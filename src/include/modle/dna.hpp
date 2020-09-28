@@ -18,9 +18,9 @@ class DNA {
     friend class DNA;
 
    public:
-    Bin(uint32_t start, uint32_t end, std::shared_ptr<ExtrusionBarrier> fwd_barrier,
+    Bin(uint32_t idx, uint32_t start, uint32_t end, std::shared_ptr<ExtrusionBarrier> fwd_barrier,
         std::shared_ptr<ExtrusionBarrier> rev_barrier);
-    Bin(uint32_t start, uint32_t end);
+    Bin(uint32_t idx, uint32_t start, uint32_t end);
 
     [[nodiscard]] bool has_fwd_barrier() const;
     [[nodiscard]] bool has_rev_barrier() const;
@@ -35,6 +35,7 @@ class DNA {
     [[nodiscard]] uint32_t size() const;
 
    private:
+    uint32_t _idx;
     uint32_t _start;
     uint32_t _end;
     std::shared_ptr<ExtrusionBarrier> _fwd_barrier;
@@ -55,6 +56,8 @@ class DNA {
   [[nodiscard]] std::vector<std::shared_ptr<Bin>>::iterator end();
   [[nodiscard]] std::vector<std::shared_ptr<Bin>>::const_iterator cbegin() const;
   [[nodiscard]] std::vector<std::shared_ptr<Bin>>::const_iterator cend() const;
+  [[nodiscard]] std::shared_ptr<DNA::Bin> get_ptr_to_previous_bin(const std::shared_ptr<DNA::Bin>& current_bin);
+  [[nodiscard]] std::shared_ptr<DNA::Bin> get_ptr_to_next_bin(const std::shared_ptr<DNA::Bin>& current_bin);
 
  private:
   std::vector<std::shared_ptr<Bin>> _bins;

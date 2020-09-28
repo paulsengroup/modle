@@ -5,3 +5,5 @@ external/
 build/
 *.sif
 scripts/fix_remote_devel.sh
+Dockerfile*
+Singularity*
