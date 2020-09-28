@@ -1,0 +1,7 @@
+cmake-build-*
+external/
+.idea/
+.vscode/
+build/
+*.sif
+scripts/fix_remote_devel.sh
