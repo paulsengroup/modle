@@ -36,7 +36,7 @@ class Genome {
 
   void randomly_bind_lefs();
   uint32_t bind_free_lefs();
-  void extrude();
+  void simulate_extrusion();
 
  private:
   std::string _path_to_bed;

@@ -1,11 +1,8 @@
 #include <random>
 #include <string>
 
-#include "absl/container/btree_map.h"
-#include "absl/container/flat_hash_set.h"
 #include "absl/strings/str_format.h"
 #include "absl/time/clock.h"
-#include "modle/dna.hpp"
 #include "modle/genome.hpp"
 
 int main(int argc, char** argv) {
@@ -33,8 +30,8 @@ int main(int argc, char** argv) {
   absl::FPrintF(stderr, "Initial lef binding took %s\n", absl::FormatDuration(absl::Now() - t0));
 
   t0 = absl::Now();
-  for (uint32_t i = 0; i < 500'000; ++i) {
-    genome.extrude();
+  for (uint32_t i = 0; i < 100'000; ++i) {
+    genome.simulate_extrusion();
     if (i % 1000 == 0) {
       absl::FPrintF(stderr, "1000 rounds of extrusion took %s\n", absl::FormatDuration(absl::Now() - t0));
       t0 = absl::Now();

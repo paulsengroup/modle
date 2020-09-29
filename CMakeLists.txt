@@ -38,3 +38,9 @@ target_link_libraries(modle
         absl::strings
         absl::str_format
         absl::time)
+
+set(MODLE_DEBUG_OPTIONS "-Wall;-Wextra;-ggdb;-Og;-g3")
+set(MODLE_RELEASE_OPTIONS "-Wall;-Wextra;-O3")
+
+target_compile_options(modle PUBLIC "$<$<CONFIG:DEBUG>:${MODLE_DEBUG_OPTIONS}>")
+target_compile_options(modle PUBLIC "$<$<CONFIG:RELEASE>:${MODLE_RELEASE_OPTIONS}>")

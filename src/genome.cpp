@@ -39,7 +39,7 @@ std::vector<Genome::Chromosome> Genome::init_chromosomes_from_bed() const {
 }
 
 std::vector<Lef> Genome::generate_lefs(uint32_t n, uint32_t avg_processivity) {
-  return std::vector<Lef>{n, Lef{0, avg_processivity}};
+  return std::vector<Lef>{n, Lef{avg_processivity}};
 }
 
 absl::btree_multimap<std::string_view, std::shared_ptr<ExtrusionBarrier>>
@@ -100,6 +100,7 @@ uint32_t Genome::tot_n_lefs() const { return this->_lefs.size(); }
 
 uint32_t Genome::n_barriers() const { return this->_barriers.size(); }
 
+/*
 uint32_t Genome::bind_free_lefs() {
   std::vector<Lef*> free_lefs;
   for (auto& lef : this->_lefs) {
@@ -111,10 +112,9 @@ uint32_t Genome::bind_free_lefs() {
   for (auto& [chr, dna] : this->_chromosomes) {
   }
 }
+*/
 
 void Genome::randomly_bind_lefs() {
-  const auto genome_size = this->size();
-  std::vector<DNA::Bin*> sampled_bins;
   const auto& weights = this->get_chromosome_lengths();
   std::discrete_distribution<> chr_idx(weights.begin(), weights.end());
   for (auto lef_it = this->_lefs.begin(); lef_it != this->_lefs.end(); ++lef_it) {
@@ -125,12 +125,21 @@ void Genome::randomly_bind_lefs() {
   }
 }
 
-void Genome::extrude() {
+void Genome::simulate_extrusion() {
   for (auto& lef : this->_lefs) {
-    if (lef.is_bound()) lef.extrude(this->_rndev);
+    if (lef.is_bound()) lef.extrude();
   }
+
+  const auto& weights = this->get_chromosome_lengths();
+  std::discrete_distribution<> chr_idx(weights.begin(), weights.end());
   for (auto& lef : this->_lefs) {
-    if (lef.is_bound()) lef.check_constraints();
+    if (lef.is_bound()) {
+      lef.check_constraints();
+      lef.try_unload(this->_rndev);
+    } else {
+      auto& [chr, dna] = this->_chromosomes[chr_idx(this->_rndev)];
+      lef.try_rebind(chr, dna, this->_rndev);
+    }
   }
 }
 
