@@ -20,6 +20,7 @@ int main(int argc, char** argv) {
   auto t0 = absl::Now();
   modle::Genome genome(path_to_bed, bin_size, tot_n_lefs, tot_n_barriers, avg_lef_processivity,
                        probability_of_barrier_block);
+  genome.randomly_generate_barriers(tot_n_barriers, probability_of_barrier_block);
   absl::FPrintF(stderr, "Genome size: %.2f Gbp; n_chr = %lu; n_bins = %lu\n", genome.size() / 1.0e9,
                 genome.get_n_chromosomes(), genome.n_bins());
   absl::FPrintF(stderr, "Initial allocation took %s\n", absl::FormatDuration(absl::Now() - t0));
@@ -29,15 +30,9 @@ int main(int argc, char** argv) {
   genome.randomly_bind_lefs();
   absl::FPrintF(stderr, "Initial lef binding took %s\n", absl::FormatDuration(absl::Now() - t0));
 
-  t0 = absl::Now();
-  for (uint32_t i = 0; i < 100'000; ++i) {
-    genome.simulate_extrusion();
-    if (i % 1000 == 0) {
-      absl::FPrintF(stderr, "1000 rounds of extrusion took %s\n", absl::FormatDuration(absl::Now() - t0));
-      t0 = absl::Now();
-    }
-  }
-  for (const auto&lef: genome.get_lefs()) {
+  //  for (uint32_t i = 1; i <= 5'000; ++i) {
+  genome.simulate_extrusion(5000);
+  for (const auto& lef : genome.get_lefs()) {
     if (lef.right_is_stalled() && lef.left_is_stalled()) {
       absl::FPrintF(stderr, "chr=%s; loop_size=%lu; left_stalled=%s; right_stalled=%s;\n",
                     lef.get_chr_name(), lef.get_loop_size(),
@@ -45,7 +40,6 @@ int main(int argc, char** argv) {
                     lef.right_is_stalled() ? "True" : "False");
     }
   }
-
 
   return 0;
 }
