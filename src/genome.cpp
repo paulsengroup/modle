@@ -27,6 +27,12 @@ std::vector<uint32_t> Genome::get_chromosome_lengths() const {
   return lengths;
 }
 
+uint32_t Genome::get_n_of_free_lefs() const {
+  return std::accumulate(
+      this->_lefs.begin(), this->_lefs.end(), 0UL,
+      [](uint32_t accumulator, const Lef& lef) { return accumulator + !lef.is_bound(); });
+}
+
 std::vector<Genome::Chromosome> Genome::init_chromosomes_from_bed() const {
   std::vector<Genome::Chromosome> chromosomes;
   SimpleBEDParser parser(this->_path_to_bed);
@@ -127,13 +133,11 @@ void Genome::randomly_bind_lefs() {
 void Genome::simulate_extrusion(uint32_t iterations) {
   const auto& weights = this->get_chromosome_lengths();
   std::discrete_distribution<> chr_idx(weights.begin(), weights.end());
-  absl::flat_hash_map<std::shared_ptr<DNA::Bin>, Lef*> lef_positions;
   auto t0 = absl::Now();
   for (uint32_t i = 0; i < iterations; ++i) {
     for (auto& lef : this->_lefs) {
       if (lef.is_bound()) lef.extrude();
     }
-    lef_positions.clear();
     for (auto& lef : this->_lefs) {
       if (lef.is_bound()) {
         lef.check_constrains();
@@ -141,7 +145,7 @@ void Genome::simulate_extrusion(uint32_t iterations) {
       }
       if (!lef.is_bound()) {
         auto& [chr, dna, _] = this->_chromosomes[chr_idx(this->_rndev)];
-        lef.try_rebind(chr, dna, this->_rndev);
+        lef.try_rebind(chr, dna, this->_rndev, 0.25);
       }
     }
 
@@ -149,6 +153,8 @@ void Genome::simulate_extrusion(uint32_t iterations) {
     if ((i + 1) % 1000 == 0) {
       absl::FPrintF(stderr, "1000 rounds of extrusion took %s\n",
                     absl::FormatDuration(absl::Now() - t0));
+      absl::FPrintF(stderr, "# of free lefs: %lu/%lu\n", this->get_n_of_free_lefs(),
+                    this->n_lefs());
       t0 = absl::Now();
     }
   }

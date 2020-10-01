@@ -36,6 +36,7 @@ class ExtrusionUnit {
   [[nodiscard]] bool is_extruding_fwd() const;
   [[nodiscard]] bool is_extruding_rev() const;
   [[nodiscard]] uint32_t get_extrusion_speed() const;
+  void check_for_extruder_collisions();
 };
 
 class Lef {

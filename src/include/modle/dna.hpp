@@ -35,18 +35,19 @@ class DNA {
     [[nodiscard]] uint32_t get_center() const;
     [[nodiscard]] uint32_t size() const;
     // The following two functions return the number of extr. units that are bound to a given bin
-    [[nodiscard]] uint32_t add_extr_unit_binding(const ExtrusionUnit* unit);
-    [[nodiscard]] uint32_t remove_extr_unit_binding(const ExtrusionUnit* unit);
+    [[nodiscard]] uint32_t add_extr_unit_binding(ExtrusionUnit* unit);
+    [[nodiscard]] uint32_t remove_extr_unit_binding(ExtrusionUnit* unit);
     [[nodiscard]] bool pos_is_occupied(uint32_t pos) const;
     [[nodiscard]] uint32_t n_extruders() const;
+    [[nodiscard]] absl::flat_hash_set<ExtrusionUnit*>& get_extruders();
 
    private:
     uint32_t _idx;
-    uint64_t _start;
-    uint64_t _end;
+    uint32_t _start;
+    uint32_t _end;
     ExtrusionBarrier const* _fwd_barrier;
     ExtrusionBarrier const* _rev_barrier;
-    std::unique_ptr<absl::flat_hash_set<const ExtrusionUnit*>> _extr_units{nullptr};
+    std::unique_ptr<absl::flat_hash_set<ExtrusionUnit*>> _extr_units{nullptr};
   };
 
   DNA(uint64_t length, uint32_t bin_size);

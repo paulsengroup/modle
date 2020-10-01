@@ -1,4 +1,3 @@
-#include <random>
 #include <string>
 
 #include "absl/strings/str_format.h"
@@ -18,7 +17,7 @@ int main(int argc, char** argv) {
   const uint32_t tot_n_lefs = 5'000;
 
   auto t0 = absl::Now();
-  modle::Genome genome(path_to_bed, bin_size, tot_n_lefs, tot_n_barriers, avg_lef_processivity,
+  modle::Genome genome(path_to_bed, bin_size, tot_n_lefs, avg_lef_processivity,
                        probability_of_barrier_block);
   genome.randomly_generate_barriers(tot_n_barriers, probability_of_barrier_block);
   absl::FPrintF(stderr, "Genome size: %.2f Gbp; n_chr = %lu; n_bins = %lu\n", genome.size() / 1.0e9,
@@ -31,15 +30,24 @@ int main(int argc, char** argv) {
   absl::FPrintF(stderr, "Initial lef binding took %s\n", absl::FormatDuration(absl::Now() - t0));
 
   //  for (uint32_t i = 1; i <= 5'000; ++i) {
-  genome.simulate_extrusion(5000);
+  genome.simulate_extrusion(100000);
   for (const auto& lef : genome.get_lefs()) {
-    if (lef.right_is_stalled() && lef.left_is_stalled()) {
+    absl::FPrintF(stderr, "Loop size: %lu\n", lef.get_loop_size());
+    if (lef.right_is_stalled() || lef.left_is_stalled()) {
       absl::FPrintF(stderr, "chr=%s; loop_size=%lu; left_stalled=%s; right_stalled=%s;\n",
                     lef.get_chr_name(), lef.get_loop_size(),
                     lef.left_is_stalled() ? "True" : "False",
                     lef.right_is_stalled() ? "True" : "False");
     }
   }
+
+  const auto& lefs = genome.get_lefs();
+  absl::FPrintF(stderr, "Mean loop size: %.3f\n",
+                std::accumulate(lefs.begin(), lefs.end(), 0UL,
+                                [](uint32_t accumulator, const modle::Lef& lef) {
+                                  return accumulator + lef.get_loop_size();
+                                }) /
+                    static_cast<double>(genome.n_lefs()));
 
   return 0;
 }

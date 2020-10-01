@@ -34,6 +34,7 @@ class Genome {
   [[nodiscard]] uint32_t n_lefs() const;
   [[nodiscard]] uint32_t n_barriers() const;
   [[nodiscard]] std::vector<uint32_t> get_chromosome_lengths() const;
+  [[nodiscard]] uint32_t get_n_of_free_lefs() const;
 
   void randomly_generate_barriers(uint32_t n_barriers, double prob_of_block);
   void randomly_bind_lefs();

@@ -124,15 +124,15 @@ uint32_t DNA::Bin::get_end() const { return this->_end; }
 uint32_t DNA::Bin::get_center() const { return (this->get_start() + this->get_end()) / 2; }
 uint32_t DNA::Bin::size() const { return this->get_end() - this->get_start(); }
 
-uint32_t DNA::Bin::add_extr_unit_binding(const ExtrusionUnit* const unit) {
+uint32_t DNA::Bin::add_extr_unit_binding(ExtrusionUnit* const unit) {
   if (this->_extr_units == nullptr) {
-    this->_extr_units = std::make_unique<absl::flat_hash_set<const ExtrusionUnit*>>();
+    this->_extr_units = std::make_unique<absl::flat_hash_set<ExtrusionUnit*>>();
   }
   this->_extr_units->insert(unit);
   return this->_extr_units->size();
 }
 
-uint32_t DNA::Bin::remove_extr_unit_binding(const ExtrusionUnit* const unit) {
+uint32_t DNA::Bin::remove_extr_unit_binding(ExtrusionUnit* const unit) {
   assert(this->_extr_units != nullptr);
   if (this->_extr_units->size() == 1) {
     this->_extr_units = nullptr;
@@ -150,5 +150,7 @@ bool DNA::Bin::pos_is_occupied(uint32_t pos) const {
 uint32_t DNA::Bin::n_extruders() const {
   return this->_extr_units == nullptr ? 0 : this->_extr_units->size();
 }
+
+absl::flat_hash_set<ExtrusionUnit*>& DNA::Bin::get_extruders() { return *this->_extr_units; }
 
 }  // namespace modle
