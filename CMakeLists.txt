@@ -5,19 +5,20 @@ set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 include(FetchContent)
 
-FetchContent_Declare(abseil-cpp
+FetchContent_Declare(
+        abseil-cpp
         GIT_REPOSITORY https://github.com/abseil/abseil-cpp.git
-        GIT_TAG        20200923
-        GIT_SHALLOW    ON
-        SOURCE_DIR     ${CMAKE_CURRENT_SOURCE_DIR}/external/abseil-cpp)
+        GIT_TAG 20200923
+        GIT_SHALLOW ON
+        SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/external/abseil-cpp
+)
 
 FetchContent_MakeAvailable(abseil-cpp)
 
-# find_package(TBB 2020.1 REQUIRED)
-
 add_executable(modle)
 
-target_sources(modle
+target_sources(
+        modle
         PRIVATE src/main.cpp
         PRIVATE src/config.cpp
         PRIVATE src/dna.cpp
@@ -25,19 +26,24 @@ target_sources(modle
         PRIVATE src/genome.cpp
         PRIVATE src/lefs.cpp
         PRIVATE src/parsers.cpp
-        )
+        PRIVATE src/contacts.cpp
+)
 
-target_include_directories(modle
+target_include_directories(
+        modle
         SYSTEM
-        PUBLIC    ${CMAKE_CURRENT_SOURCE_DIR}/src/include/
-        INTERFACE ${CMAKE_CURRENT_SOURCE_DIR}/external/abseil-cpp/include/)
+        PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/src/include/
+        INTERFACE ${CMAKE_CURRENT_SOURCE_DIR}/external/abseil-cpp/include/
+)
 
-target_link_libraries(modle
+target_link_libraries(
+        modle
         absl::base
         absl::flat_hash_map
         absl::strings
         absl::str_format
-        absl::time)
+        absl::time
+)
 
 set(MODLE_DEBUG_OPTIONS "-Wall;-Wextra;-ggdb;-Og;-g3")
 set(MODLE_RELEASE_OPTIONS "-Wall;-Wextra;-O3")

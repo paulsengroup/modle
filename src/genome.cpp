@@ -23,7 +23,7 @@ Genome::Genome(std::string_view path_to_bed, uint32_t bin_size, uint32_t n_lefs,
 std::vector<uint32_t> Genome::get_chromosome_lengths() const {
   std::vector<uint32_t> lengths;
   lengths.reserve(this->get_n_chromosomes());
-  for (const auto& [chr, dna, _] : this->_chromosomes) lengths.push_back(dna.length());
+  for (const auto& [chr, dna, x, y] : this->_chromosomes) lengths.push_back(dna.length());
   return lengths;
 }
 
@@ -56,7 +56,7 @@ void Genome::randomly_generate_barriers(uint32_t n_barriers, double prob_of_bloc
   std::discrete_distribution<> chr_idx(weights.begin(), weights.end());
   std::bernoulli_distribution strand_selector(0.5);
   for (uint32_t i = 0; i < n_barriers; ++i) {
-    auto& [chr, dna, barriers] = this->_chromosomes[chr_idx(this->_rndev)];
+    auto& [chr, dna, barriers, _] = this->_chromosomes[chr_idx(this->_rndev)];
     std::uniform_int_distribution<uint32_t> uniform_rng(0, dna.length());
     const auto barrier_position = uniform_rng(this->_rndev);
     // We are using the hash of the chr name + the position as seed for the rng that controls
@@ -123,9 +123,9 @@ void Genome::randomly_bind_lefs() {
   const auto& weights = this->get_chromosome_lengths();
   std::discrete_distribution<> chr_idx(weights.begin(), weights.end());
   for (auto lef_it = this->_lefs.begin(); lef_it != this->_lefs.end(); ++lef_it) {
-    auto& [chr, dna, _] = this->_chromosomes[chr_idx(this->_rndev)];
+    auto& [chr, dna, _, contacts] = this->_chromosomes[chr_idx(this->_rndev)];
     std::uniform_int_distribution<uint32_t> uniform_rng(0, dna.length());
-    if (!lef_it->bind_at_pos(chr, dna, uniform_rng(this->_rndev)))
+    if (!lef_it->bind_at_pos(chr, dna, contacts, uniform_rng(this->_rndev)))
       --lef_it;  // Go to next lef only if binding was successful
   }
 }
@@ -136,7 +136,10 @@ void Genome::simulate_extrusion(uint32_t iterations) {
   auto t0 = absl::Now();
   for (uint32_t i = 0; i < iterations; ++i) {
     for (auto& lef : this->_lefs) {
-      if (lef.is_bound()) lef.extrude();
+      if (lef.is_bound()) {
+        lef.extrude();
+        lef.register_contact();
+      }
     }
     for (auto& lef : this->_lefs) {
       if (lef.is_bound()) {
@@ -144,8 +147,8 @@ void Genome::simulate_extrusion(uint32_t iterations) {
         lef.try_unload(this->_rndev);
       }
       if (!lef.is_bound()) {
-        auto& [chr, dna, _] = this->_chromosomes[chr_idx(this->_rndev)];
-        lef.try_rebind(chr, dna, this->_rndev, 0.25);
+        auto& [chr, dna, x, contacts] = this->_chromosomes[chr_idx(this->_rndev)];
+        lef.try_rebind(chr, dna, contacts, this->_rndev, 0.25);
       }
     }
 
@@ -161,7 +164,11 @@ void Genome::simulate_extrusion(uint32_t iterations) {
 }
 
 Genome::Chromosome::Chromosome(std::string name, DNA dna)
-    : name(std::move(name)), dna(std::move(dna)) {}
+    : name(std::move(name)),
+      dna(std::move(dna)),
+      // TODO: Make this a tunable, the first parameter controls the width of the diagonal that we
+      // are actually storing
+      contacts(100'000 / 1000, this->dna.n_bins()) {}
 
 uint32_t Genome::Chromosome::length() const { return this->dna.length(); }
 uint32_t Genome::Chromosome::n_bins() const { return this->dna.n_bins(); }

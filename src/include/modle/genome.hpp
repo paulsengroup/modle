@@ -5,6 +5,7 @@
 
 #include "absl/container/btree_map.h"
 #include "absl/container/flat_hash_map.h"
+#include "modle/contacts.hpp"
 #include "modle/dna.hpp"
 #include "modle/extr_barrier.hpp"
 #include "modle/lefs.hpp"
@@ -20,6 +21,7 @@ class Genome {
     std::string name;
     DNA dna;
     std::vector<ExtrusionBarrier> barriers;
+    modle::ContactMatrix contacts;
   };
 
   Genome(std::string_view path_to_bed, uint32_t bin_size, uint32_t n_lefs,
@@ -38,7 +40,7 @@ class Genome {
 
   void randomly_generate_barriers(uint32_t n_barriers, double prob_of_block);
   void randomly_bind_lefs();
-  uint32_t bind_free_lefs();
+  //  uint32_t bind_free_lefs();
   void simulate_extrusion(uint32_t iterations = 1);
 
  private:

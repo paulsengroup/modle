@@ -40,6 +40,7 @@ class DNA {
     [[nodiscard]] bool pos_is_occupied(uint32_t pos) const;
     [[nodiscard]] uint32_t n_extruders() const;
     [[nodiscard]] absl::flat_hash_set<ExtrusionUnit*>& get_extruders();
+    [[nodiscard]] uint32_t get_index() const;
 
    private:
     uint32_t _idx;

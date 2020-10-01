@@ -1,6 +1,7 @@
 #include "modle/lefs.hpp"
 
-#include <absl/strings/str_format.h>
+#include "absl/strings/str_format.h"
+#include "modle/contacts.hpp"
 
 namespace modle {
 
@@ -95,13 +96,15 @@ bool Lef::is_bound() const {
   return this->_left_unit.is_bound();
 }
 
-bool Lef::bind_at_pos(std::string_view chr_name, DNA& dna, uint32_t pos) {
+bool Lef::bind_at_pos(std::string_view chr_name, DNA& dna, modle::ContactMatrix& contacts,
+                      uint32_t pos) {
   auto bin = dna.get_ptr_to_bin_from_pos(pos);
   // 1st ref. is for std::vector, 2nd ref. is for the instance passed to this func (and any
   // additional ref. is due to a lef binding to this bin)
   //  if (bin.use_count() - 1 > 1) return false;
   this->_chr = chr_name;
   this->_dna = &dna;
+  this->_contacts = &contacts;
   // We assume that the left unit always travels towards the 5', while the right unit goes to the 3'
   this->_left_unit.bind(&dna, pos, bin, ExtrusionUnit::Direction::rev);
   this->_right_unit.bind(&dna, pos, std::move(bin), ExtrusionUnit::Direction::fwd);
@@ -118,6 +121,7 @@ std::pair<DNA::Bin*, DNA::Bin*> Lef::get_ptr_to_bins() {
 void Lef::unload() {
   this->_chr = "";
   this->_dna = nullptr;
+  this->_contacts = nullptr;
   //  (void)this->_left_unit._bin->remove_extr_unit_binding(&this->_left_unit);
   //  (void)this->_right_unit._bin->remove_extr_unit_binding(&this->_right_unit);
   this->_left_unit.unload();
@@ -132,6 +136,11 @@ void Lef::remove_left_stall() { this->_left_unit.remove_stall(); }
 void Lef::remove_right_stall() { this->_right_unit.remove_stall(); }
 
 uint32_t Lef::extrude() { return this->_left_unit.extrude() + this->_right_unit.extrude(); }
+
+void Lef::register_contact() {
+  this->_contacts->increment(this->_left_unit._bin->get_index(),
+                            this->_right_unit._bin->get_index());
+}
 
 void Lef::check_constrains() {
   // Check for clashes with other LEFs
@@ -183,24 +192,27 @@ bool Lef::try_unload(std::default_random_engine& rng) {
   return false;
 }
 
-bool Lef::try_rebind(std::string_view chr_name, DNA& chr, std::default_random_engine& rng,
-                     double prob_of_rebinding) {
+bool Lef::try_rebind(std::string_view chr_name, DNA& chr, modle::ContactMatrix& contacts,
+                     std::default_random_engine& rng, double prob_of_rebinding) {
   assert(!this->is_bound());
   assert(prob_of_rebinding >= 0 && prob_of_rebinding <= 1);
   std::uniform_int_distribution<uint32_t> d1(0, chr.length());
   std::uniform_real_distribution<> d2(0.0, 1.0);
   if (d2(rng) <= prob_of_rebinding) {
     //    absl::FPrintF(stderr, "Trying to rebind...\n");
-    return this->bind_at_pos(chr_name, chr, d1(rng));
+    return this->bind_at_pos(chr_name, chr, contacts, d1(rng));
   }
   return false;
 }
 
 double Lef::compute_prob_of_unloading() const {
-  const double bp_per_extr_event = this->get_left_extrusion_speed() + this->get_right_extrusion_speed();
+  const double bp_per_extr_event =
+      this->get_left_extrusion_speed() + this->get_right_extrusion_speed();
   const double mean_extr_events = this->get_avg_processivity() / bp_per_extr_event;
-  absl::FPrintF(stderr, "avg_processivity=%lu; bp_extruded=%.0f; mean_extr_events=%.0f; prob_unloading=%.10f\n",
-                this->get_avg_processivity(), bp_per_extr_event, mean_extr_events, 1.0 / mean_extr_events);
+  absl::FPrintF(
+      stderr,
+      "avg_processivity=%lu; bp_extruded=%.0f; mean_extr_events=%.0f; prob_unloading=%.10f\n",
+      this->get_avg_processivity(), bp_per_extr_event, mean_extr_events, 1.0 / mean_extr_events);
   return 1.0 / mean_extr_events;
 }
 

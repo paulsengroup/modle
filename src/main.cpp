@@ -30,7 +30,7 @@ int main(int argc, char** argv) {
   absl::FPrintF(stderr, "Initial lef binding took %s\n", absl::FormatDuration(absl::Now() - t0));
 
   //  for (uint32_t i = 1; i <= 5'000; ++i) {
-  genome.simulate_extrusion(100000);
+  genome.simulate_extrusion(10000);
   for (const auto& lef : genome.get_lefs()) {
     absl::FPrintF(stderr, "Loop size: %lu\n", lef.get_loop_size());
     if (lef.right_is_stalled() || lef.left_is_stalled()) {

@@ -5,6 +5,8 @@
 #include <memory>
 #include <random>
 
+#include "modle/contacts.hpp"
+
 #include "modle/dna.hpp"
 
 namespace modle {
@@ -49,9 +51,10 @@ class Lef {
   //      uint8_t right_extr_speed, DNA* = nullptr, std::string_view chr = "");
 
   uint32_t extrude();
+  void register_contact();
   [[nodiscard]] std::pair<DNA::Bin*, DNA::Bin*> get_ptr_to_bins();
   [[nodiscard]] bool is_bound() const;
-  [[nodiscard]] bool bind_at_pos(std::string_view chr_name, DNA& dna,
+  [[nodiscard]] bool bind_at_pos(std::string_view chr_name, DNA& dna, modle::ContactMatrix& contacts,
                                  uint32_t pos);  // Returns false if bin is already occupied
   [[nodiscard]] std::string_view get_chr_name() const;
   void check_constrains();
@@ -67,12 +70,13 @@ class Lef {
   [[nodiscard]] uint32_t get_avg_processivity() const;
   void set_avg_processivity(uint32_t avg_proc);
   bool try_unload(std::default_random_engine& rng);
-  bool try_rebind(std::string_view chr_name, DNA& chr, std::default_random_engine& rng,
-                  double prob_of_rebinding = 1.0);
+  bool try_rebind(std::string_view chr_name, DNA& chr, modle::ContactMatrix& contacts,
+                  std::default_random_engine& rng, double prob_of_rebinding = 1.0);
 
  private:
   std::string_view _chr{};
   DNA* _dna{nullptr};
+  modle::ContactMatrix* _contacts{nullptr};
 
   ExtrusionUnit _left_unit{};
   ExtrusionUnit _right_unit{};

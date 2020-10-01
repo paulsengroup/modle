@@ -153,4 +153,6 @@ uint32_t DNA::Bin::n_extruders() const {
 
 absl::flat_hash_set<ExtrusionUnit*>& DNA::Bin::get_extruders() { return *this->_extr_units; }
 
+uint32_t DNA::Bin::get_index() const { return this->_idx; }
+
 }  // namespace modle
