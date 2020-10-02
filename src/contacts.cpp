@@ -8,37 +8,42 @@
 namespace modle {
 
 ContactMatrix::ContactMatrix(uint32_t width, uint32_t length)
-    : _width(width),
-      _length(length),
-      _apparent_x(std::sqrt((length * length) / 2)),
-      _apparent_y(std::sqrt((length * length) / 2)),
-      _matrix(allocate_matrix()) {}
+    : _width(width), _length(length), _matrix(allocate_matrix()) {}
 
-ContactMatrix::ContactMatrix(uint32_t width, uint32_t x_len, uint32_t y_len)
-    : _width(width),
-      _length(compute_diagonal_length(x_len, y_len)),
-      _apparent_x(x_len),
-      _apparent_y(y_len),
-      _matrix(allocate_matrix()) {}
-
-void ContactMatrix::increment(uint32_t x, uint32_t y, uint32_t n) {
-  // TODO: Given that we are only storing half of the symmetric matrix, it may be a good idea to
-  // invert the values of i and j when y > x (see print_symmetric for an example)
-  uint32_t j = y;
-  uint32_t i = j - x;
+void ContactMatrix::increment(uint32_t row, uint32_t col, uint32_t n) {
+  uint32_t j = col;
+  uint32_t i = j - row;
+  if (row > col) {
+    j = row;
+    i = j - col;
+  }
   assert(i < this->_matrix.size());
   assert(j < this->_matrix[0].size());
   this->_matrix[i][j] += n;
 }
 
-void ContactMatrix::decrement(uint32_t x, uint32_t y, uint32_t n) {
-  // TODO: Given that we are only storing half of the symmetric matrix, it may be a good idea to
-  // invert the values of i and j when y > x (see print_symmetric for an example)
-  uint32_t j = y;
-  uint32_t i = j - x;
+void ContactMatrix::set(uint32_t row, uint32_t col, uint32_t n) {
+  uint32_t j = col;
+  uint32_t i = j - row;
+  if (row > col) {
+    j = row;
+    i = j - col;
+  }
   assert(i < this->_matrix.size());
   assert(j < this->_matrix[0].size());
-  assert(n < this->_matrix[i][j]);
+  this->_matrix[i][j] = n;
+}
+
+void ContactMatrix::decrement(uint32_t row, uint32_t col, uint32_t n) {
+  uint32_t j = col;
+  uint32_t i = j - row;
+  if (row > col) {
+    j = row;
+    i = j - col;
+  }
+  assert(i < this->_matrix.size());
+  assert(j < this->_matrix[0].size());
+  assert(n <= this->_matrix[i][j]);
   this->_matrix[i][j] -= n;
 }
 
@@ -65,11 +70,13 @@ std::vector<std::vector<uint32_t>> ContactMatrix::allocate_matrix() const {
   return m;
 }
 
-uint32_t ContactMatrix::get(uint32_t x, uint32_t y) const {
-  // TODO: Given that we are only storing half of the symmetric matrix, it may be a good idea to
-  // invert the values of i and j when y > x (see print_symmetric for an example)
-  uint32_t j = y;
-  uint32_t i = j - x;
+uint32_t ContactMatrix::get(uint32_t row, uint32_t col) const {
+  uint32_t j = col;
+  uint32_t i = j - row;
+  if (row > col) {
+    j = row;
+    i = j - col;
+  }
   assert(i < this->_matrix.size());
   assert(j < this->_matrix[0].size());
   return this->_matrix[i][j];
@@ -80,14 +87,16 @@ uint32_t ContactMatrix::compute_diagonal_length(uint64_t x, uint64_t y) {
 }
 
 void ContactMatrix::print_symmetric_matrix() const {
-  absl::PrintF(" \t");
-  for (uint32_t y = 0; y < this->_apparent_y; ++y) {
-    absl::PrintF("%u\t", y);
-  }
-  absl::PrintF("\n");
-  for (uint32_t y = 0; y < this->_apparent_y; ++y) {
-    absl::PrintF("%u\t", y);
-    for (uint32_t x = 0; x < this->_apparent_x; ++x) {
+  //  absl::FPrintF(stderr, " \t");
+  //  for (uint32_t y = 0; y < this->_apparent_y; ++y) {
+  //    absl::FPrintF(stderr, "%u\t", y);
+  //  }
+  //  absl::FPrintF(stderr, "\n");
+  std::string buff;
+  buff.reserve(64 * 1024 * 1024);
+  for (uint32_t y = 0; y < this->_length; ++y) {
+    //    absl::FPrintF(stderr, "%u\t", y);
+    for (uint32_t x = 0; x < this->_length; ++x) {
       uint32_t j = x;
       uint32_t i = j - y;
       if (y > x) {
@@ -96,21 +105,28 @@ void ContactMatrix::print_symmetric_matrix() const {
       }
 
       if (i >= this->_width) {
-        absl::PrintF("0\t");
+        buff += "0\t";
       } else {
-        absl::PrintF("%d\t", this->_matrix[i][j]);
+        buff += std::to_string(this->_matrix[i][j]) + "\t";
       }
     }
-    absl::PrintF("\n");
+    buff += "\n";
+    if (buff.size() >= 64 * 1024 * 1023) {
+      absl::FPrintF(stderr, "%s", buff);
+      buff.clear();
+    }
+  }
+  if (!buff.empty()) {
+    absl::FPrintF(stderr, "%s", buff);
   }
 }
 
 std::vector<std::vector<uint32_t>> ContactMatrix::generate_symmetric_matrix() const {
   std::vector<std::vector<uint32_t>> m;
-  m.reserve(this->_apparent_y);
-  for (uint32_t y = 0; y < this->_apparent_y; ++y) {
-    std::vector<uint32_t> row(this->_apparent_x, 0);
-    for (uint32_t x = 0; x < this->_apparent_x; ++x) {
+  m.reserve(this->_length);
+  for (uint32_t y = 0; y < this->_length; ++y) {
+    std::vector<uint32_t> row(this->_length, 0);
+    for (uint32_t x = 0; x < this->_length; ++x) {
       uint32_t j = x;
       uint32_t i = j - y;
       if (y > x) {
@@ -119,12 +135,17 @@ std::vector<std::vector<uint32_t>> ContactMatrix::generate_symmetric_matrix() co
       }
 
       if (i < this->_width) {
-        row[i] = this->_matrix[i][j];
+        row[x] = this->_matrix[i][j];
       }
     }
     m.emplace_back(std::move(row));
   }
   return m;
 }
+
+uint32_t ContactMatrix::n_rows() const { return this->_matrix.size(); }
+uint32_t ContactMatrix::n_cols() const { return this->_matrix[0].size(); }
+uint32_t ContactMatrix::apparent_n_rows() const { return this->_length; }
+uint32_t ContactMatrix::apparent_n_cols() const { return this->_length; }
 
 }  // namespace modle

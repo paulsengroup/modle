@@ -3,8 +3,47 @@
 #include "absl/strings/str_format.h"
 #include "absl/time/clock.h"
 #include "modle/genome.hpp"
+#include <fstream>
+#include "absl/strings/str_split.h"
+
+void debugging_contacts() {
+   uint32_t size = 5'000, diagonal_width = 50;
+//  uint32_t size = 200, diagonal_width = 10;
+  modle::ContactMatrix m1(diagonal_width, size);
+  std::string path_to_file = "/home/roby/github/modle/test/data/symm_matrix_5000_50.tsv";
+//  std::string path_to_file = "/home/roby/github/modle/test/data/symm_matrix_200_10.tsv";
+  std::ifstream f(path_to_file);
+  if (f.is_open()) {
+    std::string line;
+    std::string buff;
+    uint32_t i = 0, j;
+    while (std::getline(f, line)) {
+      j = 0;
+      for (const auto& tok : absl::StrSplit(line, '\t')) {
+//        absl::FPrintF(stderr, "%lu;%lu='%s'\n", i, j, tok);
+        if (tok != "0") {
+          try {
+            buff = tok;
+            m1.set(i, j, std::stoul(buff));
+          } catch (const std::invalid_argument &e) {
+            absl::FPrintF(stderr, "Unable to convert '%s' to uint32_t: %s", buff, e.what());
+            
+          }
+        }
+        ++j;
+      }
+      ++i;
+    }
+  } else {
+    throw std::runtime_error(absl::StrFormat("Unable to open file '%s'.", path_to_file));
+  }
+//  const auto m2 = m1.generate_symmetric_matrix();
+  m1.print_symmetric_matrix();
+}
 
 int main(int argc, char** argv) {
+  debugging_contacts();
+  /*
   if (argc < 3) {
     absl::FPrintF(stderr, "Usage: %s chromosomes.bed 20000\n", argv[0]);
     return 1;
@@ -30,7 +69,7 @@ int main(int argc, char** argv) {
   absl::FPrintF(stderr, "Initial lef binding took %s\n", absl::FormatDuration(absl::Now() - t0));
 
   //  for (uint32_t i = 1; i <= 5'000; ++i) {
-  genome.simulate_extrusion(10000);
+  genome.simulate_extrusion(25000);
   for (const auto& lef : genome.get_lefs()) {
     absl::FPrintF(stderr, "Loop size: %lu\n", lef.get_loop_size());
     if (lef.right_is_stalled() || lef.left_is_stalled()) {
@@ -48,6 +87,10 @@ int main(int argc, char** argv) {
                                   return accumulator + lef.get_loop_size();
                                 }) /
                     static_cast<double>(genome.n_lefs()));
+*/
+
+
+
 
   return 0;
 }

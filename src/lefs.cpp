@@ -170,7 +170,7 @@ void Lef::check_constrains() {
 }
 
 uint32_t Lef::get_loop_size() const {
-  assert(this->_right_unit._pos - this->_left_unit._pos >= 0);
+  assert(this->_right_unit._pos >= this->_left_unit._pos);
   return this->_right_unit._pos - this->_left_unit._pos;
 }
 
