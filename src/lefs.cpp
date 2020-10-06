@@ -44,7 +44,7 @@ uint32_t ExtrusionUnit::get_pos() const { return this->_pos; }
 void ExtrusionUnit::set_stall() {
   //  absl::FPrintF(stderr, "STALLING LEF at pos %lu dir %s...\n", this->get_pos(),
   //                this->_direction ? "FWD" : "REV");
-    this->_stalled = true;
+  this->_stalled = true;
 }
 void ExtrusionUnit::remove_stall() { this->_stalled = false; }
 void ExtrusionUnit::unload() {
@@ -143,12 +143,17 @@ void Lef::unload() {
   // https://en.cppreference.com/w/cpp/numeric/random/bernoulli_distribution/reset
 }
 
-void Lef::stall_left() { this->_left_unit.set_stall(); }
-void Lef::stall_right() { this->_right_unit.set_stall(); }
-void Lef::remove_left_stall() { this->_left_unit.remove_stall(); }
-void Lef::remove_right_stall() { this->_right_unit.remove_stall(); }
-
-uint32_t Lef::extrude() { return this->_left_unit.extrude() + this->_right_unit.extrude(); }
+ uint32_t Lef::extrude() { return this->_left_unit.extrude() + this->_right_unit.extrude(); }
+ /*
+uint32_t Lef::extrude() {
+  auto l = this->_left_unit.extrude();
+  auto r = this->_right_unit.extrude();
+  if (l + r == 0) absl::FPrintF(stderr, "LEF stalled left and right.\n");
+  else if (l == 0) absl::FPrintF(stderr, "LEF stalled left.\n");
+  else if (r == 0) absl::FPrintF(stderr, "LEF stalled right.\n");
+  return l + r;
+}
+  */
 
 void Lef::register_contact() {
   this->_contacts->increment(this->_left_unit._bin->get_index(),
@@ -160,31 +165,31 @@ void Lef::check_constraints() {
   // Check for boundaries
   if (this->_left_unit._pos <=
           (this->_left_unit._bin->get_start() + this->_left_unit.get_extrusion_speed()) &&
-      this->_left_unit._bin->has_rev_barrier()) {
-//    absl::FPrintF(stderr, "Stalling left because of an extr barrier....\n");
-//    sleep(1);
-    this->stall_left();
+      this->_left_unit._bin->blocking_rev()) {
+    //    absl::FPrintF(stderr, "Stalling left because of an extr barrier....\n");
+    //    sleep(1);
+    this->_left_unit.set_stall();
     //  } else {
     //    this->remove_left_stall();
   }
   if (this->_right_unit._pos >=
           (this->_right_unit._bin->get_end() - this->_right_unit.get_extrusion_speed()) &&
-      this->_right_unit._bin->has_fwd_barrier()) {
-//    absl::FPrintF(stderr, "Stalling right because of an extr barrier....\n");
-//    sleep(1);
-    this->stall_right();
+      this->_right_unit._bin->blocking_fwd()) {
+    //    absl::FPrintF(stderr, "Stalling right because of an extr barrier....\n");
+    //    sleep(1);
+    this->_right_unit.set_stall();
     //  } else {
     //    this->remove_right_stall();
   }
   if (const auto n_extr = this->_left_unit._bin->n_extruders(); n_extr > 1) {
     this->_left_unit.check_for_extruder_collisions();
-  } else if (n_extr == 1 && !this->_left_unit._bin->has_rev_barrier()) {
-    this->remove_left_stall();
+  } else if (n_extr == 1 && !this->_left_unit._bin->blocking_rev()) {
+    this->_left_unit.remove_stall();
   }
   if (const auto n_extr = this->_right_unit._bin->n_extruders(); n_extr > 1) {
     this->_right_unit.check_for_extruder_collisions();
-  } else if (n_extr == 1 && this->_right_unit._bin->has_fwd_barrier()) {
-    this->remove_right_stall();
+  } else if (n_extr == 1 && !this->_right_unit._bin->blocking_fwd()) {
+    this->_right_unit.remove_stall();
   }
 }
 

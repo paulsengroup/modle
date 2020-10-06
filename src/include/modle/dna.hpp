@@ -19,14 +19,14 @@ class DNA {
     friend class DNA;
 
    public:
-    Bin(uint32_t idx, uint64_t start, uint64_t end, ExtrusionBarrier const* fwd_barrier,
-        ExtrusionBarrier const* rev_barrier);
+    Bin(uint32_t idx, uint64_t start, uint64_t end, ExtrusionBarrier* fwd_barrier,
+        ExtrusionBarrier* rev_barrier);
     Bin(uint32_t idx, uint64_t start, uint64_t end);
 
-    [[nodiscard]] bool has_fwd_barrier() const;
-    [[nodiscard]] bool has_rev_barrier() const;
-    void add_fwd_barrier(const ExtrusionBarrier* barrier);
-    void add_rev_barrier(const ExtrusionBarrier* barrier);
+    [[nodiscard]] bool blocking_fwd();
+    [[nodiscard]] bool blocking_rev();
+    void add_fwd_barrier(ExtrusionBarrier* barrier);
+    void add_rev_barrier(ExtrusionBarrier* barrier);
     void remove_fwd_barrier();
     void remove_rev_barrier();
     void remove_barriers();
@@ -46,14 +46,14 @@ class DNA {
     uint32_t _idx;
     uint32_t _start;
     uint32_t _end;
-    ExtrusionBarrier const* _fwd_barrier;
-    ExtrusionBarrier const* _rev_barrier;
+    ExtrusionBarrier* _fwd_barrier;
+    ExtrusionBarrier* _rev_barrier;
     std::unique_ptr<absl::flat_hash_set<ExtrusionUnit*>> _extr_units{nullptr};
   };
 
   DNA(uint64_t length, uint32_t bin_size);
-  void add_fwd_barrier(const ExtrusionBarrier& barrier, uint32_t pos);
-  void add_rev_barrier(const ExtrusionBarrier& barrier, uint32_t pos);
+  void add_fwd_barrier(ExtrusionBarrier& barrier, uint32_t pos);
+  void add_rev_barrier(ExtrusionBarrier& barrier, uint32_t pos);
   void remove_fwd_barrier(uint32_t pos);
   void remove_rev_barrier(uint32_t pos);
   [[nodiscard]] uint32_t length() const;

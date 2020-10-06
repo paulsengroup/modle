@@ -9,19 +9,14 @@ class ExtrusionBarrier {
  public:
   ExtrusionBarrier(uint32_t abs_position, uint32_t bin_size, double prob_of_block, uint64_t seed);
   [[nodiscard]] double get_prob_of_blocking() const;
-  void activate();
-  void inactivate();
-  [[nodiscard]] bool is_active() const;
   [[nodiscard]] bool is_blocking();
   void relocate(uint32_t new_abs_pos, uint32_t bin_size);
-  void relocate_and_activate(uint32_t new_abs_pos, uint32_t bin_size);
   [[nodiscard]] uint32_t get_abs_pos() const;
   [[nodiscard]] uint32_t get_rel_pos() const;
 
  private:
   uint32_t _abs_position;
   uint32_t _rel_position;  // Possibly useless
-  double _prob_of_block;
   std::default_random_engine _rng;
   std::bernoulli_distribution _block;
   uint64_t _seed;

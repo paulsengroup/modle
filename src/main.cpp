@@ -20,15 +20,16 @@ int main(int argc, char** argv) {
   const uint32_t tot_n_lefs = 5'000;
 */
   path_to_bed = "/home/roby/github/modle/test/data/test.bed";
-  const uint32_t tot_n_barriers = 30;
-  const uint32_t avg_lef_processivity = 50'000;
-  const double probability_of_barrier_block = 0.95;
-  const uint32_t tot_n_lefs = 25;
+  const uint32_t tot_n_barriers = 15;
+  const uint32_t avg_lef_processivity = 350'000;
+  const double probability_of_barrier_block = 0.99995;
+//  const double probability_of_barrier_block = 0.999975;
+  const uint32_t tot_n_lefs = 250;
 
   auto t0 = absl::Now();
   modle::Genome genome(path_to_bed, bin_size, tot_n_lefs, avg_lef_processivity,
                        probability_of_barrier_block);
-  genome.randomly_generate_barriers(tot_n_barriers, probability_of_barrier_block);
+  genome.randomly_generate_barriers(tot_n_barriers);
 
   /*
   uint32_t i = 0;
@@ -67,9 +68,8 @@ int main(int argc, char** argv) {
   for (const auto& chr : genome.get_chromosomes()) {
     t0 = absl::Now();
     const auto file = absl::StrFormat("%s/%s.tsv.gz", output_dir, chr.name);
-    absl::FPrintF(stderr, "Writing contacts for '%s' to file '%s'...", chr.name,
-                  file);
-//    chr.write_contacts_to_tsv(file);
+    absl::FPrintF(stderr, "Writing contacts for '%s' to file '%s'...", chr.name, file);
+    //    chr.write_contacts_to_tsv(file);
     chr.write_contacts_to_tsv(file, true);
     absl::FPrintF(stderr, " DONE in %s!\n", absl::FormatDuration(absl::Now() - t0));
   }
@@ -81,6 +81,13 @@ int main(int argc, char** argv) {
                                   return accumulator + lef.get_loop_size();
                                 }) /
                     static_cast<double>(genome.n_lefs()));
+
+  for (const auto&chr: genome.get_chromosomes()) {
+    uint64_t i = 0;
+    for (const auto&b: chr.barriers) {
+      absl::FPrintF(stderr, "b%lu=%lu\n", i++, b.get_abs_pos());
+    }
+  }
 
   return 0;
 }

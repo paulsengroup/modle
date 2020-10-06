@@ -61,10 +61,6 @@ class Lef {
   void check_constraints();
   [[nodiscard]] uint32_t get_left_extrusion_speed() const;
   [[nodiscard]] uint32_t get_right_extrusion_speed() const;
-  void stall_left();
-  void stall_right();
-  void remove_left_stall();
-  void remove_right_stall();
   [[nodiscard]] bool left_is_stalled() const;
   [[nodiscard]] bool right_is_stalled() const;
   [[nodiscard]] uint32_t get_loop_size() const;

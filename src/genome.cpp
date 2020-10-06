@@ -32,6 +32,7 @@ uint32_t Genome::get_n_of_free_lefs() const {
       [](uint32_t accumulator, const Lef& lef) { return accumulator + !lef.is_bound(); });
 }
 
+
 std::vector<Genome::Chromosome> Genome::init_chromosomes_from_bed() const {
   std::vector<Genome::Chromosome> chromosomes;
   SimpleBEDParser parser(this->_path_to_bed);
@@ -48,7 +49,7 @@ std::vector<Lef> Genome::generate_lefs(uint32_t n, uint32_t avg_processivity) {
   return std::vector<Lef>{n, Lef{avg_processivity}};
 }
 
-void Genome::randomly_generate_barriers(uint32_t n_barriers, double prob_of_block) {
+void Genome::randomly_generate_barriers(uint32_t n_barriers) {
   std::hash<std::string_view> str_hasher;
   absl::btree_multimap<std::string_view, std::shared_ptr<ExtrusionBarrier>> barriers;
   const auto& weights = this->get_chromosome_lengths();
@@ -60,12 +61,14 @@ void Genome::randomly_generate_barriers(uint32_t n_barriers, double prob_of_bloc
     const auto barrier_position = uniform_rng(this->_rndev);
     // We are using the hash of the chr name + the position as seed for the rng that controls
     // whether a boundary will block or not
-    auto barrier = barriers.emplace_back(barrier_position, this->_bin_size, prob_of_block,
+    // TODO: Problem, if the barriers vector is expanded, all the pointers will be invalidated. Maybe bind the barrier at the end?
+    barriers.emplace_back(barrier_position, this->_bin_size,
+                                         this->_probability_of_barrier_block,
                                          str_hasher(chr) + barrier_position);
     if (strand_selector(this->_rndev)) {
-      dna.add_fwd_barrier(barrier, barrier_position);
+      dna.add_fwd_barrier(barriers.back(), barrier_position);
     } else {
-      dna.add_rev_barrier(barrier, barrier_position);
+      dna.add_rev_barrier(barriers.back(), barrier_position);
     }
   }
 }
@@ -130,6 +133,7 @@ void Genome::randomly_bind_lefs() {
 }
 
 void Genome::simulate_extrusion(uint32_t iterations) {
+  const auto step = iterations / 1000;
   const auto& weights = this->get_chromosome_lengths();
   std::discrete_distribution<> chr_idx(weights.begin(), weights.end());
   auto t0 = absl::Now();
@@ -159,9 +163,9 @@ void Genome::simulate_extrusion(uint32_t iterations) {
     }
 
     //  absl::FPrintF(stderr, "Solved %lu lef collisions.\n", collisions);
-    if ((i + 1) % 1000 == 0) {
+    if ((i + 1) % step == 0) {
       absl::FPrintF(stderr, "Running iteration %lu (%.2f iterations/s)\n", i + 1,
-                    1000 / absl::ToDoubleSeconds(absl::Now() - t0));
+                    step / absl::ToDoubleSeconds(absl::Now() - t0));
       t0 = absl::Now();
     }
   }

@@ -18,7 +18,7 @@ class Genome {
     [[nodiscard]] uint32_t length() const;
     [[nodiscard]] uint32_t n_bins() const;
     [[nodiscard]] uint32_t n_barriers() const;
-    void write_contacts_to_tsv(const std::string &path_to_file, bool complete = false) const;
+    void write_contacts_to_tsv(const std::string& path_to_file, bool complete = false) const;
     std::string name;
     DNA dna;
     std::vector<ExtrusionBarrier> barriers;
@@ -39,7 +39,7 @@ class Genome {
   [[nodiscard]] std::vector<uint32_t> get_chromosome_lengths() const;
   [[nodiscard]] uint32_t get_n_of_free_lefs() const;
 
-  void randomly_generate_barriers(uint32_t n_barriers, double prob_of_block);
+  void randomly_generate_barriers(uint32_t n_barriers);
   void randomly_bind_lefs();
   //  uint32_t bind_free_lefs();
   void simulate_extrusion(uint32_t iterations = 1);

@@ -13,16 +13,20 @@ namespace modle {
 DNA::DNA(uint64_t length, uint32_t bin_size)
     : _bins(make_bins(length, bin_size)), _length(length) {}
 
-void DNA::add_fwd_barrier(const ExtrusionBarrier& barrier, uint32_t pos) {
+void DNA::add_fwd_barrier(ExtrusionBarrier& barrier, uint32_t pos) {
+  assert(barrier.get_prob_of_blocking() > 0);
   assert(pos <= this->length());
   assert(pos / this->bin_size() < this->n_bins());
   this->_bins[pos / this->bin_size()]->add_fwd_barrier(&barrier);
+  absl::FPrintF(stderr, "p_fwd=%.10f\n", this->_bins[pos / this->bin_size()]->_fwd_barrier->get_prob_of_blocking());
 }
 
-void DNA::add_rev_barrier(const ExtrusionBarrier& barrier, uint32_t pos) {
+void DNA::add_rev_barrier(ExtrusionBarrier& barrier, uint32_t pos) {
+  assert(barrier.get_prob_of_blocking() > 0);
   assert(pos <= this->length());
   assert(pos / this->bin_size() < this->n_bins());
   this->_bins[pos / this->bin_size()]->add_rev_barrier(&barrier);
+  absl::FPrintF(stderr, "p_rev=%.10f\n", this->_bins[pos / this->bin_size()]->_rev_barrier->get_prob_of_blocking());
 }
 
 void DNA::remove_fwd_barrier(uint32_t pos) {
@@ -96,19 +100,23 @@ std::shared_ptr<DNA::Bin> DNA::get_ptr_to_next_bin(const DNA::Bin* const current
   return this->_bins.at(current_bin->_idx + 1);
 }
 
-DNA::Bin::Bin(uint32_t idx, uint64_t start, uint64_t end, ExtrusionBarrier const* fwd_barrier,
-              ExtrusionBarrier const* rev_barrier)
+DNA::Bin::Bin(uint32_t idx, uint64_t start, uint64_t end, ExtrusionBarrier* const fwd_barrier,
+              ExtrusionBarrier* const rev_barrier)
     : _idx(idx), _start(start), _end(end), _fwd_barrier(fwd_barrier), _rev_barrier(rev_barrier) {}
 
 DNA::Bin::Bin(uint32_t idx, uint64_t start, uint64_t end)
     : _idx(idx), _start(start), _end(end), _fwd_barrier(nullptr), _rev_barrier(nullptr) {}
 
-bool DNA::Bin::has_fwd_barrier() const { return this->_fwd_barrier != nullptr; }
-bool DNA::Bin::has_rev_barrier() const { return this->_rev_barrier != nullptr; }
-void DNA::Bin::add_fwd_barrier(const ExtrusionBarrier* const barrier) {
+bool DNA::Bin::blocking_fwd() {
+  return this->_fwd_barrier != nullptr && this->_fwd_barrier->is_blocking();
+}
+bool DNA::Bin::blocking_rev() {
+  return this->_rev_barrier != nullptr && this->_rev_barrier->is_blocking();
+}
+void DNA::Bin::add_fwd_barrier(ExtrusionBarrier*  barrier) {
   this->_fwd_barrier = barrier;
 }
-void DNA::Bin::add_rev_barrier(const ExtrusionBarrier* const barrier) {
+void DNA::Bin::add_rev_barrier(ExtrusionBarrier*  barrier) {
   this->_rev_barrier = barrier;
 }
 
