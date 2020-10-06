@@ -9,3 +9,4 @@ Dockerfile*
 Singularity*
 test/data/*
 test/googletest
+scratch/
