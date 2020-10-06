@@ -1,9 +1,8 @@
 #include "modle/genome.hpp"
 
-#include <absl/strings/str_format.h>
-
 #include <functional>
 
+#include "absl/strings/str_format.h"
 #include "modle/extr_barrier.hpp"
 #include "modle/parsers.hpp"
 
@@ -138,12 +137,19 @@ void Genome::simulate_extrusion(uint32_t iterations) {
     for (auto& lef : this->_lefs) {
       if (lef.is_bound()) {
         lef.extrude();
+        /*
+        absl::FPrintF(stderr, "lpos=%lu; rpos=%lu; l_stall=%s; r_stall=%s; loop_size=%lu\n",
+                      lef.get_left_pos(), lef.get_right_pos(),
+                      lef.left_is_stalled() ? "True" : "False",
+                      lef.right_is_stalled() ? "True" : "False", lef.get_loop_size());
+        usleep(100'000);
+        */
         lef.register_contact();
       }
     }
     for (auto& lef : this->_lefs) {
       if (lef.is_bound()) {
-        lef.check_constrains();
+        lef.check_constraints();
         lef.try_unload(this->_rndev);
       }
       if (!lef.is_bound()) {
@@ -154,10 +160,8 @@ void Genome::simulate_extrusion(uint32_t iterations) {
 
     //  absl::FPrintF(stderr, "Solved %lu lef collisions.\n", collisions);
     if ((i + 1) % 1000 == 0) {
-      absl::FPrintF(stderr, "1000 rounds of extrusion took %s\n",
-                    absl::FormatDuration(absl::Now() - t0));
-      absl::FPrintF(stderr, "# of free lefs: %lu/%lu\n", this->get_n_of_free_lefs(),
-                    this->n_lefs());
+      absl::FPrintF(stderr, "Running iteration %lu (%.2f iterations/s)\n", i + 1,
+                    1000 / absl::ToDoubleSeconds(absl::Now() - t0));
       t0 = absl::Now();
     }
   }
@@ -168,9 +172,16 @@ Genome::Chromosome::Chromosome(std::string name, DNA dna)
       dna(std::move(dna)),
       // TODO: Make this a tunable, the first parameter controls the width of the diagonal that we
       // are actually storing
-      contacts(100'000 / 1000, this->dna.n_bins()) {}
+      contacts(500'000 / 1000, this->dna.n_bins()) {}
 
 uint32_t Genome::Chromosome::length() const { return this->dna.length(); }
 uint32_t Genome::Chromosome::n_bins() const { return this->dna.n_bins(); }
 uint32_t Genome::Chromosome::n_barriers() const { return this->barriers.size(); }
+void Genome::Chromosome::write_contacts_to_tsv(const std::string& path_to_file,
+                                               bool complete) const {
+  if (complete)
+    this->contacts.write_full_matrix_to_tsv(path_to_file);
+  else
+    this->contacts.write_to_tsv(path_to_file);
+}
 }  // namespace modle

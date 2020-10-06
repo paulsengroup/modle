@@ -18,10 +18,11 @@ class Genome {
     [[nodiscard]] uint32_t length() const;
     [[nodiscard]] uint32_t n_bins() const;
     [[nodiscard]] uint32_t n_barriers() const;
+    void write_contacts_to_tsv(const std::string &path_to_file, bool complete = false) const;
     std::string name;
     DNA dna;
     std::vector<ExtrusionBarrier> barriers;
-    modle::ContactMatrix contacts;
+    ContactMatrix contacts;
   };
 
   Genome(std::string_view path_to_bed, uint32_t bin_size, uint32_t n_lefs,

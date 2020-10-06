@@ -6,6 +6,8 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 include(FetchContent)
 include(CheckIPOSupported)
 
+find_package(ZLIB REQUIRED)
+
 FetchContent_Declare(
         abseil-cpp
         GIT_REPOSITORY https://github.com/abseil/abseil-cpp.git
@@ -47,9 +49,9 @@ add_library(
 
 target_include_directories(
         libmodle
-        SYSTEM
         PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/src/include/
-        INTERFACE ${CMAKE_CURRENT_SOURCE_DIR}/external/abseil-cpp/include/
+        SYSTEM PRIVATE ${ZLIB_INCLUDE_DIRS}/
+        SYSTEM INTERFACE ${CMAKE_CURRENT_SOURCE_DIR}/external/abseil-cpp/include/
 )
 
 target_link_libraries(
@@ -59,7 +61,11 @@ target_link_libraries(
         absl::strings
         absl::str_format
         absl::time
+        ZLIB::ZLIB
 )
+
+set_target_properties(libmodle
+        PROPERTIES OUTPUT_NAME modle)
 
 
 target_compile_options(libmodle PUBLIC "$<$<CONFIG:DEBUG>:${MODLE_DEBUG_OPTIONS}>")
@@ -85,3 +91,13 @@ target_include_directories(
 target_compile_options(modle PUBLIC "$<$<CONFIG:DEBUG>:${MODLE_DEBUG_OPTIONS}>")
 target_compile_options(modle PUBLIC "$<$<CONFIG:RELEASE>:${MODLE_RELEASE_OPTIONS}>")
 
+install(TARGETS libmodle
+        LIBRARY
+        COMPONENT Libraries
+        NAMELINK_COMPONENT Development
+        PUBLIC_HEADER
+        DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/modle
+        COMPONENT Development)
+
+install(TARGETS modle
+        DESTINATION ${CMAKE_INSTALL_BINDIR})

@@ -7,5 +7,5 @@ build/
 scripts/fix_remote_devel.sh
 Dockerfile*
 Singularity*
-test/data/symm_matrix_50000_50.tsv
+test/data/*
 test/googletest

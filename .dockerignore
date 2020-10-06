@@ -1,0 +1,8 @@
+# Ignore everything
+**
+
+# Allowed files and directory
+!src/**
+!utils/**
+!CMakeLists.txt
+!LICENSE

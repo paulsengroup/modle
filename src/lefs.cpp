@@ -5,10 +5,13 @@
 
 namespace modle {
 
-ExtrusionUnit::ExtrusionUnit(uint32_t pos, DNA* dna, std::shared_ptr<DNA::Bin> bin,
+ExtrusionUnit::ExtrusionUnit(Lef* lef) : _lef_ptr(lef) {}
+
+ExtrusionUnit::ExtrusionUnit(Lef* lef, uint32_t pos, DNA* dna, std::shared_ptr<DNA::Bin> bin,
                              uint32_t extrusion_speed, ExtrusionUnit::Direction direction,
                              bool stall)
-    : _pos(pos),
+    : _lef_ptr(lef),
+      _pos(pos),
       _dna(dna),
       _bin(std::move(bin)),
       _extrusion_speed(extrusion_speed),
@@ -17,15 +20,16 @@ ExtrusionUnit::ExtrusionUnit(uint32_t pos, DNA* dna, std::shared_ptr<DNA::Bin> b
 
 uint32_t ExtrusionUnit::extrude() {
   if (this->_direction == ExtrusionUnit::Direction::fwd) {
-    if (this->_pos < this->_dna->length() &&
-        (this->_pos += this->_extrusion_speed) > this->_bin->get_end()) {
+    if (this->_pos < (this->_dna->length() - this->get_extrusion_speed()) &&
+        (this->_pos += this->get_extrusion_speed()) > this->_bin->get_end()) {
       //      absl::FPrintF(stderr, "Switching to next bin at %lu!\n", this->_pos);
       (void)this->_bin->remove_extr_unit_binding(this);
       this->_bin = this->_dna->get_ptr_to_next_bin(this->_bin.get());
       (void)this->_bin->add_extr_unit_binding(this);
     }
   } else {
-    if (this->_pos > 0 && (this->_pos -= this->_extrusion_speed) < this->_bin->get_start()) {
+    if (this->_pos > this->get_extrusion_speed() &&
+        (this->_pos -= this->get_extrusion_speed()) < this->_bin->get_start()) {
       //      absl::FPrintF(stderr, "Switching to previous bin at %lu!\n", this->_pos);
       (void)this->_bin->remove_extr_unit_binding(this);
       this->_bin = this->_dna->get_ptr_to_previous_bin(this->_bin.get());
@@ -37,7 +41,11 @@ uint32_t ExtrusionUnit::extrude() {
 
 uint32_t ExtrusionUnit::get_pos() const { return this->_pos; }
 
-void ExtrusionUnit::set_stall() { this->_stalled = true; }
+void ExtrusionUnit::set_stall() {
+  //  absl::FPrintF(stderr, "STALLING LEF at pos %lu dir %s...\n", this->get_pos(),
+  //                this->_direction ? "FWD" : "REV");
+    this->_stalled = true;
+}
 void ExtrusionUnit::remove_stall() { this->_stalled = false; }
 void ExtrusionUnit::unload() {
   this->_dna = nullptr;
@@ -71,7 +79,7 @@ uint32_t ExtrusionUnit::get_extrusion_speed() const {
 void ExtrusionUnit::check_for_extruder_collisions() {
   assert(this->_bin->n_extruders() > 1);
   for (auto& other : this->_bin->get_extruders()) {
-    if (this->_direction != other->_direction &&
+    if (this->_lef_ptr != other->_lef_ptr && this->_direction != other->_direction &&
         std::abs(static_cast<int64_t>(this->_pos) - other->_pos) <=
             (this->get_extrusion_speed() + other->get_extrusion_speed())) {
       this->set_stall();
@@ -108,6 +116,8 @@ bool Lef::bind_at_pos(std::string_view chr_name, DNA& dna, modle::ContactMatrix&
   // We assume that the left unit always travels towards the 5', while the right unit goes to the 3'
   this->_left_unit.bind(&dna, pos, bin, ExtrusionUnit::Direction::rev);
   this->_right_unit.bind(&dna, pos, std::move(bin), ExtrusionUnit::Direction::fwd);
+  //  absl::FPrintF(stderr, "LEF bound at bin %lu pos %lu...\n", this->_left_unit._bin->get_index(),
+  //  pos);
 
   return true;
 }
@@ -119,6 +129,9 @@ std::pair<DNA::Bin*, DNA::Bin*> Lef::get_ptr_to_bins() {
 }
 
 void Lef::unload() {
+  //  absl::FPrintF(stderr, "Unloading LEF at bin %lu-%lu pos %lu-%lu...\n",
+  //                this->_left_unit._bin->get_index(), this->_right_unit._bin->get_index(),
+  //                this->_left_unit.get_pos(), this->_right_unit.get_pos());
   this->_chr = "";
   this->_dna = nullptr;
   this->_contacts = nullptr;
@@ -139,32 +152,38 @@ uint32_t Lef::extrude() { return this->_left_unit.extrude() + this->_right_unit.
 
 void Lef::register_contact() {
   this->_contacts->increment(this->_left_unit._bin->get_index(),
-                            this->_right_unit._bin->get_index());
+                             this->_right_unit._bin->get_index());
 }
 
-void Lef::check_constrains() {
+void Lef::check_constraints() {
   // Check for clashes with other LEFs
   // Check for boundaries
-  if (this->_left_unit._pos == this->_left_unit._bin->get_start() &&
+  if (this->_left_unit._pos <=
+          (this->_left_unit._bin->get_start() + this->_left_unit.get_extrusion_speed()) &&
       this->_left_unit._bin->has_rev_barrier()) {
+//    absl::FPrintF(stderr, "Stalling left because of an extr barrier....\n");
+//    sleep(1);
     this->stall_left();
-  } else {
-    this->remove_left_stall();
+    //  } else {
+    //    this->remove_left_stall();
   }
-  if (this->_right_unit._pos == this->_right_unit._bin->get_end() &&
+  if (this->_right_unit._pos >=
+          (this->_right_unit._bin->get_end() - this->_right_unit.get_extrusion_speed()) &&
       this->_right_unit._bin->has_fwd_barrier()) {
+//    absl::FPrintF(stderr, "Stalling right because of an extr barrier....\n");
+//    sleep(1);
     this->stall_right();
-  } else {
-    this->remove_right_stall();
+    //  } else {
+    //    this->remove_right_stall();
   }
   if (const auto n_extr = this->_left_unit._bin->n_extruders(); n_extr > 1) {
     this->_left_unit.check_for_extruder_collisions();
-  } else if (n_extr == 1) {
+  } else if (n_extr == 1 && !this->_left_unit._bin->has_rev_barrier()) {
     this->remove_left_stall();
   }
   if (const auto n_extr = this->_right_unit._bin->n_extruders(); n_extr > 1) {
     this->_right_unit.check_for_extruder_collisions();
-  } else if (n_extr == 1) {
+  } else if (n_extr == 1 && this->_right_unit._bin->has_fwd_barrier()) {
     this->remove_right_stall();
   }
 }
@@ -204,6 +223,9 @@ bool Lef::try_rebind(std::string_view chr_name, DNA& chr, modle::ContactMatrix& 
   }
   return false;
 }
+
+uint32_t Lef::get_left_pos() const { return this->_left_unit.get_pos(); }
+uint32_t Lef::get_right_pos() const { return this->_right_unit.get_pos(); }
 
 double Lef::compute_prob_of_unloading() const {
   const double bp_per_extr_event =

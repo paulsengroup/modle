@@ -19,6 +19,9 @@ class ContactMatrix {
   [[nodiscard]] uint32_t n_rows() const;
   [[nodiscard]] uint32_t apparent_n_cols() const;
   [[nodiscard]] uint32_t apparent_n_rows() const;
+  void write_full_matrix_to_tsv(const std::string& path_to_file) const;
+  void write_to_tsv(const std::string& path_to_file) const;
+  // Write method to output table directly, without conversions to "original" coordinates
 
  private:
   uint64_t _width;

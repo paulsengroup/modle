@@ -6,22 +6,23 @@
 #include <random>
 
 #include "modle/contacts.hpp"
-
 #include "modle/dna.hpp"
 
 namespace modle {
+class Lef;
 
 class ExtrusionUnit {
   friend class Lef;
 
  public:
   enum Direction { fwd = true, rev = false };
-  explicit ExtrusionUnit() = default;
-  ExtrusionUnit(uint32_t pos, DNA* dna, std::shared_ptr<DNA::Bin> bin, uint32_t extrusion_speed,
-                Direction direction, bool stall = false);
+  explicit ExtrusionUnit(Lef* lef);
+  ExtrusionUnit(Lef* lef, uint32_t pos, DNA* dna, std::shared_ptr<DNA::Bin> bin,
+                uint32_t extrusion_speed, Direction direction, bool stall = false);
   [[nodiscard]] uint32_t get_pos() const;
 
  private:
+  Lef* _lef_ptr;
   uint32_t _pos{UINT32_MAX};
   DNA* _dna{nullptr};
   std::shared_ptr<DNA::Bin> _bin{nullptr};
@@ -54,10 +55,10 @@ class Lef {
   void register_contact();
   [[nodiscard]] std::pair<DNA::Bin*, DNA::Bin*> get_ptr_to_bins();
   [[nodiscard]] bool is_bound() const;
-  [[nodiscard]] bool bind_at_pos(std::string_view chr_name, DNA& dna, modle::ContactMatrix& contacts,
+  [[nodiscard]] bool bind_at_pos(std::string_view chr_name, DNA& dna, ContactMatrix& contacts,
                                  uint32_t pos);  // Returns false if bin is already occupied
   [[nodiscard]] std::string_view get_chr_name() const;
-  void check_constrains();
+  void check_constraints();
   [[nodiscard]] uint32_t get_left_extrusion_speed() const;
   [[nodiscard]] uint32_t get_right_extrusion_speed() const;
   void stall_left();
@@ -70,16 +71,18 @@ class Lef {
   [[nodiscard]] uint32_t get_avg_processivity() const;
   void set_avg_processivity(uint32_t avg_proc);
   bool try_unload(std::default_random_engine& rng);
-  bool try_rebind(std::string_view chr_name, DNA& chr, modle::ContactMatrix& contacts,
+  bool try_rebind(std::string_view chr_name, DNA& chr, ContactMatrix& contacts,
                   std::default_random_engine& rng, double prob_of_rebinding = 1.0);
+  [[nodiscard]] uint32_t get_left_pos() const;
+  [[nodiscard]] uint32_t get_right_pos() const;
 
  private:
   std::string_view _chr{};
   DNA* _dna{nullptr};
-  modle::ContactMatrix* _contacts{nullptr};
+  ContactMatrix* _contacts{nullptr};
 
-  ExtrusionUnit _left_unit{};
-  ExtrusionUnit _right_unit{};
+  ExtrusionUnit _left_unit{this};
+  ExtrusionUnit _right_unit{this};
   uint32_t _avg_processivity{0};
   std::bernoulli_distribution _bernoulli_dist;
 
