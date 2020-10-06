@@ -104,7 +104,7 @@ bool Lef::is_bound() const {
   return this->_left_unit.is_bound();
 }
 
-bool Lef::bind_at_pos(std::string_view chr_name, DNA& dna, modle::ContactMatrix& contacts,
+bool Lef::bind_at_pos(std::string_view chr_name, DNA& dna, modle::ContactMatrix<uint32_t>& contacts,
                       uint32_t pos) {
   auto bin = dna.get_ptr_to_bin_from_pos(pos);
   // 1st ref. is for std::vector, 2nd ref. is for the instance passed to this func (and any
@@ -216,7 +216,7 @@ bool Lef::try_unload(std::default_random_engine& rng) {
   return false;
 }
 
-bool Lef::try_rebind(std::string_view chr_name, DNA& chr, modle::ContactMatrix& contacts,
+bool Lef::try_rebind(std::string_view chr_name, DNA& chr, modle::ContactMatrix<uint32_t>& contacts,
                      std::default_random_engine& rng, double prob_of_rebinding) {
   assert(!this->is_bound());
   assert(prob_of_rebinding >= 0 && prob_of_rebinding <= 1);

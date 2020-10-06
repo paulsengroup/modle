@@ -1,6 +1,3 @@
-/*
-#include "modle/contacts.hpp"
-
 #include <zlib.h>
 
 #include <cassert>
@@ -8,6 +5,7 @@
 
 #include "absl/strings/str_format.h"
 #include "absl/strings/str_join.h"
+#include "modle/contacts.hpp"
 
 namespace modle {
 template <typename I>
@@ -191,4 +189,3 @@ void ContactMatrix<I>::write_full_matrix_to_tsv(const std::string &path_to_file)
 }
 
 }  // namespace modle
-*/

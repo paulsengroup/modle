@@ -22,7 +22,7 @@ class Genome {
     std::string name;
     DNA dna;
     std::vector<ExtrusionBarrier> barriers;
-    ContactMatrix contacts;
+    ContactMatrix<uint32_t> contacts;
   };
 
   Genome(std::string_view path_to_bed, uint32_t bin_size, uint32_t n_lefs,

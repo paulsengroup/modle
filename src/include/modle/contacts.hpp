@@ -5,15 +5,17 @@
 
 namespace modle {
 
+template<typename I>
+//std::enable_if_t<std::is_integral_v<I>> f(I t)
 class ContactMatrix {
  public:
   ContactMatrix(uint64_t nrows, uint64_t ncols);
-  [[nodiscard]] uint32_t get(uint64_t row, uint64_t col) const;
-  void set(uint64_t row, uint64_t col, uint32_t n = 1);
-  void increment(uint64_t row, uint64_t col, uint32_t n = 1);
-  void decrement(uint64_t row, uint64_t col, uint32_t n = 1);
+  [[nodiscard]] I get(uint64_t row, uint64_t col) const;
+  void set(uint64_t row, uint64_t col, I n = 1);
+  void increment(uint64_t row, uint64_t col, I n = 1);
+  void decrement(uint64_t row, uint64_t col, I n = 1);
   void print() const;
-  [[nodiscard]] std::vector<std::vector<uint32_t>> generate_symmetric_matrix() const;
+  [[nodiscard]] std::vector<std::vector<I>> generate_symmetric_matrix() const;
   [[nodiscard]] uint64_t n_cols() const;
   [[nodiscard]] uint64_t n_rows() const;
   void write_full_matrix_to_tsv(const std::string& path_to_file) const;
@@ -22,11 +24,14 @@ class ContactMatrix {
  private:
   uint64_t _nrows;
   uint64_t _ncols;
-  std::vector<std::vector<uint32_t>> _matrix;
+  std::vector<std::vector<I>> _matrix;
   uint64_t _updates_missed{0};
 
   [[nodiscard]] std::vector<std::vector<uint32_t>> allocate_matrix() const;
 };
 
 }  // namespace modle
+
+#include "modle/impl/contacts.hpp"
+
 #endif  // MODLE_CONTACTS_HPP

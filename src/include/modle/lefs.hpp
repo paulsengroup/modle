@@ -55,7 +55,7 @@ class Lef {
   void register_contact();
   [[nodiscard]] std::pair<DNA::Bin*, DNA::Bin*> get_ptr_to_bins();
   [[nodiscard]] bool is_bound() const;
-  [[nodiscard]] bool bind_at_pos(std::string_view chr_name, DNA& dna, ContactMatrix& contacts,
+  [[nodiscard]] bool bind_at_pos(std::string_view chr_name, DNA& dna, ContactMatrix<uint32_t>& contacts,
                                  uint32_t pos);  // Returns false if bin is already occupied
   [[nodiscard]] std::string_view get_chr_name() const;
   void check_constraints();
@@ -67,7 +67,7 @@ class Lef {
   [[nodiscard]] uint32_t get_avg_processivity() const;
   void set_avg_processivity(uint32_t avg_proc);
   bool try_unload(std::default_random_engine& rng);
-  bool try_rebind(std::string_view chr_name, DNA& chr, ContactMatrix& contacts,
+  bool try_rebind(std::string_view chr_name, DNA& chr, ContactMatrix<uint32_t>& contacts,
                   std::default_random_engine& rng, double prob_of_rebinding = 1.0);
   [[nodiscard]] uint32_t get_left_pos() const;
   [[nodiscard]] uint32_t get_right_pos() const;
@@ -75,7 +75,7 @@ class Lef {
  private:
   std::string_view _chr{};
   DNA* _dna{nullptr};
-  ContactMatrix* _contacts{nullptr};
+  ContactMatrix<uint32_t>* _contacts{nullptr};
 
   ExtrusionUnit _left_unit{this};
   ExtrusionUnit _right_unit{this};
