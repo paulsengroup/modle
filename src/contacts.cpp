@@ -10,75 +10,61 @@
 
 namespace modle {
 
-ContactMatrix::ContactMatrix(uint32_t nrows, uint32_t ncols)
+ContactMatrix::ContactMatrix(uint64_t nrows, uint64_t ncols)
     : _nrows(nrows), _ncols(ncols), _matrix(allocate_matrix()) {}
 
-void ContactMatrix::increment(uint32_t row, uint32_t col, uint32_t n) {
-  uint32_t j = col;
-  uint32_t i = j - row;
+void ContactMatrix::increment(uint64_t row, uint64_t col, uint32_t n) {
+  auto j = col;
+  auto i = j - row;
   if (row > col) {
     j = row;
     i = j - col;
   }
-  if (i >= this->_matrix.size() || j >= this->_matrix[0].size()) {
-    absl::FPrintF(
-        stderr,
-        "WARNING: ContactMatrix::increment: ignoring one increment for matrix[%lu][%lu] += %lu! "
-        "Reason: out of range (nrows=%lu; ncols=%lu;)\n",
-        i, j, n, this->_nrows, this->_ncols);
-    return;  // Temporary workaround to avoid segfaults
+  if (i >= this->n_rows() || j >= this->n_cols()) {
+    ++this->_updates_missed;
+    return;
   }
-  assert(i < this->_matrix.size());
-  assert(j < this->_matrix[0].size());
+  assert(i < this->n_rows());
+  assert(j < this->n_cols());
   this->_matrix[i][j] += n;
 }
 
-void ContactMatrix::set(uint32_t row, uint32_t col, uint32_t n) {
-  uint32_t j = col;
-  uint32_t i = j - row;
+void ContactMatrix::set(uint64_t row, uint64_t col, uint32_t n) {
+  auto j = col;
+  auto i = j - row;
   if (row > col) {
     j = row;
     i = j - col;
   }
-  if (i >= this->_matrix.size() || j >= this->_matrix[0].size()) {
-    absl::FPrintF(stderr,
-                  "WARNING: ContactMatrix::set: ignoring one update for matrix[%lu][%lu] = %lu! "
-                  "Reason: out of range (nrows=%lu; ncols=%lu;)\n",
-                  i, j, n, this->_nrows, this->_ncols);
-    return;  // Temporary workaround to avoid segfaults
+  if (i >= this->n_rows() || j >= this->n_cols()) {
+    ++this->_updates_missed;
+    return;
   }
-  assert(i < this->_matrix.size());
-  assert(j < this->_matrix[0].size());
+  assert(i < this->n_rows());
+  assert(j < this->n_cols());
   this->_matrix[i][j] = n;
 }
 
-void ContactMatrix::decrement(uint32_t row, uint32_t col, uint32_t n) {
-  uint32_t j = col;
-  uint32_t i = j - row;
+void ContactMatrix::decrement(uint64_t row, uint64_t col, uint32_t n) {
+  auto j = col;
+  auto i = j - row;
   if (row > col) {
     j = row;
     i = j - col;
   }
-  if (i >= this->_matrix.size() || j >= this->_matrix[0].size()) {
-    absl::FPrintF(
-        stderr,
-        "WARNING: ContactMatrix::increment: ignoring one decrement for matrix[%lu][%lu] -= %lu! "
-        "Reason: out of range (nrows=%lu; ncols=%lu;)\n",
-        i, j, n, this->_nrows, this->_ncols);
-    return;  // Temporary workaround to avoid segfaults
+  if (i >= this->n_rows() || j >= this->n_cols()) {
+    ++this->_updates_missed;
+    return;
   }
-  assert(i < this->_matrix.size());
-  assert(j < this->_matrix[0].size());
+  assert(i < this->n_rows());
+  assert(j < this->n_cols());
   assert(n <= this->_matrix[i][j]);
   this->_matrix[i][j] -= n;
 }
 
 void ContactMatrix::print() const {
   for (const auto &row : this->_matrix) {
-    for (const auto &n : row) {
-      absl::PrintF("%u\t", n);
-    }
-    absl::PrintF("\n");
+    absl::PrintF("%s\n", absl::StrJoin(row, "\t"));
   }
 }
 
@@ -86,52 +72,22 @@ std::vector<std::vector<uint32_t>> ContactMatrix::allocate_matrix() const {
   std::vector<std::vector<uint32_t>> m;
   m.reserve(this->_nrows);
 
-  for (uint32_t i = 0; i < this->_nrows; ++i) {
+  for (uint64_t i = 0; i < this->_nrows; ++i) {
     std::vector<uint32_t> v(this->_ncols, 0);
     m.emplace_back(std::move(v));
   }
   return m;
 }
 
-uint32_t ContactMatrix::get(uint32_t row, uint32_t col) const {
-  uint32_t j = col;
-  uint32_t i = j - row;
+uint32_t ContactMatrix::get(uint64_t row, uint64_t col) const {
+  auto j = col;
+  auto i = j - row;
   if (row > col) {
     j = row;
     i = j - col;
   }
-  if (i >= this->_matrix.size() || j >= this->_matrix[0].size()) return 0;
+  if (i >= this->n_rows() || j >= this->n_cols()) return 0;
   return this->_matrix[i][j];
-}
-
-void ContactMatrix::print_symmetric_matrix() const {
-  std::string buff;
-  buff.reserve(64 * 1024 * 1024);
-  for (uint32_t y = 0; y < this->_ncols; ++y) {
-    //    absl::FPrintF(stderr, "%u\t", y);
-    for (uint32_t x = 0; x < this->_ncols; ++x) {
-      uint32_t j = x;
-      uint32_t i = j - y;
-      if (y > x) {
-        j = y;
-        i = j - x;
-      }
-
-      if (i >= this->_nrows) {
-        buff += "0\t";
-      } else {
-        buff += std::to_string(this->_matrix[i][j]) + "\t";
-      }
-    }
-    buff += "\n";
-    if (buff.size() >= 64 * 1024 * 1023) {
-      absl::FPrintF(stderr, "%s", buff);
-      buff.clear();
-    }
-  }
-  if (!buff.empty()) {
-    absl::FPrintF(stderr, "%s", buff);
-  }
 }
 
 std::vector<std::vector<uint32_t>> ContactMatrix::generate_symmetric_matrix() const {
@@ -156,16 +112,19 @@ std::vector<std::vector<uint32_t>> ContactMatrix::generate_symmetric_matrix() co
   return m;
 }
 
-uint32_t ContactMatrix::n_rows() const {
+uint64_t ContactMatrix::n_rows() const {
   assert(this->_nrows == this->_matrix.size());
-  return this->_matrix.size();
+  return this->_nrows;
 }
-uint32_t ContactMatrix::n_cols() const {
+uint64_t ContactMatrix::n_cols() const {
   assert(this->_ncols == this->_matrix.at(0).size());
-  return this->_matrix[0].size();
+  return this->_ncols;
 }
 
 void ContactMatrix::write_to_tsv(const std::string &path_to_file) const {
+  if (this->_updates_missed > 0) {
+    absl::FPrintF(stderr, "WARNING: There were %lu missed updates!\n", this->_updates_missed);
+  }
   auto gzf = gzopen(path_to_file.c_str(), "w");
   if (gzf == Z_NULL) {
     throw std::runtime_error(
@@ -186,6 +145,9 @@ void ContactMatrix::write_to_tsv(const std::string &path_to_file) const {
 }
 
 void ContactMatrix::write_full_matrix_to_tsv(const std::string &path_to_file) const {
+  if (this->_updates_missed > 0) {
+    absl::FPrintF(stderr, "WARNING: There were %lu missed updates!\n", this->_updates_missed);
+  }
   auto gzf = gzopen(path_to_file.c_str(), "w");
   if (gzf == Z_NULL) {
     throw std::runtime_error(
@@ -194,7 +156,6 @@ void ContactMatrix::write_full_matrix_to_tsv(const std::string &path_to_file) co
   std::vector<uint32_t> row(this->_ncols, 0);
   std::string buff;
   for (uint32_t y = 0; y < this->_ncols; ++y) {
-    //    absl::FPrintF(stderr, "%u\t", y);
     for (uint32_t x = 0; x < this->_ncols; ++x) {
       uint32_t j = x;
       uint32_t i = j - y;
@@ -207,7 +168,7 @@ void ContactMatrix::write_full_matrix_to_tsv(const std::string &path_to_file) co
       else
         row[j] = 0;
     }
-    buff = absl::StrFormat("%s\n", absl::StrJoin(row, "\t"));
+    buff = absl::StrJoin(row, "\t") + "\n";
     gzwrite(gzf, buff.c_str(), buff.size());
   }
   if (gzclose(gzf) != Z_OK) {
