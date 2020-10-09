@@ -5,8 +5,7 @@
 #include <string_view>
 #include <vector>
 
-#include "absl/container/flat_hash_map.h"
-#include "absl/container/flat_hash_set.h"
+#include "absl/container/inlined_vector.h"
 #include "modle/contacts.hpp"
 
 namespace modle {
@@ -37,7 +36,7 @@ class DNA {
     void add_extr_barrier(double prob_of_barrier_block, DNA::Direction direction);
     uint32_t add_extr_unit_binding(ExtrusionUnit* unit);
     uint32_t remove_extr_unit_binding(ExtrusionUnit* unit);
-    [[nodiscard]] absl::flat_hash_set<ExtrusionUnit*>& get_extr_units();
+    [[nodiscard]] absl::InlinedVector<ExtrusionUnit*, 10>& get_extr_units();
 
    private:
     uint32_t _idx;
@@ -45,7 +44,7 @@ class DNA {
     uint32_t _end;
     std::unique_ptr<std::vector<ExtrusionBarrier>> _extr_barriers{nullptr};
     // TODO: Consider making this a vector
-    std::unique_ptr<absl::flat_hash_set<ExtrusionUnit*>> _extr_units{nullptr};
+    std::unique_ptr<absl::InlinedVector<ExtrusionUnit*, 10>> _extr_units{nullptr};
     void add_barrier(ExtrusionBarrier& b);
     void remove_barrier(Direction d);
     void remove_barriers();

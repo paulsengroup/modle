@@ -48,9 +48,9 @@ uint32_t DNA::Bin::size() const { return this->get_end() - this->get_start(); }
 
 uint32_t DNA::Bin::add_extr_unit_binding(ExtrusionUnit* const unit) {
   if (this->_extr_units == nullptr) {
-    this->_extr_units = std::make_unique<absl::flat_hash_set<ExtrusionUnit*>>();
+    this->_extr_units = std::make_unique<absl::InlinedVector<ExtrusionUnit*, 10>>();
   }
-  this->_extr_units->insert(unit);
+  this->_extr_units->push_back(unit);
   return this->_extr_units->size();
 }
 
@@ -60,7 +60,8 @@ uint32_t DNA::Bin::remove_extr_unit_binding(ExtrusionUnit* const unit) {
     this->_extr_units = nullptr;
     return 0;
   }
-  this->_extr_units->erase(unit);
+  this->_extr_units->erase(std::remove(this->_extr_units->begin(), this->_extr_units->end(), unit),
+                           this->_extr_units->end());
   return this->_extr_units->size();
 }
 
@@ -68,7 +69,7 @@ uint32_t DNA::Bin::get_n_extr_units() const {
   return this->_extr_units == nullptr ? 0 : this->_extr_units->size();
 }
 
-absl::flat_hash_set<ExtrusionUnit*>& DNA::Bin::get_extr_units() { return *this->_extr_units; }
+absl::InlinedVector<ExtrusionUnit*, 10>& DNA::Bin::get_extr_units() { return *this->_extr_units; }
 
 uint32_t DNA::Bin::get_index() const { return this->_idx; }
 
