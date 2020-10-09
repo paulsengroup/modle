@@ -141,12 +141,10 @@ void ContactMatrix<I>::write_to_tsv(const std::string &path_to_file) const {
         absl::StrFormat("Unable to open file '%s' for writing.", path_to_file));
   }
   std::string buff;
-  buff.reserve(1024 * 1024);
   for (const auto &row : this->_matrix) {
-    buff += absl::StrJoin(row, "\t");
+    buff = absl::StrJoin(row, "\t");
     buff += "\n";
     gzwrite(gzf, buff.c_str(), buff.size());
-    buff.clear();
   }
   if (gzclose(gzf) != Z_OK) {
     throw std::runtime_error(
@@ -167,6 +165,8 @@ void ContactMatrix<I>::write_full_matrix_to_tsv(const std::string &path_to_file)
   std::vector<I> row(this->_ncols, 0);
   std::string buff;
   for (uint64_t y = 0; y < this->_ncols; ++y) {
+    //    std::fill(row.begin(), row.end(), 0);
+
     for (uint64_t x = 0; x < this->_ncols; ++x) {
       auto j = x;
       auto i = j - y;
@@ -174,10 +174,10 @@ void ContactMatrix<I>::write_full_matrix_to_tsv(const std::string &path_to_file)
         j = y;
         i = j - x;
       }
-      if (i < this->_nrows)
-        row[j] = this->_matrix[i][j];
+      if (i >= this->_nrows)
+        row[x] = 0;
       else
-        row[j] = 0;
+        row[x] = this->_matrix[i][j];
     }
     buff = absl::StrJoin(row, "\t") + "\n";
     gzwrite(gzf, buff.c_str(), buff.size());

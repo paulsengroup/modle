@@ -6,7 +6,6 @@
 namespace modle {
 
 template<typename I>
-//std::enable_if_t<std::is_integral_v<I>> f(I t)
 class ContactMatrix {
  public:
   ContactMatrix(uint64_t nrows, uint64_t ncols);

@@ -1,12 +1,13 @@
 #ifndef MODLE_DNA_HPP
 #define MODLE_DNA_HPP
 
+#include <random>
 #include <string_view>
 #include <vector>
 
 #include "absl/container/flat_hash_map.h"
 #include "absl/container/flat_hash_set.h"
-//#include "modle/lefs.hpp"
+#include "modle/contacts.hpp"
 
 namespace modle {
 
@@ -15,64 +16,89 @@ class ExtrusionUnit;
 
 class DNA {
  public:
+  enum Direction { none = 0, fwd = 1, rev = 2, both = 3 };
+
   class Bin {
     friend class DNA;
 
    public:
-    Bin(uint32_t idx, uint64_t start, uint64_t end, ExtrusionBarrier* fwd_barrier,
-        ExtrusionBarrier* rev_barrier);
+    Bin(uint32_t idx, uint64_t start, uint64_t end, std::vector<ExtrusionBarrier>& barriers);
     Bin(uint32_t idx, uint64_t start, uint64_t end);
 
-    [[nodiscard]] bool blocking_fwd();
-    [[nodiscard]] bool blocking_rev();
-    void add_fwd_barrier(ExtrusionBarrier* barrier);
-    void add_rev_barrier(ExtrusionBarrier* barrier);
-    void remove_fwd_barrier();
-    void remove_rev_barrier();
-    void remove_barriers();
     [[nodiscard]] uint32_t get_start() const;
     [[nodiscard]] uint32_t get_end() const;
-    [[nodiscard]] uint32_t get_center() const;
     [[nodiscard]] uint32_t size() const;
-    // The following two functions return the number of extr. units that are bound to a given bin
-    [[nodiscard]] uint32_t add_extr_unit_binding(ExtrusionUnit* unit);
-    [[nodiscard]] uint32_t remove_extr_unit_binding(ExtrusionUnit* unit);
-    [[nodiscard]] bool pos_is_occupied(uint32_t pos) const;
-    [[nodiscard]] uint32_t n_extruders() const;
-    [[nodiscard]] absl::flat_hash_set<ExtrusionUnit*>& get_extruders();
+    [[nodiscard]] uint32_t get_n_extr_units() const;
     [[nodiscard]] uint32_t get_index() const;
+    [[nodiscard]] ExtrusionBarrier* get_next_extr_barrier(ExtrusionBarrier* b,
+                                                          Direction d = DNA::Direction::both) const;
+    [[nodiscard]] std::vector<ExtrusionBarrier>* get_all_extr_barriers() const;
+    void add_extr_barrier(ExtrusionBarrier b);
+    void add_extr_barrier(double prob_of_barrier_block, DNA::Direction direction);
+    uint32_t add_extr_unit_binding(ExtrusionUnit* unit);
+    uint32_t remove_extr_unit_binding(ExtrusionUnit* unit);
+    [[nodiscard]] absl::flat_hash_set<ExtrusionUnit*>& get_extr_units();
 
    private:
     uint32_t _idx;
     uint32_t _start;
     uint32_t _end;
-    ExtrusionBarrier* _fwd_barrier;
-    ExtrusionBarrier* _rev_barrier;
+    std::unique_ptr<std::vector<ExtrusionBarrier>> _extr_barriers{nullptr};
+    // TODO: Consider making this a vector
     std::unique_ptr<absl::flat_hash_set<ExtrusionUnit*>> _extr_units{nullptr};
+    void add_barrier(ExtrusionBarrier& b);
+    void remove_barrier(Direction d);
+    void remove_barriers();
   };
 
   DNA(uint64_t length, uint32_t bin_size);
-  void add_fwd_barrier(ExtrusionBarrier& barrier, uint32_t pos);
-  void add_rev_barrier(ExtrusionBarrier& barrier, uint32_t pos);
-  void remove_fwd_barrier(uint32_t pos);
-  void remove_rev_barrier(uint32_t pos);
+
+  // Getters
+  [[nodiscard]] uint32_t length() const;
+  [[nodiscard]] uint32_t get_n_bins() const;
+  [[nodiscard]] uint32_t get_n_barriers() const;
+  [[nodiscard]] uint32_t get_bin_size() const;
+  [[nodiscard]] DNA::Bin& get_bin_from_pos(uint32_t pos);
+  [[nodiscard]] DNA::Bin* get_ptr_to_bin_from_pos(uint32_t pos);
+  [[nodiscard]] DNA::Bin& get_prev_bin(const Bin& current_bin);
+  [[nodiscard]] DNA::Bin* get_ptr_to_prev_bin(const Bin& current_bin);
+  [[nodiscard]] DNA::Bin& get_next_bin(const Bin& current_bin);
+  [[nodiscard]] DNA::Bin* get_ptr_to_next_bin(const Bin& current_bin);
+  [[nodiscard]] DNA::Bin& get_first_bin();
+  [[nodiscard]] DNA::Bin* get_ptr_to_first_bin();
+  [[nodiscard]] DNA::Bin& get_last_bin();
+  [[nodiscard]] DNA::Bin* get_ptr_to_last_bin();
+
+  // Iterator stuff
+  [[nodiscard]] std::vector<Bin>::iterator begin();
+  [[nodiscard]] std::vector<Bin>::iterator end();
+  [[nodiscard]] std::vector<Bin>::const_iterator cbegin() const;
+  [[nodiscard]] std::vector<Bin>::const_iterator cend() const;
+
+  // Modifiers
+  void add_barrier(ExtrusionBarrier& b, uint32_t pos);
+  void remove_barrier(uint32_t pos, Direction direction);
+
+ private:
+  std::vector<Bin> _bins;
+  uint64_t _length;
+
+  // Initializer
+  static std::vector<Bin> make_bins(uint64_t length, uint32_t bin_size);
+};
+
+struct Chromosome {
+  Chromosome(std::string name, DNA dna);
   [[nodiscard]] uint32_t length() const;
   [[nodiscard]] uint32_t n_bins() const;
   [[nodiscard]] uint32_t n_barriers() const;
-  [[nodiscard]] uint32_t bin_size() const;
-  [[nodiscard]] std::shared_ptr<DNA::Bin> get_ptr_to_bin_from_pos(uint32_t pos);
-  [[nodiscard]] std::vector<std::shared_ptr<Bin>>::iterator begin();
-  [[nodiscard]] std::vector<std::shared_ptr<Bin>>::iterator end();
-  [[nodiscard]] std::vector<std::shared_ptr<Bin>>::const_iterator cbegin() const;
-  [[nodiscard]] std::vector<std::shared_ptr<Bin>>::const_iterator cend() const;
-  [[nodiscard]] std::shared_ptr<DNA::Bin> get_ptr_to_previous_bin(const DNA::Bin* current_bin);
-  [[nodiscard]] std::shared_ptr<DNA::Bin> get_ptr_to_next_bin(const DNA::Bin* current_bin);
-
- private:
-  std::vector<std::shared_ptr<Bin>> _bins;
-  uint64_t _length;
-  static std::vector<std::shared_ptr<Bin>> make_bins(uint64_t length, uint32_t bin_size);
+  void write_contacts_to_tsv(const std::string& path_to_file, bool complete = false) const;
+  std::string name;
+  DNA dna;
+  std::vector<ExtrusionBarrier*> barriers;
+  ContactMatrix<uint32_t> contacts;
 };
+
 };  // namespace modle
 
 #endif  // MODLE_DNA_HPP

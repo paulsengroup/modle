@@ -44,7 +44,6 @@ add_library(
         src/genome.cpp
         src/lefs.cpp
         src/parsers.cpp
-        src/contacts.cpp
 )
 
 target_include_directories(
