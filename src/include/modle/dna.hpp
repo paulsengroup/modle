@@ -81,13 +81,14 @@ class DNA {
  private:
   std::vector<Bin> _bins;
   uint64_t _length;
+  uint32_t _bin_size;
 
   // Initializer
   static std::vector<Bin> make_bins(uint64_t length, uint32_t bin_size);
 };
 
 struct Chromosome {
-  Chromosome(std::string name, DNA dna);
+  Chromosome(std::string name, uint64_t length, uint32_t bin_size, uint32_t avg_lef_processivity);
   [[nodiscard]] uint32_t length() const;
   [[nodiscard]] uint32_t n_bins() const;
   [[nodiscard]] uint32_t n_barriers() const;

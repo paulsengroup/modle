@@ -163,7 +163,7 @@ void DNA::Bin::add_extr_barrier(double prob_of_barrier_block, DNA::Direction dir
 }
 
 DNA::DNA(uint64_t length, uint32_t bin_size)
-    : _bins(make_bins(length, bin_size)), _length(length) {}
+    : _bins(make_bins(length, bin_size)), _length(length), _bin_size(bin_size) {}
 
 void DNA::add_barrier(ExtrusionBarrier& b, uint32_t pos) {
   assert(b.get_prob_of_block() > 0);
@@ -202,7 +202,7 @@ uint32_t DNA::length() const { return this->_length; }
 
 uint32_t DNA::get_n_bins() const { return this->_bins.size(); }
 
-uint32_t DNA::get_bin_size() const { return this->_bins[0]._end - this->_bins[0]._start; }
+uint32_t DNA::get_bin_size() const { return this->_bin_size; }
 
 uint32_t DNA::get_n_barriers() const {
   return std::accumulate(this->_bins.begin(), this->_bins.end(), 0UL,
@@ -212,12 +212,11 @@ uint32_t DNA::get_n_barriers() const {
                          });
 }
 
-Chromosome::Chromosome(std::string name, DNA dna)
+Chromosome::Chromosome(std::string name, uint64_t length, uint32_t bin_size,
+                       uint32_t avg_lef_processivity)
     : name(std::move(name)),
-      dna(std::move(dna)),
-      // TODO: Make this a tunable, the first parameter controls the width of the diagonal that we
-      // are actually storing
-      contacts(500'000 / (this->length() / this->n_bins()), this->dna.get_n_bins()) {}
+      dna(length, bin_size),
+      contacts((8 * avg_lef_processivity) / bin_size, length / bin_size) {}
 
 uint32_t Chromosome::length() const { return this->dna.length(); }
 uint32_t Chromosome::n_bins() const { return this->dna.get_n_bins(); }

@@ -14,14 +14,15 @@ Genome::Genome(std::string_view path_to_bed, uint32_t bin_size, uint32_t n_lefs,
                uint64_t seed)
     : _path_to_bed(path_to_bed),
       _bin_size(bin_size),
-      _chromosomes(init_chromosomes_from_bed()),
-      _rand_gen(std::mt19937(seed)),
       _avg_lef_processivity(avg_lef_processivity),
-      _lefs(generate_lefs(n_lefs)),
       _probability_of_barrier_block(probability_of_barrier_block),
       _probability_of_lef_rebind(probability_of_lef_rebind),
       _probability_of_extr_unit_bypass(probability_of_extr_unit_bypass),
-      _seed(seed) {}
+      _lefs(generate_lefs(n_lefs)),
+      _chromosomes(init_chromosomes_from_bed()),
+      _seed(seed),
+      _rand_gen(std::mt19937(seed)) {
+}
 
 std::vector<uint32_t> Genome::get_chromosome_lengths() const {
   std::vector<uint32_t> lengths;
@@ -41,7 +42,8 @@ std::vector<Chromosome> Genome::init_chromosomes_from_bed() const {
   SimpleBEDParser parser(this->_path_to_bed);
   SimpleBED record = parser.parse_next();
   do {
-    chromosomes.emplace_back(record.chr, DNA{record.chr_end - record.chr_start, this->_bin_size});
+    chromosomes.emplace_back(record.chr, record.chr_end - record.chr_start, this->_bin_size,
+                             this->_avg_lef_processivity);
     record = parser.parse_next();
   } while (!record.empty());
 
@@ -149,7 +151,7 @@ void Genome::simulate_extrusion(uint32_t iterations) {
     }
     for (auto& lef : this->_lefs) {
       if (lef.is_bound()) {
-//        lef.register_contact();
+        //        lef.register_contact();
         lef.check_constraints(this->_rand_gen);
       } else {
         auto& chr = this->_chromosomes[chr_idx(this->_rand_gen)];

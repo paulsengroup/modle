@@ -37,14 +37,14 @@ class Genome {
  private:
   std::string _path_to_bed;
   uint32_t _bin_size;
-  std::vector<Chromosome> _chromosomes;
-  std::mt19937 _rand_gen;
   uint32_t _avg_lef_processivity;
-  std::vector<Lef> _lefs;
   double _probability_of_barrier_block;
   double _probability_of_lef_rebind;
   double _probability_of_extr_unit_bypass;
+  std::vector<Lef> _lefs;
+  std::vector<Chromosome> _chromosomes;
   uint64_t _seed;
+  std::mt19937 _rand_gen;
 
   [[nodiscard]] std::vector<Chromosome> init_chromosomes_from_bed() const;
   [[nodiscard]] std::vector<Lef> generate_lefs(uint32_t n);
