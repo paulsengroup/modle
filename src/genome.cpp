@@ -21,8 +21,7 @@ Genome::Genome(std::string_view path_to_bed, uint32_t bin_size, uint32_t n_lefs,
       _lefs(generate_lefs(n_lefs)),
       _chromosomes(init_chromosomes_from_bed()),
       _seed(seed),
-      _rand_gen(std::mt19937(seed)) {
-}
+      _rand_gen(std::mt19937(seed)) {}
 
 std::vector<uint32_t> Genome::get_chromosome_lengths() const {
   std::vector<uint32_t> lengths;
@@ -35,6 +34,11 @@ uint32_t Genome::get_n_of_free_lefs() const {
   return std::accumulate(
       this->_lefs.begin(), this->_lefs.end(), 0UL,
       [](uint32_t accumulator, const Lef& lef) { return accumulator + !lef.is_bound(); });
+}
+
+uint32_t Genome::get_n_lefs() const { return this->_lefs.size(); }
+uint32_t Genome::get_n_of_bound_lefs() const {
+  return this->_lefs.size() - this->get_n_of_free_lefs();
 }
 
 std::vector<Chromosome> Genome::init_chromosomes_from_bed() const {

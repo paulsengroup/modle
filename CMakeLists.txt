@@ -1,5 +1,14 @@
 cmake_minimum_required(VERSION 3.12)
-project(modle)
+project(modle
+        HOMEPAGE_URL "https://github.com/robomics/modle"
+        LANGUAGES CXX
+        VERSION 0.0.1
+        DESCRIPTION "Software for in-silico modeling of DNA loop extrusion.")
+
+if (NOT CMAKE_BUILD_TYPE)
+    set(CMAKE_BUILD_TYPE "${default_build_type}" CACHE STRING
+            "Default BUILD_TYPE is ${default_build_type}" FORCE)
+endif ()
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -16,7 +25,15 @@ FetchContent_Declare(
         SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/external/abseil-cpp
 )
 
-FetchContent_MakeAvailable(abseil-cpp)
+FetchContent_Declare(
+        CLI11
+        GIT_REPOSITORY https://github.com/CLIUtils/CLI11.git
+        GIT_TAG v1.9.1
+        GIT_SHALLOW ON
+        SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/external/CLI11
+)
+
+FetchContent_MakeAvailable(abseil-cpp CLI11)
 
 set(MODLE_DEBUG_OPTIONS "-Wall;-Wextra;-ggdb;-Og;-g3")
 set(MODLE_RELEASE_OPTIONS "-Wall;-Wextra;-O3")
@@ -38,7 +55,6 @@ endif ()
 
 add_library(
         libmodle
-        src/config.cpp
         src/dna.cpp
         src/extr_barrier.cpp
         src/genome.cpp
@@ -70,7 +86,10 @@ set_target_properties(libmodle
 target_compile_options(libmodle PUBLIC "$<$<CONFIG:DEBUG>:${MODLE_DEBUG_OPTIONS}>")
 target_compile_options(libmodle PUBLIC "$<$<CONFIG:RELEASE>:${MODLE_RELEASE_OPTIONS}>")
 
-add_executable(modle src/main.cpp)
+add_executable(
+        modle
+        src/main.cpp
+)
 
 target_link_libraries(
         modle
@@ -79,12 +98,14 @@ target_link_libraries(
         absl::strings
         absl::str_format
         absl::time
+        CLI11::CLI11
 )
 
 target_include_directories(
         modle
         PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/src/include/
         SYSTEM INTERFACE ${CMAKE_CURRENT_SOURCE_DIR}/external/abseil-cpp/include/
+        SYSTEM INTERFACE ${CMAKE_CURRENT_SOURCE_DIR}/external/CLI11/include/
 )
 
 target_compile_options(modle PUBLIC "$<$<CONFIG:DEBUG>:${MODLE_DEBUG_OPTIONS}>")
