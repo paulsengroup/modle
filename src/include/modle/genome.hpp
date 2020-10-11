@@ -1,5 +1,4 @@
-#ifndef MODLE_GENOME_HPP
-#define MODLE_GENOME_HPP
+#pragma once
 
 #include <memory>
 
@@ -18,22 +17,26 @@ class Genome {
          uint32_t avg_lef_processivity, double probability_of_barrier_block,
          double probability_of_lef_rebind, double probability_of_extr_unit_bypass,
          uint64_t seed = 0);
+
+  // Getters
   [[nodiscard]] const std::vector<Chromosome>& get_chromosomes() const;
   [[nodiscard]] std::vector<Chromosome>& get_chromosomes();
   [[nodiscard]] std::vector<Lef>& get_lefs();
   [[nodiscard]] const std::vector<Lef>& get_lefs() const;
   [[nodiscard]] uint32_t get_n_chromosomes() const;
   [[nodiscard]] uint64_t size() const;
-  [[nodiscard]] uint32_t n_bins() const;
-  [[nodiscard]] uint32_t n_lefs() const;
-  [[nodiscard]] uint32_t n_barriers() const;
+  [[nodiscard]] uint32_t get_n_bins() const;
+  [[nodiscard]] uint32_t get_n_lefs() const;
+  [[nodiscard]] uint32_t get_n_barriers() const;
   [[nodiscard]] std::vector<uint32_t> get_chromosome_lengths() const;
   [[nodiscard]] uint32_t get_n_of_free_lefs() const;
-  [[nodiscard]] uint32_t get_n_of_bound_lefs() const;
-  [[nodiscard]] uint32_t get_n_lefs() const;
+  [[nodiscard]] uint32_t get_n_of_busy_lefs() const;
 
+  // Initializers
   void randomly_generate_barriers(uint32_t n_barriers);
   void randomly_bind_lefs();
+
+  // Run simulation
   void simulate_extrusion(uint32_t iterations = 1);
 
  private:
@@ -48,9 +51,8 @@ class Genome {
   uint64_t _seed;
   std::mt19937 _rand_gen;
 
+  // Private initializers
   [[nodiscard]] std::vector<Chromosome> init_chromosomes_from_bed() const;
   [[nodiscard]] std::vector<Lef> generate_lefs(uint32_t n);
 };
 }  // namespace modle
-
-#endif  // MODLE_GENOME_HPP

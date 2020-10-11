@@ -1,11 +1,10 @@
-#ifndef MODLE_CONTACTS_HPP
-#define MODLE_CONTACTS_HPP
+#pragma once
 
 #include "absl/container/flat_hash_map.h"
 
 namespace modle {
 
-template<typename I>
+template <typename I>
 class ContactMatrix {
  public:
   ContactMatrix(uint64_t nrows, uint64_t ncols);
@@ -32,5 +31,3 @@ class ContactMatrix {
 }  // namespace modle
 
 #include "modle/impl/contacts.hpp"
-
-#endif  // MODLE_CONTACTS_HPP

@@ -19,7 +19,7 @@ void run_simulation(const modle::config& c) {
   //  genome.print_statistics();
   t0 = absl::Now();
   genome.randomly_bind_lefs();
-  absl::FPrintF(stderr, "Bound %lu LEFs in %s.\n", genome.get_n_of_bound_lefs(),
+  absl::FPrintF(stderr, "Bound %lu LEFs in %s.\n", genome.get_n_of_busy_lefs(),
                 absl::FormatDuration(absl::Now() - t0));
 
   t0 = absl::Now();

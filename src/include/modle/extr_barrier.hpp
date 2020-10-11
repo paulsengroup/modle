@@ -1,8 +1,8 @@
-#ifndef MODLE_EXTR_BARRIER_HPP
-#define MODLE_EXTR_BARRIER_HPP
+#pragma once
 
 #include <cstdint>
 #include <random>
+
 #include "modle/dna.hpp"
 
 namespace modle {
@@ -16,8 +16,5 @@ class ExtrusionBarrier {
  private:
   DNA::Direction _direction{DNA::Direction::none};
   std::geometric_distribution<uint32_t> _block_for;
-
 };
 }  // namespace modle
-
-#endif  // MODLE_EXTR_BARRIER_HPP

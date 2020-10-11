@@ -1,5 +1,4 @@
-#ifndef MODLE_CLI_HPP
-#define MODLE_CLI_HPP
+#pragma once
 
 #include "CLI/CLI.hpp"
 
@@ -59,5 +58,3 @@ class Cli {
 };
 
 }  // namespace modle
-
-#endif  // MODLE_CLI_HPP

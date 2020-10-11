@@ -1,5 +1,4 @@
-#ifndef MODLE_LEFS_HPP
-#define MODLE_LEFS_HPP
+#pragma once
 
 #include <cstdint>
 #include <memory>
@@ -84,5 +83,3 @@ class Lef {
 };
 
 }  // namespace modle
-
-#endif  // MODLE_LEFS_HPP

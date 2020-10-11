@@ -6,9 +6,14 @@ project(modle
         DESCRIPTION "Software for in-silico modeling of DNA loop extrusion.")
 
 if (NOT CMAKE_BUILD_TYPE)
-    set(CMAKE_BUILD_TYPE "${default_build_type}" CACHE STRING
-            "Default BUILD_TYPE is ${default_build_type}" FORCE)
+    set(CMAKE_BUILD_TYPE Release)
 endif ()
+
+if (NOT MODLE_BUILD_DOCS)
+    set(MODLE_BUILD_DOCS OFF)
+endif()
+
+unset(CMAKE_BUILD_TYPE CACHE)
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -34,6 +39,11 @@ FetchContent_Declare(
 )
 
 FetchContent_MakeAvailable(abseil-cpp CLI11)
+
+if (MODLE_BUILD_DOCS)
+    message(STATUS "Building ModLE documentation")
+    add_subdirectory(docs)
+endif ()
 
 set(MODLE_DEBUG_OPTIONS "-Wall;-Wextra;-ggdb;-Og;-g3")
 set(MODLE_RELEASE_OPTIONS "-Wall;-Wextra;-O3")
@@ -109,8 +119,6 @@ target_include_directories(
 
 target_compile_options(modle PUBLIC "$<$<CONFIG:DEBUG>:${MODLE_DEBUG_OPTIONS}>")
 target_compile_options(modle PUBLIC "$<$<CONFIG:RELEASE>:${MODLE_RELEASE_OPTIONS}>")
-
-add_subdirectory(docs)
 
 install(TARGETS libmodle
         LIBRARY
