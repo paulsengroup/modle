@@ -65,8 +65,8 @@ add_library(
 target_include_directories(
         libmodle
         PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/src/include/
-        SYSTEM PRIVATE ${ZLIB_INCLUDE_DIRS}/
-        SYSTEM INTERFACE ${CMAKE_CURRENT_SOURCE_DIR}/external/abseil-cpp/include/
+        PRIVATE ${ZLIB_INCLUDE_DIRS}/
+        INTERFACE ${CMAKE_CURRENT_SOURCE_DIR}/external/abseil-cpp/include/
 )
 
 target_link_libraries(
@@ -103,13 +103,14 @@ target_link_libraries(
 
 target_include_directories(
         modle
-        PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/src/include/
-        SYSTEM INTERFACE ${CMAKE_CURRENT_SOURCE_DIR}/external/abseil-cpp/include/
-        SYSTEM INTERFACE ${CMAKE_CURRENT_SOURCE_DIR}/external/CLI11/include/
+        PUBLIC libmodle
+        INTERFACE ${CMAKE_CURRENT_SOURCE_DIR}/external/CLI11/include/
 )
 
 target_compile_options(modle PUBLIC "$<$<CONFIG:DEBUG>:${MODLE_DEBUG_OPTIONS}>")
 target_compile_options(modle PUBLIC "$<$<CONFIG:RELEASE>:${MODLE_RELEASE_OPTIONS}>")
+
+add_subdirectory(docs)
 
 install(TARGETS libmodle
         LIBRARY

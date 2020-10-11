@@ -10,3 +10,4 @@ Singularity*
 test/data/*
 test/googletest
 scratch/
+docs/
