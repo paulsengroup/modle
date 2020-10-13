@@ -6,6 +6,14 @@
 #include "modle/dna.hpp"
 
 namespace modle {
+/** \brief Simple class to model a loop extrusion barrier
+ *
+ * An instance of ExtrusionBarrier can have a direction (DNA::Direction) and a probability of
+ * blocking. The probability of blocking is used to initialize a random number generator that
+ * outputs numbers under the geometric distribution.
+ * The numbers returned by this generator will be used as a base to determine for how long a given
+ * ExtrusionUnit that reached this Extrusionbarrier instance should be stalled.
+ */
 class ExtrusionBarrier {
  public:
   ExtrusionBarrier(double prob_of_block, DNA::Direction direction);

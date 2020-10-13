@@ -116,12 +116,13 @@ void Genome::randomly_bind_lefs() {
   const auto& weights = this->get_chromosome_lengths();
   std::discrete_distribution<> chr_idx(weights.begin(), weights.end());
 
-  for (auto& lef : this->_lefs) {
+  for (auto& lef :
+       this->_lefs) {  // Randomly select a chromosome, barrier binding pos and direction
     auto& chr = this->_chromosomes[chr_idx(this->_rand_gen)];
     std::uniform_int_distribution<uint32_t> uniform_rng(0, chr.length());
     auto pos = uniform_rng(this->_rand_gen);
 
-    lef.bind_at_pos(chr, pos, this->_rand_gen);
+    lef.bind_at_pos(chr, pos, this->_rand_gen);  // And bind to it
   }
 }
 
@@ -141,7 +142,7 @@ void Genome::simulate_extrusion(uint32_t iterations) {
 
     for (auto& lef : this->_lefs) {
       // Check whether the last round of extrusions caused a collision with another LEF or an extr.
-      // boundary, apply the appropriate stall and increase LEF lifetime when appropriate
+      // boundary, apply the stall and/or increase LEF lifetime where appropriate
       if (lef.is_bound()) {
         lef.check_constraints(this->_rand_gen);
       } else {
