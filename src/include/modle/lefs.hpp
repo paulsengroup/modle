@@ -92,6 +92,7 @@ class ExtrusionUnit {
   [[nodiscard]] uint64_t check_constraints(std::mt19937& rand_gen);
   bool try_extrude();
   [[nodiscard]] double get_prob_of_extr_unit_bypass() const;
+  [[nodiscard]] uint32_t get_bin_index() const;
 
  private:
   Lef& _parent_lef;

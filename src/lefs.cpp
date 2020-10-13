@@ -20,6 +20,8 @@ double ExtrusionUnit::get_prob_of_extr_unit_bypass() const {
   return this->_parent_lef.get_probability_of_extr_unit_bypass();
 }
 
+uint32_t ExtrusionUnit::get_bin_index() const { return this->_bin->get_index(); }
+
 bool ExtrusionUnit::try_extrude() {
   assert(this->_direction == DNA::Direction::fwd || this->_direction == DNA::Direction::rev);
   if (this->is_stalled()) {
@@ -99,7 +101,7 @@ uint64_t ExtrusionUnit::check_constraints(std::mt19937& rand_gen) {
   if (this->is_stalled()) return 0;
   // This already applies the appropriate stall to colliding units.
   // Communicating this to Lef should not be necessary.
-  if (const auto stalls = this->check_for_extruder_collisions(rand_gen); stalls > 0) return stalls;
+  this->check_for_extruder_collisions(rand_gen);
   // This already figures out if whether we should apply a "big" or "small" stall,
   // based on the direction of extrusion as well as the direction of the barrier
   // that is blocking the extrusion unit
@@ -111,14 +113,18 @@ uint32_t ExtrusionUnit::check_for_extruder_collisions(std::mt19937& rand_gen) {
   assert(this->_direction == DNA::Direction::fwd || this->_direction == DNA::Direction::rev);
   assert(this->_bin->get_n_extr_units() > 0);
   uint32_t n_stalls = 0;
+  // Avoid checking further if this is the only ExtrusionUnit bound to this->_bin
   if (this->_bin->get_n_extr_units() == 1) return n_stalls;
 
   for (auto& other : this->_bin->get_extr_units()) {
     assert(other->_direction == DNA::Direction::fwd || other->_direction == DNA::Direction::rev);
+    // Skip over extr. units belonging to the same LEF and apply a stall if this and other are
+    // extruding in opposite directions
     if (&this->_parent_lef != &other->_parent_lef && this->_direction != other->_direction) {
       std::geometric_distribution<uint32_t> dist(this->get_prob_of_extr_unit_bypass());
       n_stalls = dist(rand_gen);
       this->increment_stalls(n_stalls);
+      // In case other is not stalled, also apply the stall to that unit
       if (!other->is_stalled()) other->increment_stalls(n_stalls);
       break;
     }
@@ -127,7 +133,6 @@ uint32_t ExtrusionUnit::check_for_extruder_collisions(std::mt19937& rand_gen) {
 }
 
 uint64_t ExtrusionUnit::check_for_extrusion_barrier(std::mt19937& rand_gen) {
-  assert(!this->is_stalled());
   uint64_t applied_stall = 0;
   this->_blocking_barrier = this->_bin->get_next_extr_barrier(this->_blocking_barrier);
   if (this->_blocking_barrier) {
@@ -137,12 +142,6 @@ uint64_t ExtrusionUnit::check_for_extrusion_barrier(std::mt19937& rand_gen) {
       applied_stall /= 2;  // TODO: Make this tunable
     }
     this->increment_stalls(applied_stall);
-    //    if (applied_stall > 0) {
-    //      absl::FPrintF(
-    //          stderr, "Applying a %s stall of %lu. # of stalls left: %lu\n",
-    //          this->_blocking_barrier->get_direction() == this->get_extr_direction() ? "big" :
-    //          "small", applied_stall, this->_stalls_left + applied_stall);
-    //    }
   }
   return applied_stall;
 }
@@ -169,6 +168,8 @@ void Lef::bind_at_pos(Chromosome& chr, uint32_t pos, std::mt19937& rand_eng) {
     this->_right_unit =
         std::make_unique<ExtrusionUnit>(*this, this->_probability_of_extr_unit_bypass);
   this->_left_unit->bind(this->_chr, pos, DNA::Direction::rev);
+  //  this->_right_unit->bind(this->_chr, std::min(pos + chr.dna.get_bin_size(), chr.length()),
+  //                          DNA::Direction::fwd);
   this->_right_unit->bind(this->_chr, pos, DNA::Direction::fwd);
 }
 
@@ -204,38 +205,21 @@ uint32_t Lef::extrude() {
 }
 
 void Lef::register_contact() {
-  this->_chr->contacts.increment(this->_left_unit->_bin->get_index(),
-                                 this->_right_unit->_bin->get_index());
+  this->_chr->contacts.increment(this->_left_unit->get_bin_index(),
+                                 this->_right_unit->get_bin_index());
 }
 
 void Lef::check_constraints(std::mt19937& rand_gen) {
   if (this->_left_unit->is_stalled() && this->_right_unit->is_stalled()) {
-    //    absl::FPrintF(stderr, "Both extrusion units of lef %p are stalled!\n", this);
     return;
   }
-  uint32_t n_of_stalls_due_to_barriers = std::max(this->_left_unit->check_constraints(rand_gen),
-                                                  this->_right_unit->check_constraints(rand_gen));
-  //  if (n_of_stalls_due_to_barriers > 0) {
-  //    absl::FPrintF(stderr, "n_of_stalls_due_to_barriers=%lu\n", n_of_stalls_due_to_barriers);
-  //  }
-  if (this->_left_unit->is_stalled() && this->_right_unit->is_stalled()) {
-    n_of_stalls_due_to_barriers *= 2;
-    if (this->_left_unit->hard_stall() && this->_right_unit->hard_stall()) {
-      n_of_stalls_due_to_barriers *= 2;
-      assert(UINT32_MAX - n_of_stalls_due_to_barriers > this->_lifetime);
-      this->_lifetime += n_of_stalls_due_to_barriers;
-    }
-
-    //    absl::FPrintF(stderr, "left_stall %lu -> %lu\n", this->_left_unit->_stalls_left,
-    //                  std::max(n_of_stalls_due_to_barriers, this->_left_unit->_stalls_left));
-    //    absl::FPrintF(stderr, "right_stall %lu -> %lu\n", this->_right_unit->_stalls_left,
-    //                  std::max(n_of_stalls_due_to_barriers, this->_right_unit->_stalls_left));
-
-    this->_left_unit->_stalls_left =
-        std::max(n_of_stalls_due_to_barriers, this->_left_unit->_stalls_left);
-    this->_right_unit->_stalls_left =
-        std::max(n_of_stalls_due_to_barriers, this->_right_unit->_stalls_left);
-    //    usleep(100000);
+  this->_left_unit->check_constraints(rand_gen);
+  this->_right_unit->check_constraints(rand_gen);
+  if (this->_left_unit->hard_stall() && this->_right_unit->hard_stall()) {
+    auto n_of_stalls_due_to_barriers =
+        std::min(this->_left_unit->_stalls_left, this->_right_unit->_stalls_left);
+    assert(UINT32_MAX - n_of_stalls_due_to_barriers > this->_lifetime);
+    this->_lifetime += n_of_stalls_due_to_barriers;
   }
 }
 
