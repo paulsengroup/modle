@@ -162,6 +162,8 @@ void ContactMatrix<I>::write_to_tsv(const std::string &path_to_file) const {
   }
   std::string buff;
   for (const auto &row : this->_matrix) {
+    buff = absl::StrJoin(row, "\t");
+    buff += "\n";
     gzwrite(gzf, buff.c_str(), buff.size());
   }
   if (gzclose(gzf) != Z_OK) {
