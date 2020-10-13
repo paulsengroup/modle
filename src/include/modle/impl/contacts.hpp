@@ -65,9 +65,29 @@ void ContactMatrix<I>::decrement(uint64_t row, uint64_t col, I n) {
 }
 
 template <typename I>
-void ContactMatrix<I>::print() const {
-  for (const auto &row : this->_matrix) {
-    absl::PrintF("%s\n", absl::StrJoin(row, "\t"));
+void ContactMatrix<I>::print(bool full) const {
+  if (full) {
+    std::vector<I> row(this->_ncols, 0);
+    for (uint64_t y = 0; y < this->_ncols; ++y) {
+      std::fill(row.begin(), row.end(), 0);
+      for (uint64_t x = 0; x < this->_ncols; ++x) {
+        auto j = x;
+        auto i = j - y;
+        if (y > x) {
+          j = y;
+          i = j - x;
+        }
+        if (i >= this->_nrows)
+          row[x] = 0;
+        else
+          row[x] = this->_matrix[i][j];
+      }
+      absl::PrintF("%s\n", absl::StrJoin(row, "\t"));
+    }
+  } else {
+    for (const auto &row : this->_matrix) {
+      absl::PrintF("%s\n", absl::StrJoin(row, "\t"));
+    }
   }
 }
 
@@ -142,8 +162,6 @@ void ContactMatrix<I>::write_to_tsv(const std::string &path_to_file) const {
   }
   std::string buff;
   for (const auto &row : this->_matrix) {
-    buff = absl::StrJoin(row, "\t");
-    buff += "\n";
     gzwrite(gzf, buff.c_str(), buff.size());
   }
   if (gzclose(gzf) != Z_OK) {

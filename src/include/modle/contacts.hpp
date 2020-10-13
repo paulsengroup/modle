@@ -12,7 +12,7 @@ class ContactMatrix {
   void set(uint64_t row, uint64_t col, I n = 1);
   void increment(uint64_t row, uint64_t col, I n = 1);
   void decrement(uint64_t row, uint64_t col, I n = 1);
-  void print() const;
+  void print(bool full = false) const;
   [[nodiscard]] std::vector<std::vector<I>> generate_symmetric_matrix() const;
   [[nodiscard]] uint64_t n_cols() const;
   [[nodiscard]] uint64_t n_rows() const;
