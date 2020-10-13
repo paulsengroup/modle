@@ -5,18 +5,19 @@ project(modle
         VERSION 0.0.1
         DESCRIPTION "Software for in-silico modeling of DNA loop extrusion.")
 
-if (NOT CMAKE_BUILD_TYPE)
-    set(CMAKE_BUILD_TYPE Release)
+if (NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
+    message(STATUS "Setting build type to \"Release\" as none was specified.")
+    set(CMAKE_BUILD_TYPE Release CACHE STRING "Choose the type of build." FORCE)
 endif ()
+message(STATUS "Build type: ${CMAKE_BUILD_TYPE}")
 
 if (NOT MODLE_BUILD_DOCS)
     set(MODLE_BUILD_DOCS OFF)
-endif()
-
-unset(CMAKE_BUILD_TYPE CACHE)
+endif ()
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
+
 include(FetchContent)
 include(CheckIPOSupported)
 
@@ -41,7 +42,7 @@ FetchContent_Declare(
 FetchContent_MakeAvailable(abseil-cpp CLI11)
 
 if (MODLE_BUILD_DOCS)
-    message(STATUS "Building ModLE documentation")
+    message(STATUS "Will build ModLE's documentation")
     add_subdirectory(docs)
 endif ()
 
@@ -57,7 +58,7 @@ else ()
     message(STATUS "IPO/LTO not available")
 endif ()
 
-IF (CMAKE_BUILD_TYPE MATCHES Debug)
+if (CMAKE_BUILD_TYPE STREQUAL "Debug")
     message(STATUS "Debug mode detected: enabling tests")
     include_directories(${CMAKE_CURRENT_SOURCE_DIR}/src/include/)
     add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/test)
