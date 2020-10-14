@@ -160,6 +160,7 @@ bool Lef::is_bound() const {
 void Lef::bind_at_pos(Chromosome& chr, uint32_t pos, std::mt19937& rand_eng) {
   this->_chr = &chr;
   this->_lifetime = this->_lifetime_generator(rand_eng);
+  std::discrete_distribution<int8_t> bin_idx_offset_gen({1, 1, 0, 1, 1});
   // We assume that the left unit always travels towards the 5', while the right unit goes to the 3'
   if (!this->_left_unit)
     this->_left_unit =
@@ -168,9 +169,15 @@ void Lef::bind_at_pos(Chromosome& chr, uint32_t pos, std::mt19937& rand_eng) {
     this->_right_unit =
         std::make_unique<ExtrusionUnit>(*this, this->_probability_of_extr_unit_bypass);
   this->_left_unit->bind(this->_chr, pos, DNA::Direction::rev);
-  //  this->_right_unit->bind(this->_chr, std::min(pos + chr.dna.get_bin_size(), chr.length()),
-  //                          DNA::Direction::fwd);
   this->_right_unit->bind(this->_chr, pos, DNA::Direction::fwd);
+  if (int8_t bin_idx_offset = bin_idx_offset_gen(rand_eng) - 2; bin_idx_offset < 0) {
+    for (; bin_idx_offset < 0; ++bin_idx_offset) this->_left_unit->try_moving_to_prev_bin();
+  } else {
+    assert(bin_idx_offset != 0);
+    for (; bin_idx_offset < 2; ++bin_idx_offset) this->_right_unit->try_moving_to_next_bin();
+  }
+  auto n = this->_chr->dna.get_ptr_to_bin_from_pos(pos)->get_index();
+  this->_chr->contacts.increment(n, n);
 }
 
 std::string_view Lef::get_chr_name() const { return this->_chr->name; }
