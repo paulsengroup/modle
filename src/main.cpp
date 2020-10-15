@@ -16,7 +16,6 @@ void run_simulation(const modle::config& c) {
   genome.randomly_generate_barriers(c.number_of_barriers);
 
   absl::FPrintF(stderr, "Initialization took %s.\n", absl::FormatDuration(absl::Now() - t0));
-  //  genome.print_statistics();
   t0 = absl::Now();
   genome.randomly_bind_lefs();
   absl::FPrintF(stderr, "Bound %lu LEFs in %s.\n", genome.get_n_of_busy_lefs(),
@@ -24,25 +23,10 @@ void run_simulation(const modle::config& c) {
 
   t0 = absl::Now();
   genome.simulate_extrusion(c.simulation_iterations);
-  absl::FPrintF(stderr, "Simulation took %s.\nWriting contact matrices to directory '%s'...",
-                absl::FormatDuration(absl::Now() - t0), c.output_dir);
-  std::filesystem::create_directories(c.output_dir);
-  for (const auto& chr : genome.get_chromosomes()) {
-    t0 = absl::Now();
-    auto file = absl::StrFormat("%s/%s.tsv.gz", c.output_dir, chr.name);
-    absl::FPrintF(stderr, "Writing full contact matrix for '%s' to file '%s'...\n", chr.name, file);
-    chr.write_contacts_to_tsv(file, true);
-    file = absl::StrFormat("%s/%s_raw.tsv.gz", c.output_dir, chr.name);
-    chr.write_contacts_to_tsv(file);
-    absl::FPrintF(stderr, "Writing raw contact matrix for '%s' to file '%s'...\n", chr.name, file);
-    absl::FPrintF(stderr, "DONE in %s!\n", absl::FormatDuration(absl::Now() - t0));
-  }
-  if (c.make_heatmaps) {
-    t0 = absl::Now();
-    absl::FPrintF(stderr, "Generating heatmaps...\n");
-    absl::FPrintF(stderr, "TODO!!\n");
-    absl::FPrintF(stderr, "DONE in %s!\n", absl::FormatDuration(absl::Now() - t0));
-  }
+  absl::FPrintF(stderr, "Simulation took %s.\n", absl::FormatDuration(absl::Now() - t0));
+  genome.write_contacts_to_file(c.output_dir.data());
+
+  if (c.make_heatmaps) genome.make_heatmaps(c.output_dir);
 }
 }  // namespace modle
 
@@ -51,6 +35,8 @@ int main(int argc, char** argv) {
 
   try {
     auto config = cli.parse_arguments();
+    config.print();
+
     modle::run_simulation(config);
   } catch (const CLI::ParseError& e) {
     return cli.exit(e);  //  This takes care of formatting and printing error messages (if any)

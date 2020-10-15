@@ -1,4 +1,5 @@
-#include <zlib.h>
+// #include <zlib.h>
+#include <bzlib.h>
 
 #include <cassert>
 #include <cmath>
@@ -151,12 +152,22 @@ uint64_t ContactMatrix<I>::n_cols() const {
 }
 
 template <typename I>
-void ContactMatrix<I>::write_to_tsv(const std::string &path_to_file) const {
+std::pair<uint32_t, uint32_t> ContactMatrix<I>::write_to_tsv(
+    const std::string &path_to_file) const {
+  auto fp = fopen(path_to_file.c_str(), "wb");
+  int bz_status;
+  if (!fp)
+    throw std::runtime_error(
+        absl::StrFormat("An error occurred while opening file '%s' for writing.", path_to_file));
   if (this->_updates_missed > 0) {
     absl::FPrintF(stderr, "WARNING: There were %lu missed updates!\n", this->_updates_missed);
   }
-  auto gzf = gzopen(path_to_file.c_str(), "w");
-  if (gzf == Z_NULL) {
+
+  auto bzf = BZ2_bzWriteOpen(&bz_status, fp, 9 /* block size */, 0 /* verbosity */,
+                             /* work factor, 0 == default == 30 */ 0);
+  if (bz_status != BZ_OK) {
+    BZ2_bzWriteClose(nullptr, bzf, 0, nullptr, nullptr);
+    fclose(fp);
     throw std::runtime_error(
         absl::StrFormat("Unable to open file '%s' for writing.", path_to_file));
   }
@@ -164,21 +175,40 @@ void ContactMatrix<I>::write_to_tsv(const std::string &path_to_file) const {
   for (const auto &row : this->_matrix) {
     buff = absl::StrJoin(row, "\t");
     buff += "\n";
-    gzwrite(gzf, buff.c_str(), buff.size());
+    BZ2_bzWrite(&bz_status, bzf, buff.data(), buff.size());
+    if (bz_status != BZ_OK) {
+      BZ2_bzWriteClose(nullptr, bzf, 0, nullptr, nullptr);
+      fclose(fp);
+      throw std::runtime_error(
+          absl::StrFormat("An error occurred while writing to file '%s'.", path_to_file));
+    }
   }
-  if (gzclose(gzf) != Z_OK) {
+  uint32_t bytes_in, bytes_out;
+  BZ2_bzWriteClose(&bz_status, bzf, 0, &bytes_in, &bytes_out);
+  if (fclose(fp) != 0 || bz_status != BZ_OK) {
     throw std::runtime_error(
-        absl::StrFormat("An error occurred while closing the following file '%s'.", path_to_file));
+        absl::StrFormat("An error occurred while closing file '%s'.", path_to_file));
   }
+  return std::make_pair(bytes_in, bytes_out);
 }
 
 template <typename I>
-void ContactMatrix<I>::write_full_matrix_to_tsv(const std::string &path_to_file) const {
+std::pair<uint32_t, uint32_t> ContactMatrix<I>::write_full_matrix_to_tsv(
+    const std::string &path_to_file) const {
+  auto fp = fopen(path_to_file.c_str(), "wb");
+  int bz_status;
+  if (!fp)
+    throw std::runtime_error(
+        absl::StrFormat("An error occurred while opening file '%s' for writing.", path_to_file));
   if (this->_updates_missed > 0) {
     absl::FPrintF(stderr, "WARNING: There were %lu missed updates!\n", this->_updates_missed);
   }
-  auto gzf = gzopen(path_to_file.c_str(), "w");
-  if (gzf == Z_NULL) {
+
+  auto bzf = BZ2_bzWriteOpen(&bz_status, fp, 9 /* block size */, 0 /* verbosity */,
+                             /* work factor, 0 == default == 30 */ 0);
+  if (bz_status != BZ_OK) {
+    BZ2_bzWriteClose(nullptr, bzf, 0, nullptr, nullptr);
+    fclose(fp);
     throw std::runtime_error(
         absl::StrFormat("Unable to open file '%s' for writing.", path_to_file));
   }
@@ -200,12 +230,28 @@ void ContactMatrix<I>::write_full_matrix_to_tsv(const std::string &path_to_file)
         row[x] = this->_matrix[i][j];
     }
     buff = absl::StrJoin(row, "\t") + "\n";
-    gzwrite(gzf, buff.c_str(), buff.size());
+    BZ2_bzWrite(&bz_status, bzf, buff.data(), buff.size());
+    if (bz_status != BZ_OK) {
+      BZ2_bzWriteClose(nullptr, bzf, 0, nullptr, nullptr);
+      fclose(fp);
+      throw std::runtime_error(
+          absl::StrFormat("An error occurred while writing to file '%s'.", path_to_file));
+    }
   }
-  if (gzclose(gzf) != Z_OK) {
+  uint32_t bytes_in, bytes_out;
+  BZ2_bzWriteClose(&bz_status, bzf, 0, &bytes_in, &bytes_out);
+  if (fclose(fp) != 0 || bz_status != BZ_OK) {
     throw std::runtime_error(
-        absl::StrFormat("An error occurred while closing the following file '%s'.", path_to_file));
+        absl::StrFormat("An error occurred while closing file '%s'.", path_to_file));
   }
+  return std::make_pair(bytes_in, bytes_out);
+}
+
+template <typename I>
+void ContactMatrix<I>::handle_bzip_write_errors(int status, std::string_view path) {
+  if (status != BZ_OK)
+    throw std::runtime_error(
+        absl::StrFormat("An error occurred while compressing file '%s'.", path));
 }
 
 }  // namespace modle

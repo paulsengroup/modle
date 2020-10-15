@@ -167,7 +167,8 @@ struct Chromosome {
   [[nodiscard]] uint32_t get_n_bins() const;
   [[nodiscard]] uint32_t get_n_barriers() const;
 
-  void write_contacts_to_tsv(const std::string& path_to_file, bool write_full_matrix = false) const;
+  void write_contacts_to_tsv(std::string_view chr_name, std::string_view output_dir,
+                             bool write_full_matrix = false) const;
 
   std::string name;  ///< Sequence name (e.g. chromosome name from a BED file).
   DNA dna;           ///< DNA molecule represented as a sequence of DNA::Bin%s.

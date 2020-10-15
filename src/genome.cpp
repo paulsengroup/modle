@@ -1,5 +1,8 @@
 #include "modle/genome.hpp"
 
+#include <cstdlib>
+#include <execution>
+#include <filesystem>
 #include <functional>
 
 #include "absl/strings/str_format.h"
@@ -40,6 +43,54 @@ uint32_t Genome::get_n_of_free_lefs() const {
 
 uint32_t Genome::get_n_of_busy_lefs() const {
   return this->get_n_lefs() - this->get_n_of_free_lefs();
+}
+
+void Genome::write_contacts_to_file(const std::string& output_dir) const {
+  std::filesystem::create_directories(output_dir);
+  std::for_each(
+      std::execution::par, this->_chromosomes.begin(), this->_chromosomes.end(),
+      [&](const Chromosome& chr) {
+        auto t0 = absl::Now();
+        auto file = absl::StrFormat("%s/%s.tsv.bz2", output_dir, chr.name);
+        absl::FPrintF(stderr, "Writing full contact matrix for '%s' to file '%s'...\n", chr.name,
+                      file);
+        {
+          auto [bytes_in, bytes_out] = chr.contacts.write_full_matrix_to_tsv(file);
+          absl::FPrintF(
+              stderr,
+              "DONE writing '%s' in %s! Compressed size: %.2f MB (compression ratio %.2fx)\n", file,
+              absl::FormatDuration(absl::Now() - t0), bytes_out / 1.0e6,
+              static_cast<double>(bytes_in) / bytes_out);
+          t0 = absl::Now();
+        }
+        file = absl::StrFormat("%s/%s_raw.tsv.bz2", output_dir, chr.name);
+        absl::FPrintF(stderr, "Writing raw contact matrix for '%s' to file '%s'...\n", chr.name,
+                      file);
+        auto [bytes_in, bytes_out] = chr.contacts.write_to_tsv(file);
+        absl::FPrintF(
+            stderr, "DONE writing '%s' in %s! Compressed size: %.2f MB (compression ratio %.2fx)\n",
+            file, absl::FormatDuration(absl::Now() - t0), bytes_out / 1.0e6,
+            static_cast<double>(bytes_in) / bytes_out);
+      });
+}
+
+void Genome::make_heatmaps(std::string_view output_dir) const {
+  const auto t0 = absl::Now();
+  absl::FPrintF(stderr, "Generating heatmaps for %lu chromosomes...", this->get_n_chromosomes());
+  std::string script = std::filesystem::is_regular_file("../utils/plot_contact_matrix.py")
+                           ? "../utils/plot_contact_matrix.py"
+                           : "plot_contact_matrix.py";
+  auto cmd = absl::StrFormat("%s --input-dir %s --output-dir %s --bin-size %lu", script, output_dir,
+                             output_dir, this->_bin_size);
+  if (auto status = std::system(cmd.c_str()); status != 0) {
+    if (WIFEXITED(status) == 0) {
+      if (auto ec = WEXITSTATUS(status); ec != 0) {
+        throw std::runtime_error(
+            absl::StrFormat("Command '%s' terminated with exit code %d.", cmd, ec));
+      }
+    }
+  }
+  absl::FPrintF(stderr, "DONE! Plotting took %s.\n", absl::FormatDuration(absl::Now() - t0));
 }
 
 std::vector<Chromosome> Genome::init_chromosomes_from_bed() const {

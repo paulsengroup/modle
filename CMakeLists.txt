@@ -21,7 +21,8 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 include(FetchContent)
 include(CheckIPOSupported)
 
-find_package(ZLIB REQUIRED)
+find_package(BZip2 REQUIRED)
+find_package(TBB REQUIRED)
 
 FetchContent_Declare(
         abseil-cpp
@@ -76,7 +77,7 @@ add_library(
 target_include_directories(
         libmodle
         PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/src/include/
-        PRIVATE ${ZLIB_INCLUDE_DIRS}/
+        PRIVATE ${BZIP2_INCLUDE_DIRS}
         INTERFACE ${CMAKE_CURRENT_SOURCE_DIR}/external/abseil-cpp/include/
 )
 
@@ -87,7 +88,8 @@ target_link_libraries(
         absl::strings
         absl::str_format
         absl::time
-        ZLIB::ZLIB
+        BZip2::BZip2
+        TBB::tbb
 )
 
 set_target_properties(libmodle

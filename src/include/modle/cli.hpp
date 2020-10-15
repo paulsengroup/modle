@@ -17,6 +17,36 @@ struct config {
   double probability_of_extrusion_unit_bypass{0.25};
   bool make_heatmaps{true};
   uint64_t seed{0};
+
+  void print() const {
+    // clang-format off
+    absl::FPrintF(
+        stderr,
+        "###### CONFIG SUMMARY ######\n"
+        "### Input/Output##\n"
+        "##    Input BED:                        '%s'\n"
+        "##    Output directory:                 '%s'\n"
+        "### General settings\n"
+        "##    Bin size (bp):                    %lu\n"
+        "##    # of iterations:                  %lu\n"
+        "##    Avg. LEF processivity (bp):       %lu\n"
+        "##    # of randomly generated barriers: %lu\n"
+        "##    # of randomly generated LEFs:     %lu\n"
+        "### Probabilities:\n"
+        "##    Prob. of barrier block:           %.4g\n"
+        "##    Prob. of LEF rebind:              %.4g\n"
+        "##    Prob. of LEF bypass:              %.4g\n"
+        "### Various:\n"
+        "##    Generate heatmaps:                %s\n"
+        "##    Seed:                             %lu"
+        "\n\n",
+        this->path_to_bed, this->output_dir, this->bin_size, this->simulation_iterations,
+        this->average_lef_processivity, this->number_of_barriers, this->number_of_lefs,
+        this->probability_of_barrier_block, this->probability_of_lef_rebind,
+        this->probability_of_extrusion_unit_bypass, this->make_heatmaps ? "Yes" : "False",
+        this->seed);
+    // clang-format on
+  }
 };
 
 class Cli {

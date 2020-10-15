@@ -16,8 +16,10 @@ class ContactMatrix {
   [[nodiscard]] std::vector<std::vector<I>> generate_symmetric_matrix() const;
   [[nodiscard]] uint64_t n_cols() const;
   [[nodiscard]] uint64_t n_rows() const;
-  void write_full_matrix_to_tsv(const std::string& path_to_file) const;
-  void write_to_tsv(const std::string& path_to_file) const;
+  std::pair<uint32_t /* bytes_in */, uint32_t /* bytes_out */> write_full_matrix_to_tsv(
+      const std::string& path_to_file) const;
+  std::pair<uint32_t /* bytes_in */, uint32_t /* bytes_out */> write_to_tsv(
+      const std::string& path_to_file) const;
 
  private:
   uint64_t _nrows;

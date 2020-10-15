@@ -183,7 +183,7 @@ void DNA::remove_extr_barrier(uint32_t pos, Direction direction) {
 
 std::vector<DNA::Bin> DNA::make_bins(uint64_t length, uint32_t bin_size) {
   std::vector<DNA::Bin> bins;
-  if (length <= bin_size) { // Deal with short DNA molecules
+  if (length <= bin_size) {  // Deal with short DNA molecules
     bins.emplace_back(DNA::Bin{0, 0, length});
     return bins;
   }
@@ -219,17 +219,32 @@ Chromosome::Chromosome(std::string name, uint64_t length, uint32_t bin_size,
                        uint32_t avg_lef_processivity)
     : name(std::move(name)),
       dna(length, bin_size),
-      contacts((8 * avg_lef_processivity) / bin_size, length / bin_size) {}
+      contacts((10 * avg_lef_processivity) / bin_size, length / bin_size) {}
 
 uint32_t Chromosome::length() const { return this->dna.length(); }
 uint32_t Chromosome::get_n_bins() const { return this->dna.get_n_bins(); }
 uint32_t Chromosome::get_n_barriers() const { return this->barriers.size(); }
-void Chromosome::write_contacts_to_tsv(const std::string& path_to_file,
+void Chromosome::write_contacts_to_tsv(std::string_view chr_name, std::string_view output_dir,
                                        bool write_full_matrix) const {
-  if (write_full_matrix)
-    this->contacts.write_full_matrix_to_tsv(path_to_file);
-  else
-    this->contacts.write_to_tsv(path_to_file);
+  const auto t0 = absl::Now();
+  //  uint32_t bytes_in, bytes_out;
+  if (write_full_matrix) {
+    auto file = absl::StrFormat("%s/%s.tsv.bz2", output_dir, chr_name);
+    absl::FPrintF(stderr, "Writing full contact matrix for '%s' to file '%s'...\n", chr_name, file);
+    auto [bytes_in, bytes_out] = this->contacts.write_full_matrix_to_tsv(file);
+    absl::FPrintF(stderr,
+                  "DONE writing '%s' in %s! Compressed size: %.2f MB (compression ration %.2fx)\n",
+                  file, absl::FormatDuration(absl::Now() - t0), bytes_out / 1.0e6,
+                  static_cast<double>(bytes_in) / bytes_out);
+  } else {
+    auto file = absl::StrFormat("%s/%s_raw.tsv.bz2", output_dir, chr_name);
+    absl::FPrintF(stderr, "Writing raw contact matrix for '%s' to file '%s'...\n", chr_name, file);
+    auto [bytes_in, bytes_out] = this->contacts.write_to_tsv(file);
+    absl::FPrintF(stderr,
+                  "DONE writing '%s' in %s! Compressed size: %.2f MB (compression ration %.2fx)\n",
+                  file, absl::FormatDuration(absl::Now() - t0), bytes_out / 1.0e6,
+                  static_cast<double>(bytes_in) / bytes_out);
+  }
 }
 
 }  // namespace modle
