@@ -5,7 +5,7 @@
 namespace modle {
 
 ExtrusionUnit::ExtrusionUnit(Lef& lef, double prob_of_extr_unit_bypass)
-    : _parent_lef(lef), _n_of_stalls_gen(prob_of_extr_unit_bypass) {}
+    : _parent_lef(lef), _n_stall_generator(prob_of_extr_unit_bypass) {}
 
 uint32_t ExtrusionUnit::get_pos() const {
   assert(this->_bin);
@@ -87,12 +87,33 @@ void ExtrusionUnit::unload() {
   this->_blocking_barrier = nullptr;
 }
 
-void ExtrusionUnit::bind(Chromosome* chr, uint32_t pos, DNA::Direction direction) {
+void ExtrusionUnit::bind(Chromosome* chr, uint32_t pos, DNA::Direction direction,
+                         std::mt19937& rand_eng) {
   assert(pos < chr->length());
   assert(direction == DNA::Direction::fwd || direction == DNA::Direction::rev);
   this->_bin = chr->dna.get_ptr_to_bin_from_pos(pos);
   this->_bin->add_extr_unit_binding(this);
   this->_direction = direction;
+
+  if (this->_bin->has_extr_barrier()) {
+    if (direction == DNA::fwd) {
+      for (auto b : *this->_bin->get_all_extr_barriers()) {
+        if (b.get_pos() >= pos) {
+          this->_blocking_barrier = &b;
+          this->set_stalls(this->_blocking_barrier->generate_num_stalls(rand_eng));
+          return;
+        }
+      }
+    }
+    auto& barriers = *this->_bin->get_all_extr_barriers();
+    for (auto b = barriers.rbegin(); b != barriers.rend(); ++b) {
+      if (b->get_pos() <= pos) {
+        this->_blocking_barrier = b.operator->();
+        this->set_stalls(this->_blocking_barrier->generate_num_stalls(rand_eng));
+        return;
+      }
+    }
+  }
 }
 
 bool ExtrusionUnit::is_bound() const { return this->_bin != nullptr; }
@@ -121,8 +142,7 @@ uint32_t ExtrusionUnit::check_for_extruder_collisions(std::mt19937& rand_gen) {
     // Skip over extr. units belonging to the same LEF and apply a stall if this and other are
     // extruding in opposite directions
     if (&this->_parent_lef != &other->_parent_lef && this->_direction != other->_direction) {
-      std::geometric_distribution<uint32_t> dist(this->get_prob_of_extr_unit_bypass());
-      n_stalls = dist(rand_gen);
+      n_stalls = this->_n_stall_generator(rand_gen);
       this->increment_stalls(n_stalls);
       // In case other is not stalled, also apply the stall to that unit
       if (!other->is_stalled()) other->increment_stalls(n_stalls);
@@ -173,8 +193,8 @@ void Lef::bind_at_pos(Chromosome& chr, uint32_t pos, std::mt19937& rand_eng) {
   if (!this->_right_unit)
     this->_right_unit =
         std::make_unique<ExtrusionUnit>(*this, this->_probability_of_extr_unit_bypass);
-  this->_left_unit->bind(this->_chr, pos, DNA::Direction::rev);
-  this->_right_unit->bind(this->_chr, pos, DNA::Direction::fwd);
+  this->_left_unit->bind(this->_chr, pos, DNA::Direction::rev, rand_eng);
+  this->_right_unit->bind(this->_chr, pos, DNA::Direction::fwd, rand_eng);
   if (int8_t bin_idx_offset = bin_idx_offset_gen(rand_eng) - 2; bin_idx_offset < 0) {
     for (; bin_idx_offset < 0; ++bin_idx_offset) this->_left_unit->try_moving_to_prev_bin();
   } else {

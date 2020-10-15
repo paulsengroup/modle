@@ -101,7 +101,9 @@ class DNA {
     [[nodiscard]] uint32_t get_end() const;
     [[nodiscard]] uint32_t size() const;
     [[nodiscard]] uint32_t get_n_extr_units() const;
+    [[nodiscard]] uint32_t get_n_extr_barriers() const;
     [[nodiscard]] uint32_t get_index() const;
+    [[nodiscard]] bool has_extr_barrier() const;
     /** Given a ptr to an instance of ExtrusionBarrier that belongs to this instance of
      * DNA::Bin, return a ptr to the next instance of ExtrusionBarrier that is blocking
      * ExtrusionUnit%s that are moving in the direction specified by \p d.

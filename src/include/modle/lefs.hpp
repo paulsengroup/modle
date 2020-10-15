@@ -101,14 +101,14 @@ class ExtrusionUnit {
   ExtrusionBarrier* _blocking_barrier{nullptr};
   DNA::Direction _direction{};
   uint32_t _stalls_left{0};
-  std::geometric_distribution<uint32_t> _n_of_stalls_gen;
+  std::geometric_distribution<uint32_t> _n_stall_generator;
 
   void set_stalls(uint32_t n);
   void increment_stalls(uint32_t n = 1);
   void decrement_stalls(uint32_t n = 1);
   void reset_stalls();
   void unload();
-  void bind(Chromosome* chr, uint32_t pos, DNA::Direction direction);
+  void bind(Chromosome* chr, uint32_t pos, DNA::Direction direction, std::mt19937& rand_eng);
 
   uint32_t check_for_extruder_collisions(std::mt19937& rand_gen);
   [[nodiscard]] uint64_t check_for_extrusion_barrier(std::mt19937& rand_gen);

@@ -11,12 +11,13 @@
 
 namespace modle {
 
-DNA::Bin::Bin(uint32_t idx, uint64_t start, uint64_t end, const std::vector<ExtrusionBarrier>& barriers)
+DNA::Bin::Bin(uint32_t idx, uint64_t start, uint64_t end,
+              const std::vector<ExtrusionBarrier>& barriers)
     : _idx(idx),
       _start(start),
       _end(end),
-      _extr_barriers(
-          std::make_unique<absl::InlinedVector<ExtrusionBarrier, 3>>(barriers.begin(), barriers.end())) {}
+      _extr_barriers(std::make_unique<absl::InlinedVector<ExtrusionBarrier, 3>>(barriers.begin(),
+                                                                                barriers.end())) {}
 
 DNA::Bin::Bin(uint32_t idx, uint64_t start, uint64_t end)
     : _idx(idx), _start(start), _end(end), _extr_barriers(nullptr) {}
@@ -27,7 +28,12 @@ uint32_t DNA::Bin::size() const { return this->get_end() - this->get_start(); }
 uint32_t DNA::Bin::get_n_extr_units() const {
   return this->_extr_units ? this->_extr_units->size() : 0;
 }
+uint32_t DNA::Bin::get_n_extr_barriers() const {
+  return this->_extr_barriers ? this->_extr_barriers->size() : 0;
+}
 uint32_t DNA::Bin::get_index() const { return this->_idx; }
+
+bool DNA::Bin::has_extr_barrier() const { return this->_extr_barriers != nullptr; }
 
 ExtrusionBarrier* DNA::Bin::get_next_extr_barrier(ExtrusionBarrier* b, Direction d) const {
   assert(d != DNA::Direction::none);
@@ -43,7 +49,6 @@ ExtrusionBarrier* DNA::Bin::get_next_extr_barrier(ExtrusionBarrier* b, Direction
   if (barrier != this->_extr_barriers->end()) return barrier;
   return nullptr;  // Unable to find a suitable ExtrusionBarrier
 }
-
 
 ExtrusionBarrier* DNA::Bin::get_prev_extr_barrier(ExtrusionBarrier* b, Direction d) const {
   assert(d != DNA::Direction::none);
