@@ -11,15 +11,19 @@ void run_simulation(const modle::config& c) {
   auto t0 = absl::Now();
   modle::Genome genome(c.path_to_bed, c.bin_size, c.number_of_lefs, c.average_lef_processivity,
                        c.probability_of_barrier_block, c.probability_of_lef_rebind,
-                       c.probability_of_extrusion_unit_bypass, c.seed);
+                       c.probability_of_extrusion_unit_bypass, c.seed, c.skip_burnin);
 
   genome.randomly_generate_barriers(c.number_of_barriers);
 
   absl::FPrintF(stderr, "Initialization took %s.\n", absl::FormatDuration(absl::Now() - t0));
   t0 = absl::Now();
-  genome.randomly_bind_lefs();
-  absl::FPrintF(stderr, "Bound %lu LEFs in %s.\n", genome.get_n_of_busy_lefs(),
-                absl::FormatDuration(absl::Now() - t0));
+  if (c.skip_burnin) {
+    genome.randomly_bind_lefs();
+    absl::FPrintF(stderr, "Bound %lu LEFs in %s.\n", genome.get_n_of_busy_lefs(),
+                  absl::FormatDuration(absl::Now() - t0));
+  } else {
+    genome.run_burnin(c.probability_of_lef_rebind, 1, 0);
+  }
 
   t0 = absl::Now();
   genome.simulate_extrusion(c.simulation_iterations);

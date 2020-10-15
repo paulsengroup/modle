@@ -14,7 +14,7 @@ namespace modle {
 Genome::Genome(std::string_view path_to_bed, uint32_t bin_size, uint32_t n_lefs,
                uint32_t avg_lef_processivity, double probability_of_barrier_block,
                double probability_of_lef_rebind, double probability_of_extr_unit_bypass,
-               uint64_t seed)
+               uint64_t seed, bool skip_burnin)
     : _path_to_bed(path_to_bed),
       _bin_size(bin_size),
       _avg_lef_processivity(avg_lef_processivity),
@@ -24,7 +24,8 @@ Genome::Genome(std::string_view path_to_bed, uint32_t bin_size, uint32_t n_lefs,
       _lefs(generate_lefs(n_lefs)),
       _chromosomes(init_chromosomes_from_bed()),
       _seed(seed),
-      _rand_gen(std::mt19937(_seed)) {}
+      _rand_eng(std::mt19937(_seed)),
+      _burn_in_completed(skip_burnin) {}
 
 std::vector<uint32_t> Genome::get_chromosome_lengths() const {
   std::vector<uint32_t> lengths;
@@ -130,11 +131,11 @@ void Genome::randomly_generate_barriers(uint32_t n_barriers) {
 
   for (auto i = 0UL; i < n_barriers; ++i) {
     // Randomly select a chromosome, barrier binding pos and direction
-    auto& chr = this->_chromosomes[chr_idx(this->_rand_gen)];
+    auto& chr = this->_chromosomes[chr_idx(this->_rand_eng)];
     std::uniform_int_distribution<uint64_t> uniform_rng(0, chr.length());
-    const auto barrier_position = uniform_rng(this->_rand_gen);
+    const auto barrier_position = uniform_rng(this->_rand_eng);
     const DNA::Direction direction =
-        strand_selector(this->_rand_gen) ? DNA::Direction::rev : DNA::Direction::fwd;
+        strand_selector(this->_rand_eng) ? DNA::Direction::rev : DNA::Direction::fwd;
 
     // Add the new extrusion barrier to the appropriate bin
     auto& bin = chr.dna.get_bin_from_pos(barrier_position);
@@ -175,13 +176,64 @@ void Genome::randomly_bind_lefs() {
   const auto& weights = this->get_chromosome_lengths();
   std::discrete_distribution<> chr_idx(weights.begin(), weights.end());
 
-  for (auto& lef :
-       this->_lefs) {  // Randomly select a chromosome, barrier binding pos and direction
-    auto& chr = this->_chromosomes[chr_idx(this->_rand_gen)];
-    std::uniform_int_distribution<uint32_t> uniform_rng(0, chr.length());
-    auto pos = uniform_rng(this->_rand_gen);
+  for (auto& lef : this->_lefs) {
+    // Randomly select a chromosome, barrier binding pos and direction
+    auto& chr = this->_chromosomes[chr_idx(this->_rand_eng)];
+    lef.randomly_bind_to_chr(chr, this->_rand_eng);  // And bind to it
+  }
+}
 
-    lef.bind_at_pos(chr, pos, this->_rand_gen);  // And bind to it
+uint32_t Genome::run_burnin(double prob_of_rebinding, uint16_t target_n_of_unload_events,
+                            uint64_t min_extr_rounds) {
+  const auto t0 = absl::Now();
+  double avg_num_of_extr_events_per_bind =
+      (static_cast<double>(this->_avg_lef_processivity) / this->_bin_size) /
+      2 /* N of active extr. unit */;
+  uint32_t n_of_lefs_to_bind_each_round =
+      std::floor(this->get_n_lefs() / avg_num_of_extr_events_per_bind);
+  n_of_lefs_to_bind_each_round += n_of_lefs_to_bind_each_round == 0;
+
+  std::vector<uint16_t> unload_events(this->get_n_lefs(), 0);
+  const auto& weights = this->get_chromosome_lengths();
+  std::discrete_distribution<> chr_idx(weights.begin(), weights.end());
+
+  uint32_t start_idx = 0, end_idx = n_of_lefs_to_bind_each_round;
+  for (uint32_t rounds = 0;; ++rounds) {
+    for (; start_idx < end_idx && start_idx < this->get_n_lefs(); ++start_idx) {
+      auto& chr = this->_chromosomes[chr_idx(this->_rand_eng)];
+      this->_lefs[start_idx].randomly_bind_to_chr(chr, this->_rand_eng);
+    }
+    for (uint32_t i = 0; i < start_idx; ++i) {
+      auto& n = unload_events[i];
+      auto& lef = this->_lefs[i];
+
+      if (lef.is_bound()) {
+        lef.extrude();
+        n += !lef.is_bound();
+      }
+    }
+    for (uint32_t i = 0; i < start_idx; ++i) {
+      if (auto& lef = this->_lefs[i]; lef.is_bound()) {
+        lef.check_constraints(this->_rand_eng);
+      } else {
+        auto& chr = this->_chromosomes[chr_idx(this->_rand_eng)];
+        lef.try_rebind(chr, this->_rand_eng, prob_of_rebinding);
+      }
+    }
+
+    start_idx = std::min(end_idx, this->get_n_lefs());
+    end_idx += n_of_lefs_to_bind_each_round;
+    //    absl::FPrintF(stderr, "%s\n", absl::StrJoin(unload_events.begin(), unload_events.end(), ",
+    //    "));
+
+    if (rounds >= min_extr_rounds &&
+        std::all_of(unload_events.begin(), unload_events.end(),
+                    [&](uint16_t n) { return n >= target_n_of_unload_events; })) {
+      this->_burn_in_completed = true;
+      absl::FPrintF(stderr, "Burnin completed in %s! (%lu rounds).\n",
+                    absl::FormatDuration(absl::Now() - t0), rounds);
+      return rounds;
+    }
   }
 }
 
@@ -200,14 +252,14 @@ void Genome::simulate_extrusion(uint32_t iterations) {
     }
 
     for (auto& lef : this->_lefs) {
-      // Check whether the last round of extrusions caused a collision with another LEF or an extr.
-      // boundary, apply the stall and/or increase LEF lifetime where appropriate
+      // Check whether the last round of extrusions caused a collision with another LEF or an
+      // extr. boundary, apply the stall and/or increase LEF lifetime where appropriate
       if (lef.is_bound()) {
-        lef.check_constraints(this->_rand_gen);
+        lef.check_constraints(this->_rand_eng);
       } else {
         // Randomly select a chromosome and try to bind one of the free LEFs to it
-        auto& chr = this->_chromosomes[chr_idx(this->_rand_gen)];
-        lef.try_rebind(chr, this->_rand_gen, this->_probability_of_lef_rebind);
+        auto& chr = this->_chromosomes[chr_idx(this->_rand_eng)];
+        lef.try_rebind(chr, this->_rand_eng, this->_probability_of_lef_rebind);
       }
     }
 

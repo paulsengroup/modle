@@ -18,6 +18,7 @@ struct config {
   double probability_of_extrusion_unit_bypass{0.25};
   bool make_heatmaps{true};
   uint64_t seed{0};
+  bool skip_burnin{false};
 
   void print() const {
     absl::FPrintF(
@@ -76,6 +77,7 @@ class Cli {
       this->_cli.add_option("--probability-of-lef-bypass", this->_config.probability_of_extrusion_unit_bypass, "Probability that a loop extruding factor (LEF) will not block when meeting another LEF.")->check(CLI::Range(0.0, 1.0))->capture_default_str();
       this->_cli.add_flag("--make-heatmaps,!--no-make-heatmaps", this->_config.make_heatmaps, "Generate heatmaps from the complete and diagonal contact matrices.")->capture_default_str();
       this->_cli.add_flag("--force", this->_config.force, "Overwrite existing output files.")->capture_default_str();
+      this->_cli.add_flag("--skip-burn-in", this->_config.skip_burnin, "Skip burn-in phase and start counting contacts from the first extrusion round.")->capture_default_str();
       this->_cli.add_option("--seed", this->_config.seed, "Seed to use for random number generation.")->check(CLI::NonNegativeNumber)->capture_default_str();
     // clang-format on
   }

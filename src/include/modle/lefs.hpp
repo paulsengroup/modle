@@ -41,14 +41,16 @@ class Lef {
   [[nodiscard]] Chromosome* get_ptr_to_chr();
   [[nodiscard]] std::pair<uint32_t, uint32_t> get_pos() const;
   [[nodiscard]] double get_probability_of_extr_unit_bypass() const;
+  [[nodiscard]] uint64_t get_tot_bp_extruded() const;
+  void reset_tot_bp_extruded();
 
-  /// Calls extrude on the ExtrusionUnit%s. Returns 0, 1 or 2 depending on how many DNA::Bin%s have
-  /// been extruded.
+  /// Calls extrude on the ExtrusionUnit%s. Returns the number of bp extruded
   uint32_t extrude();
   /// Register a contact between the DNA::Bin%s associated with the left and right ExtrusionUnit%s
   void register_contact();
   [[nodiscard]] std::pair<DNA::Bin*, DNA::Bin*> get_ptr_to_bins();
   [[nodiscard]] bool is_bound() const;
+  void randomly_bind_to_chr(Chromosome& chr, std::mt19937& rand_eng);
   void bind_at_pos(Chromosome& chr, uint32_t pos, std::mt19937& rand_gen);
   /** Call ExtrusionUnit::check_constraints on the left and right ExtrusionUnit%s, which in turn
    * check whether there last round of extrusion produced a collision between one of the
@@ -71,6 +73,7 @@ class Lef {
   /// dependency between dna.hpp and lefs.hpp
   std::unique_ptr<ExtrusionUnit> _left_unit;
   std::unique_ptr<ExtrusionUnit> _right_unit;
+  uint64_t _tot_bp_extruded{0};
 
   /// This function resets the state of the Lef and its ExtrusionUnit%s.
   void unload();
