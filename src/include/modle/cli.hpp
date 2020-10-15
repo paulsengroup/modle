@@ -72,7 +72,7 @@ class Cli {
       this->_cli.add_option("--probability-of-barrier-block", this->_config.probability_of_barrier_block, "Probability of extrusion block by an extrusion barrier.")->check(CLI::Range(0.0, 1.0))->capture_default_str();
       this->_cli.add_option("--probability-of-lef-rebind", this->_config.probability_of_lef_rebind, "Probability that an unbound loop extruding factor (LEF) will randomly rebind to DNA.")->check(CLI::Range(0.0, 1.0))->capture_default_str();
       this->_cli.add_option("--probability-of-lef-bypass", this->_config.probability_of_extrusion_unit_bypass, "Probability that a loop extruding factor (LEF) will not block when meeting another LEF.")->check(CLI::Range(0.0, 1.0))->capture_default_str();
-      this->_cli.add_flag("--make-heatmaps", this->_config.make_heatmaps, "Generate heatmaps from the complete and diagonal contact matrices.")->capture_default_str();
+      this->_cli.add_flag("--make-heatmaps,!--no-make-heatmaps", this->_config.make_heatmaps, "Generate heatmaps from the complete and diagonal contact matrices.")->capture_default_str();
       this->_cli.add_option("--seed", this->_config.seed, "Seed to use for random number generation.")->check(CLI::NonNegativeNumber)->capture_default_str();
     // clang-format on
   }

@@ -247,11 +247,4 @@ std::pair<uint32_t, uint32_t> ContactMatrix<I>::write_full_matrix_to_tsv(
   return std::make_pair(bytes_in, bytes_out);
 }
 
-template <typename I>
-void ContactMatrix<I>::handle_bzip_write_errors(int status, std::string_view path) {
-  if (status != BZ_OK)
-    throw std::runtime_error(
-        absl::StrFormat("An error occurred while compressing file '%s'.", path));
-}
-
 }  // namespace modle

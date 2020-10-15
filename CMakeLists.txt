@@ -1,9 +1,11 @@
-cmake_minimum_required(VERSION 3.12)
+cmake_minimum_required(VERSION 3.10)
 project(modle
-        HOMEPAGE_URL "https://github.com/robomics/modle"
+#        HOMEPAGE_URL "https://github.com/robomics/modle"
         LANGUAGES CXX
         VERSION 0.0.1
         DESCRIPTION "Software for in-silico modeling of DNA loop extrusion.")
+
+cmake_policy(VERSION 3.10)
 
 if (NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
     message(STATUS "Setting build type to \"Release\" as none was specified.")
