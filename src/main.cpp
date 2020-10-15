@@ -24,9 +24,9 @@ void run_simulation(const modle::config& c) {
   t0 = absl::Now();
   genome.simulate_extrusion(c.simulation_iterations);
   absl::FPrintF(stderr, "Simulation took %s.\n", absl::FormatDuration(absl::Now() - t0));
-  genome.write_contacts_to_file(c.output_dir.data());
+  genome.write_contacts_to_file(c.output_dir.data(), c.force);
 
-  if (c.make_heatmaps) genome.make_heatmaps(c.output_dir);
+  if (c.make_heatmaps) genome.make_heatmaps(c.output_dir, c.force);
 }
 }  // namespace modle
 

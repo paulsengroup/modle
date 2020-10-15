@@ -16,13 +16,16 @@ namespace modle {
  */
 class ExtrusionBarrier {
  public:
-  ExtrusionBarrier(double prob_of_block, DNA::Direction direction);
+  ExtrusionBarrier(uint64_t pos, double prob_of_block, DNA::Direction direction);
+  [[nodiscard]] uint64_t get_pos() const;
   [[nodiscard]] double get_prob_of_block() const;
   [[nodiscard]] DNA::Direction get_direction() const;
-  [[nodiscard]] uint32_t generate_num_of_blocking_events(std::mt19937& rand_gen);
+  [[nodiscard]] uint32_t generate_num_stalls(std::mt19937& rand_dev);
+  [[nodiscard]] bool operator<(const ExtrusionBarrier& other) const;
 
  private:
+  uint64_t _pos;
   DNA::Direction _direction{DNA::Direction::none};
-  std::geometric_distribution<uint32_t> _block_for;
+  std::geometric_distribution<uint32_t> _n_stall_generator;
 };
 }  // namespace modle

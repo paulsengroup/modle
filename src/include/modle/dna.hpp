@@ -18,91 +18,11 @@ class ExtrusionUnit;
  */
 class DNA {
  public:
+  class Bin;
   /** Enumerator used across ModLE's code-base to describe directionality in terms of DNA strand
    * (+/- or forward/reverse).
    */
   enum Direction { none = 0, fwd = 1, rev = 2, both = 3 };
-
-  /// Class to represent a single Bin from a DNA molecule
-  /** A DNA::Bin knows of the genomic coordinates corresponding to its DNA::Bin::_start and
-   * DNA::Bin::_end positions, as well as the entities that are currently bound to it (currently
-   * only ExtrusionBarrier and ExtrusionUnit).
-   */
-  class Bin {
-    friend class DNA;
-
-   public:
-    ///@{
-    /** DNA::Bin Constructor
-     * @param idx        Index in the \p std::vector that owns this instance of DNA::Bin.
-     * @param start      Genomic coordinate of the left-most position represented by this DNA::Bin.
-     * @param end        Genomic coordinate of the right-most position represented by this DNA::Bin.
-     * @param barriers   List of ExtrusionBarrier%s mapped in the genomic region represented by this
-     * DNA::Bin.
-     * \b IMPORTANT: This constructor takes ownership of \p barriers by moving it to the
-     * DNA::Bin instance that is being constructed.
-     */
-    Bin(uint32_t idx, uint64_t start, uint64_t end, std::vector<ExtrusionBarrier>& barriers);
-    Bin(uint32_t idx, uint64_t start, uint64_t end);
-    ///@}
-
-    [[nodiscard]] uint32_t get_start() const;
-    [[nodiscard]] uint32_t get_end() const;
-    [[nodiscard]] uint32_t size() const;
-    [[nodiscard]] uint32_t get_n_extr_units() const;
-    [[nodiscard]] uint32_t get_index() const;
-    /** Given a ptr to an instance of ExtrusionBarrier that belongs to this instance of
-     * DNA::Bin, return a ptr to the next instance of ExtrusionBarrier that is blocking
-     * ExtrusionUnit%s that are moving in the direction specified by \p d.
-     * @param b Pointer to ExtrusionBarrier to use to look for the next ExtrusionBarrier (i.e.
-     * DNA::Bin::get_next_extr_barrier will only search for ExtrusionBarriers that come after \p b).
-     * When <tt> b == nullptr </tt>, then the search will involve all the ExtrusionBarrier that are
-     * bound to the current instance of DNA::Bin.
-     * @param d DNA::Direction of the ExtrusionBarrier to look for (the caller has to make sure that
-     * <tt> d != DNA::Direction::none </tt>).
-     * @return Pointer to the next ExtrusionBarrier with the orientation specified by \p d (or
-     * \p nullptr if there are no ExtrusionBarrier%s matching the search parameters).
-     */
-    [[nodiscard]] ExtrusionBarrier* get_next_extr_barrier(ExtrusionBarrier* b,
-                                                          Direction d = DNA::Direction::both) const;
-    [[nodiscard]] std::vector<ExtrusionBarrier>* get_all_extr_barriers() const;
-    [[nodiscard]] absl::InlinedVector<ExtrusionUnit*, 10>& get_extr_units();
-
-    void add_extr_barrier(ExtrusionBarrier b);
-    void add_extr_barrier(double prob_of_barrier_block, DNA::Direction direction);
-    /** Register the ExtrusionUnit unit as being bound to this instance of DNA::Bin.
-     *
-     * This function will take care of allocating the \p std::vector<ExtrusionUnit> when
-     * <tt> DNA::Bin::_extr_barriers = nullptr </tt>.
-     * @param unit Pointer to the ExtrusionUnit to be registered as binding to this DNA::Bin.
-     */
-    uint32_t add_extr_unit_binding(ExtrusionUnit* unit);
-    /** Remove the ExtrusionUnit \p unit from the list of ExtrusionUnit%s that are bound to this
-     * instance of DNA::Bin.
-     *
-     * This function will take care of deallocating the \p std::vector<ExtrusionUnit> when there are
-     * no more ExtrusionUnit%s bound to this DNA::Bin.
-     * @param unit Pointer to the unit to be removed from the \p std::vector<ExtrusionUnit> bound to
-     * this DNA::Bin.
-     */
-    uint32_t remove_extr_unit_binding(ExtrusionUnit* unit);
-    void remove_extr_barrier(Direction d);
-    uint32_t remove_all_extr_barriers();
-
-   private:
-    /// Index corresponding to this DNA::Bin in the owning \p std::vector<DNA::Bin> (DNA::_bins).
-    uint32_t _idx;
-    uint32_t _start;  ///< Left-most position represented by this DNA::Bin.
-    uint32_t _end;    ///< Right-most position represented by this DNA::Bin.
-    // TODO: Consider remove the unique_ptr and store the vector and InlinedVector directly
-    // This will increase memory footprint, but should improve performance. Needs testing
-    /// \brief Pointer to a \p std::vector of ExtrusionBarrier%s (or \p nullptr if there are no
-    /// ExtrusionBarrier%s).
-    std::unique_ptr<std::vector<ExtrusionBarrier>> _extr_barriers{nullptr};
-    /// Ptr to a \p std::vector of ExtrusionUnit%s (or \p nullptr if there are no ExtrusionUnit%s).
-    std::unique_ptr<absl::InlinedVector<ExtrusionUnit*, 10>> _extr_units{nullptr};
-  };
-
   DNA(uint64_t length, uint32_t bin_size);
 
   // Getters
@@ -154,6 +74,94 @@ class DNA {
    * b2::_start + 1 </tt>.
    */
   static std::vector<Bin> make_bins(uint64_t length, uint32_t bin_size);
+
+ public:
+  /// Class to represent a single Bin from a DNA molecule
+  /** A DNA::Bin knows of the genomic coordinates corresponding to its DNA::Bin::_start and
+   * DNA::Bin::_end positions, as well as the entities that are currently bound to it (currently
+   * only ExtrusionBarrier and ExtrusionUnit).
+   */
+  class Bin {
+    friend class DNA;
+
+   public:
+    ///@{
+    /** DNA::Bin Constructor
+     * @param idx        Index in the \p std::vector that owns this instance of DNA::Bin.
+     * @param start      Genomic coordinate of the left-most position represented by this DNA::Bin.
+     * @param end        Genomic coordinate of the right-most position represented by this DNA::Bin.
+     * @param barriers   List of ExtrusionBarrier%s mapped in the genomic region represented by this
+     * DNA::Bin.
+     */
+    Bin(uint32_t idx, uint64_t start, uint64_t end, const std::vector<ExtrusionBarrier>& barriers);
+    Bin(uint32_t idx, uint64_t start, uint64_t end);
+    ///@}
+
+    [[nodiscard]] uint32_t get_start() const;
+    [[nodiscard]] uint32_t get_end() const;
+    [[nodiscard]] uint32_t size() const;
+    [[nodiscard]] uint32_t get_n_extr_units() const;
+    [[nodiscard]] uint32_t get_index() const;
+    /** Given a ptr to an instance of ExtrusionBarrier that belongs to this instance of
+     * DNA::Bin, return a ptr to the next instance of ExtrusionBarrier that is blocking
+     * ExtrusionUnit%s that are moving in the direction specified by \p d.
+     * @param b Pointer to ExtrusionBarrier to use to look for the next ExtrusionBarrier (i.e.
+     * DNA::Bin::get_next_extr_barrier will only search for ExtrusionBarriers that come after \p b).
+     * When <tt> b == nullptr </tt>, then the search will involve all the ExtrusionBarrier that are
+     * bound to the current instance of DNA::Bin.
+     * @param d DNA::Direction of the ExtrusionBarrier to look for (the caller has to make sure that
+     * <tt> d != DNA::Direction::none </tt>).
+     * @return Pointer to the next ExtrusionBarrier with the orientation specified by \p d (or
+     * \p nullptr if there are no ExtrusionBarrier%s matching the search parameters).
+     */
+    [[nodiscard]] ExtrusionBarrier* get_next_extr_barrier(ExtrusionBarrier* b,
+                                                          Direction d = DNA::Direction::both) const;
+    [[nodiscard]] ExtrusionBarrier* get_prev_extr_barrier(ExtrusionBarrier* b,
+                                                          Direction d = DNA::Direction::both) const;
+    [[nodiscard]] absl::InlinedVector<ExtrusionBarrier, 3>* get_all_extr_barriers() const;
+    [[nodiscard]] absl::InlinedVector<ExtrusionUnit*, 3>& get_extr_units();
+
+    void add_extr_barrier(ExtrusionBarrier b);
+    void add_extr_barrier(uint64_t pos, double prob_of_barrier_block, DNA::Direction direction);
+    /** Register the ExtrusionUnit unit as being bound to this instance of DNA::Bin.
+     *
+     * This function will take care of allocating the \p std::vector<ExtrusionUnit> when
+     * <tt> DNA::Bin::_extr_barriers = nullptr </tt>.
+     * @param unit Pointer to the ExtrusionUnit to be registered as binding to this DNA::Bin.
+     */
+    uint32_t add_extr_unit_binding(ExtrusionUnit* unit);
+    /** Remove the ExtrusionUnit \p unit from the list of ExtrusionUnit%s that are bound to this
+     * instance of DNA::Bin.
+     *
+     * This function will take care of deallocating the \p std::vector<ExtrusionUnit> when there are
+     * no more ExtrusionUnit%s bound to this DNA::Bin.
+     * @param unit Pointer to the unit to be removed from the \p std::vector<ExtrusionUnit> bound to
+     * this DNA::Bin.
+     */
+    uint32_t remove_extr_unit_binding(ExtrusionUnit* unit);
+    void remove_extr_barrier(Direction d);
+    uint32_t remove_all_extr_barriers();
+    void sort_extr_barriers_by_pos();
+
+    // Make DNA::Bin hashable by absl::hash
+    template <typename H>
+    friend H AbslHashValue(H h, const DNA::Bin& b) {
+      return H::combine(std::move(h), &b);
+    }
+
+   private:
+    /// Index corresponding to this DNA::Bin in the owning \p std::vector<DNA::Bin> (DNA::_bins).
+    uint32_t _idx;
+    uint32_t _start;  ///< Left-most position represented by this DNA::Bin.
+    uint32_t _end;    ///< Right-most position represented by this DNA::Bin.
+    // TODO: Consider remove the unique_ptr and store the vector and InlinedVector directly
+    // This will increase memory footprint, but should improve performance. Needs testing
+    /// \brief Pointer to a \p std::vector of ExtrusionBarrier%s (or \p nullptr if there are no
+    /// ExtrusionBarrier%s).
+    std::unique_ptr<absl::InlinedVector<ExtrusionBarrier, 3>> _extr_barriers{nullptr};
+    /// Ptr to a \p std::vector of ExtrusionUnit%s (or \p nullptr if there are no ExtrusionUnit%s).
+    std::unique_ptr<absl::InlinedVector<ExtrusionUnit*, 3>> _extr_units{nullptr};
+  };
 };
 
 /// Struct representing a Chromosome.
@@ -166,6 +174,7 @@ struct Chromosome {
   [[nodiscard]] uint32_t length() const;
   [[nodiscard]] uint32_t get_n_bins() const;
   [[nodiscard]] uint32_t get_n_barriers() const;
+  void sort_barriers_by_pos();
 
   void write_contacts_to_tsv(std::string_view chr_name, std::string_view output_dir,
                              bool write_full_matrix = false) const;

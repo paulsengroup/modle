@@ -36,8 +36,8 @@ class Genome {
   [[nodiscard]] std::vector<uint32_t> get_chromosome_lengths() const;
   [[nodiscard]] uint32_t get_n_of_free_lefs() const;
   [[nodiscard]] uint32_t get_n_of_busy_lefs() const;
-  void write_contacts_to_file(const std::string& output_dir) const;
-  void make_heatmaps(std::string_view output_dir) const;
+  void write_contacts_to_file(const std::string& output_dir, bool force_overwrite) const;
+  void make_heatmaps(std::string_view output_dir, bool force_overwrite) const;
 
   /** Randomly generate and bind \p n_barriers ExtrusionBarrier%s
    *

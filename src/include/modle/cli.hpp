@@ -6,6 +6,7 @@ namespace modle {
 struct config {
   std::string_view path_to_bed;
   std::string_view output_dir;
+  bool force{false};
 
   uint32_t bin_size{1'000};
   uint32_t simulation_iterations{5'000'000};
@@ -19,13 +20,14 @@ struct config {
   uint64_t seed{0};
 
   void print() const {
-    // clang-format off
     absl::FPrintF(
         stderr,
+        // clang-format off
         "###### CONFIG SUMMARY ######\n"
         "### Input/Output##\n"
         "##    Input BED:                        '%s'\n"
         "##    Output directory:                 '%s'\n"
+        "##    Overwrite existing output files:  '%s'\n"
         "### General settings\n"
         "##    Bin size (bp):                    %lu\n"
         "##    # of iterations:                  %lu\n"
@@ -40,12 +42,12 @@ struct config {
         "##    Generate heatmaps:                %s\n"
         "##    Seed:                             %lu"
         "\n\n",
-        this->path_to_bed, this->output_dir, this->bin_size, this->simulation_iterations,
-        this->average_lef_processivity, this->number_of_barriers, this->number_of_lefs,
-        this->probability_of_barrier_block, this->probability_of_lef_rebind,
-        this->probability_of_extrusion_unit_bypass, this->make_heatmaps ? "Yes" : "False",
-        this->seed);
-    // clang-format on
+        // clang-format on
+
+        this->path_to_bed, this->output_dir, this->force ? "Yes" : "No", this->bin_size,
+        this->simulation_iterations, this->average_lef_processivity, this->number_of_barriers,
+        this->number_of_lefs, this->probability_of_barrier_block, this->probability_of_lef_rebind,
+        this->probability_of_extrusion_unit_bypass, this->make_heatmaps ? "Yes" : "No", this->seed);
   }
 };
 
@@ -73,6 +75,7 @@ class Cli {
       this->_cli.add_option("--probability-of-lef-rebind", this->_config.probability_of_lef_rebind, "Probability that an unbound loop extruding factor (LEF) will randomly rebind to DNA.")->check(CLI::Range(0.0, 1.0))->capture_default_str();
       this->_cli.add_option("--probability-of-lef-bypass", this->_config.probability_of_extrusion_unit_bypass, "Probability that a loop extruding factor (LEF) will not block when meeting another LEF.")->check(CLI::Range(0.0, 1.0))->capture_default_str();
       this->_cli.add_flag("--make-heatmaps,!--no-make-heatmaps", this->_config.make_heatmaps, "Generate heatmaps from the complete and diagonal contact matrices.")->capture_default_str();
+      this->_cli.add_flag("--force", this->_config.force, "Overwrite existing output files.")->capture_default_str();
       this->_cli.add_option("--seed", this->_config.seed, "Seed to use for random number generation.")->check(CLI::NonNegativeNumber)->capture_default_str();
     // clang-format on
   }

@@ -45,43 +45,50 @@ uint32_t Genome::get_n_of_busy_lefs() const {
   return this->get_n_lefs() - this->get_n_of_free_lefs();
 }
 
-void Genome::write_contacts_to_file(const std::string& output_dir) const {
+void Genome::write_contacts_to_file(const std::string& output_dir, bool force_overwrite) const {
   std::filesystem::create_directories(output_dir);
   std::for_each(
       std::execution::par, this->_chromosomes.begin(), this->_chromosomes.end(),
       [&](const Chromosome& chr) {
         auto t0 = absl::Now();
-        auto file = absl::StrFormat("%s/%s.tsv.bz2", output_dir, chr.name);
+        auto path_to_outfile = absl::StrFormat("%s/%s.tsv.bz2", output_dir, chr.name);
+        if (!force_overwrite && std::filesystem::exists(path_to_outfile)) {
+          absl::FPrintF(stderr,
+                        "File '%s' already exists. Pass --force to overwrite... SKIPPING.\n",
+                        path_to_outfile);
+          return;
+        }
         absl::FPrintF(stderr, "Writing full contact matrix for '%s' to file '%s'...\n", chr.name,
-                      file);
+                      path_to_outfile);
         {
-          auto [bytes_in, bytes_out] = chr.contacts.write_full_matrix_to_tsv(file);
+          auto [bytes_in, bytes_out] = chr.contacts.write_full_matrix_to_tsv(path_to_outfile);
           absl::FPrintF(
               stderr,
-              "DONE writing '%s' in %s! Compressed size: %.2f MB (compression ratio %.2fx)\n", file,
-              absl::FormatDuration(absl::Now() - t0), bytes_out / 1.0e6,
+              "DONE writing '%s' in %s! Compressed size: %.2f MB (compression ratio %.2fx)\n",
+              path_to_outfile, absl::FormatDuration(absl::Now() - t0), bytes_out / 1.0e6,
               static_cast<double>(bytes_in) / bytes_out);
           t0 = absl::Now();
         }
-        file = absl::StrFormat("%s/%s_raw.tsv.bz2", output_dir, chr.name);
+        path_to_outfile = absl::StrFormat("%s/%s_raw.tsv.bz2", output_dir, chr.name);
         absl::FPrintF(stderr, "Writing raw contact matrix for '%s' to file '%s'...\n", chr.name,
-                      file);
-        auto [bytes_in, bytes_out] = chr.contacts.write_to_tsv(file);
+                      path_to_outfile);
+        auto [bytes_in, bytes_out] = chr.contacts.write_to_tsv(path_to_outfile);
         absl::FPrintF(
             stderr, "DONE writing '%s' in %s! Compressed size: %.2f MB (compression ratio %.2fx)\n",
-            file, absl::FormatDuration(absl::Now() - t0), bytes_out / 1.0e6,
+            path_to_outfile, absl::FormatDuration(absl::Now() - t0), bytes_out / 1.0e6,
             static_cast<double>(bytes_in) / bytes_out);
       });
 }
 
-void Genome::make_heatmaps(std::string_view output_dir) const {
+void Genome::make_heatmaps(std::string_view output_dir, bool force_overwrite) const {
   const auto t0 = absl::Now();
   absl::FPrintF(stderr, "Generating heatmaps for %lu chromosomes...", this->get_n_chromosomes());
-  std::string script = std::filesystem::is_regular_file("../utils/plot_contact_matrix.py")
-                           ? "../utils/plot_contact_matrix.py"
+  std::string script = std::filesystem::is_regular_file("./utils/plot_contact_matrix.py")
+                           ? "./utils/plot_contact_matrix.py"
                            : "plot_contact_matrix.py";
-  auto cmd = absl::StrFormat("%s --input-dir %s --output-dir %s --bin-size %lu", script, output_dir,
-                             output_dir, this->_bin_size);
+  auto cmd =
+      absl::StrFormat("%s --input-dir %s --output-dir %s --bin-size %lu%s", script, output_dir,
+                      output_dir, this->_bin_size, force_overwrite ? " --force" : "");
   if (auto status = std::system(cmd.c_str()); status != 0) {
     if (WIFEXITED(status) == 0) {
       if (auto ec = WEXITSTATUS(status); ec != 0) {
@@ -124,16 +131,17 @@ void Genome::randomly_generate_barriers(uint32_t n_barriers) {
   for (auto i = 0UL; i < n_barriers; ++i) {
     // Randomly select a chromosome, barrier binding pos and direction
     auto& chr = this->_chromosomes[chr_idx(this->_rand_gen)];
-    std::uniform_int_distribution<uint32_t> uniform_rng(0, chr.length());
+    std::uniform_int_distribution<uint64_t> uniform_rng(0, chr.length());
     const auto barrier_position = uniform_rng(this->_rand_gen);
     const DNA::Direction direction =
         strand_selector(this->_rand_gen) ? DNA::Direction::rev : DNA::Direction::fwd;
 
     // Add the new extrusion barrier to the appropriate bin
     auto& bin = chr.dna.get_bin_from_pos(barrier_position);
-    bin.add_extr_barrier(this->_probability_of_barrier_block, direction);
+    bin.add_extr_barrier(barrier_position, this->_probability_of_barrier_block, direction);
     chr.barriers.emplace_back(&bin.get_all_extr_barriers()->back());
   }
+  for (auto& chr : this->get_chromosomes()) chr.sort_barriers_by_pos();
 }
 
 const std::vector<Chromosome>& Genome::get_chromosomes() const { return this->_chromosomes; }

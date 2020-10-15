@@ -84,7 +84,7 @@ if __name__ == "__main__":
         c_matrix = pd.read_csv(f, sep="\t", header=None)
         mem_usage = c_matrix.memory_usage(index=True).sum() / 1e6
         print(
-            f" DONE in {time.time() - t0}s! Read a {c_matrix.shape[0]}x{c_matrix.shape[1]} using {mem_usage:.2f} MB of RAM.")
+            f" DONE in {time.time() - t0}s! Read a {c_matrix.shape[0]}x{c_matrix.shape[1]} matrix using {mem_usage:.2f} MB of RAM.")
         t0 = time.time()
         print(f"Log-transforming counts and plotting...", file=stderr)
         c_matrix += 1

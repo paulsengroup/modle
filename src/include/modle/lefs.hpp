@@ -66,6 +66,7 @@ class Lef {
   uint32_t _avg_processivity;
   double _probability_of_extr_unit_bypass;
   std::geometric_distribution<uint32_t> _lifetime_generator;
+  uint64_t _binding_pos{UINT64_MAX};
   /// I am using a unique_ptr instead of storing the extr. units directly to avoid the cyclic
   /// dependency between dna.hpp and lefs.hpp
   std::unique_ptr<ExtrusionUnit> _left_unit;

@@ -3,6 +3,7 @@
 
 #include <algorithm>
 
+#include "absl/container/flat_hash_set.h"
 #include "absl/strings/str_format.h"
 #include "modle/extr_barrier.hpp"
 #include "modle/lefs.hpp"
@@ -10,11 +11,12 @@
 
 namespace modle {
 
-DNA::Bin::Bin(uint32_t idx, uint64_t start, uint64_t end, std::vector<ExtrusionBarrier>& barriers)
+DNA::Bin::Bin(uint32_t idx, uint64_t start, uint64_t end, const std::vector<ExtrusionBarrier>& barriers)
     : _idx(idx),
       _start(start),
       _end(end),
-      _extr_barriers(std::make_unique<std::vector<ExtrusionBarrier>>(std::move(barriers))) {}
+      _extr_barriers(
+          std::make_unique<absl::InlinedVector<ExtrusionBarrier, 3>>(barriers.begin(), barriers.end())) {}
 
 DNA::Bin::Bin(uint32_t idx, uint64_t start, uint64_t end)
     : _idx(idx), _start(start), _end(end), _extr_barriers(nullptr) {}
@@ -38,20 +40,36 @@ ExtrusionBarrier* DNA::Bin::get_next_extr_barrier(ExtrusionBarrier* b, Direction
         return d == DNA::Direction::both || barr.get_direction() == d;
       });
   // Found an ExtrusionBarrier matching the search criteria
-  if (barrier != this->_extr_barriers->end()) return barrier.operator->();
+  if (barrier != this->_extr_barriers->end()) return barrier;
   return nullptr;  // Unable to find a suitable ExtrusionBarrier
 }
 
-std::vector<ExtrusionBarrier>* DNA::Bin::get_all_extr_barriers() const {
+
+ExtrusionBarrier* DNA::Bin::get_prev_extr_barrier(ExtrusionBarrier* b, Direction d) const {
+  assert(d != DNA::Direction::none);
+  if (!this->_extr_barriers) return nullptr;  // There are no barriers bound to this Bin
+  auto b_itr = b ? this->_extr_barriers->rbegin() + std::distance(this->_extr_barriers->data(), b)
+                 : this->_extr_barriers->rbegin();  // Convert Bin* to iterator
+
+  auto barrier =
+      std::find_if(b_itr, this->_extr_barriers->rend(), [&d](const ExtrusionBarrier& barr) {
+        return d == DNA::Direction::both || barr.get_direction() == d;
+      });
+  // Found an ExtrusionBarrier matching the search criteria
+  if (barrier != this->_extr_barriers->rend()) return barrier.operator->();
+  return nullptr;  // Unable to find a suitable ExtrusionBarrier
+}
+
+absl::InlinedVector<ExtrusionBarrier, 3>* DNA::Bin::get_all_extr_barriers() const {
   return this->_extr_barriers.get();
 }
 
-absl::InlinedVector<ExtrusionUnit*, 10>& DNA::Bin::get_extr_units() { return *this->_extr_units; }
+absl::InlinedVector<ExtrusionUnit*, 3>& DNA::Bin::get_extr_units() { return *this->_extr_units; }
 
 void DNA::Bin::add_extr_barrier(ExtrusionBarrier b) {
   if (!this->_extr_barriers) {  // If this is the first ExtrusionBarrier, allocate the std::vector
-    this->_extr_barriers =
-        std::make_unique<std::vector<ExtrusionBarrier>>(std::vector<ExtrusionBarrier>{b});
+    this->_extr_barriers = std::make_unique<absl::InlinedVector<ExtrusionBarrier, 3>>(
+        absl::InlinedVector<ExtrusionBarrier, 3>{b});
   } else {
     this->_extr_barriers->emplace_back(b);
   }
@@ -80,7 +98,7 @@ void DNA::Bin::remove_extr_barrier(Direction d) {
 uint32_t DNA::Bin::add_extr_unit_binding(ExtrusionUnit* const unit) {
   if (this->_extr_units == nullptr) {  // If if there are no ExtrusionUnits binding to this Bin,
                                        // allocate the vector
-    this->_extr_units = std::make_unique<absl::InlinedVector<ExtrusionUnit*, 10>>();
+    this->_extr_units = std::make_unique<absl::InlinedVector<ExtrusionUnit*, 3>>();
   }
   this->_extr_units->push_back(unit);
   return this->_extr_units->size();
@@ -156,12 +174,19 @@ uint32_t DNA::Bin::remove_all_extr_barriers() {
   return n;
 }
 
-void DNA::Bin::add_extr_barrier(double prob_of_barrier_block, DNA::Direction direction) {
+void DNA::Bin::sort_extr_barriers_by_pos() {
+  if (this->_extr_barriers && this->_extr_barriers->size() > 1) {
+    std::sort(this->_extr_barriers->begin(), this->_extr_barriers->end());
+  }
+}
+
+void DNA::Bin::add_extr_barrier(uint64_t pos, double prob_of_barrier_block,
+                                DNA::Direction direction) {
   if (!this->_extr_barriers) {
-    this->_extr_barriers = std::make_unique<std::vector<ExtrusionBarrier>>(
-        std::vector<ExtrusionBarrier>{{prob_of_barrier_block, direction}});
+    this->_extr_barriers = std::make_unique<absl::InlinedVector<ExtrusionBarrier, 3>>(
+        absl::InlinedVector<ExtrusionBarrier, 3>{{pos, prob_of_barrier_block, direction}});
   } else {
-    this->_extr_barriers->emplace_back(prob_of_barrier_block, direction);
+    this->_extr_barriers->emplace_back(pos, prob_of_barrier_block, direction);
   }
 }
 
@@ -224,6 +249,11 @@ Chromosome::Chromosome(std::string name, uint64_t length, uint32_t bin_size,
 uint32_t Chromosome::length() const { return this->dna.length(); }
 uint32_t Chromosome::get_n_bins() const { return this->dna.get_n_bins(); }
 uint32_t Chromosome::get_n_barriers() const { return this->barriers.size(); }
+
+void Chromosome::sort_barriers_by_pos() {
+  for (auto& bin : this->dna) bin.sort_extr_barriers_by_pos();
+}
+
 void Chromosome::write_contacts_to_tsv(std::string_view chr_name, std::string_view output_dir,
                                        bool write_full_matrix) const {
   const auto t0 = absl::Now();

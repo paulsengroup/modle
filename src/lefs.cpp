@@ -134,9 +134,13 @@ uint32_t ExtrusionUnit::check_for_extruder_collisions(std::mt19937& rand_gen) {
 
 uint64_t ExtrusionUnit::check_for_extrusion_barrier(std::mt19937& rand_gen) {
   uint64_t applied_stall = 0;
-  this->_blocking_barrier = this->_bin->get_next_extr_barrier(this->_blocking_barrier);
+  if (this->get_extr_direction() == DNA::fwd) {
+    this->_blocking_barrier = this->_bin->get_next_extr_barrier(this->_blocking_barrier);
+  } else {
+    this->_blocking_barrier = this->_bin->get_prev_extr_barrier(this->_blocking_barrier);
+  }
   if (this->_blocking_barrier) {
-    applied_stall = this->_blocking_barrier->generate_num_of_blocking_events(rand_gen);
+    applied_stall = this->_blocking_barrier->generate_num_stalls(rand_gen);
     if (this->_blocking_barrier->get_direction() != this->get_extr_direction()) {
       // "Small" stall
       applied_stall /= 2;  // TODO: Make this tunable
@@ -159,6 +163,7 @@ bool Lef::is_bound() const {
 
 void Lef::bind_at_pos(Chromosome& chr, uint32_t pos, std::mt19937& rand_eng) {
   this->_chr = &chr;
+  this->_binding_pos = pos;
   this->_lifetime = this->_lifetime_generator(rand_eng);
   std::discrete_distribution<int8_t> bin_idx_offset_gen({1, 1, 0, 1, 1});
   // We assume that the left unit always travels towards the 5', while the right unit goes to the 3'
@@ -193,6 +198,7 @@ void Lef::unload() {
   this->_chr = nullptr;
   //  (void)this->_left_unit->_bin->remove_extr_unit_binding(&this->_left_unit);
   //  (void)this->_right_unit->_bin->remove_extr_unit_binding(&this->_right_unit);
+  this->_binding_pos = -1;
   this->_left_unit->unload();
   this->_right_unit->unload();
   this->_lifetime = 0;  // Probably unnecessary
