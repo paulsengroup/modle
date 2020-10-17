@@ -20,8 +20,7 @@ class Genome {
  public:
   Genome(std::string_view path_to_bed, uint32_t bin_size, uint32_t n_lefs,
          uint32_t avg_lef_processivity, double probability_of_barrier_block,
-         double probability_of_lef_rebind, double probability_of_extr_unit_bypass, uint64_t seed,
-         bool skip_burnin);
+         double probability_of_lef_rebind, double probability_of_extr_unit_bypass, uint64_t seed);
 
   // Getters
   [[nodiscard]] const std::vector<Chromosome>& get_chromosomes() const;
@@ -95,7 +94,6 @@ class Genome {
   std::vector<Chromosome> _chromosomes;
   uint64_t _seed;
   std::mt19937 _rand_eng;
-  bool _burn_in_completed;
 
   // Private initializers
   [[nodiscard]] std::vector<Chromosome> init_chromosomes_from_bed() const;

@@ -14,7 +14,7 @@ namespace modle {
 Genome::Genome(std::string_view path_to_bed, uint32_t bin_size, uint32_t n_lefs,
                uint32_t avg_lef_processivity, double probability_of_barrier_block,
                double probability_of_lef_rebind, double probability_of_extr_unit_bypass,
-               uint64_t seed, bool skip_burnin)
+               uint64_t seed)
     : _path_to_bed(path_to_bed),
       _bin_size(bin_size),
       _avg_lef_processivity(avg_lef_processivity),
@@ -24,8 +24,7 @@ Genome::Genome(std::string_view path_to_bed, uint32_t bin_size, uint32_t n_lefs,
       _lefs(generate_lefs(n_lefs)),
       _chromosomes(init_chromosomes_from_bed()),
       _seed(seed),
-      _rand_eng(std::mt19937(_seed)),
-      _burn_in_completed(skip_burnin) {}
+      _rand_eng(std::mt19937(_seed)) {}
 
 std::vector<uint32_t> Genome::get_chromosome_lengths() const {
   std::vector<uint32_t> lengths;
@@ -52,7 +51,8 @@ void Genome::write_contacts_to_file(const std::string& output_dir, bool force_ov
       std::execution::par, this->_chromosomes.begin(), this->_chromosomes.end(),
       [&](const Chromosome& chr) {
         auto t0 = absl::Now();
-        auto path_to_outfile = absl::StrFormat("%s/%s.tsv.bz2", output_dir, chr.name);
+        auto path_to_outfile =
+            std::filesystem::canonical(absl::StrFormat("%s/%s.tsv.bz2", output_dir, chr.name));
         if (!force_overwrite && std::filesystem::exists(path_to_outfile)) {
           absl::FPrintF(stderr,
                         "File '%s' already exists. Pass --force to overwrite... SKIPPING.\n",
@@ -70,7 +70,8 @@ void Genome::write_contacts_to_file(const std::string& output_dir, bool force_ov
               static_cast<double>(bytes_in) / bytes_out);
           t0 = absl::Now();
         }
-        path_to_outfile = absl::StrFormat("%s/%s_raw.tsv.bz2", output_dir, chr.name);
+        path_to_outfile =
+            std::filesystem::canonical(absl::StrFormat("%s/%s_raw.tsv.bz2", output_dir, chr.name));
         absl::FPrintF(stderr, "Writing raw contact matrix for '%s' to file '%s'...\n", chr.name,
                       path_to_outfile);
         auto [bytes_in, bytes_out] = chr.contacts.write_to_tsv(path_to_outfile);
@@ -204,12 +205,11 @@ uint32_t Genome::run_burnin(double prob_of_rebinding, uint16_t target_n_of_unloa
       this->_lefs[start_idx].randomly_bind_to_chr(chr, this->_rand_eng);
     }
     for (uint32_t i = 0; i < start_idx; ++i) {
-      auto& n = unload_events[i];
       auto& lef = this->_lefs[i];
 
       if (lef.is_bound()) {
         lef.extrude();
-        n += !lef.is_bound();
+        unload_events[i] += !lef.is_bound();
       }
     }
     for (uint32_t i = 0; i < start_idx; ++i) {
@@ -229,7 +229,6 @@ uint32_t Genome::run_burnin(double prob_of_rebinding, uint16_t target_n_of_unloa
     if (rounds >= min_extr_rounds &&
         std::all_of(unload_events.begin(), unload_events.end(),
                     [&](uint16_t n) { return n >= target_n_of_unload_events; })) {
-      this->_burn_in_completed = true;
       absl::FPrintF(stderr, "Burnin completed in %s! (%lu rounds).\n",
                     absl::FormatDuration(absl::Now() - t0), rounds);
       return rounds;
