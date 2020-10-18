@@ -34,11 +34,11 @@ struct config {
     const std::string buf = absl::StrFormat(
         // clang-format off
         "{modle-padding} CONFIG SUMMARY {modle-padding}\n\n"
-        "{modle-padding} Input/Output {modle-padding}\n"
+        "########## Input/Output {modle-padding}\n"
         "##    Input BED                        #  '%s'\n"
         "##    Output directory                 #  '%s'\n"
-        "##    Overwrite existing output files  #  '%s'\n"
-        "{modle-padding} General settings {modle-padding}\n"
+        "##    Overwrite existing output files  #  %s\n"
+        "########## General settings {modle-padding}\n"
         "##    Bin size (bp)                    #  %lu\n"
         "##    # of iterations                  #  %lu\n"
         "##    Avg. LEF processivity (bp)       #  %lu\n"
@@ -46,14 +46,14 @@ struct config {
         "##    # of randomly generated barriers #  %lu\n"
         "##    # of randomly generated LEFs     #  %lu\n"
         "##    Skip burn-in                     #  %s\n"
-        "{modle-padding} Probabilities {modle-padding}\n"
+        "########## Probabilities {modle-padding}\n"
         "##    Prob. of barrier block           #  %.4f\n"
         "##    Prob. of LEF rebind              #  %.4f\n"
         "##    Prob. of LEF bypass              #  %.4f\n"
-        "{modle-padding} Burn-in {modle-padding}\n"
+        "########## Burn-in {modle-padding}\n"
         "##    Min. # of burn-in rounds         #  %lu\n"
         "##    Min. # of loops per LEF          #  %lu\n"
-        "{modle-padding} Various {modle-padding}\n"
+        "########## Various {modle-padding}\n"
         "##    Generate heatmaps                #  %s\n"
         "##    Seed                             #  %lu\n",
         // clang-format on
@@ -82,16 +82,20 @@ struct config {
     bool first_line = true;
     for (const auto& tok : toks) {
       if (first_line) {
+        // Deal with the first line special case.
+        // Example:
+        // ###### Title ######
+        // ###             ###
         std::string title(tok.begin() + tok.find(padding_placeholder) + padding_placeholder.size(),
                           tok.begin() + tok.rfind(padding_placeholder));
-        double pad_length = static_cast<double>(max_col_width - title.size()) / 2 + 1;
-        std::string lpad(std::floor(pad_length), '#');
-        std::string rpad(std::ceil(pad_length), '#');
-        absl::FPrintF(stderr, "%s%s%s\n", lpad, title, rpad);
+        double paddding_length = static_cast<double>(max_col_width - title.size()) / 2 + 1;
+        absl::FPrintF(stderr, "%s%s%s\n", std::string(std::floor(paddding_length), '#'), title,
+                      std::string(std::ceil(paddding_length), '#'));
         absl::FPrintF(stderr, "### %*s\n", max_col_width - 2, "###");
         first_line = false;
         continue;
       }
+
       if (tok == "" || tok == "\n") continue;  // Skip empty lines
       if (tok.find(padding_placeholder) ==
           std::string::npos) {  // Display the option and its value with the proper padding.
@@ -104,15 +108,14 @@ struct config {
         // ########## Group 1 ####################
         std::string title(tok.begin() + tok.find(padding_placeholder) + padding_placeholder.size(),
                           tok.begin() + tok.rfind(padding_placeholder));
-        std::string rpad(max_col_width - title.size() - 8, '#');
-        absl::FPrintF(stderr, "##########%s%s\n", title, rpad);
+        std::string rpad(max_col_width - title.size(), '#');
+        absl::FPrintF(stderr, "%s%s\n", title, rpad);
       }
     }
     std::string title = "   END OF CONFIG SUMMARY   ";
-    double pad_length = static_cast<double>(max_col_width - title.size()) / 2 + 1;
-    std::string lpad(std::floor(pad_length), '#');
-    std::string rpad(std::ceil(pad_length), '#');
-    absl::FPrintF(stderr, "%s%s%s\n\n\n", lpad, title, rpad);
+    double padding_length = static_cast<double>(max_col_width - title.size()) / 2 + 1;
+    absl::FPrintF(stderr, "%s%s%s\n\n\n", std::string(std::floor(padding_length), '#'), title,
+                  std::string(std::ceil(padding_length), '#'));
   }
 };
 
