@@ -31,7 +31,8 @@ class ExtrusionUnit;
  */
 class Lef {
  public:
-  Lef(uint32_t bin_size, uint32_t avg_processivity, double probability_of_extruder_bypass);
+  Lef(uint32_t bin_size, uint32_t avg_processivity, double probability_of_extruder_bypass,
+      double unloader_strength_coefficient);
 
   [[nodiscard]] std::string_view get_chr_name() const;
   [[nodiscard]] uint32_t get_loop_size() const;
@@ -67,6 +68,7 @@ class Lef {
   uint32_t _lifetime{0};
   uint32_t _avg_processivity;
   double _probability_of_extr_unit_bypass;
+  double _unloader_strength_coeff;
   std::geometric_distribution<uint32_t> _lifetime_generator;
   uint64_t _binding_pos{UINT64_MAX};
   /// I am using a unique_ptr instead of storing the extr. units directly to avoid the cyclic

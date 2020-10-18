@@ -1,5 +1,6 @@
 #pragma once
 
+#include "modle/config.hpp"
 #include "modle/contacts.hpp"
 #include "modle/dna.hpp"
 #include "modle/extr_barrier.hpp"
@@ -18,9 +19,7 @@ namespace modle {
  */
 class Genome {
  public:
-  Genome(std::string_view path_to_bed, uint32_t bin_size, uint32_t n_lefs,
-         uint32_t avg_lef_processivity, double probability_of_barrier_block,
-         double probability_of_lef_rebind, double probability_of_extr_unit_bypass, uint64_t seed);
+  explicit Genome(const config& c);
 
   // Getters
   [[nodiscard]] const std::vector<Chromosome>& get_chromosomes() const;
@@ -63,7 +62,8 @@ class Genome {
    */
   void randomly_bind_lefs();
 
-  uint32_t run_burnin(double prob_of_rebinding, uint16_t target_n_of_unload_events, uint64_t min_extr_rounds);
+  uint32_t run_burnin(double prob_of_rebinding, uint16_t target_n_of_unload_events,
+                      uint64_t min_extr_rounds);
 
   /** This function is the one that actually runs the simulation
    *
@@ -90,6 +90,7 @@ class Genome {
   double _probability_of_barrier_block;
   double _probability_of_lef_rebind;
   double _probability_of_extr_unit_bypass;
+  double _lef_unloader_strength_coeff;
   std::vector<Lef> _lefs;
   std::vector<Chromosome> _chromosomes;
   uint64_t _seed;

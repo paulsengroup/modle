@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.10)
 project(modle
-#        HOMEPAGE_URL "https://github.com/robomics/modle"
+        HOMEPAGE_URL "https://github.com/robomics/modle"
         LANGUAGES CXX
         VERSION 0.0.1
         DESCRIPTION "Software for in-silico modeling of DNA loop extrusion.")
@@ -122,6 +122,13 @@ target_include_directories(
         INTERFACE ${CMAKE_CURRENT_SOURCE_DIR}/external/CLI11/include/
 )
 
+add_custom_command(
+        TARGET modle POST_BUILD
+        COMMAND ${CMAKE_COMMAND} -E copy
+        ${CMAKE_SOURCE_DIR}/utils/plot_contact_matrix.py
+        ${CMAKE_CURRENT_BINARY_DIR}/modle_plot_contact_matrix.py
+)
+
 target_compile_options(modle PUBLIC "$<$<CONFIG:DEBUG>:${MODLE_DEBUG_OPTIONS}>")
 target_compile_options(modle PUBLIC "$<$<CONFIG:RELEASE>:${MODLE_RELEASE_OPTIONS}>")
 
@@ -135,3 +142,6 @@ install(TARGETS libmodle
 
 install(TARGETS modle
         DESTINATION ${CMAKE_INSTALL_BINDIR})
+
+install(FILES utils/plot_contact_matrix.py
+        DESTINATION "${CMAKE_INSTALL_PREFIX}/bin/modle_plot_contact_matrix.py")

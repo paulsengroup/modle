@@ -1,58 +1,9 @@
 #pragma once
 
 #include "CLI/CLI.hpp"
+#include "modle/config.hpp"
 
 namespace modle {
-struct config {
-  std::string_view path_to_bed;
-  std::string_view output_dir;
-  bool force{false};
-
-  uint32_t bin_size{1'000};
-  uint32_t simulation_iterations{5'000'000};
-  uint32_t number_of_barriers;
-  uint32_t number_of_lefs;
-  uint32_t average_lef_processivity{100'000};
-  double probability_of_barrier_block{0.95};
-  double probability_of_lef_rebind{1.0};
-  double probability_of_extrusion_unit_bypass{0.25};
-  bool make_heatmaps{true};
-  uint64_t seed{0};
-  bool skip_burnin{false};
-  uint32_t min_n_of_burnin_rounds{0};
-  uint32_t min_n_of_loops_per_lef{1};
-
-  void print() const {
-    absl::FPrintF(
-        stderr,
-        // clang-format off
-        "###### CONFIG SUMMARY ######\n"
-        "### Input/Output##\n"
-        "##    Input BED:                        '%s'\n"
-        "##    Output directory:                 '%s'\n"
-        "##    Overwrite existing output files:  '%s'\n"
-        "### General settings\n"
-        "##    Bin size (bp):                    %lu\n"
-        "##    # of iterations:                  %lu\n"
-        "##    Avg. LEF processivity (bp):       %lu\n"
-        "##    # of randomly generated barriers: %lu\n"
-        "##    # of randomly generated LEFs:     %lu\n"
-        "### Probabilities:\n"
-        "##    Prob. of barrier block:           %.4g\n"
-        "##    Prob. of LEF rebind:              %.4g\n"
-        "##    Prob. of LEF bypass:              %.4g\n"
-        "### Various:\n"
-        "##    Generate heatmaps:                %s\n"
-        "##    Seed:                             %lu"
-        "\n\n",
-        // clang-format on
-
-        this->path_to_bed, this->output_dir, this->force ? "Yes" : "No", this->bin_size,
-        this->simulation_iterations, this->average_lef_processivity, this->number_of_barriers,
-        this->number_of_lefs, this->probability_of_barrier_block, this->probability_of_lef_rebind,
-        this->probability_of_extrusion_unit_bypass, this->make_heatmaps ? "Yes" : "No", this->seed);
-  }
-};
 
 class Cli {
  private:
@@ -77,6 +28,7 @@ class Cli {
     io->add_flag("--force", this->_config.force, "Overwrite existing output files.")->capture_default_str();
     gen->add_option("--number-of-iterations", this->_config.simulation_iterations, "Number of simulation iterations.")->check(CLI::PositiveNumber)->capture_default_str();
     gen->add_option("--avg-lef-processivity", this->_config.average_lef_processivity, "Average loop extrusion factor processivity, or in other words, average loop size in base pairs.")->check(CLI::PositiveNumber)->capture_default_str();
+    gen->add_option("--lef-unloader-strength", this->_config.lef_unloader_strength, "Coefficient to control the increase in the stability of the LEF-DNA bind when a LEF is stalled in both direction by two extrusion barriers in convergent orientation.")->check(CLI::Range(0.0, 1.0))->capture_default_str();
     gen->add_flag("--skip-burn-in", this->_config.skip_burnin, "Skip burn-in phase and start counting contacts from the first extrusion round.")->capture_default_str();
     gen->add_option("--seed", this->_config.seed, "Seed to use for random number generation.")->check(CLI::NonNegativeNumber)->capture_default_str();
     prob->add_option("--probability-of-barrier-block", this->_config.probability_of_barrier_block, "Probability of extrusion block by an extrusion barrier.")->check(CLI::Range(0.0, 1.0))->capture_default_str();

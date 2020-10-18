@@ -18,10 +18,10 @@ std::vector<std::string> check_if_output_file_exists(const modle::config& c) {
     const auto f1 = absl::StrFormat("%s/%s.tsv.bz2", c.output_dir, record.chr);
     const auto f2 = absl::StrFormat("%s/%s_raw.tsv.bz2", c.output_dir, record.chr);
     if (std::filesystem::exists(f1)) {
-      fn_collisions.push_back(std::filesystem::canonical(f1));
+      fn_collisions.push_back(std::filesystem::weakly_canonical(f1));
     }
     if (std::filesystem::exists(f2)) {
-      fn_collisions.push_back(std::filesystem::canonical(f2));
+      fn_collisions.push_back(std::filesystem::weakly_canonical(f2));
     }
   }
 
@@ -30,9 +30,7 @@ std::vector<std::string> check_if_output_file_exists(const modle::config& c) {
 
 void run_simulation(const modle::config& c) {
   auto t0 = absl::Now();
-  modle::Genome genome(c.path_to_bed, c.bin_size, c.number_of_lefs, c.average_lef_processivity,
-                       c.probability_of_barrier_block, c.probability_of_lef_rebind,
-                       c.probability_of_extrusion_unit_bypass, c.seed);
+  modle::Genome genome(c);
 
   genome.randomly_generate_barriers(c.number_of_barriers);
 

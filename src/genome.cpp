@@ -11,19 +11,17 @@
 
 namespace modle {
 
-Genome::Genome(std::string_view path_to_bed, uint32_t bin_size, uint32_t n_lefs,
-               uint32_t avg_lef_processivity, double probability_of_barrier_block,
-               double probability_of_lef_rebind, double probability_of_extr_unit_bypass,
-               uint64_t seed)
-    : _path_to_bed(path_to_bed),
-      _bin_size(bin_size),
-      _avg_lef_processivity(avg_lef_processivity),
-      _probability_of_barrier_block(probability_of_barrier_block),
-      _probability_of_lef_rebind(probability_of_lef_rebind),
-      _probability_of_extr_unit_bypass(probability_of_extr_unit_bypass),
-      _lefs(generate_lefs(n_lefs)),
+Genome::Genome(const config& c)
+    : _path_to_bed(c.path_to_bed),
+      _bin_size(c.bin_size),
+      _avg_lef_processivity(c.average_lef_processivity),
+      _probability_of_barrier_block(c.probability_of_barrier_block),
+      _probability_of_lef_rebind(c.probability_of_lef_rebind),
+      _probability_of_extr_unit_bypass(c.probability_of_extrusion_unit_bypass),
+      _lef_unloader_strength_coeff(c.lef_unloader_strength),
+      _lefs(generate_lefs(c.number_of_lefs)),
       _chromosomes(init_chromosomes_from_bed()),
-      _seed(seed),
+      _seed(c.seed),
       _rand_eng(std::mt19937(_seed)) {}
 
 std::vector<uint32_t> Genome::get_chromosome_lengths() const {
@@ -51,8 +49,8 @@ void Genome::write_contacts_to_file(const std::string& output_dir, bool force_ov
       std::execution::par, this->_chromosomes.begin(), this->_chromosomes.end(),
       [&](const Chromosome& chr) {
         auto t0 = absl::Now();
-        auto path_to_outfile =
-            std::filesystem::canonical(absl::StrFormat("%s/%s.tsv.bz2", output_dir, chr.name));
+        auto path_to_outfile = std::filesystem::weakly_canonical(
+            absl::StrFormat("%s/%s.tsv.bz2", output_dir, chr.name));
         if (!force_overwrite && std::filesystem::exists(path_to_outfile)) {
           absl::FPrintF(stderr,
                         "File '%s' already exists. Pass --force to overwrite... SKIPPING.\n",
@@ -70,8 +68,8 @@ void Genome::write_contacts_to_file(const std::string& output_dir, bool force_ov
               static_cast<double>(bytes_in) / bytes_out);
           t0 = absl::Now();
         }
-        path_to_outfile =
-            std::filesystem::canonical(absl::StrFormat("%s/%s_raw.tsv.bz2", output_dir, chr.name));
+        path_to_outfile = std::filesystem::weakly_canonical(
+            absl::StrFormat("%s/%s_raw.tsv.bz2", output_dir, chr.name));
         absl::FPrintF(stderr, "Writing raw contact matrix for '%s' to file '%s'...\n", chr.name,
                       path_to_outfile);
         auto [bytes_in, bytes_out] = chr.contacts.write_to_tsv(path_to_outfile);
@@ -85,9 +83,7 @@ void Genome::write_contacts_to_file(const std::string& output_dir, bool force_ov
 void Genome::make_heatmaps(std::string_view output_dir, bool force_overwrite) const {
   const auto t0 = absl::Now();
   absl::FPrintF(stderr, "Generating heatmaps for %lu chromosomes...", this->get_n_chromosomes());
-  std::string script = std::filesystem::is_regular_file("./utils/plot_contact_matrix.py")
-                           ? "./utils/plot_contact_matrix.py"
-                           : "plot_contact_matrix.py";
+  std::string script = "./modle_plot_contact_matrix.py";
   auto cmd =
       absl::StrFormat("%s --input-dir %s --output-dir %s --bin-size %lu%s", script, output_dir,
                       output_dir, this->_bin_size, force_overwrite ? " --force" : "");
@@ -121,7 +117,7 @@ std::vector<Lef> Genome::generate_lefs(uint32_t n) {
   v.reserve(n);
   for (auto i = 0UL; i < n; ++i)
     v.emplace_back(this->_bin_size, this->_avg_lef_processivity,
-                   this->_probability_of_extr_unit_bypass);
+                   this->_probability_of_extr_unit_bypass, this->_lef_unloader_strength_coeff);
   return v;
 }
 
