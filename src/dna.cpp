@@ -38,8 +38,8 @@ bool DNA::Bin::has_extr_barrier() const { return this->_extr_barriers != nullptr
 ExtrusionBarrier* DNA::Bin::get_next_extr_barrier(ExtrusionBarrier* b, Direction d) const {
   assert(d != DNA::Direction::none);
   if (!this->_extr_barriers) return nullptr;  // There are no barriers bound to this Bin
-  auto b_itr = b ? this->_extr_barriers->begin() + std::distance(this->_extr_barriers->data(), b)
-                 : this->_extr_barriers->begin();  // Convert Bin* to iterator
+  auto* b_itr = b ? this->_extr_barriers->begin() + std::distance(this->_extr_barriers->data(), b)
+                  : this->_extr_barriers->begin();  // Convert Bin* to iterator
 
   auto barrier =
       std::find_if(b_itr, this->_extr_barriers->end(), [&d](const ExtrusionBarrier& barr) {
@@ -53,7 +53,7 @@ ExtrusionBarrier* DNA::Bin::get_next_extr_barrier(ExtrusionBarrier* b, Direction
 ExtrusionBarrier* DNA::Bin::get_prev_extr_barrier(ExtrusionBarrier* b, Direction d) const {
   assert(d != DNA::Direction::none);
   if (!this->_extr_barriers) return nullptr;  // There are no barriers bound to this Bin
-  auto b_itr = b ? this->_extr_barriers->rbegin() + std::distance(this->_extr_barriers->data(), b)
+  auto b_itr = b ? this->_extr_barriers->rbegin() + std::distance(b, this->_extr_barriers->data())
                  : this->_extr_barriers->rbegin();  // Convert Bin* to iterator
 
   auto barrier =
@@ -256,7 +256,14 @@ uint32_t Chromosome::get_n_bins() const { return this->dna.get_n_bins(); }
 uint32_t Chromosome::get_n_barriers() const { return this->barriers.size(); }
 
 void Chromosome::sort_barriers_by_pos() {
-  for (auto& bin : this->dna) bin.sort_extr_barriers_by_pos();
+  for (auto& bin : this->dna) {
+    bin.sort_extr_barriers_by_pos();
+    if (bin.has_extr_barrier()) {
+      for (auto& b : *bin.get_all_extr_barriers()) {
+        this->barriers.push_back(&b);
+      }
+    }
+  }
 }
 
 void Chromosome::write_contacts_to_tsv(std::string_view chr_name, std::string_view output_dir,

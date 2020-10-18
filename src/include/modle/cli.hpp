@@ -38,12 +38,14 @@ class Cli {
     rand->add_option("-b,--bin-size", this->_config.bin_size, "Bin size in base pairs.")->check(CLI::PositiveNumber)->capture_default_str();
     rand->add_option("--number-of-randomly-generated-barriers", this->_config.number_of_barriers, "Number of extrusion barriers to be randomly generated and bound.")->check(CLI::PositiveNumber)->required();
     rand->add_option("--number-of-randomly-generated-lefs", this->_config.number_of_lefs, "Number of loop extrusion factors (LEFs) to be randomly generated and bound.")->check(CLI::PositiveNumber)->required();
+    rand->add_option("--contact-sampling-interval", this->_config.contact_sampling_interval, "Number of simulation rounds between contact sampling. When specifying this is specified, contact sampling will be performed at constant intervals.")->check(CLI::Range(1U, UINT32_MAX))->capture_default_str();
+    rand->add_flag("--randomize-sampling-interval,!--uniform-sampling-interval", this->_config.randomize_contact_sampling, "Sample contacts using a bernoulli process with a probability of success of 1 / n, where n is the interval set through --sampling-interval.")->capture_default_str();
     burn->add_option("--min-burnin-rounds", this->_config.min_n_of_burnin_rounds, "Minimum number of extrusion rounds to simulate during the burn-in phase (set to 0 to disable).")->check(CLI::PositiveNumber)->capture_default_str();
     burn->add_option("--min-number-of-loops-per-lef", this->_config.min_n_of_loops_per_lef, "Minimum number of loops that each LEF must have produced before stopping the burn-in phase.")->check(CLI::PositiveNumber)->capture_default_str();
-    // clang-format on
 
     gen->get_option("--skip-burn-in")->excludes(burn->get_option("--min-burnin-rounds"));
     gen->get_option("--skip-burn-in")->excludes(burn->get_option("--min-number-of-loops-per-lef"));
+    // clang-format on
   }
 
  public:

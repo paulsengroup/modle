@@ -51,8 +51,8 @@ class Lef {
   void register_contact();
   [[nodiscard]] std::pair<DNA::Bin*, DNA::Bin*> get_ptr_to_bins();
   [[nodiscard]] bool is_bound() const;
-  void randomly_bind_to_chr(Chromosome& chr, std::mt19937& rand_eng);
-  void bind_at_pos(Chromosome& chr, uint32_t pos, std::mt19937& rand_gen);
+  void randomly_bind_to_chr(Chromosome& chr, std::mt19937& rand_eng, bool register_contact = false);
+  void bind_at_pos(Chromosome& chr, uint32_t pos, std::mt19937& rang_eng, bool register_contact);
   /** Call ExtrusionUnit::check_constraints on the left and right ExtrusionUnit%s, which in turn
    * check whether there last round of extrusion produced a collision between one of the
    * ExtrusionUnit%s and another instance of ExtrusionUnit, or if the current ExtrusionUnit has
@@ -60,8 +60,8 @@ class Lef {
    *
    * This function also takes care of extending Lef%'s lifetime where appropriate.
    */
-  void check_constraints(std::mt19937& rand_gen);
-  bool try_rebind(Chromosome& chr, std::mt19937& rand_eng, double prob_of_rebinding);
+  void check_constraints(std::mt19937& rang_eng);
+  bool try_rebind(Chromosome& chr, std::mt19937& rand_eng, double prob_of_rebinding, bool register_contact);
 
  private:
   Chromosome* _chr{nullptr};
@@ -95,7 +95,7 @@ class ExtrusionUnit {
   [[nodiscard]] DNA::Direction get_extr_direction() const;
   [[nodiscard]] bool is_stalled() const;
   [[nodiscard]] bool is_bound() const;
-  [[nodiscard]] uint64_t check_constraints(std::mt19937& rand_gen);
+  [[nodiscard]] uint64_t check_constraints(std::mt19937& rang_eng);
   bool try_extrude();
   [[nodiscard]] double get_prob_of_extr_unit_bypass() const;
   [[nodiscard]] uint32_t get_bin_index() const;
@@ -115,8 +115,8 @@ class ExtrusionUnit {
   void unload();
   void bind(Chromosome* chr, uint32_t pos, DNA::Direction direction, std::mt19937& rand_eng);
 
-  uint32_t check_for_extruder_collisions(std::mt19937& rand_gen);
-  [[nodiscard]] uint64_t check_for_extrusion_barrier(std::mt19937& rand_gen);
+  uint32_t check_for_extruder_collisions(std::mt19937& rang_eng);
+  [[nodiscard]] uint64_t check_for_extrusion_barrier(std::mt19937& rang_eng);
   bool try_moving_to_next_bin();
   bool try_moving_to_prev_bin();
   [[nodiscard]] bool hard_stall() const;

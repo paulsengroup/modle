@@ -28,6 +28,8 @@ struct config {
   uint32_t min_n_of_burnin_rounds{0};
   uint32_t min_n_of_loops_per_lef{1};
   double lef_unloader_strength{1};
+  uint32_t contact_sampling_interval{1000};
+  bool randomize_contact_sampling{false};
 
   void print() const {
     const std::string padding_placeholder = "{modle-padding}";
@@ -46,10 +48,12 @@ struct config {
         "##    # of randomly generated barriers #  %lu\n"
         "##    # of randomly generated LEFs     #  %lu\n"
         "##    Skip burn-in                     #  %s\n"
+        "##    Contact sampling interval        #  %lu\n"
         "########## Probabilities {modle-padding}\n"
         "##    Prob. of barrier block           #  %.4f\n"
         "##    Prob. of LEF rebind              #  %.4f\n"
         "##    Prob. of LEF bypass              #  %.4f\n"
+        "##    Randomize contact sampling       #  %s\n"
         "########## Burn-in {modle-padding}\n"
         "##    Min. # of burn-in rounds         #  %lu\n"
         "##    Min. # of loops per LEF          #  %lu\n"
@@ -61,8 +65,9 @@ struct config {
         std::filesystem::weakly_canonical(this->output_dir), this->force ? "Yes" : "No",
         this->bin_size, this->simulation_iterations, this->average_lef_processivity,
         this->lef_unloader_strength, this->number_of_barriers, this->number_of_lefs,
-        this->skip_burnin ? "No" : "Yes", this->probability_of_barrier_block,
-        this->probability_of_lef_rebind, this->probability_of_extrusion_unit_bypass,
+        this->skip_burnin ? "Yes" : "No", this->contact_sampling_interval,
+        this->probability_of_barrier_block, this->probability_of_lef_rebind,
+        this->probability_of_extrusion_unit_bypass, this->randomize_contact_sampling ? "Yes" : "No",
         this->min_n_of_burnin_rounds, this->min_n_of_loops_per_lef,
         this->make_heatmaps ? "Yes" : "No", this->seed);
 
@@ -106,9 +111,8 @@ struct config {
         // Print Option group title with the appropriate padding.
         // Example:
         // ########## Group 1 ####################
-        std::string title(tok.begin() + tok.find(padding_placeholder) + padding_placeholder.size(),
-                          tok.begin() + tok.rfind(padding_placeholder));
-        std::string rpad(max_col_width - title.size(), '#');
+        std::string title(tok.begin(), tok.begin() + tok.find(padding_placeholder));
+        std::string rpad(max_col_width - title.size() + 2, '#');
         absl::FPrintF(stderr, "%s%s\n", title, rpad);
       }
     }

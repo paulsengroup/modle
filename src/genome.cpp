@@ -12,7 +12,9 @@
 namespace modle {
 
 Genome::Genome(const config& c)
-    : _path_to_bed(c.path_to_bed),
+    : _seed(c.seed),
+      _rand_eng(std::mt19937(_seed)),
+      _path_to_bed(c.path_to_bed),
       _bin_size(c.bin_size),
       _avg_lef_processivity(c.average_lef_processivity),
       _probability_of_barrier_block(c.probability_of_barrier_block),
@@ -21,8 +23,9 @@ Genome::Genome(const config& c)
       _lef_unloader_strength_coeff(c.lef_unloader_strength),
       _lefs(generate_lefs(c.number_of_lefs)),
       _chromosomes(init_chromosomes_from_bed()),
-      _seed(c.seed),
-      _rand_eng(std::mt19937(_seed)) {}
+      _sampling_interval(c.contact_sampling_interval),
+      _randomize_contact_sampling(c.randomize_contact_sampling),
+      _sample_contacts(1.0 / _sampling_interval) {}
 
 std::vector<uint32_t> Genome::get_chromosome_lengths() const {
   std::vector<uint32_t> lengths;
@@ -137,7 +140,6 @@ void Genome::randomly_generate_barriers(uint32_t n_barriers) {
     // Add the new extrusion barrier to the appropriate bin
     auto& bin = chr.dna.get_bin_from_pos(barrier_position);
     bin.add_extr_barrier(barrier_position, this->_probability_of_barrier_block, direction);
-    chr.barriers.emplace_back(&bin.get_all_extr_barriers()->back());
   }
   for (auto& chr : this->get_chromosomes()) chr.sort_barriers_by_pos();
 }
@@ -213,7 +215,7 @@ uint32_t Genome::run_burnin(double prob_of_rebinding, uint16_t target_n_of_unloa
         lef.check_constraints(this->_rand_eng);
       } else {
         auto& chr = this->_chromosomes[chr_idx(this->_rand_eng)];
-        lef.try_rebind(chr, this->_rand_eng, prob_of_rebinding);
+        lef.try_rebind(chr, this->_rand_eng, prob_of_rebinding, false);
       }
     }
 
@@ -239,9 +241,13 @@ void Genome::simulate_extrusion(uint32_t iterations) {
 
   auto t0 = absl::Now();
   for (auto i = 1UL; i <= iterations; ++i) {
+    bool register_contacts = this->_randomize_contact_sampling
+                                 ? this->_sample_contacts(this->_rand_eng)
+                                 : i % this->_sampling_interval == 0;
+
     for (auto& lef : this->_lefs) {
       if (lef.is_bound()) {  // Register contact and extrude if LEF is bound
-        lef.register_contact();
+        if (register_contacts) lef.register_contact();
         lef.extrude();
       }
     }
@@ -254,7 +260,7 @@ void Genome::simulate_extrusion(uint32_t iterations) {
       } else {
         // Randomly select a chromosome and try to bind one of the free LEFs to it
         auto& chr = this->_chromosomes[chr_idx(this->_rand_eng)];
-        lef.try_rebind(chr, this->_rand_eng, this->_probability_of_lef_rebind);
+        lef.try_rebind(chr, this->_rand_eng, this->_probability_of_lef_rebind, register_contacts);
       }
     }
 

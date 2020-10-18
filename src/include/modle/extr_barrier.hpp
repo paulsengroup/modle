@@ -20,7 +20,7 @@ class ExtrusionBarrier {
   [[nodiscard]] uint64_t get_pos() const;
   [[nodiscard]] double get_prob_of_block() const;
   [[nodiscard]] DNA::Direction get_direction() const;
-  [[nodiscard]] uint32_t generate_num_stalls(std::mt19937& rand_dev);
+  [[nodiscard]] uint32_t generate_num_stalls(std::mt19937& rand_eng);
   [[nodiscard]] bool operator<(const ExtrusionBarrier& other) const;
 
  private:

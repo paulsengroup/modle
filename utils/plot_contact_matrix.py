@@ -26,6 +26,8 @@ def parse_args():
                         default="\t", dest="separator")
     parser.add_argument("--input-files", type=Path, nargs="+",
                         help="Path to (compressed) CSV file(s) to be plotted.", dest="input_files")
+    parser.add_argument("--log-scale", action="store_true", dest="log_scale",
+                        help="Plot contact counts in log-space.")
 
     return parser.parse_args()
 
@@ -86,7 +88,6 @@ if __name__ == "__main__":
         print(
             f" DONE in {time.time() - t0}s! Read a {c_matrix.shape[0]}x{c_matrix.shape[1]} matrix using {mem_usage:.2f} MB of RAM.")
         t0 = time.time()
-        print(f"Log-transforming counts and plotting...", file=stderr)
         c_matrix += 1
         # plt.ylim(c_matrix.shape[0] * bin_size)
         # plt.xlim(c_matrix.shape[1] * bin_size)
@@ -94,10 +95,16 @@ if __name__ == "__main__":
         ax.xaxis.set_major_formatter(ax_tick_fmt)
         ax.yaxis.set_major_formatter(ax_tick_fmt)
         plt.xticks(rotation=90)
-        pcm = ax.imshow(c_matrix,
-                        norm=colors.LogNorm(vmin=c_matrix.min().min(),
-                                            vmax=c_matrix.max().max()),
-                        cmap="hot", aspect="equal", interpolation=None)
+        if args.log_scale:
+            print(f" Plotting data in log-scale...", file=stderr)
+            pcm = ax.imshow(c_matrix,
+                            norm=colors.LogNorm(vmin=c_matrix.min().min(),
+                                                vmax=c_matrix.max().max()),
+                            cmap="hot", aspect="equal", interpolation=None)
+        else:
+            print(f" Plotting data...", file=stderr)
+            pcm = ax.imshow(c_matrix, cmap="hot", aspect="equal", interpolation=None)
+
         fig.colorbar(pcm, ax=ax, extend="max")
         plt.tight_layout()
         for format in output_formats:

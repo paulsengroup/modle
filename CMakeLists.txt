@@ -143,5 +143,6 @@ install(TARGETS libmodle
 install(TARGETS modle
         DESTINATION ${CMAKE_INSTALL_BINDIR})
 
-install(FILES utils/plot_contact_matrix.py
-        DESTINATION "${CMAKE_INSTALL_PREFIX}/bin/modle_plot_contact_matrix.py")
+install(PROGRAMS utils/plot_contact_matrix.py
+        TYPE BIN
+        RENAME "modle_plot_contact_matrix.py")
