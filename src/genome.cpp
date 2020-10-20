@@ -14,7 +14,7 @@ namespace modle {
 Genome::Genome(const config& c)
     : _seed(c.seed),
       _rand_eng(std::mt19937(_seed)),
-      _path_to_bed(c.path_to_bed),
+      _path_to_chr_size_file(c.path_to_chr_size),
       _bin_size(c.bin_size),
       _avg_lef_processivity(c.average_lef_processivity),
       _probability_of_barrier_block(c.probability_of_barrier_block),
@@ -22,7 +22,7 @@ Genome::Genome(const config& c)
       _probability_of_extr_unit_bypass(c.probability_of_extrusion_unit_bypass),
       _lef_unloader_strength_coeff(c.lef_unloader_strength),
       _lefs(generate_lefs(c.number_of_lefs)),
-      _chromosomes(init_chromosomes_from_bed()),
+      _chromosomes(init_chromosomes_from_file()),
       _sampling_interval(c.contact_sampling_interval),
       _randomize_contact_sampling(c.randomize_contact_sampling),
       _sample_contacts(1.0 / _sampling_interval) {}
@@ -83,11 +83,11 @@ void Genome::write_contacts_to_file(const std::string& output_dir, bool force_ov
       });
 }
 
-void Genome::make_heatmaps(std::string_view output_dir, bool force_overwrite) const {
+void Genome::make_heatmaps(std::string_view output_dir, bool force_overwrite,
+                           const std::string& script) const {
   const auto t0 = absl::Now();
   absl::FPrintF(stderr, "Generating heatmaps for %lu chromosomes...", this->get_n_chromosomes());
-  std::string script = "./modle_plot_contact_matrix.py";
-  auto cmd =
+  const auto cmd =
       absl::StrFormat("%s --input-dir %s --output-dir %s --bin-size %lu%s", script, output_dir,
                       output_dir, this->_bin_size, force_overwrite ? " --force" : "");
   if (auto status = std::system(cmd.c_str()); status != 0) {
@@ -101,17 +101,12 @@ void Genome::make_heatmaps(std::string_view output_dir, bool force_overwrite) co
   absl::FPrintF(stderr, "DONE! Plotting took %s.\n", absl::FormatDuration(absl::Now() - t0));
 }
 
-std::vector<Chromosome> Genome::init_chromosomes_from_bed() const {
+std::vector<Chromosome> Genome::init_chromosomes_from_file() const {
   std::vector<Chromosome> chromosomes;
-  SimpleBEDParser parser(this->_path_to_bed);
-  SimpleBED record = parser.parse_next();
-
-  do {
-    chromosomes.emplace_back(record.chr, record.chr_end - record.chr_start, this->_bin_size,
-                             this->_avg_lef_processivity);
-    record = parser.parse_next();
-  } while (!record.empty());
-
+  auto parser = ChrSizeParser(this->_path_to_chr_size_file);
+  for (const auto& chr : parser.parse()) {
+    chromosomes.emplace_back(chr.name, chr.size, this->_bin_size, this->_avg_lef_processivity);
+  }
   return chromosomes;
 }
 
@@ -122,6 +117,17 @@ std::vector<Lef> Genome::generate_lefs(uint32_t n) {
     v.emplace_back(this->_bin_size, this->_avg_lef_processivity,
                    this->_probability_of_extr_unit_bypass, this->_lef_unloader_strength_coeff);
   return v;
+}
+
+uint64_t Genome::n50() const {
+  auto chr_lengths = this->get_chromosome_lengths();
+  uint64_t n50_thresh = this->size() / 2;
+  std::sort(chr_lengths.rbegin(), chr_lengths.rend(), std::greater<>());
+  uint64_t tot = 0;
+  for (const auto& len : chr_lengths) {
+    if ((tot += len) >= n50_thresh) return len;
+  }
+  return chr_lengths.back();
 }
 
 void Genome::randomly_generate_barriers(uint32_t n_barriers) {

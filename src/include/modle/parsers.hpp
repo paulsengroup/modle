@@ -4,6 +4,9 @@
 #include <string>
 #include <vector>
 
+#include "absl/container/flat_hash_set.h"
+#include "absl/hash/hash.h"
+
 namespace modle {
 struct SimpleBED {
   [[nodiscard]] bool empty() const;
@@ -28,6 +31,34 @@ class SimpleBEDParser {
   std::ifstream _bed;
   std::array<char, 2048> _buff{0};
   uint32_t _line{1};
+};
+
+struct ChrSize {
+  ChrSize(std::string_view chr_name, uint64_t length);
+  explicit ChrSize(std::vector<std::string>& toks);
+
+  [[nodiscard]] bool operator==(const ChrSize&other) const;
+  [[nodiscard]] bool operator<(const ChrSize&other) const;
+
+  std::string name;
+  uint64_t size;
+
+  template <typename H>
+  friend H AbslHashValue(H h, const ChrSize& c) {
+    return H::combine(std::move(h), c.name);
+  }
+};
+
+class ChrSizeParser {
+ public:
+  explicit ChrSizeParser(std::string path_to_chr_sizes);
+  std::vector<ChrSize> parse(char sep = '\t');
+
+ private:
+  std::string _path;
+  std::ifstream _f{};
+  absl::flat_hash_set<ChrSize> _chrs{};
+  std::vector<std::string> _errors{};
 };
 
 }  // namespace modle

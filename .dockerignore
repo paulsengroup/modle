@@ -2,6 +2,7 @@
 **
 
 # Allowed files and directory
+!cmake/**
 !src/**
 !utils/**
 !CMakeLists.txt

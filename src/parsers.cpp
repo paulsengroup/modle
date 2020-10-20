@@ -60,7 +60,6 @@ SimpleBED SimpleBEDParser::parse_next() {
 
 std::vector<SimpleBED> SimpleBEDParser::parse_all() {
   std::vector<SimpleBED> records;
-  const auto t0 = absl::Now();
   while (true) {
     if (auto record = this->parse_next(); !record.empty()) {
       records.emplace_back(std::move(record));
@@ -68,9 +67,71 @@ std::vector<SimpleBED> SimpleBEDParser::parse_all() {
       break;
     }
   }
-  absl::FPrintF(stderr, "Parsed %lu records in %s\n", this->_line,
-                absl::FormatDuration(absl::Now() - t0));
   return records;
 }
+
+ChrSizeParser::ChrSizeParser(std::string path_to_chr_sizes) : _path(std::move(path_to_chr_sizes)) {}
+
+std::vector<ChrSize> ChrSizeParser::parse(char sep) {
+  std::string buff;
+  std::vector<std::string> tokens;
+  this->_f = std::ifstream(this->_path);
+  for (auto i = 1UL; this->_f.good(); ++i) {
+    if (std::getline(this->_f, buff); buff.empty()) {
+      if (this->_f.eof()) break;
+      continue;
+    }
+
+    if (this->_f.bad()) {
+      throw std::runtime_error(
+          absl::StrFormat("An IO error while reading file '%s'.", this->_path));
+    }
+    tokens = absl::StrSplit(buff, sep);
+    assert(!tokens.empty());  // This should only happen at EOF, which is handled elsewhere
+    try {
+      if (tokens.size() != 2) {
+        throw std::runtime_error(absl::StrFormat("Expected 2 tokens, found %lu.", tokens.size()));
+      }
+      if (ChrSize record(tokens); this->_chrs.contains(record)) {
+        throw std::runtime_error(
+            absl::StrFormat("Found multiple entries with id '%s'.", record.name));
+      } else {
+        this->_chrs.emplace(std::move(record));
+      }
+
+    } catch (const std::runtime_error& e) {
+      this->_errors.push_back(
+          absl::StrFormat("Encountered a malformed record at line '%lu' of file '%s': %s.\n "
+                          "Content of the line that triggered the error:\n'%s'",
+                          i, this->_path, e.what(), buff.data()));
+    }
+  }
+  this->_f.close();
+  if (!this->_errors.empty()) {
+    throw std::runtime_error(
+        absl::StrFormat("The following error(s) occurred while parsing file '%s':\n - %s",
+                        this->_path, absl::StrJoin(this->_errors, "\n - ")));
+  }
+  return {this->_chrs.begin(), this->_chrs.end()};
+}
+
+ChrSize::ChrSize(std::vector<std::string>& toks) {
+  assert(toks.size() == 2);
+  this->name = std::move(toks[0]);
+  if (int64_t n = std::stoi(toks[1]); n > 0) {
+    this->size = static_cast<uint64_t>(n);
+  } else {
+    throw std::runtime_error(
+        absl::StrFormat("Sequence '%s' has a length of %d that is <= 0", this->name, n));
+  }
+}
+
+ChrSize::ChrSize(std::string_view chr_name, uint64_t length) : name(chr_name), size(length) {}
+
+bool ChrSize::operator==(const ChrSize& other) const {
+  return this->name == other.name && this->size == other.size;
+}
+
+bool ChrSize::operator<(const ChrSize& other) const { return this->size < other.size; }
 
 }  // namespace modle

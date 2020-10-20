@@ -184,7 +184,7 @@ bool Lef::is_bound() const {
 }
 
 void Lef::randomly_bind_to_chr(Chromosome& chr, std::mt19937& rand_eng, bool register_contact) {
-  std::uniform_int_distribution<> pos(0, chr.length());
+  std::uniform_int_distribution<> pos(0, chr.length() - 1);
   this->bind_at_pos(chr, pos(rand_eng), rand_eng, register_contact);
 }
 void Lef::bind_at_pos(Chromosome& chr, uint32_t pos, std::mt19937& rand_eng,

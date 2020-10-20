@@ -28,6 +28,7 @@ class Genome {
   [[nodiscard]] const std::vector<Lef>& get_lefs() const;
   [[nodiscard]] uint32_t get_n_chromosomes() const;
   [[nodiscard]] uint64_t size() const;
+  [[nodiscard]] uint64_t n50() const;
   [[nodiscard]] uint32_t get_n_bins() const;
   [[nodiscard]] uint32_t get_n_lefs() const;
   [[nodiscard]] uint32_t get_n_barriers() const;
@@ -35,7 +36,8 @@ class Genome {
   [[nodiscard]] uint32_t get_n_of_free_lefs() const;
   [[nodiscard]] uint32_t get_n_of_busy_lefs() const;
   void write_contacts_to_file(const std::string& output_dir, bool force_overwrite) const;
-  void make_heatmaps(std::string_view output_dir, bool force_overwrite) const;
+  void make_heatmaps(std::string_view output_dir, bool force_overwrite,
+                     const std::string& script) const;
 
   /** Randomly generate and bind \p n_barriers ExtrusionBarrier%s
    *
@@ -86,7 +88,7 @@ class Genome {
  private:
   uint64_t _seed;
   std::mt19937 _rand_eng;
-  std::string _path_to_bed;
+  std::string _path_to_chr_size_file;
   uint32_t _bin_size;
   uint32_t _avg_lef_processivity;  ///< Average loop size if loop extrusion takes place unobstructed
   double _probability_of_barrier_block;
@@ -100,7 +102,7 @@ class Genome {
   std::bernoulli_distribution _sample_contacts;
 
   // Private initializers
-  [[nodiscard]] std::vector<Chromosome> init_chromosomes_from_bed() const;
+  [[nodiscard]] std::vector<Chromosome> init_chromosomes_from_file() const;
   [[nodiscard]] std::vector<Lef> generate_lefs(uint32_t n);
 };
 }  // namespace modle

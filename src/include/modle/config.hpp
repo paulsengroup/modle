@@ -10,7 +10,7 @@
 
 namespace modle {
 struct config {
-  std::string_view path_to_bed;
+  std::string_view path_to_chr_size;
   std::string_view output_dir;
   bool force{false};
 
@@ -30,8 +30,12 @@ struct config {
   double lef_unloader_strength{1};
   uint32_t contact_sampling_interval{1000};
   bool randomize_contact_sampling{false};
+  bool skip_output{false};
 
-  void print() const {
+  int argc;
+  char** argv;
+
+  [[nodiscard]] std::string to_string() const {
     const std::string padding_placeholder = "{modle-padding}";
     const std::string buf = absl::StrFormat(
         // clang-format off
@@ -61,7 +65,7 @@ struct config {
         "##    Generate heatmaps                #  %s\n"
         "##    Seed                             #  %lu\n",
         // clang-format on
-        std::filesystem::weakly_canonical(this->path_to_bed),
+        std::filesystem::weakly_canonical(this->path_to_chr_size),
         std::filesystem::weakly_canonical(this->output_dir), this->force ? "Yes" : "No",
         this->bin_size, this->simulation_iterations, this->average_lef_processivity,
         this->lef_unloader_strength, this->number_of_barriers, this->number_of_lefs,
@@ -73,18 +77,20 @@ struct config {
 
     const auto& toks = absl::StrSplit(buf, '\n');
     uint32_t max_col_width =  // Find longest line (excluding {modle-padding})
-        std::max_element(toks.begin(), toks.end(),
-                         [&](std::string_view s1, std::string_view s2) {
-                           if (s1.find_first_of(padding_placeholder) != std::string::npos)
-                             return s1.size() - padding_placeholder.size() < s2.size();
-                           if (s2.find_first_of(padding_placeholder) != std::string::npos)
-                             return s1.size() < s2.size() - padding_placeholder.size();
-                           return s1.size() < s2.size();
-                         })
+        std::max_element(
+            toks.begin(), toks.end(),
+            [&](std::string_view s1, std::string_view s2) {
+              auto s1_offset = (s1.find_first_of(padding_placeholder) != std::string::npos) *
+                               padding_placeholder.size();
+              auto s2_offset = (s2.find_first_of(padding_placeholder) != std::string::npos) *
+                               padding_placeholder.size();
+              return s1.size() - s1_offset < s2.size() - s2_offset;
+            })
             ->size() +
         3;
 
     bool first_line = true;
+    std::string str;
     for (const auto& tok : toks) {
       if (first_line) {
         // Deal with the first line special case.
@@ -94,9 +100,9 @@ struct config {
         std::string title(tok.begin() + tok.find(padding_placeholder) + padding_placeholder.size(),
                           tok.begin() + tok.rfind(padding_placeholder));
         double paddding_length = static_cast<double>(max_col_width - title.size()) / 2 + 1;
-        absl::FPrintF(stderr, "%s%s%s\n", std::string(std::floor(paddding_length), '#'), title,
-                      std::string(std::ceil(paddding_length), '#'));
-        absl::FPrintF(stderr, "### %*s\n", max_col_width - 2, "###");
+        str = absl::StrFormat("%s%s%s\n", std::string(std::floor(paddding_length), '#'), title,
+                              std::string(std::ceil(paddding_length), '#'));
+        str += absl::StrFormat("### %*s\n", max_col_width - 2, "###");
         first_line = false;
         continue;
       }
@@ -106,21 +112,24 @@ struct config {
           std::string::npos) {  // Display the option and its value with the proper padding.
                                 // Example:
                                 // ##    Option 1  #        10 ##
-        absl::FPrintF(stderr, "%s %*s\n", tok, max_col_width - tok.size() + 1, "##");
+        str += absl::StrFormat("%s %*s\n", tok, max_col_width - tok.size() + 1, "##");
       } else {
         // Print Option group title with the appropriate padding.
         // Example:
         // ########## Group 1 ####################
         std::string title(tok.begin(), tok.begin() + tok.find(padding_placeholder));
         std::string rpad(max_col_width - title.size() + 2, '#');
-        absl::FPrintF(stderr, "%s%s\n", title, rpad);
+        str += absl::StrFormat("%s%s\n", title, rpad);
       }
     }
     std::string title = "   END OF CONFIG SUMMARY   ";
     double padding_length = static_cast<double>(max_col_width - title.size()) / 2 + 1;
-    absl::FPrintF(stderr, "%s%s%s\n\n\n", std::string(std::floor(padding_length), '#'), title,
-                  std::string(std::ceil(padding_length), '#'));
+    str += absl::StrFormat("%s%s%s\n", std::string(std::floor(padding_length), '#'), title,
+                           std::string(std::ceil(padding_length), '#'));
+    return str;
   }
+
+  void print() const { absl::FPrintF(stderr, "%s\n\n", this->to_string()); }
 };
 
 }  // namespace modle

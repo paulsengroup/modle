@@ -4,7 +4,7 @@ set -e
 
 memory='8G'
 cpus="$(nproc)"
-march='x86_64'
+march='x86-64'
 
 for arg in "$@"; do
 
@@ -23,7 +23,7 @@ for arg in "$@"; do
 done
 
 if [ -z "$name" ] || [ -z "$ver" ] || [ -z "$type" ]; then
-  echo "Usage: ./build_container --name=modle --version=a.b.c --build-type=Release|Debug [ --cpus $(nproc) --memory 8G --march='x86_64' ]"
+  echo "Usage: ./build_container --name=modle --version=a.b.c --build-type=Release|Debug [ --cpus $(nproc) --memory 8G --march='x86-64' ]"
   exit 1
 fi
 
@@ -39,6 +39,7 @@ if [ "${type,,}" = "debug" ]; then
     --cpu-quota="$((100000 * $cpus))" \
     --build-arg "march=$march" \
     --build-arg "cpus=$cpus" \
+    --build-arg "ver=$ver" \
     .
 
    sudo singularity build -F "${name}_v${ver}_dbg-${march}.sif" \
