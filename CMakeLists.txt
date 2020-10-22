@@ -76,7 +76,7 @@ add_library(
         src/genome.cpp
         src/lefs.cpp
         src/parsers.cpp
-)
+        src/include/modle/impl/parsers.hpp)
 
 target_include_directories(
         libmodle

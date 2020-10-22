@@ -25,6 +25,7 @@ add_executable(modle_test)
 target_sources(
         modle_test
         PRIVATE units/contacts_test.cpp
+        PRIVATE units/bed_parser_test.cpp
 )
 
 target_include_directories(

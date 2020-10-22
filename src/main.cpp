@@ -12,11 +12,10 @@ namespace modle {
 std::vector<std::string> check_if_output_file_exists(const modle::config& c) {
   std::vector<std::string> fn_collisions;
   if (c.force) return fn_collisions;
-  modle::SimpleBEDParser parser(c.path_to_chr_size);
-  modle::SimpleBED record;
-  while (!(record = parser.parse_next()).empty()) {
-    const auto f1 = absl::StrFormat("%s/%s.tsv.bz2", c.output_dir, record.chr);
-    const auto f2 = absl::StrFormat("%s/%s_raw.tsv.bz2", c.output_dir, record.chr);
+  modle::ChrSizeParser parser(c.path_to_chr_size);
+  for (const auto& record : parser.parse()) {
+    const auto f1 = absl::StrFormat("%s/%s.tsv.bz2", c.output_dir, record.name);
+    const auto f2 = absl::StrFormat("%s/%s_raw.tsv.bz2", c.output_dir, record.name);
     if (std::filesystem::exists(f1)) {
       fn_collisions.push_back(std::filesystem::weakly_canonical(f1));
     }

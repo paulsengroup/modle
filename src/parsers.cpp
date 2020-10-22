@@ -1,6 +1,8 @@
 #include "modle/parsers.hpp"
 
+#include <charconv>
 #include <filesystem>
+#include <utility>
 
 #include "absl/strings/str_format.h"
 #include "absl/strings/str_join.h"
@@ -9,68 +11,234 @@
 
 namespace modle {
 
-bool SimpleBED::empty() const { return this->chr.empty(); }
-std::string SimpleBED::to_string() const {
-  return absl::StrFormat("%s\t%lu\t%lu\t%f\t%c\n", this->chr, this->chr_start, this->chr_end,
-                         this->score, this->strnd);
-}
+std::string RGB::to_string() const { return absl::StrCat(r, ",", g, ",", b); }
+bool RGB::empty() const { return (static_cast<uint16_t>(r) + g + b) == 0; }
 
-SimpleBEDParser::SimpleBEDParser(std::string_view path_to_bed) : _path_to_bed(path_to_bed) {
-  if (std::filesystem::is_regular_file(this->_path_to_bed) ||
-      std::filesystem::is_fifo(this->_path_to_bed)) {
-    this->_bed = std::ifstream(this->_path_to_bed);
-  } else {
-    throw std::runtime_error(absl::StrFormat("Invalid file '%s'.", this->_path_to_bed));
-  }
-}
-
-SimpleBED SimpleBEDParser::parse_next() {
-  do {
-    this->_bed.getline(this->_buff.data(), this->_buff.size());
-    if (this->_bed.eof()) return {};
-    if (this->_bed.bad())
-      throw std::runtime_error(
-          absl::StrFormat("An IO error while parsing file '%s'.", this->_path_to_bed));
-  } while (this->_buff[0] == '\0' || this->_buff[0] == '#');
-
-  std::vector<std::string> toks = absl::StrSplit(this->_buff.begin(), "\t");
-  if (toks.size() < 5) {
-    absl::FPrintF(stderr, "toks.size()=%lu\n", toks.size());
+void BED::throw_except_from_errc(std::string_view tok, uint8_t idx, std::errc e) {
+  if (e == std::errc::invalid_argument) {
     throw std::runtime_error(
-        absl::StrFormat("Malformed BED record encountered at line %lu in file '%s': expected "
-                        "'chrom\tchromStart\tchromEnd\tscore\tstrand', got '%s'.",
-                        this->_line, this->_path_to_bed, absl::StrJoin(toks, "\t")));
+        absl::StrFormat("Unable to convert field %lu ('%s') to a positive integer number, reason: "
+                        "found an invalid character.",
+                        idx, tok));
   }
-  ++this->_line;
-  SimpleBED record;
-  record.chr = std::move(toks[0]);
-  record.chr_start = std::stoul(toks[1]);
-  record.chr_end = std::stoul(toks[2]);
-  record.score = std::stod(toks[3]);
-  if (toks[4] != "+" && toks[4] != "-" && toks[4] != ".") {
-    throw std::runtime_error(absl::StrFormat(
-        "Malformed BED record encountered at line %lu of file '%s': expected one of '+', '-' or "
-        "'.' for field 'strand', got '%s'.",
-        this->_line, this->_path_to_bed, toks[4]));
+  if (e == std::errc::result_out_of_range) {
+    throw std::runtime_error(
+        absl::StrFormat("Unable to convert field %lu ('%s') to a positive integer number, reason: "
+                        "number %s is outside the [0, %llu] interval.",
+                        idx, tok, tok, UINT64_MAX));
   }
-  record.strnd = SimpleBED::strand(toks[4].front());
-
-  return record;
+  throw std::logic_error(
+      "If you see this error, report it to the developers on github.\nBED::throw_except_from_errc "
+      "called with an invalid std::errc. This should not be possible!");
 }
 
-std::vector<SimpleBED> SimpleBEDParser::parse_all() {
-  std::vector<SimpleBED> records;
-  while (true) {
-    if (auto record = this->parse_next(); !record.empty()) {
-      records.emplace_back(std::move(record));
-    } else {
-      break;
-    }
+void BED::parse_strand_or_throw(const std::vector<std::string_view>& toks, uint8_t idx,
+                                char& field) {
+  if (!bed_strand_encoding.contains(toks[idx])) {
+    throw std::runtime_error(absl::StrFormat("Unrecognized strand '%s'", toks[idx]));
   }
+  field = bed_strand_encoding.at(toks[idx]);
+}
+
+void BED::parse_rgb_or_throw(const std::vector<std::string_view>& toks, uint8_t idx, RGB& field) {
+  if (toks[idx] == "0") {
+    field = RGB{0, 0, 0};
+    return;
+  }
+  std::vector<std::string_view> channels = absl::StrSplit(toks[idx], ',');
+  if (channels.size() != 3) {
+    throw std::runtime_error(
+        absl::StrFormat("RGB: expected 3 fields, got %lu: '%s'", channels.size(), toks[idx]));
+  }
+  parse_numeric_or_throw(channels, 0, field.r);
+  parse_numeric_or_throw(channels, 1, field.g);
+  parse_numeric_or_throw(channels, 2, field.b);
+}
+
+BED::BED(std::string_view record, BED::Standard bed_standard) {
+  std::vector<std::string_view> toks;
+  for (std::string_view tok : absl::StrSplit(record, absl::ByAnyChar("\t "))) {
+    if (!tok.empty()) toks.push_back(tok);
+  }
+  auto ntoks = toks.size();
+  if ((bed_standard != BED::Standard::none && ntoks < bed_standard) ||
+      (ntoks < 3 || (ntoks > 6 && ntoks < 12) || ntoks > 12)) {
+    if (bed_standard != BED::Standard::none) {
+      throw std::runtime_error(
+          absl::StrFormat("Expected %lu fields, got %lu.\nRecord that caused the error: '%s'.",
+                          bed_standard, ntoks, record));
+    }
+    throw std::runtime_error(
+        absl::StrFormat("Expected 3, 4, 5, 6 or 12 fields, got %lu.\nRefer to "
+                        "https://bedtools.readthedocs.io/en/latest/content/"
+                        "general-usage.html#bed-format for the BED format specification.\nRecord "
+                        "that caused the error: '%s'.",
+                        ntoks, record));
+  }
+
+  this->chrom = toks[0];
+  try {
+    parse_numeric_or_throw(toks, 1, this->chrom_start);
+    parse_numeric_or_throw(toks, 2, this->chrom_end);
+    if (this->chrom_start > this->chrom_end) {
+      throw std::runtime_error(absl::StrFormat(
+          "Invalid BED record detected: chrom_start > chrom_end: chrom='%s'; start=%lu; end=%lu.",
+          this->chrom, this->chrom_start, this->chrom_end));
+    }
+    if (auto n = 3U; ntoks == n || bed_standard == n) {
+      this->_size = n;
+      return;
+    }
+    this->name = toks[3];
+    if (auto n = 4U; ntoks == n || bed_standard == n) {
+      this->_size = n;
+      return;
+    }
+    parse_real_or_throw(toks, 4, this->score);
+    if (auto n = 5U; ntoks == n || bed_standard == n) {
+      this->_size = n;
+      return;
+    }
+    parse_strand_or_throw(toks, 5, this->strand);
+    if (auto n = 6U; ntoks == n || bed_standard == n) {
+      this->_size = n;
+      return;
+    }
+
+    parse_numeric_or_throw(toks, 6, this->thick_start);
+    if (this->thick_start < this->chrom_start) {
+      throw std::runtime_error(
+          absl::StrFormat("Invalid BED record detected: thick_start < chrom_start: chrom='%s'; "
+                          "start=%lu; thick_start=%lu.",
+                          this->chrom, this->chrom_start, this->thick_start));
+    }
+    parse_numeric_or_throw(toks, 7, this->thick_end);
+    if (this->thick_end > this->chrom_end) {
+      throw std::runtime_error(
+          absl::StrFormat("Invalid BED record detected: thick_end > chrom_end: chrom='%s'; "
+                          "start=%lu; thick_start=%lu.",
+                          this->chrom, this->chrom_end, this->thick_end));
+    }
+    if (this->thick_start > this->thick_end) {
+      throw std::runtime_error(
+          absl::StrFormat("Invalid BED record detected: thick_start > thick_end: chrom='%s'; "
+                          "thick_start=%lu; thick_end=%lu.",
+                          this->chrom, this->chrom_start, this->chrom_end));
+    }
+    parse_rgb_or_throw(toks, 8, this->rgb);
+    parse_numeric_or_throw(toks, 9, this->block_count);
+    parse_vect_of_numbers_or_throw(toks, 10, this->block_sizes, this->block_count);
+    parse_vect_of_numbers_or_throw(toks, 11, this->block_starts, this->block_count);
+    this->_size = 12;
+  } catch (const std::exception& e) {
+    throw std::runtime_error(absl::StrFormat(
+        "An error occurred while parsing the following BED record '%s':\n  %s.", record, e.what()));
+  }
+}
+
+bool BED::operator==(const BED& other) const {
+  return this->chrom == other.chrom && this->chrom_start == other.chrom_start &&
+         this->chrom_end == other.chrom_end;
+}
+
+bool BED::operator<(const BED& other) const {
+  if (this->chrom != other.chrom) return this->chrom < other.chrom;
+  if (this->chrom_start != other.chrom_start) return this->chrom_start < other.chrom_start;
+  return this->chrom_end < other.chrom_end;
+}
+
+uint8_t BED::size() const { return this->_size; }
+
+bool BED::empty() const { return chrom.empty(); }
+
+std::string BED::to_string() const {
+  switch (this->size()) {
+    case 3:
+      return absl::StrCat(chrom, "\t", chrom_start, "\t", chrom_end);
+    case 4:
+      return absl::StrCat(chrom, "\t", chrom_start, "\t", chrom_end, "\t", name);
+    case 5:
+      return absl::StrCat(chrom, "\t", chrom_start, "\t", chrom_end, "\t", score);
+    case 6:
+      return absl::StrCat(chrom, "\t", chrom_start, "\t", chrom_end, "\t", name, "\t", score, "\t",
+                          std::string(1, strand));
+    case 12:
+      return absl::StrCat(chrom, "\t", chrom_start, "\t", chrom_end, "\t", name, "\t", score, "\t",
+                          std::string(1, strand), "\t", thick_start, "\t", thick_end, "\t",
+                          rgb.to_string(), "\t", block_count, "\t", absl::StrJoin(block_sizes, ","),
+                          "\t", absl::StrJoin(block_starts, ","));
+    default:
+      throw std::runtime_error(
+          "If you see this error, please report it to the developers: BED::to_string() reached the "
+          "default case. This should not be possible!");
+  }
+}
+
+BEDParser::BEDParser(std::string path_to_bed, BED::Standard bed_standard)
+    // For now we always skip the header
+    : _path_to_bed(std::move(path_to_bed)),
+      _skip_header(true),
+      _standard(bed_standard),
+      _ncols(_standard) {
+  this->_fp.open(this->_path_to_bed);
+  if (!this->_fp)
+    throw std::runtime_error(
+        absl::StrFormat("Unable to open file '%s' for reading.", this->_path_to_bed));
+}
+
+std::vector<BED> BEDParser::parse_all(bool throw_on_duplicates) {
+  absl::flat_hash_map<BED, uint64_t> unique_records;
+  uint8_t ncols = 0;
+  assert(this->_fp.is_open() && this->_fp.good());
+  for (auto i = 1UL; std::getline(this->_fp, this->_buff); ++i) {
+    if (this->_buff.empty()) continue;                   // Skip empty lines
+    if (this->_skip_header && unique_records.empty() &&  // Skip header line(s)
+        (this->_buff.front() == '#' || this->_buff.find("track") != std::string::npos ||
+         this->_buff.find("browser") != std::string::npos))
+      continue;
+    BED record(this->_buff, this->_standard);
+    if (unique_records.empty()) ncols = record.size();
+    if (record.size() != ncols) {
+      throw std::runtime_error(
+          absl::StrFormat("Expected %lu fields, got %lu at line %lu of file '%s'.", ncols,
+                          record.size(), i, this->_path_to_bed));
+    }
+    if (throw_on_duplicates && unique_records.contains(record)) {
+      throw std::runtime_error(absl::StrFormat(
+          "Detected duplicate entry at line %lu. First occurrence was at line %lu: record: '%s'", i,
+          unique_records.at(record), this->_buff));
+    }
+    unique_records.emplace(std::move(record), i);
+  }
+
+  if (this->_fp.bad())
+    throw std::runtime_error(
+        absl::StrFormat("An error occurred while reading file '%s'.", this->_path_to_bed));
+
+  std::vector<BED> records;
+  records.reserve(unique_records.size());
+  for (auto& [record, _] : unique_records) records.push_back(record);
   return records;
 }
 
+void BEDParser::reset() {
+  if (std::filesystem::is_fifo(this->_path_to_bed)) {
+    throw std::runtime_error(
+        absl::StrFormat("BEDParser::reset() was called on a file that is a FIFO: file path '%s'",
+                        this->_path_to_bed));
+  }
+  if (!this->_fp.is_open()) {
+    throw std::runtime_error("BedParser::reset() was called on a closed file!");
+  }
+  assert(this->_fp.good());
+  this->_fp.clear();
+  this->_fp.seekg(0);
+  this->_buff.clear();
+}
+
 ChrSizeParser::ChrSizeParser(std::string path_to_chr_sizes) : _path(std::move(path_to_chr_sizes)) {}
+ChrSizeParser::ChrSizeParser(std::string_view path_to_chr_sizes)
+    : _path(std::string(path_to_chr_sizes)) {}
 
 std::vector<ChrSize> ChrSizeParser::parse(char sep) {
   std::string buff;

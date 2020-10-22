@@ -1,7 +1,6 @@
 #include "modle/contacts.hpp"
 
 #include <fstream>
-#include <random>
 #include <vector>
 
 #include "absl/strings/str_format.h"
