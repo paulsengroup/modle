@@ -62,7 +62,7 @@ BED::BED(std::string_view record, BED::Standard bed_standard) {
   }
   auto ntoks = toks.size();
   if ((bed_standard != BED::Standard::none && ntoks < bed_standard) ||
-      (ntoks < 3 || (ntoks > 6 && ntoks < 12) || ntoks > 12)) {
+      (ntoks < 3 || (ntoks > 6 && ntoks != 9 && ntoks < 12) || ntoks > 12)) {
     if (bed_standard != BED::Standard::none) {
       throw std::runtime_error(
           absl::StrFormat("Expected %lu fields, got %lu.\nRecord that caused the error: '%s'.",
@@ -95,6 +95,11 @@ BED::BED(std::string_view record, BED::Standard bed_standard) {
       return;
     }
     parse_real_or_throw(toks, 4, this->score);
+    if (this->score < 0 || this->score > 1000) {
+      throw std::runtime_error(absl::StrFormat(
+          "Invalid BED record detected: score field should be between 0 and 1000, is %f.",
+          this->score));
+    }
     if (auto n = 5U; ntoks == n || bed_standard == n) {
       this->_size = n;
       return;
@@ -126,6 +131,10 @@ BED::BED(std::string_view record, BED::Standard bed_standard) {
                           this->chrom, this->chrom_start, this->chrom_end));
     }
     parse_rgb_or_throw(toks, 8, this->rgb);
+    if (auto n = 9U; ntoks == n || bed_standard == n) {
+      this->_size = n;
+      return;
+    }
     parse_numeric_or_throw(toks, 9, this->block_count);
     parse_vect_of_numbers_or_throw(toks, 10, this->block_sizes, this->block_count);
     parse_vect_of_numbers_or_throw(toks, 11, this->block_starts, this->block_count);
@@ -162,6 +171,10 @@ std::string BED::to_string() const {
     case 6:
       return absl::StrCat(chrom, "\t", chrom_start, "\t", chrom_end, "\t", name, "\t", score, "\t",
                           std::string(1, strand));
+    case 9:
+      return absl::StrCat(chrom, "\t", chrom_start, "\t", chrom_end, "\t", name, "\t", score, "\t",
+                          std::string(1, strand), "\t", thick_start, "\t", thick_end, "\t",
+                          rgb.to_string());
     case 12:
       return absl::StrCat(chrom, "\t", chrom_start, "\t", chrom_end, "\t", name, "\t", score, "\t",
                           std::string(1, strand), "\t", thick_start, "\t", thick_end, "\t",

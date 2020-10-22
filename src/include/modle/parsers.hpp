@@ -33,7 +33,7 @@ struct RGB {
 };
 
 struct BED {
-  enum Standard { BED3 = 3U, BED4 = 4U, BED5 = 5U, BED6 = 6U, BED12 = 12U, none = 13U };
+  enum Standard { BED3 = 3U, BED4 = 4U, BED5 = 5U, BED6 = 6U, BED9 = 9U, BED12 = 12U, none = 13U };
   BED() = default;
   explicit BED(std::string_view record, Standard bed_standard = none);
   std::string chrom{};
