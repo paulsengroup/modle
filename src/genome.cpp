@@ -14,7 +14,7 @@ namespace modle {
 Genome::Genome(const config& c)
     : _seed(c.seed),
       _rand_eng(std::mt19937(_seed)),
-      _path_to_chr_size_file(c.path_to_chr_size),
+      _path_to_chr_size_file(c.path_to_chr_sizes),
       _bin_size(c.bin_size),
       _avg_lef_processivity(c.average_lef_processivity),
       _probability_of_barrier_block(c.probability_of_barrier_block),

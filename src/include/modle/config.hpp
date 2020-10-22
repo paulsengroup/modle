@@ -10,13 +10,14 @@
 
 namespace modle {
 struct config {
-  std::string_view path_to_chr_size;
+  std::string_view path_to_chr_sizes;
+  std::string_view path_to_extr_barriers_bed;
   std::string_view output_dir;
   bool force{false};
 
   uint32_t bin_size{1'000};
   uint32_t simulation_iterations{5'000'000};
-  uint32_t number_of_barriers;
+  uint32_t number_of_randomly_gen_extr_barriers;
   uint32_t number_of_lefs;
   uint32_t average_lef_processivity{100'000};
   double probability_of_barrier_block{0.95};
@@ -65,10 +66,10 @@ struct config {
         "##    Generate heatmaps                #  %s\n"
         "##    Seed                             #  %lu\n",
         // clang-format on
-        std::filesystem::weakly_canonical(this->path_to_chr_size),
+        std::filesystem::weakly_canonical(this->path_to_chr_sizes),
         std::filesystem::weakly_canonical(this->output_dir), this->force ? "Yes" : "No",
         this->bin_size, this->simulation_iterations, this->average_lef_processivity,
-        this->lef_unloader_strength, this->number_of_barriers, this->number_of_lefs,
+        this->lef_unloader_strength, this->number_of_randomly_gen_extr_barriers, this->number_of_lefs,
         this->skip_burnin ? "Yes" : "No", this->contact_sampling_interval,
         this->probability_of_barrier_block, this->probability_of_lef_rebind,
         this->probability_of_extrusion_unit_bypass, this->randomize_contact_sampling ? "Yes" : "No",

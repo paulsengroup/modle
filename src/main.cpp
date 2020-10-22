@@ -12,7 +12,7 @@ namespace modle {
 std::vector<std::string> check_if_output_file_exists(const modle::config& c) {
   std::vector<std::string> fn_collisions;
   if (c.force) return fn_collisions;
-  modle::ChrSizeParser parser(c.path_to_chr_size);
+  modle::ChrSizeParser parser(c.path_to_chr_sizes);
   for (const auto& record : parser.parse()) {
     const auto f1 = absl::StrFormat("%s/%s.tsv.bz2", c.output_dir, record.name);
     const auto f2 = absl::StrFormat("%s/%s_raw.tsv.bz2", c.output_dir, record.name);
@@ -31,7 +31,7 @@ void run_simulation(const modle::config& c) {
   auto t0 = absl::Now();
   modle::Genome genome(c);
 
-  genome.randomly_generate_barriers(c.number_of_barriers);
+  genome.randomly_generate_barriers(c.number_of_randomly_gen_extr_barriers);
   absl::FPrintF(stderr,
                 "Initialization took %s.\n"
                 " - # of sequences:       %lu\n"
