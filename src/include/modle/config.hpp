@@ -16,11 +16,12 @@ struct config {
   bool force{false};
 
   uint32_t bin_size{1'000};
+  uint32_t diagonal_width{2'000'000};
   uint32_t simulation_iterations{5'000'000};
-  uint32_t number_of_randomly_gen_extr_barriers;
+  uint32_t number_of_randomly_gen_extr_barriers{0};
   uint32_t number_of_lefs;
   uint32_t average_lef_processivity{100'000};
-  double probability_of_barrier_block{0.95};
+  double probability_of_extrusion_barrier_block{0};
   double probability_of_lef_rebind{1.0};
   double probability_of_extrusion_unit_bypass{0.25};
   bool make_heatmaps{true};
@@ -69,9 +70,9 @@ struct config {
         std::filesystem::weakly_canonical(this->path_to_chr_sizes),
         std::filesystem::weakly_canonical(this->output_dir), this->force ? "Yes" : "No",
         this->bin_size, this->simulation_iterations, this->average_lef_processivity,
-        this->lef_unloader_strength, this->number_of_randomly_gen_extr_barriers, this->number_of_lefs,
-        this->skip_burnin ? "Yes" : "No", this->contact_sampling_interval,
-        this->probability_of_barrier_block, this->probability_of_lef_rebind,
+        this->lef_unloader_strength, this->number_of_randomly_gen_extr_barriers,
+        this->number_of_lefs, this->skip_burnin ? "Yes" : "No", this->contact_sampling_interval,
+        this->probability_of_extrusion_barrier_block, this->probability_of_lef_rebind,
         this->probability_of_extrusion_unit_bypass, this->randomize_contact_sampling ? "Yes" : "No",
         this->min_n_of_burnin_rounds, this->min_n_of_loops_per_lef,
         this->make_heatmaps ? "Yes" : "No", this->seed);

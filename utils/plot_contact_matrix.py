@@ -26,6 +26,9 @@ def parse_args():
                         default="\t", dest="separator")
     parser.add_argument("--input-files", type=Path, nargs="+",
                         help="Path to (compressed) CSV file(s) to be plotted.", dest="input_files")
+    parser.add_argument("--upper-limit-linear-scale", type=int,
+                        help="Upper limit for the number of contacts when plotting in linear scale.",
+                        dest="ul_linear", default=17)
 
     return parser.parse_args()
 
@@ -48,7 +51,8 @@ def generate_metadata_string(input_file):
     return metadata
 
 
-def make_plot(matrix, bin_size, base_name, metadata, ax_tick_fmt, log_scale):
+def make_plot(matrix, bin_size, base_name, metadata, ax_tick_fmt, log_scale,
+              linear_scale_upper_limit):
     fig, ax = plt.subplots(1, 1)
     ax.xaxis.set_major_formatter(ax_tick_fmt)
     ax.yaxis.set_major_formatter(ax_tick_fmt)
@@ -64,6 +68,7 @@ def make_plot(matrix, bin_size, base_name, metadata, ax_tick_fmt, log_scale):
                         cmap="hot", aspect="equal", interpolation=None)
     else:
         pcm = ax.imshow(matrix,
+                        vmin=0, vmax=linear_scale_upper_limit,
                         cmap="hot", aspect="equal", interpolation=None)
 
     fig.colorbar(pcm, ax=ax, extend="max")
@@ -136,8 +141,8 @@ if __name__ == "__main__":
         metadata = metadata_template.copy()
         metadata["Title"] = title
         make_plot(c_matrix, bin_size, f"{base_out_dir}/{base_out_name}", metadata, ax_tick_fmt,
-                  False)
+                  False, args.ul_linear)
         make_plot(c_matrix, bin_size, f"{base_out_dir}/{base_out_name}", metadata, ax_tick_fmt,
-                  True)
+                  True, 0)
 
         print(f"DONE in {time.time() - t0}s!", file=stderr)

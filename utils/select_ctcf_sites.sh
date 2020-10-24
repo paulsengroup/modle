@@ -17,6 +17,13 @@ BEGIN {
 }
 {
     if ($1 == chr && $2 > start && $3 < end) {
+        # Make coordinates zero-based
+        $2 -= start;
+        $3 -= start;
+        if (NF >= 8) {
+          $7 -= start;
+          $8 -= start;
+        }
         # Set score to 0.8 (will be used as barrier strength)
         $5 = 0.8;
         # In this particular file, strand information is stored in the name field.
@@ -25,7 +32,7 @@ BEGIN {
         #$4 = "";
         # Replace forward/reverse with + and - and anything else with .
         sub(/forward/, "+", $6);
-        sub(/reverse/, "+", $6);
+        sub(/reverse/, "-", $6);
         sub(/[^+-]+/, ".", $6);
         gsub(/\t+/, "\t", $0);
         print $0;

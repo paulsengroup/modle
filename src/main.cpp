@@ -31,7 +31,13 @@ void run_simulation(const modle::config& c) {
   auto t0 = absl::Now();
   modle::Genome genome(c);
 
-  genome.randomly_generate_barriers(c.number_of_randomly_gen_extr_barriers);
+  if (c.number_of_randomly_gen_extr_barriers != 0) {
+    genome.randomly_generate_extrusion_barriers(c.number_of_randomly_gen_extr_barriers);
+  }
+  if (!c.path_to_extr_barriers_bed.empty()) {
+    genome.import_extrusion_barriers_from_bed(c.path_to_extr_barriers_bed,
+                                              c.probability_of_extrusion_barrier_block);
+  }
   absl::FPrintF(stderr,
                 "Initialization took %s.\n"
                 " - # of sequences:       %lu\n"

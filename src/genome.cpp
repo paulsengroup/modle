@@ -17,12 +17,12 @@ Genome::Genome(const config& c)
       _path_to_chr_size_file(c.path_to_chr_sizes),
       _bin_size(c.bin_size),
       _avg_lef_processivity(c.average_lef_processivity),
-      _probability_of_barrier_block(c.probability_of_barrier_block),
+      _probability_of_barrier_block(c.probability_of_extrusion_barrier_block),
       _probability_of_lef_rebind(c.probability_of_lef_rebind),
       _probability_of_extr_unit_bypass(c.probability_of_extrusion_unit_bypass),
       _lef_unloader_strength_coeff(c.lef_unloader_strength),
       _lefs(generate_lefs(c.number_of_lefs)),
-      _chromosomes(init_chromosomes_from_file()),
+      _chromosomes(init_chromosomes_from_file(c.diagonal_width)),
       _sampling_interval(c.contact_sampling_interval),
       _randomize_contact_sampling(c.randomize_contact_sampling),
       _sample_contacts(1.0 / _sampling_interval) {}
@@ -32,6 +32,13 @@ std::vector<uint32_t> Genome::get_chromosome_lengths() const {
   lengths.reserve(this->get_n_chromosomes());
   for (const auto& chr : this->_chromosomes) lengths.push_back(chr.length());
   return lengths;
+}
+
+std::vector<std::string_view> Genome::get_chromosome_names() const {
+  std::vector<std::string_view> names;
+  names.reserve(this->get_n_chromosomes());
+  for (const auto& chr : this->_chromosomes) names.push_back(chr.name);
+  return names;
 }
 
 uint32_t Genome::get_n_lefs() const { return this->_lefs.size(); }
@@ -101,11 +108,11 @@ void Genome::make_heatmaps(std::string_view output_dir, bool force_overwrite,
   absl::FPrintF(stderr, "DONE! Plotting took %s.\n", absl::FormatDuration(absl::Now() - t0));
 }
 
-std::vector<Chromosome> Genome::init_chromosomes_from_file() const {
+std::vector<Chromosome> Genome::init_chromosomes_from_file(uint32_t diagonal_width) const {
   std::vector<Chromosome> chromosomes;
   auto parser = ChrSizeParser(this->_path_to_chr_size_file);
   for (const auto& chr : parser.parse()) {
-    chromosomes.emplace_back(chr.name, chr.size, this->_bin_size, this->_avg_lef_processivity);
+    chromosomes.emplace_back(chr.name, chr.size, this->_bin_size, diagonal_width);
   }
   return chromosomes;
 }
@@ -130,7 +137,7 @@ uint64_t Genome::n50() const {
   return chr_lengths.back();
 }
 
-void Genome::randomly_generate_barriers(uint32_t n_barriers) {
+void Genome::randomly_generate_extrusion_barriers(uint32_t n_barriers) {
   const auto& weights = this->get_chromosome_lengths();
   std::discrete_distribution<> chr_idx(weights.begin(), weights.end());
   std::bernoulli_distribution strand_selector(0.5);
@@ -148,6 +155,33 @@ void Genome::randomly_generate_barriers(uint32_t n_barriers) {
     bin.add_extr_barrier(barrier_position, this->_probability_of_barrier_block, direction);
   }
   for (auto& chr : this->get_chromosomes()) chr.sort_barriers_by_pos();
+}
+
+std::pair<uint64_t, uint64_t> Genome::import_extrusion_barriers_from_bed(
+    std::string_view path_to_bed, double probability_of_block) {
+  auto p = modle::BEDParser(path_to_bed, BED::Standard::BED6);
+  uint64_t nrecords = 0;
+  uint64_t nrecords_ignored = 0;
+  absl::flat_hash_map<std::string_view, DNA*> chromosomes;
+  chromosomes.reserve(this->get_n_chromosomes());
+  for (auto& chr : this->get_chromosomes()) chromosomes.emplace(chr.name, &chr.dna);
+  for (auto& record : p.parse_all()) {
+    ++nrecords;
+    if (!chromosomes.contains(record.chrom)) {
+      ++nrecords_ignored;
+      continue;
+    }
+    if (record.strand == '.') continue;  // TODO: Figure out if this is an OK thing to do
+    if (probability_of_block != 0) record.score = probability_of_block;
+    if (record.score < 0 || record.score > 1) {
+      throw std::runtime_error(
+          absl::StrFormat("Invalid score field detected for record %s[%lu-%lu]: expected a score "
+                          "between 0 and 1, got %.4g.",
+                          record.name, record.chrom_start, record.chrom_end, record.score));
+    }
+    chromosomes.at(record.chrom)->add_extr_barrier(record);
+  }
+  return {nrecords, nrecords_ignored};
 }
 
 const std::vector<Chromosome>& Genome::get_chromosomes() const { return this->_chromosomes; }

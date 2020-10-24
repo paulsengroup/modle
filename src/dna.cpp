@@ -1,4 +1,3 @@
-
 #include "modle/dna.hpp"
 
 #include <algorithm>
@@ -72,6 +71,8 @@ absl::InlinedVector<ExtrusionBarrier, 3>* DNA::Bin::get_all_extr_barriers() cons
 absl::InlinedVector<ExtrusionUnit*, 3>& DNA::Bin::get_extr_units() { return *this->_extr_units; }
 
 void DNA::Bin::add_extr_barrier(ExtrusionBarrier b) {
+  absl::FPrintF(stderr, "strand=%c\n", b.get_direction() == DNA::Direction::fwd ? '+' : '-');
+  //  usleep(5e5);
   if (!this->_extr_barriers) {  // If this is the first ExtrusionBarrier, allocate the std::vector
     this->_extr_barriers = std::make_unique<absl::InlinedVector<ExtrusionBarrier, 3>>(
         absl::InlinedVector<ExtrusionBarrier, 3>{b});
@@ -199,10 +200,20 @@ DNA::DNA(uint64_t length, uint32_t bin_size)
     : _bins(make_bins(length, bin_size)), _length(length), _bin_size(bin_size) {}
 
 void DNA::add_extr_barrier(ExtrusionBarrier& b, uint32_t pos) {
-  assert(b.get_prob_of_block() > 0);
+  assert(b.get_prob_of_block() >= 0 && b.get_prob_of_block() <= 1);
   assert(pos <= this->length());
   assert(pos / this->get_bin_size() < this->get_n_bins());
   this->_bins[pos / this->get_bin_size()].add_extr_barrier(b);
+}
+
+void DNA::add_extr_barrier(const BED& record) {
+  assert(record.score >= 0 || record.score <= 1);
+  assert(record.chrom_end <= this->length());
+  assert(record.chrom_end / this->get_bin_size() < this->get_n_bins());
+  assert(record.strand == '+' || record.strand == '-');
+  uint64_t pos = (record.chrom_end + record.chrom_start) / 2;
+  auto strand = record.strand == '+' ? DNA::Direction::fwd : DNA::Direction::rev;
+  this->_bins[pos / this->get_bin_size()].add_extr_barrier(pos, record.score, strand);
 }
 
 void DNA::remove_extr_barrier(uint32_t pos, Direction direction) {
@@ -246,10 +257,10 @@ uint32_t DNA::get_n_barriers() const {
 }
 
 Chromosome::Chromosome(std::string name, uint64_t length, uint32_t bin_size,
-                       uint32_t avg_lef_processivity)
+                       uint32_t diagonal_width)
     : name(std::move(name)),
       dna(length, bin_size),
-      contacts((10 * avg_lef_processivity) / bin_size, length / bin_size) {}
+      contacts(diagonal_width / bin_size, length / bin_size) {}
 
 uint32_t Chromosome::length() const { return this->dna.length(); }
 uint32_t Chromosome::get_n_bins() const { return this->dna.get_n_bins(); }

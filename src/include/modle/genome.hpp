@@ -32,6 +32,7 @@ class Genome {
   [[nodiscard]] uint32_t get_n_bins() const;
   [[nodiscard]] uint32_t get_n_lefs() const;
   [[nodiscard]] uint32_t get_n_barriers() const;
+  [[nodiscard]] std::vector<std::string_view> get_chromosome_names() const;
   [[nodiscard]] std::vector<uint32_t> get_chromosome_lengths() const;
   [[nodiscard]] uint32_t get_n_of_free_lefs() const;
   [[nodiscard]] uint32_t get_n_of_busy_lefs() const;
@@ -54,14 +55,17 @@ class Genome {
    * only stores ptrs to the actual ExtrusionBarrier%s.
    * @param n_barriers The number of barriers to randomly generate and bind.
    */
-  void randomly_generate_barriers(uint32_t n_barriers);
+  void randomly_generate_extrusion_barriers(uint32_t n_barriers);
 
   /** This function is meant to be used before calling Genome::simulate_extrusion to randomly bind
    * Lef%s.
    *
    * The Chromosome and binding position are selected following the same procedure described for
-   * Chromosome::randomly_generate_barriers.
+   * Chromosome::randomly_generate_extrusion_barriers.
    */
+
+  std::pair<uint64_t, uint64_t> import_extrusion_barriers_from_bed(std::string_view path_to_bed,
+                                                                   double probability_of_block);
   void randomly_bind_lefs();
 
   uint32_t run_burnin(double prob_of_rebinding, uint16_t target_n_of_unload_events,
@@ -102,7 +106,7 @@ class Genome {
   std::bernoulli_distribution _sample_contacts;
 
   // Private initializers
-  [[nodiscard]] std::vector<Chromosome> init_chromosomes_from_file() const;
+  [[nodiscard]] std::vector<Chromosome> init_chromosomes_from_file(uint32_t diagonal_width) const;
   [[nodiscard]] std::vector<Lef> generate_lefs(uint32_t n);
 };
 }  // namespace modle

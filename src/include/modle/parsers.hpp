@@ -88,6 +88,8 @@ class BEDParser {
  public:
   // For now we always skip the header
   explicit BEDParser(std::string path_to_bed, BED::Standard bed_standard = BED::Standard::none);
+  explicit BEDParser(std::string_view path_to_bed,
+                     BED::Standard bed_standard = BED::Standard::none);
   std::vector<BED> parse_all(bool throw_on_duplicates = true);
   void reset();
 

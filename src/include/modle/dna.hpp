@@ -11,6 +11,7 @@ namespace modle {
 
 class ExtrusionBarrier;
 class ExtrusionUnit;
+struct BED;
 
 /// Class used to represent a DNA molecule as a vector Bin%s.
 /** Aside from owning the \p std::vector<Bin>, DNA is also used to keep track of the length and
@@ -49,6 +50,7 @@ class DNA {
 
   // Modifiers
   void add_extr_barrier(ExtrusionBarrier& b, uint32_t pos);
+  void add_extr_barrier(const BED& record);
   void remove_extr_barrier(uint32_t pos, Direction direction);
 
  private:
@@ -170,7 +172,7 @@ class DNA {
 /** The purpose of this struct is to keep together data regarding a single DNA molecule
  */
 struct Chromosome {
-  Chromosome(std::string name, uint64_t length, uint32_t bin_size, uint32_t avg_lef_processivity);
+  Chromosome(std::string name, uint64_t length, uint32_t bin_size, uint32_t diagonal_width);
 
   // Getters
   [[nodiscard]] uint32_t length() const;

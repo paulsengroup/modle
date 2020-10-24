@@ -61,7 +61,8 @@ class Lef {
    * This function also takes care of extending Lef%'s lifetime where appropriate.
    */
   void check_constraints(std::mt19937& rang_eng);
-  bool try_rebind(Chromosome& chr, std::mt19937& rand_eng, double prob_of_rebinding, bool register_contact);
+  bool try_rebind(Chromosome& chr, std::mt19937& rand_eng, double prob_of_rebinding,
+                  bool register_contact);
 
  private:
   Chromosome* _chr{nullptr};
@@ -95,7 +96,7 @@ class ExtrusionUnit {
   [[nodiscard]] DNA::Direction get_extr_direction() const;
   [[nodiscard]] bool is_stalled() const;
   [[nodiscard]] bool is_bound() const;
-  [[nodiscard]] uint64_t check_constraints(std::mt19937& rang_eng);
+  uint64_t check_constraints(std::mt19937& rang_eng);
   bool try_extrude();
   [[nodiscard]] double get_prob_of_extr_unit_bypass() const;
   [[nodiscard]] uint32_t get_bin_index() const;

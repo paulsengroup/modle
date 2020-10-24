@@ -199,6 +199,18 @@ BEDParser::BEDParser(std::string path_to_bed, BED::Standard bed_standard)
         absl::StrFormat("Unable to open file '%s' for reading.", this->_path_to_bed));
 }
 
+BEDParser::BEDParser(std::string_view path_to_bed, BED::Standard bed_standard)
+    // For now we always skip the header
+    : _path_to_bed(std::string(path_to_bed)),
+      _skip_header(true),
+      _standard(bed_standard),
+      _ncols(_standard) {
+  this->_fp.open(this->_path_to_bed);
+  if (!this->_fp)
+    throw std::runtime_error(
+        absl::StrFormat("Unable to open file '%s' for reading.", this->_path_to_bed));
+}
+
 std::vector<BED> BEDParser::parse_all(bool throw_on_duplicates) {
   absl::flat_hash_map<BED, uint64_t> unique_records;
   uint8_t ncols = 0;

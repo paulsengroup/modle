@@ -24,8 +24,6 @@ class Cli {
     auto* extr_barr = this->_cli.add_option_group("Extrusion Barriers", "");
     auto* extr_barr_mandatory = extr_barr->add_option_group("Mandatory", "")->require_option(1);
 
-
-
     // clang-format off
     io->add_option(
             "-c,--chromosome-size-file",
@@ -57,6 +55,13 @@ class Cli {
             "Bin size in base pairs.")
             ->check(CLI::PositiveNumber)
             ->capture_default_str();
+
+    gen->add_option(
+        "-w,--diagonal-width",
+        this->_config.diagonal_width,
+        "Width of the matrix that will be used to store contacts, which visually corresponds to the width of the diagonal in a typical square contact matrix.")
+        ->check(CLI::PositiveNumber)
+        ->capture_default_str();
 
     gen->add_option(
             "--number-of-iterations",
@@ -155,10 +160,9 @@ class Cli {
 
     extr_barr->add_option(
             "--probability-of-barrier-block",
-            this->_config.probability_of_barrier_block,
+            this->_config.probability_of_extrusion_barrier_block,
             "Probability of extrusion block by an extrusion barrier. When --extrusion-barrier-file is passed, this setting will overwrite the probability of block specified in the BED file.")
-            ->check(CLI::Range(0.0, 1.0))
-            ->capture_default_str();
+            ->check(CLI::Range(0.0, 1.0));
 
     gen->get_option("--skip-burn-in")->excludes(burn->get_option("--min-burnin-rounds"));
     gen->get_option("--skip-burn-in")->excludes(burn->get_option("--min-number-of-loops-per-lef"));

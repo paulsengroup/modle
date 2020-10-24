@@ -53,6 +53,7 @@ endif ()
 
 set(MODLE_DEBUG_OPTIONS "-Wall;-Wextra;-ggdb;-Og;-g3")
 set(MODLE_RELEASE_OPTIONS "-Wall;-Wextra;-O3")
+set(MODLE_RELEASE_W_TSAN_OPTIONS "-Wall;-Wextra;-O2;-fsanitize=thread;-g")
 
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 
@@ -102,6 +103,8 @@ set_target_properties(libmodle
 
 target_compile_options(libmodle PUBLIC "$<$<CONFIG:DEBUG>:${MODLE_DEBUG_OPTIONS}>")
 target_compile_options(libmodle PUBLIC "$<$<CONFIG:RELEASE>:${MODLE_RELEASE_OPTIONS}>")
+target_compile_options(libmodle PUBLIC "$<$<CONFIG:TSAN>:${MODLE_RELEASE_W_TSAN_OPTIONS}>")
+target_link_options(libmodle PUBLIC "$<$<CONFIG:TSAN>:-fsanitize=thread>")
 
 add_executable(
         modle
@@ -133,6 +136,8 @@ add_custom_command(
 
 target_compile_options(modle PUBLIC "$<$<CONFIG:DEBUG>:${MODLE_DEBUG_OPTIONS}>")
 target_compile_options(modle PUBLIC "$<$<CONFIG:RELEASE>:${MODLE_RELEASE_OPTIONS}>")
+target_compile_options(modle PUBLIC "$<$<CONFIG:TSAN>:${MODLE_RELEASE_W_TSAN_OPTIONS}>")
+target_link_options(modle PUBLIC "$<$<CONFIG:TSAN>:-fsanitize=thread>")
 
 install(TARGETS libmodle
         LIBRARY
