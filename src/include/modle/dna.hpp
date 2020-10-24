@@ -49,8 +49,8 @@ class DNA {
   [[nodiscard]] std::vector<Bin>::const_iterator cend() const;
 
   // Modifiers
-  void add_extr_barrier(ExtrusionBarrier& b, uint32_t pos);
-  void add_extr_barrier(const BED& record);
+  ExtrusionBarrier* add_extr_barrier(ExtrusionBarrier& b, uint32_t pos);
+  ExtrusionBarrier* add_extr_barrier(const BED& record);
   void remove_extr_barrier(uint32_t pos, Direction direction);
 
  private:
@@ -125,8 +125,8 @@ class DNA {
     [[nodiscard]] absl::InlinedVector<ExtrusionBarrier, 3>* get_all_extr_barriers() const;
     [[nodiscard]] absl::InlinedVector<ExtrusionUnit*, 3>& get_extr_units();
 
-    void add_extr_barrier(ExtrusionBarrier b);
-    void add_extr_barrier(uint64_t pos, double prob_of_barrier_block, DNA::Direction direction);
+    ExtrusionBarrier* add_extr_barrier(ExtrusionBarrier b);
+    ExtrusionBarrier* add_extr_barrier(uint64_t pos, double prob_of_barrier_block, DNA::Direction direction);
     /** Register the ExtrusionUnit unit as being bound to this instance of DNA::Bin.
      *
      * This function will take care of allocating the \p std::vector<ExtrusionUnit> when
@@ -180,8 +180,8 @@ struct Chromosome {
   [[nodiscard]] uint32_t get_n_barriers() const;
   void sort_barriers_by_pos();
 
-  void write_contacts_to_tsv(std::string_view chr_name, std::string_view output_dir,
-                             bool write_full_matrix = false) const;
+  void write_contacts_to_tsv(std::string_view output_dir, bool force_overwrite) const;
+  void write_barriers_to_tsv(std::string_view path_to_outfile, bool force_overwrite) const;
 
   std::string name;  ///< Sequence name (e.g. chromosome name from a BED file).
   DNA dna;           ///< DNA molecule represented as a sequence of DNA::Bin%s.

@@ -61,7 +61,8 @@ void run_simulation(const modle::config& c) {
   genome.simulate_extrusion(c.simulation_iterations);
   absl::FPrintF(stderr, "Simulation took %s.\n", absl::FormatDuration(absl::Now() - t0));
   if (!c.skip_output) {
-    genome.write_contacts_to_file(c.output_dir.data(), c.force);
+    genome.write_contacts_to_file(c.output_dir, c.force);
+    genome.write_extrusion_barriers_to_file(c.output_dir, c.force);
     std::ofstream cmd_file(absl::StrFormat("%s/settings.log", c.output_dir));
     cmd_file << c.to_string() << std::endl;
     cmd_file << absl::StrJoin(c.argv, c.argv + c.argc, " ") << std::endl;

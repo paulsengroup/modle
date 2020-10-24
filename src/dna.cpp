@@ -1,6 +1,7 @@
 #include "modle/dna.hpp"
 
 #include <algorithm>
+#include <filesystem>
 
 #include "absl/container/flat_hash_set.h"
 #include "absl/strings/str_format.h"
@@ -70,7 +71,7 @@ absl::InlinedVector<ExtrusionBarrier, 3>* DNA::Bin::get_all_extr_barriers() cons
 
 absl::InlinedVector<ExtrusionUnit*, 3>& DNA::Bin::get_extr_units() { return *this->_extr_units; }
 
-void DNA::Bin::add_extr_barrier(ExtrusionBarrier b) {
+ExtrusionBarrier* DNA::Bin::add_extr_barrier(ExtrusionBarrier b) {
   absl::FPrintF(stderr, "strand=%c\n", b.get_direction() == DNA::Direction::fwd ? '+' : '-');
   //  usleep(5e5);
   if (!this->_extr_barriers) {  // If this is the first ExtrusionBarrier, allocate the std::vector
@@ -79,6 +80,7 @@ void DNA::Bin::add_extr_barrier(ExtrusionBarrier b) {
   } else {
     this->_extr_barriers->emplace_back(b);
   }
+  return &this->_extr_barriers->back();
 }
 
 void DNA::Bin::remove_extr_barrier(Direction d) {
@@ -186,34 +188,35 @@ void DNA::Bin::sort_extr_barriers_by_pos() {
   }
 }
 
-void DNA::Bin::add_extr_barrier(uint64_t pos, double prob_of_barrier_block,
-                                DNA::Direction direction) {
+ExtrusionBarrier* DNA::Bin::add_extr_barrier(uint64_t pos, double prob_of_barrier_block,
+                                             DNA::Direction direction) {
   if (!this->_extr_barriers) {
     this->_extr_barriers = std::make_unique<absl::InlinedVector<ExtrusionBarrier, 3>>(
         absl::InlinedVector<ExtrusionBarrier, 3>{{pos, prob_of_barrier_block, direction}});
   } else {
     this->_extr_barriers->emplace_back(pos, prob_of_barrier_block, direction);
   }
+  return &this->_extr_barriers->back();
 }
 
 DNA::DNA(uint64_t length, uint32_t bin_size)
     : _bins(make_bins(length, bin_size)), _length(length), _bin_size(bin_size) {}
 
-void DNA::add_extr_barrier(ExtrusionBarrier& b, uint32_t pos) {
+ExtrusionBarrier* DNA::add_extr_barrier(ExtrusionBarrier& b, uint32_t pos) {
   assert(b.get_prob_of_block() >= 0 && b.get_prob_of_block() <= 1);
   assert(pos <= this->length());
   assert(pos / this->get_bin_size() < this->get_n_bins());
-  this->_bins[pos / this->get_bin_size()].add_extr_barrier(b);
+  return this->_bins[pos / this->get_bin_size()].add_extr_barrier(b);
 }
 
-void DNA::add_extr_barrier(const BED& record) {
+ExtrusionBarrier* DNA::add_extr_barrier(const BED& record) {
   assert(record.score >= 0 || record.score <= 1);
   assert(record.chrom_end <= this->length());
   assert(record.chrom_end / this->get_bin_size() < this->get_n_bins());
   assert(record.strand == '+' || record.strand == '-');
   uint64_t pos = (record.chrom_end + record.chrom_start) / 2;
   auto strand = record.strand == '+' ? DNA::Direction::fwd : DNA::Direction::rev;
-  this->_bins[pos / this->get_bin_size()].add_extr_barrier(pos, record.score, strand);
+  return this->_bins[pos / this->get_bin_size()].add_extr_barrier(pos, record.score, strand);
 }
 
 void DNA::remove_extr_barrier(uint32_t pos, Direction direction) {
@@ -277,26 +280,80 @@ void Chromosome::sort_barriers_by_pos() {
   }
 }
 
-void Chromosome::write_contacts_to_tsv(std::string_view chr_name, std::string_view output_dir,
-                                       bool write_full_matrix) const {
-  const auto t0 = absl::Now();
-  //  uint32_t bytes_in, bytes_out;
-  if (write_full_matrix) {
-    auto file = absl::StrFormat("%s/%s.tsv.bz2", output_dir, chr_name);
-    absl::FPrintF(stderr, "Writing full contact matrix for '%s' to file '%s'...\n", chr_name, file);
-    auto [bytes_in, bytes_out] = this->contacts.write_full_matrix_to_tsv(file);
+void Chromosome::write_contacts_to_tsv(std::string_view output_dir, bool force_overwrite) const {
+  auto t0 = absl::Now();
+  auto path_to_outfile =
+      std::filesystem::weakly_canonical(absl::StrFormat("%s/%s.tsv.bz2", output_dir, this->name));
+  if (!force_overwrite && std::filesystem::exists(path_to_outfile)) {
+    absl::FPrintF(stderr, "File '%s' already exists. Pass --force to overwrite... SKIPPING.\n",
+                  path_to_outfile);
+    return;
+  }
+  absl::FPrintF(stderr, "Writing full contact matrix for '%s' to file '%s'...\n", this->name,
+                path_to_outfile);
+  {
+    auto [bytes_in, bytes_out] = this->contacts.write_full_matrix_to_tsv(path_to_outfile);
     absl::FPrintF(stderr,
-                  "DONE writing '%s' in %s! Compressed size: %.2f MB (compression ration %.2fx)\n",
-                  file, absl::FormatDuration(absl::Now() - t0), bytes_out / 1.0e6,
+                  "DONE writing '%s' in %s! Compressed size: %.2f MB (compression ratio %.2fx)\n",
+                  path_to_outfile, absl::FormatDuration(absl::Now() - t0), bytes_out / 1.0e6,
                   static_cast<double>(bytes_in) / bytes_out);
-  } else {
-    auto file = absl::StrFormat("%s/%s_raw.tsv.bz2", output_dir, chr_name);
-    absl::FPrintF(stderr, "Writing raw contact matrix for '%s' to file '%s'...\n", chr_name, file);
-    auto [bytes_in, bytes_out] = this->contacts.write_to_tsv(file);
-    absl::FPrintF(stderr,
-                  "DONE writing '%s' in %s! Compressed size: %.2f MB (compression ration %.2fx)\n",
-                  file, absl::FormatDuration(absl::Now() - t0), bytes_out / 1.0e6,
-                  static_cast<double>(bytes_in) / bytes_out);
+    t0 = absl::Now();
+  }
+  path_to_outfile = std::filesystem::weakly_canonical(
+      absl::StrFormat("%s/%s_raw.tsv.bz2", output_dir, this->name));
+  absl::FPrintF(stderr, "Writing raw contact matrix for '%s' to file '%s'...\n", this->name,
+                path_to_outfile);
+  auto [bytes_in, bytes_out] = this->contacts.write_to_tsv(path_to_outfile);
+  absl::FPrintF(stderr,
+                "DONE writing '%s' in %s! Compressed size: %.2f MB (compression ratio %.2fx)\n",
+                path_to_outfile, absl::FormatDuration(absl::Now() - t0), bytes_out / 1.0e6,
+                static_cast<double>(bytes_in) / bytes_out);
+}
+
+void Chromosome::write_barriers_to_tsv(std::string_view output_dir, bool force_overwrite) const {
+  auto path_to_outfile = std::filesystem::weakly_canonical(
+      absl::StrFormat("%s/%s.extrusion_barriers.tsv.bz2", output_dir, this->name));
+  if (!force_overwrite && std::filesystem::exists(path_to_outfile)) {
+    absl::FPrintF(stderr, "File '%s' already exists. Pass --force to overwrite... SKIPPING.\n",
+                  path_to_outfile);
+    return;
+  }
+  auto fp = fopen(path_to_outfile.c_str(), "wb");
+  int bz_status;
+  if (!fp)
+    throw std::runtime_error(
+        absl::StrFormat("An error occurred while opening file '%s' for writing.", path_to_outfile));
+
+  auto bzf = BZ2_bzWriteOpen(&bz_status, fp, 9 /* block size */, 0 /* verbosity */,
+                             /* work factor, 0 == default == 30 */ 0);
+  if (bz_status != BZ_OK) {
+    BZ2_bzWriteClose(nullptr, bzf, 0, nullptr, nullptr);
+    fclose(fp);
+    throw std::runtime_error(
+        absl::StrFormat("Unable to open file '%s' for writing.", path_to_outfile));
+  }
+  std::string buff;
+  buff.reserve(8192);
+  for (const auto& barrier : this->barriers) {
+    buff += absl::StrFormat("%c%lu\n", barrier->get_direction() == DNA::fwd ? '+' : '-',
+                            barrier->get_pos());
+    if (buff.size() >= 8000) {
+      BZ2_bzWrite(&bz_status, bzf, buff.data(), buff.size());
+      buff.clear();
+    }
+    if (bz_status != BZ_OK) {
+      BZ2_bzWriteClose(nullptr, bzf, 0, nullptr, nullptr);
+      fclose(fp);
+      throw std::runtime_error(
+          absl::StrFormat("An error occurred while writing to file '%s'.", path_to_outfile));
+    }
+  }
+  if (!buff.empty()) BZ2_bzWrite(&bz_status, bzf, buff.data(), buff.size());
+
+  BZ2_bzWriteClose(&bz_status, bzf, 0, nullptr, nullptr);
+  if (fclose(fp) != 0 || bz_status != BZ_OK) {
+    throw std::runtime_error(
+        absl::StrFormat("An error occurred while closing file '%s'.", path_to_outfile));
   }
 }
 
