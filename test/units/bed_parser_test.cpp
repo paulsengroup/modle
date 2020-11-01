@@ -37,7 +37,8 @@ void compare_bed_records_with_file(std::vector<modle::BED> records, const std::s
 }
 
 TEST(modle_test_suite, bed_parser_simple_test) {
-  auto p = modle::BEDParser("data/sample.bed6");
+  std::string bed_file = "data/sample.bed6";
+  auto p = modle::BEDParser(bed_file);
   auto records = p.parse_all();
   EXPECT_EQ(records.size(), 9);
   std::sort(records.begin(), records.end());
@@ -49,7 +50,8 @@ TEST(modle_test_suite, bed_parser_simple_test) {
 }
 
 TEST(modle_test_suite, bed_parser_simple_test_bed3) {
-  auto p = modle::BEDParser("data/sample.bed6", modle::BED::BED3);
+  std::string bed_file = "data/sample.bed6";
+  auto p = modle::BEDParser(bed_file, modle::BED::BED3);
   auto records = p.parse_all();
   std::sort(records.begin(), records.end());
   EXPECT_STREQ(records[0].chrom.c_str(), "chr7");
