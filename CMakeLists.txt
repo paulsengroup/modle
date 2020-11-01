@@ -31,9 +31,9 @@ find_package(TBB REQUIRED)
 FetchContent_Declare(
         abseil-cpp
         GIT_REPOSITORY https://github.com/abseil/abseil-cpp.git
-        GIT_TAG 20200923
+        GIT_TAG "20200923.2"
         GIT_SHALLOW ON
-        SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/external/abseil-cpp
+        SOURCE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/external/abseil-cpp"
 )
 
 FetchContent_Declare(
@@ -41,7 +41,7 @@ FetchContent_Declare(
         GIT_REPOSITORY https://github.com/CLIUtils/CLI11.git
         GIT_TAG v1.9.1
         GIT_SHALLOW ON
-        SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/external/CLI11
+        SOURCE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/external/CLI11"
 )
 
 FetchContent_MakeAvailable(abseil-cpp CLI11)

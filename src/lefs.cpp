@@ -64,7 +64,7 @@ bool ExtrusionUnit::try_moving_to_prev_bin() {
 
 bool ExtrusionUnit::hard_stall() const {
   return this->_blocking_barrier &&
-         this->get_extr_direction() == this->_blocking_barrier->get_direction();
+         this->get_extr_direction() == this->_blocking_barrier->get_direction_of_block();
 }
 
 void ExtrusionUnit::set_stalls(uint32_t n) { this->_stalls_left = n; }
@@ -161,7 +161,7 @@ uint64_t ExtrusionUnit::check_for_extrusion_barrier(std::mt19937& rang_eng) {
   }
   if (this->_blocking_barrier) {
     applied_stall = this->_blocking_barrier->generate_num_stalls(rang_eng);
-    if (this->_blocking_barrier->get_direction() != this->get_extr_direction()) {
+    if (this->_blocking_barrier->get_direction_of_block() != this->get_extr_direction()) {
       // "Small" stall
       applied_stall /= 2;  // TODO: Make this tunable
     }

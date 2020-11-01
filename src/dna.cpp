@@ -43,7 +43,7 @@ ExtrusionBarrier* DNA::Bin::get_next_extr_barrier(ExtrusionBarrier* b, Direction
 
   auto barrier =
       std::find_if(b_itr, this->_extr_barriers->end(), [&d](const ExtrusionBarrier& barr) {
-        return d == DNA::Direction::both || barr.get_direction() == d;
+        return d == DNA::Direction::both || barr.get_direction_of_block() == d;
       });
   // Found an ExtrusionBarrier matching the search criteria
   if (barrier != this->_extr_barriers->end()) return barrier;
@@ -58,7 +58,7 @@ ExtrusionBarrier* DNA::Bin::get_prev_extr_barrier(ExtrusionBarrier* b, Direction
 
   auto barrier =
       std::find_if(b_itr, this->_extr_barriers->rend(), [&d](const ExtrusionBarrier& barr) {
-        return d == DNA::Direction::both || barr.get_direction() == d;
+        return d == DNA::Direction::both || barr.get_direction_of_block() == d;
       });
   // Found an ExtrusionBarrier matching the search criteria
   if (barrier != this->_extr_barriers->rend()) return barrier.operator->();
@@ -72,7 +72,8 @@ absl::InlinedVector<ExtrusionBarrier, 3>* DNA::Bin::get_all_extr_barriers() cons
 absl::InlinedVector<ExtrusionUnit*, 3>& DNA::Bin::get_extr_units() { return *this->_extr_units; }
 
 ExtrusionBarrier* DNA::Bin::add_extr_barrier(ExtrusionBarrier b) {
-  absl::FPrintF(stderr, "strand=%c\n", b.get_direction() == DNA::Direction::fwd ? '+' : '-');
+  absl::FPrintF(stderr, "strand=%c\n",
+                b.get_direction_of_block() == DNA::Direction::fwd ? '+' : '-');
   //  usleep(5e5);
   if (!this->_extr_barriers) {  // If this is the first ExtrusionBarrier, allocate the std::vector
     this->_extr_barriers = std::make_unique<absl::InlinedVector<ExtrusionBarrier, 3>>(
@@ -91,7 +92,7 @@ void DNA::Bin::remove_extr_barrier(Direction d) {
   }
   auto barrier = std::find_if(this->_extr_barriers->begin(), this->_extr_barriers->end(),
                               [&d](const ExtrusionBarrier& b) {
-                                return d == DNA::Direction::both || b.get_direction() == d;
+                                return d == DNA::Direction::both || b.get_direction_of_block() == d;
                               });
   if (barrier != this->_extr_barriers->end()) {
     this->_extr_barriers->erase(barrier);
@@ -335,7 +336,7 @@ void Chromosome::write_barriers_to_tsv(std::string_view output_dir, bool force_o
   std::string buff;
   buff.reserve(8192);
   for (const auto& barrier : this->barriers) {
-    buff += absl::StrFormat("%c%lu\n", barrier->get_direction() == DNA::fwd ? '+' : '-',
+    buff += absl::StrFormat("%c%lu\n", barrier->get_direction_of_block() == DNA::fwd ? '+' : '-',
                             barrier->get_pos());
     if (buff.size() >= 8000) {
       BZ2_bzWrite(&bz_status, bzf, buff.data(), buff.size());
