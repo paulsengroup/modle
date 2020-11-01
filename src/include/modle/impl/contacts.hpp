@@ -11,7 +11,19 @@
 namespace modle {
 template <typename I>
 ContactMatrix<I>::ContactMatrix(uint64_t nrows, uint64_t ncols)
-    : _nrows(nrows), _ncols(ncols), _matrix(allocate_matrix()) {}
+    : _nrows(nrows), _ncols(ncols), _matrix(_nrows * _ncols, 0) {}
+
+template <typename I>
+I &ContactMatrix<I>::at(uint64_t i, uint64_t j) {
+  assert((j * this->_nrows) + i < this->_matrix.size());
+  return this->_matrix[(j * this->_nrows) + i];
+}
+
+template <typename I>
+const I &ContactMatrix<I>::at(uint64_t i, uint64_t j) const {
+  assert((j * this->_nrows) + i < this->_matrix.size());
+  return this->_matrix[(j * this->_nrows) + i];
+}
 
 template <typename I>
 void ContactMatrix<I>::increment(uint64_t row, uint64_t col, I n) {
@@ -21,13 +33,14 @@ void ContactMatrix<I>::increment(uint64_t row, uint64_t col, I n) {
     j = row;
     i = j - col;
   }
-  if (i >= this->n_rows() || j >= this->n_cols()) {
-    ++this->_updates_missed;
-    return;
-  }
+  if (j >= this->n_cols())
+    throw std::logic_error(absl::StrFormat("ContactMatrix::increment(%d, %d, %d): j=%d > ncols=%d.",
+                                           row, col, n, j, this->n_cols()));
+  if (this->_updates_missed += i >= this->n_rows()) return;
+
   assert(i < this->n_rows());
   assert(j < this->n_cols());
-  this->_matrix[i][j] += n;
+  this->at(i, j) += n;
 }
 
 template <typename I>
@@ -38,13 +51,14 @@ void ContactMatrix<I>::set(uint64_t row, uint64_t col, I n) {
     j = row;
     i = j - col;
   }
-  if (i >= this->n_rows() || j >= this->n_cols()) {
-    ++this->_updates_missed;
-    return;
-  }
+  if (j >= this->n_cols())
+    throw std::logic_error(absl::StrFormat("ContactMatrix::set(%d, %d, %d): j=%d > ncols=%d.", row,
+                                           col, n, j, this->n_cols()));
+  if (this->_updates_missed += i >= this->n_rows()) return;
+
   assert(i < this->n_rows());
   assert(j < this->n_cols());
-  this->_matrix[i][j] = n;
+  this->at(i, j) = n;
 }
 
 template <typename I>
@@ -55,14 +69,15 @@ void ContactMatrix<I>::decrement(uint64_t row, uint64_t col, I n) {
     j = row;
     i = j - col;
   }
-  if (i >= this->n_rows() || j >= this->n_cols()) {
-    ++this->_updates_missed;
-    return;
-  }
+  if (j >= this->n_cols())
+    throw std::logic_error(absl::StrFormat("ContactMatrix::decrement(%d, %d, %d): j=%d > ncols=%d.",
+                                           row, col, n, j, this->n_cols()));
+  if (this->_updates_missed += i >= this->n_rows()) return;
+
   assert(i < this->n_rows());
   assert(j < this->n_cols());
-  assert(n <= this->_matrix[i][j]);
-  this->_matrix[i][j] -= n;
+  assert(n <= this->_matrix[(j * this->_nrows) + i]);
+  this->at(i, j) -= n;
 }
 
 template <typename I>
@@ -81,7 +96,7 @@ void ContactMatrix<I>::print(bool full) const {
         if (i >= this->_nrows)
           row[x] = 0;
         else
-          row[x] = this->_matrix[i][j];
+          row[x] = this->at(i, j);
       }
       absl::PrintF("%s\n", absl::StrJoin(row, "\t"));
     }
@@ -93,18 +108,6 @@ void ContactMatrix<I>::print(bool full) const {
 }
 
 template <typename I>
-std::vector<std::vector<uint32_t>> ContactMatrix<I>::allocate_matrix() const {
-  std::vector<std::vector<uint32_t>> m;
-  m.reserve(this->_nrows);
-
-  for (uint64_t i = 0; i < this->_nrows; ++i) {
-    std::vector<uint32_t> v(this->_ncols, 0);
-    m.emplace_back(std::move(v));
-  }
-  return m;
-}
-
-template <typename I>
 I ContactMatrix<I>::get(uint64_t row, uint64_t col) const {
   auto j = col;
   auto i = j - row;
@@ -113,7 +116,7 @@ I ContactMatrix<I>::get(uint64_t row, uint64_t col) const {
     i = j - col;
   }
   if (i >= this->n_rows() || j >= this->n_cols()) return 0;
-  return this->_matrix[i][j];
+  return this->at(i, j);
 }
 
 template <typename I>
@@ -131,7 +134,7 @@ std::vector<std::vector<I>> ContactMatrix<I>::generate_symmetric_matrix() const 
       }
 
       if (i < this->_nrows) {
-        row[x] = this->_matrix[i][j];
+        row[x] = this->at(i, j);
       }
     }
     m.emplace_back(std::move(row));
@@ -141,13 +144,11 @@ std::vector<std::vector<I>> ContactMatrix<I>::generate_symmetric_matrix() const 
 
 template <typename I>
 uint64_t ContactMatrix<I>::n_rows() const {
-  assert(this->_nrows == this->_matrix.size());
   return this->_nrows;
 }
 
 template <typename I>
 uint64_t ContactMatrix<I>::n_cols() const {
-  assert(this->_ncols == this->_matrix.at(0).size());
   return this->_ncols;
 }
 
@@ -171,8 +172,15 @@ std::pair<uint32_t, uint32_t> ContactMatrix<I>::write_to_tsv(
     throw std::runtime_error(
         absl::StrFormat("Unable to open file '%s' for writing.", path_to_file));
   }
+  std::vector<I> row(this->_ncols, 0);
   std::string buff;
-  for (const auto &row : this->_matrix) {
+
+  for (auto i = 0UL; i < this->_nrows; ++i) {
+    for (auto j = 0UL; j < this->_ncols; ++j) {
+      assert(i * j < this->_matrix.size());
+      row[j] = this->at(i, j);
+    }
+
     buff = absl::StrJoin(row, "\t");
     buff += "\n";
     BZ2_bzWrite(&bz_status, bzf, buff.data(), buff.size());
@@ -227,7 +235,7 @@ std::pair<uint32_t, uint32_t> ContactMatrix<I>::write_full_matrix_to_tsv(
       if (i >= this->_nrows)
         row[x] = 0;
       else
-        row[x] = this->_matrix[i][j];
+        row[x] = this->at(i, j);
     }
     buff = absl::StrJoin(row, "\t") + "\n";
     BZ2_bzWrite(&bz_status, bzf, buff.data(), buff.size());

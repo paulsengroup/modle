@@ -24,10 +24,11 @@ class ContactMatrix {
  private:
   uint64_t _nrows;
   uint64_t _ncols;
-  std::vector<std::vector<I>> _matrix;
+  std::vector<I> _matrix;
   uint64_t _updates_missed{0};
 
-  [[nodiscard]] std::vector<std::vector<uint32_t>> allocate_matrix() const;
+  [[nodiscard]] I& at(uint64_t i, uint64_t j);
+  [[nodiscard]] const I& at(uint64_t i, uint64_t j) const;
 };
 
 }  // namespace modle

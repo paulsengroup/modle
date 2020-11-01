@@ -90,7 +90,7 @@ modle::ContactMatrix<uint32_t> build_matrix_from_file(const std::string& path_to
 void test_with_huge_matrix(const std::string& path_to_file, uint32_t size, uint32_t diagonal_width,
                            const std::string& sep = "\t") {
   const auto m =
-      build_matrix_from_file(path_to_file, size, diagonal_width, sep).generate_symmetric_matrix();
+      build_matrix_from_file(path_to_file, size, diagonal_width, sep);
   std::ifstream f(path_to_file);
 
   if (f.is_open()) {
@@ -102,8 +102,8 @@ void test_with_huge_matrix(const std::string& path_to_file, uint32_t size, uint3
       for (const auto& tok : absl::StrSplit(line, '\t')) {
         if (tok != "0") {
           buff = tok;
-          EXPECT_EQ(m[i][j], std::stoul(buff))
-              << "i=" << i << "; j=" << j << "; expected=" << buff << "; got=" << m[i][j] << ";";
+          EXPECT_EQ(m.get(i, j), std::stoul(buff))
+              << "i=" << i << "; j=" << j << "; expected=" << buff << "; got=" << m.get(i, j) << ";";
         }
         ++j;
       }
