@@ -27,6 +27,7 @@ include(CheckIPOSupported)
 
 find_package(BZip2 REQUIRED)
 find_package(TBB REQUIRED)
+find_package(Boost REQUIRED)
 
 FetchContent_Declare(
         abseil-cpp
@@ -81,10 +82,10 @@ add_library(
 
 target_include_directories(
         libmodle
-        PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/src/include/
-        PRIVATE ${BZIP2_INCLUDE_DIRS}
-        INTERFACE ${CMAKE_CURRENT_SOURCE_DIR}/external/abseil-cpp/include/
-)
+        PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/src/include/"
+        PRIVATE "${BZIP2_INCLUDE_DIRS}"
+        INTERFACE "${CMAKE_CURRENT_SOURCE_DIR}/external/abseil-cpp/include/"
+        INTERFACE "${Boost_INCLUDE_DIRS}")
 
 target_link_libraries(
         libmodle
