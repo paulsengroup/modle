@@ -8,6 +8,8 @@
 #include <string>
 #include <unordered_set>
 
+namespace modle {
+
 template <typename N, typename = typename std::enable_if<std::is_arithmetic<N>::value, N>::type>
 inline void write_vect_to_file(const std::string& fpath, const std::vector<N>& v) {
   auto fp = std::ofstream(fpath);
@@ -20,8 +22,8 @@ inline void write_vect_to_file(const std::string& fpath, const std::vector<N>& v
 }
 
 inline std::vector<uint32_t> generate_random_vect(std::mt19937& rnd_eng, uint32_t size = 1000,
-                                           uint32_t min = 0, uint32_t max = 15'000,
-                                           bool allow_duplicates = true) {
+                                                  uint32_t min = 0, uint32_t max = 15'000,
+                                                  bool allow_duplicates = true) {
   std::uniform_int_distribution<uint32_t> dist(min, max);
   std::vector<uint32_t> v(size);
   if (allow_duplicates) {
@@ -35,7 +37,6 @@ inline std::vector<uint32_t> generate_random_vect(std::mt19937& rnd_eng, uint32_
   }
   return v;
 }
-
 
 inline std::pair<std::vector<uint32_t>, std::vector<uint32_t>> generate_correlated_vects(
     std::mt19937& rnd_eng, uint32_t size = 1000) {
@@ -53,10 +54,9 @@ inline std::pair<std::vector<uint32_t>, std::vector<uint32_t>> generate_correlat
   return {v1, v2};
 }
 
-
 template <typename N, typename = typename std::enable_if<std::is_arithmetic<N>::value, N>::type>
 inline std::pair<double, double> corr_scipy(const std::vector<N>& v1, const std::vector<N>& v2,
-                                     const std::string& method = "spearmanr") {
+                                            const std::string& method = "spearmanr") {
   auto f1_path = std::string(std::tmpnam(nullptr));
   auto f2_path = std::string(std::tmpnam(nullptr));
   write_vect_to_file(f1_path, v1);
@@ -92,3 +92,4 @@ inline std::pair<double, double> corr_scipy(const std::vector<N>& v1, const std:
 
   return {rho, pv};
 }
+}  // namespace modle

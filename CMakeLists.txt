@@ -65,9 +65,15 @@ else ()
     message(STATUS "IPO/LTO not available")
 endif ()
 
+include_directories(
+        "${CMAKE_CURRENT_SOURCE_DIR}/src/include/"
+        "${BZIP2_INCLUDE_DIRS}"
+        "${CMAKE_CURRENT_SOURCE_DIR}/external/abseil-cpp/include/"
+        "${Boost_INCLUDE_DIRS}")
+
+
 if (CMAKE_BUILD_TYPE STREQUAL "Debug")
     message(STATUS "Debug mode detected: enabling tests")
-    include_directories(${CMAKE_CURRENT_SOURCE_DIR}/src/include/)
     add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/test)
 endif ()
 
@@ -77,15 +83,7 @@ add_library(
         src/extr_barrier.cpp
         src/genome.cpp
         src/lefs.cpp
-        src/parsers.cpp
-        src/include/modle/impl/parsers.hpp)
-
-target_include_directories(
-        libmodle
-        PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/src/include/"
-        PRIVATE "${BZIP2_INCLUDE_DIRS}"
-        INTERFACE "${CMAKE_CURRENT_SOURCE_DIR}/external/abseil-cpp/include/"
-        INTERFACE "${Boost_INCLUDE_DIRS}")
+        src/parsers.cpp)
 
 target_link_libraries(
         libmodle

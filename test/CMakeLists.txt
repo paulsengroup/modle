@@ -26,8 +26,8 @@ target_sources(
         modle_test
         PRIVATE units/contacts_test.cpp
         PRIVATE units/bed_parser_test.cpp
-        PRIVATE units/spearman_test.cpp
-        PRIVATE units/kendall_test.cpp
+        PRIVATE units/correlation_test.cpp
+        PRIVATE units/utils_test.cpp
 )
 
 target_include_directories(

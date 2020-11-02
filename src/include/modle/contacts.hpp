@@ -1,11 +1,19 @@
 #pragma once
 
-#include "absl/container/flat_hash_map.h"
+#include <type_traits>
+
+//#include "absl/container/flat_hash_map.h"
+#include <cstdint>
+#include <string>
+#include <vector>
 
 namespace modle {
 
 template <typename I>
 class ContactMatrix {
+  static_assert(std::is_integral<I>::value,
+                "ContactMatrix requires an integral type as template argument.");
+
  public:
   ContactMatrix(uint64_t nrows, uint64_t ncols);
   [[nodiscard]] I get(uint64_t row, uint64_t col) const;

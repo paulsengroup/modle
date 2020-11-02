@@ -1,4 +1,3 @@
-// #include <zlib.h>
 #include <bzlib.h>
 
 #include <cassert>
@@ -9,7 +8,7 @@
 #include "modle/contacts.hpp"
 
 namespace modle {
-template <typename I>
+template <class I>
 ContactMatrix<I>::ContactMatrix(uint64_t nrows, uint64_t ncols)
     : _nrows(nrows), _ncols(ncols), _matrix(_nrows * _ncols, 0) {}
 

@@ -35,7 +35,7 @@ template <typename Iterator,
           typename = typename std::enable_if<
               std::is_base_of<std::random_access_iterator_tag,
                               typename std::iterator_traits<Iterator>::iterator_category>::value>>
-std::vector<uint32_t> sort_vector_by_idx(Iterator begin, Iterator end) {
+std::vector<uint32_t> sort_vector_by_idx(const Iterator begin, const Iterator end) {
   std::vector<uint32_t> vi(std::distance(begin, end));
   std::iota(vi.begin(), vi.end(), 0);
   std::sort(vi.begin(), vi.end(),
@@ -47,7 +47,8 @@ template <typename Iterator,
           typename = typename std::enable_if<
               std::is_base_of<std::random_access_iterator_tag,
                               typename std::iterator_traits<Iterator>::iterator_category>::value>>
-void sort_pair_of_vectors(Iterator v1_begin, Iterator v1_end, Iterator v2_begin, Iterator v2_end) {
+void sort_pair_of_vectors(const Iterator v1_begin, const Iterator v1_end, const Iterator v2_begin,
+                          const Iterator v2_end) {
   assert(std::distance(v1_begin, v1_end) == std::distance(v2_begin, v2_end));
   const auto vi = sort_vector_by_idx(v1_begin, v2_end);
   for (auto i = 0UL; i < vi.size(); ++i) {
@@ -81,7 +82,7 @@ template <typename Iterator,
           typename = typename std::enable_if<
               std::is_base_of<std::random_access_iterator_tag,
                               typename std::iterator_traits<Iterator>::iterator_category>::value>>
-std::vector<double> compute_element_ranks(Iterator begin, Iterator end) {
+std::vector<double> compute_element_ranks(const Iterator begin, const Iterator end) {
   const auto vi = sort_vector_by_idx(begin, end);
   std::vector<double> vr(vi.size());
 
@@ -102,44 +103,4 @@ std::vector<double> compute_element_ranks(Iterator begin, Iterator end) {
   //  print_vect(vr);
   return vr;
 }
-
-/*
-template <typename Iterator,
-    typename = typename std::enable_if<
-        std::is_base_of<std::random_access_iterator_tag,
-            typename std::iterator_traits<Iterator>::iterator_category>::value>>
-std::vector<double> compute_element_ranks_w_ties(Iterator begin, Iterator end) {
-  const auto vi = sort_vector_by_idx(begin, end);
-  std::vector<double> vr(vi.size());
-  absl::flat_hash_map<int64_t, std::pair<uint32_t, uint32_t>>
-      ties;  // key = tied_value; value = <lowest_rank, highest_rank>
-  ties.reserve(vi.size());
-  // This bitset is just used to avoid expensive lookups in the hashmap
-  // Bits corresponding to the indices of tied values are set to 1;
-  boost::dynamic_bitset<> ties_mask(vr.size());
-
-  for (auto i = 0U; i < vi.size(); ++i) {
-    auto n = *(begin + vi[i]);                     // Number whose rank is being computed
-    if (auto m = ties.find(n); m != ties.end()) {  // n is tied. Update min/max rank
-      m->second.first = std::min(m->second.first, i);
-      m->second.second = std::max(m->second.second, i);
-      ties_mask[m->second.first] = true;
-      ties_mask[m->second.second] = true;
-    } else  // First time that we see n. Set min and max ramks to i
-      ties.emplace(n, std::make_pair(i, i));
-  }
-
-  for (auto i = 0U; i < vr.size(); ++i) {
-    if (!ties_mask[i])
-      vr[vi[i]] = i;  // Value is not tied: assign normal rank
-    else {
-      const auto &[first, last] = ties.at(*(begin + vi[i]));
-      vr[vi[i]] = (first + last) / 2.0;  // Value is tied: assign the corrected rank
-    }
-  }
-  //  print_vect(vr);
-  return vr;
-}
- */
-
 }  // namespace modle

@@ -1,5 +1,6 @@
 #include "modle/contacts.hpp"
 
+#include <cstdint>
 #include <fstream>
 #include <vector>
 
@@ -7,8 +8,10 @@
 #include "absl/strings/str_split.h"
 #include "gtest/gtest.h"
 
+namespace modle {
+
 TEST(modle_test_suite, contacts_simple_test) {
-  modle::ContactMatrix<uint32_t> c(10, 100);
+  ContactMatrix<uint32_t> c(10, 100);
   EXPECT_EQ(c.get(0, 0), 0);
   c.increment(0, 0);
   EXPECT_EQ(c.get(0, 0), 1);
@@ -43,7 +46,7 @@ std::vector<std::vector<uint32_t>> load_matrix_from_file(const std::string& path
 TEST(modle_test_suite, contacts_small_matrix_test) {
   const auto m1 = load_matrix_from_file("data/symm_matrix_200_10.tsv");
   uint32_t size = 200, diagonal_width = 10;
-  modle::ContactMatrix<uint32_t> m2(diagonal_width, size);
+  ContactMatrix<uint32_t> m2(diagonal_width, size);
   for (auto i = 0UL; i < m1.size(); ++i) {
     for (auto j = 0UL; j < m1[i].size(); ++j) {
       if (m1[i][j] != 0 && j >= i) {
@@ -60,10 +63,10 @@ TEST(modle_test_suite, contacts_small_matrix_test) {
   }
 }
 
-modle::ContactMatrix<uint32_t> build_matrix_from_file(const std::string& path_to_file,
-                                                      uint32_t size, uint32_t diagonal_width,
-                                                      const std::string& sep = "\t") {
-  modle::ContactMatrix<uint32_t> m(diagonal_width, size);
+ContactMatrix<uint32_t> build_matrix_from_file(const std::string& path_to_file, uint32_t size,
+                                               uint32_t diagonal_width,
+                                               const std::string& sep = "\t") {
+  ContactMatrix<uint32_t> m(diagonal_width, size);
   std::ifstream f(path_to_file);
   if (f.is_open()) {
     std::string line;
@@ -89,8 +92,7 @@ modle::ContactMatrix<uint32_t> build_matrix_from_file(const std::string& path_to
 
 void test_with_huge_matrix(const std::string& path_to_file, uint32_t size, uint32_t diagonal_width,
                            const std::string& sep = "\t") {
-  const auto m =
-      build_matrix_from_file(path_to_file, size, diagonal_width, sep);
+  const auto m = build_matrix_from_file(path_to_file, size, diagonal_width, sep);
   std::ifstream f(path_to_file);
 
   if (f.is_open()) {
@@ -103,7 +105,8 @@ void test_with_huge_matrix(const std::string& path_to_file, uint32_t size, uint3
         if (tok != "0") {
           buff = tok;
           EXPECT_EQ(m.get(i, j), std::stoul(buff))
-              << "i=" << i << "; j=" << j << "; expected=" << buff << "; got=" << m.get(i, j) << ";";
+              << "i=" << i << "; j=" << j << "; expected=" << buff << "; got=" << m.get(i, j)
+              << ";";
         }
         ++j;
       }
@@ -125,3 +128,5 @@ TEST(modle_test_suite, contacts_huge_matrix_test) {
   std::string path_to_file = "data/symm_matrix_50000_50.tsv";
   test_with_huge_matrix(path_to_file, size, diagonal_width);
 }
+
+}  // namespace modle

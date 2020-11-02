@@ -1,6 +1,8 @@
-#include "modle/utils.hpp"
+#include <cstdint>
+#include <vector>
 
 #include "gtest/gtest.h"
+#include "modle/impl/correlation_utils.hpp"
 
 TEST(computecpp_test_suite, sort_vector_by_idx) {
   const std::vector<uint32_t> v{10, 5, 67, 3, 60, 45, 49, 1000};

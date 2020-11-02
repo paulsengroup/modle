@@ -1,7 +1,9 @@
 #include "gtest/gtest.h"
 #include "modle/parsers.hpp"
 
-void compare_bed_records_with_file(std::vector<modle::BED> records, const std::string &bed_file) {
+namespace modle {
+
+void compare_bed_records_with_file(std::vector<BED> records, const std::string &bed_file) {
   auto fp = std::ifstream(bed_file);
   std::vector<std::string> lines;
   lines.reserve(records.size());
@@ -38,7 +40,7 @@ void compare_bed_records_with_file(std::vector<modle::BED> records, const std::s
 
 TEST(modle_test_suite, bed_parser_simple_test) {
   std::string bed_file = "data/sample.bed6";
-  auto p = modle::BEDParser(bed_file);
+  auto p = BEDParser(bed_file);
   auto records = p.parse_all();
   EXPECT_EQ(records.size(), 9);
   std::sort(records.begin(), records.end());
@@ -51,7 +53,7 @@ TEST(modle_test_suite, bed_parser_simple_test) {
 
 TEST(modle_test_suite, bed_parser_simple_test_bed3) {
   std::string bed_file = "data/sample.bed6";
-  auto p = modle::BEDParser(bed_file, modle::BED::BED3);
+  auto p = BEDParser(bed_file, BED::BED3);
   auto records = p.parse_all();
   std::sort(records.begin(), records.end());
   EXPECT_STREQ(records[0].chrom.c_str(), "chr7");
@@ -63,14 +65,16 @@ TEST(modle_test_suite, bed_parser_simple_test_bed3) {
 
 TEST(modle_test_suite, bed_parser_short_test) {
   std::string bed_file = "data/sample.bed6";
-  auto p = modle::BEDParser(bed_file);
+  auto p = BEDParser(bed_file);
   auto records = p.parse_all();
   compare_bed_records_with_file(records, bed_file);
 }
 
 TEST(modle_test_suite, bed_parser_medium_test) {
   std::string bed_file = "data/GM12878_CTCF_orientation.bed";
-  auto p = modle::BEDParser(bed_file);
+  auto p = BEDParser(bed_file);
   auto records = p.parse_all();
   compare_bed_records_with_file(records, bed_file);
 }
+
+}  // namespace modle
