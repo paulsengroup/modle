@@ -1,5 +1,6 @@
 #include "gtest/gtest.h"
 #include "modle/parsers.hpp"
+#include "absl/strings/str_split.h"
 
 namespace modle {
 
@@ -18,8 +19,8 @@ void compare_bed_records_with_file(std::vector<BED> records, const std::string &
   ASSERT_EQ(records.size(), lines.size());
   std::sort(records.begin(), records.end());
   std::sort(lines.begin(), lines.end(), [&](const std::string_view &a, const std::string_view &b) {
-    const std::vector<std::string_view> toksa = absl::StrSplit(a, "\t");
-    const std::vector<std::string_view> toksb = absl::StrSplit(b, "\t");
+    const std::vector<std::string_view> toksa = absl::StrSplit(a, '\t');
+    const std::vector<std::string_view> toksb = absl::StrSplit(b, '\t');
     const auto &chra = toksa[0];
     const auto &chrb = toksb[0];
     const auto &starta = toksa[1];

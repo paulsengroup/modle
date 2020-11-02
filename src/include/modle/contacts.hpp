@@ -15,7 +15,8 @@ class ContactMatrix {
                 "ContactMatrix requires an integral type as template argument.");
 
  public:
-  ContactMatrix(uint64_t nrows, uint64_t ncols);
+  ContactMatrix(uint64_t nrows, uint64_t ncols, bool fill_with_random_numbers = false);
+  explicit ContactMatrix(const std::string& contact_file, char sep = '\t');
   [[nodiscard]] I get(uint64_t row, uint64_t col) const;
   void set(uint64_t row, uint64_t col, I n = 1);
   void increment(uint64_t row, uint64_t col, I n = 1);
@@ -28,6 +29,7 @@ class ContactMatrix {
       const std::string& path_to_file) const;
   std::pair<uint32_t /* bytes_in */, uint32_t /* bytes_out */> write_to_tsv(
       const std::string& path_to_file) const;
+  void clear_missed_updates_counter();
 
  private:
   uint64_t _nrows;

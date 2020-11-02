@@ -27,7 +27,7 @@ include(CheckIPOSupported)
 
 find_package(BZip2 REQUIRED)
 find_package(TBB REQUIRED)
-find_package(Boost REQUIRED)
+find_package(Boost REQUIRED COMPONENTS iostreams        )
 
 FetchContent_Declare(
         abseil-cpp
@@ -93,6 +93,7 @@ target_link_libraries(
         absl::str_format
         absl::time
         BZip2::BZip2
+        Boost::iostreams
         TBB::tbb
 )
 

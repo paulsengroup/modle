@@ -92,8 +92,8 @@ int main(int argc, char** argv) {
     if (const auto files = check_if_output_file_exists(config); !files.empty()) {
       absl::FPrintF(
           stderr,
-          "Refusing to run the simulation because some of the output files already exist. Pass "
-          "--force to overwrite.\nCollision detected:\n - %s\n",
+          "Refusing to run the simulation because some of the output file(s) already exist. Pass "
+          "--force to overwrite.\nCollision detected for the following file(s):\n - %s\n",
           absl::StrJoin(files.begin(), files.end(), "\n - "));
       return 1;
     }

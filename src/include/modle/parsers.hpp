@@ -10,6 +10,7 @@
 #include "absl/container/flat_hash_map.h"
 #include "absl/container/flat_hash_set.h"
 #include "absl/hash/hash.h"
+#include "modle/contacts.hpp"
 
 namespace modle {
 
@@ -61,34 +62,19 @@ struct BED {
   }
 
  private:
-  template <typename N, typename = typename std::enable_if<std::is_arithmetic<N>::value, N>::type>
-  static void parse_numeric_or_throw(const std::vector<std::string_view>& toks, uint8_t idx,
-                                     N& field);
   uint8_t _size;
-
-  // This is a temporary workaround to deal with the fact that libstdc++ 10 does not come with the
-  // float/double overloads for std::from_chars
-  template <typename R,
-            typename = typename std::enable_if<std::is_floating_point<R>::value, R>::type>
-  static void parse_real_or_throw(const std::vector<std::string_view>& toks, uint8_t idx, R& field);
-  static void parse_strand_or_throw(const std::vector<std::string_view>& toks, uint8_t idx,
-                                    char& field);
   static void parse_rgb_or_throw(const std::vector<std::string_view>& toks, uint8_t idx,
                                  RGB& field);
-
-  // Because of the issue outlined for parse_real_or_throw(), this currently only works for integral
-  // numbers (which should be fine for our purposes)
-  template <typename N, typename = typename std::enable_if<std::is_arithmetic<N>::value, N>::type>
-  static void parse_vect_of_numbers_or_throw(const std::vector<std::string_view>& toks, uint8_t idx,
-                                             std::vector<N>& field, uint64_t expected_size);
-  static void throw_except_from_errc(std::string_view tok, uint8_t idx, std::errc e);
+  static void parse_strand_or_throw(const std::vector<std::string_view>& toks, uint8_t idx,
+                                    char& field);
 };
 
 class BEDParser {
  public:
   // For now we always skip the header
   explicit BEDParser(std::string path_to_bed, BED::Standard bed_standard = BED::Standard::none);
-  explicit BEDParser(std::string_view path_to_bed, BED::Standard bed_standard = BED::Standard::none);
+  explicit BEDParser(std::string_view path_to_bed,
+                     BED::Standard bed_standard = BED::Standard::none);
   std::vector<BED> parse_all(bool throw_on_duplicates = true);
   void reset();
 
@@ -130,6 +116,38 @@ class ChrSizeParser {
   std::vector<std::string> _errors{};
 };
 
-}  // namespace modle
+struct Contact {
+  Contact() = default;
+  template <typename I, typename R>
+  Contact(I b1, I b2, R contacts);
+  uint64_t bin1;
+  uint64_t bin2;
+  double contacts;
+};
 
-#include "modle/impl/parsers.hpp"
+class ContactsParser {
+ public:
+  explicit ContactsParser(std::string contact_file);
+  ContactMatrix<uint32_t> parse_into_contact_matrix(uint64_t width, std::string_view sep = "\t");
+
+ private:
+  std::string _path;
+  std::ifstream _f{};
+
+  struct MatrixProperties {
+    uint64_t min_bin1{UINT64_MAX};
+    uint64_t max_bin1{0};
+    uint64_t min_bin2{UINT64_MAX};
+    uint64_t max_bin2{0};
+    uint64_t bin_size{0};
+  };
+
+  [[nodiscard]] MatrixProperties get_matrix_properties(std::string_view sep);
+  static bool parse_next(std::ifstream& f, std::string& buff, Contact& c, std::string_view sep);
+  [[nodiscard]] static Contact parse_next(std::ifstream& f, std::string& buff,
+                                          std::string_view sep);
+  bool parse_next(std::string& buff, Contact& c, std::string_view sep);
+  [[nodiscard]] Contact parse_next(std::string& buff, std::string_view sep);
+};
+
+}  // namespace modle

@@ -1,36 +1,20 @@
 #include "modle/parsers.hpp"
 
 #include <charconv>
+#include <cinttypes>
 #include <filesystem>
+#include <limits>
 #include <utility>
 
 #include "absl/strings/str_format.h"
 #include "absl/strings/str_join.h"
 #include "absl/strings/str_split.h"
-#include "absl/time/clock.h"
+#include "modle/utils.hpp"
 
 namespace modle {
 
 std::string RGB::to_string() const { return absl::StrCat(r, ",", g, ",", b); }
 bool RGB::empty() const { return (static_cast<uint16_t>(r) + g + b) == 0; }
-
-void BED::throw_except_from_errc(std::string_view tok, uint8_t idx, std::errc e) {
-  if (e == std::errc::invalid_argument) {
-    throw std::runtime_error(
-        absl::StrFormat("Unable to convert field %lu ('%s') to a positive integer number, reason: "
-                        "found an invalid character.",
-                        idx, tok));
-  }
-  if (e == std::errc::result_out_of_range) {
-    throw std::runtime_error(
-        absl::StrFormat("Unable to convert field %lu ('%s') to a positive integer number, reason: "
-                        "number %s is outside the [0, %llu] interval.",
-                        idx, tok, tok, UINT64_MAX));
-  }
-  throw std::logic_error(
-      "If you see this error, report it to the developers on github.\nBED::throw_except_from_errc "
-      "called with an invalid std::errc. This should not be possible!");
-}
 
 void BED::parse_strand_or_throw(const std::vector<std::string_view>& toks, uint8_t idx,
                                 char& field) {
@@ -50,9 +34,9 @@ void BED::parse_rgb_or_throw(const std::vector<std::string_view>& toks, uint8_t 
     throw std::runtime_error(
         absl::StrFormat("RGB: expected 3 fields, got %lu: '%s'", channels.size(), toks[idx]));
   }
-  parse_numeric_or_throw(channels, 0, field.r);
-  parse_numeric_or_throw(channels, 1, field.g);
-  parse_numeric_or_throw(channels, 2, field.b);
+  utils::parse_numeric_or_throw(channels, 0, field.r);
+  utils::parse_numeric_or_throw(channels, 1, field.g);
+  utils::parse_numeric_or_throw(channels, 2, field.b);
 }
 
 BED::BED(std::string_view record, BED::Standard bed_standard) {
@@ -78,8 +62,8 @@ BED::BED(std::string_view record, BED::Standard bed_standard) {
 
   this->chrom = toks[0];
   try {
-    parse_numeric_or_throw(toks, 1, this->chrom_start);
-    parse_numeric_or_throw(toks, 2, this->chrom_end);
+    utils::parse_numeric_or_throw(toks, 1, this->chrom_start);
+    utils::parse_numeric_or_throw(toks, 2, this->chrom_end);
     if (this->chrom_start > this->chrom_end) {
       throw std::runtime_error(absl::StrFormat(
           "Invalid BED record detected: chrom_start > chrom_end: chrom='%s'; start=%lu; end=%lu.",
@@ -94,7 +78,7 @@ BED::BED(std::string_view record, BED::Standard bed_standard) {
       this->_size = n;
       return;
     }
-    parse_real_or_throw(toks, 4, this->score);
+    utils::parse_real_or_throw(toks, 4, this->score);
     if (this->score < 0 || this->score > 1000) {
       throw std::runtime_error(absl::StrFormat(
           "Invalid BED record detected: score field should be between 0 and 1000, is %f.",
@@ -110,14 +94,14 @@ BED::BED(std::string_view record, BED::Standard bed_standard) {
       return;
     }
 
-    parse_numeric_or_throw(toks, 6, this->thick_start);
+    utils::parse_numeric_or_throw(toks, 6, this->thick_start);
     if (this->thick_start < this->chrom_start) {
       throw std::runtime_error(
           absl::StrFormat("Invalid BED record detected: thick_start < chrom_start: chrom='%s'; "
                           "start=%lu; thick_start=%lu.",
                           this->chrom, this->chrom_start, this->thick_start));
     }
-    parse_numeric_or_throw(toks, 7, this->thick_end);
+    utils::parse_numeric_or_throw(toks, 7, this->thick_end);
     if (this->thick_end > this->chrom_end) {
       throw std::runtime_error(
           absl::StrFormat("Invalid BED record detected: thick_end > chrom_end: chrom='%s'; "
@@ -135,9 +119,9 @@ BED::BED(std::string_view record, BED::Standard bed_standard) {
       this->_size = n;
       return;
     }
-    parse_numeric_or_throw(toks, 9, this->block_count);
-    parse_vect_of_numbers_or_throw(toks, 10, this->block_sizes, this->block_count);
-    parse_vect_of_numbers_or_throw(toks, 11, this->block_starts, this->block_count);
+    utils::parse_numeric_or_throw(toks, 9, this->block_count);
+    utils::parse_vect_of_numbers_or_throw(toks, 10, this->block_sizes, this->block_count);
+    utils::parse_vect_of_numbers_or_throw(toks, 11, this->block_starts, this->block_count);
     this->_size = 12;
   } catch (const std::exception& e) {
     throw std::runtime_error(absl::StrFormat(
@@ -326,5 +310,155 @@ bool ChrSize::operator==(const ChrSize& other) const {
 }
 
 bool ChrSize::operator<(const ChrSize& other) const { return this->size < other.size; }
+
+template <typename I, typename R>
+Contact::Contact(I b1, I b2, R contacts) {
+  static_assert(std::is_integral<I>());
+  static_assert(std::is_arithmetic<R>());
+  if (b1 < 0)
+    throw std::runtime_error(absl::StrFormat(
+        "Exception thrown in Contact constructor: b1 should be a positive integral number, is %s.",
+        std::to_string(b1)));
+  if (b2 < 0)
+    throw std::runtime_error(absl::StrFormat(
+        "Exception thrown in Contact constructor: b2 should be a positive integral number, is %s.",
+        std::to_string(b2)));
+  if (contacts < 0)
+    throw std::runtime_error(absl::StrFormat(
+        "Exception thrown in Contact constructor: b2 should be a positive number, is %s.",
+        std::to_string(contacts)));
+  this->bin1 = static_cast<uint64_t>(b1);
+  this->bin2 = static_cast<uint64_t>(b2);
+  this->contacts = static_cast<double>(contacts);
+}
+
+ContactsParser::ContactsParser(std::string contact_file) : _path(std::move(contact_file)) {
+  if (!std::filesystem::exists(this->_path))
+    throw std::runtime_error(absl::StrFormat("File '%s' does not exist!", this->_path));
+  if (std::filesystem::is_directory(this->_path))
+    throw std::runtime_error(absl::StrFormat("'%s' is a directory, not a file!", this->_path));
+}
+
+Contact ContactsParser::parse_next(std::ifstream& f, std::string& buff, std::string_view sep) {
+  assert(f);
+  if (std::getline(f, buff); buff.empty()) {
+    if (f.eof()) throw std::runtime_error("File is empty!");
+  }
+  if (f.bad()) throw std::runtime_error("General IO error.");
+  std::vector<std::string_view> tmp = absl::StrSplit(buff, sep);
+  if (tmp.size() != 3)
+    throw std::runtime_error(absl::StrFormat(
+        "Malformed file: expected 3 fields, got %lu: line 1: '%s'.", tmp.size(), buff));
+  Contact c;
+  utils::parse_numeric_or_throw(tmp[0], c.bin1);
+  utils::parse_numeric_or_throw(tmp[1], c.bin2);
+  utils::parse_real_or_throw(tmp[2], c.contacts);
+
+  return c;
+}
+
+bool ContactsParser::parse_next(std::ifstream& f, std::string& buff, Contact& c,
+                                std::string_view sep) {
+  assert(f);
+  if (std::getline(f, buff); buff.empty()) {
+    if (f.eof()) return false;
+  }
+  if (f.bad()) throw std::runtime_error("General IO error.");
+  std::vector<std::string_view> tmp = absl::StrSplit(buff, sep);
+  if (tmp.size() != 3)
+    throw std::runtime_error(absl::StrFormat(
+        "Malformed file: expected 3 fields, got %lu: line 1: '%s'.", tmp.size(), buff));
+  utils::parse_numeric_or_throw(tmp[0], c.bin1);
+  utils::parse_numeric_or_throw(tmp[1], c.bin2);
+  utils::parse_real_or_throw(tmp[2], c.contacts);
+  return true;
+}
+
+Contact ContactsParser::parse_next(std::string& buff, std::string_view sep) {
+  if (std::getline(this->_f, buff); buff.empty()) {
+    if (this->_f.eof()) return {};
+  }
+  if (this->_f.bad()) throw std::runtime_error("General IO error.");
+  std::vector<std::string_view> tmp = absl::StrSplit(buff, sep);
+  if (tmp.size() != 3)
+    throw std::runtime_error(absl::StrFormat(
+        "Malformed file: expected 3 fields, got %lu: line 1: '%s'.", tmp.size(), buff));
+  Contact c;
+  utils::parse_numeric_or_throw(tmp[0], c.bin1);
+  utils::parse_numeric_or_throw(tmp[1], c.bin2);
+  utils::parse_real_or_throw(tmp[2], c.contacts);
+
+  return c;
+}
+
+bool ContactsParser::parse_next(std::string& buff, Contact& c, std::string_view sep) {
+  assert(this->_f);
+  if (std::getline(this->_f, buff); buff.empty()) {
+    if (this->_f.eof()) return false;
+  }
+  if (this->_f.bad()) throw std::runtime_error("General IO error.");
+  std::vector<std::string_view> tmp = absl::StrSplit(buff, sep);
+  if (tmp.size() != 3)
+    throw std::runtime_error(absl::StrFormat(
+        "Malformed file: expected 3 fields, got %lu: line 1: '%s'.", tmp.size(), buff));
+  utils::parse_numeric_or_throw(tmp[0], c.bin1);
+  utils::parse_numeric_or_throw(tmp[1], c.bin2);
+  utils::parse_real_or_throw(tmp[2], c.contacts);
+  return false;
+}
+
+ContactsParser::MatrixProperties ContactsParser::get_matrix_properties(std::string_view sep) {
+  Contact c{};
+  ContactsParser::MatrixProperties prop{};
+  std::string buff;
+  try {
+    while (this->parse_next(buff, c, sep)) {
+      prop.min_bin1 = std::min(prop.min_bin1, c.bin1);
+      prop.min_bin2 = std::min(prop.min_bin2, c.bin2);
+      prop.max_bin1 = std::max(prop.max_bin1, c.bin1);
+      prop.max_bin2 = std::max(prop.max_bin2, c.bin2);
+      if (prop.bin_size == 0) {
+        prop.bin_size = c.bin1 > c.bin2 ? c.bin1 - c.bin2 : c.bin2 - c.bin1;
+        continue;
+      }
+      if (uint64_t new_bin_size = c.bin1 > c.bin2 ? c.bin1 - c.bin2 : c.bin2 - c.bin1;
+          new_bin_size != prop.bin_size) {
+        throw std::runtime_error(
+            absl::StrFormat("Expected bin of size %lu, got %lu", prop.bin_size, new_bin_size));
+      }
+    }
+    if (!this->_f.eof()) throw std::runtime_error("An IO error occurred");
+  } catch (const std::exception& err) {
+    throw std::runtime_error(
+        absl::StrFormat("An error occurred while reading file '%s': %s.", this->_path, err.what()));
+  }
+  this->_f.clear();
+  this->_f.seekg(0);
+  return prop;
+}
+
+ContactMatrix<uint32_t> ContactsParser::parse_into_contact_matrix(uint64_t width,
+                                                                  std::string_view sep) {
+  std::string buff;
+  Contact c{};
+  const auto matrix_prop = this->get_matrix_properties(sep);
+  ContactMatrix<uint32_t> m((matrix_prop.max_bin1 - matrix_prop.min_bin1) / matrix_prop.bin_size,
+                            width / matrix_prop.bin_size);
+  this->_f = std::ifstream(this->_path);
+  if (!this->_f)
+    throw std::runtime_error(absl::StrFormat("Unable to open file '%s' for reading.", this->_path));
+  try {
+    while (this->parse_next(buff, c, sep)) {
+      uint64_t row = (c.bin1 - matrix_prop.min_bin1) / matrix_prop.bin_size;
+      uint64_t col = (c.bin2 - matrix_prop.min_bin2) / matrix_prop.bin_size;
+      m.set(row, col, c.contacts);
+    }
+    if (!this->_f.eof()) throw std::runtime_error("An IO error occurred");
+  } catch (const std::exception& err) {
+    throw std::runtime_error(
+        absl::StrFormat("An error occurred while reading file '%s': %s.", this->_path, err.what()));
+  }
+  return m;
+}
 
 }  // namespace modle

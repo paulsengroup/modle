@@ -1,6 +1,7 @@
 #include "modle/contacts.hpp"
 
 #include <cstdint>
+#include <filesystem>
 #include <fstream>
 #include <vector>
 
@@ -127,6 +128,20 @@ TEST(modle_test_suite, contacts_huge_matrix_test) {
   uint32_t size = 50'000, diagonal_width = 50;
   std::string path_to_file = "data/symm_matrix_50000_50.tsv";
   test_with_huge_matrix(path_to_file, size, diagonal_width);
+}
+
+TEST(modle_test_suite, contacts_init_from_file) {
+  uint32_t size = 1'000, diagonal_width = 50;
+  std::string tmp_file = std::tmpnam(nullptr);
+  ContactMatrix<uint32_t> m1(size, diagonal_width, true);
+  m1.write_to_tsv(tmp_file);
+  ContactMatrix<uint32_t> m2(tmp_file);
+  for (auto i = 0UL; i < size; ++i) {
+    for (auto j = 0UL; j < size; ++j) {
+      EXPECT_EQ(m1.get(i, j), m2.get(i, j));
+    }
+  }
+  std::filesystem::remove(tmp_file);
 }
 
 }  // namespace modle
