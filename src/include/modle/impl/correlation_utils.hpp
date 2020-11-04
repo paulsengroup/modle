@@ -95,7 +95,7 @@ std::vector<double> compute_element_ranks(const Iterator begin, const Iterator e
     } else {
       const auto min = i - 1;
       auto max = i;
-      for (auto j = max + 1; current == *(begin + vi[j]) && j < vr.size(); ++j) max = j;
+      for (auto j = max + 1; j < vr.size() && current == *(begin + vi[j]); ++j) max = j;
       for (auto j = min; j <= max; ++j) vr[vi[j]] = (max + min) / 2.0;
       i = max;
     }

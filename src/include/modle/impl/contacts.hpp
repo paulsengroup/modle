@@ -22,12 +22,12 @@
 namespace modle {
 template <class I>
 ContactMatrix<I>::ContactMatrix(uint64_t nrows, uint64_t ncols, bool fill_with_random_numbers)
-    : _nrows(nrows), _ncols(ncols), _matrix(_nrows * _ncols, 0) {
+    : _nrows(nrows), _ncols(ncols), _contacts(_nrows * _ncols, 0) {
   if (fill_with_random_numbers) {
     std::random_device rand_dev;
     std::mt19937_64 rand_eng{rand_dev()};
     std::uniform_int_distribution<I> dist;
-    std::generate(this->_matrix.begin(), this->_matrix.end(), [&]() { return dist(rand_eng); });
+    std::generate(this->_contacts.begin(), this->_contacts.end(), [&]() { return dist(rand_eng); });
   }
 }
 
@@ -49,7 +49,7 @@ ContactMatrix<I>::ContactMatrix(const std::string &path_to_file, char sep) : _nr
             absl::StrFormat("Expected %lu columns, got %lu", this->_ncols, toks.size()));
       }
     }
-    this->_matrix = std::vector<I>(this->_ncols * this->_nrows, 0);
+    this->_contacts = std::vector<I>(this->_ncols * this->_nrows, 0);
 
     if (!in.eof() || in.bad() || fp.bad()) throw std::runtime_error("General IO error");
 
@@ -69,6 +69,71 @@ ContactMatrix<I>::ContactMatrix(const std::string &path_to_file, char sep) : _nr
     if (!in.eof() || in.bad() || fp.bad()) throw std::runtime_error("General IO error");
 
   } catch (const boost::iostreams::bzip2_error &err) {
+    throw std::runtime_error(absl::StrFormat("An error occurred while decompressing file '%s': %s.",
+                                             path_to_file, err.what()));
+  } catch (const std::runtime_error &err) {
+    throw std::runtime_error(absl::StrFormat("An error occurred while parsing file '%s': %s.",
+                                             path_to_file, err.what()));
+  }
+}
+
+template <class I>
+ContactMatrix<I>::ContactMatrix(const std::string &path_to_file, uint64_t nrows, uint64_t ncols,
+                                char sep)
+    : _nrows(nrows), _ncols(ncols), _contacts(_nrows * _ncols, 0) {
+  std::ifstream fp(path_to_file);
+  std::string line;
+  std::array<char, 8'192> buff{};
+  std::vector<std::string_view> toks;
+  fp.rdbuf()->pubsetbuf(buff.data(), buff.size());
+
+  auto read_and_tokenize = [&]() {
+    if (std::getline(fp, line)) {
+      if (toks = absl::StrSplit(line, sep); toks.size() != 3) {
+        throw std::runtime_error(absl::StrFormat(
+            "Malformed file: expected 3 fields, got %lu: line that triggered the error: '%s'",
+            toks.size(), line));
+      }
+      return true;
+    }
+    if (!fp.eof() || fp.bad()) {
+      throw std::runtime_error("Unable to read from file.");
+    }
+    return false;
+  };
+
+  try {
+    read_and_tokenize();
+    uint64_t offset, bin_size, i, j;
+    double contacts;
+    if (toks[0] != toks[1]) {
+      throw std::runtime_error(
+          "The first entry in this file is expected to report counts for the same bin!");
+    }
+    utils::parse_numeric_or_throw(toks[0], offset);
+    utils::parse_real_or_throw(toks[2], contacts);
+    this->set(0, 0, std::round<uint64_t>(contacts));
+
+    read_and_tokenize();
+    utils::parse_numeric_or_throw(toks[1], bin_size);
+    assert(bin_size > offset);
+    bin_size -= offset;
+
+    do {
+      utils::parse_numeric_or_throw(toks[0], i);
+      utils::parse_numeric_or_throw(toks[1], j);
+      utils::parse_real_or_throw(toks[2], contacts);
+      i = (i - offset) / bin_size;
+      j = (j - offset) / bin_size;
+      this->set(i, j, std::round<uint64_t>(contacts));
+    } while (read_and_tokenize());
+
+    if (!fp.eof() || fp.bad()) throw std::runtime_error("General IO error");
+
+  } catch (const boost::iostreams::bzip2_error &err) {
+    throw std::runtime_error(absl::StrFormat("An error occurred while decompressing file '%s': %s.",
+                                             path_to_file, err.what()));
+  } catch (const std::runtime_error &err) {
     throw std::runtime_error(absl::StrFormat("An error occurred while parsing file '%s': %s.",
                                              path_to_file, err.what()));
   }
@@ -76,14 +141,24 @@ ContactMatrix<I>::ContactMatrix(const std::string &path_to_file, char sep) : _nr
 
 template <typename I>
 I &ContactMatrix<I>::at(uint64_t i, uint64_t j) {
-  assert((j * this->_nrows) + i < this->_matrix.size());
-  return this->_matrix[(j * this->_nrows) + i];
+  if ((j * this->_nrows) + i >= this->_contacts.size()) {
+    throw std::runtime_error(absl::StrFormat(
+        "ContactMatrix::at tried to access element m[%lu][%lu] of a matrix of shape [%lu][%lu]! "
+        "(%lu >= %lu).",
+        i, j, this->n_rows(), this->n_cols(), (j * this->_nrows) + i, this->_contacts.size()));
+  }
+  return this->_contacts[(j * this->_nrows) + i];
 }
 
 template <typename I>
 const I &ContactMatrix<I>::at(uint64_t i, uint64_t j) const {
-  assert((j * this->_nrows) + i < this->_matrix.size());
-  return this->_matrix[(j * this->_nrows) + i];
+  if ((j * this->_nrows) + i >= this->_contacts.size()) {
+    throw std::runtime_error(absl::StrFormat(
+        "ContactMatrix::at tried to access element m[%lu][%lu] of a matrix of shape [%lu][%lu]! "
+        "(%lu >= %lu).",
+        i, j, this->n_rows(), this->n_cols(), (j * this->_nrows) + i, this->_contacts.size()));
+  }
+  return this->_contacts[(j * this->_nrows) + i];
 }
 
 template <typename I>
@@ -94,10 +169,13 @@ void ContactMatrix<I>::increment(uint64_t row, uint64_t col, I n) {
     j = row;
     i = j - col;
   }
-  if (j >= this->n_cols())
+  if (j > this->n_cols())
     throw std::logic_error(absl::StrFormat("ContactMatrix::increment(%d, %d, %d): j=%d > ncols=%d.",
                                            row, col, n, j, this->n_cols()));
-  if (this->_updates_missed += i >= this->n_rows()) return;
+  if (i > this->n_rows()) {
+    ++this->_updates_missed;
+    return;
+  }
 
   assert(i < this->n_rows());
   assert(j < this->n_cols());
@@ -112,13 +190,16 @@ void ContactMatrix<I>::set(uint64_t row, uint64_t col, I n) {
     j = row;
     i = j - col;
   }
-  if (j >= this->n_cols())
+  if (j > this->n_cols())
     throw std::logic_error(absl::StrFormat("ContactMatrix::set(%d, %d, %d): j=%d > ncols=%d.", row,
                                            col, n, j, this->n_cols()));
-  if (this->_updates_missed += i >= this->n_rows()) return;
+  if (i >= this->n_rows()) {
+    ++this->_updates_missed;
+    return;
+  }
 
-  assert(i < this->n_rows());
-  assert(j < this->n_cols());
+  assert(i <= this->n_rows());
+  assert(j <= this->n_cols());
   this->at(i, j) = n;
 }
 
@@ -130,14 +211,17 @@ void ContactMatrix<I>::decrement(uint64_t row, uint64_t col, I n) {
     j = row;
     i = j - col;
   }
-  if (j >= this->n_cols())
+  if (j > this->n_cols())
     throw std::logic_error(absl::StrFormat("ContactMatrix::decrement(%d, %d, %d): j=%d > ncols=%d.",
                                            row, col, n, j, this->n_cols()));
-  if (this->_updates_missed += i >= this->n_rows()) return;
+  if (i > this->n_rows()) {
+    ++this->_updates_missed;
+    return;
+  }
 
-  assert(i < this->n_rows());
-  assert(j < this->n_cols());
-  assert(n <= this->_matrix[(j * this->_nrows) + i]);
+  assert(i <= this->n_rows());
+  assert(j <= this->n_cols());
+  assert(n <= this->at(i, j));
   this->at(i, j) -= n;
 }
 
@@ -162,7 +246,11 @@ void ContactMatrix<I>::print(bool full) const {
       absl::PrintF("%s\n", absl::StrJoin(row, "\t"));
     }
   } else {
-    for (const auto &row : this->_matrix) {
+    std::vector<I> row(this->n_cols());
+    for (auto i = 0UL; i < this->n_rows(); ++i) {
+      for (auto j = 0UL; j < this->n_cols(); ++j) {
+        row[j] = this->at(i, j);
+      }
       absl::PrintF("%s\n", absl::StrJoin(row, "\t"));
     }
   }
@@ -194,9 +282,7 @@ std::vector<std::vector<I>> ContactMatrix<I>::generate_symmetric_matrix() const 
         i = j - x;
       }
 
-      if (i < this->_nrows) {
-        row[x] = this->at(i, j);
-      }
+      if (i < this->_nrows) row[x] = this->at(i, j);
     }
     m.emplace_back(std::move(row));
   }
@@ -228,7 +314,7 @@ std::pair<uint32_t, uint32_t> ContactMatrix<I>::write_to_tsv(
     std::vector<I> row(this->_ncols, 0);
     for (auto i = 0UL; i < this->_nrows; ++i) {
       for (auto j = 0UL; j < this->_ncols; ++j) {
-        assert(i * j < this->_matrix.size());
+        assert(i * j < this->_contacts.size());
         row[j] = this->at(i, j);
       }
       buff = absl::StrJoin(row, "\t") + "\n";
@@ -247,6 +333,11 @@ std::pair<uint32_t, uint32_t> ContactMatrix<I>::write_to_tsv(
 template <typename I>
 void ContactMatrix<I>::clear_missed_updates_counter() {
   this->_updates_missed = 0;
+}
+
+template <typename I>
+const std::vector<I> &ContactMatrix<I>::get_raw_count_vector() const {
+  return this->_contacts;
 }
 
 template <typename I>

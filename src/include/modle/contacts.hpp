@@ -16,7 +16,8 @@ class ContactMatrix {
 
  public:
   ContactMatrix(uint64_t nrows, uint64_t ncols, bool fill_with_random_numbers = false);
-  explicit ContactMatrix(const std::string& contact_file, char sep = '\t');
+  ContactMatrix(const std::string& path_to_file, uint64_t nrows, uint64_t ncols, char sep = '\t');
+  explicit ContactMatrix(const std::string& path_to_file, char sep = '\t');
   [[nodiscard]] I get(uint64_t row, uint64_t col) const;
   void set(uint64_t row, uint64_t col, I n = 1);
   void increment(uint64_t row, uint64_t col, I n = 1);
@@ -30,11 +31,12 @@ class ContactMatrix {
   std::pair<uint32_t /* bytes_in */, uint32_t /* bytes_out */> write_to_tsv(
       const std::string& path_to_file) const;
   void clear_missed_updates_counter();
+  const std::vector<I>& get_raw_count_vector() const;
 
  private:
   uint64_t _nrows;
   uint64_t _ncols;
-  std::vector<I> _matrix;
+  std::vector<I> _contacts;
   uint64_t _updates_missed{0};
 
   [[nodiscard]] I& at(uint64_t i, uint64_t j);

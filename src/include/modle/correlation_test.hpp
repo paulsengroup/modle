@@ -15,9 +15,11 @@ class CorrelationTest {
  public:
   CorrelationTest(const std::vector<N>& v1, const std::vector<N>& v2);
   [[nodiscard]] std::pair<double, double> compute_spearman() const;
-  [[nodiscard]] std::vector<std::pair<double, double>> compute_spearman(uint64_t window_size) const;
+  [[nodiscard]] std::vector<std::pair<double, double>> compute_spearman(
+      uint64_t window_size, uint64_t window_overlap) const;
   [[nodiscard]] std::pair<double, double> compute_kendall() const;
-  [[nodiscard]] std::vector<std::pair<double, double>> compute_kendall(uint64_t window_size) const;
+  [[nodiscard]] std::vector<std::pair<double, double>> compute_kendall(
+      uint64_t window_size, uint64_t window_overlap) const;
 
  private:
   const std::vector<N>& _v1;

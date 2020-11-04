@@ -66,9 +66,10 @@ else ()
 endif ()
 
 include_directories(
-        "${CMAKE_CURRENT_SOURCE_DIR}/src/include/"
+        "${CMAKE_CURRENT_SOURCE_DIR}/src/include"
         "${BZIP2_INCLUDE_DIRS}"
-        "${CMAKE_CURRENT_SOURCE_DIR}/external/abseil-cpp/include/"
+        "${CMAKE_CURRENT_SOURCE_DIR}/external/abseil-cpp/include"
+        "${CMAKE_CURRENT_SOURCE_DIR}/external/CLI11/include"
         "${Boost_INCLUDE_DIRS}")
 
 
@@ -124,7 +125,6 @@ target_link_libraries(
 target_include_directories(
         modle
         PUBLIC libmodle
-        INTERFACE ${CMAKE_CURRENT_SOURCE_DIR}/external/CLI11/include/
 )
 
 add_custom_command(
@@ -138,6 +138,8 @@ target_compile_options(modle PUBLIC "$<$<CONFIG:DEBUG>:${MODLE_DEBUG_OPTIONS}>")
 target_compile_options(modle PUBLIC "$<$<CONFIG:RELEASE>:${MODLE_RELEASE_OPTIONS}>")
 target_compile_options(modle PUBLIC "$<$<CONFIG:TSAN>:${MODLE_RELEASE_W_TSAN_OPTIONS}>")
 target_link_options(modle PUBLIC "$<$<CONFIG:TSAN>:-fsanitize=thread>")
+
+add_subdirectory(utils/compare_contact_matrix)
 
 install(TARGETS libmodle
         LIBRARY

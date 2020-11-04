@@ -37,6 +37,9 @@ std::pair<double, double> CorrelationTest<N>::compute_spearman(const Iterator v1
                                                                const Iterator v1_e,
                                                                const Iterator v2_b) {
   const uint32_t size = std::distance(v1_b, v1_e);
+  if (std::accumulate(v1_b, v1_e, 0.0) == 0 || std::accumulate(v2_b, v2_b + size, 0.0) == 0) {
+    return {0, 0};
+  }
   auto v1r = compute_element_ranks(v1_b, v1_b + size);
   auto v2r = compute_element_ranks(v2_b, v2_b + size);
 
@@ -52,8 +55,9 @@ std::pair<double, double> CorrelationTest<N>::compute_spearman(const Iterator v1
     d1 += std::pow(r1 - v1r_avg, 2);
     d2 += std::pow(r2 - v2r_avg, 2);
   }
-
   auto rho = n / std::sqrt(d1 * d2);
+  if (std::isnan(rho)) throw std::logic_error("compute_spearman: rho cannot be nan!");
+
   return {rho, compute_spearman_significance(rho, size)};
 };
 
@@ -172,39 +176,37 @@ std::pair<double, double> CorrelationTest<N>::compute_spearman() const {
 
 template <typename N>
 std::vector<std::pair<double, double>> CorrelationTest<N>::compute_spearman(
-    uint64_t window_size) const {
-  std::vector<std::pair<std::vector<uint32_t>::iterator, std::vector<uint32_t>::iterator>> ranges;
-  std::vector<std::pair<double, double>> correlations(this->_v1.size() - window_size);
+    uint64_t window_size, uint64_t window_overlap) const {
+  std::vector<uint32_t> windows_start((this->_v1.size() - window_size) / window_overlap);
+  for (auto i = 0UL; i < windows_start.size(); ++i) windows_start[i] = i * window_overlap;
+  assert(windows_start.size() == (this->_v1.size() - window_size) / window_overlap);
 
-  for (auto it1 = this->_v1.begin(), it2 = this->_v2.begin(); it1 + window_size != this->_v1.end();
-       ++it1, ++it2) {
-    ranges.emplace_back(it1, it2);
-  }
-  std::transform(
-      std::execution::par_unseq, ranges.begin(), ranges.end() - window_size, correlations.begin(),
-      [&](const std::pair<std::vector<uint32_t>::iterator, std::vector<uint32_t>::iterator> &p) {
-        return this->compute_spearman(p.first, p.first + window_size, p.second,
-                                      p.second + window_size);
-      });
+  std::vector<std::pair<double, double>> correlations(windows_start.size());
+  std::transform(std::execution::par_unseq, windows_start.begin(), windows_start.end(),
+                 correlations.begin(), [&](uint32_t offset) {
+                   auto v1s = this->_v1.begin() + offset;
+                   auto v1e = v1s + window_size;
+                   auto v2s = this->_v2.begin() + offset;
+                   return compute_spearman(v1s, v1e, v2s);
+                 });
+
   return correlations;
 }
 
 template <typename N>
 std::vector<std::pair<double, double>> CorrelationTest<N>::compute_kendall(
-    uint64_t window_size) const {
-  std::vector<std::pair<std::vector<uint32_t>::iterator, std::vector<uint32_t>::iterator>> ranges;
-  std::vector<std::pair<double, double>> correlations(this->_v1.size() - window_size);
-
-  for (auto it1 = this->_v1.begin(), it2 = this->_v2.begin(); it1 + window_size != this->_v1.end();
-       ++it1, ++it2) {
-    ranges.emplace_back(it1, it2);
-  }
-  std::transform(
-      std::execution::par_unseq, ranges.begin(), ranges.end() - window_size, correlations.begin(),
-      [&](const std::pair<std::vector<uint32_t>::iterator, std::vector<uint32_t>::iterator> &p) {
-        return this->compute_kendall(p.first, p.first + window_size, p.second,
-                                     p.second + window_size);
-      });
+    uint64_t window_size, uint64_t window_overlap) const {
+  std::vector<uint32_t> windows_start((this->_v1.size() - window_size) / window_overlap);
+  for (auto i = 0UL; i < windows_start.size(); ++i) windows_start[i] = i * window_overlap;
+  assert(windows_start.size() == (this->_v1.size() - window_size) / window_overlap);
+  std::vector<std::pair<double, double>> correlations(windows_start.size());
+  std::transform(std::execution::par_unseq, windows_start.begin(), windows_start.end(),
+                 correlations.begin(), [&](uint32_t offset) {
+                   auto v1_s = this->_v1.begin() + offset;
+                   auto v1_e = v1_s + window_size;
+                   auto v2_s = this->_v2.begin() + offset;
+                   return compute_kendall(v1_s, v1_e, v2_s);
+                 });
   return correlations;
 }
 
