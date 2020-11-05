@@ -17,6 +17,7 @@ struct config {
   uint64_t sliding_window_size{3000};
   uint64_t sliding_window_overlap{2400};
   std::string base_name;
+  int exit_code{0};
 };
 
 [[nodiscard]] config parse_cli(int argc, char** argv) {
@@ -32,7 +33,13 @@ struct config {
   cli.add_option("--sliding-window-overlap", c.sliding_window_overlap, "Overlap between consecutive sliding-windows.")->check(CLI::PositiveNumber)->capture_default_str();
   cli.add_flag("-f, --force", c.force, "Overwrite existing file(s).")->capture_default_str();
   // clang-format on
-  cli.parse(argc, argv);
+  try {
+    cli.parse(argc, argv);
+  } catch (const CLI::ParseError& e) {
+    c.exit_code =
+        cli.exit(e);  //  This takes care of formatting and printing error messages (if any)
+    return c;
+  }
   if (!std::filesystem::is_directory(c.out_dir) && std::filesystem::exists(c.out_dir)) {
     throw std::runtime_error(
         absl::StrFormat("'%s' should point to a directory or a non-existing path.", c.out_dir));
@@ -76,23 +83,22 @@ struct config {
 
 int main(int argc, char** argv) {
   auto c = modle::helpers::cmatrix_comp::parse_cli(argc, argv);
+  if (c.exit_code != 0) return c.exit_code;
   auto m1 = modle::ContactMatrix<uint32_t>(c.m1);
-
   auto m2 = modle::ContactMatrix<uint32_t>(c.m2, m1.n_rows(), m1.n_cols());
 
   modle::CorrelationTest<uint32_t> corr(m1.get_raw_count_vector(), m2.get_raw_count_vector());
   const auto max_size = m1.n_cols() * m1.n_rows();
-  const auto spearman =
-      corr.compute_spearman(std::min(max_size, c.sliding_window_size), std::min(max_size - 1, c.sliding_window_overlap));
-  const auto kendall =
-      corr.compute_kendall(std::min(max_size, c.sliding_window_size), std::min(max_size - 1, c.sliding_window_overlap));
+  const auto spearman = corr.compute_spearman(std::min(max_size, c.sliding_window_size),
+                                              std::min(max_size - 1, c.sliding_window_overlap));
+  const auto kendall = corr.compute_kendall(std::min(max_size, c.sliding_window_size),
+                                            std::min(max_size - 1, c.sliding_window_overlap));
 
   assert(spearman.size() == kendall.size());
+  absl::PrintF("idx\trho\trho_pv\ttau\ttau_pv\n");
   for (auto i = 0UL; i < spearman.size(); ++i) {
-    if (spearman[i].first != 0 && kendall[i].first != 0) {
-      absl::FPrintF(stderr, "%lu: rho=%.4f (%.2g); tau=%.4f (%.2g)\n", i, spearman[i].first,
-                    spearman[i].second, kendall[i].first, kendall[i].second);
-    }
+    absl::PrintF("%lu\t%.16G\t%.16G\t%.16G\t%.16G\n", i, spearman[i].first, spearman[i].second,
+                 kendall[i].first, kendall[i].second);
   }
 
   return 0;

@@ -46,13 +46,13 @@ class Lef {
   void reset_tot_bp_extruded();
 
   /// Calls extrude on the ExtrusionUnit%s. Returns the number of bp extruded
-  uint32_t extrude();
+  uint32_t extrude(std::mt19937& rand_eng);
   /// Register a contact between the DNA::Bin%s associated with the left and right ExtrusionUnit%s
   void register_contact();
   [[nodiscard]] std::pair<DNA::Bin*, DNA::Bin*> get_ptr_to_bins();
   [[nodiscard]] bool is_bound() const;
-  void randomly_bind_to_chr(Chromosome& chr, std::mt19937& rand_eng, bool register_contact = false);
-  void bind_at_pos(Chromosome& chr, uint32_t pos, std::mt19937& rang_eng, bool register_contact);
+  void randomly_bind_to_chr(Chromosome* chr, std::mt19937& rand_eng, bool register_contact = false);
+  void bind_at_pos(Chromosome* chr, uint32_t pos, std::mt19937& rang_eng, bool register_contact);
   /** Call ExtrusionUnit::check_constraints on the left and right ExtrusionUnit%s, which in turn
    * check whether there last round of extrusion produced a collision between one of the
    * ExtrusionUnit%s and another instance of ExtrusionUnit, or if the current ExtrusionUnit has
@@ -96,8 +96,8 @@ class ExtrusionUnit {
   [[nodiscard]] DNA::Direction get_extr_direction() const;
   [[nodiscard]] bool is_stalled() const;
   [[nodiscard]] bool is_bound() const;
-  uint64_t check_constraints(std::mt19937& rang_eng);
-  bool try_extrude();
+  uint64_t check_constraints(std::mt19937& rand_eng);
+  bool try_extrude(std::mt19937& rand_end);
   [[nodiscard]] double get_prob_of_extr_unit_bypass() const;
   [[nodiscard]] uint32_t get_bin_index() const;
 
@@ -105,7 +105,7 @@ class ExtrusionUnit {
   Lef& _parent_lef;
   DNA::Bin* _bin{nullptr};
   ExtrusionBarrier* _blocking_barrier{nullptr};
-  DNA::Direction _direction{};
+  DNA::Direction _direction{DNA::Direction::none};
   uint32_t _stalls_left{0};
   std::geometric_distribution<uint32_t> _n_stall_generator;
 

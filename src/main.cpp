@@ -31,21 +31,28 @@ void run_simulation(const modle::config& c) {
   auto t0 = absl::Now();
   modle::Genome genome(c);
 
+  uint64_t tot_barriers = c.number_of_randomly_gen_extr_barriers;
+  uint64_t barriers_ignored = 0;
   if (c.number_of_randomly_gen_extr_barriers != 0) {
     genome.randomly_generate_extrusion_barriers(c.number_of_randomly_gen_extr_barriers);
   }
   if (!c.path_to_extr_barriers_bed.empty()) {
-    genome.import_extrusion_barriers_from_bed(c.path_to_extr_barriers_bed,
-                                              c.probability_of_extrusion_barrier_block);
+    const auto tmp = genome.import_extrusion_barriers_from_bed(
+        c.path_to_extr_barriers_bed, c.probability_of_extrusion_barrier_block);
+    tot_barriers += tmp.first;
+    barriers_ignored = tmp.second;
   }
   absl::FPrintF(stderr,
                 "Initialization took %s.\n"
                 " - # of sequences:       %lu\n"
                 " - Avg. sequence length: %.3f Mbp\n"
-                " - Genome N50:           %.3f Mbp\n",
+                " - Genome N50:           %.3f Mbp\n"
+                " - # of LEFs:            %lu\n"
+                " - # of extr. barriers   %lu (%lu ignored)\n",
                 absl::FormatDuration(absl::Now() - t0), genome.get_n_chromosomes(),
                 (static_cast<double>(genome.size()) / genome.get_n_chromosomes()) / 1.0e6,
-                genome.n50() / 1.0e6);
+                genome.n50() / 1.0e6, genome.get_n_lefs(), tot_barriers - barriers_ignored,
+                barriers_ignored);
 
   t0 = absl::Now();
   if (c.skip_burnin) {
@@ -53,14 +60,18 @@ void run_simulation(const modle::config& c) {
     absl::FPrintF(stderr, "Bound %lu LEFs in %s.\n", genome.get_n_of_busy_lefs(),
                   absl::FormatDuration(absl::Now() - t0));
   } else {
-    genome.run_burnin(c.probability_of_lef_rebind, c.min_n_of_loops_per_lef,
-                      c.min_n_of_burnin_rounds);
+    const auto burnin_rounds = genome.run_burnin(
+        c.probability_of_lef_rebind, c.min_n_of_loops_per_lef, c.min_n_of_burnin_rounds);
+    absl::FPrintF(stderr, "Burnin completed in %s! (%lu rounds).\n",
+                  absl::FormatDuration(absl::Now() - t0), burnin_rounds);
   }
 
   t0 = absl::Now();
+  absl::FPrintF(stderr, "About to start simulating loop extrusion...\n");
   genome.simulate_extrusion(c.simulation_iterations);
   absl::FPrintF(stderr, "Simulation took %s.\n", absl::FormatDuration(absl::Now() - t0));
-  if (!c.skip_output) {
+
+  if (!c.skip_output) { // Mostly useful for profiling
     genome.write_contacts_to_file(c.output_dir, c.force);
     genome.write_extrusion_barriers_to_file(c.output_dir, c.force);
     std::ofstream cmd_file(absl::StrFormat("%s/settings.log", c.output_dir));
@@ -79,6 +90,7 @@ void run_simulation(const modle::config& c) {
       genome.make_heatmaps(c.output_dir, c.force, path_to_script);
     }
   }
+  absl::FPrintF(stderr, "Simulation terminated without errors!\nBye.\n");
 }
 }  // namespace modle
 

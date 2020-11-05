@@ -118,15 +118,16 @@ class DNA {
      * @return Pointer to the next ExtrusionBarrier with the orientation specified by \p d (or
      * \p nullptr if there are no ExtrusionBarrier%s matching the search parameters).
      */
-    [[nodiscard]] ExtrusionBarrier* get_next_extr_barrier(ExtrusionBarrier* b,
-                                                          Direction d = DNA::Direction::both) const;
-    [[nodiscard]] ExtrusionBarrier* get_prev_extr_barrier(ExtrusionBarrier* b,
-                                                          Direction d = DNA::Direction::both) const;
-    [[nodiscard]] absl::InlinedVector<ExtrusionBarrier, 3>* get_all_extr_barriers() const;
+    [[nodiscard]] ExtrusionBarrier* get_ptr_to_next_extr_barrier(
+        ExtrusionBarrier* b, Direction d = DNA::Direction::both) const;
+    [[nodiscard]] ExtrusionBarrier* get_ptr_to_prev_extr_barrier(
+        ExtrusionBarrier* b, Direction d = DNA::Direction::both) const;
+    [[nodiscard]] std::vector<ExtrusionBarrier>& get_all_extr_barriers() const;
     [[nodiscard]] absl::InlinedVector<ExtrusionUnit*, 3>& get_extr_units();
 
     ExtrusionBarrier* add_extr_barrier(ExtrusionBarrier b);
-    ExtrusionBarrier* add_extr_barrier(uint64_t pos, double prob_of_barrier_block, DNA::Direction direction);
+    ExtrusionBarrier* add_extr_barrier(uint64_t pos, double prob_of_barrier_block,
+                                       DNA::Direction direction);
     /** Register the ExtrusionUnit unit as being bound to this instance of DNA::Bin.
      *
      * This function will take care of allocating the \p std::vector<ExtrusionUnit> when
@@ -162,7 +163,7 @@ class DNA {
     // This will increase memory footprint, but should improve performance. Needs testing
     /// \brief Pointer to a \p std::vector of ExtrusionBarrier%s (or \p nullptr if there are no
     /// ExtrusionBarrier%s).
-    std::unique_ptr<absl::InlinedVector<ExtrusionBarrier, 3>> _extr_barriers{nullptr};
+    std::unique_ptr<std::vector<ExtrusionBarrier>> _extr_barriers{nullptr};
     /// Ptr to a \p std::vector of ExtrusionUnit%s (or \p nullptr if there are no ExtrusionUnit%s).
     std::unique_ptr<absl::InlinedVector<ExtrusionUnit*, 3>> _extr_units{nullptr};
   };

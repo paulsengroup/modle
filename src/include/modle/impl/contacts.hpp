@@ -169,17 +169,22 @@ void ContactMatrix<I>::increment(uint64_t row, uint64_t col, I n) {
     j = row;
     i = j - col;
   }
-  if (j > this->n_cols())
-    throw std::logic_error(absl::StrFormat("ContactMatrix::increment(%d, %d, %d): j=%d > ncols=%d.",
-                                           row, col, n, j, this->n_cols()));
-  if (i > this->n_rows()) {
-    ++this->_updates_missed;
-    return;
-  }
+  try {
+    if (j > this->n_cols())
+      throw std::runtime_error(absl::StrFormat("j=%d > ncols=%d.", j, this->n_cols()));
+    if (i > this->n_rows()) {
+      ++this->_updates_missed;
+      return;
+    }
 
-  assert(i < this->n_rows());
-  assert(j < this->n_cols());
-  this->at(i, j) += n;
+    assert(i <= this->n_rows());
+    assert(j <= this->n_cols());
+
+    this->at(i, j) += n;
+  } catch (const std::runtime_error &err) {
+    throw std::logic_error(
+        absl::StrFormat("ContactMatrix::increment(%d, %d, %d): %s", row, col, n, err.what()));
+  }
 }
 
 template <typename I>
@@ -190,17 +195,21 @@ void ContactMatrix<I>::set(uint64_t row, uint64_t col, I n) {
     j = row;
     i = j - col;
   }
-  if (j > this->n_cols())
-    throw std::logic_error(absl::StrFormat("ContactMatrix::set(%d, %d, %d): j=%d > ncols=%d.", row,
-                                           col, n, j, this->n_cols()));
-  if (i >= this->n_rows()) {
-    ++this->_updates_missed;
-    return;
-  }
+  try {
+    if (j > this->n_cols())
+      throw std::runtime_error(absl::StrFormat("j=%d > ncols=%d.", j, this->n_cols()));
+    if (i > this->n_rows()) {
+      ++this->_updates_missed;
+      return;
+    }
 
-  assert(i <= this->n_rows());
-  assert(j <= this->n_cols());
-  this->at(i, j) = n;
+    assert(i <= this->n_rows());
+    assert(j <= this->n_cols());
+    this->at(i, j) = n;
+  } catch (const std::runtime_error &err) {
+    throw std::logic_error(
+        absl::StrFormat("ContactMatrix::set(%d, %d, %d): %s", row, col, n, err.what()));
+  }
 }
 
 template <typename I>
@@ -211,18 +220,22 @@ void ContactMatrix<I>::decrement(uint64_t row, uint64_t col, I n) {
     j = row;
     i = j - col;
   }
-  if (j > this->n_cols())
-    throw std::logic_error(absl::StrFormat("ContactMatrix::decrement(%d, %d, %d): j=%d > ncols=%d.",
-                                           row, col, n, j, this->n_cols()));
-  if (i > this->n_rows()) {
-    ++this->_updates_missed;
-    return;
-  }
+  try {
+    if (j > this->n_cols())
+      throw std::runtime_error(absl::StrFormat("j=%d > ncols=%d.", j, this->n_cols()));
+    if (i > this->n_rows()) {
+      ++this->_updates_missed;
+      return;
+    }
 
-  assert(i <= this->n_rows());
-  assert(j <= this->n_cols());
-  assert(n <= this->at(i, j));
-  this->at(i, j) -= n;
+    assert(i <= this->n_rows());
+    assert(j <= this->n_cols());
+    assert(n <= this->at(i, j));
+    this->at(i, j) -= n;
+  } catch (const std::runtime_error &err) {
+    throw std::logic_error(
+        absl::StrFormat("ContactMatrix::decrement(%d, %d, %d): %s", row, col, n, err.what()));
+  }
 }
 
 template <typename I>

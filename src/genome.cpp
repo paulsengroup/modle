@@ -151,16 +151,15 @@ std::pair<uint64_t, uint64_t> Genome::import_extrusion_barriers_from_bed(
   auto p = modle::BEDParser(path_to_bed, BED::Standard::BED6);
   uint64_t nrecords = 0;
   uint64_t nrecords_ignored = 0;
-  absl::flat_hash_map<std::string_view, Chromosome*> chromosomes;
+  absl::flat_hash_map<std::string_view, DNA*> chromosomes;
   chromosomes.reserve(this->get_n_chromosomes());
-  for (auto& chr : this->get_chromosomes()) chromosomes.emplace(chr.name, &chr);
+  for (auto& chr : this->get_chromosomes()) chromosomes.emplace(chr.name, &chr.dna);
   for (auto& record : p.parse_all()) {
     ++nrecords;
-    if (!chromosomes.contains(record.chrom)) {
+    if (!chromosomes.contains(record.chrom) || record.strand == '.') {
       ++nrecords_ignored;
       continue;
     }
-    if (record.strand == '.') continue;  // TODO: Figure out if this is an OK thing to do
     if (probability_of_block != 0) record.score = probability_of_block;
     if (record.score < 0 || record.score > 1) {
       throw std::runtime_error(
@@ -168,13 +167,13 @@ std::pair<uint64_t, uint64_t> Genome::import_extrusion_barriers_from_bed(
                           "between 0 and 1, got %.4g.",
                           record.name, record.chrom_start, record.chrom_end, record.score));
     }
-    chromosomes.at(record.chrom)->dna.add_extr_barrier(record);
+    chromosomes[record.chrom]->add_extr_barrier(record);
   }
 
   for (auto& chr : this->_chromosomes) {
     for (const auto& bin : chr.dna) {
       if (bin.has_extr_barrier()) {
-        for (auto& b : *bin.get_all_extr_barriers()) {
+        for (auto& b : bin.get_all_extr_barriers()) {
           chr.barriers.push_back(&b);
         }
       }
@@ -217,59 +216,57 @@ void Genome::randomly_bind_lefs() {
 
   for (auto& lef : this->_lefs) {
     // Randomly select a chromosome, barrier binding pos and direction
-    auto& chr = this->_chromosomes[chr_idx(this->_rand_eng)];
-    lef.randomly_bind_to_chr(chr, this->_rand_eng);  // And bind to it
+    Chromosome& chr = this->_chromosomes[chr_idx(this->_rand_eng)];
+    lef.randomly_bind_to_chr(&chr, this->_rand_eng);  // And bind to it
   }
 }
 
 uint32_t Genome::run_burnin(double prob_of_rebinding, uint16_t target_n_of_unload_events,
                             uint64_t min_extr_rounds) {
-  const auto t0 = absl::Now();
   double avg_num_of_extr_events_per_bind =
       (static_cast<double>(this->_avg_lef_processivity) / this->_bin_size) /
       2 /* N of active extr. unit */;
   uint32_t n_of_lefs_to_bind_each_round =
-      std::floor(this->get_n_lefs() / avg_num_of_extr_events_per_bind);
-  n_of_lefs_to_bind_each_round += n_of_lefs_to_bind_each_round == 0;
+      std::max<uint32_t>(this->get_n_lefs() / avg_num_of_extr_events_per_bind, 1.0);
 
   std::vector<uint16_t> unload_events(this->get_n_lefs(), 0);
   const auto& weights = this->get_chromosome_lengths();
   std::discrete_distribution<> chr_idx(weights.begin(), weights.end());
 
   uint32_t start_idx = 0, end_idx = n_of_lefs_to_bind_each_round;
-  for (uint32_t rounds = 0;; ++rounds) {
+  for (auto rounds = 0U;; ++rounds) {
     for (; start_idx < end_idx && start_idx < this->get_n_lefs(); ++start_idx) {
-      auto& chr = this->_chromosomes[chr_idx(this->_rand_eng)];
-      this->_lefs[start_idx].randomly_bind_to_chr(chr, this->_rand_eng);
+      Chromosome& chr = this->_chromosomes[chr_idx(this->_rand_eng)];
+      this->_lefs[start_idx].randomly_bind_to_chr(&chr, this->_rand_eng);
     }
-    for (uint32_t i = 0; i < start_idx; ++i) {
+    for (auto i = 0U; i < start_idx; ++i) {
       auto& lef = this->_lefs[i];
 
       if (lef.is_bound()) {
-        lef.extrude();
+        lef.extrude(this->_rand_eng);
         unload_events[i] += !lef.is_bound();
       }
     }
-    for (uint32_t i = 0; i < start_idx; ++i) {
-      if (auto& lef = this->_lefs[i]; lef.is_bound()) {
-        lef.check_constraints(this->_rand_eng);
-      } else {
-        auto& chr = this->_chromosomes[chr_idx(this->_rand_eng)];
-        lef.try_rebind(chr, this->_rand_eng, prob_of_rebinding, false);
+
+    for (auto i = 0U; i < start_idx; ++i) {
+      try {
+        if (auto& lef = this->_lefs[i]; lef.is_bound()) {
+          lef.check_constraints(this->_rand_eng);
+        } else {
+          auto& chr = this->_chromosomes[chr_idx(this->_rand_eng)];
+          lef.try_rebind(chr, this->_rand_eng, prob_of_rebinding, false);
+        }
+      } catch (const std::runtime_error& err) {
+        throw std::runtime_error(absl::StrFormat("Error occurred at lef #%lu: %s!", i, err.what()));
       }
     }
 
     start_idx = std::min(end_idx, this->get_n_lefs());
-    end_idx += n_of_lefs_to_bind_each_round;
-    //    absl::FPrintF(stderr, "%s\n", absl::StrJoin(unload_events.begin(), unload_events.end(),
-    //    ",
-    //    "));
+    end_idx = std::min(end_idx + n_of_lefs_to_bind_each_round, this->get_n_lefs());
 
     if (rounds >= min_extr_rounds &&
         std::all_of(unload_events.begin(), unload_events.end(),
                     [&](uint16_t n) { return n >= target_n_of_unload_events; })) {
-      absl::FPrintF(stderr, "Burnin completed in %s! (%lu rounds).\n",
-                    absl::FormatDuration(absl::Now() - t0), rounds);
       return rounds;
     }
   }
@@ -289,7 +286,7 @@ void Genome::simulate_extrusion(uint32_t iterations) {
     for (auto& lef : this->_lefs) {
       if (lef.is_bound()) {  // Register contact and extrude if LEF is bound
         if (register_contacts) lef.register_contact();
-        lef.extrude();
+        lef.extrude(this->_rand_eng);
       }
     }
 
