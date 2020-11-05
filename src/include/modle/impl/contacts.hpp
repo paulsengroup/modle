@@ -3,10 +3,13 @@
 #include <array>
 #include <boost/iostreams/copy.hpp>
 #include <boost/iostreams/filter/bzip2.hpp>
+#include <boost/iostreams/filter/gzip.hpp>
 #include <boost/iostreams/filtering_stream.hpp>
+#include <boost/process.hpp>
 #include <cassert>
 #include <charconv>
 #include <cmath>
+#include <filesystem>
 #include <fstream>
 #include <iostream>
 #include <limits>
@@ -141,7 +144,7 @@ ContactMatrix<I>::ContactMatrix(const std::string &path_to_file, uint64_t nrows,
 
 template <typename I>
 I &ContactMatrix<I>::at(uint64_t i, uint64_t j) {
-  if ((j * this->_nrows) + i >= this->_contacts.size()) {
+  if ((j * this->_nrows) + i > this->_contacts.size()) {
     throw std::runtime_error(absl::StrFormat(
         "ContactMatrix::at tried to access element m[%lu][%lu] of a matrix of shape [%lu][%lu]! "
         "(%lu >= %lu).",
@@ -152,7 +155,7 @@ I &ContactMatrix<I>::at(uint64_t i, uint64_t j) {
 
 template <typename I>
 const I &ContactMatrix<I>::at(uint64_t i, uint64_t j) const {
-  if ((j * this->_nrows) + i >= this->_contacts.size()) {
+  if ((j * this->_nrows) + i > this->_contacts.size()) {
     throw std::runtime_error(absl::StrFormat(
         "ContactMatrix::at tried to access element m[%lu][%lu] of a matrix of shape [%lu][%lu]! "
         "(%lu >= %lu).",
@@ -318,6 +321,7 @@ std::pair<uint32_t, uint32_t> ContactMatrix<I>::write_to_tsv(
   std::ofstream fp(path_to_file, std::ios_base::out | std::ios_base::binary);
   boost::iostreams::filtering_ostream out;
   std::string buff;
+  uint64_t raw_size = 0;
   if (this->_updates_missed > 0) {
     absl::FPrintF(stderr, "WARNING: There were %lu missed updates!\n", this->_updates_missed);
   }
@@ -332,15 +336,91 @@ std::pair<uint32_t, uint32_t> ContactMatrix<I>::write_to_tsv(
       }
       buff = absl::StrJoin(row, "\t") + "\n";
       out.write(buff.data(), buff.size());
+      raw_size += buff.size();
     }
     if (out.bad() || fp.bad()) throw std::runtime_error("General IO error");
   } catch (const boost::iostreams::bzip2_error &err) {
     throw std::runtime_error(absl::StrFormat("An error occurred while writing file '%s': %s.",
                                              path_to_file, err.what()));
   }
-  out.tellp();
-  fp.tellp();
-  return std::make_pair(fp.tellp(), out.tellp());
+  out.flush();
+  return std::make_pair(raw_size, std::filesystem::file_size(path_to_file));
+}
+
+template <typename I>
+std::pair<uint32_t, uint32_t> ContactMatrix<I>::write_to_hic(const std::string &path_to_juicer,
+                                                             const std::string &chr_name,
+                                                             uint64_t bin_size,
+                                                             const std::string &path_to_chr_sizes,
+                                                             const std::string &path_to_file,
+                                                             const std::string &tmp_dir) const {
+  std::string tmp_file = absl::StrFormat("%s/%s.juicer.tmp.gz", tmp_dir, chr_name);
+  std::ofstream fp(tmp_file, std::ios_base::out | std::ios_base::binary);
+  boost::process::ipstream juicer_stderr;
+  std::string buff;
+  uint64_t raw_size = 0;
+  if (this->_updates_missed > 0) {
+    absl::FPrintF(stderr, "WARNING: There were %lu missed updates!\n", this->_updates_missed);
+  }
+  try {
+    boost::iostreams::filtering_ostream juicer_in;
+    juicer_in.push(boost::iostreams::gzip_compressor(boost::iostreams::gzip_params(1)));
+    juicer_in.push(fp);
+    absl::FPrintF(stderr, "Writing contacts to feed to Juicer pre...");
+    // TODO: The -1 here is a workaround to discard the last bin (which usually does not have the
+    // same size as the others). There's probably a better way to deal with this
+    for (auto i = 0UL; i < this->_ncols - 1; ++i) {
+      for (auto j = 0UL; j < this->_ncols - 1; ++j) {
+        if (auto n = this->get(i, j); n != 0) {
+          // strand1 chr1 pos1 frag1 strand2 chr2 pos2 frag2
+          uint64_t pos1 = ((2 * i * bin_size) + bin_size) / 2;
+          uint64_t pos2 = ((2 * j * bin_size) + bin_size) / 2;
+          buff = absl::StrFormat("1 %s %lu 0 0 %s %lu 1\n", chr_name, pos1, chr_name, pos2);
+          for (auto k = this->get(i, j); k > 0; --k) {
+            juicer_in.write(buff.data(), buff.size());
+            raw_size += buff.size();
+            if (juicer_in.bad() || fp.bad()) throw std::runtime_error("General IO error");
+          }
+        }
+      }
+    }
+    if (juicer_in.bad() || fp.bad()) throw std::runtime_error("General IO error");
+    juicer_in.flush();
+  } catch (const boost::iostreams::gzip_error &err) {
+    std::filesystem::remove(tmp_file);
+    throw std::runtime_error(absl::StrFormat("An error occurred while writing file '%s': %s.",
+                                             path_to_file, err.what()));
+  } catch (const std::runtime_error &err) {
+    std::filesystem::remove(tmp_file);
+    throw std::runtime_error(absl::StrFormat("An error occurred while writing file '%s': %s.",
+                                             path_to_file, err.what()));
+  }
+
+  absl::FPrintF(stderr, " DONE!\n");
+  std::vector<std::string> args{boost::process::search_path("java").string(),
+                                "-Xms512m",
+                                "-Xmx2048m",
+                                "-jar",
+                                path_to_juicer,
+                                "pre",
+                                tmp_file,
+                                path_to_file,
+                                path_to_chr_sizes};
+  absl::FPrintF(stderr, "Running: %s\n", absl::StrJoin(args, " "));
+  boost::process::child juicer(args, boost::process::std_in.close(),
+                               boost::process::std_out > boost::process::null,
+                               boost::process::std_err > juicer_stderr);
+
+  juicer.wait();
+  std::filesystem::remove(tmp_file);
+  if (auto ec = juicer.exit_code(); ec != 0) {
+    for (; std::getline(juicer_stderr, buff);) absl::FPrintF(stderr, "%s", buff);
+    juicer_stderr.close();
+    throw std::runtime_error(absl::StrFormat("Juicer exited with error %lu.", ec));
+  }
+  juicer_stderr.close();
+  assert(!std::filesystem::exist(tmp_file));
+  return {raw_size, std::filesystem::file_size(path_to_file.data())};
 }
 
 template <typename I>
@@ -359,6 +439,7 @@ std::pair<uint32_t, uint32_t> ContactMatrix<I>::write_full_matrix_to_tsv(
   std::ofstream fp(path_to_file, std::ios_base::out | std::ios_base::binary);
   boost::iostreams::filtering_ostream out;
   std::string buff;
+  uint64_t raw_size = 0;
   if (this->_updates_missed > 0) {
     absl::FPrintF(stderr, "WARNING: There were %lu missed updates!\n", this->_updates_missed);
   }
@@ -383,15 +464,15 @@ std::pair<uint32_t, uint32_t> ContactMatrix<I>::write_full_matrix_to_tsv(
       }
       buff = absl::StrJoin(row, "\t") + "\n";
       out.write(buff.data(), buff.size());
+      raw_size += buff.size();
     }
     if (out.bad() || fp.bad()) throw std::runtime_error("General IO error");
   } catch (const boost::iostreams::bzip2_error &err) {
     throw std::runtime_error(absl::StrFormat("An error occurred while writing file '%s': %s.",
                                              path_to_file, err.what()));
   }
-  out.tellp();
-  fp.tellp();
-  return std::make_pair(fp.tellp(), out.tellp());
+  out.flush();
+  return std::make_pair(raw_size, std::filesystem::file_size(path_to_file));
 }
 
 }  // namespace modle

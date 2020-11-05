@@ -53,14 +53,26 @@ uint32_t Genome::get_n_of_busy_lefs() const {
   return this->get_n_lefs() - this->get_n_of_free_lefs();
 }
 
-void Genome::write_contacts_to_file(std::string_view output_dir, bool force_overwrite) const {
+void Genome::write_contacts_to_file(std::string_view output_dir, std::string_view path_to_juicer,
+                                    bool force_overwrite) const {
   absl::FPrintF(stderr, "Writing contact matrices for %lu chromosomes in folder '%s'...",
                 this->get_n_chromosomes(), output_dir);
   auto t0 = absl::Now();
-  std::filesystem::create_directories(output_dir);
-  std::for_each(
-      std::execution::par, this->_chromosomes.begin(), this->_chromosomes.end(),
-      [&](const Chromosome& chr) { chr.write_contacts_to_tsv(output_dir, force_overwrite); });
+  std::string tmp_dir = absl::StrFormat("%s/.tmpdir", output_dir);
+  std::filesystem::create_directories(tmp_dir);
+  std::for_each(std::execution::par, this->_chromosomes.begin(), this->_chromosomes.end(),
+                [&](const Chromosome& chr) {
+                  chr.write_contacts_to_tsv(output_dir, force_overwrite);
+                  if (path_to_juicer.empty()) {
+                    absl::FPrintF(stderr,
+                                  "SKIPPING writing contacts in .hic format because the path to "
+                                  "Juicer's JAR was not provided.\n");
+                    return;
+                  }
+                  chr.write_contacts_to_hic(path_to_juicer, output_dir, tmp_dir,
+                                            this->_path_to_chr_size_file, force_overwrite);
+                });
+  std::filesystem::remove(tmp_dir);
   absl::FPrintF(stderr, "DONE! Saved %lu contact matrices in %s\n", this->get_n_chromosomes(),
                 absl::FormatDuration(absl::Now() - t0));
 }

@@ -178,10 +178,14 @@ struct Chromosome {
   // Getters
   [[nodiscard]] uint32_t length() const;
   [[nodiscard]] uint32_t get_n_bins() const;
+  [[nodiscard]] uint32_t get_bin_size() const;
   [[nodiscard]] uint32_t get_n_barriers() const;
   void sort_barriers_by_pos();
 
   void write_contacts_to_tsv(std::string_view output_dir, bool force_overwrite) const;
+  void write_contacts_to_hic(std::string_view path_to_juicer, std::string_view output_dir,
+                             std::string_view tmp_dir, std::string_view path_to_chr_sizes,
+                             bool force_overwrite) const;
   void write_barriers_to_tsv(std::string_view path_to_outfile, bool force_overwrite) const;
 
   std::string name;  ///< Sequence name (e.g. chromosome name from a BED file).

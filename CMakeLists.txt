@@ -27,7 +27,8 @@ include(CheckIPOSupported)
 
 find_package(BZip2 REQUIRED)
 find_package(TBB REQUIRED)
-find_package(Boost REQUIRED COMPONENTS iostreams        )
+find_package(Boost REQUIRED COMPONENTS iostreams filesystem)
+find_package(Threads REQUIRED)
 
 FetchContent_Declare(
         abseil-cpp
@@ -95,7 +96,9 @@ target_link_libraries(
         absl::time
         BZip2::BZip2
         Boost::iostreams
+        Boost::filesystem
         TBB::tbb
+        Threads::Threads
 )
 
 set_target_properties(libmodle

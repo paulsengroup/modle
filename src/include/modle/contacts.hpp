@@ -30,6 +30,9 @@ class ContactMatrix {
       const std::string& path_to_file) const;
   std::pair<uint32_t /* bytes_in */, uint32_t /* bytes_out */> write_to_tsv(
       const std::string& path_to_file) const;
+  std::pair<uint32_t /* bytes_in */, uint32_t /* bytes_out */> write_to_hic(
+      const std::string& path_to_juicer, const std::string& chr_name, uint64_t bin_size,
+      const std::string& path_to_chr_sizes, const std::string& path_to_file, const std::string& tmp_dir) const;
   void clear_missed_updates_counter();
   const std::vector<I>& get_raw_count_vector() const;
 

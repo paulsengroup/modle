@@ -49,6 +49,12 @@ class Cli {
             "Overwrite existing output files.")
             ->capture_default_str();
 
+    io->add_option(
+ "--path-to-juicer",
+         this->_config.path_to_juicer,
+            "Path to output Juicer's JAR (required to write contacts in .hic format).")
+            ->check(CLI::ExistingFile);
+
     gen->add_option(
             "-b,--bin-size",
             this->_config.bin_size,

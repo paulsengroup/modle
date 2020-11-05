@@ -72,7 +72,7 @@ void run_simulation(const modle::config& c) {
   absl::FPrintF(stderr, "Simulation took %s.\n", absl::FormatDuration(absl::Now() - t0));
 
   if (!c.skip_output) { // Mostly useful for profiling
-    genome.write_contacts_to_file(c.output_dir, c.force);
+    genome.write_contacts_to_file(c.output_dir, c.path_to_juicer, c.force);
     genome.write_extrusion_barriers_to_file(c.output_dir, c.force);
     std::ofstream cmd_file(absl::StrFormat("%s/settings.log", c.output_dir));
     cmd_file << c.to_string() << std::endl;

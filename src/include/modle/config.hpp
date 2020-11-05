@@ -33,6 +33,7 @@ struct config {
   uint32_t contact_sampling_interval{1000};
   bool randomize_contact_sampling{false};
   bool skip_output{false};
+  std::string_view path_to_juicer;
 
   int argc;
   char** argv;
