@@ -48,7 +48,7 @@ class Lef {
   /// Calls extrude on the ExtrusionUnit%s. Returns the number of bp extruded
   uint32_t extrude(std::mt19937& rand_eng);
   /// Register a contact between the DNA::Bin%s associated with the left and right ExtrusionUnit%s
-  void register_contact();
+  void register_contact(int64_t bin1_offset = 0, int64_t bin2_offset = 0);
   [[nodiscard]] std::pair<DNA::Bin*, DNA::Bin*> get_ptr_to_bins();
   [[nodiscard]] bool is_bound() const;
   void randomly_bind_to_chr(Chromosome* chr, std::mt19937& rand_eng, bool register_contact = false);

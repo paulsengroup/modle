@@ -16,23 +16,24 @@ struct config {
   bool force{false};
 
   uint32_t bin_size{1'000};
-  uint32_t diagonal_width{2'000'000};
-  uint32_t simulation_iterations{5'000'000};
+  uint32_t diagonal_width{3'000'000};
+  uint32_t simulation_iterations{15'000'000};
   uint32_t number_of_randomly_gen_extr_barriers{0};
   uint32_t number_of_lefs;
   uint32_t average_lef_processivity{100'000};
   double probability_of_extrusion_barrier_block{0};
   double probability_of_lef_rebind{1.0};
   double probability_of_extrusion_unit_bypass{0.25};
-  bool make_heatmaps{true};
   uint64_t seed{0};
   bool skip_burnin{false};
   uint32_t min_n_of_burnin_rounds{0};
   uint32_t min_n_of_loops_per_lef{1};
   double lef_unloader_strength{1};
   uint32_t contact_sampling_interval{1000};
-  bool randomize_contact_sampling{false};
+  bool randomize_contact_sampling_interval{false};
   bool skip_output{false};
+  bool randomize_contact_sampling{false};
+  uint64_t randomize_contact_sampling_range{5};
   std::string_view path_to_juicer;
 
   int argc;
@@ -65,7 +66,6 @@ struct config {
         "##    Min. # of burn-in rounds         #  %lu\n"
         "##    Min. # of loops per LEF          #  %lu\n"
         "########## Various {modle-padding}\n"
-        "##    Generate heatmaps                #  %s\n"
         "##    Seed                             #  %lu\n",
         // clang-format on
         std::filesystem::weakly_canonical(this->path_to_chr_sizes),
@@ -74,9 +74,9 @@ struct config {
         this->lef_unloader_strength, this->number_of_randomly_gen_extr_barriers,
         this->number_of_lefs, this->skip_burnin ? "Yes" : "No", this->contact_sampling_interval,
         this->probability_of_extrusion_barrier_block, this->probability_of_lef_rebind,
-        this->probability_of_extrusion_unit_bypass, this->randomize_contact_sampling ? "Yes" : "No",
-        this->min_n_of_burnin_rounds, this->min_n_of_loops_per_lef,
-        this->make_heatmaps ? "Yes" : "No", this->seed);
+        this->probability_of_extrusion_unit_bypass,
+        this->randomize_contact_sampling_interval ? "Yes" : "No", this->min_n_of_burnin_rounds,
+        this->min_n_of_loops_per_lef, this->seed);
 
     const auto& toks = absl::StrSplit(buf, '\n');
     uint32_t max_col_width =  // Find longest line (excluding {modle-padding})

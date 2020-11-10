@@ -276,61 +276,21 @@ void Chromosome::sort_barriers_by_pos() {
 
 void Chromosome::write_contacts_to_tsv(std::string_view output_dir, bool force_overwrite) const {
   auto t0 = absl::Now();
-  auto path_to_outfile =
-      std::filesystem::weakly_canonical(absl::StrFormat("%s/%s.tsv.bz2", output_dir, this->name));
+  std::string path_to_outfile = std::filesystem::weakly_canonical(
+      absl::StrFormat("%s/%s_modle_cmatrix.tsv.bz2", output_dir, this->name));
+  absl::FPrintF(stderr, "Writing contact matrix for '%s' to file '%s'...\n", this->name,
+                path_to_outfile);
   if (!force_overwrite && std::filesystem::exists(path_to_outfile)) {
-    absl::FPrintF(stderr, "File '%s' already exists. Pass --force to overwrite... SKIPPING.\n",
+    absl::FPrintF(stderr, "File '%s' already exists, SKIPPING! Pass --force to overwrite...\n",
                   path_to_outfile);
     return;
   }
-  absl::FPrintF(stderr, "Writing full contact matrix for '%s' to file '%s'...\n", this->name,
-                path_to_outfile);
-  {
-    auto [bytes_in, bytes_out] = this->contacts.write_full_matrix_to_tsv(path_to_outfile);
-    absl::FPrintF(stderr,
-                  "DONE writing '%s' in %s! Compressed size: %.2f MB (compression ratio %.2fx)\n",
-                  path_to_outfile, absl::FormatDuration(absl::Now() - t0), bytes_out / 1.0e6,
-                  static_cast<double>(bytes_in) / bytes_out);
-    t0 = absl::Now();
-  }
-  path_to_outfile = std::filesystem::weakly_canonical(
-      absl::StrFormat("%s/%s_raw.tsv.bz2", output_dir, this->name));
-  absl::FPrintF(stderr, "Writing raw contact matrix for '%s' to file '%s'...\n", this->name,
-                path_to_outfile);
-  auto [bytes_in, bytes_out] = this->contacts.write_to_tsv(path_to_outfile);
-  absl::FPrintF(stderr,
-                "DONE writing '%s' in %s! Compressed size: %.2f MB (compression ratio %.2fx)\n",
-                path_to_outfile, absl::FormatDuration(absl::Now() - t0), bytes_out / 1.0e6,
-                static_cast<double>(bytes_in) / bytes_out);
-}
 
-void Chromosome::write_contacts_to_hic(std::string_view path_to_juicer, std::string_view output_dir,
-                                       std::string_view tmp_dir, std::string_view path_to_chr_sizes,
-                                       bool force_overwrite) const {
-  auto t0 = absl::Now();
-  auto path_to_outfile =
-      std::filesystem::weakly_canonical(absl::StrFormat("%s/%s.hic", output_dir, this->name));
-  if (!force_overwrite && std::filesystem::exists(path_to_outfile)) {
-    absl::FPrintF(stderr, "File '%s' already exists. Pass --force to overwrite... SKIPPING.\n",
-                  path_to_outfile);
-    return;
-  }
-  absl::FPrintF(stderr, "Writing contacts for '%s' in .hic format...\n", this->name);
-  {
-    auto [bytes_in, bytes_out] = this->contacts.write_to_hic(
-        path_to_juicer.data(), this->name, this->get_bin_size(), path_to_chr_sizes.data(),
-        path_to_outfile.string(), tmp_dir.data());
-    absl::FPrintF(stderr,
-                  "DONE writing '%s' in %s! Compressed size: %.2f MB (compression ratio %.2fx)\n",
-                  path_to_outfile, absl::FormatDuration(absl::Now() - t0), bytes_out / 1.0e6,
-                  static_cast<double>(bytes_in) / bytes_out);
-    t0 = absl::Now();
-  }
-  path_to_outfile = std::filesystem::weakly_canonical(
-      absl::StrFormat("%s/%s_raw.tsv.bz2", output_dir, this->name));
-  absl::FPrintF(stderr, "Writing raw contact matrix for '%s' to file '%s'...\n", this->name,
-                path_to_outfile);
-  auto [bytes_in, bytes_out] = this->contacts.write_to_tsv(path_to_outfile);
+  const std::string header =
+      absl::StrFormat("#%s\t%lu\t%lu\t%lu\t%lu\n", this->name, this->get_bin_size(), 0,
+                      this->length(), this->contacts.n_rows() * this->get_bin_size());
+
+  auto [bytes_in, bytes_out] = this->contacts.write_to_tsv(path_to_outfile, header);
   absl::FPrintF(stderr,
                 "DONE writing '%s' in %s! Compressed size: %.2f MB (compression ratio %.2fx)\n",
                 path_to_outfile, absl::FormatDuration(absl::Now() - t0), bytes_out / 1.0e6,

@@ -1,21 +1,11 @@
 cmake_minimum_required(VERSION 3.10)
-project(modle
+project(modle_tools
         HOMEPAGE_URL "https://github.com/robomics/modle"
-        LANGUAGES CXX C
+        LANGUAGES CXX
         VERSION 0.0.1
-        DESCRIPTION "Helper tool to compare modle contact matrices with .hic contact matrices.")
+        DESCRIPTION "Helper tool to process the contact matrix produced by modle.")
 
 cmake_policy(VERSION 3.10)
-include(ExternalProject)
-
-ExternalProject_Add(
-        libBigWig
-        GIT_REPOSITORY git@github.com:dpryan79/libBigWig.git
-        GIT_TAG "81396bdcf8082c1e5e899a53b17cb6d2b242de28"
-        GIT_SHALLOW OFF
-        SOURCE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/external/libBigWig"
-)
-
 
 if (NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
     message(STATUS "Setting build type to \"Release\" as none was specified.")
@@ -23,15 +13,10 @@ if (NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
 endif ()
 message(STATUS "Build type: ${CMAKE_BUILD_TYPE}")
 
-# COntinue from here: Set C standard etc...
-
-
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-include(FetchContent)
 include(CheckIPOSupported)
-
 find_package(TBB REQUIRED)
 
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
@@ -43,26 +28,21 @@ else ()
     message(STATUS "IPO/LTO not available")
 endif ()
 
-include_directories(
-        libmodle
-        ${CMAKE_CURRENT_SOURCE_DIR}/external/CLI11/include
-        ${CMAKE_CURRENT_SOURCE_DIR}/external/abseil-cpp
-        )
+include_directories(modle)
 
-add_executable(cmatrix_comp main.cpp)
+add_executable(modle_tools main.cpp)
 
-target_link_libraries(cmatrix_comp
+target_link_libraries(modle_tools
         libmodle
         CLI11::CLI11
         absl::base
         absl::time
-        absl::strings
-        )
+        absl::strings)
 
 set(DEBUG_OPTIONS "-Wall;-Wextra;-ggdb;-Og;-g3")
 set(RELEASE_OPTIONS "-Wall;-Wextra;-O3")
-target_compile_options(cmatrix_comp PUBLIC "$<$<CONFIG:DEBUG>:${DEBUG_OPTIONS}>")
-target_compile_options(cmatrix_comp PUBLIC "$<$<CONFIG:RELEASE>:${RELEASE_OPTIONS}>")
+target_compile_options(modle_tools PUBLIC "$<$<CONFIG:DEBUG>:${DEBUG_OPTIONS}>")
+target_compile_options(modle_tools PUBLIC "$<$<CONFIG:RELEASE>:${RELEASE_OPTIONS}>")
 
-install(TARGETS cmatrix_comp
+install(TARGETS modle_tools
         DESTINATION ${CMAKE_INSTALL_BINDIR})

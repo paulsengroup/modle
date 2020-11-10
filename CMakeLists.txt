@@ -143,6 +143,7 @@ target_compile_options(modle PUBLIC "$<$<CONFIG:TSAN>:${MODLE_RELEASE_W_TSAN_OPT
 target_link_options(modle PUBLIC "$<$<CONFIG:TSAN>:-fsanitize=thread>")
 
 add_subdirectory(utils/compare_contact_matrix)
+add_subdirectory(utils/modle_tools)
 
 install(TARGETS libmodle
         LIBRARY

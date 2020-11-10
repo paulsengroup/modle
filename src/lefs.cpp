@@ -263,9 +263,13 @@ uint32_t Lef::extrude(std::mt19937& rand_eng) {
   return 0;
 }
 
-void Lef::register_contact() {
-  this->_chr->contacts.increment(this->_left_unit->get_bin_index(),
-                                 this->_right_unit->get_bin_index());
+void Lef::register_contact(int64_t bin1_offset, int64_t bin2_offset) {
+  uint64_t bin1 = std::clamp(bin1_offset + this->_left_unit->get_bin_index(), 0L,
+                             static_cast<int64_t>(this->_chr->get_n_bins() - 1));
+  uint64_t bin2 = std::clamp(bin2_offset + this->_right_unit->get_bin_index(), 0L,
+                             static_cast<int64_t>(this->_chr->get_n_bins() - 1));
+
+  this->_chr->contacts.increment(bin1, bin2);
 }
 
 void Lef::check_constraints(std::mt19937& rang_eng) {

@@ -38,12 +38,6 @@ class Cli {
             ->required();
 
     io->add_flag(
-            "--make-heatmaps,!--no-make-heatmaps",
-            this->_config.make_heatmaps,
-            "Generate heatmaps from the complete and diagonal contact matrices.")
-            ->capture_default_str();
-
-    io->add_flag(
             "--force",
             this->_config.force,
             "Overwrite existing output files.")
@@ -133,9 +127,22 @@ class Cli {
 
     rand->add_flag(
             "--randomize-contact-sampling-interval,!--uniform-contact-sampling-interval",
-            this->_config.randomize_contact_sampling,
+            this->_config.randomize_contact_sampling_interval,
             "Sample contacts using a bernoulli process with a probability of success of 1 / n, where n is the interval set through --contact-sampling-interval.")
             ->capture_default_str();
+
+    rand->add_flag(
+             "--randomize-contact-sampling",
+             this->_config.randomize_contact_sampling,
+             "Randomize the pair of bins for which a contact is registered. This has the effect of introducing some noise in the contact matrix. Use --randomize-contact-sampling-range to specify the amount of noise introduced.")
+             ->capture_default_str();
+
+    rand->add_option( //TODO: Change the name of this option!
+             "--randomize-contact-sampling-range",
+             this->_config.randomize_contact_sampling_range,
+             "Specify the range of numbers that will be added/subtracted from bin indices when registering contacts, and --randomize-contact-sampling is passed.")
+             ->needs(rand->get_option("--randomize-contact-sampling"))
+             ->capture_default_str();
 
     burn->add_option(
             "--min-burnin-rounds",

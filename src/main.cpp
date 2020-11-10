@@ -72,23 +72,12 @@ void run_simulation(const modle::config& c) {
   absl::FPrintF(stderr, "Simulation took %s.\n", absl::FormatDuration(absl::Now() - t0));
 
   if (!c.skip_output) { // Mostly useful for profiling
-    genome.write_contacts_to_file(c.output_dir, c.path_to_juicer, c.force);
+    genome.write_contacts_to_file(c.output_dir, c.force);
     genome.write_extrusion_barriers_to_file(c.output_dir, c.force);
     std::ofstream cmd_file(absl::StrFormat("%s/settings.log", c.output_dir));
     cmd_file << c.to_string() << std::endl;
     cmd_file << absl::StrJoin(c.argv, c.argv + c.argc, " ") << std::endl;
     cmd_file.close();
-
-    if (c.make_heatmaps) {
-      std::string_view exec(c.argv[0]);
-      auto path_hint = exec.substr(0, exec.rfind('/'));
-      std::string path_to_script = "modle_plot_contact_matrix.py";
-      if (const auto p = absl::StrFormat("%s/%s", path_hint, path_to_script);
-          std::filesystem::is_regular_file(p)) {
-        path_to_script = p;
-      }
-      genome.make_heatmaps(c.output_dir, c.force, path_to_script);
-    }
   }
   absl::FPrintF(stderr, "Simulation terminated without errors!\nBye.\n");
 }

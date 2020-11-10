@@ -1,6 +1,5 @@
 #include "modle/genome.hpp"
 
-#include <cstdlib>
 #include <execution>
 #include <filesystem>
 #include <functional>
@@ -24,7 +23,9 @@ Genome::Genome(const config& c)
       _lefs(generate_lefs(c.number_of_lefs)),
       _chromosomes(init_chromosomes_from_file(c.diagonal_width)),
       _sampling_interval(c.contact_sampling_interval),
-      _randomize_contact_sampling(c.randomize_contact_sampling),
+      _randomize_contact_sampling(c.randomize_contact_sampling_interval),
+      _noise_to_add_to_bin_index(c.randomize_contact_sampling ? c.randomize_contact_sampling_range
+                                                              : 0),
       _sample_contacts(1.0 / _sampling_interval) {}
 
 std::vector<uint32_t> Genome::get_chromosome_lengths() const {
@@ -53,26 +54,14 @@ uint32_t Genome::get_n_of_busy_lefs() const {
   return this->get_n_lefs() - this->get_n_of_free_lefs();
 }
 
-void Genome::write_contacts_to_file(std::string_view output_dir, std::string_view path_to_juicer,
-                                    bool force_overwrite) const {
+void Genome::write_contacts_to_file(std::string_view output_dir, bool force_overwrite) const {
   absl::FPrintF(stderr, "Writing contact matrices for %lu chromosomes in folder '%s'...",
                 this->get_n_chromosomes(), output_dir);
   auto t0 = absl::Now();
-  std::string tmp_dir = absl::StrFormat("%s/.tmpdir", output_dir);
-  std::filesystem::create_directories(tmp_dir);
-  std::for_each(std::execution::par, this->_chromosomes.begin(), this->_chromosomes.end(),
-                [&](const Chromosome& chr) {
-                  chr.write_contacts_to_tsv(output_dir, force_overwrite);
-                  if (path_to_juicer.empty()) {
-                    absl::FPrintF(stderr,
-                                  "SKIPPING writing contacts in .hic format because the path to "
-                                  "Juicer's JAR was not provided.\n");
-                    return;
-                  }
-                  chr.write_contacts_to_hic(path_to_juicer, output_dir, tmp_dir,
-                                            this->_path_to_chr_size_file, force_overwrite);
-                });
-  std::filesystem::remove(tmp_dir);
+  std::filesystem::create_directories(output_dir);
+  std::for_each(
+      std::execution::par, this->_chromosomes.begin(), this->_chromosomes.end(),
+      [&](const Chromosome& chr) { chr.write_contacts_to_tsv(output_dir, force_overwrite); });
   absl::FPrintF(stderr, "DONE! Saved %lu contact matrices in %s\n", this->get_n_chromosomes(),
                 absl::FormatDuration(absl::Now() - t0));
 }
@@ -88,25 +77,6 @@ void Genome::write_extrusion_barriers_to_file(std::string_view output_dir,
       [&](const Chromosome& chr) { chr.write_barriers_to_tsv(output_dir, force_overwrite); });
   absl::FPrintF(stderr, "DONE! Written extrusion barrier coordinates for %lu chromosomes in %s\n",
                 this->get_n_chromosomes(), absl::FormatDuration(absl::Now() - t0));
-}
-
-void Genome::make_heatmaps(std::string_view output_dir, bool force_overwrite,
-                           const std::string& script) const {
-  const auto t0 = absl::Now();
-  absl::FPrintF(stderr, "Generating heatmaps for %lu chromosomes...\n", this->get_n_chromosomes());
-  const auto cmd =
-      absl::StrFormat("%s --input-dir %s --output-dir %s --bin-size %lu%s", script, output_dir,
-                      output_dir, this->_bin_size, force_overwrite ? " --force" : "");
-  absl::FPrintF(stderr, "%s\n", cmd);
-  if (auto status = std::system(cmd.c_str()); status != 0) {
-    if (WIFEXITED(status) == 0) {
-      if (auto ec = WEXITSTATUS(status); ec != 0) {
-        throw std::runtime_error(
-            absl::StrFormat("Command '%s' terminated with exit code %d.", cmd, ec));
-      }
-    }
-  }
-  absl::FPrintF(stderr, "DONE! Plotting took %s.\n", absl::FormatDuration(absl::Now() - t0));
 }
 
 std::vector<Chromosome> Genome::init_chromosomes_from_file(uint32_t diagonal_width) const {
@@ -288,6 +258,10 @@ void Genome::simulate_extrusion(uint32_t iterations) {
   const auto step = iterations / 500;
   const auto& weights = this->get_chromosome_lengths();
   std::discrete_distribution<> chr_idx(weights.begin(), weights.end());
+  assert(this->_noise_to_add_to_bin_index / 2 < INT16_MAX);
+  // std::uniform_int_distribution<int16_t> bin_idx_noise(this->_noise_to_add_to_bin_index / -2,
+  //                                                      this->_noise_to_add_to_bin_index / 2);
+  // std::normal_distribution<> bin_idx_noise(0, 3);
 
   auto t0 = absl::Now();
   for (auto i = 1UL; i <= iterations; ++i) {
@@ -297,7 +271,10 @@ void Genome::simulate_extrusion(uint32_t iterations) {
 
     for (auto& lef : this->_lefs) {
       if (lef.is_bound()) {  // Register contact and extrude if LEF is bound
-        if (register_contacts) lef.register_contact();
+        if (register_contacts)
+          // lef.register_contact(std::round<int64_t>(bin_idx_noise(this->_rand_eng)),
+          // std::round<int64_t>(bin_idx_noise(this->_rand_eng)));
+          lef.register_contact();
         lef.extrude(this->_rand_eng);
       }
     }

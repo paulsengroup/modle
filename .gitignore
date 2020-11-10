@@ -9,5 +9,6 @@ Dockerfile*
 Singularity*
 test/data/*
 test/googletest
+test/settings
 scratch/
 docs/

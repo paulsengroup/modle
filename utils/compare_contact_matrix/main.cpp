@@ -79,6 +79,14 @@ struct config {
   return c;
 }
 
+void write_to_wig(std::string_view path_to_file, const std::vector<std::pair<double, double>>& corr, uint64_t bin_size) {
+  /*
+   * To create a wig file use bigWigFileCreate implemented here https://github.com/ucscGenomeBrowser/kent/blob/master/src/inc/bigWig.h
+   *
+   */
+
+}
+
 }  // namespace modle::helpers::cmatrix_comp
 
 int main(int argc, char** argv) {

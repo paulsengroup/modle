@@ -1,10 +1,12 @@
 #pragma once
 
-#include <type_traits>
-
-//#include "absl/container/flat_hash_map.h"
+#include <boost/iostreams/filtering_stream.hpp>
 #include <cstdint>
+#include <fstream>
+#include <random>
 #include <string>
+#include <string_view>
+#include <type_traits>
 #include <vector>
 
 namespace modle {
@@ -15,9 +17,22 @@ class ContactMatrix {
                 "ContactMatrix requires an integral type as template argument.");
 
  public:
+  struct Header {
+    std::string chr_name{};
+    uint64_t bin_size{};
+    uint64_t start{};
+    uint64_t end{};
+    uint64_t diagonal_width{};
+    uint64_t ncols{};
+    uint64_t nrows{};
+    [[nodiscard]] std::string to_string() const;
+  };
+
   ContactMatrix(uint64_t nrows, uint64_t ncols, bool fill_with_random_numbers = false);
   ContactMatrix(const std::string& path_to_file, uint64_t nrows, uint64_t ncols, char sep = '\t');
-  explicit ContactMatrix(const std::string& path_to_file, char sep = '\t');
+  explicit ContactMatrix(const std::string& path_to_file,
+                         std::normal_distribution<float>* noise_generator = nullptr,
+                         uint64_t seed = 0, char sep = '\t');
   [[nodiscard]] I get(uint64_t row, uint64_t col) const;
   void set(uint64_t row, uint64_t col, I n = 1);
   void increment(uint64_t row, uint64_t col, I n = 1);
@@ -29,12 +44,13 @@ class ContactMatrix {
   std::pair<uint32_t /* bytes_in */, uint32_t /* bytes_out */> write_full_matrix_to_tsv(
       const std::string& path_to_file) const;
   std::pair<uint32_t /* bytes_in */, uint32_t /* bytes_out */> write_to_tsv(
-      const std::string& path_to_file) const;
-  std::pair<uint32_t /* bytes_in */, uint32_t /* bytes_out */> write_to_hic(
-      const std::string& path_to_juicer, const std::string& chr_name, uint64_t bin_size,
-      const std::string& path_to_chr_sizes, const std::string& path_to_file, const std::string& tmp_dir) const;
+      const std::string& path_to_file, std::string_view header = "") const;
   void clear_missed_updates_counter();
   const std::vector<I>& get_raw_count_vector() const;
+  [[nodiscard]] static Header parse_header(std::string_view path_to_file);
+  [[nodiscard]] static Header parse_header(std::string_view path_to_file,
+                                           boost::iostreams::filtering_istream& in,
+                                           bool rewind_file = false);
 
  private:
   uint64_t _nrows;
