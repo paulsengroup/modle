@@ -11,9 +11,6 @@
 namespace modle::utils {
 
 struct config {
-  int argc;
-  char** argv;
-
   std::string path_to_input_matrix;
   std::string out_dir;
   std::string chr_sizes;
@@ -28,12 +25,13 @@ struct config {
   uint64_t sliding_window_size{3000};
   uint64_t sliding_window_overlap{2400};
   std::string base_name;
-  std::string path_to_juicer;
+  std::string path_to_juicer_tools;
   std::string tmp_dir{std::filesystem::temp_directory_path()};
   int exit_code{0};
   uint64_t seed{0};
   double noise_stdev{3};
   uint64_t noise_range{100'000};
+  uint64_t juicer_tools_mem{2 * 1024 * 1024 * 1024ULL};  // 2GiB
 };
 
 class Cli {
@@ -44,10 +42,10 @@ class Cli {
   int _argc;
   char** _argv;
   std::string _exec_name;
-  config _config;
+  config _config{};
   CLI::App _cli{};
-  subcommand _subcommand;
-  absl::btree_set<std::string_view> _allowed_genome_ids{
+  subcommand _subcommand{subcommand::help};
+  const absl::btree_set<std::string_view> _allowed_genome_ids{
       // See https://github.com/aidenlab/juicer/wiki/Pre#usage
       {"hg18"},      {"hg19"},      {"hg38"},    {"dMel"},    {"mm9"},     {"mm10"},
       {"anasPlat1"}, {"bTaurus3"},  {"canFam3"}, {"equCab2"}, {"galGal4"}, {"Pf3D7"},
@@ -55,12 +53,13 @@ class Cli {
 
   void MakeCli() {
     // clang-format off
+    this->_cli.name(this->_exec_name);
     this->_cli.description("Modle's helper tool. This tool allows to post-process the contact matrix produced by Modle in various ways.");
     this->_cli.require_subcommand(1);
     this->_cli.add_option("-i,--input", this->_config.path_to_input_matrix, "Path to Modle's contact matrix")->check(CLI::ExistingFile)->required();
     this->_cli.add_option("-o,--output-dir", this->_config.out_dir, "Path where to save the output files.")->required();
     this->_cli.add_option("--tmp-dir", this->_config.tmp_dir, "Path where to store temporary files.")->capture_default_str();
-    this->_cli.add_flag("--keep-temporary-files", this->_config.keep_tmp_files, "Do not delete temporaty files.")->capture_default_str();
+    this->_cli.add_flag("--keep-temporary-files", this->_config.keep_tmp_files, "Do not delete temporary files.")->capture_default_str();
     this->_cli.add_flag("-f,--force", this->_config.force, "Overwrite existing file(s).")->capture_default_str();
 
     auto convert = this->_cli.add_subcommand("convert", "Convert Modle's contact matrix into several popular formats.")->fallthrough();
@@ -71,8 +70,10 @@ class Cli {
     convert->add_flag("--tsv,!--no-tsv", this->_config.convert_to_tsv, "Convert contact matrix to TSV format.")->capture_default_str();
     convert->add_flag("--compress", this->_config.compress, "Compress output using bzip2.")->capture_default_str();
     convert->add_flag("--add-noise,--make-realistic", this->_config.add_noise, "Add noise to make the contact matrix more similar to the matrices produced by Hi-C experiments.")->capture_default_str();
-    convert->add_option("--noise-range", this->_config.noise_range, "Range to use when adding noise to contact matrices. 99.9%% of the sampled numbers will fall within this range.")->check(CLI::PositiveNumber)->capture_default_str();
-    convert->add_option("-j,--path-to-juicer-tools", this->_config.path_to_juicer, "Path to Juicer tools jar. When this is not specified, we will look in PATH for an executable called juicer_tools, juicer_tools.exe or juicer_tools.sh.")->check(CLI::ExistingFile);
+    convert->add_option("--noise-stdev", this->_config.noise_stdev, "Standard deviation to use when sampling noise to add to contact matrices.")->check(CLI::PositiveNumber)->needs(convert->get_option("--add-noise"))->capture_default_str();
+    convert->add_option("--noise-range", this->_config.noise_range, "Range to use when adding noise to contact matrices. 99.9%% of the sampled numbers will fall within this range.")->check(CLI::PositiveNumber)->needs(convert->get_option("--add-noise"))->excludes(convert->get_option("--noise-stdev"))->capture_default_str();
+    convert->add_option("-j,--path-to-juicer-tools", this->_config.path_to_juicer_tools, "Path to Juicer tools jar. When this is not specified, we will look in PATH for an executable called juicer_tools, juicer_tools.exe or juicer_tools.sh.")->check(CLI::ExistingFile);
+    convert->add_option("--juicer-tools-max-mem", this->_config.juicer_tools_mem, "Maximum memory allocation pool for Juicer Tools (JVM).")->needs(convert->get_option("--path-to-juicer-tools"))->transform(CLI::AsSizeValue(false))->capture_default_str();
     convert->add_option("-c,--chr-sizes", this->_config.chr_sizes, absl::StrFormat("Path to file containing chromosome size(s). Can also be one of the following genome IDs: %s.", absl::StrJoin(this->_allowed_genome_ids, ", ")));
     convert->add_option("--seed", this->_config.seed, "Seed value to use when adding noise to the contact matrix.")->capture_default_str();
 
@@ -178,10 +179,7 @@ class Cli {
   }
 
  public:
-  Cli(int argc, char** argv) : _argc(argc), _argv(argv), _exec_name(argv[0]) {
-    assert(this->_argc > 1);
-    this->MakeCli();
-  }
+  Cli(int argc, char** argv) : _argc(argc), _argv(argv), _exec_name(argv[0]) { this->MakeCli(); }
   [[nodiscard]] bool is_ok() const {
     return this->_config.exit_code && this->_subcommand != subcommand::help;
   }

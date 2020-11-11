@@ -27,12 +27,12 @@ class DNA {
   DNA(uint64_t length, uint32_t bin_size);
 
   // Getters
-  [[nodiscard]] uint32_t length() const;
-  [[nodiscard]] uint32_t get_n_bins() const;
-  [[nodiscard]] uint32_t get_n_barriers() const;
+  [[nodiscard]] uint64_t length() const;
+  [[nodiscard]] uint64_t get_n_bins() const;
+  [[nodiscard]] uint64_t get_n_barriers() const;
   [[nodiscard]] uint32_t get_bin_size() const;
-  [[nodiscard]] DNA::Bin& get_bin_from_pos(uint32_t pos);
-  [[nodiscard]] DNA::Bin* get_ptr_to_bin_from_pos(uint32_t pos);
+  [[nodiscard]] DNA::Bin& get_bin_from_pos(uint64_t pos);
+  [[nodiscard]] DNA::Bin* get_ptr_to_bin_from_pos(uint64_t pos);
   [[nodiscard]] DNA::Bin& get_prev_bin(const Bin& current_bin);
   [[nodiscard]] DNA::Bin* get_ptr_to_prev_bin(const Bin& current_bin);
   [[nodiscard]] DNA::Bin& get_next_bin(const Bin& current_bin);
@@ -101,9 +101,9 @@ class DNA {
 
     [[nodiscard]] uint32_t get_start() const;
     [[nodiscard]] uint32_t get_end() const;
-    [[nodiscard]] uint32_t size() const;
-    [[nodiscard]] uint32_t get_n_extr_units() const;
-    [[nodiscard]] uint32_t get_n_extr_barriers() const;
+    [[nodiscard]] uint64_t size() const;
+    [[nodiscard]] uint64_t get_n_extr_units() const;
+    [[nodiscard]] uint64_t get_n_extr_barriers() const;
     [[nodiscard]] uint32_t get_index() const;
     [[nodiscard]] bool has_extr_barrier() const;
     /** Given a ptr to an instance of ExtrusionBarrier that belongs to this instance of
@@ -134,7 +134,7 @@ class DNA {
      * <tt> DNA::Bin::_extr_barriers = nullptr </tt>.
      * @param unit Pointer to the ExtrusionUnit to be registered as binding to this DNA::Bin.
      */
-    uint32_t add_extr_unit_binding(ExtrusionUnit* unit);
+    uint64_t add_extr_unit_binding(ExtrusionUnit* unit);
     /** Remove the ExtrusionUnit \p unit from the list of ExtrusionUnit%s that are bound to this
      * instance of DNA::Bin.
      *
@@ -143,9 +143,9 @@ class DNA {
      * @param unit Pointer to the unit to be removed from the \p std::vector<ExtrusionUnit> bound to
      * this DNA::Bin.
      */
-    uint32_t remove_extr_unit_binding(ExtrusionUnit* unit);
+    uint64_t remove_extr_unit_binding(ExtrusionUnit* unit);
     void remove_extr_barrier(Direction d);
-    uint32_t remove_all_extr_barriers();
+    uint64_t remove_all_extr_barriers();
     void sort_extr_barriers_by_pos();
 
     // Make DNA::Bin hashable by absl::hash
@@ -176,10 +176,10 @@ struct Chromosome {
   Chromosome(std::string name, uint64_t length, uint32_t bin_size, uint32_t diagonal_width);
 
   // Getters
-  [[nodiscard]] uint32_t length() const;
-  [[nodiscard]] uint32_t get_n_bins() const;
+  [[nodiscard]] uint64_t length() const;
+  [[nodiscard]] uint64_t get_n_bins() const;
   [[nodiscard]] uint32_t get_bin_size() const;
-  [[nodiscard]] uint32_t get_n_barriers() const;
+  [[nodiscard]] uint64_t get_n_barriers() const;
   void sort_barriers_by_pos();
 
   void write_contacts_to_tsv(std::string_view output_dir, bool force_overwrite) const;

@@ -35,7 +35,7 @@ ContactMatrix<I>::ContactMatrix(uint64_t nrows, uint64_t ncols, bool fill_with_r
 
 template <class I>
 ContactMatrix<I>::ContactMatrix(const std::string &path_to_file,
-                                std::normal_distribution<float> *noise_generator, uint64_t seed,
+                                std::normal_distribution<double> *noise_generator, uint64_t seed,
                                 char sep)
     : _nrows(0), _ncols(0) {
   std::ifstream fp(path_to_file, std::ios_base::in | std::ios_base::binary);
@@ -391,7 +391,6 @@ typename ContactMatrix<I>::Header ContactMatrix<I>::parse_header(
   ContactMatrix<I>::Header header;
   std::string buff;
   if (!std::getline(in, buff)) {
-    assert(!fp);
     throw std::runtime_error(absl::StrFormat("IO error while reading from file '%s': %s",
                                              path_to_file, std::strerror(errno)));
   }

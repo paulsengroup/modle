@@ -30,12 +30,12 @@ class Genome {
   [[nodiscard]] uint64_t size() const;
   [[nodiscard]] uint64_t n50() const;
   [[nodiscard]] uint32_t get_n_bins() const;
-  [[nodiscard]] uint32_t get_n_lefs() const;
+  [[nodiscard]] uint64_t get_n_lefs() const;
   [[nodiscard]] uint32_t get_n_barriers() const;
   [[nodiscard]] std::vector<std::string_view> get_chromosome_names() const;
   [[nodiscard]] std::vector<uint32_t> get_chromosome_lengths() const;
-  [[nodiscard]] uint32_t get_n_of_free_lefs() const;
-  [[nodiscard]] uint32_t get_n_of_busy_lefs() const;
+  [[nodiscard]] uint64_t get_n_of_free_lefs() const;
+  [[nodiscard]] uint64_t get_n_of_busy_lefs() const;
   void write_contacts_to_file(std::string_view output_dir, bool force_overwrite) const;
   void write_extrusion_barriers_to_file(std::string_view output_dir, bool force_overwrite) const;
 
@@ -102,7 +102,6 @@ class Genome {
   std::vector<Chromosome> _chromosomes;
   uint32_t _sampling_interval;
   bool _randomize_contact_sampling;
-  uint32_t _noise_to_add_to_bin_index;
   std::bernoulli_distribution _sample_contacts;
 
   // Private initializers

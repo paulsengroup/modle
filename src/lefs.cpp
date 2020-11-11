@@ -180,7 +180,7 @@ uint32_t ExtrusionUnit::check_for_extruder_collisions(std::mt19937& rang_eng) {
 }
 
 uint64_t ExtrusionUnit::check_for_extrusion_barrier(std::mt19937& rang_eng) {
-  uint64_t applied_stall = 0;
+  uint32_t applied_stall = 0;
   if (this->get_extr_direction() == DNA::fwd) {
     this->_blocking_barrier = this->_bin->get_ptr_to_next_extr_barrier(this->_blocking_barrier);
   } else {
@@ -212,7 +212,7 @@ bool Lef::is_bound() const {
 }
 
 void Lef::randomly_bind_to_chr(Chromosome* chr, std::mt19937& rand_eng, bool register_contact) {
-  std::uniform_int_distribution<> pos(0, chr->length() - 1);
+  std::uniform_int_distribution<uint32_t> pos(0, chr->length() - 1);
   this->bind_at_pos(chr, pos(rand_eng), rand_eng, register_contact);
 }
 void Lef::bind_at_pos(Chromosome* chr, uint32_t pos, std::mt19937& rand_eng,
@@ -245,7 +245,7 @@ std::pair<DNA::Bin*, DNA::Bin*> Lef::get_ptr_to_bins() {
 
 void Lef::unload() {
   this->_chr = nullptr;
-  this->_binding_pos = -1;
+  this->_binding_pos = UINT64_MAX;
   this->_left_unit->unload();
   this->_right_unit->unload();
   this->_lifetime = 0;  // Probably unnecessary
@@ -253,7 +253,7 @@ void Lef::unload() {
 
 uint32_t Lef::extrude(std::mt19937& rand_eng) {
   if (this->_lifetime-- > 0) {
-    const auto bp_extruded =
+    const uint32_t bp_extruded =
         (this->_left_unit->try_extrude(rand_eng) * this->_left_unit->_bin->size()) +
         (this->_right_unit->try_extrude(rand_eng) * this->_right_unit->_bin->size());
     this->_tot_bp_extruded += bp_extruded;
@@ -263,13 +263,9 @@ uint32_t Lef::extrude(std::mt19937& rand_eng) {
   return 0;
 }
 
-void Lef::register_contact(int64_t bin1_offset, int64_t bin2_offset) {
-  uint64_t bin1 = std::clamp(bin1_offset + this->_left_unit->get_bin_index(), 0L,
-                             static_cast<int64_t>(this->_chr->get_n_bins() - 1));
-  uint64_t bin2 = std::clamp(bin2_offset + this->_right_unit->get_bin_index(), 0L,
-                             static_cast<int64_t>(this->_chr->get_n_bins() - 1));
-
-  this->_chr->contacts.increment(bin1, bin2);
+void Lef::register_contact() {
+  this->_chr->contacts.increment(this->_left_unit->get_bin_index(),
+                                 this->_right_unit->get_bin_index());
 }
 
 void Lef::check_constraints(std::mt19937& rang_eng) {

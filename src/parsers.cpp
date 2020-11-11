@@ -69,12 +69,12 @@ BED::BED(std::string_view record, BED::Standard bed_standard) {
           "Invalid BED record detected: chrom_start > chrom_end: chrom='%s'; start=%lu; end=%lu.",
           this->chrom, this->chrom_start, this->chrom_end));
     }
-    if (auto n = 3U; ntoks == n || bed_standard == n) {
+    if (uint8_t n = 3; ntoks == n || bed_standard == n) {
       this->_size = n;
       return;
     }
     this->name = toks[3];
-    if (auto n = 4U; ntoks == n || bed_standard == n) {
+    if (uint8_t n = 4; ntoks == n || bed_standard == n) {
       this->_size = n;
       return;
     }
@@ -84,12 +84,12 @@ BED::BED(std::string_view record, BED::Standard bed_standard) {
           "Invalid BED record detected: score field should be between 0 and 1000, is %f.",
           this->score));
     }
-    if (auto n = 5U; ntoks == n || bed_standard == n) {
+    if (uint8_t n = 5; ntoks == n || bed_standard == n) {
       this->_size = n;
       return;
     }
     parse_strand_or_throw(toks, 5, this->strand);
-    if (auto n = 6U; ntoks == n || bed_standard == n) {
+    if (uint8_t n = 6; ntoks == n || bed_standard == n) {
       this->_size = n;
       return;
     }
@@ -115,7 +115,7 @@ BED::BED(std::string_view record, BED::Standard bed_standard) {
                           this->chrom, this->chrom_start, this->chrom_end));
     }
     parse_rgb_or_throw(toks, 8, this->rgb);
-    if (auto n = 9U; ntoks == n || bed_standard == n) {
+    if (uint8_t n = 9; ntoks == n || bed_standard == n) {
       this->_size = n;
       return;
     }
@@ -349,7 +349,7 @@ Contact ContactsParser::parse_next(std::ifstream& f, std::string& buff, std::str
   if (tmp.size() != 3)
     throw std::runtime_error(absl::StrFormat(
         "Malformed file: expected 3 fields, got %lu: line 1: '%s'.", tmp.size(), buff));
-  Contact c;
+  Contact c{};
   utils::parse_numeric_or_throw(tmp[0], c.bin1);
   utils::parse_numeric_or_throw(tmp[1], c.bin2);
   utils::parse_real_or_throw(tmp[2], c.contacts);
@@ -383,7 +383,7 @@ Contact ContactsParser::parse_next(std::string& buff, std::string_view sep) {
   if (tmp.size() != 3)
     throw std::runtime_error(absl::StrFormat(
         "Malformed file: expected 3 fields, got %lu: line 1: '%s'.", tmp.size(), buff));
-  Contact c;
+  Contact c{};
   utils::parse_numeric_or_throw(tmp[0], c.bin1);
   utils::parse_numeric_or_throw(tmp[1], c.bin2);
   utils::parse_real_or_throw(tmp[2], c.contacts);
@@ -451,7 +451,7 @@ ContactMatrix<uint32_t> ContactsParser::parse_into_contact_matrix(uint64_t width
     while (this->parse_next(buff, c, sep)) {
       uint64_t row = (c.bin1 - matrix_prop.min_bin1) / matrix_prop.bin_size;
       uint64_t col = (c.bin2 - matrix_prop.min_bin2) / matrix_prop.bin_size;
-      m.set(row, col, c.contacts);
+      m.set(row, col, std::round<uint32_t>(c.contacts));
     }
     if (!this->_f.eof()) throw std::runtime_error("An IO error occurred");
   } catch (const std::exception& err) {

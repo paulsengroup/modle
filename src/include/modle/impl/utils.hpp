@@ -67,6 +67,7 @@ void parse_vect_of_numbers_or_throw(const std::vector<std::string_view> &toks, u
 template <typename N>
 void throw_except_from_errc(std::string_view tok, int32_t idx, const N &field, const char *c,
                             std::errc e) {
+  (void)field;
   static_assert(std::is_arithmetic<N>());
   std::string base_error;
   if (idx != -1)

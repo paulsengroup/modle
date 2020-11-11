@@ -31,7 +31,7 @@ class ContactMatrix {
   ContactMatrix(uint64_t nrows, uint64_t ncols, bool fill_with_random_numbers = false);
   ContactMatrix(const std::string& path_to_file, uint64_t nrows, uint64_t ncols, char sep = '\t');
   explicit ContactMatrix(const std::string& path_to_file,
-                         std::normal_distribution<float>* noise_generator = nullptr,
+                         std::normal_distribution<double>* noise_generator = nullptr,
                          uint64_t seed = 0, char sep = '\t');
   [[nodiscard]] I get(uint64_t row, uint64_t col) const;
   void set(uint64_t row, uint64_t col, I n = 1);

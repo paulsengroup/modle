@@ -15,26 +15,26 @@
 
 namespace modle::tools::convert {
 
-std::normal_distribution<float> init_noise_generator(uint64_t range) {
-  return std::normal_distribution<float>(0, range / 6.0);  // 99.9 CI
+std::normal_distribution<double> init_noise_generator(uint64_t range) {
+  return std::normal_distribution<double>(0, range / 6.0);  // 99.9 CI
 }
 
 void check_convert_preconditions(modle::utils::config& c, std::string& argv) {
   if (c.convert_to_hic) {
-    if (c.path_to_juicer.empty()) {
+    if (c.path_to_juicer_tools.empty()) {
       for (std::string file : {"juicer_tools", "juicer_tools.sh", "juicer_tools.exe"}) {
         if (auto p = boost::process::search_path("juicer_tools").string(); !p.empty()) {
-          c.path_to_juicer = std::move(p);
+          c.path_to_juicer_tools = std::move(p);
           break;
         }
       }
     }
-    if (c.path_to_juicer.empty()) {
+    if (c.path_to_juicer_tools.empty()) {
       throw std::runtime_error(
           "--path-to-juicer-tools was not specified and we were unable to find Juicer "
           "tools in your path");
     }
-    argv = c.path_to_juicer;
+    argv = c.path_to_juicer_tools;
     if (absl::EndsWith(argv, ".jar")) {
       // TODO: Check that java >= 1.7
       auto java = boost::process::search_path("java").string();
@@ -43,7 +43,8 @@ void check_convert_preconditions(modle::utils::config& c, std::string& argv) {
             "--path-to-juicer-tools points to a jar file, but we were unable to find java in "
             "your "
             "path");
-      argv = absl::StrCat(java, " -Xms512m -Xmx2048m -jar ", c.path_to_juicer);
+      argv = absl::StrFormat("java -Xms512m -Xmx%.0fm -jar %s", c.juicer_tools_mem / 1e6,
+                             c.path_to_juicer_tools);
     }
   }
 }
@@ -74,11 +75,11 @@ std::string prepare_files_for_juicer_tools(modle::utils::config& c) {
     if (!out) throw std::runtime_error("An error occurred while initializing compression stream");
 
     auto header = modle::ContactMatrix<uint32_t>::parse_header(c.path_to_input_matrix, in, false);
-    std::unique_ptr<std::normal_distribution<float>> noise_generator = nullptr;
+    std::unique_ptr<std::normal_distribution<double>> noise_generator = nullptr;
     std::unique_ptr<std::mt19937_64> rand_eng = nullptr;
     if (c.add_noise) {
       noise_generator =
-          std::make_unique<std::normal_distribution<float>>(init_noise_generator(c.noise_range));
+          std::make_unique<std::normal_distribution<double>>(init_noise_generator(c.noise_range));
       rand_eng = std::make_unique<std::mt19937_64>(c.seed);
     }
     uint64_t n, i, n_contacts = 0;
@@ -97,11 +98,13 @@ std::string prepare_files_for_juicer_tools(modle::utils::config& c) {
       }
       for (auto j = 0UL; j < toks.size(); ++j) {
         modle::utils::parse_numeric_or_throw(toks[j], n);
-        uint64_t pos1 = std::clamp(static_cast<uint64_t>(std::round(
-                                       ((2 * (j - i) * header.bin_size) + header.bin_size) / 2.0)),
-                                   0UL, header.end);
+        uint64_t pos1 = std::clamp(
+            static_cast<uint64_t>(std::round(
+                static_cast<double>((2 * (j - i) * header.bin_size) + header.bin_size) / 2)),
+            0UL, header.end);
         uint64_t pos2 = std::clamp(
-            static_cast<uint64_t>(std::round(((2 * j * header.bin_size) + header.bin_size) / 2.0)),
+            static_cast<uint64_t>(
+                std::round(static_cast<double>((2 * j * header.bin_size) + header.bin_size) / 2)),
             0UL, header.end);
         record = absl::StrFormat("1 %s %lu 0 0 %s %lu 1\n", header.chr_name, pos1, header.chr_name,
                                  pos2);
@@ -166,8 +169,8 @@ void convert_to_hic(modle::utils::config& c, std::string& argv) {
   assert(c.convert_to_hic);
   try {
     auto tmp_file_name = prepare_files_for_juicer_tools(c);
-    absl::StrAppendFormat(&argv, " pre %s %s/%s.hic %s", tmp_file_name, c.out_dir, c.base_name,
-                          c.chr_sizes);
+    absl::StrAppendFormat(&argv, " pre -t %s %s %s/%s.hic %s", c.tmp_dir, tmp_file_name, c.out_dir,
+                          c.base_name, c.chr_sizes);
     const auto t0 = absl::Now();
     absl::FPrintF(stderr, "Running: %s\n", argv);
     boost::process::ipstream juicer_tools_stderr;
@@ -202,7 +205,7 @@ void convert_to_tsv(modle::utils::config& c) {
   auto header = ContactMatrix<uint32_t>::parse_header(c.path_to_input_matrix);
   auto noise_generator =
       c.add_noise
-          ? std::make_unique<std::normal_distribution<float>>(init_noise_generator(c.noise_range))
+          ? std::make_unique<std::normal_distribution<double>>(init_noise_generator(c.noise_range))
           : nullptr;
 
   auto m = ContactMatrix<uint32_t>(c.path_to_input_matrix, noise_generator.get(), c.seed);

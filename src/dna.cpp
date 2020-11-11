@@ -1,6 +1,7 @@
 #include "modle/dna.hpp"
 
 #include <algorithm>
+#include <boost/iostreams/filter/bzip2.hpp>
 #include <filesystem>
 
 #include "absl/container/flat_hash_set.h"
@@ -14,22 +15,33 @@ namespace modle {
 DNA::Bin::Bin(uint32_t idx, uint64_t start, uint64_t end,
               const std::vector<ExtrusionBarrier>& barriers)
     : _idx(idx),
-      _start(start),
-      _end(end),
+      _start(static_cast<uint32_t>(start)),
+      _end(static_cast<uint32_t>(end)),
       _extr_barriers(
-          std::make_unique<std::vector<ExtrusionBarrier>>(barriers.begin(), barriers.end())) {}
+          std::make_unique<std::vector<ExtrusionBarrier>>(barriers.begin(), barriers.end())) {
+  assert(start <= UINT32_MAX);
+  assert(end <= UINT32_MAX);
+  assert(start <= end);
+}
 
 DNA::Bin::Bin(uint32_t idx, uint64_t start, uint64_t end)
-    : _idx(idx), _start(start), _end(end), _extr_barriers(nullptr) {}
+    : _idx(idx),
+      _start(static_cast<uint32_t>(start)),
+      _end(static_cast<uint32_t>(end)),
+      _extr_barriers(nullptr) {
+  assert(start <= UINT32_MAX);
+  assert(end <= UINT32_MAX);
+  assert(start <= end);
+}
 
 uint32_t DNA::Bin::get_start() const { return this->_start; }
 uint32_t DNA::Bin::get_end() const { return this->_end; }
-uint32_t DNA::Bin::size() const { return this->get_end() - this->get_start(); }
-uint32_t DNA::Bin::get_n_extr_units() const {
-  return this->_extr_units ? this->_extr_units->size() : 0;
+uint64_t DNA::Bin::size() const { return this->get_end() - this->get_start(); }
+uint64_t DNA::Bin::get_n_extr_units() const {
+  return this->_extr_units ? this->_extr_units->size() : 0UL;
 }
-uint32_t DNA::Bin::get_n_extr_barriers() const {
-  return this->_extr_barriers ? this->_extr_barriers->size() : 0;
+uint64_t DNA::Bin::get_n_extr_barriers() const {
+  return this->_extr_barriers ? this->_extr_barriers->size() : 0UL;
 }
 uint32_t DNA::Bin::get_index() const { return this->_idx; }
 
@@ -98,7 +110,7 @@ void DNA::Bin::remove_extr_barrier(Direction d) {
                                          d == Direction::fwd ? "forward" : "reverse"));
 }
 
-uint32_t DNA::Bin::add_extr_unit_binding(ExtrusionUnit* const unit) {
+uint64_t DNA::Bin::add_extr_unit_binding(ExtrusionUnit* const unit) {
   if (this->_extr_units == nullptr) {  // If if there are no ExtrusionUnits binding to this Bin,
                                        // allocate the vector
     this->_extr_units = std::make_unique<absl::InlinedVector<ExtrusionUnit*, 3>>();
@@ -107,7 +119,7 @@ uint32_t DNA::Bin::add_extr_unit_binding(ExtrusionUnit* const unit) {
   return this->_extr_units->size();
 }
 
-uint32_t DNA::Bin::remove_extr_unit_binding(ExtrusionUnit* const unit) {
+uint64_t DNA::Bin::remove_extr_unit_binding(ExtrusionUnit* const unit) {
   assert(this->_extr_units != nullptr);
   if (this->_extr_units->size() == 1) {
     // Deallocate vector if unit is the last ExtrusionUnit binding to this Bin
@@ -119,7 +131,7 @@ uint32_t DNA::Bin::remove_extr_unit_binding(ExtrusionUnit* const unit) {
   return this->_extr_units->size();
 }
 
-DNA::Bin* DNA::get_ptr_to_bin_from_pos(uint32_t pos) {
+DNA::Bin* DNA::get_ptr_to_bin_from_pos(uint64_t pos) {
   // TODO: Enable these checks only when compiling in Debug
   if (pos > this->length())
     throw std::logic_error(
@@ -132,7 +144,7 @@ DNA::Bin* DNA::get_ptr_to_bin_from_pos(uint32_t pos) {
   return &this->_bins[pos / this->get_bin_size()];
 }
 
-DNA::Bin& DNA::get_bin_from_pos(uint32_t pos) { return *this->get_ptr_to_bin_from_pos(pos); }
+DNA::Bin& DNA::get_bin_from_pos(uint64_t pos) { return *this->get_ptr_to_bin_from_pos(pos); }
 
 std::vector<DNA::Bin>::iterator DNA::begin() { return this->_bins.begin(); }
 std::vector<DNA::Bin>::iterator DNA::end() { return this->_bins.end(); }
@@ -171,8 +183,8 @@ DNA::Bin* DNA::get_ptr_to_last_bin() {
   return &this->_bins.back();
 }
 
-uint32_t DNA::Bin::remove_all_extr_barriers() {
-  uint32_t n = this->_extr_barriers->size();
+uint64_t DNA::Bin::remove_all_extr_barriers() {
+  auto n = this->_extr_barriers->size();
   this->_extr_barriers = nullptr;
   return n;
 }
@@ -238,15 +250,15 @@ std::vector<DNA::Bin> DNA::make_bins(uint64_t length, uint32_t bin_size) {
   return bins;
 }
 
-uint32_t DNA::length() const { return this->_length; }
+uint64_t DNA::length() const { return this->_length; }
 
-uint32_t DNA::get_n_bins() const { return this->_bins.size(); }
+uint64_t DNA::get_n_bins() const { return this->_bins.size(); }
 
 uint32_t DNA::get_bin_size() const { return this->_bin_size; }
 
-uint32_t DNA::get_n_barriers() const {
+uint64_t DNA::get_n_barriers() const {
   return std::accumulate(this->_bins.begin(), this->_bins.end(), 0UL,
-                         [](uint32_t accumulator, const DNA::Bin& b) {
+                         [](uint64_t accumulator, const DNA::Bin& b) {
                            if (b._extr_barriers) accumulator += b._extr_barriers->size();
                            return accumulator;
                          });
@@ -256,12 +268,13 @@ Chromosome::Chromosome(std::string name, uint64_t length, uint32_t bin_size,
                        uint32_t diagonal_width)
     : name(std::move(name)),
       dna(length, bin_size),
-      contacts(std::min(diagonal_width / bin_size, this->get_n_bins()), this->get_n_bins()) {}
+      contacts(std::min(static_cast<uint64_t>(diagonal_width / bin_size), this->get_n_bins()),
+               this->get_n_bins()) {}
 
-uint32_t Chromosome::length() const { return this->dna.length(); }
-uint32_t Chromosome::get_n_bins() const { return this->dna.get_n_bins(); }
+uint64_t Chromosome::length() const { return this->dna.length(); }
+uint64_t Chromosome::get_n_bins() const { return this->dna.get_n_bins(); }
 uint32_t Chromosome::get_bin_size() const { return this->dna.get_bin_size(); }
-uint32_t Chromosome::get_n_barriers() const { return this->barriers.size(); }
+uint64_t Chromosome::get_n_barriers() const { return this->barriers.size(); }
 
 void Chromosome::sort_barriers_by_pos() {
   for (auto& bin : this->dna) {
@@ -305,42 +318,29 @@ void Chromosome::write_barriers_to_tsv(std::string_view output_dir, bool force_o
                   path_to_outfile);
     return;
   }
-  auto fp = fopen(path_to_outfile.c_str(), "wb");
-  int bz_status;
-  if (!fp)
-    throw std::runtime_error(
-        absl::StrFormat("An error occurred while opening file '%s' for writing.", path_to_outfile));
+  try {
+    std::ofstream fp(path_to_outfile, std::ios_base::binary);
+    if (!fp)
+      throw std::runtime_error(absl::StrFormat("Unable to open file '%s' for writing: %s",
+                                               path_to_outfile, std::strerror(errno)));
+    boost::iostreams::filtering_ostream out;
+    std::string buff;
+    out.push(boost::iostreams::bzip2_compressor());
+    out.push(fp);
+    if (!out) throw std::runtime_error("An error occurred while initializing compression stream");
 
-  auto bzf = BZ2_bzWriteOpen(&bz_status, fp, 9 /* block size */, 0 /* verbosity */,
-                             /* work factor, 0 == default == 30 */ 0);
-  if (bz_status != BZ_OK) {
-    BZ2_bzWriteClose(nullptr, bzf, 0, nullptr, nullptr);
-    fclose(fp);
-    throw std::runtime_error(
-        absl::StrFormat("Unable to open file '%s' for writing.", path_to_outfile));
-  }
-  std::string buff;
-  buff.reserve(8192);
-  for (const auto& barrier : this->barriers) {
-    buff += absl::StrFormat("%c%lu\n", barrier->get_direction_of_block() == DNA::fwd ? '+' : '-',
-                            barrier->get_pos());
-    if (buff.size() >= 8000) {
-      BZ2_bzWrite(&bz_status, bzf, buff.data(), buff.size());
-      buff.clear();
+    for (const auto& barrier : this->barriers) {
+      buff = absl::StrCat(barrier->get_direction_of_block() == DNA::fwd ? "+" : "-",
+                          barrier->get_pos(), "\n");
+      out.write(buff.data(), buff.size());
+      if (!out || !fp) {
+        throw std::runtime_error(absl::StrFormat("IO error while writing to file '%s': %s",
+                                                 path_to_outfile, std::strerror(errno)));
+      }
     }
-    if (bz_status != BZ_OK) {
-      BZ2_bzWriteClose(nullptr, bzf, 0, nullptr, nullptr);
-      fclose(fp);
-      throw std::runtime_error(
-          absl::StrFormat("An error occurred while writing to file '%s'.", path_to_outfile));
-    }
-  }
-  if (!buff.empty()) BZ2_bzWrite(&bz_status, bzf, buff.data(), buff.size());
-
-  BZ2_bzWriteClose(&bz_status, bzf, 0, nullptr, nullptr);
-  if (fclose(fp) != 0 || bz_status != BZ_OK) {
-    throw std::runtime_error(
-        absl::StrFormat("An error occurred while closing file '%s'.", path_to_outfile));
+  } catch (const boost::iostreams::bzip2_error& err) {
+    throw std::runtime_error(absl::StrFormat("An error occurred while compressing file '%s': %s",
+                                             path_to_outfile, err.what()));
   }
 }
 

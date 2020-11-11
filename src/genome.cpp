@@ -24,8 +24,6 @@ Genome::Genome(const config& c)
       _chromosomes(init_chromosomes_from_file(c.diagonal_width)),
       _sampling_interval(c.contact_sampling_interval),
       _randomize_contact_sampling(c.randomize_contact_sampling_interval),
-      _noise_to_add_to_bin_index(c.randomize_contact_sampling ? c.randomize_contact_sampling_range
-                                                              : 0),
       _sample_contacts(1.0 / _sampling_interval) {}
 
 std::vector<uint32_t> Genome::get_chromosome_lengths() const {
@@ -42,20 +40,21 @@ std::vector<std::string_view> Genome::get_chromosome_names() const {
   return names;
 }
 
-uint32_t Genome::get_n_lefs() const { return this->_lefs.size(); }
+uint64_t Genome::get_n_lefs() const { return this->_lefs.size(); }
 
-uint32_t Genome::get_n_of_free_lefs() const {
+uint64_t Genome::get_n_of_free_lefs() const {
   return std::accumulate(
       this->_lefs.begin(), this->_lefs.end(), 0UL,
       [](uint32_t accumulator, const Lef& lef) { return accumulator + !lef.is_bound(); });
 }
 
-uint32_t Genome::get_n_of_busy_lefs() const {
+uint64_t Genome::get_n_of_busy_lefs() const {
+  assert(this->get_n_lefs() >= this->get_n_of_free_lefs());
   return this->get_n_lefs() - this->get_n_of_free_lefs();
 }
 
 void Genome::write_contacts_to_file(std::string_view output_dir, bool force_overwrite) const {
-  absl::FPrintF(stderr, "Writing contact matrices for %lu chromosomes in folder '%s'...",
+  absl::FPrintF(stderr, "Writing contact matrices for %lu chromosome(s) in folder '%s'...\n",
                 this->get_n_chromosomes(), output_dir);
   auto t0 = absl::Now();
   std::filesystem::create_directories(output_dir);
@@ -215,7 +214,7 @@ uint32_t Genome::run_burnin(double prob_of_rebinding, uint16_t target_n_of_unloa
   const auto& weights = this->get_chromosome_lengths();
   std::discrete_distribution<> chr_idx(weights.begin(), weights.end());
 
-  uint32_t start_idx = 0, end_idx = n_of_lefs_to_bind_each_round;
+  uint64_t start_idx = 0, end_idx = n_of_lefs_to_bind_each_round;
   for (auto rounds = 0U;; ++rounds) {
     for (; start_idx < end_idx && start_idx < this->get_n_lefs(); ++start_idx) {
       Chromosome& chr = this->_chromosomes[chr_idx(this->_rand_eng)];
@@ -258,10 +257,6 @@ void Genome::simulate_extrusion(uint32_t iterations) {
   const auto step = iterations / 500;
   const auto& weights = this->get_chromosome_lengths();
   std::discrete_distribution<> chr_idx(weights.begin(), weights.end());
-  assert(this->_noise_to_add_to_bin_index / 2 < INT16_MAX);
-  // std::uniform_int_distribution<int16_t> bin_idx_noise(this->_noise_to_add_to_bin_index / -2,
-  //                                                      this->_noise_to_add_to_bin_index / 2);
-  // std::normal_distribution<> bin_idx_noise(0, 3);
 
   auto t0 = absl::Now();
   for (auto i = 1UL; i <= iterations; ++i) {
@@ -271,10 +266,7 @@ void Genome::simulate_extrusion(uint32_t iterations) {
 
     for (auto& lef : this->_lefs) {
       if (lef.is_bound()) {  // Register contact and extrude if LEF is bound
-        if (register_contacts)
-          // lef.register_contact(std::round<int64_t>(bin_idx_noise(this->_rand_eng)),
-          // std::round<int64_t>(bin_idx_noise(this->_rand_eng)));
-          lef.register_contact();
+        if (register_contacts) lef.register_contact();
         lef.extrude(this->_rand_eng);
       }
     }
