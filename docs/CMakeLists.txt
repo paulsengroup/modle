@@ -2,9 +2,9 @@
 find_package(Doxygen REQUIRED)
 
 # Find all the public headers
-file(GLOB_RECURSE MODLE_PUBLIC_HEADERS ${PROJECT_SOURCE_DIR}/src/include/modle/*.hpp)
+file(GLOB_RECURSE MODLE_PUBLIC_HEADERS ../src/modle/include/modle/*.hpp)
 
-set(DOXYGEN_INPUT_DIR ${PROJECT_SOURCE_DIR}/src/include/modle)
+set(DOXYGEN_INPUT_DIR ../src/modle/include/modle)
 set(DOXYGEN_OUTPUT_DIR ${CMAKE_CURRENT_BINARY_DIR}/docs/doxygen)
 set(DOXYGEN_INDEX_FILE ${DOXYGEN_OUTPUT_DIR}/html/index.html)
 set(DOXYFILE_IN ${CMAKE_CURRENT_SOURCE_DIR}/Doxyfile.in)

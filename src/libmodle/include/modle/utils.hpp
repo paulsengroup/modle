@@ -4,7 +4,7 @@
 #include <system_error>
 #include <vector>
 
-namespace modle::utils {
+namespace modle::tools {
 
 template <typename N>
 static void parse_numeric_or_throw(std::string_view tok, N& field);
@@ -30,6 +30,6 @@ static void parse_vect_of_numbers_or_throw(const std::vector<std::string_view>& 
 template <typename N>
 static void throw_except_from_errc(std::string_view tok, int32_t idx, const N& field, const char* c,
                                    std::errc e);
-}  // namespace modle::utils
+}  // namespace modle::tools
 
 #include "modle/impl/utils.hpp"

@@ -34,9 +34,9 @@ void BED::parse_rgb_or_throw(const std::vector<std::string_view>& toks, uint8_t 
     throw std::runtime_error(
         absl::StrFormat("RGB: expected 3 fields, got %lu: '%s'", channels.size(), toks[idx]));
   }
-  utils::parse_numeric_or_throw(channels, 0, field.r);
-  utils::parse_numeric_or_throw(channels, 1, field.g);
-  utils::parse_numeric_or_throw(channels, 2, field.b);
+  tools::parse_numeric_or_throw(channels, 0, field.r);
+  tools::parse_numeric_or_throw(channels, 1, field.g);
+  tools::parse_numeric_or_throw(channels, 2, field.b);
 }
 
 BED::BED(std::string_view record, BED::Standard bed_standard) {
@@ -62,8 +62,8 @@ BED::BED(std::string_view record, BED::Standard bed_standard) {
 
   this->chrom = toks[0];
   try {
-    utils::parse_numeric_or_throw(toks, 1, this->chrom_start);
-    utils::parse_numeric_or_throw(toks, 2, this->chrom_end);
+    tools::parse_numeric_or_throw(toks, 1, this->chrom_start);
+    tools::parse_numeric_or_throw(toks, 2, this->chrom_end);
     if (this->chrom_start > this->chrom_end) {
       throw std::runtime_error(absl::StrFormat(
           "Invalid BED record detected: chrom_start > chrom_end: chrom='%s'; start=%lu; end=%lu.",
@@ -78,7 +78,7 @@ BED::BED(std::string_view record, BED::Standard bed_standard) {
       this->_size = n;
       return;
     }
-    utils::parse_real_or_throw(toks, 4, this->score);
+    tools::parse_real_or_throw(toks, 4, this->score);
     if (this->score < 0 || this->score > 1000) {
       throw std::runtime_error(absl::StrFormat(
           "Invalid BED record detected: score field should be between 0 and 1000, is %f.",
@@ -94,14 +94,14 @@ BED::BED(std::string_view record, BED::Standard bed_standard) {
       return;
     }
 
-    utils::parse_numeric_or_throw(toks, 6, this->thick_start);
+    tools::parse_numeric_or_throw(toks, 6, this->thick_start);
     if (this->thick_start < this->chrom_start) {
       throw std::runtime_error(
           absl::StrFormat("Invalid BED record detected: thick_start < chrom_start: chrom='%s'; "
                           "start=%lu; thick_start=%lu.",
                           this->chrom, this->chrom_start, this->thick_start));
     }
-    utils::parse_numeric_or_throw(toks, 7, this->thick_end);
+    tools::parse_numeric_or_throw(toks, 7, this->thick_end);
     if (this->thick_end > this->chrom_end) {
       throw std::runtime_error(
           absl::StrFormat("Invalid BED record detected: thick_end > chrom_end: chrom='%s'; "
@@ -119,9 +119,9 @@ BED::BED(std::string_view record, BED::Standard bed_standard) {
       this->_size = n;
       return;
     }
-    utils::parse_numeric_or_throw(toks, 9, this->block_count);
-    utils::parse_vect_of_numbers_or_throw(toks, 10, this->block_sizes, this->block_count);
-    utils::parse_vect_of_numbers_or_throw(toks, 11, this->block_starts, this->block_count);
+    tools::parse_numeric_or_throw(toks, 9, this->block_count);
+    tools::parse_vect_of_numbers_or_throw(toks, 10, this->block_sizes, this->block_count);
+    tools::parse_vect_of_numbers_or_throw(toks, 11, this->block_starts, this->block_count);
     this->_size = 12;
   } catch (const std::exception& e) {
     throw std::runtime_error(absl::StrFormat(
@@ -350,9 +350,9 @@ Contact ContactsParser::parse_next(std::ifstream& f, std::string& buff, std::str
     throw std::runtime_error(absl::StrFormat(
         "Malformed file: expected 3 fields, got %lu: line 1: '%s'.", tmp.size(), buff));
   Contact c{};
-  utils::parse_numeric_or_throw(tmp[0], c.bin1);
-  utils::parse_numeric_or_throw(tmp[1], c.bin2);
-  utils::parse_real_or_throw(tmp[2], c.contacts);
+  tools::parse_numeric_or_throw(tmp[0], c.bin1);
+  tools::parse_numeric_or_throw(tmp[1], c.bin2);
+  tools::parse_real_or_throw(tmp[2], c.contacts);
 
   return c;
 }
@@ -368,9 +368,9 @@ bool ContactsParser::parse_next(std::ifstream& f, std::string& buff, Contact& c,
   if (tmp.size() != 3)
     throw std::runtime_error(absl::StrFormat(
         "Malformed file: expected 3 fields, got %lu: line 1: '%s'.", tmp.size(), buff));
-  utils::parse_numeric_or_throw(tmp[0], c.bin1);
-  utils::parse_numeric_or_throw(tmp[1], c.bin2);
-  utils::parse_real_or_throw(tmp[2], c.contacts);
+  tools::parse_numeric_or_throw(tmp[0], c.bin1);
+  tools::parse_numeric_or_throw(tmp[1], c.bin2);
+  tools::parse_real_or_throw(tmp[2], c.contacts);
   return true;
 }
 
@@ -384,9 +384,9 @@ Contact ContactsParser::parse_next(std::string& buff, std::string_view sep) {
     throw std::runtime_error(absl::StrFormat(
         "Malformed file: expected 3 fields, got %lu: line 1: '%s'.", tmp.size(), buff));
   Contact c{};
-  utils::parse_numeric_or_throw(tmp[0], c.bin1);
-  utils::parse_numeric_or_throw(tmp[1], c.bin2);
-  utils::parse_real_or_throw(tmp[2], c.contacts);
+  tools::parse_numeric_or_throw(tmp[0], c.bin1);
+  tools::parse_numeric_or_throw(tmp[1], c.bin2);
+  tools::parse_real_or_throw(tmp[2], c.contacts);
 
   return c;
 }
@@ -401,9 +401,9 @@ bool ContactsParser::parse_next(std::string& buff, Contact& c, std::string_view 
   if (tmp.size() != 3)
     throw std::runtime_error(absl::StrFormat(
         "Malformed file: expected 3 fields, got %lu: line 1: '%s'.", tmp.size(), buff));
-  utils::parse_numeric_or_throw(tmp[0], c.bin1);
-  utils::parse_numeric_or_throw(tmp[1], c.bin2);
-  utils::parse_real_or_throw(tmp[2], c.contacts);
+  tools::parse_numeric_or_throw(tmp[0], c.bin1);
+  tools::parse_numeric_or_throw(tmp[1], c.bin2);
+  tools::parse_real_or_throw(tmp[2], c.contacts);
   return false;
 }
 

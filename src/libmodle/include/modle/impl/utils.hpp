@@ -5,7 +5,7 @@
 #include "absl/strings/str_split.h"
 #include "modle/utils.hpp"
 
-namespace modle::utils {
+namespace modle::tools {
 
 template <typename N>
 void parse_numeric_or_throw(std::string_view tok, N &field) {
@@ -100,4 +100,4 @@ void throw_except_from_errc(std::string_view tok, int32_t idx, const N &field, c
                       "called with an invalid std::errc. This should not be possible!",
                       base_error));
 }
-}  // namespace modle::utils
+}  // namespace modle::tools

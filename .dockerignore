@@ -4,6 +4,6 @@
 # Allowed files and directory
 !cmake/**
 !src/**
-!utils/**
+!tools/**
 !CMakeLists.txt
 !LICENSE

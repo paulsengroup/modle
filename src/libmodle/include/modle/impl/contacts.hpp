@@ -55,7 +55,7 @@ ContactMatrix<I>::ContactMatrix(const std::string &path_to_file,
       if (i > this->_nrows) continue;
       j = 0;
       for (const auto &tok : absl::StrSplit(line, sep)) {
-        utils::parse_numeric_or_throw(tok, n);
+        tools::parse_numeric_or_throw(tok, n);
         if (noise_generator != nullptr) {
           for (auto k = n; k > 0; --k) {
             this->at(std::clamp<uint64_t>(
@@ -122,19 +122,19 @@ ContactMatrix<I>::ContactMatrix(const std::string &path_to_file, uint64_t nrows,
       throw std::runtime_error(
           "The first entry in this file is expected to report counts for the same bin!");
     }
-    utils::parse_numeric_or_throw(toks[0], offset);
-    utils::parse_real_or_throw(toks[2], contacts);
+    tools::parse_numeric_or_throw(toks[0], offset);
+    tools::parse_real_or_throw(toks[2], contacts);
     this->set(0, 0, std::round<uint64_t>(contacts));
 
     read_and_tokenize();
-    utils::parse_numeric_or_throw(toks[1], bin_size);
+    tools::parse_numeric_or_throw(toks[1], bin_size);
     assert(bin_size > offset);
     bin_size -= offset;
 
     do {
-      utils::parse_numeric_or_throw(toks[0], i);
-      utils::parse_numeric_or_throw(toks[1], j);
-      utils::parse_real_or_throw(toks[2], contacts);
+      tools::parse_numeric_or_throw(toks[0], i);
+      tools::parse_numeric_or_throw(toks[1], j);
+      tools::parse_real_or_throw(toks[2], contacts);
       i = (i - offset) / bin_size;
       j = (j - offset) / bin_size;
       this->set(i, j, std::round<uint64_t>(contacts));
@@ -404,9 +404,9 @@ typename ContactMatrix<I>::Header ContactMatrix<I>::parse_header(
                         buff));
   }
   header.chr_name = toks[0].substr(1);  // Remove the leading #
-  modle::utils::parse_numeric_or_throw(toks[1], header.bin_size);
-  modle::utils::parse_numeric_or_throw(toks[2], header.start);
-  modle::utils::parse_numeric_or_throw(toks[3], header.end);
+  modle::tools::parse_numeric_or_throw(toks[1], header.bin_size);
+  modle::tools::parse_numeric_or_throw(toks[2], header.start);
+  modle::tools::parse_numeric_or_throw(toks[3], header.end);
   std::string err;
   if (header.end < header.start)
     err = absl::StrFormat("Malformed header: end position < start position in header '%s'", buff);
@@ -414,7 +414,7 @@ typename ContactMatrix<I>::Header ContactMatrix<I>::parse_header(
     absl::StrAppendFormat(&err, "%sMalformed header: bin_size > end - start in header '%s'",
                           err.empty() ? "" : "\n", buff);
   }
-  modle::utils::parse_numeric_or_throw(toks[4], header.diagonal_width);
+  modle::tools::parse_numeric_or_throw(toks[4], header.diagonal_width);
   if (header.bin_size > header.diagonal_width) {
     absl::StrAppendFormat(&err, "%sMalformed header: bin_size > diagonal_width in header '%s'",
                           err.empty() ? "" : "\n", buff);

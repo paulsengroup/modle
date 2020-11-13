@@ -1,14 +1,7 @@
-cmake_minimum_required(VERSION 3.11)
+cmake_minimum_required(VERSION 3.15)
 
 # Set the project name to your project name, my project isn't very descriptive
-project(
-  modle
-  LANGUAGES CXX
-  VERSION 0.0.1
-  DESCRIPTION "Software for in-silico modeling of DNA loop extrusion.")
-
-list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake/modules/")
-
+project(myproject CXX)
 include(cmake/StandardProjectSettings.cmake)
 include(cmake/PreventInSourceBuilds.cmake)
 
@@ -46,6 +39,7 @@ include(cmake/StaticAnalyzers.cmake)
 
 option(BUILD_SHARED_LIBS "Enable compilation of shared libraries" OFF)
 option(ENABLE_TESTING "Enable Test Builds" ON)
+option(ENABLE_FUZZING "Enable Fuzzing Builds" OFF)
 
 # Very basic PCH example
 option(ENABLE_PCH "Enable Precompiled Headers" OFF)
@@ -58,64 +52,44 @@ if(ENABLE_PCH)
     INTERFACE
     <vector>
     <string>
+    <map>
     <utility>)
-endif()
-
-# Make sure compiler support execution policies (C++17)
-include(CheckIncludeFileCXX)
-set(CMAKE_REQUIRED_INCLUDES "${CMAKE_INCLUDE_PATH}")
-check_include_file_cxx("execution" HAVE_EXECUTION)
-if(NOT HAVE_EXECUTION)
-  message(
-    FATAL_ERROR
-      "Your compiler C++ library does not seem to support execution policies (C++17, currently only implemented in libstdc++ >=9)."
-  )
 endif()
 
 # Set up some extra Conan dependencies based on our needs before loading Conan
 set(CONAN_EXTRA_REQUIRES "")
 set(CONAN_EXTRA_OPTIONS "")
 
-set(CONAN_EXTRA_REQUIRES
-    ${CONAN_EXTRA_REQUIRES}
-    tbb/2020.2
-    zlib/1.2.11
-    bzip2/1.0.8
-    boost/1.74.0
-    abseil/20200923.2
-    cli11/1.9.1)
-set(CONAN_EXTRA_OPTIONS
-    ${CONAN_EXTRA_OPTIONS}
-    bzip2:build_executable=False
-    zlib:minizip=False
-    boost:system_no_deprecated=True
-    boost:asio_no_deprecated=True
-    boost:filesystem_no_deprecated=True
-    boost:zlib=True
-    boost:bzip2=True)
+if(CPP_STARTER_USE_IMGUI)
+  set(CONAN_EXTRA_REQUIRES ${CONAN_EXTRA_REQUIRES} imgui-sfml/2.1@bincrafters/stable)
 
-if(ENABLE_TESTING)
-  set(CONAN_EXTRA_REQUIRES ${CONAN_EXTRA_REQUIRES}
-          gtest/1.10.0)
-  set(CONAN_EXTRA_OPTIONS
-          ${CONAN_EXTRA_OPTIONS}
-          gtest:build_gmock=False)
-  endif()
+  # set(CONAN_EXTRA_OPTIONS ${CONAN_EXTRA_OPTIONS} sfml:shared=False sfml:graphics=True sfml:audio=False
+  # sfml:window=True libalsa:disable_python=True)
+endif()
+
+if(CPP_STARTER_USE_SDL)
+  set(CONAN_EXTRA_REQUIRES ${CONAN_EXTRA_REQUIRES} sdl2/2.0.10@bincrafters/stable)
+  # set(CONAN_EXTRA_OPTIONS ${CONAN_EXTRA_OPTIONS} sdl2:wayland=True)
+endif()
 
 include(cmake/Conan.cmake)
 run_conan()
 
 if(ENABLE_TESTING)
   enable_testing()
-  message("Building Tests")
+  message("Building Tests. Be sure to check out test/constexpr_tests for constexpr testing")
   add_subdirectory(test)
 endif()
 
-#[[
 if(ENABLE_FUZZING)
   message("Building Fuzz Tests, using fuzzing sanitizer https://www.llvm.org/docs/LibFuzzer.html")
   add_subdirectory(fuzz_test)
 endif()
-#]]
 
 add_subdirectory(src)
+
+option(ENABLE_UNITY "Enable Unity builds of projects" OFF)
+if(ENABLE_UNITY)
+  # Add for any project you want to apply unity builds for
+  set_target_properties(intro PROPERTIES UNITY_BUILD ON)
+endif()

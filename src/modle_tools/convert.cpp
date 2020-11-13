@@ -1,55 +1,24 @@
-#pragma once
+#include "modle_tools/convert.hpp"
 
 #include <algorithm>
 #include <boost/iostreams/filter/bzip2.hpp>
 #include <boost/iostreams/filter/gzip.hpp>
 #include <boost/math/distributions/normal.hpp>
 #include <boost/process.hpp>
+#include <cstdint>
 #include <filesystem>
 #include <random>
 
 #include "absl/time/clock.h"
-#include "cli.hpp"
 #include "modle/contacts.hpp"
-#include "utils.hpp"
+#include "modle_tools/utils.hpp"
 
 namespace modle::tools::convert {
-
 std::normal_distribution<double> init_noise_generator(uint64_t range) {
   return std::normal_distribution<double>(0, range / 6.0);  // 99.9 CI
 }
 
-void check_convert_preconditions(modle::utils::config& c, std::string& argv) {
-  if (c.convert_to_hic) {
-    if (c.path_to_juicer_tools.empty()) {
-      for (std::string file : {"juicer_tools", "juicer_tools.sh", "juicer_tools.exe"}) {
-        if (auto p = boost::process::search_path("juicer_tools").string(); !p.empty()) {
-          c.path_to_juicer_tools = std::move(p);
-          break;
-        }
-      }
-    }
-    if (c.path_to_juicer_tools.empty()) {
-      throw std::runtime_error(
-          "--path-to-juicer-tools was not specified and we were unable to find Juicer "
-          "tools in your path");
-    }
-    argv = c.path_to_juicer_tools;
-    if (absl::EndsWith(argv, ".jar")) {
-      // TODO: Check that java >= 1.7
-      auto java = boost::process::search_path("java").string();
-      if (java.empty())
-        throw std::runtime_error(
-            "--path-to-juicer-tools points to a jar file, but we were unable to find java in "
-            "your "
-            "path");
-      argv = absl::StrFormat("java -Xms512m -Xmx%.0fm -jar %s", c.juicer_tools_mem / 1e6,
-                             c.path_to_juicer_tools);
-    }
-  }
-}
-
-std::string prepare_files_for_juicer_tools(modle::utils::config& c) {
+std::string prepare_files_for_juicer_tools(const modle::tools::config& c) {
   assert(c.convert_to_hic);
   auto tmp_file_name = modle::tools::utils::generate_random_path_name(c.tmp_dir);
   absl::StrAppend(&tmp_file_name, ".txt.gz");
@@ -97,7 +66,7 @@ std::string prepare_files_for_juicer_tools(modle::utils::config& c) {
             c.path_to_input_matrix, header.ncols, i, toks.size()));
       }
       for (auto j = 0UL; j < toks.size(); ++j) {
-        modle::utils::parse_numeric_or_throw(toks[j], n);
+        modle::tools::parse_numeric_or_throw(toks[j], n);
         uint64_t pos1 = std::clamp(
             static_cast<uint64_t>(std::round(
                 static_cast<double>((2 * (j - i) * header.bin_size) + header.bin_size) / 2)),
@@ -165,7 +134,7 @@ std::string prepare_files_for_juicer_tools(modle::utils::config& c) {
   return tmp_file_name;
 }
 
-void convert_to_hic(modle::utils::config& c, std::string& argv) {
+void convert_to_hic(const modle::tools::config& c, std::string& argv) {
   assert(c.convert_to_hic);
   try {
     auto tmp_file_name = prepare_files_for_juicer_tools(c);
@@ -180,7 +149,11 @@ void convert_to_hic(modle::utils::config& c, std::string& argv) {
                                        boost::process::std_err > juicer_tools_stderr);
 
     while (juicer_tools.running() && std::getline(juicer_tools_stderr, line)) {
-      absl::StrAppendFormat(&stderr_msg, "%s\n", line);
+      absl::StrAppend(&stderr_msg, line, "\n");
+    }
+    if (juicer_tools_stderr.fail()) {
+      juicer_tools.terminate();
+      throw std::runtime_error("An error occurred while reading from Juicer Tools stderr");
     }
     juicer_tools.wait();
     if (!c.keep_tmp_files) std::filesystem::remove(tmp_file_name);
@@ -196,7 +169,7 @@ void convert_to_hic(modle::utils::config& c, std::string& argv) {
   }
 }
 
-void convert_to_tsv(modle::utils::config& c) {
+void convert_to_tsv(const modle::tools::config& c) {
   auto out_file = absl::StrCat(c.out_dir, "/", c.base_name, ".tsv.bz2");
   absl::FPrintF(stderr, "Writing contacts as a symmetric matrix in TSV format to file '%s'...\n",
                 out_file);
@@ -213,4 +186,5 @@ void convert_to_tsv(modle::utils::config& c) {
   absl::FPrintF(stderr, "DONE! Compression took %s (compression rate %.2f)\n",
                 absl::FormatDuration(absl::Now() - t0), static_cast<double>(bytes_in) / bytes_out);
 }
+
 }  // namespace modle::tools::convert
