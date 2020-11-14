@@ -93,6 +93,9 @@ set(CONAN_EXTRA_OPTIONS
     boost:filesystem_no_deprecated=True
     boost:zlib=True
     boost:bzip2=True)
+set(CONAN_EXTRA_SETTINGS
+    ${CONAN_EXTRA_SETTINGS}
+    compiler.cppstd=17)
 
 if(ENABLE_TESTING)
   set(CONAN_EXTRA_REQUIRES ${CONAN_EXTRA_REQUIRES}

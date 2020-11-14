@@ -21,8 +21,11 @@ macro(run_conan)
     spdlog/1.8.1
     OPTIONS
     ${CONAN_EXTRA_OPTIONS}
+    SETTINGS
+    ${CONAN_EXTRA_SETTINGS}
     BASIC_SETUP
     CMAKE_TARGETS # individual targets to link to
     BUILD
-    missing)
+    missing
+    PROFILE_AUTO ALL)
 endmacro()
