@@ -83,6 +83,8 @@ set(CONAN_EXTRA_REQUIRES
     bzip2/1.0.8
     boost/1.74.0
     abseil/20200923.2
+    fmt/7.1.2
+    spdlog/1.8.1
     cli11/1.9.1)
 set(CONAN_EXTRA_OPTIONS
     ${CONAN_EXTRA_OPTIONS}
@@ -93,17 +95,11 @@ set(CONAN_EXTRA_OPTIONS
     boost:filesystem_no_deprecated=True
     boost:zlib=True
     boost:bzip2=True)
-set(CONAN_EXTRA_SETTINGS
-    ${CONAN_EXTRA_SETTINGS}
-    compiler.cppstd=17)
+set(CONAN_EXTRA_SETTINGS ${CONAN_EXTRA_SETTINGS} compiler.cppstd=17)
 
 if(ENABLE_TESTING)
-  set(CONAN_EXTRA_REQUIRES ${CONAN_EXTRA_REQUIRES}
-          gtest/1.10.0)
-  set(CONAN_EXTRA_OPTIONS
-          ${CONAN_EXTRA_OPTIONS}
-          gtest:build_gmock=False)
-  endif()
+  set(CONAN_EXTRA_REQUIRES ${CONAN_EXTRA_REQUIRES} catch2/2.11.1)
+endif()
 
 include(cmake/Conan.cmake)
 run_conan()

@@ -9,6 +9,11 @@ macro(run_conan)
 
   conan_add_remote(
     NAME
+    conan-center
+    URL
+    https://api.bintray.com/conan/conan/conan-center)
+  conan_add_remote(
+    NAME
     bincrafters
     URL
     https://api.bintray.com/conan/bincrafters/public-conan)
@@ -16,9 +21,6 @@ macro(run_conan)
   conan_cmake_run(
     REQUIRES
     ${CONAN_EXTRA_REQUIRES}
-    # catch2/2.11.0
-    fmt/7.1.2
-    spdlog/1.8.1
     OPTIONS
     ${CONAN_EXTRA_OPTIONS}
     SETTINGS

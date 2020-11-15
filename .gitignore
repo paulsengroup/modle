@@ -1,14 +1,13 @@
 cmake-build-*
 external/
 .idea/
+.run/
 .vscode/
+test/
 build/
 *.sif
 scripts/fix_remote_devel.sh
 Dockerfile*
 Singularity*
-test/data/*
-test/googletest
-test/settings
 scratch/
 docs/

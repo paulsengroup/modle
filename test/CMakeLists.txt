@@ -1,16 +1,31 @@
-add_executable(modle_gtest)
-target_link_libraries(modle_gtest)
+# automatically enable catch2 to generate ctest targets
+if(CONAN_CATCH2_ROOT_DEBUG)
+  include(${CONAN_CATCH2_ROOT_DEBUG}/lib/cmake/Catch2/Catch.cmake)
+else()
+  include(${CONAN_CATCH2_ROOT}/lib/cmake/Catch2/Catch.cmake)
+endif()
 
-target_sources(
-  modle_gtest
-  PRIVATE units/contacts_test.cpp
-  PRIVATE units/bed_parser_test.cpp
-  PRIVATE units/correlation_test.cpp
-  PRIVATE units/utils_test.cpp)
-
-target_include_directories(modle_gtest SYSTEM INTERFACE ${CMAKE_CURRENT_SOURCE_DIR}/googletest/include/)
-
+add_executable(catch_main catch_main.cpp)
 target_link_libraries(
-  modle_gtest
-  PRIVATE project_options
-  PUBLIC libmodle CONAN_PKG::gtest gtest_main)
+  catch_main
+  PUBLIC CONAN_PKG::catch2
+  PRIVATE project_warnings
+          project_options
+          Modle::cmatrix_test
+          Modle::correlation_test
+          Modle::parser_test
+          # This allows Catch2 to discover test units by preventing unused symbols from being discarded by the linker
+          -Wl,--whole-archive
+          $<TARGET_FILE:Modle::cmatrix_test>
+          $<TARGET_FILE:Modle::correlation_test>
+          $<TARGET_FILE:Modle::parser_test>
+          -Wl,--no-whole-archive)
+
+# automatically discover tests that are defined in catch based test files you can modify the unittests. TEST_PREFIX to
+# whatever you want, or use different for different binaries
+catch_discover_tests(
+  catch_main
+  EXTRA_ARGS
+  -s
+  --reporter=xml
+  --out=tests.xml)

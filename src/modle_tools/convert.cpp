@@ -66,7 +66,7 @@ std::string prepare_files_for_juicer_tools(const modle::tools::config& c) {
             c.path_to_input_matrix, header.ncols, i, toks.size()));
       }
       for (auto j = 0UL; j < toks.size(); ++j) {
-        modle::tools::parse_numeric_or_throw(toks[j], n);
+        modle::utils::parse_numeric_or_throw(toks[j], n);
         uint64_t pos1 = std::clamp(
             static_cast<uint64_t>(std::round(
                 static_cast<double>((2 * (j - i) * header.bin_size) + header.bin_size) / 2)),

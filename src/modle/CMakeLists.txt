@@ -6,7 +6,8 @@ target_link_libraries(
   modle
   PRIVATE project_warnings
           project_options
-          libmodle
+          Modle::Modle
+          Modle::parser
           CONAN_PKG::abseil
           CONAN_PKG::boost
           CONAN_PKG::cli11)

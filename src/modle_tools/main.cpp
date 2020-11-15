@@ -1,5 +1,5 @@
 #include "modle/contacts.hpp"
-#include "modle/correlation_test.hpp"
+#include "modle/correlation.hpp"
 #include "modle_tools/convert.hpp"
 #include "modle_tools/eval.hpp"
 #include "modle_tools/utils.hpp"

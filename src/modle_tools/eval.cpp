@@ -51,9 +51,9 @@ ContactMatrix<uint32_t> parse_hic_matrix(const modle::tools::config &c) {
               "Malformed file: expected 3 fields, got %lu: line that triggered the error: '%s'",
               toks.size(), buff));
         }
-        tools::parse_numeric_or_throw(toks[0], i);
-        tools::parse_numeric_or_throw(toks[1], j);
-        tools::parse_real_or_throw(toks[2], contacts);
+        modle::utils::parse_numeric_or_throw(toks[0], i);
+        modle::utils::parse_numeric_or_throw(toks[1], j);
+        modle::utils::parse_real_or_throw(toks[2], contacts);
         i = (i - start) / header.bin_size;
         j = (j - start) / header.bin_size;
         cmatrix.set(i, j, std::round<uint64_t>(contacts));
@@ -84,4 +84,4 @@ ContactMatrix<uint32_t> parse_hic_matrix(const modle::tools::config &c) {
   return cmatrix;
 }
 
-}  // namespace modle::tools::eval
+}  // namespace modle::utils::eval

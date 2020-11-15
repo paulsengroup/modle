@@ -14,15 +14,15 @@ set(DOXYFILE_OUT ${CMAKE_CURRENT_BINARY_DIR}/Doxyfile)
 configure_file(${DOXYFILE_IN} ${DOXYFILE_OUT} @ONLY)
 
 file(MAKE_DIRECTORY ${DOXYGEN_OUTPUT_DIR}) # Doxygen won't create this for us
-add_custom_command(OUTPUT ${DOXYGEN_INDEX_FILE}
-        DEPENDS ${MODLE_PUBLIC_HEADERS}
-        COMMAND ${DOXYGEN_EXECUTABLE} ${DOXYFILE_OUT}
-        MAIN_DEPENDENCY ${DOXYFILE_OUT} ${DOXYFILE_IN}
-        COMMENT "Generating docs")
+add_custom_command(
+  OUTPUT ${DOXYGEN_INDEX_FILE}
+  DEPENDS ${MODLE_PUBLIC_HEADERS}
+  COMMAND ${DOXYGEN_EXECUTABLE} ${DOXYFILE_OUT}
+  MAIN_DEPENDENCY ${DOXYFILE_OUT}
+  ${DOXYFILE_IN}
+  COMMENT "Generating docs")
 
 add_custom_target(
-        Doxygen
-        ALL
-        DEPENDS ${DOXYGEN_INDEX_FILE}
-        COMMENT "Running Doxygen..."
-)
+  Doxygen ALL
+  DEPENDS ${DOXYGEN_INDEX_FILE}
+  COMMENT "Running Doxygen...")
