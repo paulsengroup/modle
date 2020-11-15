@@ -1,8 +1,8 @@
 #include <charconv>
 #include <type_traits>
 
-#include "absl/strings/str_format.h"
 #include "absl/strings/str_split.h"
+#include "fmt/printf.h"
 #include "modle/utils.hpp"
 
 namespace modle::utils {
@@ -59,7 +59,7 @@ void parse_vect_of_numbers_or_throw(const std::vector<std::string_view> &toks, u
   std::vector<std::string_view> ns = absl::StrSplit(toks[idx], ',');
   if (ns.size() != expected_size)
     throw std::runtime_error(
-        absl::StrFormat("Expected %lu fields, got %lu.", expected_size, ns.size()));
+        fmt::format("Expected %lu fields, got %lu.", expected_size, ns.size()));
   field = std::vector<N>(ns.size());
   for (auto i = 0UL; i < expected_size; ++i) parse_numeric_or_throw(ns, i, field[i]);
 }
@@ -71,9 +71,9 @@ void throw_except_from_errc(std::string_view tok, int32_t idx, const N &field, c
   static_assert(std::is_arithmetic<N>());
   std::string base_error;
   if (idx != -1)
-    base_error = absl::StrFormat("Unable to convert field %lu ('%s') to a ", idx, tok);
+    base_error = fmt::format("Unable to convert field %lu ('%s') to a ", idx, tok);
   else
-    base_error = absl::StrFormat("Unable to convert field '%s' to", tok);
+    base_error = fmt::format("Unable to convert field '%s' to", tok);
   if (std::is_integral<N>()) {
     if (std::is_unsigned<N>())
       base_error += " a positive integral number";
@@ -84,21 +84,20 @@ void throw_except_from_errc(std::string_view tok, int32_t idx, const N &field, c
   if (e == std::errc::invalid_argument) {
     if (c != nullptr)
       throw std::runtime_error(
-          absl::StrFormat("%s. Reason: found an invalid character '%c'.", base_error, *c));
-    throw std::runtime_error(
-        absl::StrFormat("%s. Reason: found an invalid character.", base_error));
+          fmt::format("%s. Reason: found an invalid character '%c'.", base_error, *c));
+    throw std::runtime_error(fmt::format("%s. Reason: found an invalid character.", base_error));
   }
   if (e == std::errc::result_out_of_range) {
-    throw std::runtime_error(absl::StrFormat(
-        "%s. Reason: number %s is outside the range of representable numbers [%s, %s].", base_error,
-        tok, std::to_string(std::numeric_limits<N>::min()),
-        std::to_string(std::numeric_limits<N>::max())));
+    throw std::runtime_error(
+        fmt::format("%s. Reason: number %s is outside the range of representable numbers [%s, %s].",
+                    base_error, tok, std::to_string(std::numeric_limits<N>::min()),
+                    std::to_string(std::numeric_limits<N>::max())));
   }
   throw std::logic_error(
-      absl::StrFormat("%s. If you see this error, report it to the developers on "
-                      "github.\nBED::throw_except_from_errc "
-                      "called with an invalid std::errc. This should not be possible!",
-                      base_error));
+      fmt::format("%s. If you see this error, report it to the developers on "
+                  "github.\nBED::throw_except_from_errc "
+                  "called with an invalid std::errc. This should not be possible!",
+                  base_error));
 }
 
 }  // namespace modle::utils

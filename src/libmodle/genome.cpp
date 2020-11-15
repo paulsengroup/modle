@@ -4,7 +4,7 @@
 #include <filesystem>
 #include <functional>
 
-#include "absl/strings/str_format.h"
+#include "fmt/printf.h"
 #include "modle/extr_barrier.hpp"
 #include "modle/parsers.hpp"
 
@@ -54,28 +54,28 @@ uint64_t Genome::get_n_of_busy_lefs() const {
 }
 
 void Genome::write_contacts_to_file(std::string_view output_dir, bool force_overwrite) const {
-  absl::FPrintF(stderr, "Writing contact matrices for %lu chromosome(s) in folder '%s'...\n",
-                this->get_n_chromosomes(), output_dir);
+  fmt::fprintf(stderr, "Writing contact matrices for %lu chromosome(s) in folder '%s'...\n",
+               this->get_n_chromosomes(), output_dir);
   auto t0 = absl::Now();
   std::filesystem::create_directories(output_dir);
   std::for_each(
       std::execution::par, this->_chromosomes.begin(), this->_chromosomes.end(),
       [&](const Chromosome& chr) { chr.write_contacts_to_tsv(output_dir, force_overwrite); });
-  absl::FPrintF(stderr, "DONE! Saved %lu contact matrices in %s\n", this->get_n_chromosomes(),
-                absl::FormatDuration(absl::Now() - t0));
+  fmt::fprintf(stderr, "DONE! Saved %lu contact matrices in %s\n", this->get_n_chromosomes(),
+               absl::FormatDuration(absl::Now() - t0));
 }
 
 void Genome::write_extrusion_barriers_to_file(std::string_view output_dir,
                                               bool force_overwrite) const {
-  absl::FPrintF(stderr, "Writing extrusion barriers for %lu chromosomes in folder '%s'...",
-                this->get_n_chromosomes(), output_dir);
+  fmt::fprintf(stderr, "Writing extrusion barriers for %lu chromosomes in folder '%s'...",
+               this->get_n_chromosomes(), output_dir);
   std::filesystem::create_directories(output_dir);
   auto t0 = absl::Now();
   std::for_each(
       std::execution::par, this->_chromosomes.begin(), this->_chromosomes.end(),
       [&](const Chromosome& chr) { chr.write_barriers_to_tsv(output_dir, force_overwrite); });
-  absl::FPrintF(stderr, "DONE! Written extrusion barrier coordinates for %lu chromosomes in %s\n",
-                this->get_n_chromosomes(), absl::FormatDuration(absl::Now() - t0));
+  fmt::fprintf(stderr, "DONE! Written extrusion barrier coordinates for %lu chromosomes in %s\n",
+               this->get_n_chromosomes(), absl::FormatDuration(absl::Now() - t0));
 }
 
 std::vector<Chromosome> Genome::init_chromosomes_from_file(uint32_t diagonal_width) const {
@@ -144,9 +144,9 @@ std::pair<uint64_t, uint64_t> Genome::import_extrusion_barriers_from_bed(
     if (probability_of_block != 0) record.score = probability_of_block;
     if (record.score < 0 || record.score > 1) {
       throw std::runtime_error(
-          absl::StrFormat("Invalid score field detected for record %s[%lu-%lu]: expected a score "
-                          "between 0 and 1, got %.4g.",
-                          record.name, record.chrom_start, record.chrom_end, record.score));
+          fmt::format("Invalid score field detected for record %s[%lu-%lu]: expected a score "
+                      "between 0 and 1, got %.4g.",
+                      record.name, record.chrom_start, record.chrom_end, record.score));
     }
     chromosomes[record.chrom]->add_extr_barrier(record);
   }
@@ -238,7 +238,7 @@ uint32_t Genome::run_burnin(double prob_of_rebinding, uint16_t target_n_of_unloa
           lef.try_rebind(chr, this->_rand_eng, prob_of_rebinding, false);
         }
       } catch (const std::runtime_error& err) {
-        throw std::runtime_error(absl::StrFormat("Error occurred at lef #%lu: %s!", i, err.what()));
+        throw std::runtime_error(fmt::format("Error occurred at lef #%lu: %s!", i, err.what()));
       }
     }
 
@@ -284,8 +284,8 @@ void Genome::simulate_extrusion(uint32_t iterations) {
     }
 
     if (i % step == 0) {
-      absl::FPrintF(stderr, "Running iteration %lu/%lu (%.2f iterations/s)\n", i, iterations,
-                    step / absl::ToDoubleSeconds(absl::Now() - t0));
+      fmt::fprintf(stderr, "Running iteration %lu/%lu (%.2f iterations/s)\n", i, iterations,
+                   step / absl::ToDoubleSeconds(absl::Now() - t0));
       t0 = absl::Now();
     }
   }

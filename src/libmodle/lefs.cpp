@@ -1,6 +1,6 @@
 #include "modle/lefs.hpp"
 
-#include "absl/strings/str_format.h"
+#include "fmt/printf.h"
 
 namespace modle {
 
@@ -42,17 +42,17 @@ bool ExtrusionUnit::try_extrude(std::mt19937& rand_eng) {
 }
 
 bool ExtrusionUnit::try_moving_to_next_bin() {
-  //  absl::FPrintF(stderr, "Trying to move to next bin...");
+  //  fmt::fprintf(stderr, "Trying to move to next bin...");
   if (this->_bin == &this->_parent_lef.get_last_bin()) {
     this->set_stalls(UINT32_MAX);  // Stall forever
     return false;
   }
-  //  absl::FPrintF(stderr, " Moving from bin #%lu", this->_bin->get_index());
+  //  fmt::fprintf(stderr, " Moving from bin #%lu", this->_bin->get_index());
   this->_bin->remove_extr_unit_binding(this);
   this->_bin = &this->_parent_lef.get_ptr_to_chr()->dna.get_next_bin(*this->_bin);
   this->_bin->add_extr_unit_binding(this);
   this->_blocking_barrier = nullptr;
-  //  absl::FPrintF(stderr, " to bin #%lu!\n", this->_bin->get_index());
+  //  fmt::fprintf(stderr, " to bin #%lu!\n", this->_bin->get_index());
   return true;
 }
 
@@ -61,12 +61,12 @@ bool ExtrusionUnit::try_moving_to_prev_bin() {
     this->set_stalls(UINT32_MAX);  // Stall forever
     return false;
   }
-  //  absl::FPrintF(stderr, " Moving from bin #%lu", this->_bin->get_index());
+  //  fmt::fprintf(stderr, " Moving from bin #%lu", this->_bin->get_index());
   this->_bin->remove_extr_unit_binding(this);
   this->_bin = &this->_parent_lef.get_ptr_to_chr()->dna.get_prev_bin(*this->_bin);
   this->_bin->add_extr_unit_binding(this);
   this->_blocking_barrier = nullptr;
-  //  absl::FPrintF(stderr, " to bin #%lu!\n", this->_bin->get_index());
+  //  fmt::fprintf(stderr, " to bin #%lu!\n", this->_bin->get_index());
   return true;
 }
 
@@ -129,7 +129,7 @@ void ExtrusionUnit::bind(Chromosome* chr, uint32_t pos, DNA::Direction direction
       if (this->_blocking_barrier->get_direction_of_block() != this->get_extr_direction())
         n_stalls /= 2;
       this->set_stalls(n_stalls);
-      // absl::FPrintF(stderr, "LEF bound to a bin with a blocking extrusion barrier!\n");
+      // fmt::fprintf(stderr, "LEF bound to a bin with a blocking extrusion barrier!\n");
       assert(this->_blocking_barrier >= &this->_bin->get_all_extr_barriers().front() &&
              this->_blocking_barrier <= &this->_bin->get_all_extr_barriers().back());
     }
@@ -150,7 +150,7 @@ uint64_t ExtrusionUnit::check_constraints(std::mt19937& rand_eng) {
     return this->check_for_extrusion_barrier(rand_eng);
   } catch (const std::runtime_error& err) {
     throw std::runtime_error(
-        absl::StrFormat("Exception caught while processing ExtrUnit bound at pos %lu! %s",
+        fmt::format("Exception caught while processing ExtrUnit bound at pos %lu! %s",
                         this->get_pos(), err.what()));
   }
 }
@@ -297,7 +297,7 @@ bool Lef::try_rebind(Chromosome& chr, std::mt19937& rand_eng, double prob_of_reb
   assert(prob_of_rebinding >= 0 && prob_of_rebinding <= 1);
   std::uniform_real_distribution<> d1(0.0, 1.0);
   if (d1(rand_eng) >= 1 - prob_of_rebinding) {
-    //    absl::FPrintF(stderr, "Trying to rebind...\n");
+    //    fmt::fprintf(stderr, "Trying to rebind...\n");
     this->randomly_bind_to_chr(&chr, rand_eng, register_contact);
     return true;
   }

@@ -5,16 +5,18 @@
 #include <filesystem>
 #include <string_view>
 
-#include "absl/strings/str_format.h"
+#include "absl/container/flat_hash_map.h"
+#include "absl/strings/str_cat.h"
 #include "absl/strings/str_split.h"
+#include "fmt/printf.h"
 
 namespace modle {
+using namespace std::literals::string_view_literals;
 struct config {
   std::string_view path_to_chr_sizes;
   std::string_view path_to_extr_barriers_bed;
   std::string_view output_dir;
   bool force{false};
-
   uint32_t bin_size{1'000};
   uint32_t diagonal_width{3'000'000};
   uint32_t simulation_iterations{15'000'000};
@@ -32,107 +34,90 @@ struct config {
   uint32_t contact_sampling_interval{1000};
   bool randomize_contact_sampling_interval{false};
   bool skip_output{false};
-  bool randomize_contact_sampling{false};
-  uint64_t randomize_contact_sampling_range{5};
-  std::string_view path_to_juicer;
 
   int argc;
   char** argv;
 
   [[nodiscard]] std::string to_string() const {
-    const std::string padding_placeholder = "{modle-padding}";
-    const std::string buf = absl::StrFormat(
-        // clang-format off
-        "{modle-padding} CONFIG SUMMARY {modle-padding}\n\n"
-        "########## Input/Output {modle-padding}\n"
-        "##    Input BED                        #  '%s'\n"
-        "##    Output directory                 #  '%s'\n"
-        "##    Overwrite existing output files  #  %s\n"
-        "########## General settings {modle-padding}\n"
-        "##    Bin size (bp)                    #  %lu\n"
-        "##    # of iterations                  #  %lu\n"
-        "##    Avg. LEF processivity (bp)       #  %lu\n"
-        "##    LEF unloader strength            #  %.4f\n"
-        "##    # of randomly generated barriers #  %lu\n"
-        "##    # of randomly generated LEFs     #  %lu\n"
-        "##    Skip burn-in                     #  %s\n"
-        "##    Contact sampling interval        #  %lu\n"
-        "########## Probabilities {modle-padding}\n"
-        "##    Prob. of barrier block           #  %.4f\n"
-        "##    Prob. of LEF rebind              #  %.4f\n"
-        "##    Prob. of LEF bypass              #  %.4f\n"
-        "##    Randomize contact sampling       #  %s\n"
-        "########## Burn-in {modle-padding}\n"
-        "##    Min. # of burn-in rounds         #  %lu\n"
-        "##    Min. # of loops per LEF          #  %lu\n"
-        "########## Various {modle-padding}\n"
-        "##    Seed                             #  %lu\n",
-        // clang-format on
-        std::filesystem::weakly_canonical(this->path_to_chr_sizes),
-        std::filesystem::weakly_canonical(this->output_dir), this->force ? "Yes" : "No",
-        this->bin_size, this->simulation_iterations, this->average_lef_processivity,
-        this->lef_unloader_strength, this->number_of_randomly_gen_extr_barriers,
-        this->number_of_lefs, this->skip_burnin ? "Yes" : "No", this->contact_sampling_interval,
-        this->probability_of_extrusion_barrier_block, this->probability_of_lef_rebind,
-        this->probability_of_extrusion_unit_bypass,
-        this->randomize_contact_sampling_interval ? "Yes" : "No", this->min_n_of_burnin_rounds,
-        this->min_n_of_loops_per_lef, this->seed);
+    struct cli_tokens {
+      std::string name;
+      std::string value;
+    };
 
-    const auto& toks = absl::StrSplit(buf, '\n');
-    uint32_t max_col_width =  // Find longest line (excluding {modle-padding})
-        std::max_element(
-            toks.begin(), toks.end(),
-            [&](std::string_view s1, std::string_view s2) {
-              auto s1_offset = (s1.find_first_of(padding_placeholder) != std::string::npos) *
-                               padding_placeholder.size();
-              auto s2_offset = (s2.find_first_of(padding_placeholder) != std::string::npos) *
-                               padding_placeholder.size();
-              return s1.size() - s1_offset < s2.size() - s2_offset;
-            })
-            ->size() +
-        3;
-
-    bool first_line = true;
-    std::string str;
-    for (const auto& tok : toks) {
-      if (first_line) {
-        // Deal with the first line special case.
-        // Example:
-        // ###### Title ######
-        // ###             ###
-        std::string title(tok.begin() + tok.find(padding_placeholder) + padding_placeholder.size(),
-                          tok.begin() + tok.rfind(padding_placeholder));
-        double paddding_length = static_cast<double>(max_col_width - title.size()) / 2 + 1;
-        str = absl::StrFormat("%s%s%s\n", std::string(std::floor(paddding_length), '#'), title,
-                              std::string(std::ceil(paddding_length), '#'));
-        str += absl::StrFormat("### %*s\n", max_col_width - 2, "###");
-        first_line = false;
-        continue;
-      }
-
-      if (tok == "" || tok == "\n") continue;  // Skip empty lines
-      if (tok.find(padding_placeholder) ==
-          std::string::npos) {  // Display the option and its value with the proper padding.
-                                // Example:
-                                // ##    Option 1  #        10 ##
-        str += absl::StrFormat("%s %*s\n", tok, max_col_width - tok.size() + 1, "##");
-      } else {
-        // Print Option group title with the appropriate padding.
-        // Example:
-        // ########## Group 1 ####################
-        std::string title(tok.begin(), tok.begin() + tok.find(padding_placeholder));
-        std::string rpad(max_col_width - title.size() + 2, '#');
-        str += absl::StrFormat("%s%s\n", title, rpad);
+    // clang-format off
+    absl::flat_hash_map<std::string_view, std::vector<cli_tokens>> tokens{
+    {"Input/Output"sv,
+    std::vector<cli_tokens>{
+     {"Path to chr. sizes", fmt::format(FMT_STRING("{}"), std::filesystem::weakly_canonical(this->path_to_chr_sizes))},
+     {"Path to extr. barriers", fmt::format(FMT_STRING("{}"), std::filesystem::weakly_canonical(this->path_to_extr_barriers_bed))},
+     {"Output directory", fmt::format(FMT_STRING("{}"), std::filesystem::weakly_canonical(this->output_dir))},
+     {"Skip output", this->skip_output ? "Yes" : "No"},
+     {"Force overwrite", this->force ? "Yes" : "No"}}},
+    {"General settings"sv,
+    std::vector<cli_tokens>{
+     {"Bin size (bp)", fmt::format(FMT_STRING("{}"), this->bin_size)},
+     {"Diagonal width (bp)", fmt::format(FMT_STRING("{}"), this->diagonal_width)},
+     {"# of iterations", fmt::format(FMT_STRING("{}"), this->simulation_iterations)},
+     {"Seed", fmt::format(FMT_STRING("{}"), this->seed)},
+     {"Randomize contact sampling interval", this->randomize_contact_sampling_interval ? "Yes" : "No"},
+     {"Contact sampling interval", fmt::format(FMT_STRING("{}"), this->contact_sampling_interval)}}},
+    {"LEF settings"sv,
+    std::vector<cli_tokens>{
+     {"# of LEFs", fmt::format(FMT_STRING("{}"), this->number_of_lefs)},
+     {"Avg. LEF processivity", fmt::format(FMT_STRING("{}"), this->average_lef_processivity)},
+     {"Prob. of LEF re-bind", fmt::format(FMT_STRING("{:.4G}"), this->probability_of_lef_rebind)},
+     {"Prob. of LEF bypass", fmt::format(FMT_STRING("{:.4G}"), this->probability_of_extrusion_unit_bypass)},
+     {"LEF unloader strength", fmt::format(FMT_STRING("{:.4G}"), this->lef_unloader_strength)}}},
+    {"Extr. barrier settings"sv,
+    std::vector<cli_tokens>{
+     {"# of randomly gen extr. barriers", fmt::format(FMT_STRING("{}"), this->number_of_randomly_gen_extr_barriers)},
+     {"Prob. of block", fmt::format(FMT_STRING("{}"), this->probability_of_extrusion_barrier_block)}}},
+    {"Burn-in phase"sv,
+    std::vector<cli_tokens>{
+     {"Skip burn-in", this->skip_burnin ? "Yes" : "No"},
+     {"Min. # of burn-in rounds", this->min_n_of_burnin_rounds != 0 ? fmt::format(FMT_STRING("{}"), this->min_n_of_burnin_rounds) : "Disabled"},
+     {"Min. # of loops per LEF", fmt::format(FMT_STRING("{}"), this->min_n_of_loops_per_lef)}}}
+    };
+    // clang-format on
+    std::size_t max_column1_length = 0;
+    std::size_t max_column2_length = 0;
+    for (auto& [title, options] : tokens) {
+      for (auto& opt : options) {
+        max_column1_length =
+            opt.name.size() > max_column1_length ? opt.name.size() : max_column1_length;
+        max_column2_length =
+            opt.value.size() > max_column2_length ? opt.value.size() : max_column2_length;
       }
     }
-    std::string title = "   END OF CONFIG SUMMARY   ";
-    double padding_length = static_cast<double>(max_col_width - title.size()) / 2 + 1;
-    str += absl::StrFormat("%s%s%s\n", std::string(std::floor(padding_length), '#'), title,
-                           std::string(std::ceil(padding_length), '#'));
-    return str;
+
+    constexpr auto col1_constant_padding_length = 9U;
+    constexpr auto col2_constant_padding_length = 6U;
+    constexpr auto title_constant_padding_length = 11U;
+
+    max_column1_length += col1_constant_padding_length;
+    max_column2_length += col2_constant_padding_length;
+    const auto max_column_length = max_column1_length + max_column2_length;
+
+    std::string buff = fmt::format(FMT_STRING("{:#^{}}\n##{:^{}}##\n"), "   CONFIG SUMMARY   ",
+                                   max_column_length, "", max_column_length - 4); // NOLINT
+    for (const auto& title : {"Input/Output"sv, "General settings"sv, "LEF settings"sv,
+                              "Extr. barrier settings"sv, "Burn-in phase"sv}) {
+      absl::StrAppend(
+          &buff, fmt::format(FMT_STRING("########## {}{:#<{}}\n"), title, " ",
+                             max_column_length - title_constant_padding_length - title.size()));
+      for (auto& opt : tokens.at(title)) {
+        absl::StrAppend(&buff,
+                        fmt::format(FMT_STRING("##    {:<{}}  #  {:<{}}  ##\n"), opt.name,
+                                    max_column1_length - col1_constant_padding_length, opt.value,
+                                    max_column2_length - col2_constant_padding_length));
+      }
+    }
+    absl::StrAppend(&buff,
+                    fmt::format(FMT_STRING("{:#^{}}\n\n"), "   END OF CONFIG SUMMARY   ", max_column_length));
+    return buff;
   }
 
-  void print() const { absl::FPrintF(stderr, "%s\n\n", this->to_string()); }
+  void print() const { fmt::fprintf(stderr, FMT_STRING("%s\n\n"), this->to_string()); }
 };
 
 }  // namespace modle

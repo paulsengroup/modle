@@ -7,7 +7,7 @@
 #include <fstream>
 #include <vector>
 
-#include "absl/strings/str_format.h"
+#include "fmt/printf.h"
 #include "absl/strings/str_split.h"
 #include "catch2/catch.hpp"
 #include "modle/utils.hpp"
@@ -43,7 +43,7 @@ std::vector<std::vector<uint32_t>> load_matrix_from_file(const std::string& path
       m.emplace_back(std::move(v));
     }
   } else {
-    throw std::runtime_error(absl::StrFormat("Unable to open file '%s'.", path_to_file));
+    throw std::runtime_error(fmt::format("Unable to open file '%s'.", path_to_file));
   }
   return m;
 }
@@ -77,7 +77,7 @@ void test_with_large_matrix(const std::string& path_to_file) {
   in.push(f);
   if (!f || !in) {
     throw std::runtime_error(
-        absl::StrFormat("Unable to open file '%s': %s", path_to_file, std::strerror(errno)));
+        fmt::format("Unable to open file '%s': %s", path_to_file, std::strerror(errno)));
   }
   std::string line;
   uint32_t n{};
@@ -90,7 +90,7 @@ void test_with_large_matrix(const std::string& path_to_file) {
       }
     }
     if ((!f && !f.eof()) || (!in && !in.eof())) {
-      throw std::runtime_error(absl::StrFormat("IO error while reading from file '%s': %s.",
+      throw std::runtime_error(fmt::format("IO error while reading from file '%s': %s.",
                                                path_to_file, std::strerror(errno)));
     }
   }

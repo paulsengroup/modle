@@ -43,12 +43,6 @@ class Cli {
             "Overwrite existing output files.")
             ->capture_default_str();
 
-    io->add_option(
- "--path-to-juicer",
-         this->_config.path_to_juicer,
-            "Path to output Juicer's JAR (required to write contacts in .hic format).")
-            ->check(CLI::ExistingFile);
-
     gen->add_option(
             "-b,--bin-size",
             this->_config.bin_size,
@@ -130,19 +124,6 @@ class Cli {
             this->_config.randomize_contact_sampling_interval,
             "Sample contacts using a bernoulli process with a probability of success of 1 / n, where n is the interval set through --contact-sampling-interval.")
             ->capture_default_str();
-
-    rand->add_flag(
-             "--randomize-contact-sampling",
-             this->_config.randomize_contact_sampling,
-             "Randomize the pair of bins for which a contact is registered. This has the effect of introducing some noise in the contact matrix. Use --randomize-contact-sampling-range to specify the amount of noise introduced.")
-             ->capture_default_str();
-
-    rand->add_option( //TODO: Change the name of this option!
-             "--randomize-contact-sampling-range",
-             this->_config.randomize_contact_sampling_range,
-             "Specify the range of numbers that will be added/subtracted from bin indices when registering contacts, and --randomize-contact-sampling is passed.")
-             ->needs(rand->get_option("--randomize-contact-sampling"))
-             ->capture_default_str();
 
     burn->add_option(
             "--min-burnin-rounds",

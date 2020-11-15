@@ -41,8 +41,8 @@ inline std::string init_juicer_tools_argv(const modle::tools::config& c) {
           "--path-to-juicer-tools points to a jar file, but we were unable to find java in "
           "your "
           "path");
-    argv = absl::StrFormat("java -Xms512m -Xmx%.0fm -jar %s", c.juicer_tools_mem / 1e6,
-                           c.path_to_juicer_tools);
+    argv = fmt::format("java -Xms512m -Xmx{:.0f}m -jar {}", c.juicer_tools_mem / 1e6,
+                       c.path_to_juicer_tools);
   }
   return argv;
 }

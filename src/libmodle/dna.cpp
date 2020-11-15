@@ -5,7 +5,7 @@
 #include <filesystem>
 
 #include "absl/container/flat_hash_set.h"
-#include "absl/strings/str_format.h"
+#include "fmt/printf.h"
 #include "modle/extr_barrier.hpp"
 #include "modle/lefs.hpp"
 #include "modle/parsers.hpp"
@@ -106,8 +106,8 @@ void DNA::Bin::remove_extr_barrier(Direction d) {
     if (this->_extr_barriers->empty()) this->_extr_barriers = nullptr;
     return;
   }
-  throw std::logic_error(absl::StrFormat("Bin doesn't have barriers blocking %s!",
-                                         d == Direction::fwd ? "forward" : "reverse"));
+  throw std::logic_error(fmt::format("Bin doesn't have barriers blocking %s!",
+                                     d == Direction::fwd ? "forward" : "reverse"));
 }
 
 uint64_t DNA::Bin::add_extr_unit_binding(ExtrusionUnit* const unit) {
@@ -135,12 +135,12 @@ DNA::Bin* DNA::get_ptr_to_bin_from_pos(uint64_t pos) {
   // TODO: Enable these checks only when compiling in Debug
   if (pos > this->length())
     throw std::logic_error(
-        absl::StrFormat("DNA::get_ptr_to_bin_from_pos(pos=%lu): pos > this->length(): %lu > %lu\n",
-                        pos, pos, this->length()));
+        fmt::format("DNA::get_ptr_to_bin_from_pos(pos=%lu): pos > this->length(): %lu > %lu\n", pos,
+                    pos, this->length()));
   if ((pos / this->get_bin_size()) > this->get_n_bins())
     throw std::logic_error(
-        absl::StrFormat("(pos / this->bin_size()) >= this->nbins(): (%lu / %lu) >= %lu\n", pos,
-                        this->get_bin_size(), this->get_n_bins()));
+        fmt::format("(pos / this->bin_size()) >= this->nbins(): (%lu / %lu) >= %lu\n", pos,
+                    this->get_bin_size(), this->get_n_bins()));
   return &this->_bins[pos / this->get_bin_size()];
 }
 
@@ -290,57 +290,58 @@ void Chromosome::sort_barriers_by_pos() {
 void Chromosome::write_contacts_to_tsv(std::string_view output_dir, bool force_overwrite) const {
   auto t0 = absl::Now();
   std::string path_to_outfile = std::filesystem::weakly_canonical(
-      absl::StrFormat("%s/%s_modle_cmatrix.tsv.bz2", output_dir, this->name));
-  absl::FPrintF(stderr, "Writing contact matrix for '%s' to file '%s'...\n", this->name,
-                path_to_outfile);
+      fmt::format("{}/{}_modle_cmatrix.tsv.bz2", output_dir, this->name));
+  fmt::fprintf(stderr, "Writing contact matrix for '%s' to file '%s'...\n", this->name,
+               path_to_outfile);
   if (!force_overwrite && std::filesystem::exists(path_to_outfile)) {
-    absl::FPrintF(stderr, "File '%s' already exists, SKIPPING! Pass --force to overwrite...\n",
-                  path_to_outfile);
+    fmt::fprintf(stderr, "File '%s' already exists, SKIPPING! Pass --force to overwrite...\n",
+                 path_to_outfile);
     return;
   }
 
   const std::string header =
-      absl::StrFormat("#%s\t%lu\t%lu\t%lu\t%lu\n", this->name, this->get_bin_size(), 0,
-                      this->length(), this->contacts.n_rows() * this->get_bin_size());
+      fmt::format("#{}\t{}\t{}\t{}\t{}\n", this->name, this->get_bin_size(), 0, this->length(),
+                  this->contacts.n_rows() * this->get_bin_size());
 
   auto [bytes_in, bytes_out] = this->contacts.write_to_tsv(path_to_outfile, header);
-  absl::FPrintF(stderr,
-                "DONE writing '%s' in %s! Compressed size: %.2f MB (compression ratio %.2fx)\n",
-                path_to_outfile, absl::FormatDuration(absl::Now() - t0), bytes_out / 1.0e6,
-                static_cast<double>(bytes_in) / bytes_out);
+  fmt::fprintf(stderr,
+               "DONE writing '%s' in %s! Compressed size: %.2f MB (compression ratio %.2fx)\n",
+               path_to_outfile, absl::FormatDuration(absl::Now() - t0), bytes_out / 1.0e6,
+               static_cast<double>(bytes_in) / bytes_out);
 }
 
 void Chromosome::write_barriers_to_tsv(std::string_view output_dir, bool force_overwrite) const {
   auto path_to_outfile = std::filesystem::weakly_canonical(
-      absl::StrFormat("%s/%s.extrusion_barriers.tsv.bz2", output_dir, this->name));
+      fmt::format("{}/{}.extrusion_barriers.tsv.bz2", output_dir, this->name));
   if (!force_overwrite && std::filesystem::exists(path_to_outfile)) {
-    absl::FPrintF(stderr, "File '%s' already exists. Pass --force to overwrite... SKIPPING.\n",
-                  path_to_outfile);
+    fmt::fprintf(stderr, "File '%s' already exists. Pass --force to overwrite... SKIPPING.\n",
+                 path_to_outfile);
     return;
   }
   try {
     std::ofstream fp(path_to_outfile, std::ios_base::binary);
     if (!fp)
-      throw std::runtime_error(absl::StrFormat("Unable to open file '%s' for writing: %s",
-                                               path_to_outfile, std::strerror(errno)));
+      throw fmt::system_error(errno, "Unable to open file '{}' for writing", path_to_outfile);
     boost::iostreams::filtering_ostream out;
     std::string buff;
     out.push(boost::iostreams::bzip2_compressor());
     out.push(fp);
-    if (!out) throw std::runtime_error("An error occurred while initializing compression stream");
+    if (!out)
+      throw std::runtime_error(
+          fmt::format("An error occurred while initializing the compression stream for file '{}'",
+                      path_to_outfile));
 
     for (const auto& barrier : this->barriers) {
       buff = absl::StrCat(barrier->get_direction_of_block() == DNA::fwd ? "+" : "-",
                           barrier->get_pos(), "\n");
       out.write(buff.data(), buff.size());
       if (!out || !fp) {
-        throw std::runtime_error(absl::StrFormat("IO error while writing to file '%s': %s",
-                                                 path_to_outfile, std::strerror(errno)));
+        throw fmt::system_error(errno, "IO error while writing to file '{}'", path_to_outfile);
       }
     }
   } catch (const boost::iostreams::bzip2_error& err) {
-    throw std::runtime_error(absl::StrFormat("An error occurred while compressing file '%s': %s",
-                                             path_to_outfile, err.what()));
+    throw std::runtime_error(fmt::format("An error occurred while compressing file '{}': {}",
+                                         path_to_outfile, err.what()));
   }
 }
 

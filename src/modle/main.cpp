@@ -1,7 +1,7 @@
 #include <filesystem>
 #include <string>
 
-#include "absl/strings/str_format.h"
+#include "fmt/printf.h"
 #include "absl/time/clock.h"
 #include "modle/cli.hpp"
 #include "modle/genome.hpp"
@@ -14,8 +14,8 @@ std::vector<std::string> check_if_output_file_exists(const modle::config& c) {
   if (c.force) return fn_collisions;
   modle::ChrSizeParser parser(c.path_to_chr_sizes);
   for (const auto& record : parser.parse()) {
-    const auto f1 = absl::StrFormat("%s/%s.tsv.bz2", c.output_dir, record.name);
-    const auto f2 = absl::StrFormat("%s/%s_raw.tsv.bz2", c.output_dir, record.name);
+    const auto f1 = fmt::format("%s/%s.tsv.bz2", c.output_dir, record.name);
+    const auto f2 = fmt::format("%s/%s_raw.tsv.bz2", c.output_dir, record.name);
     if (std::filesystem::exists(f1)) {
       fn_collisions.push_back(std::filesystem::weakly_canonical(f1));
     }
@@ -42,7 +42,7 @@ void run_simulation(const modle::config& c) {
     tot_barriers += tmp.first;
     barriers_ignored = tmp.second;
   }
-  absl::FPrintF(stderr,
+  fmt::fprintf(stderr,
                 "Initialization took %s.\n"
                 " - # of sequences:       %lu\n"
                 " - Avg. sequence length: %.3f Mbp\n"
@@ -57,29 +57,29 @@ void run_simulation(const modle::config& c) {
   t0 = absl::Now();
   if (c.skip_burnin) {
     genome.randomly_bind_lefs();
-    absl::FPrintF(stderr, "Bound %lu LEFs in %s.\n", genome.get_n_of_busy_lefs(),
+    fmt::fprintf(stderr, "Bound %lu LEFs in %s.\n", genome.get_n_of_busy_lefs(),
                   absl::FormatDuration(absl::Now() - t0));
   } else {
     const auto burnin_rounds = genome.run_burnin(
         c.probability_of_lef_rebind, c.min_n_of_loops_per_lef, c.min_n_of_burnin_rounds);
-    absl::FPrintF(stderr, "Burnin completed in %s! (%lu rounds).\n",
+    fmt::fprintf(stderr, "Burnin completed in %s! (%lu rounds).\n",
                   absl::FormatDuration(absl::Now() - t0), burnin_rounds);
   }
 
   t0 = absl::Now();
-  absl::FPrintF(stderr, "About to start simulating loop extrusion...\n");
+  fmt::fprintf(stderr, "About to start simulating loop extrusion...\n");
   genome.simulate_extrusion(c.simulation_iterations);
-  absl::FPrintF(stderr, "Simulation took %s.\n", absl::FormatDuration(absl::Now() - t0));
+  fmt::fprintf(stderr, "Simulation took %s.\n", absl::FormatDuration(absl::Now() - t0));
 
   if (!c.skip_output) {  // Mostly useful for profiling
     genome.write_contacts_to_file(c.output_dir, c.force);
     genome.write_extrusion_barriers_to_file(c.output_dir, c.force);
-    std::ofstream cmd_file(absl::StrFormat("%s/settings.log", c.output_dir));
+    std::ofstream cmd_file(fmt::format("%s/settings.log", c.output_dir));
     cmd_file << c.to_string() << std::endl;
     cmd_file << absl::StrJoin(c.argv, c.argv + c.argc, " ") << std::endl;
     cmd_file.close();
   }
-  absl::FPrintF(stderr, "Simulation terminated without errors!\nBye.\n");
+  fmt::fprintf(stderr, "Simulation terminated without errors!\nBye.\n");
 }
 }  // namespace modle
 
@@ -91,7 +91,7 @@ int main(int argc, char** argv) {
     config.print();
 
     if (const auto files = check_if_output_file_exists(config); !files.empty()) {
-      absl::FPrintF(
+      fmt::fprintf(
           stderr,
           "Refusing to run the simulation because some of the output file(s) already exist. Pass "
           "--force to overwrite.\nCollision detected for the following file(s):\n - %s\n",

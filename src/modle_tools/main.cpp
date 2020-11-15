@@ -25,7 +25,7 @@ void eval(const modle::tools::config& c) {
     const auto spearman = corr.compute_spearman(std::min(max_size, c.sliding_window_size),
                                                 std::min(max_size - 1, c.sliding_window_overlap));
     for (const auto& [rho, pv] : spearman) {
-      absl::FPrintF(stderr, "rho=%.4G;\tpv=%.4G\n", rho, pv);
+      fmt::fprintf(stderr, "rho=%.4G;\tpv=%.4G\n", rho, pv);
     }
   }
 }
@@ -50,7 +50,7 @@ int main(int argc, char** argv) {
             "this message, please open an issue on GitHub");
     }
   } catch (const std::runtime_error& err) {
-    absl::FPrintF(stderr, "FAILURE: %s.\n", err.what());
+    fmt::fprintf(stderr, "FAILURE: %s.\n", err.what());
     if (!c.keep_tmp_files && std::filesystem::is_empty(c.tmp_dir))
       std::filesystem::remove_all(c.tmp_dir);
     return 1;

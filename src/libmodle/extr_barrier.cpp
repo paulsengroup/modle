@@ -1,6 +1,6 @@
 #include "modle/extr_barrier.hpp"
 
-#include "absl/strings/str_format.h"
+#include "fmt/printf.h"
 
 namespace modle {
 ExtrusionBarrier::ExtrusionBarrier(uint64_t pos, double prob_of_block, DNA::Direction direction)

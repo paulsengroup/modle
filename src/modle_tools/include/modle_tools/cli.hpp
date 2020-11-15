@@ -8,6 +8,7 @@
 #include "absl/strings/match.h"
 #include "absl/strings/str_format.h"
 #include "absl/strings/str_join.h"
+#include "fmt/printf.h"
 
 namespace modle::tools {
 
@@ -78,7 +79,7 @@ class Cli {
     convert->add_option("--noise-stdev", this->_config.noise_stdev, "Standard deviation to use when sampling noise to add to contact matrices.")->check(CLI::PositiveNumber)->needs(convert->get_option("--add-noise"))->capture_default_str();
     convert->add_option("--noise-range", this->_config.noise_range, "Range to use when adding noise to contact matrices. 99.9%% of the sampled numbers will fall within this range.")->check(CLI::PositiveNumber)->needs(convert->get_option("--add-noise"))->excludes(convert->get_option("--noise-stdev"))->capture_default_str();
     convert->add_option("--juicer-tools-max-mem", this->_config.juicer_tools_mem, "Maximum memory allocation pool for Juicer Tools (JVM).")->needs(this->_cli.get_option("--path-to-juicer-tools"))->transform(CLI::AsSizeValue(false))->capture_default_str();
-    convert->add_option("-c,--chr-sizes", this->_config.chr_sizes, absl::StrFormat("Path to file containing chromosome size(s). Can also be one of the following genome IDs: %s.", absl::StrJoin(this->_allowed_genome_ids, ", ")));
+    convert->add_option("-c,--chr-sizes", this->_config.chr_sizes, fmt::format("Path to file containing chromosome size(s). Can also be one of the following genome IDs: %s.", absl::StrJoin(this->_allowed_genome_ids, ", ")));
     convert->add_option("--seed", this->_config.seed, "Seed value to use when adding noise to the contact matrix.")->capture_default_str();
 
     eval->add_option("--reference-matrix", this->_config.path_to_reference_cmatrix, "Path to contact matrix to use as reference when computing the correlation. Formats accepted: Modle or .hic format.")->required();
@@ -115,22 +116,22 @@ class Cli {
     }
 
     if (!c.force) {
-      auto base_name = absl::StrFormat("%s/%s", c.out_dir,
-                                       std::string_view(c.path_to_input_matrix.data(),
-                                                        c.path_to_input_matrix.rfind(".tsv.bz2")));
+      auto base_name = fmt::format("%s/%s", c.out_dir,
+                                   std::string_view(c.path_to_input_matrix.data(),
+                                                    c.path_to_input_matrix.rfind(".tsv.bz2")));
       std::vector<std::string> collisions;
       if (this->_cli.get_subcommand("convert")->parsed()) {
         if (this->_config.convert_to_hic) {
           if (auto file =
-                  absl::StrFormat("%s%s.hic", this->_config.add_noise ? "_w_noise" : "", base_name);
+                  fmt::format("%s%s.hic", this->_config.add_noise ? "_w_noise" : "", base_name);
               std::filesystem::exists(file)) {
             collisions.emplace_back(std::move(file));
           }
         }
         if (this->_config.convert_to_tsv) {
-          if (auto file = absl::StrFormat("%s%s_symmetric.tsv%s", base_name,
-                                          this->_config.add_noise ? "_w_noise" : "",
-                                          this->_config.compress ? ".bz2" : "");
+          if (auto file = fmt::format("%s%s_symmetric.tsv%s", base_name,
+                                      this->_config.add_noise ? "_w_noise" : "",
+                                      this->_config.compress ? ".bz2" : "");
               std::filesystem::exists(file)) {
             collisions.emplace_back(std::move(file));
           }
@@ -139,7 +140,7 @@ class Cli {
       if (this->_cli.get_subcommand("eval")->parsed()) {
         for (std::string_view suffix : {"rho", "tau", "rho_pv", "tau_pv"}) {
           for (std::string_view ext : {"tsv.bz2", "wig"}) {
-            if (auto file = absl::StrFormat("%s_%s.%s", c.base_name, suffix, ext);
+            if (auto file = fmt::format("%s_%s.%s", c.base_name, suffix, ext);
                 std::filesystem::exists(file)) {
               collisions.emplace_back(std::move(file));
             }
@@ -200,7 +201,7 @@ class Cli {
     if (this->_cli.get_subcommand("convert")->get_option("--hic"))
 
       if (!errors.empty()) {
-        absl::FPrintF(stderr, "The following issues have been detected:\n%s\n", errors);
+        fmt::fprintf(stderr, "The following issues have been detected:\n%s\n", errors);
       }
     return errors.empty();
   }

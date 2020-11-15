@@ -5,7 +5,7 @@
 #include <future>
 #include <thread>
 
-#include "absl/strings/str_format.h"
+#include "fmt/printf.h"
 #include "absl/time/clock.h"
 #include "modle/contacts.hpp"
 #include "modle_tools/cli.hpp"
@@ -28,7 +28,7 @@ ContactMatrix<uint32_t> parse_hic_matrix(const modle::tools::config &c) {
   try {
     boost::asio::io_context ios;
     std::future<std::string> juicer_tools_stderr;
-    absl::FPrintF(stderr, "Running %s\n", argv);
+    fmt::fprintf(stderr, "Running %s\n", argv);
     std::string buff, stderr_msg;
     boost::process::ipstream juicer_tools_stdout;
     boost::process::child juicer_tools(argv, boost::process::std_in.close(),
@@ -47,7 +47,7 @@ ContactMatrix<uint32_t> parse_hic_matrix(const modle::tools::config &c) {
           continue;
         }
         if (toks = absl::StrSplit(buff, '\t'); toks.size() != 3) {
-          throw std::runtime_error(absl::StrFormat(
+          throw std::runtime_error(fmt::format(
               "Malformed file: expected 3 fields, got %lu: line that triggered the error: '%s'",
               toks.size(), buff));
         }
@@ -58,7 +58,7 @@ ContactMatrix<uint32_t> parse_hic_matrix(const modle::tools::config &c) {
         j = (j - start) / header.bin_size;
         cmatrix.set(i, j, std::round<uint64_t>(contacts));
         if (++records_parsed % 1'000'000 == 0) {
-          absl::FPrintF(stderr, "Parsed %lu records...\n", records_parsed);
+          fmt::fprintf(stderr, "Parsed %lu records...\n", records_parsed);
         }
       }
 
@@ -71,14 +71,14 @@ ContactMatrix<uint32_t> parse_hic_matrix(const modle::tools::config &c) {
     juicer_tools.wait();
     juicer_stdout_parser.join();
     if (auto ec = juicer_tools.exit_code(); ec != 0) {
-      throw std::runtime_error(absl::StrFormat("Juicer Tools terminated with exit code %lu: %s", ec,
+      throw std::runtime_error(fmt::format("Juicer Tools terminated with exit code %lu: %s", ec,
                                                juicer_tools_stderr.get()));
     }
-    absl::FPrintF(stderr, "Parsed %lu records in %s!\n", records_parsed,
+    fmt::fprintf(stderr, "Parsed %lu records in %s!\n", records_parsed,
                   absl::FormatDuration(absl::Now() - t0));
   } catch (const std::runtime_error &err) {
     throw std::runtime_error(
-        absl::StrFormat("An error occurred while running juicer_tools dump: %s", err.what()));
+        fmt::format("An error occurred while running juicer_tools dump: %s", err.what()));
   }
 
   return cmatrix;

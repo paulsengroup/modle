@@ -17,6 +17,7 @@
 #include "absl/strings/str_format.h"
 #include "absl/strings/str_join.h"
 #include "absl/strings/str_split.h"
+#include "fmt/printf.h"
 #include "modle/contacts.hpp"
 #include "modle/utils.hpp"
 
@@ -72,19 +73,19 @@ ContactMatrix<I>::ContactMatrix(const std::string &path_to_file,
     }
 
     if (i != this->_nrows)
-      throw std::runtime_error(absl::StrFormat("Expected %lu rows, got %lu\n", this->_nrows, i));
+      throw std::runtime_error(fmt::format("Expected %lu rows, got %lu\n", this->_nrows, i));
 
     if (!in.eof() /*|| in.fail() */ || fp.fail()) {
-      throw std::runtime_error(absl::StrFormat("IO error while reading from file '%s': %s",
-                                               path_to_file, std::strerror(errno)));
+      throw std::runtime_error(fmt::format("IO error while reading from file '%s': %s",
+                                           path_to_file, std::strerror(errno)));
     }
 
   } catch (const boost::iostreams::bzip2_error &err) {
-    throw std::runtime_error(absl::StrFormat("An error occurred while decompressing file '%s': %s",
-                                             path_to_file, err.what()));
+    throw std::runtime_error(fmt::format("An error occurred while decompressing file '%s': %s",
+                                         path_to_file, err.what()));
   } catch (const std::runtime_error &err) {
     throw std::runtime_error(
-        absl::StrFormat("An error occurred while parsing file '%s': %s", path_to_file, err.what()));
+        fmt::format("An error occurred while parsing file '%s': %s", path_to_file, err.what()));
   }
 }
 
@@ -101,7 +102,7 @@ ContactMatrix<I>::ContactMatrix(const std::string &path_to_file, uint64_t nrows,
   auto read_and_tokenize = [&]() {
     if (std::getline(fp, line)) {
       if (toks = absl::StrSplit(line, sep); toks.size() != 3) {
-        throw std::runtime_error(absl::StrFormat(
+        throw std::runtime_error(fmt::format(
             "Malformed file: expected 3 fields, got %lu: line that triggered the error: '%s'",
             toks.size(), line));
       }
@@ -142,18 +143,18 @@ ContactMatrix<I>::ContactMatrix(const std::string &path_to_file, uint64_t nrows,
     if (!fp.eof() || fp.bad()) throw std::runtime_error("General IO error");
 
   } catch (const boost::iostreams::bzip2_error &err) {
-    throw std::runtime_error(absl::StrFormat("An error occurred while decompressing file '%s': %s.",
-                                             path_to_file, err.what()));
+    throw std::runtime_error(fmt::format("An error occurred while decompressing file '%s': %s.",
+                                         path_to_file, err.what()));
   } catch (const std::runtime_error &err) {
-    throw std::runtime_error(absl::StrFormat("An error occurred while parsing file '%s': %s.",
-                                             path_to_file, err.what()));
+    throw std::runtime_error(
+        fmt::format("An error occurred while parsing file '%s': %s.", path_to_file, err.what()));
   }
 }
 
 template <typename I>
 I &ContactMatrix<I>::at(uint64_t i, uint64_t j) {
   if ((j * this->_nrows) + i > this->_contacts.size()) {
-    throw std::runtime_error(absl::StrFormat(
+    throw std::runtime_error(fmt::format(
         "ContactMatrix::at tried to access element m[%lu][%lu] of a matrix of shape [%lu][%lu]! "
         "(%lu >= %lu).",
         i, j, this->n_rows(), this->n_cols(), (j * this->_nrows) + i, this->_contacts.size()));
@@ -164,7 +165,7 @@ I &ContactMatrix<I>::at(uint64_t i, uint64_t j) {
 template <typename I>
 const I &ContactMatrix<I>::at(uint64_t i, uint64_t j) const {
   if ((j * this->_nrows) + i > this->_contacts.size()) {
-    throw std::runtime_error(absl::StrFormat(
+    throw std::runtime_error(fmt::format(
         "ContactMatrix::at tried to access element m[%lu][%lu] of a matrix of shape [%lu][%lu]! "
         "(%lu >= %lu).",
         i, j, this->n_rows(), this->n_cols(), (j * this->_nrows) + i, this->_contacts.size()));
@@ -182,7 +183,7 @@ void ContactMatrix<I>::increment(uint64_t row, uint64_t col, I n) {
   }
   try {
     if (j > this->n_cols())
-      throw std::runtime_error(absl::StrFormat("j=%d > ncols=%d.", j, this->n_cols()));
+      throw std::runtime_error(fmt::format("j=%d > ncols=%d.", j, this->n_cols()));
     if (i > this->n_rows()) {
       ++this->_updates_missed;
       return;
@@ -194,7 +195,7 @@ void ContactMatrix<I>::increment(uint64_t row, uint64_t col, I n) {
     this->at(i, j) += n;
   } catch (const std::runtime_error &err) {
     throw std::logic_error(
-        absl::StrFormat("ContactMatrix::increment(%d, %d, %d): %s", row, col, n, err.what()));
+        fmt::format("ContactMatrix::increment(%d, %d, %d): %s", row, col, n, err.what()));
   }
 }
 
@@ -208,7 +209,7 @@ void ContactMatrix<I>::set(uint64_t row, uint64_t col, I n) {
   }
   try {
     if (j > this->n_cols())
-      throw std::runtime_error(absl::StrFormat("j=%d > ncols=%d.", j, this->n_cols()));
+      throw std::runtime_error(fmt::format("j=%d > ncols=%d.", j, this->n_cols()));
     if (i > this->n_rows()) {
       ++this->_updates_missed;
       return;
@@ -219,7 +220,7 @@ void ContactMatrix<I>::set(uint64_t row, uint64_t col, I n) {
     this->at(i, j) = n;
   } catch (const std::runtime_error &err) {
     throw std::logic_error(
-        absl::StrFormat("ContactMatrix::set(%d, %d, %d): %s", row, col, n, err.what()));
+        fmt::format("ContactMatrix::set(%d, %d, %d): %s", row, col, n, err.what()));
   }
 }
 
@@ -233,7 +234,7 @@ void ContactMatrix<I>::decrement(uint64_t row, uint64_t col, I n) {
   }
   try {
     if (j > this->n_cols())
-      throw std::runtime_error(absl::StrFormat("j=%d > ncols=%d.", j, this->n_cols()));
+      throw std::runtime_error(fmt::format("j=%d > ncols=%d.", j, this->n_cols()));
     if (i > this->n_rows()) {
       ++this->_updates_missed;
       return;
@@ -245,7 +246,7 @@ void ContactMatrix<I>::decrement(uint64_t row, uint64_t col, I n) {
     this->at(i, j) -= n;
   } catch (const std::runtime_error &err) {
     throw std::logic_error(
-        absl::StrFormat("ContactMatrix::decrement(%d, %d, %d): %s", row, col, n, err.what()));
+        fmt::format("ContactMatrix::decrement(%d, %d, %d): %s", row, col, n, err.what()));
   }
 }
 
@@ -267,7 +268,7 @@ void ContactMatrix<I>::print(bool full) const {
         else
           row[x] = this->at(i, j);
       }
-      absl::PrintF("%s\n", absl::StrJoin(row, "\t"));
+      fmt::print("%s\n", absl::StrJoin(row, "\t"));
     }
   } else {
     std::vector<I> row(this->n_cols());
@@ -275,7 +276,7 @@ void ContactMatrix<I>::print(bool full) const {
       for (auto j = 0UL; j < this->n_cols(); ++j) {
         row[j] = this->at(i, j);
       }
-      absl::PrintF("%s\n", absl::StrJoin(row, "\t"));
+      fmt::print("%s\n", absl::StrJoin(row, "\t"));
     }
   }
 }
@@ -332,7 +333,7 @@ std::pair<uint32_t, uint32_t> ContactMatrix<I>::write_to_tsv(const std::string &
   std::string buff;
   uint64_t raw_size = 0;
   if (this->_updates_missed > 0) {
-    absl::FPrintF(stderr, "WARNING: There were %lu missed updates!\n", this->_updates_missed);
+    fmt::fprintf(stderr, "WARNING: There were %lu missed updates!\n", this->_updates_missed);
   }
   try {
     out.push(boost::iostreams::bzip2_compressor(boost::iostreams::bzip2_params(9)));
@@ -349,13 +350,13 @@ std::pair<uint32_t, uint32_t> ContactMatrix<I>::write_to_tsv(const std::string &
       raw_size += buff.size();
     }
     if (!out || !fp) {
-      throw std::runtime_error(absl::StrFormat("IO error while writing to file '%s': %s",
-                                               path_to_file, std::strerror(errno)));
+      throw std::runtime_error(fmt::format("IO error while writing to file '%s': %s", path_to_file,
+                                           std::strerror(errno)));
     }
 
   } catch (const boost::iostreams::bzip2_error &err) {
-    throw std::runtime_error(absl::StrFormat("An error occurred while compressing file '%s': %s.",
-                                             path_to_file, err.what()));
+    throw std::runtime_error(fmt::format("An error occurred while compressing file '%s': %s.",
+                                         path_to_file, err.what()));
   }
 
   out.reset();
@@ -376,8 +377,8 @@ template <typename I>
 typename ContactMatrix<I>::Header ContactMatrix<I>::parse_header(std::string_view path_to_file) {
   std::ifstream fp(path_to_file.data(), std::ios_base::binary);
   if (!fp)
-    throw std::runtime_error(absl::StrFormat("Unable to open file '%s' for reading: %s",
-                                             path_to_file, std::strerror(errno)));
+    throw std::runtime_error(fmt::format("Unable to open file '%s' for reading: %s", path_to_file,
+                                         std::strerror(errno)));
   boost::iostreams::filtering_istream in;
   in.push(boost::iostreams::bzip2_decompressor());
   in.push(fp);
@@ -390,17 +391,17 @@ typename ContactMatrix<I>::Header ContactMatrix<I>::parse_header(
   ContactMatrix<I>::Header header;
   std::string buff;
   if (!std::getline(in, buff)) {
-    throw std::runtime_error(absl::StrFormat("IO error while reading from file '%s': %s",
-                                             path_to_file, std::strerror(errno)));
+    throw std::runtime_error(fmt::format("IO error while reading from file '%s': %s", path_to_file,
+                                         std::strerror(errno)));
   }
   if (rewind_file) in.seekg(0);
 
   std::vector<std::string_view> toks = absl::StrSplit(buff, '\t');
   if (toks.size() != 5 || buff.front() != '#') {
     throw std::runtime_error(
-        absl::StrFormat("Malformed header: header should have the following structure: "
-                        "#chr_name\\tbin_size\\tstart\\tend\\tdiagonal_width: got '%s'",
-                        buff));
+        fmt::format("Malformed header: header should have the following structure: "
+                    "#chr_name\\tbin_size\\tstart\\tend\\tdiagonal_width: got '%s'",
+                    buff));
   }
   header.chr_name = toks[0].substr(1);  // Remove the leading #
   modle::utils::parse_numeric_or_throw(toks[1], header.bin_size);
@@ -408,7 +409,7 @@ typename ContactMatrix<I>::Header ContactMatrix<I>::parse_header(
   modle::utils::parse_numeric_or_throw(toks[3], header.end);
   std::string err;
   if (header.end < header.start)
-    err = absl::StrFormat("Malformed header: end position < start position in header '%s'", buff);
+    err = fmt::format("Malformed header: end position < start position in header '%s'", buff);
   if (header.bin_size > header.end - header.start) {
     absl::StrAppendFormat(&err, "%sMalformed header: bin_size > end - start in header '%s'",
                           err.empty() ? "" : "\n", buff);
@@ -433,7 +434,7 @@ std::pair<uint32_t, uint32_t> ContactMatrix<I>::write_full_matrix_to_tsv(
   std::string buff;
   uint64_t raw_size = 0;
   if (this->_updates_missed > 0) {
-    absl::FPrintF(stderr, "WARNING: There were %lu missed updates!\n", this->_updates_missed);
+    fmt::fprintf(stderr, "WARNING: There were %lu missed updates!\n", this->_updates_missed);
   }
   try {
     out.push(boost::iostreams::bzip2_compressor(boost::iostreams::bzip2_params(9)));
@@ -460,8 +461,8 @@ std::pair<uint32_t, uint32_t> ContactMatrix<I>::write_full_matrix_to_tsv(
     }
     if (out.bad() || fp.bad()) throw std::runtime_error("General IO error");
   } catch (const boost::iostreams::bzip2_error &err) {
-    throw std::runtime_error(absl::StrFormat("An error occurred while writing file '%s': %s.",
-                                             path_to_file, err.what()));
+    throw std::runtime_error(
+        fmt::format("An error occurred while writing file '%s': %s.", path_to_file, err.what()));
   }
   out.reset();
   return std::make_pair(raw_size, std::filesystem::file_size(path_to_file));
