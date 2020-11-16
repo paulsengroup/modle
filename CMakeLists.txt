@@ -58,7 +58,10 @@ if(ENABLE_PCH)
     INTERFACE
     <vector>
     <string>
-    <utility>)
+    <string_view>
+    <utility>
+    <random>
+    <cassert>)
 endif()
 
 # Make sure compiler support execution policies (C++17)
