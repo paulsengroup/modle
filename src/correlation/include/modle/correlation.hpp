@@ -5,7 +5,7 @@
 #include <utility>
 #include <vector>
 
-namespace modle {
+namespace modle::correlation {
 
 template <typename N>
 class CorrelationTest {
@@ -25,7 +25,7 @@ class CorrelationTest {
   const std::vector<N>& _v1;
   const std::vector<N>& _v2;
 
-  [[nodiscard]] static double compute_spearman_significance(double rho, uint32_t n);
+  [[nodiscard]] static double compute_spearman_significance(double rho, std::size_t n);
   [[nodiscard]] static double compute_kendall_b_significance(uint32_t nc, uint32_t nd,
                                                              uint32_t size, uint32_t tie1,
                                                              uint32_t tie2);

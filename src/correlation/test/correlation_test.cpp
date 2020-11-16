@@ -29,8 +29,8 @@ TEST_CASE("Corr. test: Spearman w ties", "[correlation][spearman][short]") {
 
 TEST_CASE("Corr. test: Spearman Scipy", "[correlation][spearman][short]") {
   std::mt19937 rnd_eng{std::random_device{}()};
-  auto v1 = generate_random_vect(rnd_eng);
-  auto v2 = generate_random_vect(rnd_eng);
+  auto v1 = generate_random_vect(rnd_eng, 1'000, 0, 15'000);
+  auto v2 = generate_random_vect(rnd_eng, 1'000, 0, 15'000);
   auto ct = CorrelationTest(v1, v2);
   const auto& [rho, pv] = ct.compute_spearman();
   const auto& [rho_py, pv_py] = corr_scipy(v1, v2, "spearmanr");
@@ -41,8 +41,8 @@ TEST_CASE("Corr. test: Spearman Scipy", "[correlation][spearman][short]") {
 TEST_CASE("Corr. test: Spearman Scipy long", "[correlation][spearman][medium]") {
   std::mt19937 rnd_eng{std::random_device{}()};
   for (auto i = 0UL; i < 100; ++i) {  // NOLINT
-    auto v1 = generate_random_vect(rnd_eng);
-    auto v2 = generate_random_vect(rnd_eng);
+    auto v1 = generate_random_vect(rnd_eng, 1'000, 0, 15'000);
+    auto v2 = generate_random_vect(rnd_eng, 1'000, 0, 15'000);
     auto ct = CorrelationTest(v1, v2);
     const auto& [rho, pv] = ct.compute_spearman();
     const auto& [rho_py, pv_py] = corr_scipy(v1, v2, "spearmanr");
@@ -53,8 +53,8 @@ TEST_CASE("Corr. test: Spearman Scipy long", "[correlation][spearman][medium]") 
 
 TEST_CASE("Corr. test: Spearman Scipy long vect.", "[correlation][spearman][medium]") {
   std::mt19937 rnd_eng{std::random_device{}()};
-  auto v1 = generate_random_vect(rnd_eng, 1'000'000);  // NOLINT
-  auto v2 = generate_random_vect(rnd_eng, 1'000'000);  // NOLINT
+  auto v1 = generate_random_vect(rnd_eng, 1'000'000, 0, 15'000);  // NOLINT
+  auto v2 = generate_random_vect(rnd_eng, 1'000'000, 0, 15'000);  // NOLINT
   auto ct = CorrelationTest(v1, v2);
   const auto& [rho, pv] = ct.compute_spearman();
   const auto& [rho_py, pv_py] = corr_scipy(v1, v2, "spearmanr");
@@ -82,8 +82,8 @@ TEST_CASE("Corr. test: Kendall w ties", "[correlation][kendall][short]") {
 
 TEST_CASE("Corr. test: Kendall Scipy", "[correlation][kendall][short]") {
   std::mt19937 rnd_eng{std::random_device{}()};
-  auto v1 = generate_random_vect(rnd_eng);
-  auto v2 = generate_random_vect(rnd_eng);
+  auto v1 = generate_random_vect(rnd_eng, 1'000, 0, 15'000);
+  auto v2 = generate_random_vect(rnd_eng, 1'000, 0, 15'000);
   auto ct = CorrelationTest(v1, v2);
   const auto& [tau, pv] = ct.compute_kendall();
   const auto& [tau_py, pv_py] = corr_scipy(v1, v2, "kendalltau");
@@ -94,8 +94,8 @@ TEST_CASE("Corr. test: Kendall Scipy", "[correlation][kendall][short]") {
 TEST_CASE("Corr. test: Kendall Scipy long", "[correlation][kendall][medium]") {
   std::mt19937 rnd_eng{std::random_device{}()};
   for (auto i = 0UL; i < 100; ++i) {  // NOLINT
-    auto v1 = generate_random_vect(rnd_eng);
-    auto v2 = generate_random_vect(rnd_eng);
+    auto v1 = generate_random_vect(rnd_eng, 1'000, 0, 15'000);
+    auto v2 = generate_random_vect(rnd_eng, 1'000, 0, 15'000);
     auto ct = CorrelationTest(v1, v2);
     const auto& [tau, pv] = ct.compute_kendall();
     const auto& [tau_py, pv_py] = corr_scipy(v1, v2, "kendalltau");
@@ -106,8 +106,8 @@ TEST_CASE("Corr. test: Kendall Scipy long", "[correlation][kendall][medium]") {
 
 TEST_CASE("Corr. test: Kendall Scipy long vect.", "[correlation][kendall][medium]") {
   std::mt19937 rnd_eng{std::random_device{}()};
-  auto v1 = generate_random_vect(rnd_eng, 1'000'000);  // NOLINT
-  auto v2 = generate_random_vect(rnd_eng, 1'000'000);  // NOLINT
+  auto v1 = generate_random_vect(rnd_eng, 1'000'000, 0, 15'000);  // NOLINT
+  auto v2 = generate_random_vect(rnd_eng, 1'000'000, 0, 15'000);  // NOLINT
   auto ct = CorrelationTest(v1, v2);
   const auto& [tau, pv] = ct.compute_kendall();
   const auto& [tau_py, pv_py] = corr_scipy(v1, v2, "kendalltau");

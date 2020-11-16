@@ -18,7 +18,7 @@ void eval(const modle::tools::config& c) {
                                : modle::ContactMatrix<uint32_t>(c.path_to_reference_cmatrix);
   assert(cmatrix.n_cols() == reference_cmatrix.n_cols() &&
          cmatrix.n_rows() == reference_cmatrix.n_rows());
-  modle::CorrelationTest<uint32_t> corr(cmatrix.get_raw_count_vector(),
+  modle::correlation::CorrelationTest<uint32_t> corr(cmatrix.get_raw_count_vector(),
                                         reference_cmatrix.get_raw_count_vector());
   if (c.compute_spearman) {
     const auto max_size = cmatrix.n_cols() * cmatrix.n_rows();
