@@ -29,9 +29,9 @@ class Genome {
   [[nodiscard]] uint32_t get_n_chromosomes() const;
   [[nodiscard]] uint64_t size() const;
   [[nodiscard]] uint64_t n50() const;
-  [[nodiscard]] uint32_t get_n_bins() const;
+  [[nodiscard]] uint64_t get_n_bins() const;
   [[nodiscard]] uint64_t get_n_lefs() const;
-  [[nodiscard]] uint32_t get_n_barriers() const;
+  [[nodiscard]] uint64_t get_n_barriers() const;
   [[nodiscard]] std::vector<std::string_view> get_chromosome_names() const;
   [[nodiscard]] std::vector<uint32_t> get_chromosome_lengths() const;
   [[nodiscard]] uint64_t get_n_of_free_lefs() const;

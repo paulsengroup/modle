@@ -1,5 +1,6 @@
 #include "modle/genome.hpp"
 
+#include <cassert>
 #include <execution>
 #include <filesystem>
 #include <functional>
@@ -29,14 +30,19 @@ Genome::Genome(const config& c)
 std::vector<uint32_t> Genome::get_chromosome_lengths() const {
   std::vector<uint32_t> lengths;
   lengths.reserve(this->get_n_chromosomes());
-  for (const auto& chr : this->_chromosomes) lengths.push_back(chr.length());
+  for (const auto& chr : this->_chromosomes) {
+    assert(chr.length() <= UINT32_MAX);  // NOLINT
+    lengths.push_back(static_cast<uint32_t>(chr.length()));
+  }
   return lengths;
 }
 
 std::vector<std::string_view> Genome::get_chromosome_names() const {
   std::vector<std::string_view> names;
   names.reserve(this->get_n_chromosomes());
-  for (const auto& chr : this->_chromosomes) names.push_back(chr.name);
+  for (const auto& chr : this->_chromosomes) {
+    names.push_back(chr.name);
+  }
   return names;
 }
 
@@ -45,11 +51,12 @@ uint64_t Genome::get_n_lefs() const { return this->_lefs.size(); }
 uint64_t Genome::get_n_of_free_lefs() const {
   return std::accumulate(
       this->_lefs.begin(), this->_lefs.end(), 0UL,
+      // NOLINTNEXTLINE(readability-implicit-bool-conversion)
       [](uint32_t accumulator, const Lef& lef) { return accumulator + !lef.is_bound(); });
 }
 
 uint64_t Genome::get_n_of_busy_lefs() const {
-  assert(this->get_n_lefs() >= this->get_n_of_free_lefs());
+  assert(this->get_n_lefs() >= this->get_n_of_free_lefs());  // NOLINT
   return this->get_n_lefs() - this->get_n_of_free_lefs();
 }
 
@@ -90,9 +97,10 @@ std::vector<Chromosome> Genome::init_chromosomes_from_file(uint32_t diagonal_wid
 std::vector<Lef> Genome::generate_lefs(uint32_t n) {
   std::vector<Lef> v;
   v.reserve(n);
-  for (auto i = 0UL; i < n; ++i)
+  for (auto i = 0UL; i < n; ++i) {
     v.emplace_back(this->_bin_size, this->_avg_lef_processivity,
                    this->_probability_of_extr_unit_bypass, this->_lef_unloader_strength_coeff);
+  }
   return v;
 }
 
@@ -102,14 +110,17 @@ uint64_t Genome::n50() const {
   std::sort(chr_lengths.rbegin(), chr_lengths.rend(), std::greater<>());
   uint64_t tot = 0;
   for (const auto& len : chr_lengths) {
-    if ((tot += len) >= n50_thresh) return len;
+    if ((tot += len) >= n50_thresh) {
+      return len;
+    }
   }
   return chr_lengths.back();
 }
 
 void Genome::randomly_generate_extrusion_barriers(uint32_t n_barriers) {
   const auto& weights = this->get_chromosome_lengths();
-  std::discrete_distribution<> chr_idx(weights.begin(), weights.end());
+  std::discrete_distribution<std::size_t> chr_idx(weights.begin(), weights.end());
+  // NOLINTNEXTLINE(readability-magic-numbers, cppcoreguidelines-avoid-magic-numbers)
   std::bernoulli_distribution strand_selector(0.5);
 
   for (auto i = 0UL; i < n_barriers; ++i) {
@@ -124,7 +135,9 @@ void Genome::randomly_generate_extrusion_barriers(uint32_t n_barriers) {
     auto& bin = chr.dna.get_bin_from_pos(barrier_position);
     bin.add_extr_barrier(barrier_position, this->_probability_of_barrier_block, direction);
   }
-  for (auto& chr : this->get_chromosomes()) chr.sort_barriers_by_pos();
+  for (auto& chr : this->get_chromosomes()) {
+    chr.sort_barriers_by_pos();
+  }
 }
 
 std::pair<uint64_t, uint64_t> Genome::import_extrusion_barriers_from_bed(
@@ -134,14 +147,18 @@ std::pair<uint64_t, uint64_t> Genome::import_extrusion_barriers_from_bed(
   uint64_t nrecords_ignored = 0;
   absl::flat_hash_map<std::string_view, DNA*> chromosomes;
   chromosomes.reserve(this->get_n_chromosomes());
-  for (auto& chr : this->get_chromosomes()) chromosomes.emplace(chr.name, &chr.dna);
+  for (auto& chr : this->get_chromosomes()) {
+    chromosomes.emplace(chr.name, &chr.dna);
+  }
   for (auto& record : p.parse_all()) {
     ++nrecords;
     if (!chromosomes.contains(record.chrom) || record.strand == '.') {
       ++nrecords_ignored;
       continue;
     }
-    if (probability_of_block != 0) record.score = probability_of_block;
+    if (probability_of_block != 0) {
+      record.score = probability_of_block;
+    }
     if (record.score < 0 || record.score > 1) {
       throw std::runtime_error(
           fmt::format("Invalid score field detected for record %s[%lu-%lu]: expected a score "
@@ -170,7 +187,10 @@ std::vector<Chromosome>& Genome::get_chromosomes() { return this->_chromosomes; 
 std::vector<Lef>& Genome::get_lefs() { return this->_lefs; }
 const std::vector<Lef>& Genome::get_lefs() const { return this->_lefs; }
 
-uint32_t Genome::get_n_chromosomes() const { return this->_chromosomes.size(); }
+uint32_t Genome::get_n_chromosomes() const {
+  assert(this->_chromosomes.size() <= UINT32_MAX);  // NOLINT
+  return static_cast<uint32_t>(this->_chromosomes.size());
+}
 
 uint64_t Genome::size() const {
   return std::accumulate(
@@ -178,22 +198,22 @@ uint64_t Genome::size() const {
       [&](uint64_t accumulator, const Chromosome& chr) { return accumulator + chr.length(); });
 }
 
-uint32_t Genome::get_n_bins() const {
+uint64_t Genome::get_n_bins() const {
   return std::accumulate(
-      this->_chromosomes.begin(), this->_chromosomes.end(), 0UL,
+      this->_chromosomes.begin(), this->_chromosomes.end(), 0ULL,
       [](uint64_t accumulator, const Chromosome& chr) { return accumulator + chr.get_n_bins(); });
 }
 
-uint32_t Genome::get_n_barriers() const {
-  return std::accumulate(this->_chromosomes.begin(), this->_chromosomes.end(), 0UL,
-                         [](uint32_t accumulator, const Chromosome& chr) {
+uint64_t Genome::get_n_barriers() const {
+  return std::accumulate(this->_chromosomes.begin(), this->_chromosomes.end(), 0ULL,
+                         [](uint64_t accumulator, const Chromosome& chr) {
                            return accumulator + chr.get_n_barriers();
                          });
 }
 
 void Genome::randomly_bind_lefs() {
   const auto& weights = this->get_chromosome_lengths();
-  std::discrete_distribution<> chr_idx(weights.begin(), weights.end());
+  std::discrete_distribution<std::size_t> chr_idx(weights.begin(), weights.end());
 
   for (auto& lef : this->_lefs) {
     // Randomly select a chromosome, barrier binding pos and direction
@@ -207,14 +227,15 @@ uint32_t Genome::run_burnin(double prob_of_rebinding, uint16_t target_n_of_unloa
   double avg_num_of_extr_events_per_bind =
       (static_cast<double>(this->_avg_lef_processivity) / this->_bin_size) /
       2 /* N of active extr. unit */;
-  uint32_t n_of_lefs_to_bind_each_round =
-      std::max<uint32_t>(this->get_n_lefs() / avg_num_of_extr_events_per_bind, 1.0);
+  const uint64_t n_of_lefs_to_bind_each_round = static_cast<uint64_t>(std::lround(
+      std::max(static_cast<double>(this->get_n_lefs()) / avg_num_of_extr_events_per_bind, 1.0)));
 
   std::vector<uint16_t> unload_events(this->get_n_lefs(), 0);
   const auto& weights = this->get_chromosome_lengths();
-  std::discrete_distribution<> chr_idx(weights.begin(), weights.end());
+  std::discrete_distribution<std::size_t> chr_idx(weights.begin(), weights.end());
 
-  uint64_t start_idx = 0, end_idx = n_of_lefs_to_bind_each_round;
+  uint64_t start_idx = 0;
+  uint64_t end_idx = n_of_lefs_to_bind_each_round;
   for (auto rounds = 0U;; ++rounds) {
     for (; start_idx < end_idx && start_idx < this->get_n_lefs(); ++start_idx) {
       Chromosome& chr = this->_chromosomes[chr_idx(this->_rand_eng)];
@@ -225,7 +246,7 @@ uint32_t Genome::run_burnin(double prob_of_rebinding, uint16_t target_n_of_unloa
 
       if (lef.is_bound()) {
         lef.extrude(this->_rand_eng);
-        unload_events[i] += !lef.is_bound();
+        unload_events[i] += !lef.is_bound();  // NOLINT(readability-implicit-bool-conversion)
       }
     }
 
@@ -256,7 +277,7 @@ uint32_t Genome::run_burnin(double prob_of_rebinding, uint16_t target_n_of_unloa
 void Genome::simulate_extrusion(uint32_t iterations) {
   const auto step = iterations / 500;
   const auto& weights = this->get_chromosome_lengths();
-  std::discrete_distribution<> chr_idx(weights.begin(), weights.end());
+  std::discrete_distribution<std::size_t> chr_idx(weights.begin(), weights.end());
 
   auto t0 = absl::Now();
   for (auto i = 1UL; i <= iterations; ++i) {
@@ -266,7 +287,9 @@ void Genome::simulate_extrusion(uint32_t iterations) {
 
     for (auto& lef : this->_lefs) {
       if (lef.is_bound()) {  // Register contact and extrude if LEF is bound
-        if (register_contacts) lef.register_contact();
+        if (register_contacts) {
+          lef.register_contact();
+        }
         lef.extrude(this->_rand_eng);
       }
     }
