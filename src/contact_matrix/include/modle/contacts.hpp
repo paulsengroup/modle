@@ -20,12 +20,14 @@ class ContactMatrix {
   struct Header {
     std::string chr_name{};
     uint64_t bin_size{};
-    uint64_t start{};
-    uint64_t end{};
-    uint64_t diagonal_width{};
-    uint64_t ncols{};
-    uint64_t nrows{};
+    std::size_t start{};
+    std::size_t end{};
+    std::size_t diagonal_width{};
+    std::size_t ncols{};
+    std::size_t nrows{};
     [[nodiscard]] std::string to_string() const;
+    // #chr_name   bin_size   start   end   diagonal_width
+    static constexpr uint8_t N_OF_EXPECTED_TOKENS = 5;
   };
 
   ContactMatrix(uint64_t nrows, uint64_t ncols, bool fill_with_random_numbers = false);
@@ -42,9 +44,10 @@ class ContactMatrix {
   [[nodiscard]] uint64_t n_cols() const;
   [[nodiscard]] uint64_t n_rows() const;
   std::pair<uint32_t /* bytes_in */, uint32_t /* bytes_out */> write_full_matrix_to_tsv(
-      const std::string& path_to_file) const;
+      const std::string& path_to_file, int bzip2_block_size = 9) const;
   std::pair<uint32_t /* bytes_in */, uint32_t /* bytes_out */> write_to_tsv(
-      const std::string& path_to_file, std::string_view header = "") const;
+      const std::string& path_to_file, std::string_view header = "",
+      int bzip2_block_size = 9) const;
   void clear_missed_updates_counter();
   const std::vector<I>& get_raw_count_vector() const;
   [[nodiscard]] static Header parse_header(std::string_view path_to_file);

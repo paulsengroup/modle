@@ -7,9 +7,9 @@
 #include <fstream>
 #include <vector>
 
-#include "fmt/printf.h"
 #include "absl/strings/str_split.h"
 #include "catch2/catch.hpp"
+#include "fmt/printf.h"
 #include "modle/utils.hpp"
 
 namespace modle::contacts::test {
@@ -29,21 +29,20 @@ std::vector<std::vector<uint32_t>> load_matrix_from_file(const std::string& path
                                                          const std::string& sep = "\t") {
   std::vector<std::vector<uint32_t>> m;
   std::ifstream f(path_to_file);
-  if (f.is_open()) {
-    std::string line;
-    std::string buff;
-    uint32_t n;  // NOLINT
-    while (std::getline(f, line)) {
-      std::vector<uint32_t> v;
+  std::string line;
+  std::string buff;
+  uint32_t n;  // NOLINT
+  while (std::getline(f, line)) {
+    std::vector<uint32_t> v;
 
-      for (const auto& tok : absl::StrSplit(line, sep)) {
-        modle::utils::parse_numeric_or_throw(tok, n);
-        v.push_back(n);
-      }
-      m.emplace_back(std::move(v));
+    for (const auto& tok : absl::StrSplit(line, sep)) {
+      modle::utils::parse_numeric_or_throw(tok, n);
+      v.push_back(n);
     }
-  } else {
-    throw std::runtime_error(fmt::format("Unable to open file '%s'.", path_to_file));
+    m.emplace_back(std::move(v));
+    if (!f && !f.eof()) {
+      throw fmt::system_error(errno, "Unable to open file '{}'", path_to_file);
+    }
   }
   return m;
 }
@@ -76,8 +75,7 @@ void test_with_large_matrix(const std::string& path_to_file) {
   in.push(boost::iostreams::bzip2_decompressor());
   in.push(f);
   if (!f || !in) {
-    throw std::runtime_error(
-        fmt::format("Unable to open file '%s': %s", path_to_file, std::strerror(errno)));
+    throw fmt::system_error(errno, "Unable to open file '{}'", path_to_file);
   }
   std::string line;
   uint32_t n{};
@@ -90,8 +88,7 @@ void test_with_large_matrix(const std::string& path_to_file) {
       }
     }
     if ((!f && !f.eof()) || (!in && !in.eof())) {
-      throw std::runtime_error(fmt::format("IO error while reading from file '%s': %s.",
-                                               path_to_file, std::strerror(errno)));
+      throw fmt::system_error(errno, "IO error while reading from file '{}'", path_to_file);
     }
   }
 }
