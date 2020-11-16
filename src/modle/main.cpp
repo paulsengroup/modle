@@ -1,9 +1,9 @@
 #include <filesystem>
 #include <string>
 
-#include "fmt/printf.h"
+#include "./cli.hpp"
 #include "absl/time/clock.h"
-#include "modle/cli.hpp"
+#include "fmt/printf.h"
 #include "modle/genome.hpp"
 #include "modle/parsers.hpp"
 
@@ -11,11 +11,13 @@ namespace modle {
 
 std::vector<std::string> check_if_output_file_exists(const modle::config& c) {
   std::vector<std::string> fn_collisions;
-  if (c.force) return fn_collisions;
+  if (c.force) {
+    return fn_collisions;
+  }
   modle::ChrSizeParser parser(c.path_to_chr_sizes);
   for (const auto& record : parser.parse()) {
-    const auto f1 = fmt::format("%s/%s.tsv.bz2", c.output_dir, record.name);
-    const auto f2 = fmt::format("%s/%s_raw.tsv.bz2", c.output_dir, record.name);
+    const auto f1 = fmt::format("{}/{}.tsv.bz2", c.output_dir, record.name);
+    const auto f2 = fmt::format("{}/{}_raw.tsv.bz2", c.output_dir, record.name);
     if (std::filesystem::exists(f1)) {
       fn_collisions.push_back(std::filesystem::weakly_canonical(f1));
     }
@@ -43,27 +45,27 @@ void run_simulation(const modle::config& c) {
     barriers_ignored = tmp.second;
   }
   fmt::fprintf(stderr,
-                "Initialization took %s.\n"
-                " - # of sequences:       %lu\n"
-                " - Avg. sequence length: %.3f Mbp\n"
-                " - Genome N50:           %.3f Mbp\n"
-                " - # of LEFs:            %lu\n"
-                " - # of extr. barriers   %lu (%lu ignored)\n",
-                absl::FormatDuration(absl::Now() - t0), genome.get_n_chromosomes(),
-                (static_cast<double>(genome.size()) / genome.get_n_chromosomes()) / 1.0e6,
-                genome.n50() / 1.0e6, genome.get_n_lefs(), tot_barriers - barriers_ignored,
-                barriers_ignored);
+               "Initialization took %s.\n"
+               " - # of sequences:       %lu\n"
+               " - Avg. sequence length: %.3f Mbp\n"
+               " - Genome N50:           %.3f Mbp\n"
+               " - # of LEFs:            %lu\n"
+               " - # of extr. barriers   %lu (%lu ignored)\n",
+               absl::FormatDuration(absl::Now() - t0), genome.get_n_chromosomes(),
+               (static_cast<double>(genome.size()) / genome.get_n_chromosomes()) / 1.0e6,
+               genome.n50() / 1.0e6, genome.get_n_lefs(), tot_barriers - barriers_ignored,
+               barriers_ignored);
 
   t0 = absl::Now();
   if (c.skip_burnin) {
     genome.randomly_bind_lefs();
     fmt::fprintf(stderr, "Bound %lu LEFs in %s.\n", genome.get_n_of_busy_lefs(),
-                  absl::FormatDuration(absl::Now() - t0));
+                 absl::FormatDuration(absl::Now() - t0));
   } else {
     const auto burnin_rounds = genome.run_burnin(
         c.probability_of_lef_rebind, c.min_n_of_loops_per_lef, c.min_n_of_burnin_rounds);
     fmt::fprintf(stderr, "Burnin completed in %s! (%lu rounds).\n",
-                  absl::FormatDuration(absl::Now() - t0), burnin_rounds);
+                 absl::FormatDuration(absl::Now() - t0), burnin_rounds);
   }
 
   t0 = absl::Now();

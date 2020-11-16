@@ -39,15 +39,16 @@ std::vector<uint32_t> generate_random_vect(std::mt19937& rnd_eng, uint32_t size,
 
 std::pair<std::vector<uint32_t>, std::vector<uint32_t>> generate_correlated_vects(
     std::mt19937& rnd_eng, uint32_t size) {
-  std::uniform_int_distribution<int32_t> dist(size / -50, size / 50);
+  // NOLINTNEXTLINE(readability-magic-numbers, cppcoreguidelines-avoid-magic-numbers)
+  std::uniform_int_distribution<int32_t> dist(static_cast<int32_t>(size) / -50, size / 50);
   std::vector<uint32_t> v1(size);
   std::vector<uint32_t> v2(size);
   std::iota(v1.begin(), v1.end(), 0);
   std::iota(v2.begin(), v2.end(), 0);
   for (auto i = 0UL; i < size; ++i) {
-    int64_t n = v1[i] + dist(rnd_eng);
+    int64_t n = static_cast<int64_t>(v1[i]) + dist(rnd_eng);
     v1[i] = static_cast<uint32_t>(std::max(0L, n));
-    n = v2[i] + dist(rnd_eng);
+    n = static_cast<int64_t>(v2[i]) + dist(rnd_eng);
     v2[i] = static_cast<uint32_t>(std::max(0L, n));
   }
   return {v1, v2};
@@ -73,8 +74,10 @@ std::pair<double, double> corr_scipy(const std::vector<N>& v1, const std::vector
       //      "print(v1, file=stderr); print(v2, file=stderr); "
       "print(f\"{corr:.16e}\\t{pv:.16e}\", end=\"\");' " +
       f1_path + " " + f2_path;
+  // NOLINTNEXTLINE(readability-magic-numbers, cppcoreguidelines-avoid-magic-numbers)
   std::array<char, 256> buffer{};
   std::string result;
+  // TODO: replace this with boost::process
   std::unique_ptr<FILE, decltype(&pclose)> pipe(popen(cmd.c_str(), "r"), pclose);
   if (!pipe) {
     throw std::runtime_error("popen() failed!");
@@ -86,8 +89,9 @@ std::pair<double, double> corr_scipy(const std::vector<N>& v1, const std::vector
   std::filesystem::remove(f1_path);
   std::filesystem::remove(f2_path);
 
-  double rho = std::stod(std::string(result.data(), result.find('\t')));
-  double pv = std::stod(std::string(result.data() + result.find('\t')));
+  const auto rho = std::stod(std::string(result.data(), result.find('\t')));
+  // NOLINTNEXTLINE(cppcoreguidelines-pro-bounds-pointer-arithmetic)
+  const auto pv = std::stod(std::string(result.data() + result.find('\t')));
 
   return {rho, pv};
 }

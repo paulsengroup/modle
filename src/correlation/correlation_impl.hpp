@@ -38,7 +38,7 @@ template <typename Iterator, typename>
 std::pair<double, double> CorrelationTest<N>::compute_spearman(const Iterator v1_b,
                                                                const Iterator v1_e,
                                                                const Iterator v2_b) {
-  const uint32_t size = std::distance(v1_b, v1_e);
+  const auto size = std::distance(v1_b, v1_e);
   if (std::accumulate(v1_b, v1_e, 0.0) == 0 || std::accumulate(v2_b, v2_b + size, 0.0) == 0) {
     return {0, 0};
   }

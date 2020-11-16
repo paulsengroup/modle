@@ -13,7 +13,7 @@ class Cli {
   config _config;
   CLI::App _cli{};
 
-  void MakeCli() {
+  void MakeCli() noexcept {
     this->_cli.description("in-silico modeling of DNA loop extrusion.");
     auto* io = this->_cli.add_option_group("Input/Output", "");
     auto* gen = this->_cli.add_option_group("Generic", "");
@@ -167,7 +167,9 @@ class Cli {
   }
 
  public:
-  Cli(int argc, char** argv) : _argc(argc), _argv(argv), _exec_name(argv[0]) { this->MakeCli(); }
+  Cli(int argc, char** argv) noexcept : _argc(argc), _argv(argv), _exec_name(argv[0]) {
+    this->MakeCli();
+  }
   [[nodiscard]] config parse_arguments() {
     this->_cli.name(this->_exec_name);
     this->_cli.parse(this->_argc, this->_argv);

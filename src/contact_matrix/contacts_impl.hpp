@@ -70,10 +70,10 @@ ContactMatrix<I>::ContactMatrix(const std::string &path_to_file,
         if (noise_generator != nullptr) {
           for (auto k = n; k > 0; --k) {
             this->at(std::clamp<std::size_t>(
-                         std::round(((*noise_generator)(*rand_eng) / header.bin_size) + i), 0.0,
+                         std::lround(((*noise_generator)(*rand_eng) / header.bin_size) + i), 0.0,
                          this->_nrows - 1.0),
                      std::clamp<std::size_t>(
-                         std::round(((*noise_generator)(*rand_eng) / header.bin_size) + j), 0.0,
+                         std::lround(((*noise_generator)(*rand_eng) / header.bin_size) + j), 0.0,
                          this->_ncols - 1.0)) += 1;
           }
         } else {
