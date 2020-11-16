@@ -95,8 +95,9 @@ class DNA {
      * @param barriers   List of ExtrusionBarrier%s mapped in the genomic region represented by this
      * DNA::Bin.
      */
-    Bin(uint32_t idx, uint64_t start, uint64_t end, const std::vector<ExtrusionBarrier>& barriers);
-    Bin(uint32_t idx, uint64_t start, uint64_t end);
+    Bin(std::size_t idx, uint64_t start, uint64_t end,
+        const std::vector<ExtrusionBarrier>& barriers);
+    Bin(std::size_t idx, uint64_t start, uint64_t end);
     ///@}
 
     [[nodiscard]] uint32_t get_start() const;
@@ -104,7 +105,7 @@ class DNA {
     [[nodiscard]] uint64_t size() const;
     [[nodiscard]] uint64_t get_n_extr_units() const;
     [[nodiscard]] uint64_t get_n_extr_barriers() const;
-    [[nodiscard]] uint32_t get_index() const;
+    [[nodiscard]] std::size_t get_index() const;
     [[nodiscard]] bool has_extr_barrier() const;
     /** Given a ptr to an instance of ExtrusionBarrier that belongs to this instance of
      * DNA::Bin, return a ptr to the next instance of ExtrusionBarrier that is blocking
@@ -156,7 +157,7 @@ class DNA {
 
    private:
     /// Index corresponding to this DNA::Bin in the owning \p std::vector<DNA::Bin> (DNA::_bins).
-    uint32_t _idx;
+    std::size_t _idx;
     uint32_t _start;  ///< Left-most position represented by this DNA::Bin.
     uint32_t _end;    ///< Right-most position represented by this DNA::Bin.
     // TODO: Consider remove the unique_ptr and store the vector and InlinedVector directly
@@ -183,9 +184,6 @@ struct Chromosome {
   void sort_barriers_by_pos();
 
   void write_contacts_to_tsv(std::string_view output_dir, bool force_overwrite) const;
-  void write_contacts_to_hic(std::string_view path_to_juicer, std::string_view output_dir,
-                             std::string_view tmp_dir, std::string_view path_to_chr_sizes,
-                             bool force_overwrite) const;
   void write_barriers_to_tsv(std::string_view path_to_outfile, bool force_overwrite) const;
 
   std::string name;  ///< Sequence name (e.g. chromosome name from a BED file).
