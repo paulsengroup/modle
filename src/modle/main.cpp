@@ -85,7 +85,7 @@ void run_simulation(const modle::config& c) {
 }
 }  // namespace modle
 
-int main(int argc, char** argv) {
+int main(int argc, char** argv) noexcept {
   auto cli = modle::Cli(argc, argv);
 
   try {
@@ -104,6 +104,31 @@ int main(int argc, char** argv) {
     modle::run_simulation(config);
   } catch (const CLI::ParseError& e) {
     return cli.exit(e);  //  This takes care of formatting and printing error messages (if any)
+  } catch (const fmt::system_error& err) {
+    fmt::fprintf(stderr, "FAILURE! An error occurred during simulation: %s.\n", err.what());
+    return 1;
+  } catch (const std::runtime_error& err) {
+    fmt::fprintf(stderr, "FAILURE! An error occurred during simulation: %s.\n", err.what());
+    return 1;
+  } catch (...) {
+    const auto err = std::current_exception();
+    auto handle_except = [&]() {
+      try {
+        if (err) {
+          std::rethrow_exception(err);
+        }
+      } catch (const std::exception& e) {
+        fmt::fprintf(
+            stderr,
+            "FAILURE! An error occurred during simulation: Caught an exception that was not "
+            "handled properly! If you see this message, please open an issue on GitHub. "
+            "err.what(): %s.\n",
+            e.what());
+        return 1;
+      }
+      return 0;
+    };
+    return handle_except();
   }
   return 0;
 }
