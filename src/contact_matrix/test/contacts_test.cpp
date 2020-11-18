@@ -88,7 +88,7 @@ void test_with_large_matrix(const std::string& path_to_file) {
       }
     }
     if ((!f && !f.eof()) || (!in && !in.eof())) {
-      throw fmt::system_error(errno, "IO error while reading from file '{}'", path_to_file);
+      throw fmt::system_error(errno, "IO error while reading file '{}'", path_to_file);
     }
   }
 }

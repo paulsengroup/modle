@@ -56,7 +56,7 @@ ContactMatrix<uint32_t> parse_hic_matrix(const modle::tools::config &c) {
         modle::utils::parse_real_or_throw(toks[2], contacts);
         i = (i - start) / header.bin_size;
         j = (j - start) / header.bin_size;
-        cmatrix.set(i, j, std::round<uint64_t>(contacts));
+        cmatrix.set(i, j, std::lround(contacts));
         if (++records_parsed % 1'000'000 == 0) {
           fmt::fprintf(stderr, "Parsed %lu records...\n", records_parsed);
         }

@@ -222,7 +222,7 @@ void Genome::randomly_bind_lefs() {
   }
 }
 
-uint32_t Genome::run_burnin(double prob_of_rebinding, uint16_t target_n_of_unload_events,
+uint32_t Genome::run_burnin(double prob_of_rebinding, uint32_t target_n_of_unload_events,
                             uint64_t min_extr_rounds) {
   double avg_num_of_extr_events_per_bind =
       (static_cast<double>(this->_avg_lef_processivity) / this->_bin_size) /

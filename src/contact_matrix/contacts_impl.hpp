@@ -59,8 +59,9 @@ ContactMatrix<I>::ContactMatrix(const std::string &path_to_file,
     std::size_t j{};
     std::size_t i{};
     uint64_t n{};
+    const auto bin_size = static_cast<double>(header.bin_size);
 
-    for (i = 0UL; std::getline(in, line); ++i) {
+    for (i = 0; std::getline(in, line); ++i) {
       if (i > this->_nrows) {
         continue;
       }
@@ -69,34 +70,38 @@ ContactMatrix<I>::ContactMatrix(const std::string &path_to_file,
         utils::parse_numeric_or_throw(tok, n);
         if (noise_generator != nullptr) {
           for (auto k = n; k > 0; --k) {
-            this->at(std::clamp<std::size_t>(
-                         std::lround(((*noise_generator)(*rand_eng) / header.bin_size) + i), 0.0,
-                         this->_nrows - 1.0),
-                     std::clamp<std::size_t>(
-                         std::lround(((*noise_generator)(*rand_eng) / header.bin_size) + j), 0.0,
-                         this->_ncols - 1.0)) += 1;
+            // TODO: Figure out how to improve readability by removing some static_casts
+            const int64_t noise1 = std::lround((*noise_generator)(*rand_eng) / bin_size);
+            const int64_t noise2 = std::lround((*noise_generator)(*rand_eng) / bin_size);
+            const auto pos1 = static_cast<std::size_t>(std::clamp(
+                noise1 + static_cast<int64_t>(i), 0L, static_cast<int64_t>(this->_nrows) - 1L));
+            const auto pos2 = static_cast<std::size_t>(std::clamp(
+                noise2 + static_cast<int64_t>(j), 0L, static_cast<int64_t>(this->_ncols) - 1L));
+            this->at(pos1, pos2) += static_cast<I>(n);
           }
         } else {
-          this->at(i, j) = n;
+          this->at(i, j) = static_cast<I>(n);
         }
         ++j;
       }
     }
 
     if (i != this->_nrows) {
-      throw std::runtime_error(fmt::format(FMT_STRING("Expected {} rows, got {})"), this->_nrows, i));
+      throw std::runtime_error(
+          fmt::format(FMT_STRING("Expected {} rows, got {})"), this->_nrows, i));
     }
 
     if ((!in && !in.eof()) || (!fp && !fp.eof())) {
-      throw fmt::system_error(errno, "IO error while reading from file '{}'", path_to_file);
+      throw fmt::system_error(errno, "IO error while reading file '{}'", path_to_file);
     }
 
   } catch (const boost::iostreams::bzip2_error &err) {
-    throw std::runtime_error(fmt::format(FMT_STRING("An error occurred while decompressing file '{}': {})"),
-                                         path_to_file, err.what()));
-  } catch (const std::runtime_error &err) {
     throw std::runtime_error(
-        fmt::format(FMT_STRING("An error occurred while parsing file '{}': {})"), path_to_file, err.what()));
+        fmt::format(FMT_STRING("An error occurred while decompressing file '{}': {})"),
+                    path_to_file, err.what()));
+  } catch (const std::runtime_error &err) {
+    throw std::runtime_error(fmt::format(
+        FMT_STRING("An error occurred while parsing file '{}': {})"), path_to_file, err.what()));
   }
 }
 
@@ -153,15 +158,16 @@ ContactMatrix<I>::ContactMatrix(const std::string &path_to_file, std::size_t nro
     } while (read_and_tokenize());
 
     if (!fp && !fp.eof()) {
-      throw fmt::system_error(errno, "IO error while reading from file '{}'", path_to_file);
+      throw fmt::system_error(errno, "IO error while reading file '{}'", path_to_file);
     }
 
   } catch (const boost::iostreams::bzip2_error &err) {
-    throw std::runtime_error(fmt::format(FMT_STRING("An error occurred while decompressing file '{}': {})"),
-                                         path_to_file, err.what()));
-  } catch (const std::runtime_error &err) {
     throw std::runtime_error(
-        fmt::format(FMT_STRING("An error occurred while parsing file '{}': {})"), path_to_file, err.what()));
+        fmt::format(FMT_STRING("An error occurred while decompressing file '{}': {})"),
+                    path_to_file, err.what()));
+  } catch (const std::runtime_error &err) {
+    throw std::runtime_error(fmt::format(
+        FMT_STRING("An error occurred while parsing file '{}': {})"), path_to_file, err.what()));
   }
 }
 
@@ -188,7 +194,17 @@ const I &ContactMatrix<I>::at(std::size_t i, std::size_t j) const {
 }
 
 template <typename I>
-void ContactMatrix<I>::increment(std::size_t row, std::size_t col, I n) {
+template <typename I2>
+void ContactMatrix<I>::set(std::size_t row, std::size_t col, I2 n) {
+  static_assert(std::is_integral<I2>::value,
+                "ContactMatrix<I>::set expects the parameter n to be an integer type.");
+  if constexpr (std::is_signed<I2>::value && std::is_unsigned<I>::value) {
+    if (n < 0) {
+      throw std::logic_error(
+          fmt::format("ContactMatrix<unsigned-like>::set was called with n < 0: n = {}", n));
+    }
+  }
+
   auto j = col;
   auto i = j - row;
   if (row > col) {
@@ -206,34 +222,10 @@ void ContactMatrix<I>::increment(std::size_t row, std::size_t col, I n) {
 
     assert(i <= this->n_rows());
     assert(j <= this->n_cols());
+    assert(n >= std::numeric_limits<I>::min());
+    assert(n <= std::numeric_limits<I>::max());
 
-    this->at(i, j) += n;
-  } catch (const std::runtime_error &err) {
-    throw std::logic_error(
-        fmt::format(FMT_STRING("ContactMatrix::increment({}, {}, {}): {})"), row, col, n, err.what()));
-  }
-}
-
-template <typename I>
-void ContactMatrix<I>::set(std::size_t row, std::size_t col, I n) {
-  auto j = col;
-  auto i = j - row;
-  if (row > col) {
-    j = row;
-    i = j - col;
-  }
-  try {
-    if (j > this->n_cols()) {
-      throw std::runtime_error(fmt::format(FMT_STRING("j={} > ncols={})"), j, this->n_cols()));
-    }
-    if (i > this->n_rows()) {
-      ++this->_updates_missed;
-      return;
-    }
-
-    assert(i <= this->n_rows());
-    assert(j <= this->n_cols());
-    this->at(i, j) = n;
+    this->at(i, j) = static_cast<I>(n);
   } catch (const std::runtime_error &err) {
     throw std::logic_error(
         fmt::format(FMT_STRING("ContactMatrix::set({}, {}, {}): {})"), row, col, n, err.what()));
@@ -241,7 +233,57 @@ void ContactMatrix<I>::set(std::size_t row, std::size_t col, I n) {
 }
 
 template <typename I>
-void ContactMatrix<I>::decrement(std::size_t row, std::size_t col, I n) {
+template <typename I2>
+void ContactMatrix<I>::increment(std::size_t row, std::size_t col, I2 n) {
+  static_assert(std::is_integral<I2>::value,
+                "ContactMatrix<I>::increment expects the parameter n to be an integer type.");
+  if constexpr (std::is_signed<I2>::value) {
+    if (n < 0) {
+      throw std::logic_error(
+          fmt::format("ContactMatrix<I>::increment was called with n < 0. Consider using "
+                      "::decrement(..., -n) instead: n = {}",
+                      n));
+    }
+  }
+  auto j = col;
+  auto i = j - row;
+  if (row > col) {
+    j = row;
+    i = j - col;
+  }
+  try {
+    if (j > this->n_cols()) {
+      throw std::runtime_error(fmt::format(FMT_STRING("j={} > ncols={})"), j, this->n_cols()));
+    }
+    if (i > this->n_rows()) {
+      ++this->_updates_missed;
+      return;
+    }
+
+    assert(i <= this->n_rows());
+    assert(j <= this->n_cols());
+    assert(this->at(i, j) <= std::numeric_limits<I>::max() - n);
+
+    this->at(i, j) += static_cast<I>(n);
+  } catch (const std::runtime_error &err) {
+    throw std::logic_error(fmt::format(FMT_STRING("ContactMatrix::increment({}, {}, {}): {})"), row,
+                                       col, n, err.what()));
+  }
+}
+
+template <typename I>
+template <typename I2>
+void ContactMatrix<I>::decrement(std::size_t row, std::size_t col, I2 n) {
+  static_assert(std::is_integral<I2>::value,
+                "ContactMatrix<I>::decrement expects the parameter n to be an integer type.");
+  if constexpr (std::is_signed<I2>::value) {
+    if (n < 0) {
+      throw std::logic_error(
+          fmt::format("ContactMatrix<I>::decrement was called with n < 0. Consider using "
+                      "::increment(..., -n) instead: n = {}",
+                      n));
+    }
+  }
   auto j = col;
   auto i = j - row;
   if (row > col) {
@@ -260,11 +302,22 @@ void ContactMatrix<I>::decrement(std::size_t row, std::size_t col, I n) {
     assert(i <= this->n_rows());
     assert(j <= this->n_cols());
     assert(n <= this->at(i, j));
-    this->at(i, j) -= n;
+
+    this->at(i, j) -= static_cast<I>(n);
   } catch (const std::runtime_error &err) {
-    throw std::logic_error(
-        fmt::format(FMT_STRING("ContactMatrix::decrement({}, {}, {}): {})"), row, col, n, err.what()));
+    throw std::logic_error(fmt::format(FMT_STRING("ContactMatrix::decrement({}, {}, {}): {})"), row,
+                                       col, n, err.what()));
   }
+}
+
+template <typename I>
+void ContactMatrix<I>::increment(std::size_t row, std::size_t col) {
+  this->increment(row, col, static_cast<uint8_t>(1));
+}
+
+template <typename I>
+void ContactMatrix<I>::decrement(std::size_t row, std::size_t col) {
+  this->decrement(row, col, static_cast<uint8_t>(1));
 }
 
 template <typename I>
@@ -380,7 +433,8 @@ std::pair<uint32_t, uint32_t> ContactMatrix<I>::write_to_tsv(const std::string &
 
   } catch (const boost::iostreams::bzip2_error &err) {
     throw std::runtime_error(
-        fmt::format(FMT_STRING("An error occurred while compressing file '{}': {})"), path_to_file, err.what()));
+        fmt::format(FMT_STRING("An error occurred while compressing file '{}': {})"), path_to_file,
+                    err.what()));
   }
 
   out.reset();
@@ -418,7 +472,7 @@ typename ContactMatrix<I>::Header ContactMatrix<I>::parse_header(
   ContactMatrix<I>::Header header;
   std::string buff;
   if (!std::getline(in, buff)) {
-    throw fmt::system_error(errno, "IO error while reading from file '%s'", path_to_file);
+    throw fmt::system_error(errno, "IO error while reading file '%s'", path_to_file);
   }
   if (rewind_file) {
     in.seekg(0);
@@ -455,8 +509,10 @@ typename ContactMatrix<I>::Header ContactMatrix<I>::parse_header(
   if (!err.empty()) {
     throw std::runtime_error(fmt::format(FMT_STRING("Malformed header: {})"), err));
   }
-  header.ncols = std::floor((header.end - header.start) / static_cast<double>(header.bin_size));
-  header.nrows = std::floor(header.diagonal_width / static_cast<double>(header.bin_size));
+  header.ncols = static_cast<std::size_t>(std::floor(
+      static_cast<double>(header.end - header.start) / static_cast<double>(header.bin_size)));
+  header.nrows = static_cast<std::size_t>(std::floor(static_cast<double>(header.diagonal_width) /
+                                                     static_cast<double>(header.bin_size)));
   return header;
 }
 
@@ -498,8 +554,8 @@ std::pair<uint32_t, uint32_t> ContactMatrix<I>::write_full_matrix_to_tsv(
       throw fmt::system_error(errno, "IO error while writing to file '{}'", path_to_file);
     }
   } catch (const boost::iostreams::bzip2_error &err) {
-    throw std::runtime_error(
-        fmt::format(FMT_STRING("An error occurred while writing file '{}': {})"), path_to_file, err.what()));
+    throw std::runtime_error(fmt::format(
+        FMT_STRING("An error occurred while writing file '{}': {})"), path_to_file, err.what()));
   }
   out.reset();
   return std::make_pair(raw_size, std::filesystem::file_size(path_to_file));

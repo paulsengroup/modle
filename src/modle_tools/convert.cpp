@@ -16,7 +16,8 @@
 
 namespace modle::tools::convert {
 std::normal_distribution<double> init_noise_generator(uint64_t range) {
-  return std::normal_distribution<double>(0, range / 6.0);  // 99.9 CI
+  constexpr double stdev_99_9_ci = 6.0;  // 99.9% CI
+  return std::normal_distribution<double>(0, static_cast<double>(range) / stdev_99_9_ci);
 }
 
 std::string prepare_files_for_juicer_tools(const modle::tools::config& c) {
@@ -25,11 +26,13 @@ std::string prepare_files_for_juicer_tools(const modle::tools::config& c) {
   absl::StrAppend(&tmp_file_name, ".txt.gz");
   fmt::fprintf(stderr, "Writing contacts to temporary file '%s'...\n", tmp_file_name);
   std::ifstream fp_in(c.path_to_input_matrix, std::ios_base::binary);
-  if (!fp_in)
+  if (!fp_in) {
     throw fmt::system_error(errno, "Unable to open file '{}' for reading", c.path_to_input_matrix);
+  }
   std::ofstream fp_out(tmp_file_name, std::ios_base::binary);
-  if (!fp_out)
+  if (!fp_out) {
     throw fmt::system_error(errno, "Unable to create temporary file '{}'", tmp_file_name);
+  }
   boost::iostreams::filtering_istream in;
   boost::iostreams::filtering_ostream out;
   std::string line;
@@ -39,8 +42,12 @@ std::string prepare_files_for_juicer_tools(const modle::tools::config& c) {
     in.push(fp_in);
     out.push(boost::iostreams::gzip_compressor());
     out.push(fp_out);
-    if (!in) throw std::runtime_error("An error occurred while initializing decompression stream");
-    if (!out) throw std::runtime_error("An error occurred while initializing compression stream");
+    if (!in) {
+      throw std::runtime_error("An error occurred while initializing decompression stream");
+    }
+    if (!out) {
+      throw std::runtime_error("An error occurred while initializing compression stream");
+    }
 
     auto header = modle::ContactMatrix<uint32_t>::parse_header(c.path_to_input_matrix, in, false);
     std::unique_ptr<std::normal_distribution<double>> noise_generator = nullptr;
@@ -50,43 +57,45 @@ std::string prepare_files_for_juicer_tools(const modle::tools::config& c) {
           std::make_unique<std::normal_distribution<double>>(init_noise_generator(c.noise_range));
       rand_eng = std::make_unique<std::mt19937_64>(c.seed);
     }
-    uint64_t n, i, n_contacts = 0;
+    uint64_t n{};
+    uint64_t i{};
+    uint64_t n_contacts = 0;
     std::string record;
-    auto t0 = absl::Now();
+    const auto t0 = absl::Now();
     for (i = 0UL; std::getline(in, line); ++i) {
       if (!in || !fp_in) {
-        if (in.eof() && fp_in.eof()) break;  // This should never happen
-        throw fmt::system_error(errno, "IO error while reading from file '%s'",
-                                c.path_to_input_matrix);
+        throw fmt::system_error(errno, "IO error while reading file '{}'", c.path_to_input_matrix);
       }
       if (toks = absl::StrSplit(line, '\t'); toks.size() != header.ncols) {
-        throw std::runtime_error(
-            fmt::format("File '{}' appears to be malformed: expected {} in row {}, but got {}",
-                        c.path_to_input_matrix, header.ncols, i, toks.size()));
+        throw std::runtime_error(fmt::format(
+            "File '{}' appears to be malformed: expected {} fields at row {}, but got {}",
+            c.path_to_input_matrix, header.ncols, i, toks.size()));
       }
+      const auto chr_start = static_cast<double>(header.start);
+      const auto chr_end = static_cast<double>(header.end);
+      const auto bin_size = static_cast<double>(header.bin_size);
       for (auto j = 0UL; j < toks.size(); ++j) {
         modle::utils::parse_numeric_or_throw(toks[j], n);
-        uint64_t pos1 = std::clamp(
-            static_cast<uint64_t>(std::round(
-                static_cast<double>((2 * (j - i) * header.bin_size) + header.bin_size) / 2)),
-            0UL, header.end);
-        uint64_t pos2 = std::clamp(
-            static_cast<uint64_t>(
-                std::round(static_cast<double>((2 * j * header.bin_size) + header.bin_size) / 2)),
-            0UL, header.end);
-        record = fmt::format(FMT_COMPILE("1 {} {} 0 0 {} {} 1\n"), header.chr_name, pos1,
+        const double pos1 =
+            std::clamp(std::round(((2.0 * static_cast<double>(j - i) * bin_size) + bin_size) / 2.0),
+                       chr_start, chr_end);
+        const double pos2 =
+            std::clamp(std::round(((2.0 * static_cast<double>(j) * bin_size) + bin_size) / 2.0),
+                       chr_start, chr_end);
+        record = fmt::format(FMT_COMPILE("1 {} {:.0f} 0 0 {} {:.0f} 1\n"), header.chr_name, pos1,
                              header.chr_name, pos2);
         for (auto k = n; k > 0UL; --k) {
           if (c.add_noise) {
-            record =
-                fmt::format(FMT_COMPILE("1 {} {} 0 0 {} {} 1\n"), header.chr_name,
-                            std::clamp<uint64_t>(std::round((*noise_generator)(*rand_eng) + pos1),
-                                                 0.0, static_cast<float>(header.end)),
-                            header.chr_name,
-                            std::clamp<uint64_t>(std::round((*noise_generator)(*rand_eng) + pos2),
-                                                 0.0, static_cast<float>(header.end)));
+            record = fmt::format(
+                FMT_COMPILE("1 {} {:.0f} 0 0 {} {:.0f} 1\n"), header.chr_name,
+                std::clamp(std::round(pos1 + (*noise_generator)(*rand_eng)), chr_start, chr_end),
+                header.chr_name,
+                std::clamp(std::round(pos2 + (*noise_generator)(*rand_eng)), chr_start, chr_end));
           }
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wsign-conversion"
           out.write(record.data(), record.size());
+#pragma GCC diagnostic pop
           if (!out || !fp_out) {
             throw fmt::system_error(errno, "IO error while writing to temporary file '{}'",
                                     tmp_file_name);
@@ -101,13 +110,12 @@ std::string prepare_files_for_juicer_tools(const modle::tools::config& c) {
     }
     if (!in.eof()) {
       throw std::runtime_error(
-          fmt::format("IO error while reading from file '{}': {}", c.path_to_input_matrix,
+          fmt::format("IO error while reading file '{}': {}", c.path_to_input_matrix,
                       in.fail() ? std::strerror(errno) : "Reading stopped before reaching EOF"));
     }
     fp_in.close();
     if (!fp_in) {
-      throw fmt::system_error(errno, "IO error while reading from file '{}'",
-                              c.path_to_input_matrix);
+      throw fmt::system_error(errno, "IO error while reading file '{}'", c.path_to_input_matrix);
     }
     if (!out || !fp_out) {
       throw fmt::system_error(errno, "IO error while writing to temporary file '{}'",
@@ -116,8 +124,9 @@ std::string prepare_files_for_juicer_tools(const modle::tools::config& c) {
     out.reset();  // Very important!! Needed to actually call gzip_compressor::close(). The stream
     // won't be usable after this
     fp_out.close();
-    if (!fp_out || !out)
+    if (!fp_out || !out) {
       throw fmt::system_error(errno, "IO error while closing file '{}'", tmp_file_name);
+    }
     fmt::fprintf(stderr, "DONE! Written %lu contacts in %s!\n", n_contacts,
                  absl::FormatDuration(absl::Now() - t0));
   } catch (const boost::iostreams::bzip2_error& err) {
@@ -140,7 +149,9 @@ void convert_to_hic(const modle::tools::config& c, std::string& argv) {
     const auto t0 = absl::Now();
     fmt::fprintf(stderr, "Running: %s\n", argv);
     boost::process::ipstream juicer_tools_stderr;
-    std::string buff, stderr_msg, line;
+    std::string buff;
+    std::string stderr_msg;
+    std::string line;
     boost::process::child juicer_tools(argv, boost::process::std_in.close(),
                                        boost::process::std_out > boost::process::null,
                                        boost::process::std_err > juicer_tools_stderr);
@@ -153,10 +164,11 @@ void convert_to_hic(const modle::tools::config& c, std::string& argv) {
       throw std::runtime_error("An error occurred while reading from Juicer Tools stderr");
     }
     juicer_tools.wait();
-    if (!c.keep_tmp_files) std::filesystem::remove(tmp_file_name);
+    if (!c.keep_tmp_files) { std::filesystem::remove(tmp_file_name);
+}
     if (auto ec = juicer_tools.exit_code(); ec != 0) {
       throw std::runtime_error(
-          fmt::format("Juicer tools terminated with exit code %lu: %s", ec, stderr_msg));
+          fmt::format("Juicer tools terminated with exit code {}:\n{}", ec, stderr_msg));
     }
     fmt::fprintf(stderr, "DONE! Conversion took %s!\n", absl::FormatDuration(absl::Now() - t0));
   } catch (const std::runtime_error& err) {

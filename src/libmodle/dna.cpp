@@ -355,7 +355,12 @@ void Chromosome::write_barriers_to_tsv(std::string_view output_dir, bool force_o
     for (const auto& barrier : this->barriers) {
       buff = absl::StrCat(barrier->get_direction_of_block() == DNA::fwd ? "+" : "-",
                           barrier->get_pos(), "\n");
+      // TODO: Make this pragma portable
+
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wsign-conversion"
       out.write(buff.data(), buff.size());
+#pragma GCC diagnostic pop
       if (!out || !fp) {
         throw fmt::system_error(errno, "IO error while writing to file '{}'", path_to_outfile);
       }

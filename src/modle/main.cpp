@@ -53,7 +53,7 @@ void run_simulation(const modle::config& c) {
                " - # of extr. barriers   %lu (%lu ignored)\n",
                absl::FormatDuration(absl::Now() - t0), genome.get_n_chromosomes(),
                (static_cast<double>(genome.size()) / genome.get_n_chromosomes()) / 1.0e6,
-               genome.n50() / 1.0e6, genome.get_n_lefs(), tot_barriers - barriers_ignored,
+               static_cast<double>(genome.n50()) / 1.0e6, genome.get_n_lefs(), tot_barriers - barriers_ignored,
                barriers_ignored);
 
   t0 = absl::Now();

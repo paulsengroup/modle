@@ -12,7 +12,7 @@ void parse_numeric_or_throw(std::string_view tok, N &field) {
   static_assert(std::is_integral<N>());
   auto [ptr, err] = std::from_chars(tok.data(), tok.end(), field);
   if (ptr != tok.end() && err != std::errc{}) {
-    throw_except_from_errc(tok, -1, field, ptr, err);
+    throw_except_from_errc(tok, SIZE_MAX, field, ptr, err);
   }
 }
 
@@ -21,16 +21,16 @@ void parse_real_or_throw(std::string_view tok, R &field) {
   static_assert(std::is_floating_point<R>());
   char *end = nullptr;
   R tmp = std::strtod(tok.data(), &end);
-  if (tmp == HUGE_VALF)
-    throw_except_from_errc(tok, -1, tmp, nullptr, std::errc::result_out_of_range);
+  if (tmp == HUGE_VAL)
+    throw_except_from_errc(tok, SIZE_MAX, tmp, nullptr, std::errc::result_out_of_range);
   else if (tmp == 0 && end == tok.data())
-    throw_except_from_errc(tok, -1, tmp, nullptr, std::errc::invalid_argument);
+    throw_except_from_errc(tok, SIZE_MAX, tmp, nullptr, std::errc::invalid_argument);
 
   field = tmp;
 }
 
 template <typename N>
-void parse_numeric_or_throw(const std::vector<std::string_view> &toks, uint8_t idx, N &field) {
+void parse_numeric_or_throw(const std::vector<std::string_view> &toks, std::size_t idx, N &field) {
   static_assert(std::is_integral<N>());
   auto [ptr, err] = std::from_chars(toks[idx].data(), toks[idx].data() + toks[idx].size(), field);
   if (ptr != toks[idx].end() && err != std::errc{}) {
@@ -39,65 +39,72 @@ void parse_numeric_or_throw(const std::vector<std::string_view> &toks, uint8_t i
 }
 
 template <typename R>
-void parse_real_or_throw(const std::vector<std::string_view> &toks, uint8_t idx, R &field) {
+void parse_real_or_throw(const std::vector<std::string_view> &toks, std::size_t idx, R &field) {
   static_assert(std::is_floating_point<R>());
   const std::string tok(toks[idx].begin(), toks[idx].end());
   char *end = nullptr;
   R tmp = std::strtod(tok.data(), &end);
-  if (tmp == HUGE_VALF)
+  if (tmp == HUGE_VAL) {
     throw_except_from_errc(toks[idx], idx, tmp, nullptr, std::errc::result_out_of_range);
-  else if (tmp == 0 && end == tok.data())
+  } else if (tmp == 0 && end == tok.data()) {
     throw_except_from_errc(tok, idx, tmp, nullptr, std::errc::invalid_argument);
+  }
 
   field = tmp;
 }
 
 template <typename N>
-void parse_vect_of_numbers_or_throw(const std::vector<std::string_view> &toks, uint8_t idx,
+void parse_vect_of_numbers_or_throw(const std::vector<std::string_view> &toks, std::size_t idx,
                                     std::vector<N> &field, uint64_t expected_size) {
   static_assert(std::is_arithmetic<N>());
   std::vector<std::string_view> ns = absl::StrSplit(toks[idx], ',');
-  if (ns.size() != expected_size)
+  if (ns.size() != expected_size) {
     throw std::runtime_error(
         fmt::format("Expected %lu fields, got %lu.", expected_size, ns.size()));
+  }
   field = std::vector<N>(ns.size());
-  for (auto i = 0UL; i < expected_size; ++i) parse_numeric_or_throw(ns, i, field[i]);
+  for (std::size_t i = 0; i < expected_size; ++i) {
+    parse_numeric_or_throw(ns, i, field[i]);
+  }
 }
 
 template <typename N>
-void throw_except_from_errc(std::string_view tok, int32_t idx, const N &field, const char *c,
+void throw_except_from_errc(std::string_view tok, std::size_t idx, const N &field, const char *c,
                             std::errc e) {
   (void)field;
   static_assert(std::is_arithmetic<N>());
   std::string base_error;
-  if (idx != -1)
-    base_error = fmt::format("Unable to convert field %lu ('%s') to a ", idx, tok);
-  else
-    base_error = fmt::format("Unable to convert field '%s' to", tok);
+  if (idx != SIZE_MAX) {
+    base_error = fmt::format("Unable to convert field {} ('{}') to a ", idx, tok);
+  } else {
+    base_error = fmt::format("Unable to convert field '{}' to", tok);
+  }
   if (std::is_integral<N>()) {
-    if (std::is_unsigned<N>())
+    if (std::is_unsigned<N>()) {
       base_error += " a positive integral number";
-    else
+    } else {
       base_error += "an integral number";
-  } else
+    }
+  } else {
     base_error += "a real number";
+  }
   if (e == std::errc::invalid_argument) {
-    if (c != nullptr)
+    if (c != nullptr) {
       throw std::runtime_error(
-          fmt::format("%s. Reason: found an invalid character '%c'.", base_error, *c));
-    throw std::runtime_error(fmt::format("%s. Reason: found an invalid character.", base_error));
+          fmt::format("{}. Reason: found an invalid character '{}'", base_error, *c));
+    }
+    throw std::runtime_error(fmt::format("{}. Reason: found an invalid character", base_error));
   }
   if (e == std::errc::result_out_of_range) {
     throw std::runtime_error(
-        fmt::format("%s. Reason: number %s is outside the range of representable numbers [%s, %s].",
-                    base_error, tok, std::to_string(std::numeric_limits<N>::min()),
-                    std::to_string(std::numeric_limits<N>::max())));
+        fmt::format("{}. Reason: number {} is outside the range of representable numbers [{}, {}].",
+                    base_error, tok, std::numeric_limits<N>::min(), std::numeric_limits<N>::max()));
   }
   throw std::logic_error(
-      fmt::format("%s. If you see this error, report it to the developers on "
-                  "github.\nBED::throw_except_from_errc "
-                  "called with an invalid std::errc. This should not be possible!",
-                  base_error));
+      fmt::format("{}. If you see this error, report it to the developers on "
+                  "GitHub.\nBED::throw_except_from_errc "
+                  "called with an invalid std::errc {}. This should not be possible!",
+                  base_error, std::make_error_code(e)));
 }
 
 }  // namespace modle::utils

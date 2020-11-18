@@ -67,7 +67,7 @@ class Genome {
                                                                    double probability_of_block);
   void randomly_bind_lefs();
 
-  uint32_t run_burnin(double prob_of_rebinding, uint16_t target_n_of_unload_events,
+  uint32_t run_burnin(double prob_of_rebinding, uint32_t target_n_of_unload_events,
                       uint64_t min_extr_rounds);
 
   /** This function is the one that actually runs the simulation

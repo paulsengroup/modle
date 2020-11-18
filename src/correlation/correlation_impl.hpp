@@ -45,8 +45,8 @@ std::pair<double, double> CorrelationTest<N>::compute_spearman(const Iterator v1
   auto v1r = utils::compute_element_ranks(v1_b, v1_b + size);
   auto v2r = utils::compute_element_ranks(v2_b, v2_b + size);
 
-  auto v1r_avg = std::reduce(v1r.begin(), v1r.end(), 0.0) / size;
-  auto v2r_avg = std::reduce(v2r.begin(), v2r.end(), 0.0) / size;
+  auto v1r_avg = std::reduce(v1r.begin(), v1r.end(), 0.0) / static_cast<double>(size);
+  auto v2r_avg = std::reduce(v2r.begin(), v2r.end(), 0.0) / static_cast<double>(size);
   double n = 0;  // numerator: sum (x - xm) * (y - ym)
   // denominator: sum (x - xm)^2 * sum (y - ym)^2
   double d1 = 0;
@@ -101,15 +101,15 @@ double CorrelationTest<N>::compute_kendall_b_significance(uint32_t nc, uint32_t 
     return 0.2 * std::reduce(v_new.begin(), v_new.end(), 0.0) /
            std::tgamma(size);  // looks like pv is multiplied by 10 for some reason
   }
-  const uint64_t x0 = tie1 * (tie1 - 1) * (tie1 - 2);
-  const uint64_t y0 = tie2 * (tie2 - 1) * (tie2 - 2);
-  const uint64_t x1 = tie1 * (tie1 - 1) * (2 * tie1 + 5);
-  const uint64_t y1 = tie2 * (tie2 - 1) * (2 * tie2 + 5);
+  const auto x0 = static_cast<double>(tie1 * (tie1 - 1) * (tie1 - 2));
+  const auto y0 = static_cast<double>(tie2 * (tie2 - 1) * (tie2 - 2));
+  const auto x1 = static_cast<double>(tie1 * (tie1 - 1) * (2 * tie1 + 5));
+  const auto y1 = static_cast<double>(tie2 * (tie2 - 1) * (2 * tie2 + 5));
   static constexpr auto sqrt2 = boost::math::constants::root_two<double>();
   const double var = (size * (size - 1) * (2.0 * size + 5) - x1 - y1) / 18.0 +
                      (2.0 * tie1 * tie2) / (size * (size - 1)) +
                      x0 * y0 / (9.0 * size * (size - 1) * (size - 2));
-  return boost::math::erfc<double>(std::abs<double>(static_cast<int64_t>(nc) - nd) /
+  return boost::math::erfc<double>(std::abs<double>(static_cast<double>(nc) - nd) /
                                    std::sqrt(var) / sqrt2);
 }
 template <typename N>
@@ -194,7 +194,7 @@ std::pair<double, double> CorrelationTest<N>::compute_spearman() const {
 template <typename N>
 std::vector<std::pair<double, double>> CorrelationTest<N>::compute_spearman(
     uint64_t window_size, uint64_t window_overlap) const {
-  std::vector<uint32_t> windows_start((this->_v1.size() - window_size) / window_overlap);
+  std::vector<std::size_t> windows_start((this->_v1.size() - window_size) / window_overlap);
   for (auto i = 0UL; i < windows_start.size(); ++i) {
     windows_start[i] = i * window_overlap;
   }
@@ -202,7 +202,7 @@ std::vector<std::pair<double, double>> CorrelationTest<N>::compute_spearman(
 
   std::vector<std::pair<double, double>> correlations(windows_start.size());
   std::transform(std::execution::par_unseq, windows_start.begin(), windows_start.end(),
-                 correlations.begin(), [&](uint32_t offset) {
+                 correlations.begin(), [&](std::size_t offset) {
                    auto v1s = this->_v1.begin() + offset;
                    auto v1e = v1s + window_size;
                    auto v2s = this->_v2.begin() + offset;

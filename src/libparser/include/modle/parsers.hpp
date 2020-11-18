@@ -35,6 +35,34 @@ struct RGB {
 
 struct BED {
   enum Standard { BED3 = 3U, BED4 = 4U, BED5 = 5U, BED6 = 6U, BED9 = 9U, BED12 = 12U, none = 13U };
+  enum Fields {
+    BED_CHROM = 1,
+    BED_CHROM_START = 2,
+    BED_CHROM_END = 3,
+    BED_NAME = 4,
+    BED_SCORE = 5,
+    BED_STRAND = 6,
+    BED_THICK_START = 7,
+    BED_THICK_END = 8,
+    BED_ITEM_RGB = 9,
+    BED_BLOCK_COUNT = 10,
+    BED_BLOCK_SIZES = 11,
+    BED_BLOCK_STARTS = 12
+  };
+  enum FieldsIdx {
+    BED_CHROM_IDX = 0,
+    BED_CHROM_START_IDX = 1,
+    BED_CHROM_END_IDX = 2,
+    BED_NAME_IDX = 3,
+    BED_SCORE_IDX = 4,
+    BED_STRAND_IDX = 5,
+    BED_THICK_START_IDX = 6,
+    BED_THICK_END_IDX = 7,
+    BED_ITEM_RGB_IDX = 8,
+    BED_BLOCK_COUNT_IDX = 9,
+    BED_BLOCK_SIZES_IDX = 10,
+    BED_BLOCK_STARTS_IDX = 11
+  };
   BED() = default;
   explicit BED(std::string_view record, Standard bed_standard = none);
   std::string chrom{};
@@ -84,7 +112,7 @@ class BEDParser {
   std::string _buff{};
   bool _skip_header;
   BED::Standard _standard;
-  uint8_t _ncols;
+  // uint8_t _ncols;
 };
 
 struct ChrSize {
@@ -143,11 +171,7 @@ class ContactsParser {
   };
 
   [[nodiscard]] MatrixProperties get_matrix_properties(std::string_view sep);
-  static bool parse_next(std::ifstream& f, std::string& buff, Contact& c, std::string_view sep);
-  [[nodiscard]] static Contact parse_next(std::ifstream& f, std::string& buff,
-                                          std::string_view sep);
   bool parse_next(std::string& buff, Contact& c, std::string_view sep);
-  [[nodiscard]] Contact parse_next(std::string& buff, std::string_view sep);
 };
 
 }  // namespace modle
