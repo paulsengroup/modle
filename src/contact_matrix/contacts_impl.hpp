@@ -509,10 +509,10 @@ typename ContactMatrix<I>::Header ContactMatrix<I>::parse_header(
   if (!err.empty()) {
     throw std::runtime_error(fmt::format(FMT_STRING("Malformed header: {})"), err));
   }
-  header.ncols = static_cast<std::size_t>(std::floor(
-      static_cast<double>(header.end - header.start) / static_cast<double>(header.bin_size)));
-  header.nrows = static_cast<std::size_t>(std::floor(static_cast<double>(header.diagonal_width) /
-                                                     static_cast<double>(header.bin_size)));
+  header.ncols = static_cast<std::size_t>(std::ceil(static_cast<double>(header.end - header.start) /
+                                                    static_cast<double>(header.bin_size)));
+  header.nrows = static_cast<std::size_t>(
+      std::ceil(static_cast<double>(header.diagonal_width) / static_cast<double>(header.bin_size)));
   return header;
 }
 

@@ -89,7 +89,7 @@ std::vector<Chromosome> Genome::init_chromosomes_from_file(uint32_t diagonal_wid
   std::vector<Chromosome> chromosomes;
   auto parser = ChrSizeParser(this->_path_to_chr_size_file);
   for (const auto& chr : parser.parse()) {
-    chromosomes.emplace_back(chr.name, chr.size, this->_bin_size, diagonal_width);
+    chromosomes.emplace_back(chr.name, chr.start, chr.end, this->_bin_size, diagonal_width);
   }
   return chromosomes;
 }
@@ -145,10 +145,10 @@ std::pair<uint64_t, uint64_t> Genome::import_extrusion_barriers_from_bed(
   auto p = modle::BEDParser(path_to_bed, BED::Standard::BED6);
   uint64_t nrecords = 0;
   uint64_t nrecords_ignored = 0;
-  absl::flat_hash_map<std::string_view, DNA*> chromosomes;
+  absl::flat_hash_map<std::string_view, Chromosome*> chromosomes;
   chromosomes.reserve(this->get_n_chromosomes());
   for (auto& chr : this->get_chromosomes()) {
-    chromosomes.emplace(chr.name, &chr.dna);
+    chromosomes.emplace(chr.name, &chr);
   }
   for (auto& record : p.parse_all()) {
     ++nrecords;
@@ -165,7 +165,11 @@ std::pair<uint64_t, uint64_t> Genome::import_extrusion_barriers_from_bed(
                       "between 0 and 1, got %.4g.",
                       record.name, record.chrom_start, record.chrom_end, record.score));
     }
-    chromosomes[record.chrom]->add_extr_barrier(record);
+    assert(record.chrom_start >= chromosomes[record.chrom]->get_start_pos());
+    assert(record.chrom_end <= chromosomes[record.chrom]->get_end_pos());
+    record.chrom_start -= chromosomes[record.chrom]->get_start_pos();
+    record.chrom_end -= chromosomes[record.chrom]->get_start_pos();
+    chromosomes[record.chrom]->dna.add_extr_barrier(record);
   }
 
   for (auto& chr : this->_chromosomes) {
@@ -220,6 +224,15 @@ void Genome::randomly_bind_lefs() {
     Chromosome& chr = this->_chromosomes[chr_idx(this->_rand_eng)];
     lef.randomly_bind_to_chr(&chr, this->_rand_eng);  // And bind to it
   }
+}
+
+uint64_t Genome::remove_chromosomes_wo_extr_barriers() {
+  const auto n_chromosomes = this->get_n_chromosomes();
+  this->_chromosomes.erase(
+      std::remove_if(this->_chromosomes.begin(), this->_chromosomes.end(),
+                     [](const Chromosome& chr) { return chr.get_n_barriers() == 0; }),
+      this->_chromosomes.end());
+  return n_chromosomes - this->get_n_chromosomes();
 }
 
 uint32_t Genome::run_burnin(double prob_of_rebinding, uint32_t target_n_of_unload_events,

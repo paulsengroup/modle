@@ -77,10 +77,10 @@ std::string prepare_files_for_juicer_tools(const modle::tools::config& c) {
       for (auto j = 0UL; j < toks.size(); ++j) {
         modle::utils::parse_numeric_or_throw(toks[j], n);
         const double pos1 =
-            std::clamp(std::round(((2.0 * static_cast<double>(j - i) * bin_size) + bin_size) / 2.0),
+            std::clamp(std::round(2.0 * (chr_start + (static_cast<double>(j - i) * bin_size)) + bin_size) / 2.0,
                        chr_start, chr_end);
         const double pos2 =
-            std::clamp(std::round(((2.0 * static_cast<double>(j) * bin_size) + bin_size) / 2.0),
+            std::clamp(std::round(2.0 * (chr_start + (static_cast<double>(j) * bin_size)) + bin_size) / 2.0,
                        chr_start, chr_end);
         record = fmt::format(FMT_COMPILE("1 {} {:.0f} 0 0 {} {:.0f} 1\n"), header.chr_name, pos1,
                              header.chr_name, pos2);

@@ -44,17 +44,18 @@ void run_simulation(const modle::config& c) {
     tot_barriers += tmp.first;
     barriers_ignored = tmp.second;
   }
+  const auto n_of_chr_removed = genome.remove_chromosomes_wo_extr_barriers();
   fmt::fprintf(stderr,
                "Initialization took %s.\n"
-               " - # of sequences:       %lu\n"
+               " - # of sequences:       %lu (%lu ignored)\n"
                " - Avg. sequence length: %.3f Mbp\n"
                " - Genome N50:           %.3f Mbp\n"
                " - # of LEFs:            %lu\n"
-               " - # of extr. barriers   %lu (%lu ignored)\n",
-               absl::FormatDuration(absl::Now() - t0), genome.get_n_chromosomes(),
+               " - # of extr. barriers   %lu (%lu ignored)\n\n",
+               absl::FormatDuration(absl::Now() - t0), genome.get_n_chromosomes(), n_of_chr_removed,
                (static_cast<double>(genome.size()) / genome.get_n_chromosomes()) / 1.0e6,
-               static_cast<double>(genome.n50()) / 1.0e6, genome.get_n_lefs(), tot_barriers - barriers_ignored,
-               barriers_ignored);
+               static_cast<double>(genome.n50()) / 1.0e6, genome.get_n_lefs(),
+               tot_barriers - barriers_ignored, barriers_ignored);
 
   t0 = absl::Now();
   if (c.skip_burnin) {

@@ -117,13 +117,15 @@ class BEDParser {
 
 struct ChrSize {
   ChrSize(std::string_view chr_name, uint64_t length);
+  ChrSize(std::string_view chr_name, uint64_t start, uint64_t end);
   explicit ChrSize(std::vector<std::string>& toks);
 
   [[nodiscard]] bool operator==(const ChrSize& other) const;
   [[nodiscard]] bool operator<(const ChrSize& other) const;
 
   std::string name;
-  uint64_t size;
+  uint64_t start;
+  uint64_t end;
 
   template <typename H>
   friend H AbslHashValue(H h, const ChrSize& c) {

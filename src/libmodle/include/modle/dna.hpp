@@ -175,9 +175,13 @@ class DNA {
  */
 struct Chromosome {
   Chromosome(std::string name, uint64_t length, uint32_t bin_size, uint32_t diagonal_width);
+  Chromosome(std::string name, uint64_t start, uint64_t end, uint32_t bin_size,
+             uint32_t diagonal_width);
 
   // Getters
   [[nodiscard]] uint64_t length() const;
+  [[nodiscard]] uint64_t get_start_pos() const;
+  [[nodiscard]] uint64_t get_end_pos() const;
   [[nodiscard]] uint64_t get_n_bins() const;
   [[nodiscard]] uint32_t get_bin_size() const;
   [[nodiscard]] uint64_t get_n_barriers() const;
@@ -187,7 +191,9 @@ struct Chromosome {
   void write_barriers_to_tsv(std::string_view path_to_outfile, bool force_overwrite) const;
 
   std::string name;  ///< Sequence name (e.g. chromosome name from a BED file).
-  DNA dna;           ///< DNA molecule represented as a sequence of DNA::Bin%s.
+  uint64_t start;
+  uint64_t end;
+  DNA dna;  ///< DNA molecule represented as a sequence of DNA::Bin%s.
   /// Pointers to the ExtrusionBarrier associated to \p Chromosome::dna.
   std::vector<ExtrusionBarrier*> barriers;
   ContactMatrix<uint32_t> contacts;  ///< ContactMatrix for the DNA::Bin%s from Chromosome::dna.

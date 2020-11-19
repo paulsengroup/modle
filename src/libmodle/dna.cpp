@@ -233,11 +233,12 @@ ExtrusionBarrier* DNA::add_extr_barrier(ExtrusionBarrier& b, uint32_t pos) {
 }
 
 ExtrusionBarrier* DNA::add_extr_barrier(const BED& record) {
-  assert(record.score >= 0 || record.score <= 1);                        // NOLINT;
+  assert(record.score >= 0 && record.score <= 1);                        // NOLINT;
   assert(record.chrom_end <= this->length());                            // NOLINT;
   assert(record.chrom_end / this->get_bin_size() < this->get_n_bins());  // NOLINT;
   assert(record.strand == '+' || record.strand == '-');                  // NOLINT;
-  uint64_t pos = (record.chrom_end + record.chrom_start) / 2;
+  const auto pos = static_cast<uint64_t>(
+      std::llround(static_cast<double>(record.chrom_end + record.chrom_start) / 2.0));
   DNA::Direction strand = record.strand == '+' ? DNA::Direction::fwd : DNA::Direction::rev;
   return this->_bins[pos / this->get_bin_size()].add_extr_barrier(pos, record.score, strand);
 }
@@ -285,11 +286,24 @@ uint64_t DNA::get_n_barriers() const {
 Chromosome::Chromosome(std::string name, uint64_t length, uint32_t bin_size,
                        uint32_t diagonal_width)
     : name(std::move(name)),
+      start(0),
+      end(length),
       dna(length, bin_size),
       contacts(std::min(static_cast<uint64_t>(diagonal_width / bin_size), this->get_n_bins()),
                this->get_n_bins()) {}
 
-uint64_t Chromosome::length() const { return this->dna.length(); }
+Chromosome::Chromosome(std::string name, uint64_t start, uint64_t end, uint32_t bin_size,
+                       uint32_t diagonal_width)
+    : name(std::move(name)),
+      start(start),
+      end(end),
+      dna(end - start, bin_size),
+      contacts(std::min(static_cast<uint64_t>(diagonal_width / bin_size), this->get_n_bins()),
+               this->get_n_bins()) {}
+
+uint64_t Chromosome::length() const { return this->end - this->start; }
+uint64_t Chromosome::get_start_pos() const { return this->start; }
+uint64_t Chromosome::get_end_pos() const { return this->end; }
 uint64_t Chromosome::get_n_bins() const { return this->dna.get_n_bins(); }
 uint32_t Chromosome::get_bin_size() const { return this->dna.get_bin_size(); }
 uint64_t Chromosome::get_n_barriers() const { return this->barriers.size(); }
@@ -318,7 +332,7 @@ void Chromosome::write_contacts_to_tsv(std::string_view output_dir, bool force_o
   }
 
   const std::string header =
-      fmt::format("#{}\t{}\t{}\t{}\t{}\n", this->name, this->get_bin_size(), 0, this->length(),
+      fmt::format("#{}\t{}\t{}\t{}\t{}\n", this->name, this->get_bin_size(), this->start, this->end,
                   this->contacts.n_rows() * this->get_bin_size());
 
   auto [bytes_in, bytes_out] = this->contacts.write_to_tsv(path_to_outfile, header);

@@ -67,6 +67,8 @@ class Genome {
                                                                    double probability_of_block);
   void randomly_bind_lefs();
 
+  uint64_t remove_chromosomes_wo_extr_barriers();
+
   uint32_t run_burnin(double prob_of_rebinding, uint32_t target_n_of_unload_events,
                       uint64_t min_extr_rounds);
 
