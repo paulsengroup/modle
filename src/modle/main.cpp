@@ -45,6 +45,11 @@ void run_simulation(const modle::config& c) {
     barriers_ignored = tmp.second;
   }
   const auto n_of_chr_removed = genome.remove_chromosomes_wo_extr_barriers();
+  if (genome.get_n_chromosomes() == 0) {
+    throw std::runtime_error(  // TODO: Improve this error message
+        "All the input sequences were discarded because there were no extrusion barriers mapping "
+        "on them. Check your input files");
+  }
   fmt::fprintf(stderr,
                "Initialization took %s.\n"
                " - # of sequences:       %lu (%lu ignored)\n"

@@ -152,7 +152,9 @@ std::pair<uint64_t, uint64_t> Genome::import_extrusion_barriers_from_bed(
   }
   for (auto& record : p.parse_all()) {
     ++nrecords;
-    if (!chromosomes.contains(record.chrom) || record.strand == '.') {
+    if (!chromosomes.contains(record.chrom) || record.strand == '.' ||
+        record.chrom_start < chromosomes[record.chrom]->get_start_pos() ||
+        record.chrom_end > chromosomes[record.chrom]->get_end_pos()) {
       ++nrecords_ignored;
       continue;
     }
@@ -165,8 +167,6 @@ std::pair<uint64_t, uint64_t> Genome::import_extrusion_barriers_from_bed(
                       "between 0 and 1, got %.4g.",
                       record.name, record.chrom_start, record.chrom_end, record.score));
     }
-    assert(record.chrom_start >= chromosomes[record.chrom]->get_start_pos());
-    assert(record.chrom_end <= chromosomes[record.chrom]->get_end_pos());
     record.chrom_start -= chromosomes[record.chrom]->get_start_pos();
     record.chrom_end -= chromosomes[record.chrom]->get_start_pos();
     chromosomes[record.chrom]->dna.add_extr_barrier(record);
