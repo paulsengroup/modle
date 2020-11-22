@@ -6,8 +6,8 @@
 #include <functional>
 
 #include "fmt/printf.h"
-#include "modle/extr_barrier.hpp"
-#include "modle/parsers.hpp"
+#include "modle/bed.hpp"
+#include "modle/chr_sizes.hpp"
 
 namespace modle {
 
@@ -87,7 +87,7 @@ void Genome::write_extrusion_barriers_to_file(std::string_view output_dir,
 
 std::vector<Chromosome> Genome::init_chromosomes_from_file(uint32_t diagonal_width) const {
   std::vector<Chromosome> chromosomes;
-  auto parser = ChrSizeParser(this->_path_to_chr_size_file);
+  auto parser = modle::chr_sizes::Parser(this->_path_to_chr_size_file);
   for (const auto& chr : parser.parse()) {
     chromosomes.emplace_back(chr.name, chr.start, chr.end, this->_bin_size, diagonal_width);
   }
@@ -142,7 +142,7 @@ void Genome::randomly_generate_extrusion_barriers(uint32_t n_barriers) {
 
 std::pair<uint64_t, uint64_t> Genome::import_extrusion_barriers_from_bed(
     std::string_view path_to_bed, double probability_of_block) {
-  auto p = modle::BEDParser(path_to_bed, BED::Standard::BED6);
+  auto p = modle::bed::Parser(path_to_bed, bed::BED::Standard::BED6);
   uint64_t nrecords = 0;
   uint64_t nrecords_ignored = 0;
   absl::flat_hash_map<std::string_view, Chromosome*> chromosomes;

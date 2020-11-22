@@ -1,9 +1,9 @@
 #pragma once
 
 #include "modle/config.hpp"
-#include "modle/contacts.hpp"
 #include "modle/dna.hpp"
 #include "modle/extr_barrier.hpp"
+#include "modle/juicer_contacts.hpp"
 #include "modle/lefs.hpp"
 
 namespace modle {

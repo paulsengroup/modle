@@ -4,8 +4,8 @@
 
 #include "CLI/CLI.hpp"
 #include "absl/strings/str_format.h"
-#include "modle/contacts.hpp"
 #include "modle/correlation_test.hpp"
+#include "modle/juicer_contacts.hpp"
 
 namespace modle::helpers::cmatrix_comp {
 

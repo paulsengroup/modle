@@ -6,9 +6,9 @@
 
 #include "absl/container/flat_hash_set.h"
 #include "fmt/printf.h"
+#include "modle/bed.hpp"
 #include "modle/extr_barrier.hpp"
 #include "modle/lefs.hpp"
-#include "modle/parsers.hpp"
 
 namespace modle {
 
@@ -120,7 +120,8 @@ void DNA::Bin::remove_extr_barrier(Direction d) {
     }
     return;
   }
-  throw std::logic_error(fmt::format("Bin doesn't have barriers blocking %s!",
+  throw std::logic_error(fmt::format("Bin #{} doesn't have barriers blocking in {} direction!",
+                                     this->get_index(),
                                      d == Direction::fwd ? "forward" : "reverse"));
 }
 
@@ -149,12 +150,12 @@ DNA::Bin* DNA::get_ptr_to_bin_from_pos(uint64_t pos) {
   // TODO: Enable these checks only when compiling in Debug
   if (pos > this->length()) {
     throw std::logic_error(
-        fmt::format("DNA::get_ptr_to_bin_from_pos(pos=%lu): pos > this->length(): %lu > %lu\n", pos,
+        fmt::format("DNA::get_ptr_to_bin_from_pos(pos={}): pos > this->length(): {} > {}\n", pos,
                     pos, this->length()));
   }
   if ((pos / this->get_bin_size()) > this->get_n_bins()) {
     throw std::logic_error(
-        fmt::format("(pos / this->bin_size()) >= this->nbins(): (%lu / %lu) >= %lu\n", pos,
+        fmt::format("(pos / this->bin_size()) >= this->nbins(): ({} / {}) >= {}\n", pos,
                     this->get_bin_size(), this->get_n_bins()));
   }
   return &this->_bins[pos / this->get_bin_size()];
@@ -232,7 +233,7 @@ ExtrusionBarrier* DNA::add_extr_barrier(ExtrusionBarrier& b, uint32_t pos) {
   return this->_bins[pos / this->get_bin_size()].add_extr_barrier(b);
 }
 
-ExtrusionBarrier* DNA::add_extr_barrier(const BED& record) {
+ExtrusionBarrier* DNA::add_extr_barrier(const modle::bed::BED& record) {
   assert(record.score >= 0 && record.score <= 1);                        // NOLINT;
   assert(record.chrom_end <= this->length());                            // NOLINT;
   assert(record.chrom_end / this->get_bin_size() < this->get_n_bins());  // NOLINT;
@@ -323,11 +324,11 @@ void Chromosome::write_contacts_to_tsv(std::string_view output_dir, bool force_o
   auto t0 = absl::Now();
   std::string path_to_outfile = std::filesystem::weakly_canonical(
       fmt::format("{}/{}_modle_cmatrix.tsv.bz2", output_dir, this->name));
-  fmt::fprintf(stderr, "Writing contact matrix for '%s' to file '%s'...\n", this->name,
-               path_to_outfile);
+  fmt::print(stderr, "Writing contact matrix for '{}' to file '{}'...\n", this->name,
+             path_to_outfile);
   if (!force_overwrite && std::filesystem::exists(path_to_outfile)) {
-    fmt::fprintf(stderr, "File '%s' already exists, SKIPPING! Pass --force to overwrite...\n",
-                 path_to_outfile);
+    fmt::print(stderr, "File '{}' already exists, SKIPPING! Pass --force to overwrite...\n",
+               path_to_outfile);
     return;
   }
 
@@ -336,19 +337,19 @@ void Chromosome::write_contacts_to_tsv(std::string_view output_dir, bool force_o
                   this->contacts.n_rows() * this->get_bin_size());
 
   auto [bytes_in, bytes_out] = this->contacts.write_to_tsv(path_to_outfile, header);
-  fmt::fprintf(stderr,
-               "DONE writing '%s' in %s! Compressed size: %.2f MB (compression ratio %.2fx)\n",
-               // NOLINTNEXTLINE(readability-magic-numbers, cppcoreguidelines-avoid-magic-numbers)
-               path_to_outfile, absl::FormatDuration(absl::Now() - t0), bytes_out / 1.0e6,
-               static_cast<double>(bytes_in) / bytes_out);
+  fmt::print(stderr,
+             "DONE writing '{}' in {}! Compressed size: {:.2f} MB (compression ratio {:.2f}x)\n",
+             // NOLINTNEXTLINE(readability-magic-numbers, cppcoreguidelines-avoid-magic-numbers)
+             path_to_outfile, absl::FormatDuration(absl::Now() - t0), bytes_out / 1.0e6,
+             static_cast<double>(bytes_in) / bytes_out);
 }
 
 void Chromosome::write_barriers_to_tsv(std::string_view output_dir, bool force_overwrite) const {
   auto path_to_outfile = std::filesystem::weakly_canonical(
       fmt::format("{}/{}.extrusion_barriers.tsv.bz2", output_dir, this->name));
   if (!force_overwrite && std::filesystem::exists(path_to_outfile)) {
-    fmt::fprintf(stderr, "File '%s' already exists. Pass --force to overwrite... SKIPPING.\n",
-                 path_to_outfile);
+    fmt::print(stderr, "File '{}' already exists. Pass --force to overwrite... SKIPPING.\n",
+               path_to_outfile);
     return;
   }
   try {
@@ -367,6 +368,9 @@ void Chromosome::write_barriers_to_tsv(std::string_view output_dir, bool force_o
     }
 
     for (const auto& barrier : this->barriers) {
+      fmt::print(out, "{}{}\n", barrier->get_direction_of_block() == DNA::fwd ? "+" : "-",
+                 barrier->get_pos());
+      /*
       buff = absl::StrCat(barrier->get_direction_of_block() == DNA::fwd ? "+" : "-",
                           barrier->get_pos(), "\n");
       // TODO: Make this pragma portable
@@ -375,6 +379,7 @@ void Chromosome::write_barriers_to_tsv(std::string_view output_dir, bool force_o
 #pragma GCC diagnostic ignored "-Wsign-conversion"
       out.write(buff.data(), buff.size());
 #pragma GCC diagnostic pop
+       */
       if (!out || !fp) {
         throw fmt::system_error(errno, "IO error while writing to file '{}'", path_to_outfile);
       }

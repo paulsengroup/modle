@@ -99,7 +99,7 @@ struct config {
     const auto max_column_length = max_column1_length + max_column2_length;
 
     std::string buff = fmt::format(FMT_STRING("{:#^{}}\n##{:^{}}##\n"), "   CONFIG SUMMARY   ",
-                                   max_column_length, "", max_column_length - 4); // NOLINT
+                                   max_column_length, "", max_column_length - 4);  // NOLINT
     for (const auto& title : {"Input/Output"sv, "General settings"sv, "LEF settings"sv,
                               "Extr. barrier settings"sv, "Burn-in phase"sv}) {
       absl::StrAppend(
@@ -112,8 +112,8 @@ struct config {
                                     max_column2_length - col2_constant_padding_length));
       }
     }
-    absl::StrAppend(&buff,
-                    fmt::format(FMT_STRING("{:#^{}}\n\n"), "   END OF CONFIG SUMMARY   ", max_column_length));
+    absl::StrAppend(&buff, fmt::format(FMT_STRING("{:#^{}}\n\n"), "   END OF CONFIG SUMMARY   ",
+                                       max_column_length));
     return buff;
   }
 

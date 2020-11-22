@@ -14,7 +14,7 @@ target_link_libraries(
   libmodle
   PRIVATE project_warnings
           project_options
-          Modle::parser
+          Modle::io
           CONAN_PKG::boost
           CONAN_PKG::tbb
   PUBLIC Threads::Threads Modle::cmatrix CONAN_PKG::abseil)

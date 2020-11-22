@@ -372,7 +372,7 @@ std::vector<std::vector<I>> ContactMatrix<I>::generate_symmetric_matrix() const 
   m.reserve(this->_ncols);
   for (std::size_t y = 0; y < this->_ncols; ++y) {
     std::vector<I> row(this->_ncols, 0);
-    for (I x = 0; x < this->_ncols; ++x) {
+    for (std::size_t x = 0; x < this->_ncols; ++x) {
       auto j = x;
       auto i = j - y;
       if (y > x) {
@@ -409,7 +409,7 @@ std::pair<uint32_t, uint32_t> ContactMatrix<I>::write_to_tsv(const std::string &
   std::string buff;
   uint64_t raw_size = 0;
   if (this->_updates_missed > 0) {
-    fmt::fprintf(stderr, "WARNING: There were %lu missed updates!\n", this->_updates_missed);
+    fmt::print(stderr, "WARNING: There were {} missed updates!\n", this->_updates_missed);
   }
   try {
     out.push(boost::iostreams::bzip2_compressor(boost::iostreams::bzip2_params(bzip2_block_size)));
@@ -423,6 +423,7 @@ std::pair<uint32_t, uint32_t> ContactMatrix<I>::write_to_tsv(const std::string &
         assert(i * j < this->_contacts.size());
         row[j] = this->at(i, j);
       }
+      fmt::print(out, "{}\n", absl::StrJoin(row, "\t"));
       buff = absl::StrCat(absl::StrJoin(row, "\t"), "\n");
       out.write(buff.data(), static_cast<long>(buff.size()));
       raw_size += buff.size();
@@ -524,7 +525,7 @@ std::pair<uint32_t, uint32_t> ContactMatrix<I>::write_full_matrix_to_tsv(
   std::string buff;
   uint64_t raw_size = 0;
   if (this->_updates_missed > 0) {
-    fmt::fprintf(stderr, "WARNING: There were %lu missed updates!\n", this->_updates_missed);
+    fmt::fprintf(stderr, "WARNING: There were {} missed updates!\n", this->_updates_missed);
   }
   try {
     out.push(boost::iostreams::bzip2_compressor(boost::iostreams::bzip2_params(bzip2_block_size)));

@@ -4,9 +4,9 @@
 #include <memory>
 #include <random>
 
-#include "modle/contacts.hpp"
 #include "modle/dna.hpp"
 #include "modle/extr_barrier.hpp"
+#include "modle/juicer_contacts.hpp"
 
 namespace modle {
 class ExtrusionUnit;
@@ -52,7 +52,7 @@ class Lef {
   [[nodiscard]] std::pair<DNA::Bin*, DNA::Bin*> get_ptr_to_bins();
   [[nodiscard]] bool is_bound() const;
   void randomly_bind_to_chr(Chromosome* chr, std::mt19937& rand_eng, bool register_contact = false);
-  void bind_at_pos(Chromosome* chr, uint32_t pos, std::mt19937& rang_eng, bool register_contact);
+  void bind_at_pos(Chromosome* chr, uint32_t pos, std::mt19937& rand_eng, bool register_contact);
   /** Call ExtrusionUnit::check_constraints on the left and right ExtrusionUnit%s, which in turn
    * check whether there last round of extrusion produced a collision between one of the
    * ExtrusionUnit%s and another instance of ExtrusionUnit, or if the current ExtrusionUnit has
@@ -97,7 +97,7 @@ class ExtrusionUnit {
   [[nodiscard]] bool is_stalled() const;
   [[nodiscard]] bool is_bound() const;
   uint64_t check_constraints(std::mt19937& rand_eng);
-  bool try_extrude(std::mt19937& rand_end);
+  bool try_extrude(std::mt19937& rand_eng);
   [[nodiscard]] double get_prob_of_extr_unit_bypass() const;
   [[nodiscard]] std::size_t get_bin_index() const;
 

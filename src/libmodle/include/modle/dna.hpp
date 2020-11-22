@@ -5,6 +5,7 @@
 #include <vector>
 
 #include "absl/container/inlined_vector.h"
+#include "modle/bed.hpp"
 #include "modle/contacts.hpp"
 
 namespace modle {
@@ -50,7 +51,7 @@ class DNA {
 
   // Modifiers
   ExtrusionBarrier* add_extr_barrier(ExtrusionBarrier& b, uint32_t pos);
-  ExtrusionBarrier* add_extr_barrier(const BED& record);
+  ExtrusionBarrier* add_extr_barrier(const modle::bed::BED& record);
   void remove_extr_barrier(uint32_t pos, Direction direction);
 
  private:
