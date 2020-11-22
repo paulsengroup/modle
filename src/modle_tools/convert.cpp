@@ -14,7 +14,7 @@
 #include "modle/contacts.hpp"
 #include "modle_tools/utils.hpp"
 
-namespace modle::tools::convert {
+namespace modle::tools {
 std::normal_distribution<double> init_noise_generator(uint64_t range) {
   constexpr double stdev_99_9_ci = 6.0;  // 99.9% CI
   return std::normal_distribution<double>(0, static_cast<double>(range) / stdev_99_9_ci);
@@ -76,12 +76,13 @@ std::string prepare_files_for_juicer_tools(const modle::tools::config& c) {
       const auto bin_size = static_cast<double>(header.bin_size);
       for (auto j = 0UL; j < toks.size(); ++j) {
         modle::utils::parse_numeric_or_throw(toks[j], n);
-        const double pos1 =
-            std::clamp(std::round(2.0 * (chr_start + (static_cast<double>(j - i) * bin_size)) + bin_size) / 2.0,
-                       chr_start, chr_end);
-        const double pos2 =
-            std::clamp(std::round(2.0 * (chr_start + (static_cast<double>(j) * bin_size)) + bin_size) / 2.0,
-                       chr_start, chr_end);
+        const double pos1 = std::clamp(
+            std::round(2.0 * (chr_start + (static_cast<double>(j - i) * bin_size)) + bin_size) /
+                2.0,
+            chr_start, chr_end);
+        const double pos2 = std::clamp(
+            std::round(2.0 * (chr_start + (static_cast<double>(j) * bin_size)) + bin_size) / 2.0,
+            chr_start, chr_end);
         record = fmt::format(FMT_COMPILE("1 {} {:.0f} 0 0 {} {:.0f} 1\n"), header.chr_name, pos1,
                              header.chr_name, pos2);
         for (auto k = n; k > 0UL; --k) {
@@ -164,8 +165,9 @@ void convert_to_hic(const modle::tools::config& c, std::string& argv) {
       throw std::runtime_error("An error occurred while reading from Juicer Tools stderr");
     }
     juicer_tools.wait();
-    if (!c.keep_tmp_files) { std::filesystem::remove(tmp_file_name);
-}
+    if (!c.keep_tmp_files) {
+      std::filesystem::remove(tmp_file_name);
+    }
     if (auto ec = juicer_tools.exit_code(); ec != 0) {
       throw std::runtime_error(
           fmt::format("Juicer tools terminated with exit code {}:\n{}", ec, stderr_msg));
@@ -196,4 +198,4 @@ void convert_to_tsv(const modle::tools::config& c) {
                absl::FormatDuration(absl::Now() - t0), static_cast<double>(bytes_in) / bytes_out);
 }
 
-}  // namespace modle::tools::convert
+}  // namespace modle::tools

@@ -1,6 +1,11 @@
 find_package(Threads REQUIRED)
 
-add_executable(modle_tools main.cpp convert.cpp eval.cpp)
+add_executable(
+  modle_tools
+  main.cpp
+  convert.cpp
+  eval.cpp
+  tools.cpp)
 
 target_link_libraries(
   modle_tools
@@ -8,8 +13,10 @@ target_link_libraries(
           project_options
           Modle::Modle
           Modle::correlation
+          Modle::io
           CONAN_PKG::abseil
+          CONAN_PKG::boost
           CONAN_PKG::cli11
-          CONAN_PKG::boost)
+          CONAN_PKG::range-v3)
 
 target_include_directories(modle_tools PRIVATE include)

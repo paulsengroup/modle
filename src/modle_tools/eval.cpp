@@ -5,23 +5,25 @@
 #include <future>
 #include <thread>
 
-#include "fmt/printf.h"
 #include "absl/time/clock.h"
+#include "fmt/printf.h"
 #include "modle/contacts.hpp"
 #include "modle_tools/cli.hpp"
 #include "modle_tools/utils.hpp"
 
-namespace modle::tools::eval {
+namespace modle::tools {
 
+//TODO move this code inside libio?
 ContactMatrix<uint32_t> parse_hic_matrix(const modle::tools::config &c) {
   auto t0 = absl::Now();
   const auto header = modle::ContactMatrix<uint32_t>::parse_header(c.path_to_input_matrix);
 
   std::string argv = modle::tools::utils::init_juicer_tools_argv(c);
   const auto chr = c.chr_name_hic.empty() ? header.chr_name : c.chr_name_hic;
-  const auto start = header.start + ((c.chr_offset_hic != UINT64_MAX) * c.chr_offset_hic);
-  const auto end = header.end + ((c.chr_offset_hic != UINT64_MAX) * c.chr_offset_hic) - 1;
-  const auto coords = absl::StrCat(chr, ":", start, ":", end);
+  const auto start =
+      c.chr_offset_hic != UINT64_MAX ? c.chr_offset_hic + header.start : header.start;
+  const auto end = c.chr_offset_hic != UINT64_MAX ? c.chr_offset_hic + header.end : header.end;
+  const auto coords = absl::StrCat(chr, ":", start, ":", end - 1);
   absl::StrAppendFormat(&argv, " dump observed NONE %s %s %s BP %lu --",
                         c.path_to_reference_cmatrix, coords, coords, header.bin_size);
   ContactMatrix<uint32_t> cmatrix(header.nrows, header.ncols);
@@ -72,10 +74,10 @@ ContactMatrix<uint32_t> parse_hic_matrix(const modle::tools::config &c) {
     juicer_stdout_parser.join();
     if (auto ec = juicer_tools.exit_code(); ec != 0) {
       throw std::runtime_error(fmt::format("Juicer Tools terminated with exit code %lu: %s", ec,
-                                               juicer_tools_stderr.get()));
+                                           juicer_tools_stderr.get()));
     }
     fmt::fprintf(stderr, "Parsed %lu records in %s!\n", records_parsed,
-                  absl::FormatDuration(absl::Now() - t0));
+                 absl::FormatDuration(absl::Now() - t0));
   } catch (const std::runtime_error &err) {
     throw std::runtime_error(
         fmt::format("An error occurred while running juicer_tools dump: %s", err.what()));
@@ -84,4 +86,4 @@ ContactMatrix<uint32_t> parse_hic_matrix(const modle::tools::config &c) {
   return cmatrix;
 }
 
-}  // namespace modle::utils::eval
+}  // namespace modle::tools

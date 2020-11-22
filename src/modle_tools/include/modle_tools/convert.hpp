@@ -5,7 +5,7 @@
 
 #include "modle_tools/cli.hpp"
 
-namespace modle::tools::convert {
+namespace modle::tools {
 
 std::normal_distribution<double> init_noise_generator(uint64_t range);
 
@@ -15,4 +15,4 @@ void convert_to_hic(const modle::tools::config& c, std::string& argv);
 
 void convert_to_tsv(const modle::tools::config& c);
 
-}  // namespace modle::tools::convert
+}  // namespace modle::tools
