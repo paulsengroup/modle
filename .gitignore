@@ -3,7 +3,7 @@ external/
 .idea/
 .run/
 .vscode/
-test/
+/test/
 build/
 *.sif
 scripts/fix_remote_devel.sh

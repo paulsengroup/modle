@@ -1,6 +1,7 @@
 #pragma once
 #include <algorithm>
 #include <atomic>
+#include <boost/math/distributions/beta.hpp>
 #include <boost/math/distributions/students_t.hpp>
 #include <boost/math/special_functions/erf.hpp>
 #include <cassert>
@@ -12,63 +13,147 @@
 
 #include "./correlation_utils.hpp"
 #include "modle/correlation.hpp"
+#include "range/v3/algorithm.hpp"
+#include "range/v3/span.hpp"
+#include "range/v3/view.hpp"
 
 namespace modle::correlation {
-template <typename N>
-CorrelationTest<N>::CorrelationTest(const std::vector<N> &v1, const std::vector<N> &v2)
-    : _v1(v1), _v2(v2) {
-  assert(v1.size() == v2.size());
+
+double compute_pearson_significance(double pcc, std::size_t n) {
+  assert(n > 2);
+  const auto ab = static_cast<const double>(n) / 2.0 - 1;
+  boost::math::beta_distribution<double> dist(ab, ab);
+  // https://github.com/scipy/scipy/blob/6703631bcd15750e86f4098b0421efabcac0f7c2/scipy/stats/stats.py#L3885
+  // NOLINTNEXTLINE(readability-magic-numbers, cppcoreguidelines-avoid-magic-numbers)
+  return 2.0 * boost::math::cdf<double>(dist, 0.5 * (1 - std::abs(pcc)));
 }
 
-template <typename N>
-double CorrelationTest<N>::compute_spearman_significance(double rho, std::size_t n) {
+double compute_spearman_significance(double rho, std::size_t n) {
   assert(n > 2);
   const auto dof = static_cast<const double>(n - 2);
   const double tscore = rho * std::sqrt(dof / ((1.0 + rho) * (1.0 - rho)));
   boost::math::students_t_distribution<double> dist(dof);
-  // See line 4229 at
-  // https://github.com/scipy/scipy/blob/6703631bcd15750e86f4098b0421efabcac0f7c2/scipy/stats/stats.py
+  // https://github.com/scipy/scipy/blob/6703631bcd15750e86f4098b0421efabcac0f7c2/scipy/stats/stats.py#L4229
   // 2 * survival function
   // NOLINTNEXTLINE(readability-magic-numbers, cppcoreguidelines-avoid-magic-numbers)
   return 2.0 * boost::math::cdf<double>(boost::math::complement(dist, std::fabs<double>(tscore)));
 }
 
-template <typename N>
-template <typename Iterator, typename>
-std::pair<double, double> CorrelationTest<N>::compute_spearman(const Iterator v1_b,
-                                                               const Iterator v1_e,
-                                                               const Iterator v2_b) {
-  const auto size = std::distance(v1_b, v1_e);
-  if (std::accumulate(v1_b, v1_e, 0.0) == 0 || std::accumulate(v2_b, v2_b + size, 0.0) == 0) {
-    return {0, 0};
-  }
-  auto v1r = utils::compute_element_ranks(v1_b, v1_b + size);
-  auto v2r = utils::compute_element_ranks(v2_b, v2_b + size);
-
-  auto v1r_avg = std::reduce(v1r.begin(), v1r.end(), 0.0) / static_cast<double>(size);
-  auto v2r_avg = std::reduce(v2r.begin(), v2r.end(), 0.0) / static_cast<double>(size);
-  double n = 0;  // numerator: sum (x - xm) * (y - ym)
-  // denominator: sum (x - xm)^2 * sum (y - ym)^2
+/*
+ * J. Bennett, R. Grout, P. Pebay, D. Roe and D. Thompson, "Numerically stable, single-pass,
+ * parallel statistics algorithms," 2009 IEEE International Conference on Cluster Computing and
+ * Workshops, New Orleans, LA, 2009, pp. 1-8, doi: 10.1109/CLUSTR.2009.5289161.
+ */
+template <typename Rng>
+double compute_pearson(Rng r1, Rng r2) {
+  static_assert(ranges::random_access_range<Rng>, "r1 and r2 should be a random access range");
+  double cov = 0;
+  double r1_avg = r1[0];
+  double r2_avg = r2[0];
   double d1 = 0;
   double d2 = 0;
-
-  for (auto i = 0U; i < size; ++i) {
-    const auto &r1 = v1r[i];
-    const auto &r2 = v2r[i];
-    n += (r1 - v1r_avg) * (r2 - v2r_avg);
-    d1 += std::pow(r1 - v1r_avg, 2);
-    d2 += std::pow(r2 - v2r_avg, 2);
-  }
-  auto rho = n / std::sqrt(d1 * d2);
-  if (std::isnan(rho)) {
-    throw std::logic_error("compute_spearman: rho cannot be nan!");
+  for (std::size_t i = 1; i < r1.size(); ++i) {
+    auto r1_tmp = r1[i] - r1_avg;
+    auto r2_tmp = r2[i] - r2_avg;
+    d1 += (i * r1_tmp * r1_tmp) / (i + 1);
+    d2 += (i * r2_tmp * r2_tmp) / (i + 1);
+    cov += i * r1_tmp * r2_tmp / (i + 1);
+    r1_avg += r1_tmp / (i + 1);
+    r2_avg += r2_tmp / (i + 1);
   }
 
-  return {rho, compute_spearman_significance(rho, size)};
+  // Both datasets are constant (i.e. perfectly correlated)
+  if (d1 == 0 && d2 == 0) {
+    return 1.0;
+  }
+  // Only one of the two datasets is constant (i.e. there's no correlation)
+  if (d1 == 0 || d2 == 0) {
+    return 0.0;
+  }
+
+  const auto pcc = std::clamp(cov / std::sqrt(d1 * d2), -1.0, 1.0);
+  if (std::isnan(pcc)) {
+    throw std::logic_error("compute_pearson: pcc cannot be nan!");
+  }
+
+  return pcc;
 };
 
+template <typename Rng>
+double compute_spearman(Rng r1, Rng r2) {
+  static_assert(ranges::random_access_range<Rng>, "r1 and r2 should be a random access range");
+  // Shortcut to avoid computing the correlation when any of the vector is all zeros
+  if (ranges::all_of(r1, [](auto n) { return n == 0; }) ||
+      ranges::all_of(r2, [](auto n) { return n == 0; })) {
+    return 1.0;
+  }
+  return compute_pearson(utils::compute_element_ranks(r1), utils::compute_element_ranks(r2));
+}
+
 template <typename N>
-double CorrelationTest<N>::compute_kendall_b_significance(uint32_t nc, uint32_t nd, uint32_t size,
+std::pair<std::vector<double>, std::vector<double>> compute_pearson(const std::vector<N>& v1,
+                                                                    const std::vector<N>& v2,
+                                                                    std::size_t window_span,
+                                                                    std::size_t window_overlap) {
+  // TODO: compute_pearson and compute_spearman (implemented below this function), basically do the
+  // same thing. Figure out a way to remove redundant code (i.e. everything excepr compute_* and
+  // compute_*_significance
+  static_assert(std::is_arithmetic<N>::value,
+                "compute_pearson requires a numeric type as template argument.");
+  if (v1.size() != v2.size()) {
+    throw std::runtime_error(
+        fmt::format("compute_pearson expects a pair of vectors of the same size, got {} "
+                    "and {} respectively",
+                    v1.size(), v2.size()));
+  }
+  assert(window_span > window_overlap);
+  std::vector<double> pcc_vals(v1.size() / (window_span - window_overlap));
+  std::vector<double> p_vals(pcc_vals.size());
+
+  for (std::size_t i = 0; i < pcc_vals.size(); ++i) {
+    const auto window_start = i * (window_span - window_overlap);
+    const auto window_end = window_start + window_span;
+    const auto slice1 = v1 | ranges::views::slice(window_start, window_end);
+    const auto slice2 = v2 | ranges::views::slice(window_start, window_end);
+    pcc_vals[i] = compute_pearson(slice1, slice2);
+    p_vals[i] = compute_pearson_significance(pcc_vals[i], slice1.size());
+  }
+
+  return std::make_pair(pcc_vals, p_vals);
+}
+
+template <typename N>
+std::pair<std::vector<double>, std::vector<double>> compute_spearman(const std::vector<N>& v1,
+                                                                     const std::vector<N>& v2,
+                                                                     std::size_t window_span,
+                                                                     std::size_t window_overlap) {
+  static_assert(std::is_arithmetic<N>::value,
+                "compute_spearman requires a numeric type as template argument.");
+  if (v1.size() != v2.size()) {
+    throw std::runtime_error(
+        fmt::format("compute_spearman expects a pair of vectors of the same size, got {} "
+                    "and {} respectively",
+                    v1.size(), v2.size()));
+  }
+  assert(window_span > window_overlap);
+  std::vector<double> rho_vals(v1.size() / (window_span - window_overlap));
+  std::vector<double> p_vals(rho_vals.size());
+
+  for (std::size_t i = 0; i < rho_vals.size(); ++i) {
+    const auto window_start = i * (window_span - window_overlap);
+    const auto window_end = window_start + window_span;
+    const auto slice1 = v1 | ranges::views::slice(window_start, window_end);
+    const auto slice2 = v2 | ranges::views::slice(window_start, window_end);
+    rho_vals[i] = compute_spearman(slice1, slice2);
+    p_vals[i] = compute_spearman_significance(rho_vals[i], slice1.size());
+  }
+
+  return std::make_pair(rho_vals, p_vals);
+}
+
+/*
+template <typename N>
+double compute_kendall_b_significance(uint32_t nc, uint32_t nd, uint32_t size,
                                                           uint32_t tie1, uint32_t tie2) {
   const uint32_t tot = size * (size - 1) / 2;
   // NOLINTNEXTLINE(readability-magic-numbers, cppcoreguidelines-avoid-magic-numbers)
@@ -109,8 +194,8 @@ double CorrelationTest<N>::compute_kendall_b_significance(uint32_t nc, uint32_t 
   const double var = (size * (size - 1) * (2.0 * size + 5) - x1 - y1) / 18.0 +
                      (2.0 * tie1 * tie2) / (size * (size - 1)) +
                      x0 * y0 / (9.0 * size * (size - 1) * (size - 2));
-  return boost::math::erfc<double>(std::abs<double>(static_cast<double>(nc) - nd) /
-                                   std::sqrt(var) / sqrt2);
+  return boost::math::erfc<double>(std::abs<double>(static_cast<double>(nc) - nd) / std::sqrt(var) /
+                                   sqrt2);
 }
 template <typename N>
 template <typename Iterator, typename>
@@ -187,32 +272,6 @@ std::pair<double, double> CorrelationTest<N>::compute_kendall() const {
 }
 
 template <typename N>
-std::pair<double, double> CorrelationTest<N>::compute_spearman() const {
-  return this->compute_spearman(this->_v1.begin(), this->_v1.end(), this->_v2.begin());
-}
-
-template <typename N>
-std::vector<std::pair<double, double>> CorrelationTest<N>::compute_spearman(
-    uint64_t window_size, uint64_t window_overlap) const {
-  std::vector<std::size_t> windows_start((this->_v1.size() - window_size) / window_overlap);
-  for (auto i = 0UL; i < windows_start.size(); ++i) {
-    windows_start[i] = i * window_overlap;
-  }
-  assert(windows_start.size() == (this->_v1.size() - window_size) / window_overlap);
-
-  std::vector<std::pair<double, double>> correlations(windows_start.size());
-  std::transform(std::execution::par_unseq, windows_start.begin(), windows_start.end(),
-                 correlations.begin(), [&](std::size_t offset) {
-                   auto v1s = this->_v1.begin() + offset;
-                   auto v1e = v1s + window_size;
-                   auto v2s = this->_v2.begin() + offset;
-                   return compute_spearman(v1s, v1e, v2s);
-                 });
-
-  return correlations;
-}
-
-template <typename N>
 std::vector<std::pair<double, double>> CorrelationTest<N>::compute_kendall(
     uint64_t window_size, uint64_t window_overlap) const {
   std::vector<uint32_t> windows_start((this->_v1.size() - window_size) / window_overlap);
@@ -230,5 +289,6 @@ std::vector<std::pair<double, double>> CorrelationTest<N>::compute_kendall(
                  });
   return correlations;
 }
+ */
 
 }  // namespace modle::correlation

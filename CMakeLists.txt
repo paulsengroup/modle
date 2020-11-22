@@ -81,23 +81,26 @@ set(CONAN_EXTRA_OPTIONS "")
 
 set(CONAN_EXTRA_REQUIRES
     ${CONAN_EXTRA_REQUIRES}
-    tbb/2020.2
-    zlib/1.2.11
-    bzip2/1.0.8
-    boost/1.74.0
     abseil/20200923.2
+    boost/1.74.0
+    bzip2/1.0.8
+    cli11/1.9.1
     fmt/7.1.2
+    range-v3/0.11.0
     spdlog/1.8.1
-    cli11/1.9.1)
+    tbb/2020.2
+    zlib/1.2.11)
+
 set(CONAN_EXTRA_OPTIONS
     ${CONAN_EXTRA_OPTIONS}
     bzip2:build_executable=False
-    zlib:minizip=False
     boost:system_no_deprecated=True
     boost:asio_no_deprecated=True
     boost:filesystem_no_deprecated=True
     boost:zlib=True
-    boost:bzip2=True)
+    boost:bzip2=True
+    zlib:minizip=False)
+
 set(CONAN_EXTRA_SETTINGS ${CONAN_EXTRA_SETTINGS} compiler.cppstd=17)
 
 if(ENABLE_TESTING)

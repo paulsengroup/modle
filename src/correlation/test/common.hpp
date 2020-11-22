@@ -64,7 +64,7 @@ std::pair<double, double> corr_scipy(const std::vector<N>& v1, const std::vector
 
   const std::string cmd =
       "python3 -c '"
-      "from scipy.stats import spearmanr, kendalltau; from sys import argv, stderr; "
+      "from scipy.stats import pearsonr, spearmanr, kendalltau; from sys import argv, stderr; "
       "from numpy import genfromtxt; "
       "v1 = genfromtxt(argv[1], delimiter=\",\", dtype=int); "
       "v2 = genfromtxt(argv[2], delimiter=\",\", dtype=int); "
