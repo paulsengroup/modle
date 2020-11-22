@@ -2,7 +2,6 @@
 
 #include <boost/asio/thread_pool.hpp>
 #include <cassert>
-#include <execution>
 #include <filesystem>
 #include <functional>
 

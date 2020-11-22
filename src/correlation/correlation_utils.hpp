@@ -4,7 +4,6 @@
 #include <bitset>
 #include <boost/dynamic_bitset.hpp>
 #include <cstdint>
-#include <execution>
 #include <numeric>
 #include <type_traits>
 #include <vector>

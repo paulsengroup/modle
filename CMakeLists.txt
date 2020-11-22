@@ -64,6 +64,7 @@ if(ENABLE_PCH)
     <cassert>)
 endif()
 
+#[[
 # Make sure compiler support execution policies (C++17)
 include(CheckIncludeFileCXX)
 set(CMAKE_REQUIRED_INCLUDES "${CMAKE_INCLUDE_PATH}")
@@ -74,6 +75,7 @@ if(NOT HAVE_EXECUTION)
       "Your compiler C++ library does not seem to support execution policies (C++17, currently only implemented in libstdc++ >=9)."
   )
 endif()
+]]
 
 # Set up some extra Conan dependencies based on our needs before loading Conan
 set(CONAN_EXTRA_REQUIRES "")
