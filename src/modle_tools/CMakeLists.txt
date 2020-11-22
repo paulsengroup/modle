@@ -20,3 +20,11 @@ target_link_libraries(
           CONAN_PKG::range-v3)
 
 target_include_directories(modle_tools PRIVATE include)
+
+install(
+  TARGETS modle_tools
+  LIBRARY DESTINATION lib
+  ARCHIVE DESTINATION lib
+  RUNTIME DESTINATION bin
+  INCLUDES
+  DESTINATION include)

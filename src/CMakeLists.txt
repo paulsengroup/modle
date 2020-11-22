@@ -1,7 +1,7 @@
 option(MODLE_BUILD_UTILS "Enable compilation of ModLE's utilities (such as modle_tools)" ON)
 
 if(MODLE_BUILD_UTILS)
-  message("Building ModLE utils")
+  message(STATUS "Building ModLE utils")
   add_subdirectory(modle_tools)
 endif()
 

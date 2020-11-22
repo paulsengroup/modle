@@ -88,7 +88,6 @@ set(CONAN_EXTRA_REQUIRES
     fmt/7.1.2
     range-v3/0.11.0
     spdlog/1.8.1
-    tbb/2020.2
     zlib/1.2.11)
 
 set(CONAN_EXTRA_OPTIONS
@@ -112,7 +111,7 @@ run_conan()
 
 if(ENABLE_TESTING)
   enable_testing()
-  message("Building Tests")
+  message(STATUS "Building tests")
   add_subdirectory(test)
 endif()
 

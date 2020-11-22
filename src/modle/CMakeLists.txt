@@ -11,3 +11,11 @@ target_link_libraries(
           CONAN_PKG::abseil
           CONAN_PKG::boost
           CONAN_PKG::cli11)
+
+install(
+  TARGETS modle
+  LIBRARY DESTINATION lib
+  ARCHIVE DESTINATION lib
+  RUNTIME DESTINATION bin
+  INCLUDES
+  DESTINATION include)

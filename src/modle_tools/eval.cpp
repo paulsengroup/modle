@@ -13,7 +13,7 @@
 
 namespace modle::tools {
 
-//TODO move this code inside libio?
+// TODO move this code inside libio?
 ContactMatrix<uint32_t> parse_hic_matrix(const modle::tools::config &c) {
   auto t0 = absl::Now();
   const auto header = modle::ContactMatrix<uint32_t>::parse_header(c.path_to_input_matrix);

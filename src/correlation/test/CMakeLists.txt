@@ -11,5 +11,4 @@ target_link_libraries(
           Modle::utils
           CONAN_PKG::abseil
           CONAN_PKG::boost
-          CONAN_PKG::tbb
           Threads::Threads)

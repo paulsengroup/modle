@@ -16,11 +16,12 @@ target_link_libraries(
           project_options
           Modle::io
           CONAN_PKG::boost
-          CONAN_PKG::tbb
+          # CONAN_PKG::tbb
   PUBLIC Threads::Threads Modle::cmatrix CONAN_PKG::abseil)
 
 set_target_properties(libmodle PROPERTIES OUTPUT_NAME modle)
 
+#[[
 install(
   TARGETS libmodle
   LIBRARY DESTINATION lib
@@ -28,3 +29,4 @@ install(
   RUNTIME DESTINATION bin
   INCLUDES
   DESTINATION include)
+]]

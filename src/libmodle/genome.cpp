@@ -1,5 +1,6 @@
 #include "modle/genome.hpp"
 
+#include <boost/asio/thread_pool.hpp>
 #include <cassert>
 #include <execution>
 #include <filesystem>
@@ -61,13 +62,16 @@ uint64_t Genome::get_n_of_busy_lefs() const {
 }
 
 void Genome::write_contacts_to_file(std::string_view output_dir, bool force_overwrite) const {
-  fmt::fprintf(stderr, "Writing contact matrices for %lu chromosome(s) in folder '%s'...\n",
-               this->get_n_chromosomes(), output_dir);
+  auto nthreads = std::thread::hardware_concurrency();
+  boost::asio::thread_pool tpool(nthreads);
+  fmt::print(stderr,
+             "Writing contact matrices for {} chromosome(s) in folder '{} using {} threads'...\n",
+             this->get_n_chromosomes(), output_dir, nthreads);
   auto t0 = absl::Now();
   std::filesystem::create_directories(output_dir);
-  std::for_each(
-      std::execution::par, this->_chromosomes.begin(), this->_chromosomes.end(),
-      [&](const Chromosome& chr) { chr.write_contacts_to_tsv(output_dir, force_overwrite); });
+  for (const auto& chr : this->_chromosomes) {
+    boost::asio::post(tpool, [&]() { chr.write_contacts_to_tsv(output_dir, force_overwrite); });
+  }
   fmt::fprintf(stderr, "DONE! Saved %lu contact matrices in %s\n", this->get_n_chromosomes(),
                absl::FormatDuration(absl::Now() - t0));
 }
@@ -78,9 +82,9 @@ void Genome::write_extrusion_barriers_to_file(std::string_view output_dir,
                this->get_n_chromosomes(), output_dir);
   std::filesystem::create_directories(output_dir);
   auto t0 = absl::Now();
-  std::for_each(
-      std::execution::par, this->_chromosomes.begin(), this->_chromosomes.end(),
-      [&](const Chromosome& chr) { chr.write_barriers_to_tsv(output_dir, force_overwrite); });
+  std::for_each(this->_chromosomes.begin(), this->_chromosomes.end(), [&](const Chromosome& chr) {
+    chr.write_barriers_to_tsv(output_dir, force_overwrite);
+  });
   fmt::fprintf(stderr, "DONE! Written extrusion barrier coordinates for %lu chromosomes in %s\n",
                this->get_n_chromosomes(), absl::FormatDuration(absl::Now() - t0));
 }

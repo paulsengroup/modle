@@ -1,0 +1,53 @@
+FROM fedora:33 AS modle_base
+
+COPY src            /tmp/modle/src
+COPY CMakeLists.txt /tmp/modle/CMakeLists.txt
+COPY LICENSE        /tmp/modle/LICENSE
+COPY cmake          /tmp/modle/cmake
+
+ARG build_dir='/tmp/modle/cmake-build'
+# march, cpus and ver are set through --build-arg at build time
+ARG march
+ARG cpus
+ARG ver
+ARG CONAN_VER=1.31.3
+
+# TODO: Figure out why IPO is not available
+# TODO: Remove -DWARNINGS_AS_ERRORS
+# TODO: Enable tests
+
+# Update system repo and install required tools
+RUN dnf update -y \
+    && dnf install -y --setopt=install_weak_deps=False --best                   \
+                      bash make cmake git bzip2 bzip2-devel zlib zlib-devel     \
+                      clang python3                                             \
+    && python3 -m venv /tmp/conan_venv --upgrade-deps                           \
+    && /tmp/conan_venv/bin/pip3 --no-cache-dir install conan==${CONAN_VER}      \
+    && mkdir -p /usr/local/bin                                                  \
+    && ln -s /tmp/conan_venv/bin/conan /usr/local/bin/conan                     \
+    && mkdir "$build_dir" && cd "$build_dir"       \
+    && env CC=/usr/bin/clang                       \
+           CXX=/usr/bin/clang++                    \
+           LD=/usr/bin/ld.lld                      \
+       cmake -DCMAKE_BUILD_TYPE=Release            \
+             -DENABLE_IPO=OFF                      \
+             -DWARNINGS_AS_ERRORS=OFF              \
+             -DENABLE_TESTING=OFF                  \
+             -DCMAKE_INSTALL_PREFIX='/usr/local'   \
+             -DCMAKE_C_COMPILER=/usr/bin/clang     \
+             -DCMAKE_CXX_COMPILER=/usr/bin/clang++ \
+             -DCMAKE_CXX_FLAGS="-march=${march}"   \
+             -DCMAKE_C_FLAGS="-march=${march}"     \
+             -G 'Unix Makefiles' ..                \
+    && make -j "$cpus" install                     \
+    && unlink /usr/local/bin/conan && rm -r /root/.conan         \
+    && dnf remove -y make cmake git bzip2-devel zlib-devel clang \
+    && dnf clean all
+
+ENV SHELL=/usr/bin/bash
+ENV PATH='$PATH:/usr/local/bin'
+
+LABEL maintainer='Roberto Rossini <roberros@uio.no>'
+LABEL version="$ver"
+WORKDIR /data
+ENTRYPOINT ["/usr/local/bin/modle"]

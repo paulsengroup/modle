@@ -7,19 +7,29 @@ ExternalProject_Add(
   libBigWig
   GIT_REPOSITORY https://github.com/dpryan79/libBigWig.git
   GIT_TAG 3a756fad0c75b2c748667481f16b200331b0a8bb
-  CONFIGURE_COMMAND ""
-  PATCH_COMMAND ${SED_EXE} -i "s/echo \"YES\"\)$/echo \"NO\")/" "<SOURCE_DIR>/Makefile"
-  BUILD_IN_SOURCE ON
-  BUILD_COMMAND ${MAKE_EXE} lib-static
-  INSTALL_COMMAND "")
+  CONFIGURE_COMMAND cp "${CMAKE_CURRENT_SOURCE_DIR}/CMakeLists_libBigWig.txt" "<SOURCE_DIR>/CMakeLists.txt"
+  COMMAND ${CMAKE_COMMAND} <SOURCE_DIR> -Wno-dev
+  BUILD_BYPRODUCTS ${BINARY_DIR}/libBigWig.so ${BINARY_DIR}/libBigWig.a
+  # BUILD_COMMAND ${CMAKE_COMMAND} <SOURCE_DIR> -Wno-dev
+  INSTALL_COMMAND ""
+  # PATCH_COMMAND ${SED_EXE} -i "s/echo \"YES\"\)$/echo \"NO\")/" "/Makefile" BUILD_IN_SOURCE ON BUILD_COMMAND
+  # ${MAKE_EXE} lib-static INSTALL_COMMAND "")
+)
 
-add_library(libBigWig_static STATIC IMPORTED)
-add_dependencies(libBigWig_static libBigWig)
-ExternalProject_Get_Property(libBigWig SOURCE_DIR)
-set(LIB_BIGWIG_ROOT ${SOURCE_DIR})
-unset(SOURCE_DIR)
-target_include_directories(libBigWig_static INTERFACE ${LIB_BIGWIG_ROOT}/../)
-set_target_properties(libBigWig_static PROPERTIES IMPORTED_LOCATION ${LIB_BIGWIG_ROOT}/libBigWig.a)
+ExternalProject_Get_Property(libBigWig BINARY_DIR)
+set(LIB_BIGWIG_ROOT ${BINARY_DIR})
+unset(BINARY_DIR)
+
+if(BUILD_SHARED_LIBS) # Generator expr do not work very well here
+  add_library(libBigWig_lib SHARED IMPORTED)
+  set_target_properties(libBigWig_lib PROPERTIES IMPORTED_LOCATION ${LIB_BIGWIG_ROOT}/libBigWig.so)
+else()
+  add_library(libBigWig_lib STATIC IMPORTED)
+  set_target_properties(libBigWig_lib PROPERTIES IMPORTED_LOCATION ${LIB_BIGWIG_ROOT}/libBigWig.a)
+endif()
+
+add_dependencies(libBigWig_lib libBigWig)
+target_include_directories(libBigWig_lib INTERFACE ${LIB_BIGWIG_ROOT}/../)
 
 add_library(libio)
 add_library(Modle::io ALIAS libio)
@@ -29,25 +39,34 @@ target_sources(
           chr_sizes.cpp
           juicer_contacts.cpp
           bigwig.cpp)
-add_dependencies(libio libBigWig_static)
+add_dependencies(libio libBigWig_lib)
 
-target_include_directories(
-  libio
-  PUBLIC include/
-  PRIVATE libBigWig_static)
+target_include_directories(libio PUBLIC include/)
 
 target_link_libraries(
   libio
-  PRIVATE project_warnings project_options m # -lm
+  PRIVATE project_warnings project_options
   PUBLIC Modle::cmatrix
-         libBigWig_static
+         # libBigWig_static
+         libBigWig_lib
          CONAN_PKG::abseil
          CONAN_PKG::fmt
          CONAN_PKG::range-v3
          CONAN_PKG::zlib)
 
 set_target_properties(libio PROPERTIES OUTPUT_NAME parser)
+target_compile_definitions(libio PRIVATE -DNOCURL)
 
 if(ENABLE_TESTING)
   add_subdirectory(test)
 endif()
+
+#[[
+install(
+  TARGETS libio
+  LIBRARY DESTINATION lib
+  ARCHIVE DESTINATION lib
+  RUNTIME DESTINATION bin
+  INCLUDES
+  DESTINATION include)
+]]
