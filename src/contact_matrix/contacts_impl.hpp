@@ -71,12 +71,14 @@ ContactMatrix<I>::ContactMatrix(const std::string &path_to_file,
         if (noise_generator != nullptr) {
           for (auto k = n; k > 0; --k) {
             // TODO: Figure out how to improve readability by removing some static_casts
-            const int64_t noise1 = std::lround((*noise_generator)(*rand_eng) / bin_size);
-            const int64_t noise2 = std::lround((*noise_generator)(*rand_eng) / bin_size);
-            const auto pos1 = static_cast<std::size_t>(std::clamp(
-                noise1 + static_cast<int64_t>(i), 0L, static_cast<int64_t>(this->_nrows) - 1L));
-            const auto pos2 = static_cast<std::size_t>(std::clamp(
-                noise2 + static_cast<int64_t>(j), 0L, static_cast<int64_t>(this->_ncols) - 1L));
+            const auto noise1 = (*noise_generator)(*rand_eng) / bin_size;
+            const auto noise2 = (*noise_generator)(*rand_eng) / bin_size;
+            const auto pos1 =
+                static_cast<std::size_t>(std::clamp(std::round(noise1 + static_cast<double>(i)),
+                                                    0.0, static_cast<double>(this->_nrows) - 1.0));
+            const auto pos2 =
+                static_cast<std::size_t>(std::clamp(std::round(noise2 + static_cast<double>(j)),
+                                                    0.0, static_cast<double>(this->_ncols) - 1.0));
             this->at(pos1, pos2) += static_cast<I>(n);
           }
         } else {
