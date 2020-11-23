@@ -16,7 +16,9 @@ target_link_libraries(
           project_options
           Modle::io
           CONAN_PKG::boost
-          # CONAN_PKG::tbb
+          # Deal with std::filesystem quirkiness on older compilers
+          $<$<AND:$<CXX_COMPILER_ID:Clang>,$<CXX_COMPILER_ID:AppleClang>,$<VERSION_LESS_EQUAL:$<CXX_COMPILER_VERSION>,9.0.0>>:-lc++fs>
+          $<$<AND:$<CXX_COMPILER_ID:GNU>,$<VERSION_LESS_EQUAL:$<CXX_COMPILER_VERSION>,9.1.0>>:-lstdc++fs>
   PUBLIC Threads::Threads Modle::cmatrix CONAN_PKG::abseil)
 
 set_target_properties(libmodle PROPERTIES OUTPUT_NAME modle)
