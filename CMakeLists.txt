@@ -53,7 +53,8 @@ if(ENABLE_PCH)
   # This sets a global PCH parameter, each project will build its own PCH, which is a good idea if any #define's change
   #
   # consider breaking this out per project as necessary
-  target_precompile_headers(
+  if(${CMAKE_VERSION} VERSION_GREATER_EQUAL "3.16.0")
+    target_precompile_headers(
     project_options
     INTERFACE
     <vector>
@@ -62,6 +63,9 @@ if(ENABLE_PCH)
     <utility>
     <random>
     <cassert>)
+  else()
+    message(WARNING "CMake 3.16 or newer is required to enable precompiled headers. Ignoring -DENABLE_PCH")
+  endif()
 endif()
 
 #[[

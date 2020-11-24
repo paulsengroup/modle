@@ -71,6 +71,7 @@ void Genome::write_contacts_to_file(std::string_view output_dir, bool force_over
   for (const auto& chr : this->_chromosomes) {
     boost::asio::post(tpool, [&]() { chr.write_contacts_to_tsv(output_dir, force_overwrite); });
   }
+  tpool.join();
   fmt::fprintf(stderr, "DONE! Saved %lu contact matrices in %s\n", this->get_n_chromosomes(),
                absl::FormatDuration(absl::Now() - t0));
 }

@@ -425,7 +425,8 @@ std::pair<uint32_t, uint32_t> ContactMatrix<I>::write_to_tsv(const std::string &
         assert(i * j < this->_contacts.size());
         row[j] = this->at(i, j);
       }
-      fmt::print(out, "{}\n", absl::StrJoin(row, "\t"));
+      // TODO: Figure out how to get the raw size when using fmt::print
+      // fmt::print(out, "{}\n", absl::StrJoin(row, "\t"));
       buff = absl::StrCat(absl::StrJoin(row, "\t"), "\n");
       out.write(buff.data(), static_cast<long>(buff.size()));
       raw_size += buff.size();

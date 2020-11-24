@@ -174,7 +174,7 @@ class Cli {
     }
 
     if (this->_cli.get_subcommand("eval")->parsed() &&
-        c.sliding_window_size <= c.sliding_window_overlap) {
+        c.sliding_window_size != 0 && c.sliding_window_size <= c.sliding_window_overlap) {
       absl::StrAppendFormat(&errors,
                             "--sliding-window-size should be > --sliding-window-overlap: "
                             "--sliding-window-size=%lu --sliding-window-overlap=%lu.",

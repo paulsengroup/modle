@@ -181,7 +181,8 @@ void convert_to_hic(const modle::tools::config& c, std::string& argv) {
 }
 
 void convert_to_tsv(const modle::tools::config& c) {
-  auto out_file = absl::StrCat(c.out_dir, "/", c.base_name, ".tsv.bz2");
+  auto out_file = absl::StrCat(c.out_dir, "/", c.base_name, "_square_cmatrix.tsv.bz2");
+  assert(c.force || !std::filesystem::exists(out_file));
   fmt::fprintf(stderr, "Writing contacts as a symmetric matrix in TSV format to file '%s'...\n",
                out_file);
 
