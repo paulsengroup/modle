@@ -283,8 +283,12 @@ uint32_t Lef::extrude(std::mt19937& rand_eng) {
 }
 
 void Lef::register_contact() {
-  this->_chr->contacts.increment(this->_left_unit->get_bin_index(),
-                                 this->_right_unit->get_bin_index());
+  // We don't register contacts for the first and last bins in a chromosome
+  if (this->_left_unit->get_bin_index() == 0 &&
+      this->_right_unit->get_bin_index() == this->get_last_bin().get_index()) {
+    this->_chr->contacts.increment(this->_left_unit->get_bin_index(),
+                                   this->_right_unit->get_bin_index());
+  }
 }
 
 void Lef::check_constraints(std::mt19937& rang_eng) {

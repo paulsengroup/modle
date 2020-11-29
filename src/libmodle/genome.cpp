@@ -324,8 +324,8 @@ void Genome::simulate_extrusion(uint32_t iterations) {
     }
 
     if (i % step == 0) {
-      fmt::fprintf(stderr, "Running iteration %lu/%lu (%.2f iterations/s)\n", i, iterations,
-                   step / absl::ToDoubleSeconds(absl::Now() - t0));
+      fmt::print(stderr, FMT_STRING("Running iteration {}/{} ({:.2f} iterations/s)\n"), i,
+                 iterations, step / absl::ToDoubleSeconds(absl::Now() - t0));
       t0 = absl::Now();
     }
   }
