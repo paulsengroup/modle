@@ -14,9 +14,11 @@
 #include <random>
 #include <string_view>
 
+#include "absl/strings/match.h"
 #include "absl/strings/str_format.h"
 #include "absl/strings/str_join.h"
 #include "absl/strings/str_split.h"
+#include "absl/strings/strip.h"
 #include "fmt/printf.h"
 #include "modle/contacts.hpp"
 #include "modle/utils.hpp"
@@ -341,7 +343,7 @@ void ContactMatrix<I>::print(bool full) const {
           row[x] = this->at(i, j);
         }
       }
-      fmt::print(FMT_STRING("%s\n)"), absl::StrJoin(row, "\t"));
+      fmt::print(FMT_STRING("%s\n"), absl::StrJoin(row, "\t"));
     }
   } else {
     std::vector<I> row(this->n_cols());
@@ -349,7 +351,7 @@ void ContactMatrix<I>::print(bool full) const {
       for (auto j = 0UL; j < this->n_cols(); ++j) {
         row[j] = this->at(i, j);
       }
-      fmt::print(FMT_STRING("%s\n)"), absl::StrJoin(row, "\t"));
+      fmt::print(FMT_STRING("%s\n"), absl::StrJoin(row, "\t"));
     }
   }
 }
@@ -476,23 +478,24 @@ typename ContactMatrix<I>::Header ContactMatrix<I>::parse_header(
   ContactMatrix<I>::Header header;
   std::string buff;
   if (!std::getline(in, buff)) {
-    throw fmt::system_error(errno, "IO error while reading file '%s'", path_to_file);
+    throw fmt::system_error(errno, "IO error while reading file '{}'", path_to_file);
   }
   if (rewind_file) {
     in.seekg(0);
     if (!in) {
-      throw fmt::system_error(errno, "IO error while rewinding file '%s'", path_to_file);
+      throw fmt::system_error(errno, "IO error while rewinding file '{}'", path_to_file);
     }
   }
 
   std::vector<std::string_view> toks = absl::StrSplit(buff, '\t');
-  if (toks.size() != Header::N_OF_EXPECTED_TOKENS || buff.front() != '#') {
+  if (toks.size() != Header::N_OF_EXPECTED_TOKENS || !absl::StartsWith(buff, "#")) {
     throw std::runtime_error(
         fmt::format("Malformed header: header should have the following structure: "
                     "#chr_name\\tbin_size\\tstart\\tend\\tdiagonal_width: got '{}'",
                     buff));
   }
-  header.chr_name = toks[0].substr(1);  // Remove the leading #
+
+  header.chr_name = absl::StripPrefix(toks[0], "#");
   modle::utils::parse_numeric_or_throw(toks[1], header.bin_size);
   modle::utils::parse_numeric_or_throw(toks[2], header.start);
   modle::utils::parse_numeric_or_throw(toks[3], header.end);

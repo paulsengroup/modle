@@ -46,16 +46,17 @@ target_include_directories(libio PUBLIC include/)
 target_link_libraries(
   libio
   PRIVATE project_warnings project_options
-  PUBLIC Modle::cmatrix
-         # libBigWig_static
-         libBigWig_lib
-         CONAN_PKG::abseil
-         CONAN_PKG::fmt
-         CONAN_PKG::range-v3
-         CONAN_PKG::zlib
-         # Deal with std::filesystem quirkiness on older compilers
-         $<$<AND:$<CXX_COMPILER_ID:Clang>,$<CXX_COMPILER_ID:AppleClang>,$<VERSION_LESS_EQUAL:$<CXX_COMPILER_VERSION>,9.0.0>>:-lc++fs>
-         $<$<AND:$<CXX_COMPILER_ID:GNU>,$<VERSION_LESS_EQUAL:$<CXX_COMPILER_VERSION>,9.1.0>>:-lstdc++fs>)
+  PUBLIC
+    Modle::cmatrix
+    libBigWig_lib
+    CONAN_PKG::abseil
+    CONAN_PKG::boost
+    CONAN_PKG::fmt
+    CONAN_PKG::range-v3
+    CONAN_PKG::zlib
+    # Deal with std::filesystem quirkiness on older compilers
+    $<$<AND:$<CXX_COMPILER_ID:Clang>,$<CXX_COMPILER_ID:AppleClang>,$<VERSION_LESS_EQUAL:$<CXX_COMPILER_VERSION>,9.0.0>>:-lc++fs>
+    $<$<AND:$<CXX_COMPILER_ID:GNU>,$<VERSION_LESS_EQUAL:$<CXX_COMPILER_VERSION>,9.1.0>>:-lstdc++fs>)
 
 set_target_properties(libio PROPERTIES OUTPUT_NAME parser)
 target_compile_definitions(libio PRIVATE -DNOCURL)

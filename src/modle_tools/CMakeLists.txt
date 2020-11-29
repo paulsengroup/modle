@@ -1,11 +1,6 @@
 find_package(Threads REQUIRED)
 
-add_executable(
-  modle_tools
-  main.cpp
-  convert.cpp
-  eval.cpp
-  tools.cpp)
+add_executable(modle_tools main.cpp convert.cpp tools.cpp)
 
 target_link_libraries(
   modle_tools

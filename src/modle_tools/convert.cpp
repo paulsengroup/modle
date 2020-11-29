@@ -24,7 +24,7 @@ std::string prepare_files_for_juicer_tools(const modle::tools::config& c) {
   assert(c.convert_to_hic);
   auto tmp_file_name = modle::tools::utils::generate_random_path_name(c.tmp_dir);
   absl::StrAppend(&tmp_file_name, ".txt.gz");
-  fmt::fprintf(stderr, "Writing contacts to temporary file '%s'...\n", tmp_file_name);
+  fmt::print(stderr, "Writing contacts to temporary file '{}'...\n", tmp_file_name);
   std::ifstream fp_in(c.path_to_input_matrix, std::ios_base::binary);
   if (!fp_in) {
     throw fmt::system_error(errno, "Unable to open file '{}' for reading", c.path_to_input_matrix);

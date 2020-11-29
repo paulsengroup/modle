@@ -2,6 +2,7 @@
 #include <cstdint>
 #include <fstream>
 #include <string>
+#include <string_view>
 
 #include "modle/contacts.hpp"
 
@@ -36,4 +37,10 @@ class ContactsParser {
   [[nodiscard]] MatrixProperties get_matrix_properties(std::string_view sep);
   bool parse_next(std::string& buff, Contact& c, std::string_view sep);
 };
+
+[[nodiscard]] ContactMatrix<uint32_t> run_juicer_dump_and_parse_contacts(
+    std::string_view path_to_input_matrix, std::string_view path_to_reference_matrix,
+    std::string_view chr_name_hic, uint64_t chr_offset_hic, std::string_view path_to_juicer_tools,
+    uint64_t juicer_tools_mem);
+
 }  // namespace modle::juicer_contacts

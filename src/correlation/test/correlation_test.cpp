@@ -4,8 +4,8 @@
 #include <utility>
 #include <vector>
 
+#include "./common.hpp"
 #include "catch2/catch.hpp"
-#include "common.hpp"
 
 namespace modle::correlation::test {
 
@@ -114,6 +114,7 @@ TEST_CASE("Corr. test: Spearman Scipy long vect.", "[correlation][spearman][medi
   CHECK(Approx(rho).margin(0) == rho_py);
   CHECK(Approx(pv).margin(0) == pv_py);
 }
+
 /*
 TEST_CASE("Corr. test: Kendall wo ties", "[correlation][kendall][short]") {
   std::vector<uint32_t> v1{17, 86, 60, 77, 47, 3, 70, 87, 88, 92};   // NOLINT

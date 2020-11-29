@@ -1,4 +1,5 @@
 #pragma once
+
 #include <algorithm>
 #include <atomic>
 #include <boost/math/distributions/beta.hpp>
@@ -13,8 +14,7 @@
 #include "./correlation_utils.hpp"
 #include "modle/correlation.hpp"
 #include "range/v3/algorithm.hpp"
-#include "range/v3/span.hpp"
-#include "range/v3/view.hpp"
+#include "range/v3/range.hpp"
 
 namespace modle::correlation {
 
@@ -149,6 +149,64 @@ std::pair<std::vector<double>, std::vector<double>> compute_spearman(const std::
 
   return std::make_pair(rho_vals, p_vals);
 }
+/*
+template <typename N>
+std::pair<std::vector<double>, std::vector<double>> compute_pearson_L(const std::vector<N>& v1,
+                                                                      const std::vector<N>& v2,
+                                                                      std::size_t nrows,
+                                                                      std::size_t ncols) {
+  // TODO: compute_pearson and compute_spearman (implemented below this function), basically do the
+  // same thing. Figure out a way to remove redundant code (i.e. everything excepr compute_* and
+  // compute_*_significance
+  static_assert(std::is_arithmetic<N>::value,
+                "compute_pearson requires a numeric type as template argument.");
+  if (v1.size() != v2.size()) {
+    throw std::runtime_error(
+        fmt::format("compute_pearson expects a pair of vectors of the same size, got {} "
+                    "and {} respectively",
+                    v1.size(), v2.size()));
+  }
+  assert(ncols > nrows);
+  std::vector<double> pcc_vals(ncols);
+  std::vector<double> p_vals(pcc_vals.size());
+
+  std::vector<N> vl1((2 * nrows) - 1);
+  std::vector<N> vl2(vl1.size());
+  for (std::size_t i = 0; i < pcc_vals.size(); ++i) {
+    std::size_t idx = i * nrows;
+    for (std::size_t j = 0; j < nrows; ++j) {
+      if (idx >= v1.size()) {
+        std::fill(vl1.begin() + j, vl1.begin() + nrows, 0);
+        std::fill(vl2.begin() + j, vl2.begin() + nrows, 0);
+        break;
+      }
+      vl1[j] = v1[idx];
+      vl2[j] = v2[idx];
+      idx += nrows + 1;
+    }
+    idx = i * nrows - 1;
+    for (std::size_t j = nrows; j < 2 * nrows; ++j) {
+      if (idx > (i * nrows) + i) {
+        std::fill(vl1.begin() + j, vl1.end(), 0);
+        std::fill(vl2.begin() + j, vl2.end(), 0);
+        break;
+      }
+      vl1[j] = v1[idx];
+      vl2[j] = v2[idx];
+      ++idx;
+    }
+
+    // fmt::print(stderr, "{} - {}\n{} - {}\n", i, absl::StrJoin(vl1, ", "), i, absl::StrJoin(vl2,
+    // ", ")); usleep(250000);
+
+    // assert(idx < v1.size());
+    pcc_vals[i] = compute_pearson(vl1, vl2);
+    p_vals[i] = compute_pearson_significance(pcc_vals[i], vl1.size());
+  }
+
+  return std::make_pair(pcc_vals, p_vals);
+}
+*/
 
 /*
 template <typename N>

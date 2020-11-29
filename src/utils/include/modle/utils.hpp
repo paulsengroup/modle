@@ -33,6 +33,8 @@ template <typename N>
 static void throw_except_from_errc(std::string_view tok, std::size_t idx, const N& field,
                                    const char* c, std::errc e);
 
+[[nodiscard]] static std::string init_juicer_tools_argv(std::string_view path_to_juicer_tools,
+                                                        uint64_t juicer_tools_mem);
 }  // namespace modle::utils
 
 #include "../../utils_impl.hpp"

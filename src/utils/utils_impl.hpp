@@ -1,7 +1,9 @@
 #include <charconv>
+#include <string>
 #include <type_traits>
 
 #include "absl/strings/str_split.h"
+#include "boost/process.hpp"
 #include "fmt/printf.h"
 #include "modle/utils.hpp"
 
@@ -107,4 +109,21 @@ void throw_except_from_errc(std::string_view tok, std::size_t idx, const N &fiel
                   base_error, std::make_error_code(e)));
 }
 
+std::string init_juicer_tools_argv(std::string_view path_to_juicer_tools,
+                                   uint64_t juicer_tools_mem) {
+  std::string argv = path_to_juicer_tools.data();
+  if (absl::EndsWith(argv, ".jar")) {
+    // TODO: Check that java >= 1.7
+    auto java = boost::process::search_path("java").string();
+    if (java.empty()) {
+      throw std::runtime_error(
+          "--path-to-juicer-tools points to a jar file, but we were unable to find java in "
+          "your "
+          "path");
+    }
+    argv = fmt::format("java -Xms512m -Xmx{:.0f}m -jar {}",
+                       static_cast<double>(juicer_tools_mem) / 1e6, path_to_juicer_tools);
+  }
+  return argv;
+}
 }  // namespace modle::utils

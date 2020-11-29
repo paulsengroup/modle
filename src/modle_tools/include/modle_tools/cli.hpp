@@ -34,7 +34,7 @@ struct config {
   double noise_stdev{3};
   uint64_t noise_range{100'000};
   uint64_t juicer_tools_mem{2 * 1024 * 1024 * 1024ULL};  // 2GiB
-  std::string path_to_reference_cmatrix;
+  std::string path_to_reference_matrix;
   std::string chr_name_hic{};
   uint64_t chr_offset_hic{UINT64_MAX};
 };
@@ -68,27 +68,27 @@ class Cli {
     this->_cli.add_flag("-f,--force", this->_config.force, "Overwrite existing file(s).")->capture_default_str();
     this->_cli.add_option("-j,--path-to-juicer-tools", this->_config.path_to_juicer_tools, "Path to Juicer tools jar. When this is not specified, we will look in PATH for an executable called juicer_tools, juicer_tools.exe or juicer_tools.sh.")->check(CLI::ExistingFile);
 
-    auto *convert = this->_cli.add_subcommand("convert", "Convert Modle's contact matrix into several popular formats.")->fallthrough();
-    auto *eval = this->_cli.add_subcommand("evaluate", "Compare Model's output with other contact matrices using various correlation tests.")->fallthrough();
-    eval->alias("eval");
+    auto *convert_sc = this->_cli.add_subcommand("convert", "Convert Modle's contact matrix into several popular formats.")->fallthrough();
+    auto *eval_sc = this->_cli.add_subcommand("evaluate", "Compare Model's output with other contact matrices using various correlation tests.")->fallthrough();
+    eval_sc->alias("eval");
 
-    convert->add_flag("--hic,!--no-hic", this->_config.convert_to_hic, "Convert contact matrix to .hic format (requires Juicer Tools).")->capture_default_str();
-    convert->add_flag("--tsv,!--no-tsv", this->_config.convert_to_tsv, "Convert contact matrix to TSV format.")->capture_default_str();
-    convert->add_flag("--compress", this->_config.compress, "Compress output using bzip2.")->capture_default_str();
-    convert->add_flag("--add-noise,--make-realistic", this->_config.add_noise, "Add noise to make the contact matrix more similar to the matrices produced by Hi-C experiments.")->capture_default_str();
-    convert->add_option("--noise-stdev", this->_config.noise_stdev, "Standard deviation to use when sampling noise to add to contact matrices.")->check(CLI::PositiveNumber)->needs(convert->get_option("--add-noise"))->capture_default_str();
-    convert->add_option("--noise-range", this->_config.noise_range, "Range to use when adding noise to contact matrices. 99.9%% of the sampled numbers will fall within this range.")->check(CLI::PositiveNumber)->needs(convert->get_option("--add-noise"))->excludes(convert->get_option("--noise-stdev"))->capture_default_str();
-    convert->add_option("--juicer-tools-max-mem", this->_config.juicer_tools_mem, "Maximum memory allocation pool for Juicer Tools (JVM).")->needs(this->_cli.get_option("--path-to-juicer-tools"))->transform(CLI::AsSizeValue(false))->capture_default_str();
-    convert->add_option("-c,--chr-sizes", this->_config.chr_sizes, fmt::format("Path to file containing chromosome size(s). Can also be one of the following genome IDs: %s.", absl::StrJoin(this->_allowed_genome_ids, ", ")));
-    convert->add_option("--seed", this->_config.seed, "Seed value to use when adding noise to the contact matrix.")->capture_default_str();
+    convert_sc->add_flag("--hic,!--no-hic", this->_config.convert_to_hic, "Convert contact matrix to .hic format (requires Juicer Tools).")->capture_default_str();
+    convert_sc->add_flag("--tsv,!--no-tsv", this->_config.convert_to_tsv, "Convert contact matrix to TSV format.")->capture_default_str();
+    convert_sc->add_flag("--compress", this->_config.compress, "Compress output using bzip2.")->capture_default_str();
+    convert_sc->add_flag("--add-noise,--make-realistic", this->_config.add_noise, "Add noise to make the contact matrix more similar to the matrices produced by Hi-C experiments.")->capture_default_str();
+    convert_sc->add_option("--noise-stdev", this->_config.noise_stdev, "Standard deviation to use when sampling noise to add to contact matrices.")->check(CLI::PositiveNumber)->needs(convert_sc->get_option("--add-noise"))->capture_default_str();
+    convert_sc->add_option("--noise-range", this->_config.noise_range, "Range to use when adding noise to contact matrices. 99.9% of the sampled numbers will fall within this range.")->check(CLI::PositiveNumber)->needs(convert_sc->get_option("--add-noise"))->excludes(convert_sc->get_option("--noise-stdev"))->capture_default_str();
+    convert_sc->add_option("--juicer-tools-max-mem", this->_config.juicer_tools_mem, "Maximum memory allocation pool for Juicer Tools (JVM).")->needs(this->_cli.get_option("--path-to-juicer-tools"))->transform(CLI::AsSizeValue(false))->capture_default_str();
+    convert_sc->add_option("-c,--chr-sizes", this->_config.chr_sizes, fmt::format("Path to file containing chromosome size(s). Can also be one of the following genome IDs: {}.", absl::StrJoin(this->_allowed_genome_ids, ", ")));
+    convert_sc->add_option("--seed", this->_config.seed, "Seed value to use when adding noise to the contact matrix.")->capture_default_str();
 
-    eval->add_option("--reference-matrix", this->_config.path_to_reference_cmatrix, "Path to contact matrix to use as reference when computing the correlation. Formats accepted: Modle or .hic format.")->required();
-    eval->add_option("-n,--chr-name", this->_config.chr_name_hic, "Name of the chromosome whose contacts should be extracted from an .hic file. Required only if different from the name stored in the header of Modle's contact matrix.");
-    eval->add_option("--chr-offset", this->_config.chr_offset_hic, "Offset to apply to coordinates read from Modle's contact matrix.")->check(CLI::NonNegativeNumber)->transform(CLI::AsSizeValue(true));
-    eval->add_flag("--pearson", this->_config.compute_pearson, "Compute Pearson correlation.");
-    eval->add_flag("--spearman", this->_config.compute_spearman, "Compute Spearman rank correlation.");
-    eval->add_option("-w,--sliding-window-size", this->_config.sliding_window_size, "Sliding window size. By default this is set to the diagonal width of ModLE's contact matrix.")->check(CLI::NonNegativeNumber);
-    eval->add_option("--sliding-window-overlap", this->_config.sliding_window_overlap, "Overlap between consecutive sliding-windows.")->check(CLI::NonNegativeNumber)->capture_default_str();
+    eval_sc->add_option("--reference-matrix", this->_config.path_to_reference_matrix, "Path to contact matrix to use as reference when computing the correlation. Formats accepted: Modle or .hic format.")->required();
+    eval_sc->add_option("-n,--chr-name", this->_config.chr_name_hic, "Name of the chromosome whose contacts should be extracted from an .hic file. Required only if different from the name stored in the header of Modle's contact matrix.");
+    eval_sc->add_option("--chr-offset", this->_config.chr_offset_hic, "Offset to apply to coordinates read from Modle's contact matrix.")->check(CLI::NonNegativeNumber)->transform(CLI::AsSizeValue(true));
+    eval_sc->add_flag("--pearson", this->_config.compute_pearson, "Compute Pearson correlation.");
+    eval_sc->add_flag("--spearman", this->_config.compute_spearman, "Compute Spearman rank correlation.");
+    eval_sc->add_option("-w,--sliding-window-size", this->_config.sliding_window_size, "Sliding window size. By default this is set to the diagonal width of ModLE's contact matrix.")->check(CLI::NonNegativeNumber);
+    eval_sc->add_option("--sliding-window-overlap", this->_config.sliding_window_overlap, "Overlap between consecutive sliding-windows.")->check(CLI::NonNegativeNumber)->capture_default_str();
     // clang-format on
   }
 
@@ -173,16 +173,16 @@ class Cli {
       }
     }
 
-    if (this->_cli.get_subcommand("eval")->parsed() &&
-        c.sliding_window_size != 0 && c.sliding_window_size <= c.sliding_window_overlap) {
+    if (this->_cli.get_subcommand("eval")->parsed() && c.sliding_window_size != 0 &&
+        c.sliding_window_size <= c.sliding_window_overlap) {
       absl::StrAppendFormat(&errors,
                             "--sliding-window-size should be > --sliding-window-overlap: "
                             "--sliding-window-size=%lu --sliding-window-overlap=%lu.",
                             c.sliding_window_size, c.sliding_window_overlap);
     }
     if (this->_config.convert_to_hic ||
-        absl::StartsWith("http", this->_config.path_to_reference_cmatrix) ||
-        absl::EndsWithIgnoreCase(c.path_to_reference_cmatrix, ".hic")) {
+        absl::StartsWith("http", this->_config.path_to_reference_matrix) ||
+        absl::EndsWithIgnoreCase(c.path_to_reference_matrix, ".hic")) {
       if (c.path_to_juicer_tools.empty()) {
         for (std::string file : {"juicer_tools", "juicer_tools.sh", "juicer_tools.exe"}) {
           if (auto p = boost::process::search_path("juicer_tools").string(); !p.empty()) {

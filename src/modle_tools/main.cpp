@@ -4,7 +4,9 @@
 int main(int argc, char** argv) {
   modle::tools::Cli cli(argc, argv);
   auto c = cli.parse_arguments();
-  if (!cli.is_ok()) return c.exit_code;
+  if (!cli.is_ok()) {
+    return c.exit_code;
+  }
 
   std::filesystem::create_directories(c.tmp_dir);
   std::filesystem::create_directories(c.out_dir);
@@ -22,12 +24,22 @@ int main(int argc, char** argv) {
             "this message, please open an issue on GitHub");
     }
   } catch (const std::runtime_error& err) {
-    fmt::fprintf(stderr, "FAILURE: %s.\n", err.what());
-    if (!c.keep_tmp_files && std::filesystem::is_empty(c.tmp_dir))
-      std::filesystem::remove_all(c.tmp_dir);
+    fmt::print(stderr, "FAILURE: {}.\n", err.what());
+    std::error_code ec;
+    if (!c.keep_tmp_files && std::filesystem::is_empty(c.tmp_dir)) {
+      std::filesystem::remove_all(c.tmp_dir, ec);
+    }
     return 1;
   }
-  if (!c.keep_tmp_files && std::filesystem::is_empty(c.tmp_dir))
-    std::filesystem::remove_all(c.tmp_dir);
+
+  try {
+    if (!c.keep_tmp_files && std::filesystem::is_empty(c.tmp_dir)) {
+      std::filesystem::remove_all(c.tmp_dir);
+    }
+  } catch (const std::filesystem::filesystem_error& err) {
+    fmt::print(stderr, "An error occurred while removing the temporary directory '{}?: {}.\n",
+               c.tmp_dir, err.what());
+    return 1;
+  }
   return 0;
 }
