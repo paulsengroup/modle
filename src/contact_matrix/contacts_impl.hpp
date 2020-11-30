@@ -220,7 +220,7 @@ void ContactMatrix<I>::set(std::size_t row, std::size_t col, I2 n) {
       throw std::runtime_error(fmt::format(FMT_STRING("j={} > ncols={})"), j, this->n_cols()));
     }
     if (i > this->n_rows()) {
-      ++this->_updates_missed;
+      this->_updates_missed += n;
       return;
     }
 
@@ -229,7 +229,10 @@ void ContactMatrix<I>::set(std::size_t row, std::size_t col, I2 n) {
     assert(n >= std::numeric_limits<I>::min());
     assert(n <= std::numeric_limits<I>::max());
 
-    this->at(i, j) = static_cast<I>(n);
+    auto &m = this->at(i, j);
+    this->_tot_contacts -= m;
+    this->_tot_contacts += n;
+    m = static_cast<I>(n);
   } catch (const std::runtime_error &err) {
     throw std::logic_error(
         fmt::format(FMT_STRING("ContactMatrix::set({}, {}, {}): {})"), row, col, n, err.what()));
@@ -260,7 +263,7 @@ void ContactMatrix<I>::increment(std::size_t row, std::size_t col, I2 n) {
       throw std::runtime_error(fmt::format(FMT_STRING("j={} > ncols={})"), j, this->n_cols()));
     }
     if (i > this->n_rows()) {
-      ++this->_updates_missed;
+      this->_updates_missed += n;
       return;
     }
 
@@ -269,6 +272,7 @@ void ContactMatrix<I>::increment(std::size_t row, std::size_t col, I2 n) {
     assert(this->at(i, j) <= std::numeric_limits<I>::max() - n);
 
     this->at(i, j) += static_cast<I>(n);
+    this->_tot_contacts += n;
   } catch (const std::runtime_error &err) {
     throw std::logic_error(fmt::format(FMT_STRING("ContactMatrix::increment({}, {}, {}): {})"), row,
                                        col, n, err.what()));
@@ -299,7 +303,7 @@ void ContactMatrix<I>::decrement(std::size_t row, std::size_t col, I2 n) {
       throw std::runtime_error(fmt::format(FMT_STRING("j={} > ncols={})"), j, this->n_cols()));
     }
     if (i > this->n_rows()) {
-      ++this->_updates_missed;
+      this->_updates_missed += n;
       return;
     }
 
@@ -308,6 +312,7 @@ void ContactMatrix<I>::decrement(std::size_t row, std::size_t col, I2 n) {
     assert(n <= this->at(i, j));
 
     this->at(i, j) -= static_cast<I>(n);
+    this->_tot_contacts -= n;
   } catch (const std::runtime_error &err) {
     throw std::logic_error(fmt::format(FMT_STRING("ContactMatrix::decrement({}, {}, {}): {})"), row,
                                        col, n, err.what()));
@@ -455,6 +460,16 @@ void ContactMatrix<I>::clear_missed_updates_counter() {
 template <typename I>
 const std::vector<I> &ContactMatrix<I>::get_raw_count_vector() const {
   return this->_contacts;
+}
+
+template <typename I>
+uint64_t ContactMatrix<I>::get_tot_contacts() const {
+  return this->_tot_contacts;
+}
+
+template <typename I>
+uint64_t ContactMatrix<I>::get_n_of_missed_updates() const {
+  return this->_updates_missed;
 }
 
 template <typename I>

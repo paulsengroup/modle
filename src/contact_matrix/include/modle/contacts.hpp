@@ -54,7 +54,9 @@ class ContactMatrix {
       const std::string& path_to_file, std::string_view header = "",
       int bzip2_block_size = 9) const;
   void clear_missed_updates_counter();
-  const std::vector<I>& get_raw_count_vector() const;
+  [[nodiscard]] const std::vector<I>& get_raw_count_vector() const;
+  [[nodiscard]] uint64_t get_n_of_missed_updates() const;
+  [[nodiscard]] uint64_t get_tot_contacts() const;
   [[nodiscard]] static Header parse_header(std::string_view path_to_file);
   [[nodiscard]] static Header parse_header(std::string_view path_to_file,
                                            boost::iostreams::filtering_istream& in,
@@ -64,6 +66,7 @@ class ContactMatrix {
   uint64_t _nrows;
   uint64_t _ncols;
   std::vector<I> _contacts;
+  uint64_t _tot_contacts{0};
   uint64_t _updates_missed{0};
 
   [[nodiscard]] I& at(std::size_t i, std::size_t j);
