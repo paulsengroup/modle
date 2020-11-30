@@ -12,6 +12,7 @@ namespace modle {
 
 class ExtrusionBarrier;
 class ExtrusionUnit;
+class Lef;
 struct BED;
 
 /// Class used to represent a DNA molecule as a vector Bin%s.
@@ -42,6 +43,7 @@ class DNA {
   [[nodiscard]] DNA::Bin* get_ptr_to_first_bin();
   [[nodiscard]] DNA::Bin& get_last_bin();
   [[nodiscard]] DNA::Bin* get_ptr_to_last_bin();
+  [[nodiscard]] double get_total_lef_affinity() const;
 
   // Iterator stuff
   [[nodiscard]] std::vector<Bin>::iterator begin();
@@ -126,6 +128,7 @@ class DNA {
         ExtrusionBarrier* b, Direction d = DNA::Direction::both) const;
     [[nodiscard]] std::vector<ExtrusionBarrier>& get_all_extr_barriers() const;
     [[nodiscard]] absl::InlinedVector<ExtrusionUnit*, 3>& get_extr_units();
+    [[nodiscard]] float get_lef_affinity() const;
 
     ExtrusionBarrier* add_extr_barrier(ExtrusionBarrier b);
     ExtrusionBarrier* add_extr_barrier(uint64_t pos, double prob_of_barrier_block,
@@ -161,6 +164,7 @@ class DNA {
     std::size_t _idx;
     uint32_t _start;  ///< Left-most position represented by this DNA::Bin.
     uint32_t _end;    ///< Right-most position represented by this DNA::Bin.
+    float _lef_affinity{1.0};
     // TODO: Consider remove the unique_ptr and store the vector and InlinedVector directly
     // This will increase memory footprint, but should improve performance. Needs testing
     /// \brief Pointer to a \p std::vector of ExtrusionBarrier%s (or \p nullptr if there are no
@@ -186,6 +190,8 @@ struct Chromosome {
   [[nodiscard]] uint64_t get_n_bins() const;
   [[nodiscard]] uint32_t get_bin_size() const;
   [[nodiscard]] uint64_t get_n_barriers() const;
+  [[nodiscard]] uint64_t get_n_lefs() const;
+  [[nodiscard]] double get_total_lef_affinity() const;
   void sort_barriers_by_pos();
 
   void write_contacts_to_tsv(std::string_view output_dir, bool force_overwrite) const;
@@ -197,6 +203,7 @@ struct Chromosome {
   DNA dna;  ///< DNA molecule represented as a sequence of DNA::Bin%s.
   /// Pointers to the ExtrusionBarrier associated to \p Chromosome::dna.
   std::vector<ExtrusionBarrier*> barriers;
+  std::vector<Lef*> lefs;
   ContactMatrix<uint32_t> contacts;  ///< ContactMatrix for the DNA::Bin%s from Chromosome::dna.
 };
 

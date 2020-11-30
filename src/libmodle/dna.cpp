@@ -92,6 +92,8 @@ std::vector<ExtrusionBarrier>& DNA::Bin::get_all_extr_barriers() const {
 
 absl::InlinedVector<ExtrusionUnit*, 3>& DNA::Bin::get_extr_units() { return *this->_extr_units; }
 
+float DNA::Bin::get_lef_affinity() const { return this->_lef_affinity; }
+
 ExtrusionBarrier* DNA::Bin::add_extr_barrier(ExtrusionBarrier b) {
   if (!this->_extr_barriers) {  // If this is the first ExtrusionBarrier, allocate the std::vector
     this->_extr_barriers =
@@ -198,6 +200,13 @@ DNA::Bin& DNA::get_last_bin() { return *this->get_ptr_to_last_bin(); }
 DNA::Bin* DNA::get_ptr_to_last_bin() {
   assert(!this->_bins.empty());  // NOLINT;
   return &this->_bins.back();
+}
+
+double DNA::get_total_lef_affinity() const {
+  return std::accumulate(this->_bins.begin(), this->_bins.end(), 0.0,
+                         [](double accumulator, const auto& bin) {
+                           return accumulator + static_cast<double>(bin.get_lef_affinity());
+                         });
 }
 
 uint64_t DNA::Bin::remove_all_extr_barriers() {
@@ -308,6 +317,8 @@ uint64_t Chromosome::get_end_pos() const { return this->end; }
 uint64_t Chromosome::get_n_bins() const { return this->dna.get_n_bins(); }
 uint32_t Chromosome::get_bin_size() const { return this->dna.get_bin_size(); }
 uint64_t Chromosome::get_n_barriers() const { return this->barriers.size(); }
+uint64_t Chromosome::get_n_lefs() const { return this->lefs.size(); }
+double Chromosome::get_total_lef_affinity() const { return this->dna.get_total_lef_affinity(); }
 
 void Chromosome::sort_barriers_by_pos() {
   for (auto& bin : this->dna) {

@@ -1,6 +1,7 @@
 #include "modle/lefs.hpp"
 
 #include "fmt/printf.h"
+#include "modle/extr_barrier.hpp"
 
 namespace modle {
 
@@ -230,6 +231,9 @@ void Lef::randomly_bind_to_chr(Chromosome* chr, std::mt19937& rand_eng, bool reg
   std::uniform_int_distribution<uint32_t> pos(0, static_cast<uint32_t>(chr->length() - 1));
   this->bind_at_pos(chr, pos(rand_eng), rand_eng, register_contact);
 }
+
+void Lef::assign_to_chr(Chromosome* chr) { this->_chr = chr; }
+
 void Lef::bind_at_pos(Chromosome* chr, uint32_t pos, std::mt19937& rand_eng,
                       bool register_contact) {
   assert(!this->_left_unit->is_bound() && !this->_right_unit->is_bound());  // NOLINT
@@ -263,7 +267,7 @@ std::pair<DNA::Bin*, DNA::Bin*> Lef::get_ptr_to_bins() {
 }
 
 void Lef::unload() {
-  this->_chr = nullptr;
+  // this->_chr = nullptr;
   this->_binding_pos = UINT64_MAX;
   this->_left_unit->unload();
   this->_right_unit->unload();
@@ -284,8 +288,8 @@ uint32_t Lef::extrude(std::mt19937& rand_eng) {
 
 void Lef::register_contact() {
   // We don't register contacts for the first and last bins in a chromosome
-  if (this->_left_unit->get_bin_index() == 0 &&
-      this->_right_unit->get_bin_index() == this->get_last_bin().get_index()) {
+  if (this->_left_unit->get_bin_index() != 0 &&
+      this->_right_unit->get_bin_index() != this->get_last_bin().get_index()) {
     this->_chr->contacts.increment(this->_left_unit->get_bin_index(),
                                    this->_right_unit->get_bin_index());
   }
@@ -314,17 +318,22 @@ uint32_t Lef::get_loop_size() const {
 
 uint32_t Lef::get_avg_processivity() const { return this->_avg_processivity; }
 
-bool Lef::try_rebind(Chromosome& chr, std::mt19937& rand_eng, double prob_of_rebinding,
-                     bool register_contact) {
+bool Lef::try_rebind(std::mt19937& rand_eng, double prob_of_rebinding, bool register_contact) {
   assert(!this->is_bound());                                 // NOLINT
   assert(prob_of_rebinding >= 0 && prob_of_rebinding <= 1);  // NOLINT
   std::uniform_real_distribution<> d1(0.0, 1.0);
   if (d1(rand_eng) >= 1 - prob_of_rebinding) {
-    //    fmt::fprintf(stderr, "Trying to rebind...\n");
-    this->randomly_bind_to_chr(&chr, rand_eng, register_contact);
+    this->randomly_bind_to_chr(this->_chr, rand_eng, register_contact);
     return true;
   }
   return false;
+}
+
+bool Lef::try_rebind(std::mt19937& rand_eng) { return this->try_rebind(rand_eng, 1, false); }
+
+std::size_t Lef::bind_at_random_pos(std::mt19937& rand_eng, bool register_contact) {
+  this->try_rebind(rand_eng, 1, register_contact);
+  return this->get_pos().first;
 }
 
 const DNA::Bin& Lef::get_first_bin() const { return this->_chr->dna.get_first_bin(); }

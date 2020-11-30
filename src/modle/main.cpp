@@ -63,16 +63,18 @@ void run_simulation(const modle::config& c) {
              tot_barriers - barriers_ignored, barriers_ignored);
 
   t0 = absl::Now();
-  if (c.skip_burnin) {
-    genome.randomly_bind_lefs();
-    fmt::print(stderr, FMT_STRING("Bound {} LEFs in {}.\n"), genome.get_n_of_busy_lefs(),
-               absl::FormatDuration(absl::Now() - t0));
-  } else {
-    const auto burnin_rounds = genome.run_burnin(
+  genome.assign_lefs(c.skip_burnin);
+  if (!c.skip_burnin) {
+    fmt::print(stderr, "Running burnin phase...\n");
+    const auto& [avg_burnin_rounds, burnin_rounds_stdev] = genome.run_burnin(
         c.probability_of_lef_rebind, c.min_n_of_loops_per_lef, c.min_n_of_burnin_rounds);
-    fmt::print(stderr, FMT_STRING("Burnin completed in {}! ({} rounds).\n"),
-               absl::FormatDuration(absl::Now() - t0), burnin_rounds);
+    fmt::print(
+        stderr, FMT_STRING("Burnin completed in {} rounds on average{}.\n"), avg_burnin_rounds,
+        burnin_rounds_stdev == 0 ? ""
+                                 : fmt::format(FMT_STRING(" (stdev = {})"), burnin_rounds_stdev));
   }
+  fmt::print(stderr, FMT_STRING("Bound {} LEFs in {}!\n"), genome.get_n_of_busy_lefs(),
+             absl::FormatDuration(absl::Now() - t0));
 
   t0 = absl::Now();
   fmt::print(stderr, "About to start simulating loop extrusion...\n");

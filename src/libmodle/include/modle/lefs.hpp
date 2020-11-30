@@ -5,11 +5,12 @@
 #include <random>
 
 #include "modle/dna.hpp"
-#include "modle/extr_barrier.hpp"
 #include "modle/juicer_contacts.hpp"
 
 namespace modle {
+class ExtrusionBarrier;
 class ExtrusionUnit;
+
 /** \brief Class to model a Loop Extrusion Factor (LEF).
  *
  * A Lef consists of two ExtrusionUnit%s: the Lef::_left_unit always moves in the 5' direction and a
@@ -52,6 +53,7 @@ class Lef {
   [[nodiscard]] std::pair<DNA::Bin*, DNA::Bin*> get_ptr_to_bins();
   [[nodiscard]] bool is_bound() const;
   void randomly_bind_to_chr(Chromosome* chr, std::mt19937& rand_eng, bool register_contact = false);
+  void assign_to_chr(Chromosome* chr);
   void bind_at_pos(Chromosome* chr, uint32_t pos, std::mt19937& rand_eng, bool register_contact);
   /** Call ExtrusionUnit::check_constraints on the left and right ExtrusionUnit%s, which in turn
    * check whether there last round of extrusion produced a collision between one of the
@@ -61,8 +63,9 @@ class Lef {
    * This function also takes care of extending Lef%'s lifetime where appropriate.
    */
   void check_constraints(std::mt19937& rang_eng);
-  bool try_rebind(Chromosome& chr, std::mt19937& rand_eng, double prob_of_rebinding,
-                  bool register_contact);
+  bool try_rebind(std::mt19937& rand_eng, double prob_of_rebinding, bool register_contact);
+  bool try_rebind(std::mt19937& rand_eng);
+  std::size_t bind_at_random_pos(std::mt19937& rand_eng, bool register_contact = false);
 
  private:
   Chromosome* _chr{nullptr};

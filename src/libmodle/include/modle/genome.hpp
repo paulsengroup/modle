@@ -34,6 +34,7 @@ class Genome {
   [[nodiscard]] uint64_t get_n_barriers() const;
   [[nodiscard]] std::vector<std::string_view> get_chromosome_names() const;
   [[nodiscard]] std::vector<uint32_t> get_chromosome_lengths() const;
+  [[nodiscard]] std::vector<double> get_chromosome_lef_affinities() const;
   [[nodiscard]] uint64_t get_n_of_free_lefs() const;
   [[nodiscard]] uint64_t get_n_of_busy_lefs() const;
   void write_contacts_to_file(std::string_view output_dir, bool force_overwrite) const;
@@ -65,12 +66,12 @@ class Genome {
 
   std::pair<uint64_t, uint64_t> import_extrusion_barriers_from_bed(std::string_view path_to_bed,
                                                                    double probability_of_block);
-  void randomly_bind_lefs();
+  void assign_lefs(bool bind_lefs_after_assignment);
 
   uint64_t remove_chromosomes_wo_extr_barriers();
 
-  uint32_t run_burnin(double prob_of_rebinding, uint32_t target_n_of_unload_events,
-                      uint64_t min_extr_rounds);
+  std::pair<double, double> run_burnin(double prob_of_rebinding, uint32_t target_n_of_unload_events,
+                                       uint64_t min_extr_rounds);
 
   /** This function is the one that actually runs the simulation
    *
