@@ -357,20 +357,39 @@ std::pair<double, double> Genome::run_burnin(double prob_of_rebinding,
 }
 
 void Genome::simulate_extrusion(uint32_t iterations, double target_contact_density) {
+  // If the simulation is set to stop when a target contact density is reached, set the number of
+  // iterations to a very large number (2^32)
   if (target_contact_density != 0.0) {
     iterations = UINT32_MAX;
   }
+  // Create a reasonably sized thread pool
   auto nthreads = std::min(std::thread::hardware_concurrency(), this->get_n_chromosomes());
+  boost::asio::thread_pool tpool(nthreads);
+
+  // Initialize variables for simulation progress tracking
   std::atomic<uint64_t> ticks_done{0};
   std::atomic<uint64_t> extrusion_events{0};
   bool simulation_completed{false};
-  std::condition_variable cv;
-  std::mutex m;
+  std::mutex m;  // This mutex is supposed to protect simulation_complete. As of C++17 we also need
+                 // to acquire a lock when modifying the condition variable simulation_completed_cv
+                 // (otherwise the change might not be communicated to waiting threads)
+  std::condition_variable simulation_completed_cv;
 
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wimplicit-int-float-conversion"
 #pragma GCC diagnostic ignored "-Wsign-conversion"
-  std::thread progress_tracker([&]() {
+  std::thread progress_tracker([&]() {  // This thread is used to periodically print the simulation
+                                        // progress to stderr
+    // The total number of ticks tot_ticks is set depending on whether or not the simulation is
+    // set to run for a fixed number of iterations:
+    //  - When we know in advance the number of iterations (e.g. because it was specified
+    //    through --number-of-iterations), then the total number of ticks is calculated as:
+    //       n. of iterations * n. of chromosomes
+    //  - When the target number of iterations is unknown (e.g. because we are targeting the
+    //    contact density specified through --target-contact-density), then the total ticks
+    //    number is given by the sum of the target number of contacts for each of the
+    //    chromosomes simulated, where the target number of contacts is defined as:
+    //       target contact density * (matrix columns * matrix rows)
     const uint64_t tot_ticks =
         target_contact_density != 0.0
             ? std::accumulate(this->_chromosomes.begin(), this->_chromosomes.end(), 0U,
@@ -382,14 +401,17 @@ void Genome::simulate_extrusion(uint32_t iterations, double target_contact_densi
             : iterations * this->get_n_chromosomes();
 
     while (true) {
-      {
+      {  // Wait for 5 seconds or until the simulation terminates
         std::unique_lock<std::mutex> lk(m);
-        cv.wait_for(lk, std::chrono::seconds(5));  // NOLINT
-        if (simulation_completed) {
-          lk.unlock();  // Probably unnecessary, as there's nothing waiting on this mutex
+        simulation_completed_cv.wait_for(lk, std::chrono::seconds(5));  // NOLINT
+        if (simulation_completed) {  // If the simulation has been completed, return
+                                     // immediately, so that the main thread can join this thread
+          // Unlocking here is probably unnecessary, as there's nothing waiting on this mutex
+          lk.unlock();
           return;
         }
       }
+      // Print progress
       fmt::print(stderr, FMT_STRING("Approx. {:.2f}% done ({:.2f}M extr. events/s)\n"),
                  100.0 * ticks_done / tot_ticks, extrusion_events / 5.0e6 /* 5s * 1M */);  // NOLINT
       extrusion_events = 0;
@@ -397,13 +419,21 @@ void Genome::simulate_extrusion(uint32_t iterations, double target_contact_densi
   });
 #pragma GCC diagnostic pop
 
-  boost::asio::thread_pool tpool(nthreads);
+  // Loop extrusion is simulated using boost::thread_pool, where each thread simulates loop
+  // extrusion at the chromosome level. This constrains the level of parallelism to the number of
+  // chromosomes that are being simulated. We can certainly do better.
+  // This is just a way to get significant speedups with very little effort
   for (auto nchr = 0U; nchr < this->_chromosomes.size(); ++nchr) {
     boost::asio::post(tpool, [&, nchr]() {
       const auto t0 = absl::Now();
-      auto& chr = this->_chromosomes[nchr];
+      auto& chr = this->_chromosomes[nchr];  // Alias for the chromosome that is being simulated
+      // This random number generator is used to randomize sampling interval
+      // (e.g. when --randomize-contact-sampling-interval is specified)
       std::bernoulli_distribution sample_contacts{1.0 / this->_sampling_interval};
 
+      // Calculate the number of contacts after which the simulation for the current chromosome is
+      // stopped. This is set to a very large number (2^64) when the simulation is set to run for a
+      // fixed number of iterations
       const uint64_t target_n_of_contacts =
           target_contact_density != 0.0
               ? static_cast<uint64_t>(std::llround(
@@ -411,46 +441,63 @@ void Genome::simulate_extrusion(uint32_t iterations, double target_contact_densi
                     static_cast<double>(chr.contacts.n_rows() * chr.contacts.n_cols())))
               : UINT64_MAX;
 
-      uint64_t extr_events_local = 0;
+      // Variables to track the simulation progress for the current chromosome
+      uint64_t local_extr_events_counter = 0;
       uint64_t ticks_local = 0;
+
+      // This for loop is where the simulation actually takes place.
+      // We basically keep iterating until one of the stopping condition is met
       for (auto i = 1UL; i <= iterations; ++i) {
+        // Determine whether we will register contacts produced during the current iteration
         bool register_contacts = this->_randomize_contact_sampling
                                      ? sample_contacts(chr._rand_eng)
                                      : i % this->_sampling_interval == 0;
+
+        // Loop over the LEFs belonging to the chromosome that is being simulated and
+        // extrude/register contacts when appropriate
         for (auto& lef : chr.lefs) {
-          if (lef->is_bound()) {  // Register contact and extrude if LEF is bound
+          if (lef->is_bound()) {  // Attempt to register a contact and move the LEF only if the
+                                  // latter is bound to the chromosome
             if (register_contacts) {
               lef->register_contact();
             }
             lef->extrude(chr._rand_eng);
-            ++extr_events_local;
+            ++local_extr_events_counter;
           }
         }
+
+        // Once we are done extruding for the current iteration, check if the constrains are
+        // satisfied and apply a stall or rebind free LEFs when appropriate
         for (auto& lef : chr.lefs) {
-          // Check whether the last round of extrusions caused a collision with another LEF or an
-          // extr. boundary, apply the stall and/or increase LEF lifetime where appropriate
           if (lef->is_bound()) {
             lef->check_constraints(chr._rand_eng);
           } else {
-            // Randomly select a chromosome and try to bind one of the free LEFs to it
             lef->try_rebind(chr._rand_eng, this->_probability_of_lef_rebind, register_contacts);
           }
         }
 
-        extrusion_events.fetch_add(extr_events_local, std::memory_order_relaxed);
-        extr_events_local = 0;
+        // Add the number of extr. events to the global counter. This is used to calculate the n. of
+        // extr. events per seconds, which is a good way to assess the simulation throughput
+        extrusion_events.fetch_add(local_extr_events_counter, std::memory_order_relaxed);
+        local_extr_events_counter = 0;
 
         if (register_contacts) {
-          if (target_contact_density != 0.0) {
+          // Propagate local progress to the global counters
+          if (target_contact_density !=
+              0.0) {  // Simulation is set to stop when the target contact density is reached
             assert(chr.contacts.get_tot_contacts() >= ticks_local);
             ticks_done.fetch_add(chr.contacts.get_tot_contacts() - ticks_local,
                                  std::memory_order_relaxed);
             ticks_local = chr.contacts.get_tot_contacts();
-          } else {
+          } else {  // Simulation is set to stop at a fixed number of iterations
             assert(i >= ticks_local);
             ticks_done.fetch_add(i - ticks_local, std::memory_order_relaxed);
             ticks_local = i;
           }
+
+          // Alt the simulation when we have reached the target number of contacts.
+          // This will never happen when the simulation is set to run for a fixed number of
+          // iterations, as when this is the case, target_n_of_contacts == 2^64
           if (chr.contacts.get_tot_contacts() >= target_n_of_contacts) {
             break;
           }
@@ -460,13 +507,14 @@ void Genome::simulate_extrusion(uint32_t iterations, double target_contact_densi
                  chr.name, absl::FormatDuration(absl::Now() - t0));
     });
   }
+  // This blocks until all the tasks posted to the thread_pool have been completed
   tpool.join();
 
-  {
+  {  // Notify the thread that is tracking simulation progress that we are done, then join it
     std::scoped_lock<std::mutex> lk(m);
     simulation_completed = true;
   }
-  cv.notify_all();
+  simulation_completed_cv.notify_all();
   progress_tracker.join();
 }
 }  // namespace modle
