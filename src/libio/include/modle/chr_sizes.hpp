@@ -1,11 +1,14 @@
 #pragma once
-#include <cstdint>
-#include <fstream>
-#include <string_view>
-#include <vector>
 
-#include "absl/container/flat_hash_set.h"
-#include "absl/hash/hash.h"
+#include <absl/container/flat_hash_set.h>
+
+#include <cstdint>  // for uint64_t
+#include <fstream>
+#include <memory>
+#include <string>
+#include <string_view>
+#include <utility>  // for move
+#include <vector>   // for vector
 
 namespace modle::chr_sizes {
 

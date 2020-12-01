@@ -1,17 +1,21 @@
 #include "modle_tools/tools.hpp"
 
-#include <cstdint>
-#include <filesystem>
+#include <absl/strings/match.h>  // for EndsWith
+#include <absl/time/clock.h>     // for Now
+#include <absl/time/time.h>      // for FormatDuration, operator-, Time
+#include <fmt/format.h>          // for format, print
 
-#include "absl/strings/strip.h"
-#include "absl/time/clock.h"
-#include "fmt/format.h"
-#include "modle/bigwig.hpp"
-#include "modle/contacts.hpp"
-#include "modle/juicer_contacts.hpp"
-#include "modle/utils.hpp"
-#include "modle_tools/convert.hpp"
-#include "modle_tools/eval.hpp"
+#include <cassert>
+#include <cstdint>     // for uint32_t
+#include <cstdio>      // for stderr
+#include <filesystem>  // for create_directories
+
+#include "modle/bigwig.hpp"           // for write_range
+#include "modle/contacts.hpp"         // for ContactMatrix<>::Header, ContactMatrix
+#include "modle/juicer_contacts.hpp"  // for run_juicer_dump_and_parse_contacts
+#include "modle_tools/cli.hpp"        // for config
+#include "modle_tools/convert.hpp"    // for convert_to_hic, convert_to_tsv
+#include "modle_tools/eval.hpp"       // for Transformation, Cross, Linear
 
 namespace modle::tools {
 

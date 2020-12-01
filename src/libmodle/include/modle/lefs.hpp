@@ -1,11 +1,13 @@
 #pragma once
 
-#include <cstdint>
-#include <memory>
-#include <random>
+#include <cstdint>      // for uint*_t, UINT*_MAX
+#include <iosfwd>       // for size_t
+#include <memory>       // for unique_ptr
+#include <random>       // for mt19937, geometric_distribution
+#include <string_view>  // for string_view
+#include <utility>      // for pair
 
-#include "modle/dna.hpp"
-#include "modle/juicer_contacts.hpp"
+#include "modle/dna.hpp"  // for DNA, Chromosome (ptr only), DNA::Direction, DNA::none
 
 namespace modle {
 class ExtrusionBarrier;

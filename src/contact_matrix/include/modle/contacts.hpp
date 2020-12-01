@@ -1,9 +1,9 @@
 #pragma once
 
 #include <boost/iostreams/filtering_stream.hpp>
-#include <cstdint>
+#include <cstdint>  // for uint_*t
 #include <fstream>
-#include <random>
+#include <random>  // for normal_distribution
 #include <string>
 #include <string_view>
 #include <type_traits>

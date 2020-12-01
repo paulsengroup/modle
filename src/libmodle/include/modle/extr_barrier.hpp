@@ -1,7 +1,7 @@
 #pragma once
 
-#include <cstdint>
-#include <random>
+#include <cstdint>  // for uint64_t
+#include <random>   // for geometric_distribution
 
 #include "modle/dna.hpp"
 

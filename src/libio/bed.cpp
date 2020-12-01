@@ -1,15 +1,21 @@
 #include "modle/bed.hpp"
 
-#include <filesystem>
-#include <string>
+#include <absl/container/flat_hash_map.h>
+#include <absl/strings/str_cat.h>
+#include <absl/strings/str_join.h>
+#include <absl/strings/str_split.h>
+#include <fmt/format.h>  // for format, system_error
+
+#include <cassert>
+#include <cerrno>
+#include <filesystem>  // for is_fifo
+#include <iosfwd>      // for size_t
+#include <new>
+#include <stdexcept>  // for runtime_error
+#include <string>     // string, getline
 #include <string_view>
 #include <vector>
 
-#include "absl/container/flat_hash_map.h"
-#include "absl/strings/str_cat.h"
-#include "absl/strings/str_join.h"
-#include "absl/strings/str_split.h"
-#include "fmt/format.h"
 #include "modle/utils.hpp"
 
 namespace modle::bed {

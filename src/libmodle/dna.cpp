@@ -1,14 +1,30 @@
 #include "modle/dna.hpp"
 
-#include <algorithm>
-#include <boost/iostreams/filter/bzip2.hpp>
-#include <filesystem>
+#include <absl/container/inlined_vector.h>
+#include <absl/time/clock.h>  // for Now
+#include <absl/time/time.h>   // for FormatDuration, Time
+#include <fmt/format.h>       // for system_error
+#include <fmt/ostream.h>      // for print
 
-#include "absl/container/flat_hash_set.h"
-#include "fmt/printf.h"
-#include "modle/bed.hpp"
-#include "modle/extr_barrier.hpp"
-#include "modle/lefs.hpp"
+#include <algorithm>                         // for min, find_if, sort
+#include <boost/iostreams/filter/bzip2.hpp>  // for basic_bzip2_compressor, bzip2_error, bzip2_compressor
+#include <boost/iostreams/filtering_stream.hpp>  // for filtering_ostream
+#include <cassert>
+#include <cerrno>
+#include <cmath>        // for llround
+#include <cstdint>      // for uint*_t
+#include <cstdio>       // for stderr
+#include <filesystem>   // for exists, weakly_canonical, path
+#include <functional>   // for hash
+#include <numeric>      // for accumulate
+#include <sstream>      // streamsize, basic_ios, ofstream, size_t, ios_base
+#include <stdexcept>    // for logic_error, runtime_error
+#include <string_view>  // for format, print, string_view
+#include <type_traits>  // for declval
+#include <utility>      // for move
+
+#include "modle/bed.hpp"           // for BED
+#include "modle/extr_barrier.hpp"  // for ExtrusionBarrier
 
 namespace modle {
 

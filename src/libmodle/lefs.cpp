@@ -1,7 +1,16 @@
 #include "modle/lefs.hpp"
 
-#include "fmt/printf.h"
-#include "modle/extr_barrier.hpp"
+#include <fmt/format.h>  // for format
+
+#include <algorithm>  // for min
+#include <cassert>
+#include <cmath>      // for lround
+#include <stdexcept>  // for runtime_error
+#include <string>
+#include <vector>
+
+#include "modle/contacts.hpp"      // for ContactMatrix
+#include "modle/extr_barrier.hpp"  // for ExtrusionBarrier
 
 namespace modle {
 

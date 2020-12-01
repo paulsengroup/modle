@@ -1,6 +1,7 @@
 #pragma once
 
-#include "CLI/CLI.hpp"
+#include <CLI/CLI.hpp>
+
 #include "modle/config.hpp"
 
 namespace modle {

@@ -1,9 +1,9 @@
 #pragma once
-#include <cstdint>
+#include <absl/container/flat_hash_map.h>
+
+#include <cstdint>  // for uint64_t
 #include <string>
 #include <vector>
-
-#include "absl/container/flat_hash_map.h"
 
 namespace modle::bigwig {
 template <typename N>

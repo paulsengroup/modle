@@ -1,11 +1,12 @@
 #pragma once
 
-#include <cstdint>
-#include <random>
-
-#include "modle_tools/cli.hpp"
+#include <cstdint>  // for uint64_t
+#include <random>   // for normal_distribution
+#include <string>
 
 namespace modle::tools {
+
+struct config;  // Pre-declaration
 
 std::normal_distribution<double> init_noise_generator(uint64_t range);
 

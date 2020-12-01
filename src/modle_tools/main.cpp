@@ -1,5 +1,12 @@
-#include "modle_tools/cli.hpp"
-#include "modle_tools/tools.hpp"
+#include <fmt/format.h>  // for print
+
+#include <cstdio>        // for stderr
+#include <filesystem>    // for create_directories, is_empty, remove_all, exists, filesystem_error
+#include <stdexcept>     // for runtime_error
+#include <system_error>  // for error_code
+
+#include "modle_tools/cli.hpp"    // for config, Cli, Cli::subcommand, Cli::convert, Cli::eval
+#include "modle_tools/tools.hpp"  // for convert, eval
 
 int main(int argc, char** argv) {
   modle::tools::Cli cli(argc, argv);

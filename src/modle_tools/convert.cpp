@@ -1,18 +1,37 @@
 #include "modle_tools/convert.hpp"
 
-#include <algorithm>
-#include <boost/iostreams/filter/bzip2.hpp>
-#include <boost/iostreams/filter/gzip.hpp>
-#include <boost/math/distributions/normal.hpp>
-#include <boost/process.hpp>
-#include <cstdint>
-#include <filesystem>
-#include <random>
+#include <absl/strings/str_cat.h>     // for StrAppend, StrCat
+#include <absl/strings/str_format.h>  // for StrAppendFormat
+#include <absl/strings/str_split.h>
+#include <absl/time/clock.h>  // for Now
+#include <absl/time/time.h>   // for FormatDuration, operator-, Time
+#include <fmt/compile.h>      // for FMT_COMPILE
+#include <fmt/format.h>       // for format, system_error
 
-#include "absl/time/clock.h"
-#include "fmt/compile.h"
-#include "modle/contacts.hpp"
-#include "modle_tools/utils.hpp"
+#include <algorithm>                         // for clamp, max
+#include <boost/iostreams/filter/bzip2.hpp>  // for basic_bzip2_decompressor, bzip2_error, bzip2_decompressor
+#include <boost/iostreams/filter/gzip.hpp>  // for basic_gzip_compressor, gzip_error, gzip_compressor
+#include <boost/iostreams/filtering_stream.hpp>  // for filtering_ostream, filtering_istream
+#include <boost/process/child.hpp>
+#include <boost/process/io.hpp>    // for std_out_, null, std_err, std_in, std_in_, std_out
+#include <boost/process/pipe.hpp>  // for ipstream
+#include <cassert>
+#include <cerrno>
+#include <cmath>       // for round
+#include <cstdint>     // for uint*_t
+#include <cstdio>      // for stderr
+#include <cstring>     // for strerror
+#include <filesystem>  // for remove
+#include <istream>     // for basic_ios, ofstream, basic_istream, ifstream, ios_base
+#include <memory>      // for unique_ptr, make_unique, make_shared
+#include <random>      // for normal_distribution, mt19937_64, generate_canonical
+#include <stdexcept>   // for runtime_error
+#include <string_view>
+#include <vector>
+
+#include "modle/contacts.hpp"     // for ContactMatrix<>::Header, ContactMatrix
+#include "modle_tools/cli.hpp"    // for config
+#include "modle_tools/utils.hpp"  // for generate_random_path_name
 
 namespace modle::tools {
 std::normal_distribution<double> init_noise_generator(uint64_t range) {

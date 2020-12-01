@@ -1,12 +1,18 @@
 #pragma once
 
-#include "modle/config.hpp"
-#include "modle/dna.hpp"
-#include "modle/extr_barrier.hpp"
-#include "modle/juicer_contacts.hpp"
-#include "modle/lefs.hpp"
+#include <cstdint>      // for uint*_t
+#include <memory>       // for _Destroy, allocator
+#include <string>       // for basic_string, string
+#include <string_view>  // for string_view
+#include <utility>      // for pair
+#include <vector>       // for vector
+
+#include "modle/dna.hpp"   // for Chromosome
+#include "modle/lefs.hpp"  // for Lef
 
 namespace modle {
+
+struct config;
 
 /** \brief The Genome class acts as the entrypoint to simulate DNA loop extrusion.
  *

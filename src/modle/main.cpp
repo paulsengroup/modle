@@ -1,11 +1,23 @@
-#include <filesystem>
-#include <string>
+#include <absl/strings/str_join.h>
+#include <absl/time/clock.h>  // for Now
+#include <absl/time/time.h>   // for FormatDuration, Time
+#include <fmt/format.h>       // for FMT_STRING, format, system_error
+#include <fmt/ostream.h>      // for print
 
-#include "./cli.hpp"
-#include "absl/time/clock.h"
-#include "fmt/printf.h"
-#include "modle/chr_sizes.hpp"
-#include "modle/genome.hpp"
+#include <CLI/Error.hpp>  // for ParseError
+#include <cstdint>        // for uint64_t
+#include <cstdio>         // for stderr
+#include <exception>
+#include <filesystem>  // for exists, weakly_canonical, path
+#include <iosfwd>      // for ofstream
+#include <stdexcept>   // for runtime_error
+#include <vector>
+
+#include "./cli.hpp"               // for Cli
+#include "modle/chr_sizes.hpp"     // for ChrSize, Parser
+#include "modle/config.hpp"        // for config
+#include "modle/extr_barrier.hpp"  // for ExtrusionBarrier
+#include "modle/genome.hpp"        // for Genome
 
 namespace modle {
 

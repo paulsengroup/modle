@@ -1,14 +1,17 @@
-#include "libBigWig/bigWig.h"
+#include "modle/bigwig.hpp"  // for write_range
 
-#include <cstdint>
-#include <filesystem>
-#include <type_traits>
+#include <absl/container/flat_hash_map.h>
+#include <fmt/format.h>
+#include <libBigWig/bigWig.h>  // for bwCleanup, bwClose, bigWigFile_t, bwAddIntervalSpanSteps, bwCreateChromList, bwCreateHdr, bwInit, bwOpen, bwWriteHdr
+
+#include <cstdint>     // for uint*_t, int*_t
+#include <filesystem>  // for file_size
+#include <iosfwd>      // for size_t
+#include <stdexcept>   // for runtime_error
+#include <string_view>
+#include <type_traits>  // for is_arithmetic
+#include <utility>      // for pair, forward, move
 #include <vector>
-
-#include "absl/container/flat_hash_map.h"
-#include "fmt/format.h"
-#include "modle/bigwig.hpp"
-#include "range/v3/all.hpp"
 
 namespace modle::bigwig {
 

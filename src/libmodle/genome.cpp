@@ -1,16 +1,35 @@
 #include "modle/genome.hpp"
 
+#include <absl/container/flat_hash_map.h>
+#include <absl/time/clock.h>  // for Now
+#include <absl/time/time.h>   // for FormatDuration, Time
+#include <fmt/format.h>       // for FMT_STRING
+
+#include <algorithm>  // for max, min, sort, transform, all_of, for_each, remove_if
+#include <atomic>     // for atomic, memory_order_relaxed
 #include <boost/asio/thread_pool.hpp>
 #include <cassert>
+#include <chrono>  // for seconds
+#include <cmath>   // for llround, floor, lround, sqrt
 #include <condition_variable>
-#include <filesystem>
-#include <functional>
+#include <cstdint>     // for uint*_t, UINT*_MAX
+#include <cstdio>      // for stderr
+#include <filesystem>  // for create_directories
+#include <functional>  // for greater, hash
+#include <iosfwd>      // for size_t
+#include <mutex>       // for mutex, unique_lock, scoped_lock
+#include <numeric>     // for accumulate, partial_sum
+#include <random>  // for mt19937,  bernoulli_distribution, seed_seq, discrete_distribution, uniform_int_distribution
+#include <range/v3/view/chunk.hpp>  // for chunk_view, chunk
+#include <stdexcept>                // for runtime_error
+#include <thread>
+#include <type_traits>  // for declval
 
-#include "absl/container/flat_hash_map.h"
-#include "fmt/printf.h"
-#include "modle/bed.hpp"
-#include "modle/chr_sizes.hpp"
-#include "range/v3/view/chunk.hpp"
+#include "modle/bed.hpp"           // for BED, Parser, BED::BED6, BED::Standard
+#include "modle/chr_sizes.hpp"     // for ChrSize, Parser
+#include "modle/config.hpp"        // for config
+#include "modle/contacts.hpp"      // for ContactMatrix
+#include "modle/extr_barrier.hpp"  // IWYU pragma: keep
 
 namespace modle {
 

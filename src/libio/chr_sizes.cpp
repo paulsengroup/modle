@@ -1,16 +1,19 @@
 #include "modle/chr_sizes.hpp"
 
-#include <cstdint>
-#include <filesystem>
-#include <fstream>
-#include <stdexcept>
-#include <string>
-#include <string_view>
-#include <vector>
+#include <absl/strings/str_join.h>
+#include <absl/strings/str_split.h>
+#include <fmt/format.h>  // for format, system_error
 
-#include "absl/strings/str_join.h"
-#include "absl/strings/str_split.h"
-#include "fmt/format.h"
+#include <cassert>
+#include <cerrno>
+#include <cstdint>  // for uint64_t
+#include <fstream>  // for ifstream, basic_ios, size_t
+#include <new>
+#include <stdexcept>  // for runtime_error, invalid_argument, out_of_range
+#include <string>     // for basic_string, string, stoull, getline
+#include <string_view>
+#include <type_traits>  // for declval
+#include <vector>
 
 namespace modle::chr_sizes {
 Parser::Parser(std::string path_to_chr_sizes) : _path(std::move(path_to_chr_sizes)) {}

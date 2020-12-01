@@ -1,19 +1,26 @@
 #pragma once
 
-#include <random>
+#include <absl/container/inlined_vector.h>
+
+#include <cstdint>  // for uint*_t
+#include <iosfwd>   // for size_t
+#include <memory>   // unique_ptr
+#include <random>   // for mt19937
+#include <string>
 #include <string_view>
 #include <vector>
 
-#include "absl/container/inlined_vector.h"
-#include "modle/bed.hpp"
-#include "modle/contacts.hpp"
+#include "modle/contacts.hpp"  // for ContactMatrix
 
 namespace modle {
 
+// Pre-declarations
 class ExtrusionBarrier;
 class ExtrusionUnit;
 class Lef;
+namespace bed {
 struct BED;
+}
 
 /// Class used to represent a DNA molecule as a vector Bin%s.
 /** Aside from owning the \p std::vector<Bin>, DNA is also used to keep track of the length and
