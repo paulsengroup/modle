@@ -2,6 +2,7 @@
 
 #include <boost/asio/thread_pool.hpp>
 #include <cassert>
+#include <condition_variable>
 #include <filesystem>
 #include <functional>
 
@@ -362,7 +363,9 @@ void Genome::simulate_extrusion(uint32_t iterations, double target_contact_densi
   auto nthreads = std::min(std::thread::hardware_concurrency(), this->get_n_chromosomes());
   std::atomic<uint64_t> ticks_done{0};
   std::atomic<uint64_t> extrusion_events{0};
-  std::atomic<uint64_t> chromosomes_done{0};
+  bool simulation_completed{false};
+  std::condition_variable cv;
+  std::mutex m;
 
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wimplicit-int-float-conversion"
@@ -378,14 +381,18 @@ void Genome::simulate_extrusion(uint32_t iterations, double target_contact_densi
                               })
             : iterations * this->get_n_chromosomes();
 
-    while (chromosomes_done < this->get_n_chromosomes()) {
-      std::this_thread::sleep_for(std::chrono::seconds(5));  // NOLINT
+    while (true) {
+      {
+        std::unique_lock<std::mutex> lk(m);
+        cv.wait_for(lk, std::chrono::seconds(5));  // NOLINT
+        if (simulation_completed) {
+          lk.unlock();  // Probably unnecessary, as there's nothing waiting on this mutex
+          return;
+        }
+      }
       fmt::print(stderr, FMT_STRING("Approx. {:.2f}% done ({:.2f}M extr. events/s)\n"),
                  100.0 * ticks_done / tot_ticks, extrusion_events / 5.0e6 /* 5s * 1M */);  // NOLINT
       extrusion_events = 0;
-      if (ticks_done >= tot_ticks * 0.999) {  // NOLINT
-        return;
-      }
     }
   });
 #pragma GCC diagnostic pop
@@ -454,6 +461,12 @@ void Genome::simulate_extrusion(uint32_t iterations, double target_contact_densi
     });
   }
   tpool.join();
+
+  {
+    std::scoped_lock<std::mutex> lk(m);
+    simulation_completed = true;
+  }
+  cv.notify_all();
   progress_tracker.join();
 }
 }  // namespace modle
