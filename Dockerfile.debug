@@ -1,10 +1,5 @@
 FROM fedora:33 AS modle_base
 
-COPY src            /tmp/modle/src
-COPY CMakeLists.txt /tmp/modle/CMakeLists.txt
-COPY LICENSE        /tmp/modle/LICENSE
-COPY cmake          /tmp/modle/cmake
-
 ARG build_dir='/tmp/modle/cmake-build'
 # march, cpus and ver are set through --build-arg at build time
 ARG march
@@ -20,16 +15,24 @@ ARG CONAN_VER=1.31.3
 RUN dnf update -y \
     && dnf install -y --setopt=install_weak_deps=False --best                   \
                       bash make cmake git bzip2 bzip2-devel zlib zlib-devel     \
-                      clang python3 java-latest-openjdk                         \
-    && python3 -m venv /tmp/conan_venv --upgrade-deps                           \
-    && /tmp/conan_venv/bin/pip3 --no-cache-dir install conan==${CONAN_VER}      \
-    && mkdir -p /usr/local/bin                                                  \
-    && ln -s /tmp/conan_venv/bin/conan /usr/local/bin/conan                     \
-    && mkdir "$build_dir" && cd "$build_dir"       \
-    && env CC=/usr/bin/clang                       \
-           CXX=/usr/bin/clang++                    \
-           LD=/usr/bin/ld.lld                      \
-       cmake -DCMAKE_BUILD_TYPE=Release            \
+                      clang python3 python-pip python-wheel java-latest-openjdk \
+                      gdb
+
+RUN pip3 --no-cache-dir install conan==${CONAN_VER}
+
+ENV CC=/usr/bin/clang
+ENV CXX=/usr/bin/clang++
+ENV LD=/usr/bin/ld.lld
+
+RUN mkdir -p "$build_dir"
+
+COPY src            /tmp/modle/src
+COPY CMakeLists.txt /tmp/modle/CMakeLists.txt
+COPY LICENSE        /tmp/modle/LICENSE
+COPY cmake          /tmp/modle/cmake
+
+RUN cd "$build_dir"                                \
+    && cmake -DCMAKE_BUILD_TYPE=Debug              \
              -DENABLE_IPO=OFF                      \
              -DWARNINGS_AS_ERRORS=OFF              \
              -DENABLE_TESTING=OFF                  \
@@ -38,11 +41,11 @@ RUN dnf update -y \
              -DCMAKE_CXX_COMPILER=/usr/bin/clang++ \
              -DCMAKE_CXX_FLAGS="-march=${march}"   \
              -DCMAKE_C_FLAGS="-march=${march}"     \
-             -G 'Unix Makefiles' ..                \
+             -G 'Unix Makefiles'                   \
+             ..                                    \
     && make -j "$cpus" install                     \
-    && unlink /usr/local/bin/conan && rm -r /root/.conan         \
-    && dnf remove -y make cmake git bzip2-devel zlib-devel clang \
     && dnf clean all
+
 
 ENV SHELL=/usr/bin/bash
 ENV PATH='$PATH:/usr/local/bin'
