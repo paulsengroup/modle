@@ -51,11 +51,11 @@ class Cli {
             ->capture_default_str();
 
     gen->add_option(
-        "-w,--diagonal-width",
-        this->_config.diagonal_width,
-        "Width of the matrix that will be used to store contacts, which visually corresponds to the width of the diagonal in a typical square contact matrix.")
-        ->check(CLI::PositiveNumber)
-        ->capture_default_str();
+            "-w,--diagonal-width",
+            this->_config.diagonal_width,
+            "Width of the matrix that will be used to store contacts, which visually corresponds to the width of the diagonal in a typical square contact matrix.")
+            ->check(CLI::PositiveNumber)
+            ->capture_default_str();
 
     gen->add_option(
             "--number-of-iterations",
@@ -63,6 +63,13 @@ class Cli {
             "Number of simulation iterations.")
             ->check(CLI::PositiveNumber)
             ->capture_default_str();
+    
+    gen->add_option(
+            "--target-contact-density",
+            this->_config.target_contact_density,
+            "Target per-chromosome average contact number after which the simulation is halted.")
+            ->check(CLI::PositiveNumber)
+            ->excludes(gen->get_option("--number-of-iterations"));
 
     gen->add_option(
             "--avg-lef-processivity",

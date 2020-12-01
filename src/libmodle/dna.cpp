@@ -294,22 +294,30 @@ uint64_t DNA::get_n_barriers() const {
 }
 
 Chromosome::Chromosome(std::string name, uint64_t length, uint32_t bin_size,
-                       uint32_t diagonal_width)
+                       uint32_t diagonal_width, uint64_t seed)
     : name(std::move(name)),
       start(0),
       end(length),
       dna(length, bin_size),
       contacts(std::min(static_cast<uint64_t>(diagonal_width / bin_size), this->get_n_bins()),
-               this->get_n_bins()) {}
+               this->get_n_bins()),
+      _seed(seed + std::hash<std::string>{}(this->name) + std::hash<uint64_t>{}(this->length())) {
+  std::seed_seq seeder{this->_seed};
+  this->_rand_eng = std::mt19937(seeder);
+}
 
 Chromosome::Chromosome(std::string name, uint64_t start, uint64_t end, uint32_t bin_size,
-                       uint32_t diagonal_width)
+                       uint32_t diagonal_width, uint64_t seed)
     : name(std::move(name)),
       start(start),
       end(end),
       dna(end - start, bin_size),
       contacts(std::min(static_cast<uint64_t>(diagonal_width / bin_size), this->get_n_bins()),
-               this->get_n_bins()) {}
+               this->get_n_bins()),
+      _seed(seed + std::hash<std::string>{}(this->name) + std::hash<uint64_t>{}(this->length())) {
+  std::seed_seq seeder{this->_seed};
+  this->_rand_eng = std::mt19937(seeder);
+}
 
 uint64_t Chromosome::length() const { return this->end - this->start; }
 uint64_t Chromosome::get_start_pos() const { return this->start; }

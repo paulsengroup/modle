@@ -89,11 +89,11 @@ class Genome {
    *
    * @param iterations Number of loop extrusion events to simulate
    */
-  void simulate_extrusion(uint32_t iterations = 1);
+  void simulate_extrusion(uint32_t iterations = 1, double target_contact_density = 0.0);
 
  private:
   uint64_t _seed;
-  std::mt19937 _rand_eng;
+  // std::mt19937 _rand_eng;
   std::string _path_to_chr_size_file;
   uint32_t _bin_size;
   uint32_t _avg_lef_processivity;  ///< Average loop size if loop extrusion takes place unobstructed
@@ -105,7 +105,7 @@ class Genome {
   std::vector<Chromosome> _chromosomes;
   uint32_t _sampling_interval;
   bool _randomize_contact_sampling;
-  std::bernoulli_distribution _sample_contacts;
+  // std::bernoulli_distribution _sample_contacts;
 
   // Private initializers
   [[nodiscard]] std::vector<Chromosome> init_chromosomes_from_file(uint32_t diagonal_width) const;

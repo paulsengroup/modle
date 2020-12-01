@@ -19,6 +19,7 @@ struct config {
   uint32_t bin_size{1'000};
   uint32_t diagonal_width{3'000'000};
   uint32_t simulation_iterations{15'000'000};
+  double target_contact_density{0.0};
   uint32_t number_of_randomly_gen_extr_barriers{0};
   uint32_t number_of_lefs;
   uint32_t average_lef_processivity{100'000};
@@ -44,6 +45,7 @@ struct config {
     };
 
     // clang-format off
+    // TODO: Remove FMT_STRING macro from trivial format strings
     absl::flat_hash_map<std::string_view, std::vector<cli_tokens>> tokens{
     {"Input/Output"sv,
     std::vector<cli_tokens>{
@@ -56,7 +58,8 @@ struct config {
     std::vector<cli_tokens>{
      {"Bin size (bp)", fmt::format(FMT_STRING("{}"), this->bin_size)},
      {"Diagonal width (bp)", fmt::format(FMT_STRING("{}"), this->diagonal_width)},
-     {"# of iterations", fmt::format(FMT_STRING("{}"), this->simulation_iterations)},
+     {"# of iterations", fmt::format(FMT_STRING("{}"), this->target_contact_density != 0 ? "Disabled"sv : fmt::format("{}", this->simulation_iterations))},
+     {"Target contact density", fmt::format(FMT_STRING("{}"), this->target_contact_density != 0 ? fmt::format("{}", this->simulation_iterations) : "Disabled"sv)},
      {"Seed", fmt::format(FMT_STRING("{}"), this->seed)},
      {"Randomize contact sampling interval", this->randomize_contact_sampling_interval ? "Yes" : "No"},
      {"Contact sampling interval", fmt::format(FMT_STRING("{}"), this->contact_sampling_interval)}}},

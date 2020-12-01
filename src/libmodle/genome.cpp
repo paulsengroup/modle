@@ -10,13 +10,11 @@
 #include "modle/bed.hpp"
 #include "modle/chr_sizes.hpp"
 #include "range/v3/view/chunk.hpp"
-#include "range/v3/view/enumerate.hpp"
 
 namespace modle {
 
 Genome::Genome(const config& c)
     : _seed(c.seed),
-      _rand_eng(std::mt19937(_seed)),
       _path_to_chr_size_file(c.path_to_chr_sizes),
       _bin_size(c.bin_size),
       _avg_lef_processivity(c.average_lef_processivity),
@@ -27,8 +25,7 @@ Genome::Genome(const config& c)
       _lefs(generate_lefs(c.number_of_lefs)),
       _chromosomes(init_chromosomes_from_file(c.diagonal_width)),
       _sampling_interval(c.contact_sampling_interval),
-      _randomize_contact_sampling(c.randomize_contact_sampling_interval),
-      _sample_contacts(1.0 / _sampling_interval) {}
+      _randomize_contact_sampling(c.randomize_contact_sampling_interval) {}
 
 std::vector<uint32_t> Genome::get_chromosome_lengths() const {
   std::vector<uint32_t> lengths;
@@ -71,7 +68,7 @@ uint64_t Genome::get_n_of_busy_lefs() const {
 }
 
 void Genome::write_contacts_to_file(std::string_view output_dir, bool force_overwrite) const {
-  auto nthreads = std::thread::hardware_concurrency();
+  auto nthreads = std::min(std::thread::hardware_concurrency(), this->get_n_chromosomes());
   boost::asio::thread_pool tpool(nthreads);
   fmt::print(stderr,
              "Writing contact matrices for {} chromosome(s) in folder '{} using {} threads'...\n",
@@ -136,14 +133,16 @@ void Genome::randomly_generate_extrusion_barriers(uint32_t n_barriers) {
   std::discrete_distribution<std::size_t> chr_idx(weights.begin(), weights.end());
   // NOLINTNEXTLINE(readability-magic-numbers, cppcoreguidelines-avoid-magic-numbers)
   std::bernoulli_distribution strand_selector(0.5);
+  std::seed_seq seeder{n_barriers};
+  std::mt19937 rand_eng{seeder};
 
   for (auto i = 0UL; i < n_barriers; ++i) {
     // Randomly select a chromosome, barrier binding pos and direction
-    auto& chr = this->_chromosomes[chr_idx(this->_rand_eng)];
+    auto& chr = this->_chromosomes[chr_idx(rand_eng)];
     std::uniform_int_distribution<uint64_t> uniform_rng(0, chr.length());
-    const auto barrier_position = uniform_rng(this->_rand_eng);
+    const auto barrier_position = uniform_rng(rand_eng);
     const DNA::Direction direction =
-        strand_selector(this->_rand_eng) ? DNA::Direction::rev : DNA::Direction::fwd;
+        strand_selector(rand_eng) ? DNA::Direction::rev : DNA::Direction::fwd;
 
     // Add the new extrusion barrier to the appropriate bin
     auto& bin = chr.dna.get_bin_from_pos(barrier_position);
@@ -249,7 +248,7 @@ void Genome::assign_lefs(bool bind_lefs_after_assignment) {
             });
   std::size_t lefs_assigned = 0;
   for (auto& [chr, nlefs] : chr_sorted_by_affinity) {
-    nlefs = static_cast<std::size_t>(std::floor((tot_affinity / chr_lef_affinities[chr]) *
+    nlefs = static_cast<std::size_t>(std::floor((chr_lef_affinities[chr] / tot_affinity) *
                                                 static_cast<double>(this->get_n_lefs())));
     lefs_assigned += nlefs;
   }
@@ -266,10 +265,10 @@ void Genome::assign_lefs(bool bind_lefs_after_assignment) {
   for (auto& [chr, nlefs] : chr_sorted_by_affinity) {
     chr->lefs.reserve(nlefs);
     for (auto j = 0U; j < nlefs; ++j) {
-      auto& last_lef = chr->lefs.emplace_back(&this->_lefs[i++]);
+      auto* last_lef = chr->lefs.emplace_back(&(this->_lefs[i++]));
       last_lef->assign_to_chr(chr);
       if (bind_lefs_after_assignment) {
-        last_lef->randomly_bind_to_chr(chr, this->_rand_eng);
+        last_lef->randomly_bind_to_chr(chr, chr->_rand_eng);
       }
     }
   }
@@ -287,13 +286,17 @@ uint64_t Genome::remove_chromosomes_wo_extr_barriers() {
 std::pair<double, double> Genome::run_burnin(double prob_of_rebinding,
                                              uint32_t target_n_of_unload_events,
                                              uint64_t min_extr_rounds) {
-  auto nthreads = std::thread::hardware_concurrency();
+  auto nthreads = std::min(std::thread::hardware_concurrency(), this->get_n_chromosomes());
   boost::asio::thread_pool tpool(nthreads);
   std::vector<double> burnin_rounds(this->get_n_chromosomes());
 
   for (auto nchr = 0U; nchr < this->get_n_chromosomes(); ++nchr) {
-    const auto& chr = this->_chromosomes[nchr];
-    boost::asio::post(tpool, [&]() {
+    boost::asio::post(tpool, [&, nchr]() {
+      const auto& chr = this->_chromosomes[nchr];
+      std::seed_seq seed{this->_seed + std::hash<std::string>{}(chr.name) +
+                         std::hash<uint64_t>{}(chr.length())};
+      std::mt19937 rand_eng{seed};
+
       double avg_num_of_extr_events_per_bind =
           (static_cast<double>(this->_avg_lef_processivity) / chr.get_bin_size()) /
           2 /* N of active extr. unit */;
@@ -307,23 +310,23 @@ std::pair<double, double> Genome::run_burnin(double prob_of_rebinding,
       for (auto rounds = 0U;; ++rounds) {
         if (rounds < chunks.size()) {
           for (const auto& lef : chunks[rounds]) {
-            lef->try_rebind(this->_rand_eng);
+            lef->try_rebind(rand_eng);
             ++lefs_loaded;
           }
         }
         for (auto i = 0U; i < lefs_loaded; ++i) {
           auto& lef = *chr.lefs[i];
           if (lef.is_bound()) {
-            lef.extrude(this->_rand_eng);
+            lef.extrude(rand_eng);
             unload_events[i] += !lef.is_bound();  // NOLINT(readability-implicit-bool-conversion)
           }
         }
 
         for (auto i = 0U; i < lefs_loaded; ++i) {
           if (auto& lef = *chr.lefs[i]; lef.is_bound()) {
-            lef.check_constraints(this->_rand_eng);
+            lef.check_constraints(rand_eng);
           } else {
-            lef.try_rebind(this->_rand_eng, prob_of_rebinding, false);
+            lef.try_rebind(rand_eng, prob_of_rebinding, false);
           }
         }
         if (rounds >= min_extr_rounds &&
@@ -338,10 +341,10 @@ std::pair<double, double> Genome::run_burnin(double prob_of_rebinding,
   tpool.join();
 
   if (burnin_rounds.size() == 1) {
-    return std::make_pair(burnin_rounds.front(), 0.0);
+    return std::make_pair(burnin_rounds[0], 0.0);
   }
 
-  const auto avg_burnin_rounds = std::reduce(burnin_rounds.begin(), burnin_rounds.end(), 0.0) /
+  const auto avg_burnin_rounds = std::accumulate(burnin_rounds.begin(), burnin_rounds.end(), 0.0) /
                                  static_cast<double>(this->get_n_chromosomes());
 
   const auto burnin_rounds_stdev = std::sqrt(
@@ -352,43 +355,105 @@ std::pair<double, double> Genome::run_burnin(double prob_of_rebinding,
   return std::make_pair(avg_burnin_rounds, burnin_rounds_stdev);
 }
 
-void Genome::simulate_extrusion(uint32_t iterations) {
-  const auto step = iterations / 500;
-  const auto& weights = this->get_chromosome_lengths();
-  std::discrete_distribution<std::size_t> chr_idx(weights.begin(), weights.end());
-
-  auto t0 = absl::Now();
-  for (auto i = 1UL; i <= iterations; ++i) {
-    bool register_contacts = this->_randomize_contact_sampling
-                                 ? this->_sample_contacts(this->_rand_eng)
-                                 : i % this->_sampling_interval == 0;
-
-    for (auto& chr : this->_chromosomes) {
-      for (auto& lef : chr.lefs) {
-        if (lef->is_bound()) {  // Register contact and extrude if LEF is bound
-          if (register_contacts) {
-            lef->register_contact();
-          }
-          lef->extrude(this->_rand_eng);
-        }
-      }
-      for (auto& lef : chr.lefs) {
-        // Check whether the last round of extrusions caused a collision with another LEF or an
-        // extr. boundary, apply the stall and/or increase LEF lifetime where appropriate
-        if (lef->is_bound()) {
-          lef->check_constraints(this->_rand_eng);
-        } else {
-          // Randomly select a chromosome and try to bind one of the free LEFs to it
-          lef->try_rebind(this->_rand_eng, this->_probability_of_lef_rebind, register_contacts);
-        }
-      }
-    }
-
-    if (i % step == 0) {
-      fmt::print(stderr, FMT_STRING("Running iteration {}/{} ({:.2f} iterations/s)\n"), i,
-                 iterations, step / absl::ToDoubleSeconds(absl::Now() - t0));
-      t0 = absl::Now();
-    }
+void Genome::simulate_extrusion(uint32_t iterations, double target_contact_density) {
+  if (target_contact_density != 0.0) {
+    iterations = UINT32_MAX;
   }
+  auto nthreads = std::min(std::thread::hardware_concurrency(), this->get_n_chromosomes());
+  std::atomic<uint64_t> ticks_done{0};
+  std::atomic<uint64_t> extrusion_events{0};
+  std::atomic<uint64_t> chromosomes_done{0};
+
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wimplicit-int-float-conversion"
+#pragma GCC diagnostic ignored "-Wsign-conversion"
+  std::thread progress_tracker([&]() {
+    const uint64_t tot_ticks =
+        target_contact_density != 0.0
+            ? std::accumulate(this->_chromosomes.begin(), this->_chromosomes.end(), 0U,
+                              [&](auto accumulator, const auto& chr) {
+                                return accumulator +
+                                       std::llround(target_contact_density * chr.contacts.n_cols() *
+                                                    chr.contacts.n_rows());
+                              })
+            : iterations * this->get_n_chromosomes();
+
+    while (chromosomes_done < this->get_n_chromosomes()) {
+      std::this_thread::sleep_for(std::chrono::seconds(5));  // NOLINT
+      fmt::print(stderr, FMT_STRING("Approx. {:.2f}% done ({:.2f}M extr. events/s)\n"),
+                 100.0 * ticks_done / tot_ticks, extrusion_events / 5.0e6 /* 5s * 1M */);  // NOLINT
+      extrusion_events = 0;
+      if (ticks_done >= tot_ticks * 0.999) {  // NOLINT
+        return;
+      }
+    }
+  });
+#pragma GCC diagnostic pop
+
+  boost::asio::thread_pool tpool(nthreads);
+  for (auto nchr = 0U; nchr < this->_chromosomes.size(); ++nchr) {
+    boost::asio::post(tpool, [&, nchr]() {
+      const auto t0 = absl::Now();
+      auto& chr = this->_chromosomes[nchr];
+      std::bernoulli_distribution sample_contacts{1.0 / this->_sampling_interval};
+
+      const uint64_t target_n_of_contacts =
+          target_contact_density != 0.0
+              ? static_cast<uint64_t>(std::llround(
+                    target_contact_density *
+                    static_cast<double>(chr.contacts.n_rows() * chr.contacts.n_cols())))
+              : UINT64_MAX;
+
+      uint64_t extr_events_local = 0;
+      uint64_t ticks_local = 0;
+      for (auto i = 1UL; i <= iterations; ++i) {
+        bool register_contacts = this->_randomize_contact_sampling
+                                     ? sample_contacts(chr._rand_eng)
+                                     : i % this->_sampling_interval == 0;
+        for (auto& lef : chr.lefs) {
+          if (lef->is_bound()) {  // Register contact and extrude if LEF is bound
+            if (register_contacts) {
+              lef->register_contact();
+            }
+            lef->extrude(chr._rand_eng);
+            ++extr_events_local;
+          }
+        }
+        for (auto& lef : chr.lefs) {
+          // Check whether the last round of extrusions caused a collision with another LEF or an
+          // extr. boundary, apply the stall and/or increase LEF lifetime where appropriate
+          if (lef->is_bound()) {
+            lef->check_constraints(chr._rand_eng);
+          } else {
+            // Randomly select a chromosome and try to bind one of the free LEFs to it
+            lef->try_rebind(chr._rand_eng, this->_probability_of_lef_rebind, register_contacts);
+          }
+        }
+
+        extrusion_events.fetch_add(extr_events_local, std::memory_order_relaxed);
+        extr_events_local = 0;
+
+        if (register_contacts) {
+          if (target_contact_density != 0.0) {
+            assert(chr.contacts.get_tot_contacts() >= ticks_local);
+            ticks_done.fetch_add(chr.contacts.get_tot_contacts() - ticks_local,
+                                 std::memory_order_relaxed);
+            ticks_local = chr.contacts.get_tot_contacts();
+          } else {
+            assert(i >= ticks_local);
+            ticks_done.fetch_add(i - ticks_local, std::memory_order_relaxed);
+            ticks_local = i;
+          }
+          if (chr.contacts.get_tot_contacts() >= target_n_of_contacts) {
+            break;
+          }
+        }
+      }
+      fmt::print(stderr, FMT_STRING("DONE simulating loop extrusion on '{}'! Simulation took {}\n"),
+                 chr.name, absl::FormatDuration(absl::Now() - t0));
+    });
+  }
+  tpool.join();
+  progress_tracker.join();
 }
 }  // namespace modle

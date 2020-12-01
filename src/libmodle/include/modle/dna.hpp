@@ -179,9 +179,10 @@ class DNA {
 /** The purpose of this struct is to keep together data regarding a single DNA molecule
  */
 struct Chromosome {
-  Chromosome(std::string name, uint64_t length, uint32_t bin_size, uint32_t diagonal_width);
+  Chromosome(std::string name, uint64_t length, uint32_t bin_size, uint32_t diagonal_width,
+             uint64_t seed = 0);
   Chromosome(std::string name, uint64_t start, uint64_t end, uint32_t bin_size,
-             uint32_t diagonal_width);
+             uint32_t diagonal_width, uint64_t seed = 0);
 
   // Getters
   [[nodiscard]] uint64_t length() const;
@@ -205,6 +206,10 @@ struct Chromosome {
   std::vector<ExtrusionBarrier*> barriers;
   std::vector<Lef*> lefs;
   ContactMatrix<uint32_t> contacts;  ///< ContactMatrix for the DNA::Bin%s from Chromosome::dna.
+  std::mt19937 _rand_eng;
+
+ private:
+  uint64_t _seed;
 };
 
 };  // namespace modle
