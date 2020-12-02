@@ -206,13 +206,7 @@ std::pair<uint64_t, uint64_t> Genome::import_extrusion_barriers_from_bed(
   }
 
   for (auto& chr : this->_chromosomes) {
-    for (const auto& bin : chr.dna) {
-      if (bin.has_extr_barrier()) {
-        for (auto& b : bin.get_all_extr_barriers()) {
-          chr.barriers.push_back(&b);
-        }
-      }
-    }
+    chr.sort_barriers_by_pos();
   }
 
   return {nrecords, nrecords_ignored};

@@ -53,17 +53,14 @@ bool ExtrusionUnit::try_extrude(std::mt19937& rand_eng) {
 }
 
 bool ExtrusionUnit::try_moving_to_next_bin() {
-  //  fmt::fprintf(stderr, "Trying to move to next bin...");
   if (this->_bin == &this->_parent_lef.get_last_bin()) {
     this->set_stalls(UINT32_MAX);  // Stall forever
     return false;
   }
-  //  fmt::fprintf(stderr, " Moving from bin #%lu", this->_bin->get_index());
   this->_bin->remove_extr_unit_binding(this);
   this->_bin = &this->_parent_lef.get_ptr_to_chr()->dna.get_next_bin(*this->_bin);
   this->_bin->add_extr_unit_binding(this);
   this->_blocking_barrier = nullptr;
-  //  fmt::fprintf(stderr, " to bin #%lu!\n", this->_bin->get_index());
   return true;
 }
 
@@ -72,12 +69,10 @@ bool ExtrusionUnit::try_moving_to_prev_bin() {
     this->set_stalls(UINT32_MAX);  // Stall forever
     return false;
   }
-  //  fmt::fprintf(stderr, " Moving from bin #%lu", this->_bin->get_index());
   this->_bin->remove_extr_unit_binding(this);
   this->_bin = &this->_parent_lef.get_ptr_to_chr()->dna.get_prev_bin(*this->_bin);
   this->_bin->add_extr_unit_binding(this);
   this->_blocking_barrier = nullptr;
-  //  fmt::fprintf(stderr, " to bin #%lu!\n", this->_bin->get_index());
   return true;
 }
 
@@ -117,39 +112,16 @@ void ExtrusionUnit::bind(Chromosome* chr, uint32_t pos, DNA::Direction direction
   this->_bin->add_extr_unit_binding(this);
   this->_direction = direction;
 
-  this->_blocking_barrier = nullptr;
-  if (this->_bin->has_extr_barrier()) {
-    auto& barriers = this->_bin->get_all_extr_barriers();
-    if (direction == DNA::Direction::fwd) {
-      // I think in this case ptr arithmetic is less error-prone than taking ptr to references/iters
-      // NOLINTNEXTLINE(cppcoreguidelines-pro-bounds-pointer-arithmetic)
-      for (auto* b = &barriers.front(); b < &barriers.back(); ++b) {
-        if (b->get_pos() >= pos) {
-          this->_blocking_barrier = b;
-          break;
-        }
-      }
-    } else {
-      // I think in this case ptr arithmetic is less error-prone than taking ptr to references/iters
-      // NOLINTNEXTLINE(cppcoreguidelines-pro-bounds-pointer-arithmetic)
-      for (auto* b = &barriers.back(); b > &barriers.front(); --b) {
-        if (b->get_pos() <= pos) {
-          this->_blocking_barrier = b;
-          break;
-        }
-      }
+  this->_blocking_barrier = this->_bin->get_ptr_to_next_extr_barrier(pos);
+  if (this->_blocking_barrier) {
+    auto n_stalls = this->_blocking_barrier->generate_num_stalls(rand_eng);
+    if (this->_blocking_barrier->get_direction_of_block() != this->get_extr_direction()) {
+      n_stalls /= 2;
     }
-    if (this->_blocking_barrier) {
-      auto n_stalls = this->_blocking_barrier->generate_num_stalls(rand_eng);
-      if (this->_blocking_barrier->get_direction_of_block() != this->get_extr_direction()) {
-        n_stalls /= 2;
-      }
-      this->set_stalls(n_stalls);
-      // fmt::fprintf(stderr, "LEF bound to a bin with a blocking extrusion barrier!\n");
-      // NOLINTNEXTLINE
-      assert(this->_blocking_barrier >= &this->_bin->get_all_extr_barriers().front() &&
-             this->_blocking_barrier <= &this->_bin->get_all_extr_barriers().back());
-    }
+    this->set_stalls(n_stalls);
+    // NOLINTNEXTLINE
+    assert(this->_blocking_barrier >= &this->_bin->get_all_extr_barriers().front() &&
+           this->_blocking_barrier <= &this->_bin->get_all_extr_barriers().back());
   }
 }
 
@@ -169,7 +141,7 @@ uint64_t ExtrusionUnit::check_constraints(std::mt19937& rand_eng) {
     return this->check_for_extrusion_barrier(rand_eng);
   } catch (const std::runtime_error& err) {
     throw std::runtime_error(
-        fmt::format("Exception caught while processing ExtrUnit bound at pos %lu! %s",
+        fmt::format("Exception caught while processing ExtrUnit bound at pos {}! {}",
                     this->get_pos(), err.what()));
   }
 }
@@ -276,7 +248,6 @@ std::pair<DNA::Bin*, DNA::Bin*> Lef::get_ptr_to_bins() {
 }
 
 void Lef::unload() {
-  // this->_chr = nullptr;
   this->_binding_pos = UINT64_MAX;
   this->_left_unit->unload();
   this->_right_unit->unload();
