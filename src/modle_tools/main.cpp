@@ -5,7 +5,7 @@
 #include <stdexcept>     // for runtime_error
 #include <system_error>  // for error_code
 
-#include "modle_tools/cli.hpp"    // for config, Cli, Cli::subcommand, Cli::convert, Cli::eval
+#include "./cli.hpp"              // for config, Cli, Cli::subcommand, Cli::convert, Cli::eval
 #include "modle_tools/tools.hpp"  // for convert, eval
 
 int main(int argc, char** argv) {

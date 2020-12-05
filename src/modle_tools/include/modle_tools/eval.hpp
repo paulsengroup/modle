@@ -4,8 +4,8 @@
 #include <utility>
 #include <vector>
 
+#include "modle_tools/config.hpp"
 #include "modle/contacts.hpp"
-#include "modle_tools/cli.hpp"
 
 namespace modle::tools {
 

@@ -10,10 +10,10 @@
 #include <cstdio>      // for stderr
 #include <filesystem>  // for create_directories
 
+#include "modle_tools/config.hpp"                  // for config
 #include "modle/bigwig.hpp"           // for write_range
 #include "modle/contacts.hpp"         // for ContactMatrix<>::Header, ContactMatrix
 #include "modle/juicer_contacts.hpp"  // for run_juicer_dump_and_parse_contacts
-#include "modle_tools/cli.hpp"        // for config
 #include "modle_tools/convert.hpp"    // for convert_to_hic, convert_to_tsv
 #include "modle_tools/eval.hpp"       // for Transformation, Cross, Linear
 

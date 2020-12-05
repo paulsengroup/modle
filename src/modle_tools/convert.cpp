@@ -30,7 +30,7 @@
 #include <vector>
 
 #include "modle/contacts.hpp"     // for ContactMatrix<>::Header, ContactMatrix
-#include "modle_tools/cli.hpp"    // for config
+#include "modle_tools/config.hpp"    // for config
 #include "modle_tools/utils.hpp"  // for generate_random_path_name
 
 namespace modle::tools {
