@@ -80,7 +80,7 @@ void run_simulation(const modle::config& c) {
     fmt::print(stderr, "Running burnin phase...\n");
     const auto& [avg_burnin_rounds, burnin_rounds_stdev] = genome.run_burnin(
         c.probability_of_lef_rebind, c.min_n_of_loops_per_lef, c.min_n_of_burnin_rounds);
-    fmt::print(stderr, FMT_STRING("Burnin completed in {:.2f} rounds{}.\n"), avg_burnin_rounds,
+    fmt::print(stderr, FMT_STRING("Burnin completed in {:.0f} rounds{}.\n"), avg_burnin_rounds,
                burnin_rounds_stdev == 0
                    ? ""
                    : fmt::format(FMT_STRING(" on average (stdev = {:.2f})"), burnin_rounds_stdev));
@@ -90,12 +90,14 @@ void run_simulation(const modle::config& c) {
 
   t0 = absl::Now();
   fmt::print(stderr, "About to start simulating loop extrusion...\n");
-  genome.simulate_extrusion(c.simulation_iterations);
+  if (c.target_contact_density != 0) {
+    genome.simulate_extrusion(c.target_contact_density, c.output_dir, c.force, !c.skip_output);
+  } else {
+    genome.simulate_extrusion(c.simulation_iterations, c.output_dir, c.force, !c.skip_output);
+  }
   fmt::print(stderr, FMT_STRING("Simulation took {}.\n"), absl::FormatDuration(absl::Now() - t0));
 
   if (!c.skip_output) {  // Mostly useful for profiling
-    genome.write_contacts_to_file(c.output_dir, c.force);
-    genome.write_extrusion_barriers_to_file(c.output_dir, c.force);
     std::ofstream cmd_file(fmt::format("{}/settings.log", c.output_dir));
     fmt::print(cmd_file, FMT_STRING("{}\n{}\n"), c.to_string(),
                absl::StrJoin(c.argv, c.argv + c.argc, " "));

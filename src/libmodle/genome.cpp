@@ -45,7 +45,8 @@ Genome::Genome(const config& c)
       _lefs(generate_lefs(c.number_of_lefs)),
       _chromosomes(init_chromosomes_from_file(c.diagonal_width)),
       _sampling_interval(c.contact_sampling_interval),
-      _randomize_contact_sampling(c.randomize_contact_sampling_interval) {}
+      _randomize_contact_sampling(c.randomize_contact_sampling_interval),
+      _nthreads(std::min(std::thread::hardware_concurrency(), c.nthreads)) {}
 
 std::vector<uint32_t> Genome::get_chromosome_lengths() const {
   std::vector<uint32_t> lengths;
@@ -87,20 +88,18 @@ uint64_t Genome::get_n_of_busy_lefs() const {
   return this->get_n_lefs() - this->get_n_of_free_lefs();
 }
 
-void Genome::write_contacts_to_file(std::string_view output_dir, bool force_overwrite) const {
-  auto nthreads = std::min(std::thread::hardware_concurrency(), this->get_n_chromosomes());
-  boost::asio::thread_pool tpool(nthreads);
-  fmt::print(stderr,
-             "Writing contact matrices for {} chromosome(s) in folder '{} using {} threads'...\n",
-             this->get_n_chromosomes(), output_dir, nthreads);
+void Genome::write_contacts_to_file(std::string_view output_dir, bool force_overwrite) {
+  fmt::print(stderr, "Writing contact matrices for {} chromosome(s) in folder '{}'...\n",
+             this->get_n_chromosomes(), output_dir);
+  boost::asio::thread_pool tpool(this->_nthreads);
   auto t0 = absl::Now();
   std::filesystem::create_directories(output_dir);
   for (const auto& chr : this->_chromosomes) {
     boost::asio::post(tpool, [&]() { chr.write_contacts_to_tsv(output_dir, force_overwrite); });
   }
   tpool.join();
-  fmt::fprintf(stderr, "DONE! Saved %lu contact matrices in %s\n", this->get_n_chromosomes(),
-               absl::FormatDuration(absl::Now() - t0));
+  fmt::print(stderr, "DONE! Saved {} contact matrices in {}.\n", this->get_n_chromosomes(),
+             absl::FormatDuration(absl::Now() - t0));
 }
 
 void Genome::write_extrusion_barriers_to_file(std::string_view output_dir,
@@ -300,10 +299,8 @@ uint64_t Genome::remove_chromosomes_wo_extr_barriers() {
 std::pair<double, double> Genome::run_burnin(double prob_of_rebinding,
                                              uint32_t target_n_of_unload_events,
                                              uint64_t min_extr_rounds) {
-  auto nthreads = std::min(std::thread::hardware_concurrency(), this->get_n_chromosomes());
-  boost::asio::thread_pool tpool(nthreads);
   std::vector<double> burnin_rounds(this->get_n_chromosomes());
-
+  boost::asio::thread_pool tpool(std::min(this->get_n_chromosomes(), this->_nthreads));
   for (auto nchr = 0U; nchr < this->get_n_chromosomes(); ++nchr) {
     boost::asio::post(tpool, [&, nchr]() {
       const auto& chr = this->_chromosomes[nchr];
@@ -369,20 +366,24 @@ std::pair<double, double> Genome::run_burnin(double prob_of_rebinding,
   return std::make_pair(avg_burnin_rounds, burnin_rounds_stdev);
 }
 
-void Genome::simulate_extrusion(uint32_t iterations, double target_contact_density) {
+void Genome::simulate_extrusion(uint32_t iterations, double target_contact_density,
+                                std::string_view output_dir, bool write_contacts_to_file,
+                                bool force_overwrite) {
   // If the simulation is set to stop when a target contact density is reached, set the number of
   // iterations to a very large number (2^32)
   if (target_contact_density != 0.0) {
     iterations = UINT32_MAX;
   }
-  // Create a reasonably sized thread pool
-  auto nthreads = std::min(std::thread::hardware_concurrency(), this->get_n_chromosomes());
-  boost::asio::thread_pool tpool(nthreads);
+
+  // Instantiate the thread pool to be used for simulation and IO operations
+  boost::asio::thread_pool tpool(std::min(this->_nthreads, this->get_n_chromosomes()));
 
   // Initialize variables for simulation progress tracking
   std::atomic<uint64_t> ticks_done{0};
   std::atomic<uint64_t> extrusion_events{0};
-  bool simulation_completed{false};
+  std::atomic<uint64_t> chromosomes_completed{0};
+  std::atomic<uint64_t> chromosomes_written_to_disk{0};
+  std::atomic<bool> simulation_completed{false};
   std::mutex m;  // This mutex is supposed to protect simulation_complete. As of C++17 we also need
                  // to acquire a lock when modifying the condition variable simulation_completed_cv
                  // (otherwise the change might not be communicated to waiting threads)
@@ -391,6 +392,8 @@ void Genome::simulate_extrusion(uint32_t iterations, double target_contact_densi
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wimplicit-int-float-conversion"
 #pragma GCC diagnostic ignored "-Wsign-conversion"
+#pragma GCC diagnostic ignored "-Wimplicit-conversion"
+#pragma GCC diagnostic ignored "-Wdouble-promotion"
   std::thread progress_tracker([&]() {  // This thread is used to periodically print the simulation
                                         // progress to stderr
     // The total number of ticks tot_ticks is set depending on whether or not the simulation is
@@ -403,31 +406,46 @@ void Genome::simulate_extrusion(uint32_t iterations, double target_contact_densi
     //    number is given by the sum of the target number of contacts for each of the
     //    chromosomes simulated, where the target number of contacts is defined as:
     //       target contact density * (matrix columns * matrix rows)
-    const uint64_t tot_ticks =
+    const long double tot_ticks =
         target_contact_density != 0.0
-            ? std::accumulate(this->_chromosomes.begin(), this->_chromosomes.end(), 0U,
-                              [&](auto accumulator, const auto& chr) {
-                                return accumulator +
-                                       std::llround(target_contact_density * chr.contacts.n_cols() *
-                                                    chr.contacts.n_rows());
-                              })
+            ? std::accumulate(
+                  this->_chromosomes.begin(), this->_chromosomes.end(), 0.0L,
+                  [&](auto accumulator, const auto& chr) {
+                    return accumulator +
+                           (target_contact_density * chr.contacts.n_cols() * chr.contacts.n_rows());
+                  })
             : iterations * this->get_n_chromosomes();
 
+    const auto t0 = absl::Now();
     while (true) {
       {  // Wait for 5 seconds or until the simulation terminates
         std::unique_lock<std::mutex> lk(m);
         simulation_completed_cv.wait_for(lk, std::chrono::seconds(5));  // NOLINT
-        if (simulation_completed) {  // If the simulation has been completed, return
-                                     // immediately, so that the main thread can join this thread
+        if (simulation_completed) {  // Stop printing updates once there are no chromosomes left,
+                                     // and return immediately, so that the main thread can join
+                                     // this thread
           // Unlocking here is probably unnecessary, as there's nothing waiting on this mutex
           lk.unlock();
           return;
         }
       }
-      // Print progress
-      fmt::print(stderr, FMT_STRING("Approx. {:.2f}% done ({:.2f}M extr. events/s)\n"),
-                 100.0 * ticks_done / tot_ticks, extrusion_events / 5.0e6 /* 5s * 1M */);  // NOLINT
-      extrusion_events = 0;
+      if (extrusion_events > 0) {  // Print progress
+        const auto progress = ticks_done / tot_ticks;
+        const auto throughput = extrusion_events / 5.0e6; /* 5s * 1M */  // NOLINT
+        const auto chr_being_written_to_disk = chromosomes_completed - chromosomes_written_to_disk;
+        const auto delta_t = absl::ToDoubleSeconds(absl::Now() - t0);
+        fmt::print(
+            stderr,
+            FMT_STRING("### ~{:.2f}% ###   {:.2f}M extr/sec - Simulation completed for "
+                       "{}/{} chromosomes{} - ETA {}.\n"),
+            100.0 * progress, throughput, chromosomes_completed, this->get_n_chromosomes(),
+            chr_being_written_to_disk == 0
+                ? ""
+                : fmt::format(" ({} chr. are currently being written to disk)",
+                              chr_being_written_to_disk),
+            absl::FormatDuration(absl::Seconds(delta_t / std::max(1.0e-06L, progress) - delta_t)));
+        extrusion_events = 0;
+      }
     }
   });
 #pragma GCC diagnostic pop
@@ -447,12 +465,11 @@ void Genome::simulate_extrusion(uint32_t iterations, double target_contact_densi
       // Calculate the number of contacts after which the simulation for the current chromosome is
       // stopped. This is set to a very large number (2^64) when the simulation is set to run for a
       // fixed number of iterations
-      const uint64_t target_n_of_contacts =
+      const auto target_n_of_contacts =
           target_contact_density != 0.0
-              ? static_cast<uint64_t>(std::llround(
-                    target_contact_density *
-                    static_cast<double>(chr.contacts.n_rows() * chr.contacts.n_cols())))
-              : UINT64_MAX;
+              ? target_contact_density *
+                    static_cast<double>(chr.contacts.n_rows() * chr.contacts.n_cols())
+              : std::numeric_limits<double>::max();
 
       // Variables to track the simulation progress for the current chromosome
       uint64_t local_extr_events_counter = 0;
@@ -516,18 +533,37 @@ void Genome::simulate_extrusion(uint32_t iterations, double target_contact_densi
           }
         }
       }
+      if (++chromosomes_completed == this->get_n_chromosomes()) {
+        {  // Notify the thread that is tracking the simulation progress that we are done simulating
+          std::scoped_lock<std::mutex> lk(m);
+          simulation_completed = true;
+        }
+        simulation_completed_cv.notify_all();
+      }
       fmt::print(stderr, FMT_STRING("DONE simulating loop extrusion on '{}'! Simulation took {}\n"),
                  chr.name, absl::FormatDuration(absl::Now() - t0));
+      if (write_contacts_to_file) {
+        chr.write_contacts_to_tsv(output_dir, force_overwrite);
+        chr.write_barriers_to_tsv(output_dir, force_overwrite);
+        ++chromosomes_written_to_disk;
+      }
+      // Free up resources
+      // chr = Chromosome{"", 0, 0, 0};
     });
   }
   // This blocks until all the tasks posted to the thread_pool have been completed
   tpool.join();
-
-  {  // Notify the thread that is tracking simulation progress that we are done, then join it
-    std::scoped_lock<std::mutex> lk(m);
-    simulation_completed = true;
-  }
-  simulation_completed_cv.notify_all();
   progress_tracker.join();
+}
+
+void Genome::simulate_extrusion() { this->simulate_extrusion(1, 0, "", false, true); }
+void Genome::simulate_extrusion(uint32_t iterations, std::string_view output_dir,
+                                bool force_overwrite, bool write_contacts_to_file) {
+  this->simulate_extrusion(iterations, 0, output_dir, write_contacts_to_file, force_overwrite);
+}
+void Genome::simulate_extrusion(double target_contact_density, std::string_view output_dir,
+                                bool force_overwrite, bool write_contacts_to_file) {
+  this->simulate_extrusion(0, target_contact_density, output_dir, write_contacts_to_file,
+                           force_overwrite);
 }
 }  // namespace modle

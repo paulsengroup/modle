@@ -43,7 +43,7 @@ class Genome {
   [[nodiscard]] std::vector<double> get_chromosome_lef_affinities() const;
   [[nodiscard]] uint64_t get_n_of_free_lefs() const;
   [[nodiscard]] uint64_t get_n_of_busy_lefs() const;
-  void write_contacts_to_file(std::string_view output_dir, bool force_overwrite) const;
+  void write_contacts_to_file(std::string_view output_dir, bool force_overwrite);
   void write_extrusion_barriers_to_file(std::string_view output_dir, bool force_overwrite) const;
 
   /** Randomly generate and bind \p n_barriers ExtrusionBarrier%s
@@ -95,7 +95,11 @@ class Genome {
    *
    * @param iterations Number of loop extrusion events to simulate
    */
-  void simulate_extrusion(uint32_t iterations = 1, double target_contact_density = 0.0);
+  void simulate_extrusion();
+  void simulate_extrusion(uint32_t iterations, std::string_view output_dir, bool force_overwrite,
+                          bool write_contacts_to_file = true);
+  void simulate_extrusion(double target_contact_density, std::string_view output_dir,
+                          bool force_overwrite, bool write_contacts_to_file = true);
 
  private:
   uint64_t _seed;
@@ -111,7 +115,11 @@ class Genome {
   std::vector<Chromosome> _chromosomes;
   uint32_t _sampling_interval;
   bool _randomize_contact_sampling;
-  // std::bernoulli_distribution _sample_contacts;
+  uint32_t _nthreads;
+
+  void simulate_extrusion(uint32_t iterations, double target_contact_density,
+                          std::string_view output_dir, bool write_contacts_to_file,
+                          bool force_overwrite);
 
   // Private initializers
   [[nodiscard]] std::vector<Chromosome> init_chromosomes_from_file(uint32_t diagonal_width) const;

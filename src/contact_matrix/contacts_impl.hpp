@@ -413,7 +413,6 @@ std::pair<uint32_t, uint32_t> ContactMatrix<I>::write_to_tsv(const std::string &
                                                              std::string_view header,
                                                              int bzip2_block_size) const {
   std::ofstream fp(path_to_file, std::ios_base::binary);
-  assert(header.empty() || header.back() == '\n');
   boost::iostreams::filtering_ostream out;
   std::string buff;
   uint64_t raw_size = 0;
@@ -425,7 +424,11 @@ std::pair<uint32_t, uint32_t> ContactMatrix<I>::write_to_tsv(const std::string &
     out.push(fp);
     std::vector<I> row(this->_ncols, 0);
     if (!header.empty()) {
-      out.write(header.data(), static_cast<long>(header.size()));
+      if (absl::EndsWith(header, "\n")) {
+        fmt::print(out, header);
+      } else {
+        fmt::print(out, "{}\n", header);
+      }
     }
     for (auto i = 0UL; i < this->_nrows; ++i) {
       for (auto j = 0UL; j < this->_ncols; ++j) {
@@ -434,8 +437,8 @@ std::pair<uint32_t, uint32_t> ContactMatrix<I>::write_to_tsv(const std::string &
       }
       // TODO: Figure out how to get the raw size when using fmt::print
       // fmt::print(out, "{}\n", absl::StrJoin(row, "\t"));
-      buff = absl::StrCat(absl::StrJoin(row, "\t"), "\n");
-      out.write(buff.data(), static_cast<long>(buff.size()));
+      buff = absl::StrJoin(row, "\t");
+      fmt::print(out, "{}\n", buff);
       raw_size += buff.size();
     }
     if (!out || !fp) {

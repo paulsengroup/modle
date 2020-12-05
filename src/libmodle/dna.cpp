@@ -379,6 +379,7 @@ void Chromosome::sort_barriers_by_pos() {
 
 void Chromosome::write_contacts_to_tsv(std::string_view output_dir, bool force_overwrite) const {
   auto t0 = absl::Now();
+  std::filesystem::create_directories(output_dir);
   std::string path_to_outfile = std::filesystem::weakly_canonical(
       fmt::format("{}/{}_modle_cmatrix.tsv.bz2", output_dir, this->name));
   fmt::print(stderr, "Writing contact matrix for '{}' to file '{}'...\n", this->name,
@@ -404,6 +405,8 @@ void Chromosome::write_contacts_to_tsv(std::string_view output_dir, bool force_o
 void Chromosome::write_barriers_to_tsv(std::string_view output_dir, bool force_overwrite) const {
   auto path_to_outfile = std::filesystem::weakly_canonical(
       fmt::format("{}/{}.extrusion_barriers.tsv.bz2", output_dir, this->name));
+  fmt::print(stderr, "Writing extr. barrier coordinates for '{}' to file '{}'\n", this->name,
+             path_to_outfile);
   if (!force_overwrite && std::filesystem::exists(path_to_outfile)) {
     fmt::print(stderr, "File '{}' already exists. Pass --force to overwrite... SKIPPING.\n",
                path_to_outfile);

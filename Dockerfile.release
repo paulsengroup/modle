@@ -26,16 +26,14 @@ RUN dnf update -y \
     && mkdir -p /usr/local/bin                                                  \
     && ln -s /tmp/conan_venv/bin/conan /usr/local/bin/conan                     \
     && mkdir "$build_dir" && cd "$build_dir"       \
-    && env CC=/usr/bin/clang                       \
-           CXX=/usr/bin/clang++                    \
-           LD=/usr/bin/ld.lld                      \
+    && env CC=/usr/bin/gcc                         \
+           CXX=/usr/bin/g++                        \
+           LD=/usr/bin/ld                          \
        cmake -DCMAKE_BUILD_TYPE=Release            \
              -DENABLE_IPO=OFF                      \
              -DWARNINGS_AS_ERRORS=OFF              \
              -DENABLE_TESTING=OFF                  \
              -DCMAKE_INSTALL_PREFIX='/usr/local'   \
-             -DCMAKE_C_COMPILER=/usr/bin/clang     \
-             -DCMAKE_CXX_COMPILER=/usr/bin/clang++ \
              -DCMAKE_CXX_FLAGS="-march=${march}"   \
              -DCMAKE_C_FLAGS="-march=${march}"     \
              -G 'Unix Makefiles' ..                \

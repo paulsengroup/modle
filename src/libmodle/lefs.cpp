@@ -120,8 +120,8 @@ void ExtrusionUnit::bind(Chromosome* chr, uint32_t pos, DNA::Direction direction
     }
     this->set_stalls(n_stalls);
     // NOLINTNEXTLINE
-    assert(this->_blocking_barrier >= &this->_bin->get_all_extr_barriers().front() &&
-           this->_blocking_barrier <= &this->_bin->get_all_extr_barriers().back());
+    // assert(this->_blocking_barrier >= &this->_bin->get_all_extr_barriers().front() &&
+    //       this->_blocking_barrier <= &this->_bin->get_all_extr_barriers().back());
   }
 }
 

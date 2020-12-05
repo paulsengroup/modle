@@ -8,6 +8,7 @@
 #include <cstdint>
 #include <filesystem>
 #include <string_view>
+#include <thread>
 
 namespace modle {
 using namespace std::literals::string_view_literals;
@@ -34,6 +35,7 @@ struct config {
   uint32_t contact_sampling_interval{1000};
   bool randomize_contact_sampling_interval{false};
   bool skip_output{false};
+  uint32_t nthreads{std::thread::hardware_concurrency()};
 
   int argc;
   char** argv;
@@ -58,8 +60,8 @@ struct config {
     std::vector<cli_tokens>{
      {"Bin size (bp)", fmt::format(FMT_STRING("{}"), this->bin_size)},
      {"Diagonal width (bp)", fmt::format(FMT_STRING("{}"), this->diagonal_width)},
-     {"# of iterations", fmt::format(FMT_STRING("{}"), this->target_contact_density != 0 ? "Disabled"sv : fmt::format("{}", this->simulation_iterations))},
-     {"Target contact density", fmt::format(FMT_STRING("{}"), this->target_contact_density != 0 ? fmt::format("{}", this->simulation_iterations) : "Disabled"sv)},
+     {"# of iterations", fmt::format(FMT_STRING("{}"), this->simulation_iterations != 0 ? "Disabled"sv : fmt::format("{}", this->simulation_iterations))},
+     {"Target contact density", fmt::format(FMT_STRING("{}"), this->target_contact_density != 0 ? fmt::format("{}", this->target_contact_density) : "Disabled"sv)},
      {"Seed", fmt::format(FMT_STRING("{}"), this->seed)},
      {"Randomize contact sampling interval", this->randomize_contact_sampling_interval ? "Yes" : "No"},
      {"Contact sampling interval", fmt::format(FMT_STRING("{}"), this->contact_sampling_interval)}}},

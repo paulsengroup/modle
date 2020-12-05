@@ -52,6 +52,13 @@ class Cli {
             ->capture_default_str();
 
     gen->add_option(
+        "-t,--threads",
+        this->_config.nthreads,
+        "Max size of the thread pool to use to run the simulation. By default ModLE will attempt to use threads available.")
+        ->check(CLI::PositiveNumber)
+        ->capture_default_str();
+
+    gen->add_option(
             "-w,--diagonal-width",
             this->_config.diagonal_width,
             "Width of the matrix that will be used to store contacts, which visually corresponds to the width of the diagonal in a typical square contact matrix.")
