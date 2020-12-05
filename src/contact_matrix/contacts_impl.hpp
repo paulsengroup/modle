@@ -21,6 +21,7 @@
 #include "absl/strings/strip.h"
 #include "fmt/printf.h"
 #include "modle/contacts.hpp"
+#include "modle/suppress_compiler_warnings.hpp"
 #include "modle/utils.hpp"
 
 namespace modle {
@@ -60,7 +61,7 @@ ContactMatrix<I>::ContactMatrix(const std::string &path_to_file,
 
     std::size_t j{};
     std::size_t i{};
-    uint64_t n{};
+    I n{};
     const auto bin_size = static_cast<double>(header.bin_size);
 
     for (i = 0; std::getline(in, line); ++i) {
@@ -72,19 +73,19 @@ ContactMatrix<I>::ContactMatrix(const std::string &path_to_file,
         utils::parse_numeric_or_throw(tok, n);
         if (noise_generator != nullptr) {
           for (auto k = n; k > 0; --k) {
-            // TODO: Figure out how to improve readability by removing some static_casts
             const auto noise1 = (*noise_generator)(*rand_eng) / bin_size;
             const auto noise2 = (*noise_generator)(*rand_eng) / bin_size;
-            const auto pos1 =
-                static_cast<std::size_t>(std::clamp(std::round(noise1 + static_cast<double>(i)),
-                                                    0.0, static_cast<double>(this->_nrows) - 1.0));
-            const auto pos2 =
-                static_cast<std::size_t>(std::clamp(std::round(noise2 + static_cast<double>(j)),
-                                                    0.0, static_cast<double>(this->_ncols) - 1.0));
-            this->at(pos1, pos2) += static_cast<I>(n);
+            DISABLE_WARNING_PUSH
+            DISABLE_WARNING_CONVERSION
+            const auto pos1 = static_cast<std::size_t>(
+                std::clamp(std::round(noise1 + i), 0.0, this->_nrows - 1.0));
+            const auto pos2 = static_cast<std::size_t>(
+                std::clamp(std::round(noise2 + j), 0.0, this->_ncols - 1.0));
+            DISABLE_WARNING_POP
+            this->at(pos1, pos2) += n;
           }
         } else {
-          this->at(i, j) = static_cast<I>(n);
+          this->at(i, j) = n;
         }
         ++j;
       }
@@ -177,23 +178,27 @@ ContactMatrix<I>::ContactMatrix(const std::string &path_to_file, std::size_t nro
 
 template <typename I>
 I &ContactMatrix<I>::at(std::size_t i, std::size_t j) {
+#ifndef NDEBUG
   if ((j * this->_nrows) + i > this->_contacts.size()) {
     throw std::runtime_error(fmt::format(
         "ContactMatrix::at tried to access element m[{}][{}] of a matrix of shape [{}][{}]! "
         "({} >= {})",
         i, j, this->n_rows(), this->n_cols(), (j * this->_nrows) + i, this->_contacts.size()));
   }
+#endif
   return this->_contacts[(j * this->_nrows) + i];
 }
 
 template <typename I>
 const I &ContactMatrix<I>::at(std::size_t i, std::size_t j) const {
+#ifndef NDEBUG
   if ((j * this->_nrows) + i > this->_contacts.size()) {
     throw std::runtime_error(fmt::format(
         "ContactMatrix::at tried to access element m[{}][{}] of a matrix of shape [{}][{}]! "
         "({} >= {})",
         i, j, this->n_rows(), this->n_cols(), (j * this->_nrows) + i, this->_contacts.size()));
   }
+#endif
   return this->_contacts[(j * this->_nrows) + i];
 }
 
@@ -202,12 +207,14 @@ template <typename I2>
 void ContactMatrix<I>::set(std::size_t row, std::size_t col, I2 n) {
   static_assert(std::is_integral<I2>::value,
                 "ContactMatrix<I>::set expects the parameter n to be an integer type.");
-  if constexpr (std::is_signed<I2>::value && std::is_unsigned<I>::value) {
-    if (n < 0) {
-      throw std::logic_error(
-          fmt::format("ContactMatrix<unsigned-like>::set was called with n < 0: n = {}", n));
-    }
+#ifndef NDEBUG
+  if (n < std::numeric_limits<I>::min() || n > std::numeric_limits<I>::max()) {
+    throw std::runtime_error(
+        fmt::format(FMT_STRING("ContactMatrix<I>::set(row={}, col={}, n={}): Overflow detected: "
+                               "n={} is outside the range of representable numbers ({}-{})"),
+                    row, col, n, n, std::numeric_limits<I>::min(), std::numeric_limits<I>::max()));
   }
+#endif
 
   auto j = col;
   auto i = j - row;
@@ -217,22 +224,31 @@ void ContactMatrix<I>::set(std::size_t row, std::size_t col, I2 n) {
   }
   try {
     if (j > this->n_cols()) {
-      throw std::runtime_error(fmt::format(FMT_STRING("j={} > ncols={})"), j, this->n_cols()));
+      throw std::runtime_error(
+          fmt::format(FMT_STRING("attempt to access an element past the end of the contact matrix: "
+                                 "j={}; ncols={}: j > ncols"),
+                      j, this->n_cols()));
     }
     if (i > this->n_rows()) {
-      this->_updates_missed += n;
+      ++this->_updates_missed;
       return;
     }
 
-    assert(i <= this->n_rows());
-    assert(j <= this->n_cols());
-    assert(n >= std::numeric_limits<I>::min());
-    assert(n <= std::numeric_limits<I>::max());
-
     auto &m = this->at(i, j);
-    this->_tot_contacts -= m;
-    this->_tot_contacts += n;
-    m = static_cast<I>(n);
+    DISABLE_WARNING_PUSH
+    DISABLE_WARNING_CONVERSION
+    DISABLE_WARNING_SIGN_CONVERSION
+    DISABLE_WARNING_SIGN_COMPARE
+#ifndef NDEBUG
+    if constexpr (std::is_signed<I2>::value) {
+      if (n < 0) {
+        assert(this->_tot_contacts - m >= n);
+      }
+    }
+#endif
+    this->_tot_contacts = this->_tot_contacts - m + n;
+    m = n;
+    DISABLE_WARNING_POP
   } catch (const std::runtime_error &err) {
     throw std::logic_error(
         fmt::format(FMT_STRING("ContactMatrix::set({}, {}, {}): {})"), row, col, n, err.what()));
@@ -244,14 +260,7 @@ template <typename I2>
 void ContactMatrix<I>::increment(std::size_t row, std::size_t col, I2 n) {
   static_assert(std::is_integral<I2>::value,
                 "ContactMatrix<I>::increment expects the parameter n to be an integer type.");
-  if constexpr (std::is_signed<I2>::value) {
-    if (n < 0) {
-      throw std::logic_error(
-          fmt::format("ContactMatrix<I>::increment was called with n < 0. Consider using "
-                      "::decrement(..., -n) instead: n = {}",
-                      n));
-    }
-  }
+
   auto j = col;
   auto i = j - row;
   if (row > col) {
@@ -263,19 +272,45 @@ void ContactMatrix<I>::increment(std::size_t row, std::size_t col, I2 n) {
       throw std::runtime_error(fmt::format(FMT_STRING("j={} > ncols={})"), j, this->n_cols()));
     }
     if (i > this->n_rows()) {
-      this->_updates_missed += n;
+      ++this->_updates_missed;
       return;
     }
 
-    assert(i <= this->n_rows());
-    assert(j <= this->n_cols());
-    assert(this->at(i, j) <= std::numeric_limits<I>::max() - n);
+    DISABLE_WARNING_PUSH
+    DISABLE_WARNING_SIGN_COMPARE
+    DISABLE_WARNING_SIGN_CONVERSION
+#ifndef NDEBUG
+    auto &m = this->at(i, j);
+    if constexpr (std::is_signed<I2>::value) {
+      if (n < 0) {
+        throw std::logic_error(fmt::format(
+            FMT_STRING("ContactMatrix<I>::increment(row={}, col={}, n={}): consider using "
+                       "ContactMatrix<I>::decrement instead of incrementing by a negative number."),
+            row, col, n));
+      }
+    }
+    if (std::numeric_limits<I>::max() - n < m) {
+      throw std::runtime_error(fmt::format(
+          FMT_STRING("Overflow detected: "
+                     "incrementing m={} by n={} would result in a number outside of range {}-{}"),
+          m, n, std::numeric_limits<I>::min(), std::numeric_limits<I>::max()));
+    }
+    if (std::numeric_limits<I>::max() - n < this->_tot_contacts) {
+      throw std::runtime_error(fmt::format(
+          FMT_STRING("Overflow detected: "
+                     "incrementing _tot_contacts={} by n={} would result in a number outside of "
+                     "range {}-{}"),
+          this->_tot_contacts, n, std::numeric_limits<I>::min(), std::numeric_limits<I>::max()));
+    }
+#endif
 
-    this->at(i, j) += static_cast<I>(n);
+    this->at(i, j) += n;
     this->_tot_contacts += n;
+    DISABLE_WARNING_POP
   } catch (const std::runtime_error &err) {
-    throw std::logic_error(fmt::format(FMT_STRING("ContactMatrix::increment({}, {}, {}): {})"), row,
-                                       col, n, err.what()));
+    throw std::logic_error(
+        fmt::format(FMT_STRING("ContactMatrix<I>::increment(row={}, col={}, n={}): {}"), row, col,
+                    n, err.what()));
   }
 }
 
@@ -284,14 +319,6 @@ template <typename I2>
 void ContactMatrix<I>::decrement(std::size_t row, std::size_t col, I2 n) {
   static_assert(std::is_integral<I2>::value,
                 "ContactMatrix<I>::decrement expects the parameter n to be an integer type.");
-  if constexpr (std::is_signed<I2>::value) {
-    if (n < 0) {
-      throw std::logic_error(
-          fmt::format("ContactMatrix<I>::decrement was called with n < 0. Consider using "
-                      "::increment(..., -n) instead: n = {}",
-                      n));
-    }
-  }
   auto j = col;
   auto i = j - row;
   if (row > col) {
@@ -303,16 +330,42 @@ void ContactMatrix<I>::decrement(std::size_t row, std::size_t col, I2 n) {
       throw std::runtime_error(fmt::format(FMT_STRING("j={} > ncols={})"), j, this->n_cols()));
     }
     if (i > this->n_rows()) {
-      this->_updates_missed += n;
+      ++this->_updates_missed;
       return;
     }
 
-    assert(i <= this->n_rows());
-    assert(j <= this->n_cols());
-    assert(n <= this->at(i, j));
+    DISABLE_WARNING_PUSH
+    DISABLE_WARNING_SIGN_COMPARE
+    DISABLE_WARNING_SIGN_CONVERSION
+#ifndef NDEBUG
+    auto &m = this->at(i, j);
+    if constexpr (std::is_signed<I2>::value) {
+      if (n < 0) {
+        throw std::logic_error(fmt::format(
+            FMT_STRING("ContactMatrix<I>::decrement(row={}, col={}, n={}): consider using "
+                       "ContactMatrix<I>::increment instead of decrementing by a negative number."),
+            row, col, n));
+      }
+    }
 
-    this->at(i, j) -= static_cast<I>(n);
+    if (std::numeric_limits<I>::min() + n > m) {
+      throw std::runtime_error(fmt::format(
+          FMT_STRING("Overflow detected: "
+                     "decrementing m={} by n={} would result in a number outside of range {}-{}"),
+          m, n, std::numeric_limits<I>::min(), std::numeric_limits<I>::max()));
+    }
+    if (std::numeric_limits<I>::min() + n > this->_tot_contacts) {
+      throw std::runtime_error(fmt::format(
+          FMT_STRING("Overflow detected: "
+                     "decrementing _tot_contacts={} by n={} would result in a number outside of "
+                     "range {}-{}"),
+          this->_tot_contacts, n, std::numeric_limits<I>::min(), std::numeric_limits<I>::max()));
+    }
+#endif
+
+    this->at(i, j) -= n;
     this->_tot_contacts -= n;
+    DISABLE_WARNING_POP
   } catch (const std::runtime_error &err) {
     throw std::logic_error(fmt::format(FMT_STRING("ContactMatrix::decrement({}, {}, {}): {})"), row,
                                        col, n, err.what()));
@@ -348,7 +401,7 @@ void ContactMatrix<I>::print(bool full) const {
           row[x] = this->at(i, j);
         }
       }
-      fmt::print(FMT_STRING("%s\n"), absl::StrJoin(row, "\t"));
+      fmt::print(FMT_STRING("{}\n"), absl::StrJoin(row, "\t"));
     }
   } else {
     std::vector<I> row(this->n_cols());
@@ -356,7 +409,7 @@ void ContactMatrix<I>::print(bool full) const {
       for (auto j = 0UL; j < this->n_cols(); ++j) {
         row[j] = this->at(i, j);
       }
-      fmt::print(FMT_STRING("%s\n"), absl::StrJoin(row, "\t"));
+      fmt::print(FMT_STRING("{}\n"), absl::StrJoin(row, "\t"));
     }
   }
 }
@@ -369,9 +422,19 @@ I ContactMatrix<I>::get(std::size_t row, std::size_t col) const {
     j = row;
     i = j - col;
   }
-  if (i >= this->n_rows() || j >= this->n_cols()) {
+#ifndef NDEBUG
+  if (i >= this->n_cols() || j >= this->n_cols()) {
+    throw std::logic_error(fmt::format(
+        FMT_STRING("ContactMatrix<I>::get(row={}, col={}) tried to access an element outside of "
+                   "the space {}x{}, which is what this contact matrix is supposed to represent"),
+        row, col, col, col));
+  }
+#endif
+
+  if (i >= this->n_rows()) {
     return 0;
   }
+
   return this->at(i, j);
 }
 
@@ -546,7 +609,6 @@ std::pair<uint32_t, uint32_t> ContactMatrix<I>::write_full_matrix_to_tsv(
     const std::string &path_to_file, int bzip2_block_size) const {
   std::ofstream fp(path_to_file, std::ios_base::binary);
   boost::iostreams::filtering_ostream out;
-  std::string buff;
   uint64_t raw_size = 0;
   if (this->_updates_missed > 0) {
     fmt::fprintf(stderr, "WARNING: There were {} missed updates!\n", this->_updates_missed);
@@ -571,9 +633,7 @@ std::pair<uint32_t, uint32_t> ContactMatrix<I>::write_full_matrix_to_tsv(
           row[x] = this->at(i, j);
         }
       }
-      buff = absl::StrJoin(row, "\t") + "\n";
-      out.write(buff.data(), static_cast<long>(buff.size()));
-      raw_size += buff.size();
+      fmt::print(out, "{}\n", absl::StrJoin(row, "\t"));
     }
     if (!out || !fp) {
       throw fmt::system_error(errno, "IO error while writing to file '{}'", path_to_file);

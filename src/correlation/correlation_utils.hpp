@@ -1,17 +1,19 @@
 #pragma once
 
+#include <absl/strings/str_join.h>
+#include <fmt/format.h>
+
 #include <algorithm>
 #include <bitset>
 #include <boost/dynamic_bitset.hpp>
 #include <cstdint>
 #include <numeric>
+#include <range/v3/numeric.hpp>
+#include <range/v3/view.hpp>
 #include <type_traits>
 #include <vector>
 
-#include "absl/strings/str_join.h"
-#include "fmt/printf.h"
-#include "range/v3/numeric.hpp"
-#include "range/v3/view.hpp"
+#include "modle/suppress_compiler_warnings.hpp"
 
 namespace modle::correlation::utils {
 // Return the indices corresponding to the sorted vector
@@ -20,11 +22,12 @@ std::vector<std::size_t> sort_range_by_idx(Rng range) {
   static_assert(ranges::random_access_range<Rng>, "r should be a random access range.");
   std::vector<std::size_t> vi(range.size());
   ranges::iota(vi, 0);
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wsign-conversion"
+
+  DISABLE_WARNING_PUSH
+  DISABLE_WARNING_SIGN_CONVERSION
   std::sort(vi.begin(), vi.end(),
             [&](std::size_t i1, std::size_t i2) { return range[i1] < range[i2]; });
-#pragma GCC diagnostic pop
+  DISABLE_WARNING_POP
   return vi;
 }
 
@@ -38,8 +41,8 @@ std::vector<double> compute_element_ranks(Rng range) {
 
   vr[vi[0]] = 0;
   for (auto i = 1U; i < vr.size(); ++i) {
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wsign-conversion"
+    DISABLE_WARNING_PUSH
+    DISABLE_WARNING_SIGN_CONVERSION
     auto& prev = range[vi[i - 1]];
     auto& current = range[vi[i]];
     if (prev != current) {
@@ -53,7 +56,7 @@ std::vector<double> compute_element_ranks(Rng range) {
       for (auto j = min; j <= max; ++j) {
         vr[vi[j]] = (max + min) / 2.0;
       }
-#pragma GCC diagnostic pop
+      DISABLE_WARNING_POP
       i = max;
     }
   }

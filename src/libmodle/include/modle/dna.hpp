@@ -33,7 +33,8 @@ class DNA {
    * (+/- or forward/reverse).
    */
   enum Direction { none = 0, fwd = 1, rev = 2, both = 3 };
-  DNA(uint64_t length, uint32_t bin_size);
+  template <typename I1, typename I2>
+  DNA(I1 length, I2 bin_size);
 
   // Getters
   [[nodiscard]] uint64_t length() const;
@@ -105,9 +106,10 @@ class DNA {
      * @param barriers   List of ExtrusionBarrier%s mapped in the genomic region represented by this
      * DNA::Bin.
      */
-    Bin(std::size_t idx, uint64_t start, uint64_t end,
-        const std::vector<ExtrusionBarrier>& barriers);
-    Bin(std::size_t idx, uint64_t start, uint64_t end);
+    template <typename I>
+    Bin(std::size_t idx, I start, I end, const std::vector<ExtrusionBarrier>& barriers);
+    template <typename I>
+    Bin(std::size_t idx, I start, I end);
     ///@}
 
     [[nodiscard]] uint32_t get_start() const;
@@ -222,4 +224,6 @@ struct Chromosome {
   uint64_t _seed;
 };
 
-};  // namespace modle
+}  // namespace modle
+
+#include "../../dna_impl.hpp"

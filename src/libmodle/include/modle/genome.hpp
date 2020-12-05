@@ -39,7 +39,7 @@ class Genome {
   [[nodiscard]] uint64_t get_n_lefs() const;
   [[nodiscard]] uint64_t get_n_barriers() const;
   [[nodiscard]] std::vector<std::string_view> get_chromosome_names() const;
-  [[nodiscard]] std::vector<uint32_t> get_chromosome_lengths() const;
+  [[nodiscard]] std::vector<uint64_t> get_chromosome_lengths() const;
   [[nodiscard]] std::vector<double> get_chromosome_lef_affinities() const;
   [[nodiscard]] uint64_t get_n_of_free_lefs() const;
   [[nodiscard]] uint64_t get_n_of_busy_lefs() const;
@@ -61,7 +61,8 @@ class Genome {
    * only stores ptrs to the actual ExtrusionBarrier%s.
    * @param n_barriers The number of barriers to randomly generate and bind.
    */
-  void randomly_generate_extrusion_barriers(uint32_t n_barriers);
+  template <typename I>
+  void randomly_generate_extrusion_barriers(I n_barriers, uint64_t seed = 0);
 
   /** This function is meant to be used before calling Genome::simulate_extrusion to randomly bind
    * Lef%s.
@@ -126,3 +127,5 @@ class Genome {
   [[nodiscard]] std::vector<Lef> generate_lefs(uint32_t n);
 };
 }  // namespace modle
+
+#include "../../genome_impl.hpp"

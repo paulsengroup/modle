@@ -19,7 +19,7 @@
 
 namespace modle::tools {
 
-void convert(const modle::tools::config& c) {
+void convert_subcmd(const modle::tools::config& c) {
   auto argv = modle::utils::init_juicer_tools_argv(c.path_to_juicer_tools, c.juicer_tools_mem);
   std::filesystem::create_directories(c.out_dir);
   if (c.convert_to_hic) {
@@ -30,7 +30,7 @@ void convert(const modle::tools::config& c) {
   }
 }
 
-void eval(const modle::tools::config& c) {
+void eval_subcmd(const modle::tools::config& c) {
   assert(c.compute_spearman || c.compute_pearson);
   modle::ContactMatrix<uint32_t> cmatrix(c.path_to_input_matrix);
   auto reference_cmatrix =

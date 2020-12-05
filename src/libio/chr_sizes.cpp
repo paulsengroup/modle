@@ -101,10 +101,10 @@ ChrSize::ChrSize(std::vector<std::string>& toks) {
   }
 }
 
-ChrSize::ChrSize(std::string_view chr_name, uint64_t length)
-    : name(chr_name), start(0), end(length) {}
-ChrSize::ChrSize(std::string_view chr_name, uint64_t start, uint64_t end)
-    : name(chr_name), start(start), end(end) {}
+ChrSize::ChrSize(std::string_view chr_name, uint64_t chr_length)
+    : name(chr_name), start(0), end(chr_length) {}
+ChrSize::ChrSize(std::string_view chr_name, uint64_t chr_start, uint64_t chr_end)
+    : name(chr_name), start(chr_start), end(chr_end) {}
 
 bool ChrSize::operator==(const ChrSize& other) const {
   return this->name == other.name && this->start == other.start && this->end == other.end;

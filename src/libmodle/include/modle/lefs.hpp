@@ -76,6 +76,11 @@ class Lef {
   double _probability_of_extr_unit_bypass;
   double _unloader_strength_coeff;
   std::geometric_distribution<uint32_t> _lifetime_generator;
+  // This will be used to add an offset of -2, -1, +1, +2 when binding to a bin. This is needed to
+  // avoid the undesired zebra pattern described in #3
+  // std::discrete_distribution<int8_t> _bin_idx_offset_generator{{1, 1, 0, 1, 1}};
+  std::uniform_int_distribution<int8_t> _bin_idx_offset_generator{-2, 2};
+  std::uniform_real_distribution<> _prob_of_rebind_generator{0.0, 1.0};
   uint64_t _binding_pos{UINT64_MAX};
   /// I am using a unique_ptr instead of storing the extr. units directly to avoid the cyclic
   /// dependency between dna.hpp and lefs.hpp

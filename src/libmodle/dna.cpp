@@ -28,28 +28,6 @@
 
 namespace modle {
 
-DNA::Bin::Bin(std::size_t idx, uint64_t start, uint64_t end,
-              const std::vector<ExtrusionBarrier>& barriers)
-    : _idx(idx),
-      _start(static_cast<uint32_t>(start)),
-      _end(static_cast<uint32_t>(end)),
-      _extr_barriers(std::make_unique<absl::InlinedVector<ExtrusionBarrier, 3>>(barriers.begin(),
-                                                                                barriers.end())) {
-  assert(start <= UINT32_MAX);  // NOLINT;
-  assert(end <= UINT32_MAX);    // NOLINT;
-  assert(start <= end);         // NOLINT;
-}
-
-DNA::Bin::Bin(std::size_t idx, uint64_t start, uint64_t end)
-    : _idx(idx),
-      _start(static_cast<uint32_t>(start)),
-      _end(static_cast<uint32_t>(end)),
-      _extr_barriers(nullptr) {
-  assert(start <= UINT32_MAX);  // NOLINT;
-  assert(end <= UINT32_MAX);    // NOLINT;
-  assert(start <= end);         // NOLINT;
-}
-
 uint32_t DNA::Bin::get_start() const { return this->_start; }
 uint32_t DNA::Bin::get_end() const { return this->_end; }
 uint64_t DNA::Bin::size() const { return this->get_end() - this->get_start(); }
@@ -110,14 +88,14 @@ ExtrusionBarrier* DNA::Bin::get_ptr_to_next_extr_barrier(uint64_t pos, Direction
     case DNA::Direction::both:
       return &this->_extr_barriers->front();
     case DNA::Direction::fwd: {
-      const auto& b = std::find_if(this->_extr_barriers->begin(), this->_extr_barriers->end(),
-                                   [&](const auto& b) { return b.get_pos() >= pos; });
-      return b != this->_extr_barriers->end() ? &(*b) : nullptr;
+      const auto& barrier = std::find_if(this->_extr_barriers->begin(), this->_extr_barriers->end(),
+                                         [&](const auto& b) { return b.get_pos() >= pos; });
+      return barrier != this->_extr_barriers->end() ? &(*barrier) : nullptr;
     }
     case DNA::Direction::rev: {
-      const auto& b = std::find_if(this->_extr_barriers->begin(), this->_extr_barriers->end(),
-                                   [&](const auto& b) { return b.get_pos() <= pos; });
-      return b != this->_extr_barriers->end() ? &(*b) : nullptr;
+      const auto& barrier = std::find_if(this->_extr_barriers->begin(), this->_extr_barriers->end(),
+                                         [&](const auto& b) { return b.get_pos() <= pos; });
+      return barrier != this->_extr_barriers->end() ? &(*barrier) : nullptr;
     }
     default:
       throw std::logic_error(
@@ -165,6 +143,7 @@ void DNA::Bin::remove_extr_barrier(Direction d) {
 }
 
 uint64_t DNA::Bin::add_extr_unit_binding(ExtrusionUnit* const unit) {
+  assert(unit);
   if (this->_extr_units == nullptr) {  // If if there are no ExtrusionUnits binding to this Bin,
                                        // allocate the vector
     this->_extr_units = std::make_unique<absl::InlinedVector<ExtrusionUnit*, 3>>();
@@ -269,9 +248,6 @@ ExtrusionBarrier* DNA::Bin::add_extr_barrier(uint64_t pos, double prob_of_barrie
   return &this->_extr_barriers->back();
 }
 
-DNA::DNA(uint64_t length, uint32_t bin_size)
-    : _bins(make_bins(length, bin_size)), _length(length), _bin_size(bin_size) {}
-
 ExtrusionBarrier* DNA::add_extr_barrier(ExtrusionBarrier& b, uint32_t pos) {
   assert(b.get_prob_of_block() >= 0 && b.get_prob_of_block() <= 1);  // NOLINT;
   assert(pos <= this->length());                                     // NOLINT;
@@ -299,17 +275,17 @@ void DNA::remove_extr_barrier(uint32_t pos, Direction direction) {
 std::vector<DNA::Bin> DNA::make_bins(uint64_t length, uint32_t bin_size) {
   std::vector<DNA::Bin> bins;
   if (length <= bin_size) {  // Deal with short DNA molecules
-    bins.emplace_back(DNA::Bin{0, 0, length});
+    bins.emplace_back(0UL, 0UL, length);
     return bins;
   }
   bins.reserve((length / bin_size) + 1);
   uint64_t start = 0;
-  for (auto end = bin_size; end <= length; end += bin_size) {
-    bins.emplace_back(DNA::Bin{static_cast<uint32_t>(bins.size()), start, end});
+  for (uint64_t end = bin_size; end <= length; end += bin_size) {
+    bins.emplace_back(bins.size(), start, end);
     start = end + 1;
   }
   if (bins.back()._end < length) {
-    bins.emplace_back(DNA::Bin{static_cast<uint32_t>(bins.size()), start, length});
+    bins.emplace_back(bins.size(), start, length);
   }
   return bins;
 }
@@ -330,9 +306,9 @@ uint64_t DNA::get_n_barriers() const {
                          });
 }
 
-Chromosome::Chromosome(std::string name, uint64_t length, uint32_t bin_size,
+Chromosome::Chromosome(std::string chr_name, uint64_t length, uint32_t bin_size,
                        uint32_t diagonal_width, uint64_t seed)
-    : name(std::move(name)),
+    : name(std::move(chr_name)),
       start(0),
       end(length),
       dna(length, bin_size),
@@ -343,12 +319,12 @@ Chromosome::Chromosome(std::string name, uint64_t length, uint32_t bin_size,
   this->_rand_eng = std::mt19937(seeder);
 }
 
-Chromosome::Chromosome(std::string name, uint64_t start, uint64_t end, uint32_t bin_size,
-                       uint32_t diagonal_width, uint64_t seed)
-    : name(std::move(name)),
-      start(start),
-      end(end),
-      dna(end - start, bin_size),
+Chromosome::Chromosome(std::string chr_name, uint64_t chr_start, uint64_t chr_end,
+                       uint32_t bin_size, uint32_t diagonal_width, uint64_t seed)
+    : name(std::move(chr_name)),
+      start(chr_start),
+      end(chr_end),
+      dna(chr_end - chr_start, bin_size),
       contacts(std::min(static_cast<uint64_t>(diagonal_width / bin_size), this->get_n_bins()),
                this->get_n_bins()),
       _seed(seed + std::hash<std::string>{}(this->name) + std::hash<uint64_t>{}(this->length())) {
@@ -430,16 +406,6 @@ void Chromosome::write_barriers_to_tsv(std::string_view output_dir, bool force_o
     for (const auto& barrier : this->barriers) {
       fmt::print(out, "{}{}\n", barrier->get_direction_of_block() == DNA::fwd ? "+" : "-",
                  barrier->get_pos());
-      /*
-      buff = absl::StrCat(barrier->get_direction_of_block() == DNA::fwd ? "+" : "-",
-                          barrier->get_pos(), "\n");
-      // TODO: Make this pragma portable
-
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wsign-conversion"
-      out.write(buff.data(), buff.size());
-#pragma GCC diagnostic pop
-       */
       if (!out || !fp) {
         throw fmt::system_error(errno, "IO error while writing to file '{}'", path_to_outfile);
       }

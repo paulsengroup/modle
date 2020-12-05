@@ -48,7 +48,7 @@ void run_simulation(const modle::config& c) {
   uint64_t tot_barriers = c.number_of_randomly_gen_extr_barriers;
   uint64_t barriers_ignored = 0;
   if (c.number_of_randomly_gen_extr_barriers != 0) {
-    genome.randomly_generate_extrusion_barriers(c.number_of_randomly_gen_extr_barriers);
+    genome.randomly_generate_extrusion_barriers(c.number_of_randomly_gen_extr_barriers, c.seed);
   }
   if (!c.path_to_extr_barriers_bed.empty()) {
     const auto tmp = genome.import_extrusion_barriers_from_bed(

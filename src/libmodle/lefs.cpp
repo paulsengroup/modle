@@ -54,7 +54,7 @@ bool ExtrusionUnit::try_extrude(std::mt19937& rand_eng) {
 
 bool ExtrusionUnit::try_moving_to_next_bin() {
   if (this->_bin == &this->_parent_lef.get_last_bin()) {
-    this->set_stalls(UINT32_MAX);  // Stall forever
+    this->set_stalls(std::numeric_limits<decltype(this->_stalls_left)>::max());  // Stall forever
     return false;
   }
   this->_bin->remove_extr_unit_binding(this);
@@ -66,7 +66,7 @@ bool ExtrusionUnit::try_moving_to_next_bin() {
 
 bool ExtrusionUnit::try_moving_to_prev_bin() {
   if (this->_bin == &this->_parent_lef.get_first_bin()) {
-    this->set_stalls(UINT32_MAX);  // Stall forever
+    this->set_stalls(std::numeric_limits<decltype(this->_stalls_left)>::max());  // Stall forever
     return false;
   }
   this->_bin->remove_extr_unit_binding(this);
@@ -221,20 +221,18 @@ void Lef::bind_at_pos(Chromosome* chr, uint32_t pos, std::mt19937& rand_eng,
   this->_chr = chr;
   this->_binding_pos = pos;
   this->_lifetime = this->_lifetime_generator(rand_eng);
-  std::discrete_distribution<int8_t> bin_idx_offset_gen({1, 1, 0, 1, 1});
+  const auto bin_idx_offset = this->_bin_idx_offset_generator(rand_eng);
+  // It would be nice to remove some static casts here, but the first static_cast to int64_t is
+  // required to deal with the possibility that pos - offset overflows
+  const auto pos1 = static_cast<uint32_t>(
+      std::clamp(bin_idx_offset < 0 ? static_cast<int64_t>(pos) + bin_idx_offset : pos, 0L,
+                 static_cast<int64_t>(this->_chr->length())));
+  const auto pos2 = static_cast<uint32_t>(
+      std::clamp(bin_idx_offset > 0 ? static_cast<int64_t>(pos) + bin_idx_offset : pos, 0L,
+                 static_cast<int64_t>(this->_chr->length())));
   // We assume that the left unit always travels towards the 5', while the right unit goes to the 3'
-  this->_left_unit->bind(this->_chr, pos, DNA::Direction::rev, rand_eng);
-  this->_right_unit->bind(this->_chr, pos, DNA::Direction::fwd, rand_eng);
-  if (int8_t bin_idx_offset = bin_idx_offset_gen(rand_eng) - 2; bin_idx_offset < 0) {
-    for (; bin_idx_offset < 0; ++bin_idx_offset) {
-      this->_left_unit->try_moving_to_prev_bin();
-    }
-  } else {
-    assert(bin_idx_offset != 0);  // NOLINT
-    for (; bin_idx_offset < 2; ++bin_idx_offset) {
-      this->_right_unit->try_moving_to_next_bin();
-    }
-  }
+  this->_left_unit->bind(this->_chr, pos1, DNA::Direction::rev, rand_eng);
+  this->_right_unit->bind(this->_chr, pos2, DNA::Direction::fwd, rand_eng);
   if (register_contact) {
     const auto n = this->_chr->dna.get_ptr_to_bin_from_pos(pos)->get_index();
     this->_chr->contacts.increment(n, n);
@@ -248,7 +246,7 @@ std::pair<DNA::Bin*, DNA::Bin*> Lef::get_ptr_to_bins() {
 }
 
 void Lef::unload() {
-  this->_binding_pos = UINT64_MAX;
+  this->_binding_pos = std::numeric_limits<decltype(this->_binding_pos)>::max();
   this->_left_unit->unload();
   this->_right_unit->unload();
   this->_lifetime = 0;  // Probably unnecessary
@@ -257,7 +255,8 @@ void Lef::unload() {
 uint32_t Lef::extrude(std::mt19937& rand_eng) {
   if (this->_lifetime-- > 0) {
     const auto bp_extruded =  // NOLINTNEXTLINE(readability-implicit-bool-conversion)
-        (this->_left_unit->try_extrude(rand_eng) + this->_right_unit->try_extrude(rand_eng)) *
+        static_cast<uint64_t>(this->_left_unit->try_extrude(rand_eng) +
+                              this->_right_unit->try_extrude(rand_eng)) *
         this->_right_unit->_bin->size();
     this->_tot_bp_extruded += bp_extruded;
     return static_cast<uint32_t>(bp_extruded);
@@ -283,10 +282,11 @@ void Lef::check_constraints(std::mt19937& rang_eng) {
   this->_right_unit->check_constraints(rang_eng);
   if (this->_unloader_strength_coeff > 0 && this->_left_unit->hard_stall() &&
       this->_right_unit->hard_stall()) {
-    const auto n_of_stalls_due_to_barriers =
+    const auto n_of_stalls_due_to_barriers = static_cast<uint32_t>(
         std::lround(this->_unloader_strength_coeff *
-                    std::min(this->_left_unit->_stalls_left, this->_right_unit->_stalls_left));
-    assert(UINT32_MAX - n_of_stalls_due_to_barriers > this->_lifetime);  // NOLINT
+                    std::min(this->_left_unit->_stalls_left, this->_right_unit->_stalls_left)));
+    assert(std::numeric_limits<decltype(this->_lifetime)>::max() - n_of_stalls_due_to_barriers >
+           this->_lifetime);  // NOLINT
     this->_lifetime += n_of_stalls_due_to_barriers;
   }
 }
@@ -301,8 +301,8 @@ uint32_t Lef::get_avg_processivity() const { return this->_avg_processivity; }
 bool Lef::try_rebind(std::mt19937& rand_eng, double prob_of_rebinding, bool register_contact) {
   assert(!this->is_bound());                                 // NOLINT
   assert(prob_of_rebinding >= 0 && prob_of_rebinding <= 1);  // NOLINT
-  std::uniform_real_distribution<> d1(0.0, 1.0);
-  if (d1(rand_eng) >= 1 - prob_of_rebinding) {
+
+  if (this->_prob_of_rebind_generator(rand_eng) <= prob_of_rebinding) {
     this->randomly_bind_to_chr(this->_chr, rand_eng, register_contact);
     return true;
   }

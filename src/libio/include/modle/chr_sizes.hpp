@@ -13,8 +13,8 @@
 namespace modle::chr_sizes {
 
 struct ChrSize {
-  ChrSize(std::string_view chr_name, uint64_t length);
-  ChrSize(std::string_view chr_name, uint64_t start, uint64_t end);
+  ChrSize(std::string_view chr_name, uint64_t chr_length);
+  ChrSize(std::string_view chr_name, uint64_t chr_start, uint64_t chr_end);
   explicit ChrSize(std::vector<std::string>& toks);
 
   [[nodiscard]] bool operator==(const ChrSize& other) const;

@@ -112,10 +112,7 @@ std::string prepare_files_for_juicer_tools(const modle::tools::config& c) {
                 header.chr_name,
                 std::clamp(std::round(pos2 + (*noise_generator)(*rand_eng)), chr_start, chr_end));
           }
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wsign-conversion"
-          out.write(record.data(), record.size());
-#pragma GCC diagnostic pop
+          fmt::print(out, record);
           if (!out || !fp_out) {
             throw fmt::system_error(errno, "IO error while writing to temporary file '{}'",
                                     tmp_file_name);

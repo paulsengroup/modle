@@ -70,7 +70,7 @@ class Cli {
 
     auto *convert_sc = this->_cli.add_subcommand("convert", "Convert Modle's contact matrix into several popular formats.")->fallthrough();
     auto *eval_sc = this->_cli.add_subcommand("evaluate", "Compare Model's output with other contact matrices using various correlation tests.")->fallthrough();
-    eval_sc->alias("eval");
+    eval_sc->alias("eval_subcmd");
 
     convert_sc->add_flag("--hic,!--no-hic", this->_config.convert_to_hic, "Convert contact matrix to .hic format (requires Juicer Tools).")->capture_default_str();
     convert_sc->add_flag("--tsv,!--no-tsv", this->_config.convert_to_tsv, "Convert contact matrix to TSV format.")->capture_default_str();
@@ -137,7 +137,7 @@ class Cli {
           }
         }
       }
-      if (this->_cli.get_subcommand("eval")->parsed()) {
+      if (this->_cli.get_subcommand("eval_subcmd")->parsed()) {
         for (std::string_view suffix : {"rho", "tau", "rho_pv", "tau_pv"}) {
           for (std::string_view ext : {"tsv.bz2", "wig"}) {
             if (auto file = fmt::format("{}_{}.{}", c.base_name, suffix, ext);
@@ -173,7 +173,7 @@ class Cli {
       }
     }
 
-    if (this->_cli.get_subcommand("eval")->parsed() && c.sliding_window_size != 0 &&
+    if (this->_cli.get_subcommand("eval_subcmd")->parsed() && c.sliding_window_size != 0 &&
         c.sliding_window_size <= c.sliding_window_overlap) {
       absl::StrAppendFormat(&errors,
                             "--sliding-window-size should be > --sliding-window-overlap: "

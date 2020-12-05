@@ -20,10 +20,10 @@ int main(int argc, char** argv) {
   try {
     switch (cli.get_subcommand()) {
       case modle::tools::Cli::subcommand::convert:
-        modle::tools::convert(c);
+        modle::tools::convert_subcmd(c);
         break;
       case modle::tools::Cli::subcommand::eval:
-        modle::tools::eval(c);
+        modle::tools::eval_subcmd(c);
         break;
       default:
         throw std::runtime_error(

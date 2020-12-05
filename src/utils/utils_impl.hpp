@@ -6,6 +6,7 @@
 #include <string>
 #include <type_traits>
 
+#include "modle/suppress_compiler_warnings.hpp"
 #include "modle/utils.hpp"
 
 namespace modle::utils {
@@ -110,6 +111,8 @@ void throw_except_from_errc(std::string_view tok, std::size_t idx, const N &fiel
                   base_error, std::make_error_code(e)));
 }
 
+DISABLE_WARNING_PUSH
+DISABLE_WARNING_UNUSED_FUNCTION
 std::string init_juicer_tools_argv(std::string_view path_to_juicer_tools,
                                    uint64_t juicer_tools_mem) {
   std::string argv = path_to_juicer_tools.data();
@@ -127,4 +130,5 @@ std::string init_juicer_tools_argv(std::string_view path_to_juicer_tools,
   }
   return argv;
 }
+DISABLE_WARNING_POP
 }  // namespace modle::utils

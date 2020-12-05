@@ -85,8 +85,10 @@ uint64_t write_range(
     bw_fp = init_bigwig(output_file, chr_names, chr_lengths);
     for (const auto& [chr_data, values] : data) {
       std::vector<float> fvalues(values->begin(), values->end());
-      if (bwAddIntervalSpanSteps(bw_fp, const_cast<char*>(chr_data.first.c_str()), offset, span,
-                                 step, fvalues.data(), static_cast<uint32_t>(fvalues.size()))) {
+      if (bwAddIntervalSpanSteps(bw_fp, const_cast<char*>(chr_data.first.c_str()),
+                                 static_cast<uint32_t>(offset), static_cast<uint32_t>(span),
+                                 static_cast<uint32_t>(step), fvalues.data(),
+                                 static_cast<uint32_t>(fvalues.size()))) {
         throw std::runtime_error(fmt::format("Failed to write data for chr '{}' to file '{}'",
                                              chr_data.first, output_file));
       }

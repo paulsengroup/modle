@@ -39,8 +39,8 @@ std::vector<uint32_t> generate_random_vect(std::mt19937& rnd_eng, uint32_t size,
 
 std::pair<std::vector<uint32_t>, std::vector<uint32_t>> generate_correlated_vects(
     std::mt19937& rnd_eng, uint32_t size) {
-  // NOLINTNEXTLINE(readability-magic-numbers, cppcoreguidelines-avoid-magic-numbers)
-  std::uniform_int_distribution<int32_t> dist(static_cast<int32_t>(size) / -50, size / 50);
+  std::uniform_int_distribution<int32_t> dist(static_cast<int32_t>(size) / -50,  // NOLINT
+                                              static_cast<int32_t>(size / 50));  // NOLINT
   std::vector<uint32_t> v1(size);
   std::vector<uint32_t> v2(size);
   std::iota(v1.begin(), v1.end(), 0);

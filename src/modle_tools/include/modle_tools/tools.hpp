@@ -4,7 +4,7 @@ namespace modle::tools {
 
 struct config;  // Pre-declaration
 
-void convert(const modle::tools::config &c);
-void eval(const modle::tools::config &c);
+void convert_subcmd(const modle::tools::config &c);
+void eval_subcmd(const modle::tools::config &c);
 
 }  // namespace modle::tools

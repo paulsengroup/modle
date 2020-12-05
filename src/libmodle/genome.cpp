@@ -20,6 +20,7 @@
 #include <mutex>       // for mutex, unique_lock, scoped_lock
 #include <numeric>     // for accumulate, partial_sum
 #include <random>  // for mt19937,  bernoulli_distribution, seed_seq, discrete_distribution, uniform_int_distribution
+#include <range/v3/algorithm/find_if.hpp>
 #include <range/v3/view/chunk.hpp>  // for chunk_view, chunk
 #include <stdexcept>                // for runtime_error
 #include <thread>
@@ -30,6 +31,7 @@
 #include "modle/config.hpp"        // for config
 #include "modle/contacts.hpp"      // for ContactMatrix
 #include "modle/extr_barrier.hpp"  // IWYU pragma: keep
+#include "modle/suppress_compiler_warnings.hpp"
 
 namespace modle {
 
@@ -48,13 +50,10 @@ Genome::Genome(const config& c)
       _randomize_contact_sampling(c.randomize_contact_sampling_interval),
       _nthreads(std::min(std::thread::hardware_concurrency(), c.nthreads)) {}
 
-std::vector<uint32_t> Genome::get_chromosome_lengths() const {
-  std::vector<uint32_t> lengths;
-  lengths.reserve(this->get_n_chromosomes());
-  for (const auto& chr : this->_chromosomes) {
-    assert(chr.length() <= UINT32_MAX);  // NOLINT
-    lengths.push_back(static_cast<uint32_t>(chr.length()));
-  }
+std::vector<uint64_t> Genome::get_chromosome_lengths() const {
+  std::vector<uint64_t> lengths(this->get_n_chromosomes());
+  std::transform(this->_chromosomes.begin(), this->_chromosomes.end(), lengths.begin(),
+                 [](const auto& chr) { return chr.length(); });
   return lengths;
 }
 
@@ -66,11 +65,9 @@ std::vector<double> Genome::get_chromosome_lef_affinities() const {
 }
 
 std::vector<std::string_view> Genome::get_chromosome_names() const {
-  std::vector<std::string_view> names;
-  names.reserve(this->get_n_chromosomes());
-  for (const auto& chr : this->_chromosomes) {
-    names.push_back(chr.name);
-  }
+  std::vector<std::string_view> names(this->get_n_chromosomes());
+  std::transform(this->_chromosomes.begin(), this->_chromosomes.end(), names.begin(),
+                 [](const auto& chr) { return chr.name; });
   return names;
 }
 
@@ -80,7 +77,7 @@ uint64_t Genome::get_n_of_free_lefs() const {
   return std::accumulate(
       this->_lefs.begin(), this->_lefs.end(), 0UL,
       // NOLINTNEXTLINE(readability-implicit-bool-conversion)
-      [](uint32_t accumulator, const Lef& lef) { return accumulator + !lef.is_bound(); });
+      [](uint64_t accumulator, const auto& lef) { return accumulator + !lef.is_bound(); });
 }
 
 uint64_t Genome::get_n_of_busy_lefs() const {
@@ -116,18 +113,22 @@ void Genome::write_extrusion_barriers_to_file(std::string_view output_dir,
 }
 
 std::vector<Chromosome> Genome::init_chromosomes_from_file(uint32_t diagonal_width) const {
+  // We are reading all the records at once to detect and deal with duplicate records
+  auto records = modle::chr_sizes::Parser(this->_path_to_chr_size_file).parse();
   std::vector<Chromosome> chromosomes;
-  auto parser = modle::chr_sizes::Parser(this->_path_to_chr_size_file);
-  for (const auto& chr : parser.parse()) {
-    chromosomes.emplace_back(chr.name, chr.start, chr.end, this->_bin_size, diagonal_width);
-  }
+  chromosomes.reserve(records.size());
+  std::transform(records.begin(), records.end(), std::back_inserter(chromosomes),
+                 [&](const auto& chr) {
+                   return Chromosome{chr.name, chr.start, chr.end, this->_bin_size, diagonal_width};
+                 });
   return chromosomes;
 }
 
 std::vector<Lef> Genome::generate_lefs(uint32_t n) {
+  // TODO: Figure out how to clean up this function
   std::vector<Lef> v;
   v.reserve(n);
-  for (auto i = 0UL; i < n; ++i) {
+  for (auto i = 0U; i < n; ++i) {
     v.emplace_back(this->_bin_size, this->_avg_lef_processivity,
                    this->_probability_of_extr_unit_bypass, this->_lef_unloader_strength_coeff);
   }
@@ -136,40 +137,11 @@ std::vector<Lef> Genome::generate_lefs(uint32_t n) {
 
 uint64_t Genome::n50() const {
   auto chr_lengths = this->get_chromosome_lengths();
-  uint64_t n50_thresh = this->size() / 2;
   std::sort(chr_lengths.rbegin(), chr_lengths.rend(), std::greater<>());
+  uint64_t n50_thresh = this->size() / 2;
   uint64_t tot = 0;
-  for (const auto& len : chr_lengths) {
-    if ((tot += len) >= n50_thresh) {
-      return len;
-    }
-  }
-  return chr_lengths.back();
-}
-
-void Genome::randomly_generate_extrusion_barriers(uint32_t n_barriers) {
-  const auto& weights = this->get_chromosome_lengths();
-  std::discrete_distribution<std::size_t> chr_idx(weights.begin(), weights.end());
-  // NOLINTNEXTLINE(readability-magic-numbers, cppcoreguidelines-avoid-magic-numbers)
-  std::bernoulli_distribution strand_selector(0.5);
-  std::seed_seq seeder{n_barriers};
-  std::mt19937 rand_eng{seeder};
-
-  for (auto i = 0UL; i < n_barriers; ++i) {
-    // Randomly select a chromosome, barrier binding pos and direction
-    auto& chr = this->_chromosomes[chr_idx(rand_eng)];
-    std::uniform_int_distribution<uint64_t> uniform_rng(0, chr.length());
-    const auto barrier_position = uniform_rng(rand_eng);
-    const DNA::Direction direction =
-        strand_selector(rand_eng) ? DNA::Direction::rev : DNA::Direction::fwd;
-
-    // Add the new extrusion barrier to the appropriate bin
-    auto& bin = chr.dna.get_bin_from_pos(barrier_position);
-    bin.add_extr_barrier(barrier_position, this->_probability_of_barrier_block, direction);
-  }
-  for (auto& chr : this->get_chromosomes()) {
-    chr.sort_barriers_by_pos();
-  }
+  return *ranges::find_if(chr_lengths,
+                          [&](const auto len) { return ((tot += len) >= n50_thresh); });
 }
 
 std::pair<uint64_t, uint64_t> Genome::import_extrusion_barriers_from_bed(
@@ -225,23 +197,21 @@ uint32_t Genome::get_n_chromosomes() const {
 uint64_t Genome::size() const {
   return std::accumulate(
       this->_chromosomes.begin(), this->_chromosomes.end(), 0ULL,
-      [&](uint64_t accumulator, const Chromosome& chr) { return accumulator + chr.length(); });
+      [&](uint64_t accumulator, const auto& chr) { return accumulator + chr.length(); });
 }
 
 uint64_t Genome::get_n_bins() const {
   return std::accumulate(
       this->_chromosomes.begin(), this->_chromosomes.end(), 0ULL,
-      [](uint64_t accumulator, const Chromosome& chr) { return accumulator + chr.get_n_bins(); });
+      [](uint64_t accumulator, const auto& chr) { return accumulator + chr.get_n_bins(); });
 }
 
 uint64_t Genome::get_n_barriers() const {
-  return std::accumulate(this->_chromosomes.begin(), this->_chromosomes.end(), 0ULL,
-                         [](uint64_t accumulator, const Chromosome& chr) {
-                           return accumulator + chr.get_n_barriers();
-                         });
+  return std::accumulate(
+      this->_chromosomes.begin(), this->_chromosomes.end(), 0ULL,
+      [](uint64_t accumulator, const auto& chr) { return accumulator + chr.get_n_barriers(); });
 }
 
-// Make sure we are not taking a ptr from a reference
 void Genome::assign_lefs(bool bind_lefs_after_assignment) {
   absl::flat_hash_map<Chromosome*, double> chr_lef_affinities;
   double tot_affinity = 0;
@@ -274,6 +244,7 @@ void Genome::assign_lefs(bool bind_lefs_after_assignment) {
       }
     }
   }
+
   std::size_t i = 0;
   for (auto& [chr, nlefs] : chr_sorted_by_affinity) {
     chr->lefs.reserve(nlefs);
@@ -291,7 +262,7 @@ uint64_t Genome::remove_chromosomes_wo_extr_barriers() {
   const auto n_chromosomes = this->get_n_chromosomes();
   this->_chromosomes.erase(
       std::remove_if(this->_chromosomes.begin(), this->_chromosomes.end(),
-                     [](const Chromosome& chr) { return chr.get_n_barriers() == 0; }),
+                     [](const auto& chr) { return chr.get_n_barriers() == 0; }),
       this->_chromosomes.end());
   return n_chromosomes - this->get_n_chromosomes();
 }
@@ -299,7 +270,7 @@ uint64_t Genome::remove_chromosomes_wo_extr_barriers() {
 std::pair<double, double> Genome::run_burnin(double prob_of_rebinding,
                                              uint32_t target_n_of_unload_events,
                                              uint64_t min_extr_rounds) {
-  std::vector<double> burnin_rounds(this->get_n_chromosomes());
+  std::vector<double> burnin_rounds_performed(this->get_n_chromosomes());
   boost::asio::thread_pool tpool(std::min(this->get_n_chromosomes(), this->_nthreads));
   for (auto nchr = 0U; nchr < this->get_n_chromosomes(); ++nchr) {
     boost::asio::post(tpool, [&, nchr]() {
@@ -311,8 +282,8 @@ std::pair<double, double> Genome::run_burnin(double prob_of_rebinding,
       double avg_num_of_extr_events_per_bind =
           (static_cast<double>(this->_avg_lef_processivity) / chr.get_bin_size()) /
           2 /* N of active extr. unit */;
-      const uint64_t n_of_lefs_to_bind_each_round = static_cast<uint64_t>(std::lround(
-          std::max(static_cast<double>(chr.get_n_lefs()) / avg_num_of_extr_events_per_bind, 1.0)));
+      const auto n_of_lefs_to_bind_each_round = std::lround(
+          std::max(static_cast<double>(chr.get_n_lefs()) / avg_num_of_extr_events_per_bind, 1.0));
 
       std::vector<uint16_t> unload_events(chr.get_n_lefs(), 0);
 
@@ -329,7 +300,14 @@ std::pair<double, double> Genome::run_burnin(double prob_of_rebinding,
           auto& lef = *chr.lefs[i];
           if (lef.is_bound()) {
             lef.extrude(rand_eng);
-            unload_events[i] += !lef.is_bound();  // NOLINT(readability-implicit-bool-conversion)
+            /* clang-format off
+             * TODO: Figure out why GCC 8.3 is complaining about this line. The warning is:
+             * warning: conversion from ‘int’ to ‘__gnu_cxx::__alloc_traits<std::allocator<short unsigned int>, short unsigned int>::value_type’ {aka ‘short unsigned int’} may change value [-Wconversion]
+             *          unload_events[i] += static_cast<uint16_t>(!lef.is_bound());  // NOLINT(readability-implicit-bool-conversion)
+             *                                                                   ^
+             * clang-format on
+             */
+            unload_events[i] += static_cast<uint16_t>(!lef.is_bound());
           }
         }
 
@@ -343,7 +321,7 @@ std::pair<double, double> Genome::run_burnin(double prob_of_rebinding,
         if (rounds >= min_extr_rounds &&
             std::all_of(unload_events.begin(), unload_events.end(),
                         [&](uint16_t n) { return n >= target_n_of_unload_events; })) {
-          burnin_rounds[nchr] = static_cast<double>(rounds);
+          burnin_rounds_performed[nchr] = static_cast<double>(rounds);
           return;
         }
       }
@@ -351,17 +329,15 @@ std::pair<double, double> Genome::run_burnin(double prob_of_rebinding,
   }
   tpool.join();
 
-  if (burnin_rounds.size() == 1) {
-    return std::make_pair(burnin_rounds[0], 0.0);
+  if (burnin_rounds_performed.size() == 1) {
+    return std::make_pair(burnin_rounds_performed[0], 0.0);
   }
 
-  const auto avg_burnin_rounds = std::accumulate(burnin_rounds.begin(), burnin_rounds.end(), 0.0) /
-                                 static_cast<double>(this->get_n_chromosomes());
-
-  const auto burnin_rounds_stdev = std::sqrt(
-      std::accumulate(burnin_rounds.begin(), burnin_rounds.end(), 0.0,
-                      [&](auto accumulator, auto rounds) { return accumulator + rounds; }) /
-      static_cast<double>(burnin_rounds.size() - 1));
+  const auto tot_burnin_rounds =
+      std::accumulate(burnin_rounds_performed.begin(), burnin_rounds_performed.end(), 0.0);
+  const auto avg_burnin_rounds = tot_burnin_rounds / static_cast<double>(this->get_n_chromosomes());
+  const auto burnin_rounds_stdev =
+      std::sqrt(tot_burnin_rounds / static_cast<double>(burnin_rounds_performed.size() - 1));
 
   return std::make_pair(avg_burnin_rounds, burnin_rounds_stdev);
 }
@@ -389,11 +365,9 @@ void Genome::simulate_extrusion(uint32_t iterations, double target_contact_densi
                  // (otherwise the change might not be communicated to waiting threads)
   std::condition_variable simulation_completed_cv;
 
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wimplicit-int-float-conversion"
-#pragma GCC diagnostic ignored "-Wsign-conversion"
-#pragma GCC diagnostic ignored "-Wimplicit-conversion"
-#pragma GCC diagnostic ignored "-Wdouble-promotion"
+  DISABLE_WARNING_PUSH
+  DISABLE_WARNING_CONVERSION
+  DISABLE_WARNING_DOUBLE_PROMOTION
   std::thread progress_tracker([&]() {  // This thread is used to periodically print the simulation
                                         // progress to stderr
     // The total number of ticks tot_ticks is set depending on whether or not the simulation is
@@ -431,7 +405,7 @@ void Genome::simulate_extrusion(uint32_t iterations, double target_contact_densi
       }
       if (extrusion_events > 0) {  // Print progress
         const auto progress = ticks_done / tot_ticks;
-        const auto throughput = extrusion_events / 5.0e6; /* 5s * 1M */  // NOLINT
+        const auto throughput = static_cast<double>(extrusion_events) / 5.0e6; /* 5s * 1M NOLINT */
         const auto chr_being_written_to_disk = chromosomes_completed - chromosomes_written_to_disk;
         const auto delta_t = absl::ToDoubleSeconds(absl::Now() - t0);
         fmt::print(
@@ -448,7 +422,7 @@ void Genome::simulate_extrusion(uint32_t iterations, double target_contact_densi
       }
     }
   });
-#pragma GCC diagnostic pop
+  DISABLE_WARNING_POP
 
   // Loop extrusion is simulated using boost::thread_pool, where each thread simulates loop
   // extrusion at the chromosome level. This constrains the level of parallelism to the number of
@@ -528,7 +502,7 @@ void Genome::simulate_extrusion(uint32_t iterations, double target_contact_densi
           // Alt the simulation when we have reached the target number of contacts.
           // This will never happen when the simulation is set to run for a fixed number of
           // iterations, as when this is the case, target_n_of_contacts == 2^64
-          if (chr.contacts.get_tot_contacts() >= target_n_of_contacts) {
+          if (static_cast<double>(chr.contacts.get_tot_contacts()) >= target_n_of_contacts) {
             break;
           }
         }

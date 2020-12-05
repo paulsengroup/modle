@@ -9,18 +9,19 @@
 #include <cmath>
 #include <cstdint>
 #include <numeric>
+#include <range/v3/algorithm.hpp>
+#include <range/v3/range.hpp>
 #include <vector>
 
 #include "./correlation_utils.hpp"
 #include "modle/correlation.hpp"
-#include "range/v3/algorithm.hpp"
-#include "range/v3/range.hpp"
+#include "modle/suppress_compiler_warnings.hpp"
 
 namespace modle::correlation {
 
 double compute_pearson_significance(double pcc, std::size_t n) {
   assert(n > 2);
-  const auto ab = static_cast<const double>(n) / 2.0 - 1;
+  const auto ab = static_cast<double>(n) / 2.0 - 1;
   boost::math::beta_distribution<double> dist(ab, ab);
   // https://github.com/scipy/scipy/blob/6703631bcd15750e86f4098b0421efabcac0f7c2/scipy/stats/stats.py#L3885
   // NOLINTNEXTLINE(readability-magic-numbers, cppcoreguidelines-avoid-magic-numbers)
@@ -29,7 +30,7 @@ double compute_pearson_significance(double pcc, std::size_t n) {
 
 double compute_spearman_significance(double rho, std::size_t n) {
   assert(n > 2);
-  const auto dof = static_cast<const double>(n - 2);
+  const auto dof = static_cast<double>(n - 2);
   const double tscore = rho * std::sqrt(dof / ((1.0 + rho) * (1.0 - rho)));
   boost::math::students_t_distribution<double> dist(dof);
   // https://github.com/scipy/scipy/blob/6703631bcd15750e86f4098b0421efabcac0f7c2/scipy/stats/stats.py#L4229
@@ -51,6 +52,9 @@ double compute_pearson(Rng r1, Rng r2) {
   double r2_avg = r2[0];
   double d1 = 0;
   double d2 = 0;
+
+  DISABLE_WARNING_PUSH
+  DISABLE_WARNING_CONVERSION
   for (std::size_t i = 1; i < r1.size(); ++i) {
     auto r1_tmp = r1[i] - r1_avg;
     auto r2_tmp = r2[i] - r2_avg;
@@ -60,6 +64,7 @@ double compute_pearson(Rng r1, Rng r2) {
     r1_avg += r1_tmp / (i + 1);
     r2_avg += r2_tmp / (i + 1);
   }
+  DISABLE_WARNING_POP
 
   // Both datasets are constant (i.e. perfectly correlated)
   if (d1 == 0 && d2 == 0) {
@@ -76,7 +81,7 @@ double compute_pearson(Rng r1, Rng r2) {
   }
 
   return pcc;
-};
+}
 
 template <typename Rng>
 double compute_spearman(Rng r1, Rng r2) {

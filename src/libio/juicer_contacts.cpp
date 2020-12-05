@@ -32,7 +32,7 @@
 namespace modle::juicer_contacts {
 
 template <typename I, typename R>
-Contact::Contact(I b1, I b2, R contacts) {
+Contact::Contact(I b1, I b2, R contacts_num) {
   static_assert(std::is_integral<I>());
   static_assert(std::is_arithmetic<R>());
   if (b1 < 0) {
@@ -47,14 +47,14 @@ Contact::Contact(I b1, I b2, R contacts) {
                     "number, is '{}'",
                     b2));
   }
-  if (contacts < 0) {
+  if (contacts_num < 0) {
     throw std::runtime_error(fmt::format(
         "Exception thrown in Contact constructor: b2 should be a positive number, is '{}'",
-        contacts));
+        contacts_num));
   }
   this->bin1 = static_cast<uint64_t>(b1);
   this->bin2 = static_cast<uint64_t>(b2);
-  this->contacts = static_cast<double>(contacts);
+  this->contacts = static_cast<double>(contacts_num);
 }
 
 ContactsParser::ContactsParser(std::string contact_file) : _path(std::move(contact_file)) {
@@ -176,7 +176,6 @@ ContactMatrix<uint32_t> run_juicer_dump_and_parse_contacts(
     auto juicer_stdout_parser = std::thread([&] {
       auto t1 = absl::Now();
       std::vector<std::string_view> toks;
-      std::string buff;
 
       uint64_t i{};
       uint64_t j{};

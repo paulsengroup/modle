@@ -11,7 +11,7 @@ namespace modle::juicer_contacts {
 struct Contact {
   Contact() = default;
   template <typename I, typename R>
-  Contact(I b1, I b2, R contacts);
+  Contact(I b1, I b2, R contacts_num);
   uint64_t bin1;
   uint64_t bin2;
   double contacts;
