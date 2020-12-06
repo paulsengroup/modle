@@ -58,13 +58,14 @@ if(ENABLE_PCH)
     project_options
     INTERFACE
     <vector>
+    <cstdint>
     <string>
     <string_view>
     <utility>
     <random>
     <cassert>)
   else()
-    message(WARNING "CMake 3.16 or newer is required to enable precompiled headers. Ignoring -DENABLE_PCH")
+    message(WARNING "CMake 3.16 or newer is required to enable precompiled headers. Ignoring -DENABLE_PCH.")
   endif()
 endif()
 

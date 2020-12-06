@@ -8,7 +8,8 @@
 #include <fmt/compile.h>      // for FMT_COMPILE
 #include <fmt/format.h>       // for format, system_error
 
-#include <algorithm>                         // for clamp, max
+#include <algorithm>  // for clamp, max
+#include <boost/asio/thread_pool.hpp>
 #include <boost/iostreams/filter/bzip2.hpp>  // for basic_bzip2_decompressor, bzip2_error, bzip2_decompressor
 #include <boost/iostreams/filter/gzip.hpp>  // for basic_gzip_compressor, gzip_error, gzip_compressor
 #include <boost/iostreams/filtering_stream.hpp>  // for filtering_ostream, filtering_istream
@@ -29,9 +30,9 @@
 #include <string_view>
 #include <vector>
 
-#include "modle/contacts.hpp"     // for ContactMatrix<>::Header, ContactMatrix
-#include "modle_tools/config.hpp"    // for config
-#include "modle_tools/utils.hpp"  // for generate_random_path_name
+#include "modle/contacts.hpp"      // for ContactMatrix<>::Header, ContactMatrix
+#include "modle_tools/config.hpp"  // for config
+#include "modle_tools/utils.hpp"   // for generate_random_path_name
 
 namespace modle::tools {
 std::normal_distribution<double> init_noise_generator(uint64_t range) {
@@ -39,14 +40,16 @@ std::normal_distribution<double> init_noise_generator(uint64_t range) {
   return std::normal_distribution<double>(0, static_cast<double>(range) / stdev_99_9_ci);
 }
 
-std::string prepare_files_for_juicer_tools(const modle::tools::config& c) {
+std::string prepare_files_for_juicer_tools(std::string_view path_to_cmatrix,
+                                           const modle::tools::config& c) {
   assert(c.convert_to_hic);
+
   auto tmp_file_name = modle::tools::utils::generate_random_path_name(c.tmp_dir);
   absl::StrAppend(&tmp_file_name, ".txt.gz");
   fmt::print(stderr, "Writing contacts to temporary file '{}'...\n", tmp_file_name);
-  std::ifstream fp_in(c.path_to_input_matrix, std::ios_base::binary);
+  std::ifstream fp_in(path_to_cmatrix.data(), std::ios_base::binary);
   if (!fp_in) {
-    throw fmt::system_error(errno, "Unable to open file '{}' for reading", c.path_to_input_matrix);
+    throw fmt::system_error(errno, "Unable to open file '{}' for reading", path_to_cmatrix);
   }
   std::ofstream fp_out(tmp_file_name, std::ios_base::binary);
   if (!fp_out) {
@@ -68,7 +71,7 @@ std::string prepare_files_for_juicer_tools(const modle::tools::config& c) {
       throw std::runtime_error("An error occurred while initializing compression stream");
     }
 
-    auto header = modle::ContactMatrix<uint32_t>::parse_header(c.path_to_input_matrix, in, false);
+    auto header = modle::ContactMatrix<uint32_t>::parse_header(path_to_cmatrix, in, false);
     std::unique_ptr<std::normal_distribution<double>> noise_generator = nullptr;
     std::unique_ptr<std::mt19937_64> rand_eng = nullptr;
     if (c.add_noise) {
@@ -83,12 +86,12 @@ std::string prepare_files_for_juicer_tools(const modle::tools::config& c) {
     const auto t0 = absl::Now();
     for (i = 0UL; std::getline(in, line); ++i) {
       if (!in || !fp_in) {
-        throw fmt::system_error(errno, "IO error while reading file '{}'", c.path_to_input_matrix);
+        throw fmt::system_error(errno, "IO error while reading file '{}'", path_to_cmatrix);
       }
       if (toks = absl::StrSplit(line, '\t'); toks.size() != header.ncols) {
         throw std::runtime_error(fmt::format(
             "File '{}' appears to be malformed: expected {} fields at row {}, but got {}",
-            c.path_to_input_matrix, header.ncols, i, toks.size()));
+            path_to_cmatrix, header.ncols, i, toks.size()));
       }
       const auto chr_start = static_cast<double>(header.start);
       const auto chr_end = static_cast<double>(header.end);
@@ -127,16 +130,16 @@ std::string prepare_files_for_juicer_tools(const modle::tools::config& c) {
     }
     if (!in.eof()) {
       throw std::runtime_error(
-          fmt::format("IO error while reading file '{}': {}", c.path_to_input_matrix,
+          fmt::format("IO error while reading file '{}': {}", path_to_cmatrix,
                       in.fail() ? std::strerror(errno) : "Reading stopped before reaching EOF"));
     }
     fp_in.close();
     if (!fp_in) {
-      throw fmt::system_error(errno, "IO error while reading file '{}'", c.path_to_input_matrix);
+      throw fmt::system_error(errno, "IO error while reading file '{}'", path_to_cmatrix);
     }
     if (!out || !fp_out) {
       throw fmt::system_error(errno, "IO error while writing to temporary file '{}'",
-                              c.path_to_input_matrix);
+                              path_to_cmatrix);
     }
     out.reset();  // Very important!! Needed to actually call gzip_compressor::close(). The stream
     // won't be usable after this
@@ -144,11 +147,12 @@ std::string prepare_files_for_juicer_tools(const modle::tools::config& c) {
     if (!fp_out || !out) {
       throw fmt::system_error(errno, "IO error while closing file '{}'", tmp_file_name);
     }
-    fmt::fprintf(stderr, "DONE! Written %lu contacts in %s!\n", n_contacts,
-                 absl::FormatDuration(absl::Now() - t0));
+    fmt::print(stderr,
+               FMT_STRING("DONE! Written {} contacts for '{}' to temporary file '{}' in {}!\n"),
+               n_contacts, header.chr_name, tmp_file_name, absl::FormatDuration(absl::Now() - t0));
   } catch (const boost::iostreams::bzip2_error& err) {
     throw std::runtime_error(fmt::format("An error occurred while decompressing file '{}': {}",
-                                         c.path_to_input_matrix, err.what()));
+                                         path_to_cmatrix, err.what()));
   } catch (const boost::iostreams::gzip_error& err) {
     throw std::runtime_error(fmt::format(
         "An error occurred while compressing temporary file '{}': {}", tmp_file_name, err.what()));
@@ -157,62 +161,73 @@ std::string prepare_files_for_juicer_tools(const modle::tools::config& c) {
   return tmp_file_name;
 }
 
-void convert_to_hic(const modle::tools::config& c, std::string& argv) {
+void convert_to_hic(boost::asio::thread_pool& tpool, const modle::tools::config& c,
+                    std::string_view template_argv) {
   assert(c.convert_to_hic);
-  try {
-    auto tmp_file_name = prepare_files_for_juicer_tools(c);
-    absl::StrAppendFormat(&argv, " pre -t %s %s %s/%s.hic %s", c.tmp_dir, tmp_file_name, c.out_dir,
-                          c.base_name, c.chr_sizes);
-    const auto t0 = absl::Now();
-    fmt::fprintf(stderr, "Running: %s\n", argv);
-    boost::process::ipstream juicer_tools_stderr;
-    std::string buff;
-    std::string stderr_msg;
-    std::string line;
-    boost::process::child juicer_tools(argv, boost::process::std_in.close(),
-                                       boost::process::std_out > boost::process::null,
-                                       boost::process::std_err > juicer_tools_stderr);
+  for (auto i = 0UL; i < c.path_to_input_matrices.size(); ++i) {
+    boost::asio::post(tpool, [&, i]() {
+      try {
+        auto tmp_file_name = prepare_files_for_juicer_tools(c.path_to_input_matrices[i], c);
+        std::string argv =
+            fmt::format(FMT_STRING("{} pre -t {} {} {}/{}.hic {}"), template_argv, c.tmp_dir,
+                        tmp_file_name, c.out_dir, c.base_names[i], c.chr_sizes);
+        const auto t0 = absl::Now();
+        fmt::print(stderr, "Running: {}\n", argv);
+        boost::process::ipstream juicer_tools_stderr;
+        std::string buff;
+        std::string stderr_msg;
+        std::string line;
+        boost::process::child juicer_tools(argv, boost::process::std_in.close(),
+                                           boost::process::std_out > boost::process::null,
+                                           boost::process::std_err > juicer_tools_stderr);
 
-    while (juicer_tools.running() && std::getline(juicer_tools_stderr, line)) {
-      absl::StrAppend(&stderr_msg, line, "\n");
-    }
-    if (!juicer_tools_stderr && !juicer_tools_stderr.eof()) {
-      juicer_tools.terminate();
-      throw std::runtime_error("An error occurred while reading from Juicer Tools stderr");
-    }
-    juicer_tools.wait();
-    if (!c.keep_tmp_files) {
-      std::filesystem::remove(tmp_file_name);
-    }
-    if (auto ec = juicer_tools.exit_code(); ec != 0) {
-      throw std::runtime_error(
-          fmt::format("Juicer tools terminated with exit code {}:\n{}", ec, stderr_msg));
-    }
-    fmt::fprintf(stderr, "DONE! Conversion took %s!\n", absl::FormatDuration(absl::Now() - t0));
-  } catch (const std::runtime_error& err) {
-    throw std::runtime_error(
-        fmt::format("An error occurred while converting file '{}' to .hic format: {}",
-                    c.path_to_input_matrix, err.what()));
+        while (juicer_tools.running() && std::getline(juicer_tools_stderr, line)) {
+          absl::StrAppend(&stderr_msg, line, "\n");
+        }
+        if (!juicer_tools_stderr && !juicer_tools_stderr.eof()) {
+          juicer_tools.terminate();
+          throw std::runtime_error("An error occurred while reading from Juicer Tools stderr");
+        }
+        juicer_tools.wait();
+        if (!c.keep_tmp_files) {
+          std::filesystem::remove(tmp_file_name);
+        }
+        if (auto ec = juicer_tools.exit_code(); ec != 0) {
+          throw std::runtime_error(
+              fmt::format("Juicer tools terminated with exit code {}:\n{}", ec, stderr_msg));
+        }
+        fmt::print(stderr, "DONE! Converting file '{}' to HIC format took {}!\n",
+                   c.path_to_input_matrices[i], absl::FormatDuration(absl::Now() - t0));
+      } catch (const std::runtime_error& err) {
+        throw std::runtime_error(
+            fmt::format("An error occurred while converting file '{}' to .hic format: {}",
+                        c.path_to_input_matrices[i], err.what()));
+      }
+    });
   }
 }
 
-void convert_to_tsv(const modle::tools::config& c) {
-  auto out_file = absl::StrCat(c.out_dir, "/", c.base_name, "_square_cmatrix.tsv.bz2");
-  assert(c.force || !std::filesystem::exists(out_file));
-  fmt::fprintf(stderr, "Writing contacts as a symmetric matrix in TSV format to file '%s'...\n",
-               out_file);
+void convert_to_tsv(boost::asio::thread_pool& tpool, const modle::tools::config& c) {
+  for (auto i = 0UL; i < c.path_to_input_matrices.size(); ++i) {
+    boost::asio::post(tpool, [&, i]() {
+      const auto& path_to_cmatrix = c.path_to_input_matrices[i];
+      auto out_file = absl::StrCat(c.out_dir, "/", c.base_names[i], "_square_cmatrix.tsv.bz2");
+      assert(c.force || !std::filesystem::exists(out_file));
+      fmt::print(stderr, "Writing contacts as a symmetric matrix in TSV format to file '{}'...\n",
+                 out_file);
 
-  const auto t0 = absl::Now();
-  auto header = ContactMatrix<uint32_t>::parse_header(c.path_to_input_matrix);
-  auto noise_generator =
-      c.add_noise
-          ? std::make_unique<std::normal_distribution<double>>(init_noise_generator(c.noise_range))
-          : nullptr;
+      const auto t0 = absl::Now();
+      auto header = ContactMatrix<uint32_t>::parse_header(path_to_cmatrix);
+      auto noise_generator = c.add_noise ? std::make_unique<std::normal_distribution<double>>(
+                                               init_noise_generator(c.noise_range))
+                                         : nullptr;
 
-  auto m = ContactMatrix<uint32_t>(c.path_to_input_matrix, noise_generator.get(), c.seed);
-  auto [bytes_in, bytes_out] = m.write_full_matrix_to_tsv(out_file);
-  fmt::fprintf(stderr, "DONE! Compression took %s (compression rate %.2f)\n",
-               absl::FormatDuration(absl::Now() - t0), static_cast<double>(bytes_in) / bytes_out);
+      auto m = ContactMatrix<uint32_t>(path_to_cmatrix, noise_generator.get(), c.seed);
+      auto [bytes_in, bytes_out] = m.write_full_matrix_to_tsv(out_file);
+      fmt::print(stderr, "DONE! Compression took {} (compression rate {:.2f})\n",
+                 absl::FormatDuration(absl::Now() - t0), static_cast<double>(bytes_in) / bytes_out);
+    });
+  }
 }
 
 }  // namespace modle::tools

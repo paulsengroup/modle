@@ -3,6 +3,7 @@
 #include <absl/strings/match.h>
 #include <absl/strings/str_format.h>
 #include <absl/strings/str_join.h>
+#include <absl/strings/strip.h>
 #include <fmt/printf.h>
 
 #include <CLI/CLI.hpp>
@@ -36,16 +37,17 @@ class Cli {
     this->_cli.name(this->_exec_name);
     this->_cli.description("Modle's helper tool. This tool allows to post-process the contact matrix produced by Modle in various ways.");
     this->_cli.require_subcommand(1);
-    this->_cli.add_option("-i,--input", this->_config.path_to_input_matrix, "Path to Modle's contact matrix")->check(CLI::ExistingFile)->required();
+    this->_cli.add_option("-i,--input", this->_config.path_to_input_matrices, "Path to Modle's contact matrix")->check(CLI::ExistingFile)->take_all()->required();
     this->_cli.add_option("-o,--output-dir", this->_config.out_dir, "Path where to save the output files.")->required();
     this->_cli.add_option("--tmp-dir", this->_config.tmp_dir, "Path where to store temporary files.")->capture_default_str();
     this->_cli.add_flag("--keep-temporary-files", this->_config.keep_tmp_files, "Do not delete temporary files.")->capture_default_str();
     this->_cli.add_flag("-f,--force", this->_config.force, "Overwrite existing file(s).")->capture_default_str();
     this->_cli.add_option("-j,--path-to-juicer-tools", this->_config.path_to_juicer_tools, "Path to Juicer tools jar. When this is not specified, we will look in PATH for an executable called juicer_tools, juicer_tools.exe or juicer_tools.sh.")->check(CLI::ExistingFile);
+    this->_cli.add_option("-t,--threads", this->_config.nthreads, "CPU threads to allocate.")->check(CLI::PositiveNumber);
 
     auto *convert_sc = this->_cli.add_subcommand("convert", "Convert Modle's contact matrix into several popular formats.")->fallthrough();
     auto *eval_sc = this->_cli.add_subcommand("evaluate", "Compare Model's output with other contact matrices using various correlation tests.")->fallthrough();
-    eval_sc->alias("eval_subcmd");
+    eval_sc->alias("eval");
 
     convert_sc->add_flag("--hic,!--no-hic", this->_config.convert_to_hic, "Convert contact matrix to .hic format (requires Juicer Tools).")->capture_default_str();
     convert_sc->add_flag("--tsv,!--no-tsv", this->_config.convert_to_tsv, "Convert contact matrix to TSV format.")->capture_default_str();
@@ -57,7 +59,7 @@ class Cli {
     convert_sc->add_option("-c,--chr-sizes", this->_config.chr_sizes, fmt::format("Path to file containing chromosome size(s). Can also be one of the following genome IDs: {}.", absl::StrJoin(this->_allowed_genome_ids, ", ")));
     convert_sc->add_option("--seed", this->_config.seed, "Seed value to use when adding noise to the contact matrix.")->capture_default_str();
 
-    eval_sc->add_option("--reference-matrix", this->_config.path_to_reference_matrix, "Path to contact matrix to use as reference when computing the correlation. Formats accepted: Modle or .hic format.")->required();
+    eval_sc->add_option("--reference-matrix", this->_config.path_to_reference_matricx, "Path to contact matrix to use as reference when computing the correlation. Formats accepted: ModLE or .hic format.")->required();
     eval_sc->add_option("-n,--chr-name", this->_config.chr_name_hic, "Name of the chromosome whose contacts should be extracted from an .hic file. Required only if different from the name stored in the header of Modle's contact matrix.");
     eval_sc->add_option("--chr-offset", this->_config.chr_offset_hic, "Offset to apply to coordinates read from Modle's contact matrix.")->check(CLI::NonNegativeNumber)->transform(CLI::AsSizeValue(true));
     eval_sc->add_flag("--pearson", this->_config.compute_pearson, "Compute Pearson correlation.");
@@ -76,48 +78,54 @@ class Cli {
           c.out_dir);
     }
 
-    if (c.path_to_input_matrix.rfind(".tsv.bz2") == std::string::npos) {
-      absl::StrAppend(&errors, "The matrix passed to --input should be in .tsv.bz2 format.");
-    }
-    c.base_name = std::filesystem::path(
-                      c.path_to_input_matrix.substr(0, c.path_to_input_matrix.rfind(".tsv.bz2")))
-                      .filename();
+    c.base_names.reserve(c.path_to_input_matrices.size());
+    std::transform(
+        c.path_to_input_matrices.begin(), c.path_to_input_matrices.end(),
+        std::back_inserter(c.base_names), [&](const auto& path) {
+          if (!absl::EndsWithIgnoreCase(path, ".tsv.bz2")) {
+            absl::StrAppendFormat(&errors, "File '%s' does not appear to be in .tsv.bz2 format.\n",
+                                  path);
+            return std::string{};
+          }
+          return std::filesystem::path(absl::StripSuffix(path, ".tsv.bz2")).filename().string();
+        });
 
     if (const auto* s = "/modle_tools/"; !absl::EndsWithIgnoreCase(c.tmp_dir, s)) c.tmp_dir += s;
     if (!std::filesystem::is_directory(c.tmp_dir) && std::filesystem::exists(c.tmp_dir)) {
-      absl::StrAppendFormat(&errors,
-                            "--tmp-dir should point to a directory or a non-existing path. Is '%s'",
-                            c.tmp_dir);
+      absl::StrAppendFormat(
+          &errors, "--tmp-dir should point to a directory or a non-existing path. Is '%s'\n",
+          c.tmp_dir);
     }
 
     if (!c.force) {
-      auto base_name = fmt::format("{}/{}", c.out_dir,
-                                   std::string_view(c.path_to_input_matrix.data(),
-                                                    c.path_to_input_matrix.rfind(".tsv.bz2")));
       std::vector<std::string> collisions;
-      if (this->_cli.get_subcommand("convert")->parsed()) {
-        if (this->_config.convert_to_hic) {
-          if (auto file =
-                  fmt::format("{}{}.hic", this->_config.add_noise ? "_w_noise" : "", base_name);
-              std::filesystem::exists(file)) {
-            collisions.emplace_back(std::move(file));
-          }
-        }
-        if (this->_config.convert_to_tsv) {
-          if (auto file = fmt::format("{}{}_symmetric.tsv{}", base_name,
-                                      this->_config.add_noise ? "_w_noise" : "",
-                                      this->_config.compress ? ".bz2" : "");
-              std::filesystem::exists(file)) {
-            collisions.emplace_back(std::move(file));
-          }
-        }
-      }
-      if (this->_cli.get_subcommand("eval_subcmd")->parsed()) {
-        for (std::string_view suffix : {"rho", "tau", "rho_pv", "tau_pv"}) {
-          for (std::string_view ext : {"tsv.bz2", "wig"}) {
-            if (auto file = fmt::format("{}_{}.{}", c.base_name, suffix, ext);
+      for (auto i = 0UL; i < c.path_to_input_matrices.size(); ++i) {
+        auto base_name = fmt::format("{}/{}", c.out_dir,
+                                     absl::StripSuffix(c.path_to_input_matrices[i], ".tsv.bz2"));
+        if (this->_cli.get_subcommand("convert")->parsed()) {
+          if (this->_config.convert_to_hic) {
+            if (auto file =
+                    fmt::format("{}{}.hic", this->_config.add_noise ? "_w_noise" : "", base_name);
                 std::filesystem::exists(file)) {
               collisions.emplace_back(std::move(file));
+            }
+          }
+          if (this->_config.convert_to_tsv) {
+            if (auto file = fmt::format("{}{}_symmetric.tsv{}", base_name,
+                                        this->_config.add_noise ? "_w_noise" : "",
+                                        this->_config.compress ? ".bz2" : "");
+                std::filesystem::exists(file)) {
+              collisions.emplace_back(std::move(file));
+            }
+          }
+        }
+        if (this->_cli.get_subcommand("eval")->parsed()) {
+          for (std::string_view suffix : {"rho", "tau", "rho_pv", "tau_pv"}) {
+            for (std::string_view ext : {"tsv.bz2", "wig"}) {
+              if (auto file = fmt::format("{}_{}.{}", c.base_names[i], suffix, ext);
+                  std::filesystem::exists(file)) {
+                collisions.emplace_back(std::move(file));
+              }
             }
           }
         }
@@ -148,7 +156,7 @@ class Cli {
       }
     }
 
-    if (this->_cli.get_subcommand("eval_subcmd")->parsed() && c.sliding_window_size != 0 &&
+    if (this->_cli.get_subcommand("eval")->parsed() && c.sliding_window_size != 0 &&
         c.sliding_window_size <= c.sliding_window_overlap) {
       absl::StrAppendFormat(&errors,
                             "--sliding-window-size should be > --sliding-window-overlap: "
@@ -156,8 +164,8 @@ class Cli {
                             c.sliding_window_size, c.sliding_window_overlap);
     }
     if (this->_config.convert_to_hic ||
-        absl::StartsWith("http", this->_config.path_to_reference_matrix) ||
-        absl::EndsWithIgnoreCase(c.path_to_reference_matrix, ".hic")) {
+        absl::StartsWith("http", this->_config.path_to_reference_matricx) ||
+        absl::EndsWithIgnoreCase(c.path_to_reference_matricx, ".hic")) {
       if (c.path_to_juicer_tools.empty()) {
         for (std::string file : {"juicer_tools", "juicer_tools.sh", "juicer_tools.exe"}) {
           if (auto p = boost::process::search_path("juicer_tools").string(); !p.empty()) {
@@ -173,11 +181,11 @@ class Cli {
             "tools in your path");
       }
     }
-    if (this->_cli.get_subcommand("convert")->get_option("--hic"))
-
+    if (this->_cli.get_subcommand("convert")->get_option("--hic")) {
       if (!errors.empty()) {
-        fmt::fprintf(stderr, "The following issues have been detected:\n%s\n", errors);
+        fmt::print(stderr, "The following issues have been detected:\n{}\n", errors);
       }
+    }
     return errors.empty();
   }
 
