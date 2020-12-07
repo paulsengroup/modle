@@ -16,7 +16,7 @@ int main(int argc, char** argv) {
   }
 
   std::filesystem::create_directories(c.tmp_dir);
-  std::filesystem::create_directories(c.out_dir);
+  std::filesystem::create_directories(c.output_base_name);
   try {
     switch (cli.get_subcommand()) {
       case modle::tools::Cli::subcommand::convert:

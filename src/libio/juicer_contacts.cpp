@@ -196,11 +196,14 @@ ContactMatrix<uint32_t> run_juicer_dump_and_parse_contacts(
         i = (i - start) / header.bin_size;
         j = (j - start) / header.bin_size;
         cmatrix.set(i, j, std::lround(contacts));
+        ++records_parsed;
+        /*
         // NOLINTNEXTLINE(readability-magic-numbers, cppcoreguidelines-avoid-magic-numbers)
         if (auto step = 1'000'000U; ++records_parsed % step == 0U) {
           fmt::print(stderr, "Parsed {} records ({:.2f} records/s)...\n", records_parsed,
                      static_cast<double>(step) / absl::ToDoubleSeconds(absl::Now() - t1));
         }
+         */
       }
 
       if (!juicer_tools_stdout && !juicer_tools_stdout.eof()) {

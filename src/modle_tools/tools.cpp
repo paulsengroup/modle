@@ -30,9 +30,9 @@ void convert_subcmd(const modle::tools::config& c) {
                c.nthreads));
   DISABLE_WARNING_POP
   auto argv = modle::utils::init_juicer_tools_argv(c.path_to_juicer_tools, c.juicer_tools_mem);
-  std::filesystem::create_directories(c.out_dir);
+  std::filesystem::create_directories(c.output_base_name);
   if (c.convert_to_hic) {
-    modle::tools::convert_to_hic(tpool, c, argv);
+    modle::tools::convert_to_hic(c, argv);
   }
   if (c.convert_to_tsv) {
     modle::tools::convert_to_tsv(tpool, c);
@@ -46,17 +46,17 @@ void eval_subcmd(const modle::tools::config& c) {
       std::min(c.path_to_input_matrices.size(), c.nthreads));
 
   auto argv = modle::utils::init_juicer_tools_argv(c.path_to_juicer_tools, c.juicer_tools_mem);
-  std::filesystem::create_directories(c.out_dir);
+  std::filesystem::create_directories(c.output_base_name);
 
   for (auto i = 0U; i < c.path_to_input_matrices.size(); ++i) {
     boost::asio::post(tpool, [&, i]() {
       modle::ContactMatrix<uint32_t> cmatrix(c.path_to_input_matrices[i]);
       auto reference_cmatrix =
-          absl::EndsWith(c.path_to_reference_matricx, ".hic")
+          absl::EndsWith(c.path_to_reference_matrix, ".hic")
               ? modle::juicer_contacts::run_juicer_dump_and_parse_contacts(
-                    c.path_to_input_matrices[i], c.path_to_reference_matricx, c.chr_name_hic,
+                    c.path_to_input_matrices[i], c.path_to_reference_matrix, c.chr_name_hic,
                     c.chr_offset_hic, c.path_to_juicer_tools, c.juicer_tools_mem)
-              : modle::ContactMatrix<uint32_t>(c.path_to_reference_matricx);
+              : modle::ContactMatrix<uint32_t>(c.path_to_reference_matrix);
       assert(cmatrix.n_cols() == reference_cmatrix.n_cols() &&
              cmatrix.n_rows() == reference_cmatrix.n_rows());
       const auto& v1 = cmatrix.get_raw_count_vector();
@@ -70,10 +70,10 @@ void eval_subcmd(const modle::tools::config& c) {
         fmt::print(stderr, "Pearson \"Linear\" computed in {}!\n",
                    absl::FormatDuration(absl::Now() - t0));
         auto out_path_pearson =
-            fmt::format("{}/{}_pearson_linear_r.bw", c.out_dir, header.chr_name);
+            fmt::format("{}/{}_pearson_linear_r.bw", c.output_base_name, header.chr_name);
         bigwig::write_range(header.chr_name, header.end, pearson.first, header.start,
                             header.bin_size, header.bin_size, out_path_pearson);
-        out_path_pearson = fmt::format("{}/{}_pearson_linear_pv.bw", c.out_dir, header.chr_name);
+        out_path_pearson = fmt::format("{}/{}_pearson_linear_pv.bw", c.output_base_name, header.chr_name);
         bigwig::write_range(header.chr_name, header.end, pearson.second, header.start,
                             header.bin_size, header.bin_size, out_path_pearson);
 
@@ -82,10 +82,10 @@ void eval_subcmd(const modle::tools::config& c) {
                                              Transformation::Cross);
         fmt::print(stderr, "Pearson \"Cross\" computed in {}!\n",
                    absl::FormatDuration(absl::Now() - t0));
-        out_path_pearson = fmt::format("{}/{}_pearson_cross_r.bw", c.out_dir, header.chr_name);
+        out_path_pearson = fmt::format("{}/{}_pearson_cross_r.bw", c.output_base_name, header.chr_name);
         bigwig::write_range(header.chr_name, header.end, pearson.first, header.start,
                             header.bin_size, header.bin_size, out_path_pearson);
-        out_path_pearson = fmt::format("{}/{}_pearson_cross_pv.bw", c.out_dir, header.chr_name);
+        out_path_pearson = fmt::format("{}/{}_pearson_cross_pv.bw", c.output_base_name, header.chr_name);
         bigwig::write_range(header.chr_name, header.end, pearson.second, header.start,
                             header.bin_size, header.bin_size, out_path_pearson);
       }
@@ -96,10 +96,10 @@ void eval_subcmd(const modle::tools::config& c) {
         fmt::print(stderr, "Spearman \"Linear\" computed in {}!\n",
                    absl::FormatDuration(absl::Now() - t0));
         auto out_path_pearson =
-            fmt::format("{}/{}_spearman_linear_r.bw", c.out_dir, header.chr_name);
+            fmt::format("{}/{}_spearman_linear_r.bw", c.output_base_name, header.chr_name);
         bigwig::write_range(header.chr_name, header.end, pearson.first, header.start,
                             header.bin_size, header.bin_size, out_path_pearson);
-        out_path_pearson = fmt::format("{}/{}_spearman_linear_pv.bw", c.out_dir, header.chr_name);
+        out_path_pearson = fmt::format("{}/{}_spearman_linear_pv.bw", c.output_base_name, header.chr_name);
         bigwig::write_range(header.chr_name, header.end, pearson.second, header.start,
                             header.bin_size, header.bin_size, out_path_pearson);
 
@@ -108,10 +108,10 @@ void eval_subcmd(const modle::tools::config& c) {
                                               Transformation::Cross);
         fmt::print(stderr, "Spearman \"Cross\" computed in {}!\n",
                    absl::FormatDuration(absl::Now() - t0));
-        out_path_pearson = fmt::format("{}/{}_spearman_cross_r.bw", c.out_dir, header.chr_name);
+        out_path_pearson = fmt::format("{}/{}_spearman_cross_r.bw", c.output_base_name, header.chr_name);
         bigwig::write_range(header.chr_name, header.end, pearson.first, header.start,
                             header.bin_size, header.bin_size, out_path_pearson);
-        out_path_pearson = fmt::format("{}/{}_spearman_cross_pv.bw", c.out_dir, header.chr_name);
+        out_path_pearson = fmt::format("{}/{}_spearman_cross_pv.bw", c.output_base_name, header.chr_name);
         bigwig::write_range(header.chr_name, header.end, pearson.second, header.start,
                             header.bin_size, header.bin_size, out_path_pearson);
       }

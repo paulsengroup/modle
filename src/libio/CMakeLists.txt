@@ -35,7 +35,8 @@ add_library(libio)
 add_library(Modle::io ALIAS libio)
 target_sources(
   libio
-  PRIVATE bed.cpp
+  PRIVATE 4dn_dcic.cpp
+          bed.cpp
           chr_sizes.cpp
           juicer_contacts.cpp
           bigwig.cpp)
