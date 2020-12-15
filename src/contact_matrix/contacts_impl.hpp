@@ -82,7 +82,7 @@ ContactMatrix<I>::ContactMatrix(const std::string &path_to_file,
             const auto pos2 = static_cast<std::size_t>(
                 std::clamp(std::round(noise2 + j), 0.0, this->_ncols - 1.0));
             DISABLE_WARNING_POP
-            this->at(pos1, pos2) += n;
+            this->at(pos1, pos2)++;
           }
         } else {
           this->at(i, j) = n;
@@ -109,6 +109,12 @@ ContactMatrix<I>::ContactMatrix(const std::string &path_to_file,
         FMT_STRING("An error occurred while parsing file '{}': {})"), path_to_file, err.what()));
   }
 }
+
+template <class I>
+ContactMatrix<I>::ContactMatrix(std::string_view path_to_file,
+                                std::normal_distribution<double> *noise_generator, uint64_t seed,
+                                char sep)
+    : ContactMatrix<I>::ContactMatrix(std::string{path_to_file}, noise_generator, seed, sep){};
 
 // TODO Rewrite this function
 template <class I>

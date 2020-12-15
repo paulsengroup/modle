@@ -35,6 +35,9 @@ class ContactMatrix {
   explicit ContactMatrix(const std::string& path_to_file,
                          std::normal_distribution<double>* noise_generator = nullptr,
                          uint64_t seed = 0, char sep = '\t');
+  explicit ContactMatrix(std::string_view path_to_file,
+                         std::normal_distribution<double>* noise_generator = nullptr,
+                         uint64_t seed = 0, char sep = '\t');
   [[nodiscard]] I get(std::size_t row, std::size_t col) const;
   template <typename I2>
   void set(std::size_t row, std::size_t col, I2 n);
