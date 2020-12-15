@@ -93,6 +93,7 @@ set(CONAN_EXTRA_REQUIRES
     bzip2/1.0.8
     cli11/1.9.1
     fmt/7.1.2
+    hdf5/1.12.0
     range-v3/0.11.0
     spdlog/1.8.1
     zlib/1.2.11)
