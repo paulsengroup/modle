@@ -221,14 +221,16 @@ void Lef::bind_at_pos(Chromosome* chr, uint32_t pos, std::mt19937& rand_eng,
   this->_chr = chr;
   this->_binding_pos = pos;
   this->_lifetime = this->_lifetime_generator(rand_eng);
-  const auto bin_idx_offset = this->_bin_idx_offset_generator(rand_eng);
+  const auto pos_offset =
+      this->_bin_idx_offset_generator(rand_eng) * static_cast<int64_t>(this->_chr->get_bin_size());
+
   // It would be nice to remove some static casts here, but the first static_cast to int64_t is
   // required to deal with the possibility that pos - offset overflows
   const auto pos1 = static_cast<uint32_t>(
-      std::clamp(bin_idx_offset < 0 ? static_cast<int64_t>(pos) + bin_idx_offset : pos, 0L,
+      std::clamp(pos_offset < 0 ? static_cast<int64_t>(pos) + pos_offset : pos, 0L,
                  static_cast<int64_t>(this->_chr->length())));
   const auto pos2 = static_cast<uint32_t>(
-      std::clamp(bin_idx_offset > 0 ? static_cast<int64_t>(pos) + bin_idx_offset : pos, 0L,
+      std::clamp(pos_offset > 0 ? static_cast<int64_t>(pos) + pos_offset : pos, 0L,
                  static_cast<int64_t>(this->_chr->length())));
   // We assume that the left unit always travels towards the 5', while the right unit goes to the 3'
   this->_left_unit->bind(this->_chr, pos1, DNA::Direction::rev, rand_eng);
