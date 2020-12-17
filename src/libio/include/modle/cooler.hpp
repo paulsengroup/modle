@@ -2,10 +2,9 @@
 
 #include <H5Cpp.h>
 
+#include <cstdint>
 #include <string_view>
 #include <vector>
-#include <cstdint>
-
 
 #include "modle/contacts.hpp"
 
@@ -31,17 +30,27 @@ hsize_t write_vect_of_int(std::vector<I> &data, H5::H5File &f, std::string_view 
                           hsize_t CHUNK_DIMS = 1024 * 1024UL / sizeof(I), /* 1 MB */
                           uint8_t COMPRESSION_LEVEL = 6);
 
-void write_chroms(H5::H5File &f,
-                  const typename std::vector<ContactMatrix<int64_t>::Header> &headers);
+H5::EnumType write_chroms(H5::H5File &f,
+                          const typename std::vector<ContactMatrix<int64_t>::Header> &headers);
 
-void write_contacts(H5::H5File &f, const std::vector<std::string_view> &path_to_cmatrices);
+hsize_t write_bins(H5::H5File &f, H5::EnumType &ENUM, const std::string &chrom, int64_t length,
+                   int64_t bin_size, std::vector<int32_t> &buff32, std::vector<int64_t> &buff64,
+                   hsize_t file_offset, hsize_t BUFF_SIZE = 1024 * 1024 / sizeof(int64_t));
+
+hsize_t write_bins(H5::H5File &f, int32_t chrom, int64_t length, int64_t bin_size,
+                   std::vector<int32_t> &buff32, std::vector<int64_t> &buff64, hsize_t file_offset,
+                   hsize_t BUFF_SIZE = 1024 * 1024 / sizeof(int64_t));
+
+void write_contacts(H5::H5File &f, const std::vector<std::string_view> &path_to_cmatrices,
+                    H5::EnumType &ENUM);
 
 void write_metadata(H5::H5File &f, int32_t bin_size, std::string_view assembly_name = "");
 
 void modle_to_cooler(const std::vector<std::string_view> &path_to_cmatrices,
                      std::string_view path_to_output);
 
-H5::EnumType init_enum_from_strs(const std::vector<std::string> &data, int32_t offset);
+[[nodiscard]] H5::EnumType init_enum_from_strs(const std::vector<std::string> &data,
+                                               int32_t offset = 0);
 }  // namespace modle::cooler
 
 #include "../../cooler_impl.hpp"

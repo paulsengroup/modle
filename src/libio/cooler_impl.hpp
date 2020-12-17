@@ -191,15 +191,18 @@ hsize_t write_vect_of_int(std::vector<I> &data, H5::H5File &f, std::string_view 
 
 H5::EnumType init_enum_from_strs(const std::vector<std::string> &data, int32_t offset) {
   H5::EnumType ENUM{getH5_type<int32_t>()};
+  DISABLE_WARNING_PUSH
+  DISABLE_WARNING_SIGN_COMPARE
+  DISABLE_WARNING_SIGN_CONVERSION
   for (int32_t i = offset; i < data.size(); ++i) {
     ENUM.insert(data[i], &i);
   }
-  ENUM.lock();
+  DISABLE_WARNING_POP
   return ENUM;
 }
 
-void write_chroms(H5::H5File &f,
-                  const typename std::vector<ContactMatrix<int64_t>::Header> &headers) {
+H5::EnumType write_chroms(H5::H5File &f,
+                          const typename std::vector<ContactMatrix<int64_t>::Header> &headers) {
   std::vector<std::string> names(headers.size());
   std::vector<int64_t> lengths(headers.size());
   for (const auto &[i, h] : headers | ranges::views::enumerate) {
@@ -208,27 +211,69 @@ void write_chroms(H5::H5File &f,
   }
   write_vect_of_int(lengths, f, "chroms/length");
   write_vect_of_str(names, f, "chroms/name");
+
+  return init_enum_from_strs(names);
 }
 
-void write_contacts(H5::H5File &f, const std::vector<std::string_view> &path_to_cmatrices) {
+hsize_t write_bins(H5::H5File &f, H5::EnumType &ENUM, const std::string &chrom, int64_t length,
+                   int64_t bin_size, std::vector<int32_t> &buff32, std::vector<int64_t> &buff64,
+                   hsize_t file_offset, hsize_t BUFF_SIZE) {
+  return write_bins(f, ENUM.getMemberIndex(chrom), length, bin_size, buff32, buff64, file_offset,
+                    BUFF_SIZE);
+}
+
+hsize_t write_bins(H5::H5File &f, int32_t chrom, int64_t length, int64_t bin_size,
+                   std::vector<int32_t> &buff32, std::vector<int64_t> &buff64, hsize_t file_offset,
+                   hsize_t BUFF_SIZE) {
+  buff32.resize(BUFF_SIZE);
+  buff64.resize(BUFF_SIZE);
+
+  std::fill(buff32.begin(), buff32.end(), chrom);
+
+  int64_t start = 0;
+  int64_t end = std::min(length, bin_size);
+  int64_t bins_processed = 0;
+  const int64_t nbins = length / bin_size;
+  const int64_t nchunks = std::max(1L, nbins / static_cast<int64_t>(BUFF_SIZE));
+
+  for (auto i = 0; i < nchunks; ++i) {
+    const auto chunk_size = std::min(BUFF_SIZE, static_cast<hsize_t>(nbins - bins_processed));
+    if (chunk_size != BUFF_SIZE) {
+      buff32.resize(chunk_size);
+      buff64.resize(chunk_size);
+    }
+    write_vect_of_int(buff32, f, "bins/chrom", file_offset);
+
+    std::generate(buff64.begin(), buff64.end(), [&]() { return (start += bin_size) - bin_size; });
+    write_vect_of_int(buff64, f, "bins/start", file_offset);
+
+    std::generate(buff64.begin(), buff64.end(), [&]() { return (end += bin_size) - bin_size; });
+    if (chunk_size != BUFF_SIZE) {
+      buff64.back() = length;
+    }
+    file_offset = write_vect_of_int(buff64, f, "bins/end", file_offset);
+  }
+  return file_offset;
+}
+
+void write_contacts(H5::H5File &f, const std::vector<std::string_view> &path_to_cmatrices,
+                    H5::EnumType &ENUM) {
   constexpr const std::size_t BUFF_SIZE = 1024 * 1024 / sizeof(int64_t);  // 1 MB
-  std::vector<int64_t> bin_start_buff;
-  std::vector<int64_t> bin_end_buff;
+  std::vector<int64_t> bin_pos_buff;
   std::vector<int32_t> bin_chrom_buff;
   std::vector<int64_t> pixel_b1_idx_buff;
   std::vector<int64_t> pixel_b2_idx_buff;
   std::vector<int64_t> pixel_count_buff;
   std::vector<int64_t> idx_bin1_offset_buff;
-  std::vector<int64_t> chr_offset_buff;
+  std::vector<int64_t> idx_chrom_offset_buff;
 
+  bin_pos_buff.reserve(BUFF_SIZE);
   bin_chrom_buff.reserve(BUFF_SIZE);
-  bin_start_buff.reserve(BUFF_SIZE);
-  bin_end_buff.reserve(BUFF_SIZE);
   pixel_b1_idx_buff.reserve(BUFF_SIZE);
   pixel_b2_idx_buff.reserve(BUFF_SIZE);
   pixel_count_buff.reserve(BUFF_SIZE);
   idx_bin1_offset_buff.reserve(BUFF_SIZE);
-  chr_offset_buff.reserve(path_to_cmatrices.size());
+  idx_chrom_offset_buff.reserve(path_to_cmatrices.size());
 
   hsize_t bin_chrom_h5df_offset = 0;
   hsize_t bin_start_h5df_offset = 0;
@@ -237,8 +282,6 @@ void write_contacts(H5::H5File &f, const std::vector<std::string_view> &path_to_
   hsize_t pixel_b2_idx_h5df_offset = 0;
   hsize_t pixel_count_h5df_offset = 0;
   hsize_t idx_bin1_offset_h5df_offset = 0;
-
-  H5::EnumType ENUM{getH5_type<int32_t>()};
 
   auto write_pixels_to_file = [&]() {
     pixel_b1_idx_h5df_offset =
@@ -252,69 +295,87 @@ void write_contacts(H5::H5File &f, const std::vector<std::string_view> &path_to_
     pixel_b2_idx_buff.clear();
     pixel_count_buff.clear();
   };
+  /*
+    auto write_bins_to_file = [&]() {
+      // bin_chrom_h5df_offset =
+      //  write_vect_of_enums(bin_chrom_buff, ENUM, f, "bins/chrom", bin_chrom_h5df_offset);
+      bin_chrom_h5df_offset =
+          write_vect_of_int(bin_chrom_buff, f, "bins/chrom", bin_chrom_h5df_offset);
+      bin_start_h5df_offset =
+          write_vect_of_int(bin_start_buff, f, "bins/start", bin_start_h5df_offset);
+      bin_end_h5df_offset = write_vect_of_int(bin_end_buff, f, "bins/end", bin_end_h5df_offset);
+      idx_bin1_offset_h5df_offset = write_vect_of_int(idx_bin1_offset_buff, f,
+    "indexes/bin1_offset", idx_bin1_offset_h5df_offset);
 
-  auto write_bins_to_file = [&]() {
-    bin_chrom_h5df_offset =
-        write_vect_of_enums(bin_chrom_buff, ENUM, f, "bins/chrom", bin_chrom_h5df_offset);
-    bin_start_h5df_offset =
-        write_vect_of_int(bin_start_buff, f, "bins/start", bin_start_h5df_offset);
-    bin_end_h5df_offset = write_vect_of_int(bin_end_buff, f, "bins/end", bin_end_h5df_offset);
-    idx_bin1_offset_h5df_offset = write_vect_of_int(idx_bin1_offset_buff, f, "indexes/bin1_offset",
-                                                    idx_bin1_offset_h5df_offset);
-
-    bin_chrom_buff.clear();
-    bin_start_buff.clear();
-    bin_end_buff.clear();
-    idx_bin1_offset_buff.clear();
-  };
+      bin_chrom_buff.clear();
+      bin_start_buff.clear();
+      bin_end_buff.clear();
+      idx_bin1_offset_buff.clear();
+    };
+    */
 
   int64_t n = 0;
-  int32_t chr_idx = 0;
-  int32_t nbins = 0;
+  int64_t offset = 0;
+  int32_t chr_idx{};
+  int64_t nbins = 0;
+  // TODO: Write full bin vector (i.e. from 0-length). We can probably do this in this function,
+  // using a for loop from 0-start
   for (const auto &path : path_to_cmatrices) {
+    const auto header = ContactMatrix<uint32_t>::parse_header(path);
+    fmt::print(stderr, FMT_STRING("Processing '{}' ({:.2f} Mbp)..."), header.chr_name,
+               header.end / 1.0e6);  // NOLINT
+    const auto t0 = absl::Now();
     const auto cmatrix = ContactMatrix<uint32_t>(path);
-    const auto header = cmatrix.parse_header(path);
-    const auto bs = static_cast<int64_t>(header.bin_size);
-    ENUM.insert(header.chr_name, &chr_idx);
-    chr_offset_buff.push_back(n);
+    const auto bs = header.bin_size;
+    const auto bin_offset = static_cast<int64_t>(header.start / bs);
+    chr_idx = ENUM.getMemberIndex(header.chr_name);
+    // ENUM.insert(header.chr_name, &chr_idx);
+    idx_chrom_offset_buff.push_back(nbins);
+    write_bins(f, chr_idx, header.end, bs, bin_chrom_buff, bin_pos_buff, nbins);  // NOLINT
+    nbins += header.end / bs;
 
+    for (auto i = 0UL; i < header.start / bs; ++i) {
+      idx_bin1_offset_buff.push_back(n);
+      if (idx_bin1_offset_buff.size() == BUFF_SIZE) {
+        idx_bin1_offset_h5df_offset = write_vect_of_int(
+            idx_bin1_offset_buff, f, "indexes/bin1_offset", idx_bin1_offset_h5df_offset);
+        idx_bin1_offset_buff.clear();
+      }
+    }
     for (auto i = 0UL; i < cmatrix.n_cols(); ++i) {
-      bin_chrom_buff.push_back(chr_idx);
-      bin_start_buff.push_back(static_cast<int64_t>(i) * bs);
-      bin_end_buff.push_back(static_cast<int64_t>(i + 1) * bs);
       idx_bin1_offset_buff.push_back(n);
       for (auto j = i; j < i + cmatrix.n_rows() && j < cmatrix.n_cols(); ++j) {
         if (const auto m = cmatrix.get(i, j); m != 0) {
-          pixel_b1_idx_buff.push_back(static_cast<int64_t>(i));
-          pixel_b2_idx_buff.push_back(static_cast<int64_t>(j));
+          pixel_b1_idx_buff.push_back(offset + static_cast<int64_t>(i));
+          pixel_b2_idx_buff.push_back(offset + static_cast<int64_t>(j));
           pixel_count_buff.push_back(m);
           ++n;
-          if (pixel_b2_idx_buff.size() == BUFF_SIZE) {
+          if (pixel_b1_idx_buff.size() == BUFF_SIZE) {
             write_pixels_to_file();
           }
         }
       }
-      if (bin_chrom_buff.size() == BUFF_SIZE) {
-        write_bins_to_file();
-      }
     }
-    nbins += cmatrix.n_cols();
-    ++chr_idx;
+    if (idx_bin1_offset_buff.size() == BUFF_SIZE) {
+      idx_bin1_offset_h5df_offset = write_vect_of_int(
+          idx_bin1_offset_buff, f, "indexes/bin1_offset", idx_bin1_offset_h5df_offset);
+      idx_bin1_offset_buff.clear();
+    }
+    offset = nbins;
+    fmt::print(stderr, FMT_STRING(" DONE in {}!\n"), absl::FormatDuration(absl::Now() - t0));
   }
 
-  if (!bin_start_buff.empty()) {
-    write_bins_to_file();
-  }
   if (!pixel_b1_idx_buff.empty()) {
     write_pixels_to_file();
   }
 
+  idx_chrom_offset_buff.push_back(nbins);
   idx_bin1_offset_buff.push_back(n);
-  chr_offset_buff.push_back(n);
-  write_vect_of_int(chr_offset_buff, f, "indexes/chrom_offset");
-  write_vect_of_int(idx_bin1_offset_buff, f, "indexes/bin1_offset", idx_bin1_offset_h5df_offset);
-  H5::DataSpace att_space(H5S_SCALAR);
 
+  write_vect_of_int(idx_chrom_offset_buff, f, "indexes/chrom_offset");
+  write_vect_of_int(idx_bin1_offset_buff, f, "indexes/bin1_offset", idx_bin1_offset_h5df_offset);
+
+  H5::DataSpace att_space(H5S_SCALAR);
   auto att = f.createAttribute("nbins", H5::PredType::NATIVE_INT, att_space);
   att.write(H5::PredType::NATIVE_INT, &nbins);
   att = f.createAttribute("nchroms", H5::PredType::NATIVE_INT, att_space);
@@ -325,6 +386,7 @@ void write_contacts(H5::H5File &f, const std::vector<std::string_view> &path_to_
 
 void write_metadata(H5::H5File &f, int32_t bin_size, std::string_view assembly_name) {
   H5::StrType STR_TYPE(H5::PredType::C_S1, H5T_VARIABLE);
+  STR_TYPE.setCset(H5T_CSET_UTF8);
   H5::DataSpace att_space(H5S_SCALAR);
   int32_t int_buff{};
   std::string str_buff{};
@@ -375,8 +437,8 @@ void modle_to_cooler(const std::vector<std::string_view> &path_to_cmatrices,
   auto cooler_file = init_file(path_to_output, true);
   write_metadata(cooler_file,
                  headers[0].bin_size);  // TODO: figure out a cleaner way to provide bin sizes
-  write_chroms(cooler_file, headers);
+  auto CHR_ENUM = write_chroms(cooler_file, headers);
 
-  write_contacts(cooler_file, path_to_cmatrices);
+  write_contacts(cooler_file, path_to_cmatrices, CHR_ENUM);
 }
 }  // namespace modle::cooler
