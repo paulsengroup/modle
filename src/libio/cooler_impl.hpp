@@ -67,7 +67,10 @@ hsize_t write_vect_of_str(std::vector<S> &data, H5::H5File &f, std::string_view 
         1;
     // Create the datatype as follows
     H5::StrType STD_STR(H5::PredType::C_S1, MAX_STR_LENGTH);
-    STD_STR.setStrpad(H5T_STR_NULLPAD);
+    STD_STR.setStrpad(H5T_STR_NULLTERM);  // This seems to be the most roboust way of terminating
+                                          // strings. Using NULLPAD sometimes causes some garbage to
+                                          // appear at end of string
+    STD_STR.setCset(H5T_CSET_ASCII);
 
     H5::DSetCreatPropList cparms{};
     cparms.setChunk(RANK, &CHUNK_DIMS);
@@ -212,6 +215,11 @@ H5::EnumType write_chroms(H5::H5File &f,
   write_vect_of_int(lengths, f, "chroms/length");
   write_vect_of_str(names, f, "chroms/name");
 
+  H5::DataSpace att_space(H5S_SCALAR);
+  auto att = f.createAttribute("nchroms", H5::PredType::NATIVE_INT, att_space);
+  const auto nchroms = headers.size();
+  att.write(H5::PredType::NATIVE_INT, &nchroms);
+
   return init_enum_from_strs(names);
 }
 
@@ -233,8 +241,8 @@ hsize_t write_bins(H5::H5File &f, int32_t chrom, int64_t length, int64_t bin_siz
   int64_t start = 0;
   int64_t end = std::min(length, bin_size);
   int64_t bins_processed = 0;
-  const int64_t nbins = length / bin_size;
-  const int64_t nchunks = std::max(1L, nbins / static_cast<int64_t>(BUFF_SIZE));
+  const int64_t nbins = (length / bin_size) + 1;
+  const int64_t nchunks = (nbins / static_cast<int64_t>(BUFF_SIZE)) + 1;
 
   for (auto i = 0; i < nchunks; ++i) {
     const auto chunk_size = std::min(BUFF_SIZE, static_cast<hsize_t>(nbins - bins_processed));
@@ -252,7 +260,10 @@ hsize_t write_bins(H5::H5File &f, int32_t chrom, int64_t length, int64_t bin_siz
       buff64.back() = length;
     }
     file_offset = write_vect_of_int(buff64, f, "bins/end", file_offset);
+    bins_processed += chunk_size;
   }
+  assert(buff64.back() == length);
+
   return file_offset;
 }
 
@@ -275,9 +286,6 @@ void write_contacts(H5::H5File &f, const std::vector<std::string_view> &path_to_
   idx_bin1_offset_buff.reserve(BUFF_SIZE);
   idx_chrom_offset_buff.reserve(path_to_cmatrices.size());
 
-  hsize_t bin_chrom_h5df_offset = 0;
-  hsize_t bin_start_h5df_offset = 0;
-  hsize_t bin_end_h5df_offset = 0;
   hsize_t pixel_b1_idx_h5df_offset = 0;
   hsize_t pixel_b2_idx_h5df_offset = 0;
   hsize_t pixel_count_h5df_offset = 0;
@@ -295,31 +303,12 @@ void write_contacts(H5::H5File &f, const std::vector<std::string_view> &path_to_
     pixel_b2_idx_buff.clear();
     pixel_count_buff.clear();
   };
-  /*
-    auto write_bins_to_file = [&]() {
-      // bin_chrom_h5df_offset =
-      //  write_vect_of_enums(bin_chrom_buff, ENUM, f, "bins/chrom", bin_chrom_h5df_offset);
-      bin_chrom_h5df_offset =
-          write_vect_of_int(bin_chrom_buff, f, "bins/chrom", bin_chrom_h5df_offset);
-      bin_start_h5df_offset =
-          write_vect_of_int(bin_start_buff, f, "bins/start", bin_start_h5df_offset);
-      bin_end_h5df_offset = write_vect_of_int(bin_end_buff, f, "bins/end", bin_end_h5df_offset);
-      idx_bin1_offset_h5df_offset = write_vect_of_int(idx_bin1_offset_buff, f,
-    "indexes/bin1_offset", idx_bin1_offset_h5df_offset);
-
-      bin_chrom_buff.clear();
-      bin_start_buff.clear();
-      bin_end_buff.clear();
-      idx_bin1_offset_buff.clear();
-    };
-    */
 
   int64_t n = 0;
   int64_t offset = 0;
   int32_t chr_idx{};
   int64_t nbins = 0;
-  // TODO: Write full bin vector (i.e. from 0-length). We can probably do this in this function,
-  // using a for loop from 0-start
+
   for (const auto &path : path_to_cmatrices) {
     const auto header = ContactMatrix<uint32_t>::parse_header(path);
     fmt::print(stderr, FMT_STRING("Processing '{}' ({:.2f} Mbp)..."), header.chr_name,
@@ -327,12 +316,9 @@ void write_contacts(H5::H5File &f, const std::vector<std::string_view> &path_to_
     const auto t0 = absl::Now();
     const auto cmatrix = ContactMatrix<uint32_t>(path);
     const auto bs = header.bin_size;
-    const auto bin_offset = static_cast<int64_t>(header.start / bs);
     chr_idx = ENUM.getMemberIndex(header.chr_name);
-    // ENUM.insert(header.chr_name, &chr_idx);
     idx_chrom_offset_buff.push_back(nbins);
-    write_bins(f, chr_idx, header.end, bs, bin_chrom_buff, bin_pos_buff, nbins);  // NOLINT
-    nbins += header.end / bs;
+    nbins = write_bins(f, chr_idx, header.end, bs, bin_chrom_buff, bin_pos_buff, nbins);  // NOLINT
 
     for (auto i = 0UL; i < header.start / bs; ++i) {
       idx_bin1_offset_buff.push_back(n);
@@ -342,12 +328,20 @@ void write_contacts(H5::H5File &f, const std::vector<std::string_view> &path_to_
         idx_bin1_offset_buff.clear();
       }
     }
+
     for (auto i = 0UL; i < cmatrix.n_cols(); ++i) {
       idx_bin1_offset_buff.push_back(n);
       for (auto j = i; j < i + cmatrix.n_rows() && j < cmatrix.n_cols(); ++j) {
         if (const auto m = cmatrix.get(i, j); m != 0) {
           pixel_b1_idx_buff.push_back(offset + static_cast<int64_t>(i));
           pixel_b2_idx_buff.push_back(offset + static_cast<int64_t>(j));
+#ifndef NDEBUG
+          if (offset + static_cast<int64_t>(i) > offset + static_cast<int64_t>(j)) {
+            throw std::runtime_error(
+                fmt::format(FMT_STRING("b1 > b2: b1={}; b2={}; offset={}; m={}\n"),
+                            pixel_b1_idx_buff.back(), pixel_b2_idx_buff.back(), offset, m));
+          }
+#endif
           pixel_count_buff.push_back(m);
           ++n;
           if (pixel_b1_idx_buff.size() == BUFF_SIZE) {
@@ -355,11 +349,11 @@ void write_contacts(H5::H5File &f, const std::vector<std::string_view> &path_to_
           }
         }
       }
-    }
-    if (idx_bin1_offset_buff.size() == BUFF_SIZE) {
-      idx_bin1_offset_h5df_offset = write_vect_of_int(
-          idx_bin1_offset_buff, f, "indexes/bin1_offset", idx_bin1_offset_h5df_offset);
-      idx_bin1_offset_buff.clear();
+      if (idx_bin1_offset_buff.size() == BUFF_SIZE) {
+        idx_bin1_offset_h5df_offset = write_vect_of_int(
+            idx_bin1_offset_buff, f, "indexes/bin1_offset", idx_bin1_offset_h5df_offset);
+        idx_bin1_offset_buff.clear();
+      }
     }
     offset = nbins;
     fmt::print(stderr, FMT_STRING(" DONE in {}!\n"), absl::FormatDuration(absl::Now() - t0));
@@ -378,8 +372,6 @@ void write_contacts(H5::H5File &f, const std::vector<std::string_view> &path_to_
   H5::DataSpace att_space(H5S_SCALAR);
   auto att = f.createAttribute("nbins", H5::PredType::NATIVE_INT, att_space);
   att.write(H5::PredType::NATIVE_INT, &nbins);
-  att = f.createAttribute("nchroms", H5::PredType::NATIVE_INT, att_space);
-  att.write(H5::PredType::NATIVE_INT, &chr_idx);
   att = f.createAttribute("nnz", H5::PredType::NATIVE_INT, att_space);
   att.write(H5::PredType::NATIVE_INT, &n);
 }
