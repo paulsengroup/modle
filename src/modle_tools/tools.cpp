@@ -22,28 +22,25 @@
 namespace modle::tools {
 
 void convert_subcmd(const modle::tools::config& c) {
-  assert(c.convert_to_hic || c.convert_to_tsv);
-  DISABLE_WARNING_PUSH
-  DISABLE_WARNING_SIGN_CONVERSION
-  boost::asio::thread_pool tpool(  // NOLINTNEXTLINE(readability-implicit-bool-conversion)
-      std::min((c.convert_to_hic + c.convert_to_tsv) * c.path_to_input_matrices.size(),
-               c.nthreads));
-  DISABLE_WARNING_POP
   auto argv = modle::utils::init_juicer_tools_argv(c.path_to_juicer_tools, c.juicer_tools_mem);
   std::filesystem::create_directories(c.output_base_name);
-  if (c.convert_to_hic) {
-    modle::tools::convert_to_hic(c, argv);
+  switch (c.output_format) {
+    case config::output_format::cooler:
+      modle::tools::convert_to_cooler(c);
+      break;
+    case config::output_format::hic:
+      modle::tools::convert_to_hic(c, argv);
+      break;
+    case config::output_format::tsv:
+      boost::asio::thread_pool tpool(std::min(c.path_to_input_matrices.size(), c.nthreads));
+      modle::tools::convert_to_tsv(tpool, c);
+      tpool.join();
   }
-  if (c.convert_to_tsv) {
-    modle::tools::convert_to_tsv(tpool, c);
-  }
-  tpool.join();
 }
 
 void eval_subcmd(const modle::tools::config& c) {
   assert(c.compute_spearman || c.compute_pearson);
-  boost::asio::thread_pool tpool(
-      std::min(c.path_to_input_matrices.size(), c.nthreads));
+  boost::asio::thread_pool tpool(std::min(c.path_to_input_matrices.size(), c.nthreads));
 
   auto argv = modle::utils::init_juicer_tools_argv(c.path_to_juicer_tools, c.juicer_tools_mem);
   std::filesystem::create_directories(c.output_base_name);
@@ -73,7 +70,8 @@ void eval_subcmd(const modle::tools::config& c) {
             fmt::format("{}/{}_pearson_linear_r.bw", c.output_base_name, header.chr_name);
         bigwig::write_range(header.chr_name, header.end, pearson.first, header.start,
                             header.bin_size, header.bin_size, out_path_pearson);
-        out_path_pearson = fmt::format("{}/{}_pearson_linear_pv.bw", c.output_base_name, header.chr_name);
+        out_path_pearson =
+            fmt::format("{}/{}_pearson_linear_pv.bw", c.output_base_name, header.chr_name);
         bigwig::write_range(header.chr_name, header.end, pearson.second, header.start,
                             header.bin_size, header.bin_size, out_path_pearson);
 
@@ -82,10 +80,12 @@ void eval_subcmd(const modle::tools::config& c) {
                                              Transformation::Cross);
         fmt::print(stderr, "Pearson \"Cross\" computed in {}!\n",
                    absl::FormatDuration(absl::Now() - t0));
-        out_path_pearson = fmt::format("{}/{}_pearson_cross_r.bw", c.output_base_name, header.chr_name);
+        out_path_pearson =
+            fmt::format("{}/{}_pearson_cross_r.bw", c.output_base_name, header.chr_name);
         bigwig::write_range(header.chr_name, header.end, pearson.first, header.start,
                             header.bin_size, header.bin_size, out_path_pearson);
-        out_path_pearson = fmt::format("{}/{}_pearson_cross_pv.bw", c.output_base_name, header.chr_name);
+        out_path_pearson =
+            fmt::format("{}/{}_pearson_cross_pv.bw", c.output_base_name, header.chr_name);
         bigwig::write_range(header.chr_name, header.end, pearson.second, header.start,
                             header.bin_size, header.bin_size, out_path_pearson);
       }
@@ -99,7 +99,8 @@ void eval_subcmd(const modle::tools::config& c) {
             fmt::format("{}/{}_spearman_linear_r.bw", c.output_base_name, header.chr_name);
         bigwig::write_range(header.chr_name, header.end, pearson.first, header.start,
                             header.bin_size, header.bin_size, out_path_pearson);
-        out_path_pearson = fmt::format("{}/{}_spearman_linear_pv.bw", c.output_base_name, header.chr_name);
+        out_path_pearson =
+            fmt::format("{}/{}_spearman_linear_pv.bw", c.output_base_name, header.chr_name);
         bigwig::write_range(header.chr_name, header.end, pearson.second, header.start,
                             header.bin_size, header.bin_size, out_path_pearson);
 
@@ -108,10 +109,12 @@ void eval_subcmd(const modle::tools::config& c) {
                                               Transformation::Cross);
         fmt::print(stderr, "Spearman \"Cross\" computed in {}!\n",
                    absl::FormatDuration(absl::Now() - t0));
-        out_path_pearson = fmt::format("{}/{}_spearman_cross_r.bw", c.output_base_name, header.chr_name);
+        out_path_pearson =
+            fmt::format("{}/{}_spearman_cross_r.bw", c.output_base_name, header.chr_name);
         bigwig::write_range(header.chr_name, header.end, pearson.first, header.start,
                             header.bin_size, header.bin_size, out_path_pearson);
-        out_path_pearson = fmt::format("{}/{}_spearman_cross_pv.bw", c.output_base_name, header.chr_name);
+        out_path_pearson =
+            fmt::format("{}/{}_spearman_cross_pv.bw", c.output_base_name, header.chr_name);
         bigwig::write_range(header.chr_name, header.end, pearson.second, header.start,
                             header.bin_size, header.bin_size, out_path_pearson);
       }

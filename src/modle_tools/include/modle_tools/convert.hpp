@@ -11,6 +11,8 @@ struct config;  // Pre-declaration
 
 std::normal_distribution<double> init_noise_generator(uint64_t noise_range, double noise_stddev);
 
+void convert_to_cooler(const modle::tools::config& c);
+
 void convert_to_hic(const modle::tools::config& c, std::string_view argv);
 
 void convert_to_tsv(boost::asio::thread_pool& tpool, const modle::tools::config& c);

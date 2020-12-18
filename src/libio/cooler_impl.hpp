@@ -267,8 +267,8 @@ hsize_t write_bins(H5::H5File &f, int32_t chrom, int64_t length, int64_t bin_siz
   return file_offset;
 }
 
-void write_contacts(H5::H5File &f, const std::vector<std::string_view> &path_to_cmatrices,
-                    H5::EnumType &ENUM) {
+int64_t write_contacts(H5::H5File &f, const std::vector<std::string_view> &path_to_cmatrices,
+                       H5::EnumType &ENUM) {
   constexpr const std::size_t BUFF_SIZE = 1024 * 1024 / sizeof(int64_t);  // 1 MB
   std::vector<int64_t> bin_pos_buff;
   std::vector<int32_t> bin_chrom_buff;
@@ -304,7 +304,7 @@ void write_contacts(H5::H5File &f, const std::vector<std::string_view> &path_to_
     pixel_count_buff.clear();
   };
 
-  int64_t n = 0;
+  int64_t nnz = 0;
   int64_t offset = 0;
   int32_t chr_idx{};
   int64_t nbins = 0;
@@ -321,7 +321,7 @@ void write_contacts(H5::H5File &f, const std::vector<std::string_view> &path_to_
     nbins = write_bins(f, chr_idx, header.end, bs, bin_chrom_buff, bin_pos_buff, nbins);  // NOLINT
 
     for (auto i = 0UL; i < header.start / bs; ++i) {
-      idx_bin1_offset_buff.push_back(n);
+      idx_bin1_offset_buff.push_back(nnz);
       if (idx_bin1_offset_buff.size() == BUFF_SIZE) {
         idx_bin1_offset_h5df_offset = write_vect_of_int(
             idx_bin1_offset_buff, f, "indexes/bin1_offset", idx_bin1_offset_h5df_offset);
@@ -330,7 +330,7 @@ void write_contacts(H5::H5File &f, const std::vector<std::string_view> &path_to_
     }
 
     for (auto i = 0UL; i < cmatrix.n_cols(); ++i) {
-      idx_bin1_offset_buff.push_back(n);
+      idx_bin1_offset_buff.push_back(nnz);
       for (auto j = i; j < i + cmatrix.n_rows() && j < cmatrix.n_cols(); ++j) {
         if (const auto m = cmatrix.get(i, j); m != 0) {
           pixel_b1_idx_buff.push_back(offset + static_cast<int64_t>(i));
@@ -343,7 +343,7 @@ void write_contacts(H5::H5File &f, const std::vector<std::string_view> &path_to_
           }
 #endif
           pixel_count_buff.push_back(m);
-          ++n;
+          ++nnz;
           if (pixel_b1_idx_buff.size() == BUFF_SIZE) {
             write_pixels_to_file();
           }
@@ -364,7 +364,7 @@ void write_contacts(H5::H5File &f, const std::vector<std::string_view> &path_to_
   }
 
   idx_chrom_offset_buff.push_back(nbins);
-  idx_bin1_offset_buff.push_back(n);
+  idx_bin1_offset_buff.push_back(nnz);
 
   write_vect_of_int(idx_chrom_offset_buff, f, "indexes/chrom_offset");
   write_vect_of_int(idx_bin1_offset_buff, f, "indexes/bin1_offset", idx_bin1_offset_h5df_offset);
@@ -373,7 +373,9 @@ void write_contacts(H5::H5File &f, const std::vector<std::string_view> &path_to_
   auto att = f.createAttribute("nbins", H5::PredType::NATIVE_INT, att_space);
   att.write(H5::PredType::NATIVE_INT, &nbins);
   att = f.createAttribute("nnz", H5::PredType::NATIVE_INT, att_space);
-  att.write(H5::PredType::NATIVE_INT, &n);
+  att.write(H5::PredType::NATIVE_INT, &nnz);
+
+  return nnz;
 }
 
 void write_metadata(H5::H5File &f, int32_t bin_size, std::string_view assembly_name) {
@@ -417,8 +419,17 @@ void write_metadata(H5::H5File &f, int32_t bin_size, std::string_view assembly_n
   att.write(STR_TYPE, str_buff);
 }
 
-void modle_to_cooler(const std::vector<std::string_view> &path_to_cmatrices,
-                     std::string_view path_to_output) {
+int64_t modle_to_cooler(const std::vector<std::string> &path_to_cmatrices,
+                        std::string_view path_to_output) {
+  std::vector<std::string_view> v(path_to_cmatrices.size());
+  std::transform(path_to_cmatrices.begin(), path_to_cmatrices.end(), v.begin(),
+                 [](const auto &s) { return s.c_str(); });
+
+  return modle_to_cooler(v, path_to_output);
+}
+
+int64_t modle_to_cooler(const std::vector<std::string_view> &path_to_cmatrices,
+                        std::string_view path_to_output) {
   using CMatrix = ContactMatrix<int64_t>;
   std::vector<CMatrix::Header> headers;
   headers.reserve(path_to_cmatrices.size());
@@ -427,10 +438,24 @@ void modle_to_cooler(const std::vector<std::string_view> &path_to_cmatrices,
                  [](auto path_to_cmatrix) { return CMatrix::parse_header(path_to_cmatrix); });
 
   auto cooler_file = init_file(path_to_output, true);
-  write_metadata(cooler_file,
-                 headers[0].bin_size);  // TODO: figure out a cleaner way to provide bin sizes
+
+  if (headers.size() > 1) {
+    for (auto i = 1UL; i < headers.size(); ++i) {
+      if (headers[i - 1].bin_size != headers[i].bin_size) {
+        throw std::runtime_error(fmt::format(
+            FMT_STRING(
+                "Detected contact matrices with different bin size. This use case is currently not "
+                "supported. Files that raised the error:\n - '{}' ({} bp)\n - '{}' ({} bp)"),
+            path_to_cmatrices[i - 1], headers[i - 1].bin_size, path_to_cmatrices[i],
+            headers[i].bin_size));
+      }
+    }
+  }
+
+  // TODO: figure out a cleaner way to pass bin sizes
+  write_metadata(cooler_file, headers[0].bin_size);
   auto CHR_ENUM = write_chroms(cooler_file, headers);
 
-  write_contacts(cooler_file, path_to_cmatrices, CHR_ENUM);
+  return write_contacts(cooler_file, path_to_cmatrices, CHR_ENUM);
 }
 }  // namespace modle::cooler

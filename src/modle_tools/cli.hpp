@@ -37,7 +37,7 @@ class Cli {
     this->_cli.name(this->_exec_name);
     this->_cli.description("Modle's helper tool. This tool allows to post-process the contact matrix produced by Modle in various ways.");
     this->_cli.require_subcommand(1);
-    this->_cli.add_option("-i,--input", this->_config.path_to_input_matrices, "Path to Modle's contact matrix")->check(CLI::ExistingFile)->take_all()->required();
+    this->_cli.add_option("-i,--input", this->_config.path_to_input_matrices, "Path to one or more contact matrices in ModLE's format. Multiple matrices can be passed by specyfing -i multiple times (e.g. modle convert -i m1.tsv.bz2 -i m2.tsv.bz2 ...), or bu providing a comma-separated list of paths (e.g. modle convert -i m1.tsv.bz2,m2.tsv.bz2...).")->delimiter(',')->check(CLI::ExistingFile)->take_all()->required();
     this->_cli.add_option("-o,--output-base-name", this->_config.output_base_name, "Base file name (including directories) to use for output.")->required();
     this->_cli.add_option("--tmp-dir", this->_config.tmp_dir, "Path where to store temporary files.")->capture_default_str();
     this->_cli.add_flag("--keep-temporary-files", this->_config.keep_tmp_files, "Do not delete temporary files.")->capture_default_str();
@@ -49,9 +49,7 @@ class Cli {
     auto *eval_sc = this->_cli.add_subcommand("evaluate", "Compare Model's output with other contact matrices using various correlation tests.")->fallthrough();
     eval_sc->alias("eval");
 
-    convert_sc->add_flag("--hic,!--no-hic", this->_config.convert_to_hic, "Convert contact matrix to .hic format (requires Juicer Tools).")->capture_default_str();
-    convert_sc->add_flag("--tsv,!--no-tsv", this->_config.convert_to_tsv, "Convert contact matrix to TSV format.")->capture_default_str();
-    convert_sc->add_flag("--compress", this->_config.compress, "Compress output using bzip2.")->capture_default_str();
+    convert_sc->add_flag("--output-format", this->_config.output_format, "Output file format. Accepted formats are: COOLER, HIC and TSV.")->capture_default_str();
     convert_sc->add_flag("--add-noise,--make-realistic", this->_config.add_noise, "Add noise to make the contact matrix more similar to the matrices produced by Hi-C experiments.")->capture_default_str();
     convert_sc->add_option("--noise-stdev", this->_config.noise_stdev, "Standard deviation to use when sampling noise to add to contact matrices.")->check(CLI::PositiveNumber)->needs(convert_sc->get_option("--add-noise"));
     convert_sc->add_option("--noise-range", this->_config.noise_range, "Range to use when adding noise to contact matrices. By default 99.9% of the sampled numbers will fall within this range.")->check(CLI::PositiveNumber)->needs(convert_sc->get_option("--add-noise"))->excludes(convert_sc->get_option("--noise-stdev"))->capture_default_str();
@@ -98,16 +96,16 @@ class Cli {
     if (!c.force) {
       std::vector<std::string> collisions;
       if (this->_cli.get_subcommand("convert")->parsed()) {
-        if (c.convert_to_hic) {
+        if (this->_config.output_format == config::output_format::hic) {
           if (auto file =
                   fmt::format("{}{}.hic", c.add_noise ? "_w_noise" : "", c.output_base_name);
               std::filesystem::exists(file)) {
             collisions.push_back(file);
           }
         }
-        if (c.convert_to_tsv) {
-          if (auto file = fmt::format("{}{}_symmetric.tsv{}", c.output_base_name,
-                                      c.add_noise ? "_w_noise" : "", c.compress ? ".bz2" : "");
+        if (this->_config.output_format == config::output_format::tsv) {
+          if (auto file = fmt::format("{}{}_symmetric.tsv.bz2", c.output_base_name,
+                                      c.add_noise ? "_w_noise" : "");
               std::filesystem::exists(file)) {
             collisions.push_back(file);
           }
@@ -132,7 +130,7 @@ class Cli {
       }
     }
 
-    if (this->_cli.get_subcommand("convert")->parsed()) {
+    if (!c.chr_sizes.empty()) {
       if (std::filesystem::exists(c.chr_sizes)) {
         if (std::filesystem::is_directory(c.chr_sizes)) {
           absl::StrAppendFormat(
@@ -156,7 +154,7 @@ class Cli {
                             "--sliding-window-size=%lu --sliding-window-overlap=%lu.",
                             c.sliding_window_size, c.sliding_window_overlap);
     }
-    if (this->_config.convert_to_hic ||
+    if (this->_config.output_format == config::output_format::hic ||
         absl::StartsWith("http", this->_config.path_to_reference_matrix) ||
         absl::EndsWithIgnoreCase(c.path_to_reference_matrix, ".hic")) {
       if (c.path_to_juicer_tools.empty()) {
@@ -167,10 +165,10 @@ class Cli {
           }
         }
       }
-      if (c.path_to_juicer_tools.empty()) {
+      if (c.output_format == config::output_format::hic && c.path_to_juicer_tools.empty()) {
         absl::StrAppendFormat(
             &errors,
-            "--path-to-juicer-tools was not specified and we were unable to find Juicer "
+            "--path-to-juicer-tools was not specified and ModLE tools was unable to find Juicer "
             "tools in your path");
       }
     }
