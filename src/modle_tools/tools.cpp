@@ -14,10 +14,9 @@
 #include "modle/bigwig.hpp"           // for write_range
 #include "modle/contacts.hpp"         // for ContactMatrix<>::Header, ContactMatrix
 #include "modle/juicer_contacts.hpp"  // for run_juicer_dump_and_parse_contacts
-#include "modle/suppress_compiler_warnings.hpp"
-#include "modle_tools/config.hpp"   // for config
-#include "modle_tools/convert.hpp"  // for convert_to_hic, convert_to_tsv
-#include "modle_tools/eval.hpp"     // for Transformation, Cross, Linear
+#include "modle_tools/config.hpp"     // for config
+#include "modle_tools/convert.hpp"    // for convert_to_hic, convert_to_tsv
+#include "modle_tools/eval.hpp"       // for Transformation, Cross, Linear
 
 namespace modle::tools {
 
@@ -25,9 +24,6 @@ void convert_subcmd(const modle::tools::config& c) {
   auto argv = modle::utils::init_juicer_tools_argv(c.path_to_juicer_tools, c.juicer_tools_mem);
   std::filesystem::create_directories(c.output_base_name);
   switch (c.output_format) {
-    case config::output_format::cooler:
-      modle::tools::convert_to_cooler(c);
-      break;
     case config::output_format::hic:
       modle::tools::convert_to_hic(c, argv);
       break;

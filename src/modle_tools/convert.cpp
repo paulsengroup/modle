@@ -20,7 +20,6 @@
 
 #include "modle/4dn_dcic.hpp"
 #include "modle/contacts.hpp"  // for ContactMatrix<>::Header, ContactMatrix
-#include "modle/cooler.hpp"
 #include "modle_tools/config.hpp"  // for config
 #include "modle_tools/utils.hpp"   // for generate_random_path_name
 
@@ -30,26 +29,6 @@ std::normal_distribution<double> init_noise_generator(uint64_t noise_range, doub
   constexpr double stdev_99_9_ci = 6.0;  // 99.9% CI
   return std::normal_distribution<double>(
       0, noise_stddev == 0 ? static_cast<double>(noise_range) / stdev_99_9_ci : noise_stddev);
-}
-
-void convert_to_cooler(const modle::tools::config& c) {
-  assert(c.convert_to_cooler);  // NOLINT
-  try {
-    const auto t0 = absl::Now();
-    const std::string path_to_output = absl::StrCat(c.output_base_name, ".cool");
-    if (!c.force && std::filesystem::exists(path_to_output)) {
-      throw std::runtime_error(fmt::format(
-          "File '{}' already exists. Pass --force to overwrite existing file(s)", path_to_output));
-    }
-    const auto ncontacts = cooler::modle_to_cooler(c.path_to_input_matrices, path_to_output);
-
-    fmt::print(stderr,
-               FMT_STRING("DONE! Written {} contacts to Cooler file '{}'. Conversion took {}!\n"),
-               ncontacts, path_to_output, absl::FormatDuration(absl::Now() - t0));
-  } catch (const std::runtime_error& err) {
-    throw std::runtime_error(
-        fmt::format("An error occurred while converting files to Cooler format: {}", err.what()));
-  }
 }
 
 void convert_to_hic(const modle::tools::config& c, std::string_view template_argv) {

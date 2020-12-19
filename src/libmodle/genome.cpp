@@ -143,8 +143,9 @@ void Genome::write_contacts_to_file(std::string_view output_file, bool force_ove
   int32_t chr_idx{};
   int64_t nbins = 0;
 
-  cooler::write_metadata(
-      f, this->_chromosomes.front().get_bin_size());  // TODO find a cleaner way to do this
+  // TODO find a cleaner way to do this
+  cooler::write_metadata(f, static_cast<int32_t>(this->_chromosomes.front().get_bin_size()));
+
   const auto max_chrom_name_length =
       std::max_element(
           this->_chromosomes.begin(), this->_chromosomes.end(),
@@ -156,12 +157,16 @@ void Genome::write_contacts_to_file(std::string_view output_file, bool force_ove
         cooler::write_str(chr.name, f, "chroms/name", max_chrom_name_length, chr_name_foffset);
     chr_length_foffset =
         cooler::write_int(chr.total_length, f, "chroms/length", chr_length_foffset);
+    DISABLE_WARNING_PUSH
+    DISABLE_WARNING_CONVERSION
+    DISABLE_WARNING_SIGN_CONVERSION
     fmt::print(stderr, FMT_STRING("Processing '{}' ({:.2f} Mbp)..."), chr.name,
                chr.real_length() / 1.0e6);  // NOLINT
     const auto t1 = absl::Now();
     idx_chrom_offset_buff.push_back(nbins);
     nbins = cooler::write_bins(f, chr_idx++, chr.real_length(), chr.get_bin_size(),  // NOLINT
                                bin_chrom_buff, bin_pos_buff, nbins);
+    DISABLE_WARNING_POP
 
     for (auto i = 0UL; i < chr.start / chr.get_bin_size(); ++i) {
       idx_bin1_offset_buff.push_back(nnz);
@@ -172,7 +177,7 @@ void Genome::write_contacts_to_file(std::string_view output_file, bool force_ove
       }
     }
 
-    offset += chr.start / chr.get_bin_size();
+    offset += static_cast<int64_t>(chr.start / chr.get_bin_size());
     for (auto i = 0UL; i < chr.contacts.n_cols(); ++i) {
       idx_bin1_offset_buff.push_back(nnz);
       for (auto j = i; j < i + chr.contacts.n_rows() && j < chr.contacts.n_cols(); ++j) {
@@ -504,9 +509,7 @@ std::pair<double, double> Genome::run_burnin(double prob_of_rebinding,
   return std::make_pair(avg_burnin_rounds, burnin_rounds_stdev);
 }
 
-void Genome::simulate_extrusion(uint32_t iterations, double target_contact_density,
-                                std::string_view output_dir, bool write_contacts_to_file,
-                                bool force_overwrite) {
+void Genome::simulate_extrusion(uint32_t iterations, double target_contact_density) {
   // If the simulation is set to stop when a target contact density is reached, set the number of
   // iterations to a very large number (2^32)
   if (target_contact_density != 0.0) {
@@ -692,14 +695,9 @@ void Genome::simulate_extrusion(uint32_t iterations, double target_contact_densi
   progress_tracker.join();
 }
 
-void Genome::simulate_extrusion() { this->simulate_extrusion(1, 0, "", false, true); }
-void Genome::simulate_extrusion(uint32_t iterations, std::string_view output_dir,
-                                bool force_overwrite, bool write_contacts_to_file) {
-  this->simulate_extrusion(iterations, 0, output_dir, write_contacts_to_file, force_overwrite);
-}
-void Genome::simulate_extrusion(double target_contact_density, std::string_view output_dir,
-                                bool force_overwrite, bool write_contacts_to_file) {
-  this->simulate_extrusion(0, target_contact_density, output_dir, write_contacts_to_file,
-                           force_overwrite);
+void Genome::simulate_extrusion() { this->simulate_extrusion(1, 0); }
+void Genome::simulate_extrusion(uint32_t iterations) { this->simulate_extrusion(iterations, 0); }
+void Genome::simulate_extrusion(double target_contact_density) {
+  this->simulate_extrusion(0, target_contact_density);
 }
 }  // namespace modle

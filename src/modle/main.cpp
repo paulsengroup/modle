@@ -91,9 +91,9 @@ void run_simulation(const modle::config& c) {
   t0 = absl::Now();
   fmt::print(stderr, "About to start simulating loop extrusion...\n");
   if (c.target_contact_density != 0) {
-    genome.simulate_extrusion(c.target_contact_density, c.output_file, c.force, !c.skip_output);
+    genome.simulate_extrusion(c.target_contact_density);
   } else {
-    genome.simulate_extrusion(c.simulation_iterations, c.output_file, c.force, !c.skip_output);
+    genome.simulate_extrusion(c.simulation_iterations);
   }
   fmt::print(stderr, FMT_STRING("Simulation took {}.\n"), absl::FormatDuration(absl::Now() - t0));
 

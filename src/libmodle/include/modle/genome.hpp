@@ -97,10 +97,8 @@ class Genome {
    * @param iterations Number of loop extrusion events to simulate
    */
   void simulate_extrusion();
-  void simulate_extrusion(uint32_t iterations, std::string_view output_dir, bool force_overwrite,
-                          bool write_contacts_to_file = true);
-  void simulate_extrusion(double target_contact_density, std::string_view output_dir,
-                          bool force_overwrite, bool write_contacts_to_file = true);
+  void simulate_extrusion(uint32_t iterations);
+  void simulate_extrusion(double target_contact_density);
 
  private:
   uint64_t _seed;
@@ -119,9 +117,7 @@ class Genome {
   bool _randomize_contact_sampling;
   uint32_t _nthreads;
 
-  void simulate_extrusion(uint32_t iterations, double target_contact_density,
-                          std::string_view output_dir, bool write_contacts_to_file,
-                          bool force_overwrite);
+  void simulate_extrusion(uint32_t iterations, double target_contact_density);
 
   // Private initializers
   [[nodiscard]] std::vector<Chromosome> init_chromosomes_from_file(uint32_t diagonal_width) const;

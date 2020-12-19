@@ -15,47 +15,21 @@ ExternalProject_Add(
   # PATCH_COMMAND ${SED_EXE} -i "s/echo \"YES\"\)$/echo \"NO\")/" "/Makefile" BUILD_IN_SOURCE ON BUILD_COMMAND
   # ${MAKE_EXE} lib-static INSTALL_COMMAND "")
 )
-#[[
-ExternalProject_Add(
-  straw
-  GIT_REPOSITORY https://github.com/robomics/straw.git
-  GIT_TAG 0431837fafd7441f0f5423aaa5f1d0cad7a5f8f5
-  CONFIGURE_COMMAND cp "${CMAKE_CURRENT_SOURCE_DIR}/CMakeLists_straw.txt" "<SOURCE_DIR>/CMakeLists.txt"
-  COMMAND ${CMAKE_COMMAND} <SOURCE_DIR> -Wno-dev
-  BUILD_BYPRODUCTS ${BINARY_DIR}/libstraw.so ${BINARY_DIR}/libstraw.a
-  # BUILD_COMMAND ${CMAKE_COMMAND} <SOURCE_DIR> -Wno-dev
-  INSTALL_COMMAND ""
-  # PATCH_COMMAND ${SED_EXE} -i "s/echo \"YES\"\)$/echo \"NO\")/" "/Makefile" BUILD_IN_SOURCE ON BUILD_COMMAND
-  # ${MAKE_EXE} lib-static INSTALL_COMMAND "")
-)
-]]
 
 ExternalProject_Get_Property(libBigWig BINARY_DIR)
 set(LIB_BIGWIG_ROOT ${BINARY_DIR})
 unset(BINARY_DIR)
 
-#[[
-ExternalProject_Get_Property(straw BINARY_DIR)
-set(STRAW_ROOT ${BINARY_DIR})
-unset(BINARY_DIR)
-]]
-
 if(BUILD_SHARED_LIBS) # Generator expr do not work very well here
   add_library(libstraw SHARED IMPORTED)
   set_target_properties(libBigWig_lib PROPERTIES IMPORTED_LOCATION ${STRAW_ROOT}/libstraw.so)
-  # add_library(libstraw SHARED IMPORTED)
-  # set_target_properties(libstraw PROPERTIES IMPORTED_LOCATION ${STRAW_ROOT}/libstraw.so)
 else()
   add_library(libBigWig_lib STATIC IMPORTED)
   set_target_properties(libBigWig_lib PROPERTIES IMPORTED_LOCATION ${LIB_BIGWIG_ROOT}/libBigWig.a)
-  # add_library(libstraw STATIC IMPORTED)
-  # set_target_properties(libstraw PROPERTIES IMPORTED_LOCATION ${STRAW_ROOT}/libstraw.a)
 endif()
 
 add_dependencies(libBigWig_lib libBigWig)
-#add_dependencies(libstraw straw)
 target_include_directories(libBigWig_lib INTERFACE ${LIB_BIGWIG_ROOT}/../)
-#target_include_directories(libstraw INTERFACE ${STRAW_ROOT}/../)
 
 add_library(libio)
 add_library(Modle::io ALIAS libio)
@@ -64,6 +38,7 @@ target_sources(
   PRIVATE 4dn_dcic.cpp
           bed.cpp
           chr_sizes.cpp
+          cooler.cpp
           juicer_contacts.cpp
           bigwig.cpp)
 add_dependencies(libio libBigWig_lib) # libstraw)

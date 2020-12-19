@@ -49,7 +49,7 @@ class Cli {
     auto *eval_sc = this->_cli.add_subcommand("evaluate", "Compare Model's output with other contact matrices using various correlation tests.")->fallthrough();
     eval_sc->alias("eval");
 
-    convert_sc->add_flag("--output-format", this->_config.output_format, "Output file format. Accepted formats are: COOLER, HIC and TSV.")->capture_default_str();
+    convert_sc->add_flag("--output-format", this->_config.output_format, "Output file format. Accepted formats are: HIC and TSV.")->capture_default_str();
     convert_sc->add_flag("--add-noise,--make-realistic", this->_config.add_noise, "Add noise to make the contact matrix more similar to the matrices produced by Hi-C experiments.")->capture_default_str();
     convert_sc->add_option("--noise-stdev", this->_config.noise_stdev, "Standard deviation to use when sampling noise to add to contact matrices.")->check(CLI::PositiveNumber)->needs(convert_sc->get_option("--add-noise"));
     convert_sc->add_option("--noise-range", this->_config.noise_range, "Range to use when adding noise to contact matrices. By default 99.9% of the sampled numbers will fall within this range.")->check(CLI::PositiveNumber)->needs(convert_sc->get_option("--add-noise"))->excludes(convert_sc->get_option("--noise-stdev"))->capture_default_str();

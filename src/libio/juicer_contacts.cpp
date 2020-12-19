@@ -174,7 +174,7 @@ ContactMatrix<uint32_t> run_juicer_dump_and_parse_contacts(
                                        boost::process::std_err > juicer_tools_stderr, ios);
     uint64_t records_parsed = 0;
     auto juicer_stdout_parser = std::thread([&] {
-      auto t1 = absl::Now();
+      // auto t1 = absl::Now();
       std::vector<std::string_view> toks;
 
       uint64_t i{};

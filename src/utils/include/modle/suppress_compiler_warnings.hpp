@@ -24,6 +24,7 @@
   #define DISABLE_WARNING_ARITH_CONVERSION   DISABLE_WARNING("-Warith-conversion")
   #define DISABLE_WARNING_DOUBLE_PROMOTION   DISABLE_WARNING("-Wdouble-promotion")
   #define DISABLE_WARNING_UNUSED_FUNCTION    DISABLE_WARNING("-Wunused-function")
+  #define DISABLE_WARNING_C_VLA              DISABLE_WARNING("-Wvla")
 
 #else
     #define DISABLE_WARNING_PUSH

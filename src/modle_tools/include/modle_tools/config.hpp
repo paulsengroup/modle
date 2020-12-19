@@ -9,22 +9,11 @@
 namespace modle::tools {
 
 struct config {
-  enum output_format {
-    TSV = 0,
-    Tsv = 0,
-    tsv = 0,
-    HIC = 1,
-    Hic = 1,
-    HiC = 1,
-    hic = 1,
-    COOLER = 2,
-    Cooler = 2,
-    cooler = 2
-  };
+  enum output_format { TSV = 0, Tsv = 0, tsv = 0, HIC = 1, Hic = 1, HiC = 1, hic = 1 };
   std::vector<std::string> path_to_input_matrices;
   std::string output_base_name;
   std::string chr_sizes;
-  output_format output_format{COOLER};
+  output_format output_format{HIC};
   bool add_noise{false};
   bool compute_spearman{true};
   bool compute_pearson{true};
