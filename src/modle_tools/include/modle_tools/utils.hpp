@@ -86,9 +86,8 @@ inline std::string generate_random_path(std::string_view base_name = "",
   return v2.size() > v1.size();
 }
 
-
 [[nodiscard]] inline bool juicer_tools_version_is_greater_or_equal(const std::vector<uint8_t>& v1,
-                                                          const std::vector<uint8_t>& v2) {
+                                                                   const std::vector<uint8_t>& v2) {
   for (auto i = 0UL; i < std::min(v1.size(), v2.size()); ++i) {
     if (v1[i] >= v2[i]) {
       return true;

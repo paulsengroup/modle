@@ -34,7 +34,7 @@ class Parser {
  public:
   explicit Parser(std::string path_to_chr_sizes);
   explicit Parser(std::string_view path_to_chr_sizes);
-  std::vector<ChrSize> parse(char sep = '\t');
+  std::vector<ChrSize> parse_all(char sep = '\t');
 
  private:
   std::string _path;

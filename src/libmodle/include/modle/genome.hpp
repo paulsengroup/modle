@@ -43,7 +43,7 @@ class Genome {
   [[nodiscard]] std::vector<double> get_chromosome_lef_affinities() const;
   [[nodiscard]] uint64_t get_n_of_free_lefs() const;
   [[nodiscard]] uint64_t get_n_of_busy_lefs() const;
-  void write_contacts_to_file(std::string_view output_dir, bool force_overwrite);
+  void write_contacts_to_file(std::string_view output_file, bool force_overwrite);
   void write_extrusion_barriers_to_file(std::string_view output_dir, bool force_overwrite) const;
 
   /** Randomly generate and bind \p n_barriers ExtrusionBarrier%s
@@ -52,7 +52,7 @@ class Genome {
    * Chromosome%s lengths as weight.
    *
    * After selecting a chromosome the binding position for an ExtrusionBarrier is randomly drawn
-   * from an uniform distribution [0, Chromosome::length).
+   * from an uniform distribution [0, Chromosome::simulated_length).
    *
    * The direction where the ExtrusionBarrier exerts a strong block is randomly drawn using an
    * unbiased bernoulli trial.
@@ -105,7 +105,8 @@ class Genome {
  private:
   uint64_t _seed;
   // std::mt19937 _rand_eng;
-  std::string _path_to_chr_size_file;
+  std::string _path_to_chrom_sizes_file;
+  std::string _path_to_chr_subranges_file;
   uint32_t _bin_size;
   uint32_t _avg_lef_processivity;  ///< Average loop size if loop extrusion takes place unobstructed
   double _probability_of_barrier_block;

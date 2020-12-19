@@ -167,9 +167,9 @@ uint64_t DNA::Bin::remove_extr_unit_binding(ExtrusionUnit* const unit) {
 DNA::Bin* DNA::get_ptr_to_bin_from_pos(uint64_t pos) {
   // TODO: Enable these checks only when compiling in Debug
   if (pos > this->length()) {
-    throw std::logic_error(
-        fmt::format("DNA::get_ptr_to_bin_from_pos(pos={}): pos > this->length(): {} > {}\n", pos,
-                    pos, this->length()));
+    throw std::logic_error(fmt::format(
+        "DNA::get_ptr_to_bin_from_pos(pos={}): pos > this->simulated_length(): {} > {}\n", pos, pos,
+        this->length()));
   }
   if ((pos / this->get_bin_size()) > this->get_n_bins()) {
     throw std::logic_error(
@@ -311,28 +311,33 @@ Chromosome::Chromosome(std::string chr_name, uint64_t length, uint32_t bin_size,
     : name(std::move(chr_name)),
       start(0),
       end(length),
+      total_length(length),
       dna(length, bin_size),
       contacts(std::min(static_cast<uint64_t>(diagonal_width / bin_size), this->get_n_bins()),
                this->get_n_bins()),
-      _seed(seed + std::hash<std::string>{}(this->name) + std::hash<uint64_t>{}(this->length())) {
+      _seed(seed + std::hash<std::string>{}(this->name) +
+            std::hash<uint64_t>{}(this->simulated_length())) {
   std::seed_seq seeder{this->_seed};
   this->_rand_eng = std::mt19937(seeder);
 }
 
-Chromosome::Chromosome(std::string chr_name, uint64_t chr_start, uint64_t chr_end,
+Chromosome::Chromosome(std::string chr_name, uint64_t chr_start, uint64_t chr_end, uint64_t length,
                        uint32_t bin_size, uint32_t diagonal_width, uint64_t seed)
     : name(std::move(chr_name)),
       start(chr_start),
       end(chr_end),
+      total_length(length),
       dna(chr_end - chr_start, bin_size),
       contacts(std::min(static_cast<uint64_t>(diagonal_width / bin_size), this->get_n_bins()),
                this->get_n_bins()),
-      _seed(seed + std::hash<std::string>{}(this->name) + std::hash<uint64_t>{}(this->length())) {
+      _seed(seed + std::hash<std::string>{}(this->name) +
+            std::hash<uint64_t>{}(this->simulated_length())) {
   std::seed_seq seeder{this->_seed};
   this->_rand_eng = std::mt19937(seeder);
 }
 
-uint64_t Chromosome::length() const { return this->end - this->start; }
+uint64_t Chromosome::simulated_length() const { return this->end - this->start; }
+uint64_t Chromosome::real_length() const { return this->total_length; }
 uint64_t Chromosome::get_start_pos() const { return this->start; }
 uint64_t Chromosome::get_end_pos() const { return this->end; }
 uint64_t Chromosome::get_n_bins() const { return this->dna.get_n_bins(); }

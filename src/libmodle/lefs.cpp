@@ -106,7 +106,7 @@ void ExtrusionUnit::bind(Chromosome* chr, uint32_t pos, DNA::Direction direction
                          std::mt19937& rand_eng) {
   // TODO: We should also set a stall if another extr unit with the proper orientation is bound to
   // this bin
-  assert(pos < chr->length());                                                   // NOLINT
+  assert(pos < chr->simulated_length());                                         // NOLINT
   assert(direction == DNA::Direction::fwd || direction == DNA::Direction::rev);  // NOLINT
   this->_bin = chr->dna.get_ptr_to_bin_from_pos(pos);
   this->_bin->add_extr_unit_binding(this);
@@ -209,7 +209,8 @@ bool Lef::is_bound() const {
 }
 
 void Lef::randomly_bind_to_chr(Chromosome* chr, std::mt19937& rand_eng, bool register_contact) {
-  std::uniform_int_distribution<uint32_t> pos(0, static_cast<uint32_t>(chr->length() - 1));
+  std::uniform_int_distribution<uint32_t> pos(0,
+                                              static_cast<uint32_t>(chr->simulated_length() - 1));
   this->bind_at_pos(chr, pos(rand_eng), rand_eng, register_contact);
 }
 
@@ -228,10 +229,10 @@ void Lef::bind_at_pos(Chromosome* chr, uint32_t pos, std::mt19937& rand_eng,
   // required to deal with the possibility that pos - offset overflows
   const auto pos1 = static_cast<uint32_t>(
       std::clamp(pos_offset < 0 ? static_cast<int64_t>(pos) + pos_offset : pos, 0L,
-                 static_cast<int64_t>(this->_chr->length())));
+                 static_cast<int64_t>(this->_chr->simulated_length())));
   const auto pos2 = static_cast<uint32_t>(
       std::clamp(pos_offset > 0 ? static_cast<int64_t>(pos) + pos_offset : pos, 0L,
-                 static_cast<int64_t>(this->_chr->length())));
+                 static_cast<int64_t>(this->_chr->simulated_length())));
   // We assume that the left unit always travels towards the 5', while the right unit goes to the 3'
   this->_left_unit->bind(this->_chr, pos1, DNA::Direction::rev, rand_eng);
   this->_right_unit->bind(this->_chr, pos2, DNA::Direction::fwd, rand_eng);

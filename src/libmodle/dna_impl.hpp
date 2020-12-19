@@ -21,15 +21,17 @@ DNA::DNA(I1 length, I2 bin_size)
 #ifndef NDEBUG
   if (length >= std::numeric_limits<decltype(this->_length)>::max()) {
     std::runtime_error(fmt::format(
-        FMT_STRING("DNA::DNA(length={}, bin_size={}): Overflow detected: unable to represent {} "
-                   "in the range {}-{}"),
+        FMT_STRING(
+            "DNA::DNA(simulated_length={}, bin_size={}): Overflow detected: unable to represent {} "
+            "in the range {}-{}"),
         length, bin_size, length, std::numeric_limits<decltype(this->_length)>::min(),
         std::numeric_limits<decltype(this->_length)>::max()));
   }
   if (length >= std::numeric_limits<decltype(this->_length)>::max()) {
     std::runtime_error(fmt::format(
-        FMT_STRING("DNA::DNA(length={}, bin_size={}): Overflow detected: unable to represent {} "
-                   "in the range {}-{}"),
+        FMT_STRING(
+            "DNA::DNA(simulated_length={}, bin_size={}): Overflow detected: unable to represent {} "
+            "in the range {}-{}"),
         length, bin_size, bin_size, std::numeric_limits<decltype(this->_bin_size)>::min(),
         std::numeric_limits<decltype(this->_bin_size)>::max()));
   }

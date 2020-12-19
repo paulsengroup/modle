@@ -46,6 +46,59 @@ H5::PredType getH5_type() {
 }
 
 template <typename S>
+hsize_t write_str(const S &str, H5::H5File &f, std::string_view dataset_name,
+                  hsize_t MAX_STR_LENGTH, hsize_t file_offset, hsize_t CHUNK_DIMS,
+                  uint8_t COMPRESSION_LEVEL) {
+  static_assert(std::is_convertible<S, H5std_string>::value,
+                "S should be a type convertible to std::string.");
+
+  const H5std_string d{dataset_name};  // Probably unnecessary
+  constexpr const hsize_t RANK{1};     // i.e. number of dimensions
+  constexpr const hsize_t BUFF_SIZE{1};
+  constexpr const hsize_t MAXDIMS{H5S_UNLIMITED};  // extensible dataset
+  const H5std_string FILL_VAL_STR{'\0'};
+
+  try {
+    auto mem_space{H5::DataSpace(RANK, &BUFF_SIZE, &MAXDIMS)};
+
+    // Create the datatype as follows
+    H5::StrType STD_STR(H5::PredType::C_S1, MAX_STR_LENGTH);
+    STD_STR.setStrpad(H5T_STR_NULLPAD);  // This seems to be the most robust way of terminating
+    // strings. Using NULLPAD sometimes causes some garbage to
+    // appear at end of string
+    STD_STR.setCset(H5T_CSET_ASCII);
+
+    H5::DSetCreatPropList cparms{};
+    cparms.setChunk(RANK, &CHUNK_DIMS);
+    cparms.setFillValue(STD_STR, &FILL_VAL_STR);
+    cparms.setDeflate(COMPRESSION_LEVEL);
+
+    auto dataset =
+        f.nameExists(d) ? f.openDataSet(d) : f.createDataSet(d, STD_STR, mem_space, cparms);
+
+    H5::DataSpace file_space;  // File space
+
+    // This is probably not very efficient, but it should be fine, given that we don't expect to
+    // write that many strings
+    hsize_t file_size{file_offset + 1};
+    dataset.extend(&file_size);
+    file_space = dataset.getSpace();
+    file_space.selectHyperslab(H5S_SELECT_SET, &BUFF_SIZE, &file_offset);
+    dataset.write(str.c_str(), STD_STR, mem_space, file_space);
+
+    return file_size;
+  } catch (const H5::FileIException &e) {
+    throw std::runtime_error(e.getDetailMsg());
+  } catch (const H5::GroupIException &e) {
+    throw std::runtime_error(e.getDetailMsg());
+  } catch (const H5::DataSetIException &e) {
+    throw std::runtime_error(e.getDetailMsg());
+  } catch (const H5::DataSpaceIException &e) {
+    throw std::runtime_error(e.getDetailMsg());
+  }
+}
+
+template <typename S>
 hsize_t write_vect_of_str(std::vector<S> &data, H5::H5File &f, std::string_view dataset_name,
                           hsize_t file_offset, hsize_t CHUNK_DIMS, uint8_t COMPRESSION_LEVEL) {
   static_assert(std::is_convertible<S, H5std_string>::value,
@@ -67,7 +120,7 @@ hsize_t write_vect_of_str(std::vector<S> &data, H5::H5File &f, std::string_view 
         1;
     // Create the datatype as follows
     H5::StrType STD_STR(H5::PredType::C_S1, MAX_STR_LENGTH);
-    STD_STR.setStrpad(H5T_STR_NULLTERM);  // This seems to be the most roboust way of terminating
+    STD_STR.setStrpad(H5T_STR_NULLTERM);  // This seems to be the most robust way of terminating
                                           // strings. Using NULLPAD sometimes causes some garbage to
                                           // appear at end of string
     STD_STR.setCset(H5T_CSET_ASCII);
@@ -127,6 +180,48 @@ hsize_t write_vect_of_enums(std::vector<int32_t> &data, const H5::EnumType &ENUM
     const auto *cbuff = reinterpret_cast<int32_t(*)[BUFF_SIZE]>(data.data());  // NOLINT
     file_space.selectHyperslab(H5S_SELECT_SET, &BUFF_SIZE, &file_offset);
     dataset.write(cbuff, ENUM, mem_space, file_space);
+    return file_size;
+
+  } catch (const H5::FileIException &e) {
+    throw std::runtime_error(e.getDetailMsg());
+  } catch (const H5::GroupIException &e) {
+    throw std::runtime_error(e.getDetailMsg());
+  } catch (const H5::DataSetIException &e) {
+    throw std::runtime_error(e.getDetailMsg());
+  } catch (const H5::DataSpaceIException &e) {
+    throw std::runtime_error(e.getDetailMsg());
+  }
+}
+
+template <typename I>
+hsize_t write_int(I num, H5::H5File &f, std::string_view dataset_name, hsize_t file_offset,
+                  hsize_t CHUNK_DIMS, uint8_t COMPRESSION_LEVEL) {
+  static_assert(std::is_integral<I>::value, "I should be an integer type.");
+
+  const H5std_string d{dataset_name};  // Probably unnecessary
+  constexpr const hsize_t RANK{1};     // i.e. number of dimensions
+  const hsize_t BUFF_SIZE{1};
+  constexpr const hsize_t MAXDIMS{H5S_UNLIMITED};  // extensible dataset
+  constexpr const I FILL_VAL{0};
+
+  try {
+    const auto mem_space{H5::DataSpace(RANK, &BUFF_SIZE, &MAXDIMS)};
+
+    H5::DSetCreatPropList cparms{};
+    cparms.setChunk(RANK, &CHUNK_DIMS);
+    cparms.setFillValue(getH5_type<I>(), &FILL_VAL);
+    cparms.setDeflate(COMPRESSION_LEVEL);
+
+    auto dataset =
+        f.nameExists(d) ? f.openDataSet(d) : f.createDataSet(d, getH5_type<I>(), mem_space, cparms);
+
+    H5::DataSpace file_space;
+
+    hsize_t file_size{file_offset + BUFF_SIZE};
+    dataset.extend(&file_size);
+    file_space = dataset.getSpace();
+    file_space.selectHyperslab(H5S_SELECT_SET, &BUFF_SIZE, &file_offset);
+    dataset.write(&num, getH5_type<I>(), mem_space, file_space);
     return file_size;
 
   } catch (const H5::FileIException &e) {
@@ -205,14 +300,15 @@ H5::EnumType init_enum_from_strs(const std::vector<std::string> &data, int32_t o
 }
 
 H5::EnumType write_chroms(H5::H5File &f,
-                          const typename std::vector<ContactMatrix<int64_t>::Header> &headers) {
+                          const typename std::vector<ContactMatrix<int64_t>::Header> &headers,
+                          std::string_view path_to_chrom_sizes) {
   std::vector<std::string> names(headers.size());
   std::vector<int64_t> lengths(headers.size());
   for (const auto &[i, h] : headers | ranges::views::enumerate) {
     names[i] = std::string{h.chr_name};
     lengths[i] = static_cast<int64_t>(h.end);
   }
-  write_vect_of_int(lengths, f, "chroms/length");
+  write_vect_of_int(lengths, f, "chroms/simulated_length");
   write_vect_of_str(names, f, "chroms/name");
 
   H5::DataSpace att_space(H5S_SCALAR);
@@ -420,7 +516,7 @@ void write_metadata(H5::H5File &f, int32_t bin_size, std::string_view assembly_n
 }
 
 int64_t modle_to_cooler(const std::vector<std::string> &path_to_cmatrices,
-                        std::string_view path_to_output) {
+                        std::string_view path_to_output, std::string_view path_to_chrom_sizes) {
   std::vector<std::string_view> v(path_to_cmatrices.size());
   std::transform(path_to_cmatrices.begin(), path_to_cmatrices.end(), v.begin(),
                  [](const auto &s) { return s.c_str(); });
@@ -429,7 +525,7 @@ int64_t modle_to_cooler(const std::vector<std::string> &path_to_cmatrices,
 }
 
 int64_t modle_to_cooler(const std::vector<std::string_view> &path_to_cmatrices,
-                        std::string_view path_to_output) {
+                        std::string_view path_to_output, std::string_view path_to_chrom_sizes) {
   using CMatrix = ContactMatrix<int64_t>;
   std::vector<CMatrix::Header> headers;
   headers.reserve(path_to_cmatrices.size());
@@ -454,8 +550,13 @@ int64_t modle_to_cooler(const std::vector<std::string_view> &path_to_cmatrices,
 
   // TODO: figure out a cleaner way to pass bin sizes
   write_metadata(cooler_file, headers[0].bin_size);
-  auto CHR_ENUM = write_chroms(cooler_file, headers);
+  auto CHR_ENUM = write_chroms(cooler_file, headers, path_to_chrom_sizes);
 
   return write_contacts(cooler_file, path_to_cmatrices, CHR_ENUM);
 }
+
+template <typename I>
+int64_t modle_to_cooler(const std::vector<modle::ContactMatrix<I> &> &cmatrices,
+                        std::string_view path_to_output, std::string_view path_to_chrom_sizes) {}
+
 }  // namespace modle::cooler

@@ -23,8 +23,8 @@ struct BED;
 }
 
 /// Class used to represent a DNA molecule as a vector Bin%s.
-/** Aside from owning the \p std::vector<Bin>, DNA is also used to keep track of the length and
- * bin size of the DNA molecule.
+/** Aside from owning the \p std::vector<Bin>, DNA is also used to keep track of the
+ * simulated_length and bin size of the DNA molecule.
  */
 class DNA {
  public:
@@ -66,20 +66,21 @@ class DNA {
 
  private:
   std::vector<Bin> _bins;  ///< \p Bin%s belonging to this instance of DNA.
-  uint64_t _length;        ///< DNA molecule length in bp.
+  uint64_t _length;        ///< DNA molecule simulated_length in bp.
   uint32_t _bin_size;      ///< Target bin size in bp.
 
-  /** Initialize the <tt> std::vector<Bin> </tt> given a length and bin size.
+  /** Initialize the <tt> std::vector<Bin> </tt> given a simulated_length and bin size.
    *
-   * When <tt> length > bin_size </tt> the <tt> std::vector<Bin> </tt> will contain a single
-   * DNA::Bin starting at <tt> pos == 0 </tt> and ending at <tt> pos == length </tt>.
+   * When <tt> simulated_length > bin_size </tt> the <tt> std::vector<Bin> </tt> will contain a
+   * single DNA::Bin starting at <tt> pos == 0 </tt> and ending at <tt> pos == simulated_length
+   * </tt>.
    *
-   * When <tt> length % bin_size != 0 </tt> then the last bin in <tt> std::vector<DNA::Bin> </tt>
-   * will be shorter than  <tt> bin_size </tt>.
+   * When <tt> simulated_length % bin_size != 0 </tt> then the last bin in <tt>
+   * std::vector<DNA::Bin> </tt> will be shorter than  <tt> bin_size </tt>.
    *
    * This will introduce a bias towards the last DNA::Bin when randomly selecting DNA::Bin by index.
-   * This bias should be negligible for <tt> length >> bin_size </tt> (which should be the case
-   * under normal circumstances).
+   * This bias should be negligible for <tt> simulated_length >> bin_size </tt> (which should be the
+   * case under normal circumstances).
    * @param length    Length of DNA molecule (bp).
    * @param bin_size  Bin size (bp).
    * @return          A vector of DNA::Bin with where consecutive DNA::Bin are non-overlapping (i.e.
@@ -193,11 +194,12 @@ class DNA {
 struct Chromosome {
   Chromosome(std::string name, uint64_t length, uint32_t bin_size, uint32_t diagonal_width,
              uint64_t seed = 0);
-  Chromosome(std::string name, uint64_t start, uint64_t end, uint32_t bin_size,
-             uint32_t diagonal_width, uint64_t seed = 0);
+  Chromosome(std::string chr_name, uint64_t chr_start, uint64_t chr_end, uint64_t length,
+             uint32_t bin_size, uint32_t diagonal_width, uint64_t seed = 0);
 
   // Getters
-  [[nodiscard]] uint64_t length() const;
+  [[nodiscard]] uint64_t simulated_length() const;
+  [[nodiscard]] uint64_t real_length() const;
   [[nodiscard]] uint64_t get_start_pos() const;
   [[nodiscard]] uint64_t get_end_pos() const;
   [[nodiscard]] uint64_t get_n_bins() const;
@@ -213,6 +215,7 @@ struct Chromosome {
   std::string name;  ///< Sequence name (e.g. chromosome name from a BED file).
   uint64_t start;
   uint64_t end;
+  uint64_t total_length;
   DNA dna;  ///< DNA molecule represented as a sequence of DNA::Bin%s.
   /// Pointers to the ExtrusionBarrier associated to \p Chromosome::dna.
   std::vector<ExtrusionBarrier*> barriers;

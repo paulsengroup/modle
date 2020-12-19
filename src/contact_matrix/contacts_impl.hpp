@@ -114,7 +114,7 @@ template <class I>
 ContactMatrix<I>::ContactMatrix(std::string_view path_to_file,
                                 std::normal_distribution<double> *noise_generator, uint64_t seed,
                                 char sep)
-    : ContactMatrix<I>::ContactMatrix(std::string{path_to_file}, noise_generator, seed, sep){};
+    : ContactMatrix<I>::ContactMatrix(std::string{path_to_file}, noise_generator, seed, sep) {}
 
 // TODO Rewrite this function
 template <class I>

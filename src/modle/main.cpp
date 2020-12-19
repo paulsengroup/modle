@@ -27,9 +27,9 @@ std::vector<std::string> check_if_output_file_exists(const modle::config& c) {
     return fn_collisions;
   }
   modle::chr_sizes::Parser parser(c.path_to_chr_sizes);
-  for (const auto& record : parser.parse()) {
-    const auto f1 = fmt::format("{}/{}.tsv.bz2", c.output_dir, record.name);
-    const auto f2 = fmt::format("{}/{}_raw.tsv.bz2", c.output_dir, record.name);
+  for (const auto& record : parser.parse_all()) {
+    const auto f1 = fmt::format("{}/{}.tsv.bz2", c.output_file, record.name);
+    const auto f2 = fmt::format("{}/{}_raw.tsv.bz2", c.output_file, record.name);
     if (std::filesystem::exists(f1)) {
       fn_collisions.push_back(std::filesystem::weakly_canonical(f1));
     }
@@ -65,7 +65,7 @@ void run_simulation(const modle::config& c) {
   fmt::print(stderr,
              FMT_STRING("Initialization took {}\n"
                         " - # of sequences:       {} ({} ignored)\n"
-                        " - Avg. sequence length: {:.3f} Mbp\n"
+                        " - Avg. sequence simulated_length: {:.3f} Mbp\n"
                         " - Genome N50:           {:.3f} Mbp\n"
                         " - # of LEFs:            {}\n"
                         " - # of extr. barriers   {} ({} ignored)\n\n"),
@@ -91,14 +91,15 @@ void run_simulation(const modle::config& c) {
   t0 = absl::Now();
   fmt::print(stderr, "About to start simulating loop extrusion...\n");
   if (c.target_contact_density != 0) {
-    genome.simulate_extrusion(c.target_contact_density, c.output_dir, c.force, !c.skip_output);
+    genome.simulate_extrusion(c.target_contact_density, c.output_file, c.force, !c.skip_output);
   } else {
-    genome.simulate_extrusion(c.simulation_iterations, c.output_dir, c.force, !c.skip_output);
+    genome.simulate_extrusion(c.simulation_iterations, c.output_file, c.force, !c.skip_output);
   }
   fmt::print(stderr, FMT_STRING("Simulation took {}.\n"), absl::FormatDuration(absl::Now() - t0));
 
   if (!c.skip_output) {  // Mostly useful for profiling
-    std::ofstream cmd_file(fmt::format("{}/settings.log", c.output_dir));
+    genome.write_contacts_to_file(c.output_file, c.force);
+    std::ofstream cmd_file(fmt::format("{}/settings.log", c.output_file));
     fmt::print(cmd_file, FMT_STRING("{}\n{}\n"), c.to_string(),
                absl::StrJoin(c.argv, c.argv + c.argc, " "));
   }
@@ -113,13 +114,38 @@ int main(int argc, char** argv) noexcept {
     auto config = cli.parse_arguments();
     config.print();
 
-    if (const auto files = check_if_output_file_exists(config); !files.empty()) {
-      fmt::print(
-          stderr,
-          "Refusing to run the simulation because some of the output file(s) already exist. Pass "
-          "--force to overwrite.\nCollision detected for the following file(s):\n - {}\n",
-          absl::StrJoin(files.begin(), files.end(), "\n - "));
-      return 1;
+    if (std::filesystem::exists(config.output_file)) {
+      if (!config.force) {
+        if (std::filesystem::is_directory(config.output_file)) {
+          fmt::print(stderr,
+                     FMT_STRING("Refusing to run the simulation because output file '{}' already "
+                                "exist (and is actually a {}directory). {}.\n"),
+                     config.output_file,
+                     std::filesystem::is_empty(config.output_file) ? "" : "non-empty ",
+                     std::filesystem::is_empty(config.output_file)
+                         ? " Pass --force to overwrite"
+                         : "You should specify a different output path, or manually remove the "
+                           "existing directory");
+
+        } else {
+          fmt::print(
+              stderr,
+              FMT_STRING(
+                  "Refusing to run the simulation because output file '{}' already exist. Pass "
+                  "--force to overwrite.\n"),
+              config.output_file);
+        }
+        return 1;
+      }
+      if (std::filesystem::is_directory(config.output_file) &&
+          !std::filesystem::is_empty(config.output_file)) {
+        fmt::print(stderr,
+                   FMT_STRING("Refusing to run the simulation because output file '{}' is a "
+                              "non-empty directory. You should specify a different output path, or "
+                              "manually remove the existing directory.\n"),
+                   config.output_file);
+        return 1;
+      }
     }
 
     modle::run_simulation(config);

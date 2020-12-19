@@ -19,7 +19,7 @@ void Genome::randomly_generate_extrusion_barriers(I n_barriers, uint64_t seed) {
   for (I i = 0UL; i < n_barriers; ++i) {
     // Randomly select a chromosome, barrier binding pos and direction
     auto& chr = this->_chromosomes[chr_idx(rand_eng)];
-    std::uniform_int_distribution<uint64_t> uniform_rng(0, chr.length());
+    std::uniform_int_distribution<uint64_t> uniform_rng(0, chr.simulated_length());
     const auto barrier_position = uniform_rng(rand_eng);
     const auto direction = strand_selector(rand_eng) ? DNA::Direction::rev : DNA::Direction::fwd;
 

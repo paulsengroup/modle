@@ -14,8 +14,9 @@ namespace modle {
 using namespace std::literals::string_view_literals;
 struct config {
   std::string_view path_to_chr_sizes;
+  std::string_view path_to_chr_subranges;
   std::string_view path_to_extr_barriers_bed;
-  std::string_view output_dir;
+  std::string_view output_file;
   bool force{false};
   uint32_t bin_size{1'000};
   uint32_t diagonal_width{3'000'000};
@@ -53,7 +54,7 @@ struct config {
     std::vector<cli_tokens>{
      {"Path to chr. sizes", fmt::format(FMT_STRING("{}"), std::filesystem::weakly_canonical(this->path_to_chr_sizes))},
      {"Path to extr. barriers", fmt::format(FMT_STRING("{}"), std::filesystem::weakly_canonical(this->path_to_extr_barriers_bed))},
-     {"Output directory", fmt::format(FMT_STRING("{}"), std::filesystem::weakly_canonical(this->output_dir))},
+     {"Output directory", fmt::format(FMT_STRING("{}"), std::filesystem::weakly_canonical(this->output_file))},
      {"Skip output", this->skip_output ? "Yes" : "No"},
      {"Force overwrite", this->force ? "Yes" : "No"}}},
     {"General settings"sv,

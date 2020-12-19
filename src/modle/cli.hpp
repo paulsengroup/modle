@@ -33,9 +33,20 @@ class Cli {
             ->check(CLI::ExistingFile)->required();
 
     io->add_option(
-            "-o,--output-dir",
-            this->_config.output_dir,
-            "Path to output directory. It will be created if it doesn't already exist.")
+        "--chromosome-subrange-file",
+        this->_config.path_to_chr_subranges,
+        "Path to BED file with subranges of the chromosomes to simulate.")
+        ->check(CLI::ExistingFile);
+
+    io->add_option(
+            "-o,--output-file",
+            this->_config.output_file,
+            "Path to output file (cooler format).")
+            ->transform([](const std::string& s) {
+              if (absl::EndsWith(s, ".cool")) {
+                return s;
+              }
+              return absl::StrCat(s, ".cool");})
             ->required();
 
     io->add_flag(

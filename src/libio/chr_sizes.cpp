@@ -19,9 +19,10 @@ namespace modle::chr_sizes {
 Parser::Parser(std::string path_to_chr_sizes) : _path(std::move(path_to_chr_sizes)) {}
 Parser::Parser(std::string_view path_to_chr_sizes) : _path(std::string(path_to_chr_sizes)) {}
 
-std::vector<ChrSize> Parser::parse(char sep) {
+std::vector<ChrSize> Parser::parse_all(char sep) {
   std::string buff;
   std::vector<std::string> tokens;
+  std::vector<ChrSize> chr_sizes;
   this->_f = std::ifstream(this->_path);
   for (auto i = 1UL; this->_f.good(); ++i) {
     if (std::getline(this->_f, buff); buff.empty()) {
@@ -42,7 +43,8 @@ std::vector<ChrSize> Parser::parse(char sep) {
       if (this->_chrs.contains(record)) {
         throw std::runtime_error(fmt::format("Found multiple records for chr '{}'", record.name));
       }
-      this->_chrs.emplace(std::move(record));
+      this->_chrs.emplace(record);
+      chr_sizes.emplace_back(std::move(record));
 
     } catch (const std::runtime_error& e) {
       this->_errors.push_back(
@@ -59,7 +61,7 @@ std::vector<ChrSize> Parser::parse(char sep) {
         fmt::format("The following error(s) occurred while parsing file '{}':\n - {}", this->_path,
                     absl::StrJoin(this->_errors, "\n - ")));
   }
-  return {this->_chrs.begin(), this->_chrs.end()};
+  return chr_sizes;
 }
 
 ChrSize::ChrSize(std::vector<std::string>& toks) {
@@ -83,8 +85,9 @@ ChrSize::ChrSize(std::vector<std::string>& toks) {
 
   } catch (const std::invalid_argument& e) {
     if (toks.size() == 2) {
-      throw std::runtime_error(fmt::format("Sequence '{}' has an invalid length of '{}': {}",
-                                           this->name, toks[idx], e.what()));
+      throw std::runtime_error(
+          fmt::format("Sequence '{}' has an invalid simulated_length of '{}': {}", this->name,
+                      toks[idx], e.what()));
     }
     throw std::runtime_error(fmt::format("Sequence '{}' has an invalid {} coord. of '{}': {}",
                                          this->name, idx == 1 ? "start" : "end", toks[idx],
@@ -92,8 +95,9 @@ ChrSize::ChrSize(std::vector<std::string>& toks) {
 
   } catch (const std::out_of_range& e) {
     if (toks.size() == 2) {
-      throw std::runtime_error(fmt::format("Sequence '{}' has an out of bound length of '{}': {}",
-                                           this->name, toks[idx], e.what()));
+      throw std::runtime_error(
+          fmt::format("Sequence '{}' has an out of bound simulated_length of '{}': {}", this->name,
+                      toks[idx], e.what()));
     }
     throw std::runtime_error(fmt::format("Sequence '{}' has an out of bound {} coord. of '{}': {}",
                                          this->name, idx == 1 ? "start" : "end", toks[idx],
