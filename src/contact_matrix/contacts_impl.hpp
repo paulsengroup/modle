@@ -32,7 +32,11 @@ ContactMatrix<I>::ContactMatrix(std::size_t nrows, std::size_t ncols, bool fill_
     std::random_device rand_dev;
     std::mt19937_64 rand_eng{rand_dev()};
     std::uniform_int_distribution<I> dist;
-    std::generate(this->_contacts.begin(), this->_contacts.end(), [&]() { return dist(rand_eng); });
+    for (auto i = 0UL; i < _ncols; ++i) {
+      for (auto j = i; j < i + _nrows && j < _ncols; ++j) {
+        this->set(i, j, dist(rand_eng));
+      }
+    }
   }
 }
 

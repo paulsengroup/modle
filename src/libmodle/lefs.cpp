@@ -106,7 +106,7 @@ void ExtrusionUnit::bind(Chromosome* chr, uint32_t pos, DNA::Direction direction
                          std::mt19937& rand_eng) {
   // TODO: We should also set a stall if another extr unit with the proper orientation is bound to
   // this bin
-  assert(pos < chr->simulated_length());                                         // NOLINT
+  assert(pos < chr->end);                                                        // NOLINT
   assert(direction == DNA::Direction::fwd || direction == DNA::Direction::rev);  // NOLINT
   this->_bin = chr->dna.get_ptr_to_bin_from_pos(pos);
   this->_bin->add_extr_unit_binding(this);

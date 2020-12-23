@@ -19,7 +19,7 @@
 #include <string_view>
 
 #include "modle/4dn_dcic.hpp"
-#include "modle/contacts.hpp"  // for ContactMatrix<>::Header, ContactMatrix
+#include "modle/contacts.hpp"      // for ContactMatrix<>::Header, ContactMatrix
 #include "modle_tools/config.hpp"  // for config
 #include "modle_tools/utils.hpp"   // for generate_random_path_name
 
@@ -32,7 +32,7 @@ std::normal_distribution<double> init_noise_generator(uint64_t noise_range, doub
 }
 
 void convert_to_hic(const modle::tools::config& c, std::string_view template_argv) {
-  assert(c.convert_to_hic);  // NOLINT
+  assert(c.output_format == config::HIC);  // NOLINT
   try {
     const auto tmp_file_name = modle::tools::utils::generate_random_path(
         c.tmp_dir, ".gz");  // Adding .gz at the end is important, otherwise Juicer Tools will crash

@@ -24,8 +24,13 @@
   #define DISABLE_WARNING_ARITH_CONVERSION   DISABLE_WARNING("-Warith-conversion")
   #define DISABLE_WARNING_DOUBLE_PROMOTION   DISABLE_WARNING("-Wdouble-promotion")
   #define DISABLE_WARNING_UNUSED_FUNCTION    DISABLE_WARNING("-Wunused-function")
-  #define DISABLE_WARNING_C_VLA              DISABLE_WARNING("-Wvla")
-
+  #define DISABLE_WARNING_UNUSED_PARAMETER   DISABLE_WARNING("-Wunused-parameter")
+  #define DISABLE_WARNING_SHADOW             DISABLE_WARNING("-Wshadow")
+#if defined(__clang__)
+    #define DISABLE_WARNING_C_VLA            DISABLE_WARNING("-Wvla-extension")
+  #else
+    #define DISABLE_WARNING_C_VLA            DISABLE_WARNING("-Wvla")
+  #endif
 #else
     #define DISABLE_WARNING_PUSH
     #define DISABLE_WARNING_POP

@@ -131,4 +131,10 @@ std::string init_juicer_tools_argv(std::string_view path_to_juicer_tools,
   return argv;
 }
 DISABLE_WARNING_POP
+
+template <class E>
+void throw_with_trace(const E &e) {
+  throw boost::enable_error_info(e) << traced(boost::stacktrace::stacktrace());
+}
+
 }  // namespace modle::utils
