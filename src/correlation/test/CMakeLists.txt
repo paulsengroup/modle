@@ -1,6 +1,6 @@
 find_package(Threads REQUIRED)
 
-add_library(modle_correlation_test STATIC correlation_test.cpp correlation_utils_test.cpp common.hpp)
+add_library(modle_correlation_test STATIC correlation_test.cpp correlation_utils_test.cpp)
 add_library(Modle::correlation_test ALIAS modle_correlation_test)
 target_link_libraries(
   modle_correlation_test

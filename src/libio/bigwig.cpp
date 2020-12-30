@@ -15,9 +15,9 @@
 
 namespace modle::bigwig {
 
-[[nodiscard]] bigWigFile_t* init_bigwig(std::string_view output_path, std::vector<char*>& chr_names,
-                                        std::vector<uint32_t>& chr_sizes, int32_t zoom_levels = 10,
-                                        std::size_t buff_size = 1U << 17U /* 128KiB */) {
+bigWigFile_t* init_bigwig_file(std::string_view output_path, std::vector<char*>& chr_names,
+                               std::vector<uint32_t>& chr_sizes, int32_t zoom_levels,
+                               std::size_t buff_size) {
   bigWigFile_t* bw_fp = nullptr;
   try {
     if (bwInit(buff_size)) {  // NOLINT(readability-implicit-bool-conversion)
@@ -57,59 +57,20 @@ namespace modle::bigwig {
   return bw_fp;
 }
 
-[[nodiscard]] bigWigFile_t* init_bigwig(std::string_view output_path, std::string& chr_name,
-                                        uint64_t chr_size, int32_t zoom_levels = 10,
-                                        std::size_t buff_size = 1U << 17U /* 128KiB */) {
+bigWigFile_t* init_bigwig_file(std::string_view output_path, std::string& chr_name,
+                               uint64_t chr_size, int32_t zoom_levels, std::size_t buff_size) {
   // Create the chromosome lists
   std::vector<char*> chr_names{chr_name.data()};
   std::vector<uint32_t> chr_sizes{static_cast<uint32_t>(chr_size)};
-  return init_bigwig(output_path, chr_names, chr_sizes, zoom_levels, buff_size);
-}
-
-template <typename N>
-uint64_t write_range(
-    absl::flat_hash_map<std::pair<std::string, N>, const std::vector<double>*>& data,
-    uint64_t offset, uint64_t span, uint64_t step, std::string_view output_file) {
-  static_assert(std::is_arithmetic<N>::value, "N should be a numeric type.");
-  std::vector<char*> chr_names(data.size());
-  std::vector<uint32_t> chr_lengths(data.size());
-  bigWigFile_t* bw_fp = nullptr;
-  std::size_t i = 0;
-  for (auto& [chr_data, _] : data) {
-    chr_names[i] =
-        const_cast<char*>(chr_data.first.c_str());  // Figure out how to avoid using const_cast
-    chr_lengths[i++] = static_cast<uint32_t>(chr_data.second);
-  }
-
-  try {
-    bw_fp = init_bigwig(output_file, chr_names, chr_lengths);
-    for (const auto& [chr_data, values] : data) {
-      std::vector<float> fvalues(values->begin(), values->end());
-      if (bwAddIntervalSpanSteps(bw_fp, const_cast<char*>(chr_data.first.c_str()),
-                                 static_cast<uint32_t>(offset), static_cast<uint32_t>(span),
-                                 static_cast<uint32_t>(step), fvalues.data(),
-                                 static_cast<uint32_t>(fvalues.size()))) {
-        throw std::runtime_error(fmt::format("Failed to write data for chr '{}' to file '{}'",
-                                             chr_data.first, output_file));
-      }
-    }
-    // Closing the file causes the zoom levels to be created
-    bwClose(bw_fp);
-    bwCleanup();
-  } catch (...) {
-    bwClose(bw_fp);
-    bwCleanup();
-    throw;
-  }
-  return std::filesystem::file_size(output_file);
+  return init_bigwig_file(output_path, chr_names, chr_sizes, zoom_levels, buff_size);
 }
 
 uint64_t write_range(const std::string& chr_name, uint64_t chr_length,
                      const std::vector<double>& vals, uint64_t offset, uint64_t span, uint64_t step,
                      std::string_view output_file) {
   absl::flat_hash_map<std::pair<std::string /* chr_name */, uint64_t /* chr_leng */>,
-                      const std::vector<double>*>
-      data{{{chr_name, chr_length}, &vals}};
+                      std::vector<double>>
+      data{{{chr_name, chr_length}, vals}};
   return write_range(data, offset, span, step, output_file);
 }
 

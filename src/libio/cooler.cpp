@@ -121,7 +121,7 @@ void write_metadata(H5::H5File &f, int32_t bin_size, std::string_view assembly_n
   str_buff = "HDF5::Cooler";
   att.write(STR_TYPE, str_buff);
 
-  att = f.createAttribute("format-version", H5::PredType::NATIVE_INT, att_space);
+  att = f.createAttribute("format-version", H5::PredType::NATIVE_INT64, att_space);
   int_buff = 3;
   att.write(H5::PredType::NATIVE_INT, &int_buff);
 
@@ -129,7 +129,7 @@ void write_metadata(H5::H5File &f, int32_t bin_size, std::string_view assembly_n
   str_buff = "fixed";
   att.write(STR_TYPE, str_buff);
 
-  att = f.createAttribute("bin-size", H5::PredType::NATIVE_INT, att_space);
+  att = f.createAttribute("bin-size", H5::PredType::NATIVE_INT64, att_space);
   att.write(H5::PredType::NATIVE_INT, &bin_size);
 
   att = f.createAttribute("storage-mode", STR_TYPE, att_space);
@@ -176,7 +176,6 @@ absl::flat_hash_map<std::string, H5O_info_t> parse_file_structure(H5::H5File &f)
 
             return op_func(loc_id, name, &infobuf, operator_data);
           };
-  DISABLE_WARNING_POP
 
   absl::flat_hash_map<std::string, H5O_info_t> obj_info;
   if (const auto status = H5Lvisit(f.getId(), H5_INDEX_NAME, H5_ITER_NATIVE,
@@ -184,6 +183,9 @@ absl::flat_hash_map<std::string, H5O_info_t> parse_file_structure(H5::H5File &f)
       status != 0) {
     throw fmt::system_error(status, "An error occurred during traversal");
   }
+  // Don't try to reduce the scope of the DISABLE_WARNING, as it breaks build on GCC8...
+  DISABLE_WARNING_POP
+
   std::vector<std::string> attributes;
   for (const auto &[name, info] : obj_info) {
     if (info.type == H5O_TYPE_GROUP) {
@@ -387,7 +389,7 @@ std::vector<int64_t> read_bin1_offset_idx(H5::H5File &f, std::size_t chr_idx) {
   const auto chr_offset_idx = read_chr_offset_idx(f);
   assert(chr_idx < chr_offset_idx.size());  // NOLINT
   const auto chr_start_bin = static_cast<std::size_t>(chr_offset_idx[chr_idx]);
-  const auto chr_end_bin = static_cast<std::size_t>(chr_offset_idx[chr_idx + 1]);
+  const auto chr_end_bin = static_cast<std::size_t>(chr_offset_idx[chr_idx + 1] - 1);
   assert(chr_end_bin >= chr_start_bin);  // NOLINT
 
   std::vector<int64_t> bin1_offset_idx(chr_end_bin - chr_start_bin);
@@ -427,17 +429,18 @@ ContactMatrix<uint32_t> cooler_to_cmatrix(H5::H5File &f, int64_t bin_offset,
                                           const std::vector<int64_t> &bin1_offset_idx,
                                           std::size_t nrows) {
   ContactMatrix<uint32_t> cmatrix(nrows, bin1_offset_idx.size());
-  std::vector<int64_t> bin1_BUFF;
-  std::vector<int64_t> bin2_BUFF;
-  std::vector<int64_t> count_BUFF;
+  std::vector<int64_t> bin1_BUFF(nrows);
+  std::vector<int64_t> bin2_BUFF(nrows);
+  std::vector<int64_t> count_BUFF(nrows);
 
   for (auto i = 1UL; i < bin1_offset_idx.size(); ++i) {
     const auto file_offset = static_cast<hsize_t>(bin1_offset_idx[i - 1]);
-    const auto buff_size =
-        std::min(nrows, static_cast<std::size_t>(bin1_offset_idx[i] - bin1_offset_idx[i - 1])) + 1;
+    const auto buff_size = // Figure out why buff size is always small
+        std::min(static_cast<std::size_t>(bin1_offset_idx[i] - bin1_offset_idx[i - 1]), nrows);
     if (buff_size == 0) {
       continue;
     }
+    //fmt::print(stderr, "i={}; buff_size={}\n", i, buff_size);
 
     bin1_BUFF.resize(buff_size);
     bin2_BUFF.resize(buff_size);
@@ -456,7 +459,8 @@ ContactMatrix<uint32_t> cooler_to_cmatrix(H5::H5File &f, int64_t bin_offset,
       DISABLE_WARNING_PUSH
       DISABLE_WARNING_SIGN_CONVERSION
       DISABLE_WARNING_SIGN_COMPARE
-      if (bin2_BUFF[j] - bin_offset >= i + nrows - 1) {
+      if (const auto bin2_id = bin2_BUFF[j] - bin_offset;
+          bin2_id >= i + nrows - 1 || bin2_id >= bin1_offset_idx.size()) {
         break;
       }
       // fmt::print(stderr, "m[{}][{}]={} (nrows={}; ncols={})\n", bin2_BUFF[j] - bin_offset,
@@ -470,20 +474,87 @@ ContactMatrix<uint32_t> cooler_to_cmatrix(H5::H5File &f, int64_t bin_offset,
 }
 
 ContactMatrix<uint32_t> cooler_to_cmatrix(std::string_view path_to_file, std::string_view chr_name,
-                                          std::size_t diagonal_width, std::size_t bin_size) {
+                                          std::size_t diagonal_width, std::size_t bin_size,
+                                          bool try_common_chr_prefixes) {
   // TODO: Add check for Cooler bin size
-  const auto nrows = diagonal_width / bin_size;
-  return cooler_to_cmatrix(path_to_file, chr_name, nrows);
+  const auto nrows =
+      (diagonal_width / bin_size) + static_cast<std::size_t>(diagonal_width % bin_size != 0);
+  return cooler_to_cmatrix(path_to_file, chr_name, nrows, try_common_chr_prefixes);
 }
 
 ContactMatrix<uint32_t> cooler_to_cmatrix(std::string_view path_to_file, std::string_view chr_name,
-                                          std::size_t nrows) {
+                                          std::size_t nrows, bool try_common_chr_prefixes) {
+  // TODO: Add check for Cooler bin size
+  auto search_chr_offset_idx = [&](H5::H5File &f) {
+    if (!try_common_chr_prefixes) {
+      return std::make_pair(chr_name, cooler::read_chr_offset_idx(f, chr_name));
+    }
+    // Here's the issue: for a given genome assembly (say hg19), some tools name chromosome as chrN,
+    // where N is the chromosome number, while others only use the number N.
+    // The purpose of this lambda is to try to guess few reasonably common prefixes, look them
+    // up in the Cooler file, then return the chromosome name variant that produced a hit together
+    // with the chr index
+    std::vector<std::string_view> chr_names{chr_name};
+    for (const auto &prefix : {"chr", "CHR", "Chr"}) {
+      if (absl::StartsWith(chr_name, prefix)) {
+        chr_names.emplace_back(absl::StripPrefix(chr_name, prefix));
+      } else {
+        chr_names.emplace_back(absl::StrCat(prefix, chr_name));
+      }
+    }
+    // TODO: Consider reading the full array of chr names and then look up all the combinations.
+    // This would allows us to avoid using exceptions, but will increase memory usage when
+    // processing highly fragmented assemblies
+    chr_name = "";  // Just to make sure we are not using this variable instead of actual_chr_name
+    for (const auto name : chr_names) {
+      try {
+        return std::make_pair(name, cooler::read_chr_offset_idx(f, name));
+      } catch (const std::runtime_error &e) {
+        if (!absl::StartsWith(e.what(), "Unable to find a chromosome named")) {
+          throw;
+        }
+      }
+    }
+    throw std::runtime_error(
+        fmt::format(FMT_STRING("Unable to find a chromosome named '{}'. The following chromosome "
+                               "name variants were searched: '{}'"),
+                    chr_name, absl::StrJoin(chr_names, "', '")));
+  };
+
   auto f = open_for_reading(path_to_file);
-  const auto bin1_offset_idx = cooler::read_bin1_offset_idx(f, chr_name);
-  const auto chr_idx = cooler::read_chr_offset_idx(f, chr_name);
+  const auto [actual_chr_name, chr_idx] = search_chr_offset_idx(f);
+  const auto bin1_offset_idx = cooler::read_bin1_offset_idx(f, actual_chr_name);
   const auto bin_offset = cooler::read_chr_offset_idx(f)[chr_idx];
 
   return cooler_to_cmatrix(f, bin_offset, bin1_offset_idx, nrows);
+}
+
+std::string read_attribute_str(H5::H5File &f, std::string_view attr_name, std::string_view path) {
+  std::string buff;
+  read_attribute(f, attr_name, buff, path);
+  return buff;
+}
+
+std::string read_attribute_str(std::string_view path_to_file, std::string_view attr_name,
+                               std::string_view path) {
+  std::string buff;
+  auto f = open_for_reading(path_to_file);
+  read_attribute(f, attr_name, buff, path);
+  return buff;
+}
+
+int64_t read_attribute_int(H5::H5File &f, std::string_view attr_name, std::string_view path) {
+  int64_t buff;
+  read_attribute(f, attr_name, buff, path);
+  return buff;
+}
+
+int64_t read_attribute_int(std::string_view path_to_file, std::string_view attr_name,
+                           std::string_view path) {
+  int64_t buff;
+  auto f = open_for_reading(path_to_file);
+  read_attribute(f, attr_name, buff, path);
+  return buff;
 }
 
 }  // namespace modle::cooler

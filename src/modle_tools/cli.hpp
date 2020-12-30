@@ -37,7 +37,7 @@ class Cli {
     this->_cli.name(this->_exec_name);
     this->_cli.description("Modle's helper tool. This tool allows to post-process the contact matrix produced by Modle in various ways.");
     this->_cli.require_subcommand(1);
-    this->_cli.add_option("-i,--input", this->_config.path_to_input_matrices, "Path to one or more contact matrices in ModLE's format. Multiple matrices can be passed by specyfing -i multiple times (e.g. modle convert -i m1.tsv.bz2 -i m2.tsv.bz2 ...), or bu providing a comma-separated list of paths (e.g. modle convert -i m1.tsv.bz2,m2.tsv.bz2...).")->delimiter(',')->check(CLI::ExistingFile)->take_all()->required();
+    this->_cli.add_option("-i,--input", this->_config.path_to_input_matrices, "Path to a contact matrix in Cooler format")->check(CLI::ExistingFile)->required();
     this->_cli.add_option("-o,--output-base-name", this->_config.output_base_name, "Base file name (including directories) to use for output.")->required();
     this->_cli.add_option("--tmp-dir", this->_config.tmp_dir, "Path where to store temporary files.")->capture_default_str();
     this->_cli.add_flag("--keep-temporary-files", this->_config.keep_tmp_files, "Do not delete temporary files.")->capture_default_str();
@@ -57,12 +57,13 @@ class Cli {
     convert_sc->add_option("-c,--chr-sizes", this->_config.chr_sizes, fmt::format("Path to file containing chromosome size(s). Can also be one of the following genome IDs: {}.", absl::StrJoin(this->_allowed_genome_ids, ", ")));
     convert_sc->add_option("--seed", this->_config.seed, "Seed value to use when adding noise to the contact matrix.")->capture_default_str();
 
-    eval_sc->add_option("--reference-matrix", this->_config.path_to_reference_matrix, "Path to contact matrix to use as reference when computing the correlation. Formats accepted: ModLE or .hic format.")->required();
+    eval_sc->add_option("--reference-matrix", this->_config.path_to_reference_matrix, "Path to contact matrix to use as reference when computing the correlation. Formats accepted: Cooler.")->required();
     eval_sc->add_option("-n,--chr-name", this->_config.chr_name_hic, "Name of the chromosome whose contacts should be extracted from an .hic file. Required only if different from the name stored in the header of Modle's contact matrix.");
     eval_sc->add_option("--chr-offset", this->_config.chr_offset_hic, "Offset to apply to coordinates read from Modle's contact matrix.")->check(CLI::NonNegativeNumber)->transform(CLI::AsSizeValue(true));
     eval_sc->add_flag("--pearson", this->_config.compute_pearson, "Compute Pearson correlation.");
     eval_sc->add_flag("--spearman", this->_config.compute_spearman, "Compute Spearman rank correlation.");
-    eval_sc->add_option("-w,--sliding-window-size", this->_config.sliding_window_size, "Sliding window size. By default this is set to the diagonal width of ModLE's contact matrix.")->check(CLI::NonNegativeNumber);
+    eval_sc->add_option("-w,--diagonal-width", this->_config.diagonal_width, "Diagonal width to use when computing correlation coefficients.")->check(CLI::NonNegativeNumber)->required();
+    eval_sc->add_option("--sliding-window-size", this->_config.sliding_window_size, "Sliding window size. By default this is set to the diagonal width of ModLE's contact matrix.")->check(CLI::NonNegativeNumber);
     eval_sc->add_option("--sliding-window-overlap", this->_config.sliding_window_overlap, "Overlap between consecutive sliding-windows.")->check(CLI::NonNegativeNumber)->capture_default_str();
     // clang-format on
   }
@@ -75,13 +76,6 @@ class Cli {
       absl::StrAppendFormat(
           &errors, "--output-dir should point to a directory or a non-existing path. Is '%s'",
           c.output_base_name);
-    }
-
-    for (const auto& path : c.path_to_input_matrices) {
-      if (!absl::EndsWithIgnoreCase(path, ".tsv.bz2")) {
-        absl::StrAppendFormat(&errors, "File '%s' does not appear to be in .tsv.bz2 format.\n",
-                              path);
-      }
     }
 
     if (const auto* s = "/modle_tools/"; !absl::EndsWithIgnoreCase(c.tmp_dir, s)) {
@@ -112,7 +106,15 @@ class Cli {
         }
       }
       if (this->_cli.get_subcommand("eval")->parsed()) {
-        for (std::string_view suffix : {"rho", "tau", "rho_pv", "tau_pv"}) {
+        if (c.path_to_input_matrices.size() > 1) {
+          absl::StrAppendFormat(&errors,
+                                "You have specified %d input files through the -i option, but "
+                                "only one file is allowed when using the eval subcommand.\n",
+                                c.path_to_input_matrices.size());
+        }
+
+        for (std::string_view suffix :
+             {"rho", "tau", "rho_pv", "tau_pv"}) {  // TODO Update this section
           for (std::string_view ext : {"tsv.bz2", "wig"}) {
             if (auto file = fmt::format("{}_{}.{}", c.output_base_name, suffix, ext);
                 std::filesystem::exists(file)) {

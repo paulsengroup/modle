@@ -1,3 +1,5 @@
+#pragma once
+
 #include <bzlib.h>
 
 #include <array>
@@ -612,6 +614,16 @@ typename ContactMatrix<I>::Header ContactMatrix<I>::parse_header(
   header.nrows = static_cast<std::size_t>(
       std::ceil(static_cast<double>(header.diagonal_width) / static_cast<double>(header.bin_size)));
   return header;
+}
+
+template <typename I>
+uint64_t ContactMatrix<I>::get_matrix_size_in_bytes() const {
+  return this->_contacts.size() * sizeof(I);
+}
+
+template <typename I>
+double ContactMatrix<I>::get_matrix_size_in_mb() const {
+  return static_cast<double>(this->get_matrix_size_in_bytes()) / 1.0e6;
 }
 
 template <typename I>

@@ -88,154 +88,24 @@ uint64_t Genome::get_n_of_busy_lefs() const {
 }
 
 void Genome::write_contacts_to_file(std::string_view output_file, bool force_overwrite) {
-  fmt::print(stderr, FMT_STRING("Writing contact matrices for {} chromosome(s) to file '{}'...\n"),
-             this->get_n_chromosomes(), output_file);
-  auto t0 = absl::Now();
+  std::vector<const ContactMatrix<uint32_t>*> cmatrices(this->get_n_chromosomes());
+  std::vector<std::string> chr_names(this->get_n_chromosomes());
+  std::vector<uint64_t> chr_starts(this->get_n_chromosomes());
+  std::vector<uint64_t> chr_ends(this->get_n_chromosomes());
+  std::vector<uint64_t> chr_sizes(this->get_n_chromosomes());
 
-  if (force_overwrite && std::filesystem::exists(output_file)) {
-    std::filesystem::remove(output_file);
+  for (auto i = 0UL; i < this->get_n_chromosomes(); ++i) {
+    const auto& chr = this->_chromosomes[i];
+    cmatrices[i] = &chr.contacts;
+    chr_names[i] = chr.name;
+    chr_starts[i] = chr.start;
+    chr_ends[i] = chr.end;
+    chr_sizes[i] = chr.total_length;
   }
 
-  std::filesystem::create_directories(std::filesystem::path(output_file).parent_path());
-
-  auto f = cooler::init_file(output_file, force_overwrite);
-
-  std::size_t chr_name_foffset = 0;
-  std::size_t chr_length_foffset = 0;
-
-  constexpr const std::size_t BUFF_SIZE = 1024 * 1024 / sizeof(int64_t);  // 1 MB
-  std::vector<int64_t> bin_pos_buff;
-  std::vector<int32_t> bin_chrom_buff;
-  std::vector<int64_t> pixel_b1_idx_buff;
-  std::vector<int64_t> pixel_b2_idx_buff;
-  std::vector<int64_t> pixel_count_buff;
-  std::vector<int64_t> idx_bin1_offset_buff;
-  std::vector<int64_t> idx_chrom_offset_buff;
-
-  bin_pos_buff.reserve(BUFF_SIZE);
-  bin_chrom_buff.reserve(BUFF_SIZE);
-  pixel_b1_idx_buff.reserve(BUFF_SIZE);
-  pixel_b2_idx_buff.reserve(BUFF_SIZE);
-  pixel_count_buff.reserve(BUFF_SIZE);
-  idx_bin1_offset_buff.reserve(BUFF_SIZE);
-  idx_chrom_offset_buff.reserve(this->get_n_chromosomes());
-
-  hsize_t pixel_b1_idx_h5df_offset = 0;
-  hsize_t pixel_b2_idx_h5df_offset = 0;
-  hsize_t pixel_count_h5df_offset = 0;
-  hsize_t idx_bin1_offset_h5df_offset = 0;
-
-  auto write_pixels_to_file = [&]() {
-    pixel_b1_idx_h5df_offset =
-        cooler::write_vect_of_int(pixel_b1_idx_buff, f, "pixels/bin1_id", pixel_b1_idx_h5df_offset);
-    pixel_b2_idx_h5df_offset =
-        cooler::write_vect_of_int(pixel_b2_idx_buff, f, "pixels/bin2_id", pixel_b2_idx_h5df_offset);
-    pixel_count_h5df_offset =
-        cooler::write_vect_of_int(pixel_count_buff, f, "pixels/count", pixel_count_h5df_offset);
-
-    pixel_b1_idx_buff.clear();
-    pixel_b2_idx_buff.clear();
-    pixel_count_buff.clear();
-  };
-
-  int64_t nnz = 0;
-  int64_t offset = 0;
-  int32_t chr_idx{};
-  int64_t nbins = 0;
-
-  // TODO find a cleaner way to do this
-  cooler::write_metadata(f, static_cast<int32_t>(this->_chromosomes.front().get_bin_size()));
-
-  const auto max_chrom_name_length =
-      std::max_element(
-          this->_chromosomes.begin(), this->_chromosomes.end(),
-          [](const auto& c1, const auto& c2) { return c1.name.size() < c2.name.size(); })
-          ->name.size() +
-      1;
-  for (const auto& chr : this->_chromosomes) {
-    chr_name_foffset =
-        cooler::write_str(chr.name, f, "chroms/name", max_chrom_name_length, chr_name_foffset);
-    chr_length_foffset =
-        cooler::write_int(chr.total_length, f, "chroms/length", chr_length_foffset);
-    DISABLE_WARNING_PUSH
-    DISABLE_WARNING_CONVERSION
-    DISABLE_WARNING_SIGN_CONVERSION
-    fmt::print(stderr, FMT_STRING("Processing '{}' ({:.2f} Mbp)..."), chr.name,
-               chr.real_length() / 1.0e6);  // NOLINT
-    const auto t1 = absl::Now();
-    idx_chrom_offset_buff.push_back(nbins);
-    nbins = cooler::write_bins(f, chr_idx++, chr.real_length(), chr.get_bin_size(),  // NOLINT
-                               bin_chrom_buff, bin_pos_buff, nbins);
-    DISABLE_WARNING_POP
-
-    for (auto i = 0UL; i < chr.start / chr.get_bin_size(); ++i) {
-      idx_bin1_offset_buff.push_back(nnz);
-      if (idx_bin1_offset_buff.size() == BUFF_SIZE) {
-        idx_bin1_offset_h5df_offset = cooler::write_vect_of_int(
-            idx_bin1_offset_buff, f, "indexes/bin1_offset", idx_bin1_offset_h5df_offset);
-        idx_bin1_offset_buff.clear();
-      }
-    }
-
-    offset += static_cast<int64_t>(chr.start / chr.get_bin_size());
-    for (auto i = 0UL; i < chr.contacts.n_cols(); ++i) {
-      idx_bin1_offset_buff.push_back(nnz);
-      for (auto j = i; j < i + chr.contacts.n_rows() && j < chr.contacts.n_cols(); ++j) {
-        if (const auto m = chr.contacts.get(i, j); m != 0) {
-          pixel_b1_idx_buff.push_back(offset + static_cast<int64_t>(i));
-          pixel_b2_idx_buff.push_back(offset + static_cast<int64_t>(j));
-#ifndef NDEBUG
-          if (offset + static_cast<int64_t>(i) > offset + static_cast<int64_t>(j)) {
-            throw std::runtime_error(
-                fmt::format(FMT_STRING("b1 > b2: b1={}; b2={}; offset={}; m={}\n"),
-                            pixel_b1_idx_buff.back(), pixel_b2_idx_buff.back(), offset, m));
-          }
-#endif
-          pixel_count_buff.push_back(m);
-          ++nnz;
-          if (pixel_b1_idx_buff.size() == BUFF_SIZE) {
-            write_pixels_to_file();
-          }
-        }
-      }
-      if (idx_bin1_offset_buff.size() == BUFF_SIZE) {
-        idx_bin1_offset_h5df_offset = cooler::write_vect_of_int(
-            idx_bin1_offset_buff, f, "indexes/bin1_offset", idx_bin1_offset_h5df_offset);
-        idx_bin1_offset_buff.clear();
-      }
-    }
-    for (auto i = 0UL; i < (chr.total_length - chr.end) / chr.get_bin_size(); ++i) {
-      idx_bin1_offset_buff.push_back(nnz);
-      if (idx_bin1_offset_buff.size() == BUFF_SIZE) {
-        idx_bin1_offset_h5df_offset = cooler::write_vect_of_int(
-            idx_bin1_offset_buff, f, "indexes/bin1_offset", idx_bin1_offset_h5df_offset);
-        idx_bin1_offset_buff.clear();
-      }
-    }
-
-    offset = nbins;
-    fmt::print(stderr, FMT_STRING(" DONE in {}!\n"), absl::FormatDuration(absl::Now() - t1));
-  }
-
-  if (!pixel_b1_idx_buff.empty()) {
-    write_pixels_to_file();
-  }
-
-  idx_chrom_offset_buff.push_back(nbins);
-  idx_bin1_offset_buff.push_back(nnz);
-
-  cooler::write_vect_of_int(idx_chrom_offset_buff, f, "indexes/chrom_offset");
-  cooler::write_vect_of_int(idx_bin1_offset_buff, f, "indexes/bin1_offset",
-                            idx_bin1_offset_h5df_offset);
-
-  H5::DataSpace att_space(H5S_SCALAR);
-  auto att = f.createAttribute("nbins", H5::PredType::NATIVE_INT, att_space);
-  att.write(H5::PredType::NATIVE_INT, &nbins);
-  att = f.createAttribute("nnz", H5::PredType::NATIVE_INT, att_space);
-  att.write(H5::PredType::NATIVE_INT, &nnz);
-
-  fmt::print(stderr, "DONE! Saved {} contacts in {}.\n", nnz,
-             absl::FormatDuration(absl::Now() - t0));
+  cooler::write_modle_cmatrices_to_cooler(cmatrices, chr_names, chr_starts, chr_ends, chr_sizes,
+                                          this->_chromosomes[0].get_bin_size(), output_file,
+                                          force_overwrite);
 }
 
 void Genome::write_extrusion_barriers_to_file(std::string_view output_dir,
@@ -510,6 +380,16 @@ std::pair<double, double> Genome::run_burnin(double prob_of_rebinding,
 }
 
 void Genome::simulate_extrusion(uint32_t iterations, double target_contact_density) {
+  {
+    std::vector<std::string_view> chr_names(this->get_n_chromosomes());
+    std::transform(this->_chromosomes.begin(), this->_chromosomes.end(), chr_names.begin(),
+                   [](const auto& c) {
+                     return std::string_view{c.name.data(), c.name.size()};
+                   });
+    fmt::print(stderr, FMT_STRING("Simulating loop extrusion on the following chromosomes: '{}'\n"),
+               absl::StrJoin(chr_names, "', '"));
+  }
+
   // If the simulation is set to stop when a target contact density is reached, set the number of
   // iterations to a very large number (2^32)
   if (target_contact_density != 0.0) {

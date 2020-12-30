@@ -9,16 +9,28 @@
 namespace modle::tools {
 
 struct config {
-  enum output_format { TSV = 0, Tsv = 0, tsv = 0, HIC = 1, Hic = 1, HiC = 1, hic = 1 };
+  enum output_format {
+    TSV = 0,
+    Tsv = 0,
+    tsv = 0,
+    HIC = 1,
+    Hic = 1,
+    HiC = 1,
+    hic = 1,
+    COOLER = 2,
+    Cooler = 2,
+    cooler = 2
+  };
   std::vector<std::string> path_to_input_matrices;
   std::string output_base_name;
   std::string chr_sizes;
-  output_format output_format{HIC};
+  output_format output_format{Cooler};
   bool add_noise{false};
   bool compute_spearman{true};
   bool compute_pearson{true};
   bool force{false};
   bool keep_tmp_files{false};
+  uint64_t diagonal_width;
   uint64_t sliding_window_size{0};
   uint64_t sliding_window_overlap{0};
   std::string path_to_juicer_tools;

@@ -1,5 +1,7 @@
 #pragma once
 
+#include <absl/types/span.h>
+
 #include <algorithm>
 #include <atomic>
 #include <boost/math/distributions/beta.hpp>
@@ -9,8 +11,6 @@
 #include <cmath>
 #include <cstdint>
 #include <numeric>
-#include <range/v3/algorithm.hpp>
-#include <range/v3/range.hpp>
 #include <vector>
 
 #include "./correlation_utils.hpp"
@@ -19,8 +19,8 @@
 
 namespace modle::correlation {
 
-double compute_pearson_significance(double pcc, std::size_t n) {
-  assert(n > 2);
+inline double compute_pearson_significance(double pcc, std::size_t n) {
+  assert(n > 2);  // NOLINT
   const auto ab = static_cast<double>(n) / 2.0 - 1;
   boost::math::beta_distribution<double> dist(ab, ab);
   // https://github.com/scipy/scipy/blob/6703631bcd15750e86f4098b0421efabcac0f7c2/scipy/stats/stats.py#L3885
@@ -28,8 +28,8 @@ double compute_pearson_significance(double pcc, std::size_t n) {
   return 2.0 * boost::math::cdf<double>(dist, 0.5 * (1 - std::abs(pcc)));
 }
 
-double compute_spearman_significance(double rho, std::size_t n) {
-  assert(n > 2);
+inline double compute_spearman_significance(double rho, std::size_t n) {
+  assert(n > 2);  // NOLINT
   const auto dof = static_cast<double>(n - 2);
   const double tscore = rho * std::sqrt(dof / ((1.0 + rho) * (1.0 - rho)));
   boost::math::students_t_distribution<double> dist(dof);
@@ -44,20 +44,23 @@ double compute_spearman_significance(double rho, std::size_t n) {
  * parallel statistics algorithms," 2009 IEEE International Conference on Cluster Computing and
  * Workshops, New Orleans, LA, 2009, pp. 1-8, doi: 10.1109/CLUSTR.2009.5289161.
  */
-template <typename Rng>
-double compute_pearson(Rng r1, Rng r2) {
-  static_assert(ranges::random_access_range<Rng>, "r1 and r2 should be a random access range");
+template <typename N1, typename N2>
+double compute_pearson(absl::Span<const N1> v1, absl::Span<const N2> v2) {
+  static_assert(std::is_arithmetic<N1>::value,
+                "v1 should be convertible to a Span of numeric type");
+  static_assert(std::is_arithmetic<N2>::value,
+                "v1 should be convertible to a Span of numeric type");
+  DISABLE_WARNING_PUSH
+  DISABLE_WARNING_CONVERSION
   double cov = 0;
-  double r1_avg = r1[0];
-  double r2_avg = r2[0];
+  double r1_avg = v1[0];
+  double r2_avg = v2[0];
   double d1 = 0;
   double d2 = 0;
 
-  DISABLE_WARNING_PUSH
-  DISABLE_WARNING_CONVERSION
-  for (std::size_t i = 1; i < r1.size(); ++i) {
-    auto r1_tmp = r1[i] - r1_avg;
-    auto r2_tmp = r2[i] - r2_avg;
+  for (std::size_t i = 1; i < v1.size(); ++i) {
+    auto r1_tmp = v1[i] - r1_avg;
+    auto r2_tmp = v2[i] - r2_avg;
     d1 += (i * r1_tmp * r1_tmp) / (i + 1);
     d2 += (i * r2_tmp * r2_tmp) / (i + 1);
     cov += i * r1_tmp * r2_tmp / (i + 1);
@@ -82,28 +85,37 @@ double compute_pearson(Rng r1, Rng r2) {
 
   return pcc;
 }
-
-template <typename Rng>
-double compute_spearman(Rng r1, Rng r2) {
-  static_assert(ranges::random_access_range<Rng>, "r1 and r2 should be a random access range");
-  // Shortcut to avoid computing the correlation when any of the vector is all zeros
-  if (ranges::all_of(r1, [](auto n) { return n == 0; }) ||
-      ranges::all_of(r2, [](auto n) { return n == 0; })) {
-    return 1.0;
-  }
-  return compute_pearson(utils::compute_element_ranks(r1), utils::compute_element_ranks(r2));
+template <typename N1, typename N2>
+double compute_pearson(const std::vector<N1>& v1, const std::vector<N2>& v2) {
+  return compute_pearson(absl::MakeConstSpan(v1), absl::MakeConstSpan(v2));
 }
 
-template <typename N>
-std::pair<std::vector<double>, std::vector<double>> compute_pearson(const std::vector<N>& v1,
-                                                                    const std::vector<N>& v2,
+template <typename N1, typename N2>
+double compute_spearman(absl::Span<const N1> v1, absl::Span<const N2> v2) {
+  static_assert(std::is_arithmetic<N1>::value,
+                "v1 should be convertible to a Span of numeric type");
+  static_assert(std::is_arithmetic<N2>::value,
+                "v1 should be convertible to a Span of numeric type");
+  // Shortcut to avoid computing the correlation when any of the vector is all zeros
+  if (std::all_of(v1.begin(), v1.end(), [](auto n) { return n == 0; }) ||
+      std::all_of(v2.begin(), v2.end(), [](auto n) { return n == 0; })) {
+    return 1.0;
+  }
+  return compute_pearson(utils::compute_element_ranks(v1), utils::compute_element_ranks(v2));
+}
+
+template <typename N1, typename N2>
+std::pair<std::vector<double>, std::vector<double>> compute_pearson(absl::Span<const N1> v1,
+                                                                    absl::Span<const N2> v2,
                                                                     std::size_t window_span,
                                                                     std::size_t window_overlap) {
   // TODO: compute_pearson and compute_spearman (implemented below this function), basically do the
   // same thing. Figure out a way to remove redundant code (i.e. everything excepr compute_* and
   // compute_*_significance
-  static_assert(std::is_arithmetic<N>::value,
-                "compute_pearson requires a numeric type as template argument.");
+  static_assert(std::is_arithmetic<N1>::value,
+                "v1 should be convertible to a Span of numeric type");
+  static_assert(std::is_arithmetic<N2>::value,
+                "v2 should be convertible to a Span of numeric type");
   if (v1.size() != v2.size()) {
     throw std::runtime_error(
         fmt::format("compute_pearson expects a pair of vectors of the same size, got {} "
@@ -117,8 +129,8 @@ std::pair<std::vector<double>, std::vector<double>> compute_pearson(const std::v
   for (std::size_t i = 0; i < pcc_vals.size(); ++i) {
     const auto window_start = i * (window_span - window_overlap);
     const auto window_end = window_start + window_span;
-    const auto slice1 = v1 | ranges::views::slice(window_start, window_end);
-    const auto slice2 = v2 | ranges::views::slice(window_start, window_end);
+    auto slice1 = absl::MakeConstSpan(v1).subspan(window_start, window_end);
+    auto slice2 = absl::MakeConstSpan(v2).subspan(window_start, window_end);
     pcc_vals[i] = compute_pearson(slice1, slice2);
     p_vals[i] = compute_pearson_significance(pcc_vals[i], slice1.size());
   }
@@ -126,13 +138,15 @@ std::pair<std::vector<double>, std::vector<double>> compute_pearson(const std::v
   return std::make_pair(pcc_vals, p_vals);
 }
 
-template <typename N>
-std::pair<std::vector<double>, std::vector<double>> compute_spearman(const std::vector<N>& v1,
-                                                                     const std::vector<N>& v2,
+template <typename N1, typename N2>
+std::pair<std::vector<double>, std::vector<double>> compute_spearman(absl::Span<const N1> v1,
+                                                                     absl::Span<const N2> v2,
                                                                      std::size_t window_span,
                                                                      std::size_t window_overlap) {
-  static_assert(std::is_arithmetic<N>::value,
-                "compute_spearman requires a numeric type as template argument.");
+  static_assert(std::is_arithmetic<N1>::value,
+                "v1 should be convertible to a Span of numeric type");
+  static_assert(std::is_arithmetic<N2>::value,
+                "v2 should be convertible to a Span of numeric type");
   if (v1.size() != v2.size()) {
     throw std::runtime_error(
         fmt::format("compute_spearman expects a pair of vectors of the same size, got {} "
@@ -146,13 +160,18 @@ std::pair<std::vector<double>, std::vector<double>> compute_spearman(const std::
   for (std::size_t i = 0; i < rho_vals.size(); ++i) {
     const auto window_start = i * (window_span - window_overlap);
     const auto window_end = window_start + window_span;
-    const auto slice1 = v1 | ranges::views::slice(window_start, window_end);
-    const auto slice2 = v2 | ranges::views::slice(window_start, window_end);
+    auto slice1 = absl::MakeConstSpan(v1).subspan(window_start, window_end);
+    auto slice2 = absl::MakeConstSpan(v2).subspan(window_start, window_end);
     rho_vals[i] = compute_spearman(slice1, slice2);
     p_vals[i] = compute_spearman_significance(rho_vals[i], slice1.size());
   }
 
   return std::make_pair(rho_vals, p_vals);
+}
+
+template <typename N1, typename N2>
+double compute_spearman(const std::vector<N1>& v1, const std::vector<N2>& v2) {
+  return compute_spearman(absl::MakeConstSpan(v1), absl::MakeConstSpan(v2));
 }
 /*
 template <typename N>

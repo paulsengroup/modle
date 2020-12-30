@@ -1,5 +1,9 @@
+#pragma once
+
+#include <absl/strings/match.h>
 #include <absl/strings/str_split.h>
-#include <fmt/printf.h>
+#include <absl/strings/substitute.h>
+#include <fmt/format.h>
 
 #include <boost/process.hpp>
 #include <charconv>
@@ -107,8 +111,8 @@ void throw_except_from_errc(std::string_view tok, std::size_t idx, const N &fiel
   throw std::logic_error(
       fmt::format("{}. If you see this error, report it to the developers on "
                   "GitHub.\nBED::throw_except_from_errc "
-                  "called with an invalid std::errc {}. This should not be possible!",
-                  base_error, std::make_error_code(e)));
+                  "called with an invalid std::errc '{}'. This should not be possible!",
+                  base_error, std::make_error_code(e).message()));
 }
 
 DISABLE_WARNING_PUSH
@@ -131,6 +135,50 @@ std::string init_juicer_tools_argv(std::string_view path_to_juicer_tools,
   return argv;
 }
 DISABLE_WARNING_POP
+
+bool chr_equal_operator(std::string_view chr1, std::string_view chr2) {
+  return chr_equal_operator(std::make_pair(chr1, 0), std::make_pair(chr2, 0));
+}
+
+bool chr_equal_operator(const std::pair<std::string_view, int64_t> &chr1,
+                        const std::pair<std::string_view, int64_t> &chr2) {
+  if (chr1.second != chr2.second) {
+    return false;
+  }
+  std::size_t offset1 = 0;
+  std::size_t offset2 = 0;
+  if (absl::StartsWithIgnoreCase(chr1.first, "chr")) {
+    offset1 = 3;
+  }
+  if (absl::StartsWithIgnoreCase(chr2.first, "chr")) {
+    offset2 = 3;
+  }
+  return chr1.first.substr(offset1) == chr2.first.substr(offset2);
+}
+
+bool chr_less_than_operator(std::string_view chr1, std::string_view chr2) {
+  return chr_less_than_operator(std::make_pair(chr1, 0), std::make_pair(chr2, 0));
+}
+
+bool chr_less_than_operator(const std::pair<std::string_view, int64_t> &chr1,
+                            const std::pair<std::string_view, int64_t> &chr2) {
+  std::size_t offset1 = 0;
+  std::size_t offset2 = 0;
+  if (absl::StartsWithIgnoreCase(chr1.first, "chr")) {
+    offset1 = 3;
+  }
+  if (absl::StartsWithIgnoreCase(chr2.first, "chr")) {
+    offset2 = 3;
+  }
+  if (chr1.first.substr(offset1) < chr2.first.substr(offset2)) {
+    return true;
+  }
+
+  if (chr1.first.substr(offset1) == chr2.first.substr(offset2)) {
+    return chr1.second < chr2.second;
+  }
+  return false;
+}
 
 template <class E>
 void throw_with_trace(const E &e) {

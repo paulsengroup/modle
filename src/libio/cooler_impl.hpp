@@ -273,7 +273,7 @@ hsize_t read_int(H5::H5File &f, std::string_view dataset_name, I &BUFF, hsize_t 
   } catch (const H5::Exception &e) {
     throw std::runtime_error(fmt::format(
         FMT_STRING("Failed to read data into an integer variable (dataset = {}; file offset = "
-                   "{}): Function '{}' failed with error '{}'"),
+                   "{}, buff size = 1): Function '{}' failed with error '{}'"),
         dataset_name, file_offset, e.getFuncName(), e.getDetailMsg()));
   }
 }
@@ -311,8 +311,8 @@ hsize_t read_vect_of_int(H5::H5File &f, std::string_view dataset_name, std::vect
   } catch (const H5::Exception &e) {
     throw std::runtime_error(fmt::format(
         FMT_STRING("Failed to read data into a vector of integers (dataset = {}; file offset = "
-                   "{}): Function '{}' failed with error '{}'"),
-        dataset_name, file_offset, e.getFuncName(), e.getDetailMsg()));
+                   "{}; buff size = {}): Function '{}' failed with error '{}'"),
+        dataset_name, file_offset, BUFF_SIZE, e.getFuncName(), e.getDetailMsg()));
   }
 }
 
@@ -330,6 +330,19 @@ void write_modle_cmatrix_to_cooler(const ContactMatrix<I> &cmatrix, std::string_
 
 template <typename I>
 void write_modle_cmatrices_to_cooler(const std::vector<ContactMatrix<I>> &cmatrices,
+                                     const std::vector<std::string> &chr_names,
+                                     const std::vector<uint64_t> &chr_starts,
+                                     const std::vector<uint64_t> &chr_ends,
+                                     const std::vector<uint64_t> &chr_sizes, uint64_t bin_size,
+                                     std::string_view output_file, bool force_overwrite) {
+  std::vector<const ContactMatrix<I> *> v(cmatrices.size());
+  std::transform(cmatrices.begin(), cmatrices.end(), v.begin(), [](const auto &m) { return &m; });
+  write_modle_cmatrices_to_cooler(v, chr_names, chr_starts, chr_ends, chr_sizes, bin_size,
+                                  output_file, force_overwrite);
+}
+
+template <typename I>
+void write_modle_cmatrices_to_cooler(const std::vector<const ContactMatrix<I> *> &cmatrices,
                                      const std::vector<std::string> &chr_names,
                                      const std::vector<uint64_t> &chr_starts,
                                      const std::vector<uint64_t> &chr_ends,
@@ -423,7 +436,7 @@ void write_modle_cmatrices_to_cooler(const std::vector<ContactMatrix<I>> &cmatri
     DISABLE_WARNING_PUSH
     DISABLE_WARNING_CONVERSION
     DISABLE_WARNING_SIGN_CONVERSION
-    fmt::print(stderr, FMT_STRING("Processing '{}' ({:.2f} Mbp)..."), chr_name,
+    fmt::print(stderr, FMT_STRING("Writing contacts for '{}' ({:.2f} Mbp)..."), chr_name,
                chr_simulated_len / 1.0e6);  // NOLINT
     const auto t1 = absl::Now();
     idx_chrom_offset_buff.push_back(nbins);
@@ -441,10 +454,10 @@ void write_modle_cmatrices_to_cooler(const std::vector<ContactMatrix<I>> &cmatri
     }
 
     offset += static_cast<int64_t>(chr_start / bin_size);
-    for (auto i = 0UL; i < cmatrix.n_cols(); ++i) {
+    for (auto i = 0UL; i < cmatrix->n_cols(); ++i) {
       idx_bin1_offset_buff.push_back(nnz);
-      for (auto j = i; j < i + cmatrix.n_rows() && j < cmatrix.n_cols(); ++j) {
-        if (const auto m = cmatrix.get(i, j); m != 0) {
+      for (auto j = i; j < i + cmatrix->n_rows() && j < cmatrix->n_cols(); ++j) {
+        if (const auto m = cmatrix->get(i, j); m != 0) {
           pixel_b1_idx_buff.push_back(offset + static_cast<int64_t>(i));
           pixel_b2_idx_buff.push_back(offset + static_cast<int64_t>(j));
 #ifndef NDEBUG
@@ -492,13 +505,34 @@ void write_modle_cmatrices_to_cooler(const std::vector<ContactMatrix<I>> &cmatri
                             idx_bin1_offset_h5df_offset);
 
   H5::DataSpace att_space(H5S_SCALAR);
-  auto att = f.createAttribute("nbins", H5::PredType::NATIVE_INT, att_space);
+  auto att = f.createAttribute("nchroms", H5::PredType::NATIVE_INT64, att_space);
+  att.write(H5::PredType::NATIVE_INT, &n_chromosomes);
+  att = f.createAttribute("nbins", H5::PredType::NATIVE_INT64, att_space);
   att.write(H5::PredType::NATIVE_INT, &nbins);
-  att = f.createAttribute("nnz", H5::PredType::NATIVE_INT, att_space);
+  att = f.createAttribute("nnz", H5::PredType::NATIVE_INT64, att_space);
   att.write(H5::PredType::NATIVE_INT, &nnz);
 
-  fmt::print(stderr, "DONE! Saved {} contacts in {}.\n", nnz,
-             absl::FormatDuration(absl::Now() - t0));
+  fmt::print(stderr, "DONE! Saved {} pixels in {}.\n", nnz, absl::FormatDuration(absl::Now() - t0));
+}
+
+template <typename T>
+void read_attribute(std::string_view path_to_file, std::string_view attr_name, T &buff,
+                    std::string_view path) {
+  auto f = open_for_reading(path_to_file);
+  read_attribute(f, attr_name, buff, path);
+}
+
+template <typename T>
+void read_attribute(H5::H5File &f, std::string_view attr_name, T &buff, std::string_view path) {
+  auto g = f.openGroup(path.empty() ? "/" : std::string{path});
+
+  if (!g.attrExists(std::string{attr_name})) {
+    throw std::runtime_error(fmt::format(
+        FMT_STRING("Unable to find an attribute named '{}' in path '/{}'"), attr_name, path));
+  }
+
+  auto attr = g.openAttribute(std::string{attr_name});
+  attr.read(attr.getDataType(), &buff);
 }
 
 }  // namespace modle::cooler

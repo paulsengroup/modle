@@ -21,6 +21,13 @@ void write_modle_cmatrix_to_cooler(const std::vector<ContactMatrix<I>> &cmatrice
                                    const std::vector<uint64_t> &chr_ends,
                                    const std::vector<uint64_t> &chr_sizes, uint64_t bin_size,
                                    std::string_view output_file, bool force_overwrite);
+template <typename I>
+void write_modle_cmatrices_to_cooler(const std::vector<const ContactMatrix<I> *> &cmatrices,
+                                     const std::vector<std::string> &chr_names,
+                                     const std::vector<uint64_t> &chr_starts,
+                                     const std::vector<uint64_t> &chr_ends,
+                                     const std::vector<uint64_t> &chr_sizes, uint64_t bin_size,
+                                     std::string_view output_file, bool force_overwrite);
 
 // IMPRTANT: for the time being, all cooler_to_cmatrix overload do not support reading portions of a
 // cooler file. This means that given a chromosome CHR of length 100Mbp, where we have simulated
@@ -32,11 +39,13 @@ void write_modle_cmatrix_to_cooler(const std::vector<ContactMatrix<I>> &cmatrice
 [[nodiscard]] ContactMatrix<uint32_t> cooler_to_cmatrix(std::string_view path_to_file,
                                                         std::string_view chr_name,
                                                         std::size_t diagonal_width,
-                                                        std::size_t bin_size);
+                                                        std::size_t bin_size,
+                                                        bool try_common_chr_prefixes = true);
 
 [[nodiscard]] ContactMatrix<uint32_t> cooler_to_cmatrix(std::string_view path_to_file,
                                                         std::string_view chr_name,
-                                                        std::size_t nrows);
+                                                        std::size_t nrows,
+                                                        bool try_common_chr_prefixes = true);
 
 [[nodiscard]] ContactMatrix<uint32_t> cooler_to_cmatrix(H5::H5File &f, int64_t bin_offset,
                                                         const std::vector<int64_t> &bin1_offset_idx,
@@ -108,6 +117,23 @@ void write_modle_cmatrices_to_cooler(const ContactMatrix<I> &cmatrix, std::strin
                                    uint64_t chr_start, uint64_t chr_end, uint64_t chr_length,
                                    std::string_view output_file, bool force_overwrite);
                                    */
+
+template <typename T>
+void read_attribute(H5::H5File &f, std::string_view attr_name, T &buff, std::string_view path = "");
+template <typename T>
+void read_attribute(std::string_view path_to_file, std::string_view attr_name, T &buff,
+                    std::string_view path = "");
+
+[[nodiscard]] std::string read_attribute_str(H5::H5File &f, std::string_view attr_name,
+                                             std::string_view path = "");
+[[nodiscard]] std::string read_attribute_str(std::string_view path_to_file,
+                                             std::string_view attr_name,
+                                             std::string_view path = "");
+
+[[nodiscard]] int64_t read_attribute_int(H5::H5File &f, std::string_view attr_name,
+                                         std::string_view path = "");
+[[nodiscard]] int64_t read_attribute_int(std::string_view path_to_file, std::string_view attr_name,
+                                         std::string_view path = "");
 
 // The following functions perform low-level actions on HDF5 files
 

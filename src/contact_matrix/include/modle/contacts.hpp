@@ -64,6 +64,8 @@ class ContactMatrix {
   [[nodiscard]] static Header parse_header(std::string_view path_to_file,
                                            boost::iostreams::filtering_istream& in,
                                            bool rewind_file = false);
+  [[nodiscard]] uint64_t get_matrix_size_in_bytes() const;
+  [[nodiscard]] double get_matrix_size_in_mb() const;
 
  private:
   uint64_t _nrows;
