@@ -8,7 +8,7 @@
 
 namespace modle::bigwig {
 
-inline constexpr const std::size_t DEFAULT_BUFF_SIZE{1U << 17U};  // 128 KiB
+inline constexpr std::size_t DEFAULT_BUFF_SIZE{1U << 17U};  // 128 KiB
 
 template <typename N1, typename N2>
 uint64_t write_range(absl::flat_hash_map<std::pair<std::string, N1>, std::vector<N2>>& data,

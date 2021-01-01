@@ -24,7 +24,11 @@ if(BUILD_SHARED_LIBS) # Generator expr do not work very well here
   add_library(libstraw SHARED IMPORTED)
   set_target_properties(libBigWig_lib PROPERTIES IMPORTED_LOCATION ${STRAW_ROOT}/libstraw.so)
 else()
-  add_library(libBigWig_lib STATIC IMPORTED)
+  add_library(
+    libBigWig_lib
+    STATIC
+    IMPORTED
+    include/modle/cooler.hpp)
   set_target_properties(libBigWig_lib PROPERTIES IMPORTED_LOCATION ${LIB_BIGWIG_ROOT}/libBigWig.a)
 endif()
 
@@ -38,7 +42,6 @@ target_sources(
   PRIVATE 4dn_dcic.cpp
           bed.cpp
           chr_sizes.cpp
-          cooler.cpp
           juicer_contacts.cpp
           bigwig.cpp)
 add_dependencies(libio libBigWig_lib) # libstraw)

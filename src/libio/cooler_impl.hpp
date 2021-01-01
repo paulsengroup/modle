@@ -1,538 +1,469 @@
 #pragma once
 
 #include <H5Cpp.h>
-#include <absl/time/clock.h>
+#include <absl/strings/match.h>
+#include <fmt/format.h>
 
 #include <algorithm>
-#include <range/v3/action/remove_if.hpp>
-#include <range/v3/action/transform.hpp>
-#include <range/v3/algorithm/transform.hpp>
-#include <range/v3/view/chunk.hpp>
-#include <range/v3/view/enumerate.hpp>
-#include <range/v3/view/filter.hpp>
-#include <range/v3/view/generate.hpp>
-#include <range/v3/view/transform.hpp>
-#include <range/v3/view/zip.hpp>
-#include <string_view>
+#include <cstdint>
+#include <memory>
+#include <stdexcept>
 #include <type_traits>
-#include <vector>
 
-#include "modle/contacts.hpp"
-#include "modle/suppress_compiler_warnings.hpp"
-#include "modle/utils.hpp"
+#include "modle/hdf5.hpp"
 
 namespace modle::cooler {
 
-template <typename DataType>
-H5::PredType getH5_type() {
-  // Taken from github.com/DavidAce/h5pp:
-  // https://github.com/DavidAce/h5pp/blob/master/h5pp/include/h5pp/details/h5ppUtils.h
-  // clang-format off
-  using DecayType = typename std::decay<DataType>::type;
-  if constexpr (std::is_same_v<DecayType, short>) return H5::PredType::NATIVE_SHORT;               // NOLINT
-  if constexpr (std::is_same_v<DecayType, int>) return H5::PredType::NATIVE_INT;                   // NOLINT
-  if constexpr (std::is_same_v<DecayType, long>) return H5::PredType::NATIVE_LONG;                 // NOLINT
-  if constexpr (std::is_same_v<DecayType, long long>) return H5::PredType::NATIVE_LLONG;           // NOLINT
-  if constexpr (std::is_same_v<DecayType, unsigned short>) return H5::PredType::NATIVE_USHORT;     // NOLINT
-  if constexpr (std::is_same_v<DecayType, unsigned int>) return H5::PredType::NATIVE_UINT;         // NOLINT
-  if constexpr (std::is_same_v<DecayType, unsigned long>) return H5::PredType::NATIVE_ULONG;       // NOLINT
-  if constexpr (std::is_same_v<DecayType, unsigned long long>) return H5::PredType::NATIVE_ULLONG; // NOLINT
-  if constexpr (std::is_same_v<DecayType, double>) return H5::PredType::NATIVE_DOUBLE;             // NOLINT
-  if constexpr (std::is_same_v<DecayType, long double>) return H5::PredType::NATIVE_LDOUBLE;       // NOLINT
-  if constexpr (std::is_same_v<DecayType, float>) return H5::PredType::NATIVE_FLOAT;               // NOLINT
-  if constexpr (std::is_same_v<DecayType, bool>) return H5::PredType::NATIVE_UINT8;                // NOLINT
-  if constexpr (std::is_same_v<DecayType, std::string>) return H5::PredType::C_S1;                 // NOLINT
-  if constexpr (std::is_same_v<DecayType, char>) return H5::PredType::C_S1;                        // NOLINT
-  // clang-format on
-
-  throw std::logic_error("getH5_type(): Unable to map C++ type to a H5T.");
-}
-
-template <typename S>
-hsize_t write_str(const S &str, H5::H5File &f, std::string_view dataset_name,
-                  hsize_t MAX_STR_LENGTH, hsize_t file_offset, hsize_t CHUNK_DIMS,
-                  uint8_t COMPRESSION_LEVEL) {
-  static_assert(std::is_convertible<S, H5std_string>::value,
-                "S should be a type convertible to std::string.");
-
-  const H5std_string d{dataset_name};  // Probably unnecessary
-  constexpr const hsize_t RANK{1};     // i.e. number of dimensions
-  constexpr const hsize_t BUFF_SIZE{1};
-  constexpr const hsize_t MAXDIMS{H5S_UNLIMITED};  // extensible dataset
-  const H5std_string FILL_VAL_STR{'\0'};
-
-  try {
-    auto mem_space{H5::DataSpace(RANK, &BUFF_SIZE, &MAXDIMS)};
-
-    // Create the datatype as follows
-    H5::StrType STD_STR(H5::PredType::C_S1, MAX_STR_LENGTH);
-    STD_STR.setStrpad(H5T_STR_NULLPAD);  // This seems to be the most robust way of terminating
-    // strings. Using NULLPAD sometimes causes some garbage to
-    // appear at end of string
-    STD_STR.setCset(H5T_CSET_ASCII);
-
-    H5::DSetCreatPropList cparms{};
-    cparms.setChunk(RANK, &CHUNK_DIMS);
-    cparms.setFillValue(STD_STR, &FILL_VAL_STR);
-    cparms.setDeflate(COMPRESSION_LEVEL);
-
-    auto dataset =
-        f.nameExists(d) ? f.openDataSet(d) : f.createDataSet(d, STD_STR, mem_space, cparms);
-
-    H5::DataSpace file_space;  // File space
-
-    // This is probably not very efficient, but it should be fine, given that we don't expect to
-    // write that many strings
-    hsize_t file_size{file_offset + 1};
-    dataset.extend(&file_size);
-    file_space = dataset.getSpace();
-    file_space.selectHyperslab(H5S_SELECT_SET, &BUFF_SIZE, &file_offset);
-    dataset.write(std::string{str}, STD_STR, mem_space, file_space);
-
-    return file_size;
-  } catch (const H5::FileIException &e) {
-    throw std::runtime_error(e.getDetailMsg());
-  } catch (const H5::GroupIException &e) {
-    throw std::runtime_error(e.getDetailMsg());
-  } catch (const H5::DataSetIException &e) {
-    throw std::runtime_error(e.getDetailMsg());
-  } catch (const H5::DataSpaceIException &e) {
-    throw std::runtime_error(e.getDetailMsg());
+std::string Cooler::flavor_to_string(Flavor f) {
+  switch (f) {
+    case UNK:
+      return "unknown";
+    case AUTO:
+      return "auto";
+    case COOL:
+      return "COOL";
+    case MCOOL:
+      return "MCOOL";
+    case SCOOL:
+      return "SCOOL";
   }
 }
 
-template <typename S>
-hsize_t write_vect_of_str(std::vector<S> &data, H5::H5File &f, std::string_view dataset_name,
-                          hsize_t file_offset, hsize_t CHUNK_DIMS, uint8_t COMPRESSION_LEVEL) {
-  static_assert(std::is_convertible<S, H5std_string>::value,
-                "S should be a type convertible to std::string.");
+H5::StrType Cooler::generate_default_str_type() {
+  auto st = H5::StrType(H5::PredType::C_S1);
+  st.setStrpad(H5T_STR_NULLTERM);
+  st.setCset(H5T_CSET_ASCII);
+  return st;
+}
 
-  const H5std_string d{dataset_name};  // Probably unnecessary
-  constexpr const hsize_t RANK{1};     // i.e. number of dimensions
-  constexpr const hsize_t BUFF_SIZE{1};
-  constexpr const hsize_t MAXDIMS{H5S_UNLIMITED};  // extensible dataset
-  const H5std_string FILL_VAL_STR{'\0'};
+template <typename T1, typename T2>
+std::unique_ptr<H5::DSetCreatPropList> Cooler::generate_default_cprop(hsize_t chunk_size,
+                                                                      uint8_t compression_lvl,
+                                                                      T1 type, T2 fill_value) {
+  static_assert(
+      std::is_same_v<T2, int64_t> || std::is_same_v<T2, int32_t> || std::is_same_v<T2, char>,
+      "fill_value should have one of the following types: int64_t, int32_t char.");
+  static_assert((std::is_same_v<T2, char> && std::is_same_v<T1, H5::StrType>) ||
+                    std::is_same_v<T1, H5::PredType>,
+                "Incompatible data type for variables type and fill_value: if T2 is char, then T1 "
+                "must be H5::StrType, else T2 is integral and type is H5::PredType");
 
-  try {
-    auto mem_space{H5::DataSpace(RANK, &BUFF_SIZE, &MAXDIMS)};
+  H5::DSetCreatPropList prop{};
+  prop.setChunk(1, &chunk_size);
+  prop.setDeflate(compression_lvl);
+  prop.setFillValue(type, &fill_value);  // TODO: make sure this works for STR_TYPE, otherwise
+                                         // use const H5std_string FILL_VAL_STR{'\0'};
 
-    const hsize_t MAX_STR_LENGTH =
-        std::max_element(data.begin(), data.end(),
-                         [](const auto &s1, const auto &s2) { return s1.size() < s2.size(); })
-            ->size() +
-        1;
-    // Create the datatype as follows
-    H5::StrType STD_STR(H5::PredType::C_S1, MAX_STR_LENGTH);
-    STD_STR.setStrpad(H5T_STR_NULLTERM);  // This seems to be the most robust way of terminating
-                                          // strings. Using NULLPAD sometimes causes some garbage to
-                                          // appear at end of string
-    STD_STR.setCset(H5T_CSET_ASCII);
+  return std::make_unique<H5::DSetCreatPropList>(prop);
+}
 
-    H5::DSetCreatPropList cparms{};
-    cparms.setChunk(RANK, &CHUNK_DIMS);
-    cparms.setFillValue(STD_STR, &FILL_VAL_STR);
-    cparms.setDeflate(COMPRESSION_LEVEL);
-
-    auto dataset =
-        f.nameExists(d) ? f.openDataSet(d) : f.createDataSet(d, STD_STR, mem_space, cparms);
-
-    H5::DataSpace file_space;  // File space
-
-    // This is probably not very efficient, but it should be fine, given that we don't expect to
-    // write that many strings
-    hsize_t file_size{file_offset + data.size()};
-    dataset.extend(&file_size);
-    for (const auto &s : data) {
-      file_space = dataset.getSpace();
-      file_space.selectHyperslab(H5S_SELECT_SET, &BUFF_SIZE, &file_offset);
-      dataset.write(s.c_str(), STD_STR, mem_space, file_space);
-      ++file_offset;
+template <typename T>
+std::unique_ptr<H5::DSetAccPropList> Cooler::generate_default_aprop(T type, hsize_t chunk_size,
+                                                                    hsize_t cache_size) {
+  static_assert(std::is_same_v<T, H5::StrType> || std::is_same_v<T, H5::PredType>,
+                "type should be of type H5::StrType or H5::PredType");
+  H5::DSetAccPropList prop{};
+  // https://support.hdfgroup.org/HDF5/doc/Advanced/Chunking/index.html
+  constexpr std::size_t default_multiplier{100};
+  constexpr double rdcc_w0{0.99};
+  if constexpr (std::is_same_v<T, H5::StrType>) {
+    prop.setChunkCache(default_multiplier * (cache_size / chunk_size), cache_size, rdcc_w0);
+  } else {
+    if (type == H5::PredType::NATIVE_INT64) {  // int64_t
+      prop.setChunkCache(default_multiplier * (cache_size / chunk_size), cache_size, rdcc_w0);
+    } else if (type == H5::PredType::NATIVE_INT) {  // int32_t
+      prop.setChunkCache(default_multiplier * (cache_size / (chunk_size + chunk_size)), cache_size,
+                         rdcc_w0);
+    } else {
+      throw std::runtime_error(
+          "Cooler::generate_default_aprop(), type should have type H5::StrType or be one of "
+          "H5::PredType:NATIVE_INT, H5::PredType::NATIVE_INT64");
     }
-    return file_offset;
-  } catch (const H5::FileIException &e) {
-    throw std::runtime_error(e.getDetailMsg());
-  } catch (const H5::GroupIException &e) {
-    throw std::runtime_error(e.getDetailMsg());
-  } catch (const H5::DataSetIException &e) {
-    throw std::runtime_error(e.getDetailMsg());
-  } catch (const H5::DataSpaceIException &e) {
-    throw std::runtime_error(e.getDetailMsg());
   }
+  return std::make_unique<H5::DSetAccPropList>(prop);
 }
 
-template <typename I>
-hsize_t write_int(I num, H5::H5File &f, std::string_view dataset_name, hsize_t file_offset,
-                  hsize_t CHUNK_DIMS, uint8_t COMPRESSION_LEVEL) {
-  static_assert(std::is_integral<I>::value, "I should be an integer type.");
-
-  const H5std_string d{dataset_name};  // Probably unnecessary
-  constexpr const hsize_t RANK{1};     // i.e. number of dimensions
-  const hsize_t BUFF_SIZE{1};
-  constexpr const hsize_t MAXDIMS{H5S_UNLIMITED};  // extensible dataset
-  constexpr const I FILL_VAL{0};
-
+std::unique_ptr<H5::H5File> Cooler::open_file(const std::filesystem::path &path, IO_MODE mode,
+                                              std::size_t bin_size, Flavor flavor, bool validate) {
   try {
-    const auto mem_space{H5::DataSpace(RANK, &BUFF_SIZE, &MAXDIMS)};
-
-    H5::DSetCreatPropList cparms{};
-    cparms.setChunk(RANK, &CHUNK_DIMS);
-    cparms.setFillValue(getH5_type<I>(), &FILL_VAL);
-    cparms.setDeflate(COMPRESSION_LEVEL);
-
-    auto dataset =
-        f.nameExists(d) ? f.openDataSet(d) : f.createDataSet(d, getH5_type<I>(), mem_space, cparms);
-
-    H5::DataSpace file_space;
-
-    hsize_t file_size{file_offset + BUFF_SIZE};
-    dataset.extend(&file_size);
-    file_space = dataset.getSpace();
-    file_space.selectHyperslab(H5S_SELECT_SET, &BUFF_SIZE, &file_offset);
-    dataset.write(&num, getH5_type<I>(), mem_space, file_space);
-    return file_size;
-
-  } catch (const H5::FileIException &e) {
-    throw std::runtime_error(e.getDetailMsg());
-  } catch (const H5::GroupIException &e) {
-    throw std::runtime_error(e.getDetailMsg());
-  } catch (const H5::DataSetIException &e) {
-    throw std::runtime_error(e.getDetailMsg());
-  } catch (const H5::DataSpaceIException &e) {
-    throw std::runtime_error(e.getDetailMsg());
-  }
-}
-
-template <typename I>
-hsize_t write_vect_of_int(std::vector<I> &data, H5::H5File &f, std::string_view dataset_name,
-                          hsize_t file_offset, hsize_t CHUNK_DIMS, uint8_t COMPRESSION_LEVEL) {
-  static_assert(std::is_integral<I>::value, "I should be an integer type.");
-
-  const H5std_string d{dataset_name};  // Probably unnecessary
-  constexpr const hsize_t RANK{1};     // i.e. number of dimensions
-  const hsize_t BUFF_SIZE{data.size()};
-  constexpr const hsize_t MAXDIMS{H5S_UNLIMITED};  // extensible dataset
-  constexpr const I FILL_VAL{0};
-
-  try {
-    const auto mem_space{H5::DataSpace(RANK, &BUFF_SIZE, &MAXDIMS)};
-
-    H5::DSetCreatPropList cparms{};
-    cparms.setChunk(RANK, &CHUNK_DIMS);
-    cparms.setFillValue(getH5_type<I>(), &FILL_VAL);
-    cparms.setDeflate(COMPRESSION_LEVEL);
-
-    auto dataset =
-        f.nameExists(d) ? f.openDataSet(d) : f.createDataSet(d, getH5_type<I>(), mem_space, cparms);
-
-    H5::DataSpace file_space;
-
-    hsize_t file_size{file_offset + BUFF_SIZE};
-    dataset.extend(&file_size);
-    DISABLE_WARNING_PUSH
-    DISABLE_WARNING_C_VLA
-    const auto *cbuff = reinterpret_cast<I(*)[BUFF_SIZE]>(data.data());  // NOLINT
-    DISABLE_WARNING_POP
-    file_space = dataset.getSpace();
-    file_space.selectHyperslab(H5S_SELECT_SET, &BUFF_SIZE, &file_offset);
-    dataset.write(cbuff, getH5_type<I>(), mem_space, file_space);
-    return file_size;
-
-  } catch (const H5::FileIException &e) {
-    throw std::runtime_error(e.getDetailMsg());
-  } catch (const H5::GroupIException &e) {
-    throw std::runtime_error(e.getDetailMsg());
-  } catch (const H5::DataSetIException &e) {
-    throw std::runtime_error(e.getDetailMsg());
-  } catch (const H5::DataSpaceIException &e) {
-    throw std::runtime_error(e.getDetailMsg());
-  }
-}
-
-template <typename I>
-hsize_t read_int(H5::H5File &f, std::string_view dataset_name, I &BUFF, hsize_t file_offset) {
-  static_assert(std::is_integral<I>::value, "I should be an integer type.");
-  try {
-    H5::Exception::dontPrint();
-
-    const H5std_string d{dataset_name};
-    constexpr const hsize_t DIMS = 1;
-    constexpr const hsize_t RANK = 1;
-
-    auto dataset = f.openDataSet(d);
-    const auto DTYPE = dataset.getDataType();
-    auto file_space = dataset.getSpace();
-
-    auto mem_space{H5::DataSpace(RANK, &DIMS)};
-
-    file_space = dataset.getSpace();
-    file_space.selectHyperslab(H5S_SELECT_SET, &RANK, &file_offset);
-    dataset.read(&BUFF, DTYPE, mem_space, file_space);
-
-    return file_offset + 1;
-
+    H5::H5File f(path.c_str(), mode == READ_ONLY ? H5F_ACC_RDONLY : H5F_ACC_CREAT);
+    if (validate) {
+      validate_file_format(f, flavor, mode, bin_size, true);
+    }
+    return std::make_unique<H5::H5File>(f);
   } catch (const H5::Exception &e) {
-    throw std::runtime_error(fmt::format(
-        FMT_STRING("Failed to read data into an integer variable (dataset = {}; file offset = "
-                   "{}, buff size = 1): Function '{}' failed with error '{}'"),
-        dataset_name, file_offset, e.getFuncName(), e.getDetailMsg()));
+    throw std::runtime_error(e.getDetailMsg());
   }
 }
 
-template <typename I>
-hsize_t read_vect_of_int(H5::H5File &f, std::string_view dataset_name, std::vector<I> &BUFF,
-                         hsize_t file_offset) {
-  static_assert(std::is_integral<I>::value, "I should be an integer type.");
+Cooler::Flavor Cooler::detect_file_flavor(H5::H5File &f) {
+  Cooler::Flavor flavor{UNK};
 
-  const H5std_string d{dataset_name};  // Probably unnecessary
-  constexpr const hsize_t RANK{1};     // i.e. number of dimensions
-  hsize_t BUFF_SIZE{BUFF.size()};
+  if (const auto &fname = f.getFileName(); absl::EndsWithIgnoreCase(fname, ".cool")) {
+    flavor = COOL;
+  } else if (absl::EndsWithIgnoreCase(fname, ".mcool")) {
+    flavor = MCOOL;
+  } else if (absl::EndsWithIgnoreCase(fname, ".scool")) {
+    flavor = SCOOL;
+  }
+  if (flavor != UNK) {
+    return flavor;
+  }
+
+  std::string buff;
+  hdf5::read_attribute(f, "format", buff);
+  if (const auto &fname = f.getFileName(); absl::EndsWithIgnoreCase(fname, "::cooler")) {
+    flavor = COOL;
+  } else if (absl::EndsWithIgnoreCase(fname, "::mcool")) {
+    flavor = MCOOL;
+  } else if (absl::EndsWithIgnoreCase(fname, "::scool")) {
+    flavor = SCOOL;
+  }
+  if (flavor != UNK) {
+    return flavor;
+  }
+
+  if (f.nameExists("/resolutions")) {
+    flavor = MCOOL;
+  } else if (f.nameExists("/bins") && f.nameExists("/chroms")) {
+    if (f.nameExists("/pixels") && f.nameExists("/indexes")) {
+      flavor = COOL;
+    } else if (f.nameExists("/cells")) {
+      flavor = SCOOL;
+    }
+  }
+
+  if (flavor == UNK) {
+    throw std::runtime_error("Unable to detect Cooler file flavor");
+  }
+  return flavor;
+}
+
+bool Cooler::validate_file_format(H5::H5File &f, Flavor expected_flavor, IO_MODE mode,
+                                  std::size_t bin_size, bool throw_on_failure) {
+  if (mode == WRITE_ONLY) {  // File is empty. Nothing to validate here
+    return true;
+  }
 
   try {
-    auto dataset = f.openDataSet(d);
-    auto file_space = dataset.getSpace();
-
-    if (const auto n_items = static_cast<hsize_t>(file_space.getSimpleExtentNpoints());
-        n_items < BUFF_SIZE || BUFF_SIZE == 0) {
-      BUFF_SIZE = n_items;
-      BUFF.resize(BUFF_SIZE);
+    const auto flavor = detect_file_flavor(f);
+    if (expected_flavor != AUTO && expected_flavor != UNK && expected_flavor != flavor) {
+      throw std::runtime_error(fmt::format(FMT_STRING("Expected format flavor {}, found {}"),
+                                           flavor_to_string(expected_flavor),
+                                           flavor_to_string(flavor)));
+    }
+    switch (flavor) {
+      case COOL:
+        return validate_cool_flavor(f, bin_size, "/", throw_on_failure);
+      case MCOOL:
+        return validate_multires_cool_flavor(f, bin_size, "/", throw_on_failure);
+      case SCOOL:
+        throw std::runtime_error("SCOOL flavor is not yet supported");
+      default:
+        assert(false);  // This code should be unreachable
+        return false;
     }
 
-    const auto mem_space{H5::DataSpace(RANK, &BUFF_SIZE)};
-
-    DISABLE_WARNING_PUSH
-    DISABLE_WARNING_C_VLA
-    auto *cbuff = reinterpret_cast<I(*)[BUFF_SIZE]>(BUFF.data());  // NOLINT
-    DISABLE_WARNING_POP
-
-    file_space.selectHyperslab(H5S_SELECT_SET, &BUFF_SIZE, &file_offset);
-    dataset.read(cbuff, getH5_type<I>(), mem_space, file_space);
-
-    return file_offset + BUFF_SIZE;
-  } catch (const H5::Exception &e) {
-    throw std::runtime_error(fmt::format(
-        FMT_STRING("Failed to read data into a vector of integers (dataset = {}; file offset = "
-                   "{}; buff size = {}): Function '{}' failed with error '{}'"),
-        dataset_name, file_offset, BUFF_SIZE, e.getFuncName(), e.getDetailMsg()));
+  } catch (const std::runtime_error &e) {
+    throw std::runtime_error(fmt::format(FMT_STRING("Cooler validation for file '{}' failed: {}"),
+                                         f.getFileName(), e.what()));
   }
 }
 
-/*
-template <typename I>
-void write_modle_cmatrix_to_cooler(const ContactMatrix<I> &cmatrix, std::string_view chr_name,
-                                   uint64_t chr_start, uint64_t chr_end, uint64_t chr_length,
-                                   std::string_view output_file, bool force_overwrite) {
-  const std::vector<ContactMatrix<I>> cmatrices{cmatrix};
-  write_modle_cmatrices_to_cooler(cmatrices, std::vector < std::string_view{chr_name},
-                                std::vector<uint64_t>{chr_start}, std::vector<uint64_t>{chr_end},
-                                std::vector<uint64_t>{chr_length}, output_file, force_overwrite);
-}
- */
+bool Cooler::validate_cool_flavor(H5::H5File &f, std::size_t bin_size, std::string_view root_path,
+                                  bool throw_on_failure) {
+  /* The following attributes are being checked:
+   * format
+   * format-version
+   * bin-type
+   * bin size
+   * storage-mode
+   */
 
-template <typename I>
-void write_modle_cmatrices_to_cooler(const std::vector<ContactMatrix<I>> &cmatrices,
-                                     const std::vector<std::string> &chr_names,
-                                     const std::vector<uint64_t> &chr_starts,
-                                     const std::vector<uint64_t> &chr_ends,
-                                     const std::vector<uint64_t> &chr_sizes, uint64_t bin_size,
-                                     std::string_view output_file, bool force_overwrite) {
-  std::vector<const ContactMatrix<I> *> v(cmatrices.size());
-  std::transform(cmatrices.begin(), cmatrices.end(), v.begin(), [](const auto &m) { return &m; });
-  write_modle_cmatrices_to_cooler(v, chr_names, chr_starts, chr_ends, chr_sizes, bin_size,
-                                  output_file, force_overwrite);
-}
+  std::string str_buff;
+  int64_t int_buff;
 
-template <typename I>
-void write_modle_cmatrices_to_cooler(const std::vector<const ContactMatrix<I> *> &cmatrices,
-                                     const std::vector<std::string> &chr_names,
-                                     const std::vector<uint64_t> &chr_starts,
-                                     const std::vector<uint64_t> &chr_ends,
-                                     const std::vector<uint64_t> &chr_sizes, uint64_t bin_size,
-                                     std::string_view output_file, bool force_overwrite) {
-  static_assert(std::is_integral<I>::value, "I should be an integral type.");
+  constexpr int64_t min_format_ver = 2;
+  constexpr int64_t max_format_ver = 3;
 
-  fmt::print(stderr, FMT_STRING("Writing {} contact matrices for to file '{}'...\n"),
-             cmatrices.size(), output_file);
-
-  const auto n_chromosomes = cmatrices.size();
-  if (n_chromosomes != chr_names.size() || n_chromosomes != chr_starts.size() ||
-      n_chromosomes != chr_ends.size() || n_chromosomes != chr_sizes.size()) {
-    utils::throw_with_trace(std::runtime_error(fmt::format(
-        FMT_STRING("Message for the DEVS: The vectors passed to function "
-                   "cooler::write_modle_cmatrices_to_cooler() should all have "
-                   "the same size!\n  cmatrices.size()={}\n  chr_names.size()={}\n  "
-                   "chr_starts={}\n  chr_ends={}\n  chr_sizes={}\n"),
-        cmatrices.size(), chr_names.size(), chr_starts.size(), chr_ends.size(), chr_sizes.size())));
-  }
-
-  auto t0 = absl::Now();
-
-  if (force_overwrite && std::filesystem::exists(output_file)) {
-    std::filesystem::remove(output_file);
-  }
-
-  std::filesystem::create_directories(std::filesystem::path(output_file).parent_path());
-
-  auto f = cooler::init_file(output_file, force_overwrite);
-
-  std::size_t chr_name_foffset = 0;
-  std::size_t chr_length_foffset = 0;
-
-  constexpr const std::size_t BUFF_SIZE = 1024 * 1024 / sizeof(int64_t);  // 1 MB
-  std::vector<int64_t> bin_pos_buff;
-  std::vector<int32_t> bin_chrom_buff;
-  std::vector<int64_t> pixel_b1_idx_buff;
-  std::vector<int64_t> pixel_b2_idx_buff;
-  std::vector<int64_t> pixel_count_buff;
-  std::vector<int64_t> idx_bin1_offset_buff;
-  std::vector<int64_t> idx_chrom_offset_buff;
-
-  bin_pos_buff.reserve(BUFF_SIZE);
-  bin_chrom_buff.reserve(BUFF_SIZE);
-  pixel_b1_idx_buff.reserve(BUFF_SIZE);
-  pixel_b2_idx_buff.reserve(BUFF_SIZE);
-  pixel_count_buff.reserve(BUFF_SIZE);
-  idx_bin1_offset_buff.reserve(BUFF_SIZE);
-  idx_chrom_offset_buff.reserve(cmatrices.size());
-
-  hsize_t pixel_b1_idx_h5df_offset = 0;
-  hsize_t pixel_b2_idx_h5df_offset = 0;
-  hsize_t pixel_count_h5df_offset = 0;
-  hsize_t idx_bin1_offset_h5df_offset = 0;
-
-  auto write_pixels_to_file = [&]() {
-    pixel_b1_idx_h5df_offset =
-        cooler::write_vect_of_int(pixel_b1_idx_buff, f, "pixels/bin1_id", pixel_b1_idx_h5df_offset);
-    pixel_b2_idx_h5df_offset =
-        cooler::write_vect_of_int(pixel_b2_idx_buff, f, "pixels/bin2_id", pixel_b2_idx_h5df_offset);
-    pixel_count_h5df_offset =
-        cooler::write_vect_of_int(pixel_count_buff, f, "pixels/count", pixel_count_h5df_offset);
-
-    pixel_b1_idx_buff.clear();
-    pixel_b2_idx_buff.clear();
-    pixel_count_buff.clear();
-  };
-
-  int64_t nnz = 0;
-  int64_t offset = 0;
-  int64_t nbins = 0;
-
-  cooler::write_metadata(f, static_cast<int32_t>(bin_size));
-
-  const auto max_chrom_name_length =
-      std::max_element(chr_names.begin(), chr_names.end(),
-                       [](const auto &s1, const auto &s2) { return s1.size() < s2.size(); })
-          ->size() +
-      1;
-  for (auto chr_idx = 0UL; chr_idx < n_chromosomes; ++chr_idx) {
-    const auto &cmatrix = cmatrices[chr_idx];
-    const auto &chr_name = chr_names[chr_idx];
-    const auto &chr_total_len = chr_sizes[chr_idx];
-    const auto &chr_start = chr_starts[chr_idx];
-    const auto &chr_end = chr_ends[chr_idx];
-    const auto chr_simulated_len = chr_end - chr_start;
-    chr_name_foffset =
-        cooler::write_str(chr_name, f, "chroms/name", max_chrom_name_length, chr_name_foffset);
-    chr_length_foffset = cooler::write_int(chr_total_len, f, "chroms/length", chr_length_foffset);
-    DISABLE_WARNING_PUSH
-    DISABLE_WARNING_CONVERSION
-    DISABLE_WARNING_SIGN_CONVERSION
-    fmt::print(stderr, FMT_STRING("Writing contacts for '{}' ({:.2f} Mbp)..."), chr_name,
-               chr_simulated_len / 1.0e6);  // NOLINT
-    const auto t1 = absl::Now();
-    idx_chrom_offset_buff.push_back(nbins);
-    nbins = cooler::write_bins(f, chr_idx++, chr_simulated_len, bin_size,  // NOLINT
-                               bin_chrom_buff, bin_pos_buff, nbins);
-    DISABLE_WARNING_POP
-
-    for (auto i = 0UL; i < chr_start / bin_size; ++i) {
-      idx_bin1_offset_buff.push_back(nnz);
-      if (idx_bin1_offset_buff.size() == BUFF_SIZE) {
-        idx_bin1_offset_h5df_offset = cooler::write_vect_of_int(
-            idx_bin1_offset_buff, f, "indexes/bin1_offset", idx_bin1_offset_h5df_offset);
-        idx_bin1_offset_buff.clear();
+  try {
+    // Checking attributes
+    hdf5::read_attribute(f, "format", str_buff, root_path);
+    if (!absl::EndsWithIgnoreCase(str_buff, "::cooler")) {
+      if (!throw_on_failure) {
+        return false;
       }
+      throw std::runtime_error(fmt::format(
+          FMT_STRING(
+              "File is not in Cooler format: format attribute should be HDF5::Cooler, is '{}'"),
+          str_buff));
     }
 
-    offset += static_cast<int64_t>(chr_start / bin_size);
-    for (auto i = 0UL; i < cmatrix->n_cols(); ++i) {
-      idx_bin1_offset_buff.push_back(nnz);
-      for (auto j = i; j < i + cmatrix->n_rows() && j < cmatrix->n_cols(); ++j) {
-        if (const auto m = cmatrix->get(i, j); m != 0) {
-          pixel_b1_idx_buff.push_back(offset + static_cast<int64_t>(i));
-          pixel_b2_idx_buff.push_back(offset + static_cast<int64_t>(j));
-#ifndef NDEBUG
-          if (offset + static_cast<int64_t>(i) > offset + static_cast<int64_t>(j)) {
-            utils::throw_with_trace(std::runtime_error(
-                fmt::format(FMT_STRING("b1 > b2: b1={}; b2={}; offset={}; m={}\n"),
-                            pixel_b1_idx_buff.back(), pixel_b2_idx_buff.back(), offset, m)));
-          }
-#endif
-          pixel_count_buff.push_back(m);
-          ++nnz;
-          if (pixel_b1_idx_buff.size() == BUFF_SIZE) {
-            write_pixels_to_file();
-          }
+    hdf5::read_attribute(f, "format-version", int_buff, root_path);
+    if (int_buff < min_format_ver && int_buff > max_format_ver) {
+      if (!throw_on_failure) {
+        return false;
+      }
+      throw std::runtime_error(fmt::format(
+          FMT_STRING("Expected format-version attribute to be between {} and {}, got {}"),
+          min_format_ver, max_format_ver, int_buff));
+    }
+    const auto format_version = static_cast<uint8_t>(int_buff);
+
+    hdf5::read_attribute(f, "bin-type", str_buff, root_path);
+    if (str_buff != "fixed") {
+      if (!throw_on_failure) {
+        return false;
+      }
+      throw std::runtime_error(
+          fmt::format(FMT_STRING("Expected bin-type attribute to be 'fixed', got '{}'"), str_buff));
+    }
+
+    if (bin_size != 0) {
+      hdf5::read_attribute(f, "bin-size", int_buff, root_path);
+      if (static_cast<int64_t>(bin_size) != int_buff) {
+        if (!throw_on_failure) {
+          return false;
         }
-      }
-      if (idx_bin1_offset_buff.size() == BUFF_SIZE) {
-        idx_bin1_offset_h5df_offset = cooler::write_vect_of_int(
-            idx_bin1_offset_buff, f, "indexes/bin1_offset", idx_bin1_offset_h5df_offset);
-        idx_bin1_offset_buff.clear();
+        throw std::runtime_error(fmt::format(
+            FMT_STRING("Expected bin-size attribute to be {}, got {}"), bin_size, int_buff));
       }
     }
-    for (auto i = 0UL; i < (chr_total_len - chr_end) / bin_size; ++i) {
-      idx_bin1_offset_buff.push_back(nnz);
-      if (idx_bin1_offset_buff.size() == BUFF_SIZE) {
-        idx_bin1_offset_h5df_offset = cooler::write_vect_of_int(
-            idx_bin1_offset_buff, f, "indexes/bin1_offset", idx_bin1_offset_h5df_offset);
-        idx_bin1_offset_buff.clear();
+    if (format_version > 2) {
+      hdf5::read_attribute(f, "storage-mode", str_buff, root_path);
+      if (str_buff != "symmetric-upper") {
+        if (!throw_on_failure) {
+          return false;
+        }
+        throw std::runtime_error(fmt::format(
+            FMT_STRING("Expected storage-mode attribute to be 'symmetric-upper', got '{}'"),
+            str_buff));
       }
     }
 
-    offset = nbins;
-    fmt::print(stderr, FMT_STRING(" DONE in {}!\n"), absl::FormatDuration(absl::Now() - t1));
+    // Checking groups
+    auto check_group = [&](std::string_view name) {
+      if (!hdf5::group_exists(f, name, root_path)) {
+        if (!throw_on_failure) {
+          return false;
+        }
+        throw std::runtime_error(fmt::format(FMT_STRING("Missing mandatory group '{}/{}'"),
+                                             absl::StripPrefix(root_path, "/"), name));
+      }
+    };
+
+    bool ok = true;
+    ok = ok && check_group("chroms");
+    ok = ok && check_group("bins");
+    ok = ok && check_group("pixels");
+    ok = ok && check_group("indexes");
+
+    if (!ok) {
+      return false;
+    }
+
+    // Checking datasets
+    auto check_int_dset = [&](std::string_view name) {
+      if (!hdf5::dataset_exists(f, "chroms/length", H5::PredType::NATIVE_INT, root_path)) {
+        if (!throw_on_failure) {
+          return false;
+        }
+        throw std::runtime_error(fmt::format(FMT_STRING("Missing mandatory dataset '{}/{}'"),
+                                             absl::StripPrefix(root_path, "/"), name));
+      }
+    };
+
+    auto check_str_dset = [&](std::string_view name) {
+      if (!hdf5::dataset_exists(f, "chroms/length", H5::PredType::C_S1, root_path)) {
+        if (!throw_on_failure) {
+          return false;
+        }
+        throw std::runtime_error(fmt::format(FMT_STRING("Missing mandatory dataset '{}/{}'"),
+                                             absl::StripPrefix(root_path, "/"), name));
+      }
+    };
+
+    ok = ok && check_int_dset("chroms/length");
+    ok = ok && check_str_dset("chroms/name");
+    ok = ok && check_int_dset("bins/chrom");
+    ok = ok && check_int_dset("bins/start");
+    ok = ok && check_int_dset("bins/end");
+    ok = ok && check_int_dset("pixels/bin1_id");
+    ok = ok && check_int_dset("pixels/bin2_id");
+    ok = ok && check_int_dset("pixels/count");
+    ok = ok && check_int_dset("indexes/bin1_offset");
+    ok = ok && check_int_dset("indexes/chrom_offset");
+
+    if (!ok) {
+      return false;
+    }
+
+  } catch (const std::runtime_error &e) {
+    if (std::string_view msg{e.what()};
+        absl::ConsumePrefix(&msg, "Unable to find an attribute named '")) {
+      if (!throw_on_failure) {
+        return false;
+      }
+      auto attr_name = msg.substr(0, msg.find_first_of("'"));
+      throw std::runtime_error(
+          fmt::format(FMT_STRING("Missing mandatory attribute '{}'{}"), attr_name,
+                      root_path == "/" ? "" : absl::StrCat(" from path '", root_path, "'")));
+    }
+    throw;
   }
-
-  if (!pixel_b1_idx_buff.empty()) {
-    write_pixels_to_file();
-  }
-
-  idx_chrom_offset_buff.push_back(nbins);
-  idx_bin1_offset_buff.push_back(nnz);
-
-  cooler::write_vect_of_int(idx_chrom_offset_buff, f, "indexes/chrom_offset");
-  cooler::write_vect_of_int(idx_bin1_offset_buff, f, "indexes/bin1_offset",
-                            idx_bin1_offset_h5df_offset);
-
-  H5::DataSpace att_space(H5S_SCALAR);
-  auto att = f.createAttribute("nchroms", H5::PredType::NATIVE_INT64, att_space);
-  att.write(H5::PredType::NATIVE_INT, &n_chromosomes);
-  att = f.createAttribute("nbins", H5::PredType::NATIVE_INT64, att_space);
-  att.write(H5::PredType::NATIVE_INT, &nbins);
-  att = f.createAttribute("nnz", H5::PredType::NATIVE_INT64, att_space);
-  att.write(H5::PredType::NATIVE_INT, &nnz);
-
-  fmt::print(stderr, "DONE! Saved {} pixels in {}.\n", nnz, absl::FormatDuration(absl::Now() - t0));
 }
 
-template <typename T>
-void read_attribute(std::string_view path_to_file, std::string_view attr_name, T &buff,
-                    std::string_view path) {
-  auto f = open_for_reading(path_to_file);
-  read_attribute(f, attr_name, buff, path);
+std::vector<H5::Group> Cooler::open_groups(H5::H5File &f, bool create_if_not_exist) {
+  std::vector<H5::Group> groups(4);  // NOLINT
+  auto open_or_create_group = [&](Cooler::Groups g, const std::string &group_name) {
+    groups[g] = create_if_not_exist && !f.nameExists(group_name) ? f.createGroup(group_name)
+                                                                 : f.openGroup(group_name);
+  };
+  try {
+    open_or_create_group(CHR, "chroms");
+    open_or_create_group(BIN, "bins");
+    open_or_create_group(PXL, "pixels");
+    open_or_create_group(IDX, "indexes");
+
+    return groups;
+  } catch (const H5::Exception &e) {
+    throw std::runtime_error(e.getDetailMsg());
+  }
 }
 
-template <typename T>
-void read_attribute(H5::H5File &f, std::string_view attr_name, T &buff, std::string_view path) {
-  auto g = f.openGroup(path.empty() ? "/" : std::string{path});
+bool Cooler::validate_multires_cool_flavor(H5::H5File &f, std::size_t bin_size,
+                                           std::string_view root_path, bool throw_on_failure) {
+  constexpr int64_t min_format_ver = 2;
+  constexpr int64_t max_format_ver = 3;
 
-  if (!g.attrExists(std::string{attr_name})) {
-    throw std::runtime_error(fmt::format(
-        FMT_STRING("Unable to find an attribute named '{}' in path '/{}'"), attr_name, path));
+  if (bin_size == 0) {
+    throw std::runtime_error(
+        "A bin size other than 0 is required when calling Cooler::validate_multires_cool_flavor()");
   }
 
-  auto attr = g.openAttribute(std::string{attr_name});
-  attr.read(attr.getDataType(), &buff);
+  if (const auto format = hdf5::read_attribute_str(f, "format", root_path);
+      absl::EndsWithIgnoreCase(format, "::mcool")) {
+    if (!throw_on_failure) {
+      return false;
+    }
+    throw std::runtime_error(
+        fmt::format(FMT_STRING("File is not in Multires-Cooler (MCool) format: format attribute "
+                               "should be HDF5::MCOOL, is '{}'"),
+                    format));
+  }
+
+  if (const auto format_ver = hdf5::read_attribute_int(f, "format-version", root_path);
+      format_ver < min_format_ver || format_ver > max_format_ver) {
+    if (!throw_on_failure) {
+      return false;
+    }
+    throw std::runtime_error(
+        fmt::format(FMT_STRING("Expected format-version attribute to be between {} and {}, got {}"),
+                    min_format_ver, max_format_ver, format_ver));
+  }
+
+  if (!hdf5::group_exists(f, "resolutions", root_path)) {
+    if (!throw_on_failure) {
+      return false;
+    }
+    throw std::runtime_error(fmt::format(FMT_STRING("Missing mandatory group '{}/resolutions'"),
+                                         absl::StripPrefix(root_path, "/")));
+  }
+
+  if (!hdf5::group_exists(f, absl::StrCat("resolutions/", bin_size), root_path)) {
+    if (!throw_on_failure) {
+      return false;
+    }
+    throw std::runtime_error(
+        fmt::format(FMT_STRING("Missing group for resolution {} bp"), bin_size));
+  }
+
+  return validate_cool_flavor(
+      f, bin_size, absl::StrCat(absl::StripPrefix(root_path, "/"), "/resolutions/", bin_size),
+      throw_on_failure);
 }
+
+Cooler::Cooler(std::string_view path_to_file, IO_MODE mode, std::size_t bin_size, Flavor flavor,
+               bool validate, uint8_t compression_lvl, std::size_t chunk_size,
+               std::size_t cache_size)
+    : _path_to_file(std::string{path_to_file.data(), path_to_file.size()}),
+      _mode(mode),
+      _bin_size(bin_size),
+      _flavor(flavor),
+      _fp(open_file(_path_to_file, _mode, _bin_size, _flavor, validate)),
+      _groups(open_groups(*_fp, !this->is_read_only())),
+      _compression_lvl(compression_lvl),
+      _chunk_size(chunk_size),
+      _cache_size(cache_size),
+      _cprop_str(this->is_read_only() ? nullptr
+                                      : generate_default_cprop(_chunk_size, _compression_lvl,
+                                                               Cooler::STR_TYPE, '\0')),
+      _cprop_int32(this->is_read_only() ? nullptr
+                                        : generate_default_cprop(_chunk_size, _compression_lvl,
+                                                                 Cooler::INT32_TYPE, 0)),
+      _cprop_int64(this->is_read_only() ? nullptr
+                                        : generate_default_cprop(_chunk_size, _compression_lvl,
+                                                                 Cooler::INT64_TYPE, 0L)),
+      _aprop_str(this->is_read_only()
+                     ? generate_default_aprop(Cooler::STR_TYPE, _chunk_size, _cache_size)
+                     : nullptr),
+      _aprop_int32(this->is_read_only()
+                       ? generate_default_aprop(Cooler::INT32_TYPE, _chunk_size, _cache_size)
+                       : nullptr),
+      _aprop_int64(this->is_read_only()
+                       ? generate_default_aprop(Cooler::INT64_TYPE, _chunk_size, _cache_size)
+                       : nullptr) {}
+
+bool Cooler::is_read_only() const { return this->_mode == Cooler::READ_ONLY; }
+
+void Cooler::write_metadata() {
+  if (this->is_read_only()) {
+    throw std::runtime_error(
+        fmt::format(FMT_STRING("Caught attempt to write metadata to an HDF5 file that is opened in "
+                               "read-only mode. File name: {}"),
+                    this->_path_to_file.string()));
+  }
+  H5::StrType METADATA_STR_TYPE(H5::PredType::C_S1, H5T_VARIABLE);
+  METADATA_STR_TYPE.setCset(H5T_CSET_UTF8);
+
+  H5::DataSpace attr_space(H5S_SCALAR);
+  int32_t int_buff{};
+  std::string str_buff{};
+
+  auto att = this->_fp->createAttribute("format", METADATA_STR_TYPE, attr_space);
+  str_buff = "HDF5::Cooler";
+  att.write(METADATA_STR_TYPE, str_buff);
+
+  att = this->_fp->createAttribute("format-version", H5::PredType::NATIVE_INT64, attr_space);
+  int_buff = 3;
+  att.write(H5::PredType::NATIVE_INT, &int_buff);
+
+  att = this->_fp->createAttribute("bin-type", METADATA_STR_TYPE, attr_space);
+  str_buff = "fixed";
+  att.write(METADATA_STR_TYPE, str_buff);
+
+  att = this->_fp->createAttribute("bin-size", H5::PredType::NATIVE_INT64, attr_space);
+  att.write(H5::PredType::NATIVE_INT, &this->_bin_size);
+
+  att = this->_fp->createAttribute("storage-mode", METADATA_STR_TYPE, attr_space);
+  str_buff = "symmetric-upper";
+  att.write(METADATA_STR_TYPE, str_buff);
+
+  if (!assembly_name.empty()) {
+    str_buff = std::string{assembly_name};
+    att = this->_fp->createAttribute("assembly-name", METADATA_STR_TYPE, attr_space);
+    att.write(METADATA_STR_TYPE, &str_buff);
+  }
+
+  att = this->_fp->createAttribute("generated-by", METADATA_STR_TYPE, attr_space);
+  str_buff = fmt::format("ModLE-v{}", "0.0.1");  // TODO make ModLE ver a tunable
+  att.write(METADATA_STR_TYPE, str_buff);
+
+  att = this->_fp->createAttribute("creation-date", METADATA_STR_TYPE, attr_space);
+  str_buff = absl::FormatTime(absl::Now(), absl::UTCTimeZone());
+  att.write(METADATA_STR_TYPE, str_buff);
+}
+
+void Cooler::write_cmatrix_to_file(const ContactMatrix<I> &cmatrix, bool wipe_before_writing) {}
 
 }  // namespace modle::cooler
