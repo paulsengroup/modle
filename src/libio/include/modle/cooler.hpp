@@ -135,8 +135,6 @@ class Cooler {
   [[nodiscard]] inline static std::vector<H5::Group> open_groups(H5::H5File &f,
                                                                  bool create_if_not_exist = false);
   [[nodiscard]] inline static std::string flavor_to_string(Flavor f);
-  [[nodiscard]] inline static bool check_version(int64_t min_ver = 2, int64_t max_ver = 3,
-                                                 bool throw_on_failure = false);
 
   template <typename T1, typename T2>
   [[nodiscard]] inline static std::unique_ptr<H5::DSetCreatPropList> generate_default_cprop(

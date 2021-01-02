@@ -808,55 +808,6 @@ ContactMatrix<uint32_t> Cooler::cooler_to_cmatrix(int64_t bin_offset,
                                                   std::size_t nrows) {
   return this->cooler_to_cmatrix(bin_offset, absl::MakeConstSpan(bin1_offset_idx), nrows);
 }
-/*
-ContactMatrix<uint32_t> Cooler::cooler_to_cmatrix(int64_t bin_offset,
-                                                  absl::Span<const int64_t> bin1_offset_idx,
-                                                  std::size_t nrows) {
-  ContactMatrix<uint32_t> cmatrix(nrows, bin1_offset_idx.size());
-  std::vector<int64_t> bin1_BUFF(nrows);
-  std::vector<int64_t> bin2_BUFF(nrows);
-  std::vector<int64_t> count_BUFF(nrows);
-
-  for (auto i = 1UL; i < bin1_offset_idx.size(); ++i) {
-    const auto file_offset = static_cast<hsize_t>(bin1_offset_idx[i - 1]);
-    const auto buff_size =
-        std::min(static_cast<std::size_t>(bin1_offset_idx[i] - bin1_offset_idx[i - 1]), nrows);
-    if (buff_size == 0) {
-      continue;
-    }
-
-    bin1_BUFF.resize(buff_size);
-    bin2_BUFF.resize(buff_size);
-    count_BUFF.resize(buff_size);
-
-    (void)hdf5::read_numbers(this->_datasets[PXL_B1], bin1_BUFF, file_offset);
-    (void)hdf5::read_numbers(this->_datasets[PXL_B2], bin2_BUFF, file_offset);
-    (void)hdf5::read_numbers(this->_datasets[PXL_COUNT], count_BUFF, file_offset);
-
-    assert(bin1_BUFF.size() == buff_size);   // NOLINT
-    assert(bin2_BUFF.size() == buff_size);   // NOLINT
-    assert(count_BUFF.size() == buff_size);  // NOLINT
-
-    for (auto j = 0UL; j < buff_size; ++j) {
-      assert(count_BUFF[j] != 0);  // NOLINT
-      DISABLE_WARNING_PUSH
-      DISABLE_WARNING_SIGN_CONVERSION
-      DISABLE_WARNING_SIGN_COMPARE
-      if (const auto bin2_id = bin2_BUFF[j] - bin_offset;
-          bin2_id >= i + nrows - 1 || bin2_id >= bin1_offset_idx.size()) {
-        break;
-      }
-      // fmt::print(stderr, "m[{}][{}]={} (nrows={}; ncols={})\n", bin2_BUFF[j] - bin_offset,
-      //           bin1_BUFF[j] - bin_offset, count_BUFF[j], cmatrix.n_rows(),
-      //           cmatrix.n_cols());
-      cmatrix.set(bin2_BUFF[j] - bin_offset, bin1_BUFF[j] - bin_offset, count_BUFF[j]);
-
-      DISABLE_WARNING_POP
-    }
-  }
-  return cmatrix;
-}
-*/
 
 ContactMatrix<uint32_t> Cooler::cooler_to_cmatrix(std::string_view chr_name,
                                                   std::size_t diagonal_width, std::size_t bin_size,
