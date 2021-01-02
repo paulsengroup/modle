@@ -40,7 +40,7 @@ H5::PredType getH5_type() {
   throw std::logic_error("getH5_type(): Unable to map C++ type to a H5T.");
 }
 
-std::string construct_error_stack(H5::Exception *e) {
+std::string construct_error_stack() {
   std::string buff;
   // The '+' in front of the declaration is a trick that allows to use the lambda as C function
   // pointer
@@ -55,17 +55,10 @@ std::string construct_error_stack(H5::Exception *e) {
     return 0;
   };
 
-  if (e) {
-    e->walkErrorStack(H5E_WALK_DOWNWARD,
-                      reinterpret_cast<H5E_walk2_t>(err_handler),  // NOLINT
-                      buff.data());
-    e->clearErrorStack();
-  } else {
-    H5::Exception::walkErrorStack(H5E_WALK_DOWNWARD,
-                                  reinterpret_cast<H5E_walk2_t>(err_handler),  // NOLINT
-                                  buff.data());
-    H5::Exception::clearErrorStack();
-  }
+  H5::Exception::walkErrorStack(H5E_WALK_DOWNWARD,
+                                reinterpret_cast<H5E_walk2_t>(err_handler),  // NOLINT
+                                buff.data());
+  H5::Exception::clearErrorStack();
   return buff;
 }
 
@@ -321,17 +314,60 @@ void read_attribute(std::string_view path_to_file, std::string_view attr_name, T
   read_attribute(f, attr_name, buff, path);
 }
 
+bool has_attribute(H5::Group &g, std::string_view attr_name) {
+  absl::ConsumePrefix(&attr_name, "/");
+  return g.attrExists(std::string{attr_name});
+}
+
+bool has_attribute(H5::H5File &f, std::string_view attr_name, std::string_view path) {
+  auto g = f.openGroup(std::string{path});
+
+  return has_attribute(g, attr_name);
+}
+
 template <typename T>
 void read_attribute(H5::H5File &f, std::string_view attr_name, T &buff, std::string_view path) {
-  auto g = f.openGroup(path.empty() ? "/" : std::string{path});
-  absl::ConsumePrefix(&attr_name, "/");
-  if (!g.attrExists(std::string{attr_name})) {
+  auto g = f.openGroup(std::string{path});
+  if (!has_attribute(g, attr_name)) {
     throw std::runtime_error(fmt::format(
         FMT_STRING("Unable to find an attribute named '{}' in path '/{}'"), attr_name, path));
   }
 
   auto attr = g.openAttribute(std::string{attr_name});
-  attr.read(attr.getDataType(), &buff);
+  if constexpr (std::is_constructible_v<H5std_string, T>) {
+    buff.clear();
+    attr.read(attr.getStrType(), buff);
+  } else {
+    attr.read(attr.getDataType(), &buff);
+  }
+}
+
+std::string read_attribute_str(H5::H5File &f, std::string_view attr_name, std::string_view path) {
+  std::string buff;
+  read_attribute(f, attr_name, buff, path);
+  return buff;
+}
+
+std::string read_attribute_str(std::string_view path_to_file, std::string_view attr_name,
+                               std::string_view path) {
+  std::string buff;
+  H5::H5File f({path_to_file.data(), path_to_file.size()}, H5F_ACC_RDONLY);
+  read_attribute(f, attr_name, buff, path);
+  return buff;
+}
+
+int64_t read_attribute_int(H5::H5File &f, std::string_view attr_name, std::string_view path) {
+  int64_t buff;  // NOLINT
+  read_attribute(f, attr_name, buff, path);
+  return buff;
+}
+
+int64_t read_attribute_int(std::string_view path_to_file, std::string_view attr_name,
+                           std::string_view path) {
+  int64_t buff;  // NOLINT
+  H5::H5File f({path_to_file.data(), path_to_file.size()}, H5F_ACC_RDONLY);
+  read_attribute(f, attr_name, buff, path);
+  return buff;
 }
 
 bool group_exists(H5::H5File &f, std::string_view name, std::string_view root_path) {
@@ -354,13 +390,10 @@ bool group_exists(H5::H5File &f, std::string_view name, std::string_view root_pa
       fmt::format(FMT_STRING("'{}' exists but is not a group"), absl::StrCat(root_path, name)));
 }
 
-template <typename T>
-inline bool dataset_exists(H5::H5File &f, std::string_view name, T type,
-                           std::string_view root_path) {
-  static_assert(std::is_base_of_v<H5::DataType, T>,
-                "type should have a type that is derived from H5::PredType or H5::StrType type.");
+bool dataset_exists(H5::H5File &f, std::string_view name, std::string_view root_path) {
   H5O_info2_t info;
-  const auto path = absl::StrCat(absl::StripSuffix(root_path, "/"), "/",absl::StripPrefix(name, "/"));
+  const auto path =
+      absl::StrCat(absl::StripSuffix(root_path, "/"), "/", absl::StripPrefix(name, "/"));
   assert(!path.empty());
   std::size_t pos = 0;
   do {
@@ -371,56 +404,77 @@ inline bool dataset_exists(H5::H5File &f, std::string_view name, T type,
   } while (pos != std::string::npos);
   f.getObjinfo(path, info);
 
-  if (info.type == H5O_TYPE_DATASET) {
-    auto dataset = f.openDataSet(path);
-    const auto actual_type = dataset.getTypeClass();
-    const auto expected_type = type.getClass();
-    if (actual_type != expected_type) {
+  return info.type == H5O_TYPE_DATASET;
+}
+
+template <typename T>
+bool check_dataset_type(H5::DataSet &dataset, T type, bool throw_on_failure) {
+  static_assert(std::is_base_of_v<H5::DataType, T>,
+                "type should have a type that is derived from H5::DataType (such as PredType, "
+                "IntType or StrType).");
+  const auto actual_type = dataset.getTypeClass();
+  const auto expected_type = type.getClass();
+  if (actual_type != expected_type) {
+    if (throw_on_failure) {
       throw std::runtime_error(
-          fmt::format(FMT_STRING("'{}' exists but has incorrect datatype"), path));
+          fmt::format(FMT_STRING("'{}' exists but has incorrect datatype"), dataset.getObjName()));
     }
-    const auto actual_size = dataset.getDataType().getSize();
-    const auto expected_size = type.getSize();
-    if (actual_size != expected_size) {
+    return false;
+  }
+  const auto actual_size = dataset.getDataType().getSize();
+  const auto expected_size = type.getSize();
+  if (actual_size != expected_size) {
+    if (throw_on_failure) {
       throw std::runtime_error(fmt::format(
-          FMT_STRING("'{}' exists but has incorrect datasize (expected {} bytes, got {})"), path,
-          expected_size, actual_size));
+          FMT_STRING("'{}' exists but has incorrect datasize (expected {} bytes, got {})"),
+          dataset.getObjName(), expected_size, actual_size));
     }
-
-    if constexpr (std::is_same_v<T, H5::StrType>) {
-      const auto expected_charset = type.getCset();
-      const auto actual_charset = dataset.getStrType().getCset();
-      if (actual_charset != expected_charset) {
-        throw std::runtime_error(
-            fmt::format(FMT_STRING("'{}' exists but has incorrect CharSet"), path));
-      }
-      const auto expected_padding = type.getStrpad();
-      const auto actual_padding = dataset.getStrType().getStrpad();
-      if (actual_padding != expected_padding) {
-        throw std::runtime_error(
-            fmt::format(FMT_STRING("'{}' exists but has incorrect String padding"), path));
-      }
-    } else {
-      if (actual_type == H5T_INTEGER) {
-        const auto actual_sign = dataset.getIntType().getSign();
-        if (auto t = H5::IntType(type); t.getSign() != actual_sign) {
-          throw std::runtime_error(
-              fmt::format(FMT_STRING("'{}' exists but has incorrect signedness"), path));
-        }
-      }
-
-      if (actual_type == H5T_FLOAT) {
-        const auto actual_precision = dataset.getFloatType().getPrecision();
-        if (auto t = H5::FloatType(type); t.getPrecision() != actual_precision) {
-          throw std::runtime_error(
-              fmt::format(FMT_STRING("'{}' exists but has incorrect precision"), path));
-        }
-      }
-    }
-    return true;
+    return false;
   }
 
-  throw std::runtime_error(fmt::format(FMT_STRING("'{}' exists but is not a dataset"), path));
+  if constexpr (std::is_same_v<T, H5::StrType>) {
+    const auto expected_charset = type.getCset();
+    const auto actual_charset = dataset.getStrType().getCset();
+    if (actual_charset != expected_charset) {
+      if (throw_on_failure) {
+        throw std::runtime_error(
+            fmt::format(FMT_STRING("'{}' exists but has incorrect CharSet"), dataset.getObjName()));
+      }
+      return false;
+    }
+    const auto expected_padding = type.getStrpad();
+    const auto actual_padding = dataset.getStrType().getStrpad();
+    if (actual_padding != expected_padding) {
+      if (throw_on_failure) {
+        throw std::runtime_error(fmt::format(
+            FMT_STRING("'{}' exists but has incorrect String padding"), dataset.getObjName()));
+      }
+      return false;
+    }
+  } else {
+    if (actual_type == H5T_INTEGER) {
+      const auto actual_sign = dataset.getIntType().getSign();
+      if (auto t = H5::IntType(type); t.getSign() != actual_sign) {
+        if (throw_on_failure) {
+          throw std::runtime_error(fmt::format(
+              FMT_STRING("'{}' exists but has incorrect signedness"), dataset.getObjName()));
+        }
+        return false;
+      }
+    }
+
+    if (actual_type == H5T_FLOAT) {
+      const auto actual_precision = dataset.getFloatType().getPrecision();
+      if (auto t = H5::FloatType(type); t.getPrecision() != actual_precision) {
+        if (throw_on_failure) {
+          throw std::runtime_error(fmt::format(
+              FMT_STRING("'{}' exists but has incorrect precision"), dataset.getObjName()));
+        }
+        return false;
+      }
+    }
+  }
+  return true;
 }
 
 /*

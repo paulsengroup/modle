@@ -3,7 +3,7 @@
 #include <H5Cpp.h>
 
 #include <cstdint>
-#include <memory>
+#include <string>
 #include <string_view>
 #include <vector>
 
@@ -25,7 +25,7 @@ enum CoolerDatasets {
   IDX_CHR = 9
 }; */
 
-[[nodiscard]] inline std::string construct_error_stack(H5::Exception *e = nullptr);
+[[nodiscard]] inline std::string construct_error_stack();
 
 template <typename S>
 [[nodiscard]] inline hsize_t write_str(const S &str, H5::DataSet &dataset,
@@ -56,30 +56,36 @@ template <typename CN>
 [[nodiscard]] inline std::vector<std::string> read_strings(H5::DataSet &dataset,
                                                            hsize_t file_offset);
 
+[[nodiscard]] inline bool has_attribute(H5::Group &g, std::string_view attr_name);
+
+[[nodiscard]] inline bool has_attribute(H5::H5File &f, std::string_view attr_name,
+                                        std::string_view path = "/");
+
 template <typename T>
 inline void read_attribute(H5::H5File &f, std::string_view attr_name, T &buff,
-                           std::string_view path = "");
+                           std::string_view path = "/");
 template <typename T>
 inline void read_attribute(std::string_view path_to_file, std::string_view attr_name, T &buff,
-                           std::string_view path = "");
+                           std::string_view path = "/");
 
 [[nodiscard]] inline std::string read_attribute_str(H5::H5File &f, std::string_view attr_name,
-                                                    std::string_view path = "");
+                                                    std::string_view path = "/");
 [[nodiscard]] inline std::string read_attribute_str(std::string_view path_to_file,
                                                     std::string_view attr_name,
-                                                    std::string_view path = "");
+                                                    std::string_view path = "/");
 
 [[nodiscard]] inline int64_t read_attribute_int(H5::H5File &f, std::string_view attr_name,
-                                                std::string_view path = "");
+                                                std::string_view path = "/");
 [[nodiscard]] inline int64_t read_attribute_int(std::string_view path_to_file,
                                                 std::string_view attr_name,
-                                                std::string_view path = "");
+                                                std::string_view path = "/");
 
 inline bool group_exists(H5::H5File &f, std::string_view name, std::string_view root_path = "/");
 
+inline bool dataset_exists(H5::H5File &f, std::string_view name, std::string_view root_path = "/");
+
 template <typename T>
-inline bool dataset_exists(H5::H5File &f, std::string_view name, T type,
-                           std::string_view root_path = "/");
+bool check_dataset_type(H5::DataSet &dataset, T type, bool throw_on_failure = true);
 /*
 // BEGINNING OF OLD HEADER
 

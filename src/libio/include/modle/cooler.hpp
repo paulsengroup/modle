@@ -1,6 +1,7 @@
 #pragma once
 
 #include <H5Cpp.h>
+#include <absl/types/span.h>
 
 #include <filesystem>
 #include <memory>
@@ -12,13 +13,13 @@
 namespace modle::cooler {
 class Cooler {
  private:
-  inline static H5::StrType generate_default_str_type();
+  [[nodiscard]] inline static H5::StrType generate_default_str_type();
 
  public:
   enum IO_MODE { READ_ONLY, WRITE_ONLY };
-  inline static H5::StrType STR_TYPE{generate_default_str_type()};    // NOLINT
-  inline static H5::PredType INT64_TYPE{H5::PredType::NATIVE_INT64};  // NOLINT
-  inline static H5::PredType INT32_TYPE{H5::PredType::NATIVE_INT32};  // NOLINT
+  const H5::StrType STR_TYPE{generate_default_str_type()};    // NOLINT
+  const H5::PredType INT64_TYPE{H5::PredType::NATIVE_INT64};  // NOLINT
+  const H5::PredType INT32_TYPE{H5::PredType::NATIVE_INT32};  // NOLINT
   enum Flavor {
     UNK = 0,
     AUTO = 1,
@@ -42,28 +43,50 @@ class Cooler {
 
   Cooler() = delete;
   inline explicit Cooler(std::string_view path_to_file, IO_MODE mode = READ_ONLY,
-                         std::size_t bin_size = 0, Flavor flavor = AUTO, bool validate = true,
+                         std::size_t bin_size = 0, std::string_view assembly_name = "",
+                         Flavor flavor = AUTO, bool validate = true,
                          uint8_t compression_lvl = 9,                    // NOLINT
                          std::size_t chunk_size = 1024 * 1024ULL,        // 1 MB NOLINT
                          std::size_t cache_size = 16 * 1024 * 1024ULL);  // 16 MB NOLINT
 
-  [[nodiscard]] inline static Flavor detect_file_flavor(H5::H5File& f);
+  [[nodiscard]] inline static Flavor detect_file_flavor(H5::H5File &f);
 
-  [[nodiscard]] inline static bool validate_file_format(H5::H5File& f, Flavor expected_flavor,
-                                                        IO_MODE mode, std::size_t bin_size = 0,
+  [[nodiscard]] inline static bool validate_file_format(H5::H5File &f, Flavor expected_flavor,
+                                                        IO_MODE mode = READ_ONLY,
+                                                        std::size_t bin_size = 0,
                                                         bool throw_on_failure = true);
 
-  [[nodiscard]] inline static bool validate_cool_flavor(H5::H5File& f, std::size_t bin_size,
+  [[nodiscard]] inline static bool validate_cool_flavor(H5::H5File &f, std::size_t bin_size,
                                                         std::string_view root_path = "/",
                                                         bool throw_on_failure = true);
 
-  [[nodiscard]] inline static bool validate_multires_cool_flavor(H5::H5File& f,
+  [[nodiscard]] inline static bool validate_multires_cool_flavor(H5::H5File &f,
                                                                  std::size_t bin_size,
                                                                  std::string_view root_path = "/",
                                                                  bool throw_on_failure = true);
   template <typename I>
-  inline void write_cmatrix_to_file(const ContactMatrix<I>& cmatrix,
-                                    bool wipe_before_writing = false);
+  void write_cmatrix_to_file(const ContactMatrix<I> &cmatrix, std::string_view chr_name,
+                             uint64_t chr_start, uint64_t chr_end, uint64_t chr_length);
+
+  template <typename I>
+  void write_cmatrix_to_file(const std::vector<ContactMatrix<I>> &cmatrices,
+                             const std::vector<std::string> &chr_names,
+                             const std::vector<uint64_t> &chr_starts,
+                             const std::vector<uint64_t> &chr_ends,
+                             const std::vector<uint64_t> &chr_sizes);
+  template <typename I>
+  void write_cmatrix_to_file(const std::vector<ContactMatrix<I> *> &cmatrices,
+                             const std::vector<std::string> &chr_names,
+                             const std::vector<uint64_t> &chr_starts,
+                             const std::vector<uint64_t> &chr_ends,
+                             const std::vector<uint64_t> &chr_sizes);
+
+  template <typename I>
+  void write_cmatrix_to_file(absl::Span<ContactMatrix<I> *const> cmatrices,
+                             absl::Span<const std::string> chr_names,
+                             absl::Span<const uint64_t> chr_starts,
+                             absl::Span<const uint64_t> chr_ends,
+                             absl::Span<const uint64_t> chr_sizes);
 
   inline void write_metadata();
   [[nodiscard]] inline bool is_read_only() const;
@@ -72,6 +95,7 @@ class Cooler {
   std::filesystem::path _path_to_file;
   IO_MODE _mode;
   std::size_t _bin_size;
+  std::string _assembly_name;
   Flavor _flavor;
   std::unique_ptr<H5::H5File> _fp{nullptr};
   std::vector<H5::Group> _groups{};
@@ -92,22 +116,26 @@ class Cooler {
   std::unique_ptr<H5::DSetAccPropList> _aprop_int64{nullptr};
 
   [[nodiscard]] inline static std::unique_ptr<H5::H5File> open_file(
-      const std::filesystem::path& path, IO_MODE mode, std::size_t bin_size = 0,
+      const std::filesystem::path &path, IO_MODE mode, std::size_t bin_size = 0,
       Flavor flavor = AUTO, bool validate = true);
-  [[nodiscard]] inline static std::vector<H5::Group> open_groups(H5::H5File& f,
+  [[nodiscard]] inline static std::vector<H5::Group> open_groups(H5::H5File &f,
                                                                  bool create_if_not_exist = false);
   [[nodiscard]] inline static std::string flavor_to_string(Flavor f);
   [[nodiscard]] inline static bool check_version(int64_t min_ver = 2, int64_t max_ver = 3,
                                                  bool throw_on_failure = false);
 
   template <typename T1, typename T2>
-  std::unique_ptr<H5::DSetCreatPropList> generate_default_cprop(hsize_t chunk_size,
-                                                                uint8_t compression_lvl, T1 type,
-                                                                T2 fill_value);
+  [[nodiscard]] inline static std::unique_ptr<H5::DSetCreatPropList> generate_default_cprop(
+      hsize_t chunk_size, uint8_t compression_lvl, T1 type, T2 fill_value);
   template <typename T>
-  inline static std::unique_ptr<H5::DSetAccPropList> generate_default_aprop(T type,
-                                                                            hsize_t chunk_size,
-                                                                            hsize_t cache_size);
+  [[nodiscard]] inline static std::unique_ptr<H5::DSetAccPropList> generate_default_aprop(
+      T type, hsize_t chunk_size, hsize_t cache_size);
+  inline void init_default_datasets();
+  [[nodiscard]] inline hsize_t write_bins(int32_t chrom, int64_t length, int64_t bin_size,
+                                          std::vector<int32_t> &buff32,
+                                          std::vector<int64_t> &buff64, hsize_t file_offset,
+                                          hsize_t buff_size = 1024 * 1024ULL /  // NOLINT
+                                                              sizeof(int64_t));
 };
 
 }  // namespace modle::cooler

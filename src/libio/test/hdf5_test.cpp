@@ -1,14 +1,17 @@
 #include "modle/hdf5.hpp"
 
+#include <H5Cpp.h>
+
 #include <catch2/catch.hpp>
 #include <filesystem>
 #include <limits>
 #include <string>
+#include <vector>
 
 namespace modle::hdf5::test {
 
 inline const std::filesystem::path test_dir{"/tmp/modle/unit_tests"};  // NOLINT
-[[nodiscard]] inline H5::StrType init_str_type(std::size_t max_size = 0) {
+[[nodiscard]] inline H5::StrType init_str_type() {
   auto st = H5::StrType(H5::PredType::C_S1, H5T_VARIABLE);
   st.setStrpad(H5T_STR_NULLPAD);
   st.setCset(H5T_CSET_ASCII);
@@ -49,10 +52,6 @@ inline H5::DataSet init_test_int64_dataset(H5::H5File& f, std::string_view path 
   return f.createDataSet(std::string{path.data(), path.size()}, H5::PredType::NATIVE_INT64,
                          mem_space, cprop);
 }
-
-inline constexpr hsize_t DIMS{1};
-inline constexpr hsize_t BUFF_SIZE{1};
-inline constexpr hsize_t MAXDIMS{H5S_UNLIMITED};  // extensible dataset
 
 TEST_CASE("read_write_strings HDF5", "[io][hdf5][short]") {
   const auto test_file = test_dir / "rw_strings.hdf5";
@@ -108,7 +107,7 @@ TEST_CASE("read_write_ints HDF5", "[io][hdf5][short]") {
 }
 
 TEST_CASE("group_exists HDF5", "[io][hdf5][short]") {
-  const auto test_file = test_dir / "rw_ints.hdf5";
+  const auto test_file = test_dir / "group_exists.hdf5";
   std::filesystem::create_directories(test_dir);
   H5::H5File f(test_file.string(), H5F_ACC_TRUNC);
   (void)init_test_int64_dataset(f);
@@ -123,25 +122,38 @@ TEST_CASE("group_exists HDF5", "[io][hdf5][short]") {
   CHECK(!group_exists(f, "2", "g2"));
   CHECK_THROWS_WITH(group_exists(f, "test"),
                     Catch::Matchers::EndsWith("exists but is not a group"));
+
+  std::filesystem::remove_all(test_dir);
+  if (const auto& p = test_dir.parent_path(); std::filesystem::is_empty(p)) {
+    std::filesystem::remove(p);
+  }
 }
 
-TEST_CASE("dataset_exists HDF5", "[io][hdf5][short]") {
-  const auto test_file = test_dir / "rw_ints.hdf5";
+TEST_CASE("check_dataset_type HDF5", "[io][hdf5][short]") {
+  const auto test_file = test_dir / "dset_exisrs.hdf5";
   std::filesystem::create_directories(test_dir);
   H5::H5File f(test_file.string(), H5F_ACC_TRUNC);
   f.createGroup("/g1");
-  (void)init_test_int64_dataset(f);
-  (void)init_test_str_dataset(f, "/g1/test");
-  CHECK(dataset_exists(f, "/test", H5::PredType::NATIVE_INT64));
-  CHECK(dataset_exists(f, "/g1/test", init_str_type()));
-  CHECK(!dataset_exists(f, "/test2", H5::PredType::NATIVE_INT64));
+  auto int_dataset = init_test_int64_dataset(f);
+  auto str_dataset = init_test_str_dataset(f, "/g1/test");
+  CHECK(dataset_exists(f, "/test"));
+  CHECK(!dataset_exists(f, "/test2"));
 
-  CHECK_THROWS_WITH(dataset_exists(f, "test", H5::PredType::NATIVE_INT),
-                    Catch::Matchers::Contains("exists but has incorrect datasize"));
-  CHECK_THROWS_WITH(dataset_exists(f, "test", H5::PredType::NATIVE_FLOAT),
-                    Catch::Matchers::EndsWith("exists but has incorrect datatype"));
-  CHECK_THROWS_WITH(dataset_exists(f, "test", H5::PredType::NATIVE_UINT64),
-                    Catch::Matchers::Contains("exists but has incorrect signedness"));
+  CHECK(check_dataset_type(int_dataset, H5::PredType::NATIVE_INT64));
+  CHECK(check_dataset_type(str_dataset, init_str_type()));
+  CHECK(!check_dataset_type(str_dataset, H5::PredType::NATIVE_INT64, false));
+
+  CHECK_THROWS_WITH(check_dataset_type(int_dataset, H5::PredType::NATIVE_INT),
+                    Catch::Matchers::Contains("incorrect datasize"));
+  CHECK_THROWS_WITH(check_dataset_type(int_dataset, H5::PredType::NATIVE_FLOAT),
+                    Catch::Matchers::EndsWith("incorrect datatype"));
+  CHECK_THROWS_WITH(check_dataset_type(int_dataset, H5::PredType::NATIVE_UINT64),
+                    Catch::Matchers::Contains("incorrect signedness"));
+
+  std::filesystem::remove_all(test_dir);
+  if (const auto& p = test_dir.parent_path(); std::filesystem::is_empty(p)) {
+    std::filesystem::remove(p);
+  }
 }
 
 /*
