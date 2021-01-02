@@ -8,9 +8,12 @@
 #include <algorithm>
 #include <cstdint>
 #include <memory>
+#include <mutex>
 #include <stdexcept>
 #include <type_traits>
+#include <utility>
 
+#include "modle/contacts.hpp"
 #include "modle/hdf5.hpp"
 
 namespace modle::cooler {
@@ -570,7 +573,7 @@ void Cooler::write_cmatrix_to_file(absl::Span<ContactMatrix<I> *const> cmatrices
 
   assert(this->_bin_size != 0);
 
-  fmt::print(stderr, FMT_STRING("Writing {} contact matrices for to file '{}'...\n"),
+  fmt::print(stderr, FMT_STRING("Writing {} contact matrices to file '{}'...\n"),
              cmatrices.size(), this->_fp->getFileName());
 
   const auto n_chromosomes = cmatrices.size();
@@ -761,6 +764,305 @@ hsize_t Cooler::write_bins(int32_t chrom, int64_t length, int64_t bin_size,
   assert(buff64.back() == length);
 
   return file_offset;
+}
+
+void Cooler::open_cooler_datasets() {
+  assert(this->_fp);
+  assert(this->_aprop_int32);
+  assert(this->_aprop_int64);
+  assert(this->_aprop_str);
+
+  auto &d = this->_datasets;
+  const auto &a32 = *this->_aprop_int32;
+  const auto &a64 = *this->_aprop_int64;
+  const auto &as = *this->_aprop_str;
+
+  this->_datasets.resize(10);
+
+  try {
+    // Do not change the order of these pushbacks
+    d[CHR_LEN] = this->_fp->openDataSet("chroms/length", a64);
+    d[CHR_NAME] = this->_fp->openDataSet("chroms/name", as);
+
+    d[BIN_CHROM] = this->_fp->openDataSet("bins/chrom", a64);
+    d[BIN_START] = this->_fp->openDataSet("bins/start", a64);
+    d[BIN_END] = this->_fp->openDataSet("bins/end", a64);
+
+    d[PXL_B1] = this->_fp->openDataSet("pixels/bin1_id", a64);
+    d[PXL_B2] = this->_fp->openDataSet("pixels/bin2_id", a64);
+    d[PXL_COUNT] = this->_fp->openDataSet("pixels/count", a32);
+
+    d[IDX_BIN1] = this->_fp->openDataSet("indexes/bin1_offset", a64);
+    d[IDX_CHR] = this->_fp->openDataSet("indexes/chrom_offset", a64);
+
+  } catch (const H5::FileIException &e) {
+    throw std::runtime_error(fmt::format(
+        FMT_STRING(
+            "An error occurred while trying to open Cooler's default dataset of file '{}': {}"),
+        this->_path_to_file, hdf5::construct_error_stack()));
+  }
+}
+
+ContactMatrix<uint32_t> Cooler::cooler_to_cmatrix(int64_t bin_offset,
+                                                  const std::vector<int64_t> &bin1_offset_idx,
+                                                  std::size_t nrows) {
+  return this->cooler_to_cmatrix(bin_offset, absl::MakeConstSpan(bin1_offset_idx), nrows);
+}
+/*
+ContactMatrix<uint32_t> Cooler::cooler_to_cmatrix(int64_t bin_offset,
+                                                  absl::Span<const int64_t> bin1_offset_idx,
+                                                  std::size_t nrows) {
+  ContactMatrix<uint32_t> cmatrix(nrows, bin1_offset_idx.size());
+  std::vector<int64_t> bin1_BUFF(nrows);
+  std::vector<int64_t> bin2_BUFF(nrows);
+  std::vector<int64_t> count_BUFF(nrows);
+
+  for (auto i = 1UL; i < bin1_offset_idx.size(); ++i) {
+    const auto file_offset = static_cast<hsize_t>(bin1_offset_idx[i - 1]);
+    const auto buff_size =
+        std::min(static_cast<std::size_t>(bin1_offset_idx[i] - bin1_offset_idx[i - 1]), nrows);
+    if (buff_size == 0) {
+      continue;
+    }
+
+    bin1_BUFF.resize(buff_size);
+    bin2_BUFF.resize(buff_size);
+    count_BUFF.resize(buff_size);
+
+    (void)hdf5::read_numbers(this->_datasets[PXL_B1], bin1_BUFF, file_offset);
+    (void)hdf5::read_numbers(this->_datasets[PXL_B2], bin2_BUFF, file_offset);
+    (void)hdf5::read_numbers(this->_datasets[PXL_COUNT], count_BUFF, file_offset);
+
+    assert(bin1_BUFF.size() == buff_size);   // NOLINT
+    assert(bin2_BUFF.size() == buff_size);   // NOLINT
+    assert(count_BUFF.size() == buff_size);  // NOLINT
+
+    for (auto j = 0UL; j < buff_size; ++j) {
+      assert(count_BUFF[j] != 0);  // NOLINT
+      DISABLE_WARNING_PUSH
+      DISABLE_WARNING_SIGN_CONVERSION
+      DISABLE_WARNING_SIGN_COMPARE
+      if (const auto bin2_id = bin2_BUFF[j] - bin_offset;
+          bin2_id >= i + nrows - 1 || bin2_id >= bin1_offset_idx.size()) {
+        break;
+      }
+      // fmt::print(stderr, "m[{}][{}]={} (nrows={}; ncols={})\n", bin2_BUFF[j] - bin_offset,
+      //           bin1_BUFF[j] - bin_offset, count_BUFF[j], cmatrix.n_rows(),
+      //           cmatrix.n_cols());
+      cmatrix.set(bin2_BUFF[j] - bin_offset, bin1_BUFF[j] - bin_offset, count_BUFF[j]);
+
+      DISABLE_WARNING_POP
+    }
+  }
+  return cmatrix;
+}
+*/
+
+ContactMatrix<uint32_t> Cooler::cooler_to_cmatrix(std::string_view chr_name,
+                                                  std::size_t diagonal_width, std::size_t bin_size,
+                                                  bool try_common_chr_prefixes) {
+  assert(this->_bin_size != 0);
+  if (bin_size != 0 && this->_bin_size != bin_size) {
+    throw std::runtime_error(fmt::format(
+        FMT_STRING(
+            "Unable to read a Cooler file with bin size {} in a contact matrix of bin size {}"),
+        this->_bin_size, bin_size));
+  }
+  const auto nrows = (diagonal_width / this->_bin_size) +
+                     static_cast<std::size_t>(diagonal_width % this->_bin_size != 0);
+  return cooler_to_cmatrix(chr_name, nrows, try_common_chr_prefixes);
+}
+
+ContactMatrix<uint32_t> Cooler::cooler_to_cmatrix(std::string_view chr_name, std::size_t nrows,
+                                                  bool try_common_chr_prefixes) {
+  // TODO: Add check for Cooler bin size
+
+  {
+    std::scoped_lock lock(this->_mutex);
+    if (this->_datasets.empty()) {
+      this->open_cooler_datasets();
+    }
+    if (this->_idx_chrom_offset.empty()) {
+      this->read_chr_offset_idx();
+    }
+    if (this->_idx_bin1_offset.empty()) {
+      this->read_bin1_offset_idx();
+    }
+  }
+
+  auto search_chr_offset_idx = [&]() {
+    if (!try_common_chr_prefixes) {
+      return std::make_pair(chr_name, this->get_chr_idx(chr_name));
+    }
+    // Here's the issue: for a given genome assembly (say hg19), some tools name chromosome as
+    // chrN, where N is the chromosome number, while others only use the number N. The purpose
+    // of this lambda is to try to guess few reasonably common prefixes, look them up in the
+    // Cooler file, then return the chromosome name variant that produced a hit together with
+    // the chr index
+    std::vector<std::string_view> chr_names{chr_name};
+    for (const auto &prefix : {"chr", "CHR", "Chr"}) {
+      if (absl::StartsWith(chr_name, prefix)) {
+        chr_names.emplace_back(absl::StripPrefix(chr_name, prefix));
+      } else {
+        chr_names.emplace_back(absl::StrCat(prefix, chr_name));
+      }
+    }
+    // TODO: Consider reading the full array of chr names and then look up all the combinations.
+    // This would allows us to avoid using exceptions, but will increase memory usage when
+    // processing highly fragmented assemblies
+    chr_name = "";  // Just to make sure we are not using this variable instead of actual_chr_name
+    for (const auto name : chr_names) {
+      try {
+        return std::make_pair(name, this->get_chr_idx(name));
+      } catch (const std::runtime_error &e) {
+        if (!absl::StartsWith(e.what(), "Unable to find a chromosome named")) {
+          throw;
+        }
+      }
+    }
+    throw std::runtime_error(
+        fmt::format(FMT_STRING("Unable to find a chromosome named '{}'. The following chromosome "
+                               "name variants were searched: '{}'"),
+                    chr_name, absl::StrJoin(chr_names, "', '")));
+  };
+
+  const auto [actual_chr_name, chr_idx] = search_chr_offset_idx();
+  const auto bin1_offset_idx = this->get_bin1_offset_idx_for_chr(chr_idx);
+  const auto bin_offset = this->_idx_chrom_offset[chr_idx];
+
+  return cooler_to_cmatrix(bin_offset, bin1_offset_idx, nrows);
+}
+
+ContactMatrix<uint32_t> Cooler::cooler_to_cmatrix(int64_t bin_offset,
+                                                  absl::Span<const int64_t> bin1_offset_idx,
+                                                  std::size_t nrows) {
+  ContactMatrix<uint32_t> cmatrix(nrows, bin1_offset_idx.size());
+  std::vector<int64_t> bin1_BUFF(nrows);
+  std::vector<int64_t> bin2_BUFF(nrows);
+  std::vector<int64_t> count_BUFF(nrows);
+  const auto &d = this->_datasets;
+
+  for (auto i = 1UL; i < bin1_offset_idx.size(); ++i) {
+    const auto file_offset = static_cast<hsize_t>(bin1_offset_idx[i - 1]);
+    const auto buff_size =  // Figure out why buff size is always small
+        std::min(static_cast<std::size_t>(bin1_offset_idx[i] - bin1_offset_idx[i - 1]), nrows);
+    if (buff_size == 0) {
+      continue;
+    }
+    // fmt::print(stderr, "i={}; buff_size={}\n", i, buff_size);
+
+    bin1_BUFF.resize(buff_size);
+    bin2_BUFF.resize(buff_size);
+    count_BUFF.resize(buff_size);
+
+    (void)hdf5::read_numbers(d[PXL_B1], bin1_BUFF, file_offset);
+    (void)hdf5::read_numbers(d[PXL_B2], bin2_BUFF, file_offset);
+    (void)hdf5::read_numbers(d[PXL_COUNT], count_BUFF, file_offset);
+
+    assert(bin1_BUFF.size() == buff_size);   // NOLINT
+    assert(bin2_BUFF.size() == buff_size);   // NOLINT
+    assert(count_BUFF.size() == buff_size);  // NOLINT
+
+    for (auto j = 0UL; j < buff_size; ++j) {
+      assert(count_BUFF[j] != 0);  // NOLINT
+      DISABLE_WARNING_PUSH
+      DISABLE_WARNING_SIGN_CONVERSION
+      DISABLE_WARNING_SIGN_COMPARE
+      if (const auto bin2_id = bin2_BUFF[j] - bin_offset;
+          bin2_id >= i + nrows - 1 || bin2_id >= bin1_offset_idx.size()) {
+        break;
+      }
+      // fmt::print(stderr, "m[{}][{}]={} (nrows={}; ncols={})\n", bin2_BUFF[j] - bin_offset,
+      //           bin1_BUFF[j] - bin_offset, count_BUFF[j], cmatrix.n_rows(),
+      //           cmatrix.n_cols());
+      cmatrix.set(bin2_BUFF[j] - bin_offset, bin1_BUFF[j] - bin_offset, count_BUFF[j]);
+
+      DISABLE_WARNING_POP
+    }
+  }
+  return cmatrix;
+}
+
+std::size_t Cooler::get_chr_idx(std::string_view chr_name) {
+  try {
+    const auto chr_names = hdf5::read_strings(this->_datasets[CHR_NAME], 0);
+    const auto match = std::find(chr_names.begin(), chr_names.end(), chr_name);
+    if (match != chr_names.end()) {
+      return static_cast<std::size_t>(std::distance(chr_names.begin(), match));
+    }
+    throw std::runtime_error(
+        fmt::format(FMT_STRING("Unable to find a chromosome named '{}'"), chr_name));
+  } catch (const std::exception &e) {
+    throw std::runtime_error(fmt::format(FMT_STRING("The following error occurred while looking up "
+                                                    "'{}' in dataset chroms/name of file '{}': {}"),
+                                         chr_name, this->_path_to_file, e.what()));
+  }
+}
+
+std::size_t Cooler::read_chr_offset_idx() {
+  const auto &d = this->_datasets[IDX_CHR];
+  const auto buff_size = static_cast<hsize_t>(d.getSpace().getSimpleExtentNpoints());
+  this->_idx_chrom_offset.resize(buff_size);
+
+  const auto idx_size = hdf5::read_numbers(d, this->_idx_chrom_offset, 0);
+  if (idx_size != this->_idx_chrom_offset.size()) {
+    throw std::runtime_error(
+        fmt::format(FMT_STRING("An error occurred while reading dataset 'indexes/chrom_offset' "
+                               "from file '{}': expected to read {} numbers, but only read {}"),
+                    this->_path_to_file, buff_size, idx_size));
+  }
+  return idx_size;
+}
+
+std::size_t Cooler::read_bin1_offset_idx() {
+  const auto &d = this->_datasets[IDX_BIN1];
+  const auto buff_size = static_cast<hsize_t>(d.getSpace().getSimpleExtentNpoints());
+  this->_idx_bin1_offset.resize(buff_size);
+
+  const auto idx_size = hdf5::read_numbers(d, this->_idx_bin1_offset, 0);
+  if (idx_size != this->_idx_bin1_offset.size()) {
+    throw std::runtime_error(
+        fmt::format(FMT_STRING("An error occurred while reading dataset 'indexes/chrom_offset' "
+                               "from file '{}': expected to read {} numbers, but only read {}"),
+                    this->_path_to_file, buff_size, idx_size));
+  }
+  return idx_size;
+}
+
+absl::Span<const int64_t> Cooler::get_bin1_offset_idx_for_chr(std::string_view chr_name) {
+  const auto chr_idx = get_chr_idx(chr_name);
+  return get_bin1_offset_idx_for_chr(chr_idx);
+}
+
+absl::Span<const int64_t> Cooler::get_bin1_offset_idx_for_chr(std::size_t chr_idx) {
+  assert(!this->_idx_bin1_offset.empty());           // NOLINT
+  assert(!this->_idx_chrom_offset.empty());          // NOLINT
+  assert(chr_idx < this->_idx_chrom_offset.size());  // NOLINT
+  const auto chr_start_bin = static_cast<std::size_t>(this->_idx_chrom_offset[chr_idx]);
+  const auto chr_end_bin = static_cast<std::size_t>(this->_idx_chrom_offset[chr_idx + 1]);
+  assert(chr_end_bin >= chr_start_bin);  // NOLINT
+
+  return absl::MakeConstSpan(this->_idx_bin1_offset).subspan(chr_start_bin, chr_end_bin - chr_start_bin);
+}
+
+std::pair<int64_t, int64_t> Cooler::read_chrom_pixels_boundaries(std::string_view chr_name) {
+  const auto chr_idx = get_chr_idx(chr_name);
+  return read_chrom_pixels_boundaries(chr_idx);
+}
+
+std::pair<int64_t, int64_t> Cooler::read_chrom_pixels_boundaries(std::size_t chr_idx) {
+  assert(chr_idx < this->_idx_chrom_offset.size());  // NOLINT
+  assert(!this->_idx_chrom_offset.empty());          // NOLINT
+  const auto chr_start_bin = static_cast<std::size_t>(this->_idx_chrom_offset[chr_idx]);
+  const auto chr_end_bin = static_cast<std::size_t>(this->_idx_chrom_offset[chr_idx + 1]);
+  assert(chr_end_bin >= chr_start_bin);  // NOLINT
+
+  std::pair<int64_t, int64_t> pixel_boundaries{};
+  const auto &d = this->_datasets[IDX_BIN1];
+  (void)hdf5::read_number(d, pixel_boundaries.first, chr_start_bin);
+  (void)hdf5::read_number(d, pixel_boundaries.second, chr_end_bin);
+
+  return pixel_boundaries;
 }
 
 }  // namespace modle::cooler

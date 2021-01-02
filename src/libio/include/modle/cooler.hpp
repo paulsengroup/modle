@@ -5,7 +5,9 @@
 
 #include <filesystem>
 #include <memory>
+#include <mutex>
 #include <string_view>
+#include <utility>
 #include <vector>
 
 #include "modle/contacts.hpp"
@@ -65,31 +67,39 @@ class Cooler {
                                                                  std::string_view root_path = "/",
                                                                  bool throw_on_failure = true);
   template <typename I>
-  void write_cmatrix_to_file(const ContactMatrix<I> &cmatrix, std::string_view chr_name,
-                             uint64_t chr_start, uint64_t chr_end, uint64_t chr_length);
+  inline void write_cmatrix_to_file(const ContactMatrix<I> &cmatrix, std::string_view chr_name,
+                                    uint64_t chr_start, uint64_t chr_end, uint64_t chr_length);
 
   template <typename I>
-  void write_cmatrix_to_file(const std::vector<ContactMatrix<I>> &cmatrices,
-                             const std::vector<std::string> &chr_names,
-                             const std::vector<uint64_t> &chr_starts,
-                             const std::vector<uint64_t> &chr_ends,
-                             const std::vector<uint64_t> &chr_sizes);
+  inline void write_cmatrix_to_file(const std::vector<ContactMatrix<I>> &cmatrices,
+                                    const std::vector<std::string> &chr_names,
+                                    const std::vector<uint64_t> &chr_starts,
+                                    const std::vector<uint64_t> &chr_ends,
+                                    const std::vector<uint64_t> &chr_sizes);
   template <typename I>
-  void write_cmatrix_to_file(const std::vector<ContactMatrix<I> *> &cmatrices,
-                             const std::vector<std::string> &chr_names,
-                             const std::vector<uint64_t> &chr_starts,
-                             const std::vector<uint64_t> &chr_ends,
-                             const std::vector<uint64_t> &chr_sizes);
+  inline void write_cmatrix_to_file(const std::vector<ContactMatrix<I> *> &cmatrices,
+                                    const std::vector<std::string> &chr_names,
+                                    const std::vector<uint64_t> &chr_starts,
+                                    const std::vector<uint64_t> &chr_ends,
+                                    const std::vector<uint64_t> &chr_sizes);
 
   template <typename I>
-  void write_cmatrix_to_file(absl::Span<ContactMatrix<I> *const> cmatrices,
-                             absl::Span<const std::string> chr_names,
-                             absl::Span<const uint64_t> chr_starts,
-                             absl::Span<const uint64_t> chr_ends,
-                             absl::Span<const uint64_t> chr_sizes);
+  inline void write_cmatrix_to_file(absl::Span<ContactMatrix<I> *const> cmatrices,
+                                    absl::Span<const std::string> chr_names,
+                                    absl::Span<const uint64_t> chr_starts,
+                                    absl::Span<const uint64_t> chr_ends,
+                                    absl::Span<const uint64_t> chr_sizes);
 
   inline void write_metadata();
   [[nodiscard]] inline bool is_read_only() const;
+
+  [[nodiscard]] inline ContactMatrix<uint32_t> cooler_to_cmatrix(
+      std::string_view chr_name, std::size_t nrows, bool try_common_chr_prefixes = true);
+
+  [[nodiscard]] inline ContactMatrix<uint32_t> cooler_to_cmatrix(std::string_view chr_name,
+                                                                 std::size_t diagonal_width,
+                                                                 std::size_t bin_size,
+                                                                 bool try_common_chr_prefixes);
 
  private:
   std::filesystem::path _path_to_file;
@@ -115,6 +125,10 @@ class Cooler {
   std::unique_ptr<H5::DSetAccPropList> _aprop_int32{nullptr};
   std::unique_ptr<H5::DSetAccPropList> _aprop_int64{nullptr};
 
+  std::mutex _mutex;  // This mutex protects _datasets and _idx_*_offset during initialization
+  std::vector<int64_t> _idx_chrom_offset{};
+  std::vector<int64_t> _idx_bin1_offset{};
+
   [[nodiscard]] inline static std::unique_ptr<H5::H5File> open_file(
       const std::filesystem::path &path, IO_MODE mode, std::size_t bin_size = 0,
       Flavor flavor = AUTO, bool validate = true);
@@ -131,11 +145,30 @@ class Cooler {
   [[nodiscard]] inline static std::unique_ptr<H5::DSetAccPropList> generate_default_aprop(
       T type, hsize_t chunk_size, hsize_t cache_size);
   inline void init_default_datasets();
+  inline void open_cooler_datasets();
   [[nodiscard]] inline hsize_t write_bins(int32_t chrom, int64_t length, int64_t bin_size,
                                           std::vector<int32_t> &buff32,
                                           std::vector<int64_t> &buff64, hsize_t file_offset,
                                           hsize_t buff_size = 1024 * 1024ULL /  // NOLINT
                                                               sizeof(int64_t));
+  [[nodiscard]] inline ContactMatrix<uint32_t> cooler_to_cmatrix(
+      int64_t bin_offset, const std::vector<int64_t> &bin1_offset_idx, std::size_t nrows);
+
+  [[nodiscard]] inline ContactMatrix<uint32_t> cooler_to_cmatrix(
+      int64_t bin_offset, absl::Span<const int64_t> bin1_offset_idx, std::size_t nrows);
+
+  [[nodiscard]] inline std::size_t get_chr_idx(std::string_view chr_name);
+
+  inline std::size_t read_chr_offset_idx();
+
+  inline std::size_t read_bin1_offset_idx();
+  [[nodiscard]] inline absl::Span<const int64_t> get_bin1_offset_idx_for_chr(std::size_t chr_idx);
+  [[nodiscard]] inline absl::Span<const int64_t> get_bin1_offset_idx_for_chr(
+      std::string_view chr_name);
+  [[nodiscard]] inline std::pair<int64_t, int64_t> read_chrom_pixels_boundaries(
+      std::string_view chr_name);
+  [[nodiscard]] inline std::pair<int64_t, int64_t> read_chrom_pixels_boundaries(
+      std::size_t chr_idx);
 };
 
 }  // namespace modle::cooler

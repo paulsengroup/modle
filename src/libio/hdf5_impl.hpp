@@ -63,7 +63,7 @@ std::string construct_error_stack() {
 }
 
 template <typename S>
-hsize_t write_str(const S &str, H5::DataSet &dataset, const H5::StrType &str_type,
+hsize_t write_str(const S &str, const H5::DataSet &dataset, const H5::StrType &str_type,
                   hsize_t file_offset) {
   static_assert(std::is_convertible_v<S, H5std_string>,
                 "S should be a type convertible to std::string.");
@@ -93,7 +93,7 @@ hsize_t write_str(const S &str, H5::DataSet &dataset, const H5::StrType &str_typ
 }
 
 template <typename CS>
-hsize_t write_strings(const CS &strings, H5::DataSet &dataset, const H5::StrType &str_type,
+hsize_t write_strings(const CS &strings, const H5::DataSet &dataset, const H5::StrType &str_type,
                       hsize_t file_offset) {
   static_assert(std::is_convertible_v<decltype(*strings.begin()), H5std_string> &&
                     std::is_convertible_v<decltype(*strings.end()), H5std_string>,
@@ -106,7 +106,7 @@ hsize_t write_strings(const CS &strings, H5::DataSet &dataset, const H5::StrType
 }
 
 template <typename N>
-hsize_t write_number(N &num, H5::DataSet &dataset, hsize_t file_offset) {
+hsize_t write_number(N &num, const H5::DataSet &dataset, hsize_t file_offset) {
   static_assert(std::is_arithmetic_v<N>, "num should be a numeric type.");
   H5::Exception::dontPrint();
 
@@ -138,7 +138,7 @@ hsize_t write_number(N &num, H5::DataSet &dataset, hsize_t file_offset) {
 }
 
 template <typename CN>
-hsize_t write_numbers(CN &numbers, H5::DataSet &dataset, hsize_t file_offset) {
+hsize_t write_numbers(CN &numbers, const H5::DataSet &dataset, hsize_t file_offset) {
   static_assert(std::is_arithmetic_v<std::remove_pointer_t<decltype(std::declval<CN &>().data())>>,
                 "numbers does not have a suitable ::data() member function.");
   static_assert(std::is_convertible_v<decltype(std::declval<CN &>().size()), std::size_t>,
@@ -177,7 +177,7 @@ hsize_t write_numbers(CN &numbers, H5::DataSet &dataset, hsize_t file_offset) {
 }
 
 template <typename N>
-hsize_t read_number(H5::DataSet &dataset, N &buff, hsize_t file_offset) {
+hsize_t read_number(const H5::DataSet &dataset, N &buff, hsize_t file_offset) {
   static_assert(std::is_integral<N>::value, "I should be a numeric type.");
   H5::Exception::dontPrint();
   constexpr hsize_t DIMS = 1;
@@ -202,7 +202,7 @@ hsize_t read_number(H5::DataSet &dataset, N &buff, hsize_t file_offset) {
 }
 
 template <typename CN>
-hsize_t read_numbers(H5::DataSet &dataset, CN &buff, hsize_t file_offset) {
+hsize_t read_numbers(const H5::DataSet &dataset, CN &buff, hsize_t file_offset) {
   static_assert(std::is_arithmetic_v<std::decay_t<decltype(*std::declval<CN &>().begin())>>,
                 "numbers does not have a suitable ::begin() member function.");
   static_assert(std::is_arithmetic_v<std::decay_t<decltype(*std::declval<CN &>().end())>>,
@@ -241,7 +241,7 @@ hsize_t read_numbers(H5::DataSet &dataset, CN &buff, hsize_t file_offset) {
   }
 }
 
-hsize_t read_str(H5::DataSet &dataset, std::string &buff, hsize_t file_offset) {
+hsize_t read_str(const H5::DataSet &dataset, std::string &buff, hsize_t file_offset) {
   try {
     H5::Exception::dontPrint();
 
@@ -267,7 +267,8 @@ hsize_t read_str(H5::DataSet &dataset, std::string &buff, hsize_t file_offset) {
   }
 }
 
-hsize_t read_strings(H5::DataSet &dataset, std::vector<std::string> &buff, hsize_t file_offset) {
+hsize_t read_strings(const H5::DataSet &dataset, std::vector<std::string> &buff,
+                     hsize_t file_offset) {
   try {
     H5::Exception::dontPrint();
     constexpr hsize_t DIMS = 1;
@@ -296,12 +297,12 @@ hsize_t read_strings(H5::DataSet &dataset, std::vector<std::string> &buff, hsize
   }
 }
 
-std::string read_str(H5::DataSet &dataset, hsize_t file_offset) {
+std::string read_str(const H5::DataSet &dataset, hsize_t file_offset) {
   std::string buff;
   (void)read_str(dataset, buff, file_offset);
   return buff;
 }
-std::vector<std::string> read_strings(H5::DataSet &dataset, hsize_t file_offset) {
+std::vector<std::string> read_strings(const H5::DataSet &dataset, hsize_t file_offset) {
   std::vector<std::string> buff;
   (void)read_strings(dataset, buff, file_offset);
   return buff;
@@ -408,7 +409,7 @@ bool dataset_exists(H5::H5File &f, std::string_view name, std::string_view root_
 }
 
 template <typename T>
-bool check_dataset_type(H5::DataSet &dataset, T type, bool throw_on_failure) {
+bool check_dataset_type(const H5::DataSet &dataset, T type, bool throw_on_failure) {
   static_assert(std::is_base_of_v<H5::DataType, T>,
                 "type should have a type that is derived from H5::DataType (such as PredType, "
                 "IntType or StrType).");

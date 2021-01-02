@@ -11,52 +11,41 @@
 
 namespace modle::hdf5 {
 
-/*inline constexpr uint8_t DEFAULT_COOLER_COMPRESSION_LVL = 6;
-enum CoolerDatasets {
-  CHR_LEN = 0,
-  CHR_NAME = 1,
-  BIN_CHROM = 2,
-  BIN_START = 3,
-  BIN_END = 4,
-  PXL_B1 = 5,
-  PXL_B2 = 6,
-  PXL_COUNT = 7,
-  IDX_BIN1 = 8,
-  IDX_CHR = 9
-}; */
-
 [[nodiscard]] inline std::string construct_error_stack();
 
 template <typename S>
-[[nodiscard]] inline hsize_t write_str(const S &str, H5::DataSet &dataset,
+[[nodiscard]] inline hsize_t write_str(const S &str, const H5::DataSet &dataset,
                                        const H5::StrType &str_type, hsize_t file_offset);
 template <typename CS>
-[[nodiscard]] inline hsize_t write_strings(const CS &strings, H5::DataSet &dataset,
+[[nodiscard]] inline hsize_t write_strings(const CS &strings, const H5::DataSet &dataset,
                                            const H5::StrType &str_type, hsize_t file_offset);
 
 template <typename N>
-[[nodiscard]] inline hsize_t write_number(N &num, H5::DataSet &dataset, hsize_t file_offset);
+[[nodiscard]] inline hsize_t write_number(N &num, const H5::DataSet &dataset, hsize_t file_offset);
 
 template <typename CN>
-[[nodiscard]] inline hsize_t write_numbers(CN &numbers, H5::DataSet &dataset, hsize_t file_offset);
+[[nodiscard]] inline hsize_t write_numbers(CN &numbers, const H5::DataSet &dataset,
+                                           hsize_t file_offset);
 
 template <typename N>
-[[nodiscard]] inline hsize_t read_number(H5::DataSet &dataset, N &buff, hsize_t file_offset);
+[[nodiscard]] inline hsize_t read_number(const H5::DataSet &dataset, N &buff, hsize_t file_offset);
 
 template <typename CN>
-[[nodiscard]] inline hsize_t read_numbers(H5::DataSet &dataset, CN &buff, hsize_t file_offset);
-
-[[nodiscard]] inline hsize_t read_str(H5::DataSet &dataset, std::string &buff, hsize_t file_offset);
-
-[[nodiscard]] inline hsize_t read_strings(H5::DataSet &dataset, std::vector<std::string> &buff,
+[[nodiscard]] inline hsize_t read_numbers(const H5::DataSet &dataset, CN &buff,
                                           hsize_t file_offset);
 
-[[nodiscard]] inline std::string read_str(H5::DataSet &dataset, hsize_t file_offset);
+[[nodiscard]] inline hsize_t read_str(const H5::DataSet &dataset, std::string &buff,
+                                      hsize_t file_offset);
 
-[[nodiscard]] inline std::vector<std::string> read_strings(H5::DataSet &dataset,
+[[nodiscard]] inline hsize_t read_strings(const H5::DataSet &dataset,
+                                          std::vector<std::string> &buff, hsize_t file_offset);
+
+[[nodiscard]] inline std::string read_str(const H5::DataSet &dataset, hsize_t file_offset);
+
+[[nodiscard]] inline std::vector<std::string> read_strings(const H5::DataSet &dataset,
                                                            hsize_t file_offset);
 
-[[nodiscard]] inline bool has_attribute(H5::Group &g, std::string_view attr_name);
+[[nodiscard]] inline bool has_attribute(const H5::Group &g, std::string_view attr_name);
 
 [[nodiscard]] inline bool has_attribute(H5::H5File &f, std::string_view attr_name,
                                         std::string_view path = "/");
@@ -85,7 +74,7 @@ inline bool group_exists(H5::H5File &f, std::string_view name, std::string_view 
 inline bool dataset_exists(H5::H5File &f, std::string_view name, std::string_view root_path = "/");
 
 template <typename T>
-bool check_dataset_type(H5::DataSet &dataset, T type, bool throw_on_failure = true);
+inline bool check_dataset_type(const H5::DataSet &dataset, T type, bool throw_on_failure = true);
 /*
 // BEGINNING OF OLD HEADER
 
@@ -194,7 +183,7 @@ inline std::size_t read_vect_of_str(H5::H5File &f, std::string_view dataset_name
 
 [[nodiscard]] inline std::pair<int64_t, int64_t> read_chrom_pixels_boundaries(
     H5::H5File &f, std::string_view chr_name);
-/*
+
 template <typename I>
 inline void write_modle_cmatrices_to_cooler(const ContactMatrix<I> &cmatrix,
                                             std::string_view chr_name, uint64_t chr_start,

@@ -1,6 +1,6 @@
-#include "modle/juicer_contacts.hpp"
-
 #include <catch2/catch.hpp>
+
+#include "modle/juicer_contacts.hpp"
 
 namespace modle::juicer_contacts::test {
 /*

@@ -1,5 +1,3 @@
-#include "modle/hdf5.hpp"
-
 #include <H5Cpp.h>
 
 #include <catch2/catch.hpp>
@@ -8,7 +6,10 @@
 #include <string>
 #include <vector>
 
-namespace modle::hdf5::test {
+#include "modle/hdf5.hpp"
+
+namespace modle::test::hdf5 {
+using namespace modle::hdf5;
 
 inline const std::filesystem::path test_dir{"/tmp/modle/unit_tests"};  // NOLINT
 [[nodiscard]] inline H5::StrType init_str_type() {
@@ -229,4 +230,4 @@ TEST_CASE("cooler_to_cmatrix 001", "[parsers][cooler][short]") {
 }
  */
 
-}  // namespace modle::hdf5::test
+}  // namespace modle::test::hdf5
