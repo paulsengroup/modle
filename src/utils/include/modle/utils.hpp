@@ -50,6 +50,19 @@ typedef boost::error_info<struct tag_stacktrace, boost::stacktrace::stacktrace> 
 
 template <class E>
 void throw_with_trace(const E& e);
+
+// Typetraits stuff
+
+// Usage: static_assert(std::experimental::is_detected_convertible_v<const char*,
+// utils::has_data_member_func, T>, "error msg");
+// This static_assert will fail for types that don't have a member function .data() that returns a
+// const char*
+
+template <class T>
+using has_data_member_func = decltype(std::declval<T&>().data());
+
+template <class T>
+using has_size_member_func = decltype(std::declval<T&>().size());
 }  // namespace modle::utils
 
 #include "../../utils_impl.hpp"

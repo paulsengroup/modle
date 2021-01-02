@@ -1,6 +1,7 @@
 #pragma once
 
 #include <absl/strings/str_join.h>
+#include <absl/types/span.h>
 
 #include <algorithm>
 #include <cstdint>
@@ -25,6 +26,11 @@ inline std::vector<std::size_t> sort_range_by_idx(absl::Span<const N> v) {
   std::sort(vi.begin(), vi.end(), [&](std::size_t i1, std::size_t i2) { return v[i1] < v[i2]; });
   DISABLE_WARNING_POP
   return vi;
+}
+
+template <typename N>  // NOLINTNEXTLINE(cppcoreguidelines-avoid-non-const-global-variables)
+inline std::vector<std::size_t> sort_range_by_idx(const std::vector<N>& v) {
+  return sort_range_by_idx(absl::MakeConstSpan(v));
 }
 
 // This returns a vector of integers corresponding to the rank of the values of
@@ -60,4 +66,10 @@ inline std::vector<double> compute_element_ranks(absl::Span<const N> v) {
   }
   return vr;
 }
+
+template <typename N>
+inline std::vector<double> compute_element_ranks(const std::vector<N>& v) {
+  return compute_element_ranks(absl::MakeConstSpan(v));
+}
+
 }  // namespace modle::correlation::utils

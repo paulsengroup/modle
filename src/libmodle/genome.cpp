@@ -87,25 +87,25 @@ uint64_t Genome::get_n_of_busy_lefs() const {
   return this->get_n_lefs() - this->get_n_of_free_lefs();
 }
 
-void Genome::write_contacts_to_file(std::string_view output_file, bool force_overwrite) {
-  std::vector<const ContactMatrix<uint32_t>*> cmatrices(this->get_n_chromosomes());
+void Genome::write_contacts_to_file(std::string_view output_file) {
+  std::vector<ContactMatrix<uint32_t>*> cmatrices(this->get_n_chromosomes());
   std::vector<std::string> chr_names(this->get_n_chromosomes());
   std::vector<uint64_t> chr_starts(this->get_n_chromosomes());
   std::vector<uint64_t> chr_ends(this->get_n_chromosomes());
   std::vector<uint64_t> chr_sizes(this->get_n_chromosomes());
 
   for (auto i = 0UL; i < this->get_n_chromosomes(); ++i) {
-    const auto& chr = this->_chromosomes[i];
+    auto& chr = this->_chromosomes[i];
     cmatrices[i] = &chr.contacts;
     chr_names[i] = chr.name;
     chr_starts[i] = chr.start;
     chr_ends[i] = chr.end;
     chr_sizes[i] = chr.total_length;
   }
-
-  cooler::write_modle_cmatrices_to_cooler(cmatrices, chr_names, chr_starts, chr_ends, chr_sizes,
-                                          this->_chromosomes[0].get_bin_size(), output_file,
-                                          force_overwrite);
+  assert(!std::filesystem::exists(output_file));
+  std::filesystem::create_directories(std::filesystem::path(output_file).parent_path());
+  cooler::Cooler c(output_file, cooler::Cooler::WRITE_ONLY, this->_bin_size);
+  c.write_cmatrix_to_file(cmatrices, chr_names, chr_starts, chr_ends, chr_sizes);
 }
 
 void Genome::write_extrusion_barriers_to_file(std::string_view output_dir,

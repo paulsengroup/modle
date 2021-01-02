@@ -1,6 +1,7 @@
 #pragma once
 
 #include <absl/types/span.h>
+#include <fmt/format.h>
 
 #include <algorithm>
 #include <atomic>

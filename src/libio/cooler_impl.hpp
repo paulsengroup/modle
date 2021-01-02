@@ -573,8 +573,13 @@ void Cooler::write_cmatrix_to_file(absl::Span<ContactMatrix<I> *const> cmatrices
 
   assert(this->_bin_size != 0);
 
-  fmt::print(stderr, FMT_STRING("Writing {} contact matrices to file '{}'...\n"),
-             cmatrices.size(), this->_fp->getFileName());
+  if (cmatrices.size() == 1) {
+    fmt::print(stderr, FMT_STRING("Writing one contact matrix to file '{}'...\n"),
+               this->_fp->getFileName());
+  } else {
+    fmt::print(stderr, FMT_STRING("Writing {} contact matrices to file '{}'...\n"),
+               cmatrices.size(), this->_fp->getFileName());
+  }
 
   const auto n_chromosomes = cmatrices.size();
   if (n_chromosomes != chr_names.size() || n_chromosomes != chr_starts.size() ||
@@ -993,7 +998,8 @@ absl::Span<const int64_t> Cooler::get_bin1_offset_idx_for_chr(std::size_t chr_id
   const auto chr_end_bin = static_cast<std::size_t>(this->_idx_chrom_offset[chr_idx + 1]);
   assert(chr_end_bin >= chr_start_bin);  // NOLINT
 
-  return absl::MakeConstSpan(this->_idx_bin1_offset).subspan(chr_start_bin, chr_end_bin - chr_start_bin);
+  return absl::MakeConstSpan(this->_idx_bin1_offset)
+      .subspan(chr_start_bin, chr_end_bin - chr_start_bin);
 }
 
 std::pair<int64_t, int64_t> Cooler::read_chrom_pixels_boundaries(std::string_view chr_name) {

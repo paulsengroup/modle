@@ -43,7 +43,7 @@ class Genome {
   [[nodiscard]] std::vector<double> get_chromosome_lef_affinities() const;
   [[nodiscard]] uint64_t get_n_of_free_lefs() const;
   [[nodiscard]] uint64_t get_n_of_busy_lefs() const;
-  void write_contacts_to_file(std::string_view output_file, bool force_overwrite);
+  void write_contacts_to_file(std::string_view output_file);
   void write_extrusion_barriers_to_file(std::string_view output_dir, bool force_overwrite) const;
 
   /** Randomly generate and bind \p n_barriers ExtrusionBarrier%s

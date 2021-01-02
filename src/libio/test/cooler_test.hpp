@@ -93,10 +93,10 @@ TEST_CASE("Cooler to CMatrix and CMatrix to Cooler", "[io][cooler][short]") {
 
   CHECK(mismatches == 0);
 
-   std::filesystem::remove_all(test_dir);
-   if (const auto& p = test_dir.parent_path(); std::filesystem::is_empty(p)) {
-     std::filesystem::remove(p);
-   }
+  std::filesystem::remove_all(test_dir);
+  if (const auto& p = test_dir.parent_path(); std::filesystem::is_empty(p)) {
+    std::filesystem::remove(p);
+  }
 }
 
 }  // namespace modle::test::cooler

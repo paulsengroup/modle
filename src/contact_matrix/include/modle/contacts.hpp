@@ -30,42 +30,43 @@ class ContactMatrix {
     static constexpr uint8_t N_OF_EXPECTED_TOKENS = 5;
   };
 
-  ContactMatrix(uint64_t nrows, uint64_t ncols, bool fill_with_random_numbers = false);
-  ContactMatrix(const std::string& path_to_file, uint64_t nrows, uint64_t ncols, char sep = '\t');
-  explicit ContactMatrix(const std::string& path_to_file,
-                         std::normal_distribution<double>* noise_generator = nullptr,
-                         uint64_t seed = 0, char sep = '\t');
-  explicit ContactMatrix(std::string_view path_to_file,
-                         std::normal_distribution<double>* noise_generator = nullptr,
-                         uint64_t seed = 0, char sep = '\t');
-  [[nodiscard]] I get(std::size_t row, std::size_t col) const;
+  inline ContactMatrix(uint64_t nrows, uint64_t ncols, bool fill_with_random_numbers = false);
+  inline ContactMatrix(const std::string& path_to_file, uint64_t nrows, uint64_t ncols,
+                       char sep = '\t');
+  inline explicit ContactMatrix(const std::string& path_to_file,
+                                std::normal_distribution<double>* noise_generator = nullptr,
+                                uint64_t seed = 0, char sep = '\t');
+  inline explicit ContactMatrix(std::string_view path_to_file,
+                                std::normal_distribution<double>* noise_generator = nullptr,
+                                uint64_t seed = 0, char sep = '\t');
+  [[nodiscard]] inline I get(std::size_t row, std::size_t col) const;
   template <typename I2>
-  void set(std::size_t row, std::size_t col, I2 n);
+  inline void set(std::size_t row, std::size_t col, I2 n);
   template <typename I2>
-  void increment(std::size_t row, std::size_t col, I2 n);
+  inline void increment(std::size_t row, std::size_t col, I2 n);
   template <typename I2>
-  void decrement(std::size_t row, std::size_t col, I2 n);
-  void increment(std::size_t row, std::size_t col);
-  void decrement(std::size_t row, std::size_t col);
-  void print(bool full = false) const;
-  [[nodiscard]] std::vector<std::vector<I>> generate_symmetric_matrix() const;
-  [[nodiscard]] std::size_t n_cols() const;
-  [[nodiscard]] std::size_t n_rows() const;
-  std::pair<uint32_t /* bytes_in */, uint32_t /* bytes_out */> write_full_matrix_to_tsv(
+  inline void decrement(std::size_t row, std::size_t col, I2 n);
+  inline void increment(std::size_t row, std::size_t col);
+  inline void decrement(std::size_t row, std::size_t col);
+  inline void print(bool full = false) const;
+  [[nodiscard]] inline std::vector<std::vector<I>> generate_symmetric_matrix() const;
+  [[nodiscard]] inline std::size_t n_cols() const;
+  [[nodiscard]] inline std::size_t n_rows() const;
+  inline std::pair<uint32_t /* bytes_in */, uint32_t /* bytes_out */> write_full_matrix_to_tsv(
       const std::string& path_to_file, int bzip2_block_size = 9) const;
-  std::pair<uint32_t /* bytes_in */, uint32_t /* bytes_out */> write_to_tsv(
+  inline std::pair<uint32_t /* bytes_in */, uint32_t /* bytes_out */> write_to_tsv(
       const std::string& path_to_file, std::string_view header = "",
       int bzip2_block_size = 9) const;
-  void clear_missed_updates_counter();
-  [[nodiscard]] const std::vector<I>& get_raw_count_vector() const;
-  [[nodiscard]] uint64_t get_n_of_missed_updates() const;
-  [[nodiscard]] uint64_t get_tot_contacts() const;
-  [[nodiscard]] static Header parse_header(std::string_view path_to_file);
-  [[nodiscard]] static Header parse_header(std::string_view path_to_file,
-                                           boost::iostreams::filtering_istream& in,
-                                           bool rewind_file = false);
-  [[nodiscard]] uint64_t get_matrix_size_in_bytes() const;
-  [[nodiscard]] double get_matrix_size_in_mb() const;
+  inline void clear_missed_updates_counter();
+  [[nodiscard]] inline const std::vector<I>& get_raw_count_vector() const;
+  [[nodiscard]] inline uint64_t get_n_of_missed_updates() const;
+  [[nodiscard]] inline uint64_t get_tot_contacts() const;
+  [[nodiscard]] inline static Header parse_header(std::string_view path_to_file);
+  [[nodiscard]] inline static Header parse_header(std::string_view path_to_file,
+                                                  boost::iostreams::filtering_istream& in,
+                                                  bool rewind_file = false);
+  [[nodiscard]] inline uint64_t get_matrix_size_in_bytes() const;
+  [[nodiscard]] inline double get_matrix_size_in_mb() const;
 
  private:
   uint64_t _nrows;
@@ -74,8 +75,8 @@ class ContactMatrix {
   uint64_t _tot_contacts{0};
   uint64_t _updates_missed{0};
 
-  [[nodiscard]] I& at(std::size_t i, std::size_t j);
-  [[nodiscard]] const I& at(std::size_t i, std::size_t j) const;
+  [[nodiscard]] inline I& at(std::size_t i, std::size_t j);
+  [[nodiscard]] inline const I& at(std::size_t i, std::size_t j) const;
 };
 
 }  // namespace modle
