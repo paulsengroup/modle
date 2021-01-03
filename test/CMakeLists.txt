@@ -13,13 +13,7 @@ target_link_libraries(
           project_options
           Modle::cmatrix_test
           Modle::correlation_test
-          Modle::io_test
-          # This allows Catch2 to discover test units by preventing unused symbols from being discarded by the linker
-          -Wl,--whole-archive
-          $<TARGET_FILE:Modle::cmatrix_test>
-          $<TARGET_FILE:Modle::correlation_test>
-          $<TARGET_FILE:Modle::io_test>
-          -Wl,--no-whole-archive)
+          Modle::io_test)
 
 # automatically discover tests that are defined in catch based test files you can modify the unittests. TEST_PREFIX to
 # whatever you want, or use different for different binaries

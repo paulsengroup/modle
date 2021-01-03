@@ -1,4 +1,4 @@
-#include "modle/lefs.hpp"
+#pragma once
 
 #include <fmt/format.h>  // for format
 
@@ -11,6 +11,7 @@
 
 #include "modle/contacts.hpp"      // for ContactMatrix
 #include "modle/extr_barrier.hpp"  // for ExtrusionBarrier
+#include "modle/lefs.hpp"
 
 namespace modle {
 
@@ -22,7 +23,7 @@ uint32_t ExtrusionUnit::get_pos() const {
   return (this->_bin->get_end() + this->_bin->get_start()) / 2;
 }
 
-DNA::Direction ExtrusionUnit::get_extr_direction() const { return this->_direction; }
+dna::Direction ExtrusionUnit::get_extr_direction() const { return this->_direction; }
 
 bool ExtrusionUnit::is_stalled() const { return this->_stalls_left > 0; }
 
@@ -33,8 +34,8 @@ double ExtrusionUnit::get_prob_of_extr_unit_bypass() const {
 std::size_t ExtrusionUnit::get_bin_index() const { return this->_bin->get_index(); }
 
 bool ExtrusionUnit::try_extrude(std::mt19937& rand_eng) {
-  assert(this->_direction == DNA::Direction::fwd ||  // NOLINT
-         this->_direction == DNA::Direction::rev);   // NOLINT
+  assert(this->_direction == dna::Direction::fwd ||  // NOLINT
+         this->_direction == dna::Direction::rev);   // NOLINT
   assert(this->_bin != nullptr);                     // NOLINT
   if (this->is_stalled()) {
     this->decrement_stalls();
@@ -46,7 +47,7 @@ bool ExtrusionUnit::try_extrude(std::mt19937& rand_eng) {
     return false;
   }
 
-  if (this->_direction == DNA::Direction::fwd) {
+  if (this->_direction == dna::Direction::fwd) {
     return this->try_moving_to_next_bin();
   }
   return this->try_moving_to_prev_bin();
@@ -99,15 +100,18 @@ void ExtrusionUnit::unload() {
   this->_bin->remove_extr_unit_binding(this);
   this->_bin = nullptr;
   this->_blocking_barrier = nullptr;
-  this->_direction = DNA::Direction::none;
+  this->_direction = dna::Direction::none;
 }
 
-void ExtrusionUnit::bind(Chromosome* chr, uint32_t pos, DNA::Direction direction,
+void ExtrusionUnit::bind(Chromosome* chr, uint32_t pos, dna::Direction direction,
                          std::mt19937& rand_eng) {
   // TODO: We should also set a stall if another extr unit with the proper orientation is bound to
   // this bin
+  if (pos >= chr->end) {
+    fmt::print(stderr, "pos={}; chr_end={}\n", pos, chr->end);
+  }
   assert(pos < chr->end);                                                        // NOLINT
-  assert(direction == DNA::Direction::fwd || direction == DNA::Direction::rev);  // NOLINT
+  assert(direction == dna::Direction::fwd || direction == dna::Direction::rev);  // NOLINT
   this->_bin = chr->dna.get_ptr_to_bin_from_pos(pos);
   this->_bin->add_extr_unit_binding(this);
   this->_direction = direction;
@@ -148,8 +152,8 @@ uint64_t ExtrusionUnit::check_constraints(std::mt19937& rand_eng) {
 
 uint32_t ExtrusionUnit::check_for_extruder_collisions(std::mt19937& rang_eng) {
   assert(!this->is_stalled());                       // NOLINT
-  assert(this->_direction == DNA::Direction::fwd ||  // NOLINT
-         this->_direction == DNA::Direction::rev);   // NOLINT
+  assert(this->_direction == dna::Direction::fwd ||  // NOLINT
+         this->_direction == dna::Direction::rev);   // NOLINT
   assert(this->_bin);                                // NOLINT
   assert(this->_bin->get_n_extr_units() > 0);        // NOLINT
   uint32_t n_stalls = 0;
@@ -159,8 +163,8 @@ uint32_t ExtrusionUnit::check_for_extruder_collisions(std::mt19937& rang_eng) {
   }
 
   for (auto& other : this->_bin->get_extr_units()) {
-    assert(other->_direction == DNA::Direction::fwd ||  // NOLINT
-           other->_direction == DNA::Direction::rev);   // NOLINT
+    assert(other->_direction == dna::Direction::fwd ||  // NOLINT
+           other->_direction == dna::Direction::rev);   // NOLINT
     // Skip over extr. units belonging to the same LEF and apply a stall if this and other are
     // extruding in opposite directions
     if (&this->_parent_lef != &other->_parent_lef && this->_direction != other->_direction) {
@@ -178,7 +182,7 @@ uint32_t ExtrusionUnit::check_for_extruder_collisions(std::mt19937& rang_eng) {
 
 uint64_t ExtrusionUnit::check_for_extrusion_barrier(std::mt19937& rang_eng) {
   uint32_t applied_stall = 0;
-  if (this->get_extr_direction() == DNA::fwd) {
+  if (this->get_extr_direction() == dna::fwd) {
     this->_blocking_barrier = this->_bin->get_ptr_to_next_extr_barrier(this->_blocking_barrier);
   } else {
     this->_blocking_barrier = this->_bin->get_ptr_to_prev_extr_barrier(this->_blocking_barrier);
@@ -229,13 +233,13 @@ void Lef::bind_at_pos(Chromosome* chr, uint32_t pos, std::mt19937& rand_eng,
   // required to deal with the possibility that pos - offset overflows
   const auto pos1 = static_cast<uint32_t>(
       std::clamp(pos_offset < 0 ? static_cast<int64_t>(pos) + pos_offset : pos, 0L,
-                 static_cast<int64_t>(this->_chr->simulated_length())));
+                 static_cast<int64_t>(this->_chr->simulated_length() - 1)));
   const auto pos2 = static_cast<uint32_t>(
       std::clamp(pos_offset > 0 ? static_cast<int64_t>(pos) + pos_offset : pos, 0L,
-                 static_cast<int64_t>(this->_chr->simulated_length())));
+                 static_cast<int64_t>(this->_chr->simulated_length() - 1)));
   // We assume that the left unit always travels towards the 5', while the right unit goes to the 3'
-  this->_left_unit->bind(this->_chr, pos1, DNA::Direction::rev, rand_eng);
-  this->_right_unit->bind(this->_chr, pos2, DNA::Direction::fwd, rand_eng);
+  this->_left_unit->bind(this->_chr, pos1, dna::Direction::rev, rand_eng);
+  this->_right_unit->bind(this->_chr, pos2, dna::Direction::fwd, rand_eng);
   if (register_contact) {
     const auto n = this->_chr->dna.get_ptr_to_bin_from_pos(pos)->get_index();
     this->_chr->contacts.increment(n, n);

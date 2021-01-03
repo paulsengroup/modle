@@ -1,11 +1,14 @@
-#include "../correlation_utils.hpp"
+#pragma once
 
 #include <cstdint>
 #include <vector>
 
+#include "../correlation_utils.hpp"
 #include "catch2/catch.hpp"
 
-namespace modle::correlation::test {
+namespace modle::test::correlation {
+using namespace modle::correlation;
+
 TEST_CASE("Corr. test utils: sort vect. by idx", "[correlation][utils][short]") {
   const std::vector<uint32_t> v{10, 5, 67, 3, 60, 45, 49, 1000};
   const std::vector<uint32_t> expected{3, 1, 0, 5, 6, 4, 2, 7};
@@ -35,4 +38,4 @@ TEST_CASE("Corr. test utils: compute ranks w ties", "[correlation][utils][short]
     CHECK(vi[i] == expected[i]);
   }
 }
-}  // namespace modle::correlation::test
+}  // namespace modle::test::correlation

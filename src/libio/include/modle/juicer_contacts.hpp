@@ -9,7 +9,7 @@
 namespace modle::juicer_contacts {
 
 struct Contact {
-  Contact() = default;
+  inline Contact() = default;
   template <typename I, typename R>
   Contact(I b1, I b2, R contacts_num);
   uint64_t bin1;
@@ -19,8 +19,9 @@ struct Contact {
 
 class ContactsParser {
  public:
-  explicit ContactsParser(std::string contact_file);
-  ContactMatrix<uint32_t> parse_into_contact_matrix(uint64_t width, std::string_view sep = "\t");
+  inline explicit ContactsParser(std::string contact_file);
+  [[nodiscard]] inline ContactMatrix<uint32_t> parse_into_contact_matrix(
+      uint64_t width, std::string_view sep = "\t");
 
  private:
   std::string _path;
@@ -34,13 +35,15 @@ class ContactsParser {
     uint64_t bin_size{0};
   };
 
-  [[nodiscard]] MatrixProperties get_matrix_properties(std::string_view sep);
-  bool parse_next(std::string& buff, Contact& c, std::string_view sep);
+  [[nodiscard]] inline MatrixProperties get_matrix_properties(std::string_view sep);
+  inline bool parse_next(std::string& buff, Contact& c, std::string_view sep);
 };
 
-[[nodiscard]] ContactMatrix<uint32_t> run_juicer_dump_and_parse_contacts(
+[[nodiscard]] inline ContactMatrix<uint32_t> run_juicer_dump_and_parse_contacts(
     std::string_view path_to_input_matrix, std::string_view path_to_reference_matrix,
     std::string_view chr_name_hic, uint64_t chr_offset_hic, std::string_view path_to_juicer_tools,
     uint64_t juicer_tools_mem);
 
 }  // namespace modle::juicer_contacts
+
+#include "../../juicer_contacts_impl.hpp"

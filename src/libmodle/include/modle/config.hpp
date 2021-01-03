@@ -41,7 +41,7 @@ struct config {
   int argc;
   char** argv;
 
-  [[nodiscard]] std::string to_string() const {
+  [[nodiscard]] inline std::string to_string() const {
     struct cli_tokens {
       std::string name;
       std::string value;
@@ -49,7 +49,7 @@ struct config {
 
     // clang-format off
     // TODO: Remove FMT_STRING macro from trivial format strings
-    absl::flat_hash_map<std::string_view, std::vector<cli_tokens>> tokens{
+    const absl::flat_hash_map<std::string_view, std::vector<cli_tokens>> tokens{
     {"Input/Output"sv,
     std::vector<cli_tokens>{
      {"Path to chr. sizes", fmt::format(FMT_STRING("{}"), std::filesystem::weakly_canonical(this->path_to_chr_sizes))},
@@ -86,8 +86,8 @@ struct config {
     // clang-format on
     std::size_t max_column1_length = 0;
     std::size_t max_column2_length = 0;
-    for (auto& [title, options] : tokens) {
-      for (auto& opt : options) {
+    for (const auto& [title, options] : tokens) {
+      for (const auto& opt : options) {
         max_column1_length =
             opt.name.size() > max_column1_length ? opt.name.size() : max_column1_length;
         max_column2_length =
@@ -110,7 +110,7 @@ struct config {
       absl::StrAppend(
           &buff, fmt::format(FMT_STRING("########## {}{:#<{}}\n"), title, " ",
                              max_column_length - title_constant_padding_length - title.size()));
-      for (auto& opt : tokens.at(title)) {
+      for (const auto& opt : tokens.at(title)) {
         absl::StrAppend(&buff,
                         fmt::format(FMT_STRING("##    {:<{}}  #  {:<{}}  ##\n"), opt.name,
                                     max_column1_length - col1_constant_padding_length, opt.value,
@@ -122,7 +122,7 @@ struct config {
     return buff;
   }
 
-  void print() const { fmt::fprintf(stderr, FMT_STRING("%s\n\n"), this->to_string()); }
+  inline void print() const { fmt::fprintf(stderr, FMT_STRING("%s\n\n"), this->to_string()); }
 };
 
 }  // namespace modle

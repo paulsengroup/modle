@@ -1,8 +1,11 @@
+#pragma once
+
 #include <catch2/catch.hpp>
 
 #include "modle/juicer_contacts.hpp"
 
-namespace modle::juicer_contacts::test {
+namespace modle::test::juicer_contacts {
+using namespace modle::juicer_contacts;
 /*
 TEST_CASE("Juicer Contacts run_juicer_dump_and_parse_contacts", "[parsers][juicer_contacts][short]")
 { const std::string hic_file =
@@ -13,4 +16,4 @@ TEST_CASE("Juicer Contacts run_juicer_dump_and_parse_contacts", "[parsers][juice
   cmatrix.write_to_tsv("/tmp/test_cmatrix.tsv.bz2", "#chr1\t1000\t1700000\t1800000\t10000\n");
 }
  */
-}  // namespace modle::juicer_contacts::test
+}  // namespace modle::test::juicer_contacts

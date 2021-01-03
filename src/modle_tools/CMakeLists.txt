@@ -1,11 +1,13 @@
-find_package(Threads REQUIRED)
+# find_package(Threads REQUIRED)
 
-add_executable(
+add_executable(modle_tools main.cpp)
+
+target_sources(
   modle_tools
-  main.cpp
-  convert.cpp
-  eval.cpp
-  tools.cpp)
+  PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/cli.hpp
+          ${CMAKE_CURRENT_SOURCE_DIR}/convert_impl.hpp
+          ${CMAKE_CURRENT_SOURCE_DIR}/eval_impl.hpp
+          ${CMAKE_CURRENT_SOURCE_DIR}/tools_impl.hpp)
 
 target_link_libraries(
   modle_tools
@@ -20,6 +22,17 @@ target_link_libraries(
           CONAN_PKG::range-v3)
 
 target_include_directories(modle_tools PRIVATE include)
+
+if(ENABLE_PCH AND ${CMAKE_VERSION} VERSION_GREATER_EQUAL "3.16.0")
+  target_precompile_headers(
+    modle_tools
+    PRIVATE
+    [["modle_tools/config.hpp"]]
+    [["modle_tools/convert.hpp"]]
+    [["modle_tools/eval.hpp"]]
+    [["modle_tools/tools.hpp"]]
+    [["modle_tools/utils.hpp"]])
+endif()
 
 install(
   TARGETS modle_tools

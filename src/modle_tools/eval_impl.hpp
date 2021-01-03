@@ -1,13 +1,55 @@
 #pragma once
 
+#include <absl/algorithm/container.h>
+#include <absl/container/btree_set.h>
+#include <absl/strings/match.h>
 #include <absl/time/clock.h>
 #include <absl/types/span.h>
-#include <fmt/printf.h>
+#include <fmt/format.h>
 
+#include "modle/cooler.hpp"
 #include "modle/correlation.hpp"
 #include "modle/suppress_compiler_warnings.hpp"
+#include "modle/utils.hpp"
 
 namespace modle::tools {
+std::vector<std::pair<std::string, int64_t>> select_chromosomes_for_eval(
+    std::string_view path_to_cooler1, std::string_view path_to_cooler2) {
+  std::vector<std::string> str_buff;
+  std::vector<int64_t> int_buff;
+
+  auto build_chr_set = [&](std::string_view path_to_cooler) {
+    try {
+      cooler::Cooler c(path_to_cooler, cooler::Cooler::READ_ONLY);
+      c.get_chr_names(str_buff);
+      c.get_chr_sizes(int_buff);
+
+      assert(str_buff.size() == c.get_n_chroms());
+      assert(int_buff.size() == str_buff.size());
+
+      absl::btree_set<std::pair<std::string, int64_t>> chr_set;
+
+      for (auto i = 0UL; i < str_buff.size(); ++i) {
+        chr_set.emplace(str_buff[i], int_buff[i]);
+      }
+      return chr_set;
+
+    } catch (const std::runtime_error &e) {
+      throw std::runtime_error(fmt::format(
+          FMT_STRING("An error occurred while reading file '{}': {}"), path_to_cooler, e.what()));
+    }
+  };
+
+  std::vector<std::pair<std::string, int64_t>> chr_intersection;
+  const auto chr_set1 = build_chr_set(path_to_cooler1);
+  const auto chr_set2 = build_chr_set(path_to_cooler2);
+
+  absl::c_set_intersection(
+      chr_set1, chr_set2, std::back_inserter(chr_intersection),
+      [](const auto &c1, const auto &c2) { return modle::utils::chr_less_than_operator(c1, c2); });
+
+  return chr_intersection;
+}
 
 template <typename N>
 void slice_range_w_cross_method(absl::Span<const N> vin, std::vector<N> &vout, std::size_t nrows,
@@ -75,12 +117,12 @@ void slice_range(absl::Span<const N> vin, std::vector<N> &vout, std::size_t nrow
 }
 
 template <typename N1, typename N2>
-std::pair<std::vector<double>, std::vector<double>> compute_pearson_over_range(
-    absl::Span<const N1> vin1, absl::Span<const N2> vin2, std::size_t nrows, std::size_t ncols,
-    Transformation t) {
+void compute_pearson_over_range(absl::Span<const N1> vin1, absl::Span<const N2> vin2,
+                                std::vector<double> &pcc_buff, std::vector<double> &pval_buff,
+                                std::size_t nrows, std::size_t ncols, Transformation t) {
   assert(vin1.size() == vin2.size());
-  std::vector<double> pcc_vals(ncols);
-  std::vector<double> pvals(ncols);
+  pcc_buff.resize(ncols);
+  pval_buff.resize(ncols);
   std::vector<N1> sub_vin1(2 * nrows - 1);
   std::vector<N2> sub_vin2(2 * nrows - 1);
   const auto step = ncols / 25;
@@ -89,8 +131,8 @@ std::pair<std::vector<double>, std::vector<double>> compute_pearson_over_range(
   for (std::size_t i = 0; i < ncols; ++i) {
     slice_range(vin1, sub_vin1, nrows, t, i);
     slice_range(vin2, sub_vin2, nrows, t, i);
-    pcc_vals[i] = correlation::compute_pearson(sub_vin1, sub_vin2);
-    pvals[i] = correlation::compute_pearson_significance(pcc_vals[i], sub_vin1.size());
+    pcc_buff[i] = correlation::compute_pearson(sub_vin1, sub_vin2);
+    pval_buff[i] = correlation::compute_pearson_significance(pcc_buff[i], sub_vin1.size());
 
     if ((i + 1) % step == 0) {
       fmt::print(stderr, FMT_STRING("Processed {}/{} bins ({:.4f}%) ({:.2f} corr/s)\n"), i, ncols,
@@ -99,25 +141,23 @@ std::pair<std::vector<double>, std::vector<double>> compute_pearson_over_range(
       t0 = absl::Now();
     }
   }
-
-  return {std::move(pcc_vals), std::move(pvals)};
 }
 
 template <typename N1, typename N2>
-std::pair<std::vector<double>, std::vector<double>> compute_pearson_over_range(
-    const std::vector<N1> &vin1, const std::vector<N2> &vin2, std::size_t nrows, std::size_t ncols,
-    Transformation t) {
-  return compute_pearson_over_range(absl::MakeConstSpan(vin1), absl::MakeConstSpan(vin2), nrows,
-                                    ncols, t);
+void compute_pearson_over_range(const std::vector<N1> &vin1, const std::vector<N2> &vin2,
+                                std::vector<double> &pcc_buff, std::vector<double> &pval_buff,
+                                std::size_t nrows, std::size_t ncols, Transformation t) {
+  return compute_pearson_over_range(absl::MakeConstSpan(vin1), absl::MakeConstSpan(vin2), pcc_buff,
+                                    pval_buff, nrows, ncols, t);
 }
 
 template <typename N1, typename N2>
-std::pair<std::vector<double>, std::vector<double>> compute_spearman_over_range(
-    absl::Span<const N1> vin1, absl::Span<const N2> vin2, std::size_t nrows, std::size_t ncols,
-    Transformation t) {
+void compute_spearman_over_range(absl::Span<const N1> vin1, absl::Span<const N2> vin2,
+                                 std::vector<double> &rho_buff, std::vector<double> &pval_buff,
+                                 std::size_t nrows, std::size_t ncols, Transformation t) {
   assert(vin1.size() == vin2.size());
-  std::vector<double> rho_vals(ncols);
-  std::vector<double> pvals(ncols);
+  rho_buff.resize(ncols);
+  pval_buff.resize(ncols);
   std::vector<N1> sub_vin1(2 * nrows - 1);
   std::vector<N2> sub_vin2(2 * nrows - 1);
   const auto step = ncols / 25;
@@ -126,8 +166,8 @@ std::pair<std::vector<double>, std::vector<double>> compute_spearman_over_range(
   for (std::size_t i = 0; i < ncols; ++i) {
     slice_range(vin1, sub_vin1, nrows, t, i);
     slice_range(vin2, sub_vin2, nrows, t, i);
-    rho_vals[i] = correlation::compute_spearman(sub_vin1, sub_vin2);
-    pvals[i] = correlation::compute_spearman_significance(rho_vals[i], sub_vin1.size());
+    rho_buff[i] = correlation::compute_spearman(sub_vin1, sub_vin2);
+    pval_buff[i] = correlation::compute_spearman_significance(rho_buff[i], sub_vin1.size());
 
     if ((i + 1) % step == 0) {
       fmt::print(stderr, FMT_STRING("Processed {}/{} bins ({:.4f}%) ({:.2f} corr/s)\n"), i, ncols,
@@ -136,15 +176,13 @@ std::pair<std::vector<double>, std::vector<double>> compute_spearman_over_range(
       t0 = absl::Now();
     }
   }
-
-  return std::make_pair(rho_vals, pvals);
 }
 
 template <typename N1, typename N2>
-std::pair<std::vector<double>, std::vector<double>> compute_spearman_over_range(
-    const std::vector<N1> &vin1, const std::vector<N2> &vin2, std::size_t nrows, std::size_t ncols,
-    Transformation t) {
-  return compute_spearman_over_range(absl::MakeConstSpan(vin1), absl::MakeConstSpan(vin2), nrows,
-                                     ncols, t);
+void compute_spearman_over_range(const std::vector<N1> &vin1, const std::vector<N2> &vin2,
+                                 std::vector<double> &rho_buff, std::vector<double> &pval_buff,
+                                 std::size_t nrows, std::size_t ncols, Transformation t) {
+  return compute_spearman_over_range(absl::MakeConstSpan(vin1), absl::MakeConstSpan(vin2), rho_buff,
+                                     pval_buff, nrows, ncols, t);
 }
 }  // namespace modle::tools

@@ -69,12 +69,17 @@ inline void read_attribute(std::string_view path_to_file, std::string_view attr_
                                                 std::string_view attr_name,
                                                 std::string_view path = "/");
 
-inline bool group_exists(H5::H5File &f, std::string_view name, std::string_view root_path = "/");
+[[nodiscard]] inline bool group_exists(H5::H5File &f, std::string_view name,
+                                       std::string_view root_path = "/");
 
-inline bool dataset_exists(H5::H5File &f, std::string_view name, std::string_view root_path = "/");
+[[nodiscard]] inline bool dataset_exists(H5::H5File &f, std::string_view name,
+                                         std::string_view root_path = "/");
 
 template <typename T>
-inline bool check_dataset_type(const H5::DataSet &dataset, T type, bool throw_on_failure = true);
+[[nodiscard]] inline bool check_dataset_type(const H5::DataSet &dataset, T type,
+                                             bool throw_on_failure = true);
+
+[[nodiscard]] inline H5::H5File open_file_for_reading(std::string_view path_to_file);
 
 }  // namespace modle::hdf5
 

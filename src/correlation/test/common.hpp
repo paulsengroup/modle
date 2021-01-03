@@ -8,10 +8,10 @@
 #include <string>
 #include <unordered_set>
 
-namespace modle::correlation::test {
+namespace modle::test::correlation {
 
 template <typename N, typename = typename std::enable_if<std::is_arithmetic<N>::value, N>::type>
-void write_vect_to_file(const std::string& fpath, const std::vector<N>& v) {
+inline void write_vect_to_file(const std::string& fpath, const std::vector<N>& v) {
   auto fp = std::ofstream(fpath);
   fp << v[0];
   for (auto i = 1UL; i < v.size(); ++i) {
@@ -21,8 +21,9 @@ void write_vect_to_file(const std::string& fpath, const std::vector<N>& v) {
   fp.close();
 }
 
-std::vector<uint32_t> generate_random_vect(std::mt19937& rnd_eng, uint32_t size, uint32_t min,
-                                           uint32_t max, bool allow_duplicates = true) {
+inline std::vector<uint32_t> generate_random_vect(std::mt19937& rnd_eng, uint32_t size,
+                                                  uint32_t min, uint32_t max,
+                                                  bool allow_duplicates = true) {
   std::uniform_int_distribution<uint32_t> dist(min, max);
   std::vector<uint32_t> v(size);
   if (allow_duplicates) {
@@ -37,7 +38,7 @@ std::vector<uint32_t> generate_random_vect(std::mt19937& rnd_eng, uint32_t size,
   return v;
 }
 
-std::pair<std::vector<uint32_t>, std::vector<uint32_t>> generate_correlated_vects(
+inline std::pair<std::vector<uint32_t>, std::vector<uint32_t>> generate_correlated_vects(
     std::mt19937& rnd_eng, uint32_t size) {
   std::uniform_int_distribution<int32_t> dist(static_cast<int32_t>(size) / -50,  // NOLINT
                                               static_cast<int32_t>(size / 50));  // NOLINT
@@ -55,8 +56,8 @@ std::pair<std::vector<uint32_t>, std::vector<uint32_t>> generate_correlated_vect
 }
 
 template <typename N, typename = typename std::enable_if<std::is_arithmetic<N>::value, N>::type>
-std::pair<double, double> corr_scipy(const std::vector<N>& v1, const std::vector<N>& v2,
-                                     const std::string& method) {
+inline std::pair<double, double> corr_scipy(const std::vector<N>& v1, const std::vector<N>& v2,
+                                            const std::string& method) {
   auto f1_path = std::string(std::tmpnam(nullptr));  // NOLINT
   auto f2_path = std::string(std::tmpnam(nullptr));  // NOLINT
   write_vect_to_file(f1_path, v1);
@@ -95,4 +96,4 @@ std::pair<double, double> corr_scipy(const std::vector<N>& v1, const std::vector
 
   return {rho, pv};
 }
-}  // namespace modle::correlation::test
+}  // namespace modle::test::correlation

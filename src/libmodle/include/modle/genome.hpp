@@ -25,26 +25,27 @@ struct config;
  */
 class Genome {
  public:
-  explicit Genome(const config& c);
+  inline explicit Genome(const config& c);
 
   // Getters
-  [[nodiscard]] const std::vector<Chromosome>& get_chromosomes() const;
-  [[nodiscard]] std::vector<Chromosome>& get_chromosomes();
-  [[nodiscard]] std::vector<Lef>& get_lefs();
-  [[nodiscard]] const std::vector<Lef>& get_lefs() const;
-  [[nodiscard]] uint32_t get_n_chromosomes() const;
-  [[nodiscard]] uint64_t size() const;
-  [[nodiscard]] uint64_t n50() const;
-  [[nodiscard]] uint64_t get_n_bins() const;
-  [[nodiscard]] uint64_t get_n_lefs() const;
-  [[nodiscard]] uint64_t get_n_barriers() const;
-  [[nodiscard]] std::vector<std::string_view> get_chromosome_names() const;
-  [[nodiscard]] std::vector<uint64_t> get_chromosome_lengths() const;
-  [[nodiscard]] std::vector<double> get_chromosome_lef_affinities() const;
-  [[nodiscard]] uint64_t get_n_of_free_lefs() const;
-  [[nodiscard]] uint64_t get_n_of_busy_lefs() const;
-  void write_contacts_to_file(std::string_view output_file);
-  void write_extrusion_barriers_to_file(std::string_view output_dir, bool force_overwrite) const;
+  [[nodiscard]] inline const std::vector<Chromosome>& get_chromosomes() const;
+  [[nodiscard]] inline std::vector<Chromosome>& get_chromosomes();
+  [[nodiscard]] inline std::vector<Lef>& get_lefs();
+  [[nodiscard]] inline const std::vector<Lef>& get_lefs() const;
+  [[nodiscard]] inline uint32_t get_n_chromosomes() const;
+  [[nodiscard]] inline uint64_t size() const;
+  [[nodiscard]] inline uint64_t n50() const;
+  [[nodiscard]] inline uint64_t get_n_bins() const;
+  [[nodiscard]] inline uint64_t get_n_lefs() const;
+  [[nodiscard]] inline uint64_t get_n_barriers() const;
+  [[nodiscard]] inline std::vector<std::string_view> get_chromosome_names() const;
+  [[nodiscard]] inline std::vector<uint64_t> get_chromosome_lengths() const;
+  [[nodiscard]] inline std::vector<double> get_chromosome_lef_affinities() const;
+  [[nodiscard]] inline uint64_t get_n_of_free_lefs() const;
+  [[nodiscard]] inline uint64_t get_n_of_busy_lefs() const;
+  inline void write_contacts_to_file(std::string_view output_file);
+  inline void write_extrusion_barriers_to_file(std::string_view output_dir,
+                                               bool force_overwrite) const;
 
   /** Randomly generate and bind \p n_barriers ExtrusionBarrier%s
    *
@@ -62,7 +63,7 @@ class Genome {
    * @param n_barriers The number of barriers to randomly generate and bind.
    */
   template <typename I>
-  void randomly_generate_extrusion_barriers(I n_barriers, uint64_t seed = 0);
+  inline void randomly_generate_extrusion_barriers(I n_barriers, uint64_t seed = 0);
 
   /** This function is meant to be used before calling Genome::simulate_extrusion to randomly bind
    * Lef%s.
@@ -71,14 +72,15 @@ class Genome {
    * Chromosome::randomly_generate_extrusion_barriers.
    */
 
-  std::pair<uint64_t, uint64_t> import_extrusion_barriers_from_bed(std::string_view path_to_bed,
-                                                                   double probability_of_block);
-  void assign_lefs(bool bind_lefs_after_assignment);
+  inline std::pair<uint64_t, uint64_t> import_extrusion_barriers_from_bed(
+      std::string_view path_to_bed, double probability_of_block);
+  inline void assign_lefs(bool bind_lefs_after_assignment);
 
-  uint64_t remove_chromosomes_wo_extr_barriers();
+  inline uint64_t remove_chromosomes_wo_extr_barriers();
 
-  std::pair<double, double> run_burnin(double prob_of_rebinding, uint32_t target_n_of_unload_events,
-                                       uint64_t min_extr_rounds);
+  inline std::pair<double, double> run_burnin(double prob_of_rebinding,
+                                              uint32_t target_n_of_unload_events,
+                                              uint64_t min_extr_rounds);
 
   /** This function is the one that actually runs the simulation
    *
@@ -117,11 +119,12 @@ class Genome {
   bool _randomize_contact_sampling;
   uint32_t _nthreads;
 
-  void simulate_extrusion(uint32_t iterations, double target_contact_density);
+  inline void simulate_extrusion(uint32_t iterations, double target_contact_density);
 
   // Private initializers
-  [[nodiscard]] std::vector<Chromosome> init_chromosomes_from_file(uint32_t diagonal_width) const;
-  [[nodiscard]] std::vector<Lef> generate_lefs(uint32_t n);
+  [[nodiscard]] inline std::vector<Chromosome> init_chromosomes_from_file(
+      uint32_t diagonal_width) const;
+  [[nodiscard]] inline std::vector<Lef> generate_lefs(uint32_t n);
 };
 }  // namespace modle
 

@@ -18,7 +18,7 @@ class Cooler {
   [[nodiscard]] inline static H5::StrType generate_default_str_type();
 
  public:
-  enum IO_MODE { READ_ONLY, WRITE_ONLY };
+  enum IO_MODE : uint8_t { READ_ONLY, WRITE_ONLY };
   const H5::StrType STR_TYPE{generate_default_str_type()};    // NOLINT
   const H5::PredType INT64_TYPE{H5::PredType::NATIVE_INT64};  // NOLINT
   const H5::PredType INT32_TYPE{H5::PredType::NATIVE_INT32};  // NOLINT
@@ -29,8 +29,8 @@ class Cooler {
     MCOOL = 3,
     SCOOL = 4  // For the time being, we do not support SCOOL
   };
-  enum Groups { CHR = 0, BIN = 1, PXL = 2, IDX = 3 };
-  enum Datasets {
+  enum Groups : uint8_t { CHR = 0, BIN = 1, PXL = 2, IDX = 3 };
+  enum Datasets : uint8_t {
     CHR_LEN = 0,
     CHR_NAME = 1,
     BIN_CHROM = 2,
@@ -96,10 +96,18 @@ class Cooler {
   [[nodiscard]] inline ContactMatrix<uint32_t> cooler_to_cmatrix(
       std::string_view chr_name, std::size_t nrows, bool try_common_chr_prefixes = true);
 
-  [[nodiscard]] inline ContactMatrix<uint32_t> cooler_to_cmatrix(std::string_view chr_name,
-                                                                 std::size_t diagonal_width,
-                                                                 std::size_t bin_size,
-                                                                 bool try_common_chr_prefixes);
+  [[nodiscard]] inline ContactMatrix<uint32_t> cooler_to_cmatrix(
+      std::string_view chr_name, std::size_t diagonal_width, std::size_t bin_size,
+      bool try_common_chr_prefixes = true);
+  [[nodiscard]] inline std::size_t get_n_chroms();
+  inline void get_chr_names(std::vector<std::string> &buff);
+  [[nodiscard]] inline std::vector<std::string> get_chr_names();
+  template <typename I>
+  inline void get_chr_sizes(std::vector<I> &buff);
+  [[nodiscard]] inline std::vector<int64_t> get_chr_sizes();
+  [[nodiscard]] inline bool is_cool() const;
+  [[nodiscard]] inline bool is_mcool() const;
+  [[nodiscard]] inline bool is_scool() const;
 
  private:
   std::filesystem::path _path_to_file;

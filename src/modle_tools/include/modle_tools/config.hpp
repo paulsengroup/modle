@@ -9,7 +9,7 @@
 namespace modle::tools {
 
 struct config {
-  enum output_format {
+  enum output_format : uint8_t {
     TSV = 0,
     Tsv = 0,
     tsv = 0,

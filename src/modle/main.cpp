@@ -102,6 +102,9 @@ void run_simulation(const modle::config& c) {
   fmt::print(stderr, FMT_STRING("Simulation took {}.\n"), absl::FormatDuration(absl::Now() - t0));
 
   if (!c.skip_output) {  // Mostly useful for profiling
+    if (c.force) {
+      std::filesystem::remove_all(c.output_file);
+    }
     genome.write_contacts_to_file(c.output_file);
     std::ofstream cmd_file(fmt::format("{}/settings.log", c.output_file));
     fmt::print(cmd_file, FMT_STRING("{}\n{}\n"), c.to_string(),

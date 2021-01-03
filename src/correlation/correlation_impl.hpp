@@ -20,7 +20,7 @@
 
 namespace modle::correlation {
 
-inline double compute_pearson_significance(double pcc, std::size_t n) {
+double compute_pearson_significance(double pcc, std::size_t n) {
   assert(n > 2);  // NOLINT
   const auto ab = static_cast<double>(n) / 2.0 - 1;
   boost::math::beta_distribution<double> dist(ab, ab);
@@ -29,7 +29,7 @@ inline double compute_pearson_significance(double pcc, std::size_t n) {
   return 2.0 * boost::math::cdf<double>(dist, 0.5 * (1 - std::abs(pcc)));
 }
 
-inline double compute_spearman_significance(double rho, std::size_t n) {
+double compute_spearman_significance(double rho, std::size_t n) {
   assert(n > 2);  // NOLINT
   const auto dof = static_cast<double>(n - 2);
   const double tscore = rho * std::sqrt(dof / ((1.0 + rho) * (1.0 - rho)));

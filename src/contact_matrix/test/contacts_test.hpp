@@ -1,18 +1,20 @@
-#include "modle/contacts.hpp"
+#pragma once
+
+#include <absl/strings/str_split.h>
+#include <fmt/format.h>
 
 #include <boost/iostreams/filter/bzip2.hpp>
 #include <boost/iostreams/filtering_stream.hpp>
+#include <catch2/catch.hpp>
 #include <cstdint>
 #include <filesystem>
 #include <fstream>
 #include <vector>
 
-#include "absl/strings/str_split.h"
-#include "catch2/catch.hpp"
-#include "fmt/printf.h"
+#include "modle/contacts.hpp"
 #include "modle/utils.hpp"
 
-namespace modle::contacts::test {
+namespace modle::test::cmatrix {
 
 TEST_CASE("CMatrix simple", "[cmatrix][short]") {
   ContactMatrix<uint32_t> c(10, 100);  // NOLINT
@@ -25,8 +27,8 @@ TEST_CASE("CMatrix simple", "[cmatrix][short]") {
   CHECK(c.get(0, 0) == 0);
 }
 
-std::vector<std::vector<uint32_t>> load_matrix_from_file(const std::string& path_to_file,
-                                                         const std::string& sep = "\t") {
+[[nodiscard]] inline std::vector<std::vector<uint32_t>> load_matrix_from_file(
+    const std::string& path_to_file, const std::string& sep = "\t") {
   std::vector<std::vector<uint32_t>> m;
   std::ifstream f(path_to_file);
   std::string line;
@@ -68,7 +70,7 @@ TEST_CASE("CMatrix 10x200", "[cmatrix][medium]") {
   }
 }
 
-void test_with_large_matrix(const std::string& path_to_file) {
+inline void test_with_large_matrix(const std::string& path_to_file) {
   const ContactMatrix<uint32_t> m(path_to_file);
   std::ifstream f(path_to_file, std::ios_base::binary);
   boost::iostreams::filtering_istream in;
@@ -105,4 +107,4 @@ TEST_CASE("CMatrix 50x50'000", "[cmatrix][long]") {
   test_with_large_matrix(file_path);  // NOLINT
 }
  */
-}  // namespace modle::contacts::test
+}  // namespace modle::test::cmatrix

@@ -1,4 +1,4 @@
-#include "modle/correlation.hpp"
+#pragma once
 
 #include <cstdint>
 #include <utility>
@@ -6,8 +6,10 @@
 
 #include "./common.hpp"
 #include "catch2/catch.hpp"
+#include "modle/correlation.hpp"
 
-namespace modle::correlation::test {
+namespace modle::test::correlation {
+using namespace modle::correlation;
 
 TEST_CASE("Corr. test: Pearson wo ties", "[correlation][pearson][short]") {
   std::vector<uint32_t> v1{17, 86, 60, 77, 47, 3, 70, 87, 88, 92};   // NOLINT
@@ -168,4 +170,4 @@ TEST_CASE("Corr. test: Kendall Scipy long vect.", "[correlation][kendall][medium
   CHECK(Approx(pv).margin(0) == pv_py);
 }
 */
-}  // namespace modle::correlation::test
+}  // namespace modle::test::correlation

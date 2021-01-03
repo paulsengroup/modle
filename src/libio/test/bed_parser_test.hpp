@@ -1,12 +1,15 @@
+#pragma once
+
 #include <filesystem>
 
 #include "absl/strings/str_split.h"
 #include "catch2/catch.hpp"
 #include "modle/bed.hpp"
 
-namespace modle::bed::test {
+namespace modle::test::bed {
+using namespace modle::bed;
 
-void compare_bed_records_with_file(std::vector<BED> records, const std::string &bed_file) {
+inline void compare_bed_records_with_file(std::vector<BED> records, const std::string &bed_file) {
   auto fp = std::ifstream(bed_file);
   std::vector<std::string> lines;
   lines.reserve(records.size());
@@ -82,4 +85,4 @@ TEST_CASE("BED Parser: BED9", "[parsers][BED][medium]") {
   compare_bed_records_with_file(records, bed_file);
 }
 
-}  // namespace modle::bed::test
+}  // namespace modle::test::bed

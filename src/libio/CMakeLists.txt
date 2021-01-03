@@ -21,37 +21,34 @@ set(LIB_BIGWIG_ROOT ${BINARY_DIR})
 unset(BINARY_DIR)
 
 if(BUILD_SHARED_LIBS) # Generator expr do not work very well here
-  add_library(libstraw SHARED IMPORTED)
-  set_target_properties(libBigWig_lib PROPERTIES IMPORTED_LOCATION ${STRAW_ROOT}/libstraw.so)
+  add_library(libBigWig_lib SHARED IMPORTED)
+  set_target_properties(libBigWig_lib PROPERTIES IMPORTED_LOCATION ${LIB_BIGWIG_ROOT}/libBigWig.so)
 else()
-  add_library(
-    libBigWig_lib
-    STATIC
-    IMPORTED
-    include/modle/cooler.hpp)
+  add_library(libBigWig_lib STATIC IMPORTED)
   set_target_properties(libBigWig_lib PROPERTIES IMPORTED_LOCATION ${LIB_BIGWIG_ROOT}/libBigWig.a)
 endif()
 
 add_dependencies(libBigWig_lib libBigWig)
 target_include_directories(libBigWig_lib INTERFACE ${LIB_BIGWIG_ROOT}/../)
 
-add_library(libio)
+add_library(libio INTERFACE)
 add_library(Modle::io ALIAS libio)
 target_sources(
   libio
-  PRIVATE 4dn_dcic.cpp
-          bed.cpp
-          chr_sizes.cpp
-          juicer_contacts.cpp
-          bigwig.cpp)
+  INTERFACE ${CMAKE_CURRENT_SOURCE_DIR}/4dn_dcic_impl.hpp
+            ${CMAKE_CURRENT_SOURCE_DIR}/bed_impl.hpp
+            ${CMAKE_CURRENT_SOURCE_DIR}/chr_sizes_impl.hpp
+            ${CMAKE_CURRENT_SOURCE_DIR}/juicer_contacts_impl.hpp
+            ${CMAKE_CURRENT_SOURCE_DIR}/bigwig_impl.hpp)
 add_dependencies(libio libBigWig_lib) # libstraw)
 
-target_include_directories(libio PUBLIC include/)
+target_include_directories(libio INTERFACE include/)
 
 target_link_libraries(
   libio
-  PRIVATE project_warnings project_options
-  PUBLIC
+  INTERFACE
+    project_warnings
+    project_options
     Modle::cmatrix
     libBigWig_lib
     CONAN_PKG::abseil
@@ -64,19 +61,21 @@ target_link_libraries(
     $<$<AND:$<CXX_COMPILER_ID:Clang>,$<CXX_COMPILER_ID:AppleClang>,$<VERSION_LESS_EQUAL:$<CXX_COMPILER_VERSION>,9.0.0>>:-lc++fs>
     $<$<AND:$<CXX_COMPILER_ID:GNU>,$<VERSION_LESS_EQUAL:$<CXX_COMPILER_VERSION>,9.1.0>>:-lstdc++fs>)
 
-set_target_properties(libio PROPERTIES OUTPUT_NAME io)
-target_compile_definitions(libio PRIVATE -DNOCURL)
+target_compile_definitions(libio INTERFACE -DNOCURL)
+
+if(ENABLE_PCH AND ${CMAKE_VERSION} VERSION_GREATER_EQUAL "3.16.0")
+  target_precompile_headers(
+    libio
+    INTERFACE
+    [["modle/4dn_dcic.hpp"]]
+    [["modle/bed.hpp"]]
+    [["modle/bigwig.hpp"]]
+    [["modle/chr_sizes.hpp"]]
+    [["modle/cooler.hpp"]]
+    [["modle/hdf5.hpp"]]
+    [["modle/juicer_contacts.hpp"]])
+endif()
 
 if(ENABLE_TESTING)
   add_subdirectory(test)
 endif()
-
-#[[
-install(
-  TARGETS libio
-  LIBRARY DESTINATION lib
-  ARCHIVE DESTINATION lib
-  RUNTIME DESTINATION bin
-  INCLUDES
-  DESTINATION include)
-]]

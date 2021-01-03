@@ -1,4 +1,4 @@
-#include "modle/bed.hpp"
+#pragma once
 
 #include <absl/container/flat_hash_map.h>
 #include <absl/strings/str_cat.h>

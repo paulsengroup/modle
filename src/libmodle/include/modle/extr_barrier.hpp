@@ -3,12 +3,13 @@
 #include <cstdint>  // for uint64_t
 #include <random>   // for geometric_distribution
 
-#include "modle/dna.hpp"
+#include "modle/common.hpp"
 
 namespace modle {
+
 /** \brief Simple class to model a loop extrusion barrier
  *
- * An instance of ExtrusionBarrier can have a direction (DNA::Direction) and a probability of
+ * An instance of ExtrusionBarrier can have a direction (dna::Direction) and a probability of
  * blocking. The probability of blocking is used to initialize a random number generator that
  * outputs numbers under the geometric distribution.
  * The numbers returned by this generator will be used as a base to determine for how long a given
@@ -16,17 +17,19 @@ namespace modle {
  */
 class ExtrusionBarrier {
  public:
-  ExtrusionBarrier(uint64_t pos, double prob_of_block, DNA::Direction direction);
-  [[nodiscard]] uint64_t get_pos() const;
-  [[nodiscard]] double get_prob_of_block() const;
-  [[nodiscard]] DNA::Direction get_direction_of_block() const;
-  [[nodiscard]] DNA::Direction get_motif_direction() const;
-  [[nodiscard]] uint32_t generate_num_stalls(std::mt19937& rand_eng);
-  [[nodiscard]] bool operator<(const ExtrusionBarrier& other) const;
+  inline ExtrusionBarrier(uint64_t pos, double prob_of_block, dna::Direction direction);
+  [[nodiscard]] inline uint64_t get_pos() const;
+  [[nodiscard]] inline double get_prob_of_block() const;
+  [[nodiscard]] inline dna::Direction get_direction_of_block() const;
+  [[nodiscard]] inline dna::Direction get_motif_direction() const;
+  [[nodiscard]] inline uint32_t generate_num_stalls(std::mt19937& rand_eng);
+  [[nodiscard]] inline bool operator<(const ExtrusionBarrier& other) const;
 
  private:
   uint64_t _pos;
-  DNA::Direction _direction{DNA::Direction::none};
+  dna::Direction _direction{dna::Direction::none};
   std::geometric_distribution<uint32_t> _n_stall_generator;
 };
 }  // namespace modle
+
+#include "../../extr_barrier_impl.hpp"

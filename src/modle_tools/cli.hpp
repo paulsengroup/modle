@@ -17,7 +17,7 @@ namespace modle::tools {
 
 class Cli {
  public:
-  enum subcommand { convert, eval, help };
+  enum subcommand : uint8_t { convert, eval, help };
 
  private:
   int _argc;

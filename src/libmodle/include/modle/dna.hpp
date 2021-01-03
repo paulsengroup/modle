@@ -10,6 +10,7 @@
 #include <string_view>
 #include <vector>
 
+#include "modle/common.hpp"
 #include "modle/contacts.hpp"  // for ContactMatrix
 
 namespace modle {
@@ -32,37 +33,36 @@ class DNA {
   /** Enumerator used across ModLE's code-base to describe directionality in terms of DNA strand
    * (+/- or forward/reverse).
    */
-  enum Direction { none = 0, fwd = 1, rev = 2, both = 3 };
   template <typename I1, typename I2>
-  DNA(I1 length, I2 bin_size);
+  inline DNA(I1 length, I2 bin_size);
 
   // Getters
-  [[nodiscard]] uint64_t length() const;
-  [[nodiscard]] uint64_t get_n_bins() const;
-  [[nodiscard]] uint64_t get_n_barriers() const;
-  [[nodiscard]] uint32_t get_bin_size() const;
-  [[nodiscard]] DNA::Bin& get_bin_from_pos(uint64_t pos);
-  [[nodiscard]] DNA::Bin* get_ptr_to_bin_from_pos(uint64_t pos);
-  [[nodiscard]] DNA::Bin& get_prev_bin(const Bin& current_bin);
-  [[nodiscard]] DNA::Bin* get_ptr_to_prev_bin(const Bin& current_bin);
-  [[nodiscard]] DNA::Bin& get_next_bin(const Bin& current_bin);
-  [[nodiscard]] DNA::Bin* get_ptr_to_next_bin(const Bin& current_bin);
-  [[nodiscard]] DNA::Bin& get_first_bin();
-  [[nodiscard]] DNA::Bin* get_ptr_to_first_bin();
-  [[nodiscard]] DNA::Bin& get_last_bin();
-  [[nodiscard]] DNA::Bin* get_ptr_to_last_bin();
-  [[nodiscard]] double get_total_lef_affinity() const;
+  [[nodiscard]] inline uint64_t length() const;
+  [[nodiscard]] inline uint64_t get_n_bins() const;
+  [[nodiscard]] inline uint64_t get_n_barriers() const;
+  [[nodiscard]] inline uint32_t get_bin_size() const;
+  [[nodiscard]] inline DNA::Bin& get_bin_from_pos(uint64_t pos);
+  [[nodiscard]] inline DNA::Bin* get_ptr_to_bin_from_pos(uint64_t pos);
+  [[nodiscard]] inline DNA::Bin& get_prev_bin(const Bin& current_bin);
+  [[nodiscard]] inline DNA::Bin* get_ptr_to_prev_bin(const Bin& current_bin);
+  [[nodiscard]] inline DNA::Bin& get_next_bin(const Bin& current_bin);
+  [[nodiscard]] inline DNA::Bin* get_ptr_to_next_bin(const Bin& current_bin);
+  [[nodiscard]] inline DNA::Bin& get_first_bin();
+  [[nodiscard]] inline DNA::Bin* get_ptr_to_first_bin();
+  [[nodiscard]] inline DNA::Bin& get_last_bin();
+  [[nodiscard]] inline DNA::Bin* get_ptr_to_last_bin();
+  [[nodiscard]] inline double get_total_lef_affinity() const;
 
   // Iterator stuff
-  [[nodiscard]] std::vector<Bin>::iterator begin();
-  [[nodiscard]] std::vector<Bin>::iterator end();
-  [[nodiscard]] std::vector<Bin>::const_iterator cbegin() const;
-  [[nodiscard]] std::vector<Bin>::const_iterator cend() const;
+  [[nodiscard]] inline std::vector<Bin>::iterator begin();
+  [[nodiscard]] inline std::vector<Bin>::iterator end();
+  [[nodiscard]] inline std::vector<Bin>::const_iterator cbegin() const;
+  [[nodiscard]] inline std::vector<Bin>::const_iterator cend() const;
 
   // Modifiers
-  ExtrusionBarrier* add_extr_barrier(ExtrusionBarrier& b, uint32_t pos);
-  ExtrusionBarrier* add_extr_barrier(const modle::bed::BED& record);
-  void remove_extr_barrier(uint32_t pos, Direction direction);
+  inline ExtrusionBarrier* add_extr_barrier(ExtrusionBarrier& b, uint32_t pos);
+  inline ExtrusionBarrier* add_extr_barrier(const modle::bed::BED& record);
+  inline void remove_extr_barrier(uint32_t pos, dna::Direction direction);
 
  private:
   std::vector<Bin> _bins;  ///< \p Bin%s belonging to this instance of DNA.
@@ -87,7 +87,7 @@ class DNA {
    * given a pair of consecutive DNA::Bin%s <tt> b1 </tt> and <tt> b2 </tt>, <tt> b1::_end ==
    * b2::_start + 1 </tt>.
    */
-  static std::vector<Bin> make_bins(uint64_t length, uint32_t bin_size);
+  inline static std::vector<Bin> make_bins(uint64_t length, uint32_t bin_size);
 
  public:
   /// Class to represent a single Bin from a DNA molecule
@@ -107,19 +107,25 @@ class DNA {
      * @param barriers   List of ExtrusionBarrier%s mapped in the genomic region represented by this
      * DNA::Bin.
      */
+    inline Bin() = default;
     template <typename I>
-    Bin(std::size_t idx, I start, I end, const std::vector<ExtrusionBarrier>& barriers);
+    inline Bin(std::size_t idx, I start, I end, const std::vector<ExtrusionBarrier>& barriers);
     template <typename I>
-    Bin(std::size_t idx, I start, I end);
+    inline Bin(std::size_t idx, I start, I end);
     ///@}
+    inline Bin(Bin&&) = default;
+    inline Bin(const Bin& other);
 
-    [[nodiscard]] uint32_t get_start() const;
-    [[nodiscard]] uint32_t get_end() const;
-    [[nodiscard]] uint64_t size() const;
-    [[nodiscard]] uint64_t get_n_extr_units() const;
-    [[nodiscard]] uint64_t get_n_extr_barriers() const;
-    [[nodiscard]] std::size_t get_index() const;
-    [[nodiscard]] bool has_extr_barrier() const;
+    Bin& operator=(Bin&&) = default;
+    Bin& operator=(const Bin& other);
+
+    [[nodiscard]] inline uint32_t get_start() const;
+    [[nodiscard]] inline uint32_t get_end() const;
+    [[nodiscard]] inline uint64_t size() const;
+    [[nodiscard]] inline uint64_t get_n_extr_units() const;
+    [[nodiscard]] inline uint64_t get_n_extr_barriers() const;
+    [[nodiscard]] inline std::size_t get_index() const;
+    [[nodiscard]] inline bool has_extr_barrier() const;
     /** Given a ptr to an instance of ExtrusionBarrier that belongs to this instance of
      * DNA::Bin, return a ptr to the next instance of ExtrusionBarrier that is blocking
      * ExtrusionUnit%s that are moving in the direction specified by \p d.
@@ -127,32 +133,32 @@ class DNA {
      * DNA::Bin::get_next_extr_barrier will only search for ExtrusionBarriers that come after \p b).
      * When <tt> b == nullptr </tt>, then the search will involve all the ExtrusionBarrier that are
      * bound to the current instance of DNA::Bin.
-     * @param d DNA::Direction of the ExtrusionBarrier to look for (the caller has to make sure that
-     * <tt> d != DNA::Direction::none </tt>).
+     * @param d dna::Direction of the ExtrusionBarrier to look for (the caller has to make sure that
+     * <tt> d != dna::Direction::none </tt>).
      * @return Pointer to the next ExtrusionBarrier with the orientation specified by \p d (or
      * \p nullptr if there are no ExtrusionBarrier%s matching the search parameters).
      */
-    [[nodiscard]] ExtrusionBarrier* get_ptr_to_next_extr_barrier(
-        ExtrusionBarrier* b, Direction d = DNA::Direction::both) const;
-    [[nodiscard]] ExtrusionBarrier* get_ptr_to_next_extr_barrier(
-        uint64_t pos, Direction d = DNA::Direction::both) const;
-    [[nodiscard]] ExtrusionBarrier* get_ptr_to_prev_extr_barrier(
-        ExtrusionBarrier* b, Direction d = DNA::Direction::both) const;
-    [[nodiscard]] ExtrusionBarrier* get_ptr_to_prev_extr_barrier(
-        uint64_t pos, Direction d = DNA::Direction::both) const;
-    [[nodiscard]] absl::InlinedVector<ExtrusionUnit*, 3>& get_extr_units();
-    [[nodiscard]] float get_lef_affinity() const;
+    [[nodiscard]] inline ExtrusionBarrier* get_ptr_to_next_extr_barrier(
+        ExtrusionBarrier* b, dna::Direction d = dna::Direction::both) const;
+    [[nodiscard]] inline ExtrusionBarrier* get_ptr_to_next_extr_barrier(
+        uint64_t pos, dna::Direction d = dna::Direction::both) const;
+    [[nodiscard]] inline ExtrusionBarrier* get_ptr_to_prev_extr_barrier(
+        ExtrusionBarrier* b, dna::Direction d = dna::Direction::both) const;
+    [[nodiscard]] inline ExtrusionBarrier* get_ptr_to_prev_extr_barrier(
+        uint64_t pos, dna::Direction d = dna::Direction::both) const;
+    [[nodiscard]] inline absl::InlinedVector<ExtrusionUnit*, 3>& get_extr_units();
+    [[nodiscard]] inline float get_lef_affinity() const;
 
-    ExtrusionBarrier* add_extr_barrier(ExtrusionBarrier b);
-    ExtrusionBarrier* add_extr_barrier(uint64_t pos, double prob_of_barrier_block,
-                                       DNA::Direction direction);
+    inline ExtrusionBarrier* add_extr_barrier(ExtrusionBarrier b);
+    inline ExtrusionBarrier* add_extr_barrier(uint64_t pos, double prob_of_barrier_block,
+                                              dna::Direction direction);
     /** Register the ExtrusionUnit unit as being bound to this instance of DNA::Bin.
      *
      * This function will take care of allocating the \p std::vector<ExtrusionUnit> when
      * <tt> DNA::Bin::_extr_barriers = nullptr </tt>.
      * @param unit Pointer to the ExtrusionUnit to be registered as binding to this DNA::Bin.
      */
-    uint64_t add_extr_unit_binding(ExtrusionUnit* unit);
+    inline uint64_t add_extr_unit_binding(ExtrusionUnit* unit);
     /** Remove the ExtrusionUnit \p unit from the list of ExtrusionUnit%s that are bound to this
      * instance of DNA::Bin.
      *
@@ -161,22 +167,22 @@ class DNA {
      * @param unit Pointer to the unit to be removed from the \p std::vector<ExtrusionUnit> bound to
      * this DNA::Bin.
      */
-    uint64_t remove_extr_unit_binding(ExtrusionUnit* unit);
-    void remove_extr_barrier(Direction d);
-    uint64_t remove_all_extr_barriers();
-    void sort_extr_barriers_by_pos();
+    inline uint64_t remove_extr_unit_binding(ExtrusionUnit* unit);
+    inline void remove_extr_barrier(dna::Direction d);
+    inline uint64_t remove_all_extr_barriers();
+    inline void sort_extr_barriers_by_pos();
 
     // Make DNA::Bin hashable by absl::hash
     template <typename H>
-    friend H AbslHashValue(H h, const DNA::Bin& b) {
+    inline friend H AbslHashValue(H h, const DNA::Bin& b) {
       return H::combine(std::move(h), &b);
     }
 
    private:
     /// Index corresponding to this DNA::Bin in the owning \p std::vector<DNA::Bin> (DNA::_bins).
-    std::size_t _idx;
-    uint32_t _start;  ///< Left-most position represented by this DNA::Bin.
-    uint32_t _end;    ///< Right-most position represented by this DNA::Bin.
+    std::size_t _idx{};
+    uint32_t _start{};  ///< Left-most position represented by this DNA::Bin.
+    uint32_t _end{};    ///< Right-most position represented by this DNA::Bin.
     float _lef_affinity{1.0};
     // TODO: Consider remove the unique_ptr and store the vector and InlinedVector directly
     // This will increase memory footprint, but should improve performance. Needs testing
@@ -192,25 +198,25 @@ class DNA {
 /** The purpose of this struct is to keep together data regarding a single DNA molecule
  */
 struct Chromosome {
-  Chromosome(std::string name, uint64_t length, uint32_t bin_size, uint32_t diagonal_width,
-             uint64_t seed = 0);
-  Chromosome(std::string chr_name, uint64_t chr_start, uint64_t chr_end, uint64_t length,
-             uint32_t bin_size, uint32_t diagonal_width, uint64_t seed = 0);
+  inline Chromosome(std::string name, uint64_t length, uint32_t bin_size, uint32_t diagonal_width,
+                    uint64_t seed = 0);
+  inline Chromosome(std::string chr_name, uint64_t chr_start, uint64_t chr_end, uint64_t length,
+                    uint32_t bin_size, uint32_t diagonal_width, uint64_t seed = 0);
 
   // Getters
-  [[nodiscard]] uint64_t simulated_length() const;
-  [[nodiscard]] uint64_t real_length() const;
-  [[nodiscard]] uint64_t get_start_pos() const;
-  [[nodiscard]] uint64_t get_end_pos() const;
-  [[nodiscard]] uint64_t get_n_bins() const;
-  [[nodiscard]] uint32_t get_bin_size() const;
-  [[nodiscard]] uint64_t get_n_barriers() const;
-  [[nodiscard]] uint64_t get_n_lefs() const;
-  [[nodiscard]] double get_total_lef_affinity() const;
-  void sort_barriers_by_pos();
+  [[nodiscard]] inline uint64_t simulated_length() const;
+  [[nodiscard]] inline uint64_t real_length() const;
+  [[nodiscard]] inline uint64_t get_start_pos() const;
+  [[nodiscard]] inline uint64_t get_end_pos() const;
+  [[nodiscard]] inline uint64_t get_n_bins() const;
+  [[nodiscard]] inline uint32_t get_bin_size() const;
+  [[nodiscard]] inline uint64_t get_n_barriers() const;
+  [[nodiscard]] inline uint64_t get_n_lefs() const;
+  [[nodiscard]] inline double get_total_lef_affinity() const;
+  inline void sort_barriers_by_pos();
 
-  void write_contacts_to_tsv(std::string_view output_dir, bool force_overwrite) const;
-  void write_barriers_to_tsv(std::string_view path_to_outfile, bool force_overwrite) const;
+  inline void write_contacts_to_tsv(std::string_view output_dir, bool force_overwrite) const;
+  inline void write_barriers_to_tsv(std::string_view path_to_outfile, bool force_overwrite) const;
 
   std::string name;  ///< Sequence name (e.g. chromosome name from a BED file).
   uint64_t start;

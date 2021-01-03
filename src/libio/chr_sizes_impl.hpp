@@ -1,4 +1,4 @@
-#include "modle/chr_sizes.hpp"
+#pragma once
 
 #include <absl/strings/str_join.h>
 #include <absl/strings/str_split.h>

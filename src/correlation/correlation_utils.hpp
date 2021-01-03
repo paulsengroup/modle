@@ -15,7 +15,7 @@ namespace modle::correlation::utils {
 
 // Return the indices corresponding to the sorted vector
 template <typename N>  // NOLINTNEXTLINE(cppcoreguidelines-avoid-non-const-global-variables)
-inline std::vector<std::size_t> sort_range_by_idx(absl::Span<const N> v) {
+[[nodiscard]] inline std::vector<std::size_t> sort_range_by_idx(absl::Span<const N> v) {
   static_assert(std::is_arithmetic<N>::value,
                 "v should be convertible to a span of numeric types.");
   std::vector<std::size_t> vi(v.size());
@@ -29,7 +29,7 @@ inline std::vector<std::size_t> sort_range_by_idx(absl::Span<const N> v) {
 }
 
 template <typename N>  // NOLINTNEXTLINE(cppcoreguidelines-avoid-non-const-global-variables)
-inline std::vector<std::size_t> sort_range_by_idx(const std::vector<N>& v) {
+[[nodiscard]] inline std::vector<std::size_t> sort_range_by_idx(const std::vector<N>& v) {
   return sort_range_by_idx(absl::MakeConstSpan(v));
 }
 

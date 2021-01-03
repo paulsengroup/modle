@@ -1,4 +1,4 @@
-#include "modle/juicer_contacts.hpp"
+#pragma once
 
 #include <absl/strings/match.h>  // for StartsWith
 #include <absl/strings/str_cat.h>

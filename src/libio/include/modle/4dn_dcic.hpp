@@ -1,7 +1,6 @@
 #pragma once
 
 #include <cstdint>
-#include <fstream>
 #include <string>
 #include <string_view>
 #include <thread>
@@ -20,7 +19,7 @@ struct short_record {
   std::string strand1;
   std::string strand2;
 
-  [[nodiscard]] std::string to_string() const;
+  [[nodiscard]] inline std::string to_string() const;
 };
 
 class Parser {
@@ -28,11 +27,13 @@ class Parser {
 };
 
 namespace converter {
-void from_modle(const std::vector<std::string>& path_to_cmatrices,
-                std::string_view path_to_output_file, uint64_t noise_range, bool force_write,
-                double noise_stddev, uint8_t compression_lvl = 9,
-                std::size_t nthreads = std::thread::hardware_concurrency());
+inline void from_modle(const std::vector<std::string>& path_to_cmatrices,
+                       std::string_view path_to_output_file, uint64_t noise_range, bool force_write,
+                       double noise_stddev, uint8_t compression_lvl = 9,
+                       std::size_t nthreads = std::thread::hardware_concurrency());
 
 }  // namespace converter
 
 }  // namespace modle::dcic4dn
+
+#include "../../4dn_dcic_impl.hpp"

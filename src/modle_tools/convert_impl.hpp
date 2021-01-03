@@ -1,4 +1,4 @@
-#include "modle_tools/convert.hpp"
+#pragma once
 
 #include <absl/strings/str_cat.h>  // for StrAppend, StrCat
 #include <absl/time/clock.h>       // for Now

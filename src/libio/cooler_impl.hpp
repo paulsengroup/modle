@@ -421,15 +421,14 @@ Cooler::Cooler(std::string_view path_to_file, IO_MODE mode, std::size_t bin_size
       _cprop_int64(this->is_read_only() ? nullptr
                                         : generate_default_cprop(_chunk_size, _compression_lvl,
                                                                  Cooler::INT64_TYPE, 0L)),
-      _aprop_str(this->is_read_only()
-                     ? generate_default_aprop(Cooler::STR_TYPE, _chunk_size, _cache_size)
-                     : nullptr),
-      _aprop_int32(this->is_read_only()
-                       ? generate_default_aprop(Cooler::INT32_TYPE, _chunk_size, _cache_size)
-                       : nullptr),
-      _aprop_int64(this->is_read_only()
-                       ? generate_default_aprop(Cooler::INT64_TYPE, _chunk_size, _cache_size)
-                       : nullptr) {}
+      _aprop_str(generate_default_aprop(Cooler::STR_TYPE, _chunk_size, _cache_size)),
+      _aprop_int32(generate_default_aprop(Cooler::INT32_TYPE, _chunk_size, _cache_size)),
+      _aprop_int64(generate_default_aprop(Cooler::INT64_TYPE, _chunk_size, _cache_size)) {
+  assert(this->_flavor != UNK);
+  if (this->_mode == READ_ONLY && this->_flavor == AUTO) {
+    this->_flavor = Cooler::detect_file_flavor(*this->_fp);
+  }
+}
 
 bool Cooler::is_read_only() const { return this->_mode == Cooler::READ_ONLY; }
 
@@ -494,6 +493,10 @@ void Cooler::init_default_datasets() {
   assert(this->_cprop_int32);
   assert(this->_cprop_int64);
 
+  assert(this->_aprop_str);
+  assert(this->_aprop_int32);
+  assert(this->_aprop_int64);
+
   const auto &INT64 = this->INT64_TYPE;
   const auto &INT32 = this->INT32_TYPE;
   const auto &STR = this->STR_TYPE;
@@ -502,24 +505,28 @@ void Cooler::init_default_datasets() {
   const auto &cp32 = *this->_cprop_int32;
   const auto &cps = *this->_cprop_str;
 
+  const auto &ap64 = *this->_aprop_int64;
+  const auto &ap32 = *this->_aprop_int32;
+  const auto &aps = *this->_aprop_str;
+
+  auto &dset = this->_datasets;
+
   try {
     auto mem_space{H5::DataSpace(RANK, &BUFF_SIZE, &MAXDIMS)};
     // Do not change the order of these pushbacks
-    this->_datasets.push_back(this->_fp->createDataSet("chroms/length", INT64, mem_space, cp64));
-    this->_datasets.push_back(this->_fp->createDataSet("chroms/name", STR, mem_space, cps));
+    dset.push_back(this->_fp->createDataSet("chroms/length", INT64, mem_space, cp64, ap64));
+    dset.push_back(this->_fp->createDataSet("chroms/name", STR, mem_space, cps, aps));
 
-    this->_datasets.push_back(this->_fp->createDataSet("bins/chrom", INT64, mem_space, cp64));
-    this->_datasets.push_back(this->_fp->createDataSet("bins/start", INT64, mem_space, cp64));
-    this->_datasets.push_back(this->_fp->createDataSet("bins/end", INT64, mem_space, cp64));
+    dset.push_back(this->_fp->createDataSet("bins/chrom", INT64, mem_space, cp64, ap64));
+    dset.push_back(this->_fp->createDataSet("bins/start", INT64, mem_space, cp64, ap64));
+    dset.push_back(this->_fp->createDataSet("bins/end", INT64, mem_space, cp64, ap64));
 
-    this->_datasets.push_back(this->_fp->createDataSet("pixels/bin1_id", INT64, mem_space, cp64));
-    this->_datasets.push_back(this->_fp->createDataSet("pixels/bin2_id", INT64, mem_space, cp64));
-    this->_datasets.push_back(this->_fp->createDataSet("pixels/count", INT32, mem_space, cp32));
+    dset.push_back(this->_fp->createDataSet("pixels/bin1_id", INT64, mem_space, cp64, ap64));
+    dset.push_back(this->_fp->createDataSet("pixels/bin2_id", INT64, mem_space, cp64, ap64));
+    dset.push_back(this->_fp->createDataSet("pixels/count", INT32, mem_space, cp32, ap32));
 
-    this->_datasets.push_back(
-        this->_fp->createDataSet("indexes/bin1_offset", INT64, mem_space, cp64));
-    this->_datasets.push_back(
-        this->_fp->createDataSet("indexes/chrom_offset", INT64, mem_space, cp64));
+    dset.push_back(this->_fp->createDataSet("indexes/bin1_offset", INT64, mem_space, cp64, ap64));
+    dset.push_back(this->_fp->createDataSet("indexes/chrom_offset", INT64, mem_space, cp64, ap64));
 
   } catch (const H5::FileIException &e) {
     throw std::runtime_error(fmt::format(
@@ -949,6 +956,9 @@ std::size_t Cooler::get_chr_idx(std::string_view chr_name) {
     throw std::runtime_error(
         fmt::format(FMT_STRING("Unable to find a chromosome named '{}'"), chr_name));
   } catch (const std::exception &e) {
+    if (absl::StartsWith(e.what(), "Unable to find a chromosome")) {
+      throw;
+    }
     throw std::runtime_error(fmt::format(FMT_STRING("The following error occurred while looking up "
                                                     "'{}' in dataset chroms/name of file '{}': {}"),
                                          chr_name, this->_path_to_file, e.what()));
@@ -1020,6 +1030,83 @@ std::pair<int64_t, int64_t> Cooler::read_chrom_pixels_boundaries(std::size_t chr
   (void)hdf5::read_number(d, pixel_boundaries.second, chr_end_bin);
 
   return pixel_boundaries;
+}
+
+bool Cooler::is_cool() const { return this->_flavor == COOL; }
+bool Cooler::is_mcool() const { return this->_flavor == MCOOL; }
+bool Cooler::is_scool() const { return this->_flavor == SCOOL; }
+
+std::size_t Cooler::get_n_chroms() {
+  assert(this->_fp);
+  if (this->is_cool()) {
+    return static_cast<std::size_t>(hdf5::read_attribute_int(*this->_fp, "nchroms"));
+  }
+  if (this->is_mcool()) {
+    assert(this->_bin_size != 0);
+    return static_cast<std::size_t>(hdf5::read_attribute_int(
+        *this->_fp, "nchroms", absl::StrCat("/resolutions", this->_bin_size)));
+  }
+  throw std::runtime_error(
+      "Message for the devs: Cooler::get_n_chroms() executed code that should be unreachable!");
+}
+
+void Cooler::get_chr_names(std::vector<std::string> &buff) {
+  assert(this->_fp);
+  const auto nchroms = this->get_n_chroms();
+  buff.resize(nchroms);
+  if (!this->_datasets.empty()) {
+    const auto &d = this->_datasets[CHR_NAME];
+    (void)hdf5::read_strings(d, buff, 0);
+  } else {
+    if (this->is_cool()) {
+      auto d = this->_fp->openDataSet("/chroms/name", *this->_aprop_str);
+      (void)hdf5::read_strings(d, buff, 0);
+    } else if (this->is_mcool()) {
+      assert(this->_bin_size != 0);
+      auto d = this->_fp->openDataSet(
+          absl::StrCat("/resolutions/", this->_bin_size, "/chroms/name"), *this->_aprop_str);
+      (void)hdf5::read_strings(d, buff, 0);
+    } else {
+      assert(!this->is_scool());
+      buff.clear();
+    }
+  }
+}
+std::vector<std::string> Cooler::get_chr_names() {
+  std::vector<std::string> buff;
+  this->get_chr_names(buff);
+  return buff;
+}
+
+template <typename I>
+void Cooler::get_chr_sizes(std::vector<I> &buff) {
+  static_assert(std::is_integral_v<I>, "buff should be a vector of integers.");
+  assert(this->_fp);
+  const auto nchroms = this->get_n_chroms();
+  buff.resize(nchroms);
+  if (!this->_datasets.empty()) {
+    const auto &d = this->_datasets[CHR_LEN];
+    (void)hdf5::read_numbers(d, buff, 0);
+  } else {
+    if (this->is_cool()) {
+      auto d = this->_fp->openDataSet("/chroms/length", *this->_aprop_str);
+      (void)hdf5::read_numbers(d, buff, 0);
+    } else if (this->is_mcool()) {
+      assert(this->_bin_size != 0);
+      auto d = this->_fp->openDataSet(
+          absl::StrCat("/resolutions/", this->_bin_size, "/chroms/length"), *this->_aprop_str);
+      (void)hdf5::read_numbers(d, buff, 0);
+    } else {
+      assert(!this->is_scool());
+      buff.clear();
+    }
+  }
+}
+
+std::vector<int64_t> Cooler::get_chr_sizes() {
+  std::vector<int64_t> buff;
+  this->get_chr_sizes(buff);
+  return buff;
 }
 
 }  // namespace modle::cooler

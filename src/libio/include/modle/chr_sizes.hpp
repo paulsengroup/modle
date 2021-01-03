@@ -13,28 +13,28 @@
 namespace modle::chr_sizes {
 
 struct ChrSize {
-  ChrSize(std::string_view chr_name, uint64_t chr_length);
-  ChrSize(std::string_view chr_name, uint64_t chr_start, uint64_t chr_end);
-  explicit ChrSize(std::vector<std::string>& toks);
+  inline ChrSize(std::string_view chr_name, uint64_t chr_length);
+  inline ChrSize(std::string_view chr_name, uint64_t chr_start, uint64_t chr_end);
+  inline explicit ChrSize(std::vector<std::string>& toks);
 
-  [[nodiscard]] bool operator==(const ChrSize& other) const;
-  [[nodiscard]] bool operator<(const ChrSize& other) const;
+  [[nodiscard]] inline bool operator==(const ChrSize& other) const;
+  [[nodiscard]] inline bool operator<(const ChrSize& other) const;
 
   std::string name;
   uint64_t start;
   uint64_t end;
 
   template <typename H>
-  friend H AbslHashValue(H h, const ChrSize& c) {
+  inline friend H AbslHashValue(H h, const ChrSize& c) {
     return H::combine(std::move(h), c.name);
   }
 };
 
 class Parser {
  public:
-  explicit Parser(std::string path_to_chr_sizes);
-  explicit Parser(std::string_view path_to_chr_sizes);
-  std::vector<ChrSize> parse_all(char sep = '\t');
+  inline explicit Parser(std::string path_to_chr_sizes);
+  inline explicit Parser(std::string_view path_to_chr_sizes);
+  [[nodiscard]] inline std::vector<ChrSize> parse_all(char sep = '\t');
 
  private:
   std::string _path;
@@ -43,3 +43,5 @@ class Parser {
   std::vector<std::string> _errors{};
 };
 }  // namespace modle::chr_sizes
+
+#include "../../chr_sizes_impl.hpp"

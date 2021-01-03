@@ -1,4 +1,4 @@
-#include "modle/4dn_dcic.hpp"
+#pragma once
 
 #include <absl/strings/str_cat.h>
 #include <absl/time/clock.h>
@@ -167,13 +167,6 @@ void converter::from_modle(const std::vector<std::string>& path_to_cmatrices,
     throw std::runtime_error(
         fmt::format("Juicer tools terminated with exit code {}:\n{}", ec, stderr_msg));
   }
-
-  /* TODO Move this to the callee
-  fmt::print(stderr,
-             FMT_STRING("DONE! Written {} contacts to temporary file '{}' in {}!\n"),
-             records_out, path_to_output_file, absl::FormatDuration(absl::Now() - t0));
-
-   */
 }
 
 }  // namespace modle::dcic4dn

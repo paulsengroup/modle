@@ -7,9 +7,11 @@
 #include <string_view>  // for string_view
 #include <utility>      // for pair
 
-#include "modle/dna.hpp"  // for DNA, Chromosome (ptr only), DNA::Direction, DNA::none
+#include "modle/common.hpp"
 
 namespace modle {
+
+struct Chromosome;
 class ExtrusionBarrier;
 class ExtrusionUnit;
 
@@ -34,29 +36,31 @@ class ExtrusionUnit;
  */
 class Lef {
  public:
-  Lef(uint32_t bin_size, uint32_t avg_processivity, double probability_of_extruder_bypass,
-      double unloader_strength_coefficient);
+  inline Lef(uint32_t bin_size, uint32_t avg_processivity, double probability_of_extruder_bypass,
+             double unloader_strength_coefficient);
 
-  [[nodiscard]] std::string_view get_chr_name() const;
-  [[nodiscard]] uint32_t get_loop_size() const;
-  [[nodiscard]] uint32_t get_avg_processivity() const;
-  [[nodiscard]] const DNA::Bin& get_first_bin() const;
-  [[nodiscard]] const DNA::Bin& get_last_bin() const;
-  [[nodiscard]] Chromosome* get_ptr_to_chr();
-  [[nodiscard]] std::pair<uint32_t, uint32_t> get_pos() const;
-  [[nodiscard]] double get_probability_of_extr_unit_bypass() const;
-  [[nodiscard]] uint64_t get_tot_bp_extruded() const;
-  void reset_tot_bp_extruded();
+  [[nodiscard]] inline std::string_view get_chr_name() const;
+  [[nodiscard]] inline uint32_t get_loop_size() const;
+  [[nodiscard]] inline uint32_t get_avg_processivity() const;
+  [[nodiscard]] inline const DNA::Bin& get_first_bin() const;
+  [[nodiscard]] inline const DNA::Bin& get_last_bin() const;
+  [[nodiscard]] inline Chromosome* get_ptr_to_chr();
+  [[nodiscard]] inline std::pair<uint32_t, uint32_t> get_pos() const;
+  [[nodiscard]] inline double get_probability_of_extr_unit_bypass() const;
+  [[nodiscard]] inline uint64_t get_tot_bp_extruded() const;
+  inline void reset_tot_bp_extruded();
 
   /// Calls extrude on the ExtrusionUnit%s. Returns the number of bp extruded
-  uint32_t extrude(std::mt19937& rand_eng);
+  inline uint32_t extrude(std::mt19937& rand_eng);
   /// Register a contact between the DNA::Bin%s associated with the left and right ExtrusionUnit%s
-  void register_contact();
-  [[nodiscard]] std::pair<DNA::Bin*, DNA::Bin*> get_ptr_to_bins();
-  [[nodiscard]] bool is_bound() const;
-  void randomly_bind_to_chr(Chromosome* chr, std::mt19937& rand_eng, bool register_contact = false);
-  void assign_to_chr(Chromosome* chr);
-  void bind_at_pos(Chromosome* chr, uint32_t pos, std::mt19937& rand_eng, bool register_contact);
+  inline void register_contact();
+  [[nodiscard]] inline std::pair<DNA::Bin*, DNA::Bin*> get_ptr_to_bins();
+  [[nodiscard]] inline bool is_bound() const;
+  inline void randomly_bind_to_chr(Chromosome* chr, std::mt19937& rand_eng,
+                                   bool register_contact = false);
+  inline void assign_to_chr(Chromosome* chr);
+  inline void bind_at_pos(Chromosome* chr, uint32_t pos, std::mt19937& rand_eng,
+                          bool register_contact);
   /** Call ExtrusionUnit::check_constraints on the left and right ExtrusionUnit%s, which in turn
    * check whether there last round of extrusion produced a collision between one of the
    * ExtrusionUnit%s and another instance of ExtrusionUnit, or if the current ExtrusionUnit has
@@ -64,10 +68,10 @@ class Lef {
    *
    * This function also takes care of extending Lef%'s lifetime where appropriate.
    */
-  void check_constraints(std::mt19937& rang_eng);
-  bool try_rebind(std::mt19937& rand_eng, double prob_of_rebinding, bool register_contact);
-  bool try_rebind(std::mt19937& rand_eng);
-  std::size_t bind_at_random_pos(std::mt19937& rand_eng, bool register_contact = false);
+  inline void check_constraints(std::mt19937& rang_eng);
+  inline bool try_rebind(std::mt19937& rand_eng, double prob_of_rebinding, bool register_contact);
+  inline bool try_rebind(std::mt19937& rand_eng);
+  inline std::size_t bind_at_random_pos(std::mt19937& rand_eng, bool register_contact = false);
 
  private:
   Chromosome* _chr{nullptr};
@@ -89,48 +93,50 @@ class Lef {
   uint64_t _tot_bp_extruded{0};
 
   /// This function resets the state of the Lef and its ExtrusionUnit%s.
-  void unload();
+  inline void unload();
 
   /// This function uses computes the probability of unloading given the average LEF processivity,
   /// bin size and the number of active extrusion units.
-  [[nodiscard]] double compute_prob_of_unloading(uint32_t bin_size,
-                                                 uint8_t n_of_active_extr_units = 2) const;
+  [[nodiscard]] inline double compute_prob_of_unloading(uint32_t bin_size,
+                                                        uint8_t n_of_active_extr_units = 2) const;
 };
 
 class ExtrusionUnit {
   friend class Lef;
 
  public:
-  explicit ExtrusionUnit(Lef& lef, double prob_of_extr_unit_bypass);
-  [[nodiscard]] uint32_t get_pos() const;
-  [[nodiscard]] DNA::Direction get_extr_direction() const;
-  [[nodiscard]] bool is_stalled() const;
-  [[nodiscard]] bool is_bound() const;
-  uint64_t check_constraints(std::mt19937& rand_eng);
-  bool try_extrude(std::mt19937& rand_eng);
-  [[nodiscard]] double get_prob_of_extr_unit_bypass() const;
-  [[nodiscard]] std::size_t get_bin_index() const;
+  inline explicit ExtrusionUnit(Lef& lef, double prob_of_extr_unit_bypass);
+  [[nodiscard]] inline uint32_t get_pos() const;
+  [[nodiscard]] inline dna::Direction get_extr_direction() const;
+  [[nodiscard]] inline bool is_stalled() const;
+  [[nodiscard]] inline bool is_bound() const;
+  inline uint64_t check_constraints(std::mt19937& rand_eng);
+  inline bool try_extrude(std::mt19937& rand_eng);
+  [[nodiscard]] inline double get_prob_of_extr_unit_bypass() const;
+  [[nodiscard]] inline std::size_t get_bin_index() const;
 
  private:
   Lef& _parent_lef;
   DNA::Bin* _bin{nullptr};
   ExtrusionBarrier* _blocking_barrier{nullptr};
-  DNA::Direction _direction{DNA::Direction::none};
+  dna::Direction _direction{dna::Direction::none};
   uint32_t _stalls_left{0};
   std::geometric_distribution<uint32_t> _n_stall_generator;
 
-  void set_stalls(uint32_t n);
-  void increment_stalls(uint32_t n = 1);
-  void decrement_stalls(uint32_t n = 1);
-  void reset_stalls();
-  void unload();
-  void bind(Chromosome* chr, uint32_t pos, DNA::Direction direction, std::mt19937& rand_eng);
+  inline void set_stalls(uint32_t n);
+  inline void increment_stalls(uint32_t n = 1);
+  inline void decrement_stalls(uint32_t n = 1);
+  inline void reset_stalls();
+  inline void unload();
+  inline void bind(Chromosome* chr, uint32_t pos, dna::Direction direction, std::mt19937& rand_eng);
 
-  uint32_t check_for_extruder_collisions(std::mt19937& rang_eng);
-  [[nodiscard]] uint64_t check_for_extrusion_barrier(std::mt19937& rang_eng);
-  bool try_moving_to_next_bin();
-  bool try_moving_to_prev_bin();
-  [[nodiscard]] bool hard_stall() const;
+  inline uint32_t check_for_extruder_collisions(std::mt19937& rang_eng);
+  [[nodiscard]] inline uint64_t check_for_extrusion_barrier(std::mt19937& rang_eng);
+  inline bool try_moving_to_next_bin();
+  inline bool try_moving_to_prev_bin();
+  [[nodiscard]] inline bool hard_stall() const;
 };
 
 }  // namespace modle
+
+#include "../../lefs_impl.hpp"

@@ -315,7 +315,7 @@ void read_attribute(std::string_view path_to_file, std::string_view attr_name, T
   read_attribute(f, attr_name, buff, path);
 }
 
-bool has_attribute(H5::Group &g, std::string_view attr_name) {
+bool has_attribute(const H5::Group &g, std::string_view attr_name) {
   absl::ConsumePrefix(&attr_name, "/");
   return g.attrExists(std::string{attr_name});
 }
@@ -476,6 +476,17 @@ bool check_dataset_type(const H5::DataSet &dataset, T type, bool throw_on_failur
     }
   }
   return true;
+}
+
+H5::H5File open_file_for_reading(std::string_view path_to_file) {
+  try {
+    H5::Exception::dontPrint();
+    H5::H5File f(std::string{path_to_file.data(), path_to_file.size()}, H5F_ACC_RDONLY);
+    return f;
+  } catch (const H5::Exception &e) {
+    throw std::runtime_error(fmt::format(FMT_STRING("Failed to open file {} for reading:\n{}"),
+                                         path_to_file, construct_error_stack()));
+  }
 }
 
 }  // namespace modle::hdf5

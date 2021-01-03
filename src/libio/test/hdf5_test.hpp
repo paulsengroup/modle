@@ -1,3 +1,5 @@
+#pragma once
+
 #include <H5Cpp.h>
 
 #include <catch2/catch.hpp>
