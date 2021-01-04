@@ -45,10 +45,10 @@ class Cooler {
 
   Cooler() = delete;
   inline explicit Cooler(std::string_view path_to_file, IO_MODE mode = READ_ONLY,
-                         std::size_t bin_size = 0, std::size_t max_str_length = 64,
+                         std::size_t bin_size = 0, std::size_t max_str_length = 64,  // NOLINT
                          std::string_view assembly_name = "", Flavor flavor = AUTO,
                          bool validate = true,
-                         uint8_t compression_lvl = 9,                    // NOLINT
+                         uint8_t compression_lvl = 6,                    // NOLINT
                          std::size_t chunk_size = 1024 * 1024ULL,        // 1 MB NOLINT
                          std::size_t cache_size = 16 * 1024 * 1024ULL);  // 16 MB NOLINT
 

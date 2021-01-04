@@ -113,8 +113,20 @@ void Genome::write_contacts_to_file(std::string_view output_file) {
   }
   assert(!std::filesystem::exists(output_file));  // NOLINT
   std::filesystem::create_directories(std::filesystem::path(output_file).parent_path());
-  cooler::Cooler c(output_file, cooler::Cooler::WRITE_ONLY, this->_bin_size, chr_name_max_length);
-  c.write_cmatrix_to_file(cmatrices, chr_names, chr_starts, chr_ends, chr_sizes);
+  const auto t0 = absl::Now();
+  {
+    if (this->get_n_chromosomes() == 1) {
+      fmt::print(stderr, FMT_STRING("Writing one contact matrix to file '{}'...\n"), output_file);
+    } else {
+      fmt::print(stderr, FMT_STRING("Writing {} contact matrices to file '{}'...\n"),
+                 this->get_n_chromosomes(), output_file);
+    }
+    cooler::Cooler c(output_file, cooler::Cooler::WRITE_ONLY, this->_bin_size, chr_name_max_length);
+    c.write_cmatrix_to_file(cmatrices, chr_names, chr_starts, chr_ends, chr_sizes);
+    fmt::print(stderr, "Flushing data to disk...\n");
+  }
+  fmt::print(stderr, FMT_STRING("Writing contacts to file '{}' took {}\n"), output_file,
+             absl::FormatDuration(absl::Now() - t0));
 }
 
 void Genome::write_extrusion_barriers_to_file(std::string_view output_dir,

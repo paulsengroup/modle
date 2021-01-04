@@ -1,6 +1,6 @@
 # find_package(Threads REQUIRED)
 
-add_library(libmodle INTERFACE include/modle/common.hpp)
+add_library(libmodle INTERFACE)
 add_library(Modle::Modle ALIAS libmodle)
 
 target_sources(

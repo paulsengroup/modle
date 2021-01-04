@@ -220,7 +220,7 @@ bool Cooler::validate_cool_flavor(H5::H5File &f, std::size_t bin_size, std::stri
     }
 
     hdf5::read_attribute(f, "format-version", int_buff, root_path);
-    if (int_buff < min_format_ver && int_buff > max_format_ver) {
+    if (int_buff < min_format_ver || int_buff > max_format_ver) {
       if (!throw_on_failure) {
         return false;
       }
@@ -583,14 +583,6 @@ void Cooler::write_cmatrix_to_file(absl::Span<ContactMatrix<I> *const> cmatrices
   static_assert(std::is_integral_v<I>, "I should be an integral type.");
 
   assert(this->_bin_size != 0);
-
-  if (cmatrices.size() == 1) {
-    fmt::print(stderr, FMT_STRING("Writing one contact matrix to file '{}'...\n"),
-               this->_fp->getFileName());
-  } else {
-    fmt::print(stderr, FMT_STRING("Writing {} contact matrices to file '{}'...\n"),
-               cmatrices.size(), this->_fp->getFileName());
-  }
 
   const auto n_chromosomes = cmatrices.size();
   if (n_chromosomes != chr_names.size() || n_chromosomes != chr_starts.size() ||

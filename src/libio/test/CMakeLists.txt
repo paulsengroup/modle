@@ -6,11 +6,11 @@ target_include_directories(modle_io_test INTERFACE include/)
 
 target_sources(
   modle_io_test
-  PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/bed_parser_test.hpp
-          ${CMAKE_CURRENT_SOURCE_DIR}/cooler_test.hpp
-          ${CMAKE_CURRENT_SOURCE_DIR}/hdf5_test.hpp
-          ${CMAKE_CURRENT_SOURCE_DIR}/juicer_contacts_test.hpp
-          ${CMAKE_CURRENT_SOURCE_DIR}/cooler_test.hpp)
+  INTERFACE ${CMAKE_CURRENT_SOURCE_DIR}/bed_parser_test.hpp
+            ${CMAKE_CURRENT_SOURCE_DIR}/cooler_test.hpp
+            ${CMAKE_CURRENT_SOURCE_DIR}/hdf5_test.hpp
+            ${CMAKE_CURRENT_SOURCE_DIR}/juicer_contacts_test.hpp
+            ${CMAKE_CURRENT_SOURCE_DIR}/cooler_test.hpp)
 
 target_link_libraries(
   modle_io_test
