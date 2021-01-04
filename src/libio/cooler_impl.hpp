@@ -34,8 +34,10 @@ std::string Cooler::flavor_to_string(Flavor f) {
   return "";
 }
 
-H5::StrType Cooler::generate_default_str_type() {
-  auto st = H5::StrType(H5::PredType::C_S1, H5T_VARIABLE);
+H5::StrType Cooler::generate_default_str_type(std::size_t max_str_length) {
+  // Cooltools doesn't seem to properly handle variable length strings (H5T_VARIABLE)
+  // For the time being we are forced to use fixed length, null-padded strings
+  auto st = H5::StrType(H5::PredType::C_S1, max_str_length);
   st.setStrpad(H5T_STR_NULLPAD);
   st.setCset(H5T_CSET_ASCII);
   return st;
@@ -400,9 +402,11 @@ bool Cooler::validate_multires_cool_flavor(H5::H5File &f, std::size_t bin_size,
 }
 
 Cooler::Cooler(std::string_view path_to_file, IO_MODE mode, std::size_t bin_size,
-               std::string_view assembly_name, Flavor flavor, bool validate,
-               uint8_t compression_lvl, std::size_t chunk_size, std::size_t cache_size)
-    : _path_to_file(std::string{path_to_file.data(), path_to_file.size()}),
+               std::size_t max_str_length, std::string_view assembly_name, Flavor flavor,
+               bool validate, uint8_t compression_lvl, std::size_t chunk_size,
+               std::size_t cache_size)
+    : STR_TYPE(generate_default_str_type(max_str_length)),
+      _path_to_file(std::string{path_to_file.data(), path_to_file.size()}),
       _mode(mode),
       _bin_size(bin_size),
       _assembly_name(assembly_name.data(), assembly_name.size()),

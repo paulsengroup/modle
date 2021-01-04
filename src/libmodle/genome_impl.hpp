@@ -96,6 +96,13 @@ void Genome::write_contacts_to_file(std::string_view output_file) {
   std::vector<uint64_t> chr_ends(this->get_n_chromosomes());
   std::vector<uint64_t> chr_sizes(this->get_n_chromosomes());
 
+  const auto chr_name_max_length =
+      std::max_element(
+          this->_chromosomes.begin(), this->_chromosomes.end(),
+          [](const auto& c1, const auto& c2) { return c1.name.size() < c2.name.size(); })
+          ->name.size() +
+      1;
+
   for (auto i = 0UL; i < this->get_n_chromosomes(); ++i) {
     auto& chr = this->_chromosomes[i];
     cmatrices[i] = &chr.contacts;
@@ -106,7 +113,7 @@ void Genome::write_contacts_to_file(std::string_view output_file) {
   }
   assert(!std::filesystem::exists(output_file));  // NOLINT
   std::filesystem::create_directories(std::filesystem::path(output_file).parent_path());
-  cooler::Cooler c(output_file, cooler::Cooler::WRITE_ONLY, this->_bin_size);
+  cooler::Cooler c(output_file, cooler::Cooler::WRITE_ONLY, this->_bin_size, chr_name_max_length);
   c.write_cmatrix_to_file(cmatrices, chr_names, chr_starts, chr_ends, chr_sizes);
 }
 

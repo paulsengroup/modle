@@ -15,13 +15,13 @@
 namespace modle::cooler {
 class Cooler {
  private:
-  [[nodiscard]] inline static H5::StrType generate_default_str_type();
+  [[nodiscard]] inline static H5::StrType generate_default_str_type(std::size_t max_str_length);
 
  public:
-  enum IO_MODE : uint8_t { READ_ONLY, WRITE_ONLY };
-  const H5::StrType STR_TYPE{generate_default_str_type()};    // NOLINT
+  const H5::StrType STR_TYPE;
   const H5::PredType INT64_TYPE{H5::PredType::NATIVE_INT64};  // NOLINT
   const H5::PredType INT32_TYPE{H5::PredType::NATIVE_INT32};  // NOLINT
+  enum IO_MODE : uint8_t { READ_ONLY, WRITE_ONLY };
   enum Flavor {
     UNK = 0,
     AUTO = 1,
@@ -45,8 +45,9 @@ class Cooler {
 
   Cooler() = delete;
   inline explicit Cooler(std::string_view path_to_file, IO_MODE mode = READ_ONLY,
-                         std::size_t bin_size = 0, std::string_view assembly_name = "",
-                         Flavor flavor = AUTO, bool validate = true,
+                         std::size_t bin_size = 0, std::size_t max_str_length = 64,
+                         std::string_view assembly_name = "", Flavor flavor = AUTO,
+                         bool validate = true,
                          uint8_t compression_lvl = 9,                    // NOLINT
                          std::size_t chunk_size = 1024 * 1024ULL,        // 1 MB NOLINT
                          std::size_t cache_size = 16 * 1024 * 1024ULL);  // 16 MB NOLINT
@@ -137,6 +138,7 @@ class Cooler {
   std::vector<int64_t> _idx_chrom_offset{};
   std::vector<int64_t> _idx_bin1_offset{};
 
+ private:
   [[nodiscard]] inline static std::unique_ptr<H5::H5File> open_file(
       const std::filesystem::path &path, IO_MODE mode, std::size_t bin_size = 0,
       Flavor flavor = AUTO, bool validate = true);
