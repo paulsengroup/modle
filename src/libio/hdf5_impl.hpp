@@ -80,13 +80,15 @@ hsize_t write_str(const S &str, const H5::DataSet &dataset, const H5::StrType &s
     dataset.extend(&file_size);
     auto file_space = dataset.getSpace();
     file_space.selectHyperslab(H5S_SELECT_SET, &BUFF_SIZE, &file_offset);
-    dataset.write(std::string{str}, str_type, mem_space, file_space);
+    std::string buff{str};
+    buff.resize(str_type.getSize(), '\0');  // Pad strings with '\0'
+    dataset.write(buff, str_type, mem_space, file_space);
 
     return file_size;
   } catch (const H5::Exception &e) {
     throw std::runtime_error(fmt::format(
         FMT_STRING(
-            "The following error occurred while writing a collectionof strings '{}' to dataset "
+            "The following error occurred while writing a collection of strings '{}' to dataset "
             "'{}' at offset {}:\n{}"),
         str, dataset.getObjName(), file_offset, construct_error_stack()));
   }

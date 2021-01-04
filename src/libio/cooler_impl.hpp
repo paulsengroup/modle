@@ -356,7 +356,7 @@ bool Cooler::validate_multires_cool_flavor(H5::H5File &f, std::size_t bin_size,
 
   if (hdf5::has_attribute(f, "format", root_path)) {
     if (const auto format = hdf5::read_attribute_str(f, "format", root_path);
-        absl::EndsWithIgnoreCase(format, "::mcool")) {
+        !absl::EndsWithIgnoreCase(format, "::mcool")) {
       if (!throw_on_failure) {
         return false;
       }

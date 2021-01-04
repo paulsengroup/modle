@@ -45,8 +45,11 @@ void eval_subcmd(const modle::tools::config& c) {
   assert(c.path_to_input_matrices.size() == 1);     // NOLINT
   const auto& path_to_input_cmatrix = c.path_to_input_matrices.front();
 
+  const auto bin_size =
+      static_cast<std::size_t>(hdf5::read_attribute_int(path_to_input_cmatrix, "bin-size"));
+
   auto chr_list =  // This cannot be made const
-      select_chromosomes_for_eval(path_to_input_cmatrix, c.path_to_reference_matrix);
+      select_chromosomes_for_eval(path_to_input_cmatrix, c.path_to_reference_matrix, bin_size);
   if (chr_list.empty()) {
     throw std::runtime_error(fmt::format(
         FMT_STRING("Files '{}' and '{}' have 0 chromosomes in common. Make sure you are not trying "
@@ -123,9 +126,6 @@ void eval_subcmd(const modle::tools::config& c) {
       c.compute_spearman
           ? bigwig::init_bigwig_file(absl::StrCat(bn, "_spearman_cross_pv.bw"), chr_list)
           : nullptr;
-
-  const auto bin_size =
-      static_cast<std::size_t>(hdf5::read_attribute_int(path_to_input_cmatrix, "bin-size"));
 
   auto ref_cooler = cooler::Cooler(c.path_to_reference_matrix, cooler::Cooler::READ_ONLY, bin_size);
   auto input_cooler = cooler::Cooler(path_to_input_cmatrix, cooler::Cooler::READ_ONLY, bin_size);

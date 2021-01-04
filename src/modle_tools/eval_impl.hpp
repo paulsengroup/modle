@@ -14,13 +14,13 @@
 
 namespace modle::tools {
 std::vector<std::pair<std::string, int64_t>> select_chromosomes_for_eval(
-    std::string_view path_to_cooler1, std::string_view path_to_cooler2) {
+    std::string_view path_to_cooler1, std::string_view path_to_cooler2, std::size_t bin_size) {
   std::vector<std::string> str_buff;
   std::vector<int64_t> int_buff;
 
   auto build_chr_set = [&](std::string_view path_to_cooler) {
     try {
-      cooler::Cooler c(path_to_cooler, cooler::Cooler::READ_ONLY);
+      cooler::Cooler c(path_to_cooler, cooler::Cooler::READ_ONLY, bin_size);
       c.get_chr_names(str_buff);
       c.get_chr_sizes(int_buff);
 

@@ -65,7 +65,7 @@ void run_simulation(const modle::config& c) {
   fmt::print(stderr,
              FMT_STRING("Initialization took {}\n"
                         " - # of sequences:       {} ({} ignored)\n"
-                        " - Avg. sequence simulated_length: {:.3f} Mbp\n"
+                        " - Avg. sequence length: {:.3f} Mbp\n"
                         " - Genome N50:           {:.3f} Mbp\n"
                         " - # of LEFs:            {}\n"
                         " - # of extr. barriers   {} ({} ignored)\n\n"),
