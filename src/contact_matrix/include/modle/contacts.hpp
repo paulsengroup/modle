@@ -30,6 +30,7 @@ class ContactMatrix {
     static constexpr uint8_t N_OF_EXPECTED_TOKENS = 5;
   };
 
+  inline ContactMatrix() = default;
   inline ContactMatrix(uint64_t nrows, uint64_t ncols, bool fill_with_random_numbers = false);
   inline ContactMatrix(const std::string& path_to_file, uint64_t nrows, uint64_t ncols,
                        char sep = '\t');
@@ -69,9 +70,9 @@ class ContactMatrix {
   [[nodiscard]] inline double get_matrix_size_in_mb() const;
 
  private:
-  uint64_t _nrows;
-  uint64_t _ncols;
-  std::vector<I> _contacts;
+  uint64_t _nrows{0};
+  uint64_t _ncols{0};
+  std::vector<I> _contacts{0};
   uint64_t _tot_contacts{0};
   uint64_t _updates_missed{0};
 

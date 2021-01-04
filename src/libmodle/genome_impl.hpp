@@ -232,6 +232,7 @@ std::pair<uint64_t, uint64_t> Genome::import_extrusion_barriers_from_bed(
     }
     record.chrom_start -= chromosomes[record.chrom]->get_start_pos();
     record.chrom_end -= chromosomes[record.chrom]->get_start_pos();
+    chromosomes[record.chrom]->allocate();
     chromosomes[record.chrom]->dna.add_extr_barrier(record);
   }
 
@@ -311,6 +312,7 @@ void Genome::assign_lefs(bool bind_lefs_after_assignment) {
       auto* last_lef = chr->lefs.emplace_back(&(this->_lefs[i++]));
       last_lef->assign_to_chr(chr);
       if (bind_lefs_after_assignment) {
+        chr->allocate();
         last_lef->randomly_bind_to_chr(chr, chr->_rand_eng);
       }
     }
@@ -617,6 +619,7 @@ void Genome::randomly_generate_extrusion_barriers(I n_barriers, uint64_t seed) {
   for (I i = 0UL; i < n_barriers; ++i) {
     // Randomly select a chromosome, barrier binding pos and direction
     auto& chr = this->_chromosomes[chr_idx(rand_eng)];
+    chr.allocate();
     std::uniform_int_distribution<uint64_t> uniform_rng(0, chr.simulated_length());
     const auto barrier_position = uniform_rng(rand_eng);
     const auto direction = strand_selector(rand_eng) ? dna::Direction::rev : dna::Direction::fwd;

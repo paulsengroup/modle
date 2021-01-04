@@ -34,11 +34,15 @@ namespace modle {
 DISABLE_WARNING_PUSH
 DISABLE_WARNING_CONVERSION
 template <typename I1, typename I2>
-DNA::DNA(I1 length, I2 bin_size)
-    : _bins(make_bins(length, bin_size)), _length(length), _bin_size(bin_size) {
+DNA::DNA(I1 length, I2 bin_size, bool allocate_bins) : _length(length), _bin_size(bin_size) {
   DISABLE_WARNING_POP
   static_assert(std::is_integral<I1>::value && std::is_integral<I2>::value,
                 "I1 and I2 should be an integral numeric type.");
+
+  if (allocate_bins) {
+    this->allocate_bins();
+  }
+
 #ifndef NDEBUG
   if (length >= std::numeric_limits<decltype(this->_length)>::max()) {
     std::runtime_error(fmt::format(
@@ -57,6 +61,12 @@ DNA::DNA(I1 length, I2 bin_size)
         std::numeric_limits<decltype(this->_bin_size)>::max()));
   }
 #endif
+}
+
+void DNA::allocate_bins() {
+  if (this->_bins.empty()) {
+    this->_bins = make_bins(this->_length, this->_bin_size);
+  }
 }
 
 template <typename I1, typename I2>
@@ -277,7 +287,8 @@ uint64_t DNA::Bin::remove_extr_unit_binding(ExtrusionUnit* const unit) {
 }
 
 DNA::Bin* DNA::get_ptr_to_bin_from_pos(uint64_t pos) {
-  // TODO: Enable these checks only when compiling in Debug
+#ifndef NDEBUG
+  assert(!this->_bins.empty());
   if (pos > this->length()) {
     throw std::logic_error(fmt::format(
         "DNA::get_ptr_to_bin_from_pos(pos={}): pos > this->simulated_length(): {} > {}\n", pos, pos,
@@ -288,35 +299,58 @@ DNA::Bin* DNA::get_ptr_to_bin_from_pos(uint64_t pos) {
         fmt::format("(pos / this->bin_size()) >= this->nbins(): ({} / {}) >= {}\n", pos,
                     this->get_bin_size(), this->get_n_bins()));
   }
+#endif
   return &this->_bins[pos / this->get_bin_size()];
 }
 
-DNA::Bin& DNA::get_bin_from_pos(uint64_t pos) { return *this->get_ptr_to_bin_from_pos(pos); }
+DNA::Bin& DNA::get_bin_from_pos(uint64_t pos) {
+  assert(!this->_bins.empty());
+  return *this->get_ptr_to_bin_from_pos(pos);
+}
 
-std::vector<DNA::Bin>::iterator DNA::begin() { return this->_bins.begin(); }
-std::vector<DNA::Bin>::iterator DNA::end() { return this->_bins.end(); }
-std::vector<DNA::Bin>::const_iterator DNA::cbegin() const { return this->_bins.cbegin(); }
-std::vector<DNA::Bin>::const_iterator DNA::cend() const { return this->_bins.cend(); }
+std::vector<DNA::Bin>::iterator DNA::begin() {
+  assert(!this->_bins.empty());
+  return this->_bins.begin();
+}
+std::vector<DNA::Bin>::iterator DNA::end() {
+  assert(!this->_bins.empty());
+  return this->_bins.end();
+}
+std::vector<DNA::Bin>::const_iterator DNA::cbegin() const {
+  assert(!this->_bins.empty());
+  return this->_bins.cbegin();
+}
+std::vector<DNA::Bin>::const_iterator DNA::cend() const {
+  assert(!this->_bins.empty());
+  return this->_bins.cend();
+}
 
 DNA::Bin* DNA::get_ptr_to_prev_bin(const DNA::Bin& current_bin) {
+  assert(!this->_bins.empty());
   assert(current_bin._idx > 0);  // NOLINT;
   return &this->_bins[current_bin._idx - 1];
 }
 
 DNA::Bin& DNA::get_prev_bin(const Bin& current_bin) {
+  assert(!this->_bins.empty());
   return *this->get_ptr_to_prev_bin(current_bin);
 }
 
 DNA::Bin& DNA::get_next_bin(const DNA::Bin& current_bin) {
+  assert(!this->_bins.empty());
   return *this->get_ptr_to_next_bin(current_bin);
 }
 
 DNA::Bin* DNA::get_ptr_to_next_bin(const DNA::Bin& current_bin) {
+  assert(!this->_bins.empty());
   assert(current_bin._idx < this->get_n_bins());  // NOLINT;
   return &this->_bins[current_bin._idx + 1];
 }
 
-DNA::Bin& DNA::get_first_bin() { return *this->get_ptr_to_first_bin(); }
+DNA::Bin& DNA::get_first_bin() {
+  assert(!this->_bins.empty());
+  return *this->get_ptr_to_first_bin();
+}
 
 DNA::Bin* DNA::get_ptr_to_first_bin() {
   assert(!this->_bins.empty());  // NOLINT;
@@ -331,6 +365,7 @@ DNA::Bin* DNA::get_ptr_to_last_bin() {
 }
 
 double DNA::get_total_lef_affinity() const {
+  assert(!this->_bins.empty());
   return std::accumulate(this->_bins.begin(), this->_bins.end(), 0.0,
                          [](double accumulator, const auto& bin) {
                            return accumulator + static_cast<double>(bin.get_lef_affinity());
@@ -361,6 +396,7 @@ ExtrusionBarrier* DNA::Bin::add_extr_barrier(uint64_t pos, double prob_of_barrie
 }
 
 ExtrusionBarrier* DNA::add_extr_barrier(ExtrusionBarrier& b, uint32_t pos) {
+  assert(!this->_bins.empty());
   assert(b.get_prob_of_block() >= 0 && b.get_prob_of_block() <= 1);  // NOLINT;
   assert(pos <= this->length());                                     // NOLINT;
   assert(pos / this->get_bin_size() < this->get_n_bins());           // NOLINT;
@@ -368,6 +404,7 @@ ExtrusionBarrier* DNA::add_extr_barrier(ExtrusionBarrier& b, uint32_t pos) {
 }
 
 ExtrusionBarrier* DNA::add_extr_barrier(const modle::bed::BED& record) {
+  assert(!this->_bins.empty());
   assert(record.score >= 0 && record.score <= 1);                        // NOLINT;
   assert(record.chrom_end <= this->length());                            // NOLINT;
   assert(record.chrom_end / this->get_bin_size() < this->get_n_bins());  // NOLINT;
@@ -379,6 +416,7 @@ ExtrusionBarrier* DNA::add_extr_barrier(const modle::bed::BED& record) {
 }
 
 void DNA::remove_extr_barrier(uint32_t pos, dna::Direction direction) {
+  assert(!this->_bins.empty());
   assert(pos <= this->length());                            // NOLINT;
   assert(pos / this->get_bin_size() < this->get_n_bins());  // NOLINT;
   this->_bins[pos / this->get_bin_size()].remove_extr_barrier(direction);
@@ -405,11 +443,15 @@ std::vector<DNA::Bin> DNA::make_bins(uint64_t length, uint32_t bin_size) {
 
 uint64_t DNA::length() const { return this->_length; }
 
-uint64_t DNA::get_n_bins() const { return this->_bins.size(); }
+uint64_t DNA::get_n_bins() const {
+  assert(!this->_bins.empty());
+  return this->_bins.size();
+}
 
 uint32_t DNA::get_bin_size() const { return this->_bin_size; }
 
 uint64_t DNA::get_n_barriers() const {
+  assert(!this->_bins.empty());
   return std::accumulate(this->_bins.begin(), this->_bins.end(), 0UL,
                          [](uint64_t accumulator, const DNA::Bin& b) {
                            if (b._extr_barriers) {
@@ -420,31 +462,39 @@ uint64_t DNA::get_n_barriers() const {
 }
 
 Chromosome::Chromosome(std::string chr_name, uint64_t length, uint32_t bin_size,
-                       uint32_t diagonal_width, uint64_t seed)
+                       uint32_t diagonal_width_, uint64_t seed, bool allocate)
     : name(std::move(chr_name)),
       start(0),
       end(length),
       total_length(length),
+      diagonal_width(diagonal_width_),
       dna(length, bin_size),
-      contacts(std::min(static_cast<uint64_t>(diagonal_width / bin_size), this->get_n_bins()),
-               this->get_n_bins()),
       _seed(seed + std::hash<std::string>{}(this->name) +
             std::hash<uint64_t>{}(this->simulated_length())) {
+  if (allocate) {
+    this->allocate();
+  }
+
   std::seed_seq seeder{this->_seed};
   this->_rand_eng = std::mt19937(seeder);
 }
 
 Chromosome::Chromosome(std::string chr_name, uint64_t chr_start, uint64_t chr_end, uint64_t length,
-                       uint32_t bin_size, uint32_t diagonal_width, uint64_t seed)
+                       uint32_t bin_size, uint32_t diagonal_width_, uint64_t seed, bool allocate)
     : name(std::move(chr_name)),
       start(chr_start),
       end(chr_end),
       total_length(length),
+      diagonal_width(diagonal_width_),
       dna(chr_end - chr_start, bin_size),
-      contacts(std::min(static_cast<uint64_t>(diagonal_width / bin_size), this->get_n_bins()),
+      contacts(std::min(static_cast<uint64_t>(diagonal_width_ / bin_size), this->get_n_bins()),
                this->get_n_bins()),
       _seed(seed + std::hash<std::string>{}(this->name) +
             std::hash<uint64_t>{}(this->simulated_length())) {
+  if (allocate) {
+    this->allocate();
+  }
+
   std::seed_seq seeder{this->_seed};
   this->_rand_eng = std::mt19937(seeder);
 }
@@ -533,6 +583,21 @@ void Chromosome::write_barriers_to_tsv(std::string_view output_dir, bool force_o
     throw std::runtime_error(fmt::format("An error occurred while compressing file '{}': {}",
                                          path_to_outfile, err.what()));
   }
+}
+
+void Chromosome::allocate_contacts() {
+  using I =
+      std::remove_const_t<std::remove_pointer_t<decltype(contacts.get_raw_count_vector().data())>>;
+  if (contacts.n_rows() == 0 && contacts.n_rows() == 0) {
+    const auto nrows = std::min(diagonal_width / dna.get_bin_size(), this->get_n_bins());
+    const auto ncols = this->get_n_bins();
+    contacts = ContactMatrix<I>(nrows, ncols);
+  }
+}
+
+void Chromosome::allocate() {
+  this->allocate_contacts();
+  this->dna.allocate_bins();
 }
 
 }  // namespace modle

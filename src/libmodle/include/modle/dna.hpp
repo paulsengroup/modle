@@ -34,7 +34,7 @@ class DNA {
    * (+/- or forward/reverse).
    */
   template <typename I1, typename I2>
-  inline DNA(I1 length, I2 bin_size);
+  inline DNA(I1 length, I2 bin_size, bool allocate_bins = false);
 
   // Getters
   [[nodiscard]] inline uint64_t length() const;
@@ -63,11 +63,12 @@ class DNA {
   inline ExtrusionBarrier* add_extr_barrier(ExtrusionBarrier& b, uint32_t pos);
   inline ExtrusionBarrier* add_extr_barrier(const modle::bed::BED& record);
   inline void remove_extr_barrier(uint32_t pos, dna::Direction direction);
+  inline void allocate_bins();
 
  private:
-  std::vector<Bin> _bins;  ///< \p Bin%s belonging to this instance of DNA.
-  uint64_t _length;        ///< DNA molecule simulated_length in bp.
-  uint32_t _bin_size;      ///< Target bin size in bp.
+  std::vector<Bin> _bins{};  ///< \p Bin%s belonging to this instance of DNA.
+  uint64_t _length;          ///< DNA molecule simulated_length in bp.
+  uint32_t _bin_size;        ///< Target bin size in bp.
 
   /** Initialize the <tt> std::vector<Bin> </tt> given a simulated_length and bin size.
    *
@@ -198,10 +199,11 @@ class DNA {
 /** The purpose of this struct is to keep together data regarding a single DNA molecule
  */
 struct Chromosome {
-  inline Chromosome(std::string name, uint64_t length, uint32_t bin_size, uint32_t diagonal_width,
-                    uint64_t seed = 0);
+  inline Chromosome(std::string name, uint64_t length, uint32_t bin_size, uint32_t diagonal_width_,
+                    uint64_t seed = 0, bool allocate = false);
   inline Chromosome(std::string chr_name, uint64_t chr_start, uint64_t chr_end, uint64_t length,
-                    uint32_t bin_size, uint32_t diagonal_width, uint64_t seed = 0);
+                    uint32_t bin_size, uint32_t diagonal_width_, uint64_t seed = 0,
+                    bool allocate = false);
 
   // Getters
   [[nodiscard]] inline uint64_t simulated_length() const;
@@ -217,11 +219,14 @@ struct Chromosome {
 
   inline void write_contacts_to_tsv(std::string_view output_dir, bool force_overwrite) const;
   inline void write_barriers_to_tsv(std::string_view path_to_outfile, bool force_overwrite) const;
+  inline void allocate_contacts();
+  inline void allocate();
 
   std::string name;  ///< Sequence name (e.g. chromosome name from a BED file).
   uint64_t start;
   uint64_t end;
   uint64_t total_length;
+  uint64_t diagonal_width;
   DNA dna;  ///< DNA molecule represented as a sequence of DNA::Bin%s.
   /// Pointers to the ExtrusionBarrier associated to \p Chromosome::dna.
   std::vector<ExtrusionBarrier*> barriers;
