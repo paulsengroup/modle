@@ -661,7 +661,7 @@ void Cooler::write_cmatrix_to_file(absl::Span<ContactMatrix<I> *const> cmatrices
                chr_simulated_len / 1.0e6);  // NOLINT
     const auto t1 = absl::Now();
     idx_chrom_offset_buff.push_back(nbins);
-    nbins = this->write_bins(chr_idx++, chr_simulated_len, this->_bin_size,  // NOLINT
+    nbins = this->write_bins(chr_idx, chr_simulated_len, this->_bin_size,  // NOLINT
                              bin_chrom_buff, bin_pos_buff, nbins);
     DISABLE_WARNING_POP
 
