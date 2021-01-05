@@ -61,7 +61,8 @@ class Cooler {
 
   [[nodiscard]] inline static bool validate_cool_flavor(H5::H5File &f, std::size_t bin_size,
                                                         std::string_view root_path = "/",
-                                                        bool throw_on_failure = true);
+                                                        bool throw_on_failure = true,
+                                                        bool check_version = true);
 
   [[nodiscard]] inline static bool validate_multires_cool_flavor(H5::H5File &f,
                                                                  std::size_t bin_size,
@@ -112,6 +113,7 @@ class Cooler {
 
  private:
   std::filesystem::path _path_to_file;
+  std::string _root_path{"/"};
   IO_MODE _mode;
   std::size_t _bin_size;
   std::string _assembly_name;
@@ -138,12 +140,12 @@ class Cooler {
   std::vector<int64_t> _idx_chrom_offset{};
   std::vector<int64_t> _idx_bin1_offset{};
 
- private:
   [[nodiscard]] inline static std::unique_ptr<H5::H5File> open_file(
       const std::filesystem::path &path, IO_MODE mode, std::size_t bin_size = 0,
       Flavor flavor = AUTO, bool validate = true);
   [[nodiscard]] inline static std::vector<H5::Group> open_groups(H5::H5File &f,
-                                                                 bool create_if_not_exist = false);
+                                                                 bool create_if_not_exist = false,
+                                                                 std::size_t bin_size = 0);
   [[nodiscard]] inline static std::string flavor_to_string(Flavor f);
 
   template <typename T1, typename T2>

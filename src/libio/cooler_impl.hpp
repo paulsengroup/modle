@@ -104,7 +104,7 @@ std::unique_ptr<H5::H5File> Cooler::open_file(const std::filesystem::path &path,
     }
     return std::make_unique<H5::H5File>(f);
   } catch (const H5::Exception &e) {
-    throw std::runtime_error(e.getDetailMsg());
+    throw std::runtime_error(hdf5::construct_error_stack());
   }
 }
 
@@ -186,7 +186,7 @@ bool Cooler::validate_file_format(H5::H5File &f, Flavor expected_flavor, IO_MODE
 }
 
 bool Cooler::validate_cool_flavor(H5::H5File &f, std::size_t bin_size, std::string_view root_path,
-                                  bool throw_on_failure) {
+                                  bool throw_on_failure, bool check_version) {
   /* The following attributes are being checked:
    * format
    * format-version
@@ -195,8 +195,8 @@ bool Cooler::validate_cool_flavor(H5::H5File &f, std::size_t bin_size, std::stri
    * storage-mode
    */
 
-  std::string str_buff;
-  int64_t int_buff;
+  std::string str_buff{};
+  int64_t int_buff{};
 
   constexpr int64_t min_format_ver = 2;
   constexpr int64_t max_format_ver = 3;
@@ -218,17 +218,21 @@ bool Cooler::validate_cool_flavor(H5::H5File &f, std::size_t bin_size, std::stri
       fmt::print(stderr, FMT_STRING("WARNING: missing attribute 'format' in file '{}'\n"),
                  f.getFileName());
     }
+    str_buff.clear();
 
-    hdf5::read_attribute(f, "format-version", int_buff, root_path);
-    if (int_buff < min_format_ver || int_buff > max_format_ver) {
-      if (!throw_on_failure) {
-        return false;
+    if (check_version) {
+      hdf5::read_attribute(f, "format-version", int_buff, root_path);
+      if (int_buff < min_format_ver || int_buff > max_format_ver) {
+        if (!throw_on_failure) {
+          return false;
+        }
+        throw std::runtime_error(fmt::format(
+            FMT_STRING("Expected format-version attribute to be between {} and {}, got {}"),
+            min_format_ver, max_format_ver, int_buff));
       }
-      throw std::runtime_error(fmt::format(
-          FMT_STRING("Expected format-version attribute to be between {} and {}, got {}"),
-          min_format_ver, max_format_ver, int_buff));
     }
     const auto format_version = static_cast<uint8_t>(int_buff);
+    int_buff = 0;
 
     hdf5::read_attribute(f, "bin-type", str_buff, root_path);
     if (str_buff != "fixed") {
@@ -238,6 +242,7 @@ bool Cooler::validate_cool_flavor(H5::H5File &f, std::size_t bin_size, std::stri
       throw std::runtime_error(
           fmt::format(FMT_STRING("Expected bin-type attribute to be 'fixed', got '{}'"), str_buff));
     }
+    str_buff.clear();
 
     if (bin_size != 0) {
       hdf5::read_attribute(f, "bin-size", int_buff, root_path);
@@ -249,6 +254,8 @@ bool Cooler::validate_cool_flavor(H5::H5File &f, std::size_t bin_size, std::stri
             FMT_STRING("Expected bin-size attribute to be {}, got {}"), bin_size, int_buff));
       }
     }
+    int_buff = 0;
+
     if (format_version > 2) {
       hdf5::read_attribute(f, "storage-mode", str_buff, root_path);
       if (str_buff != "symmetric-upper") {
@@ -260,6 +267,7 @@ bool Cooler::validate_cool_flavor(H5::H5File &f, std::size_t bin_size, std::stri
             str_buff));
       }
     }
+    str_buff.clear();
 
     // Checking groups
     auto check_group = [&](std::string_view name) {
@@ -326,21 +334,26 @@ bool Cooler::validate_cool_flavor(H5::H5File &f, std::size_t bin_size, std::stri
   return true;
 }
 
-std::vector<H5::Group> Cooler::open_groups(H5::H5File &f, bool create_if_not_exist) {
+std::vector<H5::Group> Cooler::open_groups(H5::H5File &f, bool create_if_not_exist,
+                                           std::size_t bin_size) {
   std::vector<H5::Group> groups(4);  // NOLINT
+
   auto open_or_create_group = [&](Cooler::Groups g, const std::string &group_name) {
     groups[g] = create_if_not_exist && !f.nameExists(group_name) ? f.createGroup(group_name)
                                                                  : f.openGroup(group_name);
   };
+  const std::string root_path = bin_size != 0 && hdf5::group_exists(f, "/resolutions")
+                                    ? absl::StrCat("/resolutions/", bin_size, "/")
+                                    : "";
   try {
-    open_or_create_group(CHR, "chroms");
-    open_or_create_group(BIN, "bins");
-    open_or_create_group(PXL, "pixels");
-    open_or_create_group(IDX, "indexes");
+    open_or_create_group(CHR, absl::StrCat(root_path, "chroms"));
+    open_or_create_group(BIN, absl::StrCat(root_path, "bins"));
+    open_or_create_group(PXL, absl::StrCat(root_path, "pixels"));
+    open_or_create_group(IDX, absl::StrCat(root_path, "indexes"));
 
     return groups;
   } catch (const H5::Exception &e) {
-    throw std::runtime_error(e.getDetailMsg());
+    throw std::runtime_error(hdf5::construct_error_stack());
   }
 }
 
@@ -398,7 +411,7 @@ bool Cooler::validate_multires_cool_flavor(H5::H5File &f, std::size_t bin_size,
 
   return validate_cool_flavor(
       f, bin_size, absl::StrCat(absl::StripPrefix(root_path, "/"), "/resolutions/", bin_size),
-      throw_on_failure);
+      throw_on_failure, false);
 }
 
 Cooler::Cooler(std::string_view path_to_file, IO_MODE mode, std::size_t bin_size,
@@ -412,7 +425,7 @@ Cooler::Cooler(std::string_view path_to_file, IO_MODE mode, std::size_t bin_size
       _assembly_name(assembly_name.data(), assembly_name.size()),
       _flavor(flavor),
       _fp(open_file(_path_to_file, _mode, _bin_size, _flavor, validate)),
-      _groups(open_groups(*_fp, !this->is_read_only())),
+      _groups(open_groups(*_fp, !this->is_read_only(), this->_bin_size)),
       _compression_lvl(compression_lvl),
       _chunk_size(chunk_size),
       _cache_size(cache_size),
@@ -431,6 +444,10 @@ Cooler::Cooler(std::string_view path_to_file, IO_MODE mode, std::size_t bin_size
   assert(this->_flavor != UNK);
   if (this->_mode == READ_ONLY && this->_flavor == AUTO) {
     this->_flavor = Cooler::detect_file_flavor(*this->_fp);
+  }
+  if (this->_flavor == MCOOL) {
+    assert(this->_bin_size != 0);
+    absl::StrAppend(&this->_root_path, "resolutions/", this->_bin_size, "/");
   }
 }
 
@@ -781,27 +798,28 @@ void Cooler::open_cooler_datasets() {
   assert(this->_aprop_str);
 
   auto &d = this->_datasets;
+  auto &f = this->_fp;
   const auto &a32 = *this->_aprop_int32;
   const auto &a64 = *this->_aprop_int64;
   const auto &as = *this->_aprop_str;
 
   this->_datasets.resize(10);
-
+  fmt::print(stderr, "root_path={}\n", absl::StrCat(this->_root_path, "chroms/length"));
   try {
     // Do not change the order of these pushbacks
-    d[CHR_LEN] = this->_fp->openDataSet("chroms/length", a64);
-    d[CHR_NAME] = this->_fp->openDataSet("chroms/name", as);
+    d[CHR_LEN] = f->openDataSet(absl::StrCat(this->_root_path, "chroms/length"), a64);
+    d[CHR_NAME] = f->openDataSet(absl::StrCat(this->_root_path, "chroms/name"), as);
 
-    d[BIN_CHROM] = this->_fp->openDataSet("bins/chrom", a64);
-    d[BIN_START] = this->_fp->openDataSet("bins/start", a64);
-    d[BIN_END] = this->_fp->openDataSet("bins/end", a64);
+    d[BIN_CHROM] = f->openDataSet(absl::StrCat(this->_root_path, "bins/chrom"), a64);
+    d[BIN_START] = f->openDataSet(absl::StrCat(this->_root_path, "bins/start"), a64);
+    d[BIN_END] = f->openDataSet(absl::StrCat(this->_root_path, "bins/end"), a64);
 
-    d[PXL_B1] = this->_fp->openDataSet("pixels/bin1_id", a64);
-    d[PXL_B2] = this->_fp->openDataSet("pixels/bin2_id", a64);
-    d[PXL_COUNT] = this->_fp->openDataSet("pixels/count", a32);
+    d[PXL_B1] = f->openDataSet(absl::StrCat(this->_root_path, "pixels/bin1_id"), a64);
+    d[PXL_B2] = f->openDataSet(absl::StrCat(this->_root_path, "pixels/bin2_id"), a64);
+    d[PXL_COUNT] = f->openDataSet(absl::StrCat(this->_root_path, "pixels/count"), a32);
 
-    d[IDX_BIN1] = this->_fp->openDataSet("indexes/bin1_offset", a64);
-    d[IDX_CHR] = this->_fp->openDataSet("indexes/chrom_offset", a64);
+    d[IDX_BIN1] = f->openDataSet(absl::StrCat(this->_root_path, "indexes/bin1_offset"), a64);
+    d[IDX_CHR] = f->openDataSet(absl::StrCat(this->_root_path, "indexes/chrom_offset"), a64);
 
   } catch (const H5::FileIException &e) {
     throw std::runtime_error(fmt::format(
@@ -1040,7 +1058,7 @@ std::size_t Cooler::get_n_chroms() {
   if (this->is_mcool()) {
     assert(this->_bin_size != 0);
     return static_cast<std::size_t>(hdf5::read_attribute_int(
-        *this->_fp, "nchroms", absl::StrCat("/resolutions", this->_bin_size)));
+        *this->_fp, "nchroms", absl::StrCat("/resolutions/", this->_bin_size)));
   }
   throw std::runtime_error(
       "Message for the devs: Cooler::get_n_chroms() executed code that should be unreachable!");

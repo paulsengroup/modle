@@ -37,14 +37,48 @@ H5::PredType getH5_type() {
   if constexpr (std::is_same_v<DecayType, char>) return H5::PredType::C_S1;                        // NOLINT
   // clang-format on
 
-  throw std::logic_error("getH5_type(): Unable to map C++ type to a H5T.");
+  throw std::logic_error("getH5_type(): Unable to map C++ type to a H5T/");
 }
 
 std::string construct_error_stack() {
   std::string buff;
+  auto *f = std::tmpfile();
+  if (f) {
+    H5::Exception::printErrorStack(f);
+    fseek(f, 0L, SEEK_END);
+    const auto bufsize = ftell(f);
+    if (bufsize < 0) {
+      fclose(f);
+      throw std::runtime_error(
+          "h5pp::construct_error_stack(): unable to determine buffer size required to store an "
+          "error message");
+    }
+    buff.resize(static_cast<std::size_t>(bufsize));
+    if (fseek(f, 0L, SEEK_SET) != 0) {
+      fclose(f);
+      throw std::runtime_error(
+          "h5pp::construct_error_stack(): failed to seek to the beginning to a temporary file");
+    }
+    /* Read the entire file into memory. */
+    fread(buff.data(), sizeof(char), static_cast<std::size_t>(bufsize), f);
+    if (ferror(f) != 0) {
+      fclose(f);
+      throw std::runtime_error(
+          "h5pp::construct_error_stack(): failed to read error message from temporary file");
+    }
+  } else {
+    throw std::runtime_error("h5pp::construct_error_stack(): unable to create temporary file");
+  }
+  fclose(f);
+  H5::Exception::clearErrorStack();
+  return buff;
+}
+/*
+std::string construct_error_stack() {
+  std::string buff;
   // The '+' in front of the declaration is a trick that allows to use the lambda as C function
   // pointer
-  auto err_handler = +[](int n, const H5E_error_t *err_desc, void *client_data) {
+  auto err_handler = +[](unsigned int n, const H5E_error_t *err_desc, void *client_data) {
     auto *buff_ = reinterpret_cast<std::string *>(client_data);  // NOLINT
     absl::StrAppendFormat(
         buff_,
@@ -55,13 +89,11 @@ std::string construct_error_stack() {
     return 0;
   };
 
-  H5::Exception::walkErrorStack(H5E_WALK_DOWNWARD,
-                                reinterpret_cast<H5E_walk2_t>(err_handler),  // NOLINT
-                                buff.data());
+  H5::Exception::walkErrorStack(H5E_WALK_DOWNWARD, err_handler, buff.data());
   H5::Exception::clearErrorStack();
   return buff;
 }
-
+*/
 template <typename S>
 hsize_t write_str(const S &str, const H5::DataSet &dataset, const H5::StrType &str_type,
                   hsize_t file_offset) {
@@ -196,10 +228,10 @@ hsize_t read_number(const H5::DataSet &dataset, N &buff, hsize_t file_offset) {
     return file_offset + 1;
 
   } catch (const H5::Exception &e) {
-    throw std::runtime_error(fmt::format(
-        FMT_STRING(
-            "Failed to read a number from dataset '{}' at offset {} using a buffer size of 1:\n{}"),
-        dataset.getObjName(), file_offset, construct_error_stack()));
+    throw std::runtime_error(fmt::format(FMT_STRING("Failed to read a number from dataset '{}' "
+                                                    "at offset {} using a buffer size of 1:\n{}"),
+                                         dataset.getObjName(), file_offset,
+                                         construct_error_stack()));
   }
 }
 
