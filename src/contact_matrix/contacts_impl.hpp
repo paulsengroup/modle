@@ -1,8 +1,16 @@
 #pragma once
 
+#include <absl/strings/match.h>
+#include <absl/strings/str_format.h>
+#include <absl/strings/str_join.h>
+#include <absl/strings/str_split.h>
+#include <absl/strings/strip.h>
+#include <absl/types/span.h>
 #include <bzlib.h>
+#include <fmt/printf.h>
 
 #include <array>
+#include <boost/dynamic_bitset.hpp>
 #include <boost/iostreams/filter/bzip2.hpp>
 #include <boost/iostreams/filtering_stream.hpp>
 #include <boost/process.hpp>
@@ -16,12 +24,6 @@
 #include <random>
 #include <string_view>
 
-#include "absl/strings/match.h"
-#include "absl/strings/str_format.h"
-#include "absl/strings/str_join.h"
-#include "absl/strings/str_split.h"
-#include "absl/strings/strip.h"
-#include "fmt/printf.h"
 #include "modle/contacts.hpp"
 #include "modle/suppress_compiler_warnings.hpp"
 #include "modle/utils.hpp"
@@ -220,7 +222,8 @@ void ContactMatrix<I>::set(std::size_t row, std::size_t col, I2 n) {
   static_assert(std::is_integral<I2>::value,
                 "ContactMatrix<I>::set expects the parameter n to be an integer type.");
 #ifndef NDEBUG
-  if (n < std::numeric_limits<I>::min() || n > std::numeric_limits<I>::max()) {
+  if (static_cast<I>(n) < std::numeric_limits<I>::min() ||
+      static_cast<I>(n) > std::numeric_limits<I>::max()) {
     throw std::runtime_error(
         fmt::format(FMT_STRING("ContactMatrix<I>::set(row={}, col={}, n={}): Overflow detected: "
                                "n={} is outside the range of representable numbers ({}-{})"),
@@ -536,8 +539,8 @@ void ContactMatrix<I>::clear_missed_updates_counter() {
 }
 
 template <typename I>
-const std::vector<I> &ContactMatrix<I>::get_raw_count_vector() const {
-  return this->_contacts;
+absl::Span<const I> ContactMatrix<I>::get_raw_count_vector() const {
+  return absl::MakeConstSpan(this->_contacts);
 }
 
 template <typename I>
@@ -666,6 +669,39 @@ std::pair<uint32_t, uint32_t> ContactMatrix<I>::write_full_matrix_to_tsv(
   }
   out.reset();
   return std::make_pair(raw_size, std::filesystem::file_size(path_to_file));
+}
+
+template <typename I>
+boost::dynamic_bitset<> ContactMatrix<I>::generate_mask_for_empty_rows() const {
+  boost::dynamic_bitset<> mask(this->n_cols());
+  this->generate_mask_for_empty_rows(mask);
+  return mask;
+}
+template <typename I>
+void ContactMatrix<I>::generate_mask_for_empty_rows(boost::dynamic_bitset<> &mask) const {
+  mask.resize(this->n_cols());
+  mask.reset();
+  for (auto i = 0UL; i < this->n_cols(); ++i) {
+    // Set bitmask to 1 if row contains at least one non-zero value
+    for (auto j = i; j < (i + this->n_rows()) && j < this->n_cols(); ++j) {
+      if ((mask[i] |= this->get(i, j))) {
+        break;
+      }
+    }
+    // Set bitmask to 1 if column "above" the current bin contains at least one non-zero value
+    for (auto j = i; j > 0 && j > (i - this->n_rows()); --j) {
+      if ((mask[i] |= this->get(i, j))) {
+        break;
+      }
+    }
+  }
+}
+
+template <typename I>
+void ContactMatrix<I>::reset() {
+  std::fill(this->_contacts.begin(), this->_contacts.end(), 0);
+  this->_tot_contacts = 0;
+  this->_updates_missed = 0;
 }
 
 }  // namespace modle

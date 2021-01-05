@@ -1,5 +1,8 @@
 #pragma once
 
+#include <absl/types/span.h>
+
+#include <boost/dynamic_bitset.hpp>
 #include <boost/iostreams/filtering_stream.hpp>
 #include <cstdint>  // for uint_*t
 #include <fstream>
@@ -59,7 +62,7 @@ class ContactMatrix {
       const std::string& path_to_file, std::string_view header = "",
       int bzip2_block_size = 9) const;
   inline void clear_missed_updates_counter();
-  [[nodiscard]] inline const std::vector<I>& get_raw_count_vector() const;
+  [[nodiscard]] inline absl::Span<const I> get_raw_count_vector() const;
   [[nodiscard]] inline uint64_t get_n_of_missed_updates() const;
   [[nodiscard]] inline uint64_t get_tot_contacts() const;
   [[nodiscard]] inline static Header parse_header(std::string_view path_to_file);
@@ -68,6 +71,9 @@ class ContactMatrix {
                                                   bool rewind_file = false);
   [[nodiscard]] inline uint64_t get_matrix_size_in_bytes() const;
   [[nodiscard]] inline double get_matrix_size_in_mb() const;
+  inline void generate_mask_for_empty_rows(boost::dynamic_bitset<>& mask) const;
+  [[nodiscard]] inline boost::dynamic_bitset<> generate_mask_for_empty_rows() const;
+  inline void reset();
 
  private:
   uint64_t _nrows{0};
