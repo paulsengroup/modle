@@ -79,9 +79,11 @@ std::unique_ptr<H5::DSetAccPropList> Cooler::generate_default_aprop(T type, hsiz
   } else {
     if (type == H5::PredType::NATIVE_INT64) {  // int64_t
       prop.setChunkCache(default_multiplier * (cache_size / chunk_size), cache_size, rdcc_w0);
-    } else if (type == H5::PredType::NATIVE_INT) {  // int32_t
+    } else if (type == H5::PredType::NATIVE_INT32) {  // int32_t
       prop.setChunkCache(default_multiplier * (cache_size / (chunk_size + chunk_size)), cache_size,
                          rdcc_w0);
+    } else if (type == H5::PredType::NATIVE_DOUBLE) {
+      prop.setChunkCache(default_multiplier * (cache_size / chunk_size), cache_size, rdcc_w0);
     } else {
       throw std::runtime_error(
           "Cooler::generate_default_aprop(), type should have type H5::StrType or be one of "
@@ -440,7 +442,9 @@ Cooler::Cooler(std::string_view path_to_file, IO_MODE mode, std::size_t bin_size
                                                                  Cooler::INT64_TYPE, 0L)),
       _aprop_str(generate_default_aprop(Cooler::STR_TYPE, _chunk_size, _cache_size)),
       _aprop_int32(generate_default_aprop(Cooler::INT32_TYPE, _chunk_size, _cache_size)),
-      _aprop_int64(generate_default_aprop(Cooler::INT64_TYPE, _chunk_size, _cache_size)) {
+      _aprop_int64(generate_default_aprop(Cooler::INT64_TYPE, _chunk_size, _cache_size)),
+      _aprop_float64(
+          generate_default_aprop(H5::PredType::NATIVE_DOUBLE, _chunk_size, _cache_size)) {
   assert(this->_flavor != UNK);
   if (this->_mode == READ_ONLY && this->_flavor == AUTO) {
     this->_flavor = Cooler::detect_file_flavor(*this->_fp);
@@ -449,6 +453,7 @@ Cooler::Cooler(std::string_view path_to_file, IO_MODE mode, std::size_t bin_size
     assert(this->_bin_size != 0);
     absl::StrAppend(&this->_root_path, "resolutions/", this->_bin_size, "/");
   }
+  this->open_cooler_datasets();
 }
 
 bool Cooler::is_read_only() const { return this->_mode == Cooler::READ_ONLY; }
@@ -795,36 +800,40 @@ void Cooler::open_cooler_datasets() {
   assert(this->_fp);
   assert(this->_aprop_int32);
   assert(this->_aprop_int64);
+  assert(this->_aprop_float64);
   assert(this->_aprop_str);
 
   auto &d = this->_datasets;
-  auto &f = this->_fp;
-  const auto &a32 = *this->_aprop_int32;
-  const auto &a64 = *this->_aprop_int64;
+  auto &f = *this->_fp;
+  const auto &ai32 = *this->_aprop_int32;
+  const auto &ai64 = *this->_aprop_int64;
+  const auto &af64 = *this->_aprop_float64;
   const auto &as = *this->_aprop_str;
 
-  this->_datasets.resize(10);
-  fmt::print(stderr, "root_path={}\n", absl::StrCat(this->_root_path, "chroms/length"));
+  this->_datasets.resize(DEFAULT_DATASETS_NR);
   try {
     // Do not change the order of these pushbacks
-    d[CHR_LEN] = f->openDataSet(absl::StrCat(this->_root_path, "chroms/length"), a64);
-    d[CHR_NAME] = f->openDataSet(absl::StrCat(this->_root_path, "chroms/name"), as);
+    d[CHR_LEN] = f.openDataSet(absl::StrCat(this->_root_path, "chroms/length"), ai64);
+    d[CHR_NAME] = f.openDataSet(absl::StrCat(this->_root_path, "chroms/name"), as);
 
-    d[BIN_CHROM] = f->openDataSet(absl::StrCat(this->_root_path, "bins/chrom"), a64);
-    d[BIN_START] = f->openDataSet(absl::StrCat(this->_root_path, "bins/start"), a64);
-    d[BIN_END] = f->openDataSet(absl::StrCat(this->_root_path, "bins/end"), a64);
+    d[BIN_CHROM] = f.openDataSet(absl::StrCat(this->_root_path, "bins/chrom"), ai64);
+    d[BIN_START] = f.openDataSet(absl::StrCat(this->_root_path, "bins/start"), ai64);
+    d[BIN_END] = f.openDataSet(absl::StrCat(this->_root_path, "bins/end"), ai64);
+    if (hdf5::dataset_exists(f, "bins/weight", this->_root_path)) {
+      d[BIN_WEIGHT] = f.openDataSet(absl::StrCat(this->_root_path, "bins/weight"), af64);
+    }
 
-    d[PXL_B1] = f->openDataSet(absl::StrCat(this->_root_path, "pixels/bin1_id"), a64);
-    d[PXL_B2] = f->openDataSet(absl::StrCat(this->_root_path, "pixels/bin2_id"), a64);
-    d[PXL_COUNT] = f->openDataSet(absl::StrCat(this->_root_path, "pixels/count"), a32);
+    d[PXL_B1] = f.openDataSet(absl::StrCat(this->_root_path, "pixels/bin1_id"), ai64);
+    d[PXL_B2] = f.openDataSet(absl::StrCat(this->_root_path, "pixels/bin2_id"), ai64);
+    d[PXL_COUNT] = f.openDataSet(absl::StrCat(this->_root_path, "pixels/count"), ai32);
 
-    d[IDX_BIN1] = f->openDataSet(absl::StrCat(this->_root_path, "indexes/bin1_offset"), a64);
-    d[IDX_CHR] = f->openDataSet(absl::StrCat(this->_root_path, "indexes/chrom_offset"), a64);
+    d[IDX_BIN1] = f.openDataSet(absl::StrCat(this->_root_path, "indexes/bin1_offset"), ai64);
+    d[IDX_CHR] = f.openDataSet(absl::StrCat(this->_root_path, "indexes/chrom_offset"), ai64);
 
   } catch (const H5::FileIException &e) {
     throw std::runtime_error(fmt::format(
         FMT_STRING(
-            "An error occurred while trying to open Cooler's default dataset of file '{}': {}"),
+            "An error occurred while trying to open Cooler's default datasets of file '{}': {}"),
         this->_path_to_file, hdf5::construct_error_stack()));
   }
 }
@@ -913,15 +922,25 @@ ContactMatrix<uint32_t> Cooler::cooler_to_cmatrix(std::string_view chr_name, std
 ContactMatrix<uint32_t> Cooler::cooler_to_cmatrix(int64_t bin_offset,
                                                   absl::Span<const int64_t> bin1_offset_idx,
                                                   std::size_t nrows) {
+  if (this->_datasets.empty()) {
+    this->open_cooler_datasets();
+  }
   ContactMatrix<uint32_t> cmatrix(nrows, bin1_offset_idx.size());
   std::vector<int64_t> bin1_BUFF(nrows);
   std::vector<int64_t> bin2_BUFF(nrows);
   std::vector<int64_t> count_BUFF(nrows);
+  std::vector<double> bin_weights;
+  double scaling_factor = 1;
   const auto &d = this->_datasets;
+  if (hdf5::dataset_exists(*this->_fp, "bins/weight", this->_root_path)) {
+    bin_weights.resize(bin1_offset_idx.size());
+    (void)hdf5::read_numbers(d[BIN_WEIGHT], bin_weights, static_cast<hsize_t>(bin_offset));
+    hdf5::read_attribute(d[BIN_WEIGHT], "scale", scaling_factor);
+  }
 
   for (auto i = 1UL; i < bin1_offset_idx.size(); ++i) {
     const auto file_offset = static_cast<hsize_t>(bin1_offset_idx[i - 1]);
-    const auto buff_size =  // Figure out why buff size is always small
+    const auto buff_size =
         std::min(static_cast<std::size_t>(bin1_offset_idx[i] - bin1_offset_idx[i - 1]), nrows);
     if (buff_size == 0) {
       continue;
@@ -952,8 +971,18 @@ ContactMatrix<uint32_t> Cooler::cooler_to_cmatrix(int64_t bin_offset,
       // fmt::print(stderr, "m[{}][{}]={} (nrows={}; ncols={})\n", bin2_BUFF[j] - bin_offset,
       //           bin1_BUFF[j] - bin_offset, count_BUFF[j], cmatrix.n_rows(),
       //           cmatrix.n_cols());
-      cmatrix.set(bin2_BUFF[j] - bin_offset, bin1_BUFF[j] - bin_offset, count_BUFF[j]);
-
+      const auto &bin1 = bin1_BUFF[j] - bin_offset;
+      const auto &bin2 = bin2_BUFF[j] - bin_offset;
+      const auto bin1_bias =  // According to Cooler documentations, NaN means that a bin has been
+                              // excluded by the matrix balancing procedure. In this case we set the
+                              // multiplier to 0
+          bin_weights.empty() ? 1 : !std::isnan(bin_weights[bin1]) * bin_weights[bin1];
+      const auto bin2_bias =
+          bin_weights.empty() ? 1 : !std::isnan(bin_weights[bin2]) * bin_weights[bin2];
+      // See https://github.com/robomics/modle/issues/36
+      const auto count =
+          (static_cast<double>(count_BUFF[j]) / (bin1_bias * bin2_bias)) / scaling_factor;
+      cmatrix.set(bin2, bin1, std::lround(count));
       DISABLE_WARNING_POP
     }
   }

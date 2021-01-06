@@ -36,11 +36,13 @@ class Cooler {
     BIN_CHROM = 2,
     BIN_START = 3,
     BIN_END = 4,
-    PXL_B1 = 5,
-    PXL_B2 = 6,
-    PXL_COUNT = 7,
-    IDX_BIN1 = 8,
-    IDX_CHR = 9
+    BIN_WEIGHT = 5,
+    PXL_B1 = 6,
+    PXL_B2 = 7,
+    PXL_COUNT = 8,
+    IDX_BIN1 = 9,
+    IDX_CHR = 10,
+    DEFAULT_DATASETS_NR = 11
   };
 
   Cooler() = delete;
@@ -102,11 +104,14 @@ class Cooler {
       std::string_view chr_name, std::size_t diagonal_width, std::size_t bin_size,
       bool try_common_chr_prefixes = true);
   [[nodiscard]] inline std::size_t get_n_chroms();
+
   inline void get_chr_names(std::vector<std::string> &buff);
   [[nodiscard]] inline std::vector<std::string> get_chr_names();
+
   template <typename I>
   inline void get_chr_sizes(std::vector<I> &buff);
   [[nodiscard]] inline std::vector<int64_t> get_chr_sizes();
+
   [[nodiscard]] inline bool is_cool() const;
   [[nodiscard]] inline bool is_mcool() const;
   [[nodiscard]] inline bool is_scool() const;
@@ -135,6 +140,7 @@ class Cooler {
   std::unique_ptr<H5::DSetAccPropList> _aprop_str{nullptr};
   std::unique_ptr<H5::DSetAccPropList> _aprop_int32{nullptr};
   std::unique_ptr<H5::DSetAccPropList> _aprop_int64{nullptr};
+  std::unique_ptr<H5::DSetAccPropList> _aprop_float64{nullptr};
 
   std::mutex _mutex;  // This mutex protects _datasets and _idx_*_offset during initialization
   std::vector<int64_t> _idx_chrom_offset{};

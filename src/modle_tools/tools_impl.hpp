@@ -5,6 +5,7 @@
 #include <absl/time/time.h>      // for FormatDuration, operator-, Time
 #include <fmt/format.h>          // for format, print
 
+#include <array>
 #include <boost/asio/thread_pool.hpp>
 #include <cassert>
 #include <cstdint>     // for uint32_t
@@ -71,17 +72,7 @@ void eval_subcmd(const modle::tools::config& c) {
                  chr_list.size(), absl::StrJoin(chr_names, "', '"));
     }
   }
-  std::filesystem::create_directories(c.output_base_name);
 
-  /*
-  absl::flat_hash_map<std::pair<std::string, int64_t>, std::vector<double>> corr_linear;
-  corr_linear.reserve(chr_list.size());
-  std::transform(chr_list.begin(), chr_list.end(), std::inserter(corr_linear, corr_linear.end()),
-                 [](const auto& p) { return std::make_pair(p, std::vector<double>{}); });
-  auto pv_linear = corr_linear;
-  auto corr_cross = corr_linear;
-  auto pv_cross = corr_linear;
-   */
   c.compute_pearson ? fmt::format(FMT_STRING("{}_spearman_linear_r.bw"), c.output_base_name) : "";
   const auto out_path_pv_linear_spearman =
       c.compute_pearson ? fmt::format(FMT_STRING("{}_spearman_linear_pv.bw"), c.output_base_name)
@@ -129,29 +120,96 @@ void eval_subcmd(const modle::tools::config& c) {
 
   auto ref_cooler = cooler::Cooler(c.path_to_reference_matrix, cooler::Cooler::READ_ONLY, bin_size);
   auto input_cooler = cooler::Cooler(path_to_input_cmatrix, cooler::Cooler::READ_ONLY, bin_size);
-  const auto nrows = (c.diagonal_width / bin_size) + (c.diagonal_width % bin_size != 0);
-  assert(nrows != 0);
+  const auto nrows = (c.diagonal_width / bin_size) + (c.diagonal_width % bin_size != 0);  // NOLINT
+  assert(nrows != 0);                                                                     // NOLINT
 
-  std::vector<double> corr_buff;
-  std::vector<double> pval_buff;
+  std::vector<double> pc_linear_corr_buff;
+  std::vector<double> pc_linear_pval_buff;
+
+  std::vector<double> pc_cross_corr_buff;
+  std::vector<double> pc_cross_pval_buff;
+
+  std::vector<double> sc_linear_corr_buff;
+  std::vector<double> sc_linear_pval_buff;
+
+  std::vector<double> sc_cross_corr_buff;
+  std::vector<double> sc_cross_pval_buff;
+
+  auto pcc = [&](std::string_view chr_name, absl::Span<const uint32_t> v1,
+                 absl::Span<const uint32_t> v2, std::size_t ncols, std::vector<double>& corr_buff,
+                 std::vector<double>& pval_buff, Transformation t) {
+    if (!c.compute_pearson) {
+      return;
+    }
+    const auto t0 = absl::Now();
+    compute_pearson_over_range(v1, v2, corr_buff, pval_buff, nrows, ncols, t);
+    switch (t) {
+      case Transformation::Linear:
+        bigwig::write_range(std::string{chr_name}, corr_buff, 0, bin_size, bin_size,
+                            bw_corr_linear_pearson);
+        bigwig::write_range(std::string{chr_name}, pval_buff, 0, bin_size, bin_size,
+                            bw_pv_linear_pearson);
+        fmt::print(stderr,
+                   FMT_STRING("Pearson \"linear\" correlation calculation completed in {}.\n"),
+                   absl::FormatDuration(absl::Now() - t0));
+        break;
+      case Transformation::Cross:
+        bigwig::write_range(std::string{chr_name}, corr_buff, 0, bin_size, bin_size,
+                            bw_corr_cross_pearson);
+        bigwig::write_range(std::string{chr_name}, pval_buff, 0, bin_size, bin_size,
+                            bw_pv_cross_pearson);
+        fmt::print(stderr,
+                   FMT_STRING("Pearson \"cross\" correlation calculation completed in {}.\n"),
+                   absl::FormatDuration(absl::Now() - t0));
+        break;
+    }
+  };
+
+  auto src = [&](std::string_view chr_name, absl::Span<const uint32_t> v1,
+                 absl::Span<const uint32_t> v2, std::size_t ncols, std::vector<double>& corr_buff,
+                 std::vector<double>& pval_buff, Transformation t) {
+    if (!c.compute_spearman) {
+      return;
+    }
+    const auto t0 = absl::Now();
+    compute_spearman_over_range(v1, v2, corr_buff, pval_buff, nrows, ncols, t);
+    switch (t) {
+      case Transformation::Linear:
+        bigwig::write_range(std::string{chr_name}, corr_buff, 0, bin_size, bin_size,
+                            bw_corr_linear_spearman);
+        bigwig::write_range(std::string{chr_name}, pval_buff, 0, bin_size, bin_size,
+                            bw_pv_linear_spearman);
+        fmt::print(stderr,
+                   FMT_STRING("Spearman \"linear\" correlation calculation completed in {}.\n"),
+                   absl::FormatDuration(absl::Now() - t0));
+        break;
+      case Transformation::Cross:
+        bigwig::write_range(std::string{chr_name}, corr_buff, 0, bin_size, bin_size,
+                            bw_corr_cross_spearman);
+        bigwig::write_range(std::string{chr_name}, pval_buff, 0, bin_size, bin_size,
+                            bw_pv_cross_spearman);
+        fmt::print(stderr,
+                   FMT_STRING("Spearman \"cross\" correlation calculation completed in {}.\n"),
+                   absl::FormatDuration(absl::Now() - t0));
+        break;
+    }
+  };
+
+  std::array<std::thread, 4> threads;
 
   for (const auto& chr : chr_list) {
     const auto& chr_name = chr.first;
     auto t0 = absl::Now();
-    fmt::print(stderr, FMT_STRING("Reading contacts for '{}' from reference matrix into memory..."),
-               chr_name);
+    fmt::print(stderr, FMT_STRING("Reading contacts for '{}' into memory...\n"), chr_name);
     const auto cmatrix1 = ref_cooler.cooler_to_cmatrix(chr_name, nrows);
-    fmt::print(stderr,
-               FMT_STRING(" DONE! Read a {}x{} matrix in {} using {:.2f} MB of RAM.\nReading "
-                          "contacts for '{}' from input matrix into memory..."),
-               cmatrix1.n_rows(), cmatrix1.n_cols(), absl::FormatDuration(absl::Now() - t0),
-               cmatrix1.get_matrix_size_in_mb(), chr_name);
-
-    t0 = absl::Now();
-    const auto cmatrix2 = input_cooler.cooler_to_cmatrix(chr_name, nrows);
-    fmt::print(stderr, FMT_STRING(" DONE! Read a {}x{} matrix in {} using {:.2f} MB of RAM.\n"),
+    fmt::print(stderr, FMT_STRING("Read {}x{} reference matrix in {} using {:.2f} MB of RAM.\n"),
                cmatrix1.n_rows(), cmatrix1.n_cols(), absl::FormatDuration(absl::Now() - t0),
                cmatrix1.get_matrix_size_in_mb());
+    t0 = absl::Now();
+    const auto cmatrix2 = input_cooler.cooler_to_cmatrix(chr_name, nrows);
+    fmt::print(stderr, FMT_STRING("Read {}x{} input matrix in {} using {:.2f} MB of RAM.\n"),
+               cmatrix2.n_rows(), cmatrix2.n_cols(), absl::FormatDuration(absl::Now() - t0),
+               cmatrix2.get_matrix_size_in_mb());
 
     if (cmatrix1.n_cols() != cmatrix2.n_cols() || cmatrix1.n_rows() != cmatrix2.n_rows()) {
       throw std::runtime_error(fmt::format(
@@ -167,52 +225,22 @@ void eval_subcmd(const modle::tools::config& c) {
     const auto& v1 = cmatrix1.get_raw_count_vector();
     const auto& v2 = cmatrix2.get_raw_count_vector();
     assert(v1.size() == v2.size());  // NOLINT
-    if (c.compute_pearson) {
-      t0 = absl::Now();
-      compute_pearson_over_range(v1, v2, corr_buff, pval_buff, nrows, ncols,
-                                 Transformation::Linear);
-      fmt::print(stderr, FMT_STRING("Pearson \"Linear\" for '{}' computed in {}."), chr_name,
-                 absl::FormatDuration(absl::Now() - t0));
-      t0 = absl::Now();
-      bigwig::write_range(chr_name, corr_buff, 0, bin_size, bin_size, bw_corr_linear_pearson);
-      bigwig::write_range(chr_name, pval_buff, 0, bin_size, bin_size, bw_pv_linear_pearson);
-      fmt::print(stderr, FMT_STRING(" Data written to disk in {}.\n"),
-                 absl::FormatDuration(absl::Now() - t0));
 
-      t0 = absl::Now();
-      compute_pearson_over_range(v1, v2, corr_buff, pval_buff, nrows, ncols, Transformation::Cross);
-      fmt::print(stderr, FMT_STRING("Pearson \"Cross\" for '{}' computed in {}."), chr_name,
-                 absl::FormatDuration(absl::Now() - t0));
-      t0 = absl::Now();
-      bigwig::write_range(chr_name, corr_buff, 0, bin_size, bin_size, bw_corr_cross_pearson);
-      bigwig::write_range(chr_name, pval_buff, 0, bin_size, bin_size, bw_pv_cross_pearson);
-      fmt::print(stderr, FMT_STRING(" Data written to disk in {}.\n"),
-                 absl::FormatDuration(absl::Now() - t0));
-    }
-    if (c.compute_spearman) {
-      t0 = absl::Now();
-      compute_spearman_over_range(v1, v2, corr_buff, pval_buff, nrows, ncols,
-                                  Transformation::Linear);
-      fmt::print(stderr, FMT_STRING("Spearman \"Linear\" for '{}' computed in {}."), chr_name,
-                 absl::FormatDuration(absl::Now() - t0));
-      t0 = absl::Now();
-      bigwig::write_range(chr_name, corr_buff, 0, bin_size, bin_size, bw_corr_linear_spearman);
-      bigwig::write_range(chr_name, pval_buff, 0, bin_size, bin_size, bw_pv_linear_spearman);
-      fmt::print(stderr, FMT_STRING(" Data written to disk in {}.\n"),
-                 absl::FormatDuration(absl::Now() - t0));
+    fmt::print(stderr, FMT_STRING("Computing correlation(s) for '{}'...\n"), chr_name);
 
-      t0 = absl::Now();
-      compute_spearman_over_range(v1, v2, corr_buff, pval_buff, nrows, ncols,
-                                  Transformation::Cross);
-      fmt::print(stderr, FMT_STRING("Spearman \"Cross\" for '{}' computed in {}."), chr_name,
-                 absl::FormatDuration(absl::Now() - t0));
-      t0 = absl::Now();
-      bigwig::write_range(chr_name, corr_buff, 0, bin_size, bin_size, bw_corr_cross_spearman);
-      bigwig::write_range(chr_name, pval_buff, 0, bin_size, bin_size, bw_pv_cross_spearman);
-      fmt::print(stderr, FMT_STRING(" Data written to disk in {}.\n"),
-                 absl::FormatDuration(absl::Now() - t0));
+    threads[0] = std::thread(pcc, chr_name, v1, v2, ncols, std::ref(pc_linear_corr_buff),
+                             std::ref(pc_linear_pval_buff), Transformation::Linear);
+    threads[1] = std::thread(pcc, chr_name, v1, v2, ncols, std::ref(pc_cross_corr_buff),
+                             std::ref(pc_cross_pval_buff), Transformation::Cross);
+    threads[2] = std::thread(src, chr_name, v1, v2, ncols, std::ref(sc_linear_corr_buff),
+                             std::ref(sc_linear_pval_buff), Transformation::Linear);
+    threads[3] = std::thread(src, chr_name, v1, v2, ncols, std::ref(sc_cross_corr_buff),
+                             std::ref(sc_cross_pval_buff), Transformation::Cross);
+    for (auto& t : threads) {
+      t.join();
     }
   }
+
   bigwig::close_bigwig_file(bw_corr_linear_pearson);
   bigwig::close_bigwig_file(bw_pv_linear_pearson);
   bigwig::close_bigwig_file(bw_corr_cross_pearson);

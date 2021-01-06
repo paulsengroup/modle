@@ -46,13 +46,15 @@ template <typename CN>
                                                            hsize_t file_offset);
 
 [[nodiscard]] inline bool has_attribute(const H5::Group &g, std::string_view attr_name);
-
+[[nodiscard]] inline bool has_attribute(const H5::DataSet &d, std::string_view attr_name);
 [[nodiscard]] inline bool has_attribute(H5::H5File &f, std::string_view attr_name,
                                         std::string_view path = "/");
 
 template <typename T>
 inline void read_attribute(H5::H5File &f, std::string_view attr_name, T &buff,
                            std::string_view path = "/");
+template <typename T>
+inline void read_attribute(const H5::DataSet &d, std::string_view attr_name, T &buff);
 template <typename T>
 inline void read_attribute(std::string_view path_to_file, std::string_view attr_name, T &buff,
                            std::string_view path = "/");

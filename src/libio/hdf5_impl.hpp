@@ -354,6 +354,11 @@ bool has_attribute(const H5::Group &g, std::string_view attr_name) {
   return g.attrExists(std::string{attr_name});
 }
 
+bool has_attribute(const H5::DataSet &d, std::string_view attr_name) {
+  absl::ConsumePrefix(&attr_name, "/");
+  return d.attrExists(std::string{attr_name});
+}
+
 bool has_attribute(H5::H5File &f, std::string_view attr_name, std::string_view path) {
   auto g = f.openGroup(std::string{path});
 
@@ -365,10 +370,27 @@ void read_attribute(H5::H5File &f, std::string_view attr_name, T &buff, std::str
   auto g = f.openGroup(std::string{path});
   if (!has_attribute(g, attr_name)) {
     throw std::runtime_error(fmt::format(
-        FMT_STRING("Unable to find an attribute named '{}' in path '/{}'"), attr_name, path));
+        FMT_STRING("Unable to find an attribute named '{}' in group '/{}'"), attr_name, path));
   }
 
   auto attr = g.openAttribute(std::string{attr_name});
+  if constexpr (std::is_constructible_v<H5std_string, T>) {
+    buff.clear();
+    attr.read(attr.getStrType(), buff);
+  } else {
+    attr.read(attr.getDataType(), &buff);
+  }
+}
+
+template <typename T>
+void read_attribute(const H5::DataSet &d, std::string_view attr_name, T &buff) {
+  if (!has_attribute(d, attr_name)) {
+    throw std::runtime_error(
+        fmt::format(FMT_STRING("Unable to find an attribute named '{}' in dataset '{}'"), attr_name,
+                    d.getObjName()));
+  }
+
+  auto attr = d.openAttribute(std::string{attr_name});
   if constexpr (std::is_constructible_v<H5std_string, T>) {
     buff.clear();
     attr.read(attr.getStrType(), buff);

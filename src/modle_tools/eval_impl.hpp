@@ -125,8 +125,8 @@ void compute_pearson_over_range(absl::Span<const N1> vin1, absl::Span<const N2> 
   pval_buff.resize(ncols);
   std::vector<N1> sub_vin1(2 * nrows - 1);
   std::vector<N2> sub_vin2(2 * nrows - 1);
-  const auto step = ncols / 25;
-  auto t0 = absl::Now();
+  // const auto step = ncols / 25;
+  // auto t0 = absl::Now();
 
   for (std::size_t i = 0; i < ncols; ++i) {
     slice_range(vin1, sub_vin1, nrows, t, i);
@@ -134,12 +134,14 @@ void compute_pearson_over_range(absl::Span<const N1> vin1, absl::Span<const N2> 
     pcc_buff[i] = correlation::compute_pearson(sub_vin1, sub_vin2);
     pval_buff[i] = correlation::compute_pearson_significance(pcc_buff[i], sub_vin1.size());
 
+    /*
     if ((i + 1) % step == 0) {
       fmt::print(stderr, FMT_STRING("Processed {}/{} bins ({:.4f}%) ({:.2f} corr/s)\n"), i, ncols,
                  100.0 * static_cast<double>(i) / static_cast<double>(ncols),
                  static_cast<double>(step) / absl::ToDoubleSeconds(absl::Now() - t0));
       t0 = absl::Now();
     }
+     */
   }
 }
 
@@ -160,21 +162,21 @@ void compute_spearman_over_range(absl::Span<const N1> vin1, absl::Span<const N2>
   pval_buff.resize(ncols);
   std::vector<N1> sub_vin1(2 * nrows - 1);
   std::vector<N2> sub_vin2(2 * nrows - 1);
-  const auto step = ncols / 25;
-  auto t0 = absl::Now();
+  // const auto step = ncols / 25;
+  // auto t0 = absl::Now();
 
   for (std::size_t i = 0; i < ncols; ++i) {
     slice_range(vin1, sub_vin1, nrows, t, i);
     slice_range(vin2, sub_vin2, nrows, t, i);
     rho_buff[i] = correlation::compute_spearman(sub_vin1, sub_vin2);
     pval_buff[i] = correlation::compute_spearman_significance(rho_buff[i], sub_vin1.size());
-
-    if ((i + 1) % step == 0) {
-      fmt::print(stderr, FMT_STRING("Processed {}/{} bins ({:.4f}%) ({:.2f} corr/s)\n"), i, ncols,
-                 100.0 * static_cast<double>(i) / static_cast<double>(ncols),
-                 static_cast<double>(step) / absl::ToDoubleSeconds(absl::Now() - t0));
-      t0 = absl::Now();
-    }
+    /*
+        if ((i + 1) % step == 0) {
+          fmt::print(stderr, FMT_STRING("Processed {}/{} bins ({:.4f}%) ({:.2f} corr/s)\n"), i,
+       ncols, 100.0 * static_cast<double>(i) / static_cast<double>(ncols), static_cast<double>(step)
+       / absl::ToDoubleSeconds(absl::Now() - t0)); t0 = absl::Now();
+        }
+        */
   }
 }
 
@@ -185,4 +187,5 @@ void compute_spearman_over_range(const std::vector<N1> &vin1, const std::vector<
   return compute_spearman_over_range(absl::MakeConstSpan(vin1), absl::MakeConstSpan(vin2), rho_buff,
                                      pval_buff, nrows, ncols, t);
 }
+
 }  // namespace modle::tools
