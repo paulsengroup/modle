@@ -453,7 +453,11 @@ Cooler::Cooler(std::string_view path_to_file, IO_MODE mode, std::size_t bin_size
     assert(this->_bin_size != 0);
     absl::StrAppend(&this->_root_path, "resolutions/", this->_bin_size, "/");
   }
-  this->open_cooler_datasets();
+  if (this->is_read_only()) {
+    this->open_cooler_datasets();
+  } else {
+    this->init_default_datasets();
+  }
 }
 
 bool Cooler::is_read_only() const { return this->_mode == Cooler::READ_ONLY; }
@@ -512,8 +516,7 @@ void Cooler::init_default_datasets() {
   constexpr hsize_t MAXDIMS{H5S_UNLIMITED};  // extensible dataset
   constexpr hsize_t BUFF_SIZE{1};            // Dummy buffer size
 
-  this->_datasets.clear();
-  this->_datasets.reserve(10);  // NOLINT
+  this->_datasets.resize(DEFAULT_DATASETS_NR);  // NOLINT
 
   assert(this->_cprop_str);
   assert(this->_cprop_int32);
@@ -535,29 +538,37 @@ void Cooler::init_default_datasets() {
   const auto &ap32 = *this->_aprop_int32;
   const auto &aps = *this->_aprop_str;
 
+  auto &f = *this->_fp;
   auto &dset = this->_datasets;
+  auto r = absl::StripSuffix(this->_root_path, "/");
 
   try {
     auto mem_space{H5::DataSpace(RANK, &BUFF_SIZE, &MAXDIMS)};
     // Do not change the order of these pushbacks
-    dset.push_back(this->_fp->createDataSet("chroms/length", INT64, mem_space, cp64, ap64));
-    dset.push_back(this->_fp->createDataSet("chroms/name", STR, mem_space, cps, aps));
+    dset[CHR_LEN] =
+        f.createDataSet(absl::StrCat(r, "/chroms/length"), INT64, mem_space, cp64, ap64);
+    dset[CHR_NAME] = f.createDataSet(absl::StrCat(r, "/chroms/name"), STR, mem_space, cps, aps);
 
-    dset.push_back(this->_fp->createDataSet("bins/chrom", INT64, mem_space, cp64, ap64));
-    dset.push_back(this->_fp->createDataSet("bins/start", INT64, mem_space, cp64, ap64));
-    dset.push_back(this->_fp->createDataSet("bins/end", INT64, mem_space, cp64, ap64));
+    dset[BIN_CHROM] = f.createDataSet(absl::StrCat(r, "/bins/chrom"), INT64, mem_space, cp64, ap64);
+    dset[BIN_START] = f.createDataSet(absl::StrCat(r, "/bins/start"), INT64, mem_space, cp64, ap64);
+    dset[BIN_END] = f.createDataSet(absl::StrCat(r, "/bins/end"), INT64, mem_space, cp64, ap64);
 
-    dset.push_back(this->_fp->createDataSet("pixels/bin1_id", INT64, mem_space, cp64, ap64));
-    dset.push_back(this->_fp->createDataSet("pixels/bin2_id", INT64, mem_space, cp64, ap64));
-    dset.push_back(this->_fp->createDataSet("pixels/count", INT32, mem_space, cp32, ap32));
+    dset[PXL_B1] =
+        f.createDataSet(absl::StrCat(r, "/pixels/bin1_id"), INT64, mem_space, cp64, ap64);
+    dset[PXL_B2] =
+        f.createDataSet(absl::StrCat(r, "/pixels/bin2_id"), INT64, mem_space, cp64, ap64);
+    dset[PXL_COUNT] =
+        f.createDataSet(absl::StrCat(r, "/pixels/count"), INT32, mem_space, cp32, ap32);
 
-    dset.push_back(this->_fp->createDataSet("indexes/bin1_offset", INT64, mem_space, cp64, ap64));
-    dset.push_back(this->_fp->createDataSet("indexes/chrom_offset", INT64, mem_space, cp64, ap64));
+    dset[IDX_BIN1] =
+        f.createDataSet(absl::StrCat(r, "/indexes/bin1_offset"), INT64, mem_space, cp64, ap64);
+    dset[IDX_CHR] =
+        f.createDataSet(absl::StrCat(r, "/indexes/chrom_offset"), INT64, mem_space, cp64, ap64);
 
   } catch (const H5::FileIException &e) {
     throw std::runtime_error(fmt::format(
         FMT_STRING("An error occurred while initializing default Cooler dataset on file '{}': {}"),
-        this->_path_to_file, hdf5::construct_error_stack()));
+        this->_path_to_file.string(), hdf5::construct_error_stack()));
   }
 }
 
@@ -618,8 +629,6 @@ void Cooler::write_cmatrix_to_file(absl::Span<ContactMatrix<I> *const> cmatrices
   }
 
   auto t0 = absl::Now();
-
-  this->init_default_datasets();
 
   std::size_t chr_name_foffset = 0;
   std::size_t chr_length_foffset = 0;

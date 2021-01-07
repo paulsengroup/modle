@@ -256,7 +256,7 @@ void ContactMatrix<I>::set(std::size_t row, std::size_t col, I2 n) {
     DISABLE_WARNING_SIGN_COMPARE
 #ifndef NDEBUG
     if constexpr (std::is_signed<I2>::value) {
-      if (n < 0) {
+      if (n < 0 && m != 0) {
         assert(this->_tot_contacts - m >= n);
       }
     }
