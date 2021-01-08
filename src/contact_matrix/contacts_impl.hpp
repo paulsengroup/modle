@@ -255,13 +255,17 @@ void ContactMatrix<I>::set(std::size_t row, std::size_t col, I2 n) {
     DISABLE_WARNING_SIGN_CONVERSION
     DISABLE_WARNING_SIGN_COMPARE
 #ifndef NDEBUG
-    if constexpr (std::is_signed<I2>::value) {
-      if (n < 0 && m != 0) {
-        assert(this->_tot_contacts - m >= n);
+    assert(this->_tot_contacts >= m);
+    if constexpr (std::is_signed_v<I2>) {
+      if (n < 0) {
+        throw std::runtime_error(
+            fmt::format(FMT_STRING("Setting counts to a negative value (n={}) is not allowed"), n));
       }
+      assert(this->_tot_contacts - m < std::numeric_limits<I>::max() - n);
     }
 #endif
-    this->_tot_contacts = this->_tot_contacts - m + n;
+    this->_tot_contacts -= m;
+    this->_tot_contacts += n;
     m = n;
     DISABLE_WARNING_POP
   } catch (const std::runtime_error &err) {

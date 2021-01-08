@@ -391,11 +391,29 @@ void read_attribute(const H5::DataSet &d, std::string_view attr_name, T &buff) {
   }
 
   auto attr = d.openAttribute(std::string{attr_name});
-  if constexpr (std::is_constructible_v<H5std_string, T>) {
+  if constexpr (std::is_constructible_v<H5std_string, T>) {  // string-like (scalar)
     buff.clear();
     attr.read(attr.getStrType(), buff);
-  } else {
+  } else if constexpr (std::is_arithmetic_v<T>) {  // numeric (scalar)
     attr.read(attr.getDataType(), &buff);
+  } else {  // array of numbers (non-scalar)
+    using N = std::remove_pointer_t<decltype(buff.data())>;
+    if constexpr (!std::is_arithmetic_v<N>) {
+      throw std::logic_error(
+          "buff should be a container that is contiguous in memory, and whose elements have a "
+          "numeric type.");
+    }
+    hsize_t buff_size{0};  // Figure out the appropriate buffer size
+    attr.getSpace().getSimpleExtentDims(&buff_size);
+    buff.resize(buff_size);
+    assert(buff_size > 1);
+    DISABLE_WARNING_PUSH
+    DISABLE_WARNING_C_VLA
+    auto *cbuff = reinterpret_cast<N(*)[buff_size]>(buff.data());  // NOLINT
+    DISABLE_WARNING_POP
+    const auto dtype = attr.getArrayType();  // It is important to get the array type, and not just
+                                             // the data type here
+    attr.read(attr.getArrayType(), cbuff);
   }
 }
 

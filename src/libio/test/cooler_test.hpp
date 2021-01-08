@@ -17,7 +17,7 @@ TEST_CASE("cooler ctor", "[io][cooler][short]") {
   const auto test_file = data_dir / "Dixon2012-H1hESC-HindIII-allreps-filtered.100kb.cool";
 
   {
-    auto c = Cooler(test_file.string(), Cooler::READ_ONLY, 100'000);  // NOLINT
+    auto c = Cooler(test_file, Cooler::READ_ONLY, 100'000);  // NOLINT
     CHECK(c.is_read_only());
   }
 
@@ -38,7 +38,7 @@ TEST_CASE("CMatrix to cooler", "[io][cooler][short]") {
   constexpr uint64_t nrows = 25;
   constexpr uint64_t ncols = end / bin_size;
 
-  auto c = Cooler(test_file.string(), Cooler::WRITE_ONLY, bin_size);
+  auto c = Cooler(test_file, Cooler::WRITE_ONLY, bin_size);
 
   ContactMatrix<int32_t> cmatrix(nrows, ncols, true);
   c.write_cmatrix_to_file(cmatrix, "chr0", start, end, end);
@@ -56,7 +56,7 @@ TEST_CASE("Cooler to CMatrix", "[io][cooler][short]") {
   constexpr uint64_t nrows = 25;
   constexpr uint64_t ncols = 1'591 + 1;
 
-  auto c = Cooler(test_file.string(), Cooler::READ_ONLY);
+  auto c = Cooler(test_file, Cooler::READ_ONLY);
 
   auto cmatrix = c.cooler_to_cmatrix("chr7", nrows);
   CHECK(cmatrix.n_rows() == nrows);
@@ -74,13 +74,13 @@ TEST_CASE("Cooler to CMatrix and CMatrix to Cooler", "[io][cooler][short]") {
   constexpr uint64_t nrows = 25;
   constexpr uint64_t ncols = (end / bin_size) + (end % bin_size != 0);
 
-  auto c1 = Cooler(test_file_in.string(), Cooler::READ_ONLY);
+  auto c1 = Cooler(test_file_in, Cooler::READ_ONLY);
 
   const auto cmatrix1 = c1.cooler_to_cmatrix("chr1", nrows);
   REQUIRE(cmatrix1.n_rows() == nrows);
   REQUIRE(cmatrix1.n_cols() == ncols);
 
-  auto c2 = Cooler(test_file_out.string(), Cooler::WRITE_ONLY, bin_size);
+  auto c2 = Cooler(test_file_out, Cooler::WRITE_ONLY, bin_size);
   c2.write_cmatrix_to_file(cmatrix1, "chr1", start, end, end);
   const auto cmatrix2 = c2.cooler_to_cmatrix("chr1", nrows);
   const auto& v1 = cmatrix1.get_raw_count_vector();
@@ -100,5 +100,70 @@ TEST_CASE("Cooler to CMatrix and CMatrix to Cooler", "[io][cooler][short]") {
     std::filesystem::remove(p);
   }
 }
+/*
+TEST_CASE("Cooler testing balanced matrix", "[io][cooler][short]") {
+  // const auto test_file = data_dir / "4DNFI5RMAGF9_test.mcool";
+  const auto test_file = data_dir / "4DNFIXP4QG5B_10kb.cool";
+
+  // constexpr uint64_t start = 0;
+  constexpr uint64_t end = 248'956'422;
+  constexpr uint64_t bin_size = 10'000;
+  constexpr uint64_t ncols = (end / bin_size) + (end % bin_size != 0);
+  constexpr uint64_t nrows = ncols;
+
+  cooler::Cooler c1(test_file, cooler::Cooler::READ_ONLY, bin_size);
+
+  const auto balanced_cmatrix = c1.cooler_to_cmatrix("chr1", nrows, false, true);
+  const auto raw_cmatrix = c1.cooler_to_cmatrix("chr1", nrows, false, false);
+
+  REQUIRE(raw_cmatrix.n_rows() == nrows);
+  REQUIRE(raw_cmatrix.n_cols() == ncols);
+  REQUIRE(raw_cmatrix.n_rows() == balanced_cmatrix.n_rows());
+  REQUIRE(raw_cmatrix.n_cols() == balanced_cmatrix.n_cols());
+
+  std::vector<uint64_t> balanced_row_sum(ncols, 0);
+  std::vector<uint64_t> raw_row_sum(ncols, 0);
+  std::vector<uint64_t> balanced_col_sum(ncols, 0);
+  std::vector<uint64_t> raw_col_sum(ncols, 0);
+
+  for (auto i = 0UL; i < ncols; ++i) {
+    for (auto j = i; j < (i + nrows) && j < ncols; ++j) {
+      balanced_row_sum[j] += balanced_cmatrix.get(j, i);
+      raw_row_sum[j] += raw_cmatrix.get(j, i);
+      balanced_col_sum[i] += balanced_cmatrix.get(j, i);
+      raw_col_sum[i] += raw_cmatrix.get(j, i);
+    }
+  }
+
+  double avg_col_diff = 0;
+  double avg_row_diff = 0;
+  std::size_t nnz_cols = 0;
+  std::size_t nnz_rows = 0;
+
+  for (auto i = 0UL; i < nrows; ++i) {
+    if (balanced_row_sum[i] != 0) {
+      // fmt::print(stderr, "i={}; c={}\n", i, balanced_row_sum[i]);
+    }
+  }
+
+  for (auto i = 0UL; i < raw_col_sum.size(); ++i) {
+    if (raw_col_sum[i] != 0 || balanced_col_sum[i] != 0) {
+      avg_col_diff +=
+          static_cast<int64_t>(raw_col_sum[i]) - static_cast<int64_t>(balanced_col_sum[i]);
+      nnz_rows++;
+    }
+  }
+  avg_col_diff /= static_cast<double>(nnz_cols);
+  avg_row_diff /= static_cast<double>(nnz_rows);
+
+  fmt::print(
+      stderr,
+      FMT_STRING(
+          "nrows={}\nncols={}\nbalanced_tot_contacts={}\nraw_tot_contacts={}\navg_col_diff={}\navg_"
+          "row_diff={}\n"),
+      nrows, ncols, balanced_cmatrix.get_tot_contacts(), raw_cmatrix.get_tot_contacts(),
+      avg_col_diff, avg_row_diff);
+}
+ */
 
 }  // namespace modle::test::cooler

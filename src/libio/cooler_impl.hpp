@@ -416,12 +416,12 @@ bool Cooler::validate_multires_cool_flavor(H5::H5File &f, std::size_t bin_size,
       throw_on_failure, false);
 }
 
-Cooler::Cooler(std::string_view path_to_file, IO_MODE mode, std::size_t bin_size,
+Cooler::Cooler(std::filesystem::path path_to_file, IO_MODE mode, std::size_t bin_size,
                std::size_t max_str_length, std::string_view assembly_name, Flavor flavor,
                bool validate, uint8_t compression_lvl, std::size_t chunk_size,
                std::size_t cache_size)
     : STR_TYPE(generate_default_str_type(max_str_length)),
-      _path_to_file(std::string{path_to_file.data(), path_to_file.size()}),
+      _path_to_file(path_to_file),
       _mode(mode),
       _bin_size(bin_size),
       _assembly_name(assembly_name.data(), assembly_name.size()),
@@ -459,6 +459,13 @@ Cooler::Cooler(std::string_view path_to_file, IO_MODE mode, std::size_t bin_size
     this->init_default_datasets();
   }
 }
+
+Cooler::Cooler(std::string_view path_to_file, IO_MODE mode, std::size_t bin_size,
+               std::size_t max_str_length, std::string_view assembly_name, Flavor flavor,
+               bool validate, uint8_t compression_lvl, std::size_t chunk_size,
+               std::size_t cache_size)
+    : Cooler::Cooler(std::filesystem::path(path_to_file), mode, bin_size, max_str_length,
+                     assembly_name, flavor, validate, compression_lvl, chunk_size, cache_size) {}
 
 bool Cooler::is_read_only() const { return this->_mode == Cooler::READ_ONLY; }
 
@@ -849,13 +856,16 @@ void Cooler::open_cooler_datasets() {
 
 ContactMatrix<uint32_t> Cooler::cooler_to_cmatrix(int64_t bin_offset,
                                                   const std::vector<int64_t> &bin1_offset_idx,
-                                                  std::size_t nrows) {
-  return this->cooler_to_cmatrix(bin_offset, absl::MakeConstSpan(bin1_offset_idx), nrows);
+                                                  std::size_t nrows, double scaling_factor,
+                                                  bool prefer_using_balanced_counts) {
+  return this->cooler_to_cmatrix(bin_offset, absl::MakeConstSpan(bin1_offset_idx), nrows,
+                                 scaling_factor, prefer_using_balanced_counts);
 }
 
 ContactMatrix<uint32_t> Cooler::cooler_to_cmatrix(std::string_view chr_name,
                                                   std::size_t diagonal_width, std::size_t bin_size,
-                                                  bool try_common_chr_prefixes) {
+                                                  bool try_common_chr_prefixes,
+                                                  bool prefer_using_balanced_counts) {
   assert(this->_bin_size != 0);
   if (bin_size != 0 && this->_bin_size != bin_size) {
     throw std::runtime_error(fmt::format(
@@ -865,11 +875,12 @@ ContactMatrix<uint32_t> Cooler::cooler_to_cmatrix(std::string_view chr_name,
   }
   const auto nrows = (diagonal_width / this->_bin_size) +
                      static_cast<std::size_t>(diagonal_width % this->_bin_size != 0);
-  return cooler_to_cmatrix(chr_name, nrows, try_common_chr_prefixes);
+  return cooler_to_cmatrix(chr_name, nrows, try_common_chr_prefixes, prefer_using_balanced_counts);
 }
 
 ContactMatrix<uint32_t> Cooler::cooler_to_cmatrix(std::string_view chr_name, std::size_t nrows,
-                                                  bool try_common_chr_prefixes) {
+                                                  bool try_common_chr_prefixes,
+                                                  bool prefer_using_balanced_counts) {
   // TODO: Add check for Cooler bin size
 
   {
@@ -924,13 +935,30 @@ ContactMatrix<uint32_t> Cooler::cooler_to_cmatrix(std::string_view chr_name, std
   const auto [actual_chr_name, chr_idx] = search_chr_offset_idx();
   const auto bin1_offset_idx = this->get_bin1_offset_idx_for_chr(chr_idx);
   const auto bin_offset = this->_idx_chrom_offset[chr_idx];
+  double scaling_factor{1.0};
 
-  return cooler_to_cmatrix(bin_offset, bin1_offset_idx, nrows);
+  if (prefer_using_balanced_counts &&
+      hdf5::dataset_exists(*this->_fp, "bins/weight", this->_root_path)) {
+    const auto &d = this->_datasets[BIN_WEIGHT];
+    uint8_t cis_only;
+    hdf5::read_attribute(d, "cis_only", cis_only);
+    if (cis_only) {  // --cis-only balancing produces an array of sale factors
+      std::vector<double> buff;
+      hdf5::read_attribute(d, "scale", buff);
+      scaling_factor = buff[chr_idx];
+    } else {  // standard or --trans-only balancing produces a single scale factor
+      hdf5::read_attribute(d, "scale", scaling_factor);
+    }
+  }
+
+  return cooler_to_cmatrix(bin_offset, bin1_offset_idx, nrows, scaling_factor,
+                           prefer_using_balanced_counts);
 }
 
 ContactMatrix<uint32_t> Cooler::cooler_to_cmatrix(int64_t bin_offset,
                                                   absl::Span<const int64_t> bin1_offset_idx,
-                                                  std::size_t nrows) {
+                                                  std::size_t nrows, double scaling_factor,
+                                                  bool prefer_using_balanced_counts) {
   if (this->_datasets.empty()) {
     this->open_cooler_datasets();
   }
@@ -939,12 +967,12 @@ ContactMatrix<uint32_t> Cooler::cooler_to_cmatrix(int64_t bin_offset,
   std::vector<int64_t> bin2_BUFF(nrows);
   std::vector<int64_t> count_BUFF(nrows);
   std::vector<double> bin_weights;
-  double scaling_factor = 1;
+
   const auto &d = this->_datasets;
-  if (hdf5::dataset_exists(*this->_fp, "bins/weight", this->_root_path)) {
+  if (prefer_using_balanced_counts &&
+      hdf5::dataset_exists(*this->_fp, "bins/weight", this->_root_path)) {
     bin_weights.resize(bin1_offset_idx.size());
     (void)hdf5::read_numbers(d[BIN_WEIGHT], bin_weights, static_cast<hsize_t>(bin_offset));
-    hdf5::read_attribute(d[BIN_WEIGHT], "scale", scaling_factor);
   }
 
   for (auto i = 1UL; i < bin1_offset_idx.size(); ++i) {
@@ -954,7 +982,6 @@ ContactMatrix<uint32_t> Cooler::cooler_to_cmatrix(int64_t bin_offset,
     if (buff_size == 0) {
       continue;
     }
-    // fmt::print(stderr, "i={}; buff_size={}\n", i, buff_size);
 
     bin1_BUFF.resize(buff_size);
     bin2_BUFF.resize(buff_size);
@@ -973,6 +1000,7 @@ ContactMatrix<uint32_t> Cooler::cooler_to_cmatrix(int64_t bin_offset,
       DISABLE_WARNING_PUSH
       DISABLE_WARNING_SIGN_CONVERSION
       DISABLE_WARNING_SIGN_COMPARE
+      DISABLE_WARNING_CONVERSION
       if (const auto bin2_id = bin2_BUFF[j] - bin_offset;
           bin2_id >= i + nrows - 1 || bin2_id >= bin1_offset_idx.size()) {
         break;
@@ -980,21 +1008,28 @@ ContactMatrix<uint32_t> Cooler::cooler_to_cmatrix(int64_t bin_offset,
       // fmt::print(stderr, "m[{}][{}]={} (nrows={}; ncols={})\n", bin2_BUFF[j] - bin_offset,
       //           bin1_BUFF[j] - bin_offset, count_BUFF[j], cmatrix.n_rows(),
       //           cmatrix.n_cols());
-      const auto &bin1 = bin1_BUFF[j] - bin_offset;
-      const auto &bin2 = bin2_BUFF[j] - bin_offset;
-      const auto bin1_bias =  // According to Cooler documentations, NaN means that a bin has been
-                              // excluded by the matrix balancing procedure. In this case we set the
-                              // multiplier to 0
-          bin_weights.empty() ? 1 : !std::isnan(bin_weights[bin1]) * bin_weights[bin1];
-      const auto bin2_bias =
-          bin_weights.empty() ? 1 : !std::isnan(bin_weights[bin2]) * bin_weights[bin2];
-      // See https://github.com/robomics/modle/issues/36
-      const auto count =
-          (static_cast<double>(count_BUFF[j]) / (bin1_bias * bin2_bias)) / scaling_factor;
-      cmatrix.set(bin2, bin1, std::lround(count));
-      DISABLE_WARNING_POP
+      const auto bin1 = bin1_BUFF[j] - bin_offset;
+      const auto bin2 = bin2_BUFF[j] - bin_offset;
+      if (bin_weights.empty()) {
+        cmatrix.set(bin2, bin1, static_cast<uint32_t>(count_BUFF[j]));
+      } else {
+        // According to Cooler documentations, NaN means that a bin has been excluded by the matrix
+        // balancing procedure. In this case we set the count to 0
+        if (std::isnan(bin_weights[bin1]) || std::isnan(bin_weights[bin2])) {
+          continue;  // Same as setting count to 0;
+        }
+        const auto bin1_bias = bin_weights[bin1];
+        const auto bin2_bias = bin_weights[bin2];
+        // See https://github.com/robomics/modle/issues/36 and
+        // https://github.com/open2c/cooler/issues/35
+        const auto count =
+            static_cast<double>(count_BUFF[j]) / (bin1_bias * bin2_bias) / scaling_factor;
+        cmatrix.set(bin2, bin1, static_cast<uint32_t>(std::round(count)));
+        DISABLE_WARNING_POP
+      }
     }
   }
+
   return cmatrix;
 }
 
