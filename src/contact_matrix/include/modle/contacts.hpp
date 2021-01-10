@@ -16,7 +16,7 @@ namespace modle {
 
 template <typename I>
 class ContactMatrix {
-  static_assert(std::is_integral<I>::value,
+  static_assert(std::is_integral_v<I>,
                 "ContactMatrix requires an integral type as template argument.");
 
  public:
@@ -54,8 +54,9 @@ class ContactMatrix {
   inline void decrement(std::size_t row, std::size_t col);
   inline void print(bool full = false) const;
   [[nodiscard]] inline std::vector<std::vector<I>> generate_symmetric_matrix() const;
-  [[nodiscard]] inline std::size_t n_cols() const;
-  [[nodiscard]] inline std::size_t n_rows() const;
+  [[nodiscard]] inline std::size_t ncols() const;
+  [[nodiscard]] inline std::size_t nrows() const;
+  [[nodiscard]] inline std::size_t npixels() const;
   inline std::pair<uint32_t /* bytes_in */, uint32_t /* bytes_out */> write_full_matrix_to_tsv(
       const std::string& path_to_file, int bzip2_block_size = 9) const;
   inline std::pair<uint32_t /* bytes_in */, uint32_t /* bytes_out */> write_to_tsv(
@@ -65,6 +66,7 @@ class ContactMatrix {
   [[nodiscard]] inline absl::Span<const I> get_raw_count_vector() const;
   [[nodiscard]] inline uint64_t get_n_of_missed_updates() const;
   [[nodiscard]] inline uint64_t get_tot_contacts() const;
+  [[nodiscard]] inline double get_avg_contact_density() const;
   [[nodiscard]] inline static Header parse_header(std::string_view path_to_file);
   [[nodiscard]] inline static Header parse_header(std::string_view path_to_file,
                                                   boost::iostreams::filtering_istream& in,

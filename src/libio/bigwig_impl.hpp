@@ -20,7 +20,7 @@ template <typename I>
 bigWigFile_t* init_bigwig_file(std::string_view output_path,
                                std::vector<std::pair<std::string, I>>& chromosomes,
                                int32_t zoom_levels, std::size_t buff_size) {
-  static_assert(std::is_integral<I>::value, "I should be an integral numeric type.");
+  static_assert(std::is_integral_v<I>, "I should be an integral numeric type.");
   std::vector<char*> chr_names(chromosomes.size());
   std::vector<uint32_t> chr_sizes(chromosomes.size());
 

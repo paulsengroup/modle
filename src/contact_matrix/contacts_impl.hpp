@@ -35,7 +35,7 @@ ContactMatrix<I>::ContactMatrix(std::size_t nrows, std::size_t ncols, bool fill_
   if (fill_with_random_numbers) {
     std::random_device rand_dev;
     std::mt19937_64 rand_eng{rand_dev()};
-    std::uniform_int_distribution<I> dist;
+    std::uniform_int_distribution<I> dist{0, std::numeric_limits<I>::max()};
     for (auto i = 0UL; i < _ncols; ++i) {
       for (auto j = i; j < i + _nrows && j < _ncols; ++j) {
         this->set(i, j, dist(rand_eng));
@@ -197,7 +197,7 @@ I &ContactMatrix<I>::at(std::size_t i, std::size_t j) {
     throw std::runtime_error(fmt::format(
         "ContactMatrix::at tried to access element m[{}][{}] of a matrix of shape [{}][{}]! "
         "({} >= {})",
-        i, j, this->n_rows(), this->n_cols(), (j * this->_nrows) + i, this->_contacts.size()));
+        i, j, this->nrows(), this->ncols(), (j * this->_nrows) + i, this->_contacts.size()));
   }
 #endif
   return this->_contacts[(j * this->_nrows) + i];
@@ -210,7 +210,7 @@ const I &ContactMatrix<I>::at(std::size_t i, std::size_t j) const {
     throw std::runtime_error(fmt::format(
         "ContactMatrix::at tried to access element m[{}][{}] of a matrix of shape [{}][{}]! "
         "({} >= {})",
-        i, j, this->n_rows(), this->n_cols(), (j * this->_nrows) + i, this->_contacts.size()));
+        i, j, this->nrows(), this->ncols(), (j * this->_nrows) + i, this->_contacts.size()));
   }
 #endif
   return this->_contacts[(j * this->_nrows) + i];
@@ -222,13 +222,15 @@ void ContactMatrix<I>::set(std::size_t row, std::size_t col, I2 n) {
   static_assert(std::is_integral<I2>::value,
                 "ContactMatrix<I>::set expects the parameter n to be an integer type.");
 #ifndef NDEBUG
-  if (static_cast<I>(n) < std::numeric_limits<I>::min() ||
-      static_cast<I>(n) > std::numeric_limits<I>::max()) {
+  DISABLE_WARNING_PUSH
+  DISABLE_WARNING_SIGN_COMPARE
+  if (n < std::numeric_limits<I>::min() || n > std::numeric_limits<I>::max()) {
     throw std::runtime_error(
         fmt::format(FMT_STRING("ContactMatrix<I>::set(row={}, col={}, n={}): Overflow detected: "
                                "n={} is outside the range of representable numbers ({}-{})"),
                     row, col, n, n, std::numeric_limits<I>::min(), std::numeric_limits<I>::max()));
   }
+  DISABLE_WARNING_POP
 #endif
 
   auto j = col;
@@ -238,13 +240,13 @@ void ContactMatrix<I>::set(std::size_t row, std::size_t col, I2 n) {
     i = j - col;
   }
   try {
-    if (j > this->n_cols()) {
+    if (j > this->ncols()) {
       throw std::runtime_error(
           fmt::format(FMT_STRING("attempt to access an element past the end of the contact matrix: "
                                  "j={}; ncols={}: j > ncols"),
-                      j, this->n_cols()));
+                      j, this->ncols()));
     }
-    if (i > this->n_rows()) {
+    if (i > this->nrows()) {
       ++this->_updates_missed;
       return;
     }
@@ -261,7 +263,8 @@ void ContactMatrix<I>::set(std::size_t row, std::size_t col, I2 n) {
         throw std::runtime_error(
             fmt::format(FMT_STRING("Setting counts to a negative value (n={}) is not allowed"), n));
       }
-      assert(this->_tot_contacts - m < std::numeric_limits<I>::max() - n);
+      assert(this->_tot_contacts - m <
+             std::numeric_limits<decltype(this->_tot_contacts)>::max() - n);
     }
 #endif
     this->_tot_contacts -= m;
@@ -287,10 +290,10 @@ void ContactMatrix<I>::increment(std::size_t row, std::size_t col, I2 n) {
     i = j - col;
   }
   try {
-    if (j > this->n_cols()) {
-      throw std::runtime_error(fmt::format(FMT_STRING("j={} > ncols={})"), j, this->n_cols()));
+    if (j > this->ncols()) {
+      throw std::runtime_error(fmt::format(FMT_STRING("j={} > ncols={})"), j, this->ncols()));
     }
-    if (i > this->n_rows()) {
+    if (i > this->nrows()) {
       ++this->_updates_missed;
       return;
     }
@@ -345,10 +348,10 @@ void ContactMatrix<I>::decrement(std::size_t row, std::size_t col, I2 n) {
     i = j - col;
   }
   try {
-    if (j > this->n_cols()) {
-      throw std::runtime_error(fmt::format(FMT_STRING("j={} > ncols={})"), j, this->n_cols()));
+    if (j > this->ncols()) {
+      throw std::runtime_error(fmt::format(FMT_STRING("j={} > ncols={})"), j, this->ncols()));
     }
-    if (i > this->n_rows()) {
+    if (i > this->nrows()) {
       ++this->_updates_missed;
       return;
     }
@@ -423,9 +426,9 @@ void ContactMatrix<I>::print(bool full) const {
       fmt::print(FMT_STRING("{}\n"), absl::StrJoin(row, "\t"));
     }
   } else {
-    std::vector<I> row(this->n_cols());
-    for (auto i = 0UL; i < this->n_rows(); ++i) {
-      for (auto j = 0UL; j < this->n_cols(); ++j) {
+    std::vector<I> row(this->ncols());
+    for (auto i = 0UL; i < this->nrows(); ++i) {
+      for (auto j = 0UL; j < this->ncols(); ++j) {
         row[j] = this->at(i, j);
       }
       fmt::print(FMT_STRING("{}\n"), absl::StrJoin(row, "\t"));
@@ -442,7 +445,7 @@ I ContactMatrix<I>::get(std::size_t row, std::size_t col) const {
     i = j - col;
   }
 #ifndef NDEBUG
-  if (i >= this->n_cols() || j >= this->n_cols()) {
+  if (i >= this->ncols() || j >= this->ncols()) {
     throw std::logic_error(fmt::format(
         FMT_STRING("ContactMatrix<I>::get(row={}, col={}) tried to access an element outside of "
                    "the space {}x{}, which is what this contact matrix is supposed to represent"),
@@ -450,7 +453,7 @@ I ContactMatrix<I>::get(std::size_t row, std::size_t col) const {
   }
 #endif
 
-  if (i >= this->n_rows()) {
+  if (i >= this->nrows()) {
     return 0;
   }
 
@@ -481,13 +484,18 @@ std::vector<std::vector<I>> ContactMatrix<I>::generate_symmetric_matrix() const 
 }
 
 template <typename I>
-std::size_t ContactMatrix<I>::n_rows() const {
+std::size_t ContactMatrix<I>::nrows() const {
   return this->_nrows;
 }
 
 template <typename I>
-std::size_t ContactMatrix<I>::n_cols() const {
+std::size_t ContactMatrix<I>::ncols() const {
   return this->_ncols;
+}
+
+template <typename I>
+std::size_t ContactMatrix<I>::npixels() const {
+  return this->_nrows * this->_ncols;
 }
 
 template <typename I>
@@ -550,6 +558,12 @@ absl::Span<const I> ContactMatrix<I>::get_raw_count_vector() const {
 template <typename I>
 uint64_t ContactMatrix<I>::get_tot_contacts() const {
   return this->_tot_contacts;
+}
+
+template <typename I>
+double ContactMatrix<I>::get_avg_contact_density() const {
+  return static_cast<double>(this->get_tot_contacts()) /
+         static_cast<double>(this->_contacts.size());
 }
 
 template <typename I>
@@ -677,23 +691,23 @@ std::pair<uint32_t, uint32_t> ContactMatrix<I>::write_full_matrix_to_tsv(
 
 template <typename I>
 boost::dynamic_bitset<> ContactMatrix<I>::generate_mask_for_empty_rows() const {
-  boost::dynamic_bitset<> mask(this->n_cols());
+  boost::dynamic_bitset<> mask(this->ncols());
   this->generate_mask_for_empty_rows(mask);
   return mask;
 }
 template <typename I>
 void ContactMatrix<I>::generate_mask_for_empty_rows(boost::dynamic_bitset<> &mask) const {
-  mask.resize(this->n_cols());
+  mask.resize(this->ncols());
   mask.reset();
-  for (auto i = 0UL; i < this->n_cols(); ++i) {
+  for (auto i = 0UL; i < this->ncols(); ++i) {
     // Set bitmask to 1 if row contains at least one non-zero value
-    for (auto j = i; j < (i + this->n_rows()) && j < this->n_cols(); ++j) {
+    for (auto j = i; j < (i + this->nrows()) && j < this->ncols(); ++j) {
       if ((mask[i] |= this->get(i, j))) {
         break;
       }
     }
     // Set bitmask to 1 if column "above" the current bin contains at least one non-zero value
-    for (auto j = i; j > 0 && j > (i - this->n_rows()); --j) {
+    for (auto j = i; j > 0 && j > (i - this->nrows()); --j) {
       if ((mask[i] |= this->get(i, j))) {
         break;
       }

@@ -450,12 +450,11 @@ void Genome::simulate_extrusion(uint32_t iterations, double target_contact_densi
     //       target contact density * (matrix columns * matrix rows)
     const long double tot_ticks =
         target_contact_density != 0.0
-            ? std::accumulate(
-                  this->_chromosomes.begin(), this->_chromosomes.end(), 0.0L,
-                  [&](auto accumulator, const auto& chr) {
-                    return accumulator +
-                           (target_contact_density * chr.contacts.n_cols() * chr.contacts.n_rows());
-                  })
+            ? std::accumulate(this->_chromosomes.begin(), this->_chromosomes.end(), 0.0L,
+                              [&](auto accumulator, const auto& chr) {
+                                return accumulator + (target_contact_density *
+                                                      chr.contacts.ncols() * chr.contacts.nrows());
+                              })
             : iterations * this->get_n_chromosomes();
 
     const auto t0 = absl::Now();
@@ -509,7 +508,7 @@ void Genome::simulate_extrusion(uint32_t iterations, double target_contact_densi
       const auto target_n_of_contacts =
           target_contact_density != 0.0
               ? target_contact_density *
-                    static_cast<double>(chr.contacts.n_rows() * chr.contacts.n_cols())
+                    static_cast<double>(chr.contacts.nrows() * chr.contacts.ncols())
               : std::numeric_limits<double>::max();
 
       // Variables to track the simulation progress for the current chromosome
@@ -607,7 +606,7 @@ void Genome::simulate_extrusion(double target_contact_density) {
 
 template <typename I>
 void Genome::randomly_generate_extrusion_barriers(I n_barriers, uint64_t seed) {
-  static_assert(std::is_integral<I>::value, "I should be an integral numeric type.");
+  static_assert(std::is_integral_v<I>, "I should be an integral numeric type.");
 
   const auto& weights = this->get_chromosome_lengths();
   std::discrete_distribution<std::size_t> chr_idx(weights.begin(), weights.end());

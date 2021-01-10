@@ -102,7 +102,7 @@ DNA::Bin::Bin(std::size_t idx, I start, I end, const std::vector<ExtrusionBarrie
       _extr_barriers(std::make_unique<absl::InlinedVector<ExtrusionBarrier, 3>>(barriers.begin(),
                                                                                 barriers.end())) {
   DISABLE_WARNING_POP
-  static_assert(std::is_integral<I>::value, "I should be an integral numeric type.");
+  static_assert(std::is_integral_v<I>, "I should be an integral numeric type.");
 
 #ifndef NDEBUG
   validate_params(fmt::format(FMT_STRING("DNA::Bin::Bin(idx={}, start={}, end={}, const "
@@ -536,7 +536,7 @@ void Chromosome::write_contacts_to_tsv(std::string_view output_dir, bool force_o
 
   const std::string header =
       fmt::format("#{}\t{}\t{}\t{}\t{}\n", this->name, this->get_bin_size(), this->start, this->end,
-                  this->contacts.n_rows() * this->get_bin_size());
+                  this->contacts.nrows() * this->get_bin_size());
 
   auto [bytes_in, bytes_out] = this->contacts.write_to_tsv(path_to_outfile, header);
   fmt::print(stderr,
@@ -588,7 +588,7 @@ void Chromosome::write_barriers_to_tsv(std::string_view output_dir, bool force_o
 void Chromosome::allocate_contacts() {
   using I =
       std::remove_const_t<std::remove_pointer_t<decltype(contacts.get_raw_count_vector().data())>>;
-  if (contacts.n_rows() == 0 && contacts.n_rows() == 0) {
+  if (contacts.nrows() == 0 && contacts.nrows() == 0) {
     const auto nrows = std::min(diagonal_width / dna.get_bin_size(), this->get_n_bins());
     const auto ncols = this->get_n_bins();
     contacts = ContactMatrix<I>(nrows, ncols);

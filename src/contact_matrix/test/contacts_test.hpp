@@ -98,11 +98,11 @@ inline void test_with_large_matrix(const std::string& path_to_file) {
 TEST_CASE("CMatrix Mask", "[cmatrix][short]") {
   ContactMatrix<uint32_t> m(10, 20);  // NOLINT
   auto mask = m.generate_mask_for_empty_rows();
-  REQUIRE(mask.size() == m.n_cols());
+  REQUIRE(mask.size() == m.ncols());
   CHECK(mask.none());  // Matrix is full of zeros: bitmask should also be all zeros
 
-  for (auto i = 0UL; i < m.n_cols(); ++i) {
-    for (auto j = i; j < m.n_cols(); ++j) {
+  for (auto i = 0UL; i < m.ncols(); ++i) {
+    for (auto j = i; j < m.ncols(); ++j) {
       // Even row/columns are all zeros: Bitmask should have zeros at pos corresponding to even idx
       m.set(i, j, !(i % 2 == 0 || j % 2 == 0));
     }
@@ -110,13 +110,13 @@ TEST_CASE("CMatrix Mask", "[cmatrix][short]") {
   // m.print(true);
 
   mask = m.generate_mask_for_empty_rows();
-  REQUIRE(mask.size() == m.n_cols());
+  REQUIRE(mask.size() == m.ncols());
   for (auto i = 0UL; i < mask.size(); ++i) {
     CHECK((i % 2 != 0) == mask[i]);
   }
 
-  for (auto i = 0UL; i < m.n_cols(); ++i) {
-    for (auto j = i; j < m.n_cols(); ++j) {
+  for (auto i = 0UL; i < m.ncols(); ++i) {
+    for (auto j = i; j < m.ncols(); ++j) {
       // Each row/column will have half of the fields filled with zeros, and the remaining half with
       // ones: All bits in the bitmask should be set to 1
       m.set(i, j, !(i % 2 == 0 && j % 2 == 0));
@@ -124,7 +124,7 @@ TEST_CASE("CMatrix Mask", "[cmatrix][short]") {
   }
 
   mask = m.generate_mask_for_empty_rows();
-  REQUIRE(mask.size() == m.n_cols());
+  REQUIRE(mask.size() == m.ncols());
 
   for (auto i = 0UL; i < mask.size(); ++i) {
     CHECK(mask[i]);
