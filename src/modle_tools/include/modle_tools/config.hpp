@@ -44,5 +44,7 @@ struct config {
   std::string chr_name_hic{};
   uint64_t chr_offset_hic{UINT64_MAX};
   std::size_t nthreads{std::thread::hardware_concurrency()};
+  std::size_t bin_size{0};
+  bool dump_depleted_matrices{false};
 };
 }  // namespace modle::tools

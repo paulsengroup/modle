@@ -20,6 +20,7 @@
 #include "modle_tools/config.hpp"   // for config
 #include "modle_tools/convert.hpp"  // for convert_to_hic, convert_to_tsv
 #include "modle_tools/eval.hpp"     // for Transformation, Cross, Linear
+#include "modle_tools/stats.hpp"
 
 namespace modle::tools {
 
@@ -203,24 +204,24 @@ void eval_subcmd(const modle::tools::config& c) {
     fmt::print(stderr, FMT_STRING("Reading contacts for '{}' into memory...\n"), chr_name);
     const auto cmatrix1 = ref_cooler.cooler_to_cmatrix(chr_name, nrows);
     fmt::print(stderr, FMT_STRING("Read {}x{} reference matrix in {} using {:.2f} MB of RAM.\n"),
-               cmatrix1.n_rows(), cmatrix1.n_cols(), absl::FormatDuration(absl::Now() - t0),
+               cmatrix1.nrows(), cmatrix1.ncols(), absl::FormatDuration(absl::Now() - t0),
                cmatrix1.get_matrix_size_in_mb());
     t0 = absl::Now();
     const auto cmatrix2 = input_cooler.cooler_to_cmatrix(chr_name, nrows);
     fmt::print(stderr, FMT_STRING("Read {}x{} input matrix in {} using {:.2f} MB of RAM.\n"),
-               cmatrix2.n_rows(), cmatrix2.n_cols(), absl::FormatDuration(absl::Now() - t0),
+               cmatrix2.nrows(), cmatrix2.ncols(), absl::FormatDuration(absl::Now() - t0),
                cmatrix2.get_matrix_size_in_mb());
 
-    if (cmatrix1.n_cols() != cmatrix2.n_cols() || cmatrix1.n_rows() != cmatrix2.n_rows()) {
+    if (cmatrix1.ncols() != cmatrix2.ncols() || cmatrix1.nrows() != cmatrix2.nrows()) {
       throw std::runtime_error(fmt::format(
           FMT_STRING("An error occurred while computing the correlation for '{}' between files "
                      "'{}' and '{}': Contact matrices should have the same shape "
                      "m1=[{}][{}], m2=[{}][{}]"),
-          chr_name, c.path_to_reference_matrix, path_to_input_cmatrix, cmatrix1.n_rows(),
-          cmatrix1.n_cols(), cmatrix2.n_rows(), cmatrix2.n_cols()));
+          chr_name, c.path_to_reference_matrix, path_to_input_cmatrix, cmatrix1.nrows(),
+          cmatrix1.ncols(), cmatrix2.nrows(), cmatrix2.ncols()));
     }
 
-    const auto ncols = cmatrix1.n_cols();
+    const auto ncols = cmatrix1.ncols();
 
     const auto& v1 = cmatrix1.get_raw_count_vector();
     const auto& v2 = cmatrix2.get_raw_count_vector();
@@ -249,6 +250,49 @@ void eval_subcmd(const modle::tools::config& c) {
   bigwig::close_bigwig_file(bw_pv_linear_spearman);
   bigwig::close_bigwig_file(bw_corr_cross_spearman);
   bigwig::close_bigwig_file(bw_pv_cross_spearman);
+}
+
+void stats_subcmd(const modle::tools::config& c) {
+  assert(c.path_to_input_matrices.size() == 1);  // NOLINT
+  cooler::Cooler f1(c.path_to_input_matrices[0]);
+  std::unique_ptr<cooler::Cooler> f2{nullptr};
+
+  const auto nchroms = f1.get_nchroms();
+  const auto bin_size = f1.get_bin_size();
+  const auto chr_names = f1.get_chr_names();
+  const auto chr_sizes = f1.get_chr_sizes();
+
+  if (c.dump_depleted_matrices) {
+    const auto ext = std::filesystem::path(c.path_to_input_matrices[0]).extension().string();
+    const auto path =
+        absl::StrCat(absl::StripSuffix(c.path_to_input_matrices[0], ext), "_depl", ext);
+    if (!c.force && std::filesystem::exists(path)) {
+      throw std::runtime_error(
+          fmt::format(FMT_STRING("File '{}' already exists. Pass --force to overwrite"), path));
+    }
+    std::filesystem::remove_all(path);
+    f2 = std::make_unique<cooler::Cooler>(path, cooler::Cooler::WRITE_ONLY, bin_size);
+  }
+
+  fmt::print(stdout,
+             "chr_name\ttot_number_of_contacts_1\ttot_number_of_contacts_2\tavg_number_of_contacts_"
+             "1\tavg_number_of_contacts_2\n");
+
+  for (auto i = 0UL; i < nchroms; ++i) {
+    const auto& chr_name = chr_names[i];
+    const auto& chr_size = chr_sizes[i];
+    const auto cmatrix1 = f1.cooler_to_cmatrix(chr_name, c.diagonal_width / bin_size);
+    const auto hist = compute_expected_contacts(cmatrix1);
+    const auto cmatrix2 = subtract_expected_contacts(cmatrix1, hist);
+    fmt::print(
+        stdout, FMT_STRING("{}\t{}\t{}\t{}\t{}\n"), chr_name, cmatrix1.get_tot_contacts(),
+        cmatrix2.get_tot_contacts(),
+        static_cast<double>(cmatrix1.get_tot_contacts()) / static_cast<double>(cmatrix1.npixels()),
+        static_cast<double>(cmatrix2.get_tot_contacts()) / static_cast<double>(cmatrix2.npixels()));
+    if (f2) {
+      f2->write_or_append_cmatrix_to_file(cmatrix2, chr_name, 0L, chr_size, chr_size, true);
+    }
+  }
 }
 
 }  // namespace modle::tools

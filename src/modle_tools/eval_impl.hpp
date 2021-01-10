@@ -24,7 +24,7 @@ std::vector<std::pair<std::string, int64_t>> select_chromosomes_for_eval(
       c.get_chr_names(str_buff);
       c.get_chr_sizes(int_buff);
 
-      assert(str_buff.size() == c.get_n_chroms());
+      assert(str_buff.size() == c.get_nchroms());
       assert(int_buff.size() == str_buff.size());
 
       absl::btree_set<std::pair<std::string, int64_t>> chr_set;

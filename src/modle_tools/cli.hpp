@@ -11,13 +11,14 @@
 #include <cstdint>
 #include <string>
 
+#include "modle/cooler.hpp"
 #include "modle_tools/config.hpp"
 
 namespace modle::tools {
 
 class Cli {
  public:
-  enum subcommand : uint8_t { convert, eval, help };
+  enum subcommand : uint8_t { convert, eval, stats, help };
 
  private:
   int _argc;
@@ -38,7 +39,6 @@ class Cli {
     this->_cli.description("Modle's helper tool. This tool allows to post-process the contact matrix produced by Modle in various ways.");
     this->_cli.require_subcommand(1);
     this->_cli.add_option("-i,--input", this->_config.path_to_input_matrices, "Path to a contact matrix in Cooler format")->check(CLI::ExistingFile)->required();
-    this->_cli.add_option("-o,--output-base-name", this->_config.output_base_name, "Base file name (including directories) to use for output.")->required();
     this->_cli.add_option("--tmp-dir", this->_config.tmp_dir, "Path where to store temporary files.")->capture_default_str();
     this->_cli.add_flag("--keep-temporary-files", this->_config.keep_tmp_files, "Do not delete temporary files.")->capture_default_str();
     this->_cli.add_flag("-f,--force", this->_config.force, "Overwrite existing file(s).")->capture_default_str();
@@ -47,8 +47,11 @@ class Cli {
 
     auto *convert_sc = this->_cli.add_subcommand("convert", "Convert Modle's contact matrix into several popular formats.")->fallthrough();
     auto *eval_sc = this->_cli.add_subcommand("evaluate", "Compare Model's output with other contact matrices using various correlation tests.")->fallthrough();
+    auto *stats_sc = this->_cli.add_subcommand("statistics", "Compute several useful statistics for a given Cooler file.")->fallthrough();
     eval_sc->alias("eval");
+    stats_sc->alias("stats");
 
+    convert_sc->add_option("-o,--output-base-name", this->_config.output_base_name, "Base file name (including directories) to use for output.")->required();
     convert_sc->add_flag("--output-format", this->_config.output_format, "Output file format. Accepted formats are: HIC and TSV.")->capture_default_str();
     convert_sc->add_flag("--add-noise,--make-realistic", this->_config.add_noise, "Add noise to make the contact matrix more similar to the matrices produced by Hi-C experiments.")->capture_default_str();
     convert_sc->add_option("--noise-stdev", this->_config.noise_stdev, "Standard deviation to use when sampling noise to add to contact matrices.")->check(CLI::PositiveNumber)->needs(convert_sc->get_option("--add-noise"));
@@ -57,6 +60,7 @@ class Cli {
     convert_sc->add_option("-c,--chr-sizes", this->_config.chr_sizes, fmt::format("Path to file containing chromosome size(s). Can also be one of the following genome IDs: {}.", absl::StrJoin(this->_allowed_genome_ids, ", ")));
     convert_sc->add_option("--seed", this->_config.seed, "Seed value to use when adding noise to the contact matrix.")->capture_default_str();
 
+    eval_sc->add_option("-o,--output-base-name", this->_config.output_base_name, "Base file name (including directories) to use for output.")->required();
     eval_sc->add_option("--reference-matrix", this->_config.path_to_reference_matrix, "Path to contact matrix to use as reference when computing the correlation. Formats accepted: Cooler.")->required();
     eval_sc->add_option("-n,--chr-name", this->_config.chr_name_hic, "Name of the chromosome whose contacts should be extracted from an .hic file. Required only if different from the name stored in the header of Modle's contact matrix.");
     eval_sc->add_option("--chr-offset", this->_config.chr_offset_hic, "Offset to apply to coordinates read from Modle's contact matrix.")->check(CLI::NonNegativeNumber)->transform(CLI::AsSizeValue(true));
@@ -65,6 +69,10 @@ class Cli {
     eval_sc->add_option("-w,--diagonal-width", this->_config.diagonal_width, "Diagonal width to use when computing correlation coefficients.")->check(CLI::NonNegativeNumber)->required();
     eval_sc->add_option("--sliding-window-size", this->_config.sliding_window_size, "Sliding window size. By default this is set to the diagonal width of ModLE's contact matrix.")->check(CLI::NonNegativeNumber);
     eval_sc->add_option("--sliding-window-overlap", this->_config.sliding_window_overlap, "Overlap between consecutive sliding-windows.")->check(CLI::NonNegativeNumber)->capture_default_str();
+
+    stats_sc->add_option("--bin-size", this->_config.bin_size, "Bin size to use when calculating the statistics. Required in case of MCool files.")->check(CLI::PositiveNumber);
+    stats_sc->add_option("-w,--diagonal-width", this->_config.diagonal_width, "Diagonal width.")->check(CLI::PositiveNumber)->required();
+    stats_sc->add_flag("--dump-depleted-matrices", this->_config.dump_depleted_matrices, "Dump contact matrices used to calculate the normalized average contact density.");
     // clang-format on
   }
 
@@ -174,6 +182,12 @@ class Cli {
             "tools in your path");
       }
     }
+
+    if (this->_cli.get_subcommand("stats")->parsed()) {  // Checks whether the bin size is available
+      // TODO catch error and print a friendly error message
+      cooler::Cooler f(c.path_to_input_matrices[0], cooler::Cooler::READ_ONLY, c.bin_size);
+    }
+
     if (!errors.empty()) {
       fmt::print(stderr, "The following issues have been detected:\n{}\n", errors);
     }
@@ -181,21 +195,24 @@ class Cli {
   }
 
  public:
-  Cli(int argc, char** argv) : _argc(argc), _argv(argv), _exec_name(argv[0]) { this->MakeCli(); }
+  Cli(int argc, char** argv) : _argc(argc), _argv(argv), _exec_name(*argv) { this->MakeCli(); }
   [[nodiscard]] bool is_ok() const {
     return this->_config.exit_code && this->_subcommand != subcommand::help;
   }
   [[nodiscard]] subcommand get_subcommand() const { return this->_subcommand; }
   [[nodiscard]] config parse_arguments() {
-    this->_exec_name = this->_argv[0];
+    this->_exec_name = *this->_argv;
     try {
       this->_cli.parse(this->_argc, this->_argv);
-      if (this->_cli.get_subcommand("convert")->parsed())
+      if (this->_cli.get_subcommand("convert")->parsed()) {
         this->_subcommand = subcommand::convert;
-      else if (this->_cli.get_subcommand("evaluate")->parsed())
+      } else if (this->_cli.get_subcommand("evaluate")->parsed()) {
         this->_subcommand = subcommand::eval;
-      else
+      } else if (this->_cli.get_subcommand("statistics")->parsed()) {
+        this->_subcommand = subcommand::stats;
+      } else {
         this->_subcommand = subcommand::help;
+      }
     } catch (const CLI::ParseError& e) {
       //  This takes care of formatting and printing error messages (if any)
       this->_config.exit_code = this->_cli.exit(e);
