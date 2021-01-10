@@ -167,7 +167,7 @@ class Cooler {
   std::mutex _mutex;  // This mutex protects _datasets and _idx_*_offset during initialization
   std::vector<int64_t> _idx_chrom_offset{};
   std::vector<int64_t> _idx_bin1_offset{};
-  int64_t _nbins{0};
+  hsize_t _nbins{0};
   int64_t _nchroms{0};
   int64_t _nnz{0};
 
@@ -187,7 +187,8 @@ class Cooler {
       T type, hsize_t chunk_size, hsize_t cache_size);
   inline void init_default_datasets();
   inline void open_cooler_datasets();
-  [[nodiscard]] inline hsize_t write_bins(int32_t chrom, int64_t length, int64_t bin_size,
+  template <typename I1, typename I2, typename I3>
+  [[nodiscard]] inline hsize_t write_bins(I1 chrom, I2 length, I3 bin_size,
                                           std::vector<int32_t> &buff32,
                                           std::vector<int64_t> &buff64, hsize_t file_offset,
                                           hsize_t buff_size = 1024 * 1024ULL /  // NOLINT

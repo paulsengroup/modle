@@ -486,7 +486,8 @@ Cooler::~Cooler() {
     auto bin1_idx_offset = this->_dataset_file_offsets[IDX_BIN1];
 
     (void)hdf5::write_number(++this->_nchroms, chrom_idx, chrom_idx_offset);
-    (void)hdf5::write_number(++this->_nbins, bin1_idx, bin1_idx_offset);
+    const auto nbins = static_cast<int64_t>(++this->_nbins);
+    (void)hdf5::write_number(nbins, bin1_idx, bin1_idx_offset);
   }
 }
 
@@ -613,7 +614,7 @@ void Cooler::write_or_append_cmatrix_to_file(const ContactMatrix<I1> &cmatrix,
   // slice NOLINTNEXTLINE
   const std::vector<ContactMatrix<I1> *> cmatrices{const_cast<ContactMatrix<I1> *>(&cmatrix)};
   std::string chr_name_{chr_name.data(), chr_name.size()};
-  write_or_append_cmatrix_to_file(
+  write_or_append_cmatrices_to_file(
       absl::MakeConstSpan(cmatrices), absl::MakeConstSpan(&chr_name_, 1),
       absl::MakeConstSpan(&chr_start, 1), absl::MakeConstSpan(&chr_end, 1),
       absl::MakeConstSpan(&chr_length, 1), quiet);
@@ -636,7 +637,7 @@ void Cooler::write_or_append_cmatrices_to_file(const std::vector<ContactMatrix<I
                                                const std::vector<I2> &chr_starts,
                                                const std::vector<I2> &chr_ends,
                                                const std::vector<I2> &chr_sizes, bool quiet) {
-  Cooler::write_or_append_cmatrix_to_file(
+  Cooler::write_or_append_cmatrices_to_file(
       absl::MakeConstSpan(cmatrices), absl::MakeConstSpan(chr_names),
       absl::MakeConstSpan(chr_starts), absl::MakeConstSpan(chr_ends),
       absl::MakeConstSpan(chr_sizes), quiet);
@@ -653,7 +654,7 @@ void Cooler::write_or_append_cmatrices_to_file(absl::Span<ContactMatrix<I1> *con
 
   assert(this->_bin_size != 0);
 
-  this->_nchroms += cmatrices.size();
+  this->_nchroms += static_cast<int64_t>(cmatrices.size());
   if (const auto n = chr_names.size();
       n != chr_starts.size() || n != chr_ends.size() || n != chr_sizes.size()) {
     utils::throw_with_trace(std::runtime_error(fmt::format(
@@ -718,26 +719,28 @@ void Cooler::write_or_append_cmatrices_to_file(absl::Span<ContactMatrix<I1> *con
                    ? hdf5::read_attribute_int(*this->_fp, "nnz", this->_root_path)
                    : 0;
   // Idx of the first non-zero pixel of the current chr
-  int64_t pxl_offset = hdf5::has_attribute(*this->_fp, "nbins", this->_root_path)
-                           ? hdf5::read_attribute_int(*this->_fp, "nbins", this->_root_path) - 1
-                           : 0;
-  int64_t chr_offset = hdf5::has_attribute(*this->_fp, "nchroms", this->_root_path)
-                           ? hdf5::read_attribute_int(*this->_fp, "nchroms", this->_root_path)
-                           : 0;
-  this->_nbins = pxl_offset;
+  auto pxl_offset =
+      static_cast<hsize_t>(hdf5::has_attribute(*this->_fp, "nbins", this->_root_path)
+                               ? hdf5::read_attribute_int(*this->_fp, "nbins", this->_root_path) - 1
+                               : 0);
+  auto chr_offset =
+      static_cast<hsize_t>(hdf5::has_attribute(*this->_fp, "nchroms", this->_root_path)
+                               ? hdf5::read_attribute_int(*this->_fp, "nchroms", this->_root_path)
+                               : 0);
 
-  for (auto chr_idx = 0UL; chr_offset + static_cast<int64_t>(chr_idx) < this->_nchroms; ++chr_idx) {
+  for (auto chr_idx = 0UL; chr_offset + chr_idx < static_cast<std::size_t>(this->_nchroms);
+       ++chr_idx) {
     // Declare several aliases/variables to improve code readability in later sections
     const auto &cmatrix = cmatrices[chr_idx];
     const auto &chr_name = chr_names[chr_idx];
-    const auto chr_total_len = static_cast<uint64_t>(chr_sizes[chr_idx]);
+    const auto chr_total_len = static_cast<int64_t>(chr_sizes[chr_idx]);
     const auto chr_start = static_cast<uint64_t>(chr_starts[chr_idx]);
     const auto chr_end = static_cast<uint64_t>(chr_ends[chr_idx]);
     const auto chr_simulated_len = chr_end - chr_start;
 
     if (!quiet) {
       fmt::print(stderr, FMT_STRING("Writing contacts for '{}' ({:.2f} Mbp)..."), chr_name,
-                 chr_simulated_len / 1.0e6);  // NOLINT
+                 static_cast<double>(chr_simulated_len) / 1.0e6);  // NOLINT
     }
     const auto t1 = absl::Now();
 
@@ -745,16 +748,16 @@ void Cooler::write_or_append_cmatrices_to_file(absl::Span<ContactMatrix<I1> *con
     chr_name_h5_foffset = hdf5::write_str(chr_name, d[CHR_NAME], STR_TYPE, chr_name_h5_foffset);
     chr_length_h5_foffset = hdf5::write_number(chr_total_len, d[CHR_LEN], chr_length_h5_foffset);
     // Add idx of the first bin belonging to the chromosome that is being processed
-    idx_chrom_offset_buff.push_back(this->_nbins);
+    idx_chrom_offset_buff.emplace_back(this->_nbins);
 
     // Write all fixed-size bins for the current chromosome. Maybe in the future we can switch to
     // use variable-size bins
     this->_nbins = this->write_bins(chr_offset + chr_idx, chr_total_len, this->_bin_size,
                                     bin_chrom_buff, bin_pos_buff, this->_nbins);
     // Update file offsets of bin_* datasets
-    bin_chr_name_h5_foffset = static_cast<hsize_t>(this->_nbins);
-    bin_start_h5_foffset = static_cast<hsize_t>(this->_nbins);
-    bin_end_h5_foffset = static_cast<hsize_t>(this->_nbins);
+    bin_chr_name_h5_foffset = this->_nbins;
+    bin_start_h5_foffset = this->_nbins;
+    bin_end_h5_foffset = this->_nbins;
 
     // In case we are simulating a subset of a chromosome (i.e. end - start != chr size), write the
     // index for all the bins corresponding to genomic coordinates before the start position
@@ -769,7 +772,7 @@ void Cooler::write_or_append_cmatrices_to_file(absl::Span<ContactMatrix<I1> *con
         hdf5::write_numbers(idx_bin1_offset_buff, d[IDX_BIN1], idx_bin1_offset_h5_foffset);
     idx_bin1_offset_buff.clear();
 
-    pxl_offset += static_cast<int64_t>(chr_start / this->_bin_size);
+    pxl_offset += chr_start / this->_bin_size;
     for (auto i = 0UL; i < cmatrix->ncols(); ++i) {  // Iterate over columns in the cmatrix
       // Write first pixel that refers to a given bin1 to the index
       idx_bin1_offset_buff.push_back(this->_nnz);
@@ -783,15 +786,15 @@ void Cooler::write_or_append_cmatrices_to_file(absl::Span<ContactMatrix<I1> *con
 #ifndef NDEBUG
           // Make sure we are always reading from the upper-triangle of the underlying square
           // contact matrix
-          if (pxl_offset + static_cast<int64_t>(i) > pxl_offset + static_cast<int64_t>(j)) {
+          if (pxl_offset + i > pxl_offset + j) {
             utils::throw_with_trace(std::runtime_error(
                 fmt::format(FMT_STRING("Cooler::write_or_append_cmatrix_to_file(): b1 > b2: b1={}; "
                                        "b2={}; offset={}; m={}\n"),
                             pixel_b1_idx_buff.back(), pixel_b2_idx_buff.back(), pxl_offset, m)));
           }
 #endif
-          pixel_b1_idx_buff.push_back(pxl_offset + static_cast<int64_t>(i));
-          pixel_b2_idx_buff.push_back(pxl_offset + static_cast<int64_t>(j));
+          pixel_b1_idx_buff.push_back(static_cast<int64_t>(pxl_offset + i));
+          pixel_b2_idx_buff.push_back(static_cast<int64_t>(pxl_offset + j));
           pixel_count_buff.push_back(m);
           ++this->_nnz;
 
@@ -811,10 +814,11 @@ void Cooler::write_or_append_cmatrices_to_file(absl::Span<ContactMatrix<I1> *con
     // In case we are simulating a subset of a chromosome (i.e. end - start != chr size), write the
     // index for all the bins corresponding to genomic coordinates after the end position.
     // See previous comment for an example
-    idx_bin1_offset_buff.resize(idx_bin1_offset_buff.size() +
-                                    ((chr_total_len - chr_end) / this->_bin_size) +
-                                    ((chr_total_len - chr_end) % this->_bin_size != 0),
-                                this->_nnz);
+    idx_bin1_offset_buff.resize(
+        idx_bin1_offset_buff.size() +
+            ((static_cast<std::size_t>(chr_total_len) - chr_end) / this->_bin_size) +
+            ((static_cast<std::size_t>(chr_total_len) - chr_end) % this->_bin_size != 0),
+        this->_nnz);
     idx_bin1_offset_h5_foffset =
         hdf5::write_numbers(idx_bin1_offset_buff, d[IDX_BIN1], idx_bin1_offset_h5_foffset);
     idx_bin1_offset_buff.clear();
@@ -831,7 +835,7 @@ void Cooler::write_or_append_cmatrices_to_file(absl::Span<ContactMatrix<I1> *con
   }
 
   // Write last entry for index datasets
-  idx_chrom_offset_buff.push_back(this->_nbins);
+  idx_chrom_offset_buff.push_back(static_cast<int64_t>(this->_nbins));
   idx_bin1_offset_buff.push_back(this->_nnz);
 
   // Writing the chr_index only at the end should be ok, given that most of the time we are
@@ -843,7 +847,8 @@ void Cooler::write_or_append_cmatrices_to_file(absl::Span<ContactMatrix<I1> *con
 
   auto &f = *this->_fp;
   hdf5::write_or_create_attribute(f, "nchroms", this->_nchroms);
-  hdf5::write_or_create_attribute(f, "nbins", this->_nbins);
+  const auto nbins = static_cast<int64_t>(this->_nbins);
+  hdf5::write_or_create_attribute(f, "nbins", nbins);
   hdf5::write_or_create_attribute(f, "nnz", this->_nnz);
 
   if (!quiet) {
@@ -852,12 +857,15 @@ void Cooler::write_or_append_cmatrices_to_file(absl::Span<ContactMatrix<I1> *con
   }
 }
 
-hsize_t Cooler::write_bins(int32_t chrom, int64_t length, int64_t bin_size,
-                           std::vector<int32_t> &buff32, std::vector<int64_t> &buff64,
-                           hsize_t file_offset, hsize_t buff_size) {
-  assert(bin_size != 0);
+template <typename I1, typename I2, typename I3>
+hsize_t Cooler::write_bins(I1 chrom_, I2 length_, I3 bin_size_, std::vector<int32_t> &buff32,
+                           std::vector<int64_t> &buff64, hsize_t file_offset, hsize_t buff_size) {
+  assert(bin_size_ != 0);
   buff32.resize(buff_size);
   buff64.resize(buff_size);
+  const auto chrom = static_cast<int32_t>(chrom_);
+  const auto length = static_cast<int64_t>(length_);
+  const auto bin_size = static_cast<int64_t>(bin_size_);
 
   std::fill(buff32.begin(), buff32.end(), chrom);
 
@@ -865,7 +873,8 @@ hsize_t Cooler::write_bins(int32_t chrom, int64_t length, int64_t bin_size,
   int64_t end = std::min(length, bin_size);
   hsize_t bins_processed = 0;
   const int64_t nbins = (length / bin_size) + (length % bin_size != 0);
-  const int64_t nchunks = (nbins / static_cast<int64_t>(buff_size)) + (nbins % buff_size != 0);
+  const int64_t nchunks =
+      (nbins / static_cast<int64_t>(buff_size)) + (nbins % static_cast<int64_t>(buff_size) != 0);
   auto &d = this->_datasets;
 
   for (auto i = 0; i < nchunks; ++i) {

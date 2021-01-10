@@ -224,6 +224,7 @@ void ContactMatrix<I>::set(std::size_t row, std::size_t col, I2 n) {
 #ifndef NDEBUG
   DISABLE_WARNING_PUSH
   DISABLE_WARNING_SIGN_COMPARE
+  DISABLE_WARNING_BOOL_COMPARE
   if (n < std::numeric_limits<I>::min() || n > std::numeric_limits<I>::max()) {
     throw std::runtime_error(
         fmt::format(FMT_STRING("ContactMatrix<I>::set(row={}, col={}, n={}): Overflow detected: "
