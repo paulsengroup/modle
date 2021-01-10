@@ -122,7 +122,7 @@ void Genome::write_contacts_to_file(std::string_view output_file) {
                  this->get_n_chromosomes(), output_file);
     }
     cooler::Cooler c(output_file, cooler::Cooler::WRITE_ONLY, this->_bin_size, chr_name_max_length);
-    c.write_cmatrix_to_file(cmatrices, chr_names, chr_starts, chr_ends, chr_sizes);
+    c.write_or_append_cmatrices_to_file(cmatrices, chr_names, chr_starts, chr_ends, chr_sizes);
     fmt::print(stderr, "Flushing data to disk...\n");
   }
   fmt::print(stderr, FMT_STRING("Writing contacts to file '{}' took {}\n"), output_file,

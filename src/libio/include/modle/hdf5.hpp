@@ -71,6 +71,10 @@ inline void read_attribute(std::string_view path_to_file, std::string_view attr_
                                                 std::string_view attr_name,
                                                 std::string_view path = "/");
 
+template <typename T>
+inline void write_or_create_attribute(H5::H5File &f, std::string_view attr_name, T &buff,
+                                      std::string_view path = "/");
+
 [[nodiscard]] inline bool group_exists(H5::H5File &f, std::string_view name,
                                        std::string_view root_path = "/");
 

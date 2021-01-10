@@ -41,7 +41,7 @@ TEST_CASE("CMatrix to cooler", "[io][cooler][short]") {
   auto c = Cooler(test_file, Cooler::WRITE_ONLY, bin_size);
 
   ContactMatrix<int32_t> cmatrix(nrows, ncols, true);
-  c.write_cmatrix_to_file(cmatrix, "chr0", start, end, end);
+  c.write_or_append_cmatrix_to_file(cmatrix, "chr0", start, end, end);
 
   std::filesystem::remove_all(test_dir);
   if (const auto& p = test_dir.parent_path(); std::filesystem::is_empty(p)) {
@@ -58,9 +58,9 @@ TEST_CASE("Cooler to CMatrix", "[io][cooler][short]") {
 
   auto c = Cooler(test_file, Cooler::READ_ONLY);
 
-  auto cmatrix = c.cooler_to_cmatrix("chr7", nrows);
-  CHECK(cmatrix.n_rows() == nrows);
-  CHECK(cmatrix.n_cols() == ncols);
+  auto cmatrix = c.cooler_to_cmatrix("chr7", nrows, true, false);
+  CHECK(cmatrix.nrows() == nrows);
+  CHECK(cmatrix.ncols() == ncols);
 }
 
 TEST_CASE("Cooler to CMatrix and CMatrix to Cooler", "[io][cooler][short]") {
@@ -76,12 +76,12 @@ TEST_CASE("Cooler to CMatrix and CMatrix to Cooler", "[io][cooler][short]") {
 
   auto c1 = Cooler(test_file_in, Cooler::READ_ONLY);
 
-  const auto cmatrix1 = c1.cooler_to_cmatrix("chr1", nrows);
-  REQUIRE(cmatrix1.n_rows() == nrows);
-  REQUIRE(cmatrix1.n_cols() == ncols);
+  const auto cmatrix1 = c1.cooler_to_cmatrix("chr1", nrows, true, false);
+  REQUIRE(cmatrix1.nrows() == nrows);
+  REQUIRE(cmatrix1.ncols() == ncols);
 
   auto c2 = Cooler(test_file_out, Cooler::WRITE_ONLY, bin_size);
-  c2.write_cmatrix_to_file(cmatrix1, "chr1", start, end, end);
+  c2.write_or_append_cmatrix_to_file(cmatrix1, "chr1", start, end, end);
   const auto cmatrix2 = c2.cooler_to_cmatrix("chr1", nrows);
   const auto& v1 = cmatrix1.get_raw_count_vector();
   const auto& v2 = cmatrix2.get_raw_count_vector();
@@ -116,10 +116,10 @@ TEST_CASE("Cooler testing balanced matrix", "[io][cooler][short]") {
   const auto balanced_cmatrix = c1.cooler_to_cmatrix("chr1", nrows, false, true);
   const auto raw_cmatrix = c1.cooler_to_cmatrix("chr1", nrows, false, false);
 
-  REQUIRE(raw_cmatrix.n_rows() == nrows);
-  REQUIRE(raw_cmatrix.n_cols() == ncols);
-  REQUIRE(raw_cmatrix.n_rows() == balanced_cmatrix.n_rows());
-  REQUIRE(raw_cmatrix.n_cols() == balanced_cmatrix.n_cols());
+  REQUIRE(raw_cmatrix.nrows() == nrows);
+  REQUIRE(raw_cmatrix.ncols() == ncols);
+  REQUIRE(raw_cmatrix.nrows() == balanced_cmatrix.nrows());
+  REQUIRE(raw_cmatrix.ncols() == balanced_cmatrix.ncols());
 
   std::vector<uint64_t> balanced_row_sum(ncols, 0);
   std::vector<uint64_t> raw_row_sum(ncols, 0);

@@ -42,7 +42,7 @@ H5::PredType getH5_type() {
 
 std::string construct_error_stack() {
   std::string buff;
-  auto *f = std::tmpfile();
+  auto *f = std::tmpfile();  // NOLINT
   if (f) {
     H5::Exception::printErrorStack(f);
     fseek(f, 0L, SEEK_END);
@@ -73,27 +73,7 @@ std::string construct_error_stack() {
   H5::Exception::clearErrorStack();
   return buff;
 }
-/*
-std::string construct_error_stack() {
-  std::string buff;
-  // The '+' in front of the declaration is a trick that allows to use the lambda as C function
-  // pointer
-  auto err_handler = +[](unsigned int n, const H5E_error_t *err_desc, void *client_data) {
-    auto *buff_ = reinterpret_cast<std::string *>(client_data);  // NOLINT
-    absl::StrAppendFormat(
-        buff_,
-        "%d:\n  Major: %d\n  Minor: %d\n  Function %s raised an error while processing file "
-        "'%s':\n    %s\n",
-        n, err_desc->maj_num, err_desc->min_num, err_desc->func_name, err_desc->file_name,
-        err_desc->desc != nullptr ? err_desc->desc : "error description not available");
-    return 0;
-  };
 
-  H5::Exception::walkErrorStack(H5E_WALK_DOWNWARD, err_handler, buff.data());
-  H5::Exception::clearErrorStack();
-  return buff;
-}
-*/
 template <typename S>
 hsize_t write_str(const S &str, const H5::DataSet &dataset, const H5::StrType &str_type,
                   hsize_t file_offset) {
@@ -132,7 +112,9 @@ hsize_t write_strings(const CS &strings, const H5::DataSet &dataset, const H5::S
   static_assert(std::is_convertible_v<decltype(*strings.begin()), H5std_string> &&
                     std::is_convertible_v<decltype(*strings.end()), H5std_string>,
                 "CS should be collection whose elements have a type convertible to std::string.");
-  assert(!strings.empty());
+  if (strings.empty()) {
+    return file_offset;
+  }
   for (const auto &s : strings) {
     (void)write_str(s, dataset, str_type, file_offset++);
   }
@@ -177,10 +159,12 @@ hsize_t write_numbers(CN &numbers, const H5::DataSet &dataset, hsize_t file_offs
                 "numbers does not have a suitable ::data() member function.");
   static_assert(std::is_convertible_v<decltype(std::declval<CN &>().size()), std::size_t>,
                 "numbers does not have a suitable ::size() member function.");
+  if (numbers.empty()) {
+    return file_offset;
+  }
   H5::Exception::dontPrint();
 
   using N = std::remove_pointer_t<decltype(numbers.data())>;
-  assert(!numbers.empty());
   constexpr hsize_t RANK{1};
   constexpr hsize_t MAXDIMS{H5S_UNLIMITED};
   const auto num_type = getH5_type<N>();
@@ -443,6 +427,29 @@ int64_t read_attribute_int(std::string_view path_to_file, std::string_view attr_
   H5::H5File f({path_to_file.data(), path_to_file.size()}, H5F_ACC_RDONLY);
   read_attribute(f, attr_name, buff, path);
   return buff;
+}
+
+template <typename T>
+inline void write_or_create_attribute(H5::H5File &f, std::string_view attr_name, T &buff,
+                                      std::string_view path) {
+  // TODO handle array attributes
+  H5::DataSpace attr_space(H5S_SCALAR);
+  const auto full_path = absl::StripPrefix(
+      absl::StrCat(absl::StripSuffix(path, "/"), "/", absl::StripPrefix(attr_name, "/")), "/");
+  if constexpr (std::is_same_v<T, H5::StrType>) {
+    H5::StrType METADATA_STR_TYPE(H5::PredType::C_S1, H5T_VARIABLE);
+    METADATA_STR_TYPE.setCset(H5T_CSET_UTF8);
+    auto attr = hdf5::has_attribute(f, attr_name, path)
+                    ? f.openAttribute(std::string{full_path})
+                    : f.createAttribute(std::string{attr_name}, METADATA_STR_TYPE, attr_space);
+    attr.write(attr.getDataType(), buff);
+
+  } else {
+    auto attr = hdf5::has_attribute(f, attr_name, path)
+                    ? f.openAttribute(std::string{full_path})
+                    : f.createAttribute(std::string{attr_name}, getH5_type<T>(), attr_space);
+    attr.write(attr.getDataType(), &buff);
+  }
 }
 
 bool group_exists(H5::H5File &f, std::string_view name, std::string_view root_path) {
