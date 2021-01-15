@@ -33,7 +33,7 @@ class Cli {
       {"anasPlat1"}, {"bTaurus3"},  {"canFam3"}, {"equCab2"}, {"galGal4"}, {"Pf3D7"},
       {"sacCer3"},   {"sCerS288c"}, {"susScr3"}, {"TAIR10"}};
 
-  void MakeCli() {
+  inline void MakeCli() {
     // clang-format off
     this->_cli.name(this->_exec_name);
     this->_cli.description("Modle's helper tool. This tool allows to post-process the contact matrix produced by Modle in various ways.");
@@ -73,10 +73,13 @@ class Cli {
     stats_sc->add_option("--bin-size", this->_config.bin_size, "Bin size to use when calculating the statistics. Required in case of MCool files.")->check(CLI::PositiveNumber);
     stats_sc->add_option("-w,--diagonal-width", this->_config.diagonal_width, "Diagonal width.")->check(CLI::PositiveNumber)->required();
     stats_sc->add_flag("--dump-depleted-matrices", this->_config.dump_depleted_matrices, "Dump contact matrices used to calculate the normalized average contact density.");
+    stats_sc->add_option("--path-to-histograms", this->_config.output_path_for_histograms, "Path where to output contact histograms.");
+    stats_sc->add_option("--exclude-chromosomes", this->_config.chromosomes_excluded_vect, "Comma-separated list of chromosomes to skip when calculating chromosome statistics.")->delimiter(',');
+    stats_sc->add_option("--depletion-multiplier", this->_config.depletion_multiplier, "Multiplier used to control the magnitude of the depletion.")->check(CLI::NonNegativeNumber)->capture_default_str();
     // clang-format on
   }
 
-  [[nodiscard]] bool validate() {  // TODO: Refactor this function
+  [[nodiscard]] inline bool validate() {  // TODO: Refactor this function
     std::string errors;
     auto& c = this->_config;
     if (!std::filesystem::is_directory(c.output_base_name) &&
@@ -188,19 +191,69 @@ class Cli {
       cooler::Cooler f(c.path_to_input_matrices[0], cooler::Cooler::READ_ONLY, c.bin_size);
     }
 
+    this->validate_stats_args(errors);
+
     if (!errors.empty()) {
       fmt::print(stderr, "The following issues have been detected:\n{}\n", errors);
     }
     return errors.empty();
   }
 
+  inline void validate_stats_args(std::string& errors) {
+    if (!this->_cli.get_subcommand("stats")->parsed()) {
+      return;
+    }
+    const auto& c = this->_config;
+    if (c.path_to_input_matrices.size() != 1) {
+      absl::StrAppendFormat(&errors,
+                            "modle_tools stats expects one contact matrix, but %d were found.\n",
+                            c.path_to_input_matrices.size());
+    }
+
+    try {
+      cooler::Cooler f(c.path_to_input_matrices[0], cooler::Cooler::READ_ONLY, c.bin_size);
+    } catch (const std::runtime_error& e) {
+      if (absl::EndsWith(e.what(),
+                         "A bin size other than 0 is required when calling "
+                         "Cooler::validate_multires_cool_flavor()")) {
+        absl::StrAppendFormat(&errors,
+                              "File '%s' appears to be a multi-resolution Cooler. --bin-size is a "
+                              "mandatory argument when processing .mcool files.\n",
+                              c.path_to_input_matrices[0]);
+      }
+    }
+
+    if (!c.force) {
+      const auto ext = std::filesystem::path(c.path_to_input_matrices[0]).extension().string();
+      const auto path =
+          absl::StrCat(absl::StripSuffix(c.path_to_input_matrices[0], ext), "_depl.cool");
+      if (std::filesystem::exists(path)) {
+        absl::StrAppendFormat(&errors, "File '%s' already exists. Pass --force to overwrite", path);
+      }
+      if (std::filesystem::exists(c.output_path_for_histograms)) {
+        absl::StrAppendFormat(&errors, "File '%s' already exists. Pass --force to overwrite",
+                              c.output_path_for_histograms);
+      }
+    }
+  }
+
+  inline void post_process_cli_args() {
+    this->_config.chromosomes_excluded =
+        absl::flat_hash_set<std::string>(this->_config.chromosomes_excluded_vect.begin(),
+                                         this->_config.chromosomes_excluded_vect.end());
+    std::vector<std::string> v;
+    std::swap(this->_config.chromosomes_excluded_vect, v);
+  }
+
  public:
-  Cli(int argc, char** argv) : _argc(argc), _argv(argv), _exec_name(*argv) { this->MakeCli(); }
-  [[nodiscard]] bool is_ok() const {
+  inline Cli(int argc, char** argv) : _argc(argc), _argv(argv), _exec_name(*argv) {
+    this->MakeCli();
+  }
+  [[nodiscard]] inline bool is_ok() const {
     return this->_config.exit_code && this->_subcommand != subcommand::help;
   }
-  [[nodiscard]] subcommand get_subcommand() const { return this->_subcommand; }
-  [[nodiscard]] config parse_arguments() {
+  [[nodiscard]] inline subcommand get_subcommand() const { return this->_subcommand; }
+  [[nodiscard]] inline config parse_arguments() {
     this->_exec_name = *this->_argv;
     try {
       this->_cli.parse(this->_argc, this->_argv);
@@ -219,6 +272,7 @@ class Cli {
       return this->_config;
     }
     this->_config.exit_code = this->validate();
+    this->post_process_cli_args();
     return this->_config;
   }
 };

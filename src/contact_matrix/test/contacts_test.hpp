@@ -97,7 +97,7 @@ inline void test_with_large_matrix(const std::string& path_to_file) {
 
 TEST_CASE("CMatrix Mask", "[cmatrix][short]") {
   ContactMatrix<uint32_t> m(10, 20);  // NOLINT
-  auto mask = m.generate_mask_for_empty_rows();
+  auto mask = m.generate_mask_for_bins_without_contacts();
   REQUIRE(mask.size() == m.ncols());
   CHECK(mask.none());  // Matrix is full of zeros: bitmask should also be all zeros
 
@@ -109,7 +109,7 @@ TEST_CASE("CMatrix Mask", "[cmatrix][short]") {
   }
   // m.print(true);
 
-  mask = m.generate_mask_for_empty_rows();
+  mask = m.generate_mask_for_bins_without_contacts();
   REQUIRE(mask.size() == m.ncols());
   for (auto i = 0UL; i < mask.size(); ++i) {
     CHECK((i % 2 != 0) == mask[i]);
@@ -123,7 +123,7 @@ TEST_CASE("CMatrix Mask", "[cmatrix][short]") {
     }
   }
 
-  mask = m.generate_mask_for_empty_rows();
+  mask = m.generate_mask_for_bins_without_contacts();
   REQUIRE(mask.size() == m.ncols());
 
   for (auto i = 0UL; i < mask.size(); ++i) {

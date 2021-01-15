@@ -455,8 +455,10 @@ Cooler::Cooler(std::filesystem::path path_to_file, IO_MODE mode, std::size_t bin
   }
   if (this->is_read_only()) {
     this->open_cooler_datasets();
-    this->_bin_size =
-        static_cast<size_t>(hdf5::read_attribute_int(*this->_fp, "bin-size", this->_root_path));
+    if (this->_bin_size == 0) {  // i.e. file is cooler
+      this->_bin_size =
+          static_cast<size_t>(hdf5::read_attribute_int(*this->_fp, "bin-size", this->_root_path));
+    }
   } else {
     this->init_default_datasets();
     this->write_metadata();
@@ -478,16 +480,16 @@ Cooler::Cooler(std::string_view path_to_file, IO_MODE mode, std::size_t bin_size
                      assembly_name, flavor, validate, compression_lvl, chunk_size, cache_size) {}
 
 Cooler::~Cooler() {
-  if (this->_mode == READ_ONLY && this->_nchroms != 0 && this->_nbins != 0) {
+  if (this->_mode == WRITE_ONLY && this->_nchroms != 0 && this->_nbins != 0) {
     assert(this->_fp);
     auto &chrom_idx = this->_datasets[IDX_CHR];
     auto &bin1_idx = this->_datasets[IDX_BIN1];
     auto chrom_idx_offset = this->_dataset_file_offsets[IDX_CHR];
     auto bin1_idx_offset = this->_dataset_file_offsets[IDX_BIN1];
 
-    (void)hdf5::write_number(++this->_nchroms, chrom_idx, chrom_idx_offset);
-    const auto nbins = static_cast<int64_t>(++this->_nbins);
-    (void)hdf5::write_number(nbins, bin1_idx, bin1_idx_offset);
+    (void)hdf5::write_number(++this->_nbins, chrom_idx, chrom_idx_offset);
+    const auto nnz = static_cast<int64_t>(++this->_nnz);
+    (void)hdf5::write_number(nnz, bin1_idx, bin1_idx_offset);
   }
 }
 
@@ -833,10 +835,6 @@ void Cooler::write_or_append_cmatrices_to_file(absl::Span<ContactMatrix<I1> *con
   if (!pixel_b1_idx_buff.empty()) {
     write_pixels_to_file();
   }
-
-  // Write last entry for index datasets
-  idx_chrom_offset_buff.push_back(static_cast<int64_t>(this->_nbins));
-  idx_bin1_offset_buff.push_back(this->_nnz);
 
   // Writing the chr_index only at the end should be ok, given that most of the time we are
   // processing 20-100 chr

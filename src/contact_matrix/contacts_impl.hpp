@@ -500,6 +500,32 @@ std::size_t ContactMatrix<I>::npixels() const {
 }
 
 template <typename I>
+std::size_t ContactMatrix<I>::npixels_after_masking() const {
+  auto npixels = this->npixels();
+  const auto mask = this->generate_mask_for_bins_without_contacts();
+  if (mask.all()) {
+    return npixels;
+  }
+
+  assert(this->nrows() <= this->ncols());
+  for (auto i = 0UL; i < mask.size(); ++i) {
+    if (!mask[i]) {
+      if (i < this->nrows()) {
+        assert(this->nrows() + i <= npixels);
+        npixels -= this->nrows() + i;
+      } else if (i > this->ncols() - this->nrows()) {
+        assert(this->ncols() - i <= npixels);
+        npixels -= this->nrows() + this->ncols() - i;
+      } else {
+        npixels -= (2 * this->nrows()) - 1;
+      }
+    }
+  }
+  assert(npixels <= this->npixels());
+  return npixels;
+}
+
+template <typename I>
 std::pair<uint32_t, uint32_t> ContactMatrix<I>::write_to_tsv(const std::string &path_to_file,
                                                              std::string_view header,
                                                              int bzip2_block_size) const {
@@ -691,13 +717,14 @@ std::pair<uint32_t, uint32_t> ContactMatrix<I>::write_full_matrix_to_tsv(
 }
 
 template <typename I>
-boost::dynamic_bitset<> ContactMatrix<I>::generate_mask_for_empty_rows() const {
-  boost::dynamic_bitset<> mask(this->ncols());
-  this->generate_mask_for_empty_rows(mask);
+boost::dynamic_bitset<> ContactMatrix<I>::generate_mask_for_bins_without_contacts() const {
+  boost::dynamic_bitset<> mask{};
+  this->generate_mask_for_bins_without_contacts(mask);
   return mask;
 }
 template <typename I>
-void ContactMatrix<I>::generate_mask_for_empty_rows(boost::dynamic_bitset<> &mask) const {
+void ContactMatrix<I>::generate_mask_for_bins_without_contacts(
+    boost::dynamic_bitset<> &mask) const {
   mask.resize(this->ncols());
   mask.reset();
   for (auto i = 0UL; i < this->ncols(); ++i) {

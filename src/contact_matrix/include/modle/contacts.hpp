@@ -57,6 +57,7 @@ class ContactMatrix {
   [[nodiscard]] inline std::size_t ncols() const;
   [[nodiscard]] inline std::size_t nrows() const;
   [[nodiscard]] inline std::size_t npixels() const;
+  [[nodiscard]] inline std::size_t npixels_after_masking() const;
   inline std::pair<uint32_t /* bytes_in */, uint32_t /* bytes_out */> write_full_matrix_to_tsv(
       const std::string& path_to_file, int bzip2_block_size = 9) const;
   inline std::pair<uint32_t /* bytes_in */, uint32_t /* bytes_out */> write_to_tsv(
@@ -73,8 +74,8 @@ class ContactMatrix {
                                                   bool rewind_file = false);
   [[nodiscard]] inline uint64_t get_matrix_size_in_bytes() const;
   [[nodiscard]] inline double get_matrix_size_in_mb() const;
-  inline void generate_mask_for_empty_rows(boost::dynamic_bitset<>& mask) const;
-  [[nodiscard]] inline boost::dynamic_bitset<> generate_mask_for_empty_rows() const;
+  inline void generate_mask_for_bins_without_contacts(boost::dynamic_bitset<>& mask) const;
+  [[nodiscard]] inline boost::dynamic_bitset<> generate_mask_for_bins_without_contacts() const;
   inline void reset();
 
  private:

@@ -1,5 +1,7 @@
 #pragma once
 
+#include <absl/container/flat_hash_set.h>
+
 #include <cstdint>
 #include <filesystem>
 #include <string>
@@ -46,5 +48,9 @@ struct config {
   std::size_t nthreads{std::thread::hardware_concurrency()};
   std::size_t bin_size{0};
   bool dump_depleted_matrices{false};
+  std::string output_path_for_histograms{};
+  std::vector<std::string> chromosomes_excluded_vect{};
+  absl::flat_hash_set<std::string> chromosomes_excluded{};
+  double depletion_multiplier{1.0};
 };
 }  // namespace modle::tools

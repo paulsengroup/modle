@@ -254,45 +254,103 @@ void eval_subcmd(const modle::tools::config& c) {
 
 void stats_subcmd(const modle::tools::config& c) {
   assert(c.path_to_input_matrices.size() == 1);  // NOLINT
-  cooler::Cooler f1(c.path_to_input_matrices[0]);
-  std::unique_ptr<cooler::Cooler> f2{nullptr};
+  const auto& path_to_input_matrix = c.path_to_input_matrices.front();
+  const auto& path_to_output_hist = c.output_path_for_histograms;
 
-  const auto nchroms = f1.get_nchroms();
-  const auto bin_size = f1.get_bin_size();
-  const auto chr_names = f1.get_chr_names();
-  const auto chr_sizes = f1.get_chr_sizes();
+  cooler::Cooler m1(path_to_input_matrix, cooler::Cooler::READ_ONLY, c.bin_size);
 
-  if (c.dump_depleted_matrices) {
-    const auto ext = std::filesystem::path(c.path_to_input_matrices[0]).extension().string();
-    const auto path =
-        absl::StrCat(absl::StripSuffix(c.path_to_input_matrices[0], ext), "_depl", ext);
-    if (!c.force && std::filesystem::exists(path)) {
-      throw std::runtime_error(
-          fmt::format(FMT_STRING("File '{}' already exists. Pass --force to overwrite"), path));
-    }
+  std::unique_ptr<cooler::Cooler> m2{nullptr};
+  std::unique_ptr<std::ofstream> hist_file{nullptr};
+
+  const auto nchroms = m1.get_nchroms();
+  const auto bin_size = c.bin_size;
+  const auto chr_names = m1.get_chr_names();
+  const auto chr_sizes = m1.get_chr_sizes();
+
+  if (c.dump_depleted_matrices) {  // Create cooler file to write depl. contacts
+    const auto ext = std::filesystem::path(path_to_input_matrix).extension().string();
+    const auto path = absl::StrCat(absl::StripSuffix(path_to_input_matrix, ext), "_depl.cool");
     std::filesystem::remove_all(path);
-    f2 = std::make_unique<cooler::Cooler>(path, cooler::Cooler::WRITE_ONLY, bin_size);
+    m2 = std::make_unique<cooler::Cooler>(path, cooler::Cooler::WRITE_ONLY, bin_size);
   }
 
+  if (!path_to_output_hist.empty()) {  // Create hist. file
+    std::filesystem::create_directories(std::filesystem::path(path_to_output_hist).parent_path());
+    hist_file = std::make_unique<std::ofstream>(path_to_output_hist);
+    std::vector<std::size_t> buff(c.diagonal_width / bin_size);
+    std::iota(buff.begin(), buff.end(), 0);
+    // TODO: Consider whether it make sense to write this header
+    fmt::print(*hist_file, "#{}\n", absl::StrJoin(buff, "\t"));
+  }
+
+  // Write header
   fmt::print(stdout,
              "chr_name\ttot_number_of_contacts_1\ttot_number_of_contacts_2\tavg_number_of_contacts_"
-             "1\tavg_number_of_contacts_2\n");
+             "1\tavg_number_of_contacts_2\tfraction_of_graylisted_bins\n");
+
+  std::size_t tot_contacts = 0;
+  std::size_t tot_contacts_after_depl = 0;
+  std::size_t tot_number_of_pixels = 0;
 
   for (auto i = 0UL; i < nchroms; ++i) {
     const auto& chr_name = chr_names[i];
     const auto& chr_size = chr_sizes[i];
-    const auto cmatrix1 = f1.cooler_to_cmatrix(chr_name, c.diagonal_width / bin_size);
-    const auto hist = compute_expected_contacts(cmatrix1);
-    const auto cmatrix2 = subtract_expected_contacts(cmatrix1, hist);
-    fmt::print(
-        stdout, FMT_STRING("{}\t{}\t{}\t{}\t{}\n"), chr_name, cmatrix1.get_tot_contacts(),
-        cmatrix2.get_tot_contacts(),
-        static_cast<double>(cmatrix1.get_tot_contacts()) / static_cast<double>(cmatrix1.npixels()),
-        static_cast<double>(cmatrix2.get_tot_contacts()) / static_cast<double>(cmatrix2.npixels()));
-    if (f2) {
-      f2->write_or_append_cmatrix_to_file(cmatrix2, chr_name, 0L, chr_size, chr_size, true);
+
+    // Skip chromosome found in the exclusion list
+    if (c.chromosomes_excluded.contains(chr_name)) {
+      continue;
+    }
+
+    // Read contacts for chr_name into memory
+    const auto cmatrix = m1.cooler_to_cmatrix(chr_name, c.diagonal_width / bin_size);
+
+    const auto hist = compute_row_wise_contact_histogram(cmatrix);
+    const auto mask = cmatrix.generate_mask_for_bins_without_contacts();
+
+    const auto chr_contacts = cmatrix.get_tot_contacts();
+    const auto chr_contacts_after_depl = compute_number_of_contacts_after_depletion(
+        cmatrix, hist, mask.count(), c.depletion_multiplier);
+    assert(chr_contacts_after_depl <= chr_contacts);  // NOLINT
+
+    const auto chr_avg_contacts =
+        static_cast<double>(chr_contacts) / static_cast<double>(cmatrix.npixels_after_masking());
+    const auto chr_avg_contacts_after_depl = static_cast<double>(chr_contacts_after_depl) /
+                                             static_cast<double>(cmatrix.npixels_after_masking());
+    const auto fraction_of_graylisted_bins =
+        1.0 - (static_cast<double>(cmatrix.npixels_after_masking()) /  // NOLINT
+               static_cast<double>(cmatrix.npixels()));
+
+    tot_contacts += chr_contacts;
+    tot_contacts_after_depl += chr_contacts_after_depl;
+    tot_number_of_pixels += cmatrix.npixels_after_masking();
+
+    // clang-format off
+    fmt::print(stdout, FMT_STRING("{}\t{}\t{}\t{}\t{}\t{}\n"),
+               chr_name,
+               chr_contacts,
+               chr_contacts_after_depl,
+               chr_avg_contacts,
+               chr_avg_contacts_after_depl,
+               fraction_of_graylisted_bins);
+    // clang-format on
+
+    if (hist_file) {
+      fmt::print(*hist_file, "{}\n", absl::StrJoin(hist, "\t"));
+    }
+
+    if (m2) {
+      m2->write_or_append_cmatrix_to_file(
+          compute_depl_cmatrix(cmatrix, hist, mask, c.depletion_multiplier), chr_name, 0L, chr_size,
+          chr_size, true);
     }
   }
+
+  fmt::print(
+      stdout, FMT_STRING("{}\t{}\t{}\t{}\t{}\t{}\n"),
+      // TODO Output grand averages
+      "grand_average", tot_contacts, tot_contacts_after_depl,
+      static_cast<double>(tot_contacts) / static_cast<double>(tot_number_of_pixels),
+      static_cast<double>(tot_contacts_after_depl) / static_cast<double>(tot_number_of_pixels), 0);
 }
 
 }  // namespace modle::tools
