@@ -1,5 +1,8 @@
 #pragma once
 
+#ifdef USE_XOSHIRO
+#include <XoshiroCpp.hpp>
+#endif
 #include <cstdint>      // for uint*_t, UINT*_MAX
 #include <iosfwd>       // for size_t
 #include <memory>       // for unique_ptr
@@ -10,6 +13,14 @@
 #include "modle/common.hpp"
 
 namespace modle {
+
+#ifdef USE_XOSHIRO
+using PRNG = XoshiroCpp::Xoshiro256PlusPlus;
+using seeder = XoshiroCpp::SplitMix64;
+#else
+using PRNG = std::mt19937_64;
+using seeder = std::seed_seq;
+#endif
 
 struct Chromosome;
 class ExtrusionBarrier;
@@ -51,15 +62,15 @@ class Lef {
   inline void reset_tot_bp_extruded();
 
   /// Calls extrude on the ExtrusionUnit%s. Returns the number of bp extruded
-  inline uint32_t extrude(std::mt19937& rand_eng);
+  inline uint32_t extrude(modle::PRNG& rand_eng);
   /// Register a contact between the DNA::Bin%s associated with the left and right ExtrusionUnit%s
   inline void register_contact();
   [[nodiscard]] inline std::pair<DNA::Bin*, DNA::Bin*> get_ptr_to_bins();
   [[nodiscard]] inline bool is_bound() const;
-  inline void randomly_bind_to_chr(Chromosome* chr, std::mt19937& rand_eng,
+  inline void randomly_bind_to_chr(Chromosome* chr, modle::PRNG& rand_eng,
                                    bool register_contact = false);
   inline void assign_to_chr(Chromosome* chr);
-  inline void bind_at_pos(Chromosome* chr, uint32_t pos, std::mt19937& rand_eng,
+  inline void bind_at_pos(Chromosome* chr, uint32_t pos, modle::PRNG& rand_eng,
                           bool register_contact);
   /** Call ExtrusionUnit::check_constraints on the left and right ExtrusionUnit%s, which in turn
    * check whether there last round of extrusion produced a collision between one of the
@@ -68,10 +79,10 @@ class Lef {
    *
    * This function also takes care of extending Lef%'s lifetime where appropriate.
    */
-  inline void check_constraints(std::mt19937& rang_eng);
-  inline bool try_rebind(std::mt19937& rand_eng, double prob_of_rebinding, bool register_contact);
-  inline bool try_rebind(std::mt19937& rand_eng);
-  inline std::size_t bind_at_random_pos(std::mt19937& rand_eng, bool register_contact = false);
+  inline void check_constraints(modle::PRNG& rang_eng);
+  inline bool try_rebind(modle::PRNG& rand_eng, double prob_of_rebinding, bool register_contact);
+  inline bool try_rebind(modle::PRNG& rand_eng);
+  inline std::size_t bind_at_random_pos(modle::PRNG& rand_eng, bool register_contact = false);
 
  private:
   Chromosome* _chr{nullptr};
@@ -110,8 +121,8 @@ class ExtrusionUnit {
   [[nodiscard]] inline dna::Direction get_extr_direction() const;
   [[nodiscard]] inline bool is_stalled() const;
   [[nodiscard]] inline bool is_bound() const;
-  inline uint64_t check_constraints(std::mt19937& rand_eng);
-  inline bool try_extrude(std::mt19937& rand_eng);
+  inline uint64_t check_constraints(modle::PRNG& rand_eng);
+  inline bool try_extrude(modle::PRNG& rand_eng);
   [[nodiscard]] inline double get_prob_of_extr_unit_bypass() const;
   [[nodiscard]] inline std::size_t get_bin_index() const;
 
@@ -128,10 +139,10 @@ class ExtrusionUnit {
   inline void decrement_stalls(uint32_t n = 1);
   inline void reset_stalls();
   inline void unload();
-  inline void bind(Chromosome* chr, uint32_t pos, dna::Direction direction, std::mt19937& rand_eng);
+  inline void bind(Chromosome* chr, uint32_t pos, dna::Direction direction, modle::PRNG& rand_eng);
 
-  inline uint32_t check_for_extruder_collisions(std::mt19937& rang_eng);
-  [[nodiscard]] inline uint64_t check_for_extrusion_barrier(std::mt19937& rang_eng);
+  inline uint32_t check_for_extruder_collisions(modle::PRNG& rang_eng);
+  [[nodiscard]] inline uint64_t check_for_extrusion_barrier(modle::PRNG& rang_eng);
   inline bool try_moving_to_next_bin();
   inline bool try_moving_to_prev_bin();
   [[nodiscard]] inline bool hard_stall() const;

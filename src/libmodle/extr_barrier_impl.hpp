@@ -1,5 +1,8 @@
 #pragma once
 
+#ifdef USE_XOSHIRO
+#include <XoshiroCpp.hpp>
+#endif
 #include <cassert>
 #include <cstdint>
 #include <random>
@@ -27,7 +30,7 @@ dna::Direction ExtrusionBarrier::get_direction_of_block() const {
   return this->_direction == dna::Direction::fwd ? dna::Direction::rev : dna::Direction::fwd;
 }
 
-uint32_t ExtrusionBarrier::generate_num_stalls(std::mt19937 &rand_eng) {
+uint32_t ExtrusionBarrier::generate_num_stalls(modle::PRNG &rand_eng) {
   return this->_n_stall_generator(rand_eng);
 }
 

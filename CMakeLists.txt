@@ -68,6 +68,10 @@ if(ENABLE_PCH)
   endif()
 endif()
 
+if(ENABLE_XOSHIRO)
+  target_compile_definitions(project_options INTERFACE USE_XOSHIRO)
+endif()
+
 #[[
 # Make sure compiler support execution policies (C++17)
 include(CheckIncludeFileCXX)

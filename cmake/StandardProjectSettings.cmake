@@ -43,3 +43,5 @@ SET(ARCH
 if(ENABLE_PSO AND NOT MSVC)
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -march=${ARCH}")
 endif()
+
+option(ENABLE_XOSHIRO "Use Xoshiro as default PRNG engine" OFF)

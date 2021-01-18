@@ -1,6 +1,9 @@
 #pragma once
 
 #include <fmt/format.h>  // for format
+#ifdef USE_XOSHIRO
+#include <XoshiroCpp.hpp>
+#endif
 
 #include <algorithm>  // for min
 #include <cassert>
@@ -33,7 +36,7 @@ double ExtrusionUnit::get_prob_of_extr_unit_bypass() const {
 
 std::size_t ExtrusionUnit::get_bin_index() const { return this->_bin->get_index(); }
 
-bool ExtrusionUnit::try_extrude(std::mt19937& rand_eng) {
+bool ExtrusionUnit::try_extrude(modle::PRNG& rand_eng) {
   assert(this->_direction == dna::Direction::fwd ||  // NOLINT
          this->_direction == dna::Direction::rev);   // NOLINT
   assert(this->_bin != nullptr);                     // NOLINT
@@ -104,7 +107,7 @@ void ExtrusionUnit::unload() {
 }
 
 void ExtrusionUnit::bind(Chromosome* chr, uint32_t pos, dna::Direction direction,
-                         std::mt19937& rand_eng) {
+                         modle::PRNG& rand_eng) {
   // TODO: We should also set a stall if another extr unit with the proper orientation is bound to
   // this bin
   if (pos >= chr->end) {
@@ -131,7 +134,7 @@ void ExtrusionUnit::bind(Chromosome* chr, uint32_t pos, dna::Direction direction
 
 bool ExtrusionUnit::is_bound() const { return this->_bin != nullptr; }
 
-uint64_t ExtrusionUnit::check_constraints(std::mt19937& rand_eng) {
+uint64_t ExtrusionUnit::check_constraints(modle::PRNG& rand_eng) {
   if (this->is_stalled()) {
     return 0;
   }
@@ -150,7 +153,7 @@ uint64_t ExtrusionUnit::check_constraints(std::mt19937& rand_eng) {
   }
 }
 
-uint32_t ExtrusionUnit::check_for_extruder_collisions(std::mt19937& rang_eng) {
+uint32_t ExtrusionUnit::check_for_extruder_collisions(modle::PRNG& rang_eng) {
   assert(!this->is_stalled());                       // NOLINT
   assert(this->_direction == dna::Direction::fwd ||  // NOLINT
          this->_direction == dna::Direction::rev);   // NOLINT
@@ -180,7 +183,7 @@ uint32_t ExtrusionUnit::check_for_extruder_collisions(std::mt19937& rang_eng) {
   return n_stalls;
 }
 
-uint64_t ExtrusionUnit::check_for_extrusion_barrier(std::mt19937& rang_eng) {
+uint64_t ExtrusionUnit::check_for_extrusion_barrier(modle::PRNG& rang_eng) {
   uint32_t applied_stall = 0;
   if (this->get_extr_direction() == dna::fwd) {
     this->_blocking_barrier = this->_bin->get_ptr_to_next_extr_barrier(this->_blocking_barrier);
@@ -212,7 +215,7 @@ bool Lef::is_bound() const {
   return this->_left_unit->is_bound();
 }
 
-void Lef::randomly_bind_to_chr(Chromosome* chr, std::mt19937& rand_eng, bool register_contact) {
+void Lef::randomly_bind_to_chr(Chromosome* chr, modle::PRNG& rand_eng, bool register_contact) {
   std::uniform_int_distribution<uint32_t> pos(0,
                                               static_cast<uint32_t>(chr->simulated_length() - 1));
   this->bind_at_pos(chr, pos(rand_eng), rand_eng, register_contact);
@@ -220,8 +223,7 @@ void Lef::randomly_bind_to_chr(Chromosome* chr, std::mt19937& rand_eng, bool reg
 
 void Lef::assign_to_chr(Chromosome* chr) { this->_chr = chr; }
 
-void Lef::bind_at_pos(Chromosome* chr, uint32_t pos, std::mt19937& rand_eng,
-                      bool register_contact) {
+void Lef::bind_at_pos(Chromosome* chr, uint32_t pos, modle::PRNG& rand_eng, bool register_contact) {
   assert(!this->_left_unit->is_bound() && !this->_right_unit->is_bound());  // NOLINT
   this->_chr = chr;
   this->_binding_pos = pos;
@@ -259,7 +261,7 @@ void Lef::unload() {
   this->_lifetime = 0;  // Probably unnecessary
 }
 
-uint32_t Lef::extrude(std::mt19937& rand_eng) {
+uint32_t Lef::extrude(modle::PRNG& rand_eng) {
   if (this->_lifetime-- > 0) {
     const auto bp_extruded =  // NOLINTNEXTLINE(readability-implicit-bool-conversion)
         static_cast<uint64_t>(this->_left_unit->try_extrude(rand_eng) +
@@ -281,7 +283,7 @@ void Lef::register_contact() {
   }
 }
 
-void Lef::check_constraints(std::mt19937& rang_eng) {
+void Lef::check_constraints(modle::PRNG& rang_eng) {
   if (this->_left_unit->is_stalled() && this->_right_unit->is_stalled()) {
     return;
   }
@@ -305,7 +307,7 @@ uint32_t Lef::get_loop_size() const {
 
 uint32_t Lef::get_avg_processivity() const { return this->_avg_processivity; }
 
-bool Lef::try_rebind(std::mt19937& rand_eng, double prob_of_rebinding, bool register_contact) {
+bool Lef::try_rebind(modle::PRNG& rand_eng, double prob_of_rebinding, bool register_contact) {
   assert(!this->is_bound());                                 // NOLINT
   assert(prob_of_rebinding >= 0 && prob_of_rebinding <= 1);  // NOLINT
 
@@ -316,9 +318,9 @@ bool Lef::try_rebind(std::mt19937& rand_eng, double prob_of_rebinding, bool regi
   return false;
 }
 
-bool Lef::try_rebind(std::mt19937& rand_eng) { return this->try_rebind(rand_eng, 1, false); }
+bool Lef::try_rebind(modle::PRNG& rand_eng) { return this->try_rebind(rand_eng, 1, false); }
 
-std::size_t Lef::bind_at_random_pos(std::mt19937& rand_eng, bool register_contact) {
+std::size_t Lef::bind_at_random_pos(modle::PRNG& rand_eng, bool register_contact) {
   this->try_rebind(rand_eng, 1, register_contact);
   return this->get_pos().first;
 }

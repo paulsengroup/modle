@@ -1,11 +1,22 @@
 #pragma once
 
+#ifdef USE_XOSHIRO
+#include <XoshiroCpp.hpp>
+#endif
 #include <cstdint>  // for uint64_t
 #include <random>   // for geometric_distribution
 
 #include "modle/common.hpp"
 
 namespace modle {
+
+#ifdef USE_XOSHIRO
+using PRNG = XoshiroCpp::Xoshiro256PlusPlus;
+using seeder = XoshiroCpp::SplitMix64;
+#else
+using PRNG = std::mt19937_64;
+using seeder = std::seed_seq;
+#endif
 
 /** \brief Simple class to model a loop extrusion barrier
  *
@@ -22,7 +33,7 @@ class ExtrusionBarrier {
   [[nodiscard]] inline double get_prob_of_block() const;
   [[nodiscard]] inline dna::Direction get_direction_of_block() const;
   [[nodiscard]] inline dna::Direction get_motif_direction() const;
-  [[nodiscard]] inline uint32_t generate_num_stalls(std::mt19937& rand_eng);
+  [[nodiscard]] inline uint32_t generate_num_stalls(modle::PRNG& rand_eng);
   [[nodiscard]] inline bool operator<(const ExtrusionBarrier& other) const;
 
  private:

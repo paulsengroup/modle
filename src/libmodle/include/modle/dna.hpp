@@ -1,11 +1,13 @@
 #pragma once
 
 #include <absl/container/inlined_vector.h>
+#ifdef USE_XOSHIRO
+#include <XoshiroCpp.hpp>
+#endif
 
 #include <cstdint>  // for uint*_t
 #include <iosfwd>   // for size_t
 #include <memory>   // unique_ptr
-#include <random>   // for mt19937
 #include <string>
 #include <string_view>
 #include <vector>
@@ -14,6 +16,14 @@
 #include "modle/contacts.hpp"  // for ContactMatrix
 
 namespace modle {
+
+#ifdef USE_XOSHIRO
+using PRNG = XoshiroCpp::Xoshiro256PlusPlus;
+using seeder = XoshiroCpp::SplitMix64;
+#else
+using PRNG = std::mt19937_64;
+using seeder = std::seed_seq;
+#endif
 
 // Pre-declarations
 class ExtrusionBarrier;
@@ -232,7 +242,7 @@ struct Chromosome {
   std::vector<ExtrusionBarrier*> barriers;
   std::vector<Lef*> lefs;
   ContactMatrix<uint32_t> contacts;  ///< ContactMatrix for the DNA::Bin%s from Chromosome::dna.
-  std::mt19937 _rand_eng;
+  modle::PRNG _rand_eng;
 
  private:
   uint64_t _seed;

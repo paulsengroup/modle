@@ -4,6 +4,9 @@
 #include <absl/time/clock.h>  // for Now
 #include <absl/time/time.h>   // for FormatDuration, Time
 #include <fmt/format.h>       // for FMT_STRING
+#ifdef USE_XOSHIRO
+#include <XoshiroCpp.hpp>
+#endif
 
 #include <algorithm>  // for max, min, sort, transform, all_of, for_each, remove_if
 #include <atomic>     // for atomic, memory_order_relaxed
@@ -37,6 +40,14 @@
 #include "modle/suppress_compiler_warnings.hpp"
 
 namespace modle {
+
+#ifdef USE_XOSHIRO
+using PRNG = XoshiroCpp::Xoshiro256PlusPlus;
+using seeder = XoshiroCpp::SplitMix64;
+#else
+using PRNG = std::mt19937_64;
+using seeder = std::seed_seq;
+#endif
 
 Genome::Genome(const config& c)
     : _seed(c.seed),
@@ -336,9 +347,17 @@ std::pair<double, double> Genome::run_burnin(double prob_of_rebinding,
   for (auto nchr = 0U; nchr < this->get_n_chromosomes(); ++nchr) {
     boost::asio::post(tpool, [&, nchr]() {
       const auto& chr = this->_chromosomes[nchr];
-      std::seed_seq seed{this->_seed + std::hash<std::string>{}(chr.name) +
-                         std::hash<uint64_t>{}(chr.simulated_length())};
-      std::mt19937 rand_eng{seed};
+
+      // TODO change seeding here, otherwise the same numbers will be sampled at the beginning of
+      // the actual simulation
+      const auto seed = this->_seed + std::hash<std::string>{}(chr.name) +
+                        std::hash<uint64_t>{}(chr.simulated_length());
+      modle::seeder seeder{seed};
+#ifdef USE_XOSHIRO
+      modle::PRNG rand_eng(seeder.generateSeedSequence<4>());
+#else
+      modle::PRNG rand_eng{seeder};
+#endif
 
       double avg_num_of_extr_events_per_bind =
           (static_cast<double>(this->_avg_lef_processivity) / chr.get_bin_size()) /
@@ -612,8 +631,12 @@ void Genome::randomly_generate_extrusion_barriers(I n_barriers, uint64_t seed) {
   std::discrete_distribution<std::size_t> chr_idx(weights.begin(), weights.end());
   // NOLINTNEXTLINE(readability-magic-numbers, cppcoreguidelines-avoid-magic-numbers)
   std::bernoulli_distribution strand_selector(0.5);
-  std::seed_seq seeder{seed + n_barriers};
-  std::mt19937 rand_eng{seeder};
+  modle::seeder seeder{seed + n_barriers};
+#ifdef USE_XOSHIRO
+  modle::PRNG rand_eng(seeder.generateSeedSequence<4>());
+#else
+  modle::PRNG rand_eng{seeder};
+#endif
 
   for (I i = 0UL; i < n_barriers; ++i) {
     // Randomly select a chromosome, barrier binding pos and direction

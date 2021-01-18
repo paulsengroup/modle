@@ -5,6 +5,9 @@
 #include <absl/time/time.h>   // for FormatDuration, Time
 #include <fmt/format.h>       // for system_error
 #include <fmt/ostream.h>      // for print
+#ifdef USE_XOSHIRO
+#include <XoshiroCpp.hpp>
+#endif
 
 #include <algorithm>                         // for min, find_if, sort
 #include <boost/iostreams/filter/bzip2.hpp>  // for basic_bzip2_compressor, bzip2_error, bzip2_compressor
@@ -475,8 +478,13 @@ Chromosome::Chromosome(std::string chr_name, uint64_t length, uint32_t bin_size,
     this->allocate();
   }
 
-  std::seed_seq seeder{this->_seed};
-  this->_rand_eng = std::mt19937(seeder);
+#ifdef USE_XOSHIRO
+  modle::seeder seeder(this->_seed);
+  this->_rand_eng = modle::PRNG(seeder.generateSeedSequence<4>());
+#else
+  modle::seeder seeder{this->_seed};
+  this->_rand_eng = modle::PRNG(seeder);
+#endif
 }
 
 Chromosome::Chromosome(std::string chr_name, uint64_t chr_start, uint64_t chr_end, uint64_t length,
@@ -495,8 +503,13 @@ Chromosome::Chromosome(std::string chr_name, uint64_t chr_start, uint64_t chr_en
     this->allocate();
   }
 
-  std::seed_seq seeder{this->_seed};
-  this->_rand_eng = std::mt19937(seeder);
+#ifdef USE_XOSHIRO
+  modle::seeder seeder(this->_seed);
+  this->_rand_eng = modle::PRNG(seeder.generateSeedSequence<4>());
+#else
+  modle::seeder seeder{this->_seed};
+  this->_rand_eng = modle::PRNG(seeder);
+#endif
 }
 
 uint64_t Chromosome::simulated_length() const { return this->end - this->start; }
