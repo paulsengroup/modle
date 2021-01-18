@@ -309,7 +309,7 @@ bool Lef::try_rebind(std::mt19937& rand_eng, double prob_of_rebinding, bool regi
   assert(!this->is_bound());                                 // NOLINT
   assert(prob_of_rebinding >= 0 && prob_of_rebinding <= 1);  // NOLINT
 
-  if (this->_prob_of_rebind_generator(rand_eng) <= prob_of_rebinding) {
+  if (prob_of_rebinding == 1.0 || this->_prob_of_rebind_generator(rand_eng) <= prob_of_rebinding) {
     this->randomly_bind_to_chr(this->_chr, rand_eng, register_contact);
     return true;
   }
