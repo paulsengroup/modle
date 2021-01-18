@@ -346,19 +346,7 @@ std::pair<double, double> Genome::run_burnin(double prob_of_rebinding,
   boost::asio::thread_pool tpool(std::min(this->get_n_chromosomes(), this->_nthreads));
   for (auto nchr = 0U; nchr < this->get_n_chromosomes(); ++nchr) {
     boost::asio::post(tpool, [&, nchr]() {
-      const auto& chr = this->_chromosomes[nchr];
-
-      // TODO change seeding here, otherwise the same numbers will be sampled at the beginning of
-      // the actual simulation
-      const auto seed = this->_seed + std::hash<std::string>{}(chr.name) +
-                        std::hash<uint64_t>{}(chr.simulated_length());
-      modle::seeder seeder{seed};
-#ifdef USE_XOSHIRO
-      modle::PRNG rand_eng(seeder.generateSeedSequence<4>());
-#else
-      modle::PRNG rand_eng{seeder};
-#endif
-
+      auto& chr = this->_chromosomes[nchr];
       double avg_num_of_extr_events_per_bind =
           (static_cast<double>(this->_avg_lef_processivity) / chr.get_bin_size()) /
           2 /* N of active extr. unit */;
@@ -372,14 +360,14 @@ std::pair<double, double> Genome::run_burnin(double prob_of_rebinding,
       for (auto rounds = 0U;; ++rounds) {
         if (rounds < chunks.size()) {
           for (const auto& lef : chunks[rounds]) {
-            lef->try_rebind(rand_eng);
+            lef->try_rebind(chr._rand_eng);
             ++lefs_loaded;
           }
         }
         for (auto i = 0U; i < lefs_loaded; ++i) {
           auto& lef = *chr.lefs[i];
           if (lef.is_bound()) {
-            lef.extrude(rand_eng);
+            lef.extrude(chr._rand_eng);
             /* clang-format off
              * TODO: Figure out why GCC 8.3 is complaining about this line. The warning is:
              * warning: conversion from ‘int’ to ‘__gnu_cxx::__alloc_traits<std::allocator<short unsigned int>, short unsigned int>::value_type’ {aka ‘short unsigned int’} may change value [-Wconversion]
@@ -393,9 +381,9 @@ std::pair<double, double> Genome::run_burnin(double prob_of_rebinding,
 
         for (auto i = 0U; i < lefs_loaded; ++i) {
           if (auto& lef = *chr.lefs[i]; lef.is_bound()) {
-            lef.check_constraints(rand_eng);
+            lef.check_constraints(chr._rand_eng);
           } else {
-            lef.try_rebind(rand_eng, prob_of_rebinding, false);
+            lef.try_rebind(chr._rand_eng, prob_of_rebinding, false);
           }
         }
         if (rounds >= min_extr_rounds &&
