@@ -56,6 +56,7 @@ void run_simulation(const modle::config& c) {
     tot_barriers += tmp.first;
     barriers_ignored = tmp.second;
   }
+  genome.sort_extr_barriers_by_pos();
   const auto n_of_chr_removed = genome.remove_chromosomes_wo_extr_barriers();
   if (genome.get_n_chromosomes() == 0) {
     throw std::runtime_error(  // TODO: Improve this error message

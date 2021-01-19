@@ -1,9 +1,7 @@
 #pragma once
 
 #include <absl/container/inlined_vector.h>
-#ifdef USE_XOSHIRO
-#include <XoshiroCpp.hpp>
-#endif
+#include <absl/types/span.h>
 
 #include <cstdint>  // for uint*_t
 #include <iosfwd>   // for size_t
@@ -11,9 +9,15 @@
 #include <string>
 #include <string_view>
 #include <vector>
+#ifdef USE_XOSHIRO
+#include <XoshiroCpp.hpp>
+#endif
+
+#include <absl/container/flat_hash_set.h>
 
 #include "modle/common.hpp"
 #include "modle/contacts.hpp"  // for ContactMatrix
+#include "modle/extr_barrier.hpp"
 
 namespace modle {
 
@@ -26,7 +30,7 @@ using seeder = std::seed_seq;
 #endif
 
 // Pre-declarations
-class ExtrusionBarrier;
+// class ExtrusionBarrier;
 class ExtrusionUnit;
 class Lef;
 namespace bed {
@@ -61,7 +65,11 @@ class DNA {
   [[nodiscard]] inline DNA::Bin* get_ptr_to_first_bin();
   [[nodiscard]] inline DNA::Bin& get_last_bin();
   [[nodiscard]] inline DNA::Bin* get_ptr_to_last_bin();
+  [[nodiscard]] inline std::size_t get_bin_idx_from_pos(std::size_t pos) const;
   [[nodiscard]] inline double get_total_lef_affinity() const;
+
+  [[nodiscard]] inline DNA::Bin& operator[](std::size_t idx);
+  [[nodiscard]] inline const DNA::Bin& operator[](std::size_t idx) const;
 
   // Iterator stuff
   [[nodiscard]] inline std::vector<Bin>::iterator begin();
@@ -140,7 +148,7 @@ class DNA {
     /** Given a ptr to an instance of ExtrusionBarrier that belongs to this instance of
      * DNA::Bin, return a ptr to the next instance of ExtrusionBarrier that is blocking
      * ExtrusionUnit%s that are moving in the direction specified by \p d.
-     * @param b Pointer to ExtrusionBarrier to use to look for the next ExtrusionBarrier (i.e.
+     * @param next_b Pointer to ExtrusionBarrier to use to look for the next ExtrusionBarrier (i.e.
      * DNA::Bin::get_next_extr_barrier will only search for ExtrusionBarriers that come after \p b).
      * When <tt> b == nullptr </tt>, then the search will involve all the ExtrusionBarrier that are
      * bound to the current instance of DNA::Bin.
@@ -150,14 +158,14 @@ class DNA {
      * \p nullptr if there are no ExtrusionBarrier%s matching the search parameters).
      */
     [[nodiscard]] inline ExtrusionBarrier* get_ptr_to_next_extr_barrier(
-        ExtrusionBarrier* b, dna::Direction d = dna::Direction::both) const;
+        const ExtrusionBarrier* old_b, dna::Direction d = dna::Direction::both);
     [[nodiscard]] inline ExtrusionBarrier* get_ptr_to_next_extr_barrier(
-        uint64_t pos, dna::Direction d = dna::Direction::both) const;
+        uint64_t pos, dna::Direction d = dna::Direction::both);
     [[nodiscard]] inline ExtrusionBarrier* get_ptr_to_prev_extr_barrier(
-        ExtrusionBarrier* b, dna::Direction d = dna::Direction::both) const;
+        const ExtrusionBarrier* old_b, dna::Direction d = dna::Direction::both);
     [[nodiscard]] inline ExtrusionBarrier* get_ptr_to_prev_extr_barrier(
-        uint64_t pos, dna::Direction d = dna::Direction::both) const;
-    [[nodiscard]] inline absl::InlinedVector<ExtrusionUnit*, 3>& get_extr_units();
+        uint64_t pos, dna::Direction d = dna::Direction::both);
+    [[nodiscard]] inline absl::Span<ExtrusionUnit*> get_extr_units();
     [[nodiscard]] inline float get_lef_affinity() const;
 
     inline ExtrusionBarrier* add_extr_barrier(ExtrusionBarrier b);
@@ -182,6 +190,7 @@ class DNA {
     inline void remove_extr_barrier(dna::Direction d);
     inline uint64_t remove_all_extr_barriers();
     inline void sort_extr_barriers_by_pos();
+    inline absl::Span<ExtrusionBarrier> get_all_extr_barriers();
 
     // Make DNA::Bin hashable by absl::hash
     template <typename H>
@@ -195,13 +204,11 @@ class DNA {
     uint32_t _start{};  ///< Left-most position represented by this DNA::Bin.
     uint32_t _end{};    ///< Right-most position represented by this DNA::Bin.
     float _lef_affinity{1.0};
-    // TODO: Consider remove the unique_ptr and store the vector and InlinedVector directly
-    // This will increase memory footprint, but should improve performance. Needs testing
     /// \brief Pointer to a \p std::vector of ExtrusionBarrier%s (or \p nullptr if there are no
     /// ExtrusionBarrier%s).
-    std::unique_ptr<absl::InlinedVector<ExtrusionBarrier, 3>> _extr_barriers{nullptr};
+    absl::InlinedVector<ExtrusionBarrier, 1> _extr_barriers{};
     /// Ptr to a \p std::vector of ExtrusionUnit%s (or \p nullptr if there are no ExtrusionUnit%s).
-    std::unique_ptr<absl::InlinedVector<ExtrusionUnit*, 3>> _extr_units{nullptr};
+    absl::InlinedVector<ExtrusionUnit*, 3> _extr_units{};
   };
 };
 
@@ -209,6 +216,7 @@ class DNA {
 /** The purpose of this struct is to keep together data regarding a single DNA molecule
  */
 struct Chromosome {
+  friend class Genome;
   inline Chromosome(std::string name, uint64_t length, uint32_t bin_size, uint32_t diagonal_width_,
                     uint64_t seed = 0, bool allocate = false);
   inline Chromosome(std::string chr_name, uint64_t chr_start, uint64_t chr_end, uint64_t length,
@@ -225,7 +233,6 @@ struct Chromosome {
   [[nodiscard]] inline uint64_t get_n_barriers() const;
   [[nodiscard]] inline uint64_t get_n_lefs() const;
   [[nodiscard]] inline double get_total_lef_affinity() const;
-  inline void sort_barriers_by_pos();
 
   inline void write_contacts_to_tsv(std::string_view output_dir, bool force_overwrite) const;
   inline void write_barriers_to_tsv(std::string_view path_to_outfile, bool force_overwrite) const;
@@ -239,12 +246,12 @@ struct Chromosome {
   uint64_t diagonal_width;
   DNA dna;  ///< DNA molecule represented as a sequence of DNA::Bin%s.
   /// Pointers to the ExtrusionBarrier associated to \p Chromosome::dna.
-  std::vector<ExtrusionBarrier*> barriers;
-  std::vector<Lef*> lefs;
-  ContactMatrix<uint32_t> contacts;  ///< ContactMatrix for the DNA::Bin%s from Chromosome::dna.
-  modle::PRNG _rand_eng;
+  std::vector<ExtrusionBarrier*> barriers{};
+  std::vector<Lef*> lefs{};
+  ContactMatrix<uint32_t> contacts{};  ///< ContactMatrix for the DNA::Bin%s from Chromosome::dna.
 
  private:
+  modle::PRNG _rand_eng;
   uint64_t _seed;
 };
 

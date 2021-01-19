@@ -195,13 +195,13 @@ std::vector<Chromosome> Genome::init_chromosomes_from_file(uint32_t diagonal_wid
 }
 
 std::vector<Lef> Genome::generate_lefs(uint32_t n) {
-  // TODO: Figure out how to clean up this function
   std::vector<Lef> v;
   v.reserve(n);
-  for (auto i = 0U; i < n; ++i) {
-    v.emplace_back(this->_bin_size, this->_avg_lef_processivity,
-                   this->_probability_of_extr_unit_bypass, this->_lef_unloader_strength_coeff);
-  }
+  std::generate_n(std::back_inserter(v), n, [this]() {
+    return Lef{this->_bin_size, this->_avg_lef_processivity, this->_probability_of_extr_unit_bypass,
+               this->_lef_unloader_strength_coeff};
+  });
+
   return v;
 }
 
@@ -245,13 +245,26 @@ std::pair<uint64_t, uint64_t> Genome::import_extrusion_barriers_from_bed(
     record.chrom_end -= chromosomes[record.chrom]->get_start_pos();
     chromosomes[record.chrom]->allocate();
     chromosomes[record.chrom]->dna.add_extr_barrier(record);
-  }
-
-  for (auto& chr : this->_chromosomes) {
-    chr.sort_barriers_by_pos();
+    // NOTE I am not adding ExtrusionBarrier* to chromosomes[].barriers, because if the vector
+    // holding the extrusion barrier is re-allocated, the stored in Chromosome.barriers will be
+    // invalidated
   }
 
   return {nrecords, nrecords_ignored};
+}
+
+void Genome::sort_extr_barriers_by_pos() {
+  for (auto& chr : this->_chromosomes) {
+    assert(chr.barriers.empty());  // NOLINT
+    for (auto& bin : chr.dna) {
+      auto barriers = bin.get_all_extr_barriers();
+      std::transform(barriers.begin(), barriers.end(), std::back_inserter(chr.barriers),
+                     [](auto& b) { return &b; });
+    }
+    std::sort(
+        chr.barriers.begin(), chr.barriers.end(),
+        [](const auto* const b1, const auto* const b2) { return b1->get_pos() < b2->get_pos(); });
+  }
 }
 
 const std::vector<Chromosome>& Genome::get_chromosomes() const { return this->_chromosomes; }
@@ -324,7 +337,7 @@ void Genome::assign_lefs(bool bind_lefs_after_assignment) {
       last_lef->assign_to_chr(chr);
       if (bind_lefs_after_assignment) {
         chr->allocate();
-        last_lef->randomly_bind_to_chr(chr, chr->_rand_eng);
+        last_lef->bind_chr_at_random_pos(chr, chr->_rand_eng);
       }
     }
   }
@@ -344,6 +357,7 @@ std::pair<double, double> Genome::run_burnin(double prob_of_rebinding,
                                              uint64_t min_extr_rounds) {
   std::vector<double> burnin_rounds_performed(this->get_n_chromosomes());
   boost::asio::thread_pool tpool(std::min(this->get_n_chromosomes(), this->_nthreads));
+
   for (auto nchr = 0U; nchr < this->get_n_chromosomes(); ++nchr) {
     boost::asio::post(tpool, [&, nchr]() {
       auto& chr = this->_chromosomes[nchr];
@@ -360,7 +374,7 @@ std::pair<double, double> Genome::run_burnin(double prob_of_rebinding,
       for (auto rounds = 0U;; ++rounds) {
         if (rounds < chunks.size()) {
           for (const auto& lef : chunks[rounds]) {
-            lef->try_rebind(chr._rand_eng);
+            lef->bind_chr_at_random_pos(&chr, chr._rand_eng);
             ++lefs_loaded;
           }
         }
@@ -443,7 +457,8 @@ void Genome::simulate_extrusion(uint32_t iterations, double target_contact_densi
   DISABLE_WARNING_PUSH
   DISABLE_WARNING_CONVERSION
   DISABLE_WARNING_DOUBLE_PROMOTION
-  std::thread progress_tracker([&]() {  // This thread is used to periodically print the simulation
+  std::thread progress_tracker([&]() {  // This thread is used to periodically print the
+                                        // simulation
     // progress to stderr
     // The total number of ticks tot_ticks is set depending on whether or not the simulation is
     // set to run for a fixed number of iterations:
@@ -510,8 +525,8 @@ void Genome::simulate_extrusion(uint32_t iterations, double target_contact_densi
       std::bernoulli_distribution sample_contacts{1.0 / this->_sampling_interval};
 
       // Calculate the number of contacts after which the simulation for the current chromosome is
-      // stopped. This is set to a very large number (2^64) when the simulation is set to run for a
-      // fixed number of iterations
+      // stopped. This is set to a very large number (2^64) when the simulation is set to run for
+      // a fixed number of iterations
       const auto target_n_of_contacts =
           target_contact_density != 0.0
               ? target_contact_density *
@@ -553,8 +568,8 @@ void Genome::simulate_extrusion(uint32_t iterations, double target_contact_densi
           }
         }
 
-        // Add the number of extr. events to the global counter. This is used to calculate the n. of
-        // extr. events per seconds, which is a good way to assess the simulation throughput
+        // Add the number of extr. events to the global counter. This is used to calculate the n.
+        // of extr. events per seconds, which is a good way to assess the simulation throughput
         extrusion_events.fetch_add(local_extr_events_counter, std::memory_order_relaxed);
         local_extr_events_counter = 0;
 
@@ -581,7 +596,8 @@ void Genome::simulate_extrusion(uint32_t iterations, double target_contact_densi
         }
       }
       if (++chromosomes_completed == this->get_n_chromosomes()) {
-        {  // Notify the thread that is tracking the simulation progress that we are done simulating
+        {  // Notify the thread that is tracking the simulation progress that we are done
+           // simulating
           std::scoped_lock<std::mutex> lk(m);
           simulation_completed = true;
         }
@@ -637,9 +653,6 @@ void Genome::randomly_generate_extrusion_barriers(I n_barriers, uint64_t seed) {
     // Add the new extrusion barrier to the appropriate bin
     auto& bin = chr.dna.get_bin_from_pos(barrier_position);
     bin.add_extr_barrier(barrier_position, this->_probability_of_barrier_block, direction);
-  }
-  for (auto& chr : this->get_chromosomes()) {
-    chr.sort_barriers_by_pos();
   }
 }
 }  // namespace modle

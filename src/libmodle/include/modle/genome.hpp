@@ -74,6 +74,7 @@ class Genome {
 
   inline std::pair<uint64_t, uint64_t> import_extrusion_barriers_from_bed(
       std::string_view path_to_bed, double probability_of_block);
+  inline void sort_extr_barriers_by_pos();
   inline void assign_lefs(bool bind_lefs_after_assignment);
 
   inline uint64_t remove_chromosomes_wo_extr_barriers();

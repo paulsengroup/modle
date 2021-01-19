@@ -3,8 +3,9 @@
 #ifdef USE_XOSHIRO
 #include <XoshiroCpp.hpp>
 #endif
-#include <cstdint>      // for uint*_t, UINT*_MAX
-#include <iosfwd>       // for size_t
+#include <cstdint>  // for uint*_t, UINT*_MAX
+#include <iosfwd>   // for size_t
+#include <limits>
 #include <memory>       // for unique_ptr
 #include <random>       // for mt19937, geometric_distribution
 #include <string_view>  // for string_view
@@ -58,6 +59,8 @@ class Lef {
   [[nodiscard]] inline Chromosome* get_ptr_to_chr();
   [[nodiscard]] inline std::pair<uint32_t, uint32_t> get_pos() const;
   [[nodiscard]] inline double get_probability_of_extr_unit_bypass() const;
+  [[nodiscard]] inline std::size_t get_bin_size() const;
+  [[nodiscard]] inline std::size_t get_nbins() const;
   [[nodiscard]] inline uint64_t get_tot_bp_extruded() const;
   inline void reset_tot_bp_extruded();
 
@@ -67,8 +70,8 @@ class Lef {
   inline void register_contact();
   [[nodiscard]] inline std::pair<DNA::Bin*, DNA::Bin*> get_ptr_to_bins();
   [[nodiscard]] inline bool is_bound() const;
-  inline void randomly_bind_to_chr(Chromosome* chr, modle::PRNG& rand_eng,
-                                   bool register_contact = false);
+  inline void bind_chr_at_random_pos(Chromosome* chr, modle::PRNG& rand_eng,
+                                     bool register_contact = false);
   inline void assign_to_chr(Chromosome* chr);
   inline void bind_at_pos(Chromosome* chr, uint32_t pos, modle::PRNG& rand_eng,
                           bool register_contact);
@@ -117,7 +120,7 @@ class ExtrusionUnit {
 
  public:
   inline explicit ExtrusionUnit(Lef& lef, double prob_of_extr_unit_bypass);
-  [[nodiscard]] inline uint32_t get_pos() const;
+  [[nodiscard]] inline std::size_t get_pos() const;
   [[nodiscard]] inline dna::Direction get_extr_direction() const;
   [[nodiscard]] inline bool is_stalled() const;
   [[nodiscard]] inline bool is_bound() const;
@@ -125,10 +128,14 @@ class ExtrusionUnit {
   inline bool try_extrude(modle::PRNG& rand_eng);
   [[nodiscard]] inline double get_prob_of_extr_unit_bypass() const;
   [[nodiscard]] inline std::size_t get_bin_index() const;
+  [[nodiscard]] inline std::size_t get_bin_size() const;
+  [[nodiscard]] inline DNA::Bin& get_bin();
+  [[nodiscard]] inline const DNA::Bin& get_bin() const;
 
  private:
   Lef& _parent_lef;
-  DNA::Bin* _bin{nullptr};
+  std::size_t _bin_idx{std::numeric_limits<std::size_t>::max()};
+  DNA* _dna{nullptr};
   ExtrusionBarrier* _blocking_barrier{nullptr};
   dna::Direction _direction{dna::Direction::none};
   uint32_t _stalls_left{0};
