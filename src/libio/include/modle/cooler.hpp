@@ -117,12 +117,13 @@ class Cooler {
   [[nodiscard]] inline bool is_read_only() const;
 
   [[nodiscard]] inline ContactMatrix<uint32_t> cooler_to_cmatrix(
-      std::string_view chr_name, std::size_t nrows, bool try_common_chr_prefixes = true,
-      bool prefer_using_balanced_counts = true);
+      std::string_view chr_name, std::size_t nrows, std::size_t chr_start_offset = 0,
+      bool try_common_chr_prefixes = true, bool prefer_using_balanced_counts = true);
 
   [[nodiscard]] inline ContactMatrix<uint32_t> cooler_to_cmatrix(
       std::string_view chr_name, std::size_t diagonal_width, std::size_t bin_size,
-      bool try_common_chr_prefixes = true, bool prefer_using_balanced_counts = true);
+      std::size_t chr_start_offset = 0, bool try_common_chr_prefixes = true,
+      bool prefer_using_balanced_counts = true);
   [[nodiscard]] inline std::size_t get_nchroms();
 
   inline void get_chr_names(std::vector<std::string> &buff);
@@ -199,16 +200,17 @@ class Cooler {
 
   [[nodiscard]] inline ContactMatrix<uint32_t> cooler_to_cmatrix(
       int64_t bin_offset, absl::Span<const int64_t> bin1_offset_idx, std::size_t nrows,
-      double scaling_factor = 1.0, bool prefer_using_balanced_counts = true);
+      double bias_scaling_factor = 1.0, bool prefer_using_balanced_counts = true);
 
   [[nodiscard]] inline std::size_t get_chr_idx(std::string_view chr_name);
 
   inline std::size_t read_chr_offset_idx();
 
   inline std::size_t read_bin1_offset_idx();
-  [[nodiscard]] inline absl::Span<const int64_t> get_bin1_offset_idx_for_chr(std::size_t chr_idx);
   [[nodiscard]] inline absl::Span<const int64_t> get_bin1_offset_idx_for_chr(
-      std::string_view chr_name);
+      std::size_t chr_idx, std::size_t offset = 0);
+  [[nodiscard]] inline absl::Span<const int64_t> get_bin1_offset_idx_for_chr(
+      std::string_view chr_name, std::size_t offset = 0);
   [[nodiscard]] inline std::pair<int64_t, int64_t> read_chrom_pixels_boundaries(
       std::string_view chr_name);
   [[nodiscard]] inline std::pair<int64_t, int64_t> read_chrom_pixels_boundaries(

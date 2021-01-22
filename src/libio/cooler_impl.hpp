@@ -952,21 +952,24 @@ ContactMatrix<uint32_t> Cooler::cooler_to_cmatrix(int64_t bin_offset,
 
 ContactMatrix<uint32_t> Cooler::cooler_to_cmatrix(std::string_view chr_name,
                                                   std::size_t diagonal_width, std::size_t bin_size,
+                                                  std::size_t chr_start_offset,
                                                   bool try_common_chr_prefixes,
                                                   bool prefer_using_balanced_counts) {
   assert(this->_bin_size != 0);
   if (bin_size != 0 && this->_bin_size != bin_size) {
     throw std::runtime_error(fmt::format(
         FMT_STRING(
-            "Unable to read a Cooler file with bin size {} in a contact matrix of bin size {}"),
+            "Unable to read a Cooler file with bin size {} in a contact matrix with bin size {}"),
         this->_bin_size, bin_size));
   }
   const auto nrows = (diagonal_width / this->_bin_size) +
                      static_cast<std::size_t>(diagonal_width % this->_bin_size != 0);
-  return cooler_to_cmatrix(chr_name, nrows, try_common_chr_prefixes, prefer_using_balanced_counts);
+  return cooler_to_cmatrix(chr_name, nrows, chr_start_offset, try_common_chr_prefixes,
+                           prefer_using_balanced_counts);
 }
 
 ContactMatrix<uint32_t> Cooler::cooler_to_cmatrix(std::string_view chr_name, std::size_t nrows,
+                                                  std::size_t chr_start_offset,
                                                   bool try_common_chr_prefixes,
                                                   bool prefer_using_balanced_counts) {
   // TODO: Add check for Cooler bin size
@@ -1004,7 +1007,8 @@ ContactMatrix<uint32_t> Cooler::cooler_to_cmatrix(std::string_view chr_name, std
     // TODO: Consider reading the full array of chr names and then look up all the combinations.
     // This would allows us to avoid using exceptions, but will increase memory usage when
     // processing highly fragmented assemblies
-    chr_name = "";  // Just to make sure we are not using this variable instead of actual_chr_name
+    // Just to make sure we are not later using this variable instead of actual_chr_name
+    chr_name = "";
     for (const auto name : chr_names) {
       try {
         return std::make_pair(name, this->get_chr_idx(name));
@@ -1020,9 +1024,10 @@ ContactMatrix<uint32_t> Cooler::cooler_to_cmatrix(std::string_view chr_name, std
                     chr_name, absl::StrJoin(chr_names, "', '")));
   };
 
+  const auto nbins_offset = static_cast<int64_t>(chr_start_offset / this->_bin_size);
   const auto [actual_chr_name, chr_idx] = search_chr_offset_idx();
-  const auto bin1_offset_idx = this->get_bin1_offset_idx_for_chr(chr_idx);
-  const auto bin_offset = this->_idx_chrom_offset[chr_idx];
+  const auto bin1_offset_idx = this->get_bin1_offset_idx_for_chr(chr_idx, chr_start_offset);
+  const auto bin_offset = this->_idx_chrom_offset[chr_idx] + nbins_offset;
   double scaling_factor{1.0};
 
   if (prefer_using_balanced_counts &&
@@ -1055,7 +1060,7 @@ ContactMatrix<uint32_t> Cooler::cooler_to_cmatrix(std::string_view chr_name, std
 
 ContactMatrix<uint32_t> Cooler::cooler_to_cmatrix(int64_t bin_offset,
                                                   absl::Span<const int64_t> bin1_offset_idx,
-                                                  std::size_t nrows, double scaling_factor,
+                                                  std::size_t nrows, double bias_scaling_factor,
                                                   bool prefer_using_balanced_counts) {
   if (this->_datasets.empty()) {
     this->open_cooler_datasets();
@@ -1121,7 +1126,7 @@ ContactMatrix<uint32_t> Cooler::cooler_to_cmatrix(int64_t bin_offset,
         // See https://github.com/robomics/modle/issues/36 and
         // https://github.com/open2c/cooler/issues/35
         const auto count =
-            static_cast<double>(count_BUFF[j]) / (bin1_bias * bin2_bias) / scaling_factor;
+            static_cast<double>(count_BUFF[j]) / (bin1_bias * bin2_bias) / bias_scaling_factor;
         cmatrix.set(bin2, bin1, static_cast<uint32_t>(std::round(count)));
         DISABLE_WARNING_POP
       }
@@ -1180,16 +1185,18 @@ std::size_t Cooler::read_bin1_offset_idx() {
   return idx_size;
 }
 
-absl::Span<const int64_t> Cooler::get_bin1_offset_idx_for_chr(std::string_view chr_name) {
+absl::Span<const int64_t> Cooler::get_bin1_offset_idx_for_chr(std::string_view chr_name,
+                                                              std::size_t offset) {
   const auto chr_idx = get_chr_idx(chr_name);
-  return get_bin1_offset_idx_for_chr(chr_idx);
+  return get_bin1_offset_idx_for_chr(chr_idx, offset);
 }
 
-absl::Span<const int64_t> Cooler::get_bin1_offset_idx_for_chr(std::size_t chr_idx) {
+absl::Span<const int64_t> Cooler::get_bin1_offset_idx_for_chr(std::size_t chr_idx,
+                                                              std::size_t offset) {
   assert(!this->_idx_bin1_offset.empty());           // NOLINT
   assert(!this->_idx_chrom_offset.empty());          // NOLINT
   assert(chr_idx < this->_idx_chrom_offset.size());  // NOLINT
-  const auto chr_start_bin = static_cast<std::size_t>(this->_idx_chrom_offset[chr_idx]);
+  const auto chr_start_bin = static_cast<std::size_t>(this->_idx_chrom_offset[chr_idx]) + offset;
   const auto chr_end_bin = static_cast<std::size_t>(this->_idx_chrom_offset[chr_idx + 1]);
   assert(chr_end_bin >= chr_start_bin);  // NOLINT
 

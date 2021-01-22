@@ -24,6 +24,7 @@ struct config {
     cooler = 2
   };
   std::vector<std::string> path_to_input_matrices;
+  std::string path_to_chr_subranges;
   std::string output_base_name;
   std::string chr_sizes;
   output_format output_format{Cooler};

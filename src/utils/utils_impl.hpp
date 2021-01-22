@@ -11,13 +11,23 @@
 #include <type_traits>
 
 #include "modle/suppress_compiler_warnings.hpp"
-#include "modle/utils.hpp"
 
 namespace modle::utils {
 
 template <typename N>
 void parse_numeric_or_throw(std::string_view tok, N &field) {
-  static_assert(std::is_integral<N>());
+  static_assert(std::is_arithmetic_v<N>);
+  if constexpr (std::is_integral_v<N>) {
+    parse_int_or_throw(tok, field);
+  }
+  if constexpr (std::is_floating_point_v<N>) {
+    parse_real_or_throw(tok, field);
+  }
+}
+
+template <typename I>
+void parse_int_or_throw(std::string_view tok, I &field) {
+  static_assert(std::is_integral_v<I>);
   auto [ptr, err] = std::from_chars(tok.data(), tok.end(), field);
   if (ptr != tok.end() && err != std::errc{}) {
     throw_except_from_errc(tok, SIZE_MAX, field, ptr, err);
@@ -26,7 +36,7 @@ void parse_numeric_or_throw(std::string_view tok, N &field) {
 
 template <typename R>
 void parse_real_or_throw(std::string_view tok, R &field) {
-  static_assert(std::is_floating_point<R>());
+  static_assert(std::is_floating_point_v<R>);
   char *end = nullptr;
   R tmp = std::strtod(tok.data(), &end);
   if (tmp == HUGE_VAL)
@@ -39,7 +49,17 @@ void parse_real_or_throw(std::string_view tok, R &field) {
 
 template <typename N>
 void parse_numeric_or_throw(const std::vector<std::string_view> &toks, std::size_t idx, N &field) {
-  static_assert(std::is_integral<N>());
+  static_assert(std::is_arithmetic_v<N>);
+  if constexpr (std::is_floating_point_v<N>) {
+    parse_real_or_throw(toks, idx, field);
+  } else {
+    parse_int_or_throw(toks, idx, field);
+  }
+}
+
+template <typename I>
+void parse_int_or_throw(const std::vector<std::string_view> &toks, std::size_t idx, I &field) {
+  static_assert(std::is_integral<I>());
   auto [ptr, err] = std::from_chars(toks[idx].data(), toks[idx].data() + toks[idx].size(), field);
   if (ptr != toks[idx].end() && err != std::errc{}) {
     throw_except_from_errc(toks[idx], idx, field, ptr, err);
@@ -183,6 +203,29 @@ bool chr_less_than_operator(const std::pair<std::string_view, int64_t> &chr1,
 template <class E>
 void throw_with_trace(const E &e) {
   throw boost::enable_error_info(e) << traced(boost::stacktrace::stacktrace());
+}
+
+template <typename T>
+constexpr auto get_printable_type_name() noexcept {
+  std::string_view name = "Error: unsupported compiler";
+  std::string_view prefix;
+  std::string_view suffix;
+#ifdef __clang__
+  name = __PRETTY_FUNCTION__;
+  prefix = "auto get_printable_type_name() [T = ";
+  suffix = "]";
+#elif defined(__GNUC__)
+  name = __PRETTY_FUNCTION__;
+  prefix = "constexpr auto type_name() [with T = ";
+  suffix = "]";
+#elif defined(_MSC_VER)
+  name = __FUNCSIG__;
+  prefix = "auto __cdecl type_name<";
+  suffix = ">(void) noexcept";
+#endif
+  name.remove_prefix(prefix.size());
+  name.remove_suffix(suffix.size());
+  return name;
 }
 
 }  // namespace modle::utils

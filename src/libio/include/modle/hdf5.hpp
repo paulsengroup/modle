@@ -51,7 +51,7 @@ template <typename CN>
                                         std::string_view path = "/");
 
 template <typename T>
-inline void read_attribute(H5::H5File &f, std::string_view attr_name, T &buff,
+inline void read_attribute(H5::H5File &v, std::string_view attr_name, T &buff,
                            std::string_view path = "/");
 template <typename T>
 inline void read_attribute(const H5::DataSet &d, std::string_view attr_name, T &buff);

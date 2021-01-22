@@ -215,11 +215,11 @@ Parser::Parser(std::string_view path_to_bed, BED::Standard bed_standard)
   }
 }
 
-std::vector<BED> Parser::parse_all(bool throw_on_duplicates) {
+std::vector<BED> Parser::parse_n(std::size_t nrecords, bool throw_on_duplicates) {
   absl::flat_hash_map<BED, uint64_t> unique_records;
   uint8_t ncols = 0;
   assert(this->_fp.is_open() && this->_fp.good());
-  for (auto i = 1UL; std::getline(this->_fp, this->_buff); ++i) {
+  for (auto i = 1UL; std::getline(this->_fp, this->_buff) && i < nrecords; ++i) {
     if (this->_buff.empty()) {
       continue;  // Skip empty lines
     }
@@ -254,6 +254,19 @@ std::vector<BED> Parser::parse_all(bool throw_on_duplicates) {
     records.push_back(record);
   }
   return records;
+}
+
+std::string Parser::validate(std::size_t nrecords, bool throw_on_duplicates) {
+  try {
+    (void)parse_n(nrecords, throw_on_duplicates);
+  } catch (const std::runtime_error& e) {
+    return e.what();
+  }
+  return "";
+}
+
+std::vector<BED> Parser::parse_all(bool throw_on_duplicates) {
+  return parse_n(std::numeric_limits<std::size_t>::max(), throw_on_duplicates);
 }
 
 void Parser::reset() {

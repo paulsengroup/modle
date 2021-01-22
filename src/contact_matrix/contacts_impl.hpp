@@ -506,22 +506,36 @@ std::size_t ContactMatrix<I>::npixels_after_masking() const {
   if (mask.all()) {
     return npixels;
   }
+  if (mask.none()) {
+    return 0;
+  }
+
+  auto count_zeros = [&mask](std::size_t start, std::size_t end) {
+    assert(start <= end);
+    std::size_t n = 0;
+    while (start < end) {
+      n += !mask[start++];
+    }
+    return n;
+  };
 
   assert(this->nrows() <= this->ncols());
-  for (auto i = 0UL; i < mask.size(); ++i) {
+  for (auto i = 0UL; i < this->ncols(); ++i) {
     if (!mask[i]) {
-      if (i < this->nrows()) {
-        assert(this->nrows() + i <= npixels);
-        npixels -= this->nrows() + i;
-      } else if (i > this->ncols() - this->nrows()) {
-        assert(this->ncols() - i <= npixels);
-        npixels -= this->nrows() + this->ncols() - i;
-      } else {
-        npixels -= (2 * this->nrows()) - 1;
+      if (i < this->nrows()) {  // Upper left corner of cmatrix
+        npixels -= this->nrows() - count_zeros(0UL, i);
+        npixels -= i;
+        assert(npixels <= this->npixels());
+      } else if (i > this->ncols() - this->nrows()) {  // Lower right corner of cmatrix
+        npixels -= this->nrows() - count_zeros(i - this->nrows(), i);
+        npixels -= this->ncols() - i;
+        assert(npixels <= this->npixels());
+      } else {  // Middle of cmatrix
+        npixels -= (2 * this->nrows()) - 1 - count_zeros(i - this->nrows(), i);
+        assert(npixels <= this->npixels());
       }
     }
   }
-  assert(npixels <= this->npixels());
   return npixels;
 }
 

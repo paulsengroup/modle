@@ -11,6 +11,7 @@
 #include <cstdint>
 #include <string>
 
+#include "modle/bed.hpp"
 #include "modle/cooler.hpp"
 #include "modle_tools/config.hpp"
 
@@ -33,53 +34,80 @@ class Cli {
       {"anasPlat1"}, {"bTaurus3"},  {"canFam3"}, {"equCab2"}, {"galGal4"}, {"Pf3D7"},
       {"sacCer3"},   {"sCerS288c"}, {"susScr3"}, {"TAIR10"}};
 
+  inline void make_convert_subcommand() {
+    // clang-format off
+    auto *sc = this->_cli.add_subcommand("convert", "Convert Modle's contact matrix into several popular formats.")->fallthrough();
+
+    sc->add_option("-i,--input", this->_config.path_to_input_matrices, "Path to a contact matrix in Cooler format")->check(CLI::ExistingFile)->required();
+    sc->add_option("--tmp-dir", this->_config.tmp_dir, "Path where to store temporary files.")->capture_default_str();
+    sc->add_flag("--keep-temporary-files", this->_config.keep_tmp_files, "Do not delete temporary files.")->capture_default_str();
+    sc->add_flag("-f,--force", this->_config.force, "Overwrite existing file(s).")->capture_default_str();
+    sc->add_option("-j,--path-to-juicer-tools", this->_config.path_to_juicer_tools, "Path to Juicer tools jar. When this is not specified, we will look in PATH for an executable called juicer_tools, juicer_tools.exe or juicer_tools.sh.")->check(CLI::ExistingFile);
+    sc->add_option("-t,--threads", this->_config.nthreads, "CPU threads to allocate.")->check(CLI::PositiveNumber);
+    sc->add_option("-o,--output-base-name", this->_config.output_base_name, "Base file name (including directories) to use for output.")->required();
+    sc->add_flag("--output-format", this->_config.output_format, "Output file format. Accepted formats are: HIC and TSV.")->capture_default_str();
+    sc->add_flag("--add-noise,--make-realistic", this->_config.add_noise, "Add noise to make the contact matrix more similar to the matrices produced by Hi-C experiments.")->capture_default_str();
+    sc->add_option("--noise-stdev", this->_config.noise_stdev, "Standard deviation to use when sampling noise to add to contact matrices.")->check(CLI::PositiveNumber)->needs(sc->get_option("--add-noise"));
+    sc->add_option("--noise-range", this->_config.noise_range, "Range to use when adding noise to contact matrices. By default 99.9% of the sampled numbers will fall within this range.")->check(CLI::PositiveNumber)->needs(sc->get_option("--add-noise"))->excludes(sc->get_option("--noise-stdev"))->capture_default_str();
+    sc->add_option("--juicer-tools-max-mem", this->_config.juicer_tools_mem, "Maximum memory allocation pool for Juicer Tools (JVM).")->needs(sc->get_option("--path-to-juicer-tools"))->transform(CLI::AsSizeValue(false))->capture_default_str();
+    sc->add_option("-c,--chr-sizes", this->_config.chr_sizes, fmt::format("Path to file containing chromosome size(s). Can also be one of the following genome IDs: {}.", absl::StrJoin(this->_allowed_genome_ids, ", ")));
+    sc->add_option("--seed", this->_config.seed, "Seed value to use when adding noise to the contact matrix.")->capture_default_str();
+    // clang-format on
+  }
+
+  inline void make_eval_subcommand() {
+    // clang-format off
+    auto *sc = this->_cli.add_subcommand("evaluate", "Compare Model's output with other contact matrices using various correlation tests.")->fallthrough();
+    sc->alias("eval");
+
+    sc->add_option("-i,--input", this->_config.path_to_input_matrices, "Path to a contact matrix in Cooler format")->check(CLI::ExistingFile)->required();
+    sc->add_option("--chromosome-subrange-file", this->_config.path_to_chr_subranges, "Path to BED file with subranges of the chromosomes to be processed.")->check(CLI::ExistingFile);
+    sc->add_option("--tmp-dir", this->_config.tmp_dir, "Path where to store temporary files.")->capture_default_str();
+    sc->add_flag("--keep-temporary-files", this->_config.keep_tmp_files, "Do not delete temporary files.")->capture_default_str();
+    sc->add_flag("-f,--force", this->_config.force, "Overwrite existing file(s).")->capture_default_str();
+    sc->add_option("-j,--path-to-juicer-tools", this->_config.path_to_juicer_tools, "Path to Juicer tools jar. When this is not specified, we will look in PATH for an executable called juicer_tools, juicer_tools.exe or juicer_tools.sh.")->check(CLI::ExistingFile);
+    sc->add_option("-t,--threads", this->_config.nthreads, "CPU threads to allocate.")->check(CLI::PositiveNumber);
+    sc->add_option("-o,--output-base-name", this->_config.output_base_name, "Base file name (including directories) to use for output.")->required();
+    sc->add_option("--reference-matrix", this->_config.path_to_reference_matrix, "Path to contact matrix to use as reference when computing the correlation. Formats accepted: Cooler.")->required();
+    sc->add_option("-n,--chr-name", this->_config.chr_name_hic, "Name of the chromosome whose contacts should be extracted from an .hic file. Required only if different from the name stored in the header of Modle's contact matrix.");
+    sc->add_option("--chr-offset", this->_config.chr_offset_hic, "Offset to apply to coordinates read from Modle's contact matrix.")->check(CLI::NonNegativeNumber)->transform(CLI::AsSizeValue(true));
+    sc->add_flag("--pearson", this->_config.compute_pearson, "Compute Pearson correlation.");
+    sc->add_flag("--spearman", this->_config.compute_spearman, "Compute Spearman rank correlation.");
+    sc->add_option("-w,--diagonal-width", this->_config.diagonal_width, "Diagonal width to use when computing correlation coefficients.")->check(CLI::NonNegativeNumber)->required();
+    sc->add_option("--sliding-window-size", this->_config.sliding_window_size, "Sliding window size. By default this is set to the diagonal width of ModLE's contact matrix.")->check(CLI::NonNegativeNumber);
+    sc->add_option("--sliding-window-overlap", this->_config.sliding_window_overlap, "Overlap between consecutive sliding-windows.")->check(CLI::NonNegativeNumber)->capture_default_str();
+    // clang-format on
+  }
+
+  inline void make_stats_subcommand() {
+    // clang-format off
+    auto *sc = this->_cli.add_subcommand("statistics", "Compute several useful statistics for a given Cooler file.")->fallthrough();
+    sc->alias("stats");
+    sc->add_option("-i,--input", this->_config.path_to_input_matrices, "Path to a contact matrix in Cooler format")->check(CLI::ExistingFile)->required();
+    sc->add_option("--chromosome-subrange-file", this->_config.path_to_chr_subranges, "Path to BED file with subranges of the chromosomes to be processed.")->check(CLI::ExistingFile);
+    sc->add_flag("-f,--force", this->_config.force, "Overwrite existing file(s).")->capture_default_str();
+    sc->add_option("--bin-size", this->_config.bin_size, "Bin size to use when calculating the statistics. Required in case of MCool files.")->check(CLI::PositiveNumber);
+    sc->add_option("-w,--diagonal-width", this->_config.diagonal_width, "Diagonal width.")->check(CLI::PositiveNumber)->required();
+    sc->add_flag("--dump-depleted-matrices", this->_config.dump_depleted_matrices, "Dump contact matrices used to calculate the normalized average contact density.");
+    sc->add_option("--path-to-histograms", this->_config.output_path_for_histograms, "Path where to output contact histograms.");
+    sc->add_option("--exclude-chromosomes", this->_config.chromosomes_excluded_vect, "Comma-separated list of chromosomes to skip when calculating chromosome statistics.")->delimiter(',');
+    sc->add_option("--depletion-multiplier", this->_config.depletion_multiplier, "Multiplier used to control the magnitude of the depletion.")->check(CLI::NonNegativeNumber)->capture_default_str();
+    // clang-format on
+  }
+
   inline void MakeCli() {
     // clang-format off
     this->_cli.name(this->_exec_name);
     this->_cli.description("Modle's helper tool. This tool allows to post-process the contact matrix produced by Modle in various ways.");
     this->_cli.require_subcommand(1);
-    this->_cli.add_option("-i,--input", this->_config.path_to_input_matrices, "Path to a contact matrix in Cooler format")->check(CLI::ExistingFile)->required();
-    this->_cli.add_option("--tmp-dir", this->_config.tmp_dir, "Path where to store temporary files.")->capture_default_str();
-    this->_cli.add_flag("--keep-temporary-files", this->_config.keep_tmp_files, "Do not delete temporary files.")->capture_default_str();
-    this->_cli.add_flag("-f,--force", this->_config.force, "Overwrite existing file(s).")->capture_default_str();
-    this->_cli.add_option("-j,--path-to-juicer-tools", this->_config.path_to_juicer_tools, "Path to Juicer tools jar. When this is not specified, we will look in PATH for an executable called juicer_tools, juicer_tools.exe or juicer_tools.sh.")->check(CLI::ExistingFile);
-    this->_cli.add_option("-t,--threads", this->_config.nthreads, "CPU threads to allocate.")->check(CLI::PositiveNumber);
-
-    auto *convert_sc = this->_cli.add_subcommand("convert", "Convert Modle's contact matrix into several popular formats.")->fallthrough();
-    auto *eval_sc = this->_cli.add_subcommand("evaluate", "Compare Model's output with other contact matrices using various correlation tests.")->fallthrough();
-    auto *stats_sc = this->_cli.add_subcommand("statistics", "Compute several useful statistics for a given Cooler file.")->fallthrough();
-    eval_sc->alias("eval");
-    stats_sc->alias("stats");
-
-    convert_sc->add_option("-o,--output-base-name", this->_config.output_base_name, "Base file name (including directories) to use for output.")->required();
-    convert_sc->add_flag("--output-format", this->_config.output_format, "Output file format. Accepted formats are: HIC and TSV.")->capture_default_str();
-    convert_sc->add_flag("--add-noise,--make-realistic", this->_config.add_noise, "Add noise to make the contact matrix more similar to the matrices produced by Hi-C experiments.")->capture_default_str();
-    convert_sc->add_option("--noise-stdev", this->_config.noise_stdev, "Standard deviation to use when sampling noise to add to contact matrices.")->check(CLI::PositiveNumber)->needs(convert_sc->get_option("--add-noise"));
-    convert_sc->add_option("--noise-range", this->_config.noise_range, "Range to use when adding noise to contact matrices. By default 99.9% of the sampled numbers will fall within this range.")->check(CLI::PositiveNumber)->needs(convert_sc->get_option("--add-noise"))->excludes(convert_sc->get_option("--noise-stdev"))->capture_default_str();
-    convert_sc->add_option("--juicer-tools-max-mem", this->_config.juicer_tools_mem, "Maximum memory allocation pool for Juicer Tools (JVM).")->needs(this->_cli.get_option("--path-to-juicer-tools"))->transform(CLI::AsSizeValue(false))->capture_default_str();
-    convert_sc->add_option("-c,--chr-sizes", this->_config.chr_sizes, fmt::format("Path to file containing chromosome size(s). Can also be one of the following genome IDs: {}.", absl::StrJoin(this->_allowed_genome_ids, ", ")));
-    convert_sc->add_option("--seed", this->_config.seed, "Seed value to use when adding noise to the contact matrix.")->capture_default_str();
-
-    eval_sc->add_option("-o,--output-base-name", this->_config.output_base_name, "Base file name (including directories) to use for output.")->required();
-    eval_sc->add_option("--reference-matrix", this->_config.path_to_reference_matrix, "Path to contact matrix to use as reference when computing the correlation. Formats accepted: Cooler.")->required();
-    eval_sc->add_option("-n,--chr-name", this->_config.chr_name_hic, "Name of the chromosome whose contacts should be extracted from an .hic file. Required only if different from the name stored in the header of Modle's contact matrix.");
-    eval_sc->add_option("--chr-offset", this->_config.chr_offset_hic, "Offset to apply to coordinates read from Modle's contact matrix.")->check(CLI::NonNegativeNumber)->transform(CLI::AsSizeValue(true));
-    eval_sc->add_flag("--pearson", this->_config.compute_pearson, "Compute Pearson correlation.");
-    eval_sc->add_flag("--spearman", this->_config.compute_spearman, "Compute Spearman rank correlation.");
-    eval_sc->add_option("-w,--diagonal-width", this->_config.diagonal_width, "Diagonal width to use when computing correlation coefficients.")->check(CLI::NonNegativeNumber)->required();
-    eval_sc->add_option("--sliding-window-size", this->_config.sliding_window_size, "Sliding window size. By default this is set to the diagonal width of ModLE's contact matrix.")->check(CLI::NonNegativeNumber);
-    eval_sc->add_option("--sliding-window-overlap", this->_config.sliding_window_overlap, "Overlap between consecutive sliding-windows.")->check(CLI::NonNegativeNumber)->capture_default_str();
-
-    stats_sc->add_option("--bin-size", this->_config.bin_size, "Bin size to use when calculating the statistics. Required in case of MCool files.")->check(CLI::PositiveNumber);
-    stats_sc->add_option("-w,--diagonal-width", this->_config.diagonal_width, "Diagonal width.")->check(CLI::PositiveNumber)->required();
-    stats_sc->add_flag("--dump-depleted-matrices", this->_config.dump_depleted_matrices, "Dump contact matrices used to calculate the normalized average contact density.");
-    stats_sc->add_option("--path-to-histograms", this->_config.output_path_for_histograms, "Path where to output contact histograms.");
-    stats_sc->add_option("--exclude-chromosomes", this->_config.chromosomes_excluded_vect, "Comma-separated list of chromosomes to skip when calculating chromosome statistics.")->delimiter(',');
-    stats_sc->add_option("--depletion-multiplier", this->_config.depletion_multiplier, "Multiplier used to control the magnitude of the depletion.")->check(CLI::NonNegativeNumber)->capture_default_str();
     // clang-format on
+    this->make_convert_subcommand();
+    this->make_eval_subcommand();
+    this->make_stats_subcommand();
   }
 
-  [[nodiscard]] inline bool validate() {  // TODO: Refactor this function
+  [[nodiscard]] inline std::string validate_convert_subcommand() {
+    assert(this->_cli.get_subcommand("convert")->parsed());
     std::string errors;
     auto& c = this->_config;
     if (!std::filesystem::is_directory(c.output_base_name) &&
@@ -100,37 +128,101 @@ class Cli {
 
     if (!c.force) {
       std::vector<std::string> collisions;
-      if (this->_cli.get_subcommand("convert")->parsed()) {
-        if (this->_config.output_format == config::output_format::hic) {
-          if (auto file =
-                  fmt::format("{}{}.hic", c.add_noise ? "_w_noise" : "", c.output_base_name);
-              std::filesystem::exists(file)) {
-            collisions.push_back(file);
-          }
+      if (this->_config.output_format == config::output_format::hic) {
+        if (auto file = fmt::format("{}{}.hic", c.add_noise ? "_w_noise" : "", c.output_base_name);
+            std::filesystem::exists(file)) {
+          collisions.push_back(file);
         }
-        if (this->_config.output_format == config::output_format::tsv) {
-          if (auto file = fmt::format("{}{}_symmetric.tsv.bz2", c.output_base_name,
-                                      c.add_noise ? "_w_noise" : "");
-              std::filesystem::exists(file)) {
-            collisions.push_back(file);
+      }
+      if (this->_config.output_format == config::output_format::tsv) {
+        if (auto file = fmt::format("{}{}_symmetric.tsv.bz2", c.output_base_name,
+                                    c.add_noise ? "_w_noise" : "");
+            std::filesystem::exists(file)) {
+          collisions.push_back(file);
+        }
+      }
+      if (!collisions.empty()) {
+        absl::StrAppendFormat(
+            &errors,
+            "Detected %lu file name collisions: refusing to proceed. Pass --force to "
+            "overwrite existing file(s).\nColliding file(s):\n - %s",
+            collisions.size(), absl::StrJoin(collisions, "\n - "));
+      }
+    }
+
+    if (!c.chr_sizes.empty()) {
+      if (std::filesystem::exists(c.chr_sizes)) {
+        if (std::filesystem::is_directory(c.chr_sizes)) {
+          absl::StrAppendFormat(
+              &errors,
+              "--chr-sizes should be the path to a file or one of %s, but is a directory\n",
+              absl::StrJoin(this->_allowed_genome_ids, ", "));
+        }
+      } else {
+        if (!this->_allowed_genome_ids.contains(c.chr_sizes)) {
+          absl::StrAppendFormat(
+              &errors, "--chr-sizes='%s' should be the path to an existing file or one of %s.\n",
+              c.chr_sizes, absl::StrJoin(this->_allowed_genome_ids, ", "));
+        }
+      }
+    }
+
+    if (this->_config.output_format == config::output_format::hic ||
+        absl::StartsWith("http", this->_config.path_to_reference_matrix) ||
+        absl::EndsWithIgnoreCase(c.path_to_reference_matrix, ".hic")) {
+      if (c.path_to_juicer_tools.empty()) {
+        for (std::string file : {"juicer_tools", "juicer_tools.sh", "juicer_tools.exe"}) {
+          if (auto p = boost::process::search_path(file).string(); !p.empty()) {
+            c.path_to_juicer_tools = std::move(p);
+            break;
           }
         }
       }
-      if (this->_cli.get_subcommand("eval")->parsed()) {
-        if (c.path_to_input_matrices.size() > 1) {
-          absl::StrAppendFormat(&errors,
-                                "You have specified %d input files through the -i option, but "
-                                "only one file is allowed when using the eval subcommand.\n",
-                                c.path_to_input_matrices.size());
-        }
+      if (c.output_format == config::output_format::hic && c.path_to_juicer_tools.empty()) {
+        absl::StrAppendFormat(
+            &errors,
+            "--path-to-juicer-tools was not specified and ModLE tools was unable to find Juicer "
+            "tools in your path");
+      }
+    }
+    return errors;
+  }
 
-        for (std::string_view suffix :
-             {"rho", "tau", "rho_pv", "tau_pv"}) {  // TODO Update this section
-          for (std::string_view ext : {"tsv.bz2", "wig"}) {
-            if (auto file = fmt::format("{}_{}.{}", c.output_base_name, suffix, ext);
-                std::filesystem::exists(file)) {
-              collisions.emplace_back(file);
-            }
+  [[nodiscard]] inline std::string validate_eval_subcommand() {
+    assert(this->_cli.get_subcommand("eval")->parsed());
+    std::string errors;
+    auto& c = this->_config;
+    if (!std::filesystem::is_directory(c.output_base_name) &&
+        std::filesystem::exists(c.output_base_name)) {
+      absl::StrAppendFormat(
+          &errors, "--output-dir should point to a directory or a non-existing path. Is '%s'",
+          c.output_base_name);
+    }
+
+    if (const auto* s = "/modle_tools/"; !absl::EndsWithIgnoreCase(c.tmp_dir, s)) {
+      c.tmp_dir += s;
+    }
+    if (!std::filesystem::is_directory(c.tmp_dir) && std::filesystem::exists(c.tmp_dir)) {
+      absl::StrAppendFormat(
+          &errors, "--tmp-dir should point to a directory or a non-existing path. Is '%s'\n",
+          c.tmp_dir);
+    }
+
+    if (!c.force) {
+      std::vector<std::string> collisions;
+      if (c.path_to_input_matrices.size() > 1) {
+        absl::StrAppendFormat(&errors,
+                              "You have specified %d input files through the -i option, but "
+                              "only one file is allowed when using the eval subcommand.\n",
+                              c.path_to_input_matrices.size());
+      }
+
+      for (std::string_view suffix :
+           {"rho", "tau", "rho_pv", "tau_pv"}) {  // TODO Update this section
+        for (std::string_view ext : {"tsv.bz2", "bwig"}) {
+          if (auto file = fmt::format("{}_{}.{}", c.output_base_name, suffix, ext);
+              std::filesystem::exists(file)) {
+            collisions.emplace_back(file);
           }
         }
       }
@@ -160,8 +252,7 @@ class Cli {
       }
     }
 
-    if (this->_cli.get_subcommand("eval")->parsed() && c.sliding_window_size != 0 &&
-        c.sliding_window_size <= c.sliding_window_overlap) {
+    if (c.sliding_window_size != 0 && c.sliding_window_size <= c.sliding_window_overlap) {
       absl::StrAppendFormat(&errors,
                             "--sliding-window-size should be > --sliding-window-overlap: "
                             "--sliding-window-size=%lu --sliding-window-overlap=%lu.",
@@ -185,29 +276,26 @@ class Cli {
             "tools in your path");
       }
     }
-
-    if (this->_cli.get_subcommand("stats")->parsed()) {  // Checks whether the bin size is available
-      // TODO catch error and print a friendly error message
-      cooler::Cooler f(c.path_to_input_matrices[0], cooler::Cooler::READ_ONLY, c.bin_size);
-    }
-
-    this->validate_stats_args(errors);
-
-    if (!errors.empty()) {
-      fmt::print(stderr, "The following issues have been detected:\n{}\n", errors);
-    }
-    return errors.empty();
+    return errors;
   }
 
-  inline void validate_stats_args(std::string& errors) {
-    if (!this->_cli.get_subcommand("stats")->parsed()) {
-      return;
-    }
+  [[nodiscard]] inline std::string validate_stats_subcommand() const {
+    std::string errors;
+    assert(this->_cli.get_subcommand("stats")->parsed());
     const auto& c = this->_config;
     if (c.path_to_input_matrices.size() != 1) {
       absl::StrAppendFormat(&errors,
                             "modle_tools stats expects one contact matrix, but %d were found.\n",
                             c.path_to_input_matrices.size());
+    }
+
+    if (!c.path_to_chr_subranges.empty()) {
+      auto p = modle::bed::Parser(c.path_to_chr_subranges);
+      if (const auto s = p.validate(); !s.empty()) {
+        absl::StrAppendFormat(&errors,
+                              "Validation of file '%s' failed with the following error: %s.\n",
+                              c.path_to_input_matrices[0], s);
+      }
     }
 
     try {
@@ -220,6 +308,10 @@ class Cli {
                               "File '%s' appears to be a multi-resolution Cooler. --bin-size is a "
                               "mandatory argument when processing .mcool files.\n",
                               c.path_to_input_matrices[0]);
+      } else {
+        absl::StrAppendFormat(&errors,
+                              "Validation of file '%s' failed with the following error: %s.\n",
+                              c.path_to_input_matrices[0], e.what());
       }
     }
 
@@ -235,6 +327,25 @@ class Cli {
                               c.output_path_for_histograms);
       }
     }
+    return errors;
+  }
+
+  [[nodiscard]] inline bool validate() {  // TODO: Refactor this function
+    std::string errors;
+    if (this->_cli.get_subcommand("convert")->parsed()) {
+      errors = this->validate_convert_subcommand();
+    } else if (this->_cli.get_subcommand("eval")->parsed()) {
+      errors = this->validate_eval_subcommand();
+    } else if (this->_cli.get_subcommand("stats")->parsed()) {
+      errors = this->validate_stats_subcommand();
+    } else {
+      assert(false);  // This branch should be unreachable
+    }
+
+    if (!errors.empty()) {
+      fmt::print(stderr, "The following issues have been detected:\n{}\n", errors);
+    }
+    return errors.empty();
   }
 
   inline void post_process_cli_args() {

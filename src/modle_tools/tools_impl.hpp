@@ -13,6 +13,7 @@
 #include <filesystem>  // for create_directories
 #include <mutex>
 
+#include "modle/bed.hpp"
 #include "modle/bigwig.hpp"    // for write_range
 #include "modle/contacts.hpp"  // for ContactMatrix<>::Header, ContactMatrix
 #include "modle/cooler.hpp"
@@ -202,12 +203,12 @@ void eval_subcmd(const modle::tools::config& c) {
     const auto& chr_name = chr.first;
     auto t0 = absl::Now();
     fmt::print(stderr, FMT_STRING("Reading contacts for '{}' into memory...\n"), chr_name);
-    const auto cmatrix1 = ref_cooler.cooler_to_cmatrix(chr_name, nrows);
+    const auto cmatrix1 = ref_cooler.cooler_to_cmatrix(chr_name, nrows, 0, 0UL);
     fmt::print(stderr, FMT_STRING("Read {}x{} reference matrix in {} using {:.2f} MB of RAM.\n"),
                cmatrix1.nrows(), cmatrix1.ncols(), absl::FormatDuration(absl::Now() - t0),
                cmatrix1.get_matrix_size_in_mb());
     t0 = absl::Now();
-    const auto cmatrix2 = input_cooler.cooler_to_cmatrix(chr_name, nrows);
+    const auto cmatrix2 = input_cooler.cooler_to_cmatrix(chr_name, nrows, 0, 0UL);
     fmt::print(stderr, FMT_STRING("Read {}x{} input matrix in {} using {:.2f} MB of RAM.\n"),
                cmatrix2.nrows(), cmatrix2.ncols(), absl::FormatDuration(absl::Now() - t0),
                cmatrix2.get_matrix_size_in_mb());
@@ -263,9 +264,18 @@ void stats_subcmd(const modle::tools::config& c) {
   std::unique_ptr<std::ofstream> hist_file{nullptr};
 
   const auto nchroms = m1.get_nchroms();
-  const auto bin_size = c.bin_size;
+  const auto bin_size = m1.get_bin_size();
   const auto chr_names = m1.get_chr_names();
   const auto chr_sizes = m1.get_chr_sizes();
+
+  absl::flat_hash_map<std::string, std::size_t> chr_start_offsets;
+  if (!c.path_to_chr_subranges.empty()) {
+    modle::bed::Parser p(c.path_to_chr_subranges);
+    const auto buff = p.parse_all();
+    std::transform(
+        buff.begin(), buff.end(), std::inserter(chr_start_offsets, chr_start_offsets.end()),
+        [](const auto& record) { return std::make_pair(record.chrom, record.chrom_start); });
+  }
 
   if (c.dump_depleted_matrices) {  // Create cooler file to write depl. contacts
     const auto ext = std::filesystem::path(path_to_input_matrix).extension().string();
@@ -295,6 +305,7 @@ void stats_subcmd(const modle::tools::config& c) {
   for (auto i = 0UL; i < nchroms; ++i) {
     const auto& chr_name = chr_names[i];
     const auto& chr_size = chr_sizes[i];
+    const auto chr_start_offset = chr_start_offsets.empty() ? 0UL : chr_start_offsets.at(chr_name);
 
     // Skip chromosome found in the exclusion list
     if (c.chromosomes_excluded.contains(chr_name)) {
@@ -302,7 +313,8 @@ void stats_subcmd(const modle::tools::config& c) {
     }
 
     // Read contacts for chr_name into memory
-    const auto cmatrix = m1.cooler_to_cmatrix(chr_name, c.diagonal_width / bin_size);
+    const auto cmatrix =
+        m1.cooler_to_cmatrix(chr_name, c.diagonal_width, bin_size, 0UL);
 
     const auto hist = compute_row_wise_contact_histogram(cmatrix);
     const auto mask = cmatrix.generate_mask_for_bins_without_contacts();

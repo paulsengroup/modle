@@ -58,7 +58,7 @@ TEST_CASE("Cooler to CMatrix", "[io][cooler][short]") {
 
   auto c = Cooler(test_file, Cooler::READ_ONLY);
 
-  auto cmatrix = c.cooler_to_cmatrix("chr7", nrows, true, false);
+  auto cmatrix = c.cooler_to_cmatrix("chr7", nrows, 0, true, false);
   CHECK(cmatrix.nrows() == nrows);
   CHECK(cmatrix.ncols() == ncols);
 }
@@ -76,13 +76,13 @@ TEST_CASE("Cooler to CMatrix and CMatrix to Cooler", "[io][cooler][short]") {
 
   auto c1 = Cooler(test_file_in, Cooler::READ_ONLY);
 
-  const auto cmatrix1 = c1.cooler_to_cmatrix("chr1", nrows, true, false);
+  const auto cmatrix1 = c1.cooler_to_cmatrix("chr1", nrows, 0, true, false);
   REQUIRE(cmatrix1.nrows() == nrows);
   REQUIRE(cmatrix1.ncols() == ncols);
 
   auto c2 = Cooler(test_file_out, Cooler::WRITE_ONLY, bin_size);
   c2.write_or_append_cmatrix_to_file(cmatrix1, "chr1", start, end, end);
-  const auto cmatrix2 = c2.cooler_to_cmatrix("chr1", nrows);
+  const auto cmatrix2 = c2.cooler_to_cmatrix("chr1", nrows, 0);
   const auto& v1 = cmatrix1.get_raw_count_vector();
   const auto& v2 = cmatrix2.get_raw_count_vector();
   REQUIRE(v1.size() == v2.size());

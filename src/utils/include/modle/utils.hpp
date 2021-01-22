@@ -10,6 +10,9 @@ namespace modle::utils {
 
 template <typename N>
 inline void parse_numeric_or_throw(std::string_view tok, N& field);
+
+template <typename I>
+inline void parse_int_or_throw(std::string_view tok, I& field);
 // This is a temporary workaround to deal with the fact that libstdc++ 10 does not come with the
 // float/double overloads for std::from_chars
 template <typename R>
@@ -18,6 +21,9 @@ inline void parse_real_or_throw(std::string_view tok, R& field);
 template <typename N>
 inline void parse_numeric_or_throw(const std::vector<std::string_view>& toks, std::size_t idx,
                                    N& field);
+template <typename I>
+inline void parse_int_or_throw(const std::vector<std::string_view>& toks, std::size_t idx,
+                               I& field);
 // This is a temporary workaround to deal with the fact that libstdc++ 10 does not come with the
 // float/double overloads for std::from_chars
 template <typename R>
@@ -63,6 +69,14 @@ using has_data_member_func = decltype(std::declval<T&>().data());
 
 template <class T>
 using has_size_member_func = decltype(std::declval<T&>().size());
+
+template <typename T>
+[[nodiscard]] inline std::string get_printable_type_name(const T& var);
+
+// https://stackoverflow.com/a/56766138
+template <typename T>
+constexpr auto get_printable_type_name() noexcept;
+
 }  // namespace modle::utils
 
 #include "../../utils_impl.hpp"

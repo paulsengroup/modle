@@ -7,6 +7,7 @@
 #include <experimental/type_traits>
 #include <string_view>
 #include <type_traits>
+#include <variant>
 #include <vector>
 
 #include "modle/contacts.hpp"
@@ -20,7 +21,7 @@ H5::PredType getH5_type() {
   // Taken from github.com/DavidAce/h5pp:
   // https://github.com/DavidAce/h5pp/blob/master/h5pp/include/h5pp/details/h5ppUtils.h
   // clang-format off
-  using DecayType = typename std::decay<DataType>::type;
+  using DecayType = typename std::decay_t<DataType>;
   if constexpr (std::is_same_v<DecayType, short>) return H5::PredType::NATIVE_SHORT;               // NOLINT
   if constexpr (std::is_same_v<DecayType, int>) return H5::PredType::NATIVE_INT;                   // NOLINT
   if constexpr (std::is_same_v<DecayType, long>) return H5::PredType::NATIVE_LONG;                 // NOLINT
@@ -37,7 +38,73 @@ H5::PredType getH5_type() {
   if constexpr (std::is_same_v<DecayType, char>) return H5::PredType::C_S1;                        // NOLINT
   // clang-format on
 
-  throw std::logic_error("getH5_type(): Unable to map C++ type to a H5T/");
+  throw std::logic_error("getH5_type(): Unable to map C++ type to a H5T");
+}
+
+using attr_types = std::variant<uint8_t, uint16_t, uint32_t, uint64_t, int8_t, int16_t, int32_t,
+                                int64_t, float, double, long double>;
+
+attr_types getCpp_type(const H5::IntType &h5_type) {
+  attr_types type;
+  assert(h5_type.getSign() != H5T_SGN_ERROR);  // NOLINT
+  const bool is_signed = h5_type.getSign() == H5T_SGN_NONE;
+  const auto size = h5_type.getSize();
+  assert(size >= 1 && size <= 8);  // NOLINT
+  if (is_signed) {
+    switch (size) {
+      case (sizeof(int8_t)):
+        type = static_cast<int8_t>(0);
+        return type;
+      case (sizeof(int16_t)):
+        type = static_cast<int16_t>(0);
+        return type;
+      case (sizeof(int32_t)):
+        type = static_cast<int32_t>(0);
+        return type;
+      case (sizeof(int64_t)):
+        type = static_cast<int64_t>(0);
+        return type;
+      default:
+        assert(false);  // NOLINT This branch should not be reachable
+    }
+  } else {
+    switch (size) {
+      case (sizeof(uint8_t)):
+        type = static_cast<uint8_t>(0);
+        return type;
+      case (sizeof(uint16_t)):
+        type = static_cast<uint16_t>(0);
+        return type;
+      case (sizeof(uint32_t)):
+        type = static_cast<uint32_t>(0);
+        return type;
+      case (sizeof(uint64_t)):
+        type = static_cast<uint64_t>(0);
+        return type;
+      default:
+        assert(false);  // NOLINT This branch should not be reachable
+    }
+  }
+  assert(false);  // NOLINT This branch should not be reachable
+}
+
+attr_types getCpp_type(const H5::FloatType &h5_type) {
+  attr_types type;
+  const auto size = h5_type.getSize();
+  switch (size) {
+    case (sizeof(float)):
+      type = static_cast<float>(0);
+      return type;
+    case (sizeof(double)):
+      type = static_cast<double>(0);
+      return type;
+    case (sizeof(long double)):
+      type = static_cast<long double>(0);
+      return type;
+    default:
+      assert(false);  // NOLINT This branch should not be reachable
+  }
+  assert(false);  // NOLINT This branch should not be reachable
 }
 
 std::string construct_error_stack() {
@@ -356,14 +423,90 @@ void read_attribute(H5::H5File &f, std::string_view attr_name, T &buff, std::str
     throw std::runtime_error(fmt::format(
         FMT_STRING("Unable to find an attribute named '{}' in group '/{}'"), attr_name, path));
   }
-
   auto attr = g.openAttribute(std::string{attr_name});
+
+  // Handle simple cases, where HDF5 type and T are consistent
   if constexpr (std::is_constructible_v<H5std_string, T>) {
-    buff.clear();
-    attr.read(attr.getStrType(), buff);
-  } else {
-    attr.read(attr.getDataType(), &buff);
+    if (const auto type = attr.getDataType(); type.getClass() == H5T_STRING) {
+      buff.clear();
+      attr.read(attr.getStrType(), buff);
+      return;
+    }
   }
+
+  if constexpr (std::is_unsigned_v<T>) {
+    if (const auto type = attr.getDataType(); type.getClass() == H5T_INTEGER &&
+                                              attr.getIntType().getSign() == H5T_SGN_NONE &&
+                                              attr.getIntType().getSize() == sizeof(T)) {
+      attr.read(attr.getIntType(), &buff);
+      return;
+    }
+  }
+
+  if constexpr (std::is_integral_v<T>) {
+    if (const auto type = attr.getDataType(); type.getClass() == H5T_INTEGER &&
+                                              attr.getIntType().getSign() == H5T_SGN_2 &&
+                                              attr.getIntType().getSize() == sizeof(T)) {
+      attr.read(attr.getIntType(), &buff);
+      return;
+    }
+  }
+
+  if constexpr (std::is_floating_point_v<T>) {
+    if (const auto type = attr.getDataType();
+        type.getClass() == H5T_FLOAT && attr.getFloatType().getSize() == sizeof(T)) {
+      attr.read(attr.getFloatType(), &buff);
+      return;
+    }
+  }
+
+  // Get HDF5 type info
+  const auto type = attr.getDataType();
+  const auto h5_class = type.getClass();
+
+  if constexpr (std::is_arithmetic_v<T>) {
+    if (type.getClass() == H5T_STRING) {
+      std::string buff_;
+      attr.read(attr.getStrType(), buff_);
+      utils::parse_numeric_or_throw(buff_, buff);
+      return;
+    }
+  }
+
+  // Map HDF5 type to C++ type using std::variant
+  assert(h5_class == H5T_INTEGER || h5_class == H5T_FLOAT);  // NOLINT
+  auto vars =
+      h5_class == H5T_INTEGER ? getCpp_type(attr.getIntType()) : getCpp_type(attr.getFloatType());
+  // Visit the appropriate variant and read the attribute
+  std::visit([&](auto &&var) { attr.read(attr.getDataType(), &var); }, vars);
+
+  // Try to convert the variant to type T whenever it make sense
+  if constexpr (std::is_constructible_v<H5std_string, T>) {
+    std::visit([&](auto &&v) { buff = fmt::to_string(v); }, vars);
+    return;
+  }
+
+  using VT = std::decay_t<decltype(vars)>;
+  if constexpr (std::is_integral_v<T> != std::is_integral_v<VT> &&
+                std::is_constructible_v<H5std_string, VT>) {
+    throw std::runtime_error(fmt::format(
+        FMT_STRING("Unable to store attribute '{}' of type {} into a buffer of type {}"), attr_name,
+        utils::get_printable_type_name<T>(), utils::get_printable_type_name<VT>()));
+  }
+  std::visit(
+      [&](auto &&v) {
+        if constexpr (std::is_arithmetic_v<T>) {
+          if (v >= std::numeric_limits<T>::min() && v <= std::numeric_limits<T>::max()) {  // NOLINT
+            buff = static_cast<T>(v);
+          } else {
+            throw std::runtime_error(fmt::format(
+                FMT_STRING("Unable to store attribute '{}' with value {} in a buffer with "
+                           "type {}. Reason: value does not fit in the receiver"),
+                attr_name, v, utils::get_printable_type_name<T>()));  // NOLINT
+          }
+        }
+      },
+      vars);
 }
 
 template <typename T>
@@ -395,8 +538,8 @@ void read_attribute(const H5::DataSet &d, std::string_view attr_name, T &buff) {
     DISABLE_WARNING_C_VLA
     auto *cbuff = reinterpret_cast<N(*)[buff_size]>(buff.data());  // NOLINT
     DISABLE_WARNING_POP
-    const auto dtype = attr.getArrayType();  // It is important to get the array type, and not just
-                                             // the data type here
+    const auto dtype = attr.getArrayType();  // It is important to get the array type, and not
+                                             // just the data type here
     attr.read(attr.getArrayType(), cbuff);
   }
 }
