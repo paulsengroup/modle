@@ -5,7 +5,6 @@
 
 #include <filesystem>
 #include <memory>
-#include <mutex>
 #include <string_view>
 #include <utility>
 #include <vector>
@@ -138,6 +137,8 @@ class Cooler {
   [[nodiscard]] inline bool is_mcool() const;
   [[nodiscard]] inline bool is_scool() const;
   [[nodiscard]] inline std::size_t get_bin_size() const;
+  [[nodiscard]] inline bool has_contacts_for_chr(std::string_view chr_name,
+                                                 bool try_common_chr_prefixes = false);
 
  private:
   std::filesystem::path _path_to_file;
@@ -166,7 +167,6 @@ class Cooler {
   std::unique_ptr<H5::DSetAccPropList> _aprop_int64{nullptr};
   std::unique_ptr<H5::DSetAccPropList> _aprop_float64{nullptr};
 
-  std::mutex _mutex;  // This mutex protects _datasets and _idx_*_offset during initialization
   std::vector<int64_t> _idx_chrom_offset{};
   std::vector<int64_t> _idx_bin1_offset{};
   hsize_t _nbins{0};
@@ -204,7 +204,8 @@ class Cooler {
       std::size_t nrows, double bias_scaling_factor = 1.0,
       bool prefer_using_balanced_counts = true);
 
-  [[nodiscard]] inline std::size_t get_chr_idx(std::string_view chr_name);
+  [[nodiscard]] inline std::size_t get_chr_idx(std::string_view query_chr_name,
+                                               bool try_common_chr_prefixes = false);
 
   inline std::size_t read_chr_offset_idx();
 

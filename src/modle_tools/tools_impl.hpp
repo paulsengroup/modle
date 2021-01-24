@@ -218,15 +218,39 @@ void eval_subcmd(const modle::tools::config& c) {
                                    : chr_subranges.at(chr_name);
     auto t0 = absl::Now();
     fmt::print(stderr, FMT_STRING("Reading contacts for '{}' into memory...\n"), chr_name);
+    if (!ref_cooler.has_contacts_for_chr(chr_name, true)) {
+      fmt::print(
+          stderr,
+          FMT_STRING(
+              "WARNING: reference contact matrix doesn't have any contacts for '{}'. SKIPPING!\n"),
+          chr_name);
+      continue;
+    }
+
+    if (!input_cooler.has_contacts_for_chr(chr_name, true)) {
+      fmt::print(
+          stderr,
+          FMT_STRING("WARNING: contact matrix doesn't have any contacts for '{}'. SKIPPING!\n"),
+          chr_name);
+      continue;
+    }
+
     const auto cmatrix1 = ref_cooler.cooler_to_cmatrix(chr_name, nrows, chr_subrange);
-    fmt::print(stderr, FMT_STRING("Read {}x{} reference matrix in {} using {:.2f} MB of RAM.\n"),
-               cmatrix1.nrows(), cmatrix1.ncols(), absl::FormatDuration(absl::Now() - t0),
-               cmatrix1.get_matrix_size_in_mb());
+    fmt::print(
+        stderr,
+        FMT_STRING(
+            "Read {:.2f}M contacts for a {}x{} reference matrix in {} using {:.2f} MB of RAM.\n"),
+        static_cast<double>(cmatrix1.get_tot_contacts()) / 1.0e6, cmatrix1.nrows(),
+        cmatrix1.ncols(), absl::FormatDuration(absl::Now() - t0), cmatrix1.get_matrix_size_in_mb());
     t0 = absl::Now();
+
     const auto cmatrix2 = input_cooler.cooler_to_cmatrix(chr_name, nrows, chr_subrange);
-    fmt::print(stderr, FMT_STRING("Read {}x{} input matrix in {} using {:.2f} MB of RAM.\n"),
-               cmatrix2.nrows(), cmatrix2.ncols(), absl::FormatDuration(absl::Now() - t0),
-               cmatrix2.get_matrix_size_in_mb());
+    fmt::print(
+        stderr,
+        FMT_STRING(
+            "Read {:.2f}M contacts for a {}x{} input matrix in {} using {:.2f} MB of RAM.\n"),
+        static_cast<double>(cmatrix2.get_tot_contacts()) / 1.0e6, cmatrix2.nrows(),
+        cmatrix2.ncols(), absl::FormatDuration(absl::Now() - t0), cmatrix2.get_matrix_size_in_mb());
 
     if (cmatrix1.ncols() != cmatrix2.ncols() || cmatrix1.nrows() != cmatrix2.nrows()) {
       throw std::runtime_error(fmt::format(

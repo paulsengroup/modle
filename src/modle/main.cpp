@@ -115,7 +115,7 @@ void run_simulation(const modle::config& c) {
     fmt::print(cmd_file, FMT_STRING("{}\n{}\n"), c.to_string(),
                absl::StrJoin(c.argv, c.argv + c.argc, " "));
   }
-  fmt::print(stderr, "Simulation terminated without errors!\nBye.\n");
+  fmt::print(stderr, "Simulation terminated without errors!\n\nBye.\n");
 }
 }  // namespace modle
 

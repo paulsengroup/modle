@@ -8,7 +8,6 @@
 #include <algorithm>
 #include <cstdint>
 #include <memory>
-#include <mutex>
 #include <stdexcept>
 #include <type_traits>
 #include <utility>
@@ -454,11 +453,13 @@ Cooler::Cooler(std::filesystem::path path_to_file, IO_MODE mode, std::size_t bin
     absl::StrAppend(&this->_root_path, "resolutions/", this->_bin_size, "/");
   }
   if (this->is_read_only()) {
-    this->open_cooler_datasets();
     if (this->_bin_size == 0) {  // i.e. file is cooler
       this->_bin_size =
           static_cast<size_t>(hdf5::read_attribute_int(*this->_fp, "bin-size", this->_root_path));
     }
+    this->open_cooler_datasets();
+    this->read_chr_offset_idx();
+    this->read_bin1_offset_idx();
   } else {
     this->init_default_datasets();
     this->write_metadata();
@@ -686,7 +687,7 @@ void Cooler::write_or_append_cmatrices_to_file(absl::Span<ContactMatrix<I1> *con
   pixel_b2_idx_buff.reserve(BUFF_SIZE);
   pixel_count_buff.reserve(BUFF_SIZE);
   idx_bin1_offset_buff.reserve(BUFF_SIZE);
-  idx_chrom_offset_buff.reserve(cmatrices.size());
+  idx_chrom_offset_buff.reserve(cmatrices.size() + 1);
 
   // Declare aliases to file offsets for HDF5 datasets
   auto &chr_name_h5_foffset = this->_dataset_file_offsets[CHR_NAME];
@@ -774,6 +775,14 @@ void Cooler::write_or_append_cmatrices_to_file(absl::Span<ContactMatrix<I1> *con
         hdf5::write_numbers(idx_bin1_offset_buff, d[IDX_BIN1], idx_bin1_offset_h5_foffset);
     idx_bin1_offset_buff.clear();
 
+    if (cmatrix->ncols() == 0) {
+      idx_bin1_offset_buff.resize(
+          (chr_total_len / this->_bin_size) + (chr_total_len % this->_bin_size != 0), this->_nnz);
+      idx_bin1_offset_h5_foffset =
+          hdf5::write_numbers(idx_bin1_offset_buff, d[IDX_BIN1], idx_bin1_offset_h5_foffset);
+      idx_bin1_offset_buff.clear();
+    }
+
     pxl_offset += chr_start / this->_bin_size;
     for (auto i = 0UL; i < cmatrix->ncols(); ++i) {  // Iterate over columns in the cmatrix
       // Write first pixel that refers to a given bin1 to the index
@@ -813,9 +822,9 @@ void Cooler::write_or_append_cmatrices_to_file(absl::Span<ContactMatrix<I1> *con
       }
     }
 
-    // In case we are simulating a subset of a chromosome (i.e. end - start != chr size), write the
-    // index for all the bins corresponding to genomic coordinates after the end position.
-    // See previous comment for an example
+    // In case we are simulating a subset of a chromosome (i.e. end - start != chr size), write
+    // the index for all the bins corresponding to genomic coordinates after the end position. See
+    // previous comment for an example
     idx_bin1_offset_buff.resize(
         idx_bin1_offset_buff.size() +
             ((static_cast<std::size_t>(chr_total_len) - chr_end) / this->_bin_size) +
@@ -850,8 +859,8 @@ void Cooler::write_or_append_cmatrices_to_file(absl::Span<ContactMatrix<I1> *con
   hdf5::write_or_create_attribute(f, "nnz", this->_nnz);
 
   if (!quiet) {
-    fmt::print(stderr, "DONE! Saved {} pixels in {}.\n", this->_nnz,
-               absl::FormatDuration(absl::Now() - t0));
+    fmt::print(stderr, "DONE! Saved {:.2f}M pixels in {}.\n",
+               static_cast<double>(this->_nnz) / 1.0e6, absl::FormatDuration(absl::Now() - t0));
   }
 }
 
@@ -963,61 +972,14 @@ ContactMatrix<uint32_t> Cooler::cooler_to_cmatrix(
     std::string_view chr_name, std::size_t nrows,
     std::pair<std::size_t, std::size_t> chr_boundaries, bool try_common_chr_prefixes,
     bool prefer_using_balanced_counts) {
-  // TODO: Add check for Cooler bin size
+  assert(this->_fp);
+  assert(!this->_datasets.empty());
+  assert(!this->_idx_bin1_offset.empty());
+  assert(!this->_idx_chrom_offset.empty());
 
-  {
-    std::scoped_lock lock(this->_mutex);
-    if (this->_datasets.empty()) {
-      this->open_cooler_datasets();
-    }
-    if (this->_idx_chrom_offset.empty()) {
-      this->read_chr_offset_idx();
-    }
-    if (this->_idx_bin1_offset.empty()) {
-      this->read_bin1_offset_idx();
-    }
-  }
-
-  auto search_chr_offset_idx = [&]() {
-    if (!try_common_chr_prefixes) {
-      return std::make_pair(chr_name, this->get_chr_idx(chr_name));
-    }
-    // Here's the issue: for a given genome assembly (say hg19), some tools name chromosome as
-    // chrN, where N is the chromosome number, while others only use the number N. The purpose
-    // of this lambda is to try to guess few reasonably common prefixes, look them up in the
-    // Cooler file, then return the chromosome name variant that produced a hit together with
-    // the chr index
-    std::vector<std::string_view> chr_names{chr_name};
-    for (const auto &prefix : {"chr", "CHR", "Chr"}) {
-      if (absl::StartsWith(chr_name, prefix)) {
-        chr_names.emplace_back(absl::StripPrefix(chr_name, prefix));
-      } else {
-        chr_names.emplace_back(absl::StrCat(prefix, chr_name));
-      }
-    }
-    // TODO: Consider reading the full array of chr names and then look up all the combinations.
-    // This would allows us to avoid using exceptions, but will increase memory usage when
-    // processing highly fragmented assemblies
-    // Just to make sure we are not later using this variable instead of actual_chr_name
-    chr_name = "";
-    for (const auto name : chr_names) {
-      try {
-        return std::make_pair(name, this->get_chr_idx(name));
-      } catch (const std::runtime_error &e) {
-        if (!absl::StartsWith(e.what(), "Unable to find a chromosome named")) {
-          throw;
-        }
-      }
-    }
-    throw std::runtime_error(
-        fmt::format(FMT_STRING("Unable to find a chromosome named '{}'. The following chromosome "
-                               "name variants were searched: '{}'"),
-                    chr_name, absl::StrJoin(chr_names, "', '")));
-  };
-
-  const auto [actual_chr_name, chr_idx] = search_chr_offset_idx();
+  const auto chr_idx = this->get_chr_idx(chr_name, try_common_chr_prefixes);
   const auto chr_size = static_cast<std::size_t>(this->get_chr_sizes()[chr_idx]);
-  auto nbins_offsets = std::make_pair(  // First and last bins to use for readinf
+  auto nbins_offsets = std::make_pair(  // First and last bins to use for reading
       static_cast<int64_t>(chr_boundaries.first / this->_bin_size),
       static_cast<int64_t>(std::min(chr_boundaries.second, chr_size) / this->_bin_size));
   const auto bin1_offset_idx = this->get_bin1_offset_idx_for_chr(chr_idx, chr_boundaries.first);
@@ -1036,7 +998,8 @@ ContactMatrix<uint32_t> Cooler::cooler_to_cmatrix(
         throw std::runtime_error(
             "File has a \"bins/weight\" dataset, but does not have an attribute named "
             "\"cis_only\". This most likely means that the file was generated by a very old "
-            "version of Cooler. In order to proceed, you should rebalance the file using a recent "
+            "version of Cooler. In order to proceed, you should rebalance the file using a "
+            "recent "
             "version of Cooler, or in alternative remove the weight dataset (not recommended).");
       }
     }
@@ -1115,8 +1078,8 @@ ContactMatrix<uint32_t> Cooler::cooler_to_cmatrix(std::pair<hsize_t, hsize_t> bi
       if (bin_weights.empty()) {
         cmatrix.set(bin2, bin1, static_cast<uint32_t>(count_BUFF[j]));
       } else {
-        // According to Cooler documentations, NaN means that a bin has been excluded by the matrix
-        // balancing procedure. In this case we set the count to 0
+        // According to Cooler documentations, NaN means that a bin has been excluded by the
+        // matrix balancing procedure. In this case we set the count to 0
         if (std::isnan(bin_weights[bin1]) || std::isnan(bin_weights[bin2])) {
           continue;  // Same as setting count to 0;
         }
@@ -1143,22 +1106,47 @@ ContactMatrix<uint32_t> Cooler::cooler_to_cmatrix(std::pair<hsize_t, hsize_t> bi
                                  scaling_factor, prefer_using_balanced_counts);
 }
 
-std::size_t Cooler::get_chr_idx(std::string_view chr_name) {
+std::size_t Cooler::get_chr_idx(std::string_view query_chr_name, bool try_common_chr_prefixes) {
+  // Here's the issue: for a given genome assembly (say hg19), some tools name chromosome as
+  // chrN, where N is the chromosome number, while others only use the number N. The purpose
+  // of this lambda is to try to guess few reasonably common prefixes, look them up in the
+  // Cooler file, then return the chromosome name variant that produced a hit together with
+  // the chr index
+
   try {
     const auto chr_names = hdf5::read_strings(this->_datasets[CHR_NAME], 0);
-    const auto match = std::find(chr_names.begin(), chr_names.end(), chr_name);
+    auto match = std::find(chr_names.begin(), chr_names.end(), query_chr_name);
     if (match != chr_names.end()) {
       return static_cast<std::size_t>(std::distance(chr_names.begin(), match));
     }
+    if (try_common_chr_prefixes) {
+      std::array<std::string_view, 3> queries;
+      constexpr std::array<std::string_view, 3> prefixes = {"chr", "CHR", "Chr"};
+      for (auto i = 0U; i < prefixes.size(); ++i) {
+        queries[i] = absl::StartsWith(query_chr_name, prefixes[i])
+                         ? absl::StripPrefix(query_chr_name, prefixes[i])
+                         : absl::StrCat(prefixes[i], query_chr_name);
+      }
+      for (const auto &q : queries) {
+        match = std::find(chr_names.begin(), chr_names.end(), q);
+        if (match != chr_names.end()) {
+          return static_cast<std::size_t>(std::distance(chr_names.begin(), match));
+        }
+      }
+      throw std::runtime_error(
+          fmt::format(FMT_STRING("Unable to find a chromosome named '{}'. The following chromosome "
+                                 "name variants were searched: '{}'"),
+                      query_chr_name, absl::StrJoin(queries, "', '")));
+    }
     throw std::runtime_error(
-        fmt::format(FMT_STRING("Unable to find a chromosome named '{}'"), chr_name));
+        fmt::format(FMT_STRING("Unable to find a chromosome named '{}'"), query_chr_name));
   } catch (const std::exception &e) {
     if (absl::StartsWith(e.what(), "Unable to find a chromosome")) {
       throw;
     }
     throw std::runtime_error(fmt::format(FMT_STRING("The following error occurred while looking up "
                                                     "'{}' in dataset chroms/name of file '{}': {}"),
-                                         chr_name, this->_path_to_file, e.what()));
+                                         query_chr_name, this->_path_to_file, e.what()));
   }
 }
 
@@ -1236,6 +1224,21 @@ bool Cooler::is_mcool() const { return this->_flavor == MCOOL; }
 bool Cooler::is_scool() const { return this->_flavor == SCOOL; }
 
 std::size_t Cooler::get_bin_size() const { return this->_bin_size; }
+
+bool Cooler::has_contacts_for_chr(std::string_view chr_name, bool try_common_chr_prefixes) {
+  assert(this->_fp);                         // NOLINT
+  assert(this->is_read_only());              // NOLINT
+  assert(!this->_idx_bin1_offset.empty());   // NOLINT
+  assert(!this->_idx_chrom_offset.empty());  // NOLINT
+  const auto chr_idx = this->get_chr_idx(chr_name, try_common_chr_prefixes);
+  assert(chr_idx < this->_idx_chrom_offset.size());  // NOLINT
+
+  const auto first_bin = static_cast<std::size_t>(this->_idx_chrom_offset[chr_idx]);
+  const auto last_bin = static_cast<std::size_t>(this->_idx_chrom_offset[chr_idx + 1]);
+  assert(last_bin >= first_bin);  // NOLINT
+
+  return this->_idx_bin1_offset[first_bin] != this->_idx_bin1_offset[last_bin];
+}
 
 std::size_t Cooler::get_nchroms() {
   assert(this->_fp);

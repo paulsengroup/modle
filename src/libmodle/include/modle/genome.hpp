@@ -33,6 +33,7 @@ class Genome {
   [[nodiscard]] inline std::vector<Lef>& get_lefs();
   [[nodiscard]] inline const std::vector<Lef>& get_lefs() const;
   [[nodiscard]] inline uint32_t get_n_chromosomes() const;
+  [[nodiscard]] inline uint32_t get_n_ok_chromosomes() const;
   [[nodiscard]] inline uint64_t size() const;
   [[nodiscard]] inline uint64_t n50() const;
   [[nodiscard]] inline uint64_t get_n_bins() const;
