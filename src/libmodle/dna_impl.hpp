@@ -596,4 +596,6 @@ void Chromosome::allocate() {
   this->dna.allocate_bins();
 }
 
+bool Chromosome::ok() const { return this->_ok; }
+
 }  // namespace modle

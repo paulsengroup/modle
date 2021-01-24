@@ -77,6 +77,7 @@ class ContactMatrix {
   inline void generate_mask_for_bins_without_contacts(boost::dynamic_bitset<>& mask) const;
   [[nodiscard]] inline boost::dynamic_bitset<> generate_mask_for_bins_without_contacts() const;
   inline void reset();
+  [[nodiscard]] inline bool empty() const;
 
  private:
   uint64_t _nrows{0};

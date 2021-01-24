@@ -764,4 +764,9 @@ void ContactMatrix<I>::reset() {
   this->_updates_missed = 0;
 }
 
+template <typename I>
+bool ContactMatrix<I>::empty() const {
+  return this->_tot_contacts == 0;
+}
+
 }  // namespace modle

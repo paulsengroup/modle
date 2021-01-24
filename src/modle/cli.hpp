@@ -55,6 +55,12 @@ class Cli {
             "Overwrite existing output files.")
             ->capture_default_str();
 
+    io->add_flag(
+            "--write-contacts-for-excluded-chroms",
+            this->_config.write_contacts_for_ko_chroms,
+            "Write contacts for all chromosomes, even those where loop extrusion was not simulated. In the latter case ModLE will only write to the chrom, bins and indexes datasets.")
+            ->capture_default_str();
+
     gen->add_option(
             "-b,--bin-size",
             this->_config.bin_size,
@@ -183,6 +189,12 @@ class Cli {
             this->_config.probability_of_extrusion_barrier_block,
             "Probability of extrusion block by an extrusion barrier. When --extrusion-barrier-file is passed, this setting will overwrite the probability of block specified in the BED file.")
             ->check(CLI::Range(0.0, 1.0));
+
+    extr_barr->add_flag(
+            "--exclude-chr-wo-barriers,!--keep-chr-without-barriers",
+            this->_config.exclude_chr_wo_extr_barriers,
+            fmt::format(FMT_STRING("Do not simulate loop extrusion on chromosomes without any extrusion barrier. Default: {}"), this->_config.exclude_chr_wo_extr_barriers ? "--exclude-chr-wo-barriers" : "--keep-chr-without-barriers"))
+            ->capture_default_str();
 
     gen->get_option("--skip-burn-in")->excludes(burn->get_option("--min-burnin-rounds"));
     gen->get_option("--skip-burn-in")->excludes(burn->get_option("--min-number-of-loops-per-lef"));

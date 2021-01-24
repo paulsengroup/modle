@@ -238,6 +238,7 @@ struct Chromosome {
   inline void write_barriers_to_tsv(std::string_view path_to_outfile, bool force_overwrite) const;
   inline void allocate_contacts();
   inline void allocate();
+  [[nodiscard]] inline bool ok() const;
 
   std::string name;  ///< Sequence name (e.g. chromosome name from a BED file).
   uint64_t start;
@@ -253,6 +254,7 @@ struct Chromosome {
  private:
   modle::PRNG _rand_eng;
   uint64_t _seed;
+  bool _ok{true};
 };
 
 }  // namespace modle

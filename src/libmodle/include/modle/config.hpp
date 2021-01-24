@@ -37,6 +37,8 @@ struct config {
   bool randomize_contact_sampling_interval{false};
   bool skip_output{false};
   uint32_t nthreads{std::thread::hardware_concurrency()};
+  bool exclude_chr_wo_extr_barriers{true};
+  bool write_contacts_for_ko_chroms{false};
 
   int argc;
   char** argv;

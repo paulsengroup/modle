@@ -43,7 +43,7 @@ class Genome {
   [[nodiscard]] inline std::vector<double> get_chromosome_lef_affinities() const;
   [[nodiscard]] inline uint64_t get_n_of_free_lefs() const;
   [[nodiscard]] inline uint64_t get_n_of_busy_lefs() const;
-  inline void write_contacts_to_file(std::string_view output_file);
+  inline void write_contacts_to_file(std::string_view output_file, bool include_ko_chroms = false);
   inline void write_extrusion_barriers_to_file(std::string_view output_dir,
                                                bool force_overwrite) const;
 
@@ -77,7 +77,7 @@ class Genome {
   inline void sort_extr_barriers_by_pos();
   inline void assign_lefs(bool bind_lefs_after_assignment);
 
-  inline uint64_t remove_chromosomes_wo_extr_barriers();
+  inline uint64_t exclude_chr_wo_extr_barriers();
 
   inline std::pair<double, double> run_burnin(double prob_of_rebinding,
                                               uint32_t target_n_of_unload_events,

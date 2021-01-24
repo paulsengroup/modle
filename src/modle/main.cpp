@@ -57,7 +57,14 @@ void run_simulation(const modle::config& c) {
     barriers_ignored = tmp.second;
   }
   genome.sort_extr_barriers_by_pos();
-  const auto n_of_chr_removed = genome.remove_chromosomes_wo_extr_barriers();
+  if (c.exclude_chr_wo_extr_barriers) {
+    genome.exclude_chr_wo_extr_barriers();
+  }
+  const auto n_of_chr_removed =
+      std::accumulate(genome.get_chromosomes().begin(), genome.get_chromosomes().end(), 0UL,
+                      [](std::size_t accumulator, const auto& chr) {
+                        return accumulator + chr.get_n_barriers() == 0;
+                      });
   if (genome.get_n_chromosomes() == 0) {
     throw std::runtime_error(  // TODO: Improve this error message
         "All the input sequences were discarded because there were no extrusion barriers mapping "
@@ -76,6 +83,7 @@ void run_simulation(const modle::config& c) {
              tot_barriers - barriers_ignored, barriers_ignored);
 
   t0 = absl::Now();
+  // Assign LEFs and bind them to a random pos if skip_burn in is true
   genome.assign_lefs(c.skip_burnin);
   if (!c.skip_burnin) {
     fmt::print(stderr, "Running burnin phase...\n");
@@ -102,7 +110,7 @@ void run_simulation(const modle::config& c) {
     if (c.force) {
       std::filesystem::remove_all(c.output_file);
     }
-    genome.write_contacts_to_file(c.output_file);
+    genome.write_contacts_to_file(c.output_file, c.write_contacts_for_ko_chroms);
     std::ofstream cmd_file(fmt::format("{}/settings.log", c.output_file));
     fmt::print(cmd_file, FMT_STRING("{}\n{}\n"), c.to_string(),
                absl::StrJoin(c.argv, c.argv + c.argc, " "));

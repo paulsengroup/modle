@@ -100,7 +100,7 @@ uint64_t Genome::get_n_of_busy_lefs() const {
   return this->get_n_lefs() - this->get_n_of_free_lefs();
 }
 
-void Genome::write_contacts_to_file(std::string_view output_file) {
+void Genome::write_contacts_to_file(std::string_view output_file, bool include_ko_chroms) {
   std::vector<ContactMatrix<uint32_t>*> cmatrices(this->get_n_chromosomes());
   std::vector<std::string> chr_names(this->get_n_chromosomes());
   std::vector<uint64_t> chr_starts(this->get_n_chromosomes());
@@ -116,21 +116,25 @@ void Genome::write_contacts_to_file(std::string_view output_file) {
 
   for (auto i = 0UL; i < this->get_n_chromosomes(); ++i) {
     auto& chr = this->_chromosomes[i];
-    cmatrices[i] = &chr.contacts;
-    chr_names[i] = chr.name;
-    chr_starts[i] = chr.start;
-    chr_ends[i] = chr.end;
-    chr_sizes[i] = chr.total_length;
+    if (include_ko_chroms || chr.ok()) {
+      cmatrices[i] = &chr.contacts;
+      chr_names[i] = chr.name;
+      chr_starts[i] = chr.start;
+      chr_ends[i] = chr.end;
+      chr_sizes[i] = chr.total_length;
+    }
   }
   assert(!std::filesystem::exists(output_file));  // NOLINT
   std::filesystem::create_directories(std::filesystem::path(output_file).parent_path());
   const auto t0 = absl::Now();
   {
-    if (this->get_n_chromosomes() == 1) {
+    if (const auto n = std::count_if(this->_chromosomes.begin(), this->_chromosomes.end(),
+                                     [&](const auto& c) { return c.ok() || include_ko_chroms; });
+        n == 1) {
       fmt::print(stderr, FMT_STRING("Writing one contact matrix to file '{}'...\n"), output_file);
     } else {
-      fmt::print(stderr, FMT_STRING("Writing {} contact matrices to file '{}'...\n"),
-                 this->get_n_chromosomes(), output_file);
+      fmt::print(stderr, FMT_STRING("Writing {} contact matrices to file '{}'...\n"), n,
+                 output_file);
     }
     cooler::Cooler c(output_file, cooler::Cooler::WRITE_ONLY, this->_bin_size, chr_name_max_length);
     c.write_or_append_cmatrices_to_file(cmatrices, chr_names, chr_starts, chr_ends, chr_sizes);
@@ -304,23 +308,26 @@ void Genome::assign_lefs(bool bind_lefs_after_assignment) {
     const auto& [node, _] = chr_lef_affinities.emplace(&chr, chr.get_total_lef_affinity());
     tot_affinity += node->second;
   }
-  std::vector<std::pair<Chromosome*, std::size_t>> chr_sorted_by_affinity(
-      this->get_n_chromosomes());
-  std::transform(this->_chromosomes.begin(), this->_chromosomes.end(),
-                 chr_sorted_by_affinity.begin(),
-                 [](auto& chr) { return std::make_pair(&chr, 0U); });
-  std::sort(chr_sorted_by_affinity.begin(), chr_sorted_by_affinity.end(),
+  std::vector<std::pair<Chromosome*, std::size_t>> chroms_sorted_by_affinity;  // <chr*, nlefs>
+  for (auto& chr : this->_chromosomes) {
+    // Don't assign LEFs to chromosome without extr. barriers
+    if (!chr.barriers.empty()) {
+      chroms_sorted_by_affinity.emplace_back(&chr, 0U);
+    }
+  }
+
+  std::sort(chroms_sorted_by_affinity.begin(), chroms_sorted_by_affinity.end(),
             [&](const auto& chr_pair1, const auto& chr_pair2) {
               return chr_lef_affinities[chr_pair1.first] > chr_lef_affinities[chr_pair2.first];
             });
   std::size_t lefs_assigned = 0;
-  for (auto& [chr, nlefs] : chr_sorted_by_affinity) {
+  for (auto& [chr, nlefs] : chroms_sorted_by_affinity) {
     nlefs = static_cast<std::size_t>(std::floor((chr_lef_affinities[chr] / tot_affinity) *
                                                 static_cast<double>(this->get_n_lefs())));
     lefs_assigned += nlefs;
   }
   while (lefs_assigned < this->get_n_lefs()) {
-    for (auto& [chr, nlefs] : chr_sorted_by_affinity) {
+    for (auto& [chr, nlefs] : chroms_sorted_by_affinity) {
       if (lefs_assigned++ < this->get_n_lefs()) {
         ++nlefs;
       } else {
@@ -330,7 +337,7 @@ void Genome::assign_lefs(bool bind_lefs_after_assignment) {
   }
 
   std::size_t i = 0;
-  for (auto& [chr, nlefs] : chr_sorted_by_affinity) {
+  for (auto& [chr, nlefs] : chroms_sorted_by_affinity) {
     chr->lefs.reserve(nlefs);
     for (auto j = 0U; j < nlefs; ++j) {
       auto* last_lef = chr->lefs.emplace_back(&(this->_lefs[i++]));
@@ -343,22 +350,28 @@ void Genome::assign_lefs(bool bind_lefs_after_assignment) {
   }
 }
 
-uint64_t Genome::remove_chromosomes_wo_extr_barriers() {
+uint64_t Genome::exclude_chr_wo_extr_barriers() {
   const auto n_chromosomes = this->get_n_chromosomes();
-  this->_chromosomes.erase(
-      std::remove_if(this->_chromosomes.begin(), this->_chromosomes.end(),
-                     [](const auto& chr) { return chr.get_n_barriers() == 0; }),
-      this->_chromosomes.end());
-  return n_chromosomes - this->get_n_chromosomes();
+  uint64_t chr_excluded = 0;
+  for (auto& chr : this->_chromosomes) {
+    chr_excluded += !(chr._ok &= chr.get_n_barriers() != 0);  // NOLINT
+  }
+  return chr_excluded;
 }
 
 std::pair<double, double> Genome::run_burnin(double prob_of_rebinding,
                                              uint32_t target_n_of_unload_events,
                                              uint64_t min_extr_rounds) {
   std::vector<double> burnin_rounds_performed(this->get_n_chromosomes());
-  boost::asio::thread_pool tpool(std::min(this->get_n_chromosomes(), this->_nthreads));
+  boost::asio::thread_pool tpool(std::min(
+      this->_nthreads,
+      static_cast<uint32_t>(std::count_if(this->_chromosomes.begin(), this->_chromosomes.end(),
+                                          [](const Chromosome& c) { return c.ok(); }))));
 
   for (auto nchr = 0U; nchr < this->get_n_chromosomes(); ++nchr) {
+    if (!this->_chromosomes[nchr].ok()) {
+      continue;
+    }
     boost::asio::post(tpool, [&, nchr]() {
       auto& chr = this->_chromosomes[nchr];
       double avg_num_of_extr_events_per_bind =
@@ -425,15 +438,26 @@ std::pair<double, double> Genome::run_burnin(double prob_of_rebinding,
 }
 
 void Genome::simulate_extrusion(uint32_t iterations, double target_contact_density) {
-  {
-    std::vector<std::string_view> chr_names(this->get_n_chromosomes());
-    std::transform(this->_chromosomes.begin(), this->_chromosomes.end(), chr_names.begin(),
-                   [](const auto& c) {
-                     return std::string_view{c.name.data(), c.name.size()};
-                   });
-    fmt::print(stderr, FMT_STRING("Simulating loop extrusion on the following chromosomes: '{}'\n"),
-               absl::StrJoin(chr_names, "', '"));
+  auto get_status = [](const Chromosome& c) constexpr->std::string_view {
+    if (c.ok()) {
+      return "OK!";
+    }
+    if (c.barriers.empty()) {
+      return "KO! Chromosome won't be simulated. Reason: chromosome has 0 extrusion barriers.";
+    }
+    assert(false);
+  };
+
+  fmt::print(stderr, FMT_STRING("Chromosome status report:\n"));
+
+  uint32_t nchroms_to_be_simulated = 0;
+  for (const auto& chr : this->_chromosomes) {
+    const auto status = get_status(chr);
+    nchroms_to_be_simulated += status == "OK!";  // NOLINT
+    fmt::print(stderr, FMT_STRING("'{}' status: {}\n"), chr.name, status);
   }
+  fmt::print(stderr, FMT_STRING("Simulating loop extrusion on {}/{} chromosomes...\n"),
+             nchroms_to_be_simulated, this->get_n_chromosomes());
 
   // If the simulation is set to stop when a target contact density is reached, set the number of
   // iterations to a very large number (2^32)
@@ -442,7 +466,7 @@ void Genome::simulate_extrusion(uint32_t iterations, double target_contact_densi
   }
 
   // Instantiate the thread pool to be used for simulation and IO operations
-  boost::asio::thread_pool tpool(std::min(this->_nthreads, this->get_n_chromosomes()));
+  boost::asio::thread_pool tpool(std::min(this->_nthreads, nchroms_to_be_simulated));
 
   // Initialize variables for simulation progress tracking
   std::atomic<uint64_t> ticks_done{0};
@@ -496,17 +520,19 @@ void Genome::simulate_extrusion(uint32_t iterations, double target_contact_densi
         const auto progress = ticks_done / tot_ticks;
         const auto throughput = static_cast<double>(extrusion_events) / 5.0e6; /* 5s * 1M NOLINT */
         const auto delta_t = absl::ToDoubleSeconds(absl::Now() - t0);
-        fmt::print(
-            stderr,
-            FMT_STRING("### ~{:.2f}% ###   {:.2f}M extr/sec - Simulation completed for "
-                       "{}/{} chromosomes - ETA {}.\n"),
-            100.0 * progress, throughput, chromosomes_completed, this->get_n_chromosomes(),
-            absl::FormatDuration(absl::Seconds(
-                (std::min(this->_nthreads, this->get_n_chromosomes()) /
-                 std::min(static_cast<double>(this->_nthreads),
-                          static_cast<double>(this->get_n_chromosomes() - chromosomes_completed))) *
-                (delta_t / std::max(1.0e-06L, progress) - delta_t))));
-        extrusion_events = 0;
+        const auto eta = absl::Seconds(
+            (std::min(this->_nthreads, this->get_n_chromosomes()) /
+             std::min(static_cast<double>(this->_nthreads),
+                      static_cast<double>(this->get_n_chromosomes() - chromosomes_completed))) *
+            (delta_t / std::max(1.0e-06L, progress) - delta_t));
+        if (eta > absl::ZeroDuration()) {  // Avoid printing updates when simulation is about to end
+          fmt::print(stderr,
+                     FMT_STRING("### ~{:.2f}% ###   {:.2f}M extr/sec - Simulation completed for "
+                                "{}/{} chromosomes - ETA {}.\n"),
+                     100.0 * progress, throughput, chromosomes_completed, this->get_n_chromosomes(),
+                     absl::FormatDuration(eta));
+          extrusion_events = 0;
+        }
       }
     }
   });
@@ -517,6 +543,10 @@ void Genome::simulate_extrusion(uint32_t iterations, double target_contact_densi
   // chromosomes that are being simulated. We can certainly do better.
   // This is just a way to get significant speedups with very little effort
   for (auto nchr = 0U; nchr < this->_chromosomes.size(); ++nchr) {
+    // Simulating loop extrusion on chromosomes without extr. barrier does not make sense
+    if (!this->_chromosomes[nchr].ok()) {
+      continue;
+    }
     boost::asio::post(tpool, [&, nchr]() {
       const auto t0 = absl::Now();
       auto& chr = this->_chromosomes[nchr];  // Alias for the chromosome that is being simulated
@@ -595,7 +625,7 @@ void Genome::simulate_extrusion(uint32_t iterations, double target_contact_densi
           }
         }
       }
-      if (++chromosomes_completed == this->get_n_chromosomes()) {
+      if (++chromosomes_completed == nchroms_to_be_simulated) {
         {  // Notify the thread that is tracking the simulation progress that we are done
            // simulating
           std::scoped_lock<std::mutex> lk(m);
