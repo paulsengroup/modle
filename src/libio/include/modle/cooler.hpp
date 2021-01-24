@@ -117,13 +117,14 @@ class Cooler {
   [[nodiscard]] inline bool is_read_only() const;
 
   [[nodiscard]] inline ContactMatrix<uint32_t> cooler_to_cmatrix(
-      std::string_view chr_name, std::size_t nrows, std::size_t chr_start_offset = 0,
+      std::string_view chr_name, std::size_t nrows,
+      std::pair<std::size_t, std::size_t> chr_boundaries = {0, -1},
       bool try_common_chr_prefixes = true, bool prefer_using_balanced_counts = true);
 
   [[nodiscard]] inline ContactMatrix<uint32_t> cooler_to_cmatrix(
       std::string_view chr_name, std::size_t diagonal_width, std::size_t bin_size,
-      std::size_t chr_start_offset = 0, bool try_common_chr_prefixes = true,
-      bool prefer_using_balanced_counts = true);
+      std::pair<std::size_t, std::size_t> chr_boundaries = {0, -1},
+      bool try_common_chr_prefixes = true, bool prefer_using_balanced_counts = true);
   [[nodiscard]] inline std::size_t get_nchroms();
 
   inline void get_chr_names(std::vector<std::string> &buff);
@@ -195,12 +196,13 @@ class Cooler {
                                           hsize_t buff_size = 1024 * 1024ULL /  // NOLINT
                                                               sizeof(int64_t));
   [[nodiscard]] inline ContactMatrix<uint32_t> cooler_to_cmatrix(
-      int64_t bin_offset, const std::vector<int64_t> &bin1_offset_idx, std::size_t nrows,
-      double scaling_factor = 1.0, bool prefer_using_balanced_counts = true);
+      std::pair<hsize_t, hsize_t> bin_range, const std::vector<int64_t> &bin1_offset_idx,
+      std::size_t nrows, double scaling_factor = 1.0, bool prefer_using_balanced_counts = true);
 
   [[nodiscard]] inline ContactMatrix<uint32_t> cooler_to_cmatrix(
-      int64_t bin_offset, absl::Span<const int64_t> bin1_offset_idx, std::size_t nrows,
-      double bias_scaling_factor = 1.0, bool prefer_using_balanced_counts = true);
+      std::pair<hsize_t, hsize_t> bin_range, absl::Span<const int64_t> bin1_offset_idx,
+      std::size_t nrows, double bias_scaling_factor = 1.0,
+      bool prefer_using_balanced_counts = true);
 
   [[nodiscard]] inline std::size_t get_chr_idx(std::string_view chr_name);
 

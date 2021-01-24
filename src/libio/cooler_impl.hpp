@@ -942,19 +942,10 @@ void Cooler::open_cooler_datasets() {
   }
 }
 
-ContactMatrix<uint32_t> Cooler::cooler_to_cmatrix(int64_t bin_offset,
-                                                  const std::vector<int64_t> &bin1_offset_idx,
-                                                  std::size_t nrows, double scaling_factor,
-                                                  bool prefer_using_balanced_counts) {
-  return this->cooler_to_cmatrix(bin_offset, absl::MakeConstSpan(bin1_offset_idx), nrows,
-                                 scaling_factor, prefer_using_balanced_counts);
-}
-
-ContactMatrix<uint32_t> Cooler::cooler_to_cmatrix(std::string_view chr_name,
-                                                  std::size_t diagonal_width, std::size_t bin_size,
-                                                  std::size_t chr_start_offset,
-                                                  bool try_common_chr_prefixes,
-                                                  bool prefer_using_balanced_counts) {
+ContactMatrix<uint32_t> Cooler::cooler_to_cmatrix(
+    std::string_view chr_name, std::size_t diagonal_width, std::size_t bin_size,
+    std::pair<std::size_t, std::size_t> chr_boundaries, bool try_common_chr_prefixes,
+    bool prefer_using_balanced_counts) {
   assert(this->_bin_size != 0);
   if (bin_size != 0 && this->_bin_size != bin_size) {
     throw std::runtime_error(fmt::format(
@@ -964,14 +955,14 @@ ContactMatrix<uint32_t> Cooler::cooler_to_cmatrix(std::string_view chr_name,
   }
   const auto nrows = (diagonal_width / this->_bin_size) +
                      static_cast<std::size_t>(diagonal_width % this->_bin_size != 0);
-  return cooler_to_cmatrix(chr_name, nrows, chr_start_offset, try_common_chr_prefixes,
+  return cooler_to_cmatrix(chr_name, nrows, chr_boundaries, try_common_chr_prefixes,
                            prefer_using_balanced_counts);
 }
 
-ContactMatrix<uint32_t> Cooler::cooler_to_cmatrix(std::string_view chr_name, std::size_t nrows,
-                                                  std::size_t chr_start_offset,
-                                                  bool try_common_chr_prefixes,
-                                                  bool prefer_using_balanced_counts) {
+ContactMatrix<uint32_t> Cooler::cooler_to_cmatrix(
+    std::string_view chr_name, std::size_t nrows,
+    std::pair<std::size_t, std::size_t> chr_boundaries, bool try_common_chr_prefixes,
+    bool prefer_using_balanced_counts) {
   // TODO: Add check for Cooler bin size
 
   {
@@ -1024,11 +1015,15 @@ ContactMatrix<uint32_t> Cooler::cooler_to_cmatrix(std::string_view chr_name, std
                     chr_name, absl::StrJoin(chr_names, "', '")));
   };
 
-  const auto nbins_offset = static_cast<int64_t>(chr_start_offset / this->_bin_size);
   const auto [actual_chr_name, chr_idx] = search_chr_offset_idx();
-  const auto bin1_offset_idx = this->get_bin1_offset_idx_for_chr(chr_idx, chr_start_offset);
-  const auto bin_offset = this->_idx_chrom_offset[chr_idx] + nbins_offset;
-  double scaling_factor{1.0};
+  const auto chr_size = static_cast<std::size_t>(this->get_chr_sizes()[chr_idx]);
+  auto nbins_offsets = std::make_pair(  // First and last bins to use for readinf
+      static_cast<int64_t>(chr_boundaries.first / this->_bin_size),
+      static_cast<int64_t>(std::min(chr_boundaries.second, chr_size) / this->_bin_size));
+  const auto bin1_offset_idx = this->get_bin1_offset_idx_for_chr(chr_idx, chr_boundaries.first);
+  const auto bin_range = std::make_pair(this->_idx_chrom_offset[chr_idx] + nbins_offsets.first,
+                                        this->_idx_chrom_offset[chr_idx] + nbins_offsets.second);
+  double pxl_count_scaling_factor{1.0};
 
   if (prefer_using_balanced_counts &&
       hdf5::dataset_exists(*this->_fp, "bins/weight", this->_root_path)) {
@@ -1048,24 +1043,28 @@ ContactMatrix<uint32_t> Cooler::cooler_to_cmatrix(std::string_view chr_name, std
     if (cis_only) {  // --cis-only balancing produces an array of sale factors
       std::vector<double> buff;
       hdf5::read_attribute(d, "scale", buff);
-      scaling_factor = buff[chr_idx];
+      pxl_count_scaling_factor = buff[chr_idx];
     } else {  // standard or --trans-only balancing produces a single scale factor
-      hdf5::read_attribute(d, "scale", scaling_factor);
+      hdf5::read_attribute(d, "scale", pxl_count_scaling_factor);
     }
   }
 
-  return cooler_to_cmatrix(bin_offset, bin1_offset_idx, nrows, scaling_factor,
+  return cooler_to_cmatrix(bin_range, bin1_offset_idx, nrows, pxl_count_scaling_factor,
                            prefer_using_balanced_counts);
 }
 
-ContactMatrix<uint32_t> Cooler::cooler_to_cmatrix(int64_t bin_offset,
+ContactMatrix<uint32_t> Cooler::cooler_to_cmatrix(std::pair<hsize_t, hsize_t> bin_range,
                                                   absl::Span<const int64_t> bin1_offset_idx,
                                                   std::size_t nrows, double bias_scaling_factor,
                                                   bool prefer_using_balanced_counts) {
   if (this->_datasets.empty()) {
     this->open_cooler_datasets();
   }
-  ContactMatrix<uint32_t> cmatrix(nrows, bin1_offset_idx.size());
+
+  const auto &[first_bin, last_bin] = bin_range;
+  assert(first_bin < last_bin);
+  assert(last_bin <= bin1_offset_idx.size());
+  ContactMatrix<uint32_t> cmatrix(nrows, last_bin - first_bin + 1);
   std::vector<int64_t> bin1_BUFF(nrows);
   std::vector<int64_t> bin2_BUFF(nrows);
   std::vector<int64_t> count_BUFF(nrows);
@@ -1074,11 +1073,11 @@ ContactMatrix<uint32_t> Cooler::cooler_to_cmatrix(int64_t bin_offset,
   const auto &d = this->_datasets;
   if (prefer_using_balanced_counts &&
       hdf5::dataset_exists(*this->_fp, "bins/weight", this->_root_path)) {
-    bin_weights.resize(bin1_offset_idx.size());
-    (void)hdf5::read_numbers(d[BIN_WEIGHT], bin_weights, static_cast<hsize_t>(bin_offset));
+    bin_weights.resize(last_bin - first_bin + 1);
+    (void)hdf5::read_numbers(d[BIN_WEIGHT], bin_weights, static_cast<hsize_t>(first_bin));
   }
 
-  for (auto i = 1UL; i < bin1_offset_idx.size(); ++i) {
+  for (auto i = first_bin + 1; i < last_bin; ++i) {
     const auto file_offset = static_cast<hsize_t>(bin1_offset_idx[i - 1]);
     const auto buff_size =
         std::min(static_cast<std::size_t>(bin1_offset_idx[i] - bin1_offset_idx[i - 1]), nrows);
@@ -1104,15 +1103,15 @@ ContactMatrix<uint32_t> Cooler::cooler_to_cmatrix(int64_t bin_offset,
       DISABLE_WARNING_SIGN_CONVERSION
       DISABLE_WARNING_SIGN_COMPARE
       DISABLE_WARNING_CONVERSION
-      if (const auto bin2_id = bin2_BUFF[j] - bin_offset;
+      if (const auto bin2_id = bin2_BUFF[j] - first_bin;
           bin2_id >= i + nrows - 1 || bin2_id >= bin1_offset_idx.size()) {
         break;
       }
-      // fmt::print(stderr, "m[{}][{}]={} (nrows={}; ncols={})\n", bin2_BUFF[j] - bin_offset,
-      //           bin1_BUFF[j] - bin_offset, count_BUFF[j], cmatrix.nrows(),
+      // fmt::print(stderr, "m[{}][{}]={} (nrows={}; ncols={})\n", bin2_BUFF[j] - first_bin,
+      //           bin1_BUFF[j] - first_bin, count_BUFF[j], cmatrix.nrows(),
       //           cmatrix.ncols());
-      const auto bin1 = bin1_BUFF[j] - bin_offset;
-      const auto bin2 = bin2_BUFF[j] - bin_offset;
+      const auto bin1 = bin1_BUFF[j] - first_bin;
+      const auto bin2 = bin2_BUFF[j] - first_bin;
       if (bin_weights.empty()) {
         cmatrix.set(bin2, bin1, static_cast<uint32_t>(count_BUFF[j]));
       } else {
@@ -1134,6 +1133,14 @@ ContactMatrix<uint32_t> Cooler::cooler_to_cmatrix(int64_t bin_offset,
   }
 
   return cmatrix;
+}
+
+ContactMatrix<uint32_t> Cooler::cooler_to_cmatrix(std::pair<hsize_t, hsize_t> bin_range,
+                                                  const std::vector<int64_t> &bin1_offset_idx,
+                                                  std::size_t nrows, double scaling_factor,
+                                                  bool prefer_using_balanced_counts) {
+  return this->cooler_to_cmatrix(bin_range, absl::MakeConstSpan(bin1_offset_idx), nrows,
+                                 scaling_factor, prefer_using_balanced_counts);
 }
 
 std::size_t Cooler::get_chr_idx(std::string_view chr_name) {
