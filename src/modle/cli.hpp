@@ -25,6 +25,10 @@ class Cli {
     auto* extr_barr = this->_cli.add_option_group("Extrusion Barriers", "");
     auto* extr_barr_mandatory = extr_barr->add_option_group("Mandatory", "")->require_option(1);
 
+    auto remove_trailing_zeros_from_floats = [](const std::string& s) {
+      return std::string{absl::StripSuffix(s, ".0")};
+    };
+
     // clang-format off
     io->add_option(
             "-c,--chromosome-size-file",
@@ -66,6 +70,7 @@ class Cli {
             this->_config.bin_size,
             "Bin size in base pairs.")
             ->check(CLI::PositiveNumber)
+            ->transform(remove_trailing_zeros_from_floats)
             ->capture_default_str();
 
     gen->add_option(
@@ -73,6 +78,7 @@ class Cli {
         this->_config.nthreads,
         "Max size of the thread pool to use to run the simulation. By default ModLE will attempt to use threads available.")
         ->check(CLI::PositiveNumber)
+        ->transform(remove_trailing_zeros_from_floats)
         ->capture_default_str();
 
     gen->add_option(
@@ -80,6 +86,7 @@ class Cli {
             this->_config.diagonal_width,
             "Width of the matrix that will be used to store contacts, which visually corresponds to the width of the diagonal in a typical square contact matrix.")
             ->check(CLI::PositiveNumber)
+            ->transform((remove_trailing_zeros_from_floats))
             ->capture_default_str();
 
     gen->add_option(
@@ -87,6 +94,7 @@ class Cli {
             this->_config.simulation_iterations,
             "Number of simulation iterations.")
             ->check(CLI::PositiveNumber)
+            ->transform((remove_trailing_zeros_from_floats))
             ->capture_default_str();
     
     gen->add_option(
@@ -101,6 +109,7 @@ class Cli {
             this->_config.average_lef_processivity,
             "Average loop extrusion factor processivity, or in other words, average loop size in base pairs.")
             ->check(CLI::PositiveNumber)
+            ->transform((remove_trailing_zeros_from_floats))
             ->capture_default_str();
 
     gen->add_option(
@@ -121,6 +130,7 @@ class Cli {
             this->_config.seed,
             "Seed to use for random number generation.")
             ->check(CLI::NonNegativeNumber)
+            ->transform((remove_trailing_zeros_from_floats))
             ->capture_default_str();
 
     prob->add_option(
@@ -142,6 +152,7 @@ class Cli {
             this->_config.number_of_lefs,
             "Number of loop extrusion factors (LEFs) to be randomly generated and bound.")
             ->check(CLI::NonNegativeNumber)
+            ->transform((remove_trailing_zeros_from_floats))
             ->required();
 
     rand->add_option(
@@ -149,6 +160,7 @@ class Cli {
             this->_config.contact_sampling_interval,
             "Number of simulation rounds between contact sampling. When specifying this is specified, contact sampling will be performed at constant intervals.")
             ->check(CLI::PositiveNumber)
+            ->transform((remove_trailing_zeros_from_floats))
             ->capture_default_str();
 
     rand->add_flag(
@@ -162,6 +174,7 @@ class Cli {
             this->_config.min_n_of_burnin_rounds,
             "Minimum number of extrusion rounds to simulate during the burn-in phase (set to 0 to disable).")
             ->check(CLI::PositiveNumber)
+            ->transform((remove_trailing_zeros_from_floats))
             ->capture_default_str();
 
     burn->add_option(
@@ -169,6 +182,7 @@ class Cli {
             this->_config.min_n_of_loops_per_lef,
             "Minimum number of loops that each LEF must have produced before stopping the burn-in phase.")
             ->check(CLI::PositiveNumber)
+            ->transform((remove_trailing_zeros_from_floats))
             ->capture_default_str();
 
     extr_barr_mandatory->add_option(
@@ -182,6 +196,7 @@ class Cli {
             this->_config.number_of_randomly_gen_extr_barriers,
             "Number of extrusion barriers to be randomly generated and bound.")
             ->check(CLI::PositiveNumber)
+            ->transform((remove_trailing_zeros_from_floats))
             ->capture_default_str();
 
     extr_barr->add_option(

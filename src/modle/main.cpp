@@ -85,6 +85,14 @@ void run_simulation(const modle::config& c) {
   t0 = absl::Now();
   // Assign LEFs and bind them to a random pos if skip_burn in is true
   genome.assign_lefs(c.skip_burnin);
+
+  if (!c.skip_output) {  // Write simulation params to file
+    std::ofstream cmd_file(
+        fmt::format("{}.settings.log", absl::StripSuffix(c.output_file, ".cool")));
+    fmt::print(cmd_file, FMT_STRING("{}\n{}\n"), c.to_string(),
+               absl::StrJoin(c.argv, c.argv + c.argc, " "));
+  }
+
   if (!c.skip_burnin) {
     fmt::print(stderr, "Running burnin phase...\n");
     const auto& [avg_burnin_rounds, burnin_rounds_stdev] = genome.run_burnin(
@@ -111,9 +119,6 @@ void run_simulation(const modle::config& c) {
       std::filesystem::remove_all(c.output_file);
     }
     genome.write_contacts_to_file(c.output_file, c.write_contacts_for_ko_chroms);
-    std::ofstream cmd_file(fmt::format("{}/settings.log", c.output_file));
-    fmt::print(cmd_file, FMT_STRING("{}\n{}\n"), c.to_string(),
-               absl::StrJoin(c.argv, c.argv + c.argc, " "));
   }
   fmt::print(stderr, "Simulation terminated without errors!\n\nBye.\n");
 }

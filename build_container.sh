@@ -22,12 +22,16 @@ for arg in "$@"; do
   esac
 done
 
-if [ -z "$name" ] || [ -z "$ver" ] || [ -z "$type" ]; then
+if [ -z "$name" ] || [ -z "$type" ]; then
   echo "Usage: ./build_container --name=modle --version=a.b.c --build-type=Release|Debug [ --cpus $(nproc) --memory 8G --march='x86-64' ]"
   exit 1
 fi
 
 sudo systemctl start docker.service
+
+if [ -z "$ver" ]; then
+  ver="$(git rev-parse --short HEAD)"
+fi
 
 if [ "${type,,}" = "debug" ]; then
   sudo docker build --memory="${memory}" \
@@ -59,4 +63,4 @@ else
                           "docker-daemon://robomics/${name,,}:${ver}"
 fi
 
-sudo systemctl stop docker.service
+# sudo systemctl stop docker.service
