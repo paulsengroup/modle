@@ -43,7 +43,7 @@ RUN dnf update -y \
     && dnf clean all
 
 ENV SHELL=/usr/bin/bash
-ENV PATH='$PATH:/usr/local/bin'
+ENV PATH='/usr/bin:/usr/local/bin'
 
 LABEL maintainer='Roberto Rossini <roberros@uio.no>'
 LABEL version="$ver"

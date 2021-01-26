@@ -31,6 +31,10 @@ sudo systemctl start docker.service
 
 if [ -z "$ver" ]; then
   ver="$(git rev-parse --short HEAD)"
+  if ! git diff-index --quiet HEAD --; then
+    ver+="-dirty"
+    fi
+
 fi
 
 if [ "${type,,}" = "debug" ]; then

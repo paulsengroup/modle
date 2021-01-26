@@ -87,6 +87,7 @@ void run_simulation(const modle::config& c) {
   genome.assign_lefs(c.skip_burnin);
 
   if (!c.skip_output) {  // Write simulation params to file
+    std::filesystem::create_directories(std::filesystem::path(c.output_file).parent_path());
     std::ofstream cmd_file(
         fmt::format("{}.settings.log", absl::StripSuffix(c.output_file, ".cool")));
     fmt::print(cmd_file, FMT_STRING("{}\n{}\n"), c.to_string(),
