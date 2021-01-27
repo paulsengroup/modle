@@ -68,7 +68,7 @@ void eval_subcmd(const modle::tools::config& c) {
     std::transform(
         records.begin(), records.end(), std::inserter(chr_subranges, chr_subranges.end()),
         [](const auto& r) -> std::pair<std::string, std::pair<std::size_t, std::size_t>> {
-          return {r.name, {r.chrom_start, r.chrom_end}};
+          return {r.chrom, {r.chrom_start, r.chrom_end}};
         });
   }
 
@@ -213,17 +213,34 @@ void eval_subcmd(const modle::tools::config& c) {
 
   for (const auto& chr : chr_list) {
     const auto& chr_name = chr.first;
-    const auto& chr_subrange = chr_subranges.empty()
-                                   ? std::make_pair(0UL, static_cast<std::size_t>(chr.second))
-                                   : chr_subranges.at(chr_name);
+    auto chr_subrange = std::make_pair(0UL, static_cast<std::size_t>(chr.second));
+    if (!chr_subranges.empty()) {
+      auto it = chr_subranges.find(chr_name);
+
+      if (it != chr_subranges.end()) {
+        chr_subrange = it->second;
+      } else {  // Try common prefixes
+        for (const auto& prefix : {"chr", "CHR", "Chr"}) {
+          if (absl::StartsWith(chr_name, prefix)) {
+            it = chr_subranges.find(absl::StripPrefix(chr_name, prefix));
+          } else {
+            it = chr_subranges.find(absl::StrCat(prefix, chr_name));
+          }
+          if (it != chr_subranges.end()) {
+            chr_subrange = it->second;
+            break;
+          }
+        }
+      }
+    }
+
     auto t0 = absl::Now();
     fmt::print(stderr, FMT_STRING("Reading contacts for '{}' into memory...\n"), chr_name);
     if (!ref_cooler.has_contacts_for_chr(chr_name, true)) {
-      fmt::print(
-          stderr,
-          FMT_STRING(
-              "WARNING: reference contact matrix doesn't have any contacts for '{}'. SKIPPING!\n"),
-          chr_name);
+      fmt::print(stderr,
+                 FMT_STRING("WARNING: reference contact matrix doesn't have any contacts for "
+                            "'{}'. SKIPPING!\n"),
+                 chr_name);
       continue;
     }
 

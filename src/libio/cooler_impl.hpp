@@ -979,12 +979,14 @@ ContactMatrix<uint32_t> Cooler::cooler_to_cmatrix(
 
   const auto chr_idx = this->get_chr_idx(chr_name, try_common_chr_prefixes);
   const auto chr_size = static_cast<std::size_t>(this->get_chr_sizes()[chr_idx]);
-  auto nbins_offsets = std::make_pair(  // First and last bins to use for reading
-      static_cast<int64_t>(chr_boundaries.first / this->_bin_size),
-      static_cast<int64_t>(std::min(chr_boundaries.second, chr_size) / this->_bin_size));
-  const auto bin1_offset_idx = this->get_bin1_offset_idx_for_chr(chr_idx, chr_boundaries.first);
-  const auto bin_range = std::make_pair(this->_idx_chrom_offset[chr_idx] + nbins_offsets.first,
-                                        this->_idx_chrom_offset[chr_idx] + nbins_offsets.second);
+  if (chr_boundaries.second > chr_size) {
+    chr_boundaries.second = chr_size;
+  }
+  const auto bin_range = std::make_pair(static_cast<std::size_t>(this->_idx_chrom_offset[chr_idx]) +
+                                            (chr_boundaries.first / this->_bin_size),
+                                        static_cast<std::size_t>(this->_idx_chrom_offset[chr_idx]) +
+                                            (chr_boundaries.second / this->_bin_size));
+  const auto bin1_offset_idx = this->get_bin1_offset_idx_for_chr(chr_idx, chr_boundaries);
   double pxl_count_scaling_factor{1.0};
 
   if (prefer_using_balanced_counts &&
@@ -1040,7 +1042,7 @@ ContactMatrix<uint32_t> Cooler::cooler_to_cmatrix(std::pair<hsize_t, hsize_t> bi
     (void)hdf5::read_numbers(d[BIN_WEIGHT], bin_weights, static_cast<hsize_t>(first_bin));
   }
 
-  for (auto i = first_bin + 1; i < last_bin; ++i) {
+  for (auto i = 1UL; i < last_bin; ++i) {
     const auto file_offset = static_cast<hsize_t>(bin1_offset_idx[i - 1]);
     const auto buff_size =
         std::min(static_cast<std::size_t>(bin1_offset_idx[i] - bin1_offset_idx[i - 1]), nrows);
@@ -1066,15 +1068,14 @@ ContactMatrix<uint32_t> Cooler::cooler_to_cmatrix(std::pair<hsize_t, hsize_t> bi
       DISABLE_WARNING_SIGN_CONVERSION
       DISABLE_WARNING_SIGN_COMPARE
       DISABLE_WARNING_CONVERSION
-      if (const auto bin2_id = bin2_BUFF[j] - first_bin;
-          bin2_id >= i + nrows - 1 || bin2_id >= bin1_offset_idx.size()) {
+      const auto bin1 = bin1_BUFF[j] - first_bin;
+      const auto bin2 = bin2_BUFF[j] - first_bin;
+      if (bin2 >= i + nrows - 1 || bin2 >= bin1_offset_idx.size()) {
         break;
       }
       // fmt::print(stderr, "m[{}][{}]={} (nrows={}; ncols={})\n", bin2_BUFF[j] - first_bin,
       //           bin1_BUFF[j] - first_bin, count_BUFF[j], cmatrix.nrows(),
       //           cmatrix.ncols());
-      const auto bin1 = bin1_BUFF[j] - first_bin;
-      const auto bin2 = bin2_BUFF[j] - first_bin;
       if (bin_weights.empty()) {
         cmatrix.set(bin2, bin1, static_cast<uint32_t>(count_BUFF[j]));
       } else {
@@ -1180,19 +1181,25 @@ std::size_t Cooler::read_bin1_offset_idx() {
   return idx_size;
 }
 
-absl::Span<const int64_t> Cooler::get_bin1_offset_idx_for_chr(std::string_view chr_name,
-                                                              std::size_t offset) {
+absl::Span<const int64_t> Cooler::get_bin1_offset_idx_for_chr(
+    std::string_view chr_name, std::pair<std::size_t, std::size_t> chr_subrange) {
   const auto chr_idx = get_chr_idx(chr_name);
-  return get_bin1_offset_idx_for_chr(chr_idx, offset);
+  return get_bin1_offset_idx_for_chr(chr_idx, chr_subrange);
 }
 
-absl::Span<const int64_t> Cooler::get_bin1_offset_idx_for_chr(std::size_t chr_idx,
-                                                              std::size_t offset) {
+absl::Span<const int64_t> Cooler::get_bin1_offset_idx_for_chr(
+    std::size_t chr_idx, std::pair<std::size_t, std::size_t> chr_subrange) {
   assert(!this->_idx_bin1_offset.empty());           // NOLINT
   assert(!this->_idx_chrom_offset.empty());          // NOLINT
   assert(chr_idx < this->_idx_chrom_offset.size());  // NOLINT
-  const auto chr_start_bin = static_cast<std::size_t>(this->_idx_chrom_offset[chr_idx]) + offset;
-  const auto chr_end_bin = static_cast<std::size_t>(this->_idx_chrom_offset[chr_idx + 1]);
+  const auto chr_start_bin = static_cast<std::size_t>(this->_idx_chrom_offset[chr_idx]) +
+                             (chr_subrange.first / this->_bin_size);
+  const auto chr_end_bin =
+      chr_subrange.second == std::numeric_limits<decltype(chr_subrange.second)>::max()
+          ? static_cast<std::size_t>(this->_idx_chrom_offset[chr_idx + 1])
+          : static_cast<std::size_t>(this->_idx_chrom_offset[chr_idx]) +
+                (chr_subrange.second / this->_bin_size);
+  assert(chr_end_bin <= this->_idx_chrom_offset[chr_idx + 1]);
   assert(chr_end_bin >= chr_start_bin);  // NOLINT
 
   return absl::MakeConstSpan(this->_idx_bin1_offset)

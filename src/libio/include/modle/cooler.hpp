@@ -211,9 +211,9 @@ class Cooler {
 
   inline std::size_t read_bin1_offset_idx();
   [[nodiscard]] inline absl::Span<const int64_t> get_bin1_offset_idx_for_chr(
-      std::size_t chr_idx, std::size_t offset = 0);
+      std::size_t chr_idx, std::pair<std::size_t, std::size_t> chr_subrange = {0, -1});
   [[nodiscard]] inline absl::Span<const int64_t> get_bin1_offset_idx_for_chr(
-      std::string_view chr_name, std::size_t offset = 0);
+      std::string_view chr_name, std::pair<std::size_t, std::size_t> chr_subrange = {0, -1});
   [[nodiscard]] inline std::pair<int64_t, int64_t> read_chrom_pixels_boundaries(
       std::string_view chr_name);
   [[nodiscard]] inline std::pair<int64_t, int64_t> read_chrom_pixels_boundaries(
