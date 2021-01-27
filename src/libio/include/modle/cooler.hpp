@@ -139,6 +139,7 @@ class Cooler {
   [[nodiscard]] inline std::size_t get_bin_size() const;
   [[nodiscard]] inline bool has_contacts_for_chr(std::string_view chr_name,
                                                  bool try_common_chr_prefixes = false);
+  [[nodiscard]] inline bool has_contacts_for_chr(std::size_t chr_idx) const;
 
  private:
   std::filesystem::path _path_to_file;

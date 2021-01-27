@@ -209,8 +209,38 @@ void eval_subcmd(const modle::tools::config& c) {
     }
   };
 
-  std::array<std::thread, 4> threads;
+  absl::flat_hash_map<std::string, std::size_t> ref_chr_idxes;
+  absl::flat_hash_map<std::string, std::size_t> inp_chr_idxes;
 
+  std::size_t i = 0;
+  for (auto& name : ref_cooler.get_chr_names()) {
+    ref_chr_idxes.emplace(std::move(name), i++);
+  }
+  i = 0;
+  for (auto& name : input_cooler.get_chr_names()) {
+    inp_chr_idxes.emplace(std::move(name), i++);
+  }
+
+  for (const auto& chr : chr_list) {
+    std::string_view q;
+    for (const auto& prefix : {"chr", "CHR", "Chr"}) {
+      if (absl::StartsWith(chr.first, prefix)) {
+        q = absl::StripPrefix(chr.first, prefix);
+      } else {
+        q = absl::StrCat(prefix, chr.first);
+      }
+      if (auto it = ref_chr_idxes.find(q); it != ref_chr_idxes.end()) {
+        ref_chr_idxes.emplace(chr.first, it->second);
+        ref_chr_idxes.erase(q);
+      }
+      if (auto it = inp_chr_idxes.find(q); it != inp_chr_idxes.end()) {
+        inp_chr_idxes.emplace(chr.first, it->second);
+        inp_chr_idxes.erase(q);
+      }
+    }
+  }
+
+  std::array<std::thread, 4> threads;
   for (const auto& chr : chr_list) {
     const auto& chr_name = chr.first;
     auto chr_subrange = std::make_pair(0UL, static_cast<std::size_t>(chr.second));
@@ -236,7 +266,7 @@ void eval_subcmd(const modle::tools::config& c) {
 
     auto t0 = absl::Now();
     fmt::print(stderr, FMT_STRING("Reading contacts for '{}' into memory...\n"), chr_name);
-    if (!ref_cooler.has_contacts_for_chr(chr_name, true)) {
+    if (!ref_cooler.has_contacts_for_chr(ref_chr_idxes.at(chr_name))) {
       fmt::print(stderr,
                  FMT_STRING("WARNING: reference contact matrix doesn't have any contacts for "
                             "'{}'. SKIPPING!\n"),
@@ -244,7 +274,7 @@ void eval_subcmd(const modle::tools::config& c) {
       continue;
     }
 
-    if (!input_cooler.has_contacts_for_chr(chr_name, true)) {
+    if (!input_cooler.has_contacts_for_chr(inp_chr_idxes.at(chr_name))) {
       fmt::print(
           stderr,
           FMT_STRING("WARNING: contact matrix doesn't have any contacts for '{}'. SKIPPING!\n"),

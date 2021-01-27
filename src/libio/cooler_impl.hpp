@@ -1031,7 +1031,7 @@ ContactMatrix<uint32_t> Cooler::cooler_to_cmatrix(std::pair<hsize_t, hsize_t> bi
 
   const auto &[first_bin, last_bin] = bin_range;
   assert(first_bin < last_bin);
-  assert(last_bin <= bin1_offset_idx.size());
+  assert(last_bin <= first_bin + bin1_offset_idx.size());
   ContactMatrix<uint32_t> cmatrix(nrows, last_bin - first_bin + 1);
   std::vector<int64_t> bin1_BUFF(nrows);
   std::vector<int64_t> bin2_BUFF(nrows);
@@ -1045,7 +1045,7 @@ ContactMatrix<uint32_t> Cooler::cooler_to_cmatrix(std::pair<hsize_t, hsize_t> bi
     (void)hdf5::read_numbers(d[BIN_WEIGHT], bin_weights, static_cast<hsize_t>(first_bin));
   }
 
-  for (auto i = 1UL; i < last_bin; ++i) {
+  for (auto i = 1UL; i < bin1_offset_idx.size(); ++i) {
     const auto file_offset = static_cast<hsize_t>(bin1_offset_idx[i - 1]);
     const auto buff_size =
         std::min(static_cast<std::size_t>(bin1_offset_idx[i] - bin1_offset_idx[i - 1]), nrows);
@@ -1239,11 +1239,16 @@ bool Cooler::is_scool() const { return this->_flavor == SCOOL; }
 std::size_t Cooler::get_bin_size() const { return this->_bin_size; }
 
 bool Cooler::has_contacts_for_chr(std::string_view chr_name, bool try_common_chr_prefixes) {
-  assert(this->_fp);                         // NOLINT
-  assert(this->is_read_only());              // NOLINT
-  assert(!this->_idx_bin1_offset.empty());   // NOLINT
-  assert(!this->_idx_chrom_offset.empty());  // NOLINT
+  assert(this->_fp);  // NOLINT
   const auto chr_idx = this->get_chr_idx(chr_name, try_common_chr_prefixes);
+  return this->has_contacts_for_chr(chr_idx);
+}
+
+bool Cooler::has_contacts_for_chr(std::size_t chr_idx) const {
+  assert(this->_fp);                                 // NOLINT
+  assert(this->is_read_only());                      // NOLINT
+  assert(!this->_idx_bin1_offset.empty());           // NOLINT
+  assert(!this->_idx_chrom_offset.empty());          // NOLINT
   assert(chr_idx < this->_idx_chrom_offset.size());  // NOLINT
 
   const auto first_bin = static_cast<std::size_t>(this->_idx_chrom_offset[chr_idx]);
