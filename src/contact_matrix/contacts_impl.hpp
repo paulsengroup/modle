@@ -24,7 +24,6 @@
 #include <random>
 #include <string_view>
 
-#include "modle/contacts.hpp"
 #include "modle/suppress_compiler_warnings.hpp"
 #include "modle/utils.hpp"
 
@@ -767,6 +766,50 @@ void ContactMatrix<I>::reset() {
 template <typename I>
 bool ContactMatrix<I>::empty() const {
   return this->_tot_contacts == 0;
+}
+
+template <typename I>
+std::vector<uint64_t> ContactMatrix<I>::compute_row_wise_contact_histogram() const {
+  std::vector<uint64_t> buff(this->nrows());
+  this->compute_row_wise_contact_histogram(buff);
+  return buff;
+}
+
+template <typename I>
+void ContactMatrix<I>::compute_row_wise_contact_histogram(std::vector<uint64_t> &buff) const {
+  buff.resize(this->nrows());
+  std::fill(buff.begin(), buff.end(), 0);
+
+  for (auto i = 0UL; i < this->ncols(); ++i) {
+    for (auto j = i; j < i + this->nrows() && j < this->ncols(); ++j) {
+      // j - i corresponds to the distance from the diagonal
+      buff[j - i] += this->get(j, i);
+    }
+  }
+}
+
+template <typename I>
+void ContactMatrix<I>::deplete_contacts(double depletion_multiplier) {
+  const auto hist = this->compute_row_wise_contact_histogram();
+  const auto effective_nbins = this->generate_mask_for_bins_without_contacts().count();
+  // This histogram contains the average contact number (instead of the total)
+  std::vector<uint64_t> row_wise_avg_contacts(hist.size());
+  std::transform(hist.begin(), hist.end(), row_wise_avg_contacts.begin(), [&](const auto n) {
+    return static_cast<uint64_t>(std::round((depletion_multiplier * static_cast<double>(n)) /
+                                            static_cast<double>(effective_nbins)));
+  });
+
+  for (auto i = 0UL; i < this->ncols(); ++i) {
+    for (auto j = i; j < i + this->nrows() && j < this->ncols(); ++j) {
+      // j - i corresponds to the distance from the diagonal
+      // Only process bins that more contacts than average
+      if (const auto n = this->get(j, i); n > row_wise_avg_contacts[j - i]) {
+        this->decrement(j, i, row_wise_avg_contacts[j - i]);
+      } else {
+        this->set(j, i, 0);
+      }
+    }
+  }
 }
 
 }  // namespace modle

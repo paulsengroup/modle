@@ -252,7 +252,10 @@ void eval_subcmd(const modle::tools::config& c) {
       continue;
     }
 
-    const auto cmatrix1 = ref_cooler.cooler_to_cmatrix(chr_name, nrows, chr_subrange);
+    auto cmatrix1 = ref_cooler.cooler_to_cmatrix(chr_name, nrows, chr_subrange);
+    if (c.deplete_contacts_from_reference) {
+      cmatrix1.deplete_contacts(c.depletion_multiplier);
+    }
     fmt::print(
         stderr,
         FMT_STRING(
@@ -373,9 +376,9 @@ void stats_subcmd(const modle::tools::config& c) {
     }
 
     // Read contacts for chr_name into memory
-    const auto cmatrix = m1.cooler_to_cmatrix(chr_name, c.diagonal_width, bin_size);
+    auto cmatrix = m1.cooler_to_cmatrix(chr_name, c.diagonal_width, bin_size);
 
-    const auto hist = compute_row_wise_contact_histogram(cmatrix);
+    const auto hist = cmatrix.compute_row_wise_contact_histogram();
     const auto mask = cmatrix.generate_mask_for_bins_without_contacts();
 
     const auto chr_contacts = cmatrix.get_tot_contacts();
@@ -410,16 +413,14 @@ void stats_subcmd(const modle::tools::config& c) {
     }
 
     if (m2) {
-      m2->write_or_append_cmatrix_to_file(
-          compute_depl_cmatrix(cmatrix, hist, mask, c.depletion_multiplier), chr_name, 0L, chr_size,
-          chr_size, true);
+      cmatrix.deplete_contacts(c.depletion_multiplier);
+      m2->write_or_append_cmatrix_to_file(cmatrix, chr_name, 0L, chr_size, chr_size, true);
     }
   }
 
   fmt::print(
-      stdout, FMT_STRING("{}\t{}\t{}\t{}\t{}\t{}\n"),
-      // TODO Output grand averages
-      "grand_average", tot_contacts, tot_contacts_after_depl,
+      stdout, FMT_STRING("{}\t{}\t{}\t{}\t{}\t{}\n"), "grand_average", tot_contacts,
+      tot_contacts_after_depl,
       static_cast<double>(tot_contacts) / static_cast<double>(tot_number_of_pixels),
       static_cast<double>(tot_contacts_after_depl) / static_cast<double>(tot_number_of_pixels), 0);
 }

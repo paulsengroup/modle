@@ -76,6 +76,8 @@ class Cli {
     sc->add_option("-w,--diagonal-width", this->_config.diagonal_width, "Diagonal width to use when computing correlation coefficients.")->check(CLI::NonNegativeNumber)->required();
     sc->add_option("--sliding-window-size", this->_config.sliding_window_size, "Sliding window size. By default this is set to the diagonal width of ModLE's contact matrix.")->check(CLI::NonNegativeNumber);
     sc->add_option("--sliding-window-overlap", this->_config.sliding_window_overlap, "Overlap between consecutive sliding-windows.")->check(CLI::NonNegativeNumber)->capture_default_str();
+    sc->add_option("--depletion-multiplier", this->_config.depletion_multiplier, "Multiplier used to control the magnitude of the depletion.")->check(CLI::NonNegativeNumber)->capture_default_str();
+    sc->add_flag("--deplete-reference-contacts,!--no-deplete-reference-contacts", this->_config.deplete_contacts_from_reference, "Deplete contacts along the diagonal from the reference matrix.")->capture_default_str();
     // clang-format on
   }
 

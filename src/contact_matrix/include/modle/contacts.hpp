@@ -78,6 +78,9 @@ class ContactMatrix {
   [[nodiscard]] inline boost::dynamic_bitset<> generate_mask_for_bins_without_contacts() const;
   inline void reset();
   [[nodiscard]] inline bool empty() const;
+  [[nodiscard]] inline std::vector<uint64_t> compute_row_wise_contact_histogram() const;
+  inline void compute_row_wise_contact_histogram(std::vector<uint64_t>& buff) const;
+  inline void deplete_contacts(double depletion_multiplier = 1.0);
 
  private:
   uint64_t _nrows{0};

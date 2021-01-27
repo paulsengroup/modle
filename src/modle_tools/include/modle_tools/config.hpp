@@ -53,5 +53,6 @@ struct config {
   std::vector<std::string> chromosomes_excluded_vect{};
   absl::flat_hash_set<std::string> chromosomes_excluded{};
   double depletion_multiplier{1.0};
+  bool deplete_contacts_from_reference{true};
 };
 }  // namespace modle::tools
