@@ -489,7 +489,7 @@ Cooler::~Cooler() {
     auto bin1_idx_offset = this->_dataset_file_offsets[IDX_BIN1];
 
     (void)hdf5::write_number(++this->_nbins, chrom_idx, chrom_idx_offset);
-    const auto nnz = static_cast<int64_t>(++this->_nnz);
+    const auto nnz = ++this->_nnz;
     (void)hdf5::write_number(nnz, bin1_idx, bin1_idx_offset);
   }
 }
@@ -776,8 +776,11 @@ void Cooler::write_or_append_cmatrices_to_file(absl::Span<ContactMatrix<I1> *con
     idx_bin1_offset_buff.clear();
 
     if (cmatrix->ncols() == 0) {
+      DISABLE_WARNING_PUSH
+      DISABLE_WARNING_SIGN_CONVERSION
       idx_bin1_offset_buff.resize(
           (chr_total_len / this->_bin_size) + (chr_total_len % this->_bin_size != 0), this->_nnz);
+      DISABLE_WARNING_POP
       idx_bin1_offset_h5_foffset =
           hdf5::write_numbers(idx_bin1_offset_buff, d[IDX_BIN1], idx_bin1_offset_h5_foffset);
       idx_bin1_offset_buff.clear();
@@ -1199,8 +1202,11 @@ absl::Span<const int64_t> Cooler::get_bin1_offset_idx_for_chr(
           ? static_cast<std::size_t>(this->_idx_chrom_offset[chr_idx + 1])
           : static_cast<std::size_t>(this->_idx_chrom_offset[chr_idx]) +
                 (chr_subrange.second / this->_bin_size);
+  DISABLE_WARNING_PUSH
+  DISABLE_WARNING_SIGN_COMPARE
   assert(chr_end_bin <= this->_idx_chrom_offset[chr_idx + 1]);
   assert(chr_end_bin >= chr_start_bin);  // NOLINT
+  DISABLE_WARNING_POP
 
   return absl::MakeConstSpan(this->_idx_bin1_offset)
       .subspan(chr_start_bin, chr_end_bin - chr_start_bin);

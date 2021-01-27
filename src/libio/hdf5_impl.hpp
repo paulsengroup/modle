@@ -45,6 +45,8 @@ using attr_types = std::variant<uint8_t, uint16_t, uint32_t, uint64_t, int8_t, i
                                 int64_t, float, double, long double>;
 
 attr_types getCpp_type(const H5::IntType &h5_type) {
+  DISABLE_WARNING_PUSH
+  DISABLE_WARNING_USELESS_CAST
   attr_types type;
   assert(h5_type.getSign() != H5T_SGN_ERROR);  // NOLINT
   const bool is_signed = h5_type.getSign() == H5T_SGN_NONE;
@@ -86,6 +88,7 @@ attr_types getCpp_type(const H5::IntType &h5_type) {
     }
   }
   assert(false);  // NOLINT This branch should not be reachable
+  DISABLE_WARNING_POP
 }
 
 attr_types getCpp_type(const H5::FloatType &h5_type) {
@@ -494,9 +497,13 @@ void read_attribute(H5::H5File &f, std::string_view attr_name, T &buff, std::str
         utils::get_printable_type_name<T>(), utils::get_printable_type_name<VT>()));
   }
   std::visit(
-      [&](auto &&v) {
+      [&](auto &&v) { // NOLINT unused-parameter
         if constexpr (std::is_arithmetic_v<T>) {
+          DISABLE_WARNING_PUSH
+          DISABLE_WARNING_IMPL_INT_TO_FLOAT
+          DISABLE_WARNING_SIGN_COMPARE
           if (v >= std::numeric_limits<T>::min() && v <= std::numeric_limits<T>::max()) {  // NOLINT
+            DISABLE_WARNING_POP
             buff = static_cast<T>(v);
           } else {
             throw std::runtime_error(fmt::format(

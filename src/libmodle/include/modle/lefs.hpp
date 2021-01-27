@@ -52,12 +52,12 @@ class Lef {
              double unloader_strength_coefficient);
 
   [[nodiscard]] inline std::string_view get_chr_name() const;
-  [[nodiscard]] inline uint32_t get_loop_size() const;
-  [[nodiscard]] inline uint32_t get_avg_processivity() const;
+  [[nodiscard]] inline std::size_t get_loop_size() const;
+  [[nodiscard]] inline std::size_t get_avg_lifetime() const;
   [[nodiscard]] inline const DNA::Bin& get_first_bin() const;
   [[nodiscard]] inline const DNA::Bin& get_last_bin() const;
   [[nodiscard]] inline Chromosome* get_ptr_to_chr();
-  [[nodiscard]] inline std::pair<uint32_t, uint32_t> get_pos() const;
+  [[nodiscard]] inline std::pair<std::size_t, std::size_t> get_pos() const;
   [[nodiscard]] inline double get_probability_of_extr_unit_bypass() const;
   [[nodiscard]] inline std::size_t get_bin_size() const;
   [[nodiscard]] inline std::size_t get_nbins() const;
@@ -90,7 +90,7 @@ class Lef {
  private:
   Chromosome* _chr{nullptr};
   uint32_t _lifetime{0};
-  uint32_t _avg_processivity;
+  uint32_t _avg_lifetime;
   double _probability_of_extr_unit_bypass;
   double _unloader_strength_coeff;
   std::geometric_distribution<uint32_t> _lifetime_generator;
@@ -99,7 +99,7 @@ class Lef {
   // std::discrete_distribution<int8_t> _bin_idx_offset_generator{{1, 1, 0, 1, 1}};
   std::uniform_int_distribution<int64_t> _bin_idx_offset_generator{-2, 2};
   std::uniform_real_distribution<> _prob_of_rebind_generator{0.0, 1.0};
-  uint64_t _binding_pos{UINT64_MAX};
+  std::size_t _binding_pos{std::numeric_limits<std::size_t>::max()};
   /// I am using a unique_ptr instead of storing the extr. units directly to avoid the cyclic
   /// dependency between dna.hpp and lefs.hpp
   std::unique_ptr<ExtrusionUnit> _left_unit;

@@ -26,12 +26,16 @@
   #define DISABLE_WARNING_UNUSED_FUNCTION    DISABLE_WARNING("-Wunused-function")
   #define DISABLE_WARNING_UNUSED_PARAMETER   DISABLE_WARNING("-Wunused-parameter")
   #define DISABLE_WARNING_SHADOW             DISABLE_WARNING("-Wshadow")
-  #define DISABLE_WARNING_BOOL_COMPARE       DISABLE_WARNING("-Wbool-compare")
-  #if defined(__clang__)
-    #define DISABLE_WARNING_C_VLA            DISABLE_WARNING("-Wvla-extension")
-  #else
-    #define DISABLE_WARNING_C_VLA            DISABLE_WARNING("-Wvla")
-  #endif
+  #define DISABLE_WARNING_USELESS_CAST       DISABLE_WARNING("-Wuseless-cast")
+#if defined(__clang__)
+    #define DISABLE_WARNING_C_VLA              DISABLE_WARNING("-Wvla-extension")
+    #define DISABLE_WARNING_BOOL_COMPARE       (void)0;
+    #define DISABLE_WARNING_IMPL_INT_TO_FLOAT  DISABLE_WARNING("-Wimplicit-const-int-float-conversion")
+#else
+    #define DISABLE_WARNING_C_VLA             DISABLE_WARNING("-Wvla")
+    #define DISABLE_WARNING_BOOL_COMPARE      DISABLE_WARNING("-Wbool-compare")
+    #define DISABLE_WARNING_IMPL_INT_TO_FLOAT DISABLE_WARNING("-Wfloat-conversion")
+#endif
 #else
     #define DISABLE_WARNING_PUSH
     #define DISABLE_WARNING_POP

@@ -357,6 +357,7 @@ void ContactMatrix<I>::decrement(std::size_t row, std::size_t col, I2 n) {
     }
 
     DISABLE_WARNING_PUSH
+    DISABLE_WARNING_CONVERSION
     DISABLE_WARNING_SIGN_COMPARE
     DISABLE_WARNING_SIGN_CONVERSION
 #ifndef NDEBUG

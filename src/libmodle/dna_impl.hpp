@@ -375,7 +375,10 @@ DNA::Bin& DNA::operator[](std::size_t idx) {
   return this->_bins[idx];
 }
 
-const DNA::Bin& DNA::operator[](std::size_t idx) const { return this->operator[](idx); }
+const DNA::Bin& DNA::operator[](std::size_t idx) const {
+  assert(idx < this->_bins.size());
+  return this->_bins[idx];
+}
 
 uint64_t DNA::Bin::remove_all_extr_barriers() {
   auto tmp = absl::InlinedVector<ExtrusionBarrier, 1>{};
@@ -446,7 +449,6 @@ std::vector<DNA::Bin> DNA::make_bins(uint64_t length, uint32_t bin_size) {
 uint64_t DNA::length() const { return this->_length; }
 
 uint64_t DNA::get_n_bins() const {
-  const auto foo = (this->_length / this->_bin_size) + (this->_length % this->_bin_size != 0);
   return !this->_bins.empty()
              ? this->_bins.size()
              : (this->_length / this->_bin_size) + (this->_length % this->_bin_size != 0);
@@ -479,8 +481,8 @@ Chromosome::Chromosome(std::string chr_name, uint64_t length, uint32_t bin_size,
   modle::seeder seeder(this->_seed);
   this->_rand_eng = modle::PRNG(seeder.generateSeedSequence<4>());
 #else
-  modle::seeder seeder{this->_seed};
-  this->_rand_eng = modle::PRNG(seeder);
+  modle::seeder seeder_{this->_seed};
+  this->_rand_eng = modle::PRNG(seeder_);
 #endif
 }
 
@@ -502,8 +504,8 @@ Chromosome::Chromosome(std::string chr_name, uint64_t chr_start, uint64_t chr_en
   modle::seeder seeder(this->_seed);
   this->_rand_eng = modle::PRNG(seeder.generateSeedSequence<4>());
 #else
-  modle::seeder seeder{this->_seed};
-  this->_rand_eng = modle::PRNG(seeder);
+  modle::seeder seeder_{this->_seed};
+  this->_rand_eng = modle::PRNG(seeder_);
 #endif
 }
 

@@ -41,7 +41,10 @@ DNA::Bin& ExtrusionUnit::get_bin() {
   return (*this->_dna)[this->_bin_idx];
 }
 
-const DNA::Bin& ExtrusionUnit::get_bin() const { return this->get_bin(); }
+const DNA::Bin& ExtrusionUnit::get_bin() const {
+  assert(this->_bin_idx != std::numeric_limits<decltype(this->_bin_idx)>::max());  // NOLINT
+  return (*this->_dna)[this->_bin_idx];
+}
 
 bool ExtrusionUnit::try_extrude(modle::PRNG& rand_eng) {
   assert(this->_direction == dna::Direction::fwd ||  // NOLINT
@@ -143,7 +146,7 @@ void ExtrusionUnit::bind(Chromosome* chr, uint32_t pos, dna::Direction direction
 bool ExtrusionUnit::is_bound() const {
   // NOLINTNEXTLINE
   assert(this->_bin_idx == std::numeric_limits<decltype(this->_bin_idx)>::max() ||
-         (this->_bin_idx >= 0 && this->_bin_idx < this->_dna->get_n_bins()));
+         this->_bin_idx < this->_dna->get_n_bins());
   return this->_bin_idx != std::numeric_limits<decltype(this->_bin_idx)>::max();
 }
 
@@ -167,11 +170,11 @@ uint64_t ExtrusionUnit::check_constraints(modle::PRNG& rand_eng) {
 }
 
 uint32_t ExtrusionUnit::check_for_extruder_collisions(modle::PRNG& rang_eng) {
-  assert(!this->is_stalled());                                               // NOLINT
-  assert(this->_direction == dna::Direction::fwd ||                          // NOLINT
-         this->_direction == dna::Direction::rev);                           // NOLINT
-  assert(this->_bin_idx >= 0 && this->_bin_idx < this->_dna->get_n_bins());  // NOLINT
-  assert(this->get_bin().get_n_extr_units() > 0);                            // NOLINT
+  assert(!this->is_stalled());                        // NOLINT
+  assert(this->_direction == dna::Direction::fwd ||   // NOLINT
+         this->_direction == dna::Direction::rev);    // NOLINT
+  assert(this->_bin_idx < this->_dna->get_n_bins());  // NOLINT
+  assert(this->get_bin().get_n_extr_units() > 0);     // NOLINT
   uint32_t n_stalls = 0;
   // Avoid checking further if this is the only ExtrusionUnit bound to this->_bin
   if (this->get_bin().get_n_extr_units() == 1) {
@@ -216,7 +219,7 @@ uint64_t ExtrusionUnit::check_for_extrusion_barrier(modle::PRNG& rang_eng) {
 
 Lef::Lef(uint32_t bin_size, uint32_t avg_processivity, double probability_of_extruder_bypass,
          double unloader_strength_coefficient)
-    : _avg_processivity(avg_processivity),
+    : _avg_lifetime(avg_processivity),
       _probability_of_extr_unit_bypass(probability_of_extruder_bypass),
       _unloader_strength_coeff(unloader_strength_coefficient),
       _lifetime_generator(compute_prob_of_unloading(bin_size)),
@@ -317,12 +320,12 @@ void Lef::check_constraints(modle::PRNG& rang_eng) {
   }
 }
 
-uint32_t Lef::get_loop_size() const {
+std::size_t Lef::get_loop_size() const {
   assert(this->_right_unit->get_pos() >= this->_left_unit->get_pos());  // NOLINT
   return this->_right_unit->get_pos() - this->_left_unit->get_pos();
 }
 
-uint32_t Lef::get_avg_processivity() const { return this->_avg_processivity; }
+std::size_t Lef::get_avg_lifetime() const { return static_cast<std::size_t>(this->_avg_lifetime); }
 
 bool Lef::try_rebind(modle::PRNG& rand_eng, double prob_of_rebinding, bool register_contact) {
   assert(!this->is_bound());                                 // NOLINT
@@ -349,7 +352,7 @@ Chromosome* Lef::get_ptr_to_chr() {
   return this->_chr;
 }
 
-std::pair<uint32_t, uint32_t> Lef::get_pos() const {
+std::pair<std::size_t, std::size_t> Lef::get_pos() const {
   return std::make_pair(this->_left_unit->get_pos(), this->_right_unit->get_pos());
 }
 
@@ -365,7 +368,7 @@ uint64_t Lef::get_tot_bp_extruded() const { return this->_tot_bp_extruded; }
 void Lef::reset_tot_bp_extruded() { this->_tot_bp_extruded = 0; }
 
 double Lef::compute_prob_of_unloading(uint32_t bin_size, uint8_t n_of_active_extr_units) const {
-  return n_of_active_extr_units / (static_cast<double>(this->get_avg_processivity()) / bin_size);
+  return n_of_active_extr_units / (static_cast<double>(this->get_avg_lifetime()) / bin_size);
 }
 
 }  // namespace modle

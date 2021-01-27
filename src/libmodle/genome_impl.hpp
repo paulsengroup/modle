@@ -50,8 +50,7 @@ using seeder = std::seed_seq;
 #endif
 
 Genome::Genome(const config& c)
-    : _seed(c.seed),
-      _path_to_chrom_sizes_file(c.path_to_chr_sizes),
+    : _path_to_chrom_sizes_file(c.path_to_chr_sizes),
       _path_to_chr_subranges_file(c.path_to_chr_subranges),
       _bin_size(c.bin_size),
       _avg_lef_processivity(c.average_lef_processivity),
@@ -371,7 +370,6 @@ void Genome::assign_lefs(bool bind_lefs_after_assignment) {
 }
 
 uint64_t Genome::exclude_chr_wo_extr_barriers() {
-  const auto n_chromosomes = this->get_n_chromosomes();
   uint64_t chr_excluded = 0;
   for (auto& chr : this->_chromosomes) {
     chr_excluded += !(chr._ok &= chr.get_n_barriers() != 0);  // NOLINT
@@ -682,11 +680,11 @@ void Genome::randomly_generate_extrusion_barriers(I n_barriers, uint64_t seed) {
   std::discrete_distribution<std::size_t> chr_idx(weights.begin(), weights.end());
   // NOLINTNEXTLINE(readability-magic-numbers, cppcoreguidelines-avoid-magic-numbers)
   std::bernoulli_distribution strand_selector(0.5);
-  modle::seeder seeder{seed + n_barriers};
+  modle::seeder seeder_{seed + n_barriers};
 #ifdef USE_XOSHIRO
-  modle::PRNG rand_eng(seeder.generateSeedSequence<4>());
+  modle::PRNG rand_eng(seeder_.generateSeedSequence<4>());
 #else
-  modle::PRNG rand_eng{seeder};
+  modle::PRNG rand_eng{seeder_};
 #endif
 
   for (I i = 0UL; i < n_barriers; ++i) {

@@ -105,7 +105,6 @@ class Genome {
   void simulate_extrusion(double target_contact_density);
 
  private:
-  uint64_t _seed;
   std::string _path_to_chrom_sizes_file;
   std::string _path_to_chr_subranges_file;
   uint32_t _bin_size;

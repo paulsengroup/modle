@@ -368,7 +368,6 @@ void stats_subcmd(const modle::tools::config& c) {
   for (auto i = 0UL; i < nchroms; ++i) {
     const auto& chr_name = chr_names[i];
     const auto& chr_size = chr_sizes[i];
-    const auto chr_start_offset = chr_start_offsets.empty() ? 0UL : chr_start_offsets.at(chr_name);
 
     // Skip chromosome found in the exclusion list
     if (c.chromosomes_excluded.contains(chr_name)) {
