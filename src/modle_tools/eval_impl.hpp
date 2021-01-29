@@ -74,8 +74,8 @@ void slice_range_w_cross_method(absl::Span<const N> vin, std::vector<N> &vout, s
       DISABLE_WARNING_PUSH
       DISABLE_WARNING_SIGN_CONVERSION
       std::fill(vout.begin() + j, vout.end(), 0);
-      break;
       DISABLE_WARNING_POP
+      break;
     }
     vout[j] = vin[idx++];
   }
