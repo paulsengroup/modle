@@ -659,6 +659,7 @@ std::unique_ptr<H5::DSetAccPropList> Cooler::generate_default_aprop(T type, hsiz
   constexpr double rdcc_w0{0.99};
   if constexpr (std::is_same_v<T, H5::StrType>) {
     prop.setChunkCache(default_multiplier * (cache_size / chunk_size), cache_size, 0.01);
+    (void)type;
   } else {
     if (type == H5::PredType::NATIVE_INT64) {  // int64_t
       prop.setChunkCache(default_multiplier * (cache_size / chunk_size), cache_size, rdcc_w0);

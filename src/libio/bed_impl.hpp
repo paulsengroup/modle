@@ -203,7 +203,7 @@ Parser::Parser(std::string path_to_bed, BED::Standard bed_standard)
 }
 
 Parser::Parser(std::string_view path_to_bed, BED::Standard bed_standard)
-    : Parser(std::string{path_to_bed}, bed_standard){};
+    : Parser(std::string{path_to_bed}, bed_standard) {}
 
 std::vector<BED> Parser::parse_n(std::size_t nrecords, bool throw_on_duplicates) {
   absl::flat_hash_map<BED, uint64_t> unique_records;
