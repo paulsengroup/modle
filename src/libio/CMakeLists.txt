@@ -35,10 +35,8 @@ add_library(libio INTERFACE)
 add_library(Modle::io ALIAS libio)
 target_sources(
   libio
-  INTERFACE ${CMAKE_CURRENT_SOURCE_DIR}/4dn_dcic_impl.hpp
-            ${CMAKE_CURRENT_SOURCE_DIR}/bed_impl.hpp
+  INTERFACE ${CMAKE_CURRENT_SOURCE_DIR}/bed_impl.hpp
             ${CMAKE_CURRENT_SOURCE_DIR}/chr_sizes_impl.hpp
-            ${CMAKE_CURRENT_SOURCE_DIR}/juicer_contacts_impl.hpp
             ${CMAKE_CURRENT_SOURCE_DIR}/bigwig_impl.hpp)
 add_dependencies(libio libBigWig_lib) # libstraw)
 
@@ -67,13 +65,11 @@ if(ENABLE_PCH AND ${CMAKE_VERSION} VERSION_GREATER_EQUAL "3.16.0")
   target_precompile_headers(
     libio
     INTERFACE
-    [["modle/4dn_dcic.hpp"]]
     [["modle/bed.hpp"]]
     [["modle/bigwig.hpp"]]
     [["modle/chr_sizes.hpp"]]
     [["modle/cooler.hpp"]]
-    [["modle/hdf5.hpp"]]
-    [["modle/juicer_contacts.hpp"]])
+    [["modle/hdf5.hpp"]])
 endif()
 
 if(ENABLE_TESTING)

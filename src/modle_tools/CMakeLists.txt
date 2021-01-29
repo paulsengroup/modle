@@ -5,9 +5,9 @@ add_executable(modle_tools main.cpp)
 target_sources(
   modle_tools
   PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/cli.hpp
-          ${CMAKE_CURRENT_SOURCE_DIR}/convert_impl.hpp
           ${CMAKE_CURRENT_SOURCE_DIR}/eval_impl.hpp
-          ${CMAKE_CURRENT_SOURCE_DIR}/tools_impl.hpp)
+          ${CMAKE_CURRENT_SOURCE_DIR}/tools_impl.hpp
+          ${CMAKE_CURRENT_SOURCE_DIR}/stats_impl.hpp)
 
 target_link_libraries(
   modle_tools
@@ -28,9 +28,9 @@ if(ENABLE_PCH AND ${CMAKE_VERSION} VERSION_GREATER_EQUAL "3.16.0")
     modle_tools
     PRIVATE
     [["modle_tools/config.hpp"]]
-    [["modle_tools/convert.hpp"]]
     [["modle_tools/eval.hpp"]]
     [["modle_tools/tools.hpp"]]
+    [["modle_tools/stats.hpp"]]
     [["modle_tools/utils.hpp"]])
 endif()
 

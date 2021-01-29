@@ -19,7 +19,7 @@ namespace modle::tools {
 
 class Cli {
  public:
-  enum subcommand : uint8_t { convert, eval, stats, help };
+  enum subcommand : uint8_t { eval, stats, help };
 
  private:
   int _argc;
@@ -34,27 +34,6 @@ class Cli {
       {"anasPlat1"}, {"bTaurus3"},  {"canFam3"}, {"equCab2"}, {"galGal4"}, {"Pf3D7"},
       {"sacCer3"},   {"sCerS288c"}, {"susScr3"}, {"TAIR10"}};
 
-  inline void make_convert_subcommand() {
-    // clang-format off
-    auto *sc = this->_cli.add_subcommand("convert", "Convert Modle's contact matrix into several popular formats.")->fallthrough();
-
-    sc->add_option("-i,--input", this->_config.path_to_input_matrices, "Path to a contact matrix in Cooler format")->check(CLI::ExistingFile)->required();
-    sc->add_option("--tmp-dir", this->_config.tmp_dir, "Path where to store temporary files.")->capture_default_str();
-    sc->add_flag("--keep-temporary-files", this->_config.keep_tmp_files, "Do not delete temporary files.")->capture_default_str();
-    sc->add_flag("-f,--force", this->_config.force, "Overwrite existing file(s).")->capture_default_str();
-    sc->add_option("-j,--path-to-juicer-tools", this->_config.path_to_juicer_tools, "Path to Juicer tools jar. When this is not specified, we will look in PATH for an executable called juicer_tools, juicer_tools.exe or juicer_tools.sh.")->check(CLI::ExistingFile);
-    sc->add_option("-t,--threads", this->_config.nthreads, "CPU threads to allocate.")->check(CLI::PositiveNumber);
-    sc->add_option("-o,--output-base-name", this->_config.output_base_name, "Base file name (including directories) to use for output.")->required();
-    sc->add_flag("--output-format", this->_config.output_format, "Output file format. Accepted formats are: HIC and TSV.")->capture_default_str();
-    sc->add_flag("--add-noise,--make-realistic", this->_config.add_noise, "Add noise to make the contact matrix more similar to the matrices produced by Hi-C experiments.")->capture_default_str();
-    sc->add_option("--noise-stdev", this->_config.noise_stdev, "Standard deviation to use when sampling noise to add to contact matrices.")->check(CLI::PositiveNumber)->needs(sc->get_option("--add-noise"));
-    sc->add_option("--noise-range", this->_config.noise_range, "Range to use when adding noise to contact matrices. By default 99.9% of the sampled numbers will fall within this range.")->check(CLI::PositiveNumber)->needs(sc->get_option("--add-noise"))->excludes(sc->get_option("--noise-stdev"))->capture_default_str();
-    sc->add_option("--juicer-tools-max-mem", this->_config.juicer_tools_mem, "Maximum memory allocation pool for Juicer Tools (JVM).")->needs(sc->get_option("--path-to-juicer-tools"))->transform(CLI::AsSizeValue(false))->capture_default_str();
-    sc->add_option("-c,--chr-sizes", this->_config.chr_sizes, fmt::format("Path to file containing chromosome size(s). Can also be one of the following genome IDs: {}.", absl::StrJoin(this->_allowed_genome_ids, ", ")));
-    sc->add_option("--seed", this->_config.seed, "Seed value to use when adding noise to the contact matrix.")->capture_default_str();
-    // clang-format on
-  }
-
   inline void make_eval_subcommand() {
     // clang-format off
     auto *sc = this->_cli.add_subcommand("evaluate", "Compare Model's output with other contact matrices using various correlation tests.")->fallthrough();
@@ -65,7 +44,6 @@ class Cli {
     sc->add_option("--tmp-dir", this->_config.tmp_dir, "Path where to store temporary files.")->capture_default_str();
     sc->add_flag("--keep-temporary-files", this->_config.keep_tmp_files, "Do not delete temporary files.")->capture_default_str();
     sc->add_flag("-f,--force", this->_config.force, "Overwrite existing file(s).")->capture_default_str();
-    sc->add_option("-j,--path-to-juicer-tools", this->_config.path_to_juicer_tools, "Path to Juicer tools jar. When this is not specified, we will look in PATH for an executable called juicer_tools, juicer_tools.exe or juicer_tools.sh.")->check(CLI::ExistingFile);
     sc->add_option("-t,--threads", this->_config.nthreads, "CPU threads to allocate.")->check(CLI::PositiveNumber);
     sc->add_option("-o,--output-base-name", this->_config.output_base_name, "Base file name (including directories) to use for output.")->required();
     sc->add_option("--reference-matrix", this->_config.path_to_reference_matrix, "Path to contact matrix to use as reference when computing the correlation. Formats accepted: Cooler.")->required();
@@ -103,91 +81,8 @@ class Cli {
     this->_cli.description("Modle's helper tool. This tool allows to post-process the contact matrix produced by Modle in various ways.");
     this->_cli.require_subcommand(1);
     // clang-format on
-    this->make_convert_subcommand();
     this->make_eval_subcommand();
     this->make_stats_subcommand();
-  }
-
-  [[nodiscard]] inline std::string validate_convert_subcommand() {
-    assert(this->_cli.get_subcommand("convert")->parsed());
-    std::string errors;
-    auto& c = this->_config;
-    if (!std::filesystem::is_directory(c.output_base_name) &&
-        std::filesystem::exists(c.output_base_name)) {
-      absl::StrAppendFormat(
-          &errors, "--output-dir should point to a directory or a non-existing path. Is '%s'",
-          c.output_base_name);
-    }
-
-    if (const auto* s = "/modle_tools/"; !absl::EndsWithIgnoreCase(c.tmp_dir, s)) {
-      c.tmp_dir += s;
-    }
-    if (!std::filesystem::is_directory(c.tmp_dir) && std::filesystem::exists(c.tmp_dir)) {
-      absl::StrAppendFormat(
-          &errors, "--tmp-dir should point to a directory or a non-existing path. Is '%s'\n",
-          c.tmp_dir);
-    }
-
-    if (!c.force) {
-      std::vector<std::string> collisions;
-      if (this->_config.output_format == config::output_format::hic) {
-        if (auto file = fmt::format("{}{}.hic", c.add_noise ? "_w_noise" : "", c.output_base_name);
-            std::filesystem::exists(file)) {
-          collisions.push_back(file);
-        }
-      }
-      if (this->_config.output_format == config::output_format::tsv) {
-        if (auto file = fmt::format("{}{}_symmetric.tsv.bz2", c.output_base_name,
-                                    c.add_noise ? "_w_noise" : "");
-            std::filesystem::exists(file)) {
-          collisions.push_back(file);
-        }
-      }
-      if (!collisions.empty()) {
-        absl::StrAppendFormat(
-            &errors,
-            "Detected %lu file name collisions: refusing to proceed. Pass --force to "
-            "overwrite existing file(s).\nColliding file(s):\n - %s",
-            collisions.size(), absl::StrJoin(collisions, "\n - "));
-      }
-    }
-
-    if (!c.chr_sizes.empty()) {
-      if (std::filesystem::exists(c.chr_sizes)) {
-        if (std::filesystem::is_directory(c.chr_sizes)) {
-          absl::StrAppendFormat(
-              &errors,
-              "--chr-sizes should be the path to a file or one of %s, but is a directory\n",
-              absl::StrJoin(this->_allowed_genome_ids, ", "));
-        }
-      } else {
-        if (!this->_allowed_genome_ids.contains(c.chr_sizes)) {
-          absl::StrAppendFormat(
-              &errors, "--chr-sizes='%s' should be the path to an existing file or one of %s.\n",
-              c.chr_sizes, absl::StrJoin(this->_allowed_genome_ids, ", "));
-        }
-      }
-    }
-
-    if (this->_config.output_format == config::output_format::hic ||
-        absl::StartsWith("http", this->_config.path_to_reference_matrix) ||
-        absl::EndsWithIgnoreCase(c.path_to_reference_matrix, ".hic")) {
-      if (c.path_to_juicer_tools.empty()) {
-        for (std::string file : {"juicer_tools", "juicer_tools.sh", "juicer_tools.exe"}) {
-          if (auto p = boost::process::search_path(file).string(); !p.empty()) {
-            c.path_to_juicer_tools = std::move(p);
-            break;
-          }
-        }
-      }
-      if (c.output_format == config::output_format::hic && c.path_to_juicer_tools.empty()) {
-        absl::StrAppendFormat(
-            &errors,
-            "--path-to-juicer-tools was not specified and ModLE tools was unable to find Juicer "
-            "tools in your path");
-      }
-    }
-    return errors;
   }
 
   [[nodiscard]] inline std::string validate_eval_subcommand() {
@@ -260,24 +155,6 @@ class Cli {
                             "--sliding-window-size=%lu --sliding-window-overlap=%lu.",
                             c.sliding_window_size, c.sliding_window_overlap);
     }
-    if (this->_config.output_format == config::output_format::hic ||
-        absl::StartsWith("http", this->_config.path_to_reference_matrix) ||
-        absl::EndsWithIgnoreCase(c.path_to_reference_matrix, ".hic")) {
-      if (c.path_to_juicer_tools.empty()) {
-        for (std::string file : {"juicer_tools", "juicer_tools.sh", "juicer_tools.exe"}) {
-          if (auto p = boost::process::search_path(file).string(); !p.empty()) {
-            c.path_to_juicer_tools = std::move(p);
-            break;
-          }
-        }
-      }
-      if (c.output_format == config::output_format::hic && c.path_to_juicer_tools.empty()) {
-        absl::StrAppendFormat(
-            &errors,
-            "--path-to-juicer-tools was not specified and ModLE tools was unable to find Juicer "
-            "tools in your path");
-      }
-    }
     return errors;
   }
 
@@ -334,9 +211,7 @@ class Cli {
 
   [[nodiscard]] inline bool validate() {  // TODO: Refactor this function
     std::string errors;
-    if (this->_cli.get_subcommand("convert")->parsed()) {
-      errors = this->validate_convert_subcommand();
-    } else if (this->_cli.get_subcommand("eval")->parsed()) {
+    if (this->_cli.get_subcommand("eval")->parsed()) {
       errors = this->validate_eval_subcommand();
     } else if (this->_cli.get_subcommand("stats")->parsed()) {
       errors = this->validate_stats_subcommand();
@@ -370,9 +245,7 @@ class Cli {
     this->_exec_name = *this->_argv;
     try {
       this->_cli.parse(this->_argc, this->_argv);
-      if (this->_cli.get_subcommand("convert")->parsed()) {
-        this->_subcommand = subcommand::convert;
-      } else if (this->_cli.get_subcommand("evaluate")->parsed()) {
+      if (this->_cli.get_subcommand("evaluate")->parsed()) {
         this->_subcommand = subcommand::eval;
       } else if (this->_cli.get_subcommand("statistics")->parsed()) {
         this->_subcommand = subcommand::stats;

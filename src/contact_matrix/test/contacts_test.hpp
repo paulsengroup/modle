@@ -23,7 +23,7 @@ TEST_CASE("CMatrix simple", "[cmatrix][short]") {
   CHECK(c.get(0, 0) == 1);
   c.increment(0, 0);
   CHECK(c.get(0, 0) == 2);
-  c.decrement(0, 0, 2);
+  c.subtract(0, 0, 2);
   CHECK(c.get(0, 0) == 0);
 }
 
@@ -66,31 +66,6 @@ TEST_CASE("CMatrix 10x200", "[cmatrix][medium]") {
   for (auto i = 0UL; i < m1.size(); ++i) {
     for (auto j = 0UL; j < m1[0].size(); ++j) {
       CHECK(m1[i][j] == m3[i][j]);
-    }
-  }
-}
-
-inline void test_with_large_matrix(const std::string& path_to_file) {
-  const ContactMatrix<uint32_t> m(path_to_file);
-  std::ifstream f(path_to_file, std::ios_base::binary);
-  boost::iostreams::filtering_istream in;
-  in.push(boost::iostreams::bzip2_decompressor());
-  in.push(f);
-  if (!f || !in) {
-    throw fmt::system_error(errno, "Unable to open file '{}'", path_to_file);
-  }
-  std::string line;
-  uint32_t n{};
-  for (auto i = 0UL; std::getline(in, line); ++i) {
-    auto j = 0UL;
-    for (const auto& tok : absl::StrSplit(line, '\t')) {
-      if (tok != "0") {
-        modle::utils::parse_numeric_or_throw(tok, n);
-        CHECK(m.get(i, j++) == n);
-      }
-    }
-    if ((!f && !f.eof()) || (!in && !in.eof())) {
-      throw fmt::system_error(errno, "IO error while reading file '{}'", path_to_file);
     }
   }
 }

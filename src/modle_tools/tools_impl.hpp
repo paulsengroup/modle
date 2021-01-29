@@ -19,29 +19,10 @@
 #include "modle/cooler.hpp"
 #include "modle/hdf5.hpp"
 #include "modle_tools/config.hpp"   // for config
-#include "modle_tools/convert.hpp"  // for convert_to_hic, convert_to_tsv
 #include "modle_tools/eval.hpp"     // for Transformation, Cross, Linear
 #include "modle_tools/stats.hpp"
 
 namespace modle::tools {
-
-void convert_subcmd(const modle::tools::config& c) {
-  auto argv = modle::utils::init_juicer_tools_argv(c.path_to_juicer_tools, c.juicer_tools_mem);
-  std::filesystem::create_directories(c.output_base_name);
-  switch (c.output_format) {
-    case config::output_format::hic:
-      modle::tools::convert_to_hic(c, argv);
-      break;
-    case config::output_format::cooler:
-      // TODO: Handle this case upstream of this branch.
-      break;
-    case config::output_format::tsv:
-      boost::asio::thread_pool tpool(std::min(c.path_to_input_matrices.size(), c.nthreads));
-      modle::tools::convert_to_tsv(tpool, c);
-      tpool.join();
-      break;
-  }
-}
 
 void eval_subcmd(const modle::tools::config& c) {
   assert(c.compute_spearman || c.compute_pearson);  // NOLINT

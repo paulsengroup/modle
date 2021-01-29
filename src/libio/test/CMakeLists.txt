@@ -9,7 +9,6 @@ target_sources(
   INTERFACE ${CMAKE_CURRENT_SOURCE_DIR}/bed_parser_test.hpp
             ${CMAKE_CURRENT_SOURCE_DIR}/cooler_test.hpp
             ${CMAKE_CURRENT_SOURCE_DIR}/hdf5_test.hpp
-            ${CMAKE_CURRENT_SOURCE_DIR}/juicer_contacts_test.hpp
             ${CMAKE_CURRENT_SOURCE_DIR}/cooler_test.hpp)
 
 target_link_libraries(

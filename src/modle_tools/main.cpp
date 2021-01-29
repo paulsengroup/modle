@@ -15,17 +15,11 @@ int main(int argc, char** argv) {
     return c.exit_code;
   }
 
-  if (!c.tmp_dir.empty()) {
-    std::filesystem::create_directories(c.tmp_dir);
-  }
   if (!c.output_base_name.empty()) {
     std::filesystem::create_directories(c.output_base_name);
   }
   try {
     switch (cli.get_subcommand()) {
-      case modle::tools::Cli::subcommand::convert:
-        modle::tools::convert_subcmd(c);
-        break;
       case modle::tools::Cli::subcommand::eval:
         modle::tools::eval_subcmd(c);
         break;
@@ -43,17 +37,6 @@ int main(int argc, char** argv) {
     if (!c.keep_tmp_files && std::filesystem::is_empty(c.tmp_dir)) {
       std::filesystem::remove_all(c.tmp_dir, ec);
     }
-    return 1;
-  }
-
-  try {
-    if (!c.keep_tmp_files &&
-        (!std::filesystem::exists(c.tmp_dir) || std::filesystem::is_empty(c.tmp_dir))) {
-      std::filesystem::remove_all(c.tmp_dir);
-    }
-  } catch (const std::filesystem::filesystem_error& err) {
-    fmt::print(stderr, "An error occurred while removing the temporary directory '{}': {}.\n",
-               c.tmp_dir, err.what());
     return 1;
   }
 

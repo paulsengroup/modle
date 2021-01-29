@@ -519,31 +519,6 @@ uint64_t Chromosome::get_n_barriers() const { return this->barriers.size(); }
 uint64_t Chromosome::get_n_lefs() const { return this->lefs.size(); }
 double Chromosome::get_total_lef_affinity() const { return this->dna.get_total_lef_affinity(); }
 
-void Chromosome::write_contacts_to_tsv(std::string_view output_dir, bool force_overwrite) const {
-  auto t0 = absl::Now();
-  std::filesystem::create_directories(output_dir);
-  std::string path_to_outfile = std::filesystem::weakly_canonical(
-      fmt::format("{}/{}_modle_cmatrix.tsv.bz2", output_dir, this->name));
-  fmt::print(stderr, "Writing contact matrix for '{}' to file '{}'...\n", this->name,
-             path_to_outfile);
-  if (!force_overwrite && std::filesystem::exists(path_to_outfile)) {
-    fmt::print(stderr, "File '{}' already exists, SKIPPING! Pass --force to overwrite...\n",
-               path_to_outfile);
-    return;
-  }
-
-  const std::string header =
-      fmt::format("#{}\t{}\t{}\t{}\t{}\n", this->name, this->get_bin_size(), this->start, this->end,
-                  this->contacts.nrows() * this->get_bin_size());
-
-  auto [bytes_in, bytes_out] = this->contacts.write_to_tsv(path_to_outfile, header);
-  fmt::print(stderr,
-             "DONE writing '{}' in {}! Compressed size: {:.2f} MB (compression ratio {:.2f}x)\n",
-             // NOLINTNEXTLINE(readability-magic-numbers, cppcoreguidelines-avoid-magic-numbers)
-             path_to_outfile, absl::FormatDuration(absl::Now() - t0), bytes_out / 1.0e6,
-             static_cast<double>(bytes_in) / bytes_out);
-}
-
 void Chromosome::write_barriers_to_tsv(std::string_view output_dir, bool force_overwrite) const {
   auto path_to_outfile = std::filesystem::weakly_canonical(
       fmt::format("{}/{}.extrusion_barriers.tsv.bz2", output_dir, this->name));
