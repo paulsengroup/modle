@@ -18,8 +18,8 @@
 #include "modle/contacts.hpp"  // for ContactMatrix<>::Header, ContactMatrix
 #include "modle/cooler.hpp"
 #include "modle/hdf5.hpp"
-#include "modle_tools/config.hpp"   // for config
-#include "modle_tools/eval.hpp"     // for Transformation, Cross, Linear
+#include "modle_tools/config.hpp"  // for config
+#include "modle_tools/eval.hpp"    // for Transformation, Cross, Linear
 #include "modle_tools/stats.hpp"
 
 namespace modle::tools {

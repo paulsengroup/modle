@@ -52,10 +52,8 @@ inline void throw_except_from_errc(std::string_view tok, std::size_t idx, const 
 [[nodiscard]] inline bool chr_less_than_operator(const std::pair<std::string_view, int64_t>& chr1,
                                                  const std::pair<std::string_view, int64_t>& chr2);
 
-typedef boost::error_info<struct tag_stacktrace, boost::stacktrace::stacktrace> traced;
-
 template <class E>
-inline void throw_with_trace(const E& e);
+[[noreturn]] inline void throw_with_trace(const E& e);
 
 // Typetraits stuff
 

@@ -13,8 +13,8 @@
 namespace modle::chr_sizes {
 
 struct ChrSize {
-  inline ChrSize(std::string_view chr_name, uint64_t chr_length);
   inline ChrSize(std::string_view chr_name, uint64_t chr_start, uint64_t chr_end);
+  inline ChrSize(std::string_view chr_name, uint64_t chr_length);
   inline explicit ChrSize(std::vector<std::string>& toks);
 
   [[nodiscard]] inline bool operator==(const ChrSize& other) const;
@@ -24,8 +24,9 @@ struct ChrSize {
   uint64_t start;
   uint64_t end;
 
+ private:
   template <typename H>
-  inline friend H AbslHashValue(H h, const ChrSize& c) {
+  [[maybe_unused]] inline friend H AbslHashValue(H h, const ChrSize& c) {
     return H::combine(std::move(h), c.name);
   }
 };

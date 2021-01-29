@@ -200,9 +200,13 @@ bool chr_less_than_operator(const std::pair<std::string_view, int64_t> &chr1,
   return false;
 }
 
+typedef boost::error_info<struct tag_stacktrace, boost::stacktrace::stacktrace> traced;  // NOLINT
 template <class E>
 void throw_with_trace(const E &e) {
-  throw boost::enable_error_info(e) << traced(boost::stacktrace::stacktrace());
+  if constexpr (std::is_base_of_v<std::exception, E>) {
+    throw boost::enable_error_info(e) << traced(boost::stacktrace::stacktrace());
+  }
+  throw boost::enable_error_info(std::runtime_error(e)) << traced(boost::stacktrace::stacktrace());
 }
 
 template <typename T>

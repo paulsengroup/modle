@@ -16,8 +16,64 @@
 #include <vector>
 
 namespace modle::chr_sizes {
+
+ChrSize::ChrSize(std::string_view chr_name, uint64_t chr_start, uint64_t chr_end)
+    : name(chr_name), start(chr_start), end(chr_end) {}
+
+ChrSize::ChrSize(std::string_view chr_name, uint64_t chr_length)
+    : ChrSize(chr_name, 0UL, chr_length) {}
+
+ChrSize::ChrSize(std::vector<std::string>& toks) {
+  assert(toks.size() > 1);
+  this->name = std::move(toks[0]);
+  std::size_t idx = 0;  // Used to print useful errors
+  try {
+    if (toks.size() == 2) {
+      this->start = 0ULL;
+      this->end = std::stoull(toks[++idx]);
+    } else {
+      this->start = std::stoull(toks[++idx]);
+      this->end = std::stoull(toks[++idx]);
+      if (this->start > this->end) {
+        throw std::runtime_error(fmt::format(
+            FMT_STRING("Sequence '{}' has a starting coord. that is larger than its end coord.: "
+                       "start={} > end={}"),
+            this->name, this->start, this->end));
+      }
+    }
+
+  } catch (const std::invalid_argument& e) {
+    if (toks.size() == 2) {
+      throw std::runtime_error(
+          fmt::format(FMT_STRING("Sequence '{}' has an invalid simulated_length of '{}': {}"),
+                      this->name, toks[idx], e.what()));
+    }
+    throw std::runtime_error(
+        fmt::format(FMT_STRING("Sequence '{}' has an invalid {} coord. of '{}': {}"), this->name,
+                    idx == 1 ? "start" : "end", toks[idx], e.what()));
+
+  } catch (const std::out_of_range& e) {
+    if (toks.size() == 2) {
+      throw std::runtime_error(
+          fmt::format(FMT_STRING("Sequence '{}' has an out of bound simulated_length of '{}': {}"),
+                      this->name, toks[idx], e.what()));
+    }
+    throw std::runtime_error(
+        fmt::format(FMT_STRING("Sequence '{}' has an out of bound {} coord. of '{}': {}"),
+                    this->name, idx == 1 ? "start" : "end", toks[idx], e.what()));
+  }
+}
+
+bool ChrSize::operator==(const ChrSize& other) const {
+  return this->name == other.name && this->start == other.start && this->end == other.end;
+}
+
+bool ChrSize::operator<(const ChrSize& other) const {
+  return this->end - this->start < other.end - other.start;
+}
+
 Parser::Parser(std::string path_to_chr_sizes) : _path(std::move(path_to_chr_sizes)) {}
-Parser::Parser(std::string_view path_to_chr_sizes) : _path(std::string(path_to_chr_sizes)) {}
+Parser::Parser(std::string_view path_to_chr_sizes) : Parser(std::string{path_to_chr_sizes}) {}
 
 std::vector<ChrSize> Parser::parse_all(char sep) {
   std::string buff;
@@ -36,8 +92,8 @@ std::vector<ChrSize> Parser::parse_all(char sep) {
     assert(!tokens.empty());  // This should only happen at EOF, which is handled elsewhere
     try {
       if (tokens.size() < 2) {
-        throw std::runtime_error(
-            fmt::format("Expected 2 or more tokens, got {}: '{}'", tokens.size(), buff));
+        throw std::runtime_error(fmt::format(FMT_STRING("Expected 2 or more tokens, got {}: '{}'"),
+                                             tokens.size(), buff));
       }
       ChrSize record(tokens);
       if (this->_chrs.contains(record)) {
@@ -48,8 +104,8 @@ std::vector<ChrSize> Parser::parse_all(char sep) {
 
     } catch (const std::runtime_error& e) {
       this->_errors.push_back(
-          fmt::format("Encountered a malformed record at line {} of file '{}': {}.\n "
-                      "Line that triggered the error:\n'{}'",
+          fmt::format(FMT_STRING("Encountered a malformed record at line {} of file '{}': {}.\n "
+                                 "Line that triggered the error:\n'{}'"),
                       i, this->_path, e.what(), buff.data()));
     }
   }
@@ -58,63 +114,10 @@ std::vector<ChrSize> Parser::parse_all(char sep) {
   }
   if (!this->_errors.empty()) {
     throw std::runtime_error(
-        fmt::format("The following error(s) occurred while parsing file '{}':\n - {}", this->_path,
-                    absl::StrJoin(this->_errors, "\n - ")));
+        fmt::format(FMT_STRING("The following error(s) occurred while parsing file '{}':\n - {}"),
+                    this->_path, absl::StrJoin(this->_errors, "\n - ")));
   }
   return chr_sizes;
 }
 
-ChrSize::ChrSize(std::vector<std::string>& toks) {
-  assert(toks.size() > 1);
-  this->name = std::move(toks[0]);
-  std::size_t idx = 0;  // Used to print useful errors
-  try {
-    if (toks.size() == 2) {
-      this->start = 0ULL;
-      this->end = std::stoull(toks[++idx]);
-    } else {
-      this->start = std::stoull(toks[++idx]);
-      this->end = std::stoull(toks[++idx]);
-      if (this->start > this->end) {
-        throw std::runtime_error(
-            fmt::format("Sequence '{}' has a starting coord. that is larger than its end coord.: "
-                        "start={} > end={}",
-                        this->name, this->start, this->end));
-      }
-    }
-
-  } catch (const std::invalid_argument& e) {
-    if (toks.size() == 2) {
-      throw std::runtime_error(
-          fmt::format("Sequence '{}' has an invalid simulated_length of '{}': {}", this->name,
-                      toks[idx], e.what()));
-    }
-    throw std::runtime_error(fmt::format("Sequence '{}' has an invalid {} coord. of '{}': {}",
-                                         this->name, idx == 1 ? "start" : "end", toks[idx],
-                                         e.what()));
-
-  } catch (const std::out_of_range& e) {
-    if (toks.size() == 2) {
-      throw std::runtime_error(
-          fmt::format("Sequence '{}' has an out of bound simulated_length of '{}': {}", this->name,
-                      toks[idx], e.what()));
-    }
-    throw std::runtime_error(fmt::format("Sequence '{}' has an out of bound {} coord. of '{}': {}",
-                                         this->name, idx == 1 ? "start" : "end", toks[idx],
-                                         e.what()));
-  }
-}
-
-ChrSize::ChrSize(std::string_view chr_name, uint64_t chr_length)
-    : name(chr_name), start(0), end(chr_length) {}
-ChrSize::ChrSize(std::string_view chr_name, uint64_t chr_start, uint64_t chr_end)
-    : name(chr_name), start(chr_start), end(chr_end) {}
-
-bool ChrSize::operator==(const ChrSize& other) const {
-  return this->name == other.name && this->start == other.start && this->end == other.end;
-}
-
-bool ChrSize::operator<(const ChrSize& other) const {
-  return this->end - this->start < other.end - other.start;
-}
 }  // namespace modle::chr_sizes

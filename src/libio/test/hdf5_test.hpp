@@ -109,22 +109,21 @@ TEST_CASE("read_write_ints HDF5", "[io][hdf5][short]") {
   }
 }
 
-TEST_CASE("group_exists HDF5", "[io][hdf5][short]") {
-  const auto test_file = test_dir / "group_exists.hdf5";
+TEST_CASE("has_group HDF5", "[io][hdf5][short]") {
+  const auto test_file = test_dir / "has_group.hdf5";
   std::filesystem::create_directories(test_dir);
   H5::H5File f(test_file.string(), H5F_ACC_TRUNC);
   (void)init_test_int64_dataset(f);
   f.createGroup("/g1");
   f.createGroup("/g1/1");
 
-  CHECK(group_exists(f, "g1"));
-  CHECK(group_exists(f, "1", "g1"));
-  CHECK(group_exists(f, "1", "/g1"));
-  CHECK(group_exists(f, "1", "/g1/"));
-  CHECK(!group_exists(f, "g2"));
-  CHECK(!group_exists(f, "2", "g2"));
-  CHECK_THROWS_WITH(group_exists(f, "test"),
-                    Catch::Matchers::EndsWith("exists but is not a group"));
+  CHECK(has_group(f, "g1"));
+  CHECK(has_group(f, "1", "g1"));
+  CHECK(has_group(f, "1", "/g1"));
+  CHECK(has_group(f, "1", "/g1/"));
+  CHECK(!has_group(f, "g2"));
+  CHECK(!has_group(f, "2", "g2"));
+  CHECK_THROWS_WITH(has_group(f, "test"), Catch::Matchers::EndsWith("exists but is not a group"));
 
   std::filesystem::remove_all(test_dir);
   if (const auto& p = test_dir.parent_path(); std::filesystem::is_empty(p)) {
@@ -139,8 +138,8 @@ TEST_CASE("check_dataset_type HDF5", "[io][hdf5][short]") {
   f.createGroup("/g1");
   auto int_dataset = init_test_int64_dataset(f);
   auto str_dataset = init_test_str_dataset(f, "/g1/test");
-  CHECK(dataset_exists(f, "/test"));
-  CHECK(!dataset_exists(f, "/test2"));
+  CHECK(has_dataset(f, "/test"));
+  CHECK(!has_dataset(f, "/test2"));
 
   CHECK(check_dataset_type(int_dataset, H5::PredType::NATIVE_INT64));
   CHECK(check_dataset_type(str_dataset, init_str_type()));

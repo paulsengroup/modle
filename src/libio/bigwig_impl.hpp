@@ -58,13 +58,14 @@ void write_range(absl::flat_hash_map<std::pair<std::string, N1>, std::vector<N2>
   try {
     for (const auto& [chr_data, values] : data) {
       std::vector<float> fvalues(values.begin(), values.end());
-      if (bwAddIntervalSpanSteps(
-              bigwig_fp,
-              const_cast<char*>(
-                  chr_data.first.c_str()),  // NOLINT this should be fine as long as libBigWig
-                                            // doesn't try to modify the data stored in the char*
-              static_cast<uint32_t>(offset), static_cast<uint32_t>(span),
-              static_cast<uint32_t>(step), fvalues.data(), static_cast<uint32_t>(fvalues.size()))) {
+      // NOLINTNEXTLINE(readability-implicit-bool-conversion)
+      if (bwAddIntervalSpanSteps(bigwig_fp,
+                                 // Casting away constness should be fine as long as libBigWig
+                                 // doesn't try to modify the data stored in the char*
+                                 const_cast<char*>(chr_data.first.c_str()),  // NOLINT
+                                 static_cast<uint32_t>(offset), static_cast<uint32_t>(span),
+                                 static_cast<uint32_t>(step), fvalues.data(),
+                                 static_cast<uint32_t>(fvalues.size()))) {
         throw std::runtime_error(
             fmt::format(FMT_STRING("Failed to write data for chr '{}'"), chr_data.first));
       }
@@ -105,6 +106,7 @@ void write_range(const std::string& chr_name, const std::vector<double>& vals, u
                  uint64_t span, uint64_t step, bigWigFile_t* bigwig_fp) {
   try {
     std::vector<float> fvalues(vals.begin(), vals.end());
+    // NOLINTNEXTLINE(readability-implicit-bool-conversion)
     if (bwAddIntervalSpanSteps(bigwig_fp,
                                // this should be fine as long as libBigWig doesn't try to
                                // modify the data stored in the char*

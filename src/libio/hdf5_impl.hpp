@@ -16,130 +16,40 @@
 
 namespace modle::hdf5 {
 
-template <typename DataType>
-H5::PredType getH5_type() {
-  // Taken from github.com/DavidAce/h5pp:
-  // https://github.com/DavidAce/h5pp/blob/master/h5pp/include/h5pp/details/h5ppUtils.h
-  // clang-format off
-  using DecayType = typename std::decay_t<DataType>;
-  if constexpr (std::is_same_v<DecayType, short>) return H5::PredType::NATIVE_SHORT;               // NOLINT
-  if constexpr (std::is_same_v<DecayType, int>) return H5::PredType::NATIVE_INT;                   // NOLINT
-  if constexpr (std::is_same_v<DecayType, long>) return H5::PredType::NATIVE_LONG;                 // NOLINT
-  if constexpr (std::is_same_v<DecayType, long long>) return H5::PredType::NATIVE_LLONG;           // NOLINT
-  if constexpr (std::is_same_v<DecayType, unsigned short>) return H5::PredType::NATIVE_USHORT;     // NOLINT
-  if constexpr (std::is_same_v<DecayType, unsigned int>) return H5::PredType::NATIVE_UINT;         // NOLINT
-  if constexpr (std::is_same_v<DecayType, unsigned long>) return H5::PredType::NATIVE_ULONG;       // NOLINT
-  if constexpr (std::is_same_v<DecayType, unsigned long long>) return H5::PredType::NATIVE_ULLONG; // NOLINT
-  if constexpr (std::is_same_v<DecayType, double>) return H5::PredType::NATIVE_DOUBLE;             // NOLINT
-  if constexpr (std::is_same_v<DecayType, long double>) return H5::PredType::NATIVE_LDOUBLE;       // NOLINT
-  if constexpr (std::is_same_v<DecayType, float>) return H5::PredType::NATIVE_FLOAT;               // NOLINT
-  if constexpr (std::is_same_v<DecayType, bool>) return H5::PredType::NATIVE_UINT8;                // NOLINT
-  if constexpr (std::is_same_v<DecayType, std::string>) return H5::PredType::C_S1;                 // NOLINT
-  if constexpr (std::is_same_v<DecayType, char>) return H5::PredType::C_S1;                        // NOLINT
-  // clang-format on
-
-  throw std::logic_error("getH5_type(): Unable to map C++ type to a H5T");
-}
-
+// Predeclare internal functions
 using attr_types = std::variant<uint8_t, uint16_t, uint32_t, uint64_t, int8_t, int16_t, int32_t,
                                 int64_t, float, double, long double>;
-
-attr_types getCpp_type(const H5::IntType &h5_type) {
-  DISABLE_WARNING_PUSH
-  DISABLE_WARNING_USELESS_CAST
-  attr_types type;
-  assert(h5_type.getSign() != H5T_SGN_ERROR);  // NOLINT
-  const bool is_signed = h5_type.getSign() == H5T_SGN_NONE;
-  const auto size = h5_type.getSize();
-  assert(size >= 1 && size <= 8);  // NOLINT
-  if (is_signed) {
-    switch (size) {
-      case (sizeof(int8_t)):
-        type = static_cast<int8_t>(0);
-        return type;
-      case (sizeof(int16_t)):
-        type = static_cast<int16_t>(0);
-        return type;
-      case (sizeof(int32_t)):
-        type = static_cast<int32_t>(0);
-        return type;
-      case (sizeof(int64_t)):
-        type = static_cast<int64_t>(0);
-        return type;
-      default:
-        assert(false);  // NOLINT This branch should not be reachable
-    }
-  } else {
-    switch (size) {
-      case (sizeof(uint8_t)):
-        type = static_cast<uint8_t>(0);
-        return type;
-      case (sizeof(uint16_t)):
-        type = static_cast<uint16_t>(0);
-        return type;
-      case (sizeof(uint32_t)):
-        type = static_cast<uint32_t>(0);
-        return type;
-      case (sizeof(uint64_t)):
-        type = static_cast<uint64_t>(0);
-        return type;
-      default:
-        assert(false);  // NOLINT This branch should not be reachable
-    }
-  }
-  assert(false);  // NOLINT This branch should not be reachable
-  DISABLE_WARNING_POP
-}
-
-attr_types getCpp_type(const H5::FloatType &h5_type) {
-  attr_types type;
-  const auto size = h5_type.getSize();
-  switch (size) {
-    case (sizeof(float)):
-      type = static_cast<float>(0);
-      return type;
-    case (sizeof(double)):
-      type = static_cast<double>(0);
-      return type;
-    case (sizeof(long double)):
-      type = static_cast<long double>(0);
-      return type;
-    default:
-      assert(false);  // NOLINT This branch should not be reachable
-  }
-  assert(false);  // NOLINT This branch should not be reachable
-}
+template <typename DataType>
+H5::PredType getH5_type();
+attr_types getCpp_type(const H5::IntType &h5_type);
+attr_types getCpp_type(const H5::FloatType &h5_type);
 
 std::string construct_error_stack() {
   std::string buff;
-  auto *f = std::tmpfile();  // NOLINT
-  if (f) {
-    H5::Exception::printErrorStack(f);
-    fseek(f, 0L, SEEK_END);
-    const auto bufsize = ftell(f);
+  auto fp = std::unique_ptr<FILE, decltype(&fclose)>(std::tmpfile(), &fclose);
+  if (fp) {
+    H5::Exception::printErrorStack(fp.get());
+    fseek(fp.get(), 0L, SEEK_END);
+    const auto bufsize = ftell(fp.get());
     if (bufsize < 0) {
-      fclose(f);
       throw std::runtime_error(
           "h5pp::construct_error_stack(): unable to determine buffer size required to store an "
           "error message");
     }
     buff.resize(static_cast<std::size_t>(bufsize));
-    if (fseek(f, 0L, SEEK_SET) != 0) {
-      fclose(f);
+    if (fseek(fp.get(), 0L, SEEK_SET) != 0) {
       throw std::runtime_error(
           "h5pp::construct_error_stack(): failed to seek to the beginning to a temporary file");
     }
     /* Read the entire file into memory. */
-    fread(buff.data(), sizeof(char), static_cast<std::size_t>(bufsize), f);
-    if (ferror(f) != 0) {
-      fclose(f);
+    fread(buff.data(), sizeof(char), static_cast<std::size_t>(bufsize), fp.get());
+    if (ferror(fp.get()) != 0) {
       throw std::runtime_error(
           "h5pp::construct_error_stack(): failed to read error message from temporary file");
     }
   } else {
     throw std::runtime_error("h5pp::construct_error_stack(): unable to create temporary file");
   }
-  fclose(f);
   H5::Exception::clearErrorStack();
   return buff;
 }
@@ -403,22 +313,6 @@ void read_attribute(std::string_view path_to_file, std::string_view attr_name, T
   read_attribute(f, attr_name, buff, path);
 }
 
-bool has_attribute(const H5::Group &g, std::string_view attr_name) {
-  absl::ConsumePrefix(&attr_name, "/");
-  return g.attrExists(std::string{attr_name});
-}
-
-bool has_attribute(const H5::DataSet &d, std::string_view attr_name) {
-  absl::ConsumePrefix(&attr_name, "/");
-  return d.attrExists(std::string{attr_name});
-}
-
-bool has_attribute(H5::H5File &f, std::string_view attr_name, std::string_view path) {
-  auto g = f.openGroup(std::string{path});
-
-  return has_attribute(g, attr_name);
-}
-
 template <typename T>
 void read_attribute(H5::H5File &f, std::string_view attr_name, T &buff, std::string_view path) {
   auto g = f.openGroup(std::string{path});
@@ -497,7 +391,7 @@ void read_attribute(H5::H5File &f, std::string_view attr_name, T &buff, std::str
         utils::get_printable_type_name<T>(), utils::get_printable_type_name<VT>()));
   }
   std::visit(
-      [&](auto &&v) { // NOLINT unused-parameter
+      [&](auto &&v) {  // NOLINT unused-parameter
         if constexpr (std::is_arithmetic_v<T>) {
           DISABLE_WARNING_PUSH
           DISABLE_WARNING_IMPL_INT_TO_FLOAT
@@ -602,7 +496,23 @@ inline void write_or_create_attribute(H5::H5File &f, std::string_view attr_name,
   }
 }
 
-bool group_exists(H5::H5File &f, std::string_view name, std::string_view root_path) {
+bool has_attribute(const H5::Group &g, std::string_view attr_name) {
+  absl::ConsumePrefix(&attr_name, "/");
+  return g.attrExists(std::string{attr_name});
+}
+
+bool has_attribute(const H5::DataSet &d, std::string_view attr_name) {
+  absl::ConsumePrefix(&attr_name, "/");
+  return d.attrExists(std::string{attr_name});
+}
+
+bool has_attribute(H5::H5File &f, std::string_view attr_name, std::string_view path) {
+  auto g = f.openGroup(std::string{path});
+
+  return has_attribute(g, attr_name);
+}
+
+bool has_group(H5::H5File &f, std::string_view name, std::string_view root_path) {
   H5O_info2_t info;
   const auto path =
       absl::StrCat(absl::StripSuffix(root_path, "/"), "/", absl::StripPrefix(name, "/"));
@@ -622,7 +532,7 @@ bool group_exists(H5::H5File &f, std::string_view name, std::string_view root_pa
       fmt::format(FMT_STRING("'{}' exists but is not a group"), absl::StrCat(root_path, name)));
 }
 
-bool dataset_exists(H5::H5File &f, std::string_view name, std::string_view root_path) {
+bool has_dataset(H5::H5File &f, std::string_view name, std::string_view root_path) {
   H5O_info2_t info;
   const auto path =
       absl::StrCat(absl::StripSuffix(root_path, "/"), "/", absl::StripPrefix(name, "/"));
@@ -718,6 +628,99 @@ H5::H5File open_file_for_reading(std::string_view path_to_file) {
     throw std::runtime_error(fmt::format(FMT_STRING("Failed to open file {} for reading:\n{}"),
                                          path_to_file, construct_error_stack()));
   }
+}
+
+// Internal functions
+
+template <typename DataType>
+H5::PredType getH5_type() {
+  // Taken from github.com/DavidAce/h5pp:
+  // https://github.com/DavidAce/h5pp/blob/master/h5pp/include/h5pp/details/h5ppUtils.h
+  // clang-format off
+  using DecayType = typename std::decay_t<DataType>;
+  if constexpr (std::is_same_v<DecayType, short>) return H5::PredType::NATIVE_SHORT;               // NOLINT
+  if constexpr (std::is_same_v<DecayType, int>) return H5::PredType::NATIVE_INT;                   // NOLINT
+  if constexpr (std::is_same_v<DecayType, long>) return H5::PredType::NATIVE_LONG;                 // NOLINT
+  if constexpr (std::is_same_v<DecayType, long long>) return H5::PredType::NATIVE_LLONG;           // NOLINT
+  if constexpr (std::is_same_v<DecayType, unsigned short>) return H5::PredType::NATIVE_USHORT;     // NOLINT
+  if constexpr (std::is_same_v<DecayType, unsigned int>) return H5::PredType::NATIVE_UINT;         // NOLINT
+  if constexpr (std::is_same_v<DecayType, unsigned long>) return H5::PredType::NATIVE_ULONG;       // NOLINT
+  if constexpr (std::is_same_v<DecayType, unsigned long long>) return H5::PredType::NATIVE_ULLONG; // NOLINT
+  if constexpr (std::is_same_v<DecayType, double>) return H5::PredType::NATIVE_DOUBLE;             // NOLINT
+  if constexpr (std::is_same_v<DecayType, long double>) return H5::PredType::NATIVE_LDOUBLE;       // NOLINT
+  if constexpr (std::is_same_v<DecayType, float>) return H5::PredType::NATIVE_FLOAT;               // NOLINT
+  if constexpr (std::is_same_v<DecayType, bool>) return H5::PredType::NATIVE_UINT8;                // NOLINT
+  if constexpr (std::is_same_v<DecayType, std::string>) return H5::PredType::C_S1;                 // NOLINT
+  if constexpr (std::is_same_v<DecayType, char>) return H5::PredType::C_S1;                        // NOLINT
+  // clang-format on
+
+  throw std::logic_error("getH5_type(): Unable to map C++ type to a H5T");
+}
+
+attr_types getCpp_type(const H5::IntType &h5_type) {
+  DISABLE_WARNING_PUSH
+  DISABLE_WARNING_USELESS_CAST
+  attr_types type;
+  assert(h5_type.getSign() != H5T_SGN_ERROR);  // NOLINT
+  const bool is_signed = h5_type.getSign() == H5T_SGN_NONE;
+  const auto size = h5_type.getSize();
+  assert(size >= 1 && size <= 8);  // NOLINT
+  if (is_signed) {
+    switch (size) {
+      case (sizeof(int8_t)):
+        type = static_cast<int8_t>(0);
+        return type;
+      case (sizeof(int16_t)):
+        type = static_cast<int16_t>(0);
+        return type;
+      case (sizeof(int32_t)):
+        type = static_cast<int32_t>(0);
+        return type;
+      case (sizeof(int64_t)):
+        type = static_cast<int64_t>(0);
+        return type;
+      default:
+        utils::throw_with_trace("Unreachable code");
+    }
+  } else {
+    switch (size) {
+      case (sizeof(uint8_t)):
+        type = static_cast<uint8_t>(0);
+        return type;
+      case (sizeof(uint16_t)):
+        type = static_cast<uint16_t>(0);
+        return type;
+      case (sizeof(uint32_t)):
+        type = static_cast<uint32_t>(0);
+        return type;
+      case (sizeof(uint64_t)):
+        type = static_cast<uint64_t>(0);
+        return type;
+      default:
+        utils::throw_with_trace("Unreachable code");
+    }
+  }
+  DISABLE_WARNING_POP
+  utils::throw_with_trace("Unreachable code");
+}
+
+attr_types getCpp_type(const H5::FloatType &h5_type) {
+  attr_types type;
+  const auto size = h5_type.getSize();
+  switch (size) {
+    case (sizeof(float)):
+      type = static_cast<float>(0);
+      return type;
+    case (sizeof(double)):
+      type = static_cast<double>(0);
+      return type;
+    case (sizeof(long double)):
+      type = static_cast<long double>(0);
+      return type;
+    default:
+      utils::throw_with_trace("Unreachable code");
+  }
+  utils::throw_with_trace("Unreachable code");
 }
 
 }  // namespace modle::hdf5

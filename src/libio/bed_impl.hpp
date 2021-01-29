@@ -36,7 +36,7 @@ void BED::parse_rgb_or_throw(const std::vector<std::string_view>& toks, uint8_t 
     field = RGB{0, 0, 0};
     return;
   }
-  std::vector<std::string_view> channels = absl::StrSplit(toks[idx], ',');
+  const std::vector<std::string_view> channels = absl::StrSplit(toks[idx], ',');
   if (channels.size() != 3) {
     throw std::runtime_error(
         fmt::format("RGB: expected 3 fields, got {}: '{}'", channels.size(), toks[idx]));
@@ -184,7 +184,7 @@ std::string BED::to_string() const {
       throw std::runtime_error(
           fmt::format("If you see this error, please report it to the developers on GitHub: "
                       "BED::to_string() reached the "
-                      "default case. This should not be possible! BED::size() = {}",
+                      "default case. This should not be possible! BED::size() == {}",
                       this->size()));
   }
 }
@@ -203,20 +203,11 @@ Parser::Parser(std::string path_to_bed, BED::Standard bed_standard)
 }
 
 Parser::Parser(std::string_view path_to_bed, BED::Standard bed_standard)
-    // For now we always skip the header
-    : _path_to_bed(std::string(path_to_bed)),
-      _skip_header(true),
-      _standard(bed_standard) /*,
-      _ncols(_standard) */
-{
-  this->_fp.open(this->_path_to_bed);
-  if (!this->_fp) {
-    throw fmt::system_error(errno, "Unable to open file '{}' for reading", this->_path_to_bed);
-  }
-}
+    : Parser(std::string{path_to_bed}, bed_standard){};
 
 std::vector<BED> Parser::parse_n(std::size_t nrecords, bool throw_on_duplicates) {
   absl::flat_hash_map<BED, uint64_t> unique_records;
+  unique_records.reserve(nrecords);
   uint8_t ncols = 0;
   assert(this->_fp.is_open() && this->_fp.good());
   for (auto i = 1UL; std::getline(this->_fp, this->_buff) && i < nrecords; ++i) {
@@ -233,13 +224,15 @@ std::vector<BED> Parser::parse_n(std::size_t nrecords, bool throw_on_duplicates)
       ncols = record.size();
     }
     if (record.size() != ncols) {
-      throw std::runtime_error(fmt::format("Expected %lu fields, got %lu at line %lu of file '%s'.",
-                                           ncols, record.size(), i, this->_path_to_bed));
+      throw std::runtime_error(
+          fmt::format(FMT_STRING("Expected {} fields, got {} at line {} of file '{}'"), ncols,
+                      record.size(), i, this->_path_to_bed));
     }
     if (throw_on_duplicates && unique_records.contains(record)) {
-      throw std::runtime_error(fmt::format(
-          "Detected duplicate entry at line %lu. First occurrence was at line %lu: record: '%s'", i,
-          unique_records.at(record), this->_buff));
+      throw std::runtime_error(
+          fmt::format(FMT_STRING("Detected duplicate entry at line {}. First occurrence was at "
+                                 "line {} of file '{}': record: '{}'"),
+                      i, unique_records.at(record), this->_path_to_bed, this->_buff));
     }
     unique_records.emplace(std::move(record), i);
   }
@@ -248,11 +241,9 @@ std::vector<BED> Parser::parse_n(std::size_t nrecords, bool throw_on_duplicates)
     throw fmt::system_error(errno, "An error occurred while reading file '{}'", this->_path_to_bed);
   }
 
-  std::vector<BED> records;
-  records.reserve(unique_records.size());
-  for (const auto& [record, _] : unique_records) {
-    records.push_back(record);
-  }
+  std::vector<BED> records(unique_records.size());
+  std::transform(unique_records.begin(), unique_records.end(), records.begin(),
+                 [](const auto& node) { return node.first; });
   return records;
 }
 
@@ -271,9 +262,9 @@ std::vector<BED> Parser::parse_all(bool throw_on_duplicates) {
 
 void Parser::reset() {
   if (std::filesystem::is_fifo(this->_path_to_bed)) {
-    throw std::runtime_error(
-        fmt::format("BEDParser::reset() was called on a file that is a FIFO: file path '%s'",
-                    this->_path_to_bed));
+    throw std::runtime_error(fmt::format(
+        FMT_STRING("BEDParser::reset() was called on a file that is a FIFO: file path '{}'"),
+        this->_path_to_bed));
   }
   if (!this->_fp.is_open()) {
     throw std::runtime_error("BedParser::reset() was called on a closed file!");
