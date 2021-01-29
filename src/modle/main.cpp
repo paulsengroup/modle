@@ -28,8 +28,8 @@ std::vector<std::string> check_if_output_file_exists(const modle::config& c) {
   }
   modle::chr_sizes::Parser parser(c.path_to_chr_sizes);
   for (const auto& record : parser.parse_all()) {
-    const auto f1 = fmt::format("{}/{}.tsv.bz2", c.output_file, record.name);
-    const auto f2 = fmt::format("{}/{}_raw.tsv.bz2", c.output_file, record.name);
+    const auto f1 = fmt::format("{}/{}.tsv.bz2", c.path_to_output_file, record.name);
+    const auto f2 = fmt::format("{}/{}_raw.tsv.bz2", c.path_to_output_file, record.name);
     if (std::filesystem::exists(f1)) {
       fn_collisions.push_back(std::filesystem::weakly_canonical(f1));
     }
@@ -87,9 +87,9 @@ void run_simulation(const modle::config& c) {
   genome.assign_lefs(c.skip_burnin);
 
   if (!c.skip_output) {  // Write simulation params to file
-    std::filesystem::create_directories(std::filesystem::path(c.output_file).parent_path());
+    std::filesystem::create_directories(std::filesystem::path(c.path_to_output_file).parent_path());
     std::ofstream cmd_file(
-        fmt::format("{}.settings.log", absl::StripSuffix(c.output_file, ".cool")));
+        fmt::format("{}.settings.log", absl::StripSuffix(c.path_to_output_file, ".cool")));
     fmt::print(cmd_file, FMT_STRING("{}\n{}\n"), c.to_string(),
                absl::StrJoin(c.argv, c.argv + c.argc, " "));
   }
@@ -117,9 +117,9 @@ void run_simulation(const modle::config& c) {
 
   if (!c.skip_output) {  // Mostly useful for profiling
     if (c.force) {
-      std::filesystem::remove_all(c.output_file);
+      std::filesystem::remove_all(c.path_to_output_file);
     }
-    genome.write_contacts_to_file(c.output_file, c.write_contacts_for_ko_chroms);
+    genome.write_contacts_to_file(c.path_to_output_file, c.write_contacts_for_ko_chroms);
   }
   fmt::print(stderr, "Simulation terminated without errors!\n\nBye.\n");
 }
@@ -132,15 +132,15 @@ int main(int argc, char** argv) noexcept {
     auto config = cli.parse_arguments();
     config.print();
 
-    if (std::filesystem::exists(config.output_file)) {
+    if (std::filesystem::exists(config.path_to_output_file)) {
       if (!config.force) {
-        if (std::filesystem::is_directory(config.output_file)) {
+        if (std::filesystem::is_directory(config.path_to_output_file)) {
           fmt::print(stderr,
                      FMT_STRING("Refusing to run the simulation because output file '{}' already "
                                 "exist (and is actually a {}directory). {}.\n"),
-                     config.output_file,
-                     std::filesystem::is_empty(config.output_file) ? "" : "non-empty ",
-                     std::filesystem::is_empty(config.output_file)
+                     config.path_to_output_file,
+                     std::filesystem::is_empty(config.path_to_output_file) ? "" : "non-empty ",
+                     std::filesystem::is_empty(config.path_to_output_file)
                          ? " Pass --force to overwrite"
                          : "You should specify a different output path, or manually remove the "
                            "existing directory");
@@ -151,17 +151,17 @@ int main(int argc, char** argv) noexcept {
               FMT_STRING(
                   "Refusing to run the simulation because output file '{}' already exist. Pass "
                   "--force to overwrite.\n"),
-              config.output_file);
+              config.path_to_output_file);
         }
         return 1;
       }
-      if (std::filesystem::is_directory(config.output_file) &&
-          !std::filesystem::is_empty(config.output_file)) {
+      if (std::filesystem::is_directory(config.path_to_output_file) &&
+          !std::filesystem::is_empty(config.path_to_output_file)) {
         fmt::print(stderr,
                    FMT_STRING("Refusing to run the simulation because output file '{}' is a "
                               "non-empty directory. You should specify a different output path, or "
                               "manually remove the existing directory.\n"),
-                   config.output_file);
+                   config.path_to_output_file);
         return 1;
       }
     }

@@ -14,7 +14,7 @@ class Cli {
   config _config;
   CLI::App _cli{};
 
-  void MakeCli() noexcept {
+  inline void MakeCli() {
     this->_cli.description("in-silico modeling of DNA loop extrusion.");
     auto* io = this->_cli.add_option_group("Input/Output", "");
     auto* gen = this->_cli.add_option_group("Generic", "");
@@ -37,14 +37,14 @@ class Cli {
             ->check(CLI::ExistingFile)->required();
 
     io->add_option(
-        "--chromosome-subrange-file",
-        this->_config.path_to_chr_subranges,
-        "Path to BED file with subranges of the chromosomes to simulate.")
-        ->check(CLI::ExistingFile);
+            "--chromosome-subrange-file",
+            this->_config.path_to_chr_subranges,
+            "Path to BED file with subranges of the chromosomes to simulate.")
+            ->check(CLI::ExistingFile);
 
     io->add_option(
             "-o,--output-file",
-            this->_config.output_file,
+            this->_config.path_to_output_file,
             "Path to output file (cooler format).")
             ->transform([](const std::string& s) {
               if (absl::EndsWith(s, ".cool")) {
@@ -74,12 +74,12 @@ class Cli {
             ->capture_default_str();
 
     gen->add_option(
-        "-t,--threads",
-        this->_config.nthreads,
-        "Max size of the thread pool to use to run the simulation. By default ModLE will attempt to use threads available.")
-        ->check(CLI::PositiveNumber)
-        ->transform(remove_trailing_zeros_from_floats)
-        ->capture_default_str();
+            "-t,--threads",
+            this->_config.nthreads,
+            "Max size of the thread pool to use to run the simulation. By default ModLE will attempt to use threads available.")
+            ->check(CLI::PositiveNumber)
+            ->transform(remove_trailing_zeros_from_floats)
+            ->capture_default_str();
 
     gen->add_option(
             "-w,--diagonal-width",
@@ -103,6 +103,14 @@ class Cli {
             "Target per-chromosome average contact number after which the simulation is halted.")
             ->check(CLI::PositiveNumber)
             ->excludes(gen->get_option("--number-of-iterations"));
+
+    gen->add_option(
+            "--number-of-randomly-generated-lefs",
+            this->_config.number_of_lefs,
+            "Number of loop extrusion factors (LEFs) to be randomly generated and bound.")
+            ->check(CLI::NonNegativeNumber)
+            ->transform((remove_trailing_zeros_from_floats))
+            ->required();
 
     gen->add_option(
             "--avg-lef-processivity",
@@ -146,14 +154,6 @@ class Cli {
             "Probability that a loop extruding factor (LEF) will not block when meeting another LEF.")
             ->check(CLI::Range(0.0, 1.0))
             ->capture_default_str();
-
-    rand->add_option(
-            "--number-of-randomly-generated-lefs",
-            this->_config.number_of_lefs,
-            "Number of loop extrusion factors (LEFs) to be randomly generated and bound.")
-            ->check(CLI::NonNegativeNumber)
-            ->transform((remove_trailing_zeros_from_floats))
-            ->required();
 
     rand->add_option(
             "--contact-sampling-interval",
@@ -211,26 +211,26 @@ class Cli {
             fmt::format(FMT_STRING("Do not simulate loop extrusion on chromosomes without any extrusion barrier. Default: {}"), this->_config.exclude_chr_wo_extr_barriers ? "--exclude-chr-wo-barriers" : "--keep-chr-without-barriers"))
             ->capture_default_str();
 
+    hidden->add_flag("--skip-output", this->_config.skip_output, "Don't write output files and plots. Useful for profiling");
+
     gen->get_option("--skip-burn-in")->excludes(burn->get_option("--min-burnin-rounds"));
     gen->get_option("--skip-burn-in")->excludes(burn->get_option("--min-number-of-loops-per-lef"));
     this->_cli.get_option("--extrusion-barrier-file")->excludes(this->_cli.get_option("--number-of-randomly-generated-barriers"));
-
-    hidden->add_flag("--skip-output", this->_config.skip_output, "Don't write output files and plots. Useful for profiling");
     // clang-format on
   }
 
  public:
-  Cli(int argc, char** argv) noexcept : _argc(argc), _argv(argv), _exec_name(argv[0]) {
+  inline Cli(int argc, char** argv) : _argc(argc), _argv(argv), _exec_name(*argv) {
     this->MakeCli();
   }
-  [[nodiscard]] config parse_arguments() {
+  [[nodiscard]] const config& parse_arguments() {
     this->_cli.name(this->_exec_name);
     this->_cli.parse(this->_argc, this->_argv);
     this->_config.argc = _argc;
     this->_config.argv = _argv;
     return this->_config;
   }
-  [[nodiscard]] int exit(const CLI::ParseError& e) const { return this->_cli.exit(e); }
+  [[nodiscard]] inline int exit(const CLI::ParseError& e) const { return this->_cli.exit(e); }
 };
 
 }  // namespace modle

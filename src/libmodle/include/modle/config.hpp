@@ -3,7 +3,7 @@
 #include <absl/container/flat_hash_map.h>
 #include <absl/strings/str_cat.h>
 #include <absl/strings/str_split.h>
-#include <fmt/printf.h>
+#include <fmt/format.h>
 
 #include <cstdint>
 #include <filesystem>
@@ -12,36 +12,48 @@
 
 namespace modle {
 using namespace std::literals::string_view_literals;
+
 struct config {
+  // clang-format off
+  // IO
   std::string_view path_to_chr_sizes;
   std::string_view path_to_chr_subranges;
+  std::string_view path_to_output_file;
   std::string_view path_to_extr_barriers_bed;
-  std::string_view output_file;
   bool force{false};
-  uint32_t bin_size{1'000};
-  uint32_t diagonal_width{3'000'000};
-  uint32_t simulation_iterations{15'000'000};
+  bool write_contacts_for_ko_chroms{false};
+
+  // General settings
+  uint32_t bin_size{1'000};  // NOLINT(readability-magic-numbers, cppcoreguidelines-avoid-magic-numbers)
+  uint32_t nthreads{std::thread::hardware_concurrency()};
+  uint32_t diagonal_width{3'000'000 /* 3 Mbp */};  // NOLINT(readability-magic-numbers, cppcoreguidelines-avoid-magic-numbers)
+  uint32_t simulation_iterations{15'000'000};  // NOLINT(readability-magic-numbers, cppcoreguidelines-avoid-magic-numbers)
   double target_contact_density{0.0};
-  uint32_t number_of_randomly_gen_extr_barriers{0};
   uint32_t number_of_lefs;
-  uint32_t average_lef_processivity{100'000};
-  double probability_of_extrusion_barrier_block{0};
-  double probability_of_lef_rebind{1.0};
-  double probability_of_extrusion_unit_bypass{0.25};
-  uint64_t seed{0};
+  uint32_t average_lef_processivity{100'000};  // NOLINT(readability-magic-numbers, cppcoreguidelines-avoid-magic-numbers)
+  double lef_unloader_strength{1.0};
   bool skip_burnin{false};
+  uint64_t seed{0};
+
+  // Misc probabilities
+  double probability_of_lef_rebind{1.0};
+  double probability_of_extrusion_unit_bypass{0.25};  // NOLINT(readability-magic-numbers, cppcoreguidelines-avoid-magic-numbers)
+  double probability_of_extrusion_barrier_block{0};
+  uint32_t contact_sampling_interval{1000};  // NOLINT(readability-magic-numbers, cppcoreguidelines-avoid-magic-numbers)
+
+  // Burn-in
   uint32_t min_n_of_burnin_rounds{0};
   uint32_t min_n_of_loops_per_lef{1};
-  double lef_unloader_strength{1};
-  uint32_t contact_sampling_interval{1000};
+
+  // Misc
+  uint32_t number_of_randomly_gen_extr_barriers{0};
+  bool exclude_chr_wo_extr_barriers{true};
   bool randomize_contact_sampling_interval{false};
   bool skip_output{false};
-  uint32_t nthreads{std::thread::hardware_concurrency()};
-  bool exclude_chr_wo_extr_barriers{true};
-  bool write_contacts_for_ko_chroms{false};
 
   int argc;
   char** argv;
+  // clang-format on
 
   [[nodiscard]] inline std::string to_string() const {
     struct cli_tokens {
@@ -50,13 +62,13 @@ struct config {
     };
 
     // clang-format off
-    // TODO: Remove FMT_STRING macro from trivial format strings
+    // TODO Update with new params
     const absl::flat_hash_map<std::string_view, std::vector<cli_tokens>> tokens{
     {"Input/Output"sv,
     std::vector<cli_tokens>{
      {"Path to chr. sizes", fmt::format(FMT_STRING("{}"), std::filesystem::weakly_canonical(this->path_to_chr_sizes))},
      {"Path to extr. barriers", fmt::format(FMT_STRING("{}"), std::filesystem::weakly_canonical(this->path_to_extr_barriers_bed))},
-     {"Output directory", fmt::format(FMT_STRING("{}"), std::filesystem::weakly_canonical(this->output_file))},
+     {"Output directory", fmt::format(FMT_STRING("{}"), std::filesystem::weakly_canonical(this->path_to_output_file))},
      {"Skip output", this->skip_output ? "Yes" : "No"},
      {"Force overwrite", this->force ? "Yes" : "No"}}},
     {"General settings"sv,
@@ -86,6 +98,7 @@ struct config {
      {"Min. # of loops per LEF", fmt::format(FMT_STRING("{}"), this->min_n_of_loops_per_lef)}}}
     };
     // clang-format on
+
     std::size_t max_column1_length = 0;
     std::size_t max_column2_length = 0;
     for (const auto& [title, options] : tokens) {
@@ -124,7 +137,7 @@ struct config {
     return buff;
   }
 
-  inline void print() const { fmt::fprintf(stderr, FMT_STRING("%s\n\n"), this->to_string()); }
+  inline void print() const { fmt::print(stderr, FMT_STRING("{}\n\n"), this->to_string()); }
 };
 
 }  // namespace modle
