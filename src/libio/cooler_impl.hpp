@@ -392,7 +392,7 @@ void Cooler::write_or_append_cmatrices_to_file(absl::Span<ContactMatrix<I1> *con
                  static_cast<double>(chr_simulated_len) / 1.0e6);  // NOLINT
       if (const auto n = cmatrix->get_n_of_missed_updates(); n != 0) {
         fmt::print(
-            stderr, FMT_STRING(" WARNING: Detected {} missed updates ({:.4f}%)"), n,
+            stderr, FMT_STRING(" WARNING: Detected {} missed updates ({:.4f}% of the total)."), n,
             static_cast<double>(100U * n) / static_cast<double>(cmatrix->get_tot_contacts()));
       }
     }
@@ -513,7 +513,7 @@ void Cooler::write_or_append_cmatrices_to_file(absl::Span<ContactMatrix<I1> *con
   hdf5::write_or_create_attribute(f, "nnz", this->_nnz);
 
   if (!quiet) {
-    fmt::print(stderr, "All contacts have been written to file '{}'. Saved {:.2f}M pixels in {}.\n",
+    fmt::print(stderr, "All contacts have been written to file {}. Saved {:.2f}M pixels in {}.\n",
                this->_path_to_file, static_cast<double>(this->_nnz) / 1.0e6,
                absl::FormatDuration(absl::Now() - t0));
   }

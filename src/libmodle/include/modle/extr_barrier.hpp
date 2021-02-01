@@ -24,12 +24,12 @@ using seeder = std::seed_seq;
  * blocking. The probability of blocking is used to initialize a random number generator that
  * outputs numbers under the geometric distribution.
  * The numbers returned by this generator will be used as a base to determine for how long a given
- * ExtrusionUnit that reached this Extrusionbarrier instance should be stalled.
+ * ExtrusionUnit that reached this ExtrusionBarrier instance should be stalled.
  */
 class ExtrusionBarrier {
  public:
-  inline ExtrusionBarrier(uint64_t pos, double prob_of_block, dna::Direction direction);
-  [[nodiscard]] inline uint64_t get_pos() const;
+  inline ExtrusionBarrier(std::size_t pos, double prob_of_block, dna::Direction direction);
+  [[nodiscard]] inline std::size_t get_pos() const;
   [[nodiscard]] inline double get_prob_of_block() const;
   [[nodiscard]] inline dna::Direction get_direction_of_block() const;
   [[nodiscard]] inline dna::Direction get_motif_direction() const;
@@ -37,7 +37,7 @@ class ExtrusionBarrier {
   [[nodiscard]] inline bool operator<(const ExtrusionBarrier& other) const;
 
  private:
-  uint64_t _pos;
+  std::size_t _pos;
   dna::Direction _direction{dna::Direction::none};
   std::geometric_distribution<uint32_t> _n_stall_generator;
 };

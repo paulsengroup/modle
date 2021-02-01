@@ -1,5 +1,7 @@
 #pragma once
 
+#include <absl/types/span.h>
+
 #include <cstdint>      // for uint*_t
 #include <memory>       // for _Destroy, allocator
 #include <string>       // for basic_string, string
@@ -28,25 +30,29 @@ class Genome {
   inline explicit Genome(const config& c);
 
   // Getters
-  [[nodiscard]] inline const std::vector<Chromosome>& get_chromosomes() const;
-  [[nodiscard]] inline std::vector<Chromosome>& get_chromosomes();
-  [[nodiscard]] inline std::vector<Lef>& get_lefs();
-  [[nodiscard]] inline const std::vector<Lef>& get_lefs() const;
-  [[nodiscard]] inline uint32_t get_n_chromosomes() const;
+  [[nodiscard]] inline absl::Span<const Chromosome> get_chromosomes() const;
+  [[nodiscard]] inline absl::Span<Chromosome> get_chromosomes();
+  [[nodiscard]] inline uint32_t get_nchromosomes() const;
   [[nodiscard]] inline uint32_t get_n_ok_chromosomes() const;
-  [[nodiscard]] inline uint64_t size() const;
-  [[nodiscard]] inline uint64_t n50() const;
-  [[nodiscard]] inline uint64_t get_n_bins() const;
-  [[nodiscard]] inline uint64_t get_n_lefs() const;
-  [[nodiscard]] inline uint64_t get_n_barriers() const;
   [[nodiscard]] inline std::vector<std::string_view> get_chromosome_names() const;
-  [[nodiscard]] inline std::vector<uint64_t> get_chromosome_lengths() const;
+  [[nodiscard]] inline std::vector<std::size_t> get_chromosome_lengths() const;
   [[nodiscard]] inline std::vector<double> get_chromosome_lef_affinities() const;
-  [[nodiscard]] inline uint64_t get_n_of_free_lefs() const;
-  [[nodiscard]] inline uint64_t get_n_of_busy_lefs() const;
+
+  [[nodiscard]] inline absl::Span<const Lef> get_lefs() const;
+  [[nodiscard]] inline absl::Span<Lef> get_lefs();
+  [[nodiscard]] inline std::size_t get_nlefs() const;
+  [[nodiscard]] inline std::size_t get_n_of_free_lefs() const;
+  [[nodiscard]] inline std::size_t get_n_of_busy_lefs() const;
+
+  [[nodiscard]] inline std::size_t size() const;
+  [[nodiscard]] inline std::size_t n50() const;
+
+  [[nodiscard]] inline std::size_t get_nbins() const;
+  [[nodiscard]] inline std::size_t get_nbarriers() const;
+
   inline void write_contacts_to_file(std::string_view output_file, bool include_ko_chroms = false);
-  inline void write_extrusion_barriers_to_file(std::string_view output_dir,
-                                               bool force_overwrite) const;
+  // inline void write_extrusion_barriers_to_file(std::string_view output_dir,
+  //                                             bool force_overwrite) const;
 
   /** Randomly generate and bind \p n_barriers ExtrusionBarrier%s
    *
@@ -61,10 +67,10 @@ class Genome {
    *
    * ExtrusionBarrier%s are owned by the DNA::Bin to which they bound, while Chromosome::barriers
    * only stores ptrs to the actual ExtrusionBarrier%s.
-   * @param n_barriers The number of barriers to randomly generate and bind.
+   * @param nbarriers The number of barriers to randomly generate and bind.
    */
   template <typename I>
-  inline void randomly_generate_extrusion_barriers(I n_barriers, uint64_t seed = 0);
+  inline void randomly_generate_extrusion_barriers(I nbarriers, uint64_t seed = 0);
 
   /** This function is meant to be used before calling Genome::simulate_extrusion to randomly bind
    * Lef%s.
@@ -73,7 +79,7 @@ class Genome {
    * Chromosome::randomly_generate_extrusion_barriers.
    */
 
-  inline std::pair<uint64_t, uint64_t> import_extrusion_barriers_from_bed(
+  inline std::pair<std::size_t, std::size_t> import_extrusion_barriers_from_bed(
       std::string_view path_to_bed, double probability_of_block);
   inline void sort_extr_barriers_by_pos();
   inline void assign_lefs(bool bind_lefs_after_assignment);

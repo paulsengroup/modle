@@ -10,7 +10,7 @@
 #include "modle/common.hpp"
 
 namespace modle {
-ExtrusionBarrier::ExtrusionBarrier(uint64_t pos, double prob_of_block, dna::Direction direction)
+ExtrusionBarrier::ExtrusionBarrier(std::size_t pos, double prob_of_block, dna::Direction direction)
     : _pos(pos), _direction(direction), _n_stall_generator(1 - prob_of_block) {
 #ifndef NDEBUG
   if (_direction != dna::Direction::fwd && _direction != dna::Direction::rev) {
@@ -21,15 +21,15 @@ ExtrusionBarrier::ExtrusionBarrier(uint64_t pos, double prob_of_block, dna::Dire
 #endif
 }
 
-uint64_t ExtrusionBarrier::get_pos() const { return this->_pos; }
+std::size_t ExtrusionBarrier::get_pos() const { return this->_pos; }
 
 double ExtrusionBarrier::get_prob_of_block() const { return this->_n_stall_generator.p(); }
-
-dna::Direction ExtrusionBarrier::get_motif_direction() const { return this->_direction; }
 
 dna::Direction ExtrusionBarrier::get_direction_of_block() const {
   return this->_direction == dna::Direction::fwd ? dna::Direction::rev : dna::Direction::fwd;
 }
+
+dna::Direction ExtrusionBarrier::get_motif_direction() const { return this->_direction; }
 
 uint32_t ExtrusionBarrier::generate_num_stalls(modle::PRNG &rand_eng) {
   return this->_n_stall_generator(rand_eng);

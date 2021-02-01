@@ -52,11 +52,12 @@ class Lef {
              double unloader_strength_coefficient);
 
   [[nodiscard]] inline std::string_view get_chr_name() const;
+  [[nodiscard]] inline Chromosome* get_ptr_to_chr();
+
   [[nodiscard]] inline std::size_t get_loop_size() const;
   [[nodiscard]] inline std::size_t get_avg_lifetime() const;
   [[nodiscard]] inline const DNA::Bin& get_first_bin() const;
   [[nodiscard]] inline const DNA::Bin& get_last_bin() const;
-  [[nodiscard]] inline Chromosome* get_ptr_to_chr();
   [[nodiscard]] inline std::pair<std::size_t, std::size_t> get_pos() const;
   [[nodiscard]] inline double get_probability_of_extr_unit_bypass() const;
   [[nodiscard]] inline std::size_t get_bin_size() const;
@@ -70,11 +71,16 @@ class Lef {
   inline void register_contact();
   [[nodiscard]] inline std::pair<DNA::Bin*, DNA::Bin*> get_ptr_to_bins();
   [[nodiscard]] inline bool is_bound() const;
+
   inline void bind_chr_at_random_pos(Chromosome* chr, modle::PRNG& rand_eng,
                                      bool register_contact = false);
   inline void assign_to_chr(Chromosome* chr);
   inline void bind_at_pos(Chromosome* chr, uint32_t pos, modle::PRNG& rand_eng,
                           bool register_contact);
+
+  inline bool try_rebind(modle::PRNG& rand_eng, double prob_of_rebinding, bool register_contact);
+  inline bool try_rebind(modle::PRNG& rand_eng);
+  inline std::size_t bind_at_random_pos(modle::PRNG& rand_eng, bool register_contact = false);
   /** Call ExtrusionUnit::check_constraints on the left and right ExtrusionUnit%s, which in turn
    * check whether there last round of extrusion produced a collision between one of the
    * ExtrusionUnit%s and another instance of ExtrusionUnit, or if the current ExtrusionUnit has
@@ -83,9 +89,6 @@ class Lef {
    * This function also takes care of extending Lef%'s lifetime where appropriate.
    */
   inline void check_constraints(modle::PRNG& rang_eng);
-  inline bool try_rebind(modle::PRNG& rand_eng, double prob_of_rebinding, bool register_contact);
-  inline bool try_rebind(modle::PRNG& rand_eng);
-  inline std::size_t bind_at_random_pos(modle::PRNG& rand_eng, bool register_contact = false);
 
  private:
   Chromosome* _chr{nullptr};

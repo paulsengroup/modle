@@ -63,9 +63,9 @@ void run_simulation(const modle::config& c) {
   const auto n_of_chr_removed =
       std::accumulate(genome.get_chromosomes().begin(), genome.get_chromosomes().end(), 0UL,
                       [](std::size_t accumulator, const auto& chr) {
-                        return accumulator + chr.get_n_barriers() == 0;
+                        return accumulator + chr.get_nbarriers() == 0;
                       });
-  if (genome.get_n_chromosomes() == 0) {
+  if (genome.get_nchromosomes() == 0) {
     throw std::runtime_error(  // TODO: Improve this error message
         "All the input sequences were discarded because there were no extrusion barriers mapping "
         "on them. Check your input files");
@@ -77,9 +77,9 @@ void run_simulation(const modle::config& c) {
                         " - Genome N50:           {:.3f} Mbp\n"
                         " - # of LEFs:            {}\n"
                         " - # of extr. barriers   {} ({} ignored)\n\n"),
-             absl::FormatDuration(absl::Now() - t0), genome.get_n_chromosomes(), n_of_chr_removed,
-             (static_cast<double>(genome.size()) / genome.get_n_chromosomes()) / 1.0e6,
-             static_cast<double>(genome.n50()) / 1.0e6, genome.get_n_lefs(),
+             absl::FormatDuration(absl::Now() - t0), genome.get_nchromosomes(), n_of_chr_removed,
+             (static_cast<double>(genome.size()) / genome.get_nchromosomes()) / 1.0e6,
+             static_cast<double>(genome.n50()) / 1.0e6, genome.get_nlefs(),
              tot_barriers - barriers_ignored, barriers_ignored);
 
   t0 = absl::Now();
