@@ -13,6 +13,7 @@
 
 #include "modle/bed.hpp"
 #include "modle/cooler.hpp"
+#include "modle/utils.hpp"
 #include "modle_tools/config.hpp"
 
 namespace modle::tools {
@@ -25,6 +26,7 @@ class Cli {
   int _argc;
   char** _argv;
   std::string _exec_name;
+  int _exit_code{1};
   config _config{};
   CLI::App _cli{};
   subcommand _subcommand{subcommand::help};
@@ -39,7 +41,7 @@ class Cli {
     auto *sc = this->_cli.add_subcommand("evaluate", "Compare Model's output with other contact matrices using various correlation tests.")->fallthrough();
     sc->alias("eval");
 
-    sc->add_option("-i,--input", this->_config.path_to_input_matrices, "Path to a contact matrix in Cooler format")->check(CLI::ExistingFile)->required();
+    sc->add_option("-i,--input", this->_config.path_to_input_matrix, "Path to a contact matrix in Cooler format")->check(CLI::ExistingFile)->required();
     sc->add_option("--chromosome-subrange-file", this->_config.path_to_chr_subranges, "Path to BED file with subranges of the chromosomes to be processed.")->check(CLI::ExistingFile);
     sc->add_option("--tmp-dir", this->_config.tmp_dir, "Path where to store temporary files.")->capture_default_str();
     sc->add_flag("--keep-temporary-files", this->_config.keep_tmp_files, "Do not delete temporary files.")->capture_default_str();
@@ -47,8 +49,6 @@ class Cli {
     sc->add_option("-t,--threads", this->_config.nthreads, "CPU threads to allocate.")->check(CLI::PositiveNumber);
     sc->add_option("-o,--output-base-name", this->_config.output_base_name, "Base file name (including directories) to use for output.")->required();
     sc->add_option("--reference-matrix", this->_config.path_to_reference_matrix, "Path to contact matrix to use as reference when computing the correlation. Formats accepted: Cooler.")->required();
-    sc->add_option("-n,--chr-name", this->_config.chr_name_hic, "Name of the chromosome whose contacts should be extracted from an .hic file. Required only if different from the name stored in the header of Modle's contact matrix.");
-    sc->add_option("--chr-offset", this->_config.chr_offset_hic, "Offset to apply to coordinates read from Modle's contact matrix.")->check(CLI::NonNegativeNumber)->transform(CLI::AsSizeValue(true));
     sc->add_flag("--pearson", this->_config.compute_pearson, "Compute Pearson correlation.");
     sc->add_flag("--spearman", this->_config.compute_spearman, "Compute Spearman rank correlation.");
     sc->add_option("-w,--diagonal-width", this->_config.diagonal_width, "Diagonal width to use when computing correlation coefficients.")->check(CLI::NonNegativeNumber)->required();
@@ -63,7 +63,7 @@ class Cli {
     // clang-format off
     auto *sc = this->_cli.add_subcommand("statistics", "Compute several useful statistics for a given Cooler file.")->fallthrough();
     sc->alias("stats");
-    sc->add_option("-i,--input", this->_config.path_to_input_matrices, "Path to a contact matrix in Cooler format")->check(CLI::ExistingFile)->required();
+    sc->add_option("-i,--input", this->_config.path_to_input_matrix, "Path to a contact matrix in Cooler format")->check(CLI::ExistingFile)->required();
     sc->add_option("--chromosome-subrange-file", this->_config.path_to_chr_subranges, "Path to BED file with subranges of the chromosomes to be processed.")->check(CLI::ExistingFile);
     sc->add_flag("-f,--force", this->_config.force, "Overwrite existing file(s).")->capture_default_str();
     sc->add_option("--bin-size", this->_config.bin_size, "Bin size to use when calculating the statistics. Required in case of MCool files.")->check(CLI::PositiveNumber);
@@ -86,7 +86,7 @@ class Cli {
   }
 
   [[nodiscard]] inline std::string validate_eval_subcommand() {
-    assert(this->_cli.get_subcommand("eval")->parsed());
+    assert(this->_cli.get_subcommand("eval")->parsed());  // NOLINT
     std::string errors;
     auto& c = this->_config;
     if (!std::filesystem::is_directory(c.output_base_name) &&
@@ -96,7 +96,7 @@ class Cli {
           c.output_base_name);
     }
 
-    if (const auto* s = "/modle_tools/"; !absl::EndsWithIgnoreCase(c.tmp_dir, s)) {
+    if (const auto* s = "/modle_tools/"; !absl::EndsWithIgnoreCase(c.tmp_dir.string(), s)) {
       c.tmp_dir += s;
     }
     if (!std::filesystem::is_directory(c.tmp_dir) && std::filesystem::exists(c.tmp_dir)) {
@@ -107,13 +107,6 @@ class Cli {
 
     if (!c.force) {
       std::vector<std::string> collisions;
-      if (c.path_to_input_matrices.size() > 1) {
-        absl::StrAppendFormat(&errors,
-                              "You have specified %d input files through the -i option, but "
-                              "only one file is allowed when using the eval subcommand.\n",
-                              c.path_to_input_matrices.size());
-      }
-
       for (std::string_view suffix :
            {"rho", "tau", "rho_pv", "tau_pv"}) {  // TODO Update this section
         for (std::string_view ext : {"tsv.bz2", "bwig"}) {
@@ -141,7 +134,7 @@ class Cli {
               absl::StrJoin(this->_allowed_genome_ids, ", "));
         }
       } else {
-        if (!this->_allowed_genome_ids.contains(c.chr_sizes)) {
+        if (!this->_allowed_genome_ids.contains(c.chr_sizes.string())) {
           absl::StrAppendFormat(
               &errors, "--chr-sizes='%s' should be the path to an existing file or one of %s.\n",
               c.chr_sizes, absl::StrJoin(this->_allowed_genome_ids, ", "));
@@ -160,44 +153,39 @@ class Cli {
 
   [[nodiscard]] inline std::string validate_stats_subcommand() const {
     std::string errors;
-    assert(this->_cli.get_subcommand("stats")->parsed());
+    assert(this->_cli.get_subcommand("stats")->parsed());  // NOLINT
     const auto& c = this->_config;
-    if (c.path_to_input_matrices.size() != 1) {
-      absl::StrAppendFormat(&errors,
-                            "modle_tools stats expects one contact matrix, but %d were found.\n",
-                            c.path_to_input_matrices.size());
-    }
 
     if (!c.path_to_chr_subranges.empty()) {
       auto p = modle::bed::Parser(c.path_to_chr_subranges);
       if (const auto s = p.validate(); !s.empty()) {
         absl::StrAppendFormat(&errors,
                               "Validation of file '%s' failed with the following error: %s.\n",
-                              c.path_to_input_matrices[0], s);
+                              c.path_to_input_matrix, s);
       }
     }
 
     try {
-      cooler::Cooler f(c.path_to_input_matrices[0], cooler::Cooler::READ_ONLY, c.bin_size);
+      cooler::Cooler f(c.path_to_input_matrix, cooler::Cooler::READ_ONLY, c.bin_size);
     } catch (const std::runtime_error& e) {
-      if (absl::EndsWith(e.what(),
+      if (absl::EndsWith(e.what(),  // NOLINT
                          "A bin size other than 0 is required when calling "
                          "Cooler::validate_multires_cool_flavor()")) {
         absl::StrAppendFormat(&errors,
                               "File '%s' appears to be a multi-resolution Cooler. --bin-size is a "
                               "mandatory argument when processing .mcool files.\n",
-                              c.path_to_input_matrices[0]);
+                              c.path_to_input_matrix);
       } else {
         absl::StrAppendFormat(&errors,
                               "Validation of file '%s' failed with the following error: %s.\n",
-                              c.path_to_input_matrices[0], e.what());
+                              c.path_to_input_matrix, e.what());
       }
     }
 
     if (!c.force) {
-      const auto ext = std::filesystem::path(c.path_to_input_matrices[0]).extension().string();
+      const auto ext = c.path_to_input_matrix.extension().string();
       const auto path =
-          absl::StrCat(absl::StripSuffix(c.path_to_input_matrices[0], ext), "_depl.cool");
+          absl::StrCat(absl::StripSuffix(c.path_to_input_matrix.string(), ext), "_depl.cool");
       if (std::filesystem::exists(path)) {
         absl::StrAppendFormat(&errors, "File '%s' already exists. Pass --force to overwrite", path);
       }
@@ -216,7 +204,7 @@ class Cli {
     } else if (this->_cli.get_subcommand("stats")->parsed()) {
       errors = this->validate_stats_subcommand();
     } else {
-      assert(false);  // This branch should be unreachable
+      utils::throw_with_trace("Unreachable code");
     }
 
     if (!errors.empty()) {
@@ -238,7 +226,7 @@ class Cli {
     this->MakeCli();
   }
   [[nodiscard]] inline bool is_ok() const {
-    return this->_config.exit_code && this->_subcommand != subcommand::help;
+    return this->_exit_code && this->_subcommand != subcommand::help;
   }
   [[nodiscard]] inline subcommand get_subcommand() const { return this->_subcommand; }
   [[nodiscard]] inline config parse_arguments() {
@@ -254,13 +242,15 @@ class Cli {
       }
     } catch (const CLI::ParseError& e) {
       //  This takes care of formatting and printing error messages (if any)
-      this->_config.exit_code = this->_cli.exit(e);
+      this->_exit_code = this->_cli.exit(e);
       return this->_config;
     }
-    this->_config.exit_code = this->validate();
+    this->_exit_code = this->validate();
     this->post_process_cli_args();
     return this->_config;
   }
+
+  [[nodiscard]] inline int get_exit_code() const { return this->_exit_code; }
 };
 
 }  // namespace modle::tools

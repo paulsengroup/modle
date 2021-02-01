@@ -12,7 +12,7 @@ int main(int argc, char** argv) {
   modle::tools::Cli cli(argc, argv);
   auto c = cli.parse_arguments();
   if (!cli.is_ok()) {
-    return c.exit_code;
+    return cli.get_exit_code();
   }
 
   if (!c.output_base_name.empty()) {

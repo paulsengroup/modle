@@ -26,20 +26,18 @@ namespace modle::tools {
 
 void eval_subcmd(const modle::tools::config& c) {
   assert(c.compute_spearman || c.compute_pearson);  // NOLINT
-  assert(c.path_to_input_matrices.size() == 1);     // NOLINT
-  const auto& path_to_input_cmatrix = c.path_to_input_matrices.front();
-
-  const auto bin_size =
-      static_cast<std::size_t>(hdf5::read_attribute_int(path_to_input_cmatrix, "bin-size"));
+  const auto bin_size = static_cast<std::size_t>(
+      hdf5::read_attribute_int(c.path_to_input_matrix.string(), "bin-size"));
 
   auto chr_list =  // This cannot be made const
-      select_chromosomes_for_eval(path_to_input_cmatrix, c.path_to_reference_matrix, bin_size);
+      select_chromosomes_for_eval(c.path_to_input_matrix.string(),
+                                  c.path_to_reference_matrix.string(), bin_size);
   if (chr_list.empty()) {
     throw std::runtime_error(fmt::format(
-        FMT_STRING("Files '{}' and '{}' have 0 chromosomes in common. Make sure you are not trying "
+        FMT_STRING("Files {} and {} have 0 chromosomes in common. Make sure you are not trying "
                    "to compare different genome assemblies (chromosomes needs to have the same "
                    "name and size in order to qualify for comparison)"),
-        path_to_input_cmatrix, c.path_to_reference_matrix));
+        c.path_to_input_matrix, c.path_to_reference_matrix));
   }
 
   absl::flat_hash_map<std::string, std::pair<std::size_t, std::size_t>> chr_subranges;
@@ -78,7 +76,7 @@ void eval_subcmd(const modle::tools::config& c) {
   const auto out_path_pv_cross_spearman =
       c.compute_pearson ? fmt::format(FMT_STRING("{}_spearman_cross_pv.bw"), c.output_base_name)
                         : "";
-  const auto& bn = c.output_base_name;
+  const auto bn = c.output_base_name.string();
   // Init files and write bw header
   auto* bw_corr_linear_pearson =
       c.compute_pearson
@@ -114,7 +112,7 @@ void eval_subcmd(const modle::tools::config& c) {
           : nullptr;
 
   auto ref_cooler = cooler::Cooler(c.path_to_reference_matrix, cooler::Cooler::READ_ONLY, bin_size);
-  auto input_cooler = cooler::Cooler(path_to_input_cmatrix, cooler::Cooler::READ_ONLY, bin_size);
+  auto input_cooler = cooler::Cooler(c.path_to_input_matrix, cooler::Cooler::READ_ONLY, bin_size);
   const auto nrows = (c.diagonal_width / bin_size) + (c.diagonal_width % bin_size != 0);  // NOLINT
   assert(nrows != 0);                                                                     // NOLINT
 
@@ -286,9 +284,9 @@ void eval_subcmd(const modle::tools::config& c) {
     if (cmatrix1.ncols() != cmatrix2.ncols() || cmatrix1.nrows() != cmatrix2.nrows()) {
       throw std::runtime_error(fmt::format(
           FMT_STRING("An error occurred while computing the correlation for '{}' between files "
-                     "'{}' and '{}': Contact matrices should have the same shape "
+                     "{} and {}: Contact matrices should have the same shape "
                      "m1=[{}][{}], m2=[{}][{}]"),
-          chr_name, c.path_to_reference_matrix, path_to_input_cmatrix, cmatrix1.nrows(),
+          chr_name, c.path_to_reference_matrix, c.path_to_input_matrix, cmatrix1.nrows(),
           cmatrix1.ncols(), cmatrix2.nrows(), cmatrix2.ncols()));
     }
 
@@ -328,11 +326,9 @@ void eval_subcmd(const modle::tools::config& c) {
 }
 
 void stats_subcmd(const modle::tools::config& c) {
-  assert(c.path_to_input_matrices.size() == 1);  // NOLINT
-  const auto& path_to_input_matrix = c.path_to_input_matrices.front();
   const auto& path_to_output_hist = c.output_path_for_histograms;
 
-  cooler::Cooler m1(path_to_input_matrix, cooler::Cooler::READ_ONLY, c.bin_size);
+  cooler::Cooler m1(c.path_to_input_matrix, cooler::Cooler::READ_ONLY, c.bin_size);
 
   std::unique_ptr<cooler::Cooler> m2{nullptr};
   std::unique_ptr<std::ofstream> hist_file{nullptr};
@@ -352,8 +348,9 @@ void stats_subcmd(const modle::tools::config& c) {
   }
 
   if (c.dump_depleted_matrices) {  // Create cooler file to write depl. contacts
-    const auto ext = std::filesystem::path(path_to_input_matrix).extension().string();
-    const auto path = absl::StrCat(absl::StripSuffix(path_to_input_matrix, ext), "_depl.cool");
+    const auto ext = c.path_to_input_matrix.extension().string();
+    const auto path =
+        absl::StrCat(absl::StripSuffix(c.path_to_input_matrix.string(), ext), "_depl.cool");
     std::filesystem::remove_all(path);
     m2 = std::make_unique<cooler::Cooler>(path, cooler::Cooler::WRITE_ONLY, bin_size);
   }
