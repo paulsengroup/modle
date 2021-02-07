@@ -204,7 +204,7 @@ class Cli {
     } else if (this->_cli.get_subcommand("stats")->parsed()) {
       errors = this->validate_stats_subcommand();
     } else {
-      utils::throw_with_trace("Unreachable code");
+      modle::utils::throw_with_trace("Unreachable code");
     }
 
     if (!errors.empty()) {
