@@ -28,6 +28,7 @@ struct config {
   // eval
   bool compute_spearman{true};
   bool compute_pearson{true};
+  bool compute_edist{true};
   std::size_t sliding_window_size{0};
   std::size_t sliding_window_overlap{0};
   bool deplete_contacts_from_reference{true};

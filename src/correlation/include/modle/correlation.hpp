@@ -31,6 +31,9 @@ template <typename N1, typename N2>
 [[nodiscard]] inline std::pair<std::vector<double>, std::vector<double>> compute_corr(
     absl::Span<const N1> v1, absl::Span<const N2> v2, Algorithm type, std::size_t window_span,
     std::size_t window_overlap);
+
+template <typename N1, typename N2>
+[[nodiscard]] inline double compute_sed(absl::Span<const N1> v1, absl::Span<const N2> v2);
 }  // namespace modle::correlation
 
 #include "../../correlation_impl.hpp"

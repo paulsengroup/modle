@@ -49,6 +49,7 @@ class Cli {
     sc->add_option("-t,--threads", this->_config.nthreads, "CPU threads to allocate.")->check(CLI::PositiveNumber);
     sc->add_option("-o,--output-base-name", this->_config.output_base_name, "Base file name (including directories) to use for output.")->required();
     sc->add_option("--reference-matrix", this->_config.path_to_reference_matrix, "Path to contact matrix to use as reference when computing the correlation. Formats accepted: Cooler.")->required();
+    sc->add_flag("--eucl-dist", this->_config.compute_edist, "Compute Euclidean distance.");
     sc->add_flag("--pearson", this->_config.compute_pearson, "Compute Pearson correlation.");
     sc->add_flag("--spearman", this->_config.compute_spearman, "Compute Spearman rank correlation.");
     sc->add_option("-w,--diagonal-width", this->_config.diagonal_width, "Diagonal width to use when computing correlation coefficients.")->check(CLI::NonNegativeNumber)->required();

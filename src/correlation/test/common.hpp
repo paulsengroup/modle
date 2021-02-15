@@ -1,17 +1,19 @@
 #pragma once
+#include <absl/container/flat_hash_set.h>
+
 #include <algorithm>
+#include <boost/container_hash/hash.hpp>
 #include <filesystem>
 #include <fstream>
 #include <iostream>
 #include <memory>
 #include <random>
 #include <string>
-#include <unordered_set>
 
 namespace modle::test::correlation {
 
 template <typename N, typename = typename std::enable_if<std::is_arithmetic<N>::value, N>::type>
-inline void write_vect_to_file(const std::string& fpath, const std::vector<N>& v) {
+inline void write_vect_to_file(const std::filesystem::path& fpath, const std::vector<N>& v) {
   auto fp = std::ofstream(fpath);
   fp << v[0];
   for (auto i = 1UL; i < v.size(); ++i) {
@@ -29,7 +31,7 @@ inline std::vector<uint32_t> generate_random_vect(std::mt19937& rnd_eng, uint32_
   if (allow_duplicates) {
     std::generate(v.begin(), v.end(), [&]() { return dist(rnd_eng); });
   } else {
-    std::unordered_set<uint32_t> s;
+    absl::flat_hash_set<uint32_t> s;
     while (s.size() < size) {
       s.insert(dist(rnd_eng));
     }
@@ -56,10 +58,15 @@ inline std::pair<std::vector<uint32_t>, std::vector<uint32_t>> generate_correlat
 }
 
 template <typename N, typename = typename std::enable_if<std::is_arithmetic<N>::value, N>::type>
-inline std::pair<double, double> corr_scipy(const std::vector<N>& v1, const std::vector<N>& v2,
-                                            const std::string& method) {
-  auto f1_path = std::string(std::tmpnam(nullptr));  // NOLINT
-  auto f2_path = std::string(std::tmpnam(nullptr));  // NOLINT
+[[nodiscard]] inline std::pair<double, double> corr_scipy(const std::vector<N>& v1,
+                                                          const std::vector<N>& v2,
+                                                          const std::string& method,
+                                                          const std::filesystem::path& tmpdir) {
+  if (!std::filesystem::exists(tmpdir)) {
+    std::filesystem::create_directories(tmpdir);
+  }
+  const auto f1_path = tmpdir / absl::StrCat(boost::hash_range(v1.begin(), v1.end()), "_f1");
+  const auto f2_path = tmpdir / absl::StrCat(boost::hash_range(v2.begin(), v2.end()), "_f2");
   write_vect_to_file(f1_path, v1);
   write_vect_to_file(f2_path, v2);
 
@@ -74,7 +81,7 @@ inline std::pair<double, double> corr_scipy(const std::vector<N>& v1, const std:
       "(v1, v2); "
       //      "print(v1, file=stderr); print(v2, file=stderr); "
       "print(f\"{corr:.16e}\\t{pv:.16e}\", end=\"\");' " +
-      f1_path + " " + f2_path;
+      f1_path.string() + " " + f2_path.string();
   // NOLINTNEXTLINE(readability-magic-numbers, cppcoreguidelines-avoid-magic-numbers)
   std::array<char, 256> buffer{};
   std::string result;

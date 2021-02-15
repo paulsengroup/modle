@@ -110,6 +110,12 @@ void eval_subcmd(const modle::tools::config& c) {
       c.compute_spearman
           ? bigwig::init_bigwig_file(absl::StrCat(bn, "_spearman_cross_pv.bw"), chr_list)
           : nullptr;
+  auto* bw_linear_sed =
+      c.compute_edist ? bigwig::init_bigwig_file(absl::StrCat(bn, "_eucl_dist_linear.bw"), chr_list)
+                      : nullptr;
+  auto* bw_cross_sed =
+      c.compute_edist ? bigwig::init_bigwig_file(absl::StrCat(bn, "_eucl_dist_cross.bw"), chr_list)
+                      : nullptr;
 
   auto ref_cooler = cooler::Cooler(c.path_to_reference_matrix, cooler::Cooler::READ_ONLY, bin_size);
   auto input_cooler = cooler::Cooler(c.path_to_input_matrix, cooler::Cooler::READ_ONLY, bin_size);
@@ -124,6 +130,9 @@ void eval_subcmd(const modle::tools::config& c) {
 
   std::vector<double> sc_linear_corr_buff;
   std::vector<double> sc_linear_pval_buff;
+
+  std::vector<double> ed_linear_buff;
+  std::vector<double> ed_cross_buff;
 
   std::vector<double> sc_cross_corr_buff;
   std::vector<double> sc_cross_pval_buff;
@@ -188,6 +197,30 @@ void eval_subcmd(const modle::tools::config& c) {
     }
   };
 
+  auto edist = [&](std::string_view chr_name, absl::Span<const uint32_t> v1,
+                   absl::Span<const uint32_t> v2, std::size_t ncols, std::size_t offset,
+                   std::vector<double>& sed_buff, Transformation t) {
+    if (!c.compute_edist) {
+      return;
+    }
+    const auto t0 = absl::Now();
+    compute_euc_dist_over_range(v1, v2, sed_buff, nrows, ncols, t);
+    switch (t) {
+      case Transformation::Linear:
+        bigwig::write_range(std::string{chr_name}, sed_buff, offset, bin_size, bin_size,
+                            bw_linear_sed);
+        fmt::print(stderr, FMT_STRING("Euclidean dist. \"linear\" calculation completed in {}.\n"),
+                   absl::FormatDuration(absl::Now() - t0));
+        break;
+      case Transformation::Cross:
+        bigwig::write_range(std::string{chr_name}, sed_buff, offset, bin_size, bin_size,
+                            bw_cross_sed);
+        fmt::print(stderr, FMT_STRING("Euclidean dist. \"cross\" calculation completed in {}.\n"),
+                   absl::FormatDuration(absl::Now() - t0));
+        break;
+    }
+  };
+
   absl::flat_hash_map<std::string, std::size_t> ref_chr_idxes;
   absl::flat_hash_map<std::string, std::size_t> inp_chr_idxes;
 
@@ -219,7 +252,7 @@ void eval_subcmd(const modle::tools::config& c) {
     }
   }
 
-  std::array<std::thread, 4> threads;
+  std::array<std::thread, 6> threads;
   for (const auto& chr : chr_list) {
     const auto& chr_name = chr.first;
     auto chr_subrange = std::make_pair(0UL, static_cast<std::size_t>(chr.second));
@@ -310,6 +343,12 @@ void eval_subcmd(const modle::tools::config& c) {
     threads[3] =
         std::thread(src, chr_name, v1, v2, ncols, chr_subrange.first, std::ref(sc_cross_corr_buff),
                     std::ref(sc_cross_pval_buff), Transformation::Cross);
+
+    threads[4] = std::thread(edist, chr_name, v1, v2, ncols, chr_subrange.first,
+                             std::ref(ed_linear_buff), Transformation::Linear);
+
+    threads[5] = std::thread(edist, chr_name, v1, v2, ncols, chr_subrange.first,
+                             std::ref(ed_cross_buff), Transformation::Cross);
     for (auto& t : threads) {
       t.join();
     }
@@ -323,6 +362,8 @@ void eval_subcmd(const modle::tools::config& c) {
   bigwig::close_bigwig_file(bw_pv_linear_spearman);
   bigwig::close_bigwig_file(bw_corr_cross_spearman);
   bigwig::close_bigwig_file(bw_pv_cross_spearman);
+  bigwig::close_bigwig_file(bw_cross_sed);
+  bigwig::close_bigwig_file(bw_linear_sed);
 }
 
 void stats_subcmd(const modle::tools::config& c) {

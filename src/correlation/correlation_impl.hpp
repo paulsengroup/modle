@@ -48,7 +48,7 @@ double compute_pearson(absl::Span<const N1> v1, absl::Span<const N2> v2) {
   static_assert(std::is_arithmetic<N1>::value,
                 "v1 should be convertible to a Span of numeric type");
   static_assert(std::is_arithmetic<N2>::value,
-                "v1 should be convertible to a Span of numeric type");
+                "v2 should be convertible to a Span of numeric type");
   DISABLE_WARNING_PUSH
   DISABLE_WARNING_CONVERSION
   double cov = 0;
@@ -78,9 +78,12 @@ double compute_pearson(absl::Span<const N1> v1, absl::Span<const N2> v2) {
   }
 
   const auto pcc = std::clamp(cov / std::sqrt(d1 * d2), -1.0, 1.0);
+
+#ifndef DEBUG
   if (std::isnan(pcc)) {
     throw std::logic_error("compute_pearson: pcc cannot be nan!");
   }
+#endif
 
   return pcc;
 }
@@ -95,7 +98,7 @@ double compute_spearman(absl::Span<const N1> v1, absl::Span<const N2> v2) {
   static_assert(std::is_arithmetic<N1>::value,
                 "v1 should be convertible to a Span of numeric type");
   static_assert(std::is_arithmetic<N2>::value,
-                "v1 should be convertible to a Span of numeric type");
+                "v2 should be convertible to a Span of numeric type");
   // Shortcut to avoid computing the correlation when any of the vector is all zeros
   if (std::all_of(v1.begin(), v1.end(), [](auto n) { return n == 0; }) ||
       std::all_of(v2.begin(), v2.end(), [](auto n) { return n == 0; })) {
@@ -152,6 +155,26 @@ std::pair<std::vector<double>, std::vector<double>> compute_corr(absl::Span<cons
   }
 
   return std::make_pair(r_vals, p_vals);
+}
+
+template <typename N1, typename N2>
+double compute_sed(absl::Span<const N1> v1, absl::Span<const N2> v2) {
+  static_assert(std::is_arithmetic<N1>::value,
+                "v1 should be convertible to a Span of numeric type");
+  static_assert(std::is_arithmetic<N2>::value,
+                "v2 should be convertible to a Span of numeric type");
+
+  uint64_t sed{0};
+  for (auto i = 0UL; i < v1.size(); ++i) {
+    const auto n = v1[i] > v2[i] ? v1[i] - v2[i] : v2[i] - v1[i];
+    sed += n * n;
+  }
+  return static_cast<double>(sed);
+}
+
+template <typename N1, typename N2>
+double compute_sed(const std::vector<N1>& v1, const std::vector<N2>& v2) {
+  return compute_sed(absl::MakeConstSpan(v1), absl::MakeConstSpan(v2));
 }
 
 }  // namespace modle::correlation

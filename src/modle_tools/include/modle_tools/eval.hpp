@@ -29,16 +29,35 @@ inline void compute_pearson_over_range(const std::vector<N1>& vin1, const std::v
                                        Transformation t);
 
 template <typename N1, typename N2>
-[[nodiscard]] inline std::pair<std::vector<double>, std::vector<double>>
-compute_spearman_over_range(absl::Span<const N1> vin1, absl::Span<const N2> vin2,
-                            std::vector<double>& rho_buff, std::vector<double>& pval_buff,
-                            std::size_t nrows, Transformation t);
+inline void compute_spearman_over_range(absl::Span<const N1> vin1, absl::Span<const N2> vin2,
+                                        std::vector<double>& rho_buff,
+                                        std::vector<double>& pval_buff, std::size_t nrows,
+                                        Transformation t);
 template <typename N1, typename N2>
-[[nodiscard]] inline std::pair<std::vector<double>, std::vector<double>>
-compute_spearman_over_range(const std::vector<N1>& vin1, const std::vector<N2>& vin2,
-                            std::vector<double>& rho_buff, std::vector<double>& pval_buff,
-                            std::size_t nrows, Transformation t);
+inline void compute_spearman_over_range(const std::vector<N1>& vin1, const std::vector<N2>& vin2,
+                                        std::vector<double>& rho_buff,
+                                        std::vector<double>& pval_buff, std::size_t nrows,
+                                        Transformation t);
 
+template <typename N1, typename N2>
+inline void compute_sed_over_range(absl::Span<const N1> vin1, absl::Span<const N2> vin2,
+                                   std::vector<uint64_t>& buff, std::size_t nrows,
+                                   std::size_t ncols, Transformation t);
+
+template <typename N1, typename N2>
+inline void compute_sed_over_range(const std::vector<N1>& vin1, const std::vector<N2>& vin2,
+                                   std::vector<uint64_t>& buff, std::size_t nrows,
+                                   std::size_t ncols, Transformation t);
+
+template <typename N1, typename N2>
+void compute_euc_dist_over_range(absl::Span<const N1> vin1, absl::Span<const N2> vin2,
+                                 std::vector<double>& buff, std::size_t nrows, std::size_t ncols,
+                                 Transformation t);
+
+template <typename N1, typename N2>
+void compute_euc_dist_over_range(const std::vector<N1>& vin1, const std::vector<N2>& vin2,
+                                 std::vector<double>& buff, std::size_t nrows, std::size_t ncols,
+                                 Transformation t);
 }  // namespace modle::tools
 
 #include "../../eval_impl.hpp"
