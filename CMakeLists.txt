@@ -91,14 +91,13 @@ set(CONAN_EXTRA_OPTIONS "")
 
 set(CONAN_EXTRA_REQUIRES
     ${CONAN_EXTRA_REQUIRES}
-    abseil/20200923.2
-    boost/1.74.0
+    abseil/20200923.3
+    boost/1.75.0
     bzip2/1.0.8
     cli11/1.9.1
-    fmt/7.1.2
+    fmt/7.1.3
     hdf5/1.12.0
-    range-v3/0.11.0
-    spdlog/1.8.1
+    spdlog/1.8.2
     zlib/1.2.11)
 
 set(CONAN_EXTRA_OPTIONS
@@ -114,7 +113,7 @@ set(CONAN_EXTRA_OPTIONS
 set(CONAN_EXTRA_SETTINGS ${CONAN_EXTRA_SETTINGS} compiler.cppstd=17)
 
 if(ENABLE_TESTING)
-  set(CONAN_EXTRA_REQUIRES ${CONAN_EXTRA_REQUIRES} catch2/2.11.1)
+  set(CONAN_EXTRA_REQUIRES ${CONAN_EXTRA_REQUIRES} catch2/2.13.4)
 endif()
 
 include(cmake/Conan.cmake)

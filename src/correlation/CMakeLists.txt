@@ -5,7 +5,6 @@ target_link_libraries(
   modle_correlation
   INTERFACE project_warnings
             project_options
-            CONAN_PKG::range-v3
             CONAN_PKG::boost)
 
 if(ENABLE_TESTING)

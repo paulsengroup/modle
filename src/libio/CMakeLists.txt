@@ -50,7 +50,6 @@ target_link_libraries(
     CONAN_PKG::boost
     CONAN_PKG::fmt
     CONAN_PKG::hdf5
-    CONAN_PKG::range-v3
     CONAN_PKG::zlib
     # Deal with std::filesystem quirkiness on older compilers
     $<$<AND:$<CXX_COMPILER_ID:Clang>,$<CXX_COMPILER_ID:AppleClang>,$<VERSION_LESS_EQUAL:$<CXX_COMPILER_VERSION>,9.0.0>>:-lc++fs>

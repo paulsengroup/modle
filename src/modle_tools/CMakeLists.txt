@@ -18,8 +18,7 @@ target_link_libraries(
           Modle::io
           CONAN_PKG::abseil
           CONAN_PKG::boost
-          CONAN_PKG::cli11
-          CONAN_PKG::range-v3)
+          CONAN_PKG::cli11)
 
 target_include_directories(modle_tools PRIVATE include)
 
