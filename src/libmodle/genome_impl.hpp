@@ -373,12 +373,12 @@ std::pair<double, double> Genome::run_burnin(double prob_of_rebinding,
       auto lefs = absl::MakeSpan(chr.lefs);
       std::size_t lefs_loaded = 0;
       for (auto rounds = 0U;; ++rounds) {
-        if (rounds < chr.lefs.size() / n_of_lefs_to_bind_each_round) {
+        if (!lefs.empty()) {
           for (const auto& lef : lefs.subspan(0, n_of_lefs_to_bind_each_round)) {
             lef->bind_chr_at_random_pos(&chr, chr._rand_eng);
             ++lefs_loaded;
           }
-          lefs.remove_prefix(n_of_lefs_to_bind_each_round);
+          lefs.remove_prefix(std::min(n_of_lefs_to_bind_each_round, lefs.size()));
         }
         for (auto i = 0U; i < lefs_loaded; ++i) {
           auto& lef = *chr.lefs[i];
@@ -440,7 +440,7 @@ void Genome::simulate_extrusion(uint32_t iterations, double target_contact_densi
     if (c.barriers.empty()) {
       return "KO! Chromosome won't be simulated. Reason: chromosome has 0 extrusion barriers.";
     }
-    assert(false);  // NOLINT
+    utils::throw_with_trace("Unreachable code");
   };
 
   fmt::print(stderr, FMT_STRING("Chromosome status report:\n"));
@@ -474,8 +474,7 @@ void Genome::simulate_extrusion(uint32_t iterations, double target_contact_densi
   DISABLE_WARNING_CONVERSION
   DISABLE_WARNING_DOUBLE_PROMOTION
   std::thread progress_tracker([&]() {  // This thread is used to periodically print the
-    // simulation
-    // progress to stderr
+    // simulation progress to stderr
     // The total number of ticks tot_ticks is set depending on whether or not the simulation is
     // set to run for a fixed number of iterations:
     //  - When we know in advance the number of iterations (e.g. because it was specified
@@ -496,15 +495,12 @@ void Genome::simulate_extrusion(uint32_t iterations, double target_contact_densi
             : iterations * this->get_n_ok_chromosomes();
 
     const auto t0 = absl::Now();
-    while (true) {
+    while (!simulation_completed) {
       {  // Wait for 5 seconds or until the simulation terminates
         std::unique_lock<std::mutex> lk(m);
         simulation_completed_cv.wait_for(lk, std::chrono::seconds(5));  // NOLINT
         if (simulation_completed) {  // Stop printing updates once there are no chromosomes left,
-          // and return immediately, so that the main thread can join
-          // this thread
-          // Unlocking here is probably unnecessary, as there's nothing waiting on this mutex
-          lk.unlock();
+          // and return immediately, so that the main thread can join this thread
           return;
         }
       }

@@ -208,9 +208,8 @@ void DNA::allocate_bins() {
 }
 
 std::vector<DNA::Bin> DNA::make_bins(std::size_t length, uint32_t bin_size) {
-  using N = decltype(DNA::Bin::_bin_size);
   assert(length != 0);
-  assert(length < std::numeric_limits<N>::max());
+  assert(length < std::numeric_limits<decltype(DNA::Bin::_bin_size)>::max());
   assert(bin_size != 0);
   if (length <= bin_size) {  // Deal with short DNA molecules
     return {{0UL, length}};
