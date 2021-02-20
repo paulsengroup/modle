@@ -11,6 +11,7 @@ target_sources(
           io.c)
 
 target_include_directories(libBigWig PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/)
+# TODO For some reason libBigWig seems to be linking to system zlib, not conan zlib
 target_link_libraries(
   libBigWig
   PRIVATE project_warnings project_options

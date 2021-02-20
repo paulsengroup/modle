@@ -216,14 +216,15 @@ void Cooler::write_metadata() {
   METADATA_STR_TYPE.setCset(H5T_CSET_UTF8);
 
   H5::DataSpace attr_space(H5S_SCALAR);
-  int32_t int_buff{};
+  int64_t int_buff{};
   std::string str_buff{};
 
   auto att = this->_fp->createAttribute("format", METADATA_STR_TYPE, attr_space);
   str_buff = "HDF5::Cooler";
   att.write(METADATA_STR_TYPE, str_buff);
 
-  att = this->_fp->createAttribute("format-version", H5::PredType::NATIVE_INT64, attr_space);
+  att = this->_fp->createAttribute("format-version", hdf5::getH5_type<decltype(int_buff)>(),
+                                   attr_space);
   int_buff = 3;
   att.write(H5::PredType::NATIVE_INT64, &int_buff);
 
@@ -231,7 +232,7 @@ void Cooler::write_metadata() {
   str_buff = "fixed";
   att.write(METADATA_STR_TYPE, str_buff);
 
-  att = this->_fp->createAttribute("bin-size", H5::PredType::NATIVE_INT64, attr_space);
+  att = this->_fp->createAttribute("bin-size", hdf5::getH5_type<decltype(this->_bin_size)>(), attr_space);
   att.write(H5::PredType::NATIVE_INT64, &this->_bin_size);
 
   att = this->_fp->createAttribute("storage-mode", METADATA_STR_TYPE, attr_space);

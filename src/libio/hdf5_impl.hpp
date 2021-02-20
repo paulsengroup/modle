@@ -19,8 +19,7 @@ namespace modle::hdf5 {
 // Predeclare internal functions
 using attr_types = std::variant<uint8_t, uint16_t, uint32_t, uint64_t, int8_t, int16_t, int32_t,
                                 int64_t, float, double, long double>;
-template <typename DataType>
-H5::PredType getH5_type();
+
 attr_types getCpp_type(const H5::IntType &h5_type);
 attr_types getCpp_type(const H5::FloatType &h5_type);
 

@@ -34,7 +34,8 @@ int main(int argc, char** argv) {
   } catch (const std::runtime_error& err) {
     fmt::print(stderr, "FAILURE: {}.\n", err.what());
     std::error_code ec;
-    if (!c.keep_tmp_files && std::filesystem::is_empty(c.tmp_dir)) {
+    if (!c.keep_tmp_files && std::filesystem::exists(c.tmp_dir) &&
+        std::filesystem::is_empty(c.tmp_dir)) {
       std::filesystem::remove_all(c.tmp_dir, ec);
     }
     return 1;

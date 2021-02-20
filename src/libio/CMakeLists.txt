@@ -35,7 +35,7 @@ add_library(libio INTERFACE)
 add_library(Modle::io ALIAS libio)
 target_sources(libio INTERFACE ${CMAKE_CURRENT_SOURCE_DIR}/bed_impl.hpp ${CMAKE_CURRENT_SOURCE_DIR}/chr_sizes_impl.hpp
                                ${CMAKE_CURRENT_SOURCE_DIR}/bigwig_impl.hpp)
-add_dependencies(libio libBigWig_lib) # libstraw)
+add_dependencies(libio libBigWig_lib)
 
 target_include_directories(libio INTERFACE include/)
 

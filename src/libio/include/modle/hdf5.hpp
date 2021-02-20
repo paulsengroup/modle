@@ -11,6 +11,9 @@
 
 namespace modle::hdf5 {
 
+template <typename DataType>
+H5::PredType getH5_type();
+
 [[nodiscard]] inline std::string construct_error_stack();
 
 template <typename S>

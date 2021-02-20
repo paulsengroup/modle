@@ -54,15 +54,15 @@ if(ENABLE_PCH)
   # consider breaking this out per project as necessary
   if(${CMAKE_VERSION} VERSION_GREATER_EQUAL "3.16.0")
     target_precompile_headers(
-    project_options
-    INTERFACE
-    <vector>
-    <cstdint>
-    <string>
-    <string_view>
-    <utility>
-    <random>
-    <cassert>)
+      project_options
+      INTERFACE
+      <vector>
+      <cstdint>
+      <string>
+      <string_view>
+      <utility>
+      <random>
+      <cassert>)
   else()
     message(WARNING "CMake 3.16 or newer is required to enable precompiled headers. Ignoring -DENABLE_PCH.")
   endif()
