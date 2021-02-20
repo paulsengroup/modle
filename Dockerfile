@@ -6,41 +6,53 @@ COPY LICENSE        /tmp/modle/LICENSE
 COPY cmake          /tmp/modle/cmake
 
 ARG build_dir='/tmp/modle/cmake-build'
-# march, cpus and ver are set through --build-arg at build time
+# march, cpus ver and build_type are set through --build-arg(s) at build time
 ARG march
 ARG cpus
 ARG ver
-ARG CONAN_VER=1.31.3
+ARG build_type
+
+ARG CONAN_VER=1.33.1
+
+ENV CC=/usr/bin/gcc
+ENV CXX=/usr/bin/g++
+ENV LD=/usr/bin/ld
 
 # TODO: Figure out why IPO is not available
-# TODO: Remove -DWARNINGS_AS_ERRORS
 # TODO: Enable tests
 
 # Update system repo and install required tools
 RUN dnf update -y \
     && dnf install -y --setopt=install_weak_deps=False --best                   \
-                      bash make cmake git bzip2 bzip2-devel zlib zlib-devel     \
-                      clang python3 java-latest-openjdk                         \
-    && python3 -m venv /tmp/conan_venv --upgrade-deps                           \
-    && /tmp/conan_venv/bin/pip3 --no-cache-dir install conan==${CONAN_VER}      \
+                      bash cmake gcc-c++ git make python3 zlib-devel            \
+    && python3 -m venv /conan_venv --upgrade-deps                               \
+    && /conan_venv/bin/pip3 --no-cache-dir install conan==${CONAN_VER}          \
     && mkdir -p /usr/local/bin                                                  \
-    && ln -s /tmp/conan_venv/bin/conan /usr/local/bin/conan                     \
+    && ln -s /conan_venv/bin/conan /usr/local/bin/conan                         \
     && mkdir "$build_dir" && cd "$build_dir"       \
     && env CC=/usr/bin/gcc                         \
            CXX=/usr/bin/g++                        \
            LD=/usr/bin/ld                          \
-       cmake -DCMAKE_BUILD_TYPE=Release            \
-             -DENABLE_IPO=OFF                      \
-             -DWARNINGS_AS_ERRORS=OFF              \
+       cmake -DCMAKE_BUILD_TYPE=$build_type        \
+             -DENABLE_IPO=ON                       \
+             -DWARNINGS_AS_ERRORS=ON               \
              -DENABLE_TESTING=OFF                  \
              -DCMAKE_INSTALL_PREFIX='/usr/local'   \
              -DCMAKE_CXX_FLAGS="-march=${march}"   \
              -DCMAKE_C_FLAGS="-march=${march}"     \
              -G 'Unix Makefiles' ..                \
     && make -j "$cpus" install                     \
-    && unlink /usr/local/bin/conan && rm -r /root/.conan         \
-    && dnf remove -y make cmake git bzip2-devel zlib-devel clang \
-    && dnf clean all
+    &&                                             \
+    if [ "$build_type" = "Debug" ]; then           \
+        dnf install -y dnf-plugins-core gdb        \
+     && dnf debuginfo-install -y libstdc++ zlib ;  \
+    else                                           \
+        unlink /usr/local/bin/conan                \
+     && rm -r /conan_venv /root/.conan             \
+     && dnf remove -y                              \
+        cmake make gcc-c++ git zlib-devel          \
+     && dnf clean all ;                            \
+     fi
 
 ENV SHELL=/usr/bin/bash
 ENV PATH='/usr/bin:/usr/local/bin'

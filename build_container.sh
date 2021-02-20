@@ -5,6 +5,7 @@ set -e
 memory='8G'
 cpus="$(nproc)"
 march='x86-64'
+name=modle
 
 for arg in "$@"; do
 
@@ -22,12 +23,15 @@ for arg in "$@"; do
   esac
 done
 
-if [ -z "$name" ] || [ -z "$type" ]; then
-  echo "Usage: ./build_container --name=modle --version=a.b.c --build-type=Release|Debug [ --cpus $(nproc) --memory 8G --march='x86-64' ]"
+if [[ $# -eq 1 && ("$1" == *help || "$1" == *h ) ]] ; then
+  echo "Usage: ./build_container [ --name=modle --version=a.b.c --build-type=Release|Debug --cpus $(nproc) --memory 8G --march='x86-64' ]"
   exit 1
 fi
 
-sudo systemctl start docker.service
+docker_running=$(systemctl is-active --quiet docker.service)
+if ! $docker_running ; then
+  sudo systemctl start docker.service
+fi
 
 if [ -z "$ver" ]; then
   ver="$(git rev-parse --short HEAD)"
@@ -37,34 +41,43 @@ if [ -z "$ver" ]; then
 
 fi
 
-if [ "${type,,}" = "debug" ]; then
-  sudo docker build --memory="${memory}" \
-    --compress \
-    -t "robomics/${name,,}_dbg:latest" \
-    -t "robomics/${name,,}_dbg:$ver" \
-    -f "$(pwd)/Dockerfile.debug" \
-    --cpu-period="100000" \
-    --cpu-quota="$((100000 * $cpus))" \
-    --build-arg "march=$march" \
-    --build-arg "cpus=$cpus" \
-    --build-arg "ver=$ver" \
-    .
-
-   sudo singularity build -F "${name}_v${ver}_dbg-${march}.sif" \
-                          "docker-daemon://robomics/${name,,}_dbg:${ver}"
-else
-  sudo docker build --memory="${memory}" \
-    --compress \
-    -t "robomics/${name,,}:latest" \
-    -t "robomics/${name,,}:$ver" \
-    -f "$(pwd)/Dockerfile.release" \
-    --cpu-period="100000" \
-    --cpu-quota="$((100000 * $cpus))" \
-    --build-arg "march=$march" \
-    --build-arg "cpus=$cpus" \
-    .
-   sudo singularity build -F "${name}_v${ver}-${march}.sif" \
-                          "docker-daemon://robomics/${name,,}:${ver}"
+if [ -z "$type" ]; then
+  type="Release"
 fi
 
-# sudo systemctl stop docker.service
+case "${type,,}" in
+  "")                type=Release; echo "No build type provided. Defaulting to Release"   ;;
+  debug)             type=Debug             ;;
+  release)           type=Release           ;;
+  relwithdebinfo)    type=RelWithDebInfo    ;;
+  *)
+    echo "Unknown build type '$type'. Allowed build types are Release, Debug and RelWithDebInfo"
+    return 1
+    ;;
+esac
+
+img_name="${name,,}"
+if [ "$type" != "Release" ]; then
+  img_name="$img_name-${type,,}"
+fi
+
+sudo docker build --memory="${memory}" \
+     --compress \
+     -t "robomics/${img_name}:latest" \
+     -t "robomics/${img_name}:$ver" \
+     -f "$(pwd)/Dockerfile" \
+     --cpu-period="100000" \
+     --cpu-quota="$((100000 * cpus))" \
+     --build-arg "march=$march" \
+     --build-arg "cpus=$cpus" \
+     --build-arg "ver=$ver" \
+     --build-arg "build_type=$type" \
+     .
+
+ sudo singularity build -F "${img_name}_v${ver}-${march}.sif" \
+                          "docker-daemon://robomics/${img_name}:${ver}"
+
+# Restore docker.service to the original state
+if ! $docker_running ; then
+  sudo systemctl stop docker.service
+fi
