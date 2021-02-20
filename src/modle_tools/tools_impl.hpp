@@ -234,7 +234,7 @@ void eval_subcmd(const modle::tools::config& c) {
   }
 
   for (const auto& chr : chr_list) {
-    std::string_view q;
+    std::string q;
     for (const auto& prefix : {"chr", "CHR", "Chr"}) {
       if (absl::StartsWith(chr.first, prefix)) {
         q = absl::StripPrefix(chr.first, prefix);
@@ -242,17 +242,19 @@ void eval_subcmd(const modle::tools::config& c) {
         q = absl::StrCat(prefix, chr.first);
       }
       if (auto it = ref_chr_idxes.find(q); it != ref_chr_idxes.end()) {
-        ref_chr_idxes.emplace(chr.first, it->second);
+        const auto idx = it->second;
+        ref_chr_idxes.emplace(chr.first, idx);
         ref_chr_idxes.erase(q);
       }
       if (auto it = inp_chr_idxes.find(q); it != inp_chr_idxes.end()) {
-        inp_chr_idxes.emplace(chr.first, it->second);
+        const auto idx = it->second;
+        inp_chr_idxes.emplace(chr.first, idx);
         inp_chr_idxes.erase(q);
       }
     }
   }
 
-  std::array<std::thread, 6> threads;
+  std::array<std::thread, 6> threads;  // NOLINT
   for (const auto& chr : chr_list) {
     const auto& chr_name = chr.first;
     auto chr_subrange = std::make_pair(0UL, static_cast<std::size_t>(chr.second));

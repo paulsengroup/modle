@@ -16,7 +16,7 @@ int main(int argc, char** argv) {
   }
 
   if (!c.output_base_name.empty()) {
-    std::filesystem::create_directories(c.output_base_name);
+    std::filesystem::create_directories(c.output_base_name.parent_path());
   }
   try {
     switch (cli.get_subcommand()) {
@@ -31,7 +31,7 @@ int main(int argc, char** argv) {
             "Default branch in switch statement in main.cpp should be unreachable! If you see "
             "this message, please open an issue on GitHub");
     }
-  } catch (const std::runtime_error& err) {
+  } catch (const std::exception& err) {
     fmt::print(stderr, "FAILURE: {}.\n", err.what());
     std::error_code ec;
     if (!c.keep_tmp_files && std::filesystem::exists(c.tmp_dir) &&

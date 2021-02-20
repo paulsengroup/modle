@@ -69,7 +69,7 @@ void slice_range_w_cross_method(absl::Span<const N> vin, std::vector<N> &vout, s
     idx += nrows + 1;
   }
   idx = offset * nrows - 1;
-  for (std::size_t j = nrows; j < 2 * nrows; ++j) {
+  for (std::size_t j = nrows; j < vout.size(); ++j) {
     if (idx > (offset * nrows) + offset) {
       DISABLE_WARNING_PUSH
       DISABLE_WARNING_SIGN_CONVERSION
