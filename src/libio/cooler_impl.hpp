@@ -641,6 +641,8 @@ std::unique_ptr<H5::DSetCreatPropList> Cooler::generate_default_cprop(hsize_t ch
           std::is_same_v<T1, H5::PredType>,
       "Incompatible data type for variables type and fill_value: if T2 is string "
       "constructible, then T1 must be H5::StrType, else T2 is integral and type is H5::PredType");
+  (void)fill_value;
+  (void)type;
 
   H5::DSetCreatPropList prop{};
   prop.setChunk(1, &chunk_size);
