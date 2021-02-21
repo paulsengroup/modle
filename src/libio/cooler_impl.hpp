@@ -232,8 +232,9 @@ void Cooler::write_metadata() {
   str_buff = "fixed";
   att.write(METADATA_STR_TYPE, str_buff);
 
-  att = this->_fp->createAttribute("bin-size", hdf5::getH5_type<decltype(this->_bin_size)>(), attr_space);
-  att.write(H5::PredType::NATIVE_INT64, &this->_bin_size);
+  att = this->_fp->createAttribute("bin-size", hdf5::getH5_type<decltype(int_buff)>(), attr_space);
+  int_buff = static_cast<int64_t>(this->_bin_size);
+  att.write(H5::PredType::NATIVE_INT64, &int_buff);
 
   att = this->_fp->createAttribute("storage-mode", METADATA_STR_TYPE, attr_space);
   str_buff = "symmetric-upper";
@@ -644,7 +645,9 @@ std::unique_ptr<H5::DSetCreatPropList> Cooler::generate_default_cprop(hsize_t ch
   H5::DSetCreatPropList prop{};
   prop.setChunk(1, &chunk_size);
   prop.setDeflate(compression_lvl);
-  prop.setFillValue(type, &fill_value);
+  if constexpr (!std::is_constructible_v<H5std_string, T2>) {
+    prop.setFillValue(type, &fill_value);
+  }
 
   return std::make_unique<H5::DSetCreatPropList>(prop);
 }

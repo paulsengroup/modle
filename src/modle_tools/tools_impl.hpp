@@ -66,56 +66,27 @@ void eval_subcmd(const modle::tools::config& c) {
     }
   }
 
-  c.compute_pearson ? fmt::format(FMT_STRING("{}_spearman_linear_r.bw"), c.output_base_name) : "";
-  const auto out_path_pv_linear_spearman =
-      c.compute_pearson ? fmt::format(FMT_STRING("{}_spearman_linear_pv.bw"), c.output_base_name)
-                        : "";
-  const auto out_path_corr_cross_spearman =
-      c.compute_pearson ? fmt::format(FMT_STRING("{}_spearman_cross_r.bw"), c.output_base_name)
-                        : "";
-  const auto out_path_pv_cross_spearman =
-      c.compute_pearson ? fmt::format(FMT_STRING("{}_spearman_cross_pv.bw"), c.output_base_name)
-                        : "";
   const auto bn = c.output_base_name.string();
+
+  auto create_bwig_file = [&](std::string_view fname_suffix, bool skip) -> bigwig::file {
+    if (skip) {
+      return {nullptr, bigwig::close_bigwig_file};
+    }
+    return bigwig::init_bigwig_file(absl::StrCat(bn, "_", absl::StripPrefix(fname_suffix, "_")),
+                                    chr_list);
+  };
+
   // Init files and write bw header
-  auto* bw_corr_linear_pearson =
-      c.compute_pearson
-          ? bigwig::init_bigwig_file(absl::StrCat(bn, "_pearson_linear_r.bw"), chr_list)
-          : nullptr;
-  auto* bw_pv_linear_pearson =
-      c.compute_pearson
-          ? bigwig::init_bigwig_file(absl::StrCat(bn, "_pearson_linear_pv.bw"), chr_list)
-          : nullptr;
-  auto* bw_corr_cross_pearson =
-      c.compute_pearson
-          ? bigwig::init_bigwig_file(absl::StrCat(bn, "_pearson_cross_r.bw"), chr_list)
-          : nullptr;
-  auto* bw_pv_cross_pearson =
-      c.compute_pearson
-          ? bigwig::init_bigwig_file(absl::StrCat(bn, "_pearson_cross_pv.bw"), chr_list)
-          : nullptr;
-  auto* bw_corr_linear_spearman =
-      c.compute_spearman
-          ? bigwig::init_bigwig_file(absl::StrCat(bn, "_spearman_linear_r.bw"), chr_list)
-          : nullptr;
-  auto* bw_pv_linear_spearman =
-      c.compute_spearman
-          ? bigwig::init_bigwig_file(absl::StrCat(bn, "_spearman_linear_pv.bw"), chr_list)
-          : nullptr;
-  auto* bw_corr_cross_spearman =
-      c.compute_spearman
-          ? bigwig::init_bigwig_file(absl::StrCat(bn, "_spearman_cross_r.bw"), chr_list)
-          : nullptr;
-  auto* bw_pv_cross_spearman =
-      c.compute_spearman
-          ? bigwig::init_bigwig_file(absl::StrCat(bn, "_spearman_cross_pv.bw"), chr_list)
-          : nullptr;
-  auto* bw_linear_sed =
-      c.compute_edist ? bigwig::init_bigwig_file(absl::StrCat(bn, "_eucl_dist_linear.bw"), chr_list)
-                      : nullptr;
-  auto* bw_cross_sed =
-      c.compute_edist ? bigwig::init_bigwig_file(absl::StrCat(bn, "_eucl_dist_cross.bw"), chr_list)
-                      : nullptr;
+  auto bw_corr_linear_pearson = create_bwig_file("pearson_r_linear.bw", !c.compute_pearson);
+  auto bw_pv_linear_pearson = create_bwig_file("pearson_pv_linear.bw", !c.compute_pearson);
+  auto bw_corr_cross_pearson = create_bwig_file("pearson_r_cross.bw", !c.compute_pearson);
+  auto bw_pv_cross_pearson = create_bwig_file("pearson_pv_cross.bw", !c.compute_pearson);
+  auto bw_corr_linear_spearman = create_bwig_file("spearman_r_linear.bw", !c.compute_spearman);
+  auto bw_pv_linear_spearman = create_bwig_file("spearman_pv_linear.bw", !c.compute_spearman);
+  auto bw_corr_cross_spearman = create_bwig_file("spearman_r_cross.bw", !c.compute_spearman);
+  auto bw_pv_cross_spearman = create_bwig_file("spearman_pv_cross.bw", !c.compute_spearman);
+  auto bw_linear_sed = create_bwig_file("eucl_dist_linear.bw", !c.compute_edist);
+  auto bw_cross_sed = create_bwig_file("eucl_dist_cross.bw", !c.compute_edist);
 
   auto ref_cooler = cooler::Cooler(c.path_to_reference_matrix, cooler::Cooler::READ_ONLY, bin_size);
   auto input_cooler = cooler::Cooler(c.path_to_input_matrix, cooler::Cooler::READ_ONLY, bin_size);
@@ -152,7 +123,8 @@ void eval_subcmd(const modle::tools::config& c) {
         bigwig::write_range(std::string{chr_name}, pval_buff, offset, bin_size, bin_size,
                             bw_pv_linear_pearson);
         fmt::print(stderr,
-                   FMT_STRING("Pearson \"linear\" correlation calculation completed in {}.\n"),
+                   FMT_STRING("Pearson \"linear\" correlation calculation "
+                              "completed in {}.\n"),
                    absl::FormatDuration(absl::Now() - t0));
         break;
       case Transformation::Cross:
@@ -182,7 +154,8 @@ void eval_subcmd(const modle::tools::config& c) {
         bigwig::write_range(std::string{chr_name}, pval_buff, offset, bin_size, bin_size,
                             bw_pv_linear_spearman);
         fmt::print(stderr,
-                   FMT_STRING("Spearman \"linear\" correlation calculation completed in {}.\n"),
+                   FMT_STRING("Spearman \"linear\" correlation calculation "
+                              "completed in {}.\n"),
                    absl::FormatDuration(absl::Now() - t0));
         break;
       case Transformation::Cross:
@@ -191,7 +164,8 @@ void eval_subcmd(const modle::tools::config& c) {
         bigwig::write_range(std::string{chr_name}, pval_buff, offset, bin_size, bin_size,
                             bw_pv_cross_spearman);
         fmt::print(stderr,
-                   FMT_STRING("Spearman \"cross\" correlation calculation completed in {}.\n"),
+                   FMT_STRING("Spearman \"cross\" correlation calculation "
+                              "completed in {}.\n"),
                    absl::FormatDuration(absl::Now() - t0));
         break;
     }
@@ -289,10 +263,10 @@ void eval_subcmd(const modle::tools::config& c) {
     }
 
     if (!input_cooler.has_contacts_for_chr(inp_chr_idxes.at(chr_name))) {
-      fmt::print(
-          stderr,
-          FMT_STRING("WARNING: contact matrix doesn't have any contacts for '{}'. SKIPPING!\n"),
-          chr_name);
+      fmt::print(stderr,
+                 FMT_STRING("WARNING: contact matrix doesn't have any contacts "
+                            "for '{}'. SKIPPING!\n"),
+                 chr_name);
       continue;
     }
 
@@ -300,29 +274,30 @@ void eval_subcmd(const modle::tools::config& c) {
     if (c.deplete_contacts_from_reference) {
       cmatrix1.deplete_contacts(c.depletion_multiplier);
     }
-    fmt::print(
-        stderr,
-        FMT_STRING(
-            "Read {:.2f}M contacts for a {}x{} reference matrix in {} using {:.2f} MB of RAM.\n"),
-        static_cast<double>(cmatrix1.get_tot_contacts()) / 1.0e6, cmatrix1.nrows(),
-        cmatrix1.ncols(), absl::FormatDuration(absl::Now() - t0), cmatrix1.get_matrix_size_in_mb());
+    fmt::print(stderr,
+               FMT_STRING("Read {:.2f}M contacts for a {}x{} reference matrix in {} using "
+                          "{:.2f} MB of RAM.\n"),
+               static_cast<double>(cmatrix1.get_tot_contacts()) / 1.0e6, cmatrix1.nrows(),
+               cmatrix1.ncols(), absl::FormatDuration(absl::Now() - t0),
+               cmatrix1.get_matrix_size_in_mb());
     t0 = absl::Now();
 
     const auto cmatrix2 = input_cooler.cooler_to_cmatrix(chr_name, nrows, chr_subrange);
-    fmt::print(
-        stderr,
-        FMT_STRING(
-            "Read {:.2f}M contacts for a {}x{} input matrix in {} using {:.2f} MB of RAM.\n"),
-        static_cast<double>(cmatrix2.get_tot_contacts()) / 1.0e6, cmatrix2.nrows(),
-        cmatrix2.ncols(), absl::FormatDuration(absl::Now() - t0), cmatrix2.get_matrix_size_in_mb());
+    fmt::print(stderr,
+               FMT_STRING("Read {:.2f}M contacts for a {}x{} input matrix in {} using "
+                          "{:.2f} MB of RAM.\n"),
+               static_cast<double>(cmatrix2.get_tot_contacts()) / 1.0e6, cmatrix2.nrows(),
+               cmatrix2.ncols(), absl::FormatDuration(absl::Now() - t0),
+               cmatrix2.get_matrix_size_in_mb());
 
     if (cmatrix1.ncols() != cmatrix2.ncols() || cmatrix1.nrows() != cmatrix2.nrows()) {
-      throw std::runtime_error(fmt::format(
-          FMT_STRING("An error occurred while computing the correlation for '{}' between files "
-                     "{} and {}: Contact matrices should have the same shape "
-                     "m1=[{}][{}], m2=[{}][{}]"),
-          chr_name, c.path_to_reference_matrix, c.path_to_input_matrix, cmatrix1.nrows(),
-          cmatrix1.ncols(), cmatrix2.nrows(), cmatrix2.ncols()));
+      throw std::runtime_error(
+          fmt::format(FMT_STRING("An error occurred while computing the correlation for "
+                                 "'{}' between files "
+                                 "{} and {}: Contact matrices should have the same shape "
+                                 "m1=[{}][{}], m2=[{}][{}]"),
+                      chr_name, c.path_to_reference_matrix, c.path_to_input_matrix,
+                      cmatrix1.nrows(), cmatrix1.ncols(), cmatrix2.nrows(), cmatrix2.ncols()));
     }
 
     const auto ncols = cmatrix1.ncols();
@@ -355,17 +330,6 @@ void eval_subcmd(const modle::tools::config& c) {
       t.join();
     }
   }
-
-  bigwig::close_bigwig_file(bw_corr_linear_pearson);
-  bigwig::close_bigwig_file(bw_pv_linear_pearson);
-  bigwig::close_bigwig_file(bw_corr_cross_pearson);
-  bigwig::close_bigwig_file(bw_pv_cross_pearson);
-  bigwig::close_bigwig_file(bw_corr_linear_spearman);
-  bigwig::close_bigwig_file(bw_pv_linear_spearman);
-  bigwig::close_bigwig_file(bw_corr_cross_spearman);
-  bigwig::close_bigwig_file(bw_pv_cross_spearman);
-  bigwig::close_bigwig_file(bw_cross_sed);
-  bigwig::close_bigwig_file(bw_linear_sed);
 }
 
 void stats_subcmd(const modle::tools::config& c) {
