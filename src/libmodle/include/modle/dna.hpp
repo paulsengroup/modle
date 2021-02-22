@@ -150,10 +150,10 @@ class DNA {
     [[nodiscard]] inline bool has_extr_barrier() const;
     [[nodiscard]] inline absl::Span<ExtrusionBarrier> get_all_extr_barriers();
     /** Given a ptr to an instance of ExtrusionBarrier that belongs to this instance of
-     * DNA::Bin, return a ptr to the next instance of ExtrusionBarrier that is blocking
+     * DNA::Bin, return a ptr to the previous/next instance of ExtrusionBarrier that is blocking
      * ExtrusionUnit%s that are moving in the direction specified by \p d.
-     * @param next_b Pointer to ExtrusionBarrier to use to look for the next ExtrusionBarrier (i.e.
-     * DNA::Bin::get_next_extr_barrier will only search for ExtrusionBarriers that come after \p b).
+     * @param old_b Pointer to ExtrusionBarrier to use to look for the next ExtrusionBarrier (i.e.
+     * DNA::Bin::get_(prev)|(next)_extr_barrier will only search for ExtrusionBarriers that come before/after \p old_b).
      * When <tt> b == nullptr </tt>, then the search will involve all the ExtrusionBarrier that are
      * bound to the current instance of DNA::Bin.
      * @param d dna::Direction of the ExtrusionBarrier to look for (the caller has to make sure that
@@ -186,7 +186,7 @@ class DNA {
      * <tt> DNA::Bin::_extr_barriers = nullptr </tt>.
      * @param unit Pointer to the ExtrusionUnit to be registered as binding to this DNA::Bin.
      */
-    inline uint64_t register_extr_unit_binding(ExtrusionUnit* constunit);
+    inline uint64_t register_extr_unit_binding(ExtrusionUnit* unit);
     /** Remove the ExtrusionUnit \p unit from the list of ExtrusionUnit%s that are bound to this
      * instance of DNA::Bin.
      *
@@ -195,7 +195,7 @@ class DNA {
      * @param unit Pointer to the unit to be removed from the \p std::vector<ExtrusionUnit> bound to
      * this DNA::Bin.
      */
-    inline uint64_t unregister_extr_unit_binding(ExtrusionUnit* constunit);
+    inline uint64_t unregister_extr_unit_binding(ExtrusionUnit* unit);
     inline void sort_extr_barriers_by_pos();
 
    private:

@@ -20,7 +20,7 @@ class ContactMatrix {
  public:
   // Constructors
   inline ContactMatrix() = default;
-  inline ContactMatrix(uint64_t nrows, uint64_t ncols, bool fill_with_random_numbers = false);
+  inline ContactMatrix(std::size_t nrows, std::size_t ncols, bool fill_with_random_numbers = false);
 
   // Counts getters and setters
   [[nodiscard]] inline I get(std::size_t row, std::size_t col) const;

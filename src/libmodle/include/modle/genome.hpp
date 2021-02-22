@@ -68,6 +68,7 @@ class Genome {
    * ExtrusionBarrier%s are owned by the DNA::Bin to which they bound, while Chromosome::barriers
    * only stores ptrs to the actual ExtrusionBarrier%s.
    * @param nbarriers The number of barriers to randomly generate and bind.
+   * @param seed Random seed
    */
   template <typename I>
   inline void randomly_generate_extrusion_barriers(I nbarriers, uint64_t seed = 0);
