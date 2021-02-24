@@ -3,6 +3,8 @@
 #include <absl/types/span.h>
 #ifdef USE_XOSHIRO
 #include <XoshiroCpp.hpp>
+#else
+#include <random>
 #endif
 
 #include <boost/dynamic_bitset.hpp>
