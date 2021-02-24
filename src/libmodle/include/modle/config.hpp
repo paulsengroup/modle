@@ -16,12 +16,16 @@ using namespace std::literals::string_view_literals;
 struct config {
   // clang-format off
   // IO
-  std::string_view path_to_chr_sizes;
-  std::string_view path_to_chr_subranges;
-  std::string_view path_to_output_file;
-  std::string_view path_to_extr_barriers_bed;
+  std::filesystem::path path_to_chr_sizes;
+  std::filesystem::path path_to_chr_subranges;
+  std::filesystem::path path_to_output_file;
+  std::filesystem::path path_to_log_file;
+  std::filesystem::path path_to_output_file_w_noise{};
+  std::filesystem::path path_to_extr_barriers_bed;
   bool force{false};
   bool write_contacts_for_ko_chroms{false};
+  bool write_raw_contacts{true};
+  bool write_contacts_with_noise{false};
 
   // General settings
   uint32_t bin_size{1'000};  // NOLINT(readability-magic-numbers, cppcoreguidelines-avoid-magic-numbers)
@@ -50,6 +54,8 @@ struct config {
   bool exclude_chr_wo_extr_barriers{true};
   bool randomize_contact_sampling_interval{false};
   bool skip_output{false};
+  double random_noise_mean{0};
+  double random_noise_std{7'500 /* 7.5 Kbp */}; // NOLINT(readability-magic-numbers, cppcoreguidelines-avoid-magic-numbers)
 
   int argc;
   char** argv;

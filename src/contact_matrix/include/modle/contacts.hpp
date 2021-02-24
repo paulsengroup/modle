@@ -1,6 +1,9 @@
 #pragma once
 
 #include <absl/types/span.h>
+#ifdef USE_XOSHIRO
+#include <XoshiroCpp.hpp>
+#endif
 
 #include <boost/dynamic_bitset.hpp>
 #include <cstdint>  // for uint_*t
@@ -11,6 +14,14 @@
 #include <vector>
 
 namespace modle {
+
+#ifdef USE_XOSHIRO
+using PRNG = XoshiroCpp::Xoshiro256PlusPlus;
+using seeder = XoshiroCpp::SplitMix64;
+#else
+using PRNG = std::mt19937_64;
+using seeder = std::seed_seq;
+#endif
 
 template <typename I>
 class ContactMatrix {
@@ -60,6 +71,8 @@ class ContactMatrix {
   inline void compute_row_wise_contact_histogram(std::vector<uint64_t>& buff) const;
   [[nodiscard]] inline std::vector<uint64_t> compute_row_wise_contact_histogram() const;
   inline void deplete_contacts(double depletion_multiplier = 1.0);
+  inline void add_noise(double mean, double std, PRNG& rand_eng);
+  inline void add_noise(std::size_t bin_size, double mean, double stddev, PRNG& rand_eng);
 
  private:
   uint64_t _nrows{0};

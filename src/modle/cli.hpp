@@ -65,6 +65,18 @@ class Cli {
             "Write contacts for all chromosomes, even those where loop extrusion was not simulated. In the latter case ModLE will only write to the chrom, bins and indexes datasets.")
             ->capture_default_str();
 
+    io->add_flag(
+            "--write-raw-contacts",
+            this->_config.write_raw_contacts,
+            "Output raw contact frequencies to a .cool file.")
+            ->capture_default_str();
+
+    io->add_flag(
+            "--write-contacts-w-noise",
+            this->_config.write_contacts_with_noise,
+            "Output contact frequencies to a .cool file after adding random noise. When this flag is true, contact frequencies with noise are stored in a .cool file suffixed with \"_w_noise\"")
+            ->capture_default_str();
+
     gen->add_option(
             "-b,--bin-size",
             this->_config.bin_size,
@@ -169,6 +181,20 @@ class Cli {
             "Sample contacts using a bernoulli process with a probability of success of 1 / n, where n is the interval set through --contact-sampling-interval.")
             ->capture_default_str();
 
+    rand->add_option(
+            "--contact_noise_mean",
+            this->_config.random_noise_mean,
+            "Mean parameter (in base pairs) of the normal distribution that will be used to introduce noise in the contact matrix when --write-contacts-w-noise is specified.")
+            ->check(CLI::PositiveNumber)
+            ->capture_default_str();
+
+    rand->add_option(
+            "--contact_noise_std",
+            this->_config.random_noise_std,
+            "Standard deviation parameter (in base pairs) of the normal distribution that will be used to introduce noise in the contact matrix when --write-contacts-w-noise is specified.")
+            ->check(CLI::PositiveNumber)
+        ->capture_default_str();
+
     burn->add_option(
             "--min-burnin-rounds",
             this->_config.min_n_of_burnin_rounds,
@@ -230,6 +256,68 @@ class Cli {
     this->_config.argv = _argv;
     return this->_config;
   }
+
+  [[nodiscard]] static inline std::string process_paths_and_check_for_collisions(modle::config& c) {
+    auto base_out = c.path_to_output_file;
+    std::string collisions;
+    base_out.replace_extension();
+    c.path_to_output_file_w_noise = base_out;
+    c.path_to_log_file = base_out;
+    c.path_to_output_file_w_noise +=
+      absl::StrCat("_w_noise", c.path_to_output_file.extension().string());
+    c.path_to_log_file += ".log";
+
+    fmt::print(stderr, "path_to_file_w_noise={}\n", c.path_to_output_file_w_noise);
+
+    if (c.force) {
+      return "";
+    }
+
+    auto check_for_path_collisions = [](const std::filesystem::path& path) -> std::string {
+      if (std::filesystem::exists(path)) {
+        if (std::filesystem::is_directory(path)) {
+          return fmt::format(
+              FMT_STRING("Refusing to run the simulation because output file {} already "
+                         "exist (and is actually a {}directory). {}.\n"),
+              path, std::filesystem::is_empty(path) ? "" : "non-empty ",
+              std::filesystem::is_empty(path)
+                  ? " Pass --force to overwrite"
+                  : "You should specify a different output path, or manually remove the "
+                    "existing directory");
+        }
+        return fmt::format(
+            FMT_STRING("Refusing to run the simulation because output file {} already exist. Pass "
+                       "--force to overwrite.\n"),
+            path);
+      }
+      if (std::filesystem::is_directory(path) && !std::filesystem::is_empty(path)) {
+        return fmt::format(
+            FMT_STRING("Refusing to run the simulation because output file {} is a "
+                       "non-empty directory. You should specify a different output path, or "
+                       "manually remove the existing directory.\n"),
+            path);
+      }
+      return {};
+    };
+
+    if (std::filesystem::exists(c.path_to_log_file)) {
+      absl::StrAppend(&collisions, check_for_path_collisions(c.path_to_log_file));
+    }
+
+    if (c.write_raw_contacts) {
+      if (std::filesystem::exists(c.path_to_output_file)) {
+        absl::StrAppend(&collisions, check_for_path_collisions(c.path_to_output_file));
+      }
+    }
+
+    if (c.write_contacts_with_noise) {
+      if (std::filesystem::exists(c.path_to_output_file_w_noise)) {
+        absl::StrAppend(&collisions, check_for_path_collisions(c.path_to_output_file_w_noise));
+      }
+    }
+    return collisions;
+  }
+
   [[nodiscard]] inline int exit(const CLI::ParseError& e) const { return this->_cli.exit(e); }
 };
 

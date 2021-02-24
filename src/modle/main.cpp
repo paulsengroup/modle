@@ -88,10 +88,16 @@ void run_simulation(const modle::config& c) {
 
   if (!c.skip_output) {  // Write simulation params to file
     std::filesystem::create_directories(std::filesystem::path(c.path_to_output_file).parent_path());
-    std::ofstream cmd_file(
-        fmt::format("{}.settings.log", absl::StripSuffix(c.path_to_output_file, ".cool")));
-    fmt::print(cmd_file, FMT_STRING("{}\n{}\n"), c.to_string(),
-               absl::StrJoin(c.argv, c.argv + c.argc, " "));
+    std::ofstream log_file(c.path_to_log_file);
+    if (log_file) {
+      fmt::print(log_file, FMT_STRING("{}\n{}\n"), c.to_string(),
+                 absl::StrJoin(c.argv, c.argv + c.argc, " "));
+    } else {
+      fmt::print(
+          stderr,
+          FMT_STRING("WARNING: Unable to open log file {} for writing. Continuing anyway..."),
+          c.path_to_log_file);
+    }
   }
 
   if (!c.skip_burnin) {
@@ -119,10 +125,17 @@ void run_simulation(const modle::config& c) {
     if (c.force) {
       std::filesystem::remove_all(c.path_to_output_file);
     }
-    genome.write_contacts_to_file(c.path_to_output_file, c.write_contacts_for_ko_chroms);
+    if (c.write_raw_contacts) {
+      genome.write_contacts_to_file(c.path_to_output_file, c.write_contacts_for_ko_chroms);
+    }
+    if (c.write_contacts_with_noise) {
+      genome.write_contacts_w_noise_to_file(c.path_to_output_file_w_noise, c.random_noise_mean,
+                                            c.random_noise_std, c.write_contacts_for_ko_chroms);
+    }
   }
   fmt::print(stderr, "Simulation terminated without errors!\n\nBye.\n");
 }
+
 }  // namespace modle
 
 int main(int argc, char** argv) noexcept {
@@ -130,41 +143,12 @@ int main(int argc, char** argv) noexcept {
 
   try {
     auto config = cli.parse_arguments();
-    config.print();
-
-    if (std::filesystem::exists(config.path_to_output_file)) {
-      if (!config.force) {
-        if (std::filesystem::is_directory(config.path_to_output_file)) {
-          fmt::print(stderr,
-                     FMT_STRING("Refusing to run the simulation because output file '{}' already "
-                                "exist (and is actually a {}directory). {}.\n"),
-                     config.path_to_output_file,
-                     std::filesystem::is_empty(config.path_to_output_file) ? "" : "non-empty ",
-                     std::filesystem::is_empty(config.path_to_output_file)
-                         ? " Pass --force to overwrite"
-                         : "You should specify a different output path, or manually remove the "
-                           "existing directory");
-
-        } else {
-          fmt::print(
-              stderr,
-              FMT_STRING(
-                  "Refusing to run the simulation because output file '{}' already exist. Pass "
-                  "--force to overwrite.\n"),
-              config.path_to_output_file);
-        }
-        return 1;
-      }
-      if (std::filesystem::is_directory(config.path_to_output_file) &&
-          !std::filesystem::is_empty(config.path_to_output_file)) {
-        fmt::print(stderr,
-                   FMT_STRING("Refusing to run the simulation because output file '{}' is a "
-                              "non-empty directory. You should specify a different output path, or "
-                              "manually remove the existing directory.\n"),
-                   config.path_to_output_file);
-        return 1;
-      }
+    if (const auto collisions = cli.process_paths_and_check_for_collisions(config); !collisions.empty()) {
+      fmt::print(stderr, FMT_STRING("The following path collision(s) have been detected:\n{}"),
+                 collisions);
+      return 1;
     }
+    config.print();
 
     modle::run_simulation(config);
   } catch (const CLI::ParseError& e) {

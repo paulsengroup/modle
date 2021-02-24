@@ -1,6 +1,7 @@
 #pragma once
 
 #include <absl/container/flat_hash_map.h>
+#include <absl/strings/str_cat.h>
 #include <absl/time/clock.h>  // for Now
 #include <absl/time/time.h>   // for FormatDuration, Time
 #include <absl/types/span.h>
@@ -135,7 +136,7 @@ std::size_t Genome::get_nbarriers() const {
       [](std::size_t accumulator, const auto& chr) { return accumulator + chr.get_nbarriers(); });
 }
 
-void Genome::write_contacts_to_file(std::string_view output_file, bool include_ko_chroms) {
+void Genome::write_contacts_to_file(std::filesystem::path output_file, bool include_ko_chroms) {
   std::vector<ContactMatrix<uint32_t>*> cmatrices;
   std::vector<std::string> chr_names;
   std::vector<uint64_t> chr_starts;
@@ -172,23 +173,41 @@ void Genome::write_contacts_to_file(std::string_view output_file, bool include_k
     }
   }
   assert(!std::filesystem::exists(output_file));  // NOLINT
-  std::filesystem::create_directories(std::filesystem::path(output_file).parent_path());
+  std::filesystem::create_directories(output_file.parent_path());
   const auto t0 = absl::Now();
   {
     if (const auto n = std::count_if(this->_chromosomes.begin(), this->_chromosomes.end(),
                                      [&](const auto& c) { return c.ok() || include_ko_chroms; });
         n == 1) {
-      fmt::print(stderr, FMT_STRING("Writing one contact matrix to file '{}'...\n"), output_file);
+      fmt::print(stderr, FMT_STRING("Writing one contact matrix to file {}...\n"), output_file);
     } else {
-      fmt::print(stderr, FMT_STRING("Writing {} contact matrices to file '{}'...\n"), n,
+      fmt::print(stderr, FMT_STRING("Writing {} contact matrices to file {}...\n"), n,
                  output_file);
     }
     cooler::Cooler c(output_file, cooler::Cooler::WRITE_ONLY, this->_bin_size, chr_name_max_length);
     c.write_or_append_cmatrices_to_file(cmatrices, chr_names, chr_starts, chr_ends, chr_sizes);
     fmt::print(stderr, "Flushing data to disk...\n");
   }
-  fmt::print(stderr, FMT_STRING("Writing contacts to file '{}' took {}\n"), output_file,
+  fmt::print(stderr, FMT_STRING("Writing contacts to file {} took {}\n"), output_file,
              absl::FormatDuration(absl::Now() - t0));
+}
+
+void Genome::write_contacts_w_noise_to_file(std::filesystem::path output_file, double noise_mean,
+                                            double noise_std, bool include_ko_chroms) {
+  auto tpool = this->instantiate_thread_pool();
+  for (auto nchr = 0U; nchr < this->_chromosomes.size(); ++nchr) {
+    // Simulating loop extrusion on chromosomes without extr. barrier does not make sense
+    if (!this->_chromosomes[nchr].ok()) {
+      continue;
+    }
+    boost::asio::post(tpool, [&, nchr]() {
+      auto& chr = this->_chromosomes[nchr];
+      chr.contacts.add_noise(chr.get_bin_size(), noise_mean, noise_std, chr._rand_eng);
+    });
+  }
+  tpool.join();
+
+  this->write_contacts_to_file(output_file, include_ko_chroms);
 }
 /*
 void Genome::write_extrusion_barriers_to_file(std::string_view output_dir,
@@ -235,7 +254,7 @@ void Genome::randomly_generate_extrusion_barriers(I nbarriers, uint64_t seed) {
 }
 
 std::pair<std::size_t, std::size_t> Genome::import_extrusion_barriers_from_bed(
-    std::string_view path_to_bed, double probability_of_block) {
+    std::filesystem::path path_to_bed, double probability_of_block) {
   auto p = modle::bed::Parser(path_to_bed, bed::BED::Standard::BED6);
   std::size_t nrecords = 0;
   std::size_t nrecords_ignored = 0;
@@ -306,8 +325,8 @@ void Genome::assign_lefs(bool bind_lefs_after_assignment) {
   }
 
   std::sort(chroms_sorted_by_affinity.begin(), chroms_sorted_by_affinity.end(),
-            [&](const auto& chr_pair1, const auto& chr_pair2) {
-              return chr_lef_affinities[chr_pair1.first] > chr_lef_affinities[chr_pair2.first];
+            [&](const auto& chr1, const auto& chr2) {
+              return chr_lef_affinities[chr1.first] > chr_lef_affinities[chr2.first];
             });
   std::size_t lefs_assigned = 0;
   for (auto& [chr, nlefs] : chroms_sorted_by_affinity) {
@@ -351,10 +370,7 @@ std::pair<double, double> Genome::run_burnin(double prob_of_rebinding,
                                              uint32_t target_n_of_unload_events,
                                              uint64_t min_extr_rounds) {
   std::vector<double> burnin_rounds_performed(this->get_nchromosomes());
-  boost::asio::thread_pool tpool(std::min(
-      this->_nthreads,
-      static_cast<uint32_t>(std::count_if(this->_chromosomes.begin(), this->_chromosomes.end(),
-                                          [](const Chromosome& c) { return c.ok(); }))));
+  auto tpool = this->instantiate_thread_pool();
 
   for (auto nchr = 0U; nchr < this->get_nchromosomes(); ++nchr) {
     if (!this->_chromosomes[nchr].ok()) {
@@ -457,8 +473,7 @@ void Genome::simulate_extrusion(uint32_t iterations, double target_contact_densi
     iterations = UINT32_MAX;
   }
 
-  // Instantiate the thread pool to be used for simulation and IO operations
-  boost::asio::thread_pool tpool(std::min(this->_nthreads, this->get_n_ok_chromosomes()));
+  auto tpool = this->instantiate_thread_pool();
 
   // Initialize variables for simulation progress tracking
   std::atomic<uint64_t> ticks_done{0};
@@ -557,6 +572,9 @@ void Genome::simulate_extrusion(uint32_t iterations, double target_contact_densi
 
       // This for loop is where the simulation actually takes place.
       // We basically keep iterating until one of the stopping condition is met
+      // TODO: Instead of a raw loop, we could use std::transform and exec. policies and achieve a
+      // better level of parallelism To do this, we probably need to have a lock on lefs and
+      // process all left units first, then right all the right ones
       for (auto i = 1UL; i <= iterations; ++i) {
         // Determine whether we will register contacts produced during the current iteration
         bool register_contacts = this->_randomize_contact_sampling
@@ -689,5 +707,9 @@ std::vector<Lef> Genome::generate_lefs(uint32_t n) {
   });
 
   return v;
+}
+
+boost::asio::thread_pool Genome::instantiate_thread_pool() const {
+  return boost::asio::thread_pool(std::min(this->_nthreads, this->get_n_ok_chromosomes()));
 }
 }  // namespace modle

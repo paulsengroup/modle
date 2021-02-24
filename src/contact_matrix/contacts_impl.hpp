@@ -8,6 +8,9 @@
 #include <absl/types/span.h>
 #include <bzlib.h>
 #include <fmt/printf.h>
+#ifdef USE_XOSHIRO
+#include <XoshiroCpp.hpp>
+#endif
 
 #include <array>
 #include <boost/dynamic_bitset.hpp>
@@ -470,6 +473,37 @@ void ContactMatrix<I>::deplete_contacts(double depletion_multiplier) {
       }
     }
   }
+}
+
+template <typename I>
+void ContactMatrix<I>::add_noise(double mean, double std, PRNG &rand_eng) {
+  std::normal_distribution<double> rng(mean, std);
+  auto new_cmatrix = ContactMatrix<I>(this->nrows(), this->ncols());
+  DISABLE_WARNING_PUSH
+  DISABLE_WARNING_SIGN_CONVERSION
+  DISABLE_WARNING_SIGN_COMPARE
+  for (auto i = 0L; i < this->ncols(); ++i) {
+    for (auto j = i; j < i + this->ncols() && j < this->ncols(); ++j) {
+      for (auto k = this->get(i, j); k > 0; --k) {
+        const auto bin1 = i + static_cast<int64_t>(std::round(rng(rand_eng)));
+        const auto bin2 = j + static_cast<int64_t>(std::round(rng(rand_eng)));
+        if (bin1 < this->ncols() && bin2 < this->ncols()) {
+          new_cmatrix.increment(bin1, bin2);
+        }
+      }
+    }
+  }
+  DISABLE_WARNING_POP
+
+  this->_tot_contacts = new_cmatrix._tot_contacts;
+  this->_updates_missed += new_cmatrix.get_n_of_missed_updates();
+  this->_contacts = std::move(new_cmatrix._contacts);
+}
+
+template <typename I>
+void ContactMatrix<I>::add_noise(std::size_t bin_size, double mean, double stddev, PRNG &rand_eng) {
+  this->add_noise(mean / static_cast<double>(bin_size), stddev / static_cast<double>(bin_size),
+                  rand_eng);
 }
 
 template <typename I>

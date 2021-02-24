@@ -2,6 +2,7 @@
 
 #include <absl/types/span.h>
 
+#include <boost/asio/thread_pool.hpp>
 #include <cstdint>      // for uint*_t
 #include <memory>       // for _Destroy, allocator
 #include <string>       // for basic_string, string
@@ -50,7 +51,10 @@ class Genome {
   [[nodiscard]] inline std::size_t get_nbins() const;
   [[nodiscard]] inline std::size_t get_nbarriers() const;
 
-  inline void write_contacts_to_file(std::string_view output_file, bool include_ko_chroms = false);
+  inline void write_contacts_to_file(std::filesystem::path output_file,
+                                     bool include_ko_chroms = false);
+  inline void write_contacts_w_noise_to_file(std::filesystem::path output_file, double noise_mean,
+                                             double noise_std, bool include_ko_chroms = false);
   // inline void write_extrusion_barriers_to_file(std::string_view output_dir,
   //                                             bool force_overwrite) const;
 
@@ -81,7 +85,7 @@ class Genome {
    */
 
   inline std::pair<std::size_t, std::size_t> import_extrusion_barriers_from_bed(
-      std::string_view path_to_bed, double probability_of_block);
+      std::filesystem::path path_to_bed, double probability_of_block);
   inline void sort_extr_barriers_by_pos();
   inline void assign_lefs(bool bind_lefs_after_assignment);
 
@@ -132,6 +136,7 @@ class Genome {
   [[nodiscard]] inline std::vector<Chromosome> init_chromosomes_from_file(
       uint32_t diagonal_width) const;
   [[nodiscard]] inline std::vector<Lef> generate_lefs(uint32_t n);
+  [[nodiscard]] inline boost::asio::thread_pool instantiate_thread_pool() const;
 };
 }  // namespace modle
 
