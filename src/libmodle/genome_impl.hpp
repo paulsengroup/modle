@@ -52,7 +52,7 @@ Genome::Genome(const config& c)
     : _path_to_chrom_sizes_file(c.path_to_chr_sizes),
       _path_to_chr_subranges_file(c.path_to_chr_subranges),
       _bin_size(c.bin_size),
-      _avg_lef_processivity(c.average_lef_processivity),
+      _avg_lef_lifetime(c.average_lef_lifetime),
       _probability_of_barrier_block(c.probability_of_extrusion_barrier_block),
       _probability_of_lef_rebind(c.probability_of_lef_rebind),
       _probability_of_extr_unit_bypass(c.probability_of_extrusion_unit_bypass),
@@ -181,8 +181,7 @@ void Genome::write_contacts_to_file(std::filesystem::path output_file, bool incl
         n == 1) {
       fmt::print(stderr, FMT_STRING("Writing one contact matrix to file {}...\n"), output_file);
     } else {
-      fmt::print(stderr, FMT_STRING("Writing {} contact matrices to file {}...\n"), n,
-                 output_file);
+      fmt::print(stderr, FMT_STRING("Writing {} contact matrices to file {}...\n"), n, output_file);
     }
     cooler::Cooler c(output_file, cooler::Cooler::WRITE_ONLY, this->_bin_size, chr_name_max_length);
     c.write_or_append_cmatrices_to_file(cmatrices, chr_names, chr_starts, chr_ends, chr_sizes);
@@ -379,7 +378,7 @@ std::pair<double, double> Genome::run_burnin(double prob_of_rebinding,
     boost::asio::post(tpool, [&, nchr]() {
       auto& chr = this->_chromosomes[nchr];
       double avg_num_of_extr_events_per_bind =
-          (static_cast<double>(this->_avg_lef_processivity) / chr.get_bin_size()) /
+          (static_cast<double>(this->_avg_lef_lifetime) / chr.get_bin_size()) /
           2 /* N of active extr. unit */;
       const auto n_of_lefs_to_bind_each_round = static_cast<std::size_t>(std::round(
           std::max(static_cast<double>(chr.get_nlefs()) / avg_num_of_extr_events_per_bind, 1.0)));
@@ -702,7 +701,7 @@ std::vector<Lef> Genome::generate_lefs(uint32_t n) {
   std::vector<Lef> v;
   v.reserve(n);
   std::generate_n(std::back_inserter(v), n, [this]() {
-    return Lef{this->_bin_size, this->_avg_lef_processivity, this->_probability_of_extr_unit_bypass,
+    return Lef{this->_bin_size, this->_avg_lef_lifetime, this->_probability_of_extr_unit_bypass,
                this->_lef_unloader_strength_coeff};
   });
 

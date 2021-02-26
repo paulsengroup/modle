@@ -125,9 +125,9 @@ class Cli {
             ->required();
 
     gen->add_option(
-            "--avg-lef-processivity",
-            this->_config.average_lef_processivity,
-            "Average loop extrusion factor processivity, or in other words, average loop size in base pairs.")
+            "--avg-lef-lifetime",
+            this->_config.average_lef_lifetime,
+            "Average loop extrusion factor lifetime in base pairs, assuming the extruder is free to move along the DNA without being obstructed.")
             ->check(CLI::PositiveNumber)
             ->transform((remove_trailing_zeros_from_floats))
             ->capture_default_str();

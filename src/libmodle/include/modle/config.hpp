@@ -34,7 +34,7 @@ struct config {
   uint32_t simulation_iterations{15'000'000};  // NOLINT(readability-magic-numbers, cppcoreguidelines-avoid-magic-numbers)
   double target_contact_density{0.0};
   uint32_t number_of_lefs;
-  uint32_t average_lef_processivity{100'000};  // NOLINT(readability-magic-numbers, cppcoreguidelines-avoid-magic-numbers)
+  uint32_t average_lef_lifetime{100'000};  // NOLINT(readability-magic-numbers, cppcoreguidelines-avoid-magic-numbers)
   double lef_unloader_strength{1.0};
   bool skip_burnin{false};
   uint64_t seed{0};
@@ -89,7 +89,7 @@ struct config {
     {"LEF settings"sv,
     std::vector<cli_tokens>{
      {"# of LEFs", fmt::format(FMT_STRING("{}"), this->number_of_lefs)},
-     {"Avg. LEF processivity", fmt::format(FMT_STRING("{}"), this->average_lef_processivity)},
+     {"Avg. LEF lifetime", fmt::format(FMT_STRING("{}"), this->average_lef_lifetime)},
      {"Prob. of LEF re-bind", fmt::format(FMT_STRING("{:.4G}"), this->probability_of_lef_rebind)},
      {"Prob. of LEF bypass", fmt::format(FMT_STRING("{:.4G}"), this->probability_of_extrusion_unit_bypass)},
      {"LEF unloader strength", fmt::format(FMT_STRING("{:.4G}"), this->lef_unloader_strength)}}},

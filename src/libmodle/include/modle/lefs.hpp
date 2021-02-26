@@ -48,7 +48,7 @@ class ExtrusionUnit;
  */
 class Lef {
  public:
-  inline Lef(uint32_t bin_size, uint32_t avg_processivity, double probability_of_extruder_bypass,
+  inline Lef(uint32_t bin_size, uint32_t avg_lef_lifetime, double probability_of_extruder_bypass,
              double unloader_strength_coefficient);
 
   [[nodiscard]] inline std::string_view get_chr_name() const;
@@ -112,7 +112,7 @@ class Lef {
   /// This function resets the state of the Lef and its ExtrusionUnit%s.
   inline void unload();
 
-  /// This function uses computes the probability of unloading given the average LEF processivity,
+  /// This function uses computes the probability of unloading given the average LEF lifetime,
   /// bin size and the number of active extrusion units.
   [[nodiscard]] inline double compute_prob_of_unloading(uint32_t bin_size,
                                                         uint8_t n_of_active_extr_units = 2) const;

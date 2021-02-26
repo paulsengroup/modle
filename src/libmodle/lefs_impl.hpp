@@ -17,9 +17,9 @@
 
 namespace modle {
 
-Lef::Lef(uint32_t bin_size, uint32_t avg_processivity, double probability_of_extruder_bypass,
+Lef::Lef(uint32_t bin_size, uint32_t avg_lef_lifetime, double probability_of_extruder_bypass,
          double unloader_strength_coefficient)
-    : _avg_lifetime(avg_processivity),
+    : _avg_lifetime(avg_lef_lifetime),
       _probability_of_extr_unit_bypass(probability_of_extruder_bypass),
       _unloader_strength_coeff(unloader_strength_coefficient),
       _lifetime_generator(compute_prob_of_unloading(bin_size)),

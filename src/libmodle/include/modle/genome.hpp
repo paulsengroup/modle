@@ -119,7 +119,7 @@ class Genome {
   std::string _path_to_chrom_sizes_file;
   std::string _path_to_chr_subranges_file;
   uint32_t _bin_size;
-  uint32_t _avg_lef_processivity;  ///< Average loop size if loop extrusion takes place unobstructed
+  uint32_t _avg_lef_lifetime;  ///< Average loop size if loop extrusion takes place unobstructed
   double _probability_of_barrier_block;
   double _probability_of_lef_rebind;
   double _probability_of_extr_unit_bypass;
