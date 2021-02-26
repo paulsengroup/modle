@@ -18,10 +18,11 @@
 namespace modle {
 
 Lef::Lef(uint32_t bin_size, uint32_t avg_lef_lifetime, double probability_of_extruder_bypass,
-         double unloader_strength_coefficient)
+         double hard_stall_multiplier, double soft_stall_multiplier)
     : _avg_lifetime(avg_lef_lifetime),
       _probability_of_extr_unit_bypass(probability_of_extruder_bypass),
-      _unloader_strength_coeff(unloader_strength_coefficient),
+      _hard_stall_multiplier(hard_stall_multiplier),
+      _soft_stall_multiplier(soft_stall_multiplier),
       _lifetime_generator(compute_prob_of_unloading(bin_size)),
       _left_unit(std::make_unique<ExtrusionUnit>(*this, probability_of_extruder_bypass)),
       _right_unit(std::make_unique<ExtrusionUnit>(*this, probability_of_extruder_bypass)) {}
@@ -109,10 +110,10 @@ void Lef::check_constraints(modle::PRNG& rang_eng) {
   }
   this->_left_unit->check_constraints(rang_eng);
   this->_right_unit->check_constraints(rang_eng);
-  if (this->_unloader_strength_coeff > 0 && this->_left_unit->hard_stall() &&
+  if (this->_hard_stall_multiplier > 0 && this->_left_unit->hard_stall() &&
       this->_right_unit->hard_stall()) {
     const auto n_of_stalls_due_to_barriers = static_cast<uint32_t>(
-        std::lround(this->_unloader_strength_coeff *
+        std::lround(this->_hard_stall_multiplier *
                     std::min(this->_left_unit->_stalls_left, this->_right_unit->_stalls_left)));
     assert(std::numeric_limits<decltype(this->_lifetime)>::max() - n_of_stalls_due_to_barriers >
            this->_lifetime);  // NOLINT
@@ -164,6 +165,10 @@ std::size_t Lef::get_bin_size() const { return this->_chr->get_bin_size(); }
 std::size_t Lef::get_nbins() const { return this->_chr->get_nbins(); }
 
 uint64_t Lef::get_tot_bp_extruded() const { return this->_tot_bp_extruded; }
+
+double Lef::get_hard_stall_multiplier() const { return this->_hard_stall_multiplier; }
+
+double Lef::get_soft_stall_multiplier() const { return this->_soft_stall_multiplier; }
 
 void Lef::reset_tot_bp_extruded() { this->_tot_bp_extruded = 0; }
 
@@ -354,21 +359,22 @@ uint32_t ExtrusionUnit::check_for_extruder_collisions(modle::PRNG& rang_eng) {
 }
 
 uint64_t ExtrusionUnit::check_for_extrusion_barrier(modle::PRNG& rang_eng) {
-  uint32_t applied_stall = 0;
+  uint32_t nstalls = 0;
   if (this->get_extr_direction() == dna::fwd) {
     this->_blocking_barrier = this->get_bin().get_ptr_to_next_extr_barrier(this->_blocking_barrier);
   } else {
     this->_blocking_barrier = this->get_bin().get_ptr_to_prev_extr_barrier(this->_blocking_barrier);
   }
   if (this->_blocking_barrier) {
-    applied_stall = this->_blocking_barrier->generate_num_stalls(rang_eng);
+    nstalls = this->_blocking_barrier->generate_num_stalls(rang_eng);
     if (this->_blocking_barrier->get_direction_of_block() != this->get_extr_direction()) {
-      // "Small" stall
-      applied_stall /= 2;  // TODO: Make this tunable
+      // Soft stall
+      nstalls = static_cast<uint32_t>(
+          std::round(this->_parent_lef.get_soft_stall_multiplier() * static_cast<double>(nstalls)));
     }
-    this->increment_stalls(applied_stall);
+    this->increment_stalls(nstalls);
   }
-  return applied_stall;
+  return nstalls;
 }
 
 }  // namespace modle

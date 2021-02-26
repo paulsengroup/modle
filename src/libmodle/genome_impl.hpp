@@ -56,7 +56,8 @@ Genome::Genome(const config& c)
       _probability_of_barrier_block(c.probability_of_extrusion_barrier_block),
       _probability_of_lef_rebind(c.probability_of_lef_rebind),
       _probability_of_extr_unit_bypass(c.probability_of_extrusion_unit_bypass),
-      _lef_unloader_strength_coeff(c.lef_unloader_strength),
+      _hard_stall_multiplier(c.hard_stall_multiplier),
+      _soft_stall_multiplier(c.soft_stall_multiplier),
       _lefs(generate_lefs(c.number_of_lefs)),
       _chromosomes(init_chromosomes_from_file(c.diagonal_width)),
       _sampling_interval(c.contact_sampling_interval),
@@ -702,7 +703,7 @@ std::vector<Lef> Genome::generate_lefs(uint32_t n) {
   v.reserve(n);
   std::generate_n(std::back_inserter(v), n, [this]() {
     return Lef{this->_bin_size, this->_avg_lef_lifetime, this->_probability_of_extr_unit_bypass,
-               this->_lef_unloader_strength_coeff};
+               this->_hard_stall_multiplier, this->_soft_stall_multiplier};
   });
 
   return v;

@@ -133,10 +133,17 @@ class Cli {
             ->capture_default_str();
 
     gen->add_option(
-            "--lef-unloader-strength",
-            this->_config.lef_unloader_strength,
-            "Coefficient to control the increase in the stability of the LEF-DNA bind when a LEF is stalled in both direction by two extrusion barriers in convergent orientation.")
-            ->check(CLI::Range(0.0, 1.0))
+            "--hard-stall-multiplier",
+            this->_config.hard_stall_multiplier,
+            "Coefficient to control the increase in the stability of the LEF-DNA bind when a LEF is stalled in both direction by two extrusion barriers in convergent orientation. Setting this to 1 makes hard stalls strength identical to that of normal stalls")
+            ->check(CLI::PositiveNumber)
+            ->capture_default_str();
+
+    gen->add_option(
+            "--soft-stall-multiplier",
+            this->_config.soft_stall_multiplier,
+            "Coefficient to control the increase in the stability of the LEF-DNA bind when a LEF is stalled by an extrusion barrier in the non-blocking orientation. Setting this to 1 makes soft stalls strength identical to that of normal stalls")
+            ->check(CLI::PositiveNumber)
             ->capture_default_str();
 
     gen->add_flag(
@@ -264,7 +271,7 @@ class Cli {
     c.path_to_output_file_w_noise = base_out;
     c.path_to_log_file = base_out;
     c.path_to_output_file_w_noise +=
-      absl::StrCat("_w_noise", c.path_to_output_file.extension().string());
+        absl::StrCat("_w_noise", c.path_to_output_file.extension().string());
     c.path_to_log_file += ".log";
 
     fmt::print(stderr, "path_to_file_w_noise={}\n", c.path_to_output_file_w_noise);

@@ -143,7 +143,8 @@ int main(int argc, char** argv) noexcept {
 
   try {
     auto config = cli.parse_arguments();
-    if (const auto collisions = cli.process_paths_and_check_for_collisions(config); !collisions.empty()) {
+    if (const auto collisions = cli.process_paths_and_check_for_collisions(config);
+        !collisions.empty()) {
       fmt::print(stderr, FMT_STRING("The following path collision(s) have been detected:\n{}"),
                  collisions);
       return 1;

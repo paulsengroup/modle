@@ -153,9 +153,9 @@ class DNA {
      * DNA::Bin, return a ptr to the previous/next instance of ExtrusionBarrier that is blocking
      * ExtrusionUnit%s that are moving in the direction specified by \p d.
      * @param old_b Pointer to ExtrusionBarrier to use to look for the next ExtrusionBarrier (i.e.
-     * DNA::Bin::get_(prev)|(next)_extr_barrier will only search for ExtrusionBarriers that come before/after \p old_b).
-     * When <tt> b == nullptr </tt>, then the search will involve all the ExtrusionBarrier that are
-     * bound to the current instance of DNA::Bin.
+     * DNA::Bin::get_(prev)|(next)_extr_barrier will only search for ExtrusionBarriers that come
+     * before/after \p old_b). When <tt> b == nullptr </tt>, then the search will involve all the
+     * ExtrusionBarrier that are bound to the current instance of DNA::Bin.
      * @param d dna::Direction of the ExtrusionBarrier to look for (the caller has to make sure that
      * <tt> d != dna::Direction::none </tt>).
      * @return Pointer to the next ExtrusionBarrier with the orientation specified by \p d (or

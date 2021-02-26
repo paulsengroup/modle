@@ -49,7 +49,7 @@ class ExtrusionUnit;
 class Lef {
  public:
   inline Lef(uint32_t bin_size, uint32_t avg_lef_lifetime, double probability_of_extruder_bypass,
-             double unloader_strength_coefficient);
+             double hard_stall_multiplier, double soft_stall_multiplier);
 
   [[nodiscard]] inline std::string_view get_chr_name() const;
   [[nodiscard]] inline Chromosome* get_ptr_to_chr();
@@ -63,6 +63,8 @@ class Lef {
   [[nodiscard]] inline std::size_t get_bin_size() const;
   [[nodiscard]] inline std::size_t get_nbins() const;
   [[nodiscard]] inline uint64_t get_tot_bp_extruded() const;
+  [[nodiscard]] inline double get_hard_stall_multiplier() const;
+  [[nodiscard]] inline double get_soft_stall_multiplier() const;
   inline void reset_tot_bp_extruded();
 
   /// Calls extrude on the ExtrusionUnit%s. Returns the number of bp extruded
@@ -95,7 +97,8 @@ class Lef {
   uint32_t _lifetime{0};
   uint32_t _avg_lifetime;
   double _probability_of_extr_unit_bypass;
-  double _unloader_strength_coeff;
+  double _hard_stall_multiplier;
+  double _soft_stall_multiplier;
   std::geometric_distribution<uint32_t> _lifetime_generator;
   // This will be used to add an offset of -2, -1, +1, +2 when binding to a bin. This is needed to
   // avoid the undesired zebra pattern described in #3

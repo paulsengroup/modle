@@ -35,7 +35,8 @@ struct config {
   double target_contact_density{0.0};
   uint32_t number_of_lefs;
   uint32_t average_lef_lifetime{100'000};  // NOLINT(readability-magic-numbers, cppcoreguidelines-avoid-magic-numbers)
-  double lef_unloader_strength{1.0};
+  double hard_stall_multiplier{2.0};  // NOLINT(readability-magic-numbers, cppcoreguidelines-avoid-magic-numbers)
+  double soft_stall_multiplier{0.5};  // NOLINT(readability-magic-numbers, cppcoreguidelines-avoid-magic-numbers)
   bool skip_burnin{false};
   uint64_t seed{0};
 
@@ -92,7 +93,7 @@ struct config {
      {"Avg. LEF lifetime", fmt::format(FMT_STRING("{}"), this->average_lef_lifetime)},
      {"Prob. of LEF re-bind", fmt::format(FMT_STRING("{:.4G}"), this->probability_of_lef_rebind)},
      {"Prob. of LEF bypass", fmt::format(FMT_STRING("{:.4G}"), this->probability_of_extrusion_unit_bypass)},
-     {"LEF unloader strength", fmt::format(FMT_STRING("{:.4G}"), this->lef_unloader_strength)}}},
+     {"LEF unloader strength", fmt::format(FMT_STRING("{:.4G}"), this->hard_stall_multiplier)}}},
     {"Extr. barrier settings"sv,
     std::vector<cli_tokens>{
      {"# of randomly gen extr. barriers", fmt::format(FMT_STRING("{}"), this->number_of_randomly_gen_extr_barriers)},

@@ -46,7 +46,7 @@ for pr in "${avg_proc[@]}"; do
                                     --number-of-randomly-generated-lefs "$n_lefs"     \
                                     --randomize-contact-sampling-interval             \
                                     --contact-sampling-interval "$sampl_interval"     \
-                                    --lef-unloader-strength "$lef_unloader_strn"      \
+                                    --hard-stall-multiplier "$lef_unloader_strn"      \
                                     --force                                           \
                                     -b "$bin_size"                                    \
                                     --number-of-iterations "$iter"                    \

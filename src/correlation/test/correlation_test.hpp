@@ -119,7 +119,6 @@ TEST_CASE("Corr. test: Spearman Scipy long vect.", "[correlation][spearman][medi
   CHECK(Approx(pv).margin(0) == pv_py);
 }
 
-
 TEST_CASE("SED", "[correlation][sed][short]") {
   std::vector<uint32_t> v1{17, 86, 60, 77, 47, 3, 70, 87, 88, 92};   // NOLINT
   std::vector<uint32_t> v2{70, 29, 85, 61, 80, 34, 60, 31, 73, 66};  // NOLINT
