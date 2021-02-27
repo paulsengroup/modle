@@ -168,7 +168,7 @@ class Lef {
   [[nodiscard]] inline double compute_prob_of_unloading(uint32_t bin_size,
                                                         uint8_t n_of_active_extr_units = 2) const;
   [[nodiscard]] inline bool hard_stall() const;
-  inline uint32_t apply_hard_stall_and_extend_lifetime();
+  inline uint32_t apply_hard_stall_and_extend_lifetime(bool allow_lifetime_extension = true);
   inline void finalize_extrusion_unit_construction();
 };
 

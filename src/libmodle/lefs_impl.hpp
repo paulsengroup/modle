@@ -191,7 +191,7 @@ bool Lef::hard_stall() const {
   return this->_left_unit.hard_stall() && this->_right_unit.hard_stall();
 }
 
-uint32_t Lef::apply_hard_stall_and_extend_lifetime() {
+uint32_t Lef::apply_hard_stall_and_extend_lifetime(bool allow_lifetime_extension) {
   assert(this->hard_stall());  // NOLINT
   const auto nstalls = static_cast<uint32_t>(
       std::round(this->_hard_stall_multiplier *
@@ -207,13 +207,15 @@ uint32_t Lef::apply_hard_stall_and_extend_lifetime() {
   if (this->_right_unit._nstalls_lef_bar < nstalls) {
     this->_right_unit.set_lef_bar_stalls(nstalls);
   }
-  assert(std::numeric_limits<decltype(this->_lifetime)>::max() - nstalls >
-         this->_lifetime);  // NOLINT
-  // TODO consider whether we should always increase the lifetime, or only do so when _lifetime <
-  // nstalls
-  // this->_lifetime += nstalls;
-  if (nstalls > this->_lifetime) {
-    this->_lifetime = nstalls;
+  if (allow_lifetime_extension) {
+    assert(std::numeric_limits<decltype(this->_lifetime)>::max() - nstalls >
+           this->_lifetime);  // NOLINT
+    // TODO consider whether we should always increase the lifetime, or only do so when _lifetime <
+    // nstalls
+    // this->_lifetime += nstalls;
+    if (nstalls > this->_lifetime) {
+      this->_lifetime = nstalls;
+    }
   }
 
   return nstalls;

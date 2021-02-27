@@ -146,6 +146,12 @@ class Cli {
             ->check(CLI::PositiveNumber)
             ->capture_default_str();
 
+gen->add_flag(
+        "--allow-lef-lifetime-extension,!--disable-lef-lifetime-extension",
+        this->_config.allow_lef_lifetime_extension,
+        "Toggle on and off the ability to extend LEF lifetimes in case of hard stalls.")
+        ->capture_default_str();
+
     gen->add_flag(
             "--skip-burn-in",
             this->_config.skip_burnin,

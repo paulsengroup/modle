@@ -123,8 +123,9 @@ class Genome {
   double _probability_of_barrier_block;
   double _probability_of_lef_rebind;
   double _probability_of_extr_unit_bypass;
-  double _hard_stall_multiplier;
   double _soft_stall_multiplier;
+  double _hard_stall_multiplier;
+  bool _allow_lef_lifetime_extension;
   std::vector<Lef> _lefs;
   std::vector<Chromosome> _chromosomes;
   uint32_t _sampling_interval;
