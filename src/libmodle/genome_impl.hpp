@@ -100,15 +100,15 @@ absl::Span<const Lef> Genome::get_lefs() const { return absl::MakeConstSpan(this
 absl::Span<Lef> Genome::get_lefs() { return absl::MakeSpan(this->_lefs); }
 
 std::size_t Genome::get_nlefs() const { return this->_lefs.size(); }
-std::size_t Genome::get_n_of_free_lefs() const {
+std::size_t Genome::get_n_free_lefs() const {
   return std::accumulate(
       this->_lefs.begin(), this->_lefs.end(), 0UL,
       // NOLINTNEXTLINE(readability-implicit-bool-conversion)
       [](uint64_t accumulator, const auto& lef) { return accumulator + !lef.is_bound(); });
 }
-uint64_t Genome::get_n_of_busy_lefs() const {
-  assert(this->get_nlefs() >= this->get_n_of_free_lefs());  // NOLINT
-  return this->get_nlefs() - this->get_n_of_free_lefs();
+uint64_t Genome::get_n_busy_lefs() const {
+  assert(this->get_nlefs() >= this->get_n_free_lefs());  // NOLINT
+  return this->get_nlefs() - this->get_n_free_lefs();
 }
 
 std::size_t Genome::size() const {
@@ -173,7 +173,6 @@ void Genome::write_contacts_to_file(std::filesystem::path output_file, bool incl
       chr_sizes.emplace_back(chr.total_length);
     }
   }
-  assert(!std::filesystem::exists(output_file));  // NOLINT
   std::filesystem::create_directories(output_file.parent_path());
   const auto t0 = absl::Now();
   {
@@ -276,16 +275,16 @@ std::pair<std::size_t, std::size_t> Genome::import_extrusion_barriers_from_bed(
     }
     if (record.score < 0 || record.score > 1) {
       throw std::runtime_error(
-          fmt::format("Invalid score field detected for record %s[%lu-%lu]: expected a score "
-                      "between 0 and 1, got %.4g.",
+          fmt::format("Invalid score field detected for record {}[{}-{}]: expected a score "
+                      "between 0 and 1, got {:.4g}.",
                       record.name, record.chrom_start, record.chrom_end, record.score));
     }
     record.chrom_start -= chromosomes[record.chrom]->get_start_pos();
     record.chrom_end -= chromosomes[record.chrom]->get_start_pos();
     chromosomes[record.chrom]->allocate();
     chromosomes[record.chrom]->dna.add_extr_barrier(record);
-    // NOTE I am not adding ExtrusionBarrier* to chromosomes[].barriers, because if the vector
-    // holding the extrusion barrier is re-allocated, the stored in Chromosome.barriers will be
+    // NOTE I am not adding ExtrusionBarrier* to chromosomes[].barriers because if the vector
+    // holding the extrusion barrier is re-allocated, the ptr stored in Chromosome.barriers will be
     // invalidated
   }
 
@@ -399,7 +398,7 @@ std::pair<double, double> Genome::run_burnin(double prob_of_rebinding,
         for (auto i = 0U; i < lefs_loaded; ++i) {
           auto& lef = *chr.lefs[i];
           if (lef.is_bound()) {
-            lef.extrude(chr._rand_eng);
+            lef.try_extrude();
             /* clang-format off
              * TODO: Figure out why GCC 8.3 is complaining about this line. The warning is:
              * warning: conversion from ‘int’ to ‘__gnu_cxx::__alloc_traits<std::allocator<short unsigned int>, short unsigned int>::value_type’ {aka ‘short unsigned int’} may change value [-Wconversion]
@@ -589,7 +588,7 @@ void Genome::simulate_extrusion(uint32_t iterations, double target_contact_densi
             if (register_contacts) {
               lef->register_contact();
             }
-            lef->extrude(chr._rand_eng);
+            lef->try_extrude();
             ++local_extr_events_counter;
           }
         }
@@ -699,13 +698,13 @@ std::vector<Chromosome> Genome::init_chromosomes_from_file(uint32_t diagonal_wid
 }
 
 std::vector<Lef> Genome::generate_lefs(uint32_t n) {
-  std::vector<Lef> v;
-  v.reserve(n);
-  std::generate_n(std::back_inserter(v), n, [this]() {
-    return Lef{this->_bin_size, this->_avg_lef_lifetime, this->_probability_of_extr_unit_bypass,
-               this->_hard_stall_multiplier, this->_soft_stall_multiplier};
-  });
-
+  std::vector<Lef> v{
+      n, Lef{this->_bin_size, this->_avg_lef_lifetime, this->_probability_of_extr_unit_bypass,
+             this->_hard_stall_multiplier, this->_soft_stall_multiplier}};
+  for (auto& lef : v) {  // This seems to be needed to make sure that the ptr to Lef stored in the
+                         // extr. units is in a valid state
+    lef.finalize_extrusion_unit_construction();
+  }
   return v;
 }
 

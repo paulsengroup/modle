@@ -31,7 +31,7 @@ dna::Direction ExtrusionBarrier::get_direction_of_block() const {
 
 dna::Direction ExtrusionBarrier::get_motif_direction() const { return this->_direction; }
 
-uint32_t ExtrusionBarrier::generate_num_stalls(modle::PRNG &rand_eng) {
+uint32_t ExtrusionBarrier::generate_nstalls(modle::PRNG &rand_eng) {
   return this->_n_stall_generator(rand_eng);
 }
 

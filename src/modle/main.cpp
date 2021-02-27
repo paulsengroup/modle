@@ -109,7 +109,7 @@ void run_simulation(const modle::config& c) {
                    ? ""
                    : fmt::format(FMT_STRING(" on average (stdev = {:.2f})"), burnin_rounds_stdev));
   }
-  fmt::print(stderr, FMT_STRING("Bound {} LEFs in {}!\n"), genome.get_n_of_busy_lefs(),
+  fmt::print(stderr, FMT_STRING("Bound {} LEFs in {}!\n"), genome.get_n_busy_lefs(),
              absl::FormatDuration(absl::Now() - t0));
 
   t0 = absl::Now();

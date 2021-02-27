@@ -42,8 +42,8 @@ class Genome {
   [[nodiscard]] inline absl::Span<const Lef> get_lefs() const;
   [[nodiscard]] inline absl::Span<Lef> get_lefs();
   [[nodiscard]] inline std::size_t get_nlefs() const;
-  [[nodiscard]] inline std::size_t get_n_of_free_lefs() const;
-  [[nodiscard]] inline std::size_t get_n_of_busy_lefs() const;
+  [[nodiscard]] inline std::size_t get_n_free_lefs() const;
+  [[nodiscard]] inline std::size_t get_n_busy_lefs() const;
 
   [[nodiscard]] inline std::size_t size() const;
   [[nodiscard]] inline std::size_t n50() const;

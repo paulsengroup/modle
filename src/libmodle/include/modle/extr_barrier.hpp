@@ -33,7 +33,7 @@ class ExtrusionBarrier {
   [[nodiscard]] inline double get_prob_of_block() const;
   [[nodiscard]] inline dna::Direction get_direction_of_block() const;
   [[nodiscard]] inline dna::Direction get_motif_direction() const;
-  [[nodiscard]] inline uint32_t generate_num_stalls(modle::PRNG& rand_eng);
+  [[nodiscard]] inline uint32_t generate_nstalls(modle::PRNG& rand_eng);
   [[nodiscard]] inline bool operator<(const ExtrusionBarrier& other) const;
 
  private:

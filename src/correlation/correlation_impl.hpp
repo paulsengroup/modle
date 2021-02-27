@@ -79,7 +79,7 @@ double compute_pearson(absl::Span<const N1> v1, absl::Span<const N2> v2) {
 
   const auto pcc = std::clamp(cov / std::sqrt(d1 * d2), -1.0, 1.0);
 
-#ifndef DEBUG
+#ifndef NDEBUG
   if (std::isnan(pcc)) {
     throw std::logic_error("compute_pearson: pcc cannot be nan!");
   }

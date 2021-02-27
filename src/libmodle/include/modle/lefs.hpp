@@ -25,7 +25,54 @@ using seeder = std::seed_seq;
 
 struct Chromosome;
 class ExtrusionBarrier;
-class ExtrusionUnit;
+
+class ExtrusionUnit {
+  friend class Lef;
+
+ public:
+  inline explicit ExtrusionUnit(Lef* lef, double prob_of_extr_unit_bypass);
+  [[nodiscard]] inline std::size_t get_pos() const;
+  [[nodiscard]] inline dna::Direction get_extr_direction() const;
+  [[nodiscard]] inline bool is_stalled() const;
+  [[nodiscard]] inline bool is_bound() const;
+  inline uint64_t check_constraints(modle::PRNG& rand_eng);
+  inline bool try_extrude();
+  inline bool try_extrude_and_check_constraints(modle::PRNG& rand_eng);
+  [[nodiscard]] inline double get_prob_of_extr_unit_bypass() const;
+  [[nodiscard]] inline std::size_t get_bin_index() const;
+  [[nodiscard]] inline std::size_t get_bin_size() const;
+  [[nodiscard]] inline DNA::Bin& get_bin();
+  [[nodiscard]] inline const DNA::Bin& get_bin() const;
+
+ private:
+  Lef* _parent_lef;
+  std::size_t _bin_idx{std::numeric_limits<std::size_t>::max()};
+  DNA* _dna{nullptr};
+  ExtrusionBarrier* _blocking_barrier{nullptr};
+  dna::Direction _direction{dna::Direction::none};
+  uint32_t _nstalls_lef_lef{0};
+  uint32_t _nstalls_lef_bar{0};
+  std::geometric_distribution<uint32_t> _n_lef_lef_stall_generator;
+
+  inline void set_lef_bar_stalls(uint32_t n);
+  inline void set_lef_lef_stalls(uint32_t n);
+  inline void increment_lef_bar_stalls(uint32_t n = 1);
+  inline void increment_lef_lef_stalls(uint32_t n = 1);
+  inline void decrement_stalls(uint32_t n = 1);
+  inline void decrement_lef_bar_stalls(uint32_t n = 1);
+  inline void decrement_lef_lef_stalls(uint32_t n = 1);
+  inline void reset_lef_bar_stalls();
+  inline void reset_lef_lef_stalls();
+  inline void reset_stalls();
+  inline void unload();
+  inline void bind(Chromosome* chr, uint32_t pos, dna::Direction direction);
+
+  inline uint32_t check_for_lef_lef_collisions(modle::PRNG& rang_eng);
+  [[nodiscard]] inline uint64_t check_for_lef_bar_collision(modle::PRNG& rang_eng);
+  inline bool try_moving_to_next_bin();
+  inline bool try_moving_to_prev_bin();
+  [[nodiscard]] inline bool hard_stall() const;
+};
 
 /** \brief Class to model a Loop Extrusion Factor (LEF).
  *
@@ -35,9 +82,9 @@ class ExtrusionUnit;
  *
  * A Lef can bind to the DNA through the Lef::bind_at_pos member function. This function calls
  * Lef::_lifetime_generator to generate the initial lifetime of the Lef-DNA binding. The lifetime is
- * decreased at every call to Lef::extrude. Once the lifetime reaches 0, Lef::unload is called, and
- * this Lef instance detaches from the DNA molecule (or DNA::Bin%s to be more precise) and becomes
- * available for the rebind.
+ * decreased at every call to Lef::try_extrude. Once the lifetime reaches 0, Lef::unload is called,
+ * and this Lef instance detaches from the DNA molecule (or DNA::Bin%s to be more precise) and
+ * becomes available for the rebind.
  *
  * The DNA binding lifetime can be extended by a certain amount when both ExtrusionUnit%s are
  * stalled because of an ExtrusionBarrier. The magnitude of the stall and lifetime increase depends
@@ -47,6 +94,8 @@ class ExtrusionUnit;
  * ExtrusionUnit class, which are the ones who do the actual the heavy-lifting.
  */
 class Lef {
+  friend class Genome;
+
  public:
   inline Lef(uint32_t bin_size, uint32_t avg_lef_lifetime, double probability_of_extruder_bypass,
              double hard_stall_multiplier, double soft_stall_multiplier);
@@ -67,8 +116,8 @@ class Lef {
   [[nodiscard]] inline double get_soft_stall_multiplier() const;
   inline void reset_tot_bp_extruded();
 
-  /// Calls extrude on the ExtrusionUnit%s. Returns the number of bp extruded
-  inline uint32_t extrude(modle::PRNG& rand_eng);
+  /// Calls try_extrude on the ExtrusionUnit%s. Returns the number of bp extruded
+  inline uint32_t try_extrude();
   /// Register a contact between the DNA::Bin%s associated with the left and right ExtrusionUnit%s
   inline void register_contact();
   [[nodiscard]] inline std::pair<DNA::Bin*, DNA::Bin*> get_ptr_to_bins();
@@ -102,14 +151,13 @@ class Lef {
   std::geometric_distribution<uint32_t> _lifetime_generator;
   // This will be used to add an offset of -2, -1, +1, +2 when binding to a bin. This is needed to
   // avoid the undesired zebra pattern described in #3
-  // std::discrete_distribution<int8_t> _bin_idx_offset_generator{{1, 1, 0, 1, 1}};
   std::uniform_int_distribution<int64_t> _bin_idx_offset_generator{-2, 2};
   std::uniform_real_distribution<> _prob_of_rebind_generator{0.0, 1.0};
   std::size_t _binding_pos{std::numeric_limits<std::size_t>::max()};
   /// I am using a unique_ptr instead of storing the extr. units directly to avoid the cyclic
   /// dependency between dna.hpp and lefs.hpp
-  std::unique_ptr<ExtrusionUnit> _left_unit;
-  std::unique_ptr<ExtrusionUnit> _right_unit;
+  ExtrusionUnit _left_unit;
+  ExtrusionUnit _right_unit;
   uint64_t _tot_bp_extruded{0};
 
   /// This function resets the state of the Lef and its ExtrusionUnit%s.
@@ -119,46 +167,9 @@ class Lef {
   /// bin size and the number of active extrusion units.
   [[nodiscard]] inline double compute_prob_of_unloading(uint32_t bin_size,
                                                         uint8_t n_of_active_extr_units = 2) const;
-};
-
-class ExtrusionUnit {
-  friend class Lef;
-
- public:
-  inline explicit ExtrusionUnit(Lef& lef, double prob_of_extr_unit_bypass);
-  [[nodiscard]] inline std::size_t get_pos() const;
-  [[nodiscard]] inline dna::Direction get_extr_direction() const;
-  [[nodiscard]] inline bool is_stalled() const;
-  [[nodiscard]] inline bool is_bound() const;
-  inline uint64_t check_constraints(modle::PRNG& rand_eng);
-  inline bool try_extrude(modle::PRNG& rand_eng);
-  [[nodiscard]] inline double get_prob_of_extr_unit_bypass() const;
-  [[nodiscard]] inline std::size_t get_bin_index() const;
-  [[nodiscard]] inline std::size_t get_bin_size() const;
-  [[nodiscard]] inline DNA::Bin& get_bin();
-  [[nodiscard]] inline const DNA::Bin& get_bin() const;
-
- private:
-  Lef& _parent_lef;
-  std::size_t _bin_idx{std::numeric_limits<std::size_t>::max()};
-  DNA* _dna{nullptr};
-  ExtrusionBarrier* _blocking_barrier{nullptr};
-  dna::Direction _direction{dna::Direction::none};
-  uint32_t _stalls_left{0};
-  std::geometric_distribution<uint32_t> _n_stall_generator;
-
-  inline void set_stalls(uint32_t n);
-  inline void increment_stalls(uint32_t n = 1);
-  inline void decrement_stalls(uint32_t n = 1);
-  inline void reset_stalls();
-  inline void unload();
-  inline void bind(Chromosome* chr, uint32_t pos, dna::Direction direction, modle::PRNG& rand_eng);
-
-  inline uint32_t check_for_extruder_collisions(modle::PRNG& rang_eng);
-  [[nodiscard]] inline uint64_t check_for_extrusion_barrier(modle::PRNG& rang_eng);
-  inline bool try_moving_to_next_bin();
-  inline bool try_moving_to_prev_bin();
   [[nodiscard]] inline bool hard_stall() const;
+  inline uint32_t apply_hard_stall_and_extend_lifetime();
+  inline void finalize_extrusion_unit_construction();
 };
 
 }  // namespace modle
