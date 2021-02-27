@@ -21,11 +21,7 @@ option(ENABLE_IPO "Enable Interprocedural Optimization, aka Link Time Optimizati
 
 if(ENABLE_IPO)
   include(CheckIPOSupported)
-  check_ipo_supported(
-    RESULT
-    result
-    OUTPUT
-    output)
+  check_ipo_supported(RESULT result OUTPUT output)
   if(result)
     set(CMAKE_INTERPROCEDURAL_OPTIMIZATION TRUE)
   else()
@@ -33,12 +29,11 @@ if(ENABLE_IPO)
   endif()
 endif()
 
-
 option(ENABLE_PSO "Enable platform specific optimization" OFF)
 
-SET(ARCH
-        "native"
-        CACHE STRING "Optimization target for platform specific optimization")
+set(ARCH
+    "native"
+    CACHE STRING "Optimization target for platform specific optimization")
 
 if(ENABLE_PSO AND NOT MSVC)
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -march=${ARCH}")

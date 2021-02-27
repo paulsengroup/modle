@@ -25,9 +25,13 @@ macro(run_conan)
     ${CONAN_EXTRA_OPTIONS}
     SETTINGS
     ${CONAN_EXTRA_SETTINGS}
+    ENV
+    "CC=${CMAKE_C_COMPILER}"
+    "CXX=${CMAKE_CXX_COMPILER}"
     BASIC_SETUP
     CMAKE_TARGETS # individual targets to link to
     BUILD
     missing
-    PROFILE_AUTO ALL)
+    PROFILE_AUTO
+    ALL)
 endmacro()

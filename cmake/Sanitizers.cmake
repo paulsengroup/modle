@@ -46,21 +46,31 @@ function(enable_sanitizers project_name)
     endif()
 
     # Workaround to support CMake <3.12, where the list JOIN function is not available
-    if(${CMAKE_VERSION} VERSION_LESS  "3.12.0")
+    if(${CMAKE_VERSION} VERSION_LESS "3.12.0")
       # https://stackoverflow.com/questions/7172670/best-shortest-way-to-join-a-list-in-cmake
-      function(JOIN VALUES GLUE OUTPUT)
-        string (REPLACE ";" "${GLUE}" _TMP_STR "${VALUES}")
-        set (${OUTPUT} "${_TMP_STR}" PARENT_SCOPE)
+      function(
+        JOIN
+        VALUES
+        GLUE
+        OUTPUT)
+        string(
+          REPLACE ";"
+                  "${GLUE}"
+                  _TMP_STR
+                  "${VALUES}")
+        set(${OUTPUT}
+            "${_TMP_STR}"
+            PARENT_SCOPE)
       endfunction()
-      JOIN("${SANITIZERS}" "," LIST_OF_SANITIZERS)
+      join("${SANITIZERS}" "," LIST_OF_SANITIZERS)
     else()
       list(
-      JOIN
-      SANITIZERS
-      ","
-      LIST_OF_SANITIZERS)
+        JOIN
+        SANITIZERS
+        ","
+        LIST_OF_SANITIZERS)
 
-  endif()
+    endif()
   endif()
 
   if(LIST_OF_SANITIZERS)

@@ -17,10 +17,6 @@ function(enable_doxygen)
     set(DOXYGEN_DOT_GRAPH_MAX_NODES 100)
     set(DOXYGEN_QUIET YES)
     find_package(Doxygen REQUIRED dot)
-    doxygen_add_docs(
-            doxygen
-            "${PROJECT_SOURCE_DIR}/src"
-            COMMENT "Generate documentation"
-    )
+    doxygen_add_docs(doxygen "${PROJECT_SOURCE_DIR}/src" COMMENT "Generate documentation")
   endif()
 endfunction()
