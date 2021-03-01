@@ -120,12 +120,14 @@ void Lef::register_contact() {
 }
 
 void Lef::check_constraints(modle::PRNG& rang_eng) {
+  this->_left_unit.check_for_lef_lef_collisions(rang_eng);
+  this->_right_unit.check_for_lef_lef_collisions(rang_eng);
   if (this->_left_unit._nstalls_lef_bar > 0 && this->_right_unit._nstalls_lef_bar > 0) {
     return;
   }
 
-  this->_left_unit.check_constraints(rang_eng);
-  this->_right_unit.check_constraints(rang_eng);
+  this->_left_unit.check_for_lef_bar_collision(rang_eng);
+  this->_right_unit.check_for_lef_bar_collision(rang_eng);
 
   if (this->hard_stall()) {
     this->apply_hard_stall_and_extend_lifetime();
@@ -418,9 +420,17 @@ uint32_t ExtrusionUnit::check_for_lef_lef_collisions(modle::PRNG& rang_eng) {
   assert(this->_bin_idx < this->_dna->get_n_bins());  // NOLINT
   assert(this->get_bin().get_n_extr_units() > 0);     // NOLINT
   uint32_t nstalls = 0;
-  // Avoid checking further if this is the only ExtrusionUnit bound to this->_bin
-  // and if the prob of bypass is < 1.0
-  if (this->get_bin().get_n_extr_units() == 1 || this->_n_lef_lef_stall_generator.p() == 1.0) {
+
+  // If there's a single extrusion unit bound to the current bin, reset the number of lef_lef stalls
+  // and return immediately
+  if (this->get_bin().get_n_extr_units() == 1) {
+    this->_nstalls_lef_lef = 0;
+    return nstalls;
+  }
+
+  // Avoid checking further if this lef has already been stalled due to lef_lef collisions, or if
+  // the prob. of lef bypass is 1.0 (i.e. lefs are effectively "transparent" to each other)
+  if (this->_nstalls_lef_lef > 0 || this->_n_lef_lef_stall_generator.p() == 1.0) {
     return nstalls;
   }
 
@@ -439,13 +449,12 @@ uint32_t ExtrusionUnit::check_for_lef_lef_collisions(modle::PRNG& rang_eng) {
         this->increment_lef_lef_stalls(nstalls);
         other->increment_lef_lef_stalls(nstalls);
       }
-      break;
     }
   }
   return nstalls;
 }
 
-uint64_t ExtrusionUnit::check_for_lef_bar_collision(modle::PRNG& rang_eng) {
+uint32_t ExtrusionUnit::check_for_lef_bar_collision(modle::PRNG& rang_eng) {
   uint32_t nstalls = 0;
   if (this->get_extr_direction() == dna::fwd) {
     this->_blocking_barrier = this->get_bin().get_ptr_to_next_extr_barrier(this->_blocking_barrier);

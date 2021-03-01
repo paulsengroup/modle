@@ -35,7 +35,7 @@ class ExtrusionUnit {
   [[nodiscard]] inline dna::Direction get_extr_direction() const;
   [[nodiscard]] inline bool is_stalled() const;
   [[nodiscard]] inline bool is_bound() const;
-  inline uint64_t check_constraints(modle::PRNG& rand_eng);
+  [[maybe_unused]] inline uint64_t check_constraints(modle::PRNG& rand_eng);
   inline bool try_extrude();
   inline bool try_extrude_and_check_constraints(modle::PRNG& rand_eng);
   [[nodiscard]] inline double get_prob_of_extr_unit_bypass() const;
@@ -68,7 +68,7 @@ class ExtrusionUnit {
   inline void bind(Chromosome* chr, uint32_t pos, dna::Direction direction);
 
   inline uint32_t check_for_lef_lef_collisions(modle::PRNG& rang_eng);
-  [[nodiscard]] inline uint64_t check_for_lef_bar_collision(modle::PRNG& rang_eng);
+  inline uint32_t check_for_lef_bar_collision(modle::PRNG& rang_eng);
   inline bool try_moving_to_next_bin();
   inline bool try_moving_to_prev_bin();
   [[nodiscard]] inline bool hard_stall() const;
