@@ -87,10 +87,10 @@ class Genome {
                                         std::vector<double> fwd_barriers_pblock,
                                         std::vector<double> rev_barriers_pblock);
   template <typename I>
-  inline static void bind_lefs(const Chromosome* chrom, std::vector<Lef>& lefs,
+  inline void bind_lefs(const Chromosome* chrom, std::vector<Lef>& lefs,
                                modle::PRNG& rand_eng, const std::vector<I>& mask);
 
-  inline static void bind_all_lefs(const Chromosome* chrom, std::vector<Lef>& lefs,
+  inline void bind_all_lefs(const Chromosome* chrom, std::vector<Lef>& lefs,
                                    std::vector<std::size_t>& fwd_rank_buff,
                                    std::vector<std::size_t>& rev_rank_buff, PRNG& rand_eng);
 

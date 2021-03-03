@@ -436,7 +436,7 @@ void Genome::simulate_extrusion_kernel(const Chromosome* chrom, std::size_t ncel
   std::vector<std::size_t> fwd_rank_buff(lefs.size());
   std::vector<std::size_t> rev_rank_buff(lefs.size());
 
-  Genome::bind_all_lefs(chrom, lefs, fwd_rank_buff, rev_rank_buff, rand_eng);
+  this->bind_all_lefs(chrom, lefs, fwd_rank_buff, rev_rank_buff, rand_eng);
 
   std::vector<uint_fast16_t> fwd_lef_collision_counter_buff(lefs.size());
   auto rev_lef_collision_counter_buff = fwd_lef_collision_counter_buff;
