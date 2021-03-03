@@ -33,7 +33,7 @@ struct config {
   uint32_t diagonal_width{3'000'000 /* 3 Mbp */};  // NOLINT(readability-magic-numbers, cppcoreguidelines-avoid-magic-numbers)
   uint32_t simulation_iterations{15'000'000};  // NOLINT(readability-magic-numbers, cppcoreguidelines-avoid-magic-numbers)
   double target_contact_density{0.0};
-  uint32_t number_of_lefs;
+  double number_of_lefs_per_mbp;
   uint32_t average_lef_lifetime{100'000};  // NOLINT(readability-magic-numbers, cppcoreguidelines-avoid-magic-numbers)
   double hard_stall_multiplier{2.0};  // NOLINT(readability-magic-numbers, cppcoreguidelines-avoid-magic-numbers)
   double soft_stall_multiplier{0.5};  // NOLINT(readability-magic-numbers, cppcoreguidelines-avoid-magic-numbers)
@@ -90,7 +90,7 @@ struct config {
      {"Contact sampling interval", fmt::format(FMT_STRING("{}"), this->contact_sampling_interval)}}},
     {"LEF settings"sv,
     std::vector<cli_tokens>{
-     {"# of LEFs", fmt::format(FMT_STRING("{}"), this->number_of_lefs)},
+     {"# of LEFs per Mbp", fmt::format(FMT_STRING("{}"), this->number_of_lefs_per_mbp)},
      {"Avg. LEF lifetime", fmt::format(FMT_STRING("{}"), this->average_lef_lifetime)},
      {"Prob. of LEF re-bind", fmt::format(FMT_STRING("{:.4G}"), this->probability_of_lef_rebind)},
      {"Prob. of LEF bypass", fmt::format(FMT_STRING("{:.4G}"), this->probability_of_extrusion_unit_bypass)},

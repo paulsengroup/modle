@@ -25,6 +25,29 @@ Bp ExtrusionUnit::pos() const { return this->_pos; }
 std::size_t ExtrusionUnit::rank() const { return this->_rank; }
 
 Bp ExtrusionUnit::lifetime() const { return this->_lifetime; }
+
+bool ExtrusionUnit::stalled() const { return this->_nstalls_lef_lef + this->_nstalls_lef_bar > 0; }
+
+void ExtrusionUnit::increment_stalls(Bp nstalls) {
+  assert(this->stalled());
+  if (this->_nstalls_lef_lef > 0) {
+    this->_nstalls_lef_lef +=
+        std::min(nstalls, std::numeric_limits<Bp>::max() - this->_nstalls_lef_lef);
+  } else {
+    this->_nstalls_lef_bar +=
+        std::min(nstalls, std::numeric_limits<Bp>::max() - this->_nstalls_lef_bar);
+  }
+}
+
+void ExtrusionUnit::decrement_stalls(Bp nstalls) {
+  assert(this->stalled());
+  if (this->_nstalls_lef_lef > 0) {
+    this->_nstalls_lef_lef -= std::min(nstalls, this->_nstalls_lef_lef);
+  } else {
+    this->_nstalls_lef_bar -= std::min(nstalls, this->_nstalls_lef_bar);
+  }
+}
+
 Bp ExtrusionUnit::lef_lef_stalls() const { return this->_nstalls_lef_lef; }
 
 void ExtrusionUnit::operator-(Bp n) { this->_pos = std::clamp(this->_pos - n, 0UL, this->_pos); }

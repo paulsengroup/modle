@@ -36,6 +36,7 @@ class Chromosome {
   [[nodiscard]] inline std::size_t end_pos() const;
   [[nodiscard]] inline std::size_t size() const;
   [[nodiscard]] inline std::size_t simulated_size() const;
+  [[nodiscard]] inline bool ok() const;
   [[nodiscard]] inline std::size_t nbarriers() const;
   [[nodiscard]] inline const absl::btree_set<bed::BED>& get_barriers() const;
 

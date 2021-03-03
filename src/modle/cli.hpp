@@ -117,11 +117,10 @@ class Cli {
             ->excludes(gen->get_option("--number-of-iterations"));
 
     gen->add_option(
-            "--number-of-randomly-generated-lefs",
-            this->_config.number_of_lefs,
-            "Number of loop extrusion factors (LEFs) to be randomly generated and bound.")
+            "--lefs-per-mbp",
+            this->_config.number_of_lefs_per_mbp,
+            "Number of loop extrusion factors (LEFs) per Mbp to be simulated.")
             ->check(CLI::NonNegativeNumber)
-            ->transform((remove_trailing_zeros_from_floats))
             ->required();
 
     gen->add_option(

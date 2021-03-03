@@ -88,6 +88,7 @@ std::size_t Chromosome::end_pos() const { return this->_end; }
 
 std::size_t Chromosome::size() const { return this->_size; }
 std::size_t Chromosome::simulated_size() const { return this->_end - this->_start; }
+bool Chromosome::ok() const { return !this->_barriers.empty(); }
 
 std::size_t Chromosome::nbarriers() const { return static_cast<size_t>(this->_barriers.size()); }
 

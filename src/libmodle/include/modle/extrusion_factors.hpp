@@ -19,6 +19,9 @@ class ExtrusionUnit {
   [[nodiscard]] inline Bp pos() const;
   [[nodiscard]] inline std::size_t rank() const;
   [[nodiscard]] inline Bp lifetime() const;
+  [[nodiscard]] inline bool stalled() const;
+  inline void increment_stalls(Bp nstalls);
+  inline void decrement_stalls(Bp nstalls);
   [[nodiscard]] inline Bp lef_lef_stalls() const;
   inline void operator-(Bp n);
   inline void operator+(Bp n);

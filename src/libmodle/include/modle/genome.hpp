@@ -55,6 +55,7 @@ class Genome {
   std::filesystem::path _path_to_extr_barriers;
   uint32_t _bin_size;
   uint32_t _avg_lef_lifetime;  ///< Average loop size if loop extrusion takes place unobstructed
+  double _nlefs_per_mbp;
   double _probability_of_barrier_block;
   double _probability_of_lef_rebind;
   double _probability_of_extr_unit_bypass;
@@ -81,7 +82,8 @@ class Genome {
       const std::filesystem::path& path_to_extr_barriers,
       const std::filesystem::path& path_to_chrom_subranges = {});
 
-  inline void simulate_extrusion_kernel(const Chromosome* chrom, std::size_t ncell,
+  inline void simulate_extrusion_kernel(const Chromosome* chrom, std::size_t cell_id,
+                                        std::size_t burnin_iters, std::size_t simulation_iters,
                                         std::vector<Lef> lefs, std::vector<Bp> fwd_barriers,
                                         std::vector<Bp> rev_barriers,
                                         std::vector<double> fwd_barriers_pblock,
@@ -97,7 +99,9 @@ class Genome {
   inline static void rank_lefs(std::vector<Lef>& lefs, std::vector<std::size_t>& fwd_rank_buff,
                                std::vector<std::size_t>& rev_rank_buff, bool init_buffers = false);
 
-  // Loop over lefs and identifi colliding extr. units (i.e. units that travel in opposite
+  inline void extrude(const Chromosome* chrom, std::vector<Lef>& lefs);
+
+  // Loop over lefs and identify colliding extr. units (i.e. units that travel in opposite
   // direction and that are within <p>dist_threshold</p> bp from each other
   template <typename I>
   inline static void check_lef_lef_collisions(const std::vector<Lef>& lefs,
