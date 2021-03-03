@@ -18,10 +18,7 @@ endif()
 
 target_sources(
   libmodle
-  INTERFACE ${CMAKE_CURRENT_SOURCE_DIR}/dna_impl.hpp
-            ${CMAKE_CURRENT_SOURCE_DIR}/extr_barrier_impl.hpp
-            ${CMAKE_CURRENT_SOURCE_DIR}/genome_impl.hpp
-            ${CMAKE_CURRENT_SOURCE_DIR}/lefs_impl.hpp)
+  INTERFACE ${CMAKE_CURRENT_SOURCE_DIR}/genome_impl.hpp)
 
 target_include_directories(libmodle INTERFACE include/ ${XOSHIRO_INCLUDE_DIR})
 
@@ -44,8 +41,9 @@ if(ENABLE_PCH AND ${CMAKE_VERSION} VERSION_GREATER_EQUAL "3.16.0")
     INTERFACE
     [["modle/common.hpp"]]
     [["modle/config.hpp"]]
-    [["modle/dna.hpp"]]
-    [["modle/extr_barrier.hpp"]]
-    [["modle/genome.hpp"]]
-    [["modle/lefs.hpp"]])
+    [["modle/genome.hpp"]])
+endif()
+
+if(ENABLE_TESTING)
+  add_subdirectory(test)
 endif()

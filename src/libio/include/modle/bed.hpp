@@ -42,6 +42,7 @@ struct BED {
     BED12 = 12U,
     none = 13U
   };
+
   enum Fields : uint8_t {
     BED_CHROM = 1,
     BED_CHROM_START = 2,
@@ -56,6 +57,7 @@ struct BED {
     BED_BLOCK_SIZES = 11,
     BED_BLOCK_STARTS = 12
   };
+
   enum FieldsIdx : uint8_t {
     BED_CHROM_IDX = 0,
     BED_CHROM_START_IDX = 1,
@@ -70,8 +72,10 @@ struct BED {
     BED_BLOCK_SIZES_IDX = 10,
     BED_BLOCK_STARTS_IDX = 11
   };
+
   inline BED() = default;
   inline explicit BED(std::string_view record, Standard bed_standard = none);
+
   std::string chrom{};
   uint64_t chrom_start{};
   uint64_t chrom_end{};

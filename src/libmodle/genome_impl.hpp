@@ -13,6 +13,7 @@
 #include <algorithm>  // for max, min, sort, transform, all_of, for_each, remove_if
 #include <atomic>     // for atomic, memory_order_relaxed
 #include <boost/asio/thread_pool.hpp>
+#include <boost/dynamic_bitset.hpp>
 #include <cassert>
 #include <chrono>  // for seconds
 #include <cmath>   // for llround, floor, lround, sqrt
@@ -35,7 +36,7 @@
 #include "modle/config.hpp"    // for config
 #include "modle/contacts.hpp"  // for ContactMatrix
 #include "modle/cooler.hpp"
-#include "modle/extr_barrier.hpp"  // IWYU pragma: keep
+#include "modle/extrusion_factors.hpp"
 #include "modle/suppress_compiler_warnings.hpp"
 
 namespace modle {
@@ -48,9 +49,21 @@ using PRNG = std::mt19937_64;
 using seeder = std::seed_seq;
 #endif
 
-Genome::Genome(const config& c)
-    : _path_to_chrom_sizes_file(c.path_to_chr_sizes),
-      _path_to_chr_subranges_file(c.path_to_chr_subranges),
+void Genome::test() {
+  for (const auto& chrom : this->_chromosomes) {
+    fmt::print(stderr, "{}: {}\n", chrom.name(), chrom.nbarriers());
+
+    for (const auto& b : chrom.get_barriers()) {
+      fmt::print(stderr, "\t{}[{}-{}]", b.chrom, b.chrom_start, b.chrom_end);
+    }
+  }
+  fmt::print(stderr, "\n");
+}
+
+Genome::Genome(const config& c, bool import_chroms)
+    : _path_to_chrom_sizes(c.path_to_chr_sizes),
+      _path_to_chrom_subranges(c.path_to_chr_subranges),
+      _path_to_extr_barriers(c.path_to_extr_barriers_bed),
       _bin_size(c.bin_size),
       _avg_lef_lifetime(c.average_lef_lifetime),
       _probability_of_barrier_block(c.probability_of_extrusion_barrier_block),
@@ -59,389 +72,90 @@ Genome::Genome(const config& c)
       _soft_stall_multiplier(c.soft_stall_multiplier),
       _hard_stall_multiplier(c.hard_stall_multiplier),
       _allow_lef_lifetime_extension(c.allow_lef_lifetime_extension),
-      _lefs(generate_lefs(c.number_of_lefs)),
-      _chromosomes(init_chromosomes_from_file(c.diagonal_width)),
       _sampling_interval(c.contact_sampling_interval),
       _randomize_contact_sampling(c.randomize_contact_sampling_interval),
-      _nthreads(std::min(std::thread::hardware_concurrency(), c.nthreads)) {}
-
-absl::Span<const Chromosome> Genome::get_chromosomes() const {
-  return absl::MakeConstSpan(this->_chromosomes);
-}
-absl::Span<Chromosome> Genome::get_chromosomes() { return absl::MakeSpan(this->_chromosomes); }
-
-uint32_t Genome::get_nchromosomes() const {
-  return static_cast<uint32_t>(this->_chromosomes.size());
-}
-uint32_t Genome::get_n_ok_chromosomes() const {
-  return static_cast<uint32_t>(std::count_if(this->_chromosomes.begin(), this->_chromosomes.end(),
-                                             [](const auto& c) { return c.ok(); }));
-}
-
-std::vector<std::string_view> Genome::get_chromosome_names() const {
-  std::vector<std::string_view> names(this->get_nchromosomes());
-  std::transform(this->_chromosomes.begin(), this->_chromosomes.end(), names.begin(),
-                 [](const auto& chr) { return chr.name; });
-  return names;
-}
-std::vector<std::size_t> Genome::get_chromosome_lengths() const {
-  std::vector<std::size_t> lengths(this->get_nchromosomes());
-  std::transform(this->_chromosomes.begin(), this->_chromosomes.end(), lengths.begin(),
-                 [](const auto& chr) { return chr.simulated_length(); });
-  return lengths;
-}
-std::vector<double> Genome::get_chromosome_lef_affinities() const {
-  std::vector<double> lef_affinities(this->get_nchromosomes());
-  std::transform(this->_chromosomes.begin(), this->_chromosomes.end(), lef_affinities.begin(),
-                 [](const auto& chr) { return chr.get_total_lef_affinity(); });
-  return lef_affinities;
-}
-
-absl::Span<const Lef> Genome::get_lefs() const { return absl::MakeConstSpan(this->_lefs); }
-absl::Span<Lef> Genome::get_lefs() { return absl::MakeSpan(this->_lefs); }
-
-std::size_t Genome::get_nlefs() const { return this->_lefs.size(); }
-std::size_t Genome::get_n_free_lefs() const {
-  return std::accumulate(
-      this->_lefs.begin(), this->_lefs.end(), 0UL,
-      // NOLINTNEXTLINE(readability-implicit-bool-conversion)
-      [](uint64_t accumulator, const auto& lef) { return accumulator + !lef.is_bound(); });
-}
-uint64_t Genome::get_n_busy_lefs() const {
-  assert(this->get_nlefs() >= this->get_n_free_lefs());  // NOLINT
-  return this->get_nlefs() - this->get_n_free_lefs();
-}
+      _nthreads(std::min(std::thread::hardware_concurrency(), c.nthreads)),
+      _seed(c.seed),
+      _chromosomes(import_chroms ? import_chromosomes(_path_to_chrom_sizes, _path_to_extr_barriers,
+                                                      _path_to_chrom_subranges)
+                                 : Chromosomes{}) {}
 
 std::size_t Genome::size() const {
-  return std::accumulate(this->_chromosomes.begin(), this->_chromosomes.end(), 0ULL,
-                         [&](std::size_t accumulator, const auto& chr) {
-                           return accumulator + chr.simulated_length();
+  return std::accumulate(
+      this->_chromosomes.begin(), this->_chromosomes.end(), 0UL,
+      [](auto accumulator, const auto& chrom) { return accumulator + chrom.size(); });
+}
+
+std::size_t Genome::simulated_size() const {
+  return std::accumulate(this->_chromosomes.begin(), this->_chromosomes.end(), 0UL,
+                         [](auto accumulator, const auto& chrom) {
+                           return accumulator + (chrom.end_pos() - chrom.start_pos());
                          });
 }
-std::size_t Genome::n50() const {
-  auto chr_lengths = this->get_chromosome_lengths();
-  std::sort(chr_lengths.rbegin(), chr_lengths.rend(), std::greater<>());
-  auto n50_thresh = this->size() / 2ULL;
-  return *std::find_if(
-      chr_lengths.begin(), chr_lengths.end(),
-      [&, tot = 0ULL](const auto len) mutable { return ((tot += len) >= n50_thresh); });
-}
 
-std::size_t Genome::get_nbins() const {
-  return std::accumulate(
-      this->_chromosomes.begin(), this->_chromosomes.end(), 0ULL,
-      [](std::size_t accumulator, const auto& chr) { return accumulator + chr.get_nbins(); });
-}
-std::size_t Genome::get_nbarriers() const {
-  return std::accumulate(
-      this->_chromosomes.begin(), this->_chromosomes.end(), 0ULL,
-      [](std::size_t accumulator, const auto& chr) { return accumulator + chr.get_nbarriers(); });
-}
+// TODO Add flag to import skip chrom without barriers
+Genome::Chromosomes Genome::import_chromosomes(
+    const std::filesystem::path& path_to_chrom_sizes,
+    const std::filesystem::path& path_to_extr_barriers,
+    const std::filesystem::path& path_to_chrom_subranges) {
+  assert(!path_to_chrom_sizes.empty());
+  assert(!path_to_extr_barriers.empty());
+  Chromosomes chroms;
 
-void Genome::write_contacts_to_file(std::filesystem::path output_file, bool include_ko_chroms) {
-  std::vector<ContactMatrix<uint32_t>*> cmatrices;
-  std::vector<std::string> chr_names;
-  std::vector<uint64_t> chr_starts;
-  std::vector<uint64_t> chr_ends;
-  std::vector<uint64_t> chr_sizes;
-  if (include_ko_chroms) {
-    cmatrices.reserve(this->get_nchromosomes());
-    chr_names.reserve(this->get_nchromosomes());
-    chr_starts.reserve(this->get_nchromosomes());
-    chr_ends.reserve(this->get_nchromosomes());
-    chr_sizes.reserve(this->get_nchromosomes());
-  } else {
-    cmatrices.reserve(this->get_n_ok_chromosomes());
-    chr_names.reserve(this->get_n_ok_chromosomes());
-    chr_starts.reserve(this->get_n_ok_chromosomes());
-    chr_ends.reserve(this->get_n_ok_chromosomes());
-    chr_sizes.reserve(this->get_n_ok_chromosomes());
-  }
-
-  const auto chr_name_max_length =
-      std::max_element(
-          this->_chromosomes.begin(), this->_chromosomes.end(),
-          [](const auto& c1, const auto& c2) { return c1.name.size() < c2.name.size(); })
-          ->name.size() +
-      1;
-
-  for (auto& chr : this->_chromosomes) {
-    if (include_ko_chroms || chr.ok()) {
-      cmatrices.emplace_back(&chr.contacts);
-      chr_names.emplace_back(chr.name);
-      chr_starts.emplace_back(chr.start);
-      chr_ends.emplace_back(chr.end);
-      chr_sizes.emplace_back(chr.total_length);
-    }
-  }
-  std::filesystem::create_directories(output_file.parent_path());
-  const auto t0 = absl::Now();
   {
-    if (const auto n = std::count_if(this->_chromosomes.begin(), this->_chromosomes.end(),
-                                     [&](const auto& c) { return c.ok() || include_ko_chroms; });
-        n == 1) {
-      fmt::print(stderr, FMT_STRING("Writing one contact matrix to file {}...\n"), output_file);
-    } else {
-      fmt::print(stderr, FMT_STRING("Writing {} contact matrices to file {}...\n"), n, output_file);
+    // Parse chrom subranges from BED. We parse everything at once to deal with duplicate entries
+    absl::flat_hash_map<std::string, std::pair<uint64_t, uint64_t>> chrom_ranges;
+    if (!path_to_chrom_subranges.empty()) {
+      for (auto&& record : modle::bed::Parser(path_to_chrom_subranges).parse_all()) {
+        chrom_ranges.emplace(std::move(record.chrom),
+                             std::make_pair(record.chrom_start, record.chrom_end));
+      }
     }
-    cooler::Cooler c(output_file, cooler::Cooler::WRITE_ONLY, this->_bin_size, chr_name_max_length);
-    c.write_or_append_cmatrices_to_file(cmatrices, chr_names, chr_starts, chr_ends, chr_sizes);
-    fmt::print(stderr, "Flushing data to disk...\n");
-  }
-  fmt::print(stderr, FMT_STRING("Writing contacts to file {} took {}\n"), output_file,
-             absl::FormatDuration(absl::Now() - t0));
-}
 
-void Genome::write_contacts_w_noise_to_file(std::filesystem::path output_file, double noise_mean,
-                                            double noise_std, bool include_ko_chroms) {
-  auto tpool = this->instantiate_thread_pool();
-  for (auto nchr = 0U; nchr < this->_chromosomes.size(); ++nchr) {
-    // Simulating loop extrusion on chromosomes without extr. barrier does not make sense
-    if (!this->_chromosomes[nchr].ok()) {
-      continue;
+    // Parse chrom. sizes and build the set of chromosome to be simulated.
+    // When the BED file with the chrom. subranges is not provided, all the chromosome in the
+    // chrom.sizes file will be selected and returned. When a BED file with the chrom. subranges is
+    // available, then only chromosomes that are present in both files will be selected. Furthermore
+    // we are also checking that the subrange lies within the coordinates specified in the chrom.
+    // sizes file
+    for (auto&& chrom : modle::chr_sizes::Parser(path_to_chrom_sizes).parse_all()) {
+      if (auto match = chrom_ranges.find(chrom.name); match != chrom_ranges.end()) {
+        const auto& range_start = match->second.first;
+        const auto& range_end = match->second.second;
+        if (range_start < chrom.start || range_end > chrom.end) {
+          throw std::runtime_error(fmt::format(
+              FMT_STRING("According to the chrom.sizes file {}, chromosome '{}' should have a size "
+                         "of '{}', but the subrange specified in BED file {} extends past this "
+                         "region: range {}:{}-{} does not fit in range {}:{}-{}"),
+              path_to_chrom_sizes, chrom.name, chrom.end, path_to_chrom_subranges, chrom.name,
+              range_start, range_end, chrom.name, chrom.start, chrom.end));
+        }
+        chrom.start = range_start;
+        chrom.end = range_end;
+        chroms.emplace(std::move(chrom));
+      } else if (chrom_ranges.empty()) {
+        chroms.emplace(std::move(chrom));
+      }
     }
-    boost::asio::post(tpool, [&, nchr]() {
-      auto& chr = this->_chromosomes[nchr];
-      chr.contacts.add_noise(chr.get_bin_size(), noise_mean, noise_std, chr._rand_eng);
-    });
   }
-  tpool.join();
 
-  this->write_contacts_to_file(output_file, include_ko_chroms);
-}
-/*
-void Genome::write_extrusion_barriers_to_file(std::string_view output_dir,
-                                              bool force_overwrite) const {
-  fmt::fprintf(stderr, "Writing extrusion barriers for %lu chromosomes in folder '%s'...",
-               this->get_n_chromosomes(), output_dir);
-  std::filesystem::create_directories(output_dir);
-  auto t0 = absl::Now();
-  std::for_each(this->_chromosomes.begin(), this->_chromosomes.end(), [&](const Chromosome& chr) {
-    chr.write_barriers_to_tsv(output_dir, force_overwrite);
-  });
-  fmt::fprintf(stderr, "DONE! Written extrusion barrier coordinates for %lu chromosomes in %s\n",
-               this->get_n_chromosomes(), absl::FormatDuration(absl::Now() - t0));
-}
- */
-
-template <typename I>
-void Genome::randomly_generate_extrusion_barriers(I nbarriers, uint64_t seed) {
-  static_assert(std::is_integral_v<I>, "I should be an integral numeric type.");
-
-  const auto& weights = this->get_chromosome_lengths();
-  std::discrete_distribution<std::size_t> chr_idx(weights.begin(), weights.end());
-  // NOLINTNEXTLINE(readability-magic-numbers, cppcoreguidelines-avoid-magic-numbers)
-  std::bernoulli_distribution strand_selector(0.5);
-  modle::seeder seeder_{seed + nbarriers};
-#ifdef USE_XOSHIRO
-  modle::PRNG rand_eng(seeder_.generateSeedSequence<4>());
-#else
-  modle::PRNG rand_eng{seeder_};
-#endif
-
-  for (I i = 0; i < nbarriers; ++i) {
-    // Randomly select a chromosome, barrier binding pos and direction
-    auto& chr = this->_chromosomes[chr_idx(rand_eng)];
-    chr.allocate();
-    std::uniform_int_distribution<std::size_t> uniform_rng(0, chr.simulated_length());
-    const auto barrier_position = uniform_rng(rand_eng);
-    const auto direction = strand_selector(rand_eng) ? dna::Direction::rev : dna::Direction::fwd;
-
-    // Add the new extrusion barrier to the appropriate bin
-    auto& bin = chr.dna.get_bin(barrier_position);
-    bin.add_extr_barrier(barrier_position, this->_probability_of_barrier_block, direction);
-  }
-}
-
-std::pair<std::size_t, std::size_t> Genome::import_extrusion_barriers_from_bed(
-    std::filesystem::path path_to_bed, double probability_of_block) {
-  auto p = modle::bed::Parser(path_to_bed, bed::BED::Standard::BED6);
-  std::size_t nrecords = 0;
-  std::size_t nrecords_ignored = 0;
-  absl::flat_hash_map<std::string_view, Chromosome*> chromosomes;
-  chromosomes.reserve(this->get_nchromosomes());
-  for (auto& chr : this->get_chromosomes()) {
-    chromosomes.emplace(chr.name, &chr);
-  }
-  for (auto& record : p.parse_all()) {
-    ++nrecords;
-    if (!chromosomes.contains(record.chrom) || record.strand == '.' ||
-        record.chrom_start < chromosomes[record.chrom]->get_start_pos() ||
-        record.chrom_end > chromosomes[record.chrom]->get_end_pos()) {
-      ++nrecords_ignored;
-      continue;
-    }
-    if (probability_of_block != 0) {
-      record.score = probability_of_block;
-    }
+  // Parse all the records from the BED file. parse_all() will throw in case of duplicates.
+  // This for loop selects extrusion barriers that fall within the chromosomes to be simulated
+  for (auto&& record : modle::bed::Parser(path_to_extr_barriers).parse_all()) {
     if (record.score < 0 || record.score > 1) {
       throw std::runtime_error(
           fmt::format("Invalid score field detected for record {}[{}-{}]: expected a score "
                       "between 0 and 1, got {:.4g}.",
-                      record.name, record.chrom_start, record.chrom_end, record.score));
+                      record.chrom, record.chrom_start, record.chrom_end, record.score));
     }
-    record.chrom_start -= chromosomes[record.chrom]->get_start_pos();
-    record.chrom_end -= chromosomes[record.chrom]->get_start_pos();
-    chromosomes[record.chrom]->allocate();
-    chromosomes[record.chrom]->dna.add_extr_barrier(record);
-    // NOTE I am not adding ExtrusionBarrier* to chromosomes[].barriers because if the vector
-    // holding the extrusion barrier is re-allocated, the ptr stored in Chromosome.barriers will be
-    // invalidated
+    if (auto match = chroms.find(record.chrom); match != chroms.end()) {
+      match->add_extrusion_barrier(record);
+    }
   }
-
-  return {nrecords, nrecords_ignored};
+  return chroms;
 }
 
-void Genome::sort_extr_barriers_by_pos() {
-  for (auto& chr : this->_chromosomes) {
-    assert(chr.barriers.empty());  // NOLINT
-    for (auto& bin : chr.dna) {
-      auto barriers = bin.get_all_extr_barriers();
-      std::transform(barriers.begin(), barriers.end(), std::back_inserter(chr.barriers),
-                     [](auto& b) { return &b; });
-    }
-    std::sort(
-        chr.barriers.begin(), chr.barriers.end(),
-        [](const auto* const b1, const auto* const b2) { return b1->get_pos() < b2->get_pos(); });
-  }
-}
-
-void Genome::assign_lefs(bool bind_lefs_after_assignment) {
-  absl::flat_hash_map<Chromosome*, double> chr_lef_affinities;
-  double tot_affinity = 0;
-  chr_lef_affinities.reserve(this->get_n_ok_chromosomes());
-  for (auto& chr : this->_chromosomes) {  // Build a map of the per-chromosome lef affinity
-    if (chr.ok()) {
-      const auto& [node, _] = chr_lef_affinities.emplace(&chr, chr.get_total_lef_affinity());
-      tot_affinity += node->second;
-    }
-  }
-  std::vector<std::pair<Chromosome*, std::size_t>> chroms_sorted_by_affinity;  // <chr*, nlefs>
-  for (auto& chr : this->_chromosomes) {
-    // Don't assign LEFs to chromosome without extr. barriers
-    if (chr.ok()) {
-      chroms_sorted_by_affinity.emplace_back(&chr, 0U);
-    }
-  }
-
-  std::sort(chroms_sorted_by_affinity.begin(), chroms_sorted_by_affinity.end(),
-            [&](const auto& chr1, const auto& chr2) {
-              return chr_lef_affinities[chr1.first] > chr_lef_affinities[chr2.first];
-            });
-  std::size_t lefs_assigned = 0;
-  for (auto& [chr, nlefs] : chroms_sorted_by_affinity) {
-    nlefs = static_cast<std::size_t>(std::floor((chr_lef_affinities[chr] / tot_affinity) *
-                                                static_cast<double>(this->get_nlefs())));
-    lefs_assigned += nlefs;
-  }
-  while (lefs_assigned < this->get_nlefs()) {
-    for (auto& [chr, nlefs] : chroms_sorted_by_affinity) {
-      if (lefs_assigned++ < this->get_nlefs()) {
-        ++nlefs;
-      } else {
-        break;
-      }
-    }
-  }
-
-  std::size_t i = 0;
-  for (auto& [chr, nlefs] : chroms_sorted_by_affinity) {
-    chr->lefs.reserve(nlefs);
-    for (auto j = 0U; j < nlefs; ++j) {
-      auto* last_lef = chr->lefs.emplace_back(&(this->_lefs[i++]));
-      last_lef->assign_to_chr(chr);
-      if (bind_lefs_after_assignment) {
-        chr->allocate();
-        last_lef->bind_chr_at_random_pos(chr, chr->_rand_eng);
-      }
-    }
-  }
-}
-
-uint64_t Genome::exclude_chr_wo_extr_barriers() {
-  uint64_t chr_excluded = 0;
-  for (auto& chr : this->_chromosomes) {
-    chr_excluded += !(chr._ok &= chr.get_nbarriers() != 0);  // NOLINT
-  }
-  return chr_excluded;
-}
-
-std::pair<double, double> Genome::run_burnin(double prob_of_rebinding,
-                                             uint32_t target_n_of_unload_events,
-                                             uint64_t min_extr_rounds) {
-  std::vector<double> burnin_rounds_performed(this->get_nchromosomes());
-  auto tpool = this->instantiate_thread_pool();
-
-  for (auto nchr = 0U; nchr < this->get_nchromosomes(); ++nchr) {
-    if (!this->_chromosomes[nchr].ok()) {
-      continue;
-    }
-    boost::asio::post(tpool, [&, nchr]() {
-      auto& chr = this->_chromosomes[nchr];
-      double avg_num_of_extr_events_per_bind =
-          (static_cast<double>(this->_avg_lef_lifetime) / chr.get_bin_size()) /
-          2 /* N of active extr. unit */;
-      const auto n_of_lefs_to_bind_each_round = static_cast<std::size_t>(std::round(
-          std::max(static_cast<double>(chr.get_nlefs()) / avg_num_of_extr_events_per_bind, 1.0)));
-
-      std::vector<uint16_t> unload_events(chr.get_nlefs(), 0);
-
-      auto lefs = absl::MakeSpan(chr.lefs);
-      std::size_t lefs_loaded = 0;
-      for (auto rounds = 0U;; ++rounds) {
-        if (!lefs.empty()) {
-          for (const auto& lef : lefs.subspan(0, n_of_lefs_to_bind_each_round)) {
-            lef->bind_chr_at_random_pos(&chr, chr._rand_eng);
-            ++lefs_loaded;
-          }
-          lefs.remove_prefix(std::min(n_of_lefs_to_bind_each_round, lefs.size()));
-        }
-        for (auto i = 0U; i < lefs_loaded; ++i) {
-          auto& lef = *chr.lefs[i];
-          if (lef.is_bound()) {
-            lef.try_extrude();
-            /* clang-format off
-             * TODO: Figure out why GCC 8.3 is complaining about this line. The warning is:
-             * warning: conversion from ‘int’ to ‘__gnu_cxx::__alloc_traits<std::allocator<short unsigned int>, short unsigned int>::value_type’ {aka ‘short unsigned int’} may change value [-Wconversion]
-             *          unload_events[i] += static_cast<uint16_t>(!lef.is_bound());  // NOLINT(readability-implicit-bool-conversion)
-             *                                                                   ^
-             * clang-format on
-             */
-            unload_events[i] += static_cast<uint16_t>(!lef.is_bound());
-          }
-        }
-
-        for (auto i = 0U; i < lefs_loaded; ++i) {
-          if (auto& lef = *chr.lefs[i]; lef.is_bound()) {
-            lef.check_constraints(chr._rand_eng);
-          } else {
-            lef.try_rebind(chr._rand_eng, prob_of_rebinding, false);
-          }
-        }
-        if (rounds >= min_extr_rounds &&
-            std::all_of(unload_events.begin(), unload_events.end(),
-                        [&](uint16_t n) { return n >= target_n_of_unload_events; })) {
-          burnin_rounds_performed[nchr] = static_cast<double>(rounds);
-          return;
-        }
-      }
-    });
-  }
-  tpool.join();
-
-  if (burnin_rounds_performed.size() == 1) {
-    return std::make_pair(burnin_rounds_performed[0], 0.0);
-  }
-
-  const auto tot_burnin_rounds =
-      std::accumulate(burnin_rounds_performed.begin(), burnin_rounds_performed.end(), 0.0);
-  const auto avg_burnin_rounds = tot_burnin_rounds / static_cast<double>(this->get_nchromosomes());
-  const auto burnin_rounds_stdev =
-      std::sqrt(tot_burnin_rounds / static_cast<double>(burnin_rounds_performed.size() - 1));
-
-  return std::make_pair(avg_burnin_rounds, burnin_rounds_stdev);
-}
-
+/*
 void Genome::simulate_extrusion() { this->simulate_extrusion(1, 0); }
 void Genome::simulate_extrusion(uint32_t iterations) { this->simulate_extrusion(iterations, 0); }
 void Genome::simulate_extrusion(double target_contact_density) {
@@ -480,7 +194,8 @@ void Genome::simulate_extrusion(uint32_t iterations, double target_contact_densi
   std::atomic<uint64_t> extrusion_events{0};
   std::atomic<uint64_t> chromosomes_completed{0};
   std::atomic<bool> simulation_completed{false};
-  std::mutex m;  // This mutex is supposed to protect simulation_complete. As of C++17 we also need
+  std::mutex m;  // This mutex is supposed to protect simulation_complete. As of C++17 we also
+need
   // to acquire a lock when modifying the condition variable simulation_completed_cv
   // (otherwise the change might not be communicated to waiting threads)
   std::condition_variable simulation_completed_cv;
@@ -505,7 +220,8 @@ void Genome::simulate_extrusion(uint32_t iterations, double target_contact_densi
             ? std::accumulate(this->_chromosomes.begin(), this->_chromosomes.end(), 0.0L,
                               [&](auto accumulator, const auto& chr) {
                                 return accumulator + (target_contact_density *
-                                                      chr.contacts.ncols() * chr.contacts.nrows());
+                                                      chr.contacts.ncols() *
+chr.contacts.nrows());
                               })
             : iterations * this->get_n_ok_chromosomes();
 
@@ -521,16 +237,15 @@ void Genome::simulate_extrusion(uint32_t iterations, double target_contact_densi
       }
       if (extrusion_events > 0) {  // Print progress
         const auto progress = ticks_done / tot_ticks;
-        const auto throughput = static_cast<double>(extrusion_events) / 5.0e6; /* 5s * 1M NOLINT */
+        const auto throughput = static_cast<double>(extrusion_events) / 5.0e6; // 5s * 1M NOLINT
         const auto delta_t = absl::ToDoubleSeconds(absl::Now() - t0);
         const auto eta = absl::Seconds(
             (std::min(this->_nthreads, this->get_n_ok_chromosomes()) /
              std::min(static_cast<double>(this->_nthreads),
-                      static_cast<double>(this->get_n_ok_chromosomes() - chromosomes_completed))) *
-            (delta_t / std::max(1.0e-06L, progress) - delta_t));
-        if (eta > absl::ZeroDuration()) {  // Avoid printing updates when simulation is about to end
-          fmt::print(stderr,
-                     FMT_STRING("### ~{:.2f}% ###   {:.2f}M extr/sec - Simulation completed for "
+                      static_cast<double>(this->get_n_ok_chromosomes() - chromosomes_completed)))
+* (delta_t / std::max(1.0e-06L, progress) - delta_t)); if (eta > absl::ZeroDuration()) {  // Avoid
+printing updates when simulation is about to end fmt::print(stderr, FMT_STRING("### ~{:.2f}% ###
+{:.2f}M extr/sec - Simulation completed for "
                                 "{}/{} chromosomes - ETA {}.\n"),
                      100.0 * progress, throughput, chromosomes_completed,
                      this->get_n_ok_chromosomes(), absl::FormatDuration(eta));
@@ -639,15 +354,9 @@ void Genome::simulate_extrusion(uint32_t iterations, double target_contact_densi
         }
         simulation_completed_cv.notify_all();
       }
-      fmt::print(stderr, FMT_STRING("DONE simulating loop extrusion on '{}'! Simulation took {}\n"),
-                 chr.name, absl::FormatDuration(absl::Now() - t0));
-      /*
-      if (write_contacts_to_file) {
-        chr.write_contacts_to_tsv(output_dir, force_overwrite);
-        chr.write_barriers_to_tsv(output_dir, force_overwrite);
-        ++chromosomes_written_to_disk;
-      }
-       */
+      fmt::print(stderr, FMT_STRING("DONE simulating loop extrusion on '{}'! Simulation took
+{}\n"), chr.name, absl::FormatDuration(absl::Now() - t0));
+
       // Free up resources
       // chr = Chromosome{"", 0, 0, 0};
     });
@@ -656,60 +365,233 @@ void Genome::simulate_extrusion(uint32_t iterations, double target_contact_densi
   tpool.join();
   progress_tracker.join();
 }
+*/
 
-std::vector<Chromosome> Genome::init_chromosomes_from_file(uint32_t diagonal_width) const {
-  // We are reading all the chrom_sizes at once to detect and deal with duplicate chrom_sizes
-  auto chrom_sizes = modle::chr_sizes::Parser(this->_path_to_chrom_sizes_file).parse_all();
-  absl::flat_hash_map<std::string, std::pair<uint64_t, uint64_t>> chrom_ranges;
-  if (!this->_path_to_chr_subranges_file.empty()) {
-    for (const auto& record : modle::bed::Parser(this->_path_to_chr_subranges_file).parse_all()) {
-      chrom_ranges.emplace(record.chrom, std::make_pair(record.chrom_start, record.chrom_end));
+void Genome::simulate_extrusion(std::size_t iterations) {
+  const auto simulated_size = this->simulated_size();
+  std::size_t ncells = 100;
+  std::size_t burnin_rounds = 100000;
+  auto tpool = this->instantiate_thread_pool();
+
+  std::vector<Bp> fwd_barriers_buff;
+  std::vector<Bp> rev_barriers_buff;
+  std::vector<double> fwd_barriers_pblock_buff;
+  std::vector<double> rev_barriers_pblock_buff;
+  std::vector<Lef> lef_buff;
+
+  for (const auto& chrom : this->_chromosomes) {
+    const auto nlefs = static_cast<std::size_t>(std::round(
+        static_cast<double>(chrom.simulated_size()) / static_cast<double>(simulated_size)));
+    // Clearing buffers
+    fwd_barriers_buff.clear();
+    rev_barriers_buff.clear();
+    fwd_barriers_pblock_buff.clear();
+    rev_barriers_pblock_buff.clear();
+    lef_buff.resize(nlefs);
+
+    for (const auto& b : chrom.get_barriers()) {
+      const auto bin_idx =
+          static_cast<uint32_t>(std::round(static_cast<double>(b.chrom_start + b.chrom_end) /
+                                           (2.0 * static_cast<double>(this->_bin_size))));
+      if (b.strand == '+') {
+        fwd_barriers_buff.push_back(bin_idx);
+        fwd_barriers_pblock_buff.push_back(b.score != 0 ? b.score
+                                                        : this->_probability_of_barrier_block);
+      } else {
+        assert(b.strand != '.');
+        rev_barriers_buff.push_back(bin_idx);
+        rev_barriers_pblock_buff.push_back(b.score != 0 ? b.score
+                                                        : this->_probability_of_barrier_block);
+      }
+
+      for (auto i = 0UL; i < ncells; ++i) {
+        boost::asio::post(tpool, [&]() {
+          Genome::simulate_extrusion_kernel(&chrom, i, lef_buff, fwd_barriers_buff,
+                                            rev_barriers_buff, fwd_barriers_pblock_buff,
+                                            rev_barriers_pblock_buff);
+        });
+      }
+
+      // std::vector<ExtrusionBarrier>
     }
   }
-  std::vector<Chromosome> chromosomes;
-  chromosomes.reserve(chrom_sizes.size());
-  std::transform(
-      chrom_sizes.begin(), chrom_sizes.end(), std::back_inserter(chromosomes),
-      [&](const auto& chr) {
-        uint64_t start = chr.start;
-        uint64_t end = chr.end;
-        uint64_t length = end;
-
-        if (chrom_ranges.contains(chr.name)) {
-          const auto& match = chrom_ranges.at(chr.name);
-          if (match.first < chr.start || match.second > chr.end) {
-            throw std::runtime_error(fmt::format(
-                FMT_STRING(
-                    "According to the chrom.sizes file '{}', chromosome '{}' has a size of '{}', "
-                    "but the "
-                    "subrange specified through BED file '{}' extends past this region: range "
-                    "{}:{}-{} does not fit in range {}:{}-{}"),
-                this->_path_to_chrom_sizes_file, chr.name, chr.end,
-                this->_path_to_chr_subranges_file, chr.name, match.first, match.second, chr.name,
-                chr.start, chr.end));
-          }
-          start = match.first;
-          end = match.second;
-        }
-
-        return Chromosome{chr.name, start, end, length, this->_bin_size, diagonal_width};
-      });
-
-  return chromosomes;
 }
 
-std::vector<Lef> Genome::generate_lefs(uint32_t n) {
-  std::vector<Lef> v{
-      n, Lef{this->_bin_size, this->_avg_lef_lifetime, this->_probability_of_extr_unit_bypass,
-             this->_hard_stall_multiplier, this->_soft_stall_multiplier}};
-  for (auto& lef : v) {  // This seems to be needed to make sure that the ptr to Lef stored in the
-                         // extr. units is in a valid state
-    lef.finalize_extrusion_unit_construction();
+void Genome::simulate_extrusion_kernel(const Chromosome* chrom, std::size_t ncell,
+                                       std::vector<Lef> lefs, std::vector<Bp> fwd_barriers,
+                                       std::vector<Bp> rev_barriers,
+                                       std::vector<double> fwd_barriers_pblock,
+                                       std::vector<double> rev_barriers_pblock) {
+  // Bind all lefs
+  const auto seed = this->_seed + std::hash<std::string_view>{}(chrom->name()) +
+                    std::hash<std::size_t>{}(chrom->size()) + std::hash<std::size_t>{}(ncell);
+#ifdef USE_XOSHIRO
+  modle::seeder seeder_(seed);
+  modle::PRNG rand_eng(seeder_.generateSeedSequence<4>());
+#else
+  modle::seeder seeder_{seed};
+  modle::PRNG rand_eng(seeder_);
+#endif
+
+  this->bind_all_lefs(chrom, lefs, rand_eng);
+
+  std::vector<std::size_t> fwd_rank_buff(lefs.size());
+  auto rev_rank_buff = fwd_rank_buff;
+
+  std::vector<uint_fast16_t> fwd_lef_collision_counter_buff(lefs.size());
+  auto rev_lef_collision_counter_buff = fwd_lef_collision_counter_buff;
+
+  /*
+    chrom_pos_generator_t chrom_pos_generator{
+        0U, static_cast<uint32_t>(chrom->start_pos(), chrom->end_pos())};
+    lef_lifetime_generator_t lef_lifetime_generator{
+        ExtrusionUnit::compute_probability_of_release(this->_avg_lef_lifetime, 2)};
+  */
+  std::size_t burnin_rounds = 100000;
+  auto simulation_rounds = 2UL * burnin_rounds;
+  for (auto round = 0UL; round < burnin_rounds + simulation_rounds; ++round) {
+    this->check_lef_lef_collisions(lefs, fwd_rank_buff, rev_rank_buff,
+                                   fwd_lef_collision_counter_buff, rev_lef_collision_counter_buff);
+    // this->check_lef_bar_collisions(fwd_extr_units, rev_barriers, fwd_mask, rev_mask);
   }
-  return v;
+}
+
+template <typename I>
+void Genome::bind_lefs(const Chromosome* const chrom, std::vector<Lef>& lefs, modle::PRNG& rand_eng,
+                       const std::vector<I>& mask) {
+  static_assert(std::is_integral_v<I> || std::is_same_v<I, bool>,
+                "mask should be a vector of integers/booleans");
+  assert(lefs.size() == mask.size() || mask.empty());
+  chrom_pos_generator_t chrom_pos_generator{chrom->start_pos(), chrom->end_pos()};
+  lef_lifetime_generator_t lef_lifetime_generator{
+      ExtrusionUnit::compute_probability_of_release(this->_avg_lef_lifetime, 2)};
+  for (auto i = 0UL; i < lefs.size(); ++i) {
+    // Here we only consider even indexes, as binding a single extr. unit is not
+    // allowed: either we bind all extr. units belonging to a LEF, or we bind none
+    if (mask.empty() || mask[i]) {
+      const auto pos = static_cast<Bp>(chrom_pos_generator(rand_eng));
+      const auto lifetime = lef_lifetime_generator(rand_eng);
+      lefs[i].rev_unit.bind_at_pos(pos, lifetime);
+      lefs[i].fwd_unit.bind_at_pos(pos, lifetime);
+    }
+  }
+}
+
+void Genome::bind_all_lefs(const Chromosome* chrom, std::vector<Lef>& lefs, modle::PRNG& rand_eng) {
+  this->bind_lefs(chrom, lefs, rand_eng, std::vector<std::size_t>{});
+
+  // Rank by pos. rev and fwd extr. units
+  std::vector<std::size_t> ranks(lefs.size());
+  std::iota(ranks.begin(), ranks.end(), 0);
+  std::sort(ranks.begin(), ranks.end(), [&](const auto r1, const auto r2) {
+    return lefs[r1].fwd_unit.pos() < lefs[r2].fwd_unit.pos();
+  });
+  for (auto i = 0UL; i < ranks.size(); ++i) {
+    lefs[i].fwd_unit._rank = ranks[i];
+  }
+
+  std::iota(ranks.begin(), ranks.end(), 0);
+  std::sort(ranks.begin(), ranks.end(), [&](const auto r1, const auto r2) {
+    return lefs[r1].rev_unit.pos() < lefs[r2].rev_unit.pos();
+  });
+  for (auto i = 0UL; i < ranks.size(); ++i) {
+    lefs[i].rev_unit._rank = ranks[i];
+  }
+}
+
+template <typename I>
+void Genome::check_lef_lef_collisions(const std::vector<Lef>& lefs,
+                                      const std::vector<Bp>& fwd_rank_buff,
+                                      const std::vector<Bp>& rev_rank_buff,
+                                      std::vector<I>& fwd_collision_buff,
+                                      std::vector<I>& rev_collision_buff) {
+  static_assert(std::is_integral_v<I>,
+                "fwd and rev_collision_buff should be a vector of integral numbers.");
+  assert(lefs.size() == fwd_rank_buff.size());
+  assert(lefs.size() == rev_rank_buff.size());
+  assert(lefs.size() == fwd_collision_buff.size());
+  assert(lefs.size() == rev_collision_buff.size());
+  assert(
+      std::is_sorted(fwd_rank_buff.begin(), fwd_rank_buff.end(), [&](const auto r1, const auto r2) {
+        return lefs[r1].fwd_unit.pos() < lefs[r2].fwd_unit.pos();
+      }));
+  assert(
+      std::is_sorted(rev_rank_buff.begin(), rev_rank_buff.end(), [&](const auto r1, const auto r2) {
+        return lefs[r1].rev_unit.pos() < lefs[r2].rev_unit.pos();
+      }));
+
+  // Clear buffers
+  std::fill(fwd_collision_buff.begin(), fwd_collision_buff.end(), 0);
+  std::fill(rev_collision_buff.begin(), rev_collision_buff.end(), 0);
+
+  std::size_t i = 0, j = 0;
+  /* Loop over lefs, using a procedure similar to merge in mergesort
+   * The idea here is that if we have a way to visit extr. units in 5'-3' order, then detecting
+   * LEF-LEF collisions boils down to:
+   *  - Starting from the first fwd extr. unit in 5'-3' order:
+   *    - Look for rev extr. units that are located downstream of the fwd unit that is being
+   *      processed
+   *    - Continue looking for the next rev unit, until the distance between the fwd and rev units
+   *      being considered is less than a certain threshold (e.g. the bin size)
+   *    - While doing so, increase the number of LEF-LEF collisions for the fwd/rev unit that are
+   *      being processed
+   */
+  while (i < lefs.size() && j < lefs.size()) {
+    const auto& fwd_idx = fwd_rank_buff[i];          // index of the ith fwd unit in 5'-3' order
+    const auto& fwd = lefs[fwd_idx].fwd_unit.pos();  // pos of the ith unit
+
+    for (auto k = j; k < lefs.size(); ++k) {
+      const auto& rev_idx = rev_rank_buff[k];          // index of the kth rev unit in 5'-3' order
+      const auto& rev = lefs[rev_idx].rev_unit.pos();  // pos of the kth unit
+      if (rev < fwd) {  // Look for the first rev unit that comes after the current fwd unit
+        ++j;  // NOTE k is increased by the for loop. Increasing j does not affect the current for
+              // loop
+        continue;
+      }
+
+      // Note: this delta between uint is safe to do, because at this point rev_pos >= fwd_pos
+      const auto delta = rev - fwd;
+
+      // Increment the # of collisions if delta is less than the threshold, and if the two ext.
+      // units do not belong to the same LEF
+      fwd_collision_buff[fwd_idx] += delta <= this->_bin_size && rev_idx != fwd_idx;
+      rev_collision_buff[rev_idx] += delta <= this->_bin_size && rev_idx != fwd_idx;
+
+      /*
+      fmt::print(stderr,
+                 "i={}; j={}; fwd_idx={}; rev_idx={}; rev={}; fwd={}; delta={}; fwd_mask={}; "
+                 "rev_mask={};\n",
+                 i, j, fwd_idx, rev_idx, rev, fwd, delta, fwd_collision_buff[fwd_idx],
+                 rev_collision_buff[rev_idx]);
+      */
+      // Break out of the loop if the units being processed are too far from each other, or if k
+      // points to the last rev unit
+      if (delta > this->_bin_size || k == lefs.size() - 1) {
+        // We always move to the next fwd unit, because when this branch is executed, we have
+        // already detected all possible collisions for the current fwd unit
+        ++i;
+
+        // If we already know that rev == fwd, we can spare one loop iteration by increasing j
+        // directly here
+        j += rev == fwd;
+        break;
+      }
+    }
+  }
 }
 
 boost::asio::thread_pool Genome::instantiate_thread_pool() const {
-  return boost::asio::thread_pool(std::min(this->_nthreads, this->get_n_ok_chromosomes()));
+  return boost::asio::thread_pool(this->_nthreads);
 }
+
+template <typename I>
+boost::asio::thread_pool Genome::instantiate_thread_pool(I nthreads) {
+  static_assert(std::is_integral_v<I>, "nthreads should have an integral type.");
+  DISABLE_WARNING_PUSH
+  DISABLE_WARNING_USELESS_CAST
+  return boost::asio::thread_pool(
+      std::min(std::thread::hardware_concurrency(), static_cast<unsigned int>(nthreads)));
+  DISABLE_WARNING_POP
+}
+
 }  // namespace modle

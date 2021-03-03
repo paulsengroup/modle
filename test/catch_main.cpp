@@ -5,3 +5,4 @@
 #include "modle/test/contacts.hpp"
 #include "modle/test/correlation.hpp"
 #include "modle/test/libio.hpp"
+#include "modle/test/libmodle.hpp"

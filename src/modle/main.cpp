@@ -13,11 +13,10 @@
 #include <stdexcept>   // for runtime_error
 #include <vector>
 
-#include "./cli.hpp"               // for Cli
-#include "modle/chr_sizes.hpp"     // for ChrSize, Parser
-#include "modle/config.hpp"        // for config
-#include "modle/extr_barrier.hpp"  // for ExtrusionBarrier
-#include "modle/genome.hpp"        // for Genome
+#include "./cli.hpp"            // for Cli
+#include "modle/chr_sizes.hpp"  // for ChrSize, Parser
+#include "modle/config.hpp"     // for config
+#include "modle/genome.hpp"     // for Genome
 
 namespace modle {
 
@@ -40,7 +39,7 @@ std::vector<std::string> check_if_output_file_exists(const modle::config& c) {
 
   return fn_collisions;
 }
-
+/*
 void run_simulation(const modle::config& c) {
   auto t0 = absl::Now();
   modle::Genome genome(c);
@@ -134,6 +133,15 @@ void run_simulation(const modle::config& c) {
     }
   }
   fmt::print(stderr, "Simulation terminated without errors!\n\nBye.\n");
+}
+ */
+
+void run_simulation(const modle::config& c) {
+  const auto t0 = absl::Now();
+  Genome g(c);
+  g.test();
+
+  fmt::print(stderr, "Done in {}\n", absl::FormatDuration(absl::Now() - t0));
 }
 
 }  // namespace modle

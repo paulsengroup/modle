@@ -13,7 +13,8 @@ target_link_libraries(
           project_options
           Modle::cmatrix_test
           Modle::correlation_test
-          Modle::io_test)
+          Modle::io_test
+          Modle::libmodle_test)
 
 # automatically discover tests that are defined in catch based test files you can modify the unittests. TEST_PREFIX to
 # whatever you want, or use different for different binaries

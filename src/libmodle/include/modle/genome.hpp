@@ -1,8 +1,10 @@
 #pragma once
 
+#include <absl/container/btree_set.h>
 #include <absl/types/span.h>
 
 #include <boost/asio/thread_pool.hpp>
+#include <boost/dynamic_bitset.hpp>
 #include <cstdint>      // for uint*_t
 #include <memory>       // for _Destroy, allocator
 #include <string>       // for basic_string, string
@@ -10,114 +12,33 @@
 #include <utility>      // for pair
 #include <vector>       // for vector
 
-#include "modle/dna.hpp"   // for Chromosome
-#include "modle/lefs.hpp"  // for Lef
+#include "modle/bed.hpp"
+#include "modle/dna.hpp"
+#include "modle/extrusion_factors.hpp"
 
 namespace modle {
 
 struct config;
 
-/** \brief The Genome class acts as the entrypoint to simulate DNA loop extrusion.
- *
- * This class is used to store and access most of the simulation data and operations, such as the
- * chromosomes that make up the Genome, the loop extrusion factors (Lef) and the extrusion barriers
- * (ExtrusionBarrier).
- *
- * The simulation can be executed by calling Genome::simulate_extrusion with the number of
- * iterations to simulate.
- */
 class Genome {
  public:
-  inline explicit Genome(const config& c);
+  inline void test();
+  inline explicit Genome(const config& c, bool import_chroms = true);
 
-  // Getters
-  [[nodiscard]] inline absl::Span<const Chromosome> get_chromosomes() const;
-  [[nodiscard]] inline absl::Span<Chromosome> get_chromosomes();
-  [[nodiscard]] inline uint32_t get_nchromosomes() const;
-  [[nodiscard]] inline uint32_t get_n_ok_chromosomes() const;
-  [[nodiscard]] inline std::vector<std::string_view> get_chromosome_names() const;
-  [[nodiscard]] inline std::vector<std::size_t> get_chromosome_lengths() const;
-  [[nodiscard]] inline std::vector<double> get_chromosome_lef_affinities() const;
+  [[nodiscard]] std::size_t size() const;
+  [[nodiscard]] std::size_t simulated_size() const;
 
-  [[nodiscard]] inline absl::Span<const Lef> get_lefs() const;
-  [[nodiscard]] inline absl::Span<Lef> get_lefs();
-  [[nodiscard]] inline std::size_t get_nlefs() const;
-  [[nodiscard]] inline std::size_t get_n_free_lefs() const;
-  [[nodiscard]] inline std::size_t get_n_busy_lefs() const;
-
-  [[nodiscard]] inline std::size_t size() const;
-  [[nodiscard]] inline std::size_t n50() const;
-
-  [[nodiscard]] inline std::size_t get_nbins() const;
-  [[nodiscard]] inline std::size_t get_nbarriers() const;
-
-  inline void write_contacts_to_file(std::filesystem::path output_file,
-                                     bool include_ko_chroms = false);
-  inline void write_contacts_w_noise_to_file(std::filesystem::path output_file, double noise_mean,
-                                             double noise_std, bool include_ko_chroms = false);
-  // inline void write_extrusion_barriers_to_file(std::string_view output_dir,
-  //                                             bool force_overwrite) const;
-
-  /** Randomly generate and bind \p n_barriers ExtrusionBarrier%s
-   *
-   * This function randomly selects Chromosome%s using \p std::discrete_distribution and
-   * Chromosome%s lengths as weight.
-   *
-   * After selecting a chromosome the binding position for an ExtrusionBarrier is randomly drawn
-   * from an uniform distribution [0, Chromosome::simulated_length).
-   *
-   * The direction where the ExtrusionBarrier exerts a strong block is randomly drawn using an
-   * unbiased bernoulli trial.
-   *
-   * ExtrusionBarrier%s are owned by the DNA::Bin to which they bound, while Chromosome::barriers
-   * only stores ptrs to the actual ExtrusionBarrier%s.
-   * @param nbarriers The number of barriers to randomly generate and bind.
-   * @param seed Random seed
-   */
-  template <typename I>
-  inline void randomly_generate_extrusion_barriers(I nbarriers, uint64_t seed = 0);
-
-  /** This function is meant to be used before calling Genome::simulate_extrusion to randomly bind
-   * Lef%s.
-   *
-   * The Chromosome and binding position are selected following the same procedure described for
-   * Chromosome::randomly_generate_extrusion_barriers.
-   */
-
-  inline std::pair<std::size_t, std::size_t> import_extrusion_barriers_from_bed(
-      std::filesystem::path path_to_bed, double probability_of_block);
-  inline void sort_extr_barriers_by_pos();
-  inline void assign_lefs(bool bind_lefs_after_assignment);
-
-  inline uint64_t exclude_chr_wo_extr_barriers();
-
-  inline std::pair<double, double> run_burnin(double prob_of_rebinding,
-                                              uint32_t target_n_of_unload_events,
-                                              uint64_t min_extr_rounds);
-
-  /** This function is the one that actually runs the simulation
-   *
-   * Pseudocode for one simulation round:
-   \verbatim
-     For each lef in Genome::lefs:
-        If lef is bound to DNA:
-           Register contact
-           Extrude
-        If lef is bound to DNA:
-           Check constraints and apply stalls where appropriate
-        else:
-           Try to rebind the lef
-   \endverbatim
-   *
-   * @param iterations Number of loop extrusion events to simulate
-   */
-  void simulate_extrusion();
-  void simulate_extrusion(uint32_t iterations);
-  void simulate_extrusion(double target_contact_density);
+  using Chromosomes = absl::btree_set<Chromosome, Chromosome::Comparator>;
+  using lef_bar_stall_generator_t = std::geometric_distribution<Bp>;
+  using lef_lef_stall_generator_t = std::geometric_distribution<Bp>;
+  using lef_lifetime_generator_t = std::geometric_distribution<Bp>;
+  using chrom_pos_generator_t = std::uniform_int_distribution<Bp>;
+  void simulate_extrusion(std::size_t iterations);
 
  private:
-  std::string _path_to_chrom_sizes_file;
-  std::string _path_to_chr_subranges_file;
+  std::filesystem::path _path_to_chrom_sizes;
+  std::filesystem::path _path_to_chrom_subranges;
+  std::filesystem::path _path_to_extr_barriers;
   uint32_t _bin_size;
   uint32_t _avg_lef_lifetime;  ///< Average loop size if loop extrusion takes place unobstructed
   double _probability_of_barrier_block;
@@ -126,19 +47,56 @@ class Genome {
   double _soft_stall_multiplier;
   double _hard_stall_multiplier;
   bool _allow_lef_lifetime_extension;
-  std::vector<Lef> _lefs;
-  std::vector<Chromosome> _chromosomes;
   uint32_t _sampling_interval;
   bool _randomize_contact_sampling;
   uint32_t _nthreads;
+  uint64_t _seed;
 
-  inline void simulate_extrusion(uint32_t iterations, double target_contact_density);
+  Chromosomes _chromosomes{};
 
-  // Private initializers
-  [[nodiscard]] inline std::vector<Chromosome> init_chromosomes_from_file(
-      uint32_t diagonal_width) const;
-  [[nodiscard]] inline std::vector<Lef> generate_lefs(uint32_t n);
+  // inline void simulate_extrusion();
+
+  // inline void simulate_extrusion(double target_contact_density);
+  // inline void simulate_extrusion(uint32_t iterations, double target_contact_density);
   [[nodiscard]] inline boost::asio::thread_pool instantiate_thread_pool() const;
+  template <typename I>
+  [[nodiscard]] inline static boost::asio::thread_pool instantiate_thread_pool(I nthreads);
+
+  [[nodiscard]] inline static Chromosomes import_chromosomes(
+      const std::filesystem::path& path_to_chrom_sizes,
+      const std::filesystem::path& path_to_extr_barriers,
+      const std::filesystem::path& path_to_chrom_subranges = {});
+
+  inline void simulate_extrusion_kernel(const Chromosome* chrom, std::size_t ncell,
+                                        std::vector<Lef> lefs, std::vector<Bp> fwd_barriers,
+                                        std::vector<Bp> rev_barriers,
+                                        std::vector<double> fwd_barriers_pblock,
+                                        std::vector<double> rev_barriers_pblock);
+  template <typename I>
+  inline void bind_lefs(const Chromosome* chrom, std::vector<Lef>& lefs, modle::PRNG& rand_eng,
+                        const std::vector<I>& mask);
+
+  inline void bind_all_lefs(const Chromosome* chrom, std::vector<Lef>& lefs, modle::PRNG& rand_eng);
+
+  template <typename I>
+  inline void check_lef_lef_collisions(const std::vector<Lef>& lefs,
+                                       const std::vector<Bp>& fwd_rank_buff,
+                                       const std::vector<Bp>& rev_rank_buff,
+                                       std::vector<I>& fwd_collision_buff,
+                                       std::vector<I>& rev_collision_buff);
+#ifdef ENABLE_TESTING
+ public:
+  template <typename I>
+  inline void test_check_lef_lef_collisions(const std::vector<Lef>& lefs,
+                                            const std::vector<Bp>& fwd_rank_buff,
+                                            const std::vector<Bp>& rev_rank_buff,
+                                            std::vector<I>& fwd_collision_buff,
+                                            std::vector<I>& rev_collision_buff) {
+    this->check_lef_lef_collisions(lefs, fwd_rank_buff, rev_rank_buff, fwd_collision_buff,
+                                   rev_collision_buff);
+  }
+
+#endif
 };
 }  // namespace modle
 
