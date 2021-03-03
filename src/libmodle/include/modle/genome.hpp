@@ -87,13 +87,18 @@ class Genome {
                                         std::vector<double> fwd_barriers_pblock,
                                         std::vector<double> rev_barriers_pblock);
   template <typename I>
-  inline void bind_lefs(const Chromosome* chrom, std::vector<Lef>& lefs, modle::PRNG& rand_eng,
-                        const std::vector<I>& mask);
+  inline static void bind_lefs(const Chromosome* chrom, std::vector<Lef>& lefs,
+                               modle::PRNG& rand_eng, const std::vector<I>& mask);
 
-  inline void bind_all_lefs(const Chromosome* chrom, std::vector<Lef>& lefs, modle::PRNG& rand_eng);
+  inline static void bind_all_lefs(const Chromosome* chrom, std::vector<Lef>& lefs,
+                                   std::vector<std::size_t>& fwd_rank_buff,
+                                   std::vector<std::size_t>& rev_rank_buff, PRNG& rand_eng);
 
-  // Loop over lefs and identifi colliding extr. units (i.e. units that travel in opposite direction
-  // and that are within <p>dist_threshold</p> bp from each other
+  inline static void rank_lefs(std::vector<Lef>& lefs, std::vector<std::size_t>& fwd_rank_buff,
+                               std::vector<std::size_t>& rev_rank_buff, bool init_buffers = false);
+
+  // Loop over lefs and identifi colliding extr. units (i.e. units that travel in opposite
+  // direction and that are within <p>dist_threshold</p> bp from each other
   template <typename I>
   inline static void check_lef_lef_collisions(const std::vector<Lef>& lefs,
                                               const std::vector<std::size_t>& fwd_rank_buff,

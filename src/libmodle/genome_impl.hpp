@@ -433,10 +433,10 @@ void Genome::simulate_extrusion_kernel(const Chromosome* chrom, std::size_t ncel
   modle::PRNG rand_eng(seeder_);
 #endif
 
-  this->bind_all_lefs(chrom, lefs, rand_eng);
-
   std::vector<std::size_t> fwd_rank_buff(lefs.size());
-  auto rev_rank_buff = fwd_rank_buff;
+  std::vector<std::size_t> rev_rank_buff(lefs.size());
+
+  Genome::bind_all_lefs(chrom, lefs, fwd_rank_buff, rev_rank_buff, rand_eng);
 
   std::vector<uint_fast16_t> fwd_lef_collision_counter_buff(lefs.size());
   auto rev_lef_collision_counter_buff = fwd_lef_collision_counter_buff;
@@ -477,25 +477,36 @@ void Genome::bind_lefs(const Chromosome* const chrom, std::vector<Lef>& lefs, mo
   }
 }
 
-void Genome::bind_all_lefs(const Chromosome* chrom, std::vector<Lef>& lefs, modle::PRNG& rand_eng) {
-  this->bind_lefs(chrom, lefs, rand_eng, std::vector<std::size_t>{});
+void Genome::bind_all_lefs(const Chromosome* chrom, std::vector<Lef>& lefs,
+                           std::vector<std::size_t>& fwd_rank_buff,
+                           std::vector<std::size_t>& rev_rank_buff, PRNG& rand_eng) {
+  Genome::bind_lefs(chrom, lefs, rand_eng, std::vector<std::size_t>{});
 
-  // Rank by pos. rev and fwd extr. units
-  std::vector<std::size_t> ranks(lefs.size());
-  std::iota(ranks.begin(), ranks.end(), 0);
-  std::sort(ranks.begin(), ranks.end(), [&](const auto r1, const auto r2) {
+  Genome::rank_lefs(lefs, fwd_rank_buff, rev_rank_buff, true);
+}
+
+void Genome::rank_lefs(std::vector<Lef>& lefs, std::vector<std::size_t>& fwd_rank_buff,
+                       std::vector<std::size_t>& rev_rank_buff, bool init_buffers) {
+  if (init_buffers) {
+    fwd_rank_buff.resize(lefs.size());
+    rev_rank_buff.resize(lefs.size());
+    std::iota(fwd_rank_buff.begin(), fwd_rank_buff.end(), 0);
+    std::copy(fwd_rank_buff.begin(), fwd_rank_buff.end(), rev_rank_buff.end());
+  }
+  assert(lefs.size() == fwd_rank_buff.size());
+  assert(lefs.size() == rev_rank_buff.size());
+
+  std::sort(fwd_rank_buff.begin(), fwd_rank_buff.end(), [&](const auto r1, const auto r2) {
     return lefs[r1].fwd_unit.pos() < lefs[r2].fwd_unit.pos();
   });
-  for (auto i = 0UL; i < ranks.size(); ++i) {
-    lefs[i].fwd_unit._rank = ranks[i];
-  }
 
-  std::iota(ranks.begin(), ranks.end(), 0);
-  std::sort(ranks.begin(), ranks.end(), [&](const auto r1, const auto r2) {
+  std::sort(rev_rank_buff.begin(), rev_rank_buff.end(), [&](const auto r1, const auto r2) {
     return lefs[r1].rev_unit.pos() < lefs[r2].rev_unit.pos();
   });
-  for (auto i = 0UL; i < ranks.size(); ++i) {
-    lefs[i].rev_unit._rank = ranks[i];
+
+  for (auto i = 0UL; i < lefs.size(); ++i) {
+    lefs[i].fwd_unit._rank = fwd_rank_buff[i];
+    lefs[i].rev_unit._rank = rev_rank_buff[i];
   }
 }
 
