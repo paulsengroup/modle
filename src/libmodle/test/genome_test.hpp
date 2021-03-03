@@ -152,6 +152,7 @@ TEST_CASE("Apply LEF-LEF stalls simple 001", "[simulation][short]") {
   // clang-format on
   set_lef_lef_stalls_wrapper(c, lefs, expected_collisions_rev, expected_collisions_fwd);
 }
+
 TEST_CASE("Apply LEF-LEF stalls simple 002", "[simulation][short]") {
   modle::config c;
   c.number_of_lefs = 4;
@@ -168,6 +169,33 @@ TEST_CASE("Apply LEF-LEF stalls simple 002", "[simulation][short]") {
       Lef{{4, 0, 1}, {6, 0, 1}},
       Lef{{9, 0, 2}, {14, 0, 2}},
       Lef{{11, 0, 3}, {15, 0, 3}}
+  };
+
+  const std::vector<std::size_t> expected_collisions_rev{0, 0, 2, 1};
+  const std::vector<std::size_t> expected_collisions_fwd{1, 2, 0, 0};
+  assert(lefs.size() == nlefs); // NOLINT
+  assert(expected_collisions_fwd.size() == nlefs); // NOLINT
+  assert(expected_collisions_rev.size() == nlefs); // NOLINT
+  // clang-format on
+  set_lef_lef_stalls_wrapper(c, lefs, expected_collisions_rev, expected_collisions_fwd);
+}
+
+TEST_CASE("Apply LEF-LEF stalls (reset old lef_lef stalls) simple 003", "[simulation][short]") {
+  modle::config c;
+  c.number_of_lefs = 4;
+  c.bin_size = 5;
+  c.probability_of_extrusion_unit_bypass = 0.05;
+  const auto& nlefs = c.number_of_lefs;
+
+  std::vector<Bp> fwd_rank_buff(nlefs);
+  std::vector<Bp> rev_rank_buff(nlefs);
+
+  // clang-format off
+  std::vector<Lef> lefs{
+      Lef{{1, 0, 0, 10}, {5, 0, 0, 10}},
+      Lef{{4, 0, 1, 10}, {6, 0, 1, 10}},
+      Lef{{9, 0, 2, 10}, {14, 0, 2, 10}},
+      Lef{{11, 0, 3, 10}, {15, 0, 3, 10}}
   };
 
   const std::vector<std::size_t> expected_collisions_rev{0, 0, 2, 1};

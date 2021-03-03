@@ -621,25 +621,36 @@ void Genome::apply_lef_lef_stalls(std::vector<Lef>& lefs, const std::vector<I>& 
   std::size_t collisions_fwd = fwd_collision_buff[fwd_idx];
   std::size_t collisions_rev = rev_collision_buff[rev_idx];
 
+  /* Loop over the two buffers storing the number of collision for each LEF. We use the fwd/rev
+   * ranks to iterate through collision events in 5'-3' direction. Draw and apply the appropriate
+   * number of stalls
+   */
   while (true) {
-    while (collisions_fwd == 0) {
+    while (collisions_fwd == 0) {  // Find the first collision event for fwd units
       if (++i >= lefs.size()) {
-        return;
+        assert(collisions_rev == 0);
+        return;  // All collisions have been processed
       }
       fwd_idx = fwd_rank_buff[i];
       collisions_fwd = fwd_collision_buff[fwd_idx];
+      // Reset the number of stalls if the number of collisions for the current extr. unit is 0
       lefs[fwd_idx].fwd_unit._nstalls_lef_lef *= collisions_fwd != 0;
     }
 
-    while (collisions_rev == 0) {
+    while (collisions_rev == 0) {  // Find the first collision event for rev units
       if (++j >= lefs.size()) {
-        return;
+        assert(collisions_fwd == 0);
+        return;  // All collisions have been processed
       }
       rev_idx = rev_rank_buff[j];
       collisions_rev = rev_collision_buff[rev_idx];
+      // Reset the number of stalls if the number of collisions for the current extr. unit is 0
       lefs[rev_idx].rev_unit._nstalls_lef_lef *= collisions_rev != 0;
     }
 
+    // Each iteration consumes a pair of collision events. When fwd or rev collision events (or
+    // both) reach 0, this while loop is terminated, and we go back to the outer while loop (where
+    // we look for the next non-zero collision event)
     while (collisions_fwd > 0 && collisions_rev > 0) {
       const auto nstalls = rng(rand_eng);
       lefs[fwd_idx].fwd_unit._nstalls_lef_lef += nstalls;
