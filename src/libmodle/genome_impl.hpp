@@ -504,7 +504,7 @@ void Genome::check_lef_lef_collisions(const std::vector<Lef>& lefs,
                                       const std::vector<Bp>& fwd_rank_buff,
                                       const std::vector<Bp>& rev_rank_buff,
                                       std::vector<I>& fwd_collision_buff,
-                                      std::vector<I>& rev_collision_buff) {
+                                      std::vector<I>& rev_collision_buff, Bp dist_threshold) {
   static_assert(std::is_integral_v<I>,
                 "fwd and rev_collision_buff should be a vector of integral numbers.");
   assert(lefs.size() == fwd_rank_buff.size());
@@ -524,7 +524,6 @@ void Genome::check_lef_lef_collisions(const std::vector<Lef>& lefs,
   std::fill(fwd_collision_buff.begin(), fwd_collision_buff.end(), 0);
   std::fill(rev_collision_buff.begin(), rev_collision_buff.end(), 0);
 
-  std::size_t i = 0, j = 0;
   /* Loop over lefs, using a procedure similar to merge in mergesort
    * The idea here is that if we have a way to visit extr. units in 5'-3' order, then detecting
    * LEF-LEF collisions boils down to:
@@ -536,6 +535,7 @@ void Genome::check_lef_lef_collisions(const std::vector<Lef>& lefs,
    *    - While doing so, increase the number of LEF-LEF collisions for the fwd/rev unit that are
    *      being processed
    */
+  std::size_t i = 0, j = 0;
   while (i < lefs.size() && j < lefs.size()) {
     const auto& fwd_idx = fwd_rank_buff[i];          // index of the ith fwd unit in 5'-3' order
     const auto& fwd = lefs[fwd_idx].fwd_unit.pos();  // pos of the ith unit
@@ -554,8 +554,8 @@ void Genome::check_lef_lef_collisions(const std::vector<Lef>& lefs,
 
       // Increment the # of collisions if delta is less than the threshold, and if the two ext.
       // units do not belong to the same LEF
-      fwd_collision_buff[fwd_idx] += delta <= this->_bin_size && rev_idx != fwd_idx;
-      rev_collision_buff[rev_idx] += delta <= this->_bin_size && rev_idx != fwd_idx;
+      fwd_collision_buff[fwd_idx] += delta <= dist_threshold && rev_idx != fwd_idx;
+      rev_collision_buff[rev_idx] += delta <= dist_threshold && rev_idx != fwd_idx;
 
       /*
       fmt::print(stderr,
@@ -566,7 +566,7 @@ void Genome::check_lef_lef_collisions(const std::vector<Lef>& lefs,
       */
       // Break out of the loop if the units being processed are too far from each other, or if k
       // points to the last rev unit
-      if (delta > this->_bin_size || k == lefs.size() - 1) {
+      if (delta > dist_threshold || k == lefs.size() - 1) {
         // We always move to the next fwd unit, because when this branch is executed, we have
         // already detected all possible collisions for the current fwd unit
         ++i;
@@ -578,6 +578,16 @@ void Genome::check_lef_lef_collisions(const std::vector<Lef>& lefs,
       }
     }
   }
+}
+
+template <typename I>
+void Genome::check_lef_lef_collisions(const std::vector<Lef>& lefs,
+                                      const std::vector<Bp>& fwd_rank_buff,
+                                      const std::vector<Bp>& rev_rank_buff,
+                                      std::vector<I>& fwd_collision_buff,
+                                      std::vector<I>& rev_collision_buff) {
+  this->template check_lef_lef_collisions(lefs, fwd_rank_buff, rev_rank_buff, fwd_collision_buff,
+                                          rev_collision_buff, this->_bin_size);
 }
 
 boost::asio::thread_pool Genome::instantiate_thread_pool() const {

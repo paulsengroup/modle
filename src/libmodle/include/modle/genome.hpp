@@ -78,12 +78,22 @@ class Genome {
 
   inline void bind_all_lefs(const Chromosome* chrom, std::vector<Lef>& lefs, modle::PRNG& rand_eng);
 
+  // Loop over lefs and identifi colliding extr. units (i.e. units that travel in opposite direction
+  // and that are within <p>dist_threshold</p> bp from each other
+  template <typename I>
+  inline static void check_lef_lef_collisions(const std::vector<Lef>& lefs,
+                                              const std::vector<Bp>& fwd_rank_buff,
+                                              const std::vector<Bp>& rev_rank_buff,
+                                              std::vector<I>& fwd_collision_buff,
+                                              std::vector<I>& rev_collision_buff,
+                                              Bp dist_threshold);
   template <typename I>
   inline void check_lef_lef_collisions(const std::vector<Lef>& lefs,
                                        const std::vector<Bp>& fwd_rank_buff,
                                        const std::vector<Bp>& rev_rank_buff,
                                        std::vector<I>& fwd_collision_buff,
                                        std::vector<I>& rev_collision_buff);
+
 #ifdef ENABLE_TESTING
  public:
   template <typename I>
