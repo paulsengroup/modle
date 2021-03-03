@@ -25,6 +25,7 @@ Bp ExtrusionUnit::pos() const { return this->_pos; }
 std::size_t ExtrusionUnit::rank() const { return this->_rank; }
 
 Bp ExtrusionUnit::lifetime() const { return this->_lifetime; }
+Bp ExtrusionUnit::lef_lef_stalls() const { return this->_nstalls_lef_lef; }
 
 void ExtrusionUnit::operator-(Bp n) { this->_pos = std::clamp(this->_pos - n, 0UL, this->_pos); }
 

@@ -19,6 +19,7 @@ class ExtrusionUnit {
   [[nodiscard]] inline Bp pos() const;
   [[nodiscard]] inline std::size_t rank() const;
   [[nodiscard]] inline Bp lifetime() const;
+  [[nodiscard]] inline Bp lef_lef_stalls() const;
   inline void operator-(Bp n);
   inline void operator+(Bp n);
   [[nodiscard]] inline bool operator<(const ExtrusionUnit& other);
@@ -39,7 +40,7 @@ class ExtrusionUnit {
   template <typename I>
   inline void set_rank(I n) {
     this->_rank = n;
-  };
+  }
 #endif
 };
 

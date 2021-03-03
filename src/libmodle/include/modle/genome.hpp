@@ -3,6 +3,12 @@
 #include <absl/container/btree_set.h>
 #include <absl/types/span.h>
 
+#ifdef USE_XOSHIRO
+#include <XoshiroCpp.hpp>
+#else
+#include <random>
+#endif
+
 #include <boost/asio/thread_pool.hpp>
 #include <boost/dynamic_bitset.hpp>
 #include <cstdint>      // for uint*_t
@@ -17,6 +23,14 @@
 #include "modle/extrusion_factors.hpp"
 
 namespace modle {
+
+#ifdef USE_XOSHIRO
+using PRNG = XoshiroCpp::Xoshiro256PlusPlus;
+using seeder = XoshiroCpp::SplitMix64;
+#else
+using PRNG = std::mt19937_64;
+using seeder = std::seed_seq;
+#endif
 
 struct config;
 
@@ -82,28 +96,46 @@ class Genome {
   // and that are within <p>dist_threshold</p> bp from each other
   template <typename I>
   inline static void check_lef_lef_collisions(const std::vector<Lef>& lefs,
-                                              const std::vector<Bp>& fwd_rank_buff,
-                                              const std::vector<Bp>& rev_rank_buff,
+                                              const std::vector<std::size_t>& fwd_rank_buff,
+                                              const std::vector<std::size_t>& rev_rank_buff,
                                               std::vector<I>& fwd_collision_buff,
                                               std::vector<I>& rev_collision_buff,
                                               Bp dist_threshold);
   template <typename I>
   inline void check_lef_lef_collisions(const std::vector<Lef>& lefs,
-                                       const std::vector<Bp>& fwd_rank_buff,
-                                       const std::vector<Bp>& rev_rank_buff,
+                                       const std::vector<std::size_t>& fwd_rank_buff,
+                                       const std::vector<std::size_t>& rev_rank_buff,
                                        std::vector<I>& fwd_collision_buff,
                                        std::vector<I>& rev_collision_buff);
 
+  template <typename I>
+  inline static void apply_lef_lef_stalls(std::vector<Lef>& lefs,
+                                          const std::vector<I>& fwd_collision_buff,
+                                          const std::vector<I>& rev_collision_buff,
+                                          const std::vector<std::size_t>& fwd_rank_buff,
+                                          const std::vector<std::size_t>& rev_rank_buff,
+                                          PRNG& rand_eng, double prob_of_bypass);
 #ifdef ENABLE_TESTING
  public:
   template <typename I>
   inline void test_check_lef_lef_collisions(const std::vector<Lef>& lefs,
-                                            const std::vector<Bp>& fwd_rank_buff,
-                                            const std::vector<Bp>& rev_rank_buff,
+                                            const std::vector<std::size_t>& fwd_rank_buff,
+                                            const std::vector<std::size_t>& rev_rank_buff,
                                             std::vector<I>& fwd_collision_buff,
                                             std::vector<I>& rev_collision_buff) {
     this->check_lef_lef_collisions(lefs, fwd_rank_buff, rev_rank_buff, fwd_collision_buff,
                                    rev_collision_buff);
+  }
+
+  template <typename I>
+  inline void test_apply_lef_lef_stalls(std::vector<Lef>& lefs,
+                                        const std::vector<I>& fwd_collision_buff,
+                                        const std::vector<I>& rev_collision_buff,
+                                        const std::vector<std::size_t>& fwd_rank_buff,
+                                        const std::vector<std::size_t>& rev_rank_buff,
+                                        PRNG& rand_eng, double prob_of_block) {
+    this->apply_lef_lef_stalls(lefs, fwd_collision_buff, rev_collision_buff, fwd_rank_buff,
+                               rev_rank_buff, rand_eng, prob_of_block);
   }
 
 #endif

@@ -501,8 +501,8 @@ void Genome::bind_all_lefs(const Chromosome* chrom, std::vector<Lef>& lefs, modl
 
 template <typename I>
 void Genome::check_lef_lef_collisions(const std::vector<Lef>& lefs,
-                                      const std::vector<Bp>& fwd_rank_buff,
-                                      const std::vector<Bp>& rev_rank_buff,
+                                      const std::vector<std::size_t>& fwd_rank_buff,
+                                      const std::vector<std::size_t>& rev_rank_buff,
                                       std::vector<I>& fwd_collision_buff,
                                       std::vector<I>& rev_collision_buff, Bp dist_threshold) {
   static_assert(std::is_integral_v<I>,
@@ -582,12 +582,72 @@ void Genome::check_lef_lef_collisions(const std::vector<Lef>& lefs,
 
 template <typename I>
 void Genome::check_lef_lef_collisions(const std::vector<Lef>& lefs,
-                                      const std::vector<Bp>& fwd_rank_buff,
-                                      const std::vector<Bp>& rev_rank_buff,
+                                      const std::vector<std::size_t>& fwd_rank_buff,
+                                      const std::vector<std::size_t>& rev_rank_buff,
                                       std::vector<I>& fwd_collision_buff,
                                       std::vector<I>& rev_collision_buff) {
   this->template check_lef_lef_collisions(lefs, fwd_rank_buff, rev_rank_buff, fwd_collision_buff,
                                           rev_collision_buff, this->_bin_size);
+}
+
+template <typename I>
+void Genome::apply_lef_lef_stalls(std::vector<Lef>& lefs, const std::vector<I>& fwd_collision_buff,
+                                  const std::vector<I>& rev_collision_buff,
+                                  const std::vector<std::size_t>& fwd_rank_buff,
+                                  const std::vector<std::size_t>& rev_rank_buff, PRNG& rand_eng,
+                                  double prob_of_bypass) {
+  static_assert(std::is_integral_v<I>,
+                "fwd and rev_collision_buff should be a vector of integral numbers.");
+  assert(lefs.size() == fwd_rank_buff.size());
+  assert(lefs.size() == rev_rank_buff.size());
+  assert(lefs.size() == fwd_collision_buff.size());
+  assert(lefs.size() == rev_collision_buff.size());
+  assert(
+      std::is_sorted(fwd_rank_buff.begin(), fwd_rank_buff.end(), [&](const auto r1, const auto r2) {
+        return lefs[r1].fwd_unit.pos() < lefs[r2].fwd_unit.pos();
+      }));
+  assert(
+      std::is_sorted(rev_rank_buff.begin(), rev_rank_buff.end(), [&](const auto r1, const auto r2) {
+        return lefs[r1].rev_unit.pos() < lefs[r2].rev_unit.pos();
+      }));
+  assert(std::accumulate(fwd_collision_buff.begin(), fwd_collision_buff.end(), 0UL) ==
+         std::accumulate(rev_collision_buff.begin(), rev_collision_buff.end(), 0UL));
+
+  lef_lef_stall_generator_t rng(prob_of_bypass);
+  std::size_t i = 0, j = 0;
+  auto fwd_idx = fwd_rank_buff[i];
+  auto rev_idx = rev_rank_buff[j];
+
+  std::size_t collisions_fwd = fwd_collision_buff[fwd_idx];
+  std::size_t collisions_rev = rev_collision_buff[rev_idx];
+
+  while (true) {
+    while (collisions_fwd == 0) {
+      if (++i >= lefs.size()) {
+        return;
+      }
+      fwd_idx = fwd_rank_buff[i];
+      collisions_fwd = fwd_collision_buff[fwd_idx];
+      lefs[fwd_idx].fwd_unit._nstalls_lef_lef *= collisions_fwd != 0;
+    }
+
+    while (collisions_rev == 0) {
+      if (++j >= lefs.size()) {
+        return;
+      }
+      rev_idx = rev_rank_buff[j];
+      collisions_rev = rev_collision_buff[rev_idx];
+      lefs[rev_idx].rev_unit._nstalls_lef_lef *= collisions_rev != 0;
+    }
+
+    while (collisions_fwd > 0 && collisions_rev > 0) {
+      const auto nstalls = rng(rand_eng);
+      lefs[fwd_idx].fwd_unit._nstalls_lef_lef += nstalls;
+      lefs[rev_idx].rev_unit._nstalls_lef_lef += nstalls;
+      --collisions_fwd;
+      --collisions_rev;
+    }
+  }
 }
 
 boost::asio::thread_pool Genome::instantiate_thread_pool() const {
