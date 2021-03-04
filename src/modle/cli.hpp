@@ -198,7 +198,6 @@ gen->add_flag(
             "--contact-noise-mean",
             this->_config.random_noise_mean,
             "Mean parameter (in base pairs) of the normal distribution that will be used to introduce noise in the contact matrix when --write-contacts-w-noise is specified.")
-            ->check(CLI::PositiveNumber)
             ->capture_default_str();
 
     rand->add_option(
