@@ -28,16 +28,16 @@ if [[ $# -eq 1 && ("$1" == *help || "$1" == *h ) ]] ; then
   exit 1
 fi
 
-docker_running=$(systemctl is-active --quiet docker.service)
-if ! $docker_running ; then
-  sudo systemctl start docker.service
-fi
+set +e
+docker_running="$(systemctl is-active docker.service)"
+set -e
+sudo systemctl restart docker.service
 
 if [ -z "$ver" ]; then
   ver="$(git rev-parse --short HEAD)"
   if ! git diff-index --quiet HEAD --; then
     ver+="-dirty"
-    fi
+  fi
 
 fi
 
@@ -78,6 +78,6 @@ sudo docker build --memory="${memory}" \
                           "docker-daemon://robomics/${img_name}:${ver}"
 
 # Restore docker.service to the original state
-if ! $docker_running ; then
+if [ "$docker_running" = inactive ]; then
   sudo systemctl stop docker.service
 fi
