@@ -23,6 +23,7 @@ class ExtrusionUnit {
   inline void increment_stalls(Bp nstalls);
   inline void decrement_stalls(Bp nstalls);
   [[nodiscard]] inline Bp lef_lef_stalls() const;
+  [[nodiscard]] inline Bp lef_bar_stalls() const;
   inline void operator-(Bp n);
   inline void operator+(Bp n);
   [[nodiscard]] inline bool operator<(const ExtrusionUnit& other);

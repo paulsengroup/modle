@@ -50,6 +50,8 @@ void ExtrusionUnit::decrement_stalls(Bp nstalls) {
 
 Bp ExtrusionUnit::lef_lef_stalls() const { return this->_nstalls_lef_lef; }
 
+Bp ExtrusionUnit::lef_bar_stalls() const { return this->_nstalls_lef_bar; }
+
 void ExtrusionUnit::operator-(Bp n) { this->_pos = std::clamp(this->_pos - n, 0UL, this->_pos); }
 
 void ExtrusionUnit::operator+(Bp n) {
