@@ -35,7 +35,7 @@ struct config {
   double target_contact_density{0.0};
   uint32_t number_of_lefs;
   uint32_t average_lef_lifetime{100'000};  // NOLINT(readability-magic-numbers, cppcoreguidelines-avoid-magic-numbers)
-  double hard_stall_multiplier{2.0};  // NOLINT(readability-magic-numbers, cppcoreguidelines-avoid-magic-numbers)
+  double hard_stall_multiplier{1.0};  // NOLINT(readability-magic-numbers, cppcoreguidelines-avoid-magic-numbers)
   double soft_stall_multiplier{0.5};  // NOLINT(readability-magic-numbers, cppcoreguidelines-avoid-magic-numbers)
   bool allow_lef_lifetime_extension{true};
   bool skip_burnin{false};

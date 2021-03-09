@@ -92,12 +92,6 @@ void Lef::unload() {
 }
 
 uint32_t Lef::try_extrude() {
-  // if (this->_lifetime > 150) {
-  //   fmt::print(stderr, "Lef {} has an unexpectedly long lifetime: {}\n",
-  //   static_cast<void*>(this),
-  //              this->_lifetime);
-  // }
-
   if (this->_lifetime-- > 0) {
     const auto bins_extruded =
         static_cast<uint64_t>(  // NOLINTNEXTLINE(readability-implicit-bool-conversion)
@@ -126,8 +120,13 @@ void Lef::check_constraints(modle::PRNG& rang_eng) {
     return;
   }
 
-  this->_left_unit.check_for_lef_bar_collision(rang_eng);
-  this->_right_unit.check_for_lef_bar_collision(rang_eng);
+  if (this->_left_unit._nstalls_lef_bar == 0) {
+    this->_left_unit.check_for_lef_bar_collision(rang_eng);
+  }
+
+  if (this->_right_unit._nstalls_lef_bar == 0) {
+    this->_right_unit.check_for_lef_bar_collision(rang_eng);
+  }
 
   if (this->hard_stall()) {
     this->apply_hard_stall_and_extend_lifetime();
@@ -198,26 +197,13 @@ uint32_t Lef::apply_hard_stall_and_extend_lifetime(bool allow_lifetime_extension
   const auto nstalls = static_cast<uint32_t>(
       std::round(this->_hard_stall_multiplier *
                  std::min(this->_left_unit._nstalls_lef_bar, this->_right_unit._nstalls_lef_bar)));
-  // TODO: Problem: I think the most reasonable thing to do here, is to assign the same number of
-  // stalls to both units. The problem is that when we do this, then we see an unexpected pattern,
-  // consisting of a straight line starting from dots, and going away from the diagonal
-  // this->_left_unit.set_lef_bar_stalls(nstalls);
-  // this->_right_unit.set_lef_bar_stalls(nstalls);
-  if (this->_left_unit._nstalls_lef_bar < nstalls) {
-    this->_left_unit.set_lef_bar_stalls(nstalls);
-  }
-  if (this->_right_unit._nstalls_lef_bar < nstalls) {
-    this->_right_unit.set_lef_bar_stalls(nstalls);
-  }
-  if (allow_lifetime_extension) {
-    assert(std::numeric_limits<decltype(this->_lifetime)>::max() - nstalls >
-           this->_lifetime);  // NOLINT
-    // TODO consider whether we should always increase the lifetime, or only do so when _lifetime <
-    // nstalls
-    // this->_lifetime += nstalls;
-    if (nstalls > this->_lifetime) {
-      this->_lifetime = nstalls;
-    }
+
+  this->_left_unit.increment_lef_bar_stalls(nstalls);
+  this->_right_unit.increment_lef_bar_stalls(nstalls);
+
+  if (allow_lifetime_extension &&
+      std::numeric_limits<decltype(this->_lifetime)>::max() - nstalls > this->_lifetime) {
+    this->_lifetime += nstalls;
   }
 
   return nstalls;
@@ -317,15 +303,15 @@ bool ExtrusionUnit::hard_stall() const {
 void ExtrusionUnit::set_lef_bar_stalls(uint32_t n) { this->_nstalls_lef_bar = n; }
 void ExtrusionUnit::set_lef_lef_stalls(uint32_t n) { this->_nstalls_lef_lef = n; }
 void ExtrusionUnit::increment_lef_lef_stalls(uint32_t n) {  // NOLINTNEXTLINE
-  assert(std::numeric_limits<decltype(this->_nstalls_lef_lef)>::max() - n >=
-         this->_nstalls_lef_lef);
-  this->_nstalls_lef_lef += n;
+  if (std::numeric_limits<decltype(this->_nstalls_lef_lef)>::max() - n >= this->_nstalls_lef_lef) {
+    this->_nstalls_lef_lef += n;
+  }
 }
 
 void ExtrusionUnit::increment_lef_bar_stalls(uint32_t n) {  // NOLINTNEXTLINE
-  assert(std::numeric_limits<decltype(this->_nstalls_lef_bar)>::max() - n >=
-         this->_nstalls_lef_bar);
-  this->_nstalls_lef_bar += n;
+  if (std::numeric_limits<decltype(this->_nstalls_lef_bar)>::max() - n >= this->_nstalls_lef_bar) {
+    this->_nstalls_lef_bar += n;
+  }
 }
 
 void ExtrusionUnit::decrement_stalls(uint32_t n) {
@@ -345,8 +331,8 @@ void ExtrusionUnit::decrement_lef_bar_stalls(uint32_t n) {  // NOLINTNEXTLINE
 }
 
 void ExtrusionUnit::decrement_lef_lef_stalls(uint32_t n) {  // NOLINTNEXTLINE
-  assert(this->_nstalls_lef_bar >=
-         std::numeric_limits<decltype(this->_nstalls_lef_bar)>::min() + n);
+  assert(this->_nstalls_lef_lef >=
+         std::numeric_limits<decltype(this->_nstalls_lef_lef)>::min() + n);
   this->_nstalls_lef_lef -= n;
 }
 
@@ -414,7 +400,6 @@ uint64_t ExtrusionUnit::check_constraints(modle::PRNG& rand_eng) {
 }
 
 uint32_t ExtrusionUnit::check_for_lef_lef_collisions(modle::PRNG& rang_eng) {
-  assert(!this->is_stalled());                        // NOLINT
   assert(this->_direction == dna::Direction::fwd ||   // NOLINT
          this->_direction == dna::Direction::rev);    // NOLINT
   assert(this->_bin_idx < this->_dna->get_n_bins());  // NOLINT
