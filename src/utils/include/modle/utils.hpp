@@ -1,6 +1,4 @@
 #pragma once
-#include <boost/exception/all.hpp>
-#include <boost/stacktrace.hpp>
 #include <cstdint>
 #include <string_view>
 #include <system_error>
@@ -52,8 +50,8 @@ inline void throw_except_from_errc(std::string_view tok, std::size_t idx, const 
 [[nodiscard]] inline bool chr_less_than_operator(const std::pair<std::string_view, int64_t>& chr1,
                                                  const std::pair<std::string_view, int64_t>& chr2);
 
-template <class E>
-[[noreturn]] inline void throw_with_trace(const E& e);
+template <class Except>
+[[noreturn]] inline void throw_with_trace(const Except& e);
 
 // Typetraits stuff
 

@@ -18,6 +18,8 @@ if (ENABLE_TESTING)
   target_compile_definitions(project_options INTERFACE ENABLE_TESTING=1)
 endif()
 
+target_compile_definitions(project_options INTERFACE $<$<CONFIG:Release>:BOOST_STACKTRACE_USE_NOOP>)
+
 if(CMAKE_CXX_COMPILER_ID MATCHES ".*Clang")
   option(ENABLE_BUILD_WITH_TIME_TRACE "Enable -ftime-trace to generate time tracing .json files on clang" OFF)
   if(ENABLE_BUILD_WITH_TIME_TRACE)

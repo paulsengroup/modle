@@ -15,8 +15,9 @@
 #include <memory>       // for _Destroy, allocator
 #include <string>       // for basic_string, string
 #include <string_view>  // for string_view
-#include <utility>      // for pair
-#include <vector>       // for vector
+#include <thread>
+#include <utility>  // for pair
+#include <vector>   // for vector
 
 #include "modle/bed.hpp"
 #include "modle/dna.hpp"
@@ -48,14 +49,16 @@ class Genome {
   using lef_lef_stall_generator_t = std::geometric_distribution<Bp>;
   using lef_lifetime_generator_t = std::geometric_distribution<Bp>;
   using chrom_pos_generator_t = std::uniform_int_distribution<Bp>;
-  inline void simulate_extrusion(std::size_t iterations);
+  inline void simulate_extrusion(
+      std::size_t nthreads = static_cast<std::size_t>(std::thread::hardware_concurrency()));
 
  private:
   std::filesystem::path _path_to_chrom_sizes;
   std::filesystem::path _path_to_chrom_subranges;
   std::filesystem::path _path_to_extr_barriers;
-  uint32_t _bin_size;
-  uint32_t _avg_lef_lifetime;  ///< Average loop size if loop extrusion takes place unobstructed
+  Bp _bin_size;
+  Bp _diagonal_width;
+  Bp _avg_lef_lifetime;  ///< Average loop size if loop extrusion takes place unobstructed
   double _nlefs_per_mbp;
   double _probability_of_barrier_block;
   double _probability_of_lef_rebind;
@@ -83,20 +86,22 @@ class Genome {
       const std::filesystem::path& path_to_extr_barriers,
       const std::filesystem::path& path_to_chrom_subranges = {});
 
-  inline void simulate_extrusion_kernel(const Chromosome* chrom, std::size_t cell_id,
+  inline void simulate_extrusion_kernel(Chromosome* chrom, std::size_t cell_id,
                                         std::size_t burnin_iters, std::size_t simulation_iters,
                                         std::vector<Lef> lefs,
                                         std::vector<ExtrusionBarrier> extr_barriers);
   template <typename I>
-  inline void bind_lefs(const Chromosome* chrom, std::vector<Lef>& lefs, modle::PRNG& rand_eng,
+  inline void bind_lefs(const Chromosome* chrom, std::vector<Lef>& lefs,
+                        std::vector<std::size_t>& rev_lef_rank_buff,
+                        std::vector<std::size_t>& fwd_lef_rank_buff, modle::PRNG& rand_eng,
                         const std::vector<I>& mask);
 
   inline void bind_all_lefs(const Chromosome* chrom, std::vector<Lef>& lefs,
-                            std::vector<std::size_t>& fwd_lef_rank_buff,
-                            std::vector<std::size_t>& rev_lef_rank_buff, PRNG& rand_eng);
+                            std::vector<std::size_t>& rev_lef_rank_buff,
+                            std::vector<std::size_t>& fwd_lef_rank_buff, PRNG& rand_eng);
 
-  inline static void rank_lefs(std::vector<Lef>& lefs, std::vector<std::size_t>& fwd_lef_rank_buff,
-                               std::vector<std::size_t>& rev_lef_rank_buff,
+  inline static void rank_lefs(std::vector<Lef>& lefs, std::vector<std::size_t>& rev_lef_rank_buff,
+                               std::vector<std::size_t>& fwd_lef_rank_buff,
                                bool init_buffers = false);
 
   inline void extrude(const Chromosome* chrom, std::vector<Lef>& lefs);
@@ -149,6 +154,11 @@ class Genome {
                                    const std::vector<std::size_t>& fwd_lef_rank_buff,
                                    PRNG& rand_eng, double soft_stall_multiplier,
                                    double hard_stall_multiplier);
+
+  inline void register_contacts(Chromosome* chrom, const std::vector<Lef>& lefs);
+
+  template <typename I>
+  inline void select_lefs_to_rebind(const std::vector<Lef>& lefs, std::vector<I>& mask);
 
 #ifdef ENABLE_TESTING
  public:

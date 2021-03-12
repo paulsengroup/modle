@@ -5,7 +5,9 @@
 #include <absl/strings/substitute.h>
 #include <fmt/format.h>
 
+#include <boost/exception/all.hpp>
 #include <boost/process.hpp>
+#include <boost/stacktrace.hpp>
 #include <charconv>
 #include <string>
 #include <type_traits>
@@ -201,12 +203,9 @@ bool chr_less_than_operator(const std::pair<std::string_view, int64_t> &chr1,
 }
 
 typedef boost::error_info<struct tag_stacktrace, boost::stacktrace::stacktrace> traced;  // NOLINT
-template <class E>
-void throw_with_trace(const E &e) {
-  if constexpr (std::is_base_of_v<std::exception, E>) {
-    throw boost::enable_error_info(e) << traced(boost::stacktrace::stacktrace());
-  }
-  throw boost::enable_error_info(std::runtime_error(e)) << traced(boost::stacktrace::stacktrace());
+template <class Except>
+void throw_with_trace(const Except &e) {
+  throw boost::enable_error_info(e) << traced(boost::stacktrace::stacktrace());
 }
 
 template <typename T>

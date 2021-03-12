@@ -31,9 +31,18 @@
 #include "modle/utils.hpp"
 
 namespace modle {
-template <class I>
+template <typename I>
+ContactMatrix<I>::ContactMatrix(const ContactMatrix<I> &other)
+    : _nrows(other.nrows()),
+      _ncols(other.ncols()),
+      _contacts(other._contacts),
+      _tot_contacts(other.get_tot_contacts()),
+      _updates_missed(other.get_n_of_missed_updates()),
+      _locks(other._locks.size()) {}
+
+template <typename I>
 ContactMatrix<I>::ContactMatrix(std::size_t nrows, std::size_t ncols, bool fill_with_random_numbers)
-    : _nrows(nrows), _ncols(ncols), _contacts(_nrows * _ncols, 0) {
+    : _nrows(nrows), _ncols(ncols), _contacts(_nrows * _ncols + 1, 0), _locks(_ncols) {
   if (fill_with_random_numbers) {
     std::random_device rand_dev;
     std::mt19937_64 rand_eng{rand_dev()};
@@ -47,14 +56,29 @@ ContactMatrix<I>::ContactMatrix(std::size_t nrows, std::size_t ncols, bool fill_
 }
 
 template <typename I>
+ContactMatrix<I> &ContactMatrix<I>::operator=(const ContactMatrix<I> &other) {
+  this->_nrows = other.nrows();
+  this->_ncols = other.ncols();
+  if (!this->_contacts.empty()) {
+    this->_contacts.resize(other._contacts.size());
+    std::copy(other._contacts.begin(), other._contacts.end(), this->_contacts.begin());
+  } else {
+    this->_contacts = other._contacts;
+  }
+  this->_tot_contacts = other._tot_contacts;
+  this->_updates_missed = other._updates_missed;
+  this->_locks.resize(other._locks.size());
+}
+
+template <typename I>
 I ContactMatrix<I>::get(std::size_t row, std::size_t col) const {
   const auto [i, j] = transpose_coords(row, col);
 #ifndef NDEBUG
   if (i >= this->ncols() || j >= this->ncols()) {
-    throw std::logic_error(fmt::format(
+    utils::throw_with_trace(std::logic_error(fmt::format(
         FMT_STRING("ContactMatrix<I>::get(row={}, col={}) tried to access an element outside of "
                    "the space {}x{}, which is what this contact matrix is supposed to represent"),
-        row, col, col, col));
+        row, col, col, col)));
   }
 #endif
 
@@ -75,10 +99,10 @@ void ContactMatrix<I>::set(std::size_t row, std::size_t col, I2 n) {
   DISABLE_WARNING_SIGN_COMPARE
   DISABLE_WARNING_BOOL_COMPARE
   if (n < std::numeric_limits<I>::min() || n > std::numeric_limits<I>::max()) {
-    throw std::runtime_error(
+    utils::throw_with_trace(std::runtime_error(
         fmt::format(FMT_STRING("ContactMatrix<I>::set(row={}, col={}, n={}): Overflow detected: "
                                "n={} is outside the range of representable numbers ({}-{})"),
-                    row, col, n, n, std::numeric_limits<I>::min(), std::numeric_limits<I>::max()));
+                    row, col, n, n, std::numeric_limits<I>::min(), std::numeric_limits<I>::max())));
   }
   DISABLE_WARNING_POP
 #endif
@@ -86,16 +110,17 @@ void ContactMatrix<I>::set(std::size_t row, std::size_t col, I2 n) {
 
   try {
     if (j > this->ncols()) {
-      throw std::runtime_error(
+      utils::throw_with_trace(std::runtime_error(
           fmt::format(FMT_STRING("attempt to access an element past the end of the contact matrix: "
                                  "j={}; ncols={}: j > ncols"),
-                      j, this->ncols()));
+                      j, this->ncols())));
     }
     if (i > this->nrows()) {
-      ++this->_updates_missed;
+      this->_updates_missed.fetch_add(1, std::memory_order_relaxed);
       return;
     }
 
+    std::scoped_lock l(this->_locks[j]);
     auto &m = this->at(i, j);
     DISABLE_WARNING_PUSH
     DISABLE_WARNING_CONVERSION
@@ -105,20 +130,23 @@ void ContactMatrix<I>::set(std::size_t row, std::size_t col, I2 n) {
     assert(this->_tot_contacts >= m);
     if constexpr (std::is_signed_v<I2>) {
       if (n < 0) {
-        throw std::runtime_error(
-            fmt::format(FMT_STRING("Setting counts to a negative value (n={}) is not allowed"), n));
+        utils::throw_with_trace(std::runtime_error(fmt::format(
+            FMT_STRING("Setting counts to a negative value (n={}) is not allowed"), n)));
       }
       assert(this->_tot_contacts - m <
              std::numeric_limits<decltype(this->_tot_contacts)>::max() - n);
     }
 #endif
-    this->_tot_contacts -= m;
-    this->_tot_contacts += n;
+    if (n > m) {
+      this->_tot_contacts += n - m;
+    } else {
+      this->_tot_contacts -= m - n;
+    }
     m = n;
     DISABLE_WARNING_POP
   } catch (const std::runtime_error &err) {
-    throw std::logic_error(
-        fmt::format(FMT_STRING("ContactMatrix::set({}, {}, {}): {})"), row, col, n, err.what()));
+    utils::throw_with_trace(std::logic_error(
+        fmt::format(FMT_STRING("ContactMatrix::set({}, {}, {}): {})"), row, col, n, err.what())));
   }
 }
 
@@ -132,13 +160,15 @@ void ContactMatrix<I>::add(std::size_t row, std::size_t col, I2 n) {
 
   try {
     if (j > this->ncols()) {
-      throw std::runtime_error(fmt::format(FMT_STRING("j={} > ncols={})"), j, this->ncols()));
+      utils::throw_with_trace(
+          std::runtime_error(fmt::format(FMT_STRING("j={} > ncols={})"), j, this->ncols())));
     }
     if (i > this->nrows()) {
-      ++this->_updates_missed;
+      this->_updates_missed.fetch_add(1, std::memory_order_relaxed);
       return;
     }
 
+    std::scoped_lock l(this->_locks[j]);
     DISABLE_WARNING_PUSH
     DISABLE_WARNING_SIGN_COMPARE
     DISABLE_WARNING_SIGN_CONVERSION
@@ -146,24 +176,23 @@ void ContactMatrix<I>::add(std::size_t row, std::size_t col, I2 n) {
     auto &m = this->at(i, j);
     if constexpr (std::is_signed<I2>::value) {
       if (n < 0) {
-        throw std::logic_error(fmt::format(
-            FMT_STRING("ContactMatrix<I>::increment(row={}, col={}, n={}): consider using "
-                       "ContactMatrix<I>::decrement instead of incrementing by a negative number."),
-            row, col, n));
+        utils::throw_with_trace(
+            std::logic_error("Consider using ContactMatrix<I>::subtract instead of "
+                             "incrementing by a negative number."));
       }
     }
     if (std::numeric_limits<I>::max() - n < m) {
-      throw std::runtime_error(fmt::format(
+      utils::throw_with_trace(std::runtime_error(fmt::format(
           FMT_STRING("Overflow detected: "
                      "incrementing m={} by n={} would result in a number outside of range {}-{}"),
-          m, n, std::numeric_limits<I>::min(), std::numeric_limits<I>::max()));
+          m, n, std::numeric_limits<I>::min(), std::numeric_limits<I>::max())));
     }
     if (std::numeric_limits<I>::max() - n < this->_tot_contacts) {
-      throw std::runtime_error(fmt::format(
+      utils::throw_with_trace(std::runtime_error(fmt::format(
           FMT_STRING("Overflow detected: "
                      "incrementing _tot_contacts={} by n={} would result in a number outside of "
                      "range {}-{}"),
-          this->_tot_contacts, n, std::numeric_limits<I>::min(), std::numeric_limits<I>::max()));
+          this->_tot_contacts, n, std::numeric_limits<I>::min(), std::numeric_limits<I>::max())));
     }
 #endif
 
@@ -171,8 +200,8 @@ void ContactMatrix<I>::add(std::size_t row, std::size_t col, I2 n) {
     this->_tot_contacts += n;
     DISABLE_WARNING_POP
   } catch (const std::runtime_error &err) {
-    throw std::logic_error(fmt::format(
-        FMT_STRING("ContactMatrix<I>::add(row={}, col={}, n={}): {}"), row, col, n, err.what()));
+    utils::throw_with_trace(std::logic_error(fmt::format(
+        FMT_STRING("ContactMatrix<I>::add(row={}, col={}, n={}): {}"), row, col, n, err.what())));
   }
 }
 
@@ -186,13 +215,15 @@ void ContactMatrix<I>::subtract(std::size_t row, std::size_t col, I2 n) {
 
   try {
     if (j > this->ncols()) {
-      throw std::runtime_error(fmt::format(FMT_STRING("j={} > ncols={})"), j, this->ncols()));
+      utils::throw_with_trace(
+          std::runtime_error(fmt::format(FMT_STRING("j={} > ncols={})"), j, this->ncols())));
     }
     if (i > this->nrows()) {
-      ++this->_updates_missed;
+      this->_updates_missed.fetch_add(1, std::memory_order_relaxed);
       return;
     }
 
+    std::scoped_lock l(this->_locks[j]);
     DISABLE_WARNING_PUSH
     DISABLE_WARNING_CONVERSION
     DISABLE_WARNING_SIGN_COMPARE
@@ -201,25 +232,25 @@ void ContactMatrix<I>::subtract(std::size_t row, std::size_t col, I2 n) {
     auto &m = this->at(i, j);
     if constexpr (std::is_signed<I2>::value) {
       if (n < 0) {
-        throw std::logic_error(fmt::format(
+        utils::throw_with_trace(std::logic_error(fmt::format(
             FMT_STRING("ContactMatrix<I>::decrement(row={}, col={}, n={}): consider using "
                        "ContactMatrix<I>::increment instead of decrementing by a negative number."),
-            row, col, n));
+            row, col, n)));
       }
     }
 
     if (std::numeric_limits<I>::min() + n > m) {
-      throw std::runtime_error(fmt::format(
+      utils::throw_with_trace(std::runtime_error(fmt::format(
           FMT_STRING("Overflow detected: "
                      "decrementing m={} by n={} would result in a number outside of range {}-{}"),
-          m, n, std::numeric_limits<I>::min(), std::numeric_limits<I>::max()));
+          m, n, std::numeric_limits<I>::min(), std::numeric_limits<I>::max())));
     }
     if (std::numeric_limits<I>::min() + n > this->_tot_contacts) {
-      throw std::runtime_error(fmt::format(
+      utils::throw_with_trace(std::runtime_error(fmt::format(
           FMT_STRING("Overflow detected: "
                      "decrementing _tot_contacts={} by n={} would result in a number outside of "
                      "range {}-{}"),
-          this->_tot_contacts, n, std::numeric_limits<I>::min(), std::numeric_limits<I>::max()));
+          this->_tot_contacts, n, std::numeric_limits<I>::min(), std::numeric_limits<I>::max())));
     }
 #endif
 
@@ -227,19 +258,19 @@ void ContactMatrix<I>::subtract(std::size_t row, std::size_t col, I2 n) {
     this->_tot_contacts -= n;
     DISABLE_WARNING_POP
   } catch (const std::runtime_error &err) {
-    throw std::logic_error(fmt::format(FMT_STRING("ContactMatrix::subtract({}, {}, {}): {})"), row,
-                                       col, n, err.what()));
+    utils::throw_with_trace(std::logic_error(fmt::format(
+        FMT_STRING("ContactMatrix::subtract({}, {}, {}): {})"), row, col, n, err.what())));
   }
 }
 
 template <typename I>
 void ContactMatrix<I>::increment(std::size_t row, std::size_t col) {
-  this->add(row, col, 1U);
+  this->add(row, col, static_cast<I>(1));
 }
 
 template <typename I>
 void ContactMatrix<I>::decrement(std::size_t row, std::size_t col) {
-  this->subtract(row, col, 1U);
+  this->subtract(row, col, static_cast<I>(1));
 }
 
 template <typename I>
@@ -510,10 +541,10 @@ template <typename I>
 I &ContactMatrix<I>::at(std::size_t i, std::size_t j) {
 #ifndef NDEBUG
   if ((j * this->_nrows) + i > this->_contacts.size()) {
-    throw std::runtime_error(fmt::format(
+    utils::throw_with_trace(std::runtime_error(fmt::format(
         "ContactMatrix::at tried to access element m[{}][{}] of a matrix of shape [{}][{}]! "
         "({} >= {})",
-        i, j, this->nrows(), this->ncols(), (j * this->_nrows) + i, this->_contacts.size()));
+        i, j, this->nrows(), this->ncols(), (j * this->_nrows) + i, this->_contacts.size())));
   }
 #endif
   return this->_contacts[(j * this->_nrows) + i];
@@ -523,10 +554,10 @@ template <typename I>
 const I &ContactMatrix<I>::at(std::size_t i, std::size_t j) const {
 #ifndef NDEBUG
   if ((j * this->_nrows) + i > this->_contacts.size()) {
-    throw std::runtime_error(fmt::format(
+    utils::throw_with_trace(std::runtime_error(fmt::format(
         "ContactMatrix::at tried to access element m[{}][{}] of a matrix of shape [{}][{}]! "
         "({} >= {})",
-        i, j, this->nrows(), this->ncols(), (j * this->_nrows) + i, this->_contacts.size()));
+        i, j, this->nrows(), this->ncols(), (j * this->_nrows) + i, this->_contacts.size())));
   }
 #endif
   return this->_contacts[(j * this->_nrows) + i];

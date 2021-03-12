@@ -33,7 +33,14 @@ class ContactMatrix {
  public:
   // Constructors
   inline ContactMatrix() = default;
+  inline ContactMatrix(ContactMatrix<I>&& other) = default;
+  inline ContactMatrix(const ContactMatrix<I>& other);
   inline ContactMatrix(std::size_t nrows, std::size_t ncols, bool fill_with_random_numbers = false);
+  inline ~ContactMatrix() = default;
+
+  // Operators
+  [[nodiscard]] inline ContactMatrix& operator=(const ContactMatrix& other);
+  [[nodiscard]] inline ContactMatrix& operator=(ContactMatrix&& other) = default;
 
   // Counts getters and setters
   [[nodiscard]] inline I get(std::size_t row, std::size_t col) const;
@@ -80,8 +87,9 @@ class ContactMatrix {
   uint64_t _nrows{0};
   uint64_t _ncols{0};
   std::vector<I> _contacts{};
-  uint64_t _tot_contacts{0};
-  uint64_t _updates_missed{0};
+  std::atomic<uint64_t> _tot_contacts{0};
+  std::atomic<uint64_t> _updates_missed{0};
+  std::vector<std::mutex> _locks{};
 
   [[nodiscard]] inline I& at(std::size_t i, std::size_t j);
   [[nodiscard]] inline const I& at(std::size_t i, std::size_t j) const;

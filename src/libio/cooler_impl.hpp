@@ -83,23 +83,31 @@ Cooler::Cooler(std::string_view path_to_file, IO_MODE mode, std::size_t bin_size
                      assembly_name, flavor, validate, compression_lvl, chunk_size, cache_size) {}
 
 Cooler::~Cooler() {
-  if (this->_mode == WRITE_ONLY && this->_nchroms != 0 && this->_nbins != 0) {
-    if (this->_fp) {
-      auto &chrom_idx = this->_datasets[IDX_CHR];
-      auto &bin1_idx = this->_datasets[IDX_BIN1];
-      auto chrom_idx_offset = this->_dataset_file_offsets[IDX_CHR];
-      auto bin1_idx_offset = this->_dataset_file_offsets[IDX_BIN1];
+  try {
+    if (this->_mode == WRITE_ONLY && this->_nchroms != 0 && this->_nbins != 0) {
+      if (this->_fp) {
+        auto &chrom_idx = this->_datasets[IDX_CHR];
+        auto &bin1_idx = this->_datasets[IDX_BIN1];
+        auto chrom_idx_offset = this->_dataset_file_offsets[IDX_CHR];
+        auto bin1_idx_offset = this->_dataset_file_offsets[IDX_BIN1];
 
-      (void)hdf5::write_number(++this->_nbins, chrom_idx, chrom_idx_offset);
-      const auto nnz = ++this->_nnz;
-      (void)hdf5::write_number(nnz, bin1_idx, bin1_idx_offset);
-    } else {
-      fmt::print(stderr,
-                 FMT_STRING("WARNING: Message for the developers: ~Cooler() for file '{}' was "
-                            "called on a file that is supposed to be opened in write-mode, but the "
-                            "file handle is actually already closed!"),
-                 this->_path_to_file);
+        const auto nbins = ++this->_nbins;
+        (void)hdf5::write_number(nbins, chrom_idx, chrom_idx_offset);
+        const auto nnz = ++this->_nnz;
+        (void)hdf5::write_number(nnz, bin1_idx, bin1_idx_offset);
+      } else {
+        fmt::print(
+            stderr,
+            FMT_STRING("WARNING: Message for the developers: ~Cooler() for file '{}' was "
+                       "called on a file that is supposed to be opened in write-mode, but the "
+                       "file handle is actually already closed!"),
+            this->_path_to_file);
+      }
     }
+  } catch (const H5::Exception &err) {
+    throw std::runtime_error(
+        fmt::format(FMT_STRING("The following error occurred while finalizing file '{}':\n{}"),
+                    this->_path_to_file, hdf5::construct_error_stack()));
   }
 }
 
@@ -115,7 +123,7 @@ std::size_t Cooler::get_nchroms() {
     return static_cast<std::size_t>(hdf5::read_attribute_int(
         *this->_fp, "nchroms", absl::StrCat("/resolutions/", this->_bin_size)));
   }
-  utils::throw_with_trace("Unreachable code");
+  utils::throw_with_trace(std::logic_error("Unreachable code"));
 }
 
 void Cooler::get_chr_names(std::vector<std::string> &buff) {
@@ -218,41 +226,49 @@ void Cooler::write_metadata() {
   H5::DataSpace attr_space(H5S_SCALAR);
   int64_t int_buff{};
   std::string str_buff{};
+  std::string name{};
 
-  auto att = this->_fp->createAttribute("format", METADATA_STR_TYPE, attr_space);
-  str_buff = "HDF5::Cooler";
-  att.write(METADATA_STR_TYPE, str_buff);
+  try {
+    name = "format";
+    str_buff = "HDF5::Cooler";
+    hdf5::write_or_create_attribute(*this->_fp, name, str_buff);
 
-  att = this->_fp->createAttribute("format-version", hdf5::getH5_type<decltype(int_buff)>(),
-                                   attr_space);
-  int_buff = 3;
-  att.write(H5::PredType::NATIVE_INT64, &int_buff);
+    name = "format-version";
+    int_buff = 3;
+    hdf5::write_or_create_attribute(*this->_fp, name, int_buff);
 
-  att = this->_fp->createAttribute("bin-type", METADATA_STR_TYPE, attr_space);
-  str_buff = "fixed";
-  att.write(METADATA_STR_TYPE, str_buff);
+    name = "bin-type";
+    str_buff = "fixed";
+    hdf5::write_or_create_attribute(*this->_fp, name, str_buff);
 
-  att = this->_fp->createAttribute("bin-size", hdf5::getH5_type<decltype(int_buff)>(), attr_space);
-  int_buff = static_cast<int64_t>(this->_bin_size);
-  att.write(H5::PredType::NATIVE_INT64, &int_buff);
+    name = "bin-size";
+    int_buff = static_cast<int64_t>(this->_bin_size);
+    hdf5::write_or_create_attribute(*this->_fp, name, int_buff);
 
-  att = this->_fp->createAttribute("storage-mode", METADATA_STR_TYPE, attr_space);
-  str_buff = "symmetric-upper";
-  att.write(METADATA_STR_TYPE, str_buff);
+    name = "storage-mode";
+    str_buff = "symmetric-upper";
+    hdf5::write_or_create_attribute(*this->_fp, name, str_buff);
 
-  if (!this->_assembly_name.empty()) {
-    str_buff = this->_assembly_name;
-    att = this->_fp->createAttribute("assembly-name", METADATA_STR_TYPE, attr_space);
-    att.write(METADATA_STR_TYPE, &str_buff);
+    if (!this->_assembly_name.empty()) {
+      name = "assembly-name";
+      str_buff = this->_assembly_name;
+      hdf5::write_or_create_attribute(*this->_fp, name, str_buff);
+    }
+
+    name = "generated-by";
+    str_buff =
+        fmt::format(FMT_STRING("ModLE-v{}.{}.{}"), 0, 0, 1);  // TODO make ModLE ver a tunable
+    hdf5::write_or_create_attribute(*this->_fp, name, str_buff);
+
+    name = "creation-date";
+    str_buff = absl::FormatTime(absl::Now(), absl::UTCTimeZone());
+    hdf5::write_or_create_attribute(*this->_fp, name, str_buff);
+  } catch (const H5::Exception &e) {
+    throw std::runtime_error(
+        fmt::format(FMT_STRING("The following error occurred while writing metadata to file {}: "
+                               "error while writing attribute '{}':\n{}"),
+                    this->_path_to_file, name, hdf5::construct_error_stack()));
   }
-
-  att = this->_fp->createAttribute("generated-by", METADATA_STR_TYPE, attr_space);
-  str_buff = fmt::format(FMT_STRING("ModLE-v{}.{}.{}"), 0, 0, 1);  // TODO make ModLE ver a tunable
-  att.write(METADATA_STR_TYPE, str_buff);
-
-  att = this->_fp->createAttribute("creation-date", METADATA_STR_TYPE, attr_space);
-  str_buff = absl::FormatTime(absl::Now(), absl::UTCTimeZone());
-  att.write(METADATA_STR_TYPE, str_buff);
 }
 
 template <typename I1, typename I2>

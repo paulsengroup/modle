@@ -679,7 +679,7 @@ attr_types getCpp_type(const H5::IntType &h5_type) {
         type = static_cast<int64_t>(0);
         return type;
       default:
-        utils::throw_with_trace("Unreachable code");
+        utils::throw_with_trace(std::logic_error("Unreachable code"));
     }
   } else {
     switch (size) {
@@ -696,11 +696,11 @@ attr_types getCpp_type(const H5::IntType &h5_type) {
         type = static_cast<uint64_t>(0);
         return type;
       default:
-        utils::throw_with_trace("Unreachable code");
+        utils::throw_with_trace(std::logic_error("Unreachable code"));
     }
   }
   DISABLE_WARNING_POP
-  utils::throw_with_trace("Unreachable code");
+  utils::throw_with_trace(std::logic_error("Unreachable code"));
 }
 
 attr_types getCpp_type(const H5::FloatType &h5_type) {
@@ -717,9 +717,9 @@ attr_types getCpp_type(const H5::FloatType &h5_type) {
       type = static_cast<long double>(0);
       return type;
     default:
-      utils::throw_with_trace("Unreachable code");
+      utils::throw_with_trace(std::logic_error("Unreachable code"));
   }
-  utils::throw_with_trace("Unreachable code");
+  utils::throw_with_trace(std::logic_error("Unreachable code"));
 }
 
 }  // namespace modle::hdf5

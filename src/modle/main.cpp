@@ -151,7 +151,7 @@ int main(int argc, char** argv) noexcept {
 
   try {
     auto config = cli.parse_arguments();
-    if (const auto collisions = cli.process_paths_and_check_for_collisions(config);
+    if (const auto collisions = modle::Cli::process_paths_and_check_for_collisions(config);
         !collisions.empty()) {
       fmt::print(stderr, FMT_STRING("The following path collision(s) have been detected:\n{}"),
                  collisions);
@@ -167,6 +167,17 @@ int main(int argc, char** argv) noexcept {
     return 1;
   } catch (const std::runtime_error& err) {
     fmt::print(stderr, "FAILURE! An error occurred during simulation: {}.\n", err.what());
+    return 1;
+  } catch (const std::exception& err) {
+    fmt::print(stderr, FMT_STRING("{}\n"), err.what());
+#ifndef BOOST_STACKTRACE_USE_NOOP
+    const auto* st = boost::get_error_info<modle::utils::traced>(err);
+    if (st) {
+      std::cerr << *st << '\n';
+    } else {
+      fmt::print(stderr, "Stack trace not available!\n");
+    }
+#endif
     return 1;
   } catch (...) {
     const auto err = std::current_exception();

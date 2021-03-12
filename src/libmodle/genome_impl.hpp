@@ -57,8 +57,9 @@ void Genome::test() {
     for (const auto& b : chrom.get_barriers()) {
       fmt::print(stderr, "\t{}[{}-{}]", b.chrom, b.chrom_start, b.chrom_end);
     }
+    fmt::print(stderr, "\n");
     if (chrom.nbarriers() > 0) {
-      this->simulate_extrusion(100000);
+      this->simulate_extrusion();
     }
   }
 }
@@ -68,6 +69,7 @@ Genome::Genome(const config& c, bool import_chroms)
       _path_to_chrom_subranges(c.path_to_chr_subranges),
       _path_to_extr_barriers(c.path_to_extr_barriers_bed),
       _bin_size(c.bin_size),
+      _diagonal_width(c.diagonal_width),
       _avg_lef_lifetime(c.average_lef_lifetime),
       _nlefs_per_mbp(c.number_of_lefs_per_mbp),
       _probability_of_barrier_block(c.probability_of_extrusion_barrier_block),
@@ -153,6 +155,8 @@ Genome::Chromosomes Genome::import_chromosomes(
                       record.chrom, record.chrom_start, record.chrom_end, record.score));
     }
     if (auto match = chroms.find(record.chrom); match != chroms.end()) {
+      fmt::print(stderr, "Adding barrier for {}[{}-{}]...\n", record.chrom, record.chrom_start,
+                 record.chrom_end);
       match->add_extrusion_barrier(record);
     }
   }
@@ -174,7 +178,7 @@ void Genome::simulate_extrusion(uint32_t iterations, double target_contact_densi
     if (c.barriers.empty()) {
       return "KO! Chromosome won't be simulated. Reason: chromosome has 0 extrusion barriers.";
     }
-    utils::throw_with_trace("Unreachable code");
+    utils::throw_with_trace(std::logic_error("Unreachable code"));
   };
 
   fmt::print(stderr, FMT_STRING("Chromosome status report:\n"));
@@ -371,19 +375,30 @@ printing updates when simulation is about to end fmt::print(stderr, FMT_STRING("
 }
 */
 
-void Genome::simulate_extrusion(std::size_t iterations) {
-  std::size_t ncells = 1000;
+void Genome::simulate_extrusion(std::size_t nthreads) {
+  std::size_t ncells = 100;
   std::size_t burnin_iters = 1000;
-  std::size_t simulation_iters = 25000;
-  auto tpool = this->instantiate_thread_pool();
+  std::size_t simulation_iters = 2000;
+  auto tpool = this->instantiate_thread_pool(nthreads);
 
   std::vector<ExtrusionBarrier> extr_barriers_buff;
   std::vector<Lef> lef_buff;
 
-  for (const auto& chrom : this->_chromosomes) {
+  std::mutex cooler_mutex;
+  cooler::Cooler c(std::filesystem::path("/tmp/matrix.cool"), cooler::Cooler::WRITE_ONLY,
+                   this->_bin_size);
+  std::mutex progress_mutex;
+  absl::flat_hash_map<const Chromosome* const, std::size_t> progress;
+  std::transform(this->_chromosomes.begin(), this->_chromosomes.end(),
+                 std::inserter(progress, progress.begin()),
+                 [](const auto& chr) { return std::make_pair(&chr, 0UL); });
+
+  for (auto& chrom : this->_chromosomes) {
     if (!chrom.ok()) {
+      progress.erase(&chrom);
       continue;
     }
+    chrom.allocate_contacts(this->_bin_size, this->_diagonal_width);
     const auto nlefs = static_cast<std::size_t>(
         std::round(this->_nlefs_per_mbp * (static_cast<double>(chrom.simulated_size()) / 1.0e6)));
     // Clearing buffers
@@ -401,18 +416,44 @@ void Genome::simulate_extrusion(std::size_t iterations) {
 
     for (auto i = 0UL; i < ncells; ++i) {
       boost::asio::post(tpool, [&, i]() {
-        Genome::simulate_extrusion_kernel(&chrom, i, burnin_iters, simulation_iters, lef_buff,
-                                          extr_barriers_buff);
-        fmt::print(stderr, "Done simulating cell #{}!\n", i);
+        try {
+          Genome::simulate_extrusion_kernel(&chrom, i, burnin_iters, simulation_iters, lef_buff,
+                                            extr_barriers_buff);
+          fmt::print(stderr, "Done simulating cell #{}!\n", i + 1);
+          bool write_matrix = false;
+          {
+            std::scoped_lock l(progress_mutex);
+            progress[&chrom] += 1;
+            if (progress[&chrom] == ncells) {
+              write_matrix = true;
+            }
+          }
+          if (write_matrix) {
+            std::scoped_lock l(cooler_mutex);
+            c.write_or_append_cmatrix_to_file(chrom.contacts(), chrom.name(), chrom.start_pos(),
+                                              chrom.end_pos(), chrom.size());
+          }
+
+        } catch (const std::exception& err) {
+          fmt::print(stderr, FMT_STRING("{}\n"), err.what());
+#ifndef BOOST_STACKTRACE_USE_NOOP
+          const auto* st = boost::get_error_info<modle::utils::traced>(err);
+          if (st) {
+            std::cerr << *st << '\n';
+          } else {
+            fmt::print(stderr, "Stack trace not available!\n");
+          }
+#endif
+          throw;
+        }
       });
     }
-
-    // std::vector<ExtrusionBarrier>
   }
   tpool.join();
+  c.write_metadata();
 }
 
-void Genome::simulate_extrusion_kernel(const Chromosome* chrom, std::size_t cell_id,
+void Genome::simulate_extrusion_kernel(Chromosome* chrom, std::size_t cell_id,
                                        std::size_t burnin_iters, std::size_t simulation_iters,
                                        std::vector<Lef> lefs,
                                        std::vector<ExtrusionBarrier> extr_barriers) {
@@ -427,75 +468,93 @@ void Genome::simulate_extrusion_kernel(const Chromosome* chrom, std::size_t cell
   modle::PRNG rand_eng(seeder_);
 #endif
 
-  std::vector<std::size_t> fwd_lef_rank_buff(lefs.size());
   std::vector<std::size_t> rev_lef_rank_buff(lefs.size());
+  std::vector<std::size_t> fwd_lef_rank_buff(lefs.size());
 
-  this->bind_all_lefs(chrom, lefs, fwd_lef_rank_buff, rev_lef_rank_buff, rand_eng);
+  this->bind_all_lefs(chrom, lefs, rev_lef_rank_buff, fwd_lef_rank_buff, rand_eng);
+  for (const auto& lef : lefs) {
+    assert(lef.rev_unit.pos() > 77500000);
+    assert(lef.fwd_unit.pos() > 77500000);
+  }
 
-  std::vector<uint_fast16_t> fwd_lef_collision_buff(lefs.size());
   std::vector<uint_fast16_t> rev_lef_collision_buff(lefs.size());
+  std::vector<uint_fast16_t> fwd_lef_collision_buff(lefs.size());
 
-  /*
-    chrom_pos_generator_t chrom_pos_generator{
-        0U, static_cast<uint32_t>(chrom->start_pos(), chrom->end_pos())};
-    lef_lifetime_generator_t lef_lifetime_generator{
-        ExtrusionUnit::compute_probability_of_release(this->_avg_lef_lifetime, 2)};
-  */
+  std::bernoulli_distribution sample_contacts{1.0 / this->_sampling_interval};
   for (auto round = 0UL; round < burnin_iters + simulation_iters; ++round) {
+    const auto register_contacts =
+        round > burnin_iters &&
+        (this->_randomize_contact_sampling ? sample_contacts(rand_eng)
+                                           : round % this->_sampling_interval == 0);
+
+    this->select_lefs_to_rebind(lefs, rev_lef_collision_buff);  // buffer is used as mask here
+    this->bind_lefs(chrom, lefs, rev_lef_rank_buff, fwd_lef_rank_buff, rand_eng,
+                    rev_lef_collision_buff);
+
     this->check_lef_lef_collisions(lefs, rev_lef_rank_buff, fwd_lef_rank_buff,
                                    rev_lef_collision_buff, fwd_lef_collision_buff);
     this->apply_lef_lef_stalls(lefs, rev_lef_collision_buff, fwd_lef_collision_buff,
                                rev_lef_rank_buff, fwd_lef_rank_buff, rand_eng,
                                this->_probability_of_extr_unit_bypass);
-    this->extrude(chrom, lefs);
-    this->rank_lefs(lefs, fwd_lef_rank_buff, rev_lef_rank_buff);
+
     this->check_lef_bar_collisions(lefs, rev_lef_rank_buff, fwd_lef_rank_buff, extr_barriers,
                                    rev_lef_collision_buff, fwd_lef_collision_buff);
+    this->apply_lef_bar_stalls(lefs, rev_lef_collision_buff, fwd_lef_collision_buff, extr_barriers,
+                               rev_lef_rank_buff, fwd_lef_rank_buff, rand_eng,
+                               this->_soft_stall_multiplier, this->_hard_stall_multiplier);
+
+    if (register_contacts) {
+      this->register_contacts(chrom, lefs);
+    }
+
+    this->extrude(chrom, lefs);
+    this->rank_lefs(lefs, fwd_lef_rank_buff, rev_lef_rank_buff);
+
+    // fmt::print(stderr, "round={}\n", round);
   }
 }
 
 template <typename I>
-void Genome::bind_lefs(const Chromosome* const chrom, std::vector<Lef>& lefs, modle::PRNG& rand_eng,
+void Genome::bind_lefs(const Chromosome* const chrom, std::vector<Lef>& lefs,
+                       std::vector<std::size_t>& rev_lef_rank_buff,
+                       std::vector<std::size_t>& fwd_lef_rank_buff, modle::PRNG& rand_eng,
                        const std::vector<I>& mask) {
   static_assert(std::is_integral_v<I> || std::is_same_v<I, bool>,
                 "mask should be a vector of integers/booleans");
   assert(lefs.size() == mask.size() || mask.empty());
-  chrom_pos_generator_t chrom_pos_generator{chrom->start_pos(), chrom->end_pos()};
-  lef_lifetime_generator_t lef_lifetime_generator{
-      ExtrusionUnit::compute_probability_of_release(this->_avg_lef_lifetime, 2)};
+  assert(chrom);
+  chrom_pos_generator_t pos_generator{chrom->start_pos(), chrom->end_pos()};
+  lef_lifetime_generator_t lifetime_generator{1.0 / static_cast<double>(this->_avg_lef_lifetime)};
   for (auto i = 0UL; i < lefs.size(); ++i) {
     // Here we only consider even indexes, as binding a single extr. unit is not
     // allowed: either we bind all extr. units belonging to a LEF, or we bind none
     if (mask.empty() || mask[i]) {
-      const auto pos = chrom_pos_generator(rand_eng);
-      const auto lifetime = lef_lifetime_generator(rand_eng);
-      lefs[i].rev_unit.bind_at_pos(pos, lifetime);
-      lefs[i].fwd_unit.bind_at_pos(pos, lifetime);
+      lefs[i].bind_at_pos(pos_generator(rand_eng), lifetime_generator(rand_eng));
     }
   }
+  this->rank_lefs(lefs, rev_lef_rank_buff, fwd_lef_rank_buff);
 }
 
 void Genome::bind_all_lefs(const Chromosome* chrom, std::vector<Lef>& lefs,
-                           std::vector<std::size_t>& fwd_lef_rank_buff,
-                           std::vector<std::size_t>& rev_lef_rank_buff, PRNG& rand_eng) {
+                           std::vector<std::size_t>& rev_lef_rank_buff,
+                           std::vector<std::size_t>& fwd_lef_rank_buff, PRNG& rand_eng) {
   chrom_pos_generator_t chrom_pos_generator{chrom->start_pos(), chrom->end_pos()};
-  lef_lifetime_generator_t lef_lifetime_generator{
-      ExtrusionUnit::compute_probability_of_release(this->_avg_lef_lifetime, 2)};
+  lef_lifetime_generator_t lef_lifetime_generator{1.0 /
+                                                  static_cast<double>(this->_avg_lef_lifetime)};
   absl::btree_multiset<Bp> positions;
   std::generate_n(std::inserter(positions, positions.begin()), lefs.size(),
-                  [&]() { return lef_lifetime_generator(rand_eng); });
+                  [&]() { return chrom_pos_generator(rand_eng); });
   std::size_t i = 0;
-  for (const auto pos : positions) {
-    const auto lifetime = lef_lifetime_generator(rand_eng);
-    lefs[i].rev_unit.bind_at_pos(pos, lifetime);
-    lefs[i++].fwd_unit.bind_at_pos(pos, lifetime);
+  for (auto& pos : positions) {
+    lefs[i].bind_at_pos(pos, lef_lifetime_generator(rand_eng));
+    rev_lef_rank_buff[i] = i;
+    fwd_lef_rank_buff[i] = i;
+    ++i;
   }
-  std::iota(fwd_lef_rank_buff.begin(), fwd_lef_rank_buff.end(), 0);
-  std::copy(fwd_lef_rank_buff.begin(), fwd_lef_rank_buff.end(), rev_lef_rank_buff.begin());
 }
 
-void Genome::rank_lefs(std::vector<Lef>& lefs, std::vector<std::size_t>& fwd_lef_rank_buff,
-                       std::vector<std::size_t>& rev_lef_rank_buff, bool init_buffers) {
+void Genome::rank_lefs(std::vector<Lef>& lefs, std::vector<std::size_t>& rev_lef_rank_buff,
+                       std::vector<std::size_t>& fwd_lef_rank_buff, bool init_buffers) {
   if (init_buffers) {
     fwd_lef_rank_buff.resize(lefs.size());
     rev_lef_rank_buff.resize(lefs.size());
@@ -512,15 +571,20 @@ void Genome::rank_lefs(std::vector<Lef>& lefs, std::vector<std::size_t>& fwd_lef
   std::sort(rev_lef_rank_buff.begin(), rev_lef_rank_buff.end(), [&](const auto r1, const auto r2) {
     return lefs[r1].rev_unit.pos() < lefs[r2].rev_unit.pos();
   });
-
-  for (auto i = 0UL; i < lefs.size(); ++i) {
-    lefs[i].fwd_unit._rank = fwd_lef_rank_buff[i];
-    lefs[i].rev_unit._rank = rev_lef_rank_buff[i];
-  }
 }
 
 void Genome::extrude(const Chromosome* chrom, std::vector<Lef>& lefs) {
   for (auto& lef : lefs) {
+    assert(lef.lifetime > 0);
+    if (lef.rev_unit.stalled()) {
+      lef.rev_unit.decrement_stalls(this->_bin_size);
+    } else if (lef.rev_unit._pos < chrom->start_pos() + this->_bin_size) {
+      lef.rev_unit._pos = chrom->start_pos();
+      lef.rev_unit._nstalls_lef_lef = std::numeric_limits<Bp>::max();
+    } else {
+      lef.rev_unit._pos -= this->_bin_size;
+    }
+
     if (lef.fwd_unit.stalled()) {
       lef.fwd_unit.decrement_stalls(this->_bin_size);
     } else if (lef.fwd_unit._pos + this->_bin_size > chrom->end_pos() - 1) {
@@ -530,13 +594,9 @@ void Genome::extrude(const Chromosome* chrom, std::vector<Lef>& lefs) {
       lef.fwd_unit._pos += this->_bin_size;
     }
 
-    if (lef.rev_unit.stalled()) {
-      lef.rev_unit.decrement_stalls(this->_bin_size);
-    } else if (lef.rev_unit._pos < chrom->start_pos() + this->_bin_size) {
-      lef.rev_unit._pos = chrom->start_pos();
-      lef.rev_unit._nstalls_lef_lef = std::numeric_limits<Bp>::max();
-    } else {
-      lef.rev_unit._pos -= this->_bin_size;
+    if ((lef.lifetime -= std::min(lef.lifetime, (lef.rev_unit.stalled() + lef.fwd_unit.stalled()) *
+                                                    this->_bin_size)) == 0) {
+      lef.release();
     }
   }
 }
@@ -765,7 +825,7 @@ void Genome::check_lef_bar_collisions(const std::vector<Lef>& lefs,
   }
 endloop1:
 
-  j = lefs.size() - 1;
+  j = extr_barriers.size() - 1;
   for (auto i = lefs.size() - 1; i > 0; --i) {
     const auto& rev_idx = rev_lef_rank_buff[i];  // index of the ith fwd unit in 5'-3' order
     if (lefs[rev_idx].rev_unit.stalled()) {
@@ -820,56 +880,69 @@ void Genome::apply_lef_bar_stalls(std::vector<Lef>& lefs, const std::vector<I>& 
                         }));
 
   for (auto i = 0UL; i < lefs.size(); ++i) {
-    if (rev_collision_buff[i] == -1 && fwd_collision_buff[i] == -1) {
+    if (rev_collision_buff[i] == -1 && fwd_collision_buff[i] == -1 ||
+        (lefs[i].rev_unit.stalled() && lefs[i].fwd_unit.stalled())) {
       continue;
     }
-    auto& extruder = lefs[i];
+    auto& lef = lefs[i];
 
-    if (rev_collision_buff[i] != -1) {
-      assert(!extruder.rev_unit.stalled());
-      const auto& barrier = extr_barriers[rev_collision_buff[i]];
+    if (const auto barr_idx = rev_collision_buff[i]; barr_idx != -1) {
+      assert(!lef.rev_unit.stalled());
+      const auto& barrier = extr_barriers[barr_idx];
       auto nstalls = lef_bar_stall_generator_t{1.0 - barrier.pblock()}(rand_eng);
       if (barrier.blocking_direction() != dna::rev) {
         assert(barrier.blocking_direction() == dna::fwd);
         nstalls = static_cast<Bp>(std::round(soft_stall_multiplier * static_cast<double>(nstalls)));
       }
-      extruder.rev_unit._nstalls_lef_bar = nstalls;
+      lef.rev_unit._nstalls_lef_bar = nstalls;
     }
 
-    if (fwd_collision_buff[i] != -1) {
-      assert(fwd_collision_buff[i] != -1);
-      assert(!extruder.fwd_unit.stalled());
-      const auto& barrier = extr_barriers[fwd_collision_buff[i]];
+    if (const auto barr_idx = fwd_collision_buff[i]; barr_idx != -1) {
+      assert(!lef.fwd_unit.stalled());
+      const auto& barrier = extr_barriers[barr_idx];
       auto nstalls = lef_bar_stall_generator_t{1.0 - barrier.pblock()}(rand_eng);
       if (barrier.blocking_direction() != dna::fwd) {
         assert(barrier.blocking_direction() == dna::rev);
         nstalls = static_cast<Bp>(std::round(soft_stall_multiplier * static_cast<double>(nstalls)));
       }
-      extruder.fwd_unit._nstalls_lef_bar = nstalls;
+      lef.fwd_unit._nstalls_lef_bar = nstalls;
     }
 
-    if (extruder.rev_unit.stalled() && extruder.fwd_unit.stalled() &&
-        extr_barriers[rev_collision_buff[i]].blocking_direction() == dna::rev &&
-        extr_barriers[fwd_collision_buff[i]].blocking_direction() == dna::fwd) {
-      const auto nstalls = static_cast<Bp>(
-          std::round(hard_stall_multiplier *
-                     static_cast<double>(std::min(extruder.rev_unit._nstalls_lef_bar,
-                                                  extruder.fwd_unit._nstalls_lef_bar))));
-      if (extruder.rev_unit._nstalls_lef_bar < nstalls) {
-        extruder.rev_unit._nstalls_lef_bar = nstalls;
-      }
-      if (extruder.fwd_unit._nstalls_lef_bar < nstalls) {
-        extruder.fwd_unit._nstalls_lef_bar = nstalls;
-      }
-      // TODO Make lifetime extension tunable
-      assert(extruder.rev_unit._lifetime == extruder.fwd_unit._lifetime);              // NOLINT
-      assert(std::numeric_limits<Bp>::max() - nstalls > extruder.rev_unit._lifetime);  // NOLINT
-      if (nstalls > extruder.rev_unit._lifetime) {
-        extruder.rev_unit._lifetime = nstalls;
-        extruder.fwd_unit._lifetime = nstalls;
+    const auto rev_barr_idx = rev_collision_buff[i];
+    const auto fwd_barr_idx = fwd_collision_buff[i];
+
+    if (lef.rev_unit.stalled() && lef.fwd_unit.stalled() && rev_barr_idx != -1 &&
+        fwd_barr_idx != -1 && extr_barriers[rev_barr_idx].blocking_direction() == dna::rev &&
+        extr_barriers[fwd_barr_idx].blocking_direction() == dna::fwd) {
+      const auto nstalls = static_cast<Bp>(std::round(
+          hard_stall_multiplier * static_cast<double>(std::min(lef.rev_unit._nstalls_lef_bar,
+                                                               lef.fwd_unit._nstalls_lef_bar))));
+      lef.rev_unit._nstalls_lef_bar += nstalls;
+      lef.fwd_unit._nstalls_lef_bar += nstalls;
+
+      if (this->_allow_lef_lifetime_extension) {
+        assert(std::numeric_limits<Bp>::max() - nstalls > lef.lifetime);  // NOLINT
+        lef.lifetime += nstalls;
       }
     }
   }
+}
+
+void Genome::register_contacts(Chromosome* chrom, const std::vector<Lef>& lefs) {
+  std::size_t i = 0;
+  for (const auto& lef : lefs) {
+    if (lef.is_bound()) {
+      chrom->increment_contacts(lef.rev_unit.pos(), lef.fwd_unit.pos(), this->_bin_size);
+    }
+  }
+}
+
+template <typename I>
+void Genome::select_lefs_to_rebind(const std::vector<Lef>& lefs, std::vector<I>& mask) {
+  static_assert(std::is_integral_v<I>, "mask should be a vector of integral numbers.");
+  assert(lefs.size() == mask.size());
+  std::transform(lefs.begin(), lefs.end(), mask.begin(),
+                 [](const auto& lef) { return lef.lifetime == 0; });
 }
 
 boost::asio::thread_pool Genome::instantiate_thread_pool() const {
