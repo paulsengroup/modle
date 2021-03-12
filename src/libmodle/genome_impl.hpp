@@ -376,9 +376,9 @@ printing updates when simulation is about to end fmt::print(stderr, FMT_STRING("
 */
 
 void Genome::simulate_extrusion(std::size_t nthreads) {
-  std::size_t ncells = 100;
-  std::size_t burnin_iters = 1000;
-  std::size_t simulation_iters = 2000;
+  std::size_t ncells = 1000;
+  std::size_t burnin_iters = 250;
+  std::size_t simulation_iters = 1000;
   auto tpool = this->instantiate_thread_pool(nthreads);
 
   std::vector<ExtrusionBarrier> extr_barriers_buff;
@@ -472,10 +472,6 @@ void Genome::simulate_extrusion_kernel(Chromosome* chrom, std::size_t cell_id,
   std::vector<std::size_t> fwd_lef_rank_buff(lefs.size());
 
   this->bind_all_lefs(chrom, lefs, rev_lef_rank_buff, fwd_lef_rank_buff, rand_eng);
-  for (const auto& lef : lefs) {
-    assert(lef.rev_unit.pos() > 77500000);
-    assert(lef.fwd_unit.pos() > 77500000);
-  }
 
   std::vector<uint_fast16_t> rev_lef_collision_buff(lefs.size());
   std::vector<uint_fast16_t> fwd_lef_collision_buff(lefs.size());
@@ -931,7 +927,9 @@ void Genome::apply_lef_bar_stalls(std::vector<Lef>& lefs, const std::vector<I>& 
 void Genome::register_contacts(Chromosome* chrom, const std::vector<Lef>& lefs) {
   std::size_t i = 0;
   for (const auto& lef : lefs) {
-    if (lef.is_bound()) {
+    if (lef.is_bound() && lef.rev_unit.pos() != chrom->start_pos() &&
+        lef.rev_unit.pos() != chrom->end_pos() - 1 && lef.fwd_unit.pos() != chrom->start_pos() &&
+        lef.fwd_unit.pos() != chrom->end_pos() - 1) {
       chrom->increment_contacts(lef.rev_unit.pos(), lef.fwd_unit.pos(), this->_bin_size);
     }
   }
