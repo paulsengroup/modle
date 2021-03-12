@@ -376,8 +376,8 @@ printing updates when simulation is about to end fmt::print(stderr, FMT_STRING("
 */
 
 void Genome::simulate_extrusion(std::size_t nthreads) {
-  std::size_t ncells = 1000;
-  std::size_t burnin_iters = 250;
+  std::size_t ncells = 500;
+  std::size_t burnin_iters = 10000;
   std::size_t simulation_iters = 1000;
   auto tpool = this->instantiate_thread_pool(nthreads);
 
@@ -590,8 +590,7 @@ void Genome::extrude(const Chromosome* chrom, std::vector<Lef>& lefs) {
       lef.fwd_unit._pos += this->_bin_size;
     }
 
-    if ((lef.lifetime -= std::min(lef.lifetime, (lef.rev_unit.stalled() + lef.fwd_unit.stalled()) *
-                                                    this->_bin_size)) == 0) {
+    if ((lef.lifetime -= std::min(lef.lifetime, 2 * this->_bin_size)) == 0) {
       lef.release();
     }
   }
