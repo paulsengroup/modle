@@ -100,6 +100,7 @@ set(CONAN_EXTRA_REQUIRES
     boost/1.75.0
     bzip2/1.0.8
     cli11/1.9.1
+    cpp-sort/1.9.0
     fmt/7.1.3
     hdf5/1.12.0
     spdlog/1.8.2

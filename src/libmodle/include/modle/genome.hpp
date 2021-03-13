@@ -49,6 +49,7 @@ class Genome {
   using lef_lef_stall_generator_t = std::geometric_distribution<Bp>;
   using lef_lifetime_generator_t = std::geometric_distribution<Bp>;
   using chrom_pos_generator_t = std::uniform_int_distribution<Bp>;
+  using collision_t = uint_fast16_t;
   inline void simulate_extrusion(
       std::size_t nthreads = static_cast<std::size_t>(std::thread::hardware_concurrency()));
 
@@ -87,125 +88,115 @@ class Genome {
       const std::filesystem::path& path_to_chrom_subranges = {});
 
   inline void simulate_extrusion_kernel(Chromosome* chrom, std::size_t cell_id,
-                                        std::size_t burnin_iters, std::size_t simulation_iters,
-                                        std::vector<Lef> lefs,
-                                        std::vector<ExtrusionBarrier> extr_barriers);
-  template <typename I>
-  inline void bind_lefs(const Chromosome* chrom, std::vector<Lef>& lefs,
-                        std::vector<std::size_t>& rev_lef_rank_buff,
-                        std::vector<std::size_t>& fwd_lef_rank_buff, modle::PRNG& rand_eng,
-                        const std::vector<I>& mask);
+                                        std::size_t simulation_rounds, std::vector<Lef> lef_buff,
+                                        std::vector<ExtrusionBarrier> extr_barrier_buff);
+  template <typename MaskT>
+  inline void bind_lefs(const Chromosome* chrom, absl::Span<Lef> lefs,
+                        absl::Span<std::size_t> rev_lef_rank_buff,
+                        absl::Span<std::size_t> fwd_lef_rank_buff, modle::PRNG& rand_eng,
+                        MaskT& mask);
 
-  inline void bind_all_lefs(const Chromosome* chrom, std::vector<Lef>& lefs,
-                            std::vector<std::size_t>& rev_lef_rank_buff,
-                            std::vector<std::size_t>& fwd_lef_rank_buff, PRNG& rand_eng);
+  inline void bind_all_lefs(const Chromosome* chrom, absl::Span<Lef> lefs,
+                            absl::Span<std::size_t> rev_lef_rank_buff,
+                            absl::Span<std::size_t> fwd_lef_rank_buff, PRNG& rand_eng);
 
-  inline static void rank_lefs(std::vector<Lef>& lefs, std::vector<std::size_t>& rev_lef_rank_buff,
-                               std::vector<std::size_t>& fwd_lef_rank_buff,
+  inline static void rank_lefs(absl::Span<Lef> lefs, absl::Span<std::size_t> rev_lef_rank_buff,
+                               absl::Span<std::size_t> fwd_lef_rank_buff,
                                bool init_buffers = false);
 
-  inline void extrude(const Chromosome* chrom, std::vector<Lef>& lefs);
+  inline void extrude(const Chromosome* chrom, absl::Span<Lef> lefs);
 
   // Loop over lefs and identify colliding extr. units (i.e. units that travel in opposite
   // direction and that are within <p>dist_threshold</p> bp from each other
-  template <typename I>
-  inline static void check_lef_lef_collisions(const std::vector<Lef>& lefs,
-                                              const std::vector<std::size_t>& rev_lef_rank_buff,
-                                              const std::vector<std::size_t>& fwd_lef_rank_buff,
-                                              std::vector<I>& rev_collision_buff,
-                                              std::vector<I>& fwd_collision_buff,
+  inline static void check_lef_lef_collisions(absl::Span<const Lef> lefs,
+                                              absl::Span<const std::size_t> rev_lef_rank_buff,
+                                              absl::Span<const std::size_t> fwd_lef_rank_buff,
+                                              absl::Span<collision_t> rev_collision_buff,
+                                              absl::Span<collision_t> fwd_collision_buff,
                                               Bp dist_threshold);
-  template <typename I>
-  inline void check_lef_lef_collisions(const std::vector<Lef>& lefs,
-                                       const std::vector<std::size_t>& rev_lef_rank_buff,
-                                       const std::vector<std::size_t>& fwd_lef_rank_buff,
-                                       std::vector<I>& rev_collision_buff,
-                                       std::vector<I>& fwd_collision_buff);
+  inline void check_lef_lef_collisions(absl::Span<const Lef> lefs,
+                                       absl::Span<const std::size_t> rev_lef_rank_buff,
+                                       absl::Span<const std::size_t> fwd_lef_rank_buff,
+                                       absl::Span<collision_t> rev_collision_buff,
+                                       absl::Span<collision_t> fwd_collision_buff);
 
-  template <typename I>
-  inline static void apply_lef_lef_stalls(std::vector<Lef>& lefs,
-                                          const std::vector<I>& rev_collision_buff,
-                                          const std::vector<I>& fwd_collision_buff,
-                                          const std::vector<std::size_t>& rev_lef_rank_buff,
-                                          const std::vector<std::size_t>& fwd_lef_rank_buff,
+  inline static void apply_lef_lef_stalls(absl::Span<Lef> lefs,
+                                          absl::Span<const collision_t> rev_collision_buff,
+                                          absl::Span<const collision_t> fwd_collision_buff,
+                                          absl::Span<const std::size_t> rev_lef_rank_buff,
+                                          absl::Span<const std::size_t> fwd_lef_rank_buff,
                                           PRNG& rand_eng, double prob_of_bypass);
 
-  template <typename I>
-  inline static void check_lef_bar_collisions(const std::vector<Lef>& lefs,
-                                              const std::vector<std::size_t>& rev_lef_rank_buff,
-                                              const std::vector<std::size_t>& fwd_lef_rank_buff,
-                                              const std::vector<ExtrusionBarrier>& extr_barriers,
-                                              std::vector<I>& rev_collision_buff,
-                                              std::vector<I>& fwd_collision_buff,
+  inline static void check_lef_bar_collisions(absl::Span<const Lef> lefs,
+                                              absl::Span<const std::size_t> rev_lef_rank_buff,
+                                              absl::Span<const std::size_t> fwd_lef_rank_buff,
+                                              absl::Span<const ExtrusionBarrier> extr_barriers,
+                                              absl::Span<collision_t> rev_collision_buff,
+                                              absl::Span<collision_t> fwd_collision_buff,
                                               Bp dist_threshold);
 
-  template <typename I>
-  inline void check_lef_bar_collisions(const std::vector<Lef>& lefs,
-                                       const std::vector<std::size_t>& rev_lef_rank_buff,
-                                       const std::vector<std::size_t>& fwd_lef_rank_buff,
-                                       const std::vector<ExtrusionBarrier>& extr_barriers,
-                                       std::vector<I>& rev_collision_buff,
-                                       std::vector<I>& fwd_collision_buff);
-  template <typename I>
-  inline void apply_lef_bar_stalls(std::vector<Lef>& lefs, const std::vector<I>& rev_collision_buff,
-                                   const std::vector<I>& fwd_collision_buff,
-                                   const std::vector<ExtrusionBarrier>& extr_barriers,
-                                   const std::vector<std::size_t>& rev_lef_rank_buff,
-                                   const std::vector<std::size_t>& fwd_lef_rank_buff,
-                                   PRNG& rand_eng, double soft_stall_multiplier,
-                                   double hard_stall_multiplier);
+  inline void check_lef_bar_collisions(absl::Span<const Lef> lefs,
+                                       absl::Span<const std::size_t> rev_lef_rank_buff,
+                                       absl::Span<const std::size_t> fwd_lef_rank_buff,
+                                       absl::Span<const ExtrusionBarrier> extr_barriers,
+                                       absl::Span<collision_t> rev_collision_buff,
+                                       absl::Span<collision_t> fwd_collision_buff);
 
-  inline void register_contacts(Chromosome* chrom, const std::vector<Lef>& lefs);
+  inline void apply_lef_bar_stalls(absl::Span<Lef> lefs,
+                                   absl::Span<const collision_t> rev_collision_buff,
+                                   absl::Span<const collision_t> fwd_collision_buff,
+                                   absl::Span<const ExtrusionBarrier> extr_barriers,
+                                   absl::Span<const std::size_t> rev_lef_rank_buff,
+                                   absl::Span<const std::size_t> fwd_lef_rank_buff, PRNG& rand_eng,
+                                   double soft_stall_multiplier, double hard_stall_multiplier);
 
-  template <typename I>
-  inline void select_lefs_to_rebind(const std::vector<Lef>& lefs, std::vector<I>& mask);
+  inline void register_contacts(Chromosome* chrom, absl::Span<const Lef> lefs);
+
+  template <typename MaskT>
+  inline void select_lefs_to_bind(absl::Span<const Lef> lefs, MaskT& mask);
 
 #ifdef ENABLE_TESTING
  public:
-  template <typename I>
-  inline void test_check_lef_lef_collisions(const std::vector<Lef>& lefs,
-                                            const std::vector<std::size_t>& rev_lef_rank_buff,
-                                            const std::vector<std::size_t>& fwd_lef_rank_buff,
-                                            std::vector<I>& rev_collision_buff,
-                                            std::vector<I>& fwd_collision_buff) {
+  inline void test_check_lef_lef_collisions(absl::Span<const Lef> lefs,
+                                            absl::Span<const std::size_t> rev_lef_rank_buff,
+                                            absl::Span<const std::size_t> fwd_lef_rank_buff,
+                                            absl::Span<collision_t> rev_collision_buff,
+                                            absl::Span<collision_t> fwd_collision_buff) {
     this->check_lef_lef_collisions(lefs, rev_lef_rank_buff, fwd_lef_rank_buff, rev_collision_buff,
                                    fwd_collision_buff);
   }
 
-  template <typename I>
-  inline void test_apply_lef_lef_stalls(std::vector<Lef>& lefs,
-                                        const std::vector<I>& rev_collision_buff,
-                                        const std::vector<I>& fwd_collision_buff,
-                                        const std::vector<std::size_t>& rev_lef_rank_buff,
-                                        const std::vector<std::size_t>& fwd_lef_rank_buff,
+  inline void test_apply_lef_lef_stalls(absl::Span<Lef> lefs,
+                                        const absl::Span<collision_t> rev_collision_buff,
+                                        const absl::Span<collision_t> fwd_collision_buff,
+                                        absl::Span<const std::size_t> rev_lef_rank_buff,
+                                        absl::Span<const std::size_t> fwd_lef_rank_buff,
                                         PRNG& rand_eng, double prob_of_block) {
     this->apply_lef_lef_stalls(lefs, rev_collision_buff, fwd_collision_buff, rev_lef_rank_buff,
                                fwd_lef_rank_buff, rand_eng, prob_of_block);
   }
 
-  template <typename I>
-  inline void test_check_lef_bar_collisions(const std::vector<Lef>& lefs,
-                                            const std::vector<std::size_t>& rev_lef_rank_buff,
-                                            const std::vector<std::size_t>& fwd_lef_rank_buff,
-                                            const std::vector<ExtrusionBarrier>& extr_barriers,
-                                            std::vector<I>& rev_collision_buff,
-                                            std::vector<I>& fwd_collision_buff) {
+  inline void test_check_lef_bar_collisions(absl::Span<const Lef> lefs,
+                                            absl::Span<const std::size_t> rev_lef_rank_buff,
+                                            absl::Span<const std::size_t> fwd_lef_rank_buff,
+                                            absl::Span<const ExtrusionBarrier> extr_barriers,
+                                            absl::Span<collision_t> rev_collision_buff,
+                                            absl::Span<collision_t> fwd_collision_buff) {
     this->check_lef_bar_collisions(lefs, rev_lef_rank_buff, fwd_lef_rank_buff, extr_barriers,
                                    rev_collision_buff, fwd_collision_buff);
   }
 
-  template <typename I>
-  inline void test_apply_lef_bar_stalls(std::vector<Lef>& lefs,
-                                        const std::vector<I>& rev_collision_buff,
-                                        const std::vector<I>& fwd_collision_buff,
-                                        const std::vector<ExtrusionBarrier>& extr_barriers,
-                                        const std::vector<std::size_t>& rev_lef_rank_buff,
-                                        const std::vector<std::size_t>& fwd_lef_rank_buff,
+  inline void test_apply_lef_bar_stalls(absl::Span<Lef> lefs,
+                                        const absl::Span<collision_t> rev_collision_buff,
+                                        const absl::Span<collision_t> fwd_collision_buff,
+                                        absl::Span<const ExtrusionBarrier> extr_barriers,
+                                        absl::Span<const std::size_t> rev_lef_rank_buff,
+                                        absl::Span<const std::size_t> fwd_lef_rank_buff,
                                         PRNG& rand_eng, double soft_stall_multiplier,
                                         double hard_stall_multiplier) {
-    this->template apply_lef_bar_stalls(lefs, rev_collision_buff, fwd_collision_buff, extr_barriers,
-                                        rev_lef_rank_buff, fwd_lef_rank_buff, rand_eng,
-                                        soft_stall_multiplier, hard_stall_multiplier);
+    this->apply_lef_bar_stalls(lefs, rev_collision_buff, fwd_collision_buff, extr_barriers,
+                               rev_lef_rank_buff, fwd_lef_rank_buff, rand_eng,
+                               soft_stall_multiplier, hard_stall_multiplier);
   }
 
 #endif
