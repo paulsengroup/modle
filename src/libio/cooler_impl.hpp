@@ -112,6 +112,8 @@ Cooler::~Cooler() {
 
 bool Cooler::is_read_only() const { return this->_mode == Cooler::READ_ONLY; }
 
+const std::filesystem::path &Cooler::get_path() const { return this->_path_to_file; }
+
 std::size_t Cooler::get_nchroms() {
   assert(this->_fp);
   if (this->is_cool()) {
@@ -365,169 +367,174 @@ void Cooler::write_or_append_cmatrices_to_file(absl::Span<ContactMatrix<I1> *con
   auto &idx_chr_offset_h5_foffset = this->_dataset_file_offsets[IDX_CHR];
 
   auto &d = this->_datasets;
+  try {
+    // Number of non-zero (values)
+    this->_nnz = hdf5::has_attribute(*this->_fp, "nnz", this->_root_path)
+                     ? hdf5::read_attribute_int(*this->_fp, "nnz", this->_root_path)
+                     : 0;
+    // Idx of the first non-zero pixel of the current chr
+    auto pxl_offset = static_cast<hsize_t>(
+        hdf5::has_attribute(*this->_fp, "nbins", this->_root_path)
+            ? hdf5::read_attribute_int(*this->_fp, "nbins", this->_root_path) - 1
+            : 0);
+    auto chr_offset =
+        static_cast<hsize_t>(hdf5::has_attribute(*this->_fp, "nchroms", this->_root_path)
+                                 ? hdf5::read_attribute_int(*this->_fp, "nchroms", this->_root_path)
+                                 : 0);
 
-  // Number of non-zero (values)
-  this->_nnz = hdf5::has_attribute(*this->_fp, "nnz", this->_root_path)
-                   ? hdf5::read_attribute_int(*this->_fp, "nnz", this->_root_path)
-                   : 0;
-  // Idx of the first non-zero pixel of the current chr
-  auto pxl_offset =
-      static_cast<hsize_t>(hdf5::has_attribute(*this->_fp, "nbins", this->_root_path)
-                               ? hdf5::read_attribute_int(*this->_fp, "nbins", this->_root_path) - 1
-                               : 0);
-  auto chr_offset =
-      static_cast<hsize_t>(hdf5::has_attribute(*this->_fp, "nchroms", this->_root_path)
-                               ? hdf5::read_attribute_int(*this->_fp, "nchroms", this->_root_path)
-                               : 0);
+    auto write_pixels_to_file =
+        [&]() {  // Lambda used to write pixel data to file. Mostly useful to reduce code bloat
+          pixel_b1_id_h5_foffset =
+              hdf5::write_numbers(pixel_b1_idx_buff, d[PXL_B1], pixel_b1_id_h5_foffset);
+          pixel_b2_id_h5_foffset =
+              hdf5::write_numbers(pixel_b2_idx_buff, d[PXL_B2], pixel_b2_id_h5_foffset);
+          pixel_count_h5_foffset =
+              hdf5::write_numbers(pixel_count_buff, d[PXL_COUNT], pixel_count_h5_foffset);
 
-  auto write_pixels_to_file =
-      [&]() {  // Lambda used to write pixel data to file. Mostly useful to reduce code bloat
-        pixel_b1_id_h5_foffset =
-            hdf5::write_numbers(pixel_b1_idx_buff, d[PXL_B1], pixel_b1_id_h5_foffset);
-        pixel_b2_id_h5_foffset =
-            hdf5::write_numbers(pixel_b2_idx_buff, d[PXL_B2], pixel_b2_id_h5_foffset);
-        pixel_count_h5_foffset =
-            hdf5::write_numbers(pixel_count_buff, d[PXL_COUNT], pixel_count_h5_foffset);
+          pixel_b1_idx_buff.clear();
+          pixel_b2_idx_buff.clear();
+          pixel_count_buff.clear();
+        };
 
-        pixel_b1_idx_buff.clear();
-        pixel_b2_idx_buff.clear();
-        pixel_count_buff.clear();
-      };
+    for (auto chr_idx = 0UL; chr_offset + chr_idx < static_cast<std::size_t>(this->_nchroms);
+         ++chr_idx) {
+      // Declare several aliases/variables to improve code readability in later sections
+      const auto &cmatrix = cmatrices[chr_idx];
+      const auto &chr_name = chr_names[chr_idx];
+      const auto chr_total_len = static_cast<int64_t>(chr_sizes[chr_idx]);
+      const auto chr_start = static_cast<uint64_t>(chr_starts[chr_idx]);
+      const auto chr_end = static_cast<uint64_t>(chr_ends[chr_idx]);
+      const auto chr_simulated_len = chr_end - chr_start;
 
-  for (auto chr_idx = 0UL; chr_offset + chr_idx < static_cast<std::size_t>(this->_nchroms);
-       ++chr_idx) {
-    // Declare several aliases/variables to improve code readability in later sections
-    const auto &cmatrix = cmatrices[chr_idx];
-    const auto &chr_name = chr_names[chr_idx];
-    const auto chr_total_len = static_cast<int64_t>(chr_sizes[chr_idx]);
-    const auto chr_start = static_cast<uint64_t>(chr_starts[chr_idx]);
-    const auto chr_end = static_cast<uint64_t>(chr_ends[chr_idx]);
-    const auto chr_simulated_len = chr_end - chr_start;
-
-    if (!quiet) {
-      fmt::print(stderr, FMT_STRING("Writing contacts for '{}' ({:.2f} Mbp)..."), chr_name,
-                 static_cast<double>(chr_simulated_len) / 1.0e6);  // NOLINT
-      if (const auto n = cmatrix->get_n_of_missed_updates(); n != 0) {
-        fmt::print(
-            stderr, FMT_STRING(" WARNING: Detected {} missed updates ({:.4f}% of the total)."), n,
-            static_cast<double>(100U * n) / static_cast<double>(cmatrix->get_tot_contacts()));
+      if (!quiet) {
+        fmt::print(stderr, FMT_STRING("Writing contacts for '{}' ({:.2f} Mbp)..."), chr_name,
+                   static_cast<double>(chr_simulated_len) / 1.0e6);  // NOLINT
+        if (const auto n = cmatrix->get_n_of_missed_updates(); n != 0) {
+          fmt::print(
+              stderr, FMT_STRING(" WARNING: Detected {} missed updates ({:.4f}% of the total)."), n,
+              static_cast<double>(100U * n) / static_cast<double>(cmatrix->get_tot_contacts()));
+        }
       }
-    }
-    const auto t1 = absl::Now();
+      const auto t1 = absl::Now();
 
-    // Write chr name and size
-    chr_name_h5_foffset = hdf5::write_str(chr_name, d[CHR_NAME], STR_TYPE, chr_name_h5_foffset);
-    chr_length_h5_foffset = hdf5::write_number(chr_total_len, d[CHR_LEN], chr_length_h5_foffset);
-    // Add idx of the first bin belonging to the chromosome that is being processed
-    idx_chrom_offset_buff.emplace_back(this->_nbins);
+      // Write chr name and size
+      chr_name_h5_foffset = hdf5::write_str(chr_name, d[CHR_NAME], STR_TYPE, chr_name_h5_foffset);
+      chr_length_h5_foffset = hdf5::write_number(chr_total_len, d[CHR_LEN], chr_length_h5_foffset);
+      // Add idx of the first bin belonging to the chromosome that is being processed
+      idx_chrom_offset_buff.emplace_back(this->_nbins);
 
-    // Write all fixed-size bins for the current chromosome. Maybe in the future we can switch to
-    // use variable-size bins
-    this->_nbins = this->write_bins(chr_offset + chr_idx, chr_total_len, this->_bin_size,
-                                    bin_chrom_buff, bin_pos_buff, this->_nbins);
-    // Update file offsets of bin_* datasets
-    bin_chr_name_h5_foffset = this->_nbins;
-    bin_start_h5_foffset = this->_nbins;
-    bin_end_h5_foffset = this->_nbins;
+      // Write all fixed-size bins for the current chromosome. Maybe in the future we can switch to
+      // use variable-size bins
+      this->_nbins = this->write_bins(chr_offset + chr_idx, chr_total_len, this->_bin_size,
+                                      bin_chrom_buff, bin_pos_buff, this->_nbins);
+      // Update file offsets of bin_* datasets
+      bin_chr_name_h5_foffset = this->_nbins;
+      bin_start_h5_foffset = this->_nbins;
+      bin_end_h5_foffset = this->_nbins;
 
-    // In case we are simulating a subset of a chromosome (i.e. end - start != chr size), write
-    // the index for all the bins corresponding to genomic coordinates before the start position
-    // Example: suppose we are writing contacts for a chromosome "C" of size 10 Mbp. Suppose we
-    // also know that there are no contacts in the first and last 2 Mbps. In this case chr_start
-    // will be 2 Mbp and chr_end will be 8 Mbp. This for loop write the index for all the bins
-    // corresponding to the genomic region 0-2 Mbp. A more elegant solution would be to use
-    // variable bin-size and write a single 2 Mbp bin.
-    idx_bin1_offset_buff.resize(idx_bin1_offset_buff.size() + (chr_start / this->_bin_size),
-                                this->_nnz);
-    idx_bin1_offset_h5_foffset =
-        hdf5::write_numbers(idx_bin1_offset_buff, d[IDX_BIN1], idx_bin1_offset_h5_foffset);
-    idx_bin1_offset_buff.clear();
-
-    if (cmatrix->ncols() == 0) {
-      DISABLE_WARNING_PUSH
-      DISABLE_WARNING_SIGN_CONVERSION
-      idx_bin1_offset_buff.resize(
-          (chr_total_len / this->_bin_size) + (chr_total_len % this->_bin_size != 0), this->_nnz);
-      DISABLE_WARNING_POP
+      // In case we are simulating a subset of a chromosome (i.e. end - start != chr size), write
+      // the index for all the bins corresponding to genomic coordinates before the start position
+      // Example: suppose we are writing contacts for a chromosome "C" of size 10 Mbp. Suppose we
+      // also know that there are no contacts in the first and last 2 Mbps. In this case chr_start
+      // will be 2 Mbp and chr_end will be 8 Mbp. This for loop write the index for all the bins
+      // corresponding to the genomic region 0-2 Mbp. A more elegant solution would be to use
+      // variable bin-size and write a single 2 Mbp bin.
+      idx_bin1_offset_buff.resize(idx_bin1_offset_buff.size() + (chr_start / this->_bin_size),
+                                  this->_nnz);
       idx_bin1_offset_h5_foffset =
           hdf5::write_numbers(idx_bin1_offset_buff, d[IDX_BIN1], idx_bin1_offset_h5_foffset);
       idx_bin1_offset_buff.clear();
-    }
 
-    pxl_offset += chr_start / this->_bin_size;
-    for (auto i = 0UL; i < cmatrix->ncols(); ++i) {  // Iterate over columns in the cmatrix
-      // Write first pixel that refers to a given bin1 to the index
-      idx_bin1_offset_buff.push_back(this->_nnz);
-
-      // Iterate over rows of the cmatrix. The first condition serves the purpose to avoid reading
-      // data from regions that are full of zeros by design (because cmatrix only stores contacts
-      // for a certain width along the diagonal). The second condition makes sure we are not
-      // reading past the array end
-      for (auto j = i; j < i + cmatrix->nrows() && j < cmatrix->ncols(); ++j) {
-        if (const auto m = cmatrix->get(i, j); m != 0) {  // Only write nnz pixels
-#ifndef NDEBUG
-          // Make sure we are always reading from the upper-triangle of the underlying square
-          // contact matrix
-          if (pxl_offset + i > pxl_offset + j) {
-            utils::throw_with_trace(std::runtime_error(
-                fmt::format(FMT_STRING("Cooler::write_or_append_cmatrix_to_file(): b1 > b2: b1={}; "
-                                       "b2={}; offset={}; m={}\n"),
-                            pixel_b1_idx_buff.back(), pixel_b2_idx_buff.back(), pxl_offset, m)));
-          }
-#endif
-          pixel_b1_idx_buff.push_back(static_cast<int64_t>(pxl_offset + i));
-          pixel_b2_idx_buff.push_back(static_cast<int64_t>(pxl_offset + j));
-          pixel_count_buff.push_back(m);
-          ++this->_nnz;
-
-          if (pixel_b1_idx_buff.size() == BUFF_SIZE) {  // Write pixels to disk when buffer is full
-            write_pixels_to_file();
-          }
-        }
-      }
-
-      if (idx_bin1_offset_buff.size() == BUFF_SIZE) {  // Write bin idx when buffer is full
+      if (cmatrix->ncols() == 0) {
+        DISABLE_WARNING_PUSH
+        DISABLE_WARNING_SIGN_CONVERSION
+        idx_bin1_offset_buff.resize(
+            (chr_total_len / this->_bin_size) + (chr_total_len % this->_bin_size != 0), this->_nnz);
+        DISABLE_WARNING_POP
         idx_bin1_offset_h5_foffset =
             hdf5::write_numbers(idx_bin1_offset_buff, d[IDX_BIN1], idx_bin1_offset_h5_foffset);
         idx_bin1_offset_buff.clear();
       }
+
+      pxl_offset += chr_start / this->_bin_size;
+      for (auto i = 0UL; i < cmatrix->ncols(); ++i) {  // Iterate over columns in the cmatrix
+        // Write first pixel that refers to a given bin1 to the index
+        idx_bin1_offset_buff.push_back(this->_nnz);
+
+        // Iterate over rows of the cmatrix. The first condition serves the purpose to avoid reading
+        // data from regions that are full of zeros by design (because cmatrix only stores contacts
+        // for a certain width along the diagonal). The second condition makes sure we are not
+        // reading past the array end
+        for (auto j = i; j < i + cmatrix->nrows() && j < cmatrix->ncols(); ++j) {
+          if (const auto m = cmatrix->get(i, j); m != 0) {  // Only write nnz pixels
+#ifndef NDEBUG
+            // Make sure we are always reading from the upper-triangle of the underlying square
+            // contact matrix
+            if (pxl_offset + i > pxl_offset + j) {
+              utils::throw_with_trace(std::runtime_error(fmt::format(
+                  FMT_STRING("Cooler::write_or_append_cmatrix_to_file(): b1 > b2: b1={}; "
+                             "b2={}; offset={}; m={}\n"),
+                  pixel_b1_idx_buff.back(), pixel_b2_idx_buff.back(), pxl_offset, m)));
+            }
+#endif
+            pixel_b1_idx_buff.push_back(static_cast<int64_t>(pxl_offset + i));
+            pixel_b2_idx_buff.push_back(static_cast<int64_t>(pxl_offset + j));
+            pixel_count_buff.push_back(m);
+            ++this->_nnz;
+
+            if (pixel_b1_idx_buff.size() ==
+                BUFF_SIZE) {  // Write pixels to disk when buffer is full
+              write_pixels_to_file();
+            }
+          }
+        }
+
+        if (idx_bin1_offset_buff.size() == BUFF_SIZE) {  // Write bin idx when buffer is full
+          idx_bin1_offset_h5_foffset =
+              hdf5::write_numbers(idx_bin1_offset_buff, d[IDX_BIN1], idx_bin1_offset_h5_foffset);
+          idx_bin1_offset_buff.clear();
+        }
+      }
+
+      // In case we are simulating a subset of a chromosome (i.e. end - start != chr size), write
+      // the index for all the bins corresponding to genomic coordinates after the end position. See
+      // previous comment for an example
+      idx_bin1_offset_buff.resize(
+          idx_bin1_offset_buff.size() +
+              ((static_cast<std::size_t>(chr_total_len) - chr_end) / this->_bin_size) +
+              ((static_cast<std::size_t>(chr_total_len) - chr_end) % this->_bin_size != 0),
+          this->_nnz);
+      idx_bin1_offset_h5_foffset =
+          hdf5::write_numbers(idx_bin1_offset_buff, d[IDX_BIN1], idx_bin1_offset_h5_foffset);
+      idx_bin1_offset_buff.clear();
+
+      pxl_offset = this->_nbins;
+      if (!quiet) {
+        fmt::print(stderr, FMT_STRING(" DONE in {}!\n"), absl::FormatDuration(absl::Now() - t1));
+      }
     }
 
-    // In case we are simulating a subset of a chromosome (i.e. end - start != chr size), write
-    // the index for all the bins corresponding to genomic coordinates after the end position. See
-    // previous comment for an example
-    idx_bin1_offset_buff.resize(
-        idx_bin1_offset_buff.size() +
-            ((static_cast<std::size_t>(chr_total_len) - chr_end) / this->_bin_size) +
-            ((static_cast<std::size_t>(chr_total_len) - chr_end) % this->_bin_size != 0),
-        this->_nnz);
+    // Write all non-empty buffers to disk
+    if (!pixel_b1_idx_buff.empty()) {
+      write_pixels_to_file();
+    }
+
+    // Writing the chr_index only at the end should be ok, given that most of the time we are
+    // processing 20-100 chr
+    idx_chr_offset_h5_foffset =
+        hdf5::write_numbers(idx_chrom_offset_buff, d[IDX_CHR], idx_chr_offset_h5_foffset);
     idx_bin1_offset_h5_foffset =
         hdf5::write_numbers(idx_bin1_offset_buff, d[IDX_BIN1], idx_bin1_offset_h5_foffset);
-    idx_bin1_offset_buff.clear();
 
-    pxl_offset = this->_nbins;
-    if (!quiet) {
-      fmt::print(stderr, FMT_STRING(" DONE in {}!\n"), absl::FormatDuration(absl::Now() - t1));
-    }
+    auto &f = *this->_fp;
+    hdf5::write_or_create_attribute(f, "nchroms", this->_nchroms);
+    const auto nbins = static_cast<int64_t>(this->_nbins);
+    hdf5::write_or_create_attribute(f, "nbins", nbins);
+    hdf5::write_or_create_attribute(f, "nnz", this->_nnz);
+    this->_fp->flush(H5F_SCOPE_GLOBAL);
+  } catch (const H5::Exception &err) {
+    throw std::runtime_error(hdf5::construct_error_stack());
   }
-
-  // Write all non-empty buffers to disk
-  if (!pixel_b1_idx_buff.empty()) {
-    write_pixels_to_file();
-  }
-
-  // Writing the chr_index only at the end should be ok, given that most of the time we are
-  // processing 20-100 chr
-  idx_chr_offset_h5_foffset =
-      hdf5::write_numbers(idx_chrom_offset_buff, d[IDX_CHR], idx_chr_offset_h5_foffset);
-  idx_bin1_offset_h5_foffset =
-      hdf5::write_numbers(idx_bin1_offset_buff, d[IDX_BIN1], idx_bin1_offset_h5_foffset);
-
-  auto &f = *this->_fp;
-  hdf5::write_or_create_attribute(f, "nchroms", this->_nchroms);
-  const auto nbins = static_cast<int64_t>(this->_nbins);
-  hdf5::write_or_create_attribute(f, "nbins", nbins);
-  hdf5::write_or_create_attribute(f, "nnz", this->_nnz);
 
   if (!quiet) {
     fmt::print(stderr, "All contacts have been written to file {}. Saved {:.2f}M pixels in {}.\n",

@@ -477,21 +477,29 @@ inline void write_or_create_attribute(H5::H5File &f, std::string_view attr_name,
                                       std::string_view path) {
   // TODO handle array attributes
   H5::DataSpace attr_space(H5S_SCALAR);
-  const auto full_path = absl::StripPrefix(
-      absl::StrCat(absl::StripSuffix(path, "/"), "/", absl::StripPrefix(attr_name, "/")), "/");
+  if (!hdf5::has_group(f, path)) {
+    throw std::runtime_error(fmt::format(FMT_STRING("Unable to find group '{}'"), path));
+  }
+
+  auto g = f.openGroup(std::string{path});
   if constexpr (std::is_same_v<T, H5::StrType>) {
     H5::StrType METADATA_STR_TYPE(H5::PredType::C_S1, H5T_VARIABLE);
     METADATA_STR_TYPE.setCset(H5T_CSET_UTF8);
-    auto attr = hdf5::has_attribute(f, attr_name, path)
-                    ? f.openAttribute(std::string{full_path})
-                    : f.createAttribute(std::string{attr_name}, METADATA_STR_TYPE, attr_space);
-    attr.write(attr.getDataType(), buff);
-
+    if (hdf5::has_attribute(f, std::string{attr_name}, std::string{path})) {
+      auto attr = g.openAttribute(std::string{attr_name});
+      attr.write(attr.getDataType(), buff);
+    } else {
+      auto attr = g.createAttribute(std::string{attr_name}, METADATA_STR_TYPE, attr_space);
+      attr.write(attr.getDataType(), buff);
+    }
   } else {
-    auto attr = hdf5::has_attribute(f, attr_name, path)
-                    ? f.openAttribute(std::string{full_path})
-                    : f.createAttribute(std::string{attr_name}, getH5_type<T>(), attr_space);
-    attr.write(attr.getDataType(), &buff);
+    if (hdf5::has_attribute(f, std::string{attr_name}, std::string{path})) {
+      auto attr = g.openAttribute(std::string{attr_name});
+      attr.write(attr.getDataType(), &buff);
+    } else {
+      auto attr = g.createAttribute(std::string{attr_name}, getH5_type<T>(), attr_space);
+      attr.write(attr.getDataType(), &buff);
+    }
   }
 }
 
