@@ -102,12 +102,13 @@ void Chromosome::increment_contacts(Bp pos1, Bp pos2, Bp bin_size) {
 }
 
 void Chromosome::allocate_contacts(Bp bin_size, Bp diagonal_width) {
-  fmt::print(stderr, "bin_size={}; diagonal_width={}\n", bin_size, diagonal_width);
   const auto ncols = (this->simulated_size() / bin_size) + (this->simulated_size() % bin_size != 0);
   const auto nrows =
       std::min(ncols, (diagonal_width / bin_size) + (diagonal_width % bin_size != 0));
   this->_contacts = std::make_shared<ContactMatrix<Contacts>>(nrows, ncols);
 }
+
+void Chromosome::deallocate_contacts() { this->_contacts = nullptr; }
 
 const ContactMatrix<Contacts> &Chromosome::contacts() const {
   assert(this->_contacts);  // NOLINT

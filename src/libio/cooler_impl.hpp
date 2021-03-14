@@ -105,9 +105,8 @@ Cooler::~Cooler() {
       }
     }
   } catch (const H5::Exception &err) {
-    throw std::runtime_error(
-        fmt::format(FMT_STRING("The following error occurred while finalizing file '{}':\n{}"),
-                    this->_path_to_file, hdf5::construct_error_stack()));
+    fmt::print(stderr, FMT_STRING("The following error occurred while finalizing file '{}':\n{}"),
+               this->_path_to_file, hdf5::construct_error_stack());
   }
 }
 
@@ -317,7 +316,7 @@ void Cooler::write_or_append_cmatrices_to_file(absl::Span<ContactMatrix<I1> *con
                                                absl::Span<const I2> chr_ends,
                                                absl::Span<const I2> chr_sizes, bool quiet) {
   static_assert(std::is_integral_v<I1>, "I1 should be an integral type.");
-  static_assert(std::is_integral_v<I1>, "I2 should be an integral type.");
+  static_assert(std::is_integral_v<I2>, "I2 should be an integral type.");
 
   assert(this->_bin_size != 0);
 

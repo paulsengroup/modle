@@ -43,6 +43,7 @@ class Chromosome {
   inline void increment_contacts(Bp pos1, Bp pos2, Bp bin_size, I n = 1);
   inline void increment_contacts(Bp pos1, Bp pos2, Bp bin_size);
   inline void allocate_contacts(Bp bin_size, Bp diagonal_width);
+  inline void deallocate_contacts();
   [[nodiscard]] inline const ContactMatrix<Contacts>& contacts() const;
 
   template <typename H>

@@ -80,16 +80,18 @@ class Genome {
   // inline void simulate_extrusion(uint32_t iterations, double target_contact_density);
   [[nodiscard]] inline boost::asio::thread_pool instantiate_thread_pool() const;
   template <typename I>
-  [[nodiscard]] inline static boost::asio::thread_pool instantiate_thread_pool(I nthreads);
+  [[nodiscard]] inline static boost::asio::thread_pool instantiate_thread_pool(
+      I nthreads, bool clamp_nthreads = true);
 
   [[nodiscard]] inline static Chromosomes import_chromosomes(
       const std::filesystem::path& path_to_chrom_sizes,
       const std::filesystem::path& path_to_extr_barriers,
       const std::filesystem::path& path_to_chrom_subranges = {});
 
-  inline void simulate_extrusion_kernel(Chromosome* chrom, std::size_t cell_id,
-                                        std::size_t simulation_rounds, std::vector<Lef> lef_buff,
-                                        std::vector<ExtrusionBarrier> extr_barrier_buff);
+  inline void simulate_extrusion_kernel(
+      Chromosome* chrom, std::size_t cell_id, std::size_t simulation_rounds,
+      std::vector<Lef> lef_buff,
+      std::shared_ptr<const std::vector<ExtrusionBarrier>> extr_barrier_buff);
   template <typename MaskT>
   inline void bind_lefs(const Chromosome* chrom, absl::Span<Lef> lefs,
                         absl::Span<std::size_t> rev_lef_rank_buff,
@@ -145,9 +147,7 @@ class Genome {
   inline void apply_lef_bar_stalls(absl::Span<Lef> lefs,
                                    absl::Span<const collision_t> rev_collision_buff,
                                    absl::Span<const collision_t> fwd_collision_buff,
-                                   absl::Span<const ExtrusionBarrier> extr_barriers,
-                                   absl::Span<const std::size_t> rev_lef_rank_buff,
-                                   absl::Span<const std::size_t> fwd_lef_rank_buff, PRNG& rand_eng,
+                                   absl::Span<const ExtrusionBarrier> extr_barriers, PRNG& rand_eng,
                                    double soft_stall_multiplier, double hard_stall_multiplier);
 
   inline void register_contacts(Chromosome* chrom, absl::Span<const Lef> lefs);
@@ -190,13 +190,10 @@ class Genome {
                                         const absl::Span<collision_t> rev_collision_buff,
                                         const absl::Span<collision_t> fwd_collision_buff,
                                         absl::Span<const ExtrusionBarrier> extr_barriers,
-                                        absl::Span<const std::size_t> rev_lef_rank_buff,
-                                        absl::Span<const std::size_t> fwd_lef_rank_buff,
                                         PRNG& rand_eng, double soft_stall_multiplier,
                                         double hard_stall_multiplier) {
     this->apply_lef_bar_stalls(lefs, rev_collision_buff, fwd_collision_buff, extr_barriers,
-                               rev_lef_rank_buff, fwd_lef_rank_buff, rand_eng,
-                               soft_stall_multiplier, hard_stall_multiplier);
+                               rand_eng, soft_stall_multiplier, hard_stall_multiplier);
   }
 
 #endif

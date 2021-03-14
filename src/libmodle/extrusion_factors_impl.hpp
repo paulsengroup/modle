@@ -7,7 +7,7 @@
 namespace modle {
 
 ExtrusionUnit::ExtrusionUnit(Bp pos, Bp nstalls_lef_lef, Bp nstalls_lef_bar)
-    : _pos(pos), _nstalls_lef_lef(nstalls_lef_bar), _nstalls_lef_bar(nstalls_lef_bar) {}
+    : _pos(pos), _nstalls_lef_lef(nstalls_lef_lef), _nstalls_lef_bar(nstalls_lef_bar) {}
 
 void ExtrusionUnit::bind_at_pos(Bp pos) {
   this->_pos = pos;
