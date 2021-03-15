@@ -83,6 +83,11 @@ class Cooler {
   inline void write_or_append_cmatrix_to_file(const ContactMatrix<I1> &cmatrix,
                                               std::string_view chr_name, I2 chr_start, I2 chr_end,
                                               I2 chr_length, bool quiet = false);
+
+  template <typename I1, typename I2>
+  inline void write_or_append_cmatrix_to_file(const ContactMatrix<I1> *cmatrix,
+                                              std::string_view chr_name, I2 chr_start, I2 chr_end,
+                                              I2 chr_length, bool quiet = false);
   template <typename I1, typename I2>
   inline void write_or_append_cmatrices_to_file(const std::vector<ContactMatrix<I1>> &cmatrices,
                                                 const std::vector<std::string> &chr_names,

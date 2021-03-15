@@ -72,8 +72,10 @@ Genome::Genome(const config& c, bool import_chroms)
       _randomize_contact_sampling(c.randomize_contact_sampling_interval),
       _nthreads(std::min(std::thread::hardware_concurrency(), c.nthreads)),
       _seed(c.seed),
+      _config(&c),
       _chromosomes(import_chroms ? import_chromosomes(_path_to_chrom_sizes, _path_to_extr_barriers,
-                                                      _path_to_chrom_subranges)
+                                                      _path_to_chrom_subranges,
+                                                      c.write_contacts_for_ko_chroms)
                                  : Chromosomes{}) {}
 
 std::size_t Genome::size() const {
@@ -90,48 +92,46 @@ std::size_t Genome::simulated_size() const {
 }
 
 // TODO Add flag to import skip chrom without barriers
-Genome::Chromosomes Genome::import_chromosomes(
-    const std::filesystem::path& path_to_chrom_sizes,
-    const std::filesystem::path& path_to_extr_barriers,
-    const std::filesystem::path& path_to_chrom_subranges) {
+Genome::Chromosomes Genome::import_chromosomes(const std::filesystem::path& path_to_chrom_sizes,
+                                               const std::filesystem::path& path_to_extr_barriers,
+                                               const std::filesystem::path& path_to_chrom_subranges,
+                                               bool keep_all_chroms) {
   assert(!path_to_chrom_sizes.empty());
   assert(!path_to_extr_barriers.empty());
   Chromosomes chroms;
 
-  {
-    // Parse chrom subranges from BED. We parse everything at once to deal with duplicate entries
-    absl::flat_hash_map<std::string, std::pair<uint64_t, uint64_t>> chrom_ranges;
-    if (!path_to_chrom_subranges.empty()) {
-      for (auto&& record : modle::bed::Parser(path_to_chrom_subranges).parse_all()) {
-        chrom_ranges.emplace(std::move(record.chrom),
-                             std::make_pair(record.chrom_start, record.chrom_end));
-      }
+  // Parse chrom subranges from BED. We parse everything at once to deal with duplicate entries
+  absl::flat_hash_map<std::string, std::pair<uint64_t, uint64_t>> chrom_ranges;
+  if (!path_to_chrom_subranges.empty()) {
+    for (auto&& record : modle::bed::Parser(path_to_chrom_subranges).parse_all()) {
+      chrom_ranges.emplace(std::move(record.chrom),
+                           std::make_pair(record.chrom_start, record.chrom_end));
     }
+  }
 
-    // Parse chrom. sizes and build the set of chromosome to be simulated.
-    // When the BED file with the chrom. subranges is not provided, all the chromosome in the
-    // chrom.sizes file will be selected and returned. When a BED file with the chrom. subranges is
-    // available, then only chromosomes that are present in both files will be selected. Furthermore
-    // we are also checking that the subrange lies within the coordinates specified in the chrom.
-    // sizes file
-    for (auto&& chrom : modle::chr_sizes::Parser(path_to_chrom_sizes).parse_all()) {
-      if (auto match = chrom_ranges.find(chrom.name); match != chrom_ranges.end()) {
-        const auto& range_start = match->second.first;
-        const auto& range_end = match->second.second;
-        if (range_start < chrom.start || range_end > chrom.end) {
-          throw std::runtime_error(fmt::format(
-              FMT_STRING("According to the chrom.sizes file {}, chromosome '{}' should have a size "
-                         "of '{}', but the subrange specified in BED file {} extends past this "
-                         "region: range {}:{}-{} does not fit in range {}:{}-{}"),
-              path_to_chrom_sizes, chrom.name, chrom.end, path_to_chrom_subranges, chrom.name,
-              range_start, range_end, chrom.name, chrom.start, chrom.end));
-        }
-        chrom.start = range_start;
-        chrom.end = range_end;
-        chroms.emplace(std::move(chrom));
-      } else if (chrom_ranges.empty()) {
-        chroms.emplace(std::move(chrom));
+  // Parse chrom. sizes and build the set of chromosome to be simulated.
+  // When the BED file with the chrom. subranges is not provided, all the chromosome in the
+  // chrom.sizes file will be selected and returned. When a BED file with the chrom. subranges is
+  // available, then only chromosomes that are present in both files will be selected. Furthermore
+  // we are also checking that the subrange lies within the coordinates specified in the chrom.
+  // sizes file
+  for (auto&& chrom : modle::chr_sizes::Parser(path_to_chrom_sizes).parse_all()) {
+    if (auto match = chrom_ranges.find(chrom.name); match != chrom_ranges.end()) {
+      const auto& range_start = match->second.first;
+      const auto& range_end = match->second.second;
+      if (range_start < chrom.start || range_end > chrom.end) {
+        throw std::runtime_error(fmt::format(
+            FMT_STRING("According to the chrom.sizes file {}, chromosome '{}' should have a size "
+                       "of '{}', but the subrange specified in BED file {} extends past this "
+                       "region: range {}:{}-{} does not fit in range {}:{}-{}"),
+            path_to_chrom_sizes, chrom.name, chrom.end, path_to_chrom_subranges, chrom.name,
+            range_start, range_end, chrom.name, chrom.start, chrom.end));
       }
+      chrom.start = range_start;
+      chrom.end = range_end;
+      chroms.emplace(std::move(chrom));
+    } else if (chrom_ranges.empty() || keep_all_chroms) {
+      chroms.emplace(std::move(chrom));
     }
   }
 
@@ -144,6 +144,10 @@ Genome::Chromosomes Genome::import_chromosomes(
                       "between 0 and 1, got {:.4g}.",
                       record.chrom, record.chrom_start, record.chrom_end, record.score));
     }
+    if (!chrom_ranges.empty() && chrom_ranges.find(record.chrom) == chrom_ranges.end()) {
+      continue;
+    }
+
     if (auto match = chroms.find(record.chrom); match != chroms.end()) {
       match->add_extrusion_barrier(record);
     }
@@ -312,6 +316,13 @@ void Genome::simulate_extrusion(const std::filesystem::path& output_path, uint32
   std::size_t taskid = 0;
   for (auto* chrom : chroms) {
     if (!chrom->ok()) {
+      fmt::print(stderr, "SKIPPING '{}'...\n", chrom->name());
+      if (this->_config->write_contacts_for_ko_chroms) {
+        chrom->allocate_contacts(this->_bin_size, this->_diagonal_width);
+        std::scoped_lock l(barrier_mutex, progress_mutex);
+        progress_queue.emplace_back(chrom, ncells);
+        barriers.emplace_back(nullptr);
+      }
       continue;
     }
     chrom->allocate_contacts(this->_bin_size, this->_diagonal_width);
@@ -353,7 +364,6 @@ void Genome::simulate_extrusion_kernel(
     Chromosome* chrom, std::size_t cell_id, std::size_t simulation_rounds,
     std::vector<Lef> lef_buff,
     std::shared_ptr<const std::vector<ExtrusionBarrier>> extr_barrier_buff) {
-  // Bind all lefs
   const auto seed = this->_seed + std::hash<std::string_view>{}(chrom->name()) +
                     std::hash<std::size_t>{}(chrom->size()) + std::hash<std::size_t>{}(cell_id);
 #ifdef USE_XOSHIRO
@@ -382,8 +392,6 @@ void Genome::simulate_extrusion_kernel(
   std::iota(rev_lef_rank_buff.begin(), rev_lef_rank_buff.end(), 0);
   std::vector<std::size_t> fwd_lef_rank_buff{rev_lef_rank_buff};
   boost::dynamic_bitset<> mask{lef_buff.size()};
-
-  // this->bind_all_lefs(chrom, lefs, rev_lef_rank_buff, fwd_lef_rank_buff, rand_eng);
 
   std::vector<collision_t> rev_lef_collision_buff(lef_buff.size());
   std::vector<collision_t> fwd_lef_collision_buff(lef_buff.size());
@@ -442,8 +450,8 @@ void Genome::bind_lefs(const Chromosome* const chrom, absl::Span<Lef> lefs,
                        absl::Span<std::size_t> fwd_lef_rank_buff, modle::PRNG& rand_eng,
                        MaskT& mask) {
   static_assert(std::is_same_v<boost::dynamic_bitset<>, MaskT> ||
-                    std::is_integral_v<std::decay_t<decltype(
-                        std::declval<MaskT&>().operator[](std::declval<std::size_t>()))>>,
+                    std::is_integral_v<std::decay_t<decltype(std::declval<MaskT&>().operator[](
+                        std::declval<std::size_t>()))>>,
                 "mask should be a vector of integral numbers or a boost::dynamic_bitset.");
 
   assert(lefs.size() <= mask.size() || mask.empty());
@@ -870,8 +878,8 @@ void Genome::register_contacts(Chromosome* chrom, absl::Span<const Lef> lefs) {
 template <typename MaskT>
 void Genome::select_lefs_to_bind(absl::Span<const Lef> lefs, MaskT& mask) {
   static_assert(std::is_same_v<boost::dynamic_bitset<>, MaskT> ||
-                    std::is_integral_v<std::decay_t<decltype(
-                        std::declval<MaskT&>().operator[](std::declval<std::size_t>()))>>,
+                    std::is_integral_v<std::decay_t<decltype(std::declval<MaskT&>().operator[](
+                        std::declval<std::size_t>()))>>,
                 "mask should be a vector of integral numbers or a boost::dynamic_bitset.");
   assert(lefs.size() <= mask.size());
   for (auto i = 0UL; i < lefs.size(); ++i) {

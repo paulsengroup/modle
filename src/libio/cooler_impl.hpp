@@ -288,6 +288,21 @@ void Cooler::write_or_append_cmatrix_to_file(const ContactMatrix<I1> &cmatrix,
 }
 
 template <typename I1, typename I2>
+void Cooler::write_or_append_cmatrix_to_file(const ContactMatrix<I1> *cmatrix,
+                                             std::string_view chr_name, I2 chr_start, I2 chr_end,
+                                             I2 chr_length, bool quiet) {
+  // Casting away the constness from the ptr is needed in order to make things work with slices.
+  // This shouldn't cause any problem, as in the end the contact matrix is accesses through a
+  // const slice NOLINTNEXTLINE
+  const std::vector<ContactMatrix<I1> *> cmatrices{const_cast<ContactMatrix<I1> *>(cmatrix)};
+  std::string chr_name_{chr_name.data(), chr_name.size()};
+  write_or_append_cmatrices_to_file(
+      absl::MakeConstSpan(cmatrices), absl::MakeConstSpan(&chr_name_, 1),
+      absl::MakeConstSpan(&chr_start, 1), absl::MakeConstSpan(&chr_end, 1),
+      absl::MakeConstSpan(&chr_length, 1), quiet);
+}
+
+template <typename I1, typename I2>
 void Cooler::write_or_append_cmatrices_to_file(const std::vector<ContactMatrix<I1>> &cmatrices,
                                                const std::vector<std::string> &chr_names,
                                                const std::vector<I2> &chr_starts,
@@ -399,7 +414,7 @@ void Cooler::write_or_append_cmatrices_to_file(absl::Span<ContactMatrix<I1> *con
     for (auto chr_idx = 0UL; chr_offset + chr_idx < static_cast<std::size_t>(this->_nchroms);
          ++chr_idx) {
       // Declare several aliases/variables to improve code readability in later sections
-      const auto &cmatrix = cmatrices[chr_idx];
+      const auto *cmatrix = cmatrices[chr_idx];
       const auto &chr_name = chr_names[chr_idx];
       const auto chr_total_len = static_cast<int64_t>(chr_sizes[chr_idx]);
       const auto chr_start = static_cast<uint64_t>(chr_starts[chr_idx]);
@@ -409,7 +424,8 @@ void Cooler::write_or_append_cmatrices_to_file(absl::Span<ContactMatrix<I1> *con
       if (!quiet) {
         fmt::print(stderr, FMT_STRING("Writing contacts for '{}' ({:.2f} Mbp)..."), chr_name,
                    static_cast<double>(chr_simulated_len) / 1.0e6);  // NOLINT
-        if (const auto n = cmatrix->get_n_of_missed_updates(); n != 0) {
+        if (cmatrix && cmatrix->get_n_of_missed_updates() != 0) {
+          const auto &n = cmatrix->get_n_of_missed_updates();
           fmt::print(
               stderr, FMT_STRING(" WARNING: Detected {} missed updates ({:.4f}% of the total)."), n,
               static_cast<double>(100U * n) / static_cast<double>(cmatrix->get_tot_contacts()));
@@ -445,7 +461,7 @@ void Cooler::write_or_append_cmatrices_to_file(absl::Span<ContactMatrix<I1> *con
           hdf5::write_numbers(idx_bin1_offset_buff, d[IDX_BIN1], idx_bin1_offset_h5_foffset);
       idx_bin1_offset_buff.clear();
 
-      if (cmatrix->ncols() == 0) {
+      if (!cmatrix || cmatrix->ncols() == 0) {
         DISABLE_WARNING_PUSH
         DISABLE_WARNING_SIGN_CONVERSION
         idx_bin1_offset_buff.resize(
@@ -457,42 +473,44 @@ void Cooler::write_or_append_cmatrices_to_file(absl::Span<ContactMatrix<I1> *con
       }
 
       pxl_offset += chr_start / this->_bin_size;
-      for (auto i = 0UL; i < cmatrix->ncols(); ++i) {  // Iterate over columns in the cmatrix
-        // Write first pixel that refers to a given bin1 to the index
-        idx_bin1_offset_buff.push_back(this->_nnz);
+      if (cmatrix) {  // when cmatrix == nullptr we only write chrom/bins/indexes (no pixels)
+        for (auto i = 0UL; i < cmatrix->ncols(); ++i) {  // Iterate over columns in the cmatrix
+          // Write first pixel that refers to a given bin1 to the index
+          idx_bin1_offset_buff.push_back(this->_nnz);
 
-        // Iterate over rows of the cmatrix. The first condition serves the purpose to avoid reading
-        // data from regions that are full of zeros by design (because cmatrix only stores contacts
-        // for a certain width along the diagonal). The second condition makes sure we are not
-        // reading past the array end
-        for (auto j = i; j < i + cmatrix->nrows() && j < cmatrix->ncols(); ++j) {
-          if (const auto m = cmatrix->get(i, j); m != 0) {  // Only write nnz pixels
+          // Iterate over rows of the cmatrix. The first condition serves the purpose to avoid
+          // reading data from regions that are full of zeros by design (because cmatrix only stores
+          // contacts for a certain width along the diagonal). The second condition makes sure we
+          // are not reading past the array end
+          for (auto j = i; j < i + cmatrix->nrows() && j < cmatrix->ncols(); ++j) {
+            if (const auto m = cmatrix->get(i, j); m != 0) {  // Only write nnz pixels
 #ifndef NDEBUG
-            // Make sure we are always reading from the upper-triangle of the underlying square
-            // contact matrix
-            if (pxl_offset + i > pxl_offset + j) {
-              utils::throw_with_trace(std::runtime_error(fmt::format(
-                  FMT_STRING("Cooler::write_or_append_cmatrix_to_file(): b1 > b2: b1={}; "
-                             "b2={}; offset={}; m={}\n"),
-                  pixel_b1_idx_buff.back(), pixel_b2_idx_buff.back(), pxl_offset, m)));
-            }
+              // Make sure we are always reading from the upper-triangle of the underlying square
+              // contact matrix
+              if (pxl_offset + i > pxl_offset + j) {
+                utils::throw_with_trace(std::runtime_error(fmt::format(
+                    FMT_STRING("Cooler::write_or_append_cmatrix_to_file(): b1 > b2: b1={}; "
+                               "b2={}; offset={}; m={}\n"),
+                    pixel_b1_idx_buff.back(), pixel_b2_idx_buff.back(), pxl_offset, m)));
+              }
 #endif
-            pixel_b1_idx_buff.push_back(static_cast<int64_t>(pxl_offset + i));
-            pixel_b2_idx_buff.push_back(static_cast<int64_t>(pxl_offset + j));
-            pixel_count_buff.push_back(m);
-            ++this->_nnz;
+              pixel_b1_idx_buff.push_back(static_cast<int64_t>(pxl_offset + i));
+              pixel_b2_idx_buff.push_back(static_cast<int64_t>(pxl_offset + j));
+              pixel_count_buff.push_back(m);
+              ++this->_nnz;
 
-            if (pixel_b1_idx_buff.size() ==
-                BUFF_SIZE) {  // Write pixels to disk when buffer is full
-              write_pixels_to_file();
+              if (pixel_b1_idx_buff.size() ==
+                  BUFF_SIZE) {  // Write pixels to disk when buffer is full
+                write_pixels_to_file();
+              }
             }
           }
-        }
 
-        if (idx_bin1_offset_buff.size() == BUFF_SIZE) {  // Write bin idx when buffer is full
-          idx_bin1_offset_h5_foffset =
-              hdf5::write_numbers(idx_bin1_offset_buff, d[IDX_BIN1], idx_bin1_offset_h5_foffset);
-          idx_bin1_offset_buff.clear();
+          if (idx_bin1_offset_buff.size() == BUFF_SIZE) {  // Write bin idx when buffer is full
+            idx_bin1_offset_h5_foffset =
+                hdf5::write_numbers(idx_bin1_offset_buff, d[IDX_BIN1], idx_bin1_offset_h5_foffset);
+            idx_bin1_offset_buff.clear();
+          }
         }
       }
 

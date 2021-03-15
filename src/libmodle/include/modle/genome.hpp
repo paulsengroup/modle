@@ -81,6 +81,7 @@ class Genome {
   bool _randomize_contact_sampling;
   uint32_t _nthreads;
   uint64_t _seed;
+  const config* _config;
 
   Chromosomes _chromosomes{};
 
@@ -92,7 +93,7 @@ class Genome {
   [[nodiscard]] inline static Chromosomes import_chromosomes(
       const std::filesystem::path& path_to_chrom_sizes,
       const std::filesystem::path& path_to_extr_barriers,
-      const std::filesystem::path& path_to_chrom_subranges = {});
+      const std::filesystem::path& path_to_chrom_subranges, bool keep_all_chroms);
   [[nodiscard]] inline static std::vector<ExtrusionBarrier> allocate_barriers(
       const Chromosome* chrom, double default_prob_of_block);
 
