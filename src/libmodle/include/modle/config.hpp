@@ -29,14 +29,15 @@ struct config {
 
   // General settings
   uint32_t bin_size{1'000};  // NOLINT(readability-magic-numbers, cppcoreguidelines-avoid-magic-numbers)
+  uint32_t ncells{5'000};    // NOLINT(readability-magic-numbers, cppcoreguidelines-avoid-magic-numbers)
   uint32_t nthreads{std::thread::hardware_concurrency()};
   uint32_t diagonal_width{3'000'000 /* 3 Mbp */};  // NOLINT(readability-magic-numbers, cppcoreguidelines-avoid-magic-numbers)
-  uint32_t simulation_iterations{15'000'000};  // NOLINT(readability-magic-numbers, cppcoreguidelines-avoid-magic-numbers)
+  uint32_t simulation_iterations{200};      // NOLINT(readability-magic-numbers, cppcoreguidelines-avoid-magic-numbers)
   double target_contact_density{0.0};
   double number_of_lefs_per_mbp;
   uint32_t average_lef_lifetime{100'000};  // NOLINT(readability-magic-numbers, cppcoreguidelines-avoid-magic-numbers)
-  double hard_stall_multiplier{2.0};  // NOLINT(readability-magic-numbers, cppcoreguidelines-avoid-magic-numbers)
-  double soft_stall_multiplier{0.5};  // NOLINT(readability-magic-numbers, cppcoreguidelines-avoid-magic-numbers)
+  double hard_stall_multiplier{2.0};       // NOLINT(readability-magic-numbers, cppcoreguidelines-avoid-magic-numbers)
+  double soft_stall_multiplier{0.5};       // NOLINT(readability-magic-numbers, cppcoreguidelines-avoid-magic-numbers)
   bool allow_lef_lifetime_extension{true};
   bool skip_burnin{false};
   uint64_t seed{0};

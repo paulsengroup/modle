@@ -54,18 +54,6 @@ using PRNG = std::mt19937_64;
 using seeder = std::seed_seq;
 #endif
 
-void Genome::test() {
-  for (const auto& chrom : this->_chromosomes) {
-    fmt::print(stderr, "{}: {}\n", chrom.name(), chrom.nbarriers());
-
-    for (const auto& b : chrom.get_barriers()) {
-      fmt::print(stderr, "\t{}[{}-{}]", b.chrom, b.chrom_start, b.chrom_end);
-    }
-  }
-  fmt::print(stderr, "\n");
-  this->simulate_extrusion(this->_nthreads);
-}
-
 Genome::Genome(const config& c, bool import_chroms)
     : _path_to_chrom_sizes(c.path_to_chr_sizes),
       _path_to_chrom_subranges(c.path_to_chr_subranges),
@@ -163,6 +151,28 @@ Genome::Chromosomes Genome::import_chromosomes(
     }
   }
   return chroms;
+}
+
+std::vector<ExtrusionBarrier> Genome::allocate_barriers(const Chromosome* const chrom,
+                                                        double default_prob_of_block) {
+  std::vector<ExtrusionBarrier> barriers;
+  std::size_t barriers_skipped = 0;
+  for (const auto& b : chrom->get_barriers()) {
+    if (b.strand == '+' || b.strand == '-') {
+      const auto pos =
+          static_cast<Bp>(std::round(static_cast<double>(b.chrom_start + b.chrom_end) / 2.0));
+      const auto pblock = b.score != 0 ? b.score : default_prob_of_block;
+      barriers.emplace_back(pos, pblock, b.strand);
+    } else {
+      ++barriers_skipped;
+    }
+  }
+
+  fmt::print(stderr,
+             FMT_STRING("Instantiated {} extr. barriers for '{}' ({} barriers were skipped)\n"),
+             barriers.size(), chrom->name(), barriers_skipped);
+
+  return barriers;
 }
 
 /*
@@ -377,9 +387,8 @@ printing updates when simulation is about to end fmt::print(stderr, FMT_STRING("
 }
 */
 
-void Genome::simulate_extrusion(std::size_t nthreads) {
-  std::size_t ncells = 100;
-  std::size_t simulation_rounds = 200;
+void Genome::simulate_extrusion(std::filesystem::path output_path, uint32_t ncells,
+                                uint32_t simulation_rounds, std::size_t nthreads) {
   auto tpool = this->instantiate_thread_pool(nthreads + 1, false);
 
   std::mutex progress_mutex;
@@ -391,8 +400,9 @@ void Genome::simulate_extrusion(std::size_t nthreads) {
 
   boost::asio::post(tpool, [&]() {
     Chromosome* chrom_to_be_written = nullptr;
-    cooler::Cooler c(std::filesystem::path("/var/tmp/matrix.cool"), cooler::Cooler::WRITE_ONLY,
-                     this->_bin_size);
+    auto c = output_path.empty() ? nullptr
+                                 : std::make_unique<cooler::Cooler>(
+                                       output_path, cooler::Cooler::WRITE_ONLY, this->_bin_size);
     while (true) {
       std::this_thread::sleep_for(std::chrono::milliseconds(25));
       {
@@ -409,15 +419,17 @@ void Genome::simulate_extrusion(std::size_t nthreads) {
       }
       fmt::print(stderr, "Writing {} to file...\n", chrom_to_be_written->name());
       try {
-        c.write_or_append_cmatrix_to_file(
-            chrom_to_be_written->contacts(), chrom_to_be_written->name(),
-            chrom_to_be_written->start_pos(), chrom_to_be_written->end_pos(),
-            chrom_to_be_written->size());
+        if (c) {
+          c->write_or_append_cmatrix_to_file(
+              chrom_to_be_written->contacts(), chrom_to_be_written->name(),
+              chrom_to_be_written->start_pos(), chrom_to_be_written->end_pos(),
+              chrom_to_be_written->size());
+        }
       } catch (const std::runtime_error& err) {
         throw std::runtime_error(fmt::format(
             FMT_STRING(
                 "The following error occurred while writing contacts for '{}' to file {}: {}"),
-            chrom_to_be_written->name(), c.get_path(), err.what()));
+            chrom_to_be_written->name(), c->get_path(), err.what()));
       }
       chrom_to_be_written->deallocate_contacts();
       std::scoped_lock l(barrier_mutex, lef_mutex);
@@ -443,23 +455,13 @@ void Genome::simulate_extrusion(std::size_t nthreads) {
     const auto nlefs = static_cast<std::size_t>(
         std::round(this->_nlefs_per_mbp * (static_cast<double>(chrom->simulated_size()) / 1.0e6)));
     {
-      std::scoped_lock l(lef_mutex, barrier_mutex, progress_mutex);
+      std::scoped_lock l(barrier_mutex, lef_mutex, progress_mutex);
       progress.emplace_back(chrom, 0UL);
       lefs.emplace_back(std::make_shared<std::vector<Lef>>(nlefs));
-      barriers.emplace_back(std::make_shared<std::vector<ExtrusionBarrier>>());
-      lef_buff = lefs.back();
+      barriers.emplace_back(std::make_shared<std::vector<ExtrusionBarrier>>(
+          Genome::allocate_barriers(chrom, this->_probability_of_barrier_block)));
       extr_barriers_buff = barriers.back();
-    }
-    {
-      std::scoped_lock l(barrier_mutex);
-      for (const auto& b : chrom->get_barriers()) {
-        if (b.strand == '+' || b.strand == '-') {
-          const auto pos =
-              static_cast<Bp>(std::round(static_cast<double>(b.chrom_start + b.chrom_end) / 2.0));
-          const auto pblock = b.score != 0 ? b.score : this->_probability_of_barrier_block;
-          extr_barriers_buff->emplace_back(pos, pblock, b.strand);
-        }
-      }
+      lef_buff = lefs.back();
     }
 
     for (auto i = 0UL; i < ncells; ++i) {

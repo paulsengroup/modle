@@ -38,7 +38,6 @@ struct config;
 
 class Genome {
  public:
-  inline void test();
   inline explicit Genome(const config& c, bool import_chroms = true);
 
   [[nodiscard]] inline std::size_t size() const;
@@ -51,6 +50,7 @@ class Genome {
   using chrom_pos_generator_t = std::uniform_int_distribution<Bp>;
   using collision_t = uint_fast16_t;
   inline void simulate_extrusion(
+      std::filesystem::path output_path, uint32_t ncells, uint32_t simulation_rounds,
       std::size_t nthreads = static_cast<std::size_t>(std::thread::hardware_concurrency()));
 
  private:
@@ -87,6 +87,8 @@ class Genome {
       const std::filesystem::path& path_to_chrom_sizes,
       const std::filesystem::path& path_to_extr_barriers,
       const std::filesystem::path& path_to_chrom_subranges = {});
+  [[nodiscard]] inline static std::vector<ExtrusionBarrier> allocate_barriers(
+      const Chromosome* chrom, double default_prob_of_block);
 
   inline void simulate_extrusion_kernel(
       Chromosome* chrom, std::size_t cell_id, std::size_t simulation_rounds,

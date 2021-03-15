@@ -86,7 +86,15 @@ class Cli {
             ->capture_default_str();
 
     gen->add_option(
-            "-t,--threads",
+        "--ncells",
+        this->_config.ncells,
+        "Number of cells to simulate.")
+        ->check(CLI::PositiveNumber)
+        ->transform(remove_trailing_zeros_from_floats)
+        ->capture_default_str();
+
+    gen->add_option(
+        "-t,--threads",
             this->_config.nthreads,
             "Max size of the thread pool to use to run the simulation. By default ModLE will attempt to use threads available.")
             ->check(CLI::PositiveNumber)
