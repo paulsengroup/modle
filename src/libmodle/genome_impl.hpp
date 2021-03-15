@@ -145,8 +145,6 @@ Genome::Chromosomes Genome::import_chromosomes(
                       record.chrom, record.chrom_start, record.chrom_end, record.score));
     }
     if (auto match = chroms.find(record.chrom); match != chroms.end()) {
-      fmt::print(stderr, "Adding barrier for {}[{}-{}]...\n", record.chrom, record.chrom_start,
-                 record.chrom_end);
       match->add_extrusion_barrier(record);
     }
   }
@@ -175,221 +173,9 @@ std::vector<ExtrusionBarrier> Genome::allocate_barriers(const Chromosome* const 
   return barriers;
 }
 
-/*
-void Genome::simulate_extrusion() { this->simulate_extrusion(1, 0); }
-void Genome::simulate_extrusion(uint32_t iterations) { this->simulate_extrusion(iterations, 0); }
-void Genome::simulate_extrusion(double target_contact_density) {
-  this->simulate_extrusion(0, target_contact_density);
-}
-
-void Genome::simulate_extrusion(uint32_t iterations, double target_contact_density) {
-  auto get_status = [](const Chromosome& c) constexpr->std::string_view {
-    if (c.ok()) {
-      return "OK!";
-    }
-    if (c.barriers.empty()) {
-      return "KO! Chromosome won't be simulated. Reason: chromosome has 0 extrusion barriers.";
-    }
-    utils::throw_with_trace(std::logic_error("Unreachable code"));
-  };
-
-  fmt::print(stderr, FMT_STRING("Chromosome status report:\n"));
-
-  for (const auto& chr : this->_chromosomes) {
-    fmt::print(stderr, FMT_STRING("'{}' status: {}\n"), chr.name, get_status(chr));
-  }
-  fmt::print(stderr, FMT_STRING("Simulating loop extrusion on {}/{} chromosomes...\n"),
-             this->get_n_ok_chromosomes(), this->get_nchromosomes());
-
-  // If the simulation is set to stop when a target contact density is reached, set the number of
-  // iterations to a very large number (2^32)
-  if (target_contact_density != 0.0) {
-    iterations = UINT32_MAX;
-  }
-
-  auto tpool = this->instantiate_thread_pool();
-
-  // Initialize variables for simulation progress tracking
-  std::atomic<uint64_t> ticks_done{0};
-  std::atomic<uint64_t> extrusion_events{0};
-  std::atomic<uint64_t> chromosomes_completed{0};
-  std::atomic<bool> simulation_completed{false};
-  std::mutex m;  // This mutex is supposed to protect simulation_complete. As of C++17 we also
-need
-  // to acquire a lock when modifying the condition variable simulation_completed_cv
-  // (otherwise the change might not be communicated to waiting threads)
-  std::condition_variable simulation_completed_cv;
-
-  DISABLE_WARNING_PUSH
-  DISABLE_WARNING_CONVERSION
-  DISABLE_WARNING_DOUBLE_PROMOTION
-  std::thread progress_tracker([&]() {  // This thread is used to periodically print the
-    // simulation progress to stderr
-    // The total number of ticks tot_ticks is set depending on whether or not the simulation is
-    // set to run for a fixed number of iterations:
-    //  - When we know in advance the number of iterations (e.g. because it was specified
-    //    through --number-of-iterations), then the total number of ticks is calculated as:
-    //       n. of iterations * n. of chromosomes
-    //  - When the target number of iterations is unknown (e.g. because we are targeting the
-    //    contact density specified through --target-contact-density), then the total ticks
-    //    number is given by the sum of the target number of contacts for each of the
-    //    chromosomes simulated, where the target number of contacts is defined as:
-    //       target contact density * (matrix columns * matrix rows)
-    const long double tot_ticks =
-        target_contact_density != 0.0
-            ? std::accumulate(this->_chromosomes.begin(), this->_chromosomes.end(), 0.0L,
-                              [&](auto accumulator, const auto& chr) {
-                                return accumulator + (target_contact_density *
-                                                      chr.contacts.ncols() *
-chr.contacts.nrows());
-                              })
-            : iterations * this->get_n_ok_chromosomes();
-
-    const auto t0 = absl::Now();
-    while (!simulation_completed) {
-      {  // Wait for 5 seconds or until the simulation terminates
-        std::unique_lock<std::mutex> lk(m);
-        simulation_completed_cv.wait_for(lk, std::chrono::seconds(5));  // NOLINT
-        if (simulation_completed) {  // Stop printing updates once there are no chromosomes left,
-          // and return immediately, so that the main thread can join this thread
-          return;
-        }
-      }
-      if (extrusion_events > 0) {  // Print progress
-        const auto progress = ticks_done / tot_ticks;
-        const auto throughput = static_cast<double>(extrusion_events) / 5.0e6; // 5s * 1M NOLINT
-        const auto delta_t = absl::ToDoubleSeconds(absl::Now() - t0);
-        const auto eta = absl::Seconds(
-            (std::min(this->_nthreads, this->get_n_ok_chromosomes()) /
-             std::min(static_cast<double>(this->_nthreads),
-                      static_cast<double>(this->get_n_ok_chromosomes() - chromosomes_completed)))
-* (delta_t / std::max(1.0e-06L, progress) - delta_t)); if (eta > absl::ZeroDuration()) {  // Avoid
-printing updates when simulation is about to end fmt::print(stderr, FMT_STRING("### ~{:.2f}% ###
-{:.2f}M extr/sec - Simulation completed for "
-                                "{}/{} chromosomes - ETA {}.\n"),
-                     100.0 * progress, throughput, chromosomes_completed,
-                     this->get_n_ok_chromosomes(), absl::FormatDuration(eta));
-          extrusion_events = 0;
-        }
-      }
-    }
-  });
-  DISABLE_WARNING_POP
-
-  // Loop extrusion is simulated using boost::thread_pool, where each thread simulates loop
-  // extrusion at the chromosome level. This constrains the level of parallelism to the number of
-  // chromosomes that are being simulated. We can certainly do better.
-  // This is just a way to get significant speedups with very little effort
-  for (auto nchr = 0U; nchr < this->_chromosomes.size(); ++nchr) {
-    // Simulating loop extrusion on chromosomes without extr. barrier does not make sense
-    if (!this->_chromosomes[nchr].ok()) {
-      continue;
-    }
-    boost::asio::post(tpool, [&, nchr]() {
-      const auto t0 = absl::Now();
-      auto& chr = this->_chromosomes[nchr];  // Alias for the chromosome that is being simulated
-      // This random number generator is used to randomize sampling interval
-      // (e.g. when --randomize-contact-sampling-interval is specified)
-      std::bernoulli_distribution sample_contacts{1.0 / this->_sampling_interval};
-
-      // Calculate the number of contacts after which the simulation for the current chromosome is
-      // stopped. This is set to a very large number (2^64) when the simulation is set to run for
-      // a fixed number of iterations
-      const auto target_n_of_contacts =
-          target_contact_density != 0.0
-              ? target_contact_density *
-                    static_cast<double>(chr.contacts.nrows() * chr.contacts.ncols())
-              : std::numeric_limits<double>::max();
-
-      // Variables to track the simulation progress for the current chromosome
-      uint64_t local_extr_events_counter = 0;
-      uint64_t ticks_local = 0;
-
-      // This for loop is where the simulation actually takes place.
-      // We basically keep iterating until one of the stopping condition is met
-      // TODO: Instead of a raw loop, we could use std::transform and exec. policies and achieve a
-      // better level of parallelism To do this, we probably need to have a lock on lefs and
-      // process all left units first, then right all the right ones
-      for (auto i = 1UL; i <= iterations; ++i) {
-        // Determine whether we will register contacts produced during the current iteration
-        bool register_contacts = this->_randomize_contact_sampling
-                                     ? sample_contacts(chr._rand_eng)
-                                     : i % this->_sampling_interval == 0;
-
-        // Loop over the LEFs belonging to the chromosome that is being simulated and
-        // extrude/register contacts when appropriate
-        for (auto& lef : chr.lefs) {
-          if (lef->is_bound()) {  // Attempt to register a contact and move the LEF only if the
-            // latter is bound to the chromosome
-            if (register_contacts) {
-              lef->register_contact();
-            }
-            lef->try_extrude();
-            ++local_extr_events_counter;
-          }
-        }
-
-        // Once we are done extruding for the current iteration, check if the constrains are
-        // satisfied and apply a stall or rebind free LEFs when appropriate
-        for (auto& lef : chr.lefs) {
-          if (lef->is_bound()) {
-            lef->check_constraints(chr._rand_eng);
-          } else {
-            lef->try_rebind(chr._rand_eng, this->_probability_of_lef_rebind, register_contacts);
-          }
-        }
-
-        // Add the number of extr. events to the global counter. This is used to calculate the n.
-        // of extr. events per seconds, which is a good way to assess the simulation throughput
-        extrusion_events.fetch_add(local_extr_events_counter, std::memory_order_relaxed);
-        local_extr_events_counter = 0;
-
-        if (register_contacts) {
-          // Propagate local progress to the global counters
-          if (target_contact_density !=
-              0.0) {  // Simulation is set to stop when the target contact density is reached
-            assert(chr.contacts.get_tot_contacts() >= ticks_local);
-            ticks_done.fetch_add(chr.contacts.get_tot_contacts() - ticks_local,
-                                 std::memory_order_relaxed);
-            ticks_local = chr.contacts.get_tot_contacts();
-          } else {  // Simulation is set to stop at a fixed number of iterations
-            assert(i >= ticks_local);
-            ticks_done.fetch_add(i - ticks_local, std::memory_order_relaxed);
-            ticks_local = i;
-          }
-
-          // Alt the simulation when we have reached the target number of contacts.
-          // This will never happen when the simulation is set to run for a fixed number of
-          // iterations, as when this is the case, target_n_of_contacts == 2^64
-          if (static_cast<double>(chr.contacts.get_tot_contacts()) >= target_n_of_contacts) {
-            break;
-          }
-        }
-      }
-      if (++chromosomes_completed == this->get_n_ok_chromosomes()) {
-        {  // Notify the thread that is tracking the simulation progress that we are done
-          // simulating
-          std::scoped_lock<std::mutex> lk(m);
-          simulation_completed = true;
-        }
-        simulation_completed_cv.notify_all();
-      }
-      fmt::print(stderr, FMT_STRING("DONE simulating loop extrusion on '{}'! Simulation took
-{}\n"), chr.name, absl::FormatDuration(absl::Now() - t0));
-
-      // Free up resources
-      // chr = Chromosome{"", 0, 0, 0};
-    });
-  }
-  // This blocks until all the tasks posted to the thread_pool have been completed
-  tpool.join();
-  progress_tracker.join();
-}
-*/
-
-void Genome::simulate_extrusion(std::filesystem::path output_path, uint32_t ncells,
-                                uint32_t simulation_rounds, std::size_t nthreads) {
-  auto tpool = this->instantiate_thread_pool(nthreads + 1, false);
+void Genome::simulate_extrusion(const std::filesystem::path& output_path, uint32_t ncells,
+                                uint32_t simulation_rounds, double target_contact_density) {
+  auto tpool = Genome::instantiate_thread_pool(this->_nthreads + 1, false);
 
   std::mutex progress_mutex;
   std::mutex barrier_mutex;
@@ -417,13 +203,21 @@ void Genome::simulate_extrusion(std::filesystem::path output_path, uint32_t ncel
           continue;
         }
       }
-      fmt::print(stderr, "Writing {} to file...\n", chrom_to_be_written->name());
+      fmt::print(stderr, "Simulation for '{}' successfully completed.\n",
+                 chrom_to_be_written->name());
       try {
         if (c) {
+          fmt::print(stderr, "Writing contacts for '{}' to file {}...\n",
+                     chrom_to_be_written->name(), c->get_path());
           c->write_or_append_cmatrix_to_file(
               chrom_to_be_written->contacts(), chrom_to_be_written->name(),
               chrom_to_be_written->start_pos(), chrom_to_be_written->end_pos(),
-              chrom_to_be_written->size());
+              chrom_to_be_written->size(), true);
+          fmt::print(stderr, "Written {} contacts for '{}' in {:.2f}M pixels to file {}.\n",
+                     chrom_to_be_written->contacts().get_tot_contacts(),
+                     chrom_to_be_written->name(),
+                     static_cast<double>(chrom_to_be_written->contacts().npixels()) / 1.0e6,
+                     c->get_path());
         }
       } catch (const std::runtime_error& err) {
         throw std::runtime_error(fmt::format(
@@ -465,32 +259,55 @@ void Genome::simulate_extrusion(std::filesystem::path output_path, uint32_t ncel
     }
 
     for (auto i = 0UL; i < ncells; ++i) {
-      boost::asio::post(
-          tpool, [&, chrom, extr_barriers_buff, i, lef_buff, progress = &progress.back()]() {
-            try {
-              Genome::simulate_extrusion_kernel(chrom, i, simulation_rounds, *lef_buff,
-                                                extr_barriers_buff);
-              fmt::print(stderr, "Done simulating cell #{} of {}!\n", i + 1, chrom->name());
-              std::scoped_lock l(progress_mutex);
-              ++progress->second;
+      boost::asio::post(tpool, [&, chrom, extr_barriers_buff, i, lef_buff,
+                                progress = &progress.back(), simulation_rounds]() {
+        uint32_t simulation_rounds_ = simulation_rounds;
+        if (target_contact_density != 0) {
+          simulation_rounds_ = static_cast<uint32_t>(std::round(
+              (target_contact_density *
+               static_cast<double>(this->_sampling_interval * chrom->contacts().npixels())) /
+              static_cast<double>(ncells * lef_buff->size())));
+        }
 
-            } catch (const std::exception& err) {
-              fmt::print(stderr, FMT_STRING("{}\n"), err.what());
+        if (i == 0) {
+          fmt::print(stderr, FMT_STRING("Simulating {} epochs for '{}' across {} cells...\n"),
+                     simulation_rounds_, chrom->name(), ncells);
+        }
+
+        try {
+          Genome::simulate_extrusion_kernel(chrom, i, simulation_rounds_, *lef_buff,
+                                            extr_barriers_buff);
+          std::scoped_lock l(progress_mutex);
+          ++progress->second;
+
+        } catch (const std::exception& err) {
+          fmt::print(stderr, FMT_STRING("Detected an error in thread {}:\n{}\n"),
+                     std::this_thread::get_id(), err.what());
 #ifndef BOOST_STACKTRACE_USE_NOOP
-              const auto* st = boost::get_error_info<modle::utils::traced>(err);
-              if (st) {
-                std::cerr << *st << '\n';
-              } else {
-                fmt::print(stderr, "Stack trace not available!\n");
-              }
+          const auto* st = boost::get_error_info<modle::utils::traced>(err);
+          if (st) {
+            std::cerr << *st << '\n';
+          } else {
+            fmt::print(stderr, "Stack trace not available!\n");
+          }
 #endif
-              throw;
-            }
-          });
+          throw;
+        }
+      });
     }
   }
-  progress.emplace_back(nullptr, 0UL);
+  progress.emplace_back(nullptr, 0UL);  // Signal end of simulation
   tpool.join();
+}
+
+void Genome::simulate_extrusion(const std::filesystem::path& output_path, uint32_t ncells,
+                                uint32_t simulation_rounds) {
+  this->simulate_extrusion(output_path, ncells, simulation_rounds, 0.0);
+}
+
+void Genome::simulate_extrusion(const std::filesystem::path& output_path, uint32_t ncells,
+                                double target_contact_density) {
+  this->simulate_extrusion(output_path, ncells, 0, target_contact_density);
 }
 
 void Genome::simulate_extrusion_kernel(
@@ -577,7 +394,6 @@ void Genome::simulate_extrusion_kernel(
     }
 
     this->extrude(chrom, lefs);
-    this->rank_lefs(lefs, fwd_lef_ranks, rev_lef_ranks);
   }
 }
 

@@ -51,10 +51,15 @@ void run_simulation(const modle::config& c) {
           c.path_to_log_file);
     }
   }
-  genome.simulate_extrusion(c.skip_output ? "" : c.path_to_output_file, c.ncells,
-                            c.simulation_iterations, c.nthreads);
-  fmt::print(stderr, FMT_STRING("Simulation took {}.\n"), absl::FormatDuration(absl::Now() - t0));
-  fmt::print(stderr, "Simulation terminated without errors!\n\nBye.\n");
+  if (c.target_contact_density != 0.0) {
+    genome.simulate_extrusion(c.skip_output ? "" : c.path_to_output_file, c.ncells,
+                              c.target_contact_density);
+  } else {
+    genome.simulate_extrusion(c.skip_output ? "" : c.path_to_output_file, c.ncells,
+                              c.simulation_iterations);
+  }
+  fmt::print(stderr, FMT_STRING("Simulation terminated without errors in {}!\n\nBye.\n"),
+             absl::FormatDuration(absl::Now() - t0));
 }
 
 }  // namespace modle

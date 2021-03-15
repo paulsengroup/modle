@@ -49,9 +49,10 @@ class Genome {
   using lef_lifetime_generator_t = std::geometric_distribution<Bp>;
   using chrom_pos_generator_t = std::uniform_int_distribution<Bp>;
   using collision_t = uint_fast16_t;
-  inline void simulate_extrusion(
-      std::filesystem::path output_path, uint32_t ncells, uint32_t simulation_rounds,
-      std::size_t nthreads = static_cast<std::size_t>(std::thread::hardware_concurrency()));
+  inline void simulate_extrusion(const std::filesystem::path& output_path, uint32_t ncells,
+                                 uint32_t simulation_rounds);
+  inline void simulate_extrusion(const std::filesystem::path& output_path, uint32_t ncells,
+                                 double target_contact_density);
 
  private:
   std::filesystem::path _path_to_chrom_sizes;
@@ -74,10 +75,6 @@ class Genome {
 
   Chromosomes _chromosomes{};
 
-  // inline void simulate_extrusion();
-
-  // inline void simulate_extrusion(double target_contact_density);
-  // inline void simulate_extrusion(uint32_t iterations, double target_contact_density);
   [[nodiscard]] inline boost::asio::thread_pool instantiate_thread_pool() const;
   template <typename I>
   [[nodiscard]] inline static boost::asio::thread_pool instantiate_thread_pool(
@@ -89,6 +86,9 @@ class Genome {
       const std::filesystem::path& path_to_chrom_subranges = {});
   [[nodiscard]] inline static std::vector<ExtrusionBarrier> allocate_barriers(
       const Chromosome* chrom, double default_prob_of_block);
+
+  inline void simulate_extrusion(const std::filesystem::path& output_path, uint32_t ncells,
+                                 uint32_t simulation_rounds, double target_contact_density);
 
   inline void simulate_extrusion_kernel(
       Chromosome* chrom, std::size_t cell_id, std::size_t simulation_rounds,
