@@ -1,24 +1,7 @@
 add_library(libmodle INTERFACE)
 add_library(Modle::Modle ALIAS libmodle)
 
-if(ENABLE_XOSHIRO)
-  include(ExternalProject)
-  ExternalProject_Add(
-    Xoshiro-cpp
-    GIT_REPOSITORY https://github.com/Reputeless/Xoshiro-cpp
-    GIT_TAG "v1.1"
-    CONFIGURE_COMMAND cp "${CMAKE_CURRENT_SOURCE_DIR}/CMakeLists_XoshiroCpp.txt" "<SOURCE_DIR>/CMakeLists.txt"
-    COMMAND ${CMAKE_COMMAND} <SOURCE_DIR> -Wno-dev
-    INSTALL_COMMAND "")
-  add_dependencies(libmodle Xoshiro-cpp)
-  ExternalProject_Get_Property(Xoshiro-cpp SOURCE_DIR)
-  set(XOSHIRO_INCLUDE_DIR ${SOURCE_DIR})
-  unset(SOURCE_DIR)
-endif()
-
-target_sources(
-  libmodle
-  INTERFACE ${CMAKE_CURRENT_SOURCE_DIR}/genome_impl.hpp)
+target_sources(libmodle INTERFACE ${CMAKE_CURRENT_SOURCE_DIR}/genome_impl.hpp)
 
 target_include_directories(libmodle INTERFACE include/ ${XOSHIRO_INCLUDE_DIR})
 
@@ -29,6 +12,7 @@ target_link_libraries(
     project_options
     Modle::cmatrix
     Modle::io
+    $<$<BOOL:${ENABLE_XOSHIRO}>:XoshiroCpp::XoshiroCpp>
     CONAN_PKG::abseil
     CONAN_PKG::boost
     CONAN_PKG::concurrentqueue
@@ -41,9 +25,19 @@ if(ENABLE_PCH AND ${CMAKE_VERSION} VERSION_GREATER_EQUAL "3.16.0")
   target_precompile_headers(
     libmodle
     INTERFACE
-    [["modle/common.hpp"]]
-    [["modle/config.hpp"]]
-    [["modle/genome.hpp"]])
+    <absl/container/btree_set.h>
+    <absl/container/flat_hash_map.h>
+    <absl/container/flat_hash_set.h>
+    <absl/time/clock.h>
+    <absl/time/time.h>
+    <absl/types/span.h>
+    <absl/strings/match.h>
+    <absl/strings/str_cat.h>
+    <absl/strings/str_join.h>
+    <absl/strings/str_split.h>
+    <absl/strings/strip.h>
+    <boost/asio/thread_pool.hpp>
+    <fmt/format.h>)
 endif()
 
 if(ENABLE_TESTING)

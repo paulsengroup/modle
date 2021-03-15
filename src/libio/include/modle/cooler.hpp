@@ -55,7 +55,7 @@ class Cooler {
 
   // Getters
   [[nodiscard]] inline bool is_read_only() const;
-  [[nodiscard]] inline const std::filesystem::path& get_path() const;
+  [[nodiscard]] inline const std::filesystem::path &get_path() const;
 
   [[nodiscard]] inline std::size_t get_nchroms();
 

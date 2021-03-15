@@ -14,7 +14,7 @@ include(cmake/PreventInSourceBuilds.cmake)
 # Link this 'library' to set the c++ standard / compile-time options requested
 add_library(project_options INTERFACE)
 target_compile_features(project_options INTERFACE cxx_std_17)
-if (ENABLE_TESTING)
+if(ENABLE_TESTING)
   target_compile_definitions(project_options INTERFACE ENABLE_TESTING=1)
 endif()
 
@@ -61,20 +61,29 @@ if(ENABLE_PCH)
     target_precompile_headers(
       project_options
       INTERFACE
-      <vector>
+      <algorithm>
+      <atomic>
+      <cassert>
+      <cmath>
       <cstdint>
+      <filesystem>
+      <mutex>
+      <numeric>
+      <random>
+      <thread>
+      <type_traits>
+      <stdexcept>
       <string>
       <string_view>
       <utility>
-      <random>
-      <cassert>)
+      <vector>)
   else()
     message(WARNING "CMake 3.16 or newer is required to enable precompiled headers. Ignoring -DENABLE_PCH.")
   endif()
 endif()
 
 if(ENABLE_XOSHIRO)
-  target_compile_definitions(project_options INTERFACE USE_XOSHIRO)
+  add_subdirectory(external/Xoshiro-cpp)
 endif()
 
 #[[
