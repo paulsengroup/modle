@@ -31,6 +31,7 @@ target_link_libraries(
     Modle::io
     CONAN_PKG::abseil
     CONAN_PKG::boost
+    CONAN_PKG::concurrentqueue
     CONAN_PKG::cpp-sort
     # Deal with std::filesystem quirkiness on older compilers
     $<$<AND:$<CXX_COMPILER_ID:Clang>,$<CXX_COMPILER_ID:AppleClang>,$<VERSION_LESS_EQUAL:$<CXX_COMPILER_VERSION>,9.0.0>>:-lc++fs>

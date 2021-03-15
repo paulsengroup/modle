@@ -67,14 +67,8 @@ bool Lef::is_bound() const {
 void Lef::bind_at_pos(Bp pos, Bp lifetime_) {
   assert(this->lifetime == 0);
 
-  this->rev_unit._pos = pos;
-  this->fwd_unit._pos = pos;
-
-  this->rev_unit._nstalls_lef_lef = 0;
-  this->fwd_unit._nstalls_lef_lef = 0;
-
-  this->rev_unit._nstalls_lef_bar = 0;
-  this->fwd_unit._nstalls_lef_bar = 0;
+  this->rev_unit.bind_at_pos(pos);
+  this->fwd_unit.bind_at_pos(pos);
 
   this->lifetime = lifetime_;
 }
@@ -84,5 +78,7 @@ void Lef::release() {
   this->fwd_unit.release();
   this->lifetime = 0;
 }
+
+void Lef::reset() { this->release(); }
 
 }  // namespace modle

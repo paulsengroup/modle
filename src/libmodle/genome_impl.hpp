@@ -6,6 +6,7 @@
 #include <absl/time/time.h>   // for FormatDuration, Time
 #include <absl/types/span.h>
 #include <fmt/format.h>  // for FMT_STRING
+#include <moodycamel/blockingconcurrentqueue.h>
 #ifdef USE_XOSHIRO
 #include <XoshiroCpp.hpp>
 #endif
@@ -176,13 +177,15 @@ std::vector<ExtrusionBarrier> Genome::allocate_barriers(const Chromosome* const 
 void Genome::simulate_extrusion(const std::filesystem::path& output_path, uint32_t ncells,
                                 uint32_t simulation_rounds, double target_contact_density) {
   auto tpool = Genome::instantiate_thread_pool(this->_nthreads + 1, false);
+  std::atomic<bool> end_of_simulation = false;
 
   std::mutex progress_mutex;
   std::mutex barrier_mutex;
-  std::mutex lef_mutex;
-  std::deque<std::pair<Chromosome*, std::size_t>> progress;
+  std::deque<std::pair<Chromosome*, std::size_t>> progress_queue;
   std::deque<std::shared_ptr<std::vector<ExtrusionBarrier>>> barriers;
-  std::deque<std::shared_ptr<std::vector<Lef>>> lefs;
+
+  moodycamel::BlockingConcurrentQueue<Genome::Task> task_queue(ncells * 2, 1, 0);
+  moodycamel::ProducerToken ptok(task_queue);
 
   boost::asio::post(tpool, [&]() {
     Chromosome* chrom_to_be_written = nullptr;
@@ -193,18 +196,17 @@ void Genome::simulate_extrusion(const std::filesystem::path& output_path, uint32
       std::this_thread::sleep_for(std::chrono::milliseconds(25));
       {
         std::scoped_lock l(progress_mutex);
-        if (auto& [chrom, count] = progress.front(); chrom == nullptr) {
+        if (auto& [chrom, count] = progress_queue.front(); chrom == nullptr) {
+          end_of_simulation = true;
           return;
         } else if (count == ncells) {
           chrom_to_be_written = chrom;
-          progress.pop_front();
+          progress_queue.pop_front();
         } else {
           assert(count < ncells);
           continue;
         }
       }
-      fmt::print(stderr, "Simulation for '{}' successfully completed.\n",
-                 chrom_to_be_written->name());
       try {
         if (c) {
           fmt::print(stderr, "Writing contacts for '{}' to file {}...\n",
@@ -226,11 +228,78 @@ void Genome::simulate_extrusion(const std::filesystem::path& output_path, uint32
             chrom_to_be_written->name(), c->get_path(), err.what()));
       }
       chrom_to_be_written->deallocate_contacts();
-      std::scoped_lock l(barrier_mutex, lef_mutex);
+      std::scoped_lock l(barrier_mutex);
       barriers.pop_front();
-      lefs.pop_front();
     }
   });
+
+  for (auto i = 0UL; i < this->_nthreads; ++i) {
+    moodycamel::ConsumerToken ctok(task_queue);
+    boost::asio::post(tpool, [&, ctok = std::move(ctok),
+                              progress = progress_queue.begin()]() mutable {
+      fmt::print(stderr, "Spawning simulation thread {}...\n", std::this_thread::get_id());
+      try {
+        std::array<Task, 256> task_buff;
+        std::vector<Lef> lefs;
+        // TODO use overload with timeout. Check conditional var after timeout expires
+        while (true) {
+          const auto avail_tasks = task_queue.wait_dequeue_bulk_timed(
+              ctok, task_buff.begin(), task_buff.size(), std::chrono::milliseconds(10));
+          if (avail_tasks == 0) {
+            if (end_of_simulation) {
+              return;
+            }
+            continue;
+          }
+          auto tasks = absl::MakeSpan(task_buff.data(), avail_tasks);
+          for (auto& task : tasks) {
+            if (task.id == std::numeric_limits<decltype(task.id)>::max()) {
+              return;
+            }
+            lefs.resize(task.nlefs);
+            std::for_each(lefs.begin(), lefs.end(), [](auto& lef) { lef.reset(); });
+
+            if (target_contact_density != 0) {
+              task.nrounds = static_cast<std::size_t>(std::round(
+                  (target_contact_density * static_cast<double>(this->_sampling_interval *
+                                                                task.chrom->contacts().npixels())) /
+                  static_cast<double>(ncells * task.nlefs)));
+            }
+
+            if (task.cell_id == 0) {
+              fmt::print(stderr, FMT_STRING("Simulating {} epochs for '{}' across {} cells...\n"),
+                         task.nrounds, task.chrom->name(), ncells);
+            }
+
+            Genome::simulate_extrusion_kernel(task.chrom, task.cell_id, task.nrounds, lefs,
+                                              task.barriers);
+            std::scoped_lock l(progress_mutex);
+            if (progress == progress_queue.end() || progress->first != task.chrom) {
+              progress = std::find_if(progress_queue.begin(), progress_queue.end(),
+                                      [&](const auto& p) { return task.chrom == p.first; });
+              assert(progress != progress_queue.end());
+            }
+            if (++progress->second == ncells - 1) {
+              fmt::print(stderr, "Simulation for '{}' successfully completed.\n",
+                         task.chrom->name());
+            }
+          }
+        }
+      } catch (const std::exception& err) {
+        fmt::print(stderr, FMT_STRING("Detected an error in thread {}:\n{}\n"),
+                   std::this_thread::get_id(), err.what());
+#ifndef BOOST_STACKTRACE_USE_NOOP
+        const auto* st = boost::get_error_info<modle::utils::traced>(err);
+        if (st) {
+          std::cerr << *st << '\n';
+        } else {
+          fmt::print(stderr, "Stack trace not available!\n");
+        }
+#endif
+        throw;
+      }
+    });
+  }
 
   std::vector<Chromosome*> chroms(static_cast<std::size_t>(this->_chromosomes.size()));
   std::transform(this->_chromosomes.begin(), this->_chromosomes.end(), chroms.begin(),
@@ -240,63 +309,34 @@ void Genome::simulate_extrusion(const std::filesystem::path& output_path, uint32
             [](const auto* const c1, const auto* const c2) { return c1->size() > c2->size(); });
 
   std::shared_ptr<std::vector<ExtrusionBarrier>> extr_barriers_buff{nullptr};
-  std::shared_ptr<std::vector<Lef>> lef_buff{nullptr};
+  std::vector<Task> tasks(ncells);
+  std::size_t taskid = 0;
   for (auto* chrom : chroms) {
     if (!chrom->ok()) {
       continue;
     }
     chrom->allocate_contacts(this->_bin_size, this->_diagonal_width);
-    const auto nlefs = static_cast<std::size_t>(
-        std::round(this->_nlefs_per_mbp * (static_cast<double>(chrom->simulated_size()) / 1.0e6)));
     {
-      std::scoped_lock l(barrier_mutex, lef_mutex, progress_mutex);
-      progress.emplace_back(chrom, 0UL);
-      lefs.emplace_back(std::make_shared<std::vector<Lef>>(nlefs));
+      std::scoped_lock l(barrier_mutex, progress_mutex);
+      progress_queue.emplace_back(chrom, 0UL);
       barriers.emplace_back(std::make_shared<std::vector<ExtrusionBarrier>>(
           Genome::allocate_barriers(chrom, this->_probability_of_barrier_block)));
       extr_barriers_buff = barriers.back();
-      lef_buff = lefs.back();
     }
 
-    for (auto i = 0UL; i < ncells; ++i) {
-      boost::asio::post(tpool, [&, chrom, extr_barriers_buff, i, lef_buff,
-                                progress = &progress.back(), simulation_rounds]() {
-        uint32_t simulation_rounds_ = simulation_rounds;
-        if (target_contact_density != 0) {
-          simulation_rounds_ = static_cast<uint32_t>(std::round(
-              (target_contact_density *
-               static_cast<double>(this->_sampling_interval * chrom->contacts().npixels())) /
-              static_cast<double>(ncells * lef_buff->size())));
-        }
+    tasks.resize(ncells);
+    const auto nlefs = static_cast<std::size_t>(
+        std::round(this->_nlefs_per_mbp * (static_cast<double>(chrom->simulated_size()) / 1.0e6)));
+    std::generate(tasks.begin(), tasks.end(), [&, i = 0UL]() mutable {
+      return Task{taskid++, chrom, i++, simulation_rounds, nlefs, extr_barriers_buff};
+    });
 
-        if (i == 0) {
-          fmt::print(stderr, FMT_STRING("Simulating {} epochs for '{}' across {} cells...\n"),
-                     simulation_rounds_, chrom->name(), ncells);
-        }
-
-        try {
-          Genome::simulate_extrusion_kernel(chrom, i, simulation_rounds_, *lef_buff,
-                                            extr_barriers_buff);
-          std::scoped_lock l(progress_mutex);
-          ++progress->second;
-
-        } catch (const std::exception& err) {
-          fmt::print(stderr, FMT_STRING("Detected an error in thread {}:\n{}\n"),
-                     std::this_thread::get_id(), err.what());
-#ifndef BOOST_STACKTRACE_USE_NOOP
-          const auto* st = boost::get_error_info<modle::utils::traced>(err);
-          if (st) {
-            std::cerr << *st << '\n';
-          } else {
-            fmt::print(stderr, "Stack trace not available!\n");
-          }
-#endif
-          throw;
-        }
-      });
+    while (
+        !task_queue.try_enqueue_bulk(ptok, std::make_move_iterator(tasks.begin()), tasks.size())) {
+      std::this_thread::sleep_for(std::chrono::milliseconds(10));
     }
   }
-  progress.emplace_back(nullptr, 0UL);  // Signal end of simulation
+  progress_queue.emplace_back(nullptr, 0UL);  // Signal end of simulation
   tpool.join();
 }
 

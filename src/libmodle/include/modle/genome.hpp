@@ -54,6 +54,15 @@ class Genome {
   inline void simulate_extrusion(const std::filesystem::path& output_path, uint32_t ncells,
                                  double target_contact_density);
 
+  struct Task {
+    std::size_t id;
+    Chromosome* chrom;
+    std::size_t cell_id;
+    std::size_t nrounds;
+    std::size_t nlefs;
+    std::shared_ptr<std::vector<ExtrusionBarrier>> barriers;
+  };
+
  private:
   std::filesystem::path _path_to_chrom_sizes;
   std::filesystem::path _path_to_chrom_subranges;

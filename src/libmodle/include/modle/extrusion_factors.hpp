@@ -37,6 +37,7 @@ struct Lef {
   [[nodiscard]] inline bool is_bound() const;
   inline void bind_at_pos(Bp pos, Bp lifetime_);
   inline void release();
+  inline void reset();
   ExtrusionUnit rev_unit{};
   ExtrusionUnit fwd_unit{};
   Bp lifetime{0};
