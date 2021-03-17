@@ -556,8 +556,8 @@ void Genome::bind_lefs(const Chromosome* const chrom, absl::Span<Lef> lefs,
                        absl::Span<std::size_t> fwd_lef_rank_buff, modle::PRNG& rand_eng,
                        MaskT& mask) {
   static_assert(std::is_same_v<boost::dynamic_bitset<>, MaskT> ||
-                    std::is_integral_v<std::decay_t<decltype(std::declval<MaskT&>().operator[](
-                        std::declval<std::size_t>()))>>,
+                    std::is_integral_v<std::decay_t<decltype(
+                        std::declval<MaskT&>().operator[](std::declval<std::size_t>()))>>,
                 "mask should be a vector of integral numbers or a boost::dynamic_bitset.");
 
   assert(lefs.size() <= mask.size() || mask.empty());
@@ -1015,8 +1015,8 @@ void Genome::register_contacts(Chromosome* chrom, absl::Span<const Lef> lefs) {
 template <typename MaskT>
 void Genome::select_lefs_to_bind(absl::Span<const Lef> lefs, MaskT& mask) {
   static_assert(std::is_same_v<boost::dynamic_bitset<>, MaskT> ||
-                    std::is_integral_v<std::decay_t<decltype(std::declval<MaskT&>().operator[](
-                        std::declval<std::size_t>()))>>,
+                    std::is_integral_v<std::decay_t<decltype(
+                        std::declval<MaskT&>().operator[](std::declval<std::size_t>()))>>,
                 "mask should be a vector of integral numbers or a boost::dynamic_bitset.");
   assert(lefs.size() <= mask.size());
   for (auto i = 0UL; i < lefs.size(); ++i) {
