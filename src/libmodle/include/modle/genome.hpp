@@ -60,7 +60,7 @@ class Genome {
     std::size_t cell_id;
     std::size_t nrounds;
     std::size_t nlefs;
-    std::shared_ptr<std::vector<ExtrusionBarrier>> barriers;
+    absl::Span<const ExtrusionBarrier> barriers;
   };
 
  private:
@@ -100,10 +100,14 @@ class Genome {
   inline void simulate_extrusion(const std::filesystem::path& output_path, uint32_t ncells,
                                  uint32_t simulation_rounds, double target_contact_density);
 
-  inline void simulate_extrusion_kernel(
-      Chromosome* chrom, std::size_t cell_id, std::size_t simulation_rounds,
-      std::vector<Lef> lef_buff,
-      std::shared_ptr<const std::vector<ExtrusionBarrier>> extr_barrier_buff);
+  inline void simulate_extrusion_kernel(Chromosome* chrom, std::size_t cell_id,
+                                        std::size_t n_target_epochs, std::vector<Lef> lef_buff,
+                                        absl::Span<const ExtrusionBarrier> extr_barrier_buff,
+                                        absl::Span<std::size_t> rev_lef_rank_buff,
+                                        absl::Span<std::size_t> fwd_lef_rank_buff,
+                                        boost::dynamic_bitset<>& mask,
+                                        absl::Span<collision_t> rev_lef_collision_buff,
+                                        absl::Span<collision_t> fwd_lef_collision_buff);
   template <typename MaskT>
   inline void bind_lefs(const Chromosome* chrom, absl::Span<Lef> lefs,
                         absl::Span<std::size_t> rev_lef_rank_buff,

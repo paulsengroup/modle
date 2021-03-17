@@ -5,8 +5,10 @@
 #include <absl/time/clock.h>  // for Now
 #include <absl/time/time.h>   // for FormatDuration, Time
 #include <absl/types/span.h>
+#include <cpp-sort/sorters/counting_sorter.h>
 #include <cpp-sort/sorters/drop_merge_sorter.h>
 #include <cpp-sort/sorters/insertion_sorter.h>
+#include <cpp-sort/sorters/ska_sorter.h>
 #include <fmt/format.h>  // for FMT_STRING
 #include <moodycamel/blockingconcurrentqueue.h>
 #ifdef USE_XOSHIRO
@@ -179,18 +181,40 @@ std::vector<ExtrusionBarrier> Genome::allocate_barriers(const Chromosome* const 
 
 void Genome::simulate_extrusion(const std::filesystem::path& output_path, uint32_t ncells,
                                 uint32_t simulation_rounds, double target_contact_density) {
+  // TODO with the current implementation using a thread_pool is probably overkill
   auto tpool = Genome::instantiate_thread_pool(this->_nthreads + 1, false);
+
+  /* These are the threads spawned by simulate_extrusion:
+   * - 1 thread to write contacts to disk. This thread pops Chromosome* from a std::deque once the
+   *   simulation on the Chromosome* has been ultimated. This thread is also responsible of freeing
+   *   memory as soon as it is not needed by any other thread.
+   * - The main thread (i.e. this thread), which loops over chromosomes, instantiates data
+   *   structures that are shared across simulation threads (e.g. the vector of extr. barriers),
+   * then it submits simulation tasks to a concurrent queue
+   * - N simulation threads. These threads pop tasks from the concurrent queue fed by the main
+   *   thread and carry out the actual simulation
+   *
+   * Switching to this thread-layout allowed us to significantly reduce memory allocations, as by
+   * running few simulation threads for the whole simulation allows us to recycle buffers more
+   * efficiently. Most of the time, the only data moved are tasks, which are structs consisting of
+   * few numbers, a pointer and a Span (i.e. ptr + size)
+   */
+
   std::atomic<bool> end_of_simulation = false;
-
   std::mutex progress_mutex;
-  std::mutex barrier_mutex;
   std::deque<std::pair<Chromosome*, std::size_t>> progress_queue;
-  std::deque<std::shared_ptr<std::vector<ExtrusionBarrier>>> barriers;
 
+  // Barriers are shared across threads that are simulating loop-extrusion on a given chromosome.
+  // Extrusion barriers are placed on this std::deque, and are passed to simulation threads through
+  // a Span of const ExtrusionBarriers
+  std::mutex barrier_mutex;
+  std::deque<std::unique_ptr<std::vector<ExtrusionBarrier>>> barriers;
+
+  // Queue used to submit simulation tasks to the thread pool
   moodycamel::BlockingConcurrentQueue<Genome::Task> task_queue(ncells * 2, 1, 0);
   moodycamel::ProducerToken ptok(task_queue);
 
-  boost::asio::post(tpool, [&]() {
+  boost::asio::post(tpool, [&]() {  // This thread is in charge of writing contacts to disk
     Chromosome* chrom_to_be_written = nullptr;
     auto c = output_path.empty() ? nullptr
                                  : std::make_unique<cooler::Cooler>(
@@ -211,7 +235,7 @@ void Genome::simulate_extrusion(const std::filesystem::path& output_path, uint32
         }
       }
       try {
-        if (c) {
+        if (c) {  // c == nullptr only when --skip-output is used
           fmt::print(stderr, "Writing contacts for '{}' to file {}...\n",
                      chrom_to_be_written->name(), c->get_path());
           c->write_or_append_cmatrix_to_file(
@@ -224,45 +248,67 @@ void Genome::simulate_extrusion(const std::filesystem::path& output_path, uint32
                      static_cast<double>(chrom_to_be_written->contacts().npixels()) / 1.0e6,
                      c->get_path());
         }
+        chrom_to_be_written->deallocate_contacts();
       } catch (const std::runtime_error& err) {
         throw std::runtime_error(fmt::format(
             FMT_STRING(
                 "The following error occurred while writing contacts for '{}' to file {}: {}"),
             chrom_to_be_written->name(), c->get_path(), err.what()));
       }
-      chrom_to_be_written->deallocate_contacts();
-      std::scoped_lock l(barrier_mutex);
-      barriers.pop_front();
     }
   });
 
-  for (auto i = 0UL; i < this->_nthreads; ++i) {
+  for (auto i = 0UL; i < this->_nthreads; ++i) {  // Start simulation threads
     moodycamel::ConsumerToken ctok(task_queue);
     boost::asio::post(tpool, [&, ctok = std::move(ctok),
                               progress = progress_queue.begin()]() mutable {
-      fmt::print(stderr, "Spawning simulation thread {}...\n", std::this_thread::get_id());
+      fmt::print(stderr, FMT_STRING("Spawning simulation thread {}...\n"),
+                 std::this_thread::get_id());
       try {
-        std::array<Task, 256> task_buff;
-        std::vector<Lef> lefs;
-        // TODO use overload with timeout. Check conditional var after timeout expires
-        while (true) {
+        std::array<Task, 256> task_buff;  // Tasks are dequeue in batch.
+                                          // This is to reduce contention when accessing the queue
+
+        // Buffers declared here are recycled by every simulation kernel launched from this thread
+        // Performance gain mostly come from reusing lef_buff. The impact of recycling the other
+        // buffers is barely noticeable
+        std::vector<Lef> lef_buff;
+        std::vector<std::size_t> rev_lef_rank_buff;
+        std::vector<std::size_t> fwd_lef_rank_buff;
+        boost::dynamic_bitset<> mask;
+        std::vector<collision_t> rev_lef_collision_buff;
+        std::vector<collision_t> fwd_lef_collision_buff;
+
+        while (true) {  // Try to dequeue a batch of tasks
           const auto avail_tasks = task_queue.wait_dequeue_bulk_timed(
               ctok, task_buff.begin(), task_buff.size(), std::chrono::milliseconds(10));
-          if (avail_tasks == 0) {
-            if (end_of_simulation) {
+          if (avail_tasks == 0) {     // Dequeue timed-out before any task became available
+            if (end_of_simulation) {  // Check whether this is because all tasks have been processed
               return;
             }
             continue;
           }
+
+          // Loop over new tasks
           auto tasks = absl::MakeSpan(task_buff.data(), avail_tasks);
           for (auto& task : tasks) {
-            if (task.id == std::numeric_limits<decltype(task.id)>::max()) {
-              return;
-            }
-            lefs.resize(task.nlefs);
-            std::for_each(lefs.begin(), lefs.end(), [](auto& lef) { lef.reset(); });
+            // Resize buffers
+            lef_buff.resize(task.nlefs);
+            rev_lef_rank_buff.resize(task.nlefs);
+            fwd_lef_rank_buff.resize(task.nlefs);
+            mask.resize(task.nlefs);
+            rev_lef_collision_buff.resize(task.nlefs);
+            fwd_lef_collision_buff.resize(task.nlefs);
 
-            if (target_contact_density != 0) {
+            // Reset buffers
+            std::for_each(lef_buff.begin(), lef_buff.end(), [](auto& lef) { lef.reset(); });
+            std::iota(rev_lef_rank_buff.begin(), rev_lef_rank_buff.end(), 0);
+            std::iota(fwd_lef_rank_buff.begin(), fwd_lef_rank_buff.end(), 0);
+            mask.reset();
+            std::fill(rev_lef_collision_buff.begin(), rev_lef_collision_buff.end(), 0);
+            std::fill(fwd_lef_collision_buff.begin(), fwd_lef_collision_buff.end(), 0);
+
+            if (target_contact_density != 0) {  // Compute the number of simulation rounds required
+                                                // to reach the target contact density
               task.nrounds = static_cast<std::size_t>(std::round(
                   (target_contact_density * static_cast<double>(this->_sampling_interval *
                                                                 task.chrom->contacts().npixels())) /
@@ -270,25 +316,37 @@ void Genome::simulate_extrusion(const std::filesystem::path& output_path, uint32
             }
 
             if (task.cell_id == 0) {
+              // Print a status update when we are processing cell #0 for a given chromosome
               fmt::print(stderr, FMT_STRING("Simulating {} epochs for '{}' across {} cells...\n"),
                          task.nrounds, task.chrom->name(), ncells);
             }
 
-            Genome::simulate_extrusion_kernel(task.chrom, task.cell_id, task.nrounds, lefs,
-                                              task.barriers);
-            std::scoped_lock l(progress_mutex);
+            // Start the simulation kernel
+            Genome::simulate_extrusion_kernel(
+                task.chrom, task.cell_id, task.nrounds, lef_buff, task.barriers,
+                absl::MakeSpan(rev_lef_rank_buff), absl::MakeSpan(fwd_lef_rank_buff), mask,
+                absl::MakeSpan(rev_lef_collision_buff), absl::MakeSpan(fwd_lef_collision_buff));
+
+            // Update progress
+            std::scoped_lock l1(progress_mutex);
             if (progress == progress_queue.end() || progress->first != task.chrom) {
               progress = std::find_if(progress_queue.begin(), progress_queue.end(),
                                       [&](const auto& p) { return task.chrom == p.first; });
               assert(progress != progress_queue.end());
             }
-            if (++progress->second == ncells - 1) {
+
+            // We are done simulating loop-extrusion on task.chrom
+            if (++progress->second == ncells) {
+              // Print a status update and deallocate extr. barriers
               fmt::print(stderr, "Simulation for '{}' successfully completed.\n",
                          task.chrom->name());
+              std::scoped_lock l2(barrier_mutex);
+              barriers.pop_front();
             }
           }
         }
       } catch (const std::exception& err) {
+        // This is needed, as exceptions don't seem to always propagate to the main()
         fmt::print(stderr, FMT_STRING("Detected an error in thread {}:\n{}\n"),
                    std::this_thread::get_id(), err.what());
 #ifndef BOOST_STACKTRACE_USE_NOOP
@@ -304,17 +362,25 @@ void Genome::simulate_extrusion(const std::filesystem::path& output_path, uint32
     });
   }
 
+  /*
+   * The remaining code submits simulation tasks to the queue. Then it waits until all the tasks
+   * have been completed, and contacts have been written to disk
+   */
+
+  // Create a vector of pointers to chroms, and sort the pointers by chrom size
   std::vector<Chromosome*> chroms(static_cast<std::size_t>(this->_chromosomes.size()));
   std::transform(this->_chromosomes.begin(), this->_chromosomes.end(), chroms.begin(),
                  [](auto& chrom) { return &chrom; });
-
   std::sort(chroms.begin(), chroms.end(),
             [](const auto* const c1, const auto* const c2) { return c1->size() > c2->size(); });
 
-  std::shared_ptr<std::vector<ExtrusionBarrier>> extr_barriers_buff{nullptr};
+  absl::Span<const ExtrusionBarrier> extr_barriers_buff{};
   std::vector<Task> tasks(ncells);
   std::size_t taskid = 0;
+
+  // Loop over chromosomes
   for (auto* chrom : chroms) {
+    // Don't simulate KO chroms (but write them to disk if the user specified so)
     if (!chrom->ok()) {
       fmt::print(stderr, "SKIPPING '{}'...\n", chrom->name());
       if (this->_config->write_contacts_for_ko_chroms) {
@@ -325,29 +391,44 @@ void Genome::simulate_extrusion(const std::filesystem::path& output_path, uint32
       }
       continue;
     }
+
+    // Allocate the contact matrix. Once it's not needed anymore, the contact matrix will be
+    // de-allocated by the thread that is writing contacts to disk
     chrom->allocate_contacts(this->_bin_size, this->_diagonal_width);
     {
       std::scoped_lock l(barrier_mutex, progress_mutex);
-      progress_queue.emplace_back(chrom, 0UL);
-      barriers.emplace_back(std::make_shared<std::vector<ExtrusionBarrier>>(
+      progress_queue.emplace_back(chrom, 0UL);  // Signal that we have started processing chrom
+
+      // Allocate extr. barriers mapping on the chromosome that is being simulated
+      barriers.emplace_back(std::make_unique<std::vector<ExtrusionBarrier>>(
           Genome::allocate_barriers(chrom, this->_probability_of_barrier_block)));
-      extr_barriers_buff = barriers.back();
+      extr_barriers_buff = absl::MakeConstSpan(barriers.back()->data(), barriers.back()->size());
     }
 
-    tasks.resize(ncells);
+    // Compute # of LEFs to be simulated based on chrom. sizes
     const auto nlefs = static_cast<std::size_t>(
         std::round(this->_nlefs_per_mbp * (static_cast<double>(chrom->simulated_size()) / 1.0e6)));
+
+    tasks.resize(ncells);  // This resize is not needed at the moment. It's there as a safe-guard,
+    // just in case we decide to allow the number of simulated cells to
+    // change across different chromosomes
+
+    // Generate a batch of tasks for all the simulations involving the current chrom
     std::generate(tasks.begin(), tasks.end(), [&, i = 0UL]() mutable {
       return Task{taskid++, chrom, i++, simulation_rounds, nlefs, extr_barriers_buff};
     });
 
-    while (
+    while (  // Enqueue the tasks
         !task_queue.try_enqueue_bulk(ptok, std::make_move_iterator(tasks.begin()), tasks.size())) {
       std::this_thread::sleep_for(std::chrono::milliseconds(10));
     }
   }
-  progress_queue.emplace_back(nullptr, 0UL);  // Signal end of simulation
+
+  // Signal end of simulation to the thread that is writing contacts to disk
+  progress_queue.emplace_back(nullptr, 0UL);
   tpool.join();
+
+  assert(end_of_simulation);  // NOLINT
 }
 
 void Genome::simulate_extrusion(const std::filesystem::path& output_path, uint32_t ncells,
@@ -360,10 +441,14 @@ void Genome::simulate_extrusion(const std::filesystem::path& output_path, uint32
   this->simulate_extrusion(output_path, ncells, 0, target_contact_density);
 }
 
-void Genome::simulate_extrusion_kernel(
-    Chromosome* chrom, std::size_t cell_id, std::size_t simulation_rounds,
-    std::vector<Lef> lef_buff,
-    std::shared_ptr<const std::vector<ExtrusionBarrier>> extr_barrier_buff) {
+void Genome::simulate_extrusion_kernel(Chromosome* chrom, std::size_t cell_id,
+                                       std::size_t n_target_epochs, std::vector<Lef> lef_buff,
+                                       const absl::Span<const ExtrusionBarrier> extr_barrier_buff,
+                                       absl::Span<std::size_t> rev_lef_rank_buff,
+                                       absl::Span<std::size_t> fwd_lef_rank_buff,
+                                       boost::dynamic_bitset<>& mask,
+                                       absl::Span<collision_t> rev_lef_collision_buff,
+                                       absl::Span<collision_t> fwd_lef_collision_buff) {
   const auto seed = this->_seed + std::hash<std::string_view>{}(chrom->name()) +
                     std::hash<std::size_t>{}(chrom->size()) + std::hash<std::size_t>{}(cell_id);
 #ifdef USE_XOSHIRO
@@ -374,47 +459,63 @@ void Genome::simulate_extrusion_kernel(
   modle::PRNG rand_eng(seeder_);
 #endif
 
-  std::vector<std::size_t> lef_initial_loading_round(lef_buff.size());
-  {
-    absl::btree_multiset<std::size_t> sorted_rounds;
-    std::uniform_int_distribution<std::size_t> round_gen{
-        0, (4 * this->_avg_lef_lifetime) / this->_bin_size};
+  // Generate the epoch at which each LEF is supposed to be initially loaded
+  std::vector<std::size_t> lef_initial_loading_epoch(lef_buff.size());
 
-    std::generate_n(std::inserter(sorted_rounds, sorted_rounds.begin()), lef_buff.size(),
-                    [&]() { return round_gen(rand_eng); });
-    std::transform(sorted_rounds.begin(), sorted_rounds.end(), lef_initial_loading_round.rbegin(),
-                   [&](const auto n) { return n - *sorted_rounds.begin(); });
+  // TODO Consider using a Poisson process instead of sampling from an uniform distribution
+  std::uniform_int_distribution<std::size_t> round_gen{
+      0, (4 * this->_avg_lef_lifetime) / this->_bin_size};
+  std::generate(lef_initial_loading_epoch.begin(), lef_initial_loading_epoch.end(),
+                [&]() { return round_gen(rand_eng); });
+
+  // Sort epochs in descending order
+  if (round_gen.max() > 2048) {
+    // Counting sort uses n + r space in memory, where r is the number of unique values in the range
+    // to be sorted. For this reason it is not a good idea to use it when the sampling interval is
+    // relatively large. Whether 2048 is a reasonable threshold has yet to be tested
+    cppsort::ska_sort(lef_initial_loading_epoch.rbegin(), lef_initial_loading_epoch.rend());
+  } else {
+    cppsort::counting_sort(lef_initial_loading_epoch.rbegin(), lef_initial_loading_epoch.rend());
   }
-  const auto burnin_rounds = lef_initial_loading_round.front();
-  simulation_rounds += burnin_rounds;
 
-  std::vector<std::size_t> rev_lef_rank_buff(lef_buff.size());
-  std::iota(rev_lef_rank_buff.begin(), rev_lef_rank_buff.end(), 0);
-  std::vector<std::size_t> fwd_lef_rank_buff{rev_lef_rank_buff};
-  boost::dynamic_bitset<> mask{lef_buff.size()};
+  // Shift epochs so that the first epoch == 0
+  if (const auto offset = lef_initial_loading_epoch.back(); offset != 0) {
+    std::for_each(lef_initial_loading_epoch.begin(), lef_initial_loading_epoch.end(),
+                  [&](auto& n) { n -= offset; });
+  }
 
-  std::vector<collision_t> rev_lef_collision_buff(lef_buff.size());
-  std::vector<collision_t> fwd_lef_collision_buff(lef_buff.size());
+  const auto n_burnin_epochs = lef_initial_loading_epoch.front();
+  n_target_epochs += n_burnin_epochs;
+
   std::bernoulli_distribution sample_contacts{1.0 / this->_sampling_interval};
 
-  auto lefs = absl::MakeSpan(lef_buff);
-  const auto barriers = absl::MakeConstSpan(*extr_barrier_buff);
+  // Declare the spans used by the burnin phase as well as the simulation itself
+  auto lefs = absl::MakeSpan(lef_buff.data(), lef_buff.size());
+  const auto barriers = absl::MakeConstSpan(extr_barrier_buff);
   auto rev_lef_ranks = absl::MakeSpan(rev_lef_rank_buff);
   auto fwd_lef_ranks = absl::MakeSpan(fwd_lef_rank_buff);
   auto rev_lef_collisions = absl::MakeSpan(rev_lef_collision_buff);
   auto fwd_lef_collisions = absl::MakeSpan(fwd_lef_collision_buff);
 
-  for (auto round = 0UL; round < simulation_rounds; ++round) {
+  // Start the burnin phase (followed by the actual simulation)
+  for (auto epoch = 0UL; epoch < n_target_epochs; ++epoch) {
     const auto register_contacts =
-        round > burnin_rounds &&
+        epoch > n_burnin_epochs &&
         (this->_randomize_contact_sampling ? sample_contacts(rand_eng)
-                                           : round % this->_sampling_interval == 0);
+                                           : epoch % this->_sampling_interval == 0);
 
-    if (!lef_initial_loading_round.empty()) {
-      while (!lef_initial_loading_round.empty() && lef_initial_loading_round.back() == round) {
-        lef_initial_loading_round.pop_back();
+    if (!lef_initial_loading_epoch.empty()) {  // Execute this branch only during the burnin phase
+      while (!lef_initial_loading_epoch.empty() && lef_initial_loading_epoch.back() == epoch) {
+        // Consume epochs for LEFs that are supposed to be loaded in the current epoch
+        lef_initial_loading_epoch.pop_back();
       }
-      const auto nlefs = lef_buff.size() - lef_initial_loading_round.size();
+      // Don't remove this assertion. It is very useful to prevent empty Spans (which cause weird
+      // issues later in the simulation) NOLINTNEXTLINE
+      assert(lef_initial_loading_epoch.size() < lef_buff.size());
+
+      // Compute the current number of active LEFs (i.e. LEFs that are either bound to DNA, or that
+      // are valid candidates for re-binding) and grow spans accordingly
+      const auto nlefs = lef_buff.size() - lef_initial_loading_epoch.size();
 
       lefs = absl::MakeSpan(lef_buff.data(), nlefs);
       rev_lef_ranks = absl::MakeSpan(rev_lef_rank_buff.data(), nlefs);
@@ -423,6 +524,7 @@ void Genome::simulate_extrusion_kernel(
       fwd_lef_collisions = absl::MakeSpan(fwd_lef_collision_buff.data(), nlefs);
     }
 
+    // Simulate one epoch
     this->select_lefs_to_bind(lefs, mask);
     this->bind_lefs(chrom, lefs, rev_lef_ranks, fwd_lef_ranks, rand_eng, mask);
 
@@ -459,8 +561,6 @@ void Genome::bind_lefs(const Chromosome* const chrom, absl::Span<Lef> lefs,
   chrom_pos_generator_t pos_generator{chrom->start_pos(), chrom->end_pos()};
   lef_lifetime_generator_t lifetime_generator{1.0 / static_cast<double>(this->_avg_lef_lifetime)};
   for (auto i = 0UL; i < lefs.size(); ++i) {
-    // Here we only consider even indexes, as binding a single extr. unit is not
-    // allowed: either we bind all extr. units belonging to a LEF, or we bind none
     if (mask.empty() || mask[i]) {
       lefs[i].bind_at_pos(pos_generator(rand_eng), lifetime_generator(rand_eng));
     }
@@ -488,22 +588,13 @@ void Genome::bind_all_lefs(const Chromosome* chrom, absl::Span<Lef> lefs,
 
 void Genome::rank_lefs(absl::Span<Lef> lefs, absl::Span<std::size_t> rev_lef_rank_buff,
                        absl::Span<std::size_t> fwd_lef_rank_buff, bool init_buffers) {
-  if (init_buffers) {
+  if (init_buffers) {  // Init rank buffers
     std::iota(fwd_lef_rank_buff.begin(), fwd_lef_rank_buff.end(), 0);
     std::copy(fwd_lef_rank_buff.begin(), fwd_lef_rank_buff.end(), rev_lef_rank_buff.begin());
   }
   assert(lefs.size() == fwd_lef_rank_buff.size());
   assert(lefs.size() == rev_lef_rank_buff.size());
 
-#if 0  // 55.77s
-  std::sort(fwd_lef_rank_buff.begin(), fwd_lef_rank_buff.end(), [&](const auto r1, const auto r2) {
-    return lefs[r1].fwd_unit.pos() < lefs[r2].fwd_unit.pos();
-  });
-
-  std::sort(rev_lef_rank_buff.begin(), rev_lef_rank_buff.end(), [&](const auto r1, const auto r2) {
-    return lefs[r1].rev_unit.pos() < lefs[r2].rev_unit.pos();
-  });
-#else  // 35.50s
   if (lefs.size() < 20) {  // TODO Come up with a reasonable threshold
     cppsort::insertion_sort(fwd_lef_rank_buff.begin(), fwd_lef_rank_buff.end(),
                             [&](const auto r1, const auto r2) {
@@ -515,6 +606,31 @@ void Genome::rank_lefs(absl::Span<Lef> lefs, absl::Span<std::size_t> rev_lef_ran
                               return lefs[r1].rev_unit.pos() < lefs[r2].rev_unit.pos();
                             });
   } else {
+    /*
+    fmt::print(
+        stderr, "fwd_inv={}\nrev_inv={}\n",
+        static_cast<double>(cppsort::probe::inv(fwd_lef_rank_buff.begin(),
+    fwd_lef_rank_buff.end(),
+                                                [&](const auto r1, const auto r2) {
+                                                  return lefs[r1].fwd_unit.pos() <
+                                                         lefs[r2].fwd_unit.pos();
+                                                })) /
+            static_cast<double>(fwd_lef_rank_buff.size() * (fwd_lef_rank_buff.size() - 1) / 2),
+        static_cast<double>(cppsort::probe::inv(rev_lef_rank_buff.begin(),
+    rev_lef_rank_buff.end(),
+                                                [&](const auto r1, const auto r2) {
+                                                  return lefs[r1].rev_unit.pos() <
+                                                         lefs[r2].rev_unit.pos();
+                                                })) /
+            static_cast<double>(rev_lef_rank_buff.size() * (rev_lef_rank_buff.size() - 1) / 2));
+    */
+
+    // Drop merge sort is a Rem-adaptive algorithm that it is particularly suitable for our
+    // use-case, where after the initial binding, we expect a small fraction of extr. units to be
+    // out of place when this function is called (from initial testing, it looks like most of the
+    // times we have 2.5-5% inversions, and very rarely > 10%, which is drop merge sort shines).
+    // https://github.com/Morwenn/cpp-sort/blob/develop/docs/Benchmarks.md#inv-adaptive-algorithms
+    // https://github.com/Morwenn/cpp-sort/blob/develop/docs/Sorters.md#drop_merge_sorter
     cppsort::drop_merge_sort(fwd_lef_rank_buff.begin(), fwd_lef_rank_buff.end(),
                              [&](const auto r1, const auto r2) {
                                return lefs[r1].fwd_unit.pos() < lefs[r2].fwd_unit.pos();
@@ -525,32 +641,37 @@ void Genome::rank_lefs(absl::Span<Lef> lefs, absl::Span<std::size_t> rev_lef_ran
                                return lefs[r1].rev_unit.pos() < lefs[r2].rev_unit.pos();
                              });
   }
-#endif
 }
 
 void Genome::extrude(const Chromosome* chrom, absl::Span<Lef> lefs) {
   for (auto& lef : lefs) {
-    if (lef.lifetime == 0) {
+    if (lef.lifetime == 0) {  // LEF does not currently bind DNA
       continue;
     }
-    if (lef.rev_unit.stalled()) {
+
+    // Extrude rev unit
+    if (lef.rev_unit.stalled()) {  // Unit is stalled
       lef.rev_unit.decrement_stalls(this->_bin_size);
-    } else if (lef.rev_unit._pos < chrom->start_pos() + this->_bin_size) {
+    } else if (lef.rev_unit._pos < chrom->start_pos() + this->_bin_size) {  // Unit reached chrom.
+                                                                            // boundaries
       lef.rev_unit._pos = chrom->start_pos();
       lef.rev_unit._nstalls_lef_lef = std::numeric_limits<Bp>::max();
     } else {
-      lef.rev_unit._pos -= this->_bin_size;
+      lef.rev_unit._pos -= this->_bin_size;  // Advance extr. unit in 3'-5' direction
     }
 
-    if (lef.fwd_unit.stalled()) {
+    // Extrude fwd unit
+    if (lef.fwd_unit.stalled()) {  // Unit is stalled
       lef.fwd_unit.decrement_stalls(this->_bin_size);
-    } else if (lef.fwd_unit._pos + this->_bin_size > chrom->end_pos() - 1) {
+    } else if (lef.fwd_unit._pos + this->_bin_size > chrom->end_pos() - 1) {  // Unit reached
+                                                                              // chrom. boundaries
       lef.fwd_unit._pos = chrom->end_pos() - 1;
       lef.fwd_unit._nstalls_lef_lef = std::numeric_limits<Bp>::max();
     } else {
-      lef.fwd_unit._pos += this->_bin_size;
+      lef.fwd_unit._pos += this->_bin_size;  // Advance extr. unit in 5'-3' direction
     }
 
+    // Reduce lifetime and release LEFs when appropriate (i.e. LEF lifetime reaches 0)
     if ((lef.lifetime -= std::min(lef.lifetime, 2 * this->_bin_size)) == 0) {
       lef.release();
     }
@@ -753,43 +874,51 @@ void Genome::check_lef_bar_collisions(absl::Span<const Lef> lefs,
    * The fwd and rev_collision_buff will contain the index corresponding to the ext. barrier that
    * caused the collision, or -1 in case of no collisions
    */
-  std::size_t j = 0;
+  std::size_t j = 0;  // Process fwd extrusion units
   for (auto i = 0UL; i < lefs.size(); ++i) {
     const auto& fwd_idx = fwd_lef_rank_buff[i];  // index of the ith fwd unit in 5'-3' order
     if (lefs[fwd_idx].fwd_unit.stalled()) {
       continue;
     }
-    const auto& fwd_pos = lefs[fwd_idx].fwd_unit.pos();  // pos of the ith unit
-    auto extr_barr_pos = extr_barriers[j].pos();
+    const auto& fwd_pos = lefs[fwd_idx].fwd_unit.pos();  // pos of the ith fwd unit
+    auto extr_barr_pos = extr_barriers[j].pos();  // pos of the next (possibly blocking) barrier
 
+    // Look for the first extr. barrier downstream of the current fwd extrusion unit
     while (extr_barr_pos < fwd_pos) {
       if (++j == extr_barriers.size()) {
-        goto endloop1;
+        goto endloop1;  // Reached the last barrier at the 5'-3' direction
       }
       extr_barr_pos = extr_barriers[j].pos();
     }
 
+    // Detect collisions between extr. units/barriers that are less then delta bp away from each
+    // other
     const auto delta = extr_barr_pos - fwd_pos;
     fwd_collision_buff[fwd_idx] = delta <= dist_threshold ? j : -1UL;
   }
 endloop1:
 
-  j = extr_barriers.size() - 1;
+  j = extr_barriers.size() - 1;  // Process rev extrusion units
   for (auto i = lefs.size() - 1; i > 0; --i) {
     const auto& rev_idx = rev_lef_rank_buff[i];  // index of the ith fwd unit in 5'-3' order
+    // fmt::print(stderr, "i={}/{}; rev_idx={}/{}\n", i, lefs.size(), rev_idx,
+    // rev_lef_rank_buff.size());
     if (lefs[rev_idx].rev_unit.stalled()) {
       continue;
     }
-    const auto& rev_pos = lefs[rev_idx].rev_unit.pos();  // pos of the ith unit
-    auto extr_barr_pos = extr_barriers[j].pos();
+    const auto& rev_pos = lefs[rev_idx].rev_unit.pos();  // pos of the ith rev unit
+    auto extr_barr_pos = extr_barriers[j].pos();  // pos of the next (possibly blocking) barrier
 
+    // Look for the first extr. barrier upstream of the current rev extrusion unit
     while (extr_barr_pos > rev_pos) {
       if (j-- == 0) {
-        return;
+        return;  // reached the last barrier in 3'-5' direction
       }
       extr_barr_pos = extr_barriers[j].pos();
     }
 
+    // Detect collisions between extr. units/barriers that are less then delta bp away from each
+    // other
     const auto delta = rev_pos - extr_barr_pos;
     rev_collision_buff[rev_idx] = delta <= dist_threshold ? j : -1UL;
   }
@@ -816,28 +945,31 @@ void Genome::apply_lef_bar_stalls(absl::Span<Lef> lefs,
       std::numeric_limits<std::remove_pointer_t<decltype(rev_collision_buff.data())>>::max();
 
   for (auto i = 0UL; i < lefs.size(); ++i) {
+    // Skip over LEFs where no collision occurred or where both units are currently stalled
     if ((rev_collision_buff[i] == NO_COLLISION && fwd_collision_buff[i] == NO_COLLISION) ||
         (lefs[i].rev_unit.stalled() && lefs[i].fwd_unit.stalled())) {
       continue;
     }
     auto& lef = lefs[i];
 
+    // Process rev collisions
     if (const auto barr_idx = rev_collision_buff[i]; barr_idx != NO_COLLISION) {
       assert(!lef.rev_unit.stalled());
       const auto& barrier = extr_barriers[barr_idx];
       auto nstalls = lef_bar_stall_generator_t{1.0 - barrier.pblock()}(rand_eng);
-      if (barrier.blocking_direction() != dna::rev) {
+      if (barrier.blocking_direction() != dna::rev) {  // Reduce nstalls in case of soft-stalls
         assert(barrier.blocking_direction() == dna::fwd);
         nstalls = static_cast<Bp>(std::round(soft_stall_multiplier * static_cast<double>(nstalls)));
       }
       lef.rev_unit._nstalls_lef_bar = nstalls;
     }
 
+    // Process fwd collisions
     if (const auto barr_idx = fwd_collision_buff[i]; barr_idx != NO_COLLISION) {
       assert(!lef.fwd_unit.stalled());
       const auto& barrier = extr_barriers[barr_idx];
       auto nstalls = lef_bar_stall_generator_t{1.0 - barrier.pblock()}(rand_eng);
-      if (barrier.blocking_direction() != dna::fwd) {
+      if (barrier.blocking_direction() != dna::fwd) {  // Reduce nstalls in case of soft-stalls
         assert(barrier.blocking_direction() == dna::rev);
         nstalls = static_cast<Bp>(std::round(soft_stall_multiplier * static_cast<double>(nstalls)));
       }
@@ -846,7 +978,7 @@ void Genome::apply_lef_bar_stalls(absl::Span<Lef> lefs,
 
     const auto rev_barr_idx = rev_collision_buff[i];
     const auto fwd_barr_idx = fwd_collision_buff[i];
-
+    // Detect and process hard-stalls
     if (lef.rev_unit.stalled() && lef.fwd_unit.stalled() && rev_barr_idx != NO_COLLISION &&
         fwd_barr_idx != NO_COLLISION &&
         extr_barriers[rev_barr_idx].blocking_direction() == dna::rev &&
@@ -866,7 +998,8 @@ void Genome::apply_lef_bar_stalls(absl::Span<Lef> lefs,
 }
 
 void Genome::register_contacts(Chromosome* chrom, absl::Span<const Lef> lefs) {
-  for (const auto& lef : lefs) {
+  for (const auto& lef : lefs) {  // Register contacts at LEF sites (excluding LEFs that have one
+                                  // of their units at the beginning/end of a chromosome)
     if (lef.is_bound() && lef.rev_unit.pos() != chrom->start_pos() &&
         lef.rev_unit.pos() != chrom->end_pos() - 1 && lef.fwd_unit.pos() != chrom->start_pos() &&
         lef.fwd_unit.pos() != chrom->end_pos() - 1) {
