@@ -28,9 +28,12 @@ if [[ $# -eq 1 && ("$1" == *help || "$1" == *h ) ]] ; then
   exit 1
 fi
 
-docker_running=$(systemctl is-active --quiet docker.service)
-if ! $docker_running ; then
-  sudo systemctl start docker.service
+if ! systemctl is-active --quiet docker.service; then
+  echo "Starting docker.service..."
+  sudo systemctl start --quiet docker.service
+  stop_docker=true
+else
+  stop_docker=false
 fi
 
 if [ -z "$ver" ]; then
@@ -78,6 +81,7 @@ sudo docker build --memory="${memory}" \
                           "docker-daemon://robomics/${img_name}:${ver}"
 
 # Restore docker.service to the original state
-if ! $docker_running ; then
-  sudo systemctl stop docker.service
+if $stop_docker ; then
+  echo "Stopping docker.service..."
+  sudo systemctl stop --quiet docker.service
 fi
