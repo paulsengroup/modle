@@ -126,7 +126,10 @@ set(CONAN_EXTRA_OPTIONS
     boost:bzip2=True
     zlib:minizip=False)
 
-set(CONAN_EXTRA_SETTINGS ${CONAN_EXTRA_SETTINGS} compiler.cppstd=17)
+set(CONAN_EXTRA_SETTINGS
+    ${CONAN_EXTRA_SETTINGS}
+    compiler.cppstd=17
+    compiler.libcxx=libstdc++11)
 
 if(ENABLE_TESTING)
   set(CONAN_EXTRA_REQUIRES ${CONAN_EXTRA_REQUIRES} catch2/2.13.4)

@@ -4,7 +4,7 @@ set -e
 
 memory='8G'
 cpus="$(nproc)"
-march='x86-64'
+march="$(uname -m | tr '_' '-')"
 name=modle
 
 for arg in "$@"; do

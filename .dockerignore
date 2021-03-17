@@ -3,6 +3,7 @@
 
 # Allowed files and directory
 !cmake/**
+!external/Xoshiro-cpp/**
 !src/**
 !tools/**
 !CMakeLists.txt

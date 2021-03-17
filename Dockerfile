@@ -1,9 +1,18 @@
 FROM fedora:33 AS modle_base
 
-COPY src            /tmp/modle/src
-COPY CMakeLists.txt /tmp/modle/CMakeLists.txt
-COPY LICENSE        /tmp/modle/LICENSE
-COPY cmake          /tmp/modle/cmake
+ENV SHELL=/usr/bin/bash
+ENV PATH='/usr/bin:/usr/local/bin'
+
+LABEL maintainer='Roberto Rossini <roberros@uio.no>'
+LABEL version="$ver"
+WORKDIR /data
+ENTRYPOINT ["/usr/local/bin/modle"]
+
+COPY cmake                  /tmp/modle/cmake
+COPY external/Xoshiro-cpp   /tmp/modle/external/Xoshiro-cpp
+COPY src                    /tmp/modle/src
+COPY CMakeLists.txt         /tmp/modle/CMakeLists.txt
+COPY LICENSE                /tmp/modle/LICENSE
 
 ARG build_dir='/tmp/modle/cmake-build'
 # march, cpus ver and build_type are set through --build-arg(s) at build time
@@ -12,23 +21,22 @@ ARG cpus
 ARG ver
 ARG build_type
 
-ARG CONAN_VER=1.33.1
+ARG CONAN_VER=1.34.1
 
 ENV CC=/usr/bin/gcc
 ENV CXX=/usr/bin/g++
 ENV LD=/usr/bin/ld
 
-# TODO: Figure out why IPO is not available
 # TODO: Enable tests
 
 # Update system repo and install required tools
 RUN dnf update -y \
-    && dnf install -y --setopt=install_weak_deps=False --best                   \
-                      bash cmake gcc-c++ git make python3 zlib-devel            \
-    && python3 -m venv /conan_venv --upgrade-deps                               \
-    && /conan_venv/bin/pip3 --no-cache-dir install conan==${CONAN_VER}          \
-    && mkdir -p /usr/local/bin                                                  \
-    && ln -s /conan_venv/bin/conan /usr/local/bin/conan                         \
+    && dnf install -y --setopt=install_weak_deps=False --best            \
+                      bash cmake gcc-c++ git make python3 zlib-devel     \
+    && python3 -m venv /conan_venv --upgrade-deps                        \
+    && /conan_venv/bin/pip3 --no-cache-dir install conan==${CONAN_VER}   \
+    && mkdir -p /usr/local/bin                                           \
+    && ln -s /conan_venv/bin/conan /usr/local/bin/conan                  \
     && mkdir "$build_dir" && cd "$build_dir"       \
     && env CC=/usr/bin/gcc                         \
            CXX=/usr/bin/g++                        \
@@ -52,12 +60,4 @@ RUN dnf update -y \
      && dnf remove -y                              \
         cmake make gcc-c++ git zlib-devel          \
      && dnf clean all ;                            \
-     fi
-
-ENV SHELL=/usr/bin/bash
-ENV PATH='/usr/bin:/usr/local/bin'
-
-LABEL maintainer='Roberto Rossini <roberros@uio.no>'
-LABEL version="$ver"
-WORKDIR /data
-ENTRYPOINT ["/usr/local/bin/modle"]
+    fi
