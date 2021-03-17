@@ -210,8 +210,12 @@ void Genome::simulate_extrusion(const std::filesystem::path& output_path, uint32
   std::mutex barrier_mutex;
   std::deque<std::unique_ptr<std::vector<ExtrusionBarrier>>> barriers;
 
+  constexpr std::size_t task_batch_size = 256;
   // Queue used to submit simulation tasks to the thread pool
-  moodycamel::BlockingConcurrentQueue<Genome::Task> task_queue(ncells * 2, 1, 0);
+  moodycamel::BlockingConcurrentQueue<Genome::Task> task_queue(
+      std::max(static_cast<std::size_t>(static_cast<double>(ncells) * 1.25),
+               this->_nthreads * task_batch_size),
+      1, 0);
   moodycamel::ProducerToken ptok(task_queue);
 
   boost::asio::post(tpool, [&]() {  // This thread is in charge of writing contacts to disk
