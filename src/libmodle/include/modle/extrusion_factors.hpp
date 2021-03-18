@@ -8,7 +8,7 @@ namespace modle {
 
 class ExtrusionUnit {
   friend struct Lef;
-  friend class Genome;
+  friend class Simulation;
 
  public:
   inline ExtrusionUnit() = default;

@@ -11,7 +11,7 @@ class Cli {
   int _argc;
   char** _argv;
   std::string _exec_name;
-  config _config;
+  Config _config;
   CLI::App _cli{};
 
   inline void MakeCli() {
@@ -32,13 +32,13 @@ class Cli {
     // clang-format off
     io->add_option(
             "-c,--chromosome-size-file",
-            this->_config.path_to_chr_sizes,
+            this->_config.path_to_chrom_sizes,
             "Path to file with chromosome size (should be in a TSV-like format with two fields per line).")
             ->check(CLI::ExistingFile)->required();
 
     io->add_option(
             "--chromosome-subrange-file",
-            this->_config.path_to_chr_subranges,
+            this->_config.path_to_chrom_subranges,
             "Path to BED file with subranges of the chromosomes to simulate.")
             ->check(CLI::ExistingFile);
 
@@ -86,15 +86,15 @@ class Cli {
             ->capture_default_str();
 
     gen->add_option(
-        "--ncells",
-        this->_config.ncells,
-        "Number of cells to simulate.")
-        ->check(CLI::PositiveNumber)
-        ->transform(remove_trailing_zeros_from_floats)
-        ->capture_default_str();
+            "--ncells",
+            this->_config.ncells,
+            "Number of cells to simulate.")
+            ->check(CLI::PositiveNumber)
+            ->transform(remove_trailing_zeros_from_floats)
+            ->capture_default_str();
 
     gen->add_option(
-        "-t,--threads",
+            "-t,--threads",
             this->_config.nthreads,
             "Max size of the thread pool to use to run the simulation. By default ModLE will attempt to use threads available.")
             ->check(CLI::PositiveNumber)
@@ -153,11 +153,39 @@ class Cli {
             ->check(CLI::PositiveNumber)
             ->capture_default_str();
 
-gen->add_flag(
-        "--allow-lef-lifetime-extension,!--disable-lef-lifetime-extension",
-        this->_config.allow_lef_lifetime_extension,
-        "Toggle on and off the ability to extend LEF lifetimes in case of hard stalls.")
-        ->capture_default_str();
+    gen->add_option(
+            "--fwd-extrusion-speed",
+            this->_config.fwd_extrusion_speed,
+            "Extrusion speed in forward direction (i.e. distance in bp traveled by a LEF in forward direction at each simulation iteration). Defaults to half of the distance specified through --bin-size")
+            ->check(CLI::NonNegativeNumber)
+            ->capture_default_str();
+
+    gen->add_option(
+            "--rev-extrusion-speed",
+            this->_config.rev_extrusion_speed,
+            "Extrusion speed in reverse direction (i.e. distance in bp traveled by a LEF in reverse direction at each simulation iteration). Defaults to half of the distance specified through --bin-size")
+            ->check(CLI::NonNegativeNumber)
+            ->capture_default_str();
+
+    gen->add_option(
+            "--fwd-extrusion-speed-std",
+            this->_config.fwd_extrusion_speed_std,
+            "Standard deviation of the normal distribution used to sample the distance to advance a given LEF in forward direction at every iteration. When a number other than 0 is passed to this parameter, the distribution has mean equal to the speed specified through --fwd-extrusion-speed. Specifying a std equal to 0 will cause all LEFs to move exactly --fwd-extrusion-speed bp at every iteration")
+            ->check(CLI::NonNegativeNumber)
+            ->capture_default_str();
+
+    gen->add_option(
+            "--rev-extrusion-speed-std",
+            this->_config.rev_extrusion_speed_std,
+            "Standard deviation of the normal distribution used to sample the distance to advance a given LEF in reverse direction at every iteration. When a number other than 0 is passed to this parameter, the distribution has mean equal to the speed specified through --rev-extrusion-speed. Specifying a std equal to 0 will cause all LEFs to move exactly --rev-extrusion-speed bp at every iteration")
+            ->check(CLI::NonNegativeNumber)
+            ->capture_default_str();
+
+    gen->add_flag(
+            "--allow-lef-lifetime-extension,!--disable-lef-lifetime-extension",
+            this->_config.allow_lef_lifetime_extension,
+            "Toggle on and off the ability to extend LEF lifetimes in case of hard stalls.")
+            ->capture_default_str();
 
     gen->add_flag(
             "--skip-burn-in",
@@ -213,37 +241,13 @@ gen->add_flag(
             this->_config.random_noise_std,
             "Standard deviation parameter (in base pairs) of the normal distribution that will be used to introduce noise in the contact matrix when --write-contacts-w-noise is specified.")
             ->check(CLI::PositiveNumber)
-        ->capture_default_str();
-
-    burn->add_option(
-            "--min-burnin-rounds",
-            this->_config.min_n_of_burnin_rounds,
-            "Minimum number of extrusion rounds to simulate during the burn-in phase (set to 0 to disable).")
-            ->check(CLI::PositiveNumber)
-            ->transform((remove_trailing_zeros_from_floats))
-            ->capture_default_str();
-
-    burn->add_option(
-            "--min-number-of-loops-per-lef",
-            this->_config.min_n_of_loops_per_lef,
-            "Minimum number of loops that each LEF must have produced before stopping the burn-in phase.")
-            ->check(CLI::PositiveNumber)
-            ->transform((remove_trailing_zeros_from_floats))
             ->capture_default_str();
 
     extr_barr_mandatory->add_option(
             "--extrusion-barrier-file",
-            this->_config.path_to_extr_barriers_bed,
+            this->_config.path_to_extr_barriers,
             "Path to BED file containing the extrusion barriers to be used in the simulation. Barriers corresponding to chromosomes that are not being simulated will be silently discarded.")
             ->check(CLI::ExistingFile);
-
-    extr_barr_mandatory->add_option(
-            "--number-of-randomly-generated-barriers",
-            this->_config.number_of_randomly_gen_extr_barriers,
-            "Number of extrusion barriers to be randomly generated and bound.")
-            ->check(CLI::PositiveNumber)
-            ->transform((remove_trailing_zeros_from_floats))
-            ->capture_default_str();
 
     extr_barr->add_option(
             "--probability-of-barrier-block",
@@ -269,7 +273,7 @@ gen->add_flag(
   inline Cli(int argc, char** argv) : _argc(argc), _argv(argv), _exec_name(*argv) {
     this->MakeCli();
   }
-  [[nodiscard]] const config& parse_arguments() {
+  [[nodiscard]] const Config& parse_arguments() {
     this->_cli.name(this->_exec_name);
     this->_cli.parse(this->_argc, this->_argv);
     this->_config.argc = _argc;
@@ -277,7 +281,7 @@ gen->add_flag(
     return this->_config;
   }
 
-  [[nodiscard]] static inline std::string process_paths_and_check_for_collisions(modle::config& c) {
+  [[nodiscard]] static inline std::string process_paths_and_check_for_collisions(modle::Config& c) {
     auto base_out = c.path_to_output_file;
     std::string collisions;
     base_out.replace_extension();

@@ -1,9 +1,14 @@
 add_library(libmodle INTERFACE)
 add_library(Modle::Modle ALIAS libmodle)
 
-target_sources(libmodle INTERFACE ${CMAKE_CURRENT_SOURCE_DIR}/genome_impl.hpp)
+target_sources(
+  libmodle
+  INTERFACE ${CMAKE_CURRENT_SOURCE_DIR}/dna_impl.hpp
+            ${CMAKE_CURRENT_SOURCE_DIR}/extrusion_barriers_impl.hpp
+            ${CMAKE_CURRENT_SOURCE_DIR}/extrusion_factors_impl.hpp
+            ${CMAKE_CURRENT_SOURCE_DIR}/simulation_impl.hpp)
 
-target_include_directories(libmodle INTERFACE include/ ${XOSHIRO_INCLUDE_DIR})
+target_include_directories(libmodle INTERFACE include/)
 
 target_link_libraries(
   libmodle

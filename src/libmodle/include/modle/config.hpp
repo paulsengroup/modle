@@ -10,32 +10,44 @@
 #include <string_view>
 #include <thread>
 
+#include "modle/common.hpp"
+
 namespace modle {
 using namespace std::literals::string_view_literals;
+class Cli;
+class Simulation;
 
-struct config {
+struct Config {
+  friend Cli;
+  friend Simulation;
+
+ public:
   // clang-format off
   // IO
-  std::filesystem::path path_to_chr_sizes;
-  std::filesystem::path path_to_chr_subranges;
+  std::filesystem::path path_to_chrom_sizes;
+  std::filesystem::path path_to_chrom_subranges;
   std::filesystem::path path_to_output_file;
   std::filesystem::path path_to_log_file;
   std::filesystem::path path_to_output_file_w_noise{};
-  std::filesystem::path path_to_extr_barriers_bed;
+  std::filesystem::path path_to_extr_barriers;
   bool force{false};
   bool write_contacts_for_ko_chroms{false};
   bool write_raw_contacts{true};
   bool write_contacts_with_noise{false};
 
   // General settings
-  uint32_t bin_size{1'000};  // NOLINT(readability-magic-numbers, cppcoreguidelines-avoid-magic-numbers)
-  uint32_t ncells{5'000};    // NOLINT(readability-magic-numbers, cppcoreguidelines-avoid-magic-numbers)
-  uint32_t nthreads{std::thread::hardware_concurrency()};
-  uint32_t diagonal_width{3'000'000 /* 3 Mbp */};  // NOLINT(readability-magic-numbers, cppcoreguidelines-avoid-magic-numbers)
-  uint32_t simulation_iterations{200};      // NOLINT(readability-magic-numbers, cppcoreguidelines-avoid-magic-numbers)
+  Bp bin_size{1'000};  // NOLINT(readability-magic-numbers, cppcoreguidelines-avoid-magic-numbers)
+  Bp fwd_extrusion_speed{static_cast<uint32_t>(std::round(static_cast<double>(bin_size) / 2.0))};
+  Bp rev_extrusion_speed{static_cast<uint32_t>(std::round(static_cast<double>(bin_size) / 2.0))};
+  double fwd_extrusion_speed_std{0.0};
+  double rev_extrusion_speed_std{fwd_extrusion_speed_std};
+  std::size_t ncells{5'000};    // NOLINT(readability-magic-numbers, cppcoreguidelines-avoid-magic-numbers)
+  std::size_t nthreads{std::thread::hardware_concurrency()};
+  Bp diagonal_width{3'000'000 /* 3 Mbp */};  // NOLINT(readability-magic-numbers, cppcoreguidelines-avoid-magic-numbers)
+  Bp simulation_iterations{200};      // NOLINT(readability-magic-numbers, cppcoreguidelines-avoid-magic-numbers)
   double target_contact_density{0.0};
   double number_of_lefs_per_mbp;
-  uint32_t average_lef_lifetime{100'000};  // NOLINT(readability-magic-numbers, cppcoreguidelines-avoid-magic-numbers)
+  Bp average_lef_lifetime{100'000};  // NOLINT(readability-magic-numbers, cppcoreguidelines-avoid-magic-numbers)
   double hard_stall_multiplier{2.0};       // NOLINT(readability-magic-numbers, cppcoreguidelines-avoid-magic-numbers)
   double soft_stall_multiplier{0.5};       // NOLINT(readability-magic-numbers, cppcoreguidelines-avoid-magic-numbers)
   bool allow_lef_lifetime_extension{true};
@@ -48,17 +60,12 @@ struct config {
   double probability_of_extrusion_barrier_block{0};
   uint32_t contact_sampling_interval{1000};  // NOLINT(readability-magic-numbers, cppcoreguidelines-avoid-magic-numbers)
 
-  // Burn-in
-  uint32_t min_n_of_burnin_rounds{0};
-  uint32_t min_n_of_loops_per_lef{1};
-
   // Misc
-  uint32_t number_of_randomly_gen_extr_barriers{0};
   bool exclude_chr_wo_extr_barriers{true};
   bool randomize_contact_sampling_interval{false};
   bool skip_output{false};
   double random_noise_mean{0};
-  double random_noise_std{7'500 /* 7.5 Kbp */}; // NOLINT(readability-magic-numbers, cppcoreguidelines-avoid-magic-numbers)
+  Bp random_noise_std{7'500 /* 7.5 Kbp */}; // NOLINT(readability-magic-numbers, cppcoreguidelines-avoid-magic-numbers)
 
   int argc;
   char** argv;
@@ -75,8 +82,8 @@ struct config {
     const absl::flat_hash_map<std::string_view, std::vector<cli_tokens>> tokens{
     {"Input/Output"sv,
     std::vector<cli_tokens>{
-     {"Path to chr. sizes", fmt::format(FMT_STRING("{}"), std::filesystem::weakly_canonical(this->path_to_chr_sizes))},
-     {"Path to extr. barriers", fmt::format(FMT_STRING("{}"), std::filesystem::weakly_canonical(this->path_to_extr_barriers_bed))},
+     {"Path to chr. sizes", fmt::format(FMT_STRING("{}"), std::filesystem::weakly_canonical(this->path_to_chrom_sizes))},
+     {"Path to extr. barriers", fmt::format(FMT_STRING("{}"), std::filesystem::weakly_canonical(this->path_to_extr_barriers))},
      {"Output directory", fmt::format(FMT_STRING("{}"), std::filesystem::weakly_canonical(this->path_to_output_file))},
      {"Skip output", this->skip_output ? "Yes" : "No"},
      {"Force overwrite", this->force ? "Yes" : "No"}}},
@@ -98,13 +105,10 @@ struct config {
      {"LEF unloader strength", fmt::format(FMT_STRING("{:.4G}"), this->hard_stall_multiplier)}}},
     {"Extr. barrier settings"sv,
     std::vector<cli_tokens>{
-     {"# of randomly gen extr. barriers", fmt::format(FMT_STRING("{}"), this->number_of_randomly_gen_extr_barriers)},
      {"Prob. of block", fmt::format(FMT_STRING("{}"), this->probability_of_extrusion_barrier_block)}}},
     {"Burn-in phase"sv,
     std::vector<cli_tokens>{
-     {"Skip burn-in", this->skip_burnin ? "Yes" : "No"},
-     {"Min. # of burn-in rounds", this->min_n_of_burnin_rounds != 0 ? fmt::format(FMT_STRING("{}"), this->min_n_of_burnin_rounds) : "Disabled"},
-     {"Min. # of loops per LEF", fmt::format(FMT_STRING("{}"), this->min_n_of_loops_per_lef)}}}
+     {"Skip burn-in", this->skip_burnin ? "Yes" : "No"}}}
     };
     // clang-format on
 

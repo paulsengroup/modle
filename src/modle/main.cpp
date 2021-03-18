@@ -13,48 +13,13 @@
 
 #include "./cli.hpp"         // for Cli
 #include "modle/config.hpp"  // for config
-#include "modle/genome.hpp"  // for Genome
+#include "modle/simulation.hpp"  // for Simulation
 
 namespace modle {
 
-std::vector<std::string> check_if_output_file_exists(const modle::config& c) {
-  std::vector<std::string> fn_collisions;
-  if (c.force) {
-    return fn_collisions;
-  }
-  if (std::filesystem::exists(c.path_to_output_file)) {
-    fn_collisions.push_back(std::filesystem::weakly_canonical(c.path_to_output_file));
-  }
-  return fn_collisions;
-}
-
-void run_simulation(const modle::config& c) {
+void run_simulation(const modle::Config& c) {
   const auto t0 = absl::Now();
-  modle::Genome genome(c);
-
-  if (!c.skip_output) {  // Write simulation params to file
-    if (c.force) {
-      std::filesystem::remove_all(c.path_to_output_file);
-    }
-    std::filesystem::create_directories(std::filesystem::path(c.path_to_output_file).parent_path());
-    std::ofstream log_file(c.path_to_log_file);
-    if (log_file) {
-      fmt::print(log_file, FMT_STRING("{}\n{}\n"), c.to_string(),
-                 absl::StrJoin(c.argv, c.argv + c.argc, " "));
-    } else {
-      fmt::print(
-          stderr,
-          FMT_STRING("WARNING: Unable to open log file {} for writing. Continuing anyway..."),
-          c.path_to_log_file);
-    }
-  }
-  if (c.target_contact_density != 0.0) {
-    genome.simulate_extrusion(c.skip_output ? "" : c.path_to_output_file, c.ncells,
-                              c.target_contact_density);
-  } else {
-    genome.simulate_extrusion(c.skip_output ? "" : c.path_to_output_file, c.ncells,
-                              c.simulation_iterations);
-  }
+  modle::Simulation(c).run();
   fmt::print(stderr, FMT_STRING("Simulation terminated without errors in {}!\n\nBye.\n"),
              absl::FormatDuration(absl::Now() - t0));
 }

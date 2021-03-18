@@ -34,25 +34,23 @@ using PRNG = std::mt19937_64;
 using seeder = std::seed_seq;
 #endif
 
-struct config;
+struct Config;
 
-class Genome {
+class Simulation : Config {
  public:
-  inline explicit Genome(const config& c, bool import_chroms = true);
+  inline explicit Simulation(const Config& c, bool import_chroms = true);
+  inline std::string to_string() = delete;
+  inline void print() = delete;
 
   [[nodiscard]] inline std::size_t size() const;
   [[nodiscard]] inline std::size_t simulated_size() const;
 
-  using Chromosomes = absl::btree_set<Chromosome, Chromosome::Comparator>;
+  using Genome = absl::btree_set<Chromosome, Chromosome::Comparator>;
   using lef_bar_stall_generator_t = std::geometric_distribution<Bp>;
   using lef_lef_stall_generator_t = std::geometric_distribution<Bp>;
   using lef_lifetime_generator_t = std::geometric_distribution<Bp>;
   using chrom_pos_generator_t = std::uniform_int_distribution<Bp>;
   using collision_t = uint_fast16_t;
-  inline void simulate_extrusion(const std::filesystem::path& output_path, uint32_t ncells,
-                                 uint32_t simulation_rounds);
-  inline void simulate_extrusion(const std::filesystem::path& output_path, uint32_t ncells,
-                                 double target_contact_density);
 
   struct Task {
     std::size_t id;
@@ -63,42 +61,21 @@ class Genome {
     absl::Span<const ExtrusionBarrier> barriers;
   };
 
- private:
-  std::filesystem::path _path_to_chrom_sizes;
-  std::filesystem::path _path_to_chrom_subranges;
-  std::filesystem::path _path_to_extr_barriers;
-  Bp _bin_size;
-  Bp _diagonal_width;
-  Bp _avg_lef_lifetime;  ///< Average loop size if loop extrusion takes place unobstructed
-  double _nlefs_per_mbp;
-  double _probability_of_barrier_block;
-  double _probability_of_lef_rebind;
-  double _probability_of_extr_unit_bypass;
-  double _soft_stall_multiplier;
-  double _hard_stall_multiplier;
-  bool _allow_lef_lifetime_extension;
-  uint32_t _sampling_interval;
-  bool _randomize_contact_sampling;
-  uint32_t _nthreads;
-  uint64_t _seed;
-  const config* _config;
+  inline void run();
 
-  Chromosomes _chromosomes{};
+ private:
+  Genome _chromosomes{};
 
   [[nodiscard]] inline boost::asio::thread_pool instantiate_thread_pool() const;
   template <typename I>
   [[nodiscard]] inline static boost::asio::thread_pool instantiate_thread_pool(
       I nthreads, bool clamp_nthreads = true);
 
-  [[nodiscard]] inline static Chromosomes import_chromosomes(
+  [[nodiscard]] inline static Genome import_chromosomes(
       const std::filesystem::path& path_to_chrom_sizes,
       const std::filesystem::path& path_to_extr_barriers,
       const std::filesystem::path& path_to_chrom_subranges, bool keep_all_chroms);
-  [[nodiscard]] inline static std::vector<ExtrusionBarrier> allocate_barriers(
-      const Chromosome* chrom, double default_prob_of_block);
-
-  inline void simulate_extrusion(const std::filesystem::path& output_path, uint32_t ncells,
-                                 uint32_t simulation_rounds, double target_contact_density);
+  [[nodiscard]] inline std::vector<ExtrusionBarrier> allocate_barriers(const Chromosome* chrom);
 
   inline void simulate_extrusion_kernel(Chromosome* chrom, std::size_t cell_id,
                                         std::size_t n_target_epochs, std::vector<Lef> lef_buff,
@@ -126,32 +103,17 @@ class Genome {
 
   // Loop over lefs and identify colliding extr. units (i.e. units that travel in opposite
   // direction and that are within <p>dist_threshold</p> bp from each other
-  inline static void check_lef_lef_collisions(absl::Span<const Lef> lefs,
-                                              absl::Span<const std::size_t> rev_lef_rank_buff,
-                                              absl::Span<const std::size_t> fwd_lef_rank_buff,
-                                              absl::Span<collision_t> rev_collision_buff,
-                                              absl::Span<collision_t> fwd_collision_buff,
-                                              Bp dist_threshold);
   inline void check_lef_lef_collisions(absl::Span<const Lef> lefs,
                                        absl::Span<const std::size_t> rev_lef_rank_buff,
                                        absl::Span<const std::size_t> fwd_lef_rank_buff,
                                        absl::Span<collision_t> rev_collision_buff,
                                        absl::Span<collision_t> fwd_collision_buff);
 
-  inline static void apply_lef_lef_stalls(absl::Span<Lef> lefs,
-                                          absl::Span<const collision_t> rev_collision_buff,
-                                          absl::Span<const collision_t> fwd_collision_buff,
-                                          absl::Span<const std::size_t> rev_lef_rank_buff,
-                                          absl::Span<const std::size_t> fwd_lef_rank_buff,
-                                          PRNG& rand_eng, double prob_of_bypass);
-
-  inline static void check_lef_bar_collisions(absl::Span<const Lef> lefs,
-                                              absl::Span<const std::size_t> rev_lef_rank_buff,
-                                              absl::Span<const std::size_t> fwd_lef_rank_buff,
-                                              absl::Span<const ExtrusionBarrier> extr_barriers,
-                                              absl::Span<collision_t> rev_collision_buff,
-                                              absl::Span<collision_t> fwd_collision_buff,
-                                              Bp dist_threshold);
+  inline void apply_lef_lef_stalls(absl::Span<Lef> lefs,
+                                   absl::Span<const collision_t> rev_collision_buff,
+                                   absl::Span<const collision_t> fwd_collision_buff,
+                                   absl::Span<const std::size_t> rev_lef_rank_buff,
+                                   absl::Span<const std::size_t> fwd_lef_rank_buff, PRNG& rand_eng);
 
   inline void check_lef_bar_collisions(absl::Span<const Lef> lefs,
                                        absl::Span<const std::size_t> rev_lef_rank_buff,
@@ -163,8 +125,8 @@ class Genome {
   inline void apply_lef_bar_stalls(absl::Span<Lef> lefs,
                                    absl::Span<const collision_t> rev_collision_buff,
                                    absl::Span<const collision_t> fwd_collision_buff,
-                                   absl::Span<const ExtrusionBarrier> extr_barriers, PRNG& rand_eng,
-                                   double soft_stall_multiplier, double hard_stall_multiplier);
+                                   absl::Span<const ExtrusionBarrier> extr_barriers,
+                                   PRNG& rand_eng);
 
   inline void register_contacts(Chromosome* chrom, absl::Span<const Lef> lefs);
 
@@ -183,13 +145,13 @@ class Genome {
   }
 
   inline void test_apply_lef_lef_stalls(absl::Span<Lef> lefs,
-                                        const absl::Span<collision_t> rev_collision_buff,
-                                        const absl::Span<collision_t> fwd_collision_buff,
+                                        absl::Span<const collision_t> rev_collision_buff,
+                                        absl::Span<const collision_t> fwd_collision_buff,
                                         absl::Span<const std::size_t> rev_lef_rank_buff,
                                         absl::Span<const std::size_t> fwd_lef_rank_buff,
-                                        PRNG& rand_eng, double prob_of_block) {
+                                        PRNG& rand_eng) {
     this->apply_lef_lef_stalls(lefs, rev_collision_buff, fwd_collision_buff, rev_lef_rank_buff,
-                               fwd_lef_rank_buff, rand_eng, prob_of_block);
+                               fwd_lef_rank_buff, rand_eng);
   }
 
   inline void test_check_lef_bar_collisions(absl::Span<const Lef> lefs,
@@ -203,17 +165,15 @@ class Genome {
   }
 
   inline void test_apply_lef_bar_stalls(absl::Span<Lef> lefs,
-                                        const absl::Span<collision_t> rev_collision_buff,
-                                        const absl::Span<collision_t> fwd_collision_buff,
+                                        absl::Span<const collision_t> rev_collision_buff,
+                                        absl::Span<const collision_t> fwd_collision_buff,
                                         absl::Span<const ExtrusionBarrier> extr_barriers,
-                                        PRNG& rand_eng, double soft_stall_multiplier,
-                                        double hard_stall_multiplier) {
+                                        PRNG& rand_eng) {
     this->apply_lef_bar_stalls(lefs, rev_collision_buff, fwd_collision_buff, extr_barriers,
-                               rand_eng, soft_stall_multiplier, hard_stall_multiplier);
+                               rand_eng);
   }
-
 #endif
 };
 }  // namespace modle
 
-#include "../../genome_impl.hpp"
+#include "../../simulation_impl.hpp"
