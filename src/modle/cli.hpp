@@ -20,7 +20,6 @@ class Cli {
     auto* gen = this->_cli.add_option_group("Generic", "");
     auto* prob = this->_cli.add_option_group("Probabilities", "");
     auto* rand = this->_cli.add_option_group("Random", "");
-    auto* burn = this->_cli.add_option_group("Burn-in", "");
     auto* hidden = this->_cli.add_option_group("", "");
     auto* extr_barr = this->_cli.add_option_group("Extrusion Barriers", "");
     auto* extr_barr_mandatory = extr_barr->add_option_group("Mandatory", "")->require_option(1);
@@ -262,10 +261,6 @@ class Cli {
             ->capture_default_str();
 
     hidden->add_flag("--skip-output", this->_config.skip_output, "Don't write output files and plots. Useful for profiling");
-
-    gen->get_option("--skip-burn-in")->excludes(burn->get_option("--min-burnin-rounds"));
-    gen->get_option("--skip-burn-in")->excludes(burn->get_option("--min-number-of-loops-per-lef"));
-    this->_cli.get_option("--extrusion-barrier-file")->excludes(this->_cli.get_option("--number-of-randomly-generated-barriers"));
     // clang-format on
   }
 

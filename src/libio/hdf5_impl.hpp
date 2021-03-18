@@ -63,6 +63,16 @@ hsize_t write_str(const S &str, const H5::DataSet &dataset, const H5::StrType &s
   constexpr hsize_t BUFF_SIZE{1};
   constexpr hsize_t MAXDIMS{H5S_UNLIMITED};  // extensible dataset
 
+#ifndef NDEBUG
+  if (str.size() > str_type.getSize()) {
+    throw std::runtime_error(
+        fmt::format(FMT_STRING("The following error occurred while writing strings '{}' to dataset "
+                               "'{}' at offset {}:\n string does not fit in the receiving dataset: "
+                               "string length: {}; Max. string length: {}"),
+                    str, dataset.getObjName(), file_offset, str.size(), str_type.getSize()));
+  }
+#endif
+
   try {
     auto mem_space{H5::DataSpace(RANK, &BUFF_SIZE, &MAXDIMS)};
     // This is probably not very efficient, but it should be fine, given that we don't expect to
@@ -77,21 +87,20 @@ hsize_t write_str(const S &str, const H5::DataSet &dataset, const H5::StrType &s
 
     return file_size;
   } catch (const H5::Exception &e) {
-    throw std::runtime_error(fmt::format(
-        FMT_STRING(
-            "The following error occurred while writing a collection of strings '{}' to dataset "
-            "'{}' at offset {}:\n{}"),
-        str, dataset.getObjName(), file_offset, construct_error_stack()));
+    throw std::runtime_error(
+        fmt::format(FMT_STRING("The following error occurred while writing strings '{}' to dataset "
+                               "'{}' at offset {}:\n{}"),
+                    str, dataset.getObjName(), file_offset, construct_error_stack()));
   }
 }
 
 template <typename CS>
 hsize_t write_strings(const CS &strings, const H5::DataSet &dataset, const H5::StrType &str_type,
-                      hsize_t file_offset) {
+                      hsize_t file_offset, bool write_empty_strings) {
   static_assert(std::is_convertible_v<decltype(*strings.begin()), H5std_string> &&
                     std::is_convertible_v<decltype(*strings.end()), H5std_string>,
                 "CS should be collection whose elements have a type convertible to std::string.");
-  if (strings.empty()) {
+  if (!write_empty_strings && strings.empty()) {
     return file_offset;
   }
   for (const auto &s : strings) {
@@ -482,14 +491,12 @@ inline void write_or_create_attribute(H5::H5File &f, std::string_view attr_name,
   }
 
   auto g = f.openGroup(std::string{path});
-  if constexpr (std::is_same_v<T, H5::StrType>) {
-    H5::StrType METADATA_STR_TYPE(H5::PredType::C_S1, H5T_VARIABLE);
-    METADATA_STR_TYPE.setCset(H5T_CSET_UTF8);
+  if constexpr (std::is_convertible_v<T, H5std_string>) {
     if (hdf5::has_attribute(f, std::string{attr_name}, std::string{path})) {
       auto attr = g.openAttribute(std::string{attr_name});
       attr.write(attr.getDataType(), buff);
     } else {
-      auto attr = g.createAttribute(std::string{attr_name}, METADATA_STR_TYPE, attr_space);
+      auto attr = g.createAttribute(std::string{attr_name}, METADATA_STR_TYPE(), attr_space);
       attr.write(attr.getDataType(), buff);
     }
   } else {
@@ -662,6 +669,13 @@ H5::PredType getH5_type() {
   // clang-format on
 
   throw std::logic_error("getH5_type(): Unable to map C++ type to a H5T");
+}
+
+H5::StrType METADATA_STR_TYPE() {
+  H5::StrType t(H5::PredType::C_S1, H5T_VARIABLE);
+  t.setStrpad(H5T_STR_NULLTERM);
+  t.setCset(H5T_CSET_UTF8);
+  return t;
 }
 
 attr_types getCpp_type(const H5::IntType &h5_type) {

@@ -31,16 +31,17 @@ TEST_CASE("CMatrix to cooler", "[io][cooler][short]") {
   const auto test_file = test_dir / "cmatrix_to_cooler.cool";
   std::filesystem::create_directories(test_dir);
 
+  constexpr std::string_view chrom = "chr0";
   constexpr uint64_t start = 0;
   constexpr uint64_t end = 5'000'000;
   constexpr uint64_t bin_size = 1000;
   constexpr uint64_t nrows = 25;
   constexpr uint64_t ncols = end / bin_size;
 
-  auto c = Cooler(test_file, Cooler::WRITE_ONLY, bin_size);
+  auto c = Cooler(test_file, Cooler::WRITE_ONLY, bin_size, chrom.size());
 
   ContactMatrix<int32_t> cmatrix(nrows, ncols, true);
-  c.write_or_append_cmatrix_to_file(cmatrix, "chr0", start, end, end);
+  c.write_or_append_cmatrix_to_file(cmatrix, chrom, start, end, end);
 
   std::filesystem::remove_all(test_dir);
   if (const auto& p = test_dir.parent_path(); std::filesystem::is_empty(p)) {
@@ -51,6 +52,7 @@ TEST_CASE("CMatrix to cooler", "[io][cooler][short]") {
 TEST_CASE("Cooler to CMatrix", "[io][cooler][short]") {
   const auto test_file = data_dir / "Dixon2012-H1hESC-HindIII-allreps-filtered.1000kb.cool";
 
+  constexpr std::string_view chrom = "chr7";
   constexpr uint64_t end = 159'138'663;
   constexpr uint64_t bin_size = 1'000'000;
   constexpr uint64_t nrows = 25;
@@ -58,7 +60,7 @@ TEST_CASE("Cooler to CMatrix", "[io][cooler][short]") {
 
   auto c = Cooler(test_file, Cooler::READ_ONLY);
 
-  auto cmatrix = c.cooler_to_cmatrix("chr7", nrows, {0, -1}, true, false);
+  auto cmatrix = c.cooler_to_cmatrix(chrom, nrows, {0, -1}, true, false);
   CHECK(cmatrix.nrows() == nrows);
   CHECK(cmatrix.ncols() == ncols);
 }
@@ -70,23 +72,24 @@ TEST_CASE("Cooler to CMatrix and CMatrix to Cooler", "[io][cooler][short]") {
 
   auto c1 = Cooler(test_file_in, Cooler::READ_ONLY);
 
+  constexpr std::string_view chrom = "chr1";
   constexpr uint64_t start = 0;
   constexpr uint64_t end = 249'250'621;
   constexpr uint64_t nrows = 25;
   const auto bin_size = c1.get_bin_size();
   const uint64_t ncols = (end / bin_size) + (end % bin_size != 0);
 
-  const auto cmatrix1 = c1.cooler_to_cmatrix("chr1", nrows, {start, end}, true, false);
+  const auto cmatrix1 = c1.cooler_to_cmatrix(chrom, nrows, {start, end}, true, false);
   REQUIRE(cmatrix1.nrows() == nrows);
   REQUIRE(cmatrix1.ncols() == ncols);
 
   {
-    auto c2 = Cooler(test_file_out, Cooler::WRITE_ONLY, bin_size);
-    c2.write_or_append_cmatrix_to_file(cmatrix1, "chr1", start, end, end);
+    auto c2 = Cooler(test_file_out, Cooler::WRITE_ONLY, bin_size, chrom.size());
+    c2.write_or_append_cmatrix_to_file(cmatrix1, chrom, start, end, end);
   }
   auto c3 = Cooler(test_file_out, Cooler::READ_ONLY);
 
-  const auto cmatrix2 = c3.cooler_to_cmatrix("chr1", nrows);
+  const auto cmatrix2 = c3.cooler_to_cmatrix(chrom, nrows);
   const auto& v1 = cmatrix1.get_raw_count_vector();
   const auto& v2 = cmatrix2.get_raw_count_vector();
   REQUIRE(v1.size() == v2.size());

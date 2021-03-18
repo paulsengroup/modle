@@ -27,7 +27,7 @@ Cooler::Cooler(std::filesystem::path path_to_file, IO_MODE mode, std::size_t bin
       _bin_size(bin_size),
       _assembly_name(assembly_name.data(), assembly_name.size()),
       _flavor(flavor),
-      _fp(open_file(_path_to_file, _mode, _bin_size, _flavor, validate)),
+      _fp(open_file(_path_to_file, _mode, _bin_size, max_str_length, _flavor, validate)),
       _groups(open_groups(*_fp, !this->is_read_only(), this->_bin_size)),
       _compression_lvl(compression_lvl),
       _chunk_size(chunk_size),
@@ -221,9 +221,6 @@ void Cooler::write_metadata() {
                     this->_path_to_file.string()));
   }
   assert(this->_bin_size != 0);
-  H5::StrType METADATA_STR_TYPE(H5::PredType::C_S1, H5T_VARIABLE);
-  METADATA_STR_TYPE.setCset(H5T_CSET_UTF8);
-
   H5::DataSpace attr_space(H5S_SCALAR);
   int64_t int_buff{};
   std::string str_buff{};
@@ -662,7 +659,8 @@ bool Cooler::validate_file_format(H5::H5File &f, Flavor expected_flavor, IO_MODE
 H5::StrType Cooler::generate_default_str_type(std::size_t max_str_length) {
   // Cooltools doesn't seem to properly handle variable length strings (H5T_VARIABLE)
   // For the time being we are forced to use fixed length, null-padded strings
-  auto st = H5::StrType(H5::PredType::C_S1, max_str_length);
+  auto st = max_str_length > 0 ? H5::StrType(H5::PredType::C_S1, max_str_length)
+                               : H5::StrType(H5::PredType::C_S1);
   st.setStrpad(H5T_STR_NULLPAD);
   st.setCset(H5T_CSET_ASCII);
   return st;
@@ -724,11 +722,22 @@ std::unique_ptr<H5::DSetAccPropList> Cooler::generate_default_aprop(T type, hsiz
 }
 
 std::unique_ptr<H5::H5File> Cooler::open_file(const std::filesystem::path &path, IO_MODE mode,
-                                              std::size_t bin_size, Flavor flavor, bool validate) {
-  if (mode == WRITE_ONLY && bin_size == 0) {
-    throw std::runtime_error(
-        "Cooler::open_file(): bin_size cannot be 0 when file is being opened in WRITE_ONLY mode");
+                                              std::size_t bin_size, std::size_t max_str_length,
+                                              Flavor flavor, bool validate) {
+#ifndef NDEBUG
+  if (mode == WRITE_ONLY) {
+    if (bin_size == 0) {
+      utils::throw_with_trace(
+          std::runtime_error("Cooler::open_file(): bin_size cannot be 0 when file is being opened "
+                             "in WRITE_ONLY mode"));
+    }
+    if (max_str_length == 0) {
+      utils::throw_with_trace(
+          std::runtime_error("Cooler::open_file(): max_str_length cannot be 0 when file is being "
+                             "opened in WRITE_ONLY mode"));
+    }
   }
+#endif
   try {
     H5::H5File f(path.c_str(), mode == READ_ONLY ? H5F_ACC_RDONLY : H5F_ACC_TRUNC);
     if (validate) {

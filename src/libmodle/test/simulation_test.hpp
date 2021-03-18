@@ -26,12 +26,18 @@ inline void apply_lef_lef_stalls_wrapper(
   modle::Simulation(c, false).test_apply_lef_lef_stalls(
       absl::MakeSpan(lefs), rev_collision_buff, fwd_collision_buff,
       absl::MakeSpan(rev_lef_rank_buff), absl::MakeSpan(fwd_lef_rank_buff), rand_eng);
-  for (auto i = 0UL; i < lefs.size(); ++i) {/*
-    fmt::print(stderr, "rev_lef_lef_stalls={}; rev_collisions={};\n",
-               lefs[i].rev_unit.lef_lef_stalls(), rev_collision_buff[i]);
-    fmt::print(stderr, "fwd_lef_lef_stalls={}; fwd_collisions={};\n",
-               lefs[i].fwd_unit.lef_lef_stalls(), fwd_collision_buff[i]);
+  for (auto i = 0UL; i < lefs.size(); ++i) {
+    /*
+    if (((lefs[i].rev_unit.lef_lef_stalls() > 0) != (rev_collision_buff[i] > 0))) {
+      fmt::print(stderr, "i={}; rev_lef_lef_stalls={}; rev_collisions={};\n", i,
+                 lefs[i].rev_unit.lef_lef_stalls(), rev_collision_buff[i]);
+    }
+    if (((lefs[i].fwd_unit.lef_lef_stalls() > 0) != (fwd_collision_buff[i] > 0))) {
+      fmt::print(stderr, "i={}; fwd_lef_lef_stalls={}; fwd_collisions={};\n", i,
+                 lefs[i].fwd_unit.lef_lef_stalls(), fwd_collision_buff[i]);
+    }
      */
+
     CHECK(((lefs[i].rev_unit.lef_lef_stalls() > 0) == (rev_collision_buff[i] > 0)));
     CHECK(((lefs[i].fwd_unit.lef_lef_stalls() > 0) == (fwd_collision_buff[i] > 0)));
   }
@@ -90,10 +96,10 @@ TEST_CASE("Detect LEF-LEF collision simple 001", "[simulation][short]") {
 
   // clang-format off
   std::vector<Lef> lefs{
-     Lef{{0}, {2}},    // NOLINT
-     Lef{{4}, {8}},    // NOLINT
-     Lef{{14}, {14}},  // NOLINT
-     Lef{{18}, {23}}   // NOLINT
+     Lef{{0}, {2}, 1},    // NOLINT
+     Lef{{4}, {8}, 1},    // NOLINT
+     Lef{{14}, {14}, 1},  // NOLINT
+     Lef{{18}, {23}, 1}   // NOLINT
   };
 
   const std::vector<std::size_t> expected_collisions_rev{0, 1, 0, 1};
@@ -126,10 +132,10 @@ TEST_CASE("Detect LEF-LEF collision simple 002", "[simulation][short]") {
 
   // clang-format off
   std::vector<Lef> lefs{ // Lef{pos, lifetime, rank}
-      Lef{{1}, {5}},   // NOLINT
-      Lef{{4}, {6}},   // NOLINT
-      Lef{{9}, {14}},  // NOLINT
-      Lef{{11}, {15}}  // NOLINT
+      Lef{{1}, {5}, 1},   // NOLINT
+      Lef{{4}, {6}, 1},   // NOLINT
+      Lef{{9}, {14}, 1},  // NOLINT
+      Lef{{11}, {15}, 1}  // NOLINT
   };
 
   const std::vector<std::size_t> expected_collisions_rev{0, 0, 2, 1};
@@ -163,10 +169,10 @@ TEST_CASE("Apply LEF-LEF stalls simple 001", "[simulation][short]") {
 
   // clang-format off
   std::vector<Lef> lefs{
-      Lef{{0}, {2}},    // NOLINT
-      Lef{{4}, {8}},    // NOLINT
-      Lef{{14}, {14}},  // NOLINT
-      Lef{{18}, {23}}   // NOLINT
+      Lef{{0}, {2}, 1},    // NOLINT
+      Lef{{4}, {8}, 1},    // NOLINT
+      Lef{{14}, {14}, 1},  // NOLINT
+      Lef{{18}, {23}, 1}   // NOLINT
   };
 
   const std::vector<std::size_t> expected_collisions_rev{0, 1, 0, 1};
@@ -191,38 +197,10 @@ TEST_CASE("Apply LEF-LEF stalls simple 002", "[simulation][short]") {
 
   // clang-format off
   std::vector<Lef> lefs{
-      Lef{{1}, {5}},   // NOLINT
-      Lef{{4}, {6}},   // NOLINT
-      Lef{{9}, {14}},  // NOLINT
-      Lef{{11}, {15}}  // NOLINT
-  };
-
-  const std::vector<std::size_t> expected_collisions_rev{0, 0, 2, 1};
-  const std::vector<std::size_t> expected_collisions_fwd{1, 2, 0, 0};
-  (void)nlefs;
-  assert(lefs.size() == nlefs); // NOLINT
-  assert(expected_collisions_fwd.size() == nlefs); // NOLINT
-  assert(expected_collisions_rev.size() == nlefs); // NOLINT
-  // clang-format on
-  apply_lef_lef_stalls_wrapper(c, lefs, expected_collisions_rev, expected_collisions_fwd,
-                               rev_lef_rank_buff, fwd_lef_rank_buff);
-}
-
-TEST_CASE("Apply LEF-LEF stalls (reset old lef_lef stalls) simple 003", "[simulation][short]") {
-  modle::Config c;
-  c.bin_size = 5;                                 // NOLINT
-  c.probability_of_extrusion_unit_bypass = 0.05;  // NOLINT
-  const std::size_t nlefs = 4;
-
-  std::vector<Bp> fwd_lef_rank_buff{0, 1, 2, 3};
-  std::vector<Bp> rev_lef_rank_buff{0, 1, 2, 3};
-
-  // clang-format off
-  std::vector<Lef> lefs{
-      Lef{{1, 10}, {5, 10}, 0},   // NOLINT
-      Lef{{4, 10}, {6, 10}, 1},   // NOLINT
-      Lef{{9, 10}, {14, 10}, 2},  // NOLINT
-      Lef{{11, 10}, {15, 10}, 3}  // NOLINT
+      Lef{{1}, {5}, 1},   // NOLINT
+      Lef{{4}, {6}, 1},   // NOLINT
+      Lef{{9}, {14}, 1},  // NOLINT
+      Lef{{11}, {15}, 1}  // NOLINT
   };
 
   const std::vector<std::size_t> expected_collisions_rev{0, 0, 2, 1};
@@ -246,9 +224,9 @@ TEST_CASE("Detect LEF-BAR collisions simple 001", "[simulation][short]") {
 
   // clang-format off
   std::vector<Lef> lefs{
-      Lef{{0}, {1}},  // NOLINT
-      Lef{{3}, {4}},  // NOLINT
-      Lef{{5}, {5}}   // NOLINT
+      Lef{{0}, {1}, 1},  // NOLINT
+      Lef{{3}, {4}, 1},  // NOLINT
+      Lef{{5}, {5}, 1}   // NOLINT
   };
 
   std::vector<ExtrusionBarrier> barriers{ // ExtrusionBarrier{pos, prob_of_block, motif_direction}
@@ -281,9 +259,9 @@ TEST_CASE("Detect LEF-BAR collisions simple 002", "[simulation][short]") {
 
   // clang-format off
   std::vector<Lef> lefs{
-      Lef{{0}, {1}},  // NOLINT
-      Lef{{3}, {4}},  // NOLINT
-      Lef{{5}, {8}}   // NOLINT
+      Lef{{0}, {1}, 1},  // NOLINT
+      Lef{{3}, {4}, 1},  // NOLINT
+      Lef{{5}, {8}, 1}   // NOLINT
   };
 
   std::vector<ExtrusionBarrier> barriers{ // ExtrusionBarrier{pos, prob_of_block, motif_direction}
@@ -313,9 +291,9 @@ TEST_CASE("Apply LEF-BAR stalls simple 001", "[simulation][short]") {
 
   // clang-format off
   std::vector<Lef> lefs{
-      Lef{{0}, {1}},  // NOLINT
-      Lef{{3}, {4}},  // NOLINT
-      Lef{{5}, {5}}   // NOLINT
+      Lef{{0}, {1}, 1},  // NOLINT
+      Lef{{3}, {4}, 1},  // NOLINT
+      Lef{{5}, {5}, 1}   // NOLINT
   };
 
   std::vector<ExtrusionBarrier> barriers{ // ExtrusionBarrier{pos, prob_of_block, motif_direction}
@@ -347,9 +325,9 @@ TEST_CASE("Apply LEF-BAR stalls (w hard-stall) simple 002", "[simulation][short]
 
   // clang-format off
   std::vector<Lef> lefs{
-      Lef{{0}, {1}},  // NOLINT
-      Lef{{3}, {4}},  // NOLINT
-      Lef{{5}, {8}}   // NOLINT
+      Lef{{0}, {1}, 1},  // NOLINT
+      Lef{{3}, {4}, 1},  // NOLINT
+      Lef{{5}, {8}, 1}   // NOLINT
   };
 
   std::vector<ExtrusionBarrier> barriers{ // ExtrusionBarrier{pos, prob_of_block, motif_direction}

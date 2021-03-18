@@ -13,9 +13,11 @@
 namespace modle::test::hdf5 {
 using namespace modle::hdf5;
 
+static constexpr auto MAX_STR_LENGTH = 32UL;
+
 inline const std::filesystem::path test_dir{"/tmp/modle/unit_tests"};  // NOLINT
 [[nodiscard]] inline H5::StrType init_str_type() {
-  auto st = H5::StrType(H5::PredType::C_S1, H5T_VARIABLE);
+  auto st = H5::StrType(H5::PredType::C_S1, MAX_STR_LENGTH);
   st.setStrpad(H5T_STR_NULLPAD);
   st.setCset(H5T_CSET_ASCII);
 
@@ -152,6 +154,23 @@ TEST_CASE("check_dataset_type HDF5", "[io][hdf5][short]") {
   CHECK_THROWS_WITH(check_dataset_type(int_dataset, H5::PredType::NATIVE_UINT64),
                     Catch::Matchers::Contains("incorrect signedness"));
 
+  std::filesystem::remove_all(test_dir);
+  if (const auto& p = test_dir.parent_path(); std::filesystem::is_empty(p)) {
+    std::filesystem::remove(p);
+  }
+}
+
+TEST_CASE("read_write_string HDF5 - long string", "[io][hdf5][short]") {
+  const auto test_file = test_dir / "rw_strings.hdf5";
+  std::filesystem::create_directories(test_dir);
+
+  std::string s(MAX_STR_LENGTH + 1, '#');
+
+  H5::H5File f(test_file.string(), H5F_ACC_TRUNC);
+  auto dataset = init_test_str_dataset(f);
+
+  CHECK_THROWS_WITH(write_str(s, dataset, init_str_type(), 0),
+                    Catch::Contains("string does not fit in the receiving dataset"));
   std::filesystem::remove_all(test_dir);
   if (const auto& p = test_dir.parent_path(); std::filesystem::is_empty(p)) {
     std::filesystem::remove(p);

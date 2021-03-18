@@ -11,8 +11,8 @@
 #include <stdexcept>   // for runtime_error
 #include <vector>
 
-#include "./cli.hpp"         // for Cli
-#include "modle/config.hpp"  // for config
+#include "./cli.hpp"             // for Cli
+#include "modle/config.hpp"      // for config
 #include "modle/simulation.hpp"  // for Simulation
 
 namespace modle {

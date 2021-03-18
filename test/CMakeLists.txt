@@ -16,6 +16,8 @@ target_link_libraries(
           Modle::io_test
           Modle::libmodle_test)
 
+file(MAKE_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/Testing/)
+
 # automatically discover tests that are defined in catch based test files you can modify the unittests. TEST_PREFIX to
 # whatever you want, or use different for different binaries
 catch_discover_tests(

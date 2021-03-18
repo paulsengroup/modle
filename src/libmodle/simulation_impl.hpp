@@ -155,7 +155,7 @@ std::vector<ExtrusionBarrier> Simulation::allocate_barriers(const Chromosome* co
   }
 
   fmt::print(stderr,
-             FMT_STRING("Instantiated {} extr. barriers for '{}' ({} barriers were skipped)\n"),
+             FMT_STRING("Instantiated {} extr. barriers for '{}' ({} barriers were skipped).\n"),
              barriers.size(), chrom->name(), barriers_skipped);
 
   return barriers;
@@ -218,10 +218,18 @@ void Simulation::run() {
 
   boost::asio::post(tpool, [&]() {  // This thread is in charge of writing contacts to disk
     Chromosome* chrom_to_be_written = nullptr;
+    const auto max_str_length =
+        std::max_element(  // Find chrom with the longest name
+            this->_chromosomes.begin(), this->_chromosomes.end(),
+            [](const auto& c1, const auto& c2) { return c1.name().size() < c2.name().size(); })
+            ->name()
+            .size();
+
     auto c = this->path_to_output_file.empty()
                  ? nullptr
                  : std::make_unique<cooler::Cooler>(this->path_to_output_file,
-                                                    cooler::Cooler::WRITE_ONLY, this->bin_size);
+                                                    cooler::Cooler::WRITE_ONLY, this->bin_size,
+                                                    max_str_length);
     while (true) {
       std::this_thread::sleep_for(std::chrono::milliseconds(25));
       {
@@ -411,10 +419,11 @@ void Simulation::run() {
 
     if (this->target_contact_density != 0) {  // Compute the number of simulation rounds required
       // to reach the target contact density
-      this->simulation_iterations = static_cast<std::size_t>(std::round(
-          (this->target_contact_density *
-           static_cast<double>(this->contact_sampling_interval * chrom->contacts().npixels())) /
-          static_cast<double>(ncells * nlefs)));
+      this->simulation_iterations = static_cast<std::size_t>(
+          std::max(1.0, std::round((this->target_contact_density *
+                                    static_cast<double>(this->contact_sampling_interval *
+                                                        chrom->contacts().npixels())) /
+                                   static_cast<double>(ncells * nlefs))));
     }
 
     // Generate a batch of tasks for all the simulations involving the current chrom
@@ -520,14 +529,14 @@ void Simulation::simulate_extrusion_kernel(
     this->select_lefs_to_bind(lefs, mask);
     this->bind_lefs(chrom, lefs, rev_lef_ranks, fwd_lef_ranks, rand_eng, mask);
 
+    this->check_lef_bar_collisions(lefs, rev_lef_ranks, fwd_lef_ranks, barriers, rev_lef_collisions,
+                                   fwd_lef_collisions);
+    this->apply_lef_bar_stalls(lefs, rev_lef_collisions, fwd_lef_collisions, barriers, rand_eng);
+
     this->check_lef_lef_collisions(lefs, rev_lef_ranks, fwd_lef_ranks, rev_lef_collisions,
                                    fwd_lef_collisions);
     this->apply_lef_lef_stalls(lefs, rev_lef_collisions, fwd_lef_collisions, rev_lef_ranks,
                                fwd_lef_ranks, rand_eng);
-
-    this->check_lef_bar_collisions(lefs, rev_lef_ranks, fwd_lef_ranks, barriers, rev_lef_collisions,
-                                   fwd_lef_collisions);
-    this->apply_lef_bar_stalls(lefs, rev_lef_collisions, fwd_lef_collisions, barriers, rand_eng);
 
     if (register_contacts) {
       this->register_contacts(chrom, lefs);
@@ -717,7 +726,7 @@ void Simulation::check_lef_lef_collisions(absl::Span<const Lef> lefs,
         continue;
       }
 
-      // Note: this delta between uint is safe to do, because at this point rev_pos >= fwd_pos
+      // Note: this delta between uints is safe to do, because at this point rev_pos >= fwd_pos
       const auto delta = rev - fwd;
 
       // Increment the # of collisions if delta is less than the threshold, and if the two ext.
@@ -781,34 +790,29 @@ void Simulation::apply_lef_lef_stalls(absl::Span<Lef> lefs,
    * ranks to iterate through collision events in 5'-3' direction. Draw and apply the appropriate
    * number of stalls
    */
-  while (true) {
-    while (collisions_fwd == 0) {  // Find the first collision event for fwd units
-      if (++i >= lefs.size()) {
-        assert(collisions_rev == 0);
-        return;  // All collisions have been processed
-      }
-      fwd_idx = fwd_lef_rank_buff[i];
-      collisions_fwd = fwd_collision_buff[fwd_idx];
-      // Reset the number of stalls if the number of collisions for the current extr. unit is 0
-      lefs[fwd_idx].fwd_unit._nstalls_lef_lef *= collisions_fwd != 0;
-    }
-
+  while (i < lefs.size() && j < lefs.size()) {
     while (collisions_rev == 0) {  // Find the first collision event for rev units
-      if (++j >= lefs.size()) {
-        assert(collisions_fwd == 0);
-        return;  // All collisions have been processed
+      if (++j == lefs.size()) {
+        return;
       }
       rev_idx = rev_lef_rank_buff[j];
       collisions_rev = rev_collision_buff[rev_idx];
-      // Reset the number of stalls if the number of collisions for the current extr. unit is 0
-      lefs[rev_idx].rev_unit._nstalls_lef_lef *= collisions_rev != 0;
+    }
+
+    while (collisions_fwd == 0) {  // Find the first collision event for fwd units
+      if (++i == lefs.size()) {
+        return;
+      }
+      fwd_idx = fwd_lef_rank_buff[i];
+      collisions_fwd = fwd_collision_buff[fwd_idx];
     }
 
     // Each iteration consumes a pair of collision events. When fwd or rev collision events (or
     // both) reach 0, this while loop is terminated, and we go back to the outer while loop (where
     // we look for the next non-zero collision event)
     while (collisions_fwd > 0 && collisions_rev > 0) {
-      const auto nstalls = rng(rand_eng);
+      const auto nstalls =
+          std::min({rng(rand_eng), lefs[rev_idx].lifetime, lefs[fwd_idx].lifetime});
       lefs[fwd_idx].fwd_unit._nstalls_lef_lef += nstalls;
       lefs[rev_idx].rev_unit._nstalls_lef_lef += nstalls;
       --collisions_fwd;
@@ -912,8 +916,6 @@ void Simulation::apply_lef_bar_stalls(absl::Span<Lef> lefs,
                                       PRNG& rand_eng) {
   assert(lefs.size() == fwd_collision_buff.size());
   assert(lefs.size() == rev_collision_buff.size());
-  constexpr auto NO_COLLISION =
-      std::numeric_limits<std::remove_pointer_t<decltype(rev_collision_buff.data())>>::max();
 
   for (auto i = 0UL; i < lefs.size(); ++i) {
     // Skip over LEFs where no collision occurred or where both units are currently stalled

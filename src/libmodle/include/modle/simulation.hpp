@@ -51,6 +51,7 @@ class Simulation : Config {
   using lef_lifetime_generator_t = std::geometric_distribution<Bp>;
   using chrom_pos_generator_t = std::uniform_int_distribution<Bp>;
   using collision_t = uint_fast16_t;
+  static constexpr auto NO_COLLISION = std::numeric_limits<collision_t>::max();
 
   struct Task {
     std::size_t id;

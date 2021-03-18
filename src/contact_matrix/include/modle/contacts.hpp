@@ -10,11 +10,11 @@
 #include <boost/dynamic_bitset.hpp>
 #include <cstdint>  // for uint_*t
 #include <fstream>
+#include <mutex>
 #include <string>
 #include <string_view>
 #include <type_traits>
 #include <vector>
-#include <mutex>
 
 namespace modle {
 

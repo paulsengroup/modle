@@ -14,6 +14,8 @@ namespace modle::hdf5 {
 template <typename DataType>
 H5::PredType getH5_type();
 
+[[nodiscard]] inline H5::StrType METADATA_STR_TYPE();
+
 [[nodiscard]] inline std::string construct_error_stack();
 
 template <typename S>
@@ -21,7 +23,8 @@ template <typename S>
                                        const H5::StrType &str_type, hsize_t file_offset);
 template <typename CS>
 [[nodiscard]] inline hsize_t write_strings(const CS &strings, const H5::DataSet &dataset,
-                                           const H5::StrType &str_type, hsize_t file_offset);
+                                           const H5::StrType &str_type, hsize_t file_offset,
+                                           bool write_empty_strings = false);
 
 template <typename N>
 [[nodiscard]] inline hsize_t write_number(N &num, const H5::DataSet &dataset, hsize_t file_offset);
