@@ -11,20 +11,19 @@ namespace modle::test::cooler {
 using namespace modle::cooler;
 
 inline const std::filesystem::path test_dir{"/tmp/modle/unit_tests"};  // NOLINT
-inline const std::filesystem::path data_dir{"test/data/cooler"};       // NOLINT
+inline const std::filesystem::path data_dir{"test/data/unit_tests"};   // NOLINT
 
 TEST_CASE("cooler ctor", "[io][cooler][short]") {
-  const auto test_file = data_dir / "Dixon2012-H1hESC-HindIII-allreps-filtered.100kb.cool";
+  const auto test_file = data_dir / "Dixon2012-H1hESC-HindIII-allreps-filtered.1000kb.cool";
 
   {
-    auto c = Cooler(test_file, Cooler::READ_ONLY, 100'000);  // NOLINT
+    auto c = Cooler(test_file, Cooler::READ_ONLY);  // NOLINT
     CHECK(c.is_read_only());
   }
 
   H5::H5File f(test_file.string(), H5F_ACC_RDONLY);
-  // CHECK(Cooler::detect_file_flavor(f) == Cooler::COOL);
   CHECK(Cooler::validate_file_format(f, Cooler::COOL));
-  CHECK_THROWS_WITH(!Cooler::validate_file_format(f, Cooler::MCOOL, Cooler::READ_ONLY, 1000),
+  CHECK_THROWS_WITH(!Cooler::validate_file_format(f, Cooler::MCOOL, Cooler::READ_ONLY, 1'000'000),
                     Catch::Matchers::Contains("Expected format flavor MCOOL, found COOL"));
 }
 
@@ -50,11 +49,12 @@ TEST_CASE("CMatrix to cooler", "[io][cooler][short]") {
 }
 
 TEST_CASE("Cooler to CMatrix", "[io][cooler][short]") {
-  const auto test_file = data_dir / "Dixon2012-H1hESC-HindIII-allreps-filtered.100kb.cool";
+  const auto test_file = data_dir / "Dixon2012-H1hESC-HindIII-allreps-filtered.1000kb.cool";
 
-  // constexpr uint64_t bin_size = 100'000;
+  constexpr uint64_t end = 159'138'663;
+  constexpr uint64_t bin_size = 1'000'000;
   constexpr uint64_t nrows = 25;
-  constexpr uint64_t ncols = 1'591 + 1;
+  constexpr uint64_t ncols = (end / bin_size) + (end % bin_size != 0);
 
   auto c = Cooler(test_file, Cooler::READ_ONLY);
 
@@ -64,25 +64,29 @@ TEST_CASE("Cooler to CMatrix", "[io][cooler][short]") {
 }
 
 TEST_CASE("Cooler to CMatrix and CMatrix to Cooler", "[io][cooler][short]") {
-  const auto test_file_in = data_dir / "Dixon2012-H1hESC-HindIII-allreps-filtered.100kb.cool";
+  const auto test_file_in = data_dir / "Dixon2012-H1hESC-HindIII-allreps-filtered.1000kb.cool";
   const auto test_file_out = test_dir / "cmatrix_to_cooler.cool";
   std::filesystem::create_directories(test_dir);
 
-  constexpr uint64_t start = 0;
-  constexpr uint64_t end = 249'250'621;
-  constexpr uint64_t bin_size = 100'000;
-  constexpr uint64_t nrows = 25;
-  constexpr uint64_t ncols = (end / bin_size) + (end % bin_size != 0);
-
   auto c1 = Cooler(test_file_in, Cooler::READ_ONLY);
 
-  const auto cmatrix1 = c1.cooler_to_cmatrix("chr1", nrows, {0, -1}, true, false);
+  constexpr uint64_t start = 0;
+  constexpr uint64_t end = 249'250'621;
+  constexpr uint64_t nrows = 25;
+  const auto bin_size = c1.get_bin_size();
+  const uint64_t ncols = (end / bin_size) + (end % bin_size != 0);
+
+  const auto cmatrix1 = c1.cooler_to_cmatrix("chr1", nrows, {start, end}, true, false);
   REQUIRE(cmatrix1.nrows() == nrows);
   REQUIRE(cmatrix1.ncols() == ncols);
 
-  auto c2 = Cooler(test_file_out, Cooler::WRITE_ONLY, bin_size);
-  c2.write_or_append_cmatrix_to_file(cmatrix1, "chr1", start, end, end);
-  const auto cmatrix2 = c2.cooler_to_cmatrix("chr1", nrows, 0);
+  {
+    auto c2 = Cooler(test_file_out, Cooler::WRITE_ONLY, bin_size);
+    c2.write_or_append_cmatrix_to_file(cmatrix1, "chr1", start, end, end);
+  }
+  auto c3 = Cooler(test_file_out, Cooler::READ_ONLY);
+
+  const auto cmatrix2 = c3.cooler_to_cmatrix("chr1", nrows);
   const auto& v1 = cmatrix1.get_raw_count_vector();
   const auto& v2 = cmatrix2.get_raw_count_vector();
   REQUIRE(v1.size() == v2.size());

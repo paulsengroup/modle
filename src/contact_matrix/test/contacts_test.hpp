@@ -50,7 +50,7 @@ TEST_CASE("CMatrix simple", "[cmatrix][short]") {
 }
 
 TEST_CASE("CMatrix 10x200", "[cmatrix][medium]") {
-  const std::string file_path = "../../test/data/symm_matrix_200_10.tsv";
+  const std::string file_path = "test/data/unit_tests/symm_matrix_200_10.tsv";
   REQUIRE(std::filesystem::exists(file_path));
   const auto m1 = load_matrix_from_file(file_path);
   ContactMatrix<uint32_t> m2(10, 200);  // NOLINT
@@ -109,13 +109,13 @@ TEST_CASE("CMatrix Mask", "[cmatrix][short]") {
 
 /*
 TEST_CASE("CMatrix 50x5'000", "[cmatrix][long]") {
-  const std::string file_path = "../../test/data/symm_matrix_5000_50.tsv.bz2";
+  const std::string file_path = "test/data/symm_matrix_5000_50.tsv.bz2";
   REQUIRE(std::filesystem::exists(file_path));
   test_with_large_matrix(file_path);  // NOLINT
 }
 
 TEST_CASE("CMatrix 50x50'000", "[cmatrix][long]") {
-  const std::string file_path = "../../test/data/symm_matrix_50000_50.tsv.bz2";
+  const std::string file_path = "test/data/symm_matrix_50000_50.tsv.bz2";
   REQUIRE(std::filesystem::exists(file_path));
   test_with_large_matrix(file_path);  // NOLINT
 }

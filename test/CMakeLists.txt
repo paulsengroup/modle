@@ -20,7 +20,13 @@ target_link_libraries(
 # whatever you want, or use different for different binaries
 catch_discover_tests(
   catch_main
+  WORKING_DIRECTORY
+  ${CMAKE_CURRENT_SOURCE_DIR}/../
+  REPORTER
+  xml
+  OUTPUT_DIR
+  ${CMAKE_CURRENT_SOURCE_DIR}/Testing/
+  OUTPUT_SUFFIX
+  .xml
   EXTRA_ARGS
-  -s
-  --reporter=xml
-  --out=tests.xml)
+  --success)
