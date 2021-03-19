@@ -1,15 +1,18 @@
 #pragma once
 
-#include <H5Cpp.h>
-#include <absl/types/span.h>
+#include <H5Cpp.h>            // IWYU pragma: keep
+#include <absl/types/span.h>  // for Span
 
-#include <filesystem>
-#include <memory>
-#include <string_view>
-#include <utility>
-#include <vector>
+#include <cstddef>      // IWYU pragma: keep for size_t
+#include <cstdint>      // for int64_t, uint8_t, uint32_t, int32_t
+#include <filesystem>   // for path
+#include <memory>       // for unique_ptr, allocator
+#include <string>       // for string
+#include <string_view>  // for string_view
+#include <utility>      // for pair
+#include <vector>       // for vector
 
-#include "modle/contacts.hpp"
+#include "modle/contacts.hpp"  // for ContactMatrix
 
 namespace modle::cooler {
 class Cooler {
@@ -237,4 +240,4 @@ class Cooler {
 
 }  // namespace modle::cooler
 
-#include "../../cooler_impl.hpp"
+#include "../../cooler_impl.hpp"  // IWYU pragma: keep

@@ -1,14 +1,13 @@
 #pragma once
 
-#include <absl/container/flat_hash_set.h>
+#include <absl/container/flat_hash_set.h>  // for flat_hash_set
 
-#include <cstdint>  // for uint64_t
-#include <fstream>
-#include <memory>
-#include <string>
-#include <string_view>
-#include <utility>  // for move
-#include <vector>   // for vector
+#include <cstdint>      // for uint64_t
+#include <fstream>      // for ifstream
+#include <string>       // for string, basic_string
+#include <string_view>  // for string_view
+#include <utility>      // for move
+#include <vector>       // for vector
 
 namespace modle::chr_sizes {
 
@@ -45,4 +44,4 @@ class Parser {
 };
 }  // namespace modle::chr_sizes
 
-#include "../../chr_sizes_impl.hpp"
+#include "../../chr_sizes_impl.hpp"  // IWYU pragma: keep

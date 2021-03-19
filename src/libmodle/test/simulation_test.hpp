@@ -1,15 +1,20 @@
 #pragma once
 
-#include <algorithm>
-#include <boost/dynamic_bitset.hpp>
-#include <catch2/catch.hpp>
-#include <random>
-#include <vector>
+#include <absl/types/span.h>  // for MakeSpan
 
-#include "modle/common.hpp"
-#include "modle/config.hpp"
-#include "modle/extrusion_factors.hpp"
-#include "modle/simulation.hpp"
+#include <algorithm>         // for fill
+#include <cassert>           // for assert
+#include <catch2/catch.hpp>  // for AssertionHandler, operator""_catch_sr
+#include <cstddef>           // IWYU pragma: keep for size_t
+#include <memory>            // for allocator_traits<>::value_type
+#include <vector>            // for vector
+
+#include "modle/common.hpp"                      // for Bp
+#include "modle/config.hpp"                      // for Config
+#include "modle/extrusion_barriers.hpp"          // for ExtrusionBarrier
+#include "modle/extrusion_factors.hpp"           // for Lef, ExtrusionUnit
+#include "modle/simulation.hpp"                  // for Simulation, Simulation::collision_t, seeder
+#include "modle/suppress_compiler_warnings.hpp"  // for DISABLE_WARNING_POP, DISABLE_WARNING_PUSH
 
 namespace modle::test::libmodle {
 

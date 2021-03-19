@@ -1,19 +1,42 @@
 #pragma once
 
-#include <H5Cpp.h>
-#include <absl/strings/match.h>
-#include <absl/types/span.h>
-#include <fmt/format.h>
+// IWYU pragma: private, include "modle/cooler.hpp"
 
-#include <algorithm>
-#include <cstdint>
-#include <memory>
-#include <stdexcept>
-#include <type_traits>
-#include <utility>
+#include <H5Cpp.h>                  // IWYU pragma: keep
+#include <absl/strings/match.h>     // for EndsWithIgnoreCase, StartsWith
+#include <absl/strings/str_cat.h>   // for StrCat, StrAppend
+#include <absl/strings/str_join.h>  // for StrJoin
+#include <absl/strings/strip.h>     // for StripPrefix, ConsumePrefix, StripS...
+#include <absl/time/clock.h>        // for Now
+#include <absl/time/time.h>         // for FormatDuration, operator-, FormatTime
+#include <absl/types/span.h>        // for MakeConstSpan, Span
+#include <fmt/format.h>             // for format, FMT_STRING, print
+#include <fmt/ostream.h>            // for formatbuf<>::int_type
 
-#include "modle/contacts.hpp"
-#include "modle/hdf5.hpp"
+#include <algorithm>           // for max, fill, min, copy, find, generate
+#include <array>               // for array, array<>::value_type
+#include <cassert>             // for assert
+#include <cmath>               // for isnan, round
+#include <cstddef>             // IWYU pragma: keep for size_t
+#include <cstdint>             // for int64_t, uint32_t, int32_t, uint8_t
+#include <cstdio>              // for stderr
+#include <exception>           // for exception
+#include <ext/alloc_traits.h>  // for __alloc_traits<>::value_type
+#include <filesystem>          // for operator<<, path
+#include <iterator>            // for distance
+#include <limits>              // for numeric_limits
+#include <memory>              // for unique_ptr, make_unique, allocator
+#include <sstream>             // for size_t, basic_stringbuf<>::int_type
+#include <stdexcept>           // for runtime_error, logic_error
+#include <string>              // for string, basic_string, operator!=
+#include <string_view>         // for string_view, basic_string_view
+#include <utility>             // for pair, make_pair
+#include <vector>              // for vector, vector<>::iterator
+
+#include "modle/contacts.hpp"                    // for ContactMatrix
+#include "modle/hdf5.hpp"                        // for write_numbers, write_or_create_att...
+#include "modle/suppress_compiler_warnings.hpp"  // for DISABLE_WARNING_POP, DISABLE_WARNI...
+#include "modle/utils.hpp"                       // for throw_with_trace
 
 namespace modle::cooler {
 
@@ -724,6 +747,7 @@ std::unique_ptr<H5::DSetAccPropList> Cooler::generate_default_aprop(T type, hsiz
 std::unique_ptr<H5::H5File> Cooler::open_file(const std::filesystem::path &path, IO_MODE mode,
                                               std::size_t bin_size, std::size_t max_str_length,
                                               Flavor flavor, bool validate) {
+  (void)max_str_length;
 #ifndef NDEBUG
   if (mode == WRITE_ONLY) {
     if (bin_size == 0) {

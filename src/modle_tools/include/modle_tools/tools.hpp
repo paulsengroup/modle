@@ -10,4 +10,4 @@ inline void stats_subcmd(const modle::tools::config &c);
 
 }  // namespace modle::tools
 
-#include "../../tools_impl.hpp"
+#include "../../tools_impl.hpp"  // IWYU pragma: keep

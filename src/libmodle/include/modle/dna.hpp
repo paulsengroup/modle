@@ -1,20 +1,23 @@
 #pragma once
 
-#include <absl/container/btree_set.h>
-#include <absl/types/span.h>
+#include <absl/container/btree_set.h>  // for btree_set
 
-#include <cstdint>
-#include <memory>
-#include <string>
-#include <string_view>
-#include <vector>
+#include <cstddef>      // IWYU pragma: keep for size_t
+#include <cstdint>      // for uint32_t
+#include <memory>       // for shared_ptr
+#include <string>       // for string
+#include <string_view>  // for string_view
+#include <vector>       // for vector
 
-#include "modle/bed.hpp"
-#include "modle/chr_sizes.hpp"
-#include "modle/common.hpp"
-#include "modle/contacts.hpp"
+#include "modle/bed.hpp"     // for BED
+#include "modle/common.hpp"  // for Bp, Contacts
 
 namespace modle {
+template <typename I>
+class ContactMatrix;
+namespace chr_sizes {
+struct ChrSize;
+}
 
 class Chromosome {
  public:
@@ -68,4 +71,4 @@ class Chromosome {
 
 }  // namespace modle
 
-#include "../../dna_impl.hpp"
+#include "../../dna_impl.hpp"  // IWYU pragma: keep

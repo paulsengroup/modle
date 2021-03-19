@@ -1,50 +1,75 @@
 #pragma once
 
-#include <absl/container/flat_hash_map.h>
-#include <absl/strings/str_cat.h>
-#include <absl/time/clock.h>  // for Now
-#include <absl/time/time.h>   // for FormatDuration, Time
-#include <absl/types/span.h>
-#include <cpp-sort/sorters/counting_sorter.h>
-#include <cpp-sort/sorters/drop_merge_sorter.h>
-#include <cpp-sort/sorters/insertion_sorter.h>
-#include <cpp-sort/sorters/ska_sorter.h>
-#include <fmt/format.h>  // for FMT_STRING
-#include <moodycamel/blockingconcurrentqueue.h>
+// IWYU pragma: private, include "modle/simulation.hpp"
+
+#include <absl/container/btree_set.h>            // for btree_multiset
+#include <absl/container/flat_hash_map.h>        // for flat_hash_map
+#include <absl/meta/type_traits.h>               // for remove_reference_t
+#include <absl/strings/str_join.h>               // for StrJoin
+#include <absl/types/span.h>                     // for Span, MakeSpan
+#include <bits/exception.h>                      // for exception
+#include <cpp-sort/sorter_facade.h>              // for sorter_facade
+#include <cpp-sort/sorters/counting_sorter.h>    // for counting_sort
+#include <cpp-sort/sorters/drop_merge_sorter.h>  // for drop_merge_sort
+#include <cpp-sort/sorters/insertion_sorter.h>   // for insertion_sort
+#include <cpp-sort/sorters/ska_sorter.h>         // for ska_sort, ska_so...
+#include <fmt/format.h>                          // for print, format
+#include <fmt/ostream.h>                         // for formatbuf<>::int...
+#include <moodycamel/blockingconcurrentqueue.h>  // for BlockingConcurre...
+#include <moodycamel/concurrentqueue.h>          // for ConsumerToken
+
+#include <algorithm>                                // for max, fill, is_so...
+#include <array>                                    // for array
+#include <atomic>                                   // for atomic
+#include <boost/asio/post.hpp>                      // IWYU pragma: keep for post
+#include <boost/asio/thread_pool.hpp>               // for thread_pool
+#include <boost/dynamic_bitset/dynamic_bitset.hpp>  // for dynamic_bitset
+#include <cassert>                                  // for assert
+#include <chrono>                                   // for milliseconds
+#include <cmath>                                    // for round
+#include <cstddef>                                  // IWYU pragma: keep for size_t
+#include <cstdint>                                  // for uint64_t, uint32_t
+#include <cstdio>                                   // for stderr
+#include <deque>                                    // for deque, _Deque_it...
+#include <filesystem>                               // for operator<<, path
+#include <functional>                               // for hash
+#include <iterator>                                 // for move_iterator
+#include <limits>                                   // for numeric_limits
+#include <memory>                                   // for unique_ptr, make...
+#include <mutex>                                    // for mutex
+#include <new>                                      // for operator new
+#include <numeric>                                  // for accumulate, iota
+#include <random>                                   // for uniform_int_dist...
+#include <sstream>                                  // for basic_stringbuf<...
+#include <stdexcept>                                // for runtime_error
+#include <string>                                   // for string, basic_st...
+#include <string_view>                              // for hash, string_view
+#include <thread>                                   // for operator<<, get_id
+#include <type_traits>                              // for declval, decay_t
+#include <utility>                                  // for pair, addressof
+#include <vector>                                   // for vector
+
+#ifndef BOOST_STACKTRACE_USE_NOOP
+#include <boost/exception/get_error_info.hpp>  // for get_error_info
+#include <boost/stacktrace/stacktrace.hpp>     // for operator<<
+#include <ios>                                 // IWYU pragma: keep for streamsize
+#endif
+
 #ifdef USE_XOSHIRO
 #include <XoshiroCpp.hpp>
 #endif
 
-#include <algorithm>  // for max, min, sort, transform, all_of, for_each, remove_if
-#include <atomic>     // for atomic, memory_order_relaxed
-#include <boost/asio/thread_pool.hpp>
-#include <boost/dynamic_bitset.hpp>
-#include <cassert>
-#include <chrono>  // for seconds
-#include <cmath>   // for llround, floor, lround, sqrt
-#include <condition_variable>
-#include <cstdint>  // for uint*_t, UINT*_MAX
-#include <cstdio>   // for stderr
-#include <deque>
-#include <filesystem>  // for create_directories
-#include <functional>  // for greater, hash
-#include <iosfwd>      // for size_t
-#include <mutex>       // for mutex, unique_lock, scoped_lock
-#include <numeric>     // for accumulate, partial_sum
-#include <random>  // for mt19937,  bernoulli_distribution, seed_seq, discrete_distribution, uniform_int_distribution
-#include <stdexcept>  // for runtime_error
-#include <thread>
-#include <type_traits>  // for declval
-
-#include "modle/bed.hpp"        // for BED, Parser, BED::BED6, BED::Standard
-#include "modle/chr_sizes.hpp"  // for ChrSize, Parser
-#include "modle/common.hpp"
-#include "modle/config.hpp"    // for config
-#include "modle/contacts.hpp"  // for ContactMatrix
-#include "modle/cooler.hpp"
-#include "modle/extrusion_barriers.hpp"
-#include "modle/extrusion_factors.hpp"
-#include "modle/suppress_compiler_warnings.hpp"
+#include "modle/bed.hpp"                         // for BED, Parser
+#include "modle/chr_sizes.hpp"                   // for ChrSize, Parser
+#include "modle/common.hpp"                      // for Bp, fwd, rev
+#include "modle/config.hpp"                      // for Config
+#include "modle/contacts.hpp"                    // for ContactMatrix
+#include "modle/cooler.hpp"                      // for Cooler, Cooler::...
+#include "modle/dna.hpp"                         // for Chromosome
+#include "modle/extrusion_barriers.hpp"          // for ExtrusionBarrier
+#include "modle/extrusion_factors.hpp"           // for Lef, ExtrusionUnit
+#include "modle/suppress_compiler_warnings.hpp"  // for DISABLE_WARNING_POP
+#include "modle/utils.hpp"                       // for traced
 
 namespace modle {
 
@@ -184,8 +209,8 @@ void Simulation::run() {
 
   /* These are the threads spawned by simulate_extrusion:
    * - 1 thread to write contacts to disk. This thread pops Chromosome* from a std::deque once the
-   *   simulation on the Chromosome* has been ultimated. This thread is also responsible of freeing
-   *   memory as soon as it is not needed by any other thread.
+   *   simulation on the Chromosome* has been ultimated. This thread is also responsible of
+   * freeing memory as soon as it is not needed by any other thread.
    * - The main thread (i.e. this thread), which loops over chromosomes, instantiates data
    *   structures that are shared across simulation threads (e.g. the vector of extr. barriers),
    * then it submits simulation tasks to a concurrent queue
@@ -203,8 +228,8 @@ void Simulation::run() {
   std::deque<std::pair<Chromosome*, std::size_t>> progress_queue;
 
   // Barriers are shared across threads that are simulating loop-extrusion on a given chromosome.
-  // Extrusion barriers are placed on this std::deque, and are passed to simulation threads through
-  // a Span of const ExtrusionBarriers
+  // Extrusion barriers are placed on this std::deque, and are passed to simulation threads
+  // through a Span of const ExtrusionBarriers
   std::mutex barrier_mutex;
   std::deque<std::unique_ptr<std::vector<ExtrusionBarrier>>> barriers;
 
@@ -294,7 +319,8 @@ void Simulation::run() {
           const auto avail_tasks = task_queue.wait_dequeue_bulk_timed(
               ctok, task_buff.begin(), task_buff.size(), std::chrono::milliseconds(10));
           if (avail_tasks == 0) {     // Dequeue timed-out before any task became available
-            if (end_of_simulation) {  // Check whether this is because all tasks have been processed
+            if (end_of_simulation) {  // Check whether this is because all tasks have been
+                                      // processed
               return;
             }
             continue;
@@ -471,9 +497,9 @@ void Simulation::simulate_extrusion_kernel(
 
   // Sort epochs in descending order
   if (round_gen.max() > 2048) {
-    // Counting sort uses n + r space in memory, where r is the number of unique values in the range
-    // to be sorted. For this reason it is not a good idea to use it when the sampling interval is
-    // relatively large. Whether 2048 is a reasonable threshold has yet to be tested
+    // Counting sort uses n + r space in memory, where r is the number of unique values in the
+    // range to be sorted. For this reason it is not a good idea to use it when the sampling
+    // interval is relatively large. Whether 2048 is a reasonable threshold has yet to be tested
     cppsort::ska_sort(lef_initial_loading_epoch.rbegin(), lef_initial_loading_epoch.rend());
   } else {
     cppsort::counting_sort(lef_initial_loading_epoch.rbegin(), lef_initial_loading_epoch.rend());
@@ -514,8 +540,8 @@ void Simulation::simulate_extrusion_kernel(
       // issues later in the simulation) NOLINTNEXTLINE
       assert(lef_initial_loading_epoch.size() < lef_buff.size());
 
-      // Compute the current number of active LEFs (i.e. LEFs that are either bound to DNA, or that
-      // are valid candidates for re-binding) and grow spans accordingly
+      // Compute the current number of active LEFs (i.e. LEFs that are either bound to DNA, or
+      // that are valid candidates for re-binding) and grow spans accordingly
       const auto nlefs = lef_buff.size() - lef_initial_loading_epoch.size();
 
       lefs = absl::MakeSpan(lef_buff.data(), nlefs);

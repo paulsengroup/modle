@@ -1,20 +1,20 @@
 #pragma once
 
-#include <absl/types/span.h>
-#ifdef USE_XOSHIRO
-#include <XoshiroCpp.hpp>
-#else
-#include <random>
-#endif
+#include <absl/types/span.h>  // for Span
 
-#include <boost/dynamic_bitset.hpp>
-#include <cstdint>  // for uint_*t
-#include <fstream>
-#include <mutex>
-#include <string>
-#include <string_view>
-#include <type_traits>
-#include <vector>
+#include <atomic>                                   // for atomic
+#include <boost/dynamic_bitset/dynamic_bitset.hpp>  // for dynamic_bitset
+#include <cstddef>                                  // IWYU pragma: keep for size_t
+#include <cstdint>                                  // for uint64_t
+#include <mutex>                                    // for mutex
+#include <utility>                                  // for pair
+#include <vector>                                   // for vector
+
+#ifdef USE_XOSHIRO
+#include <XoshiroCpp.hpp>  // for XoshiroCpp::Xoshiro256PlusPlus XoshiroCpp::SplitMix64;
+#else
+#include <random>  // for mt19937_64, seed_seq
+#endif
 
 namespace modle {
 
@@ -100,4 +100,4 @@ class ContactMatrix {
 
 }  // namespace modle
 
-#include "../../contacts_impl.hpp"
+#include "../../contacts_impl.hpp"  // IWYU pragma: keep

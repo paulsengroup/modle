@@ -1,20 +1,29 @@
 #pragma once
 
-#include <absl/types/span.h>
-#include <fmt/format.h>
+// IWYU pragma: private, include "modle/correlation.hpp"
 
-#include <algorithm>
-#include <boost/math/distributions/beta.hpp>
-#include <boost/math/distributions/students_t.hpp>
-#include <boost/math/special_functions/erf.hpp>
-#include <cassert>
-#include <cmath>
-#include <cstdint>
-#include <numeric>
-#include <vector>
+#include <absl/types/span.h>  // for Span, MakeConstSpan
+#include <fmt/format.h>       // for FMT_STRING, format
 
-#include "./correlation_utils.hpp"
-#include "modle/suppress_compiler_warnings.hpp"
+#include <algorithm>                                    // for min, all_of, max, clamp
+#include <boost/exception/exception.hpp>                // for clone_base
+#include <boost/math/distributions/beta.hpp>            // for cdf, beta_distribution
+#include <boost/math/distributions/complement.hpp>      // for complement
+#include <boost/math/distributions/students_t.hpp>      // for cdf, students_t_distribution
+#include <boost/math/policies/policy.hpp>               // for policy
+#include <boost/math/special_functions/fpclassify.hpp>  // for isinf, isnan
+#include <cassert>                                      // for assert
+#include <cmath>                                        // for sqrt, isnan
+#include <cstddef>                                      // for size_t
+#include <cstdint>                                      // for uint64_t
+#include <cstdlib>                                      // for abs
+#include <stdexcept>                                    // for overflow_error, logic_error, runt...
+#include <type_traits>                                  // for is_arithmetic
+#include <utility>                                      // for make_pair, pair
+#include <vector>                                       // for vector
+
+#include "./correlation_utils.hpp"               // for compute_element_ranks
+#include "modle/suppress_compiler_warnings.hpp"  // for DISABLE_WARNING_CONVERSION, DISAB...
 
 namespace modle::correlation {
 

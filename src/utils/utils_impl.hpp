@@ -1,18 +1,28 @@
 #pragma once
 
-#include <absl/strings/match.h>
-#include <absl/strings/str_split.h>
-#include <absl/strings/substitute.h>
-#include <fmt/format.h>
+// IWYU pragma: private, include "modle/utils.hpp"
 
-#include <boost/exception/all.hpp>
-#include <boost/process.hpp>
-#include <boost/stacktrace.hpp>
-#include <charconv>
-#include <string>
-#include <type_traits>
+#include <absl/strings/match.h>      // for StartsWithIgnoreCase, EndsWith
+#include <absl/strings/str_split.h>  // for StrSplit, Splitter
+#include <fmt/format.h>              // for format
 
-#include "modle/suppress_compiler_warnings.hpp"
+#include <boost/exception/exception.hpp>    // for enable_error_info, error_info_base...
+#include <boost/exception/info.hpp>         // for error_info::name_value_string
+#include <boost/stacktrace/stacktrace.hpp>  // for stacktrace, operator<<, to_string
+#include <charconv>                         // for from_chars
+#include <cmath>                            // for HUGE_VAL
+#include <cstddef>                          // IWYU pragma: keep for size_t
+#include <cstdint>                          // for int64_t, SIZE_MAX, uint64_t
+#include <cstdlib>                          // for strtod
+#include <limits>                           // for numeric_limits
+#include <memory>                           // for allocator_traits<>::value_type
+#include <stdexcept>                        // for runtime_error, logic_error
+#include <string>                           // for operator+, string, allocator, basi...
+#include <string_view>                      // for string_view, basic_string_view
+#include <system_error>                     // for errc, errc::invalid_argument, errc...
+#include <type_traits>                      // for __strip_reference_wrapper<>::__type
+#include <utility>                          // for pair, make_pair
+#include <vector>                           // for vector
 
 namespace modle::utils {
 
@@ -136,27 +146,6 @@ void throw_except_from_errc(std::string_view tok, std::size_t idx, const N &fiel
                   "called with an invalid std::errc '{}'. This should not be possible!",
                   base_error, std::make_error_code(e).message()));
 }
-
-DISABLE_WARNING_PUSH
-DISABLE_WARNING_UNUSED_FUNCTION
-std::string init_juicer_tools_argv(std::string_view path_to_juicer_tools,
-                                   uint64_t juicer_tools_mem) {
-  std::string argv = path_to_juicer_tools.data();
-  if (absl::EndsWith(argv, ".jar")) {
-    // TODO: Check that java >= 1.7
-    auto java = boost::process::search_path("java").string();
-    if (java.empty()) {
-      throw std::runtime_error(
-          "--path-to-juicer-tools points to a jar file, but we were unable to find java in "
-          "your "
-          "path");
-    }
-    argv = fmt::format("java -Xms512m -Xmx{:.0f}m -jar {}",
-                       static_cast<double>(juicer_tools_mem) / 1e6, path_to_juicer_tools);
-  }
-  return argv;
-}
-DISABLE_WARNING_POP
 
 bool chr_equal_operator(std::string_view chr1, std::string_view chr2) {
   return chr_equal_operator(std::make_pair(chr1, 0), std::make_pair(chr2, 0));

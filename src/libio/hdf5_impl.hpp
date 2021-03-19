@@ -1,18 +1,29 @@
 #pragma once
 
-#include <H5Cpp.h>
-#include <absl/time/clock.h>
+// IWYU pragma: private, include "modle/hdf5.hpp"
 
-#include <algorithm>
-#include <experimental/type_traits>
-#include <string_view>
-#include <type_traits>
-#include <variant>
-#include <vector>
+#include <H5Cpp.h>                 // IWYU pragma: keep
+#include <absl/strings/str_cat.h>  // for StrCat
+#include <absl/strings/strip.h>    // for ConsumePrefix, StripPrefix
+#include <fcntl.h>                 // for SEEK_END, SEEK_SET
+#include <fmt/format.h>            // for format, FMT_STRING, to_string
 
-#include "modle/contacts.hpp"
-#include "modle/suppress_compiler_warnings.hpp"
-#include "modle/utils.hpp"
+#include <algorithm>    // for max
+#include <cassert>      // for assert
+#include <cstddef>      // IWYU pragma: keep for size_t
+#include <cstdint>      // for int64_t, int32_t, int16_t
+#include <cstdio>       // for fclose, fseek, tmpfile, ferror
+#include <limits>       // for numeric_limits
+#include <memory>       // for unique_ptr
+#include <stdexcept>    // for runtime_error, logic_error
+#include <string>       // for string, basic_string
+#include <string_view>  // for string_view
+#include <type_traits>  // for decay_t, declval, remove_poi...
+#include <variant>      // for visit, variant
+#include <vector>       // for vector
+
+#include "modle/suppress_compiler_warnings.hpp"  // for DISABLE_WARNING_POP, DISABLE...
+#include "modle/utils.hpp"                       // for throw_with_trace, get_printable_ty...
 
 namespace modle::hdf5 {
 
@@ -26,7 +37,7 @@ attr_types getCpp_type(const H5::FloatType &h5_type);
 std::string construct_error_stack() {
   std::string buff;
   auto fp = std::unique_ptr<FILE, decltype(&fclose)>(std::tmpfile(), &fclose);
-  if (fp) {
+  if (fp) {  // TODO: Make this portable
     H5::Exception::printErrorStack(fp.get());
     fseek(fp.get(), 0L, SEEK_END);
     const auto bufsize = ftell(fp.get());

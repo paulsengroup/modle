@@ -1,22 +1,31 @@
 #pragma once
 
-#include <absl/container/flat_hash_map.h>
-#include <absl/strings/str_cat.h>
-#include <absl/strings/str_join.h>
-#include <absl/strings/str_split.h>
-#include <fmt/format.h>  // for format, system_error
+// IWYU pragma: private, include "modle/bed.hpp"
 
-#include <cassert>
-#include <cerrno>
-#include <filesystem>  // for is_fifo
-#include <iosfwd>      // for size_t
-#include <new>
-#include <stdexcept>  // for runtime_error
-#include <string>     // string, getline
-#include <string_view>
-#include <vector>
+#include <absl/container/flat_hash_map.h>  // for flat_hash_map, BitMask, oper...
+#include <absl/hash/hash.h>                // for Hash
+#include <absl/strings/str_cat.h>          // for StrCat
+#include <absl/strings/str_join.h>         // for StrJoin
+#include <absl/strings/str_split.h>        // for StrSplit, Splitter, SplitIte...
+#include <bits/exception.h>                // for exception
+#include <fmt/format.h>                    // for format, FMT_COMPILE_STRING...
 
-#include "modle/utils.hpp"
+#include <algorithm>           // for fill, max, copy, transform
+#include <cassert>             // for assert
+#include <cerrno>              // for errno
+#include <cstdint>             // for uint64_t, uint8_t, uint16_t
+#include <ext/alloc_traits.h>  // for __alloc_traits<>::value_type
+#include <filesystem>          // for is_fifo
+#include <iosfwd>              // for ifstream, size_t
+#include <istream>             // for basic_istream, basic_ios
+#include <limits>              // for numeric_limits
+#include <stdexcept>           // for runtime_error
+#include <string>              // for string, allocator, char_traits
+#include <string_view>         // for string_view, operator==, bas...
+#include <utility>             // for move
+#include <vector>              // for vector
+
+#include "modle/utils.hpp"  // for parse_numeric_or_throw, pars...
 
 namespace modle::bed {
 

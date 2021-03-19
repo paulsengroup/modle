@@ -1,13 +1,16 @@
 #pragma once
+#include <H5DataSet.h>   // for DataSet
+#include <H5File.h>      // for H5File
+#include <H5Group.h>     // for Group
+#include <H5PredType.h>  // for PredType
+#include <H5StrType.h>   // for StrType
+#include <H5public.h>    // for hsize_t
 
-#include <H5Cpp.h>
-
-#include <cstdint>
-#include <string>
-#include <string_view>
-#include <vector>
-
-#include "modle/contacts.hpp"
+#include <cstdint>      // for int64_t
+#include <string>       // for string
+#include <string_view>  // for string_view
+#include <vector>       // for vector
+// #include "modle/contacts.hpp"
 
 namespace modle::hdf5 {
 
@@ -89,4 +92,4 @@ template <typename T>
 
 }  // namespace modle::hdf5
 
-#include "../../hdf5_impl.hpp"
+#include "../../hdf5_impl.hpp"  // IWYU pragma: keep

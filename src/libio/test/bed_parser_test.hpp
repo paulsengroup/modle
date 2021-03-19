@@ -1,10 +1,18 @@
 #pragma once
 
-#include <filesystem>
+#include <absl/strings/str_split.h>  // for StrSplit, Splitter
 
-#include "absl/strings/str_split.h"
-#include "catch2/catch.hpp"
-#include "modle/bed.hpp"
+#include <algorithm>         // for sort
+#include <cassert>           // for assert
+#include <catch2/catch.hpp>  // for AssertionHandler, operator""_catch_sr, SourceLineInfo
+#include <filesystem>        // for exists
+#include <fstream>           // for basic_istream, ifstream, basic_ifstream
+#include <memory>            // for allocator_traits<>::value_type, allocator
+#include <string>            // for string, basic_string, operator==, char_traits, stoull
+#include <string_view>       // for operator!=, basic_string_view, string_view, operator<
+#include <vector>            // for vector
+
+#include "modle/bed.hpp"  // for BED, Parser, BED::BED3, bed
 
 namespace modle::test::bed {
 using namespace modle::bed;

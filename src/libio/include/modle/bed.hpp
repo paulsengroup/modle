@@ -1,14 +1,14 @@
 #pragma once
 
-#include <absl/container/flat_hash_map.h>
+#include <absl/container/flat_hash_map.h>  // for flat_hash_map
 
-#include <cstdint>  // for uint*_t
-#include <fstream>
-#include <iterator>
-#include <memory>
+#include <algorithm>    // for fill, copy, max
+#include <cstddef>      // IWYU pragma: keep for size_t
+#include <cstdint>      // for uint64_t, uint8_t
+#include <fstream>      // for ifstream
 #include <string>       // for string, basic_string
-#include <string_view>  // for operator""sv, basic_string_view, string_view, string_view_literals
-#include <utility>      // for forward, move
+#include <string_view>  // for operator""sv, basic_string_view, string_view
+#include <utility>      // for move
 #include <vector>       // for vector
 
 namespace modle::bed {
@@ -131,4 +131,4 @@ class Parser {
 };
 }  // namespace modle::bed
 
-#include "../../bed_impl.hpp"
+#include "../../bed_impl.hpp"  // IWYU pragma: keep

@@ -1,5 +1,3 @@
-# find_package(Threads REQUIRED)
-
 add_executable(modle_tools main.cpp)
 
 target_sources(
@@ -29,8 +27,7 @@ if(ENABLE_PCH AND ${CMAKE_VERSION} VERSION_GREATER_EQUAL "3.16.0")
     [["modle_tools/config.hpp"]]
     [["modle_tools/eval.hpp"]]
     [["modle_tools/tools.hpp"]]
-    [["modle_tools/stats.hpp"]]
-    [["modle_tools/utils.hpp"]])
+    [["modle_tools/stats.hpp"]])
 endif()
 
 install(

@@ -1,8 +1,13 @@
 #pragma once
-#include <cstdint>
-#include <string_view>
-#include <system_error>
-#include <vector>
+
+#include <cstddef>       // IWYU pragma: keep for size_t
+#include <cstdint>       // for int64_t, uint64_t
+#include <string>        // for string
+#include <string_view>   // for string_view
+#include <system_error>  // for errc
+#include <type_traits>   // for declval
+#include <utility>       // for pair
+#include <vector>        // for vector
 
 namespace modle::utils {
 
@@ -75,4 +80,4 @@ constexpr auto get_printable_type_name() noexcept;
 
 }  // namespace modle::utils
 
-#include "../../utils_impl.hpp"
+#include "../../utils_impl.hpp"  // IWYU pragma: keep

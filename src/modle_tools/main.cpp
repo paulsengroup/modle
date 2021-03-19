@@ -1,12 +1,14 @@
 #include <fmt/format.h>  // for print
 
 #include <cstdio>        // for stderr
-#include <filesystem>    // for create_directories, is_empty, remove_all, exists, filesystem_error
+#include <exception>     // for exception
+#include <filesystem>    // for create_directories, exists, is_empty, remove_all, path
 #include <stdexcept>     // for runtime_error
 #include <system_error>  // for error_code
 
-#include "./cli.hpp"              // for config, Cli, Cli::subcommand, Cli::convert, Cli::eval
-#include "modle_tools/tools.hpp"  // for convert, eval
+#include "./cli.hpp"               // for Cli, Cli::subcommand, Cli::eval, Cli::stats
+#include "modle_tools/config.hpp"  // for config
+#include "modle_tools/tools.hpp"   // for eval_subcmd, stats_subcmd
 
 int main(int argc, char** argv) {
   modle::tools::Cli cli(argc, argv);

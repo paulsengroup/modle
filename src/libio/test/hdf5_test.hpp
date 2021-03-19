@@ -1,12 +1,14 @@
 #pragma once
 
-#include <H5Cpp.h>
+#include <H5Cpp.h>  // IWYU pragma: keep
 
-#include <catch2/catch.hpp>
-#include <filesystem>
-#include <limits>
-#include <string>
-#include <vector>
+#include <catch2/catch.hpp>  // for operator""_catch_sr, AssertionHandler, SourceLineInfo, Strin...
+#include <cstdint>           // for int64_t
+#include <filesystem>        // for path, create_directories, is_empty, operator/, remove, remov...
+#include <limits>            // for numeric_limits
+#include <string>            // for string, allocator, basic_string, operator==
+#include <string_view>       // for string_view
+#include <vector>            // for vector
 
 #include "modle/hdf5.hpp"
 

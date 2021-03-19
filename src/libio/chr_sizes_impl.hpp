@@ -1,19 +1,23 @@
 #pragma once
 
-#include <absl/strings/str_join.h>
-#include <absl/strings/str_split.h>
-#include <fmt/format.h>  // for format, system_error
+// IWYU pragma: private, include "modle/chr_sizes.hpp"
 
-#include <cassert>
-#include <cerrno>
-#include <cstdint>  // for uint64_t
-#include <fstream>  // for ifstream, basic_ios, size_t
-#include <new>
-#include <stdexcept>  // for runtime_error, invalid_argument, out_of_range
-#include <string>     // for basic_string, string, stoull, getline
-#include <string_view>
-#include <type_traits>  // for declval
-#include <vector>
+#include <absl/container/flat_hash_set.h>  // for flat_hash_set, BitMask
+#include <absl/strings/str_join.h>         // for StrJoin
+#include <absl/strings/str_split.h>        // for StrSplit, Splitter
+#include <fmt/format.h>                    // for format, FMT_COMPILE_STRING, FMT_STRING...
+
+#include <algorithm>    // for copy, max
+#include <cassert>      // for assert
+#include <cerrno>       // for errno
+#include <cstddef>      // for size_t
+#include <cstdint>      // for uint64_t
+#include <fstream>      // for ifstream, basic_ios
+#include <stdexcept>    // for runtime_error, invalid_argument, out_of_range
+#include <string>       // for string, basic_string, stoull, getline, operator==
+#include <string_view>  // for string_view
+#include <utility>      // for move
+#include <vector>       // for vector
 
 namespace modle::chr_sizes {
 

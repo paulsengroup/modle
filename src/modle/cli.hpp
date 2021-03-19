@@ -1,8 +1,27 @@
 #pragma once
 
-#include <CLI/CLI.hpp>
+#include <absl/strings/match.h>        // for EndsWith
+#include <absl/strings/str_cat.h>      // for StrAppend, StrCat
+#include <absl/strings/string_view.h>  // for string_view
+#include <absl/strings/strip.h>        // for StripSuffix
+#include <fmt/format.h>                // for format, FMT_STRING, print
+#include <fmt/ostream.h>               // for formatbuf<>::int_type
 
-#include "modle/config.hpp"
+#include <CLI/App.hpp>         // for Option_group, App
+#include <CLI/Config.hpp>      // IWYU pragma: keep for ConfigBase
+#include <CLI/Error.hpp>       // for ParseError
+#include <CLI/Formatter.hpp>   // IWYU pragma: keep for Formatter
+#include <CLI/Option.hpp>      // for Option
+#include <CLI/Validators.hpp>  // for PositiveNumber, NonNegativeNumber, Range, Existing...
+#include <cstdint>             // for uint32_t, uint64_t
+#include <cstdio>              // for stderr
+#include <filesystem>          // for path, exists, operator<<, is_empty, is_directory
+#include <sstream>             // for basic_stringbuf<>::int_type, basic_stringbuf<>::po...
+#include <stdexcept>           // for invalid_argument, out_of_range
+#include <string>              // for allocator, string, basic_string
+
+#include "modle/common.hpp"  // for Bp
+#include "modle/config.hpp"  // for Config
 
 namespace modle {
 

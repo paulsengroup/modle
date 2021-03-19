@@ -1,18 +1,26 @@
 #pragma once
 
-#include <absl/container/flat_hash_map.h>
-#include <absl/strings/match.h>
-#include <fmt/format.h>
-#include <libBigWig/bigWig.h>
+// IWYU pragma: private, include "modle/bigwig.hpp"
 
-#include <cstdint>
-#include <filesystem>
-#include <limits>
-#include <stdexcept>  // for runtime_error
-#include <string_view>
-#include <type_traits>
-#include <utility>
-#include <vector>
+#include <absl/container/flat_hash_map.h>  // for flat_hash_map
+#include <absl/strings/match.h>            // for StartsWith
+#include <fmt/format.h>                    // for format, FMT_STRING
+#include <libBigWig/bigWig.h>              // for bwAddIntervalSpanSteps, bwCleanup, bwClose
+
+#include <cassert>      // for assert
+#include <cstddef>      // IWYU pragm: keep for size_t
+#include <cstdint>      // for uint32_t, uint64_t, int32_t, int64_t
+#include <filesystem>   // for file_size
+#include <iterator>     // for pair
+#include <limits>       // for numeric_limits
+#include <memory>       // for unique_ptr
+#include <stdexcept>    // for runtime_error
+#include <string>       // for string
+#include <string_view>  // for string_view
+#include <type_traits>  // for is_arithmetic, is_signed
+#include <vector>       // for vector, allocator
+
+#include "bigwig_impl.hpp"  // for FMT_COMPILE_STRING
 
 namespace modle::bigwig {
 

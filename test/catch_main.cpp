@@ -2,7 +2,7 @@
 
 #include <catch2/catch.hpp>
 
-#include "modle/test/contacts.hpp"
-#include "modle/test/correlation.hpp"
-#include "modle/test/libio.hpp"
-#include "modle/test/libmodle.hpp"
+#include "modle/test/contacts.hpp"     // IWYU pragma: keep
+#include "modle/test/correlation.hpp"  // IWYU pragma: keep
+#include "modle/test/libio.hpp"        // IWYU pragma: keep
+#include "modle/test/libmodle.hpp"     // IWYU pragma: keep

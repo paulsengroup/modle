@@ -1,8 +1,10 @@
 #pragma once
 
-#include <cassert>
+// IWYU pragma: private, include "modle/extrusion_barriers.hpp"
 
-#include "modle/common.hpp"
+#include <cassert>  // for assert
+
+#include "modle/common.hpp"  // for Bp, Direction
 
 namespace modle {
 ExtrusionBarrier::ExtrusionBarrier(Bp pos, double prob_of_block, dna::Direction motif_direction)

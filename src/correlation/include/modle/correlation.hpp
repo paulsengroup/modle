@@ -1,11 +1,11 @@
 #pragma once
-#include <absl/types/span.h>
 
-#include <cstdint>
-#include <iterator>
-#include <type_traits>
-#include <utility>
-#include <vector>
+#include <absl/types/span.h>  // for Span
+
+#include <cstddef>  // IWYU pragma: keep for size_t
+#include <cstdint>  // for uint8_t
+#include <utility>  // for pair
+#include <vector>   // for vector
 
 namespace modle::correlation {
 
@@ -36,4 +36,4 @@ template <typename N1, typename N2>
 [[nodiscard]] inline double compute_sed(absl::Span<const N1> v1, absl::Span<const N2> v2);
 }  // namespace modle::correlation
 
-#include "../../correlation_impl.hpp"
+#include "../../correlation_impl.hpp"  // IWYU pragma: keep

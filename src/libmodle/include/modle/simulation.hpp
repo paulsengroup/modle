@@ -6,23 +6,24 @@
 #ifdef USE_XOSHIRO
 #include <XoshiroCpp.hpp>
 #else
-#include <random>
+#include <random>  // for geometric_distribution, mt19937_64
 #endif
 
-#include <boost/asio/thread_pool.hpp>
-#include <boost/dynamic_bitset.hpp>
-#include <cstdint>      // for uint*_t
-#include <memory>       // for _Destroy, allocator
-#include <string>       // for basic_string, string
-#include <string_view>  // for string_view
-#include <thread>
-#include <utility>  // for pair
-#include <vector>   // for vector
+#include <absl/container/btree_set.h>  // IWYU pragma: keep for btree_set
+#include <absl/types/span.h>           // IWYU pragma: keep for Span
 
-#include "modle/bed.hpp"
-#include "modle/dna.hpp"
-#include "modle/extrusion_barriers.hpp"
-#include "modle/extrusion_factors.hpp"
+#include <boost/asio/thread_pool.hpp>               // for thread_pool
+#include <boost/dynamic_bitset/dynamic_bitset.hpp>  // for dynamic_bitset
+#include <cstddef>                                  // for size_t
+#include <cstdint>                                  // for uint_fast16_t
+#include <filesystem>                               // for path
+#include <limits>                                   // for numeric_limits
+#include <string>                                   // for string
+#include <vector>                                   // for vector
+
+#include "modle/common.hpp"  // for Bp
+#include "modle/config.hpp"  // for Config
+#include "modle/dna.hpp"     // for Chromosome
 
 namespace modle {
 
@@ -34,7 +35,8 @@ using PRNG = std::mt19937_64;
 using seeder = std::seed_seq;
 #endif
 
-struct Config;
+class ExtrusionBarrier;
+struct Lef;
 
 class Simulation : Config {
  public:
@@ -177,4 +179,4 @@ class Simulation : Config {
 };
 }  // namespace modle
 
-#include "../../simulation_impl.hpp"
+#include "../../simulation_impl.hpp"  // IWYU pragma: keep

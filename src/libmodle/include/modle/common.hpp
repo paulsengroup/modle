@@ -1,6 +1,7 @@
 #pragma once
 
-#include <cstdint>
+#include <cstddef>  // IWYU pragma: keep for size_t
+#include <cstdint>  // for uint32_t, uint8_t
 
 namespace modle {
 

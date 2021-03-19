@@ -1,10 +1,11 @@
 #pragma once
 
-#include <cstdint>
-#include <vector>
+#include <catch2/catch.hpp>  // for AssertionHandler, operator""_catch_sr, SourceLineInfo
+#include <cstdint>           // for uint32_t
+#include <vector>            // for vector
 
+#include "../correlation_utils.hpp"  // for compute_element_ranks, sort_range_by_idx
 #include "../correlation_utils.hpp"
-#include "catch2/catch.hpp"
 
 namespace modle::test::correlation {
 using namespace modle::correlation;

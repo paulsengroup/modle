@@ -1,16 +1,27 @@
 #pragma once
 
-#include <absl/container/btree_set.h>
-#include <fmt/format.h>
+// IWYU pragma: private, include "modle/dna.hpp"
 
-#include <cassert>
-#include <cstdint>
-#include <stdexcept>
-#include <string>
-#include <vector>
+#include <absl/container/btree_set.h>  // for btree_set
+#include <fmt/format.h>                // for format, FMT_STRING
 
-#include "modle/bed.hpp"
-#include "modle/chr_sizes.hpp"
+#include <algorithm>    // for min
+#include <cassert>      // for assert
+#include <cstddef>      // for size_t
+#include <cstdint>      // for uint32_t
+#include <iterator>     // for move_iterator
+#include <memory>       // for shared_ptr, make_shared, __shared_ptr_access
+#include <stdexcept>    // for runtime_error
+#include <string>       // for char_traits, string, operator==, basic_string<>::_...
+#include <string_view>  // for operator<, string_view, operator!=, operator==
+#include <utility>      // for move
+#include <vector>       // for vector
+
+#include "dna_impl.hpp"         // for FMT_COMPILE_STRING
+#include "modle/bed.hpp"        // for BED
+#include "modle/chr_sizes.hpp"  // for ChrSize
+#include "modle/common.hpp"     // for Contacts, Bp
+#include "modle/contacts.hpp"   // for ContactMatrix
 
 namespace modle {
 Chromosome::Chromosome(const chr_sizes::ChrSize &chrom, const std::vector<bed::BED> &barriers)

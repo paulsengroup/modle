@@ -1,18 +1,23 @@
 #pragma once
 
-#include <absl/strings/str_split.h>
-#include <fmt/format.h>
+#include <absl/strings/str_split.h>  // for SplitIterator, Splitter, StrSplit
+#include <fmt/format.h>              // for string_view, system_error
 
-#include <boost/iostreams/filter/bzip2.hpp>
-#include <boost/iostreams/filtering_stream.hpp>
-#include <catch2/catch.hpp>
-#include <cstdint>
-#include <filesystem>
-#include <fstream>
-#include <vector>
+#include <boost/dynamic_bitset/dynamic_bitset.hpp>  // for dynamic_bitset, dynamic_bitset<>::ref...
+#include <catch2/catch.hpp>                         // for AssertionHandler, operator""_catch_sr
+#include <cerrno>                                   // for errno
+#include <cstdint>                                  // for uint32_t
+#include <ext/alloc_traits.h>                       // for __alloc_traits<>::value_type
+#include <filesystem>                               // for exists
+#include <fstream>                                  // for ifstream, basic_istream, basic_ios
+#include <memory>                                   // for allocator_traits<>::value_type
+#include <stdexcept>                                // for runtime_error
+#include <string>                                   // for string, getline
+#include <utility>                                  // for move
+#include <vector>                                   // for vector, allocator
 
-#include "modle/contacts.hpp"
-#include "modle/utils.hpp"
+#include "modle/contacts.hpp"  // for ContactMatrix
+#include "modle/utils.hpp"     // for parse_numeric_or_throw
 
 namespace modle::test::cmatrix {
 

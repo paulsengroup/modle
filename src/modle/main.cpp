@@ -1,19 +1,23 @@
 #include <absl/time/clock.h>  // for Now
-#include <absl/time/time.h>   // for FormatDuration, Time
-#include <fmt/format.h>       // for FMT_STRING, format, system_error
-#include <fmt/ostream.h>      // for print
+#include <absl/time/time.h>   // for FormatDuration, operator-, Time
+#include <fmt/format.h>       // for print, system_error, FMT_STRING
 
 #include <CLI/Error.hpp>  // for ParseError
 #include <cstdio>         // for stderr
-#include <exception>
-#include <filesystem>  // for exists, weakly_canonical, path
-#include <iosfwd>      // for ofstream
-#include <stdexcept>   // for runtime_error
-#include <vector>
+#include <exception>      // for current_exception, exception_ptr, rethrow_...
+#include <stdexcept>      // for runtime_error
+#include <string>         // for basic_string
+
+#ifndef BOOST_STACKTRACE_USE_NOOP
+#include <boost/exception/get_error_info.hpp>  // for get_error_info
+#include <boost/stacktrace/stacktrace.hpp>     // for operator<<
+#include <iostream>                            // for operator<<, basic_ostream, cerr, ostream
+#endif
 
 #include "./cli.hpp"             // for Cli
-#include "modle/config.hpp"      // for config
+#include "modle/config.hpp"      // for Config
 #include "modle/simulation.hpp"  // for Simulation
+#include "modle/utils.hpp"       // for traced
 
 namespace modle {
 

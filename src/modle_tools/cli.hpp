@@ -1,20 +1,32 @@
 #pragma once
-#include <absl/container/btree_set.h>
-#include <absl/strings/match.h>
-#include <absl/strings/str_format.h>
-#include <absl/strings/str_join.h>
-#include <absl/strings/strip.h>
-#include <fmt/printf.h>
 
-#include <CLI/CLI.hpp>
-#include <boost/process.hpp>
-#include <cstdint>
-#include <string>
+#include <absl/container/btree_set.h>      // for btree_set
+#include <absl/container/flat_hash_set.h>  // for BitMask, flat_hash_set, raw_hash_set
+#include <absl/strings/match.h>            // for EndsWith, EndsWithIgnoreCase
+#include <absl/strings/str_cat.h>          // for StrCat
+#include <absl/strings/str_format.h>       // for StrAppendFormat
+#include <absl/strings/str_join.h>         // for StrJoin
+#include <absl/strings/strip.h>            // for StripSuffix
+#include <fmt/format.h>                    // for format, print
+#include <fmt/ostream.h>                   // for formatbuf<>::int_type
 
-#include "modle/bed.hpp"
-#include "modle/cooler.hpp"
-#include "modle/utils.hpp"
-#include "modle_tools/config.hpp"
+#include <CLI/CLI.hpp>       // IWYU pragma: keep
+#include <algorithm>         // for max
+#include <cassert>           // for assert
+#include <cstdint>           // for uint32_t, uint8_t
+#include <cstdio>            // for stderr
+#include <filesystem>        // for path, exists, is_directory, operat...
+#include <initializer_list>  // for initializer_list
+#include <sstream>           // for size_t, basic_stringbuf<>::int_type
+#include <stdexcept>         // for invalid_argument, out_of_range
+#include <string>            // for string, allocator, basic_string
+#include <string_view>       // for string_view
+#include <vector>            // for vector, swap
+
+#include "modle/bed.hpp"           // for Parser
+#include "modle/cooler.hpp"        // for Cooler, Cooler::READ_ONLY
+#include "modle/utils.hpp"         // for throw_with_trace
+#include "modle_tools/config.hpp"  // for config
 
 namespace modle::tools {
 

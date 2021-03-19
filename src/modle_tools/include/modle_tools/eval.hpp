@@ -1,14 +1,13 @@
 #pragma once
 
-#include <absl/types/span.h>
+#include <absl/types/span.h>  // for Span
 
-#include <cstdint>
-#include <string>
-#include <utility>
-#include <vector>
-
-#include "modle/contacts.hpp"
-#include "modle_tools/config.hpp"
+#include <cstddef>      // IWYU pragma: keep for size_t
+#include <cstdint>      // for uint64_t, int64_t, uint8_t
+#include <string>       // for string
+#include <string_view>  // for string_view
+#include <utility>      // for pair
+#include <vector>       // for vector
 
 namespace modle::tools {
 
@@ -60,4 +59,4 @@ void compute_euc_dist_over_range(const std::vector<N1>& vin1, const std::vector<
                                  Transformation t);
 }  // namespace modle::tools
 
-#include "../../eval_impl.hpp"
+#include "../../eval_impl.hpp"  // IWYU pragma: keep

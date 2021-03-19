@@ -1,10 +1,15 @@
 #pragma once
-#include <absl/container/flat_hash_map.h>
-#include <libBigWig/bigWig.h>
 
-#include <cstdint>  // for uint64_t
-#include <string>
-#include <vector>
+#include <absl/container/flat_hash_map.h>  // for flat_hash_map
+#include <libBigWig/bigWig.h>              // for bigWigFile_t
+
+#include <cstddef>      // IWYU pragma: keep for size_t
+#include <cstdint>      // for uint64_t, int32_t, uint32_t, uint8_t
+#include <iterator>     // for pair
+#include <memory>       // for unique_ptr
+#include <string>       // for string
+#include <string_view>  // for string_view
+#include <vector>       // for vector
 
 namespace modle::bigwig {
 
@@ -47,4 +52,4 @@ template <typename I>  // This overload is not as efficient as the others. This 
 inline void close_bigwig_file(bigwig::file fp);
 }  // namespace modle::bigwig
 
-#include "../../bigwig_impl.hpp"
+#include "../../bigwig_impl.hpp"  // IWYU pragma: keep

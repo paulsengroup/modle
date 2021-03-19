@@ -1,12 +1,14 @@
 #pragma once
 
-#include <absl/types/span.h>
+#include <absl/types/span.h>  // for Span
 
-#include <boost/dynamic_bitset.hpp>
-#include <cstdint>
-#include <vector>
+#include <cstddef>  // IWYU pragma: keep for size_t
+#include <cstdint>  // for uint64_t
 
-#include "modle/contacts.hpp"
+namespace modle {
+template <typename I>
+class ContactMatrix;
+}
 
 namespace modle::tools {
 template <typename I>
@@ -15,4 +17,4 @@ template <typename I>
     double depletion_multiplier);
 }  // namespace modle::tools
 
-#include "../../stats_impl.hpp"
+#include "../../stats_impl.hpp"  // IWYU pragma: keep

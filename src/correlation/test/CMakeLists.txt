@@ -1,5 +1,3 @@
-# find_package(Threads REQUIRED)
-
 add_library(modle_correlation_test INTERFACE)
 add_library(Modle::correlation_test ALIAS modle_correlation_test)
 

@@ -1,14 +1,22 @@
 #pragma once
-#include <absl/container/flat_hash_set.h>
+#include <absl/container/flat_hash_set.h>  // for flat_hash_set, operator!=
+#include <absl/hash/hash.h>                // for Hash
+#include <absl/strings/str_cat.h>          // for StrCat
 
-#include <algorithm>
-#include <boost/container_hash/hash.hpp>
-#include <filesystem>
-#include <fstream>
-#include <iostream>
-#include <memory>
-#include <random>
-#include <string>
+#include <algorithm>    // for max, generate
+#include <array>        // for array
+#include <cstdint>      // for uint32_t, int32_t, int64_t
+#include <cstdio>       // for pclose, fgets, popen, FILE
+#include <filesystem>   // for create_directories, exists, path, remove
+#include <fstream>      // for basic_ofstream, operator<<, basic_ostream
+#include <memory>       // for allocator, unique_ptr
+#include <numeric>      // for iota
+#include <random>       // for mt19937, uniform_int_distribution
+#include <stdexcept>    // for runtime_error
+#include <string>       // for string, operator+, char_traits, stod
+#include <type_traits>  // for enable_if, is_arithmetic
+#include <utility>      // for pair
+#include <vector>       // for vector
 
 namespace modle::test::correlation {
 

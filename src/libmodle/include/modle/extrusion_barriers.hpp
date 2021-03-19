@@ -20,4 +20,4 @@ class ExtrusionBarrier {
 };
 }  // namespace modle
 
-#include "../../extrusion_barriers_impl.hpp"
+#include "../../extrusion_barriers_impl.hpp"  // IWYU pragma: keep

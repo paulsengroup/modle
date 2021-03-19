@@ -1,11 +1,18 @@
 #pragma once
 
-#include <catch2/catch.hpp>
-#include <filesystem>
-#include <string_view>
+#include <absl/types/span.h>  // for Span
+#include <fmt/format.h>       // for print
 
-#include "modle/contacts.hpp"
-#include "modle/cooler.hpp"
+#include <catch2/catch.hpp>  // for operator""_catch_sr, AssertionHandler, SourceLineInfo, Str...
+#include <cstddef>           // IWYU pragma: keep for size_t
+#include <cstdint>           // for uint64_t, int32_t, uint8_t
+#include <filesystem>        // for operator/, path, create_directories, is_empty, remove, rem...
+#include <memory>            // for allocator
+#include <stdexcept>         // for runtime_error
+#include <string_view>       // for string_view
+
+#include "modle/contacts.hpp"  // for ContactMatrix
+#include "modle/cooler.hpp"    // for Cooler, Cooler::READ_ONLY, Cooler::COOL, Cooler::WRITE_ONLY
 
 namespace modle::test::cooler {
 using namespace modle::cooler;

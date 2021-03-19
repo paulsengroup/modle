@@ -1,34 +1,36 @@
 #pragma once
 
-#include <absl/strings/match.h>
-#include <absl/strings/str_format.h>
-#include <absl/strings/str_join.h>
-#include <absl/strings/str_split.h>
-#include <absl/strings/strip.h>
-#include <absl/types/span.h>
-#include <bzlib.h>
-#include <fmt/printf.h>
+// IWYU pragma: private, include "modle/contacts.hpp"
+
+#include <absl/strings/str_join.h>  // for StrJoin
+#include <absl/types/span.h>        // for MakeConstSpan, Span
+#include <fmt/format.h>             // for FMT_STRING, format
+
+#include <algorithm>                                // for max, fill, copy
+#include <atomic>                                   // for memory_order_relaxed
+#include <boost/dynamic_bitset/dynamic_bitset.hpp>  // for dynamic_bitset
+#include <boost/exception/exception.hpp>            // IWYU pragma: keep for error_info_base
+#include <cassert>                                  // for assert
+#include <cmath>                                    // for round
+#include <cstdint>                                  // for uint64_t, int64_t
+#include <fstream>                                  // for size_t
+#include <limits>                                   // for numeric_limits
+#include <mutex>                                    // for mutex
+#include <random>                                   // for normal_distribution, random_device
+#include <stdexcept>                                // for runtime_error, logic_error
+#include <type_traits>                              // for is_integral, is_signed
+#include <utility>                                  // for make_pair, pair
+#include <vector>                                   // for vector, allocator
+
+#include "modle/suppress_compiler_warnings.hpp"  // for DISABLE_WARNING_POP, DISABLE_WARNI...
+#include "modle/utils.hpp"                       // for throw_with_trace
+
 #ifdef USE_XOSHIRO
 #include <XoshiroCpp.hpp>
 #endif
 
-#include <array>
-#include <boost/dynamic_bitset.hpp>
-#include <boost/iostreams/filter/bzip2.hpp>
-#include <boost/iostreams/filtering_stream.hpp>
-#include <boost/process.hpp>
-#include <cassert>
-#include <charconv>
-#include <cmath>
-#include <filesystem>
-#include <fstream>
-#include <iostream>
-#include <limits>
-#include <random>
-#include <string_view>
-
-#include "modle/suppress_compiler_warnings.hpp"
-#include "modle/utils.hpp"
+#include "modle/suppress_compiler_warnings.hpp"  // for DISABLE_WARNING_POP, DISABLE...
+#include "modle/utils.hpp"                       // for throw_with_trace
 
 namespace modle {
 template <typename I>

@@ -1,15 +1,16 @@
 #pragma once
 
-#include <absl/strings/str_join.h>
-#include <absl/types/span.h>
+// IWYU pragma: private
 
-#include <algorithm>
-#include <cstdint>
-#include <numeric>
-#include <type_traits>
-#include <vector>
+#include <absl/types/span.h>  // for MakeConstSpan, Span
 
-#include "modle/suppress_compiler_warnings.hpp"
+#include <algorithm>    // for sort
+#include <cstddef>      // IWYU pragma: keep for size_t
+#include <numeric>      // for iota
+#include <type_traits>  // for is_arithmetic
+#include <vector>       // for vector
+
+#include "modle/suppress_compiler_warnings.hpp"  // for DISABLE_WARNING_POP, DISABLE_WARNING_PUSH
 
 namespace modle::correlation::utils {
 

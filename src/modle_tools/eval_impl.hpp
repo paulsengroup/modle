@@ -1,16 +1,29 @@
 #pragma once
 
-#include <absl/algorithm/container.h>
-#include <absl/container/btree_set.h>
-#include <absl/strings/match.h>
-#include <absl/time/clock.h>
-#include <absl/types/span.h>
-#include <fmt/format.h>
+// IWYU pragma: private, include "modle_tools/eval.hpp"
 
-#include "modle/cooler.hpp"
-#include "modle/correlation.hpp"
-#include "modle/suppress_compiler_warnings.hpp"
-#include "modle/utils.hpp"
+#include <absl/algorithm/container.h>  // for c_set_intersection
+#include <absl/container/btree_set.h>  // for btree_set
+#include <absl/types/span.h>           // for Span, MakeConstSpan
+#include <fmt/format.h>                // for format, FMT_STRING
+
+#include <algorithm>    // for max
+#include <cassert>      // for assert
+#include <cstddef>      // IWYU pragma: keep for size_t
+#include <cstdint>      // for int64_t, uint32_t
+#include <iterator>     // for back_insert_iterator, back_inserter
+#include <stdexcept>    // for runtime_error
+#include <string>       // for string, basic_string
+#include <string_view>  // for string_view
+#include <type_traits>  // for is_arithmetic
+#include <utility>      // for pair
+#include <vector>       // for vector
+
+#include "eval_impl.hpp"                         // for FMT_COMPILE_STRING
+#include "modle/cooler.hpp"                      // for Cooler, Cooler::READ_ONLY
+#include "modle/correlation.hpp"                 // for compute_pearson_significance, compute_sp...
+#include "modle/suppress_compiler_warnings.hpp"  // for DISABLE_WARNING_POP, DISABLE_WARNING_PUSH
+#include "modle/utils.hpp"                       // for chr_less_than_operator
 
 namespace modle::tools {
 std::vector<std::pair<std::string, int64_t>> select_chromosomes_for_eval(

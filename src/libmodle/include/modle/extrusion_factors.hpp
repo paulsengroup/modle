@@ -1,8 +1,9 @@
 #pragma once
 
-#include <limits>
+#include <cstddef>  // IWYU pragma: keep for size_t
+#include <limits>   // for numeric_limits
 
-#include "modle/common.hpp"
+#include "modle/common.hpp"  // for Bp
 
 namespace modle {
 
@@ -45,4 +46,4 @@ struct Lef {
 
 }  // namespace modle
 
-#include "../../extrusion_factors_impl.hpp"
+#include "../../extrusion_factors_impl.hpp"  // IWYU pragma: keep

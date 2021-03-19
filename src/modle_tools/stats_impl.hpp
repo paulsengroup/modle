@@ -1,14 +1,15 @@
 #pragma once
 
-#include <absl/types/span.h>
+// IWYU pragma: private, include "modle_tools/stats.hpp"
 
-#include <algorithm>
-#include <boost/dynamic_bitset.hpp>
-#include <cmath>
-#include <cstdint>
-#include <vector>
+#include <absl/types/span.h>  // for Span
 
-#include "modle/contacts.hpp"
+#include <algorithm>  // for transform
+#include <cassert>    // for assert
+#include <cmath>      // for round
+#include <cstddef>    // IWYU pragma: keep for size_t
+#include <cstdint>    // for uint64_t
+#include <vector>     // for vector
 
 namespace modle::tools {
 
