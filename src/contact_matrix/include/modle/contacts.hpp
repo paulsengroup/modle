@@ -11,7 +11,7 @@
 #include <vector>                                   // for vector
 
 #ifdef USE_XOSHIRO
-#include <XoshiroCpp.hpp>  // for XoshiroCpp::Xoshiro256PlusPlus XoshiroCpp::SplitMix64;
+#include <Xoshiro-cpp/XoshiroCpp.hpp>  // for XoshiroCpp::Xoshiro256PlusPlus XoshiroCpp::SplitMix64
 #else
 #include <random>  // for mt19937_64, seed_seq
 #endif

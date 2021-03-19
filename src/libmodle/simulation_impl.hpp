@@ -49,16 +49,6 @@
 #include <utility>                                  // for pair, addressof
 #include <vector>                                   // for vector
 
-#ifndef BOOST_STACKTRACE_USE_NOOP
-#include <boost/exception/get_error_info.hpp>  // for get_error_info
-#include <boost/stacktrace/stacktrace.hpp>     // for operator<<
-#include <ios>                                 // IWYU pragma: keep for streamsize
-#endif
-
-#ifdef USE_XOSHIRO
-#include <XoshiroCpp.hpp>
-#endif
-
 #include "modle/bed.hpp"                         // for BED, Parser
 #include "modle/chr_sizes.hpp"                   // for ChrSize, Parser
 #include "modle/common.hpp"                      // for Bp, fwd, rev
@@ -70,6 +60,16 @@
 #include "modle/extrusion_factors.hpp"           // for Lef, ExtrusionUnit
 #include "modle/suppress_compiler_warnings.hpp"  // for DISABLE_WARNING_POP
 #include "modle/utils.hpp"                       // for traced
+
+#ifndef BOOST_STACKTRACE_USE_NOOP
+#include <boost/exception/get_error_info.hpp>  // for get_error_info
+#include <boost/stacktrace/stacktrace.hpp>     // for operator<<
+#include <ios>                                 // IWYU pragma: keep for streamsize
+#endif
+
+#ifdef USE_XOSHIRO
+#include <Xoshiro-cpp/XoshiroCpp.hpp>  // for XoshiroCpp::Xoshiro256PlusPlus XoshiroCpp::SplitMix64
+#endif
 
 namespace modle {
 

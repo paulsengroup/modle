@@ -171,8 +171,12 @@ TEST_CASE("read_write_string HDF5 - long string", "[io][hdf5][short]") {
   H5::H5File f(test_file.string(), H5F_ACC_TRUNC);
   auto dataset = init_test_str_dataset(f);
 
+#ifndef NDEBUG
   CHECK_THROWS_WITH(write_str(s, dataset, init_str_type(), 0),
                     Catch::Contains("string does not fit in the receiving dataset"));
+#else
+  CHECK(write_str(s, dataset, init_str_type(), 0) == 1);
+#endif
   std::filesystem::remove_all(test_dir);
   if (const auto& p = test_dir.parent_path(); std::filesystem::is_empty(p)) {
     std::filesystem::remove(p);

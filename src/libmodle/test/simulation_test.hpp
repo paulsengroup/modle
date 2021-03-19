@@ -25,8 +25,13 @@ inline void apply_lef_lef_stalls_wrapper(
     const std::vector<std::size_t>& rev_lef_rank_buff,
     const std::vector<std::size_t>& fwd_lef_rank_buff) {
   // NOLINTNEXTLINE(readability-magic-numbers, cppcoreguidelines-avoid-magic-numbers)
+#ifdef USE_XOSHIRO
+  seeder s(1583769804295373920);
+  PRNG rand_eng(s.generateSeedSequence<4>());
+#else
   seeder s{1583769804295373920};
   PRNG rand_eng{s};
+#endif
 
   modle::Simulation(c, false).test_apply_lef_lef_stalls(
       absl::MakeSpan(lefs), rev_collision_buff, fwd_collision_buff,
@@ -78,8 +83,13 @@ inline void apply_lef_bar_stalls_wrapper(
     const std::vector<Simulation::collision_t>& rev_collision_buff,
     const std::vector<Simulation::collision_t>& fwd_collision_buff) {
   // NOLINTNEXTLINE(readability-magic-numbers, cppcoreguidelines-avoid-magic-numbers)
+#ifdef USE_XOSHIRO
+  seeder s(437181240247933207);
+  PRNG rand_eng(s.generateSeedSequence<4>());
+#else
   seeder s{437181240247933207};
   PRNG rand_eng{s};
+#endif
 
   modle::Simulation(c, false).test_apply_lef_bar_stalls(absl::MakeSpan(lefs), rev_collision_buff,
                                                         fwd_collision_buff, barriers, rand_eng);

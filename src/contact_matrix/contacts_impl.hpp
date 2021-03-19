@@ -26,11 +26,8 @@
 #include "modle/utils.hpp"                       // for throw_with_trace
 
 #ifdef USE_XOSHIRO
-#include <XoshiroCpp.hpp>
+#include <Xoshiro-cpp/XoshiroCpp.hpp>  // for XoshiroCpp::Xoshiro256PlusPlus XoshiroCpp::SplitMix64
 #endif
-
-#include "modle/suppress_compiler_warnings.hpp"  // for DISABLE_WARNING_POP, DISABLE...
-#include "modle/utils.hpp"                       // for throw_with_trace
 
 namespace modle {
 template <typename I>

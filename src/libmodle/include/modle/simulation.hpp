@@ -1,16 +1,9 @@
 #pragma once
 
 #include <absl/container/btree_set.h>
-#include <absl/types/span.h>
-
-#ifdef USE_XOSHIRO
-#include <XoshiroCpp.hpp>
-#else
-#include <random>  // for geometric_distribution, mt19937_64
-#endif
-
 #include <absl/container/btree_set.h>  // IWYU pragma: keep for btree_set
-#include <absl/types/span.h>           // IWYU pragma: keep for Span
+#include <absl/types/span.h>
+#include <absl/types/span.h>  // IWYU pragma: keep for Span
 
 #include <boost/asio/thread_pool.hpp>               // for thread_pool
 #include <boost/dynamic_bitset/dynamic_bitset.hpp>  // for dynamic_bitset
@@ -24,6 +17,12 @@
 #include "modle/common.hpp"  // for Bp
 #include "modle/config.hpp"  // for Config
 #include "modle/dna.hpp"     // for Chromosome
+
+#ifdef USE_XOSHIRO
+#include <Xoshiro-cpp/XoshiroCpp.hpp>  // for XoshiroCpp::Xoshiro256PlusPlus XoshiroCpp::SplitMix64
+#else
+#include <random>  // for geometric_distribution, mt19937_64
+#endif
 
 namespace modle {
 
