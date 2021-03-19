@@ -1,0 +1,14 @@
+*.swp
+*.o
+*.pico
+*.so
+*.a
+test/testLocal
+test/testRemote
+test/testWrite
+test/output.bw
+test/example_output.bw
+test/exampleWrite
+test/testRemoteManyContigs
+test/testBigBed
+test/testIterator

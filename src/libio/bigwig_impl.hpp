@@ -4,8 +4,8 @@
 
 #include <absl/container/flat_hash_map.h>  // for flat_hash_map
 #include <absl/strings/match.h>            // for StartsWith
+#include <bigWig.h>                        // for bwAddIntervalSpanSteps, bwCleanup, bwClose
 #include <fmt/format.h>                    // for format, FMT_STRING
-#include <libBigWig/bigWig.h>              // for bwAddIntervalSpanSteps, bwCleanup, bwClose
 
 #include <cassert>      // for assert
 #include <cstddef>      // IWYU pragm: keep for size_t

@@ -1,6 +1,7 @@
 project(libBigWig C)
 
 add_library(libBigWig)
+add_library(libBigWig::libBigWig ALIAS libBigWig)
 
 target_sources(
   libBigWig
@@ -14,7 +15,7 @@ target_include_directories(libBigWig PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/)
 # TODO For some reason libBigWig seems to be linking to system zlib, not conan zlib
 target_link_libraries(
   libBigWig
-  PRIVATE project_warnings project_options
+  PRIVATE project_options
   PUBLIC CONAN_PKG::zlib m) # -lm
 
 target_compile_definitions(libBigWig PUBLIC -DNOCURL)

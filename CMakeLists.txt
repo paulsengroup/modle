@@ -59,10 +59,6 @@ if(ENABLE_PCH)
   endif()
 endif()
 
-if(ENABLE_XOSHIRO)
-  add_subdirectory(external/Xoshiro-cpp)
-endif()
-
 #[[
 # Make sure compiler support execution policies (C++17)
 include(CheckIncludeFileCXX)
@@ -84,7 +80,6 @@ set(CONAN_EXTRA_REQUIRES
     ${CONAN_EXTRA_REQUIRES}
     abseil/20200923.3
     boost/1.75.0
-    bzip2/1.0.8
     cli11/1.9.1
     concurrentqueue/1.0.2
     cpp-sort/1.9.0
@@ -95,12 +90,11 @@ set(CONAN_EXTRA_REQUIRES
 
 set(CONAN_EXTRA_OPTIONS
     ${CONAN_EXTRA_OPTIONS}
-    bzip2:build_executable=False
     boost:system_no_deprecated=True
     boost:asio_no_deprecated=True
     boost:filesystem_no_deprecated=True
     boost:zlib=True
-    boost:bzip2=True
+    boost:bzip2=False
     zlib:minizip=False)
 
 set(CONAN_EXTRA_SETTINGS ${CONAN_EXTRA_SETTINGS} compiler.cppstd=17 compiler.libcxx=libstdc++11)
@@ -111,6 +105,12 @@ endif()
 
 include(cmake/Conan.cmake)
 run_conan()
+
+# import external dependencies
+add_subdirectory(external/libBigWig-0.4.6)
+if(ENABLE_XOSHIRO)
+  add_subdirectory(external/Xoshiro-cpp-1.1)
+endif()
 
 if(ENABLE_TESTING)
   enable_testing()

@@ -1,36 +1,3 @@
-include(ExternalProject)
-include(CheckLibraryExists)
-find_program(MAKE_EXE NAMES gmake nmake make)
-find_program(SED_EXE NAMES sed)
-
-ExternalProject_Add(
-  libBigWig
-  GIT_REPOSITORY https://github.com/dpryan79/libBigWig.git
-  GIT_TAG 3a756fad0c75b2c748667481f16b200331b0a8bb
-  CONFIGURE_COMMAND cp "${CMAKE_CURRENT_SOURCE_DIR}/CMakeLists_libBigWig.txt" "<SOURCE_DIR>/CMakeLists.txt"
-  COMMAND ${CMAKE_COMMAND} <SOURCE_DIR> -Wno-dev
-  BUILD_BYPRODUCTS ${BINARY_DIR}/libBigWig.so ${BINARY_DIR}/libBigWig.a
-  # BUILD_COMMAND ${CMAKE_COMMAND} <SOURCE_DIR> -Wno-dev
-  INSTALL_COMMAND ""
-  # PATCH_COMMAND ${SED_EXE} -i "s/echo \"YES\"\)$/echo \"NO\")/" "/Makefile" BUILD_IN_SOURCE ON BUILD_COMMAND
-  # ${MAKE_EXE} lib-static INSTALL_COMMAND "")
-)
-
-ExternalProject_Get_Property(libBigWig BINARY_DIR)
-set(LIB_BIGWIG_ROOT ${BINARY_DIR})
-unset(BINARY_DIR)
-
-if(BUILD_SHARED_LIBS) # Generator expr do not work very well here
-  add_library(libBigWig_lib SHARED IMPORTED)
-  set_target_properties(libBigWig_lib PROPERTIES IMPORTED_LOCATION ${LIB_BIGWIG_ROOT}/libBigWig.so)
-else()
-  add_library(libBigWig_lib STATIC IMPORTED)
-  set_target_properties(libBigWig_lib PROPERTIES IMPORTED_LOCATION ${LIB_BIGWIG_ROOT}/libBigWig.a)
-endif()
-
-add_dependencies(libBigWig_lib libBigWig)
-target_include_directories(libBigWig_lib INTERFACE ${LIB_BIGWIG_ROOT}/../)
-
 add_library(libio INTERFACE)
 add_library(Modle::io ALIAS libio)
 target_sources(libio INTERFACE ${CMAKE_CURRENT_SOURCE_DIR}/bed_impl.hpp ${CMAKE_CURRENT_SOURCE_DIR}/chr_sizes_impl.hpp
@@ -45,7 +12,7 @@ target_link_libraries(
     project_warnings
     project_options
     Modle::cmatrix
-    libBigWig_lib
+    libBigWig::libBigWig
     CONAN_PKG::abseil
     CONAN_PKG::boost
     CONAN_PKG::fmt
