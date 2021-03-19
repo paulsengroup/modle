@@ -50,35 +50,12 @@ include(cmake/StaticAnalyzers.cmake)
 
 option(BUILD_SHARED_LIBS "Enable compilation of shared libraries" OFF)
 option(ENABLE_TESTING "Enable Test Builds" ON)
-
-# Very basic PCH example
 option(ENABLE_PCH "Enable Precompiled Headers" OFF)
+
 if(ENABLE_PCH)
-  # This sets a global PCH parameter, each project will build its own PCH, which is a good idea if any #define's change
-  #
-  # consider breaking this out per project as necessary
-  if(${CMAKE_VERSION} VERSION_GREATER_EQUAL "3.16.0")
-    target_precompile_headers(
-      project_options
-      INTERFACE
-      <algorithm>
-      <atomic>
-      <cassert>
-      <cmath>
-      <cstdint>
-      <filesystem>
-      <mutex>
-      <numeric>
-      <random>
-      <thread>
-      <type_traits>
-      <stdexcept>
-      <string>
-      <string_view>
-      <utility>
-      <vector>)
-  else()
+  if(${CMAKE_VERSION} VERSION_LESS "3.16.0")
     message(WARNING "CMake 3.16 or newer is required to enable precompiled headers. Ignoring -DENABLE_PCH.")
+    set(ENABLE_PCH OFF)
   endif()
 endif()
 

@@ -57,10 +57,26 @@ target_link_libraries(
 
 target_compile_definitions(libio INTERFACE -DNOCURL)
 
-if(ENABLE_PCH AND ${CMAKE_VERSION} VERSION_GREATER_EQUAL "3.16.0")
+if(ENABLE_PCH)
   target_precompile_headers(
     libio
     INTERFACE
+    <algorithm>
+    <cassert>
+    <cstddef>
+    <cstdint>
+    <filesystem>
+    <fstream>
+    <limits>
+    <memory>
+    <stdexcept>
+    <string>
+    <string_view>
+    <vector>
+    <utility>
+    <absl/container/flat_hash_map.h>
+    <fmt/format.h>
+    <H5Cpp.h>
     [["modle/bed.hpp"]]
     [["modle/bigwig.hpp"]]
     [["modle/chr_sizes.hpp"]]

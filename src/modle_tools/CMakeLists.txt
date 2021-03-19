@@ -20,10 +20,23 @@ target_link_libraries(
 
 target_include_directories(modle_tools PRIVATE include)
 
-if(ENABLE_PCH AND ${CMAKE_VERSION} VERSION_GREATER_EQUAL "3.16.0")
+if(ENABLE_PCH)
   target_precompile_headers(
     modle_tools
     PRIVATE
+    <algorithm>
+    <cassert>
+    <cstddef>
+    <cstdint>
+    <filesystem>
+    <stdexcept>
+    <string>
+    <string_view>
+    <utility>
+    <vector>
+    <absl/container/flat_hash_set.h>
+    <absl/types/span.h>
+    <fmt/format.h>
     [["modle_tools/config.hpp"]]
     [["modle_tools/eval.hpp"]]
     [["modle_tools/tools.hpp"]]

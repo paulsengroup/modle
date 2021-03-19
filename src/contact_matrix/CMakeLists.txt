@@ -14,8 +14,15 @@ target_link_libraries(
     $<$<AND:$<CXX_COMPILER_ID:Clang>,$<CXX_COMPILER_ID:AppleClang>,$<VERSION_LESS_EQUAL:$<CXX_COMPILER_VERSION>,9.0.0>>:-lc++fs>
     $<$<AND:$<CXX_COMPILER_ID:GNU>,$<VERSION_LESS_EQUAL:$<CXX_COMPILER_VERSION>,9.1.0>>:-lstdc++fs>)
 
-if(ENABLE_PCH AND ${CMAKE_VERSION} VERSION_GREATER_EQUAL "3.16.0")
-  target_precompile_headers(cmatrix INTERFACE [["modle/contacts.hpp"]])
+if(ENABLE_PCH)
+  target_precompile_headers(
+    cmatrix
+    INTERFACE
+    <cstdint>
+    <utility>
+    <vector>
+    <boost/dynamic_bitset/dynamic_bitset.hpp>
+    [["modle/contacts.hpp"]])
 endif()
 
 if(ENABLE_TESTING)

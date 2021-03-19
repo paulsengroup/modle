@@ -16,6 +16,10 @@ target_link_libraries(
           Modle::io_test
           Modle::libmodle_test)
 
+if(ENABLE_PCH)
+  target_precompile_headers(catch_main INTERFACE <catch2/catch.hpp>)
+endif()
+
 file(MAKE_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/Testing/)
 
 # automatically discover tests that are defined in catch based test files you can modify the unittests. TEST_PREFIX to
