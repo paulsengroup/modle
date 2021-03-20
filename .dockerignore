@@ -3,8 +3,14 @@
 
 # Allowed files and directory
 !cmake/**
-!external/Xoshiro-cpp/**
+!external/libBigWig-**
+!external/Xoshiro-cpp-**
 !src/**
 !tools/**
+!test/CMakeLists.txt
+!test/catch_main.cpp
+!test/data/unit_tests/*.bed?
+!test/data/unit_tests/symm_matrix_200_10.tsv
+!test/data/unit_tests/*.cool
 !CMakeLists.txt
 !LICENSE
