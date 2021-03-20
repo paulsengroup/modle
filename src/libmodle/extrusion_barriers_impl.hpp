@@ -7,7 +7,7 @@
 #include "modle/common.hpp"  // for Bp, Direction
 
 namespace modle {
-ExtrusionBarrier::ExtrusionBarrier(Bp pos, double prob_of_block, dna::Direction motif_direction)
+ExtrusionBarrier::ExtrusionBarrier(bp_t pos, double prob_of_block, dna::Direction motif_direction)
     : _pos(pos),
       _prob_of_block(prob_of_block),
       _blocking_direction(motif_direction == dna::Direction::fwd ? dna::Direction::rev
@@ -16,7 +16,7 @@ ExtrusionBarrier::ExtrusionBarrier(Bp pos, double prob_of_block, dna::Direction 
   assert(motif_direction == dna::Direction::fwd || motif_direction == dna::Direction::rev);
 }
 
-ExtrusionBarrier::ExtrusionBarrier(Bp pos, double prob_of_block, char motif_direction)
+ExtrusionBarrier::ExtrusionBarrier(bp_t pos, double prob_of_block, char motif_direction)
     : _pos(pos),
       _prob_of_block(prob_of_block),
       _blocking_direction(motif_direction == '+' ? dna::Direction::rev : dna::Direction::fwd) {
@@ -24,7 +24,7 @@ ExtrusionBarrier::ExtrusionBarrier(Bp pos, double prob_of_block, char motif_dire
   assert(motif_direction == '+' || motif_direction == '-');
 }
 
-Bp ExtrusionBarrier::pos() const { return this->_pos; }
+bp_t ExtrusionBarrier::pos() const { return this->_pos; }
 double ExtrusionBarrier::pblock() const { return this->_prob_of_block; }
 dna::Direction ExtrusionBarrier::blocking_direction() const { return this->_blocking_direction; }
 

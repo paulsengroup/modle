@@ -64,9 +64,11 @@ inline void check_lef_bar_collisions_wrapper(
 
   std::vector<std::size_t> fwd_collision_counter_buff(nlefs, 0);
   std::vector<std::size_t> rev_collision_counter_buff(nlefs, 0);
+  std::vector<bp_t> rev_moves(nlefs, c.rev_extrusion_speed);
+  std::vector<bp_t> fwd_moves(nlefs, c.fwd_extrusion_speed);
 
   modle::Simulation(c, false).test_check_lef_bar_collisions(
-      lefs, rev_lef_rank_buff, fwd_lef_rank_buff, barriers,
+      lefs, rev_lef_rank_buff, fwd_lef_rank_buff, rev_moves, fwd_moves, barriers,
       absl::MakeSpan(rev_collision_counter_buff), absl::MakeSpan(fwd_collision_counter_buff));
 
   // fmt::print(stderr, "rev_collisions={}\n", absl::StrJoin(rev_collision_counter_buff, ", "));
@@ -103,11 +105,14 @@ inline void apply_lef_bar_stalls_wrapper(
 
 TEST_CASE("Detect LEF-LEF collision simple 001", "[simulation][short]") {
   modle::Config c;
-  c.bin_size = 5;
+  c.rev_extrusion_speed = 3;      // NOLINT
+  c.rev_extrusion_speed_std = 0;  // NOLINT
+  c.fwd_extrusion_speed = 2;      // NOLINT
+  c.fwd_extrusion_speed_std = 0;  // NOLINT
   const std::size_t nlefs = 4;
 
-  std::vector<Bp> fwd_lef_rank_buff{0, 1, 2, 3};
-  std::vector<Bp> rev_lef_rank_buff{0, 1, 2, 3};
+  std::vector<bp_t> fwd_lef_rank_buff{0, 1, 2, 3};
+  std::vector<bp_t> rev_lef_rank_buff{0, 1, 2, 3};
 
   // clang-format off
   std::vector<Lef> lefs{
@@ -126,10 +131,12 @@ TEST_CASE("Detect LEF-LEF collision simple 001", "[simulation][short]") {
   // clang-format on
   std::vector<std::size_t> fwd_collision_counter_buff(nlefs, 0);
   std::vector<std::size_t> rev_collision_counter_buff(nlefs, 0);
+  std::vector<bp_t> rev_moves(nlefs, c.rev_extrusion_speed);
+  std::vector<bp_t> fwd_moves(nlefs, c.fwd_extrusion_speed);
 
   modle::Simulation(c, false).test_check_lef_lef_collisions(
-      lefs, rev_lef_rank_buff, fwd_lef_rank_buff, absl::MakeSpan(rev_collision_counter_buff),
-      absl::MakeSpan(fwd_collision_counter_buff));
+      lefs, rev_lef_rank_buff, fwd_lef_rank_buff, rev_moves, fwd_moves,
+      absl::MakeSpan(rev_collision_counter_buff), absl::MakeSpan(fwd_collision_counter_buff));
 
   for (auto i = 0UL; i < lefs.size(); ++i) {
     CHECK(rev_collision_counter_buff[i] == expected_collisions_rev[i]);
@@ -139,11 +146,14 @@ TEST_CASE("Detect LEF-LEF collision simple 001", "[simulation][short]") {
 
 TEST_CASE("Detect LEF-LEF collision simple 002", "[simulation][short]") {
   modle::Config c;
-  c.bin_size = 5;  // NOLINT
+  c.rev_extrusion_speed = 3;      // NOLINT
+  c.rev_extrusion_speed_std = 0;  // NOLINT
+  c.fwd_extrusion_speed = 2;      // NOLINT
+  c.fwd_extrusion_speed_std = 0;  // NOLINT
   const std::size_t nlefs = 4;
 
-  std::vector<Bp> fwd_lef_rank_buff{0, 1, 2, 3};
-  std::vector<Bp> rev_lef_rank_buff{0, 1, 2, 3};
+  std::vector<bp_t> fwd_lef_rank_buff{0, 1, 2, 3};
+  std::vector<bp_t> rev_lef_rank_buff{0, 1, 2, 3};
 
   // clang-format off
   std::vector<Lef> lefs{ // Lef{pos, lifetime, rank}
@@ -162,10 +172,12 @@ TEST_CASE("Detect LEF-LEF collision simple 002", "[simulation][short]") {
   // clang-format on
   std::vector<std::size_t> fwd_collision_counter_buff(nlefs, 0);
   std::vector<std::size_t> rev_collision_counter_buff(nlefs, 0);
+  std::vector<bp_t> fwd_moves(nlefs, c.fwd_extrusion_speed);
+  std::vector<bp_t> rev_moves(nlefs, c.rev_extrusion_speed);
 
   modle::Simulation(c, false).test_check_lef_lef_collisions(
-      lefs, rev_lef_rank_buff, fwd_lef_rank_buff, absl::MakeSpan(rev_collision_counter_buff),
-      absl::MakeSpan(fwd_collision_counter_buff));
+      lefs, rev_lef_rank_buff, fwd_lef_rank_buff, rev_moves, fwd_moves,
+      absl::MakeSpan(rev_collision_counter_buff), absl::MakeSpan(fwd_collision_counter_buff));
 
   for (auto i = 0UL; i < lefs.size(); ++i) {
     CHECK(rev_collision_counter_buff[i] == expected_collisions_rev[i]);
@@ -179,8 +191,8 @@ TEST_CASE("Apply LEF-LEF stalls simple 001", "[simulation][short]") {
   c.probability_of_extrusion_unit_bypass = 0.05;  // NOLINT
   const std::size_t nlefs = 4;
 
-  std::vector<Bp> fwd_lef_rank_buff{0, 1, 2, 3};
-  std::vector<Bp> rev_lef_rank_buff{0, 1, 2, 3};
+  std::vector<bp_t> fwd_lef_rank_buff{0, 1, 2, 3};
+  std::vector<bp_t> rev_lef_rank_buff{0, 1, 2, 3};
 
   // clang-format off
   std::vector<Lef> lefs{
@@ -207,8 +219,8 @@ TEST_CASE("Apply LEF-LEF stalls simple 002", "[simulation][short]") {
   c.probability_of_extrusion_unit_bypass = 0.05;
   const std::size_t nlefs = 4;
 
-  std::vector<Bp> fwd_lef_rank_buff{0, 1, 2, 3};
-  std::vector<Bp> rev_lef_rank_buff{0, 1, 2, 3};
+  std::vector<bp_t> fwd_lef_rank_buff{0, 1, 2, 3};
+  std::vector<bp_t> rev_lef_rank_buff{0, 1, 2, 3};
 
   // clang-format off
   std::vector<Lef> lefs{
@@ -231,11 +243,14 @@ TEST_CASE("Apply LEF-LEF stalls simple 002", "[simulation][short]") {
 
 TEST_CASE("Detect LEF-BAR collisions simple 001", "[simulation][short]") {
   modle::Config c;
-  c.bin_size = 2;
+  c.rev_extrusion_speed = 1;      // NOLINT
+  c.rev_extrusion_speed_std = 0;  // NOLINT
+  c.fwd_extrusion_speed = 1;      // NOLINT
+  c.fwd_extrusion_speed_std = 0;  // NOLINT
   const std::size_t nlefs = 3;
 
-  std::vector<Bp> fwd_lef_rank_buff{0, 1, 2};
-  std::vector<Bp> rev_lef_rank_buff{0, 1, 2};
+  std::vector<bp_t> fwd_lef_rank_buff{0, 1, 2};
+  std::vector<bp_t> rev_lef_rank_buff{0, 1, 2};
 
   // clang-format off
   std::vector<Lef> lefs{
@@ -269,8 +284,8 @@ TEST_CASE("Detect LEF-BAR collisions simple 002", "[simulation][short]") {
   c.bin_size = 2;
   const std::size_t nlefs = 3;
 
-  std::vector<Bp> fwd_lef_rank_buff{0, 1, 2};
-  std::vector<Bp> rev_lef_rank_buff{0, 1, 2};
+  std::vector<bp_t> fwd_lef_rank_buff{0, 1, 2};
+  std::vector<bp_t> rev_lef_rank_buff{0, 1, 2};
 
   // clang-format off
   std::vector<Lef> lefs{

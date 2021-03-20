@@ -35,17 +35,17 @@ class Chromosome {
   inline void add_extrusion_barrier(bed::BED barrier);
 
   [[nodiscard]] inline std::string_view name() const;
-  [[nodiscard]] inline Bp start_pos() const;
-  [[nodiscard]] inline Bp end_pos() const;
-  [[nodiscard]] inline Bp size() const;
-  [[nodiscard]] inline Bp simulated_size() const;
+  [[nodiscard]] inline bp_t start_pos() const;
+  [[nodiscard]] inline bp_t end_pos() const;
+  [[nodiscard]] inline bp_t size() const;
+  [[nodiscard]] inline bp_t simulated_size() const;
   [[nodiscard]] inline bool ok() const;
   [[nodiscard]] inline std::size_t nbarriers() const;
   [[nodiscard]] inline const absl::btree_set<bed::BED>& get_barriers() const;
   template <typename I>
-  inline void increment_contacts(Bp pos1, Bp pos2, Bp bin_size, I n = 1);
-  inline void increment_contacts(Bp pos1, Bp pos2, Bp bin_size);
-  inline void allocate_contacts(Bp bin_size, Bp diagonal_width);
+  inline void increment_contacts(bp_t pos1, bp_t pos2, bp_t bin_size, I n = 1);
+  inline void increment_contacts(bp_t pos1, bp_t pos2, bp_t bin_size);
+  inline void allocate_contacts(bp_t bin_size, bp_t diagonal_width);
   inline void deallocate_contacts();
   [[nodiscard]] inline const ContactMatrix<Contacts>& contacts() const;
 

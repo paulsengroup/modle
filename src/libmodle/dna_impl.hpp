@@ -89,12 +89,12 @@ void Chromosome::add_extrusion_barrier(bed::BED &&barrier) { this->_barriers.emp
 
 std::string_view Chromosome::name() const { return this->_name; }
 
-Bp Chromosome::start_pos() const { return this->_start; }
+bp_t Chromosome::start_pos() const { return this->_start; }
 
-Bp Chromosome::end_pos() const { return this->_end; }
+bp_t Chromosome::end_pos() const { return this->_end; }
 
-Bp Chromosome::size() const { return this->_size; }
-Bp Chromosome::simulated_size() const { return this->_end - this->_start; }
+bp_t Chromosome::size() const { return this->_size; }
+bp_t Chromosome::simulated_size() const { return this->_end - this->_start; }
 bool Chromosome::ok() const { return !this->_barriers.empty(); }
 
 std::size_t Chromosome::nbarriers() const { return static_cast<size_t>(this->_barriers.size()); }
@@ -102,17 +102,17 @@ std::size_t Chromosome::nbarriers() const { return static_cast<size_t>(this->_ba
 const absl::btree_set<bed::BED> &Chromosome::get_barriers() const { return this->_barriers; }
 
 template <typename I>
-void Chromosome::increment_contacts(Bp pos1, Bp pos2, Bp bin_size, I n) {
+void Chromosome::increment_contacts(bp_t pos1, bp_t pos2, bp_t bin_size, I n) {
   static_assert(std::is_integral_v<I>, "n should have an integral type.");
   assert(this->_contacts);
   this->_contacts->add((pos1 - this->_start) / bin_size, (pos2 - this->_start) / bin_size, n);
 }
 
-void Chromosome::increment_contacts(Bp pos1, Bp pos2, Bp bin_size) {
+void Chromosome::increment_contacts(bp_t pos1, bp_t pos2, bp_t bin_size) {
   this->_contacts->increment((pos1 - this->_start) / bin_size, (pos2 - this->_start) / bin_size);
 }
 
-void Chromosome::allocate_contacts(Bp bin_size, Bp diagonal_width) {
+void Chromosome::allocate_contacts(bp_t bin_size, bp_t diagonal_width) {
   const auto ncols = (this->simulated_size() / bin_size) + (this->simulated_size() % bin_size != 0);
   const auto nrows =
       std::min(ncols, (diagonal_width / bin_size) + (diagonal_width % bin_size != 0));

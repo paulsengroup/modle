@@ -47,10 +47,11 @@ class Simulation : Config {
   [[nodiscard]] inline std::size_t simulated_size() const;
 
   using Genome = absl::btree_set<Chromosome, Chromosome::Comparator>;
-  using lef_bar_stall_generator_t = std::geometric_distribution<Bp>;
-  using lef_lef_stall_generator_t = std::geometric_distribution<Bp>;
-  using lef_lifetime_generator_t = std::geometric_distribution<Bp>;
-  using chrom_pos_generator_t = std::uniform_int_distribution<Bp>;
+  using lef_bar_stall_generator_t = std::geometric_distribution<bp_t>;
+  using lef_lef_stall_generator_t = std::geometric_distribution<bp_t>;
+  using lef_lifetime_generator_t = std::geometric_distribution<bp_t>;
+  using lef_move_generator_t = std::normal_distribution<double>;
+  using chrom_pos_generator_t = std::uniform_int_distribution<bp_t>;
   using collision_t = uint_fast16_t;
   static constexpr auto NO_COLLISION = std::numeric_limits<collision_t>::max();
 
@@ -79,35 +80,38 @@ class Simulation : Config {
       const std::filesystem::path& path_to_chrom_subranges, bool keep_all_chroms);
   [[nodiscard]] inline std::vector<ExtrusionBarrier> allocate_barriers(const Chromosome* chrom);
 
-  inline void simulate_extrusion_kernel(Chromosome* chrom, std::size_t cell_id,
-                                        std::size_t n_target_epochs, std::vector<Lef> lef_buff,
-                                        absl::Span<const ExtrusionBarrier> extr_barrier_buff,
-                                        absl::Span<std::size_t> rev_lef_rank_buff,
-                                        absl::Span<std::size_t> fwd_lef_rank_buff,
-                                        boost::dynamic_bitset<>& mask,
-                                        absl::Span<collision_t> rev_lef_collision_buff,
-                                        absl::Span<collision_t> fwd_lef_collision_buff);
+  inline void simulate_extrusion_kernel(
+      Chromosome* chrom, std::size_t cell_id, std::size_t n_target_epochs,
+      std::vector<Lef> lef_buff, const absl::Span<const ExtrusionBarrier> extr_barrier_buff,
+      absl::Span<std::size_t> rev_lef_rank_buff, absl::Span<std::size_t> fwd_lef_rank_buff,
+      boost::dynamic_bitset<>& mask, absl::Span<collision_t> rev_lef_collision_buff,
+      absl::Span<collision_t> fwd_lef_collision_buff, absl::Span<bp_t> rev_moves_buff,
+      absl::Span<bp_t> fwd_moves_buff);
   template <typename MaskT>
   inline void bind_lefs(const Chromosome* chrom, absl::Span<Lef> lefs,
-                        absl::Span<std::size_t> rev_lef_rank_buff,
-                        absl::Span<std::size_t> fwd_lef_rank_buff, modle::PRNG& rand_eng,
-                        MaskT& mask);
+                        absl::Span<std::size_t> rev_lef_ranks,
+                        absl::Span<std::size_t> fwd_lef_ranks, modle::PRNG& rand_eng, MaskT& mask);
 
-  inline void bind_all_lefs(const Chromosome* chrom, absl::Span<Lef> lefs,
-                            absl::Span<std::size_t> rev_lef_rank_buff,
-                            absl::Span<std::size_t> fwd_lef_rank_buff, PRNG& rand_eng);
+  inline void generate_moves(const Chromosome* chrom, absl::Span<const Lef> lefs,
+                             absl::Span<const std::size_t> rev_lef_ranks,
+                             absl::Span<const std::size_t> fwd_lef_ranks,
+                             absl::Span<bp_t> rev_moves, absl::Span<bp_t> fwd_moves,
+                             modle::PRNG& rand_eng);
 
   inline static void rank_lefs(absl::Span<Lef> lefs, absl::Span<std::size_t> rev_lef_rank_buff,
                                absl::Span<std::size_t> fwd_lef_rank_buff,
                                bool init_buffers = false);
 
-  inline void extrude(const Chromosome* chrom, absl::Span<Lef> lefs);
+  inline void extrude(const Chromosome* chrom, absl::Span<Lef> lefs,
+                      absl::Span<const bp_t> rev_moves, absl::Span<const bp_t> fwd_moves);
 
   // Loop over lefs and identify colliding extr. units (i.e. units that travel in opposite
   // direction and that are within <p>dist_threshold</p> bp from each other
   inline void check_lef_lef_collisions(absl::Span<const Lef> lefs,
                                        absl::Span<const std::size_t> rev_lef_rank_buff,
                                        absl::Span<const std::size_t> fwd_lef_rank_buff,
+                                       absl::Span<const bp_t> rev_move_buff,
+                                       absl::Span<const bp_t> fwd_move_buff,
                                        absl::Span<collision_t> rev_collision_buff,
                                        absl::Span<collision_t> fwd_collision_buff);
 
@@ -117,12 +121,11 @@ class Simulation : Config {
                                    absl::Span<const std::size_t> rev_lef_rank_buff,
                                    absl::Span<const std::size_t> fwd_lef_rank_buff, PRNG& rand_eng);
 
-  inline void check_lef_bar_collisions(absl::Span<const Lef> lefs,
-                                       absl::Span<const std::size_t> rev_lef_rank_buff,
-                                       absl::Span<const std::size_t> fwd_lef_rank_buff,
-                                       absl::Span<const ExtrusionBarrier> extr_barriers,
-                                       absl::Span<collision_t> rev_collision_buff,
-                                       absl::Span<collision_t> fwd_collision_buff);
+  inline void check_lef_bar_collisions(
+      absl::Span<const Lef> lefs, absl::Span<const std::size_t> rev_lef_rank_buff,
+      absl::Span<const std::size_t> fwd_lef_rank_buff, absl::Span<const bp_t> rev_move_buff,
+      absl::Span<const bp_t> fwd_move_buff, absl::Span<const ExtrusionBarrier> extr_barriers,
+      absl::Span<collision_t> rev_collision_buff, absl::Span<collision_t> fwd_collision_buff);
 
   inline void apply_lef_bar_stalls(absl::Span<Lef> lefs,
                                    absl::Span<const collision_t> rev_collision_buff,
@@ -140,10 +143,12 @@ class Simulation : Config {
   inline void test_check_lef_lef_collisions(absl::Span<const Lef> lefs,
                                             absl::Span<const std::size_t> rev_lef_rank_buff,
                                             absl::Span<const std::size_t> fwd_lef_rank_buff,
+                                            absl::Span<const bp_t> rev_move_buff,
+                                            absl::Span<const bp_t> fwd_move_buff,
                                             absl::Span<collision_t> rev_collision_buff,
                                             absl::Span<collision_t> fwd_collision_buff) {
-    this->check_lef_lef_collisions(lefs, rev_lef_rank_buff, fwd_lef_rank_buff, rev_collision_buff,
-                                   fwd_collision_buff);
+    this->check_lef_lef_collisions(lefs, rev_lef_rank_buff, fwd_lef_rank_buff, rev_move_buff,
+                                   fwd_move_buff, rev_collision_buff, fwd_collision_buff);
   }
 
   inline void test_apply_lef_lef_stalls(absl::Span<Lef> lefs,
@@ -156,14 +161,14 @@ class Simulation : Config {
                                fwd_lef_rank_buff, rand_eng);
   }
 
-  inline void test_check_lef_bar_collisions(absl::Span<const Lef> lefs,
-                                            absl::Span<const std::size_t> rev_lef_rank_buff,
-                                            absl::Span<const std::size_t> fwd_lef_rank_buff,
-                                            absl::Span<const ExtrusionBarrier> extr_barriers,
-                                            absl::Span<collision_t> rev_collision_buff,
-                                            absl::Span<collision_t> fwd_collision_buff) {
-    this->check_lef_bar_collisions(lefs, rev_lef_rank_buff, fwd_lef_rank_buff, extr_barriers,
-                                   rev_collision_buff, fwd_collision_buff);
+  inline void test_check_lef_bar_collisions(
+      absl::Span<const Lef> lefs, absl::Span<const std::size_t> rev_lef_rank_buff,
+      absl::Span<const std::size_t> fwd_lef_rank_buff, absl::Span<const bp_t> rev_move_buff,
+      absl::Span<const bp_t> fwd_move_buff, absl::Span<const ExtrusionBarrier> extr_barriers,
+      absl::Span<collision_t> rev_collision_buff, absl::Span<collision_t> fwd_collision_buff) {
+    this->check_lef_bar_collisions(lefs, rev_lef_rank_buff, fwd_lef_rank_buff, rev_move_buff,
+                                   fwd_move_buff, extr_barriers, rev_collision_buff,
+                                   fwd_collision_buff);
   }
 
   inline void test_apply_lef_bar_stalls(absl::Span<Lef> lefs,

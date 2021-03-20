@@ -43,18 +43,18 @@ struct Config {
   bool write_contacts_with_noise{false};
 
   // General settings
-  Bp bin_size{1'000};  // NOLINT(readability-magic-numbers, cppcoreguidelines-avoid-magic-numbers)
-  Bp fwd_extrusion_speed{static_cast<uint32_t>(std::round(static_cast<double>(bin_size) / 2.0))};
-  Bp rev_extrusion_speed{static_cast<uint32_t>(std::round(static_cast<double>(bin_size) / 2.0))};
+  bp_t bin_size{1'000};  // NOLINT(readability-magic-numbers, cppcoreguidelines-avoid-magic-numbers)
+  bp_t fwd_extrusion_speed{static_cast<uint32_t>(std::round(static_cast<double>(bin_size) / 2.0))};
+  bp_t rev_extrusion_speed{static_cast<uint32_t>(std::round(static_cast<double>(bin_size) / 2.0))};
   double fwd_extrusion_speed_std{0.0};
   double rev_extrusion_speed_std{fwd_extrusion_speed_std};
   std::size_t ncells{5'000};    // NOLINT(readability-magic-numbers, cppcoreguidelines-avoid-magic-numbers)
   std::size_t nthreads{std::thread::hardware_concurrency()};
-  Bp diagonal_width{3'000'000 /* 3 Mbp */};  // NOLINT(readability-magic-numbers, cppcoreguidelines-avoid-magic-numbers)
-  Bp simulation_iterations{200};      // NOLINT(readability-magic-numbers, cppcoreguidelines-avoid-magic-numbers)
+  bp_t diagonal_width{3'000'000 /* 3 Mbp */};  // NOLINT(readability-magic-numbers, cppcoreguidelines-avoid-magic-numbers)
+  bp_t simulation_iterations{200};      // NOLINT(readability-magic-numbers, cppcoreguidelines-avoid-magic-numbers)
   double target_contact_density{0.0};
   double number_of_lefs_per_mbp;
-  Bp average_lef_lifetime{100'000};  // NOLINT(readability-magic-numbers, cppcoreguidelines-avoid-magic-numbers)
+  bp_t average_lef_lifetime{100'000};  // NOLINT(readability-magic-numbers, cppcoreguidelines-avoid-magic-numbers)
   double hard_stall_multiplier{2.0};       // NOLINT(readability-magic-numbers, cppcoreguidelines-avoid-magic-numbers)
   double soft_stall_multiplier{0.5};       // NOLINT(readability-magic-numbers, cppcoreguidelines-avoid-magic-numbers)
   bool allow_lef_lifetime_extension{true};
@@ -72,7 +72,7 @@ struct Config {
   bool randomize_contact_sampling_interval{false};
   bool skip_output{false};
   double random_noise_mean{0};
-  Bp random_noise_std{7'500 /* 7.5 Kbp */}; // NOLINT(readability-magic-numbers, cppcoreguidelines-avoid-magic-numbers)
+  bp_t random_noise_std{7'500 /* 7.5 Kbp */}; // NOLINT(readability-magic-numbers, cppcoreguidelines-avoid-magic-numbers)
 
   int argc;
   char** argv;
