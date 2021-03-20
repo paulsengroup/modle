@@ -44,9 +44,9 @@ struct Config {
 
   // General settings
   bp_t bin_size{1'000};  // NOLINT(readability-magic-numbers, cppcoreguidelines-avoid-magic-numbers)
-  bp_t fwd_extrusion_speed{static_cast<uint32_t>(std::round(static_cast<double>(bin_size) / 2.0))};
-  bp_t rev_extrusion_speed{static_cast<uint32_t>(std::round(static_cast<double>(bin_size) / 2.0))};
-  double fwd_extrusion_speed_std{0.0};
+  bp_t fwd_extrusion_speed{std::numeric_limits<bp_t>::max()};
+  bp_t rev_extrusion_speed{std::numeric_limits<bp_t>::max()};
+  double fwd_extrusion_speed_std{0.05};
   double rev_extrusion_speed_std{fwd_extrusion_speed_std};
   std::size_t ncells{5'000};    // NOLINT(readability-magic-numbers, cppcoreguidelines-avoid-magic-numbers)
   std::size_t nthreads{std::thread::hardware_concurrency()};

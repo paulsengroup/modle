@@ -175,27 +175,25 @@ class Cli {
             "--fwd-extrusion-speed",
             this->_config.fwd_extrusion_speed,
             "Extrusion speed in forward direction (i.e. distance in bp traveled by a LEF in forward direction at each simulation iteration). Defaults to half of the distance specified through --bin-size")
-            ->check(CLI::NonNegativeNumber)
-            ->capture_default_str();
+            ->check(CLI::NonNegativeNumber);
 
     gen->add_option(
             "--rev-extrusion-speed",
             this->_config.rev_extrusion_speed,
             "Extrusion speed in reverse direction (i.e. distance in bp traveled by a LEF in reverse direction at each simulation iteration). Defaults to half of the distance specified through --bin-size")
-            ->check(CLI::NonNegativeNumber)
-            ->capture_default_str();
+            ->check(CLI::NonNegativeNumber);
 
     gen->add_option(
             "--fwd-extrusion-speed-std",
             this->_config.fwd_extrusion_speed_std,
-            "Standard deviation of the normal distribution used to sample the distance to advance a given LEF in forward direction at every iteration. When a number other than 0 is passed to this parameter, the distribution has mean equal to the speed specified through --fwd-extrusion-speed. Specifying a std equal to 0 will cause all LEFs to move exactly --fwd-extrusion-speed bp at every iteration")
+            "Standard deviation of the normal distribution used to sample the distance to advance a given LEF in forward direction at every iteration.\nWhen a number other than 0 is passed to this parameter, the distribution has mean equal to the speed specified through --fwd-extrusion-speed.\nSpecifying a std equal to 0 will cause all LEFs to move exactly --fwd-extrusion-speed bp at every iteration.\nWhen the specified std is less than 1, then it will be interpreted as a percentage (i.e. the actual std will be equal to pct * fwd LEF extr. speed")
             ->check(CLI::NonNegativeNumber)
             ->capture_default_str();
 
     gen->add_option(
             "--rev-extrusion-speed-std",
             this->_config.rev_extrusion_speed_std,
-            "Standard deviation of the normal distribution used to sample the distance to advance a given LEF in reverse direction at every iteration. When a number other than 0 is passed to this parameter, the distribution has mean equal to the speed specified through --rev-extrusion-speed. Specifying a std equal to 0 will cause all LEFs to move exactly --rev-extrusion-speed bp at every iteration")
+            "Standard deviation of the normal distribution used to sample the distance to advance a given LEF in reverse direction at every iteration.\nWhen a number other than 0 is passed to this parameter, the distribution has mean equal to the speed specified through --rev-extrusion-speed.\nSpecifying a std equal to 0 will cause all LEFs to move exactly --rev-extrusion-speed bp at every iteration.\nWhen the specified std is less than 1, then it will be interpreted as a percentage (i.e. the actual std will be equal to pct * rev LEF extr. speed")
             ->check(CLI::NonNegativeNumber)
             ->capture_default_str();
 
@@ -290,6 +288,7 @@ class Cli {
   [[nodiscard]] const Config& parse_arguments() {
     this->_cli.name(this->_exec_name);
     this->_cli.parse(this->_argc, this->_argv);
+    this->validate_and_transform_args();
     this->_config.argc = _argc;
     this->_config.argv = _argv;
     return this->_config;
@@ -357,6 +356,25 @@ class Cli {
   }
 
   [[nodiscard]] inline int exit(const CLI::ParseError& e) const { return this->_cli.exit(e); }
+
+ private:
+  inline void validate_and_transform_args() {
+    if (auto& speed = this->_config.rev_extrusion_speed;
+        speed == std::numeric_limits<bp_t>::max()) {
+      speed = static_cast<bp_t>(std::round(static_cast<double>(this->_config.bin_size) / 2.0));
+    }
+    if (auto& speed = this->_config.fwd_extrusion_speed;
+        speed == std::numeric_limits<bp_t>::max()) {
+      speed = static_cast<bp_t>(std::round(static_cast<double>(this->_config.bin_size) / 2.0));
+    }
+
+    if (auto& stddev = this->_config.fwd_extrusion_speed_std; stddev > 0 && stddev < 1) {
+      stddev *= static_cast<double>(this->_config.fwd_extrusion_speed);
+    }
+    if (auto& stddev = this->_config.rev_extrusion_speed_std; stddev > 0 && stddev < 1) {
+      stddev *= static_cast<double>(this->_config.rev_extrusion_speed);
+    }
+  }
 };
 
 }  // namespace modle
