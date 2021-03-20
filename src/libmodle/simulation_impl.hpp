@@ -590,8 +590,8 @@ void Simulation::bind_lefs(const Chromosome* const chrom, absl::Span<Lef> lefs,
                            absl::Span<std::size_t> fwd_lef_ranks, modle::PRNG& rand_eng,
                            MaskT& mask) {
   static_assert(std::is_same_v<boost::dynamic_bitset<>, MaskT> ||
-                    std::is_integral_v<std::decay_t<decltype(
-                        std::declval<MaskT&>().operator[](std::declval<std::size_t>()))>>,
+                    std::is_integral_v<std::decay_t<decltype(std::declval<MaskT&>().operator[](
+                        std::declval<std::size_t>()))>>,
                 "mask should be a vector of integral numbers or a boost::dynamic_bitset.");
 
   assert(lefs.size() <= mask.size() || mask.empty());
@@ -936,8 +936,19 @@ void Simulation::apply_lef_lef_stalls(absl::Span<Lef> lefs,
     while (collisions_fwd > 0 && collisions_rev > 0) {
       const auto nstalls =
           std::min({rng(rand_eng), lefs[rev_idx].lifetime, lefs[fwd_idx].lifetime});
-      lefs[fwd_idx].fwd_unit._nstalls_lef_lef += nstalls;
-      lefs[rev_idx].rev_unit._nstalls_lef_lef += nstalls;
+      auto& fwd_unit = lefs[fwd_idx].fwd_unit;
+      auto& rev_unit = lefs[rev_idx].rev_unit;
+      if (!fwd_unit.stalled() && !rev_unit.stalled()) {
+        const auto pos = (rev_unit.pos() + fwd_unit.pos()) / 2;
+        rev_unit._pos = pos;
+        fwd_unit._pos = pos;
+      } else if (fwd_unit.stalled()) {
+        rev_unit._pos = fwd_unit.pos();
+      } else if (rev_unit.stalled()) {
+        fwd_unit._pos = rev_unit.pos();
+      }
+      fwd_unit._nstalls_lef_lef += nstalls;
+      rev_unit._nstalls_lef_lef += nstalls;
       --collisions_fwd;
       --collisions_rev;
     }
@@ -1057,6 +1068,7 @@ void Simulation::apply_lef_bar_stalls(absl::Span<Lef> lefs,
         nstalls =
             static_cast<bp_t>(std::round(soft_stall_multiplier * static_cast<double>(nstalls)));
       }
+      lef.rev_unit._pos = barrier.pos();
       lef.rev_unit._nstalls_lef_bar = nstalls;
     }
 
@@ -1070,6 +1082,7 @@ void Simulation::apply_lef_bar_stalls(absl::Span<Lef> lefs,
         nstalls =
             static_cast<bp_t>(std::round(soft_stall_multiplier * static_cast<double>(nstalls)));
       }
+      lef.fwd_unit._pos = barrier.pos();
       lef.fwd_unit._nstalls_lef_bar = nstalls;
     }
 
@@ -1108,8 +1121,8 @@ void Simulation::register_contacts(Chromosome* chrom, absl::Span<const Lef> lefs
 template <typename MaskT>
 void Simulation::select_lefs_to_bind(absl::Span<const Lef> lefs, MaskT& mask) {
   static_assert(std::is_same_v<boost::dynamic_bitset<>, MaskT> ||
-                    std::is_integral_v<std::decay_t<decltype(
-                        std::declval<MaskT&>().operator[](std::declval<std::size_t>()))>>,
+                    std::is_integral_v<std::decay_t<decltype(std::declval<MaskT&>().operator[](
+                        std::declval<std::size_t>()))>>,
                 "mask should be a vector of integral numbers or a boost::dynamic_bitset.");
   assert(lefs.size() <= mask.size());
   for (auto i = 0UL; i < lefs.size(); ++i) {
