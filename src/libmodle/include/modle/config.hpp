@@ -65,11 +65,10 @@ struct Config {
   double probability_of_lef_rebind{1.0};
   double probability_of_extrusion_unit_bypass{0.25};  // NOLINT(readability-magic-numbers, cppcoreguidelines-avoid-magic-numbers)
   double probability_of_extrusion_barrier_block{0};
-  uint32_t contact_sampling_interval{1000};  // NOLINT(readability-magic-numbers, cppcoreguidelines-avoid-magic-numbers)
+  double lef_fraction_contact_sampling{0.025};  // NOLINT(readability-magic-numbers, cppcoreguidelines-avoid-magic-numbers)
 
   // Misc
   bool exclude_chr_wo_extr_barriers{true};
-  bool randomize_contact_sampling_interval{false};
   bool skip_output{false};
   double random_noise_mean{0};
   bp_t random_noise_std{7'500 /* 7.5 Kbp */}; // NOLINT(readability-magic-numbers, cppcoreguidelines-avoid-magic-numbers)
@@ -101,8 +100,7 @@ struct Config {
      {"# of iterations", fmt::format(FMT_STRING("{}"), this->simulation_iterations != 0 ? "Disabled"sv : fmt::format("{}", this->simulation_iterations))},
      {"Target contact density", fmt::format(FMT_STRING("{}"), this->target_contact_density != 0 ? fmt::format("{}", this->target_contact_density) : "Disabled"sv)},
      {"Seed", fmt::format(FMT_STRING("{}"), this->seed)},
-     {"Randomize contact sampling interval", this->randomize_contact_sampling_interval ? "Yes" : "No"},
-     {"Contact sampling interval", fmt::format(FMT_STRING("{}"), this->contact_sampling_interval)}}},
+     {"Contact sampling interval", fmt::format(FMT_STRING("{}"), this->lef_fraction_contact_sampling)}}},
     {"LEF settings"sv,
     std::vector<cli_tokens>{
      {"# of LEFs per Mbp", fmt::format(FMT_STRING("{}"), this->number_of_lefs_per_mbp)},

@@ -86,7 +86,7 @@ class Simulation : Config {
       absl::Span<std::size_t> rev_lef_rank_buff, absl::Span<std::size_t> fwd_lef_rank_buff,
       boost::dynamic_bitset<>& mask, absl::Span<collision_t> rev_lef_collision_buff,
       absl::Span<collision_t> fwd_lef_collision_buff, absl::Span<bp_t> rev_moves_buff,
-      absl::Span<bp_t> fwd_moves_buff);
+      absl::Span<bp_t> fwd_moves_buff, absl::Span<std::size_t> lef_idx_buff);
   template <typename MaskT>
   inline void bind_lefs(const Chromosome* chrom, absl::Span<Lef> lefs,
                         absl::Span<std::size_t> rev_lef_ranks,
@@ -133,7 +133,7 @@ class Simulation : Config {
                                    absl::Span<const ExtrusionBarrier> extr_barriers,
                                    PRNG& rand_eng);
 
-  inline void register_contacts(Chromosome* chrom, absl::Span<const Lef> lefs);
+  inline void register_contacts(Chromosome* chrom, absl::Span<const Lef> lefs, absl::Span<const std::size_t> selected_lef_idx);
 
   template <typename MaskT>
   inline void select_lefs_to_bind(absl::Span<const Lef> lefs, MaskT& mask);

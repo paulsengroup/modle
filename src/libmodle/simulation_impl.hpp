@@ -170,8 +170,7 @@ std::vector<ExtrusionBarrier> Simulation::allocate_barriers(const Chromosome* co
   std::size_t barriers_skipped = 0;
   for (const auto& b : chrom->get_barriers()) {
     if (b.strand == '+' || b.strand == '-') {
-      const auto pos =
-          static_cast<bp_t>(std::round(static_cast<double>(b.chrom_start + b.chrom_end) / 2.0));
+      const auto pos = (b.chrom_start + b.chrom_end + 1) / 2;
       const auto pblock = b.score != 0 ? b.score : this->probability_of_extrusion_barrier_block;
       barriers.emplace_back(pos, pblock, b.strand);
     } else {
@@ -305,9 +304,9 @@ void Simulation::run() {
                                                       // This is to reduce contention when
                                                       // accessing the queue
 
-        // Buffers declared here are recycled by every simulation kernel launched from this thread
-        // Performance gain mostly come from reusing lef_buff. The impact of recycling the other
-        // buffers is barely noticeable
+        // Buffers declared here are recycled by every simulation kernel launched from this
+        // thread Performance gain mostly come from reusing lef_buff. The impact of recycling
+        // the other buffers is barely noticeable
         std::vector<Lef> lef_buff;
         std::vector<std::size_t> rev_lef_rank_buff;
         std::vector<std::size_t> fwd_lef_rank_buff;
@@ -316,6 +315,7 @@ void Simulation::run() {
         std::vector<collision_t> fwd_lef_collision_buff;
         std::vector<bp_t> rev_move_buff;
         std::vector<bp_t> fwd_move_buff;
+        std::vector<std::size_t> lef_idx_buff;
 
         while (true) {  // Try to dequeue a batch of tasks
           const auto avail_tasks = task_queue.wait_dequeue_bulk_timed(
@@ -340,6 +340,9 @@ void Simulation::run() {
             fwd_lef_collision_buff.resize(task.nlefs);
             rev_move_buff.resize(task.nlefs);
             fwd_move_buff.resize(task.nlefs);
+            lef_idx_buff.resize(static_cast<std::size_t>(
+                std::max(1.0, std::round(static_cast<double>(task.nlefs) *
+                                         this->lef_fraction_contact_sampling))));
 
             // Reset buffers
             std::for_each(lef_buff.begin(), lef_buff.end(), [](auto& lef) { lef.reset(); });
@@ -360,7 +363,8 @@ void Simulation::run() {
                 task.chrom, task.cell_id, task.nrounds, lef_buff, task.barriers,
                 absl::MakeSpan(rev_lef_rank_buff), absl::MakeSpan(fwd_lef_rank_buff), mask,
                 absl::MakeSpan(rev_lef_collision_buff), absl::MakeSpan(fwd_lef_collision_buff),
-                absl::MakeSpan(rev_move_buff), absl::MakeSpan(fwd_move_buff));
+                absl::MakeSpan(rev_move_buff), absl::MakeSpan(fwd_move_buff),
+                absl::MakeSpan(lef_idx_buff));
 
             // Update progress
             std::scoped_lock l1(progress_mutex);
@@ -450,11 +454,11 @@ void Simulation::run() {
 
     if (this->target_contact_density != 0) {  // Compute the number of simulation rounds required
       // to reach the target contact density
-      this->simulation_iterations = static_cast<std::size_t>(
-          std::max(1.0, std::round((this->target_contact_density *
-                                    static_cast<double>(this->contact_sampling_interval *
-                                                        chrom->contacts().npixels())) /
-                                   static_cast<double>(ncells * nlefs))));
+      this->simulation_iterations = static_cast<std::size_t>(std::max(
+          1.0,
+          std::round(
+              (this->target_contact_density * static_cast<double>(chrom->contacts().npixels())) /
+              (this->lef_fraction_contact_sampling * static_cast<double>(this->ncells * nlefs)))));
     }
 
     // Generate a batch of tasks for all the simulations involving the current chrom
@@ -481,7 +485,7 @@ void Simulation::simulate_extrusion_kernel(
     absl::Span<std::size_t> rev_lef_rank_buff, absl::Span<std::size_t> fwd_lef_rank_buff,
     boost::dynamic_bitset<>& mask, absl::Span<collision_t> rev_lef_collision_buff,
     absl::Span<collision_t> fwd_lef_collision_buff, absl::Span<bp_t> rev_moves_buff,
-    absl::Span<bp_t> fwd_moves_buff) {
+    absl::Span<bp_t> fwd_moves_buff, absl::Span<std::size_t> lef_idx_buff) {
   const auto seed_ = this->seed + std::hash<std::string_view>{}(chrom->name()) +
                      std::hash<std::size_t>{}(chrom->size()) + std::hash<std::size_t>{}(cell_id);
 #ifdef USE_XOSHIRO
@@ -493,22 +497,24 @@ void Simulation::simulate_extrusion_kernel(
 #endif
 
   // Generate the epoch at which each LEF is supposed to be initially loaded
-  std::vector<std::size_t> lef_initial_loading_epoch(lef_buff.size());
+  std::vector<std::size_t> lef_initial_loading_epoch(this->skip_burnin ? 0 : lef_buff.size());
 
-  // TODO Consider using a Poisson process instead of sampling from an uniform distribution
-  std::uniform_int_distribution<std::size_t> round_gen{
-      0, (4 * this->average_lef_lifetime) / this->bin_size};
-  std::generate(lef_initial_loading_epoch.begin(), lef_initial_loading_epoch.end(),
-                [&]() { return round_gen(rand_eng); });
+  if (!this->skip_burnin) {
+    // TODO Consider using a Poisson process instead of sampling from an uniform distribution
+    std::uniform_int_distribution<std::size_t> round_gen{
+        0, (4 * this->average_lef_lifetime) / this->bin_size};
+    std::generate(lef_initial_loading_epoch.begin(), lef_initial_loading_epoch.end(),
+                  [&]() { return round_gen(rand_eng); });
 
-  // Sort epochs in descending order
-  if (round_gen.max() > 2048) {
-    // Counting sort uses n + r space in memory, where r is the number of unique values in the
-    // range to be sorted. For this reason it is not a good idea to use it when the sampling
-    // interval is relatively large. Whether 2048 is a reasonable threshold has yet to be tested
-    cppsort::ska_sort(lef_initial_loading_epoch.rbegin(), lef_initial_loading_epoch.rend());
-  } else {
-    cppsort::counting_sort(lef_initial_loading_epoch.rbegin(), lef_initial_loading_epoch.rend());
+    // Sort epochs in descending order
+    if (round_gen.max() > 2048) {
+      // Counting sort uses n + r space in memory, where r is the number of unique values in the
+      // range to be sorted. For this reason it is not a good idea to use it when the sampling
+      // interval is relatively large. Whether 2048 is a reasonable threshold has yet to be tested
+      cppsort::ska_sort(lef_initial_loading_epoch.rbegin(), lef_initial_loading_epoch.rend());
+    } else {
+      cppsort::counting_sort(lef_initial_loading_epoch.rbegin(), lef_initial_loading_epoch.rend());
+    }
   }
 
   // Shift epochs so that the first epoch == 0
@@ -517,10 +523,8 @@ void Simulation::simulate_extrusion_kernel(
                   [&](auto& n) { n -= offset; });
   }
 
-  const auto n_burnin_epochs = lef_initial_loading_epoch.front();
+  const auto n_burnin_epochs = this->skip_burnin ? 0 : lef_initial_loading_epoch.front();
   n_target_epochs += n_burnin_epochs;
-
-  std::bernoulli_distribution sample_contacts{1.0 / this->contact_sampling_interval};
 
   // Declare the spans used by the burnin phase as well as the simulation itself
   auto lefs = absl::MakeSpan(lef_buff.data(), lef_buff.size());
@@ -531,15 +535,14 @@ void Simulation::simulate_extrusion_kernel(
   auto fwd_lef_collisions = absl::MakeSpan(fwd_lef_collision_buff);
   auto rev_moves = absl::MakeSpan(rev_moves_buff);
   auto fwd_moves = absl::MakeSpan(fwd_moves_buff);
+  auto lef_idx = absl::MakeSpan(lef_idx_buff);
 
   // Start the burnin phase (followed by the actual simulation)
   for (auto epoch = 0UL; epoch < n_target_epochs; ++epoch) {
-    const auto register_contacts =
-        epoch > n_burnin_epochs &&
-        (this->randomize_contact_sampling_interval ? sample_contacts(rand_eng)
-                                                   : epoch % this->contact_sampling_interval == 0);
-
     if (!lef_initial_loading_epoch.empty()) {  // Execute this branch only during the burnin phase
+      if (this->skip_burnin) {
+        lef_initial_loading_epoch.clear();
+      }
       while (!lef_initial_loading_epoch.empty() && lef_initial_loading_epoch.back() == epoch) {
         // Consume epochs for LEFs that are supposed to be loaded in the current epoch
         lef_initial_loading_epoch.pop_back();
@@ -576,8 +579,11 @@ void Simulation::simulate_extrusion_kernel(
     this->apply_lef_lef_stalls(lefs, rev_lef_collisions, fwd_lef_collisions, rev_lef_ranks,
                                fwd_lef_ranks, rand_eng);
 
-    if (register_contacts) {
-      this->register_contacts(chrom, lefs);
+    if (epoch > n_burnin_epochs) {
+      assert(fwd_lef_ranks.size() == lef_buff.size());
+      std::sample(fwd_lef_ranks.begin(), fwd_lef_ranks.end(), lef_idx.begin(), lef_idx.size(),
+                  rand_eng);
+      this->register_contacts(chrom, lefs, lef_idx);
     }
 
     this->extrude(chrom, lefs, rev_moves, fwd_moves);
@@ -809,14 +815,16 @@ void Simulation::check_lef_lef_collisions(absl::Span<const Lef> lefs,
   assert(lefs.size() == rev_lef_rank_buff.size());
   assert(lefs.size() == fwd_collision_buff.size());
   assert(lefs.size() == rev_collision_buff.size());
-  assert(std::is_sorted(fwd_lef_rank_buff.begin(), fwd_lef_rank_buff.end(),
-                        [&](const auto r1, const auto r2) {
-                          return lefs[r1].fwd_unit.pos() < lefs[r2].fwd_unit.pos();
-                        }));
-  assert(std::is_sorted(rev_lef_rank_buff.begin(), rev_lef_rank_buff.end(),
-                        [&](const auto r1, const auto r2) {
-                          return lefs[r1].rev_unit.pos() < lefs[r2].rev_unit.pos();
-                        }));
+  /*
+    assert(std::is_sorted(fwd_lef_rank_buff.begin(), fwd_lef_rank_buff.end(),
+                          [&](const auto r1, const auto r2) {
+                            return lefs[r1].fwd_unit.pos() < lefs[r2].fwd_unit.pos();
+                          }));
+    assert(std::is_sorted(rev_lef_rank_buff.begin(), rev_lef_rank_buff.end(),
+                          [&](const auto r1, const auto r2) {
+                            return lefs[r1].rev_unit.pos() < lefs[r2].rev_unit.pos();
+                          }));
+  */
 
   // Clear buffers
   std::fill(fwd_collision_buff.begin(), fwd_collision_buff.end(), 0);
@@ -890,14 +898,16 @@ void Simulation::apply_lef_lef_stalls(absl::Span<Lef> lefs,
   assert(lefs.size() == rev_lef_rank_buff.size());
   assert(lefs.size() == fwd_collision_buff.size());
   assert(lefs.size() == rev_collision_buff.size());
-  assert(std::is_sorted(fwd_lef_rank_buff.begin(), fwd_lef_rank_buff.end(),
-                        [&](const auto r1, const auto r2) {
-                          return lefs[r1].fwd_unit.pos() < lefs[r2].fwd_unit.pos();
-                        }));
-  assert(std::is_sorted(rev_lef_rank_buff.begin(), rev_lef_rank_buff.end(),
-                        [&](const auto r1, const auto r2) {
-                          return lefs[r1].rev_unit.pos() < lefs[r2].rev_unit.pos();
-                        }));
+  /*
+    assert(std::is_sorted(fwd_lef_rank_buff.begin(), fwd_lef_rank_buff.end(),
+                          [&](const auto r1, const auto r2) {
+                            return lefs[r1].fwd_unit.pos() < lefs[r2].fwd_unit.pos();
+                          }));
+    assert(std::is_sorted(rev_lef_rank_buff.begin(), rev_lef_rank_buff.end(),
+                          [&](const auto r1, const auto r2) {
+                            return lefs[r1].rev_unit.pos() < lefs[r2].rev_unit.pos();
+                          }));
+  */
   assert(std::accumulate(fwd_collision_buff.begin(), fwd_collision_buff.end(), 0UL) ==
          std::accumulate(rev_collision_buff.begin(), rev_collision_buff.end(), 0UL));
 
@@ -939,7 +949,7 @@ void Simulation::apply_lef_lef_stalls(absl::Span<Lef> lefs,
       auto& fwd_unit = lefs[fwd_idx].fwd_unit;
       auto& rev_unit = lefs[rev_idx].rev_unit;
       if (!fwd_unit.stalled() && !rev_unit.stalled()) {
-        const auto pos = (rev_unit.pos() + fwd_unit.pos()) / 2;
+        const auto pos = (rev_unit.pos() + fwd_unit.pos() + 1) / 2;
         rev_unit._pos = pos;
         fwd_unit._pos = pos;
       } else if (fwd_unit.stalled()) {
@@ -1068,6 +1078,7 @@ void Simulation::apply_lef_bar_stalls(absl::Span<Lef> lefs,
         nstalls =
             static_cast<bp_t>(std::round(soft_stall_multiplier * static_cast<double>(nstalls)));
       }
+      assert(lef.rev_unit._nstalls_lef_bar == 0);
       lef.rev_unit._pos = barrier.pos();
       lef.rev_unit._nstalls_lef_bar = nstalls;
     }
@@ -1082,6 +1093,7 @@ void Simulation::apply_lef_bar_stalls(absl::Span<Lef> lefs,
         nstalls =
             static_cast<bp_t>(std::round(soft_stall_multiplier * static_cast<double>(nstalls)));
       }
+      assert(lef.rev_unit._nstalls_lef_bar == 0);
       lef.fwd_unit._pos = barrier.pos();
       lef.fwd_unit._nstalls_lef_bar = nstalls;
     }
@@ -1107,9 +1119,13 @@ void Simulation::apply_lef_bar_stalls(absl::Span<Lef> lefs,
   }
 }
 
-void Simulation::register_contacts(Chromosome* chrom, absl::Span<const Lef> lefs) {
-  for (const auto& lef : lefs) {  // Register contacts at LEF sites (excluding LEFs that have one
-                                  // of their units at the beginning/end of a chromosome)
+void Simulation::register_contacts(Chromosome* chrom, absl::Span<const Lef> lefs,
+                                   absl::Span<const std::size_t> selected_lef_idx) {
+  // Register contacts for the selected LEFs (excluding LEFs that have one of their units at the
+  // beginning/end of a chromosome)
+  for (const auto i : selected_lef_idx) {
+    assert(i < lefs.size());
+    const auto& lef = lefs[i];
     if (lef.is_bound() && lef.rev_unit.pos() != chrom->start_pos() &&
         lef.rev_unit.pos() != chrom->end_pos() - 1 && lef.fwd_unit.pos() != chrom->start_pos() &&
         lef.fwd_unit.pos() != chrom->end_pos() - 1) {

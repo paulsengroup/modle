@@ -160,40 +160,40 @@ class Cli {
     gen->add_option(
             "--hard-stall-multiplier",
             this->_config.hard_stall_multiplier,
-            "Coefficient to control the increase in the stability of the LEF-DNA bind when a LEF is stalled in both direction by two extrusion barriers in convergent orientation. Setting this to 1 makes hard stalls strength identical to that of normal stalls")
+            "Coefficient to control the increase in the stability of the LEF-DNA bind when a LEF is stalled in both direction by two extrusion barriers in convergent orientation. Setting this to 1 makes hard stalls strength identical to that of normal stalls.")
             ->check(CLI::PositiveNumber)
             ->capture_default_str();
 
     gen->add_option(
             "--soft-stall-multiplier",
             this->_config.soft_stall_multiplier,
-            "Coefficient to control the increase in the stability of the LEF-DNA bind when a LEF is stalled by an extrusion barrier in the non-blocking orientation. Setting this to 1 makes soft stalls strength identical to that of normal stalls")
+            "Coefficient to control the increase in the stability of the LEF-DNA bind when a LEF is stalled by an extrusion barrier in the non-blocking orientation. Setting this to 1 makes soft stalls strength identical to that of normal stalls.")
             ->check(CLI::PositiveNumber)
             ->capture_default_str();
 
     gen->add_option(
             "--fwd-extrusion-speed",
             this->_config.fwd_extrusion_speed,
-            "Extrusion speed in forward direction (i.e. distance in bp traveled by a LEF in forward direction at each simulation iteration). Defaults to half of the distance specified through --bin-size")
+            "Extrusion speed in forward direction (i.e. distance in bp traveled by a LEF in forward direction at each simulation iteration). Defaults to half of the distance specified through --bin-size.")
             ->check(CLI::NonNegativeNumber);
 
     gen->add_option(
             "--rev-extrusion-speed",
             this->_config.rev_extrusion_speed,
-            "Extrusion speed in reverse direction (i.e. distance in bp traveled by a LEF in reverse direction at each simulation iteration). Defaults to half of the distance specified through --bin-size")
+            "Extrusion speed in reverse direction (i.e. distance in bp traveled by a LEF in reverse direction at each simulation iteration). Defaults to half of the distance specified through --bin-size.")
             ->check(CLI::NonNegativeNumber);
 
     gen->add_option(
             "--fwd-extrusion-speed-std",
             this->_config.fwd_extrusion_speed_std,
-            "Standard deviation of the normal distribution used to sample the distance to advance a given LEF in forward direction at every iteration.\nWhen a number other than 0 is passed to this parameter, the distribution has mean equal to the speed specified through --fwd-extrusion-speed.\nSpecifying a std equal to 0 will cause all LEFs to move exactly --fwd-extrusion-speed bp at every iteration.\nWhen the specified std is less than 1, then it will be interpreted as a percentage (i.e. the actual std will be equal to pct * fwd LEF extr. speed")
+            "Standard deviation of the normal distribution used to sample the distance to advance a given LEF in forward direction at every iteration.\nWhen a number other than 0 is passed to this parameter, the distribution has mean equal to the speed specified through --fwd-extrusion-speed.\nSpecifying a std equal to 0 will cause all LEFs to move exactly --fwd-extrusion-speed bp at every iteration.\nWhen the specified std is less than 1, then it will be interpreted as a percentage (i.e. the actual std will be equal to pct * fwd LEF extr. speed.")
             ->check(CLI::NonNegativeNumber)
             ->capture_default_str();
 
     gen->add_option(
             "--rev-extrusion-speed-std",
             this->_config.rev_extrusion_speed_std,
-            "Standard deviation of the normal distribution used to sample the distance to advance a given LEF in reverse direction at every iteration.\nWhen a number other than 0 is passed to this parameter, the distribution has mean equal to the speed specified through --rev-extrusion-speed.\nSpecifying a std equal to 0 will cause all LEFs to move exactly --rev-extrusion-speed bp at every iteration.\nWhen the specified std is less than 1, then it will be interpreted as a percentage (i.e. the actual std will be equal to pct * rev LEF extr. speed")
+            "Standard deviation of the normal distribution used to sample the distance to advance a given LEF in reverse direction at every iteration.\nWhen a number other than 0 is passed to this parameter, the distribution has mean equal to the speed specified through --rev-extrusion-speed.\nSpecifying a std equal to 0 will cause all LEFs to move exactly --rev-extrusion-speed bp at every iteration.\nWhen the specified std is less than 1, then it will be interpreted as a percentage (i.e. the actual std will be equal to pct * rev LEF extr. speed.")
             ->check(CLI::NonNegativeNumber)
             ->capture_default_str();
 
@@ -232,17 +232,10 @@ class Cli {
             ->capture_default_str();
 
     rand->add_option(
-            "--contact-sampling-interval",
-            this->_config.contact_sampling_interval,
-            "Number of simulation rounds between contact sampling. When specifying this is specified, contact sampling will be performed at constant intervals.")
-            ->check(CLI::PositiveNumber)
-            ->transform((remove_trailing_zeros_from_floats))
-            ->capture_default_str();
-
-    rand->add_flag(
-            "--randomize-contact-sampling-interval,!--uniform-contact-sampling-interval",
-            this->_config.randomize_contact_sampling_interval,
-            "Sample contacts using a bernoulli process with a probability of success of 1 / n, where n is the interval set through --contact-sampling-interval.")
+            "--lef-fraction-for-contact-sampling",
+            this->_config.lef_fraction_contact_sampling,
+            "Fraction of LEFs to use when sampling interactions at every iteration.")
+            ->check(CLI::Range(0.0, 1.0))
             ->capture_default_str();
 
     rand->add_option(
