@@ -1078,7 +1078,6 @@ void Simulation::apply_lef_bar_stalls(absl::Span<Lef> lefs,
         nstalls =
             static_cast<bp_t>(std::round(soft_stall_multiplier * static_cast<double>(nstalls)));
       }
-      assert(lef.rev_unit._nstalls_lef_bar == 0);
       lef.rev_unit._pos = barrier.pos();
       lef.rev_unit._nstalls_lef_bar = nstalls;
     }
@@ -1093,7 +1092,6 @@ void Simulation::apply_lef_bar_stalls(absl::Span<Lef> lefs,
         nstalls =
             static_cast<bp_t>(std::round(soft_stall_multiplier * static_cast<double>(nstalls)));
       }
-      assert(lef.rev_unit._nstalls_lef_bar == 0);
       lef.fwd_unit._pos = barrier.pos();
       lef.fwd_unit._nstalls_lef_bar = nstalls;
     }
@@ -1126,9 +1124,9 @@ void Simulation::register_contacts(Chromosome* chrom, absl::Span<const Lef> lefs
   for (const auto i : selected_lef_idx) {
     assert(i < lefs.size());
     const auto& lef = lefs[i];
-    if (lef.is_bound() && lef.rev_unit.pos() != chrom->start_pos() &&
-        lef.rev_unit.pos() != chrom->end_pos() - 1 && lef.fwd_unit.pos() != chrom->start_pos() &&
-        lef.fwd_unit.pos() != chrom->end_pos() - 1) {
+    if (lef.is_bound() && lef.rev_unit.pos() > chrom->start_pos() &&
+        lef.rev_unit.pos() < chrom->end_pos() && lef.fwd_unit.pos() > chrom->start_pos() &&
+        lef.fwd_unit.pos() < chrom->end_pos()) {
       chrom->increment_contacts(lef.rev_unit.pos(), lef.fwd_unit.pos(), this->bin_size);
     }
   }
