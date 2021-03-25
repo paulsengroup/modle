@@ -333,16 +333,17 @@ void Simulation::run() {
 
             if (task.cell_id == 0) {
               // Print a status update when we are processing cell #0 for a given chromosome
-              fmt::print(stderr, FMT_STRING("Simulating {} epochs for '{}' across {} cells...\n"),
-                         task.n_target_epochs, task.chrom->name(), ncells);
+              const auto target_iterations = static_cast<std::size_t>(
+                  std::max(1.0, std::round((this->target_contact_density *
+                                            static_cast<double>(task.chrom->contacts().npixels())) /
+                                           (this->lef_fraction_contact_sampling *
+                                            static_cast<double>(this->ncells * task.nlefs)))));
+              fmt::print(stderr, FMT_STRING("Simulating ~{} epochs for '{}' across {} cells...\n"),
+                         target_iterations, task.chrom->name(), ncells);
             }
 
             // Start the simulation kernel
-            Simulation::simulate_extrusion_kernel(state_buff); /*
-                task.chrom, task.cell_id, task.n_target_epochs, absl::MakeSpan(lef_buff),
-                task.barriers, absl::MakeSpan(rev_lef_rank_buff), absl::MakeSpan(fwd_lef_rank_buff),
-                barrier_mask, rev_lef_mask, fwd_lef_mask, absl::MakeSpan(rev_move_buff),
-                absl::MakeSpan(fwd_move_buff), absl::MakeSpan(lef_idx_buff)); */
+            Simulation::simulate_extrusion_kernel(state_buff);
 
             // Update progress
             std::scoped_lock l1(progress_mutex);
@@ -430,18 +431,20 @@ void Simulation::run() {
     // just in case we decide to allow the number of simulated cells to
     // change across different chromosomes
 
+    auto target_contacts = 0UL;
     if (this->target_contact_density != 0) {  // Compute the number of simulation rounds required
       // to reach the target contact density
-      this->simulation_iterations = static_cast<std::size_t>(std::max(
-          1.0,
-          std::round(
-              (this->target_contact_density * static_cast<double>(chrom->contacts().npixels())) /
-              (this->lef_fraction_contact_sampling * static_cast<double>(this->ncells * nlefs)))));
+      target_contacts = static_cast<std::size_t>(
+          std::max(1.0, std::round((this->target_contact_density *
+                                    static_cast<double>(chrom->contacts().npixels())) /
+                                   static_cast<double>(this->ncells))));
     }
+    auto target_epochs = target_contacts == 0UL ? this->simulation_iterations
+                                                : std::numeric_limits<std::size_t>::max();
 
     // Generate a batch of tasks for all the simulations involving the current chrom
     std::generate(tasks.begin(), tasks.end(), [&, i = 0UL]() mutable {
-      return Task{taskid++, chrom, i++, this->simulation_iterations, nlefs, extr_barriers_buff};
+      return Task{taskid++, chrom, i++, target_epochs, target_contacts, nlefs, extr_barriers_buff};
     });
 
     while (  // Enqueue the tasks
@@ -461,8 +464,6 @@ void Simulation::simulate_extrusion_kernel(Simulation::State& s) {
   assert(s.nlefs == s.lef_buff.size());     // NOLINT
   assert(s.nlefs == s.rank_buff1.size());   // NOLINT
   assert(s.nlefs == s.rank_buff2.size());   // NOLINT
-  assert(s.nlefs == s.lef_mask1.size());    // NOLINT
-  assert(s.nlefs == s.lef_mask2.size());    // NOLINT
   assert(s.nlefs == s.moves_buff1.size());  // NOLINT
   assert(s.nlefs == s.moves_buff2.size());  // NOLINT
   assert(s.nlefs == s.idx_buff1.size());    // NOLINT
@@ -510,11 +511,11 @@ void Simulation::simulate_extrusion_kernel(Simulation::State& s) {
   }
 
   const auto n_burnin_epochs = this->skip_burnin ? 0 : lef_initial_loading_epoch.front();
-  s.n_target_epochs += n_burnin_epochs;
+  s.n_target_epochs += s.n_target_contacts != 0 ? 0 : n_burnin_epochs;
 
   // Compute # of LEFs to use to sample contact every iterations
   // TODO Figure out a better way to handle nlefs_to_sample < 1. Maybe we can use a poiss. distr?
-  const auto nlefs_to_sample = static_cast<std::size_t>(std::max(
+  auto nlefs_to_sample = static_cast<std::size_t>(std::max(
       1.0, std::round(static_cast<double>(s.nlefs) * this->lef_fraction_contact_sampling)));
 
   // Compute # of LEFs to be released every iterations
@@ -524,8 +525,12 @@ void Simulation::simulate_extrusion_kernel(Simulation::State& s) {
                            (this->rev_extrusion_speed + this->fwd_extrusion_speed) * s.nlefs)) /
                        static_cast<double>(this->average_lef_lifetime)))));
 
-  assert(nlefs_to_sample <= s.nlefs);
-  assert(nlefs_to_release <= s.nlefs);
+  auto n_contacts = 0UL;
+
+  assert(nlefs_to_sample <= s.nlefs);   // NOLINT
+  assert(nlefs_to_release <= s.nlefs);  // NOLINT
+  assert((s.n_target_contacts != 0) ==  // NOLINT
+         (s.n_target_epochs == std::numeric_limits<std::size_t>::max()));
 
   // Declare the spans used by the burnin phase as well as the simulation itself
   auto lefs = absl::MakeSpan(s.lef_buff);
@@ -579,10 +584,16 @@ void Simulation::simulate_extrusion_kernel(Simulation::State& s) {
 
     if (epoch > n_burnin_epochs) {
       assert(fwd_lef_ranks.size() == s.nlefs);
+      if (s.n_target_contacts != 0) {
+        nlefs_to_sample = std::min(nlefs_to_sample, s.n_target_contacts - n_contacts);
+      }
       auto lef_idx = absl::MakeSpan(s.idx_buff1.data(), nlefs_to_sample);
       std::sample(fwd_lef_ranks.begin(), fwd_lef_ranks.end(), lef_idx.begin(), lef_idx.size(),
                   s.rand_eng);
-      this->register_contacts(s.chrom, lefs, lef_idx);
+      n_contacts += this->register_contacts(s.chrom, lefs, lef_idx);
+      if (s.n_target_contacts != 0 && n_contacts >= s.n_target_contacts) {
+        return;
+      }
     }
 
     this->generate_ctcf_states(barriers, s.barrier_mask, s.rand_eng);
@@ -653,8 +664,9 @@ void Simulation::generate_moves(const Chromosome* const chrom, absl::Span<const 
       return this->rev_extrusion_speed;
     }
     // Generate the move distance (and make sure it is not a negative distance)
-    // NOTE: on my laptop generating doubles from a normal distribution, rounding them, then casting
-    // double to uint is a lot faster (~4x) than drawing uints directly from a Poisson distr.
+    // NOTE: on my laptop generating doubles from a normal distribution, rounding them, then
+    // casting double to uint is a lot faster (~4x) than drawing uints directly from a Poisson
+    // distr.
     return static_cast<bp_t>(std::max(
         0.0, std::round(lef_move_generator_t{static_cast<double>(this->rev_extrusion_speed),
                                              this->rev_extrusion_speed_std}(rand_eng))));
@@ -670,9 +682,9 @@ void Simulation::generate_moves(const Chromosome* const chrom, absl::Span<const 
                                              this->fwd_extrusion_speed_std}(rand_eng))));
   };
 
-  // As long as a LEF is bound to DNA, always generate a move, even in case a LEF has one or more of
-  // its extr. unit stalled. In the latter case, the number of moves will be used to decrease the
-  // number of stalls
+  // As long as a LEF is bound to DNA, always generate a move, even in case a LEF has one or more
+  // of its extr. unit stalled. In the latter case, the number of moves will be used to decrease
+  // the number of stalls
   for (auto i = 0UL; i < lefs.size(); ++i) {
     if (!lefs[i].is_bound()) {
       continue;
@@ -681,15 +693,14 @@ void Simulation::generate_moves(const Chromosome* const chrom, absl::Span<const 
     fwd_moves[i] = fwd_move_gen();
   }
 
-  // Make sure that consecutive extr. units that are moving in the same direction do not bypass each
-  // other. Consider the following example:
-  // LEF1.fwd_unit.pos() = 0; LEF2.fwd_unit.pos() = 10;
-  // fwd_extrusion_speed = 1000; fwd_extrusion_speed_std > 0;
-  // the fwd_unit of LEF1 is set to move 1050 bp in the current iteration, while LEF2 is set to move
-  // only 950 bp. In this scenario, the fwd_unit of LEF1 would bypass the fwd_unit of LEF2.
-  // In a real system, what would likely happen, is that the fwd_unit of LEF1 would push the
-  // fwd_unit of LEF2, temporarily increasing the fwd extr. speed of LEF2.
-  // The following code does exactly what was described for the real-system scenario.
+  // Make sure that consecutive extr. units that are moving in the same direction do not bypass
+  // each other. Consider the following example: LEF1.fwd_unit.pos() = 0; LEF2.fwd_unit.pos() =
+  // 10; fwd_extrusion_speed = 1000; fwd_extrusion_speed_std > 0; the fwd_unit of LEF1 is set to
+  // move 1050 bp in the current iteration, while LEF2 is set to move only 950 bp. In this
+  // scenario, the fwd_unit of LEF1 would bypass the fwd_unit of LEF2. In a real system, what
+  // would likely happen, is that the fwd_unit of LEF1 would push the fwd_unit of LEF2,
+  // temporarily increasing the fwd extr. speed of LEF2. The following code does exactly what was
+  // described for the real-system scenario.
 
   // Avoid this check when all extr. units are moving at the same speed
   if (this->rev_extrusion_speed_std != 0) {
@@ -835,6 +846,7 @@ void Simulation::check_lef_lef_collisions(
   assert(lefs.size() == rev_lef_rank_buff.size());
   assert(lefs.size() == fwd_collision_mask.size());
   assert(lefs.size() == rev_collision_mask.size());
+  /*
   assert(std::is_sorted(fwd_lef_rank_buff.begin(), fwd_lef_rank_buff.end(),
                         [&](const auto r1, const auto r2) {
                           return lefs[r1].fwd_unit.pos() < lefs[r2].fwd_unit.pos();
@@ -843,6 +855,7 @@ void Simulation::check_lef_lef_collisions(
                         [&](const auto r1, const auto r2) {
                           return lefs[r1].rev_unit.pos() < lefs[r2].rev_unit.pos();
                         }));
+                        */
 
   /* Loop over lefs, using a procedure similar to merge in mergesort
    * The idea here is that if we have a way to visit extr. units in 5'-3' order, then detecting
@@ -905,8 +918,8 @@ void Simulation::check_lef_lef_collisions(
       const auto& rev_idx = rev_lef_rank_buff[k];      // index of the kth rev unit in 5'-3' order
       const auto& rev = lefs[rev_idx].rev_unit.pos();  // pos of the kth unit
       if (rev < fwd || fwd_collision_mask[fwd_idx]) {  // Look for the first rev unit that comes
-                                                       // after the current fwd unit. Skip over LEFs
-                                                       // that are already stalled
+                                                       // after the current fwd unit. Skip over
+                                                       // LEFs that are already stalled
         ++j;  // NOTE k is increased by the for loop. Increasing j does not affect the current for
               // loop
         continue;
@@ -1033,10 +1046,11 @@ endloop1:
   }
 }
 
-void Simulation::register_contacts(Chromosome* chrom, absl::Span<const Lef> lefs,
-                                   absl::Span<const std::size_t> selected_lef_idx) {
+std::size_t Simulation::register_contacts(Chromosome* chrom, absl::Span<const Lef> lefs,
+                                          absl::Span<const std::size_t> selected_lef_idx) {
   // Register contacts for the selected LEFs (excluding LEFs that have one of their units at the
   // beginning/end of a chromosome)
+  std::size_t new_contacts = 0;
   for (const auto i : selected_lef_idx) {
     assert(i < lefs.size());
     const auto& lef = lefs[i];
@@ -1044,8 +1058,10 @@ void Simulation::register_contacts(Chromosome* chrom, absl::Span<const Lef> lefs
         lef.rev_unit.pos() < chrom->end_pos() && lef.fwd_unit.pos() > chrom->start_pos() &&
         lef.fwd_unit.pos() < chrom->end_pos()) {
       chrom->increment_contacts(lef.rev_unit.pos(), lef.fwd_unit.pos(), this->bin_size);
+      ++new_contacts;
     }
   }
+  return new_contacts;
 }
 
 template <typename MaskT>
@@ -1126,6 +1142,7 @@ void Simulation::State::operator=(const Task& task) {
   this->chrom = task.chrom;
   this->cell_id = task.cell_id;
   this->n_target_epochs = task.n_target_epochs;
+  this->n_target_contacts = task.n_target_contacts;
   this->nlefs = task.nlefs;
   this->barriers = task.barriers;
 }

@@ -57,6 +57,7 @@ class Simulation : Config {
     Chromosome* chrom;
     std::size_t cell_id;
     std::size_t n_target_epochs;
+    std::size_t n_target_contacts;
     std::size_t nlefs;
     absl::Span<const ExtrusionBarrier> barriers;
   };
@@ -139,8 +140,8 @@ class Simulation : Config {
       const boost::dynamic_bitset<>& barrier_mask, absl::Span<std::size_t> rev_collisions,
       absl::Span<std::size_t> fwd_collisions);
 
-  inline void register_contacts(Chromosome* chrom, absl::Span<const Lef> lefs,
-                                absl::Span<const std::size_t> selected_lef_idx);
+  inline std::size_t register_contacts(Chromosome* chrom, absl::Span<const Lef> lefs,
+                                       absl::Span<const std::size_t> selected_lef_idx);
 
   template <typename MaskT>
   inline void select_lefs_to_bind(absl::Span<const Lef> lefs, MaskT& mask);
