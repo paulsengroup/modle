@@ -218,13 +218,6 @@ class Cli {
             ->capture_default_str();
 
     prob->add_option(
-            "--probability-of-lef-rebind",
-            this->_config.probability_of_lef_rebind,
-            "Probability that an unbound loop extruding factor (LEF) will randomly rebind to DNA.")
-            ->check(CLI::Range(0.0, 1.0))
-            ->capture_default_str();
-
-    prob->add_option(
             "--probability-of-lef-bypass",
             this->_config.probability_of_extrusion_unit_bypass,
             "Probability that a loop extruding factor (LEF) will not block when meeting another LEF.")
@@ -259,10 +252,18 @@ class Cli {
             ->check(CLI::ExistingFile);
 
     extr_barr->add_option(
-            "--probability-of-barrier-block",
-            this->_config.probability_of_extrusion_barrier_block,
-            "Probability of extrusion block by an extrusion barrier. When --extrusion-barrier-file is passed, this setting will overwrite the probability of block specified in the BED file.")
-            ->check(CLI::Range(0.0, 1.0));
+            "--ctcf-occupied-probability-of-transition-to-self",
+            this->_config.ctcf_occupied_self_prob,
+            "Transition probability from CTCF in occupied state to CTCF in occupied state.")
+            ->check(CLI::Range(0.0, 1.0))
+            ->capture_default_str();
+
+    extr_barr->add_option(
+            "--ctcf-not-occupied-probability-of-transition-to-self",
+            this->_config.ctcf_not_occupied_self_prob,
+            "Transition probability from CTCF in not-occupied state to CTCF in not-occupied state.")
+            ->check(CLI::Range(0.0, 1.0))
+            ->capture_default_str();
 
     extr_barr->add_flag(
             "--exclude-chr-wo-barriers,!--keep-chr-without-barriers",

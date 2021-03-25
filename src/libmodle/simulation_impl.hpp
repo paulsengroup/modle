@@ -171,8 +171,10 @@ std::vector<ExtrusionBarrier> Simulation::allocate_barriers(const Chromosome* co
   for (const auto& b : chrom->get_barriers()) {
     if (b.strand == '+' || b.strand == '-') {
       const auto pos = (b.chrom_start + b.chrom_end + 1) / 2;
-      const auto pblock = b.score != 0 ? b.score : this->probability_of_extrusion_barrier_block;
-      barriers.emplace_back(pos, pblock, b.strand);
+      // TODO figure out how to read both transition probabilities
+      // const auto pblock = b.score != 0 ? b.score : this->probability_of_extrusion_barrier_block;
+      barriers.emplace_back(pos, this->ctcf_occupied_self_prob, this->ctcf_not_occupied_self_prob,
+                            b.strand);
     } else {
       ++barriers_skipped;
     }
@@ -982,7 +984,7 @@ void Simulation::check_lef_bar_collisions(
    */
   std::size_t j = 0;  // Process fwd extrusion units
   for (auto i = 0UL; i < lefs.size(); ++i) {
-    const auto& fwd_idx = fwd_lef_rank_buff[i];  // index of the ith fwd unit in 5'-3' order
+    const auto& fwd_idx = fwd_lef_rank_buff[i];          // index of the ith fwd unit in 5'-3' order
     const auto& fwd_pos = lefs[fwd_idx].fwd_unit.pos();  // pos of the ith fwd unit
     auto extr_barr_pos = extr_barriers[j].pos();  // pos of the next (possibly blocking) barrier
 

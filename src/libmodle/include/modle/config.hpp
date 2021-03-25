@@ -62,9 +62,7 @@ struct Config {
   uint64_t seed{0};
 
   // Misc probabilities
-  double probability_of_lef_rebind{1.0};
   double probability_of_extrusion_unit_bypass{0.25};  // NOLINT(readability-magic-numbers, cppcoreguidelines-avoid-magic-numbers)
-  double probability_of_extrusion_barrier_block{0};
   double lef_fraction_contact_sampling{0.025};  // NOLINT(readability-magic-numbers, cppcoreguidelines-avoid-magic-numbers)
   double ctcf_occupied_self_prob{0.875};
   double ctcf_not_occupied_self_prob{0.70};
@@ -107,12 +105,12 @@ struct Config {
     std::vector<cli_tokens>{
      {"# of LEFs per Mbp", fmt::format(FMT_STRING("{}"), this->number_of_lefs_per_mbp)},
      {"Avg. LEF lifetime", fmt::format(FMT_STRING("{}"), this->average_lef_lifetime)},
-     {"Prob. of LEF re-bind", fmt::format(FMT_STRING("{:.4G}"), this->probability_of_lef_rebind)},
      {"Prob. of LEF bypass", fmt::format(FMT_STRING("{:.4G}"), this->probability_of_extrusion_unit_bypass)},
      {"LEF unloader strength", fmt::format(FMT_STRING("{:.4G}"), this->hard_stall_multiplier)}}},
     {"Extr. barrier settings"sv,
     std::vector<cli_tokens>{
-     {"Prob. of block", fmt::format(FMT_STRING("{}"), this->probability_of_extrusion_barrier_block)}}},
+     {"CTCF occupied -> Occupied transition prob.", fmt::format(FMT_STRING("{}"), this->ctcf_occupied_self_prob)},
+     {"CTCF not-occupied -> not-occupied transition prob.", fmt::format(FMT_STRING("{}"), this->ctcf_not_occupied_self_prob)}}},
     {"Burn-in phase"sv,
     std::vector<cli_tokens>{
      {"Skip burn-in", this->skip_burnin ? "Yes" : "No"}}}
