@@ -513,17 +513,14 @@ void Simulation::simulate_extrusion_kernel(Simulation::State& s) {
   const auto n_burnin_epochs = this->skip_burnin ? 0 : lef_initial_loading_epoch.front();
   s.n_target_epochs += s.n_target_contacts != 0 ? 0 : n_burnin_epochs;
 
-  // Compute # of LEFs to use to sample contact every iterations
-  // TODO Figure out a better way to handle nlefs_to_sample < 1. Maybe we can use a poiss. distr?
-  auto nlefs_to_sample = static_cast<std::size_t>(std::max(
-      1.0, std::round(static_cast<double>(s.nlefs) * this->lef_fraction_contact_sampling)));
+  // Compute the avg. # of LEFs to use to sample contact every iterations
+  const auto avg_nlefs_to_sample =
+      static_cast<double>(s.nlefs) * this->lef_fraction_contact_sampling;
 
-  // Compute # of LEFs to be released every iterations
-  // TODO Figure out a way to randomize this number? Maybe we can use a poiss.
-  auto nlefs_to_release = static_cast<std::size_t>(std::max(
-      1.0, std::round(((static_cast<double>(
-                           (this->rev_extrusion_speed + this->fwd_extrusion_speed) * s.nlefs)) /
-                       static_cast<double>(this->average_lef_lifetime)))));
+  // Compute the avg. # of LEFs to be released every iterations
+  const auto avg_nlefs_to_release =
+      static_cast<double>((this->rev_extrusion_speed + this->fwd_extrusion_speed) * s.nlefs) /
+      static_cast<double>(this->average_lef_lifetime);
 
   auto n_contacts = 0UL;
 
@@ -542,6 +539,9 @@ void Simulation::simulate_extrusion_kernel(Simulation::State& s) {
   auto fwd_moves = absl::MakeSpan(s.moves_buff2);
   auto rev_collision_mask = absl::MakeSpan(s.idx_buff1);
   auto fwd_collision_mask = absl::MakeSpan(s.idx_buff2);
+
+  std::size_t nlefs_to_sample;
+  std::size_t nlefs_to_release;
 
   // Start the burnin phase (followed by the actual simulation)
   for (auto epoch = 0UL; epoch < s.n_target_epochs; ++epoch) {
@@ -569,10 +569,11 @@ void Simulation::simulate_extrusion_kernel(Simulation::State& s) {
       fwd_moves = absl::MakeSpan(s.moves_buff2.data(), nlefs);
       rev_collision_mask = absl::MakeSpan(s.idx_buff1.data(), nlefs);
       fwd_collision_mask = absl::MakeSpan(s.idx_buff2.data(), nlefs);
-      nlefs_to_release = static_cast<std::size_t>(std::max(
-          1.0, std::round(((static_cast<double>(
-                               (this->rev_extrusion_speed + this->fwd_extrusion_speed) * nlefs)) /
-                           static_cast<double>(this->average_lef_lifetime)))));
+      nlefs_to_release = std::poisson_distribution<std::size_t>{
+          static_cast<double>((this->rev_extrusion_speed + this->fwd_extrusion_speed) * s.nlefs) /
+          static_cast<double>(this->average_lef_lifetime)}(s.rand_eng);
+    } else {
+      nlefs_to_release = std::poisson_distribution<std::size_t>{avg_nlefs_to_release}(s.rand_eng);
     }
 
     // Simulate one epoch
@@ -584,6 +585,7 @@ void Simulation::simulate_extrusion_kernel(Simulation::State& s) {
 
     if (epoch > n_burnin_epochs) {
       assert(fwd_lef_ranks.size() == s.nlefs);
+      nlefs_to_sample = std::poisson_distribution<std::size_t>{avg_nlefs_to_sample}(s.rand_eng);
       if (s.n_target_contacts != 0) {
         nlefs_to_sample = std::min(nlefs_to_sample, s.n_target_contacts - n_contacts);
       }
