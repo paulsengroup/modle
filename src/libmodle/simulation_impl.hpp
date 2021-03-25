@@ -611,7 +611,7 @@ void Simulation::simulate_extrusion_kernel(Simulation::State& s) {
 
     this->check_lef_bar_collisions(s.chrom, lefs, rev_lef_ranks, fwd_lef_ranks, rev_moves,
                                    fwd_moves, barriers, s.barrier_mask, rev_collision_mask,
-                                   fwd_collision_mask);
+                                   fwd_collision_mask, s.rand_eng);
 
     this->generate_lef_unloader_affinities(lefs, barriers, rev_collision_mask, fwd_collision_mask,
                                            lef_unloader_affinity);
@@ -854,7 +854,7 @@ void Simulation::check_lef_lef_collisions(
   assert(lefs.size() == rev_lef_rank_buff.size());
   assert(lefs.size() == fwd_collision_mask.size());
   assert(lefs.size() == rev_collision_mask.size());
-  /*
+
   assert(std::is_sorted(fwd_lef_rank_buff.begin(), fwd_lef_rank_buff.end(),
                         [&](const auto r1, const auto r2) {
                           return lefs[r1].fwd_unit.pos() < lefs[r2].fwd_unit.pos();
@@ -863,7 +863,6 @@ void Simulation::check_lef_lef_collisions(
                         [&](const auto r1, const auto r2) {
                           return lefs[r1].rev_unit.pos() < lefs[r2].rev_unit.pos();
                         }));
-                        */
 
   /* Loop over lefs, using a procedure similar to merge in mergesort
    * The idea here is that if we have a way to visit extr. units in 5'-3' order, then detecting
@@ -968,15 +967,13 @@ void Simulation::check_lef_lef_collisions(
   }
 }
 
-void Simulation::check_lef_bar_collisions(const Chromosome* const chrom, absl::Span<Lef> lefs,
-                                          absl::Span<const std::size_t> rev_lef_rank_buff,
-                                          absl::Span<const std::size_t> fwd_lef_rank_buff,
-                                          absl::Span<const bp_t> rev_move_buff,
-                                          absl::Span<const bp_t> fwd_move_buff,
-                                          absl::Span<const ExtrusionBarrier> extr_barriers,
-                                          const boost::dynamic_bitset<>& barrier_mask,
-                                          absl::Span<std::size_t> rev_collisions,
-                                          absl::Span<std::size_t> fwd_collisions) {
+void Simulation::check_lef_bar_collisions(
+    const Chromosome* const chrom, absl::Span<Lef> lefs,
+    absl::Span<const std::size_t> rev_lef_rank_buff,
+    absl::Span<const std::size_t> fwd_lef_rank_buff, absl::Span<const bp_t> rev_move_buff,
+    absl::Span<const bp_t> fwd_move_buff, absl::Span<const ExtrusionBarrier> extr_barriers,
+    const boost::dynamic_bitset<>& barrier_mask, absl::Span<std::size_t> rev_collisions,
+    absl::Span<std::size_t> fwd_collisions, modle::PRNG& rand_eng) {
   assert(lefs.size() == fwd_lef_rank_buff.size());
   assert(lefs.size() == rev_lef_rank_buff.size());
   assert(lefs.size() == fwd_move_buff.size());
@@ -1020,7 +1017,7 @@ void Simulation::check_lef_bar_collisions(const Chromosome* const chrom, absl::S
     auto fwd_barr_pos = extr_barriers[j2].pos();  // pos of the next (possibly blocking) barrier
 
     // Look for the first occupied extr. barrier downstream of the current rev extrusion unit
-    if (j1 < lefs.size()) {
+    if (j1 < extr_barriers.size()) {
 #ifdef PRINT_DBG
       fmt::print(stderr,
                  "##REV## Looking for the first rev extr. barrier (i={}; j1={}; barr_pos={}; "
@@ -1044,7 +1041,24 @@ void Simulation::check_lef_bar_collisions(const Chromosome* const chrom, absl::S
         // Detect collisions between extr. units/barriers that are less then delta bp away from each
         // other
         const auto rev_delta = rev_pos - rev_barr_pos;
-        rev_collisions[rev_idx] = rev_delta <= rev_move_buff[rev_idx] ? j1 : NO_COLLISION;
+        if (rev_delta <= rev_move_buff[rev_idx]) {
+          auto generate_collision = [&]() {
+            const auto pblock = extr_barriers[j1].blocking_direction() == dna::rev
+                                    ? this->lef_hard_collision_pblock
+                                    : this->lef_soft_collision_pblock;
+            if (pblock == 0) {
+              return NO_COLLISION;
+            }
+            if (pblock == 1) {
+              return j1;
+            }
+            return std::bernoulli_distribution{pblock}(rand_eng) ? j1 : NO_COLLISION;
+          };
+          rev_collisions[rev_idx] = generate_collision();
+        } else {
+          rev_collisions[rev_idx] = NO_COLLISION;
+        }
+
 #ifdef PRINT_DBG
         fmt::print(stderr, "##REV## delta={}; move={}; collision={};\n", rev_delta,
                    rev_move_buff[rev_idx],
@@ -1073,7 +1087,7 @@ void Simulation::check_lef_bar_collisions(const Chromosome* const chrom, absl::S
     }
 
     // Look for the first occupied extr. barrier downstream of the current fwd extrusion unit
-    if (j2 < lefs.size()) {
+    if (j2 < extr_barriers.size()) {
 #ifdef PRINT_DBG
       fmt::print(stderr,
                  "##FWD## Looking for the first fwd extr. barrier (i={}; j2={}; barr_pos={}; "
@@ -1096,7 +1110,23 @@ void Simulation::check_lef_bar_collisions(const Chromosome* const chrom, absl::S
       // Detect collisions between extr. units/barriers that are less then delta bp away from each
       // other
       const auto fwd_delta = fwd_barr_pos - fwd_pos;
-      fwd_collisions[fwd_idx] = fwd_delta <= fwd_move_buff[fwd_idx] ? j2 : NO_COLLISION;
+      if (fwd_delta <= fwd_move_buff[fwd_idx]) {
+        auto generate_collision = [&]() {
+          const auto pblock = extr_barriers[j2].blocking_direction() == dna::fwd
+                                  ? this->lef_hard_collision_pblock
+                                  : this->lef_soft_collision_pblock;
+          if (pblock == 0) {
+            return NO_COLLISION;
+          }
+          if (pblock == 1) {
+            return j2;
+          }
+          return std::bernoulli_distribution{pblock}(rand_eng) ? j2 : NO_COLLISION;
+        };
+        fwd_collisions[fwd_idx] = generate_collision();
+      } else {
+        fwd_collisions[fwd_idx] = NO_COLLISION;
+      }
 #ifdef PRINT_DBG
       fmt::print(stderr, "##FWD## delta={}; move={}; collision={};\n", fwd_delta,
                  fwd_move_buff[fwd_idx],
@@ -1120,7 +1150,6 @@ void Simulation::check_lef_bar_collisions(const Chromosome* const chrom, absl::S
   if (j1 == extr_barriers.size() && j2 == extr_barriers.size()) {
     return;
   }
-  // std::this_thread::sleep_for(std::chrono::seconds(10));
 }
 
 std::size_t Simulation::register_contacts(Chromosome* chrom, absl::Span<const Lef> lefs,

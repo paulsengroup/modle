@@ -46,7 +46,7 @@ struct Config {
   bp_t bin_size{1'000};  // NOLINT(readability-magic-numbers, cppcoreguidelines-avoid-magic-numbers)
   bp_t fwd_extrusion_speed{std::numeric_limits<bp_t>::max()};
   bp_t rev_extrusion_speed{std::numeric_limits<bp_t>::max()};
-  double fwd_extrusion_speed_std{0.05};
+  double fwd_extrusion_speed_std{0.05};  // NOLINT(readability-magic-numbers, cppcoreguidelines-avoid-magic-numbers)
   double rev_extrusion_speed_std{fwd_extrusion_speed_std};
   std::size_t ncells{5'000};    // NOLINT(readability-magic-numbers, cppcoreguidelines-avoid-magic-numbers)
   std::size_t nthreads{std::thread::hardware_concurrency()};
@@ -64,8 +64,11 @@ struct Config {
   // Misc probabilities
   double probability_of_extrusion_unit_bypass{0.25};  // NOLINT(readability-magic-numbers, cppcoreguidelines-avoid-magic-numbers)
   double lef_fraction_contact_sampling{0.025};  // NOLINT(readability-magic-numbers, cppcoreguidelines-avoid-magic-numbers)
-  double ctcf_occupied_self_prob{0.875};
-  double ctcf_not_occupied_self_prob{0.70};
+  double ctcf_occupied_self_prob{0.875};  // NOLINT(readability-magic-numbers, cppcoreguidelines-avoid-magic-numbers)
+  double ctcf_not_occupied_self_prob{0.70};  // NOLINT(readability-magic-numbers, cppcoreguidelines-avoid-magic-numbers)
+  double lef_hard_collision_pblock{0.995};  // NOLINT(readability-magic-numbers, cppcoreguidelines-avoid-magic-numbers)
+  double lef_soft_collision_pblock{0};  // NOLINT(readability-magic-numbers, cppcoreguidelines-avoid-magic-numbers)
+
 
   // Misc
   bool exclude_chr_wo_extr_barriers{true};
