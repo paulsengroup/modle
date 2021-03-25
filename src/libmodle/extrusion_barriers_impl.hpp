@@ -28,4 +28,20 @@ bp_t ExtrusionBarrier::pos() const { return this->_pos; }
 double ExtrusionBarrier::pblock() const { return this->_prob_of_block; }
 dna::Direction ExtrusionBarrier::blocking_direction() const { return this->_blocking_direction; }
 
+CTCF::State CTCF::next_state(CTCF::State current_state, double occupied_self_transition_prob,
+                             double not_occupied_self_transition_prob, PRNG& rand_eng) {
+  assert(occupied_self_transition_prob >= 0 && occupied_self_transition_prob <= 1);
+  assert(not_occupied_self_transition_prob >= 0 && not_occupied_self_transition_prob <= 1);
+
+  const auto p = CTCF::state_gen_t{0.0, 1.0}(rand_eng);
+  if (current_state == NOT_OCCUPIED && p > not_occupied_self_transition_prob) {
+    return OCCUPIED;
+  } else if (p > occupied_self_transition_prob) {
+    assert(current_state == OCCUPIED);
+    return NOT_OCCUPIED;
+  }
+
+  return current_state;
+}
+
 }  // namespace modle

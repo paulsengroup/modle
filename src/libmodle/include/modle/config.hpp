@@ -66,6 +66,8 @@ struct Config {
   double probability_of_extrusion_unit_bypass{0.25};  // NOLINT(readability-magic-numbers, cppcoreguidelines-avoid-magic-numbers)
   double probability_of_extrusion_barrier_block{0};
   double lef_fraction_contact_sampling{0.025};  // NOLINT(readability-magic-numbers, cppcoreguidelines-avoid-magic-numbers)
+  double ctcf_occupied_self_prob{0.875};
+  double ctcf_not_occupied_self_prob{0.70};
 
   // Misc
   bool exclude_chr_wo_extr_barriers{true};

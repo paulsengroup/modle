@@ -307,15 +307,7 @@ void Simulation::run() {
         // Buffers declared here are recycled by every simulation kernel launched from this
         // thread Performance gain mostly come from reusing lef_buff. The impact of recycling
         // the other buffers is barely noticeable
-        std::vector<Lef> lef_buff;
-        std::vector<std::size_t> rev_lef_rank_buff;
-        std::vector<std::size_t> fwd_lef_rank_buff;
-        boost::dynamic_bitset<> mask;
-        std::vector<collision_t> rev_lef_collision_buff;
-        std::vector<collision_t> fwd_lef_collision_buff;
-        std::vector<bp_t> rev_move_buff;
-        std::vector<bp_t> fwd_move_buff;
-        std::vector<std::size_t> lef_idx_buff;
+        Simulation::State state_buff;
 
         while (true) {  // Try to dequeue a batch of tasks
           const auto avail_tasks = task_queue.wait_dequeue_bulk_timed(
@@ -331,40 +323,24 @@ void Simulation::run() {
           // Loop over new tasks
           auto tasks = absl::MakeSpan(task_buff.data(), avail_tasks);
           for (auto& task : tasks) {
-            // Resize buffers
-            lef_buff.resize(task.nlefs);
-            rev_lef_rank_buff.resize(task.nlefs);
-            fwd_lef_rank_buff.resize(task.nlefs);
-            mask.resize(task.nlefs);
-            rev_lef_collision_buff.resize(task.nlefs);
-            fwd_lef_collision_buff.resize(task.nlefs);
-            rev_move_buff.resize(task.nlefs);
-            fwd_move_buff.resize(task.nlefs);
-            lef_idx_buff.resize(static_cast<std::size_t>(
-                std::max(1.0, std::round(static_cast<double>(task.nlefs) *
-                                         this->lef_fraction_contact_sampling))));
-
-            // Reset buffers
-            std::for_each(lef_buff.begin(), lef_buff.end(), [](auto& lef) { lef.reset(); });
-            std::iota(rev_lef_rank_buff.begin(), rev_lef_rank_buff.end(), 0);
-            std::iota(fwd_lef_rank_buff.begin(), fwd_lef_rank_buff.end(), 0);
-            mask.reset();
-            std::fill(rev_lef_collision_buff.begin(), rev_lef_collision_buff.end(), 0);
-            std::fill(fwd_lef_collision_buff.begin(), fwd_lef_collision_buff.end(), 0);
+            // Resize and reset buffers
+            state_buff = task;
+            state_buff.resize();  // resize to nlefs for the current task
+            state_buff.barrier_mask.resize(task.barriers.size());
+            state_buff.reset();
 
             if (task.cell_id == 0) {
               // Print a status update when we are processing cell #0 for a given chromosome
               fmt::print(stderr, FMT_STRING("Simulating {} epochs for '{}' across {} cells...\n"),
-                         task.nrounds, task.chrom->name(), ncells);
+                         task.n_target_epochs, task.chrom->name(), ncells);
             }
 
             // Start the simulation kernel
-            Simulation::simulate_extrusion_kernel(
-                task.chrom, task.cell_id, task.nrounds, lef_buff, task.barriers,
-                absl::MakeSpan(rev_lef_rank_buff), absl::MakeSpan(fwd_lef_rank_buff), mask,
-                absl::MakeSpan(rev_lef_collision_buff), absl::MakeSpan(fwd_lef_collision_buff),
-                absl::MakeSpan(rev_move_buff), absl::MakeSpan(fwd_move_buff),
-                absl::MakeSpan(lef_idx_buff));
+            Simulation::simulate_extrusion_kernel(state_buff); /*
+                task.chrom, task.cell_id, task.n_target_epochs, absl::MakeSpan(lef_buff),
+                task.barriers, absl::MakeSpan(rev_lef_rank_buff), absl::MakeSpan(fwd_lef_rank_buff),
+                barrier_mask, rev_lef_mask, fwd_lef_mask, absl::MakeSpan(rev_move_buff),
+                absl::MakeSpan(fwd_move_buff), absl::MakeSpan(lef_idx_buff)); */
 
             // Update progress
             std::scoped_lock l1(progress_mutex);
@@ -479,32 +455,40 @@ void Simulation::run() {
   assert(end_of_simulation);  // NOLINT
 }
 
-void Simulation::simulate_extrusion_kernel(
-    Chromosome* chrom, std::size_t cell_id, std::size_t n_target_epochs, std::vector<Lef> lef_buff,
-    const absl::Span<const ExtrusionBarrier> extr_barrier_buff,
-    absl::Span<std::size_t> rev_lef_rank_buff, absl::Span<std::size_t> fwd_lef_rank_buff,
-    boost::dynamic_bitset<>& mask, absl::Span<collision_t> rev_lef_collision_buff,
-    absl::Span<collision_t> fwd_lef_collision_buff, absl::Span<bp_t> rev_moves_buff,
-    absl::Span<bp_t> fwd_moves_buff, absl::Span<std::size_t> lef_idx_buff) {
-  const auto seed_ = this->seed + std::hash<std::string_view>{}(chrom->name()) +
-                     std::hash<std::size_t>{}(chrom->size()) + std::hash<std::size_t>{}(cell_id);
+void Simulation::simulate_extrusion_kernel(Simulation::State& s) {
+  assert(s.nlefs == s.lef_buff.size());     // NOLINT
+  assert(s.nlefs == s.rank_buff1.size());   // NOLINT
+  assert(s.nlefs == s.rank_buff2.size());   // NOLINT
+  assert(s.nlefs == s.lef_mask1.size());    // NOLINT
+  assert(s.nlefs == s.lef_mask2.size());    // NOLINT
+  assert(s.nlefs == s.moves_buff1.size());  // NOLINT
+  assert(s.nlefs == s.moves_buff2.size());  // NOLINT
+  assert(s.nlefs == s.idx_buff1.size());    // NOLINT
+  assert(s.nlefs == s.idx_buff2.size());    // NOLINT
+  assert(s.nlefs == s.epoch_buff.size());   // NOLINT
+
+  s.seed = this->seed + std::hash<std::string_view>{}(s.chrom->name()) +
+           std::hash<std::size_t>{}(s.chrom->size()) + std::hash<std::size_t>{}(s.cell_id);
+  {
 #ifdef USE_XOSHIRO
-  modle::seeder seeder_(seed_);
-  modle::PRNG rand_eng(seeder_.generateSeedSequence<4>());
+    modle::seeder seeder_(s.seed);
+    s.rand_eng = modle::PRNG(seeder_.generateSeedSequence<4>());
 #else
-  modle::seeder seeder_{seed_};
-  modle::PRNG rand_eng(seeder_);
+    modle::seeder seeder_{s.seed};
+    s.rand_eng = modle::PRNG(seeder_);
 #endif
+  }
 
   // Generate the epoch at which each LEF is supposed to be initially loaded
-  std::vector<std::size_t> lef_initial_loading_epoch(this->skip_burnin ? 0 : lef_buff.size());
+  auto& lef_initial_loading_epoch = s.epoch_buff;
+  lef_initial_loading_epoch.resize(this->skip_burnin ? 0 : s.nlefs);
 
   if (!this->skip_burnin) {
     // TODO Consider using a Poisson process instead of sampling from an uniform distribution
     std::uniform_int_distribution<std::size_t> round_gen{
         0, (4 * this->average_lef_lifetime) / this->bin_size};
     std::generate(lef_initial_loading_epoch.begin(), lef_initial_loading_epoch.end(),
-                  [&]() { return round_gen(rand_eng); });
+                  [&]() { return round_gen(s.rand_eng); });
 
     // Sort epochs in descending order
     if (round_gen.max() > 2048) {
@@ -524,21 +508,36 @@ void Simulation::simulate_extrusion_kernel(
   }
 
   const auto n_burnin_epochs = this->skip_burnin ? 0 : lef_initial_loading_epoch.front();
-  n_target_epochs += n_burnin_epochs;
+  s.n_target_epochs += n_burnin_epochs;
+
+  // Compute # of LEFs to use to sample contact every iterations
+  // TODO Figure out a better way to handle nlefs_to_sample < 1. Maybe we can use a poiss. distr?
+  const auto nlefs_to_sample = static_cast<std::size_t>(std::max(
+      1.0, std::round(static_cast<double>(s.nlefs) * this->lef_fraction_contact_sampling)));
+
+  // Compute # of LEFs to be released every iterations
+  // TODO Figure out a way to randomize this number? Maybe we can use a poiss.
+  auto nlefs_to_release = static_cast<std::size_t>(std::max(
+      1.0, std::round(((static_cast<double>(
+                           (this->rev_extrusion_speed + this->fwd_extrusion_speed) * s.nlefs)) /
+                       static_cast<double>(this->average_lef_lifetime)))));
+
+  assert(nlefs_to_sample <= s.nlefs);
+  assert(nlefs_to_release <= s.nlefs);
 
   // Declare the spans used by the burnin phase as well as the simulation itself
-  auto lefs = absl::MakeSpan(lef_buff.data(), lef_buff.size());
-  const auto barriers = absl::MakeConstSpan(extr_barrier_buff);
-  auto rev_lef_ranks = absl::MakeSpan(rev_lef_rank_buff);
-  auto fwd_lef_ranks = absl::MakeSpan(fwd_lef_rank_buff);
-  auto rev_lef_collisions = absl::MakeSpan(rev_lef_collision_buff);
-  auto fwd_lef_collisions = absl::MakeSpan(fwd_lef_collision_buff);
-  auto rev_moves = absl::MakeSpan(rev_moves_buff);
-  auto fwd_moves = absl::MakeSpan(fwd_moves_buff);
-  auto lef_idx = absl::MakeSpan(lef_idx_buff);
+  auto lefs = absl::MakeSpan(s.lef_buff);
+  auto lef_unloader_affinity = absl::MakeSpan(s.lef_unloader_affinity);
+  const auto barriers = absl::MakeConstSpan(s.barriers);
+  auto rev_lef_ranks = absl::MakeSpan(s.rank_buff1);
+  auto fwd_lef_ranks = absl::MakeSpan(s.rank_buff2);
+  auto rev_moves = absl::MakeSpan(s.moves_buff1);
+  auto fwd_moves = absl::MakeSpan(s.moves_buff2);
+  auto rev_collision_mask = absl::MakeSpan(s.idx_buff1);
+  auto fwd_collision_mask = absl::MakeSpan(s.idx_buff2);
 
   // Start the burnin phase (followed by the actual simulation)
-  for (auto epoch = 0UL; epoch < n_target_epochs; ++epoch) {
+  for (auto epoch = 0UL; epoch < s.n_target_epochs; ++epoch) {
     if (!lef_initial_loading_epoch.empty()) {  // Execute this branch only during the burnin phase
       if (this->skip_burnin) {
         lef_initial_loading_epoch.clear();
@@ -549,44 +548,61 @@ void Simulation::simulate_extrusion_kernel(
       }
       // Don't remove this assertion. It is very useful to prevent empty Spans (which cause weird
       // issues later in the simulation) NOLINTNEXTLINE
-      assert(lef_initial_loading_epoch.size() < lef_buff.size());
+      assert(lef_initial_loading_epoch.size() < s.nlefs);
 
       // Compute the current number of active LEFs (i.e. LEFs that are either bound to DNA, or
       // that are valid candidates for re-binding) and grow spans accordingly
-      const auto nlefs = lef_buff.size() - lef_initial_loading_epoch.size();
+      const auto nlefs = s.nlefs - lef_initial_loading_epoch.size();
 
-      lefs = absl::MakeSpan(lef_buff.data(), nlefs);
-      rev_lef_ranks = absl::MakeSpan(rev_lef_rank_buff.data(), nlefs);
-      fwd_lef_ranks = absl::MakeSpan(fwd_lef_rank_buff.data(), nlefs);
-      rev_lef_collisions = absl::MakeSpan(rev_lef_collision_buff.data(), nlefs);
-      fwd_lef_collisions = absl::MakeSpan(fwd_lef_collision_buff.data(), nlefs);
-      rev_moves = absl::MakeSpan(rev_moves_buff.data(), nlefs);
-      fwd_moves = absl::MakeSpan(fwd_moves_buff.data(), nlefs);
+      lefs = absl::MakeSpan(s.lef_buff.data(), nlefs);
+      lef_unloader_affinity = absl::MakeSpan(s.lef_unloader_affinity.data(), nlefs);
+      rev_lef_ranks = absl::MakeSpan(s.rank_buff1.data(), nlefs);
+      fwd_lef_ranks = absl::MakeSpan(s.rank_buff2.data(), nlefs);
+      rev_moves = absl::MakeSpan(s.moves_buff1.data(), nlefs);
+      fwd_moves = absl::MakeSpan(s.moves_buff2.data(), nlefs);
+      rev_collision_mask = absl::MakeSpan(s.idx_buff1.data(), nlefs);
+      fwd_collision_mask = absl::MakeSpan(s.idx_buff2.data(), nlefs);
+      nlefs_to_release = static_cast<std::size_t>(std::max(
+          1.0, std::round(((static_cast<double>(
+                               (this->rev_extrusion_speed + this->fwd_extrusion_speed) * nlefs)) /
+                           static_cast<double>(this->average_lef_lifetime)))));
     }
 
     // Simulate one epoch
-    this->select_lefs_to_bind(lefs, mask);
-    this->bind_lefs(chrom, lefs, rev_lef_ranks, fwd_lef_ranks, rand_eng, mask);
-
-    this->generate_moves(chrom, lefs, rev_lef_ranks, fwd_lef_ranks, rev_moves, fwd_moves, rand_eng);
-
-    this->check_lef_bar_collisions(lefs, rev_lef_ranks, fwd_lef_ranks, rev_moves, fwd_moves,
-                                   barriers, rev_lef_collisions, fwd_lef_collisions);
-    this->apply_lef_bar_stalls(lefs, rev_lef_collisions, fwd_lef_collisions, barriers, rand_eng);
-
-    this->check_lef_lef_collisions(lefs, rev_lef_ranks, fwd_lef_ranks, rev_moves, fwd_moves,
-                                   rev_lef_collisions, fwd_lef_collisions);
-    this->apply_lef_lef_stalls(lefs, rev_lef_collisions, fwd_lef_collisions, rev_lef_ranks,
-                               fwd_lef_ranks, rand_eng);
-
-    if (epoch > n_burnin_epochs) {
-      assert(fwd_lef_ranks.size() == lef_buff.size());
-      std::sample(fwd_lef_ranks.begin(), fwd_lef_ranks.end(), lef_idx.begin(), lef_idx.size(),
-                  rand_eng);
-      this->register_contacts(chrom, lefs, lef_idx);
+    {
+      auto lef_mask = absl::MakeSpan(s.idx_buff1.data(), lefs.size());
+      this->select_lefs_to_bind(lefs, lef_mask);
+      this->bind_lefs(s.chrom, lefs, rev_lef_ranks, fwd_lef_ranks, s.rand_eng, lef_mask);
     }
 
-    this->extrude(chrom, lefs, rev_moves, fwd_moves);
+    if (epoch > n_burnin_epochs) {
+      assert(fwd_lef_ranks.size() == s.nlefs);
+      auto lef_idx = absl::MakeSpan(s.idx_buff1.data(), nlefs_to_sample);
+      std::sample(fwd_lef_ranks.begin(), fwd_lef_ranks.end(), lef_idx.begin(), lef_idx.size(),
+                  s.rand_eng);
+      this->register_contacts(s.chrom, lefs, lef_idx);
+    }
+
+    this->generate_ctcf_states(barriers, s.barrier_mask, s.rand_eng);
+
+    this->generate_moves(s.chrom, lefs, rev_lef_ranks, fwd_lef_ranks, rev_moves, fwd_moves,
+                         s.rand_eng);
+
+    this->check_lef_bar_collisions(lefs, rev_lef_ranks, fwd_lef_ranks, rev_moves, fwd_moves,
+                                   barriers, s.barrier_mask, rev_collision_mask,
+                                   fwd_collision_mask);
+
+    this->generate_lef_unloader_affinities(lefs, barriers, rev_collision_mask, fwd_collision_mask,
+                                           lef_unloader_affinity);
+
+    this->check_lef_lef_collisions(lefs, rev_lef_ranks, fwd_lef_ranks, rev_moves, fwd_moves,
+                                   rev_collision_mask, fwd_collision_mask, s.rand_eng);
+
+    this->extrude(s.chrom, lefs, rev_moves, fwd_moves, rev_collision_mask, fwd_collision_mask);
+
+    auto lef_idx = absl::MakeSpan(s.idx_buff1.data(), nlefs_to_release);
+    this->select_lefs_to_release(lef_idx, lef_unloader_affinity, s.rand_eng);
+    this->release_lefs(lefs, lef_idx);
   }
 }
 
@@ -603,14 +619,22 @@ void Simulation::bind_lefs(const Chromosome* const chrom, absl::Span<Lef> lefs,
   assert(lefs.size() <= mask.size() || mask.empty());
   assert(chrom);
   chrom_pos_generator_t pos_generator{chrom->start_pos(), chrom->end_pos()};
-  lef_lifetime_generator_t lifetime_generator{1.0 /
-                                              static_cast<double>(this->average_lef_lifetime)};
   for (auto i = 0UL; i < lefs.size(); ++i) {
     if (mask.empty() || mask[i]) {
-      lefs[i].bind_at_pos(pos_generator(rand_eng), lifetime_generator(rand_eng));
+      lefs[i].bind_at_pos(pos_generator(rand_eng));
     }
   }
   this->rank_lefs(lefs, rev_lef_ranks, fwd_lef_ranks);
+}
+
+inline void Simulation::generate_ctcf_states(absl::Span<const ExtrusionBarrier> extr_barriers,
+                                             boost::dynamic_bitset<>& mask, modle::PRNG& rand_eng) {
+  assert(extr_barriers.size() == mask.size());
+  for (auto i = 0UL; i < extr_barriers.size(); ++i) {
+    mask[i] = CTCF::next_state(mask[i] ? CTCF::OCCUPIED : CTCF::NOT_OCCUPIED,
+                               this->ctcf_occupied_self_prob, this->ctcf_not_occupied_self_prob,
+                               rand_eng);
+  }
 }
 
 void Simulation::generate_moves(const Chromosome* const chrom, absl::Span<const Lef> lefs,
@@ -705,7 +729,7 @@ void Simulation::generate_moves(const Chromosome* const chrom, absl::Span<const 
   }
 }
 
-void Simulation::rank_lefs(absl::Span<Lef> lefs, absl::Span<std::size_t> rev_lef_rank_buff,
+void Simulation::rank_lefs(absl::Span<const Lef> lefs, absl::Span<std::size_t> rev_lef_rank_buff,
                            absl::Span<std::size_t> fwd_lef_rank_buff, bool init_buffers) {
   if (init_buffers) {  // Init rank buffers
     std::iota(fwd_lef_rank_buff.begin(), fwd_lef_rank_buff.end(), 0);
@@ -763,72 +787,60 @@ void Simulation::rank_lefs(absl::Span<Lef> lefs, absl::Span<std::size_t> rev_lef
 }
 
 void Simulation::extrude(const Chromosome* chrom, absl::Span<Lef> lefs,
-                         absl::Span<const bp_t> rev_moves, absl::Span<const bp_t> fwd_moves) {
-  assert(lefs.size() == rev_moves.size());  // NOLINT
-  assert(lefs.size() == fwd_moves.size());  // NOLINT
+                         absl::Span<const bp_t> rev_moves, absl::Span<const bp_t> fwd_moves,
+                         absl::Span<const std::size_t> rev_lef_mask,
+                         absl::Span<const std::size_t> fwd_lef_mask) {
+  assert(lefs.size() == rev_moves.size());     // NOLINT
+  assert(lefs.size() == fwd_moves.size());     // NOLINT
+  assert(lefs.size() == rev_lef_mask.size());  // NOLINT
+  assert(lefs.size() == fwd_lef_mask.size());  // NOLINT
 
   for (auto i = 0UL; i < lefs.size(); ++i) {
     auto& lef = lefs[i];
-    if (lef.lifetime == 0) {  // LEF does not currently bind DNA
+    if (!lef.is_bound()) {  // LEF does not currently bind DNA
       continue;
     }
 
     // Extrude rev unit
-    if (lef.rev_unit.stalled()) {  // Unit is stalled
-      lef.rev_unit.decrement_stalls(rev_moves[i]);
-    } else if (lef.rev_unit.pos() <
-               chrom->start_pos() + rev_moves[i]) {  // Unit reached chrom. boundary
-      lef.rev_unit._pos = chrom->start_pos();
-      lef.rev_unit._nstalls_lef_lef = std::numeric_limits<bp_t>::max();
-    } else {
-      assert(rev_moves[i] <= lef.rev_unit.pos() - chrom->start_pos());  // NOLINT
-      lef.rev_unit._pos -= rev_moves[i];  // Advance extr. unit in 3'-5' direction
+    if (rev_lef_mask[i] == NO_COLLISION) {                           // Unit is not stalled
+      if (lef.rev_unit.pos() < chrom->start_pos() + rev_moves[i]) {  // Unit reached chrom. boundary
+        lef.rev_unit._pos = chrom->start_pos();
+      } else {
+        assert(rev_moves[i] <= lef.rev_unit.pos() - chrom->start_pos());  // NOLINT
+        lef.rev_unit._pos -= rev_moves[i];  // Advance extr. unit in 3'-5' direction
+      }
     }
 
     // Extrude fwd unit
-    if (lef.fwd_unit.stalled()) {  // Unit is stalled
-      lef.fwd_unit.decrement_stalls(fwd_moves[i]);
-    } else if (lef.fwd_unit.pos() + fwd_moves[i] >
-               chrom->end_pos() - 1) {  // Unit reached chrom. boundary
-      lef.fwd_unit._pos = chrom->end_pos();
-      lef.fwd_unit._nstalls_lef_lef = std::numeric_limits<bp_t>::max();
-    } else {
-      assert(fwd_moves[i] + lef.fwd_unit.pos() < chrom->end_pos());  // NOLINT
-      lef.fwd_unit._pos += fwd_moves[i];  // Advance extr. unit in 5'-3' direction
-    }
-
-    // Reduce lifetime and release LEFs when appropriate (i.e. LEF lifetime reaches 0)
-    if ((lef.lifetime -= std::min(lef.lifetime, rev_moves[i] + fwd_moves[i])) == 0) {
-      lef.release();
+    if (fwd_lef_mask[i] == NO_COLLISION) {  // Unit is not stalled
+      if (lef.fwd_unit.pos() + fwd_moves[i] >
+          chrom->end_pos() - 1) {  // Unit reached chrom. boundary
+        lef.fwd_unit._pos = chrom->end_pos();
+      } else {
+        assert(fwd_moves[i] + lef.fwd_unit.pos() < chrom->end_pos());  // NOLINT
+        lef.fwd_unit._pos += fwd_moves[i];  // Advance extr. unit in 5'-3' direction
+      }
     }
   }
 }
 
-void Simulation::check_lef_lef_collisions(absl::Span<const Lef> lefs,
-                                          absl::Span<const std::size_t> rev_lef_rank_buff,
-                                          absl::Span<const std::size_t> fwd_lef_rank_buff,
-                                          absl::Span<const bp_t> rev_move_buff,
-                                          absl::Span<const bp_t> fwd_move_buff,
-                                          absl::Span<collision_t> rev_collision_buff,
-                                          absl::Span<collision_t> fwd_collision_buff) {
+void Simulation::check_lef_lef_collisions(
+    absl::Span<Lef> lefs, absl::Span<const std::size_t> rev_lef_rank_buff,
+    absl::Span<const std::size_t> fwd_lef_rank_buff, absl::Span<const bp_t> rev_move_buff,
+    absl::Span<const bp_t> fwd_move_buff, absl::Span<std::size_t> rev_collision_mask,
+    absl::Span<std::size_t> fwd_collision_mask, modle::PRNG& rand_eng) {
   assert(lefs.size() == fwd_lef_rank_buff.size());
   assert(lefs.size() == rev_lef_rank_buff.size());
-  assert(lefs.size() == fwd_collision_buff.size());
-  assert(lefs.size() == rev_collision_buff.size());
-  /*
-    assert(std::is_sorted(fwd_lef_rank_buff.begin(), fwd_lef_rank_buff.end(),
-                          [&](const auto r1, const auto r2) {
-                            return lefs[r1].fwd_unit.pos() < lefs[r2].fwd_unit.pos();
-                          }));
-    assert(std::is_sorted(rev_lef_rank_buff.begin(), rev_lef_rank_buff.end(),
-                          [&](const auto r1, const auto r2) {
-                            return lefs[r1].rev_unit.pos() < lefs[r2].rev_unit.pos();
-                          }));
-  */
-
-  // Clear buffers
-  std::fill(fwd_collision_buff.begin(), fwd_collision_buff.end(), 0);
-  std::fill(rev_collision_buff.begin(), rev_collision_buff.end(), 0);
+  assert(lefs.size() == fwd_collision_mask.size());
+  assert(lefs.size() == rev_collision_mask.size());
+  assert(std::is_sorted(fwd_lef_rank_buff.begin(), fwd_lef_rank_buff.end(),
+                        [&](const auto r1, const auto r2) {
+                          return lefs[r1].fwd_unit.pos() < lefs[r2].fwd_unit.pos();
+                        }));
+  assert(std::is_sorted(rev_lef_rank_buff.begin(), rev_lef_rank_buff.end(),
+                        [&](const auto r1, const auto r2) {
+                          return lefs[r1].rev_unit.pos() < lefs[r2].rev_unit.pos();
+                        }));
 
   /* Loop over lefs, using a procedure similar to merge in mergesort
    * The idea here is that if we have a way to visit extr. units in 5'-3' order, then detecting
@@ -841,6 +853,47 @@ void Simulation::check_lef_lef_collisions(absl::Span<const Lef> lefs,
    *    - While doing so, increase the number of LEF-LEF collisions for the fwd/rev unit that are
    *      being processed
    */
+  for (auto i = 0UL; i < lefs.size() - 1; ++i) {
+    const auto& rev_idx1 = rev_lef_rank_buff[i];      // index of the ith fwd unit in 5'-3' order
+    const auto& rev_idx2 = rev_lef_rank_buff[i + 1];  // index of the ith +1 fwd unit in 5'-3' order
+
+    if (rev_collision_mask[rev_idx1]) {
+      const auto& rev1 = lefs[rev_idx1].rev_unit;  // ith unit in 5'-3' order
+      auto& rev2 = lefs[rev_idx2].rev_unit;        // ith +1 unit in 5'-3' order
+      if (rev1.pos() + rev_move_buff[rev_idx1] >= rev2.pos()) {
+        const auto collision = std::uniform_real_distribution<double>{0, 1}(rand_eng) <
+                               this->probability_of_extrusion_unit_bypass;
+        if (collision) {
+          rev2._pos = rev1.pos() + 1;        // TODO check for chrom end?
+          rev_collision_mask[rev_idx2] = 1;  // Any number other than NO_COLLISION works here
+        } else {
+          rev2._pos = rev1.pos();  // LEFs at same pos are transparent to each other
+        }
+      }
+    }
+  }
+
+  for (auto i = lefs.size() - 1; i > 1; --i) {
+    const auto& fwd_idx1 = fwd_lef_rank_buff[i];      // index of the ith fwd unit in 3'-5' order
+    const auto& fwd_idx2 = fwd_lef_rank_buff[i - 1];  // index of the ith +1 fwd unit in 3'-5' order
+
+    if (fwd_collision_mask[fwd_idx1]) {
+      const auto& fwd1 = lefs[fwd_idx1].fwd_unit;  // ith unit in 3'-5' order
+      auto& fwd2 = lefs[fwd_idx2].fwd_unit;        // ith +1 unit in 3'-5' order
+      if (fwd2.pos() + fwd_move_buff[fwd_idx2] >= fwd1.pos()) {
+        const auto collision = std::uniform_real_distribution<double>{0, 1}(rand_eng) <
+                               this->probability_of_extrusion_unit_bypass;
+        if (collision) {
+          assert(fwd1.pos() > 0);  // TODO check for chrom start?
+          fwd2._pos = fwd1.pos() - 1;
+          fwd_collision_mask[fwd_idx2] = 1;  // Any number other than NO_COLLISION works here
+        } else {
+          fwd2._pos = fwd1.pos();  // LEFs at same pos are transparent to each other
+        }
+      }
+    }
+  }
+
   std::size_t i = 0, j = 0;
   while (i < lefs.size() && j < lefs.size()) {
     const auto& fwd_idx = fwd_lef_rank_buff[i];      // index of the ith fwd unit in 5'-3' order
@@ -849,7 +902,9 @@ void Simulation::check_lef_lef_collisions(absl::Span<const Lef> lefs,
     for (auto k = j; k < lefs.size(); ++k) {
       const auto& rev_idx = rev_lef_rank_buff[k];      // index of the kth rev unit in 5'-3' order
       const auto& rev = lefs[rev_idx].rev_unit.pos();  // pos of the kth unit
-      if (rev < fwd) {  // Look for the first rev unit that comes after the current fwd unit
+      if (rev < fwd || fwd_collision_mask[fwd_idx]) {  // Look for the first rev unit that comes
+                                                       // after the current fwd unit. Skip over LEFs
+                                                       // that are already stalled
         ++j;  // NOTE k is increased by the for loop. Increasing j does not affect the current for
               // loop
         continue;
@@ -862,16 +917,18 @@ void Simulation::check_lef_lef_collisions(absl::Span<const Lef> lefs,
 
       // Increment the # of collisions if delta is less than the threshold, and if the two ext.
       // units do not belong to the same LEF
-      fwd_collision_buff[fwd_idx] += delta <= dist && rev_idx != fwd_idx;
-      rev_collision_buff[rev_idx] += delta <= dist && rev_idx != fwd_idx;
+      if (delta < dist && rev_idx != fwd_idx) {
+        const auto stalled = std::uniform_real_distribution<double>{0, 1}(rand_eng) <
+                             this->probability_of_extrusion_unit_bypass;
+        fwd_collision_mask[fwd_idx] = stalled;
+        rev_collision_mask[rev_idx] = stalled;
 
-      /*
-      fmt::print(stderr,
-                 "i={}; j={}; fwd_idx={}; rev_idx={}; rev={}; fwd={}; delta={}; fwd_mask={}; "
-                 "rev_mask={};\n",
-                 i, j, fwd_idx, rev_idx, rev, fwd, delta, fwd_collision_buff[fwd_idx],
-                 rev_collision_buff[rev_idx]);
-      */
+        if (delta > 1) {  // Move extr. unit at collision site
+          const auto collision_site = (rev + fwd + 1) / 2;
+          lefs[fwd_idx].fwd_unit._pos = collision_site;
+          lefs[rev_idx].rev_unit._pos = collision_site + 1;
+        }
+      }
       // Break out of the loop if the units being processed are too far from each other, or if k
       // points to the last rev unit
       if (delta > dist || k == lefs.size() - 1) {
@@ -888,94 +945,19 @@ void Simulation::check_lef_lef_collisions(absl::Span<const Lef> lefs,
   }
 }
 
-void Simulation::apply_lef_lef_stalls(absl::Span<Lef> lefs,
-                                      absl::Span<const collision_t> rev_collision_buff,
-                                      absl::Span<const collision_t> fwd_collision_buff,
-                                      absl::Span<const std::size_t> rev_lef_rank_buff,
-                                      absl::Span<const std::size_t> fwd_lef_rank_buff,
-                                      PRNG& rand_eng) {
-  assert(lefs.size() == fwd_lef_rank_buff.size());
-  assert(lefs.size() == rev_lef_rank_buff.size());
-  assert(lefs.size() == fwd_collision_buff.size());
-  assert(lefs.size() == rev_collision_buff.size());
-  /*
-    assert(std::is_sorted(fwd_lef_rank_buff.begin(), fwd_lef_rank_buff.end(),
-                          [&](const auto r1, const auto r2) {
-                            return lefs[r1].fwd_unit.pos() < lefs[r2].fwd_unit.pos();
-                          }));
-    assert(std::is_sorted(rev_lef_rank_buff.begin(), rev_lef_rank_buff.end(),
-                          [&](const auto r1, const auto r2) {
-                            return lefs[r1].rev_unit.pos() < lefs[r2].rev_unit.pos();
-                          }));
-  */
-  assert(std::accumulate(fwd_collision_buff.begin(), fwd_collision_buff.end(), 0UL) ==
-         std::accumulate(rev_collision_buff.begin(), rev_collision_buff.end(), 0UL));
-
-  lef_lef_stall_generator_t rng(this->probability_of_extrusion_unit_bypass);
-  std::size_t i = 0, j = 0;
-  auto fwd_idx = fwd_lef_rank_buff[i];
-  auto rev_idx = rev_lef_rank_buff[j];
-
-  std::size_t collisions_fwd = fwd_collision_buff[fwd_idx];
-  std::size_t collisions_rev = rev_collision_buff[rev_idx];
-
-  /* Loop over the two buffers storing the number of collision for each LEF. We use the fwd/rev
-   * ranks to iterate through collision events in 5'-3' direction. Draw and apply the appropriate
-   * number of stalls
-   */
-  while (i < lefs.size() && j < lefs.size()) {
-    while (collisions_rev == 0) {  // Find the first collision event for rev units
-      if (++j == lefs.size()) {
-        return;
-      }
-      rev_idx = rev_lef_rank_buff[j];
-      collisions_rev = rev_collision_buff[rev_idx];
-    }
-
-    while (collisions_fwd == 0) {  // Find the first collision event for fwd units
-      if (++i == lefs.size()) {
-        return;
-      }
-      fwd_idx = fwd_lef_rank_buff[i];
-      collisions_fwd = fwd_collision_buff[fwd_idx];
-    }
-
-    // Each iteration consumes a pair of collision events. When fwd or rev collision events (or
-    // both) reach 0, this while loop is terminated, and we go back to the outer while loop (where
-    // we look for the next non-zero collision event)
-    while (collisions_fwd > 0 && collisions_rev > 0) {
-      const auto nstalls =
-          std::min({rng(rand_eng), lefs[rev_idx].lifetime, lefs[fwd_idx].lifetime});
-      auto& fwd_unit = lefs[fwd_idx].fwd_unit;
-      auto& rev_unit = lefs[rev_idx].rev_unit;
-      if (!fwd_unit.stalled() && !rev_unit.stalled()) {
-        const auto pos = (rev_unit.pos() + fwd_unit.pos() + 1) / 2;
-        rev_unit._pos = pos;
-        fwd_unit._pos = pos;
-      } else if (fwd_unit.stalled()) {
-        rev_unit._pos = fwd_unit.pos();
-      } else if (rev_unit.stalled()) {
-        fwd_unit._pos = rev_unit.pos();
-      }
-      fwd_unit._nstalls_lef_lef += nstalls;
-      rev_unit._nstalls_lef_lef += nstalls;
-      --collisions_fwd;
-      --collisions_rev;
-    }
-  }
-}
-
 void Simulation::check_lef_bar_collisions(
-    absl::Span<const Lef> lefs, absl::Span<const std::size_t> rev_lef_rank_buff,
+    absl::Span<Lef> lefs, absl::Span<const std::size_t> rev_lef_rank_buff,
     absl::Span<const std::size_t> fwd_lef_rank_buff, absl::Span<const bp_t> rev_move_buff,
     absl::Span<const bp_t> fwd_move_buff, absl::Span<const ExtrusionBarrier> extr_barriers,
-    absl::Span<collision_t> rev_collision_buff, absl::Span<collision_t> fwd_collision_buff) {
+    const boost::dynamic_bitset<>& barrier_mask, absl::Span<std::size_t> rev_collisions,
+    absl::Span<std::size_t> fwd_collisions) {
   assert(lefs.size() == fwd_lef_rank_buff.size());
   assert(lefs.size() == rev_lef_rank_buff.size());
   assert(lefs.size() == fwd_move_buff.size());
   assert(lefs.size() == rev_move_buff.size());
-  assert(lefs.size() == fwd_collision_buff.size());
-  assert(lefs.size() == rev_collision_buff.size());
+  assert(lefs.size() == fwd_collisions.size());
+  assert(lefs.size() == rev_collisions.size());
+  assert(barrier_mask.size() == extr_barriers.size());
   assert(std::is_sorted(fwd_lef_rank_buff.begin(), fwd_lef_rank_buff.end(),
                         [&](const auto r1, const auto r2) {
                           return lefs[r1].fwd_unit.pos() < lefs[r2].fwd_unit.pos();
@@ -984,10 +966,6 @@ void Simulation::check_lef_bar_collisions(
                         [&](const auto r1, const auto r2) {
                           return lefs[r1].rev_unit.pos() < lefs[r2].rev_unit.pos();
                         }));
-
-  // Clear buffers (-1 indicates no collisions)
-  std::fill(fwd_collision_buff.begin(), fwd_collision_buff.end(), NO_COLLISION);
-  std::fill(rev_collision_buff.begin(), rev_collision_buff.end(), NO_COLLISION);
 
   /* Loop over lefs, using a procedure similar to merge in mergesort
    * The idea here is that if we have a way to visit extr. units in 5'-3' order, then detecting
@@ -1005,14 +983,11 @@ void Simulation::check_lef_bar_collisions(
   std::size_t j = 0;  // Process fwd extrusion units
   for (auto i = 0UL; i < lefs.size(); ++i) {
     const auto& fwd_idx = fwd_lef_rank_buff[i];  // index of the ith fwd unit in 5'-3' order
-    if (lefs[fwd_idx].fwd_unit.stalled()) {
-      continue;
-    }
     const auto& fwd_pos = lefs[fwd_idx].fwd_unit.pos();  // pos of the ith fwd unit
     auto extr_barr_pos = extr_barriers[j].pos();  // pos of the next (possibly blocking) barrier
 
-    // Look for the first extr. barrier downstream of the current fwd extrusion unit
-    while (extr_barr_pos < fwd_pos) {
+    // Look for the first occupied extr. barrier downstream of the current fwd extrusion unit
+    while (extr_barr_pos < fwd_pos || !barrier_mask[j]) {
       if (++j == extr_barriers.size()) {
         goto endloop1;  // Reached the last barrier at the 5'-3' direction
       }
@@ -1022,7 +997,11 @@ void Simulation::check_lef_bar_collisions(
     // Detect collisions between extr. units/barriers that are less then delta bp away from each
     // other
     const auto delta = extr_barr_pos - fwd_pos;
-    fwd_collision_buff[fwd_idx] = delta <= fwd_move_buff[fwd_idx] ? j : NO_COLLISION;
+    fwd_collisions[fwd_idx] = delta <= fwd_move_buff[fwd_idx] ? j : NO_COLLISION;
+    if (fwd_collisions[fwd_idx] != NO_COLLISION) {
+      lefs[fwd_idx].fwd_unit._pos =
+          extr_barr_pos != 0 ? extr_barr_pos - 1 : 0;  // Move LEF close to extr. barrier
+    }
   }
 endloop1:
 
@@ -1031,14 +1010,11 @@ endloop1:
     const auto& rev_idx = rev_lef_rank_buff[i];  // index of the ith fwd unit in 5'-3' order
     // fmt::print(stderr, "i={}/{}; rev_idx={}/{}\n", i, lefs.size(), rev_idx,
     // rev_lef_rank_buff.size());
-    if (lefs[rev_idx].rev_unit.stalled()) {
-      continue;
-    }
     const auto& rev_pos = lefs[rev_idx].rev_unit.pos();  // pos of the ith rev unit
     auto extr_barr_pos = extr_barriers[j].pos();  // pos of the next (possibly blocking) barrier
 
-    // Look for the first extr. barrier upstream of the current rev extrusion unit
-    while (extr_barr_pos > rev_pos) {
+    // Look for the first occupied extr. barrier upstream of the current rev extrusion unit
+    while (extr_barr_pos > rev_pos || !barrier_mask[j]) {
       if (j-- == 0) {
         return;  // reached the last barrier in 3'-5' direction
       }
@@ -1048,71 +1024,9 @@ endloop1:
     // Detect collisions between extr. units/barriers that are less then delta bp away from each
     // other
     const auto delta = rev_pos - extr_barr_pos;
-    rev_collision_buff[rev_idx] = delta <= rev_move_buff[rev_idx] ? j : NO_COLLISION;
-  }
-}
-
-void Simulation::apply_lef_bar_stalls(absl::Span<Lef> lefs,
-                                      absl::Span<const collision_t> rev_collision_buff,
-                                      absl::Span<const collision_t> fwd_collision_buff,
-                                      absl::Span<const ExtrusionBarrier> extr_barriers,
-                                      PRNG& rand_eng) {
-  assert(lefs.size() == fwd_collision_buff.size());
-  assert(lefs.size() == rev_collision_buff.size());
-
-  for (auto i = 0UL; i < lefs.size(); ++i) {
-    // Skip over LEFs where no collision occurred or where both units are currently stalled
-    if ((rev_collision_buff[i] == NO_COLLISION && fwd_collision_buff[i] == NO_COLLISION) ||
-        (lefs[i].rev_unit.stalled() && lefs[i].fwd_unit.stalled())) {
-      continue;
-    }
-    auto& lef = lefs[i];
-
-    // Process rev collisions
-    if (const auto barr_idx = rev_collision_buff[i]; barr_idx != NO_COLLISION) {
-      assert(!lef.rev_unit.stalled());
-      const auto& barrier = extr_barriers[barr_idx];
-      auto nstalls = lef_bar_stall_generator_t{1.0 - barrier.pblock()}(rand_eng);
-      if (barrier.blocking_direction() != dna::rev) {  // Reduce nstalls in case of soft-stalls
-        assert(barrier.blocking_direction() == dna::fwd);
-        nstalls =
-            static_cast<bp_t>(std::round(soft_stall_multiplier * static_cast<double>(nstalls)));
-      }
-      lef.rev_unit._pos = barrier.pos();
-      lef.rev_unit._nstalls_lef_bar = nstalls;
-    }
-
-    // Process fwd collisions
-    if (const auto barr_idx = fwd_collision_buff[i]; barr_idx != NO_COLLISION) {
-      assert(!lef.fwd_unit.stalled());
-      const auto& barrier = extr_barriers[barr_idx];
-      auto nstalls = lef_bar_stall_generator_t{1.0 - barrier.pblock()}(rand_eng);
-      if (barrier.blocking_direction() != dna::fwd) {  // Reduce nstalls in case of soft-stalls
-        assert(barrier.blocking_direction() == dna::rev);
-        nstalls =
-            static_cast<bp_t>(std::round(soft_stall_multiplier * static_cast<double>(nstalls)));
-      }
-      lef.fwd_unit._pos = barrier.pos();
-      lef.fwd_unit._nstalls_lef_bar = nstalls;
-    }
-
-    const auto rev_barr_idx = rev_collision_buff[i];
-    const auto fwd_barr_idx = fwd_collision_buff[i];
-    // Detect and process hard-stalls
-    if (lef.rev_unit.stalled() && lef.fwd_unit.stalled() && rev_barr_idx != NO_COLLISION &&
-        fwd_barr_idx != NO_COLLISION &&
-        extr_barriers[rev_barr_idx].blocking_direction() == dna::rev &&
-        extr_barriers[fwd_barr_idx].blocking_direction() == dna::fwd) {
-      const auto nstalls = static_cast<bp_t>(std::round(
-          hard_stall_multiplier * static_cast<double>(std::min(lef.rev_unit._nstalls_lef_bar,
-                                                               lef.fwd_unit._nstalls_lef_bar))));
-      lef.rev_unit._nstalls_lef_bar += nstalls;
-      lef.fwd_unit._nstalls_lef_bar += nstalls;
-
-      if (this->allow_lef_lifetime_extension) {
-        assert(std::numeric_limits<bp_t>::max() - nstalls > lef.lifetime);  // NOLINT
-        lef.lifetime += nstalls;
-      }
+    rev_collisions[rev_idx] = delta <= rev_move_buff[rev_idx] ? j : NO_COLLISION;
+    if (rev_collisions[rev_idx] != NO_COLLISION) {
+      lefs[rev_idx].rev_unit._pos = extr_barr_pos + 1;  // Move LEF close to extr. barrier
     }
   }
 }
@@ -1138,9 +1052,52 @@ void Simulation::select_lefs_to_bind(absl::Span<const Lef> lefs, MaskT& mask) {
                     std::is_integral_v<std::decay_t<decltype(std::declval<MaskT&>().operator[](
                         std::declval<std::size_t>()))>>,
                 "mask should be a vector of integral numbers or a boost::dynamic_bitset.");
-  assert(lefs.size() <= mask.size());
+  assert(lefs.size() == mask.size());
+  std::transform(lefs.begin(), lefs.end(), mask.begin(),
+                 [](const auto& lef) { return !lef.is_bound(); });
+}
+
+void Simulation::generate_lef_unloader_affinities(absl::Span<const Lef> lefs,
+                                                  absl::Span<const ExtrusionBarrier> barriers,
+                                                  absl::Span<const std::size_t> rev_collisions,
+                                                  absl::Span<const std::size_t> fwd_collisions,
+                                                  absl::Span<double> lef_unloader_affinity) {
+  assert(lefs.size() == rev_collisions.size());         // NOLINT
+  assert(lefs.size() == fwd_collisions.size());         // NOLINT
+  assert(lefs.size() == lef_unloader_affinity.size());  // NOLINT
+
   for (auto i = 0UL; i < lefs.size(); ++i) {
-    mask[i] = lefs[i].lifetime == 0;
+    const auto& lef = lefs[i];
+    if (!lef.is_bound()) {
+      lef_unloader_affinity[i] = 0.0;
+    } else if (rev_collisions[i] == NO_COLLISION || fwd_collisions[i] == NO_COLLISION) {
+      lef_unloader_affinity[i] = 1.0;
+    } else {
+      const auto& rev_barrier = barriers[rev_collisions[i]];
+      const auto& fwd_barrier = barriers[fwd_collisions[i]];
+
+      if (rev_barrier.blocking_direction() == dna::rev &&
+          fwd_barrier.blocking_direction() == dna::fwd) {
+        lef_unloader_affinity[i] = 1.0 / this->hard_stall_multiplier;
+      } else {
+        lef_unloader_affinity[i] = 1.0;
+      }
+    }
+  }
+}
+
+void Simulation::select_lefs_to_release(absl::Span<std::size_t> lef_idx,
+                                        absl::Span<const double> lef_unloader_affinity,
+                                        modle::PRNG& rand_eng) {
+  std::discrete_distribution<std::size_t> idx_gen(lef_unloader_affinity.begin(),
+                                                  lef_unloader_affinity.end());
+  std::generate(lef_idx.begin(), lef_idx.end(), [&]() { return idx_gen(rand_eng); });
+}
+
+void Simulation::release_lefs(absl::Span<Lef> lefs, absl::Span<const std::size_t> lef_idx) {
+  for (const auto& i : lef_idx) {
+    assert(i < lefs.size());  // NOLINT
+    lefs[i].release();
   }
 }
 
@@ -1160,6 +1117,42 @@ boost::asio::thread_pool Simulation::instantiate_thread_pool(I nthreads, bool cl
   assert(nthreads > 0);
   return boost::asio::thread_pool(static_cast<unsigned int>(nthreads));
   DISABLE_WARNING_POP
+}
+
+void Simulation::State::operator=(const Task& task) {
+  this->id = task.id;
+  this->chrom = task.chrom;
+  this->cell_id = task.cell_id;
+  this->n_target_epochs = task.n_target_epochs;
+  this->nlefs = task.nlefs;
+  this->barriers = task.barriers;
+}
+
+void Simulation::State::resize(std::size_t size) {
+  if (size == std::numeric_limits<std::size_t>::max()) {
+    size = this->nlefs;
+  }
+  lef_buff.resize(size);
+  lef_unloader_affinity.resize(size);
+  rank_buff1.resize(size);
+  rank_buff2.resize(size);
+  moves_buff1.resize(size);
+  moves_buff2.resize(size);
+  idx_buff1.resize(size);
+  idx_buff2.resize(size);
+  epoch_buff.resize(size);
+}
+
+void Simulation::State::reset() {  // TODO figure out which resets are redundant
+  std::for_each(lef_buff.begin(), lef_buff.end(), [](auto& lef) { lef.reset(); });
+  std::fill(lef_unloader_affinity.begin(), lef_unloader_affinity.end(), 0.0);
+  std::iota(rank_buff1.begin(), rank_buff1.end(), 0);
+  std::copy(rank_buff1.begin(), rank_buff1.end(), rank_buff2.begin());
+  std::fill(moves_buff1.begin(), moves_buff1.end(), 0);
+  std::fill(moves_buff2.begin(), moves_buff2.end(), 0);
+  std::fill(idx_buff1.begin(), idx_buff1.end(), 0);
+  std::fill(idx_buff2.begin(), idx_buff2.end(), 0);
+  std::fill(epoch_buff.begin(), epoch_buff.end(), 0);
 }
 
 }  // namespace modle
