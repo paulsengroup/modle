@@ -47,6 +47,10 @@ double ExtrusionBarrier::prob_no_block_to_block() const {
 
 dna::Direction ExtrusionBarrier::blocking_direction() const { return this->_blocking_direction; }
 
+bool ExtrusionBarrier::operator<(const ExtrusionBarrier& other) const {
+  return this->pos() < other.pos();
+}
+
 CTCF::State CTCF::next_state(CTCF::State current_state, double occupied_self_transition_prob,
                              double not_occupied_self_transition_prob, PRNG& rand_eng) {
   assert(occupied_self_transition_prob >= 0 && occupied_self_transition_prob <= 1);

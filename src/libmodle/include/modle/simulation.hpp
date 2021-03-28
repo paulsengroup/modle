@@ -51,6 +51,7 @@ class Simulation : Config {
   using chrom_pos_generator_t = std::uniform_int_distribution<bp_t>;
   using collision_t = uint_fast16_t;
   static constexpr auto NO_COLLISION = std::numeric_limits<collision_t>::max();
+  static constexpr auto LEF_LEF_COLLISION = std::numeric_limits<collision_t>::max() - 1;
 
   struct Task {
     std::size_t id;
@@ -125,21 +126,20 @@ class Simulation : Config {
 
   // Loop over lefs and identify colliding extr. units (i.e. units that travel in opposite
   // direction and that are within <p>dist_threshold</p> bp from each other
-  inline void check_lef_lef_collisions(absl::Span<Lef> lefs,
+  inline void check_lef_lef_collisions(absl::Span<const Lef> lefs,
                                        absl::Span<const std::size_t> rev_lef_rank_buff,
                                        absl::Span<const std::size_t> fwd_lef_rank_buff,
-                                       absl::Span<const bp_t> rev_move_buff,
-                                       absl::Span<const bp_t> fwd_move_buff,
+                                       absl::Span<bp_t> rev_move_buff,
+                                       absl::Span<bp_t> fwd_move_buff,
                                        absl::Span<std::size_t> rev_collision_buff,
                                        absl::Span<std::size_t> fwd_collision_buff, PRNG& rand_eng);
 
   inline void check_lef_bar_collisions(
-      const Chromosome* chrom, absl::Span<Lef> lefs,
-      absl::Span<const std::size_t> rev_lef_rank_buff,
-      absl::Span<const std::size_t> fwd_lef_rank_buff, absl::Span<const bp_t> rev_move_buff,
-      absl::Span<const bp_t> fwd_move_buff, absl::Span<const ExtrusionBarrier> extr_barriers,
+      absl::Span<const Lef> lefs, absl::Span<const std::size_t> rev_lef_rank_buff,
+      absl::Span<const std::size_t> fwd_lef_rank_buff, absl::Span<bp_t> rev_move_buff,
+      absl::Span<bp_t> fwd_move_buff, absl::Span<const ExtrusionBarrier> extr_barriers,
       const boost::dynamic_bitset<>& barrier_mask, absl::Span<std::size_t> rev_collisions,
-      absl::Span<std::size_t> fwd_collisions, modle::PRNG& rand_eng);
+      absl::Span<std::size_t> fwd_collisions);
 
   inline std::size_t register_contacts(Chromosome* chrom, absl::Span<const Lef> lefs,
                                        absl::Span<const std::size_t> selected_lef_idx);

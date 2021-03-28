@@ -6,6 +6,8 @@
 
 namespace modle {
 
+class ExtrusionUnit;
+
 class ExtrusionBarrier {
  public:
   inline ExtrusionBarrier() = default;
@@ -22,6 +24,7 @@ class ExtrusionBarrier {
   [[nodiscard]] inline double prob_no_block_to_no_block() const;
   [[nodiscard]] inline double prob_no_block_to_block() const;
   [[nodiscard]] inline dna::Direction blocking_direction() const;
+  [[nodiscard]] inline bool operator<(const ExtrusionBarrier& other) const;
 
  protected:
   bp_t _pos;

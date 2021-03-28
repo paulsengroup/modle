@@ -7,6 +7,8 @@
 
 namespace modle {
 
+class ExtrusionBarrier;
+
 class ExtrusionUnit {
   friend struct Lef;
   friend class Simulation;
@@ -16,8 +18,32 @@ class ExtrusionUnit {
   inline ExtrusionUnit(bp_t pos);
   inline void bind_at_pos(bp_t pos);
   [[nodiscard]] inline bp_t pos() const;
-  [[nodiscard]] inline bool operator<(const ExtrusionUnit& other);
-  [[nodiscard]] inline bool operator<(std::size_t other_pos);
+  [[nodiscard]] inline bool operator<(const ExtrusionUnit& other) const;
+  [[nodiscard]] inline bool operator<(const ExtrusionBarrier& barrier) const;
+  template <typename I>
+  [[nodiscard]] inline bool operator<(I other_pos) const;
+  [[nodiscard]] inline bool operator>(const ExtrusionUnit& other) const;
+  [[nodiscard]] inline bool operator>(const ExtrusionBarrier& barrier) const;
+  template <typename I>
+  [[nodiscard]] inline bool operator>(I other_pos) const;
+  [[nodiscard]] inline bool operator<=(const ExtrusionUnit& other) const;
+  [[nodiscard]] inline bool operator<=(const ExtrusionBarrier& barrier) const;
+  template <typename I>
+  [[nodiscard]] inline bool operator<=(I other_pos) const;
+  [[nodiscard]] inline bool operator>=(const ExtrusionUnit& other) const;
+  [[nodiscard]] inline bool operator>=(const ExtrusionBarrier& barrier) const;
+  template <typename I>
+  [[nodiscard]] inline bool operator>=(I other_pos) const;
+  [[nodiscard]] inline bool operator==(const ExtrusionUnit& other) const;
+  [[nodiscard]] inline bool operator==(const ExtrusionBarrier& barrier) const;
+  template <typename I>
+  [[nodiscard]] inline bool operator==(I other_pos) const;
+  [[nodiscard]] inline int64_t operator-(const ExtrusionUnit& other) const;
+  [[nodiscard]] inline int64_t operator-(const ExtrusionBarrier& barrier) const;
+  template <typename I>
+  [[nodiscard]] inline int64_t operator-(I other_pos) const;
+  template <typename I>
+  [[nodiscard]] inline int64_t operator+(I other_pos) const;
   inline void release();
 
  private:
