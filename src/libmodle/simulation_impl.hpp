@@ -541,9 +541,9 @@ void Simulation::simulate_extrusion_kernel(Simulation::State& s) {
   auto fwd_collision_mask = absl::MakeSpan(s.idx_buff2);
 
   // Generate initial extr. barrier states
-  // TODO: Figure out how to compute the occupancy at equilibrium
   for (auto i = 0UL; i < s.barrier_mask.size(); ++i) {
-    s.barrier_mask[i] = std::bernoulli_distribution{0.5}(s.rand_eng);
+    s.barrier_mask[i] =
+        std::bernoulli_distribution{this->probability_of_extrusion_barrier_block}(s.rand_eng);
   }
 
   std::size_t nlefs_to_sample;
@@ -608,6 +608,8 @@ void Simulation::simulate_extrusion_kernel(Simulation::State& s) {
                          s.rand_eng);
 
     this->generate_ctcf_states(barriers, s.barrier_mask, s.rand_eng);
+    std::fill(rev_collision_mask.begin(), rev_collision_mask.end(), NO_COLLISION);
+    std::fill(fwd_collision_mask.begin(), fwd_collision_mask.end(), NO_COLLISION);
 
     this->check_lef_bar_collisions(lefs, rev_lef_ranks, fwd_lef_ranks, rev_moves, fwd_moves,
                                    barriers, s.barrier_mask, rev_collision_mask,
@@ -868,6 +870,10 @@ void Simulation::check_lef_bar_collisions(
                         [&](const auto r1, const auto r2) {
                           return lefs[r1].rev_unit.pos() < lefs[r2].rev_unit.pos();
                         }));
+  assert(std::all_of(rev_collisions.begin(), rev_collisions.end(),
+                     [](const auto c) { return c == NO_COLLISION; }));
+  assert(std::all_of(fwd_collisions.begin(), fwd_collisions.end(),
+                     [](const auto c) { return c == NO_COLLISION; }));
 
   /* Loop over lefs, using a procedure similar to merge in mergesort
    * The idea here is that if we have a way to visit extr. units in 5'-3' order, then detecting
@@ -911,8 +917,6 @@ void Simulation::check_lef_bar_collisions(
         rev_collisions[rev_idx] = i;
         // Move LEF close to the extr. barrier
         rev_move = delta > 1 ? delta - 1 : 0;
-      } else {
-        rev_collisions[rev_idx] = NO_COLLISION;
       }
     }
 
@@ -935,8 +939,6 @@ void Simulation::check_lef_bar_collisions(
         fwd_collisions[fwd_idx] = i;
         // Move LEF close to the extr. barrier
         fwd_move = delta > 1 ? delta - 1 : 0;
-      } else {
-        fwd_collisions[fwd_idx] = NO_COLLISION;
       }
     }
 
@@ -957,56 +959,14 @@ void Simulation::check_lef_lef_collisions(
   assert(lefs.size() == rev_lef_rank_buff.size());
   assert(lefs.size() == fwd_collision_mask.size());
   assert(lefs.size() == rev_collision_mask.size());
-  (void)rand_eng;
-
-#ifndef NDEBUG
-  //#ifdef NDEBUG
-  bool ok = true;
-  if (!std::is_sorted(fwd_lef_rank_buff.begin(), fwd_lef_rank_buff.end(),
-                      [&](const auto r1, const auto r2) {
-                        return lefs[r1].fwd_unit.pos() < lefs[r2].fwd_unit.pos();
-                      })) {
-    ok = false;
-    std::vector<std::size_t> buff(lefs.size());
-    std::transform(lefs.begin(), lefs.end(), buff.begin(),
-                   [](const auto& lef) { return lef.fwd_unit.pos(); });
-    fmt::print(stderr, "FWD LEFs are not properly sorted!\nPOS=[{}]\nRANKS=[{}]\n",
-               absl::StrJoin(buff, ", "), absl::StrJoin(fwd_lef_rank_buff, ", "));
-    for (auto i = 1UL; i < lefs.size(); ++i) {
-      const auto& r1 = fwd_lef_rank_buff[i - 1];
-      const auto& r2 = fwd_lef_rank_buff[i];
-
-      if (lefs[r1].fwd_unit.pos() > lefs[r2].rev_unit.pos()) {
-        fmt::print(stderr, "i={}/{}; r1={}; r2={}; p1={}; p2={};\n", i, lefs.size(), r1, r2,
-                   lefs[r1].fwd_unit.pos(), lefs[r2].fwd_unit.pos());
-      }
-    }
-  }
-  if (!std::is_sorted(rev_lef_rank_buff.begin(), rev_lef_rank_buff.end(),
-                      [&](const auto r1, const auto r2) {
-                        return lefs[r1].rev_unit.pos() < lefs[r2].rev_unit.pos();
-                      })) {
-    ok = false;
-    std::vector<std::size_t> buff(lefs.size());
-    std::transform(lefs.begin(), lefs.end(), buff.begin(),
-                   [](const auto& lef) { return lef.rev_unit.pos(); });
-    fmt::print(stderr, "REV LEFs are not properly sorted!\nPOS=[{}]\nRANKS=[{}]\n",
-               absl::StrJoin(buff, ", "), absl::StrJoin(rev_lef_rank_buff, ", "));
-    for (auto i = 1UL; i < lefs.size(); ++i) {
-      const auto& r1 = rev_lef_rank_buff[i - 1];
-      const auto& r2 = rev_lef_rank_buff[i];
-
-      if (lefs[r1].rev_unit.pos() > lefs[r2].rev_unit.pos()) {
-        fmt::print(stderr, "i={}/{}; r1={}; r2={}; p1={}; p2={};\n", i, lefs.size(), r1, r2,
-                   lefs[r1].rev_unit.pos(), lefs[r2].rev_unit.pos());
-      }
-    }
-  }
-
-  if (!ok) {
-    throw std::runtime_error("LEFs are not sorted!");
-  }
-#endif
+  assert(std::is_sorted(rev_lef_rank_buff.begin(), rev_lef_rank_buff.end(),
+                        [&](const auto r1, const auto r2) {
+                          return lefs[r1].rev_unit.pos() < lefs[r2].rev_unit.pos();
+                        }));
+  assert(std::is_sorted(fwd_lef_rank_buff.begin(), fwd_lef_rank_buff.end(),
+                        [&](const auto r1, const auto r2) {
+                          return lefs[r1].fwd_unit.pos() < lefs[r2].fwd_unit.pos();
+                        }));
 
   /* Loop over lefs, using a procedure similar to merge in mergesort
    * The idea here is that if we have a way to visit extr. units in 5'-3' order, then detecting
@@ -1034,9 +994,8 @@ void Simulation::check_lef_lef_collisions(
     }
 
     if (const auto delta = rev_pos - fwd_pos;
-        delta < rev_move_buff[rev_idx] + fwd_move_buff[fwd_idx]) {
-      // fmt::print(stderr, "Collision detected between {} and {} (delta={}; tot_move={};)\n",
-      // fwd_pos, rev_pos, delta, rev_move_buff[rev_idx] + fwd_move_buff[fwd_idx]);
+        delta < rev_move_buff[rev_idx] + fwd_move_buff[fwd_idx] &&
+        std::bernoulli_distribution{1.0 - this->probability_of_extrusion_unit_bypass}(rand_eng)) {
       if (delta > 1) {
         if (rev_collision_mask[rev_idx] == NO_COLLISION &&
             fwd_collision_mask[fwd_idx] == NO_COLLISION) {
@@ -1075,15 +1034,12 @@ process_fwd_unit:
       auto& move1 = fwd_move_buff[fwd_idx1];
       const auto& move2 = fwd_move_buff[fwd_idx2];
 
-      if (fwd_pos2 - fwd_pos1 <= move1 + move2) {
-        // fmt::print(stderr, "Collision detected between {} and {} (delta={}; tot_move={};)\n",
-        //            fwd_pos1, fwd_pos2, (fwd_pos1 + move1) - (fwd_pos2 + move2), move1 + move2);
-        //  fmt::print(stderr, "stalling!\n");
+      if (fwd_pos2 - fwd_pos1 <= move1 + move2 &&
+          std::bernoulli_distribution{1.0 - this->probability_of_extrusion_unit_bypass}(rand_eng)) {
         fwd_collision_mask[fwd_idx1] = LEF_LEF_COLLISION;
         move1 = (fwd_pos2 + move2) - fwd_pos1;
         move1 -= move1 > 0 ? 1 : 0;
       } else {
-        // fmt::print(stderr, "breaking!\n");
         break;
       }
     }
@@ -1101,168 +1057,14 @@ process_fwd_unit:
 
     const auto& move1 = rev_move_buff[rev_idx1];
     auto& move2 = rev_move_buff[rev_idx2];
-    // fmt::print(stderr, "rev_pos1={}; rev_pos2={}; move1={}; move2={}; ", rev_pos1, rev_pos2,
-    // move1,
-    //           move2);
-    if (rev_pos2 - rev_pos1 <= move1 + move2) {
-      // fmt::print(stderr,
-      //            "Detected LEF-LEF stall! i={}; rev_pos1={}; rev_pos2={}; move1={}; move2={};",
-      //            i, rev_pos1, rev_pos2, move1, move2);
-      //  fmt::print(stderr, "stalling!\n");
+    if (rev_pos2 - rev_pos1 <= move1 + move2 &&
+        std::bernoulli_distribution{1.0 - this->probability_of_extrusion_unit_bypass}(rand_eng)) {
       rev_collision_mask[rev_idx2] = LEF_LEF_COLLISION;
       move2 = rev_pos2 - (rev_pos1 - move1);
       move2 -= move2 > 0 ? 1 : 0;
-      // fmt::print(stderr, " move2_new={};\n", move2);
     }
   }
 }
-
-/*
-void Simulation::check_lef_bar_collisions_old(
-    const Chromosome* const chrom, absl::Span<Lef> lefs,
-    absl::Span<const std::size_t> rev_lef_rank_buff,
-    absl::Span<const std::size_t> fwd_lef_rank_buff, absl::Span<bp_t> rev_move_buff,
-    absl::Span<bp_t> fwd_move_buff, absl::Span<const ExtrusionBarrier> extr_barriers,
-    const boost::dynamic_bitset<>& barrier_mask, absl::Span<std::size_t> rev_collisions,
-    absl::Span<std::size_t> fwd_collisions, modle::PRNG& rand_eng) {
-  assert(lefs.size() == fwd_lef_rank_buff.size());
-  assert(lefs.size() == rev_lef_rank_buff.size());
-  assert(lefs.size() == fwd_move_buff.size());
-  assert(lefs.size() == rev_move_buff.size());
-  assert(lefs.size() == fwd_collisions.size());
-  assert(lefs.size() == rev_collisions.size());
-  assert(barrier_mask.size() == extr_barriers.size());
-  assert(std::is_sorted(fwd_lef_rank_buff.begin(), fwd_lef_rank_buff.end(),
-                        [&](const auto r1, const auto r2) {
-                          return lefs[r1].fwd_unit.pos() < lefs[r2].fwd_unit.pos();
-                        }));
-  assert(std::is_sorted(rev_lef_rank_buff.begin(), rev_lef_rank_buff.end(),
-                        [&](const auto r1, const auto r2) {
-                          return lefs[r1].rev_unit.pos() < lefs[r2].rev_unit.pos();
-                        }));
-
-   // Loop over lefs, using a procedure similar to merge in mergesort
-   // The idea here is that if we have a way to visit extr. units in 5'-3' order, then detecting
-   // LEF-LEF collisions boils down to:
-   //  - Starting from the first fwd extr. unit in 5'-3' order:
-   //    - Look for rev extr. units that are located downstream of the fwd unit that is being
-   //      processed
-   //    - Continue looking for the next rev unit, until the distance between the fwd and rev units
-   //      being considered is less than a certain threshold (e.g. the bin size)
-   //    - While doing so, increase the number of LEF-LEF collisions for the fwd/rev unit that are
-   //      being processed
-   // The fwd and rev_collision_buff will contain the index corresponding to the ext. barrier that
-   // caused the collision, or -1 in case of no collisions
-
-  std::size_t j1 = 0, j2 = 0;  // Process fwd extrusion units
-  std::size_t fwd_lef_pos_offset = 0, rev_lef_pos_offset = 0;
-  for (auto i = 0UL; i < lefs.size(); ++i) {
-    const auto& rev_idx = rev_lef_rank_buff[i];          // index of the ith fwd unit in 5'-3' order
-    const auto& rev_pos = lefs[rev_idx].rev_unit.pos();  // pos of the ith rev unit
-    auto rev_barr_pos = extr_barriers[j1].pos();  // pos of the next (possibly blocking) barrier
-
-    // Look for the first occupied extr. barrier downstream of the current rev extr, unit
-    if (j1 < extr_barriers.size()) {
-      while ((rev_barr_pos < rev_pos || !barrier_mask[j1])) {
-        if (++j1 == extr_barriers.size()) {
-          goto process_fwd_unit;  // reached the last barrier in 3'-5' direction
-        }
-        rev_lef_pos_offset = 0;
-        rev_barr_pos = extr_barriers[j1].pos();
-      }
-      // Subtract 1 to j1, so that pos refers to the last extr. barrier upstream of the rev extr.
-      // unit (i.e. the barrier that could possibly be blocking the extr. unit)
-      rev_barr_pos = extr_barriers[j1 > 0 ? j1 - 1 : j1].pos();
-
-      if (rev_barr_pos < rev_pos) {  // Skip over extr. units where there's no active extr.
-                                     // barrier that can block them
-        // Detect collisions between extr. units/barriers that are less then delta bp away from
-        // each other
-        if (const auto delta = rev_pos - rev_barr_pos; delta <= rev_move_buff[rev_idx]) {
-          ++rev_lef_pos_offset;  // Keep track of the number of LEFs colliding with the extr.
-                                 // barrier at index j1
-          auto generate_collision = [&]() {
-            // Select prob. of block based on extr. unit and extr. barrier orientations
-            const auto pblock = extr_barriers[j1].blocking_direction() == dna::rev
-                                    ? this->lef_hard_collision_pblock
-                                    : this->lef_soft_collision_pblock;
-            if (pblock == 0) {  // Barrier is "transparent"
-              return NO_COLLISION;
-            }
-            if (pblock == 1) {  // Barrier always block. Return index of blocking barrier
-              return j1;
-            }
-            // Barrier will block with a probability of pblock.
-            // Return index of blocking barrier in case the bernoulli trial is successful
-            return std::bernoulli_distribution{pblock}(rand_eng) ? j1 : NO_COLLISION;
-          };
-
-          // In case of collision, move LEF close to the extr. barrier
-          if ((rev_collisions[rev_idx] = generate_collision()) != NO_COLLISION) {
-            rev_move_buff[rev_idx] =
-                lefs[rev_idx].rev_unit._pos - rev_barr_pos - rev_lef_pos_offset;
-            // Here rev_lef_pos_offset is used to "line-up" multiple extr. units that are
-            // colliding with the current extr. barrier. The offset is increased every time
-            // there's a potential collision between the LEF and extr. barrier that are being
-            // processed, so that there is at most one LEF per bp.
-          }
-        } else {  // LEF and extr. barrier are too far from each other
-          rev_collisions[rev_idx] = NO_COLLISION;
-        }
-      } else {  // There are no active barriers upstream of the current rev extr. unit
-        rev_collisions[rev_idx] = NO_COLLISION;
-      }
-    }
-
-  process_fwd_unit:
-    const auto& fwd_idx = fwd_lef_rank_buff[i];          // index of the ith fwd unit in 5'-3' order
-    const auto& fwd_pos = lefs[fwd_idx].fwd_unit.pos();  // pos of the ith fwd unit
-    auto fwd_barr_pos = extr_barriers[j2].pos();  // pos of the next (possibly blocking) barrier
-
-    // Look for the first occupied extr. barrier downstream of the current fwd extrusion unit
-    // For detailed comments on what is happening, refer to the previous section
-    if (j2 < extr_barriers.size()) {
-      while (fwd_barr_pos < fwd_pos || !barrier_mask[j2]) {
-        if (++j2 == extr_barriers.size()) {
-          goto end_of_loop;  // Reached the last barrier at the 5'-3' direction
-        }
-        fwd_lef_pos_offset = 0;
-        fwd_barr_pos = extr_barriers[j2].pos();
-      }
-
-      if (const auto delta = fwd_barr_pos - fwd_pos; delta <= fwd_move_buff[fwd_idx]) {
-        ++fwd_lef_pos_offset;
-        auto generate_collision = [&]() {
-          const auto pblock = extr_barriers[j2].blocking_direction() == dna::fwd
-                                  ? this->lef_hard_collision_pblock
-                                  : this->lef_soft_collision_pblock;
-          if (pblock == 0) {
-            return NO_COLLISION;
-          }
-          if (pblock == 1) {
-            return j2;
-          }
-          return std::bernoulli_distribution{pblock}(rand_eng) ? j2 : NO_COLLISION;
-        };
-
-        if ((fwd_collisions[fwd_idx] = generate_collision()) != NO_COLLISION) {
-          lefs[fwd_idx].fwd_unit._pos = std::min(fwd_barr_pos - fwd_lef_pos_offset, fwd_barr_pos);
-        }
-      } else {
-        fwd_collisions[fwd_idx] = NO_COLLISION;
-      }
-    }
-  }
-
-end_of_loop:
-
-  // Return if there are no more extr. barriers to be processed (regardless of whether there are
-  // still some LEFs to be processed)
-  if (j1 == extr_barriers.size() && j2 == extr_barriers.size()) {
-    return;
-  }
-}
-*/
 
 std::size_t Simulation::register_contacts(Chromosome* chrom, absl::Span<const Lef> lefs,
                                           absl::Span<const std::size_t> selected_lef_idx) {

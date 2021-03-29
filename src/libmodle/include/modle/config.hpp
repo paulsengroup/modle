@@ -43,38 +43,38 @@ struct Config {
   bool write_contacts_with_noise{false};
 
   // General settings
-  bp_t bin_size{1'000};  // NOLINT(readability-magic-numbers, cppcoreguidelines-avoid-magic-numbers)
+  bp_t bin_size{1'000};                        // NOLINT(readability-magic-numbers, cppcoreguidelines-avoid-magic-numbers)
   bp_t fwd_extrusion_speed{std::numeric_limits<bp_t>::max()};
   bp_t rev_extrusion_speed{std::numeric_limits<bp_t>::max()};
-  double fwd_extrusion_speed_std{0.05};  // NOLINT(readability-magic-numbers, cppcoreguidelines-avoid-magic-numbers)
+  double fwd_extrusion_speed_std{0.05};        // NOLINT(readability-magic-numbers, cppcoreguidelines-avoid-magic-numbers)
   double rev_extrusion_speed_std{fwd_extrusion_speed_std};
-  std::size_t ncells{5'000};    // NOLINT(readability-magic-numbers, cppcoreguidelines-avoid-magic-numbers)
+  std::size_t ncells{5'000};                   // NOLINT(readability-magic-numbers, cppcoreguidelines-avoid-magic-numbers)
   std::size_t nthreads{std::thread::hardware_concurrency()};
   bp_t diagonal_width{3'000'000 /* 3 Mbp */};  // NOLINT(readability-magic-numbers, cppcoreguidelines-avoid-magic-numbers)
-  bp_t simulation_iterations{200};      // NOLINT(readability-magic-numbers, cppcoreguidelines-avoid-magic-numbers)
+  bp_t simulation_iterations{200};             // NOLINT(readability-magic-numbers, cppcoreguidelines-avoid-magic-numbers)
   double target_contact_density{0.0};
   double number_of_lefs_per_mbp;
-  bp_t average_lef_lifetime{100'000};  // NOLINT(readability-magic-numbers, cppcoreguidelines-avoid-magic-numbers)
-  double hard_stall_multiplier{2.0};       // NOLINT(readability-magic-numbers, cppcoreguidelines-avoid-magic-numbers)
-  double soft_stall_multiplier{0.5};       // NOLINT(readability-magic-numbers, cppcoreguidelines-avoid-magic-numbers)
+  bp_t average_lef_lifetime{600'000};          // NOLINT(readability-magic-numbers, cppcoreguidelines-avoid-magic-numbers)
+  double hard_stall_multiplier{5.0};           // NOLINT(readability-magic-numbers, cppcoreguidelines-avoid-magic-numbers)
+  double soft_stall_multiplier{0.6};           // NOLINT(readability-magic-numbers, cppcoreguidelines-avoid-magic-numbers)
   bool allow_lef_lifetime_extension{true};
   bool skip_burnin{false};
   uint64_t seed{0};
 
   // Misc probabilities
-  double probability_of_extrusion_unit_bypass{0.25};  // NOLINT(readability-magic-numbers, cppcoreguidelines-avoid-magic-numbers)
-  double lef_fraction_contact_sampling{0.025};  // NOLINT(readability-magic-numbers, cppcoreguidelines-avoid-magic-numbers)
-  double ctcf_occupied_self_prob{0.875};  // NOLINT(readability-magic-numbers, cppcoreguidelines-avoid-magic-numbers)
-  double ctcf_not_occupied_self_prob{0.70};  // NOLINT(readability-magic-numbers, cppcoreguidelines-avoid-magic-numbers)
-  double lef_hard_collision_pblock{0.995};  // NOLINT(readability-magic-numbers, cppcoreguidelines-avoid-magic-numbers)
-  double lef_soft_collision_pblock{0};  // NOLINT(readability-magic-numbers, cppcoreguidelines-avoid-magic-numbers)
-
+  double probability_of_extrusion_unit_bypass{0.25};     // NOLINT(readability-magic-numbers, cppcoreguidelines-avoid-magic-numbers)
+  double probability_of_extrusion_barrier_block{0.825};  // NOLINT(readability-magic-numbers, cppcoreguidelines-avoid-magic-numbers)
+  double ctcf_occupied_self_prob{0.0};                   // NOLINT(readability-magic-numbers, cppcoreguidelines-avoid-magic-numbers)
+  double ctcf_not_occupied_self_prob{0.70};              // NOLINT(readability-magic-numbers, cppcoreguidelines-avoid-magic-numbers)
+  double lef_hard_collision_pblock{0.995};               // NOLINT(readability-magic-numbers, cppcoreguidelines-avoid-magic-numbers)
+  double lef_soft_collision_pblock{0};                   // NOLINT(readability-magic-numbers, cppcoreguidelines-avoid-magic-numbers)
+  double lef_fraction_contact_sampling{0.025};           // NOLINT(readability-magic-numbers, cppcoreguidelines-avoid-magic-numbers)
 
   // Misc
   bool exclude_chr_wo_extr_barriers{true};
   bool skip_output{false};
   double random_noise_mean{0};
-  bp_t random_noise_std{7'500 /* 7.5 Kbp */}; // NOLINT(readability-magic-numbers, cppcoreguidelines-avoid-magic-numbers)
+  bp_t random_noise_std{7'500 /* 7.5 Kbp */};            // NOLINT(readability-magic-numbers, cppcoreguidelines-avoid-magic-numbers)
 
   int argc;
   char** argv;

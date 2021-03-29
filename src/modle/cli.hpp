@@ -252,11 +252,16 @@ class Cli {
             ->check(CLI::ExistingFile);
 
     extr_barr->add_option(
+            "--probability-of-barrier-block",
+            this->_config.probability_of_extrusion_barrier_block,
+            "Probability of block of an extrusion unit by an extrusion barrier. Used to indirectly set --ctcf-occupied-probability-of-transition-to-self.")
+            ->check(CLI::Range(0.0, 1.0));
+
+    extr_barr->add_option(
             "--ctcf-occupied-probability-of-transition-to-self",
             this->_config.ctcf_occupied_self_prob,
             "Transition probability from CTCF in occupied state to CTCF in occupied state.")
-            ->check(CLI::Range(0.0, 1.0))
-            ->capture_default_str();
+            ->check(CLI::Range(0.0, 1.0));
 
     extr_barr->add_option(
             "--ctcf-not-occupied-probability-of-transition-to-self",
@@ -272,6 +277,8 @@ class Cli {
             ->capture_default_str();
 
     hidden->add_flag("--skip-output", this->_config.skip_output, "Don't write output files and plots. Useful for profiling");
+
+    extr_barr->get_option("--probability-of-barrier-block")->excludes("--ctcf-occupied-probability-of-transition-to-self");
     // clang-format on
   }
 
@@ -367,6 +374,19 @@ class Cli {
     }
     if (auto& stddev = this->_config.rev_extrusion_speed_std; stddev > 0 && stddev < 1) {
       stddev *= static_cast<double>(this->_config.rev_extrusion_speed);
+    }
+
+    {
+      const auto pno = 1.0 - this->_config.ctcf_not_occupied_self_prob;
+      if (this->_config.ctcf_occupied_self_prob == 0) {
+        const auto occ = this->_config.probability_of_extrusion_barrier_block;
+        const auto pon = (pno - (occ * pno)) / occ;
+        this->_config.ctcf_occupied_self_prob = 1.0 - pon;
+      } else {
+        const auto pon = 1.0 - this->_config.ctcf_occupied_self_prob;
+        const auto occ = pno / (pno + pon);
+        this->_config.probability_of_extrusion_barrier_block = occ;
+      }
     }
   }
 };
