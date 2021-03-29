@@ -190,6 +190,39 @@ TEST_CASE("Adjust LEF moves 001", "[adjust-lef-moves][simulation][short]") {
   CHECK(std::equal(fwd_moves.begin(), fwd_moves.end(), fwd_moves_adjusted.begin()));
 }
 
+TEST_CASE("Adjust LEF moves 002", "[adjust-lef-moves][simulation][short]") {
+  const Chromosome chrom{{"chr1", 10, 400}};
+  // clang-format off
+  const std::vector<Lef> lefs{Lef{{20},  {50}, true},
+                              Lef{{60},  {60}, true},
+                              Lef{{200}, {310}, true},
+                              Lef{{220}, {300}, true},
+                              Lef{{240}, {250}, true},
+                              Lef{{125}, {305}, true}};
+
+  // clang-format on
+  const std::vector<std::size_t> rev_ranks{0, 1, 5, 2, 3, 4};  // NOLINT
+  const std::vector<std::size_t> fwd_ranks{0, 1, 4, 3, 5, 2};  // NOLINT
+
+  std::vector<bp_t> rev_moves{10, 10, 5, 25, 50, 10};  // NOLINT
+  std::vector<bp_t> fwd_moves{25, 10, 5, 20, 20, 0};   // NOLINT
+
+  const std::vector<bp_t> rev_moves_adjusted{10, 10, 10, 30, 50, 10};  // NOLINT
+  const std::vector<bp_t> fwd_moves_adjusted{25, 15, 10, 20, 20, 15};  // NOLINT
+
+  require_that_lefs_are_sorted_by_idx(lefs, rev_ranks, fwd_ranks);
+
+  auto c = Config{};
+  c.rev_extrusion_speed_std = 1;
+  c.fwd_extrusion_speed_std = 1;
+  CHECK_NOTHROW(Simulation{c, false}.test_clamp_moves(
+      &chrom, absl::MakeConstSpan(lefs), absl::MakeSpan(rev_ranks), absl::MakeSpan(fwd_ranks),
+      absl::MakeSpan(rev_moves), absl::MakeSpan(fwd_moves)));
+
+  CHECK(std::equal(rev_moves.begin(), rev_moves.end(), rev_moves_adjusted.begin()));
+  CHECK(std::equal(fwd_moves.begin(), fwd_moves.end(), fwd_moves_adjusted.begin()));
+}
+
 /*
 
 inline void apply_lef_lef_stalls_wrapper(

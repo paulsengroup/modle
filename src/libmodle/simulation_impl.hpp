@@ -726,33 +726,30 @@ void Simulation::adjust_moves(const Chromosome* chrom, absl::Span<const Lef> lef
   // described for the real-system scenario.
   (void)chrom;
   // Loop over pairs of consecutive LEFs in 3'-5' direction
+  const auto rev_offset = lefs.size() - 1;
   for (auto i = 0UL; i < lefs.size() - 1; ++i) {
     if (!lefs[i].is_bound()) {
       continue;
     }
-    {
-      const auto& idx1 = rev_lef_ranks[i];
-      const auto& idx2 = rev_lef_ranks[i + 1];
+    const auto& idx1 = rev_lef_ranks[rev_offset - 1 - i];
+    const auto& idx2 = rev_lef_ranks[rev_offset - i];
 
-      assert(lefs[idx1].rev_unit.pos() >= chrom->start_pos() + rev_moves[idx1]);
-      assert(lefs[idx2].rev_unit.pos() >= chrom->start_pos() + rev_moves[idx2]);
-      const auto pos1 = lefs[idx1].rev_unit.pos() - rev_moves[idx1];
-      const auto pos2 = lefs[idx2].rev_unit.pos() - rev_moves[idx2];
-      if (pos2 < pos1) {
-        rev_moves[idx1] += pos1 - pos2;
-      }
+    assert(lefs[idx1].rev_unit.pos() >= chrom->start_pos() + rev_moves[idx1]);
+    assert(lefs[idx2].rev_unit.pos() >= chrom->start_pos() + rev_moves[idx2]);
+    const auto pos1 = lefs[idx1].rev_unit.pos() - rev_moves[idx1];
+    const auto pos2 = lefs[idx2].rev_unit.pos() - rev_moves[idx2];
+    if (pos2 < pos1) {
+      rev_moves[idx1] += pos1 - pos2;
     }
-    {
-      const auto& idx1 = fwd_lef_ranks[i];
-      const auto& idx2 = fwd_lef_ranks[i + 1];
+    const auto& idx3 = fwd_lef_ranks[i];
+    const auto& idx4 = fwd_lef_ranks[i + 1];
 
-      assert(lefs[idx1].fwd_unit.pos() + fwd_moves[idx1] < chrom->end_pos());
-      assert(lefs[idx2].fwd_unit.pos() + fwd_moves[idx2] < chrom->end_pos());
-      const auto pos1 = lefs[idx1].fwd_unit.pos() + fwd_moves[idx1];
-      const auto pos2 = lefs[idx2].fwd_unit.pos() + fwd_moves[idx2];
-      if (pos1 > pos2) {
-        fwd_moves[idx2] += pos1 - pos2;
-      }
+    assert(lefs[idx3].fwd_unit.pos() + fwd_moves[idx3] < chrom->end_pos());
+    assert(lefs[idx4].fwd_unit.pos() + fwd_moves[idx4] < chrom->end_pos());
+    const auto pos3 = lefs[idx3].fwd_unit.pos() + fwd_moves[idx3];
+    const auto pos4 = lefs[idx4].fwd_unit.pos() + fwd_moves[idx4];
+    if (pos3 > pos4) {
+      fwd_moves[idx4] += pos3 - pos4;
     }
   }
 }
