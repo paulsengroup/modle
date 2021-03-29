@@ -178,6 +178,21 @@ class Simulation : Config {
                                absl::Span<bp_t> rev_moves, absl::Span<bp_t> fwd_moves) {
     this->adjust_moves(chrom, lefs, rev_lef_ranks, fwd_lef_ranks, rev_moves, fwd_moves);
   }
+
+  inline void test_generate_moves(const Chromosome* const chrom, absl::Span<const Lef> lefs,
+                                  absl::Span<const std::size_t> rev_lef_ranks,
+                                  absl::Span<const std::size_t> fwd_lef_ranks,
+                                  absl::Span<bp_t> rev_moves, absl::Span<bp_t> fwd_moves,
+                                  modle::PRNG& rand_eng) {
+    this->generate_moves(chrom, lefs, rev_lef_ranks, fwd_lef_ranks, rev_moves, fwd_moves, rand_eng);
+  }
+
+  inline static void test_rank_lefs(absl::Span<const Lef> lefs,
+                                    absl::Span<std::size_t> rev_lef_rank_buff,
+                                    absl::Span<std::size_t> fwd_lef_rank_buff,
+                                    bool init_buffers) {
+    Simulation::rank_lefs(lefs, rev_lef_rank_buff, fwd_lef_rank_buff, init_buffers);
+  }
   /*
   inline void test_check_lef_lef_collisions(absl::Span<const Lef> lefs,
                                             absl::Span<const std::size_t> rev_lef_rank_buff,

@@ -223,6 +223,42 @@ TEST_CASE("Adjust LEF moves 002", "[adjust-lef-moves][simulation][short]") {
   CHECK(std::equal(fwd_moves.begin(), fwd_moves.end(), fwd_moves_adjusted.begin()));
 }
 
+TEST_CASE("Generate LEF moves 001", "[generate-lef-moves][simulation][short]") {
+  const Chromosome chrom{{"chr1", 1000, 2000}};
+  constexpr auto nlefs = 100UL;
+  constexpr auto iters = 1000UL;
+  std::vector<Lef> lefs(nlefs, Lef{{chrom.start_pos()}, {chrom.end_pos() - 1}, true});
+  std::vector<std::size_t> rev_ranks(nlefs);
+  std::iota(rev_ranks.begin(), rev_ranks.end(), 0);
+  std::vector<bp_t> rev_moves(nlefs, 0), fwd_moves(nlefs, 0);  // NOLINT
+  auto fwd_ranks = rev_ranks;
+  // NOLINTNEXTLINE(readability-magic-numbers, cppcoreguidelines-avoid-magic-numbers)
+  auto rand_eng = init_rand_eng(8312545934532053745ULL);
+  auto c = Config{};
+  c.rev_extrusion_speed_std = 0.01;
+  c.fwd_extrusion_speed_std = 0.01;
+
+  for (auto i = 0UL; i < iters; ++i) {
+    CHECK_NOTHROW(Simulation{c, false}.test_generate_moves(
+        &chrom, absl::MakeConstSpan(lefs), absl::MakeConstSpan(rev_ranks),
+        absl::MakeConstSpan(fwd_ranks), absl::MakeSpan(rev_moves), absl::MakeSpan(fwd_moves),
+        rand_eng));
+
+    Simulation::test_rank_lefs(absl::MakeConstSpan(lefs), absl::MakeSpan(rev_ranks),
+                               absl::MakeSpan(fwd_ranks), true);
+
+    std::for_each(rev_moves.begin(), rev_moves.end(), [&, j = 0UL](const auto n) mutable {
+      CHECK(lefs[j].rev_unit.pos() >= chrom.start_pos() + n);
+      CHECK(lefs[j++].rev_unit.pos() < chrom.end_pos());
+    });
+
+    std::for_each(fwd_moves.begin(), fwd_moves.end(), [&, j = 0UL](const auto n) mutable {
+      CHECK(lefs[j].fwd_unit.pos() + n < chrom.end_pos());
+      CHECK(lefs[j++].fwd_unit.pos() >= chrom.start_pos());
+    });
+  }
+}
+
 /*
 
 inline void apply_lef_lef_stalls_wrapper(
