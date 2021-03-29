@@ -239,7 +239,7 @@ class Cli {
     this->MakeCli();
   }
   [[nodiscard]] inline bool is_ok() const {
-    return this->_exit_code && this->_subcommand != subcommand::help;
+    return (this->_exit_code != 0) && this->_subcommand != subcommand::help;
   }
   [[nodiscard]] inline subcommand get_subcommand() const { return this->_subcommand; }
   [[nodiscard]] inline config parse_arguments() {
@@ -258,7 +258,7 @@ class Cli {
       this->_exit_code = this->_cli.exit(e);
       return this->_config;
     }
-    this->_exit_code = this->validate();
+    this->_exit_code = static_cast<int>(this->validate());
     this->post_process_cli_args();
     return this->_config;
   }

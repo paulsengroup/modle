@@ -63,7 +63,7 @@ TEST_CASE("Cooler to CMatrix", "[io][cooler][short]") {
   constexpr uint64_t end = 159'138'663;
   constexpr uint64_t bin_size = 1'000'000;
   constexpr uint64_t nrows = 25;
-  constexpr uint64_t ncols = (end / bin_size) + (end % bin_size != 0);
+  constexpr uint64_t ncols = (end / bin_size) + static_cast<uint64_t>(end % bin_size != 0);
 
   auto c = Cooler(test_file, Cooler::READ_ONLY);
 
@@ -84,7 +84,7 @@ TEST_CASE("Cooler to CMatrix and CMatrix to Cooler", "[io][cooler][short]") {
   constexpr uint64_t end = 249'250'621;
   constexpr uint64_t nrows = 25;
   const auto bin_size = c1.get_bin_size();
-  const uint64_t ncols = (end / bin_size) + (end % bin_size != 0);
+  const uint64_t ncols = (end / bin_size) + static_cast<uint64_t>(end % bin_size != 0);
 
   const auto cmatrix1 = c1.cooler_to_cmatrix(chrom, nrows, {start, end}, true, false);
   REQUIRE(cmatrix1.nrows() == nrows);

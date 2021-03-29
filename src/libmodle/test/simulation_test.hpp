@@ -24,11 +24,12 @@ inline void apply_lef_lef_stalls_wrapper(
     const std::vector<Simulation::collision_t>& fwd_collision_buff,
     const std::vector<std::size_t>& rev_lef_rank_buff,
     const std::vector<std::size_t>& fwd_lef_rank_buff) {
-  // NOLINTNEXTLINE(readability-magic-numbers, cppcoreguidelines-avoid-magic-numbers)
 #ifdef USE_XOSHIRO
+  // NOLINTNEXTLINE(readability-magic-numbers, cppcoreguidelines-avoid-magic-numbers)
   seeder s(1583769804295373920);
   PRNG rand_eng(s.generateSeedSequence<4>());
 #else
+  // NOLINTNEXTLINE(readability-magic-numbers, cppcoreguidelines-avoid-magic-numbers)
   seeder s{1583769804295373920};
   PRNG rand_eng{s};
 #endif
@@ -84,11 +85,12 @@ inline void apply_lef_bar_stalls_wrapper(
     const modle::Config& c, std::vector<Lef>& lefs, const std::vector<ExtrusionBarrier>& barriers,
     const std::vector<Simulation::collision_t>& rev_collision_buff,
     const std::vector<Simulation::collision_t>& fwd_collision_buff) {
-  // NOLINTNEXTLINE(readability-magic-numbers, cppcoreguidelines-avoid-magic-numbers)
 #ifdef USE_XOSHIRO
+  // NOLINTNEXTLINE(readability-magic-numbers, cppcoreguidelines-avoid-magic-numbers)
   seeder s(437181240247933207);
   PRNG rand_eng(s.generateSeedSequence<4>());
 #else
+  // NOLINTNEXTLINE(readability-magic-numbers, cppcoreguidelines-avoid-magic-numbers)
   seeder s{437181240247933207};
   PRNG rand_eng{s};
 #endif
@@ -215,8 +217,9 @@ TEST_CASE("Apply LEF-LEF stalls simple 001", "[simulation][short]") {
 
 TEST_CASE("Apply LEF-LEF stalls simple 002", "[simulation][short]") {
   modle::Config c;
-  c.bin_size = 5;
-  c.probability_of_extrusion_unit_bypass = 0.05;
+  c.bin_size = 5;  // NOLINT(readability-magic-numbers, cppcoreguidelines-avoid-magic-numbers)
+  c.probability_of_extrusion_unit_bypass =
+      0.05;  // NOLINT(readability-magic-numbers, cppcoreguidelines-avoid-magic-numbers)
   const std::size_t nlefs = 4;
 
   std::vector<bp_t> fwd_lef_rank_buff{0, 1, 2, 3};
@@ -349,8 +352,10 @@ TEST_CASE("Apply LEF-BAR stalls simple 001", "[simulation][short]") {
 TEST_CASE("Apply LEF-BAR stalls (w hard-stall) simple 002", "[simulation][short]") {
   modle::Config c;
   c.bin_size = 2;
-  c.soft_stall_multiplier = 0.5;
-  c.hard_stall_multiplier = 2.0;
+  c.soft_stall_multiplier =
+      0.5;  // NOLINT(readability-magic-numbers, cppcoreguidelines-avoid-magic-numbers)
+  c.hard_stall_multiplier =
+      2.0;  // NOLINT(readability-magic-numbers, cppcoreguidelines-avoid-magic-numbers)
   const std::size_t nlefs = 3;
 
   // clang-format off

@@ -24,8 +24,9 @@ inline void compare_bed_records_with_file(std::vector<BED> records, const std::s
   std::string buff;
   while (std::getline(fp, buff)) {
     if (buff.front() == '#' || buff.find("track") != std::string::npos ||
-        buff.find("browser") != std::string::npos)
+        buff.find("browser") != std::string::npos) {
       continue;
+    }
     lines.push_back(buff);
   }
 
@@ -40,10 +41,13 @@ inline void compare_bed_records_with_file(std::vector<BED> records, const std::s
     const auto &startb = toksb[1];
     const auto &enda = toksa[2];
     const auto &endb = toksb[2];
-    if (chra != chrb) return chra < chrb;
-    if (starta != startb)
+    if (chra != chrb) {
+      return chra < chrb;
+    }
+    if (starta != startb) {
       return std::stoull(starta.data(), nullptr) < std::stoull(startb.data(), nullptr);
-    assert(enda != endb);
+    }
+    assert(enda != endb);  // NOLINT
     return std::stoull(enda.data(), nullptr) < std::stoull(endb.data(), nullptr);
   });
 

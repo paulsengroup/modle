@@ -29,7 +29,7 @@ inline const std::filesystem::path test_dir{"/tmp/modle/unit_tests"};  // NOLINT
 inline H5::DataSet init_test_str_dataset(H5::H5File& f, std::string_view path = "/test") {
   constexpr hsize_t rank{1};
   constexpr hsize_t chunk_dims{1024};
-  const H5std_string fill_var{"\0"};
+  const H5std_string fill_var{"\0"};  // NOLINT bugprone-string-literal-with-embedded-nul
   constexpr hsize_t max_dims{H5S_UNLIMITED};
   const auto str_type{init_str_type()};
 
@@ -136,7 +136,7 @@ TEST_CASE("has_group HDF5", "[io][hdf5][short]") {
 }
 
 TEST_CASE("check_dataset_type HDF5", "[io][hdf5][short]") {
-  const auto test_file = test_dir / "dset_exisrs.hdf5";
+  const auto test_file = test_dir / "dset_type.hdf5";
   std::filesystem::create_directories(test_dir);
   H5::H5File f(test_file.string(), H5F_ACC_TRUNC);
   f.createGroup("/g1");

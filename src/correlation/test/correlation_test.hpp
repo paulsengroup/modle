@@ -34,8 +34,8 @@ TEST_CASE("Corr. test: Pearson w ties", "[correlation][pearson][short]") {
 
 TEST_CASE("Corr. test: Pearson Scipy", "[correlation][pearson][short]") {
   std::mt19937 rnd_eng{std::random_device{}()};
-  auto v1 = generate_random_vect(rnd_eng, 1'000, 0, 15'000);
-  auto v2 = generate_random_vect(rnd_eng, 1'000, 0, 15'000);
+  auto v1 = generate_random_vect(rnd_eng, 1'000, 0, 15'000);  // NOLINT
+  auto v2 = generate_random_vect(rnd_eng, 1'000, 0, 15'000);  // NOLINT
   const auto pcc = compute_pearson(v1, v2);
   const auto pv = compute_pearson_significance(pcc, v1.size());
   const auto& [pcc_py, pv_py] = corr_scipy(v1, v2, "pearsonr", test_dir);
@@ -45,9 +45,9 @@ TEST_CASE("Corr. test: Pearson Scipy", "[correlation][pearson][short]") {
 
 TEST_CASE("Corr. test: Pearson Scipy long", "[correlation][pearson][medium]") {
   std::mt19937 rnd_eng{std::random_device{}()};
-  for (auto i = 0UL; i < 100UL; ++i) {  // NOLINT
-    auto v1 = generate_random_vect(rnd_eng, 1'000, 0, 15'000);
-    auto v2 = generate_random_vect(rnd_eng, 1'000, 0, 15'000);
+  for (auto i = 0UL; i < 100UL; ++i) {                          // NOLINT
+    auto v1 = generate_random_vect(rnd_eng, 1'000, 0, 15'000);  // NOLINT
+    auto v2 = generate_random_vect(rnd_eng, 1'000, 0, 15'000);  // NOLINT
     const auto pcc = compute_pearson(v1, v2);
     const auto pv = compute_pearson_significance(pcc, v1.size());
     const auto& [pcc_py, pv_py] = corr_scipy(v1, v2, "pearsonr", test_dir);
@@ -87,8 +87,8 @@ TEST_CASE("Corr. test: Spearman w ties", "[correlation][spearman][short]") {
 
 TEST_CASE("Corr. test: Spearman Scipy", "[correlation][spearman][short]") {
   std::mt19937 rnd_eng{std::random_device{}()};
-  auto v1 = generate_random_vect(rnd_eng, 1'000, 0, 15'000);
-  auto v2 = generate_random_vect(rnd_eng, 1'000, 0, 15'000);
+  auto v1 = generate_random_vect(rnd_eng, 1'000, 0, 15'000);  // NOLINT
+  auto v2 = generate_random_vect(rnd_eng, 1'000, 0, 15'000);  // NOLINT
   const auto rho = compute_spearman(v1, v2);
   const auto pv = compute_spearman_significance(rho, v1.size());
   const auto& [rho_py, pv_py] = corr_scipy(v1, v2, "spearmanr", test_dir);
@@ -98,9 +98,9 @@ TEST_CASE("Corr. test: Spearman Scipy", "[correlation][spearman][short]") {
 
 TEST_CASE("Corr. test: Spearman Scipy long", "[correlation][spearman][medium]") {
   std::mt19937 rnd_eng{std::random_device{}()};
-  for (auto i = 0UL; i < 100; ++i) {  // NOLINT
-    auto v1 = generate_random_vect(rnd_eng, 1'000, 0, 15'000);
-    auto v2 = generate_random_vect(rnd_eng, 1'000, 0, 15'000);
+  for (auto i = 0UL; i < 100; ++i) {                            // NOLINT
+    auto v1 = generate_random_vect(rnd_eng, 1'000, 0, 15'000);  // NOLINT
+    auto v2 = generate_random_vect(rnd_eng, 1'000, 0, 15'000);  // NOLINT
     const auto rho = compute_spearman(v1, v2);
     const auto pv = compute_spearman_significance(rho, v1.size());
     const auto& [rho_py, pv_py] = corr_scipy(v1, v2, "spearmanr", test_dir);

@@ -6,7 +6,6 @@
 namespace modle {
 
 using bp_t = std::size_t;
-using Iter = uint32_t;
 using Contacts = uint32_t;
 
 namespace dna {
