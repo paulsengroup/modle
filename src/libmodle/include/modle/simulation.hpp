@@ -139,7 +139,7 @@ class Simulation : Config {
       absl::Span<const std::size_t> fwd_lef_rank_buff, absl::Span<bp_t> rev_move_buff,
       absl::Span<bp_t> fwd_move_buff, absl::Span<const ExtrusionBarrier> extr_barriers,
       const boost::dynamic_bitset<>& barrier_mask, absl::Span<std::size_t> rev_collisions,
-      absl::Span<std::size_t> fwd_collisions);
+      absl::Span<std::size_t> fwd_collisions, modle::PRNG& rand_eng);
 
   inline std::size_t register_contacts(Chromosome* chrom, absl::Span<const Lef> lefs,
                                        absl::Span<const std::size_t> selected_lef_idx);

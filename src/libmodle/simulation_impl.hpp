@@ -612,8 +612,8 @@ void Simulation::simulate_extrusion_kernel(Simulation::State& s) {
     std::fill(fwd_collision_mask.begin(), fwd_collision_mask.end(), NO_COLLISION);
 
     this->check_lef_bar_collisions(lefs, rev_lef_ranks, fwd_lef_ranks, rev_moves, fwd_moves,
-                                   barriers, s.barrier_mask, rev_collision_mask,
-                                   fwd_collision_mask);
+                                   barriers, s.barrier_mask, rev_collision_mask, fwd_collision_mask,
+                                   s.rand_eng);
 
     this->check_lef_lef_collisions(lefs, rev_lef_ranks, fwd_lef_ranks, rev_moves, fwd_moves,
                                    rev_collision_mask, fwd_collision_mask, s.rand_eng);
@@ -854,7 +854,7 @@ void Simulation::check_lef_bar_collisions(
     absl::Span<const std::size_t> fwd_lef_rank_buff, absl::Span<bp_t> rev_move_buff,
     absl::Span<bp_t> fwd_move_buff, absl::Span<const ExtrusionBarrier> extr_barriers,
     const boost::dynamic_bitset<>& barrier_mask, absl::Span<std::size_t> rev_collisions,
-    absl::Span<std::size_t> fwd_collisions) {
+    absl::Span<std::size_t> fwd_collisions, modle::PRNG& rand_eng) {
   assert(lefs.size() == fwd_lef_rank_buff.size());
   assert(lefs.size() == rev_lef_rank_buff.size());
   assert(lefs.size() == fwd_move_buff.size());
@@ -901,7 +901,10 @@ void Simulation::check_lef_bar_collisions(
     }
     const auto& barrier = extr_barriers[i];
 
-    if (j1 < lefs.size() && barrier.blocking_direction() == dna::rev) {  // Process rev unit
+    if (j1 < lefs.size()) {  // Process rev unit
+      const auto& pblock = barrier.blocking_direction() == dna::rev
+                               ? this->lef_hard_collision_pblock
+                               : this->lef_soft_collision_pblock;
       // Look for the first rev extr. unit that comes after the current barrier
       while (rev_unit_pos <= barrier.pos()) {
         if (++j1 == lefs.size()) {  // All rev units have been processed
@@ -912,7 +915,8 @@ void Simulation::check_lef_bar_collisions(
       }
 
       auto& rev_move = rev_move_buff[rev_idx];
-      if (const auto delta = rev_unit_pos - barrier.pos(); delta < rev_move) {
+      if (const auto delta = rev_unit_pos - barrier.pos();
+          delta < rev_move && std::bernoulli_distribution{pblock}(rand_eng)) {
         // Collision detected. Assign barrier idx to the respective entry in the collision mask
         rev_collisions[rev_idx] = i;
         // Move LEF close to the extr. barrier
@@ -921,7 +925,10 @@ void Simulation::check_lef_bar_collisions(
     }
 
   process_fwd_unit:
-    if (j2 < lefs.size() && barrier.blocking_direction() == dna::fwd) {  // Process fwd unit
+    if (j2 < lefs.size()) {  // Process fwd unit
+      const auto& pblock = barrier.blocking_direction() == dna::fwd
+                               ? this->lef_hard_collision_pblock
+                               : this->lef_soft_collision_pblock;
       // Look for the first fwd extr. unit that comes before the current barrier
       while (fwd_unit_pos <= barrier.pos()) {
         if (++j2 == lefs.size()) {  // All fwd units have been processed
@@ -934,7 +941,8 @@ void Simulation::check_lef_bar_collisions(
       fwd_unit_pos = lefs[fwd_idx].fwd_unit.pos();
 
       auto& fwd_move = fwd_move_buff[fwd_idx];
-      if (const auto delta = barrier.pos() - fwd_unit_pos; delta < fwd_move) {
+      if (const auto delta = barrier.pos() - fwd_unit_pos;
+          delta < fwd_move && std::bernoulli_distribution{pblock}(rand_eng)) {
         // Collision detected. Assign barrier idx to the respective entry in the collision mask
         fwd_collisions[fwd_idx] = i;
         // Move LEF close to the extr. barrier

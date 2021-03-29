@@ -67,7 +67,7 @@ struct Config {
   double ctcf_occupied_self_prob{0.0};                   // NOLINT(readability-magic-numbers, cppcoreguidelines-avoid-magic-numbers)
   double ctcf_not_occupied_self_prob{0.70};              // NOLINT(readability-magic-numbers, cppcoreguidelines-avoid-magic-numbers)
   double lef_hard_collision_pblock{0.995};               // NOLINT(readability-magic-numbers, cppcoreguidelines-avoid-magic-numbers)
-  double lef_soft_collision_pblock{0};                   // NOLINT(readability-magic-numbers, cppcoreguidelines-avoid-magic-numbers)
+  double lef_soft_collision_pblock{0.0};                 // NOLINT(readability-magic-numbers, cppcoreguidelines-avoid-magic-numbers)
   double lef_fraction_contact_sampling{0.025};           // NOLINT(readability-magic-numbers, cppcoreguidelines-avoid-magic-numbers)
 
   // Misc
