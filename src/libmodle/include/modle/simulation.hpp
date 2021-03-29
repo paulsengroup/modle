@@ -103,7 +103,7 @@ class Simulation : Config {
   template <typename MaskT>
   inline void bind_lefs(const Chromosome* chrom, absl::Span<Lef> lefs,
                         absl::Span<std::size_t> rev_lef_ranks,
-                        absl::Span<std::size_t> fwd_lef_ranks, modle::PRNG& rand_eng, MaskT& mask);
+                        absl::Span<std::size_t> fwd_lef_ranks, MaskT& mask, modle::PRNG& rand_eng);
 
   inline void generate_ctcf_states(absl::Span<const ExtrusionBarrier> extr_barriers,
                                    boost::dynamic_bitset<>& mask, modle::PRNG& rand_eng);
@@ -114,15 +114,18 @@ class Simulation : Config {
                              absl::Span<bp_t> rev_moves, absl::Span<bp_t> fwd_moves,
                              modle::PRNG& rand_eng);
 
+  inline void adjust_moves(const Chromosome* chrom, absl::Span<const Lef> lefs,
+                           absl::Span<const std::size_t> rev_lef_ranks,
+                           absl::Span<const std::size_t> fwd_lef_ranks, absl::Span<bp_t> rev_moves,
+                           absl::Span<bp_t> fwd_moves);
+
   inline static void rank_lefs(absl::Span<const Lef> lefs,
                                absl::Span<std::size_t> rev_lef_rank_buff,
                                absl::Span<std::size_t> fwd_lef_rank_buff,
                                bool init_buffers = false);
 
   inline void extrude(const Chromosome* chrom, absl::Span<Lef> lefs,
-                      absl::Span<const bp_t> rev_moves, absl::Span<const bp_t> fwd_moves,
-                      absl::Span<const std::size_t> rev_lef_mask,
-                      absl::Span<const std::size_t> fwd_lef_mask);
+                      absl::Span<const bp_t> rev_moves, absl::Span<const bp_t> fwd_moves);
 
   // Loop over lefs and identify colliding extr. units (i.e. units that travel in opposite
   // direction and that are within <p>dist_threshold</p> bp from each other
@@ -161,6 +164,21 @@ class Simulation : Config {
 
 #ifdef ENABLE_TESTING
  public:
+  template <typename MaskT>
+  inline void test_bind_lefs(const Chromosome* chrom, absl::Span<Lef> lefs,
+                             absl::Span<std::size_t> rev_lef_ranks,
+                             absl::Span<std::size_t> fwd_lef_ranks, MaskT& mask,
+                             modle::PRNG& rand_eng) {
+    this->bind_lefs(chrom, lefs, rev_lef_ranks, fwd_lef_ranks, mask, rand_eng);
+  }
+
+  inline void test_clamp_moves(const Chromosome* const chrom, absl::Span<const Lef> lefs,
+                               absl::Span<const std::size_t> rev_lef_ranks,
+                               absl::Span<const std::size_t> fwd_lef_ranks,
+                               absl::Span<bp_t> rev_moves, absl::Span<bp_t> fwd_moves) {
+    this->adjust_moves(chrom, lefs, rev_lef_ranks, fwd_lef_ranks, rev_moves, fwd_moves);
+  }
+  /*
   inline void test_check_lef_lef_collisions(absl::Span<const Lef> lefs,
                                             absl::Span<const std::size_t> rev_lef_rank_buff,
                                             absl::Span<const std::size_t> fwd_lef_rank_buff,
@@ -200,6 +218,7 @@ class Simulation : Config {
     this->apply_lef_bar_stalls(lefs, rev_collision_buff, fwd_collision_buff, extr_barriers,
                                rand_eng);
   }
+   */
 #endif
 };
 }  // namespace modle

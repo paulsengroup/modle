@@ -18,6 +18,180 @@
 
 namespace modle::test::libmodle {
 
+[[nodiscard]] inline modle::PRNG init_rand_eng(uint64_t seed) {
+#ifdef USE_XOSHIRO
+  seeder s(seed);
+  PRNG rand_eng(s.generateSeedSequence<4>());
+#else
+  seeder s{seed};
+  PRNG rand_eng{s};
+#endif
+  return rand_eng;
+}
+
+inline void check_that_lefs_are_sorted_by_idx(const std::vector<Lef>& lefs,
+                                              const std::vector<std::size_t>& rev_ranks,
+                                              const std::vector<std::size_t>& fwd_ranks) {
+  CHECK(std::is_sorted(fwd_ranks.begin(), fwd_ranks.end(), [&](const auto r1, const auto r2) {
+    return lefs[r1].fwd_unit.pos() < lefs[r2].fwd_unit.pos();
+  }));
+  CHECK(std::is_sorted(rev_ranks.begin(), rev_ranks.end(), [&](const auto r1, const auto r2) {
+    return lefs[r1].rev_unit.pos() < lefs[r2].rev_unit.pos();
+  }));
+}
+
+inline void require_that_lefs_are_sorted_by_idx(const std::vector<Lef>& lefs,
+                                                const std::vector<std::size_t>& rev_ranks,
+                                                const std::vector<std::size_t>& fwd_ranks) {
+  REQUIRE(std::is_sorted(fwd_ranks.begin(), fwd_ranks.end(), [&](const auto r1, const auto r2) {
+    return lefs[r1].fwd_unit.pos() < lefs[r2].fwd_unit.pos();
+  }));
+  REQUIRE(std::is_sorted(rev_ranks.begin(), rev_ranks.end(), [&](const auto r1, const auto r2) {
+    return lefs[r1].rev_unit.pos() < lefs[r2].rev_unit.pos();
+  }));
+}
+
+TEST_CASE("Bind LEFs 001", "[bind-lefs][simulation][short]") {
+  const Chromosome chrom{{"chr1", 0, 1000}};
+  constexpr auto nlefs = 10UL;
+  std::vector<Lef> lefs(nlefs, Lef{});
+  std::vector<std::size_t> rank1(nlefs), rank2(nlefs);
+  std::iota(rank1.begin(), rank1.end(), 0);
+  std::copy(rank1.begin(), rank1.end(), rank2.begin());
+  boost::dynamic_bitset<> mask(nlefs);
+  // NOLINTNEXTLINE(readability-magic-numbers, cppcoreguidelines-avoid-magic-numbers)
+  auto rand_eng = init_rand_eng(8865403569783063175ULL);
+
+  for (auto i = 0UL; i < nlefs; ++i) {
+    mask[i] = std::bernoulli_distribution{0.50}(rand_eng);
+  }
+
+  const auto c = Config{};
+  CHECK_NOTHROW(Simulation{c, false}.test_bind_lefs(
+      &chrom, absl::MakeSpan(lefs), absl::MakeSpan(rank1), absl::MakeSpan(rank2), mask, rand_eng));
+
+  CHECK(lefs.size() == nlefs);
+  CHECK(rank1.size() == nlefs);
+  CHECK(rank2.size() == nlefs);
+  CHECK(mask.size() == nlefs);
+  check_that_lefs_are_sorted_by_idx(lefs, rank1, rank2);
+
+  for (auto i = 0UL; i < nlefs; ++i) {
+    const auto& lef = lefs[i];
+    if (mask[i]) {
+      CHECK(lef.is_bound());
+      CHECK(lef.rev_unit.pos() == lef.fwd_unit.pos());
+      CHECK(lef.rev_unit.pos() >= chrom.start_pos());
+      CHECK(lef.rev_unit.pos() < chrom.end_pos());
+    } else {
+      CHECK(!lef.is_bound());
+    }
+  }
+}
+
+TEST_CASE("Bind LEFs 002 - No LEFs to bind", "[bind-lefs][simulation][short]") {
+  const Chromosome chrom{{"chr1", 0, 1000}};
+  std::vector<Lef> lefs;
+  std::vector<std::size_t> rank1, rank2;  // NOLINT
+  boost::dynamic_bitset<> mask1;
+  std::vector<int> mask2;
+  // NOLINTNEXTLINE(readability-magic-numbers, cppcoreguidelines-avoid-magic-numbers)
+  auto rand_eng = init_rand_eng(16044114709020280409ULL);
+  const auto c = Config{};
+
+  CHECK_NOTHROW(Simulation{c, false}.test_bind_lefs(
+      &chrom, absl::MakeSpan(lefs), absl::MakeSpan(rank1), absl::MakeSpan(rank2), mask1, rand_eng));
+
+  CHECK(lefs.empty());
+  CHECK(rank1.empty());
+  CHECK(rank2.empty());
+  CHECK(mask1.empty());
+
+  CHECK_NOTHROW(Simulation{c, false}.test_bind_lefs(
+      &chrom, absl::MakeSpan(lefs), absl::MakeSpan(rank1), absl::MakeSpan(rank2), mask2, rand_eng));
+
+  CHECK(lefs.empty());
+  CHECK(rank1.empty());
+  CHECK(rank2.empty());
+  CHECK(mask2.empty());
+
+  constexpr auto nlefs = 10UL;
+  std::generate_n(std::back_inserter(lefs), nlefs, []() { return Lef{}; });
+  rank1.resize(nlefs);
+  std::iota(rank1.begin(), rank1.end(), 0);
+  rank2 = rank1;
+  mask1.resize(nlefs, 0);
+
+  CHECK_NOTHROW(Simulation{c, false}.test_bind_lefs(
+      &chrom, absl::MakeSpan(lefs), absl::MakeSpan(rank1), absl::MakeSpan(rank2), mask1, rand_eng));
+
+  CHECK(lefs.size() == nlefs);
+  CHECK(rank1.size() == nlefs);
+  CHECK(rank2.size() == nlefs);
+  CHECK(mask1.size() == nlefs);
+  check_that_lefs_are_sorted_by_idx(lefs, rank1, rank2);
+  CHECK(mask1.count() == 0);
+
+  CHECK(std::all_of(lefs.begin(), lefs.end(), [](const auto& lef) { return !lef.is_bound(); }));
+}
+
+TEST_CASE("Bind LEFs 003 - Empty mask (i.e. bind all LEFs)", "[bind-lefs][simulation][short]") {
+  const Chromosome chrom{{"chr1", 0, 1000}};
+  constexpr auto nlefs = 10UL;
+  std::vector<Lef> lefs(nlefs, Lef{});
+  std::vector<std::size_t> rank1(nlefs), rank2(nlefs);
+  std::iota(rank1.begin(), rank1.end(), 0);
+  std::copy(rank1.begin(), rank1.end(), rank2.begin());
+  boost::dynamic_bitset<> mask;
+  // NOLINTNEXTLINE(readability-magic-numbers, cppcoreguidelines-avoid-magic-numbers)
+  auto rand_eng = init_rand_eng(17550568853244630438ULL);
+  const auto c = Config{};
+
+  CHECK_NOTHROW(Simulation{c, false}.test_bind_lefs(
+      &chrom, absl::MakeSpan(lefs), absl::MakeSpan(rank1), absl::MakeSpan(rank2), mask, rand_eng));
+
+  CHECK(lefs.size() == nlefs);
+  CHECK(rank1.size() == nlefs);
+  CHECK(rank2.size() == nlefs);
+  CHECK(mask.empty());
+
+  CHECK(std::all_of(lefs.begin(), lefs.end(), [](const auto& lef) { return lef.is_bound(); }));
+  CHECK(std::all_of(lefs.begin(), lefs.end(),
+                    [](const auto& lef) { return lef.rev_unit.pos() == lef.fwd_unit.pos(); }));
+}
+
+TEST_CASE("Adjust LEF moves 001", "[adjust-lef-moves][simulation][short]") {
+  const Chromosome chrom{{"chr1", 0, 101}};
+  // clang-format off
+  const std::vector<Lef> lefs{Lef{{5},  {25}, true},
+                              Lef{{10}, {20}, true},
+                              Lef{{90}, {90}, true}};
+
+  // clang-format on
+  const std::vector<std::size_t> rev_ranks{0, 1, 2};  // NOLINT
+  const std::vector<std::size_t> fwd_ranks{1, 0, 2};  // NOLINT
+
+  std::vector<bp_t> rev_moves{5, 10, 15};   // NOLINT
+  std::vector<bp_t> fwd_moves{10, 20, 10};  // NOLINT
+
+  const std::vector<bp_t> rev_moves_adjusted{5, 10, 15};   // NOLINT
+  const std::vector<bp_t> fwd_moves_adjusted{15, 20, 10};  // NOLINT
+
+  require_that_lefs_are_sorted_by_idx(lefs, rev_ranks, fwd_ranks);
+
+  auto c = Config{};
+  c.rev_extrusion_speed_std = 1;
+  c.fwd_extrusion_speed_std = 1;
+  CHECK_NOTHROW(Simulation{c, false}.test_clamp_moves(
+      &chrom, absl::MakeConstSpan(lefs), absl::MakeSpan(rev_ranks), absl::MakeSpan(fwd_ranks),
+      absl::MakeSpan(rev_moves), absl::MakeSpan(fwd_moves)));
+
+  CHECK(std::equal(rev_moves.begin(), rev_moves.end(), rev_moves_adjusted.begin()));
+  CHECK(std::equal(fwd_moves.begin(), fwd_moves.end(), fwd_moves_adjusted.begin()));
+}
+
+/*
+
 inline void apply_lef_lef_stalls_wrapper(
     const modle::Config& c, std::vector<Lef>& lefs,
     const std::vector<Simulation::collision_t>& rev_collision_buff,
@@ -38,7 +212,7 @@ inline void apply_lef_lef_stalls_wrapper(
       absl::MakeSpan(lefs), rev_collision_buff, fwd_collision_buff,
       absl::MakeSpan(rev_lef_rank_buff), absl::MakeSpan(fwd_lef_rank_buff), rand_eng);
   for (auto i = 0UL; i < lefs.size(); ++i) {
-    /*
+
     if (((lefs[i].rev_unit.lef_lef_stalls() > 0) != (rev_collision_buff[i] > 0))) {
       fmt::print(stderr, "i={}; rev_lef_lef_stalls={}; rev_collisions={};\n", i,
                  lefs[i].rev_unit.lef_lef_stalls(), rev_collision_buff[i]);
@@ -47,7 +221,7 @@ inline void apply_lef_lef_stalls_wrapper(
       fmt::print(stderr, "i={}; fwd_lef_lef_stalls={}; fwd_collisions={};\n", i,
                  lefs[i].fwd_unit.lef_lef_stalls(), fwd_collision_buff[i]);
     }
-     */
+
 
     CHECK(((lefs[i].rev_unit.lef_lef_stalls() > 0) == (rev_collision_buff[i] > 0)));
     CHECK(((lefs[i].fwd_unit.lef_lef_stalls() > 0) == (fwd_collision_buff[i] > 0)));
@@ -384,5 +558,6 @@ TEST_CASE("Apply LEF-BAR stalls (w hard-stall) simple 002", "[simulation][short]
 
   apply_lef_bar_stalls_wrapper(c, lefs, barriers, collisions_rev, collisions_fwd);
 }
+*/
 
 }  // namespace modle::test::libmodle
