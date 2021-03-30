@@ -1037,12 +1037,12 @@ void Simulation::check_lef_lef_collisions(const Chromosome* const chrom, absl::S
           const auto collision_pos =
               fwd_pos +
               static_cast<bp_t>(std::round((static_cast<double>(fwd_speed) * time_to_collision)));
-          {
-            const auto collision_pos2 =
-                rev_pos -
-                static_cast<bp_t>(std::round((static_cast<double>(rev_speed) * time_to_collision)));
-            assert(collision_pos == collision_pos2);
-          }
+#ifndef NDEBUG
+          const auto collision_pos2 =
+              rev_pos -
+              static_cast<bp_t>(std::round((static_cast<double>(rev_speed) * time_to_collision)));
+          assert(collision_pos == collision_pos2);
+#endif
           rev_move_buff[rev_idx] = rev_pos - collision_pos;
           fwd_move_buff[fwd_idx] = (collision_pos - fwd_pos) - 1;
         } else if (rev_collision_mask[rev_idx] != NO_COLLISION &&
@@ -1095,7 +1095,7 @@ process_fwd_unit:
     }
   }
 
-  for (i = lefs.size() - 1; i > 0; --i) {
+  for (i = 1; i < lefs.size(); ++i) {
     const auto& rev_idx1 = rev_lef_rank_buff[i - 1];  // index of the ith rev unit in 5'-3' order
     const auto& rev_pos1 = lefs[rev_idx1].rev_unit.pos();  // pos of the ith unit
     if (rev_collision_mask[rev_idx1] == NO_COLLISION) {
@@ -1109,7 +1109,9 @@ process_fwd_unit:
     auto& move2 = rev_move_buff[rev_idx2];
     if (rev_pos2 - rev_pos1 <= move1 + move2 &&
         std::bernoulli_distribution{1.0 - this->probability_of_extrusion_unit_bypass}(rand_eng)) {
-      rev_collision_mask[rev_idx2] = LEF_LEF_COLLISION;
+      if (rev_collision_mask[rev_idx2] != REACHED_CHROM_BOUNDARY) {
+        rev_collision_mask[rev_idx2] = LEF_LEF_COLLISION;
+      }
       move2 = rev_pos2 - (rev_pos1 - move1);
       move2 -= move2 > 0 ? 1 : 0;
     }
