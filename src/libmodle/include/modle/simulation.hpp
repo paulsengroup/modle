@@ -52,6 +52,7 @@ class Simulation : Config {
   using collision_t = uint_fast16_t;
   static constexpr auto NO_COLLISION = std::numeric_limits<collision_t>::max();
   static constexpr auto LEF_LEF_COLLISION = std::numeric_limits<collision_t>::max() - 1;
+  static constexpr auto REACHED_CHROM_BOUNDARY = std::numeric_limits<collision_t>::max() - 2;
 
   struct Task {
     std::size_t id;
@@ -112,7 +113,7 @@ class Simulation : Config {
                              absl::Span<const std::size_t> rev_lef_ranks,
                              absl::Span<const std::size_t> fwd_lef_ranks,
                              absl::Span<bp_t> rev_moves, absl::Span<bp_t> fwd_moves,
-                             modle::PRNG& rand_eng);
+                             modle::PRNG& rand_eng, bool adjust_moves_ = true);
 
   inline void adjust_moves(const Chromosome* chrom, absl::Span<const Lef> lefs,
                            absl::Span<const std::size_t> rev_lef_ranks,
@@ -129,7 +130,7 @@ class Simulation : Config {
 
   // Loop over lefs and identify colliding extr. units (i.e. units that travel in opposite
   // direction and that are within <p>dist_threshold</p> bp from each other
-  inline void check_lef_lef_collisions(absl::Span<const Lef> lefs,
+  inline void check_lef_lef_collisions(const Chromosome* chrom, absl::Span<const Lef> lefs,
                                        absl::Span<const std::size_t> rev_lef_rank_buff,
                                        absl::Span<const std::size_t> fwd_lef_rank_buff,
                                        absl::Span<bp_t> rev_move_buff,
@@ -172,10 +173,10 @@ class Simulation : Config {
     this->bind_lefs(chrom, lefs, rev_lef_ranks, fwd_lef_ranks, mask, rand_eng);
   }
 
-  inline void test_clamp_moves(const Chromosome* const chrom, absl::Span<const Lef> lefs,
-                               absl::Span<const std::size_t> rev_lef_ranks,
-                               absl::Span<const std::size_t> fwd_lef_ranks,
-                               absl::Span<bp_t> rev_moves, absl::Span<bp_t> fwd_moves) {
+  inline void test_adjust_moves(const Chromosome* const chrom, absl::Span<const Lef> lefs,
+                                absl::Span<const std::size_t> rev_lef_ranks,
+                                absl::Span<const std::size_t> fwd_lef_ranks,
+                                absl::Span<bp_t> rev_moves, absl::Span<bp_t> fwd_moves) {
     this->adjust_moves(chrom, lefs, rev_lef_ranks, fwd_lef_ranks, rev_moves, fwd_moves);
   }
 
@@ -183,28 +184,27 @@ class Simulation : Config {
                                   absl::Span<const std::size_t> rev_lef_ranks,
                                   absl::Span<const std::size_t> fwd_lef_ranks,
                                   absl::Span<bp_t> rev_moves, absl::Span<bp_t> fwd_moves,
-                                  modle::PRNG& rand_eng) {
-    this->generate_moves(chrom, lefs, rev_lef_ranks, fwd_lef_ranks, rev_moves, fwd_moves, rand_eng);
+                                  modle::PRNG& rand_eng, bool adjust_moves_ = false) {
+    this->generate_moves(chrom, lefs, rev_lef_ranks, fwd_lef_ranks, rev_moves, fwd_moves, rand_eng,
+                         adjust_moves_);
   }
 
   inline static void test_rank_lefs(absl::Span<const Lef> lefs,
                                     absl::Span<std::size_t> rev_lef_rank_buff,
-                                    absl::Span<std::size_t> fwd_lef_rank_buff,
-                                    bool init_buffers) {
+                                    absl::Span<std::size_t> fwd_lef_rank_buff, bool init_buffers) {
     Simulation::rank_lefs(lefs, rev_lef_rank_buff, fwd_lef_rank_buff, init_buffers);
   }
-  /*
-  inline void test_check_lef_lef_collisions(absl::Span<const Lef> lefs,
-                                            absl::Span<const std::size_t> rev_lef_rank_buff,
-                                            absl::Span<const std::size_t> fwd_lef_rank_buff,
-                                            absl::Span<const bp_t> rev_move_buff,
-                                            absl::Span<const bp_t> fwd_move_buff,
-                                            absl::Span<collision_t> rev_collision_buff,
-                                            absl::Span<collision_t> fwd_collision_buff) {
-    this->check_lef_lef_collisions(lefs, rev_lef_rank_buff, fwd_lef_rank_buff, rev_move_buff,
-                                   fwd_move_buff, rev_collision_buff, fwd_collision_buff);
-  }
 
+  inline void test_check_lef_lef_collisions(
+      const Chromosome* const chrom, absl::Span<const Lef> lefs,
+      absl::Span<const std::size_t> rev_lef_rank_buff,
+      absl::Span<const std::size_t> fwd_lef_rank_buff, absl::Span<bp_t> rev_move_buff,
+      absl::Span<bp_t> fwd_move_buff, absl::Span<collision_t> rev_collision_buff,
+      absl::Span<collision_t> fwd_collision_buff, modle::PRNG& rand_eng) {
+    this->check_lef_lef_collisions(chrom, lefs, rev_lef_rank_buff, fwd_lef_rank_buff, rev_move_buff,
+                                   fwd_move_buff, rev_collision_buff, fwd_collision_buff, rand_eng);
+  }
+  /*
   inline void test_apply_lef_lef_stalls(absl::Span<Lef> lefs,
                                         absl::Span<const collision_t> rev_collision_buff,
                                         absl::Span<const collision_t> fwd_collision_buff,

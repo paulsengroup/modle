@@ -615,8 +615,8 @@ void Simulation::simulate_extrusion_kernel(Simulation::State& s) {
                                    barriers, s.barrier_mask, rev_collision_mask, fwd_collision_mask,
                                    s.rand_eng);
 
-    this->check_lef_lef_collisions(lefs, rev_lef_ranks, fwd_lef_ranks, rev_moves, fwd_moves,
-                                   rev_collision_mask, fwd_collision_mask, s.rand_eng);
+    this->check_lef_lef_collisions(s.chrom, lefs, rev_lef_ranks, fwd_lef_ranks, rev_moves,
+                                   fwd_moves, rev_collision_mask, fwd_collision_mask, s.rand_eng);
 
     this->extrude(s.chrom, lefs, rev_moves, fwd_moves);
 
@@ -665,7 +665,7 @@ void Simulation::generate_moves(const Chromosome* const chrom, absl::Span<const 
                                 absl::Span<const std::size_t> rev_lef_ranks,
                                 absl::Span<const std::size_t> fwd_lef_ranks,
                                 absl::Span<bp_t> rev_moves, absl::Span<bp_t> fwd_moves,
-                                modle::PRNG& rand_eng) {
+                                modle::PRNG& rand_eng, bool adjust_moves_) {
   assert(lefs.size() == fwd_lef_ranks.size());  // NOLINT
   assert(lefs.size() == rev_lef_ranks.size());  // NOLINT
   assert(lefs.size() == fwd_moves.size());      // NOLINT
@@ -709,7 +709,10 @@ void Simulation::generate_moves(const Chromosome* const chrom, absl::Span<const 
     rev_moves[i] = lefs[i].is_bound() ? generate_rev_move(i) : 0UL;
     fwd_moves[i] = lefs[i].is_bound() ? generate_fwd_move(i) : 0UL;
   }
-  this->adjust_moves(chrom, lefs, rev_lef_ranks, fwd_lef_ranks, rev_moves, fwd_moves);
+
+  if (adjust_moves_) {
+    this->adjust_moves(chrom, lefs, rev_lef_ranks, fwd_lef_ranks, rev_moves, fwd_moves);
+  }
 }
 
 void Simulation::adjust_moves(const Chromosome* chrom, absl::Span<const Lef> lefs,
@@ -942,23 +945,47 @@ void Simulation::check_lef_bar_collisions(
   }
 }
 
-void Simulation::check_lef_lef_collisions(
-    absl::Span<const Lef> lefs, absl::Span<const std::size_t> rev_lef_rank_buff,
-    absl::Span<const std::size_t> fwd_lef_rank_buff, absl::Span<bp_t> rev_move_buff,
-    absl::Span<bp_t> fwd_move_buff, absl::Span<std::size_t> rev_collision_mask,
-    absl::Span<std::size_t> fwd_collision_mask, modle::PRNG& rand_eng) {
-  assert(lefs.size() == fwd_lef_rank_buff.size());
-  assert(lefs.size() == rev_lef_rank_buff.size());
-  assert(lefs.size() == fwd_collision_mask.size());
-  assert(lefs.size() == rev_collision_mask.size());
-  assert(std::is_sorted(rev_lef_rank_buff.begin(), rev_lef_rank_buff.end(),
+void Simulation::check_lef_lef_collisions(const Chromosome* const chrom, absl::Span<const Lef> lefs,
+                                          absl::Span<const std::size_t> rev_lef_rank_buff,
+                                          absl::Span<const std::size_t> fwd_lef_rank_buff,
+                                          absl::Span<bp_t> rev_move_buff,
+                                          absl::Span<bp_t> fwd_move_buff,
+                                          absl::Span<std::size_t> rev_collision_mask,
+                                          absl::Span<std::size_t> fwd_collision_mask,
+                                          modle::PRNG& rand_eng) {
+  assert(chrom);                                                             // NOLINT
+  assert(lefs.size() == fwd_lef_rank_buff.size());                           // NOLINT
+  assert(lefs.size() == rev_lef_rank_buff.size());                           // NOLINT
+  assert(lefs.size() == fwd_collision_mask.size());                          // NOLINT
+  assert(lefs.size() == rev_collision_mask.size());                          // NOLINT
+  assert(std::is_sorted(rev_lef_rank_buff.begin(), rev_lef_rank_buff.end(),  // NOLINT
                         [&](const auto r1, const auto r2) {
                           return lefs[r1].rev_unit.pos() < lefs[r2].rev_unit.pos();
                         }));
-  assert(std::is_sorted(fwd_lef_rank_buff.begin(), fwd_lef_rank_buff.end(),
+  assert(std::is_sorted(fwd_lef_rank_buff.begin(), fwd_lef_rank_buff.end(),  // NOLINT
                         [&](const auto r1, const auto r2) {
                           return lefs[r1].fwd_unit.pos() < lefs[r2].fwd_unit.pos();
                         }));
+  // Process first and last units
+  {
+    const auto& rev_idx = rev_lef_rank_buff.front();
+    const auto& fwd_idx = fwd_lef_rank_buff.back();
+
+    const auto& rev_unit = lefs[rev_idx].rev_unit;
+    const auto& fwd_unit = lefs[fwd_idx].fwd_unit;
+
+    auto& rev_move = rev_move_buff[rev_idx];
+    auto& fwd_move = fwd_move_buff[fwd_idx];
+    assert(chrom->start_pos() + rev_move <= rev_unit.pos());  // NOLINT
+    if (rev_unit.pos() - rev_move == chrom->start_pos()) {
+      rev_collision_mask[rev_idx] = REACHED_CHROM_BOUNDARY;
+    }
+
+    assert(fwd_unit.pos() + fwd_move < chrom->end_pos());  // NOLINT
+    if (fwd_unit.pos() + fwd_move == chrom->end_pos() - 1) {
+      fwd_collision_mask[fwd_idx] = REACHED_CHROM_BOUNDARY;
+    }
+  }
 
   /* Loop over lefs, using a procedure similar to merge in mergesort
    * The idea here is that if we have a way to visit extr. units in 5'-3' order, then detecting
@@ -971,7 +998,8 @@ void Simulation::check_lef_lef_collisions(
    *    - While doing so, increase the number of LEF-LEF collisions for the fwd/rev unit that are
    *      being processed
    */
-  for (auto i = 0UL, j = 0UL; i < lefs.size() && j < lefs.size(); ++i) {
+  auto i = 0UL, j = 0UL;
+  while (true) {
     auto rev_idx = rev_lef_rank_buff[j];          // index of the ith rev unit in 5'-3' order
     auto rev_pos = lefs[rev_idx].rev_unit.pos();  // pos of the ith unit
     auto fwd_idx = fwd_lef_rank_buff[i];          // index of the jth fwd unit in 5'-3' order
@@ -985,13 +1013,36 @@ void Simulation::check_lef_lef_collisions(
       rev_pos = lefs[rev_idx].rev_unit.pos();  // pos of the jth unit
     }
 
+    while (rev_pos > fwd_pos) {
+      if (++i == lefs.size()) {
+        goto process_fwd_unit;
+      }
+      fwd_idx = fwd_lef_rank_buff[i];          // index of the jth fwd unit in 5'-3' order
+      fwd_pos = lefs[fwd_idx].fwd_unit.pos();  // pos of the jth unit
+    }
+    fwd_idx = fwd_lef_rank_buff[i - 1];
+    fwd_pos = lefs[fwd_idx].fwd_unit.pos();
+
     if (const auto delta = rev_pos - fwd_pos;
         delta < rev_move_buff[rev_idx] + fwd_move_buff[fwd_idx] &&
         std::bernoulli_distribution{1.0 - this->probability_of_extrusion_unit_bypass}(rand_eng)) {
       if (delta > 1) {
         if (rev_collision_mask[rev_idx] == NO_COLLISION &&
             fwd_collision_mask[fwd_idx] == NO_COLLISION) {
-          const auto collision_pos = (fwd_pos + rev_pos + 1) / 2;
+          const auto& rev_speed = rev_move_buff[rev_idx];
+          const auto& fwd_speed = fwd_move_buff[fwd_idx];
+          const auto relative_speed = rev_speed + fwd_speed;
+          const auto time_to_collision =
+              static_cast<double>(rev_pos - fwd_pos) / static_cast<double>(relative_speed);
+          const auto collision_pos =
+              fwd_pos +
+              static_cast<bp_t>(std::round((static_cast<double>(fwd_speed) * time_to_collision)));
+          {
+            const auto collision_pos2 =
+                rev_pos -
+                static_cast<bp_t>(std::round((static_cast<double>(rev_speed) * time_to_collision)));
+            assert(collision_pos == collision_pos2);
+          }
           rev_move_buff[rev_idx] = rev_pos - collision_pos;
           fwd_move_buff[fwd_idx] = (collision_pos - fwd_pos) - 1;
         } else if (rev_collision_mask[rev_idx] != NO_COLLISION &&
@@ -1007,20 +1058,25 @@ void Simulation::check_lef_lef_collisions(
         rev_move_buff[rev_idx] = 0;
         fwd_move_buff[fwd_idx] = 0;
       }
-      rev_collision_mask[rev_idx] = LEF_LEF_COLLISION;
-      fwd_collision_mask[fwd_idx] = LEF_LEF_COLLISION;
+      if (rev_collision_mask[rev_idx] != REACHED_CHROM_BOUNDARY) {
+        rev_collision_mask[rev_idx] = LEF_LEF_COLLISION;
+      }
+      if (fwd_collision_mask[fwd_idx] != REACHED_CHROM_BOUNDARY) {
+        fwd_collision_mask[fwd_idx] = LEF_LEF_COLLISION;
+      }
     }
   }
 
 process_fwd_unit:
-  for (auto i = 1UL; i < lefs.size(); ++i) {
+  for (i = 1UL; i < lefs.size(); ++i) {
     const auto& fwd_idx2 = fwd_lef_rank_buff[i];  // index of the ith fwd unit in 5'-3' order
     const auto& fwd_pos2 = lefs[fwd_idx2].fwd_unit.pos();  // pos of the ith unit
     if (fwd_collision_mask[fwd_idx2] == NO_COLLISION) {
       continue;
     }
 
-    for (auto j = i - 1; j > 0; --j) {
+    j = i;
+    while (j-- > 0) {
       const auto& fwd_idx1 = fwd_lef_rank_buff[j];  // index of the ith-1 fwd unit in 5'-3' order
       const auto& fwd_pos1 = lefs[fwd_idx1].fwd_unit.pos();  // pos of the ith-1 unit
       auto& move1 = fwd_move_buff[fwd_idx1];
@@ -1028,7 +1084,9 @@ process_fwd_unit:
 
       if (fwd_pos2 - fwd_pos1 <= move1 + move2 &&
           std::bernoulli_distribution{1.0 - this->probability_of_extrusion_unit_bypass}(rand_eng)) {
-        fwd_collision_mask[fwd_idx1] = LEF_LEF_COLLISION;
+        if (fwd_collision_mask[fwd_idx1] != REACHED_CHROM_BOUNDARY) {
+          fwd_collision_mask[fwd_idx1] = LEF_LEF_COLLISION;
+        }
         move1 = (fwd_pos2 + move2) - fwd_pos1;
         move1 -= move1 > 0 ? 1 : 0;
       } else {
@@ -1037,14 +1095,14 @@ process_fwd_unit:
     }
   }
 
-  for (auto i = 0UL; i < lefs.size() - 1; ++i) {
-    const auto& rev_idx1 = rev_lef_rank_buff[i];  // index of the ith rev unit in 5'-3' order
+  for (i = lefs.size() - 1; i > 0; --i) {
+    const auto& rev_idx1 = rev_lef_rank_buff[i - 1];  // index of the ith rev unit in 5'-3' order
     const auto& rev_pos1 = lefs[rev_idx1].rev_unit.pos();  // pos of the ith unit
     if (rev_collision_mask[rev_idx1] == NO_COLLISION) {
       continue;
     }
 
-    const auto& rev_idx2 = rev_lef_rank_buff[i + 1];  // index of the ith-1 rev unit in 5'-3' order
+    const auto& rev_idx2 = rev_lef_rank_buff[i];  // index of the ith-1 rev unit in 5'-3' order
     const auto& rev_pos2 = lefs[rev_idx2].rev_unit.pos();  // pos of the ith-1 unit
 
     const auto& move1 = rev_move_buff[rev_idx1];
