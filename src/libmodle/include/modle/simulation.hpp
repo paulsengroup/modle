@@ -204,36 +204,27 @@ class Simulation : Config {
     this->check_lef_lef_collisions(chrom, lefs, rev_lef_rank_buff, fwd_lef_rank_buff, rev_move_buff,
                                    fwd_move_buff, rev_collision_buff, fwd_collision_buff, rand_eng);
   }
-  /*
-  inline void test_apply_lef_lef_stalls(absl::Span<Lef> lefs,
-                                        absl::Span<const collision_t> rev_collision_buff,
-                                        absl::Span<const collision_t> fwd_collision_buff,
-                                        absl::Span<const std::size_t> rev_lef_rank_buff,
-                                        absl::Span<const std::size_t> fwd_lef_rank_buff,
-                                        PRNG& rand_eng) {
-    this->apply_lef_lef_stalls(lefs, rev_collision_buff, fwd_collision_buff, rev_lef_rank_buff,
-                               fwd_lef_rank_buff, rand_eng);
-  }
 
   inline void test_check_lef_bar_collisions(
       absl::Span<const Lef> lefs, absl::Span<const std::size_t> rev_lef_rank_buff,
-      absl::Span<const std::size_t> fwd_lef_rank_buff, absl::Span<const bp_t> rev_move_buff,
-      absl::Span<const bp_t> fwd_move_buff, absl::Span<const ExtrusionBarrier> extr_barriers,
-      absl::Span<collision_t> rev_collision_buff, absl::Span<collision_t> fwd_collision_buff) {
+      absl::Span<const std::size_t> fwd_lef_rank_buff, absl::Span<bp_t> rev_move_buff,
+      absl::Span<bp_t> fwd_move_buff, absl::Span<const ExtrusionBarrier> extr_barriers,
+      const boost::dynamic_bitset<>& barrier_mask, absl::Span<std::size_t> rev_collisions,
+      absl::Span<std::size_t> fwd_collisions, modle::PRNG& rand_eng) {
     this->check_lef_bar_collisions(lefs, rev_lef_rank_buff, fwd_lef_rank_buff, rev_move_buff,
-                                   fwd_move_buff, extr_barriers, rev_collision_buff,
-                                   fwd_collision_buff);
+                                   fwd_move_buff, extr_barriers, barrier_mask, rev_collisions,
+                                   fwd_collisions, rand_eng);
   }
-
-  inline void test_apply_lef_bar_stalls(absl::Span<Lef> lefs,
-                                        absl::Span<const collision_t> rev_collision_buff,
-                                        absl::Span<const collision_t> fwd_collision_buff,
-                                        absl::Span<const ExtrusionBarrier> extr_barriers,
-                                        PRNG& rand_eng) {
-    this->apply_lef_bar_stalls(lefs, rev_collision_buff, fwd_collision_buff, extr_barriers,
-                               rand_eng);
-  }
-   */
+  /*
+   inline void test_apply_lef_bar_stalls(absl::Span<Lef> lefs,
+                                         absl::Span<const collision_t> rev_collision_buff,
+                                         absl::Span<const collision_t> fwd_collision_buff,
+                                         absl::Span<const ExtrusionBarrier> extr_barriers,
+                                         PRNG& rand_eng) {
+     this->apply_lef_bar_stalls(lefs, rev_collision_buff, fwd_collision_buff, extr_barriers,
+                                rand_eng);
+   }
+    */
 #endif
 };
 }  // namespace modle

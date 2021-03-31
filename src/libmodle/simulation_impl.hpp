@@ -842,24 +842,24 @@ void Simulation::check_lef_bar_collisions(
     absl::Span<bp_t> fwd_move_buff, absl::Span<const ExtrusionBarrier> extr_barriers,
     const boost::dynamic_bitset<>& barrier_mask, absl::Span<std::size_t> rev_collisions,
     absl::Span<std::size_t> fwd_collisions, modle::PRNG& rand_eng) {
-  assert(lefs.size() == fwd_lef_rank_buff.size());
-  assert(lefs.size() == rev_lef_rank_buff.size());
-  assert(lefs.size() == fwd_move_buff.size());
-  assert(lefs.size() == rev_move_buff.size());
-  assert(lefs.size() == fwd_collisions.size());
-  assert(lefs.size() == rev_collisions.size());
-  assert(barrier_mask.size() == extr_barriers.size());
-  assert(std::is_sorted(fwd_lef_rank_buff.begin(), fwd_lef_rank_buff.end(),
+  assert(lefs.size() == fwd_lef_rank_buff.size());                           // NOLINT
+  assert(lefs.size() == rev_lef_rank_buff.size());                           // NOLINT
+  assert(lefs.size() == fwd_move_buff.size());                               // NOLINT
+  assert(lefs.size() == rev_move_buff.size());                               // NOLINT
+  assert(lefs.size() == fwd_collisions.size());                              // NOLINT
+  assert(lefs.size() == rev_collisions.size());                              // NOLINT
+  assert(barrier_mask.size() == extr_barriers.size());                       // NOLINT
+  assert(std::is_sorted(fwd_lef_rank_buff.begin(), fwd_lef_rank_buff.end(),  // NOLINT
                         [&](const auto r1, const auto r2) {
                           return lefs[r1].fwd_unit.pos() < lefs[r2].fwd_unit.pos();
                         }));
-  assert(std::is_sorted(rev_lef_rank_buff.begin(), rev_lef_rank_buff.end(),
+  assert(std::is_sorted(rev_lef_rank_buff.begin(), rev_lef_rank_buff.end(),  // NOLINT
                         [&](const auto r1, const auto r2) {
                           return lefs[r1].rev_unit.pos() < lefs[r2].rev_unit.pos();
                         }));
-  assert(std::all_of(rev_collisions.begin(), rev_collisions.end(),
+  assert(std::all_of(rev_collisions.begin(), rev_collisions.end(),  // NOLINT
                      [](const auto c) { return c == NO_COLLISION; }));
-  assert(std::all_of(fwd_collisions.begin(), fwd_collisions.end(),
+  assert(std::all_of(fwd_collisions.begin(), fwd_collisions.end(),  // NOLINT
                      [](const auto c) { return c == NO_COLLISION; }));
 
   /* Loop over lefs, using a procedure similar to merge in mergesort
@@ -903,7 +903,7 @@ void Simulation::check_lef_bar_collisions(
 
       auto& rev_move = rev_move_buff[rev_idx];
       if (const auto delta = rev_unit_pos - barrier.pos();
-          delta < rev_move && std::bernoulli_distribution{pblock}(rand_eng)) {
+          delta <= rev_move && std::bernoulli_distribution{pblock}(rand_eng)) {
         // Collision detected. Assign barrier idx to the respective entry in the collision mask
         rev_collisions[rev_idx] = i;
         // Move LEF close to the extr. barrier
@@ -924,12 +924,12 @@ void Simulation::check_lef_bar_collisions(
         fwd_idx = fwd_lef_rank_buff[j2];
         fwd_unit_pos = lefs[fwd_idx].fwd_unit.pos();
       }
-      fwd_idx = fwd_lef_rank_buff[j2 > 0 ? j2 - 1 : 0];
+      fwd_idx = fwd_lef_rank_buff[j2 > 0 ? --j2 : 0];
       fwd_unit_pos = lefs[fwd_idx].fwd_unit.pos();
 
       auto& fwd_move = fwd_move_buff[fwd_idx];
       if (const auto delta = barrier.pos() - fwd_unit_pos;
-          delta < fwd_move && std::bernoulli_distribution{pblock}(rand_eng)) {
+          delta <= fwd_move && std::bernoulli_distribution{pblock}(rand_eng)) {
         // Collision detected. Assign barrier idx to the respective entry in the collision mask
         fwd_collisions[fwd_idx] = i;
         // Move LEF close to the extr. barrier
@@ -939,7 +939,7 @@ void Simulation::check_lef_bar_collisions(
 
   end_of_loop:
     // Return if there are no more extr.units to be processed
-    if (j1 == extr_barriers.size() && j2 == 0) {
+    if (j1 == extr_barriers.size() && j2 == extr_barriers.size()) {
       return;
     }
   }
