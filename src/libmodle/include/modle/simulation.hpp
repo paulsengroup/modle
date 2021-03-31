@@ -215,16 +215,6 @@ class Simulation : Config {
                                    fwd_move_buff, extr_barriers, barrier_mask, rev_collisions,
                                    fwd_collisions, rand_eng);
   }
-  /*
-   inline void test_apply_lef_bar_stalls(absl::Span<Lef> lefs,
-                                         absl::Span<const collision_t> rev_collision_buff,
-                                         absl::Span<const collision_t> fwd_collision_buff,
-                                         absl::Span<const ExtrusionBarrier> extr_barriers,
-                                         PRNG& rand_eng) {
-     this->apply_lef_bar_stalls(lefs, rev_collision_buff, fwd_collision_buff, extr_barriers,
-                                rand_eng);
-   }
-    */
 #endif
 };
 }  // namespace modle
