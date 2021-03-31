@@ -1047,21 +1047,21 @@ void Simulation::check_lef_lef_collisions(const Chromosome* const chrom, absl::S
           fwd_move_buff[fwd_idx] = (collision_pos - fwd_pos) - 1;
         } else if (rev_collision_mask[rev_idx] != NO_COLLISION &&
                    fwd_collision_mask[fwd_idx] == NO_COLLISION) {
-          rev_move_buff[rev_idx] = 0;
-          fwd_move_buff[fwd_idx] = (rev_pos - fwd_pos) - 1;
+          // rev_move_buff[rev_idx] = 0;
+          fwd_move_buff[fwd_idx] = (rev_pos - rev_move_buff[rev_idx] - fwd_pos) - 1;
         } else if (rev_collision_mask[rev_idx] == NO_COLLISION &&
                    fwd_collision_mask[fwd_idx] != NO_COLLISION) {
-          rev_move_buff[rev_idx] = (rev_pos - fwd_pos) - 1;
-          fwd_move_buff[fwd_idx] = 0;
+          rev_move_buff[rev_idx] = rev_pos - (fwd_pos + fwd_move_buff[fwd_idx] + 1);
+          // fwd_move_buff[fwd_idx] = 0;
         }
       } else {
         rev_move_buff[rev_idx] = 0;
         fwd_move_buff[fwd_idx] = 0;
       }
-      if (rev_collision_mask[rev_idx] != REACHED_CHROM_BOUNDARY) {
+      if (rev_collision_mask[rev_idx] == NO_COLLISION) {
         rev_collision_mask[rev_idx] = LEF_LEF_COLLISION;
       }
-      if (fwd_collision_mask[fwd_idx] != REACHED_CHROM_BOUNDARY) {
+      if (fwd_collision_mask[fwd_idx] == NO_COLLISION) {
         fwd_collision_mask[fwd_idx] = LEF_LEF_COLLISION;
       }
     }
@@ -1079,12 +1079,16 @@ process_fwd_unit:
     while (j-- > 0) {
       const auto& fwd_idx1 = fwd_lef_rank_buff[j];  // index of the ith-1 fwd unit in 5'-3' order
       const auto& fwd_pos1 = lefs[fwd_idx1].fwd_unit.pos();  // pos of the ith-1 unit
+      if (fwd_collision_mask[fwd_idx1] != NO_COLLISION) {
+        break;
+      }
+
       auto& move1 = fwd_move_buff[fwd_idx1];
       const auto& move2 = fwd_move_buff[fwd_idx2];
 
       if (fwd_pos2 - fwd_pos1 <= move1 + move2 &&
           std::bernoulli_distribution{1.0 - this->probability_of_extrusion_unit_bypass}(rand_eng)) {
-        if (fwd_collision_mask[fwd_idx1] != REACHED_CHROM_BOUNDARY) {
+        if (fwd_collision_mask[fwd_idx1] == NO_COLLISION) {
           fwd_collision_mask[fwd_idx1] = LEF_LEF_COLLISION;
         }
         move1 = (fwd_pos2 + move2) - fwd_pos1;
@@ -1101,17 +1105,17 @@ process_fwd_unit:
     if (rev_collision_mask[rev_idx1] == NO_COLLISION) {
       continue;
     }
-
     const auto& rev_idx2 = rev_lef_rank_buff[i];  // index of the ith-1 rev unit in 5'-3' order
     const auto& rev_pos2 = lefs[rev_idx2].rev_unit.pos();  // pos of the ith-1 unit
+    if (rev_collision_mask[rev_idx2] != NO_COLLISION) {
+      continue;
+    }
 
     const auto& move1 = rev_move_buff[rev_idx1];
     auto& move2 = rev_move_buff[rev_idx2];
     if (rev_pos2 - rev_pos1 <= move1 + move2 &&
         std::bernoulli_distribution{1.0 - this->probability_of_extrusion_unit_bypass}(rand_eng)) {
-      if (rev_collision_mask[rev_idx2] != REACHED_CHROM_BOUNDARY) {
-        rev_collision_mask[rev_idx2] = LEF_LEF_COLLISION;
-      }
+      rev_collision_mask[rev_idx2] = LEF_LEF_COLLISION;
       move2 = rev_pos2 - (rev_pos1 - move1);
       move2 -= move2 > 0 ? 1 : 0;
     }
