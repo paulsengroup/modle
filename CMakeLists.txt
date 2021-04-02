@@ -10,10 +10,18 @@ list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake/modules/")
 
 include(cmake/StandardProjectSettings.cmake)
 include(cmake/PreventInSourceBuilds.cmake)
+include(CheckCXXCompilerFlag)
 
 # Link this 'library' to set the c++ standard / compile-time options requested
 add_library(project_options INTERFACE)
-target_compile_features(project_options INTERFACE cxx_std_17)
+
+check_cxx_compiler_flag("-std=c++20" CXX20_COMPILER_AVAILABLE)
+if(CXX20_COMPILER_AVAILABLE)
+  target_compile_features(project_options INTERFACE cxx_std_20)
+else()
+  target_compile_features(project_options INTERFACE cxx_std_17)
+endif()
+
 if(ENABLE_TESTING)
   target_compile_definitions(project_options INTERFACE ENABLE_TESTING=1)
 endif()
@@ -82,10 +90,10 @@ set(CONAN_EXTRA_REQUIRES
     boost/1.75.0
     cli11/1.9.1
     concurrentqueue/1.0.2
-    cpp-sort/1.9.0
+    cpp-sort/1.10.0
     fmt/7.1.3
     hdf5/1.12.0
-    spdlog/1.8.2
+    spdlog/1.8.5
     zlib/1.2.11)
 
 set(CONAN_EXTRA_OPTIONS
@@ -97,7 +105,11 @@ set(CONAN_EXTRA_OPTIONS
     boost:bzip2=False
     zlib:minizip=False)
 
-set(CONAN_EXTRA_SETTINGS ${CONAN_EXTRA_SETTINGS} compiler.cppstd=17 compiler.libcxx=libstdc++11)
+if(CXX20_COMPILER_AVAILABLE)
+  set(CONAN_EXTRA_SETTINGS ${CONAN_EXTRA_SETTINGS} compiler.cppstd=20 compiler.libcxx=libstdc++11)
+else()
+  set(CONAN_EXTRA_SETTINGS ${CONAN_EXTRA_SETTINGS} compiler.cppstd=17 compiler.libcxx=libstdc++11)
+endif()
 
 if(ENABLE_TESTING)
   set(CONAN_EXTRA_REQUIRES ${CONAN_EXTRA_REQUIRES} catch2/2.13.4)
