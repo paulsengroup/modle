@@ -172,10 +172,17 @@ std::vector<ExtrusionBarrier> Simulation::allocate_barriers(const Chromosome* co
   for (const auto& b : chrom->get_barriers()) {
     if (b.strand == '+' || b.strand == '-') [[likely]] {
       const auto pos = (b.chrom_start + b.chrom_end + 1) / 2;
-      // TODO figure out how to read both transition probabilities
-      // const auto pblock = b.score != 0 ? b.score : this->probability_of_extrusion_barrier_block;
-      barriers.emplace_back(pos, this->ctcf_occupied_self_prob, this->ctcf_not_occupied_self_prob,
-                            b.strand);
+      if (b.score != 0) {
+        const auto pblock = b.score;
+        const auto pno = this->ctcf_not_occupied_self_prob;
+        const auto poo =
+            ExtrusionBarrier::compute_blocking_to_blocking_transition_probabilities_from_pblock(
+                pblock, pno);
+        barriers.emplace_back(pos, poo, pno, b.strand);
+      } else {
+        barriers.emplace_back(pos, this->ctcf_occupied_self_prob, this->ctcf_not_occupied_self_prob,
+                              b.strand);
+      }
     } else {
       ++barriers_skipped;
     }
@@ -657,8 +664,8 @@ inline void Simulation::generate_ctcf_states(absl::Span<const ExtrusionBarrier> 
   assert(extr_barriers.size() == mask.size());
   for (auto i = 0UL; i < extr_barriers.size(); ++i) {
     mask[i] = CTCF::next_state(mask[i] ? CTCF::OCCUPIED : CTCF::NOT_OCCUPIED,
-                               this->ctcf_occupied_self_prob, this->ctcf_not_occupied_self_prob,
-                               rand_eng);
+                               extr_barriers[i].prob_occupied_to_occupied(),
+                               extr_barriers[i].prob_not_occupied_to_not_occupied(), rand_eng);
   }
 }
 
@@ -889,7 +896,7 @@ void Simulation::check_lef_bar_collisions(
     const auto& barrier = extr_barriers[i];
 
     if (j1 < lefs.size()) {  // Process rev unit
-      const auto& pblock = barrier.blocking_direction() == dna::rev
+      const auto& pblock = barrier.blocking_direction_major() == dna::rev
                                ? this->lef_hard_collision_pblock
                                : this->lef_soft_collision_pblock;
       // Look for the first rev extr. unit that comes after the current barrier
@@ -914,7 +921,7 @@ void Simulation::check_lef_bar_collisions(
 
   process_fwd_unit:
     if (j2 < lefs.size()) {  // Process fwd unit
-      const auto& pblock = barrier.blocking_direction() == dna::fwd
+      const auto& pblock = barrier.blocking_direction_major() == dna::fwd
                                ? this->lef_hard_collision_pblock
                                : this->lef_soft_collision_pblock;
       // Look for the first fwd extr. unit that comes before the current barrier
@@ -1174,8 +1181,8 @@ void Simulation::generate_lef_unloader_affinities(absl::Span<const Lef> lefs,
       const auto& rev_barrier = barriers[rev_collisions[i]];
       const auto& fwd_barrier = barriers[fwd_collisions[i]];
 
-      if (rev_barrier.blocking_direction() == dna::rev &&
-          fwd_barrier.blocking_direction() == dna::fwd) [[unlikely]] {
+      if (rev_barrier.blocking_direction_major() == dna::rev &&
+          fwd_barrier.blocking_direction_major() == dna::fwd) [[unlikely]] {
         lef_unloader_affinity[i] = 1.0 / this->hard_stall_multiplier;
       } else [[likely]] {
         lef_unloader_affinity[i] = 1.0;

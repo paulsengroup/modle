@@ -4,7 +4,7 @@
 #include <bigWig.h>                        // for bigWigFile_t
 
 #include <cstddef>      // IWYU pragma: keep for size_t
-#include <cstdint>      // for uint64_t, int32_t, uint32_t, uint8_t
+#include <cstdint>      // for uint64_t, int32_t, uint32_t, uint_fast8_t
 #include <iterator>     // for pair
 #include <memory>       // for unique_ptr
 #include <string>       // for string
@@ -13,7 +13,7 @@
 
 namespace modle::bigwig {
 
-enum : uint8_t { DEFAULT_ZOOM_LEVELS = 10 };
+enum : uint_fast8_t { DEFAULT_ZOOM_LEVELS = 10 };
 inline constexpr std::size_t DEFAULT_BUFF_SIZE{1U << 17U};  // 128 KiB
 
 inline void close_bigwig_file(bigWigFile_t* fp);

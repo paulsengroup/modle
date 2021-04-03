@@ -13,7 +13,7 @@
 #include <CLI/CLI.hpp>       // IWYU pragma: keep
 #include <algorithm>         // for max
 #include <cassert>           // for assert
-#include <cstdint>           // for uint32_t, uint8_t
+#include <cstdint>           // for uint32_t, uint_fast8_t
 #include <cstdio>            // for stderr
 #include <filesystem>        // for path, exists, is_directory, operat...
 #include <initializer_list>  // for initializer_list
@@ -32,7 +32,7 @@ namespace modle::tools {
 
 class Cli {
  public:
-  enum subcommand : uint8_t { eval, stats, help };
+  enum subcommand : uint_fast8_t { eval, stats, help };
 
  private:
   int _argc;

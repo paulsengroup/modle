@@ -11,44 +11,71 @@ ExtrusionBarrier::ExtrusionBarrier(bp_t pos, double transition_prob_blocking_to_
                                    double transition_prob_non_blocking_to_non_blocking,
                                    dna::Direction motif_direction)
     : _pos(pos),
-      _blocking_to_blocking_transition_prob(transition_prob_blocking_to_blocking),
-      _non_blocking_to_non_blocking_transition_prob(transition_prob_non_blocking_to_non_blocking),
+      _occupied_to_occupied_transition_prob(transition_prob_blocking_to_blocking),
+      _non_occupied_to_not_occupied_transition_prob(transition_prob_non_blocking_to_non_blocking),
       _blocking_direction(motif_direction == dna::Direction::fwd ? dna::Direction::rev
                                                                  : dna::Direction::fwd) {
   // NOLINTNEXTLINE
   assert(motif_direction == dna::Direction::fwd || motif_direction == dna::Direction::rev);
+  assert(transition_prob_blocking_to_blocking >= 0.0 &&  // NOLINT
+         transition_prob_blocking_to_blocking <= 1.0);
+  assert(transition_prob_non_blocking_to_non_blocking >= 0.0 &&  // NOLINT
+         transition_prob_non_blocking_to_non_blocking <= 1.0);
 }
 
 ExtrusionBarrier::ExtrusionBarrier(bp_t pos, double transition_prob_blocking_to_blocking,
                                    double transition_prob_non_blocking_to_non_blocking,
                                    char motif_direction)
     : _pos(pos),
-      _blocking_to_blocking_transition_prob(transition_prob_blocking_to_blocking),
-      _non_blocking_to_non_blocking_transition_prob(transition_prob_non_blocking_to_non_blocking),
+      _occupied_to_occupied_transition_prob(transition_prob_blocking_to_blocking),
+      _non_occupied_to_not_occupied_transition_prob(transition_prob_non_blocking_to_non_blocking),
       _blocking_direction(motif_direction == '+' ? dna::Direction::rev : dna::Direction::fwd) {
   // NOLINTNEXTLINE
   assert(motif_direction == '+' || motif_direction == '-');
+  assert(transition_prob_blocking_to_blocking >= 0.0 &&  // NOLINT
+         transition_prob_blocking_to_blocking <= 1.0);
+  assert(transition_prob_non_blocking_to_non_blocking >= 0.0 &&  // NOLINT
+         transition_prob_non_blocking_to_non_blocking <= 1.0);
 }
 
 bp_t ExtrusionBarrier::pos() const { return this->_pos; }
-double ExtrusionBarrier::prob_block_to_block() const {
-  return this->_blocking_to_blocking_transition_prob;
+double ExtrusionBarrier::prob_occupied_to_occupied() const {
+  return this->_occupied_to_occupied_transition_prob;
 }
 
-double ExtrusionBarrier::prob_block_to_no_block() const { return 1.0 - prob_block_to_block(); }
-
-double ExtrusionBarrier::prob_no_block_to_no_block() const {
-  return this->_non_blocking_to_non_blocking_transition_prob;
+double ExtrusionBarrier::prob_occupied_to_not_occupied() const {
+  return 1.0 - prob_occupied_to_occupied();
 }
 
-double ExtrusionBarrier::prob_no_block_to_block() const {
-  return 1.0 - prob_no_block_to_no_block();
+double ExtrusionBarrier::prob_not_occupied_to_not_occupied() const {
+  return this->_non_occupied_to_not_occupied_transition_prob;
 }
 
-dna::Direction ExtrusionBarrier::blocking_direction() const { return this->_blocking_direction; }
+double ExtrusionBarrier::prob_not_occupied_to_occupied() const {
+  return 1.0 - prob_not_occupied_to_not_occupied();
+}
+
+dna::Direction ExtrusionBarrier::blocking_direction_major() const {
+  return this->_blocking_direction;
+}
+
+dna::Direction ExtrusionBarrier::blocking_direction_minor() const {
+  return this->_blocking_direction == dna::fwd ? dna::rev : dna::fwd;
+}
 
 bool ExtrusionBarrier::operator<(const ExtrusionBarrier& other) const {
   return this->pos() < other.pos();
+}
+
+double ExtrusionBarrier::compute_blocking_to_blocking_transition_probabilities_from_pblock(
+    double probability_of_barrier_block, double non_blocking_to_non_blocking_transition_prob) {
+  // pno = Transition prob. from non-occupied to occupied
+  // pon = Transition prob. from occupied to non-occupied
+  // occ = Occupancy
+  const auto pno = 1.0 - non_blocking_to_non_blocking_transition_prob;
+  const auto occ = probability_of_barrier_block;
+  const auto pon = (pno - (occ * pno)) / occ;
+  return 1.0 - pon;
 }
 
 CTCF::State CTCF::next_state(CTCF::State current_state, double occupied_self_transition_prob,

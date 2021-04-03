@@ -3,13 +3,13 @@
 #include <absl/types/span.h>  // for Span
 
 #include <cstddef>  // IWYU pragma: keep for size_t
-#include <cstdint>  // for uint8_t
+#include <cstdint>  // for uint_fast8_t
 #include <utility>  // for pair
 #include <vector>   // for vector
 
 namespace modle::correlation {
 
-enum Algorithm : uint8_t { pearson, spearman };
+enum Algorithm : uint_fast8_t { pearson, spearman };
 
 [[nodiscard]] inline double compute_pearson_significance(double pcc, std::size_t n);
 [[nodiscard]] inline double compute_spearman_significance(double rho, std::size_t n);

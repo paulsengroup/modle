@@ -4,7 +4,7 @@
 #include <absl/types/span.h>  // for Span
 
 #include <cstddef>      // IWYU pragma: keep for size_t
-#include <cstdint>      // for int64_t, uint8_t, uint32_t, int32_t
+#include <cstdint>      // for int64_t, uint_fast8_t, uint32_t, int32_t
 #include <filesystem>   // for path
 #include <memory>       // for unique_ptr, allocator
 #include <string>       // for string
@@ -17,7 +17,7 @@
 namespace modle::cooler {
 class Cooler {
  public:
-  enum IO_MODE : uint8_t { READ_ONLY, WRITE_ONLY };
+  enum IO_MODE : uint_fast8_t { READ_ONLY, WRITE_ONLY };
   enum Flavor {
     UNK = 0,
     AUTO = 1,
@@ -162,8 +162,8 @@ class Cooler {
   int64_t _nchroms{0};
   int64_t _nnz{0};
 
-  enum Groups : uint8_t { CHR = 0, BIN = 1, PXL = 2, IDX = 3 };
-  enum Datasets : uint8_t {
+  enum Groups : uint_fast8_t { CHR = 0, BIN = 1, PXL = 2, IDX = 3 };
+  enum Datasets : uint_fast8_t {
     CHR_LEN = 0,
     CHR_NAME = 1,
     BIN_CHROM = 2,

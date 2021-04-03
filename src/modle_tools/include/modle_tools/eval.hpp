@@ -3,7 +3,7 @@
 #include <absl/types/span.h>  // for Span
 
 #include <cstddef>      // IWYU pragma: keep for size_t
-#include <cstdint>      // for uint64_t, int64_t, uint8_t
+#include <cstdint>      // for uint64_t, int64_t, uint_fast8_t
 #include <string>       // for string
 #include <string_view>  // for string_view
 #include <utility>      // for pair
@@ -11,7 +11,7 @@
 
 namespace modle::tools {
 
-enum Transformation : uint8_t { Linear, Cross };
+enum Transformation : uint_fast8_t { Linear, Cross };
 
 [[nodiscard]] inline std::vector<std::pair<std::string, int64_t>> select_chromosomes_for_eval(
     std::string_view path_to_cooler1, std::string_view path_to_cooler2, std::size_t bin_size);

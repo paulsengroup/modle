@@ -4,7 +4,7 @@
 
 #include <algorithm>    // for fill, copy, max
 #include <cstddef>      // IWYU pragma: keep for size_t
-#include <cstdint>      // for uint64_t, uint8_t
+#include <cstdint>      // for uint64_t, uint_fast8_t
 #include <fstream>      // for ifstream
 #include <string>       // for string, basic_string
 #include <string_view>  // for operator""sv, basic_string_view, string_view
@@ -33,7 +33,7 @@ struct RGB {
 };
 
 struct BED {
-  enum Standard : uint8_t {
+  enum Standard : uint_fast8_t {
     BED3 = 3U,
     BED4 = 4U,
     BED5 = 5U,
@@ -43,7 +43,7 @@ struct BED {
     none = 13U
   };
 
-  enum Fields : uint8_t {
+  enum Fields : uint_fast8_t {
     BED_CHROM = 1,
     BED_CHROM_START = 2,
     BED_CHROM_END = 3,
@@ -58,7 +58,7 @@ struct BED {
     BED_BLOCK_STARTS = 12
   };
 
-  enum FieldsIdx : uint8_t {
+  enum FieldsIdx : uint_fast8_t {
     BED_CHROM_IDX = 0,
     BED_CHROM_START_IDX = 1,
     BED_CHROM_END_IDX = 2,
