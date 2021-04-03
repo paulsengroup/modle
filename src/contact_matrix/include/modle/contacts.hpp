@@ -34,14 +34,14 @@ class ContactMatrix {
  public:
   // Constructors
   inline ContactMatrix() = default;
-  inline ContactMatrix(ContactMatrix<I>&& other) = default;
+  inline ContactMatrix(ContactMatrix<I>&& other) noexcept = default;
   inline ContactMatrix(const ContactMatrix<I>& other);
   inline ContactMatrix(std::size_t nrows, std::size_t ncols, bool fill_with_random_numbers = false);
   inline ~ContactMatrix() = default;
 
   // Operators
   [[nodiscard]] inline ContactMatrix& operator=(const ContactMatrix& other);
-  [[nodiscard]] inline ContactMatrix& operator=(ContactMatrix&& other) = default;
+  [[nodiscard]] inline ContactMatrix& operator=(ContactMatrix&& other) noexcept = default;
 
   // Counts getters and setters
   [[nodiscard]] inline I get(std::size_t row, std::size_t col) const;
@@ -50,8 +50,20 @@ class ContactMatrix {
   template <typename I2>
   inline void add(std::size_t row, std::size_t col, I2 n);
   template <typename I2>
+  inline void add(absl::Span<std::pair<std::size_t /* rows */, std::size_t /* cols */>> pixels,
+                  I2 n, std::size_t size_thresh = 256);  // NOLINT
+  template <typename I2>
+  inline void add_small_buff(
+      absl::Span<std::pair<std::size_t /* rows */, std::size_t /* cols */>> pixels, I2 n);
+  template <typename I2>
+  inline void add_large_buff(
+      absl::Span<std::pair<std::size_t /* rows */, std::size_t /* cols */>> pixels, I2 n);
+  template <typename I2>
   inline void subtract(std::size_t row, std::size_t col, I2 n);
   inline void increment(std::size_t row, std::size_t col);
+  inline void increment(
+      absl::Span<std::pair<std::size_t /* rows */, std::size_t /* cols */>> pixels,
+      std::size_t size_thresh = 256);  // NOLINT
   inline void decrement(std::size_t row, std::size_t col);
 
   // Shape/statistics getters
@@ -96,6 +108,11 @@ class ContactMatrix {
   [[nodiscard]] inline const I& at(std::size_t i, std::size_t j) const;
   [[nodiscard]] inline static std::pair<std::size_t, std::size_t> transpose_coords(std::size_t row,
                                                                                    std::size_t col);
+  inline void bound_check_column(std::size_t col) const;
+  template <typename I2>
+  inline void check_for_overflow_on_add(std::size_t row, std::size_t col, I2 n) const;
+  template <typename I2>
+  inline void check_overflow_on_subtract(std::size_t row, std::size_t col, I2 n) const;
 };
 
 }  // namespace modle

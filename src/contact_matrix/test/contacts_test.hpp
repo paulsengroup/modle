@@ -112,6 +112,84 @@ TEST_CASE("CMatrix Mask", "[cmatrix][short]") {
   // m.print(true);
 }
 
+TEST_CASE("CMatrix in/decrement", "[cmatrix][short]") {
+  ContactMatrix<uint32_t> m(10, 20);  // NOLINT
+  REQUIRE_NOTHROW(m.increment(0, 0));
+  REQUIRE_NOTHROW(m.increment(15, 15));  // NOLINT
+
+  CHECK(m.get_tot_contacts() == 2);  // NOLINT
+  CHECK(m.get(0, 0) == 1);
+
+  REQUIRE_NOTHROW(m.decrement(0, 0));
+  CHECK(m.get_tot_contacts() == 1);
+  CHECK(m.get(0, 0) == 0);
+
+  REQUIRE(m.get_n_of_missed_updates() == 0);
+  REQUIRE_NOTHROW(m.increment(11, 0));  // NOLINT
+  CHECK(m.get(0, 0) == 0);
+  CHECK(m.get_n_of_missed_updates() == 1);
+  CHECK(m.get_tot_contacts() == 1);
+
+  CHECK_THROWS_WITH(
+      m.increment(25, 25),  // NOLINT
+      Catch::Contains("caught an attempt to access element past the end of the contact matrix"));
+  CHECK(m.get_n_of_missed_updates() == 1);
+  CHECK(m.get_tot_contacts() == 1);
+
+  CHECK_THROWS_WITH(
+      m.decrement(25, 25),  // NOLINT
+      Catch::Contains("caught an attempt to access element past the end of the contact matrix"));
+  CHECK(m.get_n_of_missed_updates() == 1);
+  CHECK(m.get_tot_contacts() == 1);
+}
+
+TEST_CASE("CMatrix in/decrement vector", "[cmatrix][short]") {
+  ContactMatrix<uint32_t> m(10, 20);  // NOLINT
+  // clang-format off
+  const std::vector<std::pair<std::size_t, std::size_t>> pixels{{ 0,  0},   // NOLINT
+                                                          { 5, 10},         // NOLINT
+                                                          { 2,  3},         // NOLINT
+                                                          {15,  0},         // NOLINT
+                                                          { 7,  1},         // NOLINT
+                                                          {25, 25}};        // NOLINT
+  // clang-format on
+  auto pixels_ = pixels;
+
+  m.increment(absl::MakeSpan(pixels_.data(), pixels_.size() - 1));
+
+  CHECK(m.get_n_of_missed_updates() == 1);
+  CHECK(m.get_tot_contacts() == pixels.size() - 2);  // NOLINT
+  for (auto i = 0UL; i < pixels.size() - 1; ++i) {
+    const auto& [row, col] = pixels[i];
+    if (row == 15UL && col == 0UL) {  // NOLINT
+      CHECK(m.get(row, col) == 0);
+      continue;
+    }
+    CHECK(m.get(row, col) == 1);
+  }
+
+#ifndef NDEBUG
+  pixels_ = pixels;
+  // Setting thresh to 0 forces this function to switch to a branch that is supposed to be more
+  CHECK_THROWS_WITH(  // efficient for large  buffers
+      m.increment(absl::MakeSpan(pixels_), 0),
+      Catch::Contains("caught an attempt to access element past the end of the contact matrix"));
+  CHECK(m.get_n_of_missed_updates() == 2);                 // NOLINT
+  CHECK(m.get_tot_contacts() == 2 * (pixels.size() - 2));  // NOLINT
+  for (const auto& [row, col] : pixels) {
+    if (row == 15UL && col == 0UL) {  // NOLINT
+      CHECK(m.get(row, col) == 0);
+      continue;
+    }
+    if (row == 25UL && col == 25UL) {  // NOLINT
+      continue;
+    }
+    CHECK(m.get(row, col) == 2);  // NOLINT
+  }
+
+#endif
+}
+
 /*
 TEST_CASE("CMatrix 50x5'000", "[cmatrix][long]") {
   const std::string file_path = "test/data/symm_matrix_5000_50.tsv.bz2";
