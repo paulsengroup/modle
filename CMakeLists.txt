@@ -15,8 +15,11 @@ include(CheckCXXCompilerFlag)
 # Link this 'library' to set the c++ standard / compile-time options requested
 add_library(project_options INTERFACE)
 
-check_cxx_compiler_flag("-std=c++20" CXX20_COMPILER_AVAILABLE)
-if(CXX20_COMPILER_AVAILABLE)
+if (ENABLE_CXX20)
+  check_cxx_compiler_flag("-std=c++20" CXX20_COMPILER_AVAILABLE)
+endif()
+
+if(ENABLE_CXX20 AND CXX20_COMPILER_AVAILABLE)
   target_compile_features(project_options INTERFACE cxx_std_20)
 else()
   target_compile_features(project_options INTERFACE cxx_std_17)
@@ -93,6 +96,7 @@ set(CONAN_EXTRA_REQUIRES
     cpp-sort/1.10.0
     fmt/7.1.3
     hdf5/1.12.0
+    readerwriterqueue/1.0.3
     spdlog/1.8.5
     zlib/1.2.11)
 
@@ -102,8 +106,7 @@ set(CONAN_EXTRA_OPTIONS
     boost:asio_no_deprecated=True
     boost:filesystem_no_deprecated=True
     boost:zlib=True
-    boost:bzip2=False
-    zlib:minizip=False)
+    boost:bzip2=False)
 
 if(CXX20_COMPILER_AVAILABLE)
   set(CONAN_EXTRA_SETTINGS ${CONAN_EXTRA_SETTINGS} compiler.cppstd=20 compiler.libcxx=libstdc++11)

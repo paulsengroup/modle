@@ -12,11 +12,6 @@ macro(run_conan)
     conan-center
     URL
     https://api.bintray.com/conan/conan/conan-center)
-  conan_add_remote(
-    NAME
-    bincrafters
-    URL
-    https://api.bintray.com/conan/bincrafters/public-conan)
 
   conan_cmake_run(
     REQUIRES

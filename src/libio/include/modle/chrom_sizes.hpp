@@ -9,11 +9,11 @@
 #include <utility>      // for move
 #include <vector>       // for vector
 
-namespace modle::chr_sizes {
+namespace modle::chrom_sizes {
 
 struct ChrSize {
-  inline ChrSize(std::string_view chr_name, uint64_t chr_start, uint64_t chr_end);
-  inline ChrSize(std::string_view chr_name, uint64_t chr_length);
+  inline ChrSize(std::string_view chrom_name, uint64_t chrom_start, uint64_t chrom_end);
+  inline ChrSize(std::string_view chrom_name, uint64_t chrom_length);
   inline explicit ChrSize(std::vector<std::string>& toks);
 
   [[nodiscard]] inline bool operator==(const ChrSize& other) const;
@@ -32,8 +32,8 @@ struct ChrSize {
 
 class Parser {
  public:
-  inline explicit Parser(std::string path_to_chr_sizes);
-  inline explicit Parser(std::string_view path_to_chr_sizes);
+  inline explicit Parser(std::string path_to_chrom_sizes);
+  inline explicit Parser(std::string_view path_to_chrom_sizes);
   [[nodiscard]] inline std::vector<ChrSize> parse_all(char sep = '\t');
 
  private:
@@ -42,6 +42,6 @@ class Parser {
   absl::flat_hash_set<ChrSize> _chrs{};
   std::vector<std::string> _errors{};
 };
-}  // namespace modle::chr_sizes
+}  // namespace modle::chrom_sizes
 
-#include "../../chr_sizes_impl.hpp"  // IWYU pragma: keep
+#include "../../chrom_sizes_impl.hpp"  // IWYU pragma: keep
