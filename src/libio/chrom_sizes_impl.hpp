@@ -1,6 +1,6 @@
 #pragma once
 
-// IWYU pragma: private, include "modle/chr_sizes.hpp"
+// IWYU pragma: private, include "modle/chrom_sizes.hpp"
 
 #include <absl/container/flat_hash_set.h>  // for flat_hash_set, BitMask
 #include <absl/strings/str_join.h>         // for StrJoin
@@ -19,15 +19,15 @@
 #include <utility>      // for move
 #include <vector>       // for vector
 
-namespace modle::chr_sizes {
+namespace modle::chrom_sizes {
 
-ChrSize::ChrSize(std::string_view chr_name, uint64_t chr_start, uint64_t chr_end)
-    : name(chr_name), start(chr_start), end(chr_end) {}
+ChromSize::ChromSize(std::string_view chrom_name, uint64_t chrom_start, uint64_t chrom_end)
+    : name(chrom_name), start(chrom_start), end(chrom_end) {}
 
-ChrSize::ChrSize(std::string_view chr_name, uint64_t chr_length)
-    : ChrSize(chr_name, 0UL, chr_length) {}
+ChromSize::ChromSize(std::string_view chrom_name, uint64_t chrom_length)
+    : ChromSize(chrom_name, 0UL, chrom_length) {}
 
-ChrSize::ChrSize(std::vector<std::string>& toks) {
+ChromSize::ChromSize(std::vector<std::string>& toks) {
   assert(toks.size() > 1);
   this->name = std::move(toks[0]);
   std::size_t idx = 0;  // Used to print useful errors
@@ -68,21 +68,21 @@ ChrSize::ChrSize(std::vector<std::string>& toks) {
   }
 }
 
-bool ChrSize::operator==(const ChrSize& other) const {
+bool ChromSize::operator==(const ChromSize& other) const {
   return this->name == other.name && this->start == other.start && this->end == other.end;
 }
 
-bool ChrSize::operator<(const ChrSize& other) const {
+bool ChromSize::operator<(const ChromSize& other) const {
   return this->end - this->start < other.end - other.start;
 }
 
-Parser::Parser(std::string path_to_chr_sizes) : _path(std::move(path_to_chr_sizes)) {}
-Parser::Parser(std::string_view path_to_chr_sizes) : Parser(std::string{path_to_chr_sizes}) {}
+Parser::Parser(std::string path_to_chrom_sizes) : _path(std::move(path_to_chrom_sizes)) {}
+Parser::Parser(std::string_view path_to_chrom_sizes) : Parser(std::string{path_to_chrom_sizes}) {}
 
-std::vector<ChrSize> Parser::parse_all(char sep) {
+std::vector<ChromSize> Parser::parse_all(char sep) {
   std::string buff;
   std::vector<std::string> tokens;
-  std::vector<ChrSize> chr_sizes;
+  std::vector<ChromSize> chrom_sizes;
   this->_f = std::ifstream(this->_path);
   for (auto i = 1UL; this->_f.good(); ++i) {
     if (std::getline(this->_f, buff); buff.empty()) {
@@ -99,12 +99,12 @@ std::vector<ChrSize> Parser::parse_all(char sep) {
         throw std::runtime_error(fmt::format(FMT_STRING("Expected 2 or more tokens, got {}: '{}'"),
                                              tokens.size(), buff));
       }
-      ChrSize record(tokens);
+      ChromSize record(tokens);
       if (this->_chrs.contains(record)) {
-        throw std::runtime_error(fmt::format("Found multiple records for chr '{}'", record.name));
+        throw std::runtime_error(fmt::format("Found multiple records for chrom '{}'", record.name));
       }
       this->_chrs.emplace(record);
-      chr_sizes.emplace_back(std::move(record));
+      chrom_sizes.emplace_back(std::move(record));
 
     } catch (const std::runtime_error& e) {
       this->_errors.push_back(
@@ -121,7 +121,7 @@ std::vector<ChrSize> Parser::parse_all(char sep) {
         fmt::format(FMT_STRING("The following error(s) occurred while parsing file '{}':\n - {}"),
                     this->_path, absl::StrJoin(this->_errors, "\n - ")));
   }
-  return chr_sizes;
+  return chrom_sizes;
 }
 
-}  // namespace modle::chr_sizes
+}  // namespace modle::chrom_sizes

@@ -79,7 +79,7 @@ double ExtrusionBarrier::compute_blocking_to_blocking_transition_probabilities_f
 }
 
 CTCF::State CTCF::next_state(CTCF::State current_state, double occupied_self_transition_prob,
-                             double not_occupied_self_transition_prob, PRNG& rand_eng) {
+                             double not_occupied_self_transition_prob, PRNG_t& rand_eng) {
   assert(occupied_self_transition_prob >= 0 && occupied_self_transition_prob <= 1);
   assert(not_occupied_self_transition_prob >= 0 && not_occupied_self_transition_prob <= 1);
 

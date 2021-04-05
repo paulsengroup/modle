@@ -271,9 +271,9 @@ class Cli {
             ->capture_default_str();
 
     extr_barr->add_flag(
-            "--exclude-chr-wo-barriers,!--keep-chr-without-barriers",
-            this->_config.exclude_chr_wo_extr_barriers,
-            fmt::format(FMT_STRING("Do not simulate loop extrusion on chromosomes without any extrusion barrier. Default: {}"), this->_config.exclude_chr_wo_extr_barriers ? "--exclude-chr-wo-barriers" : "--keep-chr-without-barriers"))
+            "--exclude-chrom-wo-barriers,!--keep-chrom-without-barriers",
+            this->_config.exclude_chrom_wo_extr_barriers,
+            fmt::format(FMT_STRING("Do not simulate loop extrusion on chromosomes without any extrusion barrier. Default: {}"), this->_config.exclude_chrom_wo_extr_barriers ? "--exclude-chrom-wo-barriers" : "--keep-chrom-without-barriers"))
             ->capture_default_str();
 
     hidden->add_flag("--skip-output", this->_config.skip_output, "Don't write output files and plots. Useful for profiling");

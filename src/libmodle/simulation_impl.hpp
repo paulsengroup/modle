@@ -51,8 +51,8 @@
 #include <vector>                                   // for vector
 
 #include "modle/bed.hpp"                         // for BED, Parser
-#include "modle/chr_sizes.hpp"                   // for ChrSize, Parser
-#include "modle/common.hpp"                      // for Bp, fwd, rev
+#include "modle/chrom_sizes.hpp"                 // for ChromSize, Parser
+#include "modle/common.hpp"                      // for Bp, fwd, rev, PRNG
 #include "modle/config.hpp"                      // for Config
 #include "modle/contacts.hpp"                    // for ContactMatrix
 #include "modle/cooler.hpp"                      // for Cooler, Cooler::...
@@ -68,19 +68,7 @@
 #include <ios>                                 // IWYU pragma: keep for streamsize
 #endif
 
-#ifdef USE_XOSHIRO
-#include <Xoshiro-cpp/XoshiroCpp.hpp>  // for XoshiroCpp::Xoshiro256PlusPlus XoshiroCpp::SplitMix64
-#endif
-
 namespace modle {
-
-#ifdef USE_XOSHIRO
-using PRNG = XoshiroCpp::Xoshiro256PlusPlus;
-using seeder = XoshiroCpp::SplitMix64;
-#else
-using PRNG = std::mt19937_64;
-using seeder = std::seed_seq;
-#endif
 
 Simulation::Simulation(const Config& c, bool import_chroms)
     : Config(c),
@@ -126,7 +114,7 @@ Simulation::Genome Simulation::import_chromosomes(
   // available, then only chromosomes that are present in both files will be selected. Furthermore
   // we are also checking that the subrange lies within the coordinates specified in the chrom.
   // sizes file
-  for (auto&& chrom : modle::chr_sizes::Parser(path_to_chrom_sizes).parse_all()) {
+  for (auto&& chrom : modle::chrom_sizes::Parser(path_to_chrom_sizes).parse_all()) {
     if (auto match = chrom_ranges.find(chrom.name); match != chrom_ranges.end()) {
       const auto& range_start = match->second.first;
       const auto& range_end = match->second.second;
@@ -480,15 +468,7 @@ void Simulation::simulate_extrusion_kernel(Simulation::State& s) {
 
   s.seed = this->seed + std::hash<std::string_view>{}(s.chrom->name()) +
            std::hash<std::size_t>{}(s.chrom->size()) + std::hash<std::size_t>{}(s.cell_id);
-  {
-#ifdef USE_XOSHIRO
-    modle::seeder seeder_(s.seed);
-    s.rand_eng = modle::PRNG(seeder_.generateSeedSequence<4>());
-#else
-    modle::seeder seeder_{s.seed};
-    s.rand_eng = modle::PRNG(seeder_);
-#endif
-  }
+  s.rand_eng = modle::PRNG(s.seed);
 
   // Generate the epoch at which each LEF is supposed to be initially loaded
   auto& lef_initial_loading_epoch = s.epoch_buff;
@@ -642,10 +622,10 @@ template <typename MaskT>
 void Simulation::bind_lefs(const Chromosome* chrom, absl::Span<Lef> lefs,
                            absl::Span<std::size_t> rev_lef_ranks,
                            absl::Span<std::size_t> fwd_lef_ranks, MaskT& mask,
-                           modle::PRNG& rand_eng) {
+                           modle::PRNG_t& rand_eng) {
   static_assert(std::is_same_v<boost::dynamic_bitset<>, MaskT> ||
-                    std::is_integral_v<std::decay_t<decltype(std::declval<MaskT&>().operator[](
-                        std::declval<std::size_t>()))>>,
+                    std::is_integral_v<std::decay_t<decltype(
+                        std::declval<MaskT&>().operator[](std::declval<std::size_t>()))>>,
                 "mask should be a vector of integral numbers or a boost::dynamic_bitset.");
 
   assert(lefs.size() <= mask.size() || mask.empty());
@@ -660,7 +640,8 @@ void Simulation::bind_lefs(const Chromosome* chrom, absl::Span<Lef> lefs,
 }
 
 inline void Simulation::generate_ctcf_states(absl::Span<const ExtrusionBarrier> extr_barriers,
-                                             boost::dynamic_bitset<>& mask, modle::PRNG& rand_eng) {
+                                             boost::dynamic_bitset<>& mask,
+                                             modle::PRNG_t& rand_eng) {
   assert(extr_barriers.size() == mask.size());
   for (auto i = 0UL; i < extr_barriers.size(); ++i) {
     mask[i] = CTCF::next_state(mask[i] ? CTCF::OCCUPIED : CTCF::NOT_OCCUPIED,
@@ -673,7 +654,7 @@ void Simulation::generate_moves(const Chromosome* const chrom, absl::Span<const 
                                 absl::Span<const std::size_t> rev_lef_ranks,
                                 absl::Span<const std::size_t> fwd_lef_ranks,
                                 absl::Span<bp_t> rev_moves, absl::Span<bp_t> fwd_moves,
-                                modle::PRNG& rand_eng, bool adjust_moves_) {
+                                modle::PRNG_t& rand_eng, bool adjust_moves_) {
   assert(lefs.size() == fwd_lef_ranks.size());  // NOLINT
   assert(lefs.size() == rev_lef_ranks.size());  // NOLINT
   assert(lefs.size() == fwd_moves.size());      // NOLINT
@@ -848,7 +829,7 @@ void Simulation::check_lef_bar_collisions(
     absl::Span<const std::size_t> fwd_lef_rank_buff, absl::Span<bp_t> rev_move_buff,
     absl::Span<bp_t> fwd_move_buff, absl::Span<const ExtrusionBarrier> extr_barriers,
     const boost::dynamic_bitset<>& barrier_mask, absl::Span<std::size_t> rev_collisions,
-    absl::Span<std::size_t> fwd_collisions, modle::PRNG& rand_eng) {
+    absl::Span<std::size_t> fwd_collisions, modle::PRNG_t& rand_eng) {
   assert(lefs.size() == fwd_lef_rank_buff.size());                           // NOLINT
   assert(lefs.size() == rev_lef_rank_buff.size());                           // NOLINT
   assert(lefs.size() == fwd_move_buff.size());                               // NOLINT
@@ -962,7 +943,7 @@ void Simulation::check_lef_lef_collisions(const Chromosome* const chrom, absl::S
                                           absl::Span<bp_t> fwd_move_buff,
                                           absl::Span<std::size_t> rev_collision_mask,
                                           absl::Span<std::size_t> fwd_collision_mask,
-                                          modle::PRNG& rand_eng) {
+                                          modle::PRNG_t& rand_eng) {
   assert(chrom);                                                             // NOLINT
   assert(lefs.size() == fwd_lef_rank_buff.size());                           // NOLINT
   assert(lefs.size() == rev_lef_rank_buff.size());                           // NOLINT
@@ -1152,8 +1133,8 @@ std::size_t Simulation::register_contacts(Chromosome* chrom, absl::Span<const Le
 template <typename MaskT>
 void Simulation::select_lefs_to_bind(absl::Span<const Lef> lefs, MaskT& mask) {
   static_assert(std::is_same_v<boost::dynamic_bitset<>, MaskT> ||
-                    std::is_integral_v<std::decay_t<decltype(std::declval<MaskT&>().operator[](
-                        std::declval<std::size_t>()))>>,
+                    std::is_integral_v<std::decay_t<decltype(
+                        std::declval<MaskT&>().operator[](std::declval<std::size_t>()))>>,
                 "mask should be a vector of integral numbers or a boost::dynamic_bitset.");
   assert(lefs.size() == mask.size());
   std::transform(lefs.begin(), lefs.end(), mask.begin(),
@@ -1193,7 +1174,7 @@ void Simulation::generate_lef_unloader_affinities(absl::Span<const Lef> lefs,
 
 void Simulation::select_lefs_to_release(absl::Span<std::size_t> lef_idx,
                                         absl::Span<const double> lef_unloader_affinity,
-                                        modle::PRNG& rand_eng) {
+                                        modle::PRNG_t& rand_eng) {
   std::discrete_distribution<std::size_t> idx_gen(lef_unloader_affinity.begin(),
                                                   lef_unloader_affinity.end());
   std::generate(lef_idx.begin(), lef_idx.end(), [&]() { return idx_gen(rand_eng); });

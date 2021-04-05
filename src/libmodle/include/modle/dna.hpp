@@ -15,15 +15,15 @@
 namespace modle {
 template <typename I>
 class ContactMatrix;
-namespace chr_sizes {
-struct ChrSize;
+namespace chrom_sizes {
+struct ChromSize;
 }
 
 class Chromosome {
  public:
-  inline explicit Chromosome(const chr_sizes::ChrSize& chrom,
+  inline explicit Chromosome(const chrom_sizes::ChromSize& chrom,
                              const std::vector<bed::BED>& barriers = {});
-  inline explicit Chromosome(chr_sizes::ChrSize&& chrom, std::vector<bed::BED>&& barriers = {});
+  inline explicit Chromosome(chrom_sizes::ChromSize&& chrom, std::vector<bed::BED>&& barriers = {});
 
   [[nodiscard]] inline bool operator==(const Chromosome& other) const;
   [[nodiscard]] inline bool operator==(std::string_view other) const;

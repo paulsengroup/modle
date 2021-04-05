@@ -40,7 +40,7 @@ class ExtrusionBarrier {
 namespace CTCF {
 enum State : uint_fast8_t { NOT_OCCUPIED = 0, OCCUPIED = 1 };
 [[nodiscard]] inline State next_state(State current_state, double occupied_self_transition_prob,
-                                      double not_occupied_self_transition_prob, PRNG& rand_eng);
+                                      double not_occupied_self_transition_prob, PRNG_t& rand_eng);
 using state_gen_t = std::uniform_real_distribution<double>;
 }  // namespace CTCF
 }  // namespace modle

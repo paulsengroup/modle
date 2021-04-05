@@ -147,38 +147,38 @@ void throw_except_from_errc(std::string_view tok, std::size_t idx, const N &fiel
                   base_error, std::make_error_code(e).message()));
 }
 
-bool chr_equal_operator(std::string_view chr1, std::string_view chr2) {
-  return chr_equal_operator(std::make_pair(chr1, 0), std::make_pair(chr2, 0));
+bool chrom_equal_operator(std::string_view chr1, std::string_view chr2) {
+  return chrom_equal_operator(std::make_pair(chr1, 0), std::make_pair(chr2, 0));
 }
 
-bool chr_equal_operator(const std::pair<std::string_view, int64_t> &chr1,
-                        const std::pair<std::string_view, int64_t> &chr2) {
+bool chrom_equal_operator(const std::pair<std::string_view, int64_t> &chr1,
+                          const std::pair<std::string_view, int64_t> &chr2) {
   if (chr1.second != chr2.second) {
     return false;
   }
   std::size_t offset1 = 0;
   std::size_t offset2 = 0;
-  if (absl::StartsWithIgnoreCase(chr1.first, "chr")) {
+  if (absl::StartsWithIgnoreCase(chr1.first, "chrom")) {
     offset1 = 3;
   }
-  if (absl::StartsWithIgnoreCase(chr2.first, "chr")) {
+  if (absl::StartsWithIgnoreCase(chr2.first, "chrom")) {
     offset2 = 3;
   }
   return chr1.first.substr(offset1) == chr2.first.substr(offset2);
 }
 
-bool chr_less_than_operator(std::string_view chr1, std::string_view chr2) {
-  return chr_less_than_operator(std::make_pair(chr1, 0), std::make_pair(chr2, 0));
+bool chrom_less_than_operator(std::string_view chr1, std::string_view chr2) {
+  return chrom_less_than_operator(std::make_pair(chr1, 0), std::make_pair(chr2, 0));
 }
 
-bool chr_less_than_operator(const std::pair<std::string_view, int64_t> &chr1,
-                            const std::pair<std::string_view, int64_t> &chr2) {
+bool chrom_less_than_operator(const std::pair<std::string_view, int64_t> &chr1,
+                              const std::pair<std::string_view, int64_t> &chr2) {
   std::size_t offset1 = 0;
   std::size_t offset2 = 0;
-  if (absl::StartsWithIgnoreCase(chr1.first, "chr")) {
+  if (absl::StartsWithIgnoreCase(chr1.first, "chrom")) {
     offset1 = 3;
   }
-  if (absl::StartsWithIgnoreCase(chr2.first, "chr")) {
+  if (absl::StartsWithIgnoreCase(chr2.first, "chrom")) {
     offset2 = 3;
   }
   if (chr1.first.substr(offset1) < chr2.first.substr(offset2)) {
@@ -193,7 +193,7 @@ bool chr_less_than_operator(const std::pair<std::string_view, int64_t> &chr1,
 
 typedef boost::error_info<struct tag_stacktrace, boost::stacktrace::stacktrace> traced;  // NOLINT
 template <class Except>
-void throw_with_trace(const Except &e) {
+[[noreturn]] void throw_with_trace(const Except &e) {
   throw boost::enable_error_info(e) << traced(boost::stacktrace::stacktrace());
 }
 

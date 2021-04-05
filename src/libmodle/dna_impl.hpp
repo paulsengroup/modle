@@ -17,21 +17,21 @@
 #include <utility>      // for move
 #include <vector>       // for vector
 
-#include "dna_impl.hpp"         // for FMT_COMPILE_STRING
-#include "modle/bed.hpp"        // for BED
-#include "modle/chr_sizes.hpp"  // for ChrSize
-#include "modle/common.hpp"     // for Contacts, Bp
-#include "modle/contacts.hpp"   // for ContactMatrix
+#include "dna_impl.hpp"           // for FMT_COMPILE_STRING
+#include "modle/bed.hpp"          // for BED
+#include "modle/chrom_sizes.hpp"  // for ChromSize
+#include "modle/common.hpp"       // for Contacts, Bp
+#include "modle/contacts.hpp"     // for ContactMatrix
 
 namespace modle {
-Chromosome::Chromosome(const chr_sizes::ChrSize &chrom, const std::vector<bed::BED> &barriers)
+Chromosome::Chromosome(const chrom_sizes::ChromSize &chrom, const std::vector<bed::BED> &barriers)
     : _name(chrom.name),
       _size(chrom.end),
       _start(chrom.start),
       _end(chrom.end),
       _barriers(barriers.begin(), barriers.end()) {}
 
-Chromosome::Chromosome(chr_sizes::ChrSize &&chrom, std::vector<bed::BED> &&barriers)
+Chromosome::Chromosome(chrom_sizes::ChromSize &&chrom, std::vector<bed::BED> &&barriers)
     : _name(std::move(chrom.name)),
       _size(chrom.end),
       _start(chrom.start),

@@ -28,7 +28,7 @@ template <typename N1, typename N2>
 inline void write_range(absl::flat_hash_map<std::pair<std::string, N1>, std::vector<N2>>& data,
                         uint64_t offset, uint64_t span, uint64_t step, bigwig::file& bigwig_fp);
 
-inline void write_range(const std::string& chr_name, const std::vector<double>& vals,
+inline void write_range(const std::string& chrom_name, const std::vector<double>& vals,
                         uint64_t offset, uint64_t span, uint64_t step, bigwig::file& bigwig_fp);
 
 template <typename I>  // This overload is not as efficient as the others. This shouldn't be an
@@ -39,13 +39,13 @@ template <typename I>  // This overload is not as efficient as the others. This 
     int32_t zoom_levels = DEFAULT_ZOOM_LEVELS, std::size_t buff_size = DEFAULT_BUFF_SIZE);
 
 [[nodiscard]] inline bigwig::file init_bigwig_file(std::string_view output_path,
-                                                   std::vector<char*>& chr_names,
-                                                   std::vector<uint32_t>& chr_sizes,
+                                                   std::vector<char*>& chrom_names,
+                                                   std::vector<uint32_t>& chrom_sizes,
                                                    int32_t zoom_levels = DEFAULT_ZOOM_LEVELS,
                                                    std::size_t buff_size = DEFAULT_BUFF_SIZE);
 
 [[nodiscard]] inline bigwig::file init_bigwig_file(std::string_view output_path,
-                                                   std::string& chr_name, uint64_t chr_size,
+                                                   std::string& chrom_name, uint64_t chrom_size,
                                                    int32_t zoom_levels = DEFAULT_ZOOM_LEVELS,
                                                    std::size_t buff_size = DEFAULT_BUFF_SIZE);
 

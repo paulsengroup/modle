@@ -9,7 +9,7 @@
 #include <memory>            // for allocator_traits<>::value_type
 #include <vector>            // for vector
 
-#include "modle/common.hpp"                      // for Bp
+#include "modle/common.hpp"                      // for Bp, PRNG, PRNG_t
 #include "modle/config.hpp"                      // for Config
 #include "modle/extrusion_barriers.hpp"          // for ExtrusionBarrier
 #include "modle/extrusion_factors.hpp"           // for Lef, ExtrusionUnit
@@ -17,17 +17,6 @@
 #include "modle/suppress_compiler_warnings.hpp"  // for DISABLE_WARNING_POP, DISABLE_WARNING_PUSH
 
 namespace modle::test::libmodle {
-
-[[nodiscard]] inline modle::PRNG init_rand_eng(uint64_t seed) {
-#ifdef USE_XOSHIRO
-  seeder s(seed);
-  PRNG rand_eng(s.generateSeedSequence<4>());
-#else
-  seeder s{seed};
-  PRNG rand_eng{s};
-#endif
-  return rand_eng;
-}
 
 inline void check_that_lefs_are_sorted_by_idx(const std::vector<Lef>& lefs,
                                               const std::vector<std::size_t>& rev_ranks,
@@ -60,7 +49,7 @@ TEST_CASE("Bind LEFs 001", "[bind-lefs][simulation][short]") {
   std::copy(rank1.begin(), rank1.end(), rank2.begin());
   boost::dynamic_bitset<> mask(nlefs);
   // NOLINTNEXTLINE(readability-magic-numbers, cppcoreguidelines-avoid-magic-numbers)
-  auto rand_eng = init_rand_eng(8865403569783063175ULL);
+  auto rand_eng = modle::PRNG(8865403569783063175ULL);
 
   for (auto i = 0UL; i < nlefs; ++i) {
     mask[i] = std::bernoulli_distribution{0.50}(rand_eng);
@@ -96,7 +85,7 @@ TEST_CASE("Bind LEFs 002 - No LEFs to bind", "[bind-lefs][simulation][short]") {
   boost::dynamic_bitset<> mask1;
   std::vector<int> mask2;
   // NOLINTNEXTLINE(readability-magic-numbers, cppcoreguidelines-avoid-magic-numbers)
-  auto rand_eng = init_rand_eng(16044114709020280409ULL);
+  auto rand_eng = modle::PRNG(16044114709020280409ULL);
   const auto c = Config{};
 
   CHECK_NOTHROW(Simulation{c, false}.test_bind_lefs(
@@ -144,7 +133,7 @@ TEST_CASE("Bind LEFs 003 - Empty mask (i.e. bind all LEFs)", "[bind-lefs][simula
   std::copy(rank1.begin(), rank1.end(), rank2.begin());
   boost::dynamic_bitset<> mask;
   // NOLINTNEXTLINE(readability-magic-numbers, cppcoreguidelines-avoid-magic-numbers)
-  auto rand_eng = init_rand_eng(17550568853244630438ULL);
+  auto rand_eng = modle::PRNG(17550568853244630438ULL);
   const auto c = Config{};
 
   CHECK_NOTHROW(Simulation{c, false}.test_bind_lefs(
@@ -232,7 +221,7 @@ TEST_CASE("Generate LEF moves 001", "[generate-lef-moves][simulation][short]") {
   std::vector<bp_t> rev_moves(nlefs, 0), fwd_moves(nlefs, 0);  // NOLINT
   auto fwd_ranks = rev_ranks;
   // NOLINTNEXTLINE(readability-magic-numbers, cppcoreguidelines-avoid-magic-numbers)
-  auto rand_eng = init_rand_eng(8312545934532053745ULL);
+  auto rand_eng = modle::PRNG(8312545934532053745ULL);
   auto c = Config{};
   c.bin_size = 500;  // NOLINT
   c.rev_extrusion_speed = c.bin_size;
@@ -285,7 +274,7 @@ TEST_CASE("Detect LEF-LEF collisions 001", "[lef-lef-collisions][simulation][sho
   constexpr auto nlefs = 4UL;
   (void)nlefs;
   // NOLINTNEXTLINE(readability-magic-numbers, cppcoreguidelines-avoid-magic-numbers)
-  auto rand_eng = init_rand_eng(9589236971571381257ULL);
+  auto rand_eng = modle::PRNG(9589236971571381257ULL);
 
   // clang-format off
   /*       __0__      __1__        2        __3__
@@ -352,7 +341,7 @@ TEST_CASE("Detect LEF-LEF collisions 002", "[lef-lef-collisions][simulation][sho
   constexpr auto nlefs = 4UL;
   (void)nlefs;
   // NOLINTNEXTLINE(readability-magic-numbers, cppcoreguidelines-avoid-magic-numbers)
-  auto rand_eng = init_rand_eng(9589236971571381257ULL);
+  auto rand_eng = modle::PRNG(9589236971571381257ULL);
 
   // clang-format off
   /*
@@ -431,7 +420,7 @@ TEST_CASE("Detect LEF-LEF collisions 003", "[lef-lef-collisions][simulation][sho
   const Chromosome chrom{{"chr1", 100, 201}};
   constexpr auto nlefs = 3UL;
   // NOLINTNEXTLINE(readability-magic-numbers, cppcoreguidelines-avoid-magic-numbers)
-  auto rand_eng = init_rand_eng(3778138500607566040ULL);
+  auto rand_eng = modle::PRNG(3778138500607566040ULL);
 
   // clang-format off
   /*
@@ -511,7 +500,7 @@ TEST_CASE("Detect LEF-BAR collisions 001 - wo soft collisions fwd CTCFs",
   constexpr std::size_t nlefs = 3;
   constexpr std::size_t nbarriers = 3;
   // NOLINTNEXTLINE(readability-magic-numbers, cppcoreguidelines-avoid-magic-numbers)
-  auto rand_eng = init_rand_eng(245021575020225667ULL);
+  auto rand_eng = modle::PRNG(245021575020225667ULL);
 
   // clang-format off
   const std::vector<Lef> lefs{
@@ -588,7 +577,7 @@ TEST_CASE("Detect LEF-BAR collisions 002 - wo soft-collisions rev CTCFs",
   constexpr std::size_t nlefs = 3;
   constexpr std::size_t nbarriers = 3;
   // NOLINTNEXTLINE(readability-magic-numbers, cppcoreguidelines-avoid-magic-numbers)
-  auto rand_eng = init_rand_eng(502428610956409790ULL);
+  auto rand_eng = modle::PRNG(502428610956409790ULL);
 
   // clang-format off
   const std::vector<Lef> lefs{
@@ -665,7 +654,7 @@ TEST_CASE("Detect LEF-BAR collisions 003 - w soft-collisions fwd CTCFs",
   constexpr std::size_t nlefs = 3;
   constexpr std::size_t nbarriers = 3;
   // NOLINTNEXTLINE(readability-magic-numbers, cppcoreguidelines-avoid-magic-numbers)
-  auto rand_eng = init_rand_eng(17304119060106843975ULL);
+  auto rand_eng = modle::PRNG(17304119060106843975ULL);
 
   // clang-format off
   const std::vector<Lef> lefs{
@@ -742,7 +731,7 @@ TEST_CASE("Detect LEF-BAR collisions 004 - wo soft-collisions mixed CTCFs",
   const std::size_t nlefs = 5;
   const std::size_t nbarriers = 4;
   // NOLINTNEXTLINE(readability-magic-numbers, cppcoreguidelines-avoid-magic-numbers)
-  auto rand_eng = init_rand_eng(4870652027555157985ULL);
+  auto rand_eng = modle::PRNG(4870652027555157985ULL);
 
   // clang-format off
   const std::vector<Lef> lefs{
@@ -827,7 +816,7 @@ TEST_CASE("Detect LEF-BAR collisions 005 - wo soft-collisions mixed CTCFs, diffe
   const std::size_t nlefs = 5;
   const std::size_t nbarriers = 4;
   // NOLINTNEXTLINE(readability-magic-numbers, cppcoreguidelines-avoid-magic-numbers)
-  auto rand_eng = init_rand_eng(4870652027555157985ULL);
+  auto rand_eng = modle::PRNG(4870652027555157985ULL);
 
   // clang-format off
   const std::vector<Lef> lefs{
@@ -913,7 +902,7 @@ TEST_CASE("Simulation 001", "[simulation][short]") {
   const std::size_t nbarriers = 5;
   const Chromosome chrom{{"chr1", 0, 1000}};
   // NOLINTNEXTLINE(readability-magic-numbers, cppcoreguidelines-avoid-magic-numbers)
-  auto rand_eng = init_rand_eng(10556020843759504871ULL);
+  auto rand_eng = modle::PRNG(10556020843759504871ULL);
 
   // clang-format off
   const std::vector<Lef> lefs{
@@ -1025,7 +1014,7 @@ TEST_CASE("Simulation 002", "[simulation][short]") {
   const std::size_t nbarriers = 5;
   const Chromosome chrom{{"chr1", 0, 1000}};
   // NOLINTNEXTLINE(readability-magic-numbers, cppcoreguidelines-avoid-magic-numbers)
-  auto rand_eng = init_rand_eng(9668495374385482848ULL);
+  auto rand_eng = modle::PRNG(9668495374385482848ULL);
 
   // clang-format off
   const std::vector<Lef> lefs{
@@ -1137,7 +1126,7 @@ TEST_CASE("Simulation 003 - Soft collisions on", "[simulation][short]") {
   const std::size_t nbarriers = 5;
   const Chromosome chrom{{"chr1", 0, 1000}};
   // NOLINTNEXTLINE(readability-magic-numbers, cppcoreguidelines-avoid-magic-numbers)
-  auto rand_eng = init_rand_eng(919341715542527390ULL);
+  auto rand_eng = modle::PRNG(919341715542527390ULL);
 
   // clang-format off
   const std::vector<Lef> lefs{
@@ -1249,7 +1238,7 @@ TEST_CASE("Simulation 004 - Inactive barriers", "[simulation][short]") {
   const std::size_t nbarriers = 5;
   const Chromosome chrom{{"chr1", 0, 1000}};
   // NOLINTNEXTLINE(readability-magic-numbers, cppcoreguidelines-avoid-magic-numbers)
-  auto rand_eng = init_rand_eng(138440880292496584ULL);
+  auto rand_eng = modle::PRNG(138440880292496584ULL);
 
   // clang-format off
   const std::vector<Lef> lefs{
@@ -1361,7 +1350,7 @@ TEST_CASE("Simulation 005 - Multiple LEFs located at the same site", "[simulatio
   constexpr std::size_t nbarriers = 1;
   const Chromosome chrom{{"chr1", 0, 150}};  // NOLINT
   // NOLINTNEXTLINE(readability-magic-numbers, cppcoreguidelines-avoid-magic-numbers)
-  auto rand_eng = init_rand_eng(9509334554644345044ULL);
+  auto rand_eng = modle::PRNG(9509334554644345044ULL);
 
   // clang-format off
   const std::vector<Lef> lefs{
@@ -1467,7 +1456,7 @@ TEST_CASE("Simulation 006 - Few inactive LEFs", "[simulation][short]") {
   constexpr std::size_t nbarriers = 1;
   const Chromosome chrom{{"chr1", 0, 150}};  // NOLINT
   // NOLINTNEXTLINE(readability-magic-numbers, cppcoreguidelines-avoid-magic-numbers)
-  auto rand_eng = init_rand_eng(8213068426516999476ULL);
+  auto rand_eng = modle::PRNG(8213068426516999476ULL);
 
   // clang-format off
   std::vector<Lef> lefs{

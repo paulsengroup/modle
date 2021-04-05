@@ -14,25 +14,11 @@
 #include <string>                                   // for string
 #include <vector>                                   // for vector
 
-#include "modle/common.hpp"  // for Bp
+#include "modle/common.hpp"  // for Bp, PRNG, seeder
 #include "modle/config.hpp"  // for Config
 #include "modle/dna.hpp"     // for Chromosome
 
-#ifdef USE_XOSHIRO
-#include <Xoshiro-cpp/XoshiroCpp.hpp>  // for XoshiroCpp::Xoshiro256PlusPlus XoshiroCpp::SplitMix64
-#else
-#include <random>  // for geometric_distribution, mt19937_64
-#endif
-
 namespace modle {
-
-#ifdef USE_XOSHIRO
-using PRNG = XoshiroCpp::Xoshiro256PlusPlus;
-using seeder = XoshiroCpp::SplitMix64;
-#else
-using PRNG = std::mt19937_64;
-using seeder = std::seed_seq;
-#endif
 
 class ExtrusionBarrier;
 struct Lef;
@@ -75,7 +61,7 @@ class Simulation : Config {
     std::vector<std::size_t> idx_buff1;
     std::vector<std::size_t> idx_buff2;
     std::vector<std::size_t> epoch_buff;
-    modle::PRNG rand_eng;
+    modle::PRNG_t rand_eng;
     uint64_t seed;
 
     inline void operator=(const Task& task);
@@ -104,16 +90,17 @@ class Simulation : Config {
   template <typename MaskT>
   inline void bind_lefs(const Chromosome* chrom, absl::Span<Lef> lefs,
                         absl::Span<std::size_t> rev_lef_ranks,
-                        absl::Span<std::size_t> fwd_lef_ranks, MaskT& mask, modle::PRNG& rand_eng);
+                        absl::Span<std::size_t> fwd_lef_ranks, MaskT& mask,
+                        modle::PRNG_t& rand_eng);
 
   inline void generate_ctcf_states(absl::Span<const ExtrusionBarrier> extr_barriers,
-                                   boost::dynamic_bitset<>& mask, modle::PRNG& rand_eng);
+                                   boost::dynamic_bitset<>& mask, modle::PRNG_t& rand_eng);
 
   inline void generate_moves(const Chromosome* chrom, absl::Span<const Lef> lefs,
                              absl::Span<const std::size_t> rev_lef_ranks,
                              absl::Span<const std::size_t> fwd_lef_ranks,
                              absl::Span<bp_t> rev_moves, absl::Span<bp_t> fwd_moves,
-                             modle::PRNG& rand_eng, bool adjust_moves_ = true);
+                             modle::PRNG_t& rand_eng, bool adjust_moves_ = true);
 
   inline void adjust_moves(const Chromosome* chrom, absl::Span<const Lef> lefs,
                            absl::Span<const std::size_t> rev_lef_ranks,
@@ -136,14 +123,15 @@ class Simulation : Config {
                                        absl::Span<bp_t> rev_move_buff,
                                        absl::Span<bp_t> fwd_move_buff,
                                        absl::Span<std::size_t> rev_collision_buff,
-                                       absl::Span<std::size_t> fwd_collision_buff, PRNG& rand_eng);
+                                       absl::Span<std::size_t> fwd_collision_buff,
+                                       PRNG_t& rand_eng);
 
   inline void check_lef_bar_collisions(
       absl::Span<const Lef> lefs, absl::Span<const std::size_t> rev_lef_rank_buff,
       absl::Span<const std::size_t> fwd_lef_rank_buff, absl::Span<bp_t> rev_move_buff,
       absl::Span<bp_t> fwd_move_buff, absl::Span<const ExtrusionBarrier> extr_barriers,
       const boost::dynamic_bitset<>& barrier_mask, absl::Span<std::size_t> rev_collisions,
-      absl::Span<std::size_t> fwd_collisions, modle::PRNG& rand_eng);
+      absl::Span<std::size_t> fwd_collisions, modle::PRNG_t& rand_eng);
 
   inline std::size_t register_contacts(Chromosome* chrom, absl::Span<const Lef> lefs,
                                        absl::Span<const std::size_t> selected_lef_idx);
@@ -159,7 +147,7 @@ class Simulation : Config {
 
   inline void select_lefs_to_release(absl::Span<std::size_t> lef_idx,
                                      absl::Span<const double> lef_unloader_affinity,
-                                     modle::PRNG& rand_eng);
+                                     modle::PRNG_t& rand_eng);
 
   inline void release_lefs(absl::Span<Lef> lefs, absl::Span<const std::size_t> lef_idx);
 
@@ -169,7 +157,7 @@ class Simulation : Config {
   inline void test_bind_lefs(const Chromosome* chrom, absl::Span<Lef> lefs,
                              absl::Span<std::size_t> rev_lef_ranks,
                              absl::Span<std::size_t> fwd_lef_ranks, MaskT& mask,
-                             modle::PRNG& rand_eng) {
+                             modle::PRNG_t& rand_eng) {
     this->bind_lefs(chrom, lefs, rev_lef_ranks, fwd_lef_ranks, mask, rand_eng);
   }
 
@@ -184,7 +172,7 @@ class Simulation : Config {
                                   absl::Span<const std::size_t> rev_lef_ranks,
                                   absl::Span<const std::size_t> fwd_lef_ranks,
                                   absl::Span<bp_t> rev_moves, absl::Span<bp_t> fwd_moves,
-                                  modle::PRNG& rand_eng, bool adjust_moves_ = false) {
+                                  modle::PRNG_t& rand_eng, bool adjust_moves_ = false) {
     this->generate_moves(chrom, lefs, rev_lef_ranks, fwd_lef_ranks, rev_moves, fwd_moves, rand_eng,
                          adjust_moves_);
   }
@@ -200,7 +188,7 @@ class Simulation : Config {
       absl::Span<const std::size_t> rev_lef_rank_buff,
       absl::Span<const std::size_t> fwd_lef_rank_buff, absl::Span<bp_t> rev_move_buff,
       absl::Span<bp_t> fwd_move_buff, absl::Span<collision_t> rev_collision_buff,
-      absl::Span<collision_t> fwd_collision_buff, modle::PRNG& rand_eng) {
+      absl::Span<collision_t> fwd_collision_buff, modle::PRNG_t& rand_eng) {
     this->check_lef_lef_collisions(chrom, lefs, rev_lef_rank_buff, fwd_lef_rank_buff, rev_move_buff,
                                    fwd_move_buff, rev_collision_buff, fwd_collision_buff, rand_eng);
   }
@@ -210,7 +198,7 @@ class Simulation : Config {
       absl::Span<const std::size_t> fwd_lef_rank_buff, absl::Span<bp_t> rev_move_buff,
       absl::Span<bp_t> fwd_move_buff, absl::Span<const ExtrusionBarrier> extr_barriers,
       const boost::dynamic_bitset<>& barrier_mask, absl::Span<std::size_t> rev_collisions,
-      absl::Span<std::size_t> fwd_collisions, modle::PRNG& rand_eng) {
+      absl::Span<std::size_t> fwd_collisions, modle::PRNG_t& rand_eng) {
     this->check_lef_bar_collisions(lefs, rev_lef_rank_buff, fwd_lef_rank_buff, rev_move_buff,
                                    fwd_move_buff, extr_barriers, barrier_mask, rev_collisions,
                                    fwd_collisions, rand_eng);

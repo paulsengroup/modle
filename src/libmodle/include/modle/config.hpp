@@ -71,7 +71,7 @@ struct Config {
   double lef_fraction_contact_sampling{0.025};           // NOLINT(readability-magic-numbers, cppcoreguidelines-avoid-magic-numbers)
 
   // Misc
-  bool exclude_chr_wo_extr_barriers{true};
+  bool exclude_chrom_wo_extr_barriers{true};
   bool skip_output{false};
   double random_noise_mean{0};
   bp_t random_noise_std{7'500 /* 7.5 Kbp */};            // NOLINT(readability-magic-numbers, cppcoreguidelines-avoid-magic-numbers)
@@ -91,7 +91,7 @@ struct Config {
     const absl::flat_hash_map<std::string_view, std::vector<cli_tokens>> tokens{
     {"Input/Output"sv,
     std::vector<cli_tokens>{
-     {"Path to chr. sizes", fmt::format(FMT_STRING("{}"), std::filesystem::weakly_canonical(this->path_to_chrom_sizes))},
+     {"Path to chrom. sizes", fmt::format(FMT_STRING("{}"), std::filesystem::weakly_canonical(this->path_to_chrom_sizes))},
      {"Path to extr. barriers", fmt::format(FMT_STRING("{}"), std::filesystem::weakly_canonical(this->path_to_extr_barriers))},
      {"Output directory", fmt::format(FMT_STRING("{}"), std::filesystem::weakly_canonical(this->path_to_output_file))},
      {"Skip output", this->skip_output ? "Yes" : "No"},
