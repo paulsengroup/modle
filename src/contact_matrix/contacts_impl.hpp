@@ -24,12 +24,9 @@
 #include <utility>                                  // for make_pair, pair
 #include <vector>                                   // for vector, allocator
 
+#include "modle/common.hpp"                      // for modle::PRNG, modle::seeder
 #include "modle/suppress_compiler_warnings.hpp"  // for DISABLE_WARNING_POP, DISABLE_WARNI...
 #include "modle/utils.hpp"                       // for throw_with_trace
-
-#ifdef USE_XOSHIRO
-#include <Xoshiro-cpp/XoshiroCpp.hpp>  // for XoshiroCpp::Xoshiro256PlusPlus XoshiroCpp::SplitMix64
-#endif
 
 namespace modle {
 template <typename I>
@@ -46,7 +43,7 @@ ContactMatrix<I>::ContactMatrix(std::size_t nrows, std::size_t ncols, bool fill_
     : _nrows(nrows), _ncols(ncols), _contacts(_nrows * _ncols + 1, 0), _locks(_ncols) {
   if (fill_with_random_numbers) {
     std::random_device rand_dev;
-    std::mt19937_64 rand_eng{rand_dev()};
+    auto rand_eng = PRNG(rand_dev());
     std::uniform_int_distribution<I> dist{0, std::numeric_limits<I>::max()};
     for (auto i = 0UL; i < _ncols; ++i) {
       for (auto j = i; j < i + _nrows && j < _ncols; ++j) {
@@ -66,9 +63,11 @@ ContactMatrix<I> &ContactMatrix<I>::operator=(const ContactMatrix<I> &other) {
   } else {
     this->_contacts = other._contacts;
   }
-  this->_tot_contacts = other._tot_contacts;
-  this->_updates_missed = other._updates_missed;
+  this->_tot_contacts = other._tot_contacts.load();
+  this->_updates_missed = other._updates_missed.load();
   this->_locks.resize(other._locks.size());
+
+  return *this;
 }
 
 template <typename I>
@@ -171,7 +170,7 @@ void ContactMatrix<I>::add(std::size_t row, std::size_t col, I2 n) {
     DISABLE_WARNING_SIGN_COMPARE
     DISABLE_WARNING_SIGN_CONVERSION
 #ifndef NDEBUG
-    this->check_for_overflow_on_add(row, col, n);
+    this->check_for_overflow_on_add(i, j, n);
 #endif
 
     this->at(i, j) += n;
@@ -502,6 +501,15 @@ void ContactMatrix<I>::reset() {
 }
 
 template <typename I>
+void ContactMatrix<I>::resize(std::size_t nrows, std::size_t ncols) {
+  this->_nrows = nrows;
+  this->_ncols = ncols;
+  this->_contacts.resize((this->nrows() * this->ncols()) + 1, 0);
+  std::vector<std::mutex> locks(this->ncols());
+  std::swap(this->_locks, locks);
+}
+
+template <typename I>
 bool ContactMatrix<I>::empty() const {
   assert(std::all_of(this->_contacts.begin(), this->_contacts.end(),
                      [](const auto n) { return n == 0; }));
@@ -554,37 +562,6 @@ void ContactMatrix<I>::deplete_contacts(double depletion_multiplier) {
       }
     }
   }
-}
-
-template <typename I>
-void ContactMatrix<I>::add_noise(double mean, double std, PRNG &rand_eng) {
-  std::normal_distribution<double> rng(mean, std);
-  auto new_cmatrix = ContactMatrix<I>(this->nrows(), this->ncols());
-  DISABLE_WARNING_PUSH
-  DISABLE_WARNING_SIGN_CONVERSION
-  DISABLE_WARNING_SIGN_COMPARE
-  for (auto i = 0L; i < this->ncols(); ++i) {
-    for (auto j = i; j < i + this->ncols() && j < this->ncols(); ++j) {
-      for (auto k = this->get(i, j); k > 0; --k) {
-        const auto bin1 = i + static_cast<int64_t>(std::round(rng(rand_eng)));
-        const auto bin2 = j + static_cast<int64_t>(std::round(rng(rand_eng)));
-        if (bin1 < this->ncols() && bin2 < this->ncols()) {
-          new_cmatrix.increment(bin1, bin2);
-        }
-      }
-    }
-  }
-  DISABLE_WARNING_POP
-
-  this->_tot_contacts = new_cmatrix._tot_contacts;
-  this->_updates_missed += new_cmatrix.get_n_of_missed_updates();
-  this->_contacts = std::move(new_cmatrix._contacts);
-}
-
-template <typename I>
-void ContactMatrix<I>::add_noise(std::size_t bin_size, double mean, double stddev, PRNG &rand_eng) {
-  this->add_noise(mean / static_cast<double>(bin_size), stddev / static_cast<double>(bin_size),
-                  rand_eng);
 }
 
 template <typename I>

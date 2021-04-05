@@ -10,21 +10,9 @@
 #include <utility>                                  // for pair
 #include <vector>                                   // for vector
 
-#ifdef USE_XOSHIRO
-#include <Xoshiro-cpp/XoshiroCpp.hpp>  // for XoshiroCpp::Xoshiro256PlusPlus XoshiroCpp::SplitMix64
-#else
-#include <random>  // for mt19937_64, seed_seq
-#endif
+#include "modle/common.hpp"  // for PRNG, PRNG_t
 
 namespace modle {
-
-#ifdef USE_XOSHIRO
-using PRNG = XoshiroCpp::Xoshiro256PlusPlus;
-using seeder = XoshiroCpp::SplitMix64;
-#else
-using PRNG = std::mt19937_64;
-using seeder = std::seed_seq;
-#endif
 
 template <typename I>
 class ContactMatrix {
@@ -52,6 +40,7 @@ class ContactMatrix {
   template <typename I2>
   inline void add(absl::Span<std::pair<std::size_t /* rows */, std::size_t /* cols */>> pixels,
                   I2 n, std::size_t size_thresh = 256);  // NOLINT
+
   template <typename I2>
   inline void add_small_buff(
       absl::Span<std::pair<std::size_t /* rows */, std::size_t /* cols */>> pixels, I2 n);
@@ -88,13 +77,12 @@ class ContactMatrix {
   // Misc
   inline void clear_missed_updates_counter();
   inline void reset();
+  inline void resize(std::size_t nrows, std::size_t ncols);
   [[nodiscard]] inline bool empty() const;
   [[nodiscard]] inline absl::Span<const I> get_raw_count_vector() const;
   inline void compute_row_wise_contact_histogram(std::vector<uint64_t>& buff) const;
   [[nodiscard]] inline std::vector<uint64_t> compute_row_wise_contact_histogram() const;
   inline void deplete_contacts(double depletion_multiplier = 1.0);
-  inline void add_noise(double mean, double std, PRNG& rand_eng);
-  inline void add_noise(std::size_t bin_size, double mean, double stddev, PRNG& rand_eng);
 
  private:
   uint64_t _nrows{0};
