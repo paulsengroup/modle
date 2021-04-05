@@ -1,7 +1,11 @@
 add_library(libio INTERFACE)
 add_library(Modle::io ALIAS libio)
-target_sources(libio INTERFACE ${CMAKE_CURRENT_SOURCE_DIR}/bed_impl.hpp ${CMAKE_CURRENT_SOURCE_DIR}/chr_sizes_impl.hpp
-                               ${CMAKE_CURRENT_SOURCE_DIR}/bigwig_impl.hpp)
+target_sources(
+  libio
+  INTERFACE ${CMAKE_CURRENT_SOURCE_DIR}/bed_impl.hpp
+            ${CMAKE_CURRENT_SOURCE_DIR}/bigwig_impl.hpp
+            ${CMAKE_CURRENT_SOURCE_DIR}/chrom_sizes_impl.hpp
+            ${CMAKE_CURRENT_SOURCE_DIR}/cooler_impl.hpp)
 add_dependencies(libio libBigWig_lib)
 
 target_include_directories(libio INTERFACE include/)
@@ -17,6 +21,7 @@ target_link_libraries(
     CONAN_PKG::boost
     CONAN_PKG::fmt
     CONAN_PKG::hdf5
+    CONAN_PKG::readerwriterqueue
     CONAN_PKG::zlib
     # Deal with std::filesystem quirkiness on older compilers
     $<$<AND:$<CXX_COMPILER_ID:Clang>,$<CXX_COMPILER_ID:AppleClang>,$<VERSION_LESS_EQUAL:$<CXX_COMPILER_VERSION>,9.0.0>>:-lc++fs>
@@ -46,7 +51,7 @@ if(ENABLE_PCH)
     <H5Cpp.h>
     [["modle/bed.hpp"]]
     [["modle/bigwig.hpp"]]
-    [["modle/chr_sizes.hpp"]]
+    [["modle/chrom_sizes.hpp"]]
     [["modle/cooler.hpp"]]
     [["modle/hdf5.hpp"]])
 endif()

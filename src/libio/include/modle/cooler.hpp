@@ -1,7 +1,8 @@
 #pragma once
 
-#include <H5Cpp.h>            // IWYU pragma: keep
-#include <absl/types/span.h>  // for Span
+#include <H5Cpp.h>                                // IWYU pragma: keep
+#include <absl/types/span.h>                      // for Span
+#include <readerwriterqueue/readerwriterqueue.h>  // for BlockingReadWriterQueue
 
 #include <cstddef>      // IWYU pragma: keep for size_t
 #include <cstdint>      // for int64_t, uint_fast8_t, uint32_t, int32_t
@@ -26,28 +27,42 @@ class Cooler {
     SCOOL = 4  // For the time being, we do not support SCOOL
   };
 
+  struct Pixel {
+    std::size_t row;
+    std::size_t col;
+    std::size_t count;
+    [[nodiscard]] inline bool operator==(const Pixel &other) const {
+      return this->row == other.row && this->col == other.col && this->count == other.count;
+    }
+  };
+
+  static constexpr uint_fast8_t DEFAULT_COMPRESSION_LEVEL = 6;
+  static constexpr std::size_t DEFAULT_HDF5_BUFFER_SIZE = 1024 * 1024ULL;      // 1MB
+  static constexpr std::size_t DEFAULT_HDF5_CHUNK_SIZE = 1024 * 1024ULL;       // 1MB
+  static constexpr std::size_t DEFAULT_HDF5_CACHE_SIZE = 16 * 1024 * 1024ULL;  // 16MB
+
   Cooler() = delete;
   inline explicit Cooler(std::filesystem::path path_to_file, IO_MODE mode = READ_ONLY,
-                         std::size_t bin_size = 0, std::size_t max_str_length = 0,  // NOLINT
+                         std::size_t bin_size = 0, std::size_t max_str_length = 0,
                          std::string_view assembly_name = "", Flavor flavor = AUTO,
                          bool validate = true,
-                         uint8_t compression_lvl = 6,                    // NOLINT
-                         std::size_t chunk_size = 1024 * 1024ULL,        // 1 MB NOLINT
-                         std::size_t cache_size = 16 * 1024 * 1024ULL);  // 16 MB NOLINT
+                         uint_fast8_t compression_lvl = DEFAULT_COMPRESSION_LEVEL,
+                         std::size_t chunk_size = DEFAULT_HDF5_CHUNK_SIZE,
+                         std::size_t cache_size = DEFAULT_HDF5_CACHE_SIZE);
   inline explicit Cooler(const std::string &path_to_file, IO_MODE mode = READ_ONLY,
-                         std::size_t bin_size = 0, std::size_t max_str_length = 0,  // NOLINT
+                         std::size_t bin_size = 0, std::size_t max_str_length = 0,
                          std::string_view assembly_name = "", Flavor flavor = AUTO,
                          bool validate = true,
-                         uint8_t compression_lvl = 6,                    // NOLINT
-                         std::size_t chunk_size = 1024 * 1024ULL,        // 1 MB NOLINT
-                         std::size_t cache_size = 16 * 1024 * 1024ULL);  // 16 MB NOLINT
+                         uint_fast8_t compression_lvl = DEFAULT_COMPRESSION_LEVEL,
+                         std::size_t chunk_size = DEFAULT_HDF5_CHUNK_SIZE,
+                         std::size_t cache_size = DEFAULT_HDF5_CACHE_SIZE);
   inline explicit Cooler(std::string_view path_to_file, IO_MODE mode = READ_ONLY,
-                         std::size_t bin_size = 0, std::size_t max_str_length = 0,  // NOLINT
+                         std::size_t bin_size = 0, std::size_t max_str_length = 0,
                          std::string_view assembly_name = "", Flavor flavor = AUTO,
                          bool validate = true,
-                         uint8_t compression_lvl = 6,                    // NOLINT
-                         std::size_t chunk_size = 1024 * 1024ULL,        // 1 MB NOLINT
-                         std::size_t cache_size = 16 * 1024 * 1024ULL);  // 16 MB NOLINT
+                         uint_fast8_t compression_lvl = DEFAULT_COMPRESSION_LEVEL,
+                         std::size_t chunk_size = DEFAULT_HDF5_CHUNK_SIZE,
+                         std::size_t cache_size = DEFAULT_HDF5_CACHE_SIZE);
 
   inline ~Cooler();
 
@@ -62,12 +77,14 @@ class Cooler {
 
   [[nodiscard]] inline std::size_t get_nchroms();
 
-  inline void get_chr_names(std::vector<std::string> &buff);
-  [[nodiscard]] inline std::vector<std::string> get_chr_names();
+  inline void get_chrom_names(std::vector<std::string> &buff);
+  [[nodiscard]] inline std::vector<std::string> get_chrom_names();
 
   template <typename I>
-  inline void get_chr_sizes(std::vector<I> &buff);
-  [[nodiscard]] inline std::vector<int64_t> get_chr_sizes();
+  inline void get_chrom_sizes(std::vector<I> &buff);
+  [[nodiscard]] inline std::vector<int64_t> get_chrom_sizes();
+
+  [[nodiscard]] inline std::vector<std::pair<std::string, std::size_t>> get_chroms();
 
   [[nodiscard]] inline bool is_cool() const;
   [[nodiscard]] inline bool is_mcool() const;
@@ -75,51 +92,62 @@ class Cooler {
 
   [[nodiscard]] inline std::size_t get_bin_size() const;
 
-  [[nodiscard]] inline bool has_contacts_for_chr(std::string_view chr_name,
-                                                 bool try_common_chr_prefixes = false);
-  [[nodiscard]] inline bool has_contacts_for_chr(std::size_t chr_idx) const;
+  [[nodiscard]] inline bool has_contacts_for_chrom(std::string_view chrom_name,
+                                                   bool try_common_chrom_prefixes = false);
+  [[nodiscard]] inline bool has_contacts_for_chrom(std::size_t chrom_idx) const;
 
   // Write to file
   inline void write_metadata();
 
   template <typename I1, typename I2>
   inline void write_or_append_cmatrix_to_file(const ContactMatrix<I1> &cmatrix,
-                                              std::string_view chr_name, I2 chr_start, I2 chr_end,
-                                              I2 chr_length, bool quiet = false);
+                                              std::string_view chrom_name, I2 chrom_start,
+                                              I2 chrom_end, I2 chrom_length, bool quiet = false);
 
   template <typename I1, typename I2>
   inline void write_or_append_cmatrix_to_file(const ContactMatrix<I1> *cmatrix,
-                                              std::string_view chr_name, I2 chr_start, I2 chr_end,
-                                              I2 chr_length, bool quiet = false);
+                                              std::string_view chrom_name, I2 chrom_start,
+                                              I2 chrom_end, I2 chrom_length, bool quiet = false);
   template <typename I1, typename I2>
   inline void write_or_append_cmatrices_to_file(const std::vector<ContactMatrix<I1>> &cmatrices,
-                                                const std::vector<std::string> &chr_names,
-                                                const std::vector<I2> &chr_starts,
-                                                const std::vector<I2> &chr_ends,
-                                                const std::vector<I2> &chr_sizes,
+                                                const std::vector<std::string> &chrom_names,
+                                                const std::vector<I2> &chrom_starts,
+                                                const std::vector<I2> &chrom_ends,
+                                                const std::vector<I2> &chrom_sizes,
                                                 bool quiet = false);
   template <typename I1, typename I2>
   inline void write_or_append_cmatrices_to_file(const std::vector<ContactMatrix<I1> *> &cmatrices,
-                                                const std::vector<std::string> &chr_names,
-                                                const std::vector<I2> &chr_starts,
-                                                const std::vector<I2> &chr_ends,
-                                                const std::vector<I2> &chr_sizes,
+                                                const std::vector<std::string> &chrom_names,
+                                                const std::vector<I2> &chrom_starts,
+                                                const std::vector<I2> &chrom_ends,
+                                                const std::vector<I2> &chrom_sizes,
                                                 bool quiet = false);
   template <typename I1, typename I2>
   inline void write_or_append_cmatrices_to_file(absl::Span<ContactMatrix<I1> *const> cmatrices,
-                                                absl::Span<const std::string> chr_names,
-                                                absl::Span<const I2> chr_starts,
-                                                absl::Span<const I2> chr_ends,
-                                                absl::Span<const I2> chr_sizes, bool quiet = false);
+                                                absl::Span<const std::string> chrom_names,
+                                                absl::Span<const I2> chrom_starts,
+                                                absl::Span<const I2> chrom_ends,
+                                                absl::Span<const I2> chrom_sizes,
+                                                bool quiet = false);
   // Read from file
   [[nodiscard]] inline ContactMatrix<uint32_t> cooler_to_cmatrix(
-      std::string_view chr_name, std::size_t nrows,
-      std::pair<std::size_t, std::size_t> chr_boundaries = {0, -1},
-      bool try_common_chr_prefixes = true, bool prefer_using_balanced_counts = true);
+      std::string_view chrom_name, std::size_t nrows,
+      std::pair<std::size_t, std::size_t> chrom_boundaries = {0, -1},
+      bool try_common_chrom_prefixes = true, bool prefer_using_balanced_counts = true);
   [[nodiscard]] inline ContactMatrix<uint32_t> cooler_to_cmatrix(
-      std::string_view chr_name, std::size_t diagonal_width, std::size_t bin_size,
-      std::pair<std::size_t, std::size_t> chr_boundaries = {0, -1},
-      bool try_common_chr_prefixes = true, bool prefer_using_balanced_counts = true);
+      std::string_view chrom_name, std::size_t diagonal_width, std::size_t bin_size,
+      std::pair<std::size_t, std::size_t> chrom_boundaries = {0, -1},
+      bool try_common_chrom_prefixes = true, bool prefer_using_balanced_counts = true);
+
+  inline std::size_t stream_contacts_for_chrom(
+      moodycamel::BlockingReaderWriterQueue<Pixel> &queue, std::string_view chrom_name,
+      std::size_t nrows, std::pair<std::size_t, std::size_t> chrom_boundaries = {0, -1},
+      bool try_common_chrom_prefixes = true, bool prefer_using_balanced_counts = true);
+  inline std::size_t stream_contacts_for_chrom(
+      moodycamel::BlockingReaderWriterQueue<Pixel> &queue, std::string_view chrom_name,
+      std::size_t diagonal_width, std::size_t bin_size,
+      std::pair<std::size_t, std::size_t> chrom_boundaries = {0, -1},
+      bool try_common_chrom_prefixes = true, bool prefer_using_balanced_counts = true);
   // Misc
   [[nodiscard]] inline static bool validate_file_format(H5::H5File &f, Flavor expected_flavor,
                                                         IO_MODE mode = READ_ONLY,
@@ -162,10 +190,10 @@ class Cooler {
   int64_t _nchroms{0};
   int64_t _nnz{0};
 
-  enum Groups : uint_fast8_t { CHR = 0, BIN = 1, PXL = 2, IDX = 3 };
+  enum Groups : uint_fast8_t { chrom = 0, BIN = 1, PXL = 2, IDX = 3 };
   enum Datasets : uint_fast8_t {
-    CHR_LEN = 0,
-    CHR_NAME = 1,
+    chrom_LEN = 0,
+    chrom_NAME = 1,
     BIN_CHROM = 2,
     BIN_START = 3,
     BIN_END = 4,
@@ -199,21 +227,21 @@ class Cooler {
   [[nodiscard]] inline hsize_t write_bins(I1 chrom, I2 length, I3 bin_size,
                                           std::vector<int32_t> &buff32,
                                           std::vector<int64_t> &buff64, hsize_t file_offset,
-                                          hsize_t buff_size = 1024 * 1024ULL /  // NOLINT
+                                          hsize_t buff_size = DEFAULT_HDF5_BUFFER_SIZE /
                                                               sizeof(int64_t));
 
-  inline std::size_t read_chr_offset_idx();
+  inline std::size_t read_chrom_offset_idx();
   inline std::size_t read_bin1_offset_idx();
 
-  [[nodiscard]] inline absl::Span<const int64_t> get_bin1_offset_idx_for_chr(
-      std::size_t chr_idx, std::pair<std::size_t, std::size_t> chr_subrange = {0, -1});
-  [[nodiscard]] inline absl::Span<const int64_t> get_bin1_offset_idx_for_chr(
-      std::string_view chr_name, std::pair<std::size_t, std::size_t> chr_subrange = {0, -1});
+  [[nodiscard]] inline absl::Span<const int64_t> get_bin1_offset_idx_for_chrom(
+      std::size_t chrom_idx, std::pair<std::size_t, std::size_t> chrom_subrange = {0, -1});
+  [[nodiscard]] inline absl::Span<const int64_t> get_bin1_offset_idx_for_chrom(
+      std::string_view chrom_name, std::pair<std::size_t, std::size_t> chrom_subrange = {0, -1});
 
   [[nodiscard]] inline std::pair<int64_t, int64_t> read_chrom_pixels_boundaries(
-      std::string_view chr_name);
+      std::string_view chrom_name);
   [[nodiscard]] inline std::pair<int64_t, int64_t> read_chrom_pixels_boundaries(
-      std::size_t chr_idx);
+      std::size_t chrom_idx);
 
   [[nodiscard]] inline ContactMatrix<uint32_t> cooler_to_cmatrix(
       std::pair<hsize_t, hsize_t> bin_range, absl::Span<const int64_t> bin1_offset_idx,
@@ -223,8 +251,17 @@ class Cooler {
       std::pair<hsize_t, hsize_t> bin_range, const std::vector<int64_t> &bin1_offset_idx,
       std::size_t nrows, double scaling_factor = 1.0, bool prefer_using_balanced_counts = true);
 
-  [[nodiscard]] inline std::size_t get_chr_idx(std::string_view query_chr_name,
-                                               bool try_common_chr_prefixes = false);
+  [[nodiscard]] inline std::size_t stream_contacts_for_chrom(
+      moodycamel::BlockingReaderWriterQueue<Pixel> &queue, std::pair<hsize_t, hsize_t> bin_range,
+      absl::Span<const int64_t> bin1_offset_idx, std::size_t nrows,
+      double bias_scaling_factor = 1.0, bool prefer_using_balanced_counts = true);
+  [[nodiscard]] inline std::size_t stream_contacts_for_chrom(
+      moodycamel::BlockingReaderWriterQueue<Pixel> &queue, std::pair<hsize_t, hsize_t> bin_range,
+      const std::vector<int64_t> &bin1_offset_idx, std::size_t nrows, double scaling_factor = 1.0,
+      bool prefer_using_balanced_counts = true);
+
+  [[nodiscard]] inline std::size_t get_chrom_idx(std::string_view query_chrom_name,
+                                                 bool try_common_chrom_prefixes = false);
 
   [[nodiscard]] inline static std::string flavor_to_string(Flavor f);
   [[nodiscard]] inline static Flavor detect_file_flavor(H5::H5File &f);

@@ -2,16 +2,17 @@
 
 // IWYU pragma: private, include "modle/cooler.hpp"
 
-#include <H5Cpp.h>                  // IWYU pragma: keep
-#include <absl/strings/match.h>     // for EndsWithIgnoreCase, StartsWith
-#include <absl/strings/str_cat.h>   // for StrCat, StrAppend
-#include <absl/strings/str_join.h>  // for StrJoin
-#include <absl/strings/strip.h>     // for StripPrefix, ConsumePrefix, StripS...
-#include <absl/time/clock.h>        // for Now
-#include <absl/time/time.h>         // for FormatDuration, operator-, FormatTime
-#include <absl/types/span.h>        // for MakeConstSpan, Span
-#include <fmt/format.h>             // for format, FMT_STRING, print
-#include <fmt/ostream.h>            // for formatbuf<>::int_type
+#include <H5Cpp.h>                                // IWYU pragma: keep
+#include <absl/strings/match.h>                   // for EndsWithIgnoreCase, StartsWith
+#include <absl/strings/str_cat.h>                 // for StrCat, StrAppend
+#include <absl/strings/str_join.h>                // for StrJoin
+#include <absl/strings/strip.h>                   // for StripPrefix, ConsumePrefix, StripS...
+#include <absl/time/clock.h>                      // for Now
+#include <absl/time/time.h>                       // for FormatDuration, operator-, FormatTime
+#include <absl/types/span.h>                      // for MakeConstSpan, Span
+#include <fmt/format.h>                           // for format, FMT_STRING, print
+#include <fmt/ostream.h>                          // for formatbuf<>::int_type
+#include <readerwriterqueue/readerwriterqueue.h>  // for BlockingReadWriterQueue
 
 #include <algorithm>           // for max, fill, min, copy, find, generate
 #include <array>               // for array, array<>::value_type
@@ -30,6 +31,7 @@
 #include <stdexcept>           // for runtime_error, logic_error
 #include <string>              // for string, basic_string, operator!=
 #include <string_view>         // for string_view, basic_string_view
+#include <thread>              // for sleep_for
 #include <utility>             // for pair, make_pair
 #include <vector>              // for vector, vector<>::iterator
 
@@ -42,7 +44,7 @@ namespace modle::cooler {
 
 Cooler::Cooler(std::filesystem::path path_to_file, IO_MODE mode, std::size_t bin_size,
                std::size_t max_str_length, std::string_view assembly_name, Flavor flavor,
-               bool validate, uint8_t compression_lvl, std::size_t chunk_size,
+               bool validate, uint_fast8_t compression_lvl, std::size_t chunk_size,
                std::size_t cache_size)
     : STR_TYPE(generate_default_str_type(max_str_length)),
       _path_to_file(path_to_file),
@@ -83,7 +85,7 @@ Cooler::Cooler(std::filesystem::path path_to_file, IO_MODE mode, std::size_t bin
           static_cast<size_t>(hdf5::read_attribute_int(*this->_fp, "bin-size", this->_root_path));
     }
     this->open_default_datasets();
-    this->read_chr_offset_idx();
+    this->read_chrom_offset_idx();
     this->read_bin1_offset_idx();
   } else {
     this->init_default_datasets();
@@ -93,14 +95,14 @@ Cooler::Cooler(std::filesystem::path path_to_file, IO_MODE mode, std::size_t bin
 
 Cooler::Cooler(const std::string &path_to_file, IO_MODE mode, std::size_t bin_size,
                std::size_t max_str_length, std::string_view assembly_name, Flavor flavor,
-               bool validate, uint8_t compression_lvl, std::size_t chunk_size,
+               bool validate, uint_fast8_t compression_lvl, std::size_t chunk_size,
                std::size_t cache_size)
     : Cooler::Cooler(std::filesystem::path(path_to_file), mode, bin_size, max_str_length,
                      assembly_name, flavor, validate, compression_lvl, chunk_size, cache_size) {}
 
 Cooler::Cooler(std::string_view path_to_file, IO_MODE mode, std::size_t bin_size,
                std::size_t max_str_length, std::string_view assembly_name, Flavor flavor,
-               bool validate, uint8_t compression_lvl, std::size_t chunk_size,
+               bool validate, uint_fast8_t compression_lvl, std::size_t chunk_size,
                std::size_t cache_size)
     : Cooler::Cooler(std::filesystem::path(path_to_file), mode, bin_size, max_str_length,
                      assembly_name, flavor, validate, compression_lvl, chunk_size, cache_size) {}
@@ -150,12 +152,12 @@ std::size_t Cooler::get_nchroms() {
   utils::throw_with_trace(std::logic_error("Unreachable code"));
 }
 
-void Cooler::get_chr_names(std::vector<std::string> &buff) {
+void Cooler::get_chrom_names(std::vector<std::string> &buff) {
   assert(this->_fp);
   const auto nchroms = this->get_nchroms();
   buff.resize(nchroms);
   if (!this->_datasets.empty()) {
-    const auto &d = this->_datasets[CHR_NAME];
+    const auto &d = this->_datasets[chrom_NAME];
     (void)hdf5::read_strings(d, buff, 0);
   } else {
     if (this->is_cool()) {
@@ -173,20 +175,34 @@ void Cooler::get_chr_names(std::vector<std::string> &buff) {
   }
 }
 
-std::vector<std::string> Cooler::get_chr_names() {
+std::vector<std::string> Cooler::get_chrom_names() {
   std::vector<std::string> buff;
-  this->get_chr_names(buff);
+  this->get_chrom_names(buff);
+  return buff;
+}
+
+std::vector<std::pair<std::string, std::size_t>> Cooler::get_chroms() {
+  std::vector<std::string> name_buff;
+  std::vector<std::size_t> size_buff;
+  this->get_chrom_names(name_buff);
+  this->get_chrom_sizes(size_buff);
+  assert(name_buff.size() == size_buff.size());  // NOLINT
+  std::vector<std::pair<std::string, std::size_t>> buff(name_buff.size());
+  for (auto i = 0UL; i < buff.size(); ++i) {
+    buff[i].first = std::move(name_buff[i]);
+    buff[i].second = size_buff[i];
+  }
   return buff;
 }
 
 template <typename I>
-void Cooler::get_chr_sizes(std::vector<I> &buff) {
+void Cooler::get_chrom_sizes(std::vector<I> &buff) {
   static_assert(std::is_integral_v<I>, "buff should be a vector of integers.");
   assert(this->_fp);
   const auto nchroms = this->get_nchroms();
   buff.resize(nchroms);
   if (!this->_datasets.empty()) {
-    const auto &d = this->_datasets[CHR_LEN];
+    const auto &d = this->_datasets[chrom_LEN];
     (void)hdf5::read_numbers(d, buff, 0);
   } else {
     if (this->is_cool()) {
@@ -204,9 +220,9 @@ void Cooler::get_chr_sizes(std::vector<I> &buff) {
   }
 }
 
-std::vector<int64_t> Cooler::get_chr_sizes() {
+std::vector<int64_t> Cooler::get_chrom_sizes() {
   std::vector<int64_t> buff;
-  this->get_chr_sizes(buff);
+  this->get_chrom_sizes(buff);
   return buff;
 }
 
@@ -216,21 +232,21 @@ bool Cooler::is_scool() const { return this->_flavor == SCOOL; }
 
 std::size_t Cooler::get_bin_size() const { return this->_bin_size; }
 
-bool Cooler::has_contacts_for_chr(std::string_view chr_name, bool try_common_chr_prefixes) {
+bool Cooler::has_contacts_for_chrom(std::string_view chrom_name, bool try_common_chrom_prefixes) {
   assert(this->_fp);  // NOLINT
-  const auto chr_idx = this->get_chr_idx(chr_name, try_common_chr_prefixes);
-  return this->has_contacts_for_chr(chr_idx);
+  const auto chrom_idx = this->get_chrom_idx(chrom_name, try_common_chrom_prefixes);
+  return this->has_contacts_for_chrom(chrom_idx);
 }
 
-bool Cooler::has_contacts_for_chr(std::size_t chr_idx) const {
-  assert(this->_fp);                                 // NOLINT
-  assert(this->is_read_only());                      // NOLINT
-  assert(!this->_idx_bin1_offset.empty());           // NOLINT
-  assert(!this->_idx_chrom_offset.empty());          // NOLINT
-  assert(chr_idx < this->_idx_chrom_offset.size());  // NOLINT
+bool Cooler::has_contacts_for_chrom(std::size_t chrom_idx) const {
+  assert(this->_fp);                                   // NOLINT
+  assert(this->is_read_only());                        // NOLINT
+  assert(!this->_idx_bin1_offset.empty());             // NOLINT
+  assert(!this->_idx_chrom_offset.empty());            // NOLINT
+  assert(chrom_idx < this->_idx_chrom_offset.size());  // NOLINT
 
-  const auto first_bin = static_cast<std::size_t>(this->_idx_chrom_offset[chr_idx]);
-  const auto last_bin = static_cast<std::size_t>(this->_idx_chrom_offset[chr_idx + 1]);
+  const auto first_bin = static_cast<std::size_t>(this->_idx_chrom_offset[chrom_idx]);
+  const auto last_bin = static_cast<std::size_t>(this->_idx_chrom_offset[chrom_idx + 1]);
   assert(last_bin >= first_bin);  // NOLINT
 
   return this->_idx_bin1_offset[first_bin] != this->_idx_bin1_offset[last_bin];
@@ -294,78 +310,79 @@ void Cooler::write_metadata() {
 
 template <typename I1, typename I2>
 void Cooler::write_or_append_cmatrix_to_file(const ContactMatrix<I1> &cmatrix,
-                                             std::string_view chr_name, I2 chr_start, I2 chr_end,
-                                             I2 chr_length, bool quiet) {
+                                             std::string_view chrom_name, I2 chrom_start,
+                                             I2 chrom_end, I2 chrom_length, bool quiet) {
   // Casting away the constness from the ptr is needed in order to make things work with slices.
   // This shouldn't cause any problem, as in the end the contact matrix is accesses through a
   // const slice NOLINTNEXTLINE
   const std::vector<ContactMatrix<I1> *> cmatrices{const_cast<ContactMatrix<I1> *>(&cmatrix)};
-  std::string chr_name_{chr_name.data(), chr_name.size()};
+  std::string chrom_name_{chrom_name.data(), chrom_name.size()};
   write_or_append_cmatrices_to_file(
-      absl::MakeConstSpan(cmatrices), absl::MakeConstSpan(&chr_name_, 1),
-      absl::MakeConstSpan(&chr_start, 1), absl::MakeConstSpan(&chr_end, 1),
-      absl::MakeConstSpan(&chr_length, 1), quiet);
+      absl::MakeConstSpan(cmatrices), absl::MakeConstSpan(&chrom_name_, 1),
+      absl::MakeConstSpan(&chrom_start, 1), absl::MakeConstSpan(&chrom_end, 1),
+      absl::MakeConstSpan(&chrom_length, 1), quiet);
 }
 
 template <typename I1, typename I2>
 void Cooler::write_or_append_cmatrix_to_file(const ContactMatrix<I1> *cmatrix,
-                                             std::string_view chr_name, I2 chr_start, I2 chr_end,
-                                             I2 chr_length, bool quiet) {
+                                             std::string_view chrom_name, I2 chrom_start,
+                                             I2 chrom_end, I2 chrom_length, bool quiet) {
   // Casting away the constness from the ptr is needed in order to make things work with slices.
   // This shouldn't cause any problem, as in the end the contact matrix is accesses through a
   // const slice NOLINTNEXTLINE
   const std::vector<ContactMatrix<I1> *> cmatrices{const_cast<ContactMatrix<I1> *>(cmatrix)};
-  std::string chr_name_{chr_name.data(), chr_name.size()};
+  std::string chrom_name_{chrom_name.data(), chrom_name.size()};
   write_or_append_cmatrices_to_file(
-      absl::MakeConstSpan(cmatrices), absl::MakeConstSpan(&chr_name_, 1),
-      absl::MakeConstSpan(&chr_start, 1), absl::MakeConstSpan(&chr_end, 1),
-      absl::MakeConstSpan(&chr_length, 1), quiet);
+      absl::MakeConstSpan(cmatrices), absl::MakeConstSpan(&chrom_name_, 1),
+      absl::MakeConstSpan(&chrom_start, 1), absl::MakeConstSpan(&chrom_end, 1),
+      absl::MakeConstSpan(&chrom_length, 1), quiet);
 }
 
 template <typename I1, typename I2>
 void Cooler::write_or_append_cmatrices_to_file(const std::vector<ContactMatrix<I1>> &cmatrices,
-                                               const std::vector<std::string> &chr_names,
-                                               const std::vector<I2> &chr_starts,
-                                               const std::vector<I2> &chr_ends,
-                                               const std::vector<I2> &chr_sizes, bool quiet) {
+                                               const std::vector<std::string> &chrom_names,
+                                               const std::vector<I2> &chrom_starts,
+                                               const std::vector<I2> &chrom_ends,
+                                               const std::vector<I2> &chrom_sizes, bool quiet) {
   std::vector<ContactMatrix<I1> *> v(cmatrices.size());
   // Convert references to ptrs
   std::transform(cmatrices.begin(), cmatrices.end(), v.begin(), [](const auto &m) { return &m; });
-  write_or_append_cmatrices_to_file(v, chr_names, chr_starts, chr_ends, chr_sizes, quiet);
+  write_or_append_cmatrices_to_file(v, chrom_names, chrom_starts, chrom_ends, chrom_sizes, quiet);
 }
 
 template <typename I1, typename I2>
 void Cooler::write_or_append_cmatrices_to_file(const std::vector<ContactMatrix<I1> *> &cmatrices,
-                                               const std::vector<std::string> &chr_names,
-                                               const std::vector<I2> &chr_starts,
-                                               const std::vector<I2> &chr_ends,
-                                               const std::vector<I2> &chr_sizes, bool quiet) {
+                                               const std::vector<std::string> &chrom_names,
+                                               const std::vector<I2> &chrom_starts,
+                                               const std::vector<I2> &chrom_ends,
+                                               const std::vector<I2> &chrom_sizes, bool quiet) {
   Cooler::write_or_append_cmatrices_to_file(
-      absl::MakeConstSpan(cmatrices), absl::MakeConstSpan(chr_names),
-      absl::MakeConstSpan(chr_starts), absl::MakeConstSpan(chr_ends),
-      absl::MakeConstSpan(chr_sizes), quiet);
+      absl::MakeConstSpan(cmatrices), absl::MakeConstSpan(chrom_names),
+      absl::MakeConstSpan(chrom_starts), absl::MakeConstSpan(chrom_ends),
+      absl::MakeConstSpan(chrom_sizes), quiet);
 }
 
 template <typename I1, typename I2>
 void Cooler::write_or_append_cmatrices_to_file(absl::Span<ContactMatrix<I1> *const> cmatrices,
-                                               absl::Span<const std::string> chr_names,
-                                               absl::Span<const I2> chr_starts,
-                                               absl::Span<const I2> chr_ends,
-                                               absl::Span<const I2> chr_sizes, bool quiet) {
+                                               absl::Span<const std::string> chrom_names,
+                                               absl::Span<const I2> chrom_starts,
+                                               absl::Span<const I2> chrom_ends,
+                                               absl::Span<const I2> chrom_sizes, bool quiet) {
   static_assert(std::is_integral_v<I1>, "I1 should be an integral type.");
   static_assert(std::is_integral_v<I2>, "I2 should be an integral type.");
 
   assert(this->_bin_size != 0);
 
   this->_nchroms += static_cast<int64_t>(cmatrices.size());
-  if (const auto n = chr_names.size();
-      n != chr_starts.size() || n != chr_ends.size() || n != chr_sizes.size()) {
-    utils::throw_with_trace(std::runtime_error(fmt::format(
-        FMT_STRING("Message for the DEVS: The vectors passed to function "
-                   "cooler::write_modle_cmatrices_to_cooler() should all have "
-                   "the same size!\n  cmatrices.size()={}\n  chr_names.size()={}\n  "
-                   "chr_starts={}\n  chr_ends={}\n  chr_sizes={}\n"),
-        cmatrices.size(), chr_names.size(), chr_starts.size(), chr_ends.size(), chr_sizes.size())));
+  if (const auto n = chrom_names.size();
+      n != chrom_starts.size() || n != chrom_ends.size() || n != chrom_sizes.size()) {
+    utils::throw_with_trace(std::runtime_error(
+        fmt::format(FMT_STRING("Message for the DEVS: The vectors passed to function "
+                               "cooler::write_modle_cmatrices_to_cooler() should all have "
+                               "the same size!\n  cmatrices.size()={}\n  chrom_names.size()={}\n  "
+                               "chrom_starts={}\n  chrom_ends={}\n  chrom_sizes={}\n"),
+                    cmatrices.size(), chrom_names.size(), chrom_starts.size(), chrom_ends.size(),
+                    chrom_sizes.size())));
   }
 
   auto t0 = absl::Now();
@@ -390,16 +407,16 @@ void Cooler::write_or_append_cmatrices_to_file(absl::Span<ContactMatrix<I1> *con
   idx_chrom_offset_buff.reserve(cmatrices.size() + 1);
 
   // Declare aliases to file offsets for HDF5 datasets
-  auto &chr_name_h5_foffset = this->_dataset_file_offsets[CHR_NAME];
-  auto &chr_length_h5_foffset = this->_dataset_file_offsets[CHR_LEN];
-  auto &bin_chr_name_h5_foffset = this->_dataset_file_offsets[BIN_CHROM];
+  auto &chrom_name_h5_foffset = this->_dataset_file_offsets[chrom_NAME];
+  auto &chrom_length_h5_foffset = this->_dataset_file_offsets[chrom_LEN];
+  auto &bin_chrom_name_h5_foffset = this->_dataset_file_offsets[BIN_CHROM];
   auto &bin_start_h5_foffset = this->_dataset_file_offsets[BIN_START];
   auto &bin_end_h5_foffset = this->_dataset_file_offsets[BIN_END];
   auto &pixel_b1_id_h5_foffset = this->_dataset_file_offsets[PXL_B1];
   auto &pixel_b2_id_h5_foffset = this->_dataset_file_offsets[PXL_B2];
   auto &pixel_count_h5_foffset = this->_dataset_file_offsets[PXL_COUNT];
   auto &idx_bin1_offset_h5_foffset = this->_dataset_file_offsets[IDX_BIN1];
-  auto &idx_chr_offset_h5_foffset = this->_dataset_file_offsets[IDX_CHR];
+  auto &idx_chrom_offset_h5_foffset = this->_dataset_file_offsets[IDX_CHR];
 
   auto &d = this->_datasets;
   try {
@@ -407,12 +424,12 @@ void Cooler::write_or_append_cmatrices_to_file(absl::Span<ContactMatrix<I1> *con
     this->_nnz = hdf5::has_attribute(*this->_fp, "nnz", this->_root_path)
                      ? hdf5::read_attribute_int(*this->_fp, "nnz", this->_root_path)
                      : 0;
-    // Idx of the first non-zero pixel of the current chr
+    // Idx of the first non-zero pixel of the current chrom
     auto pxl_offset = static_cast<hsize_t>(
         hdf5::has_attribute(*this->_fp, "nbins", this->_root_path)
             ? hdf5::read_attribute_int(*this->_fp, "nbins", this->_root_path) - 1
             : 0);
-    auto chr_offset =
+    auto chrom_offset =
         static_cast<hsize_t>(hdf5::has_attribute(*this->_fp, "nchroms", this->_root_path)
                                  ? hdf5::read_attribute_int(*this->_fp, "nchroms", this->_root_path)
                                  : 0);
@@ -431,19 +448,19 @@ void Cooler::write_or_append_cmatrices_to_file(absl::Span<ContactMatrix<I1> *con
           pixel_count_buff.clear();
         };
 
-    for (auto chr_idx = 0UL; chr_offset + chr_idx < static_cast<std::size_t>(this->_nchroms);
-         ++chr_idx) {
+    for (auto chrom_idx = 0UL; chrom_offset + chrom_idx < static_cast<std::size_t>(this->_nchroms);
+         ++chrom_idx) {
       // Declare several aliases/variables to improve code readability in later sections
-      const auto *cmatrix = cmatrices[chr_idx];
-      const auto &chr_name = chr_names[chr_idx];
-      const auto chr_total_len = static_cast<int64_t>(chr_sizes[chr_idx]);
-      const auto chr_start = static_cast<uint64_t>(chr_starts[chr_idx]);
-      const auto chr_end = static_cast<uint64_t>(chr_ends[chr_idx]);
-      const auto chr_simulated_len = chr_end - chr_start;
+      const auto *cmatrix = cmatrices[chrom_idx];
+      const auto &chrom_name = chrom_names[chrom_idx];
+      const auto chrom_total_len = static_cast<int64_t>(chrom_sizes[chrom_idx]);
+      const auto chrom_start = static_cast<uint64_t>(chrom_starts[chrom_idx]);
+      const auto chrom_end = static_cast<uint64_t>(chrom_ends[chrom_idx]);
+      const auto chrom_simulated_len = chrom_end - chrom_start;
 
       if (!quiet) {
-        fmt::print(stderr, FMT_STRING("Writing contacts for '{}' ({:.2f} Mbp)..."), chr_name,
-                   static_cast<double>(chr_simulated_len) / 1.0e6);  // NOLINT
+        fmt::print(stderr, FMT_STRING("Writing contacts for '{}' ({:.2f} Mbp)..."), chrom_name,
+                   static_cast<double>(chrom_simulated_len) / 1.0e6);  // NOLINT
         if (cmatrix && cmatrix->get_n_of_missed_updates() != 0) {
           const auto &n = cmatrix->get_n_of_missed_updates();
           fmt::print(
@@ -453,29 +470,31 @@ void Cooler::write_or_append_cmatrices_to_file(absl::Span<ContactMatrix<I1> *con
       }
       const auto t1 = absl::Now();
 
-      // Write chr name and size
-      chr_name_h5_foffset = hdf5::write_str(chr_name, d[CHR_NAME], STR_TYPE, chr_name_h5_foffset);
-      chr_length_h5_foffset = hdf5::write_number(chr_total_len, d[CHR_LEN], chr_length_h5_foffset);
+      // Write chrom name and size
+      chrom_name_h5_foffset =
+          hdf5::write_str(chrom_name, d[chrom_NAME], STR_TYPE, chrom_name_h5_foffset);
+      chrom_length_h5_foffset =
+          hdf5::write_number(chrom_total_len, d[chrom_LEN], chrom_length_h5_foffset);
       // Add idx of the first bin belonging to the chromosome that is being processed
       idx_chrom_offset_buff.emplace_back(this->_nbins);
 
       // Write all fixed-size bins for the current chromosome. Maybe in the future we can switch to
       // use variable-size bins
-      this->_nbins = this->write_bins(chr_offset + chr_idx, chr_total_len, this->_bin_size,
+      this->_nbins = this->write_bins(chrom_offset + chrom_idx, chrom_total_len, this->_bin_size,
                                       bin_chrom_buff, bin_pos_buff, this->_nbins);
       // Update file offsets of bin_* datasets
-      bin_chr_name_h5_foffset = this->_nbins;
+      bin_chrom_name_h5_foffset = this->_nbins;
       bin_start_h5_foffset = this->_nbins;
       bin_end_h5_foffset = this->_nbins;
 
-      // In case we are simulating a subset of a chromosome (i.e. end - start != chr size), write
+      // In case we are simulating a subset of a chromosome (i.e. end - start != chrom size), write
       // the index for all the bins corresponding to genomic coordinates before the start position
       // Example: suppose we are writing contacts for a chromosome "C" of size 10 Mbp. Suppose we
-      // also know that there are no contacts in the first and last 2 Mbps. In this case chr_start
-      // will be 2 Mbp and chr_end will be 8 Mbp. This for loop write the index for all the bins
+      // also know that there are no contacts in the first and last 2 Mbps. In this case chrom_start
+      // will be 2 Mbp and chrom_end will be 8 Mbp. This for loop write the index for all the bins
       // corresponding to the genomic region 0-2 Mbp. A more elegant solution would be to use
       // variable bin-size and write a single 2 Mbp bin.
-      idx_bin1_offset_buff.resize(idx_bin1_offset_buff.size() + (chr_start / this->_bin_size),
+      idx_bin1_offset_buff.resize(idx_bin1_offset_buff.size() + (chrom_start / this->_bin_size),
                                   this->_nnz);
       idx_bin1_offset_h5_foffset =
           hdf5::write_numbers(idx_bin1_offset_buff, d[IDX_BIN1], idx_bin1_offset_h5_foffset);
@@ -485,14 +504,15 @@ void Cooler::write_or_append_cmatrices_to_file(absl::Span<ContactMatrix<I1> *con
         DISABLE_WARNING_PUSH
         DISABLE_WARNING_SIGN_CONVERSION
         idx_bin1_offset_buff.resize(
-            (chr_total_len / this->_bin_size) + (chr_total_len % this->_bin_size != 0), this->_nnz);
+            (chrom_total_len / this->_bin_size) + (chrom_total_len % this->_bin_size != 0),
+            this->_nnz);
         DISABLE_WARNING_POP
         idx_bin1_offset_h5_foffset =
             hdf5::write_numbers(idx_bin1_offset_buff, d[IDX_BIN1], idx_bin1_offset_h5_foffset);
         idx_bin1_offset_buff.clear();
       }
 
-      pxl_offset += chr_start / this->_bin_size;
+      pxl_offset += chrom_start / this->_bin_size;
       if (cmatrix) {  // when cmatrix == nullptr we only write chrom/bins/indexes (no pixels)
         for (auto i = 0UL; i < cmatrix->ncols(); ++i) {  // Iterate over columns in the cmatrix
           // Write first pixel that refers to a given bin1 to the index
@@ -534,13 +554,13 @@ void Cooler::write_or_append_cmatrices_to_file(absl::Span<ContactMatrix<I1> *con
         }
       }
 
-      // In case we are simulating a subset of a chromosome (i.e. end - start != chr size), write
+      // In case we are simulating a subset of a chromosome (i.e. end - start != chrom size), write
       // the index for all the bins corresponding to genomic coordinates after the end position. See
       // previous comment for an example
       idx_bin1_offset_buff.resize(
           idx_bin1_offset_buff.size() +
-              ((static_cast<std::size_t>(chr_total_len) - chr_end) / this->_bin_size) +
-              ((static_cast<std::size_t>(chr_total_len) - chr_end) % this->_bin_size != 0),
+              ((static_cast<std::size_t>(chrom_total_len) - chrom_end) / this->_bin_size) +
+              ((static_cast<std::size_t>(chrom_total_len) - chrom_end) % this->_bin_size != 0),
           this->_nnz);
       idx_bin1_offset_h5_foffset =
           hdf5::write_numbers(idx_bin1_offset_buff, d[IDX_BIN1], idx_bin1_offset_h5_foffset);
@@ -557,10 +577,10 @@ void Cooler::write_or_append_cmatrices_to_file(absl::Span<ContactMatrix<I1> *con
       write_pixels_to_file();
     }
 
-    // Writing the chr_index only at the end should be ok, given that most of the time we are
-    // processing 20-100 chr
-    idx_chr_offset_h5_foffset =
-        hdf5::write_numbers(idx_chrom_offset_buff, d[IDX_CHR], idx_chr_offset_h5_foffset);
+    // Writing the chrom_index only at the end should be ok, given that most of the time we are
+    // processing 20-100 chrom
+    idx_chrom_offset_h5_foffset =
+        hdf5::write_numbers(idx_chrom_offset_buff, d[IDX_CHR], idx_chrom_offset_h5_foffset);
     idx_bin1_offset_h5_foffset =
         hdf5::write_numbers(idx_bin1_offset_buff, d[IDX_BIN1], idx_bin1_offset_h5_foffset);
 
@@ -582,24 +602,25 @@ void Cooler::write_or_append_cmatrices_to_file(absl::Span<ContactMatrix<I1> *con
 }
 
 ContactMatrix<uint32_t> Cooler::cooler_to_cmatrix(
-    std::string_view chr_name, std::size_t nrows,
-    std::pair<std::size_t, std::size_t> chr_boundaries, bool try_common_chr_prefixes,
+    std::string_view chrom_name, std::size_t nrows,
+    std::pair<std::size_t, std::size_t> chrom_boundaries, bool try_common_chrom_prefixes,
     bool prefer_using_balanced_counts) {
-  assert(this->_fp);
-  assert(!this->_datasets.empty());
-  assert(!this->_idx_bin1_offset.empty());
-  assert(!this->_idx_chrom_offset.empty());
+  assert(this->_fp);                         // NOLINT
+  assert(!this->_datasets.empty());          // NOLINT
+  assert(!this->_idx_bin1_offset.empty());   // NOLINT
+  assert(!this->_idx_chrom_offset.empty());  // NOLINT
 
-  const auto chr_idx = this->get_chr_idx(chr_name, try_common_chr_prefixes);
-  const auto chr_size = static_cast<std::size_t>(this->get_chr_sizes()[chr_idx]);
-  if (chr_boundaries.second > chr_size) {
-    chr_boundaries.second = chr_size;
+  const auto chrom_idx = this->get_chrom_idx(chrom_name, try_common_chrom_prefixes);
+  const auto chrom_size = static_cast<std::size_t>(this->get_chrom_sizes()[chrom_idx]);
+  if (chrom_boundaries.second > chrom_size) {
+    chrom_boundaries.second = chrom_size;
   }
-  const auto bin_range = std::make_pair(static_cast<std::size_t>(this->_idx_chrom_offset[chr_idx]) +
-                                            (chr_boundaries.first / this->_bin_size),
-                                        static_cast<std::size_t>(this->_idx_chrom_offset[chr_idx]) +
-                                            (chr_boundaries.second / this->_bin_size));
-  const auto bin1_offset_idx = this->get_bin1_offset_idx_for_chr(chr_idx, chr_boundaries);
+  const auto bin_range =
+      std::make_pair(static_cast<std::size_t>(this->_idx_chrom_offset[chrom_idx]) +
+                         (chrom_boundaries.first / this->_bin_size),
+                     static_cast<std::size_t>(this->_idx_chrom_offset[chrom_idx]) +
+                         (chrom_boundaries.second / this->_bin_size));
+  const auto bin1_offset_idx = this->get_bin1_offset_idx_for_chrom(chrom_idx, chrom_boundaries);
   double pxl_count_scaling_factor{1.0};
 
   if (prefer_using_balanced_counts &&
@@ -621,7 +642,7 @@ ContactMatrix<uint32_t> Cooler::cooler_to_cmatrix(
     if (cis_only) {  // --cis-only balancing produces an array of sale factors
       std::vector<double> buff;
       hdf5::read_attribute(d, "scale", buff);
-      pxl_count_scaling_factor = buff[chr_idx];
+      pxl_count_scaling_factor = buff[chrom_idx];
     } else {  // standard or --trans-only balancing produces a single scale factor
       hdf5::read_attribute(d, "scale", pxl_count_scaling_factor);
     }
@@ -632,8 +653,8 @@ ContactMatrix<uint32_t> Cooler::cooler_to_cmatrix(
 }
 
 ContactMatrix<uint32_t> Cooler::cooler_to_cmatrix(
-    std::string_view chr_name, std::size_t diagonal_width, std::size_t bin_size,
-    std::pair<std::size_t, std::size_t> chr_boundaries, bool try_common_chr_prefixes,
+    std::string_view chrom_name, std::size_t diagonal_width, std::size_t bin_size,
+    std::pair<std::size_t, std::size_t> chrom_boundaries, bool try_common_chrom_prefixes,
     bool prefer_using_balanced_counts) {
   assert(this->_bin_size != 0);
   if (bin_size != 0 && this->_bin_size != bin_size) {
@@ -644,8 +665,70 @@ ContactMatrix<uint32_t> Cooler::cooler_to_cmatrix(
   }
   const auto nrows = (diagonal_width / this->_bin_size) +
                      static_cast<std::size_t>(diagonal_width % this->_bin_size != 0);
-  return cooler_to_cmatrix(chr_name, nrows, chr_boundaries, try_common_chr_prefixes,
+  return cooler_to_cmatrix(chrom_name, nrows, chrom_boundaries, try_common_chrom_prefixes,
                            prefer_using_balanced_counts);
+}
+
+std::size_t Cooler::stream_contacts_for_chrom(
+    moodycamel::BlockingReaderWriterQueue<Cooler::Pixel> &queue, std::string_view chrom_name,
+    std::size_t nrows, std::pair<std::size_t, std::size_t> chrom_boundaries,
+    bool try_common_chrom_prefixes, bool prefer_using_balanced_counts) {
+  assert(this->_fp);                         // NOLINT
+  assert(!this->_datasets.empty());          // NOLINT
+  assert(!this->_idx_bin1_offset.empty());   // NOLINT
+  assert(!this->_idx_chrom_offset.empty());  // NOLINT
+
+  const auto chrom_idx = this->get_chrom_idx(chrom_name, try_common_chrom_prefixes);
+  const auto chrom_size = static_cast<std::size_t>(this->get_chrom_sizes()[chrom_idx]);
+  if (chrom_boundaries.second > chrom_size) {
+    chrom_boundaries.second = chrom_size;
+  }
+  const auto bin_range =
+      std::make_pair(static_cast<std::size_t>(this->_idx_chrom_offset[chrom_idx]) +
+                         (chrom_boundaries.first / this->_bin_size),
+                     static_cast<std::size_t>(this->_idx_chrom_offset[chrom_idx]) +
+                         (chrom_boundaries.second / this->_bin_size));
+  const auto bin1_offset_idx = this->get_bin1_offset_idx_for_chrom(chrom_idx, chrom_boundaries);
+  double pxl_count_scaling_factor{1.0};
+
+  if (prefer_using_balanced_counts &&
+      hdf5::has_dataset(*this->_fp, "bins/weight", this->_root_path)) {
+    const auto &d = this->_datasets[BIN_WEIGHT];
+    uint8_t cis_only;
+    try {
+      hdf5::read_attribute(d, "cis_only", cis_only);
+    } catch (const std::runtime_error &e) {
+      if (absl::StrContains(e.what(), "cis_only")) {
+        throw std::runtime_error(
+            "File has a \"bins/weight\" dataset, but does not have an attribute named "
+            "\"cis_only\". This most likely means that the file was generated by a very old "
+            "version of Cooler. In order to proceed, you should rebalance the file using a "
+            "recent "
+            "version of Cooler, or in alternative remove the weight dataset (not recommended).");
+      }
+    }
+    if (cis_only) {  // --cis-only balancing produces an array of sale factors
+      std::vector<double> buff;
+      hdf5::read_attribute(d, "scale", buff);
+      pxl_count_scaling_factor = buff[chrom_idx];
+    } else {  // standard or --trans-only balancing produces a single scale factor
+      hdf5::read_attribute(d, "scale", pxl_count_scaling_factor);
+    }
+  }
+
+  return this->stream_contacts_for_chrom(queue, bin_range, bin1_offset_idx, nrows,
+                                         pxl_count_scaling_factor, prefer_using_balanced_counts);
+}
+
+std::size_t Cooler::stream_contacts_for_chrom(
+    moodycamel::BlockingReaderWriterQueue<Cooler::Pixel> &queue, std::string_view chrom_name,
+    std::size_t diagonal_width, std::size_t bin_size,
+    std::pair<std::size_t, std::size_t> chrom_boundaries, bool try_common_chrom_prefixes,
+    bool prefer_using_balanced_counts) {
+  const auto nrows =
+      (diagonal_width / bin_size) + static_cast<std::size_t>(diagonal_width % bin_size == 0);
+  return this->stream_contacts_for_chrom(queue, chrom_name, nrows, chrom_boundaries,
+                                         try_common_chrom_prefixes, prefer_using_balanced_counts);
 }
 
 bool Cooler::validate_file_format(H5::H5File &f, Flavor expected_flavor, IO_MODE mode,
@@ -786,7 +869,7 @@ std::vector<H5::Group> Cooler::open_groups(H5::H5File &f, bool create_if_not_exi
                                     ? absl::StrCat("/resolutions/", bin_size, "/")
                                     : "";
   try {
-    open_or_create_group(CHR, absl::StrCat(root_path, "chroms"));
+    open_or_create_group(chrom, absl::StrCat(root_path, "chroms"));
     open_or_create_group(BIN, absl::StrCat(root_path, "bins"));
     open_or_create_group(PXL, absl::StrCat(root_path, "pixels"));
     open_or_create_group(IDX, absl::StrCat(root_path, "indexes"));
@@ -833,9 +916,9 @@ void Cooler::init_default_datasets() {
   try {
     auto mem_space{H5::DataSpace(RANK, &BUFF_SIZE, &MAXDIMS)};
     // Do not change the order of these pushbacks
-    dset[CHR_LEN] =
+    dset[chrom_LEN] =
         f.createDataSet(absl::StrCat(r, "/chroms/length"), INT64, mem_space, cp64, ap64);
-    dset[CHR_NAME] = f.createDataSet(absl::StrCat(r, "/chroms/name"), STR, mem_space, cps, aps);
+    dset[chrom_NAME] = f.createDataSet(absl::StrCat(r, "/chroms/name"), STR, mem_space, cps, aps);
 
     dset[BIN_CHROM] = f.createDataSet(absl::StrCat(r, "/bins/chrom"), INT64, mem_space, cp64, ap64);
     dset[BIN_START] = f.createDataSet(absl::StrCat(r, "/bins/start"), INT64, mem_space, cp64, ap64);
@@ -879,8 +962,8 @@ void Cooler::open_default_datasets() {
   std::fill(this->_dataset_file_offsets.begin(), this->_dataset_file_offsets.end(), 0);
   try {
     // Do not change the order of these pushbacks
-    d[CHR_LEN] = f.openDataSet(absl::StrCat(this->_root_path, "chroms/length"), ai64);
-    d[CHR_NAME] = f.openDataSet(absl::StrCat(this->_root_path, "chroms/name"), as);
+    d[chrom_LEN] = f.openDataSet(absl::StrCat(this->_root_path, "chroms/length"), ai64);
+    d[chrom_NAME] = f.openDataSet(absl::StrCat(this->_root_path, "chroms/name"), as);
 
     d[BIN_CHROM] = f.openDataSet(absl::StrCat(this->_root_path, "bins/chrom"), ai64);
     d[BIN_START] = f.openDataSet(absl::StrCat(this->_root_path, "bins/start"), ai64);
@@ -910,11 +993,11 @@ hsize_t Cooler::write_bins(I1 chrom_, I2 length_, I3 bin_size_, std::vector<int3
   assert(bin_size_ != 0);
   buff32.resize(buff_size);
   buff64.resize(buff_size);
-  const auto chrom = static_cast<int32_t>(chrom_);
+  const auto chromosome = static_cast<int32_t>(chrom_);
   const auto length = static_cast<int64_t>(length_);
   const auto bin_size = static_cast<int64_t>(bin_size_);
 
-  std::fill(buff32.begin(), buff32.end(), chrom);
+  std::fill(buff32.begin(), buff32.end(), chromosome);
 
   int64_t start = 0;
   int64_t end = std::min(length, bin_size);
@@ -947,7 +1030,7 @@ hsize_t Cooler::write_bins(I1 chrom_, I2 length_, I3 bin_size_, std::vector<int3
   return file_offset;
 }
 
-std::size_t Cooler::read_chr_offset_idx() {
+std::size_t Cooler::read_chrom_offset_idx() {
   const auto &d = this->_datasets[IDX_CHR];
   const auto buff_size = static_cast<hsize_t>(d.getSpace().getSimpleExtentNpoints());
   this->_idx_chrom_offset.resize(buff_size);
@@ -977,50 +1060,50 @@ std::size_t Cooler::read_bin1_offset_idx() {
   return idx_size;
 }
 
-absl::Span<const int64_t> Cooler::get_bin1_offset_idx_for_chr(
-    std::size_t chr_idx, std::pair<std::size_t, std::size_t> chr_subrange) {
-  assert(!this->_idx_bin1_offset.empty());           // NOLINT
-  assert(!this->_idx_chrom_offset.empty());          // NOLINT
-  assert(chr_idx < this->_idx_chrom_offset.size());  // NOLINT
-  const auto chr_start_bin = static_cast<std::size_t>(this->_idx_chrom_offset[chr_idx]) +
-                             (chr_subrange.first / this->_bin_size);
-  const auto chr_end_bin =
-      chr_subrange.second == std::numeric_limits<decltype(chr_subrange.second)>::max()
-          ? static_cast<std::size_t>(this->_idx_chrom_offset[chr_idx + 1])
-          : static_cast<std::size_t>(this->_idx_chrom_offset[chr_idx]) +
-                (chr_subrange.second / this->_bin_size);
+absl::Span<const int64_t> Cooler::get_bin1_offset_idx_for_chrom(
+    std::size_t chrom_idx, std::pair<std::size_t, std::size_t> chrom_subrange) {
+  assert(!this->_idx_bin1_offset.empty());             // NOLINT
+  assert(!this->_idx_chrom_offset.empty());            // NOLINT
+  assert(chrom_idx < this->_idx_chrom_offset.size());  // NOLINT
+  const auto chrom_start_bin = static_cast<std::size_t>(this->_idx_chrom_offset[chrom_idx]) +
+                               (chrom_subrange.first / this->_bin_size);
+  const auto chrom_end_bin =
+      chrom_subrange.second == std::numeric_limits<decltype(chrom_subrange.second)>::max()
+          ? static_cast<std::size_t>(this->_idx_chrom_offset[chrom_idx + 1])
+          : static_cast<std::size_t>(this->_idx_chrom_offset[chrom_idx]) +
+                (chrom_subrange.second / this->_bin_size);
   DISABLE_WARNING_PUSH
   DISABLE_WARNING_SIGN_COMPARE
-  assert(chr_end_bin <= this->_idx_chrom_offset[chr_idx + 1]);
-  assert(chr_end_bin >= chr_start_bin);  // NOLINT
+  assert(chrom_end_bin <= this->_idx_chrom_offset[chrom_idx + 1]);
+  assert(chrom_end_bin >= chrom_start_bin);  // NOLINT
   DISABLE_WARNING_POP
 
   return absl::MakeConstSpan(this->_idx_bin1_offset)
-      .subspan(chr_start_bin, chr_end_bin - chr_start_bin);
+      .subspan(chrom_start_bin, chrom_end_bin - chrom_start_bin);
 }
 
-absl::Span<const int64_t> Cooler::get_bin1_offset_idx_for_chr(
-    std::string_view chr_name, std::pair<std::size_t, std::size_t> chr_subrange) {
-  const auto chr_idx = get_chr_idx(chr_name);
-  return get_bin1_offset_idx_for_chr(chr_idx, chr_subrange);
+absl::Span<const int64_t> Cooler::get_bin1_offset_idx_for_chrom(
+    std::string_view chrom_name, std::pair<std::size_t, std::size_t> chrom_subrange) {
+  const auto chrom_idx = get_chrom_idx(chrom_name);
+  return get_bin1_offset_idx_for_chrom(chrom_idx, chrom_subrange);
 }
 
-std::pair<int64_t, int64_t> Cooler::read_chrom_pixels_boundaries(std::string_view chr_name) {
-  const auto chr_idx = get_chr_idx(chr_name);
-  return read_chrom_pixels_boundaries(chr_idx);
+std::pair<int64_t, int64_t> Cooler::read_chrom_pixels_boundaries(std::string_view chrom_name) {
+  const auto chrom_idx = get_chrom_idx(chrom_name);
+  return read_chrom_pixels_boundaries(chrom_idx);
 }
 
-std::pair<int64_t, int64_t> Cooler::read_chrom_pixels_boundaries(std::size_t chr_idx) {
-  assert(chr_idx < this->_idx_chrom_offset.size());  // NOLINT
-  assert(!this->_idx_chrom_offset.empty());          // NOLINT
-  const auto chr_start_bin = static_cast<std::size_t>(this->_idx_chrom_offset[chr_idx]);
-  const auto chr_end_bin = static_cast<std::size_t>(this->_idx_chrom_offset[chr_idx + 1]);
-  assert(chr_end_bin >= chr_start_bin);  // NOLINT
+std::pair<int64_t, int64_t> Cooler::read_chrom_pixels_boundaries(std::size_t chrom_idx) {
+  assert(chrom_idx < this->_idx_chrom_offset.size());  // NOLINT
+  assert(!this->_idx_chrom_offset.empty());            // NOLINT
+  const auto chrom_start_bin = static_cast<std::size_t>(this->_idx_chrom_offset[chrom_idx]);
+  const auto chrom_end_bin = static_cast<std::size_t>(this->_idx_chrom_offset[chrom_idx + 1]);
+  assert(chrom_end_bin >= chrom_start_bin);  // NOLINT
 
   std::pair<int64_t, int64_t> pixel_boundaries{};
   const auto &d = this->_datasets[IDX_BIN1];
-  (void)hdf5::read_number(d, pixel_boundaries.first, chr_start_bin);
-  (void)hdf5::read_number(d, pixel_boundaries.second, chr_end_bin);
+  (void)hdf5::read_number(d, pixel_boundaries.first, chrom_start_bin);
+  (void)hdf5::read_number(d, pixel_boundaries.second, chrom_end_bin);
 
   return pixel_boundaries;
 }
@@ -1034,8 +1117,8 @@ ContactMatrix<uint32_t> Cooler::cooler_to_cmatrix(std::pair<hsize_t, hsize_t> bi
   }
 
   const auto &[first_bin, last_bin] = bin_range;
-  assert(first_bin < last_bin);
-  assert(last_bin <= first_bin + bin1_offset_idx.size());
+  assert(first_bin < last_bin);                            // NOLINT
+  assert(last_bin <= first_bin + bin1_offset_idx.size());  // NOLINT
   ContactMatrix<uint32_t> cmatrix(nrows, last_bin - first_bin + 1);
   std::vector<int64_t> bin1_BUFF(nrows);
   std::vector<int64_t> bin2_BUFF(nrows);
@@ -1114,47 +1197,146 @@ ContactMatrix<uint32_t> Cooler::cooler_to_cmatrix(std::pair<hsize_t, hsize_t> bi
                                  scaling_factor, prefer_using_balanced_counts);
 }
 
-std::size_t Cooler::get_chr_idx(std::string_view query_chr_name, bool try_common_chr_prefixes) {
+std::size_t Cooler::stream_contacts_for_chrom(moodycamel::BlockingReaderWriterQueue<Pixel> &queue,
+                                              std::pair<hsize_t, hsize_t> bin_range,
+                                              absl::Span<const int64_t> bin1_offset_idx,
+                                              std::size_t nrows, double bias_scaling_factor,
+                                              bool prefer_using_balanced_counts) {
+  if (this->_datasets.empty()) {
+    this->open_default_datasets();
+  }
+
+  const auto &[first_bin, last_bin] = bin_range;
+  assert(first_bin < last_bin);                            // NOLINT
+  assert(last_bin <= first_bin + bin1_offset_idx.size());  // NOLINT
+  std::vector<int64_t> bin1_BUFF(nrows);
+  std::vector<int64_t> bin2_BUFF(nrows);
+  std::vector<int64_t> count_BUFF(nrows);
+  std::vector<double> bin_weights;
+  std::size_t pixel_count = 0;
+
+  const auto &d = this->_datasets;
+  if (prefer_using_balanced_counts &&
+      hdf5::has_dataset(*this->_fp, "bins/weight", this->_root_path)) {
+    bin_weights.resize(last_bin - first_bin + 1);
+    (void)hdf5::read_numbers(d[BIN_WEIGHT], bin_weights, static_cast<hsize_t>(first_bin));
+  }
+
+  for (auto i = 1UL; i < bin1_offset_idx.size(); ++i) {
+    const auto file_offset = static_cast<hsize_t>(bin1_offset_idx[i - 1]);
+    const auto buff_size =
+        std::min(static_cast<std::size_t>(bin1_offset_idx[i] - bin1_offset_idx[i - 1]), nrows);
+    if (buff_size == 0) {
+      continue;
+    }
+
+    bin1_BUFF.resize(buff_size);
+    bin2_BUFF.resize(buff_size);
+    count_BUFF.resize(buff_size);
+
+    (void)hdf5::read_numbers(d[PXL_B1], bin1_BUFF, file_offset);
+    (void)hdf5::read_numbers(d[PXL_B2], bin2_BUFF, file_offset);
+    (void)hdf5::read_numbers(d[PXL_COUNT], count_BUFF, file_offset);
+
+    assert(bin1_BUFF.size() == buff_size);   // NOLINT
+    assert(bin2_BUFF.size() == buff_size);   // NOLINT
+    assert(count_BUFF.size() == buff_size);  // NOLINT
+
+    for (auto j = 0UL; j < buff_size; ++j) {
+      assert(count_BUFF[j] != 0);  // NOLINT
+      DISABLE_WARNING_PUSH
+      DISABLE_WARNING_SIGN_CONVERSION
+      DISABLE_WARNING_SIGN_COMPARE
+      DISABLE_WARNING_CONVERSION
+      const auto bin1 = bin1_BUFF[j] - first_bin;
+      const auto bin2 = bin2_BUFF[j] - first_bin;
+      if (bin2 >= i + nrows - 1 || bin2 >= bin1_offset_idx.size()) {
+        break;
+      }
+      // fmt::print(stderr, "m[{}][{}]={} (nrows={}; ncols={})\n", bin2_BUFF[j] - first_bin,
+      //           bin1_BUFF[j] - first_bin, count_BUFF[j], cmatrix.nrows(),
+      //           cmatrix.ncols());
+      if (bin_weights.empty()) {
+        while (!queue.try_emplace(Pixel{std::min(bin1, bin2), std::max(bin1, bin2),
+                                        static_cast<std::size_t>(count_BUFF[j])})) {
+          std::this_thread::sleep_for(std::chrono::milliseconds(10));
+        }
+        ++pixel_count;
+      } else {
+        // According to Cooler documentations, NaN means that a bin has been excluded by the
+        // matrix balancing procedure. In this case we set the count to 0
+        if (std::isnan(bin_weights[bin1]) || std::isnan(bin_weights[bin2])) {
+          continue;  // Same as setting count to 0;
+        }
+        const auto bin1_bias = bin_weights[bin1];
+        const auto bin2_bias = bin_weights[bin2];
+        // See https://github.com/robomics/modle/issues/36 and
+        // https://github.com/open2c/cooler/issues/35
+        const auto count =
+            static_cast<double>(count_BUFF[j]) / (bin1_bias * bin2_bias) / bias_scaling_factor;
+        while (!queue.try_emplace(Pixel{std::min(bin1, bin2), std::max(bin1, bin2),
+                                        static_cast<std::size_t>(std::round(count))})) {
+          std::this_thread::sleep_for(std::chrono::milliseconds(10));
+        }
+        ++pixel_count;
+        DISABLE_WARNING_POP
+      }
+    }
+  }
+  return pixel_count;
+}
+
+std::size_t Cooler::stream_contacts_for_chrom(moodycamel::BlockingReaderWriterQueue<Pixel> &queue,
+                                              std::pair<hsize_t, hsize_t> bin_range,
+                                              const std::vector<int64_t> &bin1_offset_idx,
+                                              std::size_t nrows, double scaling_factor,
+                                              bool prefer_using_balanced_counts) {
+  return this->stream_contacts_for_chrom(queue, bin_range, absl::MakeConstSpan(bin1_offset_idx),
+                                         nrows, scaling_factor, prefer_using_balanced_counts);
+}
+
+std::size_t Cooler::get_chrom_idx(std::string_view query_chrom_name,
+                                  bool try_common_chrom_prefixes) {
   // Here's the issue: for a given genome assembly (say hg19), some tools name chromosome as
   // chrN, where N is the chromosome number, while others only use the number N. The purpose
   // of this lambda is to try to guess few reasonably common prefixes, look them up in the
   // Cooler file, then return the chromosome name variant that produced a hit together with
-  // the chr index
+  // the chrom index
 
   try {
-    const auto chr_names = hdf5::read_strings(this->_datasets[CHR_NAME], 0);
-    auto match = std::find(chr_names.begin(), chr_names.end(), query_chr_name);
-    if (match != chr_names.end()) {
-      return static_cast<std::size_t>(std::distance(chr_names.begin(), match));
+    const auto chrom_names = hdf5::read_strings(this->_datasets[chrom_NAME], 0);
+    auto match = std::find(chrom_names.begin(), chrom_names.end(), query_chrom_name);
+    if (match != chrom_names.end()) {
+      return static_cast<std::size_t>(std::distance(chrom_names.begin(), match));
     }
-    if (try_common_chr_prefixes) {
+    if (try_common_chrom_prefixes) {
       std::array<std::string_view, 3> queries;
-      constexpr std::array<std::string_view, 3> prefixes = {"chr", "CHR", "Chr"};
+      constexpr std::array<std::string_view, 3> prefixes = {"chrom", "chrom", "chrom"};
       for (auto i = 0U; i < prefixes.size(); ++i) {
-        queries[i] = absl::StartsWith(query_chr_name, prefixes[i])
-                         ? absl::StripPrefix(query_chr_name, prefixes[i])
-                         : absl::StrCat(prefixes[i], query_chr_name);
+        queries[i] = absl::StartsWith(query_chrom_name, prefixes[i])
+                         ? absl::StripPrefix(query_chrom_name, prefixes[i])
+                         : absl::StrCat(prefixes[i], query_chrom_name);
       }
       for (const auto &q : queries) {
-        match = std::find(chr_names.begin(), chr_names.end(), q);
-        if (match != chr_names.end()) {
-          return static_cast<std::size_t>(std::distance(chr_names.begin(), match));
+        match = std::find(chrom_names.begin(), chrom_names.end(), q);
+        if (match != chrom_names.end()) {
+          return static_cast<std::size_t>(std::distance(chrom_names.begin(), match));
         }
       }
       throw std::runtime_error(
           fmt::format(FMT_STRING("Unable to find a chromosome named '{}'. The following chromosome "
                                  "name variants were searched: '{}'"),
-                      query_chr_name, absl::StrJoin(queries, "', '")));
+                      query_chrom_name, absl::StrJoin(queries, "', '")));
     }
     throw std::runtime_error(
-        fmt::format(FMT_STRING("Unable to find a chromosome named '{}'"), query_chr_name));
+        fmt::format(FMT_STRING("Unable to find a chromosome named '{}'"), query_chrom_name));
   } catch (const std::exception &e) {
     if (absl::StartsWith(e.what(), "Unable to find a chromosome")) {
       throw;
     }
     throw std::runtime_error(fmt::format(FMT_STRING("The following error occurred while looking up "
                                                     "'{}' in dataset chroms/name of file '{}': {}"),
-                                         query_chr_name, this->_path_to_file, e.what()));
+                                         query_chrom_name, this->_path_to_file, e.what()));
   }
 }
 
