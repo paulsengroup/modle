@@ -37,14 +37,15 @@
 #include <utility>                                  // for pair, make_pair, move
 #include <vector>                                   // for vector
 
-#include "modle/bed.hpp"           // for Parser
-#include "modle/bigwig.hpp"        // for write_range, init_bigwig_file, close_...
-#include "modle/contacts.hpp"      // for ContactMatrix
-#include "modle/cooler.hpp"        // for Cooler, Cooler::READ_ONLY, Cooler::WR...
-#include "modle/hdf5.hpp"          // for read_attribute_int
-#include "modle_tools/config.hpp"  // for config
-#include "modle_tools/eval.hpp"    // for Transformation, Cross, Linear, comput...
-#include "modle_tools/stats.hpp"   // for compute_number_of_contacts_after_depl...
+#include "modle/bed.hpp"            // for Parser
+#include "modle/bigwig.hpp"         // for write_range, init_bigwig_file, close_...
+#include "modle/contacts.hpp"       // for ContactMatrix
+#include "modle/cooler.hpp"         // for Cooler, Cooler::READ_ONLY, Cooler::WR...
+#include "modle/hdf5.hpp"           // for read_attribute_int
+#include "modle_tools/config.hpp"   // for config
+#include "modle_tools/eval.hpp"     // for Transformation, Cross, Linear, comput...
+#include "modle_tools/noisify.hpp"  // for noisify
+#include "modle_tools/stats.hpp"    // for compute_number_of_contacts_after_depl...
 
 namespace modle::tools {
 
@@ -53,10 +54,10 @@ void eval_subcmd(const modle::tools::config& c) {
   const auto bin_size = static_cast<std::size_t>(
       hdf5::read_attribute_int(c.path_to_input_matrix.string(), "bin-size"));
 
-  auto chr_list =  // This cannot be made const
+  auto chrom_list =  // This cannot be made const
       select_chromosomes_for_eval(c.path_to_input_matrix.string(),
                                   c.path_to_reference_matrix.string(), bin_size);
-  if (chr_list.empty()) {
+  if (chrom_list.empty()) {
     throw std::runtime_error(fmt::format(
         FMT_STRING("Files {} and {} have 0 chromosomes in common. Make sure you are not trying "
                    "to compare different genome assemblies (chromosomes needs to have the same "
@@ -64,29 +65,29 @@ void eval_subcmd(const modle::tools::config& c) {
         c.path_to_input_matrix, c.path_to_reference_matrix));
   }
 
-  absl::flat_hash_map<std::string, std::pair<std::size_t, std::size_t>> chr_subranges;
-  if (!c.path_to_chr_subranges.empty()) {
-    const auto records = bed::Parser(c.path_to_chr_subranges).parse_all();
-    chr_subranges.reserve(records.size());
+  absl::flat_hash_map<std::string, std::pair<std::size_t, std::size_t>> chrom_subranges;
+  if (!c.path_to_chrom_subranges.empty()) {
+    const auto records = bed::Parser(c.path_to_chrom_subranges).parse_all();
+    chrom_subranges.reserve(records.size());
     std::transform(
-        records.begin(), records.end(), std::inserter(chr_subranges, chr_subranges.end()),
+        records.begin(), records.end(), std::inserter(chrom_subranges, chrom_subranges.end()),
         [](const auto& r) -> std::pair<std::string, std::pair<std::size_t, std::size_t>> {
           return {r.chrom, {r.chrom_start, r.chrom_end}};
         });
   }
 
   {
-    std::vector<std::string_view> chr_names(chr_list.size());
-    std::transform(chr_list.begin(), chr_list.end(), chr_names.begin(), [](const auto& p) {
+    std::vector<std::string_view> chrom_names(chrom_list.size());
+    std::transform(chrom_list.begin(), chrom_list.end(), chrom_names.begin(), [](const auto& p) {
       return std::string_view{p.first.data(), p.first.size()};
     });
-    if (chr_list.size() == 1) {
+    if (chrom_list.size() == 1) {
       fmt::print(stderr, FMT_STRING("Computing correlation for chromosome: '{}'\n"),
-                 chr_names.front());
+                 chrom_names.front());
     } else {
       fmt::print(stderr,
                  FMT_STRING("Computing correlation for the following {} chromosomes: '{}'\n"),
-                 chr_list.size(), absl::StrJoin(chr_names, "', '"));
+                 chrom_list.size(), absl::StrJoin(chrom_names, "', '"));
     }
   }
 
@@ -97,7 +98,7 @@ void eval_subcmd(const modle::tools::config& c) {
       return {nullptr, bigwig::close_bigwig_file};
     }
     return bigwig::init_bigwig_file(absl::StrCat(bn, "_", absl::StripPrefix(fname_suffix, "_")),
-                                    chr_list);
+                                    chrom_list);
   };
 
   // Init files and write bw header
@@ -132,7 +133,7 @@ void eval_subcmd(const modle::tools::config& c) {
   std::vector<double> sc_cross_corr_buff;
   std::vector<double> sc_cross_pval_buff;
 
-  auto pcc = [&](std::string_view chr_name, absl::Span<const uint32_t> v1,
+  auto pcc = [&](std::string_view chrom_name, absl::Span<const uint32_t> v1,
                  absl::Span<const uint32_t> v2, std::size_t ncols, std::size_t offset,
                  std::vector<double>& corr_buff, std::vector<double>& pval_buff, Transformation t) {
     if (!c.compute_pearson) {
@@ -142,9 +143,9 @@ void eval_subcmd(const modle::tools::config& c) {
     compute_pearson_over_range(v1, v2, corr_buff, pval_buff, nrows, ncols, t);
     switch (t) {
       case Transformation::Linear:
-        bigwig::write_range(std::string{chr_name}, corr_buff, offset, bin_size, bin_size,
+        bigwig::write_range(std::string{chrom_name}, corr_buff, offset, bin_size, bin_size,
                             bw_corr_linear_pearson);
-        bigwig::write_range(std::string{chr_name}, pval_buff, offset, bin_size, bin_size,
+        bigwig::write_range(std::string{chrom_name}, pval_buff, offset, bin_size, bin_size,
                             bw_pv_linear_pearson);
         fmt::print(stderr,
                    FMT_STRING("Pearson \"linear\" correlation calculation "
@@ -152,9 +153,9 @@ void eval_subcmd(const modle::tools::config& c) {
                    absl::FormatDuration(absl::Now() - t0));
         break;
       case Transformation::Cross:
-        bigwig::write_range(std::string{chr_name}, corr_buff, offset, bin_size, bin_size,
+        bigwig::write_range(std::string{chrom_name}, corr_buff, offset, bin_size, bin_size,
                             bw_corr_cross_pearson);
-        bigwig::write_range(std::string{chr_name}, pval_buff, offset, bin_size, bin_size,
+        bigwig::write_range(std::string{chrom_name}, pval_buff, offset, bin_size, bin_size,
                             bw_pv_cross_pearson);
         fmt::print(stderr,
                    FMT_STRING("Pearson \"cross\" correlation calculation completed in {}.\n"),
@@ -163,7 +164,7 @@ void eval_subcmd(const modle::tools::config& c) {
     }
   };
 
-  auto src = [&](std::string_view chr_name, absl::Span<const uint32_t> v1,
+  auto src = [&](std::string_view chrom_name, absl::Span<const uint32_t> v1,
                  absl::Span<const uint32_t> v2, std::size_t ncols, std::size_t offset,
                  std::vector<double>& corr_buff, std::vector<double>& pval_buff, Transformation t) {
     if (!c.compute_spearman) {
@@ -173,9 +174,9 @@ void eval_subcmd(const modle::tools::config& c) {
     compute_spearman_over_range(v1, v2, corr_buff, pval_buff, nrows, ncols, t);
     switch (t) {
       case Transformation::Linear:
-        bigwig::write_range(std::string{chr_name}, corr_buff, offset, bin_size, bin_size,
+        bigwig::write_range(std::string{chrom_name}, corr_buff, offset, bin_size, bin_size,
                             bw_corr_linear_spearman);
-        bigwig::write_range(std::string{chr_name}, pval_buff, offset, bin_size, bin_size,
+        bigwig::write_range(std::string{chrom_name}, pval_buff, offset, bin_size, bin_size,
                             bw_pv_linear_spearman);
         fmt::print(stderr,
                    FMT_STRING("Spearman \"linear\" correlation calculation "
@@ -183,9 +184,9 @@ void eval_subcmd(const modle::tools::config& c) {
                    absl::FormatDuration(absl::Now() - t0));
         break;
       case Transformation::Cross:
-        bigwig::write_range(std::string{chr_name}, corr_buff, offset, bin_size, bin_size,
+        bigwig::write_range(std::string{chrom_name}, corr_buff, offset, bin_size, bin_size,
                             bw_corr_cross_spearman);
-        bigwig::write_range(std::string{chr_name}, pval_buff, offset, bin_size, bin_size,
+        bigwig::write_range(std::string{chrom_name}, pval_buff, offset, bin_size, bin_size,
                             bw_pv_cross_spearman);
         fmt::print(stderr,
                    FMT_STRING("Spearman \"cross\" correlation calculation "
@@ -195,7 +196,7 @@ void eval_subcmd(const modle::tools::config& c) {
     }
   };
 
-  auto edist = [&](std::string_view chr_name, absl::Span<const uint32_t> v1,
+  auto edist = [&](std::string_view chrom_name, absl::Span<const uint32_t> v1,
                    absl::Span<const uint32_t> v2, std::size_t ncols, std::size_t offset,
                    std::vector<double>& sed_buff, Transformation t) {
     if (!c.compute_edist) {
@@ -205,13 +206,13 @@ void eval_subcmd(const modle::tools::config& c) {
     compute_euc_dist_over_range(v1, v2, sed_buff, nrows, ncols, t);
     switch (t) {
       case Transformation::Linear:
-        bigwig::write_range(std::string{chr_name}, sed_buff, offset, bin_size, bin_size,
+        bigwig::write_range(std::string{chrom_name}, sed_buff, offset, bin_size, bin_size,
                             bw_linear_sed);
         fmt::print(stderr, FMT_STRING("Euclidean dist. \"linear\" calculation completed in {}.\n"),
                    absl::FormatDuration(absl::Now() - t0));
         break;
       case Transformation::Cross:
-        bigwig::write_range(std::string{chr_name}, sed_buff, offset, bin_size, bin_size,
+        bigwig::write_range(std::string{chrom_name}, sed_buff, offset, bin_size, bin_size,
                             bw_cross_sed);
         fmt::print(stderr, FMT_STRING("Euclidean dist. \"cross\" calculation completed in {}.\n"),
                    absl::FormatDuration(absl::Now() - t0));
@@ -219,57 +220,57 @@ void eval_subcmd(const modle::tools::config& c) {
     }
   };
 
-  absl::flat_hash_map<std::string, std::size_t> ref_chr_idxes;
-  absl::flat_hash_map<std::string, std::size_t> inp_chr_idxes;
+  absl::flat_hash_map<std::string, std::size_t> ref_chrom_idxes;
+  absl::flat_hash_map<std::string, std::size_t> inp_chrom_idxes;
 
   std::size_t i = 0;
-  for (auto& name : ref_cooler.get_chr_names()) {
-    ref_chr_idxes.emplace(std::move(name), i++);
+  for (auto& name : ref_cooler.get_chrom_names()) {
+    ref_chrom_idxes.emplace(std::move(name), i++);
   }
   i = 0;
-  for (auto& name : input_cooler.get_chr_names()) {
-    inp_chr_idxes.emplace(std::move(name), i++);
+  for (auto& name : input_cooler.get_chrom_names()) {
+    inp_chrom_idxes.emplace(std::move(name), i++);
   }
 
-  for (const auto& chr : chr_list) {
+  for (const auto& chrom : chrom_list) {
     std::string q;
-    for (const auto& prefix : {"chr", "CHR", "Chr"}) {
-      if (absl::StartsWith(chr.first, prefix)) {
-        q = absl::StripPrefix(chr.first, prefix);
+    for (const auto& prefix : {"chrom", "chrom", "chrom"}) {
+      if (absl::StartsWith(chrom.first, prefix)) {
+        q = absl::StripPrefix(chrom.first, prefix);
       } else {
-        q = absl::StrCat(prefix, chr.first);
+        q = absl::StrCat(prefix, chrom.first);
       }
-      if (auto it = ref_chr_idxes.find(q); it != ref_chr_idxes.end()) {
+      if (auto it = ref_chrom_idxes.find(q); it != ref_chrom_idxes.end()) {
         const auto idx = it->second;
-        ref_chr_idxes.emplace(chr.first, idx);
-        ref_chr_idxes.erase(q);
+        ref_chrom_idxes.emplace(chrom.first, idx);
+        ref_chrom_idxes.erase(q);
       }
-      if (auto it = inp_chr_idxes.find(q); it != inp_chr_idxes.end()) {
+      if (auto it = inp_chrom_idxes.find(q); it != inp_chrom_idxes.end()) {
         const auto idx = it->second;
-        inp_chr_idxes.emplace(chr.first, idx);
-        inp_chr_idxes.erase(q);
+        inp_chrom_idxes.emplace(chrom.first, idx);
+        inp_chrom_idxes.erase(q);
       }
     }
   }
 
   std::array<std::thread, 6> threads;  // NOLINT
-  for (const auto& chr : chr_list) {
-    const auto& chr_name = chr.first;
-    auto chr_subrange = std::make_pair(0UL, static_cast<std::size_t>(chr.second));
-    if (!chr_subranges.empty()) {
-      auto it = chr_subranges.find(chr_name);
+  for (const auto& chrom : chrom_list) {
+    const auto& chrom_name = chrom.first;
+    auto chrom_subrange = std::make_pair(0UL, static_cast<std::size_t>(chrom.second));
+    if (!chrom_subranges.empty()) {
+      auto it = chrom_subranges.find(chrom_name);
 
-      if (it != chr_subranges.end()) {
-        chr_subrange = it->second;
+      if (it != chrom_subranges.end()) {
+        chrom_subrange = it->second;
       } else {  // Try common prefixes
-        for (const auto& prefix : {"chr", "CHR", "Chr"}) {
-          if (absl::StartsWith(chr_name, prefix)) {
-            it = chr_subranges.find(absl::StripPrefix(chr_name, prefix));
+        for (const auto& prefix : {"chrom", "chrom", "chrom"}) {
+          if (absl::StartsWith(chrom_name, prefix)) {
+            it = chrom_subranges.find(absl::StripPrefix(chrom_name, prefix));
           } else {
-            it = chr_subranges.find(absl::StrCat(prefix, chr_name));
+            it = chrom_subranges.find(absl::StrCat(prefix, chrom_name));
           }
-          if (it != chr_subranges.end()) {
-            chr_subrange = it->second;
+          if (it != chrom_subranges.end()) {
+            chrom_subrange = it->second;
             break;
           }
         }
@@ -277,24 +278,24 @@ void eval_subcmd(const modle::tools::config& c) {
     }
 
     auto t0 = absl::Now();
-    fmt::print(stderr, FMT_STRING("Reading contacts for '{}' into memory...\n"), chr_name);
-    if (!ref_cooler.has_contacts_for_chr(ref_chr_idxes.at(chr_name))) {
+    fmt::print(stderr, FMT_STRING("Reading contacts for '{}' into memory...\n"), chrom_name);
+    if (!ref_cooler.has_contacts_for_chr(ref_chrom_idxes.at(chrom_name))) {
       fmt::print(stderr,
                  FMT_STRING("WARNING: reference contact matrix doesn't have any contacts for "
                             "'{}'. SKIPPING!\n"),
-                 chr_name);
+                 chrom_name);
       continue;
     }
 
-    if (!input_cooler.has_contacts_for_chr(inp_chr_idxes.at(chr_name))) {
+    if (!input_cooler.has_contacts_for_chr(inp_chrom_idxes.at(chrom_name))) {
       fmt::print(stderr,
                  FMT_STRING("WARNING: contact matrix doesn't have any contacts "
                             "for '{}'. SKIPPING!\n"),
-                 chr_name);
+                 chrom_name);
       continue;
     }
 
-    auto cmatrix1 = ref_cooler.cooler_to_cmatrix(chr_name, nrows, chr_subrange);
+    auto cmatrix1 = ref_cooler.cooler_to_cmatrix(chrom_name, nrows, chrom_subrange);
     if (c.deplete_contacts_from_reference) {
       cmatrix1.deplete_contacts(c.depletion_multiplier);
     }
@@ -306,7 +307,7 @@ void eval_subcmd(const modle::tools::config& c) {
                cmatrix1.get_matrix_size_in_mb());
     t0 = absl::Now();
 
-    const auto cmatrix2 = input_cooler.cooler_to_cmatrix(chr_name, nrows, chr_subrange);
+    const auto cmatrix2 = input_cooler.cooler_to_cmatrix(chrom_name, nrows, chrom_subrange);
     fmt::print(stderr,
                FMT_STRING("Read {:.2f}M contacts for a {}x{} input matrix in {} using "
                           "{:.2f} MB of RAM.\n"),
@@ -320,7 +321,7 @@ void eval_subcmd(const modle::tools::config& c) {
                                  "'{}' between files "
                                  "{} and {}: Contact matrices should have the same shape "
                                  "m1=[{}][{}], m2=[{}][{}]"),
-                      chr_name, c.path_to_reference_matrix, c.path_to_input_matrix,
+                      chrom_name, c.path_to_reference_matrix, c.path_to_input_matrix,
                       cmatrix1.nrows(), cmatrix1.ncols(), cmatrix2.nrows(), cmatrix2.ncols()));
     }
 
@@ -330,25 +331,25 @@ void eval_subcmd(const modle::tools::config& c) {
     const auto& v2 = cmatrix2.get_raw_count_vector();
     assert(v1.size() == v2.size());  // NOLINT
 
-    fmt::print(stderr, FMT_STRING("Computing correlation(s) for '{}'...\n"), chr_name);
+    fmt::print(stderr, FMT_STRING("Computing correlation(s) for '{}'...\n"), chrom_name);
 
-    threads[0] =
-        std::thread(pcc, chr_name, v1, v2, ncols, chr_subrange.first, std::ref(pc_linear_corr_buff),
-                    std::ref(pc_linear_pval_buff), Transformation::Linear);
-    threads[1] =
-        std::thread(pcc, chr_name, v1, v2, ncols, chr_subrange.first, std::ref(pc_cross_corr_buff),
-                    std::ref(pc_cross_pval_buff), Transformation::Cross);
-    threads[2] =
-        std::thread(src, chr_name, v1, v2, ncols, chr_subrange.first, std::ref(sc_linear_corr_buff),
-                    std::ref(sc_linear_pval_buff), Transformation::Linear);
-    threads[3] =
-        std::thread(src, chr_name, v1, v2, ncols, chr_subrange.first, std::ref(sc_cross_corr_buff),
-                    std::ref(sc_cross_pval_buff), Transformation::Cross);
+    threads[0] = std::thread(pcc, chrom_name, v1, v2, ncols, chrom_subrange.first,
+                             std::ref(pc_linear_corr_buff), std::ref(pc_linear_pval_buff),
+                             Transformation::Linear);
+    threads[1] = std::thread(pcc, chrom_name, v1, v2, ncols, chrom_subrange.first,
+                             std::ref(pc_cross_corr_buff), std::ref(pc_cross_pval_buff),
+                             Transformation::Cross);
+    threads[2] = std::thread(src, chrom_name, v1, v2, ncols, chrom_subrange.first,
+                             std::ref(sc_linear_corr_buff), std::ref(sc_linear_pval_buff),
+                             Transformation::Linear);
+    threads[3] = std::thread(src, chrom_name, v1, v2, ncols, chrom_subrange.first,
+                             std::ref(sc_cross_corr_buff), std::ref(sc_cross_pval_buff),
+                             Transformation::Cross);
 
-    threads[4] = std::thread(edist, chr_name, v1, v2, ncols, chr_subrange.first,
+    threads[4] = std::thread(edist, chrom_name, v1, v2, ncols, chrom_subrange.first,
                              std::ref(ed_linear_buff), Transformation::Linear);
 
-    threads[5] = std::thread(edist, chr_name, v1, v2, ncols, chr_subrange.first,
+    threads[5] = std::thread(edist, chrom_name, v1, v2, ncols, chrom_subrange.first,
                              std::ref(ed_cross_buff), Transformation::Cross);
     for (auto& t : threads) {
       t.join();
@@ -366,15 +367,15 @@ void stats_subcmd(const modle::tools::config& c) {
 
   const auto nchroms = m1.get_nchroms();
   const auto bin_size = m1.get_bin_size();
-  const auto chr_names = m1.get_chr_names();
-  const auto chr_sizes = m1.get_chr_sizes();
+  const auto chrom_names = m1.get_chrom_names();
+  const auto chrom_sizes = m1.get_chrom_sizes();
 
-  absl::flat_hash_map<std::string, std::size_t> chr_start_offsets;
-  if (!c.path_to_chr_subranges.empty()) {
-    modle::bed::Parser p(c.path_to_chr_subranges);
+  absl::flat_hash_map<std::string, std::size_t> chrom_start_offsets;
+  if (!c.path_to_chrom_subranges.empty()) {
+    modle::bed::Parser p(c.path_to_chrom_subranges);
     const auto buff = p.parse_all();
     std::transform(
-        buff.begin(), buff.end(), std::inserter(chr_start_offsets, chr_start_offsets.end()),
+        buff.begin(), buff.end(), std::inserter(chrom_start_offsets, chrom_start_offsets.end()),
         [](const auto& record) { return std::make_pair(record.chrom, record.chrom_start); });
   }
 
@@ -396,53 +397,54 @@ void stats_subcmd(const modle::tools::config& c) {
   }
 
   // Write header
-  fmt::print(stdout,
-             "chr_name\ttot_number_of_contacts_1\ttot_number_of_contacts_2\tavg_number_of_contacts_"
-             "1\tavg_number_of_contacts_2\tfraction_of_graylisted_bins\n");
+  fmt::print(
+      stdout,
+      "chrom_name\ttot_number_of_contacts_1\ttot_number_of_contacts_2\tavg_number_of_contacts_"
+      "1\tavg_number_of_contacts_2\tfraction_of_graylisted_bins\n");
 
   std::size_t tot_contacts = 0;
   std::size_t tot_contacts_after_depl = 0;
   std::size_t tot_number_of_pixels = 0;
 
   for (auto i = 0UL; i < nchroms; ++i) {
-    const auto& chr_name = chr_names[i];
-    const auto& chr_size = chr_sizes[i];
+    const auto& chrom_name = chrom_names[i];
+    const auto& chrom_size = chrom_sizes[i];
 
     // Skip chromosome found in the exclusion list
-    if (c.chromosomes_excluded.contains(chr_name)) {
+    if (c.chromosomes_excluded.contains(chrom_name)) {
       continue;
     }
 
-    // Read contacts for chr_name into memory
-    auto cmatrix = m1.cooler_to_cmatrix(chr_name, c.diagonal_width, bin_size);
+    // Read contacts for chrom_name into memory
+    auto cmatrix = m1.cooler_to_cmatrix(chrom_name, c.diagonal_width, bin_size);
 
     const auto hist = cmatrix.compute_row_wise_contact_histogram();
     const auto mask = cmatrix.generate_mask_for_bins_without_contacts();
 
-    const auto chr_contacts = cmatrix.get_tot_contacts();
-    const auto chr_contacts_after_depl = compute_number_of_contacts_after_depletion(
+    const auto chrom_contacts = cmatrix.get_tot_contacts();
+    const auto chrom_contacts_after_depl = compute_number_of_contacts_after_depletion(
         cmatrix, hist, mask.count(), c.depletion_multiplier);
-    assert(chr_contacts_after_depl <= chr_contacts);  // NOLINT
+    assert(chrom_contacts_after_depl <= chrom_contacts);  // NOLINT
 
-    const auto chr_avg_contacts =
-        static_cast<double>(chr_contacts) / static_cast<double>(cmatrix.npixels_after_masking());
-    const auto chr_avg_contacts_after_depl = static_cast<double>(chr_contacts_after_depl) /
-                                             static_cast<double>(cmatrix.npixels_after_masking());
+    const auto chrom_avg_contacts =
+        static_cast<double>(chrom_contacts) / static_cast<double>(cmatrix.npixels_after_masking());
+    const auto chrom_avg_contacts_after_depl = static_cast<double>(chrom_contacts_after_depl) /
+                                               static_cast<double>(cmatrix.npixels_after_masking());
     const auto fraction_of_graylisted_bins =
         1.0 - (static_cast<double>(cmatrix.npixels_after_masking()) /  // NOLINT
                static_cast<double>(cmatrix.npixels()));
 
-    tot_contacts += chr_contacts;
-    tot_contacts_after_depl += chr_contacts_after_depl;
+    tot_contacts += chrom_contacts;
+    tot_contacts_after_depl += chrom_contacts_after_depl;
     tot_number_of_pixels += cmatrix.npixels_after_masking();
 
     // clang-format off
     fmt::print(stdout, FMT_STRING("{}\t{}\t{}\t{}\t{}\t{}\n"),
-               chr_name,
-               chr_contacts,
-               chr_contacts_after_depl,
-               chr_avg_contacts,
-               chr_avg_contacts_after_depl,
+               chrom_name,
+               chrom_contacts,
+               chrom_contacts_after_depl,
+               chrom_avg_contacts,
+               chrom_avg_contacts_after_depl,
                fraction_of_graylisted_bins);
     // clang-format on
 
@@ -452,7 +454,7 @@ void stats_subcmd(const modle::tools::config& c) {
 
     if (m2) {
       cmatrix.deplete_contacts(c.depletion_multiplier);
-      m2->write_or_append_cmatrix_to_file(cmatrix, chr_name, 0L, chr_size, chr_size, true);
+      m2->write_or_append_cmatrix_to_file(cmatrix, chrom_name, 0L, chrom_size, chrom_size, true);
     }
   }
 
@@ -462,5 +464,7 @@ void stats_subcmd(const modle::tools::config& c) {
       static_cast<double>(tot_contacts) / static_cast<double>(tot_number_of_pixels),
       static_cast<double>(tot_contacts_after_depl) / static_cast<double>(tot_number_of_pixels), 0);
 }
+
+void noisify_subcmd(const modle::tools::config& c) { modle::tools::noisify(c); }
 
 }  // namespace modle::tools

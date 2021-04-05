@@ -23,7 +23,7 @@
 #include "modle/cooler.hpp"                      // for Cooler, Cooler::READ_ONLY
 #include "modle/correlation.hpp"                 // for compute_pearson_significance, compute_sp...
 #include "modle/suppress_compiler_warnings.hpp"  // for DISABLE_WARNING_POP, DISABLE_WARNING_PUSH
-#include "modle/utils.hpp"                       // for chr_less_than_operator
+#include "modle/utils.hpp"                       // for chrom_less_than_operator
 
 namespace modle::tools {
 std::vector<std::pair<std::string, int64_t>> select_chromosomes_for_eval(
@@ -31,21 +31,21 @@ std::vector<std::pair<std::string, int64_t>> select_chromosomes_for_eval(
   std::vector<std::string> str_buff;
   std::vector<int64_t> int_buff;
 
-  auto build_chr_set = [&](std::string_view path_to_cooler) {
+  auto build_chrom_set = [&](std::string_view path_to_cooler) {
     try {
       cooler::Cooler c(path_to_cooler, cooler::Cooler::READ_ONLY, bin_size);
-      c.get_chr_names(str_buff);
-      c.get_chr_sizes(int_buff);
+      c.get_chrom_names(str_buff);
+      c.get_chrom_sizes(int_buff);
 
       assert(str_buff.size() == c.get_nchroms());
       assert(int_buff.size() == str_buff.size());
 
-      absl::btree_set<std::pair<std::string, int64_t>> chr_set;
+      absl::btree_set<std::pair<std::string, int64_t>> chrom_set;
 
       for (auto i = 0UL; i < str_buff.size(); ++i) {
-        chr_set.emplace(str_buff[i], int_buff[i]);
+        chrom_set.emplace(str_buff[i], int_buff[i]);
       }
-      return chr_set;
+      return chrom_set;
 
     } catch (const std::runtime_error &e) {
       throw std::runtime_error(fmt::format(
@@ -53,15 +53,16 @@ std::vector<std::pair<std::string, int64_t>> select_chromosomes_for_eval(
     }
   };
 
-  std::vector<std::pair<std::string, int64_t>> chr_intersection;
-  const auto chr_set1 = build_chr_set(path_to_cooler1);
-  const auto chr_set2 = build_chr_set(path_to_cooler2);
+  std::vector<std::pair<std::string, int64_t>> chrom_intersection;
+  const auto chrom_set1 = build_chrom_set(path_to_cooler1);
+  const auto chrom_set2 = build_chrom_set(path_to_cooler2);
 
-  absl::c_set_intersection(
-      chr_set1, chr_set2, std::back_inserter(chr_intersection),
-      [](const auto &c1, const auto &c2) { return modle::utils::chr_less_than_operator(c1, c2); });
+  absl::c_set_intersection(chrom_set1, chrom_set2, std::back_inserter(chrom_intersection),
+                           [](const auto &c1, const auto &c2) {
+                             return modle::utils::chrom_less_than_operator(c1, c2);
+                           });
 
-  return chr_intersection;
+  return chrom_intersection;
 }
 
 template <typename N>

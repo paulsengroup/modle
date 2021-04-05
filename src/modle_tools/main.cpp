@@ -28,6 +28,9 @@ int main(int argc, char** argv) {
       case modle::tools::Cli::subcommand::stats:
         modle::tools::stats_subcmd(c);
         break;
+      case modle::tools::Cli::subcommand::noisify:
+        modle::tools::noisify_subcmd(c);
+        break;
       default:
         throw std::runtime_error(
             "Default branch in switch statement in main.cpp should be unreachable! If you see "

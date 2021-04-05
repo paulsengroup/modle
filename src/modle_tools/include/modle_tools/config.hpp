@@ -13,10 +13,11 @@ namespace modle::tools {
 
 struct config {
   std::filesystem::path path_to_input_matrix;
+  std::filesystem::path path_to_output_matrix;
   std::filesystem::path path_to_reference_matrix;
-  std::filesystem::path path_to_chr_subranges;
+  std::filesystem::path path_to_chrom_subranges;
   std::filesystem::path output_base_name;
-  std::filesystem::path chr_sizes;
+  std::filesystem::path chrom_sizes;
   std::filesystem::path tmp_dir{std::filesystem::temp_directory_path()};
 
   bool force{false};
@@ -33,6 +34,11 @@ struct config {
   std::size_t sliding_window_size{0};
   std::size_t sliding_window_overlap{0};
   bool deplete_contacts_from_reference{true};
+
+  // noisify
+  double gamma_k{1};
+  double gamma_theta{35'000};
+  uint64_t seed{0};
 
   // stats
   bool dump_depleted_matrices{false};

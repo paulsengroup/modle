@@ -32,7 +32,7 @@ namespace modle::tools {
 
 class Cli {
  public:
-  enum subcommand : uint_fast8_t { eval, stats, help };
+  enum subcommand : uint_fast8_t { eval, noisify, stats, help };
 
  private:
   int _argc;
@@ -42,11 +42,6 @@ class Cli {
   config _config{};
   CLI::App _cli{};
   subcommand _subcommand{subcommand::help};
-  const absl::btree_set<std::string_view> _allowed_genome_ids{
-      // See https://github.com/aidenlab/juicer/wiki/Pre#usage
-      {"hg18"},      {"hg19"},      {"hg38"},    {"dMel"},    {"mm9"},     {"mm10"},
-      {"anasPlat1"}, {"bTaurus3"},  {"canFam3"}, {"equCab2"}, {"galGal4"}, {"Pf3D7"},
-      {"sacCer3"},   {"sCerS288c"}, {"susScr3"}, {"TAIR10"}};
 
   inline void make_eval_subcommand() {
     // clang-format off
@@ -54,7 +49,7 @@ class Cli {
     sc->alias("eval");
 
     sc->add_option("-i,--input", this->_config.path_to_input_matrix, "Path to a contact matrix in Cooler format")->check(CLI::ExistingFile)->required();
-    sc->add_option("--chromosome-subrange-file", this->_config.path_to_chr_subranges, "Path to BED file with subranges of the chromosomes to be processed.")->check(CLI::ExistingFile);
+    sc->add_option("--chromosome-subrange-file", this->_config.path_to_chrom_subranges, "Path to BED file with subranges of the chromosomes to be processed.")->check(CLI::ExistingFile);
     sc->add_option("--tmp-dir", this->_config.tmp_dir, "Path where to store temporary files.")->capture_default_str();
     sc->add_flag("--keep-temporary-files", this->_config.keep_tmp_files, "Do not delete temporary files.")->capture_default_str();
     sc->add_flag("-f,--force", this->_config.force, "Overwrite existing file(s).")->capture_default_str();
@@ -72,12 +67,25 @@ class Cli {
     // clang-format on
   }
 
+  inline void make_noisify_subcommand() {
+    // clang-format off
+    auto *sc = this->_cli.add_subcommand("noisify", "Add noise to ModLE's contact matrix in Cooler format.")->fallthrough();
+    sc->add_option("-i,--input", this->_config.path_to_input_matrix, "Path to a contact matrix in Cooler format")->check(CLI::ExistingFile)->required();
+    sc->add_option("-o,--output-base-name", this->_config.path_to_output_matrix, "Output file name (possibly including directories) to use for output.")->required();
+    sc->add_option("-w,--diagonal-width", this->_config.diagonal_width, "Diagonal width of the input contact matrix.")->check(CLI::NonNegativeNumber)->required();
+    sc->add_flag("-f,--force", this->_config.force, "Overwrite existing file(s).")->capture_default_str();
+    sc->add_option("-k,--shape", this->_config.gamma_k, "Shape parameter k of the Gamma distribution used to add noise to the contact matrix.")->check(CLI::NonNegativeNumber)->capture_default_str();
+    sc->add_option("--theta,--scale", this->_config.gamma_theta, "Scale parameter theta of the Gamma distribution used to add noise to the contact matrix.")->check(CLI::NonNegativeNumber)->capture_default_str();
+    sc->add_option("--seed", this->_config.seed, "Seed used to initialize the PRNG.")->check(CLI::NonNegativeNumber)->capture_default_str();
+    // clang-format on
+  }
+
   inline void make_stats_subcommand() {
     // clang-format off
     auto *sc = this->_cli.add_subcommand("statistics", "Compute several useful statistics for a given Cooler file.")->fallthrough();
     sc->alias("stats");
     sc->add_option("-i,--input", this->_config.path_to_input_matrix, "Path to a contact matrix in Cooler format")->check(CLI::ExistingFile)->required();
-    sc->add_option("--chromosome-subrange-file", this->_config.path_to_chr_subranges, "Path to BED file with subranges of the chromosomes to be processed.")->check(CLI::ExistingFile);
+    sc->add_option("--chromosome-subrange-file", this->_config.path_to_chrom_subranges, "Path to BED file with subranges of the chromosomes to be processed.")->check(CLI::ExistingFile);
     sc->add_flag("-f,--force", this->_config.force, "Overwrite existing file(s).")->capture_default_str();
     sc->add_option("--bin-size", this->_config.bin_size, "Bin size to use when calculating the statistics. Required in case of MCool files.")->check(CLI::PositiveNumber);
     sc->add_option("-w,--diagonal-width", this->_config.diagonal_width, "Diagonal width.")->check(CLI::PositiveNumber)->required();
@@ -95,6 +103,7 @@ class Cli {
     this->_cli.require_subcommand(1);
     // clang-format on
     this->make_eval_subcommand();
+    this->make_noisify_subcommand();
     this->make_stats_subcommand();
   }
 
@@ -138,20 +147,19 @@ class Cli {
       }
     }
 
-    if (!c.chr_sizes.empty()) {
-      if (std::filesystem::exists(c.chr_sizes)) {
-        if (std::filesystem::is_directory(c.chr_sizes)) {
+    if (!c.chrom_sizes.empty()) {
+      if (std::filesystem::exists(c.chrom_sizes)) {
+        if (std::filesystem::is_directory(c.chrom_sizes)) {
           absl::StrAppendFormat(
               &errors,
-              "--chr-sizes should be the path to a file or one of %s, but is a directory\n",
-              absl::StrJoin(this->_allowed_genome_ids, ", "));
+              "--chrom-sizes='%s' should be the path to an existing chrom.sizes file, "
+              "but is a directory.\n",
+              c.chrom_sizes);
         }
       } else {
-        if (!this->_allowed_genome_ids.contains(c.chr_sizes.string())) {
-          absl::StrAppendFormat(
-              &errors, "--chr-sizes='%s' should be the path to an existing file or one of %s.\n",
-              c.chr_sizes, absl::StrJoin(this->_allowed_genome_ids, ", "));
-        }
+        absl::StrAppendFormat(
+            &errors, "--chrom-sizes='%s' should be the path to an existing file or one of.\n",
+            c.chrom_sizes);
       }
     }
 
@@ -169,8 +177,8 @@ class Cli {
     assert(this->_cli.get_subcommand("stats")->parsed());  // NOLINT
     const auto& c = this->_config;
 
-    if (!c.path_to_chr_subranges.empty()) {
-      auto p = modle::bed::Parser(c.path_to_chr_subranges);
+    if (!c.path_to_chrom_subranges.empty()) {
+      auto p = modle::bed::Parser(c.path_to_chrom_subranges);
       if (const auto s = p.validate(); !s.empty()) {
         absl::StrAppendFormat(&errors,
                               "Validation of file '%s' failed with the following error: %s.\n",
@@ -214,6 +222,9 @@ class Cli {
     std::string errors;
     if (this->_cli.get_subcommand("eval")->parsed()) {
       errors = this->validate_eval_subcommand();
+    } else if (this->_cli.get_subcommand("noisify")->parsed()) {
+      // errors = this->validate_noisify_subcommand();
+      (void)0;
     } else if (this->_cli.get_subcommand("stats")->parsed()) {
       errors = this->validate_stats_subcommand();
     } else {
@@ -248,6 +259,8 @@ class Cli {
       this->_cli.parse(this->_argc, this->_argv);
       if (this->_cli.get_subcommand("evaluate")->parsed()) {
         this->_subcommand = subcommand::eval;
+      } else if (this->_cli.get_subcommand("noisify")->parsed()) {
+        this->_subcommand = subcommand::noisify;
       } else if (this->_cli.get_subcommand("statistics")->parsed()) {
         this->_subcommand = subcommand::stats;
       } else {
