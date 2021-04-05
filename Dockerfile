@@ -9,7 +9,7 @@ ARG build_type
 
 ARG XOSHIRO_CPP_VER=1.1
 ARG LIBBIGWIG_VER=0.4.6
-ARG CONAN_VER=1.34.1
+ARG CONAN_VER=1.35.0
 
 ENV CC=/usr/bin/gcc
 ENV CXX=/usr/bin/g++
@@ -42,10 +42,7 @@ RUN dnf update -y \
     && mkdir -p /usr/local/bin                                           \
     && ln -s /conan_venv/bin/conan /usr/local/bin/conan                  \
     && mkdir "$build_dir" && cd "$build_dir"       \
-    && env CC=/usr/bin/gcc                         \
-           CXX=/usr/bin/g++                        \
-           LD=/usr/bin/ld                          \
-       cmake -DCMAKE_BUILD_TYPE=$build_type        \
+    && cmake -DCMAKE_BUILD_TYPE=$build_type        \
              -DENABLE_IPO=ON                       \
              -DWARNINGS_AS_ERRORS=ON               \
              -DENABLE_TESTING=ON                   \
