@@ -279,7 +279,7 @@ void eval_subcmd(const modle::tools::config& c) {
 
     auto t0 = absl::Now();
     fmt::print(stderr, FMT_STRING("Reading contacts for '{}' into memory...\n"), chrom_name);
-    if (!ref_cooler.has_contacts_for_chr(ref_chrom_idxes.at(chrom_name))) {
+    if (!ref_cooler.has_contacts_for_chrom(ref_chrom_idxes.at(chrom_name))) {
       fmt::print(stderr,
                  FMT_STRING("WARNING: reference contact matrix doesn't have any contacts for "
                             "'{}'. SKIPPING!\n"),
@@ -287,7 +287,7 @@ void eval_subcmd(const modle::tools::config& c) {
       continue;
     }
 
-    if (!input_cooler.has_contacts_for_chr(inp_chrom_idxes.at(chrom_name))) {
+    if (!input_cooler.has_contacts_for_chrom(inp_chrom_idxes.at(chrom_name))) {
       fmt::print(stderr,
                  FMT_STRING("WARNING: contact matrix doesn't have any contacts "
                             "for '{}'. SKIPPING!\n"),

@@ -15,7 +15,7 @@ include(CheckCXXCompilerFlag)
 # Link this 'library' to set the c++ standard / compile-time options requested
 add_library(project_options INTERFACE)
 
-if (ENABLE_CXX20)
+if(ENABLE_CXX20)
   check_cxx_compiler_flag("-std=c++20" CXX20_COMPILER_AVAILABLE)
 endif()
 
