@@ -79,6 +79,8 @@ template <typename T>
 template <typename T>
 constexpr auto get_printable_type_name() noexcept;
 
+[[maybe_unused]] [[nodiscard]] constexpr bool ndebug_defined() noexcept;
+
 }  // namespace modle::utils
 
 #include "../../utils_impl.hpp"  // IWYU pragma: keep

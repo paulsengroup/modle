@@ -220,4 +220,12 @@ constexpr auto get_printable_type_name() noexcept {
   return name;
 }
 
+constexpr bool ndebug_defined() noexcept {
+#ifdef NDEBUG
+  return true;
+#else
+  return false;
+#endif
+}
+
 }  // namespace modle::utils
