@@ -127,26 +127,39 @@ class Simulation : Config {
                       absl::Span<const bp_t> rev_moves,
                       absl::Span<const bp_t> fwd_moves) noexcept(utils::ndebug_defined());
 
-  // Loop over lefs and identify colliding extr. units (i.e. units that travel in opposite
-  // direction and that are within <p>dist_threshold</p> bp from each other
   template <typename I>
-  inline void check_lef_lef_collisions(const Chromosome* chrom, absl::Span<const Lef> lefs,
-                                       absl::Span<const ExtrusionBarrier> barriers,
-                                       absl::Span<const std::size_t> rev_lef_ranks,
-                                       absl::Span<const std::size_t> fwd_lef_ranks,
-                                       absl::Span<bp_t> rev_moves, absl::Span<bp_t> fwd_moves,
-                                       absl::Span<I> rev_collisions, absl::Span<I> fwd_collisions,
-                                       PRNG_t& rand_eng) noexcept(utils::ndebug_defined());
+  inline void process_lef_bar_collisions(absl::Span<const Lef> lefs,
+                                         absl::Span<const std::size_t> rev_lef_ranks,
+                                         absl::Span<const std::size_t> fwd_lef_ranks,
+                                         absl::Span<bp_t> rev_moves, absl::Span<bp_t> fwd_moves,
+                                         absl::Span<const ExtrusionBarrier> extr_barriers,
+                                         const boost::dynamic_bitset<>& barrier_mask,
+                                         absl::Span<I> rev_collisions, absl::Span<I> fwd_collisions,
+                                         modle::PRNG_t& rand_eng) noexcept(utils::ndebug_defined());
 
   template <typename I>
-  inline void check_lef_bar_collisions(absl::Span<const Lef> lefs,
-                                       absl::Span<const std::size_t> rev_lef_ranks,
-                                       absl::Span<const std::size_t> fwd_lef_ranks,
-                                       absl::Span<bp_t> rev_moves, absl::Span<bp_t> fwd_moves,
-                                       absl::Span<const ExtrusionBarrier> extr_barriers,
-                                       const boost::dynamic_bitset<>& barrier_mask,
-                                       absl::Span<I> rev_collisions, absl::Span<I> fwd_collisions,
-                                       modle::PRNG_t& rand_eng) noexcept(utils::ndebug_defined());
+  inline void process_lef_lef_collisions(const Chromosome* chrom, absl::Span<const Lef> lefs,
+                                         absl::Span<const ExtrusionBarrier> barriers,
+                                         absl::Span<const std::size_t> rev_lef_ranks,
+                                         absl::Span<const std::size_t> fwd_lef_ranks,
+                                         absl::Span<bp_t> rev_moves, absl::Span<bp_t> fwd_moves,
+                                         absl::Span<I> rev_collisions, absl::Span<I> fwd_collisions,
+                                         PRNG_t& rand_eng) noexcept(utils::ndebug_defined());
+
+  template <typename I>
+  inline void process_primary_lef_lef_collisions(
+      const Chromosome* chrom, absl::Span<const Lef> lefs,
+      absl::Span<const ExtrusionBarrier> barriers, absl::Span<const std::size_t> rev_lef_ranks,
+      absl::Span<const std::size_t> fwd_lef_ranks, absl::Span<bp_t> rev_moves,
+      absl::Span<bp_t> fwd_moves, absl::Span<I> rev_collisions, absl::Span<I> fwd_collisions,
+      PRNG_t& rand_eng) noexcept(utils::ndebug_defined());
+
+  template <typename I>
+  inline void process_secondary_lef_lef_collisions(
+      const Chromosome* chrom, absl::Span<const Lef> lefs,
+      absl::Span<const std::size_t> rev_lef_ranks, absl::Span<const std::size_t> fwd_lef_ranks,
+      absl::Span<bp_t> rev_moves, absl::Span<bp_t> fwd_moves, absl::Span<I> rev_collisions,
+      absl::Span<I> fwd_collisions, PRNG_t& rand_eng) noexcept(utils::ndebug_defined());
 
   inline std::size_t register_contacts(
       Chromosome* chrom, absl::Span<const Lef> lefs,
@@ -203,27 +216,27 @@ class Simulation : Config {
   }
 
   template <typename I>
-  inline void test_check_lef_lef_collisions(
+  inline void test_process_lef_lef_collisions(
       const Chromosome* const chrom, absl::Span<const Lef> lefs,
       absl::Span<const ExtrusionBarrier> barriers, absl::Span<const std::size_t> rev_lef_rank_buff,
       absl::Span<const std::size_t> fwd_lef_rank_buff, absl::Span<bp_t> rev_move_buff,
       absl::Span<bp_t> fwd_move_buff, absl::Span<I> rev_collision_buff,
       absl::Span<I> fwd_collision_buff, modle::PRNG_t& rand_eng) {
-    this->check_lef_lef_collisions(chrom, lefs, barriers, rev_lef_rank_buff, fwd_lef_rank_buff,
-                                   rev_move_buff, fwd_move_buff, rev_collision_buff,
-                                   fwd_collision_buff, rand_eng);
+    this->process_lef_lef_collisions(chrom, lefs, barriers, rev_lef_rank_buff, fwd_lef_rank_buff,
+                                     rev_move_buff, fwd_move_buff, rev_collision_buff,
+                                     fwd_collision_buff, rand_eng);
   }
 
   template <typename I>
-  inline void test_check_lef_bar_collisions(
+  inline void test_process_lef_bar_collisions(
       absl::Span<const Lef> lefs, absl::Span<const std::size_t> rev_lef_rank_buff,
       absl::Span<const std::size_t> fwd_lef_rank_buff, absl::Span<bp_t> rev_move_buff,
       absl::Span<bp_t> fwd_move_buff, absl::Span<const ExtrusionBarrier> extr_barriers,
       const boost::dynamic_bitset<>& barrier_mask, absl::Span<I> rev_collisions,
       absl::Span<I> fwd_collisions, modle::PRNG_t& rand_eng) {
-    this->check_lef_bar_collisions(lefs, rev_lef_rank_buff, fwd_lef_rank_buff, rev_move_buff,
-                                   fwd_move_buff, extr_barriers, barrier_mask, rev_collisions,
-                                   fwd_collisions, rand_eng);
+    this->process_lef_bar_collisions(lefs, rev_lef_rank_buff, fwd_lef_rank_buff, rev_move_buff,
+                                     fwd_move_buff, extr_barriers, barrier_mask, rev_collisions,
+                                     fwd_collisions, rand_eng);
   }
 #endif
 };
