@@ -251,14 +251,12 @@ TEST_CASE("Generate LEF moves 001", "[generate-lef-moves][simulation][short]") {
   const Chromosome chrom{{"chr1", 1000, 2000}};
   constexpr auto nlefs = 100UL;
   constexpr auto iters = 1000UL;
-  const auto pos = (chrom.start_pos() + chrom.end_pos() + 1) / 2;
-  std::vector<Lef> lefs(nlefs, Lef{EU{pos}, EU{pos}, true});
-  std::vector<std::size_t> rev_ranks(nlefs);
-  std::iota(rev_ranks.begin(), rev_ranks.end(), 0);
-  std::vector<bp_t> rev_moves(nlefs, 0), fwd_moves(nlefs, 0);  // NOLINT
-  auto fwd_ranks = rev_ranks;
   // NOLINTNEXTLINE(readability-magic-numbers, cppcoreguidelines-avoid-magic-numbers)
   auto rand_eng = modle::PRNG(8312545934532053745ULL);
+  std::vector<Lef> lefs(nlefs);
+  std::vector<std::size_t> rev_ranks(nlefs);
+  std::vector<std::size_t> fwd_ranks(nlefs);
+  std::vector<bp_t> rev_moves(nlefs, 0), fwd_moves(nlefs, 0);  // NOLINT
   auto c = Config{};
   c.bin_size = 500;  // NOLINT
   c.rev_extrusion_speed = c.bin_size;
@@ -267,12 +265,18 @@ TEST_CASE("Generate LEF moves 001", "[generate-lef-moves][simulation][short]") {
   c.fwd_extrusion_speed_std = static_cast<double>(c.fwd_extrusion_speed) * 0.2;  // NOLINT
 
   for (auto i = 0UL; i < iters; ++i) {
+    std::generate(lefs.begin(), lefs.end(), [&]() {
+      const auto pos =
+          std::uniform_int_distribution<bp_t>{chrom.start_pos(), chrom.end_pos() - 1}(rand_eng);
+      return Lef{EU{pos}, EU{pos}, true};
+    });
+    Simulation::test_rank_lefs(lefs, absl::MakeSpan(rev_ranks), absl::MakeSpan(fwd_ranks), false,
+                               true);
+
     CHECK_NOTHROW(Simulation{c, false}.test_generate_moves(
         &chrom, absl::MakeConstSpan(lefs), absl::MakeConstSpan(rev_ranks),
         absl::MakeConstSpan(fwd_ranks), absl::MakeSpan(rev_moves), absl::MakeSpan(fwd_moves),
         rand_eng));
-
-    Simulation::test_rank_lefs(lefs, absl::MakeSpan(rev_ranks), absl::MakeSpan(fwd_ranks), true);
 
     std::for_each(rev_moves.begin(), rev_moves.end(), [&, j = 0UL](const auto n) mutable {
       CHECK(lefs[j].rev_unit.pos() >= chrom.start_pos() + n);
@@ -1600,6 +1604,289 @@ TEST_CASE("Simulation 008 - LEF-LEF collision overrides LEF-BAR collision 2",
   check_simulation_result(lefs, rev_moves, fwd_moves, rev_moves_expected, fwd_moves_expected,
                           rev_collision_mask, rev_collision_mask_expected, fwd_collision_mask,
                           fwd_collision_mask_expected);
+}
+
+TEST_CASE("Simulation 009 - Ensure stacked LEFs do not interfere with surrounding extr. barriers",
+          "[simulation][short]") {
+  modle::Config c;
+  c.rev_extrusion_speed = 10;                  // NOLINT
+  c.rev_extrusion_speed_std = 0;               // NOLINT
+  c.fwd_extrusion_speed = 10;                  // NOLINT
+  c.fwd_extrusion_speed_std = 0;               // NOLINT
+  c.probability_of_extrusion_unit_bypass = 0;  // NOLINT
+  c.lef_hard_collision_pblock = 1;             // NOLINT
+  c.lef_soft_collision_pblock = 0;             // NOLINT
+  constexpr std::size_t nlefs = 5;
+  constexpr std::size_t nbarriers = 2;
+  const Chromosome chrom{{"chr1", 0, 200}};  // NOLINT
+  // NOLINTNEXTLINE(readability-magic-numbers, cppcoreguidelines-avoid-magic-numbers)
+  auto rand_eng = modle::PRNG(8668729858575330735ULL);
+
+  // clang-format off
+  const std::vector<Lef> lefs{
+      Lef{EU{ 95},  EU{100},  1},  // NOLINT
+      Lef{EU{101},  EU{103},  1},  // NOLINT
+      Lef{EU{102},  EU{110},  1},  // NOLINT
+      Lef{EU{104},  EU{111},  1},  // NOLINT
+      Lef{EU{105},  EU{112},  1}   // NOLINT
+  };
+
+  const std::vector<ExtrusionBarrier> barriers{ExtrusionBarrier{100, 1.0, 0.0, '+'},
+                                               ExtrusionBarrier{105, 1.0, 0.0, '-'}};
+
+  boost::dynamic_bitset<> barrier_mask;
+  barrier_mask.resize(nbarriers, static_cast<bool>(CTCF::State::OCCUPIED));
+
+  const std::vector<bp_t> rev_ranks{0, 1, 2, 3, 4};  // NOLINT
+  const std::vector<bp_t> fwd_ranks{0, 1, 2, 3, 4};  // NOLINT
+
+  std::vector<bp_t> rev_moves{10, 10, 10, 10, 10};  // NOLINT
+  std::vector<bp_t> fwd_moves{10, 10, 10, 10, 10};  // NOLINT
+  // clang-format on
+
+  const auto& LEF_LEF_COLLISION = Simulation::LEF_LEF_COLLISION;
+  const auto& NO_COLLISION = Simulation::NO_COLLISION;  // clang-format off
+  const std::vector<std::size_t> rev_collision_mask_expected{NO_COLLISION,
+                                                             0UL,
+                                                             LEF_LEF_COLLISION,
+                                                             LEF_LEF_COLLISION,
+                                                             LEF_LEF_COLLISION};
+  const std::vector<std::size_t> fwd_collision_mask_expected{LEF_LEF_COLLISION,
+                                                             LEF_LEF_COLLISION,
+                                                             NO_COLLISION,
+                                                             NO_COLLISION,
+                                                             NO_COLLISION};
+std::vector<std::size_t> rev_collision_mask(nlefs, NO_COLLISION);
+  std::vector<std::size_t> fwd_collision_mask(nlefs, NO_COLLISION);
+
+  const std::vector<bp_t> rev_moves_expected{10,  0,  0,  0,  0};  // NOLINT
+  const std::vector<bp_t> fwd_moves_expected{ 0,  0, 10, 10, 10};  // NOLINT
+  // clang-format on
+
+  assert(lefs.size() == nlefs);                         // NOLINT
+  assert(barriers.size() == nbarriers);                 // NOLINT
+  assert(rev_collision_mask_expected.size() == nlefs);  // NOLINT
+  assert(fwd_collision_mask_expected.size() == nlefs);  // NOLINT
+  assert(rev_collision_mask.size() == nlefs);           // NOLINT
+  assert(fwd_collision_mask.size() == nlefs);           // NOLINT
+  require_that_lefs_are_sorted_by_idx(lefs, rev_ranks, fwd_ranks);
+
+  REQUIRE_NOTHROW(Simulation{c, false}.test_adjust_moves(
+      &chrom, lefs, rev_ranks, fwd_ranks, absl::MakeSpan(rev_moves), absl::MakeSpan(fwd_moves)));
+
+  CHECK_NOTHROW(Simulation{c, false}.test_process_lef_bar_collisions(
+      lefs, rev_ranks, fwd_ranks, absl::MakeSpan(rev_moves), absl::MakeSpan(fwd_moves), barriers,
+      barrier_mask, absl::MakeSpan(rev_collision_mask), absl::MakeSpan(fwd_collision_mask),
+      rand_eng));
+
+  CHECK_NOTHROW(Simulation{c, false}.test_process_lef_lef_collisions(
+      &chrom, lefs, barriers, rev_ranks, fwd_ranks, absl::MakeSpan(rev_moves),
+      absl::MakeSpan(fwd_moves), absl::MakeSpan(rev_collision_mask),
+      absl::MakeSpan(fwd_collision_mask), rand_eng));
+
+  check_simulation_result(lefs, rev_moves, fwd_moves, rev_moves_expected, fwd_moves_expected,
+                          rev_collision_mask, rev_collision_mask_expected, fwd_collision_mask,
+                          fwd_collision_mask_expected);
+}
+
+TEST_CASE("Simulation 010 - Ensure stacked LEFs do not interfere with surrounding extr. barriers",
+          "[simulation][short]") {
+  modle::Config c;
+  c.rev_extrusion_speed = 10;                  // NOLINT
+  c.rev_extrusion_speed_std = 0;               // NOLINT
+  c.fwd_extrusion_speed = 10;                  // NOLINT
+  c.fwd_extrusion_speed_std = 0;               // NOLINT
+  c.probability_of_extrusion_unit_bypass = 0;  // NOLINT
+  c.lef_hard_collision_pblock = 1;             // NOLINT
+  c.lef_soft_collision_pblock = 0;             // NOLINT
+  constexpr std::size_t nlefs = 6;
+  constexpr std::size_t nbarriers = 2;
+  const Chromosome chrom{{"chr1", 0, 200}};  // NOLINT
+  // NOLINTNEXTLINE(readability-magic-numbers, cppcoreguidelines-avoid-magic-numbers)
+  auto rand_eng = modle::PRNG(4320101097510038983ULL);
+
+  // clang-format off
+  const std::vector<Lef> lefs{
+      Lef{EU{ 95},  EU{100},  1},  // NOLINT
+      Lef{EU{101},  EU{103},  1},  // NOLINT
+      Lef{EU{102},  EU{110},  1},  // NOLINT
+      Lef{EU{104},  EU{111},  1},  // NOLINT
+      Lef{EU{105},  EU{112},  1},  // NOLINT
+      Lef{EU{102},  EU{102},  1}   // NOLINT
+  };
+
+  const std::vector<ExtrusionBarrier> barriers{ExtrusionBarrier{100, 1.0, 0.0, '+'},
+                                               ExtrusionBarrier{105, 1.0, 0.0, '-'}};
+
+  boost::dynamic_bitset<> barrier_mask;
+  barrier_mask.resize(nbarriers, static_cast<bool>(CTCF::State::OCCUPIED));
+
+  const std::vector<bp_t> rev_ranks{0, 1, 2, 5, 3, 4};  // NOLINT
+  const std::vector<bp_t> fwd_ranks{0, 5, 1, 2, 3, 4};  // NOLINT
+
+  std::vector<bp_t> rev_moves{10, 10, 10, 10, 10, 10};  // NOLINT
+  std::vector<bp_t> fwd_moves{10, 10, 10, 10, 10, 10};  // NOLINT
+  // clang-format on
+
+  const auto& LEF_LEF_COLLISION = Simulation::LEF_LEF_COLLISION;
+  const auto& NO_COLLISION = Simulation::NO_COLLISION;  // clang-format off
+  const std::vector<std::size_t> rev_collision_mask_expected{NO_COLLISION,
+                                                             0UL,
+                                                             LEF_LEF_COLLISION,
+                                                             LEF_LEF_COLLISION,
+                                                             LEF_LEF_COLLISION,
+                                                             LEF_LEF_COLLISION};
+  const std::vector<std::size_t> fwd_collision_mask_expected{LEF_LEF_COLLISION,
+                                                             LEF_LEF_COLLISION,
+                                                             NO_COLLISION,
+                                                             NO_COLLISION,
+                                                             NO_COLLISION,
+                                                             LEF_LEF_COLLISION};
+  std::vector<std::size_t> rev_collision_mask(nlefs, NO_COLLISION);
+  std::vector<std::size_t> fwd_collision_mask(nlefs, NO_COLLISION);
+
+  const std::vector<bp_t> rev_moves_expected{10,  0,  0,  0,  0,  0};  // NOLINT
+  const std::vector<bp_t> fwd_moves_expected{ 0,  0, 10, 10, 10,  0};  // NOLINT
+  // clang-format on
+
+  assert(lefs.size() == nlefs);                         // NOLINT
+  assert(barriers.size() == nbarriers);                 // NOLINT
+  assert(rev_collision_mask_expected.size() == nlefs);  // NOLINT
+  assert(fwd_collision_mask_expected.size() == nlefs);  // NOLINT
+  assert(rev_collision_mask.size() == nlefs);           // NOLINT
+  assert(fwd_collision_mask.size() == nlefs);           // NOLINT
+  require_that_lefs_are_sorted_by_idx(lefs, rev_ranks, fwd_ranks);
+
+  REQUIRE_NOTHROW(Simulation{c, false}.test_adjust_moves(
+      &chrom, lefs, rev_ranks, fwd_ranks, absl::MakeSpan(rev_moves), absl::MakeSpan(fwd_moves)));
+
+  CHECK_NOTHROW(Simulation{c, false}.test_process_lef_bar_collisions(
+      lefs, rev_ranks, fwd_ranks, absl::MakeSpan(rev_moves), absl::MakeSpan(fwd_moves), barriers,
+      barrier_mask, absl::MakeSpan(rev_collision_mask), absl::MakeSpan(fwd_collision_mask),
+      rand_eng));
+
+  CHECK_NOTHROW(Simulation{c, false}.test_process_lef_lef_collisions(
+      &chrom, lefs, barriers, rev_ranks, fwd_ranks, absl::MakeSpan(rev_moves),
+      absl::MakeSpan(fwd_moves), absl::MakeSpan(rev_collision_mask),
+      absl::MakeSpan(fwd_collision_mask), rand_eng));
+
+  check_simulation_result(lefs, rev_moves, fwd_moves, rev_moves_expected, fwd_moves_expected,
+                          rev_collision_mask, rev_collision_mask_expected, fwd_collision_mask,
+                          fwd_collision_mask_expected);
+}
+
+TEST_CASE("LEFs ranking 001 - Rev extr. unit tied", "[simulation][short]") {
+  modle::Config c{};
+  constexpr std::size_t nlefs = 6;
+
+  // clang-format off
+  const std::vector<Lef> lefs1{
+      Lef{EU{ 95},  EU{100},  1},  // NOLINT
+      Lef{EU{101},  EU{103},  1},  // NOLINT
+      Lef{EU{102},  EU{110},  1},  // NOLINT
+      Lef{EU{104},  EU{111},  1},  // NOLINT
+      Lef{EU{105},  EU{112},  1},  // NOLINT
+      Lef{EU{102},  EU{102},  1}   // NOLINT
+  };
+  const std::vector<Lef> lefs2{
+      Lef{EU{ 95},  EU{100},  1},  // NOLINT
+      Lef{EU{101},  EU{103},  1},  // NOLINT
+      Lef{EU{102},  EU{102},  1},  // NOLINT
+      Lef{EU{102},  EU{110},  1},  // NOLINT
+      Lef{EU{104},  EU{111},  1},  // NOLINT
+      Lef{EU{105},  EU{112},  1}   // NOLINT
+  };
+  // clang-format on
+
+  std::vector<bp_t> rev_ranks(nlefs);
+  std::vector<bp_t> fwd_ranks(nlefs);
+
+  const std::vector<bp_t> rev_ranks_expected1{0, 1, 2, 5, 3, 4};  // NOLINT
+  const std::vector<bp_t> fwd_ranks_expected1{0, 5, 1, 2, 3, 4};  // NOLINT
+
+  const std::vector<bp_t> rev_ranks_expected2{0, 1, 3, 2, 4, 5};  // NOLINT
+  const std::vector<bp_t> fwd_ranks_expected2{0, 2, 1, 3, 4, 5};  // NOLINT
+
+  assert(lefs1.size() == nlefs);                // NOLINT
+  assert(lefs2.size() == nlefs);                // NOLINT
+  assert(rev_ranks.size() == nlefs);            // NOLINT
+  assert(fwd_ranks.size() == nlefs);            // NOLINT
+  assert(rev_ranks_expected1.size() == nlefs);  // NOLINT
+  assert(rev_ranks_expected1.size() == nlefs);  // NOLINT
+  assert(fwd_ranks_expected2.size() == nlefs);  // NOLINT
+  assert(fwd_ranks_expected2.size() == nlefs);  // NOLINT
+
+  REQUIRE_NOTHROW(Simulation{c, false}.test_rank_lefs(lefs1, absl::MakeSpan(rev_ranks),
+                                                      absl::MakeSpan(fwd_ranks), false, true));
+  for (auto i = 0UL; i < lefs1.size(); ++i) {
+    CHECK(rev_ranks[i] == rev_ranks_expected1[i]);
+    CHECK(fwd_ranks[i] == fwd_ranks_expected1[i]);
+  }
+
+  REQUIRE_NOTHROW(Simulation{c, false}.test_rank_lefs(lefs2, absl::MakeSpan(rev_ranks),
+                                                      absl::MakeSpan(fwd_ranks), false, true));
+  for (auto i = 0UL; i < lefs2.size(); ++i) {
+    CHECK(rev_ranks[i] == rev_ranks_expected2[i]);
+    CHECK(fwd_ranks[i] == fwd_ranks_expected2[i]);
+  }
+}
+
+TEST_CASE("LEFs ranking 002 - Fwd extr. unit tied", "[simulation][short]") {
+  modle::Config c{};
+  constexpr std::size_t nlefs = 6;
+
+  // clang-format off
+  const std::vector<Lef> lefs1{
+      Lef{EU{ 95},  EU{100},  1},  // NOLINT
+      Lef{EU{101},  EU{104},  1},  // NOLINT
+      Lef{EU{102},  EU{110},  1},  // NOLINT
+      Lef{EU{103},  EU{111},  1},  // NOLINT
+      Lef{EU{105},  EU{112},  1},  // NOLINT
+      Lef{EU{104},  EU{104},  1}   // NOLINT
+  };
+  const std::vector<Lef> lefs2{
+      Lef{EU{ 95},  EU{100},  1},  // NOLINT
+      Lef{EU{104},  EU{104},  1},  // NOLINT
+      Lef{EU{101},  EU{104},  1},  // NOLINT
+      Lef{EU{102},  EU{110},  1},  // NOLINT
+      Lef{EU{103},  EU{111},  1},  // NOLINT
+      Lef{EU{105},  EU{112},  1}   // NOLINT
+  };
+  // clang-format on
+
+  std::vector<bp_t> rev_ranks(nlefs);
+  std::vector<bp_t> fwd_ranks(nlefs);
+
+  const std::vector<bp_t> rev_ranks_expected1{0, 1, 2, 3, 5, 4};  // NOLINT
+  const std::vector<bp_t> fwd_ranks_expected1{0, 5, 1, 2, 3, 4};  // NOLINT
+
+  const std::vector<bp_t> rev_ranks_expected2{0, 2, 3, 4, 1, 5};  // NOLINT
+  const std::vector<bp_t> fwd_ranks_expected2{0, 1, 2, 3, 4, 5};  // NOLINT
+
+  {
+    assert(lefs1.size() == nlefs);                // NOLINT
+    assert(lefs2.size() == nlefs);                // NOLINT
+    assert(rev_ranks.size() == nlefs);            // NOLINT
+    assert(fwd_ranks.size() == nlefs);            // NOLINT
+    assert(rev_ranks_expected1.size() == nlefs);  // NOLINT
+    assert(rev_ranks_expected1.size() == nlefs);  // NOLINT
+    assert(fwd_ranks_expected2.size() == nlefs);  // NOLINT
+    assert(fwd_ranks_expected2.size() == nlefs);  // NOLINT
+  }
+
+  REQUIRE_NOTHROW(Simulation{c, false}.test_rank_lefs(lefs1, absl::MakeSpan(rev_ranks),
+                                                      absl::MakeSpan(fwd_ranks), false, true));
+  for (auto i = 0UL; i < lefs1.size(); ++i) {
+    CHECK(rev_ranks[i] == rev_ranks_expected1[i]);
+    CHECK(fwd_ranks[i] == fwd_ranks_expected1[i]);
+  }
+
+  REQUIRE_NOTHROW(Simulation{c, false}.test_rank_lefs(lefs2, absl::MakeSpan(rev_ranks),
+                                                      absl::MakeSpan(fwd_ranks), false, true));
+  for (auto i = 0UL; i < lefs2.size(); ++i) {
+    CHECK(rev_ranks[i] == rev_ranks_expected2[i]);
+    CHECK(fwd_ranks[i] == fwd_ranks_expected2[i]);
+  }
 }
 
 }  // namespace modle::test::libmodle

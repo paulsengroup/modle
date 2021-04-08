@@ -8,7 +8,7 @@
 #include <boost/asio/thread_pool.hpp>               // for thread_pool
 #include <boost/dynamic_bitset/dynamic_bitset.hpp>  // for dynamic_bitset
 #include <cstddef>                                  // for size_t
-#include <cstdint>                                  // for uint_fast16_t
+#include <cstdint>                                  // for uint64_t
 #include <filesystem>                               // for path
 #include <limits>                                   // for numeric_limits
 #include <string>                                   // for string
@@ -45,6 +45,7 @@ class Simulation : Config {
   [[nodiscard]] inline static constexpr bool is_lef_bar_collision(collision_t cause_of_collision);
 
   struct Task {
+    inline Task() = default;
     std::size_t id;
     Chromosome* chrom;
     std::size_t cell_id;
@@ -55,6 +56,7 @@ class Simulation : Config {
   };
 
   struct State : Task {
+    inline State() = default;
     std::vector<Lef> lef_buff;
     std::vector<double> lef_unloader_affinity;
     std::vector<std::size_t> rank_buff1;
@@ -68,7 +70,7 @@ class Simulation : Config {
     modle::PRNG_t rand_eng;
     uint64_t seed;
 
-    inline void operator=(const Task& task);
+    inline State& operator=(const Task& task);
     inline void resize(std::size_t size = std::numeric_limits<std::size_t>::max());
     inline void reset();
   };
@@ -78,7 +80,7 @@ class Simulation : Config {
  private:
   Genome _chromosomes{};
 
-  [[nodiscard]] inline boost::asio::thread_pool instantiate_thread_pool() const;
+  [[nodiscard]] [[maybe_unused]] inline boost::asio::thread_pool instantiate_thread_pool() const;
   template <typename I>
   [[nodiscard]] inline static boost::asio::thread_pool instantiate_thread_pool(
       I nthreads, bool clamp_nthreads = true);
@@ -94,17 +96,17 @@ class Simulation : Config {
   template <typename MaskT>
   inline void bind_lefs(const Chromosome* chrom, absl::Span<Lef> lefs,
                         absl::Span<std::size_t> rev_lef_ranks,
-                        absl::Span<std::size_t> fwd_lef_ranks, MaskT& mask,
-                        modle::PRNG_t& rand_eng) noexcept(utils::ndebug_defined());
+                        absl::Span<std::size_t> fwd_lef_ranks, MaskT& mask, modle::PRNG_t& rand_eng,
+                        bool first_epoch = false) noexcept(utils::ndebug_defined());
 
   inline void generate_ctcf_states(absl::Span<const ExtrusionBarrier> extr_barriers,
                                    boost::dynamic_bitset<>& mask,
                                    modle::PRNG_t& rand_eng) noexcept(utils::ndebug_defined());
 
-  [[nodiscard]] inline bp_t generate_rev_move(const Chromosome* const chrom,
-                                              const ExtrusionUnit& unit, modle::PRNG_t& rand_eng);
-  [[nodiscard]] inline bp_t generate_fwd_move(const Chromosome* const chrom,
-                                              const ExtrusionUnit& unit, modle::PRNG_t& rand_eng);
+  [[nodiscard]] inline bp_t generate_rev_move(const Chromosome* chrom, const ExtrusionUnit& unit,
+                                              modle::PRNG_t& rand_eng);
+  [[nodiscard]] inline bp_t generate_fwd_move(const Chromosome* chrom, const ExtrusionUnit& unit,
+                                              modle::PRNG_t& rand_eng);
 
   inline void generate_moves(const Chromosome* chrom, absl::Span<const Lef> lefs,
                              absl::Span<const std::size_t> rev_lef_ranks,
@@ -121,6 +123,7 @@ class Simulation : Config {
   inline static void rank_lefs(absl::Span<const Lef> lefs,
                                absl::Span<std::size_t> rev_lef_rank_buff,
                                absl::Span<std::size_t> fwd_lef_rank_buff,
+                               bool ranks_are_partially_sorted = true,
                                bool init_buffers = false) noexcept(utils::ndebug_defined());
 
   inline void extrude(const Chromosome* chrom, absl::Span<Lef> lefs,
@@ -211,8 +214,11 @@ class Simulation : Config {
 
   inline static void test_rank_lefs(absl::Span<const Lef> lefs,
                                     absl::Span<std::size_t> rev_lef_rank_buff,
-                                    absl::Span<std::size_t> fwd_lef_rank_buff, bool init_buffers) {
-    Simulation::rank_lefs(lefs, rev_lef_rank_buff, fwd_lef_rank_buff, init_buffers);
+                                    absl::Span<std::size_t> fwd_lef_rank_buff,
+                                    bool ranks_are_partially_sorted = true,
+                                    bool init_buffers = false) {
+    Simulation::rank_lefs(lefs, rev_lef_rank_buff, fwd_lef_rank_buff, ranks_are_partially_sorted,
+                          init_buffers);
   }
 
   template <typename I>

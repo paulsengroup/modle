@@ -305,8 +305,6 @@ class Cli {
         absl::StrCat("_w_noise", c.path_to_output_file.extension().string());
     c.path_to_log_file += ".log";
 
-    fmt::print(stderr, "path_to_file_w_noise={}\n", c.path_to_output_file_w_noise);
-
     if (c.force) {
       return "";
     }

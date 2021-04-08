@@ -12,6 +12,7 @@
 #include <cpp-sort/sorters/counting_sorter.h>    // for counting_sort
 #include <cpp-sort/sorters/drop_merge_sorter.h>  // for drop_merge_sort
 #include <cpp-sort/sorters/insertion_sorter.h>   // for insertion_sort
+#include <cpp-sort/sorters/pdq_sorter.h>         // for pdq_sort
 #include <cpp-sort/sorters/ska_sorter.h>         // for ska_sort, ska_so...
 #include <fmt/format.h>                          // for print, format
 #include <fmt/ostream.h>                         // for formatbuf<>::int...
@@ -99,8 +100,8 @@ Simulation::Genome Simulation::import_chromosomes(
     const std::filesystem::path& path_to_chrom_sizes,
     const std::filesystem::path& path_to_extr_barriers,
     const std::filesystem::path& path_to_chrom_subranges, bool keep_all_chroms) {
-  assert(!path_to_chrom_sizes.empty());
-  assert(!path_to_extr_barriers.empty());
+  assert(!path_to_chrom_sizes.empty());    // NOLINT
+  assert(!path_to_extr_barriers.empty());  // NOLINT
   Genome chroms;
 
   // Parse chrom subranges from BED. We parse everything at once to deal with duplicate entries
@@ -584,7 +585,8 @@ void Simulation::simulate_extrusion_kernel(Simulation::State& s) {
     {
       auto lef_mask = absl::MakeSpan(s.idx_buff1.data(), lefs.size());
       this->select_lefs_to_bind(lefs, lef_mask);
-      this->bind_lefs(s.chrom, lefs, rev_lef_ranks, fwd_lef_ranks, lef_mask, s.rand_eng);
+      this->bind_lefs(s.chrom, lefs, rev_lef_ranks, fwd_lef_ranks, lef_mask, s.rand_eng,
+                      epoch == 0);
     }
 
     if (epoch > n_burnin_epochs) {
@@ -634,7 +636,8 @@ template <typename MaskT>
 void Simulation::bind_lefs(const Chromosome* chrom, absl::Span<Lef> lefs,
                            absl::Span<std::size_t> rev_lef_ranks,
                            absl::Span<std::size_t> fwd_lef_ranks, MaskT& mask,
-                           modle::PRNG_t& rand_eng) noexcept(utils::ndebug_defined()) {
+                           modle::PRNG_t& rand_eng,
+                           bool first_epoch) noexcept(utils::ndebug_defined()) {
   static_assert(std::is_same_v<boost::dynamic_bitset<>, MaskT> ||
                     std::is_integral_v<std::decay_t<decltype(std::declval<MaskT&>().operator[](
                         std::declval<std::size_t>()))>>,
@@ -648,7 +651,8 @@ void Simulation::bind_lefs(const Chromosome* chrom, absl::Span<Lef> lefs,
       lefs[i].bind_at_pos(pos_generator(rand_eng));
     }
   }
-  this->rank_lefs(lefs, rev_lef_ranks, fwd_lef_ranks);
+
+  this->rank_lefs(lefs, rev_lef_ranks, fwd_lef_ranks, !first_epoch);
 }
 
 inline void Simulation::generate_ctcf_states(
@@ -758,60 +762,98 @@ void Simulation::adjust_moves(const Chromosome* chrom, absl::Span<const Lef> lef
 
 void Simulation::rank_lefs(absl::Span<const Lef> lefs, absl::Span<std::size_t> rev_lef_rank_buff,
                            absl::Span<std::size_t> fwd_lef_rank_buff,
+                           bool ranks_are_partially_sorted,
                            bool init_buffers) noexcept(utils::ndebug_defined()) {
-  if (init_buffers) {  // Init rank buffers
-    std::iota(fwd_lef_rank_buff.begin(), fwd_lef_rank_buff.end(), 0);
-    std::copy(fwd_lef_rank_buff.begin(), fwd_lef_rank_buff.end(), rev_lef_rank_buff.begin());
-  }
   assert(lefs.size() == fwd_lef_rank_buff.size());  // NOLINT
   assert(lefs.size() == rev_lef_rank_buff.size());  // NOLINT
 
-  if (lefs.size() < 20) {  // TODO Come up with a reasonable threshold
-    cppsort::insertion_sort(fwd_lef_rank_buff.begin(), fwd_lef_rank_buff.end(),
-                            [&](const auto r1, const auto r2) {
-                              return lefs[r1].fwd_unit.pos() < lefs[r2].fwd_unit.pos();
-                            });
+  auto rev_comparator = [&](const auto r1, const auto r2) {
+    const auto& p1 = lefs[r1].rev_unit.pos();
+    const auto& p2 = lefs[r2].rev_unit.pos();
+    if (p1 == p2) MODLE_UNLIKELY {
+        // A LEF will have both extr. units bound at the same position if and only if the DNA
+        // binding took place in the current iteration.
+        // When this is the case, and there are multiple rev. units binding the same bp, then we
+        // we want the LEF that bound last to be ranked last in the sequence of tied LEFs
+        if (lefs[r1].fwd_unit.pos() == p1) {
+          return false;
+        }
+        if (lefs[r2].fwd_unit.pos() == p2) {
+          return true;
+        }
+        // This return ensures that in case of a tie between the rev. units of two LEFs that did not
+        // bind the DNA in the current iteration, the existing order is maintained (which means that
+        // the LEF that was the first to collide is positioned right next to the extr. barrier)
+        return r1 < r2;
+      }
+    return p1 < p2;
+  };
 
-    cppsort::insertion_sort(rev_lef_rank_buff.begin(), rev_lef_rank_buff.end(),
-                            [&](const auto r1, const auto r2) {
-                              return lefs[r1].rev_unit.pos() < lefs[r2].rev_unit.pos();
-                            });
-  } else {
-    /*
-    fmt::print(
-        stderr, "fwd_inv={}\nrev_inv={}\n",
-        static_cast<double>(cppsort::probe::inv(fwd_lef_rank_buff.begin(),
-    fwd_lef_rank_buff.end(),
-                                                [&](const auto r1, const auto r2) {
-                                                  return lefs[r1].fwd_unit.pos() <
-                                                         lefs[r2].fwd_unit.pos();
-                                                })) /
-            static_cast<double>(fwd_lef_rank_buff.size() * (fwd_lef_rank_buff.size() - 1) / 2),
-        static_cast<double>(cppsort::probe::inv(rev_lef_rank_buff.begin(),
-    rev_lef_rank_buff.end(),
-                                                [&](const auto r1, const auto r2) {
-                                                  return lefs[r1].rev_unit.pos() <
-                                                         lefs[r2].rev_unit.pos();
-                                                })) /
-            static_cast<double>(rev_lef_rank_buff.size() * (rev_lef_rank_buff.size() - 1) / 2));
-    */
+  // See comments for rev_comparator.
+  auto fwd_comparator = [&](const auto r1, const auto r2) {
+    const auto& p1 = lefs[r1].fwd_unit.pos();
+    const auto& p2 = lefs[r2].fwd_unit.pos();
+    if (p1 == p2) MODLE_UNLIKELY {
+        // Notice that the return value of the following two branches is the opposite of what's
+        // found in rev_comparator. This is because in case of a tie we want the LEF that was bound
+        // in the current iteration to be ranked lowest
+        if (lefs[r1].rev_unit.pos() == p1) {
+          return true;
+        }
+        if (lefs[r2].rev_unit.pos() == p2) {
+          return false;
+        }
+        return r1 < r2;
+      }
+    return p1 < p2;
+  };
 
-    // Drop merge sort is a Rem-adaptive algorithm that it is particularly suitable for our
-    // use-case, where after the initial binding, we expect a small fraction of extr. units to be
-    // out of place when this function is called (from initial testing, it looks like most of the
-    // times we have 2.5-5% inversions, and very rarely > 10%, which is drop merge sort shines).
-    // https://github.com/Morwenn/cpp-sort/blob/develop/docs/Benchmarks.md#inv-adaptive-algorithms
-    // https://github.com/Morwenn/cpp-sort/blob/develop/docs/Sorters.md#drop_merge_sorter
-    cppsort::drop_merge_sort(fwd_lef_rank_buff.begin(), fwd_lef_rank_buff.end(),
-                             [&](const auto r1, const auto r2) {
-                               return lefs[r1].fwd_unit.pos() < lefs[r2].fwd_unit.pos();
-                             });
+  if (init_buffers) MODLE_UNLIKELY {  // Init rank buffers
+      std::iota(fwd_lef_rank_buff.begin(), fwd_lef_rank_buff.end(), 0);
+      std::iota(rev_lef_rank_buff.begin(), rev_lef_rank_buff.end(), 0);
+    }
 
-    cppsort::drop_merge_sort(rev_lef_rank_buff.begin(), rev_lef_rank_buff.end(),
-                             [&](const auto r1, const auto r2) {
-                               return lefs[r1].rev_unit.pos() < lefs[r2].rev_unit.pos();
-                             });
-  }
+  if (lefs.size() < 20) MODLE_UNLIKELY {  // TODO Come up with a reasonable threshold
+      cppsort::insertion_sort(rev_lef_rank_buff.begin(), rev_lef_rank_buff.end(), rev_comparator);
+      cppsort::insertion_sort(fwd_lef_rank_buff.begin(), fwd_lef_rank_buff.end(), fwd_comparator);
+    }
+  else if (ranks_are_partially_sorted)
+    MODLE_LIKELY {
+      /*
+      fmt::print(
+          stderr, "fwd_inv={}\nrev_inv={}\n",
+          static_cast<double>(cppsort::probe::inv(fwd_lef_rank_buff.begin(),
+      fwd_lef_rank_buff.end(),
+                                                  [&](const auto r1, const auto r2) {
+                                                    return lefs[r1].fwd_unit.pos() <
+                                                           lefs[r2].fwd_unit.pos();
+                                                  })) /
+              static_cast<double>(fwd_lef_rank_buff.size() * (fwd_lef_rank_buff.size() - 1) / 2),
+          static_cast<double>(cppsort::probe::inv(rev_lef_rank_buff.begin(),
+      rev_lef_rank_buff.end(),
+                                                  [&](const auto r1, const auto r2) {
+                                                    return lefs[r1].rev_unit.pos() <
+                                                           lefs[r2].rev_unit.pos();
+                                                  })) /
+              static_cast<double>(rev_lef_rank_buff.size() * (rev_lef_rank_buff.size() - 1) / 2));
+      */
+      // Drop merge sort is a Rem-adaptive algorithm that it is particularly suitable for our
+      // use-case, where after the initial binding, we expect a small fraction of extr. units to be
+      // out of place when this function is called (from initial testing, it looks like most of the
+      // times we have 2.5-5% inversions, and very rarely > 10%, which is drop merge sort shines).
+      // https://github.com/Morwenn/cpp-sort/blob/develop/docs/Benchmarks.md#inv-adaptive-algorithms
+      // https://github.com/Morwenn/cpp-sort/blob/develop/docs/Sorters.md#drop_merge_sorter
+      // The algorithm itself is not stable, but the *_comparator should take care of this, making
+      // it a stable sorting algorithm in practice
+      cppsort::drop_merge_sort(rev_lef_rank_buff.begin(), rev_lef_rank_buff.end(), rev_comparator);
+      cppsort::drop_merge_sort(fwd_lef_rank_buff.begin(), fwd_lef_rank_buff.end(), fwd_comparator);
+    }
+  else
+    MODLE_UNLIKELY {
+      // Assume the sequence is randomly shuffled
+      cppsort::pdq_sort(rev_lef_rank_buff.begin(), rev_lef_rank_buff.end(), rev_comparator);
+      cppsort::pdq_sort(fwd_lef_rank_buff.begin(), fwd_lef_rank_buff.end(), fwd_comparator);
+    }
 }
 
 void Simulation::extrude(const Chromosome* chrom, absl::Span<Lef> lefs,
@@ -995,13 +1037,13 @@ void Simulation::process_lef_lef_collisions(
         break;
       }
   }
-  this->template process_primary_lef_lef_collisions(chrom, lefs, barriers, rev_lef_ranks,
-                                                    fwd_lef_ranks, rev_moves, fwd_moves,
-                                                    rev_collisions, fwd_collisions, rand_eng);
 
-  this->template process_secondary_lef_lef_collisions(chrom, lefs, rev_lef_ranks, fwd_lef_ranks,
-                                                      rev_moves, fwd_moves, rev_collisions,
-                                                      fwd_collisions, rand_eng);
+  this->process_primary_lef_lef_collisions(chrom, lefs, barriers, rev_lef_ranks, fwd_lef_ranks,
+                                           rev_moves, fwd_moves, rev_collisions, fwd_collisions,
+                                           rand_eng);
+
+  this->process_secondary_lef_lef_collisions(chrom, lefs, rev_lef_ranks, fwd_lef_ranks, rev_moves,
+                                             fwd_moves, rev_collisions, fwd_collisions, rand_eng);
 }
 
 template <typename I>
@@ -1010,7 +1052,7 @@ void Simulation::process_primary_lef_lef_collisions(
     absl::Span<const ExtrusionBarrier> barriers, absl::Span<const std::size_t> rev_lef_ranks,
     absl::Span<const std::size_t> fwd_lef_ranks, absl::Span<bp_t> rev_moves,
     absl::Span<bp_t> fwd_moves, absl::Span<I> rev_collisions, absl::Span<I> fwd_collisions,
-    PRNG_t& rand_eng) noexcept(false) {
+    PRNG_t& rand_eng) noexcept(utils::ndebug_defined()) {
   static_assert(std::is_integral_v<I>, "Collision buffers should be of integral type.");
   /* Loop over lefs, using a procedure similar to merge in mergesort
    * The idea here is that if we have a way to visit extr. units in 5'-3' order, then detecting
@@ -1052,52 +1094,46 @@ void Simulation::process_primary_lef_lef_collisions(
     if (const auto delta = rev_pos - fwd_pos;
         delta < rev_moves[rev_idx] + fwd_moves[fwd_idx] &&
         std::bernoulli_distribution{1.0 - this->probability_of_extrusion_unit_bypass}(rand_eng)) {
-      if (delta > 1) {
-        auto& rev_move = rev_moves[rev_idx];
-        auto& fwd_move = fwd_moves[fwd_idx];
+      auto& rev_move = rev_moves[rev_idx];
+      auto& fwd_move = fwd_moves[fwd_idx];
 
-        const auto& cause_of_collision_rev = rev_collisions[rev_idx];
-        const auto& cause_of_collision_fwd = fwd_collisions[fwd_idx];
+      const auto& cause_of_collision_rev = rev_collisions[rev_idx];
+      const auto& cause_of_collision_fwd = fwd_collisions[fwd_idx];
 
-        auto [collision_pos_rev, collision_pos_fwd] = compute_lef_lef_collision_pos(
-            lefs[rev_idx].rev_unit, lefs[fwd_idx].fwd_unit, rev_move, fwd_move);
+      auto [collision_pos_rev, collision_pos_fwd] = compute_lef_lef_collision_pos(
+          lefs[rev_idx].rev_unit, lefs[fwd_idx].fwd_unit, rev_move, fwd_move);
 
-        if (cause_of_collision_rev == NO_COLLISION && cause_of_collision_fwd == NO_COLLISION) {
-          rev_move = rev_pos - collision_pos_rev;
-          fwd_move = collision_pos_fwd - fwd_pos;
-        } else if (cause_of_collision_rev != NO_COLLISION &&
-                   cause_of_collision_fwd == NO_COLLISION) {
-          assert(is_lef_bar_collision(cause_of_collision_rev));  // NOLINT
-          const auto& [collision_pos_rev_new, collision_pos_fwd_new] =
-              compute_lef_lef_collision_pos(
-                  lefs[rev_idx].rev_unit, lefs[fwd_idx].fwd_unit,
-                  generate_rev_move(chrom, lefs[rev_idx].rev_unit, rand_eng), fwd_move);
-          assert(collision_pos_rev != 0 && collision_pos_fwd != 0);  // NOLINT
-          const auto& barrier_pos = barriers[cause_of_collision_rev].pos();
-          if (collision_pos_fwd > barrier_pos) {
-            rev_move = rev_pos - collision_pos_rev_new;
-            fwd_move = collision_pos_fwd_new - fwd_pos;
-            rev_collisions[rev_idx] = LEF_LEF_COLLISION;
-          } else {
-            fwd_move = (rev_pos - rev_move) - 1 - fwd_pos;
-          }
-        } else if (cause_of_collision_rev == NO_COLLISION &&
-                   cause_of_collision_fwd != NO_COLLISION) {
-          assert(is_lef_bar_collision(cause_of_collision_fwd));      // NOLINT
-          assert(collision_pos_rev != 0 && collision_pos_fwd != 0);  // NOLINT
-          const auto& barrier_pos = barriers[cause_of_collision_fwd].pos();
-          const auto& [collision_pos_rev_new, collision_pos_fwd_new] =
-              compute_lef_lef_collision_pos(
-                  lefs[rev_idx].rev_unit, lefs[fwd_idx].fwd_unit, rev_move,
-                  generate_fwd_move(chrom, lefs[fwd_idx].fwd_unit, rand_eng));
-          if (collision_pos_rev < barrier_pos) {
-            rev_move = rev_pos - collision_pos_rev_new;
-            fwd_move = collision_pos_fwd_new - fwd_pos;
-            fwd_collisions[fwd_idx] = LEF_LEF_COLLISION;
-          } else {
-            assert(rev_pos >= fwd_pos + fwd_move);  // NOLINT
-            rev_move = rev_pos - (fwd_pos + fwd_move + 1);
-          }
+      if (cause_of_collision_rev == NO_COLLISION && cause_of_collision_fwd == NO_COLLISION) {
+        rev_move = rev_pos - collision_pos_rev;
+        fwd_move = collision_pos_fwd - fwd_pos;
+      } else if (cause_of_collision_rev != NO_COLLISION && cause_of_collision_fwd == NO_COLLISION) {
+        assert(is_lef_bar_collision(cause_of_collision_rev));  // NOLINT
+        const auto& [collision_pos_rev_new, collision_pos_fwd_new] = compute_lef_lef_collision_pos(
+            lefs[rev_idx].rev_unit, lefs[fwd_idx].fwd_unit,
+            generate_rev_move(chrom, lefs[rev_idx].rev_unit, rand_eng), fwd_move);
+        assert(collision_pos_rev != 0 && collision_pos_fwd != 0);  // NOLINT
+        const auto& barrier_pos = barriers[cause_of_collision_rev].pos();
+        if (collision_pos_fwd > barrier_pos) {
+          rev_move = rev_pos - collision_pos_rev_new;
+          fwd_move = collision_pos_fwd_new - fwd_pos;
+          rev_collisions[rev_idx] = LEF_LEF_COLLISION;
+        } else {
+          fwd_move = (rev_pos - rev_move) - 1 - fwd_pos;
+        }
+      } else if (cause_of_collision_rev == NO_COLLISION && cause_of_collision_fwd != NO_COLLISION) {
+        assert(is_lef_bar_collision(cause_of_collision_fwd));      // NOLINT
+        assert(collision_pos_rev != 0 && collision_pos_fwd != 0);  // NOLINT
+        const auto& barrier_pos = barriers[cause_of_collision_fwd].pos();
+        const auto& [collision_pos_rev_new, collision_pos_fwd_new] = compute_lef_lef_collision_pos(
+            lefs[rev_idx].rev_unit, lefs[fwd_idx].fwd_unit, rev_move,
+            generate_fwd_move(chrom, lefs[fwd_idx].fwd_unit, rand_eng));
+        if (collision_pos_rev < barrier_pos) {
+          rev_move = rev_pos - collision_pos_rev_new;
+          fwd_move = collision_pos_fwd_new - fwd_pos;
+          fwd_collisions[fwd_idx] = LEF_LEF_COLLISION;
+        } else {
+          assert(rev_pos >= fwd_pos + fwd_move);  // NOLINT
+          rev_move = rev_pos - (fwd_pos + fwd_move + 1);
         }
       }
 
@@ -1116,8 +1152,9 @@ void Simulation::process_secondary_lef_lef_collisions(
     const Chromosome* chrom, absl::Span<const Lef> lefs,
     absl::Span<const std::size_t> rev_lef_ranks, absl::Span<const std::size_t> fwd_lef_ranks,
     absl::Span<bp_t> rev_moves, absl::Span<bp_t> fwd_moves, absl::Span<I> rev_collisions,
-    absl::Span<I> fwd_collisions, PRNG_t& rand_eng) noexcept(false) {
+    absl::Span<I> fwd_collisions, PRNG_t& rand_eng) noexcept(utils::ndebug_defined()) {
   static_assert(std::is_integral_v<I>, "Collision buffers should be of integral type.");
+  (void)chrom;
   for (auto i = 1UL; i < lefs.size(); ++i) {
     const auto& fwd_idx2 = fwd_lef_ranks[i];  // index of the ith fwd unit in 5'-3' order
     const auto& fwd_pos2 = lefs[fwd_idx2].fwd_unit.pos();  // pos of the ith unit
@@ -1303,7 +1340,7 @@ boost::asio::thread_pool Simulation::instantiate_thread_pool(I nthreads, bool cl
   DISABLE_WARNING_POP
 }
 
-void Simulation::State::operator=(const Task& task) {
+Simulation::State& Simulation::State::operator=(const Task& task) {
   this->id = task.id;
   this->chrom = task.chrom;
   this->cell_id = task.cell_id;
@@ -1311,6 +1348,7 @@ void Simulation::State::operator=(const Task& task) {
   this->n_target_contacts = task.n_target_contacts;
   this->nlefs = task.nlefs;
   this->barriers = task.barriers;
+  return *this;
 }
 
 void Simulation::State::resize(std::size_t size) {

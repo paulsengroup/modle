@@ -22,7 +22,11 @@ function(enable_sanitizers project_name)
 
     option(ENABLE_SANITIZER_UNDEFINED_BEHAVIOR "Enable undefined behavior sanitizer" FALSE)
     if(ENABLE_SANITIZER_UNDEFINED_BEHAVIOR)
-      list(APPEND SANITIZERS "undefined")
+      if(CMAKE_CXX_COMPILER_ID MATCHES ".*Clang")
+        list(APPEND SANITIZERS "undefined,integer,nullability")
+      else()
+        list(APPEND SANITIZERS "undefined")
+      endif()
     endif()
 
     option(ENABLE_SANITIZER_THREAD "Enable thread sanitizer" FALSE)
