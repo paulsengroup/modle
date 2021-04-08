@@ -9,7 +9,7 @@
 #include <memory>            // for allocator_traits<>::value_type
 #include <vector>            // for vector
 
-#include "modle/common.hpp"                      // for Bp, PRNG, PRNG_t
+#include "modle/common.hpp"                      // for bp_t, PRNG, PRNG_t
 #include "modle/config.hpp"                      // for Config
 #include "modle/extrusion_barriers.hpp"          // for ExtrusionBarrier
 #include "modle/extrusion_factors.hpp"           // for Lef, ExtrusionUnit
@@ -17,6 +17,40 @@
 #include "modle/suppress_compiler_warnings.hpp"  // for DISABLE_WARNING_POP, DISABLE_WARNING_PUSH
 
 namespace modle::test::libmodle {
+
+[[maybe_unused]] inline void print_debug_info(
+    std::size_t i, absl::Span<const bp_t> rev_moves, absl::Span<const bp_t> fwd_moves,
+    absl::Span<const bp_t> rev_moves_expected, absl::Span<const bp_t> fwd_moves_expected,
+    absl::Span<const std::size_t> rev_collision_mask,
+    absl::Span<const std::size_t> rev_collision_mask_expected,
+    absl::Span<const std::size_t> fwd_collision_mask,
+    absl::Span<const std::size_t> fwd_collision_mask_expected) {
+  fmt::print(stderr, "i={}; rev_move={}/{}; fwd_move={}/{};\n", i, rev_moves[i],
+             rev_moves_expected[i], fwd_moves[i], fwd_moves_expected[i]);
+  fmt::print(stderr, "i={}; rev_status={}/{}; fwd_status={}/{};\n", i, rev_collision_mask[i],
+             rev_collision_mask_expected[i], fwd_collision_mask[i], fwd_collision_mask_expected[i]);
+}
+
+[[maybe_unused]] inline void check_simulation_result(
+    absl::Span<const Lef> lefs, absl::Span<const bp_t> rev_moves, absl::Span<const bp_t> fwd_moves,
+    absl::Span<const bp_t> rev_moves_expected, absl::Span<const bp_t> fwd_moves_expected,
+    absl::Span<const std::size_t> rev_collision_mask,
+    absl::Span<const std::size_t> rev_collision_mask_expected,
+    absl::Span<const std::size_t> fwd_collision_mask,
+    absl::Span<const std::size_t> fwd_collision_mask_expected, bool print_debug_info_ = false) {
+  for (auto i = 0UL; i < lefs.size(); ++i) {
+    CHECK(rev_collision_mask[i] == rev_collision_mask_expected[i]);
+    CHECK(fwd_collision_mask[i] == fwd_collision_mask_expected[i]);
+    CHECK(rev_moves[i] == rev_moves_expected[i]);
+    CHECK(fwd_moves[i] == fwd_moves_expected[i]);
+
+    if (print_debug_info_) {
+      print_debug_info(i, rev_moves, fwd_moves, rev_moves_expected, fwd_moves_expected,
+                       rev_collision_mask, rev_collision_mask_expected, fwd_collision_mask,
+                       fwd_collision_mask_expected);
+    }
+  }
+}
 
 inline void check_that_lefs_are_sorted_by_idx(const std::vector<Lef>& lefs,
                                               const std::vector<std::size_t>& rev_ranks,
@@ -206,8 +240,10 @@ TEST_CASE("Adjust LEF moves 002", "[adjust-lef-moves][simulation][short]") {
   CHECK_NOTHROW(Simulation{c, false}.test_adjust_moves(
       &chrom, lefs, rev_ranks, fwd_ranks, absl::MakeSpan(rev_moves), absl::MakeSpan(fwd_moves)));
 
-  CHECK(std::equal(rev_moves.begin(), rev_moves.end(), rev_moves_adjusted.begin()));
-  CHECK(std::equal(fwd_moves.begin(), fwd_moves.end(), fwd_moves_adjusted.begin()));
+  for (auto i = 0UL; i < rev_moves.size(); ++i) {
+    CHECK(rev_moves[i] == rev_moves_adjusted[i]);
+    CHECK(fwd_moves[i] == fwd_moves_adjusted[i]);
+  }
 }
 
 TEST_CASE("Generate LEF moves 001", "[generate-lef-moves][simulation][short]") {
@@ -291,6 +327,8 @@ TEST_CASE("Detect LEF-LEF collisions 001", "[lef-lef-collisions][simulation][sho
   const std::vector<bp_t> rev_ranks{0, 1, 2, 3};  // NOLINT
   const std::vector<bp_t> fwd_ranks{0, 1, 2, 3};  // NOLINT
 
+  const std::vector<ExtrusionBarrier> barriers;
+
   const auto& REACHED_CHROM_BOUNDARY = Simulation::REACHED_CHROM_BOUNDARY;
   const auto& LEF_LEF_COLLISION = Simulation::LEF_LEF_COLLISION;
   const auto& NO_COLLISION = Simulation::NO_COLLISION;
@@ -319,8 +357,9 @@ TEST_CASE("Detect LEF-LEF collisions 001", "[lef-lef-collisions][simulation][sho
   require_that_lefs_are_sorted_by_idx(lefs, rev_ranks, fwd_ranks);
 
   CHECK_NOTHROW(modle::Simulation{c, false}.test_check_lef_lef_collisions(
-      &chrom, lefs, rev_ranks, fwd_ranks, absl::MakeSpan(rev_moves), absl::MakeSpan(fwd_moves),
-      absl::MakeSpan(rev_collision_mask), absl::MakeSpan(fwd_collision_mask), rand_eng));
+      &chrom, lefs, barriers, rev_ranks, fwd_ranks, absl::MakeSpan(rev_moves),
+      absl::MakeSpan(fwd_moves), absl::MakeSpan(rev_collision_mask),
+      absl::MakeSpan(fwd_collision_mask), rand_eng));
 
   for (auto i = 0UL; i < lefs.size(); ++i) {
     CHECK(rev_collision_mask[i] == rev_collision_mask_expected[i]);
@@ -361,6 +400,8 @@ TEST_CASE("Detect LEF-LEF collisions 002", "[lef-lef-collisions][simulation][sho
   const std::vector<bp_t> rev_ranks{0, 1, 2, 3};  // NOLINT
   const std::vector<bp_t> fwd_ranks{0, 1, 2, 3};  // NOLINT
 
+  const std::vector<ExtrusionBarrier> barriers;
+
   const auto& REACHED_CHROM_BOUNDARY = Simulation::REACHED_CHROM_BOUNDARY;
   const auto& LEF_LEF_COLLISION = Simulation::LEF_LEF_COLLISION;
   const auto& NO_COLLISION = Simulation::NO_COLLISION;
@@ -392,22 +433,13 @@ TEST_CASE("Detect LEF-LEF collisions 002", "[lef-lef-collisions][simulation][sho
       &chrom, lefs, rev_ranks, fwd_ranks, absl::MakeSpan(rev_moves), absl::MakeSpan(fwd_moves)));
 
   CHECK_NOTHROW(modle::Simulation{c, false}.test_check_lef_lef_collisions(
-      &chrom, lefs, rev_ranks, fwd_ranks, absl::MakeSpan(rev_moves), absl::MakeSpan(fwd_moves),
-      absl::MakeSpan(rev_collision_mask), absl::MakeSpan(fwd_collision_mask), rand_eng));
+      &chrom, lefs, barriers, rev_ranks, fwd_ranks, absl::MakeSpan(rev_moves),
+      absl::MakeSpan(fwd_moves), absl::MakeSpan(rev_collision_mask),
+      absl::MakeSpan(fwd_collision_mask), rand_eng));
 
-  for (auto i = 0UL; i < lefs.size(); ++i) {
-    CHECK(rev_collision_mask[i] == rev_collision_mask_expected[i]);
-    CHECK(fwd_collision_mask[i] == fwd_collision_mask_expected[i]);
-    CHECK(rev_moves[i] == rev_moves_expected[i]);
-    CHECK(fwd_moves[i] == fwd_moves_expected[i]);
-    /*
-    fmt::print(stderr, "i={}; rev_move={}/{}; fwd_move={}/{};\n", i, rev_moves[i],
-                rev_moves_expected[i], fwd_moves[i], fwd_moves_expected[i]);
-    fmt::print(stderr, "i={}; rev_status={}/{}; fwd_status={}/{};\n", i, rev_collision_mask[i],
-               rev_collision_mask_expected[i], fwd_collision_mask[i],
-               fwd_collision_mask_expected[i]);
-    */
-  }
+  check_simulation_result(lefs, rev_moves, fwd_moves, rev_moves_expected, fwd_moves_expected,
+                          rev_collision_mask, rev_collision_mask_expected, fwd_collision_mask,
+                          fwd_collision_mask_expected);
 }
 
 TEST_CASE("Detect LEF-LEF collisions 003", "[lef-lef-collisions][simulation][short]") {
@@ -440,6 +472,8 @@ TEST_CASE("Detect LEF-LEF collisions 003", "[lef-lef-collisions][simulation][sho
   const std::vector<bp_t> rev_ranks{0, 1, 2};  // NOLINT
   const std::vector<bp_t> fwd_ranks{2, 1, 0};  // NOLINT
 
+  const std::vector<ExtrusionBarrier> barriers;
+
   const auto& REACHED_CHROM_BOUNDARY = Simulation::REACHED_CHROM_BOUNDARY;
   const auto& LEF_LEF_COLLISION = Simulation::LEF_LEF_COLLISION;
   const auto& NO_COLLISION = Simulation::NO_COLLISION;
@@ -469,23 +503,13 @@ TEST_CASE("Detect LEF-LEF collisions 003", "[lef-lef-collisions][simulation][sho
       &chrom, lefs, rev_ranks, fwd_ranks, absl::MakeSpan(rev_moves), absl::MakeSpan(fwd_moves)));
 
   CHECK_NOTHROW(modle::Simulation{c, false}.test_check_lef_lef_collisions(
-      &chrom, lefs, rev_ranks, fwd_ranks, absl::MakeSpan(rev_moves), absl::MakeSpan(fwd_moves),
-      absl::MakeSpan(rev_collision_mask), absl::MakeSpan(fwd_collision_mask), rand_eng));
+      &chrom, lefs, barriers, rev_ranks, fwd_ranks, absl::MakeSpan(rev_moves),
+      absl::MakeSpan(fwd_moves), absl::MakeSpan(rev_collision_mask),
+      absl::MakeSpan(fwd_collision_mask), rand_eng));
 
-  for (auto i = 0UL; i < lefs.size(); ++i) {
-    CHECK(rev_collision_mask[i] == rev_collision_mask_expected[i]);
-    CHECK(fwd_collision_mask[i] == fwd_collision_mask_expected[i]);
-    CHECK(rev_moves[i] == rev_moves_expected[i]);
-    CHECK(fwd_moves[i] == fwd_moves_expected[i]);
-
-    /*
-    fmt::print(stderr, "i={}; rev_move={}/{}; fwd_move={}/{};\n", i, rev_moves[i],
-                rev_moves_expected[i], fwd_moves[i], fwd_moves_expected[i]);
-    fmt::print(stderr, "i={}; rev_status={}/{}; fwd_status={}/{};\n", i, rev_collision_mask[i],
-               rev_collision_mask_expected[i], fwd_collision_mask[i],
-               fwd_collision_mask_expected[i]);
-    */
-  }
+  check_simulation_result(lefs, rev_moves, fwd_moves, rev_moves_expected, fwd_moves_expected,
+                          rev_collision_mask, rev_collision_mask_expected, fwd_collision_mask,
+                          fwd_collision_mask_expected);
 }
 
 TEST_CASE("Detect LEF-BAR collisions 001 - wo soft collisions fwd CTCFs",
@@ -549,20 +573,9 @@ TEST_CASE("Detect LEF-BAR collisions 001 - wo soft collisions fwd CTCFs",
       barrier_mask, absl::MakeSpan(rev_collision_mask), absl::MakeSpan(fwd_collision_mask),
       rand_eng));
 
-  for (auto i = 0UL; i < lefs.size(); ++i) {
-    CHECK(rev_collision_mask[i] == rev_collision_mask_expected[i]);
-    CHECK(fwd_collision_mask[i] == fwd_collision_mask_expected[i]);
-    CHECK(rev_moves[i] == rev_moves_expected[i]);
-    CHECK(fwd_moves[i] == fwd_moves_expected[i]);
-
-    /*
-    fmt::print(stderr, "i={}; rev_move={}/{}; fwd_move={}/{};\n", i, rev_moves[i],
-               rev_moves_expected[i], fwd_moves[i], fwd_moves_expected[i]);
-    fmt::print(stderr, "i={}; rev_status={}/{}; fwd_status={}/{};\n", i, rev_collision_mask[i],
-               rev_collision_mask_expected[i], fwd_collision_mask[i],
-               fwd_collision_mask_expected[i]);
-    */
-  }
+  check_simulation_result(lefs, rev_moves, fwd_moves, rev_moves_expected, fwd_moves_expected,
+                          rev_collision_mask, rev_collision_mask_expected, fwd_collision_mask,
+                          fwd_collision_mask_expected);
 }
 
 TEST_CASE("Detect LEF-BAR collisions 002 - wo soft-collisions rev CTCFs",
@@ -626,20 +639,9 @@ TEST_CASE("Detect LEF-BAR collisions 002 - wo soft-collisions rev CTCFs",
       barrier_mask, absl::MakeSpan(rev_collision_mask), absl::MakeSpan(fwd_collision_mask),
       rand_eng));
 
-  for (auto i = 0UL; i < lefs.size(); ++i) {
-    CHECK(rev_collision_mask[i] == rev_collision_mask_expected[i]);
-    CHECK(fwd_collision_mask[i] == fwd_collision_mask_expected[i]);
-    CHECK(rev_moves[i] == rev_moves_expected[i]);
-    CHECK(fwd_moves[i] == fwd_moves_expected[i]);
-
-    /*
-    fmt::print(stderr, "i={}; rev_move={}/{}; fwd_move={}/{};\n", i, rev_moves[i],
-               rev_moves_expected[i], fwd_moves[i], fwd_moves_expected[i]);
-    fmt::print(stderr, "i={}; rev_status={}/{}; fwd_status={}/{};\n", i, rev_collision_mask[i],
-               rev_collision_mask_expected[i], fwd_collision_mask[i],
-               fwd_collision_mask_expected[i]);
-    */
-  }
+  check_simulation_result(lefs, rev_moves, fwd_moves, rev_moves_expected, fwd_moves_expected,
+                          rev_collision_mask, rev_collision_mask_expected, fwd_collision_mask,
+                          fwd_collision_mask_expected);
 }
 
 TEST_CASE("Detect LEF-BAR collisions 003 - w soft-collisions fwd CTCFs",
@@ -703,20 +705,9 @@ TEST_CASE("Detect LEF-BAR collisions 003 - w soft-collisions fwd CTCFs",
       barrier_mask, absl::MakeSpan(rev_collision_mask), absl::MakeSpan(fwd_collision_mask),
       rand_eng));
 
-  for (auto i = 0UL; i < lefs.size(); ++i) {
-    CHECK(rev_collision_mask[i] == rev_collision_mask_expected[i]);
-    CHECK(fwd_collision_mask[i] == fwd_collision_mask_expected[i]);
-    CHECK(rev_moves[i] == rev_moves_expected[i]);
-    CHECK(fwd_moves[i] == fwd_moves_expected[i]);
-
-    /*
-    fmt::print(stderr, "i={}; rev_move={}/{}; fwd_move={}/{};\n", i, rev_moves[i],
-               rev_moves_expected[i], fwd_moves[i], fwd_moves_expected[i]);
-    fmt::print(stderr, "i={}; rev_status={}/{}; fwd_status={}/{};\n", i, rev_collision_mask[i],
-               rev_collision_mask_expected[i], fwd_collision_mask[i],
-               fwd_collision_mask_expected[i]);
-    */
-  }
+  check_simulation_result(lefs, rev_moves, fwd_moves, rev_moves_expected, fwd_moves_expected,
+                          rev_collision_mask, rev_collision_mask_expected, fwd_collision_mask,
+                          fwd_collision_mask_expected);
 }
 
 TEST_CASE("Detect LEF-BAR collisions 004 - wo soft-collisions mixed CTCFs",
@@ -788,20 +779,9 @@ TEST_CASE("Detect LEF-BAR collisions 004 - wo soft-collisions mixed CTCFs",
       barrier_mask, absl::MakeSpan(rev_collision_mask), absl::MakeSpan(fwd_collision_mask),
       rand_eng));
 
-  for (auto i = 0UL; i < lefs.size(); ++i) {
-    CHECK(rev_collision_mask[i] == rev_collision_mask_expected[i]);
-    CHECK(fwd_collision_mask[i] == fwd_collision_mask_expected[i]);
-    CHECK(rev_moves[i] == rev_moves_expected[i]);
-    CHECK(fwd_moves[i] == fwd_moves_expected[i]);
-
-    /*
-    fmt::print(stderr, "i={}; rev_move={}/{}; fwd_move={}/{};\n", i, rev_moves[i],
-               rev_moves_expected[i], fwd_moves[i], fwd_moves_expected[i]);
-    fmt::print(stderr, "i={}; rev_status={}/{}; fwd_status={}/{};\n", i, rev_collision_mask[i],
-               rev_collision_mask_expected[i], fwd_collision_mask[i],
-               fwd_collision_mask_expected[i]);
-    */
-  }
+  check_simulation_result(lefs, rev_moves, fwd_moves, rev_moves_expected, fwd_moves_expected,
+                          rev_collision_mask, rev_collision_mask_expected, fwd_collision_mask,
+                          fwd_collision_mask_expected);
 }
 
 TEST_CASE("Detect LEF-BAR collisions 005 - wo soft-collisions mixed CTCFs, different extr. speeds",
@@ -873,20 +853,9 @@ TEST_CASE("Detect LEF-BAR collisions 005 - wo soft-collisions mixed CTCFs, diffe
       barrier_mask, absl::MakeSpan(rev_collision_mask), absl::MakeSpan(fwd_collision_mask),
       rand_eng));
 
-  for (auto i = 0UL; i < lefs.size(); ++i) {
-    CHECK(rev_collision_mask[i] == rev_collision_mask_expected[i]);
-    CHECK(fwd_collision_mask[i] == fwd_collision_mask_expected[i]);
-    CHECK(rev_moves[i] == rev_moves_expected[i]);
-    CHECK(fwd_moves[i] == fwd_moves_expected[i]);
-
-    /*
-    fmt::print(stderr, "i={}; rev_move={}/{}; fwd_move={}/{};\n", i, rev_moves[i],
-               rev_moves_expected[i], fwd_moves[i], fwd_moves_expected[i]);
-    fmt::print(stderr, "i={}; rev_status={}/{}; fwd_status={}/{};\n", i, rev_collision_mask[i],
-               rev_collision_mask_expected[i], fwd_collision_mask[i],
-               fwd_collision_mask_expected[i]);
-    */
-  }
+  check_simulation_result(lefs, rev_moves, fwd_moves, rev_moves_expected, fwd_moves_expected,
+                          rev_collision_mask, rev_collision_mask_expected, fwd_collision_mask,
+                          fwd_collision_mask_expected);
 }
 
 TEST_CASE("Simulation 001", "[simulation][short]") {
@@ -982,23 +951,13 @@ TEST_CASE("Simulation 001", "[simulation][short]") {
   }
 
   CHECK_NOTHROW(Simulation{c, false}.test_check_lef_lef_collisions(
-      &chrom, lefs, rev_ranks, fwd_ranks, absl::MakeSpan(rev_moves), absl::MakeSpan(fwd_moves),
-      absl::MakeSpan(rev_collision_mask), absl::MakeSpan(fwd_collision_mask), rand_eng));
+      &chrom, lefs, barriers, rev_ranks, fwd_ranks, absl::MakeSpan(rev_moves),
+      absl::MakeSpan(fwd_moves), absl::MakeSpan(rev_collision_mask),
+      absl::MakeSpan(fwd_collision_mask), rand_eng));
 
-  for (auto i = 0UL; i < lefs.size(); ++i) {
-    CHECK(rev_collision_mask[i] == rev_collision_mask_expected[i]);
-    CHECK(fwd_collision_mask[i] == fwd_collision_mask_expected[i]);
-    CHECK(rev_moves[i] == rev_moves_expected[i]);
-    CHECK(fwd_moves[i] == fwd_moves_expected[i]);
-
-    /*
-    fmt::print(stderr, "i={}; rev_move={}/{}; fwd_move={}/{};\n", i, rev_moves[i],
-               rev_moves_expected[i], fwd_moves[i], fwd_moves_expected[i]);
-    fmt::print(stderr, "i={}; rev_status={}/{}; fwd_status={}/{};\n", i, rev_collision_mask[i],
-               rev_collision_mask_expected[i], fwd_collision_mask[i],
-               fwd_collision_mask_expected[i]);
-    */
-  }
+  check_simulation_result(lefs, rev_moves, fwd_moves, rev_moves_expected, fwd_moves_expected,
+                          rev_collision_mask, rev_collision_mask_expected, fwd_collision_mask,
+                          fwd_collision_mask_expected);
 }
 
 TEST_CASE("Simulation 002", "[simulation][short]") {
@@ -1094,23 +1053,13 @@ TEST_CASE("Simulation 002", "[simulation][short]") {
   }
 
   CHECK_NOTHROW(Simulation{c, false}.test_check_lef_lef_collisions(
-      &chrom, lefs, rev_ranks, fwd_ranks, absl::MakeSpan(rev_moves), absl::MakeSpan(fwd_moves),
-      absl::MakeSpan(rev_collision_mask), absl::MakeSpan(fwd_collision_mask), rand_eng));
+      &chrom, lefs, barriers, rev_ranks, fwd_ranks, absl::MakeSpan(rev_moves),
+      absl::MakeSpan(fwd_moves), absl::MakeSpan(rev_collision_mask),
+      absl::MakeSpan(fwd_collision_mask), rand_eng));
 
-  for (auto i = 0UL; i < lefs.size(); ++i) {
-    CHECK(rev_collision_mask[i] == rev_collision_mask_expected[i]);
-    CHECK(fwd_collision_mask[i] == fwd_collision_mask_expected[i]);
-    CHECK(rev_moves[i] == rev_moves_expected[i]);
-    CHECK(fwd_moves[i] == fwd_moves_expected[i]);
-
-    /*
-    fmt::print(stderr, "i={}; rev_move={}/{}; fwd_move={}/{};\n", i, rev_moves[i],
-               rev_moves_expected[i], fwd_moves[i], fwd_moves_expected[i]);
-    fmt::print(stderr, "i={}; rev_status={}/{}; fwd_status={}/{};\n", i, rev_collision_mask[i],
-               rev_collision_mask_expected[i], fwd_collision_mask[i],
-               fwd_collision_mask_expected[i]);
-    */
-  }
+  check_simulation_result(lefs, rev_moves, fwd_moves, rev_moves_expected, fwd_moves_expected,
+                          rev_collision_mask, rev_collision_mask_expected, fwd_collision_mask,
+                          fwd_collision_mask_expected);
 }
 
 TEST_CASE("Simulation 003 - Soft collisions on", "[simulation][short]") {
@@ -1206,23 +1155,13 @@ TEST_CASE("Simulation 003 - Soft collisions on", "[simulation][short]") {
   }
 
   CHECK_NOTHROW(Simulation{c, false}.test_check_lef_lef_collisions(
-      &chrom, lefs, rev_ranks, fwd_ranks, absl::MakeSpan(rev_moves), absl::MakeSpan(fwd_moves),
-      absl::MakeSpan(rev_collision_mask), absl::MakeSpan(fwd_collision_mask), rand_eng));
+      &chrom, lefs, barriers, rev_ranks, fwd_ranks, absl::MakeSpan(rev_moves),
+      absl::MakeSpan(fwd_moves), absl::MakeSpan(rev_collision_mask),
+      absl::MakeSpan(fwd_collision_mask), rand_eng));
 
-  for (auto i = 0UL; i < lefs.size(); ++i) {
-    CHECK(rev_collision_mask[i] == rev_collision_mask_expected[i]);
-    CHECK(fwd_collision_mask[i] == fwd_collision_mask_expected[i]);
-    CHECK(rev_moves[i] == rev_moves_expected[i]);
-    CHECK(fwd_moves[i] == fwd_moves_expected[i]);
-
-    /*
-    fmt::print(stderr, "i={}; rev_move={}/{}; fwd_move={}/{};\n", i, rev_moves[i],
-               rev_moves_expected[i], fwd_moves[i], fwd_moves_expected[i]);
-    fmt::print(stderr, "i={}; rev_status={}/{}; fwd_status={}/{};\n", i, rev_collision_mask[i],
-               rev_collision_mask_expected[i], fwd_collision_mask[i],
-               fwd_collision_mask_expected[i]);
-    */
-  }
+  check_simulation_result(lefs, rev_moves, fwd_moves, rev_moves_expected, fwd_moves_expected,
+                          rev_collision_mask, rev_collision_mask_expected, fwd_collision_mask,
+                          fwd_collision_mask_expected);
 }
 
 TEST_CASE("Simulation 004 - Inactive barriers", "[simulation][short]") {
@@ -1318,23 +1257,13 @@ TEST_CASE("Simulation 004 - Inactive barriers", "[simulation][short]") {
   }
 
   CHECK_NOTHROW(Simulation{c, false}.test_check_lef_lef_collisions(
-      &chrom, lefs, rev_ranks, fwd_ranks, absl::MakeSpan(rev_moves), absl::MakeSpan(fwd_moves),
-      absl::MakeSpan(rev_collision_mask), absl::MakeSpan(fwd_collision_mask), rand_eng));
+      &chrom, lefs, barriers, rev_ranks, fwd_ranks, absl::MakeSpan(rev_moves),
+      absl::MakeSpan(fwd_moves), absl::MakeSpan(rev_collision_mask),
+      absl::MakeSpan(fwd_collision_mask), rand_eng));
 
-  for (auto i = 0UL; i < lefs.size(); ++i) {
-    CHECK(rev_collision_mask[i] == rev_collision_mask_expected[i]);
-    CHECK(fwd_collision_mask[i] == fwd_collision_mask_expected[i]);
-    CHECK(rev_moves[i] == rev_moves_expected[i]);
-    CHECK(fwd_moves[i] == fwd_moves_expected[i]);
-
-    /*
-    fmt::print(stderr, "i={}; rev_move={}/{}; fwd_move={}/{};\n", i, rev_moves[i],
-               rev_moves_expected[i], fwd_moves[i], fwd_moves_expected[i]);
-    fmt::print(stderr, "i={}; rev_status={}/{}; fwd_status={}/{};\n", i, rev_collision_mask[i],
-               rev_collision_mask_expected[i], fwd_collision_mask[i],
-               fwd_collision_mask_expected[i]);
-    */
-  }
+  check_simulation_result(lefs, rev_moves, fwd_moves, rev_moves_expected, fwd_moves_expected,
+                          rev_collision_mask, rev_collision_mask_expected, fwd_collision_mask,
+                          fwd_collision_mask_expected);
 }
 
 TEST_CASE("Simulation 005 - Multiple LEFs located at the same site", "[simulation][short]") {
@@ -1424,23 +1353,13 @@ TEST_CASE("Simulation 005 - Multiple LEFs located at the same site", "[simulatio
   }
 
   CHECK_NOTHROW(Simulation{c, false}.test_check_lef_lef_collisions(
-      &chrom, lefs, rev_ranks, fwd_ranks, absl::MakeSpan(rev_moves), absl::MakeSpan(fwd_moves),
-      absl::MakeSpan(rev_collision_mask), absl::MakeSpan(fwd_collision_mask), rand_eng));
+      &chrom, lefs, barriers, rev_ranks, fwd_ranks, absl::MakeSpan(rev_moves),
+      absl::MakeSpan(fwd_moves), absl::MakeSpan(rev_collision_mask),
+      absl::MakeSpan(fwd_collision_mask), rand_eng));
 
-  for (auto i = 0UL; i < lefs.size(); ++i) {
-    CHECK(rev_collision_mask[i] == rev_collision_mask_expected[i]);
-    CHECK(fwd_collision_mask[i] == fwd_collision_mask_expected[i]);
-    CHECK(rev_moves[i] == rev_moves_expected[i]);
-    CHECK(fwd_moves[i] == fwd_moves_expected[i]);
-
-    /*
-    fmt::print(stderr, "i={}; rev_move={}/{}; fwd_move={}/{};\n", i, rev_moves[i],
-               rev_moves_expected[i], fwd_moves[i], fwd_moves_expected[i]);
-    fmt::print(stderr, "i={}; rev_status={}/{}; fwd_status={}/{};\n", i, rev_collision_mask[i],
-               rev_collision_mask_expected[i], fwd_collision_mask[i],
-               fwd_collision_mask_expected[i]);
-    */
-  }
+  check_simulation_result(lefs, rev_moves, fwd_moves, rev_moves_expected, fwd_moves_expected,
+                          rev_collision_mask, rev_collision_mask_expected, fwd_collision_mask,
+                          fwd_collision_mask_expected);
 }
 
 TEST_CASE("Simulation 006 - Few inactive LEFs", "[simulation][short]") {
@@ -1533,23 +1452,153 @@ TEST_CASE("Simulation 006 - Few inactive LEFs", "[simulation][short]") {
   }
 
   CHECK_NOTHROW(Simulation{c, false}.test_check_lef_lef_collisions(
-      &chrom, lefs, rev_ranks, fwd_ranks, absl::MakeSpan(rev_moves), absl::MakeSpan(fwd_moves),
-      absl::MakeSpan(rev_collision_mask), absl::MakeSpan(fwd_collision_mask), rand_eng));
+      &chrom, lefs, barriers, rev_ranks, fwd_ranks, absl::MakeSpan(rev_moves),
+      absl::MakeSpan(fwd_moves), absl::MakeSpan(rev_collision_mask),
+      absl::MakeSpan(fwd_collision_mask), rand_eng));
 
-  for (auto i = 0UL; i < lefs.size(); ++i) {
-    CHECK(rev_collision_mask[i] == rev_collision_mask_expected[i]);
-    CHECK(fwd_collision_mask[i] == fwd_collision_mask_expected[i]);
-    CHECK(rev_moves[i] == rev_moves_expected[i]);
-    CHECK(fwd_moves[i] == fwd_moves_expected[i]);
+  check_simulation_result(lefs, rev_moves, fwd_moves, rev_moves_expected, fwd_moves_expected,
+                          rev_collision_mask, rev_collision_mask_expected, fwd_collision_mask,
+                          fwd_collision_mask_expected);
+}
 
-    /*
-    fmt::print(stderr, "i={}; rev_move={}/{}; fwd_move={}/{};\n", i, rev_moves[i],
-               rev_moves_expected[i], fwd_moves[i], fwd_moves_expected[i]);
-    fmt::print(stderr, "i={}; rev_status={}/{}; fwd_status={}/{};\n", i, rev_collision_mask[i],
-               rev_collision_mask_expected[i], fwd_collision_mask[i],
-               fwd_collision_mask_expected[i]);
-    */
-  }
+TEST_CASE("Simulation 007 - LEF-LEF collision overrides LEF-BAR collision 1",
+          "[simulation][short]") {
+  modle::Config c;
+  c.rev_extrusion_speed = 20;                  // NOLINT
+  c.rev_extrusion_speed_std = 0;               // NOLINT
+  c.fwd_extrusion_speed = 20;                  // NOLINT
+  c.fwd_extrusion_speed_std = 0;               // NOLINT
+  c.probability_of_extrusion_unit_bypass = 0;  // NOLINT
+  c.lef_hard_collision_pblock = 1;             // NOLINT
+  c.lef_soft_collision_pblock = 0;             // NOLINT
+  constexpr std::size_t nlefs = 2;
+  constexpr std::size_t nbarriers = 1;
+  const Chromosome chrom{{"chr1", 0, 200}};  // NOLINT
+  // NOLINTNEXTLINE(readability-magic-numbers, cppcoreguidelines-avoid-magic-numbers)
+  auto rand_eng = modle::PRNG(4003028292286930594ULL);
+
+  // clang-format off
+  std::vector<Lef> lefs{
+      Lef{{50},  {95},  1},  // NOLINT
+      Lef{{110}, {150}, 1}   // NOLINT
+  };
+
+  const std::vector<ExtrusionBarrier> barriers{ExtrusionBarrier{100, 1.0, 0.0, '+'}};
+
+  boost::dynamic_bitset<> barrier_mask;
+  barrier_mask.resize(nbarriers, static_cast<bool>(CTCF::State::OCCUPIED));
+
+  const std::vector<bp_t> rev_ranks{0, 1};  // NOLINT
+  const std::vector<bp_t> fwd_ranks{0, 1};  // NOLINT
+
+  std::vector<bp_t> rev_moves{20, 20};  // NOLINT
+  std::vector<bp_t> fwd_moves{20, 20};  // NOLINT
+  // clang-format on
+
+  const auto& LEF_LEF_COLLISION = Simulation::LEF_LEF_COLLISION;
+  const auto& NO_COLLISION = Simulation::NO_COLLISION;  // clang-format off
+  const std::vector<std::size_t> rev_collision_mask_expected{NO_COLLISION,
+                                                             LEF_LEF_COLLISION};
+  const std::vector<std::size_t> fwd_collision_mask_expected{LEF_LEF_COLLISION,
+                                                             NO_COLLISION};
+  std::vector<std::size_t> rev_collision_mask(nlefs, NO_COLLISION);
+  std::vector<std::size_t> fwd_collision_mask(nlefs, NO_COLLISION);
+
+  const std::vector<bp_t> rev_moves_expected{20, 7};  // NOLINT
+  const std::vector<bp_t> fwd_moves_expected{ 7, 20}; // NOLINT
+  // clang-format on
+
+  assert(lefs.size() == nlefs);                         // NOLINT
+  assert(barriers.size() == nbarriers);                 // NOLINT
+  assert(rev_collision_mask_expected.size() == nlefs);  // NOLINT
+  assert(fwd_collision_mask_expected.size() == nlefs);  // NOLINT
+  assert(rev_collision_mask.size() == nlefs);           // NOLINT
+  assert(fwd_collision_mask.size() == nlefs);           // NOLINT
+  require_that_lefs_are_sorted_by_idx(lefs, rev_ranks, fwd_ranks);
+
+  CHECK_NOTHROW(Simulation{c, false}.test_check_lef_bar_collisions(
+      lefs, rev_ranks, fwd_ranks, absl::MakeSpan(rev_moves), absl::MakeSpan(fwd_moves), barriers,
+      barrier_mask, absl::MakeSpan(rev_collision_mask), absl::MakeSpan(fwd_collision_mask),
+      rand_eng));
+
+  CHECK_NOTHROW(Simulation{c, false}.test_check_lef_lef_collisions(
+      &chrom, lefs, barriers, rev_ranks, fwd_ranks, absl::MakeSpan(rev_moves),
+      absl::MakeSpan(fwd_moves), absl::MakeSpan(rev_collision_mask),
+      absl::MakeSpan(fwd_collision_mask), rand_eng));
+
+  check_simulation_result(lefs, rev_moves, fwd_moves, rev_moves_expected, fwd_moves_expected,
+                          rev_collision_mask, rev_collision_mask_expected, fwd_collision_mask,
+                          fwd_collision_mask_expected);
+}
+
+TEST_CASE("Simulation 008 - LEF-LEF collision overrides LEF-BAR collision 2",
+          "[simulation][short]") {
+  modle::Config c;
+  c.rev_extrusion_speed = 20;                  // NOLINT
+  c.rev_extrusion_speed_std = 0;               // NOLINT
+  c.fwd_extrusion_speed = 20;                  // NOLINT
+  c.fwd_extrusion_speed_std = 0;               // NOLINT
+  c.probability_of_extrusion_unit_bypass = 0;  // NOLINT
+  c.lef_hard_collision_pblock = 1;             // NOLINT
+  c.lef_soft_collision_pblock = 0;             // NOLINT
+  constexpr std::size_t nlefs = 2;
+  constexpr std::size_t nbarriers = 1;
+  const Chromosome chrom{{"chr1", 0, 200}};  // NOLINT
+  // NOLINTNEXTLINE(readability-magic-numbers, cppcoreguidelines-avoid-magic-numbers)
+  auto rand_eng = modle::PRNG(12931236264094635263ULL);
+
+  // clang-format off
+  std::vector<Lef> lefs{
+      Lef{{50},  {90},  1},  // NOLINT
+      Lef{{105}, {150}, 1}   // NOLINT
+  };
+
+  const std::vector<ExtrusionBarrier> barriers{ExtrusionBarrier{100, 1.0, 0.0, '-'}};
+
+  boost::dynamic_bitset<> barrier_mask;
+  barrier_mask.resize(nbarriers, static_cast<bool>(CTCF::State::OCCUPIED));
+
+  const std::vector<bp_t> rev_ranks{0, 1};  // NOLINT
+  const std::vector<bp_t> fwd_ranks{0, 1};  // NOLINT
+
+  std::vector<bp_t> rev_moves{20, 20};  // NOLINT
+  std::vector<bp_t> fwd_moves{20, 20};  // NOLINT
+  // clang-format on
+
+  const auto& LEF_LEF_COLLISION = Simulation::LEF_LEF_COLLISION;
+  const auto& NO_COLLISION = Simulation::NO_COLLISION;  // clang-format off
+  const std::vector<std::size_t> rev_collision_mask_expected{NO_COLLISION,
+                                                             LEF_LEF_COLLISION};
+  const std::vector<std::size_t> fwd_collision_mask_expected{LEF_LEF_COLLISION,
+                                                             NO_COLLISION};
+  std::vector<std::size_t> rev_collision_mask(nlefs, NO_COLLISION);
+  std::vector<std::size_t> fwd_collision_mask(nlefs, NO_COLLISION);
+
+  const std::vector<bp_t> rev_moves_expected{20,  7};  // NOLINT
+  const std::vector<bp_t> fwd_moves_expected{ 7, 20};  // NOLINT
+  // clang-format on
+
+  assert(lefs.size() == nlefs);                         // NOLINT
+  assert(barriers.size() == nbarriers);                 // NOLINT
+  assert(rev_collision_mask_expected.size() == nlefs);  // NOLINT
+  assert(fwd_collision_mask_expected.size() == nlefs);  // NOLINT
+  assert(rev_collision_mask.size() == nlefs);           // NOLINT
+  assert(fwd_collision_mask.size() == nlefs);           // NOLINT
+  require_that_lefs_are_sorted_by_idx(lefs, rev_ranks, fwd_ranks);
+
+  CHECK_NOTHROW(Simulation{c, false}.test_check_lef_bar_collisions(
+      lefs, rev_ranks, fwd_ranks, absl::MakeSpan(rev_moves), absl::MakeSpan(fwd_moves), barriers,
+      barrier_mask, absl::MakeSpan(rev_collision_mask), absl::MakeSpan(fwd_collision_mask),
+      rand_eng));
+
+  CHECK_NOTHROW(Simulation{c, false}.test_check_lef_lef_collisions(
+      &chrom, lefs, barriers, rev_ranks, fwd_ranks, absl::MakeSpan(rev_moves),
+      absl::MakeSpan(fwd_moves), absl::MakeSpan(rev_collision_mask),
+      absl::MakeSpan(fwd_collision_mask), rand_eng));
+
+  check_simulation_result(lefs, rev_moves, fwd_moves, rev_moves_expected, fwd_moves_expected,
+                          rev_collision_mask, rev_collision_mask_expected, fwd_collision_mask,
+                          fwd_collision_mask_expected);
 }
 
 }  // namespace modle::test::libmodle

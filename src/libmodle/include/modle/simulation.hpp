@@ -21,6 +21,7 @@
 namespace modle {
 
 class ExtrusionBarrier;
+class ExtrusionUnit;
 struct Lef;
 
 class Simulation : Config {
@@ -39,6 +40,8 @@ class Simulation : Config {
   static constexpr auto NO_COLLISION = std::numeric_limits<collision_t>::max();
   static constexpr auto LEF_LEF_COLLISION = std::numeric_limits<collision_t>::max() - 1;
   static constexpr auto REACHED_CHROM_BOUNDARY = std::numeric_limits<collision_t>::max() - 2;
+
+  [[nodiscard]] inline static constexpr bool is_lef_bar_collision(collision_t cause_of_collision);
 
   struct Task {
     std::size_t id;
@@ -96,6 +99,11 @@ class Simulation : Config {
   inline void generate_ctcf_states(absl::Span<const ExtrusionBarrier> extr_barriers,
                                    boost::dynamic_bitset<>& mask, modle::PRNG_t& rand_eng);
 
+  [[nodiscard]] inline bp_t generate_rev_move(const Chromosome* const chrom,
+                                              const ExtrusionUnit& unit, modle::PRNG_t& rand_eng);
+  [[nodiscard]] inline bp_t generate_fwd_move(const Chromosome* const chrom,
+                                              const ExtrusionUnit& unit, modle::PRNG_t& rand_eng);
+
   inline void generate_moves(const Chromosome* chrom, absl::Span<const Lef> lefs,
                              absl::Span<const std::size_t> rev_lef_ranks,
                              absl::Span<const std::size_t> fwd_lef_ranks,
@@ -118,6 +126,7 @@ class Simulation : Config {
   // Loop over lefs and identify colliding extr. units (i.e. units that travel in opposite
   // direction and that are within <p>dist_threshold</p> bp from each other
   inline void check_lef_lef_collisions(const Chromosome* chrom, absl::Span<const Lef> lefs,
+                                       absl::Span<const ExtrusionBarrier> barrier_buff,
                                        absl::Span<const std::size_t> rev_lef_rank_buff,
                                        absl::Span<const std::size_t> fwd_lef_rank_buff,
                                        absl::Span<bp_t> rev_move_buff,
@@ -150,6 +159,9 @@ class Simulation : Config {
                                      modle::PRNG_t& rand_eng);
 
   inline void release_lefs(absl::Span<Lef> lefs, absl::Span<const std::size_t> lef_idx);
+
+  [[nodiscard]] inline std::pair<bp_t /*rev*/, bp_t /*fwd*/> compute_lef_lef_collision_pos(
+      const ExtrusionUnit& rev_unit, const ExtrusionUnit& fwd_unit, bp_t rev_move, bp_t fwd_move);
 
 #ifdef ENABLE_TESTING
  public:
@@ -185,12 +197,13 @@ class Simulation : Config {
 
   inline void test_check_lef_lef_collisions(
       const Chromosome* const chrom, absl::Span<const Lef> lefs,
-      absl::Span<const std::size_t> rev_lef_rank_buff,
+      absl::Span<const ExtrusionBarrier> barriers, absl::Span<const std::size_t> rev_lef_rank_buff,
       absl::Span<const std::size_t> fwd_lef_rank_buff, absl::Span<bp_t> rev_move_buff,
       absl::Span<bp_t> fwd_move_buff, absl::Span<collision_t> rev_collision_buff,
       absl::Span<collision_t> fwd_collision_buff, modle::PRNG_t& rand_eng) {
-    this->check_lef_lef_collisions(chrom, lefs, rev_lef_rank_buff, fwd_lef_rank_buff, rev_move_buff,
-                                   fwd_move_buff, rev_collision_buff, fwd_collision_buff, rand_eng);
+    this->check_lef_lef_collisions(chrom, lefs, barriers, rev_lef_rank_buff, fwd_lef_rank_buff,
+                                   rev_move_buff, fwd_move_buff, rev_collision_buff,
+                                   fwd_collision_buff, rand_eng);
   }
 
   inline void test_check_lef_bar_collisions(
