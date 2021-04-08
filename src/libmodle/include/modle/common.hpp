@@ -30,6 +30,15 @@ using Contacts = uint32_t;
 
 namespace dna {
 enum Direction : uint_fast8_t { none = 0, fwd = 1, rev = 2, both = 3 };
-}
+
+#if __cplusplus == 202002L
+#define MODLE_LIKELY [[likely]]
+#define MODLE_UNLIKELY [[unlikely]]
+#else
+#define MODLE_LIKELY
+#define MODLE_UNLIKELY
+#endif
+
+}  // namespace dna
 
 }  // namespace modle
