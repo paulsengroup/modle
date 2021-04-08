@@ -51,6 +51,7 @@ namespace modle::test::libmodle {
     }
   }
 }
+using EU = ExtrusionUnit;
 
 inline void check_that_lefs_are_sorted_by_idx(const std::vector<Lef>& lefs,
                                               const std::vector<std::size_t>& rev_ranks,
@@ -186,9 +187,9 @@ TEST_CASE("Bind LEFs 003 - Empty mask (i.e. bind all LEFs)", "[bind-lefs][simula
 TEST_CASE("Adjust LEF moves 001", "[adjust-lef-moves][simulation][short]") {
   const Chromosome chrom{{"chr1", 0, 101}};
   // clang-format off
-  const std::vector<Lef> lefs{Lef{{5},  {25}, true},
-                              Lef{{10}, {20}, true},
-                              Lef{{90}, {90}, true}};
+  const std::vector<Lef> lefs{Lef{EU{5},  EU{25}, true},
+                              Lef{EU{10}, EU{20}, true},
+                              Lef{EU{90}, EU{90}, true}};
 
   // clang-format on
   const std::vector<std::size_t> rev_ranks{0, 1, 2};  // NOLINT
@@ -215,12 +216,12 @@ TEST_CASE("Adjust LEF moves 001", "[adjust-lef-moves][simulation][short]") {
 TEST_CASE("Adjust LEF moves 002", "[adjust-lef-moves][simulation][short]") {
   const Chromosome chrom{{"chr1", 10, 400}};
   // clang-format off
-  const std::vector<Lef> lefs{Lef{{20},  {50}, true},
-                              Lef{{60},  {60}, true},
-                              Lef{{200}, {310}, true},
-                              Lef{{220}, {300}, true},
-                              Lef{{240}, {250}, true},
-                              Lef{{125}, {305}, true}};
+  const std::vector<Lef> lefs{Lef{EU{20},  EU{50}, true},
+                              Lef{EU{60},  EU{60}, true},
+                              Lef{EU{200}, EU{310}, true},
+                              Lef{EU{220}, EU{300}, true},
+                              Lef{EU{240}, EU{250}, true},
+                              Lef{EU{125}, EU{305}, true}};
 
   // clang-format on
   const std::vector<std::size_t> rev_ranks{0, 1, 5, 2, 3, 4};  // NOLINT
@@ -251,7 +252,7 @@ TEST_CASE("Generate LEF moves 001", "[generate-lef-moves][simulation][short]") {
   constexpr auto nlefs = 100UL;
   constexpr auto iters = 1000UL;
   const auto pos = (chrom.start_pos() + chrom.end_pos() + 1) / 2;
-  std::vector<Lef> lefs(nlefs, Lef{{pos}, {pos}, true});
+  std::vector<Lef> lefs(nlefs, Lef{EU{pos}, EU{pos}, true});
   std::vector<std::size_t> rev_ranks(nlefs);
   std::iota(rev_ranks.begin(), rev_ranks.end(), 0);
   std::vector<bp_t> rev_moves(nlefs, 0), fwd_moves(nlefs, 0);  // NOLINT
@@ -318,10 +319,10 @@ TEST_CASE("Detect LEF-LEF collisions 001", "[lef-lef-collisions][simulation][sho
   *      <-0- -2->  <-4- -8->  <--14-->  <-18- -23->
   */
   std::vector<Lef> lefs{
-     Lef{{0},  {2},  true},  // NOLINT
-     Lef{{4},  {8},  true},  // NOLINT
-     Lef{{14}, {14}, true},  // NOLINT
-     Lef{{18}, {23}, true}   // NOLINT
+     Lef{EU{0},  EU{2},  true},  // NOLINT
+     Lef{EU{4},  EU{8},  true},  // NOLINT
+     Lef{EU{14}, EU{14}, true},  // NOLINT
+     Lef{EU{18}, EU{23}, true}   // NOLINT
   };
   // clang-format on
   const std::vector<bp_t> rev_ranks{0, 1, 2, 3};  // NOLINT
@@ -391,10 +392,10 @@ TEST_CASE("Detect LEF-LEF collisions 002", "[lef-lef-collisions][simulation][sho
    */
 
   std::vector<Lef> lefs{
-      Lef{{0},  {5},  true},  // NOLINT
-      Lef{{4},  {6},  true},  // NOLINT
-      Lef{{9},  {14}, true},  // NOLINT
-      Lef{{11}, {15}, true}   // NOLINT
+      Lef{EU{0},  EU{5},  true},  // NOLINT
+      Lef{EU{4},  EU{6},  true},  // NOLINT
+      Lef{EU{9},  EU{14}, true},  // NOLINT
+      Lef{EU{11}, EU{15}, true}   // NOLINT
   };
   // clang-format on
   const std::vector<bp_t> rev_ranks{0, 1, 2, 3};  // NOLINT
@@ -464,9 +465,9 @@ TEST_CASE("Detect LEF-LEF collisions 003", "[lef-lef-collisions][simulation][sho
    */
 
   std::vector<Lef> lefs{
-      Lef{{120}, {180}, true},  // NOLINT
-      Lef{{130}, {160}, true},  // NOLINT
-      Lef{{140}, {141}, true}   // NOLINT
+      Lef{EU{120}, EU{180}, true},  // NOLINT
+      Lef{EU{130}, EU{160}, true},  // NOLINT
+      Lef{EU{140}, EU{141}, true}   // NOLINT
   };
   // clang-format on
   const std::vector<bp_t> rev_ranks{0, 1, 2};  // NOLINT
@@ -528,9 +529,9 @@ TEST_CASE("Detect LEF-BAR collisions 001 - wo soft collisions fwd CTCFs",
 
   // clang-format off
   const std::vector<Lef> lefs{
-      Lef{{0}, {1}, 1},  // NOLINT
-      Lef{{3}, {4}, 1},  // NOLINT
-      Lef{{5}, {5}, 1}   // NOLINT
+      Lef{EU{0}, EU{1}, 1},  // NOLINT
+      Lef{EU{3}, EU{4}, 1},  // NOLINT
+      Lef{EU{5}, EU{5}, 1}   // NOLINT
   };
   const std::vector<ExtrusionBarrier> barriers{ExtrusionBarrier{2, 1.0, 0.0, '+'},
                                                ExtrusionBarrier{4, 1.0, 0.0, '+'},
@@ -594,9 +595,9 @@ TEST_CASE("Detect LEF-BAR collisions 002 - wo soft-collisions rev CTCFs",
 
   // clang-format off
   const std::vector<Lef> lefs{
-      Lef{{0}, {1}, 1},  // NOLINT
-      Lef{{3}, {4}, 1},  // NOLINT
-      Lef{{5}, {5}, 1}   // NOLINT
+      Lef{EU{0}, EU{1}, 1},  // NOLINT
+      Lef{EU{3}, EU{4}, 1},  // NOLINT
+      Lef{EU{5}, EU{5}, 1}   // NOLINT
   };
   const std::vector<ExtrusionBarrier> barriers{ExtrusionBarrier{2, 1.0, 0.0, '-'},
                                                ExtrusionBarrier{4, 1.0, 0.0, '-'},
@@ -660,9 +661,9 @@ TEST_CASE("Detect LEF-BAR collisions 003 - w soft-collisions fwd CTCFs",
 
   // clang-format off
   const std::vector<Lef> lefs{
-      Lef{{0}, {1}, 1},  // NOLINT
-      Lef{{3}, {4}, 1},  // NOLINT
-      Lef{{5}, {5}, 1}   // NOLINT
+      Lef{EU{0}, EU{1}, 1},  // NOLINT
+      Lef{EU{3}, EU{4}, 1},  // NOLINT
+      Lef{EU{5}, EU{5}, 1}   // NOLINT
   };
   const std::vector<ExtrusionBarrier> barriers{ExtrusionBarrier{2, 1.0, 0.0, '+'},
                                                ExtrusionBarrier{4, 1.0, 0.0, '+'},
@@ -726,11 +727,11 @@ TEST_CASE("Detect LEF-BAR collisions 004 - wo soft-collisions mixed CTCFs",
 
   // clang-format off
   const std::vector<Lef> lefs{
-      Lef{{10}, {20}, 1},  // NOLINT
-      Lef{{26}, {26}, 1},  // NOLINT
-      Lef{{30}, {35}, 1},  // NOLINT
-      Lef{{42}, {43}, 1},  // NOLINT
-      Lef{{44}, {60}, 1}   // NOLINT
+      Lef{EU{10}, EU{20}, 1},  // NOLINT
+      Lef{EU{26}, EU{26}, 1},  // NOLINT
+      Lef{EU{30}, EU{35}, 1},  // NOLINT
+      Lef{EU{42}, EU{43}, 1},  // NOLINT
+      Lef{EU{44}, EU{60}, 1}   // NOLINT
   };
 
   const std::vector<ExtrusionBarrier> barriers{ExtrusionBarrier{25, 1.0, 0.0, '+'},
@@ -800,11 +801,11 @@ TEST_CASE("Detect LEF-BAR collisions 005 - wo soft-collisions mixed CTCFs, diffe
 
   // clang-format off
   const std::vector<Lef> lefs{
-      Lef{{10}, {20}, 1},  // NOLINT
-      Lef{{26}, {26}, 1},  // NOLINT
-      Lef{{30}, {35}, 1},  // NOLINT
-      Lef{{42}, {43}, 1},  // NOLINT
-      Lef{{44}, {60}, 1}   // NOLINT
+      Lef{EU{10}, EU{20}, 1},  // NOLINT
+      Lef{EU{26}, EU{26}, 1},  // NOLINT
+      Lef{EU{30}, EU{35}, 1},  // NOLINT
+      Lef{EU{42}, EU{43}, 1},  // NOLINT
+      Lef{EU{44}, EU{60}, 1}   // NOLINT
   };
 
   const std::vector<ExtrusionBarrier> barriers{ExtrusionBarrier{25, 1.0, 0.0, '+'},
@@ -875,13 +876,13 @@ TEST_CASE("Simulation 001", "[simulation][short]") {
 
   // clang-format off
   const std::vector<Lef> lefs{
-      Lef{{25},  {30},  1},  // NOLINT
-      Lef{{150}, {150}, 1},  // NOLINT
-      Lef{{200}, {350}, 1},  // NOLINT
-      Lef{{230}, {399}, 1},  // NOLINT
-      Lef{{425}, {425}, 1},  // NOLINT
-      Lef{{625}, {800}, 1},  // NOLINT
-      Lef{{650}, {650}, 1}   // NOLINT
+      Lef{EU{25},  EU{30},  1},  // NOLINT
+      Lef{EU{150}, EU{150}, 1},  // NOLINT
+      Lef{EU{200}, EU{350}, 1},  // NOLINT
+      Lef{EU{230}, EU{399}, 1},  // NOLINT
+      Lef{EU{425}, EU{425}, 1},  // NOLINT
+      Lef{EU{625}, EU{800}, 1},  // NOLINT
+      Lef{EU{650}, EU{650}, 1}   // NOLINT
   };
 
   const std::vector<ExtrusionBarrier> barriers{ExtrusionBarrier{100, 1.0, 0.0, '-'},
@@ -977,13 +978,13 @@ TEST_CASE("Simulation 002", "[simulation][short]") {
 
   // clang-format off
   const std::vector<Lef> lefs{
-      Lef{{200}, {375}, 1},  // NOLINT
-      Lef{{350}, {350}, 1},  // NOLINT
-      Lef{{575}, {575}, 1},  // NOLINT
-      Lef{{601}, {770}, 1},  // NOLINT
-      Lef{{650}, {800}, 1},  // NOLINT
-      Lef{{850}, {850}, 1},  // NOLINT
-      Lef{{970}, {975}, 1}   // NOLINT
+      Lef{EU{200}, EU{375}, 1},  // NOLINT
+      Lef{EU{350}, EU{350}, 1},  // NOLINT
+      Lef{EU{575}, EU{575}, 1},  // NOLINT
+      Lef{EU{601}, EU{770}, 1},  // NOLINT
+      Lef{EU{650}, EU{800}, 1},  // NOLINT
+      Lef{EU{850}, EU{850}, 1},  // NOLINT
+      Lef{EU{970}, EU{975}, 1}   // NOLINT
   };
 
   const std::vector<ExtrusionBarrier> barriers{ExtrusionBarrier{150, 1.0, 0.0, '-'},
@@ -1079,13 +1080,13 @@ TEST_CASE("Simulation 003 - Soft collisions on", "[simulation][short]") {
 
   // clang-format off
   const std::vector<Lef> lefs{
-      Lef{{200}, {375}, 1},  // NOLINT
-      Lef{{350}, {350}, 1},  // NOLINT
-      Lef{{575}, {575}, 1},  // NOLINT
-      Lef{{601}, {770}, 1},  // NOLINT
-      Lef{{650}, {800}, 1},  // NOLINT
-      Lef{{850}, {850}, 1},  // NOLINT
-      Lef{{970}, {975}, 1}   // NOLINT
+      Lef{EU{200}, EU{375}, 1},  // NOLINT
+      Lef{EU{350}, EU{350}, 1},  // NOLINT
+      Lef{EU{575}, EU{575}, 1},  // NOLINT
+      Lef{EU{601}, EU{770}, 1},  // NOLINT
+      Lef{EU{650}, EU{800}, 1},  // NOLINT
+      Lef{EU{850}, EU{850}, 1},  // NOLINT
+      Lef{EU{970}, EU{975}, 1}   // NOLINT
   };
 
   const std::vector<ExtrusionBarrier> barriers{ExtrusionBarrier{150, 1.0, 0.0, '-'},
@@ -1181,13 +1182,13 @@ TEST_CASE("Simulation 004 - Inactive barriers", "[simulation][short]") {
 
   // clang-format off
   const std::vector<Lef> lefs{
-      Lef{{200}, {375}, 1},  // NOLINT
-      Lef{{350}, {350}, 1},  // NOLINT
-      Lef{{575}, {575}, 1},  // NOLINT
-      Lef{{601}, {770}, 1},  // NOLINT
-      Lef{{650}, {800}, 1},  // NOLINT
-      Lef{{850}, {850}, 1},  // NOLINT
-      Lef{{970}, {975}, 1}   // NOLINT
+      Lef{EU{200}, EU{375}, 1},  // NOLINT
+      Lef{EU{350}, EU{350}, 1},  // NOLINT
+      Lef{EU{575}, EU{575}, 1},  // NOLINT
+      Lef{EU{601}, EU{770}, 1},  // NOLINT
+      Lef{EU{650}, EU{800}, 1},  // NOLINT
+      Lef{EU{850}, EU{850}, 1},  // NOLINT
+      Lef{EU{970}, EU{975}, 1}   // NOLINT
   };
 
   const std::vector<ExtrusionBarrier> barriers{ExtrusionBarrier{150, 1.0, 0.0, '-'},
@@ -1283,12 +1284,12 @@ TEST_CASE("Simulation 005 - Multiple LEFs located at the same site", "[simulatio
 
   // clang-format off
   const std::vector<Lef> lefs{
-      Lef{{30},  {50},  1},  // NOLINT
-      Lef{{60},  {80},  1},  // NOLINT
-      Lef{{60},  {80},  1},  // NOLINT
-      Lef{{65},  {125}, 1},  // NOLINT
-      Lef{{140}, {140}, 1},  // NOLINT
-      Lef{{140}, {140}, 1}   // NOLINT
+      Lef{EU{30},  EU{50},  1},  // NOLINT
+      Lef{EU{60},  EU{80},  1},  // NOLINT
+      Lef{EU{60},  EU{80},  1},  // NOLINT
+      Lef{EU{65},  EU{125}, 1},  // NOLINT
+      Lef{EU{140}, EU{140}, 1},  // NOLINT
+      Lef{EU{140}, EU{140}, 1}   // NOLINT
   };
 
   const std::vector<ExtrusionBarrier> barriers{ExtrusionBarrier{100, 1.0, 0.0, '-'}};
@@ -1379,12 +1380,12 @@ TEST_CASE("Simulation 006 - Few inactive LEFs", "[simulation][short]") {
 
   // clang-format off
   std::vector<Lef> lefs{
-      Lef{{30},  {50},  1},  // NOLINT
-      Lef{{60},  {80},  1},  // NOLINT
-      Lef{{60},  {80},  1},  // NOLINT
-      Lef{{65},  {125}, 1},  // NOLINT
-      Lef{{140}, {140}, 1},  // NOLINT
-      Lef{{140}, {140}, 1}   // NOLINT
+      Lef{EU{30},  EU{50},  1},  // NOLINT
+      Lef{EU{60},  EU{80},  1},  // NOLINT
+      Lef{EU{60},  EU{80},  1},  // NOLINT
+      Lef{EU{65},  EU{125}, 1},  // NOLINT
+      Lef{EU{140}, EU{140}, 1},  // NOLINT
+      Lef{EU{140}, EU{140}, 1}   // NOLINT
   };
 
   lefs[2].release(); // NOLINT
@@ -1479,8 +1480,8 @@ TEST_CASE("Simulation 007 - LEF-LEF collision overrides LEF-BAR collision 1",
 
   // clang-format off
   std::vector<Lef> lefs{
-      Lef{{50},  {95},  1},  // NOLINT
-      Lef{{110}, {150}, 1}   // NOLINT
+      Lef{EU{50},  EU{95},  1},  // NOLINT
+      Lef{EU{110}, EU{150}, 1}   // NOLINT
   };
 
   const std::vector<ExtrusionBarrier> barriers{ExtrusionBarrier{100, 1.0, 0.0, '+'}};
@@ -1549,8 +1550,8 @@ TEST_CASE("Simulation 008 - LEF-LEF collision overrides LEF-BAR collision 2",
 
   // clang-format off
   std::vector<Lef> lefs{
-      Lef{{50},  {90},  1},  // NOLINT
-      Lef{{105}, {150}, 1}   // NOLINT
+      Lef{EU{50},  EU{90},  1},  // NOLINT
+      Lef{EU{105}, EU{150}, 1}   // NOLINT
   };
 
   const std::vector<ExtrusionBarrier> barriers{ExtrusionBarrier{100, 1.0, 0.0, '-'}};

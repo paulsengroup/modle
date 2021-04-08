@@ -17,7 +17,7 @@
 #include <utility>           // for tuple_element<>::type
 #include <vector>            // for vector
 
-#include "modle/common.hpp"  // for Bp
+#include "modle/common.hpp"  // for bp_t
 
 namespace modle {
 using namespace std::literals::string_view_literals;

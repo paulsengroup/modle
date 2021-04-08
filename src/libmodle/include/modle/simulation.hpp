@@ -14,9 +14,10 @@
 #include <string>                                   // for string
 #include <vector>                                   // for vector
 
-#include "modle/common.hpp"  // for Bp, PRNG, seeder
+#include "modle/common.hpp"  // for bp_t, PRNG, seeder
 #include "modle/config.hpp"  // for Config
 #include "modle/dna.hpp"     // for Chromosome
+#include "modle/utils.hpp"   // for ndebug_defined
 
 namespace modle {
 
@@ -36,7 +37,7 @@ class Simulation : Config {
   using Genome = absl::btree_set<Chromosome, Chromosome::Comparator>;
   using lef_move_generator_t = std::normal_distribution<double>;
   using chrom_pos_generator_t = std::uniform_int_distribution<bp_t>;
-  using collision_t = uint_fast16_t;
+
   static constexpr auto NO_COLLISION = std::numeric_limits<collision_t>::max();
   static constexpr auto LEF_LEF_COLLISION = std::numeric_limits<collision_t>::max() - 1;
   static constexpr auto REACHED_CHROM_BOUNDARY = std::numeric_limits<collision_t>::max() - 2;
@@ -94,10 +95,11 @@ class Simulation : Config {
   inline void bind_lefs(const Chromosome* chrom, absl::Span<Lef> lefs,
                         absl::Span<std::size_t> rev_lef_ranks,
                         absl::Span<std::size_t> fwd_lef_ranks, MaskT& mask,
-                        modle::PRNG_t& rand_eng);
+                        modle::PRNG_t& rand_eng) noexcept(utils::ndebug_defined());
 
   inline void generate_ctcf_states(absl::Span<const ExtrusionBarrier> extr_barriers,
-                                   boost::dynamic_bitset<>& mask, modle::PRNG_t& rand_eng);
+                                   boost::dynamic_bitset<>& mask,
+                                   modle::PRNG_t& rand_eng) noexcept(utils::ndebug_defined());
 
   [[nodiscard]] inline bp_t generate_rev_move(const Chromosome* const chrom,
                                               const ExtrusionUnit& unit, modle::PRNG_t& rand_eng);
@@ -108,57 +110,62 @@ class Simulation : Config {
                              absl::Span<const std::size_t> rev_lef_ranks,
                              absl::Span<const std::size_t> fwd_lef_ranks,
                              absl::Span<bp_t> rev_moves, absl::Span<bp_t> fwd_moves,
-                             modle::PRNG_t& rand_eng, bool adjust_moves_ = true);
+                             modle::PRNG_t& rand_eng,
+                             bool adjust_moves_ = true) noexcept(utils::ndebug_defined());
 
   inline void adjust_moves(const Chromosome* chrom, absl::Span<const Lef> lefs,
                            absl::Span<const std::size_t> rev_lef_ranks,
                            absl::Span<const std::size_t> fwd_lef_ranks, absl::Span<bp_t> rev_moves,
-                           absl::Span<bp_t> fwd_moves);
+                           absl::Span<bp_t> fwd_moves) noexcept(utils::ndebug_defined());
 
   inline static void rank_lefs(absl::Span<const Lef> lefs,
                                absl::Span<std::size_t> rev_lef_rank_buff,
                                absl::Span<std::size_t> fwd_lef_rank_buff,
-                               bool init_buffers = false);
+                               bool init_buffers = false) noexcept(utils::ndebug_defined());
 
   inline void extrude(const Chromosome* chrom, absl::Span<Lef> lefs,
-                      absl::Span<const bp_t> rev_moves, absl::Span<const bp_t> fwd_moves);
+                      absl::Span<const bp_t> rev_moves,
+                      absl::Span<const bp_t> fwd_moves) noexcept(utils::ndebug_defined());
 
   // Loop over lefs and identify colliding extr. units (i.e. units that travel in opposite
   // direction and that are within <p>dist_threshold</p> bp from each other
+  template <typename I>
   inline void check_lef_lef_collisions(const Chromosome* chrom, absl::Span<const Lef> lefs,
-                                       absl::Span<const ExtrusionBarrier> barrier_buff,
-                                       absl::Span<const std::size_t> rev_lef_rank_buff,
-                                       absl::Span<const std::size_t> fwd_lef_rank_buff,
-                                       absl::Span<bp_t> rev_move_buff,
-                                       absl::Span<bp_t> fwd_move_buff,
-                                       absl::Span<std::size_t> rev_collision_buff,
-                                       absl::Span<std::size_t> fwd_collision_buff,
-                                       PRNG_t& rand_eng);
+                                       absl::Span<const ExtrusionBarrier> barriers,
+                                       absl::Span<const std::size_t> rev_lef_ranks,
+                                       absl::Span<const std::size_t> fwd_lef_ranks,
+                                       absl::Span<bp_t> rev_moves, absl::Span<bp_t> fwd_moves,
+                                       absl::Span<I> rev_collisions, absl::Span<I> fwd_collisions,
+                                       PRNG_t& rand_eng) noexcept(utils::ndebug_defined());
 
-  inline void check_lef_bar_collisions(
-      absl::Span<const Lef> lefs, absl::Span<const std::size_t> rev_lef_rank_buff,
-      absl::Span<const std::size_t> fwd_lef_rank_buff, absl::Span<bp_t> rev_move_buff,
-      absl::Span<bp_t> fwd_move_buff, absl::Span<const ExtrusionBarrier> extr_barriers,
-      const boost::dynamic_bitset<>& barrier_mask, absl::Span<std::size_t> rev_collisions,
-      absl::Span<std::size_t> fwd_collisions, modle::PRNG_t& rand_eng);
+  template <typename I>
+  inline void check_lef_bar_collisions(absl::Span<const Lef> lefs,
+                                       absl::Span<const std::size_t> rev_lef_ranks,
+                                       absl::Span<const std::size_t> fwd_lef_ranks,
+                                       absl::Span<bp_t> rev_moves, absl::Span<bp_t> fwd_moves,
+                                       absl::Span<const ExtrusionBarrier> extr_barriers,
+                                       const boost::dynamic_bitset<>& barrier_mask,
+                                       absl::Span<I> rev_collisions, absl::Span<I> fwd_collisions,
+                                       modle::PRNG_t& rand_eng) noexcept(utils::ndebug_defined());
 
-  inline std::size_t register_contacts(Chromosome* chrom, absl::Span<const Lef> lefs,
-                                       absl::Span<const std::size_t> selected_lef_idx);
+  inline std::size_t register_contacts(
+      Chromosome* chrom, absl::Span<const Lef> lefs,
+      absl::Span<const std::size_t> selected_lef_idx) noexcept(utils::ndebug_defined());
 
   template <typename MaskT>
-  inline void select_lefs_to_bind(absl::Span<const Lef> lefs, MaskT& mask);
+  inline void select_lefs_to_bind(absl::Span<const Lef> lefs,
+                                  MaskT& mask) noexcept(utils::ndebug_defined());
 
-  inline void generate_lef_unloader_affinities(absl::Span<const Lef> lefs,
-                                               absl::Span<const ExtrusionBarrier> barriers,
-                                               absl::Span<const std::size_t> rev_collisions,
-                                               absl::Span<const std::size_t> fwd_collisions,
-                                               absl::Span<double> lef_unloader_affinity);
+  inline void generate_lef_unloader_affinities(
+      absl::Span<const Lef> lefs, absl::Span<const ExtrusionBarrier> barriers,
+      absl::Span<const collision_t> rev_collisions, absl::Span<const collision_t> fwd_collisions,
+      absl::Span<double> lef_unloader_affinity) noexcept(utils::ndebug_defined());
 
   inline void select_lefs_to_release(absl::Span<std::size_t> lef_idx,
                                      absl::Span<const double> lef_unloader_affinity,
-                                     modle::PRNG_t& rand_eng);
+                                     modle::PRNG_t& rand_eng) noexcept(utils::ndebug_defined());
 
-  inline void release_lefs(absl::Span<Lef> lefs, absl::Span<const std::size_t> lef_idx);
+  inline void release_lefs(absl::Span<Lef> lefs, absl::Span<const std::size_t> lef_idx) noexcept;
 
   [[nodiscard]] inline std::pair<bp_t /*rev*/, bp_t /*fwd*/> compute_lef_lef_collision_pos(
       const ExtrusionUnit& rev_unit, const ExtrusionUnit& fwd_unit, bp_t rev_move, bp_t fwd_move);
@@ -195,23 +202,25 @@ class Simulation : Config {
     Simulation::rank_lefs(lefs, rev_lef_rank_buff, fwd_lef_rank_buff, init_buffers);
   }
 
+  template <typename I>
   inline void test_check_lef_lef_collisions(
       const Chromosome* const chrom, absl::Span<const Lef> lefs,
       absl::Span<const ExtrusionBarrier> barriers, absl::Span<const std::size_t> rev_lef_rank_buff,
       absl::Span<const std::size_t> fwd_lef_rank_buff, absl::Span<bp_t> rev_move_buff,
-      absl::Span<bp_t> fwd_move_buff, absl::Span<collision_t> rev_collision_buff,
-      absl::Span<collision_t> fwd_collision_buff, modle::PRNG_t& rand_eng) {
+      absl::Span<bp_t> fwd_move_buff, absl::Span<I> rev_collision_buff,
+      absl::Span<I> fwd_collision_buff, modle::PRNG_t& rand_eng) {
     this->check_lef_lef_collisions(chrom, lefs, barriers, rev_lef_rank_buff, fwd_lef_rank_buff,
                                    rev_move_buff, fwd_move_buff, rev_collision_buff,
                                    fwd_collision_buff, rand_eng);
   }
 
+  template <typename I>
   inline void test_check_lef_bar_collisions(
       absl::Span<const Lef> lefs, absl::Span<const std::size_t> rev_lef_rank_buff,
       absl::Span<const std::size_t> fwd_lef_rank_buff, absl::Span<bp_t> rev_move_buff,
       absl::Span<bp_t> fwd_move_buff, absl::Span<const ExtrusionBarrier> extr_barriers,
-      const boost::dynamic_bitset<>& barrier_mask, absl::Span<std::size_t> rev_collisions,
-      absl::Span<std::size_t> fwd_collisions, modle::PRNG_t& rand_eng) {
+      const boost::dynamic_bitset<>& barrier_mask, absl::Span<I> rev_collisions,
+      absl::Span<I> fwd_collisions, modle::PRNG_t& rand_eng) {
     this->check_lef_bar_collisions(lefs, rev_lef_rank_buff, fwd_lef_rank_buff, rev_move_buff,
                                    fwd_move_buff, extr_barriers, barrier_mask, rev_collisions,
                                    fwd_collisions, rand_eng);

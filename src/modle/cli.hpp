@@ -20,7 +20,7 @@
 #include <stdexcept>           // for invalid_argument, out_of_range
 #include <string>              // for allocator, string, basic_string
 
-#include "modle/common.hpp"  // for Bp
+#include "modle/common.hpp"  // for bp_t
 #include "modle/config.hpp"  // for Config
 
 namespace modle {

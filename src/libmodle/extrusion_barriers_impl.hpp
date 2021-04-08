@@ -4,7 +4,8 @@
 
 #include <cassert>  // for assert
 
-#include "modle/common.hpp"  // for Bp, Direction
+#include "modle/common.hpp"  // for bp_t, Direction
+#include "modle/utils.hpp"   // for ndebug_defined
 
 namespace modle {
 ExtrusionBarrier::ExtrusionBarrier(bp_t pos, double transition_prob_blocking_to_blocking,
@@ -38,37 +39,42 @@ ExtrusionBarrier::ExtrusionBarrier(bp_t pos, double transition_prob_blocking_to_
          transition_prob_non_blocking_to_non_blocking <= 1.0);
 }
 
-bp_t ExtrusionBarrier::pos() const { return this->_pos; }
-double ExtrusionBarrier::prob_occupied_to_occupied() const {
+bp_t ExtrusionBarrier::pos() const noexcept(utils::ndebug_defined()) { return this->_pos; }
+double ExtrusionBarrier::prob_occupied_to_occupied() const noexcept(utils::ndebug_defined()) {
   return this->_occupied_to_occupied_transition_prob;
 }
 
-double ExtrusionBarrier::prob_occupied_to_not_occupied() const {
+double ExtrusionBarrier::prob_occupied_to_not_occupied() const noexcept(utils::ndebug_defined()) {
   return 1.0 - prob_occupied_to_occupied();
 }
 
-double ExtrusionBarrier::prob_not_occupied_to_not_occupied() const {
+double ExtrusionBarrier::prob_not_occupied_to_not_occupied() const
+    noexcept(utils::ndebug_defined()) {
   return this->_non_occupied_to_not_occupied_transition_prob;
 }
 
-double ExtrusionBarrier::prob_not_occupied_to_occupied() const {
+double ExtrusionBarrier::prob_not_occupied_to_occupied() const noexcept(utils::ndebug_defined()) {
   return 1.0 - prob_not_occupied_to_not_occupied();
 }
 
-dna::Direction ExtrusionBarrier::blocking_direction_major() const {
+dna::Direction ExtrusionBarrier::blocking_direction_major() const
+    noexcept(utils::ndebug_defined()) {
   return this->_blocking_direction;
 }
 
-dna::Direction ExtrusionBarrier::blocking_direction_minor() const {
+dna::Direction ExtrusionBarrier::blocking_direction_minor() const
+    noexcept(utils::ndebug_defined()) {
   return this->_blocking_direction == dna::fwd ? dna::rev : dna::fwd;
 }
 
-bool ExtrusionBarrier::operator<(const ExtrusionBarrier& other) const {
+bool ExtrusionBarrier::operator<(const ExtrusionBarrier& other) const
+    noexcept(utils::ndebug_defined()) {
   return this->pos() < other.pos();
 }
 
 double ExtrusionBarrier::compute_blocking_to_blocking_transition_probabilities_from_pblock(
-    double probability_of_barrier_block, double non_blocking_to_non_blocking_transition_prob) {
+    double probability_of_barrier_block,
+    double non_blocking_to_non_blocking_transition_prob) noexcept(utils::ndebug_defined()) {
   // pno = Transition prob. from non-occupied to occupied
   // pon = Transition prob. from occupied to non-occupied
   // occ = Occupancy

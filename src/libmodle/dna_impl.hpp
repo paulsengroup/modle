@@ -20,8 +20,9 @@
 #include "dna_impl.hpp"           // for FMT_COMPILE_STRING
 #include "modle/bed.hpp"          // for BED
 #include "modle/chrom_sizes.hpp"  // for ChromSize
-#include "modle/common.hpp"       // for Contacts, Bp
+#include "modle/common.hpp"       // for bp_t, contacts_t
 #include "modle/contacts.hpp"     // for ContactMatrix
+#include "modle/utils.hpp"        // for ndebug_defined
 
 namespace modle {
 Chromosome::Chromosome(const chrom_sizes::ChromSize &chrom, const std::vector<bed::BED> &barriers)
@@ -38,44 +39,53 @@ Chromosome::Chromosome(chrom_sizes::ChromSize &&chrom, std::vector<bed::BED> &&b
       _end(chrom.end),
       _barriers(std::move_iterator(barriers.begin()), std::move_iterator(barriers.end())) {}
 
-bool Chromosome::operator==(const Chromosome &other) const {
-  return this->_name == other._name && this->_size == other._size;
+bool Chromosome::operator==(const Chromosome &other) const noexcept(utils::ndebug_defined()) {
+  return this->name() == other.name() && this->size() == other.size();
 }
 
-bool Chromosome::operator==(std::string_view other) const { return this->_name == other; }
+bool Chromosome::operator==(std::string_view other) const noexcept(utils::ndebug_defined()) {
+  return this->name() == other;
+}
 
-bool Chromosome::operator<(const Chromosome &other) const {
+bool Chromosome::operator<(const Chromosome &other) const noexcept(utils::ndebug_defined()) {
   if (this->name() != other.name()) {
     return this->name() < other.name();
   }
   return this->size() < other.size();
 }
 
-bool Chromosome::Comparator::operator()(const Chromosome &c1, const Chromosome &c2) const {
+bool Chromosome::Comparator::operator()(const Chromosome &c1, const Chromosome &c2) const
+    noexcept(utils::ndebug_defined()) {
   return c1 < c2;
 }
 
-bool Chromosome::Comparator::operator()(const Chromosome &c1, std::string_view c2) const {
+bool Chromosome::Comparator::operator()(const Chromosome &c1, std::string_view c2) const
+    noexcept(utils::ndebug_defined()) {
   return c1.name() < c2;
 }
 
-bool Chromosome::Comparator::operator()(std::string_view c1, const Chromosome &c2) const {
+bool Chromosome::Comparator::operator()(std::string_view c1, const Chromosome &c2) const
+    noexcept(utils::ndebug_defined()) {
   return c1 < c2.name();
 }
 
-bool Chromosome::Comparator::operator()(std::string_view c1, std::string_view c2) const {
+bool Chromosome::Comparator::operator()(std::string_view c1, std::string_view c2) const
+    noexcept(utils::ndebug_defined()) {
   return c1 < c2;
 }
 
 void Chromosome::instantiate_contact_matrix(std::size_t bin_size, std::size_t diagonal_width) {
-  assert(diagonal_width != 0);
+  assert(diagonal_width != 0);  // NOLINT
+#ifndef NDEBUG
   if (this->_contacts) {
-    throw std::runtime_error(fmt::format(
-        FMT_STRING("Caught an attempt to instantiate the contact matrix for '{}'"), this->_name));
+    throw std::runtime_error(
+        fmt::format(FMT_STRING("Caught an attempt to re-instantiate the contact matrix for '{}'"),
+                    this->_name));
   }
+#endif
   const auto nrows = diagonal_width / bin_size;
   const auto ncols = (this->_end - this->_start) / bin_size;
-  this->_contacts = std::make_shared<ContactMatrix<Contacts>>(nrows, ncols);
+  this->_contacts = std::make_shared<ContactMatrix<contacts_t>>(nrows, ncols);
 }
 
 void Chromosome::clear_contacts() {
@@ -89,12 +99,12 @@ void Chromosome::add_extrusion_barrier(bed::BED &&barrier) { this->_barriers.emp
 
 std::string_view Chromosome::name() const { return this->_name; }
 
-bp_t Chromosome::start_pos() const { return this->_start; }
+constexpr bp_t Chromosome::start_pos() const { return this->_start; }
 
-bp_t Chromosome::end_pos() const { return this->_end; }
+constexpr bp_t Chromosome::end_pos() const { return this->_end; }
 
-bp_t Chromosome::size() const { return this->_size; }
-bp_t Chromosome::simulated_size() const { return this->_end - this->_start; }
+constexpr bp_t Chromosome::size() const { return this->_size; }
+constexpr bp_t Chromosome::simulated_size() const { return this->_end - this->_start; }
 bool Chromosome::ok() const { return !this->_barriers.empty(); }
 
 std::size_t Chromosome::nbarriers() const { return static_cast<size_t>(this->_barriers.size()); }
@@ -116,12 +126,12 @@ void Chromosome::allocate_contacts(bp_t bin_size, bp_t diagonal_width) {
   const auto ncols = (this->simulated_size() / bin_size) + (this->simulated_size() % bin_size != 0);
   const auto nrows =
       std::min(ncols, (diagonal_width / bin_size) + (diagonal_width % bin_size != 0));
-  this->_contacts = std::make_shared<ContactMatrix<Contacts>>(nrows, ncols);
+  this->_contacts = std::make_shared<ContactMatrix<contacts_t>>(nrows, ncols);
 }
 
 void Chromosome::deallocate_contacts() { this->_contacts = nullptr; }
 
-const ContactMatrix<Contacts> &Chromosome::contacts() const {
+const ContactMatrix<contacts_t> &Chromosome::contacts() const {
   assert(this->_contacts);  // NOLINT
   return *this->_contacts;
 }

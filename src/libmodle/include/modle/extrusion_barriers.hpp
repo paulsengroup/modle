@@ -1,8 +1,9 @@
 #pragma once
 
-#include <random>
+#include <random>  // for uniform_real_distribution
 
-#include "modle/common.hpp"
+#include "modle/common.hpp"  // for bp_t_t, Direction, PRNG_t
+#include "modle/utils.hpp"   // for ndebug_defined
 
 namespace modle {
 
@@ -18,17 +19,24 @@ class ExtrusionBarrier {
                           double transition_prob_non_blocking_to_non_blocking,
                           char motif_direction);
 
-  [[nodiscard]] inline bp_t pos() const;
-  [[nodiscard]] inline double prob_occupied_to_occupied() const;
-  [[nodiscard]] inline double prob_occupied_to_not_occupied() const;
-  [[nodiscard]] inline double prob_not_occupied_to_not_occupied() const;
-  [[nodiscard]] inline double prob_not_occupied_to_occupied() const;
-  [[nodiscard]] inline dna::Direction blocking_direction_major() const;
-  [[nodiscard]] inline dna::Direction blocking_direction_minor() const;
-  [[nodiscard]] inline bool operator<(const ExtrusionBarrier& other) const;
+  [[nodiscard]] inline bp_t pos() const noexcept(utils::ndebug_defined());
+  [[nodiscard]] inline double prob_occupied_to_occupied() const noexcept(utils::ndebug_defined());
+  [[nodiscard]] inline double prob_occupied_to_not_occupied() const
+      noexcept(utils::ndebug_defined());
+  [[nodiscard]] inline double prob_not_occupied_to_not_occupied() const
+      noexcept(utils::ndebug_defined());
+  [[nodiscard]] inline double prob_not_occupied_to_occupied() const
+      noexcept(utils::ndebug_defined());
+  [[nodiscard]] inline dna::Direction blocking_direction_major() const
+      noexcept(utils::ndebug_defined());
+  [[nodiscard]] inline dna::Direction blocking_direction_minor() const
+      noexcept(utils::ndebug_defined());
+  [[nodiscard]] inline bool operator<(const ExtrusionBarrier& other) const
+      noexcept(utils::ndebug_defined());
   [[nodiscard]] inline static double
   compute_blocking_to_blocking_transition_probabilities_from_pblock(
-      double probability_of_barrier_block, double non_blocking_to_non_blocking_transition_prob);
+      double probability_of_barrier_block,
+      double non_blocking_to_non_blocking_transition_prob) noexcept(utils::ndebug_defined());
 
  protected:
   bp_t _pos;                                             // NOLINT
