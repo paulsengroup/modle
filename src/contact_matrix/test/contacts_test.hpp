@@ -17,7 +17,7 @@
 #include <vector>                                   // for vector, allocator
 
 #include "modle/contacts.hpp"  // for ContactMatrix
-#include "modle/utils.hpp"     // for parse_numeric_or_throw
+#include "modle/utils.hpp"     // for ndebug_defined, parse_numeric_or_throw
 
 namespace modle::test::cmatrix {
 
@@ -130,6 +130,7 @@ TEST_CASE("CMatrix in/decrement", "[cmatrix][short]") {
   CHECK(m.get_n_of_missed_updates() == 1);
   CHECK(m.get_tot_contacts() == 1);
 
+#ifndef NDEBUG
   CHECK_THROWS_WITH(
       m.increment(25, 25),  // NOLINT
       Catch::Contains("caught an attempt to access element past the end of the contact matrix"));
@@ -141,6 +142,7 @@ TEST_CASE("CMatrix in/decrement", "[cmatrix][short]") {
       Catch::Contains("caught an attempt to access element past the end of the contact matrix"));
   CHECK(m.get_n_of_missed_updates() == 1);
   CHECK(m.get_tot_contacts() == 1);
+#endif
 }
 
 TEST_CASE("CMatrix in/decrement vector", "[cmatrix][short]") {
