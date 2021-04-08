@@ -5,6 +5,7 @@
 #include <CLI/Error.hpp>  // for ParseError
 #include <cstdio>         // for stderr
 #include <exception>      // for current_exception, exception_ptr, rethrow_...
+#include <memory>         // for make_unique, unique_ptr
 #include <stdexcept>      // for runtime_error
 #include <string>         // for basic_string
 
@@ -17,24 +18,14 @@
 #include "./cli.hpp"             // for Cli
 #include "modle/config.hpp"      // for Config
 #include "modle/simulation.hpp"  // for Simulation
-#include "modle/utils.hpp"       // for traced
-
-namespace modle {
-
-void run_simulation(const modle::Config& c) {
-  const auto t0 = absl::Now();
-  modle::Simulation(c).run();
-  fmt::print(stderr, FMT_STRING("Simulation terminated without errors in {}!\n\nBye.\n"),
-             absl::FormatDuration(absl::Now() - t0));
-}
-
-}  // namespace modle
+#include "modle/utils.hpp"       // for ndebug_defined, traced
 
 int main(int argc, char** argv) noexcept {
-  auto cli = modle::Cli(argc, argv);
+  std::unique_ptr<modle::Cli> cli{nullptr};
 
   try {
-    auto config = cli.parse_arguments();
+    cli = std::make_unique<modle::Cli>(argc, argv);
+    auto config = cli->parse_arguments();
     if (const auto collisions = modle::Cli::process_paths_and_check_for_collisions(config);
         !collisions.empty()) {
       fmt::print(stderr, FMT_STRING("The following path collision(s) have been detected:\n{}"),
@@ -43,14 +34,20 @@ int main(int argc, char** argv) noexcept {
     }
     config.print();
 
-    modle::run_simulation(config);
+    const auto t0 = absl::Now();
+    modle::Simulation{config}.run();
+    fmt::print(stderr, FMT_STRING("Simulation terminated without errors in {}!\n\nBye.\n"),
+               absl::FormatDuration(absl::Now() - t0));
   } catch (const CLI::ParseError& e) {
-    return cli.exit(e);  //  This takes care of formatting and printing error messages (if any)
+    return cli->exit(e);  //  This takes care of formatting and printing error messages (if any)
   } catch (const fmt::system_error& err) {
     fmt::print(stderr, "FAILURE! An error occurred during simulation: {}.\n", err.what());
     return 1;
   } catch (const std::runtime_error& err) {
     fmt::print(stderr, "FAILURE! An error occurred during simulation: {}.\n", err.what());
+    return 1;
+  } catch (const std::bad_alloc& err) {
+    fmt::print(stderr, "FAILURE! Unable to allocate enough memory.\n");
     return 1;
   } catch (const std::exception& err) {
     fmt::print(stderr, FMT_STRING("{}\n"), err.what());
