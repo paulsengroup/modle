@@ -81,19 +81,19 @@ double ExtrusionBarrier::compute_blocking_to_blocking_transition_probabilities_f
   const auto pno = 1.0 - non_blocking_to_non_blocking_transition_prob;
   const auto occ = probability_of_barrier_block;
   const auto pon = (pno - (occ * pno)) / occ;
-  return 1.0 - pon;
+  return std::clamp(1.0 - pon, 0.0, 1.0);
 }
 
 CTCF::State CTCF::next_state(CTCF::State current_state, double occupied_self_transition_prob,
                              double not_occupied_self_transition_prob, PRNG_t& rand_eng) {
-  assert(occupied_self_transition_prob >= 0 && occupied_self_transition_prob <= 1);
-  assert(not_occupied_self_transition_prob >= 0 && not_occupied_self_transition_prob <= 1);
+  assert(occupied_self_transition_prob >= 0 && occupied_self_transition_prob <= 1);  // NOLINT
+  assert(not_occupied_self_transition_prob >= 0 &&
+         not_occupied_self_transition_prob <= 1);  // NOLINT
 
   const auto p = CTCF::state_gen_t{0.0, 1.0}(rand_eng);
   if (current_state == NOT_OCCUPIED && p > not_occupied_self_transition_prob) {
     return OCCUPIED;
-  } else if (p > occupied_self_transition_prob) {
-    assert(current_state == OCCUPIED);
+  } else if (current_state == OCCUPIED && p > occupied_self_transition_prob) {
     return NOT_OCCUPIED;
   }
 
