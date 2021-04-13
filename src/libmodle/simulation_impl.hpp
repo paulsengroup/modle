@@ -207,7 +207,6 @@ void Simulation::run() {
     }
   }
 
-  // TODO with the current implementation using a thread_pool is probably overkill
   auto tpool = Simulation::instantiate_thread_pool(this->nthreads + 1, false);
 
   // These are the threads spawned by simulate_extrusion:
@@ -1026,8 +1025,8 @@ void Simulation::process_lef_bar_collisions(
       const auto& pblock = barrier.blocking_direction_major() == dna::fwd
                                ? this->lef_hard_collision_pblock
                                : this->lef_soft_collision_pblock;
-      // Look for the next fwd unit that comes strictly after the current extr. barrier
-      while (fwd_unit_pos <= barrier.pos()) {  // TODO: Should this be strictly less?
+      // Look for the next fwd unit that comes strictly before the current extr. barrier
+      while (fwd_unit_pos < barrier.pos()) {
         if (++j2 == lefs.size()) {
           goto end_of_loop;
         }

@@ -621,7 +621,7 @@ TEST_CASE("Detect LEF-BAR collisions 002 - wo soft-collisions rev CTCFs",
                                                              NO_COLLISION,
                                                              NO_COLLISION};
   const std::vector<std::size_t> fwd_collision_mask_expected{0UL,
-                                                             1UL,
+                                                             NO_COLLISION,
                                                              NO_COLLISION};
   // clang-format on
 
@@ -629,7 +629,7 @@ TEST_CASE("Detect LEF-BAR collisions 002 - wo soft-collisions rev CTCFs",
   std::vector<std::size_t> fwd_collision_mask(nlefs, NO_COLLISION);
 
   const std::vector<bp_t> rev_moves_expected{0, 2, 2};  // NOLINT
-  const std::vector<bp_t> fwd_moves_expected{0, 0, 2};  // NOLINT
+  const std::vector<bp_t> fwd_moves_expected{0, 2, 2};  // NOLINT
 
   assert(lefs.size() == nlefs);                         // NOLINT
   assert(barriers.size() == nbarriers);                 // NOLINT
@@ -687,7 +687,7 @@ TEST_CASE("Detect LEF-BAR collisions 003 - w soft-collisions fwd CTCFs",
                                                              0UL,
                                                              1UL};
   const std::vector<std::size_t> fwd_collision_mask_expected{0UL,
-                                                             1UL,
+                                                             NO_COLLISION,
                                                              NO_COLLISION};
   // clang-format on
 
@@ -695,7 +695,7 @@ TEST_CASE("Detect LEF-BAR collisions 003 - w soft-collisions fwd CTCFs",
   std::vector<std::size_t> fwd_collision_mask(nlefs, NO_COLLISION);
 
   const std::vector<bp_t> rev_moves_expected{0, 0, 0};  // NOLINT
-  const std::vector<bp_t> fwd_moves_expected{0, 0, 2};  // NOLINT
+  const std::vector<bp_t> fwd_moves_expected{0, 2, 2};  // NOLINT
 
   assert(lefs.size() == nlefs);                         // NOLINT
   assert(barriers.size() == nbarriers);                 // NOLINT
@@ -712,7 +712,7 @@ TEST_CASE("Detect LEF-BAR collisions 003 - w soft-collisions fwd CTCFs",
 
   check_simulation_result(lefs, rev_moves, fwd_moves, rev_moves_expected, fwd_moves_expected,
                           rev_collision_mask, rev_collision_mask_expected, fwd_collision_mask,
-                          fwd_collision_mask_expected);
+                          fwd_collision_mask_expected, true);
 }
 
 TEST_CASE("Detect LEF-BAR collisions 004 - wo soft-collisions mixed CTCFs",
