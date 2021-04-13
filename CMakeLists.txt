@@ -134,6 +134,16 @@ if(ENABLE_TESTING)
   add_subdirectory(test)
 endif()
 
+# Reduce level of optimization to improve the code profiling experience
+if(OPTIMIZE_FOR_PROFILING)
+  if(NOT "${CMAKE_BUILD_TYPE}" STREQUAL "RelWithDebInfo")
+    message(WARNING "Switching build type from ${CMAKE_BUILD_TYPE} to RelWithDebInfo because OPTIMIZE_FOR_PROFILING was set to ON by the user")
+    set(CMAKE_BUILD_TYPE "RelWithDebInfo")
+  endif()
+
+  target_compile_options(project_options INTERFACE -O1)
+endif()
+
 #[[
 if(ENABLE_FUZZING)
   message("Building Fuzz Tests, using fuzzing sanitizer https://www.llvm.org/docs/LibFuzzer.html")

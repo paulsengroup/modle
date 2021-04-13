@@ -40,5 +40,6 @@ if(ENABLE_PSO AND NOT MSVC)
 endif()
 
 option(ENABLE_XOSHIRO "Use Xoshiro as default PRNG engine" ON)
-
 option(ENABLE_CXX20 "Compile project under C++20 if this is supported by the compiler" OFF)
+
+option(OPTIMIZE_FOR_PROFILING "Compile project in RelWithDebInfo and with less aggressive optimizations to aid profiling" OFF)
