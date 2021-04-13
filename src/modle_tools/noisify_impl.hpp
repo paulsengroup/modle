@@ -1,6 +1,6 @@
 #pragma once
 
-// IWYU pragma: private, include "modle_tools/noisify.hpp"
+// IWYU pragma: private, include "modle_tools/noisify_contacts.hpp"
 
 #include <absl/time/clock.h>  // for Now
 #include <absl/time/time.h>   // for FormatDuration
@@ -19,7 +19,7 @@
 
 namespace modle::tools {
 
-void noisify(const config& c) {
+void noisify_contacts(const config& c) {
   using pixel_queue_t = moodycamel::BlockingReaderWriterQueue<modle::cooler::Cooler::Pixel>;
 
   constexpr auto PIXEL_BATCH_SIZE =

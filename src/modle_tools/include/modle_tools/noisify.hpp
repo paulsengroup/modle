@@ -2,7 +2,7 @@
 
 namespace modle::tools {
 
-void noisify(const config& c);
+void noisify_contacts(const config& c);
 }
 
 #include "../../noisify_impl.hpp"

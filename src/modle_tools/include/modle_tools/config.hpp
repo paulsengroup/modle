@@ -35,7 +35,7 @@ struct config {
   std::size_t sliding_window_overlap{0};
   bool deplete_contacts_from_reference{true};
 
-  // noisify
+  // noisify_contacts
   double gamma_k{1};
   double gamma_theta{35'000};
   uint64_t seed{0};

@@ -44,7 +44,7 @@
 #include "modle/hdf5.hpp"           // for read_attribute_int
 #include "modle_tools/config.hpp"   // for config
 #include "modle_tools/eval.hpp"     // for Transformation, Cross, Linear, comput...
-#include "modle_tools/noisify.hpp"  // for noisify
+#include "modle_tools/noisify.hpp"  // for noisify_contacts
 #include "modle_tools/stats.hpp"    // for compute_number_of_contacts_after_depl...
 
 namespace modle::tools {
@@ -465,6 +465,6 @@ void stats_subcmd(const modle::tools::config& c) {
       static_cast<double>(tot_contacts_after_depl) / static_cast<double>(tot_number_of_pixels), 0);
 }
 
-void noisify_subcmd(const modle::tools::config& c) { modle::tools::noisify(c); }
+void noisify_subcmd(const modle::tools::config& c) { modle::tools::noisify_contacts(c); }
 
 }  // namespace modle::tools
