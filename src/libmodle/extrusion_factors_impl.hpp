@@ -13,7 +13,7 @@
 
 namespace modle {
 
-ExtrusionUnit::ExtrusionUnit(bp_t pos) noexcept(utils::ndebug_defined()) : _pos(pos) {}
+ExtrusionUnit::ExtrusionUnit(bp_t pos) noexcept : _pos(pos) {}
 
 void ExtrusionUnit::bind_at_pos(bp_t pos) noexcept(utils::ndebug_defined()) { this->_pos = pos; }
 

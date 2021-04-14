@@ -15,8 +15,8 @@ class ExtrusionUnit {
   friend class Simulation;
 
  public:
-  inline ExtrusionUnit() noexcept(utils::ndebug_defined()) = default;
-  inline explicit ExtrusionUnit(bp_t pos) noexcept(utils::ndebug_defined());
+  inline ExtrusionUnit() noexcept = default;
+  inline explicit ExtrusionUnit(bp_t pos) noexcept;
   inline void bind_at_pos(bp_t pos) noexcept(utils::ndebug_defined());
   [[nodiscard]] inline bp_t pos() const noexcept(utils::ndebug_defined());
   [[nodiscard]] inline bool operator<(const ExtrusionUnit& other) const
