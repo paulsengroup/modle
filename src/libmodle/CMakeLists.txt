@@ -23,8 +23,10 @@ target_link_libraries(
     CONAN_PKG::concurrentqueue
     CONAN_PKG::cpp-sort
     # Deal with std::filesystem quirkiness on older compilers
-    $<$<AND:$<CXX_COMPILER_ID:Clang>,$<CXX_COMPILER_ID:AppleClang>,$<VERSION_LESS_EQUAL:$<CXX_COMPILER_VERSION>,9.0.0>>:-lc++fs>
-    $<$<AND:$<CXX_COMPILER_ID:GNU>,$<VERSION_LESS_EQUAL:$<CXX_COMPILER_VERSION>,9.1.0>>:-lstdc++fs>)
+#    $<$<BOOL:${STDLIBCXX_REQUIRES_LSTDCXXFS_LINK_FLAG}>:-lstdc++fs>
+#    $<$<BOOL:${LIBCXX_REQUIRES_LCXXFS_LINK_FLAG}>:-lc++fs>)
+  $<$<AND:$<CXX_COMPILER_ID:Clang>,$<CXX_COMPILER_ID:AppleClang>,$<BOOL:${EXPLICIT_LINK_VS_FILESYSTEM_REQUIRED}>>:-lc++fs>
+  $<$<AND:$<CXX_COMPILER_ID:GNU>,$<BOOL:${EXPLICIT_LINK_VS_FILESYSTEM_REQUIRED}>>:-lstdc++fs>)
 
 if(ENABLE_PCH)
   target_precompile_headers(

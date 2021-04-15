@@ -9,6 +9,7 @@ target_link_libraries(
   libmodle_test
   INTERFACE project_warnings
             project_options
+            Modle::io
             Modle::Modle
             CONAN_PKG::abseil
             CONAN_PKG::boost

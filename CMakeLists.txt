@@ -59,6 +59,12 @@ enable_doxygen()
 # allow for static analysis options
 include(cmake/StaticAnalyzers.cmake)
 
+# figure out how to properly link to <filesystem>
+include(cmake/Filesystem.cmake)
+
+# detect which standard library is being used
+include(cmake/DetectStdlib.cmake)
+
 option(BUILD_SHARED_LIBS "Enable compilation of shared libraries" OFF)
 option(ENABLE_TESTING "Enable Test Builds" ON)
 option(ENABLE_PCH "Enable Precompiled Headers" OFF)
@@ -136,8 +142,14 @@ endif()
 
 # Reduce level of optimization to improve the code profiling experience
 if(OPTIMIZE_FOR_PROFILING)
-  if(NOT "${CMAKE_BUILD_TYPE}" STREQUAL "RelWithDebInfo")
-    message(WARNING "Switching build type from ${CMAKE_BUILD_TYPE} to RelWithDebInfo because OPTIMIZE_FOR_PROFILING was set to ON by the user")
+  if(NOT
+     "${CMAKE_BUILD_TYPE}"
+     STREQUAL
+     "RelWithDebInfo")
+    message(
+      WARNING
+        "Switching build type from ${CMAKE_BUILD_TYPE} to RelWithDebInfo because OPTIMIZE_FOR_PROFILING was set to ON by the user"
+    )
     set(CMAKE_BUILD_TYPE "RelWithDebInfo")
   endif()
 

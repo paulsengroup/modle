@@ -9,10 +9,7 @@ target_link_libraries(
     project_options
     Modle::utils
     $<$<BOOL:${ENABLE_XOSHIRO}>:XoshiroCpp::XoshiroCpp>
-    CONAN_PKG::boost
-    # Deal with std::filesystem quirkiness on older compilers
-    $<$<AND:$<CXX_COMPILER_ID:Clang>,$<CXX_COMPILER_ID:AppleClang>,$<VERSION_LESS_EQUAL:$<CXX_COMPILER_VERSION>,9.0.0>>:-lc++fs>
-    $<$<AND:$<CXX_COMPILER_ID:GNU>,$<VERSION_LESS_EQUAL:$<CXX_COMPILER_VERSION>,9.1.0>>:-lstdc++fs>)
+    CONAN_PKG::boost)
 
 if(ENABLE_PCH)
   target_precompile_headers(

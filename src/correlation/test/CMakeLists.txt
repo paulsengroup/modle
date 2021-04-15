@@ -14,7 +14,6 @@ target_link_libraries(
             project_options
             Modle::correlation
             Modle::utils
-            # Threads::Threads
             CONAN_PKG::abseil
             CONAN_PKG::boost
             CONAN_PKG::catch2)
