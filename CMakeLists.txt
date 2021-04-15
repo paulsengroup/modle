@@ -95,7 +95,7 @@ set(CONAN_EXTRA_OPTIONS "")
 
 set(CONAN_EXTRA_REQUIRES
     ${CONAN_EXTRA_REQUIRES}
-    abseil/20200923.3
+    abseil/20210324.0
     boost/1.75.0
     cli11/1.9.1
     concurrentqueue/1.0.2
