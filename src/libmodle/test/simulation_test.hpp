@@ -361,6 +361,10 @@ TEST_CASE("Detect LEF-LEF collisions 001", "[lef-lef-collisions][simulation][sho
   assert(rev_collision_mask_expected.size() == nlefs);  // NOLINT
   require_that_lefs_are_sorted_by_idx(lefs, rev_ranks, fwd_ranks);
 
+  REQUIRE_NOTHROW(modle::Simulation{c, false}.test_process_units_at_chrom_boundaries(
+      &chrom, lefs, rev_ranks, fwd_ranks, absl::MakeSpan(rev_moves), absl::MakeSpan(fwd_moves),
+      absl::MakeSpan(rev_collision_mask), absl::MakeSpan(fwd_collision_mask)));
+
   CHECK_NOTHROW(modle::Simulation{c, false}.test_process_lef_lef_collisions(
       &chrom, lefs, barriers, rev_ranks, fwd_ranks, absl::MakeSpan(rev_moves),
       absl::MakeSpan(fwd_moves), absl::MakeSpan(rev_collision_mask),
@@ -422,12 +426,12 @@ TEST_CASE("Detect LEF-LEF collisions 002", "[lef-lef-collisions][simulation][sho
                                                              LEF_LEF_COLLISION};
   const std::vector<std::size_t> fwd_collision_mask_expected{LEF_LEF_COLLISION,
                                                              LEF_LEF_COLLISION,
-                                                             LEF_LEF_COLLISION,
+                                                             REACHED_CHROM_BOUNDARY,
                                                              REACHED_CHROM_BOUNDARY};
   // clang-format on
 
   const std::vector<bp_t> rev_moves_expected{0, 3, 2, 3};  // NOLINT
-  const std::vector<bp_t> fwd_moves_expected{0, 0, 0, 0};  // NOLINT
+  const std::vector<bp_t> fwd_moves_expected{0, 0, 1, 0};  // NOLINT
 
   assert(lefs.size() == nlefs);                         // NOLINT
   assert(fwd_collision_mask_expected.size() == nlefs);  // NOLINT
@@ -436,6 +440,10 @@ TEST_CASE("Detect LEF-LEF collisions 002", "[lef-lef-collisions][simulation][sho
 
   REQUIRE_NOTHROW(modle::Simulation{c, false}.test_adjust_moves(
       &chrom, lefs, rev_ranks, fwd_ranks, absl::MakeSpan(rev_moves), absl::MakeSpan(fwd_moves)));
+
+  REQUIRE_NOTHROW(modle::Simulation{c, false}.test_process_units_at_chrom_boundaries(
+      &chrom, lefs, rev_ranks, fwd_ranks, absl::MakeSpan(rev_moves), absl::MakeSpan(fwd_moves),
+      absl::MakeSpan(rev_collision_mask), absl::MakeSpan(fwd_collision_mask)));
 
   CHECK_NOTHROW(modle::Simulation{c, false}.test_process_lef_lef_collisions(
       &chrom, lefs, barriers, rev_ranks, fwd_ranks, absl::MakeSpan(rev_moves),
@@ -449,10 +457,6 @@ TEST_CASE("Detect LEF-LEF collisions 002", "[lef-lef-collisions][simulation][sho
 
 TEST_CASE("Detect LEF-LEF collisions 003", "[lef-lef-collisions][simulation][short]") {
   modle::Config c;
-  c.rev_extrusion_speed = 50;                  // NOLINT
-  c.rev_extrusion_speed_std = 0;               // NOLINT
-  c.fwd_extrusion_speed = 50;                  // NOLINT
-  c.fwd_extrusion_speed_std = 0;               // NOLINT
   c.probability_of_extrusion_unit_bypass = 0;  // NOLINT
   const Chromosome chrom{{"chr1", 100, 201}};
   constexpr auto nlefs = 3UL;
@@ -506,6 +510,10 @@ TEST_CASE("Detect LEF-LEF collisions 003", "[lef-lef-collisions][simulation][sho
 
   REQUIRE_NOTHROW(modle::Simulation{c, false}.test_adjust_moves(
       &chrom, lefs, rev_ranks, fwd_ranks, absl::MakeSpan(rev_moves), absl::MakeSpan(fwd_moves)));
+
+  REQUIRE_NOTHROW(modle::Simulation{c, false}.test_process_units_at_chrom_boundaries(
+      &chrom, lefs, rev_ranks, fwd_ranks, absl::MakeSpan(rev_moves), absl::MakeSpan(fwd_moves),
+      absl::MakeSpan(rev_collision_mask), absl::MakeSpan(fwd_collision_mask)));
 
   CHECK_NOTHROW(modle::Simulation{c, false}.test_process_lef_lef_collisions(
       &chrom, lefs, barriers, rev_ranks, fwd_ranks, absl::MakeSpan(rev_moves),
@@ -712,7 +720,7 @@ TEST_CASE("Detect LEF-BAR collisions 003 - w soft-collisions fwd CTCFs",
 
   check_simulation_result(lefs, rev_moves, fwd_moves, rev_moves_expected, fwd_moves_expected,
                           rev_collision_mask, rev_collision_mask_expected, fwd_collision_mask,
-                          fwd_collision_mask_expected, true);
+                          fwd_collision_mask_expected);
 }
 
 TEST_CASE("Detect LEF-BAR collisions 004 - wo soft-collisions mixed CTCFs",
@@ -939,6 +947,10 @@ TEST_CASE("Simulation 001", "[simulation][short]") {
   REQUIRE_NOTHROW(Simulation{c, false}.test_adjust_moves(
       &chrom, lefs, rev_ranks, fwd_ranks, absl::MakeSpan(rev_moves), absl::MakeSpan(fwd_moves)));
 
+  REQUIRE_NOTHROW(modle::Simulation{c, false}.test_process_units_at_chrom_boundaries(
+      &chrom, lefs, rev_ranks, fwd_ranks, absl::MakeSpan(rev_moves), absl::MakeSpan(fwd_moves),
+      absl::MakeSpan(rev_collision_mask), absl::MakeSpan(fwd_collision_mask)));
+
   CHECK_NOTHROW(Simulation{c, false}.test_process_lef_bar_collisions(
       lefs, rev_ranks, fwd_ranks, absl::MakeSpan(rev_moves), absl::MakeSpan(fwd_moves), barriers,
       barrier_mask, absl::MakeSpan(rev_collision_mask), absl::MakeSpan(fwd_collision_mask),
@@ -1040,6 +1052,10 @@ TEST_CASE("Simulation 002", "[simulation][short]") {
 
   REQUIRE_NOTHROW(Simulation{c, false}.test_adjust_moves(
       &chrom, lefs, rev_ranks, fwd_ranks, absl::MakeSpan(rev_moves), absl::MakeSpan(fwd_moves)));
+
+  REQUIRE_NOTHROW(modle::Simulation{c, false}.test_process_units_at_chrom_boundaries(
+      &chrom, lefs, rev_ranks, fwd_ranks, absl::MakeSpan(rev_moves), absl::MakeSpan(fwd_moves),
+      absl::MakeSpan(rev_collision_mask), absl::MakeSpan(fwd_collision_mask)));
 
   CHECK_NOTHROW(Simulation{c, false}.test_process_lef_bar_collisions(
       lefs, rev_ranks, fwd_ranks, absl::MakeSpan(rev_moves), absl::MakeSpan(fwd_moves), barriers,
@@ -1143,6 +1159,10 @@ TEST_CASE("Simulation 003 - Soft collisions on", "[simulation][short]") {
   REQUIRE_NOTHROW(Simulation{c, false}.test_adjust_moves(
       &chrom, lefs, rev_ranks, fwd_ranks, absl::MakeSpan(rev_moves), absl::MakeSpan(fwd_moves)));
 
+  REQUIRE_NOTHROW(modle::Simulation{c, false}.test_process_units_at_chrom_boundaries(
+      &chrom, lefs, rev_ranks, fwd_ranks, absl::MakeSpan(rev_moves), absl::MakeSpan(fwd_moves),
+      absl::MakeSpan(rev_collision_mask), absl::MakeSpan(fwd_collision_mask)));
+
   CHECK_NOTHROW(Simulation{c, false}.test_process_lef_bar_collisions(
       lefs, rev_ranks, fwd_ranks, absl::MakeSpan(rev_moves), absl::MakeSpan(fwd_moves), barriers,
       barrier_mask, absl::MakeSpan(rev_collision_mask), absl::MakeSpan(fwd_collision_mask),
@@ -1245,6 +1265,10 @@ TEST_CASE("Simulation 004 - Inactive barriers", "[simulation][short]") {
   REQUIRE_NOTHROW(Simulation{c, false}.test_adjust_moves(
       &chrom, lefs, rev_ranks, fwd_ranks, absl::MakeSpan(rev_moves), absl::MakeSpan(fwd_moves)));
 
+  REQUIRE_NOTHROW(modle::Simulation{c, false}.test_process_units_at_chrom_boundaries(
+      &chrom, lefs, rev_ranks, fwd_ranks, absl::MakeSpan(rev_moves), absl::MakeSpan(fwd_moves),
+      absl::MakeSpan(rev_collision_mask), absl::MakeSpan(fwd_collision_mask)));
+
   CHECK_NOTHROW(Simulation{c, false}.test_process_lef_bar_collisions(
       lefs, rev_ranks, fwd_ranks, absl::MakeSpan(rev_moves), absl::MakeSpan(fwd_moves), barriers,
       barrier_mask, absl::MakeSpan(rev_collision_mask), absl::MakeSpan(fwd_collision_mask),
@@ -1340,6 +1364,10 @@ TEST_CASE("Simulation 005 - Multiple LEFs located at the same site", "[simulatio
 
   REQUIRE_NOTHROW(Simulation{c, false}.test_adjust_moves(
       &chrom, lefs, rev_ranks, fwd_ranks, absl::MakeSpan(rev_moves), absl::MakeSpan(fwd_moves)));
+
+  REQUIRE_NOTHROW(modle::Simulation{c, false}.test_process_units_at_chrom_boundaries(
+      &chrom, lefs, rev_ranks, fwd_ranks, absl::MakeSpan(rev_moves), absl::MakeSpan(fwd_moves),
+      absl::MakeSpan(rev_collision_mask), absl::MakeSpan(fwd_collision_mask)));
 
   CHECK_NOTHROW(Simulation{c, false}.test_process_lef_bar_collisions(
       lefs, rev_ranks, fwd_ranks, absl::MakeSpan(rev_moves), absl::MakeSpan(fwd_moves), barriers,
@@ -1440,6 +1468,10 @@ TEST_CASE("Simulation 006 - Few inactive LEFs", "[simulation][short]") {
   REQUIRE_NOTHROW(Simulation{c, false}.test_adjust_moves(
       &chrom, lefs, rev_ranks, fwd_ranks, absl::MakeSpan(rev_moves), absl::MakeSpan(fwd_moves)));
 
+  REQUIRE_NOTHROW(modle::Simulation{c, false}.test_process_units_at_chrom_boundaries(
+      &chrom, lefs, rev_ranks, fwd_ranks, absl::MakeSpan(rev_moves), absl::MakeSpan(fwd_moves),
+      absl::MakeSpan(rev_collision_mask), absl::MakeSpan(fwd_collision_mask)));
+
   CHECK_NOTHROW(Simulation{c, false}.test_process_lef_bar_collisions(
       lefs, rev_ranks, fwd_ranks, absl::MakeSpan(rev_moves), absl::MakeSpan(fwd_moves), barriers,
       barrier_mask, absl::MakeSpan(rev_collision_mask), absl::MakeSpan(fwd_collision_mask),
@@ -1520,6 +1552,10 @@ TEST_CASE("Simulation 007 - LEF-LEF collision overrides LEF-BAR collision 1",
   assert(rev_collision_mask.size() == nlefs);           // NOLINT
   assert(fwd_collision_mask.size() == nlefs);           // NOLINT
   require_that_lefs_are_sorted_by_idx(lefs, rev_ranks, fwd_ranks);
+
+  REQUIRE_NOTHROW(modle::Simulation{c, false}.test_process_units_at_chrom_boundaries(
+      &chrom, lefs, rev_ranks, fwd_ranks, absl::MakeSpan(rev_moves), absl::MakeSpan(fwd_moves),
+      absl::MakeSpan(rev_collision_mask), absl::MakeSpan(fwd_collision_mask)));
 
   CHECK_NOTHROW(Simulation{c, false}.test_process_lef_bar_collisions(
       lefs, rev_ranks, fwd_ranks, absl::MakeSpan(rev_moves), absl::MakeSpan(fwd_moves), barriers,
