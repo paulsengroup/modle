@@ -29,8 +29,13 @@
 #if defined(__clang__)
     #define DISABLE_WARNING_C_VLA              DISABLE_WARNING("-Wvla-extension")
     #define DISABLE_WARNING_BOOL_COMPARE       (void)0;
-    #define DISABLE_WARNING_IMPL_INT_TO_FLOAT  DISABLE_WARNING("-Wimplicit-const-int-float-conversion")
     #define DISABLE_WARNING_USELESS_CAST       (void)0;
+#if (__clang_major__ > 10)
+    #define DISABLE_WARNING_IMPL_INT_TO_FLOAT  DISABLE_WARNING("-Wimplicit-const-int-float-conversion")
+#else
+    #define DISABLE_WARNING_IMPL_INT_TO_FLOAT  (void)0;
+#endif
+
 #else
     #define DISABLE_WARNING_C_VLA             DISABLE_WARNING("-Wvla")
     #define DISABLE_WARNING_BOOL_COMPARE      DISABLE_WARNING("-Wbool-compare")
