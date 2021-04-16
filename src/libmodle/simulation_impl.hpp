@@ -232,7 +232,7 @@ void Simulation::run() {
   // Extrusion barriers are placed on this std::deque, and are passed to simulation threads
   // through a Span of const ExtrusionBarriers
   std::mutex barrier_mutex;
-  std::deque<std::unique_ptr<std::vector<ExtrusionBarrier>>> barriers;
+  absl::flat_hash_map<Chromosome*, std::unique_ptr<std::vector<ExtrusionBarrier>>> barriers;
 
   constexpr std::size_t task_batch_size = 128;
   // Queue used to submit simulation tasks to the thread pool
@@ -364,7 +364,7 @@ void Simulation::run() {
               fmt::print(stderr, "Simulation for '{}' successfully completed.\n",
                          task.chrom->name());
               std::scoped_lock l2(barrier_mutex);
-              barriers.pop_front();
+              barriers.erase(task.chrom);
             }
           }
         }
@@ -411,7 +411,7 @@ void Simulation::run() {
         chrom->allocate_contacts(this->bin_size, this->diagonal_width);
         std::scoped_lock l(barrier_mutex, progress_queue_mutex);
         progress_queue.emplace_back(chrom, ncells);
-        barriers.emplace_back(nullptr);
+        barriers.emplace(chrom, nullptr);
       }
       continue;
     }
@@ -428,9 +428,9 @@ void Simulation::run() {
       progress_queue.emplace_back(chrom, 0UL);
 
       // Allocate extr. barriers mapping on the chromosome that is being simulated
-      barriers.emplace_back(
-          std::make_unique<std::vector<ExtrusionBarrier>>(Simulation::allocate_barriers(chrom)));
-      extr_barriers_buff = absl::MakeConstSpan(barriers.back()->data(), barriers.back()->size());
+      auto node = barriers.emplace(chrom, std::make_unique<std::vector<ExtrusionBarrier>>(
+                                              Simulation::allocate_barriers(chrom)));
+      extr_barriers_buff = absl::MakeConstSpan(*node.first->second);
     }
 
     // Compute # of LEFs to be simulated based on chrom. sizes
