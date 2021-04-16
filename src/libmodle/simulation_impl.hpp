@@ -706,17 +706,17 @@ bp_t Simulation::generate_rev_move(const Chromosome* const chrom, const Extrusio
                                    modle::PRNG_t& rand_eng) {
   assert(unit.pos() >= chrom->start_pos());  // NOLINT
   if (this->rev_extrusion_speed_std == 0) {  // When std == 0 always return the avg. extrusion speed
-                                             // (except when unit is close to chrom start pos.)
+    // (except when unit is close to chrom start pos.)
     return std::min(this->rev_extrusion_speed, unit.pos() - chrom->start_pos());
   }
   // Generate the move distance (and make sure it is not a negative distance)
   // NOTE: on my laptop generating doubles from a normal distribution, rounding them, then
   // casting double to uint is a lot faster (~4x) than drawing uints directly from a Poisson
   // distr.
-  return std::min(static_cast<bp_t>(std::round(
-                      lef_move_generator_t{static_cast<double>(this->rev_extrusion_speed),
-                                           this->rev_extrusion_speed_std}(rand_eng))),
-                  unit.pos() - chrom->start_pos());
+  return std::clamp(static_cast<bp_t>(std::round(
+                        lef_move_generator_t{static_cast<double>(this->rev_extrusion_speed),
+                                             this->rev_extrusion_speed_std}(rand_eng))),
+                    0UL, unit.pos() - chrom->start_pos());
 }
 
 bp_t Simulation::generate_fwd_move(const Chromosome* const chrom, const ExtrusionUnit& unit,
@@ -726,10 +726,10 @@ bp_t Simulation::generate_fwd_move(const Chromosome* const chrom, const Extrusio
   if (this->fwd_extrusion_speed_std == 0) {
     return std::min(this->fwd_extrusion_speed, (chrom->end_pos() - 1) - unit.pos());
   }
-  return std::min(static_cast<bp_t>(std::round(
-                      lef_move_generator_t{static_cast<double>(this->fwd_extrusion_speed),
-                                           this->fwd_extrusion_speed_std}(rand_eng))),
-                  (chrom->end_pos() - 1) - unit.pos());
+  return std::clamp(static_cast<bp_t>(std::round(
+                        lef_move_generator_t{static_cast<double>(this->fwd_extrusion_speed),
+                                             this->fwd_extrusion_speed_std}(rand_eng))),
+                    0UL, (chrom->end_pos() - 1) - unit.pos());
 }
 
 void Simulation::generate_moves(const Chromosome* const chrom, absl::Span<const Lef> lefs,
