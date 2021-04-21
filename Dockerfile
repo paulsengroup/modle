@@ -1,11 +1,12 @@
 FROM fedora:33 AS modle_base
 
 ARG build_dir='/tmp/modle/cmake-build'
-# march, cpus ver and build_type are set through --build-arg(s) at build time
+# The following args are set through --build-arg(s) at build time
 ARG march
 ARG cpus
 ARG ver
 ARG build_type
+ARG skip_tests
 
 ARG XOSHIRO_CPP_VER=1.1
 ARG LIBBIGWIG_VER=0.4.6
@@ -50,9 +51,12 @@ RUN dnf update -y \
              -DCMAKE_CXX_FLAGS="-march=${march}"   \
              -DCMAKE_C_FLAGS="-march=${march}"     \
              -G 'Unix Makefiles' ..                \
-    && make -j "$cpus" \
-    && make test       \
-    && make install    \
+    && make -j "$cpus"                  \
+    &&                                  \
+    if [ "$skip_tests" = false ]; then  \
+        make test ;                     \
+    fi                                  \
+    && make install                     \
     &&                                             \
     if [ "$build_type" = "Debug" ]; then           \
         dnf install -y dnf-plugins-core gdb        \

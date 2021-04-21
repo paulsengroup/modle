@@ -6,6 +6,7 @@ memory='8G'
 cpus="$(nproc)"
 march="$(uname -m | tr '_' '-')"
 name=modle
+skip_tests=false
 
 for arg in "$@"; do
 
@@ -19,6 +20,7 @@ for arg in "$@"; do
   --cpus)        cpus=${value}   ;;
   --memory)      memory=${value} ;;
   --march)       march=${value}  ;;
+  --no-test)     skip_tests=true ;;
   *) ;;
   esac
 done
@@ -75,6 +77,7 @@ sudo docker build --memory="${memory}" \
      --build-arg "cpus=$cpus" \
      --build-arg "ver=$ver" \
      --build-arg "build_type=$type" \
+     --build-arg "skip-tests=$skip_tests" \
      .
 
  sudo singularity build -F "${img_name}_v${ver}-${march}.sif" \
