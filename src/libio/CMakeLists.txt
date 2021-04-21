@@ -12,20 +12,19 @@ target_include_directories(libio INTERFACE include/)
 
 target_link_libraries(
   libio
-  INTERFACE
-    project_warnings
-    project_options
-    Modle::cmatrix
-    libBigWig::libBigWig
-    CONAN_PKG::abseil
-    CONAN_PKG::boost
-    CONAN_PKG::fmt
-    CONAN_PKG::hdf5
-    CONAN_PKG::readerwriterqueue
-    CONAN_PKG::zlib
-    # Deal with std::filesystem quirkiness on older compilers
-    $<$<AND:$<BOOL:${USING_LIBCXX}>,$<BOOL:${EXPLICIT_LINK_VS_FILESYSTEM_REQUIRED}>>:-lc++fs>
-    $<$<AND:$<BOOL:${USING_STDLIBCXX}>,$<BOOL:${EXPLICIT_LINK_VS_FILESYSTEM_REQUIRED}>>:-lstdc++fs>)
+  INTERFACE project_warnings
+            project_options
+            Modle::cmatrix
+            libBigWig::libBigWig
+            CONAN_PKG::abseil
+            CONAN_PKG::boost
+            CONAN_PKG::fmt
+            CONAN_PKG::hdf5
+            CONAN_PKG::readerwriterqueue
+            CONAN_PKG::zlib
+            # Deal with std::filesystem quirkiness on older compilers
+            $<$<AND:$<BOOL:${USING_LIBCXX}>,$<BOOL:${EXPLICIT_LINK_VS_FILESYSTEM_REQUIRED}>>:-lc++fs>
+            $<$<AND:$<BOOL:${USING_STDLIBCXX}>,$<BOOL:${EXPLICIT_LINK_VS_FILESYSTEM_REQUIRED}>>:-lstdc++fs>)
 
 target_compile_definitions(libio INTERFACE -DNOCURL)
 

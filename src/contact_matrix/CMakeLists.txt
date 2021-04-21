@@ -4,12 +4,11 @@ target_include_directories(cmatrix INTERFACE include/)
 
 target_link_libraries(
   cmatrix
-  INTERFACE
-    project_warnings
-    project_options
-    Modle::utils
-    $<$<BOOL:${ENABLE_XOSHIRO}>:XoshiroCpp::XoshiroCpp>
-    CONAN_PKG::boost)
+  INTERFACE project_warnings
+            project_options
+            Modle::utils
+            $<$<BOOL:${ENABLE_XOSHIRO}>:XoshiroCpp::XoshiroCpp>
+            CONAN_PKG::boost)
 
 if(ENABLE_PCH)
   target_precompile_headers(
