@@ -43,8 +43,6 @@ class Simulation : Config {
   static constexpr auto LEF_LEF_COLLISION = std::numeric_limits<collision_t>::max() - 1;
   static constexpr auto REACHED_CHROM_BOUNDARY = std::numeric_limits<collision_t>::max() - 2;
 
-  [[nodiscard]] inline static constexpr bool is_lef_bar_collision(collision_t cause_of_collision);
-
   struct Task {
     inline Task() = default;
     std::size_t id{};
@@ -180,15 +178,27 @@ class Simulation : Config {
   //! - Simulation::process_lef_lef_collisions
   inline void extrude(const Chromosome* chrom, absl::Span<Lef> lefs,
                       absl::Span<const bp_t> rev_moves, absl::Span<const bp_t> fwd_moves,
-                      std::size_t nunits_at_5prime = 0,
-                      std::size_t nunits_at_3prime = 0) noexcept(utils::ndebug_defined());
+                      std::size_t nrev_units_at_5prime = 0,
+                      std::size_t nfwd_units_at_3prime = 0) noexcept(utils::ndebug_defined());
+
+  //! This is just a wrapper function used to make sure that process_* functions are always called
+  //! in the right order
+
+  //! \return TODO
+  template <typename I, typename MaskT>
+  inline std::pair<std::size_t, std::size_t> process_collisions(
+      const Chromosome* chrom, absl::Span<const Lef> lefs,
+      absl::Span<const ExtrusionBarrier> barriers, const MaskT& barrier_mask,
+      absl::Span<const std::size_t> rev_lef_ranks, absl::Span<const std::size_t> fwd_lef_ranks,
+      absl::Span<bp_t> rev_moves, absl::Span<bp_t> fwd_moves, absl::Span<I> rev_collisions,
+      absl::Span<I> fwd_collisions, PRNG_t& rand_eng) noexcept(utils::ndebug_defined());
 
   template <typename I>
   static inline std::pair<std::size_t, std::size_t> process_units_at_chrom_boundaries(
       const Chromosome* chrom, absl::Span<const Lef> lefs,
       absl::Span<const std::size_t> rev_lef_ranks, absl::Span<const std::size_t> fwd_lef_ranks,
-      absl::Span<bp_t> rev_moves, absl::Span<bp_t> fwd_moves, absl::Span<I> rev_collisions,
-      absl::Span<I> fwd_collisions);
+      absl::Span<const bp_t> rev_moves, absl::Span<const bp_t> fwd_moves,
+      absl::Span<I> rev_collisions, absl::Span<I> fwd_collisions);
 
   /// Detect and process collisions between LEFs and extrusion barriers
 
@@ -202,11 +212,11 @@ class Simulation : Config {
   template <typename I>
   inline void process_lef_bar_collisions(
       absl::Span<const Lef> lefs, absl::Span<const std::size_t> rev_lef_ranks,
-      absl::Span<const std::size_t> fwd_lef_ranks, absl::Span<bp_t> rev_moves,
-      absl::Span<bp_t> fwd_moves, absl::Span<const ExtrusionBarrier> extr_barriers,
+      absl::Span<const std::size_t> fwd_lef_ranks, absl::Span<const bp_t> rev_moves,
+      absl::Span<const bp_t> fwd_moves, absl::Span<const ExtrusionBarrier> extr_barriers,
       const boost::dynamic_bitset<>& barrier_mask, absl::Span<I> rev_collisions,
-      absl::Span<I> fwd_collisions, modle::PRNG_t& rand_eng, std::size_t nunits_at_5prime = 0,
-      std::size_t nunits_at_3prime = 0) noexcept(utils::ndebug_defined());
+      absl::Span<I> fwd_collisions, modle::PRNG_t& rand_eng, std::size_t nrev_units_at_5prime = 0,
+      std::size_t nfwd_units_at_3prime = 0) noexcept(utils::ndebug_defined());
 
   /// Detect and process collisions between LEFs
 
@@ -221,8 +231,8 @@ class Simulation : Config {
       absl::Span<const ExtrusionBarrier> barriers, absl::Span<const std::size_t> rev_lef_ranks,
       absl::Span<const std::size_t> fwd_lef_ranks, absl::Span<bp_t> rev_moves,
       absl::Span<bp_t> fwd_moves, absl::Span<I> rev_collisions, absl::Span<I> fwd_collisions,
-      PRNG_t& rand_eng, std::size_t nunits_at_5prime = 0,
-      std::size_t nunits_at_3prime = 0) noexcept(utils::ndebug_defined());
+      PRNG_t& rand_eng, std::size_t nrev_units_at_5prime = 0,
+      std::size_t nfwd_units_at_3prime = 0) noexcept(utils::ndebug_defined());
 
   template <typename I>
   inline void process_primary_lef_lef_collisions(
@@ -230,16 +240,44 @@ class Simulation : Config {
       absl::Span<const ExtrusionBarrier> barriers, absl::Span<const std::size_t> rev_lef_ranks,
       absl::Span<const std::size_t> fwd_lef_ranks, absl::Span<bp_t> rev_moves,
       absl::Span<bp_t> fwd_moves, absl::Span<I> rev_collisions, absl::Span<I> fwd_collisions,
-      PRNG_t& rand_eng, std::size_t nunits_at_5prime = 0,
-      std::size_t nunits_at_3prime = 0) noexcept(utils::ndebug_defined());
+      PRNG_t& rand_eng, std::size_t nrev_units_at_5prime = 0,
+      std::size_t nfwd_units_at_3prime = 0) noexcept(utils::ndebug_defined());
 
   template <typename I>
   inline void process_secondary_lef_lef_collisions(
-      const Chromosome* chrom, absl::Span<const Lef> lefs,
+      const Chromosome* chrom, absl::Span<const Lef> lefs, std::size_t nbarriers,
       absl::Span<const std::size_t> rev_lef_ranks, absl::Span<const std::size_t> fwd_lef_ranks,
       absl::Span<bp_t> rev_moves, absl::Span<bp_t> fwd_moves, absl::Span<I> rev_collisions,
-      absl::Span<I> fwd_collisions, PRNG_t& rand_eng, std::size_t nunits_at_5prime = 0,
-      std::size_t nunits_at_3prime = 0) noexcept(utils::ndebug_defined());
+      absl::Span<I> fwd_collisions, PRNG_t& rand_eng, std::size_t nrev_units_at_5prime = 0,
+      std::size_t nfwd_units_at_3prime = 0) noexcept(utils::ndebug_defined());
+
+  // TODO: Figure out how to write a template that takes Span<const int> as template argument
+  template <typename I>
+  static inline void adjust_moves_for_lef_bar_collisions(
+      absl::Span<const Lef> lefs, absl::Span<const ExtrusionBarrier> barriers,
+      absl::Span<bp_t> rev_moves, absl::Span<bp_t> fwd_moves, absl::Span<I> rev_collisions,
+      absl::Span<I> fwd_collisions) noexcept(utils::ndebug_defined());
+
+  template <typename I>
+  static inline void adjust_moves_for_primary_lef_lef_collisions(
+      absl::Span<const Lef> lefs, absl::Span<const ExtrusionBarrier> barriers,
+      absl::Span<const std::size_t> rev_ranks, absl::Span<const std::size_t> fwd_ranks,
+      absl::Span<bp_t> rev_moves, absl::Span<bp_t> fwd_moves, absl::Span<I> rev_collisions,
+      absl::Span<I> fwd_collisions) noexcept(utils::ndebug_defined());
+
+  template <typename I>
+  static inline void adjust_moves_for_secondary_lef_lef_collisions(
+      absl::Span<const Lef> lefs, std::size_t nbarriers, absl::Span<const std::size_t> rev_ranks,
+      absl::Span<const std::size_t> fwd_ranks, absl::Span<bp_t> rev_moves,
+      absl::Span<bp_t> fwd_moves, absl::Span<I> rev_collisions,
+      absl::Span<I> fwd_collisions) noexcept(utils::ndebug_defined());
+
+  template <typename I>
+  static inline void adjust_moves_based_on_collisions(
+      absl::Span<const Lef> lefs, absl::Span<const ExtrusionBarrier> barriers,
+      absl::Span<const std::size_t> rev_ranks, absl::Span<const std::size_t> fwd_ranks,
+      absl::Span<bp_t> rev_moves, absl::Span<bp_t> fwd_moves, absl::Span<I> rev_collisions,
+      absl::Span<I> fwd_collisions) noexcept(utils::ndebug_defined());
 
   inline std::size_t register_contacts(
       Chromosome* chrom, absl::Span<const Lef> lefs,
@@ -260,7 +298,7 @@ class Simulation : Config {
 
   inline void release_lefs(absl::Span<Lef> lefs, absl::Span<const std::size_t> lef_idx) noexcept;
 
-  [[nodiscard]] inline std::pair<bp_t /*rev*/, bp_t /*fwd*/> compute_lef_lef_collision_pos(
+  [[nodiscard]] static inline std::pair<bp_t /*rev*/, bp_t /*fwd*/> compute_lef_lef_collision_pos(
       const ExtrusionUnit& rev_unit, const ExtrusionUnit& fwd_unit, bp_t rev_move, bp_t fwd_move);
 
 #ifdef ENABLE_TESTING
@@ -330,6 +368,45 @@ class Simulation : Config {
     this->process_lef_bar_collisions(lefs, rev_lef_rank_buff, fwd_lef_rank_buff, rev_move_buff,
                                      fwd_move_buff, extr_barriers, barrier_mask, rev_collisions,
                                      fwd_collisions, rand_eng);
+  }
+
+  template <typename I>
+  static inline void test_adjust_moves_for_lef_bar_collisions(
+      absl::Span<const Lef> lefs, absl::Span<const ExtrusionBarrier> barriers,
+      absl::Span<bp_t> rev_moves, absl::Span<bp_t> fwd_moves, absl::Span<I> rev_collisions,
+      absl::Span<I> fwd_collisions) {
+    Simulation::adjust_moves_for_lef_bar_collisions(lefs, barriers, rev_moves, fwd_moves,
+                                                    rev_collisions, fwd_collisions);
+  }
+
+  template <typename I>
+  static inline void test_adjust_moves_for_primary_lef_lef_collisions(
+      absl::Span<const Lef> lefs, absl::Span<const ExtrusionBarrier> barriers,
+      absl::Span<const std::size_t> rev_ranks, absl::Span<const std::size_t> fwd_ranks,
+      absl::Span<bp_t> rev_moves, absl::Span<bp_t> fwd_moves, absl::Span<I> rev_collisions,
+      absl::Span<I> fwd_collisions) {
+    Simulation::adjust_moves_for_primary_lef_lef_collisions(
+        lefs, barriers, rev_ranks, fwd_ranks, rev_moves, fwd_moves, rev_collisions, fwd_collisions);
+  }
+
+  template <typename I>
+  static inline void test_adjust_moves_for_secondary_lef_lef_collisions(
+      absl::Span<const Lef> lefs, std::size_t nbarriers, absl::Span<const std::size_t> rev_ranks,
+      absl::Span<const std::size_t> fwd_ranks, absl::Span<bp_t> rev_moves,
+      absl::Span<bp_t> fwd_moves, absl::Span<I> rev_collisions, absl::Span<I> fwd_collisions) {
+    Simulation::adjust_moves_for_secondary_lef_lef_collisions(lefs, nbarriers, rev_ranks, fwd_ranks,
+                                                              rev_moves, fwd_moves, rev_collisions,
+                                                              fwd_collisions);
+  }
+
+  template <typename I>
+  static inline void test_adjust_moves_based_on_collisions(
+      absl::Span<const Lef> lefs, absl::Span<const ExtrusionBarrier> barriers,
+      absl::Span<const std::size_t> rev_ranks, absl::Span<const std::size_t> fwd_ranks,
+      absl::Span<bp_t> rev_moves, absl::Span<bp_t> fwd_moves, absl::Span<I> rev_collisions,
+      absl::Span<I> fwd_collisions) {
+    Simulation::adjust_moves_based_on_collisions(lefs, barriers, rev_ranks, fwd_ranks, rev_moves,
+                                                 fwd_moves, rev_collisions, fwd_collisions);
   }
 #endif
 };
