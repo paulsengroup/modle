@@ -127,6 +127,47 @@ endif()
 include(cmake/Conan.cmake)
 run_conan()
 
+# Reduce level of optimization to improve the code profiling experience
+if(OPTIMIZE_FOR_PROFILING)
+  if(NOT
+          "${uppercase_CMAKE_BUILD_TYPE}"
+          STREQUAL
+          "RelWithDebInfo")
+    message(
+            WARNING
+            "Switching build type from ${CMAKE_BUILD_TYPE} to RelWithDebInfo because OPTIMIZE_FOR_PROFILING was set to ON by the user"
+    )
+    set(CMAKE_BUILD_TYPE "RelWithDebInfo")
+  endif()
+
+  target_compile_options(project_options INTERFACE -O1)
+endif()
+
+# Source: https://github.com/llvm/llvm-project/blob/656ebd519e3fd52050e1c8abeacafcf94d1fa260/llvm/cmake/modules/HandleLLVMOptions.cmake#L54
+if(ENABLE_ASSERTIONS)
+  if(NOT MSVC)
+    add_definitions(-D_DEBUG)
+  endif()
+  # On non-Debug builds cmake automatically defines NDEBUG, so we explicitly undefine it:
+  if(NOT uppercase_CMAKE_BUILD_TYPE STREQUAL "DEBUG")
+    # NOTE: use `add_compile_options` rather than `add_definitions` since
+    # `add_definitions` does not support generator expressions.
+    target_compile_options(project_options INTERFACE $<$<OR:$<COMPILE_LANGUAGE:C>,$<COMPILE_LANGUAGE:CXX>>:-UNDEBUG>)
+
+    # Also remove /D NDEBUG to avoid MSVC warnings about conflicting defines.
+    foreach (flags_var_to_scrub
+            CMAKE_CXX_FLAGS_RELEASE
+            CMAKE_CXX_FLAGS_RELWITHDEBINFO
+            CMAKE_CXX_FLAGS_MINSIZEREL
+            CMAKE_C_FLAGS_RELEASE
+            CMAKE_C_FLAGS_RELWITHDEBINFO
+            CMAKE_C_FLAGS_MINSIZEREL)
+      string (REGEX REPLACE "(^| )[/-]D *NDEBUG($| )" " "
+              "${flags_var_to_scrub}" "${${flags_var_to_scrub}}")
+    endforeach()
+  endif()
+endif()
+
 # import external dependencies
 add_subdirectory(external/libBigWig-0.4.6)
 if(ENABLE_XOSHIRO)
@@ -138,22 +179,6 @@ if(ENABLE_TESTING)
   enable_testing()
   message(STATUS "Building tests")
   add_subdirectory(test)
-endif()
-
-# Reduce level of optimization to improve the code profiling experience
-if(OPTIMIZE_FOR_PROFILING)
-  if(NOT
-     "${CMAKE_BUILD_TYPE}"
-     STREQUAL
-     "RelWithDebInfo")
-    message(
-      WARNING
-        "Switching build type from ${CMAKE_BUILD_TYPE} to RelWithDebInfo because OPTIMIZE_FOR_PROFILING was set to ON by the user"
-    )
-    set(CMAKE_BUILD_TYPE "RelWithDebInfo")
-  endif()
-
-  target_compile_options(project_options INTERFACE -O1)
 endif()
 
 #[[
