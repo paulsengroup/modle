@@ -2,7 +2,11 @@
 
 // IWYU pragma: private, include "modle/extrusion_barriers.hpp"
 
-#include <cassert>  // for assert
+#include <absl/types/span.h>  // for Span
+
+#include <algorithm>                                // for clamp
+#include <boost/dynamic_bitset/dynamic_bitset.hpp>  // for dynamic_bitset
+#include <cassert>                                  // for assert
 
 #include "modle/common.hpp"  // for bp_t, Direction
 #include "modle/utils.hpp"   // for ndebug_defined
@@ -98,6 +102,17 @@ CTCF::State CTCF::next_state(CTCF::State current_state, double occupied_self_tra
   }
 
   return current_state;
+}
+
+void CTCF::update_states(absl::Span<const ExtrusionBarrier> extr_barriers,
+                         boost::dynamic_bitset<>& mask,
+                         modle::PRNG_t& rand_eng) noexcept(utils::ndebug_defined()) {
+  assert(extr_barriers.size() == mask.size());  // NOLINT
+  for (auto i = 0UL; i < extr_barriers.size(); ++i) {
+    mask[i] = CTCF::next_state(mask[i] ? CTCF::OCCUPIED : CTCF::NOT_OCCUPIED,
+                               extr_barriers[i].prob_occupied_to_occupied(),
+                               extr_barriers[i].prob_not_occupied_to_not_occupied(), rand_eng);
+  }
 }
 
 }  // namespace modle

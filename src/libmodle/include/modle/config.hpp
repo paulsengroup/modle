@@ -5,11 +5,11 @@
 #include <fmt/format.h>                    // for format, FMT_STRING, print
 #include <fmt/ostream.h>                   // for formatbuf<>::int_type
 
-#include <cmath>             // for round
 #include <cstdint>           // for uint32_t, uint64_t
 #include <cstdio>            // for stderr
 #include <filesystem>        // for weakly_canonical, operator<<, path
 #include <initializer_list>  // for initializer_list
+#include <limits>            // for numeric_limits
 #include <sstream>           // for basic_stringbuf<>::int_type, basic_stringbuf<>...
 #include <string>            // for string, allocator, basic_string
 #include <string_view>       // for operator""sv, basic_string_view, string_view

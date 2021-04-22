@@ -10,8 +10,7 @@
 #include <utility>                                  // for pair
 #include <vector>                                   // for vector
 
-#include "modle/common.hpp"  // for PRNG, PRNG_t
-#include "modle/utils.hpp"   // for ndebug_defined
+#include "modle/utils.hpp"  // for ndebug_defined
 
 namespace modle {
 
@@ -23,15 +22,14 @@ class ContactMatrix {
  public:
   // Constructors
   inline ContactMatrix() = default;
-  inline ContactMatrix(ContactMatrix<I>&& other) noexcept(utils::ndebug_defined()) = default;
+  inline ContactMatrix(ContactMatrix<I>&& other) noexcept = default;
   inline ContactMatrix(const ContactMatrix<I>& other);
   inline ContactMatrix(std::size_t nrows, std::size_t ncols, bool fill_with_random_numbers = false);
   inline ~ContactMatrix() = default;
 
   // Operators
   [[nodiscard]] inline ContactMatrix& operator=(const ContactMatrix& other);
-  [[nodiscard]] inline ContactMatrix& operator=(ContactMatrix&& other) noexcept(
-      utils::ndebug_defined()) = default;
+  [[nodiscard]] inline ContactMatrix& operator=(ContactMatrix&& other) noexcept = default;
 
   // Counts getters and setters
   [[nodiscard]] inline I get(std::size_t row, std::size_t col) const

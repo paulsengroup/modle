@@ -1,24 +1,30 @@
 #pragma once
 
-#include <absl/container/btree_set.h>
-#include <absl/container/btree_set.h>  // IWYU pragma: keep for btree_set
-#include <absl/types/span.h>
-#include <absl/types/span.h>  // IWYU pragma: keep for Span
+#include <absl/container/btree_set.h>            // IWYU pragma: keep for btree_set
+#include <absl/container/flat_hash_map.h>        // for flat_hash_map
+#include <absl/types/span.h>                     // IWYU pragma: keep for Span
+#include <moodycamel/blockingconcurrentqueue.h>  // for BlockingConcurrntQueue
 
+#include <atomic>                                   // for atomic
 #include <boost/asio/thread_pool.hpp>               // for thread_pool
 #include <boost/dynamic_bitset/dynamic_bitset.hpp>  // for dynamic_bitset
 #include <cstddef>                                  // for size_t
 #include <cstdint>                                  // for uint64_t
+#include <deque>                                    // for deque
 #include <filesystem>                               // for path
 #include <limits>                                   // for numeric_limits
+#include <memory>                                   // for unique_ptr
+#include <mutex>                                    // for mutex
+#include <random>                                   // for normal_distribution, uniform_int_dist...
 #include <string>                                   // for string
 #include <utility>                                  // for pair
 #include <vector>                                   // for vector
 
-#include "modle/common.hpp"  // for bp_t, PRNG, seeder
-#include "modle/config.hpp"  // for Config
-#include "modle/dna.hpp"     // for Chromosome
-#include "modle/utils.hpp"   // for ndebug_defined
+#include "modle/common.hpp"             // for bp_t, PRNG, seeder
+#include "modle/config.hpp"             // for Config
+#include "modle/dna.hpp"                // for Chromosome
+#include "modle/extrusion_factors.hpp"  // for Lef, ExtrusionUnit (ptr only)
+#include "modle/utils.hpp"              // for ndebug_defined
 
 namespace modle {
 
@@ -92,22 +98,22 @@ class Simulation : Config {
 
   inline void simulate_extrusion_kernel(State& state);
 
+  inline void write_contacts_to_disk(
+      std::deque<std::pair<Chromosome*, std::size_t>>& progress_queue,
+      std::mutex& progress_queue_mutex, std::atomic<bool>& end_of_simulation);
+
+  inline void worker(
+      moodycamel::BlockingConcurrentQueue<Simulation::Task>& task_queue,
+      std::deque<std::pair<Chromosome*, std::size_t>>& progress_queue,
+      std::mutex& progress_queue_mutex, std::mutex& barrier_mutex,
+      absl::flat_hash_map<Chromosome*, std::unique_ptr<std::vector<ExtrusionBarrier>>>& barriers,
+      std::atomic<bool>& end_of_simulation, std::size_t task_batch_size = 32);  // NOLINT
+
   template <typename MaskT>
   inline void bind_lefs(const Chromosome* chrom, absl::Span<Lef> lefs,
                         absl::Span<std::size_t> rev_lef_ranks,
                         absl::Span<std::size_t> fwd_lef_ranks, MaskT& mask, modle::PRNG_t& rand_eng,
                         bool first_epoch = false) noexcept(utils::ndebug_defined());
-
-  //! Update CTCF states for the current iteration based on the states from the previous iteration.
-
-  //! \param extr_barriers
-  //! \param mask bitset used to store CTCF states. States will be updated inplace. Bits set to 0
-  //!        represent CTCFs in NOT_OCCUPIED state, while bits set to 1 represent CTCFs in OCCUPIED
-  //!        state
-  //! \param rand_eng
-  inline void generate_ctcf_states(absl::Span<const ExtrusionBarrier> extr_barriers,
-                                   boost::dynamic_bitset<>& mask,
-                                   modle::PRNG_t& rand_eng) noexcept(utils::ndebug_defined());
 
   // clang-format off
   //! Generate moves in reverse direction
@@ -205,10 +211,10 @@ class Simulation : Config {
   //! After calling this function, the entries in \p rev_collisions and \p fwd_collisions
   //! corresponding to reverse or forward extrusion units that will collide with an extrusion
   //! barrier in the current iteration, will be set to the index corresponding to the barrier that
-  //! is causing the collision. Furthermore, the moves of the extrusion units involved in collision
-  //! events are updated so that after calling Simulation::extrude, these extrusion units will be
-  //! located 1bp up/downstream (depending on extrusion direction) of the extrusion barrier that is
-  //! blocking them.
+  //! is causing the collision. Furthermore, the moves of the extrusion units involved in
+  //! collision events are updated so that after calling Simulation::extrude, these extrusion
+  //! units will be located 1bp up/downstream (depending on extrusion direction) of the extrusion
+  //! barrier that is blocking them.
   template <typename I>
   inline void detect_lef_bar_collisions(
       absl::Span<const Lef> lefs, absl::Span<const std::size_t> rev_lef_ranks,
@@ -413,4 +419,8 @@ class Simulation : Config {
 };
 }  // namespace modle
 
-#include "../../simulation_impl.hpp"  // IWYU pragma: keep
+#include "../../simulation_correct_moves_impl.hpp"      // IWYU pragma: keep
+#include "../../simulation_detect_collisions_impl.hpp"  // IWYU pragma: keep
+#include "../../simulation_impl.hpp"                    // IWYU pragma: keep
+#include "../../simulation_scheduler_impl.hpp"          // IWYU pragma: keep
+#include "../../simulation_setup_impl.hpp"              // IWYU pragma: keep

@@ -34,6 +34,7 @@ using contacts_t = uint32_t;
 
 namespace dna {
 enum Direction : uint_fast8_t { none = 0, fwd = 1, rev = 2, both = 3 };
+}  // namespace dna
 
 #if __cplusplus == 202002L
 #define MODLE_LIKELY [[likely]]
@@ -42,7 +43,5 @@ enum Direction : uint_fast8_t { none = 0, fwd = 1, rev = 2, both = 3 };
 #define MODLE_LIKELY
 #define MODLE_UNLIKELY
 #endif
-
-}  // namespace dna
 
 }  // namespace modle

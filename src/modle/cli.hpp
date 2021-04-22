@@ -13,13 +13,15 @@
 #include <CLI/Formatter.hpp>   // IWYU pragma: keep for Formatter
 #include <CLI/Option.hpp>      // for Option
 #include <CLI/Validators.hpp>  // for PositiveNumber, NonNegativeNumber, Range, Existing...
+#include <cmath>               // for round
 #include <cstdint>             // for uint32_t, uint64_t
-#include <cstdio>              // for stderr
 #include <filesystem>          // for path, exists, operator<<, is_empty, is_directory
+#include <limits>              // for numeric_limits
 #include <sstream>             // for basic_stringbuf<>::int_type, basic_stringbuf<>::po...
 #include <stdexcept>           // for invalid_argument, out_of_range
 #include <string>              // for allocator, string, basic_string
 
+#include "cli.hpp"           // for FMT_COMPILE_STRING
 #include "modle/common.hpp"  // for bp_t
 #include "modle/config.hpp"  // for Config
 
