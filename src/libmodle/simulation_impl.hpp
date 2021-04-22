@@ -657,8 +657,8 @@ void Simulation::bind_lefs(const Chromosome* chrom, absl::Span<Lef> lefs,
                            modle::PRNG_t& rand_eng,
                            bool first_epoch) noexcept(utils::ndebug_defined()) {
   static_assert(std::is_same_v<boost::dynamic_bitset<>, MaskT> ||
-                    std::is_integral_v<std::decay_t<decltype(
-                        std::declval<MaskT&>().operator[](std::declval<std::size_t>()))>>,
+                    std::is_integral_v<std::decay_t<decltype(std::declval<MaskT&>().operator[](
+                        std::declval<std::size_t>()))>>,
                 "mask should be a vector of integral numbers or a boost::dynamic_bitset.");
 
   assert(lefs.size() <= mask.size() || mask.empty());  // NOLINT
@@ -914,6 +914,8 @@ void Simulation::extrude(const Chromosome* chrom, absl::Span<Lef> lefs,
     // Extrude fwd unit
     assert(lef.fwd_unit.pos() + fwd_moves[i1] <= chrom->end_pos() - 1);  // NOLINT
     lef.fwd_unit._pos += fwd_moves[i1];  // Advance extr. unit in 5'-3' direction
+
+    assert(lef.rev_unit.pos() <= lef.fwd_unit.pos());  // NOLINT
   }
 }
 
@@ -933,33 +935,37 @@ std::pair<std::size_t, std::size_t> Simulation::process_collisions(
   // process_*_collisions detect LEF-BAR/LEF collisions and update the moves so that after
   // extude() is called, stalled LEFs are located at their respective collision site
   const auto& [nrev_units_at_5prime, nfwd_units_at_3prime] =
-      Simulation::process_units_at_chrom_boundaries(chrom, lefs, rev_lef_ranks, fwd_lef_ranks,
-                                                    rev_moves, fwd_moves, rev_collisions,
-                                                    fwd_collisions);
+      Simulation::detect_collisions_at_chrom_boundaries(chrom, lefs, rev_lef_ranks, fwd_lef_ranks,
+                                                        rev_moves, fwd_moves, rev_collisions,
+                                                        fwd_collisions);
 
-  this->process_lef_bar_collisions(lefs, rev_lef_ranks, fwd_lef_ranks, rev_moves, fwd_moves,
-                                   barriers, barrier_mask, rev_collisions, fwd_collisions, rand_eng,
-                                   nrev_units_at_5prime, nfwd_units_at_3prime);
+  this->detect_lef_bar_collisions(lefs, rev_lef_ranks, fwd_lef_ranks, rev_moves, fwd_moves,
+                                  barriers, barrier_mask, rev_collisions, fwd_collisions, rand_eng,
+                                  nrev_units_at_5prime, nfwd_units_at_3prime);
 
-  this->process_primary_lef_lef_collisions(chrom, lefs, barriers, rev_lef_ranks, fwd_lef_ranks,
-                                           rev_moves, fwd_moves, rev_collisions, fwd_collisions,
-                                           rand_eng, nrev_units_at_5prime, nfwd_units_at_3prime);
+  this->detect_primary_lef_lef_collisions(chrom, lefs, barriers, rev_lef_ranks, fwd_lef_ranks,
+                                          rev_moves, fwd_moves, rev_collisions, fwd_collisions,
+                                          rand_eng, nrev_units_at_5prime, nfwd_units_at_3prime);
   this->adjust_moves_for_lef_bar_collisions(lefs, barriers, rev_moves, fwd_moves, rev_collisions,
                                             fwd_collisions);
 
   this->adjust_moves_for_primary_lef_lef_collisions(lefs, barriers, rev_lef_ranks, fwd_lef_ranks,
                                                     rev_moves, fwd_moves, rev_collisions,
                                                     fwd_collisions);
-  this->template process_secondary_lef_lef_collisions(
+  this->detect_secondary_lef_lef_collisions(
       chrom, lefs, barriers.size(), rev_lef_ranks, fwd_lef_ranks, rev_moves, fwd_moves,
       rev_collisions, fwd_collisions, rand_eng, nrev_units_at_5prime, nfwd_units_at_3prime);
+
+  this->adjust_moves_for_secondary_lef_lef_collisions(lefs, barriers.size(), rev_lef_ranks,
+                                                      fwd_lef_ranks, rev_moves, fwd_moves,
+                                                      rev_collisions, fwd_collisions);
 
   return std::make_pair(nrev_units_at_5prime, nfwd_units_at_3prime);
 }
 
 template <typename I>
-std::pair<std::size_t, std::size_t> Simulation::process_units_at_chrom_boundaries(
-    const Chromosome* const chrom, absl::Span<const Lef> lefs,
+std::pair<std::size_t, std::size_t> Simulation::detect_collisions_at_chrom_boundaries(
+    const Chromosome* chrom, absl::Span<const Lef> lefs,
     absl::Span<const std::size_t> rev_lef_ranks, absl::Span<const std::size_t> fwd_lef_ranks,
     absl::Span<const bp_t> rev_moves, absl::Span<const bp_t> fwd_moves,
     absl::Span<I> rev_collisions, absl::Span<I> fwd_collisions) {
@@ -1043,7 +1049,7 @@ std::pair<std::size_t, std::size_t> Simulation::process_units_at_chrom_boundarie
 }
 
 template <typename I>
-void Simulation::process_lef_bar_collisions(
+void Simulation::detect_lef_bar_collisions(
     absl::Span<const Lef> lefs, absl::Span<const std::size_t> rev_lef_ranks,
     absl::Span<const std::size_t> fwd_lef_ranks, absl::Span<const bp_t> rev_moves,
     absl::Span<const bp_t> fwd_moves, absl::Span<const ExtrusionBarrier> extr_barriers,
@@ -1181,7 +1187,7 @@ void Simulation::process_lef_bar_collisions(
 }
 
 template <typename I>  // TODO: make move spans const
-void Simulation::process_lef_lef_collisions(
+void Simulation::detect_lef_lef_collisions(
     const Chromosome* chrom, absl::Span<const Lef> lefs,
     absl::Span<const ExtrusionBarrier> barriers, absl::Span<const std::size_t> rev_lef_ranks,
     absl::Span<const std::size_t> fwd_lef_ranks, absl::Span<bp_t> rev_moves,
@@ -1191,18 +1197,18 @@ void Simulation::process_lef_lef_collisions(
   static_assert(std::is_integral_v<I>, "Collision buffers should be of integral type.");
 
   // Process collisions between LEFs moving in opposite directions
-  this->process_primary_lef_lef_collisions(chrom, lefs, barriers, rev_lef_ranks, fwd_lef_ranks,
-                                           rev_moves, fwd_moves, rev_collisions, fwd_collisions,
-                                           rand_eng, nrev_units_at_5prime, nfwd_units_at_3prime);
+  this->detect_primary_lef_lef_collisions(chrom, lefs, barriers, rev_lef_ranks, fwd_lef_ranks,
+                                          rev_moves, fwd_moves, rev_collisions, fwd_collisions,
+                                          rand_eng, nrev_units_at_5prime, nfwd_units_at_3prime);
 
   // Process collisions between LEFs moving in the same direction
-  this->process_secondary_lef_lef_collisions(
+  this->detect_secondary_lef_lef_collisions(
       chrom, lefs, barriers.size(), rev_lef_ranks, fwd_lef_ranks, rev_moves, fwd_moves,
       rev_collisions, fwd_collisions, rand_eng, nrev_units_at_5prime, nfwd_units_at_3prime);
 }
 
 template <typename I>  // TODO: make move spans const
-void Simulation::process_primary_lef_lef_collisions(
+void Simulation::detect_primary_lef_lef_collisions(
     const Chromosome* chrom, absl::Span<const Lef> lefs,
     absl::Span<const ExtrusionBarrier> barriers, absl::Span<const std::size_t> rev_lef_ranks,
     absl::Span<const std::size_t> fwd_lef_ranks, absl::Span<bp_t> rev_moves,
@@ -1352,7 +1358,7 @@ void Simulation::process_primary_lef_lef_collisions(
 }
 
 template <typename I>  // TODO Make move spans const
-void Simulation::process_secondary_lef_lef_collisions(
+void Simulation::detect_secondary_lef_lef_collisions(
     const Chromosome* chrom, absl::Span<const Lef> lefs, std::size_t nbarriers,
     absl::Span<const std::size_t> rev_lef_ranks, absl::Span<const std::size_t> fwd_lef_ranks,
     absl::Span<bp_t> rev_moves, absl::Span<bp_t> fwd_moves, absl::Span<I> rev_collisions,
@@ -1392,37 +1398,30 @@ void Simulation::process_secondary_lef_lef_collisions(
   const auto offset = nbarriers + lefs.size();
 
   // TBC after fixing some bugs
-  for (auto i = 1UL; i < lefs.size() - nfwd_units_at_3prime; ++i) {
+  for (auto i = lefs.size() - nfwd_units_at_3prime - 1; i > 1; --i) {
     const auto& fwd_idx2 = fwd_lef_ranks[i];  // index of the ith fwd unit in 5'-3' order
     const auto& fwd_pos2 = lefs[fwd_idx2].fwd_unit.pos();  // pos of the ith unit
     if (fwd_collisions[fwd_idx2] == NO_COLLISION) {
       continue;
     }
 
-    auto j = i;
-    while (j-- > 0) {
-      const auto& fwd_idx1 = fwd_lef_ranks[j];  // index of the ith-1 fwd unit in 5'-3' order
-      const auto& fwd_pos1 = lefs[fwd_idx1].fwd_unit.pos();  // pos of the ith-1 unit
-      if (fwd_collisions[fwd_idx1] != NO_COLLISION) {
-        break;
-      }
+    const auto& fwd_idx1 = fwd_lef_ranks[i - 1];  // index of the ith-1 fwd unit in 5'-3' order
+    const auto& fwd_pos1 = lefs[fwd_idx1].fwd_unit.pos();  // pos of the ith-1 unit
+    if (fwd_collisions[fwd_idx1] != NO_COLLISION) {
+      continue;
+    }
 
-      auto& move1 = fwd_moves[fwd_idx1];
-      const auto& move2 = fwd_moves[fwd_idx2];
+    auto& move1 = fwd_moves[fwd_idx1];
+    const auto& move2 = fwd_moves[fwd_idx2];
 
-      if (fwd_pos2 - fwd_pos1 <= move1 + move2 &&
-          std::bernoulli_distribution{1.0 - this->probability_of_extrusion_unit_bypass}(rand_eng)) {
-        if (fwd_collisions[fwd_idx1] == NO_COLLISION) {
-          fwd_collisions[fwd_idx1] = offset + fwd_idx2;
-        }
-        /*
-        move1 = (fwd_pos2 + move2) - fwd_pos1;
-        move1 -= move1 > 0 ? 1 : 0;
-        assert(fwd_pos1 + move1 < chrom->end_pos());  // NOLINT
-         */
-      } else {
-        break;
-      }
+    assert(fwd_pos2 >= fwd_pos1);                 // NOLINT
+    assert(fwd_pos1 + move1 < chrom->end_pos());  // NOLINT
+    assert(fwd_pos2 + move2 < chrom->end_pos());  // NOLINT
+
+    if (fwd_pos1 + move1 >= fwd_pos2 + move2 &&
+        (this->probability_of_extrusion_unit_bypass == 0 ||
+         std::bernoulli_distribution{1.0 - this->probability_of_extrusion_unit_bypass}(rand_eng))) {
+      fwd_collisions[fwd_idx1] = offset + fwd_idx2;
     }
   }
 
@@ -1432,6 +1431,7 @@ void Simulation::process_secondary_lef_lef_collisions(
     if (rev_collisions[rev_idx1] == NO_COLLISION) {
       continue;
     }
+
     const auto& rev_idx2 = rev_lef_ranks[i];  // index of the ith-1 rev unit in 5'-3' order
     const auto& rev_pos2 = lefs[rev_idx2].rev_unit.pos();  // pos of the ith-1 unit
     if (rev_collisions[rev_idx2] != NO_COLLISION) {
@@ -1440,14 +1440,17 @@ void Simulation::process_secondary_lef_lef_collisions(
 
     const auto& move1 = rev_moves[rev_idx1];
     auto& move2 = rev_moves[rev_idx2];
-    if (rev_pos2 - rev_pos1 <= move1 + move2 &&
-        std::bernoulli_distribution{1.0 - this->probability_of_extrusion_unit_bypass}(rand_eng)) {
+
+    assert(rev_pos2 >= rev_pos1);                    // NOLINT
+    assert(rev_pos1 >= move1);                       // NOLINT
+    assert(rev_pos2 >= move2);                       // NOLINT
+    assert(rev_pos1 - move1 >= chrom->start_pos());  // NOLINT
+    assert(rev_pos2 - move2 >= chrom->start_pos());  // NOLINT
+
+    if (rev_pos2 - move2 <= rev_pos1 - move1 &&
+        (this->probability_of_extrusion_unit_bypass == 0 ||
+         std::bernoulli_distribution{1.0 - this->probability_of_extrusion_unit_bypass}(rand_eng))) {
       rev_collisions[rev_idx2] = offset + rev_idx1;
-      /*
-      move2 = rev_pos2 - (rev_pos1 - move1);
-      move2 -= move2 > 0 ? 1 : 0;
-      assert(rev_pos2 - move2 >= chrom->start_pos());  // NOLINT
-       */
     }
   }
 }
@@ -1474,40 +1477,6 @@ void Simulation::adjust_moves_for_lef_bar_collisions(
     if (fwd_collisions[i] < upper_bound) MODLE_UNLIKELY {
         const auto& barrier_idx = fwd_collisions[i];
         const auto& barrier = barriers[barrier_idx];
-        /*
-        if (!(lefs[i].fwd_unit.pos() < barrier.pos())) {
-          std::vector<std::size_t> rev_ranks(lefs.size());
-          std::vector<std::size_t> fwd_ranks(lefs.size());
-          std::iota(rev_ranks.begin(), rev_ranks.end(), 0);
-          std::iota(fwd_ranks.begin(), fwd_ranks.end(), 0);
-          Simulation::rank_lefs(lefs, absl::MakeSpan(rev_ranks), absl::MakeSpan(fwd_ranks));
-          std::string rev_units_buff =
-              fmt::format("rev_units=[i={}->{}", rev_ranks[0], lefs[rev_ranks[0]].rev_unit.pos());
-          std::string fwd_units_buff =
-              fmt::format("fwd_units=[i={}->{}", fwd_ranks[0], lefs[fwd_ranks[0]].fwd_unit.pos());
-          std::string barriers_buff = fmt::format("barriers=[{}", barriers[0].pos());
-          std::string rev_moves_buff =
-              fmt::format("rev_moves=[i={}->{}", rev_ranks[0], rev_moves[rev_ranks[0]]);
-          std::string fwd_moves_buff =
-              fmt::format("fwd_moves=[i={}->{}", fwd_ranks[0], fwd_moves[fwd_ranks[0]]);
-          for (auto ii = 1UL; ii < lefs.size(); ++ii) {
-            rev_units_buff +=
-                fmt::format(", i={}->{}", rev_ranks[ii], lefs[rev_ranks[ii]].rev_unit.pos());
-            fwd_units_buff +=
-                fmt::format(", i={}->{}", fwd_ranks[ii], lefs[fwd_ranks[ii]].fwd_unit.pos());
-            barriers_buff += fmt::format(", {}", barriers[ii].pos());
-            rev_moves_buff += fmt::format(", i={}->{}", rev_ranks[ii], rev_moves[rev_ranks[ii]]);
-            fwd_moves_buff += fmt::format(", i={}->{}", fwd_ranks[ii], fwd_moves[fwd_ranks[ii]]);
-          }
-          rev_units_buff += "]\n";
-          fwd_units_buff += "]\n";
-          barriers_buff += "]\n";
-          rev_moves_buff += "]\n";
-          fwd_moves_buff += "]\n";
-          fmt::print(stderr, "{}\n{}\n{}\n{}\n{}\n", rev_moves_buff, fwd_units_buff, barriers_buff,
-                     rev_moves_buff, fwd_moves_buff);
-        }
-         */
         assert(lefs[i].fwd_unit.pos() < barrier.pos());  // NOLINT
 
         const auto delta = barrier.pos() - lefs[i].fwd_unit.pos();
@@ -1603,21 +1572,27 @@ inline void Simulation::adjust_moves_for_secondary_lef_lef_collisions(
         rev_idx1 -= lower_bound;
         const auto& rev_unit1 = lefs[rev_idx1].rev_unit;
         const auto& rev_unit2 = lefs[rev_idx2].rev_unit;
-        assert(rev_unit2.pos() + rev_moves[rev_idx1] >
-               rev_unit1.pos() + rev_moves[rev_idx2]);  // NOLINT
 
-        const auto delta = rev_unit2.pos() - (rev_unit1.pos() - rev_moves[rev_idx1]);
-        rev_moves[rev_idx2] = delta > 0UL ? delta - 1 : 0UL;
+        assert(rev_unit1.pos() >= rev_moves[rev_idx1]);  // NOLINT
+        assert(rev_unit2.pos() >= rev_moves[rev_idx2]);  // NOLINT
+        assert(rev_unit1.pos() - rev_moves[rev_idx1] >=
+               rev_unit2.pos() - rev_moves[rev_idx2]);  // NOLINT
+
+        const auto move = rev_unit2.pos() - (rev_unit1.pos() - rev_moves[rev_idx1]);
+        rev_moves[rev_idx2] = move > 0UL ? move - 1 : 0UL;
       }
   }
 
-  for (const auto fwd_idx2 : boost::adaptors::reverse(fwd_ranks)) {  // TODO skip the last rank
-    if (auto fwd_idx1 = fwd_collisions[fwd_idx2]; fwd_idx1 >= lower_bound && fwd_idx1 < upper_bound)
+  for (const auto fwd_idx1 : boost::adaptors::reverse(fwd_ranks)) {  // TODO skip the last rank
+    if (auto fwd_idx2 = fwd_collisions[fwd_idx1]; fwd_idx2 >= lower_bound && fwd_idx2 < upper_bound)
       MODLE_UNLIKELY {
-        fwd_idx1 -= lower_bound;
+        fwd_idx2 -= lower_bound;
         const auto& fwd_unit1 = lefs[fwd_idx1].fwd_unit;
         const auto& fwd_unit2 = lefs[fwd_idx2].fwd_unit;
-        assert(fwd_unit1.pos() + fwd_moves[fwd_idx1] > fwd_unit2.pos());  // NOLINT
+
+        assert(fwd_unit1.pos() <= fwd_unit2.pos());  // NOLINT
+        assert(fwd_unit1.pos() + fwd_moves[fwd_idx1] >=
+               fwd_unit2.pos() + fwd_moves[fwd_idx2]);  // NOLINT
 
         const auto delta = (fwd_unit2.pos() + fwd_moves[fwd_idx2]) - fwd_unit1.pos();
         fwd_moves[fwd_idx1] = delta > 0UL ? delta - 1 : 0UL;
@@ -1694,8 +1669,8 @@ template <typename MaskT>
 void Simulation::select_lefs_to_bind(absl::Span<const Lef> lefs,
                                      MaskT& mask) noexcept(utils::ndebug_defined()) {
   static_assert(std::is_same_v<boost::dynamic_bitset<>, MaskT> ||
-                    std::is_integral_v<std::decay_t<decltype(
-                        std::declval<MaskT&>().operator[](std::declval<std::size_t>()))>>,
+                    std::is_integral_v<std::decay_t<decltype(std::declval<MaskT&>().operator[](
+                        std::declval<std::size_t>()))>>,
                 "mask should be a vector of integral numbers or a boost::dynamic_bitset.");
   assert(lefs.size() == mask.size());  // NOLINT
   std::transform(lefs.begin(), lefs.end(), mask.begin(),
