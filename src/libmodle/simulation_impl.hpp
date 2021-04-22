@@ -583,11 +583,14 @@ void Simulation::simulate_extrusion_kernel(Simulation::State& s) {
       fwd_collision_mask = absl::MakeSpan(s.idx_buff2.data(), nlefs);
 
       // Sample nlefs to be released while in burn-in phase
-      nlefs_to_release = std::poisson_distribution<std::size_t>{
-          static_cast<double>((this->rev_extrusion_speed + this->fwd_extrusion_speed) * s.nlefs) /
-          static_cast<double>(this->average_lef_lifetime)}(s.rand_eng);
+      nlefs_to_release = std::min(
+          lefs.size(), std::poisson_distribution<std::size_t>{
+                           static_cast<double>(
+                               (this->rev_extrusion_speed + this->fwd_extrusion_speed) * s.nlefs) /
+                           static_cast<double>(this->average_lef_lifetime)}(s.rand_eng));
     } else {  // Sample nlefs to be released after the burn-in phase has been completed
-      nlefs_to_release = std::poisson_distribution<std::size_t>{avg_nlefs_to_release}(s.rand_eng);
+      nlefs_to_release = std::min(
+          lefs.size(), std::poisson_distribution<std::size_t>{avg_nlefs_to_release}(s.rand_eng));
     }
     ////////////////////////
     // Simulate one epoch //
@@ -603,8 +606,8 @@ void Simulation::simulate_extrusion_kernel(Simulation::State& s) {
     if (epoch > n_burnin_epochs) {              // Register contacts
       assert(fwd_lef_ranks.size() == s.nlefs);  // NOLINT
 
-      auto nlefs_to_sample =
-          std::poisson_distribution<std::size_t>{avg_nlefs_to_sample}(s.rand_eng);
+      auto nlefs_to_sample = std::min(
+          lefs.size(), std::poisson_distribution<std::size_t>{avg_nlefs_to_sample}(s.rand_eng));
 
       if (s.n_target_contacts != 0) {  // When using the target contact density as stopping
                                        // criterion, don't overshoot the target number of contacts
@@ -1668,10 +1671,10 @@ std::size_t Simulation::register_contacts(
 template <typename MaskT>
 void Simulation::select_lefs_to_bind(absl::Span<const Lef> lefs,
                                      MaskT& mask) noexcept(utils::ndebug_defined()) {
-  static_assert(std::is_same_v<boost::dynamic_bitset<>, MaskT> ||
-                    std::is_integral_v<std::decay_t<decltype(std::declval<MaskT&>().operator[](
-                        std::declval<std::size_t>()))>>,
-                "mask should be a vector of integral numbers or a boost::dynamic_bitset.");
+  static_assert(
+      std::is_integral_v<
+          std::decay_t<decltype(std::declval<MaskT&>().operator[](std::declval<std::size_t>()))>>,
+      "mask should be a vector of integral numbers or a boost::dynamic_bitset.");
   assert(lefs.size() == mask.size());  // NOLINT
   std::transform(lefs.begin(), lefs.end(), mask.begin(),
                  [](const auto& lef) { return !lef.is_bound(); });
