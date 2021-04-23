@@ -114,9 +114,8 @@ class Parser {
   inline explicit Parser(std::string path_to_bed, BED::Standard bed_standard = BED::Standard::none);
   inline explicit Parser(std::string_view path_to_bed,
                          BED::Standard bed_standard = BED::Standard::none);
-  [[nodiscard]] inline std::vector<BED> parse_n(std::size_t nrecords,
-                                                bool throw_on_duplicates = true);
-  [[nodiscard]] inline std::string validate(std::size_t nrecords = 100,  // NOLINT
+  [[nodiscard]] inline std::vector<BED> parse_n(size_t nrecords, bool throw_on_duplicates = true);
+  [[nodiscard]] inline std::string validate(size_t nrecords = 100,  // NOLINT
                                             bool throw_on_duplicates = true);
   [[nodiscard]] inline std::vector<BED> parse_all(bool throw_on_duplicates = true);
   inline void reset();

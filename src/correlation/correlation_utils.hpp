@@ -16,21 +16,21 @@ namespace modle::correlation::utils {
 
 // Return the indices corresponding to the sorted vector
 template <typename N>  // NOLINTNEXTLINE(cppcoreguidelines-avoid-non-const-global-variables)
-[[nodiscard]] inline std::vector<std::size_t> sort_range_by_idx(absl::Span<const N> v) {
+[[nodiscard]] inline std::vector<size_t> sort_range_by_idx(absl::Span<const N> v) {
   static_assert(std::is_arithmetic<N>::value,
                 "v should be convertible to a span of numeric types.");
-  std::vector<std::size_t> vi(v.size());
+  std::vector<size_t> vi(v.size());
   std::iota(vi.begin(), vi.end(), 0);
 
   DISABLE_WARNING_PUSH
   DISABLE_WARNING_SIGN_CONVERSION
-  std::sort(vi.begin(), vi.end(), [&](std::size_t i1, std::size_t i2) { return v[i1] < v[i2]; });
+  std::sort(vi.begin(), vi.end(), [&](size_t i1, size_t i2) { return v[i1] < v[i2]; });
   DISABLE_WARNING_POP
   return vi;
 }
 
 template <typename N>  // NOLINTNEXTLINE(cppcoreguidelines-avoid-non-const-global-variables)
-[[nodiscard]] inline std::vector<std::size_t> sort_range_by_idx(const std::vector<N>& v) {
+[[nodiscard]] inline std::vector<size_t> sort_range_by_idx(const std::vector<N>& v) {
   return sort_range_by_idx(absl::MakeConstSpan(v));
 }
 

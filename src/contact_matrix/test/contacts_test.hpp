@@ -148,7 +148,7 @@ TEST_CASE("CMatrix in/decrement", "[cmatrix][short]") {
 TEST_CASE("CMatrix in/decrement vector", "[cmatrix][short]") {
   ContactMatrix<uint32_t> m(10, 20);  // NOLINT
   // clang-format off
-  const std::vector<std::pair<std::size_t, std::size_t>> pixels{{ 0,  0},   // NOLINT
+  const std::vector<std::pair<size_t, size_t>> pixels{{ 0,  0},   // NOLINT
                                                           { 5, 10},         // NOLINT
                                                           { 2,  3},         // NOLINT
                                                           {15,  0},         // NOLINT

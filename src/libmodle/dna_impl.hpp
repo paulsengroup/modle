@@ -74,7 +74,7 @@ bool Chromosome::Comparator::operator()(std::string_view c1, std::string_view c2
   return c1 < c2;
 }
 
-void Chromosome::instantiate_contact_matrix(std::size_t bin_size, std::size_t diagonal_width) {
+void Chromosome::instantiate_contact_matrix(size_t bin_size, size_t diagonal_width) {
   assert(diagonal_width != 0);  // NOLINT
 #ifndef NDEBUG
   if (this->_contacts) {
@@ -107,7 +107,7 @@ constexpr bp_t Chromosome::size() const { return this->_size; }
 constexpr bp_t Chromosome::simulated_size() const { return this->_end - this->_start; }
 bool Chromosome::ok() const { return !this->_barriers.empty(); }
 
-std::size_t Chromosome::nbarriers() const { return static_cast<size_t>(this->_barriers.size()); }
+size_t Chromosome::nbarriers() const { return static_cast<size_t>(this->_barriers.size()); }
 
 const absl::btree_set<bed::BED> &Chromosome::get_barriers() const { return this->_barriers; }
 

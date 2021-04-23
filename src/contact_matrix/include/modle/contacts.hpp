@@ -24,7 +24,7 @@ class ContactMatrix {
   inline ContactMatrix() = default;
   inline ContactMatrix(ContactMatrix<I>&& other) noexcept = default;
   inline ContactMatrix(const ContactMatrix<I>& other);
-  inline ContactMatrix(std::size_t nrows, std::size_t ncols, bool fill_with_random_numbers = false);
+  inline ContactMatrix(size_t nrows, size_t ncols, bool fill_with_random_numbers = false);
   inline ~ContactMatrix() = default;
 
   // Operators
@@ -32,36 +32,32 @@ class ContactMatrix {
   [[nodiscard]] inline ContactMatrix& operator=(ContactMatrix&& other) noexcept = default;
 
   // Counts getters and setters
-  [[nodiscard]] inline I get(std::size_t row, std::size_t col) const
-      noexcept(utils::ndebug_defined());
+  [[nodiscard]] inline I get(size_t row, size_t col) const noexcept(utils::ndebug_defined());
   template <typename I2>
-  inline void set(std::size_t row, std::size_t col, I2 n) noexcept(utils::ndebug_defined());
+  inline void set(size_t row, size_t col, I2 n) noexcept(utils::ndebug_defined());
   template <typename I2>
-  inline void add(std::size_t row, std::size_t col, I2 n) noexcept(utils::ndebug_defined());
+  inline void add(size_t row, size_t col, I2 n) noexcept(utils::ndebug_defined());
   template <typename I2>
-  inline void add(absl::Span<std::pair<std::size_t /* rows */, std::size_t /* cols */>> pixels,
-                  I2 n,
-                  std::size_t size_thresh = 256) noexcept(utils::ndebug_defined());  // NOLINT
+  inline void add(absl::Span<std::pair<size_t /* rows */, size_t /* cols */>> pixels, I2 n,
+                  size_t size_thresh = 256) noexcept(utils::ndebug_defined());  // NOLINT
 
   template <typename I2>
-  inline void subtract(std::size_t row, std::size_t col, I2 n) noexcept(utils::ndebug_defined());
-  inline void increment(std::size_t row, std::size_t col) noexcept(utils::ndebug_defined());
-  inline void increment(
-      absl::Span<std::pair<std::size_t /* rows */, std::size_t /* cols */>> pixels,
-      std::size_t size_thresh = 256) noexcept(utils::ndebug_defined());  // NOLINT
-  inline void decrement(std::size_t row, std::size_t col) noexcept(utils::ndebug_defined());
+  inline void subtract(size_t row, size_t col, I2 n) noexcept(utils::ndebug_defined());
+  inline void increment(size_t row, size_t col) noexcept(utils::ndebug_defined());
+  inline void increment(absl::Span<std::pair<size_t /* rows */, size_t /* cols */>> pixels,
+                        size_t size_thresh = 256) noexcept(utils::ndebug_defined());  // NOLINT
+  inline void decrement(size_t row, size_t col) noexcept(utils::ndebug_defined());
 
   // Shape/statistics getters
-  [[nodiscard]] inline constexpr std::size_t ncols() const noexcept(utils::ndebug_defined());
-  [[nodiscard]] inline constexpr std::size_t nrows() const noexcept(utils::ndebug_defined());
-  [[nodiscard]] inline constexpr std::size_t npixels() const noexcept(utils::ndebug_defined());
-  [[nodiscard]] inline std::size_t npixels_after_masking() const;
-  [[nodiscard]] inline constexpr std::size_t get_n_of_missed_updates() const
+  [[nodiscard]] inline constexpr size_t ncols() const noexcept(utils::ndebug_defined());
+  [[nodiscard]] inline constexpr size_t nrows() const noexcept(utils::ndebug_defined());
+  [[nodiscard]] inline constexpr size_t npixels() const noexcept(utils::ndebug_defined());
+  [[nodiscard]] inline size_t npixels_after_masking() const;
+  [[nodiscard]] inline constexpr size_t get_n_of_missed_updates() const
       noexcept(utils::ndebug_defined());
-  [[nodiscard]] inline constexpr std::size_t get_tot_contacts() const
-      noexcept(utils::ndebug_defined());
+  [[nodiscard]] inline constexpr size_t get_tot_contacts() const noexcept(utils::ndebug_defined());
   [[nodiscard]] inline double get_avg_contact_density() const noexcept(utils::ndebug_defined());
-  [[nodiscard]] inline constexpr std::size_t get_matrix_size_in_bytes() const
+  [[nodiscard]] inline constexpr size_t get_matrix_size_in_bytes() const
       noexcept(utils::ndebug_defined());
   [[nodiscard]] inline constexpr double get_matrix_size_in_mb() const
       noexcept(utils::ndebug_defined());
@@ -77,7 +73,7 @@ class ContactMatrix {
   // Misc
   inline void clear_missed_updates_counter();
   inline void reset();
-  inline void resize(std::size_t nrows, std::size_t ncols);
+  inline void resize(size_t nrows, size_t ncols);
   [[nodiscard]] inline bool empty() const;
   [[nodiscard]] inline absl::Span<const I> get_raw_count_vector() const;
   inline void compute_row_wise_contact_histogram(std::vector<uint64_t>& buff) const;
@@ -88,30 +84,27 @@ class ContactMatrix {
   uint64_t _nrows{0};
   uint64_t _ncols{0};
   std::vector<I> _contacts{};
-  std::atomic<std::size_t> _tot_contacts{0};
-  std::atomic<std::size_t> _updates_missed{0};
+  std::atomic<size_t> _tot_contacts{0};
+  std::atomic<size_t> _updates_missed{0};
   std::vector<std::mutex> _locks{};
 
-  [[nodiscard]] inline I& at(std::size_t i, std::size_t j) noexcept(utils::ndebug_defined());
-  [[nodiscard]] inline const I& at(std::size_t i, std::size_t j) const
-      noexcept(utils::ndebug_defined());
+  [[nodiscard]] inline I& at(size_t i, size_t j) noexcept(utils::ndebug_defined());
+  [[nodiscard]] inline const I& at(size_t i, size_t j) const noexcept(utils::ndebug_defined());
 
   template <typename I2>
-  inline void add_small_buff(
-      absl::Span<std::pair<std::size_t /* rows */, std::size_t /* cols */>> pixels,
-      I2 n) noexcept(utils::ndebug_defined());
+  inline void add_small_buff(absl::Span<std::pair<size_t /* rows */, size_t /* cols */>> pixels,
+                             I2 n) noexcept(utils::ndebug_defined());
   template <typename I2>
-  inline void add_large_buff(
-      absl::Span<std::pair<std::size_t /* rows */, std::size_t /* cols */>> pixels,
-      I2 n) noexcept(utils::ndebug_defined());
+  inline void add_large_buff(absl::Span<std::pair<size_t /* rows */, size_t /* cols */>> pixels,
+                             I2 n) noexcept(utils::ndebug_defined());
 
-  [[nodiscard]] inline static std::pair<std::size_t, std::size_t> transpose_coords(
-      std::size_t row, std::size_t col) noexcept(utils::ndebug_defined());
-  inline void bound_check_column(std::size_t col) const;
+  [[nodiscard]] inline static std::pair<size_t, size_t> transpose_coords(
+      size_t row, size_t col) noexcept(utils::ndebug_defined());
+  inline void bound_check_column(size_t col) const;
   template <typename I2>
-  inline void check_for_overflow_on_add(std::size_t row, std::size_t col, I2 n) const;
+  inline void check_for_overflow_on_add(size_t row, size_t col, I2 n) const;
   template <typename I2>
-  inline void check_overflow_on_subtract(std::size_t row, std::size_t col, I2 n) const;
+  inline void check_overflow_on_subtract(size_t row, size_t col, I2 n) const;
 };
 
 }  // namespace modle

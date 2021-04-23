@@ -28,8 +28,8 @@ void noisify_contacts(const config& c) {
   modle::ContactMatrix<uint32_t> cmatrix{};
 
   constexpr auto END_OF_PIXEL_QUEUE = modle::cooler::Cooler::Pixel{
-      std::numeric_limits<std::size_t>::max(), std::numeric_limits<std::size_t>::max(),
-      std::numeric_limits<std::size_t>::max()};
+      std::numeric_limits<size_t>::max(), std::numeric_limits<size_t>::max(),
+      std::numeric_limits<size_t>::max()};
 
   auto input_cool =
       modle::cooler::Cooler(c.path_to_input_matrix, cooler::Cooler::READ_ONLY, c.bin_size);
@@ -49,11 +49,9 @@ void noisify_contacts(const config& c) {
   for (const auto& [chrom_name, chrom_size] : input_cool.get_chroms()) {
     const auto t0 = absl::Now();
     fmt::print(stderr, FMT_STRING("Processing contacts for {}..."), chrom_name);
-    const auto ncols =
-        (chrom_size / bin_size) + static_cast<std::size_t>(chrom_size % bin_size != 0);
-    const auto nrows =
-        std::min(ncols, (c.diagonal_width / bin_size) +
-                            static_cast<std::size_t>(c.diagonal_width % bin_size != 0));
+    const auto ncols = (chrom_size / bin_size) + static_cast<size_t>(chrom_size % bin_size != 0);
+    const auto nrows = std::min(ncols, (c.diagonal_width / bin_size) +
+                                           static_cast<size_t>(c.diagonal_width % bin_size != 0));
 
     std::thread t([&, chrom_name = chrom_name]() {
       input_cool.stream_contacts_for_chrom(std::ref(pixel_queue), chrom_name, c.diagonal_width,
@@ -67,7 +65,7 @@ void noisify_contacts(const config& c) {
     cmatrix.resize(nrows, ncols);
     modle::cooler::Cooler::Pixel pixel;  // NOLINT
     const auto seed =
-        c.seed + std::hash<std::string_view>{}(chrom_name) + std::hash<std::size_t>{}(ncols);
+        c.seed + std::hash<std::string_view>{}(chrom_name) + std::hash<size_t>{}(ncols);
 
     auto rang_eng = PRNG(seed);
     auto gammad = std::gamma_distribution<double>{c.gamma_k, c.gamma_theta};
@@ -85,10 +83,10 @@ void noisify_contacts(const config& c) {
         const auto pos2 =
             static_cast<double>(pixel.col * bin_size) + uniformd(rang_eng) - gammad(rang_eng);
         const auto bin1 =
-            std::clamp(static_cast<std::size_t>(std::round(pos1 / static_cast<double>(bin_size))),
+            std::clamp(static_cast<size_t>(std::round(pos1 / static_cast<double>(bin_size))),
                        pixel.row, pixel.col);
         const auto bin2 =
-            std::clamp(static_cast<std::size_t>(std::round(pos2 / static_cast<double>(bin_size))),
+            std::clamp(static_cast<size_t>(std::round(pos2 / static_cast<double>(bin_size))),
                        pixel.row, pixel.col);
         cmatrix.increment(bin1, bin2);
       }

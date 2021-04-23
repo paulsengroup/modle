@@ -214,7 +214,7 @@ Parser::Parser(std::string path_to_bed, BED::Standard bed_standard)
 Parser::Parser(std::string_view path_to_bed, BED::Standard bed_standard)
     : Parser(std::string{path_to_bed}, bed_standard) {}
 
-std::vector<BED> Parser::parse_n(std::size_t nrecords, bool throw_on_duplicates) {
+std::vector<BED> Parser::parse_n(size_t nrecords, bool throw_on_duplicates) {
   absl::flat_hash_map<BED, uint64_t> unique_records;
   if (nrecords != std::numeric_limits<decltype(nrecords)>::max()) {
     unique_records.reserve(nrecords);
@@ -258,7 +258,7 @@ std::vector<BED> Parser::parse_n(std::size_t nrecords, bool throw_on_duplicates)
   return records;
 }
 
-std::string Parser::validate(std::size_t nrecords, bool throw_on_duplicates) {
+std::string Parser::validate(size_t nrecords, bool throw_on_duplicates) {
   try {
     (void)parse_n(nrecords, throw_on_duplicates);
   } catch (const std::runtime_error& e) {
@@ -268,7 +268,7 @@ std::string Parser::validate(std::size_t nrecords, bool throw_on_duplicates) {
 }
 
 std::vector<BED> Parser::parse_all(bool throw_on_duplicates) {
-  return parse_n(std::numeric_limits<std::size_t>::max(), throw_on_duplicates);
+  return parse_n(std::numeric_limits<size_t>::max(), throw_on_duplicates);
 }
 
 void Parser::reset() {

@@ -46,17 +46,17 @@ RUN dnf update -y \
     && cmake -DCMAKE_BUILD_TYPE=$build_type        \
              -DENABLE_IPO=ON                       \
              -DWARNINGS_AS_ERRORS=ON               \
-             -DENABLE_TESTING=ON                   \
+             -DENABLE_TESTING=OFF                  \
              -DCMAKE_INSTALL_PREFIX='/usr/local'   \
              -DCMAKE_CXX_FLAGS="-march=${march}"   \
              -DCMAKE_C_FLAGS="-march=${march}"     \
              -G 'Unix Makefiles' ..                \
-    && make -j "$cpus"                  \
-    &&                                  \
-    if [ "$skip_tests" = false ]; then  \
-        make test ;                     \
-    fi                                  \
-    && make install                     \
+    && make modle modle_tools -j "$cpus" \
+    &&                                   \
+    if [ "$skip_tests" = false ]; then   \
+        make test ;                      \
+    fi                                   \
+    && make modle modle_tools install    \
     &&                                             \
     if [ "$build_type" = "Debug" ]; then           \
         dnf install -y dnf-plugins-core gdb        \

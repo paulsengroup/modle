@@ -27,7 +27,7 @@
 
 namespace modle::correlation {
 
-double compute_pearson_significance(double pcc, std::size_t n) {
+double compute_pearson_significance(double pcc, size_t n) {
   assert(n > 2);  // NOLINT
   const auto ab = static_cast<double>(n) / 2.0 - 1;
   boost::math::beta_distribution<double> dist(ab, ab);
@@ -36,7 +36,7 @@ double compute_pearson_significance(double pcc, std::size_t n) {
   return 2.0 * boost::math::cdf<double>(dist, 0.5 * (1 - std::abs(pcc)));
 }
 
-double compute_spearman_significance(double rho, std::size_t n) {
+double compute_spearman_significance(double rho, size_t n) {
   assert(n > 2);  // NOLINT
   const auto dof = static_cast<double>(n - 2);
   const double tscore = rho * std::sqrt(dof / ((1.0 + rho) * (1.0 - rho)));
@@ -124,9 +124,8 @@ double compute_spearman(const std::vector<N1>& v1, const std::vector<N2>& v2) {
 template <typename N1, typename N2>
 std::pair<std::vector<double>, std::vector<double>> compute_corr(absl::Span<const N1> v1,
                                                                  absl::Span<const N2> v2,
-                                                                 Algorithm type,
-                                                                 std::size_t window_span,
-                                                                 std::size_t window_overlap) {
+                                                                 Algorithm type, size_t window_span,
+                                                                 size_t window_overlap) {
   static_assert(std::is_arithmetic<N1>::value,
                 "v1 should be convertible to a Span of numeric type");
   static_assert(std::is_arithmetic<N2>::value,

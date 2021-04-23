@@ -51,8 +51,8 @@ namespace modle::tools {
 
 void eval_subcmd(const modle::tools::config& c) {
   assert(c.compute_spearman || c.compute_pearson);  // NOLINT
-  const auto bin_size = static_cast<std::size_t>(
-      hdf5::read_attribute_int(c.path_to_input_matrix.string(), "bin-size"));
+  const auto bin_size =
+      static_cast<size_t>(hdf5::read_attribute_int(c.path_to_input_matrix.string(), "bin-size"));
 
   auto chrom_list =  // This cannot be made const
       select_chromosomes_for_eval(c.path_to_input_matrix.string(),
@@ -65,15 +65,15 @@ void eval_subcmd(const modle::tools::config& c) {
         c.path_to_input_matrix, c.path_to_reference_matrix));
   }
 
-  absl::flat_hash_map<std::string, std::pair<std::size_t, std::size_t>> chrom_subranges;
+  absl::flat_hash_map<std::string, std::pair<size_t, size_t>> chrom_subranges;
   if (!c.path_to_chrom_subranges.empty()) {
     const auto records = bed::Parser(c.path_to_chrom_subranges).parse_all();
     chrom_subranges.reserve(records.size());
-    std::transform(
-        records.begin(), records.end(), std::inserter(chrom_subranges, chrom_subranges.end()),
-        [](const auto& r) -> std::pair<std::string, std::pair<std::size_t, std::size_t>> {
-          return {r.chrom, {r.chrom_start, r.chrom_end}};
-        });
+    std::transform(records.begin(), records.end(),
+                   std::inserter(chrom_subranges, chrom_subranges.end()),
+                   [](const auto& r) -> std::pair<std::string, std::pair<size_t, size_t>> {
+                     return {r.chrom, {r.chrom_start, r.chrom_end}};
+                   });
   }
 
   {
@@ -134,7 +134,7 @@ void eval_subcmd(const modle::tools::config& c) {
   std::vector<double> sc_cross_pval_buff;
 
   auto pcc = [&](std::string_view chrom_name, absl::Span<const uint32_t> v1,
-                 absl::Span<const uint32_t> v2, std::size_t ncols, std::size_t offset,
+                 absl::Span<const uint32_t> v2, size_t ncols, size_t offset,
                  std::vector<double>& corr_buff, std::vector<double>& pval_buff, Transformation t) {
     if (!c.compute_pearson) {
       return;
@@ -165,7 +165,7 @@ void eval_subcmd(const modle::tools::config& c) {
   };
 
   auto src = [&](std::string_view chrom_name, absl::Span<const uint32_t> v1,
-                 absl::Span<const uint32_t> v2, std::size_t ncols, std::size_t offset,
+                 absl::Span<const uint32_t> v2, size_t ncols, size_t offset,
                  std::vector<double>& corr_buff, std::vector<double>& pval_buff, Transformation t) {
     if (!c.compute_spearman) {
       return;
@@ -197,7 +197,7 @@ void eval_subcmd(const modle::tools::config& c) {
   };
 
   auto edist = [&](std::string_view chrom_name, absl::Span<const uint32_t> v1,
-                   absl::Span<const uint32_t> v2, std::size_t ncols, std::size_t offset,
+                   absl::Span<const uint32_t> v2, size_t ncols, size_t offset,
                    std::vector<double>& sed_buff, Transformation t) {
     if (!c.compute_edist) {
       return;
@@ -220,10 +220,10 @@ void eval_subcmd(const modle::tools::config& c) {
     }
   };
 
-  absl::flat_hash_map<std::string, std::size_t> ref_chrom_idxes;
-  absl::flat_hash_map<std::string, std::size_t> inp_chrom_idxes;
+  absl::flat_hash_map<std::string, size_t> ref_chrom_idxes;
+  absl::flat_hash_map<std::string, size_t> inp_chrom_idxes;
 
-  std::size_t i = 0;
+  size_t i = 0;
   for (auto& name : ref_cooler.get_chrom_names()) {
     ref_chrom_idxes.emplace(std::move(name), i++);
   }
@@ -256,7 +256,7 @@ void eval_subcmd(const modle::tools::config& c) {
   std::array<std::thread, 6> threads;  // NOLINT
   for (const auto& chrom : chrom_list) {
     const auto& chrom_name = chrom.first;
-    auto chrom_subrange = std::make_pair(0UL, static_cast<std::size_t>(chrom.second));
+    auto chrom_subrange = std::make_pair(0UL, static_cast<size_t>(chrom.second));
     if (!chrom_subranges.empty()) {
       auto it = chrom_subranges.find(chrom_name);
 
@@ -370,7 +370,7 @@ void stats_subcmd(const modle::tools::config& c) {
   const auto chrom_names = m1.get_chrom_names();
   const auto chrom_sizes = m1.get_chrom_sizes();
 
-  absl::flat_hash_map<std::string, std::size_t> chrom_start_offsets;
+  absl::flat_hash_map<std::string, size_t> chrom_start_offsets;
   if (!c.path_to_chrom_subranges.empty()) {
     modle::bed::Parser p(c.path_to_chrom_subranges);
     const auto buff = p.parse_all();
@@ -390,7 +390,7 @@ void stats_subcmd(const modle::tools::config& c) {
   if (!path_to_output_hist.empty()) {  // Create hist. file
     std::filesystem::create_directories(std::filesystem::path(path_to_output_hist).parent_path());
     hist_file = std::make_unique<std::ofstream>(path_to_output_hist);
-    std::vector<std::size_t> buff(c.diagonal_width / bin_size);
+    std::vector<size_t> buff(c.diagonal_width / bin_size);
     std::iota(buff.begin(), buff.end(), 0);
     // TODO: Consider whether it make sense to write this header
     fmt::print(*hist_file, "#{}\n", absl::StrJoin(buff, "\t"));
@@ -402,9 +402,9 @@ void stats_subcmd(const modle::tools::config& c) {
       "chrom_name\ttot_number_of_contacts_1\ttot_number_of_contacts_2\tavg_number_of_contacts_"
       "1\tavg_number_of_contacts_2\tfraction_of_graylisted_bins\n");
 
-  std::size_t tot_contacts = 0;
-  std::size_t tot_contacts_after_depl = 0;
-  std::size_t tot_number_of_pixels = 0;
+  size_t tot_contacts = 0;
+  size_t tot_contacts_after_depl = 0;
+  size_t tot_number_of_pixels = 0;
 
   for (auto i = 0UL; i < nchroms; ++i) {
     const auto& chrom_name = chrom_names[i];

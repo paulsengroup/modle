@@ -14,10 +14,10 @@
 namespace modle::tools {
 
 template <typename I>
-std::size_t compute_number_of_contacts_after_depletion(const ContactMatrix<I>& cmatrix,
-                                                       absl::Span<const uint64_t> hist,
-                                                       std::size_t effective_nbins,
-                                                       double depletion_multiplier) {
+size_t compute_number_of_contacts_after_depletion(const ContactMatrix<I>& cmatrix,
+                                                  absl::Span<const uint64_t> hist,
+                                                  size_t effective_nbins,
+                                                  double depletion_multiplier) {
   assert(hist.size() == cmatrix.nrows());
   // This histogram contains the average contact number (instead of the total)
   std::vector<uint64_t> row_wise_avg_contacts(hist.size());
@@ -26,7 +26,7 @@ std::size_t compute_number_of_contacts_after_depletion(const ContactMatrix<I>& c
                                             static_cast<double>(effective_nbins)));
   });
 
-  std::size_t depl_contacts{0};
+  size_t depl_contacts{0};
   for (auto i = 0UL; i < cmatrix.ncols(); ++i) {
     for (auto j = i; j < i + cmatrix.nrows() && j < cmatrix.ncols(); ++j) {
       // j - i corresponds to the distance from the diagonal

@@ -22,27 +22,23 @@ template <typename R>
 inline void parse_real_or_throw(std::string_view tok, R& field);
 
 template <typename N>
-inline void parse_numeric_or_throw(const std::vector<std::string_view>& toks, std::size_t idx,
-                                   N& field);
+inline void parse_numeric_or_throw(const std::vector<std::string_view>& toks, size_t idx, N& field);
 template <typename I>
-inline void parse_int_or_throw(const std::vector<std::string_view>& toks, std::size_t idx,
-                               I& field);
+inline void parse_int_or_throw(const std::vector<std::string_view>& toks, size_t idx, I& field);
 // This is a temporary workaround to deal with the fact that libstdc++ 10 does not come with the
 // float/double overloads for std::from_chars
 template <typename R>
-inline void parse_real_or_throw(const std::vector<std::string_view>& toks, std::size_t idx,
-                                R& field);
+inline void parse_real_or_throw(const std::vector<std::string_view>& toks, size_t idx, R& field);
 
 // Because of the issue outlined for parse_real_or_throw(), this currently only works for integral
 // numbers (which should be fine for our purposes)
 template <typename N>
-inline void parse_vect_of_numbers_or_throw(const std::vector<std::string_view>& toks,
-                                           std::size_t idx, std::vector<N>& field,
-                                           uint64_t expected_size);
+inline void parse_vect_of_numbers_or_throw(const std::vector<std::string_view>& toks, size_t idx,
+                                           std::vector<N>& field, uint64_t expected_size);
 
 template <typename N>
-inline void throw_except_from_errc(std::string_view tok, std::size_t idx, const N& field,
-                                   const char* c, std::errc e);
+inline void throw_except_from_errc(std::string_view tok, size_t idx, const N& field, const char* c,
+                                   std::errc e);
 
 [[nodiscard]] inline std::string init_juicer_tools_argv(std::string_view path_to_juicer_tools,
                                                         uint64_t juicer_tools_mem);

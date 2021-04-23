@@ -46,13 +46,13 @@ std::string construct_error_stack() {
           "h5pp::construct_error_stack(): unable to determine buffer size required to store an "
           "error message");
     }
-    buff.resize(static_cast<std::size_t>(bufsize));
+    buff.resize(static_cast<size_t>(bufsize));
     if (fseek(fp.get(), 0L, SEEK_SET) != 0) {
       throw std::runtime_error(
           "h5pp::construct_error_stack(): failed to seek to the beginning to a temporary file");
     }
     /* Read the entire file into memory. */
-    fread(buff.data(), sizeof(char), static_cast<std::size_t>(bufsize), fp.get());
+    fread(buff.data(), sizeof(char), static_cast<size_t>(bufsize), fp.get());
     if (ferror(fp.get()) != 0) {
       throw std::runtime_error(
           "h5pp::construct_error_stack(): failed to read error message from temporary file");
@@ -156,7 +156,7 @@ template <typename CN>
 hsize_t write_numbers(CN &numbers, const H5::DataSet &dataset, hsize_t file_offset) {
   static_assert(std::is_arithmetic_v<std::remove_pointer_t<decltype(std::declval<CN &>().data())>>,
                 "numbers does not have a suitable ::data() member function.");
-  static_assert(std::is_convertible_v<decltype(std::declval<CN &>().size()), std::size_t>,
+  static_assert(std::is_convertible_v<decltype(std::declval<CN &>().size()), size_t>,
                 "numbers does not have a suitable ::size() member function.");
   if (numbers.empty()) {
     return file_offset;
@@ -542,7 +542,7 @@ bool has_group(H5::H5File &f, std::string_view name, std::string_view root_path)
   const auto path =
       absl::StrCat(absl::StripSuffix(root_path, "/"), "/", absl::StripPrefix(name, "/"));
   assert(!path.empty());
-  std::size_t pos = 0;
+  size_t pos = 0;
   do {
     pos = path.find_first_of('/', pos + 1);
     if (!f.nameExists(std::string{path.substr(0, pos)})) {
@@ -562,7 +562,7 @@ bool has_dataset(H5::H5File &f, std::string_view name, std::string_view root_pat
   const auto path =
       absl::StrCat(absl::StripSuffix(root_path, "/"), "/", absl::StripPrefix(name, "/"));
   assert(!path.empty());
-  std::size_t pos = 0;
+  size_t pos = 0;
   do {
     pos = path.find_first_of('/', pos + 1);
     if (!f.nameExists(std::string{path.substr(0, pos)})) {

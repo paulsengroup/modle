@@ -27,7 +27,7 @@
 
 namespace modle::tools {
 std::vector<std::pair<std::string, int64_t>> select_chromosomes_for_eval(
-    std::string_view path_to_cooler1, std::string_view path_to_cooler2, std::size_t bin_size) {
+    std::string_view path_to_cooler1, std::string_view path_to_cooler2, size_t bin_size) {
   std::vector<std::string> str_buff;
   std::vector<int64_t> int_buff;
 
@@ -66,12 +66,12 @@ std::vector<std::pair<std::string, int64_t>> select_chromosomes_for_eval(
 }
 
 template <typename N>
-void slice_range_w_cross_method(absl::Span<const N> vin, std::vector<N> &vout, std::size_t nrows,
-                                std::size_t offset) {
+void slice_range_w_cross_method(absl::Span<const N> vin, std::vector<N> &vout, size_t nrows,
+                                size_t offset) {
   static_assert(std::is_arithmetic<N>::value, "N should be a numeric type.");
 
-  std::size_t idx = offset * nrows;
-  for (std::size_t j = 0; j < nrows; ++j) {
+  size_t idx = offset * nrows;
+  for (size_t j = 0; j < nrows; ++j) {
     if (idx >= vin.size()) {
       DISABLE_WARNING_PUSH
       DISABLE_WARNING_SIGN_CONVERSION
@@ -83,7 +83,7 @@ void slice_range_w_cross_method(absl::Span<const N> vin, std::vector<N> &vout, s
     idx += nrows + 1;
   }
   idx = offset * nrows - 1;
-  for (std::size_t j = nrows; j < vout.size(); ++j) {
+  for (size_t j = nrows; j < vout.size(); ++j) {
     if (idx > (offset * nrows) + offset) {
       DISABLE_WARNING_PUSH
       DISABLE_WARNING_SIGN_CONVERSION
@@ -96,12 +96,12 @@ void slice_range_w_cross_method(absl::Span<const N> vin, std::vector<N> &vout, s
 }
 
 template <typename N>
-void slice_range_w_linear_method(absl::Span<const N> vin, std::vector<N> &vout, std::size_t nrows,
-                                 std::size_t offset) {
+void slice_range_w_linear_method(absl::Span<const N> vin, std::vector<N> &vout, size_t nrows,
+                                 size_t offset) {
   static_assert(std::is_arithmetic<N>::value, "N should be a numeric type.");
 
-  std::size_t idx = offset * nrows;
-  for (std::size_t j = 0; j < vout.size(); ++j) {
+  size_t idx = offset * nrows;
+  for (size_t j = 0; j < vout.size(); ++j) {
     if (idx >= vin.size() || idx < offset * nrows) {
       DISABLE_WARNING_PUSH
       DISABLE_WARNING_SIGN_CONVERSION
@@ -115,8 +115,8 @@ void slice_range_w_linear_method(absl::Span<const N> vin, std::vector<N> &vout, 
 }
 
 template <typename N>
-void slice_range(absl::Span<const N> vin, std::vector<N> &vout, std::size_t nrows, Transformation t,
-                 std::size_t offset) {
+void slice_range(absl::Span<const N> vin, std::vector<N> &vout, size_t nrows, Transformation t,
+                 size_t offset) {
   vout.resize(2 * nrows - 1);
   switch (t) {
     case Transformation::Cross:
@@ -133,7 +133,7 @@ void slice_range(absl::Span<const N> vin, std::vector<N> &vout, std::size_t nrow
 template <typename N1, typename N2>
 void compute_pearson_over_range(absl::Span<const N1> vin1, absl::Span<const N2> vin2,
                                 std::vector<double> &pcc_buff, std::vector<double> &pval_buff,
-                                std::size_t nrows, std::size_t ncols, Transformation t) {
+                                size_t nrows, size_t ncols, Transformation t) {
   assert(vin1.size() == vin2.size());
   pcc_buff.resize(ncols);
   pval_buff.resize(ncols);
@@ -142,7 +142,7 @@ void compute_pearson_over_range(absl::Span<const N1> vin1, absl::Span<const N2> 
   // const auto step = ncols / 25;
   // auto t0 = absl::Now();
 
-  for (std::size_t i = 0; i < ncols; ++i) {
+  for (size_t i = 0; i < ncols; ++i) {
     slice_range(vin1, sub_vin1, nrows, t, i);
     slice_range(vin2, sub_vin2, nrows, t, i);
     pcc_buff[i] = correlation::compute_pearson(sub_vin1, sub_vin2);
@@ -162,7 +162,7 @@ void compute_pearson_over_range(absl::Span<const N1> vin1, absl::Span<const N2> 
 template <typename N1, typename N2>
 void compute_pearson_over_range(const std::vector<N1> &vin1, const std::vector<N2> &vin2,
                                 std::vector<double> &pcc_buff, std::vector<double> &pval_buff,
-                                std::size_t nrows, std::size_t ncols, Transformation t) {
+                                size_t nrows, size_t ncols, Transformation t) {
   compute_pearson_over_range(absl::MakeConstSpan(vin1), absl::MakeConstSpan(vin2), pcc_buff,
                              pval_buff, nrows, ncols, t);
 }
@@ -170,14 +170,14 @@ void compute_pearson_over_range(const std::vector<N1> &vin1, const std::vector<N
 template <typename N1, typename N2>
 void compute_spearman_over_range(absl::Span<const N1> vin1, absl::Span<const N2> vin2,
                                  std::vector<double> &rho_buff, std::vector<double> &pval_buff,
-                                 std::size_t nrows, std::size_t ncols, Transformation t) {
+                                 size_t nrows, size_t ncols, Transformation t) {
   assert(vin1.size() == vin2.size());
   rho_buff.resize(ncols);
   pval_buff.resize(ncols);
   std::vector<N1> sub_vin1(2 * nrows - 1);
   std::vector<N2> sub_vin2(2 * nrows - 1);
 
-  for (std::size_t i = 0; i < ncols; ++i) {
+  for (size_t i = 0; i < ncols; ++i) {
     slice_range(vin1, sub_vin1, nrows, t, i);
     slice_range(vin2, sub_vin2, nrows, t, i);
     rho_buff[i] = correlation::compute_spearman(sub_vin1, sub_vin2);
@@ -188,21 +188,21 @@ void compute_spearman_over_range(absl::Span<const N1> vin1, absl::Span<const N2>
 template <typename N1, typename N2>
 void compute_spearman_over_range(const std::vector<N1> &vin1, const std::vector<N2> &vin2,
                                  std::vector<double> &rho_buff, std::vector<double> &pval_buff,
-                                 std::size_t nrows, std::size_t ncols, Transformation t) {
+                                 size_t nrows, size_t ncols, Transformation t) {
   compute_spearman_over_range(absl::MakeConstSpan(vin1), absl::MakeConstSpan(vin2), rho_buff,
                               pval_buff, nrows, ncols, t);
 }
 
 template <typename N1, typename N2>
 void compute_sed_over_range(absl::Span<const N1> vin1, absl::Span<const N2> vin2,
-                            std::vector<double> &buff, std::size_t nrows, std::size_t ncols,
+                            std::vector<double> &buff, size_t nrows, size_t ncols,
                             Transformation t) {
   assert(vin1.size() == vin2.size());
   buff.resize(ncols);
   std::vector<N1> sub_vin1(2 * nrows - 1);
   std::vector<N2> sub_vin2(2 * nrows - 1);
 
-  for (std::size_t i = 0; i < ncols; ++i) {
+  for (size_t i = 0; i < ncols; ++i) {
     slice_range(vin1, sub_vin1, nrows, t, i);
     slice_range(vin2, sub_vin2, nrows, t, i);
     buff[i] = static_cast<double>(correlation::compute_sed(sub_vin1, sub_vin2));
@@ -211,7 +211,7 @@ void compute_sed_over_range(absl::Span<const N1> vin1, absl::Span<const N2> vin2
 
 template <typename N1, typename N2>
 void compute_sed_over_range(const std::vector<N1> &vin1, const std::vector<N2> &vin2,
-                            std::vector<double> &buff, std::size_t nrows, std::size_t ncols,
+                            std::vector<double> &buff, size_t nrows, size_t ncols,
                             Transformation t) {
   compute_sed_over_range(absl::MakeConstSpan(vin1), absl::MakeConstSpan(vin2), buff, nrows, ncols,
                          t);
@@ -219,7 +219,7 @@ void compute_sed_over_range(const std::vector<N1> &vin1, const std::vector<N2> &
 
 template <typename N1, typename N2>
 void compute_euc_dist_over_range(absl::Span<const N1> vin1, absl::Span<const N2> vin2,
-                                 std::vector<double> &buff, std::size_t nrows, std::size_t ncols,
+                                 std::vector<double> &buff, size_t nrows, size_t ncols,
                                  Transformation t) {
   compute_sed_over_range(vin1, vin2, buff, nrows, ncols, t);
   std::transform(buff.begin(), buff.end(), buff.begin(), [](const auto n) { return std::sqrt(n); });
@@ -227,7 +227,7 @@ void compute_euc_dist_over_range(absl::Span<const N1> vin1, absl::Span<const N2>
 
 template <typename N1, typename N2>
 void compute_euc_dist_over_range(const std::vector<N1> &vin1, const std::vector<N2> &vin2,
-                                 std::vector<double> &buff, std::size_t nrows, std::size_t ncols,
+                                 std::vector<double> &buff, size_t nrows, size_t ncols,
                                  Transformation t) {
   compute_euc_dis_over_range(absl::MakeConstSpan(vin1), absl::MakeConstSpan(vin2), buff, nrows,
                              ncols, t);

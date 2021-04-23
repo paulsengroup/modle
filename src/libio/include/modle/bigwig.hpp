@@ -14,7 +14,7 @@
 namespace modle::bigwig {
 
 enum : uint_fast8_t { DEFAULT_ZOOM_LEVELS = 10 };
-inline constexpr std::size_t DEFAULT_BUFF_SIZE{1U << 17U};  // 128 KiB
+inline constexpr size_t DEFAULT_BUFF_SIZE{1U << 17U};  // 128 KiB
 
 inline void close_bigwig_file(bigWigFile_t* fp);
 using file = std::unique_ptr<bigWigFile_t, decltype(&bigwig::close_bigwig_file)>;
@@ -36,18 +36,18 @@ template <typename I>  // This overload is not as efficient as the others. This 
                        // thousands of chromosomes
 [[nodiscard]] inline bigwig::file init_bigwig_file(
     std::string_view output_path, std::vector<std::pair<std::string, I>>& chromosomes,
-    int32_t zoom_levels = DEFAULT_ZOOM_LEVELS, std::size_t buff_size = DEFAULT_BUFF_SIZE);
+    int32_t zoom_levels = DEFAULT_ZOOM_LEVELS, size_t buff_size = DEFAULT_BUFF_SIZE);
 
 [[nodiscard]] inline bigwig::file init_bigwig_file(std::string_view output_path,
                                                    std::vector<char*>& chrom_names,
                                                    std::vector<uint32_t>& chrom_sizes,
                                                    int32_t zoom_levels = DEFAULT_ZOOM_LEVELS,
-                                                   std::size_t buff_size = DEFAULT_BUFF_SIZE);
+                                                   size_t buff_size = DEFAULT_BUFF_SIZE);
 
 [[nodiscard]] inline bigwig::file init_bigwig_file(std::string_view output_path,
                                                    std::string& chrom_name, uint64_t chrom_size,
                                                    int32_t zoom_levels = DEFAULT_ZOOM_LEVELS,
-                                                   std::size_t buff_size = DEFAULT_BUFF_SIZE);
+                                                   size_t buff_size = DEFAULT_BUFF_SIZE);
 
 inline void close_bigwig_file(bigwig::file fp);
 }  // namespace modle::bigwig

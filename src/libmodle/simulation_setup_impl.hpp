@@ -26,12 +26,20 @@
 namespace modle {
 
 // TODO Add flag to import skip chrom without barriers
-Simulation::Genome Simulation::import_chromosomes(
+Simulation::Genome Simulation::instantiate_genome(
     const std::filesystem::path& path_to_chrom_sizes,
     const std::filesystem::path& path_to_extr_barriers,
     const std::filesystem::path& path_to_chrom_subranges, bool keep_all_chroms) {
-  assert(!path_to_chrom_sizes.empty());    // NOLINT
-  assert(!path_to_extr_barriers.empty());  // NOLINT
+  auto genome =
+      Simulation::import_chromosomes(path_to_chrom_sizes, path_to_chrom_subranges, keep_all_chroms);
+  Simulation::import_barriers(genome, path_to_extr_barriers);
+  return genome;
+}
+
+Simulation::Genome Simulation::import_chromosomes(
+    const std::filesystem::path& path_to_chrom_sizes,
+    const std::filesystem::path& path_to_chrom_subranges, bool keep_all_chroms) {
+  assert(!path_to_chrom_sizes.empty());  // NOLINT
   Genome chroms;
 
   // Parse chrom subranges from BED. We parse everything at once to deal with duplicate entries
@@ -47,8 +55,8 @@ Simulation::Genome Simulation::import_chromosomes(
   // When the BED file with the chrom. subranges is not provided, all the chromosome in the
   // chrom.sizes file will be selected and returned. When a BED file with the chrom. subranges is
   // available, then only chromosomes that are present in both files will be selected. Furthermore
-  // we are also checking that the subrange lies within the coordinates specified in the chrom.
-  // sizes file
+  // we are also checking that the subrange lies within the genomic coordinates specified in the
+  // chrom. sizes file
   for (auto&& chrom : chrom_sizes::Parser(path_to_chrom_sizes).parse_all()) {
     if (auto match = chrom_ranges.find(chrom.name); match != chrom_ranges.end()) {
       const auto& range_start = match->second.first;
@@ -68,9 +76,15 @@ Simulation::Genome Simulation::import_chromosomes(
       chroms.emplace(std::move(chrom));
     }
   }
+  return chroms;
+}
 
+size_t Simulation::import_barriers(Genome& genome,
+                                   const std::filesystem::path& path_to_extr_barriers) {
+  assert(!genome.empty());
+  assert(!path_to_extr_barriers.empty());
+  size_t nbarriers = 0;
   // Parse all the records from the BED file. parse_all() will throw in case of duplicates.
-  // This for loop selects extrusion barriers that fall within the chromosomes to be simulated
   for (auto&& record : modle::bed::Parser(path_to_extr_barriers).parse_all()) {
     if (record.score < 0 || record.score > 1) {
       throw std::runtime_error(
@@ -78,40 +92,45 @@ Simulation::Genome Simulation::import_chromosomes(
                       "between 0 and 1, got {:.4g}.",
                       record.chrom, record.chrom_start, record.chrom_end, record.score));
     }
-    if (!chrom_ranges.empty() && chrom_ranges.find(record.chrom) == chrom_ranges.end()) {
+
+    if (auto match = genome.find(record.chrom); match != genome.end()) {
+      match->add_extrusion_barrier(record);
+      ++nbarriers;
+    }
+  }
+  return nbarriers;
+}
+
+std::vector<ExtrusionBarrier> Simulation::allocate_barriers(const Chromosome* const chrom) const {
+  std::vector<ExtrusionBarrier> barriers;
+  size_t barriers_skipped = 0;
+
+  for (const auto& b : chrom->get_barriers()) {
+    // Only instantiate barriers with a known motif direction.
+    if (b.strand != '+' && b.strand != '-') MODLE_UNLIKELY {
+        ++barriers_skipped;
+        continue;
+      }
+    const auto pos = (b.chrom_start + b.chrom_end + 1) / 2;
+    if (pos < chrom->start_pos() || pos >= chrom->end_pos()) {
+      // Barrier lies outside of the genomic regions to be simulated
+      ++barriers_skipped;
       continue;
     }
 
-    if (auto match = chroms.find(record.chrom); match != chroms.end()) {
-      match->add_extrusion_barrier(record);
-    }
-  }
-  return chroms;
-}
+    if (b.score != 0) {
+      // When the score field is zero (i.e. when the extr. barrier does not have a custom
+      // occupancy), use the occupancy specified through the CLI
+      const auto pblock = b.score;
+      const auto pno = this->ctcf_not_occupied_self_prob;
+      const auto poo =
+          ExtrusionBarrier::compute_blocking_to_blocking_transition_probabilities_from_pblock(
+              pblock, pno);
 
-std::vector<ExtrusionBarrier> Simulation::allocate_barriers(const Chromosome* const chrom) {
-  std::vector<ExtrusionBarrier> barriers;
-  std::size_t barriers_skipped = 0;
-  for (const auto& b : chrom->get_barriers()) {
-    if (b.strand == '+' || b.strand == '-') MODLE_LIKELY {
-        const auto pos = (b.chrom_start + b.chrom_end + 1) / 2;
-        if (pos < chrom->start_pos() || pos >= chrom->end_pos()) {
-          continue;
-        }
-        if (b.score != 0) {
-          const auto pblock = b.score;
-          const auto pno = this->ctcf_not_occupied_self_prob;
-          const auto poo =
-              ExtrusionBarrier::compute_blocking_to_blocking_transition_probabilities_from_pblock(
-                  pblock, pno);
-          barriers.emplace_back(pos, poo, pno, b.strand);
-        } else {
-          barriers.emplace_back(pos, this->ctcf_occupied_self_prob,
-                                this->ctcf_not_occupied_self_prob, b.strand);
-        }
-      }
-    else {
-      ++barriers_skipped;
+      barriers.emplace_back(pos, poo, pno, b.strand);
+    } else {
+      barriers.emplace_back(pos, this->ctcf_occupied_self_prob, this->ctcf_not_occupied_self_prob,
+                            b.strand);
     }
   }
 

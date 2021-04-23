@@ -48,8 +48,8 @@ struct Config {
   bp_t rev_extrusion_speed{std::numeric_limits<bp_t>::max()};
   double fwd_extrusion_speed_std{0.05};        // NOLINT(readability-magic-numbers, cppcoreguidelines-avoid-magic-numbers)
   double rev_extrusion_speed_std{fwd_extrusion_speed_std};
-  std::size_t ncells{5'000};                   // NOLINT(readability-magic-numbers, cppcoreguidelines-avoid-magic-numbers)
-  std::size_t nthreads{std::thread::hardware_concurrency()};
+  size_t ncells{5'000};                   // NOLINT(readability-magic-numbers, cppcoreguidelines-avoid-magic-numbers)
+  size_t nthreads{std::thread::hardware_concurrency()};
   bp_t diagonal_width{3'000'000 /* 3 Mbp */};  // NOLINT(readability-magic-numbers, cppcoreguidelines-avoid-magic-numbers)
   bp_t simulation_iterations{200};             // NOLINT(readability-magic-numbers, cppcoreguidelines-avoid-magic-numbers)
   double target_contact_density{0.0};
@@ -120,8 +120,8 @@ struct Config {
     };
     // clang-format on
 
-    std::size_t max_column1_length = 0;
-    std::size_t max_column2_length = 0;
+    size_t max_column1_length = 0;
+    size_t max_column2_length = 0;
     for (const auto& [title, options] : tokens) {
       for (const auto& opt : options) {
         max_column1_length =

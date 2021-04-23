@@ -60,7 +60,7 @@ void parse_real_or_throw(std::string_view tok, R &field) {
 }
 
 template <typename N>
-void parse_numeric_or_throw(const std::vector<std::string_view> &toks, std::size_t idx, N &field) {
+void parse_numeric_or_throw(const std::vector<std::string_view> &toks, size_t idx, N &field) {
   static_assert(std::is_arithmetic_v<N>);
   if constexpr (std::is_floating_point_v<N>) {
     parse_real_or_throw(toks, idx, field);
@@ -70,7 +70,7 @@ void parse_numeric_or_throw(const std::vector<std::string_view> &toks, std::size
 }
 
 template <typename I>
-void parse_int_or_throw(const std::vector<std::string_view> &toks, std::size_t idx, I &field) {
+void parse_int_or_throw(const std::vector<std::string_view> &toks, size_t idx, I &field) {
   static_assert(std::is_integral<I>());
   auto [ptr, err] = std::from_chars(toks[idx].data(), toks[idx].data() + toks[idx].size(), field);
   if (ptr != toks[idx].end() && err != std::errc{}) {
@@ -79,7 +79,7 @@ void parse_int_or_throw(const std::vector<std::string_view> &toks, std::size_t i
 }
 
 template <typename R>
-void parse_real_or_throw(const std::vector<std::string_view> &toks, std::size_t idx, R &field) {
+void parse_real_or_throw(const std::vector<std::string_view> &toks, size_t idx, R &field) {
   static_assert(std::is_floating_point<R>());
   const std::string tok(toks[idx].begin(), toks[idx].end());
   char *end = nullptr;
@@ -94,7 +94,7 @@ void parse_real_or_throw(const std::vector<std::string_view> &toks, std::size_t 
 }
 
 template <typename N>
-void parse_vect_of_numbers_or_throw(const std::vector<std::string_view> &toks, std::size_t idx,
+void parse_vect_of_numbers_or_throw(const std::vector<std::string_view> &toks, size_t idx,
                                     std::vector<N> &field, uint64_t expected_size) {
   static_assert(std::is_arithmetic<N>());
   std::vector<std::string_view> ns = absl::StrSplit(toks[idx], ',');
@@ -103,13 +103,13 @@ void parse_vect_of_numbers_or_throw(const std::vector<std::string_view> &toks, s
         fmt::format("Expected %lu fields, got %lu.", expected_size, ns.size()));
   }
   field = std::vector<N>(ns.size());
-  for (std::size_t i = 0; i < expected_size; ++i) {
+  for (size_t i = 0; i < expected_size; ++i) {
     parse_numeric_or_throw(ns, i, field[i]);
   }
 }
 
 template <typename N>
-void throw_except_from_errc(std::string_view tok, std::size_t idx, const N &field, const char *c,
+void throw_except_from_errc(std::string_view tok, size_t idx, const N &field, const char *c,
                             std::errc e) {
   (void)field;
   static_assert(std::is_arithmetic<N>());
@@ -156,8 +156,8 @@ bool chrom_equal_operator(const std::pair<std::string_view, int64_t> &chr1,
   if (chr1.second != chr2.second) {
     return false;
   }
-  std::size_t offset1 = 0;
-  std::size_t offset2 = 0;
+  size_t offset1 = 0;
+  size_t offset2 = 0;
   if (absl::StartsWithIgnoreCase(chr1.first, "chrom")) {
     offset1 = 3;
   }
@@ -173,8 +173,8 @@ bool chrom_less_than_operator(std::string_view chr1, std::string_view chr2) {
 
 bool chrom_less_than_operator(const std::pair<std::string_view, int64_t> &chr1,
                               const std::pair<std::string_view, int64_t> &chr2) {
-  std::size_t offset1 = 0;
-  std::size_t offset2 = 0;
+  size_t offset1 = 0;
+  size_t offset2 = 0;
   if (absl::StartsWithIgnoreCase(chr1.first, "chrom")) {
     offset1 = 3;
   }

@@ -34,7 +34,7 @@ void close_bigwig_file(bigWigFile_t* fp) {
 template <typename I>
 bigwig::file init_bigwig_file(std::string_view output_path,
                               std::vector<std::pair<std::string, I>>& chromosomes,
-                              int32_t zoom_levels, std::size_t buff_size) {
+                              int32_t zoom_levels, size_t buff_size) {
   static_assert(std::is_integral_v<I>, "I should be an integral numeric type.");
   std::vector<char*> chrom_names(chromosomes.size());
   std::vector<uint32_t> chrom_sizes(chromosomes.size());
@@ -125,7 +125,7 @@ void write_range(const std::string& chrom_name, const std::vector<double>& vals,
 
 bigwig::file init_bigwig_file(std::string_view output_path, std::vector<char*>& chrom_names,
                               std::vector<uint32_t>& chrom_sizes, int32_t zoom_levels,
-                              std::size_t buff_size) {
+                              size_t buff_size) {
   bigwig::file bw_fp{nullptr, &close_bigwig_file};
   if (bwInit(buff_size)) {  // NOLINT(readability-implicit-bool-conversion)
     throw std::runtime_error(
@@ -159,7 +159,7 @@ bigwig::file init_bigwig_file(std::string_view output_path, std::vector<char*>& 
 }
 
 bigwig::file init_bigwig_file(std::string_view output_path, std::string& chrom_name,
-                              uint64_t chrom_size, int32_t zoom_levels, std::size_t buff_size) {
+                              uint64_t chrom_size, int32_t zoom_levels, size_t buff_size) {
   // Create the chromosome lists
   std::vector<char*> chrom_names{chrom_name.data()};
   std::vector<uint32_t> chrom_sizes{static_cast<uint32_t>(chrom_size)};

@@ -80,7 +80,7 @@ void Simulation::run() {
 
   std::atomic<bool> end_of_simulation = false;
   std::mutex progress_queue_mutex;  // Protect rw access to progress_queue
-  std::deque<std::pair<Chromosome*, std::size_t>> progress_queue;
+  std::deque<std::pair<Chromosome*, size_t>> progress_queue;
 
   // Barriers are shared across threads that are simulating loop-extrusion on a given chromosome.
   // Extrusion barriers are placed on this std::deque, and are passed to simulation threads
@@ -88,10 +88,10 @@ void Simulation::run() {
   std::mutex barrier_mutex;
   absl::flat_hash_map<Chromosome*, std::unique_ptr<std::vector<ExtrusionBarrier>>> barriers;
 
-  constexpr std::size_t task_batch_size = 128;
+  constexpr size_t task_batch_size = 128;
   // Queue used to submit simulation tasks to the thread pool
   moodycamel::BlockingConcurrentQueue<Simulation::Task> task_queue(
-      std::max(static_cast<std::size_t>(static_cast<double>(ncells) * 1.25),
+      std::min(static_cast<size_t>(static_cast<double>(this->ncells) * 1.1),
                this->nthreads * task_batch_size),
       1, 0);
   moodycamel::ProducerToken ptok(task_queue);
@@ -112,14 +112,14 @@ void Simulation::run() {
 
   // Create a vector of pointers to chroms, and sort the pointers by chrom size
   // TODO Update this to process chroms in the same order they are found in the chrom.sizes file
-  std::vector<Chromosome*> chroms(static_cast<std::size_t>(this->_chromosomes.size()));
+  std::vector<Chromosome*> chroms(static_cast<size_t>(this->_chromosomes.size()));
   std::transform(this->_chromosomes.begin(), this->_chromosomes.end(), chroms.begin(),
                  [](auto& chrom) { return &chrom; });
   std::sort(chroms.begin(), chroms.end(),
             [](const auto* const c1, const auto* const c2) { return c1->size() > c2->size(); });
 
   absl::Span<const ExtrusionBarrier> extr_barriers_buff{};
-  std::vector<Task> tasks(ncells);
+  absl::FixedArray<Task> tasks(task_batch_size);
   auto taskid = 0UL;
 
   // Loop over chromosomes
@@ -154,32 +154,36 @@ void Simulation::run() {
     }
 
     // Compute # of LEFs to be simulated based on chrom. sizes
-    const auto nlefs = static_cast<std::size_t>(std::round(
+    const auto nlefs = static_cast<size_t>(std::round(
         this->number_of_lefs_per_mbp * (static_cast<double>(chrom->simulated_size()) / 1.0e6)));
-
-    // This resize is not needed at the moment. It's there as a safe-guard just in case we decide to
-    tasks.resize(ncells);  // allow the number of simulated cells to change across different chroms
 
     auto target_contacts = 0UL;
     if (this->target_contact_density != 0) {  // Compute the number of simulation rounds required
       // to reach the target contact density
-      target_contacts = static_cast<std::size_t>(
+      target_contacts = static_cast<size_t>(
           std::max(1.0, std::round((this->target_contact_density *
                                     static_cast<double>(chrom->contacts().npixels())) /
                                    static_cast<double>(this->ncells))));
     }
-    auto target_epochs = target_contacts == 0UL ? this->simulation_iterations
-                                                : std::numeric_limits<std::size_t>::max();
+    auto target_epochs =
+        target_contacts == 0UL ? this->simulation_iterations : std::numeric_limits<size_t>::max();
 
-    // Generate a batch of tasks for all the simulations involving the current chrom
-    std::generate(tasks.begin(), tasks.end(), [&, cellid = 0UL]() mutable {
-      return Task{taskid++,        chrom, cellid++,          target_epochs,
-                  target_contacts, nlefs, extr_barriers_buff};
-    });
-
-    while (  // Enqueue tasks
-        !task_queue.try_enqueue_bulk(ptok, std::make_move_iterator(tasks.begin()), tasks.size())) {
-      std::this_thread::sleep_for(std::chrono::milliseconds(10));
+    size_t cellid = 0;
+    const auto nbatches = ((this->ncells + task_batch_size - 1) / task_batch_size);
+    for (auto batchid = 0UL; batchid < nbatches; ++batchid) {
+      // Generate a batch of tasks for all the simulations involving the current chrom
+      std::generate(tasks.begin(), tasks.end(), [&]() {
+        return Task{taskid++,        chrom, cellid++,          target_epochs,
+                    target_contacts, nlefs, extr_barriers_buff};
+      });
+      const auto ntasks =
+          cellid > this->ncells ? tasks.size() - (cellid - this->ncells) : tasks.size();
+      auto sleep_us = 100;  // NOLINT
+      while (               // Enqueue tasks
+          !task_queue.try_enqueue_bulk(ptok, std::make_move_iterator(tasks.begin()), ntasks)) {
+        sleep_us = std::min(100000, sleep_us * 2);  // NOLINT
+        std::this_thread::sleep_for(std::chrono::microseconds(sleep_us));
+      }
     }
   }
 
@@ -193,10 +197,10 @@ void Simulation::run() {
 
 void Simulation::worker(
     moodycamel::BlockingConcurrentQueue<Simulation::Task>& task_queue,
-    std::deque<std::pair<Chromosome*, std::size_t>>& progress_queue,
-    std::mutex& progress_queue_mutex, std::mutex& barrier_mutex,
+    std::deque<std::pair<Chromosome*, size_t>>& progress_queue, std::mutex& progress_queue_mutex,
+    std::mutex& barrier_mutex,
     absl::flat_hash_map<Chromosome*, std::unique_ptr<std::vector<ExtrusionBarrier>>>& barriers,
-    std::atomic<bool>& end_of_simulation, std::size_t task_batch_size) {
+    std::atomic<bool>& end_of_simulation, size_t task_batch_size) const {
   fmt::print(stderr, FMT_STRING("Spawning simulation thread {}...\n"), std::this_thread::get_id());
 
   moodycamel::ConsumerToken ctok(task_queue);
@@ -229,12 +233,11 @@ void Simulation::worker(
         // Resize and reset buffers
         state_buff = task;    // Set simulation state based on task data
         state_buff.resize();  // This resizes buffers based on the nlefs to be simulated
-        state_buff.barrier_mask.resize(task.barriers.size());
-        state_buff.reset();  // Clear all buffers
+        state_buff.reset();   // Clear all buffers
 
         if (task.cell_id == 0) {
           // Print a status update when we are processing cell #0 for a given chromosome
-          const auto target_epochs = static_cast<std::size_t>(
+          const auto target_epochs = static_cast<size_t>(
               std::max(1.0, std::round((this->target_contact_density *
                                         static_cast<double>(task.chrom->contacts().npixels())) /
                                        (this->lef_fraction_contact_sampling *
@@ -266,8 +269,8 @@ void Simulation::worker(
     // This is needed, as exceptions don't seem to always propagate to the main()
     // TODO: Find a better way to propagate exception up to the main thread. Maybe use a
     // concurrent queue?
-    fmt::print(stderr, FMT_STRING("Detected an error in thread {}:\n{}\n"),
-               std::this_thread::get_id(), err.what());
+    fmt::print(stderr, FMT_STRING("Detected an error in thread {}:\n{}\n{}\n"),
+               std::this_thread::get_id(), state_buff.to_string(), err.what());
 #ifndef BOOST_STACKTRACE_USE_NOOP
     const auto* st = boost::get_error_info<modle::utils::traced>(err);
     if (st) {

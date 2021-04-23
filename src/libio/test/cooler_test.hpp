@@ -101,7 +101,7 @@ TEST_CASE("Cooler to CMatrix and CMatrix to Cooler", "[io][cooler][short]") {
   const auto& v2 = cmatrix2.get_raw_count_vector();
   REQUIRE(v1.size() == v2.size());
 
-  std::size_t mismatches = 0;
+  size_t mismatches = 0;
   for (auto i = 0UL; i < v1.size(); ++i) {
     CHECK(v1[i] == v2[i]);
     mismatches += static_cast<uint8_t>(v1[i] != v2[i]);
@@ -151,8 +151,8 @@ TEST_CASE("Cooler testing balanced matrix", "[io][cooler][short]") {
 
   double avg_col_diff = 0;
   double avg_row_diff = 0;
-  std::size_t nnz_cols = 0;
-  std::size_t nnz_rows = 0;
+  size_t nnz_cols = 0;
+  size_t nnz_rows = 0;
 
   for (auto i = 0UL; i < nrows; ++i) {
     if (balanced_row_sum[i] != 0) {

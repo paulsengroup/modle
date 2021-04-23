@@ -39,7 +39,7 @@ ContactMatrix<I>::ContactMatrix(const ContactMatrix<I> &other)
       _locks(other._locks.size()) {}
 
 template <typename I>
-ContactMatrix<I>::ContactMatrix(std::size_t nrows, std::size_t ncols, bool fill_with_random_numbers)
+ContactMatrix<I>::ContactMatrix(size_t nrows, size_t ncols, bool fill_with_random_numbers)
     : _nrows(nrows), _ncols(ncols), _contacts(_nrows * _ncols + 1, 0), _locks(_ncols) {
   if (fill_with_random_numbers) {
     std::random_device rand_dev;
@@ -71,7 +71,7 @@ ContactMatrix<I> &ContactMatrix<I>::operator=(const ContactMatrix<I> &other) {
 }
 
 template <typename I>
-I ContactMatrix<I>::get(std::size_t row, std::size_t col) const noexcept(utils::ndebug_defined()) {
+I ContactMatrix<I>::get(size_t row, size_t col) const noexcept(utils::ndebug_defined()) {
   const auto [i, j] = transpose_coords(row, col);
 #ifndef NDEBUG
   if (i >= this->ncols() || j >= this->ncols()) {
@@ -91,8 +91,7 @@ I ContactMatrix<I>::get(std::size_t row, std::size_t col) const noexcept(utils::
 
 template <typename I>
 template <typename I2>
-void ContactMatrix<I>::set(std::size_t row, std::size_t col,
-                           I2 n) noexcept(utils::ndebug_defined()) {
+void ContactMatrix<I>::set(size_t row, size_t col, I2 n) noexcept(utils::ndebug_defined()) {
   static_assert(std::is_integral<I2>::value,
                 "ContactMatrix<I>::set expects the parameter n to be an integer type.");
 #ifndef NDEBUG
@@ -152,8 +151,7 @@ void ContactMatrix<I>::set(std::size_t row, std::size_t col,
 
 template <typename I>
 template <typename I2>
-void ContactMatrix<I>::add(std::size_t row, std::size_t col,
-                           I2 n) noexcept(utils::ndebug_defined()) {
+void ContactMatrix<I>::add(size_t row, size_t col, I2 n) noexcept(utils::ndebug_defined()) {
   static_assert(std::is_integral<I2>::value,
                 "ContactMatrix<I>::add expects the parameter n to be an integer type.");
 
@@ -189,8 +187,7 @@ void ContactMatrix<I>::add(std::size_t row, std::size_t col,
 
 template <typename I>
 template <typename I2>
-void ContactMatrix<I>::subtract(std::size_t row, std::size_t col,
-                                I2 n) noexcept(utils::ndebug_defined()) {
+void ContactMatrix<I>::subtract(size_t row, size_t col, I2 n) noexcept(utils::ndebug_defined()) {
   static_assert(std::is_integral<I2>::value,
                 "ContactMatrix<I>::subtract expects the parameter n to be an integer type.");
 
@@ -211,7 +208,7 @@ void ContactMatrix<I>::subtract(std::size_t row, std::size_t col,
 #endif
     assert(n >= 0);  // NOLINT
     this->at(i, j) -= static_cast<I>(n);
-    this->_tot_contacts -= static_cast<std::size_t>(n);
+    this->_tot_contacts -= static_cast<size_t>(n);
 #ifndef NDEBUG
   } catch (const std::runtime_error &err) {
     utils::throw_with_trace(std::logic_error(fmt::format(
@@ -223,9 +220,8 @@ void ContactMatrix<I>::subtract(std::size_t row, std::size_t col,
 // IMPORTANT! This function modifies the pixel buffer
 template <typename I>
 template <typename I2>
-void ContactMatrix<I>::add(
-    absl::Span<std::pair<std::size_t /* rows */, std::size_t /* cols */>> pixels, I2 n,
-    std::size_t size_thresh) noexcept(utils::ndebug_defined()) {
+void ContactMatrix<I>::add(absl::Span<std::pair<size_t /* rows */, size_t /* cols */>> pixels, I2 n,
+                           size_t size_thresh) noexcept(utils::ndebug_defined()) {
   std::transform(pixels.begin(), pixels.end(), pixels.begin(),
                  [](const auto &pixel) { return transpose_coords(pixel.first, pixel.second); });
   cppsort::ska_sort(pixels.begin(), pixels.end(),
@@ -241,7 +237,7 @@ void ContactMatrix<I>::add(
 template <typename I>
 template <typename I2>
 void ContactMatrix<I>::add_small_buff(
-    absl::Span<std::pair<std::size_t /* rows */, std::size_t /* cols */>> pixels,
+    absl::Span<std::pair<size_t /* rows */, size_t /* cols */>> pixels,
     I2 n) noexcept(utils::ndebug_defined()) {
   static_assert(std::is_integral<I2>::value,
                 "ContactMatrix<I>::add expects the parameter n to be an integer type.");
@@ -273,7 +269,7 @@ void ContactMatrix<I>::add_small_buff(
 template <typename I>
 template <typename I2>
 void ContactMatrix<I>::add_large_buff(
-    absl::Span<std::pair<std::size_t /* rows */, std::size_t /* cols */>> pixels,
+    absl::Span<std::pair<size_t /* rows */, size_t /* cols */>> pixels,
     I2 n) noexcept(utils::ndebug_defined()) {
   static_assert(std::is_integral<I2>::value,
                 "ContactMatrix<I>::add expects the parameter n to be an integer type.");
@@ -321,41 +317,38 @@ void ContactMatrix<I>::add_large_buff(
 }
 
 template <typename I>
-void ContactMatrix<I>::increment(std::size_t row,
-                                 std::size_t col) noexcept(utils::ndebug_defined()) {
+void ContactMatrix<I>::increment(size_t row, size_t col) noexcept(utils::ndebug_defined()) {
   this->add(row, col, static_cast<I>(1));
 }
 
 template <typename I>
-void ContactMatrix<I>::increment(
-    absl::Span<std::pair<std::size_t /* rows */, std::size_t /* cols */>> pixels,
-    std::size_t size_thresh) noexcept(utils::ndebug_defined()) {
+void ContactMatrix<I>::increment(absl::Span<std::pair<size_t /* rows */, size_t /* cols */>> pixels,
+                                 size_t size_thresh) noexcept(utils::ndebug_defined()) {
   this->add(pixels, static_cast<I>(1), size_thresh);
 }
 
 template <typename I>
-void ContactMatrix<I>::decrement(std::size_t row,
-                                 std::size_t col) noexcept(utils::ndebug_defined()) {
+void ContactMatrix<I>::decrement(size_t row, size_t col) noexcept(utils::ndebug_defined()) {
   this->subtract(row, col, static_cast<I>(1));
 }
 
 template <typename I>
-constexpr std::size_t ContactMatrix<I>::ncols() const noexcept(utils::ndebug_defined()) {
+constexpr size_t ContactMatrix<I>::ncols() const noexcept(utils::ndebug_defined()) {
   return this->_ncols;
 }
 
 template <typename I>
-constexpr std::size_t ContactMatrix<I>::nrows() const noexcept(utils::ndebug_defined()) {
+constexpr size_t ContactMatrix<I>::nrows() const noexcept(utils::ndebug_defined()) {
   return this->_nrows;
 }
 
 template <typename I>
-constexpr std::size_t ContactMatrix<I>::npixels() const noexcept(utils::ndebug_defined()) {
+constexpr size_t ContactMatrix<I>::npixels() const noexcept(utils::ndebug_defined()) {
   return this->_nrows * this->_ncols;
 }
 
 template <typename I>
-std::size_t ContactMatrix<I>::npixels_after_masking() const {
+size_t ContactMatrix<I>::npixels_after_masking() const {
   auto npixels = this->npixels();
   const auto mask = this->generate_mask_for_bins_without_contacts();
   if (mask.all()) {
@@ -365,9 +358,9 @@ std::size_t ContactMatrix<I>::npixels_after_masking() const {
     return 0;
   }
 
-  auto count_zeros = [&mask](std::size_t start, std::size_t end) {
+  auto count_zeros = [&mask](size_t start, size_t end) {
     assert(start <= end);
-    std::size_t n = 0;
+    size_t n = 0;
     while (start < end) {
       n += !mask[start++];
     }
@@ -397,13 +390,13 @@ std::size_t ContactMatrix<I>::npixels_after_masking() const {
 }
 
 template <typename I>
-constexpr std::size_t ContactMatrix<I>::get_n_of_missed_updates() const
+constexpr size_t ContactMatrix<I>::get_n_of_missed_updates() const
     noexcept(utils::ndebug_defined()) {
   return this->_updates_missed;
 }
 
 template <typename I>
-constexpr std::size_t ContactMatrix<I>::get_tot_contacts() const noexcept(utils::ndebug_defined()) {
+constexpr size_t ContactMatrix<I>::get_tot_contacts() const noexcept(utils::ndebug_defined()) {
   return this->_tot_contacts;
 }
 
@@ -414,7 +407,7 @@ double ContactMatrix<I>::get_avg_contact_density() const noexcept(utils::ndebug_
 }
 
 template <typename I>
-constexpr std::size_t ContactMatrix<I>::get_matrix_size_in_bytes() const
+constexpr size_t ContactMatrix<I>::get_matrix_size_in_bytes() const
     noexcept(utils::ndebug_defined()) {
   return this->_contacts.size() * sizeof(I);
 }
@@ -428,9 +421,9 @@ template <typename I>
 void ContactMatrix<I>::print(bool full) const {
   if (full) {
     std::vector<I> row(this->_ncols, 0);
-    for (std::size_t y = 0; y < this->_ncols; ++y) {
+    for (size_t y = 0; y < this->_ncols; ++y) {
       std::fill(row.begin(), row.end(), 0);
-      for (std::size_t x = 0; x < this->_ncols; ++x) {
+      for (size_t x = 0; x < this->_ncols; ++x) {
         auto j = x;
         auto i = j - y;
         if (y > x) {
@@ -460,9 +453,9 @@ template <typename I>
 std::vector<std::vector<I>> ContactMatrix<I>::generate_symmetric_matrix() const {
   std::vector<std::vector<I>> m;
   m.reserve(this->_ncols);
-  for (std::size_t y = 0; y < this->_ncols; ++y) {
+  for (size_t y = 0; y < this->_ncols; ++y) {
     std::vector<I> row(this->_ncols, 0);
-    for (std::size_t x = 0; x < this->_ncols; ++x) {
+    for (size_t x = 0; x < this->_ncols; ++x) {
       auto j = x;
       auto i = j - y;
       if (y > x) {
@@ -520,7 +513,7 @@ void ContactMatrix<I>::reset() {
 }
 
 template <typename I>
-void ContactMatrix<I>::resize(std::size_t nrows, std::size_t ncols) {
+void ContactMatrix<I>::resize(size_t nrows, size_t ncols) {
   this->_nrows = nrows;
   this->_ncols = ncols;
   this->_contacts.resize((this->nrows() * this->ncols()) + 1, 0);
@@ -584,7 +577,7 @@ void ContactMatrix<I>::deplete_contacts(double depletion_multiplier) {
 }
 
 template <typename I>
-I &ContactMatrix<I>::at(std::size_t i, std::size_t j) noexcept(utils::ndebug_defined()) {
+I &ContactMatrix<I>::at(size_t i, size_t j) noexcept(utils::ndebug_defined()) {
 #ifndef NDEBUG
   if ((j * this->_nrows) + i > this->_contacts.size()) {
     utils::throw_with_trace(std::runtime_error(fmt::format(
@@ -597,8 +590,7 @@ I &ContactMatrix<I>::at(std::size_t i, std::size_t j) noexcept(utils::ndebug_def
 }
 
 template <typename I>
-const I &ContactMatrix<I>::at(std::size_t i, std::size_t j) const
-    noexcept(utils::ndebug_defined()) {
+const I &ContactMatrix<I>::at(size_t i, size_t j) const noexcept(utils::ndebug_defined()) {
 #ifndef NDEBUG
   if ((j * this->_nrows) + i > this->_contacts.size()) {
     utils::throw_with_trace(std::runtime_error(fmt::format(
@@ -611,8 +603,8 @@ const I &ContactMatrix<I>::at(std::size_t i, std::size_t j) const
 }
 
 template <typename I>
-std::pair<std::size_t, std::size_t> ContactMatrix<I>::transpose_coords(
-    std::size_t row, std::size_t col) noexcept(utils::ndebug_defined()) {
+std::pair<size_t, size_t> ContactMatrix<I>::transpose_coords(size_t row, size_t col) noexcept(
+    utils::ndebug_defined()) {
   if (row > col) {
     return std::make_pair(row - col, row);
   }
@@ -620,7 +612,7 @@ std::pair<std::size_t, std::size_t> ContactMatrix<I>::transpose_coords(
 }
 
 template <typename I>
-void ContactMatrix<I>::bound_check_column(std::size_t col) const {
+void ContactMatrix<I>::bound_check_column(size_t col) const {
   if (col > this->ncols()) {
     utils::throw_with_trace(std::runtime_error(fmt::format(
         FMT_STRING("caught an attempt to access element past the end of the contact matrix: "
@@ -631,7 +623,7 @@ void ContactMatrix<I>::bound_check_column(std::size_t col) const {
 
 template <typename I>
 template <typename I2>
-void ContactMatrix<I>::check_for_overflow_on_add(std::size_t row, std::size_t col, I2 n) const {
+void ContactMatrix<I>::check_for_overflow_on_add(size_t row, size_t col, I2 n) const {
   static_assert(std::is_integral_v<I2>, "n should be an integral number.");
 
   DISABLE_WARNING_PUSH
@@ -662,7 +654,7 @@ void ContactMatrix<I>::check_for_overflow_on_add(std::size_t row, std::size_t co
 
 template <typename I>
 template <typename I2>
-void ContactMatrix<I>::check_overflow_on_subtract(std::size_t row, std::size_t col, I2 n) const {
+void ContactMatrix<I>::check_overflow_on_subtract(size_t row, size_t col, I2 n) const {
   DISABLE_WARNING_PUSH
   DISABLE_WARNING_CONVERSION
   DISABLE_WARNING_SIGN_COMPARE

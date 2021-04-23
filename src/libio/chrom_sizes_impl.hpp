@@ -30,7 +30,7 @@ ChromSize::ChromSize(std::string_view chrom_name, uint64_t chrom_length)
 ChromSize::ChromSize(std::vector<std::string>& toks) {
   assert(toks.size() > 1);
   this->name = std::move(toks[0]);
-  std::size_t idx = 0;  // Used to print useful errors
+  size_t idx = 0;  // Used to print useful errors
   try {
     if (toks.size() == 2) {
       this->start = 0ULL;

@@ -28,7 +28,7 @@ namespace modle {
 
 using PRNG_t = decltype(std::function{PRNG})::result_type;
 
-using bp_t = std::size_t;
+using bp_t = size_t;
 using collision_t = uint_fast32_t;
 using contacts_t = uint32_t;
 

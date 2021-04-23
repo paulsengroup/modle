@@ -14,48 +14,48 @@ namespace modle::tools {
 enum Transformation : uint_fast8_t { Linear, Cross };
 
 [[nodiscard]] inline std::vector<std::pair<std::string, int64_t>> select_chromosomes_for_eval(
-    std::string_view path_to_cooler1, std::string_view path_to_cooler2, std::size_t bin_size);
+    std::string_view path_to_cooler1, std::string_view path_to_cooler2, size_t bin_size);
 
 template <typename N1, typename N2>
 inline void compute_pearson_over_range(absl::Span<const N1> vin1, absl::Span<const N2> vin2,
                                        std::vector<double>& pcc_buff,
-                                       std::vector<double>& pval_buff, std::size_t nrows,
+                                       std::vector<double>& pval_buff, size_t nrows,
                                        Transformation t);
 template <typename N1, typename N2>
 inline void compute_pearson_over_range(const std::vector<N1>& vin1, const std::vector<N2>& vin2,
                                        std::vector<double>& pcc_buff,
-                                       std::vector<double>& pval_buff, std::size_t nrows,
+                                       std::vector<double>& pval_buff, size_t nrows,
                                        Transformation t);
 
 template <typename N1, typename N2>
 inline void compute_spearman_over_range(absl::Span<const N1> vin1, absl::Span<const N2> vin2,
                                         std::vector<double>& rho_buff,
-                                        std::vector<double>& pval_buff, std::size_t nrows,
+                                        std::vector<double>& pval_buff, size_t nrows,
                                         Transformation t);
 template <typename N1, typename N2>
 inline void compute_spearman_over_range(const std::vector<N1>& vin1, const std::vector<N2>& vin2,
                                         std::vector<double>& rho_buff,
-                                        std::vector<double>& pval_buff, std::size_t nrows,
+                                        std::vector<double>& pval_buff, size_t nrows,
                                         Transformation t);
 
 template <typename N1, typename N2>
 inline void compute_sed_over_range(absl::Span<const N1> vin1, absl::Span<const N2> vin2,
-                                   std::vector<uint64_t>& buff, std::size_t nrows,
-                                   std::size_t ncols, Transformation t);
+                                   std::vector<uint64_t>& buff, size_t nrows, size_t ncols,
+                                   Transformation t);
 
 template <typename N1, typename N2>
 inline void compute_sed_over_range(const std::vector<N1>& vin1, const std::vector<N2>& vin2,
-                                   std::vector<uint64_t>& buff, std::size_t nrows,
-                                   std::size_t ncols, Transformation t);
+                                   std::vector<uint64_t>& buff, size_t nrows, size_t ncols,
+                                   Transformation t);
 
 template <typename N1, typename N2>
 void compute_euc_dist_over_range(absl::Span<const N1> vin1, absl::Span<const N2> vin2,
-                                 std::vector<double>& buff, std::size_t nrows, std::size_t ncols,
+                                 std::vector<double>& buff, size_t nrows, size_t ncols,
                                  Transformation t);
 
 template <typename N1, typename N2>
 void compute_euc_dist_over_range(const std::vector<N1>& vin1, const std::vector<N2>& vin2,
-                                 std::vector<double>& buff, std::size_t nrows, std::size_t ncols,
+                                 std::vector<double>& buff, size_t nrows, size_t ncols,
                                  Transformation t);
 }  // namespace modle::tools
 
