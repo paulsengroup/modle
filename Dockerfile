@@ -46,7 +46,7 @@ RUN dnf update -y \
     && cmake -DCMAKE_BUILD_TYPE=$build_type        \
              -DENABLE_IPO=ON                       \
              -DWARNINGS_AS_ERRORS=ON               \
-             -DENABLE_TESTING=OFF                  \
+             -DENABLE_TESTING=ON                   \
              -DCMAKE_INSTALL_PREFIX='/usr/local'   \
              -DCMAKE_CXX_FLAGS="-march=${march}"   \
              -DCMAKE_C_FLAGS="-march=${march}"     \

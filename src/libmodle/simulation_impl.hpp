@@ -2,16 +2,15 @@
 
 // IWYU pragma: private, include "modle/simulation.hpp"
 
-#include <absl/container/btree_set.h>            // for btree_iterator
-#include <absl/types/span.h>                     // for Span, MakeSpan, MakeConstSpan
-#include <cpp-sort/sorter_facade.h>              // for sorter_facade
-#include <cpp-sort/sorters/counting_sorter.h>    // for counting_sort, counting_sorter
-#include <cpp-sort/sorters/drop_merge_sorter.h>  // for drop_merge_sort, drop_merge_sorter
-#include <cpp-sort/sorters/insertion_sorter.h>   // for insertion_sort, insertion_sorter
-#include <cpp-sort/sorters/pdq_sorter.h>         // for pdq_sort, pdq_sorter
-#include <cpp-sort/sorters/ska_sorter.h>         // for ska_sort, ska_sorter
-#include <fmt/format.h>                          // for print, format, FMT_STRING
-#include <fmt/ostream.h>                         // for formatbuf<>::int_type
+#include <absl/container/btree_set.h>          // for btree_iterator
+#include <absl/types/span.h>                   // for Span, MakeSpan, MakeConstSpan
+#include <cpp-sort/sorter_facade.h>            // for sorter_facade
+#include <cpp-sort/sorters/counting_sorter.h>  // for counting_sort
+#include <cpp-sort/sorters/pdq_sorter.h>       // for pdq_sort
+#include <cpp-sort/sorters/ska_sorter.h>       // for ska_sort
+#include <cpp-sort/sorters/split_sorter.h>     // for split_sort
+#include <fmt/format.h>                        // for print, format, FMT_STRING
+#include <fmt/ostream.h>                       // for formatbuf<>::int_type
 
 #include <algorithm>  // for fill, min, max, clamp, for_each, gene...
 #include <atomic>     // for atomic
@@ -373,36 +372,6 @@ void Simulation::bind_lefs(const Chromosome* chrom, const absl::Span<Lef> lefs,
                        [&](const auto i) { return i < lefs.size(); }));
   }
 
-  // TODO removeme
-  auto foo = [&](std::string exception_msg) {
-    if (!std::all_of(lefs.begin(), lefs.end(),
-                     [&](const auto& lef) {
-                       return lef.rev_unit.pos() >= chrom->start_pos() &&
-                              lef.rev_unit.pos() < chrom->end_pos();
-                     }) ||
-        !std::all_of(lefs.begin(), lefs.end(), [&](const auto& lef) {
-          return lef.rev_unit.pos() >= chrom->start_pos() && lef.rev_unit.pos() < chrom->end_pos();
-        })) {
-      std::vector<size_t> buff(lefs.size());
-      std::transform(lefs.begin(), lefs.end(), buff.begin(),
-                     [](const auto& lef) { return lef.rev_unit.pos(); });
-      fmt::print(stderr, "rev_units=[{}]\n", absl::StrJoin(buff, ", "));
-      std::transform(lefs.begin(), lefs.end(), buff.begin(),
-                     [](const auto& lef) { return lef.fwd_unit.pos(); });
-      fmt::print(stderr, "fwd_units=[{}]\n", absl::StrJoin(buff, ", "));
-      throw std::runtime_error(exception_msg);
-    }
-
-    if (!std::all_of(rev_lef_ranks.begin(), rev_lef_ranks.end(),
-                     [&](const auto i) { return i < lefs.size(); }) ||
-        !std::all_of(fwd_lef_ranks.begin(), fwd_lef_ranks.end(),
-                     [&](const auto i) { return i < lefs.size(); })) {
-      fmt::print(stderr, "rev_ranks=[{}]\n", absl::StrJoin(rev_lef_ranks, ", "));
-      fmt::print(stderr, "fwd_ranks=[{}]\n", absl::StrJoin(fwd_lef_ranks, ", "));
-      throw std::runtime_error(exception_msg);
-    }
-  };
-
   chrom_pos_generator_t pos_generator{chrom->start_pos(), chrom->end_pos() - 1};
   for (auto i = 0UL; i < lefs.size(); ++i) {
     if (mask.empty() || mask[i]) {  // Bind all LEFs when mask is empty
@@ -419,10 +388,7 @@ void Simulation::bind_lefs(const Chromosome* chrom, const absl::Span<Lef> lefs,
     }));
   }
 
-  foo("foo1");
-
   Simulation::rank_lefs(lefs, rev_lef_ranks, fwd_lef_ranks, !first_epoch);
-  foo("foo2");
   {
     assert(std::all_of(lefs.begin(), lefs.end(), [&](const auto& lef) {  // NOLINT
       return lef.rev_unit >= chrom->start_pos() && lef.rev_unit < chrom->end_pos();
@@ -599,12 +565,7 @@ void Simulation::rank_lefs(const absl::Span<const Lef> lefs,
       std::iota(rev_lef_rank_buff.begin(), rev_lef_rank_buff.end(), 0);
     }
 
-  if (lefs.size() < 20) MODLE_UNLIKELY {  // TODO Come up with a reasonable threshold
-      cppsort::insertion_sort(rev_lef_rank_buff.begin(), rev_lef_rank_buff.end(), rev_comparator);
-      cppsort::insertion_sort(fwd_lef_rank_buff.begin(), fwd_lef_rank_buff.end(), fwd_comparator);
-    }
-  else if (ranks_are_partially_sorted)
-    MODLE_LIKELY {
+  if (ranks_are_partially_sorted) MODLE_LIKELY {
       /*
       fmt::print(
           stderr, "fwd_inv={}\nrev_inv={}\n",
@@ -632,12 +593,19 @@ void Simulation::rank_lefs(const absl::Span<const Lef> lefs,
       // https://github.com/Morwenn/cpp-sort/blob/develop/docs/Sorters.md#drop_merge_sorter
       // The algorithm itself is not stable, but the *_comparator should take care of this, making
       // sorting stable in practice
-      cppsort::drop_merge_sort(rev_lef_rank_buff.begin(), rev_lef_rank_buff.end(), rev_comparator);
-      cppsort::drop_merge_sort(fwd_lef_rank_buff.begin(), fwd_lef_rank_buff.end(), fwd_comparator);
+      // Plot twist! It appears drop_merge_sort can cause (extremely rare) segfaults. The segfault
+      // is caused by an attempt to access an element (way!) past the end of the Span. For this
+      // reason, for the time being, we fall back on split_sort. In ModLE's use-case, both
+      // algorithms seem to be equally fast.
+      // cppsort::drop_merge_sort(rev_lef_rank_buff.begin(), rev_lef_rank_buff.end(),
+      // rev_comparator); cppsort::drop_merge_sort(fwd_lef_rank_buff.begin(),
+      // fwd_lef_rank_buff.end(), fwd_comparator);
+      cppsort::split_sort(rev_lef_rank_buff.begin(), rev_lef_rank_buff.end(), rev_comparator);
+      cppsort::split_sort(fwd_lef_rank_buff.begin(), fwd_lef_rank_buff.end(), fwd_comparator);
     }
   else
     MODLE_UNLIKELY {
-      // Fallback on pattern-defeating quicksort we have no information regarding the level of
+      // Fallback to pattern-defeating quicksort we have no information regarding the level of
       // pre-sortedness of LEFs
       cppsort::pdq_sort(rev_lef_rank_buff.begin(), rev_lef_rank_buff.end(), rev_comparator);
       cppsort::pdq_sort(fwd_lef_rank_buff.begin(), fwd_lef_rank_buff.end(), fwd_comparator);
