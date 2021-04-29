@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.11)
+cmake_minimum_required(VERSION 3.18)
 
 project(
   modle
@@ -14,6 +14,22 @@ include(CheckCXXCompilerFlag)
 
 # Link this 'library' to set the c++ standard / compile-time options requested
 add_library(project_options INTERFACE)
+
+if (ENABLE_CUDA)
+  message(STATUS "Compiling project with CUDA support")
+  enable_language(CUDA)
+  find_package(CUDAToolkit 11 REQUIRED)
+  if(NOT DEFINED CMAKE_CUDA_STANDARD)
+    set(CMAKE_CUDA_STANDARD 17)
+    set(CMAKE_CUDA_STANDARD_REQUIRED ON)
+  endif()
+  if(NOT DEFINED CMAKE_CUDA_ARCHITECTURES)
+    set(CMAKE_CUDA_ARCHITECTURES 70 72 75)
+  endif()
+  set_target_properties(project_options
+          PROPERTIES CUDA_SEPARABLE_COMPILATION ON)
+  target_compile_definitions(project_options INTERFACE ENABLE_CUDA=1)
+endif()
 
 if(ENABLE_CXX20)
   check_cxx_compiler_flag("-std=c++20" CXX20_COMPILER_AVAILABLE)
