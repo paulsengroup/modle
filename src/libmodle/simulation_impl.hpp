@@ -168,8 +168,8 @@ void Simulation::simulate_extrusion_kernel(Simulation::State& s) const {
     s.rand_eng = modle::PRNG(s.seed);
 
     // Generate the epoch at which each LEF is supposed to be initially loaded
-    auto& lef_initial_loading_epoch = s.epoch_buff;
-    lef_initial_loading_epoch.resize(this->skip_burnin ? 0 : s.nlefs);
+    auto lef_initial_loading_epoch = absl::MakeSpan(s.epoch_buff);
+    // lef_initial_loading_epoch.resize(this->skip_burnin ? 0 : s.nlefs);
 
     if (!this->skip_burnin) {
       // TODO Consider using a Poisson process instead of sampling from an uniform distribution
@@ -240,15 +240,21 @@ void Simulation::simulate_extrusion_kernel(Simulation::State& s) const {
       if (!lef_initial_loading_epoch.empty()) {  // Execute this branch only during the burnin phase
         if (this->skip_burnin) {
           // The following will cause every LEF to be loaded in the current iteration
-          lef_initial_loading_epoch.clear();
+          lef_initial_loading_epoch.subspan(0, 0);
+          // lef_initial_loading_epoch.clear();
         }
 
         // Consume epochs for LEFs that are supposed to be loaded in the current epoch
-        while (!lef_initial_loading_epoch.empty() && lef_initial_loading_epoch.back() == epoch) {
-          lef_initial_loading_epoch.pop_back();
+        auto nlefs_to_bind = 0UL;
+        for (const auto n : boost::adaptors::reverse(lef_initial_loading_epoch)) {
+          if (n != epoch) {
+            break;
+          }
+          ++nlefs_to_bind;
         }
-        // Don't remove this assertion! It is very useful to prevent empty Spans (which can cause
-        // weird issues later on during the simulation) NOLINTNEXTLINE
+        lef_initial_loading_epoch.remove_suffix(nlefs_to_bind);
+        // Don't remove this assertion! It is very useful to prevent empty Spans and other
+        // issues that can cause weird issues later on during the simulation NOLINTNEXTLINE
         assert(lef_initial_loading_epoch.size() < s.nlefs);  // NOLINT
 
         // Compute the current number of active LEFs (i.e. LEFs that are either bound to DNA, or
@@ -518,7 +524,7 @@ void Simulation::rank_lefs(const absl::Span<const Lef> lefs,
   assert(lefs.size() == fwd_lef_rank_buff.size());  // NOLINT
   assert(lefs.size() == rev_lef_rank_buff.size());  // NOLINT
 
-  auto rev_comparator = [&](const auto r1, const auto r2) {
+  auto rev_comparator = [&](const auto r1, const auto r2) constexpr noexcept {
     const auto& p1 = lefs[r1].rev_unit.pos();
     const auto& p2 = lefs[r2].rev_unit.pos();
     if (p1 == p2) MODLE_UNLIKELY {
@@ -542,7 +548,7 @@ void Simulation::rank_lefs(const absl::Span<const Lef> lefs,
   };
 
   // See comments for rev_comparator.
-  auto fwd_comparator = [&](const auto r1, const auto r2) {
+  auto fwd_comparator = [&](const auto r1, const auto r2) constexpr noexcept {
     const auto& p1 = lefs[r1].fwd_unit.pos();
     const auto& p2 = lefs[r2].fwd_unit.pos();
     if (p1 == p2) MODLE_UNLIKELY {
@@ -823,6 +829,19 @@ void Simulation::State::resize(size_t size) {
   if (size == std::numeric_limits<size_t>::max()) {
     size = this->nlefs;
   }
+#ifndef NDEBUG
+  if (const auto size_ = static_cast<long int>(size); lef_buff.size() > size) {
+    std::for_each(lef_buff.begin() + size_, lef_buff.end(), [](auto& lef) { lef.release(); });
+    std::fill(lef_unloader_affinity.begin() + size_, lef_unloader_affinity.end(), std::nan(""));
+    std::fill(rank_buff1.begin() + size_, rank_buff1.end(), std::numeric_limits<size_t>::max());
+    std::fill(rank_buff2.begin() + size_, rank_buff2.end(), std::numeric_limits<size_t>::max());
+    std::fill(moves_buff1.begin() + size_, moves_buff1.end(), std::numeric_limits<bp_t>::max());
+    std::fill(moves_buff2.begin() + size_, moves_buff2.end(), std::numeric_limits<bp_t>::max());
+    std::fill(idx_buff1.begin() + size_, idx_buff1.end(), std::numeric_limits<size_t>::max());
+    std::fill(idx_buff2.begin() + size_, idx_buff2.end(), std::numeric_limits<size_t>::max());
+    std::fill(epoch_buff.begin() + size_, epoch_buff.end(), std::numeric_limits<size_t>::max());
+  }
+#endif
   lef_buff.resize(size);
   lef_unloader_affinity.resize(size);
   rank_buff1.resize(size);
