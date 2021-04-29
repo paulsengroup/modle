@@ -20,6 +20,7 @@
 #include "modle/simulation.hpp"  // for Simulation
 #include "modle/utils.hpp"       // for ndebug_defined, traced
 
+
 int main(int argc, char** argv) noexcept {
   std::unique_ptr<modle::Cli> cli{nullptr};
 

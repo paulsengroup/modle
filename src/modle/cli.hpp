@@ -219,6 +219,12 @@ class Cli {
             ->transform((remove_trailing_zeros_from_floats))
             ->capture_default_str();
 
+    gen->add_flag(
+            "--with-gpu,!--without-gpu",
+            this->_config.with_gpu,
+            "Offload parts of the simulation.")
+            ->capture_default_str();
+
     prob->add_option(
             "--probability-of-lef-bypass",
             this->_config.probability_of_extrusion_unit_bypass,
