@@ -41,9 +41,26 @@
 #include "modle/extrusion_barriers.hpp"  // for ExtrusionBarrier
 #include "modle/utils.hpp"               // for traced
 
+#ifdef ENABLE_CUDA
+#include <cuda_runtime.h>
+#include <thrust/device_vector.h>
+
+#include <cuda/std/atomic>
+
+#include "modle/simulation.cuh"
+#endif
+
 namespace modle {
 
 void Simulation::run() {
+  if (this->with_gpu) {
+    this->run_CUDA();
+  } else {
+    this->run_CPU();
+  }
+}
+
+void Simulation::run_CPU() {
   if (!this->skip_output) {  // Write simulation params to file
     if (this->force) {
       std::filesystem::remove_all(this->path_to_output_file);
@@ -281,6 +298,27 @@ void Simulation::worker(
 #endif
     throw;
   }
+}
+
+void Simulation::run_CUDA() {
+#ifdef ENABLE_CUDA
+  const auto nrows = 10UL;
+  const auto ncols = 10UL;
+
+  auto missed_updates = 0UL;
+  auto tot_contacts = 0UL;
+
+  const auto buff =
+      modle::cu::Simulation::run_mykernel2(nrows, ncols, missed_updates, tot_contacts);
+
+  fmt::print(stderr, "{}\n", absl::StrJoin(buff, ", "));
+  modle::ContactMatrix<uint32_t> m_host(absl::MakeConstSpan(buff), nrows, ncols);
+#else
+  throw std::runtime_error(
+      "ModLE was not compiled with CUDA support. Consider re-compiling the project with passing "
+      "-DENABLE_CUDA=ON to CMake. If this is not possible, please --with-gpu from the command line "
+      "options and re-run ModLE.");
+#endif
 }
 
 }  // namespace modle

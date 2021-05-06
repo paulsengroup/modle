@@ -86,7 +86,11 @@ class Simulation : Config {
   inline void run();
 
  private:
+  const Config* _config;
   Genome _chromosomes{};
+
+  inline void run_CPU();
+  inline void run_CUDA();
 
   [[nodiscard]] [[maybe_unused]] inline boost::asio::thread_pool instantiate_thread_pool() const;
   template <typename I>

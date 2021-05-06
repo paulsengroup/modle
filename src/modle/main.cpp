@@ -20,7 +20,6 @@
 #include "modle/simulation.hpp"  // for Simulation
 #include "modle/utils.hpp"       // for ndebug_defined, traced
 
-
 int main(int argc, char** argv) noexcept {
   std::unique_ptr<modle::Cli> cli{nullptr};
 
@@ -37,6 +36,7 @@ int main(int argc, char** argv) noexcept {
 
     const auto t0 = absl::Now();
     modle::Simulation{config}.run();
+
     fmt::print(stderr, FMT_STRING("Simulation terminated without errors in {}!\n\nBye.\n"),
                absl::FormatDuration(absl::Now() - t0));
   } catch (const CLI::ParseError& e) {

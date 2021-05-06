@@ -62,6 +62,7 @@ namespace modle {
 
 Simulation::Simulation(const Config& c, bool import_chroms)
     : Config(c),
+      _config(&c),
       _chromosomes(import_chroms
                        ? instantiate_genome(path_to_chrom_sizes, path_to_extr_barriers,
                                             path_to_chrom_subranges, write_contacts_for_ko_chroms)

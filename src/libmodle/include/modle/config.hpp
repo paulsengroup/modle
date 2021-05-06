@@ -60,7 +60,7 @@ struct Config {
   bool allow_lef_lifetime_extension{true};
   bool skip_burnin{false};
   uint64_t seed{0};
-  bool with_gpu{true};
+  bool with_gpu{false};
 
   // Misc probabilities
   double probability_of_extrusion_unit_bypass{0.25};     // NOLINT(readability-magic-numbers, cppcoreguidelines-avoid-magic-numbers)

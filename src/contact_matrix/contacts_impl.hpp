@@ -54,6 +54,20 @@ ContactMatrix<I>::ContactMatrix(size_t nrows, size_t ncols, bool fill_with_rando
 }
 
 template <typename I>
+ContactMatrix<I>::ContactMatrix(const absl::Span<const I> contacts, size_t nrows, size_t ncols,
+                                size_t tot_contacts, size_t updates_missed)
+    : _nrows(nrows),
+      _ncols(ncols),
+      _contacts(contacts.begin(), contacts.end()),
+      _updates_missed(updates_missed),
+      _tot_contacts(tot_contacts),
+      _locks(_ncols) {
+  if (this->_tot_contacts == 0 && !this->_contacts.empty()) {
+    this->_tot_contacts = std::accumulate(this->_contacts.begin(), this->_contacts.end(), 0UL);
+  }
+}
+
+template <typename I>
 ContactMatrix<I> &ContactMatrix<I>::operator=(const ContactMatrix<I> &other) {
   this->_nrows = other.nrows();
   this->_ncols = other.ncols();
@@ -531,6 +545,11 @@ bool ContactMatrix<I>::empty() const {
 template <typename I>
 absl::Span<const I> ContactMatrix<I>::get_raw_count_vector() const {
   return absl::MakeConstSpan(this->_contacts);
+}
+
+template <typename I>
+std::vector<I> &ContactMatrix<I>::get_raw_count_vector() {
+  return this->_contacts;
 }
 
 template <typename I>

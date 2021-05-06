@@ -46,6 +46,9 @@ option(ENABLE_CXX20 "Compile project under C++20 if this is supported by the com
 
 option(OPTIMIZE_FOR_PROFILING
        "Compile project in RelWithDebInfo and with less aggressive optimizations to aid profiling" OFF)
-option(ENABLE_ASSERTIONS "Enable assertions and various other runtime checks (this is done regardless of the type passed to CMAKE_BUILD_TYPE)" OFF)
+option(
+  ENABLE_ASSERTIONS
+  "Enable assertions and various other runtime checks (this is done regardless of the type passed to CMAKE_BUILD_TYPE)"
+  OFF)
 
 option(ENABLE_CUDA "Compile project with CUDA extensions." OFF)
