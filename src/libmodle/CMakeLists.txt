@@ -20,15 +20,17 @@ if(ENABLE_CUDA)
   target_sources(
     libmodle_cuda
     PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/simulation_impl.cu
-    PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include/modle/simulation.cuh)
-  set_source_files_properties(${CMAKE_CURRENT_SOURCE_DIR}/include/modle/simulation.cuh
-                              ${CMAKE_CURRENT_SOURCE_DIR}/simulation_impl.cu PROPERTIES LANGUAGE CUDA)
+    PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include/modle/extrusion_barriers.cuh
+           ${CMAKE_CURRENT_SOURCE_DIR}/include/modle/simulation.cuh)
+  set_source_files_properties(${CMAKE_CURRENT_SOURCE_DIR}/include/modle/extrusion_barriers.cuh
+                              ${CMAKE_CURRENT_SOURCE_DIR}/include/modle/simulation.cuh PROPERTIES LANGUAGE CUDA)
   target_include_directories(libmodle_cuda PUBLIC include/)
 
   target_link_libraries(
     libmodle_cuda
     PRIVATE project_warnings project_options
-    PUBLIC Modle::cmatrix $<IF:$<BOOL:${BUILD_SHARED_LIBS}>,CUDA::cudart,CUDA::cudart_static>)
+    PUBLIC Modle::cmatrix $<IF:$<BOOL:${BUILD_SHARED_LIBS}>,CUDA::cudart,CUDA::cudart_static>
+           $<IF:$<BOOL:${BUILD_SHARED_LIBS}>,CUDA::curand,CUDA::curand_static>)
 endif()
 
 target_link_libraries(

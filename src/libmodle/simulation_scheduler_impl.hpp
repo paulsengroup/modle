@@ -42,11 +42,6 @@
 #include "modle/utils.hpp"               // for traced
 
 #ifdef ENABLE_CUDA
-#include <cuda_runtime.h>
-#include <thrust/device_vector.h>
-
-#include <cuda/std/atomic>
-
 #include "modle/simulation.cuh"
 #endif
 
@@ -302,6 +297,7 @@ void Simulation::worker(
 
 void Simulation::run_CUDA() {
 #ifdef ENABLE_CUDA
+#if 0
   const auto nrows = 10UL;
   const auto ncols = 10UL;
 
@@ -313,6 +309,32 @@ void Simulation::run_CUDA() {
 
   fmt::print(stderr, "{}\n", absl::StrJoin(buff, ", "));
   modle::ContactMatrix<uint32_t> m_host(absl::MakeConstSpan(buff), nrows, ncols);
+
+  auto bin_size_ = 1UL;
+  auto f = std::make_unique<cooler::Cooler>(std::filesystem::path("/tmp/test.cool"),
+                                            cooler::Cooler::WRITE_ONLY, bin_size_, 5);
+
+  f->write_or_append_cmatrix_to_file(m_host, "chr1", 0UL, m_host.ncols() / bin_size_,
+                                     m_host.ncols() / bin_size_);
+#endif
+
+#if 1
+  std::vector<modle::cu::ExtrusionBarrier> barriers(100000);
+  std::mt19937_64 rand_eng;
+  std::generate(barriers.begin(), barriers.end(), [&]() {
+    const auto pos = std::uniform_int_distribution<bp_t>{0, 100'000'000}(rand_eng);
+    const auto direction = std::bernoulli_distribution{}(rand_eng) ? modle::cu::dna::Direction::fwd
+                                                                   : modle::cu::dna::Direction::rev;
+    return modle::cu::ExtrusionBarrier{pos, 0.93, 0.7, direction};
+  });
+
+  const auto t0 = absl::Now();
+  const auto states = modle::cu::Simulation::run_mykernel3(barriers);
+  fmt::print(stderr, "DONE in {}\n", absl::FormatDuration(absl::Now() - t0));
+
+  fmt::print(stderr, "{}\n", absl::StrJoin(states, ", "));
+
+#endif
 #else
   throw std::runtime_error(
       "ModLE was not compiled with CUDA support. Consider re-compiling the project with passing "
