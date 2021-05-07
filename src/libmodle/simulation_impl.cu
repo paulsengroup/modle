@@ -6,6 +6,7 @@
 #include <algorithm>
 #include <cstdint>
 #include <cstdio>
+#include <cuda/std/atomic>
 #include <vector>
 
 #include "modle/contacts.cuh"
@@ -13,6 +14,115 @@
 #include "modle/simulation.cuh"
 
 namespace modle::cu::Simulation {
+
+__host__ __device__ State::~State() {
+  delete[] barrier_pos;
+  delete[] barrier_directions;
+  delete[] barrier_mask;
+
+  delete[] rev_unit_pos;
+  delete[] fwd_unit_pos;
+  delete[] lef_rev_unit_idx;
+  delete[] lef_fwd_unit_idx;
+
+  delete[] rev_moves_buff;
+  delete[] fwd_moves_buff;
+  delete[] rev_collision_mask;
+  delete[] fwd_collision_mask;
+
+  delete[] lef_unloader_affinities;
+  delete[] contact_local_buff;
+  delete[] epoch_buff;
+
+  delete[] rng_state;
+}
+
+__global__ void init_global_buffers_kernel(State* states, uint32_t nstates, uint32_t max_nlefs,
+                                           uint32_t max_nbarriers,
+                                           cuda::std::atomic<bool>* global_ok) {
+  const auto id = threadIdx.x + blockIdx.x * blockDim.x;
+  const auto nthreads = blockDim.x * gridDim.x;
+
+  const auto chunk_size = max(1, (nstates + 1) / nthreads);
+
+  if (id == 0) {
+    bool local_ok = true;
+    local_ok &= !!(states[0].barrier_pos = new bp_t[max_nbarriers]);
+    local_ok &= !!(states[0].barrier_directions = new dna::Direction[max_nbarriers]);
+    local_ok &= !!(states[0].barrier_mask = new bool[max_nbarriers]);
+    if (!local_ok) {
+      *global_ok = false;
+    }
+  }
+  __syncthreads();
+
+  const auto i0 = id * chunk_size;
+  const auto i1 = (id + 1) * chunk_size;
+  for (auto i = i0; i < i1 && i < nstates && *global_ok; ++i) {
+    bool local_ok = true;
+    states[i].barrier_pos = states[0].barrier_pos;
+    states[i].barrier_directions = states[0].barrier_directions;
+    states[i].barrier_mask = states[0].barrier_mask;
+
+    local_ok &= !!(states[i].rev_unit_pos = new bp_t[max_nlefs]);
+    local_ok &= !!(states[i].fwd_unit_pos = new bp_t[max_nlefs]);
+    local_ok &= !!(states[i].lef_rev_unit_idx = new bp_t[max_nlefs]);
+    local_ok &= !!(states[i].lef_fwd_unit_idx = new bp_t[max_nlefs]);
+
+    local_ok &= !!(states[i].rev_moves_buff = new bp_t[max_nlefs]);
+    local_ok &= !!(states[i].fwd_moves_buff = new bp_t[max_nlefs]);
+    local_ok &= !!(states[i].rev_collision_mask = new bp_t[max_nlefs]);
+    local_ok &= !!(states[i].fwd_collision_mask = new bp_t[max_nlefs]);
+
+    local_ok &= !!(states[i].lef_unloader_affinities = new float[max_nlefs]);
+    local_ok &= !!(states[i].contact_local_buff = new uint2[max_nlefs]);  // TODO CHANGEME
+    local_ok &= !!(states[i].epoch_buff = new bp_t[max_nlefs]);
+
+    local_ok &= !!(states[i].rng_state = new curandStatePhilox4_32_10_t[blockDim.x]);
+
+    if (!local_ok) {
+      *global_ok = false;
+      return;
+    }
+  }
+}
+
+__global__ void free_global_buffers_kernel(State* states, uint32_t nstates) {
+  const auto id = threadIdx.x + blockIdx.x * blockDim.x;
+  const auto nthreads = blockDim.x * gridDim.x;
+
+  const auto chunk_size = max(1, (nstates + 1) / nthreads);
+
+  if (id == 0) {
+    delete[] states[0].barrier_pos;
+    delete[] states[0].barrier_directions;
+    delete[] states[0].barrier_mask;
+  }
+  __syncthreads();
+
+  const auto i0 = id * chunk_size;
+  const auto i1 = (id + 1) * chunk_size;
+  for (auto i = i0; i < i1 && i < nstates; ++i) {
+    delete[] states[i].rev_unit_pos;
+    delete[] states[i].fwd_unit_pos;
+    delete[] states[i].lef_rev_unit_idx;
+    delete[] states[i].lef_fwd_unit_idx;
+
+    delete[] states[i].rev_moves_buff;
+    delete[] states[i].fwd_moves_buff;
+    delete[] states[i].rev_collision_mask;
+    delete[] states[i].fwd_collision_mask;
+
+    delete[] states[i].lef_unloader_affinities;
+    delete[] states[i].contact_local_buff;
+    delete[] states[i].epoch_buff;
+
+    delete[] states[i].rng_state;
+  }
+
+  __syncthreads();
+  delete[] states;
+}
 
 __global__ void setup_curand_kernel(curandStatePhilox4_32_10_t* state, uint64_t seed = 123456789) {
   const auto id = threadIdx.x + blockIdx.x * blockDim.x;
@@ -75,7 +185,7 @@ __global__ void mykernel2(ContactMatrix<uint32_t>* m, cuda::std::atomic<uint32_t
 __global__ void mykernel3(const ExtrusionBarrier* barriers, size_t nbarriers, CTCF::State* mask,
                           curandStatePhilox4_32_10_t* rng_state) {
   const auto id = threadIdx.x + blockIdx.x * blockDim.x;
-  for (auto i = 0UL; i < 100000; ++i) {
+  for (auto i = 0UL; i < 20000; ++i) {
     if (id == 0 && i % 1000 == 0) printf("iter=%lu\n", i);
     CTCF::update_states(barriers, nbarriers, mask, rng_state);
   }
@@ -140,7 +250,8 @@ std::vector<CTCF::State> run_mykernel3(const std::vector<ExtrusionBarrier>& host
 
   CUDA_CALL(cudaMalloc(&dev_barriers, sizeof(ExtrusionBarrier) * host_barriers.size()));
   CUDA_CALL(cudaMalloc(&dev_barrier_states, sizeof(CTCF::State) * host_barriers.size()));
-  CUDA_CALL(cudaMalloc(&dev_rng_states, grid_size * block_size * sizeof(curandStatePhilox4_32_10_t)));
+  CUDA_CALL(
+      cudaMalloc(&dev_rng_states, grid_size * block_size * sizeof(curandStatePhilox4_32_10_t)));
   CUDA_CALL(cudaMalloc(&dev_pos_buff, sizeof(size_t) * host_barriers.size()));
   CUDA_CALL(cudaMalloc(&dev_dir_buff, sizeof(CTCF::State) * host_barriers.size()));
   CUDA_CALL(cudaDeviceSynchronize());
@@ -160,12 +271,15 @@ std::vector<CTCF::State> run_mykernel3(const std::vector<ExtrusionBarrier>& host
 
   CUDA_CALL(cudaDeviceSynchronize());
   setup_curand_kernel<<<grid_size, block_size>>>(dev_rng_states, seed);
-  init_barriers<<<grid_size, block_size>>>(dev_barriers, host_barriers.size(), dev_pos_buff, dev_dir_buff);
+  init_barriers<<<grid_size, block_size>>>(dev_barriers, host_barriers.size(), dev_pos_buff,
+                                           dev_dir_buff);
   CUDA_CALL(cudaDeviceSynchronize());
-  init_ctcf_states_kernel<<<grid_size, block_size>>>(dev_barrier_states, host_barriers.size(), dev_rng_states);
+  init_ctcf_states_kernel<<<grid_size, block_size>>>(dev_barrier_states, host_barriers.size(),
+                                                     dev_rng_states);
   CUDA_CALL(cudaDeviceSynchronize());
 
-  mykernel3<<<grid_size, block_size>>>(dev_barriers, host_barriers.size(), dev_barrier_states, dev_rng_states);
+  mykernel3<<<grid_size, block_size>>>(dev_barriers, host_barriers.size(), dev_barrier_states,
+                                       dev_rng_states);
   CUDA_CALL(cudaDeviceSynchronize());
   CUDA_CALL(cudaFree(dev_barriers));
   CUDA_CALL(cudaFree(dev_rng_states));
@@ -179,4 +293,36 @@ std::vector<CTCF::State> run_mykernel3(const std::vector<ExtrusionBarrier>& host
 
   return host_states;
 }
+
+[[nodiscard]] State* call_init_global_buffers_kernel(size_t grid_size, size_t block_size,
+                                                     uint32_t max_nlefs, uint32_t max_nbarriers) {
+  CUDA_CALL(cudaDeviceSetLimit(cudaLimitMallocHeapSize, 1024ULL * 1024ULL * 2048LL));  // 2GB
+  assert(grid_size > 0);                                                               // NOLINT
+  // We allocate one state per block
+
+  State* states{nullptr};
+  cuda::std::atomic<bool>* dev_status{nullptr};
+  cuda::std::atomic<bool> host_status{};
+
+  CUDA_CALL(cudaMalloc(&states, sizeof(State) * grid_size));
+  CUDA_CALL(cudaMalloc(&dev_status, sizeof(cuda::std::atomic<bool>)));
+  CUDA_CALL(cudaMemset(dev_status, true, sizeof(cuda::std::atomic<bool>)));
+
+  init_global_buffers_kernel<<<grid_size, block_size>>>(states, grid_size, max_nlefs, max_nbarriers,
+                                                        dev_status);
+  CUDA_CALL(cudaDeviceSynchronize());
+  CUDA_CALL(cudaMemcpy(&host_status, dev_status, sizeof(cuda::std::atomic<bool>),
+                       cudaMemcpyDeviceToHost));
+  CUDA_CALL(cudaDeviceSynchronize());
+  if (!host_status) {
+    throw std::runtime_error("Unable to allocate enough memory to initialize device buffers.");
+  }
+  return states;
+}
+
+void call_free_global_buffers_kernel(size_t grid_size, size_t block_size, State* states) {
+  free_global_buffers_kernel<<<grid_size, block_size>>>(states, grid_size);
+  CUDA_CALL(cudaDeviceSynchronize());
+}
+
 }  // namespace modle::cu::Simulation

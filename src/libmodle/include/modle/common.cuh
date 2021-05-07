@@ -2,8 +2,7 @@
 
 #include <fmt/format.h>
 
-#include <cstddef>  // IWYU pragma: keep for size_t
-#include <cstdint>  // for uint32_t, uint_fast8_t
+#include <cuda/std/cstdint>  // for uint32_t, uint_fast8_t
 
 namespace modle::cu {
 
@@ -15,8 +14,8 @@ namespace modle::cu {
     }                                                                                        \
   } while (0)
 
-using bp_t = size_t;
-using collision_t = uint_fast32_t;
+using bp_t = uint32_t;
+using collision_t = uint32_t;
 using contacts_t = uint32_t;
 
 namespace dna {
