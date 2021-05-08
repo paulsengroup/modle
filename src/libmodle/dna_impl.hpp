@@ -98,6 +98,7 @@ void Chromosome::add_extrusion_barrier(bed::BED barrier) { this->_barriers.empla
 void Chromosome::add_extrusion_barrier(bed::BED &&barrier) { this->_barriers.emplace(barrier); }
 
 std::string_view Chromosome::name() const { return this->_name; }
+const char *Chromosome::name_cstr() const { return this->_name.c_str(); }
 
 constexpr bp_t Chromosome::start_pos() const { return this->_start; }
 

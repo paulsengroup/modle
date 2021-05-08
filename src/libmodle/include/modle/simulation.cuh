@@ -11,26 +11,16 @@
 using curandStatePhilox4_32_10_t = struct curandStatePhilox4_32_10;
 
 namespace modle::cu::Simulation {
-__global__ void mykernel();
-__global__ void mykernel2(modle::cu::ContactMatrix<uint32_t>* m, cuda::std::atomic<uint32_t>* buff,
-                          size_t nrows, size_t ncols, size_t& missed_updates, size_t& tot_contacts);
-
-__global__ void mykernel3(const ExtrusionBarrier* barriers, size_t nbarriers, CTCF::State* mask,
-                          curandStatePhilox4_32_10_t* rng_state);
-[[nodiscard]] std::vector<uint32_t> run_mykernel2(size_t nrows, size_t ncols,
-                                                  size_t& missed_updates, size_t& tot_contacts);
-
-[[nodiscard]] std::vector<CTCF::State> run_mykernel3(
-    const std::vector<ExtrusionBarrier>& host_barriers, uint64_t seed = 123456789);
 
 struct Task {
   __host__ __device__ inline Task() = default;
   uint32_t id{};
-  char* chrom_name{nullptr};
+
+  uint32_t chrom_id{};
   bp_t chrom_start{};
   bp_t chrom_end{};
-  uint32_t cell_id{};
 
+  uint32_t cell_id{};
   uint32_t n_target_epochs{};
   uint64_t n_target_contacts{};
 
@@ -39,14 +29,11 @@ struct Task {
   uint64_t seed{};
 };
 
-struct State : Task {
-  __host__ __device__ inline State() = default;
-  __host__ __device__ inline State(const State& other) = delete;
-  __host__ __device__ inline State(State&& other) = delete;
-  __host__ __device__ inline ~State();
+struct BlockState {
+  __host__ __device__ inline BlockState() = default;
+  __host__ __device__ inline BlockState(const BlockState& other) = delete;
+  __host__ __device__ inline BlockState(BlockState&& other) = delete;
 
-  bp_t* barrier_pos{nullptr};
-  dna::Direction* barrier_directions{nullptr};
   bool* barrier_mask{nullptr};
 
   bp_t* rev_unit_pos{nullptr};
@@ -68,12 +55,29 @@ struct State : Task {
   curandStatePhilox4_32_10_t* rng_state{nullptr};
 };
 
-[[nodiscard]] State* call_init_global_buffers_kernel(size_t grid_size, size_t block_size,
-                                                     uint32_t max_nlefs, uint32_t max_nbarriers);
-void call_free_global_buffers_kernel(size_t grid_size, size_t block_size, State* states);
+struct GlobalState {
+  __host__ __device__ GlobalState() = default;
+  __host__ __device__ inline GlobalState(const GlobalState& other) = delete;
+  __host__ __device__ inline GlobalState(GlobalState&& other) = delete;
 
-void call_simulation_kernel(size_t grid_size, size_t block_size, const std::vector<Task>& tasks,
-                            const std::vector<uint32_t>& barrier_pos,
+  BlockState* block_states{nullptr};
+  Task* tasks{nullptr};
+
+  bp_t* barrier_pos{nullptr};
+  dna::Direction* barrier_directions{nullptr};
+
+  uint32_t nblock_states{};
+  uint32_t ntasks{};
+};
+
+[[nodiscard]] GlobalState* call_allocate_global_state_kernel(size_t grid_size, size_t block_size,
+                                                             uint32_t max_nlefs,
+                                                             uint32_t max_nbarriers);
+
+void call_free_global_state_kernel(size_t grid_size, size_t block_size, GlobalState* global_state);
+
+void call_simulation_kernel(size_t grid_size, size_t block_size, GlobalState* global_state,
+                            std::vector<Task>& tasks, const std::vector<uint32_t>& barrier_pos,
                             const std::vector<dna::Direction>& barrier_dir);
 
 }  // namespace modle::cu::Simulation

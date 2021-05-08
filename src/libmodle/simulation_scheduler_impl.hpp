@@ -181,7 +181,7 @@ void Simulation::run_CPU() {
         target_contacts == 0UL ? this->simulation_iterations : std::numeric_limits<size_t>::max();
 
     size_t cellid = 0;
-    const auto nbatches = ((this->ncells + task_batch_size - 1) / task_batch_size);
+    const auto nbatches = (this->ncells + task_batch_size - 1) / task_batch_size;
     for (auto batchid = 0UL; batchid < nbatches; ++batchid) {
       // Generate a batch of tasks for all the simulations involving the current chrom
       std::generate(tasks.begin(), tasks.end(), [&]() {
@@ -312,26 +312,44 @@ void Simulation::run_CUDA() {
       this->instantiate_genome(this->path_to_chrom_sizes, this->path_to_extr_barriers,
                                this->path_to_chrom_subranges, this->write_contacts_for_ko_chroms);
 
+  const auto max_chrom_name_length =
+      std::max_element(  // Find chrom with the longest name
+          this->_chromosomes.begin(), this->_chromosomes.end(),
+          [](const auto& c1, const auto& c2) { return c1.name().size() < c2.name().size(); })
+          ->name()
+          .size() +
+      1;
+  const auto& longest_chrom = std::max_element(
+      genome.begin(), genome.end(),
+      [&](const auto& c1, const auto& c2) { return c1.simulated_size() < c2.simulated_size(); });
+  const auto max_nbarriers = static_cast<uint32_t>(
+      std::max_element(genome.begin(), genome.end(), [](const auto& c1, const auto& c2) {
+        return c1.nbarriers() < c2.nbarriers();
+      })->nbarriers());
+  const auto max_nlefs = static_cast<uint32_t>(
+      std::round(this->number_of_lefs_per_mbp *
+                 (static_cast<double>(longest_chrom->simulated_size()) / 1.0e6)));
+
   const auto grid_size = 1088UL;
   const auto block_size = 64UL;
-  auto* dev_states =
-      modle::cu::Simulation::call_init_global_buffers_kernel(grid_size, block_size, 5000, 3500);
+  const auto task_batch_size = grid_size;
+
+  auto* global_state_dev = modle::cu::Simulation::call_allocate_global_state_kernel(
+      grid_size, block_size, max_nlefs, max_nbarriers);
+
   std::vector<Chromosome*> chroms(static_cast<size_t>(this->_chromosomes.size()));
   std::transform(this->_chromosomes.begin(), this->_chromosomes.end(), chroms.begin(),
                  [](auto& chrom) { return &chrom; });
   std::sort(chroms.begin(), chroms.end(),
             [](const auto* const c1, const auto* const c2) { return c1->size() > c2->size(); });
 
-  std::vector<modle::cu::Simulation::Task> task_buff(ncells);
+  std::vector<modle::cu::Simulation::Task> task_buff(task_batch_size);
   std::vector<uint32_t> barrier_pos_buff(chroms.front()->nbarriers());
   std::vector<modle::cu::dna::Direction> barrier_direction_buff(chroms.front()->nbarriers());
 
-  modle::cu::Simulation::call_free_global_buffers_kernel(grid_size, block_size, dev_states);
-
-  /*
   for (const auto& chrom : chroms) {
     if (!chrom->ok()) {
-      fmt::print(stderr, "SKIPPING '{}'...\n", chrom->name());
+      fmt::print(stderr, FMT_STRING("SKIPPING '{}'...\n"), chrom->name());
       if (this->write_contacts_for_ko_chroms) {
         chrom->allocate_contacts(this->bin_size,
                                  this->diagonal_width);  // TODO: Can we remove this?
@@ -341,12 +359,14 @@ void Simulation::run_CUDA() {
       }
       continue;
     }
+
+    const auto t0 = absl::Now();
     // Allocate the contact matrix. Once it's not needed anymore, the contact matrix will be
     // de-allocated by the thread that is writing contacts to disk
     chrom->allocate_contacts(this->bin_size, this->diagonal_width);
 
     modle::cu::Simulation::Task base_task{};
-    base_task.chrom_name = const_cast<char*>(chrom->name().data());
+    base_task.chrom_id = 1;  // TODO CHANGEME
     base_task.chrom_start = chrom->start_pos();
     base_task.chrom_end = chrom->end_pos();
 
@@ -366,62 +386,34 @@ void Simulation::run_CUDA() {
                                     ? static_cast<uint32_t>(this->simulation_iterations)
                                     : std::numeric_limits<uint32_t>::max();
 
-    uint32_t cellid = 0;
-    std::generate(task_buff.begin(), task_buff.end(), [&]() {
-      auto t = base_task;
-      t.cell_id = cellid++;
-      t.seed = this->seed + std::hash<std::string_view>{}(chrom->name()) +
-               std::hash<size_t>{}(chrom->size()) + std::hash<size_t>{}(t.cell_id);
-      return t;
-    });
-
-    const auto nbarriers = barriers.at(chrom->name())->size();
-    barrier_pos_buff.resize(nbarriers);
-    barrier_direction_buff.resize(nbarriers);
-    size_t i = 0;
-    for (const auto& b : *barriers.at(chrom->name())) {
-      barrier_pos_buff[i] = b.pos();
-      barrier_direction_buff[i++] = static_cast<modle::cu::dna::Direction>(
-          b.blocking_direction_minor());  // i.e. motif direction
-    }
-
-    call_simulation_kernel(block_size, grid_size, task_buff, barrier_pos_buff,
-                           barrier_direction_buff);
-
-    const auto nbatches = ((this->ncells + task_batch_size - 1) / task_batch_size);
+    task_buff.resize(task_batch_size);
+    size_t cellid = 0;
+    const auto nbatches = (this->ncells + task_batch_size - 1) / task_batch_size;
+    fmt::print(stderr, FMT_STRING("Processing '{}' in {} batches of {} blocks...\n"), chrom->name(),
+               nbatches, grid_size);
     for (auto batchid = 0UL; batchid < nbatches; ++batchid) {
       // Generate a batch of tasks for all the simulations involving the current chrom
-      std::generate(tasks.begin(), tasks.end(), [&]() {
-        return Task{taskid++,        chrom, cellid++,          target_epochs,
-                    target_contacts, nlefs, extr_barriers_buff};
+      std::generate(task_buff.begin(), task_buff.end(), [&]() {
+        auto t = base_task;
+        t.cell_id = cellid++;
+        t.seed = this->seed + std::hash<std::string_view>{}(chrom->name()) +
+                 std::hash<size_t>{}(chrom->size()) + std::hash<size_t>{}(t.cell_id);
+        return t;
       });
       const auto ntasks =
-          cellid > this->ncells ? tasks.size() - (cellid - this->ncells) : tasks.size();
-      auto sleep_us = 100;  // NOLINT
-      while (               // Enqueue tasks
-          !task_queue.try_enqueue_bulk(ptok, std::make_move_iterator(tasks.begin()), ntasks)) {
-        sleep_us = std::min(100000, sleep_us * 2);  // NOLINT
-        std::this_thread::sleep_for(std::chrono::microseconds(sleep_us));
-      }
+          cellid > this->ncells ? task_buff.size() - (cellid - this->ncells) : task_buff.size();
+
+      task_buff.resize(ntasks);
+
+      call_simulation_kernel(std::min(grid_size, ntasks), block_size, global_state_dev, task_buff,
+                             barrier_pos_buff, barrier_direction_buff);
     }
+    fmt::print(stderr, FMT_STRING("Done simulating '{}'. Simulation took {}.\n"), chrom->name(),
+               absl::FormatDuration(absl::Now() - t0));
   }
-}
 
-std::vector<modle::cu::ExtrusionBarrier> barriers(100000);
-std::mt19937_64 rand_eng;
-std::generate(barriers.begin(), barriers.end(), [&]() {
-  const auto pos = std::uniform_int_distribution<bp_t>{0, 100'000'000}(rand_eng);
-  const auto direction = std::bernoulli_distribution{}(rand_eng) ? modle::cu::dna::Direction::fwd
-                                                                 : modle::cu::dna::Direction::rev;
-  return modle::cu::ExtrusionBarrier{pos, 0.93, 0.7, direction};
-});
+  modle::cu::Simulation::call_free_global_state_kernel(grid_size, block_size, global_state_dev);
 
-const auto t0 = absl::Now();
-const auto states = modle::cu::Simulation::run_mykernel3(barriers);
-fmt::print(stderr, "DONE in {}\n", absl::FormatDuration(absl::Now() - t0));
-
-fmt::print(stderr, "{}\n", absl::StrJoin(states, ", "));
-   */
 #else
   throw std::runtime_error(
       "ModLE was not compiled with CUDA support. Consider re-compiling the project while passing "

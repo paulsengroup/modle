@@ -39,6 +39,7 @@ class Chromosome {
   inline void add_extrusion_barrier(bed::BED barrier);
 
   [[nodiscard]] inline std::string_view name() const;
+  [[nodiscard]] inline const char* name_cstr() const;
   [[nodiscard]] inline constexpr bp_t start_pos() const;
   [[nodiscard]] inline constexpr bp_t end_pos() const;
   [[nodiscard]] inline constexpr bp_t size() const;
