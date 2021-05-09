@@ -199,6 +199,12 @@ if(ENABLE_XOSHIRO)
   add_subdirectory(external/Xoshiro-cpp-1.1)
 endif()
 
+if(ENABLE_CUDA)
+  add_subdirectory(external/cuda-api-wrappers-0.4.1)
+  add_library(CudaAPIWrappers::Runtime ALIAS runtime-api)
+  add_library(CudaAPIWrappers::NVTX ALIAS nvtx)
+endif()
+
 if(ENABLE_TESTING)
   enable_testing()
   message(STATUS "Building tests")

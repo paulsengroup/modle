@@ -29,7 +29,9 @@ if(ENABLE_CUDA)
   target_link_libraries(
     libmodle_cuda
     PRIVATE project_warnings project_options
-    PUBLIC Modle::cmatrix $<IF:$<BOOL:${BUILD_SHARED_LIBS}>,CUDA::cudart,CUDA::cudart_static>
+    PUBLIC Modle::cmatrix
+           CudaAPIWrappers::Runtime
+           $<IF:$<BOOL:${BUILD_SHARED_LIBS}>,CUDA::cudart,CUDA::cudart_static>
            $<IF:$<BOOL:${BUILD_SHARED_LIBS}>,CUDA::curand,CUDA::curand_static>)
 endif()
 

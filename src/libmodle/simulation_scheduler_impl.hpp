@@ -297,6 +297,9 @@ void Simulation::worker(
 
 void Simulation::run_CUDA() {
 #ifdef ENABLE_CUDA
+
+  modle::cu::Simulation::init_simulation_params(this->_config->to_cuda_config());
+
   std::atomic<bool> end_of_simulation = false;
   std::mutex progress_queue_mutex;  // Protect rw access to progress_queue
   std::deque<std::pair<Chromosome*, size_t>> progress_queue;
@@ -306,19 +309,10 @@ void Simulation::run_CUDA() {
   std::mutex barrier_mutex;
   absl::flat_hash_map<Chromosome*, std::unique_ptr<std::vector<ExtrusionBarrier>>> barriers;
 
-  const auto config = this->_config->to_cuda_config();
-  (void)config;
   const auto genome =
       this->instantiate_genome(this->path_to_chrom_sizes, this->path_to_extr_barriers,
                                this->path_to_chrom_subranges, this->write_contacts_for_ko_chroms);
 
-  const auto max_chrom_name_length =
-      std::max_element(  // Find chrom with the longest name
-          this->_chromosomes.begin(), this->_chromosomes.end(),
-          [](const auto& c1, const auto& c2) { return c1.name().size() < c2.name().size(); })
-          ->name()
-          .size() +
-      1;
   const auto& longest_chrom = std::max_element(
       genome.begin(), genome.end(),
       [&](const auto& c1, const auto& c2) { return c1.simulated_size() < c2.simulated_size(); });
@@ -330,8 +324,9 @@ void Simulation::run_CUDA() {
       std::round(this->number_of_lefs_per_mbp *
                  (static_cast<double>(longest_chrom->simulated_size()) / 1.0e6)));
 
-  const auto grid_size = 1088UL;
-  const auto block_size = 64UL;
+  const auto nthreads_ = 48 * 32 * 68UL;
+  const auto block_size = 128UL;
+  const auto grid_size = nthreads_ / block_size;
   const auto task_batch_size = grid_size;
 
   auto* global_state_dev = modle::cu::Simulation::call_allocate_global_state_kernel(
@@ -389,15 +384,16 @@ void Simulation::run_CUDA() {
     task_buff.resize(task_batch_size);
     size_t cellid = 0;
     const auto nbatches = (this->ncells + task_batch_size - 1) / task_batch_size;
-    fmt::print(stderr, FMT_STRING("Processing '{}' in {} batches of {} blocks...\n"), chrom->name(),
-               nbatches, grid_size);
+    fmt::print(stderr, FMT_STRING("Processing '{}' in {} batches of up to {} blocks...\n"),
+               chrom->name(), nbatches, grid_size);
     for (auto batchid = 0UL; batchid < nbatches; ++batchid) {
       // Generate a batch of tasks for all the simulations involving the current chrom
       std::generate(task_buff.begin(), task_buff.end(), [&]() {
         auto t = base_task;
         t.cell_id = cellid++;
-        t.seed = this->seed + std::hash<std::string_view>{}(chrom->name()) +
-                 std::hash<size_t>{}(chrom->size()) + std::hash<size_t>{}(t.cell_id);
+        t.seed = absl::Hash<uint64_t>{}(this->seed) +
+                 absl::Hash<std::string_view>{}(chrom->name()) +
+                 absl::Hash<size_t>{}(chrom->size()) + absl::Hash<size_t>{}(t.cell_id);
         return t;
       });
       const auto ntasks =

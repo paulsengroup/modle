@@ -2,19 +2,27 @@
 #include <cuda_runtime.h>
 #include <curand_kernel.h>
 #include <fmt/format.h>
+//#include <thrust/execution_policy.h>
+//#include <thrust/sort.h>
+#include <thrust/device_vector.h>
 
 #include <algorithm>
 #include <cstdint>
 #include <cstdio>
+#include <cub/cub.cuh>
 #include <cuda/std/atomic>
+#include <numeric>
 #include <string>
 #include <vector>
 
+#include "modle/config.cuh"
 #include "modle/contacts.cuh"
 #include "modle/extrusion_barriers.cuh"
 #include "modle/simulation.cuh"
 
 namespace modle::cu::Simulation {
+
+__constant__ __device__ struct Config config;
 
 __global__ void allocate_global_state_kernel(GlobalState* global_state, uint32_t max_nlefs,
                                              uint32_t max_nbarriers,
@@ -79,7 +87,7 @@ __global__ void init_curand_kernel(GlobalState* global_state) {
   const auto seed = global_state->tasks[blockIdx.x].seed;
   auto rng_state = global_state->block_states[blockIdx.x].rng_state[threadIdx.x];
 
-  curand_init(seed, threadIdx.x, 0, &rng_state);
+  curand_init(seed, threadIdx.x + blockIdx.x * blockDim.x, 0, &rng_state);
 
   global_state->block_states[blockIdx.x].rng_state[threadIdx.x] = rng_state;
 }
@@ -112,11 +120,49 @@ __device__ void reset_buffers_kernel(GlobalState* global_state, uint32_t nlefs,
   }
 }
 
+__global__ void generate_initial_loading_epochs(GlobalState* global_state, uint32_t num_epochs) {
+  const auto tid = threadIdx.x;
+  const auto bid = blockIdx.x;
+  const auto id = tid + bid * blockDim.x;
+  const auto nthreads = blockDim.x * gridDim.x;
+
+  auto* block_state = global_state->block_states + bid;
+  const auto scaling_factor = static_cast<float>(4 * config.average_lef_lifetime);
+  auto rng_state_local = block_state->rng_state[tid];
+
+  auto local_buff_size = 0U;
+  const auto local_buff_capacity = 32U;
+  uint32_t local_buff[local_buff_capacity];
+
+  auto* global_buff = global_state->large_uint_buff1;
+
+  const auto chunk_size = (num_epochs + nthreads - 1) / nthreads;
+  const auto i0 = id * chunk_size;
+  const auto i1 = min(i0 + chunk_size, num_epochs);
+
+  for (auto i = i0; i < i1; ++i) {
+    local_buff[local_buff_size++] =
+        __float2uint_rn(curand_uniform(&rng_state_local) * scaling_factor);
+
+    if (local_buff_size == local_buff_capacity) {
+      memcpy(global_buff + i - local_buff_size, local_buff, local_buff_size * sizeof(uint32_t));
+      local_buff_size = 0;
+    }
+  }
+
+  memcpy(global_buff + i1 - local_buff_size, local_buff, local_buff_size * sizeof(uint32_t));
+  block_state->rng_state[tid] = rng_state_local;
+}
+
+void init_simulation_params(const Config& c) {
+  CUDA_CALL(cudaMemcpyToSymbol(config, &c, sizeof(modle::cu::Config)));
+}
+
 [[nodiscard]] GlobalState* call_allocate_global_state_kernel(size_t grid_size, size_t block_size,
                                                              uint32_t max_nlefs,
                                                              uint32_t max_nbarriers) {
   try {
-    CUDA_CALL(cudaDeviceSetLimit(cudaLimitMallocHeapSize, 1024ULL * 1024ULL * 4096LL));  // 2GB
+    CUDA_CALL(cudaDeviceSetLimit(cudaLimitMallocHeapSize, 1024ULL * 1024ULL * 2048LL));  // 2GB
     assert(grid_size > 0);                                                               // NOLINT
     // We allocate one state per block
 
@@ -133,22 +179,18 @@ __device__ void reset_buffers_kernel(GlobalState* global_state, uint32_t nlefs,
     CUDA_CALL(cudaMemcpy(&global_state_host, global_state_dev, sizeof(GlobalState),
                          cudaMemcpyDeviceToHost));
 
-    BlockState* block_states_dev{nullptr};
-    Task* tasks_dev{nullptr};
-    bp_t* barrier_pos_dev{nullptr};
-    dna::Direction* barrirer_directions_dev{nullptr};
-
-    CUDA_CALL(cudaMalloc(&block_states_dev, grid_size * sizeof(BlockState)));
-    CUDA_CALL(cudaMalloc(&tasks_dev, grid_size * sizeof(Task)));
-    CUDA_CALL(cudaMalloc(&barrier_pos_dev, max_nbarriers * sizeof(bp_t)));
-    CUDA_CALL(cudaMalloc(&barrirer_directions_dev, max_nbarriers * sizeof(dna::Direction)));
+    CUDA_CALL(cudaMalloc(&global_state_host.block_states, grid_size * sizeof(BlockState)));
+    CUDA_CALL(cudaMalloc(&global_state_host.tasks, grid_size * sizeof(Task)));
+    CUDA_CALL(cudaMalloc(&global_state_host.barrier_pos, max_nbarriers * sizeof(bp_t)));
+    CUDA_CALL(
+        cudaMalloc(&global_state_host.barrier_directions, max_nbarriers * sizeof(dna::Direction)));
+    CUDA_CALL(cudaMalloc(&global_state_host.large_uint_buff1,
+                         std::max(max_nlefs, max_nbarriers) * grid_size * sizeof(uint32_t)));
+    CUDA_CALL(cudaMalloc(&global_state_host.large_uint_buff2,
+                         std::max(max_nlefs, max_nbarriers) * grid_size * sizeof(uint32_t)));
 
     global_state_host.ntasks = grid_size;
     global_state_host.nblock_states = grid_size;
-    global_state_host.block_states = block_states_dev;
-    global_state_host.tasks = tasks_dev;
-    global_state_host.barrier_pos = barrier_pos_dev;
-    global_state_host.barrier_directions = barrirer_directions_dev;
 
     CUDA_CALL(cudaMemcpy(global_state_dev, &global_state_host, sizeof(GlobalState),
                          cudaMemcpyHostToDevice));
@@ -180,40 +222,115 @@ void call_free_global_state_kernel(size_t grid_size, size_t block_size,
   CUDA_CALL(cudaFree(global_state_host.tasks));
   CUDA_CALL(cudaFree(global_state_host.barrier_pos));
   CUDA_CALL(cudaFree(global_state_host.barrier_directions));
+  CUDA_CALL(cudaFree(global_state_host.large_uint_buff1));
+  CUDA_CALL(cudaFree(global_state_host.large_uint_buff2));
   CUDA_CALL(cudaFree(global_state_dev));
 }
 
-void init_global_state(GlobalState* global_state, std::vector<Task>& host_tasks,
-                       const std::vector<uint32_t>& barrier_pos,
+void init_global_state(size_t grid_size, size_t block_size, GlobalState* global_state_dev,
+                       std::vector<Task>& host_tasks, const std::vector<uint32_t>& barrier_pos,
                        const std::vector<dna::Direction>& barrier_dir) {
-  GlobalState tmp_global_state;
-  CUDA_CALL(
-      cudaMemcpy(&tmp_global_state, global_state, sizeof(GlobalState), cudaMemcpyDeviceToHost));
-  tmp_global_state.nblock_states = static_cast<uint32_t>(host_tasks.size());
-  tmp_global_state.ntasks = static_cast<uint32_t>(host_tasks.size());
-  CUDA_CALL(
-      cudaMemcpy(global_state, &tmp_global_state, sizeof(GlobalState), cudaMemcpyHostToDevice));
-  auto* dev_tasks = tmp_global_state.tasks;
-
-  CUDA_CALL(cudaMemcpy(dev_tasks, host_tasks.data(), host_tasks.size() * sizeof(Task),
+  GlobalState global_state_host;
+  CUDA_CALL(cudaMemcpy(&global_state_host, global_state_dev, sizeof(GlobalState),
+                       cudaMemcpyDeviceToHost));
+  global_state_host.nblock_states = static_cast<uint32_t>(host_tasks.size());
+  global_state_host.ntasks = static_cast<uint32_t>(host_tasks.size());
+  CUDA_CALL(cudaMemcpy(global_state_dev, &global_state_host, sizeof(GlobalState),
                        cudaMemcpyHostToDevice));
+
+  CUDA_CALL(cudaMemcpy(global_state_host.tasks, host_tasks.data(), host_tasks.size() * sizeof(Task),
+                       cudaMemcpyHostToDevice));
+
+  init_curand_kernel<<<grid_size, block_size>>>(global_state_dev);
+}
+
+template <typename T>
+__global__ void shift_and_scatter_lef_loading_epochs(const T* global_buff, BlockState* block_states,
+                                                     const uint32_t* begin_offsets,
+                                                     const uint32_t* end_offsets) {
+  const auto tid = threadIdx.x;
+  const auto bid = blockIdx.x;
+
+  const auto* source_ptr = global_buff + begin_offsets[bid];
+  auto* dest_ptr = block_states[bid].epoch_buff;
+  const auto size = end_offsets[bid] - begin_offsets[bid];
+
+  if (threadIdx.x == 0) {
+    memcpy(dest_ptr, source_ptr, size * sizeof(T));
+  }
+
+  __syncthreads();
+  const auto offset = *source_ptr;
+  const auto chunk_size = (size + blockDim.x - 1) / blockDim.x;
+  const auto i0 = tid * chunk_size;
+  const auto i1 = min(i0 + chunk_size, size);
+
+  for (auto i = i0; i < i1; ++i) {
+    dest_ptr[i] -= offset;
+  }
+}
+
+void setup_burnin_phase(size_t grid_size, size_t block_size, GlobalState* global_state_dev,
+                        const std::vector<Task>& tasks_host) {
+  GlobalState global_state_host;
+  CUDA_CALL(cudaMemcpy(&global_state_host, global_state_dev, sizeof(GlobalState),
+                       cudaMemcpyDeviceToHost));
+
+  const auto num_epochs_for_initial_loading =
+      std::accumulate(tasks_host.begin(), tasks_host.end(), 0UL,
+                      [](auto accumulator, const auto& task) { return accumulator + task.nlefs; });
+  generate_initial_loading_epochs<<<grid_size, block_size>>>(global_state_dev,
+                                                             num_epochs_for_initial_loading);
+
+  // Generate segment offsets
+  thrust::device_vector<uint32_t> offsets_dev;
+  {
+    thrust::host_vector<uint32_t> offsets_host(tasks_host.size() + 1);
+    offsets_host.front() = 0;
+    std::transform(tasks_host.begin(), tasks_host.end(), offsets_host.begin() + 1,
+                   [offset = 0U](const auto& task) mutable { return (offset += task.nlefs); });
+    offsets_dev = offsets_host;
+  }
+  auto* d_begin_offsets = thrust::device_pointer_cast(offsets_dev.data()).get();
+  auto* d_end_offsets = d_begin_offsets + 1;
+
+  auto* d_key_buf = global_state_host.large_uint_buff1;
+  auto* d_key_alt_buf = global_state_host.large_uint_buff2;
+  const auto num_items_to_sort =
+      std::accumulate(tasks_host.begin(), tasks_host.end(), 0UL,
+                      [](auto accumulator, const auto& task) { return accumulator + task.nlefs; });
+  const auto num_segments_to_sort = tasks_host.size();
+  size_t temp_storage_bytes = 0;
+
+  cub::DoubleBuffer<uint32_t> d_keys(d_key_buf, d_key_alt_buf);  // Compute temp_storage size
+  CUDA_CALL(cub::DeviceSegmentedRadixSort::SortKeys(nullptr, temp_storage_bytes, d_keys,
+                                                    num_items_to_sort, num_segments_to_sort,
+                                                    d_begin_offsets, d_end_offsets));
+  thrust::device_vector<uint8_t> d_tmp_storage(temp_storage_bytes);  // Allocate temp_storage
+  auto* d_tmp_storage_ptr = thrust::device_pointer_cast(d_tmp_storage.data()).get();
+
+  CUDA_CALL(cub::DeviceSegmentedRadixSort::SortKeys(d_tmp_storage_ptr, temp_storage_bytes, d_keys,
+                                                    num_items_to_sort, num_segments_to_sort,
+                                                    d_begin_offsets, d_end_offsets));
+
+  shift_and_scatter_lef_loading_epochs<<<grid_size, block_size>>>(
+      d_key_buf, global_state_host.block_states, d_begin_offsets, d_end_offsets);
 }
 
 void call_simulation_kernel(size_t grid_size, size_t block_size, GlobalState* global_state,
-                            std::vector<Task>& host_tasks, const std::vector<uint32_t>& barrier_pos,
+                            std::vector<Task>& tasks_host, const std::vector<uint32_t>& barrier_pos,
                             const std::vector<dna::Direction>& barrier_dir) {
   assert(barrier_pos.size() == barrier_dir.size());  // NOLINT
-  assert(host_tasks.size() == grid_size);            // NOLINT
+  assert(tasks_host.size() == grid_size);            // NOLINT
   // TODO handle case where nlefs and nbarriers can be different across states
-  const auto nlefs = host_tasks.front().nlefs;
+  const auto nlefs = tasks_host.front().nlefs;
   const auto nbarriers = barrier_pos.size();
 
-  init_global_state(global_state, host_tasks, barrier_pos, barrier_dir);
+  init_global_state(grid_size, block_size, global_state, tasks_host, barrier_pos, barrier_dir);
 
-  init_curand_kernel<<<grid_size, block_size>>>(global_state);
+  setup_burnin_phase(grid_size, block_size, global_state, tasks_host);
 
-  // run_simulation_kernel<<<grid_size, block_size>>>(states, grid_size * block_size, nlefs,
-  //                                                 nbarriers);
+  // simulate_kernel<<<grid_size, block_size>>>(global_state);
 }
 
 }  // namespace modle::cu::Simulation

@@ -4,7 +4,8 @@
 #include <cuda/std/atomic>
 #include <vector>
 
-#include "modle/common.hpp"
+#include "modle/common.cuh"
+#include "modle/config.cuh"
 #include "modle/contacts.cuh"
 #include "modle/extrusion_barriers.cuh"
 
@@ -68,7 +69,12 @@ struct GlobalState {
 
   uint32_t nblock_states{};
   uint32_t ntasks{};
+
+  uint32_t* large_uint_buff1{nullptr};
+  uint32_t* large_uint_buff2{nullptr};
 };
+
+void init_simulation_params(const Config& c);
 
 [[nodiscard]] GlobalState* call_allocate_global_state_kernel(size_t grid_size, size_t block_size,
                                                              uint32_t max_nlefs,
@@ -77,7 +83,7 @@ struct GlobalState {
 void call_free_global_state_kernel(size_t grid_size, size_t block_size, GlobalState* global_state);
 
 void call_simulation_kernel(size_t grid_size, size_t block_size, GlobalState* global_state,
-                            std::vector<Task>& tasks, const std::vector<uint32_t>& barrier_pos,
+                            std::vector<Task>& tasks_host, const std::vector<uint32_t>& barrier_pos,
                             const std::vector<dna::Direction>& barrier_dir);
 
 }  // namespace modle::cu::Simulation
