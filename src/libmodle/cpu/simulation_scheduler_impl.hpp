@@ -41,21 +41,9 @@
 #include "modle/extrusion_barriers.hpp"  // for ExtrusionBarrier
 #include "modle/utils.hpp"               // for traced
 
-#ifdef ENABLE_CUDA
-#include "modle/simulation.cuh"
-#endif
-
 namespace modle {
 
 void Simulation::run() {
-  if (this->with_gpu) {
-    this->run_CUDA();
-  } else {
-    this->run_CPU();
-  }
-}
-
-void Simulation::run_CPU() {
   if (!this->skip_output) {  // Write simulation params to file
     if (this->force) {
       std::filesystem::remove_all(this->path_to_output_file);
@@ -122,59 +110,53 @@ void Simulation::run_CPU() {
   // The remaining code submits simulation tasks to the queue. Then it waits until all the tasks
   // have been completed, and contacts have been written to disk
 
-  // Create a vector of pointers to chroms, and sort the pointers by chrom size
-  // TODO Update this to process chroms in the same order they are found in the chrom.sizes file
-  std::vector<Chromosome*> chroms(static_cast<size_t>(this->_chromosomes.size()));
-  std::transform(this->_chromosomes.begin(), this->_chromosomes.end(), chroms.begin(),
-                 [](auto& chrom) { return &chrom; });
-  std::sort(chroms.begin(), chroms.end(),
-            [](const auto* const c1, const auto* const c2) { return c1->size() > c2->size(); });
-
   absl::Span<const ExtrusionBarrier> extr_barriers_buff{};
   absl::FixedArray<Task> tasks(task_batch_size);
   auto taskid = 0UL;
 
   // Loop over chromosomes
-  for (auto* chrom : chroms) {
+  for (auto& chrom : this->_genome) {
     // Don't simulate KO chroms (but write them to disk if the user desires so)
-    if (!chrom->ok()) {
-      fmt::print(stderr, "SKIPPING '{}'...\n", chrom->name());
+    if (!chrom.ok()) {
+      fmt::print(stderr, "SKIPPING '{}'...\n", chrom.name());
       if (this->write_contacts_for_ko_chroms) {
-        chrom->allocate_contacts(this->bin_size, this->diagonal_width);
+        chrom.allocate_contacts(this->bin_size, this->diagonal_width);
         std::scoped_lock l(barrier_mutex, progress_queue_mutex);
-        progress_queue.emplace_back(chrom, ncells);
-        barriers.emplace(chrom, nullptr);
+        progress_queue.emplace_back(&chrom, ncells);
+        barriers.emplace(&chrom, nullptr);
       }
       continue;
     }
 
     // Allocate the contact matrix. Once it's not needed anymore, the contact matrix will be
     // de-allocated by the thread that is writing contacts to disk
-    chrom->allocate_contacts(this->bin_size, this->diagonal_width);
+    chrom.allocate_contacts(this->bin_size, this->diagonal_width);
     {
       // For consistency, it is important that both locks are held while new items are added to the
       // two queues
       std::scoped_lock l(barrier_mutex, progress_queue_mutex);
 
       // Signal that we have started processing the current chrom
-      progress_queue.emplace_back(chrom, 0UL);
+      progress_queue.emplace_back(&chrom, 0UL);
 
       // Allocate extr. barriers mapping on the chromosome that is being simulated
-      auto node = barriers.emplace(chrom, std::make_unique<std::vector<ExtrusionBarrier>>(
-                                              Simulation::allocate_barriers(chrom)));
+      auto node = barriers.emplace(
+          &chrom, std::make_unique<std::vector<ExtrusionBarrier>>(this->_genome.allocate_barriers(
+                      chrom.name(), this->_config->ctcf_occupied_self_prob,
+                      this->_config->ctcf_not_occupied_self_prob)));
       extr_barriers_buff = absl::MakeConstSpan(*node.first->second);
     }
 
     // Compute # of LEFs to be simulated based on chrom. sizes
     const auto nlefs = static_cast<size_t>(std::round(
-        this->number_of_lefs_per_mbp * (static_cast<double>(chrom->simulated_size()) / 1.0e6)));
+        this->number_of_lefs_per_mbp * (static_cast<double>(chrom.simulated_size()) / 1.0e6)));
 
     auto target_contacts = 0UL;
     if (this->target_contact_density != 0) {  // Compute the number of simulation rounds required
       // to reach the target contact density
       target_contacts = static_cast<size_t>(
           std::max(1.0, std::round((this->target_contact_density *
-                                    static_cast<double>(chrom->contacts().npixels())) /
+                                    static_cast<double>(chrom.contacts().npixels())) /
                                    static_cast<double>(this->ncells))));
     }
     auto target_epochs =
@@ -185,8 +167,8 @@ void Simulation::run_CPU() {
     for (auto batchid = 0UL; batchid < nbatches; ++batchid) {
       // Generate a batch of tasks for all the simulations involving the current chrom
       std::generate(tasks.begin(), tasks.end(), [&]() {
-        return Task{taskid++,        chrom, cellid++,          target_epochs,
-                    target_contacts, nlefs, extr_barriers_buff};
+        return Task{taskid++,        &chrom, cellid++,          target_epochs,
+                    target_contacts, nlefs,  extr_barriers_buff};
       });
       const auto ntasks =
           cellid > this->ncells ? tasks.size() - (cellid - this->ncells) : tasks.size();
@@ -295,10 +277,9 @@ void Simulation::worker(
   }
 }
 
+/*
 void Simulation::run_CUDA() {
 #ifdef ENABLE_CUDA
-
-  modle::cu::Simulation::init_simulation_params(this->_config->to_cuda_config());
 
   std::atomic<bool> end_of_simulation = false;
   std::mutex progress_queue_mutex;  // Protect rw access to progress_queue
@@ -324,16 +305,18 @@ void Simulation::run_CUDA() {
       std::round(this->number_of_lefs_per_mbp *
                  (static_cast<double>(longest_chrom->simulated_size()) / 1.0e6)));
 
-  const auto nthreads_ = 48 * 32 * 68UL;
-  const auto block_size = 128UL;
+  const auto nthreads_ = 208'896;  // 48 * 32 * 68UL;
+  const auto block_size = 192UL;   // 128U;
   const auto grid_size = nthreads_ / block_size;
   const auto task_batch_size = grid_size;
 
-  auto* global_state_dev = modle::cu::Simulation::call_allocate_global_state_kernel(
-      grid_size, block_size, max_nlefs, max_nbarriers);
+  auto device = cuda::device::current::get();
+  device.set_resource_limit(cudaLimitMallocHeapSize, 1024ULL * 1024ULL * 2048LL);
+  auto global_state_host = modle::cu::GlobalStateHost(
+      grid_size, block_size, this->_config->to_cuda_config(), max_nlefs, max_nbarriers, device);
 
-  std::vector<Chromosome*> chroms(static_cast<size_t>(this->_chromosomes.size()));
-  std::transform(this->_chromosomes.begin(), this->_chromosomes.end(), chroms.begin(),
+  std::vector<Chromosome*> chroms(static_cast<size_t>(this->_genome.size()));
+  std::transform(this->_genome.begin(), this->_genome.end(), chroms.begin(),
                  [](auto& chrom) { return &chrom; });
   std::sort(chroms.begin(), chroms.end(),
             [](const auto* const c1, const auto* const c2) { return c1->size() > c2->size(); });
@@ -381,6 +364,8 @@ void Simulation::run_CUDA() {
                                     ? static_cast<uint32_t>(this->simulation_iterations)
                                     : std::numeric_limits<uint32_t>::max();
 
+    base_task.nbarriers = chrom->nbarriers();
+
     task_buff.resize(task_batch_size);
     size_t cellid = 0;
     const auto nbatches = (this->ncells + task_batch_size - 1) / task_batch_size;
@@ -401,21 +386,22 @@ void Simulation::run_CUDA() {
 
       task_buff.resize(ntasks);
 
-      call_simulation_kernel(std::min(grid_size, ntasks), block_size, global_state_dev, task_buff,
-                             barrier_pos_buff, barrier_direction_buff);
+      modle::cu::Simulation::run_simulation(std::min(grid_size, ntasks), block_size,
+                                            global_state_host, task_buff, barrier_pos_buff,
+                                            barrier_direction_buff);
     }
     fmt::print(stderr, FMT_STRING("Done simulating '{}'. Simulation took {}.\n"), chrom->name(),
                absl::FormatDuration(absl::Now() - t0));
   }
 
-  modle::cu::Simulation::call_free_global_state_kernel(grid_size, block_size, global_state_dev);
-
 #else
+  (void)this->_config;
   throw std::runtime_error(
       "ModLE was not compiled with CUDA support. Consider re-compiling the project while passing "
       "-DENABLE_CUDA=ON to CMake during the configuration phase.\nShould this not be possible, "
       "please remove --with-gpu from the command line options and re-run ModLE");
 #endif
 }
+ */
 
 }  // namespace modle

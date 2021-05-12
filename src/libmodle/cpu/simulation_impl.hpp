@@ -49,6 +49,7 @@
 #include "modle/dna.hpp"                         // for Chromosome
 #include "modle/extrusion_barriers.hpp"          // for update_states, ExtrusionBarrier
 #include "modle/extrusion_factors.hpp"           // for Lef, ExtrusionUnit
+#include "modle/libmodle_io.hpp"                 // for Genome
 #include "modle/suppress_compiler_warnings.hpp"  // for DISABLE_WARNING_POP, DISABLE_WARNING_...
 #include "modle/utils.hpp"                       // for ndebug_defined
 
@@ -63,23 +64,13 @@ namespace modle {
 Simulation::Simulation(const Config& c, bool import_chroms)
     : Config(c),
       _config(&c),
-      _chromosomes(import_chroms
-                       ? instantiate_genome(path_to_chrom_sizes, path_to_extr_barriers,
-                                            path_to_chrom_subranges, write_contacts_for_ko_chroms)
-                       : Genome{}) {}
+      _genome(import_chroms ? io::Genome(path_to_chrom_sizes, path_to_extr_barriers,
+                                         path_to_chrom_subranges, write_contacts_for_ko_chroms)
+                            : io::Genome{}) {}
 
-size_t Simulation::size() const {
-  return std::accumulate(
-      this->_chromosomes.begin(), this->_chromosomes.end(), 0UL,
-      [](auto accumulator, const auto& chrom) { return accumulator + chrom.size(); });
-}
+size_t Simulation::size() const { return this->_genome.size(); }
 
-size_t Simulation::simulated_size() const {
-  return std::accumulate(this->_chromosomes.begin(), this->_chromosomes.end(), 0UL,
-                         [](auto accumulator, const auto& chrom) {
-                           return accumulator + (chrom.end_pos() - chrom.start_pos());
-                         });
-}
+size_t Simulation::simulated_size() const { return this->_genome.simulated_size(); }
 
 void Simulation::write_contacts_to_disk(std::deque<std::pair<Chromosome*, size_t>>& progress_queue,
                                         std::mutex& progress_queue_mutex,
@@ -88,7 +79,7 @@ void Simulation::write_contacts_to_disk(std::deque<std::pair<Chromosome*, size_t
   Chromosome* chrom_to_be_written = nullptr;
   const auto max_str_length =
       std::max_element(  // Find chrom with the longest name
-          this->_chromosomes.begin(), this->_chromosomes.end(),
+          this->_genome.begin(), this->_genome.end(),
           [](const auto& c1, const auto& c2) { return c1.name().size() < c2.name().size(); })
           ->name()
           .size();

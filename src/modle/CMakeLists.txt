@@ -4,7 +4,7 @@ target_link_libraries(
   modle
   PRIVATE project_warnings
           project_options
-          Modle::Modle
+          Modle::modle
           Modle::io
           CONAN_PKG::abseil
           CONAN_PKG::boost

@@ -19,6 +19,9 @@
 #include "modle/config.hpp"      // for Config
 #include "modle/simulation.hpp"  // for Simulation
 #include "modle/utils.hpp"       // for ndebug_defined, traced
+#ifdef ENABLE_CUDA
+#include "modle/cu/simulation.hpp"
+#endif
 
 int main(int argc, char** argv) noexcept {
   std::unique_ptr<modle::Cli> cli{nullptr};
@@ -35,7 +38,19 @@ int main(int argc, char** argv) noexcept {
     config.print();
 
     const auto t0 = absl::Now();
-    modle::Simulation{config}.run();
+
+    if (config.with_gpu) {
+#ifdef ENABLE_CUDA
+      modle::cu::Simulation{config}.run();
+#else
+      throw std::runtime_error(
+          "ModLE was not compiled with CUDA support. Consider re-compiling the project while "
+          "passing -DENABLE_CUDA=ON to CMake during the configuration phase.\nShould this not be "
+          "possible, please remove --with-gpu from the command line options and re-run ModLE");
+#endif
+    } else {
+      modle::Simulation{config}.run();
+    }
 
     fmt::print(stderr, FMT_STRING("Simulation terminated without errors in {}!\n\nBye.\n"),
                absl::FormatDuration(absl::Now() - t0));

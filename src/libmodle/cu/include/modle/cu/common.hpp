@@ -2,7 +2,7 @@
 
 #include <fmt/format.h>
 
-#include <cuda/std/cstdint>  // for uint32_t, uint_fast8_t
+#include <cstdint>  // for uint32_t, uint_fast8_t
 
 namespace modle::cu {
 

@@ -14,7 +14,7 @@ target_link_libraries(
           Modle::cmatrix_test
           Modle::correlation_test
           Modle::io_test
-          Modle::libmodle_test)
+          Modle::libmodle_cpu_test)
 
 if(ENABLE_PCH)
   target_precompile_headers(catch_main INTERFACE <catch2/catch.hpp>)

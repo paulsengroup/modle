@@ -12,7 +12,7 @@ target_link_libraries(
   modle_tools
   PRIVATE project_warnings
           project_options
-          Modle::Modle
+          Modle::modle
           Modle::correlation
           Modle::io
           CONAN_PKG::abseil

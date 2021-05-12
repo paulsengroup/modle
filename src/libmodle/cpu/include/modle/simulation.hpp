@@ -24,6 +24,7 @@
 #include "modle/config.hpp"             // for Config
 #include "modle/dna.hpp"                // for Chromosome
 #include "modle/extrusion_factors.hpp"  // for Lef, ExtrusionUnit (ptr only)
+#include "modle/libmodle_io.hpp"        // for Genome
 #include "modle/utils.hpp"              // for ndebug_defined
 
 namespace modle {
@@ -41,7 +42,6 @@ class Simulation : Config {
   [[nodiscard]] inline size_t size() const;
   [[nodiscard]] inline size_t simulated_size() const;
 
-  using Genome = absl::btree_set<Chromosome, Chromosome::Comparator>;
   using lef_move_generator_t = std::normal_distribution<double>;
   using chrom_pos_generator_t = std::uniform_int_distribution<bp_t>;
 
@@ -87,40 +87,12 @@ class Simulation : Config {
 
  private:
   const Config* _config;
-  Genome _chromosomes{};
-
-  inline void run_CPU();
-  inline void run_CUDA();
+  io::Genome _genome{};
 
   [[nodiscard]] [[maybe_unused]] inline boost::asio::thread_pool instantiate_thread_pool() const;
   template <typename I>
   [[nodiscard]] inline static boost::asio::thread_pool instantiate_thread_pool(
       I nthreads, bool clamp_nthreads = true);
-
-  /// A simple wrapper function that imports chromosomes and extrusion barriers that comprise the
-  /// genome that is being simulated.
-  [[nodiscard]] inline static Genome instantiate_genome(
-      const std::filesystem::path& path_to_chrom_sizes,
-      const std::filesystem::path& path_to_extr_barriers,
-      const std::filesystem::path& path_to_chrom_subranges, bool keep_all_chroms);
-
-  /// Import chromosomes from a chrom.sizes file
-
-  //! When \p path_to_extr_barriers is non-empty, import the intersection of the chromosomes present
-  //! in the chrom.sizes and BED files. The optional BED file can be used to instruct ModLE to
-  //! simulate loop extrusion on a sub-region of a chromosome from the chrom.sizes file.
-  [[nodiscard]] inline static Genome import_chromosomes(
-      const std::filesystem::path& path_to_chrom_sizes,
-      const std::filesystem::path& path_to_chrom_subranges, bool keep_all_chroms);
-
-  /// Parse a BED file containing the genomic coordinates of extrusion barriers and add them to the
-  /// Genome
-  inline static size_t import_barriers(Genome& genome,
-                                       const std::filesystem::path& path_to_extr_barriers);
-
-  /// Allocate and return the extrusion barriers for the chromosome \p chrom.
-  [[nodiscard]] inline std::vector<ExtrusionBarrier> allocate_barriers(
-      const Chromosome* chrom) const;
 
   /// Simulate loop extrusion using the parameters and buffers passed through \p state
   inline void simulate_extrusion_kernel(State& state) const;
@@ -445,4 +417,3 @@ class Simulation : Config {
 #include "../../simulation_detect_collisions_impl.hpp"  // IWYU pragma: keep
 #include "../../simulation_impl.hpp"                    // IWYU pragma: keep
 #include "../../simulation_scheduler_impl.hpp"          // IWYU pragma: keep
-#include "../../simulation_setup_impl.hpp"              // IWYU pragma: keep

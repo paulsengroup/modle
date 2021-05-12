@@ -25,22 +25,28 @@
 #include "modle/utils.hpp"        // for ndebug_defined
 
 namespace modle {
-Chromosome::Chromosome(const chrom_sizes::ChromSize &chrom, const std::vector<bed::BED> &barriers)
-    : _name(chrom.name),
+Chromosome::Chromosome(const chrom_sizes::ChromSize &chrom, size_t id,
+                       const std::vector<bed::BED> &barriers)
+    : _id(id),
+      _name(chrom.name),
       _size(chrom.end),
       _start(chrom.start),
       _end(chrom.end),
       _barriers(barriers.begin(), barriers.end()) {}
 
-Chromosome::Chromosome(chrom_sizes::ChromSize &&chrom, std::vector<bed::BED> &&barriers)
-    : _name(std::move(chrom.name)),
+Chromosome::Chromosome(chrom_sizes::ChromSize &&chrom, size_t id, std::vector<bed::BED> &&barriers)
+    : _id(id),
+      _name(std::move(chrom.name)),
       _size(chrom.end),
       _start(chrom.start),
       _end(chrom.end),
       _barriers(std::move_iterator(barriers.begin()), std::move_iterator(barriers.end())) {}
 
 bool Chromosome::operator==(const Chromosome &other) const noexcept(utils::ndebug_defined()) {
-  return this->name() == other.name() && this->size() == other.size();
+  if (this->_id == std::numeric_limits<size_t>::max()) {
+    return this->name() == other.name() && this->size() == other.size();
+  }
+  return this->_id == other._id;
 }
 
 bool Chromosome::operator==(std::string_view other) const noexcept(utils::ndebug_defined()) {
@@ -48,6 +54,11 @@ bool Chromosome::operator==(std::string_view other) const noexcept(utils::ndebug
 }
 
 bool Chromosome::operator<(const Chromosome &other) const noexcept(utils::ndebug_defined()) {
+  if (this->_id != std::numeric_limits<size_t>::max() &&
+      other._id != std::numeric_limits<size_t>::max()) {
+    return this->_id < other._id;
+  }
+
   if (this->name() != other.name()) {
     return this->name() < other.name();
   }
@@ -97,6 +108,7 @@ void Chromosome::add_extrusion_barrier(bed::BED barrier) { this->_barriers.empla
 
 void Chromosome::add_extrusion_barrier(bed::BED &&barrier) { this->_barriers.emplace(barrier); }
 
+size_t Chromosome::id() const { return this->_id; }
 std::string_view Chromosome::name() const { return this->_name; }
 const char *Chromosome::name_cstr() const { return this->_name.c_str(); }
 
@@ -108,7 +120,16 @@ constexpr bp_t Chromosome::size() const { return this->_size; }
 constexpr bp_t Chromosome::simulated_size() const { return this->_end - this->_start; }
 bool Chromosome::ok() const { return !this->_barriers.empty(); }
 
+size_t Chromosome::nlefs(double nlefs_per_mbp) const {  // NOLINTNEXTLINE
+  return static_cast<size_t>((static_cast<double>(this->simulated_size()) / 1.0e6) * nlefs_per_mbp);
+}
 size_t Chromosome::nbarriers() const { return static_cast<size_t>(this->_barriers.size()); }
+
+size_t Chromosome::num_valid_barriers() const {
+  auto foo = std::count_if(this->get_barriers().begin(), this->get_barriers().end(),
+                           [](const auto &b) { return b.strand == '-' || b.strand == '+'; });
+  return foo;
+}
 
 const absl::btree_set<bed::BED> &Chromosome::get_barriers() const { return this->_barriers; }
 

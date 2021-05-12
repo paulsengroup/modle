@@ -1,8 +1,6 @@
 #pragma once
 
-#include <cuda/std/limits>
-
-#include "modle/common.cuh"  // for bp_t
+#include "modle/common.hpp"  // for bp_t
 
 namespace modle::cu {
 struct Config {

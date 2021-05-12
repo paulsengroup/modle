@@ -4,6 +4,7 @@
 
 #include <cstddef>      // IWYU pragma: keep for size_t
 #include <cstdint>      // for uint32_t
+#include <limits>       // for numeric_limits
 #include <memory>       // for shared_ptr
 #include <string>       // for string
 #include <string_view>  // for string_view
@@ -23,8 +24,11 @@ struct ChromSize;
 class Chromosome {
  public:
   inline explicit Chromosome(const chrom_sizes::ChromSize& chrom,
+                             size_t id = std::numeric_limits<size_t>::max(),
                              const std::vector<bed::BED>& barriers = {});
-  inline explicit Chromosome(chrom_sizes::ChromSize&& chrom, std::vector<bed::BED>&& barriers = {});
+  inline explicit Chromosome(chrom_sizes::ChromSize&& chrom,
+                             size_t id = std::numeric_limits<size_t>::max(),
+                             std::vector<bed::BED>&& barriers = {});
 
   [[nodiscard]] inline bool operator==(const Chromosome& other) const
       noexcept(utils::ndebug_defined());
@@ -38,6 +42,7 @@ class Chromosome {
   inline void add_extrusion_barrier(bed::BED&& barrier);
   inline void add_extrusion_barrier(bed::BED barrier);
 
+  [[nodiscard]] inline size_t id() const;
   [[nodiscard]] inline std::string_view name() const;
   [[nodiscard]] inline const char* name_cstr() const;
   [[nodiscard]] inline constexpr bp_t start_pos() const;
@@ -45,7 +50,9 @@ class Chromosome {
   [[nodiscard]] inline constexpr bp_t size() const;
   [[nodiscard]] inline constexpr bp_t simulated_size() const;
   [[nodiscard]] inline bool ok() const;
+  [[nodiscard]] inline size_t nlefs(double nlefs_per_mbp) const;
   [[nodiscard]] inline size_t nbarriers() const;
+  [[nodiscard]] inline size_t num_valid_barriers() const;
   [[nodiscard]] inline const absl::btree_set<bed::BED>& get_barriers() const;
   template <typename I>
   inline void increment_contacts(bp_t pos1, bp_t pos2, bp_t bin_size, I n = 1);
@@ -70,6 +77,7 @@ class Chromosome {
   };
 
  private:
+  size_t _id{std::numeric_limits<size_t>::max()};
   std::string _name;
   size_t _size;
   size_t _start;
