@@ -141,9 +141,9 @@ void Simulation::run() {
 
       // Allocate extr. barriers mapping on the chromosome that is being simulated
       auto node = barriers.emplace(
-          &chrom, std::make_unique<std::vector<ExtrusionBarrier>>(this->_genome.allocate_barriers(
-                      chrom.name(), this->_config->ctcf_occupied_self_prob,
-                      this->_config->ctcf_not_occupied_self_prob)));
+          &chrom, std::make_unique<std::vector<ExtrusionBarrier>>(this->_genome.generate_vect_of_barriers(
+              chrom.name(), this->_config->ctcf_occupied_self_prob,
+              this->_config->ctcf_not_occupied_self_prob)));
       extr_barriers_buff = absl::MakeConstSpan(*node.first->second);
     }
 

@@ -96,9 +96,9 @@ size_t import_barriers(absl::btree_set<Chromosome, Chromosome::Comparator>& chro
   return nbarriers;
 }
 
-std::vector<ExtrusionBarrier> Genome::allocate_barriers(std::string_view chrom_name,
-                                                        double ctcf_prob_occ_to_occ,
-                                                        double ctcf_prob_nocc_to_nocc) {
+std::vector<ExtrusionBarrier> Genome::generate_vect_of_barriers(std::string_view chrom_name,
+                                                                double ctcf_prob_occ_to_occ,
+                                                                double ctcf_prob_nocc_to_nocc) {
   std::vector<ExtrusionBarrier> barriers;
   size_t barriers_skipped = 0;
 

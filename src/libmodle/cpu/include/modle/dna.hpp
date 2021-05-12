@@ -37,8 +37,6 @@ class Chromosome {
   [[nodiscard]] inline bool operator<(const Chromosome& other) const
       noexcept(utils::ndebug_defined());
 
-  inline void instantiate_contact_matrix(size_t bin_size, size_t diagonal_width);
-  inline void clear_contacts();
   inline void add_extrusion_barrier(bed::BED&& barrier);
   inline void add_extrusion_barrier(bed::BED barrier);
 
@@ -54,8 +52,6 @@ class Chromosome {
   [[nodiscard]] inline size_t nbarriers() const;
   [[nodiscard]] inline size_t num_valid_barriers() const;
   [[nodiscard]] inline const absl::btree_set<bed::BED>& get_barriers() const;
-  template <typename I>
-  inline void increment_contacts(bp_t pos1, bp_t pos2, bp_t bin_size, I n = 1);
   inline void increment_contacts(bp_t pos1, bp_t pos2, bp_t bin_size);
   inline void allocate_contacts(bp_t bin_size, bp_t diagonal_width);
   inline void deallocate_contacts();

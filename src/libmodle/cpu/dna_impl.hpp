@@ -85,25 +85,6 @@ bool Chromosome::Comparator::operator()(std::string_view c1, std::string_view c2
   return c1 < c2;
 }
 
-void Chromosome::instantiate_contact_matrix(size_t bin_size, size_t diagonal_width) {
-  assert(diagonal_width != 0);  // NOLINT
-#ifndef NDEBUG
-  if (this->_contacts) {
-    throw std::runtime_error(
-        fmt::format(FMT_STRING("Caught an attempt to re-instantiate the contact matrix for '{}'"),
-                    this->_name));
-  }
-#endif
-  const auto nrows = diagonal_width / bin_size;
-  const auto ncols = (this->_end - this->_start) / bin_size;
-  this->_contacts = std::make_shared<ContactMatrix<contacts_t>>(nrows, ncols);
-}
-
-void Chromosome::clear_contacts() {
-  assert(this->_contacts);
-  this->_contacts->reset();
-}
-
 void Chromosome::add_extrusion_barrier(bed::BED barrier) { this->_barriers.emplace(barrier); }
 
 void Chromosome::add_extrusion_barrier(bed::BED &&barrier) { this->_barriers.emplace(barrier); }
@@ -126,19 +107,11 @@ size_t Chromosome::nlefs(double nlefs_per_mbp) const {  // NOLINTNEXTLINE
 size_t Chromosome::nbarriers() const { return static_cast<size_t>(this->_barriers.size()); }
 
 size_t Chromosome::num_valid_barriers() const {
-  auto foo = std::count_if(this->get_barriers().begin(), this->get_barriers().end(),
-                           [](const auto &b) { return b.strand == '-' || b.strand == '+'; });
-  return foo;
+  return std::count_if(this->get_barriers().begin(), this->get_barriers().end(),
+                       [](const auto &b) { return b.strand == '-' || b.strand == '+'; });
 }
 
 const absl::btree_set<bed::BED> &Chromosome::get_barriers() const { return this->_barriers; }
-
-template <typename I>
-void Chromosome::increment_contacts(bp_t pos1, bp_t pos2, bp_t bin_size, I n) {
-  static_assert(std::is_integral_v<I>, "n should have an integral type.");
-  assert(this->_contacts);
-  this->_contacts->add((pos1 - this->_start) / bin_size, (pos2 - this->_start) / bin_size, n);
-}
 
 void Chromosome::increment_contacts(bp_t pos1, bp_t pos2, bp_t bin_size) {
   this->_contacts->increment((pos1 - this->_start) / bin_size, (pos2 - this->_start) / bin_size);

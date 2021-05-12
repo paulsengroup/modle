@@ -1,4 +1,7 @@
 #pragma once
+#include <cstdint>
+
+#include "modle/cu/common.hpp"
 #include "modle/cu/simulation.hpp"
 
 namespace modle::cu::kernels {
