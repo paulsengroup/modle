@@ -28,9 +28,8 @@ size_t GlobalStateHost::get_grid_size() const { return this->grid_size; };
 size_t GlobalStateHost::get_block_size() const { return this->block_size; };
 
 GlobalStateDev* GlobalStateHost::get_ptr_to_dev_instance() {
-  if (!this->_global_state_dev) {
-    this->_global_state_dev = static_cast<GlobalStateDev*>(
-        cuda::memory::device::allocate(this->_device, sizeof(GlobalStateDev)).get());
+  if (!this->_global_state_dev.get()) {
+    this->_global_state_dev = cuda::memory::device::allocate(this->_device, sizeof(GlobalStateDev));
     GlobalStateDev gs{};
 
     gs.config = this->config;
@@ -60,9 +59,9 @@ GlobalStateDev* GlobalStateHost::get_ptr_to_dev_instance() {
     gs.tmp_sorting_storage = this->tmp_sorting_storage.get();
     gs.tmp_sorting_storage_bytes = this->tmp_sorting_storage_bytes;
 
-    cuda::memory::copy(this->_global_state_dev, &gs, sizeof(GlobalStateDev));
+    cuda::memory::copy(this->_global_state_dev.get(), &gs, sizeof(GlobalStateDev));
   }
-  return this->_global_state_dev;
+  return static_cast<GlobalStateDev*>(this->_global_state_dev.get());
 }
 
 GlobalStateDev GlobalStateHost::get_copy_of_device_instance() {

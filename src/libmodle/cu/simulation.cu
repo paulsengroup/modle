@@ -59,7 +59,7 @@ void Simulation::run_batch(const std::vector<Task>& new_tasks,
 
   for (this->_current_epoch = 0UL; !end_of_simulation; ++this->_current_epoch) {
     end_of_simulation = this->simulate_one_epoch();
-    if (this->_current_epoch == 10) {
+    if (this->_current_epoch == 300) {
       return;
     }
   }
@@ -184,6 +184,9 @@ void Simulation::sort_lefs() {
       begin_offsets_dev, end_offsets_dev));
 
   this->_global_state_host._device.synchronize();
+  kernels::scatter_sorted_lefs<<<this->_grid_size, this->_block_size>>>(
+      this->_global_state_host.get_ptr_to_dev_instance(), direction,
+      static_cast<uint32_t*>(num_items_to_sort_dev.get()));
 
   direction = dna::Direction::fwd;
 
@@ -198,7 +201,7 @@ void Simulation::sort_lefs() {
 
   this->_global_state_host._device.synchronize();
 
-  kernels::scatter_sorted_lefs<<<this->_block_size, this->_grid_size>>>(
+  kernels::scatter_sorted_lefs<<<this->_grid_size, this->_block_size>>>(
       this->_global_state_host.get_ptr_to_dev_instance(), direction,
       static_cast<uint32_t*>(num_items_to_sort_dev.get()));
   this->_global_state_host._device.synchronize();
@@ -222,6 +225,7 @@ bool Simulation::simulate_one_epoch() {
       this->_current_epoch, this->_global_state_host.get_ptr_to_dev_instance());
 
   this->sort_lefs();
+  this->_global_state_host._device.synchronize();
   /*
     std::vector<uint32_t> buff1(10000);
     std::vector<uint32_t> buff2(10000);

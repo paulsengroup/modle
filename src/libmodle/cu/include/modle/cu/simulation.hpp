@@ -161,7 +161,7 @@ class GlobalStateHost {  // NOLINT
   uint32_t large_uint_buff_chunk_alignment{};
 
  private:
-  GlobalStateDev* _global_state_dev{nullptr};
+  cuda::memory::region_t _global_state_dev{};
   cuda::device_t _device{cuda::device::current::get()};
 
   std::vector<uint32_t> _buff1;

@@ -170,7 +170,6 @@ __global__ void shift_and_scatter_lef_loading_epochs(const uint32_t* global_buff
   const auto* source_ptr = global_buff + begin_offsets[bid];
   auto* dest_ptr = block_states[bid].epoch_buff;
   const auto size = end_offsets[bid] - begin_offsets[bid];
-  block_states[bid].num_active_lefs = size;
 
   if (threadIdx.x == 0) {
     memcpy(dest_ptr, source_ptr, size * sizeof(uint32_t));
@@ -257,14 +256,22 @@ __global__ void prepare_extr_units_for_sorting(GlobalStateDev* global_state,
   const auto num_active_lefs = global_state->block_states[bid].num_active_lefs;
 
   if (threadIdx.x == 0) {
+    /*
+    if (num_active_lefs > 3000) {
+      printf("memcopying %lu bytes to addresses %p and %p; num_active_lefs=%d %d; %d\n",
+             num_active_lefs * sizeof(uint32_t), buff1, buff2, num_active_lefs,
+             buff1 + num_active_lefs * sizeof(uint32_t) <
+                 &global_state->block_states[bid].num_active_lefs,
+             buff2 + num_active_lefs * sizeof(uint32_t) <
+                 &global_state->block_states[bid].num_active_lefs);
+    }
+     */
     if (direction == dna::Direction::rev) {
-      memcpy(buff1, global_state->block_states[bid].rev_unit_pos,
-             num_active_lefs * sizeof(uint32_t));
+      memcpy(buff1, global_state->block_states[bid].rev_unit_pos, num_active_lefs * sizeof(bp_t));
       memcpy(buff2, global_state->block_states[bid].lef_rev_unit_idx,
              num_active_lefs * sizeof(uint32_t));
     } else {
-      memcpy(buff1, global_state->block_states[bid].fwd_unit_pos,
-             num_active_lefs * sizeof(uint32_t));
+      memcpy(buff1, global_state->block_states[bid].fwd_unit_pos, num_active_lefs * sizeof(bp_t));
       memcpy(buff2, global_state->block_states[bid].lef_fwd_unit_idx,
              num_active_lefs * sizeof(uint32_t));
     }
@@ -274,7 +281,7 @@ __global__ void prepare_extr_units_for_sorting(GlobalStateDev* global_state,
     // if (blockIdx.x == 1) {
     //  printf("%d-%d/%d\n", start_offsets[bid], end_offsets[bid], num_active_lefs);
     // }
-    atomicAdd(tot_num_items_to_sort, global_state->block_states[bid].num_active_lefs);
+    atomicAdd(tot_num_items_to_sort, num_active_lefs);
   }
 }
 
