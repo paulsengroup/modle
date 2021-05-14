@@ -78,8 +78,7 @@ GlobalStateHost::GlobalStateHost(size_t grid_size_, size_t block_size_, size_t m
       grid_size(grid_size_),
       block_size(block_size_),
       max_grid_size(max_grid_size_),
-      block_states(static_cast<BlockState*>(
-          cuda::memory::device::allocate(dev, max_grid_size_ * sizeof(BlockState)).get())),
+      block_states(allocate_block_states(dev, max_nbarriers, max_nlefs, max_grid_size, block_size)),
       tasks(static_cast<Task*>(
           cuda::memory::device::allocate(dev, max_grid_size_ * sizeof(Task)).get())),
       barrier_pos(cuda::memory::device::make_unique<bp_t[]>(dev, max_nbarriers * sizeof(bp_t))),
@@ -103,28 +102,10 @@ GlobalStateHost::GlobalStateHost(size_t grid_size_, size_t block_size_, size_t m
   assert(this->block_size > 0);  // NOLINT
   this->_device.set_resource_limit(cudaLimitMallocHeapSize, device_heap_size);
   this->sync_state_with_device();
-  auto ok_buff = cuda::memory::device::allocate(this->_device, sizeof(int));
-  cuda::memory::device::set(ok_buff, true);
-
-  const auto global_state_dev = this->get_copy_of_device_instance();
-
-  kernels::allocate_block_states<<<this->max_grid_size, this->block_size>>>(
-      global_state_dev.block_states, static_cast<uint32_t>(max_nlefs),
-      static_cast<uint32_t>(max_nbarriers), static_cast<int*>(ok_buff.get()));
-  this->_device.synchronize();
-  int ok;
-  cuda::memory::copy(&ok, ok_buff.get(), sizeof(int));
-  cuda::memory::device::free(ok_buff);
-  if (!ok) {
-    throw std::runtime_error("Failed to initialize block states on the device");
-  }
-  this->sync_state_with_device();
 }
 
 GlobalStateHost::~GlobalStateHost() {
-  kernels::free_block_states<<<this->max_grid_size, this->block_size>>>(this->block_states);
-  this->_device.synchronize();
-
+  deallocate_block_states(this->block_states, this->max_grid_size);
   cuda::memory::device::free(this->block_states);
   cuda::memory::device::free(this->tasks);
   cuda::memory::device::free(this->_global_state_dev);
@@ -192,43 +173,69 @@ void GlobalStateHost::init(size_t grid_size_, size_t block_size_,
 
   kernels::reset_buffers<<<this->grid_size, this->block_size>>>(this->get_ptr_to_dev_instance());
   this->_device.synchronize();
+}
 
-  /*
-  BlockState foo;
-  Simulation::Task foo2;
-  cuda::memory::copy_single(&foo2, this->get_copy_of_device_instance().tasks);
-  std::vector<uint32_t> foo1(foo2.nlefs);
+BlockState* GlobalStateHost::allocate_block_states(const cuda::device_t& dev, size_t max_nbarriers,
+                                                   size_t max_nlefs, size_t max_grid_size,
+                                                   size_t max_block_size) {
+  auto allocate_or_throw = [&dev](auto& buff, uint32_t size) {
+    using T = std::remove_pointer_t<std::decay_t<decltype(buff)>>;
+    buff = static_cast<T*>(cuda::memory::device::allocate(dev, size * sizeof(T)).get());
+  };
 
-  cuda::memory::copy_single(&foo, this->get_copy_of_device_instance().block_states);
-  cuda::memory::copy(foo1.data(), foo.lef_rev_unit_idx, 1 * sizeof(uint32_t));
+  auto* block_states_dev = static_cast<BlockState*>(
+      cuda::memory::device::allocate(dev, max_grid_size * sizeof(BlockState)).get());
+  std::vector<BlockState> block_states_host(max_grid_size);
 
-  for (auto& n : foo1) {
-    fmt::print(stderr, "{}\t", n);
+  for (auto i = 0UL; i < max_grid_size; ++i) {
+    allocate_or_throw(block_states_host[i].barrier_mask, max_nbarriers);
+
+    allocate_or_throw(block_states_host[i].rev_unit_pos, max_nlefs);
+    allocate_or_throw(block_states_host[i].fwd_unit_pos, max_nlefs);
+    allocate_or_throw(block_states_host[i].lef_rev_unit_idx, max_nlefs);
+    allocate_or_throw(block_states_host[i].lef_fwd_unit_idx, max_nlefs);
+
+    allocate_or_throw(block_states_host[i].rev_moves_buff, max_nlefs);
+    allocate_or_throw(block_states_host[i].fwd_moves_buff, max_nlefs);
+    allocate_or_throw(block_states_host[i].rev_collision_mask, max_nlefs);
+    allocate_or_throw(block_states_host[i].fwd_collision_mask, max_nlefs);
+
+    allocate_or_throw(block_states_host[i].lef_unloader_affinities, max_nlefs);
+    allocate_or_throw(block_states_host[i].contact_local_buff,
+                      max_nlefs);  // TODO CHANGEME
+    allocate_or_throw(block_states_host[i].epoch_buff, max_nlefs);
+
+    allocate_or_throw(block_states_host[i].rng_state, max_block_size);
   }
-  fmt::print(stderr, "\n");
-   */
 
-  /*
-  GlobalStateDev global_state_host;
-  CUDA_CALL(cudaMemcpy(&global_state_host, global_state_dev, sizeof(GlobalStateDev),
-                       cudaMemcpyDeviceToHost));
-  global_state_host.nblock_states = static_cast<uint32_t>(host_tasks.size());
-  global_state_host.ntasks = static_cast<uint32_t>(host_tasks.size());
-  CUDA_CALL(cudaMemcpy(global_state_host.barrier_pos, barrier_pos.data(),
-                       barrier_pos.size() * sizeof(uint32_t), cudaMemcpyHostToDevice));
-  CUDA_CALL(cudaMemcpy(global_state_host.barrier_directions, barrier_dir.data(),
-                       barrier_dir.size() * sizeof(dna::Direction), cudaMemcpyHostToDevice));
-  CUDA_CALL(cudaMemcpy(global_state_host.tasks, host_tasks.data(), host_tasks.size() * sizeof(Task),
-                       cudaMemcpyHostToDevice));
+  cuda::memory::copy(block_states_dev, block_states_host.data(),
+                     block_states_host.size() * sizeof(BlockState));
 
-  CUDA_CALL(cudaMemcpy(global_state_dev, &global_state_host, sizeof(GlobalStateDev),
-                       cudaMemcpyHostToDevice));
+  return block_states_dev;
+}
 
-  init_curand_kernel<<<grid_size, block_size>>>(global_state_dev);
+void GlobalStateHost::deallocate_block_states(BlockState* block_states_dev, size_t nstates) {
+  BlockState block_state_host;
+  for (auto i = 0UL; i < nstates; ++i) {
+    cuda::memory::copy_single(&block_state_host, block_states_dev + i);
+    cuda::memory::device::free(block_state_host.barrier_mask);
 
-  reset_buffers_kernel<<<grid_size, block_size>>>(global_state_dev);
-  CUDA_CALL(cudaDeviceSynchronize());
-   */
+    cuda::memory::device::free(block_state_host.rev_unit_pos);
+    cuda::memory::device::free(block_state_host.fwd_unit_pos);
+    cuda::memory::device::free(block_state_host.lef_rev_unit_idx);
+    cuda::memory::device::free(block_state_host.lef_fwd_unit_idx);
+
+    cuda::memory::device::free(block_state_host.rev_moves_buff);
+    cuda::memory::device::free(block_state_host.fwd_moves_buff);
+    cuda::memory::device::free(block_state_host.rev_collision_mask);
+    cuda::memory::device::free(block_state_host.fwd_collision_mask);
+
+    cuda::memory::device::free(block_state_host.lef_unloader_affinities);
+    cuda::memory::device::free(block_state_host.contact_local_buff);
+    cuda::memory::device::free(block_state_host.epoch_buff);
+
+    cuda::memory::device::free(block_state_host.rng_state);
+  }
 }
 
 Config* write_config_to_device(const Config& c) {

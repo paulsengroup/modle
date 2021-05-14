@@ -22,4 +22,7 @@ target_link_libraries(
             $<$<AND:$<BOOL:${USING_LIBCXX}>,$<BOOL:${EXPLICIT_LINK_VS_FILESYSTEM_REQUIRED}>>:-lc++fs>
             $<$<AND:$<BOOL:${USING_STDLIBCXX}>,$<BOOL:${EXPLICIT_LINK_VS_FILESYSTEM_REQUIRED}>>:-lstdc++fs>)
 
+# TODO Move these options into a separate target
+target_compile_options(libmodle_cuda INTERFACE -Wno-pedantic)
+
 # if(ENABLE_TESTING) add_subdirectory(test) endif()

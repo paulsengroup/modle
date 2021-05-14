@@ -86,11 +86,12 @@ void Simulation::run() {
     base_task.nbarriers = barriers.size();
     std::transform(barriers.begin(), barriers.end(), this->_barrier_positions.begin(),
                    [](const auto& b) { return b.pos(); });
-    std::transform(
-        barriers.begin(), barriers.end(), this->_barrier_directions.begin(), [](const auto& b) {
-          return b.blocking_direction_major() == dna::Direction::fwd ? dna::Direction::rev
-                                                                     : dna::Direction::fwd;
-        });
+    std::transform(barriers.begin(), barriers.end(), this->_barrier_directions.begin(),
+                   [](const auto& b) {
+                     return b.blocking_direction_major() == modle::dna::Direction::fwd
+                                ? cu::dna::Direction::rev
+                                : cu::dna::Direction::fwd;
+                   });
 
     auto cellid = 0UL;
     const auto nbatches = (this->ncells + task_batch_size - 1) / task_batch_size;

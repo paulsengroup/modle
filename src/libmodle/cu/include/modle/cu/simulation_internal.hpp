@@ -7,11 +7,6 @@
 namespace modle::cu::kernels {
 
 // Memory management
-__global__ void allocate_block_states(BlockState* block_state, uint32_t max_nlefs,
-                                      uint32_t max_nbarriers, int* ok);
-
-__global__ void free_block_states(BlockState* block_state);
-
 __global__ void init_curand(GlobalStateDev* global_state);
 
 __global__ void reset_buffers(GlobalStateDev* global_state);
@@ -31,7 +26,8 @@ __global__ void select_and_bind_lefs(uint32_t current_epoch, GlobalStateDev* glo
 
 __global__ void prepare_extr_units_for_sorting(GlobalStateDev* global_state,
                                                dna::Direction direction,
-                                               uint32_t* tot_num_items_to_sort);
-__global__ void scatter_sorted_lefs(GlobalStateDev* global_state, dna::Direction direction,
-                                    bool update_extr_unit_to_lef_mappings = true);
+                                               uint32_t* tot_num_units_to_sort = nullptr);
+__global__ void update_unit_mappings_and_scatter_sorted_lefs(
+    GlobalStateDev* global_state, dna::Direction direction,
+    bool update_extr_unit_to_lef_mappings = true);
 }  // namespace modle::cu::kernels

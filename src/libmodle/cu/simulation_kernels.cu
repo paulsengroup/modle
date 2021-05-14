@@ -8,70 +8,6 @@
 
 namespace modle::cu::kernels {
 
-__global__ void allocate_block_states(BlockState* block_states, uint32_t max_nlefs,
-                                      uint32_t max_nbarriers, int* ok) {
-  auto allocate_or_fail = [&ok](auto& buff, uint32_t size) {
-    using T = std::remove_pointer_t<std::decay_t<decltype(buff)>>;
-    if (!ok) {
-      return;
-    }
-
-    if (!(buff = new T[size])) {
-      atomicExch(ok, false);
-      return;
-    }
-  };
-
-  if (threadIdx.x == 0 && ok) {
-    BlockState block_state;
-
-    allocate_or_fail(block_state.barrier_mask, max_nbarriers);
-
-    allocate_or_fail(block_state.rev_unit_pos, max_nlefs);
-    allocate_or_fail(block_state.fwd_unit_pos, max_nlefs);
-    allocate_or_fail(block_state.lef_rev_unit_idx, max_nlefs);
-    allocate_or_fail(block_state.lef_fwd_unit_idx, max_nlefs);
-
-    allocate_or_fail(block_state.rev_moves_buff, max_nlefs);
-    allocate_or_fail(block_state.fwd_moves_buff, max_nlefs);
-    allocate_or_fail(block_state.rev_collision_mask, max_nlefs);
-    allocate_or_fail(block_state.fwd_collision_mask, max_nlefs);
-
-    allocate_or_fail(block_state.lef_unloader_affinities, max_nlefs);
-    allocate_or_fail(block_state.contact_local_buff,
-                     max_nlefs);  // TODO CHANGEME
-    allocate_or_fail(block_state.epoch_buff, max_nlefs);
-
-    allocate_or_fail(block_state.rng_state, blockDim.x);
-
-    memcpy(block_states + blockIdx.x, &block_state, sizeof(BlockState));
-  }
-}
-
-__global__ void free_block_states(BlockState* block_states) {
-  if (threadIdx.x == 0) {
-    auto& block_state = block_states[blockIdx.x];
-
-    delete[] block_state.barrier_mask;
-
-    delete[] block_state.rev_unit_pos;
-    delete[] block_state.fwd_unit_pos;
-    delete[] block_state.lef_rev_unit_idx;
-    delete[] block_state.lef_fwd_unit_idx;
-
-    delete[] block_state.rev_moves_buff;
-    delete[] block_state.fwd_moves_buff;
-    delete[] block_state.rev_collision_mask;
-    delete[] block_state.fwd_collision_mask;
-
-    delete[] block_state.lef_unloader_affinities;
-    delete[] block_state.contact_local_buff;
-    delete[] block_state.epoch_buff;
-
-    delete[] block_state.rng_state;
-  }
-}
-
 __global__ void init_curand(GlobalStateDev* global_state) {
   const auto seed = global_state->tasks[blockIdx.x].seed;
   curandStatePhilox4_32_10_t rng_state;
@@ -83,10 +19,7 @@ __global__ void init_curand(GlobalStateDev* global_state) {
 
 __global__ void reset_buffers(GlobalStateDev* global_state) {
   const auto bid = blockIdx.x;
-  const auto nthreads = blockDim.x * gridDim.x;
-  const auto id = threadIdx.x + bid * blockDim.x;
-
-  // constexpr int default_mask = 0xFFFFFFFF;
+  const auto tid = threadIdx.x;
 
   const auto nlefs = global_state->tasks[bid].nlefs;
 
@@ -95,18 +28,12 @@ __global__ void reset_buffers(GlobalStateDev* global_state) {
   if (threadIdx.x == 0) {
     memset(block_state.rev_unit_pos, static_cast<int>(Simulation::LEF_IS_IDLE), nlefs);
     memset(block_state.fwd_unit_pos, static_cast<int>(Simulation::LEF_IS_IDLE), nlefs);
-
-    // memset(block_state.rev_moves_buff, 0U, nlefs);
-    // memset(block_state.fwd_moves_buff, 0U, nlefs);
-    // memset(block_state.rev_collision_mask, default_mask, nlefs);
-    // memset(block_state.fwd_collision_mask, default_mask, nlefs);
-
     block_state.num_active_lefs = 0;
   }
   __syncthreads();
 
-  const auto chunk_size = (nlefs + nthreads - 1) / nthreads;
-  const auto i0 = id * chunk_size;
+  const auto chunk_size = (nlefs + blockDim.x - 1) / blockDim.x;
+  const auto i0 = tid * chunk_size;
   const auto i1 = min(i0 + chunk_size, nlefs);
   for (auto i = i0; i < i1; ++i) {
     block_state.lef_rev_unit_idx[i] = i;
@@ -192,7 +119,7 @@ __global__ void select_and_bind_lefs(uint32_t current_epoch, GlobalStateDev* glo
 
   const auto chrom_start = global_state->tasks[bid].chrom_start;
   const auto chrom_end = global_state->tasks[bid].chrom_end;
-  const auto chrom_simulated_size = __uint2float_rn(chrom_end - chrom_start);
+  const auto chrom_simulated_size = __uint2float_rn(chrom_end - 1 - chrom_start);
 
   auto local_rng_state = global_state->block_states[bid].rng_state[tid];
 
@@ -227,13 +154,8 @@ __global__ void select_and_bind_lefs(uint32_t current_epoch, GlobalStateDev* glo
       rev_unit_pos[i] =
           __float2uint_rn(roundf(curand_uniform(&local_rng_state) * chrom_simulated_size));
       const auto j = rev_unit_idx[i];
-      /*
-      if (fwd_unit_pos[j] != Simulation::LEF_IS_IDLE) {
-        printf("epoch=%d; %d:%d; i=%d; j=%d; rev_pos=%d; fwd_pos=%d;\n", current_epoch, threadIdx.x,
-               blockIdx.x, i, j, rev_unit_pos[i], fwd_unit_pos[j]);
-      }
-       */
-      // assert(fwd_unit_pos[j] == Simulation::LEF_IS_IDLE);  // NOLINT
+
+      assert(fwd_unit_pos[j] == Simulation::LEF_IS_IDLE);  // NOLINT
       fwd_unit_pos[j] = rev_unit_pos[i];
     }
   }
@@ -241,31 +163,19 @@ __global__ void select_and_bind_lefs(uint32_t current_epoch, GlobalStateDev* glo
 
 __global__ void prepare_extr_units_for_sorting(GlobalStateDev* global_state,
                                                dna::Direction direction,
-                                               uint32_t* tot_num_items_to_sort) {
+                                               uint32_t* tot_num_units_to_sort) {
   assert(direction == dna::Direction::fwd || direction == dna::Direction::rev);  // NOLINT
-  const auto bid = blockIdx.x;
-
-  auto* buff1 =
-      global_state->large_uint_buff1 + (bid * global_state->large_uint_buff_chunk_alignment);
-  auto* buff2 =
-      global_state->large_uint_buff3 + (bid * global_state->large_uint_buff_chunk_alignment);
-  auto* start_offsets = global_state->sorting_offset1_buff;
-  auto* end_offsets = global_state->sorting_offset2_buff;
-  const auto buff_alignment = global_state->large_uint_buff_chunk_alignment;
-
-  const auto num_active_lefs = global_state->block_states[bid].num_active_lefs;
-
   if (threadIdx.x == 0) {
-    /*
-    if (num_active_lefs > 3000) {
-      printf("memcopying %lu bytes to addresses %p and %p; num_active_lefs=%d %d; %d\n",
-             num_active_lefs * sizeof(uint32_t), buff1, buff2, num_active_lefs,
-             buff1 + num_active_lefs * sizeof(uint32_t) <
-                 &global_state->block_states[bid].num_active_lefs,
-             buff2 + num_active_lefs * sizeof(uint32_t) <
-                 &global_state->block_states[bid].num_active_lefs);
-    }
-     */
+    const auto bid = blockIdx.x;
+
+    const auto buff_alignment = global_state->large_uint_buff_chunk_alignment;
+    auto* buff1 = global_state->large_uint_buff1 + (bid * buff_alignment);
+    auto* buff2 = global_state->large_uint_buff3 + (bid * buff_alignment);
+    auto* start_offsets = global_state->sorting_offset1_buff;
+    auto* end_offsets = global_state->sorting_offset2_buff;
+
+    const auto num_active_lefs = global_state->block_states[bid].num_active_lefs;
+
     if (direction == dna::Direction::rev) {
       memcpy(buff1, global_state->block_states[bid].rev_unit_pos, num_active_lefs * sizeof(bp_t));
       memcpy(buff2, global_state->block_states[bid].lef_rev_unit_idx,
@@ -278,15 +188,14 @@ __global__ void prepare_extr_units_for_sorting(GlobalStateDev* global_state,
 
     start_offsets[bid] = buff_alignment * bid;
     end_offsets[bid] = (buff_alignment * bid) + num_active_lefs;
-    // if (blockIdx.x == 1) {
-    //  printf("%d-%d/%d\n", start_offsets[bid], end_offsets[bid], num_active_lefs);
-    // }
-    atomicAdd(tot_num_items_to_sort, num_active_lefs);
+    if (tot_num_units_to_sort) {
+      atomicAdd(tot_num_units_to_sort, num_active_lefs);
+    }
   }
 }
 
-__global__ void scatter_sorted_lefs(GlobalStateDev* global_state, dna::Direction direction,
-                                    bool update_extr_unit_to_lef_mappings) {
+__global__ void update_unit_mappings_and_scatter_sorted_lefs(
+    GlobalStateDev* global_state, dna::Direction direction, bool update_extr_unit_to_lef_mappings) {
   const auto tid = threadIdx.x;
   const auto bid = blockIdx.x;
 
@@ -317,14 +226,17 @@ __global__ void scatter_sorted_lefs(GlobalStateDev* global_state, dna::Direction
       dest_idx[j] = i;
     }
   }
+  /*
   __syncthreads();
-  if (tid == 0 && bid == 0) {
+
+  if (tid == 0 && bid == 1) {
     for (auto i = 0U; i < blockDim.x; ++i) {
-      printf("i=%d; rev_pos=%d; fwd_pos=%d; rev_idx=%d; fwd_idx=%d\n", i,
-             block_state->rev_unit_pos[i], block_state->fwd_unit_pos[i],
-             block_state->lef_rev_unit_idx[i], block_state->lef_fwd_unit_idx[i]);
+      const auto j = block_state->lef_rev_unit_idx[i];
+      printf("i=%d; j=%d; rev_pos=%d; fwd_pos=%d; rev_idx=%d; fwd_idx=%d\n", i, j,
+             block_state->rev_unit_pos[i], block_state->fwd_unit_pos[j],
+             block_state->lef_rev_unit_idx[i], block_state->lef_fwd_unit_idx[j]);
     }
-  }
+  }   */
 }
 
 }  // namespace modle::cu::kernels

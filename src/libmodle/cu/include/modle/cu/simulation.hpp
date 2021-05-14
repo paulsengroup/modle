@@ -165,6 +165,12 @@ class GlobalStateHost {  // NOLINT
   cuda::device_t _device{cuda::device::current::get()};
 
   std::vector<uint32_t> _buff1;
+
+  [[nodiscard]] static BlockState* allocate_block_states(const cuda::device_t& dev,
+                                                         size_t max_nbarriers, size_t max_nlefs,
+                                                         size_t max_grid_size,
+                                                         size_t max_block_size);
+  static void deallocate_block_states(BlockState* block_states_dev, size_t nstates);
 };
 
 class Simulation : modle::Config {

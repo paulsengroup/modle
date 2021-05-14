@@ -98,9 +98,16 @@ void Simulation::setup_burnin_phase() {
 
   auto tmp_storage_bytes_required = 0UL;
   // This call just computes the required temp buffer size
-  CUDA_CALL(cub::DeviceSegmentedRadixSort::SortKeys(nullptr, tmp_storage_bytes_required, keys_dev,
-                                                    num_items_to_sort, num_segments_to_sort,
-                                                    begin_offsets_dev, end_offsets_dev));
+  auto status = cub::DeviceSegmentedRadixSort::SortKeys(
+      nullptr, tmp_storage_bytes_required, keys_dev, num_items_to_sort, num_segments_to_sort,
+      begin_offsets_dev, end_offsets_dev);
+
+  if (status != cudaSuccess) {
+    throw std::runtime_error(
+        fmt::format(FMT_STRING("Failed to compute the memory requirements to sort LEF initial "
+                               "binding epochs on the device ({}:{}): {}: {}"),
+                    __FILE__, __LINE__, cudaGetErrorName(status), cudaGetErrorString(status)));
+  }
 
   if (tmp_storage_bytes_required > this->_global_state_host.tmp_sorting_storage_bytes) {
     this->_global_state_host.tmp_sorting_storage_bytes = tmp_storage_bytes_required;
@@ -111,16 +118,16 @@ void Simulation::setup_burnin_phase() {
 
   this->_global_state_host._device.synchronize();
 
-  const auto status1 = cub::DeviceSegmentedRadixSort::SortKeys(
+  status = cub::DeviceSegmentedRadixSort::SortKeys(
       this->_global_state_host.tmp_sorting_storage.get(),
       this->_global_state_host.tmp_sorting_storage_bytes, keys_dev, num_items_to_sort,
       num_segments_to_sort, begin_offsets_dev, end_offsets_dev);
   this->_global_state_host._device.synchronize();
 
-  if (status1 != cudaSuccess) {
-    throw std::runtime_error(
-        fmt::format(FMT_STRING("Failed to sort LEF initial binding epochs ({}:{}): {}: {}"),
-                    __FILE__, __LINE__, cudaGetErrorName(status1), cudaGetErrorString(status1)));
+  if (status != cudaSuccess) {
+    throw std::runtime_error(fmt::format(
+        FMT_STRING("Failed to sort LEF initial binding epochs on the device ({}:{}): {}: {}"),
+        __FILE__, __LINE__, cudaGetErrorName(status), cudaGetErrorString(status)));
   }
 
   try {
@@ -136,7 +143,6 @@ void Simulation::setup_burnin_phase() {
 }
 
 void Simulation::sort_lefs() {
-  auto& offsets_buff_host = this->_global_state_host._buff1;
   auto* begin_offsets_dev = this->_global_state_host.sorting_offset1_buff.get();
   auto* end_offsets_dev = this->_global_state_host.sorting_offset2_buff.get();
 
@@ -161,14 +167,20 @@ void Simulation::sort_lefs() {
       static_cast<uint32_t*>(num_items_to_sort_dev.get()));
 
   uint32_t num_items_to_sort_host;
-  cuda::memory::copy(&num_items_to_sort_host, num_items_to_sort_dev.get(),
-                     num_items_to_sort_dev.size());
+  cuda::memory::copy_single(&num_items_to_sort_host,
+                            static_cast<uint32_t*>(num_items_to_sort_dev.get()));
   cuda::memory::device::free(num_items_to_sort_dev);
 
-  CUDA_CALL(cub::DeviceSegmentedRadixSort::SortPairs(
+  auto status = cub::DeviceSegmentedRadixSort::SortPairs(
       nullptr, tmp_storage_bytes_required, keys_dev, vals_dev,
       static_cast<int>(num_items_to_sort_host), static_cast<int>(num_segments_to_sort),
-      begin_offsets_dev, end_offsets_dev));
+      begin_offsets_dev, end_offsets_dev);
+  if (status != cudaSuccess) {
+    throw std::runtime_error(fmt::format(
+        FMT_STRING(
+            "Failed to compute the memory requirements to sort LEFs on the device ({}:{}): {}: {}"),
+        __FILE__, __LINE__, cudaGetErrorName(status), cudaGetErrorString(status)));
+  }
 
   if (tmp_storage_bytes_required > this->_global_state_host.tmp_sorting_storage_bytes) {
     this->_global_state_host.tmp_sorting_storage_bytes = tmp_storage_bytes_required;
@@ -178,52 +190,47 @@ void Simulation::sort_lefs() {
     this->_global_state_host.sync_state_with_device();
   }
 
-  CUDA_CALL(cub::DeviceSegmentedRadixSort::SortPairs(
+  status = cub::DeviceSegmentedRadixSort::SortPairs(
       tmp_storage_dev, tmp_storage_bytes_required, keys_dev, vals_dev,
       static_cast<int>(num_items_to_sort_host), static_cast<int>(num_segments_to_sort),
-      begin_offsets_dev, end_offsets_dev));
+      begin_offsets_dev, end_offsets_dev);
+  if (status != cudaSuccess) {
+    throw std::runtime_error(
+        fmt::format(FMT_STRING("Failed to sort LEFs on the device ({}:{}): {}: {}"), __FILE__,
+                    __LINE__, cudaGetErrorName(status), cudaGetErrorString(status)));
+  }
 
   this->_global_state_host._device.synchronize();
-  kernels::scatter_sorted_lefs<<<this->_grid_size, this->_block_size>>>(
-      this->_global_state_host.get_ptr_to_dev_instance(), direction,
-      static_cast<uint32_t*>(num_items_to_sort_dev.get()));
+  kernels::update_unit_mappings_and_scatter_sorted_lefs<<<this->_grid_size, this->_block_size>>>(
+      this->_global_state_host.get_ptr_to_dev_instance(), direction);
 
   direction = dna::Direction::fwd;
 
   kernels::prepare_extr_units_for_sorting<<<this->_grid_size, this->_block_size>>>(
-      this->_global_state_host.get_ptr_to_dev_instance(), direction,
-      static_cast<uint32_t*>(num_items_to_sort_dev.get()));
+      this->_global_state_host.get_ptr_to_dev_instance(), direction);
 
-  CUDA_CALL(cub::DeviceSegmentedRadixSort::SortPairs(
+  status = cub::DeviceSegmentedRadixSort::SortPairs(
       tmp_storage_dev, tmp_storage_bytes_required, keys_dev, vals_dev,
       static_cast<int>(num_items_to_sort_host), static_cast<int>(num_segments_to_sort),
-      begin_offsets_dev, end_offsets_dev));
+      begin_offsets_dev, end_offsets_dev);
+  if (status != cudaSuccess) {
+    throw std::runtime_error(
+        fmt::format(FMT_STRING("Failed to sort LEFs on the device ({}:{}): {}: {}"), __FILE__,
+                    __LINE__, cudaGetErrorName(status), cudaGetErrorString(status)));
+  }
 
   this->_global_state_host._device.synchronize();
 
-  kernels::scatter_sorted_lefs<<<this->_grid_size, this->_block_size>>>(
-      this->_global_state_host.get_ptr_to_dev_instance(), direction,
-      static_cast<uint32_t*>(num_items_to_sort_dev.get()));
+  kernels::update_unit_mappings_and_scatter_sorted_lefs<<<this->_grid_size, this->_block_size>>>(
+      this->_global_state_host.get_ptr_to_dev_instance(), direction);
   this->_global_state_host._device.synchronize();
-  /*
-    // THIS IS WHERE THE CODE BREAKS
-    std::vector<uint32_t> idxes(this->_tasks[0].nlefs);
-    BlockState foo;
-    cuda::memory::copy(&foo, this->_global_state_host.get_copy_of_device_instance().block_states +
-    1, sizeof(BlockState));
-
-    cuda::memory::copy(idxes.data(), foo.lef_rev_unit_idx, idxes.size() * sizeof(uint32_t));
-    for (auto& i : idxes) {
-      fmt::print(stderr, "{}\t");
-    }
-    fmt::print(stderr, "\n");
-  */
 }
 
 bool Simulation::simulate_one_epoch() {
   kernels::select_and_bind_lefs<<<this->_grid_size, this->_block_size>>>(
       this->_current_epoch, this->_global_state_host.get_ptr_to_dev_instance());
 
+  this->_global_state_host._device.synchronize();
   this->sort_lefs();
   this->_global_state_host._device.synchronize();
   /*

@@ -28,7 +28,7 @@ Genome::Genome(const std::filesystem::path& path_to_chrom_sizes,
                const std::filesystem::path& path_to_extr_barriers,
                const std::filesystem::path& path_to_chrom_subranges, bool keep_all_chroms)
     : _chromosomes(instantiate_genome(path_to_chrom_sizes, path_to_extr_barriers,
-                                      path_to_chrom_subranges, keep_all_chroms)){};
+                                      path_to_chrom_subranges, keep_all_chroms)) {}
 
 absl::btree_set<Chromosome, Chromosome::Comparator> import_chromosomes(
     const std::filesystem::path& path_to_chrom_sizes,
