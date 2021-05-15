@@ -22,8 +22,8 @@ if(ENABLE_CUDA)
   set(CMAKE_CUDA_ARCHITECTURES
       #70
       #72
-      #75
-      80)
+      75
+      86)
   set_target_properties(project_options PROPERTIES CUDA_SEPARABLE_COMPILATION ON)
   target_compile_definitions(project_options INTERFACE ENABLE_CUDA=1)
 endif()

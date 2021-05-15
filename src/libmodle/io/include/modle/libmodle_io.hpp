@@ -31,6 +31,11 @@ class Genome {
   [[nodiscard]] inline const Chromosome& chromosome_with_longest_name() const;
   [[nodiscard]] inline const Chromosome& longest_chromosome() const;
   [[nodiscard]] inline const Chromosome& chromosome_with_max_nbarriers() const;
+  [[nodiscard]] inline size_t max_target_contacts(size_t bin_size, size_t diagonal_width,
+                                                  double target_contact_density,
+                                                  size_t simulation_iterations,
+                                                  double lef_fraction_contact_sampling,
+                                                  double nlefs_per_mbp, size_t ncells) const;
 
   /// Allocate and return the extrusion barriers for the chromosome \p chrom.
   [[nodiscard]] inline std::vector<ExtrusionBarrier> generate_vect_of_barriers(

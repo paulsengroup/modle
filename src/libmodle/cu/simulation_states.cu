@@ -42,6 +42,7 @@ GlobalStateDev* GlobalStateHost::get_ptr_to_dev_instance() {
 
     gs.nblock_states = this->nblock_states;
     gs.ntasks = this->ntasks;
+    gs.ntasks_completed = this->ntasks_completed;
 
     gs.barrier_pos = this->barrier_pos.get();
     gs.barrier_directions = this->barrier_directions.get();
@@ -73,31 +74,34 @@ GlobalStateDev GlobalStateHost::get_copy_of_device_instance() {
 
 GlobalStateHost::GlobalStateHost(size_t grid_size_, size_t block_size_, size_t max_grid_size_,
                                  size_t device_heap_size, const Config& c, size_t max_nlefs,
-                                 size_t max_nbarriers, cuda::device_t dev)
+                                 size_t max_nbarriers, size_t max_ncontacts_per_block,
+                                 cuda::device_t dev)
     : config(write_config_to_device(c)),
       grid_size(grid_size_),
       block_size(block_size_),
       max_grid_size(max_grid_size_),
-      block_states(allocate_block_states(dev, max_nbarriers, max_nlefs, max_grid_size, block_size)),
+      block_states(allocate_block_states(dev, max_nbarriers, max_nlefs, max_ncontacts_per_block,
+                                         max_grid_size, block_size)),
       tasks(static_cast<Task*>(
           cuda::memory::device::allocate(dev, max_grid_size_ * sizeof(Task)).get())),
       barrier_pos(cuda::memory::device::make_unique<bp_t[]>(dev, max_nbarriers * sizeof(bp_t))),
       barrier_directions(cuda::memory::device::make_unique<dna::Direction[]>(
           dev, max_nbarriers * sizeof(dna::Direction))),
-      nblock_states(static_cast<uint32_t>(max_grid_size_)),
-      ntasks(static_cast<uint32_t>(max_grid_size_)),
+      nblock_states(static_cast<uint32_t>(max_grid_size)),
+      ntasks(static_cast<uint32_t>(max_grid_size)),
       large_uint_buff1(cuda::memory::device::make_unique<uint32_t[]>(
-          dev, max_grid_size_ * std::max(max_nlefs, max_nbarriers))),
+          dev, max_grid_size * std::max(max_nlefs, max_nbarriers))),
       large_uint_buff2(cuda::memory::device::make_unique<uint32_t[]>(
-          dev, max_grid_size_ * std::max(max_nlefs, max_nbarriers))),
+          dev, max_grid_size * std::max(max_nlefs, max_nbarriers))),
       large_uint_buff3(cuda::memory::device::make_unique<uint32_t[]>(
-          dev, max_grid_size_ * std::max(max_nlefs, max_nbarriers))),
+          dev, max_grid_size * std::max(max_nlefs, max_nbarriers))),
       large_uint_buff4(cuda::memory::device::make_unique<uint32_t[]>(
-          dev, max_grid_size_ * std::max(max_nlefs, max_nbarriers))),
-      sorting_offset1_buff(cuda::memory::device::make_unique<uint32_t[]>(dev, max_grid_size_ + 1)),
-      sorting_offset2_buff(cuda::memory::device::make_unique<uint32_t[]>(dev, max_grid_size_ + 1)),
+          dev, max_grid_size * std::max(max_nlefs, max_nbarriers))),
+      sorting_offset1_buff(cuda::memory::device::make_unique<uint32_t[]>(dev, max_grid_size + 1)),
+      sorting_offset2_buff(cuda::memory::device::make_unique<uint32_t[]>(dev, max_grid_size + 1)),
       large_uint_buff_chunk_alignment(static_cast<uint32_t>(std::max(max_nlefs, max_nbarriers))),
-      _device(dev) {
+      _device(dev),
+      _max_ncontacts_per_block(max_ncontacts_per_block) {
   assert(this->grid_size > 0);   // NOLINT
   assert(this->block_size > 0);  // NOLINT
   this->_device.set_resource_limit(cudaLimitMallocHeapSize, device_heap_size);
@@ -125,6 +129,7 @@ void GlobalStateHost::write_tasks_to_device(const std::vector<Task>& new_tasks) 
     auto dev_state = this->get_copy_of_device_instance();
     cuda::memory::copy(dev_state.tasks, new_tasks.data(), new_tasks.size() * sizeof(Task));
     dev_state.ntasks = static_cast<uint32_t>(new_tasks.size());
+    dev_state.ntasks_completed = 0;
 
     this->sync_state_with_device(dev_state);
   } catch (const cuda::runtime_error& e) {
@@ -158,6 +163,7 @@ void GlobalStateHost::init(size_t grid_size_, size_t block_size_,
   assert(barrier_pos_host.size() == barrier_dir_host.size());  // NOLINT
   this->grid_size = grid_size_;
   this->block_size = block_size_;
+  //this->ntasks_completed = 0;
   if (!tasks_host.empty()) {
     this->write_tasks_to_device(tasks_host);
   }
@@ -169,15 +175,14 @@ void GlobalStateHost::init(size_t grid_size_, size_t block_size_,
   this->sync_state_with_device();
 
   kernels::init_curand<<<this->grid_size, this->block_size>>>(this->get_ptr_to_dev_instance());
-  this->_device.synchronize();
 
   kernels::reset_buffers<<<this->grid_size, this->block_size>>>(this->get_ptr_to_dev_instance());
   this->_device.synchronize();
 }
 
 BlockState* GlobalStateHost::allocate_block_states(const cuda::device_t& dev, size_t max_nbarriers,
-                                                   size_t max_nlefs, size_t max_grid_size,
-                                                   size_t max_block_size) {
+                                                   size_t max_nlefs, size_t max_ncontacts,
+                                                   size_t max_grid_size, size_t max_block_size) {
   auto allocate_or_throw = [&dev](auto& buff, uint32_t size) {
     using T = std::remove_pointer_t<std::decay_t<decltype(buff)>>;
     buff = static_cast<T*>(cuda::memory::device::allocate(dev, size * sizeof(T)).get());
@@ -201,11 +206,12 @@ BlockState* GlobalStateHost::allocate_block_states(const cuda::device_t& dev, si
     allocate_or_throw(block_states_host[i].fwd_collision_mask, max_nlefs);
 
     allocate_or_throw(block_states_host[i].lef_unloader_affinities, max_nlefs);
-    allocate_or_throw(block_states_host[i].contact_local_buff,
-                      max_nlefs);  // TODO CHANGEME
+    allocate_or_throw(block_states_host[i].contact_local_buff, max_ncontacts);
     allocate_or_throw(block_states_host[i].epoch_buff, max_nlefs);
 
     allocate_or_throw(block_states_host[i].rng_state, max_block_size);
+
+    block_states_host[i].contact_local_buff_capacity = max_ncontacts;
   }
 
   cuda::memory::copy(block_states_dev, block_states_host.data(),

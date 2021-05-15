@@ -1,5 +1,7 @@
 #include <cuda_runtime.h>
 #include <curand_kernel.h>
+#include <thrust/execution_policy.h>
+#include <thrust/fill.h>
 
 #include <cstdio>
 
@@ -26,9 +28,14 @@ __global__ void reset_buffers(GlobalStateDev* global_state) {
   auto& block_state = global_state->block_states[bid];
 
   if (threadIdx.x == 0) {
-    memset(block_state.rev_unit_pos, static_cast<int>(Simulation::LEF_IS_IDLE), nlefs);
-    memset(block_state.fwd_unit_pos, static_cast<int>(Simulation::LEF_IS_IDLE), nlefs);
+    thrust::fill_n(thrust::device, block_state.rev_unit_pos, nlefs,
+                   static_cast<int>(Simulation::LEF_IS_IDLE));
+    thrust::fill_n(thrust::device, block_state.fwd_unit_pos, nlefs,
+                   static_cast<int>(Simulation::LEF_IS_IDLE));
     block_state.num_active_lefs = 0;
+    block_state.burnin_completed = false;
+    block_state.simulation_completed = false;
+    block_state.contact_local_buff_size = 0;
   }
   __syncthreads();
 
@@ -114,12 +121,15 @@ __global__ void shift_and_scatter_lef_loading_epochs(const uint32_t* global_buff
 }
 
 __global__ void select_and_bind_lefs(uint32_t current_epoch, GlobalStateDev* global_state) {
+  if (global_state->block_states[blockIdx.x].simulation_completed) {
+    return;
+  }
   const auto bid = blockIdx.x;
   const auto tid = threadIdx.x;
 
   const auto chrom_start = global_state->tasks[bid].chrom_start;
   const auto chrom_end = global_state->tasks[bid].chrom_end;
-  const auto chrom_simulated_size = __uint2float_rn(chrom_end - 1 - chrom_start);
+  const auto chrom_simulated_size = __uint2float_rn(chrom_end - chrom_start - 1);
 
   auto local_rng_state = global_state->block_states[bid].rng_state[tid];
 
@@ -159,12 +169,17 @@ __global__ void select_and_bind_lefs(uint32_t current_epoch, GlobalStateDev* glo
       fwd_unit_pos[j] = rev_unit_pos[i];
     }
   }
+  global_state->block_states[bid].rng_state[tid] = local_rng_state;
 }
 
 __global__ void prepare_extr_units_for_sorting(GlobalStateDev* global_state,
                                                dna::Direction direction,
                                                uint32_t* tot_num_units_to_sort) {
   assert(direction == dna::Direction::fwd || direction == dna::Direction::rev);  // NOLINT
+  if (global_state->block_states[blockIdx.x].simulation_completed) {
+    return;
+  }
+
   if (threadIdx.x == 0) {
     const auto bid = blockIdx.x;
 
@@ -196,6 +211,10 @@ __global__ void prepare_extr_units_for_sorting(GlobalStateDev* global_state,
 
 __global__ void update_unit_mappings_and_scatter_sorted_lefs(
     GlobalStateDev* global_state, dna::Direction direction, bool update_extr_unit_to_lef_mappings) {
+  if (global_state->block_states[blockIdx.x].simulation_completed) {
+    return;
+  }
+
   const auto tid = threadIdx.x;
   const auto bid = blockIdx.x;
 
@@ -226,17 +245,114 @@ __global__ void update_unit_mappings_and_scatter_sorted_lefs(
       dest_idx[j] = i;
     }
   }
-  /*
+}
+
+__global__ void prepare_units_for_random_shuffling(GlobalStateDev* global_state,
+                                                   uint32_t* tot_num_active_units) {
+  if (global_state->block_states[blockIdx.x].simulation_completed) {
+    return;
+  }
+
+  const auto bid = blockIdx.x;
+  const auto buff_alignment = global_state->large_uint_buff_chunk_alignment;
+  auto* start_offsets = global_state->sorting_offset1_buff;
+  auto* end_offsets = global_state->sorting_offset2_buff;
+
+  if (!global_state->block_states[bid].burnin_completed) {
+    if (threadIdx.x == 0) {
+      start_offsets[bid] = buff_alignment * bid;
+      end_offsets[bid] = buff_alignment * bid;
+    }
+    return;
+  }
+
+  auto* buff = global_state->large_uint_buff1 + (bid * buff_alignment);
+
+  const auto num_active_lefs = global_state->block_states[bid].num_active_lefs;
+  if (threadIdx.x == 0) {
+    memcpy(buff, global_state->block_states[bid].lef_fwd_unit_idx,
+           num_active_lefs * sizeof(uint32_t));
+    start_offsets[bid] = buff_alignment * bid;
+    end_offsets[bid] = (buff_alignment * bid) + num_active_lefs;
+
+    if (tot_num_active_units) {
+      atomicAdd(tot_num_active_units, num_active_lefs);
+    }
+  }
   __syncthreads();
 
-  if (tid == 0 && bid == 1) {
-    for (auto i = 0U; i < blockDim.x; ++i) {
-      const auto j = block_state->lef_rev_unit_idx[i];
-      printf("i=%d; j=%d; rev_pos=%d; fwd_pos=%d; rev_idx=%d; fwd_idx=%d\n", i, j,
-             block_state->rev_unit_pos[i], block_state->fwd_unit_pos[j],
-             block_state->lef_rev_unit_idx[i], block_state->lef_fwd_unit_idx[j]);
+  const auto tid = threadIdx.x;
+  auto local_rng_state = global_state->block_states[bid].rng_state[tid];
+  constexpr auto scaling_factor = static_cast<float>(static_cast<uint32_t>(-1));
+  buff = global_state->large_uint_buff3;
+
+  const auto chunk_size = (num_active_lefs + blockDim.x - 1) / blockDim.x;
+  const auto i0 = (bid * buff_alignment) + (threadIdx.x * chunk_size);
+  const auto i1 = min(i0 + chunk_size, gridDim.x * buff_alignment);
+
+  // printf("%d:%d - %d; %d; %d; %d\n", bid, tid, chunk_size, i0, i1, buff_alignment * gridDim.x);
+
+  for (auto i = i0; i < i1; ++i) {
+    buff[i] = __float2uint_rn(curand_uniform(&local_rng_state) * scaling_factor);
+  }
+
+  global_state->block_states[bid].rng_state[tid] = local_rng_state;
+}
+
+__global__ void select_lefs_then_register_contacts(GlobalStateDev* global_state) {
+  if (global_state->block_states[blockIdx.x].simulation_completed ||
+      !global_state->block_states[blockIdx.x].burnin_completed) {
+    return;
+  }
+
+  const auto tid = threadIdx.x;
+  const auto bid = blockIdx.x;
+
+  const auto* rev_unit_idx_buff = global_state->large_uint_buff1;
+  const auto* lef_rev_unit_idx_buff = global_state->block_states[bid].lef_rev_unit_idx;
+
+  const auto* rev_pos_buff = global_state->block_states[bid].rev_unit_pos;
+  const auto* fwd_pos_buff = global_state->block_states[bid].fwd_unit_pos;
+
+  const auto buff_alignment = global_state->large_uint_buff_chunk_alignment;
+
+  const auto target_sample_size =
+      __float2uint_rn(global_state->config->lef_fraction_contact_sampling *
+                      static_cast<float>(global_state->block_states[bid].num_active_lefs));
+  const auto sample_size =
+      min(target_sample_size, global_state->block_states[bid].contact_local_buff_capacity -
+                                  global_state->block_states[bid].contact_local_buff_size);
+  const auto bin_size = static_cast<float>(global_state->config->bin_size);
+
+  const auto offset = global_state->block_states[bid].contact_local_buff_size;
+
+  const auto chunk_size = (sample_size + blockDim.x - 1) / blockDim.x;
+  const auto i0 = chunk_size * tid;
+  const auto i1 = min(i0 + chunk_size, sample_size);
+
+  for (auto i = i0; i < i1; ++i) {
+    const auto rev_idx = rev_unit_idx_buff[(bid * buff_alignment) + i];
+    const auto fwd_idx = lef_rev_unit_idx_buff[rev_idx];
+
+    const auto rev_pos = rev_pos_buff[rev_idx];
+    const auto fwd_pos = fwd_pos_buff[fwd_idx];
+    // printf("bid=%d; tid=%d; i=%d; %d:%d -> %d:%d\n", bid, tid, i, rev_idx, fwd_idx, rev_pos,
+    //        fwd_pos);
+    global_state->block_states[bid].contact_local_buff[offset + i].x =
+        __float2uint_rn(static_cast<float>(min(rev_pos, fwd_pos)) / bin_size);
+    global_state->block_states[bid].contact_local_buff[offset + i].y =
+        __float2uint_rn(static_cast<float>(max(rev_pos, fwd_pos)) / bin_size);
+  }
+
+  __syncthreads();
+  if (threadIdx.x == 0) {
+    global_state->block_states[bid].contact_local_buff_size += sample_size;
+    if (global_state->block_states[bid].contact_local_buff_size ==
+        global_state->block_states[bid].contact_local_buff_capacity) {
+      global_state->block_states[blockIdx.x].simulation_completed = true;
+      atomicAdd(&global_state->ntasks_completed, 1);
     }
-  }   */
+  }
 }
 
 }  // namespace modle::cu::kernels

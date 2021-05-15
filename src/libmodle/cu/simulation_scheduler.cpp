@@ -26,11 +26,14 @@ Simulation::Simulation(const modle::Config& config, size_t grid_size, size_t blo
       _grid_size(grid_size),
       _block_size(block_size),
       _global_state_host(
-          this->_grid_size, this->_block_size,
-          max_grid_size == std::numeric_limits<size_t>::max() ? this->_grid_size : max_grid_size,
-          device_heap_size, this->_config->to_cuda_config(),
-          this->_genome.longest_chromosome().nlefs(this->_config->number_of_lefs_per_mbp),
-          this->_genome.chromosome_with_max_nbarriers().num_valid_barriers()) {
+          _grid_size, _block_size,
+          max_grid_size == std::numeric_limits<size_t>::max() ? _grid_size : max_grid_size,
+          device_heap_size, _config->to_cuda_config(),
+          _genome.longest_chromosome().nlefs(_config->number_of_lefs_per_mbp),
+          _genome.chromosome_with_max_nbarriers().num_valid_barriers(),
+          _genome.max_target_contacts(bin_size, diagonal_width, target_contact_density,
+                                      simulation_iterations, lef_fraction_contact_sampling,
+                                      number_of_lefs_per_mbp, ncells)) {
   assert(grid_size != 0);   // NOLINT
   assert(block_size != 0);  // NOLINT
 }

@@ -30,4 +30,9 @@ __global__ void prepare_extr_units_for_sorting(GlobalStateDev* global_state,
 __global__ void update_unit_mappings_and_scatter_sorted_lefs(
     GlobalStateDev* global_state, dna::Direction direction,
     bool update_extr_unit_to_lef_mappings = true);
+
+__global__ void prepare_units_for_random_shuffling(GlobalStateDev* global_state,
+                                                   uint32_t* tot_num_active_units);
+
+__global__ void select_lefs_then_register_contacts(GlobalStateDev* global_state);
 }  // namespace modle::cu::kernels

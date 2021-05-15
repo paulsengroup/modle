@@ -189,4 +189,24 @@ const Chromosome& Genome::chromosome_with_max_nbarriers() const {
                              return c1.num_valid_barriers() < c2.num_valid_barriers();
                            });
 }
+
+size_t Genome::max_target_contacts(size_t bin_size, size_t diagonal_width,
+                                   double target_contact_density, size_t simulation_iterations,
+                                   double lef_fraction_contact_sampling, double nlefs_per_mbp,
+                                   size_t ncells) const {
+  const auto& chrom = this->longest_chromosome();
+  if (target_contact_density == 0.0) {
+    const auto nlefs = static_cast<size_t>(
+        std::round(nlefs_per_mbp * (static_cast<double>(chrom.simulated_size()) / 1.0e6)));
+    return static_cast<size_t>(
+        (static_cast<double>(simulation_iterations * nlefs) * lef_fraction_contact_sampling) /
+        static_cast<double>(ncells));
+  }
+
+  const auto npixels = ((chrom.simulated_size() + bin_size - 1) / bin_size) *
+                       ((diagonal_width + bin_size - 1) / bin_size);
+
+  return static_cast<size_t>(std::round((static_cast<double>(npixels) * target_contact_density) /
+                                        static_cast<double>(ncells)));
+}
 }  // namespace modle::io

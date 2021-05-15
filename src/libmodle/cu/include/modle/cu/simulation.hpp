@@ -67,6 +67,7 @@ struct BlockState {  // NOLINT
 
   uint32_t num_active_lefs{0};
   bool burnin_completed{false};
+  bool simulation_completed{false};
 };
 
 class GlobalStateHost;
@@ -86,6 +87,7 @@ struct GlobalStateDev {  // NOLINT
 
   uint32_t nblock_states{};
   uint32_t ntasks{};
+  uint32_t ntasks_completed{};
 
   bp_t* barrier_pos{nullptr};
   dna::Direction* barrier_directions{nullptr};
@@ -112,6 +114,7 @@ class GlobalStateHost {  // NOLINT
   GlobalStateHost() = default;
   GlobalStateHost(size_t grid_size_, size_t block_size_, size_t device_heap_size,
                   size_t max_grid_size_, const Config& c, size_t max_nlefs, size_t max_nbarriers,
+                  size_t max_ncontacts_per_block,
                   cuda::device_t dev = cuda::device::current::get());
   GlobalStateHost(const GlobalStateHost& other) = delete;
   GlobalStateHost(GlobalStateHost&& other) = delete;
@@ -138,7 +141,6 @@ class GlobalStateHost {  // NOLINT
   size_t block_size;
   size_t max_grid_size;
 
- public:
   BlockState* block_states{nullptr};
   Task* tasks{nullptr};
 
@@ -148,6 +150,7 @@ class GlobalStateHost {  // NOLINT
 
   uint32_t nblock_states{};
   uint32_t ntasks{};
+  uint32_t ntasks_completed{};
 
   cuda::memory::device::unique_ptr<uint32_t[]> large_uint_buff1{nullptr};      // NOLINT
   cuda::memory::device::unique_ptr<uint32_t[]> large_uint_buff2{nullptr};      // NOLINT
@@ -165,10 +168,11 @@ class GlobalStateHost {  // NOLINT
   cuda::device_t _device{cuda::device::current::get()};
 
   std::vector<uint32_t> _buff1;
+  uint32_t _max_ncontacts_per_block;
 
   [[nodiscard]] static BlockState* allocate_block_states(const cuda::device_t& dev,
                                                          size_t max_nbarriers, size_t max_nlefs,
-                                                         size_t max_grid_size,
+                                                         size_t max_ncontacts, size_t max_grid_size,
                                                          size_t max_block_size);
   static void deallocate_block_states(BlockState* block_states_dev, size_t nstates);
 };
@@ -212,9 +216,10 @@ class Simulation : modle::Config {
   void update_barriers(const std::vector<uint32_t>& barrier_pos,
                        const std::vector<dna::Direction>& barrier_dir) noexcept;
 
-  bool simulate_one_epoch();
+  bool simulate_next_epoch();
   void setup_burnin_phase();
   void sort_lefs();
+  void select_lefs_and_register_contacts();
 };
 
 [[nodiscard]] Config* write_config_to_device(const Config& c);

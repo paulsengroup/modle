@@ -26,6 +26,7 @@ namespace modle::cu {
 void Simulation::update_tasks(const std::vector<Task>& new_tasks) noexcept {
   this->_tasks = new_tasks;
   this->_grid_size = this->_tasks.size();
+  this->_global_state_host.ntasks = this->_tasks.size();
 
   this->_global_state_host.write_tasks_to_device(this->_tasks);
 }
@@ -43,11 +44,9 @@ void Simulation::update_barriers(const std::vector<uint32_t>& barrier_pos,
 void Simulation::run_batch(const std::vector<Task>& new_tasks,
                            const std::vector<uint32_t>& barrier_pos,
                            std::vector<dna::Direction>& barrier_dir) {
-  this->update_tasks(new_tasks);
-  this->update_barriers(barrier_pos, barrier_dir);
+  this->_global_state_host.init(this->_grid_size, this->_block_size, new_tasks, barrier_pos,
+                                barrier_dir);
   assert(this->_grid_size == this->_tasks.size() && this->_grid_size != 0);  // NOLINT
-
-  this->_global_state_host.init(this->_grid_size, this->_block_size);
 
   kernels::init_barrier_states<<<this->_grid_size, this->_block_size>>>(
       this->_global_state_host.get_ptr_to_dev_instance());
@@ -55,14 +54,29 @@ void Simulation::run_batch(const std::vector<Task>& new_tasks,
 
   // const auto shared_memory_size = std::max(nlefs, nbarriers) * sizeof(uint32_t);
 
-  bool end_of_simulation{false};
+  for (this->_current_epoch = 0UL; this->simulate_next_epoch(); ++this->_current_epoch) {
+    // if (this->_current_epoch == 300) {
+    /*
 
-  for (this->_current_epoch = 0UL; !end_of_simulation; ++this->_current_epoch) {
-    end_of_simulation = this->simulate_one_epoch();
-    if (this->_current_epoch == 300) {
-      return;
-    }
+     */
   }
+  std::vector<uint2> buff(this->_global_state_host._max_ncontacts_per_block);
+  BlockState buff1;
+  cuda::memory::copy_single(&buff1,
+                            this->_global_state_host.get_copy_of_device_instance().block_states);
+  cuda::memory::copy(buff.data(), buff1.contact_local_buff,
+                     buff1.contact_local_buff_size * sizeof(uint2));
+  fmt::print(stderr, "bin pairs: ");
+  for (const auto& n : buff) {
+    fmt::print(stderr, "{}, ", n.x);
+  }
+  fmt::print(stderr, "\nrev unit pos: ");
+  std::vector<uint32_t> buff3(3182);
+  cuda::memory::copy(buff3.data(), buff1.fwd_unit_pos, 3182 * sizeof(uint32_t));
+  for (const auto& n : buff3) {
+    fmt::print(stderr, "{}, ", n);
+  }
+  fmt::print(stderr, "\n");
 }
 
 void Simulation::setup_burnin_phase() {
@@ -226,36 +240,88 @@ void Simulation::sort_lefs() {
   this->_global_state_host._device.synchronize();
 }
 
-bool Simulation::simulate_one_epoch() {
+void Simulation::select_lefs_and_register_contacts() {
+  auto num_items_to_sort_dev =
+      cuda::memory::device::allocate(this->_global_state_host._device, sizeof(uint32_t));
+  cuda::memory::device::zero(num_items_to_sort_dev);
+
+  kernels::prepare_units_for_random_shuffling<<<this->_grid_size, this->_block_size>>>(
+      this->_global_state_host.get_ptr_to_dev_instance(),
+      static_cast<uint32_t*>(num_items_to_sort_dev.get()));
+  this->_global_state_host._device.synchronize();
+  uint32_t num_items_to_sort_host;
+  cuda::memory::copy_single(&num_items_to_sort_host,
+                            static_cast<uint32_t*>(num_items_to_sort_dev.get()));
+  cuda::memory::device::free(num_items_to_sort_dev);
+
+  auto* begin_offsets_dev = this->_global_state_host.sorting_offset1_buff.get();
+  auto* end_offsets_dev = this->_global_state_host.sorting_offset2_buff.get();
+
+  const auto num_segments_to_sort = this->_global_state_host.ntasks;
+
+  auto tmp_storage_bytes_required = 0UL;
+  auto* tmp_storage_dev = this->_global_state_host.tmp_sorting_storage.get();
+
+  cub::DoubleBuffer<uint32_t> keys_dev(this->_global_state_host.large_uint_buff3.get(),
+                                       this->_global_state_host.large_uint_buff4.get());
+  cub::DoubleBuffer<uint32_t> vals_dev(this->_global_state_host.large_uint_buff1.get(),
+                                       this->_global_state_host.large_uint_buff2.get());
+
+  auto status = cub::DeviceSegmentedRadixSort::SortPairs(
+      nullptr, tmp_storage_bytes_required, keys_dev, vals_dev,
+      static_cast<int>(num_items_to_sort_host), static_cast<int>(num_segments_to_sort),
+      begin_offsets_dev, end_offsets_dev);
+  this->_global_state_host._device.synchronize();
+
+  if (status != cudaSuccess) {
+    throw std::runtime_error(fmt::format(
+        FMT_STRING("Failed to compute the memory requirements to sort LEF indexes needed to "
+                   "perform random shuffling ({}:{}): {}: {}"),
+        __FILE__, __LINE__, cudaGetErrorName(status), cudaGetErrorString(status)));
+  }
+
+  if (tmp_storage_bytes_required > this->_global_state_host.tmp_sorting_storage_bytes) {
+    this->_global_state_host.tmp_sorting_storage_bytes = tmp_storage_bytes_required;
+    this->_global_state_host.tmp_sorting_storage = cuda::memory::device::make_unique<uint32_t[]>(
+        this->_global_state_host._device, tmp_storage_bytes_required);
+    tmp_storage_dev = this->_global_state_host.tmp_sorting_storage.get();
+    this->_global_state_host.sync_state_with_device();
+  }
+
+  status = cub::DeviceSegmentedRadixSort::SortPairs(
+      tmp_storage_dev, tmp_storage_bytes_required, keys_dev, vals_dev,
+      static_cast<int>(num_items_to_sort_host), static_cast<int>(num_segments_to_sort),
+      begin_offsets_dev, end_offsets_dev);
+  this->_global_state_host._device.synchronize();
+
+  if (status != cudaSuccess) {
+    throw std::runtime_error(
+        fmt::format(FMT_STRING("Failed to sort LEF indexes needed to perform a random shuffling on "
+                               "the device ({}:{}): {}: {}"),
+                    __FILE__, __LINE__, cudaGetErrorName(status), cudaGetErrorString(status)));
+  }
+
+  kernels::select_lefs_then_register_contacts<<<this->_grid_size, this->_block_size>>>(
+      this->_global_state_host.get_ptr_to_dev_instance());
+
+  this->_global_state_host._device.synchronize();
+}
+
+bool Simulation::simulate_next_epoch() {
   kernels::select_and_bind_lefs<<<this->_grid_size, this->_block_size>>>(
       this->_current_epoch, this->_global_state_host.get_ptr_to_dev_instance());
 
   this->_global_state_host._device.synchronize();
   this->sort_lefs();
   this->_global_state_host._device.synchronize();
-  /*
-    std::vector<uint32_t> buff1(10000);
-    std::vector<uint32_t> buff2(10000);
-    GlobalStateDev global_state_host;
-    cudaMemcpy(&global_state_host, this->_global_state_host.get(), sizeof(GlobalStateDev),
-               cudaMemcpyDeviceToHost);
-    cudaMemcpy(buff1.data(), global_state_host.large_uint_buff1, buff1.size() * sizeof(uint32_t),
-               cudaMemcpyDeviceToHost);
-    cudaMemcpy(buff1.data(), global_state_host.large_uint_buff3, buff2.size() * sizeof(uint32_t),
-               cudaMemcpyDeviceToHost);
+  this->select_lefs_and_register_contacts();
+  this->_global_state_host._device.synchronize();
 
-    printf("pos = [%d", buff1[0]);
-    for (auto i = 1UL; i < buff1.size(); ++i) {
-      printf(", %d", buff1[i]);
-    }
-
-    printf("]\nidx = [%d", buff2[0]);
-    for (auto i = 1UL; i < buff2.size(); ++i) {
-      printf(", %d", buff2[i]);
-    }
-    printf("]\n");
-    */
-  return false;
+  if (const auto state = this->_global_state_host.get_copy_of_device_instance();
+      state.ntasks_completed == state.ntasks) {  // End of simulation
+    return false;
+  }
+  return true;
 }
 
 }  // namespace modle::cu
