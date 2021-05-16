@@ -316,12 +316,23 @@ __global__ void select_lefs_then_register_contacts(GlobalStateDev* global_state)
 
   const auto buff_alignment = global_state->large_uint_buff_chunk_alignment;
 
-  const auto target_sample_size =
-      __float2uint_rn(global_state->config->lef_fraction_contact_sampling *
-                      static_cast<float>(global_state->block_states[bid].num_active_lefs));
-  const auto sample_size =
-      min(target_sample_size, global_state->block_states[bid].contact_local_buff_capacity -
-                                  global_state->block_states[bid].contact_local_buff_size);
+  const auto mean_sample_size =
+      static_cast<double>(global_state->config->lef_fraction_contact_sampling) *
+      static_cast<double>(global_state->block_states[bid].num_active_lefs);
+  uint32_t sample_size;
+
+  auto local_rng_state = global_state->block_states[bid].rng_state[0];
+  __syncthreads();
+  sample_size = min(curand_poisson(&local_rng_state, mean_sample_size),
+                    global_state->block_states[bid].contact_local_buff_capacity -
+                        global_state->block_states[bid].contact_local_buff_size);
+  if (tid == 0) {
+    global_state->block_states[bid].rng_state[0] = local_rng_state;
+  }
+  __syncthreads();
+  if (sample_size == 0) {
+    return;
+  }
   const auto bin_size = static_cast<float>(global_state->config->bin_size);
 
   const auto offset = global_state->block_states[bid].contact_local_buff_size;
@@ -345,12 +356,111 @@ __global__ void select_lefs_then_register_contacts(GlobalStateDev* global_state)
   }
 
   __syncthreads();
-  if (threadIdx.x == 0) {
+  if (tid == 0) {
     global_state->block_states[bid].contact_local_buff_size += sample_size;
     if (global_state->block_states[bid].contact_local_buff_size ==
         global_state->block_states[bid].contact_local_buff_capacity) {
       global_state->block_states[blockIdx.x].simulation_completed = true;
       atomicAdd(&global_state->ntasks_completed, 1);
+    }
+  }
+}
+
+__global__ void generate_moves(GlobalStateDev* global_state) {
+  const auto tid = threadIdx.x;
+  const auto bid = blockIdx.x;
+
+  auto local_rng_state = global_state->block_states[bid].rng_state[tid];
+  const auto num_active_lefs = global_state->block_states[bid].num_active_lefs;
+
+  const auto rev_mean = global_state->config->rev_extrusion_speed;
+  const auto rev_stddev = global_state->config->rev_extrusion_speed_std;
+  const auto fwd_mean = global_state->config->fwd_extrusion_speed;
+  const auto fwd_stddev = global_state->config->fwd_extrusion_speed_std;
+
+  const auto chunk_size = (num_active_lefs + blockDim.x - 1) / blockDim.x;
+  const auto i0 = tid * chunk_size;
+  const auto i1 = min(i0 + chunk_size, num_active_lefs);
+
+  for (auto i = i0; i < i1; ++i) {
+    const auto [n1, n2] = curand_normal2(&local_rng_state);
+    global_state->block_states[bid].rev_moves_buff[i] =
+        __float2uint_rn(static_cast<float>(rev_mean) + (n1 * rev_stddev));
+    global_state->block_states[bid].fwd_moves_buff[i] =
+        __float2uint_rn(static_cast<float>(fwd_mean) + (n2 * fwd_stddev));
+  }
+
+  global_state->block_states[bid].rng_state[tid] = local_rng_state;
+
+  // Adjust moves
+  __syncthreads();
+  const auto chrom_start = global_state->tasks[bid].chrom_start;
+  const auto chrom_end = global_state->tasks[bid].chrom_end;
+
+  for (auto i = i1; i > 1; --i) {
+    const auto pos1 = global_state->block_states[bid].rev_unit_pos[i - 1];
+    const auto pos2 = global_state->block_states[bid].rev_unit_pos[i];
+    if (pos1 == Simulation::LEF_IS_IDLE || pos2 == Simulation::LEF_IS_IDLE) {
+      continue;
+    }
+
+    auto move1 = global_state->block_states[bid].rev_moves_buff[i - 1];
+    auto move2 = global_state->block_states[bid].rev_moves_buff[i];
+    auto write_move_to_global_memory = false;
+
+    if (pos1 < chrom_start + move1) {
+      move1 = pos1 - chrom_start;
+      write_move_to_global_memory = true;
+    }
+
+    if (pos2 < chrom_start + move2) {
+      move2 = pos2 - chrom_start;
+      atomicExch(global_state->block_states[bid].rev_moves_buff + i, move2);
+    }
+
+    if (pos2 - move2 < pos1 - move1) {
+      // printf("p1=%d; m1=%d; p2=%d; m2=%d\n",pos1, move1, pos2, move2);
+      move1 = (pos1 - move1) - (pos2 - move2);
+      write_move_to_global_memory = true;
+    } else if (i - 1 <= i0) {
+      break;
+    }
+    if (write_move_to_global_memory) {
+      atomicExch(global_state->block_states[bid].rev_moves_buff + i - 1, move1);
+    }
+  }
+
+  __syncthreads();
+  for (auto i = i0; i < num_active_lefs - 1; ++i) {
+    const auto pos1 = global_state->block_states[bid].fwd_unit_pos[i];
+    const auto pos2 = global_state->block_states[bid].fwd_unit_pos[i + 1];
+    if (pos1 == Simulation::LEF_IS_IDLE || pos2 == Simulation::LEF_IS_IDLE) {
+      continue;
+    }
+
+    auto move1 = global_state->block_states[bid].fwd_moves_buff[i];
+    auto move2 = global_state->block_states[bid].fwd_moves_buff[i + 1];
+    auto write_move_to_global_memory = false;
+
+    if (pos1 + move1 > chrom_end) {
+      move1 = chrom_end - pos1;
+      atomicExch(global_state->block_states[bid].fwd_moves_buff + i, move1);
+    }
+
+    if (pos2 + move2 > chrom_end) {
+      move2 = chrom_end - pos2;
+      write_move_to_global_memory = true;
+    }
+
+    if (pos1 + move1 > pos2 + move2) {
+      move2 = (pos1 + move1) - pos2;
+      write_move_to_global_memory = true;
+    } else if (i >= i1) {
+      break;
+    }
+
+    if (write_move_to_global_memory) {
+      atomicExch(global_state->block_states[bid].fwd_moves_buff + i + 1, move2);
     }
   }
 }

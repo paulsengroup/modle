@@ -54,29 +54,28 @@ void Simulation::run_batch(const std::vector<Task>& new_tasks,
 
   // const auto shared_memory_size = std::max(nlefs, nbarriers) * sizeof(uint32_t);
 
-  for (this->_current_epoch = 0UL; this->simulate_next_epoch(); ++this->_current_epoch) {
-    // if (this->_current_epoch == 300) {
-    /*
-
-     */
+  this->_current_epoch = 0UL;
+  while (this->simulate_next_epoch()) {
+    if (++this->_current_epoch % 50 == 0) {
+      fmt::print(stderr, FMT_STRING("Simulating epoch #{}...\n"), this->_current_epoch);
+    }
   }
-  std::vector<uint2> buff(this->_global_state_host._max_ncontacts_per_block);
-  BlockState buff1;
-  cuda::memory::copy_single(&buff1,
+  std::vector<uint32_t> buff(new_tasks[0].nlefs);
+  BlockState bstate;
+  cuda::memory::copy_single(&bstate,
                             this->_global_state_host.get_copy_of_device_instance().block_states);
-  cuda::memory::copy(buff.data(), buff1.contact_local_buff,
-                     buff1.contact_local_buff_size * sizeof(uint2));
-  fmt::print(stderr, "bin pairs: ");
-  for (const auto& n : buff) {
-    fmt::print(stderr, "{}, ", n.x);
+  cuda::memory::copy(buff.data(), bstate.rev_moves_buff, buff.size() * sizeof(uint32_t));
+  fmt::print(stderr, "rev_moves = [{}", buff.front());
+  for (auto i = 1UL; i < buff.size(); ++i) {
+    fmt::print(stderr, ", {}", buff[i]);
   }
-  fmt::print(stderr, "\nrev unit pos: ");
-  std::vector<uint32_t> buff3(3182);
-  cuda::memory::copy(buff3.data(), buff1.fwd_unit_pos, 3182 * sizeof(uint32_t));
-  for (const auto& n : buff3) {
-    fmt::print(stderr, "{}, ", n);
+  fmt::print(stderr, "]\n");
+  cuda::memory::copy(buff.data(), bstate.fwd_moves_buff, buff.size() * sizeof(uint32_t));
+  fmt::print(stderr, "fwd_moves = [{}", buff.front());
+  for (auto i = 1UL; i < buff.size(); ++i) {
+    fmt::print(stderr, ", {}", buff[i]);
   }
-  fmt::print(stderr, "\n");
+  fmt::print(stderr, "]\n");
 }
 
 void Simulation::setup_burnin_phase() {
@@ -307,6 +306,11 @@ void Simulation::select_lefs_and_register_contacts() {
   this->_global_state_host._device.synchronize();
 }
 
+void Simulation::generate_moves() {
+  kernels::generate_moves<<<this->_grid_size, this->_block_size>>>(
+      this->_global_state_host.get_ptr_to_dev_instance());
+}
+
 bool Simulation::simulate_next_epoch() {
   kernels::select_and_bind_lefs<<<this->_grid_size, this->_block_size>>>(
       this->_current_epoch, this->_global_state_host.get_ptr_to_dev_instance());
@@ -316,6 +320,7 @@ bool Simulation::simulate_next_epoch() {
   this->_global_state_host._device.synchronize();
   this->select_lefs_and_register_contacts();
   this->_global_state_host._device.synchronize();
+  this->generate_moves();
 
   if (const auto state = this->_global_state_host.get_copy_of_device_instance();
       state.ntasks_completed == state.ntasks) {  // End of simulation

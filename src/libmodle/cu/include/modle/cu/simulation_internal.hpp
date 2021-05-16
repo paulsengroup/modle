@@ -35,4 +35,6 @@ __global__ void prepare_units_for_random_shuffling(GlobalStateDev* global_state,
                                                    uint32_t* tot_num_active_units);
 
 __global__ void select_lefs_then_register_contacts(GlobalStateDev* global_state);
+
+__global__ void generate_moves(GlobalStateDev* global_state);
 }  // namespace modle::cu::kernels

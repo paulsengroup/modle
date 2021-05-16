@@ -220,6 +220,7 @@ class Simulation : modle::Config {
   void setup_burnin_phase();
   void sort_lefs();
   void select_lefs_and_register_contacts();
+  void generate_moves();
 };
 
 [[nodiscard]] Config* write_config_to_device(const Config& c);
