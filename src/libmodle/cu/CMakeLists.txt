@@ -16,6 +16,9 @@ target_link_libraries(
             Modle::config
             Modle::modle_io_internal
             CudaAPIWrappers::Runtime
+            CONAN_PKG::abseil
+            CONAN_PKG::fmt
+
             $<IF:$<BOOL:${BUILD_SHARED_LIBS}>,CUDA::cudart,CUDA::cudart_static>
             $<IF:$<BOOL:${BUILD_SHARED_LIBS}>,CUDA::curand,CUDA::curand_static>
             # Deal with std::filesystem quirkiness on older compilers

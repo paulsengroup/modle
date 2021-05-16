@@ -1,4 +1,3 @@
-#include <absl/hash/hash.h>
 #include <absl/time/clock.h>
 #include <fmt/format.h>
 
@@ -110,8 +109,7 @@ void Simulation::run() {
       std::generate_n(this->_tasks.begin(), this->_tasks.size(), [&]() {
         auto t = base_task;
         t.cell_id = cellid++;
-        t.seed = absl::Hash<uint64_t>{}(this->seed) + absl::Hash<std::string_view>{}(chrom.name()) +
-                 absl::Hash<size_t>{}(chrom.size()) + absl::Hash<size_t>{}(t.cell_id);
+        t.seed = chrom.hash(this->seed, t.cell_id);
         return t;
       });
 

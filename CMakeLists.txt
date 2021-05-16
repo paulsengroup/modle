@@ -125,6 +125,7 @@ set(CONAN_EXTRA_REQUIRES
     hdf5/1.12.0
     readerwriterqueue/1.0.3
     spdlog/1.8.5
+    xxhash/0.8.0
     zlib/1.2.11)
 
 set(CONAN_EXTRA_OPTIONS
@@ -133,7 +134,8 @@ set(CONAN_EXTRA_OPTIONS
     boost:asio_no_deprecated=True
     boost:filesystem_no_deprecated=True
     boost:zlib=True
-    boost:bzip2=False)
+    boost:bzip2=False
+    xxhash:utility=False)
 
 if(CXX20_COMPILER_AVAILABLE)
   set(CONAN_EXTRA_SETTINGS ${CONAN_EXTRA_SETTINGS} compiler.cppstd=20 compiler.libcxx=libstdc++11)

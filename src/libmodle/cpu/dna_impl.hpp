@@ -131,6 +131,28 @@ const ContactMatrix<contacts_t> &Chromosome::contacts() const {
   return *this->_contacts;
 }
 
+uint64_t Chromosome::hash(uint64_t seed, size_t cell_id) {
+  auto handle_errors = [&](const auto &status) {
+    if (status == XXH_ERROR || !this->_xxh_state) {
+      throw std::runtime_error(
+          fmt::format(FMT_STRING("Failed to hash '{}' for cell #{} using seed {}"), this->name(),
+                      cell_id, seed));
+    }
+  };
+
+  handle_errors(XXH3_64bits_reset_withSeed(this->_xxh_state.get(), seed));
+  handle_errors(XXH3_64bits_update(this->_xxh_state.get(), this->_name.data(),
+                                   this->_name.size() * sizeof(char)));
+  handle_errors(
+      XXH3_64bits_update(this->_xxh_state.get(), &this->_size, sizeof(decltype(this->_size))));
+  handle_errors(XXH3_64bits_update(this->_xxh_state.get(), &cell_id, sizeof(decltype(cell_id))));
+
+  DISABLE_WARNING_PUSH
+  DISABLE_WARNING_USELESS_CAST
+  return static_cast<uint64_t>(XXH3_64bits_digest(this->_xxh_state.get()));
+  DISABLE_WARNING_POP
+}
+
 template <typename H>
 H AbslHashValue(H h, const Chromosome &c) {
   return H::combine(std::move(h), c._name);

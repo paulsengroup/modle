@@ -1,6 +1,7 @@
 #pragma once
 
 #include <absl/container/btree_set.h>  // for btree_set
+#include <xxh3.h>
 
 #include <cstddef>      // IWYU pragma: keep for size_t
 #include <cstdint>      // for uint32_t
@@ -56,6 +57,7 @@ class Chromosome {
   inline void allocate_contacts(bp_t bin_size, bp_t diagonal_width);
   inline void deallocate_contacts();
   [[nodiscard]] inline const ContactMatrix<contacts_t>& contacts() const;
+  [[nodiscard]] inline uint64_t hash(uint64_t seed, size_t cell_id = 0);
 
   template <typename H>
   inline friend H AbslHashValue(H h, const Chromosome& c);
@@ -80,6 +82,12 @@ class Chromosome {
   size_t _end;
   absl::btree_set<bed::BED> _barriers{};
   std::shared_ptr<ContactMatrix<contacts_t>> _contacts{nullptr};
+
+  struct XXH3_Deleter {
+    void operator()(XXH3_state_t* state) noexcept { XXH3_freeState(state); }
+  };
+
+  std::unique_ptr<XXH3_state_t, XXH3_Deleter> _xxh_state{XXH3_createState()};
 };
 
 }  // namespace modle
