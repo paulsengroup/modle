@@ -23,30 +23,16 @@
 
 namespace modle::cu {
 
-void Simulation::update_tasks(const std::vector<Task>& new_tasks) noexcept {
-  this->_tasks = new_tasks;
-  this->_grid_size = this->_tasks.size();
-  this->_global_state_host.ntasks = this->_tasks.size();
-
-  this->_global_state_host.write_tasks_to_device(this->_tasks);
-}
-
-void Simulation::update_barriers(const std::vector<uint32_t>& barrier_pos,
-                                 const std::vector<dna::Direction>& barrier_dir) noexcept {
-  assert(barrier_pos.size() == barrier_dir.size());  // NOLINT
-  this->_barrier_positions = barrier_pos;
-  this->_barrier_directions = barrier_dir;
-
-  this->_global_state_host.write_barriers_to_device(this->_barrier_positions,
-                                                    this->_barrier_directions);
-}
-
 void Simulation::run_batch(const std::vector<Task>& new_tasks,
                            const std::vector<uint32_t>& barrier_pos,
-                           std::vector<dna::Direction>& barrier_dir) {
+                           const std::vector<dna::Direction>& barrier_dir,
+                           const std::vector<float>& barrier_probs_occ_to_occ,
+                           const std::vector<float>& barrier_probs_nocc_to_nocc) {
+  assert(!new_tasks.empty());    // NOLINT
+  assert(!barrier_pos.empty());  // NOLINT
+  this->_grid_size = new_tasks.size();
   this->_global_state_host.init(this->_grid_size, this->_block_size, new_tasks, barrier_pos,
-                                barrier_dir);
-  assert(this->_grid_size == this->_tasks.size() && this->_grid_size != 0);  // NOLINT
+                                barrier_dir, barrier_probs_occ_to_occ, barrier_probs_nocc_to_nocc);
 
   kernels::init_barrier_states<<<this->_grid_size, this->_block_size>>>(
       this->_global_state_host.get_ptr_to_dev_instance());
@@ -74,6 +60,14 @@ void Simulation::run_batch(const std::vector<Task>& new_tasks,
   fmt::print(stderr, "fwd_moves = [{}", buff.front());
   for (auto i = 1UL; i < buff.size(); ++i) {
     fmt::print(stderr, ", {}", buff[i]);
+  }
+  fmt::print(stderr, "]\n");
+
+  std::vector<char> buff1(new_tasks[0].nbarriers);
+  cuda::memory::copy(buff1.data(), bstate.barrier_mask, buff1.size() * sizeof(bool));
+  fmt::print(stderr, "barrier_states = [{}", static_cast<int>(buff1.front()));
+  for (auto i = 1UL; i < buff1.size(); ++i) {
+    fmt::print(stderr, ", {}", static_cast<int>(buff1[i]));
   }
   fmt::print(stderr, "]\n");
 }
@@ -311,16 +305,23 @@ void Simulation::generate_moves() {
       this->_global_state_host.get_ptr_to_dev_instance());
 }
 
+void Simulation::update_ctcf_states() {
+  kernels::update_ctcf_states<<<this->_grid_size, this->_block_size>>>(
+      this->_global_state_host.get_ptr_to_dev_instance());
+}
+
 bool Simulation::simulate_next_epoch() {
   kernels::select_and_bind_lefs<<<this->_grid_size, this->_block_size>>>(
       this->_current_epoch, this->_global_state_host.get_ptr_to_dev_instance());
 
-  this->_global_state_host._device.synchronize();
   this->sort_lefs();
   this->_global_state_host._device.synchronize();
   this->select_lefs_and_register_contacts();
   this->_global_state_host._device.synchronize();
   this->generate_moves();
+  this->_global_state_host._device.synchronize();
+  this->update_ctcf_states();
+  this->_global_state_host._device.synchronize();
 
   if (const auto state = this->_global_state_host.get_copy_of_device_instance();
       state.ntasks_completed == state.ntasks) {  // End of simulation

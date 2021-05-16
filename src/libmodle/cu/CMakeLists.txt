@@ -3,6 +3,7 @@ add_library(libmodle_cuda INTERFACE)
 target_sources(
   libmodle_cuda
   INTERFACE ${CMAKE_CURRENT_SOURCE_DIR}/simulation.cu
+            #${CMAKE_CURRENT_SOURCE_DIR}/simulation_device_functions.cu
             ${CMAKE_CURRENT_SOURCE_DIR}/simulation_kernels.cu
             ${CMAKE_CURRENT_SOURCE_DIR}/simulation_scheduler.cpp
             ${CMAKE_CURRENT_SOURCE_DIR}/simulation_states.cu)

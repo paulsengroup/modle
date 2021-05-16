@@ -46,6 +46,8 @@ GlobalStateDev* GlobalStateHost::get_ptr_to_dev_instance() {
 
     gs.barrier_pos = this->barrier_pos.get();
     gs.barrier_directions = this->barrier_directions.get();
+    gs.barrier_probs_occ_to_occ = this->barrier_probs_occ_to_occ.get();
+    gs.barrier_probs_nocc_to_nocc = this->barrier_probs_nocc_to_nocc.get();
 
     gs.large_uint_buff1 = this->large_uint_buff1.get();
     gs.large_uint_buff2 = this->large_uint_buff2.get();
@@ -87,6 +89,10 @@ GlobalStateHost::GlobalStateHost(size_t grid_size_, size_t block_size_, size_t m
       barrier_pos(cuda::memory::device::make_unique<bp_t[]>(dev, max_nbarriers * sizeof(bp_t))),
       barrier_directions(cuda::memory::device::make_unique<dna::Direction[]>(
           dev, max_nbarriers * sizeof(dna::Direction))),
+      barrier_probs_occ_to_occ(
+          cuda::memory::device::make_unique<float[]>(dev, max_nbarriers * sizeof(float))),
+      barrier_probs_nocc_to_nocc(
+          cuda::memory::device::make_unique<float[]>(dev, max_nbarriers * sizeof(float))),
       nblock_states(static_cast<uint32_t>(max_grid_size)),
       ntasks(static_cast<uint32_t>(max_grid_size)),
       large_uint_buff1(cuda::memory::device::make_unique<uint32_t[]>(
@@ -140,14 +146,25 @@ void GlobalStateHost::write_tasks_to_device(const std::vector<Task>& new_tasks) 
 
 void GlobalStateHost::write_barriers_to_device(
     const std::vector<uint32_t>& new_barrier_positions,
-    const std::vector<dna::Direction>& new_barrier_directions) {
-  assert(new_barrier_positions.size() == new_barrier_directions.size());  // NOLINT
+    const std::vector<dna::Direction>& new_barrier_directions,
+    const std::vector<float>& new_barrier_probs_occ_to_occ_host,
+    const std::vector<float>& new_barrier_probs_nocc_to_nocc_host) {
+  const auto nbarriers = new_barrier_positions.size();
+  assert(new_barrier_directions.size() == nbarriers);               // NOLINT
+  assert(new_barrier_probs_occ_to_occ_host.size() == nbarriers);    // NOLINT
+  assert(new_barrier_probs_nocc_to_nocc_host.size() == nbarriers);  // NOLINT
+
   try {
     auto dev_state = this->get_copy_of_device_instance();
+
     cuda::memory::copy(dev_state.barrier_pos, new_barrier_positions.data(),
-                       new_barrier_positions.size() * sizeof(uint32_t));
+                       nbarriers * sizeof(uint32_t));
     cuda::memory::copy(dev_state.barrier_directions, new_barrier_directions.data(),
-                       new_barrier_directions.size() * sizeof(dna::Direction));
+                       nbarriers * sizeof(dna::Direction));
+    cuda::memory::copy(dev_state.barrier_probs_occ_to_occ, new_barrier_probs_occ_to_occ_host.data(),
+                       nbarriers * sizeof(float));
+    cuda::memory::copy(dev_state.barrier_probs_nocc_to_nocc,
+                       new_barrier_probs_nocc_to_nocc_host.data(), nbarriers * sizeof(float));
 
     this->sync_state_with_device(dev_state);
   } catch (const cuda::runtime_error& e) {
@@ -159,17 +176,20 @@ void GlobalStateHost::write_barriers_to_device(
 void GlobalStateHost::init(size_t grid_size_, size_t block_size_,
                            const std::vector<Task>& tasks_host,
                            const std::vector<uint32_t>& barrier_pos_host,
-                           const std::vector<dna::Direction>& barrier_dir_host) {
+                           const std::vector<dna::Direction>& barrier_dir_host,
+                           const std::vector<float>& barrier_probs_occ_to_occ_host,
+                           const std::vector<float>& barrier_probs_nocc_to_nocc_host) {
   assert(barrier_pos_host.size() == barrier_dir_host.size());  // NOLINT
   this->grid_size = grid_size_;
   this->block_size = block_size_;
-  //this->ntasks_completed = 0;
+  // this->ntasks_completed = 0;
   if (!tasks_host.empty()) {
     this->write_tasks_to_device(tasks_host);
   }
 
   if (!barrier_pos_host.empty()) {
-    this->write_barriers_to_device(barrier_pos_host, barrier_dir_host);
+    this->write_barriers_to_device(barrier_pos_host, barrier_dir_host,
+                                   barrier_probs_occ_to_occ_host, barrier_probs_nocc_to_nocc_host);
   }
 
   this->sync_state_with_device();
@@ -245,18 +265,22 @@ void GlobalStateHost::deallocate_block_states(BlockState* block_states_dev, size
 }
 
 Config* write_config_to_device(const Config& c) {
-  // TODO Rewrite using cuda::memory::locate when it is released in a stable release
+  // TODO Rewrite using cuda::memory::locate when it is released in a
+  // stable release
   // https://github.com/eyalroz/cuda-api-wrappers/commit/d07c19f8488c5ea028f716b1fc219c84ee4bbaf6
 
   if (cudaMemcpyToSymbol(config, &c, sizeof(modle::cu::Config)) != cudaSuccess) {
-    throw std::runtime_error("Failed to write simulation parameters to device constant memory");
+    throw std::runtime_error(
+        "Failed to write simulation parameters to device constant "
+        "memory");
   }
 
   cudaDeviceSynchronize();
   void* symbol_ptr{};
   if (cudaGetSymbolAddress(&symbol_ptr, config) != cudaSuccess) {
     throw std::runtime_error(
-        "Failed to retrieve the address of the simulation parameters from the device");
+        "Failed to retrieve the address of the simulation parameters "
+        "from the device");
   }
 
   return static_cast<Config*>(symbol_ptr);

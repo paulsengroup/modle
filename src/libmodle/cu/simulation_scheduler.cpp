@@ -82,18 +82,26 @@ void Simulation::run() {
 
     const auto barriers = this->_genome.generate_vect_of_barriers(
         chrom.name(), ctcf_occupied_self_prob, ctcf_not_occupied_self_prob);
-    this->_barrier_positions.resize(barriers.size());
-    this->_barrier_directions.resize(barriers.size());
 
     base_task.nbarriers = barriers.size();
-    std::transform(barriers.begin(), barriers.end(), this->_barrier_positions.begin(),
-                   [](const auto& b) { return b.pos(); });
-    std::transform(barriers.begin(), barriers.end(), this->_barrier_directions.begin(),
-                   [](const auto& b) {
-                     return b.blocking_direction_major() == modle::dna::Direction::fwd
-                                ? cu::dna::Direction::rev
-                                : cu::dna::Direction::fwd;
-                   });
+
+    this->_barrier_positions.resize(barriers.size());
+    this->_barrier_directions.resize(barriers.size());
+    this->_barrier_probs_occ_to_occ.resize(barriers.size());
+    this->_barrier_probs_nocc_to_nocc.resize(barriers.size());
+
+    for (auto i = 0UL; i < barriers.size(); ++i) {
+      const auto& b = barriers[i];
+      this->_barrier_positions[i] = b.pos();
+      this->_barrier_directions[i] = b.blocking_direction_major() == modle::dna::Direction::fwd
+                                         ? cu::dna::Direction::rev
+                                         : cu::dna::Direction::fwd;
+      this->_barrier_probs_occ_to_occ[i] = static_cast<float>(b.prob_occupied_to_occupied());
+      this->_barrier_probs_nocc_to_nocc[i] =
+          static_cast<float>(b.prob_not_occupied_to_not_occupied());
+      fmt::print(stderr, "{}; {};\n", this->_barrier_probs_occ_to_occ[i],
+                 this->_barrier_probs_nocc_to_nocc[i]);
+    }
 
     auto cellid = 0UL;
     const auto nbatches = (this->ncells + task_batch_size - 1) / task_batch_size;
@@ -114,7 +122,8 @@ void Simulation::run() {
       });
 
       modle::cu::Simulation::run_batch(this->_tasks, this->_barrier_positions,
-                                       this->_barrier_directions);
+                                       this->_barrier_directions, this->_barrier_probs_occ_to_occ,
+                                       this->_barrier_probs_nocc_to_nocc);
     }
     fmt::print(stderr, FMT_STRING("Done simulating '{}'. Simulation took {}.\n"), chrom.name(),
                absl::FormatDuration(absl::Now() - t0));

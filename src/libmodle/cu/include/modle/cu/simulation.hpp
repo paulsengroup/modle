@@ -91,7 +91,8 @@ struct GlobalStateDev {  // NOLINT
 
   bp_t* barrier_pos{nullptr};
   dna::Direction* barrier_directions{nullptr};
-  // float* barrier
+  float* barrier_probs_occ_to_occ{nullptr};
+  float* barrier_probs_nocc_to_nocc{nullptr};
 
   uint32_t* large_uint_buff1{nullptr};
   uint32_t* large_uint_buff2{nullptr};
@@ -127,13 +128,17 @@ class GlobalStateHost {  // NOLINT
   [[nodiscard]] GlobalStateDev get_copy_of_device_instance();
   void write_tasks_to_device(const std::vector<Task>& new_tasks);
   void write_barriers_to_device(const std::vector<uint32_t>& new_barrier_positions,
-                                const std::vector<dna::Direction>& new_barrier_directions);
+                                const std::vector<dna::Direction>& new_barrier_directions,
+                                const std::vector<float>& new_barrier_probs_occ_to_occ,
+                                const std::vector<float>& new_barrier_probs_nocc_to_nocc);
 
   void sync_state_with_device();
   void sync_state_with_device(const GlobalStateDev& state);
   void init(size_t grid_size_, size_t block_size_, const std::vector<Task>& tasks_host = {},
             const std::vector<uint32_t>& barrier_pos_host = {},
-            const std::vector<dna::Direction>& barrier_dir_host = {});
+            const std::vector<dna::Direction>& barrier_dir_host = {},
+            const std::vector<float>& barrier_probs_occ_to_occ_host = {},
+            const std::vector<float>& barrier_probs_nocc_to_nocc_host = {});
 
   Config* config;  // This field points to a region in __constant__ memory
 
@@ -146,7 +151,8 @@ class GlobalStateHost {  // NOLINT
 
   cuda::memory::device::unique_ptr<bp_t[]> barrier_pos{nullptr};                   // NOLINT
   cuda::memory::device::unique_ptr<dna::Direction[]> barrier_directions{nullptr};  // NOLINT
-  // float* barrier
+  cuda::memory::device::unique_ptr<float[]> barrier_probs_occ_to_occ{nullptr};     // NOLINT
+  cuda::memory::device::unique_ptr<float[]> barrier_probs_nocc_to_nocc{nullptr};   // NOLINT
 
   uint32_t nblock_states{};
   uint32_t ntasks{};
@@ -207,20 +213,22 @@ class Simulation : modle::Config {
   std::vector<Task> _tasks{};
   std::vector<uint32_t> _barrier_positions{};
   std::vector<cu::dna::Direction> _barrier_directions{};
+  std::vector<float> _barrier_probs_occ_to_occ{};
+  std::vector<float> _barrier_probs_nocc_to_nocc{};
 
   size_t _current_epoch{0};
 
   void run_batch(const std::vector<Task>& new_tasks, const std::vector<uint32_t>& barrier_pos,
-                 std::vector<dna::Direction>& barrier_dir);
-  void update_tasks(const std::vector<Task>& new_tasks) noexcept;
-  void update_barriers(const std::vector<uint32_t>& barrier_pos,
-                       const std::vector<dna::Direction>& barrier_dir) noexcept;
+                 const std::vector<dna::Direction>& barrier_dir,
+                 const std::vector<float>& barrier_probs_occ_to_occ,
+                 const std::vector<float>& barrier_probs_nocc_to_nocc);
 
   bool simulate_next_epoch();
   void setup_burnin_phase();
   void sort_lefs();
   void select_lefs_and_register_contacts();
   void generate_moves();
+  void update_ctcf_states();
 };
 
 [[nodiscard]] Config* write_config_to_device(const Config& c);

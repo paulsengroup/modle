@@ -73,25 +73,28 @@ __global__ void generate_initial_loading_epochs(GlobalStateDev* global_state, ui
 }
 
 __global__ void init_barrier_states(GlobalStateDev* global_state) {
+  const auto tid = threadIdx.x;
   const auto bid = blockIdx.x;
 
-  const auto barrier_occupancy = global_state->config->probability_of_extrusion_barrier_block;
-  auto local_rng_state = global_state->block_states[bid].rng_state[threadIdx.x];
+  auto local_rng_state = global_state->block_states[bid].rng_state[tid];
 
   const auto nbarriers = global_state->tasks[bid].nbarriers;
   auto* barrier_states = global_state->block_states[bid].barrier_mask;
 
   const auto chunk_size = (nbarriers + blockDim.x - 1) / blockDim.x;
-  const auto i0 = threadIdx.x * chunk_size;
+  const auto i0 = tid * chunk_size;
   const auto i1 = min(i0 + chunk_size, nbarriers);
 
   for (auto i = i0; i < i1; ++i) {
-    barrier_states[i] = curand_uniform(&local_rng_state) > 1.0F - barrier_occupancy
-                            ? CTCF::OCCUPIED
-                            : CTCF::NOT_OCCUPIED;
+    const auto pno = 1.0F - global_state->barrier_probs_nocc_to_nocc[i];
+    const auto pon = 1.0F - global_state->barrier_probs_occ_to_occ[i];
+    const auto occ = pno / (pno + pon);
+
+    barrier_states[i] =
+        curand_uniform(&local_rng_state) > occ ? CTCF::NOT_OCCUPIED : CTCF::OCCUPIED;
   }
 
-  global_state->block_states[bid].rng_state[threadIdx.x] = local_rng_state;
+  global_state->block_states[bid].rng_state[tid] = local_rng_state;
 }
 
 __global__ void shift_and_scatter_lef_loading_epochs(const uint32_t* global_buff,
@@ -397,7 +400,7 @@ __global__ void generate_moves(GlobalStateDev* global_state) {
   const auto chrom_start = global_state->tasks[bid].chrom_start;
   const auto chrom_end = global_state->tasks[bid].chrom_end;
 
-  for (auto i = i1; i > 1; --i) {
+  for (auto i = i1 - 1; i > 1; --i) {
     const auto pos1 = global_state->block_states[bid].rev_unit_pos[i - 1];
     const auto pos2 = global_state->block_states[bid].rev_unit_pos[i];
     if (pos1 == Simulation::LEF_IS_IDLE || pos2 == Simulation::LEF_IS_IDLE) {
@@ -406,11 +409,10 @@ __global__ void generate_moves(GlobalStateDev* global_state) {
 
     auto move1 = global_state->block_states[bid].rev_moves_buff[i - 1];
     auto move2 = global_state->block_states[bid].rev_moves_buff[i];
-    auto write_move_to_global_memory = false;
 
     if (pos1 < chrom_start + move1) {
       move1 = pos1 - chrom_start;
-      write_move_to_global_memory = true;
+      atomicExch(global_state->block_states[bid].rev_moves_buff + i - 1, move1);
     }
 
     if (pos2 < chrom_start + move2) {
@@ -419,14 +421,10 @@ __global__ void generate_moves(GlobalStateDev* global_state) {
     }
 
     if (pos2 - move2 < pos1 - move1) {
-      // printf("p1=%d; m1=%d; p2=%d; m2=%d\n",pos1, move1, pos2, move2);
-      move1 = (pos1 - move1) - (pos2 - move2);
-      write_move_to_global_memory = true;
+      move1 = (pos2 - pos1) + move2;
+      atomicExch(global_state->block_states[bid].rev_moves_buff + i - 1, move1);
     } else if (i - 1 <= i0) {
       break;
-    }
-    if (write_move_to_global_memory) {
-      atomicExch(global_state->block_states[bid].rev_moves_buff + i - 1, move1);
     }
   }
 
@@ -440,7 +438,6 @@ __global__ void generate_moves(GlobalStateDev* global_state) {
 
     auto move1 = global_state->block_states[bid].fwd_moves_buff[i];
     auto move2 = global_state->block_states[bid].fwd_moves_buff[i + 1];
-    auto write_move_to_global_memory = false;
 
     if (pos1 + move1 > chrom_end) {
       move1 = chrom_end - pos1;
@@ -449,20 +446,41 @@ __global__ void generate_moves(GlobalStateDev* global_state) {
 
     if (pos2 + move2 > chrom_end) {
       move2 = chrom_end - pos2;
-      write_move_to_global_memory = true;
+      atomicExch(global_state->block_states[bid].fwd_moves_buff + i + 1, move2);
     }
 
     if (pos1 + move1 > pos2 + move2) {
       move2 = (pos1 + move1) - pos2;
-      write_move_to_global_memory = true;
+      atomicExch(global_state->block_states[bid].fwd_moves_buff + i + 1, move2);
     } else if (i >= i1) {
       break;
     }
-
-    if (write_move_to_global_memory) {
-      atomicExch(global_state->block_states[bid].fwd_moves_buff + i + 1, move2);
-    }
   }
+}
+
+__global__ void update_ctcf_states(GlobalStateDev* global_state) {
+  const auto tid = threadIdx.x;
+  const auto bid = blockIdx.x;
+
+  auto local_rng_state = global_state->block_states[bid].rng_state[tid];
+  const auto nbarriers = global_state->tasks[bid].nbarriers;
+
+  const auto chunk_size = (nbarriers + blockDim.x - 1) / blockDim.x;
+  const auto i0 = tid * chunk_size;
+  const auto i1 = min(i0 + chunk_size, nbarriers);
+
+  for (auto i = i0; i < i1; ++i) {
+    const auto current_state = global_state->block_states[bid].barrier_mask[i];
+    const auto transition_prob =
+        1.0F - (current_state == CTCF::OCCUPIED ? global_state->barrier_probs_occ_to_occ[i]
+                                                : global_state->barrier_probs_nocc_to_nocc[i]);
+    if (curand_uniform(&local_rng_state) < transition_prob) {
+      global_state->block_states[bid].barrier_mask[i] =
+          current_state == CTCF::OCCUPIED ? CTCF::NOT_OCCUPIED : CTCF::OCCUPIED;
+    }
+    __syncthreads();
+  }
+  global_state->block_states[bid].rng_state[tid] = local_rng_state;
 }
 
 }  // namespace modle::cu::kernels
