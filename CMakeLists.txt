@@ -117,7 +117,7 @@ set(CONAN_EXTRA_OPTIONS "")
 set(CONAN_EXTRA_REQUIRES
     ${CONAN_EXTRA_REQUIRES}
     abseil/20210324.0
-    boost/1.75.0
+    boost/1.76.0
     cli11/1.9.1
     concurrentqueue/1.0.2
     cpp-sort/1.10.0
