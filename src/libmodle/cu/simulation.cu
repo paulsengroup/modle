@@ -2,6 +2,8 @@
 #include <absl/time/clock.h>
 #include <curand_kernel.h>
 #include <fmt/format.h>
+#include <fmt/ranges.h>
+#include <thrust/sort.h>
 
 #include <algorithm>
 #include <cstdint>
@@ -45,7 +47,7 @@ void Simulation::run_batch(const std::vector<Task>& new_tasks,
 
   this->_current_epoch = 0UL;
   while (this->simulate_next_epoch()) {
-    if (++this->_current_epoch % 50 == 0) {
+    if (this->_current_epoch++ % 50 == 0) {
       fmt::print(stderr, FMT_STRING("Simulating epoch #{}...\n"), this->_current_epoch);
     }
   }
@@ -53,14 +55,14 @@ void Simulation::run_batch(const std::vector<Task>& new_tasks,
   BlockState bstate;
   cuda::memory::copy_single(&bstate,
                             this->_global_state_host.get_copy_of_device_instance().block_states);
-  cuda::memory::copy(buff.data(), bstate.rev_moves_buff, buff.size() * sizeof(uint32_t));
-  fmt::print(stderr, "rev_moves = [{}", buff.front());
+  cuda::memory::copy(buff.data(), bstate.rev_unit_pos, buff.size() * sizeof(bp_t));
+  fmt::print(stderr, "rev_pos = [{}", buff.front());
   for (auto i = 1UL; i < buff.size(); ++i) {
     fmt::print(stderr, ", {}", buff[i]);
   }
   fmt::print(stderr, "]\n");
-  cuda::memory::copy(buff.data(), bstate.fwd_moves_buff, buff.size() * sizeof(uint32_t));
-  fmt::print(stderr, "fwd_moves = [{}", buff.front());
+  cuda::memory::copy(buff.data(), bstate.fwd_unit_pos, buff.size() * sizeof(bp_t));
+  fmt::print(stderr, "fwd_pos = [{}", buff.front());
   for (auto i = 1UL; i < buff.size(); ++i) {
     fmt::print(stderr, ", {}", buff[i]);
   }
@@ -315,7 +317,7 @@ void Simulation::update_ctcf_states() {
 
 void Simulation::process_collisions() {
   kernels::process_collisions<<<this->_grid_size, this->_block_size>>>(
-      this->_global_state_host.get_ptr_to_dev_instance());
+      this->_current_epoch, this->_global_state_host.get_ptr_to_dev_instance());
 }
 
 bool Simulation::simulate_next_epoch() {
@@ -330,11 +332,11 @@ bool Simulation::simulate_next_epoch() {
   this->_global_state_host._device.synchronize();
   this->update_ctcf_states();
   this->_global_state_host._device.synchronize();
-  this->process_collisions();
-  this->_global_state_host._device.synchronize();
-
   kernels::reset_collision_masks<<<this->_grid_size, this->_block_size>>>(
       this->_global_state_host.get_ptr_to_dev_instance());
+  this->_global_state_host._device.synchronize();
+  this->process_collisions();
+  this->_global_state_host._device.synchronize();
 
   if (const auto state = this->_global_state_host.get_copy_of_device_instance();
       state.ntasks_completed == state.ntasks) {  // End of simulation

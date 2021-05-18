@@ -13,6 +13,8 @@
 
 namespace modle::cu {
 
+__constant__ extern struct Config config;  // NOLINT
+
 namespace CTCF {
 enum State : uint_fast8_t { NOT_OCCUPIED = 0, OCCUPIED = 1 };
 }
@@ -45,7 +47,7 @@ struct BlockState {  // NOLINT
   __host__ __device__ BlockState& operator=(const BlockState& other) = delete;
   __host__ __device__ BlockState& operator=(BlockState&& other) = delete;
 
-  bool* barrier_mask{nullptr};
+  CTCF::State* barrier_mask{nullptr};
 
   bp_t* rev_unit_pos{nullptr};
   bp_t* fwd_unit_pos{nullptr};
@@ -80,7 +82,7 @@ struct GlobalStateDev {  // NOLINT
   __host__ __device__ GlobalStateDev(const GlobalStateDev& other) = default;
   __host__ __device__ GlobalStateDev(GlobalStateDev&& other) = default;
 
-  Config* config{nullptr};  // This field points to a region in __constant__ memory
+  Config* _config{nullptr};  // This field points to a region in __constant__ memory
 
   size_t grid_size{};
   size_t block_size{};
@@ -143,7 +145,7 @@ class GlobalStateHost {  // NOLINT
             const std::vector<float>& barrier_probs_occ_to_occ_host = {},
             const std::vector<float>& barrier_probs_nocc_to_nocc_host = {});
 
-  Config* config;  // This field points to a region in __constant__ memory
+  Config* _config;  // This field points to a region in __constant__ memory
 
   size_t grid_size;
   size_t block_size;

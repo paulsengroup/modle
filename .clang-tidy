@@ -1,5 +1,5 @@
 ---
-Checks:          '*,-fuchsia-*,-google-*,-zircon-*,-llvm-*,-llvmlibc-*,-modernize-use-trailing-return-type'
+Checks:          '*,-fuchsia-*,-google-*,-zircon-*,-llvm-*,-llvmlibc-*,-modernize-use-trailing-return-type,-cppcoreguidelines-pro-bounds-pointer-arithmetic'
 WarningsAsErrors: '1'
 HeaderFilterRegex: ''
 FormatStyle:     none

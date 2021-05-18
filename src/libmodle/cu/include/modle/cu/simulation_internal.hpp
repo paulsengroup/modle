@@ -1,4 +1,5 @@
 #pragma once
+#include <cuda_runtime_api.h>
 #include <curand_kernel.h>
 
 #include <cstdint>
@@ -46,7 +47,7 @@ __global__ void update_ctcf_states(GlobalStateDev* global_state);
 
 __global__ void reset_collision_masks(GlobalStateDev* global_state);
 
-__global__ void process_collisions(GlobalStateDev* global_state);
+__global__ void process_collisions(uint32_t current_epoch, GlobalStateDev* global_state);
 }  // namespace kernels
 
 namespace dev {
@@ -58,7 +59,29 @@ __device__ uint32_t detect_collisions_at_3prime_single_threaded(
     const bp_t* rev_unit_pos, const bp_t* fwd_unit_pos, const bp_t* fwd_moves,
     collision_t* fwd_collision_mask, uint32_t chrom_end_pos, uint32_t num_extr_units);
 
-__device__ void extrude(GlobalStateDev* global_state);
+__device__ void extrude(bp_t* rev_units_pos, bp_t* fwd_units_pos, const bp_t* rev_moves,
+                        const bp_t* fwd_moves, uint32_t num_active_lefs, uint32_t chrom_start_pos,
+                        uint32_t chrom_end_pos);
+
+__device__ void detect_lef_bar_collisions(const bp_t* rev_units_pos, const bp_t* fwd_units_pos,
+                                          const bp_t* rev_moves, const bp_t* fwd_moves,
+                                          uint32_t num_active_lefs, const bp_t* barrier_pos,
+                                          const dna::Direction* barrier_directions,
+                                          const CTCF::State* barrier_states, uint32_t num_barriers,
+                                          collision_t* rev_collisions, collision_t* fwd_collisions,
+                                          curandStatePhilox4_32_10_t* rng_states,
+                                          uint32_t num_rev_units_at_5prime,
+                                          uint32_t num_fwd_units_at_3prime);
+
+[[nodiscard]] __device__ bool bernoulli_trial(curandStatePhilox4_32_10_t* state,
+                                              float prob_of_success);
+
+__device__ void correct_moves_for_lef_bar_collisions(const bp_t* rev_units_pos,
+                                                     const bp_t* fwd_units_pos, bp_t* rev_moves,
+                                                     bp_t* fwd_moves, uint32_t num_active_lefs,
+                                                     const bp_t* barr_pos, uint32_t num_barriers,
+                                                     const collision_t* rev_collisions,
+                                                     const collision_t* fwd_collisions);
 }  // namespace dev
 
 }  // namespace modle::cu

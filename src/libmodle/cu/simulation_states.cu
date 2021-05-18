@@ -27,7 +27,7 @@ GlobalStateDev* GlobalStateHost::get_ptr_to_dev_instance() {
     this->_global_state_dev = cuda::memory::device::allocate(this->_device, sizeof(GlobalStateDev));
     GlobalStateDev gs{};
 
-    gs.config = this->config;
+    gs._config = this->_config;
 
     gs.grid_size = this->grid_size;
     gs.block_size = this->block_size;
@@ -73,7 +73,7 @@ GlobalStateHost::GlobalStateHost(size_t grid_size_, size_t block_size_, size_t m
                                  size_t device_heap_size, const Config& c, size_t max_nlefs,
                                  size_t max_nbarriers, size_t max_ncontacts_per_block,
                                  cuda::device_t dev)
-    : config(write_config_to_device(c)),
+    : _config(write_config_to_device(c)),
       grid_size(grid_size_),
       block_size(block_size_),
       max_grid_size(max_grid_size_),
