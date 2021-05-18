@@ -1,24 +1,27 @@
-// clang-format off
-//#include <cuda_runtime_api.h>
-#include "modle/cu/simulation.hpp"
-#include <curand_kernel.h>
-#include <cub/cub.cuh>
-#include <cuda/runtime_api.hpp>
-// clang-format on
-
 #include <absl/hash/hash.h>
 #include <absl/time/clock.h>
+#include <curand_kernel.h>
 #include <fmt/format.h>
 
 #include <algorithm>
 #include <cstdint>
 #include <cstdio>
+// clang-format off
+#include "modle/suppress_compiler_warnings.hpp"
+DISABLE_WARNING_PUSH
+DISABLE_WARNING_PEDANTIC
+DISABLE_WARNING_OLD_STYLE_CAST
+#include <cub/cub.cuh>
+#include <cuda/runtime_api.hpp>
+DISABLE_WARNING_POP
+// clang-format on
 #include <numeric>
 #include <string>
 #include <vector>
 
-#include "modle/config_cuda.hpp"
 #include "modle/cu/common.hpp"
+#include "modle/cu/config.hpp"
+#include "modle/cu/simulation.hpp"
 #include "modle/cu/simulation_internal.hpp"
 
 namespace modle::cu {
@@ -310,6 +313,11 @@ void Simulation::update_ctcf_states() {
       this->_global_state_host.get_ptr_to_dev_instance());
 }
 
+void Simulation::process_collisions() {
+  kernels::process_collisions<<<this->_grid_size, this->_block_size>>>(
+      this->_global_state_host.get_ptr_to_dev_instance());
+}
+
 bool Simulation::simulate_next_epoch() {
   kernels::select_and_bind_lefs<<<this->_grid_size, this->_block_size>>>(
       this->_current_epoch, this->_global_state_host.get_ptr_to_dev_instance());
@@ -322,6 +330,11 @@ bool Simulation::simulate_next_epoch() {
   this->_global_state_host._device.synchronize();
   this->update_ctcf_states();
   this->_global_state_host._device.synchronize();
+  this->process_collisions();
+  this->_global_state_host._device.synchronize();
+
+  kernels::reset_collision_masks<<<this->_grid_size, this->_block_size>>>(
+      this->_global_state_host.get_ptr_to_dev_instance());
 
   if (const auto state = this->_global_state_host.get_copy_of_device_instance();
       state.ntasks_completed == state.ntasks) {  // End of simulation

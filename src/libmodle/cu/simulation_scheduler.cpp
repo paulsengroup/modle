@@ -4,6 +4,7 @@
 #include <algorithm>
 #include <cstdint>
 #include <cstdio>
+#include <mutex>
 #include <numeric>
 #include <string>
 #include <vector>
@@ -12,7 +13,7 @@
 #include "modle/cu/simulation.hpp"
 #include "modle/dna.hpp"
 #include "modle/extrusion_barriers.hpp"
-#include "modle/libmodle_io.hpp"
+#include "modle/setup.hpp"
 
 namespace modle::cu {
 
@@ -99,8 +100,6 @@ void Simulation::run() {
       this->_barrier_probs_occ_to_occ[i] = static_cast<float>(b.prob_occupied_to_occupied());
       this->_barrier_probs_nocc_to_nocc[i] =
           static_cast<float>(b.prob_not_occupied_to_not_occupied());
-      fmt::print(stderr, "{}; {};\n", this->_barrier_probs_occ_to_occ[i],
-                 this->_barrier_probs_nocc_to_nocc[i]);
     }
 
     auto cellid = 0UL;

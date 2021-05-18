@@ -9,7 +9,7 @@
 
 #include "modle/config.hpp"
 #include "modle/cu/common.hpp"
-#include "modle/libmodle_io.hpp"
+#include "modle/setup.hpp"
 
 namespace modle::cu {
 
@@ -56,6 +56,9 @@ struct BlockState {  // NOLINT
   uint32_t* fwd_moves_buff{nullptr};
   collision_t* rev_collision_mask{nullptr};
   collision_t* fwd_collision_mask{nullptr};
+
+  uint32_t num_rev_units_at_5prime{0};
+  uint32_t num_fwd_units_at_3prime{0};
 
   float* lef_unloader_affinities{nullptr};
   uint2* contact_local_buff{nullptr};
@@ -194,18 +197,16 @@ class Simulation : modle::Config {
   inline void print() = delete;
   Simulation& operator=(const Simulation& other) = delete;
   Simulation& operator=(Simulation&& other) = delete;
-  /*
-    void init_global_state(size_t grid_size, size_t block_size, size_t max_grid_size,
-                           size_t max_nlefs, size_t max_nbarriers,
-                           cuda::device_t dev = cuda::device::current::get());
-                           */
-  static constexpr auto LEF_IS_IDLE = static_cast<uint32_t>(-1);
+
+  static constexpr auto EXTR_UNIT_IS_IDLE = static_cast<bp_t>(-1);
+  static constexpr auto EXTR_UNIT_AT_CHROM_BOUNDARY = EXTR_UNIT_IS_IDLE - 1;
+  static constexpr auto NO_COLLISIONS = static_cast<collision_t>(-1);
 
   void run();
 
  private:
   const modle::Config* _config;
-  modle::io::Genome _genome{};
+  modle::Genome _genome{};
 
   size_t _grid_size;
   size_t _block_size;
@@ -229,6 +230,7 @@ class Simulation : modle::Config {
   void select_lefs_and_register_contacts();
   void generate_moves();
   void update_ctcf_states();
+  void process_collisions();
 };
 
 [[nodiscard]] Config* write_config_to_device(const Config& c);

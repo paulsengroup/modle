@@ -27,11 +27,11 @@ __global__ void reset_buffers(GlobalStateDev* global_state) {
 
   auto& block_state = global_state->block_states[bid];
 
+  constexpr auto fill_value = Simulation::EXTR_UNIT_IS_IDLE;
+
   if (threadIdx.x == 0) {
-    thrust::fill_n(thrust::device, block_state.rev_unit_pos, nlefs,
-                   static_cast<int>(Simulation::LEF_IS_IDLE));
-    thrust::fill_n(thrust::device, block_state.fwd_unit_pos, nlefs,
-                   static_cast<int>(Simulation::LEF_IS_IDLE));
+    thrust::fill_n(thrust::device, block_state.rev_unit_pos, nlefs, fill_value);
+    thrust::fill_n(thrust::device, block_state.fwd_unit_pos, nlefs, fill_value);
     block_state.num_active_lefs = 0;
     block_state.burnin_completed = false;
     block_state.simulation_completed = false;
@@ -163,12 +163,12 @@ __global__ void select_and_bind_lefs(uint32_t current_epoch, GlobalStateDev* glo
   const auto i1 = min(i0 + chunk_size, num_active_lefs);
 
   for (auto i = i0; i < i1; ++i) {
-    if (rev_unit_pos[i] == Simulation::LEF_IS_IDLE) {
+    if (rev_unit_pos[i] == Simulation::EXTR_UNIT_IS_IDLE) {
       rev_unit_pos[i] =
           __float2uint_rn(roundf(curand_uniform(&local_rng_state) * chrom_simulated_size));
       const auto j = rev_unit_idx[i];
 
-      assert(fwd_unit_pos[j] == Simulation::LEF_IS_IDLE);  // NOLINT
+      assert(fwd_unit_pos[j] == Simulation::EXTR_UNIT_IS_IDLE);  // NOLINT
       fwd_unit_pos[j] = rev_unit_pos[i];
     }
   }
@@ -400,10 +400,10 @@ __global__ void generate_moves(GlobalStateDev* global_state) {
   const auto chrom_start = global_state->tasks[bid].chrom_start;
   const auto chrom_end = global_state->tasks[bid].chrom_end;
 
-  for (auto i = i1 - 1; i > 1; --i) {
+  for (auto i = i1 - 1; i > 0; --i) {
     const auto pos1 = global_state->block_states[bid].rev_unit_pos[i - 1];
     const auto pos2 = global_state->block_states[bid].rev_unit_pos[i];
-    if (pos1 == Simulation::LEF_IS_IDLE || pos2 == Simulation::LEF_IS_IDLE) {
+    if (pos1 == Simulation::EXTR_UNIT_IS_IDLE || pos2 == Simulation::EXTR_UNIT_IS_IDLE) {
       continue;
     }
 
@@ -421,7 +421,7 @@ __global__ void generate_moves(GlobalStateDev* global_state) {
     }
 
     if (pos2 - move2 < pos1 - move1) {
-      move1 = (pos2 - pos1) + move2;
+      move1 = min(pos1 - chrom_start, (pos2 - pos1) + move2);
       atomicExch(global_state->block_states[bid].rev_moves_buff + i - 1, move1);
     } else if (i - 1 <= i0) {
       break;
@@ -432,25 +432,25 @@ __global__ void generate_moves(GlobalStateDev* global_state) {
   for (auto i = i0; i < num_active_lefs - 1; ++i) {
     const auto pos1 = global_state->block_states[bid].fwd_unit_pos[i];
     const auto pos2 = global_state->block_states[bid].fwd_unit_pos[i + 1];
-    if (pos1 == Simulation::LEF_IS_IDLE || pos2 == Simulation::LEF_IS_IDLE) {
+    if (pos1 == Simulation::EXTR_UNIT_IS_IDLE || pos2 == Simulation::EXTR_UNIT_IS_IDLE) {
       continue;
     }
 
     auto move1 = global_state->block_states[bid].fwd_moves_buff[i];
     auto move2 = global_state->block_states[bid].fwd_moves_buff[i + 1];
 
-    if (pos1 + move1 > chrom_end) {
-      move1 = chrom_end - pos1;
+    if (pos1 + move1 >= chrom_end) {
+      move1 = chrom_end - 1 - pos1;
       atomicExch(global_state->block_states[bid].fwd_moves_buff + i, move1);
     }
 
-    if (pos2 + move2 > chrom_end) {
-      move2 = chrom_end - pos2;
+    if (pos2 + move2 >= chrom_end) {
+      move2 = chrom_end - 1 - pos2;
       atomicExch(global_state->block_states[bid].fwd_moves_buff + i + 1, move2);
     }
 
     if (pos1 + move1 > pos2 + move2) {
-      move2 = (pos1 + move1) - pos2;
+      move2 = min(chrom_end - 1 - pos2, (pos1 + move1) - pos2);
       atomicExch(global_state->block_states[bid].fwd_moves_buff + i + 1, move2);
     } else if (i >= i1) {
       break;
@@ -481,6 +481,43 @@ __global__ void update_ctcf_states(GlobalStateDev* global_state) {
     __syncthreads();
   }
   global_state->block_states[bid].rng_state[tid] = local_rng_state;
+}
+
+__global__ void reset_collision_masks(GlobalStateDev* global_state) {
+  const auto tid = threadIdx.x;
+  const auto bid = blockIdx.x;
+
+  constexpr auto fill_value = Simulation::NO_COLLISIONS;
+
+  if (tid == 0) {
+    thrust::fill_n(thrust::device, global_state->block_states[bid].rev_collision_mask,
+                   global_state->block_states[bid].num_active_lefs, fill_value);
+    thrust::fill_n(thrust::device, global_state->block_states[bid].fwd_collision_mask,
+                   global_state->block_states[bid].num_active_lefs, fill_value);
+  }
+}
+
+__global__ void process_collisions(GlobalStateDev* global_state) {
+  const auto tid = threadIdx.x;
+  const auto bid = blockIdx.x;
+
+  auto* block_state = global_state->block_states + bid;
+  const auto* task = global_state->tasks + bid;
+
+  if (threadIdx.x == 0) {
+    block_state->num_rev_units_at_5prime =
+        modle::cu::dev::detect_collisions_at_5prime_single_threaded(
+            block_state->rev_unit_pos, block_state->fwd_unit_pos, block_state->rev_moves_buff,
+            block_state->rev_collision_mask, task->chrom_start, block_state->num_active_lefs);
+  } else if (threadIdx.x == 1) {
+    block_state->num_fwd_units_at_3prime =
+        modle::cu::dev::detect_collisions_at_3prime_single_threaded(
+            block_state->rev_unit_pos, block_state->fwd_unit_pos, block_state->fwd_moves_buff,
+            block_state->fwd_collision_mask, task->chrom_end, block_state->num_active_lefs);
+  }
+  __syncthreads();
+
+  modle::cu::dev::extrude(global_state);
 }
 
 }  // namespace modle::cu::kernels

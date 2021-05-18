@@ -1,22 +1,17 @@
-// clang-format off
-#include <cuda/runtime_api.hpp>
-//#include <cuda_runtime_api.h>
-
 #include <curand_kernel.h>
-#include <cub/cub.cuh>
-// clang-format on
-
 #include <fmt/format.h>
 
 #include <algorithm>
 #include <cstdint>
 #include <cstdio>
+#include <cub/cub.cuh>
+#include <cuda/runtime_api.hpp>
 #include <numeric>
 #include <string>
 #include <vector>
 
-#include "modle/config_cuda.hpp"
 #include "modle/cu/common.hpp"
+#include "modle/cu/config.hpp"
 #include "modle/cu/simulation.hpp"
 #include "modle/cu/simulation_internal.hpp"
 

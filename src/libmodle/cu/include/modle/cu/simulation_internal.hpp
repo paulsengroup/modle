@@ -6,7 +6,9 @@
 #include "modle/cu/common.hpp"
 #include "modle/cu/simulation.hpp"
 
-namespace modle::cu::kernels {
+namespace modle::cu {
+
+namespace kernels {
 
 // Memory management
 __global__ void init_curand(GlobalStateDev* global_state);
@@ -41,4 +43,22 @@ __global__ void select_lefs_then_register_contacts(GlobalStateDev* global_state)
 __global__ void generate_moves(GlobalStateDev* global_state);
 
 __global__ void update_ctcf_states(GlobalStateDev* global_state);
-}  // namespace modle::cu::kernels
+
+__global__ void reset_collision_masks(GlobalStateDev* global_state);
+
+__global__ void process_collisions(GlobalStateDev* global_state);
+}  // namespace kernels
+
+namespace dev {
+__device__ uint32_t detect_collisions_at_5prime_single_threaded(
+    const bp_t* rev_unit_pos, const bp_t* fwd_unit_pos, const bp_t* rev_moves,
+    collision_t* rev_collision_mask, uint32_t chrom_start_pos, uint32_t num_extr_units);
+
+__device__ uint32_t detect_collisions_at_3prime_single_threaded(
+    const bp_t* rev_unit_pos, const bp_t* fwd_unit_pos, const bp_t* fwd_moves,
+    collision_t* fwd_collision_mask, uint32_t chrom_end_pos, uint32_t num_extr_units);
+
+__device__ void extrude(GlobalStateDev* global_state);
+}  // namespace dev
+
+}  // namespace modle::cu
