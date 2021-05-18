@@ -1,5 +1,3 @@
-#pragma once
-
 #include <absl/container/fixed_array.h>          // for FixedArray
 #include <absl/container/flat_hash_map.h>        // for flat_hash_map, BitMask, raw_hash_set<...
 #include <absl/strings/str_join.h>               // for StrJoin
@@ -9,11 +7,9 @@
 #include <moodycamel/blockingconcurrentqueue.h>  // for BlockingConcurrentQueue
 #include <moodycamel/concurrentqueue.h>          // for ConsumerToken, ProducerToken
 
-#include <algorithm>                                // for max, copy, find_if, generate, sort
-#include <atomic>                                   // for atomic
-#include <boost/asio/impl/post.hpp>                 // for post
-#include <boost/asio/impl/thread_pool.hpp>          // for thread_pool::get_executor
-#include <boost/asio/impl/thread_pool.ipp>          // for thread_pool::thread_pool, thread_pool...
+#include <algorithm>  // for max, copy, find_if, generate, sort
+#include <atomic>     // for atomic
+#include <boost/asio/post.hpp>
 #include <boost/asio/thread_pool.hpp>               // for thread_pool
 #include <boost/dynamic_bitset/dynamic_bitset.hpp>  // for dynamic_bitset
 #include <boost/exception/get_error_info.hpp>       // for get_error_info
@@ -39,7 +35,8 @@
 #include "modle/contacts.hpp"            // for ContactMatrix
 #include "modle/dna.hpp"                 // for Chromosome
 #include "modle/extrusion_barriers.hpp"  // for ExtrusionBarrier
-#include "modle/utils.hpp"               // for traced
+#include "modle/simulation.hpp"
+#include "modle/utils.hpp"  // for traced
 
 namespace modle {
 
@@ -141,7 +138,8 @@ void Simulation::run() {
 
       // Allocate extr. barriers mapping on the chromosome that is being simulated
       auto node = barriers.emplace(
-          &chrom, std::make_unique<std::vector<ExtrusionBarrier>>(this->_genome.generate_vect_of_barriers(
+          &chrom,
+          std::make_unique<std::vector<ExtrusionBarrier>>(this->_genome.generate_vect_of_barriers(
               chrom.name(), this->_config->ctcf_occupied_self_prob,
               this->_config->ctcf_not_occupied_self_prob)));
       extr_barriers_buff = absl::MakeConstSpan(*node.first->second);

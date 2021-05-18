@@ -19,7 +19,7 @@
 
 #include "modle/common.hpp"  // for bp_t
 #ifdef ENABLE_CUDA
-#include "modle/config_cuda.hpp"
+#include "modle/cu/config.hpp"
 #endif
 
 namespace modle {

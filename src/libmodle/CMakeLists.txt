@@ -1,4 +1,4 @@
-add_subdirectory(io)
+add_subdirectory(internal)
 add_subdirectory(cpu)
 if(ENABLE_CUDA)
   add_subdirectory(cu)

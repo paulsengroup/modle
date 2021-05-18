@@ -66,7 +66,7 @@ function(enable_sanitizers project_name)
             "${_TMP_STR}"
             PARENT_SCOPE)
       endfunction()
-      JOIN("${SANITIZERS}" "," LIST_OF_SANITIZERS)
+      join("${SANITIZERS}" "," LIST_OF_SANITIZERS)
     else()
       list(
         JOIN

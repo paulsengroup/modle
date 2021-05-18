@@ -1,6 +1,6 @@
 #pragma once
 
-#include "modle/common.hpp"  // for bp_t
+#include "modle/cu/common.hpp"  // for bp_t
 
 namespace modle::cu {
 struct Config {

@@ -1,6 +1,4 @@
-#pragma once
-
-// IWYU pragma: private, include "modle/dna.hpp"
+#include "modle/dna.hpp"
 
 #include <absl/container/btree_set.h>  // for btree_set
 #include <fmt/format.h>                // for format, FMT_STRING
@@ -17,7 +15,6 @@
 #include <utility>      // for move
 #include <vector>       // for vector
 
-#include "dna_impl.hpp"           // for FMT_COMPILE_STRING
 #include "modle/bed.hpp"          // for BED
 #include "modle/chrom_sizes.hpp"  // for ChromSize
 #include "modle/common.hpp"       // for bp_t, contacts_t
@@ -93,12 +90,6 @@ size_t Chromosome::id() const { return this->_id; }
 std::string_view Chromosome::name() const { return this->_name; }
 const char *Chromosome::name_cstr() const { return this->_name.c_str(); }
 
-constexpr bp_t Chromosome::start_pos() const { return this->_start; }
-
-constexpr bp_t Chromosome::end_pos() const { return this->_end; }
-
-constexpr bp_t Chromosome::size() const { return this->_size; }
-constexpr bp_t Chromosome::simulated_size() const { return this->_end - this->_start; }
 bool Chromosome::ok() const { return !this->_barriers.empty(); }
 
 size_t Chromosome::nlefs(double nlefs_per_mbp) const {  // NOLINTNEXTLINE

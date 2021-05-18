@@ -19,12 +19,9 @@ if(ENABLE_CUDA)
   message(STATUS "Compiling project with CUDA support")
   enable_language(CUDA)
   find_package(CUDAToolkit 11 REQUIRED)
-  set(CMAKE_CUDA_ARCHITECTURES
-      #70
-      #72
-      75
-      86)
-  set_target_properties(project_options PROPERTIES CUDA_SEPARABLE_COMPILATION ON)
+  set(CMAKE_CUDA_ARCHITECTURES # 70
+      # 72
+      75 86)
   target_compile_definitions(project_options INTERFACE ENABLE_CUDA=1)
 endif()
 
@@ -59,7 +56,6 @@ endif()
 
 # Link this 'library' to use the warnings specified in CompilerWarnings.cmake
 add_library(project_warnings INTERFACE)
-add_library(project_warnings_cuda INTERFACE)
 
 # enable cache system
 include(cmake/Cache.cmake)
@@ -67,7 +63,6 @@ include(cmake/Cache.cmake)
 # standard compiler warnings
 include(cmake/CompilerWarnings.cmake)
 set_project_warnings(project_warnings)
-set_project_warnings(project_warnings_cuda)
 
 # sanitizer options if supported by compiler
 include(cmake/Sanitizers.cmake)

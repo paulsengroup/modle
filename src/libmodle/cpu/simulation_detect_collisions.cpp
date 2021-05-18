@@ -1,5 +1,3 @@
-#pragma once
-
 #include <absl/types/span.h>  // for Span
 
 #include <algorithm>                                // for is_sorted, all_of, max, find_if
@@ -14,7 +12,8 @@
 #include "modle/dna.hpp"                 // for Chromosome
 #include "modle/extrusion_barriers.hpp"  // for ExtrusionBarrier, NOT_OCCUPIED
 #include "modle/extrusion_factors.hpp"   // for ExtrusionUnit, Lef
-#include "modle/utils.hpp"               // for ndebug_defined
+#include "modle/simulation.hpp"
+#include "modle/utils.hpp"  // for ndebug_defined
 
 namespace modle {
 

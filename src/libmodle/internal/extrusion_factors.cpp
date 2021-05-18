@@ -1,6 +1,4 @@
-#pragma once
-
-// IWYU pragma: private, include "modle/extrusion_factors.hpp"
+#include "modle/extrusion_factors.hpp"
 
 #include <algorithm>  // for min, clamp
 #include <cassert>    // for assert
@@ -26,11 +24,6 @@ bool ExtrusionUnit::operator<(const ExtrusionBarrier& barrier) const
     noexcept(utils::ndebug_defined()) {
   return this->pos() < barrier.pos();
 }
-template <typename I>
-bool ExtrusionUnit::operator<(I other_pos) const noexcept(utils::ndebug_defined()) {
-  static_assert(std::is_integral_v<I>, "I should be an integral number");
-  return this->pos() < other_pos;
-}
 
 bool ExtrusionUnit::operator>(const ExtrusionUnit& other) const noexcept(utils::ndebug_defined()) {
   return this->pos() > other.pos();
@@ -38,11 +31,6 @@ bool ExtrusionUnit::operator>(const ExtrusionUnit& other) const noexcept(utils::
 bool ExtrusionUnit::operator>(const ExtrusionBarrier& barrier) const
     noexcept(utils::ndebug_defined()) {
   return this->pos() > barrier.pos();
-}
-template <typename I>
-bool ExtrusionUnit::operator>(I other_pos) const noexcept(utils::ndebug_defined()) {
-  static_assert(std::is_integral_v<I>, "I should be an integral number");
-  return this->pos() > other_pos;
 }
 
 bool ExtrusionUnit::operator<=(const ExtrusionUnit& other) const noexcept(utils::ndebug_defined()) {
@@ -52,11 +40,6 @@ bool ExtrusionUnit::operator<=(const ExtrusionBarrier& barrier) const
     noexcept(utils::ndebug_defined()) {
   return this->pos() <= barrier.pos();
 }
-template <typename I>
-bool ExtrusionUnit::operator<=(I other_pos) const noexcept(utils::ndebug_defined()) {
-  static_assert(std::is_integral_v<I>, "I should be an integral number");
-  return this->pos() <= other_pos;
-}
 
 bool ExtrusionUnit::operator>=(const ExtrusionUnit& other) const noexcept(utils::ndebug_defined()) {
   return this->pos() >= other.pos();
@@ -65,11 +48,6 @@ bool ExtrusionUnit::operator>=(const ExtrusionBarrier& barrier) const
     noexcept(utils::ndebug_defined()) {
   return this->pos() >= barrier.pos();
 }
-template <typename I>
-bool ExtrusionUnit::operator>=(I other_pos) const noexcept(utils::ndebug_defined()) {
-  static_assert(std::is_integral_v<I>, "I should be an integral number");
-  return this->pos() >= other_pos;
-}
 
 bool ExtrusionUnit::operator==(const ExtrusionUnit& other) const noexcept(utils::ndebug_defined()) {
   return this->pos() == other.pos();
@@ -77,11 +55,6 @@ bool ExtrusionUnit::operator==(const ExtrusionUnit& other) const noexcept(utils:
 bool ExtrusionUnit::operator==(const ExtrusionBarrier& barrier) const
     noexcept(utils::ndebug_defined()) {
   return this->pos() == barrier.pos();
-}
-template <typename I>
-bool ExtrusionUnit::operator==(I other_pos) const noexcept(utils::ndebug_defined()) {
-  static_assert(std::is_integral_v<I>, "I should be an integral number");
-  return this->pos() == other_pos;
 }
 
 int64_t ExtrusionUnit::operator-(const ExtrusionUnit& other) const
@@ -92,18 +65,6 @@ int64_t ExtrusionUnit::operator-(const ExtrusionUnit& other) const
 int64_t ExtrusionUnit::operator-(const ExtrusionBarrier& other_barrier) const
     noexcept(utils::ndebug_defined()) {
   return static_cast<int64_t>(this->pos()) - static_cast<int64_t>(other_barrier.pos());
-}
-
-template <typename I>
-int64_t ExtrusionUnit::operator-(I other_pos) const noexcept(utils::ndebug_defined()) {
-  static_assert(std::is_integral_v<I>, "I should be an integral number");
-  return static_cast<int64_t>(this->pos()) - static_cast<int64_t>(other_pos);
-}
-
-template <typename I>
-int64_t ExtrusionUnit::operator+(I other_pos) const noexcept(utils::ndebug_defined()) {
-  static_assert(std::is_integral_v<I>, "I should be an integral number");
-  return static_cast<int64_t>(this->pos() + other_pos);
 }
 
 void ExtrusionUnit::release() noexcept(utils::ndebug_defined()) {

@@ -1,28 +1,33 @@
-#pragma once
+#include "modle/setup.hpp"
 
 #include <absl/container/flat_hash_map.h>
 #include <fmt/format.h>
+#include <fmt/ostream.h>  // required to format std::filesystem::path
 
 #include <cassert>
+#include <filesystem>
 #include <stdexcept>
 #include <string>
 #include <utility>
 
-namespace modle::io {
+#include "modle/chrom_sizes.hpp"
+#include "modle/dna.hpp"
+
+namespace modle {
 
 /// Import chromosomes from a chrom.sizes file
 
 //! When \p path_to_extr_barriers is non-empty, import the intersection of the chromosomes present
 //! in the chrom.sizes and BED files. The optional BED file can be used to instruct ModLE to
 //! simulate loop extrusion on a sub-region of a chromosome from the chrom.sizes file.
-[[nodiscard]] inline absl::btree_set<Chromosome, Chromosome::Comparator> import_chromosomes(
+[[nodiscard]] absl::btree_set<Chromosome, Chromosome::Comparator> import_chromosomes(
     const std::filesystem::path& path_to_chrom_sizes,
     const std::filesystem::path& path_to_chrom_subranges, bool keep_all_chroms);
 
 /// Parse a BED file containing the genomic coordinates of extrusion barriers and add them to the
 /// Genome
-inline size_t import_barriers(absl::btree_set<Chromosome, Chromosome::Comparator>& chromosomes,
-                              const std::filesystem::path& path_to_extr_barriers);
+size_t import_barriers(absl::btree_set<Chromosome, Chromosome::Comparator>& chromosomes,
+                       const std::filesystem::path& path_to_extr_barriers);
 
 Genome::Genome(const std::filesystem::path& path_to_chrom_sizes,
                const std::filesystem::path& path_to_extr_barriers,
@@ -149,11 +154,11 @@ absl::btree_set<Chromosome, Chromosome::Comparator> Genome::instantiate_genome(
   return chroms;
 }
 
-auto Genome::begin() { return this->_chromosomes.begin(); }
-auto Genome::end() { return this->_chromosomes.end(); }
+Genome::iterator Genome::begin() { return this->_chromosomes.begin(); }
+Genome::iterator Genome::end() { return this->_chromosomes.end(); }
 
-auto Genome::begin() const { return this->_chromosomes.cbegin(); }
-auto Genome::end() const { return this->_chromosomes.cend(); }
+Genome::const_iterator Genome::begin() const { return this->_chromosomes.cbegin(); }
+Genome::const_iterator Genome::end() const { return this->_chromosomes.cend(); }
 
 size_t Genome::size() const {
   return std::accumulate(
@@ -209,4 +214,4 @@ size_t Genome::max_target_contacts(size_t bin_size, size_t diagonal_width,
   return static_cast<size_t>(std::round((static_cast<double>(npixels) * target_contact_density) /
                                         static_cast<double>(ncells)));
 }
-}  // namespace modle::io
+}  // namespace modle

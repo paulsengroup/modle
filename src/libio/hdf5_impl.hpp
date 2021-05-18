@@ -31,8 +31,8 @@ namespace modle::hdf5 {
 using attr_types = std::variant<uint8_t, uint16_t, uint32_t, uint64_t, int8_t, int16_t, int32_t,
                                 int64_t, float, double, long double>;
 
-attr_types getCpp_type(const H5::IntType &h5_type);
-attr_types getCpp_type(const H5::FloatType &h5_type);
+inline attr_types getCpp_type(const H5::IntType &h5_type);
+inline attr_types getCpp_type(const H5::FloatType &h5_type);
 
 std::string construct_error_stack() {
   std::string buff;

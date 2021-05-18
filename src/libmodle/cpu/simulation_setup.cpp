@@ -1,5 +1,4 @@
-#pragma once
-
+/*
 #include <absl/container/btree_set.h>      // for btree_iterator, btree_set
 #include <absl/container/flat_hash_map.h>  // for flat_hash_map, BitMask, raw_hash_set<>::iterator
 #include <fmt/format.h>                    // for format, print, FMT_STRING
@@ -22,23 +21,23 @@
 #include "modle/common.hpp"              // for MODLE_LIKELY
 #include "modle/dna.hpp"                 // for Chromosome
 #include "modle/extrusion_barriers.hpp"  // for ExtrusionBarrier
+#include "modle/simulation.hpp"
 
 namespace modle {
 
 // TODO Add flag to import skip chrom without barriers
-Simulation::Genome Simulation::instantiate_genome(
-    const std::filesystem::path& path_to_chrom_sizes,
-    const std::filesystem::path& path_to_extr_barriers,
-    const std::filesystem::path& path_to_chrom_subranges, bool keep_all_chroms) {
-  auto genome =
-      Simulation::import_chromosomes(path_to_chrom_sizes, path_to_chrom_subranges, keep_all_chroms);
-  Simulation::import_barriers(genome, path_to_extr_barriers);
+Genome Simulation::instantiate_genome(const std::filesystem::path& path_to_chrom_sizes,
+                                      const std::filesystem::path& path_to_extr_barriers,
+                                      const std::filesystem::path& path_to_chrom_subranges,
+                                      bool keep_all_chroms) {
+  auto genome = import_chromosomes(path_to_chrom_sizes, path_to_chrom_subranges, keep_all_chroms);
+  import_barriers(genome, path_to_extr_barriers);
   return genome;
 }
 
-Simulation::Genome Simulation::import_chromosomes(
-    const std::filesystem::path& path_to_chrom_sizes,
-    const std::filesystem::path& path_to_chrom_subranges, bool keep_all_chroms) {
+Genome Simulation::import_chromosomes(const std::filesystem::path& path_to_chrom_sizes,
+                                      const std::filesystem::path& path_to_chrom_subranges,
+                                      bool keep_all_chroms) {
   assert(!path_to_chrom_sizes.empty());  // NOLINT
   Genome chroms;
 
@@ -141,3 +140,4 @@ std::vector<ExtrusionBarrier> Simulation::allocate_barriers(const Chromosome* co
   return barriers;
 }
 }  // namespace modle
+*/

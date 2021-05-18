@@ -5,7 +5,7 @@ if(MODLE_BUILD_UTILS)
   add_subdirectory(modle_tools)
 endif()
 
-add_subdirectory(config)
+add_subdirectory(common)
 add_subdirectory(utils)
 add_subdirectory(contact_matrix)
 add_subdirectory(correlation)

@@ -11,7 +11,8 @@ target_link_libraries(
             project_options
             Modle::utils
             $<$<BOOL:${ENABLE_XOSHIRO}>:XoshiroCpp::XoshiroCpp>
-            CONAN_PKG::boost)
+            CONAN_PKG::boost
+            CONAN_PKG::cpp-sort)
 
 if(ENABLE_PCH)
   target_precompile_headers(
