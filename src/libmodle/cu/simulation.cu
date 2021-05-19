@@ -8,15 +8,8 @@
 #include <algorithm>
 #include <cstdint>
 #include <cstdio>
-// clang-format off
-#include "modle/suppress_compiler_warnings.hpp"
-DISABLE_WARNING_PUSH
-DISABLE_WARNING_PEDANTIC
-DISABLE_WARNING_OLD_STYLE_CAST
 #include <cub/cub.cuh>
 #include <cuda/runtime_api.hpp>
-DISABLE_WARNING_POP
-// clang-format on
 #include <numeric>
 #include <string>
 #include <vector>
@@ -48,7 +41,7 @@ void Simulation::run_batch(const std::vector<Task>& new_tasks,
   this->_current_epoch = 0UL;
   while (this->simulate_next_epoch()) {
     if (this->_current_epoch++ % 50 == 0) {
-      fmt::print(stderr, FMT_STRING("Simulating epoch #{}...\n"), this->_current_epoch);
+      fmt::print(stderr, FMT_STRING("Simulating epoch #{}...\n"), this->_current_epoch - 1);
     }
   }
   std::vector<uint32_t> buff(new_tasks[0].nlefs);

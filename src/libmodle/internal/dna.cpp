@@ -98,8 +98,9 @@ size_t Chromosome::nlefs(double nlefs_per_mbp) const {  // NOLINTNEXTLINE
 size_t Chromosome::nbarriers() const { return static_cast<size_t>(this->_barriers.size()); }
 
 size_t Chromosome::num_valid_barriers() const {
-  return std::count_if(this->get_barriers().begin(), this->get_barriers().end(),
-                       [](const auto &b) { return b.strand == '-' || b.strand == '+'; });
+  return static_cast<size_t>(
+      std::count_if(this->get_barriers().begin(), this->get_barriers().end(),
+                    [](const auto &b) { return b.strand == '-' || b.strand == '+'; }));
 }
 
 const absl::btree_set<bed::BED> &Chromosome::get_barriers() const { return this->_barriers; }

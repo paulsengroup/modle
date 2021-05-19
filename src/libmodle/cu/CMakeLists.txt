@@ -26,6 +26,7 @@ target_link_libraries(
 
 # TODO Figure out how to disable at least -Wpedantic target_compile_options(libmodle_cuda PRIVATE -Wno-pedantic -Wall
 # -Wextra)
+target_compile_options(libmodle_cuda PRIVATE -lineinfo)
 set_target_properties(libmodle_cuda PROPERTIES CUDA_SEPARABLE_COMPILATION ON CUDA_RESOLVE_DEVICE_SYMBOLS ON)
 
 # if(ENABLE_TESTING) add_subdirectory(test) endif()
