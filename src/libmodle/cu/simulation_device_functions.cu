@@ -286,7 +286,6 @@ __device__ void detect_primary_lef_lef_collisions(
   }
 
   const auto tid = threadIdx.x;
-  auto local_rng_state = rng_states[tid];
 
   const auto num_active_rev_units = num_active_lefs - num_rev_units_at_5prime;
   // Adjust the indices for the rev units such that they point to units whose position is
@@ -334,17 +333,21 @@ __device__ void detect_primary_lef_lef_collisions(
     return;
   }
 
+  auto local_rng_state = rng_states[tid];
+
   auto rev_idx = ir0;
   auto fwd_idx = if0;
   while (rev_idx < ir1 && fwd_idx < if1) {
     while (rev_units_pos[rev_idx] <= fwd_units_pos[fwd_idx]) {
       if (++rev_idx == ir1) {
+        rng_states[tid] = local_rng_state;
         return;
       }
     }
 
     while (fwd_units_pos[fwd_idx] < rev_units_pos[rev_idx]) {
       if (++fwd_idx == if1) {
+        rng_states[tid] = local_rng_state;
         return;
       }
     }
@@ -395,6 +398,7 @@ __device__ void detect_primary_lef_lef_collisions(
     }
     fwd_idx += correct_fwd_idx ? 1 : 0;
   }
+  rng_states[tid] = local_rng_state;
 }
 
 __device__ thrust::pair<bp_t, bp_t> compute_lef_lef_collision_pos(bp_t rev_unit_pos,
@@ -433,7 +437,7 @@ __device__ void correct_moves_for_primary_lef_lef_collisions(
   }
   const auto tid = threadIdx.x;
   const auto lower_bound = num_barriers;
-  const auto upper_bound = num_barriers + num_active_lefs;
+  const auto upper_bound = lower_bound + num_active_lefs;
 
   auto is_primary_lef_lef_collision = [&](const auto i) constexpr {
     return i >= lower_bound && i < upper_bound;
@@ -487,6 +491,142 @@ __device__ void correct_moves_for_primary_lef_lef_collisions(
         assert(rev_units_pos[rev_idx] >= fwd_units_pos[fwd_idx] + rev_move);  // NOLINT
         fwd_move = (rev_units_pos[rev_idx] - rev_move) - fwd_units_pos[fwd_idx];
       }
+    }
+  }
+}
+
+__device__ void detect_secondary_lef_lef_collisions(
+    const bp_t* rev_units_pos, const bp_t* fwd_units_pos, const bp_t* rev_moves,
+    const bp_t* fwd_moves, uint32_t num_active_lefs, uint32_t num_barriers,
+    collision_t* rev_collisions, collision_t* fwd_collisions,
+    curandStatePhilox4_32_10_t* rng_states, uint32_t num_rev_units_at_5prime,
+    uint32_t num_fwd_units_at_3prime) {
+  if (num_active_lefs - (num_rev_units_at_5prime + num_fwd_units_at_3prime) == 0 ||
+      num_barriers == 0) {
+    return;
+  }
+
+  const auto tid = threadIdx.x;
+  const auto num_active_rev_units = num_active_lefs - num_rev_units_at_5prime;
+  // Adjust the indices for the rev units such that they point to units whose position is
+  // different than that of the next unit
+  const auto [ir0, ir1] = [&]() {
+    const auto chunk_size = (num_active_rev_units + blockDim.x - 1) / blockDim.x;
+    auto ir0 = min(num_rev_units_at_5prime + (tid * chunk_size), num_active_rev_units);
+    auto ir1 = min(ir0 + chunk_size, num_active_rev_units);
+
+    while (ir0 > 0 && rev_collisions[ir0] != Simulation::NO_COLLISIONS) {
+      --ir0;
+    }
+    while (ir1 > ir0 && rev_units_pos[ir1] != Simulation::NO_COLLISIONS) {
+      --ir1;
+    }
+
+    return thrust::make_pair(ir0, ir1);
+  }();
+
+  const auto [if0, if1] = [&]() {
+    const auto chunk_size = (num_active_rev_units + blockDim.x - 1) / blockDim.x;
+    auto if0 = min(num_fwd_units_at_3prime + (tid * chunk_size), num_active_rev_units);
+    auto if1 = min(if0 + chunk_size, num_active_rev_units);
+
+    while (if0 > 0 && fwd_collisions[if0] != Simulation::NO_COLLISIONS) {
+      --if0;
+    }
+    while (if1 > if0 && fwd_units_pos[if1] != Simulation::NO_COLLISIONS) {
+      --if1;
+    }
+
+    return thrust::make_pair(if0, if1);
+  }();
+
+  assert(ir0 <= num_active_lefs);  // NOLINT
+  assert(ir1 <= num_active_lefs);  // NOLINT
+
+  assert(if0 <= num_active_lefs);  // NOLINT
+  assert(if1 <= num_active_lefs);  // NOLINT
+  __syncthreads();
+
+  if (ir0 == ir1 && if0 == if1) {
+    return;
+  }
+
+  auto local_rng_state = rng_states[tid];
+  const auto offset = num_barriers + num_active_lefs;
+
+  for (auto i = ir0; i < ir1 - 1; ++i) {
+    if (rev_collisions[i] != Simulation::NO_COLLISIONS) {
+      const auto& rev_pos1 = rev_units_pos[i];
+      const auto& rev_pos2 = rev_units_pos[i + 1];
+
+      const auto& rev_move1 = rev_moves[i];
+      const auto& rev_move2 = rev_moves[i + 1];
+
+      if (rev_pos2 - rev_move2 <= rev_pos1 - rev_move1 &&
+          (config.probability_of_extrusion_unit_bypass == 0 ||
+           bernoulli_trial(&local_rng_state, 1.0F - config.probability_of_extrusion_unit_bypass))) {
+        rev_collisions[i + 1] = offset + i;
+      }
+    }
+  }
+
+  for (auto i = if0; i < if1 - 1; ++i) {
+    if (fwd_collisions[i] != Simulation::NO_COLLISIONS) {
+      const auto& fwd_pos1 = fwd_units_pos[i];
+      const auto& fwd_pos2 = fwd_units_pos[i + 1];
+
+      const auto& fwd_move1 = fwd_moves[i];
+      const auto& fwd_move2 = fwd_moves[i + 1];
+
+      if (fwd_pos1 + fwd_move1 >= fwd_pos2 + fwd_move2 &&
+          (config.probability_of_extrusion_unit_bypass == 0 ||
+           bernoulli_trial(&local_rng_state, 1.0F - config.probability_of_extrusion_unit_bypass))) {
+        fwd_collisions[i] = offset + i + 1;
+      }
+    }
+  }
+
+  rng_states[tid] = local_rng_state;
+}
+
+__device__ void correct_moves_for_secondary_lef_lef_collisions(
+    const bp_t* rev_units_pos, const bp_t* fwd_units_pos, bp_t* rev_moves, bp_t* fwd_moves,
+    uint32_t num_active_lefs, uint32_t num_barriers, const collision_t* rev_collisions,
+    const collision_t* fwd_collisions) {
+  if (num_active_lefs == 0 || num_barriers == 0) {
+    return;
+  }
+  const auto tid = threadIdx.x;
+  const auto lower_bound = num_barriers + num_active_lefs;
+  const auto upper_bound = lower_bound + num_active_lefs;
+
+  auto is_secondary_lef_lef_collision = [&](const auto i) constexpr {
+    return i >= lower_bound && i < upper_bound;
+  };
+
+  const auto chunk_size = (num_active_lefs + blockDim.x - 1) / blockDim.x;
+  auto i0 = tid * chunk_size;
+  auto i1 = min(i0 + chunk_size, num_active_lefs);
+
+  for (auto rev_idx2 = i0; rev_idx2 < i1; ++rev_idx2) {
+    if (auto rev_collision = rev_collisions[rev_idx2];
+        is_secondary_lef_lef_collision(rev_collision)) {
+      rev_collision -= lower_bound;
+
+      const auto& rev_idx1 = rev_collision;
+      const auto move = rev_units_pos[rev_idx2] - (rev_units_pos[rev_idx1] - rev_moves[rev_idx1]);
+      rev_moves[rev_idx2] = move > 0U ? move - 1 : 0U;
+    }
+  }
+
+  for (auto fwd_idx1 = i1; fwd_idx1 < i0; --fwd_idx1) {
+    if (auto fwd_collision = fwd_collisions[fwd_idx1];
+        is_secondary_lef_lef_collision(fwd_collision)) {
+      fwd_collision -= lower_bound;
+
+      const auto& fwd_idx2 = fwd_collision;
+      const auto move = (fwd_units_pos[fwd_idx2] + fwd_moves[fwd_idx2]) - fwd_units_pos[fwd_idx1];
+      fwd_moves[fwd_idx1] = move > 0U ? move - 1 : 0U;
     }
   }
 }

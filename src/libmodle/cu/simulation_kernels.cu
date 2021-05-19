@@ -566,6 +566,19 @@ __global__ void process_collisions(uint32_t current_epoch, GlobalStateDev* globa
       block_state->rev_collision_mask, block_state->fwd_collision_mask);
   __syncthreads();
 
+  modle::cu::dev::detect_secondary_lef_lef_collisions(
+      block_state->rev_unit_pos, block_state->fwd_unit_pos, block_state->rev_moves_buff,
+      block_state->fwd_moves_buff, block_state->num_active_lefs, global_state->tasks[bid].nbarriers,
+      block_state->rev_collision_mask, block_state->fwd_collision_mask, block_state->rng_state,
+      block_state->num_rev_units_at_5prime, block_state->num_fwd_units_at_3prime);
+  __syncthreads();
+
+  modle::cu::dev::correct_moves_for_secondary_lef_lef_collisions(
+      block_state->rev_unit_pos, block_state->fwd_unit_pos, block_state->rev_moves_buff,
+      block_state->fwd_moves_buff, block_state->num_active_lefs, global_state->tasks[bid].nbarriers,
+      block_state->rev_collision_mask, block_state->fwd_collision_mask);
+  __syncthreads();
+
   modle::cu::dev::extrude(block_state->rev_unit_pos, block_state->fwd_unit_pos,
                           block_state->rev_moves_buff, block_state->fwd_moves_buff,
                           block_state->num_active_lefs, task->chrom_start, task->chrom_end);

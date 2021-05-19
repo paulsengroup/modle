@@ -454,7 +454,7 @@ void Simulation::detect_secondary_lef_lef_collisions(
     }
 
     const auto& move1 = rev_moves[rev_idx1];
-    auto& move2 = rev_moves[rev_idx2];
+    const auto& move2 = rev_moves[rev_idx2];
 
     assert(rev_pos2 >= rev_pos1);                    // NOLINT
     assert(rev_pos1 >= move1);                       // NOLINT
@@ -486,7 +486,7 @@ void Simulation::detect_secondary_lef_lef_collisions(
       continue;
     }
 
-    auto& move1 = fwd_moves[fwd_idx1];
+    const auto& move1 = fwd_moves[fwd_idx1];
     const auto& move2 = fwd_moves[fwd_idx2];
 
     assert(fwd_pos2 >= fwd_pos1);                 // NOLINT

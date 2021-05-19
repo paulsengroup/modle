@@ -91,7 +91,19 @@ __device__ void detect_primary_lef_lef_collisions(
     curandStatePhilox4_32_10_t* rng_states, uint32_t num_rev_units_at_5prime,
     uint32_t num_fwd_units_at_3prime);
 
+__device__ void detect_secondary_lef_lef_collisions(
+    const bp_t* rev_units_pos, const bp_t* fwd_units_pos, const bp_t* rev_moves,
+    const bp_t* fwd_moves, uint32_t num_active_lefs, uint32_t num_barriers,
+    collision_t* rev_collisions, collision_t* fwd_collisions,
+    curandStatePhilox4_32_10_t* rng_states, uint32_t num_rev_units_at_5prime,
+    uint32_t num_fwd_units_at_3prime);
+
 __device__ void correct_moves_for_primary_lef_lef_collisions(
+    const bp_t* rev_units_pos, const bp_t* fwd_units_pos, bp_t* rev_moves, bp_t* fwd_moves,
+    uint32_t num_active_lefs, uint32_t num_barriers, const collision_t* rev_collisions,
+    const collision_t* fwd_collisions);
+
+__device__ void correct_moves_for_secondary_lef_lef_collisions(
     const bp_t* rev_units_pos, const bp_t* fwd_units_pos, bp_t* rev_moves, bp_t* fwd_moves,
     uint32_t num_active_lefs, uint32_t num_barriers, const collision_t* rev_collisions,
     const collision_t* fwd_collisions);
