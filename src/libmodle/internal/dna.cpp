@@ -109,6 +109,10 @@ void Chromosome::increment_contacts(bp_t pos1, bp_t pos2, bp_t bin_size) {
   this->_contacts->increment((pos1 - this->_start) / bin_size, (pos2 - this->_start) / bin_size);
 }
 
+void Chromosome::increment_contacts(bp_t bin1, bp_t bin2) {
+  this->_contacts->increment(bin1, bin2);
+}
+
 void Chromosome::allocate_contacts(bp_t bin_size, bp_t diagonal_width) {
   const auto ncols = (this->simulated_size() / bin_size) + (this->simulated_size() % bin_size != 0);
   const auto nrows =

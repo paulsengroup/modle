@@ -2,9 +2,13 @@
 #include <cuda_runtime_api.h>
 #include <curand_kernel.h>
 
+#include <atomic>
 #include <cstddef>
 #include <cstdint>
 #include <cuda/runtime_api.hpp>
+#include <deque>
+#include <mutex>
+#include <utility>
 #include <vector>
 
 #include "modle/config.hpp"
@@ -189,8 +193,9 @@ class GlobalStateHost {  // NOLINT
 };
 
 class Simulation : modle::Config {
+
  public:  // NOLINTNEXTLINE
-  Simulation(const modle::Config& config, size_t grid_size = 208'896 / 192, size_t block_size = 192,
+  Simulation(const modle::Config& config_, size_t grid_size = 208'896 / 192, size_t block_size = 192,
              size_t max_grid_size = std::numeric_limits<size_t>::max(),
              size_t device_heap_size = 1024ULL * 1024ULL * 2048LL);
   Simulation(const Simulation& other) = delete;
@@ -225,6 +230,11 @@ class Simulation : modle::Config {
                  const std::vector<dna::Direction>& barrier_dir,
                  const std::vector<float>& barrier_probs_occ_to_occ,
                  const std::vector<float>& barrier_probs_nocc_to_nocc);
+
+  void write_contacts_to_disk(std::deque<std::pair<Chromosome*, size_t>>& progress_queue,
+                              std::mutex& progress_queue_mutex,
+                              std::atomic<bool>& end_of_simulation);
+  void update_contacts_for_chrom(Chromosome& chrom);
 
   bool simulate_next_epoch();
   void setup_burnin_phase();

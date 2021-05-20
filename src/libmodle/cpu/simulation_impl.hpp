@@ -1,5 +1,15 @@
 #pragma once
 
+#include <absl/types/span.h>  // for Span, MakeSpan, MakeConstSpan
+
+#include <algorithm>
+#include <cassert>
+#include <cstddef>
+#include <type_traits>
+
+#include "modle/common.hpp"
+#include "modle/dna.hpp"
+
 namespace modle {
 template <typename MaskT>
 void Simulation::bind_lefs(const Chromosome* chrom, const absl::Span<Lef> lefs,

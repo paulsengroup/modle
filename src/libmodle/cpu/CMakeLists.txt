@@ -6,8 +6,7 @@ target_sources(
           ${CMAKE_CURRENT_SOURCE_DIR}/simulation_correct_moves.cpp
           ${CMAKE_CURRENT_SOURCE_DIR}/simulation_detect_collisions.cpp
           ${CMAKE_CURRENT_SOURCE_DIR}/simulation_impl.hpp
-          ${CMAKE_CURRENT_SOURCE_DIR}/simulation_scheduler.cpp
-          ${CMAKE_CURRENT_SOURCE_DIR}/simulation_setup.cpp)
+          ${CMAKE_CURRENT_SOURCE_DIR}/simulation_scheduler.cpp)
 
 target_include_directories(libmodle_cpu PUBLIC include/)
 

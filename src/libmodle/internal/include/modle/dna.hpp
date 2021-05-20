@@ -50,6 +50,7 @@ class Chromosome {
   [[nodiscard]] size_t num_valid_barriers() const;
   [[nodiscard]] const absl::btree_set<bed::BED>& get_barriers() const;
   void increment_contacts(bp_t pos1, bp_t pos2, bp_t bin_size);
+  void increment_contacts(bp_t bin1, bp_t bin2);
   void allocate_contacts(bp_t bin_size, bp_t diagonal_width);
   void deallocate_contacts();
   [[nodiscard]] const ContactMatrix<contacts_t>& contacts() const;

@@ -335,16 +335,21 @@ __global__ void select_lefs_then_register_contacts(GlobalStateDev* global_state)
                                    global_state->block_states[bid].contact_local_buff_capacity -
                                        global_state->block_states[bid].contact_local_buff_size),
                                global_state->block_states[bid].num_active_lefs);
+  __shared__ uint32_t registered_contacts;
   if (tid == 0) {
     global_state->block_states[bid].rng_state[0] = local_rng_state;
+    registered_contacts = global_state->block_states[bid].contact_local_buff_size;
   }
   __syncthreads();
   if (sample_size == 0) {
     return;
   }
   const auto bin_size = static_cast<float>(config.bin_size);
+  const auto chrom_start = global_state->tasks[bid].chrom_start;
+  const auto chrom_end = global_state->tasks[bid].chrom_end;
 
-  const auto offset = global_state->block_states[bid].contact_local_buff_size;
+  const auto first_bin = chrom_start / config.bin_size;
+  const auto last_bin = chrom_end / config.bin_size;
 
   const auto chunk_size = (sample_size + blockDim.x - 1) / blockDim.x;
   const auto i0 = chunk_size * tid;
@@ -354,18 +359,22 @@ __global__ void select_lefs_then_register_contacts(GlobalStateDev* global_state)
     const auto rev_idx = rev_unit_idx_buff[(bid * buff_alignment) + i];
     const auto fwd_idx = lef_rev_unit_idx_buff[rev_idx];
 
-    const auto rev_pos = rev_pos_buff[rev_idx];
-    const auto fwd_pos = fwd_pos_buff[fwd_idx];
+    const auto rev_pos = rev_pos_buff[rev_idx] - chrom_start;
+    const auto fwd_pos = fwd_pos_buff[fwd_idx] - chrom_start;
 
-    global_state->block_states[bid].contact_local_buff[offset + i].x =
-        __float2uint_rn(static_cast<float>(min(rev_pos, fwd_pos)) / bin_size);
-    global_state->block_states[bid].contact_local_buff[offset + i].y =
-        __float2uint_rn(static_cast<float>(max(rev_pos, fwd_pos)) / bin_size);
+    const auto bin1 = __float2uint_rn(static_cast<float>(min(rev_pos, fwd_pos)) / bin_size);
+    const auto bin2 = __float2uint_rn(static_cast<float>(max(rev_pos, fwd_pos)) / bin_size);
+
+    if (bin1 > first_bin && bin2 > first_bin && bin1 < last_bin && bin2 < last_bin) {
+      const auto j = atomicAdd(&registered_contacts, 1);
+      global_state->block_states[bid].contact_local_buff[j].x = bin1;
+      global_state->block_states[bid].contact_local_buff[j].y = bin2;
+    }
   }
 
   __syncthreads();
   if (tid == 0) {
-    global_state->block_states[bid].contact_local_buff_size += sample_size;
+    global_state->block_states[bid].contact_local_buff_size = registered_contacts;
     if (global_state->block_states[bid].contact_local_buff_size ==
         global_state->block_states[bid].contact_local_buff_capacity) {
       global_state->block_states[blockIdx.x].simulation_completed = true;
