@@ -48,7 +48,9 @@ __global__ void update_ctcf_states(GlobalStateDev* global_state);
 
 __global__ void reset_collision_masks(GlobalStateDev* global_state);
 
-__global__ void process_collisions(uint32_t current_epoch, GlobalStateDev* global_state);
+__global__ void process_collisions(GlobalStateDev* global_state);
+
+__global__ void extrude_and_release_lefs(GlobalStateDev* global_state);
 }  // namespace kernels
 
 namespace dev {
@@ -111,6 +113,17 @@ __device__ void correct_moves_for_secondary_lef_lef_collisions(
 __device__ thrust::pair<bp_t, bp_t> compute_lef_lef_collision_pos(bp_t rev_unit_pos,
                                                                   bp_t fwd_unit_pos, bp_t rev_move,
                                                                   bp_t fwd_move);
+__device__ void generate_lef_unloader_affinities(
+    const bp_t* rev_units_pos, const bp_t* fwd_units_pos, const dna::Direction* barrier_directions,
+    const bp_t* lef_rev_idx, const collision_t* rev_collisions, const collision_t* fwd_collisions,
+    uint32_t num_active_lefs, uint32_t num_barriers, float* lef_unloader_affinities);
+
+__device__ void select_and_release_lefs(bp_t* rev_units_pos, bp_t* fwd_units_pos,
+                                        const bp_t* lef_rev_idx, const bp_t* lef_fwd_idx,
+                                        uint32_t num_active_lefs,
+                                        const float* lef_unloader_affinities,
+                                        float* lef_unloader_affinities_prefix_sum,
+                                        curandStatePhilox4_32_10_t* rng_states);
 }  // namespace dev
 
 }  // namespace modle::cu

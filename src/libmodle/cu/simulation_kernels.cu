@@ -32,8 +32,8 @@ __global__ void reset_buffers(GlobalStateDev* global_state) {
   constexpr auto fill_value = Simulation::EXTR_UNIT_IS_IDLE;
 
   if (threadIdx.x == 0) {
-    thrust::fill_n(thrust::device, block_state.rev_unit_pos, nlefs, fill_value);
-    thrust::fill_n(thrust::device, block_state.fwd_unit_pos, nlefs, fill_value);
+    thrust::fill_n(thrust::seq, block_state.rev_unit_pos, nlefs, fill_value);
+    thrust::fill_n(thrust::seq, block_state.fwd_unit_pos, nlefs, fill_value);
     block_state.num_active_lefs = 0;
     block_state.burnin_completed = false;
     block_state.simulation_completed = false;
@@ -42,8 +42,9 @@ __global__ void reset_buffers(GlobalStateDev* global_state) {
   __syncthreads();
 
   const auto chunk_size = (nlefs + blockDim.x - 1) / blockDim.x;
-  const auto i0 = tid * chunk_size;
+  const auto i0 = min(tid * chunk_size, nlefs);
   const auto i1 = min(i0 + chunk_size, nlefs);
+
   for (auto i = i0; i < i1; ++i) {
     block_state.lef_rev_unit_idx[i] = i;
     block_state.lef_fwd_unit_idx[i] = i;
@@ -157,6 +158,7 @@ __global__ void select_and_bind_lefs(uint32_t current_epoch, GlobalStateDev* glo
   auto* fwd_unit_pos = global_state->block_states[bid].fwd_unit_pos;
 
   auto* rev_unit_idx = global_state->block_states[bid].lef_rev_unit_idx;
+  auto* fwd_unit_idx = global_state->block_states[bid].lef_fwd_unit_idx;
 
   const auto num_active_lefs = global_state->block_states[bid].num_active_lefs;
 
@@ -166,12 +168,16 @@ __global__ void select_and_bind_lefs(uint32_t current_epoch, GlobalStateDev* glo
 
   for (auto i = i0; i < i1; ++i) {
     if (rev_unit_pos[i] == Simulation::EXTR_UNIT_IS_IDLE) {
-      rev_unit_pos[i] =
-          __float2uint_rn(roundf(curand_uniform(&local_rng_state) * chrom_simulated_size));
       const auto j = rev_unit_idx[i];
+      rev_unit_pos[i] = __float2uint_rn(curand_uniform(&local_rng_state) * chrom_simulated_size);
 
+      if (fwd_unit_pos[j] != Simulation::EXTR_UNIT_IS_IDLE) {
+        printf("bid=%d; tid=%d; i=%u; j=%u; rev_pos=%u; fwd_pos=%u;\n", bid, tid, i, j,
+               rev_unit_pos[i], fwd_unit_pos[j]);
+      }
       assert(fwd_unit_pos[j] == Simulation::EXTR_UNIT_IS_IDLE);  // NOLINT
       fwd_unit_pos[j] = rev_unit_pos[i];
+      fwd_unit_idx[j] = i;
     }
   }
   global_state->block_states[bid].rng_state[tid] = local_rng_state;
@@ -522,7 +528,7 @@ __global__ void reset_collision_masks(GlobalStateDev* global_state) {
   }
 }
 
-__global__ void process_collisions(uint32_t current_epoch, GlobalStateDev* global_state) {
+__global__ void process_collisions(GlobalStateDev* global_state) {
   if (global_state->block_states[blockIdx.x].simulation_completed) {
     return;
   }
@@ -587,10 +593,33 @@ __global__ void process_collisions(uint32_t current_epoch, GlobalStateDev* globa
       block_state->fwd_moves_buff, block_state->num_active_lefs, global_state->tasks[bid].nbarriers,
       block_state->rev_collision_mask, block_state->fwd_collision_mask);
   __syncthreads();
+}
+
+__global__ void extrude_and_release_lefs(GlobalStateDev* global_state) {
+  if (global_state->block_states[blockIdx.x].simulation_completed) {
+    return;
+  }
+  const auto bid = blockIdx.x;
+
+  auto* block_state = global_state->block_states + bid;
+  const auto* task = global_state->tasks + bid;
 
   modle::cu::dev::extrude(block_state->rev_unit_pos, block_state->fwd_unit_pos,
                           block_state->rev_moves_buff, block_state->fwd_moves_buff,
                           block_state->num_active_lefs, task->chrom_start, task->chrom_end);
+
+  modle::cu::dev::generate_lef_unloader_affinities(
+      block_state->rev_unit_pos, block_state->fwd_unit_pos, global_state->barrier_directions,
+      block_state->lef_rev_unit_idx, block_state->rev_collision_mask,
+      block_state->fwd_collision_mask, block_state->num_active_lefs,
+      global_state->tasks[bid].nbarriers, block_state->lef_unloader_affinities);
+  __syncthreads();
+
+  modle::cu::dev::select_and_release_lefs(
+      block_state->rev_unit_pos, block_state->fwd_unit_pos, block_state->lef_rev_unit_idx,
+      block_state->lef_fwd_unit_idx, block_state->num_active_lefs,
+      block_state->lef_unloader_affinities, block_state->lef_unloader_affinities_prefix_sum,
+      block_state->rng_state);
   __syncthreads();
 }
 

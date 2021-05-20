@@ -67,6 +67,7 @@ struct BlockState {  // NOLINT
   uint32_t num_fwd_units_at_3prime{0};
 
   float* lef_unloader_affinities{nullptr};
+  float* lef_unloader_affinities_prefix_sum{nullptr};
   uint2* contact_local_buff{nullptr};
   uint32_t contact_local_buff_size{};
   uint32_t contact_local_buff_capacity{};
@@ -75,6 +76,7 @@ struct BlockState {  // NOLINT
   curandStatePhilox4_32_10_t* rng_state{nullptr};
 
   uint32_t num_active_lefs{0};
+  uint32_t num_lefs_to_release{0};
   bool burnin_completed{false};
   bool simulation_completed{false};
 };
@@ -193,10 +195,9 @@ class GlobalStateHost {  // NOLINT
 };
 
 class Simulation : modle::Config {
-
  public:  // NOLINTNEXTLINE
-  Simulation(const modle::Config& config_, size_t grid_size = 208'896 / 192, size_t block_size = 192,
-             size_t max_grid_size = std::numeric_limits<size_t>::max(),
+  Simulation(const modle::Config& config_, size_t grid_size = 208'896 / 192,
+             size_t block_size = 192, size_t max_grid_size = std::numeric_limits<size_t>::max(),
              size_t device_heap_size = 1024ULL * 1024ULL * 2048LL);
   Simulation(const Simulation& other) = delete;
   Simulation(const Simulation&& other) = delete;
@@ -243,6 +244,7 @@ class Simulation : modle::Config {
   void generate_moves();
   void update_ctcf_states();
   void process_collisions();
+  void extrude_and_release_lefs();
 };
 
 [[nodiscard]] Config* write_config_to_device(const Config& c);

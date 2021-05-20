@@ -1,10 +1,13 @@
 #include <cuda_runtime_api.h>
 #include <curand_kernel.h>
+#include <thrust/binary_search.h>
 #include <thrust/find.h>
 #include <thrust/pair.h>
 
 #include <cassert>
 #include <cstdint>
+#include <cub/cub.cuh>
+#include <cub/device/device_scan.cuh>
 
 #include "modle/cu/common.hpp"
 #include "modle/cu/simulation.hpp"
@@ -76,6 +79,9 @@ __device__ uint32_t detect_collisions_at_3prime_single_threaded(
 __device__ void extrude(bp_t* rev_units_pos, bp_t* fwd_units_pos, const bp_t* rev_moves,
                         const bp_t* fwd_moves, uint32_t num_active_lefs, uint32_t chrom_start_pos,
                         uint32_t chrom_end_pos) {
+  if (num_active_lefs == 0) {
+    return;
+  }
   const auto tid = threadIdx.x;
   (void)chrom_start_pos;
   (void)chrom_end_pos;
@@ -629,6 +635,132 @@ __device__ void correct_moves_for_secondary_lef_lef_collisions(
       fwd_moves[fwd_idx1] = move > 0U ? move - 1 : 0U;
     }
   }
+}
+
+__device__ void generate_lef_unloader_affinities(
+    const bp_t* rev_units_pos, const bp_t* fwd_units_pos, const dna::Direction* barrier_directions,
+    const bp_t* lef_rev_idx, const collision_t* rev_collisions, const collision_t* fwd_collisions,
+    uint32_t num_active_lefs, uint32_t num_barriers, float* lef_unloader_affinities) {
+  (void)fwd_units_pos;
+  if (num_active_lefs == 0) {
+    return;
+  }
+  auto is_lef_bar_collision = [&](const auto i) { return i < num_barriers; };
+
+  const auto tid = threadIdx.x;
+
+  const auto chunk_size = (num_active_lefs + blockDim.x - 1) / blockDim.x;
+  const auto i0 = min(tid * chunk_size, num_active_lefs);
+  const auto i1 = min(i0 + chunk_size, num_active_lefs);
+
+  auto local_total = 0.0F;
+  __shared__ float block_total;
+  if (tid == 0) {
+    block_total = 0.0F;
+  }
+  __syncthreads();
+
+  for (auto i = i0; i < i1; ++i) {
+    const auto j = lef_rev_idx[i];
+    if (!is_lef_bar_collision(rev_collisions[i]) || !is_lef_bar_collision(fwd_collisions[j])) {
+      assert(fwd_units_pos[j] != Simulation::EXTR_UNIT_IS_IDLE);  // NOLINT
+      lef_unloader_affinities[i] = 1.0F;
+    } else if (rev_units_pos[i] != Simulation::EXTR_UNIT_IS_IDLE) {
+      assert(fwd_units_pos[j] != Simulation::EXTR_UNIT_IS_IDLE);  // NOLINT
+      const auto& barr1_idx = rev_collisions[i];
+      const auto& barr2_idx = fwd_collisions[j];
+
+      if (barrier_directions[barr1_idx] == dna::rev && barrier_directions[barr2_idx] == dna::fwd) {
+        lef_unloader_affinities[i] = 1.0F / static_cast<float>(config.hard_stall_multiplier);
+      } else {
+        lef_unloader_affinities[i] = 1.0F;
+      }
+    } else {
+      assert(rev_units_pos[i] == Simulation::EXTR_UNIT_IS_IDLE);  // NOLINT
+      assert(fwd_units_pos[j] == Simulation::EXTR_UNIT_IS_IDLE);  // NOLINT
+      lef_unloader_affinities[i] = 0.0F;
+    }
+    local_total += lef_unloader_affinities[i];
+  }
+  atomicAdd(&block_total, local_total);
+  __syncthreads();
+  if (block_total == 0.0F) {
+    return;
+  }
+  for (auto i = i0; i < i1; ++i) {
+    lef_unloader_affinities[i] /= block_total;
+  }
+}
+
+__device__ void select_and_release_lefs(bp_t* rev_units_pos, bp_t* fwd_units_pos,
+                                        const bp_t* lef_rev_idx, const bp_t* lef_fwd_idx,
+                                        uint32_t num_active_lefs,
+                                        const float* lef_unloader_affinities,
+                                        float* lef_unloader_affinities_prefix_sum,
+                                        curandStatePhilox4_32_10_t* rng_states) {
+  if (num_active_lefs == 0) {
+    return;
+  }
+  const auto tid = threadIdx.x;
+
+  auto local_rng_state = rng_states[tid];
+  __shared__ uint32_t num_lefs_to_release;
+  if (tid == 0) {
+    const auto avg_num_of_lefs_to_release =
+        static_cast<double>((config.rev_extrusion_speed + config.fwd_extrusion_speed) *
+                            num_active_lefs) /
+        static_cast<double>(config.average_lef_lifetime);
+
+    num_lefs_to_release =
+        min(num_active_lefs, curand_poisson(&local_rng_state, avg_num_of_lefs_to_release));
+
+    if (num_lefs_to_release > 0) {
+      // TODO avoid allocating a new buffer each time?
+      size_t tmp_storage_bytes_required = 0;
+      auto status = cub::DeviceScan::InclusiveSum(
+          nullptr, tmp_storage_bytes_required, lef_unloader_affinities,
+          lef_unloader_affinities_prefix_sum, num_active_lefs - 1);
+      assert(status == cudaSuccess);
+      auto* d_temp_storage = malloc(tmp_storage_bytes_required);
+      assert(d_temp_storage);  // NOLINT
+      status = cub::DeviceScan::InclusiveSum(
+          d_temp_storage, tmp_storage_bytes_required, lef_unloader_affinities,
+          lef_unloader_affinities_prefix_sum, num_active_lefs - 1);
+      // lef_unloader_affinities_prefix_sum[num_active_lefs + 1] = 1.0F;
+      assert(status == cudaSuccess);
+      free(d_temp_storage);
+    }
+  }
+  __syncthreads();
+  if (num_lefs_to_release == 0) {
+    rng_states[tid] = local_rng_state;
+    return;
+  }
+
+  const auto chunk_size = (num_lefs_to_release + blockDim.x - 1) / blockDim.x;
+  const auto i0 = min(chunk_size * tid, num_lefs_to_release);
+  const auto i1 = min(i0 + chunk_size, num_lefs_to_release);
+
+  if (i0 == i1) {
+    return;
+  }
+
+  for (auto i = i0; i < i1; ++i) {
+    const auto rev_idx = static_cast<uint32_t>(
+        thrust::upper_bound(
+            thrust::seq, lef_unloader_affinities_prefix_sum,
+            lef_unloader_affinities_prefix_sum + num_active_lefs - 1,
+            curand_uniform(&local_rng_state) - lef_unloader_affinities_prefix_sum[0]) -
+        lef_unloader_affinities_prefix_sum);
+    const auto fwd_idx = lef_rev_idx[rev_idx];
+    assert(lef_fwd_idx[fwd_idx] == rev_idx);  // NOLINT
+    (void)lef_fwd_idx;
+
+    rev_units_pos[rev_idx] = Simulation::EXTR_UNIT_IS_IDLE;
+    fwd_units_pos[fwd_idx] = Simulation::EXTR_UNIT_IS_IDLE;
+    // printf("releasing %d:%d (%d/%d)\n", rev_idx, fwd_idx, i, num_lefs_to_release);
+  }
+  rng_states[tid] = local_rng_state;
 }
 
 }  // namespace modle::cu::dev

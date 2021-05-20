@@ -221,6 +221,7 @@ BlockState* GlobalStateHost::allocate_block_states(const cuda::device_t& dev, si
     allocate_or_throw(block_states_host[i].fwd_collision_mask, max_nlefs);
 
     allocate_or_throw(block_states_host[i].lef_unloader_affinities, max_nlefs);
+    allocate_or_throw(block_states_host[i].lef_unloader_affinities_prefix_sum, max_nlefs + 1);
     allocate_or_throw(block_states_host[i].contact_local_buff, max_ncontacts);
     allocate_or_throw(block_states_host[i].epoch_buff, max_nlefs);
 
@@ -252,6 +253,7 @@ void GlobalStateHost::deallocate_block_states(BlockState* block_states_dev, size
     cuda::memory::device::free(block_state_host.fwd_collision_mask);
 
     cuda::memory::device::free(block_state_host.lef_unloader_affinities);
+    cuda::memory::device::free(block_state_host.lef_unloader_affinities_prefix_sum);
     cuda::memory::device::free(block_state_host.contact_local_buff);
     cuda::memory::device::free(block_state_host.epoch_buff);
 

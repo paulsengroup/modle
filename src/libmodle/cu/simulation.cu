@@ -8,7 +8,7 @@
 #include <algorithm>
 #include <cstdint>
 #include <cstdio>
-#include <cub/cub.cuh>
+#include <cub/device/device_segmented_radix_sort.cuh>
 #include <cuda/runtime_api.hpp>
 #include <numeric>
 #include <string>
@@ -39,11 +39,12 @@ void Simulation::run_batch(const std::vector<Task>& new_tasks,
   // const auto shared_memory_size = std::max(nlefs, nbarriers) * sizeof(uint32_t);
 
   this->_current_epoch = 0UL;
-  while (this->simulate_next_epoch()) {
+  do {
     if (this->_current_epoch++ % 50 == 0) {
       fmt::print(stderr, FMT_STRING("Simulating epoch #{}...\n"), this->_current_epoch - 1);
     }
-  }
+  } while (this->simulate_next_epoch());
+
   std::vector<uint32_t> buff(new_tasks[0].nlefs);
   BlockState bstate;
   cuda::memory::copy_single(&bstate,
@@ -310,7 +311,12 @@ void Simulation::update_ctcf_states() {
 
 void Simulation::process_collisions() {
   kernels::process_collisions<<<this->_grid_size, this->_block_size>>>(
-      this->_current_epoch, this->_global_state_host.get_ptr_to_dev_instance());
+      this->_global_state_host.get_ptr_to_dev_instance());
+}
+
+void Simulation::extrude_and_release_lefs() {
+  kernels::extrude_and_release_lefs<<<this->_grid_size, this->_block_size>>>(
+      this->_global_state_host.get_ptr_to_dev_instance());
 }
 
 bool Simulation::simulate_next_epoch() {
@@ -330,12 +336,11 @@ bool Simulation::simulate_next_epoch() {
   this->_global_state_host._device.synchronize();
   this->process_collisions();
   this->_global_state_host._device.synchronize();
+  this->extrude_and_release_lefs();
+  this->_global_state_host._device.synchronize();
 
-  if (const auto state = this->_global_state_host.get_copy_of_device_instance();
-      state.ntasks_completed == state.ntasks) {  // End of simulation
-    return false;
-  }
-  return true;
+  const auto state = this->_global_state_host.get_copy_of_device_instance();
+  return state.ntasks_completed != state.ntasks;  // End of simulation
 }
 
 }  // namespace modle::cu
