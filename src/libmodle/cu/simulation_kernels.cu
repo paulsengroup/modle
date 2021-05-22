@@ -72,14 +72,13 @@ __global__ void compute_initial_loading_epochs(GlobalStateDev* global_state) {
     cub::DoubleBuffer keys_buff(block_state->tmp_lef_buff1, block_state->tmp_lef_buff2);
     cub::DeviceRadixSort::SortKeys(block_state->cub_tmp_storage, block_state->cub_tmp_storage_bytes,
                                    keys_buff, nlefs);
+    cudaDeviceSynchronize();
     const auto status = cudaGetLastError();
     assert(status == cudaSuccess);  // NOLINT TODO: Do proper error handling
     block_state->tmp_lef_buff1 = keys_buff.Current();
     block_state->tmp_lef_buff2 = keys_buff.Alternate();
-    cudaDeviceSynchronize();
   }
-  __syncthreads();  // This syncthreads appears to be necessary, but why? This is true even if I
-                    // place cudaDeviceSynchronize outside of the if branch
+  __syncthreads();
   const auto offset = *block_state->tmp_lef_buff1;
   __syncthreads();
 
@@ -166,18 +165,27 @@ __global__ void bind_and_sort_lefs(uint32_t current_epoch, GlobalStateDev* globa
     cudaDeviceSynchronize();
     const auto status = cudaGetLastError();
     assert(status == cudaSuccess);  // NOLINT TODO: Do proper error handling
+    /* Assigning pointer in this way doesn't work, as if Current() happens to point to *_buff?, then
+    the position of idle LEFs will be overwritten by whatever happens to be in the tmp buffers
     block_state->rev_unit_pos = keys_tmp_buff.Current();
     block_state->tmp_lef_buff1 = keys_tmp_buff.Alternate();
     block_state->lef_rev_unit_idx = vals_tmp_buff.Current();
     block_state->tmp_lef_buff2 = vals_tmp_buff.Alternate();
+     */
+    memcpy(block_state->rev_unit_pos, keys_tmp_buff.Current(),
+           block_state->num_active_lefs * sizeof(bp_t));
+    memcpy(block_state->lef_rev_unit_idx, vals_tmp_buff.Current(),
+           block_state->num_active_lefs * sizeof(bp_t));
   }
-  __syncthreads();
 
-  modle::cu::dev::update_extr_unit_mappings(block_state->lef_rev_unit_idx,
-                                            block_state->lef_fwd_unit_idx,
-                                            block_state->num_active_lefs, dna::Direction::rev);
   __syncthreads();
+  if (!simulation_completed) {
+    modle::cu::dev::update_extr_unit_mappings(block_state->lef_rev_unit_idx,
+                                              block_state->lef_fwd_unit_idx,
+                                              block_state->num_active_lefs, dna::Direction::rev);
+  }
 
+  __syncthreads();
   if (!simulation_completed && tid == 0) {  // NOLINT
     cub::DoubleBuffer keys_tmp_buff(block_state->fwd_unit_pos, block_state->tmp_lef_buff1);
     cub::DoubleBuffer vals_tmp_buff(block_state->lef_fwd_unit_idx, block_state->tmp_lef_buff2);
@@ -188,14 +196,19 @@ __global__ void bind_and_sort_lefs(uint32_t current_epoch, GlobalStateDev* globa
     cudaDeviceSynchronize();
     const auto status = cudaGetLastError();
     assert(status == cudaSuccess);  // NOLINT TODO: Do proper error handling
+    /*
     block_state->fwd_unit_pos = keys_tmp_buff.Current();
     block_state->tmp_lef_buff1 = keys_tmp_buff.Alternate();
     block_state->lef_fwd_unit_idx = vals_tmp_buff.Current();
     block_state->tmp_lef_buff2 = vals_tmp_buff.Alternate();
+     */
+    memcpy(block_state->fwd_unit_pos, keys_tmp_buff.Current(),
+           block_state->num_active_lefs * sizeof(bp_t));
+    memcpy(block_state->lef_fwd_unit_idx, vals_tmp_buff.Current(),
+           block_state->num_active_lefs * sizeof(bp_t));
   }
 
   __syncthreads();
-
   if (!simulation_completed) {
     modle::cu::dev::update_extr_unit_mappings(block_state->lef_rev_unit_idx,
                                               block_state->lef_fwd_unit_idx,
@@ -408,6 +421,9 @@ __global__ void process_collisions(GlobalStateDev* global_state) {
                                         block_state->fwd_collision_mask,
                                         block_state->num_active_lefs);
   __syncthreads();
+  if (tid == 0) {
+    printf("%d reset_collision_masks_completed\n", bid);
+  }
 
   if (tid == 0) {
     block_state->num_rev_units_at_5prime =
@@ -421,6 +437,9 @@ __global__ void process_collisions(GlobalStateDev* global_state) {
             block_state->fwd_collision_mask, task->chrom_end, block_state->num_active_lefs);
   }
   __syncthreads();
+  if (tid == 0) {
+    printf("%d detect_collisions_at_?prime_completed\n", bid);
+  }
 
   modle::cu::dev::detect_lef_bar_collisions(
       block_state->rev_unit_pos, block_state->fwd_unit_pos, block_state->rev_moves_buff,
@@ -430,6 +449,9 @@ __global__ void process_collisions(GlobalStateDev* global_state) {
       block_state->fwd_collision_mask, block_state->rng_state, block_state->num_rev_units_at_5prime,
       block_state->num_fwd_units_at_3prime);
   __syncthreads();
+  if (tid == 0) {
+    printf("%d detect_lef_bar_collisions_completed\n", bid);
+  }
 
   modle::cu::dev::detect_primary_lef_lef_collisions(
       block_state->rev_unit_pos, block_state->fwd_unit_pos, block_state->lef_rev_unit_idx,
@@ -438,6 +460,9 @@ __global__ void process_collisions(GlobalStateDev* global_state) {
       block_state->rev_collision_mask, block_state->fwd_collision_mask, block_state->rng_state,
       block_state->num_rev_units_at_5prime, block_state->num_fwd_units_at_3prime);
   __syncthreads();
+  if (tid == 0) {
+    printf("%d detect_primary_lef_lef_collisions_completed\n", bid);
+  }
 
   modle::cu::dev::correct_moves_for_lef_bar_collisions(
       block_state->rev_unit_pos, block_state->fwd_unit_pos, block_state->rev_moves_buff,
@@ -445,12 +470,18 @@ __global__ void process_collisions(GlobalStateDev* global_state) {
       global_state->tasks[bid].nbarriers, block_state->rev_collision_mask,
       block_state->fwd_collision_mask);
   __syncthreads();
+  if (tid == 0) {
+    printf("%d correct_moves_for_lef_bar_collisions_completed\n", bid);
+  }
 
   modle::cu::dev::correct_moves_for_primary_lef_lef_collisions(
       block_state->rev_unit_pos, block_state->fwd_unit_pos, block_state->rev_moves_buff,
       block_state->fwd_moves_buff, block_state->num_active_lefs, global_state->tasks[bid].nbarriers,
       block_state->rev_collision_mask, block_state->fwd_collision_mask);
   __syncthreads();
+  if (tid == 0) {
+    printf("%d correct_moves_for_primary_lef_lef_collisions_completed\n", bid);
+  }
 
   modle::cu::dev::detect_secondary_lef_lef_collisions(
       block_state->rev_unit_pos, block_state->fwd_unit_pos, block_state->rev_moves_buff,
@@ -458,12 +489,18 @@ __global__ void process_collisions(GlobalStateDev* global_state) {
       block_state->rev_collision_mask, block_state->fwd_collision_mask, block_state->rng_state,
       block_state->num_rev_units_at_5prime, block_state->num_fwd_units_at_3prime);
   __syncthreads();
+  if (tid == 0) {
+    printf("%d detect_secondary_lef_lef_collisions_completed\n", bid);
+  }
 
   modle::cu::dev::correct_moves_for_secondary_lef_lef_collisions(
       block_state->rev_unit_pos, block_state->fwd_unit_pos, block_state->rev_moves_buff,
       block_state->fwd_moves_buff, block_state->num_active_lefs, global_state->tasks[bid].nbarriers,
       block_state->rev_collision_mask, block_state->fwd_collision_mask);
   __syncthreads();
+  if (tid == 0) {
+    printf("%d correct_moves_for_secondary_lef_lef_collisions_completed\n", bid);
+  }
 }
 
 __global__ void extrude_and_release_lefs(GlobalStateDev* global_state) {

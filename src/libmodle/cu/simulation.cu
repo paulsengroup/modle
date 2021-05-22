@@ -18,7 +18,6 @@
 #include "modle/cu/config.hpp"
 #include "modle/cu/simulation.hpp"
 #include "modle/cu/simulation_internal.hpp"
-
 namespace modle::cu {
 
 void Simulation::run_batch(const std::vector<Task>& new_tasks,
@@ -39,13 +38,6 @@ void Simulation::run_batch(const std::vector<Task>& new_tasks,
 
   // const auto shared_memory_size = std::max(nlefs, nbarriers) * sizeof(uint32_t);
 
-  this->_current_epoch = 0UL;
-  while (this->simulate_next_epoch()) {
-    if (this->_current_epoch++ % 50 == 0) {
-      fmt::print(stderr, FMT_STRING("Simulating epoch #{}...\n"), this->_current_epoch - 1);
-    }
-  }
-
   auto print_helper = [&](std::string_view name, const auto& buff) {
     fmt::print(stderr, "{} = [{}", name, buff.front());
     for (auto i = 1UL; i < buff.size(); ++i) {
@@ -53,10 +45,25 @@ void Simulation::run_batch(const std::vector<Task>& new_tasks,
     }
     fmt::print(stderr, "]\n");
   };
-
   std::vector<uint32_t> buff(new_tasks[0].nlefs);
 
   BlockState bstate;
+
+  this->_current_epoch = 0UL;
+  while (this->simulate_next_epoch()) {
+    /*
+    cuda::memory::copy_single(
+        &bstate, this->_global_state_host.get_copy_of_device_instance().block_states + 13);
+    cuda::memory::copy(buff.data(), bstate.rev_unit_pos, buff.size() * sizeof(bp_t));
+    print_helper("rev_pos", buff);
+    cuda::memory::copy(buff.data(), bstate.fwd_unit_pos, buff.size() * sizeof(bp_t));
+    print_helper("fwd_pos", buff);
+     */
+    if (this->_current_epoch++ % 50 == 0 || true) {
+      fmt::print(stderr, FMT_STRING("Simulating epoch #{}...\n"), this->_current_epoch - 1);
+    }
+  }
+
   cuda::memory::copy_single(&bstate,
                             this->_global_state_host.get_copy_of_device_instance().block_states);
   cuda::memory::copy(buff.data(), bstate.rev_unit_pos, buff.size() * sizeof(bp_t));
@@ -77,20 +84,12 @@ void Simulation::setup_burnin_phase() {
   kernels::compute_initial_loading_epochs<<<this->_grid_size, this->_block_size>>>(
       this->_global_state_host.get_ptr_to_dev_instance());
   this->_global_state_host._device.synchronize();
-  if (const auto status = cudaGetLastError(); status != cudaSuccess) {
-    throw std::runtime_error(fmt::format(FMT_STRING("setup_burnin_phase() failed: {}: {}"),
-                                         cudaGetErrorName(status), cudaGetErrorString(status)));
-  }
 }
 
 void Simulation::bind_and_sort_lefs() {
   kernels::bind_and_sort_lefs<<<this->_grid_size, this->_block_size>>>(
       this->_current_epoch, this->_global_state_host.get_ptr_to_dev_instance());
   this->_global_state_host._device.synchronize();
-  if (const auto status = cudaGetLastError(); status != cudaSuccess) {
-    throw std::runtime_error(fmt::format(FMT_STRING("setup_burnin_phase() failed: {}: {}"),
-                                         cudaGetErrorName(status), cudaGetErrorString(status)));
-  }
 }
 
 void Simulation::select_lefs_and_register_contacts() {
@@ -132,6 +131,7 @@ bool Simulation::simulate_next_epoch() {
 
   this->update_ctcf_states();
 
+  // Fails at iteration 11
   this->process_collisions();
 
   this->extrude_and_release_lefs();
