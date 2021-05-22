@@ -706,19 +706,6 @@ void Simulation::State::resize(size_t size) {
   if (size == std::numeric_limits<size_t>::max()) {
     size = this->nlefs;
   }
-#ifndef NDEBUG
-  if (const auto size_ = static_cast<long int>(size); lef_buff.size() > size) {
-    std::for_each(lef_buff.begin() + size_, lef_buff.end(), [](auto& lef) { lef.release(); });
-    std::fill(lef_unloader_affinity.begin() + size_, lef_unloader_affinity.end(), std::nan(""));
-    std::fill(rank_buff1.begin() + size_, rank_buff1.end(), std::numeric_limits<size_t>::max());
-    std::fill(rank_buff2.begin() + size_, rank_buff2.end(), std::numeric_limits<size_t>::max());
-    std::fill(moves_buff1.begin() + size_, moves_buff1.end(), std::numeric_limits<bp_t>::max());
-    std::fill(moves_buff2.begin() + size_, moves_buff2.end(), std::numeric_limits<bp_t>::max());
-    std::fill(idx_buff1.begin() + size_, idx_buff1.end(), std::numeric_limits<size_t>::max());
-    std::fill(idx_buff2.begin() + size_, idx_buff2.end(), std::numeric_limits<size_t>::max());
-    std::fill(epoch_buff.begin() + size_, epoch_buff.end(), std::numeric_limits<size_t>::max());
-  }
-#endif
   lef_buff.resize(size);
   lef_unloader_affinity.resize(size);
   rank_buff1.resize(size);

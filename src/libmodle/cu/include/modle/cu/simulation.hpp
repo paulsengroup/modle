@@ -71,9 +71,21 @@ struct BlockState {  // NOLINT
   uint2* contact_local_buff{nullptr};
   uint32_t contact_local_buff_size{};
   uint32_t contact_local_buff_capacity{};
-  uint32_t* epoch_buff{nullptr};
+
+  uint32_t* loading_epochs{nullptr};
+  uint32_t* lefs_to_load_per_epoch{nullptr};
+  uint32_t num_unique_loading_epochs{0};
+  uint32_t epoch_idx{0};
 
   curandStatePhilox4_32_10_t* rng_state{nullptr};
+
+  uint32_t* tmp_lef_buff1{nullptr};
+  uint32_t* tmp_lef_buff2{nullptr};
+  uint32_t* tmp_lef_buff3{nullptr};
+  uint32_t* tmp_lef_buff4{nullptr};
+
+  void* cub_tmp_storage{nullptr};
+  size_t cub_tmp_storage_bytes{0};
 
   uint32_t num_active_lefs{0};
   uint32_t num_lefs_to_release{0};
@@ -104,19 +116,6 @@ struct GlobalStateDev {  // NOLINT
   dna::Direction* barrier_directions{nullptr};
   float* barrier_probs_occ_to_occ{nullptr};
   float* barrier_probs_nocc_to_nocc{nullptr};
-
-  uint32_t* large_uint_buff1{nullptr};
-  uint32_t* large_uint_buff2{nullptr};
-  uint32_t* large_uint_buff3{nullptr};
-  uint32_t* large_uint_buff4{nullptr};
-
-  uint32_t large_uint_buff_chunk_alignment{};
-
-  uint32_t* sorting_offset1_buff{nullptr};
-  uint32_t* sorting_offset2_buff{nullptr};
-
-  void* tmp_sorting_storage{nullptr};
-  size_t tmp_sorting_storage_bytes{0};
 };
 
 class GlobalStateHost {  // NOLINT
@@ -168,17 +167,6 @@ class GlobalStateHost {  // NOLINT
   uint32_t nblock_states{};
   uint32_t ntasks{};
   uint32_t ntasks_completed{};
-
-  cuda::memory::device::unique_ptr<uint32_t[]> large_uint_buff1{nullptr};      // NOLINT
-  cuda::memory::device::unique_ptr<uint32_t[]> large_uint_buff2{nullptr};      // NOLINT
-  cuda::memory::device::unique_ptr<uint32_t[]> large_uint_buff3{nullptr};      // NOLINT
-  cuda::memory::device::unique_ptr<uint32_t[]> large_uint_buff4{nullptr};      // NOLINT
-  cuda::memory::device::unique_ptr<uint32_t[]> sorting_offset1_buff{nullptr};  // NOLINT
-  cuda::memory::device::unique_ptr<uint32_t[]> sorting_offset2_buff{nullptr};  // NOLINT
-  cuda::memory::device::unique_ptr<uint32_t[]> tmp_sorting_storage{nullptr};   // NOLINT
-  size_t tmp_sorting_storage_bytes = 0;
-
-  uint32_t large_uint_buff_chunk_alignment{};
 
  private:
   cuda::memory::region_t _global_state_dev{};
@@ -239,7 +227,7 @@ class Simulation : modle::Config {
 
   bool simulate_next_epoch();
   void setup_burnin_phase();
-  void sort_lefs();
+  void bind_and_sort_lefs();
   void select_lefs_and_register_contacts();
   void generate_moves();
   void update_ctcf_states();

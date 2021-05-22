@@ -15,10 +15,124 @@
 
 namespace modle::cu::dev {
 
+__device__ void generate_initial_loading_epochs(uint32_t* epoch_buff,
+                                                curandStatePhilox4_32_10_t* rng_states,
+                                                uint32_t num_lefs) {
+  if (num_lefs == 0) {
+    return;
+  }
+
+  const auto tid = threadIdx.x;
+
+  const auto scaling_factor =
+      static_cast<float>(4 * config.average_lef_lifetime) / static_cast<float>(config.bin_size);
+
+  const auto chunk_size = (num_lefs + blockDim.x - 1) / blockDim.x;
+  const auto i0 = min(tid * chunk_size, num_lefs);
+  const auto i1 = min(i0 + chunk_size, num_lefs);
+
+  if (i0 != i1) {
+    auto rng_state_local = rng_states[tid];
+    thrust::generate(thrust::seq, epoch_buff + i0, epoch_buff + i1, [&]() {
+      return static_cast<uint32_t>(roundf(curand_uniform(&rng_state_local) * scaling_factor));
+    });
+
+    rng_states[tid] = rng_state_local;
+  }
+}
+
+__device__ void select_and_bind_lefs(
+    bp_t* rev_units_pos, bp_t* fwd_units_pos, const uint32_t* lef_rev_unit_idx,
+    uint32_t* lef_fwd_unit_idx, const uint32_t* loading_epochs,
+    const uint32_t* lefs_to_load_per_epoch, uint32_t& epoch_idx, uint32_t num_unique_loading_epochs,
+    uint32_t& num_active_lefs, uint32_t current_epoch, uint32_t tot_num_lefs, uint32_t chrom_start,
+    uint32_t chrom_end, curandStatePhilox4_32_10_t* rng_states, bool& burnin_completed) {
+  const auto tid = threadIdx.x;
+  const auto chrom_simulated_size = static_cast<float>(chrom_end - chrom_start - 1);
+  auto local_rng_state = rng_states[tid];
+
+  // Determine if an how many new LEFs should be bound in the current iteration
+  if (!burnin_completed && tid == 0) {
+    assert(epoch_idx < num_unique_loading_epochs);  // NOLINT
+    if (loading_epochs[epoch_idx] != current_epoch) {
+      assert(loading_epochs[epoch_idx] < current_epoch);  // NOLINT
+    } else {
+      num_active_lefs += lefs_to_load_per_epoch[epoch_idx++];
+      if (num_active_lefs == tot_num_lefs) {
+        burnin_completed = true;
+      }
+    }
+  }
+  __syncthreads();
+
+  const auto chunk_size = (num_active_lefs + blockDim.x - 1) / blockDim.x;
+  const auto i0 = tid * chunk_size;
+  const auto i1 = min(i0 + chunk_size, num_active_lefs);
+
+  // Bind idle LEFs. LEFs that are supposed to bind for the first time during the current iteration,
+  // are always idling
+  for (auto i = i0; i < i1; ++i) {
+    if (rev_units_pos[i] == Simulation::EXTR_UNIT_IS_IDLE) {
+      const auto j = lef_rev_unit_idx[i];
+      rev_units_pos[i] =
+          static_cast<uint32_t>(roundf(curand_uniform(&local_rng_state) * chrom_simulated_size));
+
+      assert(fwd_units_pos[j] == Simulation::EXTR_UNIT_IS_IDLE);  // NOLINT
+      fwd_units_pos[j] = rev_units_pos[i];
+      lef_fwd_unit_idx[j] = i;
+    }
+  }
+
+  __syncthreads();
+  rng_states[tid] = local_rng_state;
+}
+
+__device__ void update_extr_unit_mappings(uint32_t* lef_rev_unit_idx, uint32_t* lef_fwd_unit_idx,
+                                          uint32_t num_active_lefs, dna::Direction direction) {
+  assert(direction == dna::fwd || direction == dna::rev);  // NOLINT
+
+  const auto tid = threadIdx.x;
+
+  const auto* source_idx = direction == dna::Direction::rev ? lef_rev_unit_idx : lef_fwd_unit_idx;
+  auto* dest_idx = direction == dna::Direction::rev ? lef_fwd_unit_idx : lef_rev_unit_idx;
+
+  const auto chunk_size = (num_active_lefs + blockDim.x - 1) / blockDim.x;
+  const auto i0 = tid * chunk_size;
+  const auto i1 = min(i0 + chunk_size, num_active_lefs);
+
+  for (auto i = i0; i < i1; ++i) {
+    const auto j = source_idx[i];
+    dest_idx[j] = i;
+  }
+}
+
+__device__ void reset_collision_masks(collision_t* rev_collisions, collision_t* fwd_collisions,
+                                      uint32_t num_active_lefs) {
+  if (num_active_lefs == 0) {
+    return;
+  }
+  const auto tid = threadIdx.x;
+
+  constexpr auto fill_value = Simulation::NO_COLLISIONS;
+
+  const auto chunk_size = (num_active_lefs + blockDim.x - 1) / blockDim.x;
+  const auto i0 = tid * chunk_size;
+  const auto i1 = min(i0 + chunk_size, num_active_lefs);
+
+  if (i0 < i1) {
+    thrust::fill_n(thrust::seq, rev_collisions + i0, num_active_lefs + i1, fill_value);
+    thrust::fill_n(thrust::seq, fwd_collisions + i0, num_active_lefs + i1, fill_value);
+  }
+  __syncthreads();
+}
+
 __device__ uint32_t detect_collisions_at_5prime_single_threaded(
     const bp_t* rev_unit_pos, const bp_t* fwd_unit_pos, const bp_t* rev_moves,
     collision_t* rev_collision_mask, uint32_t chrom_start_pos, uint32_t num_extr_units) {
   assert(threadIdx.x < 2);  // NOLINT
+  if (num_extr_units == 0) {
+    return 0;
+  }
   auto nrev_units_at_5prime = 0U;
 
   const auto first_active_fwd_unit = fwd_unit_pos[0];
@@ -51,6 +165,9 @@ __device__ uint32_t detect_collisions_at_3prime_single_threaded(
     const bp_t* rev_unit_pos, const bp_t* fwd_unit_pos, const bp_t* fwd_moves,
     collision_t* fwd_collision_mask, uint32_t chrom_end_pos, uint32_t num_extr_units) {
   assert(threadIdx.x < 2);  // NOLINT
+  if (num_extr_units == 0) {
+    return 0;
+  }
   auto nfwd_units_at_3prime = 0U;
 
   const auto last_active_rev_unit = rev_unit_pos[num_extr_units - 1];
@@ -625,7 +742,7 @@ __device__ void correct_moves_for_secondary_lef_lef_collisions(
     }
   }
 
-  for (auto fwd_idx1 = i1; fwd_idx1 < i0; --fwd_idx1) {
+  for (auto fwd_idx1 = i1; fwd_idx1 < i0; --fwd_idx1) {  // TODO should this comparison be >
     if (auto fwd_collision = fwd_collisions[fwd_idx1];
         is_secondary_lef_lef_collision(fwd_collision)) {
       fwd_collision -= lower_bound;
@@ -697,6 +814,7 @@ __device__ void select_and_release_lefs(bp_t* rev_units_pos, bp_t* fwd_units_pos
                                         uint32_t num_active_lefs,
                                         const float* lef_unloader_affinities,
                                         float* lef_unloader_affinities_prefix_sum,
+                                        void* tmp_storage, size_t tmp_storage_bytes,
                                         curandStatePhilox4_32_10_t* rng_states) {
   if (num_active_lefs == 0) {
     return;
@@ -715,20 +833,12 @@ __device__ void select_and_release_lefs(bp_t* rev_units_pos, bp_t* fwd_units_pos
         min(num_active_lefs, curand_poisson(&local_rng_state, avg_num_of_lefs_to_release));
 
     if (num_lefs_to_release > 0) {
-      // TODO avoid allocating a new buffer each time?
-      size_t tmp_storage_bytes_required = 0;
-      auto status = cub::DeviceScan::InclusiveSum(
-          nullptr, tmp_storage_bytes_required, lef_unloader_affinities,
-          lef_unloader_affinities_prefix_sum, num_active_lefs - 1);
+      cub::DeviceScan::InclusiveSum(tmp_storage, tmp_storage_bytes, lef_unloader_affinities,
+                                    lef_unloader_affinities_prefix_sum, num_active_lefs - 1);
+      cudaDeviceSynchronize();
+      const auto status = cudaGetLastError();
       assert(status == cudaSuccess);
-      auto* d_temp_storage = malloc(tmp_storage_bytes_required);
-      assert(d_temp_storage);  // NOLINT
-      status = cub::DeviceScan::InclusiveSum(
-          d_temp_storage, tmp_storage_bytes_required, lef_unloader_affinities,
-          lef_unloader_affinities_prefix_sum, num_active_lefs - 1);
       // lef_unloader_affinities_prefix_sum[num_active_lefs + 1] = 1.0F;
-      assert(status == cudaSuccess);
-      free(d_temp_storage);
     }
   }
   __syncthreads();
@@ -756,11 +866,56 @@ __device__ void select_and_release_lefs(bp_t* rev_units_pos, bp_t* fwd_units_pos
     assert(lef_fwd_idx[fwd_idx] == rev_idx);  // NOLINT
     (void)lef_fwd_idx;
 
-    rev_units_pos[rev_idx] = Simulation::EXTR_UNIT_IS_IDLE;
-    fwd_units_pos[fwd_idx] = Simulation::EXTR_UNIT_IS_IDLE;
+    atomicExch(rev_units_pos + rev_idx, Simulation::EXTR_UNIT_IS_IDLE);
+    atomicExch(fwd_units_pos + fwd_idx, Simulation::EXTR_UNIT_IS_IDLE);
     // printf("releasing %d:%d (%d/%d)\n", rev_idx, fwd_idx, i, num_lefs_to_release);
   }
   rng_states[tid] = local_rng_state;
+}
+
+__device__ void shuffle_lefs(uint32_t* shuffled_lef_idx_buff, uint32_t* keys_buff,
+                             uint32_t* tmp_lef_buff1, uint32_t* tmp_lef_buff2, void* tmp_storage,
+                             size_t tmp_storage_bytes, uint32_t num_active_lefs,
+                             curandStatePhilox4_32_10_t* rng_states) {
+  if (num_active_lefs == 0) {
+    return;
+  }
+  const auto tid = threadIdx.x;
+
+  constexpr auto scaling_factor = static_cast<uint32_t>(-1);
+  const auto [i0, i1] = compute_chunk_size(num_active_lefs);
+
+  if (i0 != i1) {
+    auto local_rng_state = rng_states[tid];
+    thrust::generate(thrust::seq, keys_buff + i0, keys_buff + i1, [&]() {
+      return static_cast<uint32_t>(curand_uniform(&local_rng_state) *
+                                   static_cast<float>(scaling_factor));
+    });
+    rng_states[tid] = local_rng_state;
+    thrust::sequence(thrust::seq, shuffled_lef_idx_buff + i0, shuffled_lef_idx_buff + i1, i0);
+  }
+  __syncthreads();
+
+  if (tid == 0) {
+    cub::DoubleBuffer keys_tmp_buff(keys_buff, tmp_lef_buff1);
+    cub::DoubleBuffer vals_tmp_buff(shuffled_lef_idx_buff, tmp_lef_buff2);
+    cub::DeviceRadixSort::SortPairs(tmp_storage, tmp_storage_bytes, keys_tmp_buff, vals_tmp_buff,
+                                    num_active_lefs);
+    cudaDeviceSynchronize();
+    const auto status = cudaGetLastError();
+    assert(status == cudaSuccess);  // NOLINT TODO: Do proper error handling
+  }
+  __syncthreads();
+}
+
+__device__ thrust::pair<uint32_t, uint32_t> compute_chunk_size(uint32_t num_elements) {
+  const auto tid = threadIdx.x;
+
+  const auto chunk_size = (num_elements + blockDim.x - 1) / blockDim.x;
+  const auto i0 = min(chunk_size * tid, num_elements);
+  const auto i1 = min(i0 + chunk_size, num_elements);
+
+  return thrust::make_pair(i0, i1);
 }
 
 }  // namespace modle::cu::dev

@@ -44,19 +44,6 @@ GlobalStateDev* GlobalStateHost::get_ptr_to_dev_instance() {
     gs.barrier_probs_occ_to_occ = this->barrier_probs_occ_to_occ.get();
     gs.barrier_probs_nocc_to_nocc = this->barrier_probs_nocc_to_nocc.get();
 
-    gs.large_uint_buff1 = this->large_uint_buff1.get();
-    gs.large_uint_buff2 = this->large_uint_buff2.get();
-    gs.large_uint_buff3 = this->large_uint_buff3.get();
-    gs.large_uint_buff4 = this->large_uint_buff4.get();
-
-    gs.large_uint_buff_chunk_alignment = this->large_uint_buff_chunk_alignment;
-
-    gs.sorting_offset1_buff = this->sorting_offset1_buff.get();
-    gs.sorting_offset2_buff = this->sorting_offset2_buff.get();
-
-    gs.tmp_sorting_storage = this->tmp_sorting_storage.get();
-    gs.tmp_sorting_storage_bytes = this->tmp_sorting_storage_bytes;
-
     cuda::memory::copy(this->_global_state_dev.get(), &gs, sizeof(GlobalStateDev));
   }
   return static_cast<GlobalStateDev*>(this->_global_state_dev.get());
@@ -90,17 +77,6 @@ GlobalStateHost::GlobalStateHost(size_t grid_size_, size_t block_size_, size_t m
           cuda::memory::device::make_unique<float[]>(dev, max_nbarriers * sizeof(float))),
       nblock_states(static_cast<uint32_t>(max_grid_size)),
       ntasks(static_cast<uint32_t>(max_grid_size)),
-      large_uint_buff1(cuda::memory::device::make_unique<uint32_t[]>(
-          dev, max_grid_size * std::max(max_nlefs, max_nbarriers))),
-      large_uint_buff2(cuda::memory::device::make_unique<uint32_t[]>(
-          dev, max_grid_size * std::max(max_nlefs, max_nbarriers))),
-      large_uint_buff3(cuda::memory::device::make_unique<uint32_t[]>(
-          dev, max_grid_size * std::max(max_nlefs, max_nbarriers))),
-      large_uint_buff4(cuda::memory::device::make_unique<uint32_t[]>(
-          dev, max_grid_size * std::max(max_nlefs, max_nbarriers))),
-      sorting_offset1_buff(cuda::memory::device::make_unique<uint32_t[]>(dev, max_grid_size + 1)),
-      sorting_offset2_buff(cuda::memory::device::make_unique<uint32_t[]>(dev, max_grid_size + 1)),
-      large_uint_buff_chunk_alignment(static_cast<uint32_t>(std::max(max_nlefs, max_nbarriers))),
       _device(dev),
       _max_ncontacts_per_block(max_ncontacts_per_block) {
   assert(this->grid_size > 0);   // NOLINT
@@ -223,11 +199,39 @@ BlockState* GlobalStateHost::allocate_block_states(const cuda::device_t& dev, si
     allocate_or_throw(block_states_host[i].lef_unloader_affinities, max_nlefs);
     allocate_or_throw(block_states_host[i].lef_unloader_affinities_prefix_sum, max_nlefs + 1);
     allocate_or_throw(block_states_host[i].contact_local_buff, max_ncontacts);
-    allocate_or_throw(block_states_host[i].epoch_buff, max_nlefs);
+    allocate_or_throw(block_states_host[i].loading_epochs, max_nlefs);
+    allocate_or_throw(block_states_host[i].lefs_to_load_per_epoch, max_nlefs);
 
     allocate_or_throw(block_states_host[i].rng_state, max_block_size);
 
     block_states_host[i].contact_local_buff_capacity = max_ncontacts;
+
+    size_t cub_tmp_storage_bytes_required = 0;
+    auto status = cub::DeviceRunLengthEncode::Encode(
+        nullptr, cub_tmp_storage_bytes_required, block_states_host[i].loading_epochs,
+        block_states_host[i].loading_epochs, block_states_host[i].loading_epochs,
+        block_states_host[i].loading_epochs, static_cast<int>(max_nlefs));
+    assert(status == cudaSuccess);  // NOLINT
+    block_states_host[i].cub_tmp_storage_bytes = cub_tmp_storage_bytes_required;
+
+    cub::DoubleBuffer tmp_buff(block_states_host[i].rev_unit_pos,
+                               block_states_host[i].lef_rev_unit_idx);
+
+    status = cub::DeviceRadixSort::SortPairs(nullptr, block_states_host[i].cub_tmp_storage_bytes,
+                                             tmp_buff, tmp_buff, static_cast<int>(max_nlefs));
+    assert(status == cudaSuccess);  // NOLINT
+    if (cub_tmp_storage_bytes_required > block_states_host[i].cub_tmp_storage_bytes) {
+      block_states_host[i].cub_tmp_storage_bytes = cub_tmp_storage_bytes_required;
+    }
+
+    block_states_host[i].cub_tmp_storage =
+        cuda::memory::device::allocate(dev, block_states_host[i].cub_tmp_storage_bytes).get();
+
+    allocate_or_throw(block_states_host[i].tmp_lef_buff1, max_nlefs);
+    allocate_or_throw(block_states_host[i].tmp_lef_buff2, max_nlefs);
+    allocate_or_throw(block_states_host[i].tmp_lef_buff3, max_nlefs);
+    allocate_or_throw(block_states_host[i].tmp_lef_buff4, max_nlefs);
+
   }
 
   cuda::memory::copy(block_states_dev, block_states_host.data(),
@@ -255,9 +259,15 @@ void GlobalStateHost::deallocate_block_states(BlockState* block_states_dev, size
     cuda::memory::device::free(block_state_host.lef_unloader_affinities);
     cuda::memory::device::free(block_state_host.lef_unloader_affinities_prefix_sum);
     cuda::memory::device::free(block_state_host.contact_local_buff);
-    cuda::memory::device::free(block_state_host.epoch_buff);
+    cuda::memory::device::free(block_state_host.loading_epochs);
 
     cuda::memory::device::free(block_state_host.rng_state);
+
+    cuda::memory::device::free(block_state_host.cub_tmp_storage);
+    cuda::memory::device::free(block_state_host.tmp_lef_buff1);
+    cuda::memory::device::free(block_state_host.tmp_lef_buff2);
+    cuda::memory::device::free(block_state_host.tmp_lef_buff3);
+    cuda::memory::device::free(block_state_host.tmp_lef_buff4);
   }
 }
 

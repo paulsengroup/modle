@@ -18,17 +18,12 @@ __global__ void init_curand(GlobalStateDev* global_state);
 __global__ void reset_buffers(GlobalStateDev* global_state);
 
 // One off
-__global__ void generate_initial_loading_epochs(GlobalStateDev* global_state, uint32_t num_epochs);
+__global__ void compute_initial_loading_epochs(GlobalStateDev* global_state);
 
 __global__ void init_barrier_states(GlobalStateDev* global_state);
 
-__global__ void shift_and_scatter_lef_loading_epochs(const uint32_t* global_buff,
-                                                     BlockState* block_states,
-                                                     const uint32_t* begin_offsets,
-                                                     const uint32_t* end_offsets);
-
 // Simulation body
-__global__ void select_and_bind_lefs(uint32_t current_epoch, GlobalStateDev* global_state);
+__global__ void bind_and_sort_lefs(uint32_t current_epoch, GlobalStateDev* global_state);
 
 __global__ void prepare_extr_units_for_sorting(GlobalStateDev* global_state,
                                                dna::Direction direction,
@@ -123,7 +118,32 @@ __device__ void select_and_release_lefs(bp_t* rev_units_pos, bp_t* fwd_units_pos
                                         uint32_t num_active_lefs,
                                         const float* lef_unloader_affinities,
                                         float* lef_unloader_affinities_prefix_sum,
+                                        void* tmp_storage, size_t tmp_storage_bytes,
                                         curandStatePhilox4_32_10_t* rng_states);
+
+__device__ void generate_initial_loading_epochs(uint32_t* epoch_buff,
+                                                curandStatePhilox4_32_10_t* rng_states,
+                                                uint32_t num_lefs);
+
+__device__ void select_and_bind_lefs(
+    bp_t* rev_units_pos, bp_t* fwd_units_pos, const uint32_t* lef_rev_unit_idx,
+    uint32_t* lef_fwd_unit_idx, const uint32_t* loading_epochs,
+    const uint32_t* lefs_to_load_per_epoch, uint32_t& epoch_idx, uint32_t num_unique_loading_epochs,
+    uint32_t& num_active_lefs, uint32_t current_epoch, uint32_t tot_num_lefs, uint32_t chrom_start,
+    uint32_t chrom_end, curandStatePhilox4_32_10_t* rng_states, bool& burnin_completed);
+
+__device__ void update_extr_unit_mappings(uint32_t* lef_rev_unit_idx, uint32_t* lef_fwd_unit_idx,
+                                          uint32_t num_active_lefs, dna::Direction direction);
+
+__device__ void reset_collision_masks(collision_t* rev_collisions, collision_t* fwd_collisions,
+                                      uint32_t num_active_lefs);
+
+__device__ thrust::pair<uint32_t, uint32_t> compute_chunk_size(uint32_t num_elements);
+
+__device__ void shuffle_lefs(uint32_t* shuffled_lef_idx_buff, uint32_t* keys_buff,
+                             uint32_t* tmp_lef_buff1, uint32_t* tmp_lef_buff2, void* tmp_storage,
+                             size_t tmp_storage_bytes, uint32_t num_active_lefs,
+                             curandStatePhilox4_32_10_t* rng_states);
 }  // namespace dev
 
 }  // namespace modle::cu
