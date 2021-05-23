@@ -102,8 +102,8 @@ void Simulation::run() {
       const auto& b = barriers[i];
       this->_barrier_positions[i] = b.pos();
       this->_barrier_directions[i] = b.blocking_direction_major() == modle::dna::Direction::fwd
-                                         ? cu::dna::Direction::rev
-                                         : cu::dna::Direction::fwd;
+                                         ? modle::cu::dna::Direction::fwd
+                                         : modle::cu::dna::Direction::rev;
       this->_barrier_probs_occ_to_occ[i] = static_cast<float>(b.prob_occupied_to_occupied());
       this->_barrier_probs_nocc_to_nocc[i] =
           static_cast<float>(b.prob_not_occupied_to_not_occupied());

@@ -432,23 +432,6 @@ __device__ void detect_primary_lef_lef_collisions(
   const auto [if0, if1] = [&, ir0 = ir0, ir1 = ir1]() {
     auto if0 = lef_rev_unit_idx[ir0];
     auto if1 = lef_rev_unit_idx[ir1];
-    if (blockIdx.x == 580 && tid == 0) {
-      if (rev_units_pos[ir0] > fwd_units_pos[if0] || rev_units_pos[ir1] > fwd_units_pos[if1]) {
-        printf("bid=%d;\nrev_pos=[%u", blockIdx.x, *rev_units_pos);
-        for (auto k = 1U; k < num_active_lefs; ++k) {
-          printf(", %u", rev_units_pos[k]);
-        }
-        printf("]\nlef_rev_idx=[%u", *lef_rev_unit_idx);
-        for (auto k = 1U; k < num_active_lefs; ++k) {
-          printf(", %u", lef_rev_unit_idx[k]);
-        }
-        printf("]\nfwd_pos=[%u", *fwd_units_pos);
-        for (auto k = 1U; k < num_active_lefs; ++k) {
-          printf(", %u", fwd_units_pos[k]);
-        }
-        printf("]\n");
-      }
-    }
     assert(rev_units_pos[ir0] <= fwd_units_pos[if0]);  // NOLINT
     assert(rev_units_pos[ir1] <= fwd_units_pos[if1]);  // NOLINT
 
