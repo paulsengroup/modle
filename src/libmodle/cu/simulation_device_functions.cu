@@ -74,6 +74,8 @@ __device__ void select_and_bind_lefs(
   for (auto i = i0; i < i1; ++i) {
     if (rev_units_pos[i] == Simulation::EXTR_UNIT_IS_IDLE) {
       const auto j = lef_rev_unit_idx[i];
+      assert(i < num_active_lefs);  // NOLINT
+      assert(j < num_active_lefs);  // NOLINT
       rev_units_pos[i] =
           static_cast<uint32_t>(roundf(curand_uniform(&local_rng_state) * chrom_simulated_size));
 
@@ -103,6 +105,8 @@ __device__ void update_extr_unit_mappings(uint32_t* lef_rev_unit_idx, uint32_t* 
 
   for (auto i = i0; i < i1; ++i) {
     const auto j = source_idx[i];
+    assert(i < num_active_lefs);  // NOLINT
+    assert(j < num_active_lefs);  // NOLINT
     dest_idx[j] = i;
   }
   __syncthreads();
@@ -430,6 +434,23 @@ __device__ void detect_primary_lef_lef_collisions(
   const auto [if0, if1] = [&, ir0 = ir0, ir1 = ir1]() {
     auto if0 = lef_rev_unit_idx[ir0];
     auto if1 = lef_rev_unit_idx[ir1];
+    if (blockIdx.x == 580 && tid == 0) {
+      if (rev_units_pos[ir0] > fwd_units_pos[if0] || rev_units_pos[ir1] > fwd_units_pos[if1]) {
+        printf("bid=%d;\nrev_pos=[%u", blockIdx.x, *rev_units_pos);
+        for (auto k = 1U; k < num_active_lefs; ++k) {
+          printf(", %u", rev_units_pos[k]);
+        }
+        printf("]\nlef_rev_idx=[%u", *lef_rev_unit_idx);
+        for (auto k = 1U; k < num_active_lefs; ++k) {
+          printf(", %u", lef_rev_unit_idx[k]);
+        }
+        printf("]\nfwd_pos=[%u", *fwd_units_pos);
+        for (auto k = 1U; k < num_active_lefs; ++k) {
+          printf(", %u", fwd_units_pos[k]);
+        }
+        printf("]\n");
+      }
+    }
     assert(rev_units_pos[ir0] <= fwd_units_pos[if0]);  // NOLINT
     assert(rev_units_pos[ir1] <= fwd_units_pos[if1]);  // NOLINT
 
@@ -749,7 +770,7 @@ __device__ void correct_moves_for_secondary_lef_lef_collisions(
     }
   }
 
-  for (auto fwd_idx1 = i1; fwd_idx1 < i0; --fwd_idx1) {  // TODO should this comparison be >
+  for (auto fwd_idx1 = i1; fwd_idx1 > i0; --fwd_idx1) {  // TODO should this comparison be >
     if (auto fwd_collision = fwd_collisions[fwd_idx1];
         is_secondary_lef_lef_collision(fwd_collision)) {
       fwd_collision -= lower_bound;
@@ -763,8 +784,9 @@ __device__ void correct_moves_for_secondary_lef_lef_collisions(
 
 __device__ void generate_lef_unloader_affinities(
     const bp_t* rev_units_pos, const bp_t* fwd_units_pos, const dna::Direction* barrier_directions,
-    const bp_t* lef_rev_idx, const collision_t* rev_collisions, const collision_t* fwd_collisions,
-    uint32_t num_active_lefs, uint32_t num_barriers, float* lef_unloader_affinities) {
+    const uint32_t* lef_rev_idx, const collision_t* rev_collisions,
+    const collision_t* fwd_collisions, uint32_t num_active_lefs, uint32_t num_barriers,
+    float* lef_unloader_affinities) {
   (void)fwd_units_pos;
   if (num_active_lefs == 0) {
     return;
@@ -819,7 +841,7 @@ __device__ void generate_lef_unloader_affinities(
 }
 
 __device__ void select_and_release_lefs(bp_t* rev_units_pos, bp_t* fwd_units_pos,
-                                        const bp_t* lef_rev_idx, const bp_t* lef_fwd_idx,
+                                        const uint32_t* lef_rev_idx, const uint32_t* lef_fwd_idx,
                                         uint32_t num_active_lefs,
                                         const float* lef_unloader_affinities,
                                         float* lef_unloader_affinities_prefix_sum,
@@ -869,6 +891,25 @@ __device__ void select_and_release_lefs(bp_t* rev_units_pos, bp_t* fwd_units_pos
             curand_uniform(&local_rng_state) - lef_unloader_affinities_prefix_sum[0]) -
         lef_unloader_affinities_prefix_sum);
     const auto fwd_idx = lef_rev_idx[rev_idx];
+    if (lef_fwd_idx[fwd_idx] != rev_idx) {
+      printf("bid=%d;\nrev_pos=[%u", blockIdx.x, *rev_units_pos);
+      for (auto k = 1U; k < num_active_lefs; ++k) {
+        printf(", %u", rev_units_pos[k]);
+      }
+      printf("]\nlef_rev_idx=[%u", *lef_rev_idx);
+      for (auto k = 1U; k < num_active_lefs; ++k) {
+        printf(", %u", lef_rev_idx[k]);
+      }
+      printf("]\nfwd_pos=[%u", *fwd_units_pos);
+      for (auto k = 1U; k < num_active_lefs; ++k) {
+        printf(", %u", fwd_units_pos[k]);
+      }
+      printf("]\nlef_fwd_idx=[%u", *lef_fwd_idx);
+      for (auto k = 1U; k < num_active_lefs; ++k) {
+        printf(", %u", lef_fwd_idx[k]);
+      }
+      printf("]\n");
+    }
     assert(lef_fwd_idx[fwd_idx] == rev_idx);  // NOLINT
 
     atomicExch(rev_units_pos + rev_idx, Simulation::EXTR_UNIT_IS_IDLE);
@@ -887,14 +928,13 @@ __device__ void shuffle_lefs(uint32_t* shuffled_lef_idx_buff, uint32_t* keys_buf
   }
   const auto tid = threadIdx.x;
 
-  constexpr auto scaling_factor = static_cast<uint32_t>(-1);
+  const auto scaling_factor = static_cast<float>(num_active_lefs);
   const auto [i0, i1] = compute_chunk_size(num_active_lefs);
 
   if (i0 != i1) {
     auto local_rng_state = rng_states[tid];
     thrust::generate(thrust::seq, keys_buff + i0, keys_buff + i1, [&]() {
-      return static_cast<uint32_t>(curand_uniform(&local_rng_state) *
-                                   static_cast<float>(scaling_factor));
+      return static_cast<uint32_t>(curand_uniform(&local_rng_state) * scaling_factor);
     });
     rng_states[tid] = local_rng_state;
     thrust::sequence(thrust::seq, shuffled_lef_idx_buff + i0, shuffled_lef_idx_buff + i1, i0);
@@ -909,6 +949,7 @@ __device__ void shuffle_lefs(uint32_t* shuffled_lef_idx_buff, uint32_t* keys_buf
     cudaDeviceSynchronize();
     const auto status = cudaGetLastError();
     assert(status == cudaSuccess);  // NOLINT TODO: Do proper error handling
+    memcpy(shuffled_lef_idx_buff, vals_tmp_buff.Current(), num_active_lefs * sizeof(uint32_t));
   }
   __syncthreads();
 }
@@ -921,6 +962,44 @@ __device__ thrust::pair<uint32_t, uint32_t> compute_chunk_size(uint32_t num_elem
   const auto i1 = min(i0 + chunk_size, num_elements);
 
   return thrust::make_pair(i0, i1);
+}
+
+__device__ void register_contacts(const bp_t* rev_unit_pos, const bp_t* fwd_unit_pos,
+                                  const uint32_t* shuffled_idx, const uint32_t* lef_rev_unit_idx,
+                                  uint2* contacts_buff, const uint32_t chrom_start,
+                                  const uint32_t chrom_end, const uint32_t bin_size,
+                                  const uint32_t sample_size, const uint32_t num_active_lefs,
+                                  uint32_t* contacts_buff_size_shared,
+                                  const uint32_t contatcts_buff_capacity) {
+  const auto [i0, i1] = modle::cu::dev::compute_chunk_size(sample_size);
+
+  const auto first_bin = chrom_start / config.bin_size;
+  const auto last_bin = chrom_end / config.bin_size;
+
+  for (auto i = i0; i < i1; ++i) {
+    const auto rev_idx = shuffled_idx[i];
+    const auto fwd_idx = lef_rev_unit_idx[rev_idx];
+    assert(rev_idx < num_active_lefs);  // NOLINT
+    assert(fwd_idx < num_active_lefs);  // NOLINT
+
+    const auto rev_pos = rev_unit_pos[rev_idx] - chrom_start;
+    const auto fwd_pos = fwd_unit_pos[fwd_idx] - chrom_start;
+
+    const auto bin1 = static_cast<uint32_t>(roundf(static_cast<float>(rev_pos) / bin_size));
+    const auto bin2 = static_cast<uint32_t>(roundf(static_cast<float>(fwd_pos) / bin_size));
+
+    if (bin1 > first_bin && bin2 > first_bin && bin1 < last_bin && bin2 < last_bin) {
+      if (const auto j = atomicAdd(contacts_buff_size_shared, 1); j < contatcts_buff_capacity) {
+        assert(j < contatcts_buff_capacity);  // NOLINT
+        contacts_buff[j].x = bin1;
+        contacts_buff[j].y = bin2;
+      } else {
+        atomicExch(contacts_buff_size_shared, contatcts_buff_capacity);
+        break;
+      }
+    }
+  }
+  __syncthreads();
 }
 
 }  // namespace modle::cu::dev

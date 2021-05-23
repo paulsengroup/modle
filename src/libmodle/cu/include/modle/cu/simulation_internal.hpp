@@ -110,11 +110,12 @@ __device__ thrust::pair<bp_t, bp_t> compute_lef_lef_collision_pos(bp_t rev_unit_
                                                                   bp_t fwd_move);
 __device__ void generate_lef_unloader_affinities(
     const bp_t* rev_units_pos, const bp_t* fwd_units_pos, const dna::Direction* barrier_directions,
-    const bp_t* lef_rev_idx, const collision_t* rev_collisions, const collision_t* fwd_collisions,
-    uint32_t num_active_lefs, uint32_t num_barriers, float* lef_unloader_affinities);
+    const uint32_t* lef_rev_idx, const collision_t* rev_collisions,
+    const collision_t* fwd_collisions, uint32_t num_active_lefs, uint32_t num_barriers,
+    float* lef_unloader_affinities);
 
 __device__ void select_and_release_lefs(bp_t* rev_units_pos, bp_t* fwd_units_pos,
-                                        const bp_t* lef_rev_idx, const bp_t* lef_fwd_idx,
+                                        const uint32_t* lef_rev_idx, const uint32_t* lef_fwd_idx,
                                         uint32_t num_active_lefs,
                                         const float* lef_unloader_affinities,
                                         float* lef_unloader_affinities_prefix_sum,
@@ -144,6 +145,13 @@ __device__ void shuffle_lefs(uint32_t* shuffled_lef_idx_buff, uint32_t* keys_buf
                              uint32_t* tmp_lef_buff1, uint32_t* tmp_lef_buff2, void* tmp_storage,
                              size_t tmp_storage_bytes, uint32_t num_active_lefs,
                              curandStatePhilox4_32_10_t* rng_states);
+
+__device__ void register_contacts(const bp_t* rev_unit_pos, const bp_t* fwd_unit_pos,
+                                  const uint32_t* shuffled_idx, const uint32_t* lef_rev_unit_idx,
+                                  uint2* contacts_buff, uint32_t chrom_start, uint32_t chrom_end,
+                                  uint32_t bin_size, uint32_t sample_size, uint32_t num_active_lefs,
+                                  uint32_t* contacts_buff_size_shared,
+                                  uint32_t contacts_buff_capacity);
 }  // namespace dev
 
 }  // namespace modle::cu

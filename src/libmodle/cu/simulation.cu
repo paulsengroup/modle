@@ -59,7 +59,7 @@ void Simulation::run_batch(const std::vector<Task>& new_tasks,
     cuda::memory::copy(buff.data(), bstate.fwd_unit_pos, buff.size() * sizeof(bp_t));
     print_helper("fwd_pos", buff);
      */
-    if (this->_current_epoch++ % 50 == 0 || true) {
+    if (this->_current_epoch++ % 50 == 0) {
       fmt::print(stderr, FMT_STRING("Simulating epoch #{}...\n"), this->_current_epoch - 1);
     }
   }
@@ -131,7 +131,6 @@ bool Simulation::simulate_next_epoch() {
 
   this->update_ctcf_states();
 
-  // Fails at iteration 11
   this->process_collisions();
 
   this->extrude_and_release_lefs();
