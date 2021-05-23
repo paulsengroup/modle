@@ -257,14 +257,13 @@ __device__ void detect_lef_bar_collisions(const bp_t* rev_units_pos, const bp_t*
       return thrust::make_pair(jr0, jr1);
     }();
 
-    const auto [i0, i1] = [&, thresh = rev_units_pos[jr0] - rev_moves[jr0]]() {
+    const auto [i0, i1] = [&, partition_pos = rev_units_pos[jr0] - rev_moves[jr0]]() {
+      const auto i0 = static_cast<uint32_t>(
+          thrust::lower_bound(thrust::seq, barrier_pos + num_rev_units_at_5prime,
+                              barrier_pos + num_barriers, partition_pos) -
+          barrier_pos);
       const auto chunk_size = (num_barriers + blockDim.x - 1) / blockDim.x;
-      auto i0 = min(tid * chunk_size, num_barriers);
       auto i1 = min(i0 + chunk_size, num_barriers);
-
-      while (i0 > 0 && barrier_pos[i0] >= thresh) {
-        --i0;
-      }
 
       return thrust::make_pair(i0, i1);
     }();
@@ -303,7 +302,7 @@ process_fwd_units:
       num_active_fwd_units > 0) {
     const auto [jf0, jf1] = [&]() {
       const auto chunk_size = (num_active_fwd_units + blockDim.x - 1) / blockDim.x;
-      auto jf0 = min(num_fwd_units_at_3prime + (tid * chunk_size), num_active_fwd_units);
+      auto jf0 = min(tid * chunk_size, num_active_fwd_units);
       auto jf1 = min(jf0 + chunk_size, num_active_fwd_units);
 
       while (jf0 > 0 && fwd_units_pos[jf0] == fwd_units_pos[jf0 - 1]) {
@@ -316,14 +315,13 @@ process_fwd_units:
       return thrust::make_pair(jf0, jf1);
     }();
 
-    const auto [i0, i1] = [&, thresh = fwd_units_pos[jf0] + fwd_moves[jf0]]() {
-      const auto chunk_size = (num_barriers + blockDim.x - 1) / blockDim.x;
-      auto i0 = tid * chunk_size;
-      auto i1 = min(i0 + chunk_size, num_barriers);
+    const auto [i0, i1] = [&, partition_pos = fwd_units_pos[jf0] + fwd_moves[jf0]]() {
+      const auto i0 = static_cast<uint32_t>(
+          thrust::upper_bound(thrust::seq, barrier_pos, barrier_pos + num_barriers, partition_pos) -
+          barrier_pos);
 
-      while (i0 < i1 && barrier_pos[i0] <= thresh) {
-        ++i0;
-      }
+      const auto chunk_size = (num_barriers + blockDim.x - 1) / blockDim.x;
+      auto i1 = min(i0 + chunk_size, num_barriers);
 
       return thrust::make_pair(i0, i1);
     }();
