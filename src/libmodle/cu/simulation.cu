@@ -17,7 +17,7 @@
 #include "modle/cu/common.hpp"
 #include "modle/cu/config.hpp"
 #include "modle/cu/simulation.hpp"
-#include "modle/cu/simulation_internal.hpp"
+#include "modle/cu/simulation_internal.cuh"
 namespace modle::cu {
 
 void Simulation::run_batch(const std::vector<Task>& new_tasks,

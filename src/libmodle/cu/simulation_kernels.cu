@@ -9,7 +9,7 @@
 #include <cub/cub.cuh>
 
 #include "modle/cu/simulation.hpp"
-#include "modle/cu/simulation_internal.hpp"
+#include "modle/cu/simulation_internal.cuh"
 
 namespace modle::cu::kernels {
 
