@@ -100,10 +100,11 @@ void Simulation::run() {
 
     for (auto i = 0UL; i < barriers.size(); ++i) {
       const auto& b = barriers[i];
-      this->_barrier_positions[i] = b.pos();
+      this->_barrier_positions[i] =
+          b.pos();  // We want the motif direction, not the barrier direction
       this->_barrier_directions[i] = b.blocking_direction_major() == modle::dna::Direction::fwd
-                                         ? modle::cu::dna::Direction::fwd
-                                         : modle::cu::dna::Direction::rev;
+                                         ? modle::cu::dna::Direction::rev
+                                         : modle::cu::dna::Direction::fwd;
       this->_barrier_probs_occ_to_occ[i] = static_cast<float>(b.prob_occupied_to_occupied());
       this->_barrier_probs_nocc_to_nocc[i] =
           static_cast<float>(b.prob_not_occupied_to_not_occupied());
