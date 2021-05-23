@@ -412,11 +412,8 @@ __global__ void process_collisions(GlobalStateDev* global_state) {
   modle::cu::dev::reset_collision_masks(block_state->rev_collision_mask,
                                         block_state->fwd_collision_mask,
                                         block_state->num_active_lefs);
-  __syncthreads();
-  if (tid == 0) {
-    // printf("%d reset_collision_masks_completed\n", bid);
-  }
 
+  __syncthreads();
   if (tid == 0) {
     block_state->num_rev_units_at_5prime =
         modle::cu::dev::detect_collisions_at_5prime_single_threaded(
@@ -428,11 +425,8 @@ __global__ void process_collisions(GlobalStateDev* global_state) {
             block_state->rev_unit_pos, block_state->fwd_unit_pos, block_state->fwd_moves_buff,
             block_state->fwd_collision_mask, task->chrom_end, block_state->num_active_lefs);
   }
-  __syncthreads();
-  if (tid == 0) {
-    // printf("%d detect_collisions_at_?prime_completed\n", bid);
-  }
 
+  __syncthreads();
   modle::cu::dev::detect_lef_bar_collisions(
       block_state->rev_unit_pos, block_state->fwd_unit_pos, block_state->rev_moves_buff,
       block_state->fwd_moves_buff, block_state->num_active_lefs, global_state->barrier_pos,
@@ -440,59 +434,34 @@ __global__ void process_collisions(GlobalStateDev* global_state) {
       global_state->tasks[bid].nbarriers, block_state->rev_collision_mask,
       block_state->fwd_collision_mask, block_state->rng_state, block_state->num_rev_units_at_5prime,
       block_state->num_fwd_units_at_3prime);
-  __syncthreads();
-  if (tid == 0) {
-    // printf("%d detect_lef_bar_collisions_completed\n", bid);
-  }
 
+  __syncthreads();
   modle::cu::dev::detect_primary_lef_lef_collisions(
       block_state->rev_unit_pos, block_state->fwd_unit_pos, block_state->lef_rev_unit_idx,
       block_state->rev_moves_buff, block_state->fwd_moves_buff, block_state->num_active_lefs,
       global_state->barrier_pos, global_state->tasks[bid].nbarriers,
       block_state->rev_collision_mask, block_state->fwd_collision_mask, block_state->rng_state,
       block_state->num_rev_units_at_5prime, block_state->num_fwd_units_at_3prime);
-  __syncthreads();
-  if (tid == 0) {
-    // printf("%d detect_primary_lef_lef_collisions_completed\n", bid);
-  }
 
+  __syncthreads();
   modle::cu::dev::correct_moves_for_lef_bar_collisions(
       block_state->rev_unit_pos, block_state->fwd_unit_pos, block_state->rev_moves_buff,
       block_state->fwd_moves_buff, block_state->num_active_lefs, global_state->barrier_pos,
       global_state->tasks[bid].nbarriers, block_state->rev_collision_mask,
       block_state->fwd_collision_mask);
-  __syncthreads();
-  if (tid == 0) {
-    // printf("%d correct_moves_for_lef_bar_collisions_completed\n", bid);
-  }
 
+  __syncthreads();
   modle::cu::dev::correct_moves_for_primary_lef_lef_collisions(
       block_state->rev_unit_pos, block_state->fwd_unit_pos, block_state->rev_moves_buff,
       block_state->fwd_moves_buff, block_state->num_active_lefs, global_state->tasks[bid].nbarriers,
       block_state->rev_collision_mask, block_state->fwd_collision_mask);
-  __syncthreads();
-  if (tid == 0) {
-    //  printf("%d correct_moves_for_primary_lef_lef_collisions_completed\n", bid);
-  }
 
-  modle::cu::dev::detect_secondary_lef_lef_collisions(
+  __syncthreads();
+  modle::cu::dev::process_secondary_lef_lef_collisions(
       block_state->rev_unit_pos, block_state->fwd_unit_pos, block_state->rev_moves_buff,
       block_state->fwd_moves_buff, block_state->num_active_lefs, global_state->tasks[bid].nbarriers,
       block_state->rev_collision_mask, block_state->fwd_collision_mask, block_state->rng_state,
       block_state->num_rev_units_at_5prime, block_state->num_fwd_units_at_3prime);
-  __syncthreads();
-  if (tid == 0) {
-    // printf("%d detect_secondary_lef_lef_collisions_completed\n", bid);
-  }
-
-  modle::cu::dev::correct_moves_for_secondary_lef_lef_collisions(
-      block_state->rev_unit_pos, block_state->fwd_unit_pos, block_state->rev_moves_buff,
-      block_state->fwd_moves_buff, block_state->num_active_lefs, global_state->tasks[bid].nbarriers,
-      block_state->rev_collision_mask, block_state->fwd_collision_mask);
-  __syncthreads();
-  if (tid == 0) {
-    // printf("%d correct_moves_for_secondary_lef_lef_collisions_completed\n", bid);
-  }
 }
 
 __global__ void extrude_and_release_lefs(GlobalStateDev* global_state) {
