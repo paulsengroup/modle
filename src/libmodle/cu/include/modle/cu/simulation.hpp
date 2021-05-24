@@ -219,7 +219,7 @@ class Simulation : modle::Config {
   void run_batch(const std::vector<Task>& new_tasks, const std::vector<uint32_t>& barrier_pos,
                  const std::vector<dna::Direction>& barrier_dir,
                  const std::vector<float>& barrier_probs_occ_to_occ,
-                 const std::vector<float>& barrier_probs_nocc_to_nocc);
+                 const std::vector<float>& barrier_probs_nocc_to_nocc, size_t batch_number);
 
   void write_contacts_to_disk(std::deque<std::pair<Chromosome*, size_t>>& progress_queue,
                               std::mutex& progress_queue_mutex,

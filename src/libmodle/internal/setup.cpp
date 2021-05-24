@@ -20,13 +20,13 @@ namespace modle {
 //! When \p path_to_extr_barriers is non-empty, import the intersection of the chromosomes present
 //! in the chrom.sizes and BED files. The optional BED file can be used to instruct ModLE to
 //! simulate loop extrusion on a sub-region of a chromosome from the chrom.sizes file.
-[[nodiscard]] absl::btree_set<Chromosome, Chromosome::Comparator> import_chromosomes(
+[[nodiscard]] absl::btree_set<Chromosome> import_chromosomes(
     const std::filesystem::path& path_to_chrom_sizes,
     const std::filesystem::path& path_to_chrom_subranges, bool keep_all_chroms);
 
 /// Parse a BED file containing the genomic coordinates of extrusion barriers and add them to the
 /// Genome
-size_t import_barriers(absl::btree_set<Chromosome, Chromosome::Comparator>& chromosomes,
+size_t import_barriers(absl::btree_set<Chromosome>& chromosomes,
                        const std::filesystem::path& path_to_extr_barriers);
 
 Genome::Genome(const std::filesystem::path& path_to_chrom_sizes,
@@ -35,13 +35,14 @@ Genome::Genome(const std::filesystem::path& path_to_chrom_sizes,
     : _chromosomes(instantiate_genome(path_to_chrom_sizes, path_to_extr_barriers,
                                       path_to_chrom_subranges, keep_all_chroms)) {}
 
-absl::btree_set<Chromosome, Chromosome::Comparator> import_chromosomes(
-    const std::filesystem::path& path_to_chrom_sizes,
-    const std::filesystem::path& path_to_chrom_subranges, bool keep_all_chroms) {
+absl::btree_set<Chromosome> import_chromosomes(const std::filesystem::path& path_to_chrom_sizes,
+                                               const std::filesystem::path& path_to_chrom_subranges,
+                                               bool keep_all_chroms) {
   assert(!path_to_chrom_sizes.empty());  // NOLINT
 
   // Parse chrom subranges from BED. We parse everything at once to deal with duplicate entries
   absl::flat_hash_map<std::string, std::pair<uint64_t, uint64_t>> chrom_ranges;
+
   if (!path_to_chrom_subranges.empty()) {
     for (auto&& record : modle::bed::Parser(path_to_chrom_subranges).parse_all()) {
       chrom_ranges.emplace(std::move(record.chrom),
@@ -49,41 +50,54 @@ absl::btree_set<Chromosome, Chromosome::Comparator> import_chromosomes(
     }
   }
 
+  auto chrom_id = 0UL;
+  absl::btree_set<Chromosome> chromosomes;
   // Parse chrom. sizes and build the set of chromosome to be simulated.
   // When the BED file with the chrom. subranges is not provided, all the chromosome in the
   // chrom.sizes file will be selected and returned. When a BED file with the chrom. subranges is
   // available, then only chromosomes that are present in both files will be selected. Furthermore
   // we are also checking that the subrange lies within the genomic coordinates specified in the
   // chrom. sizes file
-  auto chrom_id = 0UL;
-  absl::btree_set<Chromosome, Chromosome::Comparator> chromosomes;
+  if (chrom_ranges.empty()) {
+    for (auto&& chrom : chrom_sizes::Parser(path_to_chrom_sizes).parse_all()) {
+      chromosomes.emplace(std::move(chrom), chrom_id++);
+    }
+    return chromosomes;
+  }
+
   for (auto&& chrom : chrom_sizes::Parser(path_to_chrom_sizes).parse_all()) {
-    if (auto match = chrom_ranges.find(chrom.name); match != chrom_ranges.end()) {
-      const auto& range_start = match->second.first;
-      const auto& range_end = match->second.second;
-      if (range_start < chrom.start || range_end > chrom.end) {
+    if (const auto match = chrom_ranges.find(chrom.name); match != chrom_ranges.end()) {
+      const auto& begin_pos = match->second.first;
+      const auto& end_pos = match->second.second;
+      if (begin_pos < chrom.start || end_pos > chrom.end) {
         throw std::runtime_error(fmt::format(
             FMT_STRING("According to the chrom.sizes file {}, chromosome '{}' should have a size "
                        "of '{}', but the subrange specified in BED file {} extends past this "
                        "region: range {}:{}-{} does not fit in range {}:{}-{}"),
             path_to_chrom_sizes, chrom.name, chrom.end, path_to_chrom_subranges, chrom.name,
-            range_start, range_end, chrom.name, chrom.start, chrom.end));
+            begin_pos, end_pos, chrom.name, chrom.start, chrom.end));
       }
-      chrom.start = range_start;
-      chrom.end = range_end;
+
+      chrom.start = begin_pos;
+      chrom.end = end_pos;
       chromosomes.emplace(std::move(chrom), chrom_id++);
-    } else if (chrom_ranges.empty() || keep_all_chroms) {
+    } else if (keep_all_chroms) {
       chromosomes.emplace(std::move(chrom), chrom_id++);
     }
   }
   return chromosomes;
 }
 
-size_t import_barriers(absl::btree_set<Chromosome, Chromosome::Comparator>& chromosomes,
+size_t import_barriers(absl::btree_set<Chromosome>& chromosomes,
                        const std::filesystem::path& path_to_extr_barriers) {
   assert(!chromosomes.empty());
   assert(!path_to_extr_barriers.empty());
   size_t nbarriers = 0;
+  absl::flat_hash_map<std::string_view, Chromosome*> tmp_chrom_names(chromosomes.size());
+  for (auto& chrom : chromosomes) {
+    tmp_chrom_names.emplace(chrom.name(), &chrom);
+  }
+
   // Parse all the records from the BED file. parse_all() will throw in case of duplicates.
   for (auto&& record : modle::bed::Parser(path_to_extr_barriers).parse_all()) {
     if (record.score < 0 || record.score > 1) {
@@ -93,11 +107,12 @@ size_t import_barriers(absl::btree_set<Chromosome, Chromosome::Comparator>& chro
                       record.chrom, record.chrom_start, record.chrom_end, record.score));
     }
 
-    if (auto match = chromosomes.find(record.chrom); match != chromosomes.end()) {
-      match->add_extrusion_barrier(record);
+    if (auto match = tmp_chrom_names.find(record.chrom); match != tmp_chrom_names.end()) {
+      match->second->add_extrusion_barrier(record);
       ++nbarriers;
     }
   }
+
   return nbarriers;
 }
 
@@ -107,8 +122,16 @@ std::vector<ExtrusionBarrier> Genome::generate_vect_of_barriers(std::string_view
   std::vector<ExtrusionBarrier> barriers;
   size_t barriers_skipped = 0;
 
-  const auto& chrom = this->_chromosomes.find(chrom_name);
-  assert(chrom != this->_chromosomes.end());  // NOLINT
+  const auto* chrom = [&]() -> const Chromosome* {
+    for (const auto& c : this->_chromosomes) {
+      if (c.name() == chrom_name) {
+        return &c;
+      }
+    }
+    return nullptr;
+  }();
+
+  assert(chrom);
   for (const auto& b : chrom->get_barriers()) {
     // Only instantiate barriers with a known motif direction.
     if (b.strand != '+' && b.strand != '-') MODLE_UNLIKELY {
@@ -144,7 +167,7 @@ std::vector<ExtrusionBarrier> Genome::generate_vect_of_barriers(std::string_view
   return barriers;
 }
 
-absl::btree_set<Chromosome, Chromosome::Comparator> Genome::instantiate_genome(
+absl::btree_set<Chromosome> Genome::instantiate_genome(
     const std::filesystem::path& path_to_chrom_sizes,
     const std::filesystem::path& path_to_extr_barriers,
     const std::filesystem::path& path_to_chrom_subranges, bool keep_all_chroms) {

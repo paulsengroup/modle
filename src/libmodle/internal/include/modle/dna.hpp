@@ -31,8 +31,9 @@ class Chromosome {
                       std::vector<bed::BED>&& barriers = {});
 
   [[nodiscard]] bool operator==(const Chromosome& other) const noexcept(utils::ndebug_defined());
-  [[nodiscard]] bool operator==(std::string_view other) const noexcept(utils::ndebug_defined());
+  [[nodiscard]] bool operator==(std::string_view other_name) const noexcept;
   [[nodiscard]] bool operator<(const Chromosome& other) const noexcept(utils::ndebug_defined());
+  [[nodiscard]] bool operator<(std::string_view other_name) const noexcept;
 
   void add_extrusion_barrier(bed::BED&& barrier);
   void add_extrusion_barrier(bed::BED barrier);
@@ -58,18 +59,6 @@ class Chromosome {
 
   template <typename H>
   inline friend H AbslHashValue(H h, const Chromosome& c);
-
-  struct Comparator {
-    using is_transparent = void;
-    [[nodiscard]] bool operator()(const Chromosome& c1, const Chromosome& c2) const
-        noexcept(utils::ndebug_defined());
-    [[nodiscard]] bool operator()(const Chromosome& c1, std::string_view c2) const
-        noexcept(utils::ndebug_defined());
-    [[nodiscard]] bool operator()(std::string_view c1, const Chromosome& c2) const
-        noexcept(utils::ndebug_defined());
-    [[nodiscard]] bool operator()(std::string_view c1, std::string_view c2) const
-        noexcept(utils::ndebug_defined());
-  };
 
  private:
   size_t _id{std::numeric_limits<size_t>::max()};

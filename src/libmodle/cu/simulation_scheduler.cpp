@@ -113,7 +113,7 @@ void Simulation::run() {
     auto cellid = 0UL;
     const auto nbatches = (this->ncells + task_batch_size - 1) / task_batch_size;
     fmt::print(stderr, FMT_STRING("Processing '{}' in {} batches of up to {} blocks...\n"),
-               chrom.name(), nbatches, this->_grid_size);
+               chrom.name(), nbatches, this->_global_state_host.max_grid_size);
     for (auto batchid = 0UL; batchid < nbatches; ++batchid) {
       // Generate a batch of tasks for all the simulations involving the current
       // chrom
@@ -130,7 +130,7 @@ void Simulation::run() {
 
       modle::cu::Simulation::run_batch(this->_tasks, this->_barrier_positions,
                                        this->_barrier_directions, this->_barrier_probs_occ_to_occ,
-                                       this->_barrier_probs_nocc_to_nocc);
+                                       this->_barrier_probs_nocc_to_nocc, batchid + 1);
 
       modle::cu::Simulation::update_contacts_for_chrom(chrom);
     }

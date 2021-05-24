@@ -46,8 +46,8 @@ bool Chromosome::operator==(const Chromosome &other) const noexcept(utils::ndebu
   return this->_id == other._id;
 }
 
-bool Chromosome::operator==(std::string_view other) const noexcept(utils::ndebug_defined()) {
-  return this->name() == other;
+bool Chromosome::operator==(std::string_view other_name) const noexcept {
+  return this->name() == other_name;
 }
 
 bool Chromosome::operator<(const Chromosome &other) const noexcept(utils::ndebug_defined()) {
@@ -62,24 +62,8 @@ bool Chromosome::operator<(const Chromosome &other) const noexcept(utils::ndebug
   return this->size() < other.size();
 }
 
-bool Chromosome::Comparator::operator()(const Chromosome &c1, const Chromosome &c2) const
-    noexcept(utils::ndebug_defined()) {
-  return c1 < c2;
-}
-
-bool Chromosome::Comparator::operator()(const Chromosome &c1, std::string_view c2) const
-    noexcept(utils::ndebug_defined()) {
-  return c1.name() < c2;
-}
-
-bool Chromosome::Comparator::operator()(std::string_view c1, const Chromosome &c2) const
-    noexcept(utils::ndebug_defined()) {
-  return c1 < c2.name();
-}
-
-bool Chromosome::Comparator::operator()(std::string_view c1, std::string_view c2) const
-    noexcept(utils::ndebug_defined()) {
-  return c1 < c2;
+bool Chromosome::operator<(std::string_view other_name) const noexcept {
+  return this->name() < other_name;
 }
 
 void Chromosome::add_extrusion_barrier(bed::BED barrier) { this->_barriers.emplace(barrier); }

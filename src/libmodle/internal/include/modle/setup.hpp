@@ -19,8 +19,8 @@ class Genome {
          const std::filesystem::path& path_to_extr_barriers,
          const std::filesystem::path& path_to_chrom_subranges, bool keep_all_chroms);
 
-  using iterator = absl::btree_set<Chromosome, Chromosome::Comparator>::iterator;
-  using const_iterator = absl::btree_set<Chromosome, Chromosome::Comparator>::const_iterator;
+  using iterator = absl::btree_set<Chromosome>::iterator;
+  using const_iterator = absl::btree_set<Chromosome>::const_iterator;
 
   [[nodiscard]] iterator begin();
   [[nodiscard]] iterator end();
@@ -46,13 +46,13 @@ class Genome {
 
   /// A simple wrapper function that imports chromosomes and extrusion barriers that comprise the
   /// genome that is being simulated.
-  [[nodiscard]] static absl::btree_set<Chromosome, Chromosome::Comparator> instantiate_genome(
+  [[nodiscard]] static absl::btree_set<Chromosome> instantiate_genome(
       const std::filesystem::path& path_to_chrom_sizes,
       const std::filesystem::path& path_to_extr_barriers,
       const std::filesystem::path& path_to_chrom_subranges, bool keep_all_chroms);
 
  private:
-  absl::btree_set<Chromosome, Chromosome::Comparator> _chromosomes{};
+  absl::btree_set<Chromosome> _chromosomes{};
 };
 
 }  // namespace modle
