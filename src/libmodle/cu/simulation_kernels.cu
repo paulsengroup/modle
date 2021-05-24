@@ -303,11 +303,28 @@ __global__ void generate_moves(GlobalStateDev* global_state) {
 
   global_state->block_states[bid].rng_state[tid] = local_rng_state;
 
-  // Adjust moves
-  __syncthreads();
+  // Handle first and last move
   const auto chrom_start = global_state->tasks[bid].chrom_start;
   const auto chrom_end = global_state->tasks[bid].chrom_end;
-  if (i0 != i1) {
+  if (i0 == 0) {
+    auto& move = *global_state->block_states[bid].rev_moves_buff;
+    const auto pos = *global_state->block_states[bid].rev_unit_pos;
+    if (move + chrom_start > pos) {
+      move = pos - chrom_start;
+    }
+  }
+
+  if (i0 < num_active_lefs && i1 == num_active_lefs) {
+    auto& move = global_state->block_states[bid].fwd_moves_buff[num_active_lefs - 1];
+    const auto pos = global_state->block_states[bid].fwd_unit_pos[num_active_lefs - 1];
+    if (pos + move >= chrom_end) {
+      move = chrom_end - 1 - pos;
+    }
+  }
+
+  // Adjust moves
+  __syncthreads();
+  if (i0 < i1) {
     for (auto i = i1 - 1; i > 0; --i) {
       const auto pos1 = global_state->block_states[bid].rev_unit_pos[i - 1];
       const auto pos2 = global_state->block_states[bid].rev_unit_pos[i];

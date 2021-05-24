@@ -77,6 +77,7 @@ __device__ void select_and_bind_lefs(
       assert(i < num_active_lefs);  // NOLINT
       assert(j < num_active_lefs);  // NOLINT
       rev_units_pos[i] =
+          chrom_start +
           static_cast<uint32_t>(roundf(curand_uniform(&local_rng_state) * chrom_simulated_size));
 
       assert(fwd_units_pos[j] == Simulation::EXTR_UNIT_IS_IDLE);  // NOLINT
@@ -427,8 +428,9 @@ __device__ void detect_primary_lef_lef_collisions(
     uint32_t num_barriers, collision_t* rev_collisions, collision_t* fwd_collisions,
     curandStatePhilox4_32_10_t* rng_states, uint32_t num_rev_units_at_5prime,
     uint32_t num_fwd_units_at_3prime) {
-  if (num_active_lefs - num_rev_units_at_5prime == 0 ||
-      num_active_lefs - num_fwd_units_at_3prime == 0 || num_barriers == 0) {
+  if ((num_active_lefs - num_rev_units_at_5prime == 0 &&
+       num_active_lefs - num_fwd_units_at_3prime == 0) ||
+      num_barriers == 0) {
     return;
   }
 
@@ -436,9 +438,6 @@ __device__ void detect_primary_lef_lef_collisions(
 
   const auto num_active_rev_units = num_active_lefs - num_rev_units_at_5prime;
   const auto num_active_fwd_units = num_active_lefs - num_fwd_units_at_3prime;
-  if (num_active_rev_units == 0 || num_active_fwd_units == 0) {
-    return;
-  }
 
   auto local_rng_state = rng_states[tid];
 
@@ -466,7 +465,7 @@ __device__ void detect_primary_lef_lef_collisions(
 
   const auto [if0, if1] = [&, ir0 = ir0, ir1 = ir1]() {
     if (ir0 >= ir1) {
-      return thrust::make_pair(num_active_lefs, num_active_lefs);
+      return thrust::make_pair(num_active_fwd_units, num_active_fwd_units);
     }
 
     auto if0 = lef_rev_unit_idx[ir0];
