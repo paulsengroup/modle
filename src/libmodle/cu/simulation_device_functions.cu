@@ -246,29 +246,43 @@ __device__ void detect_lef_bar_collisions(const bp_t* rev_units_pos, const bp_t*
       auto jr1 = min(jr0 + chunk_size, num_active_lefs);
 
       if (jr0 < num_active_lefs) {
-        while (jr0 > 0 && rev_units_pos[jr0] == rev_units_pos[jr0 - 1]) {
+        while (jr0 > 0 && rev_units_pos[jr0 - 1] == rev_units_pos[jr0]) {
           --jr0;
         }
       }
       if (jr1 < num_active_lefs) {
-        while (jr1 > jr0 && rev_units_pos[jr1] == rev_units_pos[jr1 - 1]) {
+        while (jr1 > jr0 && rev_units_pos[jr1 - 1] == rev_units_pos[jr1]) {
           --jr1;
         }
       }
       return thrust::make_pair(jr0, jr1);
     }();
 
-    const auto leftmost_pos = rev_units_pos[jr0] - rev_moves[jr0];
-    const auto rightmost_pos = rev_units_pos[jr1] - rev_moves[jr1];
-    const auto i0 = static_cast<uint32_t>(
-        thrust::lower_bound(thrust::seq, barrier_pos + num_rev_units_at_5prime,
-                            barrier_pos + num_barriers, leftmost_pos) -
-        barrier_pos);
-    const auto i1 = static_cast<uint32_t>(
-        thrust::lower_bound(thrust::seq, barrier_pos + num_rev_units_at_5prime,
-                            barrier_pos + num_barriers, rightmost_pos) -
-        barrier_pos);
+    const auto [i0, i1] = [&, jr0 = jr0, jr1 = jr1]() {
+      if (jr0 >= jr1) {
+        return thrust::make_pair(num_barriers, num_barriers);
+      }
+      assert(jr0 < num_active_lefs);  // NOLINT
+      const auto leftmost_pos = rev_units_pos[jr0] - rev_moves[jr0];
+      const auto rightmost_pos = rev_units_pos[min(jr1, num_active_lefs - 1)];
+      const auto i0 = static_cast<uint32_t>(
+          thrust::lower_bound(thrust::seq, barrier_pos + num_rev_units_at_5prime,
+                              barrier_pos + num_barriers, leftmost_pos) -
+          barrier_pos);
+      const auto i1 = static_cast<uint32_t>(
+          thrust::lower_bound(thrust::seq, barrier_pos + num_rev_units_at_5prime,
+                              barrier_pos + num_barriers, rightmost_pos) -
+          barrier_pos);
 
+      return thrust::make_pair(i0, i1);
+    }();
+
+    if (blockIdx.x == 0) {
+      // printf("tid=%d; bid=%d; leftmost_pos=%u; rightmost_pos=%u; i0=%u; i1=%u; nbarrs=%u;\n",
+      //        tid, blockIdx.x, leftmost_pos, rightmost_pos, i0, i1, num_barriers);
+      // printf("tid=%d; bid=%d; jr0=%u; jr1=%u; i0=%u; i1=%u; nbarrs=%u;\n", tid, blockIdx.x, jr0,
+      //       jr1, i0, i1, num_barriers);
+    }
     __syncthreads();
     if (jr0 < jr1 && i0 < num_barriers) {
       for (auto i = i0, j = jr0; i < i1 && j < jr1; ++i) {
@@ -318,16 +332,24 @@ process_fwd_units:
       return thrust::make_pair(jf0, jf1);
     }();
 
-    const auto leftmost_pos = fwd_units_pos[jf0] + fwd_moves[jf0];
-    const auto rightmost_pos = fwd_units_pos[jf1] + fwd_moves[jf1];
-    const auto i0 = static_cast<uint32_t>(thrust::lower_bound(thrust::seq, barrier_pos,
-                                                              barrier_pos + num_active_fwd_units,
-                                                              leftmost_pos) -
-                                          barrier_pos);
-    const auto i1 = static_cast<uint32_t>(thrust::upper_bound(thrust::seq, barrier_pos,
-                                                              barrier_pos + num_active_fwd_units,
-                                                              rightmost_pos) -
-                                          barrier_pos);
+    const auto [i0, i1] = [&, jf0 = jf0, jf1 = jf1]() {
+      if (jf0 >= jf1) {
+        return thrust::make_pair(num_barriers, num_barriers);
+      }
+
+      assert(jf0 < num_active_lefs);  // NOLINT
+      const auto leftmost_pos = fwd_units_pos[jf0];
+      const auto rightmost_pos = fwd_units_pos[min(jf1, num_active_fwd_units - 1)] +
+                                 fwd_moves[min(jf1, num_active_fwd_units - 1)];
+      const auto i0 = static_cast<uint32_t>(
+          thrust::upper_bound(thrust::seq, barrier_pos, barrier_pos + num_barriers, leftmost_pos) -
+          barrier_pos);
+      const auto i1 = static_cast<uint32_t>(
+          thrust::upper_bound(thrust::seq, barrier_pos, barrier_pos + num_barriers, rightmost_pos) -
+          barrier_pos);
+
+      return thrust::make_pair(i0, i1);
+    }();
 
     __syncthreads();
     if (jf0 < jf1 && i0 < num_barriers) {
@@ -445,13 +467,14 @@ __device__ void detect_primary_lef_lef_collisions(
   }();
 
   const auto [if0, if1] = [&, ir0 = ir0, ir1 = ir1]() {
-    if (ir0 == num_active_lefs) {
+    if (ir0 >= ir1) {
       return thrust::make_pair(num_active_lefs, num_active_lefs);
     }
+
     auto if0 = lef_rev_unit_idx[ir0];
     auto if1 = lef_rev_unit_idx[ir1 - 1];
-    assert(rev_units_pos[ir0] <= fwd_units_pos[if0]);  // NOLINT
-    assert(rev_units_pos[ir1] <= fwd_units_pos[if1]);  // NOLINT
+    assert(rev_units_pos[ir0] <= fwd_units_pos[if0]);                    // NOLINT
+    assert(rev_units_pos[ir1] <= fwd_units_pos[lef_rev_unit_idx[ir1]]);  // NOLINT
 
     while (if0 > 0 && fwd_units_pos[if0] + fwd_moves[if0] >= rev_units_pos[ir0] - rev_moves[ir0]) {
       --if0;
