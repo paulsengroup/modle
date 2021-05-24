@@ -265,10 +265,13 @@ __device__ void detect_lef_bar_collisions(const bp_t* rev_units_pos, const bp_t*
       assert(jr0 < num_active_lefs);  // NOLINT
       const auto leftmost_pos = rev_units_pos[jr0] - rev_moves[jr0];
       const auto rightmost_pos = rev_units_pos[min(jr1, num_active_lefs - 1)];
-      const auto i0 = static_cast<uint32_t>(
+      auto i0 = static_cast<uint32_t>(
           thrust::lower_bound(thrust::seq, barrier_pos + num_rev_units_at_5prime,
-                              barrier_pos + num_barriers, leftmost_pos) -
+                              barrier_pos + num_barriers, min(leftmost_pos, leftmost_pos - 1)) -
           barrier_pos);
+      if (i0 > 0) {
+        --i0;
+      }
       const auto i1 = static_cast<uint32_t>(
           thrust::lower_bound(thrust::seq, barrier_pos + num_rev_units_at_5prime,
                               barrier_pos + num_barriers, rightmost_pos) -
@@ -277,14 +280,16 @@ __device__ void detect_lef_bar_collisions(const bp_t* rev_units_pos, const bp_t*
       return thrust::make_pair(i0, i1);
     }();
 
-    if (blockIdx.x == 0) {
-      // printf("tid=%d; bid=%d; leftmost_pos=%u; rightmost_pos=%u; i0=%u; i1=%u; nbarrs=%u;\n",
-      //        tid, blockIdx.x, leftmost_pos, rightmost_pos, i0, i1, num_barriers);
-      // printf("tid=%d; bid=%d; jr0=%u; jr1=%u; i0=%u; i1=%u; nbarrs=%u;\n", tid, blockIdx.x, jr0,
-      //       jr1, i0, i1, num_barriers);
-    }
     __syncthreads();
     if (jr0 < jr1 && i0 < num_barriers) {
+      /*
+      if (blockIdx.x == 0) {
+        printf(
+            "tid=%d; rev_idx=%u-%u; barr_idx=%u-%u; rev_pos=%u-%u; barr_pos=%u;%u; nlefs=%u; "
+            "nbarrs=%u\n",
+            tid, jr0, jr1, i0, i1, rev_units_pos[jr0], rev_units_pos[jr1], barrier_pos[i0],
+            barrier_pos[i1 - 1], num_active_lefs, num_barriers);
+      }*/
       for (auto i = i0, j = jr0; i < i1 && j < jr1; ++i) {
         if (barrier_states[i] == CTCF::NOT_OCCUPIED) {
           continue;
@@ -319,12 +324,12 @@ process_fwd_units:
       auto jf1 = min(jf0 + chunk_size, num_active_fwd_units);
 
       if (jf0 < num_active_fwd_units) {
-        while (jf0 > 0 && fwd_units_pos[jf0] == fwd_units_pos[jf0 - 1]) {
+        while (jf0 > 0 && fwd_units_pos[jf0 - 1] == fwd_units_pos[jf0]) {
           --jf0;
         }
       }
       if (jf1 < num_active_fwd_units) {
-        while (jf1 > jf0 && fwd_units_pos[jf1] == fwd_units_pos[jf1 - 1]) {
+        while (jf1 > jf0 && fwd_units_pos[jf1 - 1] == fwd_units_pos[jf1]) {
           --jf1;
         }
       }
@@ -421,6 +426,7 @@ __device__ void correct_moves_for_lef_bar_collisions(const bp_t* rev_units_pos,
       }
     }
   }
+  __syncthreads();
 }
 
 __device__ void detect_primary_lef_lef_collisions(
@@ -950,26 +956,22 @@ __device__ void register_contacts(const bp_t* rev_unit_pos, const bp_t* fwd_unit
                                   const uint32_t contatcts_buff_capacity) {
   const auto [i0, i1] = modle::cu::dev::compute_chunk_size(sample_size);
 
-  const auto first_bin = chrom_start / config.bin_size;
-  const auto last_bin = chrom_end / config.bin_size;
-
   for (auto i = i0; i < i1; ++i) {
     const auto rev_idx = shuffled_idx[i];
     const auto fwd_idx = lef_rev_unit_idx[rev_idx];
     assert(rev_idx < num_active_lefs);  // NOLINT
     assert(fwd_idx < num_active_lefs);  // NOLINT
 
-    const auto rev_pos = rev_unit_pos[rev_idx] - chrom_start;
-    const auto fwd_pos = fwd_unit_pos[fwd_idx] - chrom_start;
+    const auto rev_pos = rev_unit_pos[rev_idx];
+    const auto fwd_pos = fwd_unit_pos[fwd_idx];
 
-    const auto bin1 = static_cast<uint32_t>(roundf(static_cast<float>(rev_pos) / bin_size));
-    const auto bin2 = static_cast<uint32_t>(roundf(static_cast<float>(fwd_pos) / bin_size));
-
-    if (bin1 > first_bin && bin2 > first_bin && bin1 < last_bin && bin2 < last_bin) {
+    if (rev_pos > chrom_start && fwd_pos > chrom_start && rev_pos < chrom_end - 1 &&
+        fwd_pos < chrom_end - 1) {
       if (const auto j = atomicAdd(contacts_buff_size_shared, 1); j < contatcts_buff_capacity) {
         assert(j < contatcts_buff_capacity);  // NOLINT
-        contacts_buff[j].x = bin1;
-        contacts_buff[j].y = bin2;
+
+        contacts_buff[j].x = (rev_pos - chrom_start) / bin_size;
+        contacts_buff[j].y = (fwd_pos - chrom_start) / bin_size;
       } else {
         atomicExch(contacts_buff_size_shared, contatcts_buff_capacity);
         break;
