@@ -631,7 +631,7 @@ size_t Simulation::register_contacts(Chromosome* chrom, const absl::Span<const L
     assert(i < lefs.size());  // NOLINT
     const auto& lef = lefs[i];
     if (lef.is_bound() && lef.rev_unit.pos() > chrom->start_pos() &&
-        lef.rev_unit.pos() < chrom->end_pos() && lef.fwd_unit.pos() > chrom->start_pos() &&
+        lef.rev_unit.pos() < chrom->end_pos() - 1 && lef.fwd_unit.pos() > chrom->start_pos() &&
         lef.fwd_unit.pos() < chrom->end_pos() - 1)
       MODLE_LIKELY {
         chrom->increment_contacts(lef.rev_unit.pos(), lef.fwd_unit.pos(), this->bin_size);
@@ -769,14 +769,14 @@ std::pair<size_t, size_t> Simulation::process_collisions(
   modle::Simulation::correct_moves_for_primary_lef_lef_collisions(
       lefs, barriers, rev_lef_ranks, fwd_lef_ranks, rev_moves, fwd_moves, rev_collisions,
       fwd_collisions);
-  this->detect_secondary_lef_lef_collisions(
+  this->process_secondary_lef_lef_collisions(
       chrom, lefs, barriers.size(), rev_lef_ranks, fwd_lef_ranks, rev_moves, fwd_moves,
       rev_collisions, fwd_collisions, rand_eng, nrev_units_at_5prime, nfwd_units_at_3prime);
-
-  modle::Simulation::correct_moves_for_secondary_lef_lef_collisions(
-      lefs, barriers.size(), rev_lef_ranks, fwd_lef_ranks, rev_moves, fwd_moves, rev_collisions,
-      fwd_collisions);
-
+  /*
+    modle::Simulation::correct_moves_for_secondary_lef_lef_collisions(
+        lefs, barriers.size(), rev_lef_ranks, fwd_lef_ranks, rev_moves, fwd_moves, rev_collisions,
+        fwd_collisions);
+  */
   return std::make_pair(nrev_units_at_5prime, nfwd_units_at_3prime);
 }
 

@@ -131,7 +131,7 @@ void Simulation::correct_moves_for_primary_lef_lef_collisions(
       }
   }
 }
-
+/*
 void Simulation::correct_moves_for_secondary_lef_lef_collisions(
     const absl::Span<const Lef> lefs, const size_t nbarriers, absl::Span<const size_t> rev_ranks,
     absl::Span<const size_t> fwd_ranks, const absl::Span<bp_t> rev_moves,
@@ -189,5 +189,5 @@ void Simulation::correct_moves_for_secondary_lef_lef_collisions(
       }
   }
 }
-
+*/
 }  // namespace modle

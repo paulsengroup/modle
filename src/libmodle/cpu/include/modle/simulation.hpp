@@ -272,7 +272,7 @@ class Simulation : Config {
       noexcept(utils::ndebug_defined());
 
   // clang-format off
-  /// Detect collisions between consecutive extrusion units that are moving in the same direction.
+  /// Process collisions between consecutive extrusion units that are moving in the same direction.
 
   //! Secondary LEF-LEF collisions can occur when consecutive extrusion units moving in the same
   //! direction collide with each other.
@@ -286,10 +286,10 @@ class Simulation : Config {
   //! \p fwd_collisions will be set to the index corresponding to the extrusion unit that is causing the collision.
   //! The index i is encoded as nbarriers + nlefs + i.
   // clang-format on
-  void detect_secondary_lef_lef_collisions(
+  void process_secondary_lef_lef_collisions(
       const Chromosome* chrom, absl::Span<const Lef> lefs, size_t nbarriers,
       absl::Span<const size_t> rev_lef_ranks, absl::Span<const size_t> fwd_lef_ranks,
-      absl::Span<const bp_t> rev_moves, absl::Span<const bp_t> fwd_moves,
+      absl::Span<bp_t> rev_moves, absl::Span<bp_t> fwd_moves,
       absl::Span<collision_t> rev_collisions, absl::Span<collision_t> fwd_collisions,
       PRNG_t& rand_eng, size_t nrev_units_at_5prime = 0, size_t nfwd_units_at_3prime = 0) const
       noexcept(utils::ndebug_defined());
@@ -308,7 +308,7 @@ class Simulation : Config {
       absl::Span<bp_t> rev_moves, absl::Span<bp_t> fwd_moves,
       absl::Span<const collision_t> rev_collisions,
       absl::Span<const collision_t> fwd_collisions) noexcept(utils::ndebug_defined());
-
+/*
   /// Correct moves to comply with the constraints imposed by secondary LEF-LEF collisions.
   static void correct_moves_for_secondary_lef_lef_collisions(
       absl::Span<const Lef> lefs, size_t nbarriers, absl::Span<const size_t> rev_ranks,
@@ -316,7 +316,7 @@ class Simulation : Config {
       absl::Span<const collision_t> rev_collisions, absl::Span<const collision_t> fwd_collisions,
       size_t nrev_units_at_5prime = 0,
       size_t nfwd_units_at_3prime = 0) noexcept(utils::ndebug_defined());
-
+*/
   /// Register contacts for chromosome \p chrom using the position the extrusion units of the LEFs
   /// in \p lefs whose index is present in \p selected_lef_idx.
   size_t register_contacts(Chromosome* chrom, absl::Span<const Lef> lefs,
