@@ -187,6 +187,7 @@ class Simulation : modle::Config {
   Simulation(const modle::Config& config_, size_t grid_size = 208'896 / 192,
              size_t block_size = 192, size_t max_grid_size = std::numeric_limits<size_t>::max(),
              size_t device_heap_size = 1024ULL * 1024ULL * 2048LL);
+  ~Simulation() = default;
   Simulation(const Simulation& other) = delete;
   Simulation(const Simulation&& other) = delete;
   inline std::string to_string() = delete;

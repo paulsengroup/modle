@@ -282,14 +282,6 @@ __device__ void detect_lef_bar_collisions(const bp_t* rev_units_pos, const bp_t*
 
     __syncthreads();
     if (jr0 < jr1 && i0 < num_barriers) {
-      /*
-      if (blockIdx.x == 0) {
-        printf(
-            "tid=%d; rev_idx=%u-%u; barr_idx=%u-%u; rev_pos=%u-%u; barr_pos=%u;%u; nlefs=%u; "
-            "nbarrs=%u\n",
-            tid, jr0, jr1, i0, i1, rev_units_pos[jr0], rev_units_pos[jr1], barrier_pos[i0],
-            barrier_pos[i1 - 1], num_active_lefs, num_barriers);
-      }*/
       for (auto i = i0, j = jr0; i < i1 && j < jr1; ++i) {
         if (barrier_states[i] == CTCF::NOT_OCCUPIED) {
           continue;
@@ -495,11 +487,6 @@ __device__ void detect_primary_lef_lef_collisions(
 
     return thrust::make_pair(if0, if1);
   }();
-
-  // if (blockIdx.x == 100) {
-  //   printf("tid=%d; rev_idx=%u-%u; fwd_idx=%u-%u; nlefs=%u;\n", tid, ir0, ir1, if0, if1,
-  //          num_active_lefs);
-  // }
 
   assert(ir0 <= num_active_lefs);  // NOLINT
   assert(ir1 <= num_active_lefs);  // NOLINT
@@ -873,7 +860,6 @@ __device__ void select_and_release_lefs(bp_t* rev_units_pos, bp_t* fwd_units_pos
       cudaDeviceSynchronize();
       const auto status = cudaGetLastError();
       assert(status == cudaSuccess);
-      // lef_unloader_affinities_prefix_sum[num_active_lefs + 1] = 1.0F;
     }
   }
   __syncthreads();
