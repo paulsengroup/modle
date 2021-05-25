@@ -104,6 +104,7 @@ struct GlobalStateDev {  // NOLINT
 
   size_t grid_size{};
   size_t block_size{};
+  uint32_t shared_memory_bytes_per_block{0};
 
   BlockState* block_states{nullptr};
   Task* tasks{nullptr};
@@ -155,6 +156,7 @@ class GlobalStateHost {  // NOLINT
 
   size_t grid_size;
   size_t block_size;
+  uint32_t shared_memory_bytes_per_block{0};
   size_t max_grid_size;
 
   BlockState* block_states{nullptr};
@@ -218,6 +220,8 @@ class Simulation : modle::Config {
   std::vector<float> _barrier_probs_nocc_to_nocc{};
 
   size_t _current_epoch{0};
+
+  [[nodiscard]] size_t compute_shared_memory_per_block() const;
 
   void run_batch(const std::vector<Task>& new_tasks, const std::vector<uint32_t>& barrier_pos,
                  const std::vector<dna::Direction>& barrier_dir,

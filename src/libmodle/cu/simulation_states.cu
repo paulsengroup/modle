@@ -31,6 +31,7 @@ GlobalStateDev* GlobalStateHost::get_ptr_to_dev_instance() {
 
     gs.grid_size = this->grid_size;
     gs.block_size = this->block_size;
+    gs.shared_memory_bytes_per_block = this->shared_memory_bytes_per_block;
 
     gs.block_states = this->block_states;
     gs.tasks = this->tasks;
@@ -104,6 +105,7 @@ void GlobalStateHost::sync_state_with_device() {
 
   gs.grid_size = this->grid_size;
   gs.block_size = this->block_size;
+  gs.shared_memory_bytes_per_block = this->shared_memory_bytes_per_block;
 
   gs.block_states = this->block_states;
   gs.tasks = this->tasks;

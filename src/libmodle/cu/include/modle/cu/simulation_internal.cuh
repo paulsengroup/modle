@@ -25,16 +25,6 @@ __global__ void init_barrier_states(GlobalStateDev* global_state);
 // Simulation body
 __global__ void bind_and_sort_lefs(GlobalStateDev* global_state);
 
-__global__ void prepare_extr_units_for_sorting(GlobalStateDev* global_state,
-                                               dna::Direction direction,
-                                               uint32_t* tot_num_units_to_sort = nullptr);
-__global__ void update_unit_mappings_and_scatter_sorted_lefs(
-    GlobalStateDev* global_state, dna::Direction direction,
-    bool update_extr_unit_to_lef_mappings = true);
-
-__global__ void prepare_units_for_random_shuffling(GlobalStateDev* global_state,
-                                                   uint32_t* tot_num_active_units);
-
 __global__ void select_lefs_then_register_contacts(GlobalStateDev* global_state);
 
 __global__ void generate_moves(GlobalStateDev* global_state);
@@ -125,11 +115,13 @@ __device__ void generate_initial_loading_epochs(uint32_t* epoch_buff,
 __device__ void select_and_bind_lefs(
     bp_t* rev_units_pos, bp_t* fwd_units_pos, const uint32_t* lef_rev_unit_idx,
     uint32_t* lef_fwd_unit_idx, const uint32_t* loading_epochs,
-    const uint32_t* lefs_to_load_per_epoch, uint32_t& epoch_idx, uint32_t num_unique_loading_epochs,
-    uint32_t& num_active_lefs, uint32_t current_epoch, uint32_t tot_num_lefs, uint32_t chrom_start,
-    uint32_t chrom_end, curandStatePhilox4_32_10_t* rng_states, bool& burnin_completed);
+    const uint32_t* lefs_to_load_per_epoch, void* local_buff, uint32_t local_buff_bytes_per_block,
+    uint32_t& epoch_idx, uint32_t num_unique_loading_epochs, uint32_t& num_active_lefs,
+    uint32_t current_epoch, uint32_t tot_num_lefs, uint32_t chrom_start, uint32_t chrom_end,
+    curandStatePhilox4_32_10_t* rng_states, bool& burnin_completed);
 
 __device__ void update_extr_unit_mappings(uint32_t* lef_rev_unit_idx, uint32_t* lef_fwd_unit_idx,
+                                          void* local_buff, uint32_t local_buff_bytes_per_block,
                                           uint32_t num_active_lefs, dna::Direction direction);
 
 __device__ void reset_collision_masks(collision_t* rev_collisions, collision_t* fwd_collisions,
@@ -148,6 +140,8 @@ __device__ void register_contacts(const bp_t* rev_unit_pos, const bp_t* fwd_unit
                                   uint32_t bin_size, uint32_t sample_size, uint32_t num_active_lefs,
                                   uint32_t* contacts_buff_size_shared,
                                   uint32_t contacts_buff_capacity);
+
+__device__ thrust::pair<int, int> compute_bit_width(uint32_t num);
 }  // namespace dev
 
 }  // namespace modle::cu

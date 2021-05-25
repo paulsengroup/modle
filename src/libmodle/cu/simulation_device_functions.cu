@@ -44,9 +44,15 @@ __device__ void generate_initial_loading_epochs(uint32_t* epoch_buff,
 __device__ void select_and_bind_lefs(
     bp_t* rev_units_pos, bp_t* fwd_units_pos, const uint32_t* lef_rev_unit_idx,
     uint32_t* lef_fwd_unit_idx, const uint32_t* loading_epochs,
-    const uint32_t* lefs_to_load_per_epoch, uint32_t& epoch_idx, uint32_t num_unique_loading_epochs,
-    uint32_t& num_active_lefs, uint32_t current_epoch, uint32_t tot_num_lefs, uint32_t chrom_start,
-    uint32_t chrom_end, curandStatePhilox4_32_10_t* rng_states, bool& burnin_completed) {
+    const uint32_t* lefs_to_load_per_epoch, void* local_buff,
+    const uint32_t local_buff_bytes_per_block, uint32_t& epoch_idx,
+    const uint32_t num_unique_loading_epochs, uint32_t& num_active_lefs,
+    const uint32_t current_epoch, const uint32_t tot_num_lefs, const uint32_t chrom_start,
+    const uint32_t chrom_end, curandStatePhilox4_32_10_t* rng_states, bool& burnin_completed) {
+  (void)num_unique_loading_epochs;
+
+  using buffT = std::remove_pointer_t<decltype(rev_units_pos)>;
+
   const auto tid = threadIdx.x;
   const auto chrom_simulated_size = static_cast<float>(chrom_end - 1 - chrom_start);
   auto local_rng_state = rng_states[tid];
@@ -65,24 +71,35 @@ __device__ void select_and_bind_lefs(
   }
   __syncthreads();
 
-  const auto chunk_size = (num_active_lefs + blockDim.x - 1) / blockDim.x;
-  const auto i0 = tid * chunk_size;
-  const auto i1 = min(i0 + chunk_size, num_active_lefs);
+  if (const auto [i0, i1] = modle::cu::dev::compute_chunk_size(num_active_lefs); i0 < i1) {
+    const auto buff_capacity =
+        static_cast<uint32_t>(local_buff_bytes_per_block / (blockDim.x * sizeof(buffT)));
+    auto* rev_pos_buff = static_cast<buffT*>(local_buff) + (buff_capacity * tid);
+    auto buff_size = buff_capacity;
 
-  // Bind idle LEFs. LEFs that are supposed to bind for the first time during the current iteration,
-  // are always idling
-  for (auto i = i0; i < i1; ++i) {
-    if (rev_units_pos[i] == Simulation::EXTR_UNIT_IS_IDLE) {
-      const auto j = lef_rev_unit_idx[i];
-      assert(i < num_active_lefs);  // NOLINT
-      assert(j < num_active_lefs);  // NOLINT
-      rev_units_pos[i] =
-          chrom_start +
-          static_cast<uint32_t>(roundf(curand_uniform(&local_rng_state) * chrom_simulated_size));
+    auto update_buff = [&](uint32_t i, uint32_t size) {
+      memcpy(rev_pos_buff, rev_units_pos + i, size * sizeof(buffT));
+    };
 
-      assert(fwd_units_pos[j] == Simulation::EXTR_UNIT_IS_IDLE);  // NOLINT
-      fwd_units_pos[j] = rev_units_pos[i];
-      lef_fwd_unit_idx[j] = i;
+    // Bind idle LEFs. LEFs that are supposed to bind for the first time during the current
+    // iteration, are always idling
+    for (auto i = i0; i < i1; ++i) {
+      if (buff_size == buff_capacity) {
+        update_buff(i, min(buff_size, i1 - i));
+        buff_size = 0;
+      }
+      if (rev_pos_buff[buff_size++] == Simulation::EXTR_UNIT_IS_IDLE) {
+        const auto j = lef_rev_unit_idx[i];
+        assert(i < num_active_lefs);  // NOLINT
+        assert(j < num_active_lefs);  // NOLINT
+        rev_units_pos[i] =
+            chrom_start +
+            static_cast<uint32_t>(roundf(curand_uniform(&local_rng_state) * chrom_simulated_size));
+
+        assert(fwd_units_pos[j] == Simulation::EXTR_UNIT_IS_IDLE);  // NOLINT
+        fwd_units_pos[j] = rev_units_pos[i];
+        lef_fwd_unit_idx[j] = i;
+      }
     }
   }
 
@@ -92,7 +109,10 @@ __device__ void select_and_bind_lefs(
 }
 
 __device__ void update_extr_unit_mappings(uint32_t* lef_rev_unit_idx, uint32_t* lef_fwd_unit_idx,
+                                          void* local_buff,
+                                          const uint32_t local_buff_bytes_per_block,
                                           uint32_t num_active_lefs, dna::Direction direction) {
+  using buffT = std::remove_pointer_t<decltype(lef_rev_unit_idx)>;
   assert(direction == dna::fwd || direction == dna::rev);  // NOLINT
 
   const auto tid = threadIdx.x;
@@ -100,15 +120,27 @@ __device__ void update_extr_unit_mappings(uint32_t* lef_rev_unit_idx, uint32_t* 
   const auto* source_idx = direction == dna::Direction::rev ? lef_rev_unit_idx : lef_fwd_unit_idx;
   auto* dest_idx = direction == dna::Direction::rev ? lef_fwd_unit_idx : lef_rev_unit_idx;
 
-  const auto chunk_size = (num_active_lefs + blockDim.x - 1) / blockDim.x;
-  const auto i0 = tid * chunk_size;
-  const auto i1 = min(i0 + chunk_size, num_active_lefs);
+  const auto buff_capacity =
+      static_cast<uint32_t>(local_buff_bytes_per_block / (sizeof(buffT) * blockDim.x));
+  if (const auto [i0, i1] = modle::cu::dev::compute_chunk_size(num_active_lefs); i0 < i1) {
+    auto buff_size = buff_capacity;
+    auto* source_idx_buff = static_cast<buffT*>(local_buff) + (buff_capacity * tid);
 
-  for (auto i = i0; i < i1; ++i) {
-    const auto j = source_idx[i];
-    assert(i < num_active_lefs);  // NOLINT
-    assert(j < num_active_lefs);  // NOLINT
-    dest_idx[j] = i;
+    auto update_local_buff = [&](uint32_t i, uint32_t size) {
+      assert(size <= buff_capacity);  // NOLINT
+      memcpy(source_idx_buff, source_idx + i, size * sizeof(buffT));
+    };
+
+    for (auto i = i0; i < i1; ++i) {
+      if (buff_size == buff_capacity) {
+        update_local_buff(i, min(buff_capacity, i1 - i));
+        buff_size = 0;
+      }
+      const auto& j = source_idx_buff[buff_size++];
+      assert(i < num_active_lefs);  // NOLINT
+      assert(j < num_active_lefs);  // NOLINT
+      dest_idx[j] = i;
+    }
   }
   __syncthreads();
 }
@@ -964,6 +996,15 @@ __device__ void register_contacts(const bp_t* rev_unit_pos, const bp_t* fwd_unit
     }
   }
   __syncthreads();
+}
+
+__device__ thrust::pair<int, int> compute_bit_width(uint32_t num) {
+  const auto end_bit = static_cast<int>(ceilf(__log2f(static_cast<float>(num + 1))));
+  assert(end_bit <= 64);  // NOLINT
+  // https://docs.nvidia.com/cuda/cuda-c-programming-guide/index.html#hardware-implementation
+  // https://github.com/NVIDIA/cub/pull/307/files/d12cb62dbb2add413e0e345cf25b380236dea61a
+  // pair(least-significant bit index (inclusive), most-significant bit index (exclusive)).
+  return thrust::make_pair(0, end_bit);
 }
 
 }  // namespace modle::cu::dev

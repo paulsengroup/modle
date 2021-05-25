@@ -139,41 +139,53 @@ __global__ void init_barrier_states(GlobalStateDev* global_state) {
 }
 
 __global__ void bind_and_sort_lefs(GlobalStateDev* global_state) {
+  if (global_state->block_states[blockIdx.x].simulation_completed) {
+    return;
+  }
   const auto tid = threadIdx.x;
   const auto bid = blockIdx.x;
   auto* block_state = global_state->block_states + bid;
   const auto* task = global_state->tasks + bid;
-  const auto simulation_completed = block_state->simulation_completed;
 
-  if (!simulation_completed) {
-    modle::cu::dev::select_and_bind_lefs(
-        block_state->rev_unit_pos, block_state->fwd_unit_pos, block_state->lef_rev_unit_idx,
-        block_state->lef_fwd_unit_idx, block_state->loading_epochs,
-        block_state->lefs_to_load_per_epoch, block_state->epoch_idx,
-        block_state->num_unique_loading_epochs, block_state->num_active_lefs,
-        global_state->current_epoch, task->nlefs, task->chrom_start, task->chrom_end,
-        block_state->rng_state, block_state->burnin_completed);
-  }
+  extern __shared__ uint32_t shared_memory[];
+  auto* local_buff = static_cast<void*>(shared_memory);
+  const auto local_buff_bytes_per_block = global_state->shared_memory_bytes_per_block;
+
+  modle::cu::dev::select_and_bind_lefs(
+      block_state->rev_unit_pos, block_state->fwd_unit_pos, block_state->lef_rev_unit_idx,
+      block_state->lef_fwd_unit_idx, block_state->loading_epochs,
+      block_state->lefs_to_load_per_epoch, local_buff, local_buff_bytes_per_block,
+      block_state->epoch_idx, block_state->num_unique_loading_epochs, block_state->num_active_lefs,
+      global_state->current_epoch, task->nlefs, task->chrom_start, task->chrom_end,
+      block_state->rng_state, block_state->burnin_completed);
   __syncthreads();
 
-  if (!simulation_completed && tid == 0) {  // NOLINT
+  if (tid == 0) {  // NOLINT
     // Sort LEFs by pos. TODO: take into account binding order & other factors in case of a tie
     cub::DoubleBuffer keys_tmp_buff(block_state->rev_unit_pos, block_state->tmp_lef_buff1);
     cub::DoubleBuffer vals_tmp_buff(block_state->lef_rev_unit_idx, block_state->tmp_lef_buff2);
+#if 0
+    // On my hardware running radix sort with 26 <= end_bit <= 28 is slightly slower than running it
+    // with 32bits. I suspect this is due to CUB switching to the old RadixSort implementation when
+    // sizeof(KeyType) < 4
+    // https://github.com/NVIDIA/cub/issues/293#issuecomment-844470615
+    const auto [begin_bit, end_bit] =
+        modle::cu::dev::compute_bit_width(global_state->tasks[bid].chrom_end);
+
+    cub::DeviceRadixSort::SortPairs(
+        block_state->cub_tmp_storage, block_state->cub_tmp_storage_bytes, keys_tmp_buff,
+        vals_tmp_buff, block_state->num_active_lefs, begin_bit, end_bit);
+#else
 
     cub::DeviceRadixSort::SortPairs(block_state->cub_tmp_storage,
                                     block_state->cub_tmp_storage_bytes, keys_tmp_buff,
                                     vals_tmp_buff, block_state->num_active_lefs);
+#endif
     cudaDeviceSynchronize();
     const auto status = cudaGetLastError();
     assert(status == cudaSuccess);  // NOLINT TODO: Do proper error handling
-    /* Assigning pointer in this way doesn't work, as if Current() happens to point to *_buff?, then
-    the position of idle LEFs will be overwritten by whatever happens to be in the tmp buffers
-    block_state->rev_unit_pos = keys_tmp_buff.Current();
-    block_state->tmp_lef_buff1 = keys_tmp_buff.Alternate();
-    block_state->lef_rev_unit_idx = vals_tmp_buff.Current();
-    block_state->tmp_lef_buff2 = vals_tmp_buff.Alternate();
-     */
+    // Assigning pointer in this way doesn't work, as if Current() happens to point to *_buff?, then
+    // the position of idle LEFs will be overwritten by whatever happens to be in the tmp buffers
     memcpy(block_state->rev_unit_pos, keys_tmp_buff.Current(),
            block_state->num_active_lefs * sizeof(bp_t));
     memcpy(block_state->lef_rev_unit_idx, vals_tmp_buff.Current(),
@@ -181,20 +193,30 @@ __global__ void bind_and_sort_lefs(GlobalStateDev* global_state) {
   }
 
   __syncthreads();
-  if (!simulation_completed) {
-    modle::cu::dev::update_extr_unit_mappings(block_state->lef_rev_unit_idx,
-                                              block_state->lef_fwd_unit_idx,
-                                              block_state->num_active_lefs, dna::Direction::rev);
-  }
+  modle::cu::dev::update_extr_unit_mappings(
+      block_state->lef_rev_unit_idx, block_state->lef_fwd_unit_idx, local_buff,
+      local_buff_bytes_per_block, block_state->num_active_lefs, dna::Direction::rev);
 
   __syncthreads();
-  if (!simulation_completed && tid == 0) {  // NOLINT
+  if (tid == 0) {  // NOLINT
     cub::DoubleBuffer keys_tmp_buff(block_state->fwd_unit_pos, block_state->tmp_lef_buff1);
     cub::DoubleBuffer vals_tmp_buff(block_state->lef_fwd_unit_idx, block_state->tmp_lef_buff2);
 
+#if 0
+    // See above for an explanation of why we are not using this optimization
+
+    const auto [begin_bit, end_bit] =
+        modle::cu::dev::compute_bit_width(global_state->tasks[bid].chrom_end);
+
+    cub::DeviceRadixSort::SortPairs(
+        block_state->cub_tmp_storage, block_state->cub_tmp_storage_bytes, keys_tmp_buff,
+        vals_tmp_buff, block_state->num_active_lefs, begin_bit, end_bit);
+#else
     cub::DeviceRadixSort::SortPairs(block_state->cub_tmp_storage,
                                     block_state->cub_tmp_storage_bytes, keys_tmp_buff,
                                     vals_tmp_buff, block_state->num_active_lefs);
+#endif
+
     cudaDeviceSynchronize();
     const auto status = cudaGetLastError();
     assert(status == cudaSuccess);  // NOLINT TODO: Do proper error handling
@@ -211,11 +233,9 @@ __global__ void bind_and_sort_lefs(GlobalStateDev* global_state) {
   }
 
   __syncthreads();
-  if (!simulation_completed) {
-    modle::cu::dev::update_extr_unit_mappings(block_state->lef_rev_unit_idx,
-                                              block_state->lef_fwd_unit_idx,
-                                              block_state->num_active_lefs, dna::Direction::fwd);
-  }
+  modle::cu::dev::update_extr_unit_mappings(
+      block_state->lef_rev_unit_idx, block_state->lef_fwd_unit_idx, local_buff,
+      local_buff_bytes_per_block, block_state->num_active_lefs, dna::Direction::fwd);
 }
 
 __global__ void select_lefs_then_register_contacts(GlobalStateDev* global_state) {
