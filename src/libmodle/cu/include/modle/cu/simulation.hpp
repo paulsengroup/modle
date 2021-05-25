@@ -108,6 +108,7 @@ struct GlobalStateDev {  // NOLINT
   BlockState* block_states{nullptr};
   Task* tasks{nullptr};
 
+  uint32_t current_epoch{0};
   uint32_t nblock_states{};
   uint32_t ntasks{};
   uint32_t ntasks_completed{};
@@ -164,6 +165,7 @@ class GlobalStateHost {  // NOLINT
   cuda::memory::device::unique_ptr<float[]> barrier_probs_occ_to_occ{nullptr};     // NOLINT
   cuda::memory::device::unique_ptr<float[]> barrier_probs_nocc_to_nocc{nullptr};   // NOLINT
 
+  uint32_t current_epoch{0};
   uint32_t nblock_states{};
   uint32_t ntasks{};
   uint32_t ntasks_completed{};
@@ -200,6 +202,7 @@ class Simulation : modle::Config {
   static constexpr auto NO_COLLISIONS = static_cast<collision_t>(-1);
 
   void run();
+  void sync();
 
  private:
   const modle::Config* _config;
@@ -225,17 +228,10 @@ class Simulation : modle::Config {
                               std::mutex& progress_queue_mutex,
                               std::atomic<bool>& end_of_simulation);
   void update_contacts_for_chrom(Chromosome& chrom);
-
-  bool simulate_next_epoch();
-  void setup_burnin_phase();
-  void bind_and_sort_lefs();
-  void select_lefs_and_register_contacts();
-  void generate_moves();
-  void update_ctcf_states();
-  void process_collisions();
-  void extrude_and_release_lefs();
 };
 
 [[nodiscard]] Config* write_config_to_device(const Config& c);
+
+void throw_on_cuda_error(const cudaError status, std::string_view exception_prefix_message = "");
 
 }  // namespace modle::cu

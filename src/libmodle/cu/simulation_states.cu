@@ -35,6 +35,7 @@ GlobalStateDev* GlobalStateHost::get_ptr_to_dev_instance() {
     gs.block_states = this->block_states;
     gs.tasks = this->tasks;
 
+    gs.current_epoch = this->current_epoch;
     gs.nblock_states = this->nblock_states;
     gs.ntasks = this->ntasks;
     gs.ntasks_completed = this->ntasks_completed;
@@ -97,7 +98,27 @@ void GlobalStateHost::sync_state_with_device(const GlobalStateDev& state) {
 }
 
 void GlobalStateHost::sync_state_with_device() {
-  this->sync_state_with_device(this->get_copy_of_device_instance());
+  GlobalStateDev gs;
+
+  gs._config = this->_config;
+
+  gs.grid_size = this->grid_size;
+  gs.block_size = this->block_size;
+
+  gs.block_states = this->block_states;
+  gs.tasks = this->tasks;
+
+  gs.current_epoch = this->current_epoch;
+  gs.nblock_states = this->nblock_states;
+  gs.ntasks = this->ntasks;
+  gs.ntasks_completed = this->ntasks_completed;
+
+  gs.barrier_pos = this->barrier_pos.get();
+  gs.barrier_directions = this->barrier_directions.get();
+  gs.barrier_probs_occ_to_occ = this->barrier_probs_occ_to_occ.get();
+  gs.barrier_probs_nocc_to_nocc = this->barrier_probs_nocc_to_nocc.get();
+
+  this->sync_state_with_device(gs);
 }
 
 void GlobalStateHost::write_tasks_to_device(const std::vector<Task>& new_tasks) {
@@ -105,8 +126,9 @@ void GlobalStateHost::write_tasks_to_device(const std::vector<Task>& new_tasks) 
   try {
     auto dev_state = this->get_copy_of_device_instance();
     cuda::memory::copy(dev_state.tasks, new_tasks.data(), new_tasks.size() * sizeof(Task));
-    dev_state.ntasks = static_cast<uint32_t>(new_tasks.size());
-    dev_state.ntasks_completed = 0;
+
+    this->ntasks = static_cast<uint32_t>(new_tasks.size());
+    dev_state.ntasks = this->ntasks;
 
     this->sync_state_with_device(dev_state);
   } catch (const cuda::runtime_error& e) {
@@ -153,7 +175,10 @@ void GlobalStateHost::init(size_t grid_size_, size_t block_size_,
   assert(barrier_pos_host.size() == barrier_dir_host.size());  // NOLINT
   this->grid_size = grid_size_;
   this->block_size = block_size_;
-  // this->ntasks_completed = 0;
+  this->current_epoch = 0;
+  this->ntasks_completed = 0;
+  this->sync_state_with_device();
+
   if (!tasks_host.empty()) {
     this->write_tasks_to_device(tasks_host);
   }
@@ -166,8 +191,11 @@ void GlobalStateHost::init(size_t grid_size_, size_t block_size_,
   this->sync_state_with_device();
 
   kernels::init_curand<<<this->grid_size, this->block_size>>>(this->get_ptr_to_dev_instance());
+  throw_on_cuda_error(cudaGetLastError(),
+                      "An error occurred while initializing PRNG states on the device");
 
   kernels::reset_buffers<<<this->grid_size, this->block_size>>>(this->get_ptr_to_dev_instance());
+  throw_on_cuda_error(cudaGetLastError(), "An error occurred while resetting device buffers");
   this->_device.synchronize();
 }
 
@@ -231,7 +259,6 @@ BlockState* GlobalStateHost::allocate_block_states(const cuda::device_t& dev, si
     allocate_or_throw(block_states_host[i].tmp_lef_buff2, max_nlefs);
     allocate_or_throw(block_states_host[i].tmp_lef_buff3, max_nlefs);
     allocate_or_throw(block_states_host[i].tmp_lef_buff4, max_nlefs);
-
   }
 
   cuda::memory::copy(block_states_dev, block_states_host.data(),

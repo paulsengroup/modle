@@ -23,7 +23,7 @@ __global__ void compute_initial_loading_epochs(GlobalStateDev* global_state);
 __global__ void init_barrier_states(GlobalStateDev* global_state);
 
 // Simulation body
-__global__ void bind_and_sort_lefs(uint32_t current_epoch, GlobalStateDev* global_state);
+__global__ void bind_and_sort_lefs(GlobalStateDev* global_state);
 
 __global__ void prepare_extr_units_for_sorting(GlobalStateDev* global_state,
                                                dna::Direction direction,
@@ -46,6 +46,8 @@ __global__ void reset_collision_masks(GlobalStateDev* global_state);
 __global__ void process_collisions(GlobalStateDev* global_state);
 
 __global__ void extrude_and_release_lefs(GlobalStateDev* global_state);
+
+__global__ void advance_epoch(GlobalStateDev* global_state);
 }  // namespace kernels
 
 namespace dev {

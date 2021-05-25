@@ -138,7 +138,7 @@ __global__ void init_barrier_states(GlobalStateDev* global_state) {
   global_state->block_states[bid].rng_state[tid] = local_rng_state;
 }
 
-__global__ void bind_and_sort_lefs(uint32_t current_epoch, GlobalStateDev* global_state) {
+__global__ void bind_and_sort_lefs(GlobalStateDev* global_state) {
   const auto tid = threadIdx.x;
   const auto bid = blockIdx.x;
   auto* block_state = global_state->block_states + bid;
@@ -150,9 +150,9 @@ __global__ void bind_and_sort_lefs(uint32_t current_epoch, GlobalStateDev* globa
         block_state->rev_unit_pos, block_state->fwd_unit_pos, block_state->lef_rev_unit_idx,
         block_state->lef_fwd_unit_idx, block_state->loading_epochs,
         block_state->lefs_to_load_per_epoch, block_state->epoch_idx,
-        block_state->num_unique_loading_epochs, block_state->num_active_lefs, current_epoch,
-        task->nlefs, task->chrom_start, task->chrom_end, block_state->rng_state,
-        block_state->burnin_completed);
+        block_state->num_unique_loading_epochs, block_state->num_active_lefs,
+        global_state->current_epoch, task->nlefs, task->chrom_start, task->chrom_end,
+        block_state->rng_state, block_state->burnin_completed);
   }
   __syncthreads();
 
@@ -507,6 +507,12 @@ __global__ void extrude_and_release_lefs(GlobalStateDev* global_state) {
       block_state->lef_unloader_affinities, block_state->lef_unloader_affinities_prefix_sum,
       block_state->cub_tmp_storage, block_state->cub_tmp_storage_bytes, block_state->rng_state);
   __syncthreads();
+}
+
+__global__ void advance_epoch(GlobalStateDev* global_state) {
+  if (threadIdx.x == 0 && blockIdx.x == 0) {
+    atomicAdd(&global_state->current_epoch, 1);
+  }
 }
 
 }  // namespace modle::cu::kernels

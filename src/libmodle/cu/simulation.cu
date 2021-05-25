@@ -20,6 +20,20 @@
 #include "modle/cu/simulation_internal.cuh"
 namespace modle::cu {
 
+void throw_on_cuda_error(const cudaError status, std::string_view exception_prefix_message) {
+  if (status != cudaSuccess) {
+    if (exception_prefix_message.empty()) {
+      throw std::runtime_error(
+          fmt::format(FMT_STRING("The device encountered the following error: {}: {}"),
+                      cudaGetErrorName(status), cudaGetErrorString(status)));
+    }
+    throw std::runtime_error(fmt::format(FMT_STRING("{}: {}: {}"), exception_prefix_message,
+                                         cudaGetErrorName(status), cudaGetErrorString(status)));
+  }
+}
+
+void Simulation::sync() { this->_global_state_host._device.synchronize(); }
+
 void Simulation::run_batch(const std::vector<Task>& new_tasks,
                            const std::vector<uint32_t>& barrier_pos,
                            const std::vector<dna::Direction>& barrier_dir,
@@ -34,76 +48,89 @@ void Simulation::run_batch(const std::vector<Task>& new_tasks,
 
   kernels::init_barrier_states<<<this->_grid_size, this->_block_size>>>(
       this->_global_state_host.get_ptr_to_dev_instance());
-  this->setup_burnin_phase();
-  this->_global_state_host._device.synchronize();
+  throw_on_cuda_error(
+      cudaGetLastError(),
+      fmt::format(
+          FMT_STRING(
+              "The following error occurred while initializing barrier states for batch #{}"),
+          batch_number));
 
-  this->_current_epoch = 0UL;
-  while (this->simulate_next_epoch()) {
-    if (this->_current_epoch++ % 50 == 0) {
+  kernels::compute_initial_loading_epochs<<<this->_grid_size, this->_block_size>>>(
+      this->_global_state_host.get_ptr_to_dev_instance());
+  throw_on_cuda_error(
+      cudaGetLastError(),
+      fmt::format(
+          FMT_STRING(
+              "The following error occurred while computing initial loading epochs for batch #{}"),
+          batch_number));
+  this->sync();
+
+  for (this->_current_epoch = 0; true; ++this->_current_epoch) {
+    if (this->_current_epoch % 50 == 0) {
       fmt::print(stderr,
                  FMT_STRING("Simulating epoch #{} of batch #{}. grid_size={}; block_size={};\n"),
-                 this->_current_epoch - 1, batch_number, this->_grid_size, this->_block_size);
+                 this->_current_epoch, batch_number, this->_grid_size, this->_block_size);
+    }
+    kernels::bind_and_sort_lefs<<<this->_grid_size, this->_block_size>>>(
+        this->_global_state_host.get_ptr_to_dev_instance());
+    throw_on_cuda_error(
+        cudaGetLastError(),
+        fmt::format(
+            FMT_STRING(
+                "The following error occurred while binding LEFs during epoch #{} of batch #{}"),
+            this->_current_epoch, batch_number));
+
+    kernels::select_lefs_then_register_contacts<<<this->_grid_size, this->_block_size>>>(
+        this->_global_state_host.get_ptr_to_dev_instance());
+    throw_on_cuda_error(cudaGetLastError(),
+                        fmt::format(FMT_STRING("The following error occurred while sampling "
+                                               "contacts during epoch #{} of batch #{}"),
+                                    this->_current_epoch, batch_number));
+
+    kernels::generate_moves<<<this->_grid_size, this->_block_size>>>(
+        this->_global_state_host.get_ptr_to_dev_instance());
+    throw_on_cuda_error(cudaGetLastError(),
+                        fmt::format(FMT_STRING("The following error occurred while generating "
+                                               "moves during epoch #{} of batch #{}"),
+                                    this->_current_epoch, batch_number));
+
+    kernels::update_ctcf_states<<<this->_grid_size, this->_block_size>>>(
+        this->_global_state_host.get_ptr_to_dev_instance());
+    throw_on_cuda_error(
+        cudaGetLastError(),
+        fmt::format(FMT_STRING("The following error occurred while updating extrusion barrier "
+                               "states during epoch #{} of batch #{}"),
+                    this->_current_epoch, batch_number));
+
+    kernels::process_collisions<<<this->_grid_size, this->_block_size>>>(
+        this->_global_state_host.get_ptr_to_dev_instance());
+    throw_on_cuda_error(cudaGetLastError(),
+                        fmt::format(FMT_STRING("The following error occurred while processing LEF "
+                                               "collisions during epoch #{} of batch #{}"),
+                                    this->_current_epoch, batch_number));
+
+    kernels::extrude_and_release_lefs<<<this->_grid_size, this->_block_size>>>(
+        this->_global_state_host.get_ptr_to_dev_instance());
+    throw_on_cuda_error(
+        cudaGetLastError(),
+        fmt::format(
+            FMT_STRING(
+                "The following error occurred while extruding during epoch #{} of batch #{}"),
+            this->_current_epoch, batch_number));
+
+    kernels::advance_epoch<<<1, 1>>>(this->_global_state_host.get_ptr_to_dev_instance());
+    throw_on_cuda_error(
+        cudaGetLastError(),
+        fmt::format(
+            FMT_STRING(
+                "The following error occurred while advancing epoch from {} to {} for batch #{}"),
+            this->_current_epoch, this->_current_epoch + 1, batch_number));
+
+    this->sync();
+    const auto state = this->_global_state_host.get_copy_of_device_instance();
+    if (state.ntasks_completed == state.ntasks) {
+      break;
     }
   }
 }
-
-void Simulation::setup_burnin_phase() {
-  kernels::compute_initial_loading_epochs<<<this->_grid_size, this->_block_size>>>(
-      this->_global_state_host.get_ptr_to_dev_instance());
-  this->_global_state_host._device.synchronize();
-}
-
-void Simulation::bind_and_sort_lefs() {
-  kernels::bind_and_sort_lefs<<<this->_grid_size, this->_block_size>>>(
-      this->_current_epoch, this->_global_state_host.get_ptr_to_dev_instance());
-  this->_global_state_host._device.synchronize();
-}
-
-void Simulation::select_lefs_and_register_contacts() {
-  kernels::select_lefs_then_register_contacts<<<this->_grid_size, this->_block_size>>>(
-      this->_global_state_host.get_ptr_to_dev_instance());
-  this->_global_state_host._device.synchronize();
-}
-
-void Simulation::generate_moves() {
-  kernels::generate_moves<<<this->_grid_size, this->_block_size>>>(
-      this->_global_state_host.get_ptr_to_dev_instance());
-  this->_global_state_host._device.synchronize();
-}
-
-void Simulation::update_ctcf_states() {
-  kernels::update_ctcf_states<<<this->_grid_size, this->_block_size>>>(
-      this->_global_state_host.get_ptr_to_dev_instance());
-  this->_global_state_host._device.synchronize();
-}
-
-void Simulation::process_collisions() {
-  kernels::process_collisions<<<this->_grid_size, this->_block_size>>>(
-      this->_global_state_host.get_ptr_to_dev_instance());
-  this->_global_state_host._device.synchronize();
-}
-
-void Simulation::extrude_and_release_lefs() {
-  kernels::extrude_and_release_lefs<<<this->_grid_size, this->_block_size>>>(
-      this->_global_state_host.get_ptr_to_dev_instance());
-  this->_global_state_host._device.synchronize();
-}
-
-bool Simulation::simulate_next_epoch() {
-  this->bind_and_sort_lefs();
-
-  this->select_lefs_and_register_contacts();
-
-  this->generate_moves();
-
-  this->update_ctcf_states();
-
-  this->process_collisions();
-
-  this->extrude_and_release_lefs();
-
-  const auto state = this->_global_state_host.get_copy_of_device_instance();
-  return state.ntasks_completed != state.ntasks;  // End of simulation
-}
-
 }  // namespace modle::cu

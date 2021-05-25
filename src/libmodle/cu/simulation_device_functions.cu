@@ -48,7 +48,7 @@ __device__ void select_and_bind_lefs(
     uint32_t& num_active_lefs, uint32_t current_epoch, uint32_t tot_num_lefs, uint32_t chrom_start,
     uint32_t chrom_end, curandStatePhilox4_32_10_t* rng_states, bool& burnin_completed) {
   const auto tid = threadIdx.x;
-  const auto chrom_simulated_size = static_cast<float>(chrom_end - chrom_start - 1);
+  const auto chrom_simulated_size = static_cast<float>(chrom_end - 1 - chrom_start);
   auto local_rng_state = rng_states[tid];
 
   // Determine if an how many new LEFs should be bound in the current iteration

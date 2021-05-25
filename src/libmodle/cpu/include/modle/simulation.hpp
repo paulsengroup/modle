@@ -308,15 +308,15 @@ class Simulation : Config {
       absl::Span<bp_t> rev_moves, absl::Span<bp_t> fwd_moves,
       absl::Span<const collision_t> rev_collisions,
       absl::Span<const collision_t> fwd_collisions) noexcept(utils::ndebug_defined());
-/*
-  /// Correct moves to comply with the constraints imposed by secondary LEF-LEF collisions.
-  static void correct_moves_for_secondary_lef_lef_collisions(
-      absl::Span<const Lef> lefs, size_t nbarriers, absl::Span<const size_t> rev_ranks,
-      absl::Span<const size_t> fwd_ranks, absl::Span<bp_t> rev_moves, absl::Span<bp_t> fwd_moves,
-      absl::Span<const collision_t> rev_collisions, absl::Span<const collision_t> fwd_collisions,
-      size_t nrev_units_at_5prime = 0,
-      size_t nfwd_units_at_3prime = 0) noexcept(utils::ndebug_defined());
-*/
+  /*
+    /// Correct moves to comply with the constraints imposed by secondary LEF-LEF collisions.
+    static void correct_moves_for_secondary_lef_lef_collisions(
+        absl::Span<const Lef> lefs, size_t nbarriers, absl::Span<const size_t> rev_ranks,
+        absl::Span<const size_t> fwd_ranks, absl::Span<bp_t> rev_moves, absl::Span<bp_t> fwd_moves,
+        absl::Span<const collision_t> rev_collisions, absl::Span<const collision_t> fwd_collisions,
+        size_t nrev_units_at_5prime = 0,
+        size_t nfwd_units_at_3prime = 0) noexcept(utils::ndebug_defined());
+  */
   /// Register contacts for chromosome \p chrom using the position the extrusion units of the LEFs
   /// in \p lefs whose index is present in \p selected_lef_idx.
   size_t register_contacts(Chromosome* chrom, absl::Span<const Lef> lefs,
