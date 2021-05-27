@@ -416,15 +416,6 @@ class Simulation : Config {
     Simulation::correct_moves_for_primary_lef_lef_collisions(
         lefs, barriers, rev_ranks, fwd_ranks, rev_moves, fwd_moves, rev_collisions, fwd_collisions);
   }
-
-  static inline void test_adjust_moves_for_secondary_lef_lef_collisions(
-      absl::Span<const Lef> lefs, size_t nbarriers, absl::Span<const size_t> rev_ranks,
-      absl::Span<const size_t> fwd_ranks, absl::Span<bp_t> rev_moves, absl::Span<bp_t> fwd_moves,
-      absl::Span<collision_t> rev_collisions, absl::Span<collision_t> fwd_collisions) {
-    Simulation::correct_moves_for_secondary_lef_lef_collisions(lefs, nbarriers, rev_ranks,
-                                                               fwd_ranks, rev_moves, fwd_moves,
-                                                               rev_collisions, fwd_collisions);
-  }
 #endif
 };
 }  // namespace modle

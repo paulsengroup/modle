@@ -93,7 +93,7 @@ size_t import_barriers(absl::btree_set<Chromosome>& chromosomes,
   assert(!chromosomes.empty());
   assert(!path_to_extr_barriers.empty());
   size_t nbarriers = 0;
-  absl::flat_hash_map<std::string_view, Chromosome*> tmp_chrom_names(chromosomes.size());
+  absl::flat_hash_map<std::string_view, Chromosome*> tmp_chrom_names(static_cast<size_t>(chromosomes.size()));
   for (auto& chrom : chromosomes) {
     tmp_chrom_names.emplace(chrom.name(), &chrom);
   }
