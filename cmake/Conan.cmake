@@ -11,7 +11,7 @@ macro(run_conan)
     NAME
     conan-center
     URL
-    https://api.bintray.com/conan/conan/conan-center)
+    https://center.conan.io)
 
   conan_cmake_run(
     REQUIRES
