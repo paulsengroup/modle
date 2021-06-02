@@ -14,7 +14,7 @@
 namespace modle::bed {
 
 using namespace std::literals::string_view_literals;
-inline static const absl::flat_hash_map<std::string_view, char> bed_strand_encoding{
+static const absl::flat_hash_map<std::string_view, char> bed_strand_encoding{
     {"+"sv, '+'},       {"plus"sv, '+'},    {"fwd"sv, '+'},     {"Fwd"sv, '+'},
     {"forward"sv, '+'}, {"Forward"sv, '+'}, {"FWD"sv, '+'},     {"FORWARD"sv, '+'},
     {"-"sv, '-'},       {"minus"sv, '-'},   {"rev"sv, '-'},     {"Rev"sv, '-'},
@@ -28,8 +28,8 @@ struct RGB {
   uint8_t g;
   uint8_t b;
 
-  [[nodiscard]] inline std::string to_string() const;
-  [[nodiscard]] inline bool empty() const;
+  [[nodiscard]] std::string to_string() const;
+  [[nodiscard]] bool empty() const;
 };
 
 struct BED {
@@ -73,8 +73,8 @@ struct BED {
     BED_BLOCK_STARTS_IDX = 11
   };
 
-  inline BED() = default;
-  inline explicit BED(std::string_view record, Standard bed_standard = none);
+  BED() = default;
+  explicit BED(std::string_view record, Standard bed_standard = none);
 
   std::string chrom{};
   uint64_t chrom_start{};
@@ -90,11 +90,11 @@ struct BED {
   std::vector<uint64_t> block_sizes{};
   std::vector<uint64_t> block_starts{};
 
-  [[nodiscard]] inline bool operator==(const BED& other) const;
-  [[nodiscard]] inline bool operator<(const BED& other) const;
-  [[nodiscard]] inline uint8_t size() const;
-  [[nodiscard]] inline std::string to_string() const;
-  [[nodiscard]] inline bool empty() const;
+  [[nodiscard]] bool operator==(const BED& other) const;
+  [[nodiscard]] bool operator<(const BED& other) const;
+  [[nodiscard]] uint8_t size() const;
+  [[nodiscard]] std::string to_string() const;
+  [[nodiscard]] bool empty() const;
   template <typename H>
   inline friend H AbslHashValue(H h, const BED& c) {
     return H::combine(std::move(h), c.chrom, c.chrom_start, c.chrom_end);
@@ -102,23 +102,22 @@ struct BED {
 
  private:
   uint8_t _size;
-  inline static void parse_rgb_or_throw(const std::vector<std::string_view>& toks, uint8_t idx,
-                                        RGB& field);
-  inline static void parse_strand_or_throw(const std::vector<std::string_view>& toks, uint8_t idx,
-                                           char& field);
+  static void parse_rgb_or_throw(const std::vector<std::string_view>& toks, uint8_t idx,
+                                 RGB& field);
+  static void parse_strand_or_throw(const std::vector<std::string_view>& toks, uint8_t idx,
+                                    char& field);
 };
 
 class Parser {
  public:
   // For now we always skip the header
-  inline explicit Parser(std::string path_to_bed, BED::Standard bed_standard = BED::Standard::none);
-  inline explicit Parser(std::string_view path_to_bed,
-                         BED::Standard bed_standard = BED::Standard::none);
-  [[nodiscard]] inline std::vector<BED> parse_n(size_t nrecords, bool throw_on_duplicates = true);
-  [[nodiscard]] inline std::string validate(size_t nrecords = 100,  // NOLINT
-                                            bool throw_on_duplicates = true);
-  [[nodiscard]] inline std::vector<BED> parse_all(bool throw_on_duplicates = true);
-  inline void reset();
+  explicit Parser(std::string path_to_bed, BED::Standard bed_standard = BED::Standard::none);
+  explicit Parser(std::string_view path_to_bed, BED::Standard bed_standard = BED::Standard::none);
+  [[nodiscard]] std::vector<BED> parse_n(size_t nrecords, bool throw_on_duplicates = true);
+  [[nodiscard]] std::string validate(size_t nrecords = 100,  // NOLINT
+                                     bool throw_on_duplicates = true);
+  [[nodiscard]] std::vector<BED> parse_all(bool throw_on_duplicates = true);
+  void reset();
 
  private:
   std::string _path_to_bed;
@@ -129,5 +128,3 @@ class Parser {
   // uint8_t _ncols;
 };
 }  // namespace modle::bed
-
-#include "../../bed_impl.hpp"  // IWYU pragma: keep

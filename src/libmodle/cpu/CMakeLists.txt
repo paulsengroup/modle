@@ -1,4 +1,4 @@
-add_library(libmodle_cpu)
+add_library(libmodle_cpu STATIC)
 
 target_sources(
   libmodle_cpu
@@ -12,19 +12,22 @@ target_include_directories(libmodle_cpu PUBLIC include/)
 
 target_link_libraries(
   libmodle_cpu
-  PRIVATE project_warnings project_options
-  PUBLIC Modle::cmatrix
-         Modle::common
-         Modle::modle_internal
-         Modle::utils
-         $<$<BOOL:${ENABLE_XOSHIRO}>:XoshiroCpp::XoshiroCpp>
+  PRIVATE project_warnings
+          project_options
+          Modle::cmatrix
+          Modle::common
+          Modle::utils
+          $<$<BOOL:${ENABLE_XOSHIRO}>:XoshiroCpp::XoshiroCpp>
+          CONAN_PKG::cpp-sort
+  PUBLIC Modle::modle_internal
          CONAN_PKG::abseil
          CONAN_PKG::boost
          CONAN_PKG::concurrentqueue
-         CONAN_PKG::cpp-sort
          # Deal with std::filesystem quirkiness on older compilers
          $<$<AND:$<BOOL:${USING_LIBCXX}>,$<BOOL:${EXPLICIT_LINK_VS_FILESYSTEM_REQUIRED}>>:-lc++fs>
          $<$<AND:$<BOOL:${USING_STDLIBCXX}>,$<BOOL:${EXPLICIT_LINK_VS_FILESYSTEM_REQUIRED}>>:-lstdc++fs>)
+
+set_target_properties(libmodle_cpu PROPERTIES OUTPUT_NAME "modle_cpu")
 
 if(ENABLE_PCH)
   target_precompile_headers(

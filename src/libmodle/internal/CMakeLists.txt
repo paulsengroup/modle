@@ -1,4 +1,4 @@
-add_library(libmodle_internal)
+add_library(libmodle_internal STATIC)
 add_library(Modle::modle_internal ALIAS libmodle_internal)
 
 target_sources(
@@ -11,10 +11,11 @@ target_sources(
           ${CMAKE_CURRENT_SOURCE_DIR}/setup.cpp)
 target_link_libraries(
   libmodle_internal
-  PRIVATE project_options project_warnings
-  PUBLIC Modle::common
-         Modle::io
-         CONAN_PKG::abseil
-         CONAN_PKG::xxhash)
+  PRIVATE project_options
+          project_warnings
+          Modle::common
+          Modle::cmatrix
+  PUBLIC Modle::io CONAN_PKG::abseil CONAN_PKG::xxhash)
 
 target_include_directories(libmodle_internal PUBLIC include/)
+set_target_properties(libmodle_internal PROPERTIES OUTPUT_NAME "modle_internal")

@@ -1,6 +1,4 @@
-#pragma once
-
-// IWYU pragma: private, include "modle/bed.hpp"
+#include "modle/bed.hpp"
 
 #include <absl/container/flat_hash_map.h>  // for flat_hash_map, BitMask, oper...
 #include <absl/hash/hash.h>                // for Hash

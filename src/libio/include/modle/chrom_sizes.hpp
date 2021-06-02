@@ -12,12 +12,12 @@
 namespace modle::chrom_sizes {
 
 struct ChromSize {
-  inline ChromSize(std::string_view chrom_name, uint64_t chrom_start, uint64_t chrom_end);
-  inline ChromSize(std::string_view chrom_name, uint64_t chrom_length);
-  inline explicit ChromSize(std::vector<std::string>& toks);
+  ChromSize(std::string_view chrom_name, uint64_t chrom_start, uint64_t chrom_end);
+  ChromSize(std::string_view chrom_name, uint64_t chrom_length);
+  explicit ChromSize(std::vector<std::string>& toks);
 
-  [[nodiscard]] inline bool operator==(const ChromSize& other) const;
-  [[nodiscard]] inline bool operator<(const ChromSize& other) const;
+  [[nodiscard]] bool operator==(const ChromSize& other) const;
+  [[nodiscard]] bool operator<(const ChromSize& other) const;
 
   std::string name;
   uint64_t start;
@@ -32,9 +32,9 @@ struct ChromSize {
 
 class Parser {
  public:
-  inline explicit Parser(std::string path_to_chrom_sizes);
-  inline explicit Parser(std::string_view path_to_chrom_sizes);
-  [[nodiscard]] inline std::vector<ChromSize> parse_all(char sep = '\t');
+  explicit Parser(std::string path_to_chrom_sizes);
+  explicit Parser(std::string_view path_to_chrom_sizes);
+  [[nodiscard]] std::vector<ChromSize> parse_all(char sep = '\t');
 
  private:
   std::string _path;
@@ -43,5 +43,3 @@ class Parser {
   std::vector<std::string> _errors{};
 };
 }  // namespace modle::chrom_sizes
-
-#include "../../chrom_sizes_impl.hpp"  // IWYU pragma: keep

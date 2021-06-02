@@ -1,7 +1,5 @@
 #pragma once
 
-// IWYU pragma: private, include "modle/hdf5.hpp"
-
 #include <H5Cpp.h>                 // IWYU pragma: keep
 #include <absl/strings/str_cat.h>  // for StrCat
 #include <absl/strings/strip.h>    // for ConsumePrefix, StripPrefix
@@ -33,36 +31,6 @@ using attr_types = std::variant<uint8_t, uint16_t, uint32_t, uint64_t, int8_t, i
 
 inline attr_types getCpp_type(const H5::IntType &h5_type);
 inline attr_types getCpp_type(const H5::FloatType &h5_type);
-
-std::string construct_error_stack() {
-  std::string buff;
-  auto fp = std::unique_ptr<FILE, decltype(&fclose)>(std::tmpfile(), &fclose);
-  if (fp) {  // TODO: Make this portable
-    H5::Exception::printErrorStack(fp.get());
-    fseek(fp.get(), 0L, SEEK_END);
-    const auto bufsize = ftell(fp.get());
-    if (bufsize < 0) {
-      throw std::runtime_error(
-          "h5pp::construct_error_stack(): unable to determine buffer size required to store an "
-          "error message");
-    }
-    buff.resize(static_cast<size_t>(bufsize));
-    if (fseek(fp.get(), 0L, SEEK_SET) != 0) {
-      throw std::runtime_error(
-          "h5pp::construct_error_stack(): failed to seek to the beginning to a temporary file");
-    }
-    /* Read the entire file into memory. */
-    fread(buff.data(), sizeof(char), static_cast<size_t>(bufsize), fp.get());
-    if (ferror(fp.get()) != 0) {
-      throw std::runtime_error(
-          "h5pp::construct_error_stack(): failed to read error message from temporary file");
-    }
-  } else {
-    throw std::runtime_error("h5pp::construct_error_stack(): unable to create temporary file");
-  }
-  H5::Exception::clearErrorStack();
-  return buff;
-}
 
 template <typename S>
 hsize_t write_str(const S &str, const H5::DataSet &dataset, const H5::StrType &str_type,
@@ -258,73 +226,6 @@ hsize_t read_numbers(const H5::DataSet &dataset, CN &buff, hsize_t file_offset) 
   }
 }
 
-hsize_t read_str(const H5::DataSet &dataset, std::string &buff, hsize_t file_offset) {
-  try {
-    H5::Exception::dontPrint();
-
-    constexpr hsize_t DIMS{1};
-    constexpr hsize_t RANK{1};
-
-    auto type = dataset.getDataType();
-    auto file_space = dataset.getSpace();
-
-    auto mem_space{H5::DataSpace(RANK, &DIMS)};
-
-    file_space = dataset.getSpace();
-    file_space.selectHyperslab(H5S_SELECT_SET, &RANK, &file_offset);
-    dataset.read(buff, type, mem_space, file_space);
-
-    return file_offset + 1;
-
-  } catch (const H5::Exception &e) {
-    throw std::runtime_error(
-        fmt::format(FMT_STRING("Failed to read a string from dataset '{}' at offset {} using a "
-                               "buffer size of 1:\n{}"),
-                    dataset.getObjName(), file_offset, construct_error_stack()));
-  }
-}
-
-hsize_t read_strings(const H5::DataSet &dataset, std::vector<std::string> &buff,
-                     hsize_t file_offset) {
-  try {
-    H5::Exception::dontPrint();
-    constexpr hsize_t DIMS = 1;
-    constexpr hsize_t RANK = 1;
-    auto type = dataset.getDataType();
-    auto file_space = dataset.getSpace();
-
-    const auto n_strings = static_cast<hsize_t>(file_space.getSimpleExtentNpoints());
-    buff.resize(n_strings);
-
-    auto mem_space{H5::DataSpace(RANK, &DIMS)};
-
-    for (hsize_t i = 0U; i < n_strings; ++i) {
-      file_space = dataset.getSpace();
-      file_space.selectHyperslab(H5S_SELECT_SET, &RANK, &i);
-      dataset.read(buff[i], type, mem_space, file_space);
-    }
-
-    return n_strings;
-
-  } catch (const H5::Exception &e) {
-    throw std::runtime_error(
-        fmt::format(FMT_STRING("Failed to read strings from dataset '{}' at offset {} using a "
-                               "buffer size of {}:\n{}"),
-                    dataset.getObjName(), file_offset, buff.size(), construct_error_stack()));
-  }
-}
-
-std::string read_str(const H5::DataSet &dataset, hsize_t file_offset) {
-  std::string buff;
-  (void)read_str(dataset, buff, file_offset);
-  return buff;
-}
-std::vector<std::string> read_strings(const H5::DataSet &dataset, hsize_t file_offset) {
-  std::vector<std::string> buff;
-  (void)read_strings(dataset, buff, file_offset);
-  return buff;
-}
-
 template <typename T>
 void read_attribute(std::string_view path_to_file, std::string_view attr_name, T &buff,
                     std::string_view path) {
@@ -464,34 +365,6 @@ void read_attribute(const H5::DataSet &d, std::string_view attr_name, T &buff) {
   }
 }
 
-std::string read_attribute_str(H5::H5File &f, std::string_view attr_name, std::string_view path) {
-  std::string buff;
-  read_attribute(f, attr_name, buff, path);
-  return buff;
-}
-
-std::string read_attribute_str(std::string_view path_to_file, std::string_view attr_name,
-                               std::string_view path) {
-  std::string buff;
-  H5::H5File f({path_to_file.data(), path_to_file.size()}, H5F_ACC_RDONLY);
-  read_attribute(f, attr_name, buff, path);
-  return buff;
-}
-
-int64_t read_attribute_int(H5::H5File &f, std::string_view attr_name, std::string_view path) {
-  int64_t buff;  // NOLINT
-  read_attribute(f, attr_name, buff, path);
-  return buff;
-}
-
-int64_t read_attribute_int(std::string_view path_to_file, std::string_view attr_name,
-                           std::string_view path) {
-  int64_t buff;  // NOLINT
-  H5::H5File f({path_to_file.data(), path_to_file.size()}, H5F_ACC_RDONLY);
-  read_attribute(f, attr_name, buff, path);
-  return buff;
-}
-
 template <typename T>
 inline void write_or_create_attribute(H5::H5File &f, std::string_view attr_name, T &buff,
                                       std::string_view path) {
@@ -519,59 +392,6 @@ inline void write_or_create_attribute(H5::H5File &f, std::string_view attr_name,
       attr.write(attr.getDataType(), &buff);
     }
   }
-}
-
-bool has_attribute(const H5::Group &g, std::string_view attr_name) {
-  absl::ConsumePrefix(&attr_name, "/");
-  return g.attrExists(std::string{attr_name});
-}
-
-bool has_attribute(const H5::DataSet &d, std::string_view attr_name) {
-  absl::ConsumePrefix(&attr_name, "/");
-  return d.attrExists(std::string{attr_name});
-}
-
-bool has_attribute(H5::H5File &f, std::string_view attr_name, std::string_view path) {
-  auto g = f.openGroup(std::string{path});
-
-  return has_attribute(g, attr_name);
-}
-
-bool has_group(H5::H5File &f, std::string_view name, std::string_view root_path) {
-  H5O_info2_t info;
-  const auto path =
-      absl::StrCat(absl::StripSuffix(root_path, "/"), "/", absl::StripPrefix(name, "/"));
-  assert(!path.empty());
-  size_t pos = 0;
-  do {
-    pos = path.find_first_of('/', pos + 1);
-    if (!f.nameExists(std::string{path.substr(0, pos)})) {
-      return false;
-    }
-  } while (pos != std::string::npos);
-  f.getObjinfo(path, info);
-  if (info.type == H5O_TYPE_GROUP) {
-    return true;
-  }
-  throw std::runtime_error(
-      fmt::format(FMT_STRING("'{}' exists but is not a group"), absl::StrCat(root_path, name)));
-}
-
-bool has_dataset(H5::H5File &f, std::string_view name, std::string_view root_path) {
-  H5O_info2_t info;
-  const auto path =
-      absl::StrCat(absl::StripSuffix(root_path, "/"), "/", absl::StripPrefix(name, "/"));
-  assert(!path.empty());
-  size_t pos = 0;
-  do {
-    pos = path.find_first_of('/', pos + 1);
-    if (!f.nameExists(std::string{path.substr(0, pos)})) {
-      return false;
-    }
-  } while (pos != std::string::npos);
-  f.getObjinfo(path, info);
-
-  return info.type == H5O_TYPE_DATASET;
 }
 
 template <typename T>
@@ -644,52 +464,16 @@ bool check_dataset_type(const H5::DataSet &dataset, T type, bool throw_on_failur
   return true;
 }
 
-H5::H5File open_file_for_reading(std::string_view path_to_file) {
-  try {
-    H5::Exception::dontPrint();
-    H5::H5File f(std::string{path_to_file.data(), path_to_file.size()}, H5F_ACC_RDONLY);
-    return f;
-  } catch (const H5::Exception &e) {
-    throw std::runtime_error(fmt::format(FMT_STRING("Failed to open file {} for reading:\n{}"),
-                                         path_to_file, construct_error_stack()));
-  }
-}
-
 // Internal functions
 
-template <typename DataType>
-H5::PredType getH5_type() {
-  // Taken from github.com/DavidAce/h5pp:
-  // https://github.com/DavidAce/h5pp/blob/master/h5pp/include/h5pp/details/h5ppUtils.h
-  // clang-format off
-  using DecayType = typename std::decay_t<DataType>;
-  if constexpr (std::is_same_v<DecayType, short>) return H5::PredType::NATIVE_SHORT;               // NOLINT
-  if constexpr (std::is_same_v<DecayType, int>) return H5::PredType::NATIVE_INT;                   // NOLINT
-  if constexpr (std::is_same_v<DecayType, long>) return H5::PredType::NATIVE_LONG;                 // NOLINT
-  if constexpr (std::is_same_v<DecayType, long long>) return H5::PredType::NATIVE_LLONG;           // NOLINT
-  if constexpr (std::is_same_v<DecayType, unsigned short>) return H5::PredType::NATIVE_USHORT;     // NOLINT
-  if constexpr (std::is_same_v<DecayType, unsigned int>) return H5::PredType::NATIVE_UINT;         // NOLINT
-  if constexpr (std::is_same_v<DecayType, unsigned long>) return H5::PredType::NATIVE_ULONG;       // NOLINT
-  if constexpr (std::is_same_v<DecayType, unsigned long long>) return H5::PredType::NATIVE_ULLONG; // NOLINT
-  if constexpr (std::is_same_v<DecayType, double>) return H5::PredType::NATIVE_DOUBLE;             // NOLINT
-  if constexpr (std::is_same_v<DecayType, long double>) return H5::PredType::NATIVE_LDOUBLE;       // NOLINT
-  if constexpr (std::is_same_v<DecayType, float>) return H5::PredType::NATIVE_FLOAT;               // NOLINT
-  if constexpr (std::is_same_v<DecayType, bool>) return H5::PredType::NATIVE_UINT8;                // NOLINT
-  if constexpr (std::is_same_v<DecayType, std::string>) return H5::PredType::C_S1;                 // NOLINT
-  if constexpr (std::is_same_v<DecayType, char>) return H5::PredType::C_S1;                        // NOLINT
-  // clang-format on
-
-  throw std::logic_error("getH5_type(): Unable to map C++ type to a H5T");
-}
-
-H5::StrType METADATA_STR_TYPE() {
+[[nodiscard]] inline H5::StrType METADATA_STR_TYPE() {
   H5::StrType t(H5::PredType::C_S1, H5T_VARIABLE);
   t.setStrpad(H5T_STR_NULLTERM);
   t.setCset(H5T_CSET_UTF8);
   return t;
 }
 
-attr_types getCpp_type(const H5::IntType &h5_type) {
+[[nodiscard]] attr_types getCpp_type(const H5::IntType &h5_type) {
   DISABLE_WARNING_PUSH
   DISABLE_WARNING_USELESS_CAST
   attr_types type;
@@ -736,7 +520,7 @@ attr_types getCpp_type(const H5::IntType &h5_type) {
   utils::throw_with_trace(std::logic_error("Unreachable code"));
 }
 
-attr_types getCpp_type(const H5::FloatType &h5_type) {
+[[nodiscard]] attr_types getCpp_type(const H5::FloatType &h5_type) {
   attr_types type;
   const auto size = h5_type.getSize();
   switch (size) {
@@ -753,6 +537,31 @@ attr_types getCpp_type(const H5::FloatType &h5_type) {
       utils::throw_with_trace(std::logic_error("Unreachable code"));
   }
   utils::throw_with_trace(std::logic_error("Unreachable code"));
+}
+
+template <typename DataType>
+inline H5::PredType getH5_type() {
+  // Taken from github.com/DavidAce/h5pp:
+  // https://github.com/DavidAce/h5pp/blob/master/h5pp/include/h5pp/details/h5ppUtils.h
+  // clang-format off
+  using DecayType = typename std::decay_t<DataType>;
+  if constexpr (std::is_same_v<DecayType, short>) return H5::PredType::NATIVE_SHORT;               // NOLINT
+  if constexpr (std::is_same_v<DecayType, int>) return H5::PredType::NATIVE_INT;                   // NOLINT
+  if constexpr (std::is_same_v<DecayType, long>) return H5::PredType::NATIVE_LONG;                 // NOLINT
+  if constexpr (std::is_same_v<DecayType, long long>) return H5::PredType::NATIVE_LLONG;           // NOLINT
+  if constexpr (std::is_same_v<DecayType, unsigned short>) return H5::PredType::NATIVE_USHORT;     // NOLINT
+  if constexpr (std::is_same_v<DecayType, unsigned int>) return H5::PredType::NATIVE_UINT;         // NOLINT
+  if constexpr (std::is_same_v<DecayType, unsigned long>) return H5::PredType::NATIVE_ULONG;       // NOLINT
+  if constexpr (std::is_same_v<DecayType, unsigned long long>) return H5::PredType::NATIVE_ULLONG; // NOLINT
+  if constexpr (std::is_same_v<DecayType, double>) return H5::PredType::NATIVE_DOUBLE;             // NOLINT
+  if constexpr (std::is_same_v<DecayType, long double>) return H5::PredType::NATIVE_LDOUBLE;       // NOLINT
+  if constexpr (std::is_same_v<DecayType, float>) return H5::PredType::NATIVE_FLOAT;               // NOLINT
+  if constexpr (std::is_same_v<DecayType, bool>) return H5::PredType::NATIVE_UINT8;                // NOLINT
+  if constexpr (std::is_same_v<DecayType, std::string>) return H5::PredType::C_S1;                 // NOLINT
+  if constexpr (std::is_same_v<DecayType, char>) return H5::PredType::C_S1;                        // NOLINT
+  // clang-format on
+
+  throw std::logic_error("getH5_type(): Unable to map C++ type to a H5T");
 }
 
 }  // namespace modle::hdf5

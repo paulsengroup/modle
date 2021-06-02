@@ -1,6 +1,4 @@
-#pragma once
-
-// IWYU pragma: private, include "modle/chrom_sizes.hpp"
+#include "modle/chrom_sizes.hpp"
 
 #include <absl/container/flat_hash_set.h>  // for flat_hash_set, BitMask
 #include <absl/strings/str_join.h>         // for StrJoin

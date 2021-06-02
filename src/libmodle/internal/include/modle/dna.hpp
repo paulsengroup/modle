@@ -13,13 +13,15 @@
 
 #include "modle/bed.hpp"     // for BED
 #include "modle/common.hpp"  // for bp_t, contacts_t
-#include "modle/contacts.hpp"
-#include "modle/utils.hpp"  // for ndebug_defined
+#include "modle/utils.hpp"   // for ndebug_defined
 
 namespace modle {
 namespace chrom_sizes {
 struct ChromSize;
 }
+
+template <typename I>
+class ContactMatrix;
 
 class Chromosome {
  public:

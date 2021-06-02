@@ -1,37 +1,41 @@
-add_library(libio INTERFACE)
+add_library(libio STATIC)
 add_library(Modle::io ALIAS libio)
 target_sources(
   libio
-  INTERFACE ${CMAKE_CURRENT_SOURCE_DIR}/bed_impl.hpp
-            ${CMAKE_CURRENT_SOURCE_DIR}/bigwig_impl.hpp
-            ${CMAKE_CURRENT_SOURCE_DIR}/chrom_sizes_impl.hpp
-            ${CMAKE_CURRENT_SOURCE_DIR}/cooler_impl.hpp)
-add_dependencies(libio libBigWig_lib)
+  PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/bed.cpp
+          ${CMAKE_CURRENT_SOURCE_DIR}/bigwig.cpp
+          ${CMAKE_CURRENT_SOURCE_DIR}/bigwig_impl.hpp
+          ${CMAKE_CURRENT_SOURCE_DIR}/chrom_sizes.cpp
+          ${CMAKE_CURRENT_SOURCE_DIR}/cooler.cpp
+          ${CMAKE_CURRENT_SOURCE_DIR}/cooler_impl.hpp
+          ${CMAKE_CURRENT_SOURCE_DIR}/hdf5.cpp
+          ${CMAKE_CURRENT_SOURCE_DIR}/hdf5_impl.hpp)
 
-target_include_directories(libio INTERFACE include/)
+add_dependencies(libio libBigWig)
+target_include_directories(libio PUBLIC include/)
 
 target_link_libraries(
   libio
-  INTERFACE project_warnings
-            project_options
-            Modle::cmatrix
-            libBigWig::libBigWig
-            CONAN_PKG::abseil
-            CONAN_PKG::boost
-            CONAN_PKG::fmt
-            CONAN_PKG::hdf5
-            CONAN_PKG::readerwriterqueue
-            CONAN_PKG::zlib
-            # Deal with std::filesystem quirkiness on older compilers
-            $<$<AND:$<BOOL:${USING_LIBCXX}>,$<BOOL:${EXPLICIT_LINK_VS_FILESYSTEM_REQUIRED}>>:-lc++fs>
-            $<$<AND:$<BOOL:${USING_STDLIBCXX}>,$<BOOL:${EXPLICIT_LINK_VS_FILESYSTEM_REQUIRED}>>:-lstdc++fs>)
+  PRIVATE project_warnings project_options
+  PUBLIC libBigWig::libBigWig
+         Modle::cmatrix
+         CONAN_PKG::abseil
+         CONAN_PKG::boost
+         CONAN_PKG::fmt
+         CONAN_PKG::hdf5
+         CONAN_PKG::readerwriterqueue
+         CONAN_PKG::zlib
+         # Deal with std::filesystem quirkiness on older compilers
+         $<$<AND:$<BOOL:${USING_LIBCXX}>,$<BOOL:${EXPLICIT_LINK_VS_FILESYSTEM_REQUIRED}>>:-lc++fs>
+         $<$<AND:$<BOOL:${USING_STDLIBCXX}>,$<BOOL:${EXPLICIT_LINK_VS_FILESYSTEM_REQUIRED}>>:-lstdc++fs>)
 
-target_compile_definitions(libio INTERFACE -DNOCURL)
+target_compile_definitions(libio PRIVATE -DNOCURL)
+set_target_properties(libio PROPERTIES OUTPUT_NAME "io")
 
 if(ENABLE_PCH)
   target_precompile_headers(
     libio
-    INTERFACE
+    PUBLIC
     <algorithm>
     <cassert>
     <cstddef>
