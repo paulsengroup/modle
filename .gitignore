@@ -15,3 +15,5 @@ external/
 gmon.out
 scratch/
 scripts/fix_remote_devel.sh
+*.ipynb*
+perf.*

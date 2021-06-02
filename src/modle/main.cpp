@@ -35,7 +35,9 @@ int main(int argc, char** argv) noexcept {
     config.print();
 
     const auto t0 = absl::Now();
+
     modle::Simulation{config}.run();
+
     fmt::print(stderr, FMT_STRING("Simulation terminated without errors in {}!\n\nBye.\n"),
                absl::FormatDuration(absl::Now() - t0));
   } catch (const CLI::ParseError& e) {

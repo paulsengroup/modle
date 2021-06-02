@@ -25,6 +25,8 @@ class ContactMatrix {
   inline ContactMatrix(ContactMatrix<I>&& other) noexcept = default;
   inline ContactMatrix(const ContactMatrix<I>& other);
   inline ContactMatrix(size_t nrows, size_t ncols, bool fill_with_random_numbers = false);
+  inline ContactMatrix(absl::Span<const I> contacts, size_t nrows, size_t ncols,
+                       size_t tot_contacts = 0, size_t updates_missed = 0);
   inline ~ContactMatrix() = default;
 
   // Operators
@@ -76,6 +78,7 @@ class ContactMatrix {
   inline void resize(size_t nrows, size_t ncols);
   [[nodiscard]] inline bool empty() const;
   [[nodiscard]] inline absl::Span<const I> get_raw_count_vector() const;
+  [[nodiscard]] inline std::vector<I>& get_raw_count_vector();
   inline void compute_row_wise_contact_histogram(std::vector<uint64_t>& buff) const;
   [[nodiscard]] inline std::vector<uint64_t> compute_row_wise_contact_histogram() const;
   inline void deplete_contacts(double depletion_multiplier = 1.0);

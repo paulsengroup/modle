@@ -1,5 +1,3 @@
-#pragma once
-
 #include <absl/types/span.h>  // for Span
 
 #include <boost/range/adaptor/reversed.hpp>  // for reversed_range, reverse
@@ -8,7 +6,8 @@
 
 #include "modle/common.hpp"             // for bp_t, MODLE_UNLIKELY
 #include "modle/extrusion_factors.hpp"  // for ExtrusionUnit, Lef
-#include "modle/utils.hpp"              // for ndebug_defined
+#include "modle/simulation.hpp"
+#include "modle/utils.hpp"  // for ndebug_defined
 
 namespace modle {
 
@@ -45,7 +44,7 @@ void Simulation::correct_moves_for_lef_bar_collisions(
   }
 }
 
-inline void Simulation::correct_moves_for_primary_lef_lef_collisions(
+void Simulation::correct_moves_for_primary_lef_lef_collisions(
     const absl::Span<const Lef> lefs, const absl::Span<const ExtrusionBarrier> barriers,
     const absl::Span<const size_t> rev_ranks, const absl::Span<const size_t> fwd_ranks,
     const absl::Span<bp_t> rev_moves, const absl::Span<bp_t> fwd_moves,
@@ -132,8 +131,8 @@ inline void Simulation::correct_moves_for_primary_lef_lef_collisions(
       }
   }
 }
-
-inline void Simulation::correct_moves_for_secondary_lef_lef_collisions(
+/*
+void Simulation::correct_moves_for_secondary_lef_lef_collisions(
     const absl::Span<const Lef> lefs, const size_t nbarriers, absl::Span<const size_t> rev_ranks,
     absl::Span<const size_t> fwd_ranks, const absl::Span<bp_t> rev_moves,
     const absl::Span<bp_t> fwd_moves, const absl::Span<const collision_t> rev_collisions,
@@ -190,5 +189,5 @@ inline void Simulation::correct_moves_for_secondary_lef_lef_collisions(
       }
   }
 }
-
+*/
 }  // namespace modle

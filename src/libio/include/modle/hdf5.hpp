@@ -15,7 +15,7 @@
 namespace modle::hdf5 {
 
 template <typename DataType>
-H5::PredType getH5_type();
+inline H5::PredType getH5_type();
 
 [[nodiscard]] inline H5::StrType METADATA_STR_TYPE();
 

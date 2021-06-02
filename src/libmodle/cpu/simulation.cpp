@@ -1,6 +1,6 @@
-#pragma once
-
 // IWYU pragma: private, include "modle/simulation.hpp"
+
+#include "modle/simulation.hpp"
 
 #include <absl/container/btree_set.h>          // for btree_iterator
 #include <absl/types/span.h>                   // for Span, MakeSpan, MakeConstSpan
@@ -49,6 +49,7 @@
 #include "modle/dna.hpp"                         // for Chromosome
 #include "modle/extrusion_barriers.hpp"          // for update_states, ExtrusionBarrier
 #include "modle/extrusion_factors.hpp"           // for Lef, ExtrusionUnit
+#include "modle/setup.hpp"                       // for Genome
 #include "modle/suppress_compiler_warnings.hpp"  // for DISABLE_WARNING_POP, DISABLE_WARNING_...
 #include "modle/utils.hpp"                       // for ndebug_defined
 
@@ -62,23 +63,14 @@ namespace modle {
 
 Simulation::Simulation(const Config& c, bool import_chroms)
     : Config(c),
-      _chromosomes(import_chroms
-                       ? instantiate_genome(path_to_chrom_sizes, path_to_extr_barriers,
-                                            path_to_chrom_subranges, write_contacts_for_ko_chroms)
-                       : Genome{}) {}
+      _config(&c),
+      _genome(import_chroms ? Genome(path_to_chrom_sizes, path_to_extr_barriers,
+                                     path_to_chrom_subranges, write_contacts_for_ko_chroms)
+                            : Genome{}) {}
 
-size_t Simulation::size() const {
-  return std::accumulate(
-      this->_chromosomes.begin(), this->_chromosomes.end(), 0UL,
-      [](auto accumulator, const auto& chrom) { return accumulator + chrom.size(); });
-}
+size_t Simulation::size() const { return this->_genome.size(); }
 
-size_t Simulation::simulated_size() const {
-  return std::accumulate(this->_chromosomes.begin(), this->_chromosomes.end(), 0UL,
-                         [](auto accumulator, const auto& chrom) {
-                           return accumulator + (chrom.end_pos() - chrom.start_pos());
-                         });
-}
+size_t Simulation::simulated_size() const { return this->_genome.simulated_size(); }
 
 void Simulation::write_contacts_to_disk(std::deque<std::pair<Chromosome*, size_t>>& progress_queue,
                                         std::mutex& progress_queue_mutex,
@@ -87,7 +79,7 @@ void Simulation::write_contacts_to_disk(std::deque<std::pair<Chromosome*, size_t
   Chromosome* chrom_to_be_written = nullptr;
   const auto max_str_length =
       std::max_element(  // Find chrom with the longest name
-          this->_chromosomes.begin(), this->_chromosomes.end(),
+          this->_genome.begin(), this->_genome.end(),
           [](const auto& c1, const auto& c2) { return c1.name().size() < c2.name().size(); })
           ->name()
           .size();
@@ -163,8 +155,7 @@ void Simulation::simulate_extrusion_kernel(Simulation::State& s) const {
                      // use the current epoch when generating error messages
   try {
     // Seed is computed based on chrom. name, size and cellid
-    s.seed = this->seed + std::hash<std::string_view>{}(s.chrom->name()) +
-             std::hash<size_t>{}(s.chrom->size()) + std::hash<size_t>{}(s.cell_id);
+    s.seed = s.chrom->hash(this->seed, s.cell_id);
     s.rand_eng = modle::PRNG(s.seed);
 
     // Generate the epoch at which each LEF is supposed to be initially loaded
@@ -355,57 +346,6 @@ void Simulation::simulate_extrusion_kernel(Simulation::State& s) const {
     throw std::runtime_error(fmt::format(
         FMT_STRING("Caught an exception while simulating epoch #{} in cell #{} of {}:\n{}"), epoch,
         s.cell_id, s.chrom->name(), err.what()));
-  }
-}
-
-template <typename MaskT>
-void Simulation::bind_lefs(const Chromosome* chrom, const absl::Span<Lef> lefs,
-                           const absl::Span<size_t> rev_lef_ranks,
-                           const absl::Span<size_t> fwd_lef_ranks, MaskT& mask,
-                           modle::PRNG_t& rand_eng,
-                           bool first_epoch) noexcept(utils::ndebug_defined() && false) {
-  static_assert(
-      std::is_same_v<boost::dynamic_bitset<>, MaskT> ||
-          std::is_integral_v<
-              std::decay_t<decltype(std::declval<MaskT&>().operator[](std::declval<size_t>()))>>,
-      "mask should be a vector of integral numbers or a boost::dynamic_bitset.");
-  {
-    assert(lefs.size() <= mask.size() || mask.empty());             // NOLINT
-    assert(chrom);                                                  // NOLINT
-    assert(std::all_of(rev_lef_ranks.begin(), rev_lef_ranks.end(),  // NOLINT
-                       [&](const auto i) { return i < lefs.size(); }));
-    assert(std::all_of(fwd_lef_ranks.begin(), fwd_lef_ranks.end(),  // NOLINT
-                       [&](const auto i) { return i < lefs.size(); }));
-  }
-
-  chrom_pos_generator_t pos_generator{chrom->start_pos(), chrom->end_pos() - 1};
-  for (auto i = 0UL; i < lefs.size(); ++i) {
-    if (mask.empty() || mask[i]) {  // Bind all LEFs when mask is empty
-      lefs[i].bind_at_pos(pos_generator(rand_eng));
-    }
-  }
-
-  {
-    assert(std::all_of(lefs.begin(), lefs.end(), [&](const auto& lef) {  // NOLINT
-      return lef.rev_unit >= chrom->start_pos() && lef.rev_unit < chrom->end_pos();
-    }));
-    assert(std::all_of(lefs.begin(), lefs.end(), [&](const auto& lef) {  // NOLINT
-      return lef.fwd_unit >= chrom->start_pos() && lef.fwd_unit < chrom->end_pos();
-    }));
-  }
-
-  Simulation::rank_lefs(lefs, rev_lef_ranks, fwd_lef_ranks, !first_epoch);
-  {
-    assert(std::all_of(lefs.begin(), lefs.end(), [&](const auto& lef) {  // NOLINT
-      return lef.rev_unit >= chrom->start_pos() && lef.rev_unit < chrom->end_pos();
-    }));
-    assert(std::all_of(lefs.begin(), lefs.end(), [&](const auto& lef) {  // NOLINT
-      return lef.fwd_unit >= chrom->start_pos() && lef.fwd_unit < chrom->end_pos();
-    }));
-    assert(std::all_of(rev_lef_ranks.begin(), rev_lef_ranks.end(),  // NOLINT
-                       [&](const auto i) { return i < lefs.size(); }));
-    assert(std::all_of(fwd_lef_ranks.begin(), fwd_lef_ranks.end(),  // NOLINT
-                       [&](const auto i) { return i < lefs.size(); }));
   }
 }
 
@@ -651,43 +591,6 @@ void Simulation::extrude(const Chromosome* chrom, const absl::Span<Lef> lefs,
   }
 }
 
-template <typename MaskT>
-std::pair<size_t, size_t> Simulation::process_collisions(
-    const Chromosome* chrom, const absl::Span<const Lef> lefs,
-    const absl::Span<const ExtrusionBarrier> barriers, const MaskT& barrier_mask,
-    const absl::Span<const size_t> rev_lef_ranks, const absl::Span<const size_t> fwd_lef_ranks,
-    const absl::Span<bp_t> rev_moves, const absl::Span<bp_t> fwd_moves,
-    const absl::Span<collision_t> rev_collisions, const absl::Span<collision_t> fwd_collisions,
-    PRNG_t& rand_eng) const noexcept(utils::ndebug_defined()) {
-  const auto& [nrev_units_at_5prime, nfwd_units_at_3prime] =
-      Simulation::detect_collisions_at_chrom_boundaries(chrom, lefs, rev_lef_ranks, fwd_lef_ranks,
-                                                        rev_moves, fwd_moves, rev_collisions,
-                                                        fwd_collisions);
-
-  this->detect_lef_bar_collisions(lefs, rev_lef_ranks, fwd_lef_ranks, rev_moves, fwd_moves,
-                                  barriers, barrier_mask, rev_collisions, fwd_collisions, rand_eng,
-                                  nrev_units_at_5prime, nfwd_units_at_3prime);
-
-  this->detect_primary_lef_lef_collisions(lefs, barriers, rev_lef_ranks, fwd_lef_ranks, rev_moves,
-                                          fwd_moves, rev_collisions, fwd_collisions, rand_eng,
-                                          nrev_units_at_5prime, nfwd_units_at_3prime);
-  this->correct_moves_for_lef_bar_collisions(lefs, barriers, rev_moves, fwd_moves, rev_collisions,
-                                             fwd_collisions);
-
-  this->correct_moves_for_primary_lef_lef_collisions(lefs, barriers, rev_lef_ranks, fwd_lef_ranks,
-                                                     rev_moves, fwd_moves, rev_collisions,
-                                                     fwd_collisions);
-  this->detect_secondary_lef_lef_collisions(
-      chrom, lefs, barriers.size(), rev_lef_ranks, fwd_lef_ranks, rev_moves, fwd_moves,
-      rev_collisions, fwd_collisions, rand_eng, nrev_units_at_5prime, nfwd_units_at_3prime);
-
-  this->correct_moves_for_secondary_lef_lef_collisions(lefs, barriers.size(), rev_lef_ranks,
-                                                       fwd_lef_ranks, rev_moves, fwd_moves,
-                                                       rev_collisions, fwd_collisions);
-
-  return std::make_pair(nrev_units_at_5prime, nfwd_units_at_3prime);
-}
-
 std::pair<bp_t, bp_t> Simulation::compute_lef_lef_collision_pos(const ExtrusionUnit& rev_unit,
                                                                 const ExtrusionUnit& fwd_unit,
                                                                 bp_t rev_move, bp_t fwd_move) {
@@ -728,7 +631,7 @@ size_t Simulation::register_contacts(Chromosome* chrom, const absl::Span<const L
     assert(i < lefs.size());  // NOLINT
     const auto& lef = lefs[i];
     if (lef.is_bound() && lef.rev_unit.pos() > chrom->start_pos() &&
-        lef.rev_unit.pos() < chrom->end_pos() && lef.fwd_unit.pos() > chrom->start_pos() &&
+        lef.rev_unit.pos() < chrom->end_pos() - 1 && lef.fwd_unit.pos() > chrom->start_pos() &&
         lef.fwd_unit.pos() < chrom->end_pos() - 1)
       MODLE_LIKELY {
         chrom->increment_contacts(lef.rev_unit.pos(), lef.fwd_unit.pos(), this->bin_size);
@@ -736,18 +639,6 @@ size_t Simulation::register_contacts(Chromosome* chrom, const absl::Span<const L
       }
   }
   return new_contacts;
-}
-
-template <typename MaskT>
-void Simulation::select_lefs_to_bind(const absl::Span<const Lef> lefs,
-                                     MaskT& mask) noexcept(utils::ndebug_defined()) {
-  static_assert(
-      std::is_integral_v<
-          std::decay_t<decltype(std::declval<MaskT&>().operator[](std::declval<size_t>()))>>,
-      "mask should be a vector of integral numbers or a boost::dynamic_bitset.");
-  assert(lefs.size() == mask.size());  // NOLINT
-  std::transform(lefs.begin(), lefs.end(), mask.begin(),
-                 [](const auto& lef) { return !lef.is_bound(); });
 }
 
 void Simulation::generate_lef_unloader_affinities(
@@ -800,20 +691,6 @@ boost::asio::thread_pool Simulation::instantiate_thread_pool() const {
   return boost::asio::thread_pool(this->nthreads);
 }
 
-template <typename I>
-boost::asio::thread_pool Simulation::instantiate_thread_pool(I nthreads, bool clamp_nthreads) {
-  static_assert(std::is_integral_v<I>, "nthreads should have an integral type.");
-  DISABLE_WARNING_PUSH
-  DISABLE_WARNING_USELESS_CAST
-  if (clamp_nthreads) {
-    return boost::asio::thread_pool(
-        std::min(std::thread::hardware_concurrency(), static_cast<unsigned int>(nthreads)));
-  }
-  assert(nthreads > 0);
-  return boost::asio::thread_pool(static_cast<unsigned int>(nthreads));
-  DISABLE_WARNING_POP
-}
-
 Simulation::State& Simulation::State::operator=(const Task& task) {
   this->id = task.id;
   this->chrom = task.chrom;
@@ -829,19 +706,6 @@ void Simulation::State::resize(size_t size) {
   if (size == std::numeric_limits<size_t>::max()) {
     size = this->nlefs;
   }
-#ifndef NDEBUG
-  if (const auto size_ = static_cast<long int>(size); lef_buff.size() > size) {
-    std::for_each(lef_buff.begin() + size_, lef_buff.end(), [](auto& lef) { lef.release(); });
-    std::fill(lef_unloader_affinity.begin() + size_, lef_unloader_affinity.end(), std::nan(""));
-    std::fill(rank_buff1.begin() + size_, rank_buff1.end(), std::numeric_limits<size_t>::max());
-    std::fill(rank_buff2.begin() + size_, rank_buff2.end(), std::numeric_limits<size_t>::max());
-    std::fill(moves_buff1.begin() + size_, moves_buff1.end(), std::numeric_limits<bp_t>::max());
-    std::fill(moves_buff2.begin() + size_, moves_buff2.end(), std::numeric_limits<bp_t>::max());
-    std::fill(idx_buff1.begin() + size_, idx_buff1.end(), std::numeric_limits<size_t>::max());
-    std::fill(idx_buff2.begin() + size_, idx_buff2.end(), std::numeric_limits<size_t>::max());
-    std::fill(epoch_buff.begin() + size_, epoch_buff.end(), std::numeric_limits<size_t>::max());
-  }
-#endif
   lef_buff.resize(size);
   lef_unloader_affinity.resize(size);
   rank_buff1.resize(size);
@@ -878,6 +742,58 @@ std::string Simulation::State::to_string() const noexcept {
                                 " - seed: {}\n"),
                      id, chrom->name(), chrom->start_pos(), chrom->end_pos(), cell_id,
                      n_target_epochs, n_target_contacts, nlefs, barriers.size(), seed);
+}
+
+std::pair<size_t, size_t> Simulation::process_collisions(
+    const Chromosome* chrom, const absl::Span<const Lef> lefs,
+    const absl::Span<const ExtrusionBarrier> barriers, const boost::dynamic_bitset<>& barrier_mask,
+    const absl::Span<const size_t> rev_lef_ranks, const absl::Span<const size_t> fwd_lef_ranks,
+    const absl::Span<bp_t> rev_moves, const absl::Span<bp_t> fwd_moves,
+    const absl::Span<collision_t> rev_collisions, const absl::Span<collision_t> fwd_collisions,
+    PRNG_t& rand_eng) const noexcept(utils::ndebug_defined()) {
+  const auto& [nrev_units_at_5prime, nfwd_units_at_3prime] =
+      Simulation::detect_collisions_at_chrom_boundaries(chrom, lefs, rev_lef_ranks, fwd_lef_ranks,
+                                                        rev_moves, fwd_moves, rev_collisions,
+                                                        fwd_collisions);
+
+  this->detect_lef_bar_collisions(lefs, rev_lef_ranks, fwd_lef_ranks, rev_moves, fwd_moves,
+                                  barriers, barrier_mask, rev_collisions, fwd_collisions, rand_eng,
+                                  nrev_units_at_5prime, nfwd_units_at_3prime);
+
+  this->detect_primary_lef_lef_collisions(lefs, barriers, rev_lef_ranks, fwd_lef_ranks, rev_moves,
+                                          fwd_moves, rev_collisions, fwd_collisions, rand_eng,
+                                          nrev_units_at_5prime, nfwd_units_at_3prime);
+  modle::Simulation::correct_moves_for_lef_bar_collisions(lefs, barriers, rev_moves, fwd_moves,
+                                                          rev_collisions, fwd_collisions);
+
+  modle::Simulation::correct_moves_for_primary_lef_lef_collisions(
+      lefs, barriers, rev_lef_ranks, fwd_lef_ranks, rev_moves, fwd_moves, rev_collisions,
+      fwd_collisions);
+  this->process_secondary_lef_lef_collisions(
+      chrom, lefs, barriers.size(), rev_lef_ranks, fwd_lef_ranks, rev_moves, fwd_moves,
+      rev_collisions, fwd_collisions, rand_eng, nrev_units_at_5prime, nfwd_units_at_3prime);
+  /*
+    modle::Simulation::correct_moves_for_secondary_lef_lef_collisions(
+        lefs, barriers.size(), rev_lef_ranks, fwd_lef_ranks, rev_moves, fwd_moves, rev_collisions,
+        fwd_collisions);
+  */
+  return std::make_pair(nrev_units_at_5prime, nfwd_units_at_3prime);
+}
+
+void Simulation::select_lefs_to_bind(
+    const absl::Span<const Lef> lefs,
+    boost::dynamic_bitset<>& mask) noexcept(utils::ndebug_defined()) {
+  assert(lefs.size() == mask.size());  // NOLINT
+  for (auto i = 0UL; i < lefs.size(); ++i) {
+    mask[i] = !lefs[i].is_bound();
+  }
+}
+
+void Simulation::select_lefs_to_bind(const absl::Span<const Lef> lefs,
+                                     absl::Span<size_t> mask) noexcept(utils::ndebug_defined()) {
+  assert(lefs.size() == mask.size());  // NOLINT
+  std::transform(lefs.begin(), lefs.end(), mask.begin(),
+                 [](const auto& lef) { return !lef.is_bound(); });
 }
 
 }  // namespace modle

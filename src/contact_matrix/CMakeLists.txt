@@ -1,14 +1,19 @@
 add_library(cmatrix INTERFACE)
 add_library(Modle::cmatrix ALIAS cmatrix)
+
+target_sources(cmatrix INTERFACE ${CMAKE_CURRENT_SOURCE_DIR}/contacts_impl.hpp)
+
 target_include_directories(cmatrix INTERFACE include/)
 
 target_link_libraries(
   cmatrix
   INTERFACE project_warnings
             project_options
+            Modle::common
             Modle::utils
             $<$<BOOL:${ENABLE_XOSHIRO}>:XoshiroCpp::XoshiroCpp>
-            CONAN_PKG::boost)
+            CONAN_PKG::boost
+            CONAN_PKG::cpp-sort)
 
 if(ENABLE_PCH)
   target_precompile_headers(

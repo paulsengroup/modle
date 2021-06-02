@@ -24,7 +24,9 @@
 #include "modle/config.hpp"             // for Config
 #include "modle/dna.hpp"                // for Chromosome
 #include "modle/extrusion_factors.hpp"  // for Lef, ExtrusionUnit (ptr only)
-#include "modle/utils.hpp"              // for ndebug_defined
+#include "modle/setup.hpp"              // for Genome
+#include "modle/suppress_compiler_warnings.hpp"
+#include "modle/utils.hpp"  // for ndebug_defined
 
 namespace modle {
 
@@ -34,14 +36,13 @@ struct Lef;
 
 class Simulation : Config {
  public:
-  inline explicit Simulation(const Config& c, bool import_chroms = true);
-  inline std::string to_string() = delete;
-  inline void print() = delete;
+  explicit Simulation(const Config& c, bool import_chroms = true);
+  std::string to_string() = delete;
+  void print() = delete;
 
-  [[nodiscard]] inline size_t size() const;
-  [[nodiscard]] inline size_t simulated_size() const;
+  [[nodiscard]] size_t size() const;
+  [[nodiscard]] size_t simulated_size() const;
 
-  using Genome = absl::btree_set<Chromosome, Chromosome::Comparator>;
   using lef_move_generator_t = std::normal_distribution<double>;
   using chrom_pos_generator_t = std::uniform_int_distribution<bp_t>;
 
@@ -50,7 +51,7 @@ class Simulation : Config {
   static constexpr auto REACHED_CHROM_BOUNDARY = std::numeric_limits<collision_t>::max() - 2;
 
   struct Task {
-    inline Task() = default;
+    Task() = default;
     size_t id{};
     Chromosome* chrom{};
     size_t cell_id{};
@@ -62,7 +63,7 @@ class Simulation : Config {
   } __attribute__((aligned(64)));
 
   struct State : Task {
-    inline State() = default;
+    State() = default;
     std::vector<Lef> lef_buff{};
     std::vector<double> lef_unloader_affinity{};
     std::vector<size_t> rank_buff1{};
@@ -76,58 +77,45 @@ class Simulation : Config {
     modle::PRNG_t rand_eng{};
     uint64_t seed{};
 
-    inline State& operator=(const Task& task);
-    inline void resize(size_t size = std::numeric_limits<size_t>::max());
-    inline void reset();
-    [[nodiscard]] inline std::string to_string() const noexcept;
+    State& operator=(const Task& task);
+    void resize(size_t size = std::numeric_limits<size_t>::max());
+    void reset();
+    [[nodiscard]] std::string to_string() const noexcept;
     // NOLINTNEXTLINE(readability-magic-numbers, cppcoreguidelines-avoid-magic-numbers)
   } __attribute__((aligned(128)));
 
-  inline void run();
+  void run();
 
  private:
-  Genome _chromosomes{};
+  const Config* _config;
+  Genome _genome{};
 
-  [[nodiscard]] [[maybe_unused]] inline boost::asio::thread_pool instantiate_thread_pool() const;
+  [[nodiscard]] [[maybe_unused]] boost::asio::thread_pool instantiate_thread_pool() const;
   template <typename I>
-  [[nodiscard]] inline static boost::asio::thread_pool instantiate_thread_pool(
-      I nthreads, bool clamp_nthreads = true);
-
-  /// A simple wrapper function that imports chromosomes and extrusion barriers that comprise the
-  /// genome that is being simulated.
-  [[nodiscard]] inline static Genome instantiate_genome(
-      const std::filesystem::path& path_to_chrom_sizes,
-      const std::filesystem::path& path_to_extr_barriers,
-      const std::filesystem::path& path_to_chrom_subranges, bool keep_all_chroms);
-
-  /// Import chromosomes from a chrom.sizes file
-
-  //! When \p path_to_extr_barriers is non-empty, import the intersection of the chromosomes present
-  //! in the chrom.sizes and BED files. The optional BED file can be used to instruct ModLE to
-  //! simulate loop extrusion on a sub-region of a chromosome from the chrom.sizes file.
-  [[nodiscard]] inline static Genome import_chromosomes(
-      const std::filesystem::path& path_to_chrom_sizes,
-      const std::filesystem::path& path_to_chrom_subranges, bool keep_all_chroms);
-
-  /// Parse a BED file containing the genomic coordinates of extrusion barriers and add them to the
-  /// Genome
-  inline static size_t import_barriers(Genome& genome,
-                                       const std::filesystem::path& path_to_extr_barriers);
-
-  /// Allocate and return the extrusion barriers for the chromosome \p chrom.
-  [[nodiscard]] inline std::vector<ExtrusionBarrier> allocate_barriers(
-      const Chromosome* chrom) const;
+  [[nodiscard]] static boost::asio::thread_pool instantiate_thread_pool(
+      I nthreads, bool clamp_nthreads = true) {
+    static_assert(std::is_integral_v<I>, "nthreads should have an integral type.");
+    DISABLE_WARNING_PUSH
+    DISABLE_WARNING_USELESS_CAST
+    if (clamp_nthreads) {
+      return boost::asio::thread_pool(
+          std::min(std::thread::hardware_concurrency(), static_cast<unsigned int>(nthreads)));
+    }
+    assert(nthreads > 0);
+    return boost::asio::thread_pool(static_cast<unsigned int>(nthreads));
+    DISABLE_WARNING_POP
+  }
 
   /// Simulate loop extrusion using the parameters and buffers passed through \p state
-  inline void simulate_extrusion_kernel(State& state) const;
+  void simulate_extrusion_kernel(State& state) const;
 
   /// Monitor the progress queue and write contacts to a .cool file when all the cells belonging to
   /// a given chromosome have been simulated.
 
   //! IMPORTANT: this function is meant to be run in a dedicated thread.
-  inline void write_contacts_to_disk(std::deque<std::pair<Chromosome*, size_t>>& progress_queue,
-                                     std::mutex& progress_queue_mutex,
-                                     std::atomic<bool>& end_of_simulation) const;
+  void write_contacts_to_disk(std::deque<std::pair<Chromosome*, size_t>>& progress_queue,
+                              std::mutex& progress_queue_mutex,
+                              std::atomic<bool>& end_of_simulation) const;
 
   /// Worker function used to run an instance of the simulation
 
@@ -137,7 +125,7 @@ class Simulation : Config {
   //! This function is also responsible for allocating and clearing the buffers used throughout the
   //! simulation.
   //! IMPORTANT: this function is meant to be run in a dedicated thread.
-  inline void worker(
+  void worker(
       moodycamel::BlockingConcurrentQueue<Simulation::Task>& task_queue,
       std::deque<std::pair<Chromosome*, size_t>>& progress_queue, std::mutex& progress_queue_mutex,
       std::mutex& barrier_mutex,
@@ -151,10 +139,10 @@ class Simulation : Config {
   //! In order to properly handle ties, the sorting criterion is actually a bit more complex. See
   //! documentation and comments for Simulation::rank_lefs for more details).
   template <typename MaskT>
-  inline static void bind_lefs(const Chromosome* chrom, absl::Span<Lef> lefs,
-                               absl::Span<size_t> rev_lef_ranks, absl::Span<size_t> fwd_lef_ranks,
-                               MaskT& mask, modle::PRNG_t& rand_eng,
-                               bool first_epoch = false) noexcept(utils::ndebug_defined() && false);
+  static void bind_lefs(const Chromosome* chrom, absl::Span<Lef> lefs,
+                        absl::Span<size_t> rev_lef_ranks, absl::Span<size_t> fwd_lef_ranks,
+                        const MaskT& mask, modle::PRNG_t& rand_eng,
+                        bool first_epoch = false) noexcept(utils::ndebug_defined());
 
   // clang-format off
   //! Generate moves in reverse direction
@@ -165,13 +153,13 @@ class Simulation : Config {
   //! \p unit parameter
   //! \return move
   // clang-format on
-  [[nodiscard]] inline bp_t generate_rev_move(const Chromosome* chrom, const ExtrusionUnit& unit,
-                                              modle::PRNG_t& rand_eng) const;
+  [[nodiscard]] bp_t generate_rev_move(const Chromosome* chrom, const ExtrusionUnit& unit,
+                                       modle::PRNG_t& rand_eng) const;
 
   //! Generate moves in forward direction. See doc for Simulation::generate_rev_move for more
   //! details
-  [[nodiscard]] inline bp_t generate_fwd_move(const Chromosome* chrom, const ExtrusionUnit& unit,
-                                              modle::PRNG_t& rand_eng) const;
+  [[nodiscard]] bp_t generate_fwd_move(const Chromosome* chrom, const ExtrusionUnit& unit,
+                                       modle::PRNG_t& rand_eng) const;
   // clang-format off
   //! Generate moves for all active LEFs
 
@@ -179,11 +167,11 @@ class Simulation : Config {
   //! When adjust_moves_ is true, adjust moves to make consecutive LEFs behave in a more realistic way.
   //! See Simulation::adjust_moves_of_consecutive_extr_units for more details
   // clang-format on
-  inline void generate_moves(const Chromosome* chrom, absl::Span<const Lef> lefs,
-                             absl::Span<const size_t> rev_lef_ranks,
-                             absl::Span<const size_t> fwd_lef_ranks, absl::Span<bp_t> rev_moves,
-                             absl::Span<bp_t> fwd_moves, modle::PRNG_t& rand_eng,
-                             bool adjust_moves_ = true) const noexcept(utils::ndebug_defined());
+  void generate_moves(const Chromosome* chrom, absl::Span<const Lef> lefs,
+                      absl::Span<const size_t> rev_lef_ranks,
+                      absl::Span<const size_t> fwd_lef_ranks, absl::Span<bp_t> rev_moves,
+                      absl::Span<bp_t> fwd_moves, modle::PRNG_t& rand_eng,
+                      bool adjust_moves_ = true) const noexcept(utils::ndebug_defined());
 
   // clang-format off
   //! Adjust moves of consecutive extr. units moving in the same direction to improve simulation realism
@@ -203,17 +191,19 @@ class Simulation : Config {
   //! In a real system, what would likely happen, is that the fwd_unit of LEF1 would push
   //! against the fwd_unit of LEF2, temporarily increasing the fwd extr. speed of LEF2.
   // clang-format on
-  inline void adjust_moves_of_consecutive_extr_units(
-      const Chromosome* chrom, absl::Span<const Lef> lefs, absl::Span<const size_t> rev_lef_ranks,
-      absl::Span<const size_t> fwd_lef_ranks, absl::Span<bp_t> rev_moves,
-      absl::Span<bp_t> fwd_moves) const noexcept(utils::ndebug_defined());
+  void adjust_moves_of_consecutive_extr_units(const Chromosome* chrom, absl::Span<const Lef> lefs,
+                                              absl::Span<const size_t> rev_lef_ranks,
+                                              absl::Span<const size_t> fwd_lef_ranks,
+                                              absl::Span<bp_t> rev_moves,
+                                              absl::Span<bp_t> fwd_moves) const
+      noexcept(utils::ndebug_defined());
 
   /// Sort extr. units by index based on their position whilst properly dealing with ties. See
   /// comments in \p simulation_impl.hpp file for more details.
-  inline static void rank_lefs(absl::Span<const Lef> lefs, absl::Span<size_t> rev_lef_rank_buff,
-                               absl::Span<size_t> fwd_lef_rank_buff,
-                               bool ranks_are_partially_sorted = true,
-                               bool init_buffers = false) noexcept(utils::ndebug_defined());
+  static void rank_lefs(absl::Span<const Lef> lefs, absl::Span<size_t> rev_lef_rank_buff,
+                        absl::Span<size_t> fwd_lef_rank_buff,
+                        bool ranks_are_partially_sorted = true,
+                        bool init_buffers = false) noexcept(utils::ndebug_defined());
 
   /// Extrude LEFs by applying the respective moves
 
@@ -221,19 +211,18 @@ class Simulation : Config {
   //! processed by:
   //! - Simulation::adjust_moves_of_consecutive_extr_units
   //! - Simulation::process_collisions
-  inline static void extrude(const Chromosome* chrom, absl::Span<Lef> lefs,
-                             absl::Span<const bp_t> rev_moves, absl::Span<const bp_t> fwd_moves,
-                             size_t nrev_units_at_5prime = 0,
-                             size_t nfwd_units_at_3prime = 0) noexcept(utils::ndebug_defined());
+  static void extrude(const Chromosome* chrom, absl::Span<Lef> lefs,
+                      absl::Span<const bp_t> rev_moves, absl::Span<const bp_t> fwd_moves,
+                      size_t nrev_units_at_5prime = 0,
+                      size_t nfwd_units_at_3prime = 0) noexcept(utils::ndebug_defined());
 
   //! This is just a wrapper function used to make sure that process_* functions are always called
   //! in the right order
 
   //! \return number of rev units at the 5'-end, number of fwd units at the 3'-end
-  template <typename MaskT>
-  inline std::pair<size_t, size_t> process_collisions(
+  std::pair<size_t, size_t> process_collisions(
       const Chromosome* chrom, absl::Span<const Lef> lefs,
-      absl::Span<const ExtrusionBarrier> barriers, const MaskT& barrier_mask,
+      absl::Span<const ExtrusionBarrier> barriers, const boost::dynamic_bitset<>& barrier_mask,
       absl::Span<const size_t> rev_lef_ranks, absl::Span<const size_t> fwd_lef_ranks,
       absl::Span<bp_t> rev_moves, absl::Span<bp_t> fwd_moves,
       absl::Span<collision_t> rev_collisions, absl::Span<collision_t> fwd_collisions,
@@ -243,7 +232,7 @@ class Simulation : Config {
 
   //! \return a pair of numbers consisting in the number of rev units located at the 5'-end and
   //! number of fwd units located at the 3'-end.
-  static inline std::pair<size_t, size_t> detect_collisions_at_chrom_boundaries(
+  static std::pair<size_t, size_t> detect_collisions_at_chrom_boundaries(
       const Chromosome* chrom, absl::Span<const Lef> lefs, absl::Span<const size_t> rev_lef_ranks,
       absl::Span<const size_t> fwd_lef_ranks, absl::Span<const bp_t> rev_moves,
       absl::Span<const bp_t> fwd_moves, absl::Span<collision_t> rev_collisions,
@@ -255,13 +244,15 @@ class Simulation : Config {
   //! corresponding to reverse or forward extrusion units that will collide with an extrusion
   //! barrier in the current iteration, will be set to the index corresponding to the barrier that
   //! is causing the collision.
-  inline void detect_lef_bar_collisions(
-      absl::Span<const Lef> lefs, absl::Span<const size_t> rev_lef_ranks,
-      absl::Span<const size_t> fwd_lef_ranks, absl::Span<const bp_t> rev_moves,
-      absl::Span<const bp_t> fwd_moves, absl::Span<const ExtrusionBarrier> extr_barriers,
-      const boost::dynamic_bitset<>& barrier_mask, absl::Span<collision_t> rev_collisions,
-      absl::Span<collision_t> fwd_collisions, modle::PRNG_t& rand_eng,
-      size_t nrev_units_at_5prime = 0, size_t nfwd_units_at_3prime = 0) const
+  void detect_lef_bar_collisions(absl::Span<const Lef> lefs, absl::Span<const size_t> rev_lef_ranks,
+                                 absl::Span<const size_t> fwd_lef_ranks,
+                                 absl::Span<const bp_t> rev_moves, absl::Span<const bp_t> fwd_moves,
+                                 absl::Span<const ExtrusionBarrier> extr_barriers,
+                                 const boost::dynamic_bitset<>& barrier_mask,
+                                 absl::Span<collision_t> rev_collisions,
+                                 absl::Span<collision_t> fwd_collisions, modle::PRNG_t& rand_eng,
+                                 size_t nrev_units_at_5prime = 0,
+                                 size_t nfwd_units_at_3prime = 0) const
       noexcept(utils::ndebug_defined());
 
   /// Detect collisions between LEFs moving in opposite directions.
@@ -272,7 +263,7 @@ class Simulation : Config {
   //! corresponding to units stalled due to primary LEF-LEF collisions will be set to the index
   //! pointing to the extrusion unit that is causing the collisions.
   //! The index i is encoded as nbarriers + i.
-  inline void detect_primary_lef_lef_collisions(
+  void detect_primary_lef_lef_collisions(
       absl::Span<const Lef> lefs, absl::Span<const ExtrusionBarrier> barriers,
       absl::Span<const size_t> rev_lef_ranks, absl::Span<const size_t> fwd_lef_ranks,
       absl::Span<const bp_t> rev_moves, absl::Span<const bp_t> fwd_moves,
@@ -281,7 +272,7 @@ class Simulation : Config {
       noexcept(utils::ndebug_defined());
 
   // clang-format off
-  /// Detect collisions between consecutive extrusion units that are moving in the same direction.
+  /// Process collisions between consecutive extrusion units that are moving in the same direction.
 
   //! Secondary LEF-LEF collisions can occur when consecutive extrusion units moving in the same
   //! direction collide with each other.
@@ -295,61 +286,62 @@ class Simulation : Config {
   //! \p fwd_collisions will be set to the index corresponding to the extrusion unit that is causing the collision.
   //! The index i is encoded as nbarriers + nlefs + i.
   // clang-format on
-  inline void detect_secondary_lef_lef_collisions(
+  void process_secondary_lef_lef_collisions(
       const Chromosome* chrom, absl::Span<const Lef> lefs, size_t nbarriers,
       absl::Span<const size_t> rev_lef_ranks, absl::Span<const size_t> fwd_lef_ranks,
-      absl::Span<const bp_t> rev_moves, absl::Span<const bp_t> fwd_moves,
+      absl::Span<bp_t> rev_moves, absl::Span<bp_t> fwd_moves,
       absl::Span<collision_t> rev_collisions, absl::Span<collision_t> fwd_collisions,
       PRNG_t& rand_eng, size_t nrev_units_at_5prime = 0, size_t nfwd_units_at_3prime = 0) const
       noexcept(utils::ndebug_defined());
 
   /// Correct moves to comply with the constraints imposed by LEF-BAR collisions.
-  static inline void correct_moves_for_lef_bar_collisions(
+  static void correct_moves_for_lef_bar_collisions(
       absl::Span<const Lef> lefs, absl::Span<const ExtrusionBarrier> barriers,
       absl::Span<bp_t> rev_moves, absl::Span<bp_t> fwd_moves,
       absl::Span<const collision_t> rev_collisions,
       absl::Span<const collision_t> fwd_collisions) noexcept(utils::ndebug_defined());
 
   /// Correct moves to comply with the constraints imposed by primary LEF-LEF collisions.
-  static inline void correct_moves_for_primary_lef_lef_collisions(
+  static void correct_moves_for_primary_lef_lef_collisions(
       absl::Span<const Lef> lefs, absl::Span<const ExtrusionBarrier> barriers,
       absl::Span<const size_t> rev_ranks, absl::Span<const size_t> fwd_ranks,
       absl::Span<bp_t> rev_moves, absl::Span<bp_t> fwd_moves,
       absl::Span<const collision_t> rev_collisions,
       absl::Span<const collision_t> fwd_collisions) noexcept(utils::ndebug_defined());
-
-  /// Correct moves to comply with the constraints imposed by secondary LEF-LEF collisions.
-  static inline void correct_moves_for_secondary_lef_lef_collisions(
-      absl::Span<const Lef> lefs, size_t nbarriers, absl::Span<const size_t> rev_ranks,
-      absl::Span<const size_t> fwd_ranks, absl::Span<bp_t> rev_moves, absl::Span<bp_t> fwd_moves,
-      absl::Span<const collision_t> rev_collisions, absl::Span<const collision_t> fwd_collisions,
-      size_t nrev_units_at_5prime = 0,
-      size_t nfwd_units_at_3prime = 0) noexcept(utils::ndebug_defined());
-
+  /*
+    /// Correct moves to comply with the constraints imposed by secondary LEF-LEF collisions.
+    static void correct_moves_for_secondary_lef_lef_collisions(
+        absl::Span<const Lef> lefs, size_t nbarriers, absl::Span<const size_t> rev_ranks,
+        absl::Span<const size_t> fwd_ranks, absl::Span<bp_t> rev_moves, absl::Span<bp_t> fwd_moves,
+        absl::Span<const collision_t> rev_collisions, absl::Span<const collision_t> fwd_collisions,
+        size_t nrev_units_at_5prime = 0,
+        size_t nfwd_units_at_3prime = 0) noexcept(utils::ndebug_defined());
+  */
   /// Register contacts for chromosome \p chrom using the position the extrusion units of the LEFs
   /// in \p lefs whose index is present in \p selected_lef_idx.
-  inline size_t register_contacts(Chromosome* chrom, absl::Span<const Lef> lefs,
-                                  absl::Span<const size_t> selected_lef_idx) const
+  size_t register_contacts(Chromosome* chrom, absl::Span<const Lef> lefs,
+                           absl::Span<const size_t> selected_lef_idx) const
       noexcept(utils::ndebug_defined());
 
-  template <typename MaskT>
-  inline static void select_lefs_to_bind(absl::Span<const Lef> lefs,
-                                         MaskT& mask) noexcept(utils::ndebug_defined());
+  static void select_lefs_to_bind(absl::Span<const Lef> lefs,
+                                  boost::dynamic_bitset<>& mask) noexcept(utils::ndebug_defined());
+  static void select_lefs_to_bind(absl::Span<const Lef> lefs,
+                                  absl::Span<size_t> mask) noexcept(utils::ndebug_defined());
 
-  inline void generate_lef_unloader_affinities(absl::Span<const Lef> lefs,
-                                               absl::Span<const ExtrusionBarrier> barriers,
-                                               absl::Span<const collision_t> rev_collisions,
-                                               absl::Span<const collision_t> fwd_collisions,
-                                               absl::Span<double> lef_unloader_affinity) const
+  void generate_lef_unloader_affinities(absl::Span<const Lef> lefs,
+                                        absl::Span<const ExtrusionBarrier> barriers,
+                                        absl::Span<const collision_t> rev_collisions,
+                                        absl::Span<const collision_t> fwd_collisions,
+                                        absl::Span<double> lef_unloader_affinity) const
       noexcept(utils::ndebug_defined());
 
-  inline static void select_lefs_to_release(
-      absl::Span<size_t> lef_idx, absl::Span<const double> lef_unloader_affinity,
-      modle::PRNG_t& rand_eng) noexcept(utils::ndebug_defined());
+  static void select_lefs_to_release(absl::Span<size_t> lef_idx,
+                                     absl::Span<const double> lef_unloader_affinity,
+                                     modle::PRNG_t& rand_eng) noexcept(utils::ndebug_defined());
 
-  inline static void release_lefs(absl::Span<Lef> lefs, absl::Span<const size_t> lef_idx) noexcept;
+  static void release_lefs(absl::Span<Lef> lefs, absl::Span<const size_t> lef_idx) noexcept;
 
-  [[nodiscard]] inline static std::pair<bp_t /*rev*/, bp_t /*fwd*/> compute_lef_lef_collision_pos(
+  [[nodiscard]] static std::pair<bp_t /*rev*/, bp_t /*fwd*/> compute_lef_lef_collision_pos(
       const ExtrusionUnit& rev_unit, const ExtrusionUnit& fwd_unit, bp_t rev_move, bp_t fwd_move);
 
 #ifdef ENABLE_TESTING
@@ -357,8 +349,8 @@ class Simulation : Config {
   template <typename MaskT>
   inline void test_bind_lefs(const Chromosome* chrom, absl::Span<Lef> lefs,
                              absl::Span<size_t> rev_lef_ranks, absl::Span<size_t> fwd_lef_ranks,
-                             MaskT& mask, modle::PRNG_t& rand_eng) {
-    this->bind_lefs(chrom, lefs, rev_lef_ranks, fwd_lef_ranks, mask, rand_eng);
+                             const MaskT& mask, modle::PRNG_t& rand_eng) {
+    modle::Simulation::bind_lefs(chrom, lefs, rev_lef_ranks, fwd_lef_ranks, mask, rand_eng);
   }
 
   inline void test_adjust_moves(const Chromosome* const chrom, absl::Span<const Lef> lefs,
@@ -424,21 +416,8 @@ class Simulation : Config {
     Simulation::correct_moves_for_primary_lef_lef_collisions(
         lefs, barriers, rev_ranks, fwd_ranks, rev_moves, fwd_moves, rev_collisions, fwd_collisions);
   }
-
-  static inline void test_adjust_moves_for_secondary_lef_lef_collisions(
-      absl::Span<const Lef> lefs, size_t nbarriers, absl::Span<const size_t> rev_ranks,
-      absl::Span<const size_t> fwd_ranks, absl::Span<bp_t> rev_moves, absl::Span<bp_t> fwd_moves,
-      absl::Span<collision_t> rev_collisions, absl::Span<collision_t> fwd_collisions) {
-    Simulation::correct_moves_for_secondary_lef_lef_collisions(lefs, nbarriers, rev_ranks,
-                                                               fwd_ranks, rev_moves, fwd_moves,
-                                                               rev_collisions, fwd_collisions);
-  }
 #endif
 };
 }  // namespace modle
 
-#include "../../simulation_correct_moves_impl.hpp"      // IWYU pragma: keep
-#include "../../simulation_detect_collisions_impl.hpp"  // IWYU pragma: keep
-#include "../../simulation_impl.hpp"                    // IWYU pragma: keep
-#include "../../simulation_scheduler_impl.hpp"          // IWYU pragma: keep
-#include "../../simulation_setup_impl.hpp"              // IWYU pragma: keep
+#include "../../simulation_impl.hpp"  // IWYU pragma: keep

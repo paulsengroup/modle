@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.11)
+cmake_minimum_required(VERSION 3.18)
 
 project(
   modle
@@ -96,7 +96,7 @@ set(CONAN_EXTRA_OPTIONS "")
 set(CONAN_EXTRA_REQUIRES
     ${CONAN_EXTRA_REQUIRES}
     abseil/20210324.0
-    boost/1.75.0
+    boost/1.76.0
     cli11/1.9.1
     concurrentqueue/1.0.2
     cpp-sort/1.10.0
@@ -104,6 +104,7 @@ set(CONAN_EXTRA_REQUIRES
     hdf5/1.12.0
     readerwriterqueue/1.0.3
     spdlog/1.8.5
+    xxhash/0.8.0
     zlib/1.2.11)
 
 set(CONAN_EXTRA_OPTIONS
@@ -112,7 +113,8 @@ set(CONAN_EXTRA_OPTIONS
     boost:asio_no_deprecated=True
     boost:filesystem_no_deprecated=True
     boost:zlib=True
-    boost:bzip2=False)
+    boost:bzip2=False
+    xxhash:utility=False)
 
 if(CXX20_COMPILER_AVAILABLE)
   set(CONAN_EXTRA_SETTINGS ${CONAN_EXTRA_SETTINGS} compiler.cppstd=20 compiler.libcxx=libstdc++11)
@@ -130,12 +132,12 @@ run_conan()
 # Reduce level of optimization to improve the code profiling experience
 if(OPTIMIZE_FOR_PROFILING)
   if(NOT
-          "${uppercase_CMAKE_BUILD_TYPE}"
-          STREQUAL
-          "RelWithDebInfo")
+     "${uppercase_CMAKE_BUILD_TYPE}"
+     STREQUAL
+     "RelWithDebInfo")
     message(
-            WARNING
-            "Switching build type from ${CMAKE_BUILD_TYPE} to RelWithDebInfo because OPTIMIZE_FOR_PROFILING was set to ON by the user"
+      WARNING
+        "Switching build type from ${CMAKE_BUILD_TYPE} to RelWithDebInfo because OPTIMIZE_FOR_PROFILING was set to ON by the user"
     )
     set(CMAKE_BUILD_TYPE "RelWithDebInfo")
   endif()
@@ -143,27 +145,36 @@ if(OPTIMIZE_FOR_PROFILING)
   target_compile_options(project_options INTERFACE -O1)
 endif()
 
-# Source: https://github.com/llvm/llvm-project/blob/656ebd519e3fd52050e1c8abeacafcf94d1fa260/llvm/cmake/modules/HandleLLVMOptions.cmake#L54
+# Source:
+# https://github.com/llvm/llvm-project/blob/656ebd519e3fd52050e1c8abeacafcf94d1fa260/llvm/cmake/modules/HandleLLVMOptions.cmake#L54
 if(ENABLE_ASSERTIONS)
   if(NOT MSVC)
     add_definitions(-D_DEBUG)
   endif()
   # On non-Debug builds cmake automatically defines NDEBUG, so we explicitly undefine it:
-  if(NOT uppercase_CMAKE_BUILD_TYPE STREQUAL "DEBUG")
-    # NOTE: use `add_compile_options` rather than `add_definitions` since
-    # `add_definitions` does not support generator expressions.
+  if(NOT
+     uppercase_CMAKE_BUILD_TYPE
+     STREQUAL
+     "DEBUG")
+    # NOTE: use `add_compile_options` rather than `add_definitions` since `add_definitions` does not support generator
+    # expressions.
     target_compile_options(project_options INTERFACE $<$<OR:$<COMPILE_LANGUAGE:C>,$<COMPILE_LANGUAGE:CXX>>:-UNDEBUG>)
 
     # Also remove /D NDEBUG to avoid MSVC warnings about conflicting defines.
-    foreach (flags_var_to_scrub
-            CMAKE_CXX_FLAGS_RELEASE
-            CMAKE_CXX_FLAGS_RELWITHDEBINFO
-            CMAKE_CXX_FLAGS_MINSIZEREL
-            CMAKE_C_FLAGS_RELEASE
-            CMAKE_C_FLAGS_RELWITHDEBINFO
-            CMAKE_C_FLAGS_MINSIZEREL)
-      string (REGEX REPLACE "(^| )[/-]D *NDEBUG($| )" " "
-              "${flags_var_to_scrub}" "${${flags_var_to_scrub}}")
+    foreach(
+      flags_var_to_scrub
+      CMAKE_CXX_FLAGS_RELEASE
+      CMAKE_CXX_FLAGS_RELWITHDEBINFO
+      CMAKE_CXX_FLAGS_MINSIZEREL
+      CMAKE_C_FLAGS_RELEASE
+      CMAKE_C_FLAGS_RELWITHDEBINFO
+      CMAKE_C_FLAGS_MINSIZEREL)
+      string(
+        REGEX
+        REPLACE "(^| )[/-]D *NDEBUG($| )"
+                " "
+                "${flags_var_to_scrub}"
+                "${${flags_var_to_scrub}}")
     endforeach()
   endif()
 endif()

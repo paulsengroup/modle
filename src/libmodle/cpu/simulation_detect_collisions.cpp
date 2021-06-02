@@ -1,5 +1,3 @@
-#pragma once
-
 #include <absl/types/span.h>  // for Span
 
 #include <algorithm>                                // for is_sorted, all_of, max, find_if
@@ -14,7 +12,8 @@
 #include "modle/dna.hpp"                 // for Chromosome
 #include "modle/extrusion_barriers.hpp"  // for ExtrusionBarrier, NOT_OCCUPIED
 #include "modle/extrusion_factors.hpp"   // for ExtrusionUnit, Lef
-#include "modle/utils.hpp"               // for ndebug_defined
+#include "modle/simulation.hpp"
+#include "modle/utils.hpp"  // for ndebug_defined
 
 namespace modle {
 
@@ -397,10 +396,10 @@ void Simulation::detect_primary_lef_lef_collisions(
   }
 }
 
-void Simulation::detect_secondary_lef_lef_collisions(
+void Simulation::process_secondary_lef_lef_collisions(
     const Chromosome* chrom, const absl::Span<const Lef> lefs, const size_t nbarriers,
     const absl::Span<const size_t> rev_lef_ranks, const absl::Span<const size_t> fwd_lef_ranks,
-    const absl::Span<const bp_t> rev_moves, const absl::Span<const bp_t> fwd_moves,
+    const absl::Span<bp_t> rev_moves, const absl::Span<bp_t> fwd_moves,
     const absl::Span<collision_t> rev_collisions, const absl::Span<collision_t> fwd_collisions,
     PRNG_t& rand_eng, size_t nrev_units_at_5prime, size_t nfwd_units_at_3prime) const
     noexcept(utils::ndebug_defined()) {
@@ -467,6 +466,8 @@ void Simulation::detect_secondary_lef_lef_collisions(
         (this->probability_of_extrusion_unit_bypass == 0 ||
          std::bernoulli_distribution{1.0 - this->probability_of_extrusion_unit_bypass}(rand_eng))) {
       rev_collisions[rev_idx2] = offset + rev_idx1;
+      const auto move = rev_pos2 - (rev_pos1 - move1);
+      move2 = move > 0UL ? move - 1UL : 0UL;
     }
   }
 
@@ -498,6 +499,8 @@ void Simulation::detect_secondary_lef_lef_collisions(
         (this->probability_of_extrusion_unit_bypass == 0 ||
          std::bernoulli_distribution{1.0 - this->probability_of_extrusion_unit_bypass}(rand_eng))) {
       fwd_collisions[fwd_idx1] = offset + fwd_idx2;
+      const auto move = (fwd_pos2 + move2) - fwd_pos1;
+      move1 = move > 0UL ? move - 1UL : 0UL;
     }
   }
 }

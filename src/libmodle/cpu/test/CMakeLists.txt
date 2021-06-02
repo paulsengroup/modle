@@ -1,5 +1,5 @@
 add_library(libmodle_test INTERFACE)
-add_library(Modle::libmodle_test ALIAS libmodle_test)
+add_library(Modle::libmodle_cpu_test ALIAS libmodle_test)
 
 target_include_directories(libmodle_test INTERFACE include/)
 
@@ -10,7 +10,7 @@ target_link_libraries(
   INTERFACE project_warnings
             project_options
             Modle::io
-            Modle::Modle
+            Modle::modle
             CONAN_PKG::abseil
             CONAN_PKG::boost
             CONAN_PKG::catch2)

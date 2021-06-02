@@ -1,5 +1,3 @@
-#pragma once
-
 #include <absl/container/fixed_array.h>          // for FixedArray
 #include <absl/container/flat_hash_map.h>        // for flat_hash_map, BitMask, raw_hash_set<...
 #include <absl/strings/str_join.h>               // for StrJoin
@@ -9,11 +7,9 @@
 #include <moodycamel/blockingconcurrentqueue.h>  // for BlockingConcurrentQueue
 #include <moodycamel/concurrentqueue.h>          // for ConsumerToken, ProducerToken
 
-#include <algorithm>                                // for max, copy, find_if, generate, sort
-#include <atomic>                                   // for atomic
-#include <boost/asio/impl/post.hpp>                 // for post
-#include <boost/asio/impl/thread_pool.hpp>          // for thread_pool::get_executor
-#include <boost/asio/impl/thread_pool.ipp>          // for thread_pool::thread_pool, thread_pool...
+#include <algorithm>  // for max, copy, find_if, generate, sort
+#include <atomic>     // for atomic
+#include <boost/asio/post.hpp>
 #include <boost/asio/thread_pool.hpp>               // for thread_pool
 #include <boost/dynamic_bitset/dynamic_bitset.hpp>  // for dynamic_bitset
 #include <boost/exception/get_error_info.hpp>       // for get_error_info
@@ -39,7 +35,8 @@
 #include "modle/contacts.hpp"            // for ContactMatrix
 #include "modle/dna.hpp"                 // for Chromosome
 #include "modle/extrusion_barriers.hpp"  // for ExtrusionBarrier
-#include "modle/utils.hpp"               // for traced
+#include "modle/simulation.hpp"
+#include "modle/utils.hpp"  // for traced
 
 namespace modle {
 
@@ -110,71 +107,66 @@ void Simulation::run() {
   // The remaining code submits simulation tasks to the queue. Then it waits until all the tasks
   // have been completed, and contacts have been written to disk
 
-  // Create a vector of pointers to chroms, and sort the pointers by chrom size
-  // TODO Update this to process chroms in the same order they are found in the chrom.sizes file
-  std::vector<Chromosome*> chroms(static_cast<size_t>(this->_chromosomes.size()));
-  std::transform(this->_chromosomes.begin(), this->_chromosomes.end(), chroms.begin(),
-                 [](auto& chrom) { return &chrom; });
-  std::sort(chroms.begin(), chroms.end(),
-            [](const auto* const c1, const auto* const c2) { return c1->size() > c2->size(); });
-
   absl::Span<const ExtrusionBarrier> extr_barriers_buff{};
   absl::FixedArray<Task> tasks(task_batch_size);
   auto taskid = 0UL;
 
   // Loop over chromosomes
-  for (auto* chrom : chroms) {
+  for (auto& chrom : this->_genome) {
     // Don't simulate KO chroms (but write them to disk if the user desires so)
-    if (!chrom->ok()) {
-      fmt::print(stderr, "SKIPPING '{}'...\n", chrom->name());
+    if (!chrom.ok()) {
+      fmt::print(stderr, "SKIPPING '{}'...\n", chrom.name());
       if (this->write_contacts_for_ko_chroms) {
-        chrom->allocate_contacts(this->bin_size, this->diagonal_width);
+        chrom.allocate_contacts(this->bin_size, this->diagonal_width);
         std::scoped_lock l(barrier_mutex, progress_queue_mutex);
-        progress_queue.emplace_back(chrom, ncells);
-        barriers.emplace(chrom, nullptr);
+        progress_queue.emplace_back(&chrom, ncells);
+        barriers.emplace(&chrom, nullptr);
       }
       continue;
     }
 
     // Allocate the contact matrix. Once it's not needed anymore, the contact matrix will be
     // de-allocated by the thread that is writing contacts to disk
-    chrom->allocate_contacts(this->bin_size, this->diagonal_width);
+    chrom.allocate_contacts(this->bin_size, this->diagonal_width);
     {
       // For consistency, it is important that both locks are held while new items are added to the
       // two queues
       std::scoped_lock l(barrier_mutex, progress_queue_mutex);
 
       // Signal that we have started processing the current chrom
-      progress_queue.emplace_back(chrom, 0UL);
+      progress_queue.emplace_back(&chrom, 0UL);
 
       // Allocate extr. barriers mapping on the chromosome that is being simulated
-      auto node = barriers.emplace(chrom, std::make_unique<std::vector<ExtrusionBarrier>>(
-                                              Simulation::allocate_barriers(chrom)));
+      auto node = barriers.emplace(
+          &chrom,
+          std::make_unique<std::vector<ExtrusionBarrier>>(this->_genome.generate_vect_of_barriers(
+              chrom.name(), this->_config->ctcf_occupied_self_prob,
+              this->_config->ctcf_not_occupied_self_prob)));
       extr_barriers_buff = absl::MakeConstSpan(*node.first->second);
     }
 
     // Compute # of LEFs to be simulated based on chrom. sizes
     const auto nlefs = static_cast<size_t>(std::round(
-        this->number_of_lefs_per_mbp * (static_cast<double>(chrom->simulated_size()) / 1.0e6)));
+        this->number_of_lefs_per_mbp * (static_cast<double>(chrom.simulated_size()) / 1.0e6)));
 
     auto target_contacts = 0UL;
     if (this->target_contact_density != 0) {  // Compute the number of simulation rounds required
       // to reach the target contact density
       target_contacts = static_cast<size_t>(
           std::max(1.0, std::round((this->target_contact_density *
-                                    static_cast<double>(chrom->contacts().npixels())) /
+                                    static_cast<double>(chrom.contacts().npixels())) /
                                    static_cast<double>(this->ncells))));
     }
     auto target_epochs =
         target_contacts == 0UL ? this->simulation_iterations : std::numeric_limits<size_t>::max();
 
     size_t cellid = 0;
-    const auto nbatches = ((this->ncells + task_batch_size - 1) / task_batch_size);
+    const auto nbatches = (this->ncells + task_batch_size - 1) / task_batch_size;
     for (auto batchid = 0UL; batchid < nbatches; ++batchid) {
       // Generate a batch of tasks for all the simulations involving the current chrom
       std::generate(tasks.begin(), tasks.end(), [&]() {
-        return Task{taskid++,        chrom, cellid++,          target_epochs,
-                    target_contacts, nlefs, extr_barriers_buff};
+        return Task{taskid++,        &chrom, cellid++,          target_epochs,
+                    target_contacts, nlefs,  extr_barriers_buff};
       });
       const auto ntasks =
           cellid > this->ncells ? tasks.size() - (cellid - this->ncells) : tasks.size();

@@ -82,7 +82,7 @@ TEST_CASE("Bind LEFs 001", "[bind-lefs][simulation][short]") {
   std::vector<std::size_t> rank1(nlefs), rank2(nlefs);  // NOLINT
   std::iota(rank1.begin(), rank1.end(), 0);
   std::copy(rank1.begin(), rank1.end(), rank2.begin());
-  boost::dynamic_bitset<> mask(nlefs);
+  std::vector<size_t> mask(nlefs);
   // NOLINTNEXTLINE(readability-magic-numbers, cppcoreguidelines-avoid-magic-numbers)
   auto rand_eng = modle::PRNG(8865403569783063175ULL);
 

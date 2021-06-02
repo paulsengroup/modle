@@ -1,6 +1,4 @@
-#pragma once
-
-// IWYU pragma: private, include "modle/extrusion_barriers.hpp"
+#include "modle/extrusion_barriers.hpp"
 
 #include <absl/types/span.h>  // for Span
 
