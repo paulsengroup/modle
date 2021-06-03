@@ -1,10 +1,11 @@
 add_subdirectory(internal)
 add_subdirectory(cpu)
 
-add_library(libmodle INTERFACE)
+add_library(libmodle)
 add_library(Modle::modle ALIAS libmodle)
 
-target_link_libraries(libmodle INTERFACE libmodle_cpu)
+target_link_libraries(libmodle PUBLIC libmodle_cpu)
+set_target_properties(libmodle PROPERTIES OUTPUT_NAME modle)
 
 if(ENABLE_SHARED)
   install(

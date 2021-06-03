@@ -27,7 +27,7 @@ target_link_libraries(
          $<$<AND:$<BOOL:${USING_LIBCXX}>,$<BOOL:${EXPLICIT_LINK_VS_FILESYSTEM_REQUIRED}>>:-lc++fs>
          $<$<AND:$<BOOL:${USING_STDLIBCXX}>,$<BOOL:${EXPLICIT_LINK_VS_FILESYSTEM_REQUIRED}>>:-lstdc++fs>)
 
-set_target_properties(libmodle_cpu PROPERTIES OUTPUT_NAME "modle_cpu")
+set_target_properties(libmodle_cpu PROPERTIES OUTPUT_NAME modle_cpu)
 
 if(ENABLE_PCH)
   target_precompile_headers(
@@ -44,9 +44,7 @@ if(ENABLE_PCH)
     <utility>
     <vector>
     <absl/types/span.h>
-    <fmt/format.h>
-    [["modle/common.hpp"]]
-    [["modle/config.hpp"]])
+    <fmt/format.h>)
 endif()
 
 if(ENABLE_TESTING)

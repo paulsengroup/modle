@@ -1,5 +1,4 @@
 add_library(modle_common INTERFACE)
-add_library(modle_common_cuda INTERFACE)
 
 add_library(Modle::common ALIAS modle_common)
 
@@ -14,3 +13,11 @@ target_link_libraries(
             $<$<BOOL:${ENABLE_XOSHIRO}>:XoshiroCpp::XoshiroCpp>)
 
 target_include_directories(modle_common INTERFACE include/)
+
+if(ENABLE_PCH)
+  target_precompile_headers(
+    modle_common
+    INTERFACE
+    [["modle/common.hpp"]]
+    [["modle/config.hpp"]])
+endif()

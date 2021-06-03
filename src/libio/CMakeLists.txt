@@ -30,7 +30,7 @@ target_link_libraries(
          $<$<AND:$<BOOL:${USING_STDLIBCXX}>,$<BOOL:${EXPLICIT_LINK_VS_FILESYSTEM_REQUIRED}>>:-lstdc++fs>)
 
 target_compile_definitions(libio PRIVATE -DNOCURL)
-set_target_properties(libio PROPERTIES OUTPUT_NAME "io")
+set_target_properties(libio PROPERTIES OUTPUT_NAME io)
 
 if(ENABLE_PCH)
   target_precompile_headers(
@@ -51,12 +51,7 @@ if(ENABLE_PCH)
     <utility>
     <absl/container/flat_hash_map.h>
     <fmt/format.h>
-    <H5Cpp.h>
-    [["modle/bed.hpp"]]
-    [["modle/bigwig.hpp"]]
-    [["modle/chrom_sizes.hpp"]]
-    [["modle/cooler.hpp"]]
-    [["modle/hdf5.hpp"]])
+    <H5Cpp.h>)
 endif()
 
 if(ENABLE_TESTING)
