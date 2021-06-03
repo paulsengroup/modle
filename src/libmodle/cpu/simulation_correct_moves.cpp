@@ -1,13 +1,13 @@
 #include <absl/types/span.h>  // for Span
 
-#include <boost/range/adaptor/reversed.hpp>  // for reversed_range, reverse
-#include <cassert>                           // for assert
-#include <cstddef>                           // for size_t
+#include <cassert>  // for assert
+#include <cstddef>  // for size_t
 
-#include "modle/common.hpp"             // for bp_t, MODLE_UNLIKELY
-#include "modle/extrusion_factors.hpp"  // for ExtrusionUnit, Lef
-#include "modle/simulation.hpp"
-#include "modle/utils.hpp"  // for ndebug_defined
+#include "modle/common.hpp"              // for MODLE_UNLIKELY, bp_t, collision_t
+#include "modle/extrusion_barriers.hpp"  // for ExtrusionBarrier
+#include "modle/extrusion_factors.hpp"   // for ExtrusionUnit, Lef
+#include "modle/simulation.hpp"          // for Simulation
+#include "modle/utils.hpp"               // for ndebug_defined
 
 namespace modle {
 

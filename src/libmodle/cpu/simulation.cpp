@@ -2,56 +2,51 @@
 
 #include "modle/simulation.hpp"
 
+#include <H5Cpp.h>                             // IWYU pragma: keep
 #include <absl/container/btree_set.h>          // for btree_iterator
+#include <absl/strings/str_join.h>             // for StrJoin
 #include <absl/types/span.h>                   // for Span, MakeSpan, MakeConstSpan
 #include <cpp-sort/sorter_facade.h>            // for sorter_facade
-#include <cpp-sort/sorters/counting_sorter.h>  // for counting_sort
-#include <cpp-sort/sorters/pdq_sorter.h>       // for pdq_sort
-#include <cpp-sort/sorters/ska_sorter.h>       // for ska_sort
-#include <cpp-sort/sorters/split_sorter.h>     // for split_sort
-#include <fmt/format.h>                        // for print, format, FMT_STRING
+#include <cpp-sort/sorters/counting_sorter.h>  // for counting_sort, counting_sorter
+#include <cpp-sort/sorters/pdq_sorter.h>       // for pdq_sort, pdq_sorter
+#include <cpp-sort/sorters/ska_sorter.h>       // for ska_sort, ska_sorter
+#include <cpp-sort/sorters/split_sorter.h>     // for split_sort, split_sorter
+#include <fmt/format.h>                        // for format, print, FMT_STRING
 #include <fmt/ostream.h>                       // for formatbuf<>::int_type
 
-#include <algorithm>  // for fill, min, max, clamp, for_each, gene...
-#include <atomic>     // for atomic
-#include <boost/asio/post.hpp>
+#include <algorithm>                                // for fill, min, max, clamp, for_each, gene...
+#include <atomic>                                   // for atomic
 #include <boost/asio/thread_pool.hpp>               // for thread_pool
 #include <boost/dynamic_bitset/dynamic_bitset.hpp>  // for dynamic_bitset, dynamic_bitset<>::ref...
-#include <boost/range/adaptor/reversed.hpp>         // for reversed_range
+#include <boost/range/adaptor/reversed.hpp>         // for reversed_range, reverse
 #include <cassert>                                  // for assert
-#include <chrono>                                   // for milliseconds
+#include <chrono>                                   // for microseconds
 #include <cmath>                                    // for round
 #include <cstddef>                                  // for size_t
 #include <cstdio>                                   // for stderr
 #include <cstdlib>                                  // for abs
 #include <deque>                                    // for deque
 #include <filesystem>                               // for operator<<, path
-#include <functional>                               // for hash
-#include <ios>                                      // for size_t, streamsize
+#include <ios>                                      // for streamsize
 #include <limits>                                   // for numeric_limits
 #include <memory>                                   // for unique_ptr, make_unique, _MakeUniq<>:...
 #include <mutex>                                    // for mutex
-#include <numeric>                                  // for iota, accumulate
+#include <numeric>                                  // for iota
 #include <random>                                   // for poisson_distribution, uniform_int_dis...
-#include <sstream>                                  // for basic_stringbuf<>::int_type, basic_st...
 #include <stdexcept>                                // for runtime_error
-#include <string>                                   // for basic_string
-#include <string_view>                              // for hash, string_view
-#include <thread>                                   // for sleep_for, thread
-#include <type_traits>                              // for declval, decay_t
+#include <string>                                   // for basic_string, string
+#include <string_view>                              // for string_view
 #include <utility>                                  // for make_pair, pair
 #include <vector>                                   // for vector, vector<>::iterator
 
-#include "modle/common.hpp"                      // for bp_t, PRNG_t, MODLE_UNLIKELY, MODLE_L...
-#include "modle/config.hpp"                      // for Config
-#include "modle/contacts.hpp"                    // for ContactMatrix
-#include "modle/cooler.hpp"                      // for Cooler, Cooler::WRITE_ONLY
-#include "modle/dna.hpp"                         // for Chromosome
-#include "modle/extrusion_barriers.hpp"          // for update_states, ExtrusionBarrier
-#include "modle/extrusion_factors.hpp"           // for Lef, ExtrusionUnit
-#include "modle/setup.hpp"                       // for Genome
-#include "modle/suppress_compiler_warnings.hpp"  // for DISABLE_WARNING_POP, DISABLE_WARNING_...
-#include "modle/utils.hpp"                       // for ndebug_defined
+#include "modle/common.hpp"              // for bp_t, PRNG_t, MODLE_UNLIKELY, MODLE_L...
+#include "modle/config.hpp"              // for Config
+#include "modle/cooler.hpp"              // for Cooler, Cooler::WRITE_ONLY
+#include "modle/dna.hpp"                 // for Chromosome
+#include "modle/extrusion_barriers.hpp"  // for update_states, ExtrusionBarrier
+#include "modle/extrusion_factors.hpp"   // for Lef, ExtrusionUnit
+#include "modle/setup.hpp"               // for Genome::const_iterator, Genome
+#include "modle/utils.hpp"               // for ndebug_defined
 
 #ifndef BOOST_STACKTRACE_USE_NOOP
 #include <boost/exception/get_error_info.hpp>  // for get_error_info

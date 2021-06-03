@@ -1,16 +1,18 @@
 #pragma once
 
-#include <absl/container/btree_set.h>
+#include <absl/container/btree_set.h>  // for btree_set, btree_set_container<>::const_iterator
 
-#include <cstddef>
-#include <filesystem>
-#include <string_view>
-#include <vector>
+#include <cstddef>      // for size_t
+#include <cstdint>      // for uint32_t
+#include <filesystem>   // for path
+#include <string_view>  // for string_view
+#include <vector>       // for vector
 
-#include "modle/dna.hpp"
-#include "modle/extrusion_barriers.hpp"
+#include "modle/dna.hpp"  // for Chromosome
 
 namespace modle {
+
+class ExtrusionBarrier;
 
 class Genome {
  public:

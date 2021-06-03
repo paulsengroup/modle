@@ -22,7 +22,6 @@
 
 #include "modle/common.hpp"             // for bp_t, PRNG, seeder
 #include "modle/config.hpp"             // for Config
-#include "modle/dna.hpp"                // for Chromosome
 #include "modle/extrusion_factors.hpp"  // for Lef, ExtrusionUnit (ptr only)
 #include "modle/setup.hpp"              // for Genome
 #include "modle/suppress_compiler_warnings.hpp"
@@ -30,6 +29,7 @@
 
 namespace modle {
 
+class Chromosome;
 class ExtrusionBarrier;
 class ExtrusionUnit;
 struct Lef;
@@ -92,19 +92,8 @@ class Simulation : Config {
 
   [[nodiscard]] [[maybe_unused]] boost::asio::thread_pool instantiate_thread_pool() const;
   template <typename I>
-  [[nodiscard]] static boost::asio::thread_pool instantiate_thread_pool(
-      I nthreads, bool clamp_nthreads = true) {
-    static_assert(std::is_integral_v<I>, "nthreads should have an integral type.");
-    DISABLE_WARNING_PUSH
-    DISABLE_WARNING_USELESS_CAST
-    if (clamp_nthreads) {
-      return boost::asio::thread_pool(
-          std::min(std::thread::hardware_concurrency(), static_cast<unsigned int>(nthreads)));
-    }
-    assert(nthreads > 0);
-    return boost::asio::thread_pool(static_cast<unsigned int>(nthreads));
-    DISABLE_WARNING_POP
-  }
+  [[nodiscard]] inline static boost::asio::thread_pool instantiate_thread_pool(
+      I nthreads, bool clamp_nthreads = true);
 
   /// Simulate loop extrusion using the parameters and buffers passed through \p state
   void simulate_extrusion_kernel(State& state) const;
@@ -139,10 +128,10 @@ class Simulation : Config {
   //! In order to properly handle ties, the sorting criterion is actually a bit more complex. See
   //! documentation and comments for Simulation::rank_lefs for more details).
   template <typename MaskT>
-  static void bind_lefs(const Chromosome* chrom, absl::Span<Lef> lefs,
-                        absl::Span<size_t> rev_lef_ranks, absl::Span<size_t> fwd_lef_ranks,
-                        const MaskT& mask, modle::PRNG_t& rand_eng,
-                        bool first_epoch = false) noexcept(utils::ndebug_defined());
+  inline static void bind_lefs(const Chromosome* chrom, absl::Span<Lef> lefs,
+                               absl::Span<size_t> rev_lef_ranks, absl::Span<size_t> fwd_lef_ranks,
+                               const MaskT& mask, modle::PRNG_t& rand_eng,
+                               bool first_epoch = false) noexcept(utils::ndebug_defined());
 
   // clang-format off
   //! Generate moves in reverse direction

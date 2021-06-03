@@ -1,7 +1,9 @@
 #pragma once
 
-#include <cstddef>  // IWYU pragma: keep for size_t
-#include <cstdint>  // for uint32_t, uint_fast8_t
+#include <array>       // for array
+#include <cstddef>     // IWYU pragma: keep for size_t
+#include <cstdint>     // for uint32_t, uint_fast8_t
+#include <functional>  // for function<>::result_type
 
 #include "modle/utils.hpp"  // for ndebug_defined
 

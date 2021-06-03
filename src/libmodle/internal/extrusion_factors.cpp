@@ -1,9 +1,8 @@
 #include "modle/extrusion_factors.hpp"
 
-#include <algorithm>  // for min, clamp
-#include <cassert>    // for assert
-#include <cstddef>    // IWYU pragma: keep for size_t
-#include <limits>     // for numeric_limits
+#include <cassert>  // for assert
+#include <cstddef>  // IWYU pragma: keep for size_t
+#include <limits>   // for numeric_limits
 
 #include "modle/common.hpp"              // for bp_t
 #include "modle/extrusion_barriers.hpp"  // for ExtrusionBarrier

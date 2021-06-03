@@ -5,7 +5,9 @@
 #include <CLI/Error.hpp>  // for ParseError
 #include <cstdio>         // for stderr
 #include <exception>      // for current_exception, exception_ptr, rethrow_...
-#include <memory>         // for make_unique, unique_ptr
+#include <iostream>       // for operator<<, basic_ostream, cerr, ostream
+#include <memory>         // for unique_ptr, make_unique
+#include <new>            // for bad_alloc
 #include <stdexcept>      // for runtime_error
 #include <string>         // for basic_string
 
@@ -18,7 +20,7 @@
 #include "./cli.hpp"             // for Cli
 #include "modle/config.hpp"      // for Config
 #include "modle/simulation.hpp"  // for Simulation
-#include "modle/utils.hpp"       // for ndebug_defined, traced
+#include "modle/utils.hpp"       // for traced
 
 int main(int argc, char** argv) noexcept {
   std::unique_ptr<modle::Cli> cli{nullptr};

@@ -5,6 +5,7 @@
 #include <algorithm>  // for min, clamp
 #include <cassert>    // for assert
 #include <cstddef>    // IWYU pragma: keep for size_t
+#include <cstdint>    // for int64_t
 #include <limits>     // for numeric_limits
 
 #include "modle/common.hpp"              // for bp_t

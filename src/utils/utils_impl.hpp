@@ -1,6 +1,8 @@
 #pragma once
 
 // IWYU pragma: private, include "modle/utils.hpp"
+// IWYU pragma: no_include <boost/exception/detail/error_info_impl.hpp>
+// IWYU pragma: no_include <modle/src/utils/utils_impl.hpp>
 
 #include <absl/strings/match.h>      // for StartsWithIgnoreCase, EndsWith
 #include <absl/strings/str_split.h>  // for StrSplit, Splitter

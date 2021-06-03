@@ -2,13 +2,12 @@
 
 #include <absl/container/flat_hash_map.h>  // for flat_hash_map
 
-#include <algorithm>    // for fill, copy, max
 #include <cstddef>      // IWYU pragma: keep for size_t
 #include <cstdint>      // for uint64_t, uint_fast8_t
 #include <fstream>      // for ifstream
 #include <string>       // for string, basic_string
 #include <string_view>  // for operator""sv, basic_string_view, string_view
-#include <utility>      // for move
+#include <utility>      // IWYU pragma: keep for move
 #include <vector>       // for vector
 
 namespace modle::bed {

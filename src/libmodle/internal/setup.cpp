@@ -1,17 +1,28 @@
 #include "modle/setup.hpp"
 
-#include <absl/container/flat_hash_map.h>
-#include <fmt/format.h>
-#include <fmt/ostream.h>  // required to format std::filesystem::path
+// IWYU pragma: no_include <absl/meta/type_traits.h>
+// IWYU pragma: no_include <sstream>
 
-#include <cassert>
-#include <filesystem>
-#include <stdexcept>
-#include <string>
-#include <utility>
+#include <absl/container/flat_hash_map.h>  // for flat_hash_map, BitMask, operator!=, raw_hash_s...
+#include <fmt/format.h>                    // for format, print, FMT_STRING
+#include <fmt/ostream.h>
 
-#include "modle/chrom_sizes.hpp"
-#include "modle/dna.hpp"
+#include <algorithm>   // for max_element, max
+#include <cassert>     // for assert
+#include <cmath>       // for round
+#include <cstdint>     // for uint64_t, uint32_t
+#include <cstdio>      // for stderr
+#include <filesystem>  // for path, operator<<
+#include <numeric>     // for accumulate
+#include <stdexcept>   // for runtime_error
+#include <string>      // for string, basic_string, char_traits
+#include <utility>     // for pair, move, make_pair
+
+#include "modle/bed.hpp"                 // for BED, Parser
+#include "modle/chrom_sizes.hpp"         // for ChromSize, Parser
+#include "modle/common.hpp"              // for MODLE_UNLIKELY
+#include "modle/dna.hpp"                 // for Chromosome
+#include "modle/extrusion_barriers.hpp"  // for ExtrusionBarrier
 
 namespace modle {
 

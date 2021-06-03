@@ -80,4 +80,4 @@ class Chromosome {
 
 }  // namespace modle
 
-#include "../../dna_impl.hpp"
+#include "../../dna_impl.hpp"  // IWYU pragma: keep

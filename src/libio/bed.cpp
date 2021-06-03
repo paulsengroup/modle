@@ -1,29 +1,27 @@
+// IWYU pragma: no_include <ext/alloc_traits.h>
+
 #include "modle/bed.hpp"
 
-#include <absl/container/flat_hash_map.h>  // for flat_hash_map, BitMask, oper...
+#include <absl/container/flat_hash_map.h>  // for flat_hash_map, BitMask, operator!=
 #include <absl/hash/hash.h>                // for Hash
 #include <absl/strings/str_cat.h>          // for StrCat
 #include <absl/strings/str_join.h>         // for StrJoin
-#include <absl/strings/str_split.h>        // for StrSplit, Splitter, SplitIte...
-#include <bits/exception.h>                // for exception
-#include <fmt/format.h>                    // for format, FMT_COMPILE_STRING...
+#include <absl/strings/str_split.h>        // for StrSplit, Splitter, SplitIterator, operator!=
+#include <fmt/format.h>                    // for format, FMT_STRING, string_view, system_error
 
-#include <algorithm>           // for fill, max, copy, transform
-#include <cassert>             // for assert
-#include <cerrno>              // for errno
-#include <cstdint>             // for uint64_t, uint8_t, uint16_t
-#include <ext/alloc_traits.h>  // for __alloc_traits<>::value_type
-#include <filesystem>          // for is_fifo
-#include <iosfwd>              // for ifstream, size_t
-#include <istream>             // for basic_istream, basic_ios
-#include <limits>              // for numeric_limits
-#include <stdexcept>           // for runtime_error
-#include <string>              // for string, allocator, char_traits
-#include <string_view>         // for string_view, operator==, bas...
-#include <utility>             // for move
-#include <vector>              // for vector
+#include <algorithm>    // for transform, max
+#include <cassert>      // for assert
+#include <cerrno>       // for errno
+#include <cstdint>      // for uint64_t, uint8_t, uint16_t
+#include <filesystem>   // for is_fifo
+#include <limits>       // for numeric_limits
+#include <stdexcept>    // for runtime_error
+#include <string>       // for string, allocator, char_traits, getline, opera...
+#include <string_view>  // for string_view, operator==, basic_string_view
+#include <utility>      // for move
+#include <vector>       // for vector
 
-#include "modle/utils.hpp"  // for parse_numeric_or_throw, pars...
+#include "modle/utils.hpp"  // for parse_numeric_or_throw, parse_vect_of_numbers_...
 
 namespace modle::bed {
 

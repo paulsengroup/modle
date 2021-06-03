@@ -1,6 +1,7 @@
 #pragma once
 
 #include <cstddef>  // IWYU pragma: keep for size_t
+#include <cstdint>  // for int64_t
 #include <limits>   // for numeric_limits
 
 #include "modle/common.hpp"  // for bp_t_t

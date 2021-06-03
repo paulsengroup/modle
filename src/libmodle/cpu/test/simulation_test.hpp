@@ -9,6 +9,7 @@
 #include <memory>            // for allocator_traits<>::value_type
 #include <vector>            // for vector
 
+#include "modle/chrom_sizes.hpp"
 #include "modle/common.hpp"                      // for bp_t, PRNG, PRNG_t
 #include "modle/config.hpp"                      // for Config
 #include "modle/extrusion_barriers.hpp"          // for ExtrusionBarrier

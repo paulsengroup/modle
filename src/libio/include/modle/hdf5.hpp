@@ -1,11 +1,24 @@
 #pragma once
-#include <H5Cpp.h>
+
+// IWYU pragma: no_include <H5DaccProp.h>
+// IWYU pragma: no_include <H5DataSet.h>
+// IWYU pragma: no_include <H5DataSpace.h>
+// IWYU pragma: no_include <H5DcreatProp.h>
+// IWYU pragma: no_include <H5Exception.h>
+// IWYU pragma: no_include <H5File.h>
+// IWYU pragma: no_include <H5Group.h>
+// IWYU pragma: no_include <H5PredType.h>
+// IWYU pragma: no_include <H5Public.h>
+// IWYU pragma: no_include "H5Public.h"
+// IWYU pragma: no_include <H5public.h>
+// IWYU pragma: no_include <H5StrType.h>
+
+#include <H5Cpp.h>  // IWYU pragma: keep
 
 #include <cstdint>      // for int64_t
 #include <string>       // for string
 #include <string_view>  // for string_view
 #include <vector>       // for vector
-// #include "modle/contacts.hpp"
 
 namespace modle::hdf5 {
 

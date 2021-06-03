@@ -1,14 +1,21 @@
 #pragma once
 
-#include <absl/types/span.h>  // for Span, MakeSpan, MakeConstSpan
+// IWYU pragma: private, include "modle/simulation.hpp"
 
-#include <algorithm>
-#include <cassert>
-#include <cstddef>
-#include <type_traits>
+#include <absl/types/span.h>  // for Span
 
-#include "modle/common.hpp"
-#include "modle/dna.hpp"
+#include <algorithm>                   // for min
+#include <boost/asio/thread_pool.hpp>  // for thread_pool
+#include <cassert>                     // for assert
+#include <cstddef>                     // for size_t
+#include <thread>                      // for thread
+#include <type_traits>                 // for declval, decay_t
+
+#include "modle/common.hpp"                      // for PRNG_t
+#include "modle/dna.hpp"                         // for Chromosome
+#include "modle/extrusion_factors.hpp"           // for Lef
+#include "modle/suppress_compiler_warnings.hpp"  // for DISABLE_WARNING_POP, DISABLE_WARNING_...
+#include "modle/utils.hpp"                       // for ndebug_defined
 
 namespace modle {
 template <typename MaskT>
@@ -60,5 +67,19 @@ void Simulation::bind_lefs(const Chromosome* chrom, const absl::Span<Lef> lefs,
     assert(std::all_of(fwd_lef_ranks.begin(), fwd_lef_ranks.end(),  // NOLINT
                        [&](const auto i) { return i < lefs.size(); }));
   }
+}
+
+template <typename I>
+boost::asio::thread_pool Simulation::instantiate_thread_pool(I nthreads, bool clamp_nthreads) {
+  static_assert(std::is_integral_v<I>, "nthreads should have an integral type.");
+  DISABLE_WARNING_PUSH
+  DISABLE_WARNING_USELESS_CAST
+  if (clamp_nthreads) {
+    return boost::asio::thread_pool(
+        std::min(std::thread::hardware_concurrency(), static_cast<unsigned int>(nthreads)));
+  }
+  assert(nthreads > 0);
+  return boost::asio::thread_pool(static_cast<unsigned int>(nthreads));
+  DISABLE_WARNING_POP
 }
 }  // namespace modle

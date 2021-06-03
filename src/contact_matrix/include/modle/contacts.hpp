@@ -1,5 +1,7 @@
 #pragma once
 
+// IWYU pragma: no_include "modle/src/contact_matrix/contacts_impl.hpp"
+
 #include <absl/types/span.h>  // for Span
 
 #include <atomic>                                   // for atomic

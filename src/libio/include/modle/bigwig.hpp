@@ -1,5 +1,7 @@
 #pragma once
 
+// IWYU pragma: no_include "modle/src/libio/bigwig_impl.hpp"
+
 #include <absl/container/flat_hash_map.h>  // for flat_hash_map
 #include <bigWig.h>                        // for bigWigFile_t
 

@@ -1,11 +1,14 @@
 #pragma once
 
 // IWYU pragma: private, include "modle/contacts.hpp"
+// IWYU pragma: no_include <boost/core/checked_delete.hpp>
+// IWYU pragma: no_include <boost/exception/detail/error_info_impl.hpp>
+// IWYU pragma: no_include <H5Public.h>
 
 #include <absl/strings/str_join.h>        // for StrJoin
 #include <absl/types/span.h>              // for MakeConstSpan, Span
+#include <cpp-sort/sorter_facade.h>       // for sorter_facade
 #include <cpp-sort/sorters/ska_sorter.h>  // for ska_sort
-#include <cpp-sort/utility/functional.h>  // for as_projection
 #include <fmt/format.h>                   // for FMT_STRING, format
 
 #include <algorithm>                                // for max, fill, copy
@@ -14,10 +17,11 @@
 #include <boost/exception/exception.hpp>            // IWYU pragma: keep for error_info_base
 #include <cassert>                                  // for assert
 #include <cmath>                                    // for round
+#include <cstddef>                                  // IWYU pragma: keep for size_t
 #include <cstdint>                                  // for uint64_t, int64_t
-#include <fstream>                                  // for size_t
 #include <limits>                                   // for numeric_limits
 #include <mutex>                                    // for mutex
+#include <numeric>                                  // for accumulate
 #include <random>                                   // for normal_distribution, random_device
 #include <stdexcept>                                // for runtime_error, logic_error
 #include <type_traits>                              // for is_integral, is_signed

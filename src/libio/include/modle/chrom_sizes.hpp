@@ -1,12 +1,13 @@
 #pragma once
 
 #include <absl/container/flat_hash_set.h>  // for flat_hash_set
+#include <absl/hash/hash.h>                // for Hash
 
 #include <cstdint>      // for uint64_t
 #include <fstream>      // for ifstream
 #include <string>       // for string, basic_string
 #include <string_view>  // for string_view
-#include <utility>      // for move
+#include <utility>      // IWYU pragma: keep for move
 #include <vector>       // for vector
 
 namespace modle::chrom_sizes {

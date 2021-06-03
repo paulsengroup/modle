@@ -1,5 +1,7 @@
 #pragma once
 
+// IWYU pragma: no_include "modle/src/utils/utils_impl.hpp"
+
 #include <cstddef>       // IWYU pragma: keep for size_t
 #include <cstdint>       // for int64_t, uint64_t
 #include <string>        // for string

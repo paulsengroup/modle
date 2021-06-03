@@ -1,27 +1,36 @@
 #include "modle/hdf5.hpp"
 
+// IWYU pragma: no_include <H5DaccProp.h>
+// IWYU pragma: no_include <H5DataSet.h>
+// IWYU pragma: no_include <H5DataSpace.h>
+// IWYU pragma: no_include <H5DcreatProp.h>
+// IWYU pragma: no_include <H5Exception.h>
+// IWYU pragma: no_include <H5File.h>
+// IWYU pragma: no_include <H5Group.h>
+// IWYU pragma: no_include <H5PredType.h>
+// IWYU pragma: no_include <H5Public.h>
+// IWYU pragma: no_include "H5Public.h"
+// IWYU pragma: no_include <H5Ppublic.h>
+// IWYU pragma: no_include "H5Ppublic.h"
+// IWYU pragma: no_include <H5SPublic.h>
+// IWYU pragma: no_include <H5StrType.h>
+
 #include <H5Cpp.h>                 // IWYU pragma: keep
 #include <absl/strings/str_cat.h>  // for StrCat
-#include <absl/strings/strip.h>    // for ConsumePrefix, StripPrefix
+#include <absl/strings/strip.h>    // for ConsumePrefix, StripPrefix, StripSuffix
 #include <fcntl.h>                 // for SEEK_END, SEEK_SET
-#include <fmt/format.h>            // for format, FMT_STRING, to_string
+#include <fmt/format.h>            // for format, FMT_STRING
 
 #include <algorithm>    // for max
 #include <cassert>      // for assert
 #include <cstddef>      // IWYU pragma: keep for size_t
-#include <cstdint>      // for int64_t, int32_t, int16_t
-#include <cstdio>       // for fclose, fseek, tmpfile, ferror
-#include <limits>       // for numeric_limits
+#include <cstdint>      // for int64_t
+#include <cstdio>       // for fclose, fseek, tmpfile, ferror, fread, ftell, FILE
 #include <memory>       // for unique_ptr
-#include <stdexcept>    // for runtime_error, logic_error
+#include <stdexcept>    // for runtime_error
 #include <string>       // for string, basic_string
 #include <string_view>  // for string_view
-#include <type_traits>  // for decay_t, declval, remove_poi...
-#include <variant>      // for visit, variant
 #include <vector>       // for vector
-
-#include "modle/suppress_compiler_warnings.hpp"  // for DISABLE_WARNING_POP, DISABLE...
-#include "modle/utils.hpp"                       // for throw_with_trace, get_printable_ty...
 
 namespace modle::hdf5 {
 

@@ -1,5 +1,16 @@
 #pragma once
 
+// IWYU pragma: no_include <H5DaccProp.h>
+// IWYU pragma: no_include <H5DataSet.h>
+// IWYU pragma: no_include <H5DataSpace.h>
+// IWYU pragma: no_include <H5DcreatProp.h>
+// IWYU pragma: no_include <H5File.h>
+// IWYU pragma: no_include <H5Group.h>
+// IWYU pragma: no_include <H5PredType.h>
+// IWYU pragma: no_include <H5StrType.h>
+// IWYU pragma: no_include <H5public.h>
+// IWYU pragma: no_include "modle/src/libio/cooler_impl.hpp"
+
 #include <H5Cpp.h>                                // IWYU pragma: keep
 #include <absl/types/span.h>                      // for Span
 #include <readerwriterqueue/readerwriterqueue.h>  // for BlockingReadWriterQueue

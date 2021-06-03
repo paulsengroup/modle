@@ -1,42 +1,47 @@
 #pragma once
 
 // IWYU pragma: private, include "modle/cooler.hpp"
+// IWYU pragma: no_include <boost/core/checked_delete.hpp>
+// IWYU pragma: no_include <boost/exception/detail/error_info_impl.hpp>
+// IWYU pragma: no_include <cpp-sort/sorter_facade.h>
+// IWYU pragma: no_include <H5DaccProp.h>
+// IWYU pragma: no_include <H5DataSet.h>
+// IWYU pragma: no_include <H5DataSpace.h>
+// IWYU pragma: no_include <H5DcreatProp.h>
+// IWYU pragma: no_include <H5Exception.h>
+// IWYU pragma: no_include <H5File.h>
+// IWYU pragma: no_include <H5Group.h>
+// IWYU pragma: no_include <H5PredType.h>
+// IWYU pragma: no_include <H5Public.h>
+// IWYU pragma: no_include "H5Public.h"
+// IWYU pragma: no_include <H5Ppublic.h>
+// IWYU pragma: no_include "H5Ppublic.h"
+// IWYU pragma: no_include <H5public.h>
+// IWYU pragma: no_include <H5StrType.h>
+// IWYU pragma: no_include "hdf5_impl.hpp"
+// IWYU pragma: no_include <ssrteam>
 
-#include <H5Cpp.h>                                // IWYU pragma: keep
-#include <absl/strings/match.h>                   // for EndsWithIgnoreCase, StartsWith
-#include <absl/strings/str_cat.h>                 // for StrCat, StrAppend
-#include <absl/strings/str_join.h>                // for StrJoin
-#include <absl/strings/strip.h>                   // for StripPrefix, ConsumePrefix, StripS...
-#include <absl/time/clock.h>                      // for Now
-#include <absl/time/time.h>                       // for FormatDuration, operator-, FormatTime
-#include <absl/types/span.h>                      // for MakeConstSpan, Span
-#include <fmt/format.h>                           // for format, FMT_STRING, print
-#include <fmt/ostream.h>                          // for formatbuf<>::int_type
-#include <readerwriterqueue/readerwriterqueue.h>  // for BlockingReadWriterQueue
+#include <H5Cpp.h>                 // IWYU pragma: keep
+#include <absl/strings/str_cat.h>  // for StrCat
+#include <absl/time/clock.h>       // for Now
+#include <absl/time/time.h>        // for FormatDuration, operator-, Time
+#include <absl/types/span.h>       // for MakeConstSpan, Span
+#include <fmt/format.h>            // for FMT_STRING, print, format
+#include <fmt/ostream.h>                         // for formatbuf<>::int_type
 
-#include <algorithm>           // for max, fill, min, copy, find, generate
-#include <array>               // for array, array<>::value_type
-#include <cassert>             // for assert
-#include <cmath>               // for isnan, round
-#include <cstddef>             // IWYU pragma: keep for size_t
-#include <cstdint>             // for int64_t, uint32_t, int32_t, uint8_t
-#include <cstdio>              // for stderr
-#include <exception>           // for exception
-#include <ext/alloc_traits.h>  // for __alloc_traits<>::value_type
-#include <filesystem>          // for operator<<, path
-#include <iterator>            // for distance
-#include <limits>              // for numeric_limits
-#include <memory>              // for unique_ptr, make_unique, allocator
-#include <sstream>             // for size_t, basic_stringbuf<>::int_type
-#include <stdexcept>           // for runtime_error, logic_error
-#include <string>              // for string, basic_string, operator!=
-#include <string_view>         // for string_view, basic_string_view
-#include <thread>              // for sleep_for
-#include <utility>             // for pair, make_pair
-#include <vector>              // for vector, vector<>::iterator
+#include <algorithm>    // for max, min, fill
+#include <cassert>      // for assert
+#include <cstddef>      // IWYU pragma: keep for size_t
+#include <cstdint>      // for int64_t, int32_t, uint64_t, uint8_t
+#include <cstdio>       // for stderr
+#include <memory>       // for unique_ptr, make_unique
+#include <stdexcept>    // for runtime_error
+#include <string>       // for string
+#include <string_view>  // for string_view
+#include <vector>       // for vector
 
-#include "modle/contacts.hpp"                    // for ContactMatrix
-#include "modle/hdf5.hpp"                        // for write_numbers, write_or_create_att...
+#include "modle/contacts.hpp"                    // IWYU pragma: keep for ContactMatrix
+#include "modle/hdf5.hpp"                        // for has_attribute, read_attribute_int
 #include "modle/suppress_compiler_warnings.hpp"  // for DISABLE_WARNING_POP, DISABLE_WARNI...
 #include "modle/utils.hpp"                       // for throw_with_trace
 

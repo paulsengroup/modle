@@ -1,26 +1,46 @@
 #pragma once
 
-#include <H5Cpp.h>                 // IWYU pragma: keep
-#include <absl/strings/str_cat.h>  // for StrCat
-#include <absl/strings/strip.h>    // for ConsumePrefix, StripPrefix
-#include <fcntl.h>                 // for SEEK_END, SEEK_SET
-#include <fmt/format.h>            // for format, FMT_STRING, to_string
+// IWYU pragma: private, include "modle/hdf5.hpp"
 
-#include <algorithm>    // for max
+// IWYU pragma: no_include <boost/core/checked_delete.hpp>
+// IWYU pragma: no_include <boost/exception/detail/error_info_impl.hpp>
+// IWYU pragma: no_include <H5ArrayType.h>
+// IWYU pragma: no_include <H5Attribute.h>
+// IWYU pragma: no_include <H5DaccProp.h>
+// IWYU pragma: no_include <H5DataSet.h>
+// IWYU pragma: no_include <H5DataSpace.h>
+// IWYU pragma: no_include <H5DataType.h>
+// IWYU pragma: no_include <H5DcreatProp.h>
+// IWYU pragma: no_include <H5Exception.h>
+// IWYU pragma: no_include <H5File.h>
+// IWYU pragma: no_include <H5FloatType.h>
+// IWYU pragma: no_include <H5Group.h>
+// IWYU pragma: no_include <H5IntType.h>
+// IWYU pragma: no_include <H5PredType.h>
+// IWYU pragma: no_include <H5Public.h>
+// IWYU pragma: no_include "H5Public.h"
+// IWYU pragma: no_include <H5Ppublic.h>
+// IWYU pragma: no_include "H5Ppublic.h"
+// IWYU pragma: no_include <H5public.h>
+// IWYU pragma: no_include <H5StrType.h>
+// IWYU pragma: no_include <H5Spublic.h>
+// IWYU pragma: no_include <H5public.h>
+
+#include <H5Cpp.h>       // IWYU pragma: keep
+#include <fmt/format.h>  // for FMT_STRING, format, to_string
+
 #include <cassert>      // for assert
-#include <cstddef>      // IWYU pragma: keep for size_t
-#include <cstdint>      // for int64_t, int32_t, int16_t
-#include <cstdio>       // for fclose, fseek, tmpfile, ferror
+#include <cstddef>      // for size_t
+#include <cstdint>      // for int32_t, int16_t, int64_t, int8_t
 #include <limits>       // for numeric_limits
-#include <memory>       // for unique_ptr
 #include <stdexcept>    // for runtime_error, logic_error
-#include <string>       // for string, basic_string
+#include <string>       // for string
 #include <string_view>  // for string_view
-#include <type_traits>  // for decay_t, declval, remove_poi...
+#include <type_traits>  // for decay_t, declval, remove_pointer_t
 #include <variant>      // for visit, variant
 #include <vector>       // for vector
 
-#include "modle/suppress_compiler_warnings.hpp"  // for DISABLE_WARNING_POP, DISABLE...
+#include "modle/suppress_compiler_warnings.hpp"  // for DISABLE_WARNING_POP, DISABLE_WARNI...
 #include "modle/utils.hpp"                       // for throw_with_trace, get_printable_ty...
 
 namespace modle::hdf5 {
