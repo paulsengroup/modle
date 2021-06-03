@@ -19,7 +19,6 @@
 // IWYU pragma: no_include <boost/exception/detail/error_info_impl.hpp>
 // IWYU pragma: no_include "hdf5_impl.hpp"
 
-
 #include <H5Cpp.h>                                // IWYU pragma: keep
 #include <absl/strings/match.h>                   // for EndsWithIgnoreCase, StartsWith
 #include <absl/strings/str_cat.h>                 // for StrCat, StrAppend

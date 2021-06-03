@@ -27,7 +27,7 @@
 #include <absl/time/time.h>        // for FormatDuration, operator-, Time
 #include <absl/types/span.h>       // for MakeConstSpan, Span
 #include <fmt/format.h>            // for FMT_STRING, print, format
-#include <fmt/ostream.h>                         // for formatbuf<>::int_type
+#include <fmt/ostream.h>           // for formatbuf<>::int_type
 
 #include <algorithm>    // for max, min, fill
 #include <cassert>      // for assert
