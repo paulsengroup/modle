@@ -17,11 +17,11 @@
 
 namespace modle {
 
-std::pair<size_t, size_t> Simulation::detect_collisions_at_chrom_boundaries(
-    const Chromosome* chrom, const absl::Span<const Lef> lefs,
-    const absl::Span<const size_t> rev_lef_ranks, const absl::Span<const size_t> fwd_lef_ranks,
-    const absl::Span<const bp_t> rev_moves, const absl::Span<const bp_t> fwd_moves,
-    const absl::Span<collision_t> rev_collisions, const absl::Span<collision_t> fwd_collisions) {
+std::pair<size_t, size_t> Simulation::detect_units_at_chrom_boundaries(
+    const Chromosome* chrom, absl::Span<const Lef> lefs, absl::Span<const size_t> rev_lef_ranks,
+    absl::Span<const size_t> fwd_lef_ranks, absl::Span<const bp_t> rev_moves,
+    absl::Span<const bp_t> fwd_moves, absl::Span<collision_t> rev_collisions,
+    absl::Span<collision_t> fwd_collisions) {
   {
     assert(lefs.size() == fwd_lef_ranks.size());                       // NOLINT
     assert(lefs.size() == rev_lef_ranks.size());                       // NOLINT
@@ -45,8 +45,8 @@ std::pair<size_t, size_t> Simulation::detect_collisions_at_chrom_boundaries(
   // Detect if the first rev unit or last fwd unit are about to fall off chrom. boundaries
   // Also detect extr. units that are already at chrom boundaries
 
-  auto nrev_units_at_5prime = 0UL;
-  auto nfwd_units_at_3prime = 0UL;
+  auto num_rev_units_at_5prime = 0UL;
+  auto num_fwd_units_at_3prime = 0UL;
 
   const auto& first_active_fwd_unit = lefs[fwd_lef_ranks[0]].fwd_unit;
   const auto& last_active_rev_unit =
@@ -65,7 +65,7 @@ std::pair<size_t, size_t> Simulation::detect_collisions_at_chrom_boundaries(
 
     if (rev_unit.pos() == chrom->start_pos()) {  // Unit already at the 5'-end
       assert(rev_moves[rev_idx] == 0);           // NOLINT
-      ++nrev_units_at_5prime;
+      ++num_rev_units_at_5prime;
       rev_collisions[rev_idx] = REACHED_CHROM_BOUNDARY;
 
     } else if (rev_unit.pos() > first_active_fwd_unit.pos()) {
@@ -76,7 +76,7 @@ std::pair<size_t, size_t> Simulation::detect_collisions_at_chrom_boundaries(
     } else if (rev_unit.pos() - rev_move == chrom->start_pos()) {
       // Unit will reach the 5'-end by the end of the current epoch
       rev_collisions[rev_idx] = REACHED_CHROM_BOUNDARY;
-      ++nrev_units_at_5prime;
+      ++num_rev_units_at_5prime;
       break;
     }
   }
@@ -88,15 +88,15 @@ std::pair<size_t, size_t> Simulation::detect_collisions_at_chrom_boundaries(
     const auto& fwd_move = fwd_moves[fwd_idx];
 
     if (!lefs[fwd_idx].is_bound()) {
-      ++nfwd_units_at_3prime;  // Inactive units are technically not at the 3'-end, but we count
-      continue;                // them anyway so that we can shrink the spans on LEF-related
-                               // buffers to avoid doing some work in later steps
+      ++num_fwd_units_at_3prime;  // Inactive units are technically not at the 3'-end, but we count
+      continue;                   // them anyway so that we can shrink the spans on LEF-related
+                                  // buffers to avoid doing some work in later steps
     }
 
     assert(fwd_unit.pos() + fwd_move < chrom->end_pos());  // NOLINT
     if (fwd_unit.pos() == chrom->end_pos() - 1) {
       assert(fwd_moves[fwd_idx] == 0);  // NOLINT
-      ++nfwd_units_at_3prime;
+      ++num_fwd_units_at_3prime;
       fwd_collisions[fwd_idx] = REACHED_CHROM_BOUNDARY;
 
     } else if (fwd_unit.pos() < last_active_rev_unit.pos()) {
@@ -104,12 +104,12 @@ std::pair<size_t, size_t> Simulation::detect_collisions_at_chrom_boundaries(
 
     } else if (fwd_unit.pos() + fwd_move == chrom->end_pos() - 1) {
       fwd_collisions[fwd_idx] = REACHED_CHROM_BOUNDARY;
-      ++nfwd_units_at_3prime;
+      ++num_fwd_units_at_3prime;
       break;
     }
   }
 
-  return std::make_pair(nrev_units_at_5prime, nfwd_units_at_3prime);
+  return std::make_pair(num_rev_units_at_5prime, num_fwd_units_at_3prime);
 }
 
 void Simulation::detect_lef_bar_collisions(
@@ -118,7 +118,7 @@ void Simulation::detect_lef_bar_collisions(
     const absl::Span<const bp_t> fwd_moves, const absl::Span<const ExtrusionBarrier> extr_barriers,
     const boost::dynamic_bitset<>& barrier_mask, const absl::Span<collision_t> rev_collisions,
     const absl::Span<collision_t> fwd_collisions, modle::PRNG_t& rand_eng,
-    size_t nrev_units_at_5prime, size_t nfwd_units_at_3prime) const
+    size_t num_rev_units_at_5prime, size_t num_fwd_units_at_3prime) const
     noexcept(utils::ndebug_defined()) {
   {
     assert(lefs.size() == fwd_lef_ranks.size());                       // NOLINT
@@ -128,8 +128,8 @@ void Simulation::detect_lef_bar_collisions(
     assert(lefs.size() == fwd_collisions.size());                      // NOLINT
     assert(lefs.size() == rev_collisions.size());                      // NOLINT
     assert(barrier_mask.size() == extr_barriers.size());               // NOLINT
-    assert(lefs.size() >= nrev_units_at_5prime);                       // NOLINT
-    assert(lefs.size() >= nfwd_units_at_3prime);                       // NOLINT
+    assert(lefs.size() >= num_rev_units_at_5prime);                    // NOLINT
+    assert(lefs.size() >= num_fwd_units_at_3prime);                    // NOLINT
     assert(std::is_sorted(fwd_lef_ranks.begin(), fwd_lef_ranks.end(),  // NOLINT
                           [&](const auto r1, const auto r2) {
                             return lefs[r1].fwd_unit.pos() < lefs[r2].fwd_unit.pos();
@@ -158,9 +158,9 @@ void Simulation::detect_lef_bar_collisions(
   // of the extr. barrier that caused the collision.
 
   // Init indices and position with the rev and fwd extr. units that are the closest to the 5'-end
-  auto j1 = nrev_units_at_5prime == 0UL ? 0 : nrev_units_at_5prime - 1;
+  auto j1 = num_rev_units_at_5prime == 0UL ? 0 : num_rev_units_at_5prime - 1;
   size_t j2 = 0;
-  const auto j2_end = lefs.size() - nfwd_units_at_3prime;
+  const auto j2_end = lefs.size() - std::min(num_fwd_units_at_3prime, num_fwd_units_at_3prime - 1);
 
   auto rev_idx = rev_lef_ranks[j1];
   auto fwd_idx = fwd_lef_ranks[j2];
@@ -227,7 +227,7 @@ void Simulation::detect_lef_bar_collisions(
       // Decrement j2 by one (if it is legal to do so), so that j2 corresponds to the index of the
       // fwd extr. unit that is located as close as possible to the extr. barrier that is being
       // processed
-      fwd_idx = fwd_lef_ranks[j2 > 0 ? --j2 : 0];
+      fwd_idx = fwd_lef_ranks[std::min(j2, j2 - 1)];
       fwd_unit_pos = lefs[fwd_idx].fwd_unit.pos();
 
       if (lefs[fwd_idx].is_bound()) {
@@ -254,7 +254,7 @@ void Simulation::detect_primary_lef_lef_collisions(
     const absl::Span<const size_t> rev_lef_ranks, const absl::Span<const size_t> fwd_lef_ranks,
     const absl::Span<const bp_t> rev_moves, const absl::Span<const bp_t> fwd_moves,
     const absl::Span<collision_t> rev_collisions, const absl::Span<collision_t> fwd_collisions,
-    PRNG_t& rand_eng, size_t nrev_units_at_5prime, size_t nfwd_units_at_3prime) const
+    PRNG_t& rand_eng, size_t num_rev_units_at_5prime, size_t num_fwd_units_at_3prime) const
     noexcept(utils::ndebug_defined()) {
   {
     assert(lefs.size() == fwd_lef_ranks.size());                       // NOLINT
@@ -263,8 +263,8 @@ void Simulation::detect_primary_lef_lef_collisions(
     assert(lefs.size() == rev_moves.size());                           // NOLINT
     assert(lefs.size() == fwd_collisions.size());                      // NOLINT
     assert(lefs.size() == rev_collisions.size());                      // NOLINT
-    assert(lefs.size() >= nrev_units_at_5prime);                       // NOLINT
-    assert(lefs.size() >= nfwd_units_at_3prime);                       // NOLINT
+    assert(lefs.size() >= num_rev_units_at_5prime);                    // NOLINT
+    assert(lefs.size() >= num_fwd_units_at_3prime);                    // NOLINT
     assert(std::is_sorted(fwd_lef_ranks.begin(), fwd_lef_ranks.end(),  // NOLINT
                           [&](const auto r1, const auto r2) {
                             return lefs[r1].fwd_unit.pos() < lefs[r2].fwd_unit.pos();
@@ -290,13 +290,14 @@ void Simulation::detect_primary_lef_lef_collisions(
   //      mask. This kind of collisions are encoded as offset + i, where offset = nbarriers and i =
   //      the index of the unit that is colliding.
 
-  if (nrev_units_at_5prime == lefs.size() || nfwd_units_at_3prime == lefs.size()) MODLE_UNLIKELY {
-      return;
-    }
+  if (num_rev_units_at_5prime == lefs.size() || num_fwd_units_at_3prime == lefs.size())
+    MODLE_UNLIKELY { return; }
 
   //    Initialize indexes so that we skip over rev units at the 5' and fwd units at the 3' (if any)
-  auto i1 = 0UL, j1 = nrev_units_at_5prime;
-  const auto i2 = lefs.size() - nfwd_units_at_3prime, j2 = lefs.size();
+  auto i1 = 0UL;
+  auto j1 = num_rev_units_at_5prime;
+  const auto i2 = lefs.size() - std::min(num_fwd_units_at_3prime, num_fwd_units_at_3prime - 1);
+  const auto j2 = lefs.size();
 
   while (true) {
     auto rev_idx = rev_lef_ranks[j1];             // index of the jth rev unit in 5'-3' order
@@ -327,7 +328,7 @@ void Simulation::detect_primary_lef_lef_collisions(
     // The previous while loop finds the first fwd unit that comes at or after the rev unit that
     // is being processed, but we are actually interested in the fwd unit before this one.
     // This is why we take the unit at index i1-1
-    fwd_idx = fwd_lef_ranks[i1 - 1];
+    fwd_idx = fwd_lef_ranks[std::min(i1, i1 - 1)];
     fwd_pos = lefs[fwd_idx].fwd_unit.pos();
 
     // We have a LEF-LEF collision event if the distance between the two extr. units is less than
@@ -339,8 +340,8 @@ void Simulation::detect_primary_lef_lef_collisions(
         (this->probability_of_extrusion_unit_bypass == 0 ||
          std::bernoulli_distribution{1.0 - this->probability_of_extrusion_unit_bypass}(rand_eng))) {
       // Declare few aliases to reduce code verbosity later on
-      auto& rev_move = rev_moves[rev_idx];
-      auto& fwd_move = fwd_moves[fwd_idx];
+      const auto& rev_move = rev_moves[rev_idx];
+      const auto& fwd_move = fwd_moves[fwd_idx];
       auto& cause_of_collision_rev = rev_collisions[rev_idx];
       auto& cause_of_collision_fwd = fwd_collisions[fwd_idx];
 
@@ -401,17 +402,17 @@ void Simulation::process_secondary_lef_lef_collisions(
     const absl::Span<const size_t> rev_lef_ranks, const absl::Span<const size_t> fwd_lef_ranks,
     const absl::Span<bp_t> rev_moves, const absl::Span<bp_t> fwd_moves,
     const absl::Span<collision_t> rev_collisions, const absl::Span<collision_t> fwd_collisions,
-    PRNG_t& rand_eng, size_t nrev_units_at_5prime, size_t nfwd_units_at_3prime) const
+    PRNG_t& rand_eng, size_t num_rev_units_at_5prime, size_t num_fwd_units_at_3prime) const
     noexcept(utils::ndebug_defined()) {
   {
-    assert(lefs.size() == fwd_lef_ranks.size());   // NOLINT
-    assert(lefs.size() == rev_lef_ranks.size());   // NOLINT
-    assert(lefs.size() == fwd_moves.size());       // NOLINT
-    assert(lefs.size() == rev_moves.size());       // NOLINT
-    assert(lefs.size() == fwd_collisions.size());  // NOLINT
-    assert(lefs.size() == rev_collisions.size());  // NOLINT
-    assert(lefs.size() >= nrev_units_at_5prime);   // NOLINT
-    assert(lefs.size() >= nfwd_units_at_3prime);   // NOLINT
+    assert(lefs.size() == fwd_lef_ranks.size());     // NOLINT
+    assert(lefs.size() == rev_lef_ranks.size());     // NOLINT
+    assert(lefs.size() == fwd_moves.size());         // NOLINT
+    assert(lefs.size() == rev_moves.size());         // NOLINT
+    assert(lefs.size() == fwd_collisions.size());    // NOLINT
+    assert(lefs.size() == rev_collisions.size());    // NOLINT
+    assert(lefs.size() >= num_rev_units_at_5prime);  // NOLINT
+    assert(lefs.size() >= num_fwd_units_at_3prime);  // NOLINT
     (void)chrom;
   }
 
@@ -434,9 +435,12 @@ void Simulation::process_secondary_lef_lef_collisions(
   // 5. Continue iterating from where we left at step 0
 
   const auto offset = nbarriers + lefs.size();
+  const auto num_active_rev_units = std::max(1UL, num_rev_units_at_5prime);
+  const auto num_active_fwd_units =
+      lefs.size() - std::min(num_fwd_units_at_3prime, num_fwd_units_at_3prime - 1);
 
   // Loop over rev units in 5'-3' direction, and skip over units that are located at the 5'-end
-  for (auto i = std::max(1UL, nrev_units_at_5prime); i < lefs.size(); ++i) {
+  for (auto i = num_active_rev_units; i < lefs.size(); ++i) {
     // index of the ith-1 rev unit in 5'-3' order (i.e. U1)
     const auto& rev_idx1 = rev_lef_ranks[i - 1];
     const auto& rev_pos1 = lefs[rev_idx1].rev_unit.pos();
@@ -473,7 +477,7 @@ void Simulation::process_secondary_lef_lef_collisions(
 
   // Loop over fwd units in 3'-5' direction, and skip over units that are located at the 3'-end.
   // Look in the section above for detailed comments
-  for (auto i = lefs.size() - nfwd_units_at_3prime - 1; i > 1; --i) {
+  for (auto i = num_active_fwd_units - 1; i > 0; --i) {
     // index of the ith fwd unit in 3'-5' order (i.e. U2)
     const auto& fwd_idx2 = fwd_lef_ranks[i];
     const auto& fwd_pos2 = lefs[fwd_idx2].fwd_unit.pos();

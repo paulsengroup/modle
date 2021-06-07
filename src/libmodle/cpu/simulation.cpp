@@ -319,13 +319,14 @@ void Simulation::simulate_extrusion_kernel(Simulation::State& s) const {
       std::fill(fwd_collision_mask.begin(), fwd_collision_mask.end(), NO_COLLISION);
 
       // Detect collision and correct moves
-      const auto& [nrev_units_at_5prime, nfwd_units_at_3prime] = Simulation::process_collisions(
-          s.chrom, lefs, barriers, s.barrier_mask, rev_lef_ranks, fwd_lef_ranks, rev_moves,
-          fwd_moves, rev_collision_mask, fwd_collision_mask, s.rand_eng);
+      const auto& [num_rev_units_at_5prime, num_fwd_units_at_3prime] =
+          Simulation::process_collisions(s.chrom, lefs, barriers, s.barrier_mask, rev_lef_ranks,
+                                         fwd_lef_ranks, rev_moves, fwd_moves, rev_collision_mask,
+                                         fwd_collision_mask, s.rand_eng);
 
       // Advance LEFs
-      this->extrude(s.chrom, lefs, rev_moves, fwd_moves, nrev_units_at_5prime,
-                    nfwd_units_at_3prime);
+      this->extrude(s.chrom, lefs, rev_moves, fwd_moves, num_rev_units_at_5prime,
+                    num_fwd_units_at_3prime);
 
       // The vector of affinities is used to bias LEF release towards LEFs that are not in a hard
       // stall condition
@@ -555,18 +556,18 @@ void Simulation::rank_lefs(const absl::Span<const Lef> lefs,
 
 void Simulation::extrude(const Chromosome* chrom, const absl::Span<Lef> lefs,
                          const absl::Span<const bp_t> rev_moves,
-                         const absl::Span<const bp_t> fwd_moves, size_t nrev_units_at_5prime,
-                         size_t nfwd_units_at_3prime) noexcept(utils::ndebug_defined()) {
+                         const absl::Span<const bp_t> fwd_moves, size_t num_rev_units_at_5prime,
+                         size_t num_fwd_units_at_3prime) noexcept(utils::ndebug_defined()) {
   {
-    assert(lefs.size() == rev_moves.size());      // NOLINT
-    assert(lefs.size() == fwd_moves.size());      // NOLINT
-    assert(lefs.size() >= nrev_units_at_5prime);  // NOLINT
-    assert(lefs.size() >= nfwd_units_at_3prime);  // NOLINT
+    assert(lefs.size() == rev_moves.size());         // NOLINT
+    assert(lefs.size() == fwd_moves.size());         // NOLINT
+    assert(lefs.size() >= num_rev_units_at_5prime);  // NOLINT
+    assert(lefs.size() >= num_fwd_units_at_3prime);  // NOLINT
     (void)chrom;
   }
 
-  auto i1 = nrev_units_at_5prime == 0 ? 0UL : nrev_units_at_5prime - 1;
-  const auto i2 = lefs.size() - nfwd_units_at_3prime;
+  auto i1 = num_rev_units_at_5prime == 0 ? 0UL : num_rev_units_at_5prime - 1;
+  const auto i2 = lefs.size() - num_fwd_units_at_3prime;
   for (; i1 < i2; ++i1) {
     auto& lef = lefs[i1];
     if (!lef.is_bound()) {  // Do not process inactive LEFs
@@ -746,18 +747,18 @@ std::pair<size_t, size_t> Simulation::process_collisions(
     const absl::Span<bp_t> rev_moves, const absl::Span<bp_t> fwd_moves,
     const absl::Span<collision_t> rev_collisions, const absl::Span<collision_t> fwd_collisions,
     PRNG_t& rand_eng) const noexcept(utils::ndebug_defined()) {
-  const auto& [nrev_units_at_5prime, nfwd_units_at_3prime] =
-      Simulation::detect_collisions_at_chrom_boundaries(chrom, lefs, rev_lef_ranks, fwd_lef_ranks,
-                                                        rev_moves, fwd_moves, rev_collisions,
-                                                        fwd_collisions);
+  const auto& [num_rev_units_at_5prime, num_fwd_units_at_3prime] =
+      Simulation::detect_units_at_chrom_boundaries(chrom, lefs, rev_lef_ranks, fwd_lef_ranks,
+                                                   rev_moves, fwd_moves, rev_collisions,
+                                                   fwd_collisions);
 
   this->detect_lef_bar_collisions(lefs, rev_lef_ranks, fwd_lef_ranks, rev_moves, fwd_moves,
                                   barriers, barrier_mask, rev_collisions, fwd_collisions, rand_eng,
-                                  nrev_units_at_5prime, nfwd_units_at_3prime);
+                                  num_rev_units_at_5prime, num_fwd_units_at_3prime);
 
   this->detect_primary_lef_lef_collisions(lefs, barriers, rev_lef_ranks, fwd_lef_ranks, rev_moves,
                                           fwd_moves, rev_collisions, fwd_collisions, rand_eng,
-                                          nrev_units_at_5prime, nfwd_units_at_3prime);
+                                          num_rev_units_at_5prime, num_fwd_units_at_3prime);
   modle::Simulation::correct_moves_for_lef_bar_collisions(lefs, barriers, rev_moves, fwd_moves,
                                                           rev_collisions, fwd_collisions);
 
@@ -766,29 +767,13 @@ std::pair<size_t, size_t> Simulation::process_collisions(
       fwd_collisions);
   this->process_secondary_lef_lef_collisions(
       chrom, lefs, barriers.size(), rev_lef_ranks, fwd_lef_ranks, rev_moves, fwd_moves,
-      rev_collisions, fwd_collisions, rand_eng, nrev_units_at_5prime, nfwd_units_at_3prime);
+      rev_collisions, fwd_collisions, rand_eng, num_rev_units_at_5prime, num_fwd_units_at_3prime);
   /*
     modle::Simulation::correct_moves_for_secondary_lef_lef_collisions(
         lefs, barriers.size(), rev_lef_ranks, fwd_lef_ranks, rev_moves, fwd_moves, rev_collisions,
         fwd_collisions);
   */
-  return std::make_pair(nrev_units_at_5prime, nfwd_units_at_3prime);
-}
-
-void Simulation::select_lefs_to_bind(
-    const absl::Span<const Lef> lefs,
-    boost::dynamic_bitset<>& mask) noexcept(utils::ndebug_defined()) {
-  assert(lefs.size() == mask.size());  // NOLINT
-  for (auto i = 0UL; i < lefs.size(); ++i) {
-    mask[i] = !lefs[i].is_bound();
-  }
-}
-
-void Simulation::select_lefs_to_bind(const absl::Span<const Lef> lefs,
-                                     absl::Span<size_t> mask) noexcept(utils::ndebug_defined()) {
-  assert(lefs.size() == mask.size());  // NOLINT
-  std::transform(lefs.begin(), lefs.end(), mask.begin(),
-                 [](const auto& lef) { return !lef.is_bound(); });
+  return std::make_pair(num_rev_units_at_5prime, num_fwd_units_at_3prime);
 }
 
 }  // namespace modle

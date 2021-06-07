@@ -101,7 +101,7 @@ void Simulation::correct_moves_for_primary_lef_lef_collisions(
           const auto& fwd_move = fwd_moves[fwd_idx];
 
           assert(rev_unit.pos() >= fwd_unit.pos() + fwd_move);  // NOLINT
-          rev_move = rev_unit.pos() - (fwd_unit.pos() + fwd_move);
+          rev_move = rev_unit.pos() - (fwd_unit.pos() + fwd_move) - 1;
         }
       }
   }
@@ -126,68 +126,9 @@ void Simulation::correct_moves_for_primary_lef_lef_collisions(
           auto& fwd_move = fwd_moves[fwd_idx];
 
           assert(rev_unit.pos() >= fwd_unit.pos() + rev_move);  // NOLINT
-          fwd_move = (rev_unit.pos() - rev_move) - fwd_unit.pos();
+          fwd_move = (rev_unit.pos() - rev_move) - fwd_unit.pos() - 1;
         }
       }
   }
 }
-/*
-void Simulation::correct_moves_for_secondary_lef_lef_collisions(
-    const absl::Span<const Lef> lefs, const size_t nbarriers, absl::Span<const size_t> rev_ranks,
-    absl::Span<const size_t> fwd_ranks, const absl::Span<bp_t> rev_moves,
-    const absl::Span<bp_t> fwd_moves, const absl::Span<const collision_t> rev_collisions,
-    const absl::Span<const collision_t> fwd_collisions, const size_t nrev_units_at_5prime,
-    const size_t nfwd_units_at_3prime) noexcept(utils::ndebug_defined()) {
-  // Secondary LEF-LEF collisions are encoded with a number between nbarriers + lefs and nbarriers +
-  // 2*nlefs.
-  // Given an extrusion unit involved in a secondary LEF-LEF collision, the index of the extr. unit
-  // that is causing the collision is encoded as nbarriers + nlefs + i.
-  const auto lower_bound = nbarriers + lefs.size();
-  const auto upper_bound = lower_bound + lefs.size();
-
-  auto is_secondary_lef_lef_collision = [&](const auto i) constexpr noexcept {
-    return i >= lower_bound && i < upper_bound;
-  };
-
-  // Skip over rev units that are already at the 5'-end. Furthermore, the left-most rev unit cannot
-  // be involved in a secondary LEF-LEF collision, so we skip it.
-  rev_ranks.remove_prefix(nrev_units_at_5prime + 1);
-  for (const auto rev_idx2 : rev_ranks) {
-    if (auto rev_idx1 = rev_collisions[rev_idx2]; is_secondary_lef_lef_collision(rev_idx1))
-      MODLE_UNLIKELY {
-        rev_idx1 -= lower_bound;  // Decode the index
-        const auto& rev_unit1 = lefs[rev_idx1].rev_unit;
-        const auto& rev_unit2 = lefs[rev_idx2].rev_unit;
-
-        assert(rev_unit1.pos() >= rev_moves[rev_idx1]);  // NOLINT
-        assert(rev_unit2.pos() >= rev_moves[rev_idx2]);  // NOLINT
-        assert(rev_unit1.pos() - rev_moves[rev_idx1] >=
-               rev_unit2.pos() - rev_moves[rev_idx2]);  // NOLINT
-
-        // Update the move of the second unit such that after extruding once, this unit will be
-        // located one bp downstream of the first rev unit
-        const auto move = rev_unit2.pos() - (rev_unit1.pos() - rev_moves[rev_idx1]);
-        rev_moves[rev_idx2] = move > 0UL ? move - 1 : 0UL;
-      }
-  }
-
-  // Look above for detailed comments.
-  fwd_ranks.remove_suffix(nfwd_units_at_3prime + 1);
-  for (const auto fwd_idx1 : boost::adaptors::reverse(fwd_ranks)) {
-    if (auto fwd_idx2 = fwd_collisions[fwd_idx1]; is_secondary_lef_lef_collision(fwd_idx2))
-      MODLE_UNLIKELY {
-        fwd_idx2 -= lower_bound;
-        const auto& fwd_unit1 = lefs[fwd_idx1].fwd_unit;
-        const auto& fwd_unit2 = lefs[fwd_idx2].fwd_unit;
-
-        assert(fwd_unit1.pos() <= fwd_unit2.pos());  // NOLINT
-        assert(fwd_unit1.pos() + fwd_moves[fwd_idx1] >=
-               fwd_unit2.pos() + fwd_moves[fwd_idx2]);  // NOLINT
-
-        const auto delta = (fwd_unit2.pos() + fwd_moves[fwd_idx2]) - fwd_unit1.pos();
-        fwd_moves[fwd_idx1] = delta > 0UL ? delta - 1 : 0UL;
-      }
-  }
-}
-*/
 }  // namespace modle

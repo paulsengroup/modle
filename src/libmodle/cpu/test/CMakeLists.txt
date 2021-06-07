@@ -3,7 +3,8 @@ add_library(Modle::libmodle_cpu_test ALIAS libmodle_test)
 
 target_include_directories(libmodle_test INTERFACE include/)
 
-target_sources(libmodle_test INTERFACE ${CMAKE_CURRENT_SOURCE_DIR}/simulation_test.hpp)
+target_sources(libmodle_test INTERFACE ${CMAKE_CURRENT_SOURCE_DIR}/simulation_complex_unit_tests.hpp
+                                       ${CMAKE_CURRENT_SOURCE_DIR}/simulation_simple_unit_tests.hpp)
 
 target_link_libraries(
   libmodle_test

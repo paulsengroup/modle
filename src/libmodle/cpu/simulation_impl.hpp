@@ -24,11 +24,9 @@ void Simulation::bind_lefs(const Chromosome* chrom, const absl::Span<Lef> lefs,
                            const absl::Span<size_t> fwd_lef_ranks, const MaskT& mask,
                            modle::PRNG_t& rand_eng,
                            bool first_epoch) noexcept(utils::ndebug_defined()) {
-  static_assert(
-      std::is_same_v<boost::dynamic_bitset<>, MaskT> ||
-          std::is_integral_v<
-              std::decay_t<decltype(std::declval<MaskT&>().operator[](std::declval<size_t>()))>>,
-      "mask should be a vector of integral numbers or a boost::dynamic_bitset.");
+  using T = std::decay_t<decltype(std::declval<MaskT&>().operator[](std::declval<size_t>()))>;
+  static_assert(std::is_integral_v<T> || std::is_same_v<MaskT, boost::dynamic_bitset<>>,
+                "mask should be a vector of integral numbers or a boost::dynamic_bitset.");
   {
     assert(lefs.size() <= mask.size() || mask.empty());             // NOLINT
     assert(chrom);                                                  // NOLINT
@@ -46,26 +44,35 @@ void Simulation::bind_lefs(const Chromosome* chrom, const absl::Span<Lef> lefs,
   }
 
   {
-    assert(std::all_of(lefs.begin(), lefs.end(), [&](const auto& lef) {  // NOLINT
-      return lef.rev_unit >= chrom->start_pos() && lef.rev_unit < chrom->end_pos();
-    }));
-    assert(std::all_of(lefs.begin(), lefs.end(), [&](const auto& lef) {  // NOLINT
-      return lef.fwd_unit >= chrom->start_pos() && lef.fwd_unit < chrom->end_pos();
-    }));
+    for (auto i = 0UL; i < lefs.size(); ++i) {
+      if (mask.empty() || mask[i]) {
+        assert(lefs[i].rev_unit >= chrom->start_pos() &&
+               lefs[i].rev_unit < chrom->end_pos());  // NOLINT
+        assert(lefs[i].fwd_unit >= chrom->start_pos() &&
+               lefs[i].fwd_unit < chrom->end_pos());  // NOLINT
+      }
+    }
   }
 
   Simulation::rank_lefs(lefs, rev_lef_ranks, fwd_lef_ranks, !first_epoch);
   {
-    assert(std::all_of(lefs.begin(), lefs.end(), [&](const auto& lef) {  // NOLINT
-      return lef.rev_unit >= chrom->start_pos() && lef.rev_unit < chrom->end_pos();
-    }));
-    assert(std::all_of(lefs.begin(), lefs.end(), [&](const auto& lef) {  // NOLINT
-      return lef.fwd_unit >= chrom->start_pos() && lef.fwd_unit < chrom->end_pos();
-    }));
-    assert(std::all_of(rev_lef_ranks.begin(), rev_lef_ranks.end(),  // NOLINT
-                       [&](const auto i) { return i < lefs.size(); }));
-    assert(std::all_of(fwd_lef_ranks.begin(), fwd_lef_ranks.end(),  // NOLINT
-                       [&](const auto i) { return i < lefs.size(); }));
+    using IT = std::decay_t<decltype(rev_lef_ranks.front())>;
+    (void)static_cast<IT*>(nullptr);
+    assert(std::all_of(
+        rev_lef_ranks.begin(), rev_lef_ranks.end(),  // NOLINT
+        [&](const auto i) { return i < lefs.size() || i == std::numeric_limits<IT>::max(); }));
+  }
+}
+
+template <typename MaskT>
+void Simulation::select_lefs_to_bind(const absl::Span<const Lef> lefs,
+                                     MaskT& mask) noexcept(utils::ndebug_defined()) {
+  using T = std::decay_t<decltype(std::declval<MaskT&>().operator[](std::declval<size_t>()))>;
+  static_assert(std::is_integral_v<T> || std::is_same_v<MaskT, boost::dynamic_bitset<>>,
+                "mask should be a vector of integral numbers or a boost::dynamic_bitset.");
+  assert(lefs.size() == mask.size());  // NOLINT
+  for (auto i = 0UL; i < lefs.size(); ++i) {
+    mask[i] = !lefs[i].is_bound();
   }
 }
 
