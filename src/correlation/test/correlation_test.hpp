@@ -1,9 +1,9 @@
 #pragma once
 
+#include <boost/random/random_number_generator.hpp>  // for random_device, mt19937
 #include <catch2/catch.hpp>  // for Approx, operator==, AssertionHandler, operator""_catch_sr
 #include <cstdint>           // for uint32_t
 #include <filesystem>        // for path
-#include <random>            // for random_device, mt19937
 #include <vector>            // for vector, allocator
 
 #include "./common.hpp"           // for generate_random_vect, corr_scipy

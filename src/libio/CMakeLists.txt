@@ -19,6 +19,7 @@ target_link_libraries(
   PRIVATE project_warnings project_options
   PUBLIC libBigWig::libBigWig
          Modle::cmatrix
+         Modle::common
          CONAN_PKG::abseil
          CONAN_PKG::boost
          CONAN_PKG::fmt

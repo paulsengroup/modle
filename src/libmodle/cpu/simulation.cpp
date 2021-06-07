@@ -18,27 +18,30 @@
 #include <atomic>                                   // for atomic
 #include <boost/asio/thread_pool.hpp>               // for thread_pool
 #include <boost/dynamic_bitset/dynamic_bitset.hpp>  // for dynamic_bitset, dynamic_bitset<>::ref...
-#include <boost/range/adaptor/reversed.hpp>         // for reversed_range, reverse
-#include <cassert>                                  // for assert
-#include <chrono>                                   // for microseconds
-#include <cmath>                                    // for round
-#include <cstddef>                                  // for size_t
-#include <cstdio>                                   // for stderr
-#include <cstdlib>                                  // for abs
-#include <deque>                                    // for deque
-#include <filesystem>                               // for operator<<, path
-#include <ios>                                      // for streamsize
-#include <limits>                                   // for numeric_limits
-#include <memory>                                   // for unique_ptr, make_unique, _MakeUniq<>:...
-#include <mutex>                                    // for mutex
-#include <numeric>                                  // for iota
-#include <random>                                   // for poisson_distribution, uniform_int_dis...
-#include <stdexcept>                                // for runtime_error
-#include <string>                                   // for basic_string, string
-#include <string_view>                              // for string_view
-#include <utility>                                  // for make_pair, pair
-#include <vector>                                   // for vector, vector<>::iterator
+#include <boost/random/discrete_distribution.hpp>   // for discrete_distribution
+#include <boost/random/poisson_distribution.hpp>    // for poisson_distribution
+#include <boost/random/uniform_int_distribution.hpp>  // for uniform_int_distribution
+#include <boost/range/adaptor/reversed.hpp>           // for reversed_range, reverse
+#include <cassert>                                    // for assert
+#include <chrono>                                     // for microseconds
+#include <cmath>                                      // for round
+#include <cstddef>                                    // for size_t
+#include <cstdio>                                     // for stderr
+#include <cstdlib>                                    // for abs
+#include <deque>                                      // for deque
+#include <filesystem>                                 // for operator<<, path
+#include <ios>                                        // for streamsize
+#include <limits>                                     // for numeric_limits
+#include <memory>       // for unique_ptr, make_unique, _MakeUniq<>:...
+#include <mutex>        // for mutex
+#include <numeric>      // for iota
+#include <stdexcept>    // for runtime_error
+#include <string>       // for basic_string, string
+#include <string_view>  // for string_view
+#include <utility>      // for make_pair, pair
+#include <vector>       // for vector, vector<>::iterator
 
+#include "core/random_sampling.hpp"      // for random_sampling
 #include "modle/common.hpp"              // for bp_t, PRNG_t, MODLE_UNLIKELY, MODLE_L...
 #include "modle/config.hpp"              // for Config
 #include "modle/cooler.hpp"              // for Cooler, Cooler::WRITE_ONLY
@@ -159,7 +162,7 @@ void Simulation::simulate_extrusion_kernel(Simulation::State& s) const {
 
     if (!this->skip_burnin) {
       // TODO Consider using a Poisson process instead of sampling from an uniform distribution
-      std::uniform_int_distribution<size_t> round_gen{
+      boost::random::uniform_int_distribution<size_t> round_gen{
           0, (4 * this->average_lef_lifetime) / this->bin_size};
       std::generate(lef_initial_loading_epoch.begin(), lef_initial_loading_epoch.end(),
                     [&]() { return round_gen(s.rand_eng); });
@@ -216,8 +219,8 @@ void Simulation::simulate_extrusion_kernel(Simulation::State& s) const {
 
     // Generate initial extr. barrier states, so that they are already at or close to equilibrium
     for (auto i = 0UL; i < s.barrier_mask.size(); ++i) {
-      s.barrier_mask[i] =
-          std::bernoulli_distribution{this->probability_of_extrusion_barrier_block}(s.rand_eng);
+      s.barrier_mask[i] = boost::random::bernoulli_distribution{
+          this->probability_of_extrusion_barrier_block}(s.rand_eng);
     }
 
     size_t nlefs_to_release;
@@ -259,13 +262,14 @@ void Simulation::simulate_extrusion_kernel(Simulation::State& s) const {
         // Sample nlefs to be released while in burn-in phase
         nlefs_to_release =
             std::min(lefs.size(),
-                     std::poisson_distribution<size_t>{
+                     boost::random::poisson_distribution<size_t>{
                          static_cast<double>(
                              (this->rev_extrusion_speed + this->fwd_extrusion_speed) * s.nlefs) /
                          static_cast<double>(this->average_lef_lifetime)}(s.rand_eng));
       } else {  // Sample nlefs to be released after the burn-in phase has been completed
-        nlefs_to_release = std::min(
-            lefs.size(), std::poisson_distribution<size_t>{avg_nlefs_to_release}(s.rand_eng));
+        nlefs_to_release =
+            std::min(lefs.size(),
+                     boost::random::poisson_distribution<size_t>{avg_nlefs_to_release}(s.rand_eng));
       }
 
       ////////////////////////
@@ -282,8 +286,9 @@ void Simulation::simulate_extrusion_kernel(Simulation::State& s) const {
       if (epoch > n_burnin_epochs) {              // Register contacts
         assert(fwd_lef_ranks.size() == s.nlefs);  // NOLINT
 
-        auto nlefs_to_sample = std::min(
-            lefs.size(), std::poisson_distribution<size_t>{avg_nlefs_to_sample}(s.rand_eng));
+        auto nlefs_to_sample =
+            std::min(lefs.size(),
+                     boost::random::poisson_distribution<size_t>{avg_nlefs_to_sample}(s.rand_eng));
 
         if (s.n_target_contacts != 0) {  // When using the target contact density as stopping
                                          // criterion, don't overshoot the target number of contacts
@@ -294,8 +299,8 @@ void Simulation::simulate_extrusion_kernel(Simulation::State& s) const {
         // We are sampling from fwd ranks to avoid having to allocate a vector of indices just to do
         // this sampling
         const auto lef_idx = absl::MakeSpan(s.idx_buff1.data(), nlefs_to_sample);
-        std::sample(fwd_lef_ranks.begin(), fwd_lef_ranks.end(), lef_idx.begin(), lef_idx.size(),
-                    s.rand_eng);
+        modle::random_sample(fwd_lef_ranks.begin(), fwd_lef_ranks.end(), lef_idx.begin(),
+                             lef_idx.size(), s.rand_eng);
         if (!std::all_of(lef_idx.begin(), lef_idx.end(),
                          [&](const auto i) { return i < lefs.size(); })) {
           throw std::runtime_error(fmt::format("lef_idx.size()={}; nlefs={};\nlef_idx=[{}]\n",
@@ -670,8 +675,8 @@ void Simulation::generate_lef_unloader_affinities(
 void Simulation::select_lefs_to_release(const absl::Span<size_t> lef_idx,
                                         const absl::Span<const double> lef_unloader_affinity,
                                         modle::PRNG_t& rand_eng) noexcept(utils::ndebug_defined()) {
-  std::discrete_distribution<size_t> idx_gen(lef_unloader_affinity.begin(),
-                                             lef_unloader_affinity.end());
+  boost::random::discrete_distribution<size_t> idx_gen(lef_unloader_affinity.begin(),
+                                                       lef_unloader_affinity.end());
   std::generate(lef_idx.begin(), lef_idx.end(), [&]() { return idx_gen(rand_eng); });
 }
 

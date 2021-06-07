@@ -2,9 +2,9 @@
 
 #include <absl/types/span.h>  // for Span
 
-#include <boost/dynamic_bitset/dynamic_bitset.hpp>  // for dynamic_bitset
-#include <cstdint>                                  // for uint_fast8_t
-#include <random>                                   // for uniform_real_distribution
+#include <boost/dynamic_bitset/dynamic_bitset.hpp>     // for dynamic_bitset
+#include <boost/random/uniform_real_distribution.hpp>  // for uniform_real_distribution
+#include <cstdint>                                     // for uint_fast8_t
 
 #include "modle/common.hpp"  // for bp_t_t, Direction, PRNG_t
 #include "modle/utils.hpp"   // for ndebug_defined
@@ -46,7 +46,7 @@ namespace CTCF {
 enum State : uint_fast8_t { NOT_OCCUPIED = 0, OCCUPIED = 1 };
 [[nodiscard]] State next_state(State current_state, double occupied_self_transition_prob,
                                double not_occupied_self_transition_prob, PRNG_t& rand_eng);
-using state_gen_t = std::uniform_real_distribution<double>;
+using state_gen_t = boost::random::uniform_real_distribution<double>;
 
 //! Update CTCF states for the current iteration based on the states from the previous
 //! iteration.

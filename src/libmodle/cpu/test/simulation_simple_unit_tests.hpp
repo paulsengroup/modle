@@ -32,7 +32,7 @@ TEST_CASE("Bind LEFs 001", "[bind-lefs][simulation][short]") {
   auto rand_eng = modle::PRNG(8865403569783063175ULL);
 
   for (auto i = 0UL; i < nlefs; ++i) {
-    mask[i] = std::bernoulli_distribution{0.50}(rand_eng);
+    mask[i] = boost::random::bernoulli_distribution{0.50}(rand_eng);
   }
 
   const auto c = Config{};
@@ -211,8 +211,8 @@ TEST_CASE("Generate LEF moves 001", "[generate-lef-moves][simulation][short]") {
 
   for (auto i = 0UL; i < iters; ++i) {
     std::generate(lefs.begin(), lefs.end(), [&]() {
-      const auto pos =
-          std::uniform_int_distribution<bp_t>{chrom.start_pos(), chrom.end_pos() - 1}(rand_eng);
+      const auto pos = boost::random::uniform_int_distribution<bp_t>{chrom.start_pos(),
+                                                                     chrom.end_pos() - 1}(rand_eng);
       return Lef{EU{pos}, EU{pos}, true};
     });
     Simulation::test_rank_lefs(lefs, absl::MakeSpan(rev_ranks), absl::MakeSpan(fwd_ranks), false,

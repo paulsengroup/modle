@@ -3,15 +3,15 @@
 #include <absl/hash/hash.h>                // for Hash
 #include <absl/strings/str_cat.h>          // for StrCat
 
-#include <algorithm>    // for max, generate
-#include <array>        // for array
-#include <cstdint>      // for uint32_t, int32_t, int64_t
-#include <cstdio>       // for pclose, fgets, popen, FILE
-#include <filesystem>   // for create_directories, exists, path, remove
+#include <algorithm>                                 // for max, generate
+#include <array>                                     // for array
+#include <boost/random/random_number_generator.hpp>  // for mt19937, uniform_int_distribution
+#include <cstdint>                                   // for uint32_t, int32_t, int64_t
+#include <cstdio>                                    // for pclose, fgets, popen, FILE
+#include <filesystem>                                // for create_directories, exists, path, remove
 #include <fstream>      // for basic_ofstream, operator<<, basic_ostream
 #include <memory>       // for allocator, unique_ptr
 #include <numeric>      // for iota
-#include <random>       // for mt19937, uniform_int_distribution
 #include <stdexcept>    // for runtime_error
 #include <string>       // for string, operator+, char_traits, stod
 #include <type_traits>  // for enable_if, is_arithmetic
@@ -34,7 +34,7 @@ inline void write_vect_to_file(const std::filesystem::path& fpath, const std::ve
 inline std::vector<uint32_t> generate_random_vect(std::mt19937& rnd_eng, uint32_t size,
                                                   uint32_t min, uint32_t max,
                                                   bool allow_duplicates = true) {
-  std::uniform_int_distribution<uint32_t> dist(min, max);
+  boost::random::uniform_int_distribution<uint32_t> dist(min, max);
   std::vector<uint32_t> v(size);
   if (allow_duplicates) {
     std::generate(v.begin(), v.end(), [&]() { return dist(rnd_eng); });
@@ -50,8 +50,8 @@ inline std::vector<uint32_t> generate_random_vect(std::mt19937& rnd_eng, uint32_
 
 inline std::pair<std::vector<uint32_t>, std::vector<uint32_t>> generate_correlated_vects(
     std::mt19937& rnd_eng, uint32_t size) {
-  std::uniform_int_distribution<int32_t> dist(static_cast<int32_t>(size) / -50,  // NOLINT
-                                              static_cast<int32_t>(size / 50));  // NOLINT
+  boost::random::uniform_int_distribution<int32_t> dist(static_cast<int32_t>(size) / -50,  // NOLINT
+                                                        static_cast<int32_t>(size / 50));  // NOLINT
   std::vector<uint32_t> v1(size);
   std::vector<uint32_t> v2(size);
   std::iota(v1.begin(), v1.end(), 0);

@@ -11,22 +11,22 @@
 #include <cpp-sort/sorters/ska_sorter.h>  // for ska_sort
 #include <fmt/format.h>                   // for FMT_STRING, format
 
-#include <algorithm>                                // for max, fill, copy
-#include <atomic>                                   // for memory_order_relaxed
-#include <boost/dynamic_bitset/dynamic_bitset.hpp>  // for dynamic_bitset
-#include <boost/exception/exception.hpp>            // IWYU pragma: keep for error_info_base
-#include <cassert>                                  // for assert
-#include <cmath>                                    // for round
-#include <cstddef>                                  // IWYU pragma: keep for size_t
-#include <cstdint>                                  // for uint64_t, int64_t
-#include <limits>                                   // for numeric_limits
-#include <mutex>                                    // for mutex
-#include <numeric>                                  // for accumulate
-#include <random>                                   // for normal_distribution, random_device
-#include <stdexcept>                                // for runtime_error, logic_error
-#include <type_traits>                              // for is_integral, is_signed
-#include <utility>                                  // for make_pair, pair
-#include <vector>                                   // for vector, allocator
+#include <algorithm>                                 // for max, fill, copy
+#include <atomic>                                    // for memory_order_relaxed
+#include <boost/dynamic_bitset/dynamic_bitset.hpp>   // for dynamic_bitset
+#include <boost/exception/exception.hpp>             // IWYU pragma: keep for error_info_base
+#include <boost/random/random_number_generator.hpp>  // for normal_distribution, random_device
+#include <cassert>                                   // for assert
+#include <cmath>                                     // for round
+#include <cstddef>                                   // IWYU pragma: keep for size_t
+#include <cstdint>                                   // for uint64_t, int64_t
+#include <limits>                                    // for numeric_limits
+#include <mutex>                                     // for mutex
+#include <numeric>                                   // for accumulate
+#include <stdexcept>                                 // for runtime_error, logic_error
+#include <type_traits>                               // for is_integral, is_signed
+#include <utility>                                   // for make_pair, pair
+#include <vector>                                    // for vector, allocator
 
 #include "modle/common.hpp"                      // for modle::PRNG, modle::seeder
 #include "modle/suppress_compiler_warnings.hpp"  // for DISABLE_WARNING_POP, DISABLE_WARNI...
@@ -46,9 +46,8 @@ template <typename I>
 ContactMatrix<I>::ContactMatrix(size_t nrows, size_t ncols, bool fill_with_random_numbers)
     : _nrows(nrows), _ncols(ncols), _contacts(_nrows * _ncols + 1, 0), _locks(_ncols) {
   if (fill_with_random_numbers) {
-    std::random_device rand_dev;
-    auto rand_eng = PRNG(rand_dev());
-    std::uniform_int_distribution<I> dist{0, std::numeric_limits<I>::max()};
+    auto rand_eng = PRNG(1234567890ULL);
+    boost::random::uniform_int_distribution<I> dist{0, std::numeric_limits<I>::max()};
     for (auto i = 0UL; i < _ncols; ++i) {
       for (auto j = i; j < i + _nrows && j < _ncols; ++j) {
         this->set(i, j, dist(rand_eng));

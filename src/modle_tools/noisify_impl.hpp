@@ -7,10 +7,11 @@
 #include <fmt/format.h>       // for print
 #include <readerwriterqueue/readerwriterqueue.h>
 
-#include <boost/asio/post.hpp>         // IWYU pragma: keep for post
-#include <boost/asio/thread_pool.hpp>  // for thread_pool
-#include <random>                      // for gamma_distribution, uniform_distribution
-#include <thread>                      // for thread, this_thread::sleep_for
+#include <boost/asio/post.hpp>                         // IWYU pragma: keep for post
+#include <boost/asio/thread_pool.hpp>                  // for thread_pool
+#include <boost/random/gamma_distribution.hpp>         // for gamma_distribution
+#include <boost/random/uniform_real_distribution.hpp>  // for uniform_real_distribution
+#include <thread>                                      // for thread, this_thread::sleep_for
 
 #include "include/modle_tools/config.hpp"
 #include "modle/common.hpp"
@@ -68,9 +69,9 @@ void noisify_contacts(const config& c) {
         c.seed + std::hash<std::string_view>{}(chrom_name) + std::hash<size_t>{}(ncols);
 
     auto rang_eng = PRNG(seed);
-    auto gammad = std::gamma_distribution<double>{c.gamma_k, c.gamma_theta};
-    auto uniformd = std::uniform_real_distribution<double>{static_cast<double>(bin_size) / -2.0,
-                                                           static_cast<double>(bin_size) / 2.0};
+    auto gammad = boost::random::gamma_distribution<double>{c.gamma_k, c.gamma_theta};
+    auto uniformd = boost::random::uniform_real_distribution<double>{
+        static_cast<double>(bin_size) / -2.0, static_cast<double>(bin_size) / 2.0};
     while (true) {
       pixel_queue.wait_dequeue(pixel);
       if (pixel == END_OF_PIXEL_QUEUE) {

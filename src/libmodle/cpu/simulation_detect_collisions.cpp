@@ -2,10 +2,10 @@
 
 #include <algorithm>                                // for is_sorted, all_of, max, find_if
 #include <boost/dynamic_bitset/dynamic_bitset.hpp>  // for dynamic_bitset
+#include <boost/random/bernoulli_distribution.hpp>  // for bernoulli_distribution
 #include <cassert>                                  // for assert
 #include <cstddef>                                  // for size_t
 #include <limits>                                   // for numeric_limits
-#include <random>                                   // for bernoulli_distribution
 #include <utility>                                  // for make_pair, pair
 
 #include "modle/common.hpp"              // for bp_t, PRNG_t, MODLE_UNLIKELY, fwd, rev
@@ -199,7 +199,7 @@ void Simulation::detect_lef_bar_collisions(
         // trial before calling a collision
         const auto delta = rev_unit_pos - barrier.pos();
         if (delta > 0 && delta <= rev_moves[rev_idx] &&
-            (pblock == 1.0 || std::bernoulli_distribution{pblock}(rand_eng))) {
+            (pblock == 1.0 || modle::bernoulli_trial{pblock}(rand_eng))) {
           // Collision detected. Assign barrier idx to the respective entry in the collision mask
           rev_collisions[rev_idx] = i;
           // Move LEF close to the extr. barrier (i.e 1bp upstream of the extr. barrier)
@@ -233,7 +233,7 @@ void Simulation::detect_lef_bar_collisions(
       if (lefs[fwd_idx].is_bound()) {
         const auto delta = barrier.pos() - fwd_unit_pos;
         if (delta > 0 && delta <= fwd_moves[fwd_idx] &&
-            (pblock == 1.0 || std::bernoulli_distribution{pblock}(rand_eng))) {
+            (pblock == 1.0 || modle::bernoulli_trial{pblock}(rand_eng))) {
           fwd_collisions[fwd_idx] = i;
           // fwd_move = delta > 1 ? delta - 1 : 0;
         }
@@ -338,7 +338,8 @@ void Simulation::detect_primary_lef_lef_collisions(
     if (const auto delta = rev_pos - fwd_pos;
         delta > 0 && delta < rev_moves[rev_idx] + fwd_moves[fwd_idx] &&
         (this->probability_of_extrusion_unit_bypass == 0 ||
-         std::bernoulli_distribution{1.0 - this->probability_of_extrusion_unit_bypass}(rand_eng))) {
+         boost::random::bernoulli_distribution{1.0 - this->probability_of_extrusion_unit_bypass}(
+             rand_eng))) {
       // Declare few aliases to reduce code verbosity later on
       const auto& rev_move = rev_moves[rev_idx];
       const auto& fwd_move = fwd_moves[fwd_idx];
@@ -468,7 +469,8 @@ void Simulation::process_secondary_lef_lef_collisions(
 
     if (rev_pos2 - move2 <= rev_pos1 - move1 &&
         (this->probability_of_extrusion_unit_bypass == 0 ||
-         std::bernoulli_distribution{1.0 - this->probability_of_extrusion_unit_bypass}(rand_eng))) {
+         boost::random::bernoulli_distribution{1.0 - this->probability_of_extrusion_unit_bypass}(
+             rand_eng))) {
       rev_collisions[rev_idx2] = offset + rev_idx1;
       const auto move = rev_pos2 - (rev_pos1 - move1);
       move2 = move > 0UL ? move - 1UL : 0UL;
@@ -501,7 +503,8 @@ void Simulation::process_secondary_lef_lef_collisions(
 
     if (fwd_pos1 + move1 >= fwd_pos2 + move2 &&
         (this->probability_of_extrusion_unit_bypass == 0 ||
-         std::bernoulli_distribution{1.0 - this->probability_of_extrusion_unit_bypass}(rand_eng))) {
+         boost::random::bernoulli_distribution{1.0 - this->probability_of_extrusion_unit_bypass}(
+             rand_eng))) {
       fwd_collisions[fwd_idx1] = offset + fwd_idx2;
       const auto move = (fwd_pos2 + move2) - fwd_pos1;
       move1 = move > 0UL ? move - 1UL : 0UL;

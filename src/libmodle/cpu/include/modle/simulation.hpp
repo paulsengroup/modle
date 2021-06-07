@@ -5,20 +5,21 @@
 #include <absl/types/span.h>                     // IWYU pragma: keep for Span
 #include <moodycamel/blockingconcurrentqueue.h>  // for BlockingConcurrntQueue
 
-#include <atomic>                                   // for atomic
-#include <boost/asio/thread_pool.hpp>               // for thread_pool
-#include <boost/dynamic_bitset/dynamic_bitset.hpp>  // for dynamic_bitset
-#include <cstddef>                                  // for size_t
-#include <cstdint>                                  // for uint64_t
-#include <deque>                                    // for deque
-#include <filesystem>                               // for path
-#include <limits>                                   // for numeric_limits
-#include <memory>                                   // for unique_ptr
-#include <mutex>                                    // for mutex
-#include <random>                                   // for normal_distribution, uniform_int_dist...
-#include <string>                                   // for string
-#include <utility>                                  // for pair
-#include <vector>                                   // for vector
+#include <atomic>                                     // for atomic
+#include <boost/asio/thread_pool.hpp>                 // for thread_pool
+#include <boost/dynamic_bitset/dynamic_bitset.hpp>    // for dynamic_bitset
+#include <boost/random/normal_distribution.hpp>       // for normal_distribution
+#include <boost/random/uniform_int_distribution.hpp>  // for uniform_int_distribution
+#include <cstddef>                                    // for size_t
+#include <cstdint>                                    // for uint64_t
+#include <deque>                                      // for deque
+#include <filesystem>                                 // for path
+#include <limits>                                     // for numeric_limits
+#include <memory>                                     // for unique_ptr
+#include <mutex>                                      // for mutex
+#include <string>                                     // for string
+#include <utility>                                    // for pair
+#include <vector>                                     // for vector
 
 #include "modle/common.hpp"             // for bp_t, PRNG, seeder
 #include "modle/config.hpp"             // for Config
@@ -43,8 +44,8 @@ class Simulation : Config {
   [[nodiscard]] size_t size() const;
   [[nodiscard]] size_t simulated_size() const;
 
-  using lef_move_generator_t = std::normal_distribution<double>;
-  using chrom_pos_generator_t = std::uniform_int_distribution<bp_t>;
+  using lef_move_generator_t = boost::random::normal_distribution<double>;
+  using chrom_pos_generator_t = boost::random::uniform_int_distribution<bp_t>;
 
   static constexpr auto NO_COLLISION = std::numeric_limits<collision_t>::max();
   static constexpr auto REACHED_CHROM_BOUNDARY = std::numeric_limits<collision_t>::max() - 1;
