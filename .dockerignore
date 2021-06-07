@@ -3,8 +3,7 @@
 
 # Allowed files and directory
 !cmake/**
-!external/libBigWig-**
-!external/Xoshiro-cpp-**
+!external/*.tar.xz
 !src/**
 !tools/**
 !test/CMakeLists.txt

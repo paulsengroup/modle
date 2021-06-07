@@ -10,7 +10,7 @@ ARG skip_tests
 
 ARG XOSHIRO_CPP_VER=1.1
 ARG LIBBIGWIG_VER=0.4.6
-ARG CONAN_VER=1.35.0
+ARG CONAN_VER=1.37.0
 
 ENV CC=/usr/bin/gcc
 ENV CXX=/usr/bin/g++
@@ -24,10 +24,10 @@ WORKDIR /data
 ENTRYPOINT ["/usr/local/bin/modle"]
 
 COPY cmake                  /tmp/modle/cmake
-COPY "external/libBigWig-$LIBBIGWIG_VER"            \
-     "/tmp/modle/external/libBigWig-$LIBBIGWIG_VER"
-COPY "external/Xoshiro-cpp-$XOSHIRO_CPP_VER"        \
-     "/tmp/modle/external/Xoshiro-cpp-$XOSHIRO_CPP_VER"
+COPY "external/libBigWig-$LIBBIGWIG_VER.tar.xz"                \
+     "/tmp/modle/external/libBigWig-$LIBBIGWIG_VER.tar.xz"
+COPY "external/Xoshiro-cpp-$XOSHIRO_CPP_VER.tar.xz"            \
+     "/tmp/modle/external/Xoshiro-cpp-$XOSHIRO_CPP_VER.tar.xz"
 COPY src                    /tmp/modle/src
 COPY test                   /tmp/modle/test
 COPY CMakeLists.txt         /tmp/modle/CMakeLists.txt
