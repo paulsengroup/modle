@@ -179,12 +179,8 @@ if(ENABLE_ASSERTIONS)
   endif()
 endif()
 
-# import external dependencies
-add_subdirectory(external/libBigWig-0.4.6)
-if(ENABLE_XOSHIRO)
-  target_compile_definitions(project_options INTERFACE USE_XOSHIRO=1)
-  add_subdirectory(external/Xoshiro-cpp-1.1)
-endif()
+# Prepare external dependencies
+include(cmake/FetchExternalDeps.cmake)
 
 if(ENABLE_TESTING)
   enable_testing()
