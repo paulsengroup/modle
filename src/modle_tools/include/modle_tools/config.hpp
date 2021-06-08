@@ -36,8 +36,9 @@ struct config {
   bool deplete_contacts_from_reference{true};
 
   // noisify_contacts
-  double gamma_k{1};
-  double gamma_theta{35'000};
+  double genextreme_mu{0};
+  double genextreme_sigma{5'000};
+  double genextreme_xi{0.001};
   uint64_t seed{0};
 
   // stats

@@ -74,8 +74,9 @@ class Cli {
     sc->add_option("-o,--output-base-name", this->_config.path_to_output_matrix, "Output file name (possibly including directories) to use for output.")->required();
     sc->add_option("-w,--diagonal-width", this->_config.diagonal_width, "Diagonal width of the input contact matrix.")->check(CLI::NonNegativeNumber)->required();
     sc->add_flag("-f,--force", this->_config.force, "Overwrite existing file(s).")->capture_default_str();
-    sc->add_option("-k,--shape", this->_config.gamma_k, "Shape parameter k of the Gamma distribution used to add noise to the contact matrix.")->check(CLI::NonNegativeNumber)->capture_default_str();
-    sc->add_option("--theta,--scale", this->_config.gamma_theta, "Scale parameter theta of the Gamma distribution used to add noise to the contact matrix.")->check(CLI::NonNegativeNumber)->capture_default_str();
+    sc->add_option("--mu,--location", this->_config.genextreme_mu, "Location parameter (mu) of the generalized extreme value used to add noise to the contact matrix.")->check(CLI::NonNegativeNumber)->capture_default_str();
+    sc->add_option("--sigma,--scale", this->_config.genextreme_sigma, "Scale parameter (sigma) of the generalized extreme value used to add noise to the contact matrix.")->check(CLI::NonNegativeNumber)->capture_default_str();
+    sc->add_option("--xi,--shape", this->_config.genextreme_xi, "Shape parameter (xi) of the generalized extreme value used to add noise to the contact matrix.")->check(CLI::NonNegativeNumber)->capture_default_str();
     sc->add_option("--seed", this->_config.seed, "Seed used to initialize the PRNG.")->check(CLI::NonNegativeNumber)->capture_default_str();
     // clang-format on
   }

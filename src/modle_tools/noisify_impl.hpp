@@ -9,10 +9,10 @@
 
 #include <boost/asio/post.hpp>                         // IWYU pragma: keep for post
 #include <boost/asio/thread_pool.hpp>                  // for thread_pool
-#include <boost/random/gamma_distribution.hpp>         // for gamma_distribution
 #include <boost/random/uniform_real_distribution.hpp>  // for uniform_real_distribution
 #include <thread>                                      // for thread, this_thread::sleep_for
 
+#include "core/genextreme_value_distribution.hpp"
 #include "include/modle_tools/config.hpp"
 #include "modle/common.hpp"
 #include "modle/contacts.hpp"
@@ -69,7 +69,8 @@ void noisify_contacts(const config& c) {
         c.seed + std::hash<std::string_view>{}(chrom_name) + std::hash<size_t>{}(ncols);
 
     auto rang_eng = PRNG(seed);
-    auto gammad = boost::random::gamma_distribution<double>{c.gamma_k, c.gamma_theta};
+    auto genextreme = modle::genextreme_value_distribution<double>{
+        c.genextreme_mu, c.genextreme_sigma, c.genextreme_xi};
     auto uniformd = boost::random::uniform_real_distribution<double>{
         static_cast<double>(bin_size) / -2.0, static_cast<double>(bin_size) / 2.0};
     while (true) {
@@ -80,15 +81,13 @@ void noisify_contacts(const config& c) {
       assert(pixel.row <= pixel.col);  // NOLINT
       for (auto i = 0UL; i < pixel.count; ++i) {
         const auto pos1 =
-            static_cast<double>(pixel.row * bin_size) + uniformd(rang_eng) + gammad(rang_eng);
+            static_cast<double>(pixel.row * bin_size) + uniformd(rang_eng) + genextreme(rang_eng);
         const auto pos2 =
-            static_cast<double>(pixel.col * bin_size) + uniformd(rang_eng) - gammad(rang_eng);
-        const auto bin1 =
-            std::clamp(static_cast<size_t>(std::round(pos1 / static_cast<double>(bin_size))),
-                       pixel.row, pixel.col);
-        const auto bin2 =
-            std::clamp(static_cast<size_t>(std::round(pos2 / static_cast<double>(bin_size))),
-                       pixel.row, pixel.col);
+            static_cast<double>(pixel.col * bin_size) + uniformd(rang_eng) - genextreme(rang_eng);
+        const auto bin1 = std::clamp(
+            static_cast<size_t>(std::round(pos1 / static_cast<double>(bin_size))), 0UL, ncols - 1);
+        const auto bin2 = std::clamp(
+            static_cast<size_t>(std::round(pos2 / static_cast<double>(bin_size))), 0UL, ncols - 1);
         cmatrix.increment(bin1, bin2);
       }
     }
