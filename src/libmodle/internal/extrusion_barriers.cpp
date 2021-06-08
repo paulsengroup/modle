@@ -6,8 +6,8 @@
 #include <boost/dynamic_bitset/dynamic_bitset.hpp>  // for dynamic_bitset
 #include <cassert>                                  // for assert
 
-#include "modle/common.hpp"  // for bp_t, Direction
-#include "modle/utils.hpp"   // for ndebug_defined
+#include "modle/common/common.hpp"  // for bp_t, Direction
+#include "modle/common/utils.hpp"   // for ndebug_defined
 
 namespace modle {
 ExtrusionBarrier::ExtrusionBarrier(bp_t pos, double transition_prob_blocking_to_blocking,

@@ -28,9 +28,9 @@
 #include <utility>                                   // for make_pair, pair
 #include <vector>                                    // for vector, allocator
 
-#include "modle/common.hpp"                      // for modle::PRNG, modle::seeder
-#include "modle/suppress_compiler_warnings.hpp"  // for DISABLE_WARNING_POP, DISABLE_WARNI...
-#include "modle/utils.hpp"                       // for ndebug_defined, throw_with_trace
+#include "modle/common/common.hpp"                      // for modle::PRNG, modle::seeder
+#include "modle/common/suppress_compiler_warnings.hpp"  // for DISABLE_WARNING_POP, DISABLE_WARNI...
+#include "modle/common/utils.hpp"                       // for ndebug_defined, throw_with_trace
 
 namespace modle {
 template <typename I>

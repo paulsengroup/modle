@@ -11,9 +11,9 @@
 #include <string_view>  // for string_view
 #include <vector>       // for vector
 
-#include "modle/bed.hpp"     // for BED
-#include "modle/common.hpp"  // for bp_t, contacts_t
-#include "modle/utils.hpp"   // for ndebug_defined
+#include "modle/bed.hpp"            // for BED
+#include "modle/common/common.hpp"  // for bp_t, contacts_t
+#include "modle/common/utils.hpp"   // for ndebug_defined
 
 namespace modle {
 namespace chrom_sizes {

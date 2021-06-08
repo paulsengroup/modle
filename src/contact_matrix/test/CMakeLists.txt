@@ -10,7 +10,7 @@ target_link_libraries(
   INTERFACE project_warnings
             project_options
             Modle::cmatrix
-            Modle::utils
+            Modle::common
             CONAN_PKG::abseil
             CONAN_PKG::boost
             CONAN_PKG::catch2)

@@ -17,10 +17,10 @@
 #include <iostream>                            // for operator<<, basic_ostream, cerr, ostream
 #endif
 
-#include "./cli.hpp"             // for Cli
-#include "modle/config.hpp"      // for Config
-#include "modle/simulation.hpp"  // for Simulation
-#include "modle/utils.hpp"       // for traced
+#include "./cli.hpp"                // for Cli
+#include "modle/common/config.hpp"  // for Config
+#include "modle/common/utils.hpp"   // for traced
+#include "modle/simulation.hpp"     // for Simulation
 
 int main(int argc, char** argv) noexcept {
   std::unique_ptr<modle::Cli> cli{nullptr};

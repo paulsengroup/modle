@@ -4,8 +4,8 @@
 #include <cstdint>  // for int64_t
 #include <limits>   // for numeric_limits
 
-#include "modle/common.hpp"  // for bp_t_t
-#include "modle/utils.hpp"   // for ndebug_defined
+#include "modle/common/common.hpp"  // for bp_t_t
+#include "modle/common/utils.hpp"   // for ndebug_defined
 
 namespace modle {
 

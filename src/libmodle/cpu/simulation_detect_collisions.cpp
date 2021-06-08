@@ -8,12 +8,12 @@
 #include <limits>                                   // for numeric_limits
 #include <utility>                                  // for make_pair, pair
 
-#include "modle/common.hpp"              // for bp_t, PRNG_t, MODLE_UNLIKELY, fwd, rev
+#include "modle/common/common.hpp"       // for bp_t, PRNG_t, MODLE_UNLIKELY, fwd, rev
+#include "modle/common/utils.hpp"        // for ndebug_defined
 #include "modle/dna.hpp"                 // for Chromosome
 #include "modle/extrusion_barriers.hpp"  // for ExtrusionBarrier, NOT_OCCUPIED
 #include "modle/extrusion_factors.hpp"   // for ExtrusionUnit, Lef
 #include "modle/simulation.hpp"
-#include "modle/utils.hpp"  // for ndebug_defined
 
 namespace modle {
 

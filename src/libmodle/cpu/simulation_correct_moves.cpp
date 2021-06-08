@@ -3,11 +3,11 @@
 #include <cassert>  // for assert
 #include <cstddef>  // for size_t
 
-#include "modle/common.hpp"              // for MODLE_UNLIKELY, bp_t, collision_t
+#include "modle/common/common.hpp"       // for MODLE_UNLIKELY, bp_t, collision_t
+#include "modle/common/utils.hpp"        // for ndebug_defined
 #include "modle/extrusion_barriers.hpp"  // for ExtrusionBarrier
 #include "modle/extrusion_factors.hpp"   // for ExtrusionUnit, Lef
 #include "modle/simulation.hpp"          // for Simulation
-#include "modle/utils.hpp"               // for ndebug_defined
 
 namespace modle {
 

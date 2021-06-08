@@ -17,7 +17,7 @@
 #include <utility>           // for tuple_element<>::type
 #include <vector>            // for vector
 
-#include "modle/common.hpp"  // for bp_t
+#include "modle/common/common.hpp"  // for bp_t
 #ifdef ENABLE_CUDA
 #include "modle/cu/config.hpp"
 #endif

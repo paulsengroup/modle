@@ -21,7 +21,7 @@
 #include <utility>      // for move
 #include <vector>       // for vector
 
-#include "modle/utils.hpp"  // for parse_numeric_or_throw, parse_vect_of_numbers_...
+#include "modle/common/utils.hpp"  // for parse_numeric_or_throw, parse_vect_of_numbers_...
 
 namespace modle::bed {
 

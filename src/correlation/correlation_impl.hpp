@@ -22,8 +22,8 @@
 #include <utility>                                      // for make_pair, pair
 #include <vector>                                       // for vector
 
-#include "./correlation_utils.hpp"               // for compute_element_ranks
-#include "modle/suppress_compiler_warnings.hpp"  // for DISABLE_WARNING_CONVERSION, DISAB...
+#include "./correlation_utils.hpp"                      // for compute_element_ranks
+#include "modle/common/suppress_compiler_warnings.hpp"  // for DISABLE_WARNING_CONVERSION, DISAB...
 
 namespace modle::correlation {
 

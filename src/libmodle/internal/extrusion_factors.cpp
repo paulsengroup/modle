@@ -4,9 +4,9 @@
 #include <cstddef>  // IWYU pragma: keep for size_t
 #include <limits>   // for numeric_limits
 
-#include "modle/common.hpp"              // for bp_t
+#include "modle/common/common.hpp"       // for bp_t
+#include "modle/common/utils.hpp"        // for ndebug_defined
 #include "modle/extrusion_barriers.hpp"  // for ExtrusionBarrier
-#include "modle/utils.hpp"               // for ndebug_defined
 
 namespace modle {
 

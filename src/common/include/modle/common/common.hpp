@@ -6,7 +6,7 @@
 #include <cstdint>                                  // for uint32_t, uint_fast8_t
 #include <functional>                               // for function<>::result_type
 
-#include "modle/utils.hpp"  // for ndebug_defined
+#include "modle/common/utils.hpp"  // for ndebug_defined
 
 #ifdef USE_XOSHIRO
 #include <Xoshiro-cpp/XoshiroCpp.hpp>  // for XoshiroCpp::Xoshiro256PlusPlus XoshiroCpp::SplitMix64

@@ -41,15 +41,15 @@
 #include <utility>      // for make_pair, pair
 #include <vector>       // for vector, vector<>::iterator
 
-#include "core/random_sampling.hpp"      // for random_sampling
-#include "modle/common.hpp"              // for bp_t, PRNG_t, MODLE_UNLIKELY, MODLE_L...
-#include "modle/config.hpp"              // for Config
-#include "modle/cooler.hpp"              // for Cooler, Cooler::WRITE_ONLY
-#include "modle/dna.hpp"                 // for Chromosome
-#include "modle/extrusion_barriers.hpp"  // for update_states, ExtrusionBarrier
-#include "modle/extrusion_factors.hpp"   // for Lef, ExtrusionUnit
-#include "modle/setup.hpp"               // for Genome::const_iterator, Genome
-#include "modle/utils.hpp"               // for ndebug_defined
+#include "modle/common/common.hpp"           // for bp_t, PRNG_t, MODLE_UNLIKELY, MODLE_L...
+#include "modle/common/config.hpp"           // for Config
+#include "modle/common/random_sampling.hpp"  // for random_sampling
+#include "modle/common/utils.hpp"            // for ndebug_defined
+#include "modle/cooler.hpp"                  // for Cooler, Cooler::WRITE_ONLY
+#include "modle/dna.hpp"                     // for Chromosome
+#include "modle/extrusion_barriers.hpp"      // for update_states, ExtrusionBarrier
+#include "modle/extrusion_factors.hpp"       // for Lef, ExtrusionUnit
+#include "modle/setup.hpp"                   // for Genome::const_iterator, Genome
 
 #ifndef BOOST_STACKTRACE_USE_NOOP
 #include <boost/exception/get_error_info.hpp>  // for get_error_info

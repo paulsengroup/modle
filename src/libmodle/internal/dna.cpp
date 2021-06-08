@@ -15,12 +15,12 @@
 #include <utility>      // for move
 #include <vector>       // for vector
 
-#include "modle/bed.hpp"                         // for BED
-#include "modle/chrom_sizes.hpp"                 // for ChromSize
-#include "modle/common.hpp"                      // for bp_t, contacts_t
-#include "modle/contacts.hpp"                    // for ContactMatrix
-#include "modle/suppress_compiler_warnings.hpp"  // for DISABLE_WARNING_POP, DISABLE_WARNING_PUSH
-#include "modle/utils.hpp"                       // for ndebug_defined
+#include "modle/bed.hpp"                                // for BED
+#include "modle/chrom_sizes.hpp"                        // for ChromSize
+#include "modle/common/common.hpp"                      // for bp_t, contacts_t
+#include "modle/common/suppress_compiler_warnings.hpp"  // for DISABLE_WARNING_POP, DISABLE_WARNING_PUSH
+#include "modle/common/utils.hpp"                       // for ndebug_defined
+#include "modle/contacts.hpp"                           // for ContactMatrix
 
 namespace modle {
 Chromosome::Chromosome(const chrom_sizes::ChromSize &chrom, size_t id,

@@ -10,7 +10,7 @@
 #include <type_traits>  // for is_arithmetic
 #include <vector>       // for vector
 
-#include "modle/suppress_compiler_warnings.hpp"  // for DISABLE_WARNING_POP, DISABLE_WARNING_PUSH
+#include "modle/common/suppress_compiler_warnings.hpp"  // for DISABLE_WARNING_POP, DISABLE_WARNING_PUSH
 
 namespace modle::correlation::utils {
 

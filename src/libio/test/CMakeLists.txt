@@ -15,7 +15,7 @@ target_link_libraries(
   modle_io_test
   INTERFACE project_warnings
             project_options
+            Modle::common
             Modle::io
-            Modle::utils
             CONAN_PKG::abseil
             CONAN_PKG::catch2)

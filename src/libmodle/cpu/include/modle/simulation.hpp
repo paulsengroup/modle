@@ -21,12 +21,12 @@
 #include <utility>                                    // for pair
 #include <vector>                                     // for vector
 
-#include "modle/common.hpp"             // for bp_t, PRNG, seeder
-#include "modle/config.hpp"             // for Config
+#include "modle/common/common.hpp"  // for bp_t, PRNG, seeder
+#include "modle/common/config.hpp"  // for Config
+#include "modle/common/suppress_compiler_warnings.hpp"
+#include "modle/common/utils.hpp"       // for ndebug_defined
 #include "modle/extrusion_factors.hpp"  // for Lef, ExtrusionUnit (ptr only)
 #include "modle/setup.hpp"              // for Genome
-#include "modle/suppress_compiler_warnings.hpp"
-#include "modle/utils.hpp"  // for ndebug_defined
 
 namespace modle {
 

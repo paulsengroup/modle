@@ -8,7 +8,7 @@
 #include <cstddef>
 #include <vector>
 
-#include "modle/common.hpp"
+#include "modle/common/common.hpp"
 #include "modle/extrusion_factors.hpp"
 
 namespace modle::test::libmodle {

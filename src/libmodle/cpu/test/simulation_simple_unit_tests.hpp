@@ -10,12 +10,12 @@
 #include <vector>            // for vector
 
 #include "modle/chrom_sizes.hpp"
-#include "modle/common.hpp"                      // for bp_t, PRNG, PRNG_t
-#include "modle/config.hpp"                      // for Config
-#include "modle/extrusion_barriers.hpp"          // for ExtrusionBarrier
-#include "modle/extrusion_factors.hpp"           // for Lef, ExtrusionUnit
-#include "modle/simulation.hpp"                  // for Simulation, Simulation::collision_t, seeder
-#include "modle/suppress_compiler_warnings.hpp"  // for DISABLE_WARNING_POP, DISABLE_WARNING_PUSH
+#include "modle/common/common.hpp"                      // for bp_t, PRNG, PRNG_t
+#include "modle/common/config.hpp"                      // for Config
+#include "modle/common/suppress_compiler_warnings.hpp"  // for DISABLE_WARNING_POP, DISABLE_WARNING_PUSH
+#include "modle/extrusion_barriers.hpp"                 // for ExtrusionBarrier
+#include "modle/extrusion_factors.hpp"                  // for Lef, ExtrusionUnit
+#include "modle/simulation.hpp"  // for Simulation, Simulation::collision_t, seeder
 #include "modle/test/common.hpp"
 
 namespace modle::test::libmodle {

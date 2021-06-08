@@ -24,8 +24,8 @@
 #include <vector>            // for vector, swap
 
 #include "modle/bed.hpp"           // for Parser
+#include "modle/common/utils.hpp"  // for throw_with_trace
 #include "modle/cooler.hpp"        // for Cooler, Cooler::READ_ONLY
-#include "modle/utils.hpp"         // for throw_with_trace
 #include "modle_tools/config.hpp"  // for config
 
 namespace modle::tools {

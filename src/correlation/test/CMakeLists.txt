@@ -12,8 +12,8 @@ target_link_libraries(
   modle_correlation_test
   INTERFACE project_warnings
             project_options
+            Modle::common
             Modle::correlation
-            Modle::utils
             CONAN_PKG::abseil
             CONAN_PKG::boost
             CONAN_PKG::catch2)

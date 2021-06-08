@@ -31,12 +31,12 @@
 #include <utility>                                  // for pair, addressof
 #include <vector>                                   // for vector
 
-#include "modle/config.hpp"              // for Config
+#include "modle/common/config.hpp"       // for Config
+#include "modle/common/utils.hpp"        // for traced
 #include "modle/contacts.hpp"            // for ContactMatrix
 #include "modle/dna.hpp"                 // for Chromosome
 #include "modle/extrusion_barriers.hpp"  // for ExtrusionBarrier
 #include "modle/simulation.hpp"
-#include "modle/utils.hpp"  // for traced
 
 namespace modle {
 

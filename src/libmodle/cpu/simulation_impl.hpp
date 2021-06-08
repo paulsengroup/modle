@@ -11,11 +11,11 @@
 #include <thread>                      // for thread
 #include <type_traits>                 // for declval, decay_t
 
-#include "modle/common.hpp"                      // for PRNG_t
-#include "modle/dna.hpp"                         // for Chromosome
-#include "modle/extrusion_factors.hpp"           // for Lef
-#include "modle/suppress_compiler_warnings.hpp"  // for DISABLE_WARNING_POP, DISABLE_WARNING_...
-#include "modle/utils.hpp"                       // for ndebug_defined
+#include "modle/common/common.hpp"                      // for PRNG_t
+#include "modle/common/suppress_compiler_warnings.hpp"  // for DISABLE_WARNING_POP, DISABLE_WARNING_...
+#include "modle/common/utils.hpp"                       // for ndebug_defined
+#include "modle/dna.hpp"                                // for Chromosome
+#include "modle/extrusion_factors.hpp"                  // for Lef
 
 namespace modle {
 template <typename MaskT>

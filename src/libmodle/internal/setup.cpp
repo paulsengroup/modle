@@ -20,7 +20,7 @@
 
 #include "modle/bed.hpp"                 // for BED, Parser
 #include "modle/chrom_sizes.hpp"         // for ChromSize, Parser
-#include "modle/common.hpp"              // for MODLE_UNLIKELY
+#include "modle/common/common.hpp"       // for MODLE_UNLIKELY
 #include "modle/dna.hpp"                 // for Chromosome
 #include "modle/extrusion_barriers.hpp"  // for ExtrusionBarrier
 

@@ -19,11 +19,11 @@
 #include <utility>      // for pair
 #include <vector>       // for vector
 
-#include "eval_impl.hpp"                         // for FMT_COMPILE_STRING
-#include "modle/cooler.hpp"                      // for Cooler, Cooler::READ_ONLY
-#include "modle/correlation.hpp"                 // for compute_pearson_significance, compute_sp...
-#include "modle/suppress_compiler_warnings.hpp"  // for DISABLE_WARNING_POP, DISABLE_WARNING_PUSH
-#include "modle/utils.hpp"                       // for chrom_less_than_operator
+#include "eval_impl.hpp"                                // for FMT_COMPILE_STRING
+#include "modle/common/suppress_compiler_warnings.hpp"  // for DISABLE_WARNING_POP, DISABLE_WARNING_PUSH
+#include "modle/common/utils.hpp"                       // for chrom_less_than_operator
+#include "modle/cooler.hpp"                             // for Cooler, Cooler::READ_ONLY
+#include "modle/correlation.hpp"  // for compute_pearson_significance, compute_sp...
 
 namespace modle::tools {
 std::vector<std::pair<std::string, int64_t>> select_chromosomes_for_eval(

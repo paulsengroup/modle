@@ -40,10 +40,10 @@
 #include <string_view>  // for string_view
 #include <vector>       // for vector
 
-#include "modle/contacts.hpp"                    // IWYU pragma: keep for ContactMatrix
-#include "modle/hdf5.hpp"                        // for has_attribute, read_attribute_int
-#include "modle/suppress_compiler_warnings.hpp"  // for DISABLE_WARNING_POP, DISABLE_WARNI...
-#include "modle/utils.hpp"                       // for throw_with_trace
+#include "modle/common/suppress_compiler_warnings.hpp"  // for DISABLE_WARNING_POP, DISABLE_WARNI...
+#include "modle/common/utils.hpp"                       // for throw_with_trace
+#include "modle/contacts.hpp"                           // IWYU pragma: keep for ContactMatrix
+#include "modle/hdf5.hpp"                               // for has_attribute, read_attribute_int
 
 namespace modle::cooler {
 

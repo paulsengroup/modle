@@ -16,8 +16,8 @@
 #include <utility>                                  // for move
 #include <vector>                                   // for vector, allocator
 
-#include "modle/contacts.hpp"  // for ContactMatrix
-#include "modle/utils.hpp"     // for ndebug_defined, parse_numeric_or_throw
+#include "modle/common/utils.hpp"  // for ndebug_defined, parse_numeric_or_throw
+#include "modle/contacts.hpp"      // for ContactMatrix
 
 namespace modle::test::cmatrix {
 

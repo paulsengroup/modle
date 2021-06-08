@@ -12,7 +12,7 @@
 #include <utility>                                  // for pair
 #include <vector>                                   // for vector
 
-#include "modle/utils.hpp"  // for ndebug_defined
+#include "modle/common/utils.hpp"  // for ndebug_defined
 
 namespace modle {
 

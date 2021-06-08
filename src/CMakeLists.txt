@@ -6,7 +6,6 @@ if(MODLE_BUILD_UTILS)
 endif()
 
 add_subdirectory(common)
-add_subdirectory(utils)
 add_subdirectory(contact_matrix)
 add_subdirectory(correlation)
 add_subdirectory(libio)

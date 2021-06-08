@@ -12,9 +12,9 @@
 #include <boost/random/uniform_real_distribution.hpp>  // for uniform_real_distribution
 #include <thread>                                      // for thread, this_thread::sleep_for
 
-#include "core/genextreme_value_distribution.hpp"
 #include "include/modle_tools/config.hpp"
-#include "modle/common.hpp"
+#include "modle/common/common.hpp"
+#include "modle/common/genextreme_value_distribution.hpp"
 #include "modle/contacts.hpp"
 #include "modle/cooler.hpp"
 
