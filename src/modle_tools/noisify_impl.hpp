@@ -26,7 +26,7 @@ void noisify_contacts(const config& c) {
   constexpr auto PIXEL_BATCH_SIZE =
       modle::cooler::Cooler::DEFAULT_HDF5_BUFFER_SIZE / sizeof(modle::cooler::Cooler::Pixel);
   pixel_queue_t pixel_queue(PIXEL_BATCH_SIZE);
-  modle::ContactMatrix<uint32_t> cmatrix{};
+  modle::ContactMatrix<> cmatrix{};
 
   constexpr auto END_OF_PIXEL_QUEUE = modle::cooler::Cooler::Pixel{
       std::numeric_limits<size_t>::max(), std::numeric_limits<size_t>::max(),

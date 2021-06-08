@@ -296,10 +296,10 @@ void Cooler::write_metadata() {
   }
 }
 
-ContactMatrix<uint32_t> Cooler::cooler_to_cmatrix(std::string_view chrom_name, size_t nrows,
-                                                  std::pair<size_t, size_t> chrom_boundaries,
-                                                  bool try_common_chrom_prefixes,
-                                                  bool prefer_using_balanced_counts) {
+ContactMatrix<> Cooler::cooler_to_cmatrix(std::string_view chrom_name, size_t nrows,
+                                          std::pair<size_t, size_t> chrom_boundaries,
+                                          bool try_common_chrom_prefixes,
+                                          bool prefer_using_balanced_counts) {
   assert(this->_fp);                         // NOLINT
   assert(!this->_datasets.empty());          // NOLINT
   assert(!this->_idx_bin1_offset.empty());   // NOLINT
@@ -346,11 +346,11 @@ ContactMatrix<uint32_t> Cooler::cooler_to_cmatrix(std::string_view chrom_name, s
                            prefer_using_balanced_counts);
 }
 
-ContactMatrix<uint32_t> Cooler::cooler_to_cmatrix(std::string_view chrom_name,
-                                                  size_t diagonal_width, size_t bin_size,
-                                                  std::pair<size_t, size_t> chrom_boundaries,
-                                                  bool try_common_chrom_prefixes,
-                                                  bool prefer_using_balanced_counts) {
+ContactMatrix<> Cooler::cooler_to_cmatrix(std::string_view chrom_name, size_t diagonal_width,
+                                          size_t bin_size,
+                                          std::pair<size_t, size_t> chrom_boundaries,
+                                          bool try_common_chrom_prefixes,
+                                          bool prefer_using_balanced_counts) {
   assert(this->_bin_size != 0);
   if (bin_size != 0 && this->_bin_size != bin_size) {
     throw std::runtime_error(fmt::format(
@@ -702,10 +702,10 @@ std::pair<int64_t, int64_t> Cooler::read_chrom_pixels_boundaries(size_t chrom_id
   return pixel_boundaries;
 }
 
-ContactMatrix<uint32_t> Cooler::cooler_to_cmatrix(std::pair<hsize_t, hsize_t> bin_range,
-                                                  absl::Span<const int64_t> bin1_offset_idx,
-                                                  size_t nrows, double bias_scaling_factor,
-                                                  bool prefer_using_balanced_counts) {
+ContactMatrix<> Cooler::cooler_to_cmatrix(std::pair<hsize_t, hsize_t> bin_range,
+                                          absl::Span<const int64_t> bin1_offset_idx, size_t nrows,
+                                          double bias_scaling_factor,
+                                          bool prefer_using_balanced_counts) {
   if (this->_datasets.empty()) {
     this->open_default_datasets();
   }
@@ -713,7 +713,7 @@ ContactMatrix<uint32_t> Cooler::cooler_to_cmatrix(std::pair<hsize_t, hsize_t> bi
   const auto &[first_bin, last_bin] = bin_range;
   assert(first_bin < last_bin);                            // NOLINT
   assert(last_bin <= first_bin + bin1_offset_idx.size());  // NOLINT
-  ContactMatrix<uint32_t> cmatrix(nrows, last_bin - first_bin + 1);
+  ContactMatrix<> cmatrix(nrows, last_bin - first_bin + 1);
   std::vector<int64_t> bin1_BUFF(nrows);
   std::vector<int64_t> bin2_BUFF(nrows);
   std::vector<int64_t> count_BUFF(nrows);
@@ -783,10 +783,10 @@ ContactMatrix<uint32_t> Cooler::cooler_to_cmatrix(std::pair<hsize_t, hsize_t> bi
   return cmatrix;
 }
 
-ContactMatrix<uint32_t> Cooler::cooler_to_cmatrix(std::pair<hsize_t, hsize_t> bin_range,
-                                                  const std::vector<int64_t> &bin1_offset_idx,
-                                                  size_t nrows, double scaling_factor,
-                                                  bool prefer_using_balanced_counts) {
+ContactMatrix<> Cooler::cooler_to_cmatrix(std::pair<hsize_t, hsize_t> bin_range,
+                                          const std::vector<int64_t> &bin1_offset_idx, size_t nrows,
+                                          double scaling_factor,
+                                          bool prefer_using_balanced_counts) {
   return this->cooler_to_cmatrix(bin_range, absl::MakeConstSpan(bin1_offset_idx), nrows,
                                  scaling_factor, prefer_using_balanced_counts);
 }

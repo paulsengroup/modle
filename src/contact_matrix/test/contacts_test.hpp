@@ -22,7 +22,7 @@
 namespace modle::test::cmatrix {
 
 TEST_CASE("CMatrix simple", "[cmatrix][short]") {
-  ContactMatrix<uint32_t> c(10, 100);  // NOLINT
+  ContactMatrix<> c(10, 100);  // NOLINT
   CHECK(c.get(0, 0) == 0);
   c.increment(0, 0);
   CHECK(c.get(0, 0) == 1);
@@ -58,7 +58,7 @@ TEST_CASE("CMatrix 10x200", "[cmatrix][medium]") {
   const std::string file_path = "test/data/unit_tests/symm_matrix_200_10.tsv";
   REQUIRE(std::filesystem::exists(file_path));
   const auto m1 = load_matrix_from_file(file_path);
-  ContactMatrix<uint32_t> m2(10, 200);  // NOLINT
+  ContactMatrix<> m2(10, 200);  // NOLINT
   for (auto i = 0UL; i < m1.size(); ++i) {
     for (auto j = 0UL; j < m1[i].size(); ++j) {
       if (m1[i][j] != 0 && j >= i) {
@@ -76,7 +76,7 @@ TEST_CASE("CMatrix 10x200", "[cmatrix][medium]") {
 }
 
 TEST_CASE("CMatrix Mask", "[cmatrix][short]") {
-  ContactMatrix<uint32_t> m(10, 20);  // NOLINT
+  ContactMatrix<> m(10, 20);  // NOLINT
   auto mask = m.generate_mask_for_bins_without_contacts();
   REQUIRE(mask.size() == m.ncols());
   CHECK(mask.none());  // Matrix is full of zeros: bitmask should also be all zeros
@@ -113,7 +113,7 @@ TEST_CASE("CMatrix Mask", "[cmatrix][short]") {
 }
 
 TEST_CASE("CMatrix in/decrement", "[cmatrix][short]") {
-  ContactMatrix<uint32_t> m(10, 20);  // NOLINT
+  ContactMatrix<> m(10, 20);  // NOLINT
   REQUIRE_NOTHROW(m.increment(0, 0));
   REQUIRE_NOTHROW(m.increment(15, 15));  // NOLINT
 
@@ -146,7 +146,7 @@ TEST_CASE("CMatrix in/decrement", "[cmatrix][short]") {
 }
 
 TEST_CASE("CMatrix in/decrement vector", "[cmatrix][short]") {
-  ContactMatrix<uint32_t> m(10, 20);  // NOLINT
+  ContactMatrix<> m(10, 20);  // NOLINT
   // clang-format off
   const std::vector<std::pair<size_t, size_t>> pixels{{ 0,  0},   // NOLINT
                                                           { 5, 10},         // NOLINT
