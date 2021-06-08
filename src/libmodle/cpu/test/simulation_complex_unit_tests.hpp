@@ -10,7 +10,7 @@
 #include <vector>            // for vector
 
 #include "modle/chrom_sizes.hpp"
-#include "modle/common/common.hpp"                      // for bp_t, PRNG, PRNG_t
+#include "modle/common/common.hpp"                      // for bp_t, PRNG, random::PRNG_t
 #include "modle/common/config.hpp"                      // for Config
 #include "modle/common/suppress_compiler_warnings.hpp"  // for DISABLE_WARNING_POP, DISABLE_WARNING_PUSH
 #include "modle/extrusion_barriers.hpp"                 // for ExtrusionBarrier
@@ -33,17 +33,17 @@ TEST_CASE("Simulation 001", "[simulation][short]") {
   const size_t nbarriers = 5;
   const Chromosome chrom{{"chr1", 0, 1000}};
   // NOLINTNEXTLINE(readability-magic-numbers, cppcoreguidelines-avoid-magic-numbers)
-  auto rand_eng = modle::PRNG(10556020843759504871ULL);
+  auto rand_eng = random::PRNG(10556020843759504871ULL);
 
   // clang-format off
   const std::vector<Lef> lefs{
-      Lef{EU{25},  EU{30},  1},  // NOLINT
-      Lef{EU{150}, EU{150}, 1},  // NOLINT
-      Lef{EU{200}, EU{350}, 1},  // NOLINT
-      Lef{EU{230}, EU{399}, 1},  // NOLINT
-      Lef{EU{425}, EU{425}, 1},  // NOLINT
-      Lef{EU{625}, EU{800}, 1},  // NOLINT
-      Lef{EU{650}, EU{650}, 1}   // NOLINT
+      construct_lef(25, 30, 0),    // NOLINT
+      construct_lef(150, 150, 1),  // NOLINT
+      construct_lef(200, 350, 2),  // NOLINT
+      construct_lef(230, 399, 3),  // NOLINT
+      construct_lef(425, 425, 4),  // NOLINT
+      construct_lef(625, 800, 5),  // NOLINT
+      construct_lef(650, 650, 6)   // NOLINT
   };
 
   const std::vector<ExtrusionBarrier> barriers{ExtrusionBarrier{100, 1.0, 0.0, '-'},
@@ -116,17 +116,17 @@ TEST_CASE("Simulation 002", "[simulation][short]") {
   const size_t nbarriers = 5;
   const Chromosome chrom{{"chr1", 0, 1000}};
   // NOLINTNEXTLINE(readability-magic-numbers, cppcoreguidelines-avoid-magic-numbers)
-  auto rand_eng = modle::PRNG(9668495374385482848ULL);
+  auto rand_eng = random::PRNG(9668495374385482848ULL);
 
   // clang-format off
   const std::vector<Lef> lefs{
-      Lef{EU{200}, EU{375}, 1},  // NOLINT
-      Lef{EU{350}, EU{350}, 1},  // NOLINT
-      Lef{EU{575}, EU{575}, 1},  // NOLINT
-      Lef{EU{601}, EU{770}, 1},  // NOLINT
-      Lef{EU{650}, EU{800}, 1},  // NOLINT
-      Lef{EU{850}, EU{850}, 1},  // NOLINT
-      Lef{EU{970}, EU{975}, 1}   // NOLINT
+      construct_lef(200, 375, 0),  // NOLINT
+      construct_lef(350, 350, 1),  // NOLINT
+      construct_lef(575, 575, 2),  // NOLINT
+      construct_lef(601, 770, 3),  // NOLINT
+      construct_lef(650, 800, 4),  // NOLINT
+      construct_lef(850, 850, 5),  // NOLINT
+      construct_lef(970, 975, 6)   // NOLINT
   };
 
   const std::vector<ExtrusionBarrier> barriers{ExtrusionBarrier{150, 1.0, 0.0, '-'},
@@ -199,17 +199,17 @@ TEST_CASE("Simulation 003 - Soft collisions on", "[simulation][short]") {
   const size_t nbarriers = 5;
   const Chromosome chrom{{"chr1", 0, 1000}};
   // NOLINTNEXTLINE(readability-magic-numbers, cppcoreguidelines-avoid-magic-numbers)
-  auto rand_eng = modle::PRNG(919341715542527390ULL);
+  auto rand_eng = random::PRNG(919341715542527390ULL);
 
   // clang-format off
   const std::vector<Lef> lefs{
-      Lef{EU{200}, EU{375}, 1},  // NOLINT
-      Lef{EU{350}, EU{350}, 1},  // NOLINT
-      Lef{EU{575}, EU{575}, 1},  // NOLINT
-      Lef{EU{601}, EU{770}, 1},  // NOLINT
-      Lef{EU{650}, EU{800}, 1},  // NOLINT
-      Lef{EU{850}, EU{850}, 1},  // NOLINT
-      Lef{EU{970}, EU{975}, 1}   // NOLINT
+      construct_lef(200, 375, 0),  // NOLINT
+      construct_lef(350, 350, 1),  // NOLINT
+      construct_lef(575, 575, 2),  // NOLINT
+      construct_lef(601, 770, 3),  // NOLINT
+      construct_lef(650, 800, 4),  // NOLINT
+      construct_lef(850, 850, 5),  // NOLINT
+      construct_lef(970, 975, 6)   // NOLINT
   };
 
   const std::vector<ExtrusionBarrier> barriers{ExtrusionBarrier{150, 1.0, 0.0, '-'},
@@ -282,17 +282,17 @@ TEST_CASE("Simulation 004 - Inactive barriers", "[simulation][short]") {
   const size_t nbarriers = 5;
   const Chromosome chrom{{"chr1", 0, 1000}};
   // NOLINTNEXTLINE(readability-magic-numbers, cppcoreguidelines-avoid-magic-numbers)
-  auto rand_eng = modle::PRNG(138440880292496584ULL);
+  auto rand_eng = random::PRNG(138440880292496584ULL);
 
   // clang-format off
   const std::vector<Lef> lefs{
-      Lef{EU{200}, EU{375}, 1},  // NOLINT
-      Lef{EU{350}, EU{350}, 1},  // NOLINT
-      Lef{EU{575}, EU{575}, 1},  // NOLINT
-      Lef{EU{601}, EU{770}, 1},  // NOLINT
-      Lef{EU{650}, EU{800}, 1},  // NOLINT
-      Lef{EU{850}, EU{850}, 1},  // NOLINT
-      Lef{EU{970}, EU{975}, 1}   // NOLINT
+      construct_lef(200, 375, 0),  // NOLINT
+      construct_lef(350, 350, 1),  // NOLINT
+      construct_lef(575, 575, 2),  // NOLINT
+      construct_lef(601, 770, 3),  // NOLINT
+      construct_lef(650, 800, 4),  // NOLINT
+      construct_lef(850, 850, 5),  // NOLINT
+      construct_lef(970, 975, 6)   // NOLINT
   };
 
   const std::vector<ExtrusionBarrier> barriers{ExtrusionBarrier{150, 1.0, 0.0, '-'},
@@ -365,16 +365,16 @@ TEST_CASE("Simulation 005 - Multiple LEFs located at the same site", "[simulatio
   constexpr size_t nbarriers = 1;
   const Chromosome chrom{{"chr1", 0, 150}};  // NOLINT
   // NOLINTNEXTLINE(readability-magic-numbers, cppcoreguidelines-avoid-magic-numbers)
-  auto rand_eng = modle::PRNG(9509334554644345044ULL);
+  auto rand_eng = random::PRNG(9509334554644345044ULL);
 
   // clang-format off
   const std::vector<Lef> lefs{
-      Lef{EU{30},  EU{50},  1},  // NOLINT
-      Lef{EU{60},  EU{80},  1},  // NOLINT
-      Lef{EU{60},  EU{80},  1},  // NOLINT
-      Lef{EU{65},  EU{125}, 1},  // NOLINT
-      Lef{EU{140}, EU{140}, 1},  // NOLINT
-      Lef{EU{140}, EU{140}, 1}   // NOLINT
+      construct_lef(30, 50, 0),    // NOLINT
+      construct_lef(60, 80, 1),    // NOLINT
+      construct_lef(60, 80, 2),    // NOLINT
+      construct_lef(65, 125, 3),   // NOLINT
+      construct_lef(140, 140, 4),  // NOLINT
+      construct_lef(140, 140, 5)   // NOLINT
   };
 
   const std::vector<ExtrusionBarrier> barriers{ExtrusionBarrier{100, 1.0, 0.0, '-'}};
@@ -441,16 +441,16 @@ TEST_CASE("Simulation 006 - Few inactive LEFs", "[simulation][short]") {
   constexpr size_t nbarriers = 1;
   const Chromosome chrom{{"chr1", 0, 150}};  // NOLINT
   // NOLINTNEXTLINE(readability-magic-numbers, cppcoreguidelines-avoid-magic-numbers)
-  auto rand_eng = modle::PRNG(8213068426516999476ULL);
+  auto rand_eng = random::PRNG(8213068426516999476ULL);
 
   // clang-format off
   std::vector<Lef> lefs{
-      Lef{EU{30},  EU{50},  1},  // NOLINT
-      Lef{EU{60},  EU{80},  1},  // NOLINT
-      Lef{EU{60},  EU{80},  1},  // NOLINT
-      Lef{EU{65},  EU{125}, 1},  // NOLINT
-      Lef{EU{140}, EU{140}, 1},  // NOLINT
-      Lef{EU{140}, EU{140}, 1}   // NOLINT
+      construct_lef(30, 50, 0),    // NOLINT
+      construct_lef(60, 80, 1),    // NOLINT
+      construct_lef(60, 80, 2),    // NOLINT
+      construct_lef(65, 125, 3),   // NOLINT
+      construct_lef(140, 140, 4),  // NOLINT
+      construct_lef(140, 140, 5)   // NOLINT
   };
 
   lefs[2].release(); // NOLINT
@@ -521,12 +521,12 @@ TEST_CASE("Simulation 007 - LEF-LEF collision overrides LEF-BAR collision 1",
   constexpr size_t nbarriers = 1;
   const Chromosome chrom{{"chr1", 0, 200}};  // NOLINT
   // NOLINTNEXTLINE(readability-magic-numbers, cppcoreguidelines-avoid-magic-numbers)
-  auto rand_eng = modle::PRNG(4003028292286930594ULL);
+  auto rand_eng = random::PRNG(4003028292286930594ULL);
 
   // clang-format off
   std::vector<Lef> lefs{
-      Lef{EU{50},  EU{95},  1},  // NOLINT
-      Lef{EU{110}, EU{150}, 1}   // NOLINT
+      construct_lef(50, 95, 0),    // NOLINT
+      construct_lef(110, 150, 1)   // NOLINT
   };
 
   const std::vector<ExtrusionBarrier> barriers{ExtrusionBarrier{100, 1.0, 0.0, '+'}};
@@ -582,12 +582,12 @@ TEST_CASE("Simulation 008 - LEF-LEF collision overrides LEF-BAR collision 2",
   constexpr size_t nbarriers = 1;
   const Chromosome chrom{{"chr1", 0, 200}};  // NOLINT
   // NOLINTNEXTLINE(readability-magic-numbers, cppcoreguidelines-avoid-magic-numbers)
-  auto rand_eng = modle::PRNG(12931236264094635263ULL);
+  auto rand_eng = random::PRNG(12931236264094635263ULL);
 
   // clang-format off
   std::vector<Lef> lefs{
-      Lef{EU{50},  EU{90},  1},  // NOLINT
-      Lef{EU{105}, EU{150}, 1}   // NOLINT
+      construct_lef(50, 90, 0),    // NOLINT
+      construct_lef(105, 150, 1)   // NOLINT
   };
 
   const std::vector<ExtrusionBarrier> barriers{ExtrusionBarrier{100, 1.0, 0.0, '-'}};
@@ -643,15 +643,15 @@ TEST_CASE("Simulation 009 - Ensure stacked LEFs do not interfere with surroundin
   constexpr size_t nbarriers = 2;
   const Chromosome chrom{{"chr1", 0, 200}};  // NOLINT
   // NOLINTNEXTLINE(readability-magic-numbers, cppcoreguidelines-avoid-magic-numbers)
-  auto rand_eng = modle::PRNG(8668729858575330735ULL);
+  auto rand_eng = random::PRNG(8668729858575330735ULL);
 
   // clang-format off
   const std::vector<Lef> lefs{
-      Lef{EU{ 95},  EU{100},  1},  // NOLINT
-      Lef{EU{101},  EU{103},  1},  // NOLINT
-      Lef{EU{102},  EU{110},  1},  // NOLINT
-      Lef{EU{104},  EU{111},  1},  // NOLINT
-      Lef{EU{105},  EU{112},  1}   // NOLINT
+      construct_lef(95, 100, 0),   // NOLINT
+      construct_lef(101, 103, 1),  // NOLINT
+      construct_lef(102, 110, 2),  // NOLINT
+      construct_lef(104, 111, 3),  // NOLINT
+      construct_lef(105, 112, 4)   // NOLINT
   };
 
   const std::vector<ExtrusionBarrier> barriers{ExtrusionBarrier{100, 1.0, 0.0, '+'},
@@ -718,16 +718,16 @@ TEST_CASE("Simulation 010 - Ensure stacked LEFs do not interfere with surroundin
   constexpr size_t nbarriers = 2;
   const Chromosome chrom{{"chr1", 0, 200}};  // NOLINT
   // NOLINTNEXTLINE(readability-magic-numbers, cppcoreguidelines-avoid-magic-numbers)
-  auto rand_eng = modle::PRNG(4320101097510038983ULL);
+  auto rand_eng = random::PRNG(4320101097510038983ULL);
 
   // clang-format off
   const std::vector<Lef> lefs{
-      Lef{EU{ 95},  EU{100},  1},  // NOLINT
-      Lef{EU{101},  EU{103},  1},  // NOLINT
-      Lef{EU{102},  EU{110},  1},  // NOLINT
-      Lef{EU{104},  EU{111},  1},  // NOLINT
-      Lef{EU{105},  EU{112},  1},  // NOLINT
-      Lef{EU{102},  EU{102},  1}   // NOLINT
+      construct_lef(95, 100, 0),   // NOLINT
+      construct_lef(101, 103, 1),  // NOLINT
+      construct_lef(102, 110, 2),  // NOLINT
+      construct_lef(104, 111, 3),  // NOLINT
+      construct_lef(105, 112, 4),  // NOLINT
+      construct_lef(102, 102, 5)   // NOLINT
   };
 
   const std::vector<ExtrusionBarrier> barriers{ExtrusionBarrier{100, 1.0, 0.0, '+'},

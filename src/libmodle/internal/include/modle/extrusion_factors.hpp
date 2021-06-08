@@ -4,7 +4,7 @@
 #include <cstdint>  // for int64_t
 #include <limits>   // for numeric_limits
 
-#include "modle/common/common.hpp"  // for bp_t_t
+#include "modle/common/common.hpp"  // for bp_t
 #include "modle/common/utils.hpp"   // for ndebug_defined
 
 namespace modle {
@@ -60,13 +60,14 @@ class ExtrusionUnit {
 };
 
 struct Lef {
+  Lef() = default;
   [[nodiscard]] bool is_bound() const noexcept(utils::ndebug_defined());
-  void bind_at_pos(bp_t pos) noexcept(utils::ndebug_defined());
+  void bind_at_pos(size_t current_epoch, bp_t pos) noexcept(utils::ndebug_defined());
   void release() noexcept(utils::ndebug_defined());
   void reset() noexcept(utils::ndebug_defined());
+  size_t binding_epoch{std::numeric_limits<size_t>::max()};
   ExtrusionUnit rev_unit{};
   ExtrusionUnit fwd_unit{};
-  bool active{false};
 };
 
 }  // namespace modle

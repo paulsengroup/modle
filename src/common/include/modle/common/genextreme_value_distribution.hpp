@@ -1,8 +1,8 @@
 #pragma once
-
-#include <boost/random/generate_canonical.hpp>
 #include <cassert>
 #include <cmath>
+
+#include "modle/common/random.hpp"
 
 namespace modle {
 template <class RealType = double>
@@ -87,15 +87,16 @@ genextreme_value_distribution<RealType>::operator()(URNG& g, const param_type& p
   if (p.xi() == RealType(0)) {
     return (p.mu() - p.sigma()) *
            std::log(-std::log(
-               boost::random::generate_canonical<RealType, std::numeric_limits<RealType>::digits>(
-                   g)));
+               random::generate_canonical<RealType, std::numeric_limits<RealType>::digits>(g)));
   }
 
   return p.mu() +
          (p.sigma() *
-          (RealType(1) - std::pow(-std::log(boost::random::generate_canonical<
-                                            RealType, std::numeric_limits<RealType>::digits>(g)),
-                                  p.xi()))) /
+          (RealType(1) -
+           std::pow(
+               -std::log(
+                   random::generate_canonical<RealType, std::numeric_limits<RealType>::digits>(g)),
+               p.xi()))) /
              p.xi();
 }
 }  // namespace modle

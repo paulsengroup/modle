@@ -68,11 +68,11 @@ void noisify_contacts(const config& c) {
     const auto seed =
         c.seed + std::hash<std::string_view>{}(chrom_name) + std::hash<size_t>{}(ncols);
 
-    auto rang_eng = PRNG(seed);
+    auto rang_eng = random::PRNG(seed);
     auto genextreme = modle::genextreme_value_distribution<double>{
         c.genextreme_mu, c.genextreme_sigma, c.genextreme_xi};
-    auto uniformd = boost::random::uniform_real_distribution<double>{
-        static_cast<double>(bin_size) / -2.0, static_cast<double>(bin_size) / 2.0};
+    auto uniformd = random::uniform_real_distribution<double>{static_cast<double>(bin_size) / -2.0,
+                                                              static_cast<double>(bin_size) / 2.0};
     while (true) {
       pixel_queue.wait_dequeue(pixel);
       if (pixel == END_OF_PIXEL_QUEUE) {

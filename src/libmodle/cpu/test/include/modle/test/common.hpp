@@ -15,7 +15,11 @@ namespace modle::test::libmodle {
 
 inline const auto& REACHED_CHROM_BOUNDARY = Simulation::REACHED_CHROM_BOUNDARY;
 inline const auto& NO_COLLISION = Simulation::NO_COLLISION;
-using EU = ExtrusionUnit;
+template <typename I>
+[[nodiscard]] inline Lef construct_lef(I p1, I p2, size_t binding_epoch = 0) {
+  return Lef{binding_epoch, ExtrusionUnit{static_cast<bp_t>(p1)},
+             ExtrusionUnit{static_cast<bp_t>(p2)}};
+}
 
 [[maybe_unused]] inline void print_debug_info(
     size_t i, absl::Span<const bp_t> rev_moves, absl::Span<const bp_t> fwd_moves,

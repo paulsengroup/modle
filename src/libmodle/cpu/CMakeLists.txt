@@ -16,7 +16,6 @@ target_link_libraries(
           project_options
           Modle::cmatrix
           Modle::common
-          $<$<BOOL:${ENABLE_XOSHIRO}>:XoshiroCpp::XoshiroCpp>
           CONAN_PKG::cpp-sort
   PUBLIC Modle::modle_internal
          CONAN_PKG::abseil

@@ -2,17 +2,18 @@
 
 #include "modle/simulation.hpp"
 
-#include <H5Cpp.h>                             // IWYU pragma: keep
-#include <absl/container/btree_set.h>          // for btree_iterator
-#include <absl/strings/str_join.h>             // for StrJoin
-#include <absl/types/span.h>                   // for Span, MakeSpan, MakeConstSpan
-#include <cpp-sort/sorter_facade.h>            // for sorter_facade
-#include <cpp-sort/sorters/counting_sorter.h>  // for counting_sort, counting_sorter
-#include <cpp-sort/sorters/pdq_sorter.h>       // for pdq_sort, pdq_sorter
-#include <cpp-sort/sorters/ska_sorter.h>       // for ska_sort, ska_sorter
-#include <cpp-sort/sorters/split_sorter.h>     // for split_sort, split_sorter
-#include <fmt/format.h>                        // for format, print, FMT_STRING
-#include <fmt/ostream.h>                       // for formatbuf<>::int_type
+#include <H5Cpp.h>                              // IWYU pragma: keep
+#include <absl/container/btree_set.h>           // for btree_iterator
+#include <absl/strings/str_join.h>              // for StrJoin
+#include <absl/types/span.h>                    // for Span, MakeSpan, MakeConstSpan
+#include <cpp-sort/sorter_facade.h>             // for sorter_facade
+#include <cpp-sort/sorters/counting_sorter.h>   // for counting_sort, counting_sorter
+#include <cpp-sort/sorters/insertion_sorter.h>  // for insertion_sorter
+#include <cpp-sort/sorters/pdq_sorter.h>        // for pdq_sort, pdq_sorter
+#include <cpp-sort/sorters/ska_sorter.h>        // for ska_sort, ska_sorter
+#include <cpp-sort/sorters/split_sorter.h>      // for split_sort, split_sorter
+#include <fmt/format.h>                         // for format, print, FMT_STRING
+#include <fmt/ostream.h>                        // for formatbuf<>::int_type
 
 #include <algorithm>                                // for fill, min, max, clamp, for_each, gene...
 #include <atomic>                                   // for atomic
@@ -41,7 +42,7 @@
 #include <utility>      // for make_pair, pair
 #include <vector>       // for vector, vector<>::iterator
 
-#include "modle/common/common.hpp"           // for bp_t, PRNG_t, MODLE_UNLIKELY, MODLE_L...
+#include "modle/common/common.hpp"           // for bp_t, random::PRNG_t, MODLE_UNLIKELY, MODLE_L...
 #include "modle/common/config.hpp"           // for Config
 #include "modle/common/random_sampling.hpp"  // for random_sampling
 #include "modle/common/utils.hpp"            // for ndebug_defined
@@ -154,7 +155,7 @@ void Simulation::simulate_extrusion_kernel(Simulation::State& s) const {
   try {
     // Seed is computed based on chrom. name, size and cellid
     s.seed = s.chrom->hash(this->seed, s.cell_id);
-    s.rand_eng = modle::PRNG(s.seed);
+    s.rand_eng = random::PRNG(s.seed);
 
     // Generate the epoch at which each LEF is supposed to be initially loaded
     auto lef_initial_loading_epoch = absl::MakeSpan(s.epoch_buff);
@@ -162,7 +163,7 @@ void Simulation::simulate_extrusion_kernel(Simulation::State& s) const {
 
     if (!this->skip_burnin) {
       // TODO Consider using a Poisson process instead of sampling from an uniform distribution
-      boost::random::uniform_int_distribution<size_t> round_gen{
+      random::uniform_int_distribution<size_t> round_gen{
           0, (4 * this->average_lef_lifetime) / this->bin_size};
       std::generate(lef_initial_loading_epoch.begin(), lef_initial_loading_epoch.end(),
                     [&]() { return round_gen(s.rand_eng); });
@@ -219,8 +220,8 @@ void Simulation::simulate_extrusion_kernel(Simulation::State& s) const {
 
     // Generate initial extr. barrier states, so that they are already at or close to equilibrium
     for (auto i = 0UL; i < s.barrier_mask.size(); ++i) {
-      s.barrier_mask[i] = boost::random::bernoulli_distribution{
-          this->probability_of_extrusion_barrier_block}(s.rand_eng);
+      s.barrier_mask[i] =
+          random::bernoulli_trial{this->probability_of_extrusion_barrier_block}(s.rand_eng);
     }
 
     size_t nlefs_to_release;
@@ -262,14 +263,13 @@ void Simulation::simulate_extrusion_kernel(Simulation::State& s) const {
         // Sample nlefs to be released while in burn-in phase
         nlefs_to_release =
             std::min(lefs.size(),
-                     boost::random::poisson_distribution<size_t>{
+                     random::poisson_distribution<size_t>{
                          static_cast<double>(
                              (this->rev_extrusion_speed + this->fwd_extrusion_speed) * s.nlefs) /
                          static_cast<double>(this->average_lef_lifetime)}(s.rand_eng));
       } else {  // Sample nlefs to be released after the burn-in phase has been completed
-        nlefs_to_release =
-            std::min(lefs.size(),
-                     boost::random::poisson_distribution<size_t>{avg_nlefs_to_release}(s.rand_eng));
+        nlefs_to_release = std::min(
+            lefs.size(), random::poisson_distribution<size_t>{avg_nlefs_to_release}(s.rand_eng));
       }
 
       ////////////////////////
@@ -279,16 +279,14 @@ void Simulation::simulate_extrusion_kernel(Simulation::State& s) const {
       {  // Select inactive LEFs and bind them
         auto lef_mask = absl::MakeSpan(s.idx_buff1.data(), lefs.size());
         this->select_lefs_to_bind(lefs, lef_mask);
-        this->bind_lefs(s.chrom, lefs, rev_lef_ranks, fwd_lef_ranks, lef_mask, s.rand_eng,
-                        epoch == 0);
+        this->bind_lefs(s.chrom, lefs, rev_lef_ranks, fwd_lef_ranks, lef_mask, s.rand_eng, epoch);
       }
 
       if (epoch > n_burnin_epochs) {              // Register contacts
         assert(fwd_lef_ranks.size() == s.nlefs);  // NOLINT
 
-        auto nlefs_to_sample =
-            std::min(lefs.size(),
-                     boost::random::poisson_distribution<size_t>{avg_nlefs_to_sample}(s.rand_eng));
+        auto nlefs_to_sample = std::min(
+            lefs.size(), random::poisson_distribution<size_t>{avg_nlefs_to_sample}(s.rand_eng));
 
         if (s.n_target_contacts != 0) {  // When using the target contact density as stopping
                                          // criterion, don't overshoot the target number of contacts
@@ -351,7 +349,7 @@ void Simulation::simulate_extrusion_kernel(Simulation::State& s) const {
 }
 
 bp_t Simulation::generate_rev_move(const Chromosome* const chrom, const ExtrusionUnit& unit,
-                                   modle::PRNG_t& rand_eng) const {
+                                   random::PRNG_t& rand_eng) const {
   assert(unit.pos() >= chrom->start_pos());  // NOLINT
   if (this->rev_extrusion_speed_std == 0) {  // When std == 0 always return the avg. extrusion speed
     // (except when unit is close to chrom start pos.)
@@ -368,7 +366,7 @@ bp_t Simulation::generate_rev_move(const Chromosome* const chrom, const Extrusio
 }
 
 bp_t Simulation::generate_fwd_move(const Chromosome* const chrom, const ExtrusionUnit& unit,
-                                   modle::PRNG_t& rand_eng) const {
+                                   random::PRNG_t& rand_eng) const {
   // See Simulation::generate_rev_move for comments
   assert(unit.pos() < chrom->end_pos());  // NOLINT
   if (this->fwd_extrusion_speed_std == 0) {
@@ -384,7 +382,7 @@ void Simulation::generate_moves(const Chromosome* const chrom, const absl::Span<
                                 const absl::Span<const size_t> rev_lef_ranks,
                                 const absl::Span<const size_t> fwd_lef_ranks,
                                 const absl::Span<bp_t> rev_moves, const absl::Span<bp_t> fwd_moves,
-                                modle::PRNG_t& rand_eng, bool adjust_moves_) const
+                                random::PRNG_t& rand_eng, bool adjust_moves_) const
     noexcept(utils::ndebug_defined()) {
   {
     assert(lefs.size() == fwd_lef_ranks.size());  // NOLINT
@@ -466,45 +464,16 @@ void Simulation::rank_lefs(const absl::Span<const Lef> lefs,
   assert(lefs.size() == rev_lef_rank_buff.size());  // NOLINT
 
   auto rev_comparator = [&](const auto r1, const auto r2) constexpr noexcept {
-    const auto& p1 = lefs[r1].rev_unit.pos();
-    const auto& p2 = lefs[r2].rev_unit.pos();
-    if (p1 == p2) MODLE_UNLIKELY {
-        // A LEF will have both extr. units bound at the same position if and only if the DNA
-        // binding took place in the current iteration.
-        // When this is the case, and there are multiple rev. units binding the same bp, then we
-        // we want the LEF that bound last to be ranked last in the sequence of tied LEFs
-        if (lefs[r1].fwd_unit.pos() == p1) {
-          return false;
-        }
-        if (lefs[r2].fwd_unit.pos() == p2) {
-          return true;
-        }
-        // This return ensures that in case of a tie between rev. units of two LEFs, neither of
-        // which was bound the DNA in the current iteration, the existing order is maintained (which
-        // means that the LEF that was the first to collide is positioned right next to the extr.
-        // barrier, and any other LEFs follow based on their collision iteration)
-        return r1 < r2;
-      }
-    return p1 < p2;
+    assert(r1 < lefs.size());  // NOLINT
+    assert(r2 < lefs.size());  // NOLINT
+    return lefs[r1].rev_unit.pos() < lefs[r2].rev_unit.pos();
   };
 
   // See comments for rev_comparator.
   auto fwd_comparator = [&](const auto r1, const auto r2) constexpr noexcept {
-    const auto& p1 = lefs[r1].fwd_unit.pos();
-    const auto& p2 = lefs[r2].fwd_unit.pos();
-    if (p1 == p2) MODLE_UNLIKELY {
-        // Notice that the return value of the following two branches is the opposite of what's
-        // found in rev_comparator. This is because in case of a tie we want the LEF that was bound
-        // in the current iteration to be ranked lowest
-        if (lefs[r1].rev_unit.pos() == p1) {
-          return true;
-        }
-        if (lefs[r2].rev_unit.pos() == p2) {
-          return false;
-        }
-        return r1 < r2;
-      }
-    return p1 < p2;
+    assert(r1 < lefs.size());  // NOLINT
+    assert(r2 < lefs.size());  // NOLINT
+    return lefs[r1].fwd_unit.pos() < lefs[r2].fwd_unit.pos();
   };
 
   if (init_buffers) MODLE_UNLIKELY {  // Init rank buffers
@@ -513,40 +482,6 @@ void Simulation::rank_lefs(const absl::Span<const Lef> lefs,
     }
 
   if (ranks_are_partially_sorted) MODLE_LIKELY {
-      /*
-      fmt::print(
-          stderr, "fwd_inv={}\nrev_inv={}\n",
-          static_cast<double>(cppsort::probe::inv(fwd_lef_rank_buff.begin(),
-      fwd_lef_rank_buff.end(),
-                                                  [&](const auto r1, const auto r2) {
-                                                    return lefs[r1].fwd_unit.pos() <
-                                                           lefs[r2].fwd_unit.pos();
-                                                  })) /
-              static_cast<double>(fwd_lef_rank_buff.size() * (fwd_lef_rank_buff.size() - 1) / 2),
-          static_cast<double>(cppsort::probe::inv(rev_lef_rank_buff.begin(),
-      rev_lef_rank_buff.end(),
-                                                  [&](const auto r1, const auto r2) {
-                                                    return lefs[r1].rev_unit.pos() <
-                                                           lefs[r2].rev_unit.pos();
-                                                  })) /
-              static_cast<double>(rev_lef_rank_buff.size() * (rev_lef_rank_buff.size() - 1) / 2));
-      */
-      // Drop merge sort is a Rem-adaptive algorithm that it is particularly suitable for our
-      // use-case, where after the initial binding, we expect a small fraction of extr. units to be
-      // out of place when this function is called (from initial testing, it looks like most of the
-      // times we have 2.5-5% inversions, and very rarely > 10%, which is where drop merge sort
-      // shines).
-      // https://github.com/Morwenn/cpp-sort/blob/develop/docs/Benchmarks.md#inv-adaptive-algorithms
-      // https://github.com/Morwenn/cpp-sort/blob/develop/docs/Sorters.md#drop_merge_sorter
-      // The algorithm itself is not stable, but the *_comparator should take care of this, making
-      // sorting stable in practice
-      // Plot twist! It appears drop_merge_sort can cause (extremely rare) segfaults. The segfault
-      // is caused by an attempt to access an element (way!) past the end of the Span. For this
-      // reason, for the time being, we fall back on split_sort. In ModLE's use-case, both
-      // algorithms seem to be equally fast.
-      // cppsort::drop_merge_sort(rev_lef_rank_buff.begin(), rev_lef_rank_buff.end(),
-      // rev_comparator); cppsort::drop_merge_sort(fwd_lef_rank_buff.begin(),
-      // fwd_lef_rank_buff.end(), fwd_comparator);
       cppsort::split_sort(rev_lef_rank_buff.begin(), rev_lef_rank_buff.end(), rev_comparator);
       cppsort::split_sort(fwd_lef_rank_buff.begin(), fwd_lef_rank_buff.end(), fwd_comparator);
     }
@@ -557,6 +492,57 @@ void Simulation::rank_lefs(const absl::Span<const Lef> lefs,
       cppsort::pdq_sort(rev_lef_rank_buff.begin(), rev_lef_rank_buff.end(), rev_comparator);
       cppsort::pdq_sort(fwd_lef_rank_buff.begin(), fwd_lef_rank_buff.end(), fwd_comparator);
     }
+
+  // TODO Figure out a better way to deal with ties
+  auto begin = 0UL;
+  auto end = 0UL;
+  for (auto i = 1UL; i < rev_lef_rank_buff.size(); ++i) {
+    const auto& r1 = rev_lef_rank_buff[i - 1];
+    const auto& r2 = rev_lef_rank_buff[i];
+    if (lefs[r1].rev_unit.pos() == lefs[r2].rev_unit.pos()) {
+      begin = i - 1;
+      for (; i < rev_lef_rank_buff.size(); ++i) {
+        const auto& r11 = rev_lef_rank_buff[i - 1];
+        const auto& r22 = rev_lef_rank_buff[i];
+        if (lefs[r11].rev_unit.pos() != lefs[r22].rev_unit.pos()) {
+          break;
+        }
+      }
+
+      end = i;
+      cppsort::insertion_sort(rev_lef_rank_buff.begin() + begin, rev_lef_rank_buff.begin() + end,
+                              [&lefs](const auto r11, const auto r22) {
+                                assert(r11 < lefs.size());  // NOLINT
+                                assert(r22 < lefs.size());  // NOLINT
+                                return lefs[r11].binding_epoch < lefs[r22].binding_epoch;
+                              });
+      begin = end;
+    }
+  }
+
+  for (auto i = 1UL; i < fwd_lef_rank_buff.size(); ++i) {
+    const auto& r1 = fwd_lef_rank_buff[i - 1];
+    const auto& r2 = fwd_lef_rank_buff[i];
+    if (lefs[r1].fwd_unit.pos() == lefs[r2].fwd_unit.pos()) {
+      begin = i - 1;
+      for (; i < fwd_lef_rank_buff.size(); ++i) {
+        const auto& r11 = fwd_lef_rank_buff[i - 1];
+        const auto& r22 = fwd_lef_rank_buff[i];
+        if (lefs[r11].fwd_unit.pos() != lefs[r22].fwd_unit.pos()) {
+          break;
+        }
+      }
+
+      end = i;
+      cppsort::insertion_sort(fwd_lef_rank_buff.begin() + begin, fwd_lef_rank_buff.begin() + end,
+                              [&lefs](const auto r11, const auto r22) {
+                                assert(r11 < lefs.size());  // NOLINT
+                                assert(r22 < lefs.size());  // NOLINT
+                                return lefs[r22].binding_epoch < lefs[r11].binding_epoch;
+                              });
+      begin = end;
+    }
+  }
 }
 
 void Simulation::extrude(const Chromosome* chrom, const absl::Span<Lef> lefs,
@@ -672,11 +658,11 @@ void Simulation::generate_lef_unloader_affinities(
   }
 }
 
-void Simulation::select_lefs_to_release(const absl::Span<size_t> lef_idx,
-                                        const absl::Span<const double> lef_unloader_affinity,
-                                        modle::PRNG_t& rand_eng) noexcept(utils::ndebug_defined()) {
-  boost::random::discrete_distribution<size_t> idx_gen(lef_unloader_affinity.begin(),
-                                                       lef_unloader_affinity.end());
+void Simulation::select_lefs_to_release(
+    const absl::Span<size_t> lef_idx, const absl::Span<const double> lef_unloader_affinity,
+    random::PRNG_t& rand_eng) noexcept(utils::ndebug_defined()) {
+  random::discrete_distribution<size_t> idx_gen(lef_unloader_affinity.begin(),
+                                                lef_unloader_affinity.end());
   std::generate(lef_idx.begin(), lef_idx.end(), [&]() { return idx_gen(rand_eng); });
 }
 
@@ -751,7 +737,7 @@ std::pair<size_t, size_t> Simulation::process_collisions(
     const absl::Span<const size_t> rev_lef_ranks, const absl::Span<const size_t> fwd_lef_ranks,
     const absl::Span<bp_t> rev_moves, const absl::Span<bp_t> fwd_moves,
     const absl::Span<collision_t> rev_collisions, const absl::Span<collision_t> fwd_collisions,
-    PRNG_t& rand_eng) const noexcept(utils::ndebug_defined()) {
+    random::PRNG_t& rand_eng) const noexcept(utils::ndebug_defined()) {
   const auto& [num_rev_units_at_5prime, num_fwd_units_at_3prime] =
       Simulation::detect_units_at_chrom_boundaries(chrom, lefs, rev_lef_ranks, fwd_lef_ranks,
                                                    rev_moves, fwd_moves, rev_collisions,

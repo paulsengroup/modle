@@ -179,6 +179,10 @@ if(ENABLE_ASSERTIONS)
   endif()
 endif()
 
+if(USE_BOOST_RANDOM_LIB)
+  target_compile_definitions(project_options INTERFACE USE_BOOST_RANDOM_LIB=1)
+endif()
+
 # Prepare external dependencies
 include(cmake/FetchExternalDeps.cmake)
 

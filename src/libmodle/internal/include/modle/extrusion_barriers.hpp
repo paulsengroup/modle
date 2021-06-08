@@ -6,7 +6,8 @@
 #include <boost/random/uniform_real_distribution.hpp>  // for uniform_real_distribution
 #include <cstdint>                                     // for uint_fast8_t
 
-#include "modle/common/common.hpp"  // for bp_t_t, Direction, PRNG_t
+#include "modle/common/common.hpp"  // for bp_t, Direction, random::PRNG_t
+#include "modle/common/random.hpp"  // for random::PRNG_t
 #include "modle/common/utils.hpp"   // for ndebug_defined
 
 namespace modle {
@@ -45,8 +46,8 @@ class ExtrusionBarrier {
 namespace CTCF {
 enum State : uint_fast8_t { NOT_OCCUPIED = 0, OCCUPIED = 1 };
 [[nodiscard]] State next_state(State current_state, double occupied_self_transition_prob,
-                               double not_occupied_self_transition_prob, PRNG_t& rand_eng);
-using state_gen_t = boost::random::uniform_real_distribution<double>;
+                               double not_occupied_self_transition_prob, random::PRNG_t& rand_eng);
+using state_gen_t = random::uniform_real_distribution<double>;
 
 //! Update CTCF states for the current iteration based on the states from the previous
 //! iteration.
@@ -57,7 +58,7 @@ using state_gen_t = boost::random::uniform_real_distribution<double>;
 //!        OCCUPIED state
 //! \param rand_eng
 void update_states(absl::Span<const ExtrusionBarrier> extr_barriers, boost::dynamic_bitset<>& mask,
-                   modle::PRNG_t& rand_eng) noexcept(utils::ndebug_defined());
+                   random::PRNG_t& rand_eng) noexcept(utils::ndebug_defined());
 
 }  // namespace CTCF
 }  // namespace modle

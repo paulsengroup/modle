@@ -34,7 +34,7 @@ inline void write_vect_to_file(const std::filesystem::path& fpath, const std::ve
 inline std::vector<uint32_t> generate_random_vect(std::mt19937& rnd_eng, uint32_t size,
                                                   uint32_t min, uint32_t max,
                                                   bool allow_duplicates = true) {
-  boost::random::uniform_int_distribution<uint32_t> dist(min, max);
+  random::uniform_int_distribution<uint32_t> dist(min, max);
   std::vector<uint32_t> v(size);
   if (allow_duplicates) {
     std::generate(v.begin(), v.end(), [&]() { return dist(rnd_eng); });
@@ -50,8 +50,8 @@ inline std::vector<uint32_t> generate_random_vect(std::mt19937& rnd_eng, uint32_
 
 inline std::pair<std::vector<uint32_t>, std::vector<uint32_t>> generate_correlated_vects(
     std::mt19937& rnd_eng, uint32_t size) {
-  boost::random::uniform_int_distribution<int32_t> dist(static_cast<int32_t>(size) / -50,  // NOLINT
-                                                        static_cast<int32_t>(size / 50));  // NOLINT
+  random::uniform_int_distribution<int32_t> dist(static_cast<int32_t>(size) / -50,  // NOLINT
+                                                 static_cast<int32_t>(size / 50));  // NOLINT
   std::vector<uint32_t> v1(size);
   std::vector<uint32_t> v2(size);
   std::iota(v1.begin(), v1.end(), 0);

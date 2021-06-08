@@ -8,7 +8,7 @@
 #include <limits>                                   // for numeric_limits
 #include <utility>                                  // for make_pair, pair
 
-#include "modle/common/common.hpp"       // for bp_t, PRNG_t, MODLE_UNLIKELY, fwd, rev
+#include "modle/common/common.hpp"       // for bp_t, random::PRNG_t, MODLE_UNLIKELY, fwd, rev
 #include "modle/common/utils.hpp"        // for ndebug_defined
 #include "modle/dna.hpp"                 // for Chromosome
 #include "modle/extrusion_barriers.hpp"  // for ExtrusionBarrier, NOT_OCCUPIED
@@ -117,7 +117,7 @@ void Simulation::detect_lef_bar_collisions(
     const absl::Span<const size_t> fwd_lef_ranks, const absl::Span<const bp_t> rev_moves,
     const absl::Span<const bp_t> fwd_moves, const absl::Span<const ExtrusionBarrier> extr_barriers,
     const boost::dynamic_bitset<>& barrier_mask, const absl::Span<collision_t> rev_collisions,
-    const absl::Span<collision_t> fwd_collisions, modle::PRNG_t& rand_eng,
+    const absl::Span<collision_t> fwd_collisions, random::PRNG_t& rand_eng,
     size_t num_rev_units_at_5prime, size_t num_fwd_units_at_3prime) const
     noexcept(utils::ndebug_defined()) {
   {
@@ -199,7 +199,7 @@ void Simulation::detect_lef_bar_collisions(
         // trial before calling a collision
         const auto delta = rev_unit_pos - barrier.pos();
         if (delta > 0 && delta <= rev_moves[rev_idx] &&
-            (pblock == 1.0 || modle::bernoulli_trial{pblock}(rand_eng))) {
+            (pblock == 1.0 || random::bernoulli_trial{pblock}(rand_eng))) {
           // Collision detected. Assign barrier idx to the respective entry in the collision mask
           rev_collisions[rev_idx] = i;
           // Move LEF close to the extr. barrier (i.e 1bp upstream of the extr. barrier)
@@ -233,7 +233,7 @@ void Simulation::detect_lef_bar_collisions(
       if (lefs[fwd_idx].is_bound()) {
         const auto delta = barrier.pos() - fwd_unit_pos;
         if (delta > 0 && delta <= fwd_moves[fwd_idx] &&
-            (pblock == 1.0 || modle::bernoulli_trial{pblock}(rand_eng))) {
+            (pblock == 1.0 || random::bernoulli_trial{pblock}(rand_eng))) {
           fwd_collisions[fwd_idx] = i;
           // fwd_move = delta > 1 ? delta - 1 : 0;
         }
@@ -254,7 +254,7 @@ void Simulation::detect_primary_lef_lef_collisions(
     const absl::Span<const size_t> rev_lef_ranks, const absl::Span<const size_t> fwd_lef_ranks,
     const absl::Span<const bp_t> rev_moves, const absl::Span<const bp_t> fwd_moves,
     const absl::Span<collision_t> rev_collisions, const absl::Span<collision_t> fwd_collisions,
-    PRNG_t& rand_eng, size_t num_rev_units_at_5prime, size_t num_fwd_units_at_3prime) const
+    random::PRNG_t& rand_eng, size_t num_rev_units_at_5prime, size_t num_fwd_units_at_3prime) const
     noexcept(utils::ndebug_defined()) {
   {
     assert(lefs.size() == fwd_lef_ranks.size());                       // NOLINT
@@ -338,8 +338,7 @@ void Simulation::detect_primary_lef_lef_collisions(
     if (const auto delta = rev_pos - fwd_pos;
         delta > 0 && delta < rev_moves[rev_idx] + fwd_moves[fwd_idx] &&
         (this->probability_of_extrusion_unit_bypass == 0 ||
-         boost::random::bernoulli_distribution{1.0 - this->probability_of_extrusion_unit_bypass}(
-             rand_eng))) {
+         random::bernoulli_trial{1.0 - this->probability_of_extrusion_unit_bypass}(rand_eng))) {
       // Declare few aliases to reduce code verbosity later on
       const auto& rev_move = rev_moves[rev_idx];
       const auto& fwd_move = fwd_moves[fwd_idx];
@@ -403,7 +402,7 @@ void Simulation::process_secondary_lef_lef_collisions(
     const absl::Span<const size_t> rev_lef_ranks, const absl::Span<const size_t> fwd_lef_ranks,
     const absl::Span<bp_t> rev_moves, const absl::Span<bp_t> fwd_moves,
     const absl::Span<collision_t> rev_collisions, const absl::Span<collision_t> fwd_collisions,
-    PRNG_t& rand_eng, size_t num_rev_units_at_5prime, size_t num_fwd_units_at_3prime) const
+    random::PRNG_t& rand_eng, size_t num_rev_units_at_5prime, size_t num_fwd_units_at_3prime) const
     noexcept(utils::ndebug_defined()) {
   {
     assert(lefs.size() == fwd_lef_ranks.size());     // NOLINT
@@ -469,8 +468,7 @@ void Simulation::process_secondary_lef_lef_collisions(
 
     if (rev_pos2 - move2 <= rev_pos1 - move1 &&
         (this->probability_of_extrusion_unit_bypass == 0 ||
-         boost::random::bernoulli_distribution{1.0 - this->probability_of_extrusion_unit_bypass}(
-             rand_eng))) {
+         random::bernoulli_trial{1.0 - this->probability_of_extrusion_unit_bypass}(rand_eng))) {
       rev_collisions[rev_idx2] = offset + rev_idx1;
       const auto move = rev_pos2 - (rev_pos1 - move1);
       move2 = move > 0UL ? move - 1UL : 0UL;
@@ -503,8 +501,7 @@ void Simulation::process_secondary_lef_lef_collisions(
 
     if (fwd_pos1 + move1 >= fwd_pos2 + move2 &&
         (this->probability_of_extrusion_unit_bypass == 0 ||
-         boost::random::bernoulli_distribution{1.0 - this->probability_of_extrusion_unit_bypass}(
-             rand_eng))) {
+         random::bernoulli_trial{1.0 - this->probability_of_extrusion_unit_bypass}(rand_eng))) {
       fwd_collisions[fwd_idx1] = offset + fwd_idx2;
       const auto move = (fwd_pos2 + move2) - fwd_pos1;
       move1 = move > 0UL ? move - 1UL : 0UL;

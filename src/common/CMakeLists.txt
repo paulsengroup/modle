@@ -7,6 +7,7 @@ target_sources(
   INTERFACE ${CMAKE_CURRENT_SOURCE_DIR}/include/modle/common/common.hpp
             ${CMAKE_CURRENT_SOURCE_DIR}/include/modle/common/config.hpp
             ${CMAKE_CURRENT_SOURCE_DIR}/include/modle/common/genextreme_value_distribution.hpp
+            ${CMAKE_CURRENT_SOURCE_DIR}/include/modle/common/random.hpp
             ${CMAKE_CURRENT_SOURCE_DIR}/include/modle/common/random_sampling.hpp
             ${CMAKE_CURRENT_SOURCE_DIR}/include/modle/common/suppress_compiler_warnings.hpp
             ${CMAKE_CURRENT_SOURCE_DIR}/include/modle/common/utils.hpp
@@ -16,7 +17,7 @@ target_link_libraries(
   modle_common
   INTERFACE project_options
             project_warnings
-            $<$<BOOL:${ENABLE_XOSHIRO}>:XoshiroCpp::XoshiroCpp>
+            $<$<NOT:$<BOOL:${USE_MERSENNE_TWISTER}>>:XoshiroCpp::XoshiroCpp>
             CONAN_PKG::abseil
             CONAN_PKG::fmt
             CONAN_PKG::boost)

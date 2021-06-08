@@ -87,7 +87,7 @@ double ExtrusionBarrier::compute_blocking_to_blocking_transition_probabilities_f
 }
 
 CTCF::State CTCF::next_state(CTCF::State current_state, double occupied_self_transition_prob,
-                             double not_occupied_self_transition_prob, PRNG_t& rand_eng) {
+                             double not_occupied_self_transition_prob, random::PRNG_t& rand_eng) {
   assert(occupied_self_transition_prob >= 0 && occupied_self_transition_prob <= 1);  // NOLINT
   assert(not_occupied_self_transition_prob >= 0 &&
          not_occupied_self_transition_prob <= 1);  // NOLINT
@@ -104,7 +104,7 @@ CTCF::State CTCF::next_state(CTCF::State current_state, double occupied_self_tra
 
 void CTCF::update_states(absl::Span<const ExtrusionBarrier> extr_barriers,
                          boost::dynamic_bitset<>& mask,
-                         modle::PRNG_t& rand_eng) noexcept(utils::ndebug_defined()) {
+                         random::PRNG_t& rand_eng) noexcept(utils::ndebug_defined()) {
   assert(extr_barriers.size() == mask.size());  // NOLINT
   for (auto i = 0UL; i < extr_barriers.size(); ++i) {
     mask[i] = CTCF::next_state(mask[i] ? CTCF::OCCUPIED : CTCF::NOT_OCCUPIED,

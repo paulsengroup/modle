@@ -10,7 +10,6 @@ target_link_libraries(
   INTERFACE project_warnings
             project_options
             Modle::common
-            $<$<BOOL:${ENABLE_XOSHIRO}>:XoshiroCpp::XoshiroCpp>
             CONAN_PKG::boost
             CONAN_PKG::cpp-sort)
 

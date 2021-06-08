@@ -44,8 +44,8 @@ class Simulation : Config {
   [[nodiscard]] size_t size() const;
   [[nodiscard]] size_t simulated_size() const;
 
-  using lef_move_generator_t = boost::random::normal_distribution<double>;
-  using chrom_pos_generator_t = boost::random::uniform_int_distribution<bp_t>;
+  using lef_move_generator_t = random::normal_distribution<double>;
+  using chrom_pos_generator_t = random::uniform_int_distribution<bp_t>;
 
   static constexpr auto NO_COLLISION = std::numeric_limits<collision_t>::max();
   static constexpr auto REACHED_CHROM_BOUNDARY = std::numeric_limits<collision_t>::max() - 1;
@@ -74,7 +74,7 @@ class Simulation : Config {
     std::vector<size_t> idx_buff1{};
     std::vector<size_t> idx_buff2{};
     std::vector<size_t> epoch_buff{};
-    modle::PRNG_t rand_eng{};
+    random::PRNG_t rand_eng{};
     uint64_t seed{};
 
     State& operator=(const Task& task);
@@ -130,8 +130,8 @@ class Simulation : Config {
   template <typename MaskT>
   inline static void bind_lefs(const Chromosome* chrom, absl::Span<Lef> lefs,
                                absl::Span<size_t> rev_lef_ranks, absl::Span<size_t> fwd_lef_ranks,
-                               const MaskT& mask, modle::PRNG_t& rand_eng,
-                               bool first_epoch = false) noexcept(utils::ndebug_defined());
+                               const MaskT& mask, random::PRNG_t& rand_eng,
+                               size_t current_epoch) noexcept(utils::ndebug_defined());
 
   // clang-format off
   //! Generate moves in reverse direction
@@ -143,12 +143,12 @@ class Simulation : Config {
   //! \return move
   // clang-format on
   [[nodiscard]] bp_t generate_rev_move(const Chromosome* chrom, const ExtrusionUnit& unit,
-                                       modle::PRNG_t& rand_eng) const;
+                                       random::PRNG_t& rand_eng) const;
 
   //! Generate moves in forward direction. See doc for Simulation::generate_rev_move for more
   //! details
   [[nodiscard]] bp_t generate_fwd_move(const Chromosome* chrom, const ExtrusionUnit& unit,
-                                       modle::PRNG_t& rand_eng) const;
+                                       random::PRNG_t& rand_eng) const;
   // clang-format off
   //! Generate moves for all active LEFs
 
@@ -159,7 +159,7 @@ class Simulation : Config {
   void generate_moves(const Chromosome* chrom, absl::Span<const Lef> lefs,
                       absl::Span<const size_t> rev_lef_ranks,
                       absl::Span<const size_t> fwd_lef_ranks, absl::Span<bp_t> rev_moves,
-                      absl::Span<bp_t> fwd_moves, modle::PRNG_t& rand_eng,
+                      absl::Span<bp_t> fwd_moves, random::PRNG_t& rand_eng,
                       bool adjust_moves_ = true) const noexcept(utils::ndebug_defined());
 
   // clang-format off
@@ -215,7 +215,7 @@ class Simulation : Config {
       absl::Span<const size_t> rev_lef_ranks, absl::Span<const size_t> fwd_lef_ranks,
       absl::Span<bp_t> rev_moves, absl::Span<bp_t> fwd_moves,
       absl::Span<collision_t> rev_collisions, absl::Span<collision_t> fwd_collisions,
-      PRNG_t& rand_eng) const noexcept(utils::ndebug_defined());
+      random::PRNG_t& rand_eng) const noexcept(utils::ndebug_defined());
 
   /// Detect and stall LEFs with one or more extrusion units located at chromosomal boundaries.
 
@@ -239,7 +239,7 @@ class Simulation : Config {
                                  absl::Span<const ExtrusionBarrier> extr_barriers,
                                  const boost::dynamic_bitset<>& barrier_mask,
                                  absl::Span<collision_t> rev_collisions,
-                                 absl::Span<collision_t> fwd_collisions, modle::PRNG_t& rand_eng,
+                                 absl::Span<collision_t> fwd_collisions, random::PRNG_t& rand_eng,
                                  size_t num_rev_units_at_5prime = 0,
                                  size_t num_fwd_units_at_3prime = 0) const
       noexcept(utils::ndebug_defined());
@@ -257,7 +257,7 @@ class Simulation : Config {
       absl::Span<const size_t> rev_lef_ranks, absl::Span<const size_t> fwd_lef_ranks,
       absl::Span<const bp_t> rev_moves, absl::Span<const bp_t> fwd_moves,
       absl::Span<collision_t> rev_collisions, absl::Span<collision_t> fwd_collisions,
-      PRNG_t& rand_eng, size_t num_rev_units_at_5prime = 0,
+      random::PRNG_t& rand_eng, size_t num_rev_units_at_5prime = 0,
       size_t num_fwd_units_at_3prime = 0) const noexcept(utils::ndebug_defined());
 
   // clang-format off
@@ -280,7 +280,7 @@ class Simulation : Config {
       absl::Span<const size_t> rev_lef_ranks, absl::Span<const size_t> fwd_lef_ranks,
       absl::Span<bp_t> rev_moves, absl::Span<bp_t> fwd_moves,
       absl::Span<collision_t> rev_collisions, absl::Span<collision_t> fwd_collisions,
-      PRNG_t& rand_eng, size_t num_rev_units_at_5prime = 0,
+      random::PRNG_t& rand_eng, size_t num_rev_units_at_5prime = 0,
       size_t num_fwd_units_at_3prime = 0) const noexcept(utils::ndebug_defined());
 
   /// Correct moves to comply with the constraints imposed by LEF-BAR collisions.
@@ -325,7 +325,7 @@ class Simulation : Config {
 
   static void select_lefs_to_release(absl::Span<size_t> lef_idx,
                                      absl::Span<const double> lef_unloader_affinity,
-                                     modle::PRNG_t& rand_eng) noexcept(utils::ndebug_defined());
+                                     random::PRNG_t& rand_eng) noexcept(utils::ndebug_defined());
 
   static void release_lefs(absl::Span<Lef> lefs, absl::Span<const size_t> lef_idx) noexcept;
 
@@ -338,8 +338,9 @@ class Simulation : Config {
   inline void test_bind_lefs(const Chromosome* chrom, const absl::Span<Lef> lefs,
                              const absl::Span<size_t> rev_lef_ranks,
                              const absl::Span<size_t> fwd_lef_ranks, const MaskT& mask,
-                             modle::PRNG_t& rand_eng) {
-    modle::Simulation::bind_lefs(chrom, lefs, rev_lef_ranks, fwd_lef_ranks, mask, rand_eng);
+                             random::PRNG_t& rand_eng, size_t current_epoch) {
+    modle::Simulation::bind_lefs(chrom, lefs, rev_lef_ranks, fwd_lef_ranks, mask, rand_eng,
+                                 current_epoch);
   }
 
   inline void test_adjust_moves(const Chromosome* const chrom, const absl::Span<const Lef> lefs,
@@ -355,7 +356,7 @@ class Simulation : Config {
                                   const absl::Span<const size_t> rev_lef_ranks,
                                   const absl::Span<const size_t> fwd_lef_ranks,
                                   const absl::Span<bp_t> rev_moves,
-                                  const absl::Span<bp_t> fwd_moves, modle::PRNG_t& rand_eng,
+                                  const absl::Span<bp_t> fwd_moves, random::PRNG_t& rand_eng,
                                   bool adjust_moves_ = false) {
     this->generate_moves(chrom, lefs, rev_lef_ranks, fwd_lef_ranks, rev_moves, fwd_moves, rand_eng,
                          adjust_moves_);
@@ -386,7 +387,7 @@ class Simulation : Config {
       const absl::Span<const bp_t> fwd_move_buff,
       const absl::Span<const ExtrusionBarrier> extr_barriers,
       const boost::dynamic_bitset<>& barrier_mask, const absl::Span<collision_t> rev_collisions,
-      const absl::Span<collision_t> fwd_collisions, modle::PRNG_t& rand_eng) {
+      const absl::Span<collision_t> fwd_collisions, random::PRNG_t& rand_eng) {
     Simulation::detect_lef_bar_collisions(lefs, rev_lef_rank_buff, fwd_lef_rank_buff, rev_move_buff,
                                           fwd_move_buff, extr_barriers, barrier_mask,
                                           rev_collisions, fwd_collisions, rand_eng);
@@ -416,7 +417,7 @@ class Simulation : Config {
       const absl::Span<const size_t> fwd_lef_rank_buff, const absl::Span<bp_t> rev_move_buff,
       const absl::Span<bp_t> fwd_move_buff, const absl::Span<const ExtrusionBarrier> extr_barriers,
       const boost::dynamic_bitset<>& barrier_mask, const absl::Span<collision_t> rev_collisions,
-      const absl::Span<collision_t> fwd_collisions, modle::PRNG_t& rand_eng) {
+      const absl::Span<collision_t> fwd_collisions, random::PRNG_t& rand_eng) {
     const auto [num_rev_units_at_5prime, num_fwd_units_at_3prime] =
         Simulation::detect_units_at_chrom_boundaries(chrom, lefs, rev_lef_rank_buff,
                                                      fwd_lef_rank_buff, rev_move_buff,
@@ -449,7 +450,7 @@ class Simulation : Config {
       absl::Span<const ExtrusionBarrier> extr_barriers, absl::Span<const size_t> rev_lef_rank_buff,
       absl::Span<const size_t> fwd_lef_rank_buff, absl::Span<bp_t> rev_move_buff,
       absl::Span<bp_t> fwd_move_buff, absl::Span<collision_t> rev_collisions,
-      absl::Span<collision_t> fwd_collisions, modle::PRNG_t& rand_eng) {
+      absl::Span<collision_t> fwd_collisions, random::PRNG_t& rand_eng) {
     Simulation::detect_primary_lef_lef_collisions(lefs, extr_barriers, rev_lef_rank_buff,
                                                   fwd_lef_rank_buff, rev_move_buff, fwd_move_buff,
                                                   rev_collisions, fwd_collisions, rand_eng);

@@ -11,7 +11,7 @@
 #include <thread>                      // for thread
 #include <type_traits>                 // for declval, decay_t
 
-#include "modle/common/common.hpp"                      // for PRNG_t
+#include "modle/common/common.hpp"                      // for random::PRNG_t
 #include "modle/common/suppress_compiler_warnings.hpp"  // for DISABLE_WARNING_POP, DISABLE_WARNING_...
 #include "modle/common/utils.hpp"                       // for ndebug_defined
 #include "modle/dna.hpp"                                // for Chromosome
@@ -22,8 +22,8 @@ template <typename MaskT>
 void Simulation::bind_lefs(const Chromosome* chrom, const absl::Span<Lef> lefs,
                            const absl::Span<size_t> rev_lef_ranks,
                            const absl::Span<size_t> fwd_lef_ranks, const MaskT& mask,
-                           modle::PRNG_t& rand_eng,
-                           bool first_epoch) noexcept(utils::ndebug_defined()) {
+                           random::PRNG_t& rand_eng,
+                           size_t current_epoch) noexcept(utils::ndebug_defined()) {
   using T = std::decay_t<decltype(std::declval<MaskT&>().operator[](std::declval<size_t>()))>;
   static_assert(std::is_integral_v<T> || std::is_same_v<MaskT, boost::dynamic_bitset<>>,
                 "mask should be a vector of integral numbers or a boost::dynamic_bitset.");
@@ -39,7 +39,7 @@ void Simulation::bind_lefs(const Chromosome* chrom, const absl::Span<Lef> lefs,
   chrom_pos_generator_t pos_generator{chrom->start_pos(), chrom->end_pos() - 1};
   for (auto i = 0UL; i < lefs.size(); ++i) {
     if (mask.empty() || mask[i]) {  // Bind all LEFs when mask is empty
-      lefs[i].bind_at_pos(pos_generator(rand_eng));
+      lefs[i].bind_at_pos(current_epoch, pos_generator(rand_eng));
     }
   }
 
@@ -54,7 +54,7 @@ void Simulation::bind_lefs(const Chromosome* chrom, const absl::Span<Lef> lefs,
     }
   }
 
-  Simulation::rank_lefs(lefs, rev_lef_ranks, fwd_lef_ranks, !first_epoch);
+  Simulation::rank_lefs(lefs, rev_lef_ranks, fwd_lef_ranks, current_epoch == 0);
   {
     using IT = std::decay_t<decltype(rev_lef_ranks.front())>;
     (void)static_cast<IT*>(nullptr);

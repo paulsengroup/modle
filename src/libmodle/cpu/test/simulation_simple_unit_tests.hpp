@@ -1,6 +1,7 @@
 #pragma once
 
-#include <absl/types/span.h>  // for MakeSpan
+#include <absl/strings/str_join.h>  // TODO remove me
+#include <absl/types/span.h>        // for MakeSpan
 
 #include <algorithm>         // for fill
 #include <cassert>           // for assert
@@ -10,7 +11,7 @@
 #include <vector>            // for vector
 
 #include "modle/chrom_sizes.hpp"
-#include "modle/common/common.hpp"                      // for bp_t, PRNG, PRNG_t
+#include "modle/common/common.hpp"                      // for bp_t, PRNG, random::PRNG_t
 #include "modle/common/config.hpp"                      // for Config
 #include "modle/common/suppress_compiler_warnings.hpp"  // for DISABLE_WARNING_POP, DISABLE_WARNING_PUSH
 #include "modle/extrusion_barriers.hpp"                 // for ExtrusionBarrier
@@ -24,20 +25,21 @@ TEST_CASE("Bind LEFs 001", "[bind-lefs][simulation][short]") {
   const Chromosome chrom{{"chr1", 0, 1000}};
   constexpr auto nlefs = 10UL;
   std::vector<Lef> lefs(nlefs, Lef{});
-  std::vector<std::size_t> rank1(nlefs), rank2(nlefs);  // NOLINT
+  std::vector<size_t> rank1(nlefs), rank2(nlefs);  // NOLINT
   std::iota(rank1.begin(), rank1.end(), 0);
   std::copy(rank1.begin(), rank1.end(), rank2.begin());
   std::vector<size_t> mask(nlefs, 1);
   // NOLINTNEXTLINE(readability-magic-numbers, cppcoreguidelines-avoid-magic-numbers)
-  auto rand_eng = modle::PRNG(8865403569783063175ULL);
+  auto rand_eng = random::PRNG(8865403569783063175ULL);
 
   for (auto i = 0UL; i < nlefs; ++i) {
-    mask[i] = boost::random::bernoulli_distribution{0.50}(rand_eng);
+    mask[i] = random::bernoulli_trial{0.50}(rand_eng);
   }
 
   const auto c = Config{};
-  CHECK_NOTHROW(Simulation{c, false}.test_bind_lefs(
-      &chrom, absl::MakeSpan(lefs), absl::MakeSpan(rank1), absl::MakeSpan(rank2), mask, rand_eng));
+  CHECK_NOTHROW(Simulation{c, false}.test_bind_lefs(&chrom, absl::MakeSpan(lefs),
+                                                    absl::MakeSpan(rank1), absl::MakeSpan(rank2),
+                                                    mask, rand_eng, 0));
 
   CHECK(lefs.size() == nlefs);
   CHECK(rank1.size() == nlefs);
@@ -61,23 +63,25 @@ TEST_CASE("Bind LEFs 001", "[bind-lefs][simulation][short]") {
 TEST_CASE("Bind LEFs 002 - No LEFs to bind", "[bind-lefs][simulation][short]") {
   const Chromosome chrom{{"chr1", 0, 1000}};
   std::vector<Lef> lefs;
-  std::vector<std::size_t> rank1, rank2;  // NOLINT
+  std::vector<size_t> rank1, rank2;  // NOLINT
   boost::dynamic_bitset<> mask1;
   std::vector<int> mask2;
   // NOLINTNEXTLINE(readability-magic-numbers, cppcoreguidelines-avoid-magic-numbers)
-  auto rand_eng = modle::PRNG(16044114709020280409ULL);
+  auto rand_eng = random::PRNG(16044114709020280409ULL);
   const auto c = Config{};
 
-  CHECK_NOTHROW(Simulation{c, false}.test_bind_lefs(
-      &chrom, absl::MakeSpan(lefs), absl::MakeSpan(rank1), absl::MakeSpan(rank2), mask1, rand_eng));
+  CHECK_NOTHROW(Simulation{c, false}.test_bind_lefs(&chrom, absl::MakeSpan(lefs),
+                                                    absl::MakeSpan(rank1), absl::MakeSpan(rank2),
+                                                    mask1, rand_eng, 1));
 
   CHECK(lefs.empty());
   CHECK(rank1.empty());
   CHECK(rank2.empty());
   CHECK(mask1.empty());
 
-  CHECK_NOTHROW(Simulation{c, false}.test_bind_lefs(
-      &chrom, absl::MakeSpan(lefs), absl::MakeSpan(rank1), absl::MakeSpan(rank2), mask2, rand_eng));
+  CHECK_NOTHROW(Simulation{c, false}.test_bind_lefs(&chrom, absl::MakeSpan(lefs),
+                                                    absl::MakeSpan(rank1), absl::MakeSpan(rank2),
+                                                    mask2, rand_eng, 2));
 
   CHECK(lefs.empty());
   CHECK(rank1.empty());
@@ -91,8 +95,9 @@ TEST_CASE("Bind LEFs 002 - No LEFs to bind", "[bind-lefs][simulation][short]") {
   rank2 = rank1;
   mask1.resize(nlefs, 0);
 
-  CHECK_NOTHROW(Simulation{c, false}.test_bind_lefs(
-      &chrom, absl::MakeSpan(lefs), absl::MakeSpan(rank1), absl::MakeSpan(rank2), mask1, rand_eng));
+  CHECK_NOTHROW(Simulation{c, false}.test_bind_lefs(&chrom, absl::MakeSpan(lefs),
+                                                    absl::MakeSpan(rank1), absl::MakeSpan(rank2),
+                                                    mask1, rand_eng, 0));
 
   CHECK(lefs.size() == nlefs);
   CHECK(rank1.size() == nlefs);
@@ -108,16 +113,17 @@ TEST_CASE("Bind LEFs 003 - Empty mask (i.e. bind all LEFs)", "[bind-lefs][simula
   const Chromosome chrom{{"chr1", 0, 1000}};
   constexpr auto nlefs = 10UL;
   std::vector<Lef> lefs(nlefs, Lef{});
-  std::vector<std::size_t> rank1(nlefs), rank2(nlefs);
+  std::vector<size_t> rank1(nlefs), rank2(nlefs);
   std::iota(rank1.begin(), rank1.end(), 0);
   std::copy(rank1.begin(), rank1.end(), rank2.begin());
   boost::dynamic_bitset<> mask;
   // NOLINTNEXTLINE(readability-magic-numbers, cppcoreguidelines-avoid-magic-numbers)
-  auto rand_eng = modle::PRNG(17550568853244630438ULL);
+  auto rand_eng = random::PRNG(17550568853244630438ULL);
   const auto c = Config{};
 
-  CHECK_NOTHROW(Simulation{c, false}.test_bind_lefs(
-      &chrom, absl::MakeSpan(lefs), absl::MakeSpan(rank1), absl::MakeSpan(rank2), mask, rand_eng));
+  CHECK_NOTHROW(Simulation{c, false}.test_bind_lefs(&chrom, absl::MakeSpan(lefs),
+                                                    absl::MakeSpan(rank1), absl::MakeSpan(rank2),
+                                                    mask, rand_eng, 0));
 
   CHECK(lefs.size() == nlefs);
   CHECK(rank1.size() == nlefs);
@@ -132,13 +138,13 @@ TEST_CASE("Bind LEFs 003 - Empty mask (i.e. bind all LEFs)", "[bind-lefs][simula
 TEST_CASE("Adjust LEF moves 001", "[adjust-lef-moves][simulation][short]") {
   const Chromosome chrom{{"chr1", 0, 101}};
   // clang-format off
-const std::vector<Lef> lefs{Lef{EU{5},  EU{25}, true},
-                            Lef{EU{10}, EU{20}, true},
-                            Lef{EU{90}, EU{90}, true}};
+const std::vector<Lef> lefs{construct_lef(5, 25, 1),
+                            construct_lef(10, 20, 2),
+                            construct_lef(90, 90, 3)};
 
   // clang-format on
-  const std::vector<std::size_t> rev_ranks{0, 1, 2};  // NOLINT
-  const std::vector<std::size_t> fwd_ranks{1, 0, 2};  // NOLINT
+  const std::vector<size_t> rev_ranks{0, 1, 2};  // NOLINT
+  const std::vector<size_t> fwd_ranks{1, 0, 2};  // NOLINT
 
   std::vector<bp_t> rev_moves{5, 10, 15};   // NOLINT
   std::vector<bp_t> fwd_moves{10, 20, 10};  // NOLINT
@@ -161,16 +167,16 @@ const std::vector<Lef> lefs{Lef{EU{5},  EU{25}, true},
 TEST_CASE("Adjust LEF moves 002", "[adjust-lef-moves][simulation][short]") {
   const Chromosome chrom{{"chr1", 10, 400}};
   // clang-format off
-const std::vector<Lef> lefs{Lef{EU{20},  EU{50}, true},
-                            Lef{EU{60},  EU{60}, true},
-                            Lef{EU{200}, EU{310}, true},
-                            Lef{EU{220}, EU{300}, true},
-                            Lef{EU{240}, EU{250}, true},
-                            Lef{EU{125}, EU{305}, true}};
+const std::vector<Lef> lefs{construct_lef(20, 50, 0),
+                            construct_lef(60, 60, 1),
+                            construct_lef(200, 310, 2),
+                            construct_lef(220, 300, 3),
+                            construct_lef(240, 250, 4),
+                            construct_lef(125, 305, 5)};
 
   // clang-format on
-  const std::vector<std::size_t> rev_ranks{0, 1, 5, 2, 3, 4};  // NOLINT
-  const std::vector<std::size_t> fwd_ranks{0, 1, 4, 3, 5, 2};  // NOLINT
+  const std::vector<size_t> rev_ranks{0, 1, 5, 2, 3, 4};  // NOLINT
+  const std::vector<size_t> fwd_ranks{0, 1, 4, 3, 5, 2};  // NOLINT
 
   std::vector<bp_t> rev_moves{10, 10, 5, 25, 50, 10};  // NOLINT
   std::vector<bp_t> fwd_moves{25, 10, 5, 20, 20, 0};   // NOLINT
@@ -197,10 +203,10 @@ TEST_CASE("Generate LEF moves 001", "[generate-lef-moves][simulation][short]") {
   constexpr auto nlefs = 100UL;
   constexpr auto iters = 1000UL;
   // NOLINTNEXTLINE(readability-magic-numbers, cppcoreguidelines-avoid-magic-numbers)
-  auto rand_eng = modle::PRNG(8312545934532053745ULL);
+  auto rand_eng = random::PRNG(8312545934532053745ULL);
   std::vector<Lef> lefs(nlefs);
-  std::vector<std::size_t> rev_ranks(nlefs);
-  std::vector<std::size_t> fwd_ranks(nlefs);
+  std::vector<size_t> rev_ranks(nlefs);
+  std::vector<size_t> fwd_ranks(nlefs);
   std::vector<bp_t> rev_moves(nlefs, 0), fwd_moves(nlefs, 0);  // NOLINT
   auto c = Config{};
   c.bin_size = 500;  // NOLINT
@@ -211,10 +217,19 @@ TEST_CASE("Generate LEF moves 001", "[generate-lef-moves][simulation][short]") {
 
   for (auto i = 0UL; i < iters; ++i) {
     std::generate(lefs.begin(), lefs.end(), [&]() {
-      const auto pos = boost::random::uniform_int_distribution<bp_t>{chrom.start_pos(),
-                                                                     chrom.end_pos() - 1}(rand_eng);
-      return Lef{EU{pos}, EU{pos}, true};
+      const auto pos =
+          random::uniform_int_distribution<bp_t>{chrom.start_pos(), chrom.end_pos() - 1}(rand_eng);
+      return construct_lef(pos, pos, i);
     });
+    /*
+    std::vector<size_t> pos(lefs.size());
+    std::transform(lefs.begin(), lefs.end(), pos.begin(),
+                   [](const auto& lef) { return lef.rev_unit.pos(); });
+    fmt::print(stderr, "i={}; rev_pos=[{}]\n", i, absl::StrJoin(pos, ", "));
+    std::transform(lefs.begin(), lefs.end(), pos.begin(),
+                   [](const auto& lef) { return lef.fwd_unit.pos(); });
+    fmt::print(stderr, "i={}; fwd_pos=[{}]\n", i, absl::StrJoin(pos, ", "));
+     */
     Simulation::test_rank_lefs(lefs, absl::MakeSpan(rev_ranks), absl::MakeSpan(fwd_ranks), false,
                                true);
 
@@ -246,7 +261,7 @@ TEST_CASE("Detect LEF-LEF collisions 001", "[lef-lef-collisions][simulation][sho
   constexpr auto nlefs = 4UL;
   (void)nlefs;
   // NOLINTNEXTLINE(readability-magic-numbers, cppcoreguidelines-avoid-magic-numbers)
-  auto rand_eng = modle::PRNG(9589236971571381257ULL);
+  auto rand_eng = random::PRNG(9589236971571381257ULL);
 
   // clang-format off
 /*       __0__      __1__        2        __3__
@@ -254,10 +269,10 @@ TEST_CASE("Detect LEF-LEF collisions 001", "[lef-lef-collisions][simulation][sho
 *      <-0- -2->  <-4- -8->  <--14-->  <-18- -23->
 */
 std::vector<Lef> lefs{
-    Lef{EU{0},  EU{2},  true},  // NOLINT
-    Lef{EU{4},  EU{8},  true},  // NOLINT
-    Lef{EU{14}, EU{14}, true},  // NOLINT
-    Lef{EU{18}, EU{23}, true}   // NOLINT
+    construct_lef(0, 2, 0),    // NOLINT
+    construct_lef(4, 8, 1),    // NOLINT
+    construct_lef(14, 14, 2),  // NOLINT
+    construct_lef(18, 23, 3)   // NOLINT
 };
   // clang-format on
   const std::vector<size_t> rev_ranks{0, 1, 2, 3};  // NOLINT
@@ -311,7 +326,7 @@ TEST_CASE("Detect LEF-LEF collisions 002", "[lef-lef-collisions][simulation][sho
   constexpr auto nlefs = 4UL;
   (void)nlefs;
   // NOLINTNEXTLINE(readability-magic-numbers, cppcoreguidelines-avoid-magic-numbers)
-  auto rand_eng = modle::PRNG(9589236971571381257ULL);
+  auto rand_eng = random::PRNG(9589236971571381257ULL);
 
   // clang-format off
 /*
@@ -322,10 +337,10 @@ TEST_CASE("Detect LEF-LEF collisions 002", "[lef-lef-collisions][simulation][sho
  */
 
 std::vector<Lef> lefs{
-    Lef{EU{0},  EU{5},  true},  // NOLINT
-    Lef{EU{4},  EU{6},  true},  // NOLINT
-    Lef{EU{9},  EU{14}, true},  // NOLINT
-    Lef{EU{11}, EU{15}, true}   // NOLINT
+    construct_lef(0, 5, 0),    // NOLINT
+    construct_lef(4, 6, 1),    // NOLINT
+    construct_lef(9, 14, 2),   // NOLINT
+    construct_lef(11, 15, 3)   // NOLINT
 };
   // clang-format on
   const std::vector<size_t> rev_ranks{0, 1, 2, 3};  // NOLINT
@@ -378,7 +393,7 @@ TEST_CASE("Detect LEF-LEF collisions 003", "[lef-lef-collisions][simulation][sho
   const Chromosome chrom{{"chr1", 100, 201}};
   constexpr auto nlefs = 3UL;
   // NOLINTNEXTLINE(readability-magic-numbers, cppcoreguidelines-avoid-magic-numbers)
-  auto rand_eng = modle::PRNG(3778138500607566040ULL);
+  auto rand_eng = random::PRNG(3778138500607566040ULL);
 
   // clang-format off
 /*
@@ -390,9 +405,9 @@ TEST_CASE("Detect LEF-LEF collisions 003", "[lef-lef-collisions][simulation][sho
  */
 
 std::vector<Lef> lefs{
-    Lef{EU{120}, EU{180}, true},  // NOLINT
-    Lef{EU{130}, EU{160}, true},  // NOLINT
-    Lef{EU{140}, EU{141}, true}   // NOLINT
+    construct_lef(120, 180, 0),  // NOLINT
+    construct_lef(130, 160, 1),  // NOLINT
+    construct_lef(140, 141, 2)   // NOLINT
 };
   // clang-format on
   const std::vector<size_t> rev_ranks{0, 1, 2};  // NOLINT
@@ -401,8 +416,8 @@ std::vector<Lef> lefs{
   const std::vector<ExtrusionBarrier> barriers;
   const boost::dynamic_bitset<> barrier_mask;
 
-  std::vector<std::size_t> rev_collision_mask(nlefs, NO_COLLISION);
-  std::vector<std::size_t> fwd_collision_mask(nlefs, NO_COLLISION);
+  std::vector<size_t> rev_collision_mask(nlefs, NO_COLLISION);
+  std::vector<size_t> fwd_collision_mask(nlefs, NO_COLLISION);
 
   std::vector<bp_t> rev_moves{20, 30, 40};  // NOLINT
   std::vector<bp_t> fwd_moves{20, 40, 59};  // NOLINT
@@ -446,16 +461,16 @@ TEST_CASE("Detect LEF-BAR collisions 001 - wo soft collisions fwd CTCFs",
   c.fwd_extrusion_speed_std = 0;    // NOLINT
   c.lef_hard_collision_pblock = 1;  // NOLINT
   c.lef_soft_collision_pblock = 0;  // NOLINT
-  constexpr std::size_t nlefs = 3;
-  constexpr std::size_t nbarriers = 3;
+  constexpr size_t nlefs = 3;
+  constexpr size_t nbarriers = 3;
   // NOLINTNEXTLINE(readability-magic-numbers, cppcoreguidelines-avoid-magic-numbers)
-  auto rand_eng = modle::PRNG(245021575020225667ULL);
+  auto rand_eng = random::PRNG(245021575020225667ULL);
 
   // clang-format off
 const std::vector<Lef> lefs{
-    Lef{EU{0}, EU{1}, 1},  // NOLINT
-    Lef{EU{3}, EU{4}, 1},  // NOLINT
-    Lef{EU{5}, EU{5}, 1}   // NOLINT
+    construct_lef(0, 1, 0),  // NOLINT
+    construct_lef(3, 4, 1),  // NOLINT
+    construct_lef(5, 5, 2)   // NOLINT
 };
 const std::vector<ExtrusionBarrier> barriers{ExtrusionBarrier{2, 1.0, 0.0, '+'},
                                              ExtrusionBarrier{4, 1.0, 0.0, '+'},
@@ -475,8 +490,8 @@ const std::vector<ExtrusionBarrier> barriers{ExtrusionBarrier{2, 1.0, 0.0, '+'},
                                                              NO_COLLISION};
   // clang-format on
 
-  std::vector<std::size_t> rev_collision_mask(nlefs, NO_COLLISION);
-  std::vector<std::size_t> fwd_collision_mask(nlefs, NO_COLLISION);
+  std::vector<size_t> rev_collision_mask(nlefs, NO_COLLISION);
+  std::vector<size_t> fwd_collision_mask(nlefs, NO_COLLISION);
 
   const std::vector<bp_t> rev_moves_expected{0, 0, 0};  // NOLINT
   const std::vector<bp_t> fwd_moves_expected{2, 2, 2};  // NOLINT
@@ -510,16 +525,16 @@ TEST_CASE("Detect LEF-BAR collisions 002 - wo soft-collisions rev CTCFs",
   c.fwd_extrusion_speed_std = 0;    // NOLINT
   c.lef_hard_collision_pblock = 1;  // NOLINT
   c.lef_soft_collision_pblock = 0;  // NOLINT
-  constexpr std::size_t nlefs = 3;
-  constexpr std::size_t nbarriers = 3;
+  constexpr size_t nlefs = 3;
+  constexpr size_t nbarriers = 3;
   // NOLINTNEXTLINE(readability-magic-numbers, cppcoreguidelines-avoid-magic-numbers)
-  auto rand_eng = modle::PRNG(502428610956409790ULL);
+  auto rand_eng = random::PRNG(502428610956409790ULL);
 
   // clang-format off
 const std::vector<Lef> lefs{
-    Lef{EU{0}, EU{1}, 1},  // NOLINT
-    Lef{EU{3}, EU{4}, 1},  // NOLINT
-    Lef{EU{5}, EU{5}, 1}   // NOLINT
+    construct_lef(0, 1, 0),  // NOLINT
+    construct_lef(3, 4, 1),  // NOLINT
+    construct_lef(5, 5, 2)   // NOLINT
 };
 const std::vector<ExtrusionBarrier> barriers{ExtrusionBarrier{2, 1.0, 0.0, '-'},
                                              ExtrusionBarrier{4, 1.0, 0.0, '-'},
@@ -539,8 +554,8 @@ const std::vector<ExtrusionBarrier> barriers{ExtrusionBarrier{2, 1.0, 0.0, '-'},
   const std::vector<collision_t> fwd_collision_mask_expected{0UL, NO_COLLISION, NO_COLLISION};
   // clang-format on
 
-  std::vector<std::size_t> rev_collision_mask(nlefs, NO_COLLISION);
-  std::vector<std::size_t> fwd_collision_mask(nlefs, NO_COLLISION);
+  std::vector<size_t> rev_collision_mask(nlefs, NO_COLLISION);
+  std::vector<size_t> fwd_collision_mask(nlefs, NO_COLLISION);
 
   const std::vector<bp_t> rev_moves_expected{0, 2, 2};  // NOLINT
   const std::vector<bp_t> fwd_moves_expected{0, 2, 2};  // NOLINT
@@ -575,16 +590,16 @@ TEST_CASE("Detect LEF-BAR collisions 003 - w soft-collisions fwd CTCFs",
   c.fwd_extrusion_speed_std = 0;    // NOLINT
   c.lef_hard_collision_pblock = 1;  // NOLINT
   c.lef_soft_collision_pblock = 1;  // NOLINT
-  constexpr std::size_t nlefs = 3;
-  constexpr std::size_t nbarriers = 3;
+  constexpr size_t nlefs = 3;
+  constexpr size_t nbarriers = 3;
   // NOLINTNEXTLINE(readability-magic-numbers, cppcoreguidelines-avoid-magic-numbers)
-  auto rand_eng = modle::PRNG(17304119060106843975ULL);
+  auto rand_eng = random::PRNG(17304119060106843975ULL);
 
   // clang-format off
 const std::vector<Lef> lefs{
-    Lef{EU{0}, EU{1}, 1},  // NOLINT
-    Lef{EU{3}, EU{4}, 1},  // NOLINT
-    Lef{EU{5}, EU{5}, 1}   // NOLINT
+    construct_lef(0, 1, 0),  // NOLINT
+    construct_lef(3, 4, 1),  // NOLINT
+    construct_lef(5, 5, 2)   // NOLINT
 };
 const std::vector<ExtrusionBarrier> barriers{ExtrusionBarrier{2, 1.0, 0.0, '+'},
                                              ExtrusionBarrier{4, 1.0, 0.0, '+'},
@@ -603,8 +618,8 @@ const std::vector<ExtrusionBarrier> barriers{ExtrusionBarrier{2, 1.0, 0.0, '+'},
   const std::vector<collision_t> fwd_collision_mask_expected{0UL, NO_COLLISION, NO_COLLISION};
   // clang-format on
 
-  std::vector<std::size_t> rev_collision_mask(nlefs, NO_COLLISION);
-  std::vector<std::size_t> fwd_collision_mask(nlefs, NO_COLLISION);
+  std::vector<size_t> rev_collision_mask(nlefs, NO_COLLISION);
+  std::vector<size_t> fwd_collision_mask(nlefs, NO_COLLISION);
 
   const std::vector<bp_t> rev_moves_expected{0, 0, 0};  // NOLINT
   const std::vector<bp_t> fwd_moves_expected{0, 2, 2};  // NOLINT
@@ -639,18 +654,18 @@ TEST_CASE("Detect LEF-BAR collisions 004 - wo soft-collisions mixed CTCFs",
   c.fwd_extrusion_speed_std = 0;    // NOLINT
   c.lef_hard_collision_pblock = 1;  // NOLINT
   c.lef_soft_collision_pblock = 0;  // NOLINT
-  const std::size_t nlefs = 5;
-  const std::size_t nbarriers = 4;
+  const size_t nlefs = 5;
+  const size_t nbarriers = 4;
   // NOLINTNEXTLINE(readability-magic-numbers, cppcoreguidelines-avoid-magic-numbers)
-  auto rand_eng = modle::PRNG(4870652027555157985ULL);
+  auto rand_eng = random::PRNG(4870652027555157985ULL);
 
   // clang-format off
 const std::vector<Lef> lefs{
-    Lef{EU{10}, EU{20}, 1},  // NOLINT
-    Lef{EU{26}, EU{26}, 1},  // NOLINT
-    Lef{EU{30}, EU{35}, 1},  // NOLINT
-    Lef{EU{42}, EU{43}, 1},  // NOLINT
-    Lef{EU{44}, EU{60}, 1}   // NOLINT
+    construct_lef(10, 20, 0),  // NOLINT
+    construct_lef(26, 26, 1),  // NOLINT
+    construct_lef(30, 35, 2),  // NOLINT
+    construct_lef(42, 43, 3),  // NOLINT
+    construct_lef(44, 60, 4)   // NOLINT
 };
 
 const std::vector<ExtrusionBarrier> barriers{ExtrusionBarrier{25, 1.0, 0.0, '+'},
@@ -673,8 +688,8 @@ const std::vector<ExtrusionBarrier> barriers{ExtrusionBarrier{25, 1.0, 0.0, '+'}
                                                              NO_COLLISION, 3UL, NO_COLLISION};
   // clang-format on
 
-  std::vector<std::size_t> rev_collision_mask(nlefs, NO_COLLISION);
-  std::vector<std::size_t> fwd_collision_mask(nlefs, NO_COLLISION);
+  std::vector<size_t> rev_collision_mask(nlefs, NO_COLLISION);
+  std::vector<size_t> fwd_collision_mask(nlefs, NO_COLLISION);
 
   const std::vector<bp_t> rev_moves_expected{5, 0, 2, 1, 5};  // NOLINT
   const std::vector<bp_t> fwd_moves_expected{5, 5, 5, 2, 5};  // NOLINT
@@ -709,18 +724,18 @@ TEST_CASE("Detect LEF-BAR collisions 005 - wo soft-collisions mixed CTCFs, diffe
   c.fwd_extrusion_speed_std = 0;    // NOLINT
   c.lef_hard_collision_pblock = 1;  // NOLINT
   c.lef_soft_collision_pblock = 0;  // NOLINT
-  const std::size_t nlefs = 5;
-  const std::size_t nbarriers = 4;
+  const size_t nlefs = 5;
+  const size_t nbarriers = 4;
   // NOLINTNEXTLINE(readability-magic-numbers, cppcoreguidelines-avoid-magic-numbers)
-  auto rand_eng = modle::PRNG(4870652027555157985ULL);
+  auto rand_eng = random::PRNG(4870652027555157985ULL);
 
   // clang-format off
 const std::vector<Lef> lefs{
-    Lef{EU{10}, EU{20}, 1},  // NOLINT
-    Lef{EU{26}, EU{26}, 1},  // NOLINT
-    Lef{EU{30}, EU{35}, 1},  // NOLINT
-    Lef{EU{42}, EU{43}, 1},  // NOLINT
-    Lef{EU{44}, EU{60}, 1}   // NOLINT
+    construct_lef(10, 20, 0),  // NOLINT
+    construct_lef(26, 26, 1),  // NOLINT
+    construct_lef(30, 35, 2),  // NOLINT
+    construct_lef(42, 43, 3),  // NOLINT
+    construct_lef(44, 60, 4)   // NOLINT
 };
 
 const std::vector<ExtrusionBarrier> barriers{ExtrusionBarrier{25, 1.0, 0.0, '+'},
@@ -743,8 +758,8 @@ const std::vector<ExtrusionBarrier> barriers{ExtrusionBarrier{25, 1.0, 0.0, '+'}
                                                              NO_COLLISION, 3UL, NO_COLLISION};
   // clang-format on
 
-  std::vector<std::size_t> rev_collision_mask(nlefs, NO_COLLISION);
-  std::vector<std::size_t> fwd_collision_mask(nlefs, NO_COLLISION);
+  std::vector<size_t> rev_collision_mask(nlefs, NO_COLLISION);
+  std::vector<size_t> fwd_collision_mask(nlefs, NO_COLLISION);
 
   const std::vector<bp_t> rev_moves_expected{2, 0, 2, 1, 2};  // NOLINT
   const std::vector<bp_t> fwd_moves_expected{5, 5, 5, 2, 5};  // NOLINT
@@ -776,20 +791,20 @@ TEST_CASE("LEFs ranking 001 - Rev extr. unit tied", "[simulation][short]") {
 
   // clang-format off
   const std::vector<Lef> lefs1{
-      Lef{EU{ 95},  EU{100},  1},  // NOLINT
-      Lef{EU{101},  EU{103},  1},  // NOLINT
-      Lef{EU{102},  EU{110},  1},  // NOLINT
-      Lef{EU{104},  EU{111},  1},  // NOLINT
-      Lef{EU{105},  EU{112},  1},  // NOLINT
-      Lef{EU{102},  EU{102},  1}   // NOLINT
+      construct_lef(95, 100, 0),   // NOLINT
+      construct_lef(101, 103, 0),  // NOLINT
+      construct_lef(102, 110, 0),  // NOLINT
+      construct_lef(104, 111, 0),  // NOLINT
+      construct_lef(105, 112, 0),  // NOLINT
+      construct_lef(102, 102, 1)   // NOLINT
   };
   const std::vector<Lef> lefs2{
-      Lef{EU{ 95},  EU{100},  1},  // NOLINT
-      Lef{EU{101},  EU{103},  1},  // NOLINT
-      Lef{EU{102},  EU{102},  1},  // NOLINT
-      Lef{EU{102},  EU{110},  1},  // NOLINT
-      Lef{EU{104},  EU{111},  1},  // NOLINT
-      Lef{EU{105},  EU{112},  1}   // NOLINT
+      construct_lef(95, 100, 0),   // NOLINT
+      construct_lef(101, 103, 0),  // NOLINT
+      construct_lef(102, 102, 1),  // NOLINT
+      construct_lef(102, 110, 0),  // NOLINT
+      construct_lef(104, 111, 0),  // NOLINT
+      construct_lef(105, 112, 0)   // NOLINT
   };
   // clang-format on
 
@@ -832,20 +847,20 @@ TEST_CASE("LEFs ranking 002 - Fwd extr. unit tied", "[simulation][short]") {
 
   // clang-format off
   const std::vector<Lef> lefs1{
-      Lef{EU{ 95},  EU{100},  1},  // NOLINT
-      Lef{EU{101},  EU{104},  1},  // NOLINT
-      Lef{EU{102},  EU{110},  1},  // NOLINT
-      Lef{EU{103},  EU{111},  1},  // NOLINT
-      Lef{EU{105},  EU{112},  1},  // NOLINT
-      Lef{EU{104},  EU{104},  1}   // NOLINT
+      construct_lef(95, 100, 0),   // NOLINT
+      construct_lef(101, 104, 0),  // NOLINT
+      construct_lef(102, 110, 0),  // NOLINT
+      construct_lef(103, 111, 0),  // NOLINT
+      construct_lef(105, 112, 0),  // NOLINT
+      construct_lef(104, 104, 1)   // NOLINT
   };
   const std::vector<Lef> lefs2{
-      Lef{EU{ 95},  EU{100},  1},  // NOLINT
-      Lef{EU{104},  EU{104},  1},  // NOLINT
-      Lef{EU{101},  EU{104},  1},  // NOLINT
-      Lef{EU{102},  EU{110},  1},  // NOLINT
-      Lef{EU{103},  EU{111},  1},  // NOLINT
-      Lef{EU{105},  EU{112},  1}   // NOLINT
+      construct_lef(95, 100, 0),   // NOLINT
+      construct_lef(104, 104, 1),  // NOLINT
+      construct_lef(101, 104, 0),  // NOLINT
+      construct_lef(102, 110, 0),  // NOLINT
+      construct_lef(103, 111, 0),  // NOLINT
+      construct_lef(105, 112, 0)   // NOLINT
   };
   // clang-format on
 
