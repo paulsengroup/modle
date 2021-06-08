@@ -36,7 +36,7 @@ COPY LICENSE                /tmp/modle/LICENSE
 # Update system repo and install required tools
 RUN dnf update -y \
     && dnf install -y --setopt=install_weak_deps=False --best            \
-                      bash cmake gcc-c++ git make python3 python3-scipy  \
+                      bash cmake gcc-c++ git make python3                \
                       zlib-devel                                         \
     && python3 -m venv /conan_venv --upgrade-deps                        \
     && /conan_venv/bin/pip3 --no-cache-dir install conan==${CONAN_VER}   \
@@ -53,10 +53,13 @@ RUN dnf update -y \
              -G 'Unix Makefiles' ..                \
     && make modle modle_tools -j "$cpus" \
     &&                                   \
-    if [ "$skip_tests" = false ]; then   \
-        make test ;                      \
+    if [ ! "$skip_tests" = true ]; then  \
+        dnf install -y python3-scipy     \
+        && make catch_main               \
+        && make test                     \
+        && dnf remove -y python3-scipy;  \
     fi                                   \
-    && make modle modle_tools install    \
+    && make install                      \
     &&                                             \
     if [ "$build_type" = "Debug" ]; then           \
         dnf install -y dnf-plugins-core gdb        \
@@ -65,7 +68,7 @@ RUN dnf update -y \
         unlink /usr/local/bin/conan                \
      && rm -r /conan_venv /root/.conan /tmp/modle  \
      && dnf remove -y                              \
-        cmake make gcc-c++ git python3-scipy       \
+        cmake make gcc-c++ git                     \
         zlib-devel                                 \
      && dnf clean all ;                            \
     fi
