@@ -54,7 +54,7 @@ void Simulation::bind_lefs(const Chromosome* chrom, const absl::Span<Lef> lefs,
     }
   }
 
-  Simulation::rank_lefs(lefs, rev_lef_ranks, fwd_lef_ranks, current_epoch == 0);
+  Simulation::rank_lefs(lefs, rev_lef_ranks, fwd_lef_ranks, current_epoch != 0);
   {
     using IT = std::decay_t<decltype(rev_lef_ranks.front())>;
     (void)static_cast<IT*>(nullptr);
