@@ -8,9 +8,9 @@
 #include <limits>                                   // for numeric_limits
 #include <utility>                                  // for make_pair, pair
 
-#include "modle/common/common.hpp"       // for bp_t, random::PRNG_t, MODLE_UNLIKELY, fwd, rev
-#include "modle/common/utils.hpp"        // for ndebug_defined
-#include "modle/dna.hpp"                 // for Chromosome
+#include "modle/common/common.hpp"  // for BOOST_LIKELY, BOOST_UNLIKELY, bp_t, random::PRNG_t...
+#include "modle/common/utils.hpp"   // for ndebug_defined
+#include "modle/dna.hpp"            // for Chromosome
 #include "modle/extrusion_barriers.hpp"  // for ExtrusionBarrier, NOT_OCCUPIED
 #include "modle/extrusion_factors.hpp"   // for ExtrusionUnit, Lef
 #include "modle/simulation.hpp"
@@ -58,7 +58,7 @@ std::pair<size_t, size_t> Simulation::detect_units_at_chrom_boundaries(
   for (auto i = 0UL; i < lefs.size(); ++i) {
     const auto& rev_idx = rev_lef_ranks[i];
     const auto& rev_unit = lefs[rev_idx].rev_unit;
-    auto& rev_move = rev_moves[rev_idx];
+    const auto& rev_move = rev_moves[rev_idx];
 
     assert(lefs[rev_idx].is_bound());                         // NOLINT
     assert(chrom->start_pos() + rev_move <= rev_unit.pos());  // NOLINT
@@ -175,7 +175,7 @@ void Simulation::detect_lef_bar_collisions(
 
     const auto& barrier = extr_barriers[i];
 
-    if (j1 < lefs.size()) {  // Process rev unit
+    if (BOOST_LIKELY(j1 < lefs.size())) {  // Process rev unit
       // Probability of block is set based on the extr. barrier blocking direction
       const auto& pblock = barrier.blocking_direction_major() == dna::rev
                                ? this->lef_hard_collision_pblock
@@ -183,8 +183,8 @@ void Simulation::detect_lef_bar_collisions(
 
       // Look for the first rev extr. unit that comes after the current barrier
       while (rev_unit_pos <= barrier.pos()) {
-        if (++j1 >= lefs.size()) {  // All rev units have been processed
-          goto process_fwd_unit;    // Move to the next section
+        if (BOOST_UNLIKELY(++j1 >= lefs.size())) {  // All rev units have been processed
+          goto process_fwd_unit;                    // Move to the next section
         }
 
         // Update idx and position with those corresponding to the rev extr. unit that comes next
@@ -192,7 +192,7 @@ void Simulation::detect_lef_bar_collisions(
         rev_unit_pos = lefs[rev_idx].rev_unit.pos();
       }
 
-      if (lefs[rev_idx].is_bound()) {
+      if (BOOST_LIKELY(lefs[rev_idx].is_bound())) {
         // We have a LEF-BAR collision event if the distance between the rev. unit and the extr.
         // barrier is less or equal than the distance that the rev extr. unit is set to move in
         // the current iteration. If pblock != 1, then we also require a successful bernoulli
@@ -210,13 +210,13 @@ void Simulation::detect_lef_bar_collisions(
 
   // Look in the previous section for detailed comments
   process_fwd_unit:
-    if (j2 < j2_end) {
+    if (BOOST_LIKELY(j2 < j2_end)) {
       const auto& pblock = barrier.blocking_direction_major() == dna::fwd
                                ? this->lef_hard_collision_pblock
                                : this->lef_soft_collision_pblock;
       // Look for the next fwd unit that comes strictly before the current extr. barrier
       while (fwd_unit_pos < barrier.pos()) {
-        if (++j2 >= j2_end) {
+        if (BOOST_UNLIKELY(++j2 >= j2_end)) {
           goto end_of_loop;
         }
 
@@ -230,7 +230,7 @@ void Simulation::detect_lef_bar_collisions(
       fwd_idx = fwd_lef_ranks[std::min(j2, j2 - 1)];
       fwd_unit_pos = lefs[fwd_idx].fwd_unit.pos();
 
-      if (lefs[fwd_idx].is_bound()) {
+      if (BOOST_LIKELY(lefs[fwd_idx].is_bound())) {
         const auto delta = barrier.pos() - fwd_unit_pos;
         if (delta > 0 && delta <= fwd_moves[fwd_idx] &&
             (pblock == 1.0 || random::bernoulli_trial{pblock}(rand_eng))) {
@@ -243,7 +243,7 @@ void Simulation::detect_lef_bar_collisions(
   end_of_loop:
     // Return immediately if all extr. units have been processed (regardless of whether there are
     // still extr. barriers to be processed)
-    if (j1 == lefs.size() && j2 == j2_end) {
+    if (BOOST_UNLIKELY(j1 == lefs.size() && j2 == j2_end)) {
       return;
     }
   }
@@ -290,8 +290,10 @@ void Simulation::detect_primary_lef_lef_collisions(
   //      mask. This kind of collisions are encoded as offset + i, where offset = nbarriers and i =
   //      the index of the unit that is colliding.
 
-  if (num_rev_units_at_5prime == lefs.size() || num_fwd_units_at_3prime == lefs.size())
-    MODLE_UNLIKELY { return; }
+  if (BOOST_UNLIKELY(num_rev_units_at_5prime == lefs.size() ||
+                     num_fwd_units_at_3prime == lefs.size())) {
+    return;
+  }
 
   //    Initialize indexes so that we skip over rev units at the 5' and fwd units at the 3' (if any)
   auto i1 = 0UL;
@@ -307,9 +309,9 @@ void Simulation::detect_primary_lef_lef_collisions(
 
     // Find the first rev unit that comes right after the ith fwd unit
     while (rev_pos <= fwd_pos) {
-      if (++j1 == j2) MODLE_UNLIKELY {
-          return;  // all rev units have been processed
-        }
+      if (BOOST_UNLIKELY(++j1 == j2)) {
+        return;  // all rev units have been processed
+      }
       rev_idx = rev_lef_ranks[j1];
       rev_pos = lefs[rev_idx].rev_unit.pos();
     }
@@ -318,9 +320,9 @@ void Simulation::detect_primary_lef_lef_collisions(
     // This is necessary in order to handle ties in fwd units ranking, as well as the case where
     // there are many fwd units between the pos of the jth-1 and jth rev extr. units
     while (fwd_pos < rev_pos) {
-      if (++i1 == i2) MODLE_UNLIKELY {
-          return;  // all fwd units have been processed
-        }
+      if (BOOST_UNLIKELY(++i1 == i2)) {
+        return;  // all fwd units have been processed
+      }
       fwd_idx = fwd_lef_ranks[i1];             // index of the ith fwd unit in 5'-3' order
       fwd_pos = lefs[fwd_idx].fwd_unit.pos();  // pos of the ith fwd unit
     }
@@ -370,7 +372,7 @@ void Simulation::detect_primary_lef_lef_collisions(
         assert(cause_of_collision_rev < barriers.size() /* is LEF-BAR collision*/);  // NOLINT
         assert(collision_pos_rev != 0 && collision_pos_fwd != 0);                    // NOLINT
         const auto& barrier_pos = barriers[cause_of_collision_rev].pos();
-        if (collision_pos_fwd > barrier_pos) {
+        if (BOOST_UNLIKELY(collision_pos_fwd > barrier_pos)) {
           // Detected the mis-prediction mentioned above: make the LEF-BAR collision a LEF-LEF
           // collision
           cause_of_collision_rev = barriers.size() + fwd_idx;
@@ -386,7 +388,7 @@ void Simulation::detect_primary_lef_lef_collisions(
         assert(cause_of_collision_fwd < barriers.size() /* is LEF-BAR collision*/);  // NOLINT
         assert(collision_pos_rev != 0 && collision_pos_fwd != 0);                    // NOLINT
         const auto& barrier_pos = barriers[cause_of_collision_fwd].pos();
-        if (collision_pos_rev < barrier_pos) {
+        if (BOOST_UNLIKELY(collision_pos_rev < barrier_pos)) {
           cause_of_collision_rev = barriers.size() + fwd_idx;
           cause_of_collision_fwd = barriers.size() + rev_idx;
         } else {
@@ -444,7 +446,7 @@ void Simulation::process_secondary_lef_lef_collisions(
     // index of the ith-1 rev unit in 5'-3' order (i.e. U1)
     const auto& rev_idx1 = rev_lef_ranks[i - 1];
     const auto& rev_pos1 = lefs[rev_idx1].rev_unit.pos();
-    if (rev_collisions[rev_idx1] == NO_COLLISION) {
+    if (BOOST_LIKELY(rev_collisions[rev_idx1] == NO_COLLISION)) {
       // If U1 is not stalled, then it is not possible to have a secondary LEF-LEF collision
       continue;
     }
@@ -481,7 +483,7 @@ void Simulation::process_secondary_lef_lef_collisions(
     // index of the ith fwd unit in 3'-5' order (i.e. U2)
     const auto& fwd_idx2 = fwd_lef_ranks[i];
     const auto& fwd_pos2 = lefs[fwd_idx2].fwd_unit.pos();
-    if (fwd_collisions[fwd_idx2] == NO_COLLISION) {
+    if (BOOST_LIKELY(fwd_collisions[fwd_idx2] == NO_COLLISION)) {
       // If U2 is not stalled, then it is not possible to have a secondary LEF-LEF collision
       continue;
     }

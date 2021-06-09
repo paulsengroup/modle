@@ -20,7 +20,6 @@
 
 #include "modle/bed.hpp"                 // for BED, Parser
 #include "modle/chrom_sizes.hpp"         // for ChromSize, Parser
-#include "modle/common/common.hpp"       // for MODLE_UNLIKELY
 #include "modle/dna.hpp"                 // for Chromosome
 #include "modle/extrusion_barriers.hpp"  // for ExtrusionBarrier
 
@@ -146,10 +145,10 @@ std::vector<ExtrusionBarrier> Genome::generate_vect_of_barriers(std::string_view
   assert(chrom);
   for (const auto& b : chrom->get_barriers()) {
     // Only instantiate barriers with a known motif direction.
-    if (b.strand != '+' && b.strand != '-') MODLE_UNLIKELY {
-        ++barriers_skipped;
-        continue;
-      }
+    if (b.strand != '+' && b.strand != '-') {
+      ++barriers_skipped;
+      continue;
+    }
     const auto pos = (b.chrom_start + b.chrom_end + 1) / 2;
     if (pos < chrom->start_pos() || pos >= chrom->end_pos()) {
       // Barrier lies outside of the genomic regions to be simulated

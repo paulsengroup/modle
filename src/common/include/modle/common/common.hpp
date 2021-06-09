@@ -1,8 +1,9 @@
 #pragma once
 
-#include <array>    // for array
-#include <cstddef>  // IWYU pragma: keep for size_t
-#include <cstdint>  // for uint32_t, uint_fast8_t
+#include <array>             // for array
+#include <boost/config.hpp>  // for BOOST_LIKELY, BOOST_UNLIKELY
+#include <cstddef>           // IWYU pragma: keep for size_t
+#include <cstdint>           // for uint32_t, uint_fast8_t
 
 #include "modle/common/utils.hpp"  // for ndebug_defined
 
@@ -15,13 +16,5 @@ using contacts_t = uint32_t;
 namespace dna {
 enum Direction : uint_fast8_t { none = 0, fwd = 1, rev = 2, both = 3 };
 }  // namespace dna
-
-#if __cplusplus == 202002L
-#define MODLE_LIKELY [[likely]]
-#define MODLE_UNLIKELY [[unlikely]]
-#else
-#define MODLE_LIKELY
-#define MODLE_UNLIKELY
-#endif
 
 }  // namespace modle

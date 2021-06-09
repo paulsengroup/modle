@@ -42,7 +42,7 @@
 #include <utility>      // for make_pair, pair
 #include <vector>       // for vector, vector<>::iterator
 
-#include "modle/common/common.hpp"           // for bp_t, random::PRNG_t, MODLE_UNLIKELY, MODLE_L...
+#include "modle/common/common.hpp"           // for BOOST_LIKELY, BOOST_UNLIKELY bp_t...
 #include "modle/common/config.hpp"           // for Config
 #include "modle/common/random_sampling.hpp"  // for random_sampling
 #include "modle/common/utils.hpp"            // for ndebug_defined
@@ -101,19 +101,18 @@ void Simulation::write_contacts_to_disk(std::deque<std::pair<Chromosome*, size_t
       }
 
       // chrom == nullptr is the end-of-queue signal
-      if (auto& [chrom, count] = progress_queue.front(); chrom == nullptr) MODLE_UNLIKELY {
-          end_of_simulation = true;
-          return;
-        }
+      if (auto& [chrom, count] = progress_queue.front(); chrom == nullptr) {
+        end_of_simulation = true;
+        return;
+      }
       // count == ncells signals that we are done simulating the current chromosome
-      else if (count == ncells) {
+      else if (count == ncells) {  // NOLINT
         chrom_to_be_written = chrom;
         progress_queue.pop_front();
-      } else
-        MODLE_LIKELY {
-          assert(count < ncells);  // NOLINT
-          continue;
-        }
+      } else {
+        assert(count < ncells);  // NOLINT
+        continue;
+      }
     }
     sleep_us = 100;
     try {
@@ -224,7 +223,7 @@ void Simulation::simulate_extrusion_kernel(Simulation::State& s) const {
           random::bernoulli_trial{this->probability_of_extrusion_barrier_block}(s.rand_eng);
     }
 
-    size_t nlefs_to_release;
+    size_t nlefs_to_release;  // NOLINT
     // Start the burnin phase (followed by the actual simulation)
     for (; epoch < s.n_target_epochs; ++epoch) {
       if (!lef_initial_loading_epoch.empty()) {  // Execute this branch only during the burnin phase
@@ -278,7 +277,7 @@ void Simulation::simulate_extrusion_kernel(Simulation::State& s) const {
 
       {  // Select inactive LEFs and bind them
         auto lef_mask = absl::MakeSpan(s.idx_buff1.data(), lefs.size());
-        this->select_lefs_to_bind(lefs, lef_mask);
+        Simulation::select_lefs_to_bind(lefs, lef_mask);
         this->bind_lefs(s.chrom, lefs, rev_lef_ranks, fwd_lef_ranks, lef_mask, s.rand_eng, epoch);
       }
 
@@ -297,8 +296,8 @@ void Simulation::simulate_extrusion_kernel(Simulation::State& s) const {
         // We are sampling from fwd ranks to avoid having to allocate a vector of indices just to do
         // this sampling
         const auto lef_idx = absl::MakeSpan(s.idx_buff1.data(), nlefs_to_sample);
-        modle::random_sample(fwd_lef_ranks.begin(), fwd_lef_ranks.end(), lef_idx.begin(),
-                             lef_idx.size(), s.rand_eng);
+        random_sample(fwd_lef_ranks.begin(), fwd_lef_ranks.end(), lef_idx.begin(), lef_idx.size(),
+                      s.rand_eng);
         if (!std::all_of(lef_idx.begin(), lef_idx.end(),
                          [&](const auto i) { return i < lefs.size(); })) {
           throw std::runtime_error(fmt::format("lef_idx.size()={}; nlefs={};\nlef_idx=[{}]\n",
@@ -339,7 +338,7 @@ void Simulation::simulate_extrusion_kernel(Simulation::State& s) const {
       // Reusing this buffer is ok, as at this point we don't need access to collision information
       const auto lef_idx = absl::MakeSpan(s.idx_buff1.data(), nlefs_to_release);
       this->select_lefs_to_release(lef_idx, lef_unloader_affinity, s.rand_eng);
-      this->release_lefs(lefs, lef_idx);
+      Simulation::release_lefs(lefs, lef_idx);
     }
   } catch (const std::exception& err) {
     throw std::runtime_error(fmt::format(
@@ -476,22 +475,20 @@ void Simulation::rank_lefs(const absl::Span<const Lef> lefs,
     return lefs[r1].fwd_unit.pos() < lefs[r2].fwd_unit.pos();
   };
 
-  if (init_buffers) MODLE_UNLIKELY {  // Init rank buffers
-      std::iota(fwd_lef_rank_buff.begin(), fwd_lef_rank_buff.end(), 0);
-      std::iota(rev_lef_rank_buff.begin(), rev_lef_rank_buff.end(), 0);
-    }
+  if (BOOST_UNLIKELY(init_buffers)) {  // Init rank buffers
+    std::iota(fwd_lef_rank_buff.begin(), fwd_lef_rank_buff.end(), 0);
+    std::iota(rev_lef_rank_buff.begin(), rev_lef_rank_buff.end(), 0);
+  }
 
-  if (ranks_are_partially_sorted) MODLE_LIKELY {
-      cppsort::split_sort(rev_lef_rank_buff.begin(), rev_lef_rank_buff.end(), rev_comparator);
-      cppsort::split_sort(fwd_lef_rank_buff.begin(), fwd_lef_rank_buff.end(), fwd_comparator);
-    }
-  else
-    MODLE_UNLIKELY {
-      // Fallback to pattern-defeating quicksort we have no information regarding the level of
-      // pre-sortedness of LEFs
-      cppsort::pdq_sort(rev_lef_rank_buff.begin(), rev_lef_rank_buff.end(), rev_comparator);
-      cppsort::pdq_sort(fwd_lef_rank_buff.begin(), fwd_lef_rank_buff.end(), fwd_comparator);
-    }
+  if (BOOST_LIKELY(ranks_are_partially_sorted)) {
+    cppsort::split_sort(rev_lef_rank_buff.begin(), rev_lef_rank_buff.end(), rev_comparator);
+    cppsort::split_sort(fwd_lef_rank_buff.begin(), fwd_lef_rank_buff.end(), fwd_comparator);
+  } else {
+    // Fallback to pattern-defeating quicksort we have no information regarding the level of
+    // pre-sortedness of LEFs
+    cppsort::pdq_sort(rev_lef_rank_buff.begin(), rev_lef_rank_buff.end(), rev_comparator);
+    cppsort::pdq_sort(fwd_lef_rank_buff.begin(), fwd_lef_rank_buff.end(), fwd_comparator);
+  }
 
   // TODO Figure out a better way to deal with ties
   auto begin = 0UL;
@@ -499,7 +496,7 @@ void Simulation::rank_lefs(const absl::Span<const Lef> lefs,
   for (auto i = 1UL; i < rev_lef_rank_buff.size(); ++i) {
     const auto& r1 = rev_lef_rank_buff[i - 1];
     const auto& r2 = rev_lef_rank_buff[i];
-    if (lefs[r1].rev_unit.pos() == lefs[r2].rev_unit.pos()) {
+    if (BOOST_UNLIKELY(lefs[r1].rev_unit.pos() == lefs[r2].rev_unit.pos())) {
       begin = i - 1;
       for (; i < rev_lef_rank_buff.size(); ++i) {
         const auto& r11 = rev_lef_rank_buff[i - 1];
@@ -523,7 +520,7 @@ void Simulation::rank_lefs(const absl::Span<const Lef> lefs,
   for (auto i = 1UL; i < fwd_lef_rank_buff.size(); ++i) {
     const auto& r1 = fwd_lef_rank_buff[i - 1];
     const auto& r2 = fwd_lef_rank_buff[i];
-    if (lefs[r1].fwd_unit.pos() == lefs[r2].fwd_unit.pos()) {
+    if (BOOST_UNLIKELY(lefs[r1].fwd_unit.pos() == lefs[r2].fwd_unit.pos())) {
       begin = i - 1;
       for (; i < fwd_lef_rank_buff.size(); ++i) {
         const auto& r11 = fwd_lef_rank_buff[i - 1];
@@ -561,7 +558,7 @@ void Simulation::extrude(const Chromosome* chrom, const absl::Span<Lef> lefs,
   const auto i2 = lefs.size() - num_fwd_units_at_3prime;
   for (; i1 < i2; ++i1) {
     auto& lef = lefs[i1];
-    if (!lef.is_bound()) {  // Do not process inactive LEFs
+    if (BOOST_UNLIKELY(!lef.is_bound())) {  // Do not process inactive LEFs
       continue;
     }
     assert(lef.rev_unit.pos() <= lef.fwd_unit.pos());  // NOLINT
@@ -598,7 +595,7 @@ std::pair<bp_t, bp_t> Simulation::compute_lef_lef_collision_pos(const ExtrusionU
       static_cast<double>(rev_pos) - static_cast<double>(rev_speed) * time_to_collision;
   assert(abs(static_cast<double>(collision_pos) - collision_pos_) < 1.0);  // NOLINT
 #endif
-  if (collision_pos == fwd_pos) {
+  if (BOOST_UNLIKELY(collision_pos == fwd_pos)) {
     assert(collision_pos >= fwd_pos);      // NOLINT
     assert(collision_pos + 1 <= rev_pos);  // NOLINT
     return std::make_pair(collision_pos + 1, collision_pos);
@@ -617,13 +614,13 @@ size_t Simulation::register_contacts(Chromosome* chrom, const absl::Span<const L
   for (const auto i : selected_lef_idx) {
     assert(i < lefs.size());  // NOLINT
     const auto& lef = lefs[i];
-    if (lef.is_bound() && lef.rev_unit.pos() > chrom->start_pos() &&
-        lef.rev_unit.pos() < chrom->end_pos() - 1 && lef.fwd_unit.pos() > chrom->start_pos() &&
-        lef.fwd_unit.pos() < chrom->end_pos() - 1)
-      MODLE_LIKELY {
-        chrom->increment_contacts(lef.rev_unit.pos(), lef.fwd_unit.pos(), this->bin_size);
-        ++new_contacts;
-      }
+    if (BOOST_LIKELY(lef.is_bound() && lef.rev_unit.pos() > chrom->start_pos() &&
+                     lef.rev_unit.pos() < chrom->end_pos() - 1 &&
+                     lef.fwd_unit.pos() > chrom->start_pos() &&
+                     lef.fwd_unit.pos() < chrom->end_pos() - 1)) {
+      chrom->increment_contacts(lef.rev_unit.pos(), lef.fwd_unit.pos(), this->bin_size);
+      ++new_contacts;
+    }
   }
   return new_contacts;
 }
@@ -643,17 +640,19 @@ void Simulation::generate_lef_unloader_affinities(
     const auto& lef = lefs[i];
     if (!lef.is_bound()) {
       lef_unloader_affinity[i] = 0.0;
-    } else if (!is_lef_bar_collision(rev_collisions[i]) || !is_lef_bar_collision(fwd_collisions[i]))
-      MODLE_LIKELY { lef_unloader_affinity[i] = 1.0; }
-    else {
+    } else if (BOOST_LIKELY(!is_lef_bar_collision(rev_collisions[i]) ||
+                            !is_lef_bar_collision(fwd_collisions[i]))) {
+      lef_unloader_affinity[i] = 1.0;
+    } else {
       const auto& rev_barrier = barriers[rev_collisions[i]];
       const auto& fwd_barrier = barriers[fwd_collisions[i]];
 
-      if (rev_barrier.blocking_direction_major() == dna::rev &&
-          fwd_barrier.blocking_direction_major() == dna::fwd)
-        MODLE_UNLIKELY { lef_unloader_affinity[i] = 1.0 / this->hard_stall_multiplier; }
-      else
-        MODLE_LIKELY { lef_unloader_affinity[i] = 1.0; }
+      if (BOOST_UNLIKELY(rev_barrier.blocking_direction_major() == dna::rev &&
+                         fwd_barrier.blocking_direction_major() == dna::fwd)) {
+        lef_unloader_affinity[i] = 1.0 / this->hard_stall_multiplier;
+      } else {
+        lef_unloader_affinity[i] = 1.0;
+      }
     }
   }
 }
@@ -750,20 +749,15 @@ std::pair<size_t, size_t> Simulation::process_collisions(
   this->detect_primary_lef_lef_collisions(lefs, barriers, rev_lef_ranks, fwd_lef_ranks, rev_moves,
                                           fwd_moves, rev_collisions, fwd_collisions, rand_eng,
                                           num_rev_units_at_5prime, num_fwd_units_at_3prime);
-  modle::Simulation::correct_moves_for_lef_bar_collisions(lefs, barriers, rev_moves, fwd_moves,
-                                                          rev_collisions, fwd_collisions);
+  Simulation::correct_moves_for_lef_bar_collisions(lefs, barriers, rev_moves, fwd_moves,
+                                                   rev_collisions, fwd_collisions);
 
-  modle::Simulation::correct_moves_for_primary_lef_lef_collisions(
-      lefs, barriers, rev_lef_ranks, fwd_lef_ranks, rev_moves, fwd_moves, rev_collisions,
-      fwd_collisions);
+  Simulation::correct_moves_for_primary_lef_lef_collisions(lefs, barriers, rev_lef_ranks,
+                                                           fwd_lef_ranks, rev_moves, fwd_moves,
+                                                           rev_collisions, fwd_collisions);
   this->process_secondary_lef_lef_collisions(
       chrom, lefs, barriers.size(), rev_lef_ranks, fwd_lef_ranks, rev_moves, fwd_moves,
       rev_collisions, fwd_collisions, rand_eng, num_rev_units_at_5prime, num_fwd_units_at_3prime);
-  /*
-    modle::Simulation::correct_moves_for_secondary_lef_lef_collisions(
-        lefs, barriers.size(), rev_lef_ranks, fwd_lef_ranks, rev_moves, fwd_moves, rev_collisions,
-        fwd_collisions);
-  */
   return std::make_pair(num_rev_units_at_5prime, num_fwd_units_at_3prime);
 }
 
