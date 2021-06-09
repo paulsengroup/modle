@@ -3,12 +3,11 @@
 #include <absl/hash/hash.h>                // for Hash
 #include <absl/strings/str_cat.h>          // for StrCat
 
-#include <algorithm>                                 // for max, generate
-#include <array>                                     // for array
-#include <boost/random/random_number_generator.hpp>  // for mt19937, uniform_int_distribution
-#include <cstdint>                                   // for uint32_t, int32_t, int64_t
-#include <cstdio>                                    // for pclose, fgets, popen, FILE
-#include <filesystem>                                // for create_directories, exists, path, remove
+#include <algorithm>    // for max, generate
+#include <array>        // for array
+#include <cstdint>      // for uint32_t, int32_t, int64_t
+#include <cstdio>       // for pclose, fgets, popen, FILE
+#include <filesystem>   // for create_directories, exists, path, remove
 #include <fstream>      // for basic_ofstream, operator<<, basic_ostream
 #include <memory>       // for allocator, unique_ptr
 #include <numeric>      // for iota

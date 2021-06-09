@@ -2,7 +2,6 @@
 
 #include <algorithm>                                // for is_sorted, all_of, max, find_if
 #include <boost/dynamic_bitset/dynamic_bitset.hpp>  // for dynamic_bitset
-#include <boost/random/bernoulli_distribution.hpp>  // for bernoulli_distribution
 #include <cassert>                                  // for assert
 #include <cstddef>                                  // for size_t
 #include <limits>                                   // for numeric_limits

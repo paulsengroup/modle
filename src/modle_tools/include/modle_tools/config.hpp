@@ -37,7 +37,7 @@ struct config {
 
   // noisify_contacts
   double genextreme_mu{0};
-  double genextreme_sigma{5'000};
+  double genextreme_sigma{7'500};
   double genextreme_xi{0.001};
   uint64_t seed{0};
 

@@ -7,10 +7,9 @@
 #include <fmt/format.h>       // for print
 #include <readerwriterqueue/readerwriterqueue.h>
 
-#include <boost/asio/post.hpp>                         // IWYU pragma: keep for post
-#include <boost/asio/thread_pool.hpp>                  // for thread_pool
-#include <boost/random/uniform_real_distribution.hpp>  // for uniform_real_distribution
-#include <thread>                                      // for thread, this_thread::sleep_for
+#include <boost/asio/post.hpp>         // IWYU pragma: keep for post
+#include <boost/asio/thread_pool.hpp>  // for thread_pool
+#include <thread>                      // for thread, this_thread::sleep_for
 
 #include "include/modle_tools/config.hpp"
 #include "modle/common/common.hpp"
@@ -71,8 +70,6 @@ void noisify_contacts(const config& c) {
     auto rang_eng = random::PRNG(seed);
     auto genextreme = modle::genextreme_value_distribution<double>{
         c.genextreme_mu, c.genextreme_sigma, c.genextreme_xi};
-    auto uniformd = random::uniform_real_distribution<double>{static_cast<double>(bin_size) / -2.0,
-                                                              static_cast<double>(bin_size) / 2.0};
     while (true) {
       pixel_queue.wait_dequeue(pixel);
       if (pixel == END_OF_PIXEL_QUEUE) {
@@ -80,15 +77,13 @@ void noisify_contacts(const config& c) {
       }
       assert(pixel.row <= pixel.col);  // NOLINT
       for (auto i = 0UL; i < pixel.count; ++i) {
-        const auto pos1 =
-            static_cast<double>(pixel.row * bin_size) + uniformd(rang_eng) + genextreme(rang_eng);
-        const auto pos2 =
-            static_cast<double>(pixel.col * bin_size) + uniformd(rang_eng) - genextreme(rang_eng);
+        const auto pos1 = static_cast<double>(pixel.row * bin_size) + genextreme(rang_eng);
+        const auto pos2 = static_cast<double>(pixel.col * bin_size) - genextreme(rang_eng);
         const auto bin1 = std::clamp(
             static_cast<size_t>(std::round(pos1 / static_cast<double>(bin_size))), 0UL, ncols - 1);
         const auto bin2 = std::clamp(
             static_cast<size_t>(std::round(pos2 / static_cast<double>(bin_size))), 0UL, ncols - 1);
-        cmatrix.increment(bin1, bin2);
+        cmatrix.increment(std::min(bin1, bin2), std::max(bin1, bin2));
       }
     }
     t.join();

@@ -7,6 +7,7 @@
 #include <cassert>                                  // for assert
 
 #include "modle/common/common.hpp"  // for bp_t, Direction
+#include "modle/common/random.hpp"  // for random::generate_canonical, random::PRNG_t
 #include "modle/common/utils.hpp"   // for ndebug_defined
 
 namespace modle {
@@ -92,7 +93,7 @@ CTCF::State CTCF::next_state(CTCF::State current_state, double occupied_self_tra
   assert(not_occupied_self_transition_prob >= 0 &&
          not_occupied_self_transition_prob <= 1);  // NOLINT
 
-  const auto p = CTCF::state_gen_t{0.0, 1.0}(rand_eng);
+  const auto p = random::generate_canonical<double, std::numeric_limits<double>::digits>(rand_eng);
   if (current_state == NOT_OCCUPIED && p > not_occupied_self_transition_prob) {
     return OCCUPIED;
   } else if (current_state == OCCUPIED && p > occupied_self_transition_prob) {
