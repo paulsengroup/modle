@@ -28,7 +28,7 @@ struct config {
 
   size_t bin_size{0};
   size_t diagonal_width;
-  bed::BED::Dialect bed_dialect{bed::BED::Dialect::BED4};
+  bed::BED::Dialect bed_dialect{bed::BED::Dialect::BED6};
   bool strict_bed_validation{true};
 
   // eval
