@@ -44,19 +44,13 @@ int main(int argc, char** argv) noexcept {
                absl::FormatDuration(absl::Now() - t0));
   } catch (const CLI::ParseError& e) {
     return cli->exit(e);  //  This takes care of formatting and printing error messages (if any)
-  } catch (const fmt::system_error& err) {
-    fmt::print(stderr, "FAILURE! An error occurred during simulation: {}.\n", err.what());
-    return 1;
-  } catch (const std::runtime_error& err) {
-    fmt::print(stderr, "FAILURE! An error occurred during simulation: {}.\n", err.what());
-    return 1;
   } catch (const std::bad_alloc& err) {
     fmt::print(stderr, "FAILURE! Unable to allocate enough memory.\n");
     return 1;
-  } catch (const std::exception& err) {
-    fmt::print(stderr, FMT_STRING("{}\n"), err.what());
+  } catch (const std::exception& e) {
+    fmt::print(stderr, "FAILURE! An error occurred during simulation: {}.\n", e.what());
 #ifndef BOOST_STACKTRACE_USE_NOOP
-    const auto* st = boost::get_error_info<modle::utils::traced>(err);
+    const auto* st = boost::get_error_info<modle::utils::traced>(e);
     if (st) {
       std::cerr << *st << '\n';
     } else {
@@ -74,7 +68,7 @@ int main(int argc, char** argv) noexcept {
       } catch (const std::exception& e) {
         fmt::print(stderr,
                    "FAILURE! An error occurred during simulation: Caught an exception that was not "
-                   "handled properly! If you see this message, please open an issue on GitHub. "
+                   "handled properly! If you see this message, please file an issue on GitHub. "
                    "err.what(): {}.\n",
                    e.what());
         return 1;
