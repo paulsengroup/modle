@@ -15,6 +15,7 @@ target_link_libraries(
           Modle::modle
           Modle::correlation
           Modle::io
+          CGRanges::CGRanges
           CONAN_PKG::abseil
           CONAN_PKG::boost
           CONAN_PKG::cli11

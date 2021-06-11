@@ -32,7 +32,7 @@ namespace modle::tools {
 
 class Cli {
  public:
-  enum subcommand : uint_fast8_t { eval, noisify, stats, help };
+  enum subcommand : uint_fast8_t { eval, filter__barriers, noisify, stats, help };
 
  private:
   int _argc;
@@ -42,6 +42,8 @@ class Cli {
   config _config{};
   CLI::App _cli{};
   subcommand _subcommand{subcommand::help};
+
+  absl::btree_set<std::string> _filtering_criteria{"intersection", "union"};
 
   inline void make_eval_subcommand() {
     // clang-format off
@@ -64,6 +66,24 @@ class Cli {
     sc->add_option("--sliding-window-overlap", this->_config.sliding_window_overlap, "Overlap between consecutive sliding-windows.")->check(CLI::NonNegativeNumber)->capture_default_str();
     sc->add_option("--depletion-multiplier", this->_config.depletion_multiplier, "Multiplier used to control the magnitude of the depletion.")->check(CLI::NonNegativeNumber)->capture_default_str();
     sc->add_flag("--deplete-reference-contacts,!--no-deplete-reference-contacts", this->_config.deplete_contacts_from_reference, "Deplete contacts along the diagonal from the reference matrix.")->capture_default_str();
+    // clang-format on
+  }
+
+  inline void make_filter_barriers_subcommand() {
+    // clang-format off
+    auto *sc = this->_cli.add_subcommand("filter-barriers", "Filter extrusion barriers to be used by ModLE.")->fallthrough();
+    sc->add_option("--extrusion-barriers-motif-bed", this->_config.path_to_extrusion_barrier_motifs_bed, "Path to a BED file containing the list of extrusion barriers to be filtered.")->check(CLI::ExistingFile)->required();
+    sc->add_option("bedFiles", this->_config.path_to_bed_files_for_filtering, "One or more path to BED files containing records to be used to select records from the file specified through --extrusion-barriers-motif-bed.")->check(CLI::ExistingFile)->required();
+    sc->add_option("-f,--filtering-criterion", this->_config.filtering_criterion, fmt::format(FMT_STRING("Filtering criterion. Accepted values are: {}"), absl::StrJoin(this->_filtering_criteria, ", ")))->check(
+        [this](const auto &str){
+          if (this->_filtering_criteria.contains(CLI::detail::to_lower(str))) {
+            return std::string{};
+          }
+          return fmt::format(FMT_STRING("\"{}\" is not a valid filtering criterion. Allowed criteria are: {}."), str, absl::StrJoin(this->_filtering_criteria, ", "));
+    })->capture_default_str();
+    sc->add_option("--bed-dialect", this->_config.bed_dialect, fmt::format(FMT_STRING("Specify the BED dialect to use when parsing input files. Example: when specifying BED3 through this dialect, we only validate the first three fields. Additional fields (if any) are copied verbatim and can thus in principle contain arbitrary information. Allowed dialects: {}."), absl::StrJoin(bed::bed_dialects, ", ")))->transform(
+        CLI::CheckedTransformer(bed::str_to_bed_dialect_mappings))->capture_default_str();
+    sc->add_flag("--strict-bed-validation,!--no-strict-bed-validation", this->_config.strict_bed_validation, "Toggle strict BED file format validation on or off.")->capture_default_str();
     // clang-format on
   }
 
@@ -104,6 +124,7 @@ class Cli {
     this->_cli.require_subcommand(1);
     // clang-format on
     this->make_eval_subcommand();
+    this->make_filter_barriers_subcommand();
     this->make_noisify_subcommand();
     this->make_stats_subcommand();
   }
@@ -173,6 +194,31 @@ class Cli {
     return errors;
   }
 
+  [[nodiscard]] inline std::string validate_filter_barriers_subcommand() const {
+    std::string errors;
+    assert(this->_cli.get_subcommand("filter-barriers")->parsed());  // NOLINT
+    const auto& c = this->_config;
+
+    auto valitade_bed = [&](const auto& path) {
+      if (std::filesystem::is_regular_file(path)) {
+        const auto status =
+            bed::Parser(path.string(), c.bed_dialect, c.strict_bed_validation).validate(100, false);
+        if (!status.empty()) {
+          absl::StrAppendFormat(&errors, "Validation failed for file '%s': %s\n", path,
+                                absl::StripPrefix(status, "An error occurred while reading file"));
+        }
+      }
+    };
+
+    valitade_bed(c.path_to_extrusion_barrier_motifs_bed);
+    assert(!c.path_to_extrusion_barrier_motifs_bed.empty());  // NOLINT
+    for (const auto& path : c.path_to_extrusion_barrier_motifs_bed) {
+      valitade_bed(path);
+    }
+
+    return errors;
+  }
+
   [[nodiscard]] inline std::string validate_stats_subcommand() const {
     std::string errors;
     assert(this->_cli.get_subcommand("stats")->parsed());  // NOLINT
@@ -223,6 +269,8 @@ class Cli {
     std::string errors;
     if (this->_cli.get_subcommand("eval")->parsed()) {
       errors = this->validate_eval_subcommand();
+    } else if (this->_cli.get_subcommand("filter-barriers")->parsed()) {
+      errors = this->validate_filter_barriers_subcommand();
     } else if (this->_cli.get_subcommand("noisify")->parsed()) {
       // errors = this->validate_noisify_subcommand();
       (void)0;
@@ -260,6 +308,8 @@ class Cli {
       this->_cli.parse(this->_argc, this->_argv);
       if (this->_cli.get_subcommand("evaluate")->parsed()) {
         this->_subcommand = subcommand::eval;
+      } else if (this->_cli.get_subcommand("filter-barriers")->parsed()) {
+        this->_subcommand = subcommand::filter__barriers;
       } else if (this->_cli.get_subcommand("noisify")->parsed()) {
         this->_subcommand = subcommand::noisify;
       } else if (this->_cli.get_subcommand("statistics")->parsed()) {
@@ -271,10 +321,30 @@ class Cli {
       //  This takes care of formatting and printing error messages (if any)
       this->_exit_code = this->_cli.exit(e);
       return this->_config;
+    } catch (const std::exception& e) {
+      this->_exit_code = 1;
+      throw std::runtime_error(fmt::format(
+          FMT_STRING(
+              "An unexpected error has occurred while parsing CLI arguments: {}. If you see this "
+              "message, please file an issue on GitHub"),
+          e.what()));
+
+    } catch (...) {
+      this->_exit_code = 1;
+      throw std::runtime_error(
+          "An unknown error occurred while parsing CLI arguments! If you see this message, please "
+          "file an issue on GitHub");
     }
-    this->_exit_code = static_cast<int>(this->validate());
-    this->post_process_cli_args();
-    return this->_config;
+
+    try {
+      this->_exit_code = static_cast<int>(this->validate());
+      this->post_process_cli_args();
+      return this->_config;
+    } catch (const std::exception& e) {
+      throw std::runtime_error(fmt::format(
+          FMT_STRING("The following error occourred while validating CLI arguments: {}"),
+          e.what()));
+    }
   }
 
   [[nodiscard]] inline int get_exit_code() const { return this->_exit_code; }

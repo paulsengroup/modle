@@ -11,19 +11,24 @@
 #include "modle_tools/tools.hpp"   // for eval_subcmd, stats_subcmd
 
 int main(int argc, char** argv) {
-  modle::tools::Cli cli(argc, argv);
-  auto c = cli.parse_arguments();
-  if (!cli.is_ok()) {
-    return cli.get_exit_code();
-  }
-
-  if (!c.output_base_name.empty()) {
-    std::filesystem::create_directories(c.output_base_name.parent_path());
-  }
+  modle::tools::config c;
   try {
+    modle::tools::Cli cli(argc, argv);
+    c = cli.parse_arguments();
+    if (!cli.is_ok()) {
+      return cli.get_exit_code();
+    }
+
+    if (!c.output_base_name.empty()) {
+      std::filesystem::create_directories(c.output_base_name.parent_path());
+    }
+
     switch (cli.get_subcommand()) {
       case modle::tools::Cli::subcommand::eval:
         modle::tools::eval_subcmd(c);
+        break;
+      case modle::tools::Cli::subcommand::filter__barriers:
+        modle::tools::filter_barriers(c);
         break;
       case modle::tools::Cli::subcommand::stats:
         modle::tools::stats_subcmd(c);
@@ -33,8 +38,8 @@ int main(int argc, char** argv) {
         break;
       default:
         throw std::runtime_error(
-            "Default branch in switch statement in main.cpp should be unreachable! If you see "
-            "this message, please open an issue on GitHub");
+            "Default branch in switch statement in modle_tools::main() should be unreachable! If "
+            "you see this message, please file an issue on GitHub");
     }
   } catch (const std::exception& err) {
     fmt::print(stderr, "FAILURE: {}.\n", err.what());
@@ -43,6 +48,11 @@ int main(int argc, char** argv) {
         std::filesystem::is_empty(c.tmp_dir)) {
       std::filesystem::remove_all(c.tmp_dir, ec);
     }
+    return 1;
+  } catch (...) {
+    fmt::print(stderr,
+               "FAILURE: modle_tools encountered an unknown error! If you see this message, please "
+               "file an issue on GitHub.");
     return 1;
   }
 

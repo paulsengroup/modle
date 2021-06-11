@@ -20,6 +20,7 @@
 #include <array>                                    // for array, array<>::value_type
 #include <boost/dynamic_bitset/dynamic_bitset.hpp>  // for dynamic_bitset
 #include <cassert>                                  // for assert
+#include <cgranges/IITree.hpp>                      // for IITree
 #include <cmath>                                    // for sqrt
 #include <cstdint>                                  // for uint32_t
 #include <cstdio>                                   // for stderr, stdout
@@ -353,6 +354,52 @@ void eval_subcmd(const modle::tools::config& c) {
                              std::ref(ed_cross_buff), Transformation::Cross);
     for (auto& t : threads) {
       t.join();
+    }
+  }
+}
+
+void filter_barriers(const modle::tools::config& c) {
+  using IITree_t = IITree<uint32_t, uint32_t>;
+  assert(!c.path_to_bed_files_for_filtering.empty());  // NOLINT
+  absl::flat_hash_map<std::string, std::vector<IITree_t>> intervals(
+      c.path_to_bed_files_for_filtering.size());
+
+  for (auto i = 0UL; i < c.path_to_bed_files_for_filtering.size(); ++i) {
+    for (const auto& record : bed::Parser(c.path_to_bed_files_for_filtering[i].string(),
+                                          c.bed_dialect, c.strict_bed_validation)
+                                  .parse_all(false)) {
+      auto [node, new_insertion] = intervals.try_emplace(record.chrom, std::vector<IITree_t>{});
+      if (new_insertion) {
+        node->second.resize(c.path_to_bed_files_for_filtering.size());
+      }
+      node->second[i].add(record.chrom_start, record.chrom_end, uint8_t(0));
+    }
+
+    for (auto& [_, trees] : intervals) {
+      trees[i].index();
+    }
+  }
+
+  std::vector<size_t> buff;
+  for (const auto& record :
+       bed::Parser(c.path_to_extrusion_barrier_motifs_bed, c.bed_dialect, c.strict_bed_validation)
+           .parse_all(false)) {
+    if (auto node = intervals.find(record.chrom); node != intervals.end()) {
+      auto print = true;
+      for (const auto& tree : node->second) {
+        if (tree.size() == 0) {
+          print = false;
+          break;
+        }
+        tree.overlap(record.chrom_start, record.chrom_end, buff);
+        if (buff.empty()) {
+          print = false;
+          break;
+        }
+      }
+      if (print) {
+        fmt::print(stdout, "{}\n", record.to_string());
+      }
     }
   }
 }

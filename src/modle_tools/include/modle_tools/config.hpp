@@ -9,6 +9,8 @@
 #include <thread>      // for thread
 #include <vector>      // for vector
 
+#include "modle/bed.hpp"  // for BED::Dialect
+
 namespace modle::tools {
 
 struct config {
@@ -26,6 +28,8 @@ struct config {
 
   size_t bin_size{0};
   size_t diagonal_width;
+  bed::BED::Dialect bed_dialect{bed::BED::Dialect::BED4};
+  bool strict_bed_validation{true};
 
   // eval
   bool compute_spearman{true};
@@ -34,6 +38,11 @@ struct config {
   size_t sliding_window_size{0};
   size_t sliding_window_overlap{0};
   bool deplete_contacts_from_reference{true};
+
+  // filter barriers
+  std::filesystem::path path_to_extrusion_barrier_motifs_bed;
+  std::vector<std::filesystem::path> path_to_bed_files_for_filtering;
+  std::string filtering_criterion{"intersection"};
 
   // noisify_contacts
   double genextreme_mu{0};
