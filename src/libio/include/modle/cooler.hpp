@@ -50,6 +50,21 @@ class Cooler {
     }
   };
 
+ private:
+  struct InternalBuffers {
+    explicit InternalBuffers(size_t buff_size = 1024 * 1024 / sizeof(int64_t));  // 1 MB
+    std::vector<int64_t> bin_pos_buff;
+    std::vector<int32_t> bin_chrom_buff;
+    std::vector<int64_t> pixel_b1_idx_buff;
+    std::vector<int64_t> pixel_b2_idx_buff;
+    std::vector<int64_t> pixel_count_buff;
+    std::vector<int64_t> idx_bin1_offset_buff;
+    std::vector<int64_t> idx_chrom_offset_buff;
+
+    [[nodiscard]] size_t capacity() const;
+  };
+
+ public:
   static constexpr uint_fast8_t DEFAULT_COMPRESSION_LEVEL = 6;
   static constexpr size_t DEFAULT_HDF5_BUFFER_SIZE = 1024 * 1024ULL;      // 1MB
   static constexpr size_t DEFAULT_HDF5_CHUNK_SIZE = 1024 * 1024ULL;       // 1MB
@@ -195,6 +210,8 @@ class Cooler {
   std::unique_ptr<H5::DSetAccPropList> _aprop_int32{nullptr};
   std::unique_ptr<H5::DSetAccPropList> _aprop_int64{nullptr};
   std::unique_ptr<H5::DSetAccPropList> _aprop_float64{nullptr};
+
+  std::unique_ptr<InternalBuffers> _buff{nullptr};
 
   std::vector<int64_t> _idx_chrom_offset{};
   std::vector<int64_t> _idx_bin1_offset{};

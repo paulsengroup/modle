@@ -117,7 +117,6 @@ void Simulation::run() {
     if (!chrom.ok()) {
       fmt::print(stderr, "SKIPPING '{}'...\n", chrom.name());
       if (this->write_contacts_for_ko_chroms) {
-        chrom.allocate_contacts(this->bin_size, this->diagonal_width);
         std::scoped_lock l(barrier_mutex, progress_queue_mutex);
         progress_queue.emplace_back(&chrom, ncells);
         barriers.emplace(&chrom, nullptr);

@@ -152,23 +152,10 @@ void Cooler::write_or_append_cmatrices_to_file(absl::Span<ContactMatrix<I1> *con
   auto t0 = absl::Now();
 
   // Declare one buffer for each dataset
-  constexpr size_t BUFF_SIZE = 1024 * 1024 / sizeof(int64_t);  // 1 MB
-  std::vector<int64_t> bin_pos_buff;
-  std::vector<int32_t> bin_chrom_buff;
-  std::vector<int64_t> pixel_b1_idx_buff;
-  std::vector<int64_t> pixel_b2_idx_buff;
-  std::vector<int64_t> pixel_count_buff;
-  std::vector<int64_t> idx_bin1_offset_buff;
-  std::vector<int64_t> idx_chrom_offset_buff;
-
-  // Reserve memory for max buff size
-  bin_pos_buff.reserve(BUFF_SIZE);
-  bin_chrom_buff.reserve(BUFF_SIZE);
-  pixel_b1_idx_buff.reserve(BUFF_SIZE);
-  pixel_b2_idx_buff.reserve(BUFF_SIZE);
-  pixel_count_buff.reserve(BUFF_SIZE);
-  idx_bin1_offset_buff.reserve(BUFF_SIZE);
-  idx_chrom_offset_buff.reserve(cmatrices.size() + 1);
+  if (!this->_buff) {
+    this->_buff = std::make_unique<InternalBuffers>();
+  }
+  auto &b = this->_buff;
 
   // Declare aliases to file offsets for HDF5 datasets
   auto &chrom_name_h5_foffset = this->_dataset_file_offsets[chrom_NAME];
@@ -201,15 +188,15 @@ void Cooler::write_or_append_cmatrices_to_file(absl::Span<ContactMatrix<I1> *con
     auto write_pixels_to_file =
         [&]() {  // Lambda used to write pixel data to file. Mostly useful to reduce code bloat
           pixel_b1_id_h5_foffset =
-              hdf5::write_numbers(pixel_b1_idx_buff, d[PXL_B1], pixel_b1_id_h5_foffset);
+              hdf5::write_numbers(b->pixel_b1_idx_buff, d[PXL_B1], pixel_b1_id_h5_foffset);
           pixel_b2_id_h5_foffset =
-              hdf5::write_numbers(pixel_b2_idx_buff, d[PXL_B2], pixel_b2_id_h5_foffset);
+              hdf5::write_numbers(b->pixel_b2_idx_buff, d[PXL_B2], pixel_b2_id_h5_foffset);
           pixel_count_h5_foffset =
-              hdf5::write_numbers(pixel_count_buff, d[PXL_COUNT], pixel_count_h5_foffset);
+              hdf5::write_numbers(b->pixel_count_buff, d[PXL_COUNT], pixel_count_h5_foffset);
 
-          pixel_b1_idx_buff.clear();
-          pixel_b2_idx_buff.clear();
-          pixel_count_buff.clear();
+          b->pixel_b1_idx_buff.clear();
+          b->pixel_b2_idx_buff.clear();
+          b->pixel_count_buff.clear();
         };
 
     for (auto chrom_idx = 0UL; chrom_offset + chrom_idx < static_cast<size_t>(this->_nchroms);
@@ -240,12 +227,12 @@ void Cooler::write_or_append_cmatrices_to_file(absl::Span<ContactMatrix<I1> *con
       chrom_length_h5_foffset =
           hdf5::write_number(chrom_total_len, d[chrom_LEN], chrom_length_h5_foffset);
       // Add idx of the first bin belonging to the chromosome that is being processed
-      idx_chrom_offset_buff.emplace_back(this->_nbins);
+      b->idx_chrom_offset_buff.emplace_back(this->_nbins);
 
       // Write all fixed-size bins for the current chromosome. Maybe in the future we can switch to
       // use variable-size bins
       this->_nbins = this->write_bins(chrom_offset + chrom_idx, chrom_total_len, this->_bin_size,
-                                      bin_chrom_buff, bin_pos_buff, this->_nbins);
+                                      b->bin_chrom_buff, b->bin_pos_buff, this->_nbins);
       // Update file offsets of bin_* datasets
       bin_chrom_name_h5_foffset = this->_nbins;
       bin_start_h5_foffset = this->_nbins;
@@ -258,29 +245,29 @@ void Cooler::write_or_append_cmatrices_to_file(absl::Span<ContactMatrix<I1> *con
       // will be 2 Mbp and chrom_end will be 8 Mbp. This for loop write the index for all the bins
       // corresponding to the genomic region 0-2 Mbp. A more elegant solution would be to use
       // variable bin-size and write a single 2 Mbp bin.
-      idx_bin1_offset_buff.resize(idx_bin1_offset_buff.size() + (chrom_start / this->_bin_size),
-                                  this->_nnz);
+      b->idx_bin1_offset_buff.resize(
+          b->idx_bin1_offset_buff.size() + (chrom_start / this->_bin_size), this->_nnz);
       idx_bin1_offset_h5_foffset =
-          hdf5::write_numbers(idx_bin1_offset_buff, d[IDX_BIN1], idx_bin1_offset_h5_foffset);
-      idx_bin1_offset_buff.clear();
+          hdf5::write_numbers(b->idx_bin1_offset_buff, d[IDX_BIN1], idx_bin1_offset_h5_foffset);
+      b->idx_bin1_offset_buff.clear();
 
       if (!cmatrix || cmatrix->ncols() == 0) {
         DISABLE_WARNING_PUSH
         DISABLE_WARNING_SIGN_CONVERSION
-        idx_bin1_offset_buff.resize(
+        b->idx_bin1_offset_buff.resize(
             (chrom_total_len / this->_bin_size) + (chrom_total_len % this->_bin_size != 0),
             this->_nnz);
         DISABLE_WARNING_POP
         idx_bin1_offset_h5_foffset =
-            hdf5::write_numbers(idx_bin1_offset_buff, d[IDX_BIN1], idx_bin1_offset_h5_foffset);
-        idx_bin1_offset_buff.clear();
+            hdf5::write_numbers(b->idx_bin1_offset_buff, d[IDX_BIN1], idx_bin1_offset_h5_foffset);
+        b->idx_bin1_offset_buff.clear();
       }
 
       pxl_offset += chrom_start / this->_bin_size;
       if (cmatrix) {  // when cmatrix == nullptr we only write chrom/bins/indexes (no pixels)
         for (auto i = 0UL; i < cmatrix->ncols(); ++i) {  // Iterate over columns in the cmatrix
           // Write first pixel that refers to a given bin1 to the index
-          idx_bin1_offset_buff.push_back(this->_nnz);
+          b->idx_bin1_offset_buff.push_back(this->_nnz);
 
           // Iterate over rows of the cmatrix. The first condition serves the purpose to avoid
           // reading data from regions that are full of zeros by design (because cmatrix only stores
@@ -295,25 +282,26 @@ void Cooler::write_or_append_cmatrices_to_file(absl::Span<ContactMatrix<I1> *con
                 utils::throw_with_trace(std::runtime_error(fmt::format(
                     FMT_STRING("Cooler::write_or_append_cmatrix_to_file(): b1 > b2: b1={}; "
                                "b2={}; offset={}; m={}\n"),
-                    pixel_b1_idx_buff.back(), pixel_b2_idx_buff.back(), pxl_offset, m)));
+                    b->pixel_b1_idx_buff.back(), b->pixel_b2_idx_buff.back(), pxl_offset, m)));
               }
 #endif
-              pixel_b1_idx_buff.push_back(static_cast<int64_t>(pxl_offset + i));
-              pixel_b2_idx_buff.push_back(static_cast<int64_t>(pxl_offset + j));
-              pixel_count_buff.push_back(m);
+              b->pixel_b1_idx_buff.push_back(static_cast<int64_t>(pxl_offset + i));
+              b->pixel_b2_idx_buff.push_back(static_cast<int64_t>(pxl_offset + j));
+              b->pixel_count_buff.push_back(m);
               ++this->_nnz;
 
-              if (pixel_b1_idx_buff.size() ==
-                  BUFF_SIZE) {  // Write pixels to disk when buffer is full
+              if (b->pixel_b1_idx_buff.size() ==
+                  b->capacity()) {  // Write pixels to disk when buffer is full
                 write_pixels_to_file();
               }
             }
           }
 
-          if (idx_bin1_offset_buff.size() == BUFF_SIZE) {  // Write bin idx when buffer is full
-            idx_bin1_offset_h5_foffset =
-                hdf5::write_numbers(idx_bin1_offset_buff, d[IDX_BIN1], idx_bin1_offset_h5_foffset);
-            idx_bin1_offset_buff.clear();
+          if (b->idx_bin1_offset_buff.size() ==
+              b->capacity()) {  // Write bin idx when buffer is full
+            idx_bin1_offset_h5_foffset = hdf5::write_numbers(b->idx_bin1_offset_buff, d[IDX_BIN1],
+                                                             idx_bin1_offset_h5_foffset);
+            b->idx_bin1_offset_buff.clear();
           }
         }
       }
@@ -321,14 +309,14 @@ void Cooler::write_or_append_cmatrices_to_file(absl::Span<ContactMatrix<I1> *con
       // In case we are simulating a subset of a chromosome (i.e. end - start != chrom size), write
       // the index for all the bins corresponding to genomic coordinates after the end position. See
       // previous comment for an example
-      idx_bin1_offset_buff.resize(
-          idx_bin1_offset_buff.size() +
+      b->idx_bin1_offset_buff.resize(
+          b->idx_bin1_offset_buff.size() +
               ((static_cast<size_t>(chrom_total_len) - chrom_end) / this->_bin_size) +
               ((static_cast<size_t>(chrom_total_len) - chrom_end) % this->_bin_size != 0),
           this->_nnz);
       idx_bin1_offset_h5_foffset =
-          hdf5::write_numbers(idx_bin1_offset_buff, d[IDX_BIN1], idx_bin1_offset_h5_foffset);
-      idx_bin1_offset_buff.clear();
+          hdf5::write_numbers(b->idx_bin1_offset_buff, d[IDX_BIN1], idx_bin1_offset_h5_foffset);
+      b->idx_bin1_offset_buff.clear();
 
       pxl_offset = this->_nbins;
       if (!quiet) {
@@ -337,16 +325,16 @@ void Cooler::write_or_append_cmatrices_to_file(absl::Span<ContactMatrix<I1> *con
     }
 
     // Write all non-empty buffers to disk
-    if (!pixel_b1_idx_buff.empty()) {
+    if (!b->pixel_b1_idx_buff.empty()) {
       write_pixels_to_file();
     }
 
     // Writing the chrom_index only at the end should be ok, given that most of the time we are
     // processing 20-100 chrom
     idx_chrom_offset_h5_foffset =
-        hdf5::write_numbers(idx_chrom_offset_buff, d[IDX_CHR], idx_chrom_offset_h5_foffset);
+        hdf5::write_numbers(b->idx_chrom_offset_buff, d[IDX_CHR], idx_chrom_offset_h5_foffset);
     idx_bin1_offset_h5_foffset =
-        hdf5::write_numbers(idx_bin1_offset_buff, d[IDX_BIN1], idx_bin1_offset_h5_foffset);
+        hdf5::write_numbers(b->idx_bin1_offset_buff, d[IDX_BIN1], idx_bin1_offset_h5_foffset);
 
     auto &f = *this->_fp;
     hdf5::write_or_create_attribute(f, "nchroms", this->_nchroms);
