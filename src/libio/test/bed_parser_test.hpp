@@ -12,6 +12,7 @@
 #include <string_view>       // for operator!=, basic_string_view, string_view, operator<
 #include <vector>            // for vector
 
+#include "absl/strings/match.h"
 #include "modle/bed.hpp"  // for BED, Parser, BED::BED3, bed
 
 namespace modle::test::bed {
@@ -23,8 +24,8 @@ inline void compare_bed_records_with_file(std::vector<BED> records, const std::s
   lines.reserve(records.size());
   std::string buff;
   while (std::getline(fp, buff)) {
-    if (buff.front() == '#' || buff.find("track") != std::string::npos ||
-        buff.find("browser") != std::string::npos) {
+    if (buff.front() == '#' || absl::StrContains(buff, "track") ||
+        absl::StrContains(buff, "browser")) {
       continue;
     }
     lines.push_back(buff);
@@ -58,7 +59,6 @@ inline void compare_bed_records_with_file(std::vector<BED> records, const std::s
 
 TEST_CASE("BED Parser simple", "[parsers][BED][short]") {
   const std::string bed_file = "test/data/unit_tests/sample.bed6";
-  REQUIRE(std::filesystem::exists(bed_file));
   auto p = bed::Parser(bed_file);
   auto records = p.parse_all();
   CHECK(records.size() == 9);
@@ -72,7 +72,6 @@ TEST_CASE("BED Parser simple", "[parsers][BED][short]") {
 
 TEST_CASE("BED Parser simple: BED6 -> BED3", "[parsers][BED][short]") {
   const std::string bed_file = "test/data/unit_tests/sample.bed6";
-  REQUIRE(std::filesystem::exists(bed_file));
   auto p = bed::Parser(bed_file, BED::BED3);
   auto records = p.parse_all();
   std::sort(records.begin(), records.end());
