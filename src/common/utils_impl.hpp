@@ -102,7 +102,7 @@ void parse_vect_of_numbers_or_throw(const std::vector<std::string_view> &toks, s
   std::vector<std::string_view> ns = absl::StrSplit(toks[idx], ',');
   if (ns.size() != expected_size) {
     throw std::runtime_error(
-        fmt::format("Expected %lu fields, got %lu.", expected_size, ns.size()));
+        fmt::format(FMT_STRING("Expected {} fields, got {}."), expected_size, ns.size()));
   }
   field = std::vector<N>(ns.size());
   for (size_t i = 0; i < expected_size; ++i) {
