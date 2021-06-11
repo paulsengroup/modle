@@ -85,18 +85,6 @@ class Cli {
             "Write contacts for all chromosomes, even those where loop extrusion was not simulated. In the latter case ModLE will only write to the chrom, bins and indexes datasets.")
             ->capture_default_str();
 
-    io->add_flag(
-            "--write-raw-contacts",
-            this->_config.write_raw_contacts,
-            "Output raw contact frequencies to a .cool file.")
-            ->capture_default_str();
-
-    io->add_flag(
-            "--write-contacts-w-noise",
-            this->_config.write_contacts_with_noise,
-            "Output contact frequencies to a .cool file after adding random noise. When this flag is true, contact frequencies with noise are stored in a .cool file suffixed with \"_w_noise\"")
-            ->capture_default_str();
-
     gen->add_option(
             "-b,--bin-size",
             this->_config.bin_size,
@@ -200,12 +188,6 @@ class Cli {
             ->capture_default_str();
 
     gen->add_flag(
-            "--allow-lef-lifetime-extension,!--disable-lef-lifetime-extension",
-            this->_config.allow_lef_lifetime_extension,
-            "Toggle on and off the ability to extend LEF lifetimes in case of hard stalls.")
-            ->capture_default_str();
-
-    gen->add_flag(
             "--skip-burn-in",
             this->_config.skip_burnin,
             "Skip burn-in phase and start counting contacts from the first extrusion round.")
@@ -231,20 +213,6 @@ class Cli {
             this->_config.lef_fraction_contact_sampling,
             "Fraction of LEFs to use when sampling interactions at every iteration.")
             ->check(CLI::Range(0.0, 1.0))
-            ->capture_default_str();
-
-    rand->add_option(
-            "--contact-noise-mean",
-            this->_config.random_noise_mean,
-            "Mean parameter (in base pairs) of the normal distribution that will be used to introduce noise in the contact matrix when --write-contacts-w-noise is specified.")
-            ->check(CLI::PositiveNumber)
-            ->capture_default_str();
-
-    rand->add_option(
-            "--contact-noise-std",
-            this->_config.random_noise_std,
-            "Standard deviation parameter (in base pairs) of the normal distribution that will be used to introduce noise in the contact matrix when --write-contacts-w-noise is specified.")
-            ->check(CLI::PositiveNumber)
             ->capture_default_str();
 
     extr_barr_mandatory->add_option(
@@ -301,13 +269,10 @@ class Cli {
     auto base_out = c.path_to_output_file;
     std::string collisions;
     base_out.replace_extension();
-    c.path_to_output_file_w_noise = base_out;
     c.path_to_log_file = base_out;
-    c.path_to_output_file_w_noise +=
-        absl::StrCat("_w_noise", c.path_to_output_file.extension().string());
     c.path_to_log_file += ".log";
 
-    if (c.force) {
+    if (c.force || c.skip_output) {
       return "";
     }
 
@@ -342,17 +307,10 @@ class Cli {
       absl::StrAppend(&collisions, check_for_path_collisions(c.path_to_log_file));
     }
 
-    if (c.write_raw_contacts) {
-      if (std::filesystem::exists(c.path_to_output_file)) {
-        absl::StrAppend(&collisions, check_for_path_collisions(c.path_to_output_file));
-      }
+    if (std::filesystem::exists(c.path_to_output_file)) {
+      absl::StrAppend(&collisions, check_for_path_collisions(c.path_to_output_file));
     }
 
-    if (c.write_contacts_with_noise) {
-      if (std::filesystem::exists(c.path_to_output_file_w_noise)) {
-        absl::StrAppend(&collisions, check_for_path_collisions(c.path_to_output_file_w_noise));
-      }
-    }
     return collisions;
   }
 

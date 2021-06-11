@@ -38,12 +38,9 @@ struct Config {
   std::filesystem::path path_to_chrom_subranges;
   std::filesystem::path path_to_output_file;
   std::filesystem::path path_to_log_file;
-  std::filesystem::path path_to_output_file_w_noise{};
   std::filesystem::path path_to_extr_barriers;
   bool force{false};
   bool write_contacts_for_ko_chroms{false};
-  bool write_raw_contacts{true};
-  bool write_contacts_with_noise{false};
 
   // General settings
   bp_t bin_size{1'000};                        // NOLINT(readability-magic-numbers, cppcoreguidelines-avoid-magic-numbers)
@@ -60,10 +57,8 @@ struct Config {
   bp_t average_lef_lifetime{600'000};          // NOLINT(readability-magic-numbers, cppcoreguidelines-avoid-magic-numbers)
   double hard_stall_multiplier{5.0};           // NOLINT(readability-magic-numbers, cppcoreguidelines-avoid-magic-numbers)
   double soft_stall_multiplier{0.6};           // NOLINT(readability-magic-numbers, cppcoreguidelines-avoid-magic-numbers)
-  bool allow_lef_lifetime_extension{true};
   bool skip_burnin{false};
   uint64_t seed{0};
-  bool with_gpu{false};
 
   // Misc probabilities
   double probability_of_extrusion_unit_bypass{0.25};     // NOLINT(readability-magic-numbers, cppcoreguidelines-avoid-magic-numbers)
@@ -77,8 +72,6 @@ struct Config {
   // Misc
   bool exclude_chrom_wo_extr_barriers{true};
   bool skip_output{false};
-  double random_noise_mean{0};
-  bp_t random_noise_std{7'500 /* 7.5 Kbp */};            // NOLINT(readability-magic-numbers, cppcoreguidelines-avoid-magic-numbers)
 
   int argc;
   char** argv;
