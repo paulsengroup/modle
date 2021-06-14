@@ -27,8 +27,8 @@ int main(int argc, char** argv) {
       case modle::tools::Cli::subcommand::eval:
         modle::tools::eval_subcmd(c);
         break;
-      case modle::tools::Cli::subcommand::filter__barriers:
-        modle::tools::filter_barriers(c);
+      case modle::tools::Cli::subcommand::filter_barriers:
+        modle::tools::filter_barriers_subcmd(c);
         break;
       case modle::tools::Cli::subcommand::stats:
         modle::tools::stats_subcmd(c);

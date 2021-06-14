@@ -1,8 +1,8 @@
 #pragma once
 
 #include <absl/container/flat_hash_set.h>  // for BitMask, flat_hash_set, raw_hash_set
+#include <cstdint>                        // for uint64_t
 
-#include <algorithm>   // for max
 #include <cstddef>     // IWYU pragma: keep for size_t
 #include <filesystem>  // for path, temp_directory_path
 #include <string>      // for string

@@ -3,15 +3,17 @@ add_executable(modle_tools main.cpp)
 target_sources(
   modle_tools
   PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/cli.hpp
-          ${CMAKE_CURRENT_SOURCE_DIR}/eval_impl.hpp
-          ${CMAKE_CURRENT_SOURCE_DIR}/noisify_impl.hpp
-          ${CMAKE_CURRENT_SOURCE_DIR}/tools_impl.hpp
-          ${CMAKE_CURRENT_SOURCE_DIR}/stats_impl.hpp)
+          ${CMAKE_CURRENT_SOURCE_DIR}/include/modle_tools/config.hpp
+          ${CMAKE_CURRENT_SOURCE_DIR}/eval.cpp
+          ${CMAKE_CURRENT_SOURCE_DIR}/filter_barriers.cpp
+          ${CMAKE_CURRENT_SOURCE_DIR}/noisify.cpp
+          ${CMAKE_CURRENT_SOURCE_DIR}/stats.cpp)
 
 target_link_libraries(
   modle_tools
   PRIVATE project_warnings
           project_options
+          Modle::common
           Modle::modle
           Modle::correlation
           Modle::io

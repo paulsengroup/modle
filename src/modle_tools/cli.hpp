@@ -1,29 +1,28 @@
-#pragma once
-
 #include <absl/container/btree_set.h>      // for btree_set
-#include <absl/container/flat_hash_set.h>  // for BitMask, flat_hash_set, raw_hash_set
+#include <absl/container/flat_hash_map.h>  // for flat_hash_map
+#include <absl/container/flat_hash_set.h>  // for operator!=, BitMask, flat_hash_set
 #include <absl/strings/match.h>            // for EndsWith, EndsWithIgnoreCase
 #include <absl/strings/str_cat.h>          // for StrCat
 #include <absl/strings/str_format.h>       // for StrAppendFormat
 #include <absl/strings/str_join.h>         // for StrJoin
-#include <absl/strings/strip.h>            // for StripSuffix
-#include <fmt/format.h>                    // for format, print
+#include <absl/strings/strip.h>            // for StripPrefix, StripSuffix
+#include <fmt/format.h>                    // for format, FMT_STRING, print
 #include <fmt/ostream.h>                   // for formatbuf<>::int_type
 
-#include <CLI/CLI.hpp>       // IWYU pragma: keep
-#include <algorithm>         // for max
+#include <CLI/CLI.hpp>
 #include <cassert>           // for assert
-#include <cstdint>           // for uint32_t, uint_fast8_t
-#include <cstdio>            // for stderr
+#include <cstdint>           // for uint64_t, uint32_t, uint_fast8_t
+#include <cstdio>            // for size_t, stderr
+#include <exception>         // for exception
 #include <filesystem>        // for path, exists, is_directory, operat...
 #include <initializer_list>  // for initializer_list
-#include <sstream>           // for size_t, basic_stringbuf<>::int_type
 #include <stdexcept>         // for invalid_argument, out_of_range
-#include <string>            // for string, allocator, basic_string
+#include <string>            // for string, basic_string, allocator
 #include <string_view>       // for string_view
+#include <type_traits>       // for remove_reference<>::type
 #include <vector>            // for vector, swap
 
-#include "modle/bed.hpp"           // for Parser
+#include "modle/bed.hpp"           // for BED::Dialect, Parser, bed_dialects
 #include "modle/common/utils.hpp"  // for throw_with_trace
 #include "modle/cooler.hpp"        // for Cooler, Cooler::READ_ONLY
 #include "modle_tools/config.hpp"  // for config
@@ -32,7 +31,7 @@ namespace modle::tools {
 
 class Cli {
  public:
-  enum subcommand : uint_fast8_t { eval, filter__barriers, noisify, stats, help };
+  enum subcommand : uint_fast8_t { eval, filter_barriers, noisify, stats, help };
 
  private:
   int _argc;
@@ -309,7 +308,7 @@ class Cli {
       if (this->_cli.get_subcommand("evaluate")->parsed()) {
         this->_subcommand = subcommand::eval;
       } else if (this->_cli.get_subcommand("filter-barriers")->parsed()) {
-        this->_subcommand = subcommand::filter__barriers;
+        this->_subcommand = subcommand::filter_barriers;
       } else if (this->_cli.get_subcommand("noisify")->parsed()) {
         this->_subcommand = subcommand::noisify;
       } else if (this->_cli.get_subcommand("statistics")->parsed()) {

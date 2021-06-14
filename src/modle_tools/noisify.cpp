@@ -1,22 +1,29 @@
-#pragma once
+#include <absl/time/clock.h>                      // for Now
+#include <absl/time/time.h>                       // for FormatDuration, operator-, Time
+#include <fmt/format.h>                           // for print, FMT_STRING
+#include <readerwriterqueue/readerwriterqueue.h>  // for BlockingReaderWriterQueue
 
-// IWYU pragma: private, include "modle_tools/noisify_contacts.hpp"
+#include <algorithm>    // for clamp, min, max, max_element
+#include <cassert>      // for assert
+#include <chrono>       // for milliseconds
+#include <cmath>        // for round
+#include <cstdio>       // for size_t, stderr
+#include <functional>   // for ref, hash, reference_wrapper
+#include <limits>       // for numeric_limits
+#include <stdexcept>    // for runtime_error
+#include <string>       // for basic_string
+#include <string_view>  // for hash, string_view
+#include <thread>       // for thread
+#include <type_traits>  // for add_const<>::type
+#include <utility>      // for tuple_element<>::type
+#include <vector>       // for vector
 
-#include <absl/time/clock.h>  // for Now
-#include <absl/time/time.h>   // for FormatDuration
-#include <fmt/format.h>       // for print
-#include <readerwriterqueue/readerwriterqueue.h>
-
-#include <boost/asio/post.hpp>         // IWYU pragma: keep for post
-#include <boost/asio/thread_pool.hpp>  // for thread_pool
-#include <thread>                      // for thread, this_thread::sleep_for
-
-#include "include/modle_tools/config.hpp"
-#include "modle/common/common.hpp"
-#include "modle/common/genextreme_value_distribution.hpp"
-#include "modle/contacts.hpp"
-#include "modle/cooler.hpp"
-
+#include "include/modle_tools/config.hpp"                  // for config
+#include "modle/common/genextreme_value_distribution.hpp"  // for genextreme_value_distribution
+#include "modle/common/random.hpp"                         // for PRNG
+#include "modle/contacts.hpp"                              // for ContactMatrix
+#include "modle/cooler.hpp"                                // for Cooler::Pixel, Cooler, Cooler:...
+#include "modle_tools/tools.hpp"                           // for noisify_subcmd
 namespace modle::tools {
 
 void noisify_contacts(const config& c) {
@@ -93,4 +100,7 @@ void noisify_contacts(const config& c) {
     fmt::print(stderr, FMT_STRING(" DONE in {}.\n"), absl::FormatDuration(absl::Now() - t0));
   }
 }
+
+void noisify_subcmd(const modle::tools::config& c) { modle::tools::noisify_contacts(c); }
+
 }  // namespace modle::tools
