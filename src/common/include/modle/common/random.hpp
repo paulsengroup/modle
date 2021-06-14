@@ -3,6 +3,8 @@
 #include <functional>  // for function<>::result_type
 #include <limits>      // for numeric_limits
 
+#include "modle/common/utils.hpp"
+
 #if !defined(USE_MERSENNE_TWISTER)
 #define USE_XOSHIRO
 #endif

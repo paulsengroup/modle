@@ -1,11 +1,12 @@
 #pragma once
 
-#include <absl/container/btree_set.h>      // for btree_set
 #include <absl/container/flat_hash_map.h>  // for flat_hash_map
 
 #include <cstddef>      // IWYU pragma: keep for size_t
 #include <cstdint>      // for uint64_t, uint_fast8_t
 #include <fstream>      // for ifstream
+#include <limits>       // for numeric_limits
+#include <memory>       // for unique_ptr
 #include <string>       // for string, basic_string
 #include <string_view>  // for operator""sv, basic_string_view, string_view
 #include <utility>      // IWYU pragma: keep for move
