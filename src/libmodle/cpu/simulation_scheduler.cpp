@@ -43,9 +43,9 @@ namespace modle {
 void Simulation::run() {
   if (!this->skip_output) {  // Write simulation params to file
     if (this->force) {
-      std::filesystem::remove_all(this->path_to_output_file);
+      std::filesystem::remove_all(this->path_to_output_file_cool);
     }
-    std::filesystem::create_directories(this->path_to_output_file.parent_path());
+    std::filesystem::create_directories(this->path_to_output_file_cool.parent_path());
     std::ofstream log_file(this->path_to_log_file);
     if (log_file) {
       fmt::print(log_file, FMT_STRING("{}\n{}\n"), Config::to_string(),

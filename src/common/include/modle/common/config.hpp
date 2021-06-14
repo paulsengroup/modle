@@ -36,11 +36,14 @@ struct Config {
   // IO
   std::filesystem::path path_to_chrom_sizes;
   std::filesystem::path path_to_chrom_subranges;
-  std::filesystem::path path_to_output_file;
+  std::filesystem::path path_to_output_prefix;
+  std::filesystem::path path_to_output_file_cool{};
+  std::filesystem::path path_to_output_file_bedpe{};
   std::filesystem::path path_to_log_file;
   std::filesystem::path path_to_extr_barriers;
   bool force{false};
   bool write_contacts_for_ko_chroms{false};
+  std::vector<std::filesystem::path> path_to_feature_bed_files{};
 
   // General settings
   bp_t bin_size{1'000};                        // NOLINT(readability-magic-numbers, cppcoreguidelines-avoid-magic-numbers)
@@ -57,6 +60,7 @@ struct Config {
   bp_t average_lef_lifetime{600'000};          // NOLINT(readability-magic-numbers, cppcoreguidelines-avoid-magic-numbers)
   double hard_stall_multiplier{5.0};           // NOLINT(readability-magic-numbers, cppcoreguidelines-avoid-magic-numbers)
   double soft_stall_multiplier{0.6};           // NOLINT(readability-magic-numbers, cppcoreguidelines-avoid-magic-numbers)
+  bp_t deletion_size{10'000};                  // NOLINT(readability-magic-numbers, cppcoreguidelines-avoid-magic-numbers)
   bool skip_burnin{false};
   uint64_t seed{0};
 
@@ -90,7 +94,7 @@ struct Config {
     std::vector<cli_tokens>{
      {"Path to chrom. sizes", fmt::format(FMT_STRING("{}"), std::filesystem::weakly_canonical(this->path_to_chrom_sizes))},
      {"Path to extr. barriers", fmt::format(FMT_STRING("{}"), std::filesystem::weakly_canonical(this->path_to_extr_barriers))},
-     {"Output directory", fmt::format(FMT_STRING("{}"), std::filesystem::weakly_canonical(this->path_to_output_file))},
+     {"Output prefix", fmt::format(FMT_STRING("{}"), std::filesystem::weakly_canonical(this->path_to_output_prefix))},
      {"Skip output", this->skip_output ? "Yes" : "No"},
      {"Force overwrite", this->force ? "Yes" : "No"}}},
     {"General settings"sv,

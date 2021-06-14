@@ -80,11 +80,11 @@ void Simulation::write_contacts_to_disk(std::deque<std::pair<Chromosome*, size_t
           ->name()
           .size();
 
-  auto c =
-      this->path_to_output_file.empty()
-          ? nullptr
-          : std::make_unique<cooler::Cooler>(this->path_to_output_file, cooler::Cooler::WRITE_ONLY,
-                                             this->bin_size, max_str_length);
+  auto c = this->path_to_output_file_cool.empty()
+               ? nullptr
+               : std::make_unique<cooler::Cooler>(this->path_to_output_file_cool,
+                                                  cooler::Cooler::WRITE_ONLY, this->bin_size,
+                                                  max_str_length);
 
   auto sleep_us = 100;
   while (true) {  // Structuring the loop in this way allows us to sleep without holding the mutex

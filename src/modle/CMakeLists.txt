@@ -1,4 +1,6 @@
-add_executable(modle main.cpp)
+add_executable(modle)
+
+target_sources(modle PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/cli.cpp ${CMAKE_CURRENT_SOURCE_DIR}/main.cpp)
 
 target_link_libraries(
   modle
