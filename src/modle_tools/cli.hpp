@@ -43,7 +43,7 @@ class Cli {
   CLI::App _cli{};
   subcommand _subcommand{subcommand::help};
 
-  absl::btree_set<std::string> _filtering_criteria{"intersection", "union"};
+  absl::btree_set<std::string> _filtering_criteria{"intersection", "pairwise-intersection"};
 
   inline void make_eval_subcommand() {
     // clang-format off

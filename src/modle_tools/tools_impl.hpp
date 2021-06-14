@@ -358,7 +358,7 @@ void eval_subcmd(const modle::tools::config& c) {
   }
 }
 
-void filter_barriers(const modle::tools::config& c) {
+void filter_barriers_intersection(const modle::tools::config& c) {
   using IITree_t = IITree<uint32_t, uint32_t>;
   assert(!c.path_to_bed_files_for_filtering.empty());  // NOLINT
   absl::flat_hash_map<std::string, std::vector<IITree_t>> intervals(
@@ -401,6 +401,56 @@ void filter_barriers(const modle::tools::config& c) {
         fmt::print(stdout, "{}\n", record.to_string());
       }
     }
+  }
+}
+
+// TODO: Find a better name than pairwise-intersection
+void filter_barriers_pairwise_intersection(const modle::tools::config& c) {
+  using IITree_t = IITree<uint32_t, uint32_t>;
+  assert(!c.path_to_bed_files_for_filtering.empty());  // NOLINT
+  absl::flat_hash_map<std::string, std::vector<IITree_t>> intervals(
+      c.path_to_bed_files_for_filtering.size());
+
+  for (auto i = 0UL; i < c.path_to_bed_files_for_filtering.size(); ++i) {
+    for (const auto& record : bed::Parser(c.path_to_bed_files_for_filtering[i].string(),
+                                          c.bed_dialect, c.strict_bed_validation)
+                                  .parse_all(false)) {
+      auto [node, new_insertion] = intervals.try_emplace(record.chrom, std::vector<IITree_t>{});
+      if (new_insertion) {
+        node->second.resize(c.path_to_bed_files_for_filtering.size());
+      }
+      node->second[i].add(record.chrom_start, record.chrom_end, uint8_t(0));
+    }
+
+    for (auto& [_, trees] : intervals) {
+      trees[i].index();
+    }
+  }
+
+  std::vector<size_t> buff;
+  for (const auto& record :
+       bed::Parser(c.path_to_extrusion_barrier_motifs_bed, c.bed_dialect, c.strict_bed_validation)
+           .parse_all(false)) {
+    if (auto node = intervals.find(record.chrom); node != intervals.end()) {
+      for (const auto& tree : node->second) {
+        if (tree.size() != 0) {
+          tree.overlap(record.chrom_start, record.chrom_end, buff);
+          if (!buff.empty()) {
+            fmt::print(stdout, "{}\n", record.to_string());
+          }
+        }
+      }
+    }
+  }
+}
+
+void filter_barriers(const modle::tools::config& c) {
+  if (absl::AsciiStrToLower(c.filtering_criterion) == "intersection") {
+    filter_barriers_intersection(c);
+  } else if (absl::AsciiStrToLower(c.filtering_criterion) == "pairwise-intersection") {
+    filter_barriers_pairwise_intersection(c);
+  } else {
+    assert(false);
   }
 }
 
