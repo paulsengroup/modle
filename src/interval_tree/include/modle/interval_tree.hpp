@@ -65,38 +65,38 @@ class IITree {
   class Interval;
 
  public:
-  IITree() = default;
+  inline IITree() = default;
 
   using iterator = typename std::vector<Interval>::iterator;
   using const_iterator = typename std::vector<Interval>::const_iterator;
 
-  void insert(I s, I e, const T &d);
-  void insert(I s, I e, T &&d);
+  inline void insert(I s, I e, const T &d);
+  inline void insert(I s, I e, T &&d);
 
-  [[nodiscard]] bool contains(I start, I end) noexcept;
-  bool find_overlaps(I start, I end, std::vector<size_t> &out);
+  [[nodiscard]] inline bool overlaps_with(I start, I end) noexcept;
+  inline bool find_overlaps(I start, I end, std::vector<size_t> &out);
 
-  [[nodiscard]] constexpr size_t capacity() const noexcept;
-  [[nodiscard]] constexpr bool empty() const noexcept;
-  [[nodiscard]] constexpr size_t size() const noexcept;
+  [[nodiscard]] inline constexpr size_t capacity() const noexcept;
+  [[nodiscard]] inline constexpr bool empty() const noexcept;
+  [[nodiscard]] inline constexpr size_t size() const noexcept;
 
-  [[nodiscard]] I overlap_start(size_t i) const;
-  [[nodiscard]] I overlap_end(size_t i) const;
-  [[nodiscard]] T overlap_data(size_t i) const;
+  [[nodiscard]] inline I overlap_start(size_t i) const;
+  [[nodiscard]] inline I overlap_end(size_t i) const;
+  [[nodiscard]] inline T overlap_data(size_t i) const;
 
-  [[nodiscard]] iterator begin();
-  [[nodiscard]] iterator end();
-  [[nodiscard]] const iterator begin() const;
-  [[nodiscard]] const iterator end() const;
-  [[nodiscard]] const_iterator cbegin() const;
-  [[nodiscard]] const_iterator cend() const;
+  [[nodiscard]] inline iterator begin();
+  [[nodiscard]] inline iterator end();
+  [[nodiscard]] inline const iterator begin() const;
+  [[nodiscard]] inline const iterator end() const;
+  [[nodiscard]] inline const_iterator cbegin() const;
+  [[nodiscard]] inline const_iterator cend() const;
 
-  void reserve(size_t new_capacity);
+  inline void reserve(size_t new_capacity);
 
  private:
   struct StackCell {
-    StackCell() = default;
-    StackCell(int64_t _level, size_t _node_idx, bool _left_child_alread_processed);
+    inline StackCell() = default;
+    inline StackCell(int64_t _level, size_t _node_idx, bool _left_child_alread_processed);
 
     int64_t level;
     size_t node_idx;
@@ -107,14 +107,14 @@ class IITree {
     friend class IITree<I, T>;
 
    public:
-    Interval() = delete;
-    Interval(I start_, I end_, const T &data_);
-    Interval(I start_, I end_, T &&data_);
-    [[nodiscard]] constexpr bool operator<(const Interval &other) const noexcept;
+    inline Interval() = delete;
+    inline Interval(I start_, I end_, const T &data_);
+    inline Interval(I start_, I end_, T &&data_);
+    [[nodiscard]] inline constexpr bool operator<(const Interval &other) const noexcept;
 
-    [[nodiscard]] constexpr I start() const noexcept;
-    [[nodiscard]] constexpr I end() const noexcept;
-    [[nodiscard]] constexpr const T *const data() const noexcept;
+    [[nodiscard]] inline constexpr I start() const noexcept;
+    [[nodiscard]] inline constexpr I end() const noexcept;
+    [[nodiscard]] inline constexpr const T *const data() const noexcept;
 
    private:
     I _start;
@@ -128,7 +128,7 @@ class IITree {
   std::array<StackCell, 64> _stack{};  // NOLINT
   bool _indexed{false};
 
-  void make_BST();
+  inline void make_BST();
 };
 }  // namespace modle
 

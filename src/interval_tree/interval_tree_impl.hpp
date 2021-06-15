@@ -177,7 +177,7 @@ bool IITree<I, T>::find_overlaps(const I start, const I end, std::vector<size_t>
 }
 
 template <typename I, typename T>
-bool IITree<I, T>::contains(const I start, const I end) noexcept {
+bool IITree<I, T>::overlaps_with(const I start, const I end) noexcept {
   if (this->_max_level < 0) {
     return false;
   }
