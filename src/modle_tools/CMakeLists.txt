@@ -41,12 +41,7 @@ if(ENABLE_PCH)
     <vector>
     <absl/container/flat_hash_set.h>
     <absl/types/span.h>
-    <fmt/format.h>
-    [["modle_tools/config.hpp"]]
-    [["modle_tools/eval.hpp"]]
-    [["modle_tools/noisify.hpp"]]
-    [["modle_tools/stats.hpp"]]
-    [["modle_tools/tools.hpp"]])
+    <fmt/format.h>)
 endif()
 
 install(

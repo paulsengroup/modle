@@ -22,7 +22,7 @@ DISABLE_WARNING_POP
 namespace modle::tools {
 
 void filter_barriers_intersection(const modle::tools::config& c) {
-  using IITree_t = IITree<uint64_t, uint64_t>;
+  using IITree_t = IITree<uint64_t, uint8_t>;
   assert(!c.path_to_bed_files_for_filtering.empty());  // NOLINT
   absl::flat_hash_map<std::string, std::vector<IITree_t>> intervals(
       c.path_to_bed_files_for_filtering.size());
