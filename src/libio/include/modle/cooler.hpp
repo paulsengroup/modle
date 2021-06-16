@@ -77,18 +77,6 @@ class Cooler {
                   uint_fast8_t compression_lvl = DEFAULT_COMPRESSION_LEVEL,
                   size_t chunk_size = DEFAULT_HDF5_CHUNK_SIZE,
                   size_t cache_size = DEFAULT_HDF5_CACHE_SIZE);
-  explicit Cooler(const std::string &path_to_file, IO_MODE mode = READ_ONLY, size_t bin_size = 0,
-                  size_t max_str_length = 0, std::string_view assembly_name = "",
-                  Flavor flavor = AUTO, bool validate = true,
-                  uint_fast8_t compression_lvl = DEFAULT_COMPRESSION_LEVEL,
-                  size_t chunk_size = DEFAULT_HDF5_CHUNK_SIZE,
-                  size_t cache_size = DEFAULT_HDF5_CACHE_SIZE);
-  explicit Cooler(std::string_view path_to_file, IO_MODE mode = READ_ONLY, size_t bin_size = 0,
-                  size_t max_str_length = 0, std::string_view assembly_name = "",
-                  Flavor flavor = AUTO, bool validate = true,
-                  uint_fast8_t compression_lvl = DEFAULT_COMPRESSION_LEVEL,
-                  size_t chunk_size = DEFAULT_HDF5_CHUNK_SIZE,
-                  size_t cache_size = DEFAULT_HDF5_CACHE_SIZE);
 
   ~Cooler();
 

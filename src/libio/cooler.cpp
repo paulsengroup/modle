@@ -108,18 +108,6 @@ Cooler::Cooler(std::filesystem::path path_to_file, IO_MODE mode, size_t bin_size
   }
 }
 
-Cooler::Cooler(const std::string &path_to_file, IO_MODE mode, size_t bin_size,
-               size_t max_str_length, std::string_view assembly_name, Flavor flavor, bool validate,
-               uint_fast8_t compression_lvl, size_t chunk_size, size_t cache_size)
-    : Cooler::Cooler(std::filesystem::path(path_to_file), mode, bin_size, max_str_length,
-                     assembly_name, flavor, validate, compression_lvl, chunk_size, cache_size) {}
-
-Cooler::Cooler(std::string_view path_to_file, IO_MODE mode, size_t bin_size, size_t max_str_length,
-               std::string_view assembly_name, Flavor flavor, bool validate,
-               uint_fast8_t compression_lvl, size_t chunk_size, size_t cache_size)
-    : Cooler::Cooler(std::filesystem::path(path_to_file), mode, bin_size, max_str_length,
-                     assembly_name, flavor, validate, compression_lvl, chunk_size, cache_size) {}
-
 Cooler::~Cooler() {
   try {
     if (this->_mode == WRITE_ONLY && this->_nchroms != 0 && this->_nbins != 0) {
