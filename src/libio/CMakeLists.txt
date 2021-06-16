@@ -16,10 +16,13 @@ target_include_directories(libio PUBLIC include/)
 
 target_link_libraries(
   libio
-  PRIVATE project_warnings project_options
+  PRIVATE project_warnings
+          project_options
+          Modle::common
+          CONAN_PKG::xxhash
   PUBLIC libBigWig::libBigWig
          Modle::cmatrix
-         Modle::common
+         Modle::interval_tree
          CONAN_PKG::abseil
          CONAN_PKG::boost
          CONAN_PKG::fmt

@@ -1,18 +1,93 @@
 #pragma once
 
+#include <absl/container/btree_map.h>      // for btree_map
 #include <absl/container/flat_hash_map.h>  // for flat_hash_map
+#include <absl/types/span.h>               // for Span
+#include <xxh3.h>                          // for XXH3_state_t
 
 #include <cstddef>      // IWYU pragma: keep for size_t
 #include <cstdint>      // for uint64_t, uint_fast8_t
+#include <filesystem>   // for path
 #include <fstream>      // for ifstream
 #include <limits>       // for numeric_limits
 #include <memory>       // for unique_ptr
 #include <string>       // for string, basic_string
 #include <string_view>  // for operator""sv, basic_string_view, string_view
-#include <utility>      // IWYU pragma: keep for move
+#include <utility>      // IWYU pragma: keep for move, pair
 #include <vector>       // for vector
 
+#include "modle/interval_tree.hpp"  // for IITree
+
 namespace modle::bed {
+struct BED;
+
+template <typename K = std::string, typename I = uint32_t>
+class BED_tree {
+  static_assert(std::is_constructible_v<K, std::string>,
+                "K should be a type from which a std::string can be constructed.");
+  using IITree_t = IITree<I, BED>;
+  using BED_tree_t = absl::btree_map<K, IITree<I, BED>>;
+
+  friend IITree_t;
+
+ public:
+  inline BED_tree() = default;
+
+  using node_type = typename BED_tree_t::node_type;
+  using value_type = typename BED_tree_t::value_type;
+  using iterator = typename BED_tree_t::iterator;
+
+  inline std::pair<iterator, bool> insert(BED interval);
+  inline std::pair<iterator, bool> insert(const K& chrom_name, value_type tree);
+  inline std::pair<iterator, bool> insert(const K& chrom_name, I chrom_start, I chrom_end);
+  inline std::pair<iterator, bool> emplace(BED&& interval);
+  inline std::pair<iterator, bool> emplace(const K& chrom_name, value_type&& tree);
+
+  inline void insert(absl::Span<const BED> intervals);
+  inline void emplace(std::vector<BED>&& intervals);
+
+  inline const value_type& at(const K& chrom_name) const;
+
+  inline void index();
+  inline void index(const K& chrom_name);
+
+  [[nodiscard]] inline bool contains(const K& chrom_name) const;
+  [[nodiscard]] inline bool contains_overlap(const BED& interval) const;
+  [[nodiscard]] inline bool contains_overlap(const K& chrom_name, uint64_t chrom_start,
+                                             uint64_t chrom_end) const;
+
+  [[nodiscard]] inline size_t count_overlaps(const BED& interval) const;
+  [[nodiscard]] inline size_t count_overlaps(const K& chrom_name, uint64_t chrom_start,
+                                             uint64_t chrom_end) const;
+  [[nodiscard]] inline size_t count_overlaps(const BED& interval,
+                                             std::vector<size_t>& overlaps_idx) const;
+  [[nodiscard]] inline size_t count_overlaps(const K& chrom_name, uint64_t chrom_start,
+                                             uint64_t chrom_end,
+                                             std::vector<size_t>& overlaps_idx) const;
+
+  inline bool find_overlaps(const BED& interval, std::vector<const BED*>& overlaps) const;
+  inline bool find_overlaps(const BED& interval, std::vector<BED>& overlaps) const;
+  [[nodiscard]] inline std::vector<BED> find_overlaps(const BED& interval) const;
+
+  inline bool find_overlaps(const K& chrom_name, I chrom_start, I chrom_end,
+                            std::vector<const BED*>& overlaps) const;
+  inline bool find_overlaps(const K& chrom_name, I chrom_start, I chrom_end,
+                            std::vector<BED>& overlaps) const;
+  [[nodiscard]] inline std::vector<BED> find_overlaps(const K& chrom_name, I chrom_start,
+                                                      I chrom_end) const;
+
+  [[nodiscard]] inline bool empty() const;
+  [[nodiscard]] inline size_t size() const;
+  [[nodiscard]] inline size_t size(const K& chrom_name) const;
+
+  inline void clear();
+  inline void clear(const K& chrom_name);
+
+  // TODO: add erase methods
+
+ private:
+  BED_tree_t _trees{};
+};
 
 struct RGB {
   uint8_t r;
@@ -23,6 +98,7 @@ struct RGB {
 };
 
 struct BED {
+  friend class Parser;
   enum Dialect : uint_fast8_t {
     BED3 = 3U,
     BED4 = 4U,
@@ -110,6 +186,7 @@ struct BED {
                                               uint8_t idx);
   static void parse_strand_or_throw(const std::vector<std::string_view>& toks, uint8_t idx,
                                     char& field);
+  [[nodiscard]] static Dialect detect_standard(std::string_view line);
   [[nodiscard]] static Dialect detect_standard(const std::vector<std::string_view>& toks);
   static void validate_record(const std::vector<std::string_view>& toks, Dialect standard);
 
@@ -127,29 +204,35 @@ struct BED {
   bool parse_block_sizes(const std::vector<std::string_view>& toks);
   bool parse_block_starts(const std::vector<std::string_view>& toks);
   void parse_extra_tokens(const std::vector<std::string_view>& toks);
+
+  [[nodiscard]] uint64_t hash(XXH3_state_t* state,
+                              uint64_t seed = 17039577131913730910ULL) const;  // NOLINT
 };
 
 class Parser {
  public:
-  // For now we always skip the header
-  explicit Parser(std::string path_to_bed, BED::Dialect bed_standard = BED::Dialect::autodetect,
-                  bool enforce_std_compliance = true);
-  explicit Parser(std::string_view path_to_bed,
+  explicit Parser(std::filesystem::path path_to_bed,
                   BED::Dialect bed_standard = BED::Dialect::autodetect,
                   bool enforce_std_compliance = true);
-  [[nodiscard]] std::vector<BED> parse_n(size_t nrecords, bool throw_on_duplicates = true);
-  [[nodiscard]] std::string validate(size_t nrecords = 100,  // NOLINT
-                                     bool throw_on_duplicates = true);
-  [[nodiscard]] std::vector<BED> parse_all(bool throw_on_duplicates = true);
+
+  [[nodiscard]] BED parse_next();
+  [[nodiscard]] std::vector<BED> parse_n(size_t num_records);
+  [[nodiscard]] BED_tree<> parse_n_in_interval_tree(size_t num_records);
+  [[nodiscard]] std::string validate(size_t nrecords = 100);  // NOLINT
+  [[nodiscard]] std::vector<BED> parse_all();
+  [[nodiscard]] BED_tree<> parse_all_in_interval_tree();
   void reset();
 
  private:
-  std::string _path_to_bed;
+  std::filesystem::path _path_to_bed;
   std::ifstream _fp;
   std::string _buff{};
-  bool _skip_header;
-  BED::Dialect _standard;
+  size_t _num_records_parsed{0};
+  size_t _num_lines_read{0};
+  BED::Dialect _dialect;
   bool _enforce_std_compliance;
+
+  size_t skip_header();
 };
 
 using namespace std::literals::string_view_literals;
@@ -174,3 +257,5 @@ static const absl::flat_hash_map<BED::Dialect, std::string_view> bed_dialect_to_
     {BED::Dialect::BED9, "BED9"sv}, {BED::Dialect::BED12, "BED12"sv}};
 
 }  // namespace modle::bed
+
+#include "../../bed_impl.hpp"

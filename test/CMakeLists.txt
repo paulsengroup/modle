@@ -13,6 +13,7 @@ target_link_libraries(
           project_options
           Modle::cmatrix_test
           Modle::correlation_test
+          Modle::interval_tree_test
           Modle::io_test
           Modle::libmodle_cpu_test)
 
