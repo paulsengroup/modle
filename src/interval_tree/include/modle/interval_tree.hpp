@@ -70,28 +70,30 @@ class IITree {
   using iterator = typename std::vector<Interval>::iterator;
   using const_iterator = typename std::vector<Interval>::const_iterator;
 
-  inline void insert(I s, I e, const T &d);
-  inline void insert(I s, I e, T &&d);
+  inline void insert(I start, I end, const T &data);
+  inline void emplace(I start, I end, T &&data);
 
   [[nodiscard]] inline bool overlaps_with(I start, I end) noexcept;
-  inline bool find_overlaps(I start, I end, std::vector<size_t> &out);
+  [[nodiscard]] inline bool overlaps_with(I start, I end) const;
+  inline bool find_overlaps(I start, I end, std::vector<size_t> &overlapping_intervals);
+  inline bool find_overlaps(I start, I end, std::vector<size_t> &overlapping_intervals) const;
 
   [[nodiscard]] inline constexpr size_t capacity() const noexcept;
   [[nodiscard]] inline constexpr bool empty() const noexcept;
   [[nodiscard]] inline constexpr size_t size() const noexcept;
+  [[nodiscard]] inline constexpr bool is_BST() const noexcept;
 
-  [[nodiscard]] inline I overlap_start(size_t i) const;
-  [[nodiscard]] inline I overlap_end(size_t i) const;
-  [[nodiscard]] inline T overlap_data(size_t i) const;
+  [[nodiscard]] inline I get_overlap_start(size_t i) const;
+  [[nodiscard]] inline I get_overlap_end(size_t i) const;
+  [[nodiscard]] inline const T &get_overlap_data(size_t i) const;
 
   [[nodiscard]] inline iterator begin();
   [[nodiscard]] inline iterator end();
-  [[nodiscard]] inline const iterator begin() const;
-  [[nodiscard]] inline const iterator end() const;
   [[nodiscard]] inline const_iterator cbegin() const;
   [[nodiscard]] inline const_iterator cend() const;
 
   inline void reserve(size_t new_capacity);
+  inline void make_BST();
 
  private:
   struct StackCell {
@@ -114,7 +116,7 @@ class IITree {
 
     [[nodiscard]] inline constexpr I start() const noexcept;
     [[nodiscard]] inline constexpr I end() const noexcept;
-    [[nodiscard]] inline constexpr const T *const data() const noexcept;
+    [[nodiscard]] inline constexpr T *data() const noexcept;
 
    private:
     I _start;
@@ -128,7 +130,10 @@ class IITree {
   std::array<StackCell, 64> _stack{};  // NOLINT
   bool _indexed{false};
 
-  inline void make_BST();
+  [[nodiscard]] inline bool overlaps_with(I start, I end,
+                                          absl::Span<StackCell> stack) const noexcept;
+  inline bool find_overlaps(I start, I end, std::vector<size_t> &overlapping_intervals,
+                            absl::Span<StackCell> stack) const;
 };
 }  // namespace modle
 

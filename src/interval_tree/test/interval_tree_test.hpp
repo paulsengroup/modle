@@ -24,6 +24,9 @@ TEST_CASE("Interval tree simple", "[interval-tree][short]") {
 
   tree.insert(0, 10, "");
   tree.insert(5, 15, "");
+
+  tree.make_BST();
+
   REQUIRE(tree.size() == 2);
 
   std::vector<size_t> buff;
@@ -80,6 +83,7 @@ TEST_CASE("Interval tree chrX", "[interval-tree][short]") {
     REQUIRE(f.eof());
     REQUIRE(tree.size() == 2118);  // NOLINT
   }
+  tree.make_BST();
 
   {
     std::ifstream f(subset_intervals);
@@ -93,9 +97,9 @@ TEST_CASE("Interval tree chrX", "[interval-tree][short]") {
       CHECK(tree.find_overlaps(record.start, record.end, idx_buff));
       CHECK(idx_buff.size() == 1);
 
-      CHECK(tree.overlap_start(idx_buff.front()) == record.start);
-      CHECK(tree.overlap_end(idx_buff.front()) == record.end);
-      CHECK(tree.overlap_data(idx_buff.front()) == record.data);
+      CHECK(tree.get_overlap_start(idx_buff.front()) == record.start);
+      CHECK(tree.get_overlap_end(idx_buff.front()) == record.end);
+      CHECK(tree.get_overlap_data(idx_buff.front()) == record.data);
     }
 
     REQUIRE(f.eof());
