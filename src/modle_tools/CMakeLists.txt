@@ -14,10 +14,9 @@ target_link_libraries(
   PRIVATE project_warnings
           project_options
           Modle::common
-          Modle::modle
           Modle::correlation
           Modle::io
-          CGRanges::CGRanges
+          Modle::modle
           CONAN_PKG::abseil
           CONAN_PKG::boost
           CONAN_PKG::cli11

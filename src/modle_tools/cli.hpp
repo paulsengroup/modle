@@ -200,8 +200,7 @@ class Cli {
 
     auto valitade_bed = [&](const auto& path) {
       if (std::filesystem::is_regular_file(path)) {
-        const auto status =
-            bed::Parser(path.string(), c.bed_dialect, c.strict_bed_validation).validate(100, false);
+        const auto status = bed::Parser(path, c.bed_dialect, c.strict_bed_validation).validate();
         if (!status.empty()) {
           absl::StrAppendFormat(&errors, "Validation failed for file '%s': %s\n", path,
                                 absl::StripPrefix(status, "An error occurred while reading file"));
