@@ -51,7 +51,7 @@ template <typename K, typename I>
 void BED_tree<K, I>::insert(const absl::Span<const BED> intervals) {
   for (const auto& interval : intervals) {
     auto [node, inserted] = this->_trees.try_emplace(interval.chrom, IITree_t{});
-    node->second.insert(interval.chrom_start, interval.chrom_end, interval);
+    node->second.insert(I(interval.chrom_start), I(interval.chrom_end), interval);
   }
 }
 
@@ -59,7 +59,7 @@ template <typename K, typename I>
 void BED_tree<K, I>::emplace(std::vector<BED>&& intervals) {
   for (auto&& interval : intervals) {
     auto [node, inserted] = this->_trees.try_emplace(interval.chrom, IITree_t{});
-    node->second.emplace(interval.chrom_start, interval.chrom_end, std::move(interval));
+    node->second.emplace(I(interval.chrom_start), I(interval.chrom_end), std::move(interval));
   }
 }
 
