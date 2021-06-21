@@ -31,20 +31,20 @@ template <typename K, typename I>
 std::pair<iterator_t<K, I>, bool> BED_tree<K, I>::insert(const K& chrom_name, I chrom_start,
                                                          I chrom_end) {
   auto [node, inserted] = this->_trees.try_emplace(chrom_name, IITree_t{});
-  node->second.insert(chrom_start, chrom_end, BED{});
+  node->second.insert(chrom_start, chrom_end, BED{chrom_name, chrom_start, chrom_end});
   return std::make_pair(node, inserted);
 }
 
 template <typename K, typename I>
 std::pair<iterator_t<K, I>, bool> BED_tree<K, I>::emplace(BED&& interval) {
   auto [node, inserted] = this->_trees.try_emplace(interval.chrom, IITree_t{});
-  node->second.insert(I(interval.chrom_start), I(interval.chrom_end), interval);
+  node->second.emplace(I(interval.chrom_start), I(interval.chrom_end), std::move(interval));
   return std::make_pair(node, inserted);
 }
 
 template <typename K, typename I>
 std::pair<iterator_t<K, I>, bool> BED_tree<K, I>::emplace(const K& chrom_name, value_type&& tree) {
-  return this->_trees.emplace(chrom_name, tree);
+  return this->_trees.emplace(chrom_name, std::move(tree));
 }
 
 template <typename K, typename I>
@@ -64,15 +64,14 @@ void BED_tree<K, I>::emplace(std::vector<BED>&& intervals) {
 }
 
 template <typename K, typename I>
-const typename BED_tree<K, I>::value_type& BED_tree<K, I>::at(const K& chrom_name) const {
-  return this->_trees.at(chrom_name);
+const typename BED_tree<K, I>::value_type& BED_tree<K, I>::at(const K& chrom) const {
+  return this->_trees.at(chrom);
 }
 
 template <typename K, typename I>
 void BED_tree<K, I>::index() {
-  for (auto& [_, tree] : this->_trees) {
-    tree.make_BST();
-  }
+  std::for_each(this->_trees.begin(), this->_trees.end(),
+                [](auto& node) { node.second.make_BST(); });
 }
 
 template <typename K, typename I>

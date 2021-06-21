@@ -226,7 +226,7 @@ std::string BED::dialect_to_str(Dialect d) {
   return std::string{bed::bed_dialect_to_str_mappings.at(d)};
 }
 
-BED::BED(std::string_view record, BED::Dialect bed_standard, bool validate) {
+BED::BED(std::string_view record, size_t id_, BED::Dialect bed_standard, bool validate) : _id(id_) {
   std::vector<std::string_view> toks;
   for (std::string_view tok : absl::StrSplit(record, absl::ByAnyChar("\t "))) {
     if (!tok.empty()) {
@@ -306,6 +306,7 @@ BED::BED(const BED& other)
       block_sizes(other.block_sizes),
       block_starts(other.block_starts),
       extra_tokens(other.extra_tokens),
+      _id(other._id),
       _standard(other._standard) {}
 
 BED& BED::operator=(const BED& other) {
@@ -325,6 +326,7 @@ BED& BED::operator=(const BED& other) {
   block_sizes = other.block_sizes;
   block_starts = other.block_starts;
   extra_tokens = other.extra_tokens;
+  _id = other._id;
   _standard = other._standard;
 
   return *this;
@@ -347,7 +349,11 @@ bool BED::operator<(const BED& other) const noexcept {
 
 BED::Dialect BED::get_standard() const noexcept { return this->_standard; }
 
-size_t BED::size() const noexcept {
+size_t BED::id() const noexcept { return this->_id; }
+
+size_t BED::size() const noexcept { return this->chrom_end - this->chrom_start; }
+
+size_t BED::num_fields() const noexcept {
   assert(this->_standard != autodetect);  // NOLINT
   if (this->_standard != none) {
     return static_cast<size_t>(this->_standard);
@@ -372,7 +378,7 @@ size_t BED::size() const noexcept {
 bool BED::empty() const { return chrom.empty(); }
 
 std::string BED::to_string() const noexcept {
-  switch (this->size()) {
+  switch (this->num_fields()) {
     case BED3:
       return absl::StrCat(chrom, "\t", chrom_start, "\t", chrom_end,
                           extra_tokens.empty() ? "" : fmt::format("\t{}", extra_tokens));
@@ -451,8 +457,8 @@ BED Parser::parse_next() {
     return BED{};
   }
 
-  BED record{this->_buff, this->_dialect, this->_enforce_std_compliance};
-  ++this->_num_records_parsed;
+  BED record{this->_buff, this->_num_records_parsed++, this->_dialect,
+             this->_enforce_std_compliance};
   if (this->_fp.eof()) {
     this->_buff.clear();
     return record;
@@ -542,7 +548,6 @@ BED_tree<> Parser::parse_n_in_interval_tree(size_t num_records) {
 
     intervals.emplace(std::move(record));
   }
-
   intervals.index();
 
   return intervals;
@@ -572,12 +577,22 @@ void Parser::reset() {
   if (!this->_fp.is_open()) {
     throw std::runtime_error("BED::Parser::reset() was called on a closed file!");
   }
-  assert(this->_fp.good());  // NOLINT
+
+  if (!this->_fp && !this->_fp.eof()) {
+    throw fmt::system_error(
+        errno,
+        FMT_STRING(
+            "An error occourred while seeking to the begin of file {} using BED::Parser::reset()"),
+        this->_path_to_bed);
+  }
+
   this->_fp.clear();
   this->_fp.seekg(0);
   this->_buff.clear();
   this->_num_lines_read = 0;
   this->_num_records_parsed = 0;
+
+  this->skip_header();
 }
 
 size_t Parser::skip_header() {

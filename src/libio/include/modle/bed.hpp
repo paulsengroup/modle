@@ -16,6 +16,7 @@
 #include <utility>      // IWYU pragma: keep for move, pair
 #include <vector>       // for vector
 
+#include "modle/chrom_sizes.hpp"    // for ChromSizes
 #include "modle/interval_tree.hpp"  // for IITree
 
 namespace modle::bed {
@@ -23,8 +24,6 @@ struct BED;
 
 template <typename K = std::string, typename I = uint32_t>
 class BED_tree {
-  static_assert(std::is_constructible_v<K, std::string>,
-                "K should be a type from which a std::string can be constructed.");
   using IITree_t = IITree<I, BED>;
   using BED_tree_t = absl::btree_map<K, IITree<I, BED>>;
 
@@ -34,7 +33,8 @@ class BED_tree {
   inline BED_tree() = default;
 
   using node_type = typename BED_tree_t::node_type;
-  using value_type = typename BED_tree_t::value_type;
+  using key_type = typename BED_tree_t::value_type::first_type;
+  using value_type = typename BED_tree_t::value_type::second_type;
   using iterator = typename BED_tree_t::iterator;
 
   inline std::pair<iterator, bool> insert(BED interval);
@@ -46,7 +46,7 @@ class BED_tree {
   inline void insert(absl::Span<const BED> intervals);
   inline void emplace(std::vector<BED>&& intervals);
 
-  inline const value_type& at(const K& chrom_name) const;
+  inline const value_type& at(const K& chrom) const;
 
   inline void index();
   inline void index(const K& chrom_name);
@@ -144,7 +144,7 @@ struct BED {
   };
 
   BED() = default;
-  explicit BED(std::string_view record, Dialect bed_standard = autodetect,
+  explicit BED(std::string_view record, size_t id_ = null_id, Dialect bed_standard = autodetect,
                bool enforce_std_compliance = true);
   BED(const BED& other);
   BED(BED&& other) = default;
@@ -169,7 +169,9 @@ struct BED {
 
   [[nodiscard]] bool operator==(const BED& other) const noexcept;
   [[nodiscard]] bool operator<(const BED& other) const noexcept;
+  [[nodiscard]] size_t id() const noexcept;
   [[nodiscard]] size_t size() const noexcept;
+  [[nodiscard]] size_t num_fields() const noexcept;
   [[nodiscard]] Dialect get_standard() const noexcept;
   [[nodiscard]] std::string to_string() const noexcept;
   [[nodiscard]] bool empty() const;
@@ -179,6 +181,8 @@ struct BED {
   }
 
  private:
+  static constexpr auto null_id = std::numeric_limits<size_t>::max();
+  size_t _id{null_id};
   Dialect _standard;
   static void parse_rgb_or_throw(const std::vector<std::string_view>& toks, uint8_t idx,
                                  RGB& field);
