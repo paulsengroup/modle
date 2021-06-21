@@ -19,7 +19,8 @@ target_link_libraries(
             project_warnings
             $<$<NOT:$<BOOL:${USE_MERSENNE_TWISTER}>>:XoshiroCpp::XoshiroCpp>
             CONAN_PKG::abseil
+            CONAN_PKG::boost
             CONAN_PKG::fmt
-            CONAN_PKG::boost)
+            CONAN_PKG::xxhash)
 
 target_include_directories(modle_common INTERFACE include/)

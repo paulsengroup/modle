@@ -2,6 +2,8 @@
 
 // IWYU pragma: no_include "modle/src/utils/utils_impl.hpp"
 
+#include <xxh3.h>  // for XXH3_freeState, XXH3_state_t
+
 #include <cstddef>       // IWYU pragma: keep for size_t
 #include <cstdint>       // for int64_t, uint64_t
 #include <string>        // for string
@@ -78,6 +80,10 @@ template <typename T>
 constexpr auto get_printable_type_name() noexcept;
 
 [[maybe_unused]] [[nodiscard]] constexpr bool ndebug_defined() noexcept;
+
+struct XXH3_Deleter {  // NOLINT
+  inline void operator()(XXH3_state_t* state) noexcept { XXH3_freeState(state); }
+};
 
 }  // namespace modle::utils
 
