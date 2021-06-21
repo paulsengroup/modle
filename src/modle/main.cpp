@@ -38,10 +38,17 @@ int main(int argc, char** argv) noexcept {
 
     const auto t0 = absl::Now();
 
-    modle::Simulation{config}.run();
-
-    fmt::print(stderr, FMT_STRING("Simulation terminated without errors in {}!\n\nBye.\n"),
+    auto sim = modle::Simulation{config};
+    sim.run_base();
+    fmt::print(stderr, FMT_STRING("Simulation terminated without errors in {}!\n"),
                absl::FormatDuration(absl::Now() - t0));
+    if (config.path_to_output_file_bedpe.empty()) {
+      fmt::print(stderr, FMT_STRING("\nBye.\n"));
+      return 0;
+    }
+
+    sim.run_pairwise();
+
   } catch (const CLI::ParseError& e) {
     return cli->exit(e);  //  This takes care of formatting and printing error messages (if any)
   } catch (const std::bad_alloc& err) {

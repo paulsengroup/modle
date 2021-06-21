@@ -334,9 +334,6 @@ class Simulation : Config {
   [[nodiscard]] static std::pair<bp_t /*rev*/, bp_t /*fwd*/> compute_lef_lef_collision_pos(
       const ExtrusionUnit& rev_unit, const ExtrusionUnit& fwd_unit, bp_t rev_move, bp_t fwd_move);
 
-  [[nodiscard]] static bed::BED_tree<> build_interval_tree(
-      const std::filesystem::path& path_to_bed);
-
 #ifdef ENABLE_TESTING
  public:
   template <typename MaskT>

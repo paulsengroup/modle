@@ -275,7 +275,10 @@ void Simulation::worker(
 }
 
 void Simulation::run_pairwise() {
+  // TODO Do proper error handling
   assert(std::filesystem::exists(this->path_to_output_file_cool));  // NOLINT
+  // For now we support only the case where exactly two files are specified
+  assert(this->path_to_feature_bed_files.size() == 2);  // NOLINT
 }
 
 }  // namespace modle

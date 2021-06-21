@@ -59,9 +59,10 @@ namespace modle {
 Simulation::Simulation(const Config& c, bool import_chroms)
     : Config(c),
       _config(&c),
-      _genome(import_chroms ? Genome(path_to_chrom_sizes, path_to_extr_barriers,
-                                     path_to_chrom_subranges, write_contacts_for_ko_chroms)
-                            : Genome{}) {}
+      _genome(import_chroms
+                  ? Genome(path_to_chrom_sizes, path_to_extr_barriers, path_to_chrom_subranges,
+                           path_to_feature_bed_files, write_contacts_for_ko_chroms)
+                  : Genome{}) {}
 
 size_t Simulation::size() const { return this->_genome.size(); }
 

@@ -165,9 +165,12 @@ uint64_t Chromosome::hash(uint64_t seed, size_t cell_id) {
 
 Genome::Genome(const std::filesystem::path& path_to_chrom_sizes,
                const std::filesystem::path& path_to_extr_barriers,
-               const std::filesystem::path& path_to_chrom_subranges, bool keep_all_chroms)
+               const std::filesystem::path& path_to_chrom_subranges,
+               const absl::Span<const std::filesystem::path> paths_to_extra_features,
+               bool keep_all_chroms)
     : _chromosomes(instantiate_genome(path_to_chrom_sizes, path_to_extr_barriers,
-                                      path_to_chrom_subranges, keep_all_chroms)) {}
+                                      path_to_chrom_subranges, paths_to_extra_features,
+                                      keep_all_chroms)) {}
 
 absl::btree_set<Chromosome> Genome::import_chromosomes(
     const std::filesystem::path& path_to_chrom_sizes,
@@ -178,7 +181,7 @@ absl::btree_set<Chromosome> Genome::import_chromosomes(
   const auto chrom_ranges = [&]() {
     absl::btree_map<std::string, bed::BED> ranges;
     if (!path_to_chrom_subranges.empty()) {
-      for (auto&& record : bed::Parser(path_to_chrom_subranges).parse_all()) {
+      for (auto&& record : bed::Parser(path_to_chrom_subranges, bed::BED::BED3).parse_all()) {
         const auto chrom_name = record.chrom;
         const auto [node, new_insertion] = ranges.try_emplace(chrom_name, std::move(record));
         if (!new_insertion) {
@@ -242,16 +245,10 @@ size_t Genome::import_barriers(absl::btree_set<Chromosome>& chromosomes,
   assert(!chromosomes.empty());            // NOLINT
   assert(!path_to_extr_barriers.empty());  // NOLINT
   size_t nbarriers = 0;
-  /*
-  absl::flat_hash_map<std::string_view, Chromosome*> tmp_chrom_names(
-      static_cast<size_t>(chromosomes.size()));
-  for (auto& chrom : chromosomes) {
-    tmp_chrom_names.emplace(chrom.name(), &chrom);
-  }
-   */
 
   // Parse all the records from the BED file. The parser will throw in case of duplicates.
-  const auto barriers = bed::Parser(path_to_extr_barriers).parse_all_in_interval_tree();
+  const auto barriers =
+      bed::Parser(path_to_extr_barriers, bed::BED::BED6).parse_all_in_interval_tree();
 
   for (auto& chrom : chromosomes) {
     if (const auto chrom_name = std::string{chrom.name()}; barriers.contains(chrom_name)) {
@@ -268,6 +265,25 @@ size_t Genome::import_barriers(absl::btree_set<Chromosome>& chromosomes,
     }
   }
   return nbarriers;
+}
+
+size_t Genome::import_extra_features(absl::btree_set<Chromosome>& chromosomes,
+                                     const std::filesystem::path& path_to_extra_features) {
+  assert(!chromosomes.empty());             // NOLINT
+  assert(!path_to_extra_features.empty());  // NOLINT
+  size_t nfeatures = 0;
+
+  // Parse all the records from the BED file. The parser will throw in case of duplicates.
+  const auto features =
+      bed::Parser(path_to_extra_features, bed::BED::BED3).parse_all_in_interval_tree();
+
+  for (auto& chrom : chromosomes) {
+    if (const auto chrom_name = std::string{chrom.name()}; features.contains(chrom_name)) {
+      const auto element = chrom._features.emplace_back(features.at(chrom_name));
+      nfeatures += element.size();
+    }
+  }
+  return nfeatures;
 }
 
 std::vector<ExtrusionBarrier> Genome::generate_vect_of_barriers(std::string_view chrom_name,
@@ -324,9 +340,13 @@ std::vector<ExtrusionBarrier> Genome::generate_vect_of_barriers(std::string_view
 absl::btree_set<Chromosome> Genome::instantiate_genome(
     const std::filesystem::path& path_to_chrom_sizes,
     const std::filesystem::path& path_to_extr_barriers,
-    const std::filesystem::path& path_to_chrom_subranges, bool keep_all_chroms) {
+    const std::filesystem::path& path_to_chrom_subranges,
+    const absl::Span<const std::filesystem::path> paths_to_extra_features, bool keep_all_chroms) {
   auto chroms = import_chromosomes(path_to_chrom_sizes, path_to_chrom_subranges, keep_all_chroms);
   import_barriers(chroms, path_to_extr_barriers);
+  for (const auto& path_to_feature_bed : paths_to_extra_features) {
+    import_extra_features(chroms, path_to_feature_bed);
+  }
 
   return chroms;
 }

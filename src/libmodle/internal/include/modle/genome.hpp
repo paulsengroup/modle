@@ -29,6 +29,7 @@ class ExtrusionBarrier;
 class Chromosome {
   using contact_matrix_t = ContactMatrix<contacts_t>;
   using interval_tree_value_t = bed::BED_tree<>::value_type;
+  friend class Genome;
 
  public:
   Chromosome() = default;
@@ -119,7 +120,8 @@ class Genome {
   Genome() = default;
   Genome(const std::filesystem::path& path_to_chrom_sizes,
          const std::filesystem::path& path_to_extr_barriers,
-         const std::filesystem::path& path_to_chrom_subranges, bool keep_all_chroms);
+         const std::filesystem::path& path_to_chrom_subranges,
+         absl::Span<const std::filesystem::path> paths_to_extra_features, bool keep_all_chroms);
 
   using iterator = absl::btree_set<Chromosome>::iterator;
   using const_iterator = absl::btree_set<Chromosome>::const_iterator;
@@ -151,7 +153,8 @@ class Genome {
   [[nodiscard]] static absl::btree_set<Chromosome> instantiate_genome(
       const std::filesystem::path& path_to_chrom_sizes,
       const std::filesystem::path& path_to_extr_barriers,
-      const std::filesystem::path& path_to_chrom_subranges, bool keep_all_chroms);
+      const std::filesystem::path& path_to_chrom_subranges,
+      absl::Span<const std::filesystem::path> paths_to_extra_features, bool keep_all_chroms);
 
  private:
   absl::btree_set<Chromosome> _chromosomes{};
@@ -169,8 +172,13 @@ class Genome {
   /// Genome
   static size_t import_barriers(absl::btree_set<Chromosome>& chromosomes,
                                 const std::filesystem::path& path_to_extr_barriers);
+
+  /// Parse a BED file containing the genomic coordinates of extra features (e.g. promoters,
+  /// enhancer) them to the Genome
+  static size_t import_extra_features(absl::btree_set<Chromosome>& chromosomes,
+                                      const std::filesystem::path& path_to_extra_features);
 };
 
 }  // namespace modle
 
-#include "../../dna_impl.hpp"  // IWYU pragma: keep
+#include "../../genome_impl.hpp"  // IWYU pragma: keep
