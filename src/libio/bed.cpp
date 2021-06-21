@@ -492,7 +492,7 @@ std::vector<BED> Parser::parse_n(size_t num_records) {
 
   for (auto record = this->parse_next(); !record.empty() && this->_num_records_parsed < num_records;
        record = this->parse_next()) {
-    if (this->_dialect != BED::none && record.size() < this->_dialect) {
+    if (this->_dialect != BED::none && record.num_fields() < this->_dialect) {
       throw std::runtime_error(fmt::format(
           FMT_STRING("Expected BED record with at least {} fields, got {} at line {} of file {}"),
           this->_dialect, record.size(), this->_num_lines_read, this->_path_to_bed));
@@ -529,7 +529,7 @@ BED_tree<> Parser::parse_n_in_interval_tree(size_t num_records) {
 
   for (auto record = this->parse_next(); !record.empty() && this->_num_records_parsed < num_records;
        record = this->parse_next()) {
-    if (this->_dialect != BED::none && record.size() < this->_dialect) {
+    if (this->_dialect != BED::none && record.num_fields() < this->_dialect) {
       throw std::runtime_error(fmt::format(
           FMT_STRING("Expected BED record with at least {} fields, got {} at line {} of file {}"),
           this->_dialect, record.size(), this->_num_lines_read, this->_path_to_bed));
