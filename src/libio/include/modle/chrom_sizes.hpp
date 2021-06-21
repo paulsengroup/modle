@@ -12,7 +12,7 @@ namespace modle::chrom_sizes {
 
 class Parser {
  public:
-  explicit Parser(std::filesystem::path  path_to_chrom_sizes);
+  explicit Parser(std::filesystem::path path_to_chrom_sizes);
   [[nodiscard]] std::vector<bed::BED> parse_all(char sep = '\t');
 
  private:
