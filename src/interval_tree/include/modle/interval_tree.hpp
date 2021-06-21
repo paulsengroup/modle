@@ -22,7 +22,7 @@
 #pragma once
 
 #include <array>        // for array
-#include <cstddef>      // for size_t
+#include <cstddef>      // for size_t, std::ptrdiff_t
 #include <cstdint>      // for uint64_t
 #include <type_traits>  // for is_integral_v
 #include <vector>       // for vector
@@ -62,16 +62,21 @@ template <typename I, typename T>
 class IITree {
   static_assert(std::is_integral_v<I>, "I should be an integral type.");
   struct StackCell;
-  class Interval;
+
+  using I_iterator = typename std::vector<I>::iterator;
+  using T_iterator = typename std::vector<T>::iterator;
+
+  using I_iterator_const = typename std::vector<I>::const_iterator;
+  using T_iterator_const = typename std::vector<T>::const_iterator;
 
  public:
-  inline IITree() = default;
+  inline explicit IITree(size_t start_pos_ = 0,
+                         size_t end_pos_ = std::numeric_limits<size_t>::max());
 
-  using iterator = typename std::vector<Interval>::iterator;
-  using const_iterator = typename std::vector<Interval>::const_iterator;
-
-  inline void insert(I start, I end, const T &data);
-  inline void emplace(I start, I end, T &&data);
+  template <typename I2, typename = std::enable_if_t<std::is_integral_v<I2>>>
+  inline void insert(I2 start, I2 end, const T &data);
+  template <typename I2, typename = std::enable_if_t<std::is_integral_v<I2>>>
+  inline void emplace(I2 start, I2 end, T &&data);
 
   [[nodiscard]] inline bool overlaps_with(I start, I end) noexcept;
   [[nodiscard]] inline bool overlaps_with(I start, I end) const;
@@ -83,14 +88,37 @@ class IITree {
   [[nodiscard]] inline constexpr size_t size() const noexcept;
   [[nodiscard]] inline constexpr bool is_BST() const noexcept;
 
+  [[nodiscard]] inline constexpr size_t span() const noexcept;
+  [[nodiscard]] inline constexpr size_t start_pos() const noexcept;
+  [[nodiscard]] inline constexpr size_t end_pos() const noexcept;
+
   [[nodiscard]] inline I get_overlap_start(size_t i) const;
   [[nodiscard]] inline I get_overlap_end(size_t i) const;
   [[nodiscard]] inline const T &get_overlap_data(size_t i) const;
 
-  [[nodiscard]] inline iterator begin();
-  [[nodiscard]] inline iterator end();
-  [[nodiscard]] inline const_iterator cbegin() const;
-  [[nodiscard]] inline const_iterator cend() const;
+  [[nodiscard]] inline const absl::Span<const I> starts() const;
+  [[nodiscard]] inline const absl::Span<const I> ends() const;
+  [[nodiscard]] inline const absl::Span<const T> data() const;
+
+  [[nodiscard]] inline I_iterator starts_begin();
+  [[nodiscard]] inline I_iterator starts_end();
+
+  [[nodiscard]] inline I_iterator ends_begin();
+  [[nodiscard]] inline I_iterator ends_end();
+
+  [[nodiscard]] inline T_iterator data_begin();
+  [[nodiscard]] inline T_iterator data_end();
+
+  [[nodiscard]] inline I_iterator_const starts_begin() const;
+  [[nodiscard]] inline I_iterator_const starts_end() const;
+
+  [[nodiscard]] inline I_iterator_const ends_begin() const;
+  [[nodiscard]] inline I_iterator_const ends_end() const;
+
+  [[nodiscard]] inline T_iterator_const data_begin() const;
+  [[nodiscard]] inline T_iterator_const data_end() const;
+
+  inline void clear();
 
   inline void reserve(size_t new_capacity);
   inline void make_BST();
@@ -105,30 +133,17 @@ class IITree {
     bool left_child_already_processed;
   };
 
-  class Interval {
-    friend class IITree<I, T>;
-
-   public:
-    inline Interval() = delete;
-    inline Interval(I start_, I end_, const T &data_);
-    inline Interval(I start_, I end_, T &&data_);
-    [[nodiscard]] inline constexpr bool operator<(const Interval &other) const noexcept;
-
-    [[nodiscard]] inline constexpr I start() const noexcept;
-    [[nodiscard]] inline constexpr I end() const noexcept;
-    [[nodiscard]] inline constexpr T *data() const noexcept;
-
-   private:
-    I _start;
-    I _end;
-    I _max;
-    T _data;
-  };
-
-  std::vector<Interval> _data{};
+  size_t _start_pos;
+  size_t _end_pos;
   int64_t _max_level{0};
-  std::array<StackCell, 64> _stack{};  // NOLINT
   bool _indexed{false};
+
+  std::vector<I> _start;
+  std::vector<I> _end;
+  std::vector<I> _max;
+  std::vector<T> _data;
+
+  std::array<StackCell, 64> _stack{};  // NOLINT
 
   [[nodiscard]] inline bool overlaps_with(I start, I end,
                                           absl::Span<StackCell> stack) const noexcept;

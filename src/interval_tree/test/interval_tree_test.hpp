@@ -119,7 +119,8 @@ TEST_CASE("Interval tree chrX", "[interval-tree][short]") {
 
   REQUIRE(f.eof());
 
-  for (auto it1 = tree.begin(), it2 = tree.begin() + 1; it2 != tree.end(); ++it1, ++it2) {
+  for (auto it1 = tree.starts_begin(), it2 = tree.starts_begin() + 1; it2 != tree.starts_end();
+       ++it1, ++it2) {
     CHECK(*it1 < *it2);
   }
 }
