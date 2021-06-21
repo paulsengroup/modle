@@ -44,10 +44,9 @@
 #include "modle/common/random_sampling.hpp"  // for random_sampling
 #include "modle/common/utils.hpp"            // for ndebug_defined
 #include "modle/cooler.hpp"                  // for Cooler, Cooler::WRITE_ONLY
-#include "modle/dna.hpp"                     // for Chromosome
 #include "modle/extrusion_barriers.hpp"      // for update_states, ExtrusionBarrier
 #include "modle/extrusion_factors.hpp"       // for Lef, ExtrusionUnit
-#include "modle/setup.hpp"                   // for Genome::const_iterator, Genome
+#include "modle/genome.hpp"                  // for Chromosome, Genome
 
 #ifndef BOOST_STACKTRACE_USE_NOOP
 #include <boost/exception/get_error_info.hpp>  // for get_error_info

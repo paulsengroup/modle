@@ -34,13 +34,13 @@
 #include "modle/common/config.hpp"       // for Config
 #include "modle/common/utils.hpp"        // for traced
 #include "modle/contacts.hpp"            // for ContactMatrix
-#include "modle/dna.hpp"                 // for Chromosome
 #include "modle/extrusion_barriers.hpp"  // for ExtrusionBarrier
+#include "modle/genome.hpp"              // for Chromosome
 #include "modle/simulation.hpp"
 
 namespace modle {
 
-void Simulation::run() {
+void Simulation::run_base() {
   if (!this->skip_output) {  // Write simulation params to file
     if (this->force) {
       std::filesystem::remove_all(this->path_to_output_file_cool);
@@ -272,6 +272,10 @@ void Simulation::worker(
 #endif
     throw;
   }
+}
+
+void Simulation::run_pairwise() {
+  assert(std::filesystem::exists(this->path_to_output_file_cool));  // NOLINT
 }
 
 }  // namespace modle

@@ -24,7 +24,10 @@
 #include "modle/common/suppress_compiler_warnings.hpp"
 #include "modle/common/utils.hpp"       // for ndebug_defined
 #include "modle/extrusion_factors.hpp"  // for Lef, ExtrusionUnit (ptr only)
-#include "modle/setup.hpp"              // for Genome
+#include "modle/genome.hpp"             // for Genome
+
+template <typename I, typename T>
+class IITree;
 
 namespace modle {
 
@@ -82,7 +85,8 @@ class Simulation : Config {
     // NOLINTNEXTLINE(readability-magic-numbers, cppcoreguidelines-avoid-magic-numbers)
   } __attribute__((aligned(128)));
 
-  void run();
+  void run_base();
+  void run_pairwise();
 
  private:
   const Config* _config;
@@ -329,6 +333,9 @@ class Simulation : Config {
 
   [[nodiscard]] static std::pair<bp_t /*rev*/, bp_t /*fwd*/> compute_lef_lef_collision_pos(
       const ExtrusionUnit& rev_unit, const ExtrusionUnit& fwd_unit, bp_t rev_move, bp_t fwd_move);
+
+  [[nodiscard]] static bed::BED_tree<> build_interval_tree(
+      const std::filesystem::path& path_to_bed);
 
 #ifdef ENABLE_TESTING
  public:
