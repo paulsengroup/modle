@@ -31,7 +31,7 @@ TEST_CASE("Simulation 001", "[simulation][short]") {
   c.lef_soft_collision_pblock = 0;             // NOLINT
   const size_t nlefs = 7;
   const size_t nbarriers = 5;
-  const Chromosome chrom{{"chr1", 0, 1000}};
+  const Chromosome chrom{0, "chr1", 0, 1000, 1000};
   // NOLINTNEXTLINE(readability-magic-numbers, cppcoreguidelines-avoid-magic-numbers)
   auto rand_eng = random::PRNG(10556020843759504871ULL);
 
@@ -114,7 +114,7 @@ TEST_CASE("Simulation 002", "[simulation][short]") {
   c.lef_soft_collision_pblock = 0;             // NOLINT
   const size_t nlefs = 7;
   const size_t nbarriers = 5;
-  const Chromosome chrom{{"chr1", 0, 1000}};
+  const Chromosome chrom{0, "chr1", 0, 1000, 1000};
   // NOLINTNEXTLINE(readability-magic-numbers, cppcoreguidelines-avoid-magic-numbers)
   auto rand_eng = random::PRNG(9668495374385482848ULL);
 
@@ -197,7 +197,7 @@ TEST_CASE("Simulation 003 - Soft collisions on", "[simulation][short]") {
   c.lef_soft_collision_pblock = 1;             // NOLINT
   const size_t nlefs = 7;
   const size_t nbarriers = 5;
-  const Chromosome chrom{{"chr1", 0, 1000}};
+  const Chromosome chrom{0, "chr1", 0, 1000, 1000};
   // NOLINTNEXTLINE(readability-magic-numbers, cppcoreguidelines-avoid-magic-numbers)
   auto rand_eng = random::PRNG(919341715542527390ULL);
 
@@ -280,7 +280,7 @@ TEST_CASE("Simulation 004 - Inactive barriers", "[simulation][short]") {
   c.lef_soft_collision_pblock = 0;             // NOLINT
   const size_t nlefs = 7;
   const size_t nbarriers = 5;
-  const Chromosome chrom{{"chr1", 0, 1000}};
+  const Chromosome chrom{0, "chr1", 0, 1000, 1000};
   // NOLINTNEXTLINE(readability-magic-numbers, cppcoreguidelines-avoid-magic-numbers)
   auto rand_eng = random::PRNG(138440880292496584ULL);
 
@@ -363,7 +363,7 @@ TEST_CASE("Simulation 005 - Multiple LEFs located at the same site", "[simulatio
   c.lef_soft_collision_pblock = 0;             // NOLINT
   constexpr size_t nlefs = 6;
   constexpr size_t nbarriers = 1;
-  const Chromosome chrom{{"chr1", 0, 150}};  // NOLINT
+  const Chromosome chrom{0, "chr1", 0, 150, 150};  // NOLINT
   // NOLINTNEXTLINE(readability-magic-numbers, cppcoreguidelines-avoid-magic-numbers)
   auto rand_eng = random::PRNG(9509334554644345044ULL);
 
@@ -439,7 +439,7 @@ TEST_CASE("Simulation 006 - Few inactive LEFs", "[simulation][short]") {
   c.lef_soft_collision_pblock = 0;             // NOLINT
   constexpr size_t nlefs = 6;
   constexpr size_t nbarriers = 1;
-  const Chromosome chrom{{"chr1", 0, 150}};  // NOLINT
+  const Chromosome chrom{0, "chr1", 0, 150, 150};  // NOLINT
   // NOLINTNEXTLINE(readability-magic-numbers, cppcoreguidelines-avoid-magic-numbers)
   auto rand_eng = random::PRNG(8213068426516999476ULL);
 
@@ -519,7 +519,7 @@ TEST_CASE("Simulation 007 - LEF-LEF collision overrides LEF-BAR collision 1",
   c.lef_soft_collision_pblock = 0;             // NOLINT
   constexpr size_t nlefs = 2;
   constexpr size_t nbarriers = 1;
-  const Chromosome chrom{{"chr1", 0, 200}};  // NOLINT
+  const Chromosome chrom{0, "chr1", 0, 200, 200};  // NOLINT
   // NOLINTNEXTLINE(readability-magic-numbers, cppcoreguidelines-avoid-magic-numbers)
   auto rand_eng = random::PRNG(4003028292286930594ULL);
 
@@ -580,7 +580,7 @@ TEST_CASE("Simulation 008 - LEF-LEF collision overrides LEF-BAR collision 2",
   c.lef_soft_collision_pblock = 0;             // NOLINT
   constexpr size_t nlefs = 2;
   constexpr size_t nbarriers = 1;
-  const Chromosome chrom{{"chr1", 0, 200}};  // NOLINT
+  const Chromosome chrom{0, "chr1", 0, 200, 200};  // NOLINT
   // NOLINTNEXTLINE(readability-magic-numbers, cppcoreguidelines-avoid-magic-numbers)
   auto rand_eng = random::PRNG(12931236264094635263ULL);
 
@@ -641,7 +641,7 @@ TEST_CASE("Simulation 009 - Ensure stacked LEFs do not interfere with surroundin
   c.lef_soft_collision_pblock = 0;             // NOLINT
   constexpr size_t nlefs = 5;
   constexpr size_t nbarriers = 2;
-  const Chromosome chrom{{"chr1", 0, 200}};  // NOLINT
+  const Chromosome chrom{0, "chr1", 0, 200, 200};  // NOLINT
   // NOLINTNEXTLINE(readability-magic-numbers, cppcoreguidelines-avoid-magic-numbers)
   auto rand_eng = random::PRNG(8668729858575330735ULL);
 
@@ -716,7 +716,7 @@ TEST_CASE("Simulation 010 - Ensure stacked LEFs do not interfere with surroundin
   c.lef_soft_collision_pblock = 0;             // NOLINT
   constexpr size_t nlefs = 6;
   constexpr size_t nbarriers = 2;
-  const Chromosome chrom{{"chr1", 0, 200}};  // NOLINT
+  const Chromosome chrom{0, "chr1", 0, 200, 200};  // NOLINT
   // NOLINTNEXTLINE(readability-magic-numbers, cppcoreguidelines-avoid-magic-numbers)
   auto rand_eng = random::PRNG(4320101097510038983ULL);
 
