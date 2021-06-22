@@ -23,11 +23,12 @@
 #include <cpp-sort/sorters/pdq_sorter.h>  // for pdq_sorter
 #include <fmt/format.h>
 
-#include <array>    // for array
-#include <cassert>  // for assert
-#include <cstddef>  // for size_t
-#include <stack>    // for stack
-#include <vector>   // for vector
+#include <array>     // for array
+#include <cassert>   // for assert
+#include <cstddef>   // for size_t
+#include <iterator>  // for iterator_traits
+#include <stack>     // for stack
+#include <vector>    // for vector
 
 namespace modle {
 
@@ -143,45 +144,58 @@ void IITree<I, T>::make_BST() {
   this->_indexed = true;
 }
 
-template <typename I, typename T>
-bool IITree<I, T>::find_overlaps(const I start, const I end,
-                                 std::vector<size_t> &overlapping_intervals) const {
-  std::array<StackCell, 64> stack{};  // NOLINT
-
-  return this->find_overlaps(start, end, overlapping_intervals, absl::MakeSpan(stack));
-}
+// GCC chokes if we use an using directive here
+#define T_iterator typename IITree<I, T>::T_iterator
+#define I_iterator typename IITree<I, T>::I_iterator
+#define T_iterator_const typename IITree<I, T>::T_iterator_const
+#define I_iterator_const typename IITree<I, T>::I_iterator_const
 
 template <typename I, typename T>
-bool IITree<I, T>::find_overlaps(const I start, const I end,
-                                 std::vector<size_t> &overlapping_intervals) {
-  return this->find_overlaps(start, end, overlapping_intervals, absl::MakeSpan(this->_stack));
-}
-
-template <typename I, typename T>
-bool IITree<I, T>::find_overlaps(const I start, const I end,
-                                 std::vector<size_t> &overlapping_intervals,
-                                 const absl::Span<StackCell> stack) const {
+template <typename IITree<I, T>::QueryType Mode>
+std::pair<T_iterator_const, T_iterator_const> IITree<I, T>::internal_equal_range(
+    const I start, const I end) const noexcept {
   assert(start <= end);  // NOLINT
-  overlapping_intervals.clear();
+  std::array<StackCell, 64> stack;
   if (this->_max_level < 0) {
-    return false;
+    return std::make_pair(this->_data.end(), this->_data.end());
   }
 
   assert(this->_indexed);  // NOLINT
+  T_iterator_const overlap_begin = this->_data.end();
+  T_iterator_const overlap_end = this->_data.begin();
+
+  auto update_overlap_range = [&](auto idx) {  // The idea here is to have a single implementation
+                                               // for lower/upper bound and equal range queries
+    using ptr_difference_t = typename std::iterator_traits<T_iterator_const>::difference_type;
+    if constexpr ((Mode & QueryType::LOWER_BOUND) == 0) {
+      overlap_begin =
+          std::min(overlap_begin, this->_data.begin() + static_cast<ptr_difference_t>(idx));
+    }
+    if constexpr ((Mode & QueryType::UPPER_BOUND) == 0) {
+      overlap_end =
+          std::max(overlap_end, this->_data.begin() + static_cast<ptr_difference_t>(idx + 1));
+    }
+    if constexpr ((Mode & QueryType::CONTAINS) || (Mode & QueryType::UPPER_BOUND) != 0) {
+      return true;
+    }
+    return false;
+  };
 
   // push the root; this is a top down traversal
   stack.front() = StackCell{this->_max_level, (1ULL << this->_max_level) - 1, false};
 
-  for (auto t = 1UL; t > 0;) {  // the following guarantees that numbers in
-                                // overlapping_intervals[] are always sorted
-    assert(t <= 64);            // NOLINT
+  // The following guarantees that we visit overlapping intervals in increasing order
+  for (auto t = 1UL; t > 0;) {
+    assert(t <= 64);  // NOLINT
     const auto cell = stack[--t];
     if (cell.level < 4) {  // we are in a small subtree; traverse every node in this subtree
       const auto i0 = cell.node_idx >> cell.level << cell.level;
       const auto i1 = std::min(i0 + (1UL << (cell.level + 1)) - 1, this->size());
       for (auto i = i0; i < i1 && this->_start[i] < end; ++i)
-        if (start < this->_end[i]) {  // if find_overlaps, append to overlapping_intervals[]
-          overlapping_intervals.push_back(i);
+        if (start < this->_end[i]) {  // found an overlap
+          if (update_overlap_range(i)) {
+            goto return_stmt;
+          }
         }
     } else if (!cell.left_child_already_processed) {
       const auto lchild_idx =
@@ -193,81 +207,94 @@ bool IITree<I, T>::find_overlaps(const I start, const I end,
       // re-add node cell.node_idx, but mark the left child as having been processed
       stack[t++] = StackCell{cell.level, cell.node_idx, true};
       if (lchild_idx >= this->size() || this->_max[lchild_idx] > start) {
-        // push the left child if lchild_idx is overlapping_intervals of range or may
-        // find_overlaps with the query
+        // push the left child if lchild_idx is out of range or may overlap with the query
         stack[t++] = StackCell{cell.level - 1, lchild_idx, false};
       }
     } else if (cell.node_idx < this->size() && this->_start[cell.node_idx] < end) {
       // need to push the right child
       // test if cell.node_idx overlaps the query; if yes, append to overlapping_intervals[]
-      if (start < this->_end[cell.node_idx]) {
-        overlapping_intervals.push_back(cell.node_idx);
-      }
-      stack[t++] = StackCell{cell.level - 1, cell.node_idx + (1LL << (cell.level - 1)),
-                             false};  // push the right child
-    }
-  }
-  return !overlapping_intervals.empty();
-}
-
-template <typename I, typename T>
-bool IITree<I, T>::overlaps_with(const I start, const I end) noexcept {
-  return this->overlaps_with(start, end, absl::MakeSpan(this->_stack));
-}
-
-template <typename I, typename T>
-bool IITree<I, T>::overlaps_with(const I start, const I end) const {
-  std::array<StackCell, 64> stack;  // NOLINT
-  return this->overlaps_with(start, end, absl::MakeSpan(stack));
-}
-
-template <typename I, typename T>
-bool IITree<I, T>::overlaps_with(const I start, const I end,
-                                 const absl::Span<StackCell> stack) const noexcept {
-  assert(start <= end);  // NOLINT
-  if (this->_max_level < 0) {
-    return false;
-  }
-
-  assert(this->_indexed);  // NOLINT
-
-  // push the root; this is a top down traversal
-  stack.front() = StackCell{this->_max_level, (1ULL << this->_max_level) - 1, false};
-
-  for (auto t = 1UL; t > 0;) {  // the following guarantees that numbers in out[] are always sorted
-    assert(t <= 64);            // NOLINT
-    const auto cell = stack[--t];
-    if (cell.level < 4) {  // we are in a small subtree; traverse every node in this subtree
-      const auto i0 = cell.node_idx >> cell.level << cell.level;
-      const auto i1 = std::min(i0 + (1UL << (cell.level + 1)) - 1, this->size());
-      for (auto i = i0; i < i1 && this->_start[i] < end; ++i)
-        if (start < this->_end[i]) {  // found an overlap
-          return true;
+      if (start < this->_end[cell.node_idx]) {  // found an overlap
+        if (update_overlap_range(cell.node_idx)) {
+          goto return_stmt;
         }
-      return false;
-    } else if (!cell.left_child_already_processed) {  // if left child not processed
-      const auto lchild_idx =
-          cell.node_idx - (1ULL << (cell.level - 1));  // the left child of cell.node_idx
-                                                       // NB: lchild_idx may be out of range
-                                                       // (i.e. lchild_idx >= _data.size())
-
-      // re-add node cell.node_idx, but mark the left child as having been processed
-      stack[t++] = StackCell{cell.level, cell.node_idx, true};
-      if (lchild_idx >= this->size() || this->_max[lchild_idx] > start) {
-        // push the left child if lchild_idx is out of range or may overlap with the query
-        assert(t < stack.size());  // NOLINT
-        stack[t++] = StackCell{cell.level - 1, lchild_idx, false};
-      }
-    } else if (cell.node_idx < this->size() && this->_start[cell.node_idx] < end) {
-      // need to push the right child
-      if (start < this->_end[cell.node_idx]) {
-        return true;  // test if cell.node_idx overlaps the query; if yes, append to out[]
       }
       stack[t++] = StackCell{cell.level - 1, cell.node_idx + (1LL << (cell.level - 1)),
                              false};  // push the right child
     }
   }
-  return false;
+
+return_stmt:
+  if (overlap_begin == this->_data.end()) {
+    overlap_end = overlap_begin;
+  }
+  return std::make_pair(overlap_begin, overlap_end);
+}
+
+template <typename I, typename T>
+std::pair<T_iterator_const, T_iterator_const> IITree<I, T>::equal_range(
+    const I start, const I end) const noexcept {
+  return this->internal_equal_range<QueryType::EQUAL_RANGE>(start, end);
+}
+
+template <typename I, typename T>
+std::pair<T_iterator_const, T_iterator_const> IITree<I, T>::find_overlaps(
+    const I start, const I end) const noexcept {
+  return this->equal_range(start, end);
+}
+
+template <typename I, typename T>
+T_iterator_const IITree<I, T>::lower_bound(const I start, const I end) const noexcept {
+  const auto [overlap_begin, _] = this->internal_equal_range<QueryType::LOWER_BOUND>(start, end);
+  return overlap_begin;
+}
+
+template <typename I, typename T>
+T_iterator_const IITree<I, T>::upper_bound(const I start, const I end) const noexcept {
+  const auto [_, overlap_end] = this->internal_equal_range<QueryType::UPPER_BOUND>(start, end);
+  return overlap_end;
+}
+
+template <typename I, typename T>
+std::pair<size_t, size_t> IITree<I, T>::equal_range_idx(const I start, const I end) const noexcept {
+  const auto [overlap_begin, overlap_end] =
+      this->internal_equal_range<QueryType::EQUAL_RANGE>(start, end);
+
+  return std::make_pair(overlap_begin - this->_data.begin(), overlap_end - this->_data.begin());
+}
+
+template <typename I, typename T>
+std::pair<size_t, size_t> IITree<I, T>::find_overlaps_idx(const I start,
+                                                          const I end) const noexcept {
+  return this->equal_range_idx(start, end);
+}
+
+template <typename I, typename T>
+size_t IITree<I, T>::lower_bound_idx(const I start, const I end) const noexcept {
+  const auto [overlap_begin, _] = this->internal_equal_range<QueryType::LOWER_BOUND>(start, end);
+  return this->_data.begin() - overlap_begin;
+}
+
+template <typename I, typename T>
+size_t IITree<I, T>::upper_bound_idx(const I start, const I end) const noexcept {
+  const auto [_, overlap_end] = this->internal_equal_range<QueryType::UPPER_BOUND>(start, end);
+  return this->_data.begin() - overlap_end;
+}
+
+template <typename I, typename T>
+bool IITree<I, T>::overlaps_with(const I start, const I end) const noexcept {
+  const auto [overlap_begin, _] = this->internal_equal_range<QueryType::CONTAINS>(start, end);
+  return overlap_begin != this->_data.end();
+}
+
+template <typename I, typename T>
+size_t IITree<I, T>::count(const I start, const I end) const noexcept {
+  const auto [overlap_begin, overlap_end] =
+      this->internal_equal_range<QueryType::EQUAL_RANGE>(start, end);
+  if (overlap_begin == this->_data.end()) {
+    return 0UL;
+  }
+  assert(overlap_begin <= overlap_end);  // NOLINT
+  return static_cast<size_t>(overlap_end - overlap_begin);
 }
 
 template <typename I, typename T>
@@ -359,63 +386,68 @@ const absl::Span<const T> IITree<I, T>::data() const {
 }
 
 template <typename I, typename T>
-typename IITree<I, T>::I_iterator IITree<I, T>::starts_begin() {
+I_iterator IITree<I, T>::starts_begin() {
   return this->_start.begin();
 }
 
 template <typename I, typename T>
-typename IITree<I, T>::I_iterator IITree<I, T>::starts_end() {
+I_iterator IITree<I, T>::starts_end() {
   return this->_start.end();
 }
 
 template <typename I, typename T>
-typename IITree<I, T>::I_iterator IITree<I, T>::ends_begin() {
+I_iterator IITree<I, T>::ends_begin() {
   return this->_end.begin();
 }
 
 template <typename I, typename T>
-typename IITree<I, T>::I_iterator IITree<I, T>::ends_end() {
+I_iterator IITree<I, T>::ends_end() {
   return this->_end.end();
 }
 
 template <typename I, typename T>
-typename IITree<I, T>::T_iterator IITree<I, T>::data_begin() {
+T_iterator IITree<I, T>::data_begin() {
   return this->_data.begin();
 }
 
 template <typename I, typename T>
-typename IITree<I, T>::T_iterator IITree<I, T>::data_end() {
+T_iterator IITree<I, T>::data_end() {
   return this->_data.end();
 }
 
 template <typename I, typename T>
-typename IITree<I, T>::I_iterator_const IITree<I, T>::starts_begin() const {
+I_iterator_const IITree<I, T>::starts_begin() const {
   return this->_starts.begin();
 }
 
 template <typename I, typename T>
-typename IITree<I, T>::I_iterator_const IITree<I, T>::starts_end() const {
+I_iterator_const IITree<I, T>::starts_end() const {
   return this->_start.end();
 }
 
 template <typename I, typename T>
-typename IITree<I, T>::I_iterator_const IITree<I, T>::ends_begin() const {
+I_iterator_const IITree<I, T>::ends_begin() const {
   return this->_end.begin();
 }
 
 template <typename I, typename T>
-typename IITree<I, T>::I_iterator_const IITree<I, T>::ends_end() const {
+I_iterator_const IITree<I, T>::ends_end() const {
   return this->_end.end();
 }
 
 template <typename I, typename T>
-typename IITree<I, T>::T_iterator_const IITree<I, T>::data_begin() const {
+T_iterator_const IITree<I, T>::data_begin() const {
   return this->_data.begin();
 }
 
 template <typename I, typename T>
-typename IITree<I, T>::T_iterator_const IITree<I, T>::data_end() const {
+T_iterator_const IITree<I, T>::data_end() const {
   return this->_data.end();
 }
+
+#undef T_iterator
+#undef I_iterator
+#undef T_iterator_const
+#undef I_iterator_const
 
 }  // namespace modle

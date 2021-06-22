@@ -78,10 +78,20 @@ class IITree {
   template <typename I2, typename = std::enable_if_t<std::is_integral_v<I2>>>
   inline void emplace(I2 start, I2 end, T &&data);
 
-  [[nodiscard]] inline bool overlaps_with(I start, I end) noexcept;
-  [[nodiscard]] inline bool overlaps_with(I start, I end) const;
-  inline bool find_overlaps(I start, I end, std::vector<size_t> &overlapping_intervals);
-  inline bool find_overlaps(I start, I end, std::vector<size_t> &overlapping_intervals) const;
+  [[nodiscard]] inline bool overlaps_with(I start, I end) const noexcept;
+  [[nodiscard]] inline std::pair<T_iterator_const, T_iterator_const> equal_range(
+      I start, I end) const noexcept;
+  [[nodiscard]] inline std::pair<T_iterator_const, T_iterator_const> find_overlaps(
+      I start, I end) const noexcept;
+  [[nodiscard]] inline T_iterator_const lower_bound(I start, I end) const noexcept;
+  [[nodiscard]] inline T_iterator_const upper_bound(I start, I end) const noexcept;
+
+  [[nodiscard]] inline std::pair<size_t, size_t> equal_range_idx(I start, I end) const noexcept;
+  [[nodiscard]] inline std::pair<size_t, size_t> find_overlaps_idx(I start, I end) const noexcept;
+  [[nodiscard]] inline size_t lower_bound_idx(I start, I end) const noexcept;
+  [[nodiscard]] inline size_t upper_bound_idx(I start, I end) const noexcept;
+
+  [[nodiscard]] inline size_t count(I start, I end) const noexcept;
 
   [[nodiscard]] inline constexpr size_t capacity() const noexcept;
   [[nodiscard]] inline constexpr bool empty() const noexcept;
@@ -143,12 +153,18 @@ class IITree {
   std::vector<I> _max;
   std::vector<T> _data;
 
-  std::array<StackCell, 64> _stack{};  // NOLINT
+  // clang-format off
+  enum QueryType : uint8_t {
+    LOWER_BOUND = 0x01,
+    UPPER_BOUND = 0x02,
+    EQUAL_RANGE = 0x04,
+    CONTAINS =    0x08
+  };
+  // clang-format on
 
-  [[nodiscard]] inline bool overlaps_with(I start, I end,
-                                          absl::Span<StackCell> stack) const noexcept;
-  inline bool find_overlaps(I start, I end, std::vector<size_t> &overlapping_intervals,
-                            absl::Span<StackCell> stack) const;
+  template <QueryType Mode>
+  inline std::pair<T_iterator_const, T_iterator_const> internal_equal_range(I start,
+                                                                            I end) const noexcept;
 };
 }  // namespace modle
 

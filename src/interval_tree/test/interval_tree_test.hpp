@@ -11,7 +11,6 @@
 #include "modle/interval_tree.hpp"
 
 namespace modle::test::interval_tree {
-using IITree_t = IITree<size_t, std::string>;
 
 struct Record {
   size_t start;
@@ -19,17 +18,23 @@ struct Record {
   std::string data;
 };
 
+using IITree_t = IITree<size_t, Record>;
+
+void test_find_overlaps(const IITree_t& tree, size_t start, size_t end,
+                        size_t num_expected_overlaps) {
+  const auto [overlap_begin, overlap_end] = tree.find_overlaps(start, end);
+  CHECK(overlap_end - overlap_begin == num_expected_overlaps);
+}
+
 TEST_CASE("Interval tree simple", "[interval-tree][short]") {
   IITree_t tree{};
 
-  tree.insert(0, 10, "");
-  tree.insert(5, 15, "");
+  tree.insert(0, 10, Record{});  // NOLINT
+  tree.insert(5, 15, Record{});  // NOLINT
 
   tree.make_BST();
 
   REQUIRE(tree.size() == 2);
-
-  std::vector<size_t> buff;
 
   CHECK(tree.overlaps_with(0, 4));
   CHECK(tree.overlaps_with(0, 10));
@@ -38,18 +43,12 @@ TEST_CASE("Interval tree simple", "[interval-tree][short]") {
   CHECK(tree.overlaps_with(0, 25));
   CHECK(!tree.overlaps_with(16, 25));
 
-  CHECK(tree.find_overlaps(0, 4, buff));
-  CHECK(buff.size() == 1);
-  CHECK(tree.find_overlaps(0, 10, buff));
-  CHECK(buff.size() == 2);
-  CHECK(tree.find_overlaps(5, 15, buff));
-  CHECK(buff.size() == 2);
-  CHECK(tree.find_overlaps(0, 15, buff));
-  CHECK(buff.size() == 2);
-  CHECK(tree.find_overlaps(0, 25, buff));
-  CHECK(buff.size() == 2);
-  CHECK(!tree.find_overlaps(16, 25, buff));
-  CHECK(buff.empty());
+  test_find_overlaps(tree, 0, 4, 1);    // NOLINT
+  test_find_overlaps(tree, 0, 10, 2);   // NOLINT
+  test_find_overlaps(tree, 5, 15, 2);   // NOLINT
+  test_find_overlaps(tree, 0, 15, 2);   // NOLINT
+  test_find_overlaps(tree, 0, 25, 2);   // NOLINT
+  test_find_overlaps(tree, 16, 25, 0);  // NOLINT
 }
 
 TEST_CASE("Interval tree chrX", "[interval-tree][short]") {
@@ -61,7 +60,6 @@ TEST_CASE("Interval tree chrX", "[interval-tree][short]") {
   std::vector<std::string_view> toks;
   Record record{};
   IITree_t tree{};
-  std::vector<size_t> idx_buff;
 
   auto toks_to_record = [&]() {
     REQUIRE(toks.size() == 3UL);
@@ -77,7 +75,7 @@ TEST_CASE("Interval tree chrX", "[interval-tree][short]") {
       toks = absl::StrSplit(buff, absl::ByAnyChar("\t "));
       toks_to_record();
 
-      tree.insert(record.start, record.end, record.data);
+      tree.insert(record.start, record.end, record);
     }
 
     REQUIRE(f.eof());
@@ -94,12 +92,12 @@ TEST_CASE("Interval tree chrX", "[interval-tree][short]") {
       toks_to_record();
 
       CHECK(tree.overlaps_with(record.start, record.end));
-      CHECK(tree.find_overlaps(record.start, record.end, idx_buff));
-      CHECK(idx_buff.size() == 1);
+      CHECK(tree.count(record.start, record.end) == 1);
+      const auto [overlap_begin, overlap_end] = tree.find_overlaps(record.start, record.end);
 
-      CHECK(tree.get_overlap_start(idx_buff.front()) == record.start);
-      CHECK(tree.get_overlap_end(idx_buff.front()) == record.end);
-      CHECK(tree.get_overlap_data(idx_buff.front()) == record.data);
+      CHECK(overlap_begin->start == record.start);
+      CHECK(overlap_begin->end == record.end);
+      CHECK(overlap_begin->data == record.data);
     }
 
     REQUIRE(f.eof());
@@ -113,8 +111,8 @@ TEST_CASE("Interval tree chrX", "[interval-tree][short]") {
     toks_to_record();
 
     CHECK(!tree.overlaps_with(record.start, record.end));
-    CHECK(!tree.find_overlaps(record.start, record.end, idx_buff));
-    CHECK(idx_buff.empty());
+    CHECK(tree.count(record.start, record.end) == 0);
+    test_find_overlaps(tree, record.start, record.end, 0);
   }
 
   REQUIRE(f.eof());
