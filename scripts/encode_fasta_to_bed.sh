@@ -2,6 +2,7 @@
 
 set -e
 
+# TODO: fix code to support chrX/Y
 
 zcat "$1" |
     grep '>' |
