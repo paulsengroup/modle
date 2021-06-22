@@ -172,8 +172,9 @@ bool IITree<I, T>::find_overlaps(const I start, const I end,
   // push the root; this is a top down traversal
   stack.front() = StackCell{this->_max_level, (1ULL << this->_max_level) - 1, false};
 
-  for (auto t = 1UL; t;) {  // the following guarantees that numbers in
-                            // overlapping_intervals[] are always sorted
+  for (auto t = 1UL; t > 0;) {  // the following guarantees that numbers in
+                                // overlapping_intervals[] are always sorted
+    assert(t <= 64);            // NOLINT
     const auto cell = stack[--t];
     if (cell.level < 4) {  // we are in a small subtree; traverse every node in this subtree
       const auto i0 = cell.node_idx >> cell.level << cell.level;
@@ -182,10 +183,7 @@ bool IITree<I, T>::find_overlaps(const I start, const I end,
         if (start < this->_end[i]) {  // if find_overlaps, append to overlapping_intervals[]
           overlapping_intervals.push_back(i);
         }
-      return !overlapping_intervals.empty();
-    }
-
-    if (!cell.left_child_already_processed) {
+    } else if (!cell.left_child_already_processed) {
       const auto lchild_idx =
           cell.node_idx -
           (1ULL << (cell.level - 1));  // the left child of cell.node_idx
@@ -236,7 +234,8 @@ bool IITree<I, T>::overlaps_with(const I start, const I end,
   // push the root; this is a top down traversal
   stack.front() = StackCell{this->_max_level, (1ULL << this->_max_level) - 1, false};
 
-  for (auto t = 1UL; t;) {  // the following guarantees that numbers in out[] are always sorted
+  for (auto t = 1UL; t > 0;) {  // the following guarantees that numbers in out[] are always sorted
+    assert(t <= 64);            // NOLINT
     const auto cell = stack[--t];
     if (cell.level < 4) {  // we are in a small subtree; traverse every node in this subtree
       const auto i0 = cell.node_idx >> cell.level << cell.level;
@@ -246,9 +245,7 @@ bool IITree<I, T>::overlaps_with(const I start, const I end,
           return true;
         }
       return false;
-    }
-
-    if (!cell.left_child_already_processed) {  // if left child not processed
+    } else if (!cell.left_child_already_processed) {  // if left child not processed
       const auto lchild_idx =
           cell.node_idx - (1ULL << (cell.level - 1));  // the left child of cell.node_idx
                                                        // NB: lchild_idx may be out of range
