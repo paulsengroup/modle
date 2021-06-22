@@ -59,22 +59,11 @@ class BED_tree {
   [[nodiscard]] inline size_t count_overlaps(const BED& interval) const;
   [[nodiscard]] inline size_t count_overlaps(const K& chrom_name, uint64_t chrom_start,
                                              uint64_t chrom_end) const;
-  [[nodiscard]] inline size_t count_overlaps(const BED& interval,
-                                             std::vector<size_t>& overlaps_idx) const;
-  [[nodiscard]] inline size_t count_overlaps(const K& chrom_name, uint64_t chrom_start,
-                                             uint64_t chrom_end,
-                                             std::vector<size_t>& overlaps_idx) const;
 
-  inline bool find_overlaps(const BED& interval, std::vector<const BED*>& overlaps) const;
-  inline bool find_overlaps(const BED& interval, std::vector<BED>& overlaps) const;
-  [[nodiscard]] inline std::vector<BED> find_overlaps(const BED& interval) const;
-
-  inline bool find_overlaps(const K& chrom_name, I chrom_start, I chrom_end,
-                            std::vector<const BED*>& overlaps) const;
-  inline bool find_overlaps(const K& chrom_name, I chrom_start, I chrom_end,
-                            std::vector<BED>& overlaps) const;
-  [[nodiscard]] inline std::vector<BED> find_overlaps(const K& chrom_name, I chrom_start,
-                                                      I chrom_end) const;
+  [[nodiscard]] inline absl::Span<const BED> find_overlaps(const BED& interval) const;
+  [[nodiscard]] inline absl::Span<const BED> find_overlaps(const K& chrom_name,
+                                                           uint64_t chrom_start,
+                                                           uint64_t chrom_end) const;
 
   [[nodiscard]] inline bool empty() const;
   [[nodiscard]] inline size_t size() const;
@@ -87,6 +76,7 @@ class BED_tree {
 
  private:
   BED_tree_t _trees{};
+  std::vector<BED> _empty_range{};
 };
 
 struct RGB {

@@ -109,93 +109,35 @@ size_t BED_tree<K, I>::count_overlaps(const BED& interval) const {
 template <typename K, typename I>
 size_t BED_tree<K, I>::count_overlaps(const K& chrom_name, uint64_t chrom_start,
                                       uint64_t chrom_end) const {
-  std::vector<size_t> buff;
-  return this->count_overlaps(chrom_name, chrom_start, chrom_end, buff);
-}
-
-template <typename K, typename I>
-size_t BED_tree<K, I>::count_overlaps(const BED& interval,
-                                      std::vector<size_t>& overlaps_idx) const {
-  return this->count_overlaps(interval.chrom, I(interval.chrom_start), I(interval.chrom_end),
-                              overlaps_idx);
-}
-
-template <typename K, typename I>
-size_t BED_tree<K, I>::count_overlaps(const K& chrom_name, uint64_t chrom_start, uint64_t chrom_end,
-                                      std::vector<size_t>& overlaps_idx) const {
   auto it = this->_trees.find(chrom_name);
   if (it == this->_trees.end()) {
     return 0UL;
   }
   assert(it->second.is_BST());  // NOLINT You forgot to call index/make_BST()!
 
-  it->second.find_overlaps(chrom_start, chrom_end, overlaps_idx);
-  return overlaps_idx.size();
+  return it->second.count(chrom_start, chrom_end);
 }
 
 template <typename K, typename I>
-bool BED_tree<K, I>::find_overlaps(const K& chrom_name, I chrom_start, I chrom_end,
-                                   std::vector<const BED*>& overlaps) const {
-  overlaps.clear();
+absl::Span<const BED> BED_tree<K, I>::find_overlaps(const K& chrom_name, uint64_t chrom_start,
+                                                    uint64_t chrom_end) const {
   auto it = this->_trees.find(chrom_name);
   if (it == this->_trees.end()) {
-    return false;
+    assert(this->_empty_range.empty());  // NOLINT
+    return this->_empty_range;
   }
   assert(it->second.is_BST());  // NOLINT You forgot to call index/make_BST()!
 
-  std::vector<size_t> overlaps_idx;
-  it->second.find_overlaps(chrom_start, chrom_end, overlaps_idx);
-
-  overlaps.resize(overlaps_idx.size());
-  std::transform(overlaps_idx.begin(), overlaps_idx.end(), overlaps.begin(),
-                 [&](const auto idx) { return &(it->second.get_overlap_data(idx)); });
-
-  return !overlaps.empty();
-}
-
-template <typename K, typename I>
-bool BED_tree<K, I>::find_overlaps(const K& chrom_name, I chrom_start, I chrom_end,
-                                   std::vector<BED>& overlaps) const {
-  overlaps.clear();
-  auto it = this->_trees.find(chrom_name);
-  if (it == this->_trees.end()) {
-    return false;
+  const auto [overlap_begin, overlap_end] = it->second.find_overlaps(chrom_start, chrom_end);
+  if (overlap_begin == it->second.data_end()) {
+    return it->second.data().subspan(0, 0);  // return an empty span
   }
-  assert(it->second.is_BST());  // NOLINT You forgot to call index/make_BST()!
-
-  std::vector<size_t> overlaps_idx;
-  it->second.find_overlaps(chrom_start, chrom_end, overlaps_idx);
-
-  overlaps.resize(overlaps_idx.size());
-  std::transform(overlaps_idx.begin(), overlaps_idx.end(), overlaps.begin(),
-                 [tree = it->second](const auto idx) { return tree.get_overlap_data(idx); });
-
-  return !overlaps.empty();
+  return absl::MakeConstSpan(&(*overlap_begin), overlap_end - overlap_begin);
 }
 
 template <typename K, typename I>
-std::vector<BED> BED_tree<K, I>::find_overlaps(const K& chrom_name, I chrom_start,
-                                               I chrom_end) const {
-  std::vector<BED> buff;
-  this->find_overlaps(chrom_name, chrom_start, chrom_end, buff);
-  return buff;
-}
-
-template <typename K, typename I>
-bool BED_tree<K, I>::find_overlaps(const BED& interval, std::vector<const BED*>& overlaps) const {
-  return this->find_overlaps(interval.chrom, I(interval.chrom_start), I(interval.chrom_end),
-                             overlaps);
-}
-
-template <typename K, typename I>
-bool BED_tree<K, I>::find_overlaps(const BED& interval, std::vector<BED>& overlaps) const {
-  return this->find_overlaps(interval.chrom, I(interval.chrom_start), I(interval.chrom_end),
-                             overlaps);
-}
-
-template <typename K, typename I>
-std::vector<BED> BED_tree<K, I>::find_overlaps(const BED& interval) const {
-  return this->find_overlaps(interval.chrom, I(interval.chrom_start), I(interval.chrom_end));
+absl::Span<const BED> BED_tree<K, I>::find_overlaps(const BED& interval) const {
+  return this->find_overlaps(interval.chrom, interval.chrom_start, interval.chrom_end);
 }
 
 template <typename K, typename I>
