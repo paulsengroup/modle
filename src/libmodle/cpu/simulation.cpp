@@ -275,7 +275,8 @@ void Simulation::simulate_extrusion_kernel(Simulation::State& s) const {
       {  // Select inactive LEFs and bind them
         auto lef_mask = absl::MakeSpan(s.idx_buff1.data(), lefs.size());
         Simulation::select_lefs_to_bind(lefs, lef_mask);
-        this->bind_lefs(s.chrom, lefs, rev_lef_ranks, fwd_lef_ranks, lef_mask, s.rand_eng, epoch);
+        Simulation::bind_lefs(s.chrom, lefs, rev_lef_ranks, fwd_lef_ranks, lef_mask, s.rand_eng,
+                              epoch);
       }
 
       if (epoch > n_burnin_epochs) {              // Register contacts
@@ -324,8 +325,8 @@ void Simulation::simulate_extrusion_kernel(Simulation::State& s) const {
                                          fwd_collision_mask, s.rand_eng);
 
       // Advance LEFs
-      this->extrude(s.chrom, lefs, rev_moves, fwd_moves, num_rev_units_at_5prime,
-                    num_fwd_units_at_3prime);
+      Simulation::extrude(s.chrom, lefs, rev_moves, fwd_moves, num_rev_units_at_5prime,
+                          num_fwd_units_at_3prime);
 
       // The vector of affinities is used to bias LEF release towards LEFs that are not in a hard
       // stall condition
@@ -334,7 +335,7 @@ void Simulation::simulate_extrusion_kernel(Simulation::State& s) const {
 
       // Reusing this buffer is ok, as at this point we don't need access to collision information
       const auto lef_idx = absl::MakeSpan(s.idx_buff1.data(), nlefs_to_release);
-      this->select_lefs_to_release(lef_idx, lef_unloader_affinity, s.rand_eng);
+      Simulation::select_lefs_to_release(lef_idx, lef_unloader_affinity, s.rand_eng);
       Simulation::release_lefs(lefs, lef_idx);
     }
   } catch (const std::exception& err) {
