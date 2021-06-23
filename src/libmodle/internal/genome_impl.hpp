@@ -14,32 +14,17 @@ namespace modle {
 DISABLE_WARNING_PUSH
 DISABLE_WARNING_SIGN_CONVERSION
 DISABLE_WARNING_CONVERSION
-template <typename Iter, typename I, typename, typename>
+template <typename I, typename>
 Chromosome::Chromosome(size_t id, std::string_view chrom_name, I chrom_start, I chrom_end,
-                       I chrom_size, Iter barriers_begin, Iter barriers_end)
+                       I chrom_size)
     : _name(chrom_name), _start(chrom_start), _end(chrom_end), _size(chrom_size), _id(id) {
   assert(chrom_start <= chrom_end);               // NOLINT
   assert(chrom_end - chrom_start <= chrom_size);  // NOLINT
-  if (const auto size = std::distance(barriers_begin, barriers_end); size > 0) {
-    _barriers.reserve(size);
-
-    using Iter_t = typename std::iterator_traits<Iter>::value_type;
-    if constexpr (std::is_rvalue_reference_v<Iter_t>) {
-      std::for_each(barriers_begin, barriers_end, [&](auto&& barrier) {
-        _barriers.emplace(barrier.chrom_start, barrier.chrom_end, std::move(barrier));
-      });
-    } else {
-      std::for_each(barriers_begin, barriers_end, [&](const auto& barrier) {
-        _barriers.insert(barrier.chrom_start, barrier.chrom_end, barrier);
-      });
-    }
-  }
-  _barriers.make_BST();
 }
 
 template <typename I, typename>
 Chromosome::Chromosome(size_t id, std::string_view chrom_name, I chrom_start, I chrom_end,
-                       I chrom_size, const bed_tree_value_t& barriers)
+                       I chrom_size, const IITree<bp_t, ExtrusionBarrier>& barriers)
     : _name(chrom_name),
       _start(chrom_start),
       _end(chrom_end),
@@ -54,7 +39,7 @@ Chromosome::Chromosome(size_t id, std::string_view chrom_name, I chrom_start, I 
 
 template <typename I, typename>
 Chromosome::Chromosome(size_t id, std::string_view chrom_name, I chrom_start, I chrom_end,
-                       I chrom_size, bed_tree_value_t&& barriers)
+                       I chrom_size, IITree<bp_t, ExtrusionBarrier>&& barriers)
     : _name(chrom_name),
       _start(chrom_start),
       _end(chrom_end),
@@ -67,11 +52,6 @@ Chromosome::Chromosome(size_t id, std::string_view chrom_name, I chrom_start, I 
   _barriers.make_BST();
 }
 DISABLE_WARNING_POP
-
-template <typename Iter, typename>
-Chromosome::Chromosome(size_t id, const bed::BED& chrom, Iter barriers_begin, Iter barriers_end)
-    : Chromosome(id, chrom.chrom, chrom.thick_start, chrom.thick_end, chrom.size(), barriers_begin,
-                 barriers_end){};
 
 constexpr bp_t Chromosome::start_pos() const { return this->_start; }
 

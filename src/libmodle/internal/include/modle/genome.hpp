@@ -33,29 +33,20 @@ class Chromosome {
 
  public:
   Chromosome() = default;
-  template <typename Iter = bed::BED*, typename I,
-            typename = std::enable_if_t<std::is_same_v<
-                std::remove_cv_t<typename std::iterator_traits<Iter>::value_type>, bed::BED>>,
-            typename = std::enable_if_t<std::is_integral_v<I>>>
+  template <typename I, typename = std::enable_if_t<std::is_integral_v<I>>>
   inline Chromosome(size_t id, std::string_view chrom_name, I chrom_start, I chrom_end,
-                    I chrom_size, Iter barriers_begin = {}, Iter barriers_end = {});
-  template <typename Iter = bed::BED*,
-            typename = std::enable_if_t<std::is_same_v<
-                std::remove_cv_t<typename std::iterator_traits<Iter>::value_type>, bed::BED>>>
-  inline Chromosome(size_t id, const bed::BED& chrom, Iter barriers_begin = {},
-                    Iter barriers_end = {});
+                    I chrom_size);
 
-  Chromosome(size_t id, const bed::BED& chrom, absl::Span<const bed::BED> barriers);
-
-  Chromosome(size_t id, const bed::BED& chrom, const bed_tree_value_t& barriers);
-  Chromosome(size_t id, const bed::BED& chrom, bed_tree_value_t&& barriers);
+  Chromosome(size_t id, const bed::BED& chrom);
+  Chromosome(size_t id, const bed::BED& chrom, const IITree<bp_t, ExtrusionBarrier>& barriers);
+  Chromosome(size_t id, const bed::BED& chrom, IITree<bp_t, ExtrusionBarrier>&& barriers);
 
   template <typename I = uint64_t, typename = std::enable_if_t<std::is_integral_v<I>>>
   inline Chromosome(size_t id, std::string_view chrom_name, I chrom_start, I chrom_end,
-                    I chrom_size, const bed_tree_value_t& barriers);
+                    I chrom_size, const IITree<bp_t, ExtrusionBarrier>& barriers);
   template <typename I = uint64_t, typename = std::enable_if_t<std::is_integral_v<I>>>
   inline Chromosome(size_t id, std::string_view chrom_name, I chrom_start, I chrom_end,
-                    I chrom_size, bed_tree_value_t&& barriers);
+                    I chrom_size, IITree<bp_t, ExtrusionBarrier>&& barriers);
 
   ~Chromosome() = default;
 
@@ -69,10 +60,9 @@ class Chromosome {
   [[nodiscard]] bool operator==(std::string_view other_name) const noexcept;
   [[nodiscard]] bool operator<(const Chromosome& other) const noexcept(utils::ndebug_defined());
 
-  void add_extrusion_barrier(const bed::BED& barrier);
-  void add_extrusion_barrier(bed::BED&& barrier);
+  void add_extrusion_barrier(const bed::BED& record, double ctcf_prob_occ_to_occ,
+                             double ctcf_prob_nocc_to_nocc);
 
-  void add_extrusion_barrier(absl::Span<const bed::BED> barriers);
   template <typename Iter,
             typename = std::enable_if_t<std::is_same_v<
                 std::remove_cv_t<typename std::iterator_traits<Iter>::value_type>, bed::BED>>>
@@ -86,10 +76,10 @@ class Chromosome {
   [[nodiscard]] constexpr bp_t size() const;
   [[nodiscard]] constexpr bp_t simulated_size() const;
   [[nodiscard]] bool ok() const;
-  [[nodiscard]] size_t nlefs(double nlefs_per_mbp) const;
-  [[nodiscard]] size_t nbarriers() const;
-  [[nodiscard]] size_t num_valid_barriers() const;
-  [[nodiscard]] const bed_tree_value_t& get_barriers() const;
+  [[nodiscard]] size_t num_lefs(double nlefs_per_mbp) const;
+  [[nodiscard]] size_t num_barriers() const;
+  [[nodiscard]] const IITree<bp_t, ExtrusionBarrier>& barriers() const;
+  [[nodiscard]] IITree<bp_t, ExtrusionBarrier>& barriers();
   [[nodiscard]] absl::Span<const bed_tree_value_t> get_features() const;
   void increment_contacts(bp_t pos1, bp_t pos2, bp_t bin_size);
   void increment_contacts(bp_t bin1, bp_t bin2);
@@ -107,7 +97,7 @@ class Chromosome {
   bp_t _end{std::numeric_limits<bp_t>::max()};
   bp_t _size{std::numeric_limits<bp_t>::max()};
   size_t _id{std::numeric_limits<size_t>::max()};
-  bed_tree_value_t _barriers{};
+  IITree<bp_t, ExtrusionBarrier> _barriers{};
   std::shared_ptr<contact_matrix_t> _contacts{nullptr};
   std::vector<bed_tree_value_t> _features{};
 
@@ -122,7 +112,8 @@ class Genome {
   Genome(const std::filesystem::path& path_to_chrom_sizes,
          const std::filesystem::path& path_to_extr_barriers,
          const std::filesystem::path& path_to_chrom_subranges,
-         absl::Span<const std::filesystem::path> paths_to_extra_features, bool keep_all_chroms);
+         absl::Span<const std::filesystem::path> paths_to_extra_features,
+         double ctcf_prob_occ_to_occ, double ctcf_prob_nocc_to_nocc, bool keep_all_chroms);
 
   using iterator = absl::btree_set<Chromosome>::iterator;
   using const_iterator = absl::btree_set<Chromosome>::const_iterator;
@@ -145,17 +136,14 @@ class Genome {
                                            double lef_fraction_contact_sampling,
                                            double nlefs_per_mbp, size_t ncells) const;
 
-  /// Allocate and return the extrusion barriers for the chromosome \p chrom.
-  [[nodiscard]] std::vector<ExtrusionBarrier> generate_vect_of_barriers(
-      std::string_view chrom_name, double ctcf_prob_occ_to_occ, double ctcf_prob_nocc_to_nocc);
-
   /// A simple wrapper function that imports chromosomes and extrusion barriers that comprise the
   /// genome that is being simulated.
   [[nodiscard]] static absl::btree_set<Chromosome> instantiate_genome(
       const std::filesystem::path& path_to_chrom_sizes,
       const std::filesystem::path& path_to_extr_barriers,
       const std::filesystem::path& path_to_chrom_subranges,
-      absl::Span<const std::filesystem::path> paths_to_extra_features, bool keep_all_chroms);
+      absl::Span<const std::filesystem::path> paths_to_extra_features, double ctcf_prob_occ_to_occ,
+      double ctcf_prob_nocc_to_nocc, bool keep_all_chroms);
 
  private:
   absl::btree_set<Chromosome> _chromosomes{};
@@ -172,7 +160,8 @@ class Genome {
   /// Parse a BED file containing the genomic coordinates of extrusion barriers and add them to the
   /// Genome
   static size_t import_barriers(absl::btree_set<Chromosome>& chromosomes,
-                                const std::filesystem::path& path_to_extr_barriers);
+                                const std::filesystem::path& path_to_extr_barriers,
+                                double ctcf_prob_occ_to_occ, double ctcf_prob_nocc_to_nocc);
 
   /// Parse a BED file containing the genomic coordinates of extra features (e.g. promoters,
   /// enhancer) them to the Genome

@@ -26,14 +26,18 @@
 
 namespace modle {
 
-Chromosome::Chromosome(size_t id, const bed::BED& chrom, absl::Span<const bed::BED> barriers)
-    : Chromosome(id, chrom.chrom, chrom.thick_start, chrom.thick_end, chrom.size(),
-                 barriers.begin(), barriers.end()) {}
-
-Chromosome::Chromosome(size_t id, const bed::BED& chrom, const bed_tree_value_t& barriers)
+Chromosome::Chromosome(size_t id, const bed::BED& chrom,
+                       const IITree<bp_t, ExtrusionBarrier>& barriers)
     : Chromosome(id, chrom.chrom, chrom.thick_start, chrom.thick_end, chrom.size(), barriers) {}
 
-Chromosome::Chromosome(size_t id, const bed::BED& chrom, bed_tree_value_t&& barriers)
+Chromosome::Chromosome(size_t id, const bed::BED& chrom)
+    : _name(chrom.chrom),
+      _start(chrom.chrom_start),
+      _end(chrom.chrom_end),
+      _size(chrom.size()),
+      _id(id) {}
+
+Chromosome::Chromosome(size_t id, const bed::BED& chrom, IITree<bp_t, ExtrusionBarrier>&& barriers)
     : Chromosome(id, chrom.chrom, chrom.thick_start, chrom.thick_end, chrom.size(), barriers) {}
 
 Chromosome::Chromosome(const Chromosome& other)
@@ -88,16 +92,33 @@ bool Chromosome::operator<(const Chromosome& other) const noexcept(utils::ndebug
   return this->size() < other.size();
 }
 
-void Chromosome::add_extrusion_barrier(const bed::BED& barrier) {
-  this->_barriers.insert(barrier.chrom_start, barrier.chrom_end, barrier);
-}
+void Chromosome::add_extrusion_barrier(const bed::BED& record, const double ctcf_prob_occ_to_occ,
+                                       const double ctcf_prob_nocc_to_nocc) {
+  if (record.strand != '+' && record.strand != '-') {
+    return;
+  }
+  const auto pos = (record.chrom_start + record.chrom_end + 1) / 2;
+  if (pos < this->start_pos() || pos >= this->end_pos()) {
+    // Barrier lies outside of the genomic regions to be simulated
+    return;
+  }
 
-void Chromosome::add_extrusion_barrier(const absl::Span<const bed::BED> barriers) {
-  this->add_extrusion_barrier(barriers.begin(), barriers.end());
-}
+  if (record.score != 0) {
+    // When the score field is zero (i.e. when the extr. barrier does not have a custom
+    // occupancy), use the occupancy specified through the CLI
+    const auto pblock = record.score;
+    const auto pno = ctcf_prob_nocc_to_nocc;
+    const auto poo =
+        ExtrusionBarrier::compute_blocking_to_blocking_transition_probabilities_from_pblock(pblock,
+                                                                                            pno);
 
-void Chromosome::add_extrusion_barrier(bed::BED&& barrier) {
-  this->_barriers.emplace(barrier.chrom_start, barrier.chrom_end, std::move(barrier));
+    this->_barriers.emplace(record.chrom_start, record.chrom_end,
+                            ExtrusionBarrier{pos, poo, pno, record.strand});
+  } else {
+    this->_barriers.emplace(
+        record.chrom_start, record.chrom_end,
+        ExtrusionBarrier{pos, ctcf_prob_occ_to_occ, ctcf_prob_nocc_to_nocc, record.strand});
+  }
 }
 
 size_t Chromosome::id() const { return this->_id; }
@@ -106,18 +127,13 @@ const char* Chromosome::name_cstr() const { return this->_name.c_str(); }
 
 bool Chromosome::ok() const { return !this->_barriers.empty(); }
 
-size_t Chromosome::nlefs(double nlefs_per_mbp) const {  // NOLINTNEXTLINE
+size_t Chromosome::num_lefs(double nlefs_per_mbp) const {  // NOLINTNEXTLINE
   return static_cast<size_t>((static_cast<double>(this->simulated_size()) / 1.0e6) * nlefs_per_mbp);
 }
-size_t Chromosome::nbarriers() const { return this->_barriers.size(); }
+size_t Chromosome::num_barriers() const { return this->_barriers.size(); }
 
-size_t Chromosome::num_valid_barriers() const {
-  return static_cast<size_t>(
-      std::count_if(this->get_barriers().data_begin(), this->get_barriers().data_end(),
-                    [](const auto& b) { return b.strand == '-' || b.strand == '+'; }));
-}
-
-const Chromosome::bed_tree_value_t& Chromosome::get_barriers() const { return this->_barriers; }
+const IITree<bp_t, ExtrusionBarrier>& Chromosome::barriers() const { return this->_barriers; }
+IITree<bp_t, ExtrusionBarrier>& Chromosome::barriers() { return this->_barriers; }
 absl::Span<const Chromosome::bed_tree_value_t> Chromosome::get_features() const {
   return this->_features;
 }
@@ -170,10 +186,12 @@ Genome::Genome(const std::filesystem::path& path_to_chrom_sizes,
                const std::filesystem::path& path_to_extr_barriers,
                const std::filesystem::path& path_to_chrom_subranges,
                const absl::Span<const std::filesystem::path> paths_to_extra_features,
+               const double ctcf_prob_occ_to_occ, const double ctcf_prob_nocc_to_nocc,
                bool keep_all_chroms)
-    : _chromosomes(instantiate_genome(path_to_chrom_sizes, path_to_extr_barriers,
-                                      path_to_chrom_subranges, paths_to_extra_features,
-                                      keep_all_chroms)) {}
+    : _chromosomes(instantiate_genome(
+          path_to_chrom_sizes, path_to_extr_barriers, path_to_chrom_subranges,
+          paths_to_extra_features, ctcf_prob_occ_to_occ, ctcf_prob_nocc_to_nocc, keep_all_chroms)) {
+}
 
 absl::btree_set<Chromosome> Genome::import_chromosomes(
     const std::filesystem::path& path_to_chrom_sizes,
@@ -258,7 +276,9 @@ absl::btree_set<Chromosome> Genome::import_chromosomes(
 }
 
 size_t Genome::import_barriers(absl::btree_set<Chromosome>& chromosomes,
-                               const std::filesystem::path& path_to_extr_barriers) {
+                               const std::filesystem::path& path_to_extr_barriers,
+                               const double ctcf_prob_occ_to_occ,
+                               const double ctcf_prob_nocc_to_nocc) {
   assert(!chromosomes.empty());            // NOLINT
   assert(!path_to_extr_barriers.empty());  // NOLINT
 
@@ -266,7 +286,7 @@ size_t Genome::import_barriers(absl::btree_set<Chromosome>& chromosomes,
   fmt::print(stderr, FMT_STRING("Importing extrusion barriers from file {}..."),
              path_to_extr_barriers);
 
-  size_t num_barriers = 0;
+  size_t tot_num_barriers = 0;
 
   // Parse all the records from the BED file. The parser will throw in case of duplicates.
   const auto barriers =
@@ -274,21 +294,22 @@ size_t Genome::import_barriers(absl::btree_set<Chromosome>& chromosomes,
 
   for (auto& chrom : chromosomes) {
     if (const auto chrom_name = std::string{chrom.name()}; barriers.contains(chrom_name)) {
-      chrom._barriers = barriers.at(chrom_name);
-      num_barriers += chrom.get_barriers().size();
-      for (const auto& record : chrom.get_barriers().data()) {
+      for (const auto& record : barriers.at(chrom_name).data()) {
         if (record.score < 0 || record.score > 1) {
           throw std::runtime_error(
               fmt::format("Invalid score field detected for record {}[{}-{}]: expected a score "
                           "between 0 and 1, got {:.4g}.",
                           record.chrom, record.chrom_start, record.chrom_end, record.score));
         }
+        chrom.add_extrusion_barrier(record, ctcf_prob_occ_to_occ, ctcf_prob_nocc_to_nocc);
+        ++tot_num_barriers;
       }
     }
+    chrom.barriers().make_BST();
   }
-  fmt::print(stderr, FMT_STRING(" DONE!\nImported {} barriers in {}.\n"), num_barriers,
+  fmt::print(stderr, FMT_STRING(" DONE!\nImported {} barriers in {}.\n"), tot_num_barriers,
              absl::FormatDuration(absl::Now() - t0));
-  return num_barriers;
+  return tot_num_barriers;
 }
 
 size_t Genome::import_extra_features(absl::btree_set<Chromosome>& chromosomes,
@@ -316,64 +337,14 @@ size_t Genome::import_extra_features(absl::btree_set<Chromosome>& chromosomes,
   return num_features;
 }
 
-std::vector<ExtrusionBarrier> Genome::generate_vect_of_barriers(std::string_view chrom_name,
-                                                                double ctcf_prob_occ_to_occ,
-                                                                double ctcf_prob_nocc_to_nocc) {
-  std::vector<ExtrusionBarrier> barriers;
-  size_t barriers_skipped = 0;
-
-  const auto* chrom = [&]() -> const Chromosome* {
-    for (const auto& c : this->_chromosomes) {
-      if (c.name() == chrom_name) {
-        return &c;
-      }
-    }
-    return nullptr;
-  }();
-
-  assert(chrom);  // NOLINT
-  for (const auto& record : chrom->get_barriers().data()) {
-    // Only instantiate barriers with a known motif direction.
-    if (record.strand != '+' && record.strand != '-') {
-      ++barriers_skipped;
-      continue;
-    }
-    const auto pos = (record.chrom_start + record.chrom_end + 1) / 2;
-    if (pos < chrom->start_pos() || pos >= chrom->end_pos()) {
-      // Barrier lies outside of the genomic regions to be simulated
-      ++barriers_skipped;
-      continue;
-    }
-
-    if (record.score != 0) {
-      // When the score field is zero (i.e. when the extr. barrier does not have a custom
-      // occupancy), use the occupancy specified through the CLI
-      const auto pblock = record.score;
-      const auto pno = ctcf_prob_nocc_to_nocc;
-      const auto poo =
-          ExtrusionBarrier::compute_blocking_to_blocking_transition_probabilities_from_pblock(
-              pblock, pno);
-
-      barriers.emplace_back(pos, poo, pno, record.strand);
-    } else {
-      barriers.emplace_back(pos, ctcf_prob_occ_to_occ, ctcf_prob_nocc_to_nocc, record.strand);
-    }
-  }
-
-  fmt::print(stderr,
-             FMT_STRING("Instantiated {} extr. barriers for '{}' ({} barriers were skipped).\n"),
-             barriers.size(), chrom->name(), barriers_skipped);
-
-  return barriers;
-}
-
 absl::btree_set<Chromosome> Genome::instantiate_genome(
     const std::filesystem::path& path_to_chrom_sizes,
     const std::filesystem::path& path_to_extr_barriers,
     const std::filesystem::path& path_to_chrom_subranges,
-    const absl::Span<const std::filesystem::path> paths_to_extra_features, bool keep_all_chroms) {
+    const absl::Span<const std::filesystem::path> paths_to_extra_features,
+    const double ctcf_prob_occ_to_occ, const double ctcf_prob_nocc_to_nocc, bool keep_all_chroms) {
   auto chroms = import_chromosomes(path_to_chrom_sizes, path_to_chrom_subranges, keep_all_chroms);
-  import_barriers(chroms, path_to_extr_barriers);
+  import_barriers(chroms, path_to_extr_barriers, ctcf_prob_occ_to_occ, ctcf_prob_nocc_to_nocc);
   for (const auto& path_to_feature_bed : paths_to_extra_features) {
     import_extra_features(chroms, path_to_feature_bed);
   }
@@ -416,10 +387,9 @@ const Chromosome& Genome::longest_chromosome() const {
 
 const Chromosome& Genome::chromosome_with_max_nbarriers() const {
   assert(!this->_chromosomes.empty());  // NOLINT
-  return *std::max_element(this->_chromosomes.begin(), this->_chromosomes.end(),
-                           [&](const auto& c1, const auto& c2) {
-                             return c1.num_valid_barriers() < c2.num_valid_barriers();
-                           });
+  return *std::max_element(
+      this->_chromosomes.begin(), this->_chromosomes.end(),
+      [&](const auto& c1, const auto& c2) { return c1.num_barriers() < c2.num_barriers(); });
 }
 
 size_t Genome::max_target_contacts(size_t bin_size, size_t diagonal_width,
