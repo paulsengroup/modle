@@ -30,10 +30,10 @@ Chromosome::Chromosome(size_t id, const bed::BED& chrom, absl::Span<const bed::B
     : Chromosome(id, chrom.chrom, chrom.thick_start, chrom.thick_end, chrom.size(),
                  barriers.begin(), barriers.end()) {}
 
-Chromosome::Chromosome(size_t id, const bed::BED& chrom, const interval_tree_value_t& barriers)
+Chromosome::Chromosome(size_t id, const bed::BED& chrom, const bed_tree_value_t& barriers)
     : Chromosome(id, chrom.chrom, chrom.thick_start, chrom.thick_end, chrom.size(), barriers) {}
 
-Chromosome::Chromosome(size_t id, const bed::BED& chrom, interval_tree_value_t&& barriers)
+Chromosome::Chromosome(size_t id, const bed::BED& chrom, bed_tree_value_t&& barriers)
     : Chromosome(id, chrom.chrom, chrom.thick_start, chrom.thick_end, chrom.size(), barriers) {}
 
 Chromosome::Chromosome(const Chromosome& other)
@@ -113,11 +113,14 @@ size_t Chromosome::nbarriers() const { return this->_barriers.size(); }
 
 size_t Chromosome::num_valid_barriers() const {
   return static_cast<size_t>(
-      std::count_if(this->get_barriers().begin(), this->get_barriers().end(),
+      std::count_if(this->get_barriers().data_begin(), this->get_barriers().data_end(),
                     [](const auto& b) { return b.strand == '-' || b.strand == '+'; }));
 }
 
-absl::Span<const bed::BED> Chromosome::get_barriers() const { return this->_barriers.data(); }
+const Chromosome::bed_tree_value_t& Chromosome::get_barriers() const { return this->_barriers; }
+absl::Span<const Chromosome::bed_tree_value_t> Chromosome::get_features() const {
+  return this->_features;
+}
 
 void Chromosome::increment_contacts(bp_t pos1, bp_t pos2, bp_t bin_size) {
   this->_contacts->increment((pos1 - this->_start) / bin_size, (pos2 - this->_start) / bin_size);
@@ -177,6 +180,18 @@ absl::btree_set<Chromosome> Genome::import_chromosomes(
     const std::filesystem::path& path_to_chrom_subranges, bool keep_all_chroms) {
   assert(!path_to_chrom_sizes.empty());  // NOLINT
 
+  const auto t0 = absl::Now();
+  if (path_to_chrom_subranges.empty()) {
+    fmt::print(stderr, FMT_STRING("Importing chromosomes from file {}..."), path_to_chrom_sizes);
+  } else {
+    fmt::print(stderr, FMT_STRING("Importing chromosomes from files {} and {}..."),
+               path_to_chrom_sizes, path_to_chrom_subranges);
+  }
+  auto print_status_update_on_return = [&](auto num_chromosomes) {
+    fmt::print(stderr, FMT_STRING(" DONE!\nImported {} chromosomes in {}.\n"), num_chromosomes,
+               absl::FormatDuration(absl::Now() - t0));
+  };
+
   // Parse chrom subranges from BED. We parse everything at once to deal with duplicate entries
   const auto chrom_ranges = [&]() {
     absl::btree_map<std::string, bed::BED> ranges;
@@ -208,6 +223,7 @@ absl::btree_set<Chromosome> Genome::import_chromosomes(
       record.thick_end = record.chrom_end;
       chromosomes.emplace(id++, std::move(record));
     }
+    print_status_update_on_return(chromosomes.size());
     return chromosomes;
   }
 
@@ -237,6 +253,7 @@ absl::btree_set<Chromosome> Genome::import_chromosomes(
     }
   }
 
+  print_status_update_on_return(chromosomes.size());
   return chromosomes;
 }
 
@@ -244,7 +261,12 @@ size_t Genome::import_barriers(absl::btree_set<Chromosome>& chromosomes,
                                const std::filesystem::path& path_to_extr_barriers) {
   assert(!chromosomes.empty());            // NOLINT
   assert(!path_to_extr_barriers.empty());  // NOLINT
-  size_t nbarriers = 0;
+
+  const auto t0 = absl::Now();
+  fmt::print(stderr, FMT_STRING("Importing extrusion barriers from file {}..."),
+             path_to_extr_barriers);
+
+  size_t num_barriers = 0;
 
   // Parse all the records from the BED file. The parser will throw in case of duplicates.
   const auto barriers =
@@ -252,26 +274,32 @@ size_t Genome::import_barriers(absl::btree_set<Chromosome>& chromosomes,
 
   for (auto& chrom : chromosomes) {
     if (const auto chrom_name = std::string{chrom.name()}; barriers.contains(chrom_name)) {
-      for (const auto& record : barriers.at(chrom_name).data()) {
+      chrom._barriers = barriers.at(chrom_name);
+      num_barriers += chrom.get_barriers().size();
+      for (const auto& record : chrom.get_barriers().data()) {
         if (record.score < 0 || record.score > 1) {
           throw std::runtime_error(
               fmt::format("Invalid score field detected for record {}[{}-{}]: expected a score "
                           "between 0 and 1, got {:.4g}.",
                           record.chrom, record.chrom_start, record.chrom_end, record.score));
         }
-        chrom.add_extrusion_barrier(record);
-        ++nbarriers;
       }
     }
   }
-  return nbarriers;
+  fmt::print(stderr, FMT_STRING(" DONE!\nImported {} barriers in {}.\n"), num_barriers,
+             absl::FormatDuration(absl::Now() - t0));
+  return num_barriers;
 }
 
 size_t Genome::import_extra_features(absl::btree_set<Chromosome>& chromosomes,
                                      const std::filesystem::path& path_to_extra_features) {
   assert(!chromosomes.empty());             // NOLINT
   assert(!path_to_extra_features.empty());  // NOLINT
-  size_t nfeatures = 0;
+
+  const auto t0 = absl::Now();
+  fmt::print(stderr, FMT_STRING("Importing features from the following file: {}..."),
+             path_to_extra_features);
+  size_t num_features = 0;
 
   // Parse all the records from the BED file. The parser will throw in case of duplicates.
   const auto features =
@@ -280,10 +308,12 @@ size_t Genome::import_extra_features(absl::btree_set<Chromosome>& chromosomes,
   for (auto& chrom : chromosomes) {
     if (const auto chrom_name = std::string{chrom.name()}; features.contains(chrom_name)) {
       const auto element = chrom._features.emplace_back(features.at(chrom_name));
-      nfeatures += element.size();
+      num_features += element.size();
     }
   }
-  return nfeatures;
+  fmt::print(stderr, FMT_STRING(" DONE!\nImported {} features in {}.\n"), num_features,
+             absl::FormatDuration(absl::Now() - t0));
+  return num_features;
 }
 
 std::vector<ExtrusionBarrier> Genome::generate_vect_of_barriers(std::string_view chrom_name,
@@ -302,7 +332,7 @@ std::vector<ExtrusionBarrier> Genome::generate_vect_of_barriers(std::string_view
   }();
 
   assert(chrom);  // NOLINT
-  for (const auto& record : chrom->get_barriers()) {
+  for (const auto& record : chrom->get_barriers().data()) {
     // Only instantiate barriers with a known motif direction.
     if (record.strand != '+' && record.strand != '-') {
       ++barriers_skipped;

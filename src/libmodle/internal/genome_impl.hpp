@@ -39,7 +39,7 @@ Chromosome::Chromosome(size_t id, std::string_view chrom_name, I chrom_start, I 
 
 template <typename I, typename>
 Chromosome::Chromosome(size_t id, std::string_view chrom_name, I chrom_start, I chrom_end,
-                       I chrom_size, const interval_tree_value_t& barriers)
+                       I chrom_size, const bed_tree_value_t& barriers)
     : _name(chrom_name),
       _start(chrom_start),
       _end(chrom_end),
@@ -54,7 +54,7 @@ Chromosome::Chromosome(size_t id, std::string_view chrom_name, I chrom_start, I 
 
 template <typename I, typename>
 Chromosome::Chromosome(size_t id, std::string_view chrom_name, I chrom_start, I chrom_end,
-                       I chrom_size, interval_tree_value_t&& barriers)
+                       I chrom_size, bed_tree_value_t&& barriers)
     : _name(chrom_name),
       _start(chrom_start),
       _end(chrom_end),

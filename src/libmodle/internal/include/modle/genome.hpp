@@ -28,7 +28,7 @@ class ExtrusionBarrier;
 
 class Chromosome {
   using contact_matrix_t = ContactMatrix<contacts_t>;
-  using interval_tree_value_t = bed::BED_tree<>::value_type;
+  using bed_tree_value_t = bed::BED_tree<>::value_type;
   friend class Genome;
 
  public:
@@ -47,15 +47,15 @@ class Chromosome {
 
   Chromosome(size_t id, const bed::BED& chrom, absl::Span<const bed::BED> barriers);
 
-  Chromosome(size_t id, const bed::BED& chrom, const interval_tree_value_t& barriers);
-  Chromosome(size_t id, const bed::BED& chrom, interval_tree_value_t&& barriers);
+  Chromosome(size_t id, const bed::BED& chrom, const bed_tree_value_t& barriers);
+  Chromosome(size_t id, const bed::BED& chrom, bed_tree_value_t&& barriers);
 
   template <typename I = uint64_t, typename = std::enable_if_t<std::is_integral_v<I>>>
   inline Chromosome(size_t id, std::string_view chrom_name, I chrom_start, I chrom_end,
-                    I chrom_size, const interval_tree_value_t& barriers);
+                    I chrom_size, const bed_tree_value_t& barriers);
   template <typename I = uint64_t, typename = std::enable_if_t<std::is_integral_v<I>>>
   inline Chromosome(size_t id, std::string_view chrom_name, I chrom_start, I chrom_end,
-                    I chrom_size, interval_tree_value_t&& barriers);
+                    I chrom_size, bed_tree_value_t&& barriers);
 
   ~Chromosome() = default;
 
@@ -89,7 +89,8 @@ class Chromosome {
   [[nodiscard]] size_t nlefs(double nlefs_per_mbp) const;
   [[nodiscard]] size_t nbarriers() const;
   [[nodiscard]] size_t num_valid_barriers() const;
-  [[nodiscard]] absl::Span<const bed::BED> get_barriers() const;
+  [[nodiscard]] const bed_tree_value_t& get_barriers() const;
+  [[nodiscard]] absl::Span<const bed_tree_value_t> get_features() const;
   void increment_contacts(bp_t pos1, bp_t pos2, bp_t bin_size);
   void increment_contacts(bp_t bin1, bp_t bin2);
   void allocate_contacts(bp_t bin_size, bp_t diagonal_width);
@@ -106,9 +107,9 @@ class Chromosome {
   bp_t _end{std::numeric_limits<bp_t>::max()};
   bp_t _size{std::numeric_limits<bp_t>::max()};
   size_t _id{std::numeric_limits<size_t>::max()};
-  interval_tree_value_t _barriers{};
+  bed_tree_value_t _barriers{};
   std::shared_ptr<contact_matrix_t> _contacts{nullptr};
-  std::vector<interval_tree_value_t> _features{};
+  std::vector<bed_tree_value_t> _features{};
 
   std::unique_ptr<XXH3_state_t, utils::XXH3_Deleter> _xxh_state{XXH3_createState()};
 };
