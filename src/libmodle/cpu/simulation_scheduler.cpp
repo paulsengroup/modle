@@ -85,22 +85,22 @@ void Simulation::run_base() {
   std::mutex barrier_mutex;
   absl::flat_hash_map<Chromosome*, std::unique_ptr<std::vector<ExtrusionBarrier>>> barriers;
 
-  constexpr size_t task_batch_size = 128;
+  constexpr size_t task_batch_size_enq = 128;  // NOLINTNEXTLINE
+  const auto queue_capacity = std::min(static_cast<size_t>(static_cast<double>(this->ncells) * 1.1),
+                                       this->nthreads * task_batch_size_enq);
   // Queue used to submit simulation tasks to the thread pool
-  moodycamel::BlockingConcurrentQueue<Simulation::Task> task_queue(
-      std::min(static_cast<size_t>(static_cast<double>(this->ncells) * 1.1),
-               this->nthreads * task_batch_size),
-      1, 0);
+  moodycamel::BlockingConcurrentQueue<Simulation::Task> task_queue(queue_capacity, 1, 0);
   moodycamel::ProducerToken ptok(task_queue);
 
   boost::asio::post(tpool, [&]() {  // This thread is in charge of writing contacts to disk
     this->write_contacts_to_disk(progress_queue, progress_queue_mutex, end_of_simulation);
   });
 
+  const auto task_batch_size_deq = std::min(32UL, this->ncells / this->nthreads);
   for (auto i = 0UL; i < this->nthreads; ++i) {  // Start simulation threads
     boost::asio::post(tpool, [&]() {
       this->worker(task_queue, progress_queue, progress_queue_mutex, barrier_mutex, barriers,
-                   end_of_simulation);
+                   end_of_simulation, task_batch_size_deq);
     });
   }
 
@@ -108,7 +108,7 @@ void Simulation::run_base() {
   // have been completed, and contacts have been written to disk
 
   absl::Span<const ExtrusionBarrier> extr_barriers_buff{};
-  absl::FixedArray<Task> tasks(task_batch_size);
+  absl::FixedArray<Task> tasks(task_batch_size_enq);
   auto taskid = 0UL;
 
   // Loop over chromosomes
@@ -128,8 +128,8 @@ void Simulation::run_base() {
     // de-allocated by the thread that is writing contacts to disk
     chrom.allocate_contacts(this->bin_size, this->diagonal_width);
     {
-      // For consistency, it is important that both locks are held while new items are added to the
-      // two queues
+      // For consistency, it is important that both locks are held while new items are added to
+      // the two queues
       std::scoped_lock l(barrier_mutex, progress_queue_mutex);
 
       // Signal that we have started processing the current chrom
@@ -160,7 +160,7 @@ void Simulation::run_base() {
         target_contacts == 0UL ? this->simulation_iterations : std::numeric_limits<size_t>::max();
 
     size_t cellid = 0;
-    const auto nbatches = (this->ncells + task_batch_size - 1) / task_batch_size;
+    const auto nbatches = (this->ncells + task_batch_size_enq - 1) / task_batch_size_enq;
     for (auto batchid = 0UL; batchid < nbatches; ++batchid) {
       // Generate a batch of tasks for all the simulations involving the current chrom
       std::generate(tasks.begin(), tasks.end(), [&]() {
