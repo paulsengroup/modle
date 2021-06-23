@@ -79,12 +79,6 @@ void Simulation::run_base() {
   std::mutex progress_queue_mutex;  // Protect rw access to progress_queue
   std::deque<std::pair<Chromosome*, size_t>> progress_queue;
 
-  // Barriers are shared across threads that are simulating loop-extrusion on a given chromosome.
-  // Extrusion barriers are placed on this std::deque, and are passed to simulation threads
-  // through a Span of const ExtrusionBarriers
-  std::mutex barrier_mutex;
-  absl::flat_hash_map<Chromosome*, std::unique_ptr<std::vector<ExtrusionBarrier>>> barriers;
-
   constexpr size_t task_batch_size_enq = 128;  // NOLINTNEXTLINE
   const auto queue_capacity = std::min(static_cast<size_t>(static_cast<double>(this->ncells) * 1.1),
                                        this->nthreads * task_batch_size_enq);
@@ -99,15 +93,14 @@ void Simulation::run_base() {
   const auto task_batch_size_deq = std::min(32UL, this->ncells / this->nthreads);
   for (auto i = 0UL; i < this->nthreads; ++i) {  // Start simulation threads
     boost::asio::post(tpool, [&]() {
-      this->worker(task_queue, progress_queue, progress_queue_mutex, barrier_mutex, barriers,
-                   end_of_simulation, task_batch_size_deq);
+      this->worker(task_queue, progress_queue, progress_queue_mutex, end_of_simulation,
+                   task_batch_size_deq);
     });
   }
 
   // The remaining code submits simulation tasks to the queue. Then it waits until all the tasks
   // have been completed, and contacts have been written to disk
 
-  absl::Span<const ExtrusionBarrier> extr_barriers_buff{};
   absl::FixedArray<Task> tasks(task_batch_size_enq);
   auto taskid = 0UL;
 
@@ -117,9 +110,8 @@ void Simulation::run_base() {
     if (!chrom.ok()) {
       fmt::print(stderr, "SKIPPING '{}'...\n", chrom.name());
       if (this->write_contacts_for_ko_chroms) {
-        std::scoped_lock l(barrier_mutex, progress_queue_mutex);
+        std::scoped_lock l(progress_queue_mutex);
         progress_queue.emplace_back(&chrom, ncells);
-        barriers.emplace(&chrom, nullptr);
       }
       continue;
     }
@@ -128,20 +120,10 @@ void Simulation::run_base() {
     // de-allocated by the thread that is writing contacts to disk
     chrom.allocate_contacts(this->bin_size, this->diagonal_width);
     {
-      // For consistency, it is important that both locks are held while new items are added to
-      // the two queues
-      std::scoped_lock l(barrier_mutex, progress_queue_mutex);
+      std::scoped_lock l(progress_queue_mutex);
 
       // Signal that we have started processing the current chrom
       progress_queue.emplace_back(&chrom, 0UL);
-
-      // Allocate extr. barriers mapping on the chromosome that is being simulated
-      auto node = barriers.emplace(
-          &chrom,
-          std::make_unique<std::vector<ExtrusionBarrier>>(this->_genome.generate_vect_of_barriers(
-              chrom.name(), this->_config->ctcf_occupied_self_prob,
-              this->_config->ctcf_not_occupied_self_prob)));
-      extr_barriers_buff = absl::MakeConstSpan(*node.first->second);
     }
 
     // Compute # of LEFs to be simulated based on chrom. sizes
@@ -164,8 +146,7 @@ void Simulation::run_base() {
     for (auto batchid = 0UL; batchid < nbatches; ++batchid) {
       // Generate a batch of tasks for all the simulations involving the current chrom
       std::generate(tasks.begin(), tasks.end(), [&]() {
-        return Task{taskid++,        &chrom, cellid++,          target_epochs,
-                    target_contacts, nlefs,  extr_barriers_buff};
+        return Task{taskid++, &chrom, cellid++, target_epochs, target_contacts, nlefs};
       });
       const auto ntasks =
           cellid > this->ncells ? tasks.size() - (cellid - this->ncells) : tasks.size();
@@ -186,18 +167,16 @@ void Simulation::run_base() {
   assert(end_of_simulation);  // NOLINT
 }
 
-void Simulation::worker(
-    moodycamel::BlockingConcurrentQueue<Simulation::Task>& task_queue,
-    std::deque<std::pair<Chromosome*, size_t>>& progress_queue, std::mutex& progress_queue_mutex,
-    std::mutex& barrier_mutex,
-    absl::flat_hash_map<Chromosome*, std::unique_ptr<std::vector<ExtrusionBarrier>>>& barriers,
-    std::atomic<bool>& end_of_simulation, size_t task_batch_size) const {
+void Simulation::worker(moodycamel::BlockingConcurrentQueue<Simulation::Task>& task_queue,
+                        std::deque<std::pair<Chromosome*, size_t>>& progress_queue,
+                        std::mutex& progress_queue_mutex, std::atomic<bool>& end_of_simulation,
+                        size_t task_batch_size) const {
   fmt::print(stderr, FMT_STRING("Spawning simulation thread {}...\n"), std::this_thread::get_id());
 
   moodycamel::ConsumerToken ctok(task_queue);
-  absl::FixedArray<Task> task_buff(task_batch_size);  // Tasks are dequeue in batch.
-  // This is to reduce contention when
-  // accessing the queue
+  absl::FixedArray<Task> task_buff(task_batch_size);  // Tasks are dequeued in batch.
+                                                      // This is to reduce contention
+                                                      // when accessing the queue
 
   // This state object owns all the buffers and PRNG + seed required in order to simulate loop
   // extrusion for a single cell. Buffers are allocated once and resized, cleared and reused
@@ -248,11 +227,8 @@ void Simulation::worker(
         assert(progress != progress_queue.end());  // NOLINT
 
         if (++progress->second == ncells) {
-          // We are done simulating loop-extrusion on task.chrom
-          // Print a status update and deallocate extr. barriers
+          // We are done simulating loop-extrusion on task.chrom: print a status update
           fmt::print(stderr, "Simulation for '{}' successfully completed.\n", task.chrom->name());
-          std::scoped_lock l2(barrier_mutex);
-          barriers.erase(task.chrom);
         }
       }
     }

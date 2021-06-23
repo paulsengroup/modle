@@ -61,7 +61,8 @@ Simulation::Simulation(const Config& c, bool import_chroms)
       _config(&c),
       _genome(import_chroms
                   ? Genome(path_to_chrom_sizes, path_to_extr_barriers, path_to_chrom_subranges,
-                           path_to_feature_bed_files, write_contacts_for_ko_chroms)
+                           path_to_feature_bed_files, ctcf_occupied_self_prob,
+                           ctcf_not_occupied_self_prob, write_contacts_for_ko_chroms)
                   : Genome{}) {}
 
 size_t Simulation::size() const { return this->_genome.size(); }
@@ -296,7 +297,7 @@ void Simulation::simulate_extrusion_kernel(Simulation::State& s) const {
                       s.rand_eng);
         if (!std::all_of(lef_idx.begin(), lef_idx.end(),
                          [&](const auto i) { return i < lefs.size(); })) {
-          throw std::runtime_error(fmt::format("lef_idx.size()={}; nlefs={};\nlef_idx=[{}]\n",
+          throw std::runtime_error(fmt::format("lef_idx.size()={}; num_lefs={};\nlef_idx=[{}]\n",
                                                lef_idx.size(), lefs.size(),
                                                absl::StrJoin(lef_idx, ", ")));
         }

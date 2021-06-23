@@ -51,7 +51,7 @@ class Simulation : Config {
   static constexpr auto NO_COLLISION = std::numeric_limits<collision_t>::max();
   static constexpr auto REACHED_CHROM_BOUNDARY = std::numeric_limits<collision_t>::max() - 1;
 
-  struct Task {
+  struct Task {  // NOLINT(altera-struct-pack-align)
     Task() = default;
     size_t id{};
     Chromosome* chrom{};
@@ -60,10 +60,9 @@ class Simulation : Config {
     size_t n_target_contacts{};
     size_t nlefs{};
     absl::Span<const ExtrusionBarrier> barriers{};
-    // NOLINTNEXTLINE(readability-magic-numbers, cppcoreguidelines-avoid-magic-numbers)
-  } __attribute__((aligned(64)));
+  };
 
-  struct State : Task {
+  struct State : Task {  // NOLINT(altera-struct-pack-align)
     State() = default;
     std::vector<Lef> lef_buff{};
     std::vector<double> lef_unloader_affinity{};
@@ -82,8 +81,7 @@ class Simulation : Config {
     void resize(size_t size = std::numeric_limits<size_t>::max());
     void reset();
     [[nodiscard]] std::string to_string() const noexcept;
-    // NOLINTNEXTLINE(readability-magic-numbers, cppcoreguidelines-avoid-magic-numbers)
-  } __attribute__((aligned(128)));
+  };
 
   void run_base();
   void run_pairwise();
@@ -116,12 +114,15 @@ class Simulation : Config {
   //! This function is also responsible for allocating and clearing the buffers used throughout the
   //! simulation.
   //! IMPORTANT: this function is meant to be run in a dedicated thread.
-  void worker(
-      moodycamel::BlockingConcurrentQueue<Simulation::Task>& task_queue,
-      std::deque<std::pair<Chromosome*, size_t>>& progress_queue, std::mutex& progress_queue_mutex,
-      std::mutex& barrier_mutex,
-      absl::flat_hash_map<Chromosome*, std::unique_ptr<std::vector<ExtrusionBarrier>>>& barriers,
-      std::atomic<bool>& end_of_simulation, size_t task_batch_size = 32) const;  // NOLINT
+  void worker(moodycamel::BlockingConcurrentQueue<Simulation::Task>& task_queue,
+              std::deque<std::pair<Chromosome*, size_t>>& progress_queue,
+              std::mutex& progress_queue_mutex, std::atomic<bool>& end_of_simulation,
+              size_t task_batch_size = 32) const;  // NOLINT
+
+  void worker(  // Pair of feature + task
+      moodycamel::BlockingConcurrentQueue<std::pair<const bed::BED*, Simulation::Task>>& task_queue,
+      std::ifstream& out_file, std::mutex& out_file_mutex, std::atomic<bool>& end_of_simulation,
+      size_t task_batch_size = 1) const;  // NOLINT
 
   /// Bind inactive LEFs, then sort them by their genomic coordinates.
 
@@ -253,7 +254,7 @@ class Simulation : Config {
   //! After calling this function, the entries in \p rev_collisions and \p fwd_collisions
   //! corresponding to units stalled due to primary LEF-LEF collisions will be set to the index
   //! pointing to the extrusion unit that is causing the collisions.
-  //! The index i is encoded as nbarriers + i.
+  //! The index i is encoded as num_barriers + i.
   void detect_primary_lef_lef_collisions(
       absl::Span<const Lef> lefs, absl::Span<const ExtrusionBarrier> barriers,
       absl::Span<const size_t> rev_lef_ranks, absl::Span<const size_t> fwd_lef_ranks,
@@ -275,7 +276,7 @@ class Simulation : Config {
   //! Simulation::extrude, U1 will be located 1bp upstream of U2.
   //! When a secondary LEF-LEF collision is detected, the appropriate entry in \p rev_collisions or
   //! \p fwd_collisions will be set to the index corresponding to the extrusion unit that is causing the collision.
-  //! The index i is encoded as nbarriers + nlefs + i.
+  //! The index i is encoded as num_barriers + num_lefs + i.
   // clang-format on
   void process_secondary_lef_lef_collisions(
       const Chromosome* chrom, absl::Span<const Lef> lefs, size_t nbarriers,
