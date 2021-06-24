@@ -95,15 +95,14 @@ set(CONAN_EXTRA_OPTIONS "")
 
 set(CONAN_EXTRA_REQUIRES
     ${CONAN_EXTRA_REQUIRES}
-    abseil/20210324.1
+    abseil/20210324.2
     boost/1.76.0
     cli11/1.9.1
     concurrentqueue/1.0.2
     cpp-sort/1.10.0
-    fmt/7.1.3
+    fmt/8.0.0
     hdf5/1.12.0
     readerwriterqueue/1.0.3
-    spdlog/1.8.5
     xxhash/0.8.0
     zlib/1.2.11)
 
