@@ -23,6 +23,7 @@ class ExtrusionBarrier {
                    double transition_prob_non_blocking_to_non_blocking, char motif_direction);
 
   [[nodiscard]] bp_t pos() const noexcept(utils::ndebug_defined());
+  [[nodiscard]] bp_t& pos() noexcept(utils::ndebug_defined());
   [[nodiscard]] double prob_occupied_to_occupied() const noexcept(utils::ndebug_defined());
   [[nodiscard]] double prob_occupied_to_not_occupied() const noexcept(utils::ndebug_defined());
   [[nodiscard]] double prob_not_occupied_to_not_occupied() const noexcept(utils::ndebug_defined());

@@ -147,10 +147,8 @@ void Chromosome::increment_contacts(bp_t bin1, bp_t bin2) {
 }
 
 void Chromosome::allocate_contacts(bp_t bin_size, bp_t diagonal_width) {
-  const auto ncols = (this->simulated_size() / bin_size) + (this->simulated_size() % bin_size != 0);
-  const auto nrows =
-      std::min(ncols, (diagonal_width / bin_size) + (diagonal_width % bin_size != 0));
-  this->_contacts = std::make_shared<ContactMatrix<contacts_t>>(nrows, ncols);
+  this->_contacts =
+      std::make_shared<ContactMatrix<contacts_t>>(this->simulated_size(), diagonal_width, bin_size);
 }
 
 void Chromosome::deallocate_contacts() { this->_contacts = nullptr; }

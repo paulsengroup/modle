@@ -43,6 +43,7 @@ ExtrusionBarrier::ExtrusionBarrier(bp_t pos, double transition_prob_blocking_to_
 }
 
 bp_t ExtrusionBarrier::pos() const noexcept(utils::ndebug_defined()) { return this->_pos; }
+bp_t& ExtrusionBarrier::pos() noexcept(utils::ndebug_defined()) { return this->_pos; }
 double ExtrusionBarrier::prob_occupied_to_occupied() const noexcept(utils::ndebug_defined()) {
   return this->_occupied_to_occupied_transition_prob;
 }

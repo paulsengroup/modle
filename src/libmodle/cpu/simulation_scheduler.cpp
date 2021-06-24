@@ -31,9 +31,10 @@
 #include <utility>                                  // for pair, addressof
 #include <vector>                                   // for vector
 
-#include "modle/common/config.hpp"       // for Config
-#include "modle/common/utils.hpp"        // for traced
-#include "modle/contacts.hpp"            // for ContactMatrix
+#include "modle/common/config.hpp"  // for Config
+#include "modle/common/utils.hpp"   // for traced
+#include "modle/contacts.hpp"       // for ContactMatrix
+#include "modle/cooler.hpp"
 #include "modle/extrusion_barriers.hpp"  // for ExtrusionBarrier
 #include "modle/genome.hpp"              // for Chromosome
 #include "modle/simulation.hpp"
@@ -80,8 +81,9 @@ void Simulation::run_base() {
   std::deque<std::pair<Chromosome*, size_t>> progress_queue;
 
   constexpr size_t task_batch_size_enq = 128;  // NOLINTNEXTLINE
-  const auto queue_capacity = std::min(static_cast<size_t>(static_cast<double>(this->ncells) * 1.1),
-                                       this->nthreads * task_batch_size_enq);
+  const auto queue_capacity =
+      std::min(static_cast<size_t>(static_cast<double>(this->num_cells) * 1.1),
+               this->nthreads * task_batch_size_enq);
   // Queue used to submit simulation tasks to the thread pool
   moodycamel::BlockingConcurrentQueue<Simulation::Task> task_queue(queue_capacity, 1, 0);
   moodycamel::ProducerToken ptok(task_queue);
@@ -90,7 +92,7 @@ void Simulation::run_base() {
     this->write_contacts_to_disk(progress_queue, progress_queue_mutex, end_of_simulation);
   });
 
-  const auto task_batch_size_deq = std::min(32UL, this->ncells / this->nthreads);
+  const auto task_batch_size_deq = std::min(32UL, this->num_cells / this->nthreads);
   for (auto i = 0UL; i < this->nthreads; ++i) {  // Start simulation threads
     boost::asio::post(tpool, [&]() {
       this->worker(task_queue, progress_queue, progress_queue_mutex, end_of_simulation,
@@ -111,7 +113,7 @@ void Simulation::run_base() {
       fmt::print(stderr, "SKIPPING '{}'...\n", chrom.name());
       if (this->write_contacts_for_ko_chroms) {
         std::scoped_lock l(progress_queue_mutex);
-        progress_queue.emplace_back(&chrom, ncells);
+        progress_queue.emplace_back(&chrom, num_cells);
       }
       continue;
     }
@@ -128,7 +130,7 @@ void Simulation::run_base() {
 
     // Compute # of LEFs to be simulated based on chrom. sizes
     const auto nlefs = static_cast<size_t>(std::round(
-        this->number_of_lefs_per_mbp * (static_cast<double>(chrom.simulated_size()) / 1.0e6)));
+        this->number_of_lefs_per_mbp * (static_cast<double>(chrom.simulated_size()) / Mbp)));
 
     auto target_contacts = 0UL;
     if (this->target_contact_density != 0) {  // Compute the number of simulation rounds required
@@ -136,20 +138,20 @@ void Simulation::run_base() {
       target_contacts = static_cast<size_t>(
           std::max(1.0, std::round((this->target_contact_density *
                                     static_cast<double>(chrom.contacts().npixels())) /
-                                   static_cast<double>(this->ncells))));
+                                   static_cast<double>(this->num_cells))));
     }
     auto target_epochs =
         target_contacts == 0UL ? this->simulation_iterations : std::numeric_limits<size_t>::max();
 
     size_t cellid = 0;
-    const auto nbatches = (this->ncells + task_batch_size_enq - 1) / task_batch_size_enq;
+    const auto nbatches = (this->num_cells + task_batch_size_enq - 1) / task_batch_size_enq;
     for (auto batchid = 0UL; batchid < nbatches; ++batchid) {
       // Generate a batch of tasks for all the simulations involving the current chrom
       std::generate(tasks.begin(), tasks.end(), [&]() {
-        return Task{taskid++, &chrom, cellid++, target_epochs, target_contacts, nlefs};
+        return Task{{taskid++, &chrom, cellid++, target_epochs, target_contacts, nlefs}};
       });
       const auto ntasks =
-          cellid > this->ncells ? tasks.size() - (cellid - this->ncells) : tasks.size();
+          cellid > this->num_cells ? tasks.size() - (cellid - this->num_cells) : tasks.size();
       auto sleep_us = 100;  // NOLINT
       while (               // Enqueue tasks
           !task_queue.try_enqueue_bulk(ptok, std::make_move_iterator(tasks.begin()), ntasks)) {
@@ -211,10 +213,10 @@ void Simulation::worker(moodycamel::BlockingConcurrentQueue<Simulation::Task>& t
               std::max(1.0, std::round((this->target_contact_density *
                                         static_cast<double>(task.chrom->contacts().npixels())) /
                                        (this->lef_fraction_contact_sampling *
-                                        static_cast<double>(this->ncells * task.nlefs)))));
+                                        static_cast<double>(this->num_cells * task.num_lefs)))));
 
           fmt::print(stderr, FMT_STRING("Simulating ~{} epochs for '{}' across {} cells...\n"),
-                     target_epochs, task.chrom->name(), ncells);
+                     target_epochs, task.chrom->name(), num_cells);
         }
 
         // Start the simulation kernel
@@ -226,7 +228,7 @@ void Simulation::worker(moodycamel::BlockingConcurrentQueue<Simulation::Task>& t
                                      [&](const auto& p) { return task.chrom == p.first; });
         assert(progress != progress_queue.end());  // NOLINT
 
-        if (++progress->second == ncells) {
+        if (++progress->second == num_cells) {
           // We are done simulating loop-extrusion on task.chrom: print a status update
           fmt::print(stderr, "Simulation for '{}' successfully completed.\n", task.chrom->name());
         }
@@ -252,9 +254,280 @@ void Simulation::worker(moodycamel::BlockingConcurrentQueue<Simulation::Task>& t
 
 void Simulation::run_pairwise() {
   // TODO Do proper error handling
-  assert(std::filesystem::exists(this->path_to_output_file_cool));  // NOLINT
   // For now we support only the case where exactly two files are specified
   assert(this->path_to_feature_bed_files.size() == 2);  // NOLINT
+
+  auto query_interval_tree = [&](const auto& tree, const auto start, const auto end) {
+    const auto [overlap_begin, overlap_end] = tree.find_overlaps(start, end);
+    if (overlap_begin == overlap_end) {
+      return absl::MakeConstSpan(&(*overlap_begin), 0UL);
+    }
+    return absl::MakeConstSpan(&(*overlap_begin), static_cast<size_t>(overlap_end - overlap_begin));
+  };
+
+  using Task_t = std::pair<const bed::BED*, Simulation::TaskPW>;
+
+  constexpr size_t task_batch_size_enq = 32;  // NOLINTNEXTLINE
+  moodycamel::BlockingConcurrentQueue<Task_t> task_queue(this->nthreads * task_batch_size_enq, 1,
+                                                         0);
+  moodycamel::ProducerToken ptok(task_queue);
+  std::array<Task_t, task_batch_size_enq> tasks;
+
+  std::ifstream out_file;  // TODO
+  std::mutex out_file_mutex;
+  std::atomic<bool> end_of_simulation = false;
+
+  auto tpool = Simulation::instantiate_thread_pool();
+  for (auto i = 0UL; i < this->nthreads; ++i) {  // Start simulation threads
+    boost::asio::post(
+        tpool, [&]() { this->worker(task_queue, out_file, out_file_mutex, end_of_simulation); });
+  }
+
+  size_t task_id = 0;
+  size_t num_tasks = 0;
+  for (auto& chrom : this->_genome) {
+    size_t cell_id = 0;
+    const auto& reference_features = chrom.get_features();
+    const auto& barriers = chrom.barriers();
+    if (reference_features.size() != 2 || barriers.empty()) {
+      continue;
+    }
+
+    // We assume the first set of feature is the promoter/TSS, and we look around using window of
+    // size ~2x diagonal_width. We want to process windows with at least 1 enhancer and 1 extr.
+    // barrier
+    for (const auto& feature : reference_features[0].data()) {
+      const auto feature_center_pos = (feature.chrom_start + feature.chrom_end + 1) / 2;
+
+      const auto range_start = feature_center_pos > this->diagonal_width
+                                   ? feature_center_pos - this->diagonal_width
+                                   : 0UL;
+      const auto range_end = std::min(feature_center_pos + this->diagonal_width, chrom.end_pos());
+
+      const auto overlapping_barriers = query_interval_tree(barriers, range_start, range_end);
+      if (overlapping_barriers.empty()) {
+        break;
+      }
+
+      const auto overlapping_features =
+          query_interval_tree(reference_features[1], range_start, range_end);
+      if (overlapping_features.empty()) {
+        break;
+      }
+      TaskPW t{{task_id++, &chrom, cell_id++}};
+
+      if (this->target_contact_density != 0) {  // Compute the number of simulation rounds required
+        // to reach the target contact density
+        t.num_target_contacts = static_cast<size_t>(std::max(
+            1.0,
+            std::round(this->target_contact_density *
+                       static_cast<double>((range_end - range_start) * this->diagonal_width))));
+      }
+      t.num_target_epochs = t.num_target_contacts == 0UL ? this->simulation_iterations
+                                                         : std::numeric_limits<size_t>::max();
+
+      t.num_lefs = static_cast<size_t>(static_cast<double>(range_end - range_start) *
+                                       this->number_of_lefs_per_mbp);
+      t.range_start = range_start;
+      t.range_end = range_end;
+
+      t.barriers = overlapping_barriers;
+      t.features = overlapping_features;
+
+      if (num_tasks == tasks.size()) {
+        auto sleep_us = 100;  // NOLINT
+        while (               // Enqueue tasks
+            !task_queue.try_enqueue_bulk(ptok, std::make_move_iterator(tasks.begin()), num_tasks)) {
+          sleep_us = std::min(100000, sleep_us * 2);  // NOLINT
+          std::this_thread::sleep_for(std::chrono::microseconds(sleep_us));
+        }
+        num_tasks = 0;
+      }
+      tasks[num_tasks++] = std::make_pair(&feature, t);
+
+      // Put overlaps on queue
+      //
+    }
+  }
+  if (num_tasks != 0) {
+    while (  // Enqueue tasks
+        !task_queue.try_enqueue_bulk(ptok, std::make_move_iterator(tasks.begin()), num_tasks)) {
+      std::this_thread::sleep_for(std::chrono::microseconds(100));  // NOLINT
+    }
+  }
+}
+
+void Simulation::worker(
+    moodycamel::BlockingConcurrentQueue<std::pair<const bed::BED*, Simulation::TaskPW>>& task_queue,
+    std::ifstream& out_file, std::mutex& out_file_mutex, std::atomic<bool>& end_of_simulation,
+    size_t task_batch_size) const {
+  fmt::print(stderr, FMT_STRING("Spawning simulation thread {}...\n"), std::this_thread::get_id());
+  moodycamel::ConsumerToken ctok(task_queue);
+
+  using Task_t = std::pair<const bed::BED*, Simulation::TaskPW>;
+  absl::FixedArray<Task_t> task_buff(task_batch_size);  // Tasks are dequeue in batch.
+
+  Simulation::StatePW state{};
+
+  try {
+    while (true) {  // Try to dequeue a batch of tasks
+      const auto avail_tasks = task_queue.wait_dequeue_bulk_timed(
+          ctok, task_buff.begin(), task_buff.size(), std::chrono::milliseconds(10));
+      // Check whether dequeue operation timed-out before any task became available
+      if (avail_tasks == 0) {
+        if (end_of_simulation) {
+          // Reached end of simulation (i.e. all tasks have been processed)
+          return;
+        }
+        // Keep waiting until one or more tasks become available
+        continue;
+      }
+
+      // Loop over new tasks
+      auto tasks = absl::MakeSpan(task_buff.data(), avail_tasks);
+      for (auto& [feature_ptr, task] : tasks) {
+        assert(!task.barriers.empty());  // NOLINT
+        assert(!task.features.empty());  // NOLINT
+
+        if (task.chrom->simulated_size() <= this->deletion_size) {
+          continue;
+        }
+        state = task;  // Set simulation state based on task data
+        state.contacts.resize(task.range_end - task.range_start, this->diagonal_width,
+                              this->bin_size);
+
+        Simulation::simulate_window(*feature_ptr, state, out_file, out_file_mutex);
+      }
+    }
+  } catch (const std::exception& err) {
+    // This is needed, as exceptions don't seem to always propagate to main()
+    // TODO: Find a better way to propagate exception up to the main thread. Maybe use a
+    // concurrent queue?
+    fmt::print(stderr, FMT_STRING("Detected an error in thread {}:\n{}\n{}\n"),
+               std::this_thread::get_id(), state.to_string(), err.what());
+#ifndef BOOST_STACKTRACE_USE_NOOP
+    const auto* st = boost::get_error_info<modle::utils::traced>(err);
+    if (st) {
+      std::cerr << *st << '\n';
+    } else {
+      fmt::print(stderr, "Stack trace not available!\n");
+    }
+#endif
+    throw;
+  }
+}
+
+void Simulation::simulate_window(const bed::BED& reference_feature, Simulation::StatePW& state,
+                                 std::ifstream& out_file, std::mutex& out_file_mutex) const {
+  (void)out_file;
+  const auto all_barriers = state.barriers;
+  const auto full_range_start = state.range_start;
+  const auto full_range_end = state.range_end;
+
+  size_t last_barrier_deleted_idx{0};
+
+  do {
+    state.deletion_size =
+        std::min(all_barriers[last_barrier_deleted_idx].pos() + 1, this->deletion_size);
+    state.deletion_begin = all_barriers[last_barrier_deleted_idx].pos() + 1 - deletion_size;
+    const auto deletion_end = state.deletion_begin + state.deletion_size;
+
+    if (const auto pos = (reference_feature.chrom_start + reference_feature.chrom_end + 1) / 2;
+        pos >= state.deletion_begin && pos < deletion_end) {
+      continue;  // "Reference" reference_feature falls withing the deletion
+    }
+
+    // TODO: all these comparisons should be made using the bin to which the middle of the
+    // reference_feature maps
+    if (state.features.front().chrom_start >= state.deletion_begin &&
+        state.features.back().chrom_start < deletion_end) {
+      continue;  // Is it safe to break here?
+    }
+
+    [&]() {  // Generate barrier configuration
+      state.barrier_tmp_buff.clear();
+      for (const auto& barrier : all_barriers) {
+        if (barrier.pos() < state.deletion_begin) {
+          state.barrier_tmp_buff.push_back(barrier);
+        } else if (barrier.pos() >= deletion_end) {
+          state.barrier_tmp_buff.push_back(barrier);
+          state.barrier_tmp_buff.back().pos() -= state.deletion_size;
+        }
+      }
+    }();
+
+    if (state.barrier_tmp_buff.empty()) {
+      continue;
+    }
+
+    state.num_target_contacts = static_cast<size_t>(this->target_contact_density *
+                                                    static_cast<double>(state.contacts.npixels()));
+    state.barriers = state.barrier_tmp_buff;
+    assert(state.range_end > deletion_size);  // NOLINT
+    state.range_end -= deletion_size;
+    state.num_lefs =  // Compute # of LEFs to be simulated
+        static_cast<size_t>(std::round(this->number_of_lefs_per_mbp *
+                                       (static_cast<double>(state.range_end - state.range_start)) /
+                                       Mbp));
+    // Resize and reset buffers
+    state.resize();
+    state.reset();
+    state.contacts.reset();
+
+    // fmt::print(stderr, "{}[{}-{}]\n", state.chrom->name(), state.range_start, state.range_end);
+    Simulation::simulate_extrusion_kernel(state);
+
+    const auto reference_feature_rel_bin =
+        (reference_feature.chrom_end - reference_feature.chrom_start + this->bin_size - 1) /
+        this->bin_size;
+
+    for (const auto& target_feature : state.features) {
+      // Skip deleted features
+      if (target_feature.chrom_start >= state.deletion_begin &&
+          target_feature.chrom_end < deletion_end) {
+        continue;
+      }
+
+      const auto target_feature_rel_bin =
+          (target_feature.chrom_end - target_feature.chrom_start + this->bin_size - 1) /
+          this->bin_size;
+
+      const auto contacts = state.contacts.get(reference_feature_rel_bin, target_feature_rel_bin);
+      if (contacts == 0) {  // Don't output entries with 0 contacts
+        continue;
+      }
+
+      const auto reference_feature_abs_bin =
+          (reference_feature.chrom_start + reference_feature.chrom_start + this->bin_size - 1) /
+          this->bin_size;
+
+      const auto target_feature_abs_bin =
+          (target_feature.chrom_start + target_feature.chrom_start + this->bin_size - 1) /
+          this->bin_size;
+
+      const auto name = absl::StrCat(reference_feature.name, ";", target_feature.name);
+      fmt::print(stdout,
+                 FMT_STRING("{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\tcenter={}\tdeletion={}-{}"
+                            "\tnum_barr={}/{}\tnum_feats={}\n"),
+                 reference_feature.chrom, reference_feature_abs_bin * bin_size,
+                 (reference_feature_abs_bin + 1) * bin_size, target_feature.chrom,
+                 target_feature_abs_bin * bin_size, (target_feature_abs_bin + 1) * bin_size,
+                 name.size() > 1 ? name : "none", contacts, reference_feature.strand,
+                 target_feature.strand, ((2 * reference_feature_abs_bin * bin_size) + bin_size) / 2,
+                 state.deletion_begin, deletion_end, state.barriers.size(), all_barriers.size(),
+                 state.features.size());
+    }
+
+    // auto c = cooler::Cooler(fmt::format("/tmp/test_{}_{}.cool", state.id, state.cell_id),
+    //                         cooler::Cooler::WRITE_ONLY, this->bin_size);
+    // c.write_or_append_cmatrix_to_file(state.contacts, state.chrom->name(),
+    // state.chrom->start_pos(),
+    //                                   state.chrom->end_pos(), state.chrom->size());
+  } while (++last_barrier_deleted_idx < all_barriers.size());
+
+  std::scoped_lock l(out_file_mutex);
+  fmt::print(stderr, FMT_STRING("Done processing {}[{}-{}]!\n"), state.chrom->name(),
+             full_range_start, full_range_end);
 }
 
 }  // namespace modle
