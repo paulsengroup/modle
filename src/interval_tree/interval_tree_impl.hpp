@@ -191,12 +191,13 @@ std::pair<T_iterator_const, T_iterator_const> IITree<I, T>::internal_equal_range
     if (cell.level < 4) {  // we are in a small subtree; traverse every node in this subtree
       const auto i0 = cell.node_idx >> cell.level << cell.level;
       const auto i1 = std::min(i0 + (1UL << (cell.level + 1)) - 1, this->size());
-      for (auto i = i0; i < i1 && this->_start[i] < end; ++i)
+      for (auto i = i0; i < i1 && this->_start[i] < end; ++i) {
         if (start < this->_end[i]) {  // found an overlap
           if (update_overlap_range(i)) {
             goto return_stmt;
           }
         }
+      }
     } else if (!cell.left_child_already_processed) {
       const auto lchild_idx =
           cell.node_idx -
