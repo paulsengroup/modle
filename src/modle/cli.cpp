@@ -90,7 +90,7 @@ void Cli::make_cli() {
 
     gen->add_option(
             "--ncells",
-            this->_config.ncells,
+            this->_config.num_cells,
             "Number of cells to simulate.")
             ->check(CLI::PositiveNumber)
             ->transform(remove_trailing_zero_from_floats)

@@ -27,7 +27,7 @@ using namespace std::literals::string_view_literals;
 class Cli;
 class Simulation;
 
-struct Config {
+struct Config {  // NOLINT(altera-struct-pack-align)
   friend Cli;
   friend Simulation;
 
@@ -51,7 +51,7 @@ struct Config {
   bp_t rev_extrusion_speed{std::numeric_limits<bp_t>::max()};
   double fwd_extrusion_speed_std{0.05};        // NOLINT(readability-magic-numbers, cppcoreguidelines-avoid-magic-numbers)
   double rev_extrusion_speed_std{fwd_extrusion_speed_std};
-  size_t ncells{5'000};                   // NOLINT(readability-magic-numbers, cppcoreguidelines-avoid-magic-numbers)
+  size_t num_cells{5'000};                   // NOLINT(readability-magic-numbers, cppcoreguidelines-avoid-magic-numbers)
   size_t nthreads{std::thread::hardware_concurrency()};
   bp_t diagonal_width{3'000'000 /* 3 Mbp */};  // NOLINT(readability-magic-numbers, cppcoreguidelines-avoid-magic-numbers)
   size_t simulation_iterations{200};           // NOLINT(readability-magic-numbers, cppcoreguidelines-avoid-magic-numbers)
