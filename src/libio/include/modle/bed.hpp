@@ -22,7 +22,7 @@
 namespace modle::bed {
 struct BED;
 
-template <typename K = std::string, typename I = uint32_t>
+template <typename K = std::string, typename I = uint64_t>
 class BED_tree {
   using IITree_t = IITree<I, BED>;
   using BED_tree_t = absl::btree_map<K, IITree<I, BED>>;

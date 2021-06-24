@@ -130,7 +130,7 @@ absl::Span<const BED> BED_tree<K, I>::find_overlaps(const K& chrom_name, uint64_
 
   const auto [overlap_begin, overlap_end] = it->second.find_overlaps(chrom_start, chrom_end);
   if (overlap_begin == it->second.data_end()) {
-    return it->second.data().subspan(0, 0);  // return an empty span
+    return absl::Span<const BED>{};
   }
   return absl::MakeConstSpan(&(*overlap_begin), overlap_end - overlap_begin);
 }
