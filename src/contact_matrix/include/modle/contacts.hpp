@@ -12,6 +12,7 @@
 #include <utility>                                  // for pair
 #include <vector>                                   // for vector
 
+#include "modle/common/common.hpp"
 #include "modle/common/utils.hpp"  // for ndebug_defined
 
 namespace modle {
@@ -27,6 +28,9 @@ class ContactMatrix {
   inline ContactMatrix(ContactMatrix<I>&& other) noexcept = default;
   inline ContactMatrix(const ContactMatrix<I>& other);
   inline ContactMatrix(size_t nrows, size_t ncols, bool fill_with_random_numbers = false);
+  template <typename I2, typename = std::enable_if_t<std::is_integral_v<I2>>>
+  inline ContactMatrix(I2 length, I2 diagonal_width, I2 bin_size,
+                       bool fill_with_random_numbers = false);
   inline ContactMatrix(absl::Span<const I> contacts, size_t nrows, size_t ncols,
                        size_t tot_contacts = 0, size_t updates_missed = 0);
   inline ~ContactMatrix() = default;
@@ -78,6 +82,8 @@ class ContactMatrix {
   inline void clear_missed_updates_counter();
   inline void reset();
   inline void resize(size_t nrows, size_t ncols);
+  template <typename I2, typename = std::enable_if_t<std::is_integral_v<I2>>>
+  inline void resize(I2 length, I2 diagonal_width, I2 bin_size);
   [[nodiscard]] inline bool empty() const;
   [[nodiscard]] inline absl::Span<const I> get_raw_count_vector() const;
   [[nodiscard]] inline std::vector<I>& get_raw_count_vector();

@@ -43,7 +43,10 @@ ContactMatrix<I>::ContactMatrix(const ContactMatrix<I> &other)
 
 template <typename I>
 ContactMatrix<I>::ContactMatrix(size_t nrows, size_t ncols, bool fill_with_random_numbers)
-    : _nrows(nrows), _ncols(ncols), _contacts(_nrows * _ncols + 1, 0), _locks(_ncols) {
+    : _nrows(std::min(nrows, ncols)),
+      _ncols(ncols),
+      _contacts(_nrows * _ncols + 1, 0),
+      _locks(_ncols) {
   if (fill_with_random_numbers) {
     auto rand_eng = random::PRNG(1234567890ULL);
     random::uniform_int_distribution<I> dist{0, std::numeric_limits<I>::max()};
@@ -54,6 +57,13 @@ ContactMatrix<I>::ContactMatrix(size_t nrows, size_t ncols, bool fill_with_rando
     }
   }
 }
+
+template <typename I>
+template <typename I2, typename>
+ContactMatrix<I>::ContactMatrix(I2 length, I2 diagonal_width, I2 bin_size,
+                                bool fill_with_random_numbers)
+    : ContactMatrix((diagonal_width + bin_size - 1) / bin_size, (length + bin_size - 1) / bin_size,
+                    fill_with_random_numbers) {}
 
 template <typename I>
 ContactMatrix<I>::ContactMatrix(const absl::Span<const I> contacts, size_t nrows, size_t ncols,
@@ -525,16 +535,29 @@ template <typename I>
 void ContactMatrix<I>::reset() {
   std::fill(this->_contacts.begin(), this->_contacts.end(), 0);
   this->_tot_contacts = 0;
-  this->_updates_missed = 0;
+  this->clear_missed_updates_counter();
 }
 
 template <typename I>
 void ContactMatrix<I>::resize(size_t nrows, size_t ncols) {
-  this->_nrows = nrows;
+  if (nrows == this->_nrows && ncols == this->_ncols) {
+    return;
+  }
+  if (ncols != this->_ncols) {
+    std::vector<std::mutex> locks(ncols);
+    std::swap(this->_locks, locks);
+  }
+
+  this->_nrows = std::min(nrows, ncols);
   this->_ncols = ncols;
   this->_contacts.resize((this->nrows() * this->ncols()) + 1, 0);
-  std::vector<std::mutex> locks(this->ncols());
-  std::swap(this->_locks, locks);
+}
+
+template <typename I>
+template <typename I2, typename>
+void ContactMatrix<I>::resize(I2 length, I2 diagonal_width, I2 bin_size) {
+  this->resize(static_cast<size_t>((diagonal_width + bin_size - 1) / bin_size),
+               static_cast<size_t>((length + bin_size - 1) / bin_size));
 }
 
 template <typename I>
