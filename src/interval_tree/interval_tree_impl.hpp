@@ -37,7 +37,7 @@ IITree<I, T>::StackCell::StackCell(int64_t _level, size_t _node_idx,
                                    bool _left_child_alread_processed)
     : level(_level),
       node_idx(_node_idx),
-      left_child_already_processed(_left_child_alread_processed){};
+      left_child_already_processed(_left_child_alread_processed) {}
 
 template <typename I, typename T>
 IITree<I, T>::IITree(size_t start_pos_, size_t end_pos_)
@@ -219,8 +219,10 @@ std::pair<T_iterator_const, T_iterator_const> IITree<I, T>::internal_equal_range
           goto return_stmt;
         }
       }
-      stack[t++] = StackCell{cell.level - 1, cell.node_idx + (1LL << (cell.level - 1)),
-                             false};  // push the right child
+      assert(cell.level > 0);  // NOLINT
+      stack[t++] =
+          StackCell{cell.level - 1, cell.node_idx + (1ULL << static_cast<size_t>(cell.level - 1)),
+                    false};  // push the right child
     }
   }
 

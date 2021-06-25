@@ -70,7 +70,7 @@ void noisify_contacts(const config& c) {
 
     cmatrix.reset();
     cmatrix.resize(nrows, ncols);
-    modle::cooler::Cooler::Pixel pixel;  // NOLINT
+    modle::cooler::Cooler::Pixel pixel{};  // NOLINT
     const auto seed =
         c.seed + std::hash<std::string_view>{}(chrom_name) + std::hash<size_t>{}(ncols);
 
