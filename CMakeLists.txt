@@ -115,10 +115,16 @@ set(CONAN_EXTRA_OPTIONS
     boost:bzip2=False
     xxhash:utility=False)
 
+if(CMAKE_CXX_COMPILER_ID STREQUAL AppleClang
+   OR CMAKE_CXX_COMPILER_ID STREQUAL Clang
+   OR CMAKE_CXX_COMPILER_ID STREQUAL GNU)
+  set(CONAN_EXTRA_SETTINGS ${CONAN_EXTRA_SETTINGS} compiler.libcxx=libstdc++11)
+endif()
+
 if(CXX20_COMPILER_AVAILABLE)
-  set(CONAN_EXTRA_SETTINGS ${CONAN_EXTRA_SETTINGS} compiler.cppstd=20 compiler.libcxx=libstdc++11)
+  set(CONAN_EXTRA_SETTINGS ${CONAN_EXTRA_SETTINGS} compiler.cppstd=20)
 else()
-  set(CONAN_EXTRA_SETTINGS ${CONAN_EXTRA_SETTINGS} compiler.cppstd=17 compiler.libcxx=libstdc++11)
+  set(CONAN_EXTRA_SETTINGS ${CONAN_EXTRA_SETTINGS} compiler.cppstd=17)
 endif()
 
 if(ENABLE_TESTING)
