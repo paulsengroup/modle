@@ -9,7 +9,8 @@ target_sources(
           ${CMAKE_CURRENT_SOURCE_DIR}/cooler.cpp
           ${CMAKE_CURRENT_SOURCE_DIR}/cooler_impl.hpp
           ${CMAKE_CURRENT_SOURCE_DIR}/hdf5.cpp
-          ${CMAKE_CURRENT_SOURCE_DIR}/hdf5_impl.hpp)
+          ${CMAKE_CURRENT_SOURCE_DIR}/hdf5_impl.hpp
+          ${CMAKE_CURRENT_SOURCE_DIR}/libarchivexx.cpp)
 
 add_dependencies(libio libBigWig)
 target_include_directories(libio PUBLIC include/)
@@ -27,6 +28,7 @@ target_link_libraries(
          CONAN_PKG::boost
          CONAN_PKG::fmt
          CONAN_PKG::hdf5
+         CONAN_PKG::libarchive
          CONAN_PKG::readerwriterqueue
          CONAN_PKG::zlib
          # Deal with std::filesystem quirkiness on older compilers

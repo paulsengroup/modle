@@ -102,6 +102,7 @@ set(CONAN_EXTRA_REQUIRES
     cpp-sort/1.10.0
     fmt/8.0.0
     hdf5/1.12.0
+    libarchive/3.5.1
     readerwriterqueue/1.0.3
     xxhash/0.8.0
     zlib/1.2.11)
@@ -111,8 +112,15 @@ set(CONAN_EXTRA_OPTIONS
     boost:system_no_deprecated=True
     boost:asio_no_deprecated=True
     boost:filesystem_no_deprecated=True
-    boost:zlib=True
+    boost:zlib=False
     boost:bzip2=False
+    libarchive:shared=False
+    libarchive:with_zlib=True
+    libarchive:with_bzip2=True
+    libarchive:with_lz4=True
+    libarchive:with_lzo=True
+    libarchive:with_lzma=True
+    libarchive:with_zstd=True
     xxhash:utility=False)
 
 if(CMAKE_CXX_COMPILER_ID STREQUAL AppleClang
