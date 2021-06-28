@@ -15,6 +15,7 @@
 #include <cmath>                            // for HUGE_VAL
 #include <cstddef>                          // IWYU pragma: keep for size_t
 #include <cstdint>                          // for int64_t, SIZE_MAX, uint64_t
+#include <cstdio>                           // for fclose, FILE
 #include <cstdlib>                          // for strtod
 #include <limits>                           // for numeric_limits
 #include <memory>                           // for allocator_traits<>::value_type
@@ -228,6 +229,15 @@ constexpr bool ndebug_defined() noexcept {
 #else
   return false;
 #endif
+}
+
+void fclose(FILE *fp) noexcept(false) {
+  if (!fp || fp == stdout || fp == stderr) {
+    return;
+  }
+  if (std::fclose(fp) != 0) {
+    throw fmt::system_error(errno, "Failed to close a file handle");
+  }
 }
 
 }  // namespace modle::utils

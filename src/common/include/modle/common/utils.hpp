@@ -6,6 +6,7 @@
 
 #include <cstddef>       // IWYU pragma: keep for size_t
 #include <cstdint>       // for int64_t, uint64_t
+#include <cstdio>        // for FILE
 #include <string>        // for string
 #include <string_view>   // for string_view
 #include <system_error>  // for errc
@@ -85,6 +86,7 @@ struct XXH3_Deleter {  // NOLINT
   inline void operator()(XXH3_state_t* state) noexcept { XXH3_freeState(state); }
 };
 
+inline void fclose(FILE* fp) noexcept(false);
 }  // namespace modle::utils
 
 #include "../../../utils_impl.hpp"  // IWYU pragma: keep

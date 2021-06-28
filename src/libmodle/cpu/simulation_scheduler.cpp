@@ -4,7 +4,6 @@
 #include <absl/types/span.h>                     // for Span, MakeConstSpan, MakeSpan
 #include <fmt/compile.h>                         // for FMT_COMPILE
 #include <fmt/format.h>                          // for print, FMT_STRING
-#include <fmt/os.h>                              // for output_file
 #include <fmt/ostream.h>                         // for formatbuf<>::int_type, print
 #include <moodycamel/blockingconcurrentqueue.h>  // for BlockingConcurrentQueue
 #include <moodycamel/concurrentqueue.h>          // for ConsumerToken, ProducerToken
@@ -264,10 +263,20 @@ void Simulation::run_pairwise() {
   moodycamel::ProducerToken ptok(task_queue);
   std::array<StatePW, task_batch_size_enq> tasks;
 
-  std::ofstream out_file;
-  if (!this->path_to_output_file_bedpe.empty()) {
-    out_file.open(this->path_to_output_file_bedpe);
-  }
+  auto out_file = [&]() {
+    if (this->path_to_output_file_bedpe.empty()) {
+      return std::unique_ptr<FILE, decltype(&utils::fclose)>(stdout, utils::fclose);
+    }
+    auto fp = std::unique_ptr<FILE, decltype(&utils::fclose)>(
+        std::fopen(this->path_to_output_file_bedpe.c_str(), "w"), utils::fclose);
+
+    if (!fp) {
+      throw fmt::system_error(errno, FMT_STRING("Failed to create file {}"),
+                              this->path_to_output_file_bedpe);
+    }
+    return fp;
+  }();
+
   std::mutex out_file_mutex;
   std::atomic<bool> end_of_simulation = false;
 
@@ -383,8 +392,9 @@ void Simulation::run_pairwise() {
 }
 
 void Simulation::worker(moodycamel::BlockingConcurrentQueue<Simulation::TaskPW>& task_queue,
-                        std::ofstream& out_file, std::mutex& out_file_mutex,
-                        std::atomic<bool>& end_of_simulation, size_t task_batch_size) const {
+                        std::unique_ptr<FILE, decltype(&utils::fclose)>& out_file,
+                        std::mutex& out_file_mutex, std::atomic<bool>& end_of_simulation,
+                        size_t task_batch_size) const {
   fmt::print(stderr, FMT_STRING("Spawning simulation thread {}...\n"), std::this_thread::get_id());
   moodycamel::ConsumerToken ctok(task_queue);
 
@@ -440,9 +450,9 @@ void Simulation::worker(moodycamel::BlockingConcurrentQueue<Simulation::TaskPW>&
   }
 }
 
-void Simulation::simulate_window(Simulation::StatePW& state, std::ofstream& out_file,
+void Simulation::simulate_window(Simulation::StatePW& state,
+                                 std::unique_ptr<FILE, decltype(&utils::fclose)>& out_file,
                                  std::mutex& out_file_mutex) const {
-  auto& out_stream = out_file.is_open() ? out_file : std::cout;
   const auto all_barriers = state.barriers;
 
   size_t last_barrier_deleted_idx{0};
@@ -530,9 +540,9 @@ void Simulation::simulate_window(Simulation::StatePW& state, std::ofstream& out_
 
         const auto name = absl::StrCat(feat1.name, ";", feat2.name);
 
-        fmt::print(out_stream,
-                   FMT_STRING("{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\tdeletion={}-{}"
-                              "\tnum_barr={}/{}\tbarrs={}\n"),
+        fmt::print(out_file.get(),
+                   FMT_COMPILE("{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\tdeletion={}-{}"
+                               "\tnum_barr={}/{}\tbarrs={}\n"),
                    feat1.chrom, feat1_abs_bin * bin_size, (feat1_abs_bin + 1) * bin_size,
                    feat2.chrom, feat2_abs_bin * bin_size, (feat2_abs_bin + 1) * bin_size,
                    name.size() > 1 ? name : "none", contacts, feat1.strand, feat2.strand,
