@@ -29,8 +29,9 @@ template <typename MaskT>
 void Simulation::bind_lefs(const Chromosome* const chrom, const absl::Span<Lef> lefs,
                            const absl::Span<size_t> rev_lef_ranks,
                            const absl::Span<size_t> fwd_lef_ranks, const MaskT& mask,
-                           random::PRNG_t& rand_eng,
-                           size_t current_epoch) noexcept(utils::ndebug_defined()) {
+                           random::PRNG_t& rand_eng, size_t current_epoch,
+                           const bp_t deletion_begin,
+                           const bp_t deletion_size) noexcept(utils::ndebug_defined()) {
   using T = std::decay_t<decltype(std::declval<MaskT&>().operator[](std::declval<size_t>()))>;
   static_assert(std::is_integral_v<T> || std::is_same_v<MaskT, boost::dynamic_bitset<>>,
                 "mask should be a vector of integral numbers or a boost::dynamic_bitset.");
@@ -46,7 +47,14 @@ void Simulation::bind_lefs(const Chromosome* const chrom, const absl::Span<Lef> 
   chrom_pos_generator_t pos_generator{chrom->start_pos(), chrom->end_pos() - 1};
   for (auto i = 0UL; i < lefs.size(); ++i) {
     if (mask.empty() || mask[i]) {  // Bind all LEFs when mask is empty
-      lefs[i].bind_at_pos(current_epoch, pos_generator(rand_eng));
+      auto pos = pos_generator(rand_eng);
+      if (deletion_size > 0) {
+        const auto deletion_end = deletion_begin + deletion_size;
+        while (pos >= deletion_begin && pos < deletion_end) {
+          pos = pos_generator(rand_eng);
+        }
+      }
+      lefs[i].bind_at_pos(current_epoch, pos);
     }
   }
 
@@ -239,8 +247,13 @@ void Simulation::simulate_extrusion_kernel(StateT& s) const {
       {  // Select inactive LEFs and bind them
         auto lef_mask = absl::MakeSpan(s.idx_buff1.data(), lefs.size());
         Simulation::select_lefs_to_bind(lefs, lef_mask);
-        Simulation::bind_lefs(s.chrom, lefs, rev_lef_ranks, fwd_lef_ranks, lef_mask, s.rand_eng,
-                              epoch);
+        if constexpr (normal_simulation) {
+          Simulation::bind_lefs(s.chrom, lefs, rev_lef_ranks, fwd_lef_ranks, lef_mask, s.rand_eng,
+                                epoch);
+        } else {
+          Simulation::bind_lefs(s.chrom, lefs, rev_lef_ranks, fwd_lef_ranks, lef_mask, s.rand_eng,
+                                epoch, s.deletion_begin, s.deletion_size);
+        }
       }
 
       if (epoch > n_burnin_epochs) {                 // Register contacts
@@ -270,7 +283,7 @@ void Simulation::simulate_extrusion_kernel(StateT& s) const {
           n_contacts += this->register_contacts(s.chrom, lefs, lef_idx);
         } else {
           n_contacts +=
-              this->register_contacts(s.range_start, s.range_end, s.contacts, lefs, lef_idx);
+              this->register_contacts(s.window_start, s.window_end, s.contacts, lefs, lef_idx);
         }
 
         if (s.num_target_contacts != 0 && n_contacts >= s.num_target_contacts) {
@@ -294,8 +307,13 @@ void Simulation::simulate_extrusion_kernel(StateT& s) const {
                                          fwd_collision_mask, s.rand_eng);
 
       // Advance LEFs
-      Simulation::extrude(s.chrom, lefs, rev_moves, fwd_moves, num_rev_units_at_5prime,
-                          num_fwd_units_at_3prime);
+      if constexpr (normal_simulation) {
+        Simulation::extrude(s.chrom, lefs, rev_moves, fwd_moves, num_rev_units_at_5prime,
+                            num_fwd_units_at_3prime);
+      } else {
+        Simulation::extrude(s.chrom, lefs, rev_moves, fwd_moves, num_rev_units_at_5prime,
+                            num_fwd_units_at_3prime, s.deletion_begin, s.deletion_size);
+      }
 
       // The vector of affinities is used to bias LEF release towards LEFs that are not in a hard
       // stall condition

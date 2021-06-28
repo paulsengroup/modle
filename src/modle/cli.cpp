@@ -74,11 +74,11 @@ void Cli::make_cli() {
     io->add_option(
             "--feature-beds",
             this->_config.path_to_feature_bed_files,
-            "Path to one or more BED files containing features used to compute the total number of contacts between pairs of features. Pairs of features with a non-zero number of contacts will be written to a BEDPE file. When a single BED file is specified, the output will only contain within-feature contacts.")
+            "Path to one or more BED files containing feats1 used to compute the total number of contacts between pairs of feats1. Pairs of feats1 with a non-zero number of contacts will be written to a BEDPE file. When a single BED file is specified, the output will only contain within-feature contacts.")
             ->check(CLI::ExistingFile);
 
     // TODO Add flag to write contacts in scool format when --feature-beds is passed. Cell 0 should store contacts for the entire genome,
-    // while additional cells should store contacts for the smaller simulations used to generate contacts for pairs of features.
+    // while additional cells should store contacts for the smaller simulations used to generate contacts for pairs of feats1.
 
     gen->add_option(
             "-b,--bin-size",
@@ -200,7 +200,7 @@ void Cli::make_cli() {
     gen->add_option(
             "--deletion-size",
             this->_config.deletion_size,
-            "Size of deletion in bp. Used to enable/disable extrusion barriers and compute the total number of contacts between pairs of features. Specify 0 to compute all possible combinations.")
+            "Size of deletion in bp. Used to enable/disable extrusion barriers and compute the total number of contacts between pairs of feats1. Specify 0 to compute all possible combinations.")
             ->check(CLI::NonNegativeNumber)
             ->transform((remove_trailing_zero_from_floats))
             ->capture_default_str();

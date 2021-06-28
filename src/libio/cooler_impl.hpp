@@ -80,7 +80,7 @@ void Cooler::write_or_append_cmatrix_to_file(const ContactMatrix<I1> &cmatrix,
   // This shouldn't cause any problem, as in the end the contact matrix is accesses through a
   // const slice NOLINTNEXTLINE
   const std::vector<ContactMatrix<I1> *> cmatrices{const_cast<ContactMatrix<I1> *>(&cmatrix)};
-  std::string chrom_name_{chrom_name.data(), chrom_name.size()};
+  std::string chrom_name_{chrom_name};
   write_or_append_cmatrices_to_file(
       absl::MakeConstSpan(cmatrices), absl::MakeConstSpan(&chrom_name_, 1),
       absl::MakeConstSpan(&chrom_start, 1), absl::MakeConstSpan(&chrom_end, 1),

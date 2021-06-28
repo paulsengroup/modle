@@ -2,7 +2,9 @@
 #include <absl/container/flat_hash_map.h>        // for flat_hash_map, BitMask, raw_hash_set<...
 #include <absl/strings/str_join.h>               // for StrJoin
 #include <absl/types/span.h>                     // for Span, MakeConstSpan, MakeSpan
+#include <fmt/compile.h>                         // for FMT_COMPILE
 #include <fmt/format.h>                          // for print, FMT_STRING
+#include <fmt/os.h>                              // for output_file
 #include <fmt/ostream.h>                         // for formatbuf<>::int_type, print
 #include <moodycamel/blockingconcurrentqueue.h>  // for BlockingConcurrentQueue
 #include <moodycamel/concurrentqueue.h>          // for ConsumerToken, ProducerToken
@@ -257,23 +259,15 @@ void Simulation::run_pairwise() {
   // For now we support only the case where exactly two files are specified
   assert(this->path_to_feature_bed_files.size() == 2);  // NOLINT
 
-  auto query_interval_tree = [&](const auto& tree, const auto start, const auto end) {
-    const auto [overlap_begin, overlap_end] = tree.find_overlaps(start, end);
-    if (overlap_begin == overlap_end) {
-      return absl::MakeConstSpan(&(*overlap_begin), 0UL);
-    }
-    return absl::MakeConstSpan(&(*overlap_begin), static_cast<size_t>(overlap_end - overlap_begin));
-  };
-
-  using Task_t = std::pair<const bed::BED*, Simulation::TaskPW>;
-
   constexpr size_t task_batch_size_enq = 32;  // NOLINTNEXTLINE
-  moodycamel::BlockingConcurrentQueue<Task_t> task_queue(this->nthreads * task_batch_size_enq, 1,
-                                                         0);
+  moodycamel::BlockingConcurrentQueue<TaskPW> task_queue(this->nthreads * 2, 1, 0);
   moodycamel::ProducerToken ptok(task_queue);
-  std::array<Task_t, task_batch_size_enq> tasks;
+  std::array<StatePW, task_batch_size_enq> tasks;
 
-  std::ifstream out_file;  // TODO
+  std::ofstream out_file;
+  if (!this->path_to_output_file_bedpe.empty()) {
+    out_file.open(this->path_to_output_file_bedpe);
+  }
   std::mutex out_file_mutex;
   std::atomic<bool> end_of_simulation = false;
 
@@ -283,56 +277,88 @@ void Simulation::run_pairwise() {
         tpool, [&]() { this->worker(task_queue, out_file, out_file_mutex, end_of_simulation); });
   }
 
+  auto print_status_update = [](const auto& t) {
+    fmt::print(stderr, "Skipping {}[{}-{}]...\n", t.chrom->name(), t.active_window_start,
+               t.active_window_end);
+  };
+
   size_t task_id = 0;
   size_t num_tasks = 0;
   for (auto& chrom : this->_genome) {
-    size_t cell_id = 0;
-    const auto& reference_features = chrom.get_features();
+    const auto& features = chrom.get_features();
     const auto& barriers = chrom.barriers();
-    if (reference_features.size() != 2 || barriers.empty()) {
+    if (features.size() != 2 || barriers.empty()) {
       continue;
     }
 
-    // We assume the first set of feature is the promoter/TSS, and we look around using window of
-    // size ~2x diagonal_width. We want to process windows with at least 1 enhancer and 1 extr.
-    // barrier
-    for (const auto& feature : reference_features[0].data()) {
-      const auto feature_center_pos = (feature.chrom_start + feature.chrom_end + 1) / 2;
+    size_t cell_id = 0;
+    TaskPW t{};
+    t.chrom = &chrom;
+    t.window_start = 0;
+    t.window_end = 4 * this->diagonal_width;
+    t.active_window_start = 0;
+    t.active_window_end = 3 * this->diagonal_width;
 
-      const auto range_start = feature_center_pos > this->diagonal_width
-                                   ? feature_center_pos - this->diagonal_width
-                                   : 0UL;
-      const auto range_end = std::min(feature_center_pos + this->diagonal_width, chrom.end_pos());
+    auto advance_window = [&]() -> bool {
+      t.window_start += this->diagonal_width;
+      t.active_window_start = t.window_start + this->diagonal_width;
 
-      const auto overlapping_barriers = query_interval_tree(barriers, range_start, range_end);
-      if (overlapping_barriers.empty()) {
-        break;
-      }
+      t.active_window_end = std::min(t.active_window_start + this->diagonal_width, chrom.end_pos());
+      t.window_end = std::min(t.active_window_end + this->diagonal_width, chrom.end_pos());
 
-      const auto overlapping_features =
-          query_interval_tree(reference_features[1], range_start, range_end);
-      if (overlapping_features.empty()) {
-        break;
-      }
-      TaskPW t{{task_id++, &chrom, cell_id++}};
+      return t.active_window_start >= chrom.end_pos();
+    };
 
+    do {
       if (this->target_contact_density != 0) {  // Compute the number of simulation rounds required
-        // to reach the target contact density
+                                                // to reach the target contact density
+
+        const auto num_pixels = [&]() {
+          const auto npix1 =
+              (t.window_end - this->deletion_size - t.window_start + this->bin_size - 1) /
+              this->bin_size;
+          const auto npix2 = (this->diagonal_width + this->bin_size - 1) / this->bin_size;
+
+          return npix1 * npix2;
+        }();
         t.num_target_contacts = static_cast<size_t>(std::max(
-            1.0,
-            std::round(this->target_contact_density *
-                       static_cast<double>((range_end - range_start) * this->diagonal_width))));
+            1.0, std::round(this->target_contact_density * static_cast<double>(num_pixels))));
       }
       t.num_target_epochs = t.num_target_contacts == 0UL ? this->simulation_iterations
                                                          : std::numeric_limits<size_t>::max();
 
-      t.num_lefs = static_cast<size_t>(static_cast<double>(range_end - range_start) *
+      t.num_lefs = static_cast<size_t>(static_cast<double>(t.window_end - t.window_start) *
                                        this->number_of_lefs_per_mbp);
-      t.range_start = range_start;
-      t.range_end = range_end;
 
-      t.barriers = overlapping_barriers;
-      t.features = overlapping_features;
+      auto [first_barrier, last_barrier] = barriers.equal_range(t.window_start, t.window_end);
+      if (first_barrier == barriers.data_end()) {
+        print_status_update(t);
+        continue;
+      }
+
+      auto [first_feat1, last_feat1] =
+          features[0].equal_range(t.active_window_start, t.active_window_end);
+      if (first_feat1 == features[0].data_end()) {
+        print_status_update(t);
+        continue;
+      }
+
+      auto [first_feat2, last_feat2] =
+          features[1].equal_range(t.active_window_start, t.active_window_end);
+      if (first_feat2 == features[1].data_end()) {
+        print_status_update(t);
+        continue;
+      }
+
+      t.id = task_id++;
+      t.cell_id = cell_id++;
+
+      t.barriers =
+          absl::MakeConstSpan(&(*first_barrier), static_cast<size_t>(last_barrier - first_barrier));
+      t.feats1 =
+          absl::MakeConstSpan(&(*first_feat1), static_cast<size_t>(last_feat1 - first_feat1));
+      t.feats2 =
+          absl::MakeConstSpan(&(*first_feat2), static_cast<size_t>(last_feat2 - first_feat2));
 
       if (num_tasks == tasks.size()) {
         auto sleep_us = 100;  // NOLINT
@@ -343,11 +369,8 @@ void Simulation::run_pairwise() {
         }
         num_tasks = 0;
       }
-      tasks[num_tasks++] = std::make_pair(&feature, t);
-
-      // Put overlaps on queue
-      //
-    }
+      tasks[num_tasks++] = t;  // NOLINT
+    } while (!advance_window());
   }
   if (num_tasks != 0) {
     while (  // Enqueue tasks
@@ -355,17 +378,17 @@ void Simulation::run_pairwise() {
       std::this_thread::sleep_for(std::chrono::microseconds(100));  // NOLINT
     }
   }
+  end_of_simulation = true;
+  tpool.join();
 }
 
-void Simulation::worker(
-    moodycamel::BlockingConcurrentQueue<std::pair<const bed::BED*, Simulation::TaskPW>>& task_queue,
-    std::ifstream& out_file, std::mutex& out_file_mutex, std::atomic<bool>& end_of_simulation,
-    size_t task_batch_size) const {
+void Simulation::worker(moodycamel::BlockingConcurrentQueue<Simulation::TaskPW>& task_queue,
+                        std::ofstream& out_file, std::mutex& out_file_mutex,
+                        std::atomic<bool>& end_of_simulation, size_t task_batch_size) const {
   fmt::print(stderr, FMT_STRING("Spawning simulation thread {}...\n"), std::this_thread::get_id());
   moodycamel::ConsumerToken ctok(task_queue);
 
-  using Task_t = std::pair<const bed::BED*, Simulation::TaskPW>;
-  absl::FixedArray<Task_t> task_buff(task_batch_size);  // Tasks are dequeue in batch.
+  absl::FixedArray<TaskPW> task_buff(task_batch_size);  // Tasks are dequeue in batch.
 
   Simulation::StatePW state{};
 
@@ -385,18 +408,18 @@ void Simulation::worker(
 
       // Loop over new tasks
       auto tasks = absl::MakeSpan(task_buff.data(), avail_tasks);
-      for (auto& [feature_ptr, task] : tasks) {
+      for (const auto& task : tasks) {
         assert(!task.barriers.empty());  // NOLINT
-        assert(!task.features.empty());  // NOLINT
+        assert(!task.feats1.empty());    // NOLINT
 
         if (task.chrom->simulated_size() <= this->deletion_size) {
           continue;
         }
         state = task;  // Set simulation state based on task data
-        state.contacts.resize(task.range_end - task.range_start, this->diagonal_width,
+        state.contacts.resize(task.window_end - task.window_start, this->diagonal_width,
                               this->bin_size);
 
-        Simulation::simulate_window(*feature_ptr, state, out_file, out_file_mutex);
+        Simulation::simulate_window(state, out_file, out_file_mutex);
       }
     }
   } catch (const std::exception& err) {
@@ -417,117 +440,120 @@ void Simulation::worker(
   }
 }
 
-void Simulation::simulate_window(const bed::BED& reference_feature, Simulation::StatePW& state,
-                                 std::ifstream& out_file, std::mutex& out_file_mutex) const {
-  (void)out_file;
+void Simulation::simulate_window(Simulation::StatePW& state, std::ofstream& out_file,
+                                 std::mutex& out_file_mutex) const {
+  auto& out_stream = out_file.is_open() ? out_file : std::cout;
   const auto all_barriers = state.barriers;
-  const auto full_range_start = state.range_start;
-  const auto full_range_end = state.range_end;
 
   size_t last_barrier_deleted_idx{0};
 
+  std::string barrier_str_buff;
   do {
+    const auto first_chunk = state.active_window_start == state.chrom->start_pos();
+    const auto last_chunk = state.active_window_end == state.chrom->end_pos();
+    const auto partition_point = (state.active_window_start + state.active_window_end + 1) / 2;
+
     state.deletion_size =
         std::min(all_barriers[last_barrier_deleted_idx].pos() + 1, this->deletion_size);
     state.deletion_begin = all_barriers[last_barrier_deleted_idx].pos() + 1 - deletion_size;
     const auto deletion_end = state.deletion_begin + state.deletion_size;
 
-    if (const auto pos = (reference_feature.chrom_start + reference_feature.chrom_end + 1) / 2;
-        pos >= state.deletion_begin && pos < deletion_end) {
-      continue;  // "Reference" reference_feature falls withing the deletion
-    }
-
-    // TODO: all these comparisons should be made using the bin to which the middle of the
-    // reference_feature maps
-    if (state.features.front().chrom_start >= state.deletion_begin &&
-        state.features.back().chrom_start < deletion_end) {
-      continue;  // Is it safe to break here?
-    }
-
-    [&]() {  // Generate barrier configuration
-      state.barrier_tmp_buff.clear();
-      for (const auto& barrier : all_barriers) {
-        if (barrier.pos() < state.deletion_begin) {
-          state.barrier_tmp_buff.push_back(barrier);
-        } else if (barrier.pos() >= deletion_end) {
-          state.barrier_tmp_buff.push_back(barrier);
-          state.barrier_tmp_buff.back().pos() -= state.deletion_size;
-        }
+    // Generate barrier configuration
+    state.barrier_tmp_buff.clear();
+    barrier_str_buff.clear();
+    // TODO Removeme
+    for (const auto& barrier : all_barriers) {
+      if (barrier.pos() < state.deletion_begin ||
+          barrier.pos() >= state.deletion_begin + state.deletion_size) {
+        absl::StrAppend(&barrier_str_buff, barrier.pos(), ",");
       }
-    }();
+    }
+    if (!barrier_str_buff.empty()) {
+      barrier_str_buff.pop_back();
+    }
+
+    std::copy_if(all_barriers.begin(), all_barriers.end(),
+                 std::back_inserter(state.barrier_tmp_buff), [&](const auto& barrier) {
+                   return barrier.pos() < state.deletion_begin ||
+                          barrier.pos() >= state.deletion_begin + state.deletion_size;
+                 });
 
     if (state.barrier_tmp_buff.empty()) {
       continue;
     }
 
-    state.num_target_contacts = static_cast<size_t>(this->target_contact_density *
-                                                    static_cast<double>(state.contacts.npixels()));
     state.barriers = state.barrier_tmp_buff;
-    assert(state.range_end > deletion_size);  // NOLINT
-    state.range_end -= deletion_size;
-    state.num_lefs =  // Compute # of LEFs to be simulated
-        static_cast<size_t>(std::round(this->number_of_lefs_per_mbp *
-                                       (static_cast<double>(state.range_end - state.range_start)) /
-                                       Mbp));
+    assert(state.window_end > deletion_size);  // NOLINT
+    state.num_lefs =                           // Compute # of LEFs to be simulated
+        static_cast<size_t>(std::round(
+            this->number_of_lefs_per_mbp *
+            (static_cast<double>(state.window_end - deletion_size - state.window_start)) / Mbp));
     // Resize and reset buffers
     state.resize();
     state.reset();
     state.contacts.reset();
 
-    // fmt::print(stderr, "{}[{}-{}]\n", state.chrom->name(), state.range_start, state.range_end);
     Simulation::simulate_extrusion_kernel(state);
 
-    const auto reference_feature_rel_bin =
-        (reference_feature.chrom_end - reference_feature.chrom_start + this->bin_size - 1) /
-        this->bin_size;
-
-    for (const auto& target_feature : state.features) {
-      // Skip deleted features
-      if (target_feature.chrom_start >= state.deletion_begin &&
-          target_feature.chrom_end < deletion_end) {
-        continue;
+    std::scoped_lock l(out_file_mutex);
+    for (auto i = 0UL; i < state.feats1.size(); ++i) {
+      const auto& feat1 = state.feats1[i];
+      const auto feat1_abs_center_pos = (feat1.chrom_start + feat1.chrom_end + 1) / 2;
+      if (feat1_abs_center_pos >= state.deletion_begin && feat1_abs_center_pos < deletion_end) {
+        continue;  // Skip deleted feat1
       }
+      for (auto j = i; j < state.feats2.size(); ++j) {
+        const auto& feat2 = state.feats2[j];
+        const auto feat2_abs_center_pos = (feat2.chrom_start + feat2.chrom_end + 1) / 2;
+        if (feat2_abs_center_pos >= state.deletion_begin && feat2_abs_center_pos < deletion_end) {
+          continue;  // Skip deleted feat2
+        }
 
-      const auto target_feature_rel_bin =
-          (target_feature.chrom_end - target_feature.chrom_start + this->bin_size - 1) /
-          this->bin_size;
+        if ((first_chunk || last_chunk) &&
+            (feat1_abs_center_pos >= partition_point && feat2_abs_center_pos >= partition_point)) {
+          continue;
+        }
 
-      const auto contacts = state.contacts.get(reference_feature_rel_bin, target_feature_rel_bin);
-      if (contacts == 0) {  // Don't output entries with 0 contacts
-        continue;
+        const auto feat1_rel_center_pos = feat1_abs_center_pos - state.window_start;
+        const auto feat2_rel_center_pos = feat2_abs_center_pos - state.window_start;
+
+        const auto feat1_rel_bin = feat1_rel_center_pos / this->bin_size;
+        const auto feat2_rel_bin = feat2_rel_center_pos / this->bin_size;
+
+        const auto contacts = state.contacts.get(feat1_rel_bin, feat2_rel_bin);
+        if (contacts == 0) {  // Don't output entries with 0 contacts
+          continue;
+        }
+
+        const auto feat1_abs_bin = (feat1_abs_center_pos + this->bin_size - 1) / this->bin_size;
+        const auto feat2_abs_bin = (feat2_abs_center_pos + this->bin_size - 1) / this->bin_size;
+
+        const auto name = absl::StrCat(feat1.name, ";", feat2.name);
+
+        fmt::print(out_stream,
+                   FMT_STRING("{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\tdeletion={}-{}"
+                              "\tnum_barr={}/{}\tbarrs={}\n"),
+                   feat1.chrom, feat1_abs_bin * bin_size, (feat1_abs_bin + 1) * bin_size,
+                   feat2.chrom, feat2_abs_bin * bin_size, (feat2_abs_bin + 1) * bin_size,
+                   name.size() > 1 ? name : "none", contacts, feat1.strand, feat2.strand,
+                   state.deletion_begin, deletion_end, state.barriers.size(), all_barriers.size(),
+                   barrier_str_buff);
       }
-
-      const auto reference_feature_abs_bin =
-          (reference_feature.chrom_start + reference_feature.chrom_start + this->bin_size - 1) /
-          this->bin_size;
-
-      const auto target_feature_abs_bin =
-          (target_feature.chrom_start + target_feature.chrom_start + this->bin_size - 1) /
-          this->bin_size;
-
-      const auto name = absl::StrCat(reference_feature.name, ";", target_feature.name);
-      fmt::print(stdout,
-                 FMT_STRING("{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\tcenter={}\tdeletion={}-{}"
-                            "\tnum_barr={}/{}\tnum_feats={}\n"),
-                 reference_feature.chrom, reference_feature_abs_bin * bin_size,
-                 (reference_feature_abs_bin + 1) * bin_size, target_feature.chrom,
-                 target_feature_abs_bin * bin_size, (target_feature_abs_bin + 1) * bin_size,
-                 name.size() > 1 ? name : "none", contacts, reference_feature.strand,
-                 target_feature.strand, ((2 * reference_feature_abs_bin * bin_size) + bin_size) / 2,
-                 state.deletion_begin, deletion_end, state.barriers.size(), all_barriers.size(),
-                 state.features.size());
     }
-
-    // auto c = cooler::Cooler(fmt::format("/tmp/test_{}_{}.cool", state.id, state.cell_id),
-    //                         cooler::Cooler::WRITE_ONLY, this->bin_size);
-    // c.write_or_append_cmatrix_to_file(state.contacts, state.chrom->name(),
-    // state.chrom->start_pos(),
-    //                                   state.chrom->end_pos(), state.chrom->size());
+    /*
+    if (foo == k++) {
+      auto c = cooler::Cooler(fmt::format("/tmp/test_{}_{}_{:03}.cool", state.id, state.cell_id,
+    foo), cooler::Cooler::WRITE_ONLY, this->bin_size, state.chrom->name().size());
+      c.write_or_append_cmatrix_to_file(state.contacts, state.chrom->name(),
+                                        state.chrom->start_pos(), state.chrom->end_pos(),
+                                        state.chrom->size());
+    }
+     */
   } while (++last_barrier_deleted_idx < all_barriers.size());
 
   std::scoped_lock l(out_file_mutex);
   fmt::print(stderr, FMT_STRING("Done processing {}[{}-{}]!\n"), state.chrom->name(),
-             full_range_start, full_range_end);
+             state.active_window_start, state.active_window_end);
 }
 
 }  // namespace modle

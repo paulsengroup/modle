@@ -322,7 +322,7 @@ size_t Genome::import_extra_features(absl::btree_set<Chromosome>& chromosomes,
 
   // Parse all the records from the BED file. The parser will throw in case of duplicates.
   const auto features =
-      bed::Parser(path_to_extra_features, bed::BED::BED3).parse_all_in_interval_tree();
+      bed::Parser(path_to_extra_features, bed::BED::BED6).parse_all_in_interval_tree();
 
   for (auto& chrom : chromosomes) {
     if (const auto chrom_name = std::string{chrom.name()}; features.contains(chrom_name)) {

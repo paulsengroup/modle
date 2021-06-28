@@ -326,33 +326,50 @@ void Simulation::rank_lefs(const absl::Span<const Lef> lefs,
 
 void Simulation::extrude(const Chromosome* const chrom, const absl::Span<Lef> lefs,
                          const absl::Span<const bp_t> rev_moves,
-                         const absl::Span<const bp_t> fwd_moves, size_t num_rev_units_at_5prime,
-                         size_t num_fwd_units_at_3prime) noexcept(utils::ndebug_defined()) {
+                         const absl::Span<const bp_t> fwd_moves,
+                         const size_t num_rev_units_at_5prime, const size_t num_fwd_units_at_3prime,
+                         const bp_t deletion_begin,
+                         const bp_t deletion_size) noexcept(utils::ndebug_defined()) {
   {
     assert(lefs.size() == rev_moves.size());         // NOLINT
     assert(lefs.size() == fwd_moves.size());         // NOLINT
     assert(lefs.size() >= num_rev_units_at_5prime);  // NOLINT
     assert(lefs.size() >= num_fwd_units_at_3prime);  // NOLINT
-    (void)chrom;
   }
 
   auto i1 = num_rev_units_at_5prime == 0 ? 0UL : num_rev_units_at_5prime - 1;
   const auto i2 = lefs.size() - num_fwd_units_at_3prime;
+  const auto deletion_end = deletion_begin + deletion_size;
   for (; i1 < i2; ++i1) {
     auto& lef = lefs[i1];
     if (BOOST_UNLIKELY(!lef.is_bound())) {  // Do not process inactive LEFs
       continue;
     }
-    assert(lef.rev_unit.pos() <= lef.fwd_unit.pos());  // NOLINT
+    assert(lef.rev_unit.pos() <= lef.fwd_unit.pos());                    // NOLINT
+    assert(lef.rev_unit.pos() >= chrom->start_pos() + rev_moves[i1]);    // NOLINT
+    assert(lef.fwd_unit.pos() + fwd_moves[i1] <= chrom->end_pos() - 1);  // NOLINT
+
+    const auto rev_move = [&]() {
+      if (deletion_size > 0 && lef.rev_unit.pos() >= deletion_end &&
+          lef.rev_unit.pos() - rev_moves[i1] < deletion_end) {
+        return std::min(rev_moves[i1] + deletion_size, lef.rev_unit.pos());
+      }
+      return rev_moves[i1];
+    }();
+
+    const auto fwd_move = [&]() {
+      if (deletion_size > 0 && lef.fwd_unit.pos() < deletion_begin &&
+          lef.fwd_unit.pos() + fwd_moves[i1] >= deletion_begin) {
+        return std::min(fwd_moves[i1] + deletion_size, chrom->end_pos() - lef.fwd_unit.pos());
+      }
+      return fwd_moves[i1];
+    }();
 
     // Extrude rev unit
-    assert(lef.rev_unit.pos() >= chrom->start_pos() + rev_moves[i1]);  // NOLINT
-    lef.rev_unit._pos -= rev_moves[i1];  // Advance extr. unit in 3'-5' direction
+    lef.rev_unit._pos -= rev_move;  // Advance extr. unit in 3'-5' direction
 
     // Extrude fwd unit
-    assert(lef.fwd_unit.pos() + fwd_moves[i1] <= chrom->end_pos() - 1);  // NOLINT
-    lef.fwd_unit._pos += fwd_moves[i1];  // Advance extr. unit in 5'-3' direction
-
+    lef.fwd_unit._pos += fwd_move;                     // Advance extr. unit in 5'-3' direction
     assert(lef.rev_unit.pos() <= lef.fwd_unit.pos());  // NOLINT
   }
 }
@@ -550,9 +567,13 @@ Simulation::StatePW& Simulation::StatePW::operator=(const TaskPW& task) {
   this->num_lefs = task.num_lefs;
   this->barriers = task.barriers;
 
-  this->range_start = task.range_start;
-  this->range_end = task.range_end;
-  this->features = task.features;
+  this->window_start = task.window_start;
+  this->window_end = task.window_end;
+  this->active_window_start = task.active_window_start;
+  this->active_window_end = task.active_window_end;
+
+  this->feats1 = task.feats1;
+  this->feats2 = task.feats2;
   return *this;
 }
 
@@ -578,8 +599,8 @@ std::string Simulation::StatePW::to_string() const noexcept {
                                 " - # of LEFs: {}\n"
                                 " - # Extrusion barriers: {}\n"
                                 " - seed: {}\n"),
-                     id, chrom->name(), chrom->start_pos(), chrom->end_pos(), range_start,
-                     range_end, cell_id, num_target_epochs, num_target_contacts, num_lefs,
+                     id, chrom->name(), chrom->start_pos(), chrom->end_pos(), window_start,
+                     window_end, cell_id, num_target_epochs, num_target_contacts, num_lefs,
                      barriers.size(), seed);
 }
 
