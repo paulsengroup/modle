@@ -26,6 +26,7 @@
 #include "modle/common/suppress_compiler_warnings.hpp"
 #include "modle/common/utils.hpp"   // for parse_numeric_or_throw, parse_vect_of_numbers_...
 #include "modle/interval_tree.hpp"  // for IITree
+#include "modle/libarchivexx.hpp"   // for Reader, readline
 
 namespace modle::bed {
 
@@ -439,13 +440,9 @@ uint64_t BED::hash(XXH_INLINE_XXH3_state_t* state, uint64_t seed) const {
 Parser::Parser(std::filesystem::path path_to_bed, BED::Dialect bed_standard,
                bool enforce_std_compliance)
     // For now we always skip the header
-    : _path_to_bed(std::move(path_to_bed)),
+    : _fp(std::move(path_to_bed)),
       _dialect(bed_standard),
       _enforce_std_compliance(enforce_std_compliance) {
-  this->_fp.open(this->_path_to_bed);
-  if (!this->_fp) {
-    throw fmt::system_error(errno, "Unable to open file {} for reading", this->_path_to_bed);
-  }
   this->_num_lines_read = this->skip_header();
   if (this->_dialect == BED::autodetect) {
     this->_dialect = BED::detect_standard(this->_buff);
@@ -465,22 +462,18 @@ BED Parser::parse_next() {
   }
 
   // Look for the next non-empty line
-  while (std::getline(this->_fp, this->_buff)) {
+  while (this->_fp.getline(this->_buff)) {
     ++this->_num_lines_read;
     if (!this->_buff.empty()) {
       break;
     }
   }
 
-  if (!this->_fp && !this->_fp.eof()) {
-    throw fmt::system_error(errno, "An error occurred while reading file {}", this->_path_to_bed);
-  }
-
   return record;
 }
 
 std::vector<BED> Parser::parse_n(size_t num_records) {
-  assert(this->_fp.is_open() && this->_fp.good());  // NOLINT
+  assert(this->_fp.is_open());  // NOLINT
 
   using record_idx_t = size_t;
   using line_num_t = size_t;
@@ -495,7 +488,7 @@ std::vector<BED> Parser::parse_n(size_t num_records) {
     if (this->_dialect != BED::none && record.num_fields() < this->_dialect) {
       throw std::runtime_error(fmt::format(
           FMT_STRING("Expected BED record with at least {} fields, got {} at line {} of file {}"),
-          this->_dialect, record.size(), this->_num_lines_read, this->_path_to_bed));
+          this->_dialect, record.size(), this->_num_lines_read, this->_fp.path()));
     }
 
     if (auto [node, new_insertion] = records.try_emplace(
@@ -506,7 +499,7 @@ std::vector<BED> Parser::parse_n(size_t num_records) {
       throw std::runtime_error(fmt::format(
           FMT_STRING("Detected duplicate record at line {} of file {}. First occurrence was at "
                      "line {}.\n - First occurrence:  '{}'\n - Second occurrence: '{}'"),
-          this->_num_lines_read, this->_path_to_bed, other_record_line, record.to_string(),
+          this->_num_lines_read, this->_fp.path(), other_record_line, record.to_string(),
           other_record.to_string()));
     }
   }
@@ -521,7 +514,7 @@ std::vector<BED> Parser::parse_n(size_t num_records) {
 }
 
 BED_tree<> Parser::parse_n_in_interval_tree(size_t num_records) {
-  assert(this->_fp.is_open() && this->_fp.good());  // NOLINT
+  assert(this->_fp.is_open());  // NOLINT
 
   using line_num_t = size_t;
   absl::flat_hash_map<BED, line_num_t> records;
@@ -532,7 +525,7 @@ BED_tree<> Parser::parse_n_in_interval_tree(size_t num_records) {
     if (this->_dialect != BED::none && record.num_fields() < this->_dialect) {
       throw std::runtime_error(fmt::format(
           FMT_STRING("Expected BED record with at least {} fields, got {} at line {} of file {}"),
-          this->_dialect, record.size(), this->_num_lines_read, this->_path_to_bed));
+          this->_dialect, record.size(), this->_num_lines_read, this->_fp.path()));
     }
 
     if (auto [node, new_insertion] = records.try_emplace(record, this->_num_lines_read);
@@ -542,7 +535,7 @@ BED_tree<> Parser::parse_n_in_interval_tree(size_t num_records) {
       throw std::runtime_error(fmt::format(
           FMT_STRING("Detected duplicate record at line {} of file {}. First occurrence was at "
                      "line {}.\n - First occurrence:  '{}'\n - Second occurrence: '{}'"),
-          this->_num_lines_read, this->_path_to_bed, other_record_line, record.to_string(),
+          this->_num_lines_read, this->_fp.path(), other_record_line, record.to_string(),
           other_record.to_string()));
     }
 
@@ -569,25 +562,23 @@ BED_tree<> Parser::parse_all_in_interval_tree() {
 }
 
 void Parser::reset() {
-  if (std::filesystem::is_fifo(this->_path_to_bed)) {
+  if (std::filesystem::is_fifo(this->_fp.path())) {
     throw std::runtime_error(fmt::format(
         FMT_STRING("BED::Parser::reset() was called on a file that is a FIFO: file path '{}'"),
-        this->_path_to_bed));
+        this->_fp.path()));
   }
   if (!this->_fp.is_open()) {
     throw std::runtime_error("BED::Parser::reset() was called on a closed file!");
   }
 
-  if (!this->_fp && !this->_fp.eof()) {
-    throw fmt::system_error(
-        errno,
+  try {
+    this->_fp.reset();
+  } catch (const std::exception& e) {
+    throw std::runtime_error(fmt::format(
         FMT_STRING(
             "An error occourred while seeking to the begin of file {} using BED::Parser::reset()"),
-        this->_path_to_bed);
+        this->_fp.path()));
   }
-
-  this->_fp.clear();
-  this->_fp.seekg(0);
   this->_buff.clear();
   this->_num_lines_read = 0;
   this->_num_records_parsed = 0;
@@ -598,8 +589,8 @@ void Parser::reset() {
 size_t Parser::skip_header() {
   assert(this->_num_records_parsed == 0);  // NOLINT
   auto num_header_lines = 0ULL;
-  assert(this->_fp.is_open() && this->_fp.good());  // NOLINT
-  while (std::getline(this->_fp, this->_buff)) {
+  assert(this->_fp.is_open());  // NOLINT
+  while (this->_fp.getline(this->_buff)) {
     if (this->_buff.empty()) {  // Skip empty lines
       ++num_header_lines;
       continue;
@@ -610,10 +601,6 @@ size_t Parser::skip_header() {
       continue;
     }
     return num_header_lines;
-  }
-
-  if (!this->_fp && !this->_fp.eof()) {
-    throw fmt::system_error(errno, "An error occurred while reading file {}", this->_path_to_bed);
   }
 
   return num_header_lines;

@@ -18,6 +18,7 @@
 
 #include "modle/chrom_sizes.hpp"    // for ChromSizes
 #include "modle/interval_tree.hpp"  // for IITree
+#include "modle/libarchivexx.hpp"   // for Reader
 
 namespace modle::bed {
 struct BED;
@@ -218,8 +219,7 @@ class Parser {
   void reset();
 
  private:
-  std::filesystem::path _path_to_bed;
-  std::ifstream _fp;
+  libarchivexx::Reader _fp{};
   std::string _buff{};
   size_t _num_records_parsed{0};
   size_t _num_lines_read{0};
