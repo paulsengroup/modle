@@ -31,6 +31,22 @@ TEST_CASE("Reader plain", "[reader][short]") {
   CHECK(!std::getline(fp, buff2));
 }
 
+TEST_CASE("Reader plain sv", "[reader][short]") {
+  const std::filesystem::path ptext_file = "test/data/unit_tests/sample.bed9";
+
+  modle::libarchivexx::Reader r(ptext_file);
+  std::ifstream fp(ptext_file);
+
+  std::string_view buff1;
+  std::string buff2;
+  while (!(buff1 = r.getline()).empty() && std::getline(fp, buff2)) {
+    CHECK(!!fp);
+    CHECK(buff1 == buff2);
+  }
+  CHECK(!r.getline(buff2));
+  CHECK(!std::getline(fp, buff2));
+}
+
 TEST_CASE("Reader gzip", "[reader][short]") {
   const std::filesystem::path compressed_file = "test/data/unit_tests/sample.bed9.gz";
   const std::filesystem::path ptext_file = "test/data/unit_tests/sample.bed9";

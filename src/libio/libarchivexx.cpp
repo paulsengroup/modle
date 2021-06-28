@@ -5,10 +5,11 @@
 #include <fmt/format.h>     // system_error
 #include <fmt/ostream.h>
 
-#include <cassert>     // for assert
-#include <filesystem>  // for path
-#include <memory>      // for unique_ptr
-#include <string>      // for string
+#include <cassert>      // for assert
+#include <filesystem>   // for path
+#include <memory>       // for unique_ptr
+#include <string>       // for string
+#include <string_view>  // for string_view
 
 namespace modle::libarchivexx {
 Reader::Reader(const std::filesystem::path& path, size_t buff_capacity) {
@@ -94,6 +95,24 @@ bool Reader::getline(std::string& buff, char sep) {
   return true;
 }
 
+std::string_view Reader::getline(char sep) {
+  assert(this->is_open());  // NOLINT
+  if (this->eof()) {
+    return std::string_view{};
+  }
+
+  this->_tok_tmp_buff.clear();
+  while (true) {
+    if (const auto tok = this->read_next_token(sep); !tok.empty()) {
+      return tok;
+    }
+    if (!this->read_next_chunk()) {
+      assert(this->eof());  // NOLINT
+      return std::string_view{};
+    }
+  }
+}
+
 bool Reader::read_next_chunk() {
   assert(!this->eof());     // NOLINT
   assert(this->is_open());  // NOLINT
@@ -105,6 +124,7 @@ bool Reader::read_next_chunk() {
   } else if (bytes_read == 0) {
     this->_eof = true;
     this->_buff.clear();
+    this->_tok_tmp_buff.clear();
     return false;
   }
   this->_buff.resize(static_cast<size_t>(bytes_read));
@@ -131,6 +151,33 @@ bool Reader::read_next_token(std::string& buff, char sep) {
   buff.append(this->_buff.begin() + i, this->_buff.begin() + static_cast<int64_t>(pos));
   this->_idx = pos + 1;
   return true;
+}
+
+std::string_view Reader::read_next_token(char sep) {
+  assert(!this->eof());                      // NOLINT
+  assert(this->is_open());                   // NOLINT
+  assert(this->_idx <= this->_buff.size());  // NOLINT
+  if (this->_idx == this->_buff.size()) {
+    return std::string_view{};
+  }
+
+  const auto pos = this->_buff.find(sep, this->_idx);
+  const auto i = static_cast<int64_t>(this->_idx);
+  if (pos == std::string::npos) {
+    this->_tok_tmp_buff.append(this->_buff.begin() + i, this->_buff.end());
+    return std::string_view{};
+  }
+
+  assert(pos >= this->_idx);  // NOLINT
+  this->_idx = pos + 1;
+  if (this->_tok_tmp_buff.empty()) {  // NOLINTNEXTLINE
+    return std::string_view{this->_buff.data() + static_cast<size_t>(i),
+                            pos - static_cast<size_t>(i)};
+  }
+
+  this->_tok_tmp_buff.append(this->_buff.begin() + i,
+                             this->_buff.begin() + static_cast<int64_t>(pos));
+  return std::string_view{this->_tok_tmp_buff};
 }
 
 }  // namespace modle::libarchivexx
