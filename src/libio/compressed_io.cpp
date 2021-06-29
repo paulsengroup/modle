@@ -19,7 +19,10 @@ Reader::Reader(const std::filesystem::path& path, size_t buff_capacity) {
 
 void Reader::open(const std::filesystem::path& path) {
   auto handle_open_errors = [&](la_ssize_t status) {
-    if (status != ARCHIVE_OK) {
+    if (status == ARCHIVE_EOF) {
+      throw std::runtime_error(fmt::format(FMT_STRING("File {} appears to be empty"), this->_path));
+    }
+    if (status < ARCHIVE_OK) {
       throw fmt::system_error(archive_errno(this->_arc.get()),
                               FMT_STRING("Failed to open file {} for reading"), this->_path);
     }
@@ -66,7 +69,7 @@ std::string Reader::path_string() const noexcept { return this->_path.string(); 
 const char* Reader::path_c_str() const noexcept { return this->_path.c_str(); }
 
 void Reader::handle_libarchive_errors(la_ssize_t errcode) const {
-  if (errcode != ARCHIVE_OK) {
+  if (errcode < ARCHIVE_OK) {
     this->handle_libarchive_errors();
   }
 }
@@ -178,6 +181,57 @@ std::string_view Reader::read_next_token(char sep) {
   this->_tok_tmp_buff.append(this->_buff.begin() + i,
                              this->_buff.begin() + static_cast<int64_t>(pos));
   return std::string_view{this->_tok_tmp_buff};
+}
+
+Writer::Writer(const std::filesystem::path& path, Compression compression)
+    : _compression(compression) {
+  this->open(path);
+}
+
+void Writer::open(const std::filesystem::path& path) {
+  auto handle_open_errors = [&](la_ssize_t status) {
+    if (status < ARCHIVE_OK) {
+      throw fmt::system_error(archive_errno(this->_arc.get()),
+                              FMT_STRING("Failed to open file {} for writing"), this->_path);
+    }
+  };
+
+  if (this->is_open()) {
+    this->close();
+  }
+
+  this->_path = path;
+  this->_arc.reset(archive_write_new());
+  this->_arc_entry.reset(archive_entry_new());
+  if (!this->_arc || !this->_arc_entry) {
+    throw std::runtime_error(
+        fmt::format(FMT_STRING("Failed to allocate a buffer of to write file {}"), this->_path));
+  }
+
+  handle_open_errors(archive_write_add_filter(this->_arc.get(), this->_compression));
+  handle_open_errors(archive_write_set_format_raw(this->_arc.get()));
+
+  handle_open_errors(archive_write_open_filename(this->_arc.get(), this->_path.c_str()));
+  handle_open_errors(archive_read_next_header2(this->_arc.get(), this->_arc_entry.get()));
+  handle_open_errors(archive_write_header(this->_arc.get(), this->_arc_entry.get()));
+}
+
+bool Writer::is_open() const noexcept { return !!this->_arc; }
+
+void Writer::close() { this->_arc = nullptr; }
+
+const std::filesystem::path& Writer::path() const noexcept { return this->_path; }
+std::string Writer::path_string() const noexcept { return this->_path.string(); }
+const char* Writer::path_c_str() const noexcept { return this->_path.c_str(); }
+
+void Writer::write(std::string_view buff) {
+  if (const auto status = archive_write_data(this->_arc.get(), buff.data(), buff.size());
+      status < ARCHIVE_OK) {
+    throw fmt::system_error(
+        archive_errno(this->_arc.get()),
+        FMT_STRING("The following error occurred while writing {} bytes to file {}"), buff.size(),
+        this->_path);
+  }
 }
 
 }  // namespace modle::libarchivexx

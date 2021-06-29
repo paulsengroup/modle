@@ -6,7 +6,7 @@
 #include <iostream>
 #include <string>  // for string, basic_string, operator==, char_traits, stoull
 
-#include "modle/libarchivexx.hpp"  // for Reader
+#include "modle/compressed_io.hpp"  // for Reader
 
 namespace modle::test::libarchivexx {
 
