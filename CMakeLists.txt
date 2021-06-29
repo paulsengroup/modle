@@ -105,15 +105,18 @@ set(CONAN_EXTRA_REQUIRES
     libarchive/3.5.1
     readerwriterqueue/1.0.3
     xxhash/0.8.0
-    zlib/1.2.11)
+    zlib/1.2.11
+    zstd/1.5.0)
 
 set(CONAN_EXTRA_OPTIONS
     ${CONAN_EXTRA_OPTIONS}
     boost:system_no_deprecated=True
     boost:asio_no_deprecated=True
     boost:filesystem_no_deprecated=True
-    boost:zlib=False
-    boost:bzip2=False
+    boost:zlib=True
+    boost:bzip2=True
+    boost:lzma=True
+    boost:zstd=True
     libarchive:shared=False
     libarchive:with_zlib=True
     libarchive:with_bzip2=True

@@ -34,6 +34,7 @@
 
 #include "modle/common/config.hpp"  // for Config
 #include "modle/common/utils.hpp"   // for traced
+#include "modle/compressed_io.hpp"  // for Writer, write
 #include "modle/contacts.hpp"       // for ContactMatrix
 #include "modle/cooler.hpp"
 #include "modle/extrusion_barriers.hpp"  // for ExtrusionBarrier
@@ -263,27 +264,16 @@ void Simulation::run_pairwise() {
   moodycamel::ProducerToken ptok(task_queue);
   std::array<StatePW, task_batch_size_enq> tasks;
 
-  auto out_file = [&]() {
-    if (this->path_to_output_file_bedpe.empty()) {
-      return std::unique_ptr<FILE, decltype(&utils::fclose)>(stdout, utils::fclose);
-    }
-    auto fp = std::unique_ptr<FILE, decltype(&utils::fclose)>(
-        std::fopen(this->path_to_output_file_bedpe.c_str(), "w"), utils::fclose);
+  std::mutex out_stream_mutex;
+  auto out_stream = compressed_io::Writer(this->path_to_output_file_bedpe);
 
-    if (!fp) {
-      throw fmt::system_error(errno, FMT_STRING("Failed to create file {}"),
-                              this->path_to_output_file_bedpe);
-    }
-    return fp;
-  }();
-
-  std::mutex out_file_mutex;
   std::atomic<bool> end_of_simulation = false;
 
   auto tpool = Simulation::instantiate_thread_pool();
   for (auto i = 0UL; i < this->nthreads; ++i) {  // Start simulation threads
-    boost::asio::post(
-        tpool, [&]() { this->worker(task_queue, out_file, out_file_mutex, end_of_simulation); });
+    boost::asio::post(tpool, [&]() {
+      this->worker(task_queue, out_stream, out_stream_mutex, end_of_simulation);
+    });
   }
 
   auto print_status_update = [](const auto& t) {
@@ -392,9 +382,8 @@ void Simulation::run_pairwise() {
 }
 
 void Simulation::worker(moodycamel::BlockingConcurrentQueue<Simulation::TaskPW>& task_queue,
-                        std::unique_ptr<FILE, decltype(&utils::fclose)>& out_file,
-                        std::mutex& out_file_mutex, std::atomic<bool>& end_of_simulation,
-                        size_t task_batch_size) const {
+                        compressed_io::Writer& out_stream, std::mutex& out_file_mutex,
+                        std::atomic<bool>& end_of_simulation, size_t task_batch_size) const {
   fmt::print(stderr, FMT_STRING("Spawning simulation thread {}...\n"), std::this_thread::get_id());
   moodycamel::ConsumerToken ctok(task_queue);
 
@@ -429,7 +418,7 @@ void Simulation::worker(moodycamel::BlockingConcurrentQueue<Simulation::TaskPW>&
         state.contacts.resize(task.window_end - task.window_start, this->diagonal_width,
                               this->bin_size);
 
-        Simulation::simulate_window(state, out_file, out_file_mutex);
+        Simulation::simulate_window(state, out_stream, out_file_mutex);
       }
     }
   } catch (const std::exception& err) {
@@ -450,13 +439,14 @@ void Simulation::worker(moodycamel::BlockingConcurrentQueue<Simulation::TaskPW>&
   }
 }
 
-void Simulation::simulate_window(Simulation::StatePW& state,
-                                 std::unique_ptr<FILE, decltype(&utils::fclose)>& out_file,
-                                 std::mutex& out_file_mutex) const {
+void Simulation::simulate_window(Simulation::StatePW& state, compressed_io::Writer& out_stream,
+                                 std::mutex& out_stream_mutex) const {
+  const auto write_to_stdout = out_stream.path().empty();
   const auto all_barriers = state.barriers;
 
   size_t last_barrier_deleted_idx{0};
 
+  std::string out_buffer;
   std::string barrier_str_buff;
   do {
     const auto first_chunk = state.active_window_start == state.chrom->start_pos();
@@ -505,7 +495,6 @@ void Simulation::simulate_window(Simulation::StatePW& state,
 
     Simulation::simulate_extrusion_kernel(state);
 
-    std::scoped_lock l(out_file_mutex);
     for (auto i = 0UL; i < state.feats1.size(); ++i) {
       const auto& feat1 = state.feats1[i];
       const auto feat1_abs_center_pos = (feat1.chrom_start + feat1.chrom_end + 1) / 2;
@@ -538,17 +527,28 @@ void Simulation::simulate_window(Simulation::StatePW& state,
         const auto feat1_abs_bin = (feat1_abs_center_pos + this->bin_size - 1) / this->bin_size;
         const auto feat2_abs_bin = (feat2_abs_center_pos + this->bin_size - 1) / this->bin_size;
 
-        const auto name = absl::StrCat(feat1.name, ";", feat2.name);
-
-        fmt::print(out_file.get(),
-                   FMT_COMPILE("{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\tdeletion={}-{}"
-                               "\tnum_barr={}/{}\tbarrs={}\n"),
-                   feat1.chrom, feat1_abs_bin * bin_size, (feat1_abs_bin + 1) * bin_size,
-                   feat2.chrom, feat2_abs_bin * bin_size, (feat2_abs_bin + 1) * bin_size,
-                   name.size() > 1 ? name : "none", contacts, feat1.strand, feat2.strand,
-                   state.deletion_begin, deletion_end, state.barriers.size(), all_barriers.size(),
-                   barrier_str_buff);
+        const auto name = feat1.name.empty() && feat2.name.empty()
+                              ? ""
+                              : absl::StrCat(feat1.name, ";", feat2.name);
+        absl::StrAppend(
+            &out_buffer,
+            fmt::format(FMT_COMPILE("{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\tdeletion={}-{}"
+                                    "\tnum_barr={}/{}\tbarrs={}\n"),
+                        feat1.chrom, feat1_abs_bin * bin_size, (feat1_abs_bin + 1) * bin_size,
+                        feat2.chrom, feat2_abs_bin * bin_size, (feat2_abs_bin + 1) * bin_size,
+                        name.size() > 1 ? name : "none", contacts, feat1.strand, feat2.strand,
+                        state.deletion_begin, deletion_end, state.barriers.size(),
+                        all_barriers.size(), barrier_str_buff));
       }
+    }
+    if (!out_buffer.empty()) {
+      std::scoped_lock l(out_stream_mutex);
+      if (write_to_stdout) {
+        fmt::print(stdout, out_buffer);
+      } else {
+        out_stream.write(out_buffer);
+      }
+      out_buffer.clear();
     }
     /*
     if (foo == k++) {
@@ -561,7 +561,6 @@ void Simulation::simulate_window(Simulation::StatePW& state,
      */
   } while (++last_barrier_deleted_idx < all_barriers.size());
 
-  std::scoped_lock l(out_file_mutex);
   fmt::print(stderr, FMT_STRING("Done processing {}[{}-{}]!\n"), state.chrom->name(),
              state.active_window_start, state.active_window_end);
 }

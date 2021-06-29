@@ -277,7 +277,7 @@ std::string Cli::process_paths_and_check_for_collisions(modle::Config& c) {
   c.path_to_log_file = c.path_to_output_prefix;
 
   c.path_to_output_file_cool += ".cool";
-  c.path_to_output_file_bedpe += !c.path_to_output_file_bedpe.empty() ? ".bedpe" : "";
+  c.path_to_output_file_bedpe += !c.path_to_output_file_bedpe.empty() ? ".bedpe.gz" : "";
   c.path_to_log_file += ".log";
 
   if (c.force || c.skip_output) {
