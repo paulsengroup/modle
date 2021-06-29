@@ -97,6 +97,7 @@ set(CONAN_EXTRA_REQUIRES
     ${CONAN_EXTRA_REQUIRES}
     abseil/20210324.2
     boost/1.76.0
+    bzip2/1.0.8
     cli11/1.9.1
     concurrentqueue/1.0.2
     cpp-sort/1.10.0
@@ -105,6 +106,7 @@ set(CONAN_EXTRA_REQUIRES
     libarchive/3.5.1
     readerwriterqueue/1.0.3
     xxhash/0.8.0
+    xz_utils/5.2.5
     zlib/1.2.11
     zstd/1.5.0)
 
@@ -117,6 +119,7 @@ set(CONAN_EXTRA_OPTIONS
     boost:bzip2=True
     boost:lzma=True
     boost:zstd=True
+    bzip2:build_executable=False
     libarchive:shared=False
     libarchive:with_zlib=True
     libarchive:with_bzip2=True
