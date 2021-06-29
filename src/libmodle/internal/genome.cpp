@@ -158,6 +158,11 @@ const Chromosome::contact_matrix_t& Chromosome::contacts() const {
   return *this->_contacts;
 }
 
+Chromosome::contact_matrix_t& Chromosome::contacts() {
+  assert(this->_contacts);  // NOLINT
+  return *this->_contacts;
+}
+
 uint64_t Chromosome::hash(uint64_t seed, size_t cell_id) {
   auto handle_errors = [&](const auto& status) {
     if (status == XXH_ERROR || !this->_xxh_state) {

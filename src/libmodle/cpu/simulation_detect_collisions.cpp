@@ -17,7 +17,7 @@
 namespace modle {
 
 std::pair<size_t, size_t> Simulation::detect_units_at_chrom_boundaries(
-    const Chromosome* chrom, absl::Span<const Lef> lefs, absl::Span<const size_t> rev_lef_ranks,
+    const Chromosome& chrom, absl::Span<const Lef> lefs, absl::Span<const size_t> rev_lef_ranks,
     absl::Span<const size_t> fwd_lef_ranks, absl::Span<const bp_t> rev_moves,
     absl::Span<const bp_t> fwd_moves, absl::Span<collision_t> rev_collisions,
     absl::Span<collision_t> fwd_collisions) {
@@ -59,11 +59,11 @@ std::pair<size_t, size_t> Simulation::detect_units_at_chrom_boundaries(
     const auto& rev_unit = lefs[rev_idx].rev_unit;
     const auto& rev_move = rev_moves[rev_idx];
 
-    assert(lefs[rev_idx].is_bound());                         // NOLINT
-    assert(chrom->start_pos() + rev_move <= rev_unit.pos());  // NOLINT
+    assert(lefs[rev_idx].is_bound());                        // NOLINT
+    assert(chrom.start_pos() + rev_move <= rev_unit.pos());  // NOLINT
 
-    if (rev_unit.pos() == chrom->start_pos()) {  // Unit already at the 5'-end
-      assert(rev_moves[rev_idx] == 0);           // NOLINT
+    if (rev_unit.pos() == chrom.start_pos()) {  // Unit already at the 5'-end
+      assert(rev_moves[rev_idx] == 0);          // NOLINT
       ++num_rev_units_at_5prime;
       rev_collisions[rev_idx] = REACHED_CHROM_BOUNDARY;
 
@@ -72,7 +72,7 @@ std::pair<size_t, size_t> Simulation::detect_units_at_chrom_boundaries(
       // before the rev unit reaches the 5'-end
       break;
 
-    } else if (rev_unit.pos() - rev_move == chrom->start_pos()) {
+    } else if (rev_unit.pos() - rev_move == chrom.start_pos()) {
       // Unit will reach the 5'-end by the end of the current epoch
       rev_collisions[rev_idx] = REACHED_CHROM_BOUNDARY;
       ++num_rev_units_at_5prime;
@@ -92,8 +92,8 @@ std::pair<size_t, size_t> Simulation::detect_units_at_chrom_boundaries(
                                   // buffers to avoid doing some work in later steps
     }
 
-    assert(fwd_unit.pos() + fwd_move < chrom->end_pos());  // NOLINT
-    if (fwd_unit.pos() == chrom->end_pos() - 1) {
+    assert(fwd_unit.pos() + fwd_move < chrom.end_pos());  // NOLINT
+    if (fwd_unit.pos() == chrom.end_pos() - 1) {
       assert(fwd_moves[fwd_idx] == 0);  // NOLINT
       ++num_fwd_units_at_3prime;
       fwd_collisions[fwd_idx] = REACHED_CHROM_BOUNDARY;
@@ -101,7 +101,7 @@ std::pair<size_t, size_t> Simulation::detect_units_at_chrom_boundaries(
     } else if (fwd_unit.pos() < last_active_rev_unit.pos()) {
       break;
 
-    } else if (fwd_unit.pos() + fwd_move == chrom->end_pos() - 1) {
+    } else if (fwd_unit.pos() + fwd_move == chrom.end_pos() - 1) {
       fwd_collisions[fwd_idx] = REACHED_CHROM_BOUNDARY;
       ++num_fwd_units_at_3prime;
       break;
@@ -399,7 +399,7 @@ void Simulation::detect_primary_lef_lef_collisions(
 }
 
 void Simulation::process_secondary_lef_lef_collisions(
-    const Chromosome* chrom, const absl::Span<const Lef> lefs, const size_t nbarriers,
+    const Chromosome& chrom, const absl::Span<const Lef> lefs, const size_t nbarriers,
     const absl::Span<const size_t> rev_lef_ranks, const absl::Span<const size_t> fwd_lef_ranks,
     const absl::Span<bp_t> rev_moves, const absl::Span<bp_t> fwd_moves,
     const absl::Span<collision_t> rev_collisions, const absl::Span<collision_t> fwd_collisions,
@@ -461,11 +461,11 @@ void Simulation::process_secondary_lef_lef_collisions(
     const auto& move1 = rev_moves[rev_idx1];
     auto& move2 = rev_moves[rev_idx2];
 
-    assert(rev_pos2 >= rev_pos1);                    // NOLINT
-    assert(rev_pos1 >= move1);                       // NOLINT
-    assert(rev_pos2 >= move2);                       // NOLINT
-    assert(rev_pos1 - move1 >= chrom->start_pos());  // NOLINT
-    assert(rev_pos2 - move2 >= chrom->start_pos());  // NOLINT
+    assert(rev_pos2 >= rev_pos1);                   // NOLINT
+    assert(rev_pos1 >= move1);                      // NOLINT
+    assert(rev_pos2 >= move2);                      // NOLINT
+    assert(rev_pos1 - move1 >= chrom.start_pos());  // NOLINT
+    assert(rev_pos2 - move2 >= chrom.start_pos());  // NOLINT
 
     if (rev_pos2 - move2 <= rev_pos1 - move1 &&
         (this->probability_of_extrusion_unit_bypass == 0 ||
@@ -496,9 +496,9 @@ void Simulation::process_secondary_lef_lef_collisions(
     auto& move1 = fwd_moves[fwd_idx1];
     const auto& move2 = fwd_moves[fwd_idx2];
 
-    assert(fwd_pos2 >= fwd_pos1);                 // NOLINT
-    assert(fwd_pos1 + move1 < chrom->end_pos());  // NOLINT
-    assert(fwd_pos2 + move2 < chrom->end_pos());  // NOLINT
+    assert(fwd_pos2 >= fwd_pos1);                // NOLINT
+    assert(fwd_pos1 + move1 < chrom.end_pos());  // NOLINT
+    assert(fwd_pos2 + move2 < chrom.end_pos());  // NOLINT
 
     if (fwd_pos1 + move1 >= fwd_pos2 + move2 &&
         (this->probability_of_extrusion_unit_bypass == 0 ||

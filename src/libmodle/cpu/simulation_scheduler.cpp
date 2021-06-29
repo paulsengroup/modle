@@ -553,10 +553,10 @@ void Simulation::simulate_window(Simulation::StatePW& state, compressed_io::Writ
     /*
     if (foo == k++) {
       auto c = cooler::Cooler(fmt::format("/tmp/test_{}_{}_{:03}.cool", state.id, state.cell_id,
-    foo), cooler::Cooler::WRITE_ONLY, this->bin_size, state.chrom->name().size());
-      c.write_or_append_cmatrix_to_file(state.contacts, state.chrom->name(),
-                                        state.chrom->start_pos(), state.chrom->end_pos(),
-                                        state.chrom->size());
+    foo), cooler::Cooler::WRITE_ONLY, this->bin_size, state.chrom.name().size());
+      c.write_or_append_cmatrix_to_file(state.contacts, state.chrom.name(),
+                                        state.chrom.start_pos(), state.chrom.end_pos(),
+                                        state.chrom.size());
     }
      */
   } while (++last_barrier_deleted_idx < all_barriers.size());

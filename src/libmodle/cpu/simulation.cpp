@@ -129,12 +129,12 @@ void Simulation::write_contacts_to_disk(std::deque<std::pair<Chromosome*, size_t
   }
 }
 
-bp_t Simulation::generate_rev_move(const Chromosome* const chrom, const ExtrusionUnit& unit,
+bp_t Simulation::generate_rev_move(const Chromosome& chrom, const ExtrusionUnit& unit,
                                    random::PRNG_t& rand_eng) const {
-  assert(unit.pos() >= chrom->start_pos());  // NOLINT
+  assert(unit.pos() >= chrom.start_pos());   // NOLINT
   if (this->rev_extrusion_speed_std == 0) {  // When std == 0 always return the avg. extrusion speed
     // (except when unit is close to chrom start pos.)
-    return std::min(this->rev_extrusion_speed, unit.pos() - chrom->start_pos());
+    return std::min(this->rev_extrusion_speed, unit.pos() - chrom.start_pos());
   }
   // Generate the move distance (and make sure it is not a negative distance)
   // NOTE: on my laptop generating doubles from a normal distribution, rounding them, then
@@ -143,23 +143,23 @@ bp_t Simulation::generate_rev_move(const Chromosome* const chrom, const Extrusio
   return std::clamp(static_cast<bp_t>(std::round(
                         lef_move_generator_t{static_cast<double>(this->rev_extrusion_speed),
                                              this->rev_extrusion_speed_std}(rand_eng))),
-                    0UL, unit.pos() - chrom->start_pos());
+                    0UL, unit.pos() - chrom.start_pos());
 }
 
-bp_t Simulation::generate_fwd_move(const Chromosome* const chrom, const ExtrusionUnit& unit,
+bp_t Simulation::generate_fwd_move(const Chromosome& chrom, const ExtrusionUnit& unit,
                                    random::PRNG_t& rand_eng) const {
   // See Simulation::generate_rev_move for comments
-  assert(unit.pos() < chrom->end_pos());  // NOLINT
+  assert(unit.pos() < chrom.end_pos());  // NOLINT
   if (this->fwd_extrusion_speed_std == 0) {
-    return std::min(this->fwd_extrusion_speed, (chrom->end_pos() - 1) - unit.pos());
+    return std::min(this->fwd_extrusion_speed, (chrom.end_pos() - 1) - unit.pos());
   }
   return std::clamp(static_cast<bp_t>(std::round(
                         lef_move_generator_t{static_cast<double>(this->fwd_extrusion_speed),
                                              this->fwd_extrusion_speed_std}(rand_eng))),
-                    0UL, (chrom->end_pos() - 1) - unit.pos());
+                    0UL, (chrom.end_pos() - 1) - unit.pos());
 }
 
-void Simulation::generate_moves(const Chromosome* const chrom, const absl::Span<const Lef> lefs,
+void Simulation::generate_moves(const Chromosome& chrom, const absl::Span<const Lef> lefs,
                                 const absl::Span<const size_t> rev_lef_ranks,
                                 const absl::Span<const size_t> fwd_lef_ranks,
                                 const absl::Span<bp_t> rev_moves, const absl::Span<bp_t> fwd_moves,
@@ -187,9 +187,9 @@ void Simulation::generate_moves(const Chromosome* const chrom, const absl::Span<
 }
 
 void Simulation::adjust_moves_of_consecutive_extr_units(
-    const Chromosome* const chrom, absl::Span<const Lef> lefs,
-    absl::Span<const size_t> rev_lef_ranks, absl::Span<const size_t> fwd_lef_ranks,
-    absl::Span<bp_t> rev_moves, absl::Span<bp_t> fwd_moves) noexcept(utils::ndebug_defined()) {
+    const Chromosome& chrom, absl::Span<const Lef> lefs, absl::Span<const size_t> rev_lef_ranks,
+    absl::Span<const size_t> fwd_lef_ranks, absl::Span<bp_t> rev_moves,
+    absl::Span<bp_t> fwd_moves) noexcept(utils::ndebug_defined()) {
   (void)chrom;
 
   // Loop over pairs of consecutive extr. units.
@@ -201,8 +201,8 @@ void Simulation::adjust_moves_of_consecutive_extr_units(
     const auto& idx2 = rev_lef_ranks[rev_offset - i];
 
     if (lefs[idx1].is_bound() && lefs[idx2].is_bound()) {
-      assert(lefs[idx1].rev_unit.pos() >= chrom->start_pos() + rev_moves[idx1]);  // NOLINT
-      assert(lefs[idx2].rev_unit.pos() >= chrom->start_pos() + rev_moves[idx2]);  // NOLINT
+      assert(lefs[idx1].rev_unit.pos() >= chrom.start_pos() + rev_moves[idx1]);  // NOLINT
+      assert(lefs[idx2].rev_unit.pos() >= chrom.start_pos() + rev_moves[idx2]);  // NOLINT
 
       const auto pos1 = lefs[idx1].rev_unit.pos() - rev_moves[idx1];
       const auto pos2 = lefs[idx2].rev_unit.pos() - rev_moves[idx2];
@@ -223,8 +223,8 @@ void Simulation::adjust_moves_of_consecutive_extr_units(
 
     // See above for detailed comments. The logic is the same used on rev units (but mirrored!)
     if (lefs[idx3].is_bound() && lefs[idx4].is_bound()) {
-      assert(lefs[idx3].fwd_unit.pos() + fwd_moves[idx3] < chrom->end_pos());  // NOLINT
-      assert(lefs[idx4].fwd_unit.pos() + fwd_moves[idx4] < chrom->end_pos());  // NOLINT
+      assert(lefs[idx3].fwd_unit.pos() + fwd_moves[idx3] < chrom.end_pos());  // NOLINT
+      assert(lefs[idx4].fwd_unit.pos() + fwd_moves[idx4] < chrom.end_pos());  // NOLINT
 
       const auto pos3 = lefs[idx3].fwd_unit.pos() + fwd_moves[idx3];
       const auto pos4 = lefs[idx4].fwd_unit.pos() + fwd_moves[idx4];
@@ -324,7 +324,7 @@ void Simulation::rank_lefs(const absl::Span<const Lef> lefs,
   }
 }
 
-void Simulation::extrude(const Chromosome* const chrom, const absl::Span<Lef> lefs,
+void Simulation::extrude(const Chromosome& chrom, const absl::Span<Lef> lefs,
                          const absl::Span<const bp_t> rev_moves,
                          const absl::Span<const bp_t> fwd_moves,
                          const size_t num_rev_units_at_5prime, const size_t num_fwd_units_at_3prime,
@@ -345,9 +345,9 @@ void Simulation::extrude(const Chromosome* const chrom, const absl::Span<Lef> le
     if (BOOST_UNLIKELY(!lef.is_bound())) {  // Do not process inactive LEFs
       continue;
     }
-    assert(lef.rev_unit.pos() <= lef.fwd_unit.pos());                    // NOLINT
-    assert(lef.rev_unit.pos() >= chrom->start_pos() + rev_moves[i1]);    // NOLINT
-    assert(lef.fwd_unit.pos() + fwd_moves[i1] <= chrom->end_pos() - 1);  // NOLINT
+    assert(lef.rev_unit.pos() <= lef.fwd_unit.pos());                   // NOLINT
+    assert(lef.rev_unit.pos() >= chrom.start_pos() + rev_moves[i1]);    // NOLINT
+    assert(lef.fwd_unit.pos() + fwd_moves[i1] <= chrom.end_pos() - 1);  // NOLINT
 
     const auto rev_move = [&]() {
       if (deletion_size > 0 && lef.rev_unit.pos() >= deletion_end &&
@@ -360,7 +360,7 @@ void Simulation::extrude(const Chromosome* const chrom, const absl::Span<Lef> le
     const auto fwd_move = [&]() {
       if (deletion_size > 0 && lef.fwd_unit.pos() < deletion_begin &&
           lef.fwd_unit.pos() + fwd_moves[i1] >= deletion_begin) {
-        return std::min(fwd_moves[i1] + deletion_size, chrom->end_pos() - lef.fwd_unit.pos());
+        return std::min(fwd_moves[i1] + deletion_size, chrom.end_pos() - lef.fwd_unit.pos());
       }
       return fwd_moves[i1];
     }();
@@ -404,24 +404,11 @@ std::pair<bp_t, bp_t> Simulation::compute_lef_lef_collision_pos(const ExtrusionU
   return std::make_pair(collision_pos, collision_pos - 1);
 }
 
-size_t Simulation::register_contacts(Chromosome* const chrom, const absl::Span<const Lef> lefs,
+size_t Simulation::register_contacts(Chromosome& chrom, const absl::Span<const Lef> lefs,
                                      const absl::Span<const size_t> selected_lef_idx) const
     noexcept(utils::ndebug_defined()) {
-  // Register contacts for the selected LEFs (excluding LEFs that have one of their units at the
-  // beginning/end of a chromosome)
-  size_t new_contacts = 0;
-  for (const auto i : selected_lef_idx) {
-    assert(i < lefs.size());  // NOLINT
-    const auto& lef = lefs[i];
-    if (BOOST_LIKELY(lef.is_bound() && lef.rev_unit.pos() > chrom->start_pos() &&
-                     lef.rev_unit.pos() < chrom->end_pos() - 1 &&
-                     lef.fwd_unit.pos() > chrom->start_pos() &&
-                     lef.fwd_unit.pos() < chrom->end_pos() - 1)) {
-      chrom->increment_contacts(lef.rev_unit.pos(), lef.fwd_unit.pos(), this->bin_size);
-      ++new_contacts;
-    }
-  }
-  return new_contacts;
+  return this->register_contacts(chrom.start_pos(), chrom.end_pos(), chrom.contacts(), lefs,
+                                 selected_lef_idx);
 }
 
 size_t Simulation::register_contacts(const bp_t start_pos, const bp_t end_pos,
@@ -605,7 +592,7 @@ std::string Simulation::StatePW::to_string() const noexcept {
 }
 
 std::pair<size_t, size_t> Simulation::process_collisions(
-    const Chromosome* const chrom, const absl::Span<const Lef> lefs,
+    const Chromosome& chrom, const absl::Span<const Lef> lefs,
     const absl::Span<const ExtrusionBarrier> barriers, const boost::dynamic_bitset<>& barrier_mask,
     const absl::Span<const size_t> rev_lef_ranks, const absl::Span<const size_t> fwd_lef_ranks,
     const absl::Span<bp_t> rev_moves, const absl::Span<bp_t> fwd_moves,

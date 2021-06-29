@@ -183,7 +183,7 @@ class Simulation : Config {
   //! In order to properly handle ties, the sorting criterion is actually a bit more complex. See
   //! documentation and comments for Simulation::rank_lefs for more details).
   template <typename MaskT>
-  inline static void bind_lefs(const Chromosome* chrom, absl::Span<Lef> lefs,
+  inline static void bind_lefs(const Chromosome& chrom, absl::Span<Lef> lefs,
                                absl::Span<size_t> rev_lef_ranks, absl::Span<size_t> fwd_lef_ranks,
                                const MaskT& mask, random::PRNG_t& rand_eng, size_t current_epoch,
                                bp_t deletion_begin = 0,
@@ -198,12 +198,12 @@ class Simulation : Config {
   //! \p unit parameter
   //! \return move
   // clang-format on
-  [[nodiscard]] bp_t generate_rev_move(const Chromosome* chrom, const ExtrusionUnit& unit,
+  [[nodiscard]] bp_t generate_rev_move(const Chromosome& chrom, const ExtrusionUnit& unit,
                                        random::PRNG_t& rand_eng) const;
 
   //! Generate moves in forward direction. See doc for Simulation::generate_rev_move for more
   //! details
-  [[nodiscard]] bp_t generate_fwd_move(const Chromosome* chrom, const ExtrusionUnit& unit,
+  [[nodiscard]] bp_t generate_fwd_move(const Chromosome& chrom, const ExtrusionUnit& unit,
                                        random::PRNG_t& rand_eng) const;
   // clang-format off
   //! Generate moves for all active LEFs
@@ -212,7 +212,7 @@ class Simulation : Config {
   //! When adjust_moves_ is true, adjust moves to make consecutive LEFs behave in a more realistic way.
   //! See Simulation::adjust_moves_of_consecutive_extr_units for more details
   // clang-format on
-  void generate_moves(const Chromosome* chrom, absl::Span<const Lef> lefs,
+  void generate_moves(const Chromosome& chrom, absl::Span<const Lef> lefs,
                       absl::Span<const size_t> rev_lef_ranks,
                       absl::Span<const size_t> fwd_lef_ranks, absl::Span<bp_t> rev_moves,
                       absl::Span<bp_t> fwd_moves, random::PRNG_t& rand_eng,
@@ -237,7 +237,7 @@ class Simulation : Config {
   //! against the fwd_unit of LEF2, temporarily increasing the fwd extr. speed of LEF2.
   // clang-format on
   static void adjust_moves_of_consecutive_extr_units(
-      const Chromosome* chrom, absl::Span<const Lef> lefs, absl::Span<const size_t> rev_lef_ranks,
+      const Chromosome& chrom, absl::Span<const Lef> lefs, absl::Span<const size_t> rev_lef_ranks,
       absl::Span<const size_t> fwd_lef_ranks, absl::Span<bp_t> rev_moves,
       absl::Span<bp_t> fwd_moves) noexcept(utils::ndebug_defined());
 
@@ -254,7 +254,7 @@ class Simulation : Config {
   //! processed by:
   //! - Simulation::adjust_moves_of_consecutive_extr_units
   //! - Simulation::process_collisions
-  static void extrude(const Chromosome* chrom, absl::Span<Lef> lefs,
+  static void extrude(const Chromosome& chrom, absl::Span<Lef> lefs,
                       absl::Span<const bp_t> rev_moves, absl::Span<const bp_t> fwd_moves,
                       size_t num_rev_units_at_5prime = 0, size_t num_fwd_units_at_3prime = 0,
                       bp_t deletion_begin = 0,
@@ -265,7 +265,7 @@ class Simulation : Config {
 
   //! \return number of rev units at the 5'-end, number of fwd units at the 3'-end
   std::pair<size_t, size_t> process_collisions(
-      const Chromosome* chrom, absl::Span<const Lef> lefs,
+      const Chromosome& chrom, absl::Span<const Lef> lefs,
       absl::Span<const ExtrusionBarrier> barriers, const boost::dynamic_bitset<>& barrier_mask,
       absl::Span<const size_t> rev_lef_ranks, absl::Span<const size_t> fwd_lef_ranks,
       absl::Span<bp_t> rev_moves, absl::Span<bp_t> fwd_moves,
@@ -277,7 +277,7 @@ class Simulation : Config {
   //! \return a pair of numbers consisting in the number of rev units located at the 5'-end and
   //! number of fwd units located at the 3'-end.
   static std::pair<size_t, size_t> detect_units_at_chrom_boundaries(
-      const Chromosome* chrom, absl::Span<const Lef> lefs, absl::Span<const size_t> rev_lef_ranks,
+      const Chromosome& chrom, absl::Span<const Lef> lefs, absl::Span<const size_t> rev_lef_ranks,
       absl::Span<const size_t> fwd_lef_ranks, absl::Span<const bp_t> rev_moves,
       absl::Span<const bp_t> fwd_moves, absl::Span<collision_t> rev_collisions,
       absl::Span<collision_t> fwd_collisions);
@@ -331,7 +331,7 @@ class Simulation : Config {
   //! The index i is encoded as num_barriers + num_lefs + i.
   // clang-format on
   void process_secondary_lef_lef_collisions(
-      const Chromosome* chrom, absl::Span<const Lef> lefs, size_t nbarriers,
+      const Chromosome& chrom, absl::Span<const Lef> lefs, size_t nbarriers,
       absl::Span<const size_t> rev_lef_ranks, absl::Span<const size_t> fwd_lef_ranks,
       absl::Span<bp_t> rev_moves, absl::Span<bp_t> fwd_moves,
       absl::Span<collision_t> rev_collisions, absl::Span<collision_t> fwd_collisions,
@@ -363,7 +363,7 @@ class Simulation : Config {
   */
   /// Register contacts for chromosome \p chrom using the position the extrusion units of the LEFs
   /// in \p lefs whose index is present in \p selected_lef_idx.
-  size_t register_contacts(Chromosome* chrom, absl::Span<const Lef> lefs,
+  size_t register_contacts(Chromosome& chrom, absl::Span<const Lef> lefs,
                            absl::Span<const size_t> selected_lef_idx) const
       noexcept(utils::ndebug_defined());
 
@@ -395,7 +395,7 @@ class Simulation : Config {
 #ifdef ENABLE_TESTING
  public:
   template <typename MaskT>
-  inline void test_bind_lefs(const Chromosome* chrom, const absl::Span<Lef> lefs,
+  inline void test_bind_lefs(const Chromosome& chrom, const absl::Span<Lef> lefs,
                              const absl::Span<size_t> rev_lef_ranks,
                              const absl::Span<size_t> fwd_lef_ranks, const MaskT& mask,
                              random::PRNG_t& rand_eng, size_t current_epoch) {
@@ -403,7 +403,7 @@ class Simulation : Config {
                                  current_epoch);
   }
 
-  inline void test_adjust_moves(const Chromosome* const chrom, const absl::Span<const Lef> lefs,
+  inline void test_adjust_moves(const Chromosome& chrom, const absl::Span<const Lef> lefs,
                                 const absl::Span<const size_t> rev_lef_ranks,
                                 const absl::Span<const size_t> fwd_lef_ranks,
                                 const absl::Span<bp_t> rev_moves,
@@ -412,7 +412,7 @@ class Simulation : Config {
                                                  rev_moves, fwd_moves);
   }
 
-  inline void test_generate_moves(const Chromosome* const chrom, const absl::Span<const Lef> lefs,
+  inline void test_generate_moves(const Chromosome& chrom, const absl::Span<const Lef> lefs,
                                   const absl::Span<const size_t> rev_lef_ranks,
                                   const absl::Span<const size_t> fwd_lef_ranks,
                                   const absl::Span<bp_t> rev_moves,
@@ -432,7 +432,7 @@ class Simulation : Config {
   }
 
   inline static void test_detect_units_at_chrom_boundaries(
-      const Chromosome* chrom, const absl::Span<const Lef> lefs,
+      const Chromosome& chrom, const absl::Span<const Lef> lefs,
       const absl::Span<const size_t> rev_lef_ranks, const absl::Span<const size_t> fwd_lef_ranks,
       const absl::Span<const bp_t> rev_moves, const absl::Span<const bp_t> fwd_moves,
       const absl::Span<collision_t> rev_collisions, const absl::Span<collision_t> fwd_collisions) {
@@ -472,7 +472,7 @@ class Simulation : Config {
   }
 
   inline void test_process_collisions(
-      const Chromosome* chrom, const absl::Span<const Lef> lefs,
+      const Chromosome& chrom, const absl::Span<const Lef> lefs,
       const absl::Span<const size_t> rev_lef_rank_buff,
       const absl::Span<const size_t> fwd_lef_rank_buff, const absl::Span<bp_t> rev_move_buff,
       const absl::Span<bp_t> fwd_move_buff, const absl::Span<const ExtrusionBarrier> extr_barriers,
@@ -506,7 +506,7 @@ class Simulation : Config {
   }
 
   inline void test_process_lef_lef_collisions(
-      const Chromosome* chrom, absl::Span<const Lef> lefs,
+      const Chromosome& chrom, absl::Span<const Lef> lefs,
       absl::Span<const ExtrusionBarrier> extr_barriers, absl::Span<const size_t> rev_lef_rank_buff,
       absl::Span<const size_t> fwd_lef_rank_buff, absl::Span<bp_t> rev_move_buff,
       absl::Span<bp_t> fwd_move_buff, absl::Span<collision_t> rev_collisions,

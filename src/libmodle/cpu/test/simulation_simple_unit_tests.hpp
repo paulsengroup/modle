@@ -37,7 +37,7 @@ TEST_CASE("Bind LEFs 001", "[bind-lefs][simulation][short]") {
   }
 
   const auto c = Config{};
-  CHECK_NOTHROW(Simulation{c, false}.test_bind_lefs(&chrom, absl::MakeSpan(lefs),
+  CHECK_NOTHROW(Simulation{c, false}.test_bind_lefs(chrom, absl::MakeSpan(lefs),
                                                     absl::MakeSpan(rank1), absl::MakeSpan(rank2),
                                                     mask, rand_eng, 0));
 
@@ -70,7 +70,7 @@ TEST_CASE("Bind LEFs 002 - No LEFs to bind", "[bind-lefs][simulation][short]") {
   auto rand_eng = random::PRNG(16044114709020280409ULL);
   const auto c = Config{};
 
-  CHECK_NOTHROW(Simulation{c, false}.test_bind_lefs(&chrom, absl::MakeSpan(lefs),
+  CHECK_NOTHROW(Simulation{c, false}.test_bind_lefs(chrom, absl::MakeSpan(lefs),
                                                     absl::MakeSpan(rank1), absl::MakeSpan(rank2),
                                                     mask1, rand_eng, 1));
 
@@ -79,7 +79,7 @@ TEST_CASE("Bind LEFs 002 - No LEFs to bind", "[bind-lefs][simulation][short]") {
   CHECK(rank2.empty());
   CHECK(mask1.empty());
 
-  CHECK_NOTHROW(Simulation{c, false}.test_bind_lefs(&chrom, absl::MakeSpan(lefs),
+  CHECK_NOTHROW(Simulation{c, false}.test_bind_lefs(chrom, absl::MakeSpan(lefs),
                                                     absl::MakeSpan(rank1), absl::MakeSpan(rank2),
                                                     mask2, rand_eng, 2));
 
@@ -95,7 +95,7 @@ TEST_CASE("Bind LEFs 002 - No LEFs to bind", "[bind-lefs][simulation][short]") {
   rank2 = rank1;
   mask1.resize(nlefs, 0);
 
-  CHECK_NOTHROW(Simulation{c, false}.test_bind_lefs(&chrom, absl::MakeSpan(lefs),
+  CHECK_NOTHROW(Simulation{c, false}.test_bind_lefs(chrom, absl::MakeSpan(lefs),
                                                     absl::MakeSpan(rank1), absl::MakeSpan(rank2),
                                                     mask1, rand_eng, 0));
 
@@ -121,7 +121,7 @@ TEST_CASE("Bind LEFs 003 - Empty mask (i.e. bind all LEFs)", "[bind-lefs][simula
   auto rand_eng = random::PRNG(17550568853244630438ULL);
   const auto c = Config{};
 
-  CHECK_NOTHROW(Simulation{c, false}.test_bind_lefs(&chrom, absl::MakeSpan(lefs),
+  CHECK_NOTHROW(Simulation{c, false}.test_bind_lefs(chrom, absl::MakeSpan(lefs),
                                                     absl::MakeSpan(rank1), absl::MakeSpan(rank2),
                                                     mask, rand_eng, 0));
 
@@ -158,7 +158,7 @@ const std::vector<Lef> lefs{construct_lef(5, 25, 1),
   c.rev_extrusion_speed_std = 1;
   c.fwd_extrusion_speed_std = 1;
   CHECK_NOTHROW(Simulation{c, false}.test_adjust_moves(
-      &chrom, lefs, rev_ranks, fwd_ranks, absl::MakeSpan(rev_moves), absl::MakeSpan(fwd_moves)));
+      chrom, lefs, rev_ranks, fwd_ranks, absl::MakeSpan(rev_moves), absl::MakeSpan(fwd_moves)));
 
   CHECK(std::equal(rev_moves.begin(), rev_moves.end(), rev_moves_adjusted.begin()));
   CHECK(std::equal(fwd_moves.begin(), fwd_moves.end(), fwd_moves_adjusted.begin()));
@@ -190,7 +190,7 @@ const std::vector<Lef> lefs{construct_lef(20, 50, 0),
   c.rev_extrusion_speed_std = 1;
   c.fwd_extrusion_speed_std = 1;
   CHECK_NOTHROW(Simulation{c, false}.test_adjust_moves(
-      &chrom, lefs, rev_ranks, fwd_ranks, absl::MakeSpan(rev_moves), absl::MakeSpan(fwd_moves)));
+      chrom, lefs, rev_ranks, fwd_ranks, absl::MakeSpan(rev_moves), absl::MakeSpan(fwd_moves)));
 
   for (auto i = 0UL; i < rev_moves.size(); ++i) {
     CHECK(rev_moves[i] == rev_moves_adjusted[i]);
@@ -234,7 +234,7 @@ TEST_CASE("Generate LEF moves 001", "[generate-lef-moves][simulation][short]") {
                                true);
 
     CHECK_NOTHROW(Simulation{c, false}.test_generate_moves(
-        &chrom, absl::MakeConstSpan(lefs), absl::MakeConstSpan(rev_ranks),
+        chrom, absl::MakeConstSpan(lefs), absl::MakeConstSpan(rev_ranks),
         absl::MakeConstSpan(fwd_ranks), absl::MakeSpan(rev_moves), absl::MakeSpan(fwd_moves),
         rand_eng));
 
@@ -306,11 +306,11 @@ const std::vector<collision_t> fwd_collision_mask_expected{1UL,
   require_that_lefs_are_sorted_by_idx(lefs, rev_ranks, fwd_ranks);
 
   CHECK_NOTHROW(modle::Simulation{c, false}.test_detect_units_at_chrom_boundaries(
-      &chrom, lefs, rev_ranks, fwd_ranks, rev_moves, fwd_moves, absl::MakeSpan(rev_collision_mask),
+      chrom, lefs, rev_ranks, fwd_ranks, rev_moves, fwd_moves, absl::MakeSpan(rev_collision_mask),
       absl::MakeSpan(fwd_collision_mask)));
 
   CHECK_NOTHROW(modle::Simulation{c, false}.test_process_lef_lef_collisions(
-      &chrom, lefs, barriers, rev_ranks, fwd_ranks, absl::MakeSpan(rev_moves),
+      chrom, lefs, barriers, rev_ranks, fwd_ranks, absl::MakeSpan(rev_moves),
       absl::MakeSpan(fwd_moves), absl::MakeSpan(rev_collision_mask),
       absl::MakeSpan(fwd_collision_mask), rand_eng));
 
@@ -374,11 +374,11 @@ const std::vector<collision_t> fwd_collision_mask_expected{5UL,
   require_that_lefs_are_sorted_by_idx(lefs, rev_ranks, fwd_ranks);
 
   CHECK_NOTHROW(modle::Simulation{c, false}.test_detect_units_at_chrom_boundaries(
-      &chrom, lefs, rev_ranks, fwd_ranks, rev_moves, fwd_moves, absl::MakeSpan(rev_collision_mask),
+      chrom, lefs, rev_ranks, fwd_ranks, rev_moves, fwd_moves, absl::MakeSpan(rev_collision_mask),
       absl::MakeSpan(fwd_collision_mask)));
 
   CHECK_NOTHROW(modle::Simulation{c, false}.test_process_lef_lef_collisions(
-      &chrom, lefs, barriers, rev_ranks, fwd_ranks, absl::MakeSpan(rev_moves),
+      chrom, lefs, barriers, rev_ranks, fwd_ranks, absl::MakeSpan(rev_moves),
       absl::MakeSpan(fwd_moves), absl::MakeSpan(rev_collision_mask),
       absl::MakeSpan(fwd_collision_mask), rand_eng));
 
@@ -439,11 +439,11 @@ const std::vector<collision_t> fwd_collision_mask_expected{REACHED_CHROM_BOUNDAR
   require_that_lefs_are_sorted_by_idx(lefs, rev_ranks, fwd_ranks);
 
   CHECK_NOTHROW(modle::Simulation{c, false}.test_detect_units_at_chrom_boundaries(
-      &chrom, lefs, rev_ranks, fwd_ranks, rev_moves, fwd_moves, absl::MakeSpan(rev_collision_mask),
+      chrom, lefs, rev_ranks, fwd_ranks, rev_moves, fwd_moves, absl::MakeSpan(rev_collision_mask),
       absl::MakeSpan(fwd_collision_mask)));
 
   CHECK_NOTHROW(modle::Simulation{c, false}.test_process_lef_lef_collisions(
-      &chrom, lefs, barriers, rev_ranks, fwd_ranks, absl::MakeSpan(rev_moves),
+      chrom, lefs, barriers, rev_ranks, fwd_ranks, absl::MakeSpan(rev_moves),
       absl::MakeSpan(fwd_moves), absl::MakeSpan(rev_collision_mask),
       absl::MakeSpan(fwd_collision_mask), rand_eng));
 

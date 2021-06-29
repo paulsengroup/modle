@@ -26,7 +26,7 @@
 
 namespace modle {
 template <typename MaskT>
-void Simulation::bind_lefs(const Chromosome* const chrom, const absl::Span<Lef> lefs,
+void Simulation::bind_lefs(const Chromosome& chrom, const absl::Span<Lef> lefs,
                            const absl::Span<size_t> rev_lef_ranks,
                            const absl::Span<size_t> fwd_lef_ranks, const MaskT& mask,
                            random::PRNG_t& rand_eng, size_t current_epoch,
@@ -37,14 +37,13 @@ void Simulation::bind_lefs(const Chromosome* const chrom, const absl::Span<Lef> 
                 "mask should be a vector of integral numbers or a boost::dynamic_bitset.");
   {
     assert(lefs.size() <= mask.size() || mask.empty());             // NOLINT
-    assert(chrom);                                                  // NOLINT
     assert(std::all_of(rev_lef_ranks.begin(), rev_lef_ranks.end(),  // NOLINT
                        [&](const auto i) { return i < lefs.size(); }));
     assert(std::all_of(fwd_lef_ranks.begin(), fwd_lef_ranks.end(),  // NOLINT
                        [&](const auto i) { return i < lefs.size(); }));
   }
 
-  chrom_pos_generator_t pos_generator{chrom->start_pos(), chrom->end_pos() - 1};
+  chrom_pos_generator_t pos_generator{chrom.start_pos(), chrom.end_pos() - 1};
   for (auto i = 0UL; i < lefs.size(); ++i) {
     if (mask.empty() || mask[i]) {  // Bind all LEFs when mask is empty
       auto pos = pos_generator(rand_eng);
@@ -61,10 +60,10 @@ void Simulation::bind_lefs(const Chromosome* const chrom, const absl::Span<Lef> 
   {
     for (auto i = 0UL; i < lefs.size(); ++i) {
       if (mask.empty() || mask[i]) {
-        assert(lefs[i].rev_unit >= chrom->start_pos() &&
-               lefs[i].rev_unit < chrom->end_pos());  // NOLINT
-        assert(lefs[i].fwd_unit >= chrom->start_pos() &&
-               lefs[i].fwd_unit < chrom->end_pos());  // NOLINT
+        assert(lefs[i].rev_unit >= chrom.start_pos() &&
+               lefs[i].rev_unit < chrom.end_pos());  // NOLINT
+        assert(lefs[i].fwd_unit >= chrom.start_pos() &&
+               lefs[i].fwd_unit < chrom.end_pos());  // NOLINT
       }
     }
   }
@@ -248,10 +247,10 @@ void Simulation::simulate_extrusion_kernel(StateT& s) const {
         auto lef_mask = absl::MakeSpan(s.idx_buff1.data(), lefs.size());
         Simulation::select_lefs_to_bind(lefs, lef_mask);
         if constexpr (normal_simulation) {
-          Simulation::bind_lefs(s.chrom, lefs, rev_lef_ranks, fwd_lef_ranks, lef_mask, s.rand_eng,
+          Simulation::bind_lefs(*s.chrom, lefs, rev_lef_ranks, fwd_lef_ranks, lef_mask, s.rand_eng,
                                 epoch);
         } else {
-          Simulation::bind_lefs(s.chrom, lefs, rev_lef_ranks, fwd_lef_ranks, lef_mask, s.rand_eng,
+          Simulation::bind_lefs(*s.chrom, lefs, rev_lef_ranks, fwd_lef_ranks, lef_mask, s.rand_eng,
                                 epoch, s.deletion_begin, s.deletion_size);
         }
       }
@@ -280,7 +279,7 @@ void Simulation::simulate_extrusion_kernel(StateT& s) const {
                                                absl::StrJoin(lef_idx, ", ")));
         }
         if constexpr (normal_simulation) {
-          n_contacts += this->register_contacts(s.chrom, lefs, lef_idx);
+          n_contacts += this->register_contacts(*s.chrom, lefs, lef_idx);
         } else {
           n_contacts +=
               this->register_contacts(s.window_start, s.window_end, s.contacts, lefs, lef_idx);
@@ -291,7 +290,7 @@ void Simulation::simulate_extrusion_kernel(StateT& s) const {
         }
       }
 
-      this->generate_moves(s.chrom, lefs, rev_lef_ranks, fwd_lef_ranks, rev_moves, fwd_moves,
+      this->generate_moves(*s.chrom, lefs, rev_lef_ranks, fwd_lef_ranks, rev_moves, fwd_moves,
                            s.rand_eng);
 
       CTCF::update_states(barriers, s.barrier_mask, s.rand_eng);
@@ -302,16 +301,16 @@ void Simulation::simulate_extrusion_kernel(StateT& s) const {
 
       // Detect collision and correct moves
       const auto& [num_rev_units_at_5prime, num_fwd_units_at_3prime] =
-          Simulation::process_collisions(s.chrom, lefs, barriers, s.barrier_mask, rev_lef_ranks,
+          Simulation::process_collisions(*s.chrom, lefs, barriers, s.barrier_mask, rev_lef_ranks,
                                          fwd_lef_ranks, rev_moves, fwd_moves, rev_collision_mask,
                                          fwd_collision_mask, s.rand_eng);
 
       // Advance LEFs
       if constexpr (normal_simulation) {
-        Simulation::extrude(s.chrom, lefs, rev_moves, fwd_moves, num_rev_units_at_5prime,
+        Simulation::extrude(*s.chrom, lefs, rev_moves, fwd_moves, num_rev_units_at_5prime,
                             num_fwd_units_at_3prime);
       } else {
-        Simulation::extrude(s.chrom, lefs, rev_moves, fwd_moves, num_rev_units_at_5prime,
+        Simulation::extrude(*s.chrom, lefs, rev_moves, fwd_moves, num_rev_units_at_5prime,
                             num_fwd_units_at_3prime, s.deletion_begin, s.deletion_size);
       }
 
