@@ -1,13 +1,18 @@
 #pragma once
-#include <archive.h>        // for archive
-#include <archive_entry.h>  // for archive_entry_new, archive_entry_free
+#include <absl/container/flat_hash_map.h>  // for flat_hash_map
+#include <archive.h>                       // for archive
+#include <archive_entry.h>                 // for archive_entry_new, archive_entry_free
 
-#include <filesystem>   // for path
+#include <boost/iostreams/filtering_stream.hpp>
+#include <filesystem>  // for path
+#include <fstream>
+#include <iostream>
 #include <memory>       // for unique_ptr
 #include <string>       // for string
 #include <string_view>  // for string_view
 
-namespace modle::libarchivexx {
+namespace modle::compressed_io {
+using namespace std::literals::string_view_literals;
 class Reader {
   using archive_ptr_t = std::unique_ptr<archive, decltype(&archive_read_free)>;
 
@@ -46,25 +51,11 @@ class Reader {
 };
 
 class Writer {
-  using archive_ptr_t = std::unique_ptr<archive, decltype(&archive_write_free)>;
-
  public:
-  enum Compression : uint8_t {
-    NONE = ARCHIVE_FILTER_NONE,
-    GZIP = ARCHIVE_FILTER_GZIP,
-    BZIP2 = ARCHIVE_FILTER_BZIP2,
-    LZMA = ARCHIVE_FILTER_LZMA,
-    XZ = ARCHIVE_FILTER_XZ,
-    LZIP = ARCHIVE_FILTER_LZIP,
-    LRZIP = ARCHIVE_FILTER_LRZIP,
-    LZOP = ARCHIVE_FILTER_LZOP,
-    GRZIP = ARCHIVE_FILTER_GRZIP,
-    LZ4 = ARCHIVE_FILTER_LZ4,
-    ZSTD = ARCHIVE_FILTER_ZSTD
-  };
+  enum Compression : uint8_t { AUTO = 0, NONE = 1, GZIP = 2, BZIP2 = 3, LZMA = 4, ZSTD = 5 };
 
   Writer() = default;
-  Writer(const std::filesystem::path& path, Compression compression = GZIP);
+  explicit Writer(const std::filesystem::path& path, Compression compression = AUTO);  // NOLINT
 
   [[nodiscard]] bool is_open() const noexcept;
   void close();
@@ -76,12 +67,18 @@ class Writer {
   [[nodiscard]] std::string path_string() const noexcept;
   [[nodiscard]] const char* path_c_str() const noexcept;
 
+  [[nodiscard]] static Compression infer_compression_from_ext(const std::filesystem::path& p);
+
  private:
   std::filesystem::path _path{};
-  archive_ptr_t _arc{nullptr, archive_write_free};
-  std::unique_ptr<archive_entry, decltype(&archive_entry_free)> _arc_entry{archive_entry_new(),
-                                                                           archive_entry_free};
-  Compression _compression{GZIP};
+  Compression _compression{AUTO};
+  std::ofstream _fp{};
+  boost::iostreams::filtering_ostream _out{};
+
+  static constexpr std::array<std::pair<std::string_view, Compression>, 6> ext_mappings{
+      std::make_pair(".gz"sv, GZIP),  std::make_pair(".bz2"sv, BZIP2),
+      std::make_pair(".xz"sv, LZMA),  std::make_pair(".lzma"sv, LZMA),
+      std::make_pair(".zst"sv, ZSTD), std::make_pair(".zstd"sv, ZSTD)};
 };
 
-}  // namespace modle::libarchivexx
+}  // namespace modle::compressed_io

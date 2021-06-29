@@ -10,7 +10,7 @@ target_sources(
           ${CMAKE_CURRENT_SOURCE_DIR}/cooler_impl.hpp
           ${CMAKE_CURRENT_SOURCE_DIR}/hdf5.cpp
           ${CMAKE_CURRENT_SOURCE_DIR}/hdf5_impl.hpp
-          ${CMAKE_CURRENT_SOURCE_DIR}/libarchivexx.cpp)
+          ${CMAKE_CURRENT_SOURCE_DIR}/compressed_io.cpp)
 
 add_dependencies(libio libBigWig)
 target_include_directories(libio PUBLIC include/)

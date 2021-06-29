@@ -25,8 +25,8 @@
 #include "absl/strings/match.h"
 #include "modle/common/suppress_compiler_warnings.hpp"
 #include "modle/common/utils.hpp"   // for parse_numeric_or_throw, parse_vect_of_numbers_...
+#include "modle/compressed_io.hpp"  // for Reader, getline
 #include "modle/interval_tree.hpp"  // for IITree
-#include "modle/libarchivexx.hpp"   // for Reader, readline
 
 namespace modle::bed {
 

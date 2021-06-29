@@ -1,17 +1,24 @@
-#include "modle/libarchivexx.hpp"
+#include "modle/compressed_io.hpp"
 
 #include <archive.h>        // for archive
 #include <archive_entry.h>  // for archive_entry
 #include <fmt/format.h>     // system_error
 #include <fmt/ostream.h>
 
+#include <boost/iostreams/copy.hpp>
+#include <boost/iostreams/filter/bzip2.hpp>
+#include <boost/iostreams/filter/gzip.hpp>
+#include <boost/iostreams/filter/lzma.hpp>
+#include <boost/iostreams/filter/zstd.hpp>
 #include <cassert>      // for assert
 #include <filesystem>   // for path
 #include <memory>       // for unique_ptr
 #include <string>       // for string
 #include <string_view>  // for string_view
 
-namespace modle::libarchivexx {
+#include "modle/common/utils.hpp"  // for ndebug_defined
+
+namespace modle::compressed_io {
 Reader::Reader(const std::filesystem::path& path, size_t buff_capacity) {
   this->_buff.reserve(buff_capacity);
   this->open(path);
@@ -62,6 +69,9 @@ void Reader::close() {
 void Reader::reset() {
   this->close();
   this->open(this->_path);
+  this->_idx = 0;
+  this->_buff.clear();
+  this->_tok_tmp_buff.clear();
 }
 
 const std::filesystem::path& Reader::path() const noexcept { return this->_path; }
@@ -189,49 +199,74 @@ Writer::Writer(const std::filesystem::path& path, Compression compression)
 }
 
 void Writer::open(const std::filesystem::path& path) {
-  auto handle_open_errors = [&](la_ssize_t status) {
-    if (status < ARCHIVE_OK) {
-      throw fmt::system_error(archive_errno(this->_arc.get()),
-                              FMT_STRING("Failed to open file {} for writing"), this->_path);
-    }
-  };
-
+  this->_out.reset();
   if (this->is_open()) {
     this->close();
   }
 
-  this->_path = path;
-  this->_arc.reset(archive_write_new());
-  this->_arc_entry.reset(archive_entry_new());
-  if (!this->_arc || !this->_arc_entry) {
-    throw std::runtime_error(
-        fmt::format(FMT_STRING("Failed to allocate a buffer of to write file {}"), this->_path));
+  if (this->_compression == AUTO) {
+    this->_compression = infer_compression_from_ext(path);
   }
-
-  handle_open_errors(archive_write_add_filter(this->_arc.get(), this->_compression));
-  handle_open_errors(archive_write_set_format_raw(this->_arc.get()));
-
-  handle_open_errors(archive_write_open_filename(this->_arc.get(), this->_path.c_str()));
-  handle_open_errors(archive_read_next_header2(this->_arc.get(), this->_arc_entry.get()));
-  handle_open_errors(archive_write_header(this->_arc.get(), this->_arc_entry.get()));
+  switch (this->_compression) {
+    case GZIP:
+      this->_out.push(boost::iostreams::gzip_compressor(
+          boost::iostreams::gzip_params(boost::iostreams::gzip::best_compression)));
+      break;
+    case BZIP2:
+      this->_out.push(boost::iostreams::bzip2_compressor(boost::iostreams::bzip2_params(9)));
+      break;
+    case LZMA:
+      this->_out.push(boost::iostreams::lzma_compressor(
+          boost::iostreams::lzma_params(boost::iostreams::lzma::best_compression)));
+      break;
+    case ZSTD:
+      this->_out.push(boost::iostreams::zstd_compressor(
+          boost::iostreams::zstd_params(boost::iostreams::zstd::best_compression)));
+      break;
+    case NONE:
+      break;
+    case AUTO:
+      if constexpr (utils::ndebug_defined()) {
+        utils::throw_with_trace(std::logic_error("Unreachable code"));
+      }
+  }
+  this->_path = path;
+  this->_fp.open(path, std::ios_base::binary);
+  if (!this->_fp) {
+    throw fmt::system_error(errno, FMT_STRING("Failed to open file {} for writing"), this->_path);
+  }
+  this->_out.push(this->_fp);
 }
 
-bool Writer::is_open() const noexcept { return !!this->_arc; }
+bool Writer::is_open() const noexcept { return this->_fp.is_open(); }
 
-void Writer::close() { this->_arc = nullptr; }
+void Writer::close() {
+  this->_out.reset();
+  boost::iostreams::close(this->_out);
+  this->_fp.close();
+}
 
 const std::filesystem::path& Writer::path() const noexcept { return this->_path; }
 std::string Writer::path_string() const noexcept { return this->_path.string(); }
 const char* Writer::path_c_str() const noexcept { return this->_path.c_str(); }
 
-void Writer::write(std::string_view buff) {
-  if (const auto status = archive_write_data(this->_arc.get(), buff.data(), buff.size());
-      status < ARCHIVE_OK) {
-    throw fmt::system_error(
-        archive_errno(this->_arc.get()),
-        FMT_STRING("The following error occurred while writing {} bytes to file {}"), buff.size(),
-        this->_path);
+Writer::Compression Writer::infer_compression_from_ext(const std::filesystem::path& p) {
+  const auto ext = absl::AsciiStrToLower(p.extension().string());
+  const auto *const match = std::find_if(ext_mappings.begin(), ext_mappings.end(),
+                                  [&](const auto& mapping) { return mapping.first == ext; });
+  if (match == ext_mappings.end()) {
+    return NONE;
   }
+  return match->second;
 }
 
-}  // namespace modle::libarchivexx
+void Writer::write(std::string_view buff) {
+  if constexpr (utils::ndebug_defined()) {
+    if (!this->is_open()) {
+      utils::throw_with_trace(std::runtime_error("Writer::write() was called on a closed file!"));
+    }
+  }
+  this->_out << buff;
+}
+
+}  // namespace modle::compressed_io

@@ -17,8 +17,8 @@
 #include <vector>       // for vector
 
 #include "modle/chrom_sizes.hpp"    // for ChromSizes
+#include "modle/compressed_io.hpp"  // for Reader
 #include "modle/interval_tree.hpp"  // for IITree
-#include "modle/libarchivexx.hpp"   // for Reader
 
 namespace modle::bed {
 struct BED;
@@ -219,7 +219,7 @@ class Parser {
   void reset();
 
  private:
-  libarchivexx::Reader _fp{};
+  compressed_io::Reader _fp{};
   std::string _buff{};
   size_t _num_records_parsed{0};
   size_t _num_lines_read{0};
