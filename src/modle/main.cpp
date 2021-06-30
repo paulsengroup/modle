@@ -39,7 +39,7 @@ int main(int argc, char** argv) noexcept {
     const auto t0 = absl::Now();
 
     auto sim = modle::Simulation{config};
-    // sim.run_base();
+    sim.run_base();
     fmt::print(stderr, FMT_STRING("Simulation terminated without errors in {}!\n"),
                absl::FormatDuration(absl::Now() - t0));
     if (config.path_to_output_file_bedpe.empty()) {

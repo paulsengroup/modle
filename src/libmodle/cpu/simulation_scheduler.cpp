@@ -150,7 +150,8 @@ void Simulation::run_base() {
     for (auto batchid = 0UL; batchid < nbatches; ++batchid) {
       // Generate a batch of tasks for all the simulations involving the current chrom
       std::generate(tasks.begin(), tasks.end(), [&]() {
-        return Task{{taskid++, &chrom, cellid++, target_epochs, target_contacts, nlefs}};
+        return Task{{taskid++, &chrom, cellid++, target_epochs, target_contacts, nlefs,
+                     chrom.barriers().data()}};
       });
       const auto ntasks =
           cellid > this->num_cells ? tasks.size() - (cellid - this->num_cells) : tasks.size();
