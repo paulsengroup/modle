@@ -279,10 +279,21 @@ void Simulation::simulate_extrusion_kernel(StateT& s) const {
                                                absl::StrJoin(lef_idx, ", ")));
         }
         if constexpr (normal_simulation) {
-          n_contacts += this->register_contacts(*s.chrom, lefs, lef_idx);
+          if (this->randomize_contacts) {
+            n_contacts +=
+                this->register_contacts_w_randomization(*s.chrom, lefs, lef_idx, s.rand_eng);
+          } else {
+            n_contacts += this->register_contacts(*s.chrom, lefs, lef_idx);
+          }
         } else {
-          n_contacts +=
-              this->register_contacts(s.window_start, s.window_end, s.contacts, lefs, lef_idx);
+          if (this->randomize_contacts) {
+            n_contacts += this->register_contacts_w_randomization(
+                s.window_start, s.window_end, s.contacts, lefs, lef_idx, s.rand_eng,
+                s.deletion_begin, s.deletion_size);
+          } else {
+            n_contacts +=
+                this->register_contacts(s.window_start, s.window_end, s.contacts, lefs, lef_idx);
+          }
         }
 
         if (s.num_target_contacts != 0 && n_contacts >= s.num_target_contacts) {

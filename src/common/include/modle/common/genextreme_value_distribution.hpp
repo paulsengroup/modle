@@ -21,7 +21,6 @@ class genextreme_value_distribution {
 
     explicit param_type(result_type mu = 0, result_type sigma = 1, result_type xi = 0.1)  // NOLINT
         : _mu(mu), _sigma(sigma), _xi(xi) {
-      assert(mu > 0);     // NOLINT
       assert(sigma > 0);  // NOLINT
     }
 

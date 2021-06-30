@@ -372,6 +372,17 @@ class Simulation : Config {
                            absl::Span<const size_t> selected_lef_idx) const
       noexcept(utils::ndebug_defined());
 
+  size_t register_contacts_w_randomization(Chromosome& chrom, absl::Span<const Lef> lefs,
+                                           absl::Span<const size_t> selected_lef_idx,
+                                           random::PRNG_t& rand_eng, bp_t deletion_begin = 0,
+                                           bp_t deletion_size_ = 0) const
+      noexcept(utils::ndebug_defined());
+
+  size_t register_contacts_w_randomization(
+      bp_t start_pos, bp_t end_pos, ContactMatrix<contacts_t>& contacts, absl::Span<const Lef> lefs,
+      absl::Span<const size_t> selected_lef_idx, random::PRNG_t& rand_eng, bp_t deletion_begin = 0,
+      bp_t deletion_size_ = 0) const noexcept(utils::ndebug_defined());
+
   template <typename MaskT>
   inline static void select_lefs_to_bind(absl::Span<const Lef> lefs,
                                          MaskT& mask) noexcept(utils::ndebug_defined());

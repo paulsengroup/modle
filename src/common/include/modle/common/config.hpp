@@ -72,6 +72,10 @@ struct Config {  // NOLINT(altera-struct-pack-align)
   double lef_hard_collision_pblock{0.995};               // NOLINT(readability-magic-numbers, cppcoreguidelines-avoid-magic-numbers)
   double lef_soft_collision_pblock{0.0};                 // NOLINT(readability-magic-numbers, cppcoreguidelines-avoid-magic-numbers)
   double lef_fraction_contact_sampling{0.025};           // NOLINT(readability-magic-numbers, cppcoreguidelines-avoid-magic-numbers)
+  bool randomize_contacts{false};
+  double genextreme_mu{0};                               // NOLINT(readability-magic-numbers, cppcoreguidelines-avoid-magic-numbers)
+  double genextreme_sigma{12'500};                       // NOLINT(readability-magic-numbers, cppcoreguidelines-avoid-magic-numbers)
+  double genextreme_xi{0.001};                           // NOLINT(readability-magic-numbers, cppcoreguidelines-avoid-magic-numbers)
 
   // Misc
   bool exclude_chrom_wo_extr_barriers{true};

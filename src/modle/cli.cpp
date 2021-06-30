@@ -219,6 +219,33 @@ void Cli::make_cli() {
             ->check(CLI::Range(0.0, 1.0))
             ->capture_default_str();
 
+    rand->add_flag(
+            "--randomize-contacts",
+            this->_config.randomize_contacts,
+            "Enable randomization when collecting contacts. Contacts are randomized by drawing random offsets from a genextreme distrubution. The distribution properties can be controlled through the parameters --mu, --sigma and --xi.")
+            ->capture_default_str();
+
+    rand->add_option(
+            "--mu,--location",
+            this->_config.genextreme_mu,
+            "Location parameter (mu) of the generalized extreme value used to add noise to the contact matrix.")
+            ->check(CLI::NonNegativeNumber)
+            ->capture_default_str();
+
+    rand->add_option(
+            "--sigma,--scale",
+            this->_config.genextreme_sigma,
+            "Scale parameter (sigma) of the generalized extreme value used to add noise to the contact matrix.")
+            ->check(CLI::NonNegativeNumber)
+            ->capture_default_str();
+
+    rand->add_option(
+            "--xi,--shape",
+            this->_config.genextreme_xi,
+            "Shape parameter (xi) of the generalized extreme value used to add noise to the contact matrix.")
+            ->check(CLI::NonNegativeNumber)
+            ->capture_default_str();
+
     extr_barr_mandatory->add_option(
             "--extrusion-barrier-file",
             this->_config.path_to_extr_barriers,
@@ -255,6 +282,9 @@ void Cli::make_cli() {
     gen->get_option("--target-contact-density")->excludes(gen->get_option("--number-of-iterations"));
     extr_barr->get_option("--probability-of-barrier-block")->excludes("--ctcf-occupied-probability-of-transition-to-self");
     gen->get_option("--deletion-size")->needs(io->get_option("--feature-beds"));
+    rand->get_option("--mu")->needs(rand->get_option("--randomize-contacts"));
+    rand->get_option("--sigma")->needs(rand->get_option("--randomize-contacts"));
+    rand->get_option("--xi")->needs(rand->get_option("--randomize-contacts"));
   // clang-format on
 }
 
