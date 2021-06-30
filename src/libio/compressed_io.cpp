@@ -51,6 +51,7 @@ void Reader::open(const std::filesystem::path& path) {
   handle_open_errors(
       archive_read_open_filename(this->_arc.get(), this->_path.c_str(), this->_buff.capacity()));
   handle_open_errors(archive_read_next_header(this->_arc.get(), this->_arc_entry.get()));
+  this->_idx = 0;
 }
 
 bool Reader::eof() const noexcept {
@@ -252,8 +253,8 @@ const char* Writer::path_c_str() const noexcept { return this->_path.c_str(); }
 
 Writer::Compression Writer::infer_compression_from_ext(const std::filesystem::path& p) {
   const auto ext = absl::AsciiStrToLower(p.extension().string());
-  const auto *const match = std::find_if(ext_mappings.begin(), ext_mappings.end(),
-                                  [&](const auto& mapping) { return mapping.first == ext; });
+  const auto* const match = std::find_if(ext_mappings.begin(), ext_mappings.end(),
+                                         [&](const auto& mapping) { return mapping.first == ext; });
   if (match == ext_mappings.end()) {
     return NONE;
   }
