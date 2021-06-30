@@ -9,15 +9,15 @@
 #include <cstdint>                                  // for uint32_t
 #include <ext/alloc_traits.h>                       // for __alloc_traits<>::value_type
 #include <filesystem>                               // for exists
-#include <fstream>                                  // for ifstream, basic_istream, basic_ios
 #include <memory>                                   // for allocator_traits<>::value_type
 #include <stdexcept>                                // for runtime_error
 #include <string>                                   // for string, getline
 #include <utility>                                  // for move
 #include <vector>                                   // for vector, allocator
 
-#include "modle/common/utils.hpp"  // for ndebug_defined, parse_numeric_or_throw
-#include "modle/contacts.hpp"      // for ContactMatrix
+#include "modle/common/utils.hpp"   // for ndebug_defined, parse_numeric_or_throw
+#include "modle/compressed_io.hpp"  // for Reader
+#include "modle/contacts.hpp"       // for ContactMatrix
 
 namespace modle::test::cmatrix {
 
@@ -35,11 +35,11 @@ TEST_CASE("CMatrix simple", "[cmatrix][short]") {
 [[nodiscard]] inline std::vector<std::vector<uint32_t>> load_matrix_from_file(
     const std::string& path_to_file, const std::string& sep = "\t") {
   std::vector<std::vector<uint32_t>> m;
-  std::ifstream f(path_to_file);
+  compressed_io::Reader r(path_to_file);
   std::string line;
   std::string buff;
   uint32_t n;  // NOLINT
-  while (std::getline(f, line)) {
+  while (r.getline(line)) {
     std::vector<uint32_t> v;
 
     for (const auto& tok : absl::StrSplit(line, sep)) {
@@ -47,15 +47,13 @@ TEST_CASE("CMatrix simple", "[cmatrix][short]") {
       v.push_back(n);
     }
     m.emplace_back(std::move(v));
-    if (!f && !f.eof()) {
-      throw fmt::system_error(errno, "Unable to open file '{}'", path_to_file);
-    }
   }
+  REQUIRE(r.eof());
   return m;
 }
 
 TEST_CASE("CMatrix 10x200", "[cmatrix][medium]") {
-  const std::string file_path = "test/data/unit_tests/symm_matrix_200_10.tsv";
+  const std::string file_path = "test/data/unit_tests/symm_matrix_200_10.tsv.gz";
   REQUIRE(std::filesystem::exists(file_path));
   const auto m1 = load_matrix_from_file(file_path);
   ContactMatrix<> m2(10, 200);  // NOLINT
@@ -192,17 +190,4 @@ TEST_CASE("CMatrix in/decrement vector", "[cmatrix][short]") {
 #endif
 }
 
-/*
-TEST_CASE("CMatrix 50x5'000", "[cmatrix][long]") {
-  const std::string file_path = "test/data/symm_matrix_5000_50.tsv.bz2";
-  REQUIRE(std::filesystem::exists(file_path));
-  test_with_large_matrix(file_path);  // NOLINT
-}
-
-TEST_CASE("CMatrix 50x50'000", "[cmatrix][long]") {
-  const std::string file_path = "test/data/symm_matrix_50000_50.tsv.bz2";
-  REQUIRE(std::filesystem::exists(file_path));
-  test_with_large_matrix(file_path);  // NOLINT
-}
- */
 }  // namespace modle::test::cmatrix

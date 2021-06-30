@@ -9,12 +9,13 @@
 #include <vector>
 
 #include "modle/bed.hpp"
+#include "modle/compressed_io.hpp"
 
 namespace modle::test::bed {
 using namespace modle::bed;
 
 TEST_CASE("BED Tree simple", "[BED][short]") {
-  const std::string all_intervals = "test/data/unit_tests/H1_ctcf_all_chroms.bed";
+  const std::string all_intervals = "test/data/unit_tests/H1_ctcf_all_chroms.bed.gz";
 
   Parser p(all_intervals, bed::BED::BED3);
 
@@ -34,18 +35,18 @@ TEST_CASE("BED Tree simple", "[BED][short]") {
 }
 
 TEST_CASE("BED Tree multiple overlaps", "[BED][short]") {
-  const std::string all_intervals = "test/data/unit_tests/H1_ctcf_all_chroms.bed";
+  const std::string all_intervals = "test/data/unit_tests/H1_ctcf_all_chroms.bed.gz";
   const std::string counts_per_interval =
-      "test/data/unit_tests/H1_ctcf_all_chroms_per_interval.tsv";
+      "test/data/unit_tests/H1_ctcf_all_chroms_per_interval.tsv.gz";
 
   Parser p(all_intervals, bed::BED::BED3);
   const auto intervals = p.parse_all_in_interval_tree();
 
-  std::ifstream fp(counts_per_interval);
+  compressed_io::Reader r(counts_per_interval);
   std::string buff;
 
   std::vector<std::string_view> toks;
-  while (std::getline(fp, buff)) {
+  while (r.getline(buff)) {
     toks = absl::StrSplit(buff, '\t');
     size_t num_expected_overlaps, start, end;  // NOLINT
     const auto chrom = std::string{toks.front()};
@@ -61,7 +62,6 @@ TEST_CASE("BED Tree multiple overlaps", "[BED][short]") {
       CHECK(record.chrom_end >= start);
     }
   }
-  CHECK(fp.eof());
 }
 
 }  // namespace modle::test::bed

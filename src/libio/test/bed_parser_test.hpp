@@ -14,16 +14,17 @@
 
 #include "absl/strings/match.h"
 #include "modle/bed.hpp"  // for BED, Parser, BED::BED3, bed
+#include "modle/compressed_io.hpp"
 
 namespace modle::test::bed {
 using namespace modle::bed;
 
 inline void compare_bed_records_with_file(std::vector<BED> records, const std::string &bed_file) {
-  auto fp = std::ifstream(bed_file);
+  compressed_io::Reader r(bed_file);
   std::vector<std::string> lines;
   lines.reserve(records.size());
   std::string buff;
-  while (std::getline(fp, buff)) {
+  while (r.getline(buff)) {
     if (buff.front() == '#' || absl::StrContains(buff, "track") ||
         absl::StrContains(buff, "browser")) {
       continue;
@@ -58,7 +59,7 @@ inline void compare_bed_records_with_file(std::vector<BED> records, const std::s
 }
 
 TEST_CASE("BED Parser simple", "[parsers][BED][short]") {
-  const std::string bed_file = "test/data/unit_tests/sample.bed6";
+  const std::string bed_file = "test/data/unit_tests/sample.bed6.gz";
   auto p = bed::Parser(bed_file);
   auto records = p.parse_all();
   CHECK(records.size() == 9);
@@ -71,7 +72,7 @@ TEST_CASE("BED Parser simple", "[parsers][BED][short]") {
 }
 
 TEST_CASE("BED Parser simple: BED6 -> BED3", "[parsers][BED][short]") {
-  const std::string bed_file = "test/data/unit_tests/sample.bed6";
+  const std::string bed_file = "test/data/unit_tests/sample.bed6.gz";
   auto p = bed::Parser(bed_file, BED::BED3);
   auto records = p.parse_all();
   std::sort(records.begin(), records.end());
@@ -83,14 +84,14 @@ TEST_CASE("BED Parser simple: BED6 -> BED3", "[parsers][BED][short]") {
 }
 
 TEST_CASE("BED Parser: BED6", "[parsers][BED][medium]") {
-  const std::string bed_file = "test/data/unit_tests/sample.bed6";
+  const std::string bed_file = "test/data/unit_tests/sample.bed6.gz";
   auto p = bed::Parser(bed_file);
   auto records = p.parse_all();
   compare_bed_records_with_file(records, bed_file);
 }
 
 TEST_CASE("BED Parser: BED9", "[parsers][BED][medium]") {
-  std::string bed_file = "test/data/unit_tests/sample.bed9";
+  std::string bed_file = "test/data/unit_tests/sample.bed9.gz";
   auto p = bed::Parser(bed_file);
   auto records = p.parse_all();
   compare_bed_records_with_file(records, bed_file);

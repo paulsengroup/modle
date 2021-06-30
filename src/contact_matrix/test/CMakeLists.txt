@@ -11,6 +11,7 @@ target_link_libraries(
             project_options
             Modle::cmatrix
             Modle::common
+            Modle::io
             CONAN_PKG::abseil
             CONAN_PKG::boost
             CONAN_PKG::catch2)

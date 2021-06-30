@@ -52,9 +52,9 @@ TEST_CASE("Interval tree simple", "[interval-tree][short]") {
 }
 
 TEST_CASE("Interval tree chrX", "[interval-tree][short]") {
-  const std::string all_intervals = "test/data/unit_tests/interval_tree_all.bed";
-  const std::string subset_intervals = "test/data/unit_tests/interval_tree_subset.bed";
-  const std::string complement_intervals = "test/data/unit_tests/interval_tree_complement.bed";
+  const std::string all_intervals = "test/data/unit_tests/interval_tree_all.bed.gz";
+  const std::string subset_intervals = "test/data/unit_tests/interval_tree_subset.bed.gz";
+  const std::string complement_intervals = "test/data/unit_tests/interval_tree_complement.bed.gz";
 
   std::string buff;
   std::vector<std::string_view> toks;
@@ -68,45 +68,38 @@ TEST_CASE("Interval tree chrX", "[interval-tree][short]") {
     record.data = toks[0];
   };
 
-  {
-    std::ifstream f(all_intervals);
-    REQUIRE((f.is_open() && f.good()));
-    while (std::getline(f, buff)) {
-      toks = absl::StrSplit(buff, absl::ByAnyChar("\t "));
-      toks_to_record();
+  compressed_io::Reader r(all_intervals);
+  REQUIRE(r.is_open());
+  while (r.getline(buff)) {
+    toks = absl::StrSplit(buff, absl::ByAnyChar("\t "));
+    toks_to_record();
 
-      tree.insert(record.start, record.end, record);
-    }
-
-    REQUIRE(f.eof());
-    REQUIRE(tree.size() == 2118);  // NOLINT
+    tree.insert(record.start, record.end, record);
   }
+
+  REQUIRE(tree.size() == 2118);  // NOLINT
   tree.make_BST();
 
-  {
-    std::ifstream f(subset_intervals);
-    REQUIRE((f.is_open() && f.good()));
+  r.open(subset_intervals);
+  REQUIRE(r.is_open());
 
-    while (std::getline(f, buff)) {
-      toks = absl::StrSplit(buff, absl::ByAnyChar("\t "));
-      toks_to_record();
+  while (r.getline(buff)) {
+    toks = absl::StrSplit(buff, absl::ByAnyChar("\t "));
+    toks_to_record();
 
-      CHECK(tree.overlaps_with(record.start, record.end));
-      CHECK(tree.count(record.start, record.end) == 1);
-      const auto [overlap_begin, overlap_end] = tree.find_overlaps(record.start, record.end);
+    CHECK(tree.overlaps_with(record.start, record.end));
+    CHECK(tree.count(record.start, record.end) == 1);
+    const auto [overlap_begin, overlap_end] = tree.find_overlaps(record.start, record.end);
 
-      CHECK(overlap_begin->start == record.start);
-      CHECK(overlap_begin->end == record.end);
-      CHECK(overlap_begin->data == record.data);
-    }
-
-    REQUIRE(f.eof());
+    CHECK(overlap_begin->start == record.start);
+    CHECK(overlap_begin->end == record.end);
+    CHECK(overlap_begin->data == record.data);
   }
 
-  std::ifstream f(complement_intervals);
-  REQUIRE((f.is_open() && f.good()));
+  r.open(complement_intervals);
+  REQUIRE(r.is_open());
 
-  while (std::getline(f, buff)) {
+  while (r.getline(buff)) {
     toks = absl::StrSplit(buff, absl::ByAnyChar("\t "));
     toks_to_record();
 
@@ -114,8 +107,6 @@ TEST_CASE("Interval tree chrX", "[interval-tree][short]") {
     CHECK(tree.count(record.start, record.end) == 0);
     test_find_overlaps(tree, record.start, record.end, 0);
   }
-
-  REQUIRE(f.eof());
 
   for (auto it1 = tree.starts_begin(), it2 = tree.starts_begin() + 1; it2 != tree.starts_end();
        ++it1, ++it2) {

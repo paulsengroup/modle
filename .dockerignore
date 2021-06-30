@@ -8,8 +8,6 @@
 !tools/**
 !test/CMakeLists.txt
 !test/catch_main.cpp
-!test/data/unit_tests/*.bed?
-!test/data/unit_tests/symm_matrix_200_10.tsv
-!test/data/unit_tests/*.cool
+!test/data/unit_tests/**
 !CMakeLists.txt
 !LICENSE
