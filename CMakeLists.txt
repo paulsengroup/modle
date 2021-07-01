@@ -43,8 +43,20 @@ if(CMAKE_CXX_COMPILER_ID MATCHES ".*Clang")
   endif()
 endif()
 
+# figure out how to properly link to <filesystem>
+include(cmake/Filesystem.cmake)
 if(NOT STD_FILESYSTEM_AVAILABLE)
   target_compile_definitions(project_options INTERFACE MODLE_WITH_BOOST_FILESYSTEM=1)
+endif()
+
+# figure out what flavor of <charconv> is available
+include(cmake/Charconv.cmake)
+if(CHARCONV_INT_AVAILABLE)
+  target_compile_definitions(project_options INTERFACE MODLE_CHARCONV_INT_AVAILABLE=1)
+endif()
+
+if(CHARCONV_FP_AVAILABLE)
+  target_compile_definitions(project_options INTERFACE MODLE_CHARCONV_FP_AVAILABLE=1)
 endif()
 
 # Link this 'library' to use the warnings specified in CompilerWarnings.cmake
@@ -67,9 +79,6 @@ enable_doxygen()
 
 # allow for static analysis options
 include(cmake/StaticAnalyzers.cmake)
-
-# figure out how to properly link to <filesystem>
-include(cmake/Filesystem.cmake)
 
 # detect which standard library is being used
 include(cmake/DetectStdlib.cmake)

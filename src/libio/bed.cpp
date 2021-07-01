@@ -142,7 +142,7 @@ bool BED::parse_name(const std::vector<std::string_view>& toks) {
 
 bool BED::parse_score(const std::vector<std::string_view>& toks, bool validate) {
   assert(this->_standard >= BED5);  // NOLINT
-  utils::parse_real_or_throw(toks, BED_SCORE_IDX, this->score);
+  utils::parse_numeric_or_throw(toks, BED_SCORE_IDX, this->score);
   // NOLINTNEXTLINE(readability-magic-numbers, cppcoreguidelines-avoid-magic-numbers)
   if (this->_standard != none && validate && (this->score < 0 || this->score > 1000)) {
     throw std::runtime_error(fmt::format(

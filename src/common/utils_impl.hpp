@@ -4,6 +4,13 @@
 // IWYU pragma: no_include <boost/exception/detail/error_info_impl.hpp>
 // IWYU pragma: no_include <modle/src/utils/utils_impl.hpp>
 
+#if defined(MODLE_CHARCONV_FP_AVAILABLE) || defined(MODLE_CHARCONV_INT_AVAILABLE)
+#include <charconv>  // for from_chars
+#endif
+#ifndef MODLE_CHARCONV_FP_AVAILABLE
+#include <absl/strings/charconv.h>  // for from_chars (FP)
+#endif
+
 #include <absl/strings/match.h>      // for StartsWithIgnoreCase, EndsWith
 #include <absl/strings/str_split.h>  // for StrSplit, Splitter
 #include <fmt/format.h>              // for format
@@ -11,7 +18,7 @@
 #include <boost/exception/exception.hpp>    // for enable_error_info, error_info_base...
 #include <boost/exception/info.hpp>         // for error_info::name_value_string
 #include <boost/stacktrace/stacktrace.hpp>  // for stacktrace, operator<<, to_string
-#include <charconv>                         // for from_chars
+#include <cassert>                          // for assert
 #include <cmath>                            // for HUGE_VAL
 #include <cstddef>                          // IWYU pragma: keep for size_t
 #include <cstdint>                          // for int64_t, SIZE_MAX, uint64_t
@@ -27,73 +34,81 @@
 #include <utility>                          // for pair, make_pair
 #include <vector>                           // for vector
 
+#include "modle/common/suppress_compiler_warnings.hpp"
+
 namespace modle::utils {
 
-template <typename N>
+template <typename N, typename>
 void parse_numeric_or_throw(std::string_view tok, N &field) {
-  static_assert(std::is_arithmetic_v<N>);
   if constexpr (std::is_integral_v<N>) {
-    parse_int_or_throw(tok, field);
+#ifdef MODLE_CHARCONV_INT_AVAILABLE  // str -> integral
+    auto [ptr, err] = std::from_chars(tok.data(), tok.end(), field);
+    if (ptr != tok.end() && err != std::errc{}) {
+      throw_except_from_errc(tok, SIZE_MAX, field, ptr, err);
+    }
+#else
+    if constexpr (std::is_same_v<N, int32_t>) {  // str -> int32
+      const auto tmp = static_cast<N>(std::stol(tok.data(), nullptr));
+      if (tmp == LONG_MAX) {
+        throw_except_from_errc(tok, SIZE_MAX, tmp, nullptr, std::errc::result_out_of_range);
+      } else if (tmp == 0 && tok != "0") {
+        throw_except_from_errc(tok, SIZE_MAX, tmp, nullptr, std::errc::invalid_argument);
+      }
+      field = tmp;
+    } else if constexpr (std::is_same_v<N, int64_t>) {  // str -> int64
+      const auto tmp = static_cast<N>(std::stoll(tok.data(), nullptr));
+      if (tmp == LONG_LONG_MAX) {
+        throw_except_from_errc(tok, SIZE_MAX, tmp, nullptr, std::errc::result_out_of_range);
+      } else if (tmp == 0 && tok != "0") {
+        throw_except_from_errc(tok, SIZE_MAX, tmp, nullptr, std::errc::invalid_argument);
+      }
+      field = tmp;
+    } else if constexpr (std::is_same_v<N, uint32_t>) {  // str -> uint32
+      const auto tmp = static_cast<N>(std::stoul(tok.data(), nullptr));
+      if (tmp == ULONG_MAX) {
+        throw_except_from_errc(tok, SIZE_MAX, tmp, nullptr, std::errc::result_out_of_range);
+      } else if (tmp == 0 && tok != "0") {
+        throw_except_from_errc(tok, SIZE_MAX, tmp, nullptr, std::errc::invalid_argument);
+      }
+      field = tmp;
+    } else if constexpr (std::is_same_v<N, uint64_t>) {  // str -> uint64
+      const auto tmp = static_cast<N>(std::stoull(tok.data(), nullptr));
+      if (tmp == ULONG_LONG_MAX) {
+        throw_except_from_errc(tok, SIZE_MAX, tmp, nullptr, std::errc::result_out_of_range);
+      } else if (tmp == 0 && tok != "0") {
+        throw_except_from_errc(tok, SIZE_MAX, tmp, nullptr, std::errc::invalid_argument);
+      }
+      field = tmp;
+    } else {  // str -> other int
+      const auto tmp = std::stoll(tok.data(), nullptr);
+      DISABLE_WARNING_PUSH
+      DISABLE_WARNING_USELESS_CAST
+      if (tmp == LONG_LONG_MAX || tmp < static_cast<int64_t>(std::numeric_limits<N>::min()) ||
+          tmp > static_cast<int64_t>(std::numeric_limits<N>::max())) {
+        throw_except_from_errc(tok, SIZE_MAX, tmp, nullptr, std::errc::result_out_of_range);
+      } else if (tmp == 0 && tok != "0") {
+        throw_except_from_errc(tok, SIZE_MAX, tmp, nullptr, std::errc::invalid_argument);
+      }
+      DISABLE_WARNING_POP
+      field = static_cast<N>(tmp);
+    }
+#endif
+    // str -> floating point
+  } else if constexpr (std::is_floating_point_v<N>) {
+#ifdef MODLE_CHARCONV_FP_AVAILABLE
+    auto [ptr, err] = std::from_chars(tok.data(), tok.end(), field);
+#else
+    auto [ptr, err] = absl::from_chars(tok.data(), tok.end(), field);
+#endif
+    if (ptr != tok.end() && err != std::errc{}) {
+      throw_except_from_errc(tok, SIZE_MAX, field, ptr, err);
+    }
   }
-  if constexpr (std::is_floating_point_v<N>) {
-    parse_real_or_throw(tok, field);
-  }
-}
-
-template <typename I>
-void parse_int_or_throw(std::string_view tok, I &field) {
-  static_assert(std::is_integral_v<I>);
-  auto [ptr, err] = std::from_chars(tok.data(), tok.end(), field);
-  if (ptr != tok.end() && err != std::errc{}) {
-    throw_except_from_errc(tok, SIZE_MAX, field, ptr, err);
-  }
-}
-
-template <typename R>
-void parse_real_or_throw(std::string_view tok, R &field) {
-  static_assert(std::is_floating_point_v<R>);
-  char *end = nullptr;
-  R tmp = std::strtod(tok.data(), &end);
-  if (tmp == HUGE_VAL)
-    throw_except_from_errc(tok, SIZE_MAX, tmp, nullptr, std::errc::result_out_of_range);
-  else if (tmp == 0 && end == tok.data())
-    throw_except_from_errc(tok, SIZE_MAX, tmp, nullptr, std::errc::invalid_argument);
-
-  field = tmp;
 }
 
 template <typename N>
 void parse_numeric_or_throw(const std::vector<std::string_view> &toks, size_t idx, N &field) {
-  static_assert(std::is_arithmetic_v<N>);
-  if constexpr (std::is_floating_point_v<N>) {
-    parse_real_or_throw(toks, idx, field);
-  } else {
-    parse_int_or_throw(toks, idx, field);
-  }
-}
-
-template <typename I>
-void parse_int_or_throw(const std::vector<std::string_view> &toks, size_t idx, I &field) {
-  static_assert(std::is_integral<I>());
-  auto [ptr, err] = std::from_chars(toks[idx].data(), toks[idx].data() + toks[idx].size(), field);
-  if (ptr != toks[idx].end() && err != std::errc{}) {
-    throw_except_from_errc(toks[idx], idx, field, ptr, err);
-  }
-}
-
-template <typename R>
-void parse_real_or_throw(const std::vector<std::string_view> &toks, size_t idx, R &field) {
-  static_assert(std::is_floating_point<R>());
-  const std::string tok(toks[idx].begin(), toks[idx].end());
-  char *end = nullptr;
-  R tmp = std::strtod(tok.data(), &end);
-  if (tmp == HUGE_VAL) {
-    throw_except_from_errc(toks[idx], idx, tmp, nullptr, std::errc::result_out_of_range);
-  } else if (tmp == 0 && end == tok.data()) {
-    throw_except_from_errc(tok, idx, tmp, nullptr, std::errc::invalid_argument);
-  }
-
-  field = tmp;
+  parse_numeric_or_throw(toks[idx], field);
 }
 
 template <typename N>

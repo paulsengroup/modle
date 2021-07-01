@@ -16,27 +16,12 @@
 
 namespace modle::utils {
 
-template <typename N>
+template <typename N, typename = std::enable_if_t<std::is_arithmetic_v<N>>>
 inline void parse_numeric_or_throw(std::string_view tok, N& field);
-
-template <typename I>
-inline void parse_int_or_throw(std::string_view tok, I& field);
-// This is a temporary workaround to deal with the fact that libstdc++ 10 does not come with the
-// float/double overloads for std::from_chars
-template <typename R>
-inline void parse_real_or_throw(std::string_view tok, R& field);
 
 template <typename N>
 inline void parse_numeric_or_throw(const std::vector<std::string_view>& toks, size_t idx, N& field);
-template <typename I>
-inline void parse_int_or_throw(const std::vector<std::string_view>& toks, size_t idx, I& field);
-// This is a temporary workaround to deal with the fact that libstdc++ 10 does not come with the
-// float/double overloads for std::from_chars
-template <typename R>
-inline void parse_real_or_throw(const std::vector<std::string_view>& toks, size_t idx, R& field);
 
-// Because of the issue outlined for parse_real_or_throw(), this currently only works for integral
-// numbers (which should be fine for our purposes)
 template <typename N>
 inline void parse_vect_of_numbers_or_throw(const std::vector<std::string_view>& toks, size_t idx,
                                            std::vector<N>& field, uint64_t expected_size);
