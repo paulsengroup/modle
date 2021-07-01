@@ -52,7 +52,7 @@ std::string construct_error_stack() {
           "h5pp::construct_error_stack(): failed to seek to the beginning to a temporary file");
     }
     /* Read the entire file into memory. */
-    fread(buff.data(), sizeof(char), static_cast<size_t>(bufsize), fp.get());
+    (void)fread(buff.data(), sizeof(char), static_cast<size_t>(bufsize), fp.get());
     if (ferror(fp.get()) != 0) {
       throw std::runtime_error(
           "h5pp::construct_error_stack(): failed to read error message from temporary file");
