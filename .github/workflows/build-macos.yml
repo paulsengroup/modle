@@ -5,15 +5,21 @@ name: MacOS Builds
 
 on:
   push:
-    branches: [ main ]
+    branches: [ main, testing-ci ]
     paths:
-      - "CMakeLists.txt"
+      - ".github/workflows/*.yml"
+      - "external/**"
       - "src/**"
+      - "test/**"
+      - "CMakeLists.txt"
   pull_request:
-    branches: [ main ]
+    branches: [ main, testing-ci ]
     paths:
-      - "CMakeLists.txt"
+      - ".github/workflows/*.yml"
+      - "external/**"
       - "src/**"
+      - "test/**"
+      - "CMakeLists.txt"
 
 jobs:
   build:
