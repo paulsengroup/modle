@@ -94,62 +94,6 @@ if(NOT HAVE_EXECUTION)
 endif()
 ]]
 
-# Set up some extra Conan dependencies based on our needs before loading Conan
-set(CONAN_EXTRA_REQUIRES "")
-set(CONAN_EXTRA_OPTIONS "")
-
-set(CONAN_EXTRA_REQUIRES
-    ${CONAN_EXTRA_REQUIRES}
-    abseil/20210324.2
-    boost/1.76.0
-    bzip2/1.0.8
-    cli11/1.9.1
-    concurrentqueue/1.0.2
-    cpp-sort/1.10.0
-    fmt/8.0.0
-    hdf5/1.12.0
-    libarchive/3.5.1
-    readerwriterqueue/1.0.3
-    xxhash/0.8.0
-    xz_utils/5.2.5
-    zlib/1.2.11
-    zstd/1.5.0)
-
-set(CONAN_EXTRA_OPTIONS
-    ${CONAN_EXTRA_OPTIONS}
-    boost:system_no_deprecated=True
-    boost:asio_no_deprecated=True
-    boost:filesystem_no_deprecated=True
-    boost:zlib=True
-    boost:bzip2=True
-    boost:lzma=True
-    boost:zstd=True
-    bzip2:build_executable=False
-    libarchive:shared=False
-    libarchive:with_zlib=True
-    libarchive:with_bzip2=True
-    libarchive:with_lz4=True
-    libarchive:with_lzo=True
-    libarchive:with_lzma=True
-    libarchive:with_zstd=True
-    xxhash:utility=False)
-
-if(CMAKE_CXX_COMPILER_ID STREQUAL AppleClang
-   OR CMAKE_CXX_COMPILER_ID STREQUAL Clang
-   OR CMAKE_CXX_COMPILER_ID STREQUAL GNU)
-  set(CONAN_EXTRA_SETTINGS ${CONAN_EXTRA_SETTINGS} compiler.libcxx=libstdc++11)
-endif()
-
-if(CXX20_COMPILER_AVAILABLE)
-  set(CONAN_EXTRA_SETTINGS ${CONAN_EXTRA_SETTINGS} compiler.cppstd=20)
-else()
-  set(CONAN_EXTRA_SETTINGS ${CONAN_EXTRA_SETTINGS} compiler.cppstd=17)
-endif()
-
-if(ENABLE_TESTING)
-  set(CONAN_EXTRA_REQUIRES ${CONAN_EXTRA_REQUIRES} catch2/2.13.4)
-endif()
-
 include(cmake/Conan.cmake)
 run_conan()
 

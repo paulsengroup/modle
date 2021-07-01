@@ -14,12 +14,12 @@ macro(run_conan)
     https://center.conan.io)
 
   conan_cmake_run(
-    REQUIRES
-    ${CONAN_EXTRA_REQUIRES}
-    OPTIONS
-    ${CONAN_EXTRA_OPTIONS}
+    CONANFILE
+    conanfile.py
     SETTINGS
-    ${CONAN_EXTRA_SETTINGS}
+    compiler.cppstd=${CMAKE_CXX_STANDARD} # For some reason setting this in conanfile doesn't work
+    OPTIONS
+    enable_testing=${ENABLE_TESTING}
     ENV
     "CC=${CMAKE_C_COMPILER}"
     "CXX=${CMAKE_CXX_COMPILER}"
