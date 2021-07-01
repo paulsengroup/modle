@@ -40,19 +40,21 @@ std::string construct_error_stack() {
   if (fp) {  // TODO: Make this portable
     H5::Exception::printErrorStack(fp.get());
     fseek(fp.get(), 0L, SEEK_END);
-    const auto bufsize = ftell(fp.get());
-    if (bufsize < 0) {
+    const auto buff_capacity = ftell(fp.get());
+    if (buff_capacity < 0) {
       throw std::runtime_error(
           "h5pp::construct_error_stack(): unable to determine buffer size required to store an "
           "error message");
     }
-    buff.resize(static_cast<size_t>(bufsize));
+    auto buff_size = static_cast<size_t>(buff_capacity);
+    buff.resize(buff_size);
     if (fseek(fp.get(), 0L, SEEK_SET) != 0) {
       throw std::runtime_error(
           "h5pp::construct_error_stack(): failed to seek to the beginning to a temporary file");
     }
     /* Read the entire file into memory. */
-    (void)fread(buff.data(), sizeof(char), static_cast<size_t>(bufsize), fp.get());
+    buff_size = fread(buff.data(), sizeof(char), buff_size, fp.get());
+    buff.resize(buff_size);
     if (ferror(fp.get()) != 0) {
       throw std::runtime_error(
           "h5pp::construct_error_stack(): failed to read error message from temporary file");
