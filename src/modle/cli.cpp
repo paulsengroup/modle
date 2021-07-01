@@ -15,7 +15,7 @@
 #include <CLI/Validators.hpp>  // for PositiveNumber, NonNegativeNumber, Range, Existing...
 #include <cmath>               // for round
 #include <cstdint>             // for uint32_t, uint64_t
-#include <filesystem>          // for path, exists, operator<<, is_empty, is_directory
+#include <boost/filesystem/path.hpp>          // for path, exists, operator<<, is_empty, is_directory
 #include <limits>              // for numeric_limits
 #include <sstream>             // for basic_stringbuf<>::int_type, basic_stringbuf<>::po...
 #include <stdexcept>           // for invalid_argument, out_of_range
@@ -303,7 +303,7 @@ std::string Cli::process_paths_and_check_for_collisions(modle::Config& c) {
 
   c.path_to_output_file_cool = c.path_to_output_prefix;
   c.path_to_output_file_bedpe =
-      !c.path_to_feature_bed_files.empty() ? c.path_to_output_prefix : std::filesystem::path{};
+      !c.path_to_feature_bed_files.empty() ? c.path_to_output_prefix : boost::filesystem::path{};
   c.path_to_log_file = c.path_to_output_prefix;
 
   c.path_to_output_file_cool += ".cool";
@@ -314,14 +314,14 @@ std::string Cli::process_paths_and_check_for_collisions(modle::Config& c) {
     return "";
   }
 
-  auto check_for_path_collisions = [](const std::filesystem::path& path) -> std::string {
-    if (std::filesystem::exists(path)) {
-      if (std::filesystem::is_directory(path)) {
+  auto check_for_path_collisions = [](const boost::filesystem::path& path) -> std::string {
+    if (boost::filesystem::exists(path)) {
+      if (boost::filesystem::is_directory(path)) {
         return fmt::format(
             FMT_STRING("Refusing to run the simulation because output file {} already "
                        "exist (and is actually a {}directory). {}.\n"),
-            path, std::filesystem::is_empty(path) ? "" : "non-empty ",
-            std::filesystem::is_empty(path)
+            path, boost::filesystem::is_empty(path) ? "" : "non-empty ",
+            boost::filesystem::is_empty(path)
                 ? " Pass --force to overwrite"
                 : "You should specify a different output path, or manually remove the "
                   "existing directory");
@@ -331,7 +331,7 @@ std::string Cli::process_paths_and_check_for_collisions(modle::Config& c) {
                      "--force to overwrite.\n"),
           path);
     }
-    if (std::filesystem::is_directory(path) && !std::filesystem::is_empty(path)) {
+    if (boost::filesystem::is_directory(path) && !boost::filesystem::is_empty(path)) {
       return fmt::format(
           FMT_STRING("Refusing to run the simulation because output file {} is a "
                      "non-empty directory. You should specify a different output path, or "
@@ -341,14 +341,14 @@ std::string Cli::process_paths_and_check_for_collisions(modle::Config& c) {
     return {};
   };
 
-  if (std::filesystem::exists(c.path_to_log_file)) {
+  if (boost::filesystem::exists(c.path_to_log_file)) {
     absl::StrAppend(&collisions, check_for_path_collisions(c.path_to_log_file));
   }
-  if (std::filesystem::exists(c.path_to_output_file_cool)) {
+  if (boost::filesystem::exists(c.path_to_output_file_cool)) {
     absl::StrAppend(&collisions, check_for_path_collisions(c.path_to_output_file_cool));
   }
   if (!c.path_to_output_file_bedpe.empty() &&
-      std::filesystem::exists(c.path_to_output_file_bedpe)) {
+      boost::filesystem::exists(c.path_to_output_file_bedpe)) {
     absl::StrAppend(&collisions, check_for_path_collisions(c.path_to_output_file_bedpe));
   }
 

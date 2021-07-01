@@ -1,10 +1,12 @@
 #include <fmt/format.h>  // for print
 
-#include <cstdio>        // for stderr
-#include <exception>     // for exception
-#include <filesystem>    // for create_directories, exists, is_empty, remove_all, path
-#include <stdexcept>     // for runtime_error
-#include <system_error>  // for error_code
+#include <boost/filesystem/operations.hpp>  // for create_directories, exists, is_empty, remove_all
+#include <boost/filesystem/path.hpp>        // for path
+#include <boost/system/error_code.hpp>      // for system::error_code
+#include <cstdio>                           // for stderr
+#include <exception>                        // for exception
+#include <stdexcept>                        // for runtime_error
+#include <system_error>                     // for error_code
 
 #include "./cli.hpp"               // for Cli, Cli::subcommand, Cli::eval, Cli::stats
 #include "modle_tools/config.hpp"  // for config
@@ -20,7 +22,7 @@ int main(int argc, char** argv) {
     }
 
     if (!c.output_base_name.empty()) {
-      std::filesystem::create_directories(c.output_base_name.parent_path());
+      boost::filesystem::create_directories(c.output_base_name.parent_path());
     }
 
     switch (cli.get_subcommand()) {
@@ -43,10 +45,10 @@ int main(int argc, char** argv) {
     }
   } catch (const std::exception& err) {
     fmt::print(stderr, "FAILURE: {}.\n", err.what());
-    std::error_code ec;
-    if (!c.keep_tmp_files && std::filesystem::exists(c.tmp_dir) &&
-        std::filesystem::is_empty(c.tmp_dir)) {
-      std::filesystem::remove_all(c.tmp_dir, ec);
+    boost::system::error_code ec;
+    if (!c.keep_tmp_files && boost::filesystem::exists(c.tmp_dir) &&
+        boost::filesystem::is_empty(c.tmp_dir)) {
+      boost::filesystem::remove_all(c.tmp_dir, ec);
     }
     return 1;
   } catch (...) {

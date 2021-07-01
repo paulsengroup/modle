@@ -11,23 +11,23 @@
 #include <fmt/format.h>                    // for print, FMT_STRING, format
 #include <fmt/ostream.h>                   // for formatbuf<>::int_type
 
-#include <algorithm>         // for fill, max, transform
-#include <array>             // for array, array<>::value_type
-#include <cassert>           // for assert
-#include <cmath>             // for sqrt
-#include <cstdint>           // for int64_t, uint32_t, uint_fast8_t
-#include <cstdio>            // for size_t, stderr
-#include <filesystem>        // for operator<<, path
-#include <functional>        // for ref
-#include <initializer_list>  // for initializer_list
-#include <iterator>          // for back_insert_iterator, insert_iter...
-#include <memory>            // for unique_ptr
-#include <stdexcept>         // for runtime_error
-#include <string>            // for string, basic_string
-#include <thread>            // for thread
-#include <type_traits>       // for is_arithmetic
-#include <utility>           // for pair, move, make_pair
-#include <vector>            // for vector
+#include <algorithm>                  // for fill, max, transform
+#include <array>                      // for array, array<>::value_type
+#include <boost/filesystem/path.hpp>  // for operator<<, path
+#include <cassert>                    // for assert
+#include <cmath>                      // for sqrt
+#include <cstdint>                    // for int64_t, uint32_t, uint_fast8_t
+#include <cstdio>                     // for size_t, stderr
+#include <functional>                 // for ref
+#include <initializer_list>           // for initializer_list
+#include <iterator>                   // for back_insert_iterator, insert_iter...
+#include <memory>                     // for unique_ptr
+#include <stdexcept>                  // for runtime_error
+#include <string>                     // for string, basic_string
+#include <thread>                     // for thread
+#include <type_traits>                // for is_arithmetic
+#include <utility>                    // for pair, move, make_pair
+#include <vector>                     // for vector
 
 #include "modle/bed.hpp"                                // for Parser
 #include "modle/bigwig.hpp"                             // for write_range, init_bigwig_file
@@ -51,7 +51,7 @@ std::vector<std::pair<std::string, int64_t>> select_chromosomes_for_eval(
 
   auto build_chrom_set = [&](std::string_view path_to_cooler) {
     try {
-      cooler::Cooler c(path_to_cooler, cooler::Cooler::READ_ONLY, bin_size);
+      cooler::Cooler c(std::string{path_to_cooler}, cooler::Cooler::READ_ONLY, bin_size);
       c.get_chrom_names(str_buff);
       c.get_chrom_sizes(int_buff);
 

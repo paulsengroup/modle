@@ -5,7 +5,7 @@
 #include <algorithm>         // for sort
 #include <cassert>           // for assert
 #include <catch2/catch.hpp>  // for AssertionHandler, operator""_catch_sr, SourceLineInfo
-#include <filesystem>        // for exists
+#include <boost/filesystem/path.hpp>        // for exists
 #include <fstream>           // for basic_istream, ifstream, basic_ifstream
 #include <memory>            // for allocator_traits<>::value_type, allocator
 #include <string>            // for string, basic_string, operator==, char_traits, stoull

@@ -185,10 +185,10 @@ uint64_t Chromosome::hash(uint64_t seed, size_t cell_id) {
   DISABLE_WARNING_POP
 }
 
-Genome::Genome(const std::filesystem::path& path_to_chrom_sizes,
-               const std::filesystem::path& path_to_extr_barriers,
-               const std::filesystem::path& path_to_chrom_subranges,
-               const absl::Span<const std::filesystem::path> paths_to_extra_features,
+Genome::Genome(const boost::filesystem::path& path_to_chrom_sizes,
+               const boost::filesystem::path& path_to_extr_barriers,
+               const boost::filesystem::path& path_to_chrom_subranges,
+               const absl::Span<const boost::filesystem::path> paths_to_extra_features,
                const double ctcf_prob_occ_to_occ, const double ctcf_prob_nocc_to_nocc,
                bool keep_all_chroms)
     : _chromosomes(instantiate_genome(
@@ -197,8 +197,8 @@ Genome::Genome(const std::filesystem::path& path_to_chrom_sizes,
 }
 
 absl::btree_set<Chromosome> Genome::import_chromosomes(
-    const std::filesystem::path& path_to_chrom_sizes,
-    const std::filesystem::path& path_to_chrom_subranges, bool keep_all_chroms) {
+    const boost::filesystem::path& path_to_chrom_sizes,
+    const boost::filesystem::path& path_to_chrom_subranges, bool keep_all_chroms) {
   assert(!path_to_chrom_sizes.empty());  // NOLINT
 
   const auto t0 = absl::Now();
@@ -279,7 +279,7 @@ absl::btree_set<Chromosome> Genome::import_chromosomes(
 }
 
 size_t Genome::import_barriers(absl::btree_set<Chromosome>& chromosomes,
-                               const std::filesystem::path& path_to_extr_barriers,
+                               const boost::filesystem::path& path_to_extr_barriers,
                                const double ctcf_prob_occ_to_occ,
                                const double ctcf_prob_nocc_to_nocc) {
   assert(!chromosomes.empty());            // NOLINT
@@ -316,7 +316,7 @@ size_t Genome::import_barriers(absl::btree_set<Chromosome>& chromosomes,
 }
 
 size_t Genome::import_extra_features(absl::btree_set<Chromosome>& chromosomes,
-                                     const std::filesystem::path& path_to_extra_features) {
+                                     const boost::filesystem::path& path_to_extra_features) {
   assert(!chromosomes.empty());             // NOLINT
   assert(!path_to_extra_features.empty());  // NOLINT
 
@@ -341,10 +341,10 @@ size_t Genome::import_extra_features(absl::btree_set<Chromosome>& chromosomes,
 }
 
 absl::btree_set<Chromosome> Genome::instantiate_genome(
-    const std::filesystem::path& path_to_chrom_sizes,
-    const std::filesystem::path& path_to_extr_barriers,
-    const std::filesystem::path& path_to_chrom_subranges,
-    const absl::Span<const std::filesystem::path> paths_to_extra_features,
+    const boost::filesystem::path& path_to_chrom_sizes,
+    const boost::filesystem::path& path_to_extr_barriers,
+    const boost::filesystem::path& path_to_chrom_subranges,
+    const absl::Span<const boost::filesystem::path> paths_to_extra_features,
     const double ctcf_prob_occ_to_occ, const double ctcf_prob_nocc_to_nocc, bool keep_all_chroms) {
   auto chroms = import_chromosomes(path_to_chrom_sizes, path_to_chrom_subranges, keep_all_chroms);
   import_barriers(chroms, path_to_extr_barriers, ctcf_prob_occ_to_occ, ctcf_prob_nocc_to_nocc);

@@ -2,7 +2,7 @@
 
 #include <catch2/catch.hpp>  // for Approx, operator==, AssertionHandler, operator""_catch_sr
 #include <cstdint>           // for uint32_t
-#include <filesystem>        // for path
+#include <boost/filesystem/path.hpp>        // for path
 #include <vector>            // for vector, allocator
 
 #include "./common.hpp"  // for generate_random_vect, corr_scipy

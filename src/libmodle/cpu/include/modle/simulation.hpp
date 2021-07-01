@@ -11,7 +11,7 @@
 #include <cstddef>                                  // for size_t
 #include <cstdint>                                  // for uint64_t
 #include <deque>                                    // for deque
-#include <filesystem>                               // for path
+#include <boost/filesystem/path.hpp>                               // for path
 #include <limits>                                   // for numeric_limits
 #include <memory>                                   // for unique_ptr
 #include <mutex>                                    // for mutex

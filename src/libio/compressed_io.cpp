@@ -10,7 +10,7 @@
 #include <boost/iostreams/filter/lzma.hpp>
 #include <boost/iostreams/filter/zstd.hpp>
 #include <cassert>      // for assert
-#include <filesystem>   // for path
+#include <boost/filesystem/path.hpp>   // for path
 #include <string>       // for string
 #include <string_view>  // for string_view
 
@@ -18,12 +18,12 @@
 
 namespace modle::compressed_io {
 
-Reader::Reader(const std::filesystem::path& path, size_t buff_capacity) {
+Reader::Reader(const boost::filesystem::path& path, size_t buff_capacity) {
   this->_buff.reserve(buff_capacity);
   this->open(path);
 }
 
-void Reader::open(const std::filesystem::path& path) {
+void Reader::open(const boost::filesystem::path& path) {
   auto handle_open_errors = [&](la_ssize_t status) {
     if (status == ARCHIVE_EOF) {
       throw std::runtime_error(fmt::format(FMT_STRING("File {} appears to be empty"), this->_path));
@@ -75,7 +75,7 @@ void Reader::reset() {
   this->_tok_tmp_buff.clear();
 }
 
-const std::filesystem::path& Reader::path() const noexcept { return this->_path; }
+const boost::filesystem::path& Reader::path() const noexcept { return this->_path; }
 std::string Reader::path_string() const noexcept { return this->_path.string(); }
 const char* Reader::path_c_str() const noexcept { return this->_path.c_str(); }
 
@@ -194,12 +194,12 @@ std::string_view Reader::read_next_token(char sep) {
   return std::string_view{this->_tok_tmp_buff};
 }
 
-Writer::Writer(const std::filesystem::path& path, Compression compression)
+Writer::Writer(const boost::filesystem::path& path, Compression compression)
     : _compression(compression) {
   this->open(path);
 }
 
-void Writer::open(const std::filesystem::path& path) {
+void Writer::open(const boost::filesystem::path& path) {
   this->_out.reset();
   if (this->is_open()) {
     this->close();
@@ -248,11 +248,11 @@ void Writer::close() {
   this->_fp.close();
 }
 
-const std::filesystem::path& Writer::path() const noexcept { return this->_path; }
+const boost::filesystem::path& Writer::path() const noexcept { return this->_path; }
 std::string Writer::path_string() const noexcept { return this->_path.string(); }
 const char* Writer::path_c_str() const noexcept { return this->_path.c_str(); }
 
-Writer::Compression Writer::infer_compression_from_ext(const std::filesystem::path& p) {
+Writer::Compression Writer::infer_compression_from_ext(const boost::filesystem::path& p) {
   const auto ext = absl::AsciiStrToLower(p.extension().string());
   const auto* const match = std::find_if(ext_mappings.begin(), ext_mappings.end(),
                                          [&](const auto& mapping) { return mapping.first == ext; });

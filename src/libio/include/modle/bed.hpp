@@ -7,7 +7,7 @@
 
 #include <cstddef>      // IWYU pragma: keep for size_t
 #include <cstdint>      // for uint64_t, uint_fast8_t
-#include <filesystem>   // for path
+#include <boost/filesystem/path.hpp>   // for path
 #include <fstream>      // for ifstream
 #include <limits>       // for numeric_limits
 #include <memory>       // for unique_ptr
@@ -206,7 +206,7 @@ struct BED {
 
 class Parser {
  public:
-  explicit Parser(std::filesystem::path path_to_bed,
+  explicit Parser(boost::filesystem::path path_to_bed,
                   BED::Dialect bed_standard = BED::Dialect::autodetect,
                   bool enforce_std_compliance = true);
 

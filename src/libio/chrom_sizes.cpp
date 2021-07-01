@@ -9,7 +9,7 @@
 #include <cassert>      // for assert
 #include <cerrno>       // for errno
 #include <cstddef>      // for size_t
-#include <filesystem>   // for filesystem::path
+#include <boost/filesystem/path.hpp>   // for filesystem::path
 #include <fstream>      // for ifstream, basic_ios
 #include <stdexcept>    // for runtime_error, invalid_argument, out_of_range
 #include <string>       // for string, basic_string, getline, operator==
@@ -21,7 +21,7 @@
 
 namespace modle::chrom_sizes {
 
-Parser::Parser(std::filesystem::path path_to_chrom_sizes) : _path(std::move(path_to_chrom_sizes)) {
+Parser::Parser(boost::filesystem::path path_to_chrom_sizes) : _path(std::move(path_to_chrom_sizes)) {
   this->_fp.open(this->_path);
   if (!this->_fp) {
     throw fmt::system_error(errno, "Unable to open file {} for reading", this->_path);

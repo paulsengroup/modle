@@ -1,8 +1,9 @@
 #pragma once
 
-#include <filesystem>  // for filesystem::path
-#include <fstream>     // for ifstream
-#include <vector>      // for vector
+#include <fstream>  // for ifstream
+#include <vector>   // for vector
+
+#include <boost/filesystem/path.hpp>  // for filesystem::path
 
 namespace modle::bed {
 struct BED;
@@ -12,11 +13,11 @@ namespace modle::chrom_sizes {
 
 class Parser {
  public:
-  explicit Parser(std::filesystem::path path_to_chrom_sizes);
+  explicit Parser(boost::filesystem::path path_to_chrom_sizes);
   [[nodiscard]] std::vector<bed::BED> parse_all(char sep = '\t');
 
  private:
-  std::filesystem::path _path;
+  boost::filesystem::path _path;
   std::ifstream _fp{};
 };
 }  // namespace modle::chrom_sizes

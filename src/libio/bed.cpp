@@ -10,13 +10,15 @@
 #include <fmt/format.h>                    // for format, FMT_STRING, system_error
 #include <fmt/ostream.h>
 
-#include <algorithm>    // for transform, _max
-#include <cassert>      // for assert
-#include <cerrno>       // for errno
-#include <cstdint>      // for uint64_t, uint8_t, uint16_t
-#include <filesystem>   // for is_fifo
-#include <limits>       // for numeric_limits
-#include <stdexcept>    // for runtime_error
+#include <algorithm>                         // for transform, _max
+#include <boost/filesystem/file_status.hpp>  // for filesystem::file_type
+#include <boost/filesystem/operations.hpp>   // filesystem::status
+#include <boost/filesystem/path.hpp>         // for filesystem::path
+#include <cassert>                           // for assert
+#include <cerrno>                            // for errno
+#include <cstdint>                           // for uint64_t, uint8_t, uint16_t
+#include <limits>                            // for numeric_limits
+#include <stdexcept>                         // for runtime_error
 #include <string>       // for string, allocator, char_traits, getline, opera...
 #include <string_view>  // for string_view, operator==, basic_string_view
 #include <utility>      // for move
@@ -437,7 +439,7 @@ uint64_t BED::hash(XXH_INLINE_XXH3_state_t* state, uint64_t seed) const {
   DISABLE_WARNING_POP
 }
 
-Parser::Parser(std::filesystem::path path_to_bed, BED::Dialect bed_standard,
+Parser::Parser(boost::filesystem::path path_to_bed, BED::Dialect bed_standard,
                bool enforce_std_compliance)
     // For now we always skip the header
     : _reader(std::move(path_to_bed)),
@@ -562,7 +564,7 @@ BED_tree<> Parser::parse_all_in_interval_tree() {
 }
 
 void Parser::reset() {
-  if (std::filesystem::is_fifo(this->_reader.path())) {
+  if (boost::filesystem::status(this->_reader.path()).type() == boost::filesystem::fifo_file) {
     throw std::runtime_error(fmt::format(
         FMT_STRING("BED::Parser::reset() was called on a file that is a FIFO: file path '{}'"),
         this->_reader.path()));

@@ -21,7 +21,7 @@ target_link_libraries(
          CONAN_PKG::abseil
          CONAN_PKG::boost
          CONAN_PKG::concurrentqueue
-         # Deal with std::filesystem quirkiness on older compilers
+         # Deal with boost::filesystem quirkiness on older compilers
          $<$<AND:$<BOOL:${USING_LIBCXX}>,$<BOOL:${EXPLICIT_LINK_VS_FILESYSTEM_REQUIRED}>>:-lc++fs>
          $<$<AND:$<BOOL:${USING_STDLIBCXX}>,$<BOOL:${EXPLICIT_LINK_VS_FILESYSTEM_REQUIRED}>>:-lstdc++fs>)
 

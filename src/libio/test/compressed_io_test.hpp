@@ -1,7 +1,7 @@
 #pragma once
 
 #include <catch2/catch.hpp>  // for AssertionHandler, operator""_catch_sr, SourceLineInfo
-#include <filesystem>        // for exists
+#include <boost/filesystem/path.hpp>        // for exists
 #include <fstream>           // for ifstrea, getline
 #include <iostream>
 #include <string>  // for string, basic_string, operator==, char_traits, stoull
@@ -21,7 +21,7 @@ namespace modle::test::compressed_io {
 }
 
 TEST_CASE("Reader plain", "[io][reader][short]") {
-  const std::filesystem::path ptext_file = "test/data/unit_tests/sample.bed9";
+  const boost::filesystem::path ptext_file = "test/data/unit_tests/sample.bed9";
 
   modle::compressed_io::Reader r(ptext_file);
   std::ifstream fp(ptext_file);
@@ -37,7 +37,7 @@ TEST_CASE("Reader plain", "[io][reader][short]") {
 }
 
 TEST_CASE("Reader plain sv", "[io][reader][short]") {
-  const std::filesystem::path ptext_file = "test/data/unit_tests/sample.bed9";
+  const boost::filesystem::path ptext_file = "test/data/unit_tests/sample.bed9";
 
   modle::compressed_io::Reader r(ptext_file);
   std::ifstream fp(ptext_file);
@@ -53,8 +53,8 @@ TEST_CASE("Reader plain sv", "[io][reader][short]") {
 }
 
 TEST_CASE("Reader gzip", "[io][reader][short]") {
-  const std::filesystem::path compressed_file = "test/data/unit_tests/sample.bed9.gz";
-  const std::filesystem::path ptext_file = "test/data/unit_tests/sample.bed9";
+  const boost::filesystem::path compressed_file = "test/data/unit_tests/sample.bed9.gz";
+  const boost::filesystem::path ptext_file = "test/data/unit_tests/sample.bed9";
 
   modle::compressed_io::Reader r1(compressed_file);
   modle::compressed_io::Reader r2(ptext_file);
@@ -70,8 +70,8 @@ TEST_CASE("Reader gzip", "[io][reader][short]") {
 }
 
 TEST_CASE("Reader bzip2", "[io][reader][short]") {
-  const std::filesystem::path compressed_file = "test/data/unit_tests/sample.bed9.bz2";
-  const std::filesystem::path ptext_file = "test/data/unit_tests/sample.bed9";
+  const boost::filesystem::path compressed_file = "test/data/unit_tests/sample.bed9.bz2";
+  const boost::filesystem::path ptext_file = "test/data/unit_tests/sample.bed9";
 
   modle::compressed_io::Reader r1(compressed_file);
   modle::compressed_io::Reader r2(ptext_file);
@@ -86,8 +86,8 @@ TEST_CASE("Reader bzip2", "[io][reader][short]") {
 }
 
 TEST_CASE("Reader lz4", "[io][reader][short]") {
-  const std::filesystem::path compressed_file = "test/data/unit_tests/sample.bed9.lz4";
-  const std::filesystem::path ptext_file = "test/data/unit_tests/sample.bed9";
+  const boost::filesystem::path compressed_file = "test/data/unit_tests/sample.bed9.lz4";
+  const boost::filesystem::path ptext_file = "test/data/unit_tests/sample.bed9";
 
   modle::compressed_io::Reader r1(compressed_file);
   modle::compressed_io::Reader r2(ptext_file);
@@ -102,8 +102,8 @@ TEST_CASE("Reader lz4", "[io][reader][short]") {
 }
 
 TEST_CASE("Reader zstd", "[io][reader][short]") {
-  const std::filesystem::path compressed_file = "test/data/unit_tests/sample.bed9.zst";
-  const std::filesystem::path ptext_file = "test/data/unit_tests/sample.bed9";
+  const boost::filesystem::path compressed_file = "test/data/unit_tests/sample.bed9.zst";
+  const boost::filesystem::path ptext_file = "test/data/unit_tests/sample.bed9";
 
   modle::compressed_io::Reader r1(compressed_file);
   modle::compressed_io::Reader r2(ptext_file);
@@ -118,8 +118,8 @@ TEST_CASE("Reader zstd", "[io][reader][short]") {
 }
 
 TEST_CASE("Reader lzma", "[io][reader][short]") {
-  const std::filesystem::path compressed_file = "test/data/unit_tests/sample.bed9.xz";
-  const std::filesystem::path ptext_file = "test/data/unit_tests/sample.bed9";
+  const boost::filesystem::path compressed_file = "test/data/unit_tests/sample.bed9.xz";
+  const boost::filesystem::path ptext_file = "test/data/unit_tests/sample.bed9";
 
   modle::compressed_io::Reader r1(compressed_file);
   modle::compressed_io::Reader r2(ptext_file);
@@ -153,7 +153,7 @@ inline void test_writer(modle::compressed_io::Reader& r1, modle::compressed_io::
 }
 
 TEST_CASE("Writer plain", "[io][writer][short]") {
-  const std::filesystem::path ptext_file = "test/data/unit_tests/sample.bed9";
+  const boost::filesystem::path ptext_file = "test/data/unit_tests/sample.bed9";
   const auto tmpout = testdir() / ptext_file.filename();
 
   modle::compressed_io::Reader r1(ptext_file);
@@ -163,7 +163,7 @@ TEST_CASE("Writer plain", "[io][writer][short]") {
 }
 
 TEST_CASE("Writer gzip", "[io][writer][short]") {
-  const std::filesystem::path ptext_file = "test/data/unit_tests/sample.bed9";
+  const boost::filesystem::path ptext_file = "test/data/unit_tests/sample.bed9";
   const auto tmpout = testdir() / ptext_file.filename();
 
   modle::compressed_io::Reader r1(ptext_file);
@@ -173,7 +173,7 @@ TEST_CASE("Writer gzip", "[io][writer][short]") {
 }
 
 TEST_CASE("Writer bzip2", "[io][writer][short]") {
-  const std::filesystem::path ptext_file = "test/data/unit_tests/sample.bed9";
+  const boost::filesystem::path ptext_file = "test/data/unit_tests/sample.bed9";
   const auto tmpout = testdir() / ptext_file.filename();
 
   modle::compressed_io::Reader r1(ptext_file);
@@ -183,7 +183,7 @@ TEST_CASE("Writer bzip2", "[io][writer][short]") {
 }
 
 TEST_CASE("Writer lzma", "[io][writer][short]") {
-  const std::filesystem::path ptext_file = "test/data/unit_tests/sample.bed9";
+  const boost::filesystem::path ptext_file = "test/data/unit_tests/sample.bed9";
   const auto tmpout = testdir() / ptext_file.filename();
 
   modle::compressed_io::Reader r1(ptext_file);
@@ -193,7 +193,7 @@ TEST_CASE("Writer lzma", "[io][writer][short]") {
 }
 
 TEST_CASE("Writer zstd", "[io][writer][short]") {
-  const std::filesystem::path ptext_file = "test/data/unit_tests/sample.bed9";
+  const boost::filesystem::path ptext_file = "test/data/unit_tests/sample.bed9";
   const auto tmpout = testdir() / ptext_file.filename();
 
   modle::compressed_io::Reader r1(ptext_file);

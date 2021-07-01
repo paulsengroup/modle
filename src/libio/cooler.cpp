@@ -39,7 +39,7 @@
 #include <cstddef>      // for size_t
 #include <cstdint>      // for int64_t, uint32_t, uint8_t, uint_f...
 #include <cstdio>       // for stderr
-#include <filesystem>   // for operator<<, path
+#include <boost/filesystem/path.hpp>   // for operator<<, path
 #include <iterator>     // for distance
 #include <limits>       // for numeric_limits
 #include <memory>       // for unique_ptr, allocator, make_unique
@@ -58,7 +58,7 @@
 
 namespace modle::cooler {
 
-Cooler::Cooler(std::filesystem::path path_to_file, IO_MODE mode, size_t bin_size,
+Cooler::Cooler(boost::filesystem::path path_to_file, IO_MODE mode, size_t bin_size,
                size_t max_str_length, std::string_view assembly_name, Flavor flavor, bool validate,
                uint_fast8_t compression_lvl, size_t chunk_size, size_t cache_size)
     : STR_TYPE(generate_default_str_type(max_str_length)),
@@ -138,7 +138,7 @@ Cooler::~Cooler() {
 
 bool Cooler::is_read_only() const { return this->_mode == Cooler::READ_ONLY; }
 
-const std::filesystem::path &Cooler::get_path() const { return this->_path_to_file; }
+const boost::filesystem::path &Cooler::get_path() const { return this->_path_to_file; }
 
 size_t Cooler::get_nchroms() {
   assert(this->_fp);
@@ -453,7 +453,7 @@ H5::StrType Cooler::generate_default_str_type(size_t max_str_length) {
   return st;
 }
 
-std::unique_ptr<H5::H5File> Cooler::open_file(const std::filesystem::path &path, IO_MODE mode,
+std::unique_ptr<H5::H5File> Cooler::open_file(const boost::filesystem::path &path, IO_MODE mode,
                                               size_t bin_size, size_t max_str_length, Flavor flavor,
                                               bool validate) {
   (void)max_str_length;

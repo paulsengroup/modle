@@ -43,6 +43,10 @@ if(CMAKE_CXX_COMPILER_ID MATCHES ".*Clang")
   endif()
 endif()
 
+if(NOT STD_FILESYSTEM_AVAILABLE)
+  target_compile_definitions(project_options INTERFACE MODLE_WITH_BOOST_FILESYSTEM=1)
+endif()
+
 # Link this 'library' to use the warnings specified in CompilerWarnings.cmake
 add_library(project_warnings INTERFACE)
 

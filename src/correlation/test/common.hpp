@@ -7,7 +7,7 @@
 #include <array>        // for array
 #include <cstdint>      // for uint32_t, int32_t, int64_t
 #include <cstdio>       // for pclose, fgets, popen, FILE
-#include <filesystem>   // for create_directories, exists, path, remove
+#include <boost/filesystem/path.hpp>   // for create_directories, exists, path, remove
 #include <fstream>      // for basic_ofstream, operator<<, basic_ostream
 #include <memory>       // for allocator, unique_ptr
 #include <numeric>      // for iota
@@ -20,7 +20,7 @@
 namespace modle::test::correlation {
 
 template <typename N, typename = typename std::enable_if<std::is_arithmetic<N>::value, N>::type>
-inline void write_vect_to_file(const std::filesystem::path& fpath, const std::vector<N>& v) {
+inline void write_vect_to_file(const boost::filesystem::path& fpath, const std::vector<N>& v) {
   auto fp = std::ofstream(fpath);
   fp << v[0];
   for (auto i = 1UL; i < v.size(); ++i) {
@@ -68,9 +68,9 @@ template <typename N, typename = typename std::enable_if<std::is_arithmetic<N>::
 [[nodiscard]] inline std::pair<double, double> corr_scipy(const std::vector<N>& v1,
                                                           const std::vector<N>& v2,
                                                           const std::string& method,
-                                                          const std::filesystem::path& tmpdir) {
-  if (!std::filesystem::exists(tmpdir)) {
-    std::filesystem::create_directories(tmpdir);
+                                                          const boost::filesystem::path& tmpdir) {
+  if (!boost::filesystem::exists(tmpdir)) {
+    boost::filesystem::create_directories(tmpdir);
   }
   const auto f1_path = tmpdir / absl::StrCat(boost::hash_range(v1.begin(), v1.end()), "_f1");
   const auto f2_path = tmpdir / absl::StrCat(boost::hash_range(v2.begin(), v2.end()), "_f2");
@@ -101,8 +101,8 @@ template <typename N, typename = typename std::enable_if<std::is_arithmetic<N>::
     result += buffer.data();
     //    printf("%s\n", result.c_str());
   }
-  std::filesystem::remove(f1_path);
-  std::filesystem::remove(f2_path);
+  boost::filesystem::remove(f1_path);
+  boost::filesystem::remove(f2_path);
 
   const auto rho = std::stod(std::string(result.data(), result.find('\t')));
   // NOLINTNEXTLINE(cppcoreguidelines-pro-bounds-pointer-arithmetic)

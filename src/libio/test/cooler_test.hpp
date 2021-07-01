@@ -6,7 +6,7 @@
 #include <catch2/catch.hpp>  // for operator""_catch_sr, AssertionHandler, SourceLineInfo, Str...
 #include <cstddef>           // IWYU pragma: keep for size_t
 #include <cstdint>           // for uint64_t, int32_t, uint8_t
-#include <filesystem>        // for operator/, path, create_directories, is_empty, remove, rem...
+#include <boost/filesystem/path.hpp>        // for operator/, path, create_directories, is_empty, remove, rem...
 #include <memory>            // for allocator
 #include <stdexcept>         // for runtime_error
 #include <string_view>       // for string_view
@@ -21,7 +21,7 @@ const extern SmartDir testdir;  // NOLINT
 namespace modle::test::cooler {
 using namespace modle::cooler;
 
-inline const std::filesystem::path data_dir{"test/data/unit_tests"};  // NOLINT
+inline const boost::filesystem::path data_dir{"test/data/unit_tests"};  // NOLINT
 
 TEST_CASE("cooler ctor", "[io][cooler][short]") {
   const auto test_file = data_dir / "Dixon2012-H1hESC-HindIII-allreps-filtered.1000kb.cool";
@@ -39,7 +39,7 @@ TEST_CASE("cooler ctor", "[io][cooler][short]") {
 
 TEST_CASE("CMatrix to cooler", "[io][cooler][short]") {
   const auto test_file = testdir() / "cmatrix_to_cooler.cool";
-  std::filesystem::create_directories(testdir());
+  boost::filesystem::create_directories(testdir());
 
   constexpr std::string_view chrom = "chr0";
   constexpr uint64_t start = 0;
@@ -53,7 +53,7 @@ TEST_CASE("CMatrix to cooler", "[io][cooler][short]") {
   ContactMatrix<int32_t> cmatrix(nrows, ncols, true);
   c.write_or_append_cmatrix_to_file(cmatrix, chrom, start, end, end);
 
-  std::filesystem::remove(test_file);
+  boost::filesystem::remove(test_file);
 }
 
 TEST_CASE("Cooler to CMatrix", "[io][cooler][short]") {
@@ -108,7 +108,7 @@ TEST_CASE("Cooler to CMatrix and CMatrix to Cooler", "[io][cooler][short]") {
 
   CHECK(mismatches == 0);
 
-  std::filesystem::remove(test_file_out);
+  boost::filesystem::remove(test_file_out);
 }
 /*
 TEST_CASE("Cooler testing balanced matrix", "[io][cooler][short]") {

@@ -17,7 +17,7 @@
 
 #include <cstddef>      // IWYU pragma: keep for size_t
 #include <cstdint>      // for int64_t, uint_fast8_t, uint32_t, int32_t
-#include <filesystem>   // for path
+#include <boost/filesystem/path.hpp>   // for path
 #include <memory>       // for unique_ptr, allocator
 #include <string>       // for string
 #include <string_view>  // for string_view
@@ -71,7 +71,7 @@ class Cooler {
   static constexpr size_t DEFAULT_HDF5_CACHE_SIZE = 16 * 1024 * 1024ULL;  // 16MB
 
   Cooler() = delete;
-  explicit Cooler(std::filesystem::path path_to_file, IO_MODE mode = READ_ONLY, size_t bin_size = 0,
+  explicit Cooler(boost::filesystem::path path_to_file, IO_MODE mode = READ_ONLY, size_t bin_size = 0,
                   size_t max_str_length = 0, std::string_view assembly_name = "",
                   Flavor flavor = AUTO, bool validate = true,
                   uint_fast8_t compression_lvl = DEFAULT_COMPRESSION_LEVEL,
@@ -87,7 +87,7 @@ class Cooler {
 
   // Getters
   [[nodiscard]] bool is_read_only() const;
-  [[nodiscard]] const std::filesystem::path &get_path() const;
+  [[nodiscard]] const boost::filesystem::path &get_path() const;
 
   [[nodiscard]] size_t get_nchroms();
 
@@ -173,7 +173,7 @@ class Cooler {
   H5::StrType STR_TYPE;
   H5::PredType INT64_TYPE{H5::PredType::NATIVE_INT64};
   H5::PredType INT32_TYPE{H5::PredType::NATIVE_INT32};
-  std::filesystem::path _path_to_file;
+  boost::filesystem::path _path_to_file;
   std::string _root_path{"/"};
   IO_MODE _mode;
   size_t _bin_size;
@@ -231,7 +231,7 @@ class Cooler {
   [[nodiscard]] inline static std::unique_ptr<H5::DSetAccPropList> generate_default_aprop(
       T type, hsize_t chunk_size, hsize_t cache_size);
 
-  [[nodiscard]] static std::unique_ptr<H5::H5File> open_file(const std::filesystem::path &path,
+  [[nodiscard]] static std::unique_ptr<H5::H5File> open_file(const boost::filesystem::path &path,
                                                              IO_MODE mode, size_t bin_size = 0,
                                                              size_t max_str_length = 0,
                                                              Flavor flavor = AUTO,

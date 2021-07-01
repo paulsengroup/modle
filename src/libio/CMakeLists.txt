@@ -31,7 +31,7 @@ target_link_libraries(
          CONAN_PKG::libarchive
          CONAN_PKG::readerwriterqueue
          CONAN_PKG::zlib
-         # Deal with std::filesystem quirkiness on older compilers
+         # Deal with boost::filesystem quirkiness on older compilers
          $<$<AND:$<BOOL:${USING_LIBCXX}>,$<BOOL:${EXPLICIT_LINK_VS_FILESYSTEM_REQUIRED}>>:-lc++fs>
          $<$<AND:$<BOOL:${USING_STDLIBCXX}>,$<BOOL:${EXPLICIT_LINK_VS_FILESYSTEM_REQUIRED}>>:-lstdc++fs>)
 

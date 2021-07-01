@@ -4,7 +4,7 @@
 #include <archive_entry.h>                 // for archive_entry_new, archive_entry_free
 
 #include <boost/iostreams/filtering_stream.hpp>
-#include <filesystem>  // for path
+#include <boost/filesystem/path.hpp>  // for path
 #include <fstream>
 #include <iostream>
 #include <memory>       // for unique_ptr
@@ -18,22 +18,22 @@ class Reader {
 
  public:
   Reader() = default;  // NOLINTNEXTLINE
-  Reader(const std::filesystem::path& path, size_t buff_capacity = 512 * 1024);
+  Reader(const boost::filesystem::path& path, size_t buff_capacity = 512 * 1024);
 
   bool getline(std::string& buff, char sep = '\n');
   [[nodiscard]] std::string_view getline(char sep = '\n');
   [[nodiscard]] bool eof() const noexcept;
   [[nodiscard]] bool is_open() const noexcept;
   void close();
-  void open(const std::filesystem::path& path);
+  void open(const boost::filesystem::path& path);
   void reset();
 
-  [[nodiscard]] const std::filesystem::path& path() const noexcept;
+  [[nodiscard]] const boost::filesystem::path& path() const noexcept;
   [[nodiscard]] std::string path_string() const noexcept;
   [[nodiscard]] const char* path_c_str() const noexcept;
 
  private:
-  std::filesystem::path _path{};
+  boost::filesystem::path _path{};
   archive_ptr_t _arc{nullptr, archive_read_free};
   std::unique_ptr<archive_entry*> _arc_entry{new archive_entry* };
   std::string _buff{};
@@ -55,22 +55,22 @@ class Writer {
   enum Compression : uint8_t { AUTO = 0, NONE = 1, GZIP = 2, BZIP2 = 3, LZMA = 4, ZSTD = 5 };
 
   Writer() = default;
-  explicit Writer(const std::filesystem::path& path, Compression compression = AUTO);  // NOLINT
+  explicit Writer(const boost::filesystem::path& path, Compression compression = AUTO);  // NOLINT
 
   [[nodiscard]] bool is_open() const noexcept;
   void close();
-  void open(const std::filesystem::path& path);
+  void open(const boost::filesystem::path& path);
 
   void write(std::string_view buff);
 
-  [[nodiscard]] const std::filesystem::path& path() const noexcept;
+  [[nodiscard]] const boost::filesystem::path& path() const noexcept;
   [[nodiscard]] std::string path_string() const noexcept;
   [[nodiscard]] const char* path_c_str() const noexcept;
 
-  [[nodiscard]] static Compression infer_compression_from_ext(const std::filesystem::path& p);
+  [[nodiscard]] static Compression infer_compression_from_ext(const boost::filesystem::path& p);
 
  private:
-  std::filesystem::path _path{};
+  boost::filesystem::path _path{};
   Compression _compression{AUTO};
   std::ofstream _fp{};
   boost::iostreams::filtering_ostream _out{};

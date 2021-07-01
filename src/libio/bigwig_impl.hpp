@@ -7,16 +7,16 @@
 #include <bigWig.h>                        // for bwAddIntervalSpanSteps
 #include <fmt/format.h>                    // for FMT_STRING, format
 
-#include <cstddef>      // for size_t
-#include <cstdint>      // for uint32_t, uint64_t, int32_t
-#include <filesystem>   // for file_size
-#include <iterator>     // for pair
-#include <limits>       // for numeric_limits
-#include <stdexcept>    // for runtime_error
-#include <string>       // for string
-#include <string_view>  // for string_view
-#include <type_traits>  // for is_arithmetic, is_signed
-#include <vector>       // for vector
+#include <boost/filesystem/path.hpp>  // for file_size
+#include <cstddef>                    // for size_t
+#include <cstdint>                    // for uint32_t, uint64_t, int32_t
+#include <iterator>                   // for pair
+#include <limits>                     // for numeric_limits
+#include <stdexcept>                  // for runtime_error
+#include <string>                     // for string
+#include <string_view>                // for string_view
+#include <type_traits>                // for is_arithmetic, is_signed
+#include <vector>                     // for vector
 
 namespace modle::bigwig {
 
@@ -92,7 +92,7 @@ uint64_t write_range(absl::flat_hash_map<std::pair<std::string, N1>, std::vector
     }
     throw;
   }
-  return std::filesystem::file_size(output_file);
+  return boost::filesystem::path{std::string{output_file}}.size();
 }
 
 }  // namespace modle::bigwig

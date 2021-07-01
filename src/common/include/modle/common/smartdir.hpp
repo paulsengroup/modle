@@ -2,7 +2,7 @@
 
 #include <atomic>
 #include <boost/filesystem.hpp>
-#include <filesystem>
+#include <boost/filesystem/path.hpp>
 
 namespace modle {
 // The point of this class is to provide a reliable way to create a directory that automatically
@@ -12,15 +12,15 @@ namespace modle {
 class SmartDir {  // NOLINT
  public:
   [[maybe_unused]] inline SmartDir() {
-    std::filesystem::path path{
+    boost::filesystem::path path{
         (boost::filesystem::temp_directory_path() / boost::filesystem::unique_path()).string()};
-    std::filesystem::create_directories(path);
+    boost::filesystem::create_directories(path);
     _path = path;
   }
-  [[maybe_unused]] explicit inline SmartDir(std::filesystem::path path,
+  [[maybe_unused]] explicit inline SmartDir(boost::filesystem::path path,
                                             bool delete_on_destruction = true)
       : _path(std::move(path)), _delete_on_destruction(delete_on_destruction) {
-    std::filesystem::create_directories(_path);
+    boost::filesystem::create_directories(_path);
   }
 
   [[maybe_unused]] explicit inline SmartDir(bool delete_on_destruction) : SmartDir() {
@@ -29,11 +29,11 @@ class SmartDir {  // NOLINT
 
   inline ~SmartDir() {
     if (this->get_delete_on_destruction()) {
-      std::filesystem::remove_all(this->_path);
+      boost::filesystem::remove_all(this->_path);
     }
   }
 
-  [[nodiscard]] inline const std::filesystem::path& operator()() const noexcept {
+  [[nodiscard]] inline const boost::filesystem::path& operator()() const noexcept {
     return this->_path;
   }
   [[maybe_unused]] [[nodiscard]] inline bool get_delete_on_destruction() const noexcept {
@@ -45,7 +45,7 @@ class SmartDir {  // NOLINT
   }
 
  private:
-  std::filesystem::path _path;
+  boost::filesystem::path _path;
   std::atomic<bool> _delete_on_destruction{true};
 };
 }  // namespace modle

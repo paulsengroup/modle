@@ -14,7 +14,6 @@
 #include <cstdint>           // for uint64_t, uint32_t, uint_fast8_t
 #include <cstdio>            // for size_t, stderr
 #include <exception>         // for exception
-#include <filesystem>        // for path, exists, is_directory, operat...
 #include <initializer_list>  // for initializer_list
 #include <stdexcept>         // for invalid_argument, out_of_range
 #include <string>            // for string, basic_string, allocator
@@ -22,10 +21,11 @@
 #include <type_traits>       // for remove_reference<>::type
 #include <vector>            // for vector, swap
 
-#include "modle/bed.hpp"           // for BED::Dialect, Parser, bed_dialects
-#include "modle/common/utils.hpp"  // for throw_with_trace
-#include "modle/cooler.hpp"        // for Cooler, Cooler::READ_ONLY
-#include "modle_tools/config.hpp"  // for config
+#include "modle/bed.hpp"                // for BED::Dialect, Parser, bed_dialects
+#include <boost/filesystem/path.hpp>  // for path, exists, is_directory, operat...
+#include "modle/common/utils.hpp"       // for throw_with_trace
+#include "modle/cooler.hpp"             // for Cooler, Cooler::READ_ONLY
+#include "modle_tools/config.hpp"       // for config
 
 namespace modle::tools {
 
@@ -132,20 +132,20 @@ class Cli {
     assert(this->_cli.get_subcommand("eval")->parsed());  // NOLINT
     std::string errors;
     auto& c = this->_config;
-    if (!std::filesystem::is_directory(c.output_base_name) &&
-        std::filesystem::exists(c.output_base_name)) {
+    if (!boost::filesystem::is_directory(c.output_base_name) &&
+        boost::filesystem::exists(c.output_base_name)) {
       absl::StrAppendFormat(
-          &errors, "--output-dir should point to a directory or a non-existing path. Is '%s'",
-          c.output_base_name);
+          &errors, "--output-dir should point to a directory or a non-existing path. Is \"%s\"",
+          c.output_base_name.string());
     }
 
     if (const auto* s = "/modle_tools/"; !absl::EndsWithIgnoreCase(c.tmp_dir.string(), s)) {
       c.tmp_dir += s;
     }
-    if (!std::filesystem::is_directory(c.tmp_dir) && std::filesystem::exists(c.tmp_dir)) {
+    if (!boost::filesystem::is_directory(c.tmp_dir) && boost::filesystem::exists(c.tmp_dir)) {
       absl::StrAppendFormat(
-          &errors, "--tmp-dir should point to a directory or a non-existing path. Is '%s'\n",
-          c.tmp_dir);
+          &errors, "--tmp-dir should point to a directory or a non-existing path. Is \"%s\"\n",
+          c.tmp_dir.string());
     }
 
     if (!c.force) {
@@ -154,7 +154,7 @@ class Cli {
            {"rho", "tau", "rho_pv", "tau_pv"}) {  // TODO Update this section
         for (std::string_view ext : {"tsv.bz2", "bwig"}) {
           if (auto file = fmt::format("{}_{}.{}", c.output_base_name, suffix, ext);
-              std::filesystem::exists(file)) {
+              boost::filesystem::exists(file)) {
             collisions.emplace_back(file);
           }
         }
@@ -169,18 +169,18 @@ class Cli {
     }
 
     if (!c.chrom_sizes.empty()) {
-      if (std::filesystem::exists(c.chrom_sizes)) {
-        if (std::filesystem::is_directory(c.chrom_sizes)) {
+      if (boost::filesystem::exists(c.chrom_sizes)) {
+        if (boost::filesystem::is_directory(c.chrom_sizes)) {
           absl::StrAppendFormat(
               &errors,
-              "--chrom-sizes='%s' should be the path to an existing chrom.sizes file, "
+              "--chrom-sizes=\"%s\" should be the path to an existing chrom.sizes file, "
               "but is a directory.\n",
-              c.chrom_sizes);
+              c.chrom_sizes.string());
         }
       } else {
         absl::StrAppendFormat(
-            &errors, "--chrom-sizes='%s' should be the path to an existing file or one of.\n",
-            c.chrom_sizes);
+            &errors, "--chrom-sizes=\"%s\" should be the path to an existing file or one of.\n",
+            c.chrom_sizes.string());
       }
     }
 
@@ -199,10 +199,10 @@ class Cli {
     const auto& c = this->_config;
 
     auto valitade_bed = [&](const auto& path) {
-      if (std::filesystem::is_regular_file(path)) {
+      if (boost::filesystem::is_regular_file(path)) {
         const auto status = bed::Parser(path, c.bed_dialect, c.strict_bed_validation).validate();
         if (!status.empty()) {
-          absl::StrAppendFormat(&errors, "Validation failed for file '%s': %s\n", path,
+          absl::StrAppendFormat(&errors, "Validation failed for file \"%s\": %s\n", path.string(),
                                 absl::StripPrefix(status, "An error occurred while reading file"));
         }
       }
@@ -226,8 +226,8 @@ class Cli {
       auto p = modle::bed::Parser(c.path_to_chrom_subranges);
       if (const auto s = p.validate(); !s.empty()) {
         absl::StrAppendFormat(&errors,
-                              "Validation of file '%s' failed with the following error: %s.\n",
-                              c.path_to_input_matrix, s);
+                              "Validation of file \"%s\" failed with the following error: %s.\n",
+                              c.path_to_input_matrix.string(), s);
       }
     }
 
@@ -237,14 +237,15 @@ class Cli {
       if (absl::EndsWith(e.what(),  // NOLINT
                          "A bin size other than 0 is required when calling "
                          "Cooler::validate_multires_cool_flavor()")) {
-        absl::StrAppendFormat(&errors,
-                              "File '%s' appears to be a multi-resolution Cooler. --bin-size is a "
-                              "mandatory argument when processing .mcool files.\n",
-                              c.path_to_input_matrix);
+        absl::StrAppendFormat(
+            &errors,
+            "File \"%s\" appears to be a multi-resolution Cooler. --bin-size is a "
+            "mandatory argument when processing .mcool files.\n",
+            c.path_to_input_matrix.string());
       } else {
         absl::StrAppendFormat(&errors,
-                              "Validation of file '%s' failed with the following error: %s.\n",
-                              c.path_to_input_matrix, e.what());
+                              "Validation of file \"%s\" failed with the following error: %s.\n",
+                              c.path_to_input_matrix.string(), e.what());
       }
     }
 
@@ -252,11 +253,12 @@ class Cli {
       const auto ext = c.path_to_input_matrix.extension().string();
       const auto path =
           absl::StrCat(absl::StripSuffix(c.path_to_input_matrix.string(), ext), "_depl.cool");
-      if (std::filesystem::exists(path)) {
-        absl::StrAppendFormat(&errors, "File '%s' already exists. Pass --force to overwrite", path);
+      if (boost::filesystem::exists(path)) {
+        absl::StrAppendFormat(&errors, "File \"%s\" already exists. Pass --force to overwrite",
+                              path);
       }
-      if (std::filesystem::exists(c.output_path_for_histograms)) {
-        absl::StrAppendFormat(&errors, "File '%s' already exists. Pass --force to overwrite",
+      if (boost::filesystem::exists(c.output_path_for_histograms)) {
+        absl::StrAppendFormat(&errors, "File \"%s\" already exists. Pass --force to overwrite",
                               c.output_path_for_histograms);
       }
     }

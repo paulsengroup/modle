@@ -20,7 +20,7 @@
 #include <cmath>                                    // for round
 #include <cstdio>                                   // for stderr
 #include <deque>                                    // for deque, operator-, operator!=, _Deque_...
-#include <filesystem>                               // for create_directories, operator<<, remov...
+#include <boost/filesystem/path.hpp>                               // for create_directories, operator<<, remov...
 #include <iostream>                                 // for size_t, streamsize, ofstream, operator<<
 #include <iterator>                                 // for move_iterator, make_move_iterator
 #include <limits>                                   // for numeric_limits
@@ -46,9 +46,9 @@ namespace modle {
 void Simulation::run_base() {
   if (!this->skip_output) {  // Write simulation params to file
     if (this->force) {
-      std::filesystem::remove_all(this->path_to_output_file_cool);
+      boost::filesystem::remove_all(this->path_to_output_file_cool);
     }
-    std::filesystem::create_directories(this->path_to_output_file_cool.parent_path());
+    boost::filesystem::create_directories(this->path_to_output_file_cool.parent_path());
     std::ofstream log_file(this->path_to_log_file);
     if (log_file) {
       fmt::print(log_file, FMT_STRING("{}\n{}\n"), Config::to_string(),

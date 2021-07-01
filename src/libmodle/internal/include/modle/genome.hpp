@@ -110,10 +110,10 @@ class Genome {
 
  public:
   Genome() = default;
-  Genome(const std::filesystem::path& path_to_chrom_sizes,
-         const std::filesystem::path& path_to_extr_barriers,
-         const std::filesystem::path& path_to_chrom_subranges,
-         absl::Span<const std::filesystem::path> paths_to_extra_features,
+  Genome(const boost::filesystem::path& path_to_chrom_sizes,
+         const boost::filesystem::path& path_to_extr_barriers,
+         const boost::filesystem::path& path_to_chrom_subranges,
+         absl::Span<const boost::filesystem::path> paths_to_extra_features,
          double ctcf_prob_occ_to_occ, double ctcf_prob_nocc_to_nocc, bool keep_all_chroms);
 
   using iterator = absl::btree_set<Chromosome>::iterator;
@@ -140,10 +140,10 @@ class Genome {
   /// A simple wrapper function that imports chromosomes and extrusion barriers that comprise the
   /// genome that is being simulated.
   [[nodiscard]] static absl::btree_set<Chromosome> instantiate_genome(
-      const std::filesystem::path& path_to_chrom_sizes,
-      const std::filesystem::path& path_to_extr_barriers,
-      const std::filesystem::path& path_to_chrom_subranges,
-      absl::Span<const std::filesystem::path> paths_to_extra_features, double ctcf_prob_occ_to_occ,
+      const boost::filesystem::path& path_to_chrom_sizes,
+      const boost::filesystem::path& path_to_extr_barriers,
+      const boost::filesystem::path& path_to_chrom_subranges,
+      absl::Span<const boost::filesystem::path> paths_to_extra_features, double ctcf_prob_occ_to_occ,
       double ctcf_prob_nocc_to_nocc, bool keep_all_chroms);
 
  private:
@@ -155,19 +155,19 @@ class Genome {
   //! in the chrom.sizes and BED files. The optional BED file can be used to instruct ModLE to
   //! simulate loop extrusion on a sub-region of a chromosome from the chrom.sizes file.
   [[nodiscard]] static absl::btree_set<Chromosome> import_chromosomes(
-      const std::filesystem::path& path_to_chrom_sizes,
-      const std::filesystem::path& path_to_chrom_subranges, bool keep_all_chroms);
+      const boost::filesystem::path& path_to_chrom_sizes,
+      const boost::filesystem::path& path_to_chrom_subranges, bool keep_all_chroms);
 
   /// Parse a BED file containing the genomic coordinates of extrusion barriers and add them to the
   /// Genome
   static size_t import_barriers(absl::btree_set<Chromosome>& chromosomes,
-                                const std::filesystem::path& path_to_extr_barriers,
+                                const boost::filesystem::path& path_to_extr_barriers,
                                 double ctcf_prob_occ_to_occ, double ctcf_prob_nocc_to_nocc);
 
   /// Parse a BED file containing the genomic coordinates of extra features (e.g. promoters,
   /// enhancer) them to the Genome
   static size_t import_extra_features(absl::btree_set<Chromosome>& chromosomes,
-                                      const std::filesystem::path& path_to_extra_features);
+                                      const boost::filesystem::path& path_to_extra_features);
 };
 
 }  // namespace modle

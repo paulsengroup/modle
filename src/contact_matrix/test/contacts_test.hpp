@@ -8,7 +8,7 @@
 #include <cerrno>                                   // for errno
 #include <cstdint>                                  // for uint32_t
 #include <ext/alloc_traits.h>                       // for __alloc_traits<>::value_type
-#include <filesystem>                               // for exists
+#include <boost/filesystem/path.hpp>                               // for exists
 #include <memory>                                   // for allocator_traits<>::value_type
 #include <stdexcept>                                // for runtime_error
 #include <string>                                   // for string, getline
@@ -54,7 +54,7 @@ TEST_CASE("CMatrix simple", "[cmatrix][short]") {
 
 TEST_CASE("CMatrix 10x200", "[cmatrix][medium]") {
   const std::string file_path = "test/data/unit_tests/symm_matrix_200_10.tsv.gz";
-  REQUIRE(std::filesystem::exists(file_path));
+  REQUIRE(boost::filesystem::exists(file_path));
   const auto m1 = load_matrix_from_file(file_path);
   ContactMatrix<> m2(10, 200);  // NOLINT
   for (auto i = 0UL; i < m1.size(); ++i) {

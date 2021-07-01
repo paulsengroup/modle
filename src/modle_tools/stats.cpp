@@ -14,7 +14,7 @@
 #include <cstddef>                                  // for size_t
 #include <cstdint>                                  // for uint64_t
 #include <cstdio>                                   // for stdout
-#include <filesystem>                               // for path, create_directories, remove_all
+#include <boost/filesystem/path.hpp>                               // for path, create_directories, remove_all
 #include <fstream>                                  // for ofstream, basic_ofstream
 #include <iterator>                                 // for insert_iterator, inserter
 #include <memory>                                   // for unique_ptr, make_unique
@@ -83,12 +83,12 @@ void stats_subcmd(const modle::tools::config& c) {
     const auto ext = c.path_to_input_matrix.extension().string();
     const auto path =
         absl::StrCat(absl::StripSuffix(c.path_to_input_matrix.string(), ext), "_depl.cool");
-    std::filesystem::remove_all(path);
+    boost::filesystem::remove_all(path);
     m2 = std::make_unique<cooler::Cooler>(path, cooler::Cooler::WRITE_ONLY, bin_size);
   }
 
   if (!path_to_output_hist.empty()) {  // Create hist. file
-    std::filesystem::create_directories(std::filesystem::path(path_to_output_hist).parent_path());
+    boost::filesystem::create_directories(boost::filesystem::path(path_to_output_hist).parent_path());
     hist_file = std::make_unique<std::ofstream>(path_to_output_hist);
     std::vector<size_t> buff(c.diagonal_width / bin_size);
     std::iota(buff.begin(), buff.end(), 0);
