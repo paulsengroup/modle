@@ -9,10 +9,14 @@
 #include "modle/common/random.hpp"
 #include "modle/correlation.hpp"  // for compute_pearson, compute_pearson_significance, compute_...
 
+#include "modle/common/smartdir.hpp"  // IWYU pragma: keep
+
+namespace modle::test {
+const extern SmartDir testdir;  // NOLINT
+}
 namespace modle::test::correlation {
 using namespace modle::correlation;
 
-inline const std::filesystem::path test_dir{"/tmp/modle/unit_tests"};  // NOLINT
 
 TEST_CASE("Corr. test: Pearson wo ties", "[correlation][pearson][short]") {
   std::vector<uint32_t> v1{17, 86, 60, 77, 47, 3, 70, 87, 88, 92};   // NOLINT
@@ -38,7 +42,7 @@ TEST_CASE("Corr. test: Pearson Scipy", "[correlation][pearson][short]") {
   auto v2 = generate_random_vect(rnd_eng, 1'000, 0, 15'000);  // NOLINT
   const auto pcc = compute_pearson(v1, v2);
   const auto pv = compute_pearson_significance(pcc, v1.size());
-  const auto& [pcc_py, pv_py] = corr_scipy(v1, v2, "pearsonr", test_dir);
+  const auto& [pcc_py, pv_py] = corr_scipy(v1, v2, "pearsonr", testdir());
   CHECK(Approx(pcc).margin(0) == pcc_py);
   CHECK(Approx(pv).margin(0) == pv_py);
 }
@@ -50,7 +54,7 @@ TEST_CASE("Corr. test: Pearson Scipy long", "[correlation][pearson][medium]") {
     auto v2 = generate_random_vect(rnd_eng, 1'000, 0, 15'000);  // NOLINT
     const auto pcc = compute_pearson(v1, v2);
     const auto pv = compute_pearson_significance(pcc, v1.size());
-    const auto& [pcc_py, pv_py] = corr_scipy(v1, v2, "pearsonr", test_dir);
+    const auto& [pcc_py, pv_py] = corr_scipy(v1, v2, "pearsonr", testdir());
     CHECK(Approx(pcc).margin(0) == pcc_py);
     CHECK(Approx(pv).margin(0) == pv_py);
   }
@@ -62,7 +66,7 @@ TEST_CASE("Corr. test: Pearson Scipy long vect.", "[correlation][pearson][medium
   auto v2 = generate_random_vect(rnd_eng, 1'000'000, 0, 15'000);  // NOLINT
   const auto pcc = compute_pearson(v1, v2);
   const auto pv = compute_pearson_significance(pcc, v1.size());
-  const auto& [pcc_py, pv_py] = corr_scipy(v1, v2, "pearsonr", test_dir);
+  const auto& [pcc_py, pv_py] = corr_scipy(v1, v2, "pearsonr", testdir());
   CHECK(Approx(pcc).margin(0) == pcc_py);
   CHECK(Approx(pv).margin(0) == pv_py);
 }
@@ -91,7 +95,7 @@ TEST_CASE("Corr. test: Spearman Scipy", "[correlation][spearman][short]") {
   auto v2 = generate_random_vect(rnd_eng, 1'000, 0, 15'000);  // NOLINT
   const auto rho = compute_spearman(v1, v2);
   const auto pv = compute_spearman_significance(rho, v1.size());
-  const auto& [rho_py, pv_py] = corr_scipy(v1, v2, "spearmanr", test_dir);
+  const auto& [rho_py, pv_py] = corr_scipy(v1, v2, "spearmanr", testdir());
   CHECK(Approx(rho).margin(0) == rho_py);
   CHECK(Approx(pv).margin(0) == pv_py);
 }
@@ -103,7 +107,7 @@ TEST_CASE("Corr. test: Spearman Scipy long", "[correlation][spearman][medium]") 
     auto v2 = generate_random_vect(rnd_eng, 1'000, 0, 15'000);  // NOLINT
     const auto rho = compute_spearman(v1, v2);
     const auto pv = compute_spearman_significance(rho, v1.size());
-    const auto& [rho_py, pv_py] = corr_scipy(v1, v2, "spearmanr", test_dir);
+    const auto& [rho_py, pv_py] = corr_scipy(v1, v2, "spearmanr", testdir());
     CHECK(Approx(rho).margin(0) == rho_py);
     CHECK(Approx(pv).margin(0) == pv_py);
   }
@@ -115,7 +119,7 @@ TEST_CASE("Corr. test: Spearman Scipy long vect.", "[correlation][spearman][medi
   auto v2 = generate_random_vect(rnd_eng, 1'000'000, 0, 15'000);  // NOLINT
   const auto rho = compute_spearman(v1, v2);
   const auto pv = compute_spearman_significance(rho, v1.size());
-  const auto& [rho_py, pv_py] = corr_scipy(v1, v2, "spearmanr", test_dir);
+  const auto& [rho_py, pv_py] = corr_scipy(v1, v2, "spearmanr", testdir());
   CHECK(Approx(rho).margin(0) == rho_py);
   CHECK(Approx(pv).margin(0) == pv_py);
 }

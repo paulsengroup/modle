@@ -10,14 +10,18 @@
 #include <string_view>       // for string_view
 #include <vector>            // for vector
 
+#include "modle/common/smartdir.hpp"  // IWYU pragma: keep
 #include "modle/hdf5.hpp"
+
+namespace modle::test {
+const extern SmartDir testdir;  // NOLINT
+}
 
 namespace modle::test::hdf5 {
 using namespace modle::hdf5;
 
 static constexpr auto MAX_STR_LENGTH = 32UL;
 
-inline const std::filesystem::path test_dir{"/tmp/modle/unit_tests"};  // NOLINT
 [[nodiscard]] inline H5::StrType init_str_type() {
   auto st = H5::StrType(H5::PredType::C_S1, MAX_STR_LENGTH);
   st.setStrpad(H5T_STR_NULLPAD);
@@ -61,8 +65,8 @@ inline H5::DataSet init_test_int64_dataset(H5::H5File& f, std::string_view path 
 }
 
 TEST_CASE("read_write_strings HDF5", "[io][hdf5][short]") {
-  const auto test_file = test_dir / "rw_strings.hdf5";
-  std::filesystem::create_directories(test_dir);
+  const auto test_file = testdir() / "rw_strings.hdf5";
+  std::filesystem::create_directories(testdir());
 
   std::vector<std::string> v{"0", "QWERTY", "ABCDE", "0123456789", "!\"#¤%&/()=?"};
 
@@ -80,15 +84,15 @@ TEST_CASE("read_write_strings HDF5", "[io][hdf5][short]") {
   for (auto i = 0UL; i < v.size(); ++i) {
     CHECK(v[i] == buffv[i]);
   }
-  std::filesystem::remove_all(test_dir);
-  if (const auto& p = test_dir.parent_path(); std::filesystem::is_empty(p)) {
+  std::filesystem::remove_all(testdir());
+  if (const auto& p = testdir().parent_path(); std::filesystem::is_empty(p)) {
     std::filesystem::remove(p);
   }
 }
 
 TEST_CASE("read_write_ints HDF5", "[io][hdf5][short]") {
-  const auto test_file = test_dir / "rw_ints.hdf5";
-  std::filesystem::create_directories(test_dir);
+  const auto test_file = testdir() / "rw_ints.hdf5";
+  std::filesystem::create_directories(testdir());
   std::vector<int64_t> v{std::numeric_limits<int64_t>::min(), -10, 0, 10,  // NOLINT
                          std::numeric_limits<int64_t>::max()};
   H5::H5File f(test_file.string(), H5F_ACC_TRUNC);
@@ -107,15 +111,15 @@ TEST_CASE("read_write_ints HDF5", "[io][hdf5][short]") {
   for (auto i = 0UL; i < v.size(); ++i) {
     CHECK(v[i] == buffv[i]);
   }
-  std::filesystem::remove_all(test_dir);
-  if (const auto& p = test_dir.parent_path(); std::filesystem::is_empty(p)) {
+  std::filesystem::remove_all(testdir());
+  if (const auto& p = testdir().parent_path(); std::filesystem::is_empty(p)) {
     std::filesystem::remove(p);
   }
 }
 
 TEST_CASE("has_group HDF5", "[io][hdf5][short]") {
-  const auto test_file = test_dir / "has_group.hdf5";
-  std::filesystem::create_directories(test_dir);
+  const auto test_file = testdir() / "has_group.hdf5";
+  std::filesystem::create_directories(testdir());
   H5::H5File f(test_file.string(), H5F_ACC_TRUNC);
   (void)init_test_int64_dataset(f);
   f.createGroup("/g1");
@@ -129,15 +133,15 @@ TEST_CASE("has_group HDF5", "[io][hdf5][short]") {
   CHECK(!has_group(f, "2", "g2"));
   CHECK_THROWS_WITH(has_group(f, "test"), Catch::Matchers::EndsWith("exists but is not a group"));
 
-  std::filesystem::remove_all(test_dir);
-  if (const auto& p = test_dir.parent_path(); std::filesystem::is_empty(p)) {
+  std::filesystem::remove_all(testdir());
+  if (const auto& p = testdir().parent_path(); std::filesystem::is_empty(p)) {
     std::filesystem::remove(p);
   }
 }
 
 TEST_CASE("check_dataset_type HDF5", "[io][hdf5][short]") {
-  const auto test_file = test_dir / "dset_type.hdf5";
-  std::filesystem::create_directories(test_dir);
+  const auto test_file = testdir() / "dset_type.hdf5";
+  std::filesystem::create_directories(testdir());
   H5::H5File f(test_file.string(), H5F_ACC_TRUNC);
   f.createGroup("/g1");
   auto int_dataset = init_test_int64_dataset(f);
@@ -156,15 +160,15 @@ TEST_CASE("check_dataset_type HDF5", "[io][hdf5][short]") {
   CHECK_THROWS_WITH(check_dataset_type(int_dataset, H5::PredType::NATIVE_UINT64),
                     Catch::Matchers::Contains("incorrect signedness"));
 
-  std::filesystem::remove_all(test_dir);
-  if (const auto& p = test_dir.parent_path(); std::filesystem::is_empty(p)) {
+  std::filesystem::remove_all(testdir());
+  if (const auto& p = testdir().parent_path(); std::filesystem::is_empty(p)) {
     std::filesystem::remove(p);
   }
 }
 
 TEST_CASE("read_write_string HDF5 - long string", "[io][hdf5][short]") {
-  const auto test_file = test_dir / "rw_strings.hdf5";
-  std::filesystem::create_directories(test_dir);
+  const auto test_file = testdir() / "rw_strings.hdf5";
+  std::filesystem::create_directories(testdir());
 
   std::string s(MAX_STR_LENGTH + 1, '#');
 
@@ -177,8 +181,8 @@ TEST_CASE("read_write_string HDF5 - long string", "[io][hdf5][short]") {
 #else
   CHECK(write_str(s, dataset, init_str_type(), 0) == 1);
 #endif
-  std::filesystem::remove_all(test_dir);
-  if (const auto& p = test_dir.parent_path(); std::filesystem::is_empty(p)) {
+  std::filesystem::remove_all(testdir());
+  if (const auto& p = testdir().parent_path(); std::filesystem::is_empty(p)) {
     std::filesystem::remove(p);
   }
 }

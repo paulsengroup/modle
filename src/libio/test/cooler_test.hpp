@@ -11,14 +11,17 @@
 #include <stdexcept>         // for runtime_error
 #include <string_view>       // for string_view
 
-#include "modle/contacts.hpp"  // for ContactMatrix
-#include "modle/cooler.hpp"    // for Cooler, Cooler::READ_ONLY, Cooler::COOL, Cooler::WRITE_ONLY
+#include "modle/common/smartdir.hpp"  // IWYU pragma: keep
+#include "modle/contacts.hpp"         // for ContactMatrix
+#include "modle/cooler.hpp"  // for Cooler, Cooler::READ_ONLY, Cooler::COOL, Cooler::WRITE_ONLY
 
+namespace modle::test {
+const extern SmartDir testdir;  // NOLINT
+}
 namespace modle::test::cooler {
 using namespace modle::cooler;
 
-inline const std::filesystem::path test_dir{"/tmp/modle/unit_tests"};  // NOLINT
-inline const std::filesystem::path data_dir{"test/data/unit_tests"};   // NOLINT
+inline const std::filesystem::path data_dir{"test/data/unit_tests"};  // NOLINT
 
 TEST_CASE("cooler ctor", "[io][cooler][short]") {
   const auto test_file = data_dir / "Dixon2012-H1hESC-HindIII-allreps-filtered.1000kb.cool";
@@ -35,8 +38,8 @@ TEST_CASE("cooler ctor", "[io][cooler][short]") {
 }
 
 TEST_CASE("CMatrix to cooler", "[io][cooler][short]") {
-  const auto test_file = test_dir / "cmatrix_to_cooler.cool";
-  std::filesystem::create_directories(test_dir);
+  const auto test_file = testdir() / "cmatrix_to_cooler.cool";
+  std::filesystem::create_directories(testdir());
 
   constexpr std::string_view chrom = "chr0";
   constexpr uint64_t start = 0;
@@ -50,10 +53,7 @@ TEST_CASE("CMatrix to cooler", "[io][cooler][short]") {
   ContactMatrix<int32_t> cmatrix(nrows, ncols, true);
   c.write_or_append_cmatrix_to_file(cmatrix, chrom, start, end, end);
 
-  std::filesystem::remove_all(test_dir);
-  if (const auto& p = test_dir.parent_path(); std::filesystem::is_empty(p)) {
-    std::filesystem::remove(p);
-  }
+  std::filesystem::remove(test_file);
 }
 
 TEST_CASE("Cooler to CMatrix", "[io][cooler][short]") {
@@ -74,8 +74,7 @@ TEST_CASE("Cooler to CMatrix", "[io][cooler][short]") {
 
 TEST_CASE("Cooler to CMatrix and CMatrix to Cooler", "[io][cooler][short]") {
   const auto test_file_in = data_dir / "Dixon2012-H1hESC-HindIII-allreps-filtered.1000kb.cool";
-  const auto test_file_out = test_dir / "cmatrix_to_cooler.cool";
-  std::filesystem::create_directories(test_dir);
+  const auto test_file_out = testdir() / "cmatrix_to_cooler.cool";
 
   auto c1 = Cooler(test_file_in, Cooler::READ_ONLY);
 
@@ -109,10 +108,7 @@ TEST_CASE("Cooler to CMatrix and CMatrix to Cooler", "[io][cooler][short]") {
 
   CHECK(mismatches == 0);
 
-  std::filesystem::remove_all(test_dir);
-  if (const auto& p = test_dir.parent_path(); std::filesystem::is_empty(p)) {
-    std::filesystem::remove(p);
-  }
+  std::filesystem::remove(test_file_out);
 }
 /*
 TEST_CASE("Cooler testing balanced matrix", "[io][cooler][short]") {
