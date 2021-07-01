@@ -5,7 +5,7 @@
 
 #include "modle/common/utils.hpp"
 
-#if !defined(USE_MERSENNE_TWISTER)
+#if !defined(MODLE_USE_MERSENNE_TWISTER)
 #define USE_XOSHIRO
 #endif
 
@@ -13,12 +13,12 @@
 #include <Xoshiro-cpp/XoshiroCpp.hpp>  // for XoshiroCpp::Xoshiro256PlusPlus XoshiroCpp::SplitMix64
 #endif
 
-#if defined(USE_MERSENNE_TWISTER) && defined(USE_BOOST_RANDOM_LIB)
+#if defined(MODLE_USE_MERSENNE_TWISTER) && defined(MODLE_WITH_BOOST_RANDOM)
 #include <boost/random/mersenne_twister.hpp>
 #include <boost/random/seed_seq.hpp>
 #endif
 
-#ifdef USE_BOOST_RANDOM_LIB
+#ifdef MODLE_WITH_BOOST_RANDOM
 #include <boost/random/bernoulli_distribution.hpp>
 #include <boost/random/discrete_distribution.hpp>
 #include <boost/random/generate_canonical.hpp>
@@ -32,7 +32,7 @@
 
 namespace modle::random {
 
-#if defined(USE_MERSENNE_TWISTER) && defined(USE_BOOST_RANDOM_LIB)
+#if defined(MODLE_USE_MERSENNE_TWISTER) && defined(MODLE_WITH_BOOST_RANDOM)
 [[nodiscard]] inline boost::random::mt19937_64 PRNG(uint64_t seed) noexcept(
     utils::ndebug_defined()) {
   auto seeder = boost::random::seed_seq{seed};
@@ -40,7 +40,7 @@ namespace modle::random {
 }
 #endif
 
-#if defined(USE_MERSENNE_TWISTER) && !defined(USE_BOOST_RANDOM_LIB)
+#if defined(MODLE_USE_MERSENNE_TWISTER) && !defined(MODLE_WITH_BOOST_RANDOM)
 [[nodiscard]] inline std::mt19937_64 PRNG(uint64_t seed) noexcept(utils::ndebug_defined()) {
   auto seeder = std::seed_seq{seed};
   return std::mt19937_64{seeder};
@@ -57,7 +57,7 @@ namespace modle::random {
 
 using PRNG_t = decltype(std::function{PRNG})::result_type;
 
-#ifdef USE_BOOST_RANDOM_LIB
+#ifdef MODLE_WITH_BOOST_RANDOM
 using bernoulli_trial = boost::random::bernoulli_distribution<double>;
 template <class N>
 using discrete_distribution = boost::random::discrete_distribution<N>;

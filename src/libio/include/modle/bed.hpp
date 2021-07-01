@@ -219,7 +219,7 @@ class Parser {
   void reset();
 
  private:
-  compressed_io::Reader _fp{};
+  compressed_io::Reader _reader{};
   std::string _buff{};
   size_t _num_records_parsed{0};
   size_t _num_lines_read{0};

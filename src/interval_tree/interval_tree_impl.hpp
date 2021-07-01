@@ -48,8 +48,8 @@ IITree<I, T>::IITree(size_t start_pos_, size_t end_pos_)
 template <typename I, typename T>
 template <typename I2, typename>
 void IITree<I, T>::insert(const I2 start, const I2 end, const T &data) {
-  assert(this->start_pos() <= start);  // NOLINT
-  assert(this->end_pos() > end);       // NOLINT
+  assert(this->start_pos() <= static_cast<size_t>(start));  // NOLINT
+  assert(this->end_pos() > static_cast<size_t>(end));       // NOLINT
 
   this->_indexed = false;
   this->_start.emplace_back(I2(start));
@@ -61,8 +61,8 @@ void IITree<I, T>::insert(const I2 start, const I2 end, const T &data) {
 template <typename I, typename T>
 template <typename I2, typename>
 void IITree<I, T>::emplace(const I2 start, const I2 end, T &&data) {
-  assert(this->start_pos() <= start);  // NOLINT
-  assert(this->end_pos() > end);       // NOLINT
+  assert(this->start_pos() <= static_cast<size_t>(start));  // NOLINT
+  assert(this->end_pos() > static_cast<size_t>(end));       // NOLINT
 
   this->_indexed = false;
   this->_start.emplace_back(I2(start));

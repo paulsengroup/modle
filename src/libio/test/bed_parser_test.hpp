@@ -58,7 +58,7 @@ inline void compare_bed_records_with_file(std::vector<BED> records, const std::s
   }
 }
 
-TEST_CASE("BED Parser simple", "[parsers][BED][short]") {
+TEST_CASE("BED Parser simple", "[parsers][BED][io][short]") {
   const std::string bed_file = "test/data/unit_tests/sample.bed6.gz";
   auto p = bed::Parser(bed_file);
   auto records = p.parse_all();
@@ -71,7 +71,7 @@ TEST_CASE("BED Parser simple", "[parsers][BED][short]") {
   CHECK(records[0].strand == '+');
 }
 
-TEST_CASE("BED Parser simple: BED6 -> BED3", "[parsers][BED][short]") {
+TEST_CASE("BED Parser simple: BED6 -> BED3", "[parsers][BED][io][short]") {
   const std::string bed_file = "test/data/unit_tests/sample.bed6.gz";
   auto p = bed::Parser(bed_file, BED::BED3);
   auto records = p.parse_all();
@@ -83,14 +83,14 @@ TEST_CASE("BED Parser simple: BED6 -> BED3", "[parsers][BED][short]") {
   CHECK(records[0].strand == '.');
 }
 
-TEST_CASE("BED Parser: BED6", "[parsers][BED][medium]") {
+TEST_CASE("BED Parser: BED6", "[parsers][BED][io][medium]") {
   const std::string bed_file = "test/data/unit_tests/sample.bed6.gz";
   auto p = bed::Parser(bed_file);
   auto records = p.parse_all();
   compare_bed_records_with_file(records, bed_file);
 }
 
-TEST_CASE("BED Parser: BED9", "[parsers][BED][medium]") {
+TEST_CASE("BED Parser: BED9", "[parsers][BED][io][medium]") {
   std::string bed_file = "test/data/unit_tests/sample.bed9.gz";
   auto p = bed::Parser(bed_file);
   auto records = p.parse_all();

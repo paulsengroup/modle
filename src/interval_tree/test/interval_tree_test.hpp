@@ -23,7 +23,7 @@ using IITree_t = IITree<size_t, Record>;
 void test_find_overlaps(const IITree_t& tree, size_t start, size_t end,
                         size_t num_expected_overlaps) {
   const auto [overlap_begin, overlap_end] = tree.find_overlaps(start, end);
-  CHECK(overlap_end - overlap_begin == num_expected_overlaps);
+  CHECK(static_cast<size_t>(overlap_end - overlap_begin) == num_expected_overlaps);
 }
 
 TEST_CASE("Interval tree simple", "[interval-tree][short]") {

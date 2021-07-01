@@ -41,8 +41,8 @@ if(ENABLE_PSO AND NOT MSVC)
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -march=${ARCH}")
 endif()
 
-option(USE_MERSENNE_TWISTER "Use Mersenne Twister instead of Xoshiro as default PRNG engine" OFF)
-option(USE_BOOST_RANDOM_LIB "Use boost's random library instead of that from the STL (recommended)" ON)
+option(MODLE_USE_MERSENNE_TWISTER "Use Mersenne Twister instead of Xoshiro as default PRNG engine" OFF)
+option(WITH_BOOST_RANDOM "Use Boost's random library instead of that from the STL (recommended)" ON)
 option(ENABLE_CXX20 "Compile project under C++20 if this is supported by the compiler" OFF)
 
 option(OPTIMIZE_FOR_PROFILING

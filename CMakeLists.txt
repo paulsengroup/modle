@@ -15,13 +15,18 @@ include(CheckCXXCompilerFlag)
 # Link this 'library' to set the c++ standard / compile-time options requested
 add_library(project_options INTERFACE)
 
-if(ENABLE_CXX20)
-  check_cxx_compiler_flag("-std=c++20" CXX20_COMPILER_AVAILABLE)
+check_cxx_compiler_flag("-std=c++20" MODLE_CXX20_COMPILER_AVAILABLE)
+if (MODLE_CXX20_COMPILER_AVAILABLE)
+  set(MODLE_CXX20_COMPILER_AVAILABLE ON)
+else()
+  set(MODLE_CXX20_COMPILER_AVAILABLE OFF)
 endif()
 
-if(ENABLE_CXX20 AND CXX20_COMPILER_AVAILABLE)
+if(MODLE_ENABLE_CXX20 AND MODLE_CXX20_COMPILER_AVAILABLE)
+  set(CMAKE_CXX_STANDARD 20)
   target_compile_features(project_options INTERFACE cxx_std_20)
 else()
+  set(CMAKE_CXX_STANDARD 17)
   target_compile_features(project_options INTERFACE cxx_std_17)
 endif()
 
@@ -198,8 +203,8 @@ if(ENABLE_ASSERTIONS)
   endif()
 endif()
 
-if(USE_BOOST_RANDOM_LIB)
-  target_compile_definitions(project_options INTERFACE USE_BOOST_RANDOM_LIB=1)
+if(WITH_BOOST_RANDOM)
+  target_compile_definitions(project_options INTERFACE MODLE_WITH_BOOST_RANDOM=1)
 endif()
 
 # Prepare external dependencies

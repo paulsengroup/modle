@@ -17,7 +17,7 @@ target_link_libraries(
   modle_common
   INTERFACE project_options
             project_warnings
-            $<$<NOT:$<BOOL:${USE_MERSENNE_TWISTER}>>:XoshiroCpp::XoshiroCpp>
+            $<$<NOT:$<BOOL:${MODLE_USE_MERSENNE_TWISTER}>>:XoshiroCpp::XoshiroCpp>
             CONAN_PKG::abseil
             CONAN_PKG::boost
             CONAN_PKG::fmt

@@ -132,7 +132,7 @@ absl::Span<const BED> BED_tree<K, I>::find_overlaps(const K& chrom_name, uint64_
   if (overlap_begin == it->second.data_end()) {
     return absl::Span<const BED>{};
   }
-  return absl::MakeConstSpan(&(*overlap_begin), overlap_end - overlap_begin);
+  return absl::MakeConstSpan(&(*overlap_begin), static_cast<size_t>(overlap_end - overlap_begin));
 }
 
 template <typename K, typename I>

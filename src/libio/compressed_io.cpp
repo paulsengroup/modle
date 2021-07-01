@@ -5,20 +5,19 @@
 #include <fmt/format.h>     // system_error
 #include <fmt/ostream.h>
 
-#include <boost/iostreams/copy.hpp>
 #include <boost/iostreams/filter/bzip2.hpp>
 #include <boost/iostreams/filter/gzip.hpp>
 #include <boost/iostreams/filter/lzma.hpp>
 #include <boost/iostreams/filter/zstd.hpp>
 #include <cassert>      // for assert
 #include <filesystem>   // for path
-#include <memory>       // for unique_ptr
 #include <string>       // for string
 #include <string_view>  // for string_view
 
 #include "modle/common/utils.hpp"  // for ndebug_defined
 
 namespace modle::compressed_io {
+
 Reader::Reader(const std::filesystem::path& path, size_t buff_capacity) {
   this->_buff.reserve(buff_capacity);
   this->open(path);
@@ -30,8 +29,9 @@ void Reader::open(const std::filesystem::path& path) {
       throw std::runtime_error(fmt::format(FMT_STRING("File {} appears to be empty"), this->_path));
     }
     if (status < ARCHIVE_OK) {
-      throw fmt::system_error(archive_errno(this->_arc.get()),
-                              FMT_STRING("Failed to open file {} for reading"), this->_path);
+      throw std::runtime_error(fmt::format(
+          FMT_STRING("Failed to open file {} for reading (error code {}): {}"), this->_path,
+          archive_errno(this->_arc.get()), archive_error_string(this->_arc.get())));
     }
   };
 
@@ -86,10 +86,10 @@ void Reader::handle_libarchive_errors(la_ssize_t errcode) const {
 }
 
 void Reader::handle_libarchive_errors() const {
-  if (const auto status = archive_errno(this->_arc.get()); status != 0) {
-    throw fmt::system_error(archive_errno(this->_arc.get()),
-                            FMT_STRING("The following error occurred while reading file {}"),
-                            this->_path);
+  if (const auto status = archive_errno(this->_arc.get()); status < ARCHIVE_OK) {
+    throw std::runtime_error(fmt::format(
+        FMT_STRING("The following error occurred while reading file (error code {}): {}"),
+        this->_path, archive_errno(this->_arc.get()), archive_error_string(this->_arc.get())));
   }
 }
 
@@ -208,6 +208,7 @@ void Writer::open(const std::filesystem::path& path) {
   if (this->_compression == AUTO) {
     this->_compression = infer_compression_from_ext(path);
   }
+
   switch (this->_compression) {
     case GZIP:
       this->_out.push(boost::iostreams::gzip_compressor(

@@ -14,7 +14,7 @@
 namespace modle::test::bed {
 using namespace modle::bed;
 
-TEST_CASE("BED Tree simple", "[BED][short]") {
+TEST_CASE("BED Tree simple", "[BED][io][short]") {
   const std::string all_intervals = "test/data/unit_tests/H1_ctcf_all_chroms.bed.gz";
 
   Parser p(all_intervals, bed::BED::BED3);
@@ -34,7 +34,7 @@ TEST_CASE("BED Tree simple", "[BED][short]") {
   }
 }
 
-TEST_CASE("BED Tree multiple overlaps", "[BED][short]") {
+TEST_CASE("BED Tree multiple overlaps", "[BED][io][short]") {
   const std::string all_intervals = "test/data/unit_tests/H1_ctcf_all_chroms.bed.gz";
   const std::string counts_per_interval =
       "test/data/unit_tests/H1_ctcf_all_chroms_per_interval.tsv.gz";
