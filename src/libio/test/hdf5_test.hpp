@@ -2,9 +2,9 @@
 
 #include <H5Cpp.h>  // IWYU pragma: keep
 
+#include <boost/filesystem/path.hpp>  // for path, create_directories, is_empty, operator/, remove, remov...
 #include <catch2/catch.hpp>  // for operator""_catch_sr, AssertionHandler, SourceLineInfo, Strin...
 #include <cstdint>           // for int64_t
-#include <boost/filesystem/path.hpp>        // for path, create_directories, is_empty, operator/, remove, remov...
 #include <limits>            // for numeric_limits
 #include <string>            // for string, allocator, basic_string, operator==
 #include <string_view>       // for string_view

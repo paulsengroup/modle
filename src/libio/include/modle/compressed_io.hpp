@@ -3,8 +3,8 @@
 #include <archive.h>                       // for archive
 #include <archive_entry.h>                 // for archive_entry_new, archive_entry_free
 
-#include <boost/iostreams/filtering_stream.hpp>
 #include <boost/filesystem/path.hpp>  // for path
+#include <boost/iostreams/filtering_stream.hpp>
 #include <fstream>
 #include <iostream>
 #include <memory>       // for unique_ptr

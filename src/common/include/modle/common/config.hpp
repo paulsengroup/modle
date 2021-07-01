@@ -162,7 +162,6 @@ struct Config {  // NOLINT(altera-struct-pack-align)
   }
 
   inline void print() const { fmt::print(stderr, FMT_STRING("{}\n\n"), this->to_string()); }
-
 };
 
 }  // namespace modle

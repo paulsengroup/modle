@@ -8,10 +8,10 @@
 #include <atomic>                                   // for atomic
 #include <boost/asio/thread_pool.hpp>               // for thread_pool
 #include <boost/dynamic_bitset/dynamic_bitset.hpp>  // for dynamic_bitset
+#include <boost/filesystem/path.hpp>                // for path
 #include <cstddef>                                  // for size_t
 #include <cstdint>                                  // for uint64_t
 #include <deque>                                    // for deque
-#include <boost/filesystem/path.hpp>                               // for path
 #include <limits>                                   // for numeric_limits
 #include <memory>                                   // for unique_ptr
 #include <mutex>                                    // for mutex

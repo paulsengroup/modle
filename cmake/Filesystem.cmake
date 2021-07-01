@@ -29,7 +29,7 @@ check_cxx_source_compiles(
   LIBCXX_REQUIRES_LCXXFS_LINK_FLAG)
 
 check_cxx_source_compiles(
-   "#include <filesystem>
+  "#include <filesystem>
 
      std::filesystem::path p(\"foo\");
 
@@ -42,7 +42,7 @@ if(STDLIBCXX_REQUIRES_LSTDCXXFS_LINK_FLAG OR LIBCXX_REQUIRES_LCXXFS_LINK_FLAG)
   set(EXPLICIT_LINK_VS_FILESYSTEM_REQUIRED TRUE)
 endif()
 
-if (NOT STD_FILESYSTEM_AVAILABLE)
+if(NOT STD_FILESYSTEM_AVAILABLE)
   set(EXPLICIT_LINK_VS_FILESYSTEM_REQUIRED FALSE)
 endif()
 

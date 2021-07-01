@@ -1,8 +1,8 @@
 #pragma once
 
-#include <catch2/catch.hpp>  // for AssertionHandler, operator""_catch_sr, SourceLineInfo
-#include <boost/filesystem/path.hpp>        // for exists
-#include <fstream>           // for ifstrea, getline
+#include <boost/filesystem/path.hpp>  // for exists
+#include <catch2/catch.hpp>           // for AssertionHandler, operator""_catch_sr, SourceLineInfo
+#include <fstream>                    // for ifstrea, getline
 #include <iostream>
 #include <string>  // for string, basic_string, operator==, char_traits, stoull
 

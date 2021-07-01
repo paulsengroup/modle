@@ -14,6 +14,7 @@
 #include <atomic>                                   // for atomic
 #include <boost/asio/thread_pool.hpp>               // for thread_pool
 #include <boost/dynamic_bitset/dynamic_bitset.hpp>  // for dynamic_bitset, dynamic_bitset<>::ref...
+#include <boost/filesystem/path.hpp>                // for operator<<, path
 #include <cassert>                                  // for assert
 #include <chrono>                                   // for microseconds
 #include <cmath>                                    // for round
@@ -21,7 +22,6 @@
 #include <cstdio>                                   // for stderr
 #include <cstdlib>                                  // for abs
 #include <deque>                                    // for deque
-#include <boost/filesystem/path.hpp>                               // for operator<<, path
 #include <ios>                                      // for streamsize
 #include <limits>                                   // for numeric_limits
 #include <memory>                                   // for unique_ptr, make_unique, _MakeUniq<>:...

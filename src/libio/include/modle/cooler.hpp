@@ -15,14 +15,14 @@
 #include <absl/types/span.h>                      // for Span
 #include <readerwriterqueue/readerwriterqueue.h>  // for BlockingReadWriterQueue
 
-#include <cstddef>      // IWYU pragma: keep for size_t
-#include <cstdint>      // for int64_t, uint_fast8_t, uint32_t, int32_t
-#include <boost/filesystem/path.hpp>   // for path
-#include <memory>       // for unique_ptr, allocator
-#include <string>       // for string
-#include <string_view>  // for string_view
-#include <utility>      // for pair
-#include <vector>       // for vector
+#include <boost/filesystem/path.hpp>  // for path
+#include <cstddef>                    // IWYU pragma: keep for size_t
+#include <cstdint>                    // for int64_t, uint_fast8_t, uint32_t, int32_t
+#include <memory>                     // for unique_ptr, allocator
+#include <string>                     // for string
+#include <string_view>                // for string_view
+#include <utility>                    // for pair
+#include <vector>                     // for vector
 
 namespace modle {
 template <typename I>
@@ -71,9 +71,9 @@ class Cooler {
   static constexpr size_t DEFAULT_HDF5_CACHE_SIZE = 16 * 1024 * 1024ULL;  // 16MB
 
   Cooler() = delete;
-  explicit Cooler(boost::filesystem::path path_to_file, IO_MODE mode = READ_ONLY, size_t bin_size = 0,
-                  size_t max_str_length = 0, std::string_view assembly_name = "",
-                  Flavor flavor = AUTO, bool validate = true,
+  explicit Cooler(boost::filesystem::path path_to_file, IO_MODE mode = READ_ONLY,
+                  size_t bin_size = 0, size_t max_str_length = 0,
+                  std::string_view assembly_name = "", Flavor flavor = AUTO, bool validate = true,
                   uint_fast8_t compression_lvl = DEFAULT_COMPRESSION_LEVEL,
                   size_t chunk_size = DEFAULT_HDF5_CHUNK_SIZE,
                   size_t cache_size = DEFAULT_HDF5_CACHE_SIZE);

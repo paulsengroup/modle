@@ -5,16 +5,16 @@
 #include <absl/types/span.h>               // for Span
 #include <xxh3.h>                          // for XXH3_state_t
 
-#include <cstddef>      // IWYU pragma: keep for size_t
-#include <cstdint>      // for uint64_t, uint_fast8_t
-#include <boost/filesystem/path.hpp>   // for path
-#include <fstream>      // for ifstream
-#include <limits>       // for numeric_limits
-#include <memory>       // for unique_ptr
-#include <string>       // for string, basic_string
-#include <string_view>  // for operator""sv, basic_string_view, string_view
-#include <utility>      // IWYU pragma: keep for move, pair
-#include <vector>       // for vector
+#include <boost/filesystem/path.hpp>  // for path
+#include <cstddef>                    // IWYU pragma: keep for size_t
+#include <cstdint>                    // for uint64_t, uint_fast8_t
+#include <fstream>                    // for ifstream
+#include <limits>                     // for numeric_limits
+#include <memory>                     // for unique_ptr
+#include <string>                     // for string, basic_string
+#include <string_view>                // for operator""sv, basic_string_view, string_view
+#include <utility>                    // IWYU pragma: keep for move, pair
+#include <vector>                     // for vector
 
 #include "modle/chrom_sizes.hpp"    // for ChromSizes
 #include "modle/compressed_io.hpp"  // for Reader

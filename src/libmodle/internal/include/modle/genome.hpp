@@ -143,8 +143,8 @@ class Genome {
       const boost::filesystem::path& path_to_chrom_sizes,
       const boost::filesystem::path& path_to_extr_barriers,
       const boost::filesystem::path& path_to_chrom_subranges,
-      absl::Span<const boost::filesystem::path> paths_to_extra_features, double ctcf_prob_occ_to_occ,
-      double ctcf_prob_nocc_to_nocc, bool keep_all_chroms);
+      absl::Span<const boost::filesystem::path> paths_to_extra_features,
+      double ctcf_prob_occ_to_occ, double ctcf_prob_nocc_to_nocc, bool keep_all_chroms);
 
  private:
   absl::btree_set<Chromosome> _chromosomes{};

@@ -9,12 +9,12 @@
 
 #include <algorithm>                                // for transform
 #include <boost/dynamic_bitset/dynamic_bitset.hpp>  // for dynamic_bitset
+#include <boost/filesystem/path.hpp>                // for path, create_directories, remove_all
 #include <cassert>                                  // for assert
 #include <cmath>                                    // for round
 #include <cstddef>                                  // for size_t
 #include <cstdint>                                  // for uint64_t
 #include <cstdio>                                   // for stdout
-#include <boost/filesystem/path.hpp>                               // for path, create_directories, remove_all
 #include <fstream>                                  // for ofstream, basic_ofstream
 #include <iterator>                                 // for insert_iterator, inserter
 #include <memory>                                   // for unique_ptr, make_unique
@@ -88,7 +88,8 @@ void stats_subcmd(const modle::tools::config& c) {
   }
 
   if (!path_to_output_hist.empty()) {  // Create hist. file
-    boost::filesystem::create_directories(boost::filesystem::path(path_to_output_hist).parent_path());
+    boost::filesystem::create_directories(
+        boost::filesystem::path(path_to_output_hist).parent_path());
     hist_file = std::make_unique<std::ofstream>(path_to_output_hist);
     std::vector<size_t> buff(c.diagonal_width / bin_size);
     std::iota(buff.begin(), buff.end(), 0);

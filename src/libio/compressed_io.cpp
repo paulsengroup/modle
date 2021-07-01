@@ -5,12 +5,12 @@
 #include <fmt/format.h>     // system_error
 #include <fmt/ostream.h>
 
+#include <boost/filesystem/path.hpp>  // for path
 #include <boost/iostreams/filter/bzip2.hpp>
 #include <boost/iostreams/filter/gzip.hpp>
 #include <boost/iostreams/filter/lzma.hpp>
 #include <boost/iostreams/filter/zstd.hpp>
 #include <cassert>      // for assert
-#include <boost/filesystem/path.hpp>   // for path
 #include <string>       // for string
 #include <string_view>  // for string_view
 

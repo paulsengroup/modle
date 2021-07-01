@@ -4,11 +4,11 @@
 #include <fmt/format.h>              // for string_view, system_error
 
 #include <boost/dynamic_bitset/dynamic_bitset.hpp>  // for dynamic_bitset, dynamic_bitset<>::ref...
+#include <boost/filesystem/path.hpp>                // for exists
 #include <catch2/catch.hpp>                         // for AssertionHandler, operator""_catch_sr
 #include <cerrno>                                   // for errno
 #include <cstdint>                                  // for uint32_t
 #include <ext/alloc_traits.h>                       // for __alloc_traits<>::value_type
-#include <boost/filesystem/path.hpp>                               // for exists
 #include <memory>                                   // for allocator_traits<>::value_type
 #include <stdexcept>                                // for runtime_error
 #include <string>                                   // for string, getline

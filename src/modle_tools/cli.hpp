@@ -10,22 +10,22 @@
 #include <fmt/ostream.h>                   // for formatbuf<>::int_type
 
 #include <CLI/CLI.hpp>
-#include <cassert>           // for assert
-#include <cstdint>           // for uint64_t, uint32_t, uint_fast8_t
-#include <cstdio>            // for size_t, stderr
-#include <exception>         // for exception
-#include <initializer_list>  // for initializer_list
-#include <stdexcept>         // for invalid_argument, out_of_range
-#include <string>            // for string, basic_string, allocator
-#include <string_view>       // for string_view
-#include <type_traits>       // for remove_reference<>::type
-#include <vector>            // for vector, swap
-
-#include "modle/bed.hpp"                // for BED::Dialect, Parser, bed_dialects
 #include <boost/filesystem/path.hpp>  // for path, exists, is_directory, operat...
-#include "modle/common/utils.hpp"       // for throw_with_trace
-#include "modle/cooler.hpp"             // for Cooler, Cooler::READ_ONLY
-#include "modle_tools/config.hpp"       // for config
+#include <cassert>                    // for assert
+#include <cstdint>                    // for uint64_t, uint32_t, uint_fast8_t
+#include <cstdio>                     // for size_t, stderr
+#include <exception>                  // for exception
+#include <initializer_list>           // for initializer_list
+#include <stdexcept>                  // for invalid_argument, out_of_range
+#include <string>                     // for string, basic_string, allocator
+#include <string_view>                // for string_view
+#include <type_traits>                // for remove_reference<>::type
+#include <vector>                     // for vector, swap
+
+#include "modle/bed.hpp"           // for BED::Dialect, Parser, bed_dialects
+#include "modle/common/utils.hpp"  // for throw_with_trace
+#include "modle/cooler.hpp"        // for Cooler, Cooler::READ_ONLY
+#include "modle_tools/config.hpp"  // for config
 
 namespace modle::tools {
 
