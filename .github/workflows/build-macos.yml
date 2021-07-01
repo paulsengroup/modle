@@ -1,0 +1,97 @@
+# Copyright (c) 2021 Roberto Rossini (roberros@uio.no)
+# SPDX-License-Identifier: MIT
+
+name: MacOS Builds
+
+on:
+  push:
+    branches: [ main ]
+    paths:
+      - "CMakeLists.txt"
+      - "src/**"
+  pull_request:
+    branches: [ main ]
+    paths:
+      - "CMakeLists.txt"
+      - "src/**"
+
+jobs:
+  build:
+    runs-on: macos-10.15
+
+    strategy:
+      fail-fast: false
+      matrix:
+        config:
+          - build_type: Release
+          - build_type: Debug
+            sanitizer: ADDRESS
+          - build_type: Debug
+            sanitizer: UNDEFINED_BEHAVIOR
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v2
+        with:
+          fetch-depth: 0
+
+      - name: Cache Conan packages
+        uses: actions/cache@v2
+        with:
+          key: >
+            host-${{runner.os}}-
+            target-${{runner.os}}-
+            ${{matrix.config.build_type}}-
+            ${{hashFiles('conanfile.py')}}
+
+          path: ~/.conan/data
+
+      - name: Install Conan
+        id: conan
+        uses: turtlebrowser/get-conan@main
+
+      - name: Clean up Conan
+        run: |
+          conan remove -f "*" --builds
+          conan remove -f "*" --src
+          conan remove -f "*" --system-reqs
+
+      - name: Conan version
+        run: echo ${{steps.conan.outputs.version}}
+
+      - name: Make build directory
+        working-directory: ${{runner.workspace}}
+        run: mkdir build
+
+      - name: Configure project - Release
+        working-directory: ${{runner.workspace}}/build
+        if: ${{matrix.config.build_type != 'Debug'}}
+        run: |
+          cmake -DCMAKE_BUILD_TYPE=${{matrix.config.build_type}} \
+                -DENABLE_IPO=ON                                  \
+                -DENABLE_TESTING=ON                              \
+                -DWARNINGS_AS_ERRORS=ON                          \
+                ${{github.workspace}}
+
+      - name: Configure project - Debug
+        working-directory: ${{runner.workspace}}/build
+        if: ${{matrix.config.build_type == 'Debug'}}
+        run: |
+          cmake -DCMAKE_BUILD_TYPE=${{matrix.config.build_type}}   \
+                -DENABLE_SANITIZER_${{matrix.config.sanitizer}}=ON \
+                -DENABLE_IPO=ON                                    \
+                -DENABLE_TESTING=ON                                \
+                -DWARNINGS_AS_ERRORS=ON                            \
+                ${{github.workspace}}
+
+      - name: Build project
+        working-directory: ${{runner.workspace}}/build
+        run: cmake --build . -j $(nproc)
+
+      - name: Test project
+        working-directory: ${{github.workspace}}
+        run: |
+          ctest --test-dir ${{runner.workspace}}/build \
+                --schedule-random                      \
+                --output-on-failure                    \
+                -j $(nproc)
