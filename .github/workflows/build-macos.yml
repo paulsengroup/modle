@@ -50,6 +50,9 @@ jobs:
         id: conan
         uses: turtlebrowser/get-conan@main
 
+      - name: Install unit test dependencies
+        run: pip3 install scipy
+
       - name: Clean up Conan
         run: |
           conan remove -f "*" --builds
