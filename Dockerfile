@@ -31,6 +31,7 @@ COPY "external/Xoshiro-cpp-$XOSHIRO_CPP_VER.tar.xz"            \
 COPY src                    /tmp/modle/src
 COPY test                   /tmp/modle/test
 COPY CMakeLists.txt         /tmp/modle/CMakeLists.txt
+COPY conanfile.py           /tmp/modle/conanfile.py
 COPY LICENSE                /tmp/modle/LICENSE
 
 # Update system repo and install required tools

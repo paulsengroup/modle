@@ -10,4 +10,5 @@
 !test/catch_main.cpp
 !test/data/unit_tests/**
 !CMakeLists.txt
+!conanfile.py
 !LICENSE
