@@ -58,6 +58,8 @@
 
 namespace modle::cooler {
 
+DISABLE_WARNING_PUSH
+DISABLE_WARNING_USELESS_CAST
 Cooler::Cooler(boost::filesystem::path path_to_file, IO_MODE mode, size_t bin_size,
                size_t max_str_length, std::string_view assembly_name, Flavor flavor, bool validate,
                uint_fast8_t compression_lvl, size_t chunk_size, size_t cache_size)
@@ -107,6 +109,7 @@ Cooler::Cooler(boost::filesystem::path path_to_file, IO_MODE mode, size_t bin_si
     this->write_metadata();
   }
 }
+DISABLE_WARNING_POP
 
 Cooler::~Cooler() {
   try {

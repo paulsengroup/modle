@@ -56,10 +56,13 @@ inline std::pair<std::vector<uint32_t>, std::vector<uint32_t>> generate_correlat
   std::iota(v1.begin(), v1.end(), 0);
   std::iota(v2.begin(), v2.end(), 0);
   for (auto i = 0UL; i < size; ++i) {
+    DISABLE_WARNING_PUSH
+    DISABLE_WARNING_USELESS_CAST
     int64_t n = static_cast<int64_t>(v1[i]) + dist(rnd_eng);
     v1[i] = static_cast<uint32_t>(std::max(int64_t(0), n));
     n = static_cast<int64_t>(v2[i]) + dist(rnd_eng);
     v2[i] = static_cast<uint32_t>(std::max(int64_t(0), n));
+    DISABLE_WARNING_POP
   }
   return {v1, v2};
 }

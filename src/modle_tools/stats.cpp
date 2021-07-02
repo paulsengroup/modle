@@ -23,11 +23,13 @@
 #include <utility>                                  // for make_pair
 #include <vector>                                   // for vector
 
-#include "modle/bed.hpp"           // for Parser
+#include "modle/bed.hpp"  // for Parser
+#include "modle/common/suppress_compiler_warnings.hpp"
 #include "modle/contacts.hpp"      // for ContactMatrix
 #include "modle/cooler.hpp"        // for Cooler, ContactMatrix, Cooler::READ_ONLY
 #include "modle_tools/config.hpp"  // for config
 #include "modle_tools/tools.hpp"   // for stats_subcmd
+
 namespace modle::tools {
 
 template <typename I>
@@ -155,8 +157,11 @@ void stats_subcmd(const modle::tools::config& c) {
 
     if (m2) {
       cmatrix.deplete_contacts(c.depletion_multiplier);
+      DISABLE_WARNING_PUSH
+      DISABLE_WARNING_USELESS_CAST
       m2->write_or_append_cmatrix_to_file(cmatrix, chrom_name, int64_t(0), chrom_size, chrom_size,
                                           true);
+      DISABLE_WARNING_POP
     }
   }
 
