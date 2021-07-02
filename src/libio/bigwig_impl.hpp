@@ -4,7 +4,6 @@
 
 #include <absl/container/flat_hash_map.h>  // for flat_hash_map
 #include <absl/strings/match.h>            // for StartsWith
-#include <bigWig.h>                        // for bwAddIntervalSpanSteps
 #include <fmt/format.h>                    // for FMT_STRING, format
 
 #include <boost/filesystem/path.hpp>  // for file_size
@@ -17,6 +16,8 @@
 #include <string_view>                // for string_view
 #include <type_traits>                // for is_arithmetic, is_signed
 #include <vector>                     // for vector
+
+#include "libBigWig/bigWig.h"  // for bwAddIntervalSpanSteps
 
 namespace modle::bigwig {
 

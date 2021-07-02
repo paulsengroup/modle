@@ -3,7 +3,6 @@
 // IWYU pragma: no_include "modle/src/libio/bigwig_impl.hpp"
 
 #include <absl/container/flat_hash_map.h>  // for flat_hash_map
-#include <bigWig.h>                        // for bigWigFile_t
 
 #include <cstddef>      // IWYU pragma: keep for size_t
 #include <cstdint>      // for uint64_t, int32_t, uint32_t, uint_fast8_t
@@ -12,6 +11,8 @@
 #include <string>       // for string
 #include <string_view>  // for string_view
 #include <vector>       // for vector
+
+#include "libBigWig/bigWig.h"  // for bigWigFile_t
 
 namespace modle::bigwig {
 
