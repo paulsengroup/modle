@@ -40,6 +40,45 @@ Chromosome::Chromosome(size_t id, const bed::BED& chrom)
 Chromosome::Chromosome(size_t id, const bed::BED& chrom, IITree<bp_t, ExtrusionBarrier>&& barriers)
     : Chromosome(id, chrom.chrom, chrom.thick_start, chrom.thick_end, chrom.size(), barriers) {}
 
+DISABLE_WARNING_PUSH
+DISABLE_WARNING_SIGN_CONVERSION
+DISABLE_WARNING_CONVERSION
+Chromosome::Chromosome(size_t id, std::string_view chrom_name, bp_t chrom_start, bp_t chrom_end,
+                       bp_t chrom_size)
+    : _name(chrom_name), _start(chrom_start), _end(chrom_end), _size(chrom_size), _id(id) {
+  assert(chrom_start <= chrom_end);               // NOLINT
+  assert(chrom_end - chrom_start <= chrom_size);  // NOLINT
+}
+
+Chromosome::Chromosome(size_t id, std::string_view chrom_name, bp_t chrom_start, bp_t chrom_end,
+                       bp_t chrom_size, const IITree<bp_t, ExtrusionBarrier>& barriers)
+    : _name(chrom_name),
+      _start(chrom_start),
+      _end(chrom_end),
+      _size(chrom_size),
+      _id(id),
+      _barriers(barriers) {
+  assert(chrom_start <= chrom_end);               // NOLINT
+  assert(chrom_end - chrom_start <= chrom_size);  // NOLINT
+
+  _barriers.make_BST();
+}
+
+Chromosome::Chromosome(size_t id, std::string_view chrom_name, bp_t chrom_start, bp_t chrom_end,
+                       bp_t chrom_size, IITree<bp_t, ExtrusionBarrier>&& barriers)
+    : _name(chrom_name),
+      _start(chrom_start),
+      _end(chrom_end),
+      _size(chrom_size),
+      _id(id),
+      _barriers(std::move(barriers)) {
+  assert(chrom_start <= chrom_end);               // NOLINT
+  assert(chrom_end - chrom_start <= chrom_size);  // NOLINT
+
+  _barriers.make_BST();
+}
+DISABLE_WARNING_POP
+
 Chromosome::Chromosome(const Chromosome& other)
     : _name(other._name),
       _start(other._start),

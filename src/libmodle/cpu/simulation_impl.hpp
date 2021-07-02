@@ -108,14 +108,15 @@ template <typename StateT, typename>
 void Simulation::simulate_extrusion_kernel(StateT& s) const {
   constexpr auto normal_simulation = std::is_same_v<std::remove_reference_t<StateT>, State>;
   {
-    assert(s.num_lefs == s.lef_buff.size());     // NOLINT
-    assert(s.num_lefs == s.rank_buff1.size());   // NOLINT
-    assert(s.num_lefs == s.rank_buff2.size());   // NOLINT
-    assert(s.num_lefs == s.moves_buff1.size());  // NOLINT
-    assert(s.num_lefs == s.moves_buff2.size());  // NOLINT
-    assert(s.num_lefs == s.idx_buff1.size());    // NOLINT
-    assert(s.num_lefs == s.idx_buff2.size());    // NOLINT
-    assert(s.num_lefs == s.epoch_buff.size());   // NOLINT
+    assert(s.num_lefs == s.lef_buff.size());         // NOLINT
+    assert(s.num_lefs == s.rank_buff1.size());       // NOLINT
+    assert(s.num_lefs == s.rank_buff2.size());       // NOLINT
+    assert(s.num_lefs == s.moves_buff1.size());      // NOLINT
+    assert(s.num_lefs == s.moves_buff2.size());      // NOLINT
+    assert(s.num_lefs == s.idx_buff.size());         // NOLINT
+    assert(s.num_lefs == s.collision_buff1.size());  // NOLINT
+    assert(s.num_lefs == s.collision_buff2.size());  // NOLINT
+    assert(s.num_lefs == s.epoch_buff.size());       // NOLINT
   }
   auto epoch = 0UL;  // The epoch needs to be declared outside of the try-catch body so that we can
   // use the current epoch when generating error messages
@@ -182,8 +183,8 @@ void Simulation::simulate_extrusion_kernel(StateT& s) const {
     auto fwd_lef_ranks = absl::MakeSpan(s.rank_buff2);
     auto rev_moves = absl::MakeSpan(s.moves_buff1);
     auto fwd_moves = absl::MakeSpan(s.moves_buff2);
-    auto rev_collision_mask = absl::MakeSpan(s.idx_buff1);
-    auto fwd_collision_mask = absl::MakeSpan(s.idx_buff2);
+    auto rev_collision_mask = absl::MakeSpan(s.collision_buff1);
+    auto fwd_collision_mask = absl::MakeSpan(s.collision_buff2);
 
     // Generate initial extr. barrier states, so that they are already at or close to equilibrium
     for (auto i = 0UL; i < s.barrier_mask.size(); ++i) {
@@ -224,8 +225,8 @@ void Simulation::simulate_extrusion_kernel(StateT& s) const {
         fwd_lef_ranks = absl::MakeSpan(s.rank_buff2.data(), nlefs);
         rev_moves = absl::MakeSpan(s.moves_buff1.data(), nlefs);
         fwd_moves = absl::MakeSpan(s.moves_buff2.data(), nlefs);
-        rev_collision_mask = absl::MakeSpan(s.idx_buff1.data(), nlefs);
-        fwd_collision_mask = absl::MakeSpan(s.idx_buff2.data(), nlefs);
+        rev_collision_mask = absl::MakeSpan(s.collision_buff1.data(), nlefs);
+        fwd_collision_mask = absl::MakeSpan(s.collision_buff2.data(), nlefs);
 
         // Sample nlefs to be released while in burn-in phase
         nlefs_to_release =
@@ -244,7 +245,7 @@ void Simulation::simulate_extrusion_kernel(StateT& s) const {
       ////////////////////////
 
       {  // Select inactive LEFs and bind them
-        auto lef_mask = absl::MakeSpan(s.idx_buff1.data(), lefs.size());
+        auto lef_mask = absl::MakeSpan(s.idx_buff.data(), lefs.size());
         Simulation::select_lefs_to_bind(lefs, lef_mask);
         if constexpr (normal_simulation) {
           Simulation::bind_lefs(*s.chrom, lefs, rev_lef_ranks, fwd_lef_ranks, lef_mask, s.rand_eng,
@@ -269,7 +270,7 @@ void Simulation::simulate_extrusion_kernel(StateT& s) const {
         // Select LEFs to be used for contact registration.
         // We are sampling from fwd ranks to avoid having to allocate a vector of indices just to do
         // this sampling
-        const auto lef_idx = absl::MakeSpan(s.idx_buff1.data(), nlefs_to_sample);
+        const auto lef_idx = absl::MakeSpan(s.idx_buff.data(), nlefs_to_sample);
         random_sample(fwd_lef_ranks.begin(), fwd_lef_ranks.end(), lef_idx.begin(), lef_idx.size(),
                       s.rand_eng);
         if (!std::all_of(lef_idx.begin(), lef_idx.end(),
@@ -331,7 +332,7 @@ void Simulation::simulate_extrusion_kernel(StateT& s) const {
                                              lef_unloader_affinity);
 
       // Reusing this buffer is ok, as at this point we don't need access to collision information
-      const auto lef_idx = absl::MakeSpan(s.idx_buff1.data(), nlefs_to_release);
+      const auto lef_idx = absl::MakeSpan(s.idx_buff.data(), nlefs_to_release);
       Simulation::select_lefs_to_release(lef_idx, lef_unloader_affinity, s.rand_eng);
       Simulation::release_lefs(lefs, lef_idx);
     }

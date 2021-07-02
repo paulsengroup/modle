@@ -49,7 +49,7 @@ void Simulation::run_base() {
       boost::filesystem::remove_all(this->path_to_output_file_cool);
     }
     boost::filesystem::create_directories(this->path_to_output_file_cool.parent_path());
-    std::ofstream log_file(this->path_to_log_file);
+    std::ofstream log_file(this->path_to_log_file.string());
     if (log_file) {
       fmt::print(log_file, FMT_STRING("{}\n{}\n"), Config::to_string(),
                  absl::StrJoin(this->argv, this->argv + this->argc, " "));

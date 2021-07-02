@@ -33,20 +33,17 @@ class Chromosome {
 
  public:
   Chromosome() = default;
-  template <typename I, typename = std::enable_if_t<std::is_integral_v<I>>>
-  inline Chromosome(size_t id, std::string_view chrom_name, I chrom_start, I chrom_end,
-                    I chrom_size);
+  Chromosome(size_t id, std::string_view chrom_name, bp_t chrom_start, bp_t chrom_end,
+             bp_t chrom_size);
 
   Chromosome(size_t id, const bed::BED& chrom);
   Chromosome(size_t id, const bed::BED& chrom, const IITree<bp_t, ExtrusionBarrier>& barriers);
   Chromosome(size_t id, const bed::BED& chrom, IITree<bp_t, ExtrusionBarrier>&& barriers);
 
-  template <typename I = uint64_t, typename = std::enable_if_t<std::is_integral_v<I>>>
-  inline Chromosome(size_t id, std::string_view chrom_name, I chrom_start, I chrom_end,
-                    I chrom_size, const IITree<bp_t, ExtrusionBarrier>& barriers);
-  template <typename I = uint64_t, typename = std::enable_if_t<std::is_integral_v<I>>>
-  inline Chromosome(size_t id, std::string_view chrom_name, I chrom_start, I chrom_end,
-                    I chrom_size, IITree<bp_t, ExtrusionBarrier>&& barriers);
+  Chromosome(size_t id, std::string_view chrom_name, bp_t chrom_start, bp_t chrom_end,
+             bp_t chrom_size, const IITree<bp_t, ExtrusionBarrier>& barriers);
+  Chromosome(size_t id, std::string_view chrom_name, bp_t chrom_start, bp_t chrom_end,
+             bp_t chrom_size, IITree<bp_t, ExtrusionBarrier>&& barriers);
 
   ~Chromosome() = default;
 

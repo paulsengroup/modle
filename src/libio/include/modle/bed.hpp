@@ -17,13 +17,14 @@
 #include <vector>                     // for vector
 
 #include "modle/chrom_sizes.hpp"    // for ChromSizes
+#include "modle/common/common.hpp"  // for bp_t
 #include "modle/compressed_io.hpp"  // for Reader
 #include "modle/interval_tree.hpp"  // for IITree
 
 namespace modle::bed {
 struct BED;
 
-template <typename K = std::string, typename I = uint64_t>
+template <typename K = std::string, typename I = bp_t>
 class BED_tree {
   using IITree_t = IITree<I, BED>;
   using BED_tree_t = absl::btree_map<K, IITree<I, BED>>;
@@ -145,13 +146,13 @@ struct BED {
   BED& operator=(BED&& other) = default;
 
   std::string chrom{};
-  uint64_t chrom_start{};
-  uint64_t chrom_end{};
+  bp_t chrom_start{};
+  bp_t chrom_end{};
   std::string name{};
   double score{};
   char strand{'.'};
-  uint64_t thick_start{std::numeric_limits<uint64_t>::max()};
-  uint64_t thick_end{std::numeric_limits<uint64_t>::max()};
+  bp_t thick_start{std::numeric_limits<uint64_t>::max()};
+  bp_t thick_end{std::numeric_limits<uint64_t>::max()};
   std::unique_ptr<RGB> rgb{nullptr};
   uint64_t block_count{std::numeric_limits<uint64_t>::max()};
   std::vector<uint64_t> block_sizes{};

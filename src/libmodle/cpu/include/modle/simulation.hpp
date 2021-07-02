@@ -75,8 +75,9 @@ class Simulation : Config {
     boost::dynamic_bitset<> barrier_mask{};
     std::vector<bp_t> moves_buff1{};
     std::vector<bp_t> moves_buff2{};
-    std::vector<size_t> idx_buff1{};
-    std::vector<size_t> idx_buff2{};
+    std::vector<size_t> idx_buff{};
+    std::vector<collision_t> collision_buff1{};
+    std::vector<collision_t> collision_buff2{};
     std::vector<size_t> epoch_buff{};
     random::PRNG_t rand_eng{};
     uint64_t seed{};
@@ -414,13 +415,13 @@ class Simulation : Config {
                                  current_epoch);
   }
 
-  inline void test_adjust_moves(const Chromosome& chrom, const absl::Span<const Lef> lefs,
-                                const absl::Span<const size_t> rev_lef_ranks,
-                                const absl::Span<const size_t> fwd_lef_ranks,
-                                const absl::Span<bp_t> rev_moves,
-                                const absl::Span<bp_t> fwd_moves) {
-    this->adjust_moves_of_consecutive_extr_units(chrom, lefs, rev_lef_ranks, fwd_lef_ranks,
-                                                 rev_moves, fwd_moves);
+  static inline void test_adjust_moves(const Chromosome& chrom, const absl::Span<const Lef> lefs,
+                                       const absl::Span<const size_t> rev_lef_ranks,
+                                       const absl::Span<const size_t> fwd_lef_ranks,
+                                       const absl::Span<bp_t> rev_moves,
+                                       const absl::Span<bp_t> fwd_moves) {
+    Simulation::adjust_moves_of_consecutive_extr_units(chrom, lefs, rev_lef_ranks, fwd_lef_ranks,
+                                                       rev_moves, fwd_moves);
   }
 
   inline void test_generate_moves(const Chromosome& chrom, const absl::Span<const Lef> lefs,

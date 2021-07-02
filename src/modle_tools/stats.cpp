@@ -155,7 +155,8 @@ void stats_subcmd(const modle::tools::config& c) {
 
     if (m2) {
       cmatrix.deplete_contacts(c.depletion_multiplier);
-      m2->write_or_append_cmatrix_to_file(cmatrix, chrom_name, 0L, chrom_size, chrom_size, true);
+      m2->write_or_append_cmatrix_to_file(cmatrix, chrom_name, int64_t(0), chrom_size, chrom_size,
+                                          true);
     }
   }
 

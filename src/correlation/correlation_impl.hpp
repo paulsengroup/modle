@@ -44,7 +44,7 @@ double compute_spearman_significance(double rho, size_t n) {
   // https://github.com/scipy/scipy/blob/6703631bcd15750e86f4098b0421efabcac0f7c2/scipy/stats/stats.py#L4229
   // 2 * survival function
   // NOLINTNEXTLINE(readability-magic-numbers, cppcoreguidelines-avoid-magic-numbers)
-  return 2.0 * boost::math::cdf<double>(boost::math::complement(dist, std::fabs<double>(tscore)));
+  return 2.0 * boost::math::cdf<double>(boost::math::complement(dist, std::fabs(tscore)));
 }
 
 /*

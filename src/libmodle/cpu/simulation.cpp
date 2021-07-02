@@ -552,8 +552,9 @@ void Simulation::BaseState::_resize(const size_t new_size) {
   rank_buff2.resize(new_size);
   moves_buff1.resize(new_size);
   moves_buff2.resize(new_size);
-  idx_buff1.resize(new_size);
-  idx_buff2.resize(new_size);
+  idx_buff.resize(new_size);
+  collision_buff1.resize(new_size);
+  collision_buff2.resize(new_size);
   epoch_buff.resize(new_size);
 }
 
@@ -565,8 +566,8 @@ void Simulation::BaseState::_reset() {  // TODO figure out which resets are redu
   barrier_mask.reset();
   std::fill(moves_buff1.begin(), moves_buff1.end(), 0);
   std::fill(moves_buff2.begin(), moves_buff2.end(), 0);
-  std::fill(idx_buff1.begin(), idx_buff1.end(), 0);
-  std::fill(idx_buff2.begin(), idx_buff2.end(), 0);
+  std::fill(collision_buff1.begin(), collision_buff1.end(), 0);
+  std::fill(collision_buff2.begin(), collision_buff2.end(), 0);
   std::fill(epoch_buff.begin(), epoch_buff.end(), 0);
 }
 

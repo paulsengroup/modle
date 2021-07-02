@@ -77,10 +77,10 @@ Cooler::Cooler(boost::filesystem::path path_to_file, IO_MODE mode, size_t bin_si
                                                                Cooler::STR_TYPE, "\0")),
       _cprop_int32(this->is_read_only() ? nullptr
                                         : generate_default_cprop(_chunk_size, _compression_lvl,
-                                                                 Cooler::INT32_TYPE, 0)),
+                                                                 Cooler::INT32_TYPE, int32_t(0))),
       _cprop_int64(this->is_read_only() ? nullptr
                                         : generate_default_cprop(_chunk_size, _compression_lvl,
-                                                                 Cooler::INT64_TYPE, 0L)),
+                                                                 Cooler::INT64_TYPE, int64_t(0))),
       _aprop_str(generate_default_aprop(Cooler::STR_TYPE, _chunk_size, _cache_size)),
       _aprop_int32(generate_default_aprop(Cooler::INT32_TYPE, _chunk_size, _cache_size)),
       _aprop_int64(generate_default_aprop(Cooler::INT64_TYPE, _chunk_size, _cache_size)),

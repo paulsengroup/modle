@@ -233,7 +233,7 @@ void Writer::open(const boost::filesystem::path& path) {
       }
   }
   this->_path = path;
-  this->_fp.open(path, std::ios_base::binary);
+  this->_fp.open(path.string(), std::ios_base::binary);
   if (!this->_fp) {
     throw fmt::system_error(errno, FMT_STRING("Failed to open file {} for writing"), this->_path);
   }
