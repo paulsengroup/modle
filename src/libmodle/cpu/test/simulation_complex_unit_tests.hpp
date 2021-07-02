@@ -75,8 +75,8 @@ TEST_CASE("Simulation 001", "[simulation][short]") {
                                                              NO_COLLISION,
                                                              NO_COLLISION,
                                                              NO_COLLISION};
-  std::vector<size_t> rev_collision_mask(nlefs, NO_COLLISION);
-  std::vector<size_t> fwd_collision_mask(nlefs, NO_COLLISION);
+  std::vector<collision_t> rev_collision_mask(nlefs, NO_COLLISION);
+  std::vector<collision_t> fwd_collision_mask(nlefs, NO_COLLISION);
 
   const std::vector<bp_t> rev_moves_expected{25, 44, 25, 54, 25, 75, 75};  // NOLINT
   const std::vector<bp_t> fwd_moves_expected{69, 24, 48, 0, 75, 75, 75};   // NOLINT
@@ -90,8 +90,8 @@ TEST_CASE("Simulation 001", "[simulation][short]") {
   assert(fwd_collision_mask.size() == nlefs);           // NOLINT
   require_that_lefs_are_sorted_by_idx(lefs, rev_ranks, fwd_ranks);
 
-  REQUIRE_NOTHROW(Simulation{c, false}.test_adjust_moves(
-      chrom, lefs, rev_ranks, fwd_ranks, absl::MakeSpan(rev_moves), absl::MakeSpan(fwd_moves)));
+  Simulation::test_adjust_moves(chrom, lefs, rev_ranks, fwd_ranks, absl::MakeSpan(rev_moves),
+                                absl::MakeSpan(fwd_moves));
 
   modle::Simulation{c, false}.test_process_collisions(
       chrom, lefs, rev_ranks, fwd_ranks, absl::MakeSpan(rev_moves), absl::MakeSpan(fwd_moves),
@@ -158,8 +158,8 @@ TEST_CASE("Simulation 002", "[simulation][short]") {
                                                              10UL,
                                                              3UL,
                                                              REACHED_CHROM_BOUNDARY};
-  std::vector<size_t> rev_collision_mask(nlefs, NO_COLLISION);
-  std::vector<size_t> fwd_collision_mask(nlefs, NO_COLLISION);
+  std::vector<collision_t> rev_collision_mask(nlefs, NO_COLLISION);
+  std::vector<collision_t> fwd_collision_mask(nlefs, NO_COLLISION);
 
   const std::vector<bp_t> rev_moves_expected{75, 75, 75, 0, 48, 25, 69};   // NOLINT
   const std::vector<bp_t> fwd_moves_expected{75, 75, 25, 53, 24, 44, 24};  // NOLINT
@@ -173,8 +173,8 @@ TEST_CASE("Simulation 002", "[simulation][short]") {
   assert(fwd_collision_mask.size() == nlefs);           // NOLINT
   require_that_lefs_are_sorted_by_idx(lefs, rev_ranks, fwd_ranks);
 
-  REQUIRE_NOTHROW(Simulation{c, false}.test_adjust_moves(
-      chrom, lefs, rev_ranks, fwd_ranks, absl::MakeSpan(rev_moves), absl::MakeSpan(fwd_moves)));
+  Simulation::test_adjust_moves(chrom, lefs, rev_ranks, fwd_ranks, absl::MakeSpan(rev_moves),
+                                absl::MakeSpan(fwd_moves));
 
   modle::Simulation{c, false}.test_process_collisions(
       chrom, lefs, rev_ranks, fwd_ranks, absl::MakeSpan(rev_moves), absl::MakeSpan(fwd_moves),
@@ -241,8 +241,8 @@ TEST_CASE("Simulation 003 - Soft collisions on", "[simulation][short]") {
                                                              10UL,
                                                              3UL,
                                                              REACHED_CHROM_BOUNDARY};
-  std::vector<size_t> rev_collision_mask(nlefs, NO_COLLISION);
-  std::vector<size_t> fwd_collision_mask(nlefs, NO_COLLISION);
+  std::vector<collision_t> rev_collision_mask(nlefs, NO_COLLISION);
+  std::vector<collision_t> fwd_collision_mask(nlefs, NO_COLLISION);
 
   const std::vector<bp_t> rev_moves_expected{49, 75, 75, 0, 48, 25, 69};   // NOLINT
   const std::vector<bp_t> fwd_moves_expected{24, 48, 24, 53, 24, 44, 24};  // NOLINT
@@ -256,8 +256,8 @@ TEST_CASE("Simulation 003 - Soft collisions on", "[simulation][short]") {
   assert(fwd_collision_mask.size() == nlefs);           // NOLINT
   require_that_lefs_are_sorted_by_idx(lefs, rev_ranks, fwd_ranks);
 
-  REQUIRE_NOTHROW(Simulation{c, false}.test_adjust_moves(
-      chrom, lefs, rev_ranks, fwd_ranks, absl::MakeSpan(rev_moves), absl::MakeSpan(fwd_moves)));
+  Simulation::test_adjust_moves(chrom, lefs, rev_ranks, fwd_ranks, absl::MakeSpan(rev_moves),
+                                absl::MakeSpan(fwd_moves));
 
   modle::Simulation{c, false}.test_process_collisions(
       chrom, lefs, rev_ranks, fwd_ranks, absl::MakeSpan(rev_moves), absl::MakeSpan(fwd_moves),
@@ -324,8 +324,8 @@ TEST_CASE("Simulation 004 - Inactive barriers", "[simulation][short]") {
                                                              10UL,
                                                              11UL,
                                                              REACHED_CHROM_BOUNDARY};
-  std::vector<size_t> rev_collision_mask(nlefs, NO_COLLISION);
-  std::vector<size_t> fwd_collision_mask(nlefs, NO_COLLISION);
+  std::vector<collision_t> rev_collision_mask(nlefs, NO_COLLISION);
+  std::vector<collision_t> fwd_collision_mask(nlefs, NO_COLLISION);
 
   const std::vector<bp_t> rev_moves_expected{75, 75, 75, 13, 61, 25, 60};  // NOLINT
   const std::vector<bp_t> fwd_moves_expected{75, 75, 12, 53, 24, 59, 24};  // NOLINT
@@ -339,8 +339,8 @@ TEST_CASE("Simulation 004 - Inactive barriers", "[simulation][short]") {
   assert(fwd_collision_mask.size() == nlefs);           // NOLINT
   require_that_lefs_are_sorted_by_idx(lefs, rev_ranks, fwd_ranks);
 
-  REQUIRE_NOTHROW(Simulation{c, false}.test_adjust_moves(
-      chrom, lefs, rev_ranks, fwd_ranks, absl::MakeSpan(rev_moves), absl::MakeSpan(fwd_moves)));
+  Simulation::test_adjust_moves(chrom, lefs, rev_ranks, fwd_ranks, absl::MakeSpan(rev_moves),
+                                absl::MakeSpan(fwd_moves));
 
   modle::Simulation{c, false}.test_process_collisions(
       chrom, lefs, rev_ranks, fwd_ranks, absl::MakeSpan(rev_moves), absl::MakeSpan(fwd_moves),
@@ -400,8 +400,8 @@ TEST_CASE("Simulation 005 - Multiple LEFs located at the same site", "[simulatio
                                                              5UL,
                                                              12UL,
                                                              REACHED_CHROM_BOUNDARY};
-  std::vector<size_t> rev_collision_mask(nlefs, NO_COLLISION);
-  std::vector<size_t> fwd_collision_mask(nlefs, NO_COLLISION);
+  std::vector<collision_t> rev_collision_mask(nlefs, NO_COLLISION);
+  std::vector<collision_t> fwd_collision_mask(nlefs, NO_COLLISION);
 
   const std::vector<bp_t> rev_moves_expected{25, 5, 4, 8, 8, 7};   // NOLINT
   const std::vector<bp_t> fwd_moves_expected{4, 18, 19, 6, 8, 9};  // NOLINT
@@ -415,8 +415,8 @@ TEST_CASE("Simulation 005 - Multiple LEFs located at the same site", "[simulatio
   assert(fwd_collision_mask.size() == nlefs);           // NOLINT
   require_that_lefs_are_sorted_by_idx(lefs, rev_ranks, fwd_ranks);
 
-  REQUIRE_NOTHROW(Simulation{c, false}.test_adjust_moves(
-      chrom, lefs, rev_ranks, fwd_ranks, absl::MakeSpan(rev_moves), absl::MakeSpan(fwd_moves)));
+  Simulation::test_adjust_moves(chrom, lefs, rev_ranks, fwd_ranks, absl::MakeSpan(rev_moves),
+                                absl::MakeSpan(fwd_moves));
 
   modle::Simulation{c, false}.test_process_collisions(
       chrom, lefs, rev_ranks, fwd_ranks, absl::MakeSpan(rev_moves), absl::MakeSpan(fwd_moves),
@@ -479,8 +479,8 @@ TEST_CASE("Simulation 006 - Few inactive LEFs", "[simulation][short]") {
                                                              5UL,
                                                              REACHED_CHROM_BOUNDARY,
                                                              NO_COLLISION};
-  std::vector<size_t> rev_collision_mask(nlefs, NO_COLLISION);
-  std::vector<size_t> fwd_collision_mask(nlefs, NO_COLLISION);
+  std::vector<collision_t> rev_collision_mask(nlefs, NO_COLLISION);
+  std::vector<collision_t> fwd_collision_mask(nlefs, NO_COLLISION);
 
   const std::vector<bp_t> rev_moves_expected{25, 5, 0, 9, 8, 0};  // NOLINT
   const std::vector<bp_t> fwd_moves_expected{4, 19, 0, 6, 9, 0};  // NOLINT
@@ -494,8 +494,8 @@ TEST_CASE("Simulation 006 - Few inactive LEFs", "[simulation][short]") {
   assert(fwd_collision_mask.size() == nlefs);           // NOLINT
   require_that_lefs_are_sorted_by_idx(lefs, rev_ranks, fwd_ranks);
 
-  REQUIRE_NOTHROW(Simulation{c, false}.test_adjust_moves(
-      chrom, lefs, rev_ranks, fwd_ranks, absl::MakeSpan(rev_moves), absl::MakeSpan(fwd_moves)));
+  Simulation::test_adjust_moves(chrom, lefs, rev_ranks, fwd_ranks, absl::MakeSpan(rev_moves),
+                                absl::MakeSpan(fwd_moves));
 
   modle::Simulation{c, false}.test_process_collisions(
       chrom, lefs, rev_ranks, fwd_ranks, absl::MakeSpan(rev_moves), absl::MakeSpan(fwd_moves),
@@ -543,8 +543,8 @@ TEST_CASE("Simulation 007 - LEF-LEF collision overrides LEF-BAR collision 1",
 
   const std::vector<collision_t> rev_collision_mask_expected{NO_COLLISION, 1UL};
   const std::vector<collision_t> fwd_collision_mask_expected{2UL, NO_COLLISION};
-  std::vector<size_t> rev_collision_mask(nlefs, NO_COLLISION);
-  std::vector<size_t> fwd_collision_mask(nlefs, NO_COLLISION);
+  std::vector<collision_t> rev_collision_mask(nlefs, NO_COLLISION);
+  std::vector<collision_t> fwd_collision_mask(nlefs, NO_COLLISION);
 
   const std::vector<bp_t> rev_moves_expected{20, 7};  // NOLINT
   const std::vector<bp_t> fwd_moves_expected{7, 20};  // NOLINT
@@ -604,8 +604,8 @@ TEST_CASE("Simulation 008 - LEF-LEF collision overrides LEF-BAR collision 2",
 
   const std::vector<collision_t> rev_collision_mask_expected{NO_COLLISION, 1UL};
   const std::vector<collision_t> fwd_collision_mask_expected{2UL, NO_COLLISION};
-  std::vector<size_t> rev_collision_mask(nlefs, NO_COLLISION);
-  std::vector<size_t> fwd_collision_mask(nlefs, NO_COLLISION);
+  std::vector<collision_t> rev_collision_mask(nlefs, NO_COLLISION);
+  std::vector<collision_t> fwd_collision_mask(nlefs, NO_COLLISION);
 
   const std::vector<bp_t> rev_moves_expected{20, 7};  // NOLINT
   const std::vector<bp_t> fwd_moves_expected{7, 20};  // NOLINT
@@ -676,8 +676,8 @@ TEST_CASE("Simulation 009 - Ensure stacked LEFs do not interfere with surroundin
                                                              NO_COLLISION,
                                                              NO_COLLISION,
                                                              NO_COLLISION};
-  std::vector<size_t> rev_collision_mask(nlefs, NO_COLLISION);
-  std::vector<size_t> fwd_collision_mask(nlefs, NO_COLLISION);
+  std::vector<collision_t> rev_collision_mask(nlefs, NO_COLLISION);
+  std::vector<collision_t> fwd_collision_mask(nlefs, NO_COLLISION);
 
   const std::vector<bp_t> rev_moves_expected{10, 0, 0, 0, 0};    // NOLINT
   const std::vector<bp_t> fwd_moves_expected{0, 0, 10, 10, 10};  // NOLINT
@@ -691,8 +691,8 @@ TEST_CASE("Simulation 009 - Ensure stacked LEFs do not interfere with surroundin
   assert(fwd_collision_mask.size() == nlefs);           // NOLINT
   require_that_lefs_are_sorted_by_idx(lefs, rev_ranks, fwd_ranks);
 
-  REQUIRE_NOTHROW(Simulation{c, false}.test_adjust_moves(
-      chrom, lefs, rev_ranks, fwd_ranks, absl::MakeSpan(rev_moves), absl::MakeSpan(fwd_moves)));
+  Simulation::test_adjust_moves(chrom, lefs, rev_ranks, fwd_ranks, absl::MakeSpan(rev_moves),
+                                absl::MakeSpan(fwd_moves));
 
   modle::Simulation{c, false}.test_process_collisions(
       chrom, lefs, rev_ranks, fwd_ranks, absl::MakeSpan(rev_moves), absl::MakeSpan(fwd_moves),
@@ -754,8 +754,8 @@ TEST_CASE("Simulation 010 - Ensure stacked LEFs do not interfere with surroundin
                                                              NO_COLLISION,
                                                              NO_COLLISION,
                                                              9UL};
-  std::vector<size_t> rev_collision_mask(nlefs, NO_COLLISION);
-  std::vector<size_t> fwd_collision_mask(nlefs, NO_COLLISION);
+  std::vector<collision_t> rev_collision_mask(nlefs, NO_COLLISION);
+  std::vector<collision_t> fwd_collision_mask(nlefs, NO_COLLISION);
 
   const std::vector<bp_t> rev_moves_expected{10, 0, 0, 0, 0, 0};    // NOLINT
   const std::vector<bp_t> fwd_moves_expected{0, 0, 10, 10, 10, 0};  // NOLINT
@@ -769,8 +769,8 @@ TEST_CASE("Simulation 010 - Ensure stacked LEFs do not interfere with surroundin
   assert(fwd_collision_mask.size() == nlefs);           // NOLINT
   require_that_lefs_are_sorted_by_idx(lefs, rev_ranks, fwd_ranks);
 
-  REQUIRE_NOTHROW(Simulation{c, false}.test_adjust_moves(
-      chrom, lefs, rev_ranks, fwd_ranks, absl::MakeSpan(rev_moves), absl::MakeSpan(fwd_moves)));
+  Simulation::test_adjust_moves(chrom, lefs, rev_ranks, fwd_ranks, absl::MakeSpan(rev_moves),
+                                absl::MakeSpan(fwd_moves));
 
   modle::Simulation{c, false}.test_process_collisions(
       chrom, lefs, rev_ranks, fwd_ranks, absl::MakeSpan(rev_moves), absl::MakeSpan(fwd_moves),

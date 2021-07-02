@@ -22,12 +22,12 @@ template <typename I>
 }
 
 [[maybe_unused]] inline void print_debug_info(
-    size_t i, absl::Span<const bp_t> rev_moves, absl::Span<const bp_t> fwd_moves,
-    absl::Span<const bp_t> rev_moves_expected, absl::Span<const bp_t> fwd_moves_expected,
-    absl::Span<const size_t> rev_collision_mask,
-    absl::Span<const size_t> rev_collision_mask_expected,
-    absl::Span<const size_t> fwd_collision_mask,
-    absl::Span<const size_t> fwd_collision_mask_expected) {
+    size_t i, const std::vector<bp_t>& rev_moves, const std::vector<bp_t>& fwd_moves,
+    const std::vector<bp_t>& rev_moves_expected, const std::vector<bp_t>& fwd_moves_expected,
+    const std::vector<collision_t>& rev_collision_mask,
+    const std::vector<collision_t>& rev_collision_mask_expected,
+    const std::vector<collision_t>& fwd_collision_mask,
+    const std::vector<collision_t>& fwd_collision_mask_expected) {
   fmt::print(stderr, "i={}; rev_move={}/{}; fwd_move={}/{};\n", i, rev_moves[i],
              rev_moves_expected[i], fwd_moves[i], fwd_moves_expected[i]);
   fmt::print(stderr, "i={}; rev_status={}/{}; fwd_status={}/{};\n", i, rev_collision_mask[i],
@@ -35,12 +35,12 @@ template <typename I>
 }
 
 [[maybe_unused]] inline void check_simulation_result(
-    absl::Span<const Lef> lefs, absl::Span<const bp_t> rev_moves, absl::Span<const bp_t> fwd_moves,
-    absl::Span<const bp_t> rev_moves_expected, absl::Span<const bp_t> fwd_moves_expected,
-    absl::Span<const size_t> rev_collision_mask,
-    absl::Span<const size_t> rev_collision_mask_expected,
-    absl::Span<const size_t> fwd_collision_mask,
-    absl::Span<const size_t> fwd_collision_mask_expected, bool print_debug_info_ = false) {
+    const std::vector<Lef>& lefs, const std::vector<bp_t>& rev_moves,
+    const std::vector<bp_t>& fwd_moves, const std::vector<bp_t>& rev_moves_expected,
+    const std::vector<bp_t>& fwd_moves_expected, const std::vector<collision_t>& rev_collision_mask,
+    const std::vector<collision_t>& rev_collision_mask_expected,
+    const std::vector<collision_t>& fwd_collision_mask,
+    const std::vector<collision_t>& fwd_collision_mask_expected, bool print_debug_info_ = false) {
   for (auto i = 0UL; i < lefs.size(); ++i) {
     CHECK(rev_collision_mask[i] == rev_collision_mask_expected[i]);
     CHECK(fwd_collision_mask[i] == fwd_collision_mask_expected[i]);

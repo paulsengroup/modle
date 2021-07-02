@@ -21,7 +21,7 @@ namespace modle::test::correlation {
 
 template <typename N, typename = typename std::enable_if<std::is_arithmetic<N>::value, N>::type>
 inline void write_vect_to_file(const boost::filesystem::path& fpath, const std::vector<N>& v) {
-  auto fp = std::ofstream(fpath);
+  auto fp = std::ofstream(fpath.string());
   fp << v[0];
   for (auto i = 1UL; i < v.size(); ++i) {
     fp << "," << v[i];
@@ -57,9 +57,9 @@ inline std::pair<std::vector<uint32_t>, std::vector<uint32_t>> generate_correlat
   std::iota(v2.begin(), v2.end(), 0);
   for (auto i = 0UL; i < size; ++i) {
     int64_t n = static_cast<int64_t>(v1[i]) + dist(rnd_eng);
-    v1[i] = static_cast<uint32_t>(std::max(0L, n));
+    v1[i] = static_cast<uint32_t>(std::max(int64_t(0), n));
     n = static_cast<int64_t>(v2[i]) + dist(rnd_eng);
-    v2[i] = static_cast<uint32_t>(std::max(0L, n));
+    v2[i] = static_cast<uint32_t>(std::max(int64_t(0), n));
   }
   return {v1, v2};
 }

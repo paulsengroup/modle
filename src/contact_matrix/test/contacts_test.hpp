@@ -8,7 +8,6 @@
 #include <catch2/catch.hpp>                         // for AssertionHandler, operator""_catch_sr
 #include <cerrno>                                   // for errno
 #include <cstdint>                                  // for uint32_t
-#include <ext/alloc_traits.h>                       // for __alloc_traits<>::value_type
 #include <memory>                                   // for allocator_traits<>::value_type
 #include <stdexcept>                                // for runtime_error
 #include <string>                                   // for string, getline
@@ -112,18 +111,18 @@ TEST_CASE("CMatrix Mask", "[cmatrix][short]") {
 
 TEST_CASE("CMatrix in/decrement", "[cmatrix][short]") {
   ContactMatrix<> m(10, 20);  // NOLINT
-  REQUIRE_NOTHROW(m.increment(0, 0));
-  REQUIRE_NOTHROW(m.increment(15, 15));  // NOLINT
+  m.increment(0, 0);
+  m.increment(15, 15);  // NOLINT
 
   CHECK(m.get_tot_contacts() == 2);  // NOLINT
   CHECK(m.get(0, 0) == 1);
 
-  REQUIRE_NOTHROW(m.decrement(0, 0));
+  m.decrement(0, 0);
   CHECK(m.get_tot_contacts() == 1);
   CHECK(m.get(0, 0) == 0);
 
   REQUIRE(m.get_n_of_missed_updates() == 0);
-  REQUIRE_NOTHROW(m.increment(11, 0));  // NOLINT
+  m.increment(11, 0);  // NOLINT
   CHECK(m.get(0, 0) == 0);
   CHECK(m.get_n_of_missed_updates() == 1);
   CHECK(m.get_tot_contacts() == 1);

@@ -24,7 +24,7 @@ TEST_CASE("Reader plain", "[io][reader][short]") {
   const boost::filesystem::path ptext_file = "test/data/unit_tests/sample.bed9";
 
   modle::compressed_io::Reader r(ptext_file);
-  std::ifstream fp(ptext_file);
+  std::ifstream fp(ptext_file.string());
 
   std::string buff1;
   std::string buff2;
@@ -40,7 +40,7 @@ TEST_CASE("Reader plain sv", "[io][reader][short]") {
   const boost::filesystem::path ptext_file = "test/data/unit_tests/sample.bed9";
 
   modle::compressed_io::Reader r(ptext_file);
-  std::ifstream fp(ptext_file);
+  std::ifstream fp(ptext_file.string());
 
   std::string_view buff1;
   std::string buff2;
