@@ -10,6 +10,7 @@ list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake/modules/")
 
 include(cmake/StandardProjectSettings.cmake)
 include(cmake/PreventInSourceBuilds.cmake)
+include(cmake/TestStdlibFeatures.cmake)
 include(CheckCXXCompilerFlag)
 
 # Link this 'library' to set the c++ standard / compile-time options requested
@@ -43,20 +44,21 @@ if(CMAKE_CXX_COMPILER_ID MATCHES ".*Clang")
   endif()
 endif()
 
-# figure out how to properly link to <filesystem>
-include(cmake/Filesystem.cmake)
+# Define macros to signal library feature availability
 if(NOT STD_FILESYSTEM_AVAILABLE)
   target_compile_definitions(project_options INTERFACE MODLE_WITH_BOOST_FILESYSTEM=1)
 endif()
 
-# figure out what flavor of <charconv> is available
-include(cmake/Charconv.cmake)
 if(CHARCONV_INT_AVAILABLE)
   target_compile_definitions(project_options INTERFACE MODLE_CHARCONV_INT_AVAILABLE=1)
 endif()
 
 if(CHARCONV_FP_AVAILABLE)
   target_compile_definitions(project_options INTERFACE MODLE_CHARCONV_FP_AVAILABLE=1)
+endif()
+
+if(VARIANT_AVAILABLE)
+  target_compile_definitions(project_options INTERFACE MODLE_VARIANT_AVAILABLE=1)
 endif()
 
 # Link this 'library' to use the warnings specified in CompilerWarnings.cmake
@@ -79,9 +81,6 @@ enable_doxygen()
 
 # allow for static analysis options
 include(cmake/StaticAnalyzers.cmake)
-
-# detect which standard library is being used
-include(cmake/DetectStdlib.cmake)
 
 option(BUILD_SHARED_LIBS "Enable compilation of shared libraries" OFF)
 option(ENABLE_TESTING "Enable Test Builds" ON)
