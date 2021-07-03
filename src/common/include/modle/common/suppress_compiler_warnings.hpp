@@ -30,6 +30,7 @@
     #define DISABLE_WARNING_C_VLA                DISABLE_WARNING("-Wvla-extension")
     #define DISABLE_WARNING_BOOL_COMPARE
     #define DISABLE_WARNING_USELESS_CAST
+    #define DISABLE_WARNING_DUPLICATED_BANCHES
 
 #if defined(__APPLE__) || (__clang_major__ < 11)
       #define DISABLE_WARNING_IMPL_INT_TO_FLOAT
@@ -42,6 +43,7 @@
     #define DISABLE_WARNING_BOOL_COMPARE         DISABLE_WARNING("-Wbool-compare")
     #define DISABLE_WARNING_IMPL_INT_TO_FLOAT    DISABLE_WARNING("-Wfloat-conversion")
     #define DISABLE_WARNING_USELESS_CAST         DISABLE_WARNING("-Wuseless-cast")
+    #define DISABLE_WARNING_DUPLICATED_BANCHES   DISABLE_WARNING("-Wduplicated-branches")
 #endif
 #else
     // Defines for unknown/unsupported compilers

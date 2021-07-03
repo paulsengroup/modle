@@ -491,7 +491,8 @@ void Simulation::generate_lef_unloader_affinities(
   assert(lefs.size() == fwd_collisions.size());         // NOLINT
   assert(lefs.size() == lef_unloader_affinity.size());  // NOLINT
 
-  auto is_lef_bar_collision = [&](const auto i) { return i < barriers.size(); };
+  // Changing ii -> i raises a -Werror=shadow on GCC 7.5
+  auto is_lef_bar_collision = [&](const auto ii) { return ii < barriers.size(); };
 
   for (auto i = 0UL; i < lefs.size(); ++i) {
     const auto& lef = lefs[i];

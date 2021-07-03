@@ -277,9 +277,10 @@ void Simulation::run_pairwise() {
     });
   }
 
-  auto print_status_update = [](const auto& t) {
-    fmt::print(stderr, "Skipping {}[{}-{}]...\n", t.chrom->name(), t.active_window_start,
-               t.active_window_end);
+  // Changing tt -> t raises a -Werror=shadow on GCC 7.5
+  auto print_status_update = [](const auto& tt) {
+    fmt::print(stderr, "Skipping {}[{}-{}]...\n", tt.chrom->name(), tt.active_window_start,
+               tt.active_window_end);
   };
 
   size_t task_id = 0;

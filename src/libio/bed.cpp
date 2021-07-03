@@ -229,6 +229,9 @@ std::string BED::dialect_to_str(Dialect d) {
   return std::string{bed::bed_dialect_to_str_mappings.at(d)};
 }
 
+BED::BED(std::string_view chrom_, bp_t chrom_start_, bp_t chrom_end_)
+    : chrom(chrom_), chrom_start(chrom_start_), chrom_end(chrom_end_), _standard(BED3) {}
+
 BED::BED(std::string_view record, size_t id_, BED::Dialect bed_standard, bool validate) : _id(id_) {
   std::vector<std::string_view> toks;
   for (std::string_view tok : absl::StrSplit(record, absl::ByAnyChar("\t "))) {

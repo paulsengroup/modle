@@ -336,6 +336,11 @@ void read_attribute(H5::H5File &f, std::string_view attr_name, T &buff, std::str
           DISABLE_WARNING_PUSH
           DISABLE_WARNING_IMPL_INT_TO_FLOAT
           DISABLE_WARNING_SIGN_COMPARE
+#if __GNUC__ < 8
+          // The following two warnings seem to be a false positive produced by GCC 7.5
+          DISABLE_WARNING_CONVERSION
+          DISABLE_WARNING_SIGN_CONVERSION
+#endif
           if (v >= std::numeric_limits<T>::min() && v <= std::numeric_limits<T>::max()) {  // NOLINT
             DISABLE_WARNING_POP
             buff = static_cast<T>(v);

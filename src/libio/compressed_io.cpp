@@ -191,8 +191,14 @@ std::string_view Reader::read_next_token(char sep) {
 
   this->_tok_tmp_buff.append(this->_buff.begin() + i,
                              this->_buff.begin() + static_cast<int64_t>(pos));
+  DISABLE_WARNING_PUSH
+#if __GNUC__ < 8
+  // The following two warnings seem to be a false positive produced by GCC 7.5
+  DISABLE_WARNING_CONVERSION
+#endif
   return std::string_view{this->_tok_tmp_buff};
 }
+DISABLE_WARNING_POP
 
 Writer::Writer(const boost::filesystem::path& path, Compression compression)
     : _compression(compression) {

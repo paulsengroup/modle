@@ -64,7 +64,7 @@ Cooler::Cooler(boost::filesystem::path path_to_file, IO_MODE mode, size_t bin_si
                size_t max_str_length, std::string_view assembly_name, Flavor flavor, bool validate,
                uint_fast8_t compression_lvl, size_t chunk_size, size_t cache_size)
     : STR_TYPE(generate_default_str_type(max_str_length)),
-      _path_to_file(path_to_file),
+      _path_to_file(std::move(path_to_file)),
       _mode(mode),
       _bin_size(bin_size),
       _assembly_name(assembly_name.data(), assembly_name.size()),
@@ -88,12 +88,12 @@ Cooler::Cooler(boost::filesystem::path path_to_file, IO_MODE mode, size_t bin_si
       _aprop_int64(generate_default_aprop(Cooler::INT64_TYPE, _chunk_size, _cache_size)),
       _aprop_float64(
           generate_default_aprop(H5::PredType::NATIVE_DOUBLE, _chunk_size, _cache_size)) {
-  assert(this->_flavor != UNK);
+  assert(this->_flavor != UNK);  // NOLINT
   if (this->_mode == READ_ONLY && this->_flavor == AUTO) {
     this->_flavor = Cooler::detect_file_flavor(*this->_fp);
   }
   if (this->_flavor == MCOOL) {
-    assert(this->_bin_size != 0);
+    assert(this->_bin_size != 0);  // NOLINT
     absl::StrAppend(&this->_root_path, "resolutions/", this->_bin_size, "/");
   }
   if (this->is_read_only()) {

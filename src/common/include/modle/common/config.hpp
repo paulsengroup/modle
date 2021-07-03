@@ -126,6 +126,7 @@ struct Config {  // NOLINT(altera-struct-pack-align)
     size_t max_column1_length = 0;
     size_t max_column2_length = 0;
     for (const auto& [title, options] : tokens) {
+      (void)title;
       for (const auto& opt : options) {
         max_column1_length =
             opt.name.size() > max_column1_length ? opt.name.size() : max_column1_length;

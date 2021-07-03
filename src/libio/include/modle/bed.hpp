@@ -138,6 +138,7 @@ struct BED {
   BED() = default;
   explicit BED(std::string_view record, size_t id_ = null_id, Dialect bed_standard = autodetect,
                bool enforce_std_compliance = true);
+  BED(std::string_view chrom_, bp_t chrom_start_, bp_t chrom_end_);
   BED(const BED& other);
   BED(BED&& other) = default;
   ~BED() = default;
@@ -175,7 +176,7 @@ struct BED {
  private:
   static constexpr auto null_id = std::numeric_limits<size_t>::max();
   size_t _id{null_id};
-  Dialect _standard;
+  Dialect _standard{none};
   static void parse_rgb_or_throw(const std::vector<std::string_view>& toks, uint8_t idx,
                                  RGB& field);
   [[nodiscard]] static RGB parse_rgb_or_throw(const std::vector<std::string_view>& toks,

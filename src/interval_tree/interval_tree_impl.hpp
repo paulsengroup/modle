@@ -135,8 +135,9 @@ void IITree<I, T>::make_BST() {
       last_i = last_i >> k & 1
                    ? last_i - x
                    : last_i + x;  // last_i now points to the parent of the original last_i
-      if (last_i < this->size() && this->_max[last_i] > last)  // update last accordingly
+      if (last_i < this->size() && this->_max[last_i] > last) {  // update last accordingly
         last = this->_max[last_i];
+      }
     }
     return k - 1LL;
   }();
@@ -274,18 +275,21 @@ std::pair<size_t, size_t> IITree<I, T>::find_overlaps_idx(const I start,
 template <typename I, typename T>
 size_t IITree<I, T>::lower_bound_idx(const I start, const I end) const noexcept {
   const auto [overlap_begin, _] = this->internal_equal_range<QueryType::LOWER_BOUND>(start, end);
+  (void)_;
   return this->_data.begin() - overlap_begin;
 }
 
 template <typename I, typename T>
 size_t IITree<I, T>::upper_bound_idx(const I start, const I end) const noexcept {
   const auto [_, overlap_end] = this->internal_equal_range<QueryType::UPPER_BOUND>(start, end);
+  (void)_;
   return this->_data.begin() - overlap_end;
 }
 
 template <typename I, typename T>
 bool IITree<I, T>::overlaps_with(const I start, const I end) const noexcept {
   const auto [overlap_begin, _] = this->internal_equal_range<QueryType::CONTAINS>(start, end);
+  (void)_;
   return overlap_begin != this->_data.end();
 }
 

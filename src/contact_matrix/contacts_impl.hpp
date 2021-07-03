@@ -124,6 +124,9 @@ void ContactMatrix<I>::set(size_t row, size_t col, I2 n) noexcept(utils::ndebug_
   DISABLE_WARNING_PUSH
   DISABLE_WARNING_SIGN_COMPARE
   DISABLE_WARNING_BOOL_COMPARE
+#if __GNUC__ < 8
+  DISABLE_WARNING_SIGN_CONVERSION
+#endif
   if (n < std::numeric_limits<I>::min() || n > std::numeric_limits<I>::max()) {
     utils::throw_with_trace(std::runtime_error(
         fmt::format(FMT_STRING("ContactMatrix<I>::set(row={}, col={}, n={}): Overflow detected: "

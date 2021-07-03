@@ -259,6 +259,7 @@ absl::btree_set<Chromosome> Genome::import_chromosomes(
       for (const auto& record : bed::Parser(path_to_chrom_subranges, bed::BED::BED3).parse_all()) {
         // passing std::string{record.chrom} is required in order to make GCC 8.4 happy
         const auto [node, new_insertion] = ranges.try_emplace(std::string{record.chrom}, record);
+        (void)node;
         if (!new_insertion) {
           throw std::runtime_error(
               fmt::format(FMT_STRING("Found more than one entry for chromosome '{}' in file {}"),
