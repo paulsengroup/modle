@@ -26,8 +26,9 @@
 // IWYU pragma: no_include <H5Spublic.h>
 // IWYU pragma: no_include <H5public.h>
 
-#include <H5Cpp.h>       // IWYU pragma: keep
-#include <fmt/format.h>  // for FMT_STRING, format, to_string
+#include <H5Cpp.h>               // IWYU pragma: keep
+#include <absl/types/variant.h>  // for visit, variant
+#include <fmt/format.h>          // for FMT_STRING, format, to_string
 
 #include <cassert>      // for assert
 #include <cstddef>      // for size_t
@@ -37,7 +38,6 @@
 #include <string>       // for string
 #include <string_view>  // for string_view
 #include <type_traits>  // for decay_t, declval, remove_pointer_t
-#include <variant>      // for visit, variant
 #include <vector>       // for vector
 
 #include "modle/common/suppress_compiler_warnings.hpp"  // for DISABLE_WARNING_POP, DISABLE_WARNI...
@@ -45,10 +45,10 @@
 
 namespace modle::hdf5 {
 
-// Predeclare internal functions
-using attr_types = std::variant<uint8_t, uint16_t, uint32_t, uint64_t, int8_t, int16_t, int32_t,
-                                int64_t, float, double, long double>;
+using attr_types = absl::variant<uint8_t, uint16_t, uint32_t, uint64_t, int8_t, int16_t, int32_t,
+                                 int64_t, float, double, long double>;
 
+// Predeclare internal functions
 inline attr_types getCpp_type(const H5::IntType &h5_type);
 inline attr_types getCpp_type(const H5::FloatType &h5_type);
 
@@ -315,11 +315,11 @@ void read_attribute(H5::H5File &f, std::string_view attr_name, T &buff, std::str
   auto vars =
       h5_class == H5T_INTEGER ? getCpp_type(attr.getIntType()) : getCpp_type(attr.getFloatType());
   // Visit the appropriate variant and read the attribute
-  std::visit([&](auto &&var) { attr.read(attr.getDataType(), &var); }, vars);
+  absl::visit([&](auto &&var) { attr.read(attr.getDataType(), &var); }, vars);
 
   // Try to convert the variant to type T whenever it make sense
   if constexpr (std::is_constructible_v<H5std_string, T>) {
-    std::visit([&](auto &&v) { buff = fmt::to_string(v); }, vars);
+    absl::visit([&](auto &&v) { buff = fmt::to_string(v); }, vars);
     return;
   }
 
@@ -330,7 +330,7 @@ void read_attribute(H5::H5File &f, std::string_view attr_name, T &buff, std::str
         FMT_STRING("Unable to store attribute '{}' of type {} into a buffer of type {}"), attr_name,
         utils::get_printable_type_name<T>(), utils::get_printable_type_name<VT>()));
   }
-  std::visit(
+  absl::visit(
       [&](auto &&v) {  // NOLINT unused-parameter
         if constexpr (std::is_arithmetic_v<T>) {
           DISABLE_WARNING_PUSH
