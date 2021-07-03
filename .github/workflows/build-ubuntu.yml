@@ -88,7 +88,7 @@ jobs:
           waserr='ON'; wlto='ON';     \
           if [[ ${{matrix.os}} == 'ubuntu-18.04' ]]; then \
             waserr='OFF'; wlto='OFF'; \
-          fi \
+          fi; \
           cmake -DCMAKE_BUILD_TYPE=${{matrix.config.build_type}} \
                 -DCMAKE_C_COMPILER=${{matrix.compiler.cc}}       \
                 -DCMAKE_CXX_COMPILER=${{matrix.compiler.cxx}}    \
@@ -104,7 +104,7 @@ jobs:
           waserr='ON'; wlto='ON';     \
           if [[ ${{matrix.os}} == 'ubuntu-18.04' ]]; then \
             waserr='OFF'; wlto='OFF'; \
-          fi \
+          fi; \
           cmake -DCMAKE_BUILD_TYPE=${{matrix.config.build_type}}   \
                 -DENABLE_SANITIZER_${{matrix.config.sanitizer}}=ON \
                 -DCMAKE_C_COMPILER=${{matrix.compiler.cc}}         \
