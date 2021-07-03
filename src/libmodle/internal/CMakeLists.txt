@@ -17,4 +17,3 @@ target_link_libraries(
   INTERFACE Modle::io CONAN_PKG::abseil CONAN_PKG::xxhash)
 
 target_include_directories(libmodle_internal INTERFACE include/)
-set_target_properties(libmodle_internal PROPERTIES OUTPUT_NAME "modle_internal")

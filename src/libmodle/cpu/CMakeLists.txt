@@ -25,8 +25,6 @@ target_link_libraries(
             $<$<AND:$<BOOL:${USING_LIBCXX}>,$<BOOL:${EXPLICIT_LINK_VS_FILESYSTEM_REQUIRED}>>:-lc++fs>
             $<$<AND:$<BOOL:${USING_STDLIBCXX}>,$<BOOL:${EXPLICIT_LINK_VS_FILESYSTEM_REQUIRED}>>:-lstdc++fs>)
 
-set_target_properties(libmodle_cpu PROPERTIES OUTPUT_NAME modle_cpu)
-
 if(ENABLE_PCH)
   target_precompile_headers(
     libmodle_cpu
