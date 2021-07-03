@@ -85,25 +85,33 @@ jobs:
         working-directory: ${{runner.workspace}}/build
         if: ${{matrix.config.build_type != 'Debug'}}
         run: |
+          waserr='ON'; wlto='ON';     \
+          if [[ ${{matrix.os}} == 'ubuntu-18.04' ]]; then \
+            waserr='OFF'; wlto='OFF'; \
+          fi \
           cmake -DCMAKE_BUILD_TYPE=${{matrix.config.build_type}} \
                 -DCMAKE_C_COMPILER=${{matrix.compiler.cc}}       \
                 -DCMAKE_CXX_COMPILER=${{matrix.compiler.cxx}}    \
-                -DENABLE_IPO=ON                                  \
+                -DENABLE_IPO=$wlto                               \
                 -DENABLE_TESTING=ON                              \
-                -DWARNINGS_AS_ERRORS=ON                          \
+                -DWARNINGS_AS_ERRORS=$waserr                     \
                 ${{github.workspace}}
 
       - name: Configure project - Debug
         working-directory: ${{runner.workspace}}/build
         if: ${{matrix.config.build_type == 'Debug'}}
         run: |
+          waserr='ON'; wlto='ON';     \
+          if [[ ${{matrix.os}} == 'ubuntu-18.04' ]]; then \
+            waserr='OFF'; wlto='OFF'; \
+          fi \
           cmake -DCMAKE_BUILD_TYPE=${{matrix.config.build_type}}   \
                 -DENABLE_SANITIZER_${{matrix.config.sanitizer}}=ON \
                 -DCMAKE_C_COMPILER=${{matrix.compiler.cc}}         \
                 -DCMAKE_CXX_COMPILER=${{matrix.compiler.cxx}}      \
-                -DENABLE_IPO=ON                                    \
+                -DENABLE_IPO=$wlto                                 \
                 -DENABLE_TESTING=ON                                \
-                -DWARNINGS_AS_ERRORS=ON                            \
+                -DWARNINGS_AS_ERRORS=$waserr                       \
                 ${{github.workspace}}
 
       - name: Build project
