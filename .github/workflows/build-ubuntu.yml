@@ -12,6 +12,7 @@ on:
       - "src/**"
       - "test/**"
       - "CMakeLists.txt"
+      - "conanfile.py
   pull_request:
     branches: [ main, testing-ci ]
     paths:
@@ -20,6 +21,7 @@ on:
       - "src/**"
       - "test/**"
       - "CMakeLists.txt"
+      - "conanfile.py
 
 jobs:
   build:

@@ -26,7 +26,7 @@ macro(run_conan)
     BASIC_SETUP
     CMAKE_TARGETS # individual targets to link to
     BUILD
-    missing
+    outdated
     PROFILE_AUTO
     ALL)
 endmacro()

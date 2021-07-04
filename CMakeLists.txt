@@ -17,7 +17,7 @@ include(CheckCXXCompilerFlag)
 add_library(project_options INTERFACE)
 
 check_cxx_compiler_flag("-std=c++20" MODLE_CXX20_COMPILER_AVAILABLE)
-if (MODLE_CXX20_COMPILER_AVAILABLE)
+if(MODLE_CXX20_COMPILER_AVAILABLE)
   set(MODLE_CXX20_COMPILER_AVAILABLE ON)
 else()
   set(MODLE_CXX20_COMPILER_AVAILABLE OFF)
