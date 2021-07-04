@@ -21,7 +21,7 @@ target_link_libraries(
           project_options
           Modle::common
           CONAN_PKG::xxhash
-  PUBLIC libBigWig::libBigWig
+  PUBLIC libBigWig::libbigwig
          Modle::cmatrix
          Modle::interval_tree
          CONAN_PKG::abseil

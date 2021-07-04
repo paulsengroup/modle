@@ -3,7 +3,7 @@ FetchContent_Declare(
   libBigWig
   URL ${CMAKE_CURRENT_SOURCE_DIR}/external/libBigWig-0.4.6.tar.xz
   URL_HASH
-    SHA512=9a7ce0448d79f072040860bc9b9b5514253725be9ecc10f40be4030d91c315a5d81671a7512e03eee993ce05a0b3e59b6a0498773ba4a9b1b1ecd773ff1211e1
+    SHA512=2708f5c14966749b3fe0d80196acd229c48b47833c5d3af2b2d456393ee14cbbf454faa9970b98f4b4793564e45194ab47ea4aeb450206be647997ad50de0262
 )
 FetchContent_Declare(
   Xoshiro-cpp
@@ -15,6 +15,7 @@ FetchContent_Declare(
 FetchContent_GetProperties(libBigWig)
 FetchContent_GetProperties(Xoshiro)
 
+set(WITH_CURL OFF CACHE INTERNAL "")
 if(NOT ${libbigwig}_POPULATED)
   FetchContent_Populate(libBigWig)
 endif()
