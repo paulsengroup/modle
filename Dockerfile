@@ -1,4 +1,4 @@
-FROM fedora:33 AS modle_base
+FROM fedora:34 AS modle_base
 
 ARG build_dir='/tmp/modle/cmake-build'
 # The following args are set through --build-arg(s) at build time
@@ -10,7 +10,7 @@ ARG skip_tests
 
 ARG XOSHIRO_CPP_VER=1.1
 ARG LIBBIGWIG_VER=0.4.6
-ARG CONAN_VER=1.37.0
+ARG CONAN_VER=1.38.0
 
 ENV CC=/usr/bin/gcc
 ENV CXX=/usr/bin/g++
