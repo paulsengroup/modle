@@ -227,10 +227,10 @@ void Writer::open(const boost::filesystem::path& path) {
       this->_out.push(boost::iostreams::lzma_compressor(
           boost::iostreams::lzma_params(boost::iostreams::lzma::best_compression)));
       break;
-    case ZSTD:
-      this->_out.push(boost::iostreams::zstd_compressor(
-          boost::iostreams::zstd_params(boost::iostreams::zstd::best_compression)));
-      break;
+    case ZSTD:  // Disabled
+      // this->_out.push(boost::iostreams::zstd_compressor(
+      //     boost::iostreams::zstd_params(boost::iostreams::zstd::best_compression)));
+      throw std::runtime_error("ZSTD compression not available.");
     case NONE:
       break;
     case AUTO:

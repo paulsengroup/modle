@@ -100,7 +100,7 @@ TEST_CASE("Reader lz4", "[io][reader][short]") {
   CHECK(!r1.getline(buff1));
   CHECK(!r2.getline(buff1));
 }
-
+/*
 TEST_CASE("Reader zstd", "[io][reader][short]") {
   const boost::filesystem::path compressed_file = "test/data/unit_tests/sample.bed9.zst";
   const boost::filesystem::path ptext_file = "test/data/unit_tests/sample.bed9";
@@ -116,6 +116,7 @@ TEST_CASE("Reader zstd", "[io][reader][short]") {
   CHECK(!r1.getline(buff1));
   CHECK(!r2.getline(buff1));
 }
+ */
 
 TEST_CASE("Reader lzma", "[io][reader][short]") {
   const boost::filesystem::path compressed_file = "test/data/unit_tests/sample.bed9.xz";
@@ -191,7 +192,7 @@ TEST_CASE("Writer lzma", "[io][writer][short]") {
 
   test_writer(r1, w);
 }
-
+/*
 TEST_CASE("Writer zstd", "[io][writer][short]") {
   const boost::filesystem::path ptext_file = "test/data/unit_tests/sample.bed9";
   const auto tmpout = testdir() / ptext_file.filename();
@@ -201,4 +202,5 @@ TEST_CASE("Writer zstd", "[io][writer][short]") {
 
   test_writer(r1, w);
 }
+ */
 }  // namespace modle::test::compressed_io
