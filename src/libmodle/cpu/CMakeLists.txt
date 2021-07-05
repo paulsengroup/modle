@@ -17,7 +17,7 @@ target_link_libraries(
             Modle::cmatrix
             Modle::common
             CONAN_PKG::cpp-sort
-  INTERFACE Modle::modle_internal
+  INTERFACE Modle::libmodle_internal
             CONAN_PKG::abseil
             CONAN_PKG::boost
             CONAN_PKG::concurrentqueue

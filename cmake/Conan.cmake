@@ -9,9 +9,19 @@ macro(run_conan)
 
   conan_add_remote(
     NAME
-    conan-center
+    conancenter
     URL
-    https://center.conan.io)
+    https://center.conan.io
+    INDEX
+    1)
+
+  conan_add_remote(
+    NAME
+    bincrafters
+    URL
+    https://bincrafters.jfrog.io/artifactory/api/conan/public-conan
+    INDEX
+    2)
 
   conan_cmake_run(
     CONANFILE

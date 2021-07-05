@@ -1,5 +1,5 @@
 add_library(libmodle_internal INTERFACE)
-add_library(Modle::modle_internal ALIAS libmodle_internal)
+add_library(Modle::libmodle_internal ALIAS libmodle_internal)
 
 target_sources(
   libmodle_internal
@@ -14,6 +14,6 @@ target_link_libraries(
             project_warnings
             Modle::common
             Modle::cmatrix
-  INTERFACE Modle::io CONAN_PKG::abseil CONAN_PKG::xxhash)
+  INTERFACE Modle::libmodle_io CONAN_PKG::abseil CONAN_PKG::xxhash)
 
 target_include_directories(libmodle_internal INTERFACE include/)

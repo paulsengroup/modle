@@ -1,7 +1,7 @@
-add_library(libio STATIC)
-add_library(Modle::io ALIAS libio)
+add_library(libmodle_io)
+add_library(Modle::libmodle_io ALIAS libmodle_io)
 target_sources(
-  libio
+  libmodle_io
   PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/bed.cpp
           ${CMAKE_CURRENT_SOURCE_DIR}/bigwig.cpp
           ${CMAKE_CURRENT_SOURCE_DIR}/bigwig_impl.hpp
@@ -12,11 +12,11 @@ target_sources(
           ${CMAKE_CURRENT_SOURCE_DIR}/hdf5_impl.hpp
           ${CMAKE_CURRENT_SOURCE_DIR}/compressed_io.cpp)
 
-add_dependencies(libio libBigWig)
-target_include_directories(libio PUBLIC include/)
+add_dependencies(libmodle_io libBigWig)
+target_include_directories(libmodle_io PUBLIC include/)
 
 target_link_libraries(
-  libio
+  libmodle_io
   PRIVATE project_warnings
           project_options
           Modle::common
@@ -35,12 +35,12 @@ target_link_libraries(
          $<$<AND:$<BOOL:${USING_LIBCXX}>,$<BOOL:${EXPLICIT_LINK_VS_FILESYSTEM_REQUIRED}>>:-lc++fs>
          $<$<AND:$<BOOL:${USING_STDLIBCXX}>,$<BOOL:${EXPLICIT_LINK_VS_FILESYSTEM_REQUIRED}>>:-lstdc++fs>)
 
-target_compile_definitions(libio PRIVATE -DNOCURL)
-set_target_properties(libio PROPERTIES OUTPUT_NAME io)
+target_compile_definitions(libmodle_io PRIVATE -DNOCURL)
+set_target_properties(libmodle_io PROPERTIES OUTPUT_NAME modle_io)
 
 if(ENABLE_PCH)
   target_precompile_headers(
-    libio
+    libmodle_io
     PUBLIC
     <algorithm>
     <cassert>
@@ -63,3 +63,9 @@ endif()
 if(ENABLE_TESTING)
   add_subdirectory(test)
 endif()
+
+install(
+  TARGETS libmodle_io
+  ARCHIVE
+  INCLUDES
+  LIBRARY)

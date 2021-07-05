@@ -16,6 +16,13 @@ include(CheckCXXCompilerFlag)
 # Link this 'library' to set the c++ standard / compile-time options requested
 add_library(project_options INTERFACE)
 
+if(CMAKE_CXX_COMPILER_ID MATCHES ".*Clang")
+  option(ENABLE_BUILD_WITH_TIME_TRACE "Enable -ftime-trace to generate time tracing .json files on clang" OFF)
+  if(ENABLE_BUILD_WITH_TIME_TRACE)
+    add_compile_definitions(project_options INTERFACE -ftime-trace)
+  endif()
+endif()
+
 check_cxx_compiler_flag("-std=c++20" MODLE_CXX20_COMPILER_AVAILABLE)
 if(MODLE_CXX20_COMPILER_AVAILABLE)
   set(MODLE_CXX20_COMPILER_AVAILABLE ON)
@@ -37,13 +44,6 @@ endif()
 
 target_compile_definitions(project_options INTERFACE $<$<CONFIG:Release>:BOOST_STACKTRACE_USE_NOOP>)
 
-if(CMAKE_CXX_COMPILER_ID MATCHES ".*Clang")
-  option(ENABLE_BUILD_WITH_TIME_TRACE "Enable -ftime-trace to generate time tracing .json files on clang" OFF)
-  if(ENABLE_BUILD_WITH_TIME_TRACE)
-    add_compile_definitions(project_options INTERFACE -ftime-trace)
-  endif()
-endif()
-
 # Define macros to signal library feature availability
 if(NOT STD_FILESYSTEM_AVAILABLE)
   target_compile_definitions(project_options INTERFACE MODLE_WITH_BOOST_FILESYSTEM=1)
@@ -59,6 +59,60 @@ endif()
 
 if(VARIANT_AVAILABLE)
   target_compile_definitions(project_options INTERFACE MODLE_VARIANT_AVAILABLE=1)
+endif()
+
+# Reduce level of optimization to improve the code profiling experience
+if(OPTIMIZE_FOR_PROFILING)
+  if(NOT
+          "${uppercase_CMAKE_BUILD_TYPE}"
+          STREQUAL
+          "RelWithDebInfo")
+    message(
+            WARNING
+            "Switching build type from ${CMAKE_BUILD_TYPE} to RelWithDebInfo because OPTIMIZE_FOR_PROFILING was set to ON by the user"
+    )
+    set(CMAKE_BUILD_TYPE "RelWithDebInfo")
+  endif()
+
+  target_compile_options(project_options INTERFACE -O1)
+endif()
+
+# Source:
+# https://github.com/llvm/llvm-project/blob/656ebd519e3fd52050e1c8abeacafcf94d1fa260/llvm/cmake/modules/HandleLLVMOptions.cmake#L54
+if(ENABLE_ASSERTIONS)
+  if(NOT MSVC)
+    add_definitions(-D_DEBUG)
+  endif()
+  # On non-Debug builds cmake automatically defines NDEBUG, so we explicitly undefine it:
+  if(NOT
+          uppercase_CMAKE_BUILD_TYPE
+          STREQUAL
+          "DEBUG")
+    # NOTE: use `add_compile_options` rather than `add_definitions` since `add_definitions` does not support generator
+    # expressions.
+    target_compile_options(project_options INTERFACE $<$<OR:$<COMPILE_LANGUAGE:C>,$<COMPILE_LANGUAGE:CXX>>:-UNDEBUG>)
+
+    # Also remove /D NDEBUG to avoid MSVC warnings about conflicting defines.
+    foreach(
+            flags_var_to_scrub
+            CMAKE_CXX_FLAGS_RELEASE
+            CMAKE_CXX_FLAGS_RELWITHDEBINFO
+            CMAKE_CXX_FLAGS_MINSIZEREL
+            CMAKE_C_FLAGS_RELEASE
+            CMAKE_C_FLAGS_RELWITHDEBINFO
+            CMAKE_C_FLAGS_MINSIZEREL)
+      string(
+              REGEX
+              REPLACE "(^| )[/-]D *NDEBUG($| )"
+              " "
+              "${flags_var_to_scrub}"
+              "${${flags_var_to_scrub}}")
+    endforeach()
+  endif()
+endif()
+
+if(WITH_BOOST_RANDOM)
+  target_compile_definitions(project_options INTERFACE MODLE_WITH_BOOST_RANDOM=1)
 endif()
 
 # Link this 'library' to use the warnings specified in CompilerWarnings.cmake
@@ -82,86 +136,8 @@ enable_doxygen()
 # allow for static analysis options
 include(cmake/StaticAnalyzers.cmake)
 
-option(BUILD_SHARED_LIBS "Enable compilation of shared libraries" OFF)
-option(ENABLE_TESTING "Enable Test Builds" ON)
-option(ENABLE_PCH "Enable Precompiled Headers" OFF)
-
-if(ENABLE_PCH)
-  if(${CMAKE_VERSION} VERSION_LESS "3.16.0")
-    message(WARNING "CMake 3.16 or newer is required to enable precompiled headers. Ignoring -DENABLE_PCH.")
-    set(ENABLE_PCH OFF)
-  endif()
-endif()
-
-#[[
-# Make sure compiler support execution policies (C++17)
-include(CheckIncludeFileCXX)
-set(CMAKE_REQUIRED_INCLUDES "${CMAKE_INCLUDE_PATH}")
-check_include_file_cxx("execution" HAVE_EXECUTION)
-if(NOT HAVE_EXECUTION)
-  message(
-    FATAL_ERROR
-      "Your compiler C++ library does not seem to support execution policies (C++17, currently only implemented in libstdc++ >=9)."
-  )
-endif()
-]]
-
 include(cmake/Conan.cmake)
 run_conan()
-
-# Reduce level of optimization to improve the code profiling experience
-if(OPTIMIZE_FOR_PROFILING)
-  if(NOT
-     "${uppercase_CMAKE_BUILD_TYPE}"
-     STREQUAL
-     "RelWithDebInfo")
-    message(
-      WARNING
-        "Switching build type from ${CMAKE_BUILD_TYPE} to RelWithDebInfo because OPTIMIZE_FOR_PROFILING was set to ON by the user"
-    )
-    set(CMAKE_BUILD_TYPE "RelWithDebInfo")
-  endif()
-
-  target_compile_options(project_options INTERFACE -O1)
-endif()
-
-# Source:
-# https://github.com/llvm/llvm-project/blob/656ebd519e3fd52050e1c8abeacafcf94d1fa260/llvm/cmake/modules/HandleLLVMOptions.cmake#L54
-if(ENABLE_ASSERTIONS)
-  if(NOT MSVC)
-    add_definitions(-D_DEBUG)
-  endif()
-  # On non-Debug builds cmake automatically defines NDEBUG, so we explicitly undefine it:
-  if(NOT
-     uppercase_CMAKE_BUILD_TYPE
-     STREQUAL
-     "DEBUG")
-    # NOTE: use `add_compile_options` rather than `add_definitions` since `add_definitions` does not support generator
-    # expressions.
-    target_compile_options(project_options INTERFACE $<$<OR:$<COMPILE_LANGUAGE:C>,$<COMPILE_LANGUAGE:CXX>>:-UNDEBUG>)
-
-    # Also remove /D NDEBUG to avoid MSVC warnings about conflicting defines.
-    foreach(
-      flags_var_to_scrub
-      CMAKE_CXX_FLAGS_RELEASE
-      CMAKE_CXX_FLAGS_RELWITHDEBINFO
-      CMAKE_CXX_FLAGS_MINSIZEREL
-      CMAKE_C_FLAGS_RELEASE
-      CMAKE_C_FLAGS_RELWITHDEBINFO
-      CMAKE_C_FLAGS_MINSIZEREL)
-      string(
-        REGEX
-        REPLACE "(^| )[/-]D *NDEBUG($| )"
-                " "
-                "${flags_var_to_scrub}"
-                "${${flags_var_to_scrub}}")
-    endforeach()
-  endif()
-endif()
-
-if(WITH_BOOST_RANDOM)
-  target_compile_definitions(project_options INTERFACE MODLE_WITH_BOOST_RANDOM=1)
-endif()
 
 # Prepare external dependencies
 include(cmake/FetchExternalDeps.cmake)

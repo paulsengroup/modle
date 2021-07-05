@@ -14,7 +14,7 @@ target_link_libraries(
           Modle::cmatrix_test
           Modle::correlation_test
           Modle::interval_tree_test
-          Modle::io_test
+          Modle::libmodle_io_test
           Modle::libmodle_cpu_test)
 
 if(ENABLE_PCH)
