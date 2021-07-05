@@ -2,7 +2,6 @@ FROM fedora:34 AS modle_base
 
 ARG build_dir='/tmp/modle/cmake-build'
 # The following args are set through --build-arg(s) at build time
-ARG march
 ARG cpus
 ARG ver
 ARG build_type
@@ -11,6 +10,9 @@ ARG skip_tests
 ARG XOSHIRO_CPP_VER=1.1
 ARG LIBBIGWIG_VER=0.4.6
 ARG CONAN_VER=1.38.0
+
+# Required by new bincrafter artifactory
+ARG CONAN_REVISIONS_ENABLED=1
 
 ENV CC=/usr/bin/gcc
 ENV CXX=/usr/bin/g++
@@ -49,18 +51,19 @@ RUN dnf update -y \
              -DWARNINGS_AS_ERRORS=ON               \
              -DENABLE_TESTING=ON                   \
              -DCMAKE_INSTALL_PREFIX='/usr/local'   \
-             -DCMAKE_CXX_FLAGS="-march=${march}"   \
-             -DCMAKE_C_FLAGS="-march=${march}"     \
              -G 'Unix Makefiles' ..                \
-    && make modle modle_tools -j "$cpus" \
-    &&                                   \
-    if [ ! "$skip_tests" = true ]; then  \
-        dnf install -y python3-scipy     \
-        && make catch_main               \
-        && make test                     \
-        && dnf remove -y python3-scipy;  \
-    fi                                   \
-    && make install                      \
+    && cmake --build "$build_dir" -j "$cpus"       \
+    &&                                             \
+    if [ ! "$skip_tests" = true ]; then            \
+        dnf install -y python3-scipy               \
+        && cd ..                                   \
+        && ctest -j "$cpus"                        \
+                 --test-dir "$build_dir"           \
+                 --schedule-random                 \
+                 --output-on-failure               \
+        && dnf remove -y python3-scipy;            \
+    fi                                             \
+    && cmake --install "$build_dir"                \
     &&                                             \
     if [ "$build_type" = "Debug" ]; then           \
         dnf install -y dnf-plugins-core gdb        \
@@ -69,7 +72,6 @@ RUN dnf update -y \
         unlink /usr/local/bin/conan                \
      && rm -r /conan_venv /root/.conan /tmp/modle  \
      && dnf remove -y                              \
-        cmake make gcc-c++ git                     \
-        zlib-devel                                 \
+        cmake make gcc-c++ git zlib-devel          \
      && dnf clean all ;                            \
     fi

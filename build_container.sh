@@ -4,7 +4,6 @@ set -e
 
 memory='8G'
 cpus="$(nproc)"
-march="$(uname -m | tr '_' '-')"
 name=modle
 skip_tests=false
 
@@ -19,14 +18,13 @@ for arg in "$@"; do
   --build-type)  type=${value}   ;;
   --cpus)        cpus=${value}   ;;
   --memory)      memory=${value} ;;
-  --march)       march=${value}  ;;
   --no-test)     skip_tests=true ;;
   *) ;;
   esac
 done
 
 if [[ $# -eq 1 && ("$1" == *help || "$1" == *h ) ]] ; then
-  echo "Usage: ./build_container [ --name=modle --version=a.b.c --build-type=Release|Debug --cpus $(nproc) --memory 8G --march='x86-64' ]"
+  echo "Usage: ./build_container [ --name=modle --version=a.b.c --build-type=Release|Debug --cpus $(nproc) --memory 8G ]"
   exit 1
 fi
 
@@ -73,15 +71,14 @@ sudo docker build --memory="${memory}" \
      -f "$(pwd)/Dockerfile" \
      --cpu-period="100000" \
      --cpu-quota="$((100000 * cpus))" \
-     --build-arg "march=$march" \
      --build-arg "cpus=$cpus" \
      --build-arg "ver=$ver" \
      --build-arg "build_type=$type" \
      --build-arg "skip-tests=$skip_tests" \
      .
 
- sudo singularity build -F "${img_name}_v${ver}-${march}.sif" \
-                          "docker-daemon://robomics/${img_name}:${ver}"
+ sudo singularity build -F "${img_name}_v${ver}.sif" \
+                           "docker-daemon://robomics/${img_name}:${ver}"
 
 # Restore docker.service to the original state
 if $stop_docker ; then
