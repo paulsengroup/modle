@@ -199,7 +199,6 @@ void Simulation::simulate_extrusion_kernel(StateT& s) const {
         if (this->skip_burnin) {
           // The following will cause every LEF to be loaded in the current iteration
           lef_initial_loading_epoch.subspan(0, 0);
-          // lef_initial_loading_epoch.clear();
         }
 
         // Consume epochs for LEFs that are supposed to be loaded in the current epoch

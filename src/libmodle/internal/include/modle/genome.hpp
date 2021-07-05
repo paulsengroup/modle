@@ -34,16 +34,18 @@ class Chromosome {
  public:
   Chromosome() = default;
   Chromosome(size_t id, std::string_view chrom_name, bp_t chrom_start, bp_t chrom_end,
-             bp_t chrom_size);
+             bp_t chrom_size, bool ok_ = true);
 
-  Chromosome(size_t id, const bed::BED& chrom);
-  Chromosome(size_t id, const bed::BED& chrom, const IITree<bp_t, ExtrusionBarrier>& barriers);
-  Chromosome(size_t id, const bed::BED& chrom, IITree<bp_t, ExtrusionBarrier>&& barriers);
+  Chromosome(size_t id, const bed::BED& chrom, bool ok_ = true);
+  Chromosome(size_t id, const bed::BED& chrom, const IITree<bp_t, ExtrusionBarrier>& barriers,
+             bool ok_ = true);
+  Chromosome(size_t id, const bed::BED& chrom, IITree<bp_t, ExtrusionBarrier>&& barriers,
+             bool ok_ = true);
 
   Chromosome(size_t id, std::string_view chrom_name, bp_t chrom_start, bp_t chrom_end,
-             bp_t chrom_size, const IITree<bp_t, ExtrusionBarrier>& barriers);
+             bp_t chrom_size, const IITree<bp_t, ExtrusionBarrier>& barriers, bool ok_ = true);
   Chromosome(size_t id, std::string_view chrom_name, bp_t chrom_start, bp_t chrom_end,
-             bp_t chrom_size, IITree<bp_t, ExtrusionBarrier>&& barriers);
+             bp_t chrom_size, IITree<bp_t, ExtrusionBarrier>&& barriers, bool ok_ = true);
 
   ~Chromosome() = default;
 
@@ -98,6 +100,7 @@ class Chromosome {
   IITree<bp_t, ExtrusionBarrier> _barriers{};
   std::shared_ptr<contact_matrix_t> _contacts{nullptr};
   std::vector<bed_tree_value_t> _features{};
+  bool _ok{true};
 
   std::unique_ptr<XXH3_state_t, utils::XXH3_Deleter> _xxh_state{XXH3_createState()};
 };

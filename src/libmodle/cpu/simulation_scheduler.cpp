@@ -111,7 +111,7 @@ void Simulation::run_base() {
   // Loop over chromosomes
   for (auto& chrom : this->_genome) {
     // Don't simulate KO chroms (but write them to disk if the user desires so)
-    if (!chrom.ok()) {
+    if (!chrom.ok() || chrom.num_barriers() == 0) {
       fmt::print(stderr, "SKIPPING '{}'...\n", chrom.name());
       if (this->write_contacts_for_ko_chroms) {
         std::scoped_lock l(progress_queue_mutex);
