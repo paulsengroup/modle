@@ -145,14 +145,14 @@ void Cli::make_cli() {
             "--hard-stall-multiplier",
             this->_config.hard_stall_multiplier,
             "Coefficient to control the increase in the stability of the LEF-DNA bind when a LEF is stalled in both direction by two extrusion barriers in convergent orientation. Setting this to 1 makes hard stalls strength identical to that of normal stalls.")
-            ->check(CLI::PositiveNumber)
+            ->check(CLI::NonNegativeNumber)
             ->capture_default_str();
 
     gen->add_option(
             "--soft-stall-multiplier",
             this->_config.soft_stall_multiplier,
             "Coefficient to control the increase in the stability of the LEF-DNA bind when a LEF is stalled by an extrusion barrier in the non-blocking orientation. Setting this to 1 makes soft stalls strength identical to that of normal stalls.")
-            ->check(CLI::PositiveNumber)
+            ->check(CLI::NonNegativeNumber)
             ->capture_default_str();
 
     gen->add_option(
