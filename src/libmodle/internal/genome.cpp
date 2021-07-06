@@ -217,6 +217,14 @@ Chromosome::contact_matrix_t& Chromosome::contacts() {
   return *this->_contacts;
 }
 
+const Chromosome::contact_matrix_t* Chromosome::contacts_ptr() const {
+  return this->_contacts.get();
+}
+
+Chromosome::contact_matrix_t* Chromosome::contacts_ptr() {
+  return this->_contacts.get();
+}
+
 uint64_t Chromosome::hash(uint64_t seed, size_t cell_id) {
   auto handle_errors = [&](const auto& status) {
     if (status == XXH_ERROR || !this->_xxh_state) {
@@ -267,24 +275,6 @@ absl::btree_set<Chromosome> Genome::import_chromosomes(
                absl::FormatDuration(absl::Now() - t0));
   };
 
-  // Parse chrom subranges from BED. We parse everything at once to deal with duplicate entries
-  const auto chrom_ranges = [&]() {
-    absl::btree_map<std::string, bed::BED> ranges;
-    if (!path_to_chrom_subranges.empty()) {
-      for (const auto& record : bed::Parser(path_to_chrom_subranges, bed::BED::BED3).parse_all()) {
-        // passing std::string{record.chrom} is required in order to make GCC 8.4 happy
-        const auto [node, new_insertion] = ranges.try_emplace(std::string{record.chrom}, record);
-        (void)node;
-        if (!new_insertion) {
-          throw std::runtime_error(
-              fmt::format(FMT_STRING("Found more than one entry for chromosome '{}' in file {}"),
-                          record.chrom, path_to_chrom_subranges));
-        }
-      }
-    }
-    return ranges;
-  }();
-
   // Parse chrom. sizes and build the set of chromosome to be simulated.
   // When the BED file with the chrom. subranges is not provided, all the chromosome in the
   // chrom.sizes file will be selected and returned. When a BED file with the chrom. subranges is
@@ -293,7 +283,7 @@ absl::btree_set<Chromosome> Genome::import_chromosomes(
   // chrom. sizes file
   auto id = 0UL;
   absl::btree_set<Chromosome> chromosomes;
-  if (chrom_ranges.empty()) {
+  if (path_to_chrom_subranges.empty()) {
     for (auto record : chrom_sizes::Parser(path_to_chrom_sizes).parse_all()) {
       record.thick_start = record.chrom_start;
       record.thick_end = record.chrom_end;
@@ -302,6 +292,22 @@ absl::btree_set<Chromosome> Genome::import_chromosomes(
     print_status_update_on_return(chromosomes.size());
     return chromosomes;
   }
+
+  // Parse chrom subranges from BED. We parse everything at once to deal with duplicate entries
+  const auto chrom_ranges = [&]() {
+    absl::btree_map<std::string, bed::BED> ranges;
+    for (const auto& record : bed::Parser(path_to_chrom_subranges, bed::BED::BED3).parse_all()) {
+      // passing std::string{record.chrom} is required in order to make GCC 8.4 happy
+      const auto [node, new_insertion] = ranges.try_emplace(std::string{record.chrom}, record);
+      (void)node;
+      if (!new_insertion) {
+        throw std::runtime_error(
+            fmt::format(FMT_STRING("Found more than one entry for chromosome '{}' in file {}"),
+                        record.chrom, path_to_chrom_subranges));
+      }
+    }
+    return ranges;
+  }();
 
   for (auto record : chrom_sizes::Parser(path_to_chrom_sizes).parse_all()) {
     const auto match = chrom_ranges.find(record.chrom);

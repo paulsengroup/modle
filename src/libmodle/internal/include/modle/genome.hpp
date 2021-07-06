@@ -86,6 +86,8 @@ class Chromosome {
   void deallocate_contacts();
   [[nodiscard]] const contact_matrix_t& contacts() const;
   [[nodiscard]] contact_matrix_t& contacts();
+  [[nodiscard]] const contact_matrix_t* contacts_ptr() const;
+  [[nodiscard]] contact_matrix_t* contacts_ptr();
   [[nodiscard]] uint64_t hash(uint64_t seed, size_t cell_id = 0);
 
   template <typename H>

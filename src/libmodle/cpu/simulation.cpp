@@ -108,17 +108,33 @@ void Simulation::write_contacts_to_disk(std::deque<std::pair<Chromosome*, size_t
     sleep_us = 100;
     try {
       if (c) {  // c == nullptr only when --skip-output is used
-        fmt::print(stderr, "Writing contacts for '{}' to file {}...\n", chrom_to_be_written->name(),
-                   c->get_path());
+        // NOTE here we have to use pointers instead of reference because
+        // chrom_to_be_written.contacts() == nullptr is used to signal an empty matrix.
+        // In this case, c->write_or_append_cmatrix_to_file() will create an entry in the chroms and
+        // bins datasets, as well as update the appropriate index
+        if (chrom_to_be_written->contacts_ptr()) {
+          fmt::print(stderr, "Writing contacts for '{}' to file {}...\n",
+                     chrom_to_be_written->name(), c->get_path());
+        } else {
+          fmt::print(stderr, "Creating an empty entry for '{}' in file {}...\n",
+                     chrom_to_be_written->name(), c->get_path());
+        }
+
         c->write_or_append_cmatrix_to_file(
-            chrom_to_be_written->contacts(), chrom_to_be_written->name(),
+            chrom_to_be_written->contacts_ptr(), chrom_to_be_written->name(),
             chrom_to_be_written->start_pos(), chrom_to_be_written->end_pos(),
             chrom_to_be_written->size(), true);
-        fmt::print(
-            stderr, "Written {} contacts for '{}' in {:.2f}M pixels to file {}.\n",
-            chrom_to_be_written->contacts().get_tot_contacts(), chrom_to_be_written->name(),
-            static_cast<double>(chrom_to_be_written->contacts().npixels()) / 1.0e6,  // NOLINT
-            c->get_path());
+
+        if (chrom_to_be_written->contacts_ptr()) {
+          fmt::print(
+              stderr, "Written {} contacts for '{}' in {:.2f}M pixels to file {}.\n",
+              chrom_to_be_written->contacts().get_tot_contacts(), chrom_to_be_written->name(),
+              static_cast<double>(chrom_to_be_written->contacts().npixels()) / 1.0e6,  // NOLINT
+              c->get_path());
+        } else {
+          fmt::print(stderr, "Created an entry for '{}' in file {}.\n", chrom_to_be_written->name(),
+                     c->get_path());
+        }
       }
       // Deallocate the contact matrix to free up unused memory
       chrom_to_be_written->deallocate_contacts();
