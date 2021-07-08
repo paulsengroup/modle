@@ -5,7 +5,7 @@ name: Ubuntu Builds
 
 on:
   push:
-    branches: [ main, testing-ci ]
+    branches: [ main, testing-ci, v4, v4.1 ]
     paths:
       - ".github/workflows/*.yml"
       - "external/**"
@@ -14,7 +14,7 @@ on:
       - "CMakeLists.txt"
       - "conanfile.py"
   pull_request:
-    branches: [ main, testing-ci ]
+    branches: [ main, testing-ci, v4, v4.1 ]
     paths:
       - ".github/workflows/*.yml"
       - "external/**"
