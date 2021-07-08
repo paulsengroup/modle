@@ -46,7 +46,7 @@ namespace modle {
 void Simulation::run_base() {
   if (!this->skip_output) {  // Write simulation params to file
     if (this->force) {
-      boost::filesystem::remove_all(this->path_to_output_file_cool);
+      boost::filesystem::remove(this->path_to_output_file_cool);
     }
     boost::filesystem::create_directories(this->path_to_output_file_cool.parent_path());
     std::ofstream log_file(this->path_to_log_file.string());
@@ -289,17 +289,66 @@ void Simulation::run_pairwise() {
     const auto& features = chrom.get_features();
     const auto& barriers = chrom.barriers();
     if (features.size() != 2 || barriers.empty()) {
-      continue;
+      continue;  // Skip chromosomes that have less than two "kinds" of features or no barriers
     }
 
+    // The idea here is that given a diagonal width D and a feature F1, in order to track all
+    // possible interactions between F1 and nearby features we need to simulate at least window 2*D
+    // wide centered around F1.
+    // If we now consider another feature F2 located 100 bp downstream of F1, in order to track all
+    // possible interactions we need to simulate a 2*D window centered around F2. Given how close F1
+    // and F2 we basically end up simulating the same region twice.
+    // This can be avoided by extending the window we are simulating by 1*D left and right,
+    // increasing the window width to 4*D. We then define an active window, which is a 2*D wide
+    // region centered inside the 4*D window.
+    // Now we simulate loop extrusion over a 4*D region and record all possible, non-zero contacts
+    // between features falling in the 2*D region.
+    // Next, we advance both windows by 1*D, and repeat the same procedure. With this logic the
+    // overlap between subsequent windows is always 3*D.
+    // Deletions are performed on the entire 4*D region, this is because deletions outside of the
+    // active window can still affect interactions between features in the active window.
+    // The last problem we have to solve, is to figure out how to ensure that we don't output the
+    // number of contacts for a pair of features and a given barrier configuration twice. This is
+    // likely to happen, as the active window is 2*D and windows are advanced by only 1*D at a time.
+    // The solution to this problem was to use the center of the two windows as partition point.
+    // For features upstream of the partition point we output all possible pairwise contacts, while
+    // for features located downstream of the partition point we output contacts only if one of the
+    // feature participating in the pair is upstream of the partition point.
+    // Consider the following example:
+    // Given four features F1, F2, F3 and F4, where F1 and F2 are located upstream of the partition
+    // point P, while F3 and F4 are located downstream of said point. All features fall in a D wide
+    // region in the active window.
+    // For each distinct extrusion barrier configuration we
+    // output the number of contacts for the following pairs (assumin nnz contacts):
+    //
+    // - F1:F2 - both are upstream of P
+    // - F1:F3 - F1 is upstream of P
+    // - F1:F4 - F1 is upstream of P
+    // - F2:F3 - F2 is upstream of P
+    // - F2:F4 - F2 is upstream of P
+    //
+    // - Contacts between F3 and F4 will be produced when simulating the next window, as in that
+    // case they will both be located upstream of the new partition point
+    //
+    // It should be noted that the first and last window on a chromosome need special handling, as
+    // the outer window cannot extend past the chromosomal boundaries. In these cases the active
+    // window is extended such that it goes from 5'-end->3*D for the first window and from P +
+    // 1*D->3'-end, where P is the partition point of the previous window.
+
     size_t cell_id = 0;
+
+    // Setup the
     TaskPW t{};
+
     t.chrom = &chrom;
+    // Initialize task with the initial window
     t.window_start = 0;
     t.window_end = 4 * this->diagonal_width;
     t.active_window_start = 0;
     t.active_window_end = 3 * this->diagonal_width;
 
+    // This lambda advances the outer and active windows by 1*D while ensuring the neither of the
+    // windows extend past the 3'-end
     auto advance_window = [&]() -> bool {
       t.window_start += this->diagonal_width;
       t.active_window_start = t.window_start + this->diagonal_width;
@@ -311,10 +360,10 @@ void Simulation::run_pairwise() {
     };
 
     do {
-      if (this->target_contact_density != 0) {  // Compute the number of simulation rounds required
-                                                // to reach the target contact density
-
+      // Compute the number of simulation rounds required to reach the target contact density
+      if (this->target_contact_density != 0) {
         const auto num_pixels = [&]() {
+          // Compute the number of pixels mapping to the outer window
           const auto npix1 =
               (t.window_end - this->deletion_size - t.window_start + this->bin_size - 1) /
               this->bin_size;
@@ -322,21 +371,28 @@ void Simulation::run_pairwise() {
 
           return npix1 * npix2;
         }();
+
         t.num_target_contacts = static_cast<size_t>(std::max(
             1.0, std::round(this->target_contact_density * static_cast<double>(num_pixels))));
       }
-      t.num_target_epochs = t.num_target_contacts == 0UL ? this->simulation_iterations
-                                                         : std::numeric_limits<size_t>::max();
 
+      // Compute the number of LEFs based on the window size
       t.num_lefs = static_cast<size_t>(static_cast<double>(t.window_end - t.window_start) *
                                        this->number_of_lefs_per_mbp);
 
+      // Compute the target number of epochs based on the target number of contacts
+      t.num_target_epochs = t.num_target_contacts == 0UL ? this->simulation_iterations
+                                                         : std::numeric_limits<size_t>::max();
+
+      // Find all barriers falling within the outer window. Skip over windows with 0 barriers
       auto [first_barrier, last_barrier] = barriers.equal_range(t.window_start, t.window_end);
       if (first_barrier == barriers.data_end()) {
         print_status_update(t);
         continue;
       }
 
+      // Find all features of type 1 falling within the outer window. Skip over windows with 0
+      // features
       auto [first_feat1, last_feat1] =
           features[0].equal_range(t.active_window_start, t.active_window_end);
       if (first_feat1 == features[0].data_end()) {
@@ -344,6 +400,8 @@ void Simulation::run_pairwise() {
         continue;
       }
 
+      // Find all features of type 2 falling within the outer window. Skip over windows with 0
+      // features
       auto [first_feat2, last_feat2] =
           features[1].equal_range(t.active_window_start, t.active_window_end);
       if (first_feat2 == features[1].data_end()) {
@@ -351,6 +409,7 @@ void Simulation::run_pairwise() {
         continue;
       }
 
+      // Complete task setup
       t.id = task_id++;
       t.cell_id = cell_id++;
 
@@ -361,26 +420,29 @@ void Simulation::run_pairwise() {
       t.feats2 =
           absl::MakeConstSpan(&(*first_feat2), static_cast<size_t>(last_feat2 - first_feat2));
 
-      if (num_tasks == tasks.size()) {
-        auto sleep_us = 100;  // NOLINT
-        while (               // Enqueue tasks
+      if (num_tasks == tasks.size()) {  // Enqueue a batch of tasks
+        auto sleep_us = 100;            // NOLINT
+        while (
             !task_queue.try_enqueue_bulk(ptok, std::make_move_iterator(tasks.begin()), num_tasks)) {
           sleep_us = std::min(100000, sleep_us * 2);  // NOLINT
           std::this_thread::sleep_for(std::chrono::microseconds(sleep_us));
         }
         num_tasks = 0;
       }
+      // Add task to the current batch
       tasks[num_tasks++] = t;  // NOLINT
     } while (!advance_window());
   }
+
+  // Submit any remaining task
   if (num_tasks != 0) {
-    while (  // Enqueue tasks
-        !task_queue.try_enqueue_bulk(ptok, std::make_move_iterator(tasks.begin()), num_tasks)) {
+    while (!task_queue.try_enqueue_bulk(ptok, std::make_move_iterator(tasks.begin()), num_tasks)) {
       std::this_thread::sleep_for(std::chrono::microseconds(100));  // NOLINT
     }
   }
+
   end_of_simulation = true;
-  tpool.join();
+  tpool.join();  // Wait on worker threads
 }
 
 void Simulation::worker(moodycamel::BlockingConcurrentQueue<Simulation::TaskPW>& task_queue,
@@ -443,78 +505,109 @@ void Simulation::worker(moodycamel::BlockingConcurrentQueue<Simulation::TaskPW>&
 
 void Simulation::simulate_window(Simulation::StatePW& state, compressed_io::Writer& out_stream,
                                  std::mutex& out_stream_mutex) const {
+  // Simulating a window consists in generating all valid combinations of barriers after deleting a
+  // portion of the DNA from the window.
+  // The idea here is that given that biologically relevant boundaries are often marked by multiple
+  // extrusion barriers, deleting one barrier at a time is not very interesting, while by deleting
+  // regions spanning several kbs we are able to delete clusters of barriers, which should produce a
+  // more dramatic change in the number of contacts.
+  // Deletions are performed according to the following algorithm:
+  //
+  // Going from the first barrier at the 5-end of the window and moving towards the last barrier at
+  // the 3-'end of the window do:
+  // - Delete a region going from the BP + 1 - DS to BP, where BP is the position of the extrusion
+  //   barrier and DS is the deletion size. This will produce a novel extrusion barrier
+  //   configuration
+  // - Simulate loop extrusion on the current window given the above barrier configuration
+  // - Move to the next barrier and start over from step #1
+  //
+  // Thew idea here is that if there's a cluster of barriers going from BP1 until BP10, and
+  // BP10 - BP1 < DS, when BP points to BP10, the deletion will include every barrier in the
+  // cluster.
+
   const auto write_to_stdout = out_stream.path().empty();
-  const auto all_barriers = state.barriers;
+  const auto all_barriers = state.barriers;  // "Backup" the span corresponding to all the barriers
+                                             // mapping to the current window
 
   size_t last_barrier_deleted_idx{0};
 
   std::string out_buffer;
   std::string barrier_str_buff;
   do {
+    // Figure out whether we are processing the first or last window and compute the partition point
     const auto first_chunk = state.active_window_start == state.chrom->start_pos();
     const auto last_chunk = state.active_window_end == state.chrom->end_pos();
     const auto partition_point = (state.active_window_start + state.active_window_end + 1) / 2;
 
+    // Compute the span of the deletion
     state.deletion_size =
         std::min(all_barriers[last_barrier_deleted_idx].pos() + 1, this->deletion_size);
     state.deletion_begin = all_barriers[last_barrier_deleted_idx].pos() + 1 - deletion_size;
     const auto deletion_end = state.deletion_begin + state.deletion_size;
+    {  // TODO Remove me!
+      barrier_str_buff.clear();
+      for (const auto& barrier : all_barriers) {
+        if (barrier.pos() < state.deletion_begin ||
+            barrier.pos() >= state.deletion_begin + state.deletion_size) {
+          absl::StrAppend(&barrier_str_buff, barrier.pos(), ",");
+        }
+      }
+      if (!barrier_str_buff.empty()) {
+        barrier_str_buff.pop_back();
+      }
+    }
 
     // Generate barrier configuration
     state.barrier_tmp_buff.clear();
-    barrier_str_buff.clear();
-    // TODO Removeme
-    for (const auto& barrier : all_barriers) {
-      if (barrier.pos() < state.deletion_begin ||
-          barrier.pos() >= state.deletion_begin + state.deletion_size) {
-        absl::StrAppend(&barrier_str_buff, barrier.pos(), ",");
-      }
-    }
-    if (!barrier_str_buff.empty()) {
-      barrier_str_buff.pop_back();
-    }
-
     std::copy_if(all_barriers.begin(), all_barriers.end(),
                  std::back_inserter(state.barrier_tmp_buff), [&](const auto& barrier) {
                    return barrier.pos() < state.deletion_begin ||
                           barrier.pos() >= state.deletion_begin + state.deletion_size;
                  });
 
+    // Don't proceed further in case a deletion removed all the barriers in the current window
     if (state.barrier_tmp_buff.empty()) {
       continue;
     }
 
+    // The code below is assigning a span, it is not copying the actual vector of barriers
     state.barriers = state.barrier_tmp_buff;
     assert(state.window_end > deletion_size);  // NOLINT
-    state.num_lefs =                           // Compute # of LEFs to be simulated
+    state.num_lefs =  // Compute # of LEFs to be simulated taking into account the deletion size
         static_cast<size_t>(std::round(
             this->number_of_lefs_per_mbp *
             (static_cast<double>(state.window_end - deletion_size - state.window_start)) / Mbp));
-    // Resize and reset buffers
+
+    // Resize and reset state buffers
     state.resize();
     state.reset();
     state.contacts.reset();
 
     Simulation::simulate_extrusion_kernel(state);
 
+    // Output contacts for valid pairs of features
     for (auto i = 0UL; i < state.feats1.size(); ++i) {
       const auto& feat1 = state.feats1[i];
       const auto feat1_abs_center_pos = (feat1.chrom_start + feat1.chrom_end + 1) / 2;
       if (feat1_abs_center_pos >= state.deletion_begin && feat1_abs_center_pos < deletion_end) {
-        continue;  // Skip deleted feat1
+        continue;  // feat1 has been deleted
       }
       for (auto j = i; j < state.feats2.size(); ++j) {
         const auto& feat2 = state.feats2[j];
         const auto feat2_abs_center_pos = (feat2.chrom_start + feat2.chrom_end + 1) / 2;
         if (feat2_abs_center_pos >= state.deletion_begin && feat2_abs_center_pos < deletion_end) {
-          continue;  // Skip deleted feat2
+          continue;  // feat2 has been deleted
         }
 
+        // Don't output contacts when both feat1 and feat2 are located downstream of the partition
+        // point. This does not apply when we are processing the first or last window
         if ((first_chunk || last_chunk) &&
             (feat1_abs_center_pos >= partition_point && feat2_abs_center_pos >= partition_point)) {
           continue;
         }
 
+        // Convert absolute positions to relative positions, as the contact matrix does not refer to
+        // an entire chromosome, but only to a 4*D wide region
         const auto feat1_rel_center_pos = feat1_abs_center_pos - state.window_start;
         const auto feat2_rel_center_pos = feat2_abs_center_pos - state.window_start;
 
@@ -526,23 +619,27 @@ void Simulation::simulate_window(Simulation::StatePW& state, compressed_io::Writ
           continue;
         }
 
+        // Compute the absolute bin coordinates. This are used to compute the positions shown in the
+        // BEDPE file
         const auto feat1_abs_bin = (feat1_abs_center_pos + this->bin_size - 1) / this->bin_size;
         const auto feat2_abs_bin = (feat2_abs_center_pos + this->bin_size - 1) / this->bin_size;
 
-        const auto name = feat1.name.empty() && feat2.name.empty()
-                              ? ""
-                              : absl::StrCat(feat1.name, ";", feat2.name);
-        absl::StrAppend(
+        // Generate the name field. The field will be "none;none" in case both features don't have a
+        // name
+        const auto name = absl::StrCat(feat1.name.empty() ? "none" : feat1.name, ";",
+                                       feat2.name.empty() ? "none" : feat2.name);
+        absl::StrAppend(  // Append a BEDPE record to the local buffer
             &out_buffer,
             fmt::format(FMT_COMPILE("{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\tdeletion={}-{}"
                                     "\tnum_barr={}/{}\tbarrs={}\n"),
                         feat1.chrom, feat1_abs_bin * bin_size, (feat1_abs_bin + 1) * bin_size,
-                        feat2.chrom, feat2_abs_bin * bin_size, (feat2_abs_bin + 1) * bin_size,
-                        name.size() > 1 ? name : "none", contacts, feat1.strand, feat2.strand,
-                        state.deletion_begin, deletion_end, state.barriers.size(),
-                        all_barriers.size(), barrier_str_buff));
+                        feat2.chrom, feat2_abs_bin * bin_size, (feat2_abs_bin + 1) * bin_size, name,
+                        contacts, feat1.strand, feat2.strand, state.deletion_begin, deletion_end,
+                        state.barriers.size(), all_barriers.size(), barrier_str_buff));
       }
     }
+
+    // Write the buffer to the appropriate stream
     if (!out_buffer.empty()) {
       std::scoped_lock l(out_stream_mutex);
       if (write_to_stdout) {
@@ -552,7 +649,7 @@ void Simulation::simulate_window(Simulation::StatePW& state, compressed_io::Writ
       }
       out_buffer.clear();
     }
-    /*
+    /* // DEBUG CODE: write contacts to a .cool file
     if (foo == k++) {
       auto c = cooler::Cooler(fmt::format("/tmp/test_{}_{}_{:03}.cool", state.id, state.cell_id,
     foo), cooler::Cooler::WRITE_ONLY, this->bin_size, state.chrom.name().size());
