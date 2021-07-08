@@ -189,4 +189,34 @@ TEST_CASE("CMatrix in/decrement vector", "[cmatrix][short]") {
 #endif
 }
 
+TEST_CASE("CMatrix get w/ block", "[cmatrix][short]") {
+  ContactMatrix<> m1(100, 100);  // NOLINT
+  // Fill the upper left corner
+  for (auto i = 0UL; i < 3; ++i) {
+    for (auto j = i; j < 3; ++j) {
+      m1.set(i, j, i + j);
+    }
+  }
+
+  // Fill a region away from the diagonal
+  for (auto i = 20UL; i < 25; ++i) {
+    for (auto j = 25; j < 30; ++j) {
+      m1.set(i, j, 1);
+    }
+  }
+
+  // Fill the lower right corner
+  for (auto i = 97UL; i < 100; ++i) {
+    for (auto j = 97UL; j < 100; ++j) {
+      m1.set(i, j, (i - 97) + (j - 97));
+    }
+  }
+
+  // m1.print(true);
+
+  CHECK(m1.get(0, 0, 5) == 30);
+  CHECK(m1.get(22, 27, 5) == 25);
+  CHECK(m1.get(99, 99, 5) == 70);
+}
+
 }  // namespace modle::test::cmatrix

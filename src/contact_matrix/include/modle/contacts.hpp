@@ -41,6 +41,9 @@ class ContactMatrix {
 
   // Counts getters and setters
   [[nodiscard]] inline I get(size_t row, size_t col) const noexcept(utils::ndebug_defined());
+  // block_size is required to be an odd number at the moment
+  [[nodiscard]] inline I get(size_t row, size_t col, size_t block_size) const
+      noexcept(utils::ndebug_defined());
   template <typename I2>
   inline void set(size_t row, size_t col, I2 n) noexcept(utils::ndebug_defined());
   template <typename I2>

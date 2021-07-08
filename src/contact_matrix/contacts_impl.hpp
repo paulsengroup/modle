@@ -116,6 +116,44 @@ I ContactMatrix<I>::get(size_t row, size_t col) const noexcept(utils::ndebug_def
 }
 
 template <typename I>
+I ContactMatrix<I>::get(size_t row, size_t col, size_t block_size) const
+    noexcept(utils::ndebug_defined()) {
+  assert(block_size > 0);              // NOLINT
+  assert(block_size < this->nrows());  // NOLINT
+  // For now we only support blocks with an odd size
+  assert(block_size % 2 != 0);  // NOLINT
+  if (block_size == 1) {
+    return this->get(row, col);
+  }
+
+  if constexpr (utils::ndebug_defined()) {
+    const auto [i, j] = transpose_coords(row, col);
+    if (i >= this->ncols() || j >= this->ncols()) {
+      utils::throw_with_trace(std::logic_error(fmt::format(
+          FMT_STRING("ContactMatrix<I>::get(row={}, col={}) tried to access an element outside of "
+                     "the space {}x{}, which is what this contact matrix is supposed to represent"),
+          row, col, col, col)));
+    }
+  }
+
+  // Edges are handled like shown here: https://en.wikipedia.org/wiki/File:Extend_Edge-Handling.png
+  const auto bs = static_cast<int64_t>(block_size);
+  const auto first_row = static_cast<int64_t>(row) - ((bs - 1) / 2);
+  const auto first_col = static_cast<int64_t>(col) - ((bs - 1) / 2);
+  I n{0};
+  for (auto i = first_row; i < first_row + bs; ++i) {
+    for (auto j = first_col; j < first_col + bs; ++j) {
+      const auto ii =
+          static_cast<size_t>(std::clamp(i, int64_t(0), static_cast<int64_t>(this->_nrows - 1)));
+      const auto jj =
+          static_cast<size_t>(std::clamp(j, int64_t(0), static_cast<int64_t>(this->_ncols - 1)));
+      n += this->get(ii, jj);
+    }
+  }
+  return n;
+}
+
+template <typename I>
 template <typename I2>
 void ContactMatrix<I>::set(size_t row, size_t col, I2 n) noexcept(utils::ndebug_defined()) {
   static_assert(std::is_integral<I2>::value,
