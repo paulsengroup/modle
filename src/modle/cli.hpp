@@ -28,6 +28,8 @@
 namespace modle {
 
 class Cli {
+  enum subcommand : uint8_t { simulate, pertubate };
+
  private:
   int _argc;
   char** _argv;
@@ -36,6 +38,8 @@ class Cli {
   CLI::App _cli{};
 
   void make_cli();
+  void make_simulation_subcommand();
+  void make_perturbate_subcommand();
 
  public:
   Cli(int argc, char** argv);
