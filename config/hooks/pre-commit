@@ -1,0 +1,22 @@
+#!/bin/sh
+# Adapted from https://github.com/uber/NullAway/blob/master/config/hooks/pre-commit
+
+set -e
+
+REPO_ROOT_DIR="$(git rev-parse --show-toplevel)"
+
+# Format .hpp and .cpp files with clang-format
+files=$((git diff --cached --name-only --diff-filter=ACMR | grep -Ei "\.[hc]pp$") || true)
+if [ ! -z "${files}" ]; then
+    files="$(echo "$files" | paste -s -d " " -)"
+    clang-format -i --style=file $files &>/dev/null
+    git add $files
+fi
+
+# Format CMake files with cmake-format
+files=$((git diff --cached --name-only --diff-filter=ACMR | grep -Ei "(CMakeLists\.txt$)|(\.cmake$)") || true)
+if [ ! -z "${files}" ]; then
+    files="$(echo "$files" | paste -s -d " " -)"
+    cmake-format -i -c="${REPO_ROOT_DIR}/.cmake-format.yaml" $files &>/dev/null
+    git add $files
+fi
