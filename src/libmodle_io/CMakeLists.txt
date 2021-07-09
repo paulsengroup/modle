@@ -31,9 +31,7 @@ target_link_libraries(
          CONAN_PKG::libarchive
          CONAN_PKG::readerwriterqueue
          CONAN_PKG::zlib
-         # Deal with boost::filesystem quirkiness on older compilers
-         $<$<AND:$<BOOL:${USING_LIBCXX}>,$<BOOL:${EXPLICIT_LINK_VS_FILESYSTEM_REQUIRED}>>:-lc++fs>
-         $<$<AND:$<BOOL:${USING_STDLIBCXX}>,$<BOOL:${EXPLICIT_LINK_VS_FILESYSTEM_REQUIRED}>>:-lstdc++fs>)
+)
 
 target_compile_definitions(libmodle_io PRIVATE -DNOCURL)
 set_target_properties(libmodle_io PROPERTIES OUTPUT_NAME modle_io)

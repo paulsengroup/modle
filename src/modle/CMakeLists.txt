@@ -12,9 +12,7 @@ target_link_libraries(
           CONAN_PKG::abseil
           CONAN_PKG::boost
           CONAN_PKG::cli11
-          # Deal with boost::filesystem quirkiness on older compilers
-          $<$<AND:$<BOOL:${USING_LIBCXX}>,$<BOOL:${EXPLICIT_LINK_VS_FILESYSTEM_REQUIRED}>>:-lc++fs>
-          $<$<AND:$<BOOL:${USING_STDLIBCXX}>,$<BOOL:${EXPLICIT_LINK_VS_FILESYSTEM_REQUIRED}>>:-lstdc++fs>)
+)
 
 install(
   TARGETS modle
