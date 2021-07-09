@@ -55,8 +55,8 @@ jobs:
         uses: actions/cache@v2
         with:
           key: >
-            host-${{runner.os}}-
-            target-${{runner.os}}-
+            host-${{matrix.os}}-
+            target-${{matrix.os}}-
             ${{matrix.compiler.cc}}-
             ${{matrix.config.build_type}}-
             ${{hashFiles('conanfile.py')}}
