@@ -49,7 +49,7 @@ struct Config {  // NOLINT(altera-struct-pack-align)
   bp_t rev_extrusion_speed{std::numeric_limits<bp_t>::max()};
   double fwd_extrusion_speed_std{0.05};        // NOLINT(readability-magic-numbers, cppcoreguidelines-avoid-magic-numbers)
   double rev_extrusion_speed_std{fwd_extrusion_speed_std};
-  size_t num_cells{5'000};                   // NOLINT(readability-magic-numbers, cppcoreguidelines-avoid-magic-numbers)
+  size_t num_cells{5'000};                     // NOLINT(readability-magic-numbers, cppcoreguidelines-avoid-magic-numbers)
   size_t nthreads{std::thread::hardware_concurrency()};
   bp_t diagonal_width{3'000'000 /* 3 Mbp */};  // NOLINT(readability-magic-numbers, cppcoreguidelines-avoid-magic-numbers)
   size_t simulation_iterations{200};           // NOLINT(readability-magic-numbers, cppcoreguidelines-avoid-magic-numbers)
@@ -60,6 +60,7 @@ struct Config {  // NOLINT(altera-struct-pack-align)
   double soft_stall_multiplier{0.6};           // NOLINT(readability-magic-numbers, cppcoreguidelines-avoid-magic-numbers)
   bp_t deletion_size{10'000};                  // NOLINT(readability-magic-numbers, cppcoreguidelines-avoid-magic-numbers)
   bool skip_burnin{false};
+  size_t block_size{9};                        // NOLINT(readability-magic-numbers, cppcoreguidelines-avoid-magic-numbers)
   uint64_t seed{0};
 
   // Misc probabilities
