@@ -192,23 +192,23 @@ TEST_CASE("CMatrix in/decrement vector", "[cmatrix][short]") {
 TEST_CASE("CMatrix get w/ block", "[cmatrix][short]") {
   ContactMatrix<> m1(100, 100);  // NOLINT
   // Fill the upper left corner
-  for (auto i = 0UL; i < 3; ++i) {
-    for (auto j = i; j < 3; ++j) {
+  for (auto i = 0UL; i < 3UL; ++i) {
+    for (auto j = i; j < 3UL; ++j) {
       m1.set(i, j, i + j);
     }
   }
 
   // Fill a region away from the diagonal
-  for (auto i = 20UL; i < 25; ++i) {
-    for (auto j = 25; j < 30; ++j) {
+  for (auto i = 20UL; i < 25UL; ++i) {
+    for (auto j = 25UL; j < 30UL; ++j) {
       m1.set(i, j, 1);
     }
   }
 
   // Fill the lower right corner
-  for (auto i = 97UL; i < 100; ++i) {
-    for (auto j = 97UL; j < 100; ++j) {
-      m1.set(i, j, (i - 97) + (j - 97));
+  for (auto i = 97UL; i < 100UL; ++i) {
+    for (auto j = 97UL; j < 100UL; ++j) {
+      m1.set(i, j, (i - 97UL) + (j - 97UL));
     }
   }
 
