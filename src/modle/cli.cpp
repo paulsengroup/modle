@@ -264,9 +264,11 @@ void add_common_options(CLI::App& subcommand, modle::Config& c) {
 }
 
 void Cli::make_simulation_subcommand() {
-  auto& s = *this->_cli.add_subcommand(
-      "simulate",
-      "Perform a single genome-wide simulation and output the resulting contacts to a .cool file.");
+  auto& s = *this->_cli
+                 .add_subcommand("simulate",
+                                 "Perform a single genome-wide simulation and output the resulting "
+                                 "contacts to a .cool file.")
+                 ->fallthrough();
   s.alias("sim");
   add_common_options(s, this->_config);
 
@@ -338,7 +340,8 @@ void Cli::make_simulation_subcommand() {
 }
 
 void Cli::make_perturbate_subcommand() {
-  auto& s = *this->_cli.add_subcommand("perturbate", "TODO.");  // TODO add description
+  auto& s =
+      *this->_cli.add_subcommand("perturbate", "TODO.")->fallthrough();  // TODO add description
   s.alias("pert");
   add_common_options(s, this->_config);
 
@@ -355,6 +358,14 @@ void Cli::make_perturbate_subcommand() {
       "while a log file will be saved at \"/tmp/mycontacts.log\".")
       ->required();
 
+  io.add_option(
+      "--feature-beds",
+      this->_config.path_to_feature_bed_files,
+      "Path to one or more BED files containing features used to compute the total number of contacts between pairs of features.\n"
+      "Pairs of features with a non-zero number of contacts will be written to a BEDPE file.\n"
+      "When a single BED file is specified, the output will only contain within-feature contacts (Not yet implemented).")
+      ->check(CLI::ExistingFile);
+
   gen.add_option(
       "--block-size",
       c.block_size,
@@ -363,11 +374,20 @@ void Cli::make_perturbate_subcommand() {
               CLI::Validator(is_odd_number, "ODD-NUMBER", ""))
       ->transform(str_float_to_str_int)
       ->capture_default_str();
+
+  gen.add_option(
+      "--deletion-size",
+      this->_config.deletion_size,
+      "Size of deletion in bp. Used to enable/disable extrusion barriers and compute the total number of contacts between pairs of feats1. Specify 0 to compute all possible combinations.")
+      ->check(CLI::NonNegativeNumber)
+      ->transform(str_float_to_str_int)
+      ->capture_default_str();
   // clang-format on
 }
 
 void Cli::make_cli() {
   this->_cli.description("Stochastic modeling of DNA loop extrusion.");
+  this->_cli.require_subcommand(1);
 
   this->make_simulation_subcommand();
   this->make_perturbate_subcommand();
@@ -377,6 +397,14 @@ Cli::Cli(int argc, char** argv) : _argc(argc), _argv(argv), _exec_name(*argv) { 
 const Config& Cli::parse_arguments() {
   this->_cli.name(this->_exec_name);
   this->_cli.parse(this->_argc, this->_argv);
+
+  if (this->_cli.get_subcommand("simulate")->parsed()) {
+    this->_subcommand = simulate;
+  } else {
+    assert(this->_cli.get_subcommand("perturbate")->parsed());  // NOLINT
+    this->_subcommand = pertubate;
+  }
+
   this->validate_and_transform_args();
   this->_config.argc = _argc;
   this->_config.argv = _argv;
@@ -472,5 +500,7 @@ void Cli::validate_and_transform_args() {
     }
   }
 }
+
+Cli::subcommand Cli::get_subcommand() const { return this->_subcommand; }
 
 }  // namespace modle

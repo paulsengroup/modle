@@ -614,7 +614,7 @@ void Simulation::simulate_window(Simulation::StatePW& state, compressed_io::Writ
         const auto feat1_rel_bin = feat1_rel_center_pos / this->bin_size;
         const auto feat2_rel_bin = feat2_rel_center_pos / this->bin_size;
 
-        const auto contacts = state.contacts.get(feat1_rel_bin, feat2_rel_bin);
+        const auto contacts = state.contacts.get(feat1_rel_bin, feat2_rel_bin, this->block_size);
         if (contacts == 0) {  // Don't output entries with 0 contacts
           continue;
         }

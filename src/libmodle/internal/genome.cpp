@@ -221,9 +221,7 @@ const Chromosome::contact_matrix_t* Chromosome::contacts_ptr() const {
   return this->_contacts.get();
 }
 
-Chromosome::contact_matrix_t* Chromosome::contacts_ptr() {
-  return this->_contacts.get();
-}
+Chromosome::contact_matrix_t* Chromosome::contacts_ptr() { return this->_contacts.get(); }
 
 uint64_t Chromosome::hash(uint64_t seed, size_t cell_id) {
   auto handle_errors = [&](const auto& status) {

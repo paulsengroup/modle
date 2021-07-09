@@ -39,16 +39,21 @@ int main(int argc, char** argv) noexcept {
     const auto t0 = absl::Now();
 
     auto sim = modle::Simulation{config};
-    sim.run_base();
+    switch (cli->get_subcommand()) {
+      case modle::Cli::subcommand::simulate:
+        sim.run_base();
+        break;
+      case modle::Cli::subcommand::pertubate:
+        sim.run_pairwise();
+        break;
+      default:
+        throw std::runtime_error(
+            "Default branch in switch statement in modle::main() should be unreachable! If you see "
+            "this message, please file an issue on GitHub");
+    }
     fmt::print(stderr, FMT_STRING("Simulation terminated without errors in {}!\n"),
                absl::FormatDuration(absl::Now() - t0));
-    if (config.path_to_output_file_bedpe.empty()) {
-      fmt::print(stderr, FMT_STRING("\nBye.\n"));
-      return 0;
-    }
-
-    sim.run_pairwise();
-
+    fmt::print(stderr, FMT_STRING("\nBye.\n"));
   } catch (const CLI::ParseError& e) {
     return cli->exit(e);  //  This takes care of formatting and printing error messages (if any)
   } catch (const std::bad_alloc& err) {

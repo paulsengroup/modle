@@ -28,7 +28,15 @@
 namespace modle {
 
 class Cli {
-  enum subcommand : uint8_t { simulate, pertubate };
+ public:
+  enum subcommand : uint8_t { help, simulate, pertubate };
+
+  Cli(int argc, char** argv);
+  [[nodiscard]] const Config& parse_arguments();
+  [[nodiscard]] static std::string process_paths_and_check_for_collisions(modle::Config& c);
+
+  [[nodiscard]] int exit(const CLI::ParseError& e) const;
+  [[nodiscard]] subcommand get_subcommand() const;
 
  private:
   int _argc;
@@ -36,19 +44,11 @@ class Cli {
   std::string _exec_name;
   Config _config;
   CLI::App _cli{};
+  subcommand _subcommand{subcommand::help};
 
   void make_cli();
   void make_simulation_subcommand();
   void make_perturbate_subcommand();
-
- public:
-  Cli(int argc, char** argv);
-  [[nodiscard]] const Config& parse_arguments();
-  [[nodiscard]] static std::string process_paths_and_check_for_collisions(modle::Config& c);
-
-  [[nodiscard]] int exit(const CLI::ParseError& e) const;
-
- private:
   void validate_and_transform_args();
 };
 
