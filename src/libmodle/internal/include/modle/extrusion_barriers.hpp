@@ -35,12 +35,13 @@ class ExtrusionBarrier {
   [[nodiscard]] static double compute_blocking_to_blocking_transition_probabilities_from_pblock(
       double probability_of_barrier_block,
       double non_blocking_to_non_blocking_transition_prob) noexcept(utils::ndebug_defined());
+  [[nodiscard]] double occupancy() const noexcept(utils::ndebug_defined());
 
  protected:
   bp_t _pos;                                             // NOLINT
   double _occupied_to_occupied_transition_prob;          // NOLINT
   double _non_occupied_to_not_occupied_transition_prob;  // NOLINT
-  dna::Direction _blocking_direction;                    // NOLINT
+  dna::Direction _blocking_direction{dna::none};         // NOLINT
 };
 
 namespace CTCF {

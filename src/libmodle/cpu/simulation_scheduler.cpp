@@ -43,7 +43,7 @@
 
 namespace modle {
 
-void Simulation::run_base() {
+void Simulation::run_simulation() {
   if (!this->skip_output) {  // Write simulation params to file
     if (this->force) {
       boost::filesystem::remove(this->path_to_output_file_cool);
@@ -223,7 +223,7 @@ void Simulation::worker(moodycamel::BlockingConcurrentQueue<Simulation::Task>& t
         }
 
         // Start the simulation kernel
-        Simulation::simulate_extrusion_kernel(state_buff);
+        Simulation::simulate_one_cell(state_buff);
 
         // Update progress for the current chrom
         std::scoped_lock l1(progress_queue_mutex);
@@ -255,7 +255,7 @@ void Simulation::worker(moodycamel::BlockingConcurrentQueue<Simulation::Task>& t
   }
 }
 
-void Simulation::run_pairwise() {
+void Simulation::run_perturbate() {
   // TODO Do proper error handling
   // For now we support only the case where exactly two files are specified
   assert(this->path_to_feature_bed_files.size() == 2);  // NOLINT
@@ -377,7 +377,7 @@ void Simulation::run_pairwise() {
       }
 
       // Compute the number of LEFs based on the window size
-      t.num_lefs = static_cast<size_t>(static_cast<double>(t.window_end - t.window_start) *
+      t.num_lefs = static_cast<size_t>((static_cast<double>(t.window_end - t.window_start) / Mbp) *
                                        this->number_of_lefs_per_mbp);
 
       // Compute the target number of epochs based on the target number of contacts
@@ -528,6 +528,7 @@ void Simulation::simulate_window(Simulation::StatePW& state, compressed_io::Writ
   const auto write_to_stdout = out_stream.path().empty();
   const auto all_barriers = state.barriers;  // "Backup" the span corresponding to all the barriers
                                              // mapping to the current window
+  state.barrier_tmp_buff.resize(all_barriers.size());
 
   size_t last_barrier_deleted_idx{0};
 
@@ -558,32 +559,25 @@ void Simulation::simulate_window(Simulation::StatePW& state, compressed_io::Writ
     }
 
     // Generate barrier configuration
-    state.barrier_tmp_buff.clear();
-    std::copy_if(all_barriers.begin(), all_barriers.end(),
-                 std::back_inserter(state.barrier_tmp_buff), [&](const auto& barrier) {
-                   return barrier.pos() < state.deletion_begin ||
-                          barrier.pos() >= state.deletion_begin + state.deletion_size;
-                 });
-
-    // Don't proceed further in case a deletion removed all the barriers in the current window
-    if (state.barrier_tmp_buff.empty()) {
-      continue;
-    }
+    std::transform(
+        all_barriers.begin(), all_barriers.end(), state.barrier_tmp_buff.begin(),
+        [&](const auto& barrier) {
+          if (barrier.pos() >= state.deletion_begin &&
+              barrier.pos() < state.deletion_begin + state.deletion_size) {
+            return ExtrusionBarrier{barrier.pos(), 0.0, 1.0, barrier.blocking_direction_major()};
+          }
+          return barrier;
+        });
 
     // The code below is assigning a span, it is not copying the actual vector of barriers
     state.barriers = state.barrier_tmp_buff;
-    assert(state.window_end > deletion_size);  // NOLINT
-    state.num_lefs =  // Compute # of LEFs to be simulated taking into account the deletion size
-        static_cast<size_t>(std::round(
-            this->number_of_lefs_per_mbp *
-            (static_cast<double>(state.window_end - deletion_size - state.window_start)) / Mbp));
 
     // Resize and reset state buffers
     state.resize();
     state.reset();
     state.contacts.reset();
 
-    Simulation::simulate_extrusion_kernel(state);
+    Simulation::simulate_one_cell(state);
 
     // Output contacts for valid pairs of features
     for (auto i = 0UL; i < state.feats1.size(); ++i) {
@@ -606,8 +600,8 @@ void Simulation::simulate_window(Simulation::StatePW& state, compressed_io::Writ
           continue;
         }
 
-        // Convert absolute positions to relative positions, as the contact matrix does not refer to
-        // an entire chromosome, but only to a 4*D wide region
+        // Convert absolute positions to relative positions, as the contact matrix does not refer
+        // to an entire chromosome, but only to a 4*D wide region
         const auto feat1_rel_center_pos = feat1_abs_center_pos - state.window_start;
         const auto feat2_rel_center_pos = feat2_abs_center_pos - state.window_start;
 
@@ -619,13 +613,13 @@ void Simulation::simulate_window(Simulation::StatePW& state, compressed_io::Writ
           continue;
         }
 
-        // Compute the absolute bin coordinates. This are used to compute the positions shown in the
-        // BEDPE file
+        // Compute the absolute bin coordinates. This are used to compute the positions shown in
+        // the BEDPE file
         const auto feat1_abs_bin = (feat1_abs_center_pos + this->bin_size - 1) / this->bin_size;
         const auto feat2_abs_bin = (feat2_abs_center_pos + this->bin_size - 1) / this->bin_size;
 
-        // Generate the name field. The field will be "none;none" in case both features don't have a
-        // name
+        // Generate the name field. The field will be "none;none" in case both features don't have
+        // a name
         const auto name = absl::StrCat(feat1.name.empty() ? "none" : feat1.name, ";",
                                        feat2.name.empty() ? "none" : feat2.name);
         absl::StrAppend(  // Append a BEDPE record to the local buffer
@@ -649,15 +643,15 @@ void Simulation::simulate_window(Simulation::StatePW& state, compressed_io::Writ
       }
       out_buffer.clear();
     }
-    /* // DEBUG CODE: write contacts to a .cool file
-    if (foo == k++) {
-      auto c = cooler::Cooler(fmt::format("/tmp/test_{}_{}_{:03}.cool", state.id, state.cell_id,
-    foo), cooler::Cooler::WRITE_ONLY, this->bin_size, state.chrom.name().size());
-      c.write_or_append_cmatrix_to_file(state.contacts, state.chrom.name(),
-                                        state.chrom.start_pos(), state.chrom.end_pos(),
-                                        state.chrom.size());
-    }
-     */
+    // DEBUG CODE: write contacts to a .cool file
+    // if (foo == k++) {
+    auto c =
+        cooler::Cooler(fmt::format("/tmp/test_{}_{}_{:03}.cool", state.id, state.cell_id, rand()),
+                       cooler::Cooler::WRITE_ONLY, this->bin_size, state.chrom->name().size());
+    c.write_or_append_cmatrix_to_file(state.contacts, state.chrom->name(), state.chrom->start_pos(),
+                                      state.chrom->end_pos(), state.chrom->size());
+    //}
+
   } while (++last_barrier_deleted_idx < all_barriers.size());
 
   fmt::print(stderr, FMT_STRING("Done processing {}[{}-{}]!\n"), state.chrom->name(),

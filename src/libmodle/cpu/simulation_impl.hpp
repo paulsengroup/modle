@@ -105,7 +105,7 @@ boost::asio::thread_pool Simulation::instantiate_thread_pool(I nthreads, bool cl
 }
 
 template <typename StateT, typename>
-void Simulation::simulate_extrusion_kernel(StateT& s) const {
+void Simulation::simulate_one_cell(StateT& s) const {
   constexpr auto normal_simulation = std::is_same_v<std::remove_reference_t<StateT>, State>;
   {
     assert(s.num_lefs == s.lef_buff.size());         // NOLINT
@@ -188,8 +188,7 @@ void Simulation::simulate_extrusion_kernel(StateT& s) const {
 
     // Generate initial extr. barrier states, so that they are already at or close to equilibrium
     for (auto i = 0UL; i < s.barrier_mask.size(); ++i) {
-      s.barrier_mask[i] =
-          random::bernoulli_trial{this->probability_of_extrusion_barrier_block}(s.rand_eng);
+      s.barrier_mask[i] = random::bernoulli_trial{barriers[i].occupancy()}(s.rand_eng);
     }
 
     size_t nlefs_to_release;  // NOLINT
@@ -246,13 +245,13 @@ void Simulation::simulate_extrusion_kernel(StateT& s) const {
       {  // Select inactive LEFs and bind them
         auto lef_mask = absl::MakeSpan(s.idx_buff.data(), lefs.size());
         Simulation::select_lefs_to_bind(lefs, lef_mask);
-        if constexpr (normal_simulation) {
-          Simulation::bind_lefs(*s.chrom, lefs, rev_lef_ranks, fwd_lef_ranks, lef_mask, s.rand_eng,
-                                epoch);
-        } else {
-          Simulation::bind_lefs(*s.chrom, lefs, rev_lef_ranks, fwd_lef_ranks, lef_mask, s.rand_eng,
-                                epoch, s.deletion_begin, s.deletion_size);
-        }
+        // if constexpr (normal_simulation) {
+        Simulation::bind_lefs(*s.chrom, lefs, rev_lef_ranks, fwd_lef_ranks, lef_mask, s.rand_eng,
+                              epoch);
+        // } else {
+        //  Simulation::bind_lefs(*s.chrom, lefs, rev_lef_ranks, fwd_lef_ranks, lef_mask,
+        //  s.rand_eng, epoch, s.deletion_begin, s.deletion_size);
+        //}
       }
 
       if (epoch > n_burnin_epochs) {                 // Register contacts
@@ -317,13 +316,13 @@ void Simulation::simulate_extrusion_kernel(StateT& s) const {
                                          fwd_collision_mask, s.rand_eng);
 
       // Advance LEFs
-      if constexpr (normal_simulation) {
-        Simulation::extrude(*s.chrom, lefs, rev_moves, fwd_moves, num_rev_units_at_5prime,
-                            num_fwd_units_at_3prime);
-      } else {
-        Simulation::extrude(*s.chrom, lefs, rev_moves, fwd_moves, num_rev_units_at_5prime,
-                            num_fwd_units_at_3prime, s.deletion_begin, s.deletion_size);
-      }
+      // if constexpr (normal_simulation) {
+      Simulation::extrude(*s.chrom, lefs, rev_moves, fwd_moves, num_rev_units_at_5prime,
+                          num_fwd_units_at_3prime);
+      //} else {
+      //  Simulation::extrude(*s.chrom, lefs, rev_moves, fwd_moves, num_rev_units_at_5prime,
+      //                     num_fwd_units_at_3prime, s.deletion_begin, s.deletion_size);
+      //}
 
       // The vector of affinities is used to bias LEF release towards LEFs that are not in a hard
       // stall condition

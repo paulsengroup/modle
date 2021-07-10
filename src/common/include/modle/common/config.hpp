@@ -61,6 +61,7 @@ struct Config {  // NOLINT(altera-struct-pack-align)
   bp_t deletion_size{10'000};                  // NOLINT(readability-magic-numbers, cppcoreguidelines-avoid-magic-numbers)
   bool skip_burnin{false};
   size_t block_size{9};                        // NOLINT(readability-magic-numbers, cppcoreguidelines-avoid-magic-numbers)
+  std::string perturbate_mode{"cluster"};
   uint64_t seed{0};
 
   // Misc probabilities

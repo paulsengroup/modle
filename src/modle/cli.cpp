@@ -360,7 +360,7 @@ void Cli::make_perturbate_subcommand() {
 
   io.add_option(
       "--feature-beds",
-      this->_config.path_to_feature_bed_files,
+      c.path_to_feature_bed_files,
       "Path to one or more BED files containing features used to compute the total number of contacts between pairs of features.\n"
       "Pairs of features with a non-zero number of contacts will be written to a BEDPE file.\n"
       "When a single BED file is specified, the output will only contain within-feature contacts (Not yet implemented).")
@@ -377,10 +377,23 @@ void Cli::make_perturbate_subcommand() {
 
   gen.add_option(
       "--deletion-size",
-      this->_config.deletion_size,
-      "Size of deletion in bp. Used to enable/disable extrusion barriers and compute the total number of contacts between pairs of feats1. Specify 0 to compute all possible combinations.")
+      c.deletion_size,
+      "Size of deletion in bp. Used to enable/disable extrusion barriers and compute the total number of contacts between pairs of feats1.\n"
+      "Specify 0 to compute all possible combinations. Ignored when --mode=\"cluster\".")
       ->check(CLI::NonNegativeNumber)
       ->transform(str_float_to_str_int)
+      ->capture_default_str();
+
+  gen.add_option(
+      "--mode",
+      c.perturbate_mode,
+      "Perturbation mode, can be one of \"exhaustive\", \"cluster\".") // TODO: change me
+      ->check(CLI::Validator([](std::string_view tok) -> std::string {
+                               if (tok != "exhaustive" && tok != "cluster") {
+                                 return "The argument passed to --mode should be one of \"exhaustive\", \"cluster\".";
+                               }
+                               return "";
+                             }, "", ""))
       ->capture_default_str();
   // clang-format on
 }

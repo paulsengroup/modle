@@ -38,13 +38,13 @@ int main(int argc, char** argv) noexcept {
 
     const auto t0 = absl::Now();
 
-    auto sim = modle::Simulation{config};
+    boost::filesystem::create_directories(config.path_to_output_prefix.remove_filename());
     switch (cli->get_subcommand()) {
       case modle::Cli::subcommand::simulate:
-        sim.run_base();
+        modle::Simulation{config}.run_simulation();
         break;
       case modle::Cli::subcommand::pertubate:
-        sim.run_pairwise();
+        modle::Simulation{config}.run_perturbate();
         break;
       default:
         throw std::runtime_error(
