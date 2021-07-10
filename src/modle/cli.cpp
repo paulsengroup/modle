@@ -26,20 +26,6 @@
 
 namespace modle {
 
-// Try to convert str representations like "1.0" or "1.000000" to "1"
-std::string str_float_to_str_int(const std::string& s) {
-  try {
-    double n;
-    utils::parse_numeric_or_throw(s, n);
-    if (std::trunc(n) == n) {
-      return fmt::format(FMT_STRING("{:.0f}"), n);
-    }
-  } catch (const std::exception& e) {  // Let CLI deal with invalid numbers
-    return s;
-  }
-  return s;
-}
-
 std::string is_odd_number(std::string_view s) {
   int64_t n;
   try {
@@ -87,7 +73,7 @@ void add_common_options(CLI::App& subcommand, modle::Config& c) {
       c.bin_size,
       "Bin size in base pairs.")
       ->check(CLI::PositiveNumber)
-      ->transform(str_float_to_str_int)
+      ->transform(utils::str_float_to_str_int)
       ->capture_default_str();
 
   gen.add_option(
@@ -96,7 +82,7 @@ void add_common_options(CLI::App& subcommand, modle::Config& c) {
       "Number of worker threads used to run the simulation.\n"
       "By default MoDLE will try to use all available threads.")
       ->check(CLI::PositiveNumber)
-      ->transform(str_float_to_str_int)
+      ->transform(utils::str_float_to_str_int)
       ->capture_default_str();
 
   gen.add_option(
@@ -106,7 +92,7 @@ void add_common_options(CLI::App& subcommand, modle::Config& c) {
       "This setting affects the maximum distance of a pair of bins whose interactions will be tracked by MoDLE.\n"
       "Setting --diagonal-width to a very large value (i.e. more than few Mbp) will dramatically inflate MoDLE's memory footprint.")
       ->check(CLI::PositiveNumber)
-      ->transform(str_float_to_str_int)
+      ->transform(utils::str_float_to_str_int)
       ->capture_default_str();
 
   gen.add_option(
@@ -114,7 +100,7 @@ void add_common_options(CLI::App& subcommand, modle::Config& c) {
       c.simulation_iterations,
       "Number of simulation iterations to run on each cell.")
       ->check(CLI::PositiveNumber)
-      ->transform(str_float_to_str_int)
+      ->transform(utils::str_float_to_str_int)
       ->capture_default_str();
 
   gen.add_option(
@@ -136,7 +122,7 @@ void add_common_options(CLI::App& subcommand, modle::Config& c) {
       "Average LEF lifetime.\n"
       "This is equal to the average distance an unencumbered LEF is able to move along the DNA before it is released.")
       ->check(CLI::PositiveNumber)
-      ->transform(str_float_to_str_int)
+      ->transform(utils::str_float_to_str_int)
       ->capture_default_str();
 
   gen.add_option(
@@ -162,14 +148,14 @@ void add_common_options(CLI::App& subcommand, modle::Config& c) {
       c.fwd_extrusion_speed,
       "Average distance in bp covered by a LEF in forward direction during one iteration.\n"
       "By deafult this is set to half of the bin size specified through --bin-size.")
-      ->transform(str_float_to_str_int)
+      ->transform(utils::str_float_to_str_int)
       ->check(CLI::NonNegativeNumber);
 
   gen.add_option(
       "--rev-extrusion-speed",
       c.rev_extrusion_speed,
       "Same as --fwd-extrusion-speed but for the reverse direction.")
-      ->transform(str_float_to_str_int)
+      ->transform(utils::str_float_to_str_int)
       ->check(CLI::NonNegativeNumber);
 
   gen.add_option(
@@ -204,7 +190,7 @@ void add_common_options(CLI::App& subcommand, modle::Config& c) {
       c.seed,
       "Base seed to use for random number generation.")
       ->check(CLI::NonNegativeNumber)
-      ->transform(str_float_to_str_int)
+      ->transform(utils::str_float_to_str_int)
       ->capture_default_str();
 
   prob.add_option(
@@ -301,7 +287,7 @@ void Cli::make_simulation_subcommand() {
       "The total number of contacts for a given chromosome is obtained by aggregating contacts from all the "
       "simulation instances for that chromosome.")
       ->check(CLI::PositiveNumber)
-      ->transform(str_float_to_str_int)
+      ->transform(utils::str_float_to_str_int)
       ->capture_default_str();
 
   rand.add_flag(
@@ -372,7 +358,7 @@ void Cli::make_perturbate_subcommand() {
       "Size of the block of pixels to use when generating contacts for a pair of features. Must be an odd number.")
       ->check(CLI::Range(1UL, std::numeric_limits<decltype(c.block_size)>::max()) |
               CLI::Validator(is_odd_number, "ODD-NUMBER", ""))
-      ->transform(str_float_to_str_int)
+      ->transform(utils::str_float_to_str_int)
       ->capture_default_str();
 
   gen.add_option(
@@ -381,7 +367,7 @@ void Cli::make_perturbate_subcommand() {
       "Size of deletion in bp. Used to enable/disable extrusion barriers and compute the total number of contacts between pairs of feats1.\n"
       "Specify 0 to compute all possible combinations. Ignored when --mode=\"cluster\".")
       ->check(CLI::NonNegativeNumber)
-      ->transform(str_float_to_str_int)
+      ->transform(utils::str_float_to_str_int)
       ->capture_default_str();
 
   gen.add_option(

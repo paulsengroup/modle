@@ -72,6 +72,9 @@ struct XXH3_Deleter {  // NOLINT
 };
 
 inline void fclose(FILE* fp) noexcept(false);
+
+// Try to convert str representations like "1.0" or "1.000000" to "1"
+[[nodiscard]] inline std::string str_float_to_str_int(const std::string& s);
 }  // namespace modle::utils
 
 #include "../../../utils_impl.hpp"  // IWYU pragma: keep

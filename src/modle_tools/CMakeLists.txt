@@ -4,6 +4,7 @@ target_sources(
   modle_tools
   PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/cli.hpp
           ${CMAKE_CURRENT_SOURCE_DIR}/include/modle_tools/config.hpp
+          ${CMAKE_CURRENT_SOURCE_DIR}/cli.cpp
           ${CMAKE_CURRENT_SOURCE_DIR}/eval.cpp
           ${CMAKE_CURRENT_SOURCE_DIR}/filter_barriers.cpp
           ${CMAKE_CURRENT_SOURCE_DIR}/noisify.cpp
@@ -16,7 +17,6 @@ target_link_libraries(
           Modle::common
           Modle::correlation
           Modle::libmodle_io
-          Modle::libmodle
           CONAN_PKG::abseil
           CONAN_PKG::boost
           CONAN_PKG::cli11

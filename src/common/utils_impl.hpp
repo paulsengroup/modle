@@ -255,4 +255,18 @@ void fclose(FILE *fp) noexcept(false) {
   }
 }
 
+// Try to convert str representations like "1.0" or "1.000000" to "1"
+std::string str_float_to_str_int(const std::string &s) {
+  try {
+    double n;
+    parse_numeric_or_throw(s, n);
+    if (std::trunc(n) == n) {
+      return fmt::format(FMT_STRING("{:.0f}"), n);
+    }
+  } catch (const std::exception &e) {  // Let CLI deal with invalid numbers
+    return s;
+  }
+  return s;
+}
+
 }  // namespace modle::utils
