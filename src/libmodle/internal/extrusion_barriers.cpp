@@ -71,9 +71,28 @@ dna::Direction ExtrusionBarrier::blocking_direction_minor() const
   return this->_blocking_direction == dna::fwd ? dna::rev : dna::fwd;
 }
 
-bool ExtrusionBarrier::operator<(const ExtrusionBarrier& other) const
-    noexcept(utils::ndebug_defined()) {
+bool ExtrusionBarrier::operator==(const ExtrusionBarrier& other) const noexcept {
+  return this->pos() == other.pos();
+}
+
+bool ExtrusionBarrier::operator!=(const ExtrusionBarrier& other) const noexcept {
+  return !(*this == other);
+}
+
+bool ExtrusionBarrier::operator<(const ExtrusionBarrier& other) const noexcept {
   return this->pos() < other.pos();
+}
+
+bool ExtrusionBarrier::operator>(const ExtrusionBarrier& other) const noexcept {
+  return this->pos() > other.pos();
+}
+
+bool ExtrusionBarrier::operator<=(const ExtrusionBarrier& other) const noexcept {
+  return this->pos() <= other.pos();
+}
+
+bool ExtrusionBarrier::operator>=(const ExtrusionBarrier& other) const noexcept {
+  return this->pos() >= other.pos();
 }
 
 double ExtrusionBarrier::compute_blocking_to_blocking_transition_probabilities_from_pblock(

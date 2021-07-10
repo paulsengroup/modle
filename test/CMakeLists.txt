@@ -14,8 +14,9 @@ target_link_libraries(
           Modle::cmatrix_test
           Modle::correlation_test
           Modle::interval_tree_test
-          Modle::libmodle_io_test
-          Modle::libmodle_cpu_test)
+          Modle::libmodle_cpu_test
+          Modle::libmodle_internal_test
+          Modle::libmodle_io_test)
 
 if(ENABLE_PCH)
   target_precompile_headers(catch_main INTERFACE <catch2/catch.hpp>)
@@ -27,6 +28,10 @@ file(MAKE_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/Testing/)
 # whatever you want, or use different for different binaries
 catch_discover_tests(
   catch_main
+  TEST_SPEC
+  "[short]"
+  TEST_SUFFIX
+  " - SHORT"
   WORKING_DIRECTORY
   ${CMAKE_CURRENT_SOURCE_DIR}/../
   REPORTER
@@ -35,5 +40,35 @@ catch_discover_tests(
   ${CMAKE_CURRENT_SOURCE_DIR}/Testing/
   OUTPUT_SUFFIX
   .xml
+  EXTRA_ARGS
+  --success)
+
+catch_discover_tests(
+  catch_main
+  TEST_SPEC
+  "[medium]"
+  TEST_SUFFIX
+  " - MEDIUM"
+  WORKING_DIRECTORY
+  ${CMAKE_CURRENT_SOURCE_DIR}/../
+  REPORTER
+  xml
+  OUTPUT_DIR
+  ${CMAKE_CURRENT_SOURCE_DIR}/Testing/
+  OUTPUT_SUFFIX
+  .xml
+  EXTRA_ARGS
+  --success)
+
+catch_discover_tests(
+  catch_main
+  TEST_SPEC
+  "[long]"
+  TEST_SUFFIX
+  " - LONG"
+  WORKING_DIRECTORY
+  ${CMAKE_CURRENT_SOURCE_DIR}/../
+  REPORTER
+  compact # This dramatically speeds up the test suit
   EXTRA_ARGS
   --success)

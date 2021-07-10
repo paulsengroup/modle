@@ -17,3 +17,7 @@ target_link_libraries(
   INTERFACE Modle::libmodle_io CONAN_PKG::abseil CONAN_PKG::xxhash)
 
 target_include_directories(libmodle_internal INTERFACE include/)
+
+if(ENABLE_TESTING)
+  add_subdirectory(test)
+endif()

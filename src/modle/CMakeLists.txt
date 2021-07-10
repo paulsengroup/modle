@@ -11,8 +11,7 @@ target_link_libraries(
           Modle::libmodle_io
           CONAN_PKG::abseil
           CONAN_PKG::boost
-          CONAN_PKG::cli11
-)
+          CONAN_PKG::cli11)
 
 install(
   TARGETS modle

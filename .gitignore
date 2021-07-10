@@ -3,7 +3,9 @@
 .idea/
 .run/
 .vscode/
-/test/
+/test/data
+/test/settings
+/test/Testing
 Dockerfile*
 Singularity*
 Testing/

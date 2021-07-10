@@ -30,8 +30,12 @@ class ExtrusionBarrier {
   [[nodiscard]] double prob_not_occupied_to_occupied() const noexcept(utils::ndebug_defined());
   [[nodiscard]] dna::Direction blocking_direction_major() const noexcept(utils::ndebug_defined());
   [[nodiscard]] dna::Direction blocking_direction_minor() const noexcept(utils::ndebug_defined());
-  [[nodiscard]] bool operator<(const ExtrusionBarrier& other) const
-      noexcept(utils::ndebug_defined());
+  [[nodiscard]] bool operator==(const ExtrusionBarrier& other) const noexcept;
+  [[nodiscard]] bool operator!=(const ExtrusionBarrier& other) const noexcept;
+  [[nodiscard]] bool operator<(const ExtrusionBarrier& other) const noexcept;
+  [[nodiscard]] bool operator>(const ExtrusionBarrier& other) const noexcept;
+  [[nodiscard]] bool operator>=(const ExtrusionBarrier& other) const noexcept;
+  [[nodiscard]] bool operator<=(const ExtrusionBarrier& other) const noexcept;
   [[nodiscard]] static double compute_blocking_to_blocking_transition_probabilities_from_pblock(
       double probability_of_barrier_block,
       double non_blocking_to_non_blocking_transition_prob) noexcept(utils::ndebug_defined());

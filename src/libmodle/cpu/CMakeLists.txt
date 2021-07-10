@@ -20,8 +20,7 @@ target_link_libraries(
   INTERFACE Modle::libmodle_internal
             CONAN_PKG::abseil
             CONAN_PKG::boost
-            CONAN_PKG::concurrentqueue
-)
+            CONAN_PKG::concurrentqueue)
 
 if(ENABLE_PCH)
   target_precompile_headers(

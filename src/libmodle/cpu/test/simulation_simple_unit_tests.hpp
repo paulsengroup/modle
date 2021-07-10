@@ -194,7 +194,7 @@ const std::vector<Lef> lefs{construct_lef(20, 50, 0),
   }
 }
 
-TEST_CASE("Generate LEF moves 001", "[generate-lef-moves][simulation][short]") {
+TEST_CASE("Generate LEF moves 001", "[generate-lef-moves][simulation][long]") {
   const Chromosome chrom{0, "chr1", 1000, 2000, 2000};
   constexpr auto nlefs = 100UL;
   constexpr auto iters = 1000UL;
