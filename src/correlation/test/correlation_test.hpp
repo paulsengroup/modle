@@ -45,7 +45,7 @@ TEST_CASE("Corr. test: Pearson Scipy", "[correlation][pearson][short]") {
   CHECK(Approx(pv).margin(0) == pv_py);
 }
 
-TEST_CASE("Corr. test: Pearson Scipy long", "[correlation][pearson][medium]") {
+TEST_CASE("Corr. test: Pearson Scipy long", "[correlation][pearson][long]") {
   std::mt19937 rnd_eng{std::random_device{}()};
   for (auto i = 0UL; i < 100UL; ++i) {                          // NOLINT
     auto v1 = generate_random_vect(rnd_eng, 1'000, 0, 15'000);  // NOLINT
@@ -98,7 +98,7 @@ TEST_CASE("Corr. test: Spearman Scipy", "[correlation][spearman][short]") {
   CHECK(Approx(pv).margin(0) == pv_py);
 }
 
-TEST_CASE("Corr. test: Spearman Scipy long", "[correlation][spearman][medium]") {
+TEST_CASE("Corr. test: Spearman Scipy long", "[correlation][spearman][long]") {
   std::mt19937 rnd_eng{std::random_device{}()};
   for (auto i = 0UL; i < 100; ++i) {                            // NOLINT
     auto v1 = generate_random_vect(rnd_eng, 1'000, 0, 15'000);  // NOLINT

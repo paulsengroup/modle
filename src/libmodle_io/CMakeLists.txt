@@ -30,8 +30,7 @@ target_link_libraries(
          CONAN_PKG::hdf5
          CONAN_PKG::libarchive
          CONAN_PKG::readerwriterqueue
-         CONAN_PKG::zlib
-)
+         CONAN_PKG::zlib)
 
 target_compile_definitions(libmodle_io PRIVATE -DNOCURL)
 set_target_properties(libmodle_io PROPERTIES OUTPUT_NAME modle_io)
