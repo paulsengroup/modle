@@ -22,64 +22,6 @@
 #include "modle/interval_tree.hpp"  // for IITree
 
 namespace modle::bed {
-struct BED;
-
-template <typename K = std::string, typename I = bp_t>
-class BED_tree {
-  using IITree_t = IITree<I, BED>;
-  using BED_tree_t = absl::btree_map<K, IITree<I, BED>>;
-
-  friend IITree_t;
-
- public:
-  inline BED_tree() = default;
-
-  using node_type = typename BED_tree_t::node_type;
-  using key_type = typename BED_tree_t::value_type::first_type;
-  using value_type = typename BED_tree_t::value_type::second_type;
-  using iterator = typename BED_tree_t::iterator;
-
-  inline std::pair<iterator, bool> insert(BED interval);
-  inline std::pair<iterator, bool> insert(const K& chrom_name, value_type tree);
-  inline std::pair<iterator, bool> insert(const K& chrom_name, I chrom_start, I chrom_end);
-  inline std::pair<iterator, bool> emplace(BED&& interval);
-  inline std::pair<iterator, bool> emplace(const K& chrom_name, value_type&& tree);
-
-  inline void insert(absl::Span<const BED> intervals);
-  inline void emplace(std::vector<BED>&& intervals);
-
-  inline const value_type& at(const K& chrom) const;
-
-  inline void index();
-  inline void index(const K& chrom_name);
-
-  [[nodiscard]] inline bool contains(const K& chrom_name) const;
-  [[nodiscard]] inline bool contains_overlap(const BED& interval) const;
-  [[nodiscard]] inline bool contains_overlap(const K& chrom_name, uint64_t chrom_start,
-                                             uint64_t chrom_end) const;
-
-  [[nodiscard]] inline size_t count_overlaps(const BED& interval) const;
-  [[nodiscard]] inline size_t count_overlaps(const K& chrom_name, uint64_t chrom_start,
-                                             uint64_t chrom_end) const;
-
-  [[nodiscard]] inline absl::Span<const BED> find_overlaps(const BED& interval) const;
-  [[nodiscard]] inline absl::Span<const BED> find_overlaps(const K& chrom_name,
-                                                           uint64_t chrom_start,
-                                                           uint64_t chrom_end) const;
-
-  [[nodiscard]] inline bool empty() const;
-  [[nodiscard]] inline size_t size() const;
-  [[nodiscard]] inline size_t size(const K& chrom_name) const;
-
-  inline void clear();
-  inline void clear(const K& chrom_name);
-
-  // TODO: add erase methods
-
- private:
-  BED_tree_t _trees{};
-  std::vector<BED> _empty_range{};
-};
 
 struct RGB {
   uint8_t r;
@@ -204,6 +146,72 @@ struct BED {
 
   [[nodiscard]] uint64_t hash(XXH3_state_t* state,
                               uint64_t seed = 17039577131913730910ULL) const;  // NOLINT
+};
+
+template <typename K = std::string, typename I = bp_t>
+class BED_tree {
+  using IITree_t = IITree<I, BED>;
+  using BED_tree_t = absl::btree_map<K, IITree<I, BED>>;
+
+  friend IITree_t;
+
+ public:
+  inline BED_tree() = default;
+  inline explicit BED_tree(const boost::filesystem::path& path_to_bed,
+                           BED::Dialect dialect = BED::Dialect::autodetect);
+
+  using node_type = typename BED_tree_t::node_type;
+  using key_type = typename BED_tree_t::value_type::first_type;
+  using value_type = typename BED_tree_t::value_type::second_type;
+  using iterator = typename BED_tree_t::iterator;
+  using const_iterator = typename BED_tree_t::const_iterator;
+
+  inline std::pair<iterator, bool> insert(BED interval);
+  inline std::pair<iterator, bool> insert(const K& chrom_name, value_type tree);
+  inline std::pair<iterator, bool> insert(const K& chrom_name, I chrom_start, I chrom_end);
+  inline std::pair<iterator, bool> emplace(BED&& interval);
+  inline std::pair<iterator, bool> emplace(const K& chrom_name, value_type&& tree);
+
+  inline void insert(absl::Span<const BED> intervals);
+  inline void emplace(std::vector<BED>&& intervals);
+
+  [[nodiscard]] inline const value_type& at(const K& chrom) const;
+
+  inline void index();
+  inline void index(const K& chrom_name);
+
+  [[nodiscard]] inline bool contains(const K& chrom_name) const;
+  [[nodiscard]] inline bool contains_overlap(const BED& interval) const;
+  [[nodiscard]] inline bool contains_overlap(const K& chrom_name, uint64_t chrom_start,
+                                             uint64_t chrom_end) const;
+
+  [[nodiscard]] inline size_t count_overlaps(const BED& interval) const;
+  [[nodiscard]] inline size_t count_overlaps(const K& chrom_name, uint64_t chrom_start,
+                                             uint64_t chrom_end) const;
+
+  [[nodiscard]] inline absl::Span<const BED> find_overlaps(const BED& interval) const;
+  [[nodiscard]] inline absl::Span<const BED> find_overlaps(const K& chrom_name,
+                                                           uint64_t chrom_start,
+                                                           uint64_t chrom_end) const;
+
+  [[nodiscard]] inline bool empty() const;
+  [[nodiscard]] inline size_t size() const;
+  [[nodiscard]] inline size_t size(const K& chrom_name) const;
+
+  inline void clear();
+  inline void clear(const K& chrom_name);
+
+  [[nodiscard]] inline iterator begin();
+  [[nodiscard]] inline iterator end();
+  [[nodiscard]] inline const_iterator begin() const;
+  [[nodiscard]] inline const_iterator end() const;
+  [[nodiscard]] inline const_iterator cbegin() const;
+  [[nodiscard]] inline const_iterator cend() const;
+
+  // TODO: add erase methods
+
+ private:
+  BED_tree_t _trees{};
 };
 
 class Parser {

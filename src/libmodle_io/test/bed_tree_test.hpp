@@ -2,6 +2,7 @@
 
 #include <absl/strings/str_split.h>
 
+#include <boost/filesystem/path.hpp>
 #include <catch2/catch.hpp>  // for AssertionHandler, operator""_catch_sr, SourceLineInfo
 #include <fstream>
 #include <string>
@@ -15,7 +16,7 @@ namespace modle::test::bed {
 using namespace modle::bed;
 
 TEST_CASE("BED Tree simple", "[BED][io][long]") {
-  const std::string all_intervals = "test/data/unit_tests/H1_ctcf_all_chroms.bed.gz";
+  const boost::filesystem::path all_intervals = "test/data/unit_tests/H1_ctcf_all_chroms.bed.gz";
 
   Parser p(all_intervals, bed::BED::BED3);
 
@@ -35,12 +36,11 @@ TEST_CASE("BED Tree simple", "[BED][io][long]") {
 }
 
 TEST_CASE("BED Tree multiple overlaps", "[BED][io][long]") {
-  const std::string all_intervals = "test/data/unit_tests/H1_ctcf_all_chroms.bed.gz";
-  const std::string counts_per_interval =
+  const boost::filesystem::path all_intervals = "test/data/unit_tests/H1_ctcf_all_chroms.bed.gz";
+  const boost::filesystem::path counts_per_interval =
       "test/data/unit_tests/H1_ctcf_all_chroms_per_interval.tsv.gz";
 
-  Parser p(all_intervals, bed::BED::BED3);
-  const auto intervals = p.parse_all_in_interval_tree();
+  const BED_tree<> intervals{all_intervals, bed::BED::BED3};
 
   compressed_io::Reader r(counts_per_interval);
   std::string buff;

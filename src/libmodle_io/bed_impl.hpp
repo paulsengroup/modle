@@ -9,6 +9,10 @@
 
 namespace modle::bed {
 
+template <typename K, typename I>
+BED_tree<K, I>::BED_tree(const boost::filesystem::path& path_to_bed, BED::Dialect dialect)
+    : BED_tree(bed::Parser(path_to_bed, dialect).parse_all_in_interval_tree()) {}
+
 // For some reason GCC 11 is confused by this alias...
 // template <typename K, typename I>
 // using value_type_t = typename BED_tree<K, I>::value_type;
@@ -142,8 +146,7 @@ absl::Span<const BED> BED_tree<K, I>::find_overlaps(const K& chrom_name, uint64_
                                                     uint64_t chrom_end) const {
   auto it = this->_trees.find(chrom_name);
   if (it == this->_trees.end()) {
-    assert(this->_empty_range.empty());  // NOLINT
-    return this->_empty_range;
+    return absl::Span<const BED>{};
   }
   assert(it->second.is_BST());  // NOLINT You forgot to call index/make_BST()!
 
@@ -186,6 +189,36 @@ void BED_tree<K, I>::clear() {
 template <typename K, typename I>
 void BED_tree<K, I>::clear(const K& chrom_name) {
   this->_trees.at(chrom_name).clear();
+}
+
+template <typename K, typename I>
+typename BED_tree<K, I>::iterator BED_tree<K, I>::begin() {
+  return this->_trees.begin();
+}
+
+template <typename K, typename I>
+typename BED_tree<K, I>::iterator BED_tree<K, I>::end() {
+  return this->_trees.end();
+}
+
+template <typename K, typename I>
+typename BED_tree<K, I>::const_iterator BED_tree<K, I>::begin() const {
+  return this->_trees.begin();
+}
+
+template <typename K, typename I>
+typename BED_tree<K, I>::const_iterator BED_tree<K, I>::end() const {
+  return this->_trees.end();
+}
+
+template <typename K, typename I>
+typename BED_tree<K, I>::const_iterator BED_tree<K, I>::cbegin() const {
+  return this->_trees.cbegin();
+}
+
+template <typename K, typename I>
+typename BED_tree<K, I>::const_iterator BED_tree<K, I>::cend() const {
+  return this->_trees.cend();
 }
 
 }  // namespace modle::bed
