@@ -40,8 +40,8 @@ void Cli::make_eval_subcommand() {
                                   "various correlation tests.")
                   ->fallthrough()
                   ->preparse_callback([this](size_t i) {
+                    (void)i;
                     assert(this->_config.index() == 0);  // NOLINT empty variant
-                    fmt::print("callback_arg={}\n", i);
                     this->_config = eval_config{};
                   });
   sc.alias("eval");
@@ -173,8 +173,8 @@ void Cli::make_filter_barriers_subcommand() {
            .add_subcommand("filter-barriers", "Filter extrusion barriers to be used by ModLE.")
            ->fallthrough()
            ->preparse_callback([this](size_t i) {
+             (void)i;
              assert(this->_config.index() == 0);  // NOLINT empty variant
-             fmt::print("callback_arg={}\n", i);
              this->_config = filter_barrier_config{};
            });
 
@@ -231,14 +231,95 @@ void Cli::make_filter_barriers_subcommand() {
   this->_config = absl::monostate{};
 }
 
+void Cli::make_find_barrier_clusters_subcommand() {
+  auto& sc = *this->_cli
+                  .add_subcommand("find-barrier-clusters",
+                                  "Detect clusters of extrusion barriers given a BED file.")
+                  ->fallthrough()
+                  ->preparse_callback([this](size_t i) {
+                    (void)i;
+                    assert(this->_config.index() == 0);  // NOLINT empty variant
+                    this->_config = find_barrier_clusters_config{};
+                  });
+
+  sc.alias("fbcl");
+
+  this->_config = find_barrier_clusters_config{};
+  auto& c = absl::get<find_barrier_clusters_config>(this->_config);
+
+  auto& io = *sc.add_option_group("Input/Output", "");
+  auto& cluster = *sc.add_option_group("Cluster properties", "");
+
+  // clang-format off
+  io.add_option(
+      "-i,--input",
+      c.path_to_input_barriers,
+      "Path to a BED file with the collection of extrusion barriers to be processed.")
+      ->check(CLI::ExistingFile)
+      ->required();
+
+  io.add_option(
+      "-o,--output-name",
+      c.path_to_output,
+      "Path to output file. When not provided, barrier clusters will be written to stdout.");
+
+  io.add_flag(
+      "-f,--force",
+      c.force,
+      "Overwrite existing file(s).")
+      ->capture_default_str();
+
+  cluster.add_option(
+      "-w,--extension-window",
+      c.extension_window,
+      "Size of the extension window in bp.\n"
+      "Clusters of extrusion barriers are identified by finding the first barrier not belonging to any cluster, "
+      "then extending the cluster by --extension-window bp, until extending the cluster does not increase the "
+      "number of barriers in the cluster.")
+      ->check(CLI::PositiveNumber);
+
+  cluster.add_option(
+      "--min-cluster-span",
+      c.min_cluster_span,
+      "The minimum span in bp of a cluster of barriers.\n"
+      "--min-cluster-span=0 can be used to allow clusters of any size less than --max-cluster-span.")
+      ->check(CLI::NonNegativeNumber)
+      ->capture_default_str();
+
+  cluster.add_option(
+      "--max-cluster-span",
+      c.max_cluster_span,
+      "The maximum span in bp of a cluster of barriers.\n"
+      "--max-cluster-span=0 can be used to allow clusters to grow indefinitely.")
+      ->check(CLI::NonNegativeNumber)
+      ->capture_default_str();
+
+  cluster.add_option(
+      "--min-barriers-per-cluster",
+      c.min_cluster_size,
+      "The minimum number of barriers that can belong to a given cluster.\n")
+      ->check(CLI::NonNegativeNumber)
+      ->capture_default_str();
+
+  cluster.add_option(
+      "--max-barriers-per-cluster",
+      c.max_cluster_size,
+      "The maximum number of barriers that can belong to a given cluster.\n"
+      "--max-barriers-per-cluster=0 can be used to allow clusters with an unlimited number of barriers.")
+      ->check(CLI::NonNegativeNumber)
+      ->capture_default_str();
+  // clang-format on
+  this->_config = absl::monostate{};
+}
+
 void Cli::make_noisify_subcommand() {
   auto& sc =
       *this->_cli
            .add_subcommand("noisify", "Add noise to MoDLE's contact matrix in Cooler format.")
            ->fallthrough()
            ->preparse_callback([this](size_t i) {
+             (void)i;
              assert(this->_config.index() == 0);  // NOLINT empty variant
-             fmt::print("callback_arg={}\n", i);
              this->_config = noisify_config{};
            });
 
@@ -320,8 +401,8 @@ void Cli::make_stats_subcommand() {
                                   "Compute several useful statistics for a given Cooler file.")
                   ->fallthrough()
                   ->preparse_callback([this](size_t i) {
+                    (void)i;
                     assert(this->_config.index() == 0);  // NOLINT empty variant
-                    fmt::print("callback_arg={}\n", i);
                     this->_config = stats_config{};
                   });
   sc.alias("stats");
@@ -391,82 +472,18 @@ void Cli::make_stats_subcommand() {
   // clang-format on
   this->_config = absl::monostate{};
 }
-/*
-void Cli::make_find_barrier_clusters_subcommand() {
-     auto* sc = this->_cli
-  .add_subcommand("find-barrier-clusters",
-     "Detect clusters of extrusion barriers for a given BED file.")
-     ->fallthrough();
-     sc.alias("fbcl");
-
-     // clang-format off
-  sc.add_option(
-     "-i,--input",
-     this->_config.path_to_input_matrix,
-     "Path to a contact matrix in Cooler format.")
-     ->check(CLI::ExistingFile)
-     ->required();
-
-  sc.add_option(
-     "--chromosome-subrange-file",
-     this->_config.path_to_chrom_subranges,
-     "Path to BED file with subranges of the chromosomes to be processed.")
-     ->check(CLI::ExistingFile);
-
-  sc.add_flag(
-     "-f,--force",
-     this->_config.force,
-     "Overwrite existing file(s).")
-     ->capture_default_str();
-
-  sc.add_option(
-     "--bin-size",
-     this->_config.bin_size,
-     "Bin size to use when calculating the statistics. Required in case of MCool files.")
-     ->check(CLI::PositiveNumber);
-
-  sc.add_option(
-     "-w,--diagonal-width",
-     this->_config.diagonal_width,
-     "Diagonal width.")
-     ->check(CLI::PositiveNumber)
-     ->transform(utils::str_float_to_str_int)
-     ->required();
-
-  sc.add_flag(
-     "--dump-depleted-matrices",
-     this->_config.dump_depleted_matrices,
-     "Dump contact matrices used to calculate the normalized average contact density.");
-
-  sc.add_option(
-     "--path-to-histograms",
-     this->_config.output_path_for_histograms,
-     "Path where to output contact histograms.");
-
-  sc.add_option(
-     "--exclude-chromosomes",
-     this->_config.chromosomes_excluded_vect,
-     "Comma-separated list of chromosomes to skip when calculating chromosome statistics.")
-     ->delimiter(',');
-
-  sc.add_option(
-     "--depletion-multiplier",
-     this->_config.depletion_multiplier,
-     "Multiplier used to control the magnitude of the depletion.")
-     ->check(CLI::NonNegativeNumber)
-     ->capture_default_str();
-     // clang-format on
-}
-     */
 
 void Cli::make_cli() {
-  // clang-format off
-     this->_cli.name(this->_exec_name);
-     this->_cli.description("Modle's helper tool. This tool allows to post-process the contact matrix produced by Modle in various ways.");
-     this->_cli.require_subcommand(1);
-  // clang-format on
+  this->_cli.name(this->_exec_name);
+  this->_cli.description(
+      "Modle's helper tool.\n"
+      "This tool can be used to perform common pre and post-process operations on MoDLE's "
+      "input and output files.");
+  this->_cli.require_subcommand(1);
+
   this->make_eval_subcommand();
   this->make_filter_barriers_subcommand();
+  this->make_find_barrier_clusters_subcommand();
   this->make_noisify_subcommand();
   this->make_stats_subcommand();
 }
@@ -547,6 +564,34 @@ std::string Cli::validate_filter_barriers_subcommand() const {
     valitade_bed(path);
   }
 
+  return errors;
+}
+
+std::string Cli::validate_find_barrier_clusters_subcommand() const {
+  assert(this->_cli.get_subcommand("find-barrier-clusters")->parsed());  // NOLINT
+  std::string errors;
+  auto& c = absl::get<find_barrier_clusters_config>(this->_config);
+
+  assert(boost::filesystem::exists(c.path_to_input_barriers));  // NOLINT
+  utils::detect_path_collision(c.path_to_output, errors, c.force, boost::filesystem::regular_file);
+
+  if (c.min_cluster_span >= c.max_cluster_span && c.max_cluster_span != 0) {
+    absl::StrAppendFormat(&errors,
+                          "--min-cluster-span should be strictly less than --max-cluster-span.\n"
+                          "Got:\n"
+                          "--min-cluster-span=%d\n"
+                          "--max-cluster-span=%d\n",
+                          c.min_cluster_span, c.max_cluster_span);
+  }
+
+  if (c.min_cluster_size >= c.max_cluster_size && c.max_cluster_size != 0) {
+    absl::StrAppendFormat(&errors,
+                          "--min-cluster-size should be strictly less than --max-cluster-size.\n"
+                          "Got:\n"
+                          "--min-cluster-size=%d\n"
+                          "--max-cluster-size=%d\n",
+                          c.min_cluster_size, c.max_cluster_size);
+  }
   return errors;
 }
 
@@ -641,6 +686,8 @@ bool Cli::validate() {  // TODO: Refactor this function
     errors = this->validate_eval_subcommand();
   } else if (this->_cli.get_subcommand("filter-barriers")->parsed()) {
     errors = this->validate_filter_barriers_subcommand();
+  } else if (this->_cli.get_subcommand("find-barrier-clusters")->parsed()) {
+    errors = this->validate_find_barrier_clusters_subcommand();
   } else if (this->_cli.get_subcommand("noisify")->parsed()) {
     errors = this->validate_noisify_subcommand();
   } else if (this->_cli.get_subcommand("stats")->parsed()) {
@@ -665,6 +712,8 @@ modle::tools::config Cli::parse_arguments() {
       this->_subcommand = subcommand::eval;
     } else if (this->_cli.get_subcommand("filter-barriers")->parsed()) {
       this->_subcommand = subcommand::filter_barriers;
+    } else if (this->_cli.get_subcommand("find-barrier-clusters")->parsed()) {
+      this->_subcommand = subcommand::find_barrier_clusters;
     } else if (this->_cli.get_subcommand("noisify")->parsed()) {
       this->_subcommand = subcommand::noisify;
     } else if (this->_cli.get_subcommand("statistics")->parsed()) {

@@ -53,6 +53,20 @@ struct filter_barrier_config {  // NOLINT
   bool strict_bed_validation{true};
 };
 
+struct find_barrier_clusters_config {  // NOLINT
+  // IO
+  boost::filesystem::path path_to_input_barriers;
+  boost::filesystem::path path_to_output;
+  bool force{false};
+
+  // Cluster properties
+  bp_t extension_window{5000};  // NOLINT
+  bp_t min_cluster_span{0};
+  bp_t max_cluster_span{0};
+  bp_t min_cluster_size{0};
+  bp_t max_cluster_size{0};
+};
+
 struct noisify_config {  // NOLINT
   // IO
   boost::filesystem::path path_to_input_matrix;
@@ -89,6 +103,7 @@ struct stats_config {  // NOLINT
 using config = absl::variant<absl::monostate,
                              eval_config,
                              filter_barrier_config,
+                             find_barrier_clusters_config,
                              noisify_config,
                              stats_config>;
 // clang-format on

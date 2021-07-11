@@ -31,16 +31,20 @@ int main(int argc, char** argv) {
     switch (cli.get_subcommand()) {
       case modle::tools::Cli::subcommand::eval:
         modle::tools::eval_subcmd(absl::get<modle::tools::eval_config>(c));
-        break;
+        return 0;
       case modle::tools::Cli::subcommand::filter_barriers:
         modle::tools::filter_barriers_subcmd(absl::get<modle::tools::filter_barrier_config>(c));
-        break;
+        return 0;
+      case modle::tools::Cli::subcommand::find_barrier_clusters:
+        modle::tools::find_barrier_clusters_subcmd(
+            absl::get<modle::tools::find_barrier_clusters_config>(c));
+        return 0;
       case modle::tools::Cli::subcommand::stats:
         modle::tools::stats_subcmd(absl::get<modle::tools::stats_config>(c));
-        break;
+        return 0;
       case modle::tools::Cli::subcommand::noisify:
         modle::tools::noisify_subcmd(absl::get<modle::tools::noisify_config>(c));
-        break;
+        return 0;
       default:
         throw std::runtime_error(
             "Default branch in switch statement in modle_tools::main() should be unreachable! If "
@@ -62,6 +66,4 @@ int main(int argc, char** argv) {
                "file an issue on GitHub.");
     return 1;
   }
-
-  return 0;
 }

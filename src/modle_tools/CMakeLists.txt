@@ -7,6 +7,7 @@ target_sources(
           ${CMAKE_CURRENT_SOURCE_DIR}/cli.cpp
           ${CMAKE_CURRENT_SOURCE_DIR}/eval.cpp
           ${CMAKE_CURRENT_SOURCE_DIR}/filter_barriers.cpp
+          ${CMAKE_CURRENT_SOURCE_DIR}/find_barrier_clusters.cpp
           ${CMAKE_CURRENT_SOURCE_DIR}/noisify.cpp
           ${CMAKE_CURRENT_SOURCE_DIR}/stats.cpp)
 

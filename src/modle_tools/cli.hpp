@@ -10,7 +10,14 @@ namespace modle::tools {
 
 class Cli {
  public:
-  enum subcommand : uint_fast8_t { eval, filter_barriers, noisify, stats, help };
+  enum subcommand : uint_fast8_t {
+    eval,
+    filter_barriers,
+    find_barrier_clusters,
+    noisify,
+    stats,
+    help
+  };
   Cli(int argc, char** argv);
   [[nodiscard]] bool is_ok() const;
   [[nodiscard]] subcommand get_subcommand() const;
@@ -30,11 +37,14 @@ class Cli {
 
   void make_eval_subcommand();
   void make_filter_barriers_subcommand();
+  void make_find_barrier_clusters_subcommand();
   void make_noisify_subcommand();
   void make_stats_subcommand();
   void make_cli();
+
   [[nodiscard]] std::string validate_eval_subcommand();
   [[nodiscard]] std::string validate_filter_barriers_subcommand() const;
+  [[nodiscard]] std::string validate_find_barrier_clusters_subcommand() const;
   [[nodiscard]] std::string validate_noisify_subcommand() const;
   [[nodiscard]] std::string validate_stats_subcommand() const;
   [[nodiscard]] bool validate();

@@ -11,12 +11,14 @@
 #include <absl/strings/charconv.h>  // for from_chars (FP)
 #endif
 
-#include <absl/strings/match.h>      // for StartsWithIgnoreCase, EndsWith
-#include <absl/strings/str_split.h>  // for StrSplit, Splitter
-#include <fmt/format.h>              // for format
+#include <absl/strings/match.h>       // for StartsWithIgnoreCase, EndsWith
+#include <absl/strings/str_format.h>  // for absl::StrAppendFormat
+#include <absl/strings/str_split.h>   // for StrSplit, Splitter
+#include <fmt/format.h>               // for format
 
 #include <boost/exception/exception.hpp>    // for enable_error_info, error_info_base...
 #include <boost/exception/info.hpp>         // for error_info::name_value_string
+#include <boost/filesystem.hpp>             // for path, status
 #include <boost/stacktrace/stacktrace.hpp>  // for stacktrace, operator<<, to_string
 #include <cassert>                          // for assert
 #include <cmath>                            // for HUGE_VAL
@@ -250,7 +252,7 @@ void fclose(FILE *fp) noexcept(false) {
   if (!fp || fp == stdout || fp == stderr) {
     return;
   }
-  if (std::fclose(fp) != 0) {
+  if (std::fclose(fp) != 0) {  // NOLINT
     throw fmt::system_error(errno, "Failed to close a file handle");
   }
 }
@@ -267,6 +269,52 @@ std::string str_float_to_str_int(const std::string &s) {
     return s;
   }
   return s;
+}
+
+std::string detect_path_collision(const boost::filesystem::path &p, bool force_overwrite,
+                                  boost::filesystem::file_type expected_type) {
+  std::string error_msg;
+  detect_path_collision(p, error_msg, force_overwrite, expected_type);
+  return error_msg;
+}
+
+bool detect_path_collision(const boost::filesystem::path &p, std::string &error_msg,
+                           bool force_overwrite, boost::filesystem::file_type expected_type) {
+  const auto path_type = boost::filesystem::status(p).type();
+  if (force_overwrite && path_type == boost::filesystem::file_not_found) {
+    return true;
+  }
+
+  if (expected_type != path_type) {
+    switch (path_type) {
+      case boost::filesystem::regular_file:
+        absl::StrAppendFormat(&error_msg,
+                              "Path \"%s\" already exists and is actually a file. Please remove "
+                              "the file and try again",
+                              p.string());
+        return false;
+      case boost::filesystem::directory_file:
+        absl::StrAppendFormat(
+            &error_msg,
+            "Path \"%s\" already exists and is actually a directory. Please remove "
+            "the directory and try again",
+            p.string());
+        return false;
+      default:  // For the time being we only handle regular files and folders
+        return true;
+    }
+  }
+
+  if (force_overwrite) {
+    return true;
+  }
+
+  if (path_type == boost::filesystem::regular_file) {
+    absl::StrAppendFormat(&error_msg, "File \"%s\" already exists. Pass --force to overwrite",
+                          p.string());
+    return false;
+  }
+  return true;
 }
 
 }  // namespace modle::utils

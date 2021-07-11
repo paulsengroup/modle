@@ -4,6 +4,8 @@
 
 #include <xxh3.h>  // for XXH3_freeState, XXH3_state_t
 
+#include <boost/filesystem/file_status.hpp>
+#include <boost/filesystem/path.hpp>
 #include <cstddef>       // IWYU pragma: keep for size_t
 #include <cstdint>       // for int64_t, uint64_t
 #include <cstdio>        // for FILE
@@ -67,6 +69,8 @@ constexpr auto get_printable_type_name() noexcept;
 
 [[maybe_unused]] [[nodiscard]] constexpr bool ndebug_defined() noexcept;
 
+// Various
+
 struct XXH3_Deleter {  // NOLINT
   inline void operator()(XXH3_state_t* state) noexcept { XXH3_freeState(state); }
 };
@@ -75,6 +79,14 @@ inline void fclose(FILE* fp) noexcept(false);
 
 // Try to convert str representations like "1.0" or "1.000000" to "1"
 [[nodiscard]] inline std::string str_float_to_str_int(const std::string& s);
+
+// Returns false in case a collision was detected
+inline bool detect_path_collision(
+    const boost::filesystem::path& p, std::string& error_msg, bool force_overwrite = false,
+    boost::filesystem::file_type expected_type = boost::filesystem::regular_file);
+[[nodiscard]] inline std::string detect_path_collision(
+    const boost::filesystem::path& p, bool force_overwrite = false,
+    boost::filesystem::file_type expected_type = boost::filesystem::regular_file);
 }  // namespace modle::utils
 
 #include "../../../utils_impl.hpp"  // IWYU pragma: keep
