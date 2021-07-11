@@ -21,22 +21,25 @@ int main(int argc, char** argv) {
       return cli.get_exit_code();
     }
 
+    // TODO: move this inside the subcommands
+    /*
     if (!c.output_base_name.empty()) {
       boost::filesystem::create_directories(c.output_base_name.parent_path());
     }
+     */
 
     switch (cli.get_subcommand()) {
       case modle::tools::Cli::subcommand::eval:
-        modle::tools::eval_subcmd(c);
+        modle::tools::eval_subcmd(absl::get<modle::tools::eval_config>(c));
         break;
       case modle::tools::Cli::subcommand::filter_barriers:
-        modle::tools::filter_barriers_subcmd(c);
+        modle::tools::filter_barriers_subcmd(absl::get<modle::tools::filter_barrier_config>(c));
         break;
       case modle::tools::Cli::subcommand::stats:
-        modle::tools::stats_subcmd(c);
+        modle::tools::stats_subcmd(absl::get<modle::tools::stats_config>(c));
         break;
       case modle::tools::Cli::subcommand::noisify:
-        modle::tools::noisify_subcmd(c);
+        modle::tools::noisify_subcmd(absl::get<modle::tools::noisify_config>(c));
         break;
       default:
         throw std::runtime_error(
@@ -45,11 +48,13 @@ int main(int argc, char** argv) {
     }
   } catch (const std::exception& err) {
     fmt::print(stderr, "FAILURE: {}.\n", err.what());
+    // TODO Fixme
+    /*
     boost::system::error_code ec;
     if (!c.keep_tmp_files && boost::filesystem::exists(c.tmp_dir) &&
         boost::filesystem::is_empty(c.tmp_dir)) {
       boost::filesystem::remove_all(c.tmp_dir, ec);
-    }
+    }*/
     return 1;
   } catch (...) {
     fmt::print(stderr,

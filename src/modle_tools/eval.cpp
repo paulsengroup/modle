@@ -144,7 +144,7 @@ void slice_range(absl::Span<const N> vin, std::vector<N> &vout, size_t nrows, Tr
       slice_range_w_linear_method(vin, vout, nrows, offset);
       break;
     default:
-      assert(false);  // This code should be unreachable
+      utils::throw_with_trace(std::logic_error("Unreachable code"));
   }
 }
 
@@ -251,7 +251,7 @@ void compute_euc_dist_over_range(const std::vector<N1> &vin1, const std::vector<
                              ncols, t);
 }
 
-void eval_subcmd(const modle::tools::config &c) {
+void eval_subcmd(const modle::tools::eval_config &c) {
   assert(c.compute_spearman || c.compute_pearson);  // NOLINT
   const auto bin_size =
       static_cast<size_t>(hdf5::read_attribute_int(c.path_to_input_matrix.string(), "bin-size"));
@@ -303,6 +303,7 @@ void eval_subcmd(const modle::tools::config &c) {
                                     chrom_list);
   };
 
+  boost::filesystem::create_directories(c.output_base_name.parent_path());
   // Init files and write bw header
   auto bw_corr_linear_pearson = create_bwig_file("pearson_r_linear.bw", !c.compute_pearson);
   auto bw_pv_linear_pearson = create_bwig_file("pearson_pv_linear.bw", !c.compute_pearson);

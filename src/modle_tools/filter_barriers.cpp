@@ -12,7 +12,7 @@
 
 namespace modle::tools {
 
-void filter_barriers_intersection(const modle::tools::config& c) {
+void filter_barriers_intersection(const modle::tools::filter_barrier_config& c) {
   assert(!c.path_to_bed_files_for_filtering.empty());  // NOLINT
   std::vector<bed::BED_tree<std::string, uint64_t>> intervals(
       c.path_to_bed_files_for_filtering.size());
@@ -43,7 +43,7 @@ void filter_barriers_intersection(const modle::tools::config& c) {
 }
 
 // TODO: Find a better name than pairwise-intersection
-void filter_barriers_pairwise_intersection(const modle::tools::config& c) {
+void filter_barriers_pairwise_intersection(const modle::tools::filter_barrier_config& c) {
   assert(!c.path_to_bed_files_for_filtering.empty());  // NOLINT
   std::vector<bed::BED_tree<std::string, uint64_t>> intervals(
       c.path_to_bed_files_for_filtering.size());
@@ -70,13 +70,13 @@ void filter_barriers_pairwise_intersection(const modle::tools::config& c) {
   }
 }
 
-void filter_barriers_subcmd(const modle::tools::config& c) {
+void filter_barriers_subcmd(const modle::tools::filter_barrier_config& c) {
   if (absl::AsciiStrToLower(c.filtering_criterion) == "intersection") {
     filter_barriers_intersection(c);
   } else if (absl::AsciiStrToLower(c.filtering_criterion) == "pairwise-intersection") {
     filter_barriers_pairwise_intersection(c);
   } else {
-    assert(false);
+    utils::throw_with_trace(std::logic_error("Unreachable code"));
   }
 }
 

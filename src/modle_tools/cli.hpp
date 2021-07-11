@@ -35,9 +35,9 @@ class Cli {
   void make_cli();
   [[nodiscard]] std::string validate_eval_subcommand();
   [[nodiscard]] std::string validate_filter_barriers_subcommand() const;
+  [[nodiscard]] std::string validate_noisify_subcommand() const;
   [[nodiscard]] std::string validate_stats_subcommand() const;
   [[nodiscard]] bool validate();
-  void post_process_cli_args();
 };
 
 }  // namespace modle::tools

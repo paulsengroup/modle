@@ -59,13 +59,16 @@ size_t compute_number_of_contacts_after_depletion(const ContactMatrix<I>& cmatri
   return depl_contacts;
 }
 
-void stats_subcmd(const modle::tools::config& c) {
+void stats_subcmd(const modle::tools::stats_config& c) {
   const auto& path_to_output_hist = c.output_path_for_histograms;
 
   cooler::Cooler m1(c.path_to_input_matrix, cooler::Cooler::READ_ONLY, c.bin_size);
 
   std::unique_ptr<cooler::Cooler> m2{nullptr};
   std::unique_ptr<std::ofstream> hist_file{nullptr};
+
+  const auto chromosomes_excluded = absl::flat_hash_set<std::string>(
+      c.chromosomes_excluded_vect.begin(), c.chromosomes_excluded_vect.end());
 
   const auto nchroms = m1.get_nchroms();
   const auto bin_size = m1.get_bin_size();
@@ -82,6 +85,7 @@ void stats_subcmd(const modle::tools::config& c) {
   }
 
   if (c.dump_depleted_matrices) {  // Create cooler file to write depl. contacts
+    assert(boost::filesystem::exists(c.path_to_input_matrix.parent_path()));  // NOLINT
     const auto ext = c.path_to_input_matrix.extension().string();
     const auto path =
         absl::StrCat(absl::StripSuffix(c.path_to_input_matrix.string(), ext), "_depl.cool");
@@ -114,7 +118,7 @@ void stats_subcmd(const modle::tools::config& c) {
     const auto& chrom_size = chrom_sizes[i];
 
     // Skip chromosome found in the exclusion list
-    if (c.chromosomes_excluded.contains(chrom_name)) {
+    if (chromosomes_excluded.contains(chrom_name)) {
       continue;
     }
 

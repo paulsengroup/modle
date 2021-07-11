@@ -26,7 +26,7 @@
 #include "modle_tools/tools.hpp"                           // for noisify_subcmd
 namespace modle::tools {
 
-void noisify_contacts(const config& c) {
+void noisify_contacts(const noisify_config& c) {
   using pixel_queue_t = moodycamel::BlockingReaderWriterQueue<modle::cooler::Cooler::Pixel>;
 
   constexpr auto PIXEL_BATCH_SIZE =
@@ -101,6 +101,6 @@ void noisify_contacts(const config& c) {
   }
 }
 
-void noisify_subcmd(const modle::tools::config& c) { modle::tools::noisify_contacts(c); }
+void noisify_subcmd(const modle::tools::noisify_config& c) { modle::tools::noisify_contacts(c); }
 
 }  // namespace modle::tools
