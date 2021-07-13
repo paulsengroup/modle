@@ -81,6 +81,10 @@ ContactMatrix<I>::ContactMatrix(const absl::Span<const I> contacts, size_t nrows
 
 template <typename I>
 ContactMatrix<I> &ContactMatrix<I>::operator=(const ContactMatrix<I> &other) {
+  if (this == &other) {
+    return *this;
+  }
+
   this->_nrows = other.nrows();
   this->_ncols = other.ncols();
   if (!this->_contacts.empty()) {
@@ -91,7 +95,7 @@ ContactMatrix<I> &ContactMatrix<I>::operator=(const ContactMatrix<I> &other) {
   }
   this->_tot_contacts = other._tot_contacts.load();
   this->_updates_missed = other._updates_missed.load();
-  this->_locks.resize(other._locks.size());
+  this->_locks = std::vector<std::mutex>(other._locks.size());
 
   return *this;
 }

@@ -97,7 +97,7 @@ Chromosome::Chromosome(const Chromosome& other)
       _size(other._size),
       _id(other._id),
       _barriers(other._barriers),
-      _contacts(std::make_unique<contact_matrix_t>(*other._contacts)),
+      _contacts(other._contacts),
       _features(other._features),
       _ok(other._ok) {
   _barriers.make_BST();
@@ -114,7 +114,7 @@ Chromosome& Chromosome::operator=(const Chromosome& other) {
   _start = other._start;
   _end = other._end;
   _barriers = other._barriers;
-  _contacts = std::make_unique<contact_matrix_t>(*other._contacts);
+  _contacts = other._contacts;
   _features = other._features;
   _ok = other._ok;
 
@@ -193,19 +193,39 @@ absl::Span<const Chromosome::bed_tree_value_t> Chromosome::get_features() const 
 }
 
 void Chromosome::increment_contacts(bp_t pos1, bp_t pos2, bp_t bin_size) {
+  assert(this->_contacts);  // NOLINT
   this->_contacts->increment((pos1 - this->_start) / bin_size, (pos2 - this->_start) / bin_size);
 }
 
 void Chromosome::increment_contacts(bp_t bin1, bp_t bin2) {
+  assert(this->_contacts);  // NOLINT
   this->_contacts->increment(bin1, bin2);
 }
 
-void Chromosome::allocate_contacts(bp_t bin_size, bp_t diagonal_width) {
-  this->_contacts =
-      std::make_shared<ContactMatrix<contacts_t>>(this->simulated_size(), diagonal_width, bin_size);
+bool Chromosome::allocate_contacts(bp_t bin_size, bp_t diagonal_width) {
+  if (this->_contacts) {
+    return false;
+  }
+
+  if (std::scoped_lock l(this->_contacts_mutex); !this->_contacts) {
+    this->_contacts = contact_matrix_t{this->simulated_size(), diagonal_width, bin_size};
+    return true;
+  }
+  return false;
 }
 
-void Chromosome::deallocate_contacts() { this->_contacts = nullptr; }
+bool Chromosome::deallocate_contacts() {
+  if (!this->_contacts) {
+    return false;
+  }
+
+  if (std::scoped_lock l(this->_contacts_mutex); this->_contacts) {
+    auto tmp = absl::optional<contact_matrix_t>{};
+    this->_contacts.swap(tmp);
+    return true;
+  }
+  return false;
+}
 
 const Chromosome::contact_matrix_t& Chromosome::contacts() const {
   assert(this->_contacts);  // NOLINT
@@ -218,10 +238,18 @@ Chromosome::contact_matrix_t& Chromosome::contacts() {
 }
 
 const Chromosome::contact_matrix_t* Chromosome::contacts_ptr() const {
-  return this->_contacts.get();
+  if (this->_contacts) {
+    return &(*this->_contacts);
+  }
+  return nullptr;
 }
 
-Chromosome::contact_matrix_t* Chromosome::contacts_ptr() { return this->_contacts.get(); }
+Chromosome::contact_matrix_t* Chromosome::contacts_ptr() {
+  if (this->_contacts) {
+    return &(*this->_contacts);
+  }
+  return nullptr;
+}
 
 uint64_t Chromosome::hash(uint64_t seed, size_t cell_id) {
   auto handle_errors = [&](const auto& status) {

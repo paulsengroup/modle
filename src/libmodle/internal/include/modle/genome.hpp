@@ -1,6 +1,7 @@
 #pragma once
 
 #include <absl/container/btree_set.h>  // for btree_set
+#include <absl/types/optional.h>       // for optional
 #include <absl/types/span.h>           // for Span
 #include <xxh3.h>                      // for XXH3_state_t
 
@@ -17,12 +18,10 @@
 #include "modle/bed.hpp"            // for BED
 #include "modle/common/common.hpp"  // for bp_t, contacts_t
 #include "modle/common/utils.hpp"   // for ndebug_defined, XXH3_Deleter
+#include "modle/contacts.hpp"       // for ContactMatrix
 #include "modle/interval_tree.hpp"  // for IITree
 
 namespace modle {
-
-template <typename I>
-class ContactMatrix;
 
 class ExtrusionBarrier;
 
@@ -74,6 +73,7 @@ class Chromosome {
   [[nodiscard]] constexpr bp_t end_pos() const;
   [[nodiscard]] constexpr bp_t size() const;
   [[nodiscard]] constexpr bp_t simulated_size() const;
+  [[nodiscard]] constexpr size_t npixels(bp_t diagonal_width, bp_t bin_size) const;
   [[nodiscard]] bool ok() const;
   [[nodiscard]] size_t num_lefs(double nlefs_per_mbp) const;
   [[nodiscard]] size_t num_barriers() const;
@@ -82,8 +82,8 @@ class Chromosome {
   [[nodiscard]] absl::Span<const bed_tree_value_t> get_features() const;
   void increment_contacts(bp_t pos1, bp_t pos2, bp_t bin_size);
   void increment_contacts(bp_t bin1, bp_t bin2);
-  void allocate_contacts(bp_t bin_size, bp_t diagonal_width);
-  void deallocate_contacts();
+  bool allocate_contacts(bp_t bin_size, bp_t diagonal_width);
+  bool deallocate_contacts();
   [[nodiscard]] const contact_matrix_t& contacts() const;
   [[nodiscard]] contact_matrix_t& contacts();
   [[nodiscard]] const contact_matrix_t* contacts_ptr() const;
@@ -100,7 +100,8 @@ class Chromosome {
   bp_t _size{std::numeric_limits<bp_t>::max()};
   size_t _id{std::numeric_limits<size_t>::max()};
   IITree<bp_t, ExtrusionBarrier> _barriers{};
-  std::shared_ptr<contact_matrix_t> _contacts{nullptr};
+  absl::optional<contact_matrix_t> _contacts{};
+  std::mutex _contacts_mutex{};  // Protect _contacts from concurrent allocations/deallocations
   std::vector<bed_tree_value_t> _features{};
   bool _ok{true};
 

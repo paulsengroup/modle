@@ -82,10 +82,14 @@ void Simulation::run_simulation() {
   std::mutex progress_queue_mutex;  // Protect rw access to progress_queue
   std::deque<std::pair<Chromosome*, size_t>> progress_queue;
 
-  constexpr size_t task_batch_size_enq = 128;  // NOLINTNEXTLINE
-  const auto queue_capacity =
-      std::min(static_cast<size_t>(static_cast<double>(this->num_cells) * 1.1),
-               this->nthreads * task_batch_size_enq);
+  const auto task_batch_size_deq = [this]() -> size_t {
+    if (this->num_cells <= this->nthreads) {
+      return 1;
+    }
+    return std::min(16UL, this->num_cells / this->nthreads);  // NOLINT
+  }();
+  const size_t task_batch_size_enq = 2 * task_batch_size_deq;  // NOLINTNEXTLINE
+  const size_t queue_capacity = 2 * this->nthreads * task_batch_size_deq;
   // Queue used to submit simulation tasks to the thread pool
   moodycamel::BlockingConcurrentQueue<Simulation::Task> task_queue(queue_capacity, 1, 0);
   moodycamel::ProducerToken ptok(task_queue);
@@ -94,7 +98,6 @@ void Simulation::run_simulation() {
     this->write_contacts_to_disk(progress_queue, progress_queue_mutex, end_of_simulation);
   });
 
-  const auto task_batch_size_deq = std::min(32UL, this->num_cells / this->nthreads);
   for (auto i = 0UL; i < this->nthreads; ++i) {  // Start simulation threads
     boost::asio::post(tpool, [&]() {
       this->worker(task_queue, progress_queue, progress_queue_mutex, end_of_simulation,
@@ -120,9 +123,6 @@ void Simulation::run_simulation() {
       continue;
     }
 
-    // Allocate the contact matrix. Once it's not needed anymore, the contact matrix will be
-    // de-allocated by the thread that is writing contacts to disk
-    chrom.allocate_contacts(this->bin_size, this->diagonal_width);
     {
       std::scoped_lock l(progress_queue_mutex);
 
@@ -137,10 +137,11 @@ void Simulation::run_simulation() {
     auto target_contacts = 0UL;
     if (this->target_contact_density != 0) {  // Compute the number of simulation rounds required
       // to reach the target contact density
-      target_contacts = static_cast<size_t>(
-          std::max(1.0, std::round((this->target_contact_density *
-                                    static_cast<double>(chrom.contacts().npixels())) /
-                                   static_cast<double>(this->num_cells))));
+      target_contacts = static_cast<size_t>(std::max(
+          1.0,
+          std::round((this->target_contact_density *
+                      static_cast<double>(chrom.npixels(this->diagonal_width, this->bin_size))) /
+                     static_cast<double>(this->num_cells))));
     }
     auto target_epochs =
         target_contacts == 0UL ? this->simulation_iterations : std::numeric_limits<size_t>::max();
@@ -186,7 +187,7 @@ void Simulation::worker(moodycamel::BlockingConcurrentQueue<Simulation::Task>& t
   // This state object owns all the buffers and PRNG + seed required in order to simulate loop
   // extrusion for a single cell. Buffers are allocated once and resized, cleared and reused
   // throughout the simulation
-  Simulation::State state_buff;
+  Simulation::State local_state;
 
   try {
     while (true) {  // Try to dequeue a batch of tasks
@@ -206,24 +207,28 @@ void Simulation::worker(moodycamel::BlockingConcurrentQueue<Simulation::Task>& t
       auto tasks = absl::MakeSpan(task_buff.data(), avail_tasks);
       for (auto& task : tasks) {
         // Resize and reset buffers
-        state_buff = task;    // Set simulation state based on task data
-        state_buff.resize();  // This resizes buffers based on the nlefs to be simulated
-        state_buff.reset();   // Clear all buffers
+        local_state = task;    // Set simulation state based on task data
+        local_state.resize();  // This resizes buffers based on the nlefs to be simulated
+        local_state.reset();   // Clear all buffers
 
         if (task.cell_id == 0) {
           // Print a status update when we are processing cell #0 for a given chromosome
-          const auto target_epochs = static_cast<size_t>(
-              std::max(1.0, std::round((this->target_contact_density *
-                                        static_cast<double>(task.chrom->contacts().npixels())) /
-                                       (this->lef_fraction_contact_sampling *
-                                        static_cast<double>(this->num_cells * task.num_lefs)))));
+          const auto target_epochs = static_cast<size_t>(std::max(
+              1.0, std::round(
+                       (this->target_contact_density * static_cast<double>(task.chrom->npixels(
+                                                           this->diagonal_width, this->bin_size))) /
+                       (this->lef_fraction_contact_sampling *
+                        static_cast<double>(this->num_cells * task.num_lefs)))));
 
           fmt::print(stderr, FMT_STRING("Simulating ~{} epochs for '{}' across {} cells...\n"),
                      target_epochs, task.chrom->name(), num_cells);
         }
 
+        // Allocate the contact matrix. Once it's not needed anymore, the contact matrix will be
+        // de-allocated by the thread that is writing contacts to disk
+        local_state.chrom->allocate_contacts(this->bin_size, this->diagonal_width);
         // Start the simulation kernel
-        Simulation::simulate_one_cell(state_buff);
+        Simulation::simulate_one_cell(local_state);
 
         // Update progress for the current chrom
         std::scoped_lock l1(progress_queue_mutex);
@@ -242,7 +247,7 @@ void Simulation::worker(moodycamel::BlockingConcurrentQueue<Simulation::Task>& t
     // TODO: Find a better way to propagate exception up to the main thread. Maybe use a
     // concurrent queue?
     fmt::print(stderr, FMT_STRING("Detected an error in thread {}:\n{}\n{}\n"),
-               std::this_thread::get_id(), state_buff.to_string(), err.what());
+               std::this_thread::get_id(), local_state.to_string(), err.what());
 #ifndef BOOST_STACKTRACE_USE_NOOP
     const auto* st = boost::get_error_info<modle::utils::traced>(err);
     if (st) {

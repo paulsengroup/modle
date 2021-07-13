@@ -18,6 +18,13 @@ constexpr bp_t Chromosome::end_pos() const { return this->_end; }
 constexpr bp_t Chromosome::size() const { return this->_size; }
 constexpr bp_t Chromosome::simulated_size() const { return this->_end - this->_start; }
 
+constexpr size_t Chromosome::npixels(bp_t diagonal_width, bp_t bin_size) const {
+  const auto npix1 = (diagonal_width + bin_size - 1) / bin_size;
+  const auto npix2 = (this->simulated_size() + bin_size - 1) / bin_size;
+
+  return npix1 * npix2;
+}
+
 template <typename H>
 H AbslHashValue(H h, const Chromosome& c) {
   return H::combine(std::move(h), c._name);
