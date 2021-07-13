@@ -22,7 +22,7 @@
 #include "modle/common/common.hpp"  // for bp_t, PRNG, seeder
 #include "modle/common/config.hpp"  // for Config
 #include "modle/common/suppress_compiler_warnings.hpp"
-#include "modle/common/utils.hpp"       // for ndebug_defined
+#include "modle/common/utils.hpp"       // for ndebug_defined, XXH3_Deleter
 #include "modle/compressed_io.hpp"      // for Writer
 #include "modle/contacts.hpp"           // for ContactMatrix
 #include "modle/extrusion_factors.hpp"  // for Lef, ExtrusionUnit (ptr only)
@@ -81,6 +81,7 @@ class Simulation : Config {
     std::vector<size_t> epoch_buff{};
     random::PRNG_t rand_eng{};
     uint64_t seed{};
+    std::unique_ptr<XXH3_state_t, utils::XXH3_Deleter> xxh_state{XXH3_createState()};
 
     void _resize(size_t size = std::numeric_limits<size_t>::max());
     void _reset();

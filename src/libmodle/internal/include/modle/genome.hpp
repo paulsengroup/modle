@@ -49,10 +49,10 @@ class Chromosome {
   ~Chromosome() = default;
 
   Chromosome(const Chromosome& other);
-  Chromosome(Chromosome&& other) = default;
+  Chromosome(Chromosome&& other) noexcept;
 
   Chromosome& operator=(const Chromosome& other);
-  Chromosome& operator=(Chromosome&& other) = default;
+  Chromosome& operator=(Chromosome&& other) noexcept;
 
   [[nodiscard]] bool operator==(const Chromosome& other) const noexcept(utils::ndebug_defined());
   [[nodiscard]] bool operator==(std::string_view other_name) const noexcept;
@@ -88,7 +88,8 @@ class Chromosome {
   [[nodiscard]] contact_matrix_t& contacts();
   [[nodiscard]] const contact_matrix_t* contacts_ptr() const;
   [[nodiscard]] contact_matrix_t* contacts_ptr();
-  [[nodiscard]] uint64_t hash(uint64_t seed, size_t cell_id = 0);
+  [[nodiscard]] uint64_t hash(XXH3_state_t* xxh_state, uint64_t seed, size_t cell_id) const;
+  [[nodiscard]] uint64_t hash(uint64_t seed, size_t cell_id) const;
 
   template <typename H>
   inline friend H AbslHashValue(H h, const Chromosome& c);
@@ -105,7 +106,7 @@ class Chromosome {
   std::vector<bed_tree_value_t> _features{};
   bool _ok{true};
 
-  std::unique_ptr<XXH3_state_t, utils::XXH3_Deleter> _xxh_state{XXH3_createState()};
+  // std::unique_ptr<XXH3_state_t, utils::XXH3_Deleter> _xxh_state{XXH3_createState()};
 };
 
 class Genome {
