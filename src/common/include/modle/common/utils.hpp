@@ -72,7 +72,7 @@ constexpr auto get_printable_type_name() noexcept;
 // Various
 
 struct XXH3_Deleter {  // NOLINT
-  inline void operator()(XXH3_state_t* state) noexcept { XXH3_freeState(state); }
+  inline void operator()(XXH3_state_t* state) noexcept;
 };
 
 inline void fclose(FILE* fp) noexcept(false);

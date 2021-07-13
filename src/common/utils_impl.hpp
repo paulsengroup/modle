@@ -317,4 +317,5 @@ bool detect_path_collision(const boost::filesystem::path &p, std::string &error_
   return true;
 }
 
+void XXH3_Deleter::operator()(XXH3_state_t *state) noexcept { XXH3_freeState(state); }
 }  // namespace modle::utils
