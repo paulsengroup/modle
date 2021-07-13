@@ -103,6 +103,19 @@ Chromosome::Chromosome(const Chromosome& other)
   _barriers.make_BST();
 }
 
+Chromosome::Chromosome(Chromosome&& other) noexcept
+    : _name(std::move(other._name)),
+      _start(other._start),
+      _end(other._end),
+      _size(other._size),
+      _id(other._id),
+      _barriers(std::move(other._barriers)),
+      _contacts(std::move(other._contacts)),
+      _features(std::move(other._features)),
+      _ok(other._ok) {
+  _barriers.make_BST();
+}
+
 Chromosome& Chromosome::operator=(const Chromosome& other) {
   if (this == &other) {
     return *this;
@@ -116,6 +129,26 @@ Chromosome& Chromosome::operator=(const Chromosome& other) {
   _barriers = other._barriers;
   _contacts = std::make_unique<contact_matrix_t>(*other._contacts);
   _features = other._features;
+  _ok = other._ok;
+
+  _barriers.make_BST();
+
+  return *this;
+}
+
+Chromosome& Chromosome::operator=(Chromosome&& other) noexcept {
+  if (this == &other) {
+    return *this;
+  }
+
+  _id = other._id;
+  _name = std::move(other._name);
+  _size = other._size;
+  _start = other._start;
+  _end = other._end;
+  _barriers = std::move(other._barriers);
+  _contacts = std::move(other._contacts);
+  _features = std::move(other._features);
   _ok = other._ok;
 
   _barriers.make_BST();
@@ -223,26 +256,30 @@ const Chromosome::contact_matrix_t* Chromosome::contacts_ptr() const {
 
 Chromosome::contact_matrix_t* Chromosome::contacts_ptr() { return this->_contacts.get(); }
 
-uint64_t Chromosome::hash(uint64_t seed, size_t cell_id) {
+uint64_t Chromosome::hash(XXH3_state_t* const xxh_state, uint64_t seed, size_t cell_id) const {
   auto handle_errors = [&](const auto& status) {
-    if (status == XXH_ERROR || !this->_xxh_state) {
+    if (status == XXH_ERROR || !xxh_state) {
       throw std::runtime_error(
           fmt::format(FMT_STRING("Failed to hash '{}' for cell #{} using seed {}"), this->name(),
                       cell_id, seed));
     }
   };
 
-  handle_errors(XXH3_64bits_reset_withSeed(this->_xxh_state.get(), seed));
-  handle_errors(XXH3_64bits_update(this->_xxh_state.get(), this->_name.data(),
-                                   this->_name.size() * sizeof(char)));
+  handle_errors(XXH3_64bits_reset_withSeed(xxh_state, seed));
   handle_errors(
-      XXH3_64bits_update(this->_xxh_state.get(), &this->_size, sizeof(decltype(this->_size))));
-  handle_errors(XXH3_64bits_update(this->_xxh_state.get(), &cell_id, sizeof(decltype(cell_id))));
+      XXH3_64bits_update(xxh_state, this->_name.data(), this->_name.size() * sizeof(char)));
+  handle_errors(XXH3_64bits_update(xxh_state, &this->_size, sizeof(decltype(this->_size))));
+  handle_errors(XXH3_64bits_update(xxh_state, &cell_id, sizeof(decltype(cell_id))));
 
   DISABLE_WARNING_PUSH
   DISABLE_WARNING_USELESS_CAST
-  return static_cast<uint64_t>(XXH3_64bits_digest(this->_xxh_state.get()));
+  return static_cast<uint64_t>(XXH3_64bits_digest(xxh_state));
   DISABLE_WARNING_POP
+}
+
+uint64_t Chromosome::hash(uint64_t seed, size_t cell_id) const {
+  std::unique_ptr<XXH3_state_t, utils::XXH3_Deleter> xxh_state{XXH3_createState()};
+  return this->hash(xxh_state.get(), seed, cell_id);
 }
 
 Genome::Genome(const boost::filesystem::path& path_to_chrom_sizes,

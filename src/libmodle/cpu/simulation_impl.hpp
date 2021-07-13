@@ -122,7 +122,7 @@ void Simulation::simulate_extrusion_kernel(StateT& s) const {
   // use the current epoch when generating error messages
   try {
     // Seed is computed based on chrom. name, size and cellid
-    s.seed = s.chrom->hash(this->seed, s.cell_id);
+    s.seed = s.chrom->hash(s.xxh_state.get(), this->seed, s.cell_id);
     s.rand_eng = random::PRNG(s.seed);
 
     // Generate the epoch at which each LEF is supposed to be initially loaded
