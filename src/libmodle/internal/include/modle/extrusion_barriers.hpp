@@ -1,6 +1,7 @@
 #pragma once
 
 #include <absl/types/span.h>  // for Span
+#include <fmt/format.h>
 
 #include <boost/dynamic_bitset/dynamic_bitset.hpp>  // for dynamic_bitset
 #include <cstdint>                                  // for uint_fast8_t
@@ -65,3 +66,39 @@ void update_states(absl::Span<const ExtrusionBarrier> extr_barriers, boost::dyna
 
 }  // namespace CTCF
 }  // namespace modle
+
+template <>
+struct fmt::formatter<modle::ExtrusionBarrier> {
+  char presentation = 's';  // s == short, f == full
+  inline constexpr auto parse(format_parse_context& ctx) -> decltype(ctx.begin()) {
+    const auto* it = ctx.begin();
+    const auto* end = ctx.end();
+    if (it != end && (*it == 's' || *it == 'f')) {
+      presentation = *it++;
+    }
+
+    // Check if reached the end of the range:
+    if (it != end && *it != '}') {
+      throw fmt::format_error("invalid format");
+    }
+
+    // Return an iterator past the end of the parsed range:
+    return it;
+  }
+
+  // Formats the point p using the parsed format specification (presentation)
+  // stored in this formatter.
+  template <typename FormatContext>
+  inline auto format(const modle::ExtrusionBarrier& b, FormatContext& ctx) -> decltype(ctx.out()) {
+    // ctx.out() is an output iterator to write to.
+    if (presentation == 's') {
+      return fmt::format_to(ctx.out(), "ExtrusionBarrier{{pos={}; motif_direction={}}}", b.pos(),
+                            b.blocking_direction_major() == modle::dna::fwd ? "rev" : "fwd");
+    }
+    assert(presentation == 'f');
+    return fmt::format_to(ctx.out(),
+                          "ExtrusionBarrier{{pos={}; motif_direction={}; poo={:.4f}; pnn={:.4f}}}",
+                          b.pos(), b.blocking_direction_major() == modle::dna::fwd ? "rev" : "fwd",
+                          b.prob_occupied_to_occupied(), b.prob_not_occupied_to_not_occupied());
+  }
+};
