@@ -42,6 +42,7 @@ struct Config {  // NOLINT(altera-struct-pack-align)
   bool force{false};
   bool write_contacts_for_ko_chroms{false};
   std::vector<boost::filesystem::path> path_to_feature_bed_files{};
+  boost::filesystem::path path_to_deletion_bed{};
 
   // General settings
   bp_t bin_size{1'000};                        // NOLINT(readability-magic-numbers, cppcoreguidelines-avoid-magic-numbers)
@@ -61,15 +62,14 @@ struct Config {  // NOLINT(altera-struct-pack-align)
   bp_t deletion_size{10'000};                  // NOLINT(readability-magic-numbers, cppcoreguidelines-avoid-magic-numbers)
   bool skip_burnin{false};
   size_t block_size{9};                        // NOLINT(readability-magic-numbers, cppcoreguidelines-avoid-magic-numbers)
-  std::string perturbate_mode{"cluster"};
   uint64_t seed{0};
 
   // Misc probabilities
-  double probability_of_extrusion_unit_bypass{0.25};     // NOLINT(readability-magic-numbers, cppcoreguidelines-avoid-magic-numbers)
-  double probability_of_extrusion_barrier_block{0.825};  // NOLINT(readability-magic-numbers, cppcoreguidelines-avoid-magic-numbers)
+  double probability_of_extrusion_unit_bypass{0.1};     // NOLINT(readability-magic-numbers, cppcoreguidelines-avoid-magic-numbers)
+  double extrusion_barrier_occupancy{0.825};             // NOLINT(readability-magic-numbers, cppcoreguidelines-avoid-magic-numbers)
   double ctcf_occupied_self_prob{0.0};                   // NOLINT(readability-magic-numbers, cppcoreguidelines-avoid-magic-numbers)
   double ctcf_not_occupied_self_prob{0.70};              // NOLINT(readability-magic-numbers, cppcoreguidelines-avoid-magic-numbers)
-  double lef_hard_collision_pblock{0.995};               // NOLINT(readability-magic-numbers, cppcoreguidelines-avoid-magic-numbers)
+  double lef_hard_collision_pblock{1.0};                 // NOLINT(readability-magic-numbers, cppcoreguidelines-avoid-magic-numbers)
   double lef_soft_collision_pblock{0.0};                 // NOLINT(readability-magic-numbers, cppcoreguidelines-avoid-magic-numbers)
   double lef_fraction_contact_sampling{0.025};           // NOLINT(readability-magic-numbers, cppcoreguidelines-avoid-magic-numbers)
   bool randomize_contacts{false};

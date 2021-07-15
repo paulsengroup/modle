@@ -49,7 +49,7 @@ class Cli {
   void make_cli();
   void make_simulation_subcommand();
   void make_perturbate_subcommand();
-  void validate_and_transform_args();
+  void transform_args();
 };
 
 }  // namespace modle

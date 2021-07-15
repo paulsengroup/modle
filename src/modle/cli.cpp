@@ -215,10 +215,22 @@ void add_common_options(CLI::App& subcommand, modle::Config& c) {
       ->check(CLI::ExistingFile);
 
   extr_barr.add_option(
-      "--probability-of-barrier-block",
-      c.probability_of_extrusion_barrier_block,
-      "Probability that a LEF will be stalled upon reaching an extrusion barrier.\n"
+      "--extrusion-barrier-occupancy",
+      c.extrusion_barrier_occupancy,
+      "Probability that an extrusion barrier will be active (i.e. occupied) at any given time."
       "This parameter provides an easier mean to set --ctcf-occupied-probability-of-transition-to-self.")
+      ->check(CLI::Range(0.0, 1.0));
+
+  extr_barr.add_option(
+      "--hard-collision-prob",
+      c.lef_hard_collision_pblock,
+      "Collision probability of a LEF moving towards an extrusion barrier in blocking orientation.")
+      ->check(CLI::Range(0.0, 1.0));
+
+  extr_barr.add_option(
+      "--soft-collision-prob",
+      c.lef_soft_collision_pblock,
+      "Collision probability of a LEF moving towards an extrusion barrier in non-blocking orientation.")
       ->check(CLI::Range(0.0, 1.0));
 
   extr_barr.add_option(
@@ -245,7 +257,7 @@ void add_common_options(CLI::App& subcommand, modle::Config& c) {
   hidden.add_flag("--skip-output", c.skip_output, "Don't write output files. Useful for profiling");
 
   gen.get_option("--target-contact-density")->excludes(gen.get_option("--number-of-iterations"));
-  extr_barr.get_option("--probability-of-barrier-block")->excludes("--ctcf-occupied-probability-of-transition-to-self");
+  extr_barr.get_option("--extrusion-barrier-occupancy")->excludes("--ctcf-occupied-probability-of-transition-to-self");
   // clang-format on
 }
 
@@ -371,17 +383,14 @@ void Cli::make_perturbate_subcommand() {
       ->capture_default_str();
 
   gen.add_option(
-      "--mode",
-      c.perturbate_mode,
-      "Perturbation mode, can be one of \"exhaustive\", \"cluster\".") // TODO: change me
-      ->check(CLI::Validator([](std::string_view tok) -> std::string {
-                               if (tok != "exhaustive" && tok != "cluster") {
-                                 return "The argument passed to --mode should be one of \"exhaustive\", \"cluster\".";
-                               }
-                               return "";
-                             }, "", ""))
-      ->capture_default_str();
+      "--deletion-list",
+      c.path_to_deletion_bed,
+      "Path to BED file containing a list of the deletion to perform when perturbating extrusion barriers.")
+      ->check(CLI::ExistingFile);
   // clang-format on
+
+  gen.get_option("--deletion-size")->excludes("--deletion-list");
+  gen.get_option("--deletion-list")->excludes("--deletion-size");
 }
 
 void Cli::make_cli() {
@@ -404,7 +413,7 @@ const Config& Cli::parse_arguments() {
     this->_subcommand = pertubate;
   }
 
-  this->validate_and_transform_args();
+  this->transform_args();
   this->_config.argc = _argc;
   this->_config.argv = _argv;
   return this->_config;
@@ -469,7 +478,7 @@ std::string Cli::process_paths_and_check_for_collisions(modle::Config& c) {
 
 int Cli::exit(const CLI::ParseError& e) const { return this->_cli.exit(e); }
 
-void Cli::validate_and_transform_args() {
+void Cli::transform_args() {
   if (auto& speed = this->_config.rev_extrusion_speed; speed == std::numeric_limits<bp_t>::max()) {
     speed =
         static_cast<bp_t>(std::round(static_cast<double>(this->_config.bin_size) / 2.0));  // NOLINT
@@ -489,13 +498,13 @@ void Cli::validate_and_transform_args() {
   {
     const auto pno = 1.0 - this->_config.ctcf_not_occupied_self_prob;
     if (this->_config.ctcf_occupied_self_prob == 0) {
-      const auto occ = this->_config.probability_of_extrusion_barrier_block;
+      const auto occ = this->_config.extrusion_barrier_occupancy;
       const auto pon = (pno - (occ * pno)) / occ;
       this->_config.ctcf_occupied_self_prob = 1.0 - pon;
     } else {
       const auto pon = 1.0 - this->_config.ctcf_occupied_self_prob;
       const auto occ = pno / (pno + pon);
-      this->_config.probability_of_extrusion_barrier_block = occ;
+      this->_config.extrusion_barrier_occupancy = occ;
     }
   }
 }
