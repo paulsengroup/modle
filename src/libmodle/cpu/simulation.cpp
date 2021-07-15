@@ -344,19 +344,18 @@ void Simulation::rank_lefs(const absl::Span<const Lef> lefs,
 void Simulation::extrude(const Chromosome& chrom, const absl::Span<Lef> lefs,
                          const absl::Span<const bp_t> rev_moves,
                          const absl::Span<const bp_t> fwd_moves,
-                         const size_t num_rev_units_at_5prime, const size_t num_fwd_units_at_3prime,
-                         const bp_t deletion_begin,
-                         const bp_t deletion_size) noexcept(utils::ndebug_defined()) {
+                         const size_t num_rev_units_at_5prime,
+                         const size_t num_fwd_units_at_3prime) noexcept(utils::ndebug_defined()) {
   {
     assert(lefs.size() == rev_moves.size());         // NOLINT
     assert(lefs.size() == fwd_moves.size());         // NOLINT
     assert(lefs.size() >= num_rev_units_at_5prime);  // NOLINT
     assert(lefs.size() >= num_fwd_units_at_3prime);  // NOLINT
+    (void)chrom;
   }
 
   auto i1 = num_rev_units_at_5prime == 0 ? 0UL : num_rev_units_at_5prime - 1;
   const auto i2 = lefs.size() - num_fwd_units_at_3prime;
-  const auto deletion_end = deletion_begin + deletion_size;
   for (; i1 < i2; ++i1) {
     auto& lef = lefs[i1];
     if (BOOST_UNLIKELY(!lef.is_bound())) {  // Do not process inactive LEFs
@@ -366,27 +365,11 @@ void Simulation::extrude(const Chromosome& chrom, const absl::Span<Lef> lefs,
     assert(lef.rev_unit.pos() >= chrom.start_pos() + rev_moves[i1]);    // NOLINT
     assert(lef.fwd_unit.pos() + fwd_moves[i1] <= chrom.end_pos() - 1);  // NOLINT
 
-    const auto rev_move = [&]() {
-      if (deletion_size > 0 && lef.rev_unit.pos() >= deletion_end &&
-          lef.rev_unit.pos() - rev_moves[i1] < deletion_end) {
-        return std::min(rev_moves[i1] + deletion_size, lef.rev_unit.pos());
-      }
-      return rev_moves[i1];
-    }();
-
-    const auto fwd_move = [&]() {
-      if (deletion_size > 0 && lef.fwd_unit.pos() < deletion_begin &&
-          lef.fwd_unit.pos() + fwd_moves[i1] >= deletion_begin) {
-        return std::min(fwd_moves[i1] + deletion_size, chrom.end_pos() - lef.fwd_unit.pos());
-      }
-      return fwd_moves[i1];
-    }();
-
     // Extrude rev unit
-    lef.rev_unit._pos -= rev_move;  // Advance extr. unit in 3'-5' direction
+    lef.rev_unit._pos -= rev_moves[i1];  // Advance extr. unit in 3'-5' direction
 
     // Extrude fwd unit
-    lef.fwd_unit._pos += fwd_move;                     // Advance extr. unit in 5'-3' direction
+    lef.fwd_unit._pos += fwd_moves[i1];                // Advance extr. unit in 5'-3' direction
     assert(lef.rev_unit.pos() <= lef.fwd_unit.pos());  // NOLINT
   }
 }
@@ -439,12 +422,12 @@ size_t Simulation::register_contacts(const bp_t start_pos, const bp_t end_pos,
   for (const auto i : selected_lef_idx) {
     assert(i < lefs.size());  // NOLINT
     const auto& lef = lefs[i];
-    if (BOOST_LIKELY(lef.is_bound() && lef.rev_unit.pos() > start_pos &&
-                     lef.rev_unit.pos() < end_pos - 1 && lef.fwd_unit.pos() > start_pos &&
-                     lef.fwd_unit.pos() < end_pos - 1)) {
+    if (BOOST_LIKELY(lef.is_bound() && lef.rev_unit.pos() >= start_pos &&
+                     lef.rev_unit.pos() < end_pos && lef.fwd_unit.pos() >= start_pos &&
+                     lef.fwd_unit.pos() < end_pos)) {
       const auto pos1 = lef.rev_unit.pos() - start_pos;
       const auto pos2 = lef.fwd_unit.pos() - start_pos;
-      contacts.increment(pos1 / bin_size, pos2 / bin_size);
+      contacts.increment(pos1 / this->bin_size, pos2 / this->bin_size);
       ++new_contacts;
     }
   }
@@ -453,45 +436,39 @@ size_t Simulation::register_contacts(const bp_t start_pos, const bp_t end_pos,
 
 size_t Simulation::register_contacts_w_randomization(Chromosome& chrom, absl::Span<const Lef> lefs,
                                                      absl::Span<const size_t> selected_lef_idx,
-                                                     random::PRNG_t& rand_eng, bp_t deletion_begin,
-                                                     bp_t deletion_size_) const
+                                                     random::PRNG_t& rand_eng) const
     noexcept(utils::ndebug_defined()) {
-  return this->register_contacts_w_randomization(chrom.start_pos(), chrom.end_pos(),
-                                                 chrom.contacts(), lefs, selected_lef_idx, rand_eng,
-                                                 deletion_begin, deletion_size_);
+  return this->register_contacts_w_randomization(
+      chrom.start_pos(), chrom.end_pos(), chrom.contacts(), lefs, selected_lef_idx, rand_eng);
 }
 
-size_t Simulation::register_contacts_w_randomization(
-    bp_t start_pos, bp_t end_pos, ContactMatrix<contacts_t>& contacts, absl::Span<const Lef> lefs,
-    absl::Span<const size_t> selected_lef_idx, random::PRNG_t& rand_eng, bp_t deletion_begin,
-    bp_t deletion_size_) const noexcept(utils::ndebug_defined()) {
+size_t Simulation::register_contacts_w_randomization(bp_t start_pos, bp_t end_pos,
+                                                     ContactMatrix<contacts_t>& contacts,
+                                                     absl::Span<const Lef> lefs,
+                                                     absl::Span<const size_t> selected_lef_idx,
+                                                     random::PRNG_t& rand_eng) const
+    noexcept(utils::ndebug_defined()) {
   auto noise_gen = genextreme_value_distribution<double>{
       this->genextreme_mu, this->genextreme_sigma, this->genextreme_xi};
-  const auto deletion_end = deletion_begin + deletion_size_;
 
   size_t new_contacts = 0;
   for (const auto i : selected_lef_idx) {
     assert(i < lefs.size());  // NOLINT
     const auto& lef = lefs[i];
-    if (BOOST_LIKELY(lef.is_bound() && lef.rev_unit.pos() > start_pos &&
-                     lef.rev_unit.pos() < end_pos - 1 && lef.fwd_unit.pos() > start_pos &&
-                     lef.fwd_unit.pos() < end_pos - 1)) {
+    if (BOOST_LIKELY(lef.is_bound() && lef.rev_unit.pos() >= start_pos &&
+                     lef.rev_unit.pos() < end_pos && lef.fwd_unit.pos() >= start_pos &&
+                     lef.fwd_unit.pos() < end_pos)) {
       const auto p1 = static_cast<double>(lef.rev_unit.pos() - start_pos) - noise_gen(rand_eng);
       const auto p2 = static_cast<double>(lef.fwd_unit.pos() - start_pos) + noise_gen(rand_eng);
 
-      if (p1 < 0 || p2 < 0 || p1 > static_cast<double>(end_pos - 1) ||
-          p2 > static_cast<double>(end_pos - 1)) {
+      if (p1 < 0 || p2 < 0 || p1 > static_cast<double>(end_pos) ||
+          p2 > static_cast<double>(end_pos)) {
         continue;
       }
 
       const auto pos1 = static_cast<bp_t>(std::round(p1));
       const auto pos2 = static_cast<bp_t>(std::round(p2));
-      if ((pos1 >= deletion_begin && pos1 < deletion_end) ||
-          (pos2 >= deletion_begin && pos2 <= deletion_end)) {
-        continue;
-      }
-
-      contacts.increment(pos1 / bin_size, pos2 / bin_size);
+      contacts.increment(pos1 / this->bin_size, pos2 / this->bin_size);
       ++new_contacts;
     }
   }
@@ -562,7 +539,7 @@ Simulation::State& Simulation::State::operator=(const Task& task) {
   return *this;
 }
 
-void Simulation::BaseState::_resize(const size_t new_size) {
+void Simulation::BaseState::_resize_buffers(const size_t new_size) {
   lef_buff.resize(new_size);
   lef_unloader_affinity.resize(new_size);
   rank_buff1.resize(new_size);
@@ -575,7 +552,7 @@ void Simulation::BaseState::_resize(const size_t new_size) {
   epoch_buff.resize(new_size);
 }
 
-void Simulation::BaseState::_reset() {  // TODO figure out which resets are redundant
+void Simulation::BaseState::_reset_buffers() {  // TODO figure out which resets are redundant
   std::for_each(lef_buff.begin(), lef_buff.end(), [](auto& lef) { lef.reset(); });
   std::fill(lef_unloader_affinity.begin(), lef_unloader_affinity.end(), 0.0);
   std::iota(rank_buff1.begin(), rank_buff1.end(), 0);
@@ -588,15 +565,15 @@ void Simulation::BaseState::_reset() {  // TODO figure out which resets are redu
   std::fill(epoch_buff.begin(), epoch_buff.end(), 0);
 }
 
-void Simulation::State::resize(size_t new_size) {
+void Simulation::State::resize_buffers(size_t new_size) {
   if (new_size == std::numeric_limits<size_t>::max()) {
     new_size = this->num_lefs;
   }
-  this->_resize(new_size);
+  this->_resize_buffers(new_size);
   barrier_mask.resize(this->barriers.size());
 }
 
-void Simulation::State::reset() { this->_reset(); }
+void Simulation::State::reset_buffers() { this->_reset_buffers(); }
 
 std::string Simulation::State::to_string() const noexcept {
   return fmt::format(FMT_STRING("State:\n - TaskID {}\n"
@@ -620,6 +597,8 @@ Simulation::StatePW& Simulation::StatePW::operator=(const TaskPW& task) {
   this->num_lefs = task.num_lefs;
   this->barriers = task.barriers;
 
+  this->deletion_begin = task.deletion_begin;
+  this->deletion_size = task.deletion_size;
   this->window_start = task.window_start;
   this->window_end = task.window_end;
   this->active_window_start = task.active_window_start;
@@ -630,16 +609,15 @@ Simulation::StatePW& Simulation::StatePW::operator=(const TaskPW& task) {
   return *this;
 }
 
-void Simulation::StatePW::resize(size_t new_size) {
+void Simulation::StatePW::resize_buffers(size_t new_size) {
   if (new_size == std::numeric_limits<size_t>::max()) {
     new_size = this->num_lefs;
   }
-  this->_resize(new_size);
+  this->_resize_buffers(new_size);
   barrier_mask.resize(this->barriers.size());
-  barrier_tmp_buff.resize(this->barriers.size());
 }
 
-void Simulation::StatePW::reset() { this->_reset(); }
+void Simulation::StatePW::reset_buffers() { this->_reset_buffers(); }
 
 std::string Simulation::StatePW::to_string() const noexcept {
   return fmt::format(FMT_STRING("StatePW:\n - TaskID {}\n"
@@ -686,6 +664,36 @@ std::pair<size_t, size_t> Simulation::process_collisions(
       chrom, lefs, barriers.size(), rev_lef_ranks, fwd_lef_ranks, rev_moves, fwd_moves,
       rev_collisions, fwd_collisions, rand_eng, num_rev_units_at_5prime, num_fwd_units_at_3prime);
   return std::make_pair(num_rev_units_at_5prime, num_fwd_units_at_3prime);
+}
+
+absl::Span<const size_t> Simulation::setup_burnin(BaseState& s) const {
+  // Generate the epoch at which each LEF is supposed to be initially loaded
+  auto lef_initial_loading_epoch = absl::MakeSpan(s.epoch_buff);
+  // lef_initial_loading_epoch.resize(this->skip_burnin ? 0 : s.nlefs);
+
+  if (!skip_burnin) {
+    // TODO Consider using a Poisson process instead of sampling from an uniform distribution
+    random::uniform_int_distribution<size_t> round_gen{0, (4 * average_lef_lifetime) / bin_size};
+    std::generate(lef_initial_loading_epoch.begin(), lef_initial_loading_epoch.end(),
+                  [&]() { return round_gen(s.rand_eng); });
+
+    // Sort epochs in descending order
+    if (round_gen.max() > 2048) {
+      // Counting sort uses n + r space in memory, where r is the number of unique values in the
+      // range to be sorted. For this reason it is not a good idea to use it when the sampling
+      // interval is relatively large. Whether 2048 is a reasonable threshold has yet to be tested
+      cppsort::ska_sort(lef_initial_loading_epoch.rbegin(), lef_initial_loading_epoch.rend());
+    } else {
+      cppsort::counting_sort(lef_initial_loading_epoch.rbegin(), lef_initial_loading_epoch.rend());
+    }
+  }
+
+  // Shift epochs so that the first epoch == 0
+  if (const auto offset = lef_initial_loading_epoch.back(); offset != 0) {
+    std::for_each(lef_initial_loading_epoch.begin(), lef_initial_loading_epoch.end(),
+                  [&](auto& n) { n -= offset; });
+  }
+  return lef_initial_loading_epoch;
 }
 
 }  // namespace modle

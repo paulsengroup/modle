@@ -201,8 +201,6 @@ void Simulation::detect_lef_bar_collisions(
             (pblock == 1.0 || random::bernoulli_trial{pblock}(rand_eng))) {
           // Collision detected. Assign barrier idx to the respective entry in the collision mask
           rev_collisions[rev_idx] = i;
-          // Move LEF close to the extr. barrier (i.e 1bp upstream of the extr. barrier)
-          // rev_move = delta > 1 ? delta - 1 : 0;
         }
       }
     }
@@ -234,7 +232,6 @@ void Simulation::detect_lef_bar_collisions(
         if (delta > 0 && delta <= fwd_moves[fwd_idx] &&
             (pblock == 1.0 || random::bernoulli_trial{pblock}(rand_eng))) {
           fwd_collisions[fwd_idx] = i;
-          // fwd_move = delta > 1 ? delta - 1 : 0;
         }
       }
     }

@@ -83,8 +83,8 @@ class Simulation : Config {
     uint64_t seed{};
     std::unique_ptr<XXH3_state_t, utils::XXH3_Deleter> xxh_state{XXH3_createState()};
 
-    void _resize(size_t size = std::numeric_limits<size_t>::max());
-    void _reset();
+    void _resize_buffers(size_t size = std::numeric_limits<size_t>::max());
+    void _reset_buffers();
   };
 
  public:
@@ -97,16 +97,19 @@ class Simulation : Config {
 
     State& operator=(const Task& task);
     [[nodiscard]] std::string to_string() const noexcept;
-    void resize(size_t size = std::numeric_limits<size_t>::max());
-    void reset();
+    void resize_buffers(size_t size = std::numeric_limits<size_t>::max());
+    void reset_buffers();
   };
 
   struct TaskPW : BaseTask {  // NOLINT(altera-struct-pack-align)
     TaskPW() = default;
+    bp_t deletion_begin{};
+    bp_t deletion_size{};
     bp_t window_start{};
     bp_t window_end{};
     bp_t active_window_start{};
     bp_t active_window_end{};
+
     absl::Span<const bed::BED> feats1{};
     absl::Span<const bed::BED> feats2{};
   };
@@ -114,15 +117,13 @@ class Simulation : Config {
   struct StatePW : TaskPW, BaseState {  // NOLINT(altera-struct-pack-align)
     StatePW() = default;
 
-    bp_t deletion_begin{};
-    bp_t deletion_size{};
     ContactMatrix<contacts_t> contacts{};
     std::vector<ExtrusionBarrier> barrier_tmp_buff{};
 
     StatePW& operator=(const TaskPW& task);
     [[nodiscard]] std::string to_string() const noexcept;
-    void resize(size_t size = std::numeric_limits<size_t>::max());
-    void reset();
+    void resize_buffers(size_t size = std::numeric_limits<size_t>::max());
+    void reset_buffers();
   };
 
   void run_simulation();
@@ -142,6 +143,8 @@ class Simulation : Config {
                                                          std::is_same_v<StateT, StatePW>>>
   inline void simulate_one_cell(StateT& s) const;
 
+  [[nodiscard]] absl::Span<const size_t> setup_burnin(BaseState& s) const;
+
   /// Simulate loop extrusion on a Chromosome window using the parameters and buffers passed through
   /// \p state
 
@@ -151,6 +154,18 @@ class Simulation : Config {
   //! \p state
   void simulate_window(StatePW& state, compressed_io::Writer& out_stream,
                        std::mutex& out_file_mutex) const;
+
+  /// Advance the simulation window by one diagonal width.
+
+  //! Return false if the new window extends past the end of \p chrom
+  bool advance_window(TaskPW& base_task, const Chromosome& chrom) const;
+
+  /// Map barrier or features to the window specified by \p base_task.
+
+  //! Return false if the window doesn't have any barrier or is missing one or more type of
+  //! features
+  static bool map_barriers_to_window(TaskPW& base_task, const Chromosome& chrom);
+  static bool map_features_to_window(TaskPW& base_task, const Chromosome& chrom);
 
   /// Monitor the progress queue and write contacts to a .cool file when all the cells belonging to
   /// a given chromosome have been simulated.
@@ -187,9 +202,14 @@ class Simulation : Config {
   template <typename MaskT>
   inline static void bind_lefs(const Chromosome& chrom, absl::Span<Lef> lefs,
                                absl::Span<size_t> rev_lef_ranks, absl::Span<size_t> fwd_lef_ranks,
-                               const MaskT& mask, random::PRNG_t& rand_eng, size_t current_epoch,
-                               bp_t deletion_begin = 0,
-                               bp_t deletion_size = 0) noexcept(utils::ndebug_defined());
+                               const MaskT& mask, random::PRNG_t& rand_eng,
+                               size_t current_epoch) noexcept(utils::ndebug_defined());
+
+  template <typename MaskT>
+  inline static void bind_lefs(bp_t start_pos, bp_t end_pos, absl::Span<Lef> lefs,
+                               absl::Span<size_t> rev_lef_ranks, absl::Span<size_t> fwd_lef_ranks,
+                               const MaskT& mask, random::PRNG_t& rand_eng,
+                               size_t current_epoch) noexcept(utils::ndebug_defined());
 
   // clang-format off
   //! Generate moves in reverse direction
@@ -258,9 +278,8 @@ class Simulation : Config {
   //! - Simulation::process_collisions
   static void extrude(const Chromosome& chrom, absl::Span<Lef> lefs,
                       absl::Span<const bp_t> rev_moves, absl::Span<const bp_t> fwd_moves,
-                      size_t num_rev_units_at_5prime = 0, size_t num_fwd_units_at_3prime = 0,
-                      bp_t deletion_begin = 0,
-                      bp_t deletion_size = 0) noexcept(utils::ndebug_defined());
+                      size_t num_rev_units_at_5prime = 0,
+                      size_t num_fwd_units_at_3prime = 0) noexcept(utils::ndebug_defined());
 
   //! This is just a wrapper function used to make sure that process_* functions are always called
   //! in the right order
@@ -376,14 +395,15 @@ class Simulation : Config {
 
   size_t register_contacts_w_randomization(Chromosome& chrom, absl::Span<const Lef> lefs,
                                            absl::Span<const size_t> selected_lef_idx,
-                                           random::PRNG_t& rand_eng, bp_t deletion_begin = 0,
-                                           bp_t deletion_size_ = 0) const
+                                           random::PRNG_t& rand_eng) const
       noexcept(utils::ndebug_defined());
 
-  size_t register_contacts_w_randomization(
-      bp_t start_pos, bp_t end_pos, ContactMatrix<contacts_t>& contacts, absl::Span<const Lef> lefs,
-      absl::Span<const size_t> selected_lef_idx, random::PRNG_t& rand_eng, bp_t deletion_begin = 0,
-      bp_t deletion_size_ = 0) const noexcept(utils::ndebug_defined());
+  size_t register_contacts_w_randomization(bp_t start_pos, bp_t end_pos,
+                                           ContactMatrix<contacts_t>& contacts,
+                                           absl::Span<const Lef> lefs,
+                                           absl::Span<const size_t> selected_lef_idx,
+                                           random::PRNG_t& rand_eng) const
+      noexcept(utils::ndebug_defined());
 
   template <typename MaskT>
   inline static void select_lefs_to_bind(absl::Span<const Lef> lefs,
@@ -404,6 +424,9 @@ class Simulation : Config {
 
   [[nodiscard]] static std::pair<bp_t /*rev*/, bp_t /*fwd*/> compute_lef_lef_collision_pos(
       const ExtrusionUnit& rev_unit, const ExtrusionUnit& fwd_unit, bp_t rev_move, bp_t fwd_move);
+
+  [[nodiscard]] bed::BED_tree<> import_deletions() const;
+  [[nodiscard]] bed::BED_tree<> generate_deletions() const;
 
 #ifdef ENABLE_TESTING
  public:

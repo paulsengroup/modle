@@ -26,12 +26,11 @@
 
 namespace modle {
 template <typename MaskT>
-void Simulation::bind_lefs(const Chromosome& chrom, const absl::Span<Lef> lefs,
+void Simulation::bind_lefs(const bp_t start_pos, const bp_t end_pos, const absl::Span<Lef> lefs,
                            const absl::Span<size_t> rev_lef_ranks,
                            const absl::Span<size_t> fwd_lef_ranks, const MaskT& mask,
-                           random::PRNG_t& rand_eng, size_t current_epoch,
-                           const bp_t deletion_begin,
-                           const bp_t deletion_size) noexcept(utils::ndebug_defined()) {
+                           random::PRNG_t& rand_eng,
+                           size_t current_epoch) noexcept(utils::ndebug_defined()) {
   using T = std::decay_t<decltype(std::declval<MaskT&>().operator[](std::declval<size_t>()))>;
   static_assert(std::is_integral_v<T> || std::is_same_v<MaskT, boost::dynamic_bitset<>>,
                 "mask should be a vector of integral numbers or a boost::dynamic_bitset.");
@@ -43,27 +42,18 @@ void Simulation::bind_lefs(const Chromosome& chrom, const absl::Span<Lef> lefs,
                        [&](const auto i) { return i < lefs.size(); }));
   }
 
-  chrom_pos_generator_t pos_generator{chrom.start_pos(), chrom.end_pos() - 1};
+  chrom_pos_generator_t pos_generator{start_pos, end_pos - 1};
   for (auto i = 0UL; i < lefs.size(); ++i) {
     if (mask.empty() || mask[i]) {  // Bind all LEFs when mask is empty
-      auto pos = pos_generator(rand_eng);
-      if (deletion_size > 0) {
-        const auto deletion_end = deletion_begin + deletion_size;
-        while (pos >= deletion_begin && pos < deletion_end) {
-          pos = pos_generator(rand_eng);
-        }
-      }
-      lefs[i].bind_at_pos(current_epoch, pos);
+      lefs[i].bind_at_pos(current_epoch, pos_generator(rand_eng));
     }
   }
 
-  {
+  if constexpr (utils::ndebug_defined()) {
     for (auto i = 0UL; i < lefs.size(); ++i) {
       if (mask.empty() || mask[i]) {
-        assert(lefs[i].rev_unit >= chrom.start_pos() &&
-               lefs[i].rev_unit < chrom.end_pos());  // NOLINT
-        assert(lefs[i].fwd_unit >= chrom.start_pos() &&
-               lefs[i].fwd_unit < chrom.end_pos());  // NOLINT
+        assert(lefs[i].rev_unit >= start_pos && lefs[i].rev_unit < end_pos);  // NOLINT
+        assert(lefs[i].fwd_unit >= start_pos && lefs[i].fwd_unit < end_pos);  // NOLINT
       }
     }
   }
@@ -76,6 +66,16 @@ void Simulation::bind_lefs(const Chromosome& chrom, const absl::Span<Lef> lefs,
         rev_lef_ranks.begin(), rev_lef_ranks.end(),  // NOLINT
         [&](const auto i) { return i < lefs.size() || i == std::numeric_limits<IT>::max(); }));
   }
+}
+
+template <typename MaskT>
+void Simulation::bind_lefs(const Chromosome& chrom, const absl::Span<Lef> lefs,
+                           const absl::Span<size_t> rev_lef_ranks,
+                           const absl::Span<size_t> fwd_lef_ranks, const MaskT& mask,
+                           random::PRNG_t& rand_eng,
+                           size_t current_epoch) noexcept(utils::ndebug_defined()) {
+  return Simulation::bind_lefs(chrom.start_pos(), chrom.end_pos(), lefs, rev_lef_ranks,
+                               fwd_lef_ranks, mask, rand_eng, current_epoch);
 }
 
 template <typename MaskT>
@@ -124,35 +124,7 @@ void Simulation::simulate_one_cell(StateT& s) const {
     // Seed is computed based on chrom. name, size and cellid
     s.seed = s.chrom->hash(s.xxh_state.get(), this->seed, s.cell_id);
     s.rand_eng = random::PRNG(s.seed);
-
-    // Generate the epoch at which each LEF is supposed to be initially loaded
-    auto lef_initial_loading_epoch = absl::MakeSpan(s.epoch_buff);
-    // lef_initial_loading_epoch.resize(this->skip_burnin ? 0 : s.nlefs);
-
-    if (!this->skip_burnin) {
-      // TODO Consider using a Poisson process instead of sampling from an uniform distribution
-      random::uniform_int_distribution<size_t> round_gen{
-          0, (4 * this->average_lef_lifetime) / this->bin_size};
-      std::generate(lef_initial_loading_epoch.begin(), lef_initial_loading_epoch.end(),
-                    [&]() { return round_gen(s.rand_eng); });
-
-      // Sort epochs in descending order
-      if (round_gen.max() > 2048) {
-        // Counting sort uses n + r space in memory, where r is the number of unique values in the
-        // range to be sorted. For this reason it is not a good idea to use it when the sampling
-        // interval is relatively large. Whether 2048 is a reasonable threshold has yet to be tested
-        cppsort::ska_sort(lef_initial_loading_epoch.rbegin(), lef_initial_loading_epoch.rend());
-      } else {
-        cppsort::counting_sort(lef_initial_loading_epoch.rbegin(),
-                               lef_initial_loading_epoch.rend());
-      }
-    }
-
-    // Shift epochs so that the first epoch == 0
-    if (const auto offset = lef_initial_loading_epoch.back(); offset != 0) {
-      std::for_each(lef_initial_loading_epoch.begin(), lef_initial_loading_epoch.end(),
-                    [&](auto& n) { n -= offset; });
-    }
+    auto lef_initial_loading_epoch = setup_burnin(s);
 
     // The highest loading epoch equals to the number of burnin epochs
     const auto n_burnin_epochs = this->skip_burnin ? 0 : lef_initial_loading_epoch.front();
@@ -245,13 +217,13 @@ void Simulation::simulate_one_cell(StateT& s) const {
       {  // Select inactive LEFs and bind them
         auto lef_mask = absl::MakeSpan(s.idx_buff.data(), lefs.size());
         Simulation::select_lefs_to_bind(lefs, lef_mask);
-        // if constexpr (normal_simulation) {
-        Simulation::bind_lefs(*s.chrom, lefs, rev_lef_ranks, fwd_lef_ranks, lef_mask, s.rand_eng,
-                              epoch);
-        // } else {
-        //  Simulation::bind_lefs(*s.chrom, lefs, rev_lef_ranks, fwd_lef_ranks, lef_mask,
-        //  s.rand_eng, epoch, s.deletion_begin, s.deletion_size);
-        //}
+        if constexpr (normal_simulation) {
+          Simulation::bind_lefs(*s.chrom, lefs, rev_lef_ranks, fwd_lef_ranks, lef_mask, s.rand_eng,
+                                epoch);
+        } else {
+          Simulation::bind_lefs(s.window_start, s.window_end, lefs, rev_lef_ranks, fwd_lef_ranks,
+                                lef_mask, s.rand_eng, epoch);
+        }
       }
 
       if (epoch > n_burnin_epochs) {                 // Register contacts
@@ -287,8 +259,7 @@ void Simulation::simulate_one_cell(StateT& s) const {
         } else {
           if (this->randomize_contacts) {
             n_contacts += this->register_contacts_w_randomization(
-                s.window_start, s.window_end, s.contacts, lefs, lef_idx, s.rand_eng,
-                s.deletion_begin, s.deletion_size);
+                s.window_start, s.window_end, s.contacts, lefs, lef_idx, s.rand_eng);
           } else {
             n_contacts +=
                 this->register_contacts(s.window_start, s.window_end, s.contacts, lefs, lef_idx);
@@ -314,15 +285,9 @@ void Simulation::simulate_one_cell(StateT& s) const {
           Simulation::process_collisions(*s.chrom, lefs, barriers, s.barrier_mask, rev_lef_ranks,
                                          fwd_lef_ranks, rev_moves, fwd_moves, rev_collision_mask,
                                          fwd_collision_mask, s.rand_eng);
-
       // Advance LEFs
-      // if constexpr (normal_simulation) {
       Simulation::extrude(*s.chrom, lefs, rev_moves, fwd_moves, num_rev_units_at_5prime,
                           num_fwd_units_at_3prime);
-      //} else {
-      //  Simulation::extrude(*s.chrom, lefs, rev_moves, fwd_moves, num_rev_units_at_5prime,
-      //                     num_fwd_units_at_3prime, s.deletion_begin, s.deletion_size);
-      //}
 
       // The vector of affinities is used to bias LEF release towards LEFs that are not in a hard
       // stall condition
