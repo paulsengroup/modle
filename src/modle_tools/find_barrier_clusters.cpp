@@ -30,12 +30,12 @@ void find_barrier_clusters_subcmd(const find_barrier_clusters_config& c) {
     for (size_t i = 1; i < barriers.size(); ++i) {
       const auto& b1 = barriers[i - 1];
       const auto& b2 = barriers[i];
-      if (b2.chrom_start - b1.chrom_start < c.extension_window) {
+      if (b2.chrom_end - b1.chrom_start < c.extension_window) {
         if (cluster_size == 0) {
           start_pos = b1.chrom_start;
           cluster_size = 1;
         }
-        end_pos = b2.chrom_start;
+        end_pos = b2.chrom_end + 1;
         ++cluster_size;
         continue;
       }
