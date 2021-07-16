@@ -105,8 +105,6 @@ class Chromosome {
   std::mutex _contacts_mutex{};  // Protect _contacts from concurrent allocations/deallocations
   std::vector<bed_tree_value_t> _features{};
   bool _ok{true};
-
-  // std::unique_ptr<XXH3_state_t, utils::XXH3_Deleter> _xxh_state{XXH3_createState()};
 };
 
 class Genome {

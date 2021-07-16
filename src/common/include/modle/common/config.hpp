@@ -43,6 +43,7 @@ struct Config {  // NOLINT(altera-struct-pack-align)
   bool write_contacts_for_ko_chroms{false};
   std::vector<boost::filesystem::path> path_to_feature_bed_files{};
   boost::filesystem::path path_to_deletion_bed{};
+  boost::filesystem::path path_to_regions_for_contact_output_bed{};
 
   // General settings
   bp_t bin_size{1'000};                        // NOLINT(readability-magic-numbers, cppcoreguidelines-avoid-magic-numbers)

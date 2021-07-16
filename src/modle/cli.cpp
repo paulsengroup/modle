@@ -385,7 +385,13 @@ void Cli::make_perturbate_subcommand() {
   gen.add_option(
       "--deletion-list",
       c.path_to_deletion_bed,
-      "Path to BED file containing a list of the deletion to perform when perturbating extrusion barriers.")
+      "Path to a BED file containing the list deletions to perform when perturbating extrusion barriers.")
+      ->check(CLI::ExistingFile);
+
+  gen.add_option(
+      "--regions-to-output-bed",
+      c.path_to_regions_for_contact_output_bed,
+      "Path to a BED file containing the list of regions whose contacts should be written to disk.")
       ->check(CLI::ExistingFile);
   // clang-format on
 

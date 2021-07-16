@@ -294,6 +294,9 @@ void Simulation::run_perturbate() {
   // TODO Do proper error handling
   // For now we support only the case where exactly two files are specified
   assert(this->path_to_feature_bed_files.size() == 2);  // NOLINT
+  const auto regions_for_contact_output =
+      bed::Parser(this->path_to_regions_for_contact_output_bed, bed::BED::BED3)
+          .parse_all_in_interval_tree();
 
   constexpr size_t task_batch_size_enq = 32;  // NOLINTNEXTLINE
   moodycamel::BlockingConcurrentQueue<TaskPW> task_queue(this->nthreads * 2, 1, 0);
@@ -301,6 +304,7 @@ void Simulation::run_perturbate() {
   std::array<TaskPW, task_batch_size_enq> tasks;
 
   std::mutex out_stream_mutex;
+  std::mutex cooler_mutex;
   auto out_stream = compressed_io::Writer(this->path_to_output_file_bedpe);
 
   std::atomic<bool> end_of_simulation = false;
@@ -308,7 +312,7 @@ void Simulation::run_perturbate() {
   auto tpool = Simulation::instantiate_thread_pool();
   for (auto i = 0UL; i < this->nthreads; ++i) {  // Start simulation threads
     boost::asio::post(tpool, [&]() {
-      this->worker(task_queue, out_stream, out_stream_mutex, end_of_simulation);
+      this->worker(task_queue, out_stream, out_stream_mutex, cooler_mutex, end_of_simulation);
     });
   }
 
@@ -414,6 +418,9 @@ void Simulation::run_perturbate() {
         continue;
       }
 
+      base_task.write_contacts_to_disk = regions_for_contact_output.contains_overlap(
+          chrom_name, base_task.window_start, base_task.window_end);
+
       assert(!base_task.barriers.empty());  // NOLINT
       assert(!base_task.feats1.empty());    // NOLINT
       assert(!base_task.feats2.empty());    // NOLINT
@@ -481,8 +488,9 @@ void Simulation::run_perturbate() {
 }
 
 void Simulation::worker(moodycamel::BlockingConcurrentQueue<Simulation::TaskPW>& task_queue,
-                        compressed_io::Writer& out_stream, std::mutex& out_file_mutex,
-                        std::atomic<bool>& end_of_simulation, size_t task_batch_size) const {
+                        compressed_io::Writer& out_stream, std::mutex& out_stream_mutex,
+                        std::mutex& cooler_mutex, std::atomic<bool>& end_of_simulation,
+                        size_t task_batch_size) const {
   fmt::print(stderr, FMT_STRING("Spawning simulation thread {}...\n"), std::this_thread::get_id());
   moodycamel::ConsumerToken ctok(task_queue);
 
@@ -514,7 +522,7 @@ void Simulation::worker(moodycamel::BlockingConcurrentQueue<Simulation::TaskPW>&
         state.contacts.resize(state.window_end - state.window_start, this->diagonal_width,
                               this->bin_size);
 
-        Simulation::simulate_window(state, out_stream, out_file_mutex);
+        Simulation::simulate_window(state, out_stream, out_stream_mutex, cooler_mutex);
       }
     }
   } catch (const std::exception& err) {
@@ -536,7 +544,7 @@ void Simulation::worker(moodycamel::BlockingConcurrentQueue<Simulation::TaskPW>&
 }
 
 void Simulation::simulate_window(Simulation::StatePW& state, compressed_io::Writer& out_stream,
-                                 std::mutex& out_stream_mutex) const {
+                                 std::mutex& out_stream_mutex, std::mutex& cooler_mutex) const {
   fmt::print(stderr, FMT_STRING("Processing {}[{}-{}]; outer_window=[{}-{}]; deletion=[{}-{}];\n"),
              state.chrom->name(), state.active_window_start, state.active_window_end,
              state.window_start, state.window_end, state.deletion_begin,
@@ -643,28 +651,30 @@ void Simulation::simulate_window(Simulation::StatePW& state, compressed_io::Writ
                       contacts, feat1.strand, feat2.strand, state.deletion_begin,
                       state.deletion_begin + state.deletion_size, num_active_barriers,
                       state.barriers.size()));
-
-      if (name == "EH38E1314191;EH38E1314227") {
-        std::scoped_lock l(out_stream_mutex);
-        auto c = cooler::Cooler(
-            fmt::format(FMT_STRING("/tmp/test_{:04d}_{}_{}.cool"), state.id, state.deletion_begin,
-                        state.deletion_begin + state.deletion_size),
-            cooler::Cooler::WRITE_ONLY, this->bin_size, state.chrom->name().size());
-        c.write_or_append_cmatrix_to_file(state.contacts, state.chrom->name(),
-                                          state.chrom->start_pos(), state.chrom->end_pos(),
-                                          state.chrom->size());
-      }
     }
   }
+
   // Write the buffer to the appropriate stream
   if (!out_buffer.empty()) {
-    std::scoped_lock l(out_stream_mutex);
-    if (write_to_stdout) {
+    if (std::scoped_lock l(out_stream_mutex); write_to_stdout) {
       fmt::print(stdout, out_buffer);
     } else {
       out_stream.write(out_buffer);
     }
     out_buffer.clear();
+  }
+
+  if (state.write_contacts_to_disk) {
+    const auto file_name = fmt::format(
+        FMT_STRING("{}_{:06d}_{}_window_{}-{}_deletion_{}-{}.cool"),
+        this->path_to_output_prefix.string(), state.id, state.chrom->name(), state.window_start,
+        state.window_end, state.deletion_begin, state.deletion_begin + state.deletion_size);
+
+    std::scoped_lock l(cooler_mutex);
+    auto c = cooler::Cooler(file_name, cooler::Cooler::WRITE_ONLY, this->bin_size,
+                            state.chrom->name().size());
+    c.write_or_append_cmatrix_to_file(state.contacts, state.chrom->name(), state.window_start,
+                                      state.window_end, state.chrom->size());
   }
 }
 

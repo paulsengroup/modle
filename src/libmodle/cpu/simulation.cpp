@@ -603,6 +603,7 @@ Simulation::StatePW& Simulation::StatePW::operator=(const TaskPW& task) {
   this->window_end = task.window_end;
   this->active_window_start = task.active_window_start;
   this->active_window_end = task.active_window_end;
+  this->write_contacts_to_disk = task.write_contacts_to_disk;
 
   this->feats1 = task.feats1;
   this->feats2 = task.feats2;
