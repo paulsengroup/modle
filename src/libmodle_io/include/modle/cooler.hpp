@@ -122,27 +122,6 @@ class Cooler {
   inline void write_or_append_cmatrix_to_file(const ContactMatrix<I1> *cmatrix,
                                               std::string_view chrom_name, I2 chrom_start,
                                               I2 chrom_end, I2 chrom_length, bool quiet = false);
-  template <typename I1, typename I2>
-  inline void write_or_append_cmatrices_to_file(const std::vector<ContactMatrix<I1>> &cmatrices,
-                                                const std::vector<std::string> &chrom_names,
-                                                const std::vector<I2> &chrom_starts,
-                                                const std::vector<I2> &chrom_ends,
-                                                const std::vector<I2> &chrom_sizes,
-                                                bool quiet = false);
-  template <typename I1, typename I2>
-  inline void write_or_append_cmatrices_to_file(const std::vector<ContactMatrix<I1> *> &cmatrices,
-                                                const std::vector<std::string> &chrom_names,
-                                                const std::vector<I2> &chrom_starts,
-                                                const std::vector<I2> &chrom_ends,
-                                                const std::vector<I2> &chrom_sizes,
-                                                bool quiet = false);
-  template <typename I1, typename I2>
-  inline void write_or_append_cmatrices_to_file(absl::Span<ContactMatrix<I1> *const> cmatrices,
-                                                absl::Span<const std::string> chrom_names,
-                                                absl::Span<const I2> chrom_starts,
-                                                absl::Span<const I2> chrom_ends,
-                                                absl::Span<const I2> chrom_sizes,
-                                                bool quiet = false);
   // Read from file
   [[nodiscard]] ContactMatrix<uint32_t> cooler_to_cmatrix(
       std::string_view chrom_name, size_t nrows,

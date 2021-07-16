@@ -76,78 +76,20 @@ template <typename I1, typename I2>
 void Cooler::write_or_append_cmatrix_to_file(const ContactMatrix<I1> &cmatrix,
                                              std::string_view chrom_name, I2 chrom_start,
                                              I2 chrom_end, I2 chrom_length, bool quiet) {
-  // Casting away the constness from the ptr is needed in order to make things work with slices.
-  // This shouldn't cause any problem, as in the end the contact matrix is accesses through a
-  // const slice NOLINTNEXTLINE
-  const std::vector<ContactMatrix<I1> *> cmatrices{const_cast<ContactMatrix<I1> *>(&cmatrix)};
-  std::string chrom_name_{chrom_name};
-  write_or_append_cmatrices_to_file(
-      absl::MakeConstSpan(cmatrices), absl::MakeConstSpan(&chrom_name_, 1),
-      absl::MakeConstSpan(&chrom_start, 1), absl::MakeConstSpan(&chrom_end, 1),
-      absl::MakeConstSpan(&chrom_length, 1), quiet);
+  Cooler::write_or_append_cmatrix_to_file(&cmatrix, chrom_name, chrom_start, chrom_end,
+                                          chrom_length, quiet);
 }
 
 template <typename I1, typename I2>
 void Cooler::write_or_append_cmatrix_to_file(const ContactMatrix<I1> *cmatrix,
                                              std::string_view chrom_name, I2 chrom_start,
                                              I2 chrom_end, I2 chrom_length, bool quiet) {
-  // Casting away the constness from the ptr is needed in order to make things work with slices.
-  // This shouldn't cause any problem, as in the end the contact matrix is accesses through a
-  // const slice NOLINTNEXTLINE
-  const std::vector<ContactMatrix<I1> *> cmatrices{const_cast<ContactMatrix<I1> *>(cmatrix)};
-  std::string chrom_name_{chrom_name.data(), chrom_name.size()};
-  write_or_append_cmatrices_to_file(
-      absl::MakeConstSpan(cmatrices), absl::MakeConstSpan(&chrom_name_, 1),
-      absl::MakeConstSpan(&chrom_start, 1), absl::MakeConstSpan(&chrom_end, 1),
-      absl::MakeConstSpan(&chrom_length, 1), quiet);
-}
-
-template <typename I1, typename I2>
-void Cooler::write_or_append_cmatrices_to_file(const std::vector<ContactMatrix<I1>> &cmatrices,
-                                               const std::vector<std::string> &chrom_names,
-                                               const std::vector<I2> &chrom_starts,
-                                               const std::vector<I2> &chrom_ends,
-                                               const std::vector<I2> &chrom_sizes, bool quiet) {
-  std::vector<ContactMatrix<I1> *> v(cmatrices.size());
-  // Convert references to ptrs
-  std::transform(cmatrices.begin(), cmatrices.end(), v.begin(), [](const auto &m) { return &m; });
-  write_or_append_cmatrices_to_file(v, chrom_names, chrom_starts, chrom_ends, chrom_sizes, quiet);
-}
-
-template <typename I1, typename I2>
-void Cooler::write_or_append_cmatrices_to_file(const std::vector<ContactMatrix<I1> *> &cmatrices,
-                                               const std::vector<std::string> &chrom_names,
-                                               const std::vector<I2> &chrom_starts,
-                                               const std::vector<I2> &chrom_ends,
-                                               const std::vector<I2> &chrom_sizes, bool quiet) {
-  Cooler::write_or_append_cmatrices_to_file(
-      absl::MakeConstSpan(cmatrices), absl::MakeConstSpan(chrom_names),
-      absl::MakeConstSpan(chrom_starts), absl::MakeConstSpan(chrom_ends),
-      absl::MakeConstSpan(chrom_sizes), quiet);
-}
-
-template <typename I1, typename I2>
-void Cooler::write_or_append_cmatrices_to_file(absl::Span<ContactMatrix<I1> *const> cmatrices,
-                                               absl::Span<const std::string> chrom_names,
-                                               absl::Span<const I2> chrom_starts,
-                                               absl::Span<const I2> chrom_ends,
-                                               absl::Span<const I2> chrom_sizes, bool quiet) {
   static_assert(std::is_integral_v<I1>, "I1 should be an integral type.");
   static_assert(std::is_integral_v<I2>, "I2 should be an integral type.");
 
   assert(this->_bin_size != 0);
 
-  this->_nchroms += static_cast<int64_t>(cmatrices.size());
-  if (const auto n = chrom_names.size();
-      n != chrom_starts.size() || n != chrom_ends.size() || n != chrom_sizes.size()) {
-    utils::throw_with_trace(std::runtime_error(
-        fmt::format(FMT_STRING("Message for the DEVS: The vectors passed to function "
-                               "cooler::write_modle_cmatrices_to_cooler() should all have "
-                               "the same size!\n  cmatrices.size()={}\n  chrom_names.size()={}\n  "
-                               "chrom_starts={}\n  chrom_ends={}\n  chrom_sizes={}\n"),
-                    cmatrices.size(), chrom_names.size(), chrom_starts.size(), chrom_ends.size(),
-                    chrom_sizes.size())));
-  }
+  ++this->_nchroms;
 
   auto t0 = absl::Now();
 
@@ -202,16 +144,9 @@ void Cooler::write_or_append_cmatrices_to_file(absl::Span<ContactMatrix<I1> *con
     for (auto chrom_idx = 0UL; chrom_offset + chrom_idx < static_cast<size_t>(this->_nchroms);
          ++chrom_idx) {
       // Declare several aliases/variables to improve code readability in later sections
-      const auto *cmatrix = cmatrices[chrom_idx];
-      const auto &chrom_name = chrom_names[chrom_idx];
-      const auto chrom_total_len = static_cast<int64_t>(chrom_sizes[chrom_idx]);
-      const auto chrom_start = static_cast<uint64_t>(chrom_starts[chrom_idx]);
-      const auto chrom_end = static_cast<uint64_t>(chrom_ends[chrom_idx]);
-      const auto chrom_simulated_len = chrom_end - chrom_start;
-
       if (!quiet) {
         fmt::print(stderr, FMT_STRING("Writing contacts for '{}' ({:.2f} Mbp)..."), chrom_name,
-                   static_cast<double>(chrom_simulated_len) / 1.0e6);  // NOLINT
+                   static_cast<double>(chrom_length) / 1.0e6);  // NOLINT
         if (cmatrix && cmatrix->get_n_of_missed_updates() != 0) {
           const auto &n = cmatrix->get_n_of_missed_updates();
           fmt::print(
@@ -225,13 +160,13 @@ void Cooler::write_or_append_cmatrices_to_file(absl::Span<ContactMatrix<I1> *con
       chrom_name_h5_foffset =
           hdf5::write_str(chrom_name, d[chrom_NAME], STR_TYPE, chrom_name_h5_foffset);
       chrom_length_h5_foffset =
-          hdf5::write_number(chrom_total_len, d[chrom_LEN], chrom_length_h5_foffset);
+          hdf5::write_number(chrom_length, d[chrom_LEN], chrom_length_h5_foffset);
       // Add idx of the first bin belonging to the chromosome that is being processed
       b->idx_chrom_offset_buff.emplace_back(this->_nbins);
 
       // Write all fixed-size bins for the current chromosome. Maybe in the future we can switch to
       // use variable-size bins
-      this->_nbins = this->write_bins(chrom_offset + chrom_idx, chrom_total_len, this->_bin_size,
+      this->_nbins = this->write_bins(chrom_offset + chrom_idx, chrom_length, this->_bin_size,
                                       b->bin_chrom_buff, b->bin_pos_buff, this->_nbins);
       // Update file offsets of bin_* datasets
       bin_chrom_name_h5_foffset = this->_nbins;
@@ -254,9 +189,8 @@ void Cooler::write_or_append_cmatrices_to_file(absl::Span<ContactMatrix<I1> *con
       if (!cmatrix || cmatrix->ncols() == 0) {
         DISABLE_WARNING_PUSH
         DISABLE_WARNING_SIGN_CONVERSION
-        b->idx_bin1_offset_buff.resize(
-            (chrom_total_len / this->_bin_size) + (chrom_total_len % this->_bin_size != 0),
-            this->_nnz);
+        b->idx_bin1_offset_buff.resize((chrom_length + this->_bin_size - 1) / this->_bin_size,
+                                       this->_nnz);
         DISABLE_WARNING_POP
         idx_bin1_offset_h5_foffset =
             hdf5::write_numbers(b->idx_bin1_offset_buff, d[IDX_BIN1], idx_bin1_offset_h5_foffset);
@@ -311,8 +245,8 @@ void Cooler::write_or_append_cmatrices_to_file(absl::Span<ContactMatrix<I1> *con
       // previous comment for an example
       b->idx_bin1_offset_buff.resize(
           b->idx_bin1_offset_buff.size() +
-              ((static_cast<size_t>(chrom_total_len) - chrom_end) / this->_bin_size) +
-              ((static_cast<size_t>(chrom_total_len) - chrom_end) % this->_bin_size != 0),
+              ((static_cast<size_t>(chrom_length) - chrom_end) / this->_bin_size) +
+              ((static_cast<size_t>(chrom_length) - chrom_end) % this->_bin_size != 0),
           this->_nnz);
       idx_bin1_offset_h5_foffset =
           hdf5::write_numbers(b->idx_bin1_offset_buff, d[IDX_BIN1], idx_bin1_offset_h5_foffset);

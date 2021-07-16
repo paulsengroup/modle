@@ -53,14 +53,21 @@ inline attr_types getCpp_type(const H5::IntType &h5_type);
 inline attr_types getCpp_type(const H5::FloatType &h5_type);
 
 template <typename S>
-hsize_t write_str(const S &str, const H5::DataSet &dataset, const H5::StrType &str_type,
+hsize_t write_str(const S &str_, const H5::DataSet &dataset, const H5::StrType &str_type,
                   hsize_t file_offset) {
-  static_assert(std::is_convertible_v<S, H5std_string>,
-                "S should be a type convertible to std::string.");
+  static_assert(std::is_constructible_v<S, H5std_string>,
+                "S should be a type that can be used to construct a std::string.");
   H5::Exception::dontPrint();
   constexpr hsize_t RANK{1};  // i.e. number of dimensions
   constexpr hsize_t BUFF_SIZE{1};
   constexpr hsize_t MAXDIMS{H5S_UNLIMITED};  // extensible dataset
+
+  const auto &str = [&]() {  // This is mostly useful to allow std::string_view to be passed in
+    if constexpr (std::is_convertible_v<S, H5std_string>) {
+      return str_;
+    }
+    return std::string{str_};
+  }();
 
 #ifndef NDEBUG
   if (str.size() > str_type.getSize()) {

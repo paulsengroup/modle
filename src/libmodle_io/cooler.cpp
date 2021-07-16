@@ -436,8 +436,7 @@ bool Cooler::validate_file_format(H5::H5File &f, Flavor expected_flavor, IO_MODE
       case SCOOL:
         throw std::runtime_error("SCOOL flavor is not yet supported");
       default:
-        assert(false);  // This code should be unreachable
-        return false;
+        utils::throw_with_trace(std::logic_error("Unreachable code"));
     }
 
   } catch (const std::runtime_error &e) {
