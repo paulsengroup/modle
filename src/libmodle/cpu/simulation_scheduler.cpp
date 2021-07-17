@@ -319,12 +319,6 @@ void Simulation::run_perturbate() {
   const auto all_deletions =
       this->path_to_deletion_bed.empty() ? this->generate_deletions() : this->import_deletions();
 
-  // Changing tt -> t raises a -Werror=shadow on GCC 7.5
-  auto print_status_update = [](const auto& tt) {
-    fmt::print(stderr, "Skipping {}[{}-{}]...\n", tt.chrom->name(), tt.active_window_start,
-               tt.active_window_end);
-  };
-
   size_t task_id = 0;
   size_t num_tasks = 0;
   for (auto& chrom : this->_genome) {
@@ -393,12 +387,6 @@ void Simulation::run_perturbate() {
     do {
       // Find all barriers falling within the outer window. Skip over windows with 0 barriers
       if (!Simulation::map_barriers_to_window(base_task, chrom)) {
-        continue;
-      }
-      auto [first_barrier, last_barrier] =
-          barriers.equal_range(base_task.window_start, base_task.window_end);
-      if (first_barrier == barriers.data_end()) {
-        print_status_update(base_task);
         continue;
       }
 

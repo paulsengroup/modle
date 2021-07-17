@@ -66,7 +66,7 @@ struct Config {  // NOLINT(altera-struct-pack-align)
   uint64_t seed{0};
 
   // Misc probabilities
-  double probability_of_extrusion_unit_bypass{0.1};     // NOLINT(readability-magic-numbers, cppcoreguidelines-avoid-magic-numbers)
+  double probability_of_extrusion_unit_bypass{0.1};      // NOLINT(readability-magic-numbers, cppcoreguidelines-avoid-magic-numbers)
   double extrusion_barrier_occupancy{0.825};             // NOLINT(readability-magic-numbers, cppcoreguidelines-avoid-magic-numbers)
   double ctcf_occupied_self_prob{0.0};                   // NOLINT(readability-magic-numbers, cppcoreguidelines-avoid-magic-numbers)
   double ctcf_not_occupied_self_prob{0.70};              // NOLINT(readability-magic-numbers, cppcoreguidelines-avoid-magic-numbers)
