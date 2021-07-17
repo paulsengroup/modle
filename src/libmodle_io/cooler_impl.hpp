@@ -82,12 +82,17 @@ void Cooler::write_or_append_cmatrix_to_file(const ContactMatrix<I1> &cmatrix,
 
 template <typename I1, typename I2>
 void Cooler::write_or_append_cmatrix_to_file(const ContactMatrix<I1> *cmatrix,
-                                             std::string_view chrom_name, I2 chrom_start,
-                                             I2 chrom_end, I2 chrom_length, bool quiet) {
+                                             std::string_view chrom_name, I2 chrom_start_,
+                                             I2 chrom_end_, I2 chrom_length_, bool quiet) {
   static_assert(std::is_integral_v<I1>, "I1 should be an integral type.");
   static_assert(std::is_integral_v<I2>, "I2 should be an integral type.");
-
+  assert(chrom_start_ >= 0);   // NOLINT
+  assert(chrom_end_ >= 0);     // NOLINT
+  assert(chrom_length_ >= 0);  // NOLINT
   assert(this->_bin_size != 0);
+  const auto chrom_start = static_cast<size_t>(chrom_start_);
+  const auto chrom_end = static_cast<size_t>(chrom_end_);
+  const auto chrom_length = static_cast<size_t>(chrom_length_);
 
   ++this->_nchroms;
 
@@ -208,7 +213,7 @@ void Cooler::write_or_append_cmatrix_to_file(const ContactMatrix<I1> *cmatrix,
           // contacts for a certain width along the diagonal). The second condition makes sure we
           // are not reading past the array end
           for (auto j = i; j < i + cmatrix->nrows() && j < cmatrix->ncols(); ++j) {
-            if (const auto m = cmatrix->get(i, j); m != 0) {  // Only write nnz pixels
+            if (const auto m = cmatrix->get(i, j); m != 0) {  // Only write non-zero pixels
 #ifndef NDEBUG
               // Make sure we are always reading from the upper-triangle of the underlying square
               // contact matrix
