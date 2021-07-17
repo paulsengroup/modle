@@ -32,7 +32,7 @@
 
 namespace modle::bed {
 
-std::string RGB::to_string() const noexcept { return absl::StrCat(r, ",", g, ",", b); }
+std::string RGB::to_string() const noexcept { return fmt::to_string(*this); }
 
 void BED::parse_strand_or_throw(const std::vector<std::string_view>& toks, uint8_t idx,
                                 char& field) {
@@ -232,6 +232,8 @@ std::string BED::dialect_to_str(Dialect d) {
 BED::BED(std::string_view chrom_, bp_t chrom_start_, bp_t chrom_end_)
     : chrom(chrom_), chrom_start(chrom_start_), chrom_end(chrom_end_), _standard(BED3) {}
 
+BED::BED(BED::Dialect d) : _standard(d) {}
+
 BED::BED(std::string_view record, size_t id_, BED::Dialect bed_standard, bool validate) : _id(id_) {
   std::vector<std::string_view> toks;
   for (std::string_view tok : absl::StrSplit(record, absl::ByAnyChar("\t "))) {
@@ -383,45 +385,7 @@ size_t BED::num_fields() const noexcept {
 
 bool BED::empty() const { return chrom.empty(); }
 
-std::string BED::to_string() const noexcept {
-  switch (this->num_fields()) {
-    case BED3:
-      return absl::StrCat(chrom, "\t", chrom_start, "\t", chrom_end,
-                          extra_tokens.empty() ? "" : fmt::format("\t{}", extra_tokens));
-    case BED4:
-      return absl::StrCat(chrom, "\t", chrom_start, "\t", chrom_end, "\t", name,
-                          extra_tokens.empty() ? "" : fmt::format("\t{}", extra_tokens));
-    case BED5:
-      return absl::StrCat(chrom, "\t", chrom_start, "\t", chrom_end, "\t", score,
-                          extra_tokens.empty() ? "" : fmt::format("\t{}", extra_tokens));
-    case BED6:
-      return absl::StrCat(chrom, "\t", chrom_start, "\t", chrom_end, "\t", name, "\t", score, "\t",
-                          std::string(1, strand),
-                          extra_tokens.empty() ? "" : fmt::format("\t{}", extra_tokens));
-    case BED9:
-      assert(rgb);  // NOLINT
-      return absl::StrCat(chrom, "\t", chrom_start, "\t", chrom_end, "\t", name, "\t", score, "\t",
-                          std::string(1, strand), "\t", thick_start, "\t", thick_end, "\t",
-                          rgb->to_string(),
-                          extra_tokens.empty() ? "" : fmt::format("\t{}", extra_tokens));
-    case BED12:
-      assert(rgb);  // NOLINT
-      return absl::StrCat(chrom, "\t", chrom_start, "\t", chrom_end, "\t", name, "\t", score, "\t",
-                          std::string(1, strand), "\t", thick_start, "\t", thick_end, "\t",
-                          rgb->to_string(), "\t", block_count, "\t",
-                          absl::StrJoin(block_sizes, ","), "\t", absl::StrJoin(block_starts, ","),
-                          extra_tokens.empty() ? "" : fmt::format("\t{}", extra_tokens));
-    default:
-      assert(this->_standard == none);  // NOLINT
-      assert(rgb);                      // NOLINT
-      assert(!extra_tokens.empty());    // NOLINT
-      return absl::StrCat(chrom, "\t", chrom_start, "\t", chrom_end, "\t", name, "\t", score, "\t",
-                          std::string(1, strand), "\t", thick_start, "\t", thick_end, "\t",
-                          rgb->to_string(), "\t", block_count, "\t",
-                          absl::StrJoin(block_sizes, ","), "\t", absl::StrJoin(block_starts, ","),
-                          "\t", extra_tokens);
-  }
-}
+std::string BED::to_string() const noexcept { return fmt::to_string(*this); }
 
 uint64_t BED::hash(XXH_INLINE_XXH3_state_t* state, uint64_t seed) const {
   auto handle_errors = [&](const auto& status) {

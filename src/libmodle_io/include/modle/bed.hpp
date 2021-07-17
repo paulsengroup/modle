@@ -78,6 +78,7 @@ struct BED {
   };
 
   BED() = default;
+  explicit BED(Dialect d);
   explicit BED(std::string_view record, size_t id_ = null_id, Dialect bed_standard = autodetect,
                bool enforce_std_compliance = true);
   BED(std::string_view chrom_, bp_t chrom_start_, bp_t chrom_end_);
@@ -261,5 +262,45 @@ static const absl::flat_hash_map<BED::Dialect, std::string_view> bed_dialect_to_
     {BED::Dialect::BED9, "BED9"sv}, {BED::Dialect::BED12, "BED12"sv}};
 
 }  // namespace modle::bed
+
+template <>
+struct fmt::formatter<modle::bed::RGB> {
+  inline constexpr auto parse(format_parse_context& ctx) -> decltype(ctx.begin());
+  // Formats the point p using the parsed format specification (presentation)
+  // stored in this formatter.
+  template <typename FormatContext>
+  inline auto format(const modle::bed::RGB& b, FormatContext& ctx) -> decltype(ctx.out());
+};
+
+template <>
+struct fmt::formatter<modle::bed::BED> {
+  // Presentation can be any of the following:
+  //  - auto
+  //  - none
+  //  - bed3
+  //  - bed4
+  //  - bed5
+  //  - bed6
+  //  - bed9
+  //  - bed12
+
+  inline constexpr auto parse(format_parse_context& ctx) -> decltype(ctx.begin());
+  // Formats the point p using the parsed format specification (presentation)
+  // stored in this formatter.
+  template <typename FormatContext>
+  inline auto format(const modle::bed::BED& b, FormatContext& ctx) -> decltype(ctx.out());
+
+ private:
+  modle::bed::BED::Dialect presentation{modle::bed::BED::none};
+  constexpr static std::array<std::pair<std::string_view, modle::bed::BED::Dialect>, 8>
+      presentation_mappings{std::make_pair("auto", modle::bed::BED::autodetect),
+                            std::make_pair("none", modle::bed::BED::none),
+                            std::make_pair("bed3", modle::bed::BED::BED3),
+                            std::make_pair("bed4", modle::bed::BED::BED4),
+                            std::make_pair("bed5", modle::bed::BED::BED5),
+                            std::make_pair("bed6", modle::bed::BED::BED6),
+                            std::make_pair("bed9", modle::bed::BED::BED9),
+                            std::make_pair("bed12", modle::bed::BED::BED12)};
+};
 
 #include "../../bed_impl.hpp"

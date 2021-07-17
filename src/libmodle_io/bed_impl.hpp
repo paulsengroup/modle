@@ -11,7 +11,9 @@ namespace modle::bed {
 
 template <typename K, typename I>
 BED_tree<K, I>::BED_tree(const boost::filesystem::path& path_to_bed, BED::Dialect dialect)
-    : BED_tree(bed::Parser(path_to_bed, dialect).parse_all_in_interval_tree()) {}
+    : BED_tree(path_to_bed.empty()
+                   ? BED_tree<>{}
+                   : bed::Parser(path_to_bed, dialect).parse_all_in_interval_tree()) {}
 
 // For some reason GCC 11 is confused by this alias...
 // template <typename K, typename I>
@@ -220,5 +222,81 @@ template <typename K, typename I>
 typename BED_tree<K, I>::const_iterator BED_tree<K, I>::cend() const {
   return this->_trees.cend();
 }
-
 }  // namespace modle::bed
+
+constexpr auto fmt::formatter<modle::bed::RGB>::parse(format_parse_context& ctx)
+    -> decltype(ctx.begin()) {
+  if (ctx.begin() != ctx.end() && *ctx.begin() != '}') {
+    throw fmt::format_error("invalid format");
+  }
+  return ctx.begin();
+}
+
+template <typename FormatContext>
+auto fmt::formatter<modle::bed::RGB>::format(const modle::bed::RGB& rgb, FormatContext& ctx)
+    -> decltype(ctx.out()) {
+  return fmt::format_to(ctx.out(), FMT_STRING("{},{},{}"), rgb.r, rgb.g, rgb.b);
+}
+
+constexpr auto fmt::formatter<modle::bed::BED>::parse(format_parse_context& ctx)
+    -> decltype(ctx.begin()) {
+  const auto* it = ctx.begin();
+  const auto* end = ctx.end();
+  const auto fmt_string =
+      std::string_view{&(*ctx.begin()), static_cast<size_t>(ctx.end() - ctx.begin())};
+  if (it != end) {
+    for (const auto& [k, v] : this->presentation_mappings) {
+      if (const auto pos = fmt_string.find(k); pos != std::string_view::npos) {
+        this->presentation = v;
+        it += k.size();
+        break;
+      }
+    }
+  }
+  // Check if reached the end of the range:
+  if (it != end && *it != '}') {
+    throw fmt::format_error("invalid format");
+  }
+
+  // Return an iterator past the end of the parsed range:
+  return it;
+}
+
+// Formats the point p using the parsed format specification (presentation)
+// stored in this formatter.
+template <typename FormatContext>
+auto fmt::formatter<modle::bed::BED>::format(const modle::bed::BED& b, FormatContext& ctx)
+    -> decltype(ctx.out()) {
+  assert(!b.chrom.empty());  // NOLINT
+  const auto n = std::min(b.num_fields(), static_cast<size_t>(this->presentation));
+  auto it = ctx.out();
+  if (n == 3U) {
+    it = fmt::format_to(it, FMT_STRING("{}\t{}\t{}"), b.chrom, b.chrom_start, b.chrom_end);
+  } else if (n == 4U) {
+    it = fmt::format_to(it, FMT_STRING("{}\t{}\t{}\t{}"), b.chrom, b.chrom_start, b.chrom_end,
+                        b.name);
+  } else if (n == 5U) {
+    it = fmt::format_to(it, FMT_STRING("{}\t{}\t{}\t{}\t{}"), b.chrom, b.chrom_start, b.chrom_end,
+                        b.name, b.score);
+  } else if (n == 6U) {
+    it = fmt::format_to(it, FMT_STRING("{}\t{}\t{}\t{}\t{}\t{}"), b.chrom, b.chrom_start,
+                        b.chrom_end, b.name, b.score, b.strand);
+  } else if (n == 9U) {
+    assert(b.rgb);  // NOLINT
+    it =
+        fmt::format_to(it, FMT_STRING("{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}"), b.chrom, b.chrom_start,
+                       b.chrom_end, b.name, b.score, b.strand, b.thick_start, b.thick_end, *b.rgb);
+  } else if (n >= 12U) {
+    assert(b.rgb);  // NOLINT
+    it = fmt::format_to(it, FMT_STRING("{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}"), b.chrom,
+                        b.chrom_start, b.chrom_end, b.name, b.score, b.strand, b.thick_start,
+                        b.thick_end, *b.rgb, fmt::join(b.block_sizes, ","),
+                        fmt::join(b.block_starts, ","));
+  }
+
+  if (!b.extra_tokens.empty()) {
+    it = fmt::format_to(it, "\t{}", b.extra_tokens);
+  }
+
+  return it;
+}
