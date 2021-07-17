@@ -264,7 +264,7 @@ bed::BED_tree<> Simulation::import_deletions() const {
   fmt::print(stderr, FMT_STRING("Importing deletions from file {}...\n"),
              this->path_to_deletion_bed);
   const auto t0 = absl::Now();
-  auto deletions = bed::BED_tree<>{this->path_to_deletion_bed};
+  auto deletions = bed::BED_tree<>{this->path_to_deletion_bed, bed::BED::BED3};
   fmt::print(stderr, FMT_STRING("Imported {} deletions in {}\n"), deletions.size(),
              absl::FormatDuration(absl::Now() - t0));
   return deletions;
@@ -316,12 +316,8 @@ void Simulation::run_perturbate() {
     });
   }
 
-  const auto all_deletions = [this]() {
-    if (this->path_to_deletion_bed.empty()) {
-      return this->generate_deletions();
-    }
-    return this->import_deletions();
-  }();
+  const auto all_deletions =
+      this->path_to_deletion_bed.empty() ? this->generate_deletions() : this->import_deletions();
 
   // Changing tt -> t raises a -Werror=shadow on GCC 7.5
   auto print_status_update = [](const auto& tt) {
@@ -394,13 +390,7 @@ void Simulation::run_perturbate() {
     base_task.active_window_start = 0;
     base_task.active_window_end = 3 * this->diagonal_width;
 
-    for (size_t i = 0; true; ++i) {
-      if (i > 0) {
-        if (!Simulation::advance_window(base_task, chrom)) {
-          break;  // Break, as the new window extends past chrom.end_pos()
-        }
-      }
-
+    do {
       // Find all barriers falling within the outer window. Skip over windows with 0 barriers
       if (!Simulation::map_barriers_to_window(base_task, chrom)) {
         continue;
@@ -473,10 +463,10 @@ void Simulation::run_perturbate() {
           num_tasks = 0;
         }
       }
-    }
-    // Submit any remaining task
+    } while (Simulation::advance_window(base_task, chrom));
   }
 
+  // Submit any remaining task
   if (num_tasks != 0) {
     while (!task_queue.try_enqueue_bulk(ptok, std::make_move_iterator(tasks.begin()), num_tasks)) {
       std::this_thread::sleep_for(std::chrono::microseconds(100));  // NOLINT
@@ -679,11 +669,11 @@ void Simulation::simulate_window(Simulation::StatePW& state, compressed_io::Writ
 }
 
 bool Simulation::advance_window(TaskPW& base_task, const Chromosome& chrom) const {
-  base_task.window_start += this->diagonal_width;
-  base_task.active_window_start = base_task.window_start + this->diagonal_width;
-
+  base_task.active_window_start += this->diagonal_width;
   base_task.active_window_end =
-      std::min(base_task.active_window_start + this->diagonal_width, chrom.end_pos());
+      std::min(base_task.active_window_start + (2 * this->diagonal_width), chrom.end_pos());
+
+  base_task.window_start = base_task.active_window_start - this->diagonal_width;
   base_task.window_end =
       std::min(base_task.active_window_end + this->diagonal_width, chrom.end_pos());
 
