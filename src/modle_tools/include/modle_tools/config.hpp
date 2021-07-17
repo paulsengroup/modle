@@ -57,7 +57,9 @@ struct find_barrier_clusters_config {  // NOLINT
   // IO
   boost::filesystem::path path_to_input_barriers;
   boost::filesystem::path path_to_output;
+  boost::filesystem::path path_to_breaking_points;
   bool force{false};
+  bool quiet{false};
 
   // Cluster properties
   bp_t extension_window{5000};  // NOLINT

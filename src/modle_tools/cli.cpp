@@ -263,10 +263,23 @@ void Cli::make_find_barrier_clusters_subcommand() {
       c.path_to_output,
       "Path to output file. When not provided, barrier clusters will be written to stdout.");
 
+  io.add_option(
+      "-b,--breaking-points",
+      c.path_to_breaking_points,
+      "Path to a BED file listing a the coordinates of cluster breaking points. "
+      "These could for instance be a list of genes or enhancers.")
+      ->check(CLI::ExistingFile);
+
   io.add_flag(
       "-f,--force",
       c.force,
       "Overwrite existing file(s).")
+      ->capture_default_str();
+
+  io.add_flag(
+      "-q,--quiet",
+      c.quiet,
+      "Don't print warnings to stderr.")
       ->capture_default_str();
 
   cluster.add_option(
