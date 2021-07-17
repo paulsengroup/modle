@@ -146,7 +146,7 @@ class IITree {
   size_t _start_pos;
   size_t _end_pos;
   int64_t _max_level{0};
-  bool _indexed{false};
+  bool _indexed{true};
 
   std::vector<I> _start;
   std::vector<I> _end;
