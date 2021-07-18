@@ -231,11 +231,11 @@ class Parser {
 
  private:
   compressed_io::Reader _reader{};
+  BED::Dialect _dialect;
+  bool _enforce_std_compliance;
   std::string _buff{};
   size_t _num_records_parsed{0};
   size_t _num_lines_read{0};
-  BED::Dialect _dialect;
-  bool _enforce_std_compliance;
 
   size_t skip_header();
 };

@@ -40,6 +40,10 @@ void Reader::open(const boost::filesystem::path& path) {
   }
 
   this->_path = path;
+  if (this->_path.empty()) {
+    return;
+  }
+
   this->_arc.reset(archive_read_new());
   if (!this->_arc) {
     throw std::runtime_error(

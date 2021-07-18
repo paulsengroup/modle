@@ -411,8 +411,8 @@ Parser::Parser(boost::filesystem::path path_to_bed, BED::Dialect bed_standard,
     // For now we always skip the header
     : _reader(std::move(path_to_bed)),
       _dialect(bed_standard),
-      _enforce_std_compliance(enforce_std_compliance) {
-  this->_num_lines_read = this->skip_header();
+      _enforce_std_compliance(enforce_std_compliance),
+      _num_lines_read(this->skip_header()) {
   if (this->_dialect == BED::autodetect) {
     this->_dialect = BED::detect_standard(this->_buff);
   }
@@ -442,6 +442,9 @@ BED Parser::parse_next() {
 }
 
 std::vector<BED> Parser::parse_n(size_t num_records) {
+  if (this->_reader.path().empty()) {
+    return std::vector<BED>{};
+  }
   assert(this->_reader.is_open());  // NOLINT
 
   using record_idx_t = size_t;
@@ -483,6 +486,9 @@ std::vector<BED> Parser::parse_n(size_t num_records) {
 }
 
 BED_tree<> Parser::parse_n_in_interval_tree(size_t num_records) {
+  if (this->_reader.path().empty()) {
+    return BED_tree<>{};
+  }
   assert(this->_reader.is_open());  // NOLINT
 
   using line_num_t = size_t;
@@ -556,6 +562,9 @@ void Parser::reset() {
 }
 
 size_t Parser::skip_header() {
+  if (!this->_reader.is_open()) {
+    return 0;
+  }
   assert(this->_num_records_parsed == 0);  // NOLINT
   auto num_header_lines = 0ULL;
   assert(this->_reader.is_open());  // NOLINT
