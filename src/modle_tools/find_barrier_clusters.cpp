@@ -6,6 +6,56 @@
 #include "modle_tools/tools.hpp"
 
 namespace modle::tools {
+
+void print_warnings(const bed::BED& cluster, const bed::BED& barrier1,
+                    const find_barrier_clusters_config& c, const size_t cluster_span,
+                    const size_t cluster_size) {
+  fmt::print(stderr, FMT_STRING("Warning: Skipping a cluster {}:{}-{}. Reason:"), barrier1.chrom,
+             cluster.chrom_start, cluster.chrom_end);
+  if (cluster_span < c.min_cluster_span) {
+    fmt::print(stderr, FMT_STRING(" Cluster span is too small ({} < {});"), cluster_span,
+               c.min_cluster_span);
+  } else if (cluster_span >= c.max_cluster_span) {
+    fmt::print(stderr, FMT_STRING(" Cluster span is too large ({} >= {});"), cluster_span,
+               c.max_cluster_span);
+  }
+
+  if (cluster_size < c.min_cluster_size) {
+    fmt::print(stderr, FMT_STRING(" Cluster does not contain enough barriers ({} < {});"),
+               cluster_size, c.min_cluster_size);
+  }
+  if (cluster_size >= c.max_cluster_size) {
+    fmt::print(stderr, FMT_STRING(" Cluster contains too many barriers ({} >= {});"), cluster_size,
+               c.max_cluster_size);
+  }
+  fmt::print(stderr, "\n");
+}
+
+void write_cluster(bed::BED& cluster, const size_t cluster_id, const size_t cluster_size,
+                   std::unique_ptr<fmt::ostream>& fp) {
+  cluster.name = fmt::format(FMT_STRING("cluster_{:07d}"), cluster_id);
+  cluster.score = static_cast<double>(cluster_size);
+  if (fp) {
+    fp->print(FMT_STRING("{:bed5}\n"), cluster);
+  } else {
+    fmt::print(stdout, FMT_STRING("{:bed5}\n"), cluster);
+  }
+}
+
+void write_single_barrier(bed::BED& buff, const bed::BED& barrier, const size_t barrier_id,
+                          std::unique_ptr<fmt::ostream>& fp) {
+  buff.chrom = barrier.chrom;
+  buff.chrom_start = barrier.chrom_start;
+  buff.chrom_end = barrier.chrom_end;
+  buff.name = fmt::format(FMT_STRING("barrier_{:07d}"), barrier_id);
+  buff.score = 1;
+  if (fp) {
+    fp->print(FMT_STRING("{:bed5}\n"), buff);
+  } else {
+    fmt::print(stdout, FMT_STRING("{:bed5}\n"), buff);
+  }
+}
+
 void find_barrier_clusters_subcmd(const find_barrier_clusters_config& c) {
   const bed::BED_tree<> barrier_intervals_gw(c.path_to_input_barriers, bed::BED::BED3);
   const bed::BED_tree<> breaking_intervals_gw(c.path_to_breaking_points, bed::BED::BED3);
@@ -43,6 +93,24 @@ void find_barrier_clusters_subcmd(const find_barrier_clusters_config& c) {
     cluster.chrom_end = 0;
     size_t cluster_size = 0;
 
+    auto process_cluster = [&](bed::BED& cluster_, const bed::BED& barrier,
+                               const size_t barrier_id) {
+      const auto cluster_span = cluster_.chrom_end - cluster_.chrom_start;
+      if (cluster_span != 0 && cluster_span >= min_cluster_span &&
+          cluster_span < max_cluster_span && cluster_size >= min_cluster_size &&
+          cluster_size < max_cluster_size) {
+        // Print the cluster in BED format if cluster size and span constraints are satisfied
+        write_cluster(cluster_, cluster_id, cluster_size, fp);
+      } else if (const auto barrier_span = barrier.chrom_end - barrier.chrom_start;
+                 c.min_cluster_size == 1 && cluster_size <= 1 &&
+                 barrier_span >= c.min_cluster_span && barrier_span < c.max_cluster_span) {
+        // Handle case where --min-cluster-size=1
+        write_single_barrier(cluster_, barrier, barrier_id, fp);
+      } else if (!c.quiet && cluster_span != 0) {
+        print_warnings(cluster_, barrier, c, cluster_span, cluster_size);
+      }
+    };
+
     // Look for uninterrupted clusters of barriers
     // Clusters are identified by initially considering a window starting at the position of the
     // first extrusion barrier that has yet to be processed, and extends for a width equal to
@@ -65,54 +133,13 @@ void find_barrier_clusters_subcmd(const find_barrier_clusters_config& c) {
         continue;
       }
 
-      const auto cluster_span = cluster.chrom_end - cluster.chrom_start;
-      // Print the cluster in BED format
-      if (cluster_span != 0 && cluster_span >= min_cluster_span &&
-          cluster_span < max_cluster_span && cluster_size >= min_cluster_size &&
-          cluster_size < max_cluster_size) {
-        cluster.name = fmt::format(FMT_STRING("cluster_{:07d}"), cluster_id);
-        cluster.score = static_cast<double>(cluster_size);
-        if (fp) {
-          fp->print(FMT_STRING("{:bed5}\n"), cluster);
-        } else {
-          fmt::print(stdout, FMT_STRING("{:bed5}\n"), cluster);
-        }
-      } else if (c.min_cluster_size == 1) {
-        cluster.chrom = b1.chrom;
-        cluster.chrom_start = b1.chrom_start;
-        cluster.chrom_end = b1.chrom_end;
-        cluster.name = fmt::format(FMT_STRING("barrier_{:07d}"), i - 1);
-        cluster.score = 1;
-        if (fp) {
-          fp->print(FMT_STRING("{:bed5}\n"), cluster);
-        } else {
-          fmt::print(stdout, FMT_STRING("{:bed5}\n"), cluster);
-        }
-      } else if (!c.quiet && cluster_span != 0) {
-        fmt::print(stderr, FMT_STRING("Warning: Skipping a cluster {}:{}-{}. Reason:"), b1.chrom,
-                   cluster.chrom_start, cluster.chrom_end);
-        if (cluster_span < min_cluster_span) {
-          fmt::print(stderr, FMT_STRING(" Cluster span is too small ({} < {});"), cluster_span,
-                     min_cluster_span);
-        } else if (cluster_span >= max_cluster_span) {
-          fmt::print(stderr, FMT_STRING(" Cluster span is too large ({} >= {});"), cluster_span,
-                     max_cluster_span);
-        }
-
-        if (cluster_size < min_cluster_size) {
-          fmt::print(stderr, FMT_STRING(" Cluster does not contain enough barriers ({} < {});"),
-                     cluster_size, min_cluster_size);
-        }
-        if (cluster_size >= max_cluster_size) {
-          fmt::print(stderr, FMT_STRING(" Cluster contains too many barriers ({} >= {});"),
-                     cluster_size, max_cluster_size);
-        }
-        fmt::print(stderr, "\n");
-      }
+      process_cluster(cluster, b1, i - 1);
       ++cluster_id;
       cluster_size = 0;
       cluster.chrom_start = cluster.chrom_end;
     }
+    // Handle last barrier mapping on a chromosome
+    process_cluster(cluster, barriers.back(), barriers.size() - 1);
   }
 }
 }  // namespace modle::tools
