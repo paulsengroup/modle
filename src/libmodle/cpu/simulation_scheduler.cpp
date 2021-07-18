@@ -418,15 +418,14 @@ void Simulation::run_perturbate() {
         t.cell_id = cell_id++;
         t.deletion_begin = deletion.chrom_start;
         t.deletion_size = deletion.chrom_end - deletion.chrom_start;
-        t.window_end = std::min(t.window_end + t.deletion_size, chrom.end_pos());
-        t.active_window_end = std::min(t.active_window_end + t.deletion_size, chrom.end_pos());
+        t.window_end = std::min(t.window_end, chrom.end_pos());
+        t.active_window_end = std::min(t.active_window_end, chrom.end_pos());
 
         // Compute the number of simulation rounds required to reach the target contact density
         if (this->target_contact_density != 0) {
           // Compute the number of pixels mapping to the outer window
           const auto npix1 = (t.window_end - t.window_start + this->bin_size - 1) / this->bin_size;
-          const auto npix2 =
-              (this->diagonal_width + t.deletion_size + this->bin_size - 1) / this->bin_size;
+          const auto npix2 = (this->diagonal_width + this->bin_size - 1) / this->bin_size;
 
           t.num_target_contacts = static_cast<size_t>(std::max(
               1.0, std::round(this->target_contact_density * static_cast<double>(npix1 * npix2))));
@@ -552,9 +551,9 @@ void Simulation::simulate_window(Simulation::StatePW& state, compressed_io::Writ
   std::string barrier_str_buff;
   // Figure out whether we are processing the first or last window and compute the partition
   // point
-  const auto first_chunk = state.active_window_start == state.chrom->start_pos();
-  const auto last_chunk = state.active_window_end == state.chrom->end_pos();
-  const auto partition_point = (state.active_window_start + state.active_window_end + 1) / 2;
+  // const auto first_window = state.active_window_start == state.chrom->start_pos();
+  const auto last_window = state.active_window_end == state.chrom->end_pos();
+  const auto partition_point = state.active_window_start + this->diagonal_width;
 
   // Generate barrier configuration
   size_t num_active_barriers = 0;
@@ -577,8 +576,8 @@ void Simulation::simulate_window(Simulation::StatePW& state, compressed_io::Writ
   // Resize and reset state buffers
   state.resize_buffers();
   state.reset_buffers();
-  state.contacts.resize(state.window_end - state.window_start,
-                        this->diagonal_width + state.deletion_size, this->bin_size);
+  state.contacts.resize(state.window_end - state.window_start, this->diagonal_width,
+                        this->bin_size);
   state.contacts.reset();
 
   Simulation::simulate_one_cell(state);
@@ -592,9 +591,9 @@ void Simulation::simulate_window(Simulation::StatePW& state, compressed_io::Writ
       const auto feat2_abs_center_pos = (feat2.chrom_start + feat2.chrom_end + 1) / 2;
 
       // Don't output contacts when both feat1 and feat2 are located downstream of the partition
-      // point. This does not apply when we are processing the first or last window
-      if ((first_chunk || last_chunk) &&
-          (feat1_abs_center_pos >= partition_point && feat2_abs_center_pos >= partition_point)) {
+      // point. This does not apply when we are processing the last window
+      if (!last_window && feat1.chrom_start >= partition_point &&
+          feat2.chrom_start >= partition_point) {
         continue;
       }
 
@@ -623,12 +622,13 @@ void Simulation::simulate_window(Simulation::StatePW& state, compressed_io::Writ
       absl::StrAppend(  // Append a BEDPE record to the local buffer
           &out_buffer,
           fmt::format(FMT_COMPILE("{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\tdeletion={}-{}"
-                                  "\tnum_barr={}/{}\n"),
+                                  "\tnum_barr={}/{}\tactive_window={}-{}\touter_window={}-{}\n"),
                       feat1.chrom, feat1_abs_bin * bin_size, (feat1_abs_bin + 1) * bin_size,
                       feat2.chrom, feat2_abs_bin * bin_size, (feat2_abs_bin + 1) * bin_size, name,
                       contacts, feat1.strand, feat2.strand, state.deletion_begin,
                       state.deletion_begin + state.deletion_size, num_active_barriers,
-                      state.barriers.size()));
+                      state.barriers.size(), state.active_window_start, state.active_window_end,
+                      state.window_start, state.window_end));
     }
   }
 
