@@ -25,6 +25,7 @@ void find_barrier_clusters_subcmd(const find_barrier_clusters_config& c) {
 
   bed::BED cluster;  //{bed::BED::BED5};
   size_t cluster_id = 0;
+
   for (const auto& [chrom, barriers_itree] : barrier_intervals_gw) {
     // Create two spans corresponding to the barriers and breaking points mapping on the chrom that
     // is being processed
@@ -71,6 +72,17 @@ void find_barrier_clusters_subcmd(const find_barrier_clusters_config& c) {
           cluster_size < max_cluster_size) {
         cluster.name = fmt::format(FMT_STRING("cluster_{:07d}"), cluster_id);
         cluster.score = static_cast<double>(cluster_size);
+        if (fp) {
+          fp->print(FMT_STRING("{:bed5}\n"), cluster);
+        } else {
+          fmt::print(stdout, FMT_STRING("{:bed5}\n"), cluster);
+        }
+      } else if (c.min_cluster_size == 1) {
+        cluster.chrom = b1.chrom;
+        cluster.chrom_start = b1.chrom_start;
+        cluster.chrom_end = b1.chrom_end;
+        cluster.name = fmt::format(FMT_STRING("barrier_{:07d}"), i - 1);
+        cluster.score = 1;
         if (fp) {
           fp->print(FMT_STRING("{:bed5}\n"), cluster);
         } else {
