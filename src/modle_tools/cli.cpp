@@ -308,17 +308,17 @@ void Cli::make_find_barrier_clusters_subcommand() {
       ->capture_default_str();
 
   cluster.add_option(
-      "--min-barriers-per-cluster",
+      "--min-cluster-size",
       c.min_cluster_size,
       "The minimum number of barriers that can belong to a given cluster.\n")
       ->check(CLI::NonNegativeNumber)
       ->capture_default_str();
 
   cluster.add_option(
-      "--max-barriers-per-cluster",
+      "--max-cluster-size",
       c.max_cluster_size,
       "The maximum number of barriers that can belong to a given cluster.\n"
-      "--max-barriers-per-cluster=0 can be used to allow clusters with an unlimited number of barriers.")
+      "--max-cluster-size=0 can be used to allow clusters with an unlimited number of barriers.")
       ->check(CLI::NonNegativeNumber)
       ->capture_default_str();
   // clang-format on
