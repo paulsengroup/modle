@@ -270,8 +270,8 @@ void Cooler::write_or_append_cmatrix_to_file(const ContactMatrix<I1> *cmatrix,
 
     // Writing the chrom_index only at the end should be ok, given that most of the time we are
     // processing 20-100 chrom
-    idx_chrom_offset_h5_foffset =
-        hdf5::write_numbers(b->idx_chrom_offset_buff, d[IDX_CHR], idx_chrom_offset_h5_foffset);
+    idx_chrom_offset_h5_foffset = hdf5::write_number(b->idx_chrom_offset_buff.back(), d[IDX_CHR],
+                                                     idx_chrom_offset_h5_foffset);
     idx_bin1_offset_h5_foffset =
         hdf5::write_numbers(b->idx_bin1_offset_buff, d[IDX_BIN1], idx_bin1_offset_h5_foffset);
 
