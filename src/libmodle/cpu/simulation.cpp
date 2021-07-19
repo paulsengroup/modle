@@ -407,7 +407,7 @@ std::pair<bp_t, bp_t> Simulation::compute_lef_lef_collision_pos(const ExtrusionU
 size_t Simulation::register_contacts(Chromosome& chrom, const absl::Span<const Lef> lefs,
                                      const absl::Span<const size_t> selected_lef_idx) const
     noexcept(utils::ndebug_defined()) {
-  return this->register_contacts(chrom.start_pos(), chrom.end_pos(), chrom.contacts(), lefs,
+  return this->register_contacts(chrom.start_pos() + 1, chrom.end_pos() - 1, chrom.contacts(), lefs,
                                  selected_lef_idx);
 }
 
@@ -422,8 +422,8 @@ size_t Simulation::register_contacts(const bp_t start_pos, const bp_t end_pos,
   for (const auto i : selected_lef_idx) {
     assert(i < lefs.size());  // NOLINT
     const auto& lef = lefs[i];
-    if (BOOST_LIKELY(lef.is_bound() && lef.rev_unit.pos() >= start_pos &&
-                     lef.rev_unit.pos() < end_pos && lef.fwd_unit.pos() >= start_pos &&
+    if (BOOST_LIKELY(lef.is_bound() && lef.rev_unit.pos() > start_pos &&
+                     lef.rev_unit.pos() < end_pos && lef.fwd_unit.pos() > start_pos &&
                      lef.fwd_unit.pos() < end_pos)) {
       const auto pos1 = lef.rev_unit.pos() - start_pos;
       const auto pos2 = lef.fwd_unit.pos() - start_pos;
@@ -438,8 +438,9 @@ size_t Simulation::register_contacts_w_randomization(Chromosome& chrom, absl::Sp
                                                      absl::Span<const size_t> selected_lef_idx,
                                                      random::PRNG_t& rand_eng) const
     noexcept(utils::ndebug_defined()) {
-  return this->register_contacts_w_randomization(
-      chrom.start_pos(), chrom.end_pos(), chrom.contacts(), lefs, selected_lef_idx, rand_eng);
+  return this->register_contacts_w_randomization(chrom.start_pos() + 1, chrom.end_pos() - 1,
+                                                 chrom.contacts(), lefs, selected_lef_idx,
+                                                 rand_eng);
 }
 
 size_t Simulation::register_contacts_w_randomization(bp_t start_pos, bp_t end_pos,
@@ -455,8 +456,8 @@ size_t Simulation::register_contacts_w_randomization(bp_t start_pos, bp_t end_po
   for (const auto i : selected_lef_idx) {
     assert(i < lefs.size());  // NOLINT
     const auto& lef = lefs[i];
-    if (BOOST_LIKELY(lef.is_bound() && lef.rev_unit.pos() >= start_pos &&
-                     lef.rev_unit.pos() < end_pos && lef.fwd_unit.pos() >= start_pos &&
+    if (BOOST_LIKELY(lef.is_bound() && lef.rev_unit.pos() > start_pos &&
+                     lef.rev_unit.pos() < end_pos && lef.fwd_unit.pos() > start_pos &&
                      lef.fwd_unit.pos() < end_pos)) {
       const auto p1 = static_cast<double>(lef.rev_unit.pos() - start_pos) - noise_gen(rand_eng);
       const auto p2 = static_cast<double>(lef.fwd_unit.pos() - start_pos) + noise_gen(rand_eng);
