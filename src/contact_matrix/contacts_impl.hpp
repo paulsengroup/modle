@@ -148,7 +148,7 @@ I ContactMatrix<I>::get(size_t row, size_t col, size_t block_size) const
   for (auto i = first_row; i < first_row + bs; ++i) {
     for (auto j = first_col; j < first_col + bs; ++j) {
       const auto ii =
-          static_cast<size_t>(std::clamp(i, int64_t(0), static_cast<int64_t>(this->_nrows - 1)));
+          static_cast<size_t>(std::clamp(i, int64_t(0), static_cast<int64_t>(this->_ncols - 1)));
       const auto jj =
           static_cast<size_t>(std::clamp(j, int64_t(0), static_cast<int64_t>(this->_ncols - 1)));
       n += this->get(ii, jj);
