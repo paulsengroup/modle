@@ -1,12 +1,12 @@
 ---
-Checks:          '*,-fuchsia-*,-google-*,-zircon-*,-llvm-*,-llvmlibc-*,-modernize-use-trailing-return-type'
-WarningsAsErrors: '1'
+Checks: '*,-fuchsia-*,-google-*,-zircon-*,-llvm-*,-llvmlibc-*,-modernize-use-trailing-return-type'
+WarningsAsErrors: ''
 HeaderFilterRegex: ''
-FormatStyle:     none
+FormatStyle: none
 CheckOptions:
-  - key:    misc-non-private-member-variables-in-classes.IgnoreClassesWithAllMemberVariablesBeingPublic
-    value:  '1'
-  - key:    readability-implicit-bool-conversion.AllowPointerConditions
-    value:  '1'
-  - key:    readability-magic-numbers.IgnorePowersOf2IntegerValues
-    value:  '1'
+  - key: misc-non-private-member-variables-in-classes.IgnoreClassesWithAllMemberVariablesBeingPublic
+    value: '1'
+  - key: readability-implicit-bool-conversion.AllowPointerConditions
+    value: '1'
+  - key: readability-magic-numbers.IgnorePowersOf2IntegerValues
+    value: '1'
