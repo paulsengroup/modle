@@ -80,7 +80,7 @@ void Simulation::write_contacts_to_disk(std::deque<std::pair<Chromosome*, size_t
                                                                 cooler::Cooler::WRITE_ONLY,
                                                                 this->bin_size, max_str_length);
 
-  auto sleep_us = 100;
+  auto sleep_us = 100;  // NOLINT(readability-magic-numbers), cppcoreguidelines-avoid-magic-numbers)
   while (true) {  // Structuring the loop in this way allows us to sleep without holding the mutex
     sleep_us = std::min(500000, sleep_us * 2);  // NOLINT
     std::this_thread::sleep_for(std::chrono::microseconds(sleep_us));
@@ -105,7 +105,7 @@ void Simulation::write_contacts_to_disk(std::deque<std::pair<Chromosome*, size_t
         continue;
       }
     }
-    sleep_us = 100;
+    sleep_us = 100;  // NOLINT(readability-magic-numbers), cppcoreguidelines-avoid-magic-numbers)
     try {
       if (c) {  // c == nullptr only when --skip-output is used
         // NOTE here we have to use pointers instead of reference because
@@ -405,8 +405,7 @@ std::pair<bp_t, bp_t> Simulation::compute_lef_lef_collision_pos(const ExtrusionU
 }
 
 size_t Simulation::register_contacts(Chromosome& chrom, const absl::Span<const Lef> lefs,
-                                     const absl::Span<const size_t> selected_lef_idx) const
-    noexcept(utils::ndebug_defined()) {
+                                     const absl::Span<const size_t> selected_lef_idx) const {
   return this->register_contacts(chrom.start_pos() + 1, chrom.end_pos() - 1, chrom.contacts(), lefs,
                                  selected_lef_idx);
 }
@@ -414,8 +413,7 @@ size_t Simulation::register_contacts(Chromosome& chrom, const absl::Span<const L
 size_t Simulation::register_contacts(const bp_t start_pos, const bp_t end_pos,
                                      ContactMatrix<contacts_t>& contacts,
                                      const absl::Span<const Lef> lefs,
-                                     const absl::Span<const size_t> selected_lef_idx) const
-    noexcept(utils::ndebug_defined()) {
+                                     const absl::Span<const size_t> selected_lef_idx) const {
   // Register contacts for the selected LEFs (excluding LEFs that have one of their units at the
   // beginning/end of a chromosome)
   size_t new_contacts = 0;
@@ -436,8 +434,7 @@ size_t Simulation::register_contacts(const bp_t start_pos, const bp_t end_pos,
 
 size_t Simulation::register_contacts_w_randomization(Chromosome& chrom, absl::Span<const Lef> lefs,
                                                      absl::Span<const size_t> selected_lef_idx,
-                                                     random::PRNG_t& rand_eng) const
-    noexcept(utils::ndebug_defined()) {
+                                                     random::PRNG_t& rand_eng) const {
   return this->register_contacts_w_randomization(chrom.start_pos() + 1, chrom.end_pos() - 1,
                                                  chrom.contacts(), lefs, selected_lef_idx,
                                                  rand_eng);
@@ -447,8 +444,7 @@ size_t Simulation::register_contacts_w_randomization(bp_t start_pos, bp_t end_po
                                                      ContactMatrix<contacts_t>& contacts,
                                                      absl::Span<const Lef> lefs,
                                                      absl::Span<const size_t> selected_lef_idx,
-                                                     random::PRNG_t& rand_eng) const
-    noexcept(utils::ndebug_defined()) {
+                                                     random::PRNG_t& rand_eng) const {
   auto noise_gen = genextreme_value_distribution<double>{
       this->genextreme_mu, this->genextreme_sigma, this->genextreme_xi};
 
@@ -680,6 +676,7 @@ absl::Span<const size_t> Simulation::setup_burnin(BaseState& s) const {
                   [&]() { return round_gen(s.rand_eng); });
 
     // Sort epochs in descending order
+    // NOLINTNEXTLINE(readability-magic-numbers, cppcoreguidelines-avoid-magic-numbers)
     if (round_gen.max() > 2048) {
       // Counting sort uses n + r space in memory, where r is the number of unique values in the
       // range to be sorted. For this reason it is not a good idea to use it when the sampling

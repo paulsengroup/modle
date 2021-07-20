@@ -387,25 +387,21 @@ class Simulation : Config {
   /// Register contacts for chromosome \p chrom using the position the extrusion units of the LEFs
   /// in \p lefs whose index is present in \p selected_lef_idx.
   size_t register_contacts(Chromosome& chrom, absl::Span<const Lef> lefs,
-                           absl::Span<const size_t> selected_lef_idx) const
-      noexcept(utils::ndebug_defined());
+                           absl::Span<const size_t> selected_lef_idx) const;
 
   size_t register_contacts(bp_t start_pos, bp_t end_pos, ContactMatrix<contacts_t>& contacts,
                            absl::Span<const Lef> lefs,
-                           absl::Span<const size_t> selected_lef_idx) const
-      noexcept(utils::ndebug_defined());
+                           absl::Span<const size_t> selected_lef_idx) const;
 
   size_t register_contacts_w_randomization(Chromosome& chrom, absl::Span<const Lef> lefs,
                                            absl::Span<const size_t> selected_lef_idx,
-                                           random::PRNG_t& rand_eng) const
-      noexcept(utils::ndebug_defined());
+                                           random::PRNG_t& rand_eng) const;
 
   size_t register_contacts_w_randomization(bp_t start_pos, bp_t end_pos,
                                            ContactMatrix<contacts_t>& contacts,
                                            absl::Span<const Lef> lefs,
                                            absl::Span<const size_t> selected_lef_idx,
-                                           random::PRNG_t& rand_eng) const
-      noexcept(utils::ndebug_defined());
+                                           random::PRNG_t& rand_eng) const;
 
   template <typename MaskT>
   inline static void select_lefs_to_bind(absl::Span<const Lef> lefs,
