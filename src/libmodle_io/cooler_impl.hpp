@@ -72,6 +72,14 @@ void Cooler::get_chrom_sizes(std::vector<I> &buff) {
   }
 }
 
+template <typename I>
+void Cooler::write_or_append_empty_cmatrix_to_file(std::string_view chrom_name, I chrom_start,
+                                                   I chrom_end, I chrom_length, bool quiet) {
+  ContactMatrix<int64_t> *null_matrix{nullptr};
+  Cooler::write_or_append_cmatrix_to_file(null_matrix, chrom_name, chrom_start, chrom_end,
+                                          chrom_length, quiet);
+}
+
 template <typename I1, typename I2>
 void Cooler::write_or_append_cmatrix_to_file(const ContactMatrix<I1> &cmatrix,
                                              std::string_view chrom_name, I2 chrom_start,
@@ -214,16 +222,16 @@ void Cooler::write_or_append_cmatrix_to_file(const ContactMatrix<I1> *cmatrix,
           // are not reading past the array end
           for (auto j = i; j < i + cmatrix->nrows() && j < cmatrix->ncols(); ++j) {
             if (const auto m = cmatrix->get(i, j); m != 0) {  // Only write non-zero pixels
-#ifndef NDEBUG
-              // Make sure we are always reading from the upper-triangle of the underlying square
-              // contact matrix
-              if (pxl_offset + i > pxl_offset + j) {
-                utils::throw_with_trace(std::runtime_error(fmt::format(
-                    FMT_STRING("Cooler::write_or_append_cmatrix_to_file(): b1 > b2: b1={}; "
-                               "b2={}; offset={}; m={}\n"),
-                    b->pixel_b1_idx_buff.back(), b->pixel_b2_idx_buff.back(), pxl_offset, m)));
+              if constexpr (utils::ndebug_defined()) {
+                // Make sure we are always reading from the upper-triangle of the underlying square
+                // contact matrix
+                if (pxl_offset + i > pxl_offset + j) {
+                  utils::throw_with_trace(std::runtime_error(fmt::format(
+                      FMT_STRING("Cooler::write_or_append_cmatrix_to_file(): b1 > b2: b1={}; "
+                                 "b2={}; offset={}; m={}\n"),
+                      b->pixel_b1_idx_buff.back(), b->pixel_b2_idx_buff.back(), pxl_offset, m)));
+                }
               }
-#endif
               b->pixel_b1_idx_buff.push_back(static_cast<int64_t>(pxl_offset + i));
               b->pixel_b2_idx_buff.push_back(static_cast<int64_t>(pxl_offset + j));
               b->pixel_count_buff.push_back(m);
@@ -280,7 +288,7 @@ void Cooler::write_or_append_cmatrix_to_file(const ContactMatrix<I1> *cmatrix,
     const auto nbins = static_cast<int64_t>(this->_nbins);
     hdf5::write_or_create_attribute(f, "nbins", nbins);
     hdf5::write_or_create_attribute(f, "nnz", this->_nnz);
-    this->_fp->flush(H5F_SCOPE_GLOBAL);
+    // this->_fp->flush(H5F_SCOPE_GLOBAL); // This is probably unnecessary
   } catch (const H5::Exception &err) {
     throw std::runtime_error(hdf5::construct_error_stack());
   }

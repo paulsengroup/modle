@@ -113,6 +113,10 @@ class Cooler {
   // Write to file
   void write_metadata();
 
+  template <typename I>
+  inline void write_or_append_empty_cmatrix_to_file(std::string_view chrom_name, I chrom_start,
+                                                    I chrom_end, I chrom_length, bool quiet);
+
   template <typename I1, typename I2>
   inline void write_or_append_cmatrix_to_file(const ContactMatrix<I1> &cmatrix,
                                               std::string_view chrom_name, I2 chrom_start,
