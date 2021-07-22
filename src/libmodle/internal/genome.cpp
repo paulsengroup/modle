@@ -478,6 +478,9 @@ Genome::iterator Genome::end() { return this->_chromosomes.end(); }
 Genome::const_iterator Genome::begin() const { return this->_chromosomes.cbegin(); }
 Genome::const_iterator Genome::end() const { return this->_chromosomes.cend(); }
 
+Genome::const_iterator Genome::cbegin() const { return this->_chromosomes.cbegin(); }
+Genome::const_iterator Genome::cend() const { return this->_chromosomes.cend(); }
+
 size_t Genome::size() const {
   return std::accumulate(
       this->_chromosomes.begin(), this->_chromosomes.end(), 0UL,

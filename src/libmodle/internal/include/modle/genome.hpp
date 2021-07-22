@@ -127,6 +127,9 @@ class Genome {
   [[nodiscard]] const_iterator begin() const;
   [[nodiscard]] const_iterator end() const;
 
+  [[nodiscard]] const_iterator cbegin() const;
+  [[nodiscard]] const_iterator cend() const;
+
   [[nodiscard]] size_t size() const;
   [[nodiscard]] size_t simulated_size() const;
 
