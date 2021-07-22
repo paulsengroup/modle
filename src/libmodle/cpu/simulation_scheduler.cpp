@@ -649,10 +649,24 @@ void Simulation::simulate_window(Simulation::StatePW& state, compressed_io::Writ
         state.window_end, state.deletion_begin, state.deletion_begin + state.deletion_size);
 
     std::scoped_lock l(cooler_mutex);
-    auto c = cooler::Cooler(file_name, cooler::Cooler::WRITE_ONLY, this->bin_size,
-                            state.chrom->name().size());
-    c.write_or_append_cmatrix_to_file(state.contacts, state.chrom->name(), state.window_start,
-                                      state.window_end, state.chrom->size());
+    const auto t0 = absl::Now();
+    fmt::print(stderr, FMT_STRING("Writing contacts for {} to file \"{}\"..."), state.chrom->name(),
+               file_name);
+    {
+      auto c = cooler::Cooler(file_name, cooler::Cooler::WRITE_ONLY, this->bin_size,
+                              this->_genome.chromosome_with_longest_name().name().size());
+      for (const auto& chrom : this->_genome) {
+        if (&chrom == state.chrom) {
+          c.write_or_append_cmatrix_to_file(state.contacts, state.chrom->name(), state.window_start,
+                                            state.window_end, state.chrom->size(), true);
+          continue;
+        }
+        assert(chrom.contacts_ptr() == nullptr);  // NOLINT
+        c.write_or_append_empty_cmatrix_to_file(chrom.name(), chrom.start_pos(), chrom.end_pos(),
+                                                chrom.size(), true);
+      }
+    }
+    fmt::print(stderr, FMT_STRING(" DONE in {}\n"), absl::FormatDuration(absl::Now() - t0));
   }
 }
 

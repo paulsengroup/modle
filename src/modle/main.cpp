@@ -37,8 +37,7 @@ int main(int argc, char** argv) noexcept {
     config.print();
 
     const auto t0 = absl::Now();
-
-    boost::filesystem::create_directories(config.path_to_output_prefix.remove_filename());
+    boost::filesystem::create_directories(config.path_to_output_prefix.parent_path());
     switch (cli->get_subcommand()) {
       case modle::Cli::subcommand::simulate:
         modle::Simulation{config}.run_simulation();

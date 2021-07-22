@@ -259,10 +259,10 @@ void Simulation::simulate_one_cell(StateT& s) const {
         } else {
           if (this->randomize_contacts) {
             n_contacts += this->register_contacts_w_randomization(
-                s.window_start, s.window_end, s.contacts, lefs, lef_idx, s.rand_eng);
+                s.window_start + 1, s.window_end - 1, s.contacts, lefs, lef_idx, s.rand_eng);
           } else {
-            n_contacts +=
-                this->register_contacts(s.window_start, s.window_end, s.contacts, lefs, lef_idx);
+            n_contacts += this->register_contacts(s.window_start + 1, s.window_end - 1, s.contacts,
+                                                  lefs, lef_idx);
           }
         }
 
