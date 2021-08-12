@@ -163,8 +163,7 @@ void stats_subcmd(const modle::tools::stats_config& c) {
       cmatrix.deplete_contacts(c.depletion_multiplier);
       DISABLE_WARNING_PUSH
       DISABLE_WARNING_USELESS_CAST
-      m2->write_or_append_cmatrix_to_file(cmatrix, chrom_name, int64_t(0), chrom_size, chrom_size,
-                                          true);
+      m2->write_or_append_cmatrix_to_file(cmatrix, chrom_name, int64_t(0), chrom_size, chrom_size);
       DISABLE_WARNING_POP
     }
   }

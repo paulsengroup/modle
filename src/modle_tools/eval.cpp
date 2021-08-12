@@ -10,6 +10,7 @@
 #include <absl/types/span.h>               // for Span, MakeConstSpan
 #include <fmt/format.h>                    // for print, FMT_STRING, format
 #include <fmt/ostream.h>                   // for formatbuf<>::int_type
+#include <spdlog/spdlog.h>
 
 #include <algorithm>                  // for fill, max, transform
 #include <array>                      // for array, array<>::value_type
@@ -284,12 +285,10 @@ void eval_subcmd(const modle::tools::eval_config &c) {
       return std::string_view{p.first.data(), p.first.size()};
     });
     if (chrom_list.size() == 1) {
-      fmt::print(stderr, FMT_STRING("Computing correlation for chromosome: '{}'\n"),
-                 chrom_names.front());
+      spdlog::info(FMT_STRING("Computing correlation for chromosome: '{}'"), chrom_names.front());
     } else {
-      fmt::print(stderr,
-                 FMT_STRING("Computing correlation for the following {} chromosomes: '{}'\n"),
-                 chrom_list.size(), absl::StrJoin(chrom_names, "', '"));
+      spdlog::info(FMT_STRING("Computing correlation for the following {} chromosomes: '{}'"),
+                   chrom_list.size(), absl::StrJoin(chrom_names, "', '"));
     }
   }
 
@@ -350,19 +349,16 @@ void eval_subcmd(const modle::tools::eval_config &c) {
                             bw_corr_linear_pearson);
         bigwig::write_range(std::string{chrom_name}, pval_buff, offset, bin_size, bin_size,
                             bw_pv_linear_pearson);
-        fmt::print(stderr,
-                   FMT_STRING("Pearson \"linear\" correlation calculation "
-                              "completed in {}.\n"),
-                   absl::FormatDuration(absl::Now() - t0));
+        spdlog::info(FMT_STRING("Pearson \"linear\" correlation calculation completed in {}."),
+                     absl::FormatDuration(absl::Now() - t0));
         break;
       case Transformation::Cross:
         bigwig::write_range(std::string{chrom_name}, corr_buff, offset, bin_size, bin_size,
                             bw_corr_cross_pearson);
         bigwig::write_range(std::string{chrom_name}, pval_buff, offset, bin_size, bin_size,
                             bw_pv_cross_pearson);
-        fmt::print(stderr,
-                   FMT_STRING("Pearson \"cross\" correlation calculation completed in {}.\n"),
-                   absl::FormatDuration(absl::Now() - t0));
+        spdlog::info(FMT_STRING("Pearson \"cross\" correlation calculation completed in {}."),
+                     absl::FormatDuration(absl::Now() - t0));
         break;
     }
   };
@@ -381,20 +377,16 @@ void eval_subcmd(const modle::tools::eval_config &c) {
                             bw_corr_linear_spearman);
         bigwig::write_range(std::string{chrom_name}, pval_buff, offset, bin_size, bin_size,
                             bw_pv_linear_spearman);
-        fmt::print(stderr,
-                   FMT_STRING("Spearman \"linear\" correlation calculation "
-                              "completed in {}.\n"),
-                   absl::FormatDuration(absl::Now() - t0));
+        spdlog::info(FMT_STRING("Spearman \"linear\" correlation calculation completed in {}."),
+                     absl::FormatDuration(absl::Now() - t0));
         break;
       case Transformation::Cross:
         bigwig::write_range(std::string{chrom_name}, corr_buff, offset, bin_size, bin_size,
                             bw_corr_cross_spearman);
         bigwig::write_range(std::string{chrom_name}, pval_buff, offset, bin_size, bin_size,
                             bw_pv_cross_spearman);
-        fmt::print(stderr,
-                   FMT_STRING("Spearman \"cross\" correlation calculation "
-                              "completed in {}.\n"),
-                   absl::FormatDuration(absl::Now() - t0));
+        spdlog::info(FMT_STRING("Spearman \"cross\" correlation calculation completed in {}."),
+                     absl::FormatDuration(absl::Now() - t0));
         break;
     }
   };
@@ -411,14 +403,14 @@ void eval_subcmd(const modle::tools::eval_config &c) {
       case Transformation::Linear:
         bigwig::write_range(std::string{chrom_name}, sed_buff, offset, bin_size, bin_size,
                             bw_linear_sed);
-        fmt::print(stderr, FMT_STRING("Euclidean dist. \"linear\" calculation completed in {}.\n"),
-                   absl::FormatDuration(absl::Now() - t0));
+        spdlog::info(FMT_STRING("Euclidean dist. \"linear\" calculation completed in {}."),
+                     absl::FormatDuration(absl::Now() - t0));
         break;
       case Transformation::Cross:
         bigwig::write_range(std::string{chrom_name}, sed_buff, offset, bin_size, bin_size,
                             bw_cross_sed);
-        fmt::print(stderr, FMT_STRING("Euclidean dist. \"cross\" calculation completed in {}.\n"),
-                   absl::FormatDuration(absl::Now() - t0));
+        spdlog::info(FMT_STRING("Euclidean dist. \"cross\" calculation completed in {}."),
+                     absl::FormatDuration(absl::Now() - t0));
         break;
     }
   };
@@ -481,20 +473,18 @@ void eval_subcmd(const modle::tools::eval_config &c) {
     }
 
     auto t0 = absl::Now();
-    fmt::print(stderr, FMT_STRING("Reading contacts for '{}' into memory...\n"), chrom_name);
+    spdlog::info(FMT_STRING("Reading contacts for '{}' into memory..."), chrom_name);
     if (!ref_cooler.has_contacts_for_chrom(ref_chrom_idxes.at(chrom_name))) {
-      fmt::print(stderr,
-                 FMT_STRING("WARNING: reference contact matrix doesn't have any contacts for "
-                            "'{}'. SKIPPING!\n"),
-                 chrom_name);
+      spdlog::warn(FMT_STRING("WARNING: reference contact matrix doesn't have any contacts for "
+                              "'{}'. SKIPPING!"),
+                   chrom_name);
       continue;
     }
 
     if (!input_cooler.has_contacts_for_chrom(inp_chrom_idxes.at(chrom_name))) {
-      fmt::print(stderr,
-                 FMT_STRING("WARNING: contact matrix doesn't have any contacts "
-                            "for '{}'. SKIPPING!\n"),
-                 chrom_name);
+      spdlog::warn(FMT_STRING("WARNING: contact matrix doesn't have any contacts "
+                              "for '{}'. SKIPPING!"),
+                   chrom_name);
       continue;
     }
 
@@ -502,21 +492,19 @@ void eval_subcmd(const modle::tools::eval_config &c) {
     if (c.deplete_contacts_from_reference) {
       cmatrix1.deplete_contacts(c.depletion_multiplier);
     }
-    fmt::print(stderr,
-               FMT_STRING("Read {:.2f}M contacts for a {}x{} reference matrix in {} using "
-                          "{:.2f} MB of RAM.\n"),
-               static_cast<double>(cmatrix1.get_tot_contacts()) / 1.0e6, cmatrix1.nrows(),
-               cmatrix1.ncols(), absl::FormatDuration(absl::Now() - t0),
-               cmatrix1.get_matrix_size_in_mb());
+    spdlog::info(FMT_STRING("Read {:.2f}M contacts for a {}x{} reference matrix in {} using "
+                            "{:.2f} MB of RAM."),
+                 static_cast<double>(cmatrix1.get_tot_contacts()) / 1.0e6, cmatrix1.nrows(),
+                 cmatrix1.ncols(), absl::FormatDuration(absl::Now() - t0),
+                 cmatrix1.get_matrix_size_in_mb());
     t0 = absl::Now();
 
     const auto cmatrix2 = input_cooler.cooler_to_cmatrix(chrom_name, nrows, chrom_subrange);
-    fmt::print(stderr,
-               FMT_STRING("Read {:.2f}M contacts for a {}x{} input matrix in {} using "
-                          "{:.2f} MB of RAM.\n"),
-               static_cast<double>(cmatrix2.get_tot_contacts()) / 1.0e6, cmatrix2.nrows(),
-               cmatrix2.ncols(), absl::FormatDuration(absl::Now() - t0),
-               cmatrix2.get_matrix_size_in_mb());
+    spdlog::info(FMT_STRING("Read {:.2f}M contacts for a {}x{} input matrix in {} using "
+                            "{:.2f} MB of RAM."),
+                 static_cast<double>(cmatrix2.get_tot_contacts()) / 1.0e6, cmatrix2.nrows(),
+                 cmatrix2.ncols(), absl::FormatDuration(absl::Now() - t0),
+                 cmatrix2.get_matrix_size_in_mb());
 
     if (cmatrix1.ncols() != cmatrix2.ncols() || cmatrix1.nrows() != cmatrix2.nrows()) {
       throw std::runtime_error(
@@ -534,7 +522,7 @@ void eval_subcmd(const modle::tools::eval_config &c) {
     const auto &v2 = cmatrix2.get_raw_count_vector();
     assert(v1.size() == v2.size());  // NOLINT
 
-    fmt::print(stderr, FMT_STRING("Computing correlation(s) for '{}'...\n"), chrom_name);
+    spdlog::info(FMT_STRING("Computing correlation(s) for '{}'..."), chrom_name);
 
     threads[0] = std::thread(pcc, chrom_name, v1, v2, ncols, chrom_subrange.first,
                              std::ref(pc_linear_corr_buff), std::ref(pc_linear_pval_buff),

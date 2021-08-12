@@ -2,6 +2,7 @@
 #include <absl/time/time.h>                       // for FormatDuration, operator-, Time
 #include <fmt/format.h>                           // for print, FMT_STRING
 #include <readerwriterqueue/readerwriterqueue.h>  // for BlockingReaderWriterQueue
+#include <spdlog/spdlog.h>
 
 #include <algorithm>    // for clamp, min, max, max_element
 #include <cassert>      // for assert
@@ -24,6 +25,7 @@
 #include "modle/contacts.hpp"                              // for ContactMatrix
 #include "modle/cooler.hpp"                                // for Cooler::Pixel, Cooler, Cooler:...
 #include "modle_tools/tools.hpp"                           // for noisify_subcmd
+
 namespace modle::tools {
 
 void noisify_contacts(const noisify_config& c) {
@@ -55,7 +57,7 @@ void noisify_contacts(const noisify_config& c) {
 
   for (const auto& [chrom_name, chrom_size] : input_cool.get_chroms()) {
     const auto t0 = absl::Now();
-    fmt::print(stderr, FMT_STRING("Processing contacts for {}..."), chrom_name);
+    spdlog::info(FMT_STRING("Processing contacts for {}..."), chrom_name);
     const auto ncols = (chrom_size / bin_size) + static_cast<size_t>(chrom_size % bin_size != 0);
     const auto nrows = std::min(ncols, (c.diagonal_width / bin_size) +
                                            static_cast<size_t>(c.diagonal_width % bin_size != 0));
@@ -95,9 +97,9 @@ void noisify_contacts(const noisify_config& c) {
     }
     t.join();
 
-    output_cool.write_or_append_cmatrix_to_file(cmatrix, chrom_name, 0UL, chrom_size, chrom_size,
-                                                true);
-    fmt::print(stderr, FMT_STRING(" DONE in {}.\n"), absl::FormatDuration(absl::Now() - t0));
+    output_cool.write_or_append_cmatrix_to_file(cmatrix, chrom_name, 0UL, chrom_size, chrom_size);
+    spdlog::info(FMT_STRING("DONE procesing contacts for {} in {}."), chrom_name,
+                 absl::FormatDuration(absl::Now() - t0));
   }
 }
 

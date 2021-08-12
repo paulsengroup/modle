@@ -10,6 +10,7 @@
 #include <absl/strings/strip.h>            // for StripPrefix, StripSuffix
 #include <fmt/format.h>                    // for format, FMT_STRING, print
 #include <fmt/ostream.h>                   // for formatbuf<>::int_type
+#include <spdlog/spdlog.h>
 
 #include <CLI/CLI.hpp>
 #include <boost/filesystem/path.hpp>  // for path, exists, is_directory, operat...
@@ -710,7 +711,7 @@ bool Cli::validate() {  // TODO: Refactor this function
   }
 
   if (!errors.empty()) {
-    fmt::print(stderr, "The following issues have been detected:\n{}\n", errors);
+    spdlog::error(FMT_STRING("FAILURE! The following issues have been detected:\n{}"), errors);
   }
   return errors.empty();
 }
@@ -718,9 +719,10 @@ bool Cli::validate() {  // TODO: Refactor this function
 bool Cli::is_ok() const { return (this->_exit_code != 0) && this->_subcommand != subcommand::help; }
 Cli::subcommand Cli::get_subcommand() const { return this->_subcommand; }
 modle::tools::config Cli::parse_arguments() {
-  this->_exec_name = *this->_argv;
+  this->_cli.name(this->_exec_name);
+  this->_cli.parse(this->_argc, this->_argv);
+
   try {
-    this->_cli.parse(this->_argc, this->_argv);
     if (this->_cli.get_subcommand("evaluate")->parsed()) {
       this->_subcommand = subcommand::eval;
     } else if (this->_cli.get_subcommand("filter-barriers")->parsed()) {
@@ -762,6 +764,6 @@ modle::tools::config Cli::parse_arguments() {
   }
 }
 
-int Cli::get_exit_code() const { return this->_exit_code; }
+int Cli::exit(const CLI::ParseError& e) const { return this->_cli.exit(e); }
 
 }  // namespace modle::tools

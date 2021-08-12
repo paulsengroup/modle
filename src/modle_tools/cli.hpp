@@ -11,18 +11,18 @@ namespace modle::tools {
 class Cli {
  public:
   enum subcommand : uint_fast8_t {
+    help,
     eval,
     filter_barriers,
     find_barrier_clusters,
     noisify,
     stats,
-    help
   };
   Cli(int argc, char** argv);
   [[nodiscard]] bool is_ok() const;
   [[nodiscard]] subcommand get_subcommand() const;
   [[nodiscard]] config parse_arguments();
-  [[nodiscard]] int get_exit_code() const;
+  [[nodiscard]] int exit(const CLI::ParseError& e) const;
 
  private:
   int _argc;

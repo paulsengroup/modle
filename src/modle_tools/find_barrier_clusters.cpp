@@ -1,5 +1,7 @@
+#include <absl/strings/str_format.h>
 #include <fmt/format.h>
 #include <fmt/os.h>
+#include <spdlog/spdlog.h>
 
 #include "modle/bed.hpp"
 #include "modle_tools/config.hpp"
@@ -9,26 +11,26 @@ namespace modle::tools {
 
 void print_warnings(const bed::BED& cluster, const bed::BED& barrier1,
                     const find_barrier_clusters_config& c, const size_t cluster_span,
-                    const size_t cluster_size) {
-  fmt::print(stderr, FMT_STRING("Warning: Skipping a cluster {}:{}-{}. Reason:"), barrier1.chrom,
-             cluster.chrom_start, cluster.chrom_end);
+                    const size_t cluster_size, std::string& warning_buffer) {
+  warning_buffer.clear();
   if (cluster_span < c.min_cluster_span) {
-    fmt::print(stderr, FMT_STRING(" Cluster span is too small ({} < {});"), cluster_span,
-               c.min_cluster_span);
+    absl::StrAppendFormat(&warning_buffer, " Cluster span is too small (%d < %d);", cluster_span,
+                          c.min_cluster_span);
   } else if (cluster_span >= c.max_cluster_span) {
-    fmt::print(stderr, FMT_STRING(" Cluster span is too large ({} >= {});"), cluster_span,
-               c.max_cluster_span);
+    absl::StrAppendFormat(&warning_buffer, " Cluster span is too large (%d >= %d);", cluster_span,
+                          c.max_cluster_span);
   }
 
   if (cluster_size < c.min_cluster_size) {
-    fmt::print(stderr, FMT_STRING(" Cluster does not contain enough barriers ({} < {});"),
-               cluster_size, c.min_cluster_size);
+    absl::StrAppendFormat(&warning_buffer, " Cluster does not contain enough barriers (%d < %d);",
+                          cluster_size, c.min_cluster_size);
   }
   if (cluster_size >= c.max_cluster_size) {
-    fmt::print(stderr, FMT_STRING(" Cluster contains too many barriers ({} >= {});"), cluster_size,
-               c.max_cluster_size);
+    absl::StrAppendFormat(&warning_buffer, " Cluster contains too many barriers (%d >= %d);",
+                          cluster_size, c.max_cluster_size);
   }
-  fmt::print(stderr, "\n");
+  spdlog::warn(FMT_STRING("Warning: Skipping a cluster {}:{}-{}. Reason: {}"), barrier1.chrom,
+               cluster.chrom_start, cluster.chrom_end, warning_buffer);
 }
 
 void write_cluster(bed::BED& cluster, const size_t cluster_id, const size_t cluster_size,
@@ -72,6 +74,7 @@ void find_barrier_clusters_subcmd(const find_barrier_clusters_config& c) {
   const auto min_cluster_span = c.min_cluster_span;
   const auto max_cluster_span =
       c.max_cluster_span == 0 ? std::numeric_limits<bp_t>::max() : c.max_cluster_span;
+  std::string warning_buffer;
 
   bed::BED cluster;  //{bed::BED::BED5};
   size_t cluster_id = 0;
@@ -107,7 +110,7 @@ void find_barrier_clusters_subcmd(const find_barrier_clusters_config& c) {
         // Handle case where --min-cluster-size=1
         write_single_barrier(cluster_, barrier, barrier_id, fp);
       } else if (!c.quiet && cluster_span != 0) {
-        print_warnings(cluster_, barrier, c, cluster_span, cluster_size);
+        print_warnings(cluster_, barrier, c, cluster_span, cluster_size, warning_buffer);
       }
     };
 

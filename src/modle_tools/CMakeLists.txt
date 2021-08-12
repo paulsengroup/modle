@@ -21,7 +21,8 @@ target_link_libraries(
           CONAN_PKG::abseil
           CONAN_PKG::boost
           CONAN_PKG::cli11
-          CONAN_PKG::readerwriterqueue)
+          CONAN_PKG::readerwriterqueue
+          CONAN_PKG::spdlog)
 
 target_include_directories(modle_tools PRIVATE include)
 
