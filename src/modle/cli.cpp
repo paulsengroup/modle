@@ -254,6 +254,36 @@ void add_common_options(CLI::App& subcommand, modle::Config& c) {
       "Do not simulate loop extrusion on chromosomes without any extrusion barrier.")
       ->capture_default_str();
 
+
+  rand.add_flag(
+      "--randomize-contacts",
+      c.randomize_contacts,
+      "Enable randomization when collecting contacts.\n"
+      "Contacts are randomized by drawing offsets from a genextreme distrubution.\n"
+      "The distribution properties can be controlled through the parameters --mu, --sigma and --xi.")
+      ->capture_default_str();
+
+  rand.add_option(
+      "--mu,--genextr-location",
+      c.genextreme_mu,
+      "Location parameter (mu) of the generalized extreme value distribution used to add noise to the contact matrix.")
+      ->check(CLI::NonNegativeNumber)
+      ->capture_default_str();
+
+  rand.add_option(
+      "--sigma,--genextr-scale",
+      c.genextreme_sigma,
+      "Scale parameter (sigma) of the generalized extreme value distribution used to add noise to the contact matrix.")
+      ->check(CLI::NonNegativeNumber)
+      ->capture_default_str();
+
+  rand.add_option(
+      "--xi,--genextr-shape",
+      c.genextreme_xi,
+      "Shape parameter (xi) of the generalized extreme value distribution used to add noise to the contact matrix.")
+      ->check(CLI::NonNegativeNumber)
+      ->capture_default_str();
+
   hidden.add_flag("--skip-output", c.skip_output, "Don't write output files. Useful for profiling");
 
   gen.get_option("--target-contact-density")->excludes(gen.get_option("--number-of-iterations"));
@@ -300,35 +330,6 @@ void Cli::make_simulation_subcommand() {
       "simulation instances for that chromosome.")
       ->check(CLI::PositiveNumber)
       ->transform(utils::str_float_to_str_int)
-      ->capture_default_str();
-
-  rand.add_flag(
-      "--randomize-contacts",
-      c.randomize_contacts,
-      "Enable randomization when collecting contacts.\n"
-      "Contacts are randomized by drawing offsets from a genextreme distrubution.\n"
-      "The distribution properties can be controlled through the parameters --mu, --sigma and --xi.")
-      ->capture_default_str();
-
-  rand.add_option(
-      "--mu,--genextr-location",
-      c.genextreme_mu,
-      "Location parameter (mu) of the generalized extreme value distribution used to add noise to the contact matrix.")
-      ->check(CLI::NonNegativeNumber)
-      ->capture_default_str();
-
-  rand.add_option(
-      "--sigma,--genextr-scale",
-      c.genextreme_sigma,
-      "Scale parameter (sigma) of the generalized extreme value distribution used to add noise to the contact matrix.")
-      ->check(CLI::NonNegativeNumber)
-      ->capture_default_str();
-
-  rand.add_option(
-      "--xi,--genextr-shape",
-      c.genextreme_xi,
-      "Shape parameter (xi) of the generalized extreme value distribution used to add noise to the contact matrix.")
-      ->check(CLI::NonNegativeNumber)
       ->capture_default_str();
   // clang-format on
 
