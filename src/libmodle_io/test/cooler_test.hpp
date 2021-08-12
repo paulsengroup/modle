@@ -2,6 +2,8 @@
 
 #include <absl/types/span.h>  // for Span
 #include <fmt/format.h>       // for print
+#include <spdlog/sinks/stdout_color_sinks.h>
+#include <spdlog/spdlog.h>
 
 #include <boost/filesystem/path.hpp>  // for operator/, path, create_directories, is_empty, remove, rem...
 #include <catch2/catch.hpp>  // for operator""_catch_sr, AssertionHandler, SourceLineInfo, Str...
@@ -25,7 +27,8 @@ inline const boost::filesystem::path data_dir{"test/data/unit_tests"};  // NOLIN
 
 TEST_CASE("cooler ctor", "[io][cooler][short]") {
   const auto test_file = data_dir / "Dixon2012-H1hESC-HindIII-allreps-filtered.1000kb.cool";
-
+  spdlog::set_default_logger(std::make_shared<spdlog::logger>(
+      "main_logger", std::make_shared<spdlog::sinks::stdout_color_sink_mt>()));
   {
     auto c = Cooler(test_file, Cooler::READ_ONLY);  // NOLINT
     CHECK(c.is_read_only());
@@ -40,6 +43,8 @@ TEST_CASE("cooler ctor", "[io][cooler][short]") {
 TEST_CASE("CMatrix to cooler", "[io][cooler][short]") {
   const auto test_file = testdir() / "cmatrix_to_cooler.cool";
   boost::filesystem::create_directories(testdir());
+  spdlog::set_default_logger(std::make_shared<spdlog::logger>(
+      "main_logger", std::make_shared<spdlog::sinks::stdout_color_sink_mt>()));
 
   constexpr std::string_view chrom = "chr0";
   constexpr uint64_t start = 0;
@@ -58,6 +63,8 @@ TEST_CASE("CMatrix to cooler", "[io][cooler][short]") {
 
 TEST_CASE("Cooler to CMatrix", "[io][cooler][short]") {
   const auto test_file = data_dir / "Dixon2012-H1hESC-HindIII-allreps-filtered.1000kb.cool";
+  spdlog::set_default_logger(std::make_shared<spdlog::logger>(
+      "main_logger", std::make_shared<spdlog::sinks::stdout_color_sink_mt>()));
 
   constexpr std::string_view chrom = "chr7";
   constexpr uint64_t end = 159'138'663;
@@ -75,6 +82,8 @@ TEST_CASE("Cooler to CMatrix", "[io][cooler][short]") {
 TEST_CASE("Cooler to CMatrix and CMatrix to Cooler", "[io][cooler][short]") {
   const auto test_file_in = data_dir / "Dixon2012-H1hESC-HindIII-allreps-filtered.1000kb.cool";
   const auto test_file_out = testdir() / "cmatrix_to_cooler.cool";
+  spdlog::set_default_logger(std::make_shared<spdlog::logger>(
+      "main_logger", std::make_shared<spdlog::sinks::stdout_color_sink_mt>()));
 
   auto c1 = Cooler(test_file_in, Cooler::READ_ONLY);
 
