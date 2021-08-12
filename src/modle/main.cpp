@@ -1,6 +1,9 @@
 #include <absl/time/clock.h>  // for Now
 #include <absl/time/time.h>   // for FormatDuration, operator-, Time
 #include <fmt/format.h>       // for print
+#include <spdlog/sinks/basic_file_sink.h>
+#include <spdlog/sinks/stdout_color_sinks.h>
+#include <spdlog/spdlog.h>
 
 #include <CLI/Error.hpp>  // for ParseError
 #include <cstdio>         // for stderr
@@ -10,15 +13,12 @@
 #include <new>            // for bad_alloc
 #include <stdexcept>      // for runtime_error
 #include <string>         // for basic_string
+
 #ifndef BOOST_STACKTRACE_USE_NOOP
 #include <boost/exception/get_error_info.hpp>  // for get_error_info
 #include <boost/stacktrace/stacktrace.hpp>     // for operator<<
 #include <iostream>                            // for operator<<, basic_ostream, cerr, ostream
 #endif
-
-#include <spdlog/sinks/basic_file_sink.h>
-#include <spdlog/sinks/stdout_color_sinks.h>
-#include <spdlog/spdlog.h>
 
 #include "./cli.hpp"                // for Cli
 #include "modle/common/config.hpp"  // for Config
@@ -31,8 +31,8 @@ int main(int argc, char** argv) noexcept {
   {
     auto stderr_sink = spdlog::default_logger()->sinks().emplace_back(
         std::make_shared<spdlog::sinks::stdout_color_sink_mt>());
-    //                        [Thu Aug 17:49:34.581] [info]: my log msg
-    stderr_sink->set_pattern("[%a %b %T.%e] %^[%l]%$: %v");
+    //                        [2021-08-12 17:49:34.581] [info]: my log msg
+    stderr_sink->set_pattern("[%Y-%m-%d %T.%e] %^[%l]%$: %v");
   }
 
   try {
@@ -58,8 +58,8 @@ int main(int argc, char** argv) noexcept {
       auto file_sink = spdlog::default_logger()->sinks().emplace_back(
           std::make_shared<spdlog::sinks::basic_file_sink_mt>(config.path_to_log_file.string(),
                                                               true));
-      //                      [Thu Aug 17:49:34.581] [139797797574208] [info]: my log msg
-      file_sink->set_pattern("[%a %b %T.%e] [%t] %^[%l]%$: %v");
+      //                      [2021-08-12 17:49:34.581] [139797797574208] [info]: my log msg
+      file_sink->set_pattern("[%Y-%m-%d %T.%e] [%t] %^[%l]%$: %v");
     }
     spdlog::info(FMT_STRING("Command: {}"),
                  absl::StrJoin(config.argv, config.argv + config.argc, " "));

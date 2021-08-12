@@ -77,6 +77,8 @@ class MoDLE(ConanFile):
         self.options["boost"].without_type_erasure = True
         self.options["boost"].without_wave = True
 
+        self.options["spdlog"].header_only = True
+
         self.options["bizp2"].enable_executable = False
 
         self.options["libarchive"].with_zlib = True

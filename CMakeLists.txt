@@ -61,15 +61,21 @@ if(VARIANT_AVAILABLE)
   target_compile_definitions(project_options INTERFACE MODLE_VARIANT_AVAILABLE=1)
 endif()
 
+# Tweak spdlog
+target_compile_definitions(project_options INTERFACE SPDLOG_CLOCK_COARSE=1)
+target_compile_definitions(project_options INTERFACE SPDLOG_DISABLE_DEFAULT_LOGGER=1)
+target_compile_definitions(project_options INTERFACE SPDLOG_NO_ATOMIC_LEVELS=1)
+target_compile_definitions(project_options INTERFACE SPDLOG_PREVENT_CHILD_FD=1)
+
 # Reduce level of optimization to improve the code profiling experience
 if(OPTIMIZE_FOR_PROFILING)
   if(NOT
-          "${uppercase_CMAKE_BUILD_TYPE}"
-          STREQUAL
-          "RelWithDebInfo")
+     "${uppercase_CMAKE_BUILD_TYPE}"
+     STREQUAL
+     "RelWithDebInfo")
     message(
-            WARNING
-            "Switching build type from ${CMAKE_BUILD_TYPE} to RelWithDebInfo because OPTIMIZE_FOR_PROFILING was set to ON by the user"
+      WARNING
+        "Switching build type from ${CMAKE_BUILD_TYPE} to RelWithDebInfo because OPTIMIZE_FOR_PROFILING was set to ON by the user"
     )
     set(CMAKE_BUILD_TYPE "RelWithDebInfo")
   endif()
@@ -85,28 +91,28 @@ if(ENABLE_ASSERTIONS)
   endif()
   # On non-Debug builds cmake automatically defines NDEBUG, so we explicitly undefine it:
   if(NOT
-          uppercase_CMAKE_BUILD_TYPE
-          STREQUAL
-          "DEBUG")
+     uppercase_CMAKE_BUILD_TYPE
+     STREQUAL
+     "DEBUG")
     # NOTE: use `add_compile_options` rather than `add_definitions` since `add_definitions` does not support generator
     # expressions.
     target_compile_options(project_options INTERFACE $<$<OR:$<COMPILE_LANGUAGE:C>,$<COMPILE_LANGUAGE:CXX>>:-UNDEBUG>)
 
     # Also remove /D NDEBUG to avoid MSVC warnings about conflicting defines.
     foreach(
-            flags_var_to_scrub
-            CMAKE_CXX_FLAGS_RELEASE
-            CMAKE_CXX_FLAGS_RELWITHDEBINFO
-            CMAKE_CXX_FLAGS_MINSIZEREL
-            CMAKE_C_FLAGS_RELEASE
-            CMAKE_C_FLAGS_RELWITHDEBINFO
-            CMAKE_C_FLAGS_MINSIZEREL)
+      flags_var_to_scrub
+      CMAKE_CXX_FLAGS_RELEASE
+      CMAKE_CXX_FLAGS_RELWITHDEBINFO
+      CMAKE_CXX_FLAGS_MINSIZEREL
+      CMAKE_C_FLAGS_RELEASE
+      CMAKE_C_FLAGS_RELWITHDEBINFO
+      CMAKE_C_FLAGS_MINSIZEREL)
       string(
-              REGEX
-              REPLACE "(^| )[/-]D *NDEBUG($| )"
-              " "
-              "${flags_var_to_scrub}"
-              "${${flags_var_to_scrub}}")
+        REGEX
+        REPLACE "(^| )[/-]D *NDEBUG($| )"
+                " "
+                "${flags_var_to_scrub}"
+                "${${flags_var_to_scrub}}")
     endforeach()
   endif()
 endif()

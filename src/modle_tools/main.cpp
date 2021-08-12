@@ -20,8 +20,8 @@ int main(int argc, char** argv) {
   {
     auto stderr_sink = spdlog::default_logger()->sinks().emplace_back(
         std::make_shared<spdlog::sinks::stdout_color_sink_mt>());
-    //                        [Thu Aug 17:49:34.581] [info]: my log msg
-    stderr_sink->set_pattern("[%a %b %T.%e] %^[%l]%$: %v");
+    //                        [2021-08-12 17:49:34.581] [info]: my log msg
+    stderr_sink->set_pattern("[%Y-%m-%d %T.%e] %^[%l]%$: %v");
   }
   try {
     cli = std::make_unique<modle::tools::Cli>(argc, argv);
