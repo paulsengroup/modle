@@ -49,7 +49,7 @@ void Simulation::bind_lefs(const bp_t start_pos, const bp_t end_pos, const absl:
     }
   }
 
-  if constexpr (utils::ndebug_defined()) {
+  if constexpr (utils::ndebug_not_defined()) {
     for (auto i = 0UL; i < lefs.size(); ++i) {
       if (mask.empty() || mask[i]) {
         assert(lefs[i].rev_unit >= start_pos && lefs[i].rev_unit < end_pos);  // NOLINT

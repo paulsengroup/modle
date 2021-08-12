@@ -222,7 +222,7 @@ void Cooler::write_or_append_cmatrix_to_file(const ContactMatrix<I1> *cmatrix,
           // are not reading past the array end
           for (auto j = i; j < i + cmatrix->nrows() && j < cmatrix->ncols(); ++j) {
             if (const auto m = cmatrix->get(i, j); m != 0) {  // Only write non-zero pixels
-              if constexpr (utils::ndebug_defined()) {
+              if constexpr (utils::ndebug_not_defined()) {
                 // Make sure we are always reading from the upper-triangle of the underlying square
                 // contact matrix
                 if (pxl_offset + i > pxl_offset + j) {

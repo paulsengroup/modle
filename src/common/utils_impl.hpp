@@ -248,6 +248,8 @@ constexpr bool ndebug_defined() noexcept {
 #endif
 }
 
+constexpr bool ndebug_not_defined() noexcept { return !ndebug_defined(); }
+
 void fclose(FILE *fp) noexcept(false) {
   if (!fp || fp == stdout || fp == stderr) {
     return;

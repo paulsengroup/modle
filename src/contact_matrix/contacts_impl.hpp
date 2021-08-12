@@ -103,7 +103,7 @@ ContactMatrix<I> &ContactMatrix<I>::operator=(const ContactMatrix<I> &other) {
 template <typename I>
 I ContactMatrix<I>::get(size_t row, size_t col) const noexcept(utils::ndebug_defined()) {
   const auto [i, j] = transpose_coords(row, col);
-  if constexpr (utils::ndebug_defined()) {
+  if constexpr (utils::ndebug_not_defined()) {
     if (i >= this->ncols() || j >= this->ncols()) {
       utils::throw_with_trace(std::logic_error(fmt::format(
           FMT_STRING("ContactMatrix<I>::get(row={}, col={}) tried to access an element outside of "
@@ -130,7 +130,7 @@ I ContactMatrix<I>::get(size_t row, size_t col, size_t block_size) const
     return this->get(row, col);
   }
 
-  if constexpr (utils::ndebug_defined()) {
+  if constexpr (utils::ndebug_not_defined()) {
     const auto [i, j] = transpose_coords(row, col);
     if (i >= this->ncols() || j >= this->ncols()) {
       utils::throw_with_trace(std::logic_error(fmt::format(
@@ -162,7 +162,7 @@ template <typename I2>
 void ContactMatrix<I>::set(size_t row, size_t col, I2 n) noexcept(utils::ndebug_defined()) {
   static_assert(std::is_integral<I2>::value,
                 "ContactMatrix<I>::set expects the parameter n to be an integer type.");
-  if constexpr (utils::ndebug_defined()) {
+  if constexpr (utils::ndebug_not_defined()) {
     DISABLE_WARNING_PUSH
     DISABLE_WARNING_SIGN_COMPARE
     DISABLE_WARNING_BOOL_COMPARE
@@ -194,7 +194,7 @@ void ContactMatrix<I>::set(size_t row, size_t col, I2 n) noexcept(utils::ndebug_
     DISABLE_WARNING_CONVERSION
     DISABLE_WARNING_SIGN_CONVERSION
     DISABLE_WARNING_SIGN_COMPARE
-    if constexpr (utils::ndebug_defined()) {
+    if constexpr (utils::ndebug_not_defined()) {
       assert(this->_tot_contacts >= m);
       if constexpr (std::is_signed_v<I2>) {
         if (n < 0) {
@@ -241,7 +241,7 @@ void ContactMatrix<I>::add(size_t row, size_t col, I2 n) noexcept(utils::ndebug_
     DISABLE_WARNING_PUSH
     DISABLE_WARNING_SIGN_COMPARE
     DISABLE_WARNING_SIGN_CONVERSION
-    if constexpr (utils::ndebug_defined()) {
+    if constexpr (utils::ndebug_not_defined()) {
       this->check_for_overflow_on_add(i, j, n);
     }
 
@@ -274,7 +274,7 @@ void ContactMatrix<I>::subtract(size_t row, size_t col, I2 n) noexcept(utils::nd
     }
 
     std::scoped_lock l(this->_locks[j]);
-    if constexpr (utils::ndebug_defined()) {
+    if constexpr (utils::ndebug_not_defined()) {
       this->check_overflow_on_subtract(i, j, n);
     }
     assert(n >= 0);  // NOLINT
@@ -323,7 +323,7 @@ void ContactMatrix<I>::add_small_buff(
         continue;
       }
       std::scoped_lock l(this->_locks[col]);
-      if constexpr (utils::ndebug_defined()) {
+      if constexpr (utils::ndebug_not_defined()) {
         this->check_for_overflow_on_add(row, col, n);
       }
       this->at(row, col) += n;
@@ -366,7 +366,7 @@ void ContactMatrix<I>::add_large_buff(
           ++range.first;
           continue;
         }
-        if constexpr (utils::ndebug_defined()) {
+        if constexpr (utils::ndebug_not_defined()) {
           this->check_for_overflow_on_add(row, col, n);
         }
         this->at(row, col) += n;
@@ -667,11 +667,12 @@ void ContactMatrix<I>::deplete_contacts(double depletion_multiplier) {
 
 template <typename I>
 I &ContactMatrix<I>::at(size_t i, size_t j) noexcept(utils::ndebug_defined()) {
-  if constexpr (utils::ndebug_defined()) {
+  if constexpr (utils::ndebug_not_defined()) {
     if ((j * this->_nrows) + i > this->_contacts.size()) {
       utils::throw_with_trace(std::runtime_error(fmt::format(
-          "ContactMatrix::at tried to access element m[{}][{}] of a matrix of shape [{}][{}]! "
-          "({} >= {})",
+          FMT_STRING(
+              "ContactMatrix::at tried to access element m[{}][{}] of a matrix of shape [{}][{}]! "
+              "({} >= {})"),
           i, j, this->nrows(), this->ncols(), (j * this->_nrows) + i, this->_contacts.size())));
     }
   }
@@ -680,11 +681,12 @@ I &ContactMatrix<I>::at(size_t i, size_t j) noexcept(utils::ndebug_defined()) {
 
 template <typename I>
 const I &ContactMatrix<I>::at(size_t i, size_t j) const noexcept(utils::ndebug_defined()) {
-  if constexpr (utils::ndebug_defined()) {
+  if constexpr (utils::ndebug_not_defined()) {
     if ((j * this->_nrows) + i > this->_contacts.size()) {
       utils::throw_with_trace(std::runtime_error(fmt::format(
-          "ContactMatrix::at tried to access element m[{}][{}] of a matrix of shape [{}][{}]! "
-          "({} >= {})",
+          FMT_STRING(
+              "ContactMatrix::at tried to access element m[{}][{}] of a matrix of shape [{}][{}]! "
+              "({} >= {})"),
           i, j, this->nrows(), this->ncols(), (j * this->_nrows) + i, this->_contacts.size())));
     }
   }
