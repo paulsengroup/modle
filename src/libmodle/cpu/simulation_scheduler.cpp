@@ -45,19 +45,9 @@ namespace modle {
 
 void Simulation::run_simulation() {
   if (!this->skip_output) {  // Write simulation params to file
+    assert(boost::filesystem::exists(this->path_to_output_prefix.parent_path()));
     if (this->force) {
       boost::filesystem::remove(this->path_to_output_file_cool);
-    }
-    boost::filesystem::create_directories(this->path_to_output_file_cool.parent_path());
-    std::ofstream log_file(this->path_to_log_file.string());
-    if (log_file) {
-      fmt::print(log_file, FMT_STRING("{}\n{}\n"), Config::to_string(),
-                 absl::StrJoin(this->argv, this->argv + this->argc, " "));
-    } else {
-      fmt::print(
-          stderr,
-          FMT_STRING("WARNING: Unable to open log file {} for writing. Continuing anyway..."),
-          this->path_to_log_file);
     }
   }
 
@@ -291,6 +281,12 @@ bed::BED_tree<> Simulation::generate_deletions() const {
 }
 
 void Simulation::run_perturbate() {
+  if (!this->skip_output) {  // Write simulation params to file
+    assert(boost::filesystem::exists(this->path_to_output_prefix.parent_path()));
+    if (this->force) {
+      boost::filesystem::remove(this->path_to_output_file_bedpe);
+    }
+  }
   // TODO Do proper error handling
   // For now we support only the case where exactly two files are specified
   assert(this->path_to_feature_bed_files.size() == 2);  // NOLINT

@@ -62,6 +62,7 @@ struct Config {  // NOLINT(altera-struct-pack-align)
   double soft_stall_multiplier{0.6};           // NOLINT(readability-magic-numbers, cppcoreguidelines-avoid-magic-numbers)
   bp_t deletion_size{10'000};                  // NOLINT(readability-magic-numbers, cppcoreguidelines-avoid-magic-numbers)
   bool skip_burnin{false};
+  bool compute_reference_matrix{false};
   size_t block_size{9};                        // NOLINT(readability-magic-numbers, cppcoreguidelines-avoid-magic-numbers)
   uint64_t seed{0};
 

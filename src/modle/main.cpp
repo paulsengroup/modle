@@ -17,10 +17,24 @@
 #include <iostream>                            // for operator<<, basic_ostream, cerr, ostream
 #endif
 
+#include <spdlog/sinks/basic_file_sink.h>
+#include <spdlog/sinks/stdout_color_sinks.h>
+#include <spdlog/spdlog.h>
+
 #include "./cli.hpp"                // for Cli
 #include "modle/common/config.hpp"  // for Config
 #include "modle/common/utils.hpp"   // for traced
 #include "modle/simulation.hpp"     // for Simulation
+
+/*
+[[nodiscard]] std::pair<spdlog::logger, spdlog::logger> setup_loggers(
+    const boost::filesystem::path& path_to_log_file, const bool quiet) {
+  auto file_logger = spdlog::basic_logger_mt("file_logger", path_to_log_file.string(), true);
+  auto stderr_logger = spdlog::stderr_color_mt("stderr_logger");
+
+  return std::make_pair(stderr_logger, file_logger);
+}
+ */
 
 int main(int argc, char** argv) noexcept {
   std::unique_ptr<modle::Cli> cli{nullptr};
@@ -37,13 +51,29 @@ int main(int argc, char** argv) noexcept {
     config.print();
 
     const auto t0 = absl::Now();
-    boost::filesystem::create_directories(config.path_to_output_prefix.parent_path());
+    if (!config.skip_output) {
+      boost::filesystem::create_directories(config.path_to_output_prefix.parent_path());
+      std::ofstream log_file(config.path_to_log_file.string());
+      if (log_file) {
+        fmt::print(log_file, FMT_STRING("{}\n{}\n"),
+                   absl::StrJoin(config.argv, config.argv + config.argc, " "), config.to_string());
+      } else {
+        fmt::print(
+            stderr,
+            FMT_STRING("WARNING: Unable to open log file {} for writing. Continuing anyway..."),
+            config.path_to_log_file);
+      }
+    }
+    modle::Simulation sim(config);
     switch (cli->get_subcommand()) {
       case modle::Cli::subcommand::simulate:
-        modle::Simulation{config}.run_simulation();
+        sim.run_simulation();
         break;
       case modle::Cli::subcommand::pertubate:
-        modle::Simulation{config}.run_perturbate();
+        if (config.compute_reference_matrix) {
+          sim.run_simulation();
+        }
+        sim.run_perturbate();
         break;
       default:
         throw std::runtime_error(
@@ -78,9 +108,8 @@ int main(int argc, char** argv) noexcept {
         }
       } catch (const std::exception& e) {
         fmt::print(stderr,
-                   "FAILURE! An error occurred during simulation: Caught an exception that was not "
-                   "handled properly! If you see this message, please file an issue on GitHub. "
-                   "err.what(): {}.\n",
+                   "FAILURE! An error occurred during simulation: Caught an unhandled exception! "
+                   "If you see this message, please file an issue on GitHub.\nerr.what(): {}\n",
                    e.what());
         return 1;
       }
