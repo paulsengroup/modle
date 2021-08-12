@@ -447,6 +447,8 @@ size_t Simulation::register_contacts_w_randomization(bp_t start_pos, bp_t end_po
                                                      random::PRNG_t& rand_eng) const {
   auto noise_gen = genextreme_value_distribution<double>{
       this->genextreme_mu, this->genextreme_sigma, this->genextreme_xi};
+  const auto start_pos_dbl = static_cast<double>(start_pos);
+  const auto end_pos_dbl = static_cast<double>(end_pos);
 
   size_t new_contacts = 0;
   for (const auto i : selected_lef_idx) {
@@ -455,16 +457,18 @@ size_t Simulation::register_contacts_w_randomization(bp_t start_pos, bp_t end_po
     if (BOOST_LIKELY(lef.is_bound() && lef.rev_unit.pos() > start_pos &&
                      lef.rev_unit.pos() < end_pos && lef.fwd_unit.pos() > start_pos &&
                      lef.fwd_unit.pos() < end_pos)) {
-      const auto p1 = static_cast<double>(lef.rev_unit.pos() - start_pos) - noise_gen(rand_eng);
-      const auto p2 = static_cast<double>(lef.fwd_unit.pos() - start_pos) + noise_gen(rand_eng);
+      // We are performing most operations using double to deal with the possibility that the noise
+      // generated to compute p1 is larger than the pos of the rev unit
+      const auto p1 = static_cast<double>(lef.rev_unit.pos()) - noise_gen(rand_eng);
+      const auto p2 = static_cast<double>(lef.fwd_unit.pos()) + noise_gen(rand_eng);
 
-      if (p1 < 0 || p2 < 0 || p1 > static_cast<double>(end_pos) ||
-          p2 > static_cast<double>(end_pos)) {
+      if (BOOST_UNLIKELY(p1 < start_pos_dbl || p2 < start_pos_dbl || p1 >= end_pos_dbl ||
+                         p2 >= end_pos_dbl)) {
         continue;
       }
 
-      const auto pos1 = static_cast<bp_t>(std::round(p1));
-      const auto pos2 = static_cast<bp_t>(std::round(p2));
+      const auto pos1 = static_cast<bp_t>(p1) - start_pos;
+      const auto pos2 = static_cast<bp_t>(p2) - start_pos;
       contacts.increment(pos1 / this->bin_size, pos2 / this->bin_size);
       ++new_contacts;
     }
