@@ -191,13 +191,6 @@ void add_common_options(CLI::App& subcommand, modle::Config& c) {
       "Skip the burn-in phase and start counting contacts from the first extrusion round.")
       ->capture_default_str();
 
-  gen.add_flag(
-      "--generate-reference-matrix",
-      c.compute_reference_matrix,
-      "Compute and write to disk the reference contact matrix."
-      "This is equivalent to running modle simulate followed by modle perturbate without changing parameters.")
-      ->capture_default_str();
-
   gen.add_option(
       "--seed",
       c.seed,
@@ -377,6 +370,13 @@ void Cli::make_perturbate_subcommand() {
       "Pairs of features with a non-zero number of contacts will be written to a BEDPE file.\n"
       "When a single BED file is specified, the output will only contain within-feature contacts (Not yet implemented).")
       ->check(CLI::ExistingFile);
+
+  gen.add_flag(
+      "--generate-reference-matrix",
+      c.compute_reference_matrix,
+      "Compute and write to disk the reference contact matrix."
+      "This is equivalent to running modle simulate followed by modle perturbate without changing parameters.")
+      ->capture_default_str();
 
   gen.add_option(
       "--block-size",
