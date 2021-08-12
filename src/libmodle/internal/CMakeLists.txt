@@ -14,7 +14,11 @@ target_link_libraries(
             project_warnings
             Modle::common
             Modle::cmatrix
-  INTERFACE Modle::libmodle_io CONAN_PKG::abseil CONAN_PKG::xxhash)
+            Modle::libmodle_io
+            CONAN_PKG::abseil
+            CONAN_PKG::fmt
+            CONAN_PKG::spdlog
+            CONAN_PKG::xxhash)
 
 target_include_directories(libmodle_internal INTERFACE include/)
 

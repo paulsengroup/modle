@@ -40,6 +40,7 @@ struct Config {  // NOLINT(altera-struct-pack-align)
   boost::filesystem::path path_to_log_file;
   boost::filesystem::path path_to_extr_barriers;
   bool force{false};
+  bool quiet{false};
   bool write_contacts_for_ko_chroms{false};
   std::vector<boost::filesystem::path> path_to_feature_bed_files{};
   boost::filesystem::path path_to_deletion_bed{};

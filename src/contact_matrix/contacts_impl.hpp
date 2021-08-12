@@ -461,9 +461,17 @@ size_t ContactMatrix<I>::npixels_after_masking() const {
 }
 
 template <typename I>
-constexpr size_t ContactMatrix<I>::get_n_of_missed_updates() const
-    noexcept(utils::ndebug_defined()) {
+constexpr size_t ContactMatrix<I>::get_n_of_missed_updates() const noexcept {
   return this->_updates_missed;
+}
+
+template <typename I>
+constexpr double ContactMatrix<I>::get_fraction_of_missed_updates() const noexcept {
+  if (this->empty()) {
+    return 0.0;
+  }
+  return static_cast<double>(this->get_n_of_missed_updates()) /
+         static_cast<double>(this->get_tot_contacts());
 }
 
 template <typename I>
@@ -607,8 +615,10 @@ void ContactMatrix<I>::resize(I2 length, I2 diagonal_width, I2 bin_size) {
 
 template <typename I>
 bool ContactMatrix<I>::empty() const {
-  assert(std::all_of(this->_contacts.begin(), this->_contacts.end(),
-                     [](const auto n) { return n == 0; }));
+  if (this->_tot_contacts == 0) {
+    assert(std::all_of(this->_contacts.begin(), this->_contacts.end(),
+                       [](const auto n) { return n == 0; }));  // NOLINT
+  }
   return this->_tot_contacts == 0;
 }
 

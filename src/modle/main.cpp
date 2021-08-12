@@ -1,6 +1,6 @@
 #include <absl/time/clock.h>  // for Now
 #include <absl/time/time.h>   // for FormatDuration, operator-, Time
-#include <fmt/format.h>       // for print, system_error, FMT_STRING
+#include <fmt/format.h>       // for print
 
 #include <CLI/Error.hpp>  // for ParseError
 #include <cstdio>         // for stderr
@@ -10,7 +10,6 @@
 #include <new>            // for bad_alloc
 #include <stdexcept>      // for runtime_error
 #include <string>         // for basic_string
-
 #ifndef BOOST_STACKTRACE_USE_NOOP
 #include <boost/exception/get_error_info.hpp>  // for get_error_info
 #include <boost/stacktrace/stacktrace.hpp>     // for operator<<
@@ -26,44 +25,45 @@
 #include "modle/common/utils.hpp"   // for traced
 #include "modle/simulation.hpp"     // for Simulation
 
-/*
-[[nodiscard]] std::pair<spdlog::logger, spdlog::logger> setup_loggers(
-    const boost::filesystem::path& path_to_log_file, const bool quiet) {
-  auto file_logger = spdlog::basic_logger_mt("file_logger", path_to_log_file.string(), true);
-  auto stderr_logger = spdlog::stderr_color_mt("stderr_logger");
-
-  return std::make_pair(stderr_logger, file_logger);
-}
- */
-
 int main(int argc, char** argv) noexcept {
   std::unique_ptr<modle::Cli> cli{nullptr};
+  spdlog::set_default_logger(std::make_shared<spdlog::logger>("main_logger"));
+  {
+    auto stderr_sink = spdlog::default_logger()->sinks().emplace_back(
+        std::make_shared<spdlog::sinks::stdout_color_sink_mt>());
+    //                        [Thu Aug 17:49:34.581] [info]: my log msg
+    stderr_sink->set_pattern("[%a %b %T.%e] %^[%l]%$: %v");
+  }
 
   try {
     cli = std::make_unique<modle::Cli>(argc, argv);
     auto config = cli->parse_arguments();
     if (const auto collisions = modle::Cli::process_paths_and_check_for_collisions(config);
         !collisions.empty()) {
-      fmt::print(stderr, FMT_STRING("The following path collision(s) have been detected:\n{}"),
-                 collisions);
+      spdlog::error(FMT_STRING("FAILURE! The following path collision(s) have been detected:\n{}"),
+                    collisions);
       return 1;
     }
-    config.print();
+    if (config.quiet) {
+      assert(spdlog::default_logger()->sinks().size() == 1);  // NOLINT
+      spdlog::default_logger()->sinks().front()->set_level(spdlog::level::err);
+    }
 
     const auto t0 = absl::Now();
     if (!config.skip_output) {
+      assert(!config.path_to_log_file.empty());  // NOLINT
       boost::filesystem::create_directories(config.path_to_output_prefix.parent_path());
-      std::ofstream log_file(config.path_to_log_file.string());
-      if (log_file) {
-        fmt::print(log_file, FMT_STRING("{}\n{}\n"),
-                   absl::StrJoin(config.argv, config.argv + config.argc, " "), config.to_string());
-      } else {
-        fmt::print(
-            stderr,
-            FMT_STRING("WARNING: Unable to open log file {} for writing. Continuing anyway..."),
-            config.path_to_log_file);
-      }
+      spdlog::logger("tmp_logger", spdlog::default_logger()->sinks().front())
+          .info(FMT_STRING("Complete log will be written to file {}"), config.path_to_log_file);
+      auto file_sink = spdlog::default_logger()->sinks().emplace_back(
+          std::make_shared<spdlog::sinks::basic_file_sink_mt>(config.path_to_log_file.string(),
+                                                              true));
+      //                      [Thu Aug 17:49:34.581] [139797797574208] [info]: my log msg
+      file_sink->set_pattern("[%a %b %T.%e] [%t] %^[%l]%$: %v");
     }
+    spdlog::info(FMT_STRING("Command: {}"),
+                 absl::StrJoin(config.argv, config.argv + config.argc, " "));
+    spdlog::info(config.to_string());
     modle::Simulation sim(config);
     switch (cli->get_subcommand()) {
       case modle::Cli::subcommand::simulate:
@@ -80,42 +80,36 @@ int main(int argc, char** argv) noexcept {
             "Default branch in switch statement in modle::main() should be unreachable! If you see "
             "this message, please file an issue on GitHub");
     }
-    fmt::print(stderr, FMT_STRING("Simulation terminated without errors in {}!\n"),
-               absl::FormatDuration(absl::Now() - t0));
-    fmt::print(stderr, FMT_STRING("\nBye.\n"));
+    spdlog::info(FMT_STRING("Simulation terminated without errors in {}!\n\nBye."),
+                 absl::FormatDuration(absl::Now() - t0));
   } catch (const CLI::ParseError& e) {
     return cli->exit(e);  //  This takes care of formatting and printing error messages (if any)
   } catch (const std::bad_alloc& err) {
-    fmt::print(stderr, "FAILURE! Unable to allocate enough memory.\n");
+    spdlog::error(FMT_STRING("FAILURE! Unable to allocate enough memory: {}"), err.what());
+    return 1;
+  } catch (const spdlog::spdlog_ex& e) {
+    fmt::print(
+        stderr,
+        FMT_STRING(
+            "FAILURE! An error occurred while setting up the main application logger: {}.\n"),
+        e.what());
     return 1;
   } catch (const std::exception& e) {
-    fmt::print(stderr, "FAILURE! An error occurred during simulation: {}.\n", e.what());
+    spdlog::error("FAILURE! An error occurred during simulation: {}.", e.what());
 #ifndef BOOST_STACKTRACE_USE_NOOP
     const auto* st = boost::get_error_info<modle::utils::traced>(e);
     if (st) {
-      std::cerr << *st << '\n';
+      spdlog::error(*st);
     } else {
-      fmt::print(stderr, "Stack trace not available!\n");
+      spdlog::error("Stack trace not available!");
     }
 #endif
     return 1;
   } catch (...) {
-    const auto err = std::current_exception();
-    auto handle_except = [&]() {
-      try {
-        if (err) {
-          std::rethrow_exception(err);
-        }
-      } catch (const std::exception& e) {
-        fmt::print(stderr,
-                   "FAILURE! An error occurred during simulation: Caught an unhandled exception! "
-                   "If you see this message, please file an issue on GitHub.\nerr.what(): {}\n",
-                   e.what());
-        return 1;
-      }
-      return 0;
-    };
-    return handle_except();
+    spdlog::error(
+        "FAILURE! An error occurred during simulation: Caught an unhandled exception! "
+        "If you see this message, please file an issue on GitHub.");
+    return 1;
   }
   return 0;
 }

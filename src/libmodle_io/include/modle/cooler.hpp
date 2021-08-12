@@ -115,17 +115,17 @@ class Cooler {
 
   template <typename I>
   inline void write_or_append_empty_cmatrix_to_file(std::string_view chrom_name, I chrom_start,
-                                                    I chrom_end, I chrom_length, bool quiet);
+                                                    I chrom_end, I chrom_length);
 
   template <typename I1, typename I2>
   inline void write_or_append_cmatrix_to_file(const ContactMatrix<I1> &cmatrix,
                                               std::string_view chrom_name, I2 chrom_start,
-                                              I2 chrom_end, I2 chrom_length, bool quiet = false);
+                                              I2 chrom_end, I2 chrom_length);
 
   template <typename I1, typename I2>
   inline void write_or_append_cmatrix_to_file(const ContactMatrix<I1> *cmatrix,
                                               std::string_view chrom_name, I2 chrom_start,
-                                              I2 chrom_end, I2 chrom_length, bool quiet = false);
+                                              I2 chrom_end, I2 chrom_length);
   // Read from file
   [[nodiscard]] ContactMatrix<uint32_t> cooler_to_cmatrix(
       std::string_view chrom_name, size_t nrows,

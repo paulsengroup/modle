@@ -30,6 +30,7 @@
 #include <fmt/format.h>                           // for format, FMT_STRING, print
 #include <fmt/ostream.h>                          // for formatbuf<>::int_type
 #include <readerwriterqueue/readerwriterqueue.h>  // for BlockingReaderWriterQueue
+#include <spdlog/spdlog.h>                        // for spdlog::info, spdlog::warning
 
 #include <algorithm>                  // for max, min, fill, find
 #include <array>                      // for array, array<>::value_type
@@ -125,17 +126,19 @@ Cooler::~Cooler() {
         const auto nnz = ++this->_nnz;
         (void)hdf5::write_number(nnz, bin1_idx, bin1_idx_offset);
       } else {
-        fmt::print(
-            stderr,
-            FMT_STRING("WARNING: Message for the developers: ~Cooler() for file '{}' was "
-                       "called on a file that is supposed to be opened in write-mode, but the "
-                       "file handle is actually already closed!"),
+        spdlog::error(
+            FMT_STRING(
+                "Message for the developers: ~Cooler() for file {} was called on a closed "
+                "file handle. This should never happen, as whenever Cooler objects are created "
+                "in write-mode the file handle is supposed to be closed upon object destruction!"),
             this->_path_to_file);
       }
     }
   } catch (const H5::Exception &err) {
-    fmt::print(stderr, FMT_STRING("The following error occurred while finalizing file '{}':\n{}"),
-               this->_path_to_file, hdf5::construct_error_stack());
+    spdlog::error(FMT_STRING("The following error occurred while finalizing file {}:\n{}"),
+                  this->_path_to_file, hdf5::construct_error_stack());
+    spdlog::error(FMT_STRING("The content of file {} may be corrupted or incomplete."),
+                  this->_path_to_file);
   }
 }
 
@@ -747,9 +750,6 @@ ContactMatrix<> Cooler::cooler_to_cmatrix(std::pair<hsize_t, hsize_t> bin_range,
       if (bin2 >= i + nrows - 1 || bin2 >= bin1_offset_idx.size()) {
         break;
       }
-      // fmt::print(stderr, "m[{}][{}]={} (nrows={}; ncols={})\n", bin2_BUFF[j] - first_bin,
-      //           bin1_BUFF[j] - first_bin, count_BUFF[j], cmatrix.nrows(),
-      //           cmatrix.ncols());
       if (bin_weights.empty()) {
         cmatrix.set(bin2, bin1, static_cast<uint32_t>(count_BUFF[j]));
       } else {
@@ -837,9 +837,6 @@ size_t Cooler::stream_contacts_for_chrom(moodycamel::BlockingReaderWriterQueue<P
       if (bin2 >= i + nrows - 1 || bin2 >= bin1_offset_idx.size()) {
         break;
       }
-      // fmt::print(stderr, "m[{}][{}]={} (nrows={}; ncols={})\n", bin2_BUFF[j] - first_bin,
-      //           bin1_BUFF[j] - first_bin, count_BUFF[j], cmatrix.nrows(),
-      //           cmatrix.ncols());
       if (bin_weights.empty()) {
         while (!queue.try_emplace(Pixel{std::min(bin1, bin2), std::max(bin1, bin2),
                                         static_cast<size_t>(count_BUFF[j])})) {
@@ -1001,8 +998,8 @@ bool Cooler::validate_cool_flavor(H5::H5File &f, size_t bin_size, std::string_vi
             str_buff));
       }
     } else {
-      fmt::print(stderr, FMT_STRING("WARNING: missing attribute 'format' in file '{}'\n"),
-                 f.getFileName());
+      spdlog::warn(FMT_STRING("WARNING: missing attribute 'format' in file '{}'\n"),
+                   f.getFileName());
     }
     str_buff.clear();
 
@@ -1143,8 +1140,7 @@ bool Cooler::validate_multires_cool_flavor(H5::H5File &f, size_t bin_size,
                       format));
     }
   } else {
-    fmt::print(stderr, FMT_STRING("WARNING: missing attribute 'format' in file '{}'\n"),
-               f.getFileName());
+    spdlog::warn(FMT_STRING("WARNING: missing attribute 'format' in file '{}'\n"), f.getFileName());
   }
 
   if (const auto format_ver = hdf5::read_attribute_int(f, "format-version", root_path);

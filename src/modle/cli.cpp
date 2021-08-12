@@ -68,6 +68,12 @@ void add_common_options(CLI::App& subcommand, modle::Config& c) {
       "Force overwrite of output files if they exists.")
       ->capture_default_str();
 
+  io.add_flag(
+      "-q,--quiet",
+      c.quiet,
+      "Only log fatal errors.")
+      ->capture_default_str();
+
   gen.add_option(
       "-b,--bin-size",
       c.bin_size,

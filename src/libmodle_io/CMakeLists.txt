@@ -30,6 +30,7 @@ target_link_libraries(
          CONAN_PKG::hdf5
          CONAN_PKG::libarchive
          CONAN_PKG::readerwriterqueue
+         CONAN_PKG::spdlog
          CONAN_PKG::zlib)
 
 target_compile_definitions(libmodle_io PRIVATE -DNOCURL)

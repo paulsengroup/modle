@@ -16,11 +16,12 @@ target_link_libraries(
             project_options
             Modle::cmatrix
             Modle::common
-            CONAN_PKG::cpp-sort
-  INTERFACE Modle::libmodle_internal
+            Modle::libmodle_internal
             CONAN_PKG::abseil
             CONAN_PKG::boost
-            CONAN_PKG::concurrentqueue)
+            CONAN_PKG::concurrentqueue
+            CONAN_PKG::cpp-sort
+            CONAN_PKG::spdlog)
 
 if(ENABLE_PCH)
   target_precompile_headers(

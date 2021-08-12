@@ -3,6 +3,7 @@
 #include <absl/container/btree_set.h>  // for btree_set
 #include <fmt/format.h>                // for format, FMT_STRING
 #include <fmt/ostream.h>
+#include <spdlog/spdlog.h>
 
 #include <algorithm>    // for min
 #include <cassert>      // for assert
@@ -320,14 +321,14 @@ absl::btree_set<Chromosome> Genome::import_chromosomes(
 
   const auto t0 = absl::Now();
   if (path_to_chrom_subranges.empty()) {
-    fmt::print(stderr, FMT_STRING("Importing chromosomes from file {}..."), path_to_chrom_sizes);
+    spdlog::info(FMT_STRING("Importing chromosomes from file {}..."), path_to_chrom_sizes);
   } else {
-    fmt::print(stderr, FMT_STRING("Importing chromosomes from files {} and {}..."),
-               path_to_chrom_sizes, path_to_chrom_subranges);
+    spdlog::info(FMT_STRING("Importing chromosomes from files {} and {}..."), path_to_chrom_sizes,
+                 path_to_chrom_subranges);
   }
   auto print_status_update_on_return = [&](auto num_chromosomes) {
-    fmt::print(stderr, FMT_STRING(" DONE!\nImported {} chromosomes in {}.\n"), num_chromosomes,
-               absl::FormatDuration(absl::Now() - t0));
+    spdlog::info(FMT_STRING("Imported {} chromosomes in {}."), num_chromosomes,
+                 absl::FormatDuration(absl::Now() - t0));
   };
 
   // Parse chrom. sizes and build the set of chromosome to be simulated.
@@ -403,8 +404,7 @@ size_t Genome::import_barriers(absl::btree_set<Chromosome>& chromosomes,
   assert(!path_to_extr_barriers.empty());  // NOLINT
 
   const auto t0 = absl::Now();
-  fmt::print(stderr, FMT_STRING("Importing extrusion barriers from file {}..."),
-             path_to_extr_barriers);
+  spdlog::info(FMT_STRING("Importing extrusion barriers from file {}..."), path_to_extr_barriers);
 
   size_t tot_num_barriers = 0;
 
@@ -427,8 +427,8 @@ size_t Genome::import_barriers(absl::btree_set<Chromosome>& chromosomes,
     }
     chrom.barriers().make_BST();
   }
-  fmt::print(stderr, FMT_STRING(" DONE!\nImported {} barriers in {}.\n"), tot_num_barriers,
-             absl::FormatDuration(absl::Now() - t0));
+  spdlog::info(FMT_STRING("Imported {} barriers in {}."), tot_num_barriers,
+               absl::FormatDuration(absl::Now() - t0));
   return tot_num_barriers;
 }
 
@@ -438,8 +438,8 @@ size_t Genome::import_extra_features(absl::btree_set<Chromosome>& chromosomes,
   assert(!path_to_extra_features.empty());  // NOLINT
 
   const auto t0 = absl::Now();
-  fmt::print(stderr, FMT_STRING("Importing features from the following file: {}..."),
-             path_to_extra_features);
+  spdlog::info(FMT_STRING("Importing features from the following file: {}..."),
+               path_to_extra_features);
   size_t num_features = 0;
 
   // Parse all the records from the BED file. The parser will throw in case of duplicates.
@@ -452,8 +452,8 @@ size_t Genome::import_extra_features(absl::btree_set<Chromosome>& chromosomes,
       num_features += element.size();
     }
   }
-  fmt::print(stderr, FMT_STRING(" DONE!\nImported {} features in {}.\n"), num_features,
-             absl::FormatDuration(absl::Now() - t0));
+  spdlog::info(FMT_STRING("Imported {} features in {}."), num_features,
+               absl::FormatDuration(absl::Now() - t0));
   return num_features;
 }
 

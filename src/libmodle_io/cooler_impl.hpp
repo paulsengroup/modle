@@ -28,6 +28,7 @@
 #include <absl/types/span.h>       // for MakeConstSpan, Span
 #include <fmt/format.h>            // for FMT_STRING, print, format
 #include <fmt/ostream.h>           // for formatbuf<>::int_type
+#include <spdlog/spdlog.h>
 
 #include <algorithm>    // for max, min, fill
 #include <cassert>      // for assert
@@ -74,24 +75,24 @@ void Cooler::get_chrom_sizes(std::vector<I> &buff) {
 
 template <typename I>
 void Cooler::write_or_append_empty_cmatrix_to_file(std::string_view chrom_name, I chrom_start,
-                                                   I chrom_end, I chrom_length, bool quiet) {
+                                                   I chrom_end, I chrom_length) {
   ContactMatrix<int64_t> *null_matrix{nullptr};
   Cooler::write_or_append_cmatrix_to_file(null_matrix, chrom_name, chrom_start, chrom_end,
-                                          chrom_length, quiet);
+                                          chrom_length);
 }
 
 template <typename I1, typename I2>
 void Cooler::write_or_append_cmatrix_to_file(const ContactMatrix<I1> &cmatrix,
                                              std::string_view chrom_name, I2 chrom_start,
-                                             I2 chrom_end, I2 chrom_length, bool quiet) {
+                                             I2 chrom_end, I2 chrom_length) {
   Cooler::write_or_append_cmatrix_to_file(&cmatrix, chrom_name, chrom_start, chrom_end,
-                                          chrom_length, quiet);
+                                          chrom_length);
 }
 
 template <typename I1, typename I2>
 void Cooler::write_or_append_cmatrix_to_file(const ContactMatrix<I1> *cmatrix,
                                              std::string_view chrom_name, I2 chrom_start_,
-                                             I2 chrom_end_, I2 chrom_length_, bool quiet) {
+                                             I2 chrom_end_, I2 chrom_length_) {
   static_assert(std::is_integral_v<I1>, "I1 should be an integral type.");
   static_assert(std::is_integral_v<I2>, "I2 should be an integral type.");
   assert(chrom_start_ >= 0);   // NOLINT
@@ -103,8 +104,6 @@ void Cooler::write_or_append_cmatrix_to_file(const ContactMatrix<I1> *cmatrix,
   const auto chrom_length = static_cast<size_t>(chrom_length_);
 
   ++this->_nchroms;
-
-  auto t0 = absl::Now();
 
   // Declare one buffer for each dataset
   if (!this->_buff) {
@@ -157,18 +156,13 @@ void Cooler::write_or_append_cmatrix_to_file(const ContactMatrix<I1> *cmatrix,
     for (auto chrom_idx = 0UL; chrom_offset + chrom_idx < static_cast<size_t>(this->_nchroms);
          ++chrom_idx) {
       // Declare several aliases/variables to improve code readability in later sections
-      if (!quiet) {
-        fmt::print(stderr, FMT_STRING("Writing contacts for '{}' ({:.2f} Mbp)..."), chrom_name,
-                   static_cast<double>(chrom_length) / 1.0e6);  // NOLINT
-        if (cmatrix && cmatrix->get_n_of_missed_updates() != 0) {
-          const auto &n = cmatrix->get_n_of_missed_updates();
-          fmt::print(
-              stderr, FMT_STRING(" WARNING: Detected {} missed updates ({:.4f}% of the total)."), n,
-              static_cast<double>(100U * n) / static_cast<double>(cmatrix->get_tot_contacts()));
-        }
+      if (cmatrix && cmatrix->get_n_of_missed_updates() != 0) {
+        const auto &n = cmatrix->get_n_of_missed_updates();
+        spdlog::warn(
+            FMT_STRING(
+                "Detected {} missed updates ({:.4f}% of the total number of contacts) for '{}'."),
+            n, 100.0 * cmatrix->get_fraction_of_missed_updates(), chrom_name);
       }
-      const auto t1 = absl::Now();
-
       // Write chrom name and size
       chrom_name_h5_foffset =
           hdf5::write_str(chrom_name, d[chrom_NAME], STR_TYPE, chrom_name_h5_foffset);
@@ -266,9 +260,6 @@ void Cooler::write_or_append_cmatrix_to_file(const ContactMatrix<I1> *cmatrix,
       b->idx_bin1_offset_buff.clear();
 
       pxl_offset = this->_nbins;
-      if (!quiet) {
-        fmt::print(stderr, FMT_STRING(" DONE in {}!\n"), absl::FormatDuration(absl::Now() - t1));
-      }
     }
 
     // Write all non-empty buffers to disk
@@ -291,12 +282,6 @@ void Cooler::write_or_append_cmatrix_to_file(const ContactMatrix<I1> *cmatrix,
     // this->_fp->flush(H5F_SCOPE_GLOBAL); // This is probably unnecessary
   } catch (const H5::Exception &err) {
     throw std::runtime_error(hdf5::construct_error_stack());
-  }
-
-  if (!quiet) {
-    fmt::print(stderr, "All contacts have been written to file {}. Saved {:.2f}M pixels in {}.\n",
-               this->_path_to_file, static_cast<double>(this->_nnz) / 1.0e6,
-               absl::FormatDuration(absl::Now() - t0));
   }
 }
 

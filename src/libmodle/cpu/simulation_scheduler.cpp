@@ -7,6 +7,7 @@
 #include <fmt/ostream.h>                         // for formatbuf<>::int_type, print
 #include <moodycamel/blockingconcurrentqueue.h>  // for BlockingConcurrentQueue
 #include <moodycamel/concurrentqueue.h>          // for ConsumerToken, ProducerToken
+#include <spdlog/spdlog.h>
 
 #include <algorithm>  // for max, copy, find_if, generate, sort
 #include <atomic>     // for atomic
@@ -42,6 +43,25 @@
 #include "modle/simulation.hpp"
 
 namespace modle {
+
+template <typename StateT>
+[[noreturn]] void handle_exceptions_from_worker_thread(const std::exception& e,
+                                                       const StateT& local_state) {
+#ifdef BOOST_STACKTRACE_USE_NOOP
+  spdlog::error(FMT_STRING("Detected an error in thread {}:\n{}\n{}"), std::this_thread::get_id(),
+                local_state.to_string(), e.what());
+#else
+  const auto* st = boost::get_error_info<modle::utils::traced>(e);
+  if (st) {
+    spdlog::error(FMT_STRING("Detected an error in thread {}:\n{}\n{}\n{}"),
+                  std::this_thread::get_id(), local_state.to_string(), e.what(), *st);
+  } else {
+    spdlog::error(FMT_STRING("Detected an error in thread {}:\n{}\n{}\nStack trace not available!"),
+                  std::this_thread::get_id(), local_state.to_string(), e.what());
+  }
+#endif
+  throw;
+}
 
 void Simulation::run_simulation() {
   if (!this->skip_output) {  // Write simulation params to file
@@ -105,7 +125,7 @@ void Simulation::run_simulation() {
   for (auto& chrom : this->_genome) {
     // Don't simulate KO chroms (but write them to disk if the user desires so)
     if (!chrom.ok() || chrom.num_barriers() == 0) {
-      fmt::print(stderr, "SKIPPING '{}'...\n", chrom.name());
+      spdlog::info(FMT_STRING("SKIPPING '{}'..."), chrom.name());
       if (this->write_contacts_for_ko_chroms) {
         std::scoped_lock l(progress_queue_mutex);
         progress_queue.emplace_back(&chrom, num_cells);
@@ -167,7 +187,7 @@ void Simulation::worker(moodycamel::BlockingConcurrentQueue<Simulation::Task>& t
                         std::deque<std::pair<Chromosome*, size_t>>& progress_queue,
                         std::mutex& progress_queue_mutex, std::atomic<bool>& end_of_simulation,
                         size_t task_batch_size) const {
-  fmt::print(stderr, FMT_STRING("Spawning simulation thread {}...\n"), std::this_thread::get_id());
+  spdlog::info(FMT_STRING("Spawning simulation thread {}..."), std::this_thread::get_id());
 
   moodycamel::ConsumerToken ctok(task_queue);
   absl::FixedArray<Task> task_buff(task_batch_size);  // Tasks are dequeued in batch.
@@ -210,8 +230,8 @@ void Simulation::worker(moodycamel::BlockingConcurrentQueue<Simulation::Task>& t
                        (this->lef_fraction_contact_sampling *
                         static_cast<double>(this->num_cells * task.num_lefs)))));
 
-          fmt::print(stderr, FMT_STRING("Simulating ~{} epochs for '{}' across {} cells...\n"),
-                     target_epochs, task.chrom->name(), num_cells);
+          spdlog::info(FMT_STRING("Simulating ~{} epochs for '{}' across {} cells..."),
+                       target_epochs, task.chrom->name(), num_cells);
         }
 
         // Allocate the contact matrix. Once it's not needed anymore, the contact matrix will be
@@ -228,7 +248,7 @@ void Simulation::worker(moodycamel::BlockingConcurrentQueue<Simulation::Task>& t
 
         if (++progress->second == num_cells) {
           // We are done simulating loop-extrusion on task.chrom: print a status update
-          fmt::print(stderr, "Simulation for '{}' successfully completed.\n", task.chrom->name());
+          spdlog::info("Simulation for '{}' successfully completed.", task.chrom->name());
         }
       }
     }
@@ -236,33 +256,21 @@ void Simulation::worker(moodycamel::BlockingConcurrentQueue<Simulation::Task>& t
     // This is needed, as exceptions don't seem to always propagate to the main()
     // TODO: Find a better way to propagate exception up to the main thread. Maybe use a
     // concurrent queue?
-    fmt::print(stderr, FMT_STRING("Detected an error in thread {}:\n{}\n{}\n"),
-               std::this_thread::get_id(), local_state.to_string(), err.what());
-#ifndef BOOST_STACKTRACE_USE_NOOP
-    const auto* st = boost::get_error_info<modle::utils::traced>(err);
-    if (st) {
-      std::cerr << *st << '\n';
-    } else {
-      fmt::print(stderr, "Stack trace not available!\n");
-    }
-#endif
-    throw;
+    handle_exceptions_from_worker_thread(err, local_state);
   }
 }
 
 bed::BED_tree<> Simulation::import_deletions() const {
-  fmt::print(stderr, FMT_STRING("Importing deletions from file {}...\n"),
-             this->path_to_deletion_bed);
+  spdlog::info(FMT_STRING("Importing deletions from file {}..."), this->path_to_deletion_bed);
   const auto t0 = absl::Now();
   auto deletions = bed::BED_tree<>{this->path_to_deletion_bed, bed::BED::BED3};
-  fmt::print(stderr, FMT_STRING("Imported {} deletions in {}\n"), deletions.size(),
-             absl::FormatDuration(absl::Now() - t0));
+  spdlog::info(FMT_STRING("Imported {} deletions in {}"), deletions.size(),
+               absl::FormatDuration(absl::Now() - t0));
   return deletions;
 }
 
 bed::BED_tree<> Simulation::generate_deletions() const {
-  fmt::print(stderr, FMT_STRING("Generating deletions for {} chromosomes...\n"),
-             this->_genome.size());
+  spdlog::info(FMT_STRING("Generating deletions for {} chromosomes..."), this->_genome.size());
   const auto t0 = absl::Now();
   bed::BED_tree<> deletions;
   for (const auto& chrom : this->_genome) {
@@ -275,8 +283,8 @@ bed::BED_tree<> Simulation::generate_deletions() const {
     }
   }
   deletions.index();
-  fmt::print(stderr, FMT_STRING("Generated {} deletions in {}\n"), deletions.size(),
-             absl::FormatDuration(absl::Now() - t0));
+  spdlog::info(FMT_STRING("Generated {} deletions in {}"), deletions.size(),
+               absl::FormatDuration(absl::Now() - t0));
   return deletions;
 }
 
@@ -464,12 +472,12 @@ void Simulation::worker(moodycamel::BlockingConcurrentQueue<Simulation::TaskPW>&
                         compressed_io::Writer& out_stream, std::mutex& out_stream_mutex,
                         std::mutex& cooler_mutex, std::atomic<bool>& end_of_simulation,
                         size_t task_batch_size) const {
-  fmt::print(stderr, FMT_STRING("Spawning simulation thread {}...\n"), std::this_thread::get_id());
+  spdlog::info(FMT_STRING("Spawning simulation thread {}..."), std::this_thread::get_id());
   moodycamel::ConsumerToken ctok(task_queue);
 
   absl::FixedArray<TaskPW> task_buff(task_batch_size);  // Tasks are dequeue in batch.
 
-  Simulation::StatePW state{};
+  Simulation::StatePW local_state{};
 
   try {
     while (true) {  // Try to dequeue a batch of tasks
@@ -491,37 +499,27 @@ void Simulation::worker(moodycamel::BlockingConcurrentQueue<Simulation::TaskPW>&
         assert(!task.feats1.empty());    // NOLINT
         assert(!task.feats2.empty());    // NOLINT
 
-        state = task;  // Set simulation state based on task data
-        state.contacts.resize(state.window_end - state.window_start, this->diagonal_width,
-                              this->bin_size);
+        local_state = task;  // Set simulation local_state based on task data
+        local_state.contacts.resize(local_state.window_end - local_state.window_start,
+                                    this->diagonal_width, this->bin_size);
 
-        Simulation::simulate_window(state, out_stream, out_stream_mutex, cooler_mutex);
+        Simulation::simulate_window(local_state, out_stream, out_stream_mutex, cooler_mutex);
       }
     }
   } catch (const std::exception& err) {
     // This is needed, as exceptions don't seem to always propagate to main()
     // TODO: Find a better way to propagate exception up to the main thread. Maybe use a
     // concurrent queue?
-    fmt::print(stderr, FMT_STRING("Detected an error in thread {}:\n{}\n{}\n"),
-               std::this_thread::get_id(), state.to_string(), err.what());
-#ifndef BOOST_STACKTRACE_USE_NOOP
-    const auto* st = boost::get_error_info<modle::utils::traced>(err);
-    if (st) {
-      std::cerr << *st << '\n';
-    } else {
-      fmt::print(stderr, "Stack trace not available!\n");
-    }
-#endif
-    throw;
+    handle_exceptions_from_worker_thread(err, local_state);
   }
 }
 
 void Simulation::simulate_window(Simulation::StatePW& state, compressed_io::Writer& out_stream,
                                  std::mutex& out_stream_mutex, std::mutex& cooler_mutex) const {
-  fmt::print(stderr, FMT_STRING("Processing {}[{}-{}]; outer_window=[{}-{}]; deletion=[{}-{}];\n"),
-             state.chrom->name(), state.active_window_start, state.active_window_end,
-             state.window_start, state.window_end, state.deletion_begin,
-             state.deletion_begin + state.deletion_size);
+  spdlog::info(FMT_STRING("Processing {}[{}-{}]; outer_window=[{}-{}]; deletion=[{}-{}];"),
+               state.chrom->name(), state.active_window_start, state.active_window_end,
+               state.window_start, state.window_end, state.deletion_begin,
+               state.deletion_begin + state.deletion_size);
   // Simulating a window consists in generating all valid combinations of barriers after deleting
   // a portion of the DNA from the window. The idea here is that given that biologically relevant
   // boundaries are often marked by multiple extrusion barriers, deleting one barrier at a time is
@@ -646,23 +644,24 @@ void Simulation::simulate_window(Simulation::StatePW& state, compressed_io::Writ
 
     std::scoped_lock l(cooler_mutex);
     const auto t0 = absl::Now();
-    fmt::print(stderr, FMT_STRING("Writing contacts for {} to file \"{}\"..."), state.chrom->name(),
-               file_name);
+    spdlog::info(FMT_STRING("Writing contacts for {} to file \"{}\"..."), state.chrom->name(),
+                 file_name);
     {
       auto c = cooler::Cooler(file_name, cooler::Cooler::WRITE_ONLY, this->bin_size,
                               this->_genome.chromosome_with_longest_name().name().size());
       for (const auto& chrom : this->_genome) {
         if (&chrom == state.chrom) {
           c.write_or_append_cmatrix_to_file(state.contacts, state.chrom->name(), state.window_start,
-                                            state.window_end, state.chrom->size(), true);
+                                            state.window_end, state.chrom->size());
           continue;
         }
         assert(chrom.contacts_ptr() == nullptr);  // NOLINT
         c.write_or_append_empty_cmatrix_to_file(chrom.name(), chrom.start_pos(), chrom.end_pos(),
-                                                chrom.size(), true);
+                                                chrom.size());
       }
     }
-    fmt::print(stderr, FMT_STRING(" DONE in {}\n"), absl::FormatDuration(absl::Now() - t0));
+    spdlog::info(FMT_STRING("DONE writing file \"{}\" in {}"), file_name,
+                 absl::FormatDuration(absl::Now() - t0));
   }
 }
 
@@ -682,8 +681,8 @@ bool Simulation::map_features_to_window(TaskPW& base_task, const Chromosome& chr
   const auto chrom_name = std::string{chrom.name()};
   const auto& features = chrom.get_features();
   auto print_status_update = [](const auto& t) {
-    fmt::print(stderr, "Skipping {}[{}-{}]...\n", t.chrom->name(), t.active_window_start,
-               t.active_window_end);
+    spdlog::info("Skipping {}[{}-{}]...", t.chrom->name(), t.active_window_start,
+                 t.active_window_end);
   };
 
   // Find all features of type 1 falling within the outer window. Skip over windows with 0
@@ -716,8 +715,8 @@ bool Simulation::map_barriers_to_window(TaskPW& base_task, const Chromosome& chr
   auto [first_barrier, last_barrier] =
       barriers.equal_range(base_task.window_start, base_task.window_end);
   if (first_barrier == barriers.data_end()) {
-    fmt::print(stderr, "Skipping {}[{}-{}]...\n", base_task.chrom->name(),
-               base_task.active_window_start, base_task.active_window_end);
+    spdlog::info("Skipping {}[{}-{}]...", base_task.chrom->name(), base_task.active_window_start,
+                 base_task.active_window_end);
     return false;
   }
 

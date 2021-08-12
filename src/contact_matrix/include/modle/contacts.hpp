@@ -64,8 +64,8 @@ class ContactMatrix {
   [[nodiscard]] inline constexpr size_t nrows() const noexcept(utils::ndebug_defined());
   [[nodiscard]] inline constexpr size_t npixels() const noexcept(utils::ndebug_defined());
   [[nodiscard]] inline size_t npixels_after_masking() const;
-  [[nodiscard]] inline constexpr size_t get_n_of_missed_updates() const
-      noexcept(utils::ndebug_defined());
+  [[nodiscard]] inline constexpr size_t get_n_of_missed_updates() const noexcept;
+  [[nodiscard]] inline constexpr double get_fraction_of_missed_updates() const noexcept;
   [[nodiscard]] inline constexpr size_t get_tot_contacts() const noexcept(utils::ndebug_defined());
   [[nodiscard]] inline double get_avg_contact_density() const noexcept(utils::ndebug_defined());
   [[nodiscard]] inline constexpr size_t get_matrix_size_in_bytes() const
