@@ -61,8 +61,8 @@ double compute_pearson(absl::Span<const N1> v1, absl::Span<const N2> v2) {
   DISABLE_WARNING_PUSH
   DISABLE_WARNING_CONVERSION
   double cov = 0;
-  double r1_avg = v1[0];
-  double r2_avg = v2[0];
+  double r1_avg = v1.empty() ? 0 : v1[0];
+  double r2_avg = v2.empty() ? 0 : v2[0];
   double d1 = 0;
   double d2 = 0;
 
