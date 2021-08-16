@@ -49,7 +49,7 @@ ContactMatrix<I>::ContactMatrix(size_t nrows, size_t ncols, bool fill_with_rando
       _locks(_ncols) {
   if (fill_with_random_numbers) {
     auto rand_eng = random::PRNG(1234567890ULL);
-    random::uniform_int_distribution<I> dist{0, std::numeric_limits<I>::max()};
+    random::uniform_int_distribution<I> dist{0, (std::numeric_limits<I>::max)()};
     for (auto i = 0UL; i < _ncols; ++i) {
       for (auto j = i; j < i + _nrows && j < _ncols; ++j) {
         this->set(i, j, dist(rand_eng));
@@ -169,11 +169,11 @@ void ContactMatrix<I>::set(size_t row, size_t col, I2 n) noexcept(utils::ndebug_
 #if __GNUC__ < 8
     DISABLE_WARNING_SIGN_CONVERSION
 #endif
-    if (n < std::numeric_limits<I>::min() || n > std::numeric_limits<I>::max()) {
+    if (n < (std::numeric_limits<I>::min)() || n > (std::numeric_limits<I>::max)()) {
       utils::throw_with_trace(std::runtime_error(fmt::format(
           FMT_STRING("ContactMatrix<I>::set(row={}, col={}, n={}): Overflow detected: "
                      "n={} is outside the range of representable numbers ({}-{})"),
-          row, col, n, n, std::numeric_limits<I>::min(), std::numeric_limits<I>::max())));
+          row, col, n, n, (std::numeric_limits<I>::min)(), (std::numeric_limits<I>::max)())));
     }
     DISABLE_WARNING_POP
   }
@@ -738,17 +738,17 @@ void ContactMatrix<I>::check_for_overflow_on_add(size_t row, size_t col, I2 n) c
                            "incrementing by a negative number."));
     }
   }
-  if (std::numeric_limits<I>::max() - n < m) {
+  if ((std::numeric_limits<I>::max)() - n < m) {
     utils::throw_with_trace(std::runtime_error(
         fmt::format(FMT_STRING("Overflow detected: incrementing m={} by n={} would result in a "
                                "number outside of range {}-{}"),
-                    m, n, std::numeric_limits<I>::min(), std::numeric_limits<I>::max())));
+                    m, n, (std::numeric_limits<I>::min)(), (std::numeric_limits<I>::max)())));
   }
-  if (std::numeric_limits<I>::max() - n < this->_tot_contacts) {
+  if ((std::numeric_limits<I>::max)() - n < this->_tot_contacts) {
     utils::throw_with_trace(std::runtime_error(fmt::format(
         FMT_STRING("Overflow detected: incrementing _tot_contacts={} by n={} would result in a "
                    "number outside of range {}-{}"),
-        this->_tot_contacts, n, std::numeric_limits<I>::min(), std::numeric_limits<I>::max())));
+        this->_tot_contacts, n, (std::numeric_limits<I>::min)(), (std::numeric_limits<I>::max)())));
   }
   DISABLE_WARNING_POP
 }
@@ -770,17 +770,17 @@ void ContactMatrix<I>::check_overflow_on_subtract(size_t row, size_t col, I2 n) 
     }
   }
 
-  if (std::numeric_limits<I>::min() + n > m) {
+  if ((std::numeric_limits<I>::min)() + n > m) {
     utils::throw_with_trace(std::runtime_error(
         fmt::format(FMT_STRING("Overflow detected: decrementing m={} by n={} would result in a "
                                "number outside of range {}-{}"),
-                    m, n, std::numeric_limits<I>::min(), std::numeric_limits<I>::max())));
+                    m, n, (std::numeric_limits<I>::min)(), (std::numeric_limits<I>::max)())));
   }
-  if (std::numeric_limits<I>::min() + n > this->_tot_contacts) {
+  if ((std::numeric_limits<I>::min)() + n > this->_tot_contacts) {
     utils::throw_with_trace(std::runtime_error(fmt::format(
         FMT_STRING("Overflow detected: decrementing _tot_contacts={} by n={} would result in a "
                    "number outside of range {}-{}"),
-        this->_tot_contacts, n, std::numeric_limits<I>::min(), std::numeric_limits<I>::max())));
+        this->_tot_contacts, n, (std::numeric_limits<I>::min)(), (std::numeric_limits<I>::max)())));
   }
 }
 

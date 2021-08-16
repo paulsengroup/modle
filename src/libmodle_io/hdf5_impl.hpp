@@ -348,7 +348,8 @@ void read_attribute(H5::H5File &f, std::string_view attr_name, T &buff, std::str
           DISABLE_WARNING_CONVERSION
           DISABLE_WARNING_SIGN_CONVERSION
 #endif
-          if (v >= std::numeric_limits<T>::min() && v <= std::numeric_limits<T>::max()) {  // NOLINT
+          if (v >= (std::numeric_limits<T>::min)() &&
+              v <= (std::numeric_limits<T>::max)()) {  // NOLINT
             DISABLE_WARNING_POP
             buff = static_cast<T>(v);
           } else {

@@ -158,7 +158,7 @@ Chromosome& Chromosome::operator=(Chromosome&& other) noexcept {
 }
 
 bool Chromosome::operator==(const Chromosome& other) const noexcept(utils::ndebug_defined()) {
-  if (this->_id == std::numeric_limits<size_t>::max()) {
+  if (this->_id == (std::numeric_limits<size_t>::max)()) {
     return this->name() == other.name() && this->size() == other.size();
   }
   return this->_id == other._id;
@@ -169,8 +169,8 @@ bool Chromosome::operator==(std::string_view other_name) const noexcept {
 }
 
 bool Chromosome::operator<(const Chromosome& other) const noexcept(utils::ndebug_defined()) {
-  if (this->_id != std::numeric_limits<size_t>::max() &&
-      other._id != std::numeric_limits<size_t>::max()) {
+  if (this->_id != (std::numeric_limits<size_t>::max)() &&
+      other._id != (std::numeric_limits<size_t>::max)()) {
     return this->_id < other._id;
   }
 

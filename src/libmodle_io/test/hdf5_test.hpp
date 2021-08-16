@@ -93,8 +93,8 @@ TEST_CASE("read_write_strings HDF5", "[io][hdf5][short]") {
 TEST_CASE("read_write_ints HDF5", "[io][hdf5][short]") {
   const auto test_file = testdir() / "rw_ints.hdf5";
   boost::filesystem::create_directories(testdir());
-  std::vector<int64_t> v{std::numeric_limits<int64_t>::min(), -10, 0, 10,  // NOLINT
-                         std::numeric_limits<int64_t>::max()};
+  std::vector<int64_t> v{(std::numeric_limits<int64_t>::min)(), -10, 0, 10,  // NOLINT
+                         (std::numeric_limits<int64_t>::max)()};
   H5::H5File f(test_file.string(), H5F_ACC_TRUNC);
   auto dataset = init_test_int64_dataset(f);
   int64_t buff{};

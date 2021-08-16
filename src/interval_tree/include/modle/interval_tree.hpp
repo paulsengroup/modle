@@ -71,7 +71,7 @@ class IITree {
 
  public:
   inline explicit IITree(size_t start_pos_ = 0,
-                         size_t end_pos_ = std::numeric_limits<size_t>::max());
+                         size_t end_pos_ = (std::numeric_limits<size_t>::max)());
 
   template <typename I2, typename = std::enable_if_t<std::is_integral_v<I2>>>
   inline void insert(I2 start, I2 end, const T &data);

@@ -67,13 +67,13 @@ int64_t ExtrusionUnit::operator-(const ExtrusionBarrier& other_barrier) const
 }
 
 void ExtrusionUnit::release() noexcept(utils::ndebug_defined()) {
-  this->_pos = std::numeric_limits<bp_t>::max();
+  this->_pos = (std::numeric_limits<bp_t>::max)();
 }
 
 bool Lef::is_bound() const noexcept(utils::ndebug_defined()) {
-  assert((this->rev_unit._pos == std::numeric_limits<bp_t>::max()) ==
-         (this->fwd_unit._pos == std::numeric_limits<bp_t>::max()));
-  return this->binding_epoch != std::numeric_limits<size_t>::max();
+  assert((this->rev_unit._pos == (std::numeric_limits<bp_t>::max)()) ==
+         (this->fwd_unit._pos == (std::numeric_limits<bp_t>::max)()));
+  return this->binding_epoch != (std::numeric_limits<size_t>::max)();
 }
 
 void Lef::bind_at_pos(size_t current_epoch, bp_t pos) noexcept(utils::ndebug_defined()) {
@@ -86,7 +86,7 @@ void Lef::bind_at_pos(size_t current_epoch, bp_t pos) noexcept(utils::ndebug_def
 void Lef::release() noexcept(utils::ndebug_defined()) {
   this->rev_unit.release();
   this->fwd_unit.release();
-  this->binding_epoch = std::numeric_limits<size_t>::max();
+  this->binding_epoch = (std::numeric_limits<size_t>::max)();
 }
 
 void Lef::reset() noexcept(utils::ndebug_defined()) { this->release(); }

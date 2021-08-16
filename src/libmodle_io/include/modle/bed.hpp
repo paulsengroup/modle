@@ -95,10 +95,10 @@ struct BED {
   std::string name{};
   double score{};
   char strand{'.'};
-  bp_t thick_start{std::numeric_limits<uint64_t>::max()};
-  bp_t thick_end{std::numeric_limits<uint64_t>::max()};
+  bp_t thick_start{(std::numeric_limits<uint64_t>::max)()};
+  bp_t thick_end{(std::numeric_limits<uint64_t>::max)()};
   std::unique_ptr<RGB> rgb{nullptr};
-  uint64_t block_count{std::numeric_limits<uint64_t>::max()};
+  uint64_t block_count{(std::numeric_limits<uint64_t>::max)()};
   std::vector<uint64_t> block_sizes{};
   std::vector<uint64_t> block_starts{};
   std::string extra_tokens{};
@@ -117,7 +117,7 @@ struct BED {
   }
 
  private:
-  static constexpr auto null_id = std::numeric_limits<size_t>::max();
+  static constexpr auto null_id = (std::numeric_limits<size_t>::max)();
   size_t _id{null_id};
   Dialect _standard{none};
   static void parse_rgb_or_throw(const std::vector<std::string_view>& toks, uint8_t idx,

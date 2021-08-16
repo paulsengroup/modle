@@ -48,8 +48,8 @@ struct Config {  // NOLINT(altera-struct-pack-align)
 
   // General settings
   bp_t bin_size{1'000};                        // NOLINT(readability-magic-numbers, cppcoreguidelines-avoid-magic-numbers)
-  bp_t fwd_extrusion_speed{std::numeric_limits<bp_t>::max()};
-  bp_t rev_extrusion_speed{std::numeric_limits<bp_t>::max()};
+  bp_t fwd_extrusion_speed{(std::numeric_limits<bp_t>::max)()};
+  bp_t rev_extrusion_speed{(std::numeric_limits<bp_t>::max)()};
   double fwd_extrusion_speed_std{0.05};        // NOLINT(readability-magic-numbers, cppcoreguidelines-avoid-magic-numbers)
   double rev_extrusion_speed_std{fwd_extrusion_speed_std};
   size_t num_cells{5'000};                     // NOLINT(readability-magic-numbers, cppcoreguidelines-avoid-magic-numbers)

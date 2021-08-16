@@ -33,8 +33,8 @@ bigwig::file init_bigwig_file(std::string_view output_path,
     chrom_names[i] = const_cast<char*>(  // NOLINT this should be fine as long as libBigWig doesn't
         chromosomes[i].first.data());    // try to modify the data stored in the char*
 
-    if constexpr (const auto max_val = std::numeric_limits<uint32_t>::max();
-                  std::numeric_limits<I>::max() > max_val) {
+    if constexpr (const auto max_val = (std::numeric_limits<uint32_t>::max)();
+                  (std::numeric_limits<I>::max)() > max_val) {
       if (chromosomes[i].second > max_val) {
         throw std::runtime_error(fmt::format(
             FMT_STRING("We currently don't support writing chromosomes longer than ~4.29 Gbp (2^32 "

@@ -63,10 +63,10 @@ class genextreme_value_distribution {
   inline void param(const param_type& p) { this->_p = p; }
 
   [[nodiscard]] inline constexpr result_type min() const {
-    return std::numeric_limits<RealType>::min();
+    return (std::numeric_limits<RealType>::min)();
   }
   [[nodiscard]] inline constexpr result_type max() const {
-    return std::numeric_limits<RealType>::max();
+    return (std::numeric_limits<RealType>::max)();
   }
 
   friend inline bool operator==(const genextreme_value_distribution& a,

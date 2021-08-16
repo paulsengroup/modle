@@ -96,10 +96,10 @@ class Chromosome {
 
  private:
   std::string _name{};
-  bp_t _start{std::numeric_limits<bp_t>::max()};
-  bp_t _end{std::numeric_limits<bp_t>::max()};
-  bp_t _size{std::numeric_limits<bp_t>::max()};
-  size_t _id{std::numeric_limits<size_t>::max()};
+  bp_t _start{(std::numeric_limits<bp_t>::max)()};
+  bp_t _end{(std::numeric_limits<bp_t>::max)()};
+  bp_t _size{(std::numeric_limits<bp_t>::max)()};
+  size_t _id{(std::numeric_limits<size_t>::max)()};
   IITree<bp_t, ExtrusionBarrier> _barriers{};
   absl::optional<contact_matrix_t> _contacts{};
   std::mutex _contacts_mutex{};  // Protect _contacts from concurrent allocations/deallocations

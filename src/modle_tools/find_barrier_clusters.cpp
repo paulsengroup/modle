@@ -70,10 +70,10 @@ void find_barrier_clusters_subcmd(const find_barrier_clusters_config& c) {
 
   const auto min_cluster_size = c.min_cluster_size;
   const auto max_cluster_size =
-      c.max_cluster_size == 0 ? std::numeric_limits<size_t>::max() : c.max_cluster_size;
+      c.max_cluster_size == 0 ? (std::numeric_limits<size_t>::max)() : c.max_cluster_size;
   const auto min_cluster_span = c.min_cluster_span;
   const auto max_cluster_span =
-      c.max_cluster_span == 0 ? std::numeric_limits<bp_t>::max() : c.max_cluster_span;
+      c.max_cluster_span == 0 ? (std::numeric_limits<bp_t>::max)() : c.max_cluster_span;
   std::string warning_buffer;
 
   bed::BED cluster;  //{bed::BED::BED5};

@@ -499,11 +499,13 @@ std::string Cli::process_paths_and_check_for_collisions(modle::Config& c) {
 int Cli::exit(const CLI::ParseError& e) const { return this->_cli.exit(e); }
 
 void Cli::transform_args() {
-  if (auto& speed = this->_config.rev_extrusion_speed; speed == std::numeric_limits<bp_t>::max()) {
+  if (auto& speed = this->_config.rev_extrusion_speed;
+      speed == (std::numeric_limits<bp_t>::max)()) {
     speed =
         static_cast<bp_t>(std::round(static_cast<double>(this->_config.bin_size) / 2.0));  // NOLINT
   }
-  if (auto& speed = this->_config.fwd_extrusion_speed; speed == std::numeric_limits<bp_t>::max()) {
+  if (auto& speed = this->_config.fwd_extrusion_speed;
+      speed == (std::numeric_limits<bp_t>::max)()) {
     speed =
         static_cast<bp_t>(std::round(static_cast<double>(this->_config.bin_size) / 2.0));  // NOLINT
   }

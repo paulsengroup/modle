@@ -566,7 +566,7 @@ void Simulation::BaseState::_reset_buffers() {  // TODO figure out which resets 
 }
 
 void Simulation::State::resize_buffers(size_t new_size) {
-  if (new_size == std::numeric_limits<size_t>::max()) {
+  if (new_size == (std::numeric_limits<size_t>::max)()) {
     new_size = this->num_lefs;
   }
   this->_resize_buffers(new_size);
@@ -611,7 +611,7 @@ Simulation::StatePW& Simulation::StatePW::operator=(const TaskPW& task) {
 }
 
 void Simulation::StatePW::resize_buffers(size_t new_size) {
-  if (new_size == std::numeric_limits<size_t>::max()) {
+  if (new_size == (std::numeric_limits<size_t>::max)()) {
     new_size = this->num_lefs;
   }
   this->_resize_buffers(new_size);

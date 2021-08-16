@@ -530,10 +530,10 @@ std::string Parser::validate(size_t nrecords) {
   return "";
 }
 
-std::vector<BED> Parser::parse_all() { return parse_n(std::numeric_limits<size_t>::max()); }
+std::vector<BED> Parser::parse_all() { return parse_n((std::numeric_limits<size_t>::max)()); }
 
 BED_tree<> Parser::parse_all_in_interval_tree() {
-  return parse_n_in_interval_tree(std::numeric_limits<size_t>::max());
+  return parse_n_in_interval_tree((std::numeric_limits<size_t>::max)());
 }
 
 void Parser::reset() {

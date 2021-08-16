@@ -56,7 +56,7 @@ class ExtrusionUnit {
   void release() noexcept(utils::ndebug_defined());
 
  private:
-  bp_t _pos{std::numeric_limits<bp_t>::max()};
+  bp_t _pos{(std::numeric_limits<bp_t>::max)()};
 };
 
 struct Lef {
@@ -65,7 +65,7 @@ struct Lef {
   void bind_at_pos(size_t current_epoch, bp_t pos) noexcept(utils::ndebug_defined());
   void release() noexcept(utils::ndebug_defined());
   void reset() noexcept(utils::ndebug_defined());
-  size_t binding_epoch{std::numeric_limits<size_t>::max()};
+  size_t binding_epoch{(std::numeric_limits<size_t>::max)()};
   ExtrusionUnit rev_unit{};
   ExtrusionUnit fwd_unit{};
 };

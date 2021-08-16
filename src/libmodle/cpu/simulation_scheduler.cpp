@@ -154,7 +154,7 @@ void Simulation::run_simulation() {
                      static_cast<double>(this->num_cells))));
     }
     auto target_epochs =
-        target_contacts == 0UL ? this->simulation_iterations : std::numeric_limits<size_t>::max();
+        target_contacts == 0UL ? this->simulation_iterations : (std::numeric_limits<size_t>::max)();
 
     size_t cellid = 0;
     const auto nbatches = (this->num_cells + task_batch_size_enq - 1) / task_batch_size_enq;
@@ -442,7 +442,7 @@ void Simulation::run_perturbate() {
 
         // Compute the target number of epochs based on the target number of contacts
         t.num_target_epochs = t.num_target_contacts == 0UL ? this->simulation_iterations
-                                                           : std::numeric_limits<size_t>::max();
+                                                           : (std::numeric_limits<size_t>::max)();
 
         if (num_tasks == tasks.size()) {  // Enqueue a batch of tasks
           auto sleep_us = 100;            // NOLINT

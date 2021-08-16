@@ -37,8 +37,8 @@ void noisify_contacts(const noisify_config& c) {
   modle::ContactMatrix<> cmatrix{};
 
   constexpr auto END_OF_PIXEL_QUEUE = modle::cooler::Cooler::Pixel{
-      std::numeric_limits<size_t>::max(), std::numeric_limits<size_t>::max(),
-      std::numeric_limits<size_t>::max()};
+      (std::numeric_limits<size_t>::max)(), (std::numeric_limits<size_t>::max)(),
+      (std::numeric_limits<size_t>::max)()};
 
   auto input_cool =
       modle::cooler::Cooler(c.path_to_input_matrix, cooler::Cooler::READ_ONLY, c.bin_size);

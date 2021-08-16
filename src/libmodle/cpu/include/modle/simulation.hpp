@@ -50,8 +50,8 @@ class Simulation : Config {
   using lef_move_generator_t = random::normal_distribution<double>;
   using chrom_pos_generator_t = random::uniform_int_distribution<bp_t>;
 
-  static constexpr auto NO_COLLISION = std::numeric_limits<collision_t>::max();
-  static constexpr auto REACHED_CHROM_BOUNDARY = std::numeric_limits<collision_t>::max() - 1;
+  static constexpr auto NO_COLLISION = (std::numeric_limits<collision_t>::max)();
+  static constexpr auto REACHED_CHROM_BOUNDARY = (std::numeric_limits<collision_t>::max)() - 1;
   static constexpr auto Mbp = 1.0e6;
 
  private:
@@ -83,7 +83,7 @@ class Simulation : Config {
     uint64_t seed{};
     std::unique_ptr<XXH3_state_t, utils::XXH3_Deleter> xxh_state{XXH3_createState()};
 
-    void _resize_buffers(size_t size = std::numeric_limits<size_t>::max());
+    void _resize_buffers(size_t size = (std::numeric_limits<size_t>::max)());
     void _reset_buffers();
   };
 
@@ -97,7 +97,7 @@ class Simulation : Config {
 
     State& operator=(const Task& task);
     [[nodiscard]] std::string to_string() const noexcept;
-    void resize_buffers(size_t size = std::numeric_limits<size_t>::max());
+    void resize_buffers(size_t size = (std::numeric_limits<size_t>::max)());
     void reset_buffers();
   };
 
@@ -124,7 +124,7 @@ class Simulation : Config {
 
     StatePW& operator=(const TaskPW& task);
     [[nodiscard]] std::string to_string() const noexcept;
-    void resize_buffers(size_t size = std::numeric_limits<size_t>::max());
+    void resize_buffers(size_t size = (std::numeric_limits<size_t>::max)());
     void reset_buffers();
   };
 

@@ -64,7 +64,7 @@ void Simulation::bind_lefs(const bp_t start_pos, const bp_t end_pos, const absl:
     (void)static_cast<IT*>(nullptr);
     assert(std::all_of(
         rev_lef_ranks.begin(), rev_lef_ranks.end(),  // NOLINT
-        [&](const auto i) { return i < lefs.size() || i == std::numeric_limits<IT>::max(); }));
+        [&](const auto i) { return i < lefs.size() || i == (std::numeric_limits<IT>::max)(); }));
   }
 }
 
@@ -145,7 +145,7 @@ void Simulation::simulate_one_cell(StateT& s) const {
     assert(avg_nlefs_to_sample <= static_cast<double>(s.num_lefs));   // NOLINT
     assert(avg_nlefs_to_release <= static_cast<double>(s.num_lefs));  // NOLINT
     assert((s.num_target_contacts != 0) ==                            // NOLINT
-           (s.num_target_epochs == std::numeric_limits<size_t>::max()));
+           (s.num_target_epochs == (std::numeric_limits<size_t>::max)()));
 
     // Declare the spans used by the burnin phase as well as the simulation itself
     auto lefs = absl::MakeSpan(s.lef_buff);

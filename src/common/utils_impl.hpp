@@ -85,8 +85,8 @@ void parse_numeric_or_throw(std::string_view tok, N &field) {
       const auto tmp = std::stoll(tok.data(), nullptr);
       DISABLE_WARNING_PUSH
       DISABLE_WARNING_USELESS_CAST
-      if (tmp == LONG_LONG_MAX || tmp < static_cast<int64_t>(std::numeric_limits<N>::min()) ||
-          tmp > static_cast<int64_t>(std::numeric_limits<N>::max())) {
+      if (tmp == LONG_LONG_MAX || tmp < static_cast<int64_t>((std::numeric_limits<N>::min)()) ||
+          tmp > static_cast<int64_t>((std::numeric_limits<N>::max)())) {
         throw_except_from_errc(tok, SIZE_MAX, tmp, nullptr, std::errc::result_out_of_range);
       } else if (tmp == 0 && tok != "0") {
         throw_except_from_errc(tok, SIZE_MAX, tmp, nullptr, std::errc::invalid_argument);
@@ -156,9 +156,9 @@ void throw_except_from_errc(std::string_view tok, size_t idx, const N &field, co
     throw std::runtime_error(fmt::format("{}. Reason: found an invalid character", base_error));
   }
   if (e == std::errc::result_out_of_range) {
-    throw std::runtime_error(
-        fmt::format("{}. Reason: number {} is outside the range of representable numbers [{}, {}].",
-                    base_error, tok, std::numeric_limits<N>::min(), std::numeric_limits<N>::max()));
+    throw std::runtime_error(fmt::format(
+        "{}. Reason: number {} is outside the range of representable numbers [{}, {}].", base_error,
+        tok, (std::numeric_limits<N>::min)(), (std::numeric_limits<N>::max)()));
   }
   throw std::logic_error(
       fmt::format("{}. If you see this error, report it to the developers on "
