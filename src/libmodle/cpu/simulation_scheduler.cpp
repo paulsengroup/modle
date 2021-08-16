@@ -637,14 +637,14 @@ void Simulation::simulate_window(Simulation::StatePW& state, compressed_io::Writ
   }
 
   if (state.write_contacts_to_disk) {
-    const auto file_name = fmt::format(
+    const auto file_name = boost::filesystem::path(fmt::format(
         FMT_STRING("{}_{:06d}_{}_window_{}-{}_deletion_{}-{}.cool"),
         this->path_to_output_prefix.string(), state.id, state.chrom->name(), state.window_start,
-        state.window_end, state.deletion_begin, state.deletion_begin + state.deletion_size);
+        state.window_end, state.deletion_begin, state.deletion_begin + state.deletion_size));
 
     std::scoped_lock l(cooler_mutex);
     const auto t0 = absl::Now();
-    spdlog::info(FMT_STRING("Writing contacts for {} to file \"{}\"..."), state.chrom->name(),
+    spdlog::info(FMT_STRING("Writing contacts for {} to file {}..."), state.chrom->name(),
                  file_name);
     {
       auto c = cooler::Cooler(file_name, cooler::Cooler::WRITE_ONLY, this->bin_size,
@@ -660,7 +660,7 @@ void Simulation::simulate_window(Simulation::StatePW& state, compressed_io::Writ
                                                 chrom.size());
       }
     }
-    spdlog::info(FMT_STRING("DONE writing file \"{}\" in {}"), file_name,
+    spdlog::info(FMT_STRING("DONE writing file {} in {}"), file_name,
                  absl::FormatDuration(absl::Now() - t0));
   }
 }
