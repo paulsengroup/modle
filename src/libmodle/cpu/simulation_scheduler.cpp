@@ -616,14 +616,15 @@ void Simulation::simulate_window(Simulation::StatePW& state, compressed_io::Writ
                                      feat2.name.empty() ? "none" : feat2.name);
       absl::StrAppend(  // Append a BEDPE record to the local buffer
           &out_buffer,
-          fmt::format(FMT_COMPILE("{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\tdeletion={}-{}"
-                                  "\tnum_barr={}/{}\tactive_window={}-{}\touter_window={}-{}\n"),
-                      feat1.chrom, feat1_abs_bin * bin_size, (feat1_abs_bin + 1) * bin_size,
-                      feat2.chrom, feat2_abs_bin * bin_size, (feat2_abs_bin + 1) * bin_size, name,
-                      contacts, feat1.strand, feat2.strand, state.deletion_begin,
-                      state.deletion_begin + state.deletion_size, num_active_barriers,
-                      state.barriers.size(), state.active_window_start, state.active_window_end,
-                      state.window_start, state.window_end));
+          fmt::format(
+              FMT_COMPILE(
+                  "{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\n"),
+              feat1.chrom, feat1_abs_bin * bin_size, (feat1_abs_bin + 1) * bin_size, feat2.chrom,
+              feat2_abs_bin * bin_size, (feat2_abs_bin + 1) * bin_size, name, contacts,
+              feat1.strand, feat2.strand, state.deletion_begin,
+              state.deletion_begin + state.deletion_size, num_active_barriers,
+              state.barriers.size(), state.active_window_start, state.active_window_end,
+              state.window_start, state.window_end));
     }
   }
 
