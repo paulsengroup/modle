@@ -248,7 +248,8 @@ void Simulation::worker(moodycamel::BlockingConcurrentQueue<Simulation::Task>& t
 
         if (++progress->second == num_cells) {
           // We are done simulating loop-extrusion on task.chrom: print a status update
-          spdlog::info("Simulation for '{}' successfully completed.", task.chrom->name());
+          spdlog::info(FMT_STRING("Simulation for '{}' successfully completed."),
+                       task.chrom->name());
         }
       }
     }
@@ -629,7 +630,7 @@ void Simulation::simulate_window(Simulation::StatePW& state, compressed_io::Writ
   // Write the buffer to the appropriate stream
   if (!out_buffer.empty()) {
     if (std::scoped_lock l(out_stream_mutex); write_to_stdout) {
-      fmt::print(stdout, out_buffer);
+      fmt::print(stdout, FMT_STRING("{}"), out_buffer);
     } else {
       out_stream.write(out_buffer);
     }
@@ -681,7 +682,7 @@ bool Simulation::map_features_to_window(TaskPW& base_task, const Chromosome& chr
   const auto chrom_name = std::string{chrom.name()};
   const auto& features = chrom.get_features();
   auto print_status_update = [](const auto& t) {
-    spdlog::info("Skipping {}[{}-{}]...", t.chrom->name(), t.active_window_start,
+    spdlog::info(FMT_STRING("Skipping {}[{}-{}]..."), t.chrom->name(), t.active_window_start,
                  t.active_window_end);
   };
 
@@ -715,8 +716,8 @@ bool Simulation::map_barriers_to_window(TaskPW& base_task, const Chromosome& chr
   auto [first_barrier, last_barrier] =
       barriers.equal_range(base_task.window_start, base_task.window_end);
   if (first_barrier == barriers.data_end()) {
-    spdlog::info("Skipping {}[{}-{}]...", base_task.chrom->name(), base_task.active_window_start,
-                 base_task.active_window_end);
+    spdlog::info(FMT_STRING("Skipping {}[{}-{}]..."), base_task.chrom->name(),
+                 base_task.active_window_start, base_task.active_window_end);
     return false;
   }
 

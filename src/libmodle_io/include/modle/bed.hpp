@@ -109,7 +109,6 @@ struct BED {
   [[nodiscard]] size_t size() const noexcept;
   [[nodiscard]] size_t num_fields() const noexcept;
   [[nodiscard]] Dialect get_standard() const noexcept;
-  [[nodiscard]] std::string to_string() const noexcept;
   [[nodiscard]] bool empty() const;
   template <typename H>
   inline friend H AbslHashValue(H h, const BED& c) {

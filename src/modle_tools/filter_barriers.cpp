@@ -37,7 +37,7 @@ void filter_barriers_intersection(const modle::tools::filter_barrier_config& c) 
       }
     }
     if (print) {
-      fmt::print(stdout, "{}\n", record.to_string());
+      fmt::print(stdout, FMT_STRING("{}\n"), record);
     }
   }
 }
@@ -63,7 +63,7 @@ void filter_barriers_pairwise_intersection(const modle::tools::filter_barrier_co
            .parse_all()) {
     for (const auto& i : intervals) {
       if (!i.contains_overlap(record)) {
-        fmt::print(stdout, "{}\n", record.to_string());
+        fmt::print(stdout, FMT_STRING("{}\n"), record);
         break;
       }
     }

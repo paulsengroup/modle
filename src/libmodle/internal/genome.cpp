@@ -416,10 +416,10 @@ size_t Genome::import_barriers(absl::btree_set<Chromosome>& chromosomes,
     if (const auto chrom_name = std::string{chrom.name()}; barriers.contains(chrom_name)) {
       for (const auto& record : barriers.at(chrom_name).data()) {
         if (record.score < 0 || record.score > 1) {
-          throw std::runtime_error(
-              fmt::format("Invalid score field detected for record {}[{}-{}]: expected a score "
-                          "between 0 and 1, got {:.4g}.",
-                          record.chrom, record.chrom_start, record.chrom_end, record.score));
+          throw std::runtime_error(fmt::format(
+              FMT_STRING("Invalid score field detected for record {}[{}-{}]: expected a score "
+                         "between 0 and 1, got {:.4g}."),
+              record.chrom, record.chrom_start, record.chrom_end, record.score));
         }
         chrom.add_extrusion_barrier(record, ctcf_prob_occ_to_occ, ctcf_prob_nocc_to_nocc);
         ++tot_num_barriers;

@@ -38,7 +38,8 @@ std::vector<bed::BED> Parser::parse_all(char sep) {
       }
       tokens.insert(tokens.begin() + 1, "0");
       if (const auto& chrom_name = tokens.front(); chrom_names.contains(chrom_name)) {
-        throw std::runtime_error(fmt::format("Found multiple records for chrom '{}'", chrom_name));
+        throw std::runtime_error(
+            fmt::format(FMT_STRING("Found multiple records for chrom '{}'"), chrom_name));
       }
       chrom_sizes.emplace_back(absl::StrJoin(tokens, "\t"), id++, bed::BED::BED3);
     } catch (const std::runtime_error& e) {

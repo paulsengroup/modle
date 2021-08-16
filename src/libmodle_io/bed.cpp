@@ -38,7 +38,7 @@ void BED::parse_strand_or_throw(const std::vector<std::string_view>& toks, uint8
                                 char& field) {
   const auto match = bed_strand_encoding.find(toks[idx]);
   if (match == bed_strand_encoding.end()) {
-    throw std::runtime_error(fmt::format("Unrecognized strand '{}'", toks[idx]));
+    throw std::runtime_error(fmt::format(FMT_STRING("Unrecognized strand '{}'"), toks[idx]));
   }
   field = match->second;
 }
@@ -50,8 +50,8 @@ void BED::parse_rgb_or_throw(const std::vector<std::string_view>& toks, uint8_t 
   }
   const std::vector<std::string_view> channels = absl::StrSplit(toks[idx], ',');
   if (channels.size() != 3) {
-    throw std::runtime_error(
-        fmt::format("RGB: expected 3 fields, got {}: '{}'", channels.size(), toks[idx]));
+    throw std::runtime_error(fmt::format(FMT_STRING("RGB: expected 3 fields, got {}: '{}'"),
+                                         channels.size(), toks[idx]));
   }
   utils::parse_numeric_or_throw(channels, 0, field.r);
   utils::parse_numeric_or_throw(channels, 1, field.g);
@@ -70,9 +70,9 @@ BED::Dialect BED::detect_standard(std::string_view line) {
 
 BED::Dialect BED::detect_standard(const std::vector<std::string_view>& toks) {
   if (toks.size() < BED3) {
-    throw std::runtime_error(
-        fmt::format("Expected at least 3 fields, got {}.\nRecord that caused the error: '{}'",
-                    toks.size(), absl::StrJoin(toks, "\t")));
+    throw std::runtime_error(fmt::format(
+        FMT_STRING("Expected at least 3 fields, got {}.\nRecord that caused the error: '{}'"),
+        toks.size(), absl::StrJoin(toks, "\t")));
   }
 
   switch (toks.size()) {
@@ -102,15 +102,17 @@ void BED::validate_record(const std::vector<std::string_view>& toks, const Diale
   const auto& ntoks = toks.size();
   if (standard == autodetect && detect_standard(toks) == none) {
     throw std::runtime_error(fmt::format(
-        "Invalid BED record detected: expected 3, 4, 5, 6 or 12 fields, got {}.\nRefer to "
-        "https://bedtools.readthedocs.io/_end/latest/content/general-usage.html#bed-format for the "
-        "BED format specification",
+        FMT_STRING(
+            "Invalid BED record detected: expected 3, 4, 5, 6 or 12 fields, got {}.\nRefer to "
+            "https://bedtools.readthedocs.io/_end/latest/content/general-usage.html#bed-format for "
+            "the BED format specification"),
         ntoks));
   }
 
   if (detect_standard(toks) < standard) {
     throw std::runtime_error(fmt::format(
-        "Invalid BED record detected: Expected BED record with at least {} fields, got {}",
+        FMT_STRING(
+            "Invalid BED record detected: Expected BED record with at least {} fields, got {}"),
         standard, ntoks));
   }
 }
@@ -127,8 +129,8 @@ bool BED::parse_chrom_end(const std::vector<std::string_view>& toks) {
   utils::parse_numeric_or_throw(toks, BED_CHROM_END_IDX, this->chrom_end);
   if (this->chrom_start > this->chrom_end) {
     throw std::runtime_error(
-        fmt::format("Invalid BED record detected: chrom_start > chrom_end: chrom='{}'; "
-                    "overlap_start={}; _end={}",
+        fmt::format(FMT_STRING("Invalid BED record detected: chrom_start > chrom_end: chrom='{}'; "
+                               "overlap_start={}; _end={}"),
                     this->chrom, this->chrom_start, this->chrom_end));
   }
   return this->_standard == BED3;
@@ -146,7 +148,8 @@ bool BED::parse_score(const std::vector<std::string_view>& toks, bool validate) 
   // NOLINTNEXTLINE(readability-magic-numbers, cppcoreguidelines-avoid-magic-numbers)
   if (this->_standard != none && validate && (this->score < 0 || this->score > 1000)) {
     throw std::runtime_error(fmt::format(
-        "Invalid BED record detected: score field should be between 0.0 and 1000.0, is {}.",
+        FMT_STRING(
+            "Invalid BED record detected: score field should be between 0.0 and 1000.0, is {}."),
         this->score));
   }
   return this->_standard == BED5;
@@ -162,10 +165,10 @@ bool BED::parse_thick_start(const std::vector<std::string_view>& toks, bool vali
   assert(this->_standard >= 7);  // NOLINT
   utils::parse_numeric_or_throw(toks, BED_THICK_START_IDX, this->thick_start);
   if (validate && this->thick_start < this->chrom_start) {
-    throw std::runtime_error(
-        fmt::format("Invalid BED record detected: thick_start < chrom_start: chrom='{}'; "
-                    "overlap_start={}; thick_start={}",
-                    this->chrom, this->chrom_start, this->thick_start));
+    throw std::runtime_error(fmt::format(
+        FMT_STRING("Invalid BED record detected: thick_start < chrom_start: chrom='{}'; "
+                   "overlap_start={}; thick_start={}"),
+        this->chrom, this->chrom_start, this->thick_start));
   }
   return this->_standard == none && toks.size() == BED_THICK_START;
 }
@@ -175,14 +178,14 @@ bool BED::parse_thick_end(const std::vector<std::string_view>& toks, bool valida
   utils::parse_numeric_or_throw(toks, BED_THICK_END_IDX, this->thick_end);
   if (validate && this->thick_end > this->chrom_end) {
     throw std::runtime_error(
-        fmt::format("Invalid BED record detected: thick_end > chrom_end: chrom='{}'; "
-                    "overlap_start={}; thick_start={}",
+        fmt::format(FMT_STRING("Invalid BED record detected: thick_end > chrom_end: chrom='{}'; "
+                               "overlap_start={}; thick_start={}"),
                     this->chrom, this->chrom_end, this->thick_end));
   }
   if (validate && this->thick_start > this->thick_end) {
     throw std::runtime_error(
-        fmt::format("Invalid BED record detected: thick_start > thick_end: chrom='{}'; "
-                    "thick_start={}; thick_end={}",
+        fmt::format(FMT_STRING("Invalid BED record detected: thick_start > thick_end: chrom='{}'; "
+                               "thick_start={}; thick_end={}"),
                     this->chrom, this->chrom_start, this->chrom_end));
   }
   return this->_standard == none && toks.size() == BED_THICK_END;
@@ -243,12 +246,14 @@ BED::BED(std::string_view record, size_t id_, BED::Dialect bed_standard, bool va
   }
   if (bed_standard == autodetect) {
     if ((bed_standard = detect_standard(toks)) == none && validate) {
-      throw std::runtime_error(
-          fmt::format("Expected 3, 4, 5, 6 or 12 fields, got {}.\nRefer to "
-                      "https://bedtools.readthedocs.io/_end/latest/content/"
-                      "general-usage.html#bed-format for the BED format specification.\nRecord "
-                      "that caused the error: '{}'",
-                      toks.size(), absl::StrJoin(toks, "\t")));
+      throw std::runtime_error(fmt::format(
+          FMT_STRING(
+              "Expected 3, 4, 5, 6 or 12 fields, got {}.\n"
+              "Refer to "
+              "https://bedtools.readthedocs.io/_end/latest/content/general-usage.html#bed-format "
+              "for the BED format specification.\n"
+              "Record that caused the error: '{}'"),
+          toks.size(), absl::StrJoin(toks, "\t")));
     }
   }
 
@@ -296,7 +301,8 @@ BED::BED(std::string_view record, size_t id_, BED::Dialect bed_standard, bool va
 
   } catch (const std::exception& e) {
     throw std::runtime_error(fmt::format(
-        "An error occurred while parsing the following BED record '{}':\n  {}", record, e.what()));
+        FMT_STRING("An error occurred while parsing the following BED record '{}':\n  {}"), record,
+        e.what()));
   }
 }
 
@@ -385,13 +391,11 @@ size_t BED::num_fields() const noexcept {
 
 bool BED::empty() const { return chrom.empty(); }
 
-std::string BED::to_string() const noexcept { return fmt::to_string(*this); }
-
 uint64_t BED::hash(XXH_INLINE_XXH3_state_t* state, uint64_t seed) const {
   auto handle_errors = [&](const auto& status) {
     if (status == XXH_ERROR || !state) {
-      throw std::runtime_error(fmt::format(
-          FMT_STRING("Failed to hash the following BED record: {}"), this->to_string()));
+      throw std::runtime_error(
+          fmt::format(FMT_STRING("Failed to hash the following BED record: {}"), *this));
     }
   };
 
@@ -471,8 +475,7 @@ std::vector<BED> Parser::parse_n(size_t num_records) {
       throw std::runtime_error(fmt::format(
           FMT_STRING("Detected duplicate record at line {} of file {}. First occurrence was at "
                      "line {}.\n - First occurrence:  '{}'\n - Second occurrence: '{}'"),
-          this->_num_lines_read, this->_reader.path(), other_record_line, record.to_string(),
-          other_record.to_string()));
+          this->_num_lines_read, this->_reader.path(), other_record_line, record, other_record));
     }
   }
 
@@ -510,8 +513,7 @@ BED_tree<> Parser::parse_n_in_interval_tree(size_t num_records) {
       throw std::runtime_error(fmt::format(
           FMT_STRING("Detected duplicate record at line {} of file {}. First occurrence was at "
                      "line {}.\n - First occurrence:  '{}'\n - Second occurrence: '{}'"),
-          this->_num_lines_read, this->_reader.path(), other_record_line, record.to_string(),
-          other_record.to_string()));
+          this->_num_lines_read, this->_reader.path(), other_record_line, record, other_record));
     }
 
     intervals.emplace(std::move(record));

@@ -295,7 +295,7 @@ auto fmt::formatter<modle::bed::BED>::format(const modle::bed::BED& b, FormatCon
   }
 
   if (!b.extra_tokens.empty()) {
-    it = fmt::format_to(it, "\t{}", b.extra_tokens);
+    it = fmt::format_to(it, FMT_STRING("\t{}"), b.extra_tokens);
   }
 
   return it;

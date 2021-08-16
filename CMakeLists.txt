@@ -67,6 +67,9 @@ target_compile_definitions(project_options INTERFACE SPDLOG_DISABLE_DEFAULT_LOGG
 target_compile_definitions(project_options INTERFACE SPDLOG_NO_ATOMIC_LEVELS=1)
 target_compile_definitions(project_options INTERFACE SPDLOG_PREVENT_CHILD_FD=1)
 
+# Tweak fmt
+target_compile_definitions(project_options INTERFACE FMT_ENFORCE_COMPILE_STRING=1)
+
 # Reduce level of optimization to improve the code profiling experience
 if(OPTIMIZE_FOR_PROFILING)
   if(NOT

@@ -100,14 +100,15 @@ void stats_subcmd(const modle::tools::stats_config& c) {
     std::vector<size_t> buff(c.diagonal_width / bin_size);
     std::iota(buff.begin(), buff.end(), 0);
     // TODO: Consider whether it make sense to write this header
-    fmt::print(*hist_file, "#{}\n", absl::StrJoin(buff, "\t"));
+    fmt::print(*hist_file, FMT_STRING("#{}\n"), absl::StrJoin(buff, "\t"));
   }
 
   // Write header
   fmt::print(
       stdout,
-      "chrom_name\ttot_number_of_contacts_1\ttot_number_of_contacts_2\tavg_number_of_contacts_"
-      "1\tavg_number_of_contacts_2\tfraction_of_graylisted_bins\n");
+      FMT_STRING(
+          "chrom_name\ttot_number_of_contacts_1\ttot_number_of_contacts_2\tavg_number_of_contacts_"
+          "1\tavg_number_of_contacts_2\tfraction_of_graylisted_bins\n"));
 
   size_t tot_contacts = 0;
   size_t tot_contacts_after_depl = 0;
@@ -156,7 +157,7 @@ void stats_subcmd(const modle::tools::stats_config& c) {
     // clang-format on
 
     if (hist_file) {
-      fmt::print(*hist_file, "{}\n", absl::StrJoin(hist, "\t"));
+      fmt::print(*hist_file, FMT_STRING("{}\n"), absl::StrJoin(hist, "\t"));
     }
 
     if (m2) {

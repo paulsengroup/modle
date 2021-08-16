@@ -95,7 +95,7 @@ int main(int argc, char** argv) noexcept {
         e.what());
     return 1;
   } catch (const std::exception& e) {
-    spdlog::error("FAILURE! An error occurred during simulation: {}.", e.what());
+    spdlog::error(FMT_STRING("FAILURE! An error occurred during simulation: {}."), e.what());
 #ifndef BOOST_STACKTRACE_USE_NOOP
     const auto* st = boost::get_error_info<modle::utils::traced>(e);
     if (st) {
@@ -107,8 +107,8 @@ int main(int argc, char** argv) noexcept {
     return 1;
   } catch (...) {
     spdlog::error(
-        "FAILURE! An error occurred during simulation: Caught an unhandled exception! "
-        "If you see this message, please file an issue on GitHub.");
+        FMT_STRING("FAILURE! An error occurred during simulation: Caught an unhandled exception! "
+                   "If you see this message, please file an issue on GitHub."));
     return 1;
   }
   return 0;

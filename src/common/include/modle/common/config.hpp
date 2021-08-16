@@ -108,8 +108,8 @@ struct Config {  // NOLINT(altera-struct-pack-align)
     std::vector<cli_tokens>{
      {"Bin size (bp)", fmt::format(FMT_STRING("{}"), this->bin_size)},
      {"Diagonal width (bp)", fmt::format(FMT_STRING("{}"), this->diagonal_width)},
-     {"# of iterations", fmt::format(FMT_STRING("{}"), this->simulation_iterations != 0 ? "Disabled"sv : fmt::format("{}", this->simulation_iterations))},
-     {"Target contact density", fmt::format(FMT_STRING("{}"), this->target_contact_density != 0 ? fmt::format("{}", this->target_contact_density) : "Disabled"sv)},
+     {"# of iterations", fmt::format(FMT_STRING("{}"), this->simulation_iterations != 0 ? "Disabled"sv : fmt::format(FMT_STRING("{}"), this->simulation_iterations))},
+     {"Target contact density", fmt::format(FMT_STRING("{}"), this->target_contact_density != 0 ? fmt::format(FMT_STRING("{}"), this->target_contact_density) : "Disabled"sv)},
      {"Seed", fmt::format(FMT_STRING("{}"), this->seed)},
      {"Contact sampling interval", fmt::format(FMT_STRING("{}"), this->lef_fraction_contact_sampling)}}},
     {"LEF settings"sv,

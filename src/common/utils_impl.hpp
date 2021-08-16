@@ -135,9 +135,9 @@ void throw_except_from_errc(std::string_view tok, size_t idx, const N &field, co
   static_assert(std::is_arithmetic<N>());
   std::string base_error;
   if (idx != SIZE_MAX) {
-    base_error = fmt::format("Unable to convert field {} ('{}') to a ", idx, tok);
+    base_error = fmt::format(FMT_STRING("Unable to convert field {} ('{}') to a "), idx, tok);
   } else {
-    base_error = fmt::format("Unable to convert field '{}' to", tok);
+    base_error = fmt::format(FMT_STRING("Unable to convert field '{}' to"), tok);
   }
   if (std::is_integral<N>()) {
     if (std::is_unsigned<N>()) {
@@ -151,19 +151,20 @@ void throw_except_from_errc(std::string_view tok, size_t idx, const N &field, co
   if (e == std::errc::invalid_argument) {
     if (c != nullptr) {
       throw std::runtime_error(
-          fmt::format("{}. Reason: found an invalid character '{}'", base_error, *c));
+          fmt::format(FMT_STRING("{}. Reason: found an invalid character '{}'"), base_error, *c));
     }
-    throw std::runtime_error(fmt::format("{}. Reason: found an invalid character", base_error));
+    throw std::runtime_error(
+        fmt::format(FMT_STRING("{}. Reason: found an invalid character"), base_error));
   }
   if (e == std::errc::result_out_of_range) {
     throw std::runtime_error(fmt::format(
-        "{}. Reason: number {} is outside the range of representable numbers [{}, {}].", base_error,
-        tok, (std::numeric_limits<N>::min)(), (std::numeric_limits<N>::max)()));
+        FMT_STRING("{}. Reason: number {} is outside the range of representable numbers [{}, {}]."),
+        base_error, tok, (std::numeric_limits<N>::min)(), (std::numeric_limits<N>::max)()));
   }
   throw std::logic_error(
-      fmt::format("{}. If you see this error, report it to the developers on "
-                  "GitHub.\nBED::throw_except_from_errc "
-                  "called with an invalid std::errc '{}'. This should not be possible!",
+      fmt::format(FMT_STRING("{}. If you see this error, report it to the developers on "
+                             "GitHub.\nBED::throw_except_from_errc "
+                             "called with an invalid std::errc '{}'. This should not be possible!"),
                   base_error, std::make_error_code(e).message()));
 }
 
@@ -255,7 +256,7 @@ void fclose(FILE *fp) noexcept(false) {
     return;
   }
   if (std::fclose(fp) != 0) {  // NOLINT
-    throw fmt::system_error(errno, "Failed to close a file handle");
+    throw fmt::system_error(errno, FMT_STRING("Failed to close a file handle"));
   }
 }
 

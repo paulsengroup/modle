@@ -45,31 +45,32 @@ bigwig::file init_bigwig_file(std::string_view output_path, std::vector<char*>& 
   bigwig::file bw_fp{nullptr, &close_bigwig_file};
   if (bwInit(buff_size)) {  // NOLINT(readability-implicit-bool-conversion)
     throw std::runtime_error(
-        fmt::format("Failed to initialize a buffer for file: '{}'", output_path));
+        fmt::format(FMT_STRING("Failed to initialize a buffer for file: '{}'"), output_path));
   }
 
   std::string output_path_tmp = output_path.data();  // This is just a workaround, because bwOpen
   // takes a char* ... not a const char*
   bw_fp.reset(bwOpen(output_path_tmp.data(), nullptr, "w"));
   if (!bw_fp) {
-    throw std::runtime_error(
-        fmt::format("An error occurred while opening file '{}' for writing", output_path));
+    throw std::runtime_error(fmt::format(
+        FMT_STRING("An error occurred while opening file '{}' for writing"), output_path));
   }
 
   if (bwCreateHdr(bw_fp.get(), zoom_levels)) {  // NOLINT(readability-implicit-bool-conversion)
     throw std::runtime_error(
-        fmt::format("Failed to initialize the file header for file '{}'", output_path));
+        fmt::format(FMT_STRING("Failed to initialize the file header for file '{}'"), output_path));
   }
 
   bw_fp->cl = bwCreateChromList(chrom_names.data(), chrom_sizes.data(),
                                 static_cast<int64_t>(chrom_sizes.size()));
   if (!bw_fp->cl) {
     throw std::runtime_error(
-        fmt::format("Failed to create the chromosome list for file '{}'", output_path));
+        fmt::format(FMT_STRING("Failed to create the chromosome list for file '{}'"), output_path));
   }
 
   if (bwWriteHdr(bw_fp.get())) {  // NOLINT(readability-implicit-bool-conversion)
-    throw std::runtime_error(fmt::format("Failed to write file header to file '{}'", output_path));
+    throw std::runtime_error(
+        fmt::format(FMT_STRING("Failed to write file header to file '{}'"), output_path));
   }
   return bw_fp;
 }

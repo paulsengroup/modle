@@ -533,7 +533,7 @@ std::string Cli::validate_eval_subcommand() {
     for (std::string_view suffix :
          {"rho", "tau", "rho_pv", "tau_pv"}) {  // TODO Update this section
       for (std::string_view ext : {"tsv.bz2", "bwig"}) {
-        if (auto file = fmt::format("{}_{}.{}", c.output_base_name, suffix, ext);
+        if (auto file = fmt::format(FMT_STRING("{}_{}.{}"), c.output_base_name, suffix, ext);
             boost::filesystem::exists(file)) {
           collisions.emplace_back(file);
         }

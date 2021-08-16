@@ -28,10 +28,11 @@ template <typename I>
     const std::vector<collision_t>& rev_collision_mask_expected,
     const std::vector<collision_t>& fwd_collision_mask,
     const std::vector<collision_t>& fwd_collision_mask_expected) {
-  fmt::print(stderr, "i={}; rev_move={}/{}; fwd_move={}/{};\n", i, rev_moves[i],
+  fmt::print(stderr, FMT_STRING("i={}; rev_move={}/{}; fwd_move={}/{};\n"), i, rev_moves[i],
              rev_moves_expected[i], fwd_moves[i], fwd_moves_expected[i]);
-  fmt::print(stderr, "i={}; rev_status={}/{}; fwd_status={}/{};\n", i, rev_collision_mask[i],
-             rev_collision_mask_expected[i], fwd_collision_mask[i], fwd_collision_mask_expected[i]);
+  fmt::print(stderr, FMT_STRING("i={}; rev_status={}/{}; fwd_status={}/{};\n"), i,
+             rev_collision_mask[i], rev_collision_mask_expected[i], fwd_collision_mask[i],
+             fwd_collision_mask_expected[i]);
 }
 
 [[maybe_unused]] inline void check_simulation_result(
