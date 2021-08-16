@@ -471,7 +471,7 @@ constexpr double ContactMatrix<I>::get_fraction_of_missed_updates() const noexce
     return 0.0;
   }
   return static_cast<double>(this->get_n_of_missed_updates()) /
-         static_cast<double>(this->get_tot_contacts());
+         static_cast<double>(this->get_tot_contacts() + this->get_n_of_missed_updates());
 }
 
 template <typename I>
