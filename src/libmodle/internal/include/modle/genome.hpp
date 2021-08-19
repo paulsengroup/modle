@@ -157,7 +157,7 @@ class Genome {
   /// Import chromosomes from a chrom.sizes file
 
   //! When \p path_to_extr_barriers is non-empty, import the intersection of the chromosomes present
-  //! in the chrom.sizes and BED files. The optional BED file can be used to instruct ModLE to
+  //! in the chrom.sizes and BED files. The optional BED file can be used to instruct MoDLE to
   //! simulate loop extrusion on a sub-region of a chromosome from the chrom.sizes file.
   [[nodiscard]] static absl::btree_set<Chromosome> import_chromosomes(
       const boost::filesystem::path& path_to_chrom_sizes,

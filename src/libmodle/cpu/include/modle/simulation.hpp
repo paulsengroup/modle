@@ -78,7 +78,6 @@ class Simulation : Config {
     std::vector<size_t> idx_buff{};
     std::vector<collision_t> collision_buff1{};
     std::vector<collision_t> collision_buff2{};
-    std::vector<size_t> epoch_buff{};
     random::PRNG_t rand_eng{};
     uint64_t seed{};
     std::unique_ptr<XXH3_state_t, utils::XXH3_Deleter> xxh_state{XXH3_createState()};
@@ -144,8 +143,6 @@ class Simulation : Config {
   template <typename StateT, typename = std::enable_if_t<std::is_same_v<StateT, State> ||
                                                          std::is_same_v<StateT, StatePW>>>
   inline void simulate_one_cell(StateT& s) const;
-
-  [[nodiscard]] absl::Span<const size_t> setup_burnin(BaseState& s) const;
 
   /// Simulate loop extrusion on a Chromosome window using the parameters and buffers passed through
   /// \p state

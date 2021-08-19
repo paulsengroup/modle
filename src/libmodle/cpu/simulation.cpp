@@ -207,6 +207,7 @@ void Simulation::adjust_moves_of_consecutive_extr_units(
     absl::Span<const size_t> fwd_lef_ranks, absl::Span<bp_t> rev_moves,
     absl::Span<bp_t> fwd_moves) noexcept(utils::ndebug_defined()) {
   (void)chrom;
+  assert(!lefs.empty());  // NOLINT
 
   // Loop over pairs of consecutive extr. units.
   // Extr. units moving in rev direction are processed in 3'-5' order, while units moving in fwd
@@ -549,7 +550,6 @@ void Simulation::BaseState::_resize_buffers(const size_t new_size) {
   idx_buff.resize(new_size);
   collision_buff1.resize(new_size);
   collision_buff2.resize(new_size);
-  epoch_buff.resize(new_size);
 }
 
 void Simulation::BaseState::_reset_buffers() {  // TODO figure out which resets are redundant
@@ -562,7 +562,6 @@ void Simulation::BaseState::_reset_buffers() {  // TODO figure out which resets 
   std::fill(moves_buff2.begin(), moves_buff2.end(), 0);
   std::fill(collision_buff1.begin(), collision_buff1.end(), 0);
   std::fill(collision_buff2.begin(), collision_buff2.end(), 0);
-  std::fill(epoch_buff.begin(), epoch_buff.end(), 0);
 }
 
 void Simulation::State::resize_buffers(size_t new_size) {
@@ -665,37 +664,6 @@ std::pair<size_t, size_t> Simulation::process_collisions(
       chrom, lefs, barriers.size(), rev_lef_ranks, fwd_lef_ranks, rev_moves, fwd_moves,
       rev_collisions, fwd_collisions, rand_eng, num_rev_units_at_5prime, num_fwd_units_at_3prime);
   return std::make_pair(num_rev_units_at_5prime, num_fwd_units_at_3prime);
-}
-
-absl::Span<const size_t> Simulation::setup_burnin(BaseState& s) const {
-  // Generate the epoch at which each LEF is supposed to be initially loaded
-  auto lef_initial_loading_epoch = absl::MakeSpan(s.epoch_buff);
-  // lef_initial_loading_epoch.resize(this->skip_burnin ? 0 : s.nlefs);
-
-  if (!skip_burnin) {
-    // TODO Consider using a Poisson process instead of sampling from an uniform distribution
-    random::uniform_int_distribution<size_t> round_gen{0, (4 * average_lef_lifetime) / bin_size};
-    std::generate(lef_initial_loading_epoch.begin(), lef_initial_loading_epoch.end(),
-                  [&]() { return round_gen(s.rand_eng); });
-
-    // Sort epochs in descending order
-    // NOLINTNEXTLINE(readability-magic-numbers, cppcoreguidelines-avoid-magic-numbers)
-    if (round_gen.max() > 2048) {
-      // Counting sort uses n + r space in memory, where r is the number of unique values in the
-      // range to be sorted. For this reason it is not a good idea to use it when the sampling
-      // interval is relatively large. Whether 2048 is a reasonable threshold has yet to be tested
-      cppsort::ska_sort(lef_initial_loading_epoch.rbegin(), lef_initial_loading_epoch.rend());
-    } else {
-      cppsort::counting_sort(lef_initial_loading_epoch.rbegin(), lef_initial_loading_epoch.rend());
-    }
-  }
-
-  // Shift epochs so that the first epoch == 0
-  if (const auto offset = lef_initial_loading_epoch.back(); offset != 0) {
-    std::for_each(lef_initial_loading_epoch.begin(), lef_initial_loading_epoch.end(),
-                  [&](auto& n) { n -= offset; });
-  }
-  return lef_initial_loading_epoch;
 }
 
 }  // namespace modle

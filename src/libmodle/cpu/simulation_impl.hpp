@@ -116,7 +116,6 @@ void Simulation::simulate_one_cell(StateT& s) const {
     assert(s.num_lefs == s.idx_buff.size());         // NOLINT
     assert(s.num_lefs == s.collision_buff1.size());  // NOLINT
     assert(s.num_lefs == s.collision_buff2.size());  // NOLINT
-    assert(s.num_lefs == s.epoch_buff.size());       // NOLINT
   }
   auto epoch = 0UL;  // The epoch needs to be declared outside of the try-catch body so that we can
   // use the current epoch when generating error messages
@@ -124,11 +123,11 @@ void Simulation::simulate_one_cell(StateT& s) const {
     // Seed is computed based on chrom. name, size and cellid
     s.seed = s.chrom->hash(s.xxh_state.get(), this->seed, s.cell_id);
     s.rand_eng = random::PRNG(s.seed);
-    auto lef_initial_loading_epoch = setup_burnin(s);
 
-    // The highest loading epoch equals to the number of burnin epochs
-    const auto n_burnin_epochs = this->skip_burnin ? 0 : lef_initial_loading_epoch.front();
-    s.num_target_epochs += s.num_target_contacts != 0 ? 0 : n_burnin_epochs;
+    const auto lef_binding_rate_burnin =
+        static_cast<double>(s.num_lefs) /
+        (static_cast<double>(this->average_lef_lifetime * 4) /
+         static_cast<double>(this->rev_extrusion_speed + this->fwd_extrusion_speed));
 
     // Compute the avg. # of LEFs to use to sample contact every iterations
     const auto avg_nlefs_to_sample =
@@ -164,39 +163,27 @@ void Simulation::simulate_one_cell(StateT& s) const {
     }
 
     size_t nlefs_to_release;  // NOLINT
+    size_t num_active_lefs = this->skip_burnin ? s.num_lefs : 0;
     // Start the burnin phase (followed by the actual simulation)
     for (; epoch < s.num_target_epochs; ++epoch) {
-      if (!lef_initial_loading_epoch.empty()) {  // Execute this branch only during the burnin phase
-        if (this->skip_burnin) {
-          // The following will cause every LEF to be loaded in the current iteration
-          lef_initial_loading_epoch.subspan(0, 0);
+      if (num_active_lefs != s.num_lefs) {
+        s.num_target_epochs = std::max(s.num_target_epochs + 1, s.num_target_epochs);
+        const auto num_lefs_to_bind =
+            modle::random::poisson_distribution<size_t>{lef_binding_rate_burnin}(s.rand_eng);
+        num_active_lefs = std::min(num_active_lefs + num_lefs_to_bind, s.num_lefs);
+        if (num_active_lefs == 0) {  // Guard against the rare occasion where the poisson prng
+                                     // samples 0 in the first epoch
+          continue;
         }
 
-        // Consume epochs for LEFs that are supposed to be loaded in the current epoch
-        auto nlefs_to_bind = 0UL;
-        for (const auto n : boost::adaptors::reverse(lef_initial_loading_epoch)) {
-          if (n != epoch) {
-            break;
-          }
-          ++nlefs_to_bind;
-        }
-        lef_initial_loading_epoch.remove_suffix(nlefs_to_bind);
-        // Don't remove this assertion! It is very useful to prevent empty Spans and other
-        // issues that can cause weird issues later on during the simulation NOLINTNEXTLINE
-        assert(lef_initial_loading_epoch.size() < s.num_lefs);  // NOLINT
-
-        // Compute the current number of active LEFs (i.e. LEFs that are either bound to DNA, or
-        // that are valid candidates for re-binding). Grow spans accordingly
-        const auto nlefs = s.num_lefs - lef_initial_loading_epoch.size();
-
-        lefs = absl::MakeSpan(s.lef_buff.data(), nlefs);
-        lef_unloader_affinity = absl::MakeSpan(s.lef_unloader_affinity.data(), nlefs);
-        rev_lef_ranks = absl::MakeSpan(s.rank_buff1.data(), nlefs);
-        fwd_lef_ranks = absl::MakeSpan(s.rank_buff2.data(), nlefs);
-        rev_moves = absl::MakeSpan(s.moves_buff1.data(), nlefs);
-        fwd_moves = absl::MakeSpan(s.moves_buff2.data(), nlefs);
-        rev_collision_mask = absl::MakeSpan(s.collision_buff1.data(), nlefs);
-        fwd_collision_mask = absl::MakeSpan(s.collision_buff2.data(), nlefs);
+        lefs = absl::MakeSpan(s.lef_buff.data(), num_active_lefs);
+        lef_unloader_affinity = absl::MakeSpan(s.lef_unloader_affinity.data(), num_active_lefs);
+        rev_lef_ranks = absl::MakeSpan(s.rank_buff1.data(), num_active_lefs);
+        fwd_lef_ranks = absl::MakeSpan(s.rank_buff2.data(), num_active_lefs);
+        rev_moves = absl::MakeSpan(s.moves_buff1.data(), num_active_lefs);
+        fwd_moves = absl::MakeSpan(s.moves_buff2.data(), num_active_lefs);
+        rev_collision_mask = absl::MakeSpan(s.collision_buff1.data(), num_active_lefs);
+        fwd_collision_mask = absl::MakeSpan(s.collision_buff2.data(), num_active_lefs);
 
         // Sample nlefs to be released while in burn-in phase
         nlefs_to_release =
@@ -226,7 +213,7 @@ void Simulation::simulate_one_cell(StateT& s) const {
         }
       }
 
-      if (epoch > n_burnin_epochs) {                 // Register contacts
+      if (num_active_lefs == s.num_lefs) {           // Register contacts
         assert(fwd_lef_ranks.size() == s.num_lefs);  // NOLINT
 
         auto nlefs_to_sample = std::min(
@@ -238,8 +225,8 @@ void Simulation::simulate_one_cell(StateT& s) const {
         }
 
         // Select LEFs to be used for contact registration.
-        // We are sampling from fwd ranks to avoid having to allocate a vector of indices just to do
-        // this sampling
+        // We are sampling from fwd ranks to avoid having to allocate a vector of indices just to
+        // do this sampling
         const auto lef_idx = absl::MakeSpan(s.idx_buff.data(), nlefs_to_sample);
         random_sample(fwd_lef_ranks.begin(), fwd_lef_ranks.end(), lef_idx.begin(), lef_idx.size(),
                       s.rand_eng);
