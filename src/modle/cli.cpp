@@ -192,6 +192,35 @@ void add_common_options(CLI::App& subcommand, modle::Config& c) {
       ->capture_default_str();
 
   gen.add_option(
+      "--burn-in-lef-activation-epochs",
+       c.burnin_lef_binding_epochs,
+      "Number of epochs over which LEFs are progressively activated and bound to DNA.\n"
+      "Note: this number is approximate, as LEFs are activate using a Possion process.\n"
+      "By default this parameter is computed based on the average LEF lifetime, overall extrusion speed "
+      "and burn-in extrusion speed coefficient (controlled by --avg-lef-lifetime, --fwd/rev-extrusion-speed "
+      "and --burn-in-extr-speed-coefficient respectively).")
+       ->check(CLI::PositiveNumber);
+
+  gen.add_option(
+      "--burn-in-epochs",
+       c.burnin_epochs,
+       "Number of burnin epochs.\n"
+       "Once all LEFs have been activated (see --burn-in-lef-activation-epochs), MoDLE will "
+       "simulate loop extrusion for exactly --burn-in-epochs without recording contacts.\n"
+       "By default this parameter is computed based on the average LEF lifetime, overall extrusion speed "
+       "and burn-in extrusion speed coefficient (controlled by --avg-lef-lifetime, --fwd/rev-extrusion-speed "
+       "and --burn-in-extr-speed-coefficient respectively).")
+       ->check(CLI::PositiveNumber);
+
+  gen.add_option(
+      "--burn-in-extr-speed-coefficient",
+      c.burnin_speed_coefficient,
+      "Extrusion speed coefficient to apply during the burn-in phase.\n"
+      "Setting this to numbers > 1.0 will speed-up the burn-in phase.")
+      ->check(CLI::PositiveNumber)
+      ->capture_default_str();
+
+  gen.add_option(
       "--seed",
       c.seed,
       "Base seed to use for random number generation.")
@@ -295,6 +324,10 @@ void add_common_options(CLI::App& subcommand, modle::Config& c) {
   gen.get_option("--target-contact-density")->excludes(gen.get_option("--number-of-iterations"));
   extr_barr.get_option("--extrusion-barrier-occupancy")->excludes("--ctcf-occupied-probability-of-transition-to-self");
   // clang-format on
+
+  rand.get_option("--mu")->needs(rand.get_option("--randomize-contacts"));
+  rand.get_option("--sigma")->needs(rand.get_option("--randomize-contacts"));
+  rand.get_option("--xi")->needs(rand.get_option("--randomize-contacts"));
 }
 
 void Cli::make_simulation_subcommand() {
@@ -309,7 +342,6 @@ void Cli::make_simulation_subcommand() {
   auto& c = this->_config;
   auto& io = *s.get_option_group("Input/Output");
   auto& gen = *s.get_option_group("Generic");
-  auto& rand = *s.get_option_group("Random");
 
   // clang-format off
   io.add_option(
@@ -338,10 +370,6 @@ void Cli::make_simulation_subcommand() {
       ->transform(utils::str_float_to_str_int)
       ->capture_default_str();
   // clang-format on
-
-  rand.get_option("--mu")->needs(rand.get_option("--randomize-contacts"));
-  rand.get_option("--sigma")->needs(rand.get_option("--randomize-contacts"));
-  rand.get_option("--xi")->needs(rand.get_option("--randomize-contacts"));
 }
 
 void Cli::make_perturbate_subcommand() {
@@ -422,6 +450,7 @@ void Cli::make_cli() {
 }
 
 Cli::Cli(int argc, char** argv) : _argc(argc), _argv(argv), _exec_name(*argv) { this->make_cli(); }
+
 const Config& Cli::parse_arguments() {
   this->_cli.name(this->_exec_name);
   this->_cli.parse(this->_argc, this->_argv);
@@ -499,35 +528,51 @@ std::string Cli::process_paths_and_check_for_collisions(modle::Config& c) {
 int Cli::exit(const CLI::ParseError& e) const { return this->_cli.exit(e); }
 
 void Cli::transform_args() {
-  if (auto& speed = this->_config.rev_extrusion_speed;
-      speed == (std::numeric_limits<bp_t>::max)()) {
-    speed =
-        static_cast<bp_t>(std::round(static_cast<double>(this->_config.bin_size) / 2.0));  // NOLINT
+  auto& c = this->_config;
+
+  // Compute mean and std for rev and fwd extrusion speed
+  if (auto& speed = c.rev_extrusion_speed; speed == (std::numeric_limits<bp_t>::max)()) {
+    speed = static_cast<bp_t>(std::round(static_cast<double>(c.bin_size) / 2.0));  // NOLINT
   }
-  if (auto& speed = this->_config.fwd_extrusion_speed;
-      speed == (std::numeric_limits<bp_t>::max)()) {
-    speed =
-        static_cast<bp_t>(std::round(static_cast<double>(this->_config.bin_size) / 2.0));  // NOLINT
+  if (auto& speed = c.fwd_extrusion_speed; speed == (std::numeric_limits<bp_t>::max)()) {
+    speed = static_cast<bp_t>(std::round(static_cast<double>(c.bin_size) / 2.0));  // NOLINT
   }
 
-  if (auto& stddev = this->_config.fwd_extrusion_speed_std; stddev > 0 && stddev < 1) {
-    stddev *= static_cast<double>(this->_config.fwd_extrusion_speed);
+  if (auto& stddev = c.fwd_extrusion_speed_std; stddev > 0 && stddev < 1) {
+    stddev *= static_cast<double>(c.fwd_extrusion_speed);
   }
-  if (auto& stddev = this->_config.rev_extrusion_speed_std; stddev > 0 && stddev < 1) {
-    stddev *= static_cast<double>(this->_config.rev_extrusion_speed);
+  if (auto& stddev = c.rev_extrusion_speed_std; stddev > 0 && stddev < 1) {
+    stddev *= static_cast<double>(c.rev_extrusion_speed);
   }
 
-  {
-    const auto pno = 1.0 - this->_config.ctcf_not_occupied_self_prob;
-    if (this->_config.ctcf_occupied_self_prob == 0) {
-      const auto occ = this->_config.extrusion_barrier_occupancy;
-      const auto pon = (pno - (occ * pno)) / occ;
-      this->_config.ctcf_occupied_self_prob = 1.0 - pon;
-    } else {
-      const auto pon = 1.0 - this->_config.ctcf_occupied_self_prob;
-      const auto occ = pno / (pno + pon);
-      this->_config.extrusion_barrier_occupancy = occ;
-    }
+  c.rev_extrusion_speed_burnin = static_cast<bp_t>(
+      std::round(c.burnin_speed_coefficient * static_cast<double>(c.rev_extrusion_speed)));
+  c.fwd_extrusion_speed_burnin = static_cast<bp_t>(
+      std::round(c.burnin_speed_coefficient * static_cast<double>(c.fwd_extrusion_speed)));
+
+  // Compute the transition probabilities for the HMM used to model extrusion barriers
+  const auto pno = 1.0 - c.ctcf_not_occupied_self_prob;
+  if (c.ctcf_occupied_self_prob == 0) {
+    const auto occ = c.extrusion_barrier_occupancy;
+    const auto pon = (pno - (occ * pno)) / occ;
+    c.ctcf_occupied_self_prob = 1.0 - pon;
+  } else {
+    const auto pon = 1.0 - c.ctcf_occupied_self_prob;
+    const auto occ = pno / (pno + pon);
+    c.extrusion_barrier_occupancy = occ;
+  }
+
+  // Compute the number of epochs to be spent in burn-in phase.
+  // Note: c.burnin_lef_binding_epochs is the target number of epochs.
+  //       The precise number of epochs cannot be easily computed ahead of time,
+  //       as LEFs are progressively activated using a Poisson process.
+  if (!c.skip_burnin) {
+    const auto avg_extr_speed_burnin =
+        static_cast<double>(c.rev_extrusion_speed_burnin + c.fwd_extrusion_speed_burnin);
+    c.burnin_lef_binding_epochs = static_cast<size_t>(
+        std::round(static_cast<double>(c.average_lef_lifetime * 4) / avg_extr_speed_burnin));
+    c.burnin_epochs = static_cast<size_t>(
+        std::round(static_cast<double>(c.average_lef_lifetime) / avg_extr_speed_burnin));
   }
 }
 
