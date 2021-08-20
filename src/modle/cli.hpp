@@ -37,8 +37,10 @@ class Cli {
 
   [[nodiscard]] int exit(const CLI::ParseError& e) const;
   [[nodiscard]] subcommand get_subcommand() const;
-  void print_config() const;
-  void write_config_file() const;
+  void print_config(bool print_default_args = false) const;
+  void write_config_file(bool write_default_args = false) const;
+
+  [[nodiscard]] bool config_file_parsed() const;
 
  private:
   int _argc;

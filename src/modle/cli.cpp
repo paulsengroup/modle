@@ -336,7 +336,8 @@ void Cli::make_simulation_subcommand() {
                  .add_subcommand("simulate",
                                  "Perform a single genome-wide simulation and output the resulting "
                                  "contacts to a .cool file.")
-                 ->fallthrough();
+                 ->fallthrough()
+                 ->configurable();
   s.alias("sim");
   add_common_options(s, this->_config);
 
@@ -374,8 +375,9 @@ void Cli::make_simulation_subcommand() {
 }
 
 void Cli::make_perturbate_subcommand() {
-  auto& s =
-      *this->_cli.add_subcommand("perturbate", "TODO.")->fallthrough();  // TODO add description
+  auto& s = *this->_cli.add_subcommand("perturbate", "TODO.")
+                 ->configurable()
+                 ->fallthrough();  // TODO add description
   s.alias("pert");
   add_common_options(s, this->_config);
 
@@ -445,6 +447,7 @@ void Cli::make_perturbate_subcommand() {
 void Cli::make_cli() {
   this->_cli.description("Stochastic modeling of DNA loop extrusion.");
   this->_cli.require_subcommand(1);
+  this->_cli.set_config("--config", "", "Path to MoDLE's config file.");
 
   this->make_simulation_subcommand();
   this->make_perturbate_subcommand();
@@ -586,13 +589,15 @@ void Cli::transform_args() {
 
 Cli::subcommand Cli::get_subcommand() const { return this->_subcommand; }
 
-void Cli::print_config() const {
-  fmt::print(stderr, FMT_STRING("{}\n"), this->_cli.config_to_str(true, true));
+void Cli::print_config(bool print_default_args) const {
+  fmt::print(stderr, FMT_STRING("{}\n"), this->_cli.config_to_str(print_default_args, true));
 }
 
-void Cli::write_config_file() const {
+void Cli::write_config_file(bool write_default_args) const {
   auto fp = fmt::output_file(this->_config.path_to_config_file.string());
-  fp.print(FMT_STRING("{}\n"), this->_cli.config_to_str(true, true));
+  fp.print(FMT_STRING("{}\n"), this->_cli.config_to_str(write_default_args, true));
 }
+
+bool Cli::config_file_parsed() const { return !this->_cli.get_config_ptr()->empty(); }
 
 }  // namespace modle

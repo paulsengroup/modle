@@ -60,8 +60,11 @@ int main(int argc, char** argv) noexcept {
                                                               true));
       //                      [2021-08-12 17:49:34.581] [139797797574208] [info]: my log msg
       file_sink->set_pattern("[%Y-%m-%d %T.%e] [%t] %^[%l]%$: %v");
-      spdlog::info(FMT_STRING("Writing config file {}"), config.path_to_config_file);
-      cli->write_config_file();
+      if (!cli->config_file_parsed()) {
+        spdlog::info(FMT_STRING("Writing simulation parameters to config file {}"),
+                     config.path_to_config_file);
+        cli->write_config_file();
+      }
     }
     spdlog::info(FMT_STRING("Command: {}"),
                  absl::StrJoin(config.argv, config.argv + config.argc, " "));
