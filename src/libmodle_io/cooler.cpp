@@ -276,7 +276,7 @@ void Cooler::write_metadata() {
 
     name = "generated-by";
     str_buff =
-        fmt::format(FMT_STRING("ModLE-v{}.{}.{}"), 0, 0, 1);  // TODO make ModLE ver a tunable
+        fmt::format(FMT_STRING("MoDLE-v{}.{}.{}"), 0, 0, 1);  // TODO make MoDLE ver a tunable
     hdf5::write_or_create_attribute(*this->_fp, name, str_buff);
 
     name = "creation-date";

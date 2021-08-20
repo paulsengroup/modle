@@ -152,7 +152,7 @@ void Cli::make_eval_subcommand() {
   gen.add_option(
      "--sliding-window-size",
      c.sliding_window_size,
-     "Sliding window size. By default this is set to the diagonal width of ModLE's contact matrix.")
+     "Sliding window size. By default this is set to the diagonal width of MoDLE's contact matrix.")
      ->check(CLI::NonNegativeNumber)
      ->transform(utils::str_float_to_str_int);
 
@@ -171,7 +171,7 @@ void Cli::make_eval_subcommand() {
 void Cli::make_filter_barriers_subcommand() {
   auto& sc =
       *this->_cli
-           .add_subcommand("filter-barriers", "Filter extrusion barriers to be used by ModLE.")
+           .add_subcommand("filter-barriers", "Filter extrusion barriers to be used by MoDLE.")
            ->fallthrough()
            ->preparse_callback([this](size_t i) {
              (void)i;
