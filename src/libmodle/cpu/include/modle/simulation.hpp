@@ -219,13 +219,15 @@ class Simulation : Config {
   //! \p unit parameter
   //! \return move
   // clang-format on
-  [[nodiscard]] bp_t generate_rev_move(const Chromosome& chrom, const ExtrusionUnit& unit,
-                                       random::PRNG_t& rand_eng) const;
+  [[nodiscard]] static bp_t generate_rev_move(const Chromosome& chrom, const ExtrusionUnit& unit,
+                                              double avg_extr_speed, double extr_speed_std,
+                                              random::PRNG_t& rand_eng);
 
   //! Generate moves in forward direction. See doc for Simulation::generate_rev_move for more
   //! details
-  [[nodiscard]] bp_t generate_fwd_move(const Chromosome& chrom, const ExtrusionUnit& unit,
-                                       random::PRNG_t& rand_eng) const;
+  [[nodiscard]] static bp_t generate_fwd_move(const Chromosome& chrom, const ExtrusionUnit& unit,
+                                              double avg_extr_speed, double extr_speed_std,
+                                              random::PRNG_t& rand_eng);
   // clang-format off
   //! Generate moves for all active LEFs
 
@@ -236,7 +238,7 @@ class Simulation : Config {
   void generate_moves(const Chromosome& chrom, absl::Span<const Lef> lefs,
                       absl::Span<const size_t> rev_lef_ranks,
                       absl::Span<const size_t> fwd_lef_ranks, absl::Span<bp_t> rev_moves,
-                      absl::Span<bp_t> fwd_moves, random::PRNG_t& rand_eng,
+                      absl::Span<bp_t> fwd_moves, bool burnin_completed, random::PRNG_t& rand_eng,
                       bool adjust_moves_ = true) const noexcept(utils::ndebug_defined());
 
   // clang-format off
@@ -449,8 +451,8 @@ class Simulation : Config {
                                   const absl::Span<bp_t> rev_moves,
                                   const absl::Span<bp_t> fwd_moves, random::PRNG_t& rand_eng,
                                   bool adjust_moves_ = false) {
-    this->generate_moves(chrom, lefs, rev_lef_ranks, fwd_lef_ranks, rev_moves, fwd_moves, rand_eng,
-                         adjust_moves_);
+    this->generate_moves(chrom, lefs, rev_lef_ranks, fwd_lef_ranks, rev_moves, fwd_moves, false,
+                         rand_eng, adjust_moves_);
   }
 
   inline static void test_rank_lefs(const absl::Span<const Lef> lefs,

@@ -146,41 +146,41 @@ void Simulation::write_contacts_to_disk(std::deque<std::pair<Chromosome*, size_t
 }
 
 bp_t Simulation::generate_rev_move(const Chromosome& chrom, const ExtrusionUnit& unit,
-                                   random::PRNG_t& rand_eng) const {
-  assert(unit.pos() >= chrom.start_pos());   // NOLINT
-  if (this->rev_extrusion_speed_std == 0) {  // When std == 0 always return the avg. extrusion speed
+                                   const double avg_extr_speed, const double extr_speed_std,
+                                   random::PRNG_t& rand_eng) {
+  assert(unit.pos() >= chrom.start_pos());  // NOLINT
+  if (extr_speed_std == 0) {                // When std == 0 always return the avg. extrusion speed
     // (except when unit is close to chrom start pos.)
-    return std::min(this->rev_extrusion_speed, unit.pos() - chrom.start_pos());
+    return std::min(static_cast<bp_t>(avg_extr_speed), unit.pos() - chrom.start_pos());
   }
   // Generate the move distance (and make sure it is not a negative distance)
   // NOTE: on my laptop generating doubles from a normal distribution, rounding them, then
   // casting double to uint is a lot faster (~4x) than drawing uints directly from a Poisson
   // distr.
-  return std::clamp(static_cast<bp_t>(std::round(
-                        lef_move_generator_t{static_cast<double>(this->rev_extrusion_speed),
-                                             this->rev_extrusion_speed_std}(rand_eng))),
-                    0UL, unit.pos() - chrom.start_pos());
+  return std::clamp(
+      static_cast<bp_t>(std::round(lef_move_generator_t{avg_extr_speed, extr_speed_std}(rand_eng))),
+      bp_t(0), unit.pos() - chrom.start_pos());
 }
 
 bp_t Simulation::generate_fwd_move(const Chromosome& chrom, const ExtrusionUnit& unit,
-                                   random::PRNG_t& rand_eng) const {
+                                   const double avg_extr_speed, const double extr_speed_std,
+                                   random::PRNG_t& rand_eng) {
   // See Simulation::generate_rev_move for comments
   assert(unit.pos() < chrom.end_pos());  // NOLINT
-  if (this->fwd_extrusion_speed_std == 0) {
-    return std::min(this->fwd_extrusion_speed, (chrom.end_pos() - 1) - unit.pos());
+  if (extr_speed_std == 0) {
+    return std::min(static_cast<bp_t>(avg_extr_speed), (chrom.end_pos() - 1) - unit.pos());
   }
-  return std::clamp(static_cast<bp_t>(std::round(
-                        lef_move_generator_t{static_cast<double>(this->fwd_extrusion_speed),
-                                             this->fwd_extrusion_speed_std}(rand_eng))),
-                    0UL, (chrom.end_pos() - 1) - unit.pos());
+  return std::clamp(
+      static_cast<bp_t>(std::round(lef_move_generator_t{avg_extr_speed, extr_speed_std}(rand_eng))),
+      bp_t(0), (chrom.end_pos() - 1) - unit.pos());
 }
 
 void Simulation::generate_moves(const Chromosome& chrom, const absl::Span<const Lef> lefs,
                                 const absl::Span<const size_t> rev_lef_ranks,
                                 const absl::Span<const size_t> fwd_lef_ranks,
                                 const absl::Span<bp_t> rev_moves, const absl::Span<bp_t> fwd_moves,
-                                random::PRNG_t& rand_eng, bool adjust_moves_) const
-    noexcept(utils::ndebug_defined()) {
+                                const bool burnin_completed, random::PRNG_t& rand_eng,
+                                bool adjust_moves_) const noexcept(utils::ndebug_defined()) {
   {
     assert(lefs.size() == fwd_lef_ranks.size());  // NOLINT
     assert(lefs.size() == rev_lef_ranks.size());  // NOLINT
@@ -189,9 +189,17 @@ void Simulation::generate_moves(const Chromosome& chrom, const absl::Span<const 
   }
 
   // As long as a LEF is bound to DNA, always generate a move
+  const auto rev_extr_speed = static_cast<double>(
+      burnin_completed ? this->rev_extrusion_speed : this->rev_extrusion_speed_burnin);
+  const auto fwd_extr_speed = static_cast<double>(
+      burnin_completed ? this->fwd_extrusion_speed : this->fwd_extrusion_speed_burnin);
   for (auto i = 0UL; i < lefs.size(); ++i) {
-    rev_moves[i] = lefs[i].is_bound() ? generate_rev_move(chrom, lefs[i].rev_unit, rand_eng) : 0UL;
-    fwd_moves[i] = lefs[i].is_bound() ? generate_fwd_move(chrom, lefs[i].fwd_unit, rand_eng) : 0UL;
+    rev_moves[i] = lefs[i].is_bound() ? generate_rev_move(chrom, lefs[i].rev_unit, rev_extr_speed,
+                                                          this->rev_extrusion_speed_std, rand_eng)
+                                      : 0UL;
+    fwd_moves[i] = lefs[i].is_bound() ? generate_fwd_move(chrom, lefs[i].fwd_unit, fwd_extr_speed,
+                                                          this->fwd_extrusion_speed_std, rand_eng)
+                                      : 0UL;
   }
 
   if (adjust_moves_) {  // Adjust moves of consecutive extr. units to make LEF behavior more
