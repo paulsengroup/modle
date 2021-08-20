@@ -33,10 +33,12 @@ class Cli {
 
   Cli(int argc, char** argv);
   [[nodiscard]] const Config& parse_arguments();
-  [[nodiscard]] static std::string process_paths_and_check_for_collisions(modle::Config& c);
+  [[nodiscard]] static std::string detect_file_path_collisions(modle::Config& c);
 
   [[nodiscard]] int exit(const CLI::ParseError& e) const;
   [[nodiscard]] subcommand get_subcommand() const;
+  void print_config() const;
+  void write_config_file() const;
 
  private:
   int _argc;

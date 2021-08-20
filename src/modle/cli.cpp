@@ -4,7 +4,8 @@
 #include <absl/strings/str_cat.h>      // for StrAppend, StrCat
 #include <absl/strings/string_view.h>  // for string_view
 #include <fmt/format.h>                // for format, FMT_STRING, print
-#include <fmt/ostream.h>               // for formatbuf<>::int_type
+#include <fmt/os.h>
+#include <fmt/ostream.h>  // for formatbuf<>::int_type
 
 #include <CLI/App.hpp>                // for Option_group, App
 #include <CLI/Config.hpp>             // IWYU pragma: keep for ConfigBase
@@ -319,7 +320,7 @@ void add_common_options(CLI::App& subcommand, modle::Config& c) {
       ->check(CLI::NonNegativeNumber)
       ->capture_default_str();
 
-  hidden.add_flag("--skip-output", c.skip_output, "Don't write output files. Useful for profiling");
+  hidden.add_flag("--skip-output", c.skip_output, "Don't write output files. Useful for profiling.")->configurable(false);
 
   gen.get_option("--target-contact-density")->excludes(gen.get_option("--number-of-iterations"));
   extr_barr.get_option("--extrusion-barrier-occupancy")->excludes("--ctcf-occupied-probability-of-transition-to-self");
@@ -468,23 +469,15 @@ const Config& Cli::parse_arguments() {
   return this->_config;
 }
 
-std::string Cli::process_paths_and_check_for_collisions(modle::Config& c) {
+std::string Cli::detect_file_path_collisions(modle::Config& c) {
   std::string collisions;
-
-  c.path_to_output_file_cool = c.path_to_output_prefix;
-  c.path_to_output_file_bedpe =
-      !c.path_to_feature_bed_files.empty() ? c.path_to_output_prefix : boost::filesystem::path{};
-  c.path_to_log_file = c.path_to_output_prefix;
-
-  c.path_to_output_file_cool += ".cool";
-  c.path_to_output_file_bedpe += !c.path_to_output_file_bedpe.empty() ? ".bedpe.gz" : "";
-  c.path_to_log_file += ".log";
 
   if (c.force || c.skip_output) {
     return "";
   }
 
   auto check_for_path_collisions = [](const boost::filesystem::path& path) -> std::string {
+    assert(!path.empty());  // NOLINT
     if (boost::filesystem::exists(path)) {
       if (boost::filesystem::is_directory(path)) {
         return fmt::format(
@@ -514,6 +507,9 @@ std::string Cli::process_paths_and_check_for_collisions(modle::Config& c) {
   if (boost::filesystem::exists(c.path_to_log_file)) {
     absl::StrAppend(&collisions, check_for_path_collisions(c.path_to_log_file));
   }
+  if (boost::filesystem::exists(c.path_to_config_file)) {
+    absl::StrAppend(&collisions, check_for_path_collisions(c.path_to_config_file));
+  }
   if (boost::filesystem::exists(c.path_to_output_file_cool)) {
     absl::StrAppend(&collisions, check_for_path_collisions(c.path_to_output_file_cool));
   }
@@ -529,6 +525,18 @@ int Cli::exit(const CLI::ParseError& e) const { return this->_cli.exit(e); }
 
 void Cli::transform_args() {
   auto& c = this->_config;
+
+  // Generate output file paths from output prefix
+  c.path_to_output_file_cool = c.path_to_output_prefix;
+  c.path_to_output_file_bedpe =
+      !c.path_to_feature_bed_files.empty() ? c.path_to_output_prefix : boost::filesystem::path{};
+  c.path_to_log_file = c.path_to_output_prefix;
+  c.path_to_config_file = c.path_to_output_prefix;
+
+  c.path_to_output_file_cool += ".cool";
+  c.path_to_output_file_bedpe += !c.path_to_output_file_bedpe.empty() ? ".bedpe.gz" : "";
+  c.path_to_log_file += ".log";
+  c.path_to_config_file += "_config.toml";
 
   // Compute mean and std for rev and fwd extrusion speed
   if (auto& speed = c.rev_extrusion_speed; speed == (std::numeric_limits<bp_t>::max)()) {
@@ -577,5 +585,14 @@ void Cli::transform_args() {
 }
 
 Cli::subcommand Cli::get_subcommand() const { return this->_subcommand; }
+
+void Cli::print_config() const {
+  fmt::print(stderr, FMT_STRING("{}\n"), this->_cli.config_to_str(true, true));
+}
+
+void Cli::write_config_file() const {
+  auto fp = fmt::output_file(this->_config.path_to_config_file.string());
+  fp.print(FMT_STRING("{}\n"), this->_cli.config_to_str(true, true));
+}
 
 }  // namespace modle

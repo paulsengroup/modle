@@ -38,7 +38,7 @@ int main(int argc, char** argv) noexcept {
   try {
     cli = std::make_unique<modle::Cli>(argc, argv);
     auto config = cli->parse_arguments();
-    if (const auto collisions = modle::Cli::process_paths_and_check_for_collisions(config);
+    if (const auto collisions = modle::Cli::detect_file_path_collisions(config);
         !collisions.empty()) {
       spdlog::error(FMT_STRING("FAILURE! The following path collision(s) have been detected:\n{}"),
                     collisions);
@@ -60,10 +60,11 @@ int main(int argc, char** argv) noexcept {
                                                               true));
       //                      [2021-08-12 17:49:34.581] [139797797574208] [info]: my log msg
       file_sink->set_pattern("[%Y-%m-%d %T.%e] [%t] %^[%l]%$: %v");
+      spdlog::info(FMT_STRING("Writing config file {}"), config.path_to_config_file);
+      cli->write_config_file();
     }
     spdlog::info(FMT_STRING("Command: {}"),
                  absl::StrJoin(config.argv, config.argv + config.argc, " "));
-    spdlog::info(config.to_string());
     modle::Simulation sim(config);
     switch (cli->get_subcommand()) {
       case modle::Cli::subcommand::simulate:
