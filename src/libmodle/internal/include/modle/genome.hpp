@@ -108,8 +108,6 @@ class Chromosome {
 };
 
 class Genome {
-  using Genome_t = bed::BED_tree<bed::BED, uint32_t>;
-
  public:
   Genome() = default;
   Genome(const boost::filesystem::path& path_to_chrom_sizes,
@@ -129,6 +127,16 @@ class Genome {
 
   [[nodiscard]] const_iterator cbegin() const;
   [[nodiscard]] const_iterator cend() const;
+
+  // NOTE: The find and contains method taking a string_view as input parameter are performing a
+  // linear search through the genome
+  [[nodiscard]] iterator find(const Chromosome& other_chrom);
+  [[nodiscard]] const_iterator find(const Chromosome& other_chrom) const;
+  [[nodiscard]] iterator find(std::string_view other_chrom_name);
+  [[nodiscard]] const_iterator find(std::string_view other_chrom_name) const;
+
+  [[nodiscard]] bool contains(const Chromosome& other_chromosome) const;
+  [[nodiscard]] bool contains(std::string_view other_chrom_name) const;
 
   [[nodiscard]] size_t size() const;
   [[nodiscard]] size_t simulated_size() const;

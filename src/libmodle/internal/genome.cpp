@@ -481,6 +481,32 @@ Genome::const_iterator Genome::end() const { return this->_chromosomes.cend(); }
 Genome::const_iterator Genome::cbegin() const { return this->_chromosomes.cbegin(); }
 Genome::const_iterator Genome::cend() const { return this->_chromosomes.cend(); }
 
+Genome::iterator Genome::find(const Chromosome& other_chrom) {
+  return this->_chromosomes.find(other_chrom);
+}
+
+Genome::const_iterator Genome::find(const Chromosome& other_chrom) const {
+  return this->_chromosomes.find(other_chrom);
+}
+
+Genome::iterator Genome::find(std::string_view other_chrom_name) {
+  return std::find_if(this->_chromosomes.begin(), this->_chromosomes.end(),
+                      [&](const auto& chrom) { return chrom.name() == other_chrom_name; });
+}
+
+Genome::const_iterator Genome::find(std::string_view other_chrom_name) const {
+  return std::find_if(this->_chromosomes.begin(), this->_chromosomes.end(),
+                      [&](const auto& chrom) { return chrom.name() == other_chrom_name; });
+}
+
+bool Genome::contains(const Chromosome& other_chromosome) const {
+  return this->_chromosomes.contains(other_chromosome);
+}
+
+bool Genome::contains(std::string_view other_chrom_name) const {
+  return this->find(other_chrom_name) != this->end();
+}
+
 size_t Genome::size() const {
   return std::accumulate(
       this->_chromosomes.begin(), this->_chromosomes.end(), 0UL,
