@@ -268,7 +268,7 @@ struct fmt::formatter<modle::bed::RGB> {
   // Formats the point p using the parsed format specification (presentation)
   // stored in this formatter.
   template <typename FormatContext>
-  inline auto format(const modle::bed::RGB& b, FormatContext& ctx) -> decltype(ctx.out());
+  inline auto format(const modle::bed::RGB& rgb, FormatContext& ctx) -> decltype(ctx.out());
 };
 
 template <>

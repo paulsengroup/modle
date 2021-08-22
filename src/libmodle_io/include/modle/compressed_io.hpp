@@ -28,6 +28,9 @@ class Reader {
   void open(const boost::filesystem::path& path);
   void reset();
 
+  [[nodiscard]] explicit operator bool() const;
+  [[nodiscard]] bool operator!() const;
+
   [[nodiscard]] const boost::filesystem::path& path() const noexcept;
   [[nodiscard]] std::string path_string() const noexcept;
   [[nodiscard]] const char* path_c_str() const noexcept;
@@ -62,6 +65,9 @@ class Writer {
   void open(const boost::filesystem::path& path);
 
   void write(std::string_view buff);
+
+  [[nodiscard]] explicit operator bool() const;
+  [[nodiscard]] bool operator!() const;
 
   [[nodiscard]] const boost::filesystem::path& path() const noexcept;
   [[nodiscard]] std::string path_string() const noexcept;

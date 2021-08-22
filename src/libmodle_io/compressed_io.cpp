@@ -58,6 +58,10 @@ void Reader::open(const boost::filesystem::path& path) {
   this->_idx = 0;
 }
 
+Reader::operator bool() const { return this->is_open() && !this->eof(); }
+
+bool Reader::operator!() const { return !this->operator bool(); }
+
 bool Reader::eof() const noexcept {
   assert(this->is_open());  // NOLINT
   return this->_eof;
@@ -66,9 +70,11 @@ bool Reader::eof() const noexcept {
 bool Reader::is_open() const noexcept { return !!this->_arc; }
 
 void Reader::close() {
-  this->_arc = nullptr;
-  this->_buff.clear();
-  this->_eof = false;
+  if (this->is_open()) {
+    this->_arc = nullptr;
+    this->_buff.clear();
+    this->_eof = false;
+  }
 }
 
 void Reader::reset() {
@@ -253,10 +259,16 @@ void Writer::open(const boost::filesystem::path& path) {
 bool Writer::is_open() const noexcept { return this->_fp.is_open(); }
 
 void Writer::close() {
-  this->_out.reset();
-  boost::iostreams::close(this->_out);
-  this->_fp.close();
+  if (this->is_open()) {
+    this->_out.reset();
+    boost::iostreams::close(this->_out);
+    this->_fp.close();
+  }
 }
+
+Writer::operator bool() const { return this->is_open(); }
+
+bool Writer::operator!() const { return !this->operator bool(); }
 
 const boost::filesystem::path& Writer::path() const noexcept { return this->_path; }
 std::string Writer::path_string() const noexcept { return this->_path.string(); }
