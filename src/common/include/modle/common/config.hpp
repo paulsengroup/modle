@@ -17,24 +17,24 @@ class Simulation;
 struct Config {  // NOLINT(altera-struct-pack-align)
   friend Cli;
   friend Simulation;
-
- public:
   // clang-format off
   // IO
   boost::filesystem::path path_to_chrom_sizes;
   boost::filesystem::path path_to_chrom_subranges;
   boost::filesystem::path path_to_output_prefix;
   boost::filesystem::path path_to_output_file_cool{};
-  boost::filesystem::path path_to_output_file_bedpe{};
   boost::filesystem::path path_to_config_file{};
   boost::filesystem::path path_to_log_file;
   boost::filesystem::path path_to_extr_barriers;
   bool force{false};
   bool quiet{false};
   bool write_contacts_for_ko_chroms{false};
+  bool write_tasks_to_disk{true};
   std::vector<boost::filesystem::path> path_to_feature_bed_files{};
+  boost::filesystem::path path_to_output_file_bedpe{};
   boost::filesystem::path path_to_deletion_bed{};
-  boost::filesystem::path path_to_regions_for_contact_output_bed{};
+  boost::filesystem::path path_to_task_file;
+  boost::filesystem::path path_to_task_filter_file{};
 
   // General settings
   bp_t bin_size{1'000};                        // NOLINT(readability-magic-numbers, cppcoreguidelines-avoid-magic-numbers)

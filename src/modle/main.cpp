@@ -38,8 +38,7 @@ int main(int argc, char** argv) noexcept {
   try {
     cli = std::make_unique<modle::Cli>(argc, argv);
     auto config = cli->parse_arguments();
-    if (const auto collisions = modle::Cli::detect_file_path_collisions(config);
-        !collisions.empty()) {
+    if (const auto collisions = cli->detect_path_collisions(config); !collisions.empty()) {
       spdlog::error(FMT_STRING("FAILURE! The following path collision(s) have been detected:\n{}"),
                     collisions);
       return 1;
@@ -70,14 +69,18 @@ int main(int argc, char** argv) noexcept {
                  absl::StrJoin(config.argv, config.argv + config.argc, " "));
     modle::Simulation sim(config);
     switch (cli->get_subcommand()) {
-      case modle::Cli::subcommand::simulate:
-        sim.run_simulation();
+      using subcommand = modle::Cli::subcommand;
+      case subcommand::simulate:
+        sim.run_simulate();
         break;
-      case modle::Cli::subcommand::pertubate:
+      case subcommand::pertubate:
         if (config.compute_reference_matrix) {
-          sim.run_simulation();
+          sim.run_simulate();
         }
         sim.run_perturbate();
+        break;
+      case subcommand::replay:
+        sim.run_replay();
         break;
       default:
         throw std::runtime_error(

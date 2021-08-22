@@ -1,5 +1,6 @@
 #include <absl/container/fixed_array.h>          // for FixedArray
 #include <absl/container/flat_hash_map.h>        // for flat_hash_map, BitMask, raw_hash_set<...
+#include <absl/container/flat_hash_set.h>        // for flat_hash_map, BitMask, raw_hash_set<...
 #include <absl/strings/str_join.h>               // for StrJoin
 #include <absl/types/span.h>                     // for Span, MakeConstSpan, MakeSpan
 #include <fmt/compile.h>                         // for FMT_COMPILE
@@ -60,10 +61,10 @@ template <typename StateT>
                   std::this_thread::get_id(), local_state.to_string(), e.what());
   }
 #endif
-  throw;
+  throw e;
 }
 
-void Simulation::run_simulation() {
+void Simulation::run_simulate() {
   if (!this->skip_output) {  // Write simulation params to file
     assert(boost::filesystem::exists(this->path_to_output_prefix.parent_path()));
     if (this->force) {
@@ -110,8 +111,8 @@ void Simulation::run_simulation() {
 
   for (auto i = 0UL; i < this->nthreads; ++i) {  // Start simulation threads
     boost::asio::post(tpool, [&]() {
-      this->worker(task_queue, progress_queue, progress_queue_mutex, end_of_simulation,
-                   task_batch_size_deq);
+      this->simulate_worker(task_queue, progress_queue, progress_queue_mutex, end_of_simulation,
+                            task_batch_size_deq);
     });
   }
 
@@ -166,10 +167,10 @@ void Simulation::run_simulation() {
       });
       const auto ntasks =
           cellid > this->num_cells ? tasks.size() - (cellid - this->num_cells) : tasks.size();
-      auto sleep_us = 100;  // NOLINT
+      auto sleep_us = 100;  // NOLINT(readability-magic-numbers)
       while (               // Enqueue tasks
           !task_queue.try_enqueue_bulk(ptok, std::make_move_iterator(tasks.begin()), ntasks)) {
-        sleep_us = std::min(100000, sleep_us * 2);  // NOLINT
+        sleep_us = std::min(100000, sleep_us * 2);  // NOLINT(readability-magic-numbers)
         std::this_thread::sleep_for(std::chrono::microseconds(sleep_us));
       }
     }
@@ -183,10 +184,11 @@ void Simulation::run_simulation() {
   assert(end_of_simulation);  // NOLINT
 }
 
-void Simulation::worker(moodycamel::BlockingConcurrentQueue<Simulation::Task>& task_queue,
-                        std::deque<std::pair<Chromosome*, size_t>>& progress_queue,
-                        std::mutex& progress_queue_mutex, std::atomic<bool>& end_of_simulation,
-                        size_t task_batch_size) const {
+void Simulation::simulate_worker(moodycamel::BlockingConcurrentQueue<Simulation::Task>& task_queue,
+                                 std::deque<std::pair<Chromosome*, size_t>>& progress_queue,
+                                 std::mutex& progress_queue_mutex,
+                                 std::atomic<bool>& end_of_simulation,
+                                 size_t task_batch_size) const {
   spdlog::info(FMT_STRING("Spawning simulation thread {}..."), std::this_thread::get_id());
 
   moodycamel::ConsumerToken ctok(task_queue);
@@ -214,8 +216,7 @@ void Simulation::worker(moodycamel::BlockingConcurrentQueue<Simulation::Task>& t
       }
 
       // Loop over new tasks
-      auto tasks = absl::MakeSpan(task_buff.data(), avail_tasks);
-      for (auto& task : tasks) {
+      for (auto& task : absl::MakeConstSpan(task_buff.data(), avail_tasks)) {
         // Resize and reset buffers
         local_state = task;            // Set simulation state based on task data
         local_state.resize_buffers();  // This resizes buffers based on the nlefs to be simulated
@@ -291,7 +292,7 @@ bed::BED_tree<> Simulation::generate_deletions() const {
 
 void Simulation::run_perturbate() {
   if (!this->skip_output) {  // Write simulation params to file
-    assert(boost::filesystem::exists(this->path_to_output_prefix.parent_path()));
+    assert(boost::filesystem::exists(this->path_to_output_prefix.parent_path()));  // NOLINT
     if (this->force) {
       boost::filesystem::remove(this->path_to_output_file_bedpe);
     }
@@ -299,25 +300,24 @@ void Simulation::run_perturbate() {
   // TODO Do proper error handling
   // For now we support only the case where exactly two files are specified
   assert(this->path_to_feature_bed_files.size() == 2);  // NOLINT
-  const auto regions_for_contact_output =
-      bed::Parser(this->path_to_regions_for_contact_output_bed, bed::BED::BED3)
-          .parse_all_in_interval_tree();
-
-  constexpr size_t task_batch_size_enq = 32;  // NOLINTNEXTLINE
+  const size_t task_batch_size_enq = 32;                // NOLINTNEXTLINE
   moodycamel::BlockingConcurrentQueue<TaskPW> task_queue(this->nthreads * 2, 1, 0);
   moodycamel::ProducerToken ptok(task_queue);
   std::array<TaskPW, task_batch_size_enq> tasks;
 
   std::mutex out_stream_mutex;
   std::mutex cooler_mutex;
-  auto out_stream = compressed_io::Writer(this->path_to_output_file_bedpe);
+
+  auto out_bedpe_stream = compressed_io::Writer(this->path_to_output_file_bedpe);
+  auto out_task_stream = compressed_io::Writer(this->path_to_task_file);
 
   std::atomic<bool> end_of_simulation = false;
 
   auto tpool = Simulation::instantiate_thread_pool();
   for (auto i = 0UL; i < this->nthreads; ++i) {  // Start simulation threads
     boost::asio::post(tpool, [&]() {
-      this->worker(task_queue, out_stream, out_stream_mutex, cooler_mutex, end_of_simulation);
+      this->perturbate_worker(task_queue, out_bedpe_stream, out_stream_mutex, cooler_mutex,
+                              end_of_simulation);
     });
   }
 
@@ -401,9 +401,6 @@ void Simulation::run_perturbate() {
         continue;
       }
 
-      base_task.write_contacts_to_disk = regions_for_contact_output.contains_overlap(
-          chrom_name, base_task.window_start, base_task.window_end);
-
       assert(!base_task.barriers.empty());  // NOLINT
       assert(!base_task.feats1.empty());    // NOLINT
       assert(!base_task.feats2.empty());    // NOLINT
@@ -446,10 +443,13 @@ void Simulation::run_perturbate() {
                                                            : (std::numeric_limits<size_t>::max)();
 
         if (num_tasks == tasks.size()) {  // Enqueue a batch of tasks
-          auto sleep_us = 100;            // NOLINT
+          if (out_task_stream) {
+            out_task_stream.write(fmt::format(FMT_STRING("{}\n"), fmt::join(tasks, "\n")));
+          }
+          auto sleep_us = 100;  // NOLINT(readability-magic-numbers)
           while (!task_queue.try_enqueue_bulk(ptok, std::make_move_iterator(tasks.begin()),
                                               num_tasks)) {
-            sleep_us = std::min(100000, sleep_us * 2);  // NOLINT
+            sleep_us = std::min(100000, sleep_us * 2);  // NOLINT(readability-magic-numbers)
             std::this_thread::sleep_for(std::chrono::microseconds(sleep_us));
           }
           num_tasks = 0;
@@ -460,19 +460,25 @@ void Simulation::run_perturbate() {
 
   // Submit any remaining task
   if (num_tasks != 0) {
+    if (out_task_stream) {
+      out_task_stream.write(fmt::format(FMT_STRING("{}\n"),
+                                        fmt::join(tasks.begin(), tasks.begin() + num_tasks, "\n")));
+    }
     while (!task_queue.try_enqueue_bulk(ptok, std::make_move_iterator(tasks.begin()), num_tasks)) {
-      std::this_thread::sleep_for(std::chrono::microseconds(100));  // NOLINT
+      // NOLINTNEXTLINE(readability-magic-numbers)
+      std::this_thread::sleep_for(std::chrono::microseconds(100));
     }
   }
 
   end_of_simulation = true;
-  tpool.join();  // Wait on worker threads
+  out_task_stream.close();
+  tpool.join();  // Wait on simulate_worker threads
 }
 
-void Simulation::worker(moodycamel::BlockingConcurrentQueue<Simulation::TaskPW>& task_queue,
-                        compressed_io::Writer& out_stream, std::mutex& out_stream_mutex,
-                        std::mutex& cooler_mutex, std::atomic<bool>& end_of_simulation,
-                        size_t task_batch_size) const {
+void Simulation::perturbate_worker(
+    moodycamel::BlockingConcurrentQueue<Simulation::TaskPW>& task_queue,
+    compressed_io::Writer& out_stream, std::mutex& out_stream_mutex, std::mutex& cooler_mutex,
+    std::atomic<bool>& end_of_simulation, size_t task_batch_size) const {
   spdlog::info(FMT_STRING("Spawning simulation thread {}..."), std::this_thread::get_id());
   moodycamel::ConsumerToken ctok(task_queue);
 
@@ -495,7 +501,7 @@ void Simulation::worker(moodycamel::BlockingConcurrentQueue<Simulation::TaskPW>&
       }
 
       // Loop over new tasks
-      for (const auto& task : absl::MakeSpan(task_buff.data(), avail_tasks)) {
+      for (const auto& task : absl::MakeConstSpan(task_buff.data(), avail_tasks)) {
         assert(!task.barriers.empty());  // NOLINT
         assert(!task.feats1.empty());    // NOLINT
         assert(!task.feats2.empty());    // NOLINT
@@ -516,7 +522,8 @@ void Simulation::worker(moodycamel::BlockingConcurrentQueue<Simulation::TaskPW>&
 }
 
 void Simulation::simulate_window(Simulation::StatePW& state, compressed_io::Writer& out_stream,
-                                 std::mutex& out_stream_mutex, std::mutex& cooler_mutex) const {
+                                 std::mutex& out_stream_mutex, std::mutex& cooler_mutex,
+                                 bool write_contacts_to_cooler) const {
   spdlog::info(FMT_STRING("Processing {}[{}-{}]; outer_window=[{}-{}]; deletion=[{}-{}];"),
                state.chrom->name(), state.active_window_start, state.active_window_end,
                state.window_start, state.window_end, state.deletion_begin,
@@ -577,78 +584,85 @@ void Simulation::simulate_window(Simulation::StatePW& state, compressed_io::Writ
 
   Simulation::simulate_one_cell(state);
 
-  // Output contacts for valid pairs of features
-  for (auto i = 0UL; i < state.feats1.size(); ++i) {
-    const auto& feat1 = state.feats1[i];
-    const auto feat1_abs_center_pos = (feat1.chrom_start + feat1.chrom_end + 1) / 2;
-    for (auto j = i; j < state.feats2.size(); ++j) {
-      const auto& feat2 = state.feats2[j];
-      const auto feat2_abs_center_pos = (feat2.chrom_start + feat2.chrom_end + 1) / 2;
+  if (out_stream) {  // Output contacts for valid pairs of features
+    for (auto i = 0UL; i < state.feats1.size(); ++i) {
+      const auto& feat1 = state.feats1[i];
+      const auto feat1_abs_center_pos = (feat1.chrom_start + feat1.chrom_end + 1) / 2;
+      for (auto j = i; j < state.feats2.size(); ++j) {
+        const auto& feat2 = state.feats2[j];
+        const auto feat2_abs_center_pos = (feat2.chrom_start + feat2.chrom_end + 1) / 2;
 
-      // Don't output contacts when both feat1 and feat2 are located downstream of the partition
-      // point. This does not apply when we are processing the last window
-      if (!last_window && feat1.chrom_start >= partition_point &&
-          feat2.chrom_start >= partition_point) {
-        continue;
+        // Don't output contacts when both feat1 and feat2 are located downstream of the partition
+        // point. This does not apply when we are processing the last window
+        if (!last_window && feat1.chrom_start >= partition_point &&
+            feat2.chrom_start >= partition_point) {
+          continue;
+        }
+
+        // Convert absolute positions to relative positions, as the contact matrix does not refer
+        // to an entire chromosome, but only to a 4*D wide region
+        const auto feat1_rel_center_pos = feat1_abs_center_pos - state.window_start;
+        const auto feat2_rel_center_pos = feat2_abs_center_pos - state.window_start;
+
+        const auto feat1_rel_bin = feat1_rel_center_pos / this->bin_size;
+        const auto feat2_rel_bin = feat2_rel_center_pos / this->bin_size;
+
+        const auto contacts = state.contacts.get(feat1_rel_bin, feat2_rel_bin, this->block_size);
+        if (contacts == 0) {  // Don't output entries with 0 contacts
+          continue;
+        }
+
+        // Compute the absolute bin coordinates. This are used to compute the positions shown in
+        // the BEDPE file
+        const auto feat1_abs_bin = (feat1_abs_center_pos + this->bin_size - 1) / this->bin_size;
+        const auto feat2_abs_bin = (feat2_abs_center_pos + this->bin_size - 1) / this->bin_size;
+
+        // Generate the name field. The field will be "none;none" in case both features don't have
+        // a name
+        const auto name = absl::StrCat(feat1.name.empty() ? "none" : feat1.name, ";",
+                                       feat2.name.empty() ? "none" : feat2.name);
+        absl::StrAppend(  // Append a BEDPE record to the local buffer
+            &out_buffer,
+            fmt::format(
+                FMT_COMPILE(
+                    "{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\n"),
+                feat1.chrom, feat1_abs_bin * bin_size, (feat1_abs_bin + 1) * bin_size, feat2.chrom,
+                feat2_abs_bin * bin_size, (feat2_abs_bin + 1) * bin_size, name, contacts,
+                feat1.strand, feat2.strand, state.deletion_begin,
+                state.deletion_begin + state.deletion_size, num_active_barriers,
+                state.barriers.size(), state.active_window_start, state.active_window_end,
+                state.window_start, state.window_end));
       }
+    }
 
-      // Convert absolute positions to relative positions, as the contact matrix does not refer
-      // to an entire chromosome, but only to a 4*D wide region
-      const auto feat1_rel_center_pos = feat1_abs_center_pos - state.window_start;
-      const auto feat2_rel_center_pos = feat2_abs_center_pos - state.window_start;
-
-      const auto feat1_rel_bin = feat1_rel_center_pos / this->bin_size;
-      const auto feat2_rel_bin = feat2_rel_center_pos / this->bin_size;
-
-      const auto contacts = state.contacts.get(feat1_rel_bin, feat2_rel_bin, this->block_size);
-      if (contacts == 0) {  // Don't output entries with 0 contacts
-        continue;
+    // Write the buffer to the appropriate stream
+    if (!out_buffer.empty()) {
+      if (std::scoped_lock l(out_stream_mutex); write_to_stdout) {
+        fmt::print(stdout, FMT_STRING("{}"), out_buffer);
+      } else {
+        out_stream.write(out_buffer);
       }
-
-      // Compute the absolute bin coordinates. This are used to compute the positions shown in
-      // the BEDPE file
-      const auto feat1_abs_bin = (feat1_abs_center_pos + this->bin_size - 1) / this->bin_size;
-      const auto feat2_abs_bin = (feat2_abs_center_pos + this->bin_size - 1) / this->bin_size;
-
-      // Generate the name field. The field will be "none;none" in case both features don't have
-      // a name
-      const auto name = absl::StrCat(feat1.name.empty() ? "none" : feat1.name, ";",
-                                     feat2.name.empty() ? "none" : feat2.name);
-      absl::StrAppend(  // Append a BEDPE record to the local buffer
-          &out_buffer,
-          fmt::format(
-              FMT_COMPILE(
-                  "{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\n"),
-              feat1.chrom, feat1_abs_bin * bin_size, (feat1_abs_bin + 1) * bin_size, feat2.chrom,
-              feat2_abs_bin * bin_size, (feat2_abs_bin + 1) * bin_size, name, contacts,
-              feat1.strand, feat2.strand, state.deletion_begin,
-              state.deletion_begin + state.deletion_size, num_active_barriers,
-              state.barriers.size(), state.active_window_start, state.active_window_end,
-              state.window_start, state.window_end));
+      out_buffer.clear();
     }
   }
 
-  // Write the buffer to the appropriate stream
-  if (!out_buffer.empty()) {
-    if (std::scoped_lock l(out_stream_mutex); write_to_stdout) {
-      fmt::print(stdout, FMT_STRING("{}"), out_buffer);
-    } else {
-      out_stream.write(out_buffer);
-    }
-    out_buffer.clear();
-  }
-
-  if (state.write_contacts_to_disk) {
+  if (write_contacts_to_cooler) {
     const auto file_name = boost::filesystem::path(fmt::format(
         FMT_STRING("{}_{:06d}_{}_window_{}-{}_deletion_{}-{}.cool"),
         this->path_to_output_prefix.string(), state.id, state.chrom->name(), state.window_start,
         state.window_end, state.deletion_begin, state.deletion_begin + state.deletion_size));
 
-    std::scoped_lock l(cooler_mutex);
-    const auto t0 = absl::Now();
+    if (!this->force && boost::filesystem::exists(file_name)) {
+      throw std::runtime_error(fmt::format(
+          FMT_STRING("Refusing to overwrite output file {}. Pass --force to overwrite."),
+          file_name));
+    }
+
     spdlog::info(FMT_STRING("Writing contacts for {} to file {}..."), state.chrom->name(),
                  file_name);
+    const auto t0 = absl::Now();
     {
+      std::scoped_lock l(cooler_mutex);
       auto c = cooler::Cooler(file_name, cooler::Cooler::WRITE_ONLY, this->bin_size,
                               this->_genome.chromosome_with_longest_name().name().size());
       for (const auto& chrom : this->_genome) {
@@ -724,6 +738,134 @@ bool Simulation::map_barriers_to_window(TaskPW& base_task, const Chromosome& chr
 
   base_task.barriers = absl::MakeConstSpan(&(*first_barrier), &(*last_barrier));
   return true;
+}
+
+absl::flat_hash_set<size_t> import_task_filter(const boost::filesystem::path& path_to_task_filter) {
+  if (path_to_task_filter.empty()) {
+    return absl::flat_hash_set<size_t>{};
+  }
+
+  compressed_io::Reader r(path_to_task_filter);
+  std::string buff;
+  size_t i = 0;
+  absl::flat_hash_set<size_t> tasks;
+  try {
+    size_t id;  // NOLINT
+    for (; r.getline(buff); ++i) {
+      utils::parse_numeric_or_throw(buff, id);
+      if (tasks.contains(id)) {
+        throw std::runtime_error(
+            fmt::format(FMT_STRING("Found a duplicate entry for task #{}"), id));
+      }
+      tasks.insert(id);
+    }
+  } catch (const std::exception& e) {
+    if (absl::StartsWith(e.what(), "Unable to convert field")) {
+      throw std::runtime_error(
+          fmt::format(FMT_STRING("Detected a malformed entry at line {} of file {}: {}"), i,
+                      path_to_task_filter, e.what()));
+    }
+    throw std::runtime_error(
+        fmt::format(FMT_STRING("The following error occurred while parsing line {} of file {}: {}"),
+                    i, path_to_task_filter, e.what()));
+  }
+  return tasks;
+}
+
+void Simulation::run_replay() {
+  assert(boost::filesystem::exists(this->path_to_task_file));  // NOLINT
+  compressed_io::Reader task_reader(this->path_to_task_file);
+
+  const size_t task_batch_size_enq = 32;  // NOLINTNEXTLINE
+  moodycamel::BlockingConcurrentQueue<TaskPW> task_queue(this->nthreads * 2, 1, 0);
+  moodycamel::ProducerToken ptok(task_queue);
+  std::array<TaskPW, task_batch_size_enq> tasks;
+
+  std::atomic<bool> end_of_simulation = false;
+  std::mutex cooler_mutex;
+
+  auto tpool = Simulation::instantiate_thread_pool();
+  for (auto i = 0UL; i < this->nthreads; ++i) {  // Start simulation threads
+    boost::asio::post(tpool,
+                      [&]() { this->replay_worker(task_queue, cooler_mutex, end_of_simulation); });
+  }
+
+  const auto task_filter = import_task_filter(this->path_to_task_filter_file);
+
+  std::string task_definition;
+  size_t num_tasks = 0;
+  while (task_reader.getline(task_definition)) {
+    if (num_tasks == tasks.size()) {  // Enqueue a batch of tasks
+      auto sleep_us = 100;            // NOLINT(readability-magic-numbers)
+      while (
+          !task_queue.try_enqueue_bulk(ptok, std::make_move_iterator(tasks.begin()), num_tasks)) {
+        sleep_us = std::min(100000, sleep_us * 2);  // NOLINT(readability-magic-numbers)
+        std::this_thread::sleep_for(std::chrono::microseconds(sleep_us));
+      }
+      num_tasks = 0;
+    }  // NOLINTNEXTLINE(cppcoreguidelines-pro-bounds-constant-array-index)
+    const auto& t = (tasks[num_tasks] = TaskPW::from_string(task_definition, this->_genome));
+    if (task_filter.empty() || task_filter.contains(t.id)) {
+      ++num_tasks;
+    }
+  }
+
+  if (num_tasks != 0) {
+    while (!task_queue.try_enqueue_bulk(ptok, std::make_move_iterator(tasks.begin()), num_tasks)) {
+      // NOLINTNEXTLINE(readability-magic-numbers)
+      std::this_thread::sleep_for(std::chrono::microseconds(100));
+    }
+  }
+
+  end_of_simulation = true;
+  tpool.join();  // Wait on simulate_worker threads
+}
+
+void Simulation::replay_worker(moodycamel::BlockingConcurrentQueue<Simulation::TaskPW>& task_queue,
+                               std::mutex& cooler_mutex, std::atomic<bool>& end_of_simulation,
+                               size_t task_batch_size) const {
+  spdlog::info(FMT_STRING("Spawning simulation thread {}..."), std::this_thread::get_id());
+  moodycamel::ConsumerToken ctok(task_queue);
+
+  absl::FixedArray<TaskPW> task_buff(task_batch_size);  // Tasks are dequeue in batch.
+
+  Simulation::StatePW local_state{};
+  compressed_io::Writer null_stream{};
+  std::mutex null_mutex{};
+
+  try {
+    while (true) {  // Try to dequeue a batch of tasks
+      const auto avail_tasks = task_queue.wait_dequeue_bulk_timed(
+          ctok, task_buff.begin(), task_buff.size(), std::chrono::milliseconds(10));
+      // Check whether dequeue operation timed-out before any task became available
+      if (avail_tasks == 0) {
+        if (end_of_simulation) {
+          // Reached end of simulation (i.e. all tasks have been processed)
+          return;
+        }
+        // Keep waiting until one or more tasks become available
+        continue;
+      }
+
+      // Loop over new tasks
+      for (const auto& task : absl::MakeConstSpan(task_buff.data(), avail_tasks)) {
+        assert(!task.barriers.empty());  // NOLINT
+        assert(!task.feats1.empty());    // NOLINT
+        assert(!task.feats2.empty());    // NOLINT
+
+        local_state = task;  // Set simulation local_state based on task data
+        local_state.contacts.resize(local_state.window_end - local_state.window_start,
+                                    this->diagonal_width, this->bin_size);
+
+        Simulation::simulate_window(local_state, null_stream, null_mutex, cooler_mutex, true);
+      }
+    }
+  } catch (const std::exception& err) {
+    // This is needed, as exceptions don't seem to always propagate to main()
+    // TODO: Find a better way to propagate exception up to the main thread. Maybe use a
+    // concurrent queue?
+    handle_exceptions_from_worker_thread(err, local_state);
+  }
 }
 
 }  // namespace modle

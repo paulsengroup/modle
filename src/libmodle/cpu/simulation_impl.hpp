@@ -302,3 +302,39 @@ void Simulation::simulate_one_cell(StateT& s) const {
 }
 
 }  // namespace modle
+
+constexpr auto fmt::formatter<modle::Simulation::Task>::parse(format_parse_context& ctx)
+    -> decltype(ctx.begin()) {
+  if (ctx.begin() != ctx.end() && *ctx.begin() != '}') {
+    throw fmt::format_error("invalid format");
+  }
+  return ctx.begin();
+}
+
+template <typename FormatContext>
+auto fmt::formatter<modle::Simulation::Task>::format(const modle::Simulation::Task& t,
+                                                     FormatContext& ctx) -> decltype(ctx.out()) {
+  assert(t.chrom);  // NOLINT
+  return fmt::format_to(ctx.out(), FMT_STRING("{}\t{}\t{}\t{}\t{}\t{}\t{}"), t.id, t.chrom->name(),
+                        t.cell_id, t.num_target_epochs, t.num_target_contacts, t.num_lefs,
+                        t.barriers.size());
+}
+
+constexpr auto fmt::formatter<modle::Simulation::TaskPW>::parse(format_parse_context& ctx)
+    -> decltype(ctx.begin()) {
+  if (ctx.begin() != ctx.end() && *ctx.begin() != '}') {
+    throw fmt::format_error("invalid format");
+  }
+  return ctx.begin();
+}
+
+template <typename FormatContext>
+auto fmt::formatter<modle::Simulation::TaskPW>::format(const modle::Simulation::TaskPW& t,
+                                                       FormatContext& ctx) -> decltype(ctx.out()) {
+  assert(t.chrom);  // NOLINT
+  return fmt::format_to(
+      ctx.out(), FMT_STRING("{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}"), t.id,
+      t.chrom->name(), t.cell_id, t.num_target_epochs, t.num_target_contacts, t.num_lefs,
+      t.barriers.size(), t.deletion_begin, t.deletion_size, t.window_start, t.window_end,
+      t.active_window_start, t.active_window_end, t.feats1.size(), t.feats2.size());
+}

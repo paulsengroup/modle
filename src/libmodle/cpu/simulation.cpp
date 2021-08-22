@@ -51,7 +51,6 @@ namespace modle {
 
 Simulation::Simulation(const Config& c, bool import_chroms)
     : Config(c),
-      _config(&c),
       _genome(import_chroms
                   ? Genome(path_to_chrom_sizes, path_to_extr_barriers, path_to_chrom_subranges,
                            path_to_feature_bed_files, ctcf_occupied_self_prob,
@@ -537,6 +536,114 @@ boost::asio::thread_pool Simulation::instantiate_thread_pool() const {
   return boost::asio::thread_pool(this->nthreads);
 }
 
+Simulation::Task Simulation::Task::from_string(std::string_view serialized_task, Genome& genome) {
+  const size_t ntoks = 7;
+  const auto sep = '\t';
+  const std::vector<std::string_view> toks = absl::StrSplit(serialized_task, sep);
+  assert(toks.size() == ntoks);  // NOLINT
+  (void)ntoks;
+
+  Task t;
+  try {
+    size_t i = 0;
+    utils::parse_numeric_or_throw(toks[i++], t.id);
+    const auto& chrom_name = toks[i++];
+    utils::parse_numeric_or_throw(toks[i++], t.cell_id);
+    utils::parse_numeric_or_throw(toks[i++], t.num_target_epochs);
+    utils::parse_numeric_or_throw(toks[i++], t.num_target_contacts);
+    utils::parse_numeric_or_throw(toks[i++], t.num_lefs);
+    size_t num_barriers_expected;  // NOLINT
+    utils::parse_numeric_or_throw(toks[i++], num_barriers_expected);
+
+    auto chrom_it = genome.find(chrom_name);
+    if (chrom_it == genome.end()) {
+      throw std::runtime_error(
+          fmt::format(FMT_STRING("Unable to find a chromosome named \"{}\""), chrom_name));
+    }
+    t.chrom = &(*chrom_it);
+
+    if (t.chrom->num_barriers() != num_barriers_expected) {
+      throw std::runtime_error(
+          fmt::format(FMT_STRING("Expected {} extrusion barriers for chromosome \"{}\". Found {}"),
+                      num_barriers_expected, t.chrom->name(), t.chrom->num_barriers()));
+    }
+    t.barriers = absl::MakeConstSpan(t.chrom->barriers().data());
+
+  } catch (const std::runtime_error& e) {
+    throw std::runtime_error(
+        fmt::format(FMT_STRING("An error occourred while parsing the following task definition:\n"
+                               "Task string: \"{}\"\n"
+                               "Error reason: {}"),
+                    serialized_task, e.what()));
+  }
+  return t;
+}
+
+Simulation::TaskPW Simulation::TaskPW::from_string(std::string_view serialized_task,
+                                                   Genome& genome) {
+  const size_t ntoks = 15;
+  const auto sep = '\t';
+  const std::vector<std::string_view> toks = absl::StrSplit(serialized_task, sep);
+  assert(toks.size() == ntoks);  // NOLINT
+  (void)ntoks;
+
+  TaskPW t;
+  try {
+    size_t i = 0;
+    utils::parse_numeric_or_throw(toks[i++], t.id);
+    const auto& chrom_name = toks[i++];
+    utils::parse_numeric_or_throw(toks[i++], t.cell_id);
+    utils::parse_numeric_or_throw(toks[i++], t.num_target_epochs);
+    utils::parse_numeric_or_throw(toks[i++], t.num_target_contacts);
+    utils::parse_numeric_or_throw(toks[i++], t.num_lefs);
+    size_t num_barriers_expected;  // NOLINT
+    utils::parse_numeric_or_throw(toks[i++], num_barriers_expected);
+    utils::parse_numeric_or_throw(toks[i++], t.deletion_begin);
+    utils::parse_numeric_or_throw(toks[i++], t.deletion_size);
+    utils::parse_numeric_or_throw(toks[i++], t.window_start);
+    utils::parse_numeric_or_throw(toks[i++], t.window_end);
+    utils::parse_numeric_or_throw(toks[i++], t.active_window_start);
+    utils::parse_numeric_or_throw(toks[i++], t.active_window_end);
+    size_t num_feats1_expected;  // NOLINT
+    size_t num_feats2_expected;  // NOLINT
+    utils::parse_numeric_or_throw(toks[i++], num_feats1_expected);
+    utils::parse_numeric_or_throw(toks[i++], num_feats2_expected);
+
+    auto chrom_it = genome.find(chrom_name);
+    if (chrom_it == genome.end()) {
+      throw std::runtime_error(
+          fmt::format(FMT_STRING("Unable to find a chromosome named \"{}\""), chrom_name));
+    }
+    t.chrom = &(*chrom_it);
+
+    if (t.chrom->num_barriers() < num_barriers_expected) {
+      throw std::runtime_error(
+          fmt::format(FMT_STRING("Expected {} extrusion barriers for chromosome \"{}\". Found {}"),
+                      num_barriers_expected, t.chrom->name(), t.chrom->num_barriers()));
+    }
+    t.barriers = absl::MakeConstSpan(t.chrom->barriers().data());
+
+    assert(t.chrom->get_features().size() == 2);  // NOLINT
+    Simulation::map_barriers_to_window(t, *t.chrom);
+    Simulation::map_features_to_window(t, *t.chrom);
+
+    if (t.feats1.size() != num_feats1_expected || t.feats2.size() != num_feats2_expected) {
+      throw std::runtime_error(fmt::format(
+          FMT_STRING("Expected {} and {} features for chromosome \"{}\". Found {} and {}"),
+          num_feats1_expected, num_feats2_expected, t.chrom->name(), t.feats1.size(),
+          t.feats2.size()));
+    }
+
+  } catch (const std::runtime_error& e) {
+    throw std::runtime_error(
+        fmt::format(FMT_STRING("An error occourred while parsing task definition #{}.\n"
+                               "Task definition: \"{}\"\n"
+                               "Reason: {}"),
+                    toks.front(), serialized_task, e.what()));
+  }
+  return t;
+}
+
 Simulation::State& Simulation::State::operator=(const Task& task) {
   this->id = task.id;
   this->chrom = task.chrom;
@@ -610,7 +717,6 @@ Simulation::StatePW& Simulation::StatePW::operator=(const TaskPW& task) {
   this->window_end = task.window_end;
   this->active_window_start = task.active_window_start;
   this->active_window_end = task.active_window_end;
-  this->write_contacts_to_disk = task.write_contacts_to_disk;
 
   this->feats1 = task.feats1;
   this->feats2 = task.feats2;

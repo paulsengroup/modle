@@ -86,7 +86,7 @@ void add_common_options(CLI::App& subcommand, modle::Config& c) {
   gen.add_option(
       "-t,--threads",
       c.nthreads,
-      "Number of worker threads used to run the simulation.\n"
+      "Number of simulate_worker threads used to run the simulation.\n"
       "By default MoDLE will try to use all available threads.")
       ->check(CLI::PositiveNumber)
       ->transform(utils::str_float_to_str_int)
@@ -433,15 +433,67 @@ void Cli::make_perturbate_subcommand() {
       "Path to a BED file containing the list deletions to perform when perturbating extrusion barriers.")
       ->check(CLI::ExistingFile);
 
-  gen.add_option(
-      "--regions-to-output-bed",
-      c.path_to_regions_for_contact_output_bed,
-      "Path to a BED file containing the list of regions whose contacts should be written to disk.")
-      ->check(CLI::ExistingFile);
+  gen.add_flag(
+      "--write-tasks,!--no-write-taks",
+      c.write_tasks_to_disk,
+      "Write tasks to disk.")
+      ->capture_default_str();
   // clang-format on
 
   gen.get_option("--deletion-size")->excludes("--deletion-list");
   gen.get_option("--deletion-list")->excludes("--deletion-size");
+}
+
+void Cli::make_replay_subcommand() {
+  auto& s = *this->_cli.add_subcommand("replay", "TODO")->fallthrough();
+  s.alias("rpl");
+
+  auto& c = this->_config;
+  auto& io = *s.add_option_group("Input/Output", "");
+  auto& gen = *s.add_option_group("Generic", "");
+
+  // clang-format off
+  io.add_option(
+      "--config",
+      c.path_to_config_file,
+      "Path to the config file of a previous run of modle perturbate.")
+      ->check(CLI::ExistingFile)
+      ->required();
+
+  io.add_option(
+      "--task-file",
+      c.path_to_task_file,
+      "Path to the task file produced by modle perturbate.")
+      ->check(CLI::ExistingFile)
+      ->required();
+
+  io.add_option(
+      "--task-filter-file",
+      c.path_to_task_filter_file,
+      "TSV containing the list of task IDs to be processed.")
+      ->check(CLI::ExistingFile);
+
+  io.add_option(
+      "-o,--output-prefix",
+      c.path_to_output_prefix,
+      "Output prefix. Can be a full or relative path including the file name but without file extension.")
+      ->required();
+
+  io.add_flag(
+      "-f,--force",
+      c.force,
+      "Force overwrite of output files if they exists.")
+      ->capture_default_str();
+
+  gen.add_option(
+      "-t,--threads",
+      c.nthreads,
+      "Number of simulate_worker threads used to run the simulation.\n"
+      "By default MoDLE will try to use all available threads.")
+      ->check(CLI::PositiveNumber)
+      ->transform(utils::str_float_to_str_int)
+      ->capture_default_str();
+  // clang-format on
 }
 
 void Cli::make_cli() {
@@ -451,19 +503,40 @@ void Cli::make_cli() {
 
   this->make_simulation_subcommand();
   this->make_perturbate_subcommand();
+  this->make_replay_subcommand();
 }
 
 Cli::Cli(int argc, char** argv) : _argc(argc), _argv(argv), _exec_name(*argv) { this->make_cli(); }
 
 const Config& Cli::parse_arguments() {
+  if (this->_cli.parsed()) {
+    return this->_config;
+  }
+
   this->_cli.name(this->_exec_name);
   this->_cli.parse(this->_argc, this->_argv);
 
   if (this->_cli.get_subcommand("simulate")->parsed()) {
     this->_subcommand = simulate;
-  } else {
-    assert(this->_cli.get_subcommand("perturbate")->parsed());  // NOLINT
+  } else if (this->_cli.get_subcommand("perturbate")->parsed()) {
     this->_subcommand = pertubate;
+  } else {
+    assert(this->_cli.get_subcommand("replay")->parsed());  // NOLINT
+    this->_subcommand = replay;
+    // The code in this branch basically tricks CLI11 into parsing a config file by creating a fake
+    // argv like: {"modle", "pert", "--config", "myconfig.toml"}
+    const auto config_backup = this->_config;
+    constexpr std::string_view config_arg = "--config\0"sv;
+    constexpr std::string_view subcmd_arg = "pert\0"sv;
+    const std::array<const char*, 4> args{this->_exec_name.c_str(), subcmd_arg.data(),
+                                          config_arg.data(),
+                                          this->_config.path_to_config_file.c_str()};
+    this->_cli.parse(args.size(), args.data());
+    this->_config.path_to_config_file = config_backup.path_to_config_file;
+    this->_config.path_to_task_file = config_backup.path_to_task_file;
+    this->_config.path_to_task_filter_file = config_backup.path_to_task_filter_file;
+    this->_config.path_to_output_prefix = config_backup.path_to_output_prefix;
+    this->_config.nthreads = config_backup.nthreads;
   }
 
   this->transform_args();
@@ -472,7 +545,7 @@ const Config& Cli::parse_arguments() {
   return this->_config;
 }
 
-std::string Cli::detect_file_path_collisions(modle::Config& c) {
+std::string Cli::detect_path_collisions(modle::Config& c) const {
   std::string collisions;
 
   if (c.force || c.skip_output) {
@@ -510,15 +583,25 @@ std::string Cli::detect_file_path_collisions(modle::Config& c) {
   if (boost::filesystem::exists(c.path_to_log_file)) {
     absl::StrAppend(&collisions, check_for_path_collisions(c.path_to_log_file));
   }
-  if (boost::filesystem::exists(c.path_to_config_file)) {
+  if (this->get_subcommand() != subcommand::replay &&
+      boost::filesystem::exists(c.path_to_config_file)) {
     absl::StrAppend(&collisions, check_for_path_collisions(c.path_to_config_file));
   }
-  if (boost::filesystem::exists(c.path_to_output_file_cool)) {
+  if ((this->get_subcommand() == subcommand::simulate ||
+       (this->get_subcommand() == subcommand::pertubate &&
+        this->_config.compute_reference_matrix)) &&
+      boost::filesystem::exists(c.path_to_output_file_cool)) {
     absl::StrAppend(&collisions, check_for_path_collisions(c.path_to_output_file_cool));
   }
-  if (!c.path_to_output_file_bedpe.empty() &&
+  if ((this->get_subcommand() == subcommand::pertubate ||
+       this->get_subcommand() == subcommand::replay) &&
+      !c.path_to_output_file_bedpe.empty() &&
       boost::filesystem::exists(c.path_to_output_file_bedpe)) {
     absl::StrAppend(&collisions, check_for_path_collisions(c.path_to_output_file_bedpe));
+  }
+  if (this->get_subcommand() == subcommand::pertubate &&
+      boost::filesystem::exists(this->_config.path_to_task_file)) {
+    absl::StrAppend(&collisions, check_for_path_collisions(c.path_to_task_file));
   }
 
   return collisions;
@@ -535,6 +618,10 @@ void Cli::transform_args() {
       !c.path_to_feature_bed_files.empty() ? c.path_to_output_prefix : boost::filesystem::path{};
   c.path_to_log_file = c.path_to_output_prefix;
   c.path_to_config_file = c.path_to_output_prefix;
+  if (this->get_subcommand() == subcommand::pertubate) {
+    c.path_to_task_file = c.path_to_output_prefix;
+    c.path_to_task_file += "_tasks.tsv.gz";
+  }
 
   c.path_to_output_file_cool += ".cool";
   c.path_to_output_file_bedpe += !c.path_to_output_file_bedpe.empty() ? ".bedpe.gz" : "";
