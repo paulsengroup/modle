@@ -96,7 +96,6 @@ class Simulation : Config {
     State() = default;
 
     State& operator=(const Task& task);
-    [[nodiscard]] std::string to_string() const noexcept;
     void resize_buffers(size_t size = (std::numeric_limits<size_t>::max)());
     void reset_buffers();
   };
@@ -133,6 +132,13 @@ class Simulation : Config {
 
  private:
   Genome _genome{};
+  std::atomic<bool> _end_of_simulation{false};
+  std::atomic<bool> _exception_thrown{false};
+  std::vector<std::exception_ptr> _exceptions{};
+  std::mutex _exceptions_mutex{};
+  thread_pool _tpool;
+
+  [[nodiscard]] bool ok() const noexcept;
 
   [[nodiscard]] [[maybe_unused]] thread_pool instantiate_thread_pool() const;
   template <typename I>
@@ -171,8 +177,7 @@ class Simulation : Config {
 
   //! IMPORTANT: this function is meant to be run in a dedicated thread.
   void write_contacts_to_disk(std::deque<std::pair<Chromosome*, size_t>>& progress_queue,
-                              std::mutex& progress_queue_mutex,
-                              std::atomic<bool>& end_of_simulation) const;
+                              std::mutex& progress_queue_mutex);
 
   /// Worker function used to run an instance of the simulation
 
@@ -182,19 +187,20 @@ class Simulation : Config {
   //! This function is also responsible for allocating and clearing the buffers used throughout the
   //! simulation.
   //! IMPORTANT: this function is meant to be run in a dedicated thread.
-  void simulate_worker(moodycamel::BlockingConcurrentQueue<Simulation::Task>& task_queue,
+  void simulate_worker(uint64_t tid,
+                       moodycamel::BlockingConcurrentQueue<Simulation::Task>& task_queue,
                        std::deque<std::pair<Chromosome*, size_t>>& progress_queue,
-                       std::mutex& progress_queue_mutex, std::atomic<bool>& end_of_simulation,
-                       size_t task_batch_size = 32) const;  // NOLINT
+                       std::mutex& progress_queue_mutex,
+                       size_t task_batch_size = 32);  // NOLINT
 
-  void perturbate_worker(moodycamel::BlockingConcurrentQueue<Simulation::TaskPW>& task_queue,
+  void perturbate_worker(uint64_t tid,
+                         moodycamel::BlockingConcurrentQueue<Simulation::TaskPW>& task_queue,
                          compressed_io::Writer& out_stream, std::mutex& out_stream_mutex,
-                         std::mutex& cooler_mutex, std::atomic<bool>& end_of_simulation,
-                         size_t task_batch_size = 1) const;  // NOLINT
+                         std::mutex& cooler_mutex, size_t task_batch_size = 1);  // NOLINT
 
-  void replay_worker(moodycamel::BlockingConcurrentQueue<Simulation::TaskPW>& task_queue,
-                     std::mutex& cooler_mutex, std::atomic<bool>& end_of_simulation,
-                     size_t task_batch_size = 32) const;  // NOLINT
+  void replay_worker(uint64_t tid,
+                     moodycamel::BlockingConcurrentQueue<Simulation::TaskPW>& task_queue,
+                     std::mutex& cooler_mutex, size_t task_batch_size = 32);  // NOLINT
 
   /// Bind inactive LEFs, then sort them by their genomic coordinates.
 
@@ -429,6 +435,9 @@ class Simulation : Config {
   [[nodiscard]] bed::BED_tree<> import_deletions() const;
   [[nodiscard]] bed::BED_tree<> generate_deletions() const;
 
+  [[noreturn]] void rethrow_exceptions() const;
+  [[noreturn]] void handle_exceptions();
+
 #ifdef ENABLE_TESTING
  public:
   template <typename MaskT>
@@ -581,6 +590,15 @@ struct fmt::formatter<modle::Simulation::TaskPW> {
   // stored in this formatter.
   template <typename FormatContext>
   inline auto format(const modle::Simulation::TaskPW& t, FormatContext& ctx) -> decltype(ctx.out());
+};
+
+template <>
+struct fmt::formatter<modle::Simulation::State> {
+  inline constexpr auto parse(format_parse_context& ctx) -> decltype(ctx.begin());
+  // Formats the point p using the parsed format specification (presentation)
+  // stored in this formatter.
+  template <typename FormatContext>
+  inline auto format(const modle::Simulation::State& s, FormatContext& ctx) -> decltype(ctx.out());
 };
 
 #include "../../simulation_impl.hpp"  // IWYU pragma: keep

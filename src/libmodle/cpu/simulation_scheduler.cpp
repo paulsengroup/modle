@@ -44,25 +44,6 @@
 
 namespace modle {
 
-template <typename StateT>
-[[noreturn]] void handle_exceptions_from_worker_thread(const std::exception& e,
-                                                       const StateT& local_state) {
-#ifdef BOOST_STACKTRACE_USE_NOOP
-  spdlog::error(FMT_STRING("Detected an error in thread {}:\n{}\n{}"), std::this_thread::get_id(),
-                local_state.to_string(), e.what());
-#else
-  const auto* st = boost::get_error_info<modle::utils::traced>(e);
-  if (st) {
-    spdlog::error(FMT_STRING("Detected an error in thread {}:\n{}\n{}\n{}"),
-                  std::this_thread::get_id(), local_state.to_string(), e.what(), *st);
-  } else {
-    spdlog::error(FMT_STRING("Detected an error in thread {}:\n{}\n{}\nStack trace not available!"),
-                  std::this_thread::get_id(), local_state.to_string(), e.what());
-  }
-#endif
-  throw e;
-}
-
 void Simulation::run_simulate() {
   if (!this->skip_output) {  // Write simulation params to file
     assert(boost::filesystem::exists(this->path_to_output_prefix.parent_path()));  // NOLINT
@@ -71,7 +52,7 @@ void Simulation::run_simulate() {
     }
   }
 
-  auto tpool = Simulation::instantiate_thread_pool(this->nthreads + 1, false);
+  this->_tpool.reset(this->nthreads + 1);
 
   // These are the threads spawned by simulate_extrusion:
   // - 1 thread to write contacts to disk. This thread pops Chromosome* from a std::deque once the
@@ -88,7 +69,6 @@ void Simulation::run_simulate() {
   // efficiently. Most of the time, the only data moved are tasks, which are structs consisting of
   // few numbers, a pointer and a Span (i.e. ptr + size)
 
-  std::atomic<bool> end_of_simulation = false;
   std::mutex progress_queue_mutex;  // Protect rw access to progress_queue
   std::deque<std::pair<Chromosome*, size_t>> progress_queue;
 
@@ -103,16 +83,14 @@ void Simulation::run_simulate() {
   // Queue used to submit simulation tasks to the thread pool
   moodycamel::BlockingConcurrentQueue<Simulation::Task> task_queue(queue_capacity, 1, 0);
   moodycamel::ProducerToken ptok(task_queue);
-  // std::vector<std::future<bool>> return_codes(this->nthreads + 2);
-  // std::mutex return_codes_mutex;
 
-  tpool.submit([&]() {  // This thread is in charge of writing contacts to disk
-    this->write_contacts_to_disk(progress_queue, progress_queue_mutex, end_of_simulation);
+  this->_tpool.push_task([&]() {  // This thread is in charge of writing contacts to disk
+    this->write_contacts_to_disk(progress_queue, progress_queue_mutex);
   });
 
-  for (auto i = 0UL; i < this->nthreads; ++i) {  // Start simulation threads
-    tpool.submit([&]() {
-      this->simulate_worker(task_queue, progress_queue, progress_queue_mutex, end_of_simulation,
+  for (uint64_t tid = 0; tid < this->nthreads; ++tid) {  // Start simulation threads
+    this->_tpool.push_task([&, tid]() {
+      this->simulate_worker(tid, task_queue, progress_queue, progress_queue_mutex,
                             task_batch_size_deq);
     });
   }
@@ -125,6 +103,9 @@ void Simulation::run_simulate() {
 
   // Loop over chromosomes
   for (auto& chrom : this->_genome) {
+    if (!this->ok()) {
+      this->handle_exceptions();
+    }
     // Don't simulate KO chroms (but write them to disk if the user desires so)
     if (!chrom.ok() || chrom.num_barriers() == 0) {
       spdlog::info(FMT_STRING("SKIPPING '{}'..."), chrom.name());
@@ -171,6 +152,9 @@ void Simulation::run_simulate() {
       auto sleep_us = 100;  // NOLINT(readability-magic-numbers)
       while (               // Enqueue tasks
           !task_queue.try_enqueue_bulk(ptok, std::make_move_iterator(tasks.begin()), ntasks)) {
+        if (!this->ok()) {
+          this->handle_exceptions();
+        }
         sleep_us = std::min(100000, sleep_us * 2);  // NOLINT(readability-magic-numbers)
         std::this_thread::sleep_for(std::chrono::microseconds(sleep_us));
       }
@@ -181,16 +165,16 @@ void Simulation::run_simulate() {
     std::scoped_lock l(progress_queue_mutex);
     progress_queue.emplace_back(nullptr, 0UL);
   }
-  tpool.wait_for_tasks();
-  assert(end_of_simulation);  // NOLINT
+  this->_tpool.wait_for_tasks();
+  assert(this->_end_of_simulation);  // NOLINT
+  assert(!this->_exception_thrown);  // NOLINT
 }
 
-void Simulation::simulate_worker(moodycamel::BlockingConcurrentQueue<Simulation::Task>& task_queue,
+void Simulation::simulate_worker(const uint64_t tid,
+                                 moodycamel::BlockingConcurrentQueue<Simulation::Task>& task_queue,
                                  std::deque<std::pair<Chromosome*, size_t>>& progress_queue,
-                                 std::mutex& progress_queue_mutex,
-                                 std::atomic<bool>& end_of_simulation,
-                                 size_t task_batch_size) const {
-  spdlog::info(FMT_STRING("Spawning simulation thread {}..."), std::this_thread::get_id());
+                                 std::mutex& progress_queue_mutex, const size_t task_batch_size) {
+  spdlog::info(FMT_STRING("Spawning simulation thread {}..."), tid);
 
   moodycamel::ConsumerToken ctok(task_queue);
   absl::FixedArray<Task> task_buff(task_batch_size);  // Tasks are dequeued in batch.
@@ -203,12 +187,12 @@ void Simulation::simulate_worker(moodycamel::BlockingConcurrentQueue<Simulation:
   Simulation::State local_state;
 
   try {
-    while (true) {  // Try to dequeue a batch of tasks
+    while (this->ok()) {  // Try to dequeue a batch of tasks
       const auto avail_tasks = task_queue.wait_dequeue_bulk_timed(
           ctok, task_buff.begin(), task_buff.size(), std::chrono::milliseconds(10));
       // Check whether dequeue operation timed-out before any task became available
       if (avail_tasks == 0) {
-        if (end_of_simulation) {
+        if (this->_end_of_simulation) {
           // Reached end of simulation (i.e. all tasks have been processed)
           return;
         }
@@ -217,7 +201,10 @@ void Simulation::simulate_worker(moodycamel::BlockingConcurrentQueue<Simulation:
       }
 
       // Loop over new tasks
-      for (auto& task : absl::MakeConstSpan(task_buff.data(), avail_tasks)) {
+      for (const auto& task : absl::MakeConstSpan(task_buff.data(), avail_tasks)) {
+        if (!this->ok()) {
+          return;
+        }
         // Resize and reset buffers
         local_state = task;            // Set simulation state based on task data
         local_state.resize_buffers();  // This resizes buffers based on the nlefs to be simulated
@@ -255,11 +242,18 @@ void Simulation::simulate_worker(moodycamel::BlockingConcurrentQueue<Simulation:
         }
       }
     }
-  } catch (const std::exception& err) {
-    // This is needed, as exceptions don't seem to always propagate to the main()
-    // TODO: Find a better way to propagate exception up to the main thread. Maybe use a
-    // concurrent queue?
-    handle_exceptions_from_worker_thread(err, local_state);
+  } catch (const std::exception& e) {
+    std::scoped_lock<std::mutex> l(this->_exceptions_mutex);
+
+    const auto excp = std::runtime_error(fmt::format(
+        FMT_STRING("Detected an error in worker thread {}:\n{}\n{}"), tid, local_state, e.what()));
+    this->_exceptions.emplace_back(std::make_exception_ptr(excp));
+    this->_exception_thrown = true;
+
+  } catch (...) {
+    std::scoped_lock<std::mutex> l(this->_exceptions_mutex);
+    this->_exceptions.emplace_back(std::current_exception());
+    this->_exception_thrown = true;
   }
 }
 
@@ -312,13 +306,10 @@ void Simulation::run_perturbate() {
   auto out_bedpe_stream = compressed_io::Writer(this->path_to_output_file_bedpe);
   auto out_task_stream = compressed_io::Writer(this->path_to_task_file);
 
-  std::atomic<bool> end_of_simulation = false;
-
-  auto tpool = Simulation::instantiate_thread_pool();
-  for (auto i = 0UL; i < this->nthreads; ++i) {  // Start simulation threads
-    tpool.submit([&]() {
-      this->perturbate_worker(task_queue, out_bedpe_stream, out_stream_mutex, cooler_mutex,
-                              end_of_simulation);
+  this->_tpool.reset(this->nthreads);
+  for (uint64_t tid = 0; tid < this->nthreads; ++tid) {  // Start simulation threads
+    this->_tpool.submit([&, tid]() {
+      this->perturbate_worker(tid, task_queue, out_bedpe_stream, out_stream_mutex, cooler_mutex);
     });
   }
 
@@ -328,6 +319,9 @@ void Simulation::run_perturbate() {
   size_t task_id = 0;
   size_t num_tasks = 0;
   for (auto& chrom : this->_genome) {
+    if (!this->ok()) {
+      this->handle_exceptions();
+    }
     const auto chrom_name = std::string{chrom.name()};
     const auto& features = chrom.get_features();
     const auto& barriers = chrom.barriers();
@@ -391,6 +385,9 @@ void Simulation::run_perturbate() {
     base_task.active_window_end = 3 * this->diagonal_width;
 
     do {
+      if (!this->ok()) {
+        this->handle_exceptions();
+      }
       // Find all barriers falling within the outer window. Skip over windows with 0 barriers
       if (!Simulation::map_barriers_to_window(base_task, chrom)) {
         continue;
@@ -450,7 +447,10 @@ void Simulation::run_perturbate() {
           auto sleep_us = 100;  // NOLINT(readability-magic-numbers)
           while (!task_queue.try_enqueue_bulk(ptok, std::make_move_iterator(tasks.begin()),
                                               num_tasks)) {
-            sleep_us = std::min(100000, sleep_us * 2);  // NOLINT(readability-magic-numbers)
+            if (!this->ok()) {
+              this->handle_exceptions();
+            }  // NOLINTNEXTLINE(readability-magic-numbers)
+            sleep_us = std::min(100000, sleep_us * 2);
             std::this_thread::sleep_for(std::chrono::microseconds(sleep_us));
           }
           num_tasks = 0;
@@ -466,21 +466,24 @@ void Simulation::run_perturbate() {
                                         fmt::join(tasks.begin(), tasks.begin() + num_tasks, "\n")));
     }
     while (!task_queue.try_enqueue_bulk(ptok, std::make_move_iterator(tasks.begin()), num_tasks)) {
-      // NOLINTNEXTLINE(readability-magic-numbers)
+      if (!this->ok()) {
+        this->handle_exceptions();
+      }  // NOLINTNEXTLINE(readability-magic-numbers)
       std::this_thread::sleep_for(std::chrono::microseconds(100));
     }
   }
 
-  end_of_simulation = true;
+  this->_end_of_simulation = true;
   out_task_stream.close();
-  tpool.wait_for_tasks();  // Wait on simulate_worker threads
+  this->_tpool.wait_for_tasks();     // Wait on simulate_worker threads
+  assert(!this->_exception_thrown);  // NOLINT
 }
 
 void Simulation::perturbate_worker(
-    moodycamel::BlockingConcurrentQueue<Simulation::TaskPW>& task_queue,
+    const uint64_t tid, moodycamel::BlockingConcurrentQueue<Simulation::TaskPW>& task_queue,
     compressed_io::Writer& out_stream, std::mutex& out_stream_mutex, std::mutex& cooler_mutex,
-    std::atomic<bool>& end_of_simulation, size_t task_batch_size) const {
-  spdlog::info(FMT_STRING("Spawning simulation thread {}..."), std::this_thread::get_id());
+    const size_t task_batch_size) {
+  spdlog::info(FMT_STRING("Spawning simulation thread {}..."), tid);
   moodycamel::ConsumerToken ctok(task_queue);
 
   absl::FixedArray<TaskPW> task_buff(task_batch_size);  // Tasks are dequeue in batch.
@@ -488,12 +491,12 @@ void Simulation::perturbate_worker(
   Simulation::StatePW local_state{};
 
   try {
-    while (true) {  // Try to dequeue a batch of tasks
+    while (this->ok()) {  // Try to dequeue a batch of tasks
       const auto avail_tasks = task_queue.wait_dequeue_bulk_timed(
           ctok, task_buff.begin(), task_buff.size(), std::chrono::milliseconds(10));
       // Check whether dequeue operation timed-out before any task became available
       if (avail_tasks == 0) {
-        if (end_of_simulation) {
+        if (!this->ok()) {
           // Reached end of simulation (i.e. all tasks have been processed)
           return;
         }
@@ -503,6 +506,9 @@ void Simulation::perturbate_worker(
 
       // Loop over new tasks
       for (const auto& task : absl::MakeConstSpan(task_buff.data(), avail_tasks)) {
+        if (!this->ok()) {
+          return;
+        }
         assert(!task.barriers.empty());  // NOLINT
         assert(!task.feats1.empty());    // NOLINT
         assert(!task.feats2.empty());    // NOLINT
@@ -514,11 +520,17 @@ void Simulation::perturbate_worker(
         Simulation::simulate_window(local_state, out_stream, out_stream_mutex, cooler_mutex);
       }
     }
-  } catch (const std::exception& err) {
-    // This is needed, as exceptions don't seem to always propagate to main()
-    // TODO: Find a better way to propagate exception up to the main thread. Maybe use a
-    // concurrent queue?
-    handle_exceptions_from_worker_thread(err, local_state);
+  } catch (const std::exception& e) {
+    std::scoped_lock<std::mutex> l(this->_exceptions_mutex);
+    this->_exceptions.emplace_back(std::make_exception_ptr(
+        std::runtime_error(fmt::format(FMT_STRING("Detected an error in worker thread {}:\n{}\n{}"),
+                                       tid, local_state.to_string(), e.what()))));
+    this->_exception_thrown = true;
+
+  } catch (...) {
+    std::scoped_lock<std::mutex> l(this->_exceptions_mutex);
+    this->_exceptions.emplace_back(std::current_exception());
+    this->_exception_thrown = true;
   }
 }
 
@@ -782,12 +794,11 @@ void Simulation::run_replay() {
   moodycamel::ProducerToken ptok(task_queue);
   std::array<TaskPW, task_batch_size_enq> tasks;
 
-  std::atomic<bool> end_of_simulation = false;
   std::mutex cooler_mutex;
 
-  auto tpool = Simulation::instantiate_thread_pool();
-  for (auto i = 0UL; i < this->nthreads; ++i) {  // Start simulation threads
-    tpool.submit([&]() { this->replay_worker(task_queue, cooler_mutex, end_of_simulation); });
+  this->_tpool.reset(this->nthreads);
+  for (uint64_t tid = 0; tid < this->nthreads; ++tid) {  // Start simulation threads
+    this->_tpool.submit([&, tid]() { this->replay_worker(tid, task_queue, cooler_mutex); });
   }
 
   const auto task_filter = import_task_filter(this->path_to_task_filter_file);
@@ -795,11 +806,17 @@ void Simulation::run_replay() {
   std::string task_definition;
   size_t num_tasks = 0;
   while (task_reader.getline(task_definition)) {
+    if (!this->ok()) {
+      this->handle_exceptions();
+    }
     if (num_tasks == tasks.size()) {  // Enqueue a batch of tasks
       auto sleep_us = 100;            // NOLINT(readability-magic-numbers)
       while (
           !task_queue.try_enqueue_bulk(ptok, std::make_move_iterator(tasks.begin()), num_tasks)) {
-        sleep_us = std::min(100000, sleep_us * 2);  // NOLINT(readability-magic-numbers)
+        if (!this->ok()) {
+          this->handle_exceptions();
+        }  // NOLINTNEXTLINE(readability-magic-numbers)
+        sleep_us = std::min(100000, sleep_us * 2);
         std::this_thread::sleep_for(std::chrono::microseconds(sleep_us));
       }
       num_tasks = 0;
@@ -812,19 +829,22 @@ void Simulation::run_replay() {
 
   if (num_tasks != 0) {
     while (!task_queue.try_enqueue_bulk(ptok, std::make_move_iterator(tasks.begin()), num_tasks)) {
-      // NOLINTNEXTLINE(readability-magic-numbers)
+      if (!this->ok()) {
+        this->handle_exceptions();
+      }  // NOLINTNEXTLINE(readability-magic-numbers)
       std::this_thread::sleep_for(std::chrono::microseconds(100));
     }
   }
 
-  end_of_simulation = true;
-  tpool.wait_for_tasks();  // Wait on simulate_worker threads
+  this->_end_of_simulation = true;
+  this->_tpool.wait_for_tasks();     // Wait on simulate_worker threads
+  assert(!this->_exception_thrown);  // NOLINT
 }
 
-void Simulation::replay_worker(moodycamel::BlockingConcurrentQueue<Simulation::TaskPW>& task_queue,
-                               std::mutex& cooler_mutex, std::atomic<bool>& end_of_simulation,
-                               size_t task_batch_size) const {
-  spdlog::info(FMT_STRING("Spawning simulation thread {}..."), std::this_thread::get_id());
+void Simulation::replay_worker(const uint64_t tid,
+                               moodycamel::BlockingConcurrentQueue<Simulation::TaskPW>& task_queue,
+                               std::mutex& cooler_mutex, const size_t task_batch_size) {
+  spdlog::info(FMT_STRING("Spawning simulation thread {}..."), tid);
   moodycamel::ConsumerToken ctok(task_queue);
 
   absl::FixedArray<TaskPW> task_buff(task_batch_size);  // Tasks are dequeue in batch.
@@ -834,12 +854,12 @@ void Simulation::replay_worker(moodycamel::BlockingConcurrentQueue<Simulation::T
   std::mutex null_mutex{};
 
   try {
-    while (true) {  // Try to dequeue a batch of tasks
+    while (this->ok()) {  // Try to dequeue a batch of tasks
       const auto avail_tasks = task_queue.wait_dequeue_bulk_timed(
           ctok, task_buff.begin(), task_buff.size(), std::chrono::milliseconds(10));
       // Check whether dequeue operation timed-out before any task became available
       if (avail_tasks == 0) {
-        if (end_of_simulation) {
+        if (this->_end_of_simulation) {
           // Reached end of simulation (i.e. all tasks have been processed)
           return;
         }
@@ -849,6 +869,9 @@ void Simulation::replay_worker(moodycamel::BlockingConcurrentQueue<Simulation::T
 
       // Loop over new tasks
       for (const auto& task : absl::MakeConstSpan(task_buff.data(), avail_tasks)) {
+        if (!this->ok()) {
+          return;
+        }
         assert(!task.barriers.empty());  // NOLINT
         assert(!task.feats1.empty());    // NOLINT
         assert(!task.feats2.empty());    // NOLINT
@@ -860,12 +883,44 @@ void Simulation::replay_worker(moodycamel::BlockingConcurrentQueue<Simulation::T
         Simulation::simulate_window(local_state, null_stream, null_mutex, cooler_mutex, true);
       }
     }
-  } catch (const std::exception& err) {
-    // This is needed, as exceptions don't seem to always propagate to main()
-    // TODO: Find a better way to propagate exception up to the main thread. Maybe use a
-    // concurrent queue?
-    handle_exceptions_from_worker_thread(err, local_state);
+  } catch (const std::exception& e) {
+    std::scoped_lock<std::mutex> l(this->_exceptions_mutex);
+    this->_exceptions.emplace_back(std::make_exception_ptr(
+        std::runtime_error(fmt::format(FMT_STRING("Detected an error in worker thread {}:\n{}\n{}"),
+                                       tid, local_state.to_string(), e.what()))));
+    this->_exception_thrown = true;
+
+  } catch (...) {
+    std::scoped_lock<std::mutex> l(this->_exceptions_mutex);
+    this->_exceptions.emplace_back(std::current_exception());
+    this->_exception_thrown = true;
   }
+}
+
+void Simulation::rethrow_exceptions() const {
+  assert(!this->ok());                 // NOLINT
+  assert(!this->_exceptions.empty());  // NOLINT
+
+  std::string error_msg = "The following error(s) occurred while simulating loop extrusion:";
+  for (const auto& exc_ptr : this->_exceptions) {
+    try {
+      std::rethrow_exception(exc_ptr);
+    } catch (const std::exception& e) {
+      absl::StrAppendFormat(&error_msg, "\n  %s", e.what());
+    } catch (...) {
+      absl::StrAppend(&error_msg,
+                      "\n  An unhandled exception was caught! This should never happen! If you see "
+                      "this message, please file an issue on GitHub.");
+    }
+  }
+  throw std::runtime_error(error_msg);
+}
+
+void Simulation::handle_exceptions() {
+  assert(!this->ok());  // NOLINT
+  spdlog::error("MoDLE encountered an exception. Shutting down worker threads...");
+  this->_tpool.wait_for_tasks();  // Wait on simulate_worker threads
+  this->rethrow_exceptions();
 }
 
 }  // namespace modle

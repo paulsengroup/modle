@@ -55,16 +55,18 @@ Simulation::Simulation(const Config& c, bool import_chroms)
                   ? Genome(path_to_chrom_sizes, path_to_extr_barriers, path_to_chrom_subranges,
                            path_to_feature_bed_files, ctcf_occupied_self_prob,
                            ctcf_not_occupied_self_prob, write_contacts_for_ko_chroms)
-                  : Genome{}) {}
+                  : Genome{}),
+      _tpool(c.nthreads + 1) {}
+
+bool Simulation::ok() const noexcept { return !this->_exception_thrown; }
 
 size_t Simulation::size() const { return this->_genome.size(); }
 
 size_t Simulation::simulated_size() const { return this->_genome.simulated_size(); }
 
 void Simulation::write_contacts_to_disk(std::deque<std::pair<Chromosome*, size_t>>& progress_queue,
-                                        std::mutex& progress_queue_mutex,
-                                        std::atomic<bool>& end_of_simulation)
-    const {  // This thread is in charge of writing contacts to disk
+                                        std::mutex& progress_queue_mutex) {
+  // This thread is in charge of writing contacts to disk
   Chromosome* chrom_to_be_written = nullptr;
   const auto max_str_length =
       std::max_element(  // Find chrom with the longest name
@@ -79,7 +81,8 @@ void Simulation::write_contacts_to_disk(std::deque<std::pair<Chromosome*, size_t
                                                                 this->bin_size, max_str_length);
 
   auto sleep_us = 100;  // NOLINT(readability-magic-numbers), cppcoreguidelines-avoid-magic-numbers)
-  while (true) {  // Structuring the loop in this way allows us to sleep without holding the mutex
+  while (this->ok()) {  // Structuring the loop in this way allows us to sleep without
+                        // holding the mutex
     sleep_us = std::min(500000, sleep_us * 2);  // NOLINT
     std::this_thread::sleep_for(std::chrono::microseconds(sleep_us));
     {
@@ -91,8 +94,7 @@ void Simulation::write_contacts_to_disk(std::deque<std::pair<Chromosome*, size_t
 
       // chrom == nullptr is the end-of-queue signal
       if (auto& [chrom, count] = progress_queue.front(); chrom == nullptr) {
-        end_of_simulation = true;
-        return;
+        break;
       }
       // count == ncells signals that we are done simulating the current chromosome
       else if (count == num_cells) {  // NOLINT
@@ -142,6 +144,7 @@ void Simulation::write_contacts_to_disk(std::deque<std::pair<Chromosome*, size_t
           chrom_to_be_written->name(), c->get_path(), err.what()));
     }
   }
+  this->_end_of_simulation = true;
 }
 
 bp_t Simulation::generate_rev_move(const Chromosome& chrom, const ExtrusionUnit& unit,
@@ -686,19 +689,6 @@ void Simulation::State::resize_buffers(size_t new_size) {
 }
 
 void Simulation::State::reset_buffers() { this->_reset_buffers(); }
-
-std::string Simulation::State::to_string() const noexcept {
-  return fmt::format(FMT_STRING("State:\n - TaskID {}\n"
-                                " - Chrom: {}[{}-{}]\n"
-                                " - CellID: {}\n"
-                                " - Target epochs: {}\n"
-                                " - Target contacts: {}\n"
-                                " - # of LEFs: {}\n"
-                                " - # Extrusion barriers: {}\n"
-                                " - seed: {}\n"),
-                     id, chrom->name(), chrom->start_pos(), chrom->end_pos(), cell_id,
-                     num_target_epochs, num_target_contacts, num_lefs, barriers.size(), seed);
-}
 
 Simulation::StatePW& Simulation::StatePW::operator=(const TaskPW& task) {
   this->id = task.id;

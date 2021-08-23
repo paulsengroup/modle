@@ -331,10 +331,36 @@ constexpr auto fmt::formatter<modle::Simulation::TaskPW>::parse(format_parse_con
 template <typename FormatContext>
 auto fmt::formatter<modle::Simulation::TaskPW>::format(const modle::Simulation::TaskPW& t,
                                                        FormatContext& ctx) -> decltype(ctx.out()) {
-  assert(t.chrom);  // NOLINT
   return fmt::format_to(
       ctx.out(), FMT_STRING("{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}"), t.id,
-      t.chrom->name(), t.cell_id, t.num_target_epochs, t.num_target_contacts, t.num_lefs,
-      t.barriers.size(), t.deletion_begin, t.deletion_size, t.window_start, t.window_end,
-      t.active_window_start, t.active_window_end, t.feats1.size(), t.feats2.size());
+      t.chrom ? t.chrom->name() : "null", t.cell_id, t.num_target_epochs, t.num_target_contacts,
+      t.num_lefs, t.barriers.size(), t.deletion_begin, t.deletion_size, t.window_start,
+      t.window_end, t.active_window_start, t.active_window_end, t.feats1.size(), t.feats2.size());
+}
+
+constexpr auto fmt::formatter<modle::Simulation::State>::parse(format_parse_context& ctx)
+    -> decltype(ctx.begin()) {
+  if (ctx.begin() != ctx.end() && *ctx.begin() != '}') {
+    throw fmt::format_error("invalid format");
+  }
+  return ctx.begin();
+}
+
+template <typename FormatContext>
+auto fmt::formatter<modle::Simulation::State>::format(const modle::Simulation::State& s,
+                                                      FormatContext& ctx) -> decltype(ctx.out()) {
+  return fmt::format_to(ctx.out(),
+                        FMT_STRING("State:\n - TaskID {}\n"
+                                   " - Chrom: {}[{}-{}]\n"
+                                   " - CellID: {}\n"
+                                   " - Target epochs: {}\n"
+                                   " - Target contacts: {}\n"
+                                   " - # of LEFs: {}\n"
+                                   " - # Extrusion barriers: {}\n"
+                                   " - seed: {}\n"),
+                        s.id, s.chrom ? s.chrom->name() : "null",
+                        s.chrom ? static_cast<int64_t>(s.chrom->start_pos()) : -1,
+                        s.chrom ? static_cast<int64_t>(s.chrom->end_pos()) : -1, s.cell_id,
+                        s.num_target_epochs, s.num_target_contacts, s.num_lefs, s.barriers.size(),
+                        s.seed);
 }
