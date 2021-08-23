@@ -6,7 +6,6 @@
 #include <moodycamel/blockingconcurrentqueue.h>  // for BlockingConcurrntQueue
 
 #include <atomic>                                   // for atomic
-#include <boost/asio/thread_pool.hpp>               // for thread_pool
 #include <boost/dynamic_bitset/dynamic_bitset.hpp>  // for dynamic_bitset
 #include <boost/filesystem/path.hpp>                // for path
 #include <cstddef>                                  // for size_t
@@ -16,8 +15,9 @@
 #include <memory>                                   // for unique_ptr
 #include <mutex>                                    // for mutex
 #include <string>                                   // for string
-#include <utility>                                  // for pair
-#include <vector>                                   // for vector
+#include <thread_pool/thread_pool.hpp>
+#include <utility>  // for pair
+#include <vector>   // for vector
 
 #include "modle/common/common.hpp"  // for bp_t, PRNG, seeder
 #include "modle/common/config.hpp"  // for Config
@@ -134,10 +134,9 @@ class Simulation : Config {
  private:
   Genome _genome{};
 
-  [[nodiscard]] [[maybe_unused]] boost::asio::thread_pool instantiate_thread_pool() const;
+  [[nodiscard]] [[maybe_unused]] thread_pool instantiate_thread_pool() const;
   template <typename I>
-  [[nodiscard]] inline static boost::asio::thread_pool instantiate_thread_pool(
-      I nthreads, bool clamp_nthreads = true);
+  [[nodiscard]] inline static thread_pool instantiate_thread_pool(I nthreads, bool clamp_nthreads);
 
   /// Simulate loop extrusion using the parameters and buffers passed through \p state
   template <typename StateT, typename = std::enable_if_t<std::is_same_v<StateT, State> ||

@@ -10,12 +10,12 @@
 #include <cpp-sort/sorters/split_sorter.h>      // for split_sort, split_sorter
 
 #include <algorithm>                         // for min
-#include <boost/asio/thread_pool.hpp>        // for thread_pool
 #include <boost/range/adaptor/reversed.hpp>  // for reversed_range, reverse
 #include <cassert>                           // for assert
 #include <cstddef>                           // for size_t
 #include <thread>                            // for thread
-#include <type_traits>                       // for declval, decay_t
+#include <thread_pool/thread_pool.hpp>
+#include <type_traits>  // for declval, decay_t
 
 #include "modle/common/common.hpp"                      // for random::PRNG_t
 #include "modle/common/random_sampling.hpp"             // for random_sampe
@@ -91,16 +91,16 @@ void Simulation::select_lefs_to_bind(const absl::Span<const Lef> lefs,
 }
 
 template <typename I>
-boost::asio::thread_pool Simulation::instantiate_thread_pool(I nthreads, bool clamp_nthreads) {
+thread_pool Simulation::instantiate_thread_pool(I nthreads, bool clamp_nthreads) {
   static_assert(std::is_integral_v<I>, "nthreads should have an integral type.");
   DISABLE_WARNING_PUSH
   DISABLE_WARNING_USELESS_CAST
   if (clamp_nthreads) {
-    return boost::asio::thread_pool(
-        std::min(std::thread::hardware_concurrency(), static_cast<unsigned int>(nthreads)));
+    return thread_pool(
+        std::min(std::thread::hardware_concurrency(), static_cast<uint32_t>(nthreads)));
   }
   assert(nthreads > 0);
-  return boost::asio::thread_pool(static_cast<unsigned int>(nthreads));
+  return thread_pool(static_cast<uint32_t>(nthreads));
   DISABLE_WARNING_POP
 }
 

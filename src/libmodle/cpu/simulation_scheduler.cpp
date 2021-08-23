@@ -10,10 +10,8 @@
 #include <moodycamel/concurrentqueue.h>          // for ConsumerToken, ProducerToken
 #include <spdlog/spdlog.h>
 
-#include <algorithm>  // for max, copy, find_if, generate, sort
-#include <atomic>     // for atomic
-#include <boost/asio/post.hpp>
-#include <boost/asio/thread_pool.hpp>               // for thread_pool
+#include <algorithm>                                // for max, copy, find_if, generate, sort
+#include <atomic>                                   // for atomic
 #include <boost/dynamic_bitset/dynamic_bitset.hpp>  // for dynamic_bitset
 #include <boost/exception/get_error_info.hpp>       // for get_error_info
 #include <boost/filesystem/path.hpp>                // for create_directories, operator<<, remov...
@@ -31,8 +29,9 @@
 #include <sstream>                                  // for basic_stringbuf<>::int_type, basic_st...
 #include <string>                                   // for basic_string
 #include <thread>                                   // for operator<<, get_id, sleep_for
-#include <utility>                                  // for pair, addressof
-#include <vector>                                   // for vector
+#include <thread_pool/thread_pool.hpp>
+#include <utility>  // for pair, addressof
+#include <vector>   // for vector
 
 #include "modle/common/config.hpp"  // for Config
 #include "modle/common/utils.hpp"   // for traced
@@ -66,7 +65,7 @@ template <typename StateT>
 
 void Simulation::run_simulate() {
   if (!this->skip_output) {  // Write simulation params to file
-    assert(boost::filesystem::exists(this->path_to_output_prefix.parent_path()));
+    assert(boost::filesystem::exists(this->path_to_output_prefix.parent_path()));  // NOLINT
     if (this->force) {
       boost::filesystem::remove(this->path_to_output_file_cool);
     }
@@ -104,13 +103,15 @@ void Simulation::run_simulate() {
   // Queue used to submit simulation tasks to the thread pool
   moodycamel::BlockingConcurrentQueue<Simulation::Task> task_queue(queue_capacity, 1, 0);
   moodycamel::ProducerToken ptok(task_queue);
+  // std::vector<std::future<bool>> return_codes(this->nthreads + 2);
+  // std::mutex return_codes_mutex;
 
-  boost::asio::post(tpool, [&]() {  // This thread is in charge of writing contacts to disk
+  tpool.submit([&]() {  // This thread is in charge of writing contacts to disk
     this->write_contacts_to_disk(progress_queue, progress_queue_mutex, end_of_simulation);
   });
 
   for (auto i = 0UL; i < this->nthreads; ++i) {  // Start simulation threads
-    boost::asio::post(tpool, [&]() {
+    tpool.submit([&]() {
       this->simulate_worker(task_queue, progress_queue, progress_queue_mutex, end_of_simulation,
                             task_batch_size_deq);
     });
@@ -180,7 +181,7 @@ void Simulation::run_simulate() {
     std::scoped_lock l(progress_queue_mutex);
     progress_queue.emplace_back(nullptr, 0UL);
   }
-  tpool.join();
+  tpool.wait_for_tasks();
   assert(end_of_simulation);  // NOLINT
 }
 
@@ -315,7 +316,7 @@ void Simulation::run_perturbate() {
 
   auto tpool = Simulation::instantiate_thread_pool();
   for (auto i = 0UL; i < this->nthreads; ++i) {  // Start simulation threads
-    boost::asio::post(tpool, [&]() {
+    tpool.submit([&]() {
       this->perturbate_worker(task_queue, out_bedpe_stream, out_stream_mutex, cooler_mutex,
                               end_of_simulation);
     });
@@ -472,7 +473,7 @@ void Simulation::run_perturbate() {
 
   end_of_simulation = true;
   out_task_stream.close();
-  tpool.join();  // Wait on simulate_worker threads
+  tpool.wait_for_tasks();  // Wait on simulate_worker threads
 }
 
 void Simulation::perturbate_worker(
@@ -786,8 +787,7 @@ void Simulation::run_replay() {
 
   auto tpool = Simulation::instantiate_thread_pool();
   for (auto i = 0UL; i < this->nthreads; ++i) {  // Start simulation threads
-    boost::asio::post(tpool,
-                      [&]() { this->replay_worker(task_queue, cooler_mutex, end_of_simulation); });
+    tpool.submit([&]() { this->replay_worker(task_queue, cooler_mutex, end_of_simulation); });
   }
 
   const auto task_filter = import_task_filter(this->path_to_task_filter_file);
@@ -818,7 +818,7 @@ void Simulation::run_replay() {
   }
 
   end_of_simulation = true;
-  tpool.join();  // Wait on simulate_worker threads
+  tpool.wait_for_tasks();  // Wait on simulate_worker threads
 }
 
 void Simulation::replay_worker(moodycamel::BlockingConcurrentQueue<Simulation::TaskPW>& task_queue,

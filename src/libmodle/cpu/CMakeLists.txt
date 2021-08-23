@@ -17,6 +17,7 @@ target_link_libraries(
             Modle::cmatrix
             Modle::common
             Modle::libmodle_internal
+            thread-pool
             CONAN_PKG::abseil
             CONAN_PKG::boost
             CONAN_PKG::concurrentqueue

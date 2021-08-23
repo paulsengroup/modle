@@ -11,7 +11,6 @@
 
 #include <algorithm>                                // for fill, min, max, clamp, for_each, gene...
 #include <atomic>                                   // for atomic
-#include <boost/asio/thread_pool.hpp>               // for thread_pool
 #include <boost/dynamic_bitset/dynamic_bitset.hpp>  // for dynamic_bitset, dynamic_bitset<>::ref...
 #include <boost/filesystem/path.hpp>                // for operator<<, path
 #include <cassert>                                  // for assert
@@ -29,8 +28,9 @@
 #include <stdexcept>                                // for runtime_error
 #include <string>                                   // for basic_string, string
 #include <string_view>                              // for string_view
-#include <utility>                                  // for make_pair, pair
-#include <vector>                                   // for vector, vector<>::iterator
+#include <thread_pool/thread_pool.hpp>
+#include <utility>  // for make_pair, pair
+#include <vector>   // for vector, vector<>::iterator
 
 #include "modle/common/common.hpp"  // for BOOST_LIKELY, BOOST_UNLIKELY bp_t...
 #include "modle/common/config.hpp"  // for Config
@@ -532,9 +532,7 @@ void Simulation::release_lefs(const absl::Span<Lef> lefs,
   }
 }
 
-boost::asio::thread_pool Simulation::instantiate_thread_pool() const {
-  return boost::asio::thread_pool(this->nthreads);
-}
+thread_pool Simulation::instantiate_thread_pool() const { return thread_pool(this->nthreads); }
 
 Simulation::Task Simulation::Task::from_string(std::string_view serialized_task, Genome& genome) {
   const size_t ntoks = 7;
