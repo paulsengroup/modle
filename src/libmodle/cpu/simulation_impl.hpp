@@ -242,7 +242,7 @@ void Simulation::simulate_one_cell(StateT& s) const {
                          [&](const auto i) { return i < lefs.size(); })) {
           throw std::runtime_error(
               fmt::format(FMT_STRING("lef_idx.size()={}; num_lefs={};\nlef_idx=[{}]\n"),
-                          lef_idx.size(), lefs.size(), absl::StrJoin(lef_idx, ", ")));
+                          lef_idx.size(), lefs.size(), fmt::join(lef_idx, ", ")));
         }
         if constexpr (normal_simulation) {
           if (this->randomize_contacts) {

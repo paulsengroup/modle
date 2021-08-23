@@ -72,7 +72,7 @@ BED::Dialect BED::detect_standard(const std::vector<std::string_view>& toks) {
   if (toks.size() < BED3) {
     throw std::runtime_error(fmt::format(
         FMT_STRING("Expected at least 3 fields, got {}.\nRecord that caused the error: '{}'"),
-        toks.size(), absl::StrJoin(toks, "\t")));
+        toks.size(), fmt::join(toks, "\t")));
   }
 
   switch (toks.size()) {
@@ -253,7 +253,7 @@ BED::BED(std::string_view record, size_t id_, BED::Dialect bed_standard, bool va
               "https://bedtools.readthedocs.io/_end/latest/content/general-usage.html#bed-format "
               "for the BED format specification.\n"
               "Record that caused the error: '{}'"),
-          toks.size(), absl::StrJoin(toks, "\t")));
+          toks.size(), fmt::join(toks, "\t")));
     }
   }
 

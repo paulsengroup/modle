@@ -100,7 +100,7 @@ void stats_subcmd(const modle::tools::stats_config& c) {
     std::vector<size_t> buff(c.diagonal_width / bin_size);
     std::iota(buff.begin(), buff.end(), 0);
     // TODO: Consider whether it make sense to write this header
-    fmt::print(*hist_file, FMT_STRING("#{}\n"), absl::StrJoin(buff, "\t"));
+    fmt::print(*hist_file, FMT_STRING("#{}\n"), fmt::join(buff, "\t"));
   }
 
   // Write header
@@ -157,7 +157,7 @@ void stats_subcmd(const modle::tools::stats_config& c) {
     // clang-format on
 
     if (hist_file) {
-      fmt::print(*hist_file, FMT_STRING("{}\n"), absl::StrJoin(hist, "\t"));
+      fmt::print(*hist_file, FMT_STRING("{}\n"), fmt::join(hist, "\t"));
     }
 
     if (m2) {

@@ -515,7 +515,7 @@ void ContactMatrix<I>::print(bool full) const {
           row[x] = this->at(i, j);
         }
       }
-      fmt::print(FMT_STRING("{}\n"), absl::StrJoin(row, "\t"));
+      fmt::print(FMT_STRING("{}\n"), fmt::join(row, "\t"));
     }
   } else {
     std::vector<I> row(this->ncols());
@@ -523,7 +523,7 @@ void ContactMatrix<I>::print(bool full) const {
       for (auto j = 0UL; j < this->ncols(); ++j) {
         row[j] = this->at(i, j);
       }
-      fmt::print(FMT_STRING("{}\n"), absl::StrJoin(row, "\t"));
+      fmt::print(FMT_STRING("{}\n"), fmt::join(row, "\t"));
     }
   }
 }

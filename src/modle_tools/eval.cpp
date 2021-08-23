@@ -288,7 +288,7 @@ void eval_subcmd(const modle::tools::eval_config &c) {
       spdlog::info(FMT_STRING("Computing correlation for chromosome: '{}'"), chrom_names.front());
     } else {
       spdlog::info(FMT_STRING("Computing correlation for the following {} chromosomes: '{}'"),
-                   chrom_list.size(), absl::StrJoin(chrom_names, "', '"));
+                   chrom_list.size(), fmt::join(chrom_names, "', '"));
     }
   }
 

@@ -905,7 +905,7 @@ size_t Cooler::get_chrom_idx(std::string_view query_chrom_name, bool try_common_
       throw std::runtime_error(
           fmt::format(FMT_STRING("Unable to find a chromosome named '{}'. The following chromosome "
                                  "name variants were searched: '{}'"),
-                      query_chrom_name, absl::StrJoin(queries, "', '")));
+                      query_chrom_name, fmt::join(queries, "', '")));
     }
     throw std::runtime_error(
         fmt::format(FMT_STRING("Unable to find a chromosome named '{}'"), query_chrom_name));

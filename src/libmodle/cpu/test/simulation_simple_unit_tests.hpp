@@ -221,10 +221,10 @@ TEST_CASE("Generate LEF moves 001", "[generate-lef-moves][simulation][long]") {
     std::vector<size_t> pos(lefs.size());
     std::transform(lefs.begin(), lefs.end(), pos.begin(),
                    [](const auto& lef) { return lef.rev_unit.pos(); });
-    fmt::print(stderr, "i={}; rev_pos=[{}]\n", i, absl::StrJoin(pos, ", "));
+    fmt::print(stderr, "i={}; rev_pos=[{}]\n", i, fmt::join(pos, ", "));
     std::transform(lefs.begin(), lefs.end(), pos.begin(),
                    [](const auto& lef) { return lef.fwd_unit.pos(); });
-    fmt::print(stderr, "i={}; fwd_pos=[{}]\n", i, absl::StrJoin(pos, ", "));
+    fmt::print(stderr, "i={}; fwd_pos=[{}]\n", i, fmt::join(pos, ", "));
      */
     Simulation::test_rank_lefs(lefs, absl::MakeSpan(rev_ranks), absl::MakeSpan(fwd_ranks), false,
                                true);

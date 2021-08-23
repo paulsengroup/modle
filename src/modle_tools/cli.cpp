@@ -203,13 +203,13 @@ void Cli::make_filter_barriers_subcommand() {
   gen.add_option(
      "-f,--filtering-criterion",
      c.filtering_criterion,
-     fmt::format(FMT_STRING("Filtering criterion. Accepted values are: {}"), absl::StrJoin(this->_filtering_criteria, ", ")))
+     fmt::format(FMT_STRING("Filtering criterion. Accepted values are: {}"), fmt::join(this->_filtering_criteria, ", ")))
      ->check(
      [this](const auto &str){
      if (this->_filtering_criteria.contains(CLI::detail::to_lower(str))) {
      return std::string{};
      }
-     return fmt::format(FMT_STRING("\"{}\" is not a valid filtering criterion. Allowed criteria are: {}."), str, absl::StrJoin(this->_filtering_criteria, ", "));
+     return fmt::format(FMT_STRING("\"{}\" is not a valid filtering criterion. Allowed criteria are: {}."), str, fmt::join(this->_filtering_criteria, ", "));
      })
      ->capture_default_str();
 
@@ -219,7 +219,7 @@ void Cli::make_filter_barriers_subcommand() {
      fmt::format(FMT_STRING("Specify the BED dialect to use when parsing input files.\n"
      "Example: when specifying BED3 through this dialect, we only validate the first three fields.\n"
      "Additional fields (if any) are copied verbatim and can thus in principle contain arbitrary information.\n"
-     "Allowed dialects: {}."), absl::StrJoin(bed::bed_dialects, ", ")))
+     "Allowed dialects: {}."), fmt::join(bed::bed_dialects, ", ")))
      ->transform(CLI::CheckedTransformer(bed::str_to_bed_dialect_mappings))
      ->capture_default_str();
 
