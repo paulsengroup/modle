@@ -529,7 +529,7 @@ bool check_dataset_type(const H5::DataSet &dataset, T type, bool throw_on_failur
         type = static_cast<int64_t>(0);
         return type;
       default:
-        utils::throw_with_trace(std::logic_error("Unreachable code"));
+        throw std::logic_error("Unreachable code");
     }
   } else {
     switch (size) {
@@ -546,11 +546,11 @@ bool check_dataset_type(const H5::DataSet &dataset, T type, bool throw_on_failur
         type = static_cast<uint64_t>(0);
         return type;
       default:
-        utils::throw_with_trace(std::logic_error("Unreachable code"));
+        throw std::logic_error("Unreachable code");
     }
   }
   DISABLE_WARNING_POP
-  utils::throw_with_trace(std::logic_error("Unreachable code"));
+  throw std::logic_error("Unreachable code");
 }
 
 [[nodiscard]] attr_types getCpp_type(const H5::FloatType &h5_type) {
@@ -567,9 +567,9 @@ bool check_dataset_type(const H5::DataSet &dataset, T type, bool throw_on_failur
       type = static_cast<long double>(0);
       return type;
     default:
-      utils::throw_with_trace(std::logic_error("Unreachable code"));
+      throw std::logic_error("Unreachable code");
   }
-  utils::throw_with_trace(std::logic_error("Unreachable code"));
+  throw std::logic_error("Unreachable code");
 }
 
 template <typename DataType>

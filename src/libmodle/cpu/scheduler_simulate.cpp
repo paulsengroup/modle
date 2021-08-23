@@ -225,7 +225,7 @@ void Simulation::simulate_worker(const uint64_t tid,
                                      [&](const auto& p) { return task.chrom == p.first; });
         assert(progress != progress_queue.end());  // NOLINT
 
-        if (++progress->second == num_cells) {
+        if (++progress->second == num_cells && !this->_exception_thrown) {
           // We are done simulating loop-extrusion on task.chrom: print a status update
           spdlog::info(FMT_STRING("Simulation for '{}' successfully completed."),
                        task.chrom->name());

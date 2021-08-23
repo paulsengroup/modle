@@ -156,7 +156,7 @@ size_t Cooler::get_nchroms() {
     return static_cast<size_t>(hdf5::read_attribute_int(
         *this->_fp, "nchroms", absl::StrCat("/resolutions/", this->_bin_size)));
   }
-  utils::throw_with_trace(std::logic_error("Unreachable code"));
+  throw std::logic_error("Unreachable code");
 }
 
 void Cooler::get_chrom_names(std::vector<std::string> &buff) {
@@ -439,7 +439,7 @@ bool Cooler::validate_file_format(H5::H5File &f, Flavor expected_flavor, IO_MODE
       case SCOOL:
         throw std::runtime_error("SCOOL flavor is not yet supported");
       default:
-        utils::throw_with_trace(std::logic_error("Unreachable code"));
+        throw std::logic_error("Unreachable code");
     }
 
   } catch (const std::runtime_error &e) {

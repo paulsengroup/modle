@@ -1,3 +1,5 @@
+#include <absl/debugging/failure_signal_handler.h>
+#include <absl/debugging/symbolize.h>
 #include <absl/time/clock.h>  // for Now
 #include <absl/time/time.h>   // for FormatDuration, operator-, Time
 #include <fmt/format.h>       // for print
@@ -14,18 +16,24 @@
 #include <stdexcept>      // for runtime_error
 #include <string>         // for basic_string
 
-#ifndef BOOST_STACKTRACE_USE_NOOP
-#include <boost/exception/get_error_info.hpp>  // for get_error_info
-#include <boost/stacktrace/stacktrace.hpp>     // for operator<<
-#include <iostream>                            // for operator<<, basic_ostream, cerr, ostream
-#endif
-
 #include "./cli.hpp"                // for Cli
 #include "modle/common/config.hpp"  // for Config
 #include "modle/common/utils.hpp"   // for traced
 #include "modle/simulation.hpp"     // for Simulation
 
 int main(int argc, char** argv) noexcept {
+  absl::InitializeSymbolizer(argv[0]);  // NOLINT(cppcoreguidelines-pro-bounds-pointer-arithmetic)
+  absl::FailureSignalHandlerOptions options;
+  // TODO: figure out a way to make this callback async-signal-safe
+  options.writerfn = [](const char* buff) {
+    if (buff) {
+      const std::string_view buff_{buff, strlen(buff)};
+      spdlog::error(FMT_STRING("{}"), absl::StripSuffix(buff_, "\n"));
+    } else {
+      spdlog::shutdown();
+    }
+  };
+  absl::InstallFailureSignalHandler(options);
   std::unique_ptr<modle::Cli> cli{nullptr};
   spdlog::set_default_logger(std::make_shared<spdlog::logger>("main_logger"));
   {
@@ -65,8 +73,7 @@ int main(int argc, char** argv) noexcept {
         cli->write_config_file();
       }
     }
-    spdlog::info(FMT_STRING("Command: {}"),
-                 absl::StrJoin(config.argv, config.argv + config.argc, " "));
+    spdlog::info(FMT_STRING("Command: {}"), fmt::join(config.argv, config.argv + config.argc, " "));
     modle::Simulation sim(config);
     switch (cli->get_subcommand()) {
       using subcommand = modle::Cli::subcommand;
@@ -103,14 +110,6 @@ int main(int argc, char** argv) noexcept {
     return 1;
   } catch (const std::exception& e) {
     spdlog::error(FMT_STRING("FAILURE! An error occurred during simulation: {}."), e.what());
-#ifndef BOOST_STACKTRACE_USE_NOOP
-    const auto* st = boost::get_error_info<modle::utils::traced>(e);
-    if (st) {
-      spdlog::error(*st);
-    } else {
-      spdlog::error("Stack trace not available!");
-    }
-#endif
     return 1;
   } catch (...) {
     spdlog::error(

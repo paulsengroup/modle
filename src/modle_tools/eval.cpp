@@ -145,7 +145,7 @@ void slice_range(absl::Span<const N> vin, std::vector<N> &vout, size_t nrows, Tr
       slice_range_w_linear_method(vin, vout, nrows, offset);
       break;
     default:
-      utils::throw_with_trace(std::logic_error("Unreachable code"));
+      throw std::logic_error("Unreachable code");
   }
 }
 

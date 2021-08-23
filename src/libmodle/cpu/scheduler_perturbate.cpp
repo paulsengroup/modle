@@ -67,7 +67,7 @@ void Simulation::run_perturbate() {
 
   this->_tpool.reset(this->nthreads);
   for (uint64_t tid = 0; tid < this->nthreads; ++tid) {  // Start simulation threads
-    this->_tpool.submit([&, tid]() {
+    this->_tpool.push_task([&, tid]() {
       this->perturbate_worker(tid, task_queue, out_bedpe_stream, out_stream_mutex, cooler_mutex);
     });
   }

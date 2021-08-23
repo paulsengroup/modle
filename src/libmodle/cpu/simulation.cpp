@@ -80,34 +80,35 @@ void Simulation::write_contacts_to_disk(std::deque<std::pair<Chromosome*, size_t
                                                                 cooler::Cooler::WRITE_ONLY,
                                                                 this->bin_size, max_str_length);
 
-  auto sleep_us = 100;  // NOLINT(readability-magic-numbers), cppcoreguidelines-avoid-magic-numbers)
-  while (this->ok()) {  // Structuring the loop in this way allows us to sleep without
-                        // holding the mutex
-    sleep_us = std::min(500000, sleep_us * 2);  // NOLINT
-    std::this_thread::sleep_for(std::chrono::microseconds(sleep_us));
-    {
-      std::scoped_lock l(progress_queue_mutex);
-      if (progress_queue.empty()) {
-        // There are no contacts to write to disk at the moment. Go back to sleep
-        continue;
-      }
+  try {
+    // NOLINTNEXTLINE(readability-magic-numbers), cppcoreguidelines-avoid-magic-numbers)
+    auto sleep_us = 100;
+    while (this->ok()) {  // Structuring the loop in this way allows us to sleep without
+                          // holding the mutex
+      sleep_us = std::min(500000, sleep_us * 2);  // NOLINT
+      std::this_thread::sleep_for(std::chrono::microseconds(sleep_us));
+      {
+        std::scoped_lock l(progress_queue_mutex);
+        if (progress_queue.empty()) {
+          // There are no contacts to write to disk at the moment. Go back to sleep
+          continue;
+        }
 
-      // chrom == nullptr is the end-of-queue signal
-      if (auto& [chrom, count] = progress_queue.front(); chrom == nullptr) {
-        break;
+        // chrom == nullptr is the end-of-queue signal
+        if (auto& [chrom, count] = progress_queue.front(); chrom == nullptr) {
+          break;
+        }
+        // count == ncells signals that we are done simulating the current chromosome
+        else if (count == num_cells) {  // NOLINT
+          chrom_to_be_written = chrom;
+          progress_queue.pop_front();
+        } else {
+          assert(count < num_cells);  // NOLINT
+          continue;
+        }
       }
-      // count == ncells signals that we are done simulating the current chromosome
-      else if (count == num_cells) {  // NOLINT
-        chrom_to_be_written = chrom;
-        progress_queue.pop_front();
-      } else {
-        assert(count < num_cells);  // NOLINT
-        continue;
-      }
-    }
-    sleep_us = 100;  // NOLINT(readability-magic-numbers), cppcoreguidelines-avoid-magic-numbers)
-    try {
-      if (c) {  // c == nullptr only when --skip-output is used
+      sleep_us = 100;  // NOLINT(readability-magic-numbers), cppcoreguidelines-avoid-magic-numbers)
+      if (c) {         // c == nullptr only when --skip-output is used
         // NOTE here we have to use pointers instead of reference because
         // chrom_to_be_written.contacts() == nullptr is used to signal an empty matrix.
         // In this case, c->write_or_append_cmatrix_to_file() will create an entry in the chroms and
@@ -138,11 +139,25 @@ void Simulation::write_contacts_to_disk(std::deque<std::pair<Chromosome*, size_t
       }
       // Deallocate the contact matrix to free up unused memory
       chrom_to_be_written->deallocate_contacts();
-    } catch (const std::runtime_error& err) {
-      throw std::runtime_error(fmt::format(
-          FMT_STRING("The following error occurred while writing contacts for '{}' to file {}: {}"),
-          chrom_to_be_written->name(), c->get_path(), err.what()));
     }
+  } catch (const std::exception& err) {
+    std::scoped_lock l(this->_exceptions_mutex);
+    if (chrom_to_be_written) {
+      this->_exceptions.emplace_back(std::make_exception_ptr(std::runtime_error(fmt::format(
+          FMT_STRING("The following error occurred while writing contacts for '{}' to file {}: {}"),
+          chrom_to_be_written->name(), c->get_path(), err.what()))));
+    } else {
+      this->_exceptions.emplace_back(std::make_exception_ptr(std::runtime_error(fmt::format(
+          FMT_STRING("The following error occurred while writing contacts to file {}: {}"),
+          c->get_path(), err.what()))));
+    }
+    this->_exception_thrown = true;
+  } catch (...) {
+    std::scoped_lock l(this->_exceptions_mutex);
+    this->_exceptions.emplace_back(std::make_exception_ptr(
+        std::runtime_error("An unhandled exception was caught! This should never happen! "
+                           "If you see this message, please file an issue on GitHub.")));
+    this->_exception_thrown = true;
   }
   this->_end_of_simulation = true;
 }

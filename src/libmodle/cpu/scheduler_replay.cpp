@@ -46,7 +46,7 @@ void Simulation::run_replay() {
 
   this->_tpool.reset(this->nthreads);
   for (uint64_t tid = 0; tid < this->nthreads; ++tid) {  // Start simulation threads
-    this->_tpool.submit([&, tid]() { this->replay_worker(tid, task_queue, cooler_mutex); });
+    this->_tpool.push_task([&, tid]() { this->replay_worker(tid, task_queue, cooler_mutex); });
   }
 
   const auto task_filter = import_task_filter(this->path_to_task_filter_file);

@@ -245,7 +245,7 @@ void Writer::open(const boost::filesystem::path& path) {
       break;
     case AUTO:
       if constexpr (utils::ndebug_not_defined()) {
-        utils::throw_with_trace(std::logic_error("Unreachable code"));
+        throw std::logic_error("Unreachable code");
       }
   }
   this->_path = path;
@@ -287,7 +287,7 @@ Writer::Compression Writer::infer_compression_from_ext(const boost::filesystem::
 void Writer::write(std::string_view buff) {
   if constexpr (utils::ndebug_not_defined()) {
     if (!this->is_open()) {
-      utils::throw_with_trace(std::runtime_error("Writer::write() was called on a closed file!"));
+      throw std::runtime_error("Writer::write() was called on a closed file!");
     }
   }
   this->_out << buff;

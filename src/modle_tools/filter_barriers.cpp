@@ -76,7 +76,7 @@ void filter_barriers_subcmd(const modle::tools::filter_barrier_config& c) {
   } else if (absl::AsciiStrToLower(c.filtering_criterion) == "pairwise-intersection") {
     filter_barriers_pairwise_intersection(c);
   } else {
-    utils::throw_with_trace(std::logic_error("Unreachable code"));
+    throw std::logic_error("Unreachable code");
   }
 }
 
