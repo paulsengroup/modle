@@ -123,4 +123,4 @@ class ContactMatrix {
 
 }  // namespace modle
 
-#include "../../contacts_impl.hpp"  // IWYU pragma: keep
+#include "../../contacts_impl.hpp"  // IWYU pragma: export

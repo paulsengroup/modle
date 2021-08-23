@@ -36,4 +36,4 @@ template <typename N1, typename N2>
 [[nodiscard]] inline double compute_sed(absl::Span<const N1> v1, absl::Span<const N2> v2);
 }  // namespace modle::correlation
 
-#include "../../correlation_impl.hpp"  // IWYU pragma: keep
+#include "../../correlation_impl.hpp"  // IWYU pragma: export

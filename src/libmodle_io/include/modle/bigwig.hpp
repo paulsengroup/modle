@@ -56,4 +56,4 @@ template <typename I>  // This overload is not as efficient as the others. This 
 void close_bigwig_file(bigwig::file fp);
 }  // namespace modle::bigwig
 
-#include "../../bigwig_impl.hpp"  // IWYU pragma: keep
+#include "../../bigwig_impl.hpp"  // IWYU pragma: export

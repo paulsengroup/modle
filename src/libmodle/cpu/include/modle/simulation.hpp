@@ -2,6 +2,7 @@
 
 #include <absl/container/btree_set.h>            // IWYU pragma: keep for btree_set
 #include <absl/container/flat_hash_map.h>        // for flat_hash_map
+#include <absl/container/flat_hash_set.h>        // for flat_hash_set
 #include <absl/types/span.h>                     // IWYU pragma: keep for Span
 #include <moodycamel/blockingconcurrentqueue.h>  // for BlockingConcurrntQueue
 
@@ -434,6 +435,8 @@ class Simulation : Config {
 
   [[nodiscard]] bed::BED_tree<> import_deletions() const;
   [[nodiscard]] bed::BED_tree<> generate_deletions() const;
+  [[nodiscard]] static absl::flat_hash_set<size_t> import_task_filter(
+      const boost::filesystem::path& path_to_task_filter);
 
   [[noreturn]] void rethrow_exceptions() const;
   [[noreturn]] void handle_exceptions();
@@ -601,4 +604,4 @@ struct fmt::formatter<modle::Simulation::State> {
   inline auto format(const modle::Simulation::State& s, FormatContext& ctx) -> decltype(ctx.out());
 };
 
-#include "../../simulation_impl.hpp"  // IWYU pragma: keep
+#include "../../simulation_impl.hpp"  // IWYU pragma: export

@@ -168,4 +168,4 @@ class IITree {
 };
 }  // namespace modle
 
-#include "../../interval_tree_impl.hpp"
+#include "../../interval_tree_impl.hpp"  // IWYU pragma: export

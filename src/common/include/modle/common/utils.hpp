@@ -89,4 +89,4 @@ inline bool detect_path_collision(
     boost::filesystem::file_type expected_type = boost::filesystem::regular_file);
 }  // namespace modle::utils
 
-#include "../../../utils_impl.hpp"  // IWYU pragma: keep
+#include "../../../utils_impl.hpp"  // IWYU pragma: export

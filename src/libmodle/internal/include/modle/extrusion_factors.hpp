@@ -72,4 +72,4 @@ struct Lef {
 
 }  // namespace modle
 
-#include "../../extrusion_factors_impl.hpp"  // IWYU pragma: keep
+#include "../../extrusion_factors_impl.hpp"  // IWYU pragma: export

@@ -302,4 +302,4 @@ struct fmt::formatter<modle::bed::BED> {
                             std::make_pair("bed12", modle::bed::BED::BED12)};
 };
 
-#include "../../bed_impl.hpp"
+#include "../../bed_impl.hpp"  // IWYU pragma: export

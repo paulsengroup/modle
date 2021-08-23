@@ -278,4 +278,4 @@ class Cooler {
 
 }  // namespace modle::cooler
 
-#include "../../cooler_impl.hpp"  // IWYU pragma: keep
+#include "../../cooler_impl.hpp"  // IWYU pragma: export

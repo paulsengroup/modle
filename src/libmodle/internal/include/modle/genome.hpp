@@ -185,4 +185,4 @@ class Genome {
 
 }  // namespace modle
 
-#include "../../genome_impl.hpp"  // IWYU pragma: keep
+#include "../../genome_impl.hpp"  // IWYU pragma: export
