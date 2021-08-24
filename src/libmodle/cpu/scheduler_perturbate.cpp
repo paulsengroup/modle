@@ -286,7 +286,7 @@ void Simulation::perturbate_worker(
           ctok, task_buff.begin(), task_buff.size(), std::chrono::milliseconds(10));
       // Check whether dequeue operation timed-out before any task became available
       if (avail_tasks == 0) {
-        if (!this->ok()) {
+        if (this->_end_of_simulation) {
           // Reached end of simulation (i.e. all tasks have been processed)
           return;
         }
