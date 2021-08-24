@@ -1,10 +1,11 @@
+#include <absl/debugging/failure_signal_handler.h>
+#include <absl/debugging/symbolize.h>
 #include <fmt/format.h>  // for print
 #include <spdlog/sinks/stdout_color_sinks.h>
 #include <spdlog/spdlog.h>
 
 #include <boost/filesystem/operations.hpp>  // for create_directories, exists, is_empty, remove_all
 #include <boost/filesystem/path.hpp>        // for path
-#include <boost/system/error_code.hpp>      // for system::error_code
 #include <cstdio>                           // for stderr
 #include <exception>                        // for exception
 #include <stdexcept>                        // for runtime_error
@@ -15,6 +16,18 @@
 #include "modle_tools/tools.hpp"   // for eval_subcmd, stats_subcmd
 
 int main(int argc, char** argv) {
+  absl::InitializeSymbolizer(argv[0]);  // NOLINT(cppcoreguidelines-pro-bounds-pointer-arithmetic)
+  absl::FailureSignalHandlerOptions options;
+  // TODO: figure out a way to make this callback async-signal-safe
+  options.writerfn = [](const char* buff) {
+    if (buff) {
+      const std::string_view buff_{buff, strlen(buff)};
+      spdlog::error(FMT_STRING("{}"), absl::StripSuffix(buff_, "\n"));
+    } else {
+      spdlog::shutdown();
+    }
+  };
+  absl::InstallFailureSignalHandler(options);
   std::unique_ptr<modle::tools::Cli> cli{nullptr};
   spdlog::set_default_logger(std::make_shared<spdlog::logger>("main_logger"));
   {
@@ -71,14 +84,6 @@ int main(int argc, char** argv) {
     return 1;
   } catch (const std::exception& e) {
     spdlog::error(FMT_STRING("FAILURE! An error occurred during simulation: {}."), e.what());
-#ifndef BOOST_STACKTRACE_USE_NOOP
-    const auto* st = boost::get_error_info<modle::utils::traced>(e);
-    if (st) {
-      spdlog::error(*st);
-    } else {
-      spdlog::error("Stack trace not available!");
-    }
-#endif
     return 1;
   } catch (...) {
     spdlog::error(
