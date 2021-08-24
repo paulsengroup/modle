@@ -390,9 +390,14 @@ void Cli::make_perturbate_subcommand() {
       "-o,--output-prefix",
       c.path_to_output_prefix,
       "Output prefix. Can be a full or relative path including the file name but without file extension.\n"
-      "Example: -o /tmp/mycontacts will cause MoDLE to write interactions to a file named \"/tmp/mycontacts.bedpe\", "
+      "Example: -o /tmp/mycontacts will cause MoDLE to write interactions to a file named \"/tmp/mycontacts.bedpe.gz\", "
       "while a log file will be saved at \"/tmp/mycontacts.log\".")
       ->required();
+
+  io.add_flag("--write-header,!--no-write-header",
+      c.write_header,
+      "Write header with column names to output file.")
+      ->capture_default_str();
 
   io.add_option(
       "--feature-beds",

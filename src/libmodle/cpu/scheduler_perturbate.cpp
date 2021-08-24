@@ -65,6 +65,37 @@ void Simulation::run_perturbate() {
   auto out_bedpe_stream = compressed_io::Writer(this->path_to_output_file_bedpe);
   auto out_task_stream = compressed_io::Writer(this->path_to_task_file);
 
+  if (this->write_header) {
+    // clang-format off
+    constexpr std::string_view header{
+      "#"
+      "chrom1\t"
+      "start1\t"
+      "end1\t"
+      "chrom2\t"
+      "start2\t"
+      "end2\t"
+      "name\t"
+      "score\t"
+      "strand1\t"
+      "strand2\t"
+      "deletion_begin\t"
+      "deletion_end\t"
+      "num_active_barriers\t"
+      "total_num_barriers\t"
+      "active_window_start\t"
+      "active_window_end\t"
+      "window_start\t"
+      "window_end\t"
+      "task_id\n"};
+    // clang-format on
+    if (out_bedpe_stream) {
+      out_bedpe_stream.write(header);
+    } else {
+      fmt::print(stdout, FMT_STRING("{}"), header);
+    }
+  }
+
   this->_tpool.reset(this->nthreads);
   for (uint64_t tid = 0; tid < this->nthreads; ++tid) {  // Start simulation threads
     this->_tpool.push_task([&, tid]() {
@@ -397,13 +428,13 @@ void Simulation::simulate_window(Simulation::StatePW& state, compressed_io::Writ
             &out_buffer,
             fmt::format(
                 FMT_COMPILE(
-                    "{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\n"),
+                    "{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\n"),
                 feat1.chrom, feat1_abs_bin * bin_size, (feat1_abs_bin + 1) * bin_size, feat2.chrom,
                 feat2_abs_bin * bin_size, (feat2_abs_bin + 1) * bin_size, name, contacts,
                 feat1.strand, feat2.strand, state.deletion_begin,
                 state.deletion_begin + state.deletion_size, num_active_barriers,
                 state.barriers.size(), state.active_window_start, state.active_window_end,
-                state.window_start, state.window_end));
+                state.window_start, state.window_end, state.id));
       }
     }
 

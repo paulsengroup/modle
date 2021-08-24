@@ -35,6 +35,7 @@ struct Config {  // NOLINT(altera-struct-pack-align)
   boost::filesystem::path path_to_deletion_bed{};
   boost::filesystem::path path_to_task_file;
   boost::filesystem::path path_to_task_filter_file{};
+  bool write_header{true};
 
   // General settings
   bp_t bin_size{1'000};                        // NOLINT(readability-magic-numbers, cppcoreguidelines-avoid-magic-numbers)
