@@ -124,11 +124,26 @@ if(WITH_BOOST_RANDOM)
   target_compile_definitions(project_options INTERFACE MODLE_WITH_BOOST_RANDOM=1)
 endif()
 
+message(STATUS "CPU arch detected by CMake: ${CMAKE_SYSTEM_PROCESSOR}")
+if(ENABLE_PSO
+   AND "${CMAKE_SYSTEM_PROCESSOR}" STREQUAL "x86_64"
+   OR "${CMAKE_SYSTEM_PROCESSOR}" STREQUAL AMD64)
+  if(MSVC)
+    target_compile_options(project_options INTERFACE /arch:native)
+  else()
+    target_compile_options(project_options INTERFACE -march=native)
+  endif()
+endif()
+
 # Link this 'library' to use the warnings specified in CompilerWarnings.cmake
 add_library(project_warnings INTERFACE)
 
 # enable cache system
 include(cmake/Cache.cmake)
+
+# Add linker configuration
+include(cmake/Linker.cmake)
+configure_linker(project_options)
 
 # standard compiler warnings
 include(cmake/CompilerWarnings.cmake)
