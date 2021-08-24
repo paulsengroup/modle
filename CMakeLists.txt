@@ -133,6 +133,10 @@ if(ENABLE_PSO
   else()
     target_compile_options(project_options INTERFACE -march=native)
   endif()
+  if(ENABLE_PCH)
+    message(WARNING "Disabling precompiled headers as they tend to cause problems when combined with -DENABLE_PSO=ON")
+    set(ENABLE_PCH OFF)
+  endif()
 endif()
 
 # Link this 'library' to use the warnings specified in CompilerWarnings.cmake
