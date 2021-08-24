@@ -7,8 +7,9 @@ ARG ver
 ARG build_type
 ARG skip_tests
 
-ARG XOSHIRO_CPP_VER=1.1
 ARG LIBBIGWIG_VER=0.4.6
+ARG THREAD_POOL_VER=2.0.0
+ARG XOSHIRO_CPP_VER=1.1
 ARG CONAN_VER=1.38.0
 
 # Required by new bincrafter artifactory
@@ -28,6 +29,8 @@ ENTRYPOINT ["/usr/local/bin/modle"]
 COPY cmake                  /tmp/modle/cmake
 COPY "external/libBigWig-$LIBBIGWIG_VER.tar.xz"                \
      "/tmp/modle/external/libBigWig-$LIBBIGWIG_VER.tar.xz"
+COPY "external/thread-pool-$THREAD_POOL_VER.tar.xz"            \
+     "/tmp/modle/external/thread-pool-$THREAD_POOL_VER.tar.xz"
 COPY "external/Xoshiro-cpp-$XOSHIRO_CPP_VER.tar.xz"            \
      "/tmp/modle/external/Xoshiro-cpp-$XOSHIRO_CPP_VER.tar.xz"
 COPY src                    /tmp/modle/src
