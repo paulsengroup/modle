@@ -519,7 +519,7 @@ void Simulation::generate_lef_unloader_affinities(
       lef_unloader_affinity[i] = 0.0;
     } else if (BOOST_LIKELY(!is_lef_bar_collision(rev_collisions[i]) ||
                             !is_lef_bar_collision(fwd_collisions[i]))) {
-      lef_unloader_affinity[i] = 1.0;
+      lef_unloader_affinity[i] = 1.0 / this->soft_stall_multiplier;
     } else {
       const auto& rev_barrier = barriers[rev_collisions[i]];
       const auto& fwd_barrier = barriers[fwd_collisions[i]];

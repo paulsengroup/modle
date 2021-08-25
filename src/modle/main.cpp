@@ -38,7 +38,7 @@ int main(int argc, char** argv) noexcept {
   spdlog::set_default_logger(std::make_shared<spdlog::logger>("main_logger"));
   {
     auto stderr_sink = spdlog::default_logger()->sinks().emplace_back(
-        std::make_shared<spdlog::sinks::stdout_color_sink_mt>());
+        std::make_shared<spdlog::sinks::stderr_color_sink_mt>());
     //                        [2021-08-12 17:49:34.581] [info]: my log msg
     stderr_sink->set_pattern("[%Y-%m-%d %T.%e] %^[%l]%$: %v");
   }
