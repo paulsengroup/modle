@@ -8,6 +8,7 @@
 #include <cpp-sort/sorters/insertion_sorter.h>  // for insertion_sorter
 #include <cpp-sort/sorters/ska_sorter.h>        // for ska_sort, ska_sorter
 #include <cpp-sort/sorters/split_sorter.h>      // for split_sort, split_sorter
+#include <fmt/compile.h>
 
 #include <algorithm>                         // for min
 #include <boost/range/adaptor/reversed.hpp>  // for reversed_range, reverse
@@ -25,6 +26,22 @@
 #include "modle/genome.hpp"                             // for Chromosome
 
 namespace modle {
+
+template <typename StateT>
+inline void print_avg_loop_size(const size_t epoch, const size_t num_active_lefs,
+                                const bool burnin_completed, const StateT& state) {
+  static_assert(std::is_same<StateT, Simulation::State>() ||
+                std::is_same<StateT, Simulation::StatePW>());
+  std::vector<bp_t> loop_sizes(num_active_lefs, 0);
+  std::transform(state.lef_buff.begin(),
+                 state.lef_buff.begin() + static_cast<int32_t>(num_active_lefs), loop_sizes.begin(),
+                 [](const auto& lef) { return lef.fwd_unit.pos() - lef.rev_unit.pos(); });
+  // chrom_name, cell_id, epoch, burnin_completed, num_lefs, num_active_lefs, loop_sizes
+  fmt::print(stdout, FMT_COMPILE("{}\t{}\t{}\t{}\t{}\t{}\t{}\n"), state.chrom->name(),
+             state.cell_id, epoch, burnin_completed ? "True" : "False", state.num_lefs,
+             num_active_lefs, fmt::join(loop_sizes, "\t"));
+}
+
 template <typename MaskT>
 void Simulation::bind_lefs(const bp_t start_pos, const bp_t end_pos, const absl::Span<Lef> lefs,
                            const absl::Span<size_t> rev_lef_ranks,
@@ -170,6 +187,7 @@ void Simulation::simulate_one_cell(StateT& s) const {
     auto burnin_completed = this->skip_burnin;
     // Start the burnin phase (followed by the actual simulation)
     for (; epoch < s.num_target_epochs; ++epoch) {
+      print_avg_loop_size(epoch, num_active_lefs, burnin_completed, s);
       if (num_active_lefs != s.num_lefs) {
         s.num_target_epochs = std::max(s.num_target_epochs + 1, s.num_target_epochs);
         ++target_burnin_epochs;
