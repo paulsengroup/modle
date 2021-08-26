@@ -153,6 +153,54 @@ inline void test_writer(modle::compressed_io::Reader& r1, modle::compressed_io::
   CHECK(!r2.getline(buff2));
 }
 
+TEST_CASE("Reader plain - empty file", "[io][reader][short]") {
+  const auto test_file = testdir() / "empty_file.txt";
+  { std::ofstream fp(test_file); }
+
+  modle::compressed_io::Reader r(test_file);
+  CHECK(r.eof());
+  std::string buff;
+  CHECK(!r.getline(buff));
+  boost::filesystem::remove(test_file);
+}
+
+TEST_CASE("Reader plain - one newline", "[io][reader][short]") {
+  const auto test_file = testdir() / "one_newline_file.txt";
+  {
+    std::ofstream fp(test_file);
+    const auto c = '\n';
+    fp.write(&c, 1);
+  }
+
+  std::string buff;
+  modle::compressed_io::Reader r(test_file);
+
+  CHECK(!r.eof());
+  CHECK(r.getline(buff));
+  CHECK(buff.empty());
+  CHECK(!r.eof());
+  CHECK(!r.getline(buff));
+  CHECK(r.eof());
+  boost::filesystem::remove(test_file);
+}
+
+TEST_CASE("Reader plain - truncated file", "[io][reader][short]") {
+  const auto test_file = testdir() / "truncated_file.txt";
+  const std::string buff1{"test"};
+  {
+    std::ofstream fp(test_file);
+    fp.write(buff1.data(), buff1.size());
+  }
+
+  std::string buff2;
+  modle::compressed_io::Reader r(test_file);
+  CHECK(r.getline(buff2));
+  CHECK(buff1 == buff2);
+  CHECK(r.eof());
+  CHECK(!r.getline(buff2));
+  boost::filesystem::remove(test_file);
+}
+
 TEST_CASE("Writer plain", "[io][writer][short]") {
   const boost::filesystem::path ptext_file = "test/data/unit_tests/sample.bed9";
   const auto tmpout = testdir() / ptext_file.filename();

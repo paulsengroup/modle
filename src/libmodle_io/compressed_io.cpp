@@ -26,7 +26,9 @@ Reader::Reader(const boost::filesystem::path& path, size_t buff_capacity) {
 void Reader::open(const boost::filesystem::path& path) {
   auto handle_open_errors = [&](la_ssize_t status) {
     if (status == ARCHIVE_EOF) {
-      throw std::runtime_error(fmt::format(FMT_STRING("File {} appears to be empty"), this->_path));
+      this->_eof = true;
+      // throw std::runtime_error(fmt::format(FMT_STRING("File {} appears to be empty"),
+      // this->_path));
     }
     if (status < ARCHIVE_OK) {
       throw std::runtime_error(fmt::format(
@@ -51,6 +53,7 @@ void Reader::open(const boost::filesystem::path& path) {
   }
 
   handle_open_errors(archive_read_support_filter_all(this->_arc.get()));
+  handle_open_errors(archive_read_support_format_empty(this->_arc.get()));
   handle_open_errors(archive_read_support_format_raw(this->_arc.get()));
   handle_open_errors(
       archive_read_open_filename(this->_arc.get(), this->_path.c_str(), this->_buff.capacity()));
@@ -113,7 +116,7 @@ bool Reader::getline(std::string& buff, char sep) {
   while (!this->read_next_token(buff, sep)) {
     if (!this->read_next_chunk()) {
       assert(this->eof());  // NOLINT
-      return false;
+      return !buff.empty();
     }
   }
   return true;
