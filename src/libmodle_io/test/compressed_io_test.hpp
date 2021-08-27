@@ -189,7 +189,7 @@ TEST_CASE("Reader plain - truncated file", "[io][reader][short]") {
   const std::string buff1{"test"};
   {
     std::ofstream fp(test_file.string());
-    fp.write(buff1.data(), buff1.size());
+    fp.write(buff1.data(), static_cast<std::streamsize>(buff1.size()));
   }
 
   std::string buff2;

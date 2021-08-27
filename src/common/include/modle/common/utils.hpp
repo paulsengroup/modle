@@ -32,9 +32,6 @@ template <typename N>
 inline void throw_except_from_errc(std::string_view tok, size_t idx, const N& field, const char* c,
                                    std::errc e);
 
-[[nodiscard]] inline std::string init_juicer_tools_argv(std::string_view path_to_juicer_tools,
-                                                        uint64_t juicer_tools_mem);
-
 [[nodiscard]] inline bool chrom_equal_operator(std::string_view chr1, std::string_view chr2);
 [[nodiscard]] inline bool chrom_equal_operator(const std::pair<std::string_view, int64_t>& chr1,
                                                const std::pair<std::string_view, int64_t>& chr2);
@@ -43,9 +40,6 @@ inline void throw_except_from_errc(std::string_view tok, size_t idx, const N& fi
 [[nodiscard]] inline bool chrom_less_than_operator(
     const std::pair<std::string_view, int64_t>& chr1,
     const std::pair<std::string_view, int64_t>& chr2);
-
-template <class Except>
-[[noreturn]] inline void throw_with_trace(const Except& e);
 
 // Typetraits stuff
 

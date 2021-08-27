@@ -1,3 +1,9 @@
+find_package(absl REQUIRED)
+find_package(Boost REQUIRED)
+find_package(fmt REQUIRED)
+find_package(spdlog REQUIRED)
+find_package(xxHash REQUIRED)
+
 add_library(libmodle_internal INTERFACE)
 add_library(Modle::libmodle_internal ALIAS libmodle_internal)
 
@@ -12,13 +18,16 @@ target_link_libraries(
   libmodle_internal
   INTERFACE project_options
             project_warnings
+            absl::btree
+            absl::optional
+            absl::span
+            Boost::filesystem
+            fmt::fmt
+            xxHash::xxhash
+            spdlog::spdlog
             Modle::common
             Modle::cmatrix
-            Modle::libmodle_io
-            CONAN_PKG::abseil
-            CONAN_PKG::fmt
-            CONAN_PKG::spdlog
-            CONAN_PKG::xxhash)
+            Modle::libmodle_io)
 
 target_include_directories(libmodle_internal INTERFACE include/)
 

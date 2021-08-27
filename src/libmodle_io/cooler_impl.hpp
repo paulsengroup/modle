@@ -42,7 +42,6 @@
 #include <vector>       // for vector
 
 #include "modle/common/suppress_compiler_warnings.hpp"  // for DISABLE_WARNING_POP, DISABLE_WARNI...
-#include "modle/common/utils.hpp"                       // for throw_with_trace
 #include "modle/contacts.hpp"                           // IWYU pragma: keep for ContactMatrix
 #include "modle/hdf5.hpp"                               // for has_attribute, read_attribute_int
 
@@ -220,10 +219,10 @@ void Cooler::write_or_append_cmatrix_to_file(const ContactMatrix<I1> *cmatrix,
                 // Make sure we are always reading from the upper-triangle of the underlying square
                 // contact matrix
                 if (pxl_offset + i > pxl_offset + j) {
-                  utils::throw_with_trace(std::runtime_error(fmt::format(
+                  throw std::runtime_error(fmt::format(
                       FMT_STRING("Cooler::write_or_append_cmatrix_to_file(): b1 > b2: b1={}; "
                                  "b2={}; offset={}; m={}\n"),
-                      b->pixel_b1_idx_buff.back(), b->pixel_b2_idx_buff.back(), pxl_offset, m)));
+                      b->pixel_b1_idx_buff.back(), b->pixel_b2_idx_buff.back(), pxl_offset, m));
                 }
               }
               b->pixel_b1_idx_buff.push_back(static_cast<int64_t>(pxl_offset + i));

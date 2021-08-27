@@ -164,8 +164,11 @@ enable_doxygen()
 # allow for static analysis options
 include(cmake/StaticAnalyzers.cmake)
 
-include(cmake/Conan.cmake)
-run_conan()
+option(ENABLE_CONAN "Use Conan for dependency management" ON)
+if(ENABLE_CONAN)
+  include(cmake/Conan.cmake)
+  run_conan()
+endif()
 
 # Prepare external dependencies
 include(cmake/FetchExternalDeps.cmake)

@@ -1,14 +1,13 @@
-# automatically enable catch2 to generate ctest targets
-if(CONAN_CATCH2_ROOT_DEBUG)
-  include(${CONAN_CATCH2_ROOT_DEBUG}/lib/cmake/Catch2/Catch.cmake)
-else()
-  include(${CONAN_CATCH2_ROOT}/lib/cmake/Catch2/Catch.cmake)
-endif()
+find_package(Catch2 REQUIRED)
+
+include(CTest)
+include(Catch)
 
 add_executable(catch_main catch_main.cpp)
+
 target_link_libraries(
   catch_main
-  PUBLIC CONAN_PKG::catch2
+  PUBLIC Catch2::Catch2
   PRIVATE project_warnings
           project_options
           Modle::cmatrix_test

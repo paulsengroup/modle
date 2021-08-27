@@ -1,3 +1,8 @@
+find_package(absl REQUIRED)
+find_package(Boost REQUIRED)
+find_package(fmt REQUIRED)
+find_package(xxHash REQUIRED)
+
 add_library(modle_common INTERFACE)
 
 add_library(Modle::common ALIAS modle_common)
@@ -17,10 +22,13 @@ target_link_libraries(
   modle_common
   INTERFACE project_options
             project_warnings
+            absl::strings
+            absl::str_format
+            Boost::headers
+            Boost::filesystem
+            Boost::random
+            fmt::fmt
             $<$<NOT:$<BOOL:${MODLE_USE_MERSENNE_TWISTER}>>:XoshiroCpp::XoshiroCpp>
-            CONAN_PKG::abseil
-            CONAN_PKG::boost
-            CONAN_PKG::fmt
-            CONAN_PKG::xxhash)
+            xxHash::xxhash)
 
 target_include_directories(modle_common INTERFACE include/)

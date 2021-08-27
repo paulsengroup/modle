@@ -10,8 +10,12 @@ macro(run_conan)
   endif()
 
   set(ENV{CONAN_REVISIONS_ENABLED} 1)
+  list(APPEND CMAKE_MODULE_PATH ${CMAKE_BINARY_DIR})
+  list(APPEND CMAKE_PREFIX_PATH ${CMAKE_BINARY_DIR})
+
   include(${CMAKE_BINARY_DIR}/conan.cmake)
 
+  # Add (or remove) remotes as needed
   conan_add_remote(
     NAME
     conancenter
@@ -32,20 +36,35 @@ macro(run_conan)
     INDEX
     2)
 
-  conan_cmake_run(
-    CONANFILE
-    conanfile.py
-    SETTINGS
-    compiler.cppstd=${CMAKE_CXX_STANDARD} # For some reason setting this in conanfile doesn't work
-    OPTIONS
-    enable_testing=${ENABLE_TESTING}
-    ENV
-    "CC=${CMAKE_C_COMPILER}"
-    "CXX=${CMAKE_CXX_COMPILER}"
-    BASIC_SETUP
-    CMAKE_TARGETS # individual targets to link to
-    BUILD
-    outdated
-    PROFILE_AUTO
-    ALL)
+  # For multi configuration generators, like VS and XCode
+  if(NOT CMAKE_CONFIGURATION_TYPES)
+    message(STATUS "Single configuration build!")
+    set(LIST_OF_BUILD_TYPES ${CMAKE_BUILD_TYPE})
+  else()
+    message(STATUS "Multi-configuration build: '${CMAKE_CONFIGURATION_TYPES}'!")
+    set(LIST_OF_BUILD_TYPES ${CMAKE_CONFIGURATION_TYPES})
+  endif()
+
+  foreach(TYPE ${LIST_OF_BUILD_TYPES})
+    message(STATUS "Running Conan for build type '${TYPE}'")
+
+    # Detects current build settings to pass into conan
+    conan_cmake_autodetect(settings BUILD_TYPE ${TYPE})
+
+    # PATH_OR_REFERENCE ${CMAKE_SOURCE_DIR} is used to tell conan to process the external "conanfile.py" provided with
+    # the project Alternatively a conanfile.txt could be used
+    conan_cmake_install(
+      PATH_OR_REFERENCE
+      ${CMAKE_SOURCE_DIR}
+      SETTINGS
+      compiler.cppstd=${CMAKE_CXX_STANDARD} # For some reason setting this in conanfile doesn't work
+      OPTIONS
+      enable_testing=${ENABLE_TESTING}
+      ENV
+      "CC=${CMAKE_C_COMPILER}"
+      "CXX=${CMAKE_CXX_COMPILER}"
+      BUILD
+      outdated)
+  endforeach()
+
 endmacro()

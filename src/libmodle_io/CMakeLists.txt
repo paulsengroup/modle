@@ -1,3 +1,14 @@
+find_package(absl REQUIRED)
+find_package(Boost REQUIRED)
+find_package(Catch2 REQUIRED)
+find_package(fmt REQUIRED)
+find_package(HDF5 REQUIRED)
+find_package(LibArchive REQUIRED)
+find_package(readerwriterqueue REQUIRED)
+find_package(spdlog REQUIRED)
+find_package(ZLIB REQUIRED)
+find_package(xxHash REQUIRED)
+
 add_library(libmodle_io)
 add_library(Modle::libmodle_io ALIAS libmodle_io)
 target_sources(
@@ -19,19 +30,29 @@ target_link_libraries(
   libmodle_io
   PRIVATE project_warnings
           project_options
+          Boost::headers
+          xxHash::xxhash
           Modle::common
-          CONAN_PKG::xxhash
-  PUBLIC libBigWig::libbigwig
+  PUBLIC absl::btree
+         absl::flat_hash_map
+         absl::flat_hash_set
+         absl::hash
+         absl::span
+         absl::strings
+         absl::time
+         absl::variant
+         Catch2::Catch2
+         Boost::filesystem
+         Boost::iostreams
+         fmt::fmt
+         HDF5::HDF5
+         LibArchive::LibArchive
+         readerwriterqueue::readerwriterqueue
+         spdlog::spdlog
+         ZLIB::ZLIB
          Modle::cmatrix
          Modle::interval_tree
-         CONAN_PKG::abseil
-         CONAN_PKG::boost
-         CONAN_PKG::fmt
-         CONAN_PKG::hdf5
-         CONAN_PKG::libarchive
-         CONAN_PKG::readerwriterqueue
-         CONAN_PKG::spdlog
-         CONAN_PKG::zlib)
+         libBigWig::libbigwig)
 
 target_compile_definitions(libmodle_io PRIVATE -DNOCURL)
 set_target_properties(libmodle_io PROPERTIES OUTPUT_NAME modle_io)

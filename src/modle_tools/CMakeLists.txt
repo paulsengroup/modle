@@ -1,3 +1,9 @@
+find_package(absl REQUIRED)
+find_package(Boost REQUIRED)
+find_package(CLI11 REQUIRED)
+find_package(readerwriterqueue REQUIRED)
+find_package(spdlog REQUIRED)
+
 add_executable(modle_tools main.cpp)
 
 target_sources(
@@ -15,14 +21,21 @@ target_link_libraries(
   modle_tools
   PRIVATE project_warnings
           project_options
+          absl::algorithm_container
+          absl::btree
+          absl::flat_hash_map
+          absl::flat_hash_set
+          absl::failure_signal_handler
+          absl::strings
+          absl::symbolize
+          absl::time
+          Boost::headers
+          CLI11::CLI11
+          readerwriterqueue::readerwriterqueue
+          spdlog::spdlog
           Modle::common
           Modle::correlation
-          Modle::libmodle_io
-          CONAN_PKG::abseil
-          CONAN_PKG::boost
-          CONAN_PKG::cli11
-          CONAN_PKG::readerwriterqueue
-          CONAN_PKG::spdlog)
+          Modle::libmodle_io)
 
 target_include_directories(modle_tools PRIVATE include)
 

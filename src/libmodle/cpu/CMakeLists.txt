@@ -1,3 +1,9 @@
+find_package(absl REQUIRED)
+find_package(Boost REQUIRED)
+find_package(concurrentqueue REQUIRED)
+find_package(cpp-sort REQUIRED)
+find_package(spdlog REQUIRED)
+
 add_library(libmodle_cpu INTERFACE)
 
 target_sources(
@@ -17,15 +23,22 @@ target_link_libraries(
   libmodle_cpu
   INTERFACE project_warnings
             project_options
+            absl::btree
+            absl::fixed_array
+            absl::flat_hash_map
+            absl::flat_hash_set
+            absl::span
+            absl::strings
+            absl::time
+            Boost::filesystem
+            concurrentqueue::concurrentqueue
+            cpp-sort::cpp-sort
+            spdlog::spdlog
             Modle::cmatrix
             Modle::common
+            Modle::libmodle_io
             Modle::libmodle_internal
-            thread-pool
-            CONAN_PKG::abseil
-            CONAN_PKG::boost
-            CONAN_PKG::concurrentqueue
-            CONAN_PKG::cpp-sort
-            CONAN_PKG::spdlog)
+            thread-pool)
 
 if(ENABLE_PCH)
   target_precompile_headers(

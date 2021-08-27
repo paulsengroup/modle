@@ -1,3 +1,7 @@
+find_package(absl REQUIRED)
+find_package(Catch2 REQUIRED)
+find_package(HDF5 REQUIRED)
+
 add_library(modle_io_test INTERFACE)
 
 add_library(Modle::libmodle_io_test ALIAS modle_io_test)
@@ -15,7 +19,9 @@ target_link_libraries(
   modle_io_test
   INTERFACE project_warnings
             project_options
+            absl::span
+            absl::strings
+            Catch2::Catch2
+            HDF5::HDF5
             Modle::common
-            Modle::libmodle_io
-            CONAN_PKG::abseil
-            CONAN_PKG::catch2)
+            Modle::libmodle_io)

@@ -1,3 +1,7 @@
+find_package(absl REQUIRED)
+find_package(Boost REQUIRED)
+find_package(Catch2 REQUIRED)
+
 add_library(libmodle_cpu_test INTERFACE)
 add_library(Modle::libmodle_cpu_test ALIAS libmodle_cpu_test)
 
@@ -10,8 +14,9 @@ target_link_libraries(
   libmodle_cpu_test
   INTERFACE project_warnings
             project_options
+            absl::span
+            absl::strings
+            # Boost
+            Catch2::Catch2
             Modle::libmodle_io
-            Modle::libmodle
-            CONAN_PKG::abseil
-            CONAN_PKG::boost
-            CONAN_PKG::catch2)
+            Modle::libmodle)

@@ -53,7 +53,6 @@
 #include <vector>                     // for vector, vector<>::iterator
 
 #include "modle/common/suppress_compiler_warnings.hpp"  // for DISABLE_WARNING_POP, DISABLE_WARNI...
-#include "modle/common/utils.hpp"                       // for throw_with_trace
 #include "modle/contacts.hpp"                           // for ContactMatrix
 #include "modle/hdf5.hpp"                               // for construct_error_stack, has_dataset
 
@@ -465,14 +464,14 @@ std::unique_ptr<H5::H5File> Cooler::open_file(const boost::filesystem::path &pat
 #ifndef NDEBUG
   if (mode == WRITE_ONLY) {
     if (bin_size == 0) {
-      utils::throw_with_trace(
-          std::runtime_error("Cooler::open_file(): bin_size cannot be 0 when file is being opened "
-                             "in WRITE_ONLY mode"));
+      throw std::runtime_error(
+          "Cooler::open_file(): bin_size cannot be 0 when file is being opened "
+          "in WRITE_ONLY mode");
     }
     if (max_str_length == 0) {
-      utils::throw_with_trace(
-          std::runtime_error("Cooler::open_file(): max_str_length cannot be 0 when file is being "
-                             "opened in WRITE_ONLY mode"));
+      throw std::runtime_error(
+          "Cooler::open_file(): max_str_length cannot be 0 when file is being "
+          "opened in WRITE_ONLY mode");
     }
   }
 #endif
@@ -661,8 +660,8 @@ absl::Span<const int64_t> Cooler::get_bin1_offset_idx_for_chrom(
                 (chrom_subrange.second / this->_bin_size);
   DISABLE_WARNING_PUSH
   DISABLE_WARNING_SIGN_COMPARE
-  assert(chrom_end_bin <= this->_idx_chrom_offset[chrom_idx + 1]);
-  assert(chrom_end_bin >= chrom_start_bin);  // NOLINT
+  assert(chrom_end_bin <= this->_idx_chrom_offset[chrom_idx + 1]);  // NOLINT
+  assert(chrom_end_bin >= chrom_start_bin);                         // NOLINT
   DISABLE_WARNING_POP
 
   return absl::MakeConstSpan(this->_idx_bin1_offset)

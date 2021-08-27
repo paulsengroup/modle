@@ -1,3 +1,6 @@
+find_package(Boost REQUIRED)
+find_package(cpp-sort REQUIRED)
+
 add_library(cmatrix INTERFACE)
 add_library(Modle::cmatrix ALIAS cmatrix)
 
@@ -9,9 +12,8 @@ target_link_libraries(
   cmatrix
   INTERFACE project_warnings
             project_options
-            Modle::common
-            CONAN_PKG::boost
-            CONAN_PKG::cpp-sort)
+            cpp-sort::cpp-sort
+            Modle::common)
 
 if(ENABLE_PCH)
   target_precompile_headers(

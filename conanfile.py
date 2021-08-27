@@ -34,7 +34,7 @@ class MoDLE(ConanFile):
                 "zlib/1.2.11"]
                 # "zstd/1.4.8"]
 
-    generators = "cmake"
+    generators = "cmake", "gcc", "txt", "cmake_find_package"
 
     def requirements(self):
         if bool(self.options.enable_testing):

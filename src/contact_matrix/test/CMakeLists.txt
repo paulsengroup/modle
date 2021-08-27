@@ -1,3 +1,7 @@
+find_package(absl REQUIRED)
+find_package(Boost REQUIRED)
+find_package(Catch2 REQUIRED)
+
 add_library(modle_cmatrix_test INTERFACE)
 add_library(Modle::cmatrix_test ALIAS modle_cmatrix_test)
 
@@ -9,9 +13,8 @@ target_link_libraries(
   modle_cmatrix_test
   INTERFACE project_warnings
             project_options
+            absl::strings
+            Catch2::Catch2
             Modle::cmatrix
             Modle::common
-            Modle::libmodle_io
-            CONAN_PKG::abseil
-            CONAN_PKG::boost
-            CONAN_PKG::catch2)
+            Modle::libmodle_io)
