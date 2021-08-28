@@ -86,6 +86,8 @@ jobs:
       - name: Configure project - Release
         working-directory: ${{runner.workspace}}/build
         if: ${{matrix.config.build_type != 'Debug'}}
+        env:
+          CONAN_V2_MODE: "1"
         run: |
           waserr='ON'; wlto='ON';     \
           if [[ ${{matrix.os}} == 'ubuntu-18.04' ]]; then \
@@ -102,6 +104,8 @@ jobs:
       - name: Configure project - Debug
         working-directory: ${{runner.workspace}}/build
         if: ${{matrix.config.build_type == 'Debug'}}
+        env:
+          CONAN_V2_MODE: "1"
         run: |
           waserr='ON'; wlto='ON';     \
           if [[ ${{matrix.os}} == 'ubuntu-18.04' ]]; then \

@@ -51,18 +51,18 @@ macro(run_conan)
     # Detects current build settings to pass into conan
     conan_cmake_autodetect(settings BUILD_TYPE ${TYPE})
 
+    # This is important to avoid ABI compatibility problems with abseil
+    string(APPEND settings ";compiler.cppstd=${CMAKE_CXX_STANDARD}")
+
     # PATH_OR_REFERENCE ${CMAKE_SOURCE_DIR} is used to tell conan to process the external "conanfile.py" provided with
     # the project Alternatively a conanfile.txt could be used
     conan_cmake_install(
       PATH_OR_REFERENCE
       ${CMAKE_SOURCE_DIR}
       SETTINGS
-      compiler.cppstd=${CMAKE_CXX_STANDARD} # For some reason setting this in conanfile doesn't work
+      ${settings}
       OPTIONS
       enable_testing=${ENABLE_TESTING}
-      ENV
-      "CC=${CMAKE_C_COMPILER}"
-      "CXX=${CMAKE_CXX_COMPILER}"
       BUILD
       outdated)
   endforeach()
