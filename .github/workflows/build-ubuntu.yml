@@ -51,6 +51,27 @@ jobs:
         with:
           fetch-depth: 0
 
+      - name: Install ccache
+        run: sudo apt install -y ccache
+
+      - name: Install unit test dependencies
+        run: pip3 install scipy
+
+      - name: Prepare ccache timestamp
+        id: ccache_cache_timestamp
+        shell: cmake -P {0}
+        run: |
+          string(TIMESTAMP current_date "%Y-%m-%d-%H;%M;%S" UTC)
+          message("::set-output name=timestamp::${current_date}")
+
+      - name: ccache cache files
+        uses: actions/cache@v1.1.0
+        with:
+          path: ${{runner.workspace}}/.ccache
+          key: ${{ matrix.config.name }}-ccache-${{ steps.ccache_cache_timestamp.outputs.timestamp }}
+          restore-keys: |
+            ${{ matrix.config.name }}-ccache-
+
       - name: Cache Conan packages
         uses: actions/cache@v2
         with:
@@ -66,9 +87,6 @@ jobs:
       - name: Install Conan
         id: conan
         uses: turtlebrowser/get-conan@main
-
-      - name: Install unit test dependencies
-        run: pip3 install scipy
 
       - name: Clean up Conan
         run: |
@@ -88,6 +106,10 @@ jobs:
         if: ${{matrix.config.build_type != 'Debug'}}
         env:
           CONAN_V2_MODE: "1"
+          CCACHE_BASEDIR: ${{runner.workspace}}
+          CCACHE_DIR: ${{runner.workspace}}/.ccache
+          CCACHE_COMPRESS: "true"
+          CCACHE_MAXSIZE: "200M"
         run: |
           waserr='ON'; wlto='ON';     \
           if [[ ${{matrix.os}} == 'ubuntu-18.04' ]]; then \
@@ -106,6 +128,10 @@ jobs:
         if: ${{matrix.config.build_type == 'Debug'}}
         env:
           CONAN_V2_MODE: "1"
+          CCACHE_BASEDIR: ${{runner.workspace}}
+          CCACHE_DIR: ${{runner.workspace}}/.ccache
+          CCACHE_COMPRESS: "true"
+          CCACHE_MAXSIZE: "200M"
         run: |
           waserr='ON'; wlto='ON';     \
           if [[ ${{matrix.os}} == 'ubuntu-18.04' ]]; then \
@@ -122,7 +148,18 @@ jobs:
 
       - name: Build project
         working-directory: ${{runner.workspace}}/build
+        env:
+          CCACHE_BASEDIR: ${{runner.workspace}}
+          CCACHE_DIR: ${{runner.workspace}}/.ccache
+          CCACHE_COMPRESS: "true"
+          CCACHE_MAXSIZE: "200M"
         run: cmake --build . -j $(nproc)
+
+      - name: Print ccache stats
+        env:
+          CCACHE_BASEDIR: ${{runner.workspace}}
+          CCACHE_DIR: ${{runner.workspace}}/.ccache
+        run: ccache --show-stats && ccache --zero-stats
 
       - name: Test project
         working-directory: ${{github.workspace}}
