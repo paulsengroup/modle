@@ -1,6 +1,5 @@
 find_package(absl REQUIRED)
 find_package(Boost REQUIRED)
-find_package(Catch2 REQUIRED)
 find_package(fmt REQUIRED)
 find_package(HDF5 REQUIRED)
 find_package(LibArchive REQUIRED)
@@ -41,7 +40,6 @@ target_link_libraries(
          absl::strings
          absl::time
          absl::variant
-         Catch2::Catch2
          Boost::filesystem
          Boost::iostreams
          fmt::fmt
