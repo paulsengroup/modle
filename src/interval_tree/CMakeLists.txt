@@ -1,3 +1,4 @@
+find_package(absl REQUIRED)
 find_package(cpp-sort REQUIRED)
 
 add_library(interval_tree INTERFACE)
@@ -7,4 +8,9 @@ target_sources(interval_tree INTERFACE ${CMAKE_CURRENT_SOURCE_DIR}/interval_tree
 
 target_include_directories(interval_tree INTERFACE include/)
 
-target_link_libraries(interval_tree INTERFACE project_warnings project_options cpp-sort::cpp-sort)
+target_link_libraries(
+  interval_tree
+  INTERFACE project_options
+            project_warnings
+            absl::span
+            cpp-sort::cpp-sort)

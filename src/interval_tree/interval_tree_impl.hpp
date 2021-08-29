@@ -20,13 +20,14 @@
 //   SOFTWARE.
 
 #pragma once
+#include <absl/types/span.h>              // for Span
 #include <cpp-sort/sorters/pdq_sorter.h>  // for pdq_sorter
-#include <fmt/format.h>
 
 #include <array>     // for array
 #include <cassert>   // for assert
 #include <cstddef>   // for size_t
 #include <iterator>  // for iterator_traits
+#include <numeric>   // for iota
 #include <stack>     // for stack
 #include <vector>    // for vector
 
@@ -77,7 +78,7 @@ void IITree<I, T>::make_BST() {
     return;
   }
   std::vector<size_t> ranks(this->size());
-  std::iota(ranks.begin(), ranks.end(), 0UL);
+  std::iota(ranks.begin(), ranks.end(), 0);
   cppsort::pdq_sort(ranks.begin(), ranks.end(), [this](const auto i1, const auto i2) {
     assert(i1 < this->size());  // NOLINT
     assert(i2 < this->size());  // NOLINT

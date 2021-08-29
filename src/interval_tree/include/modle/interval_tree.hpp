@@ -21,9 +21,12 @@
 
 #pragma once
 
+#include <absl/types/span.h>  // for Span
+
 #include <array>        // for array
 #include <cstddef>      // for size_t, std::ptrdiff_t
 #include <cstdint>      // for uint64_t
+#include <limits>       // for numeric_limits
 #include <type_traits>  // for is_integral_v
 #include <vector>       // for vector
 
