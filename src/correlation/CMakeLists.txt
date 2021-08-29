@@ -20,7 +20,3 @@ if(ENABLE_PCH)
     <boost/dynamic_bitset/dynamic_bitset.hpp>
     [["modle/correlation.hpp"]])
 endif()
-
-if(ENABLE_TESTING)
-  add_subdirectory(test)
-endif()

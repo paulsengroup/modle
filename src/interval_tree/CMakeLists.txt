@@ -8,7 +8,3 @@ target_sources(interval_tree INTERFACE ${CMAKE_CURRENT_SOURCE_DIR}/interval_tree
 target_include_directories(interval_tree INTERFACE include/)
 
 target_link_libraries(interval_tree INTERFACE project_warnings project_options cpp-sort::cpp-sort)
-
-if(ENABLE_TESTING)
-  add_subdirectory(test)
-endif()

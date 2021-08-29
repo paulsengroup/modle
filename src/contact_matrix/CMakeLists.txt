@@ -12,6 +12,7 @@ target_link_libraries(
   cmatrix
   INTERFACE project_warnings
             project_options
+            Boost::headers
             cpp-sort::cpp-sort
             Modle::common)
 
@@ -24,8 +25,4 @@ if(ENABLE_PCH)
     <vector>
     <boost/dynamic_bitset/dynamic_bitset.hpp>
     [["modle/contacts.hpp"]])
-endif()
-
-if(ENABLE_TESTING)
-  add_subdirectory(test)
 endif()
