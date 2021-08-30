@@ -15,7 +15,7 @@ class MoDLE(ConanFile):
     homepage = "https://github.com/robomics"
     license = "MIT"
     author = "Roberto Rossini (roberros@uio.no)"
-    settings = "os", "compiler", "cppstd", "build_type", "arch"
+    settings = "os", "compiler", "build_type", "arch"
     requires = ["abseil/20210324.2",
                 "boost/1.76.0",
                 "bzip2/1.0.8",

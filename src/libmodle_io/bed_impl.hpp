@@ -171,7 +171,7 @@ bool BED_tree<K, I>::empty() const {
 
 template <typename K, typename I>
 size_t BED_tree<K, I>::size() const {
-  return std::accumulate(this->_trees.begin(), this->_trees.end(), 0UL,
+  return std::accumulate(this->_trees.begin(), this->_trees.end(), size_t(0),
                          [](const auto accumulator, const auto& node) {
                            const auto& tree = node.second;
                            return accumulator + tree.size();

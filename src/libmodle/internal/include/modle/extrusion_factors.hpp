@@ -65,6 +65,7 @@ struct Lef {
   void bind_at_pos(size_t current_epoch, bp_t pos) noexcept(utils::ndebug_defined());
   void release() noexcept(utils::ndebug_defined());
   void reset() noexcept(utils::ndebug_defined());
+  bp_t loop_size() const noexcept;
   size_t binding_epoch{(std::numeric_limits<size_t>::max)()};
   ExtrusionUnit rev_unit{};
   ExtrusionUnit fwd_unit{};

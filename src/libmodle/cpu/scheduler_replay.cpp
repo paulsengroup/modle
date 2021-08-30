@@ -97,7 +97,7 @@ void Simulation::replay_worker(const uint64_t tid,
 
   absl::FixedArray<TaskPW> task_buff(task_batch_size);  // Tasks are dequeue in batch.
 
-  Simulation::StatePW local_state{};
+  Simulation::State local_state{};
   compressed_io::Writer null_stream{};
   std::mutex null_mutex{};
 
@@ -125,8 +125,8 @@ void Simulation::replay_worker(const uint64_t tid,
         assert(!task.feats2.empty());    // NOLINT
 
         local_state = task;  // Set simulation local_state based on task data
-        local_state.contacts.resize(local_state.window_end - local_state.window_start,
-                                    this->diagonal_width, this->bin_size);
+        local_state.contacts->resize(local_state.window_end - local_state.window_start,
+                                     this->diagonal_width, this->bin_size);
 
         Simulation::simulate_window(local_state, null_stream, null_mutex, cooler_mutex, true);
       }

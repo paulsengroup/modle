@@ -6,16 +6,18 @@
 #include <absl/types/span.h>                     // IWYU pragma: keep for Span
 #include <moodycamel/blockingconcurrentqueue.h>  // for BlockingConcurrntQueue
 
-#include <atomic>                                   // for atomic
+#include <atomic>  // for atomic
+#include <boost/circular_buffer.hpp>
 #include <boost/dynamic_bitset/dynamic_bitset.hpp>  // for dynamic_bitset
 #include <boost/filesystem/path.hpp>                // for path
 #include <cstddef>                                  // for size_t
 #include <cstdint>                                  // for uint64_t
-#include <deque>                                    // for deque
-#include <limits>                                   // for numeric_limits
-#include <memory>                                   // for unique_ptr
-#include <mutex>                                    // for mutex
-#include <string>                                   // for string
+#include <deque>
+#include <deque>   // for deque
+#include <limits>  // for numeric_limits
+#include <memory>  // for unique_ptr
+#include <mutex>   // for mutex
+#include <string>  // for string
 #include <thread_pool/thread_pool.hpp>
 #include <utility>  // for pair
 #include <vector>   // for vector
@@ -67,43 +69,16 @@ class Simulation : Config {
     absl::Span<const ExtrusionBarrier> barriers{};
   };
 
-  struct BaseState {  // NOLINT(altera-struct-pack-align)
-    BaseState() = default;
-    std::vector<Lef> lef_buff{};
-    std::vector<double> lef_unloader_affinity{};
-    std::vector<size_t> rank_buff1{};
-    std::vector<size_t> rank_buff2{};
-    boost::dynamic_bitset<> barrier_mask{};
-    std::vector<bp_t> moves_buff1{};
-    std::vector<bp_t> moves_buff2{};
-    std::vector<size_t> idx_buff{};
-    std::vector<collision_t> collision_buff1{};
-    std::vector<collision_t> collision_buff2{};
-    random::PRNG_t rand_eng{};
-    uint64_t seed{};
-    std::unique_ptr<XXH3_state_t, utils::XXH3_Deleter> xxh_state{XXH3_createState()};
-
-    void _resize_buffers(size_t size = (std::numeric_limits<size_t>::max)());
-    void _reset_buffers();
-  };
-
  public:
   struct Task : BaseTask {  // NOLINT(altera-struct-pack-align)
     Task() = default;
     static Task from_string(std::string_view serialized_task, Genome& genome);
   };
 
-  struct State : BaseTask, BaseState {  // NOLINT(altera-struct-pack-align)
-    State() = default;
-
-    State& operator=(const Task& task);
-    void resize_buffers(size_t size = (std::numeric_limits<size_t>::max)());
-    void reset_buffers();
-  };
-
   struct TaskPW : BaseTask {  // NOLINT(altera-struct-pack-align)
     TaskPW() = default;
     static TaskPW from_string(std::string_view serialized_task, Genome& genome);
+
     bp_t deletion_begin{};
     bp_t deletion_size{};
     bp_t window_start{};
@@ -115,14 +90,80 @@ class Simulation : Config {
     absl::Span<const bed::BED> feats2{};
   };
 
-  struct StatePW : TaskPW, BaseState {  // NOLINT(altera-struct-pack-align)
-    StatePW() = default;
+  struct State : BaseTask {  // NOLINT(altera-struct-pack-align)
+    State() = default;
+    size_t epoch{};
+    bool burnin_completed{false};
+    size_t num_active_lefs{0};
+    size_t num_burnin_epochs{0};
+    size_t num_contacts{0};
 
-    ContactMatrix<contacts_t> contacts{};
+    random::PRNG_t rand_eng{};
+    uint64_t seed{};
+    std::unique_ptr<XXH3_state_t, utils::XXH3_Deleter> xxh_state{XXH3_createState()};
+
+   protected:
+    std::vector<Lef> lef_buff{};
+    std::vector<double> lef_unloader_affinity{};
+    std::vector<size_t> rank_buff1{};
+    std::vector<size_t> rank_buff2{};
+    boost::dynamic_bitset<> barrier_mask{};
+    std::vector<bp_t> moves_buff1{};
+    std::vector<bp_t> moves_buff2{};
+    std::vector<size_t> idx_buff{};
+    std::vector<collision_t> collision_buff1{};
+    std::vector<collision_t> collision_buff2{};
+    std::deque<double> cfx_of_variation_buff{};
+    std::deque<double> avg_loop_size_buff{};
+
+   public:
+    [[nodiscard]] absl::Span<Lef> get_lefs(size_t size = 0) noexcept;
+    [[nodiscard]] absl::Span<double> get_lef_unloader_affinities(size_t size = 0) noexcept;
+    [[nodiscard]] absl::Span<size_t> get_rev_ranks(size_t size = 0) noexcept;
+    [[nodiscard]] absl::Span<size_t> get_fwd_ranks(size_t size = 0) noexcept;
+    [[nodiscard]] boost::dynamic_bitset<>& get_barrier_mask() noexcept;
+    [[nodiscard]] absl::Span<bp_t> get_rev_moves(size_t size = 0) noexcept;
+    [[nodiscard]] absl::Span<bp_t> get_fwd_moves(size_t size = 0) noexcept;
+    [[nodiscard]] absl::Span<size_t> get_idx_buff(size_t size = 0) noexcept;
+    [[nodiscard]] absl::Span<collision_t> get_rev_collisions(size_t size = 0) noexcept;
+    [[nodiscard]] absl::Span<collision_t> get_fwd_collisions(size_t size = 0) noexcept;
+    [[nodiscard]] std::deque<double>& get_cfx_of_variation() noexcept;
+    [[nodiscard]] std::deque<double>& get_avg_loop_sizes() noexcept;
+
+    [[nodiscard]] absl::Span<const Lef> get_lefs(size_t size = 0) const noexcept;
+    [[nodiscard]] absl::Span<const double> get_lef_unloader_affinities(
+        size_t size = 0) const noexcept;
+    [[nodiscard]] absl::Span<const size_t> get_rev_ranks(size_t size = 0) const noexcept;
+    [[nodiscard]] absl::Span<const size_t> get_fwd_ranks(size_t size = 0) const noexcept;
+    [[nodiscard]] const boost::dynamic_bitset<>& get_barrier_mask() const noexcept;
+    [[nodiscard]] absl::Span<const bp_t> get_rev_moves(size_t size = 0) const noexcept;
+    [[nodiscard]] absl::Span<const bp_t> get_fwd_moves(size_t size = 0) const noexcept;
+    [[nodiscard]] absl::Span<const size_t> get_idx_buff(size_t size = 0) const noexcept;
+    [[nodiscard]] absl::Span<const collision_t> get_rev_collisions(size_t size = 0) const noexcept;
+    [[nodiscard]] absl::Span<const collision_t> get_fwd_collisions(size_t size = 0) const noexcept;
+    [[nodiscard]] const std::deque<double>& get_cfx_of_variation() const noexcept;
+    [[nodiscard]] const std::deque<double>& get_avg_loop_sizes() const noexcept;
+
+    [[nodiscard]] bool is_modle_pert_state() const noexcept;
+    [[nodiscard]] bool is_modle_sim_state() const noexcept;
+
+    // These fields are specific to modle pert
+    bp_t deletion_begin{};
+    bp_t deletion_size{};
+    bp_t window_start{};
+    bp_t window_end{};
+    bp_t active_window_start{};
+    bp_t active_window_end{};
+
+    absl::Span<const bed::BED> feats1{};
+    absl::Span<const bed::BED> feats2{};
+    std::shared_ptr<ContactMatrix<contacts_t>> contacts{nullptr};
     std::vector<ExtrusionBarrier> barrier_tmp_buff{};
 
-    StatePW& operator=(const TaskPW& task);
+    State& operator=(const Task& task);
+    State& operator=(const TaskPW& task);
     [[nodiscard]] std::string to_string() const noexcept;
+
     void resize_buffers(size_t size = (std::numeric_limits<size_t>::max)());
     void reset_buffers();
   };
@@ -146,9 +187,7 @@ class Simulation : Config {
   [[nodiscard]] inline static thread_pool instantiate_thread_pool(I nthreads, bool clamp_nthreads);
 
   /// Simulate loop extrusion using the parameters and buffers passed through \p state
-  template <typename StateT, typename = std::enable_if_t<std::is_same_v<StateT, State> ||
-                                                         std::is_same_v<StateT, StatePW>>>
-  inline void simulate_one_cell(StateT& s) const;
+  void simulate_one_cell(State& s) const;
 
   /// Simulate loop extrusion on a Chromosome window using the parameters and buffers passed through
   /// \p state
@@ -157,9 +196,8 @@ class Simulation : Config {
   //! contacts between a pair of features given a specific barrier configuration.
   //! The different configurations are generated by this function based on the parameters from
   //! \p state
-  void simulate_window(StatePW& state, compressed_io::Writer& out_stream,
-                       std::mutex& out_file_mutex, std::mutex& cooler_mutex,
-                       bool write_contacts_to_cooler = false) const;
+  void simulate_window(State& state, compressed_io::Writer& out_stream, std::mutex& out_file_mutex,
+                       std::mutex& cooler_mutex, bool write_contacts_to_cooler = false) const;
 
   /// Advance the simulation window by one diagonal width.
 
@@ -220,6 +258,8 @@ class Simulation : Config {
                                absl::Span<size_t> rev_lef_ranks, absl::Span<size_t> fwd_lef_ranks,
                                const MaskT& mask, random::PRNG_t& rand_eng,
                                size_t current_epoch) noexcept(utils::ndebug_defined());
+
+  static void select_and_bind_lefs(State& s) noexcept(utils::ndebug_defined());
 
   // clang-format off
   //! Generate moves in reverse direction
@@ -440,6 +480,19 @@ class Simulation : Config {
 
   [[noreturn]] void rethrow_exceptions() const;
   [[noreturn]] void handle_exceptions();
+
+  static void compute_loop_size_stats(absl::Span<const Lef> lefs,
+                                      std::deque<double>& cfx_of_variation_buff,
+                                      std::deque<double>& avg_loop_size_buff,
+                                      size_t buff_capacity) noexcept;
+
+  static bool evaluate_burnin(const std::deque<double>& cfx_of_variation_buff,
+                              const std::deque<double>& avg_loop_size_buff,
+                              size_t buff_capacity) noexcept;
+
+  void run_burnin(State& s, double lef_binding_rate_burnin) const;
+
+  void sample_and_register_contacts(State& s, const double avg_nlefs_to_sample) const;
 
 #ifdef ENABLE_TESTING
  public:

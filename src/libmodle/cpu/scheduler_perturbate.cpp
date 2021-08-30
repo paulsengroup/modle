@@ -278,7 +278,9 @@ void Simulation::perturbate_worker(
 
   absl::FixedArray<TaskPW> task_buff(task_batch_size);  // Tasks are dequeue in batch.
 
-  Simulation::StatePW local_state{};
+  Simulation::State local_state{};
+  auto local_contacts = std::make_shared<ContactMatrix<contacts_t>>();
+  local_state.contacts = std::make_shared<ContactMatrix<contacts_t>>();
 
   try {
     while (this->ok()) {  // Try to dequeue a batch of tasks
@@ -302,10 +304,11 @@ void Simulation::perturbate_worker(
         assert(!task.barriers.empty());  // NOLINT
         assert(!task.feats1.empty());    // NOLINT
         assert(!task.feats2.empty());    // NOLINT
+        assert(local_state.contacts);    // NOLINT
 
         local_state = task;  // Set simulation local_state based on task data
-        local_state.contacts.resize(local_state.window_end - local_state.window_start,
-                                    this->diagonal_width, this->bin_size);
+        local_state.contacts->resize(local_state.window_end - local_state.window_start,
+                                     this->diagonal_width, this->bin_size);
 
         Simulation::simulate_window(local_state, out_stream, out_stream_mutex, cooler_mutex);
       }
@@ -324,7 +327,7 @@ void Simulation::perturbate_worker(
   }
 }
 
-void Simulation::simulate_window(Simulation::StatePW& state, compressed_io::Writer& out_stream,
+void Simulation::simulate_window(Simulation::State& state, compressed_io::Writer& out_stream,
                                  std::mutex& out_stream_mutex, std::mutex& cooler_mutex,
                                  bool write_contacts_to_cooler) const {
   spdlog::info(FMT_STRING("Processing {}[{}-{}]; outer_window=[{}-{}]; deletion=[{}-{}];"),
@@ -381,9 +384,9 @@ void Simulation::simulate_window(Simulation::StatePW& state, compressed_io::Writ
   // Resize and reset state buffers
   state.resize_buffers();
   state.reset_buffers();
-  state.contacts.resize(state.window_end - state.window_start, this->diagonal_width,
-                        this->bin_size);
-  state.contacts.reset();
+  state.contacts->resize(state.window_end - state.window_start, this->diagonal_width,
+                         this->bin_size);
+  state.contacts->reset();
 
   Simulation::simulate_one_cell(state);
 
@@ -410,7 +413,7 @@ void Simulation::simulate_window(Simulation::StatePW& state, compressed_io::Writ
         const auto feat1_rel_bin = feat1_rel_center_pos / this->bin_size;
         const auto feat2_rel_bin = feat2_rel_center_pos / this->bin_size;
 
-        const auto contacts = state.contacts.get(feat1_rel_bin, feat2_rel_bin, this->block_size);
+        const auto contacts = state.contacts->get(feat1_rel_bin, feat2_rel_bin, this->block_size);
         if (contacts == 0) {  // Don't output entries with 0 contacts
           continue;
         }
@@ -470,8 +473,9 @@ void Simulation::simulate_window(Simulation::StatePW& state, compressed_io::Writ
                               this->_genome.chromosome_with_longest_name().name().size());
       for (const auto& chrom : this->_genome) {
         if (&chrom == state.chrom) {
-          c.write_or_append_cmatrix_to_file(state.contacts, state.chrom->name(), state.window_start,
-                                            state.window_end, state.chrom->size());
+          c.write_or_append_cmatrix_to_file(*state.contacts, state.chrom->name(),
+                                            state.window_start, state.window_end,
+                                            state.chrom->size());
           continue;
         }
         assert(chrom.contacts_ptr() == nullptr);  // NOLINT

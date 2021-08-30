@@ -19,15 +19,16 @@
 #include <cstddef>                                  // for size_t
 #include <cstdio>                                   // for stderr
 #include <cstdlib>                                  // for abs
-#include <deque>                                    // for deque
-#include <ios>                                      // for streamsize
-#include <limits>                                   // for numeric_limits
-#include <memory>                                   // for unique_ptr, make_unique, _MakeUniq<>:...
-#include <mutex>                                    // for mutex
-#include <numeric>                                  // for iota
-#include <stdexcept>                                // for runtime_error
-#include <string>                                   // for basic_string, string
-#include <string_view>                              // for string_view
+#include <deque>
+#include <deque>        // for deque
+#include <ios>          // for streamsize
+#include <limits>       // for numeric_limits
+#include <memory>       // for unique_ptr, make_unique, _MakeUniq<>:...
+#include <mutex>        // for mutex
+#include <numeric>      // for iota
+#include <stdexcept>    // for runtime_error
+#include <string>       // for basic_string, string
+#include <string_view>  // for string_view
 #include <thread_pool/thread_pool.hpp>
 #include <utility>  // for make_pair, pair
 #include <vector>   // for vector, vector<>::iterator
@@ -40,12 +41,6 @@
 #include "modle/extrusion_barriers.hpp"                    // for update_states, ExtrusionBarrier
 #include "modle/extrusion_factors.hpp"                     // for Lef, ExtrusionUnit
 #include "modle/genome.hpp"                                // for Chromosome, Genome
-
-#ifndef BOOST_STACKTRACE_USE_NOOP
-#include <boost/exception/get_error_info.hpp>  // for get_error_info
-#include <boost/stacktrace/stacktrace.hpp>     // for operator<<
-#include <ios>                                 // IWYU pragma: keep for streamsize
-#endif
 
 namespace modle {
 
@@ -109,7 +104,7 @@ void Simulation::write_contacts_to_disk(std::deque<std::pair<Chromosome*, size_t
       }
       sleep_us = 100;  // NOLINT(readability-magic-numbers), cppcoreguidelines-avoid-magic-numbers)
       if (c) {         // c == nullptr only when --skip-output is used
-        // NOTE here we have to use pointers instead of reference because
+        // NOTE here we have to use pointers instead of references because
         // chrom_to_be_written.contacts() == nullptr is used to signal an empty matrix.
         // In this case, c->write_or_append_cmatrix_to_file() will create an entry in the chroms and
         // bins datasets, as well as update the appropriate index
@@ -122,7 +117,7 @@ void Simulation::write_contacts_to_disk(std::deque<std::pair<Chromosome*, size_t
         }
 
         c->write_or_append_cmatrix_to_file(
-            chrom_to_be_written->contacts_ptr(), chrom_to_be_written->name(),
+            chrom_to_be_written->contacts_ptr().get(), chrom_to_be_written->name(),
             chrom_to_be_written->start_pos(), chrom_to_be_written->end_pos(),
             chrom_to_be_written->size());
 
@@ -660,18 +655,10 @@ Simulation::TaskPW Simulation::TaskPW::from_string(std::string_view serialized_t
   return t;
 }
 
-Simulation::State& Simulation::State::operator=(const Task& task) {
-  this->id = task.id;
-  this->chrom = task.chrom;
-  this->cell_id = task.cell_id;
-  this->num_target_epochs = task.num_target_epochs;
-  this->num_target_contacts = task.num_target_contacts;
-  this->num_lefs = task.num_lefs;
-  this->barriers = task.barriers;
-  return *this;
-}
-
-void Simulation::BaseState::_resize_buffers(const size_t new_size) {
+void Simulation::State::resize_buffers(size_t new_size) {
+  if (new_size == (std::numeric_limits<size_t>::max)()) {
+    new_size = this->num_lefs;
+  }
   lef_buff.resize(new_size);
   lef_unloader_affinity.resize(new_size);
   rank_buff1.resize(new_size);
@@ -681,9 +668,11 @@ void Simulation::BaseState::_resize_buffers(const size_t new_size) {
   idx_buff.resize(new_size);
   collision_buff1.resize(new_size);
   collision_buff2.resize(new_size);
+
+  this->get_barrier_mask().resize(this->barriers.size());
 }
 
-void Simulation::BaseState::_reset_buffers() {  // TODO figure out which resets are redundant
+void Simulation::State::reset_buffers() {  // TODO figure out which resets are redundant
   std::for_each(lef_buff.begin(), lef_buff.end(), [](auto& lef) { lef.reset(); });
   std::fill(lef_unloader_affinity.begin(), lef_unloader_affinity.end(), 0.0);
   std::iota(rank_buff1.begin(), rank_buff1.end(), 0);
@@ -693,19 +682,194 @@ void Simulation::BaseState::_reset_buffers() {  // TODO figure out which resets 
   std::fill(moves_buff2.begin(), moves_buff2.end(), 0);
   std::fill(collision_buff1.begin(), collision_buff1.end(), 0);
   std::fill(collision_buff2.begin(), collision_buff2.end(), 0);
+  barrier_tmp_buff.clear();
+  cfx_of_variation_buff.clear();
+  avg_loop_size_buff.clear();
 }
 
-void Simulation::State::resize_buffers(size_t new_size) {
-  if (new_size == (std::numeric_limits<size_t>::max)()) {
-    new_size = this->num_lefs;
+absl::Span<Lef> Simulation::State::get_lefs(size_t size) noexcept {
+  if (size == 0) {
+    size = this->num_active_lefs;
   }
-  this->_resize_buffers(new_size);
-  barrier_mask.resize(this->barriers.size());
+  return absl::MakeSpan(this->lef_buff.data(), size);
+}
+absl::Span<double> Simulation::State::get_lef_unloader_affinities(size_t size) noexcept {
+  if (size == 0) {
+    size = this->num_active_lefs;
+  }
+  return absl::MakeSpan(this->lef_unloader_affinity.data(), size);
+}
+absl::Span<size_t> Simulation::State::get_rev_ranks(size_t size) noexcept {
+  if (size == 0) {
+    size = this->num_active_lefs;
+  }
+  return absl::MakeSpan(this->rank_buff1.data(), size);
+}
+absl::Span<size_t> Simulation::State::get_fwd_ranks(size_t size) noexcept {
+  if (size == 0) {
+    size = this->num_active_lefs;
+  }
+  return absl::MakeSpan(this->rank_buff2.data(), size);
+}
+boost::dynamic_bitset<>& Simulation::State::get_barrier_mask() noexcept {
+  return this->barrier_mask;
+}
+absl::Span<bp_t> Simulation::State::get_rev_moves(size_t size) noexcept {
+  if (size == 0) {
+    size = this->num_active_lefs;
+  }
+  return absl::MakeSpan(this->moves_buff1.data(), size);
+}
+absl::Span<bp_t> Simulation::State::get_fwd_moves(size_t size) noexcept {
+  if (size == 0) {
+    size = this->num_active_lefs;
+  }
+  return absl::MakeSpan(this->moves_buff2.data(), size);
+}
+absl::Span<size_t> Simulation::State::get_idx_buff(size_t size) noexcept {
+  if (size == 0) {
+    size = this->num_active_lefs;
+  }
+  return absl::MakeSpan(this->idx_buff.data(), size);
+}
+absl::Span<collision_t> Simulation::State::get_rev_collisions(size_t size) noexcept {
+  if (size == 0) {
+    size = this->num_active_lefs;
+  }
+  return absl::MakeSpan(this->collision_buff1.data(), size);
+}
+absl::Span<collision_t> Simulation::State::get_fwd_collisions(size_t size) noexcept {
+  if (size == 0) {
+    size = this->num_active_lefs;
+  }
+  return absl::MakeSpan(this->collision_buff2.data(), size);
+}
+std::deque<double>& Simulation::State::get_cfx_of_variation() noexcept {
+  return this->cfx_of_variation_buff;
+}
+std::deque<double>& Simulation::State::get_avg_loop_sizes() noexcept {
+  return this->avg_loop_size_buff;
 }
 
-void Simulation::State::reset_buffers() { this->_reset_buffers(); }
+absl::Span<const Lef> Simulation::State::get_lefs(size_t size) const noexcept {
+  if (size == 0) {
+    size = this->num_active_lefs;
+  }
+  return absl::MakeConstSpan(this->lef_buff.data(), size);
+}
 
-Simulation::StatePW& Simulation::StatePW::operator=(const TaskPW& task) {
+absl::Span<const double> Simulation::State::get_lef_unloader_affinities(
+    size_t size) const noexcept {
+  if (size == 0) {
+    size = this->num_active_lefs;
+  }
+  return absl::MakeConstSpan(this->lef_unloader_affinity.data(), size);
+}
+absl::Span<const size_t> Simulation::State::get_rev_ranks(size_t size) const noexcept {
+  if (size == 0) {
+    size = this->num_active_lefs;
+  }
+  return absl::MakeConstSpan(this->rank_buff1.data(), size);
+}
+absl::Span<const size_t> Simulation::State::get_fwd_ranks(size_t size) const noexcept {
+  if (size == 0) {
+    size = this->num_active_lefs;
+  }
+  return absl::MakeConstSpan(this->rank_buff2.data(), size);
+}
+const boost::dynamic_bitset<>& Simulation::State::get_barrier_mask() const noexcept {
+  return this->barrier_mask;
+}
+absl::Span<const bp_t> Simulation::State::get_rev_moves(size_t size) const noexcept {
+  if (size == 0) {
+    size = this->num_active_lefs;
+  }
+  return absl::MakeConstSpan(this->moves_buff1.data(), size);
+}
+absl::Span<const bp_t> Simulation::State::get_fwd_moves(size_t size) const noexcept {
+  if (size == 0) {
+    size = this->num_active_lefs;
+  }
+  return absl::MakeConstSpan(this->moves_buff2.data(), size);
+}
+absl::Span<const size_t> Simulation::State::get_idx_buff(size_t size) const noexcept {
+  if (size == 0) {
+    size = this->num_active_lefs;
+  }
+  return absl::MakeConstSpan(this->idx_buff.data(), size);
+}
+absl::Span<const collision_t> Simulation::State::get_rev_collisions(size_t size) const noexcept {
+  if (size == 0) {
+    size = this->num_active_lefs;
+  }
+  return absl::MakeConstSpan(this->collision_buff1.data(), size);
+}
+absl::Span<const collision_t> Simulation::State::get_fwd_collisions(size_t size) const noexcept {
+  if (size == 0) {
+    size = this->num_active_lefs;
+  }
+  return absl::MakeConstSpan(this->collision_buff2.data(), size);
+}
+const std::deque<double>& Simulation::State::get_cfx_of_variation() const noexcept {
+  return this->cfx_of_variation_buff;
+}
+const std::deque<double>& Simulation::State::get_avg_loop_sizes() const noexcept {
+  return this->avg_loop_size_buff;
+}
+
+bool Simulation::State::is_modle_pert_state() const noexcept { return !this->is_modle_sim_state(); }
+
+bool Simulation::State::is_modle_sim_state() const noexcept {
+  if constexpr (utils::ndebug_not_defined()) {
+    const auto return_val = feats1.empty() && feats2.empty();
+    (void)return_val;
+    assert((deletion_size == 0) == return_val);        // NOLINT
+    assert((window_start == 0) == return_val);         // NOLINT
+    assert((window_end == 0) == return_val);           // NOLINT
+    assert((active_window_start == 0) == return_val);  // NOLINT
+    assert((active_window_end == 0) == return_val);    // NOLINT
+  }
+  return feats1.empty() && feats2.empty();
+}
+
+Simulation::State& Simulation::State::operator=(const Task& task) {
+  this->epoch = 0;
+  this->num_burnin_epochs = 0;
+  this->burnin_completed = false;
+  this->num_active_lefs = 0;
+  this->num_contacts = 0;
+
+  this->id = task.id;
+  this->chrom = task.chrom;
+  this->cell_id = task.cell_id;
+  this->num_target_epochs = task.num_target_epochs;
+  this->num_target_contacts = task.num_target_contacts;
+  this->num_lefs = task.num_lefs;
+  this->barriers = task.barriers;
+
+  this->deletion_begin = 0;
+  this->deletion_size = 0;
+  this->window_start = 0;
+  this->window_end = 0;
+  this->active_window_start = 0;
+  this->active_window_end = 0;
+
+  this->feats1 = absl::Span<const bed::BED>{};
+  this->feats2 = absl::Span<const bed::BED>{};
+
+  if (this->chrom->contacts_ptr()) {
+    this->contacts = this->chrom->contacts_ptr();
+  }
+  return *this;
+}
+
+Simulation::State& Simulation::State::operator=(const TaskPW& task) {
+  this->epoch = 0;
+  this->num_burnin_epochs = 0;
+  this->burnin_completed = false;
+  this->num_active_lefs = 0;
+  this->num_contacts = 0;
+
   this->id = task.id;
   this->chrom = task.chrom;
   this->cell_id = task.cell_id;
@@ -726,17 +890,7 @@ Simulation::StatePW& Simulation::StatePW::operator=(const TaskPW& task) {
   return *this;
 }
 
-void Simulation::StatePW::resize_buffers(size_t new_size) {
-  if (new_size == (std::numeric_limits<size_t>::max)()) {
-    new_size = this->num_lefs;
-  }
-  this->_resize_buffers(new_size);
-  barrier_mask.resize(this->barriers.size());
-}
-
-void Simulation::StatePW::reset_buffers() { this->_reset_buffers(); }
-
-std::string Simulation::StatePW::to_string() const noexcept {
+std::string Simulation::State::to_string() const noexcept {
   return fmt::format(FMT_STRING("StatePW:\n - TaskID {}\n"
                                 " - Chrom: {}[{}-{}]\n"
                                 " - Range start: {}\n"
@@ -781,6 +935,292 @@ std::pair<size_t, size_t> Simulation::process_collisions(
       chrom, lefs, barriers.size(), rev_lef_ranks, fwd_lef_ranks, rev_moves, fwd_moves,
       rev_collisions, fwd_collisions, rand_eng, num_rev_units_at_5prime, num_fwd_units_at_3prime);
   return std::make_pair(num_rev_units_at_5prime, num_fwd_units_at_3prime);
+}
+
+void Simulation::compute_loop_size_stats(const absl::Span<const Lef> lefs,
+                                         std::deque<double>& cfx_of_variation_buff,
+                                         std::deque<double>& avg_loop_size_buff,
+                                         const size_t buff_capacity) noexcept {
+  assert(cfx_of_variation_buff.size() == avg_loop_size_buff.size());  // NOLINT
+  if (lefs.empty()) {
+    cfx_of_variation_buff.clear();
+    avg_loop_size_buff.clear();
+    return;
+  }
+  const auto avg_loop_size = [&]() {
+    return static_cast<double>(std::accumulate(
+               lefs.begin(), lefs.end(), bp_t(0),
+               [](bp_t accumulator, const auto& lef) { return accumulator + lef.loop_size(); })) /
+           static_cast<double>(lefs.size());
+  }();
+
+  const auto avg_loop_size_std = [&]() {
+    const auto sum_of_squared_devs = std::accumulate(
+        lefs.begin(), lefs.end(), 0.0, [&](const auto accumulator, const auto& lef) {
+          const auto n = static_cast<double>(lef.loop_size()) - avg_loop_size;
+          return accumulator + (n * n);
+        });
+
+    return std::sqrt(sum_of_squared_devs / static_cast<double>(lefs.size()));
+  }();
+
+  if (avg_loop_size_buff.size() == buff_capacity) {
+    avg_loop_size_buff.pop_front();
+    cfx_of_variation_buff.pop_front();
+  }
+
+  avg_loop_size_buff.push_back(avg_loop_size);
+  cfx_of_variation_buff.push_back(avg_loop_size_std / avg_loop_size_buff.back());
+}
+
+bool Simulation::evaluate_burnin(const std::deque<double>& cfx_of_variation_buff,
+                                 const std::deque<double>& avg_loop_size_buff,
+                                 const size_t buff_capacity) noexcept {
+  assert(cfx_of_variation_buff.size() == avg_loop_size_buff.size());  // NOLINT
+  assert(cfx_of_variation_buff.size() <= buff_capacity);              // NOLINT
+
+  if (cfx_of_variation_buff.size() != buff_capacity) {
+    return false;
+  }
+
+  const auto avg_cov =
+      std::accumulate(cfx_of_variation_buff.begin(), cfx_of_variation_buff.end(), 0.0) /
+      static_cast<double>(buff_capacity);
+
+  const auto cov_std = [&]() {
+    const auto sum_of_squared_devs =
+        std::accumulate(cfx_of_variation_buff.begin(), cfx_of_variation_buff.end(), 0.0,
+                        [&](const auto accumulator, auto n) {
+                          n -= avg_cov;
+                          return accumulator + (n * n);
+                        });
+
+    return std::sqrt(sum_of_squared_devs / static_cast<double>(buff_capacity));
+  }();
+
+  const auto cfx_of_variation_is_stable = cov_std <= 0.02;
+  // if (!cfx_of_variation_is_stable) {
+  //   return false;
+  // }
+
+  size_t n = 0;
+  for (size_t i = 1; i < buff_capacity; ++i) {
+    n += static_cast<size_t>(avg_loop_size_buff[i - 1] > avg_loop_size_buff[i]);
+  }
+
+  const auto avg_loop_size_is_stable = n >= ((buff_capacity + 1) / 2);
+
+#if 0
+  const auto avg_loop_size =
+      std::accumulate(avg_loop_size_buff.begin(), avg_loop_size_buff.end(), 0.0) /
+      static_cast<double>(buff_capacity);
+
+  fmt::print(stderr, FMT_STRING("{}\n"), fmt::join(avg_loop_size_buff, "\t"));
+
+  fmt::print(stderr,
+             FMT_STRING("avg_loop_size={}; avg_cov={}; cov_std={}; n={}/{}; cov={}; size={};\n"),
+             avg_loop_size, avg_cov, cov_std, n, avg_loop_size_buff.size(),
+             cfx_of_variation_is_stable ? "OK" : "KO", avg_loop_size_is_stable ? "OK" : "KO");
+#endif
+  return avg_loop_size_is_stable && cfx_of_variation_is_stable;
+}
+
+void Simulation::run_burnin(State& s, const double lef_binding_rate_burnin) const {
+  do {
+    ++s.num_burnin_epochs;
+    if (s.num_active_lefs != s.num_lefs) {
+      const auto num_lefs_to_bind =
+          modle::random::poisson_distribution<size_t>{lef_binding_rate_burnin}(s.rand_eng);
+      s.num_active_lefs = std::min(s.num_active_lefs + num_lefs_to_bind, s.num_lefs);
+    } else {
+      Simulation::compute_loop_size_stats(s.get_lefs(), s.get_cfx_of_variation(),
+                                          s.get_avg_loop_sizes(), this->burnin_window_size);
+
+      s.burnin_completed = Simulation::evaluate_burnin(
+          s.get_cfx_of_variation(), s.get_avg_loop_sizes(), this->burnin_window_size);
+
+      if (!s.burnin_completed && s.epoch >= this->max_burnin_epochs) {
+        s.burnin_completed = true;
+        spdlog::warn(
+            FMT_STRING("The burn-in phase for '{}' from cell #{} was terminated earlier than "
+                       "it should've as its simulation instance failed to stabilize "
+                       "within --max-burnin-epochs={} epochs."),
+            s.chrom->name(), s.cell_id, this->max_burnin_epochs);
+      }
+      // if (s.burnin_completed) {
+      //  fmt::print(stdout, FMT_STRING("TID={}; burnin epochs={}\n"), s.id, s.num_burnin_epochs);
+      //}
+    }
+    // Guard against the rare occasion where the poisson prng samples 0 in the first epoch
+  } while (s.num_active_lefs == 0);
+}
+
+void Simulation::simulate_one_cell(State& s) const {
+  assert(s.epoch == 0);              // NOLINT
+  assert(s.num_burnin_epochs == 0);  // NOLINT
+  assert(!s.burnin_completed);       // NOLINT
+  assert(s.num_active_lefs == 0);    // NOLINT
+
+  // use the current epoch when generating error messages
+  try {
+    // Seed is computed based on chrom. name, size and cellid
+    s.seed = s.chrom->hash(s.xxh_state.get(), this->seed, s.cell_id);
+    s.rand_eng = random::PRNG(s.seed);
+
+    const auto lef_binding_rate_burnin =
+        static_cast<double>(s.num_lefs) /
+        static_cast<double>(this->burnin_target_epochs_for_lef_activation);
+
+    // Compute the avg. # of LEFs to use to sample contact every iterations
+    const auto avg_nlefs_to_sample =
+        static_cast<double>(s.num_lefs) * this->lef_fraction_contact_sampling;
+
+    // Local counter for the number of contacts generated by the current kernel instance
+    s.num_contacts = 0;
+    assert((s.num_target_contacts != 0) ==  // NOLINT
+           (s.num_target_epochs == (std::numeric_limits<size_t>::max)()));
+
+    // Generate initial extr. barrier states, so that they are already at or close to equilibrium
+    for (auto i = 0UL; i < s.barriers.size(); ++i) {
+      s.get_barrier_mask()[i] = random::bernoulli_trial{s.barriers[i].occupancy()}(s.rand_eng);
+    }
+
+    if (this->skip_burnin) {
+      s.num_active_lefs = s.num_lefs;
+      s.burnin_completed = true;
+    }
+    for (; s.epoch < std::max(s.num_burnin_epochs + s.num_target_epochs, s.num_target_epochs);
+         ++s.epoch) {
+      if (!s.burnin_completed) {
+        this->Simulation::run_burnin(s, lef_binding_rate_burnin);
+      }
+
+      ////////////////////////
+      // Simulate one epoch //
+      ////////////////////////
+
+      const auto num_lefs_to_release = [&]() {
+        const auto avg_extrusion_speed = static_cast<double>(
+            s.burnin_completed
+                ? this->rev_extrusion_speed + this->fwd_extrusion_speed
+                : this->rev_extrusion_speed_burnin + this->fwd_extrusion_speed_burnin);
+
+        const auto bp_extruded_in_current_epoch =
+            avg_extrusion_speed * static_cast<double>(s.num_active_lefs);
+        const auto avg_num_lefs_to_release_in_current_epoch =
+            bp_extruded_in_current_epoch / static_cast<double>(this->average_lef_lifetime);
+
+        // Sample nlefs to be released while in burn-in phase
+        return std::min(s.num_active_lefs,
+                        random::poisson_distribution<size_t>{
+                            avg_num_lefs_to_release_in_current_epoch}(s.rand_eng));
+      }();
+
+      // Select inactive LEFs and bind them
+      Simulation::select_and_bind_lefs(s);
+
+      if (s.burnin_completed) {  // Register contacts
+        this->sample_and_register_contacts(s, avg_nlefs_to_sample);
+        if (s.num_target_contacts != 0 && s.num_contacts >= s.num_target_contacts) {
+          return;  // Enough contact have been generated. Yay!
+        }
+      }
+
+      this->generate_moves(*s.chrom, s.get_lefs(), s.get_rev_ranks(), s.get_fwd_ranks(),
+                           s.get_rev_moves(), s.get_fwd_moves(), s.burnin_completed, s.rand_eng);
+
+      CTCF::update_states(s.barriers, s.get_barrier_mask(), s.rand_eng);
+
+      // Reset collision masks
+      std::fill(s.get_rev_collisions().begin(), s.get_rev_collisions().end(), NO_COLLISION);
+      std::fill(s.get_fwd_collisions().begin(), s.get_fwd_collisions().end(), NO_COLLISION);
+
+      // Detect collision and correct moves
+      const auto [num_rev_units_at_5prime, num_fwd_units_at_3prime] =
+          Simulation::process_collisions(*s.chrom, s.get_lefs(), s.barriers, s.get_barrier_mask(),
+                                         s.get_rev_ranks(), s.get_fwd_ranks(), s.get_rev_moves(),
+                                         s.get_fwd_moves(), s.get_rev_collisions(),
+                                         s.get_fwd_collisions(), s.rand_eng);
+      // Advance LEFs
+      Simulation::extrude(*s.chrom, s.get_lefs(), s.get_rev_moves(), s.get_fwd_moves(),
+                          num_rev_units_at_5prime, num_fwd_units_at_3prime);
+
+      // The vector of affinities is used to bias LEF release towards LEFs that are not in a hard
+      // stall condition
+      this->generate_lef_unloader_affinities(s.get_lefs(), s.barriers, s.get_rev_collisions(),
+                                             s.get_fwd_collisions(),
+                                             s.get_lef_unloader_affinities());
+
+      // Reusing this buffer is ok, as at this point we don't need access to collision information
+      const auto lef_idx = s.get_idx_buff(num_lefs_to_release);
+      Simulation::select_lefs_to_release(lef_idx, s.get_lef_unloader_affinities(), s.rand_eng);
+      Simulation::release_lefs(s.get_lefs(), lef_idx);
+    }
+  } catch (const std::exception& err) {
+    throw std::runtime_error(fmt::format(
+        FMT_STRING("Caught an exception while simulating epoch #{} in cell #{} of {}:\n{}"),
+        s.epoch, s.cell_id, s.chrom->name(), err.what()));
+  }
+}
+
+void Simulation::select_and_bind_lefs(State& s) noexcept(utils::ndebug_defined()) {
+  const auto lef_mask = s.get_idx_buff();
+  Simulation::select_lefs_to_bind(s.get_lefs(), lef_mask);
+  if (s.is_modle_sim_state()) {
+    Simulation::bind_lefs(*s.chrom, s.get_lefs(), s.get_rev_ranks(), s.get_fwd_ranks(), lef_mask,
+                          s.rand_eng, s.epoch);
+    return;
+  }
+  Simulation::bind_lefs(s.window_start, s.window_end, s.get_lefs(), s.get_rev_ranks(),
+                        s.get_fwd_ranks(), lef_mask, s.rand_eng, s.epoch);
+}
+
+void Simulation::sample_and_register_contacts(State& s, const double avg_nlefs_to_sample) const {
+  assert(s.num_active_lefs == s.num_lefs);  // NOLINT
+  auto nlefs_to_sample =
+      std::min(s.num_lefs, random::poisson_distribution<size_t>{avg_nlefs_to_sample}(s.rand_eng));
+
+  if (s.num_target_contacts != 0) {  // When using the target contact density as stopping
+    // criterion, don't overshoot the target number of contacts
+    nlefs_to_sample = std::min(nlefs_to_sample, s.num_target_contacts - s.num_contacts);
+  }
+
+  // Select LEFs to be used for contact registration.
+  // We are sampling from fwd ranks to avoid having to allocate a vector of indices just to
+  // do this sampling
+  const auto lef_idx = s.get_idx_buff(nlefs_to_sample);
+  random_sample(s.get_fwd_ranks().begin(), s.get_fwd_ranks().end(), lef_idx.begin(), lef_idx.size(),
+                s.rand_eng);
+  if constexpr (utils::ndebug_not_defined()) {
+    if (!std::all_of(lef_idx.begin(), lef_idx.end(),
+                     [&](const auto i) { return i < s.num_lefs; })) {
+      throw std::runtime_error(
+          fmt::format(FMT_STRING("lef_idx.size()={}; num_lefs={};\nlef_idx=[{}]\n"), lef_idx.size(),
+                      s.num_lefs, fmt::join(lef_idx, ", ")));
+    }
+  }
+  const auto start_pos = s.is_modle_sim_state() ? s.chrom->start_pos() : s.window_start;
+  const auto end_pos = s.is_modle_sim_state() ? s.chrom->end_pos() : s.window_end;
+
+  assert(s.contacts);  // NOLINT
+  if (this->randomize_contacts) {
+    s.num_contacts += this->register_contacts_w_randomization(
+        start_pos + 1, end_pos - 1, *s.contacts, s.get_lefs(), lef_idx, s.rand_eng);
+  } else {
+    s.num_contacts +=
+        this->register_contacts(start_pos + 1, end_pos - 1, *s.contacts, s.get_lefs(), lef_idx);
+  }
+}
+
+void print_avg_loop_size(const size_t epoch, const size_t num_active_lefs,
+                         const bool burnin_completed, const Simulation::State& state) {
+  std::vector<bp_t> loop_sizes(num_active_lefs, 0);
+  std::transform(state.get_lefs().begin(), state.get_lefs().end(), loop_sizes.begin(),
+                 [](const auto& lef) { return lef.fwd_unit.pos() - lef.rev_unit.pos(); });
+  // chrom_name, cell_id, epoch, burnin_completed, num_lefs, num_active_lefs, loop_sizes
+  fmt::print(stdout, FMT_COMPILE("{}\t{}\t{}\t{}\t{}\t{}\t{}\n"), state.chrom->name(),
+             state.cell_id, epoch, burnin_completed ? "True" : "False", state.num_lefs,
+             num_active_lefs, fmt::join(loop_sizes, "\t"));
 }
 
 }  // namespace modle

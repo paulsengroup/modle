@@ -196,6 +196,7 @@ void Simulation::simulate_worker(const uint64_t tid,
           return;
         }
         // Resize and reset buffers
+        task.chrom->allocate_contacts(this->bin_size, this->diagonal_width);
         local_state = task;            // Set simulation state based on task data
         local_state.resize_buffers();  // This resizes buffers based on the nlefs to be simulated
         local_state.reset_buffers();   // Clear all buffers
@@ -213,9 +214,6 @@ void Simulation::simulate_worker(const uint64_t tid,
                        target_epochs, task.chrom->name(), num_cells);
         }
 
-        // Allocate the contact matrix. Once it's not needed anymore, the contact matrix will be
-        // de-allocated by the thread that is writing contacts to disk
-        local_state.chrom->allocate_contacts(this->bin_size, this->diagonal_width);
         // Start the simulation kernel
         Simulation::simulate_one_cell(local_state);
 

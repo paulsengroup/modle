@@ -91,4 +91,8 @@ void Lef::release() noexcept(utils::ndebug_defined()) {
 
 void Lef::reset() noexcept(utils::ndebug_defined()) { this->release(); }
 
+bp_t Lef::loop_size() const noexcept {
+  assert(this->rev_unit.pos() <= this->fwd_unit.pos());  // NOLINT
+  return this->fwd_unit.pos() - this->rev_unit.pos();
+}
 }  // namespace modle

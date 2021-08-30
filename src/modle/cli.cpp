@@ -187,14 +187,14 @@ void add_common_options(CLI::App& subcommand, modle::Config& c) {
       ->capture_default_str();
 
   gen.add_flag(
-      "--skip-burn-in",
+      "--skip-burnin",
       c.skip_burnin,
       "Skip the burn-in phase and start counting contacts from the first extrusion round.")
       ->capture_default_str();
 
   gen.add_option(
-      "--burn-in-lef-activation-epochs",
-       c.burnin_lef_binding_epochs,
+      "--burnin-target-epochs-for-lef-activation",
+       c.burnin_target_epochs_for_lef_activation,
       "Number of epochs over which LEFs are progressively activated and bound to DNA.\n"
       "Note: this number is approximate, as LEFs are activate using a Possion process.\n"
       "By default this parameter is computed based on the average LEF lifetime, overall extrusion speed "
@@ -203,15 +203,19 @@ void add_common_options(CLI::App& subcommand, modle::Config& c) {
        ->check(CLI::PositiveNumber);
 
   gen.add_option(
-      "--burn-in-epochs",
-       c.burnin_epochs,
-       "Number of burnin epochs.\n"
-       "Once all LEFs have been activated (see --burn-in-lef-activation-epochs), MoDLE will "
-       "simulate loop extrusion for exactly --burn-in-epochs without recording contacts.\n"
-       "By default this parameter is computed based on the average LEF lifetime, overall extrusion speed "
-       "and burn-in extrusion speed coefficient (controlled by --avg-lef-lifetime, --fwd/rev-extrusion-speed "
-       "and --burn-in-extr-speed-coefficient respectively).")
-       ->check(CLI::PositiveNumber);
+      "--burnin-window-size",
+      c.burnin_window_size,
+      "Number of epochs used to determine whether a simulation instance has reached a stable state.\n"
+      "This is used to decide whether to terminate the burn-in phase.")
+      ->check(CLI::PositiveNumber)
+      ->capture_default_str();
+
+  gen.add_option(
+      "--max-burnin-epochs",
+       c.max_burnin_epochs,
+       "Maximum number of epochs to spend in burn-in phase.")
+       ->check(CLI::PositiveNumber)
+       ->capture_default_str();
 
   gen.add_option(
       "--burn-in-extr-speed-coefficient",
@@ -666,16 +670,14 @@ void Cli::transform_args() {
   }
 
   // Compute the number of epochs to be spent in burn-in phase.
-  // Note: c.burnin_lef_binding_epochs is the target number of epochs.
+  // Note: c.burnin_target_epochs_for_lef_activation is the target number of epochs.
   //       The precise number of epochs cannot be easily computed ahead of time,
   //       as LEFs are progressively activated using a Poisson process.
   if (!c.skip_burnin) {
     const auto avg_extr_speed_burnin =
         static_cast<double>(c.rev_extrusion_speed_burnin + c.fwd_extrusion_speed_burnin);
-    c.burnin_lef_binding_epochs = static_cast<size_t>(
+    c.burnin_target_epochs_for_lef_activation = static_cast<size_t>(
         std::round(static_cast<double>(c.average_lef_lifetime * 4) / avg_extr_speed_burnin));
-    c.burnin_epochs = static_cast<size_t>(
-        std::round(static_cast<double>(c.average_lef_lifetime) / avg_extr_speed_burnin));
   }
 }
 

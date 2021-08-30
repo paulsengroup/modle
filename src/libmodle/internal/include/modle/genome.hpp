@@ -86,8 +86,8 @@ class Chromosome {
   bool deallocate_contacts();
   [[nodiscard]] const contact_matrix_t& contacts() const;
   [[nodiscard]] contact_matrix_t& contacts();
-  [[nodiscard]] const contact_matrix_t* contacts_ptr() const;
-  [[nodiscard]] contact_matrix_t* contacts_ptr();
+  [[nodiscard]] const std::shared_ptr<contact_matrix_t> contacts_ptr() const;
+  [[nodiscard]] std::shared_ptr<contact_matrix_t> contacts_ptr();
   [[nodiscard]] uint64_t hash(XXH3_state_t* xxh_state, uint64_t seed, size_t cell_id) const;
   [[nodiscard]] uint64_t hash(uint64_t seed, size_t cell_id) const;
 
@@ -101,7 +101,7 @@ class Chromosome {
   bp_t _size{(std::numeric_limits<bp_t>::max)()};
   size_t _id{(std::numeric_limits<size_t>::max)()};
   IITree<bp_t, ExtrusionBarrier> _barriers{};
-  absl::optional<contact_matrix_t> _contacts{};
+  std::shared_ptr<contact_matrix_t> _contacts{};
   std::mutex _contacts_mutex{};  // Protect _contacts from concurrent allocations/deallocations
   std::vector<bed_tree_value_t> _features{};
   bool _ok{true};

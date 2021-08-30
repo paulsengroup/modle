@@ -238,16 +238,16 @@ void Chromosome::increment_contacts(bp_t bin1, bp_t bin2) {
 
 bool Chromosome::allocate_contacts(bp_t bin_size, bp_t diagonal_width) {
   if (std::scoped_lock l(this->_contacts_mutex); !this->_contacts) {
-    this->_contacts = contact_matrix_t{this->simulated_size(), diagonal_width, bin_size};
+    this->_contacts =
+        std::make_shared<contact_matrix_t>(this->simulated_size(), diagonal_width, bin_size);
     return true;
   }
   return false;
 }
 
 bool Chromosome::deallocate_contacts() {
-  if (std::scoped_lock l(this->_contacts_mutex); this->_contacts) {
-    auto tmp = absl::optional<contact_matrix_t>{};
-    this->_contacts.swap(tmp);
+  if (this->_contacts) {
+    this->_contacts = nullptr;
     return true;
   }
   return false;
@@ -263,16 +263,16 @@ Chromosome::contact_matrix_t& Chromosome::contacts() {
   return *this->_contacts;
 }
 
-const Chromosome::contact_matrix_t* Chromosome::contacts_ptr() const {
+const std::shared_ptr<Chromosome::contact_matrix_t> Chromosome::contacts_ptr() const {
   if (this->_contacts) {
-    return &(*this->_contacts);
+    return this->_contacts;
   }
   return nullptr;
 }
 
-Chromosome::contact_matrix_t* Chromosome::contacts_ptr() {
+std::shared_ptr<Chromosome::contact_matrix_t> Chromosome::contacts_ptr() {
   if (this->_contacts) {
-    return &(*this->_contacts);
+    return this->_contacts;
   }
   return nullptr;
 }
@@ -514,7 +514,7 @@ size_t Genome::size() const {
 }
 
 size_t Genome::simulated_size() const {
-  return std::accumulate(this->_chromosomes.begin(), this->_chromosomes.end(), 0UL,
+  return std::accumulate(this->_chromosomes.begin(), this->_chromosomes.end(), size_t(0),
                          [](auto accumulator, const auto& chrom) {
                            return accumulator + (chrom.end_pos() - chrom.start_pos());
                          });

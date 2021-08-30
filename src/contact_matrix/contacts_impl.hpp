@@ -75,7 +75,8 @@ ContactMatrix<I>::ContactMatrix(const absl::Span<const I> contacts, size_t nrows
       _tot_contacts(tot_contacts),
       _locks(_ncols) {
   if (this->_tot_contacts == 0 && !this->_contacts.empty()) {
-    this->_tot_contacts = std::accumulate(this->_contacts.begin(), this->_contacts.end(), 0UL);
+    this->_tot_contacts =
+        std::accumulate(this->_contacts.begin(), this->_contacts.end(), size_t(0));
   }
 }
 
