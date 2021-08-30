@@ -235,11 +235,13 @@ class Simulation : Config {
   void perturbate_worker(uint64_t tid,
                          moodycamel::BlockingConcurrentQueue<Simulation::TaskPW>& task_queue,
                          compressed_io::Writer& out_stream, std::mutex& out_stream_mutex,
-                         std::mutex& cooler_mutex, size_t task_batch_size = 1);  // NOLINT
+                         std::mutex& cooler_mutex,
+                         size_t task_batch_size = 1);  // NOLINT
 
   void replay_worker(uint64_t tid,
                      moodycamel::BlockingConcurrentQueue<Simulation::TaskPW>& task_queue,
-                     std::mutex& cooler_mutex, size_t task_batch_size = 32);  // NOLINT
+                     std::mutex& cooler_mutex,
+                     size_t task_batch_size = 32);  // NOLINT
 
   /// Bind inactive LEFs, then sort them by their genomic coordinates.
 
@@ -487,8 +489,8 @@ class Simulation : Config {
                                       size_t buff_capacity) noexcept;
 
   static bool evaluate_burnin(const std::deque<double>& cfx_of_variation_buff,
-                              const std::deque<double>& avg_loop_size_buff,
-                              size_t buff_capacity) noexcept;
+                              const std::deque<double>& avg_loop_size_buff, size_t buff_capacity,
+                              size_t window_size) noexcept;
 
   void run_burnin(State& s, double lef_binding_rate_burnin) const;
 

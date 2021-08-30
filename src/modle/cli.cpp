@@ -203,10 +203,17 @@ void add_common_options(CLI::App& subcommand, modle::Config& c) {
        ->check(CLI::PositiveNumber);
 
   gen.add_option(
-      "--burnin-window-size",
-      c.burnin_window_size,
+      "--burnin-history-length",
+      c.burnin_history_length,
       "Number of epochs used to determine whether a simulation instance has reached a stable state.\n"
-      "This is used to decide whether to terminate the burn-in phase.")
+      "This is used to decide whether to terminate the burn-in phase at a given epoch.")
+      ->check(CLI::PositiveNumber)
+      ->capture_default_str();
+
+gen.add_option(
+      "--burnin-smoothing-window-size",
+      c.burnin_smoothing_window_size,
+      "Window size used to smooth values during the burnin phase.")
       ->check(CLI::PositiveNumber)
       ->capture_default_str();
 
@@ -218,7 +225,7 @@ void add_common_options(CLI::App& subcommand, modle::Config& c) {
        ->capture_default_str();
 
   gen.add_option(
-      "--burn-in-extr-speed-coefficient",
+      "--burnin-extr-speed-coefficient",
       c.burnin_speed_coefficient,
       "Extrusion speed coefficient to apply during the burn-in phase.\n"
       "Setting this to numbers > 1.0 will speed-up the burn-in phase.")
@@ -548,6 +555,7 @@ const Config& Cli::parse_arguments() {
     this->_config.nthreads = config_backup.nthreads;
   }
 
+  this->validate_args();
   this->transform_args();
   this->_config.argc = _argc;
   this->_config.argv = _argv;
@@ -617,6 +625,27 @@ std::string Cli::detect_path_collisions(modle::Config& c) const {
 }
 
 int Cli::exit(const CLI::ParseError& e) const { return this->_cli.exit(e); }
+
+void Cli::validate_args() const {
+  const auto& c = this->_config;
+  std::vector<std::string> errors;
+
+  if (c.burnin_smoothing_window_size > c.burnin_history_length) {
+    assert(this->_cli.get_option("--burnin-smoothing-window-size"));  // NOLINT
+    assert(this->_cli.get_option("--burnin-history-length"));         // NOLINT
+    errors.emplace_back(fmt::format(
+        FMT_STRING("The value passed to {} should be less or equal than that of {} ({} > {})"),
+        "--burnin-smoothing-window-size", "--burnin-history-length", c.burnin_smoothing_window_size,
+        c.burnin_history_length));
+  }
+
+  if (!errors.empty()) {
+    throw std::runtime_error(fmt::format(
+        FMT_STRING(
+            "The following error(s) where encountered while validating CLI arguments:\n - {}"),
+        fmt::join(errors, "\n - ")));
+  }
+}
 
 void Cli::transform_args() {
   auto& c = this->_config;

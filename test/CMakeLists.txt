@@ -10,6 +10,7 @@ target_sources(
   catch_main
   PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/catch_main.cpp
           ${CMAKE_CURRENT_SOURCE_DIR}/contact_matrix/contacts_test.cpp
+          ${CMAKE_CURRENT_SOURCE_DIR}/common/math_test.cpp
           ${CMAKE_CURRENT_SOURCE_DIR}/correlation/common.hpp
           ${CMAKE_CURRENT_SOURCE_DIR}/correlation/correlation_test.cpp
           ${CMAKE_CURRENT_SOURCE_DIR}/correlation/correlation_utils_test.cpp
@@ -31,6 +32,7 @@ target_link_libraries(
           Boost::headers
           Catch2::Catch2
           Modle::cmatrix
+          Modle::common
           Modle::correlation
           Modle::interval_tree
           Modle::libmodle

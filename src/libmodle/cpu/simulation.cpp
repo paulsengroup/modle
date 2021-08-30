@@ -975,7 +975,7 @@ void Simulation::compute_loop_size_stats(const absl::Span<const Lef> lefs,
 
 bool Simulation::evaluate_burnin(const std::deque<double>& cfx_of_variation_buff,
                                  const std::deque<double>& avg_loop_size_buff,
-                                 const size_t buff_capacity) noexcept {
+                                 const size_t buff_capacity, const size_t window_size) noexcept {
   assert(cfx_of_variation_buff.size() == avg_loop_size_buff.size());  // NOLINT
   assert(cfx_of_variation_buff.size() <= buff_capacity);              // NOLINT
 
@@ -983,44 +983,62 @@ bool Simulation::evaluate_burnin(const std::deque<double>& cfx_of_variation_buff
     return false;
   }
 
-  const auto avg_cov =
-      std::accumulate(cfx_of_variation_buff.begin(), cfx_of_variation_buff.end(), 0.0) /
-      static_cast<double>(buff_capacity);
+  (void)avg_loop_size_buff;
 
-  const auto cov_std = [&]() {
-    const auto sum_of_squared_devs =
-        std::accumulate(cfx_of_variation_buff.begin(), cfx_of_variation_buff.end(), 0.0,
-                        [&](const auto accumulator, auto n) {
-                          n -= avg_cov;
-                          return accumulator + (n * n);
-                        });
-
-    return std::sqrt(sum_of_squared_devs / static_cast<double>(buff_capacity));
-  }();
+  /*
+  const auto cov_std =
+      math::standard_dev(cfx_of_variation_buff.begin(), cfx_of_variation_buff.end());
 
   const auto cfx_of_variation_is_stable = cov_std <= 0.02;
   // if (!cfx_of_variation_is_stable) {
   //   return false;
   // }
-
+*/
+  // Count the number of adjacent pairs of values where the first value is larger than the second
+  // This visually corresponds to a local dip in the avg loop size plot
+  // When we are in a stable state the above line should be relatively flat. For this reason, we
+  // expect n to be roughly equal to 1/2 of all the measurements
   size_t n = 0;
-  for (size_t i = 1; i < buff_capacity; ++i) {
-    n += static_cast<size_t>(avg_loop_size_buff[i - 1] > avg_loop_size_buff[i]);
+  assert(window_size < buff_capacity);  // NOLINT
+  for (auto it1 = cfx_of_variation_buff.begin() + 1,
+            it2 = cfx_of_variation_buff.begin() + static_cast<std::ptrdiff_t>(window_size + 1);
+       it2 != cfx_of_variation_buff.end(); ++it1, ++it2) {
+    const auto n1 = math::mean(it1 - 1, it2 - 1);
+    const auto n2 = math::mean(it1, it2);
+    n += static_cast<size_t>(n1 > n2);
   }
+  const auto r1 = static_cast<double>(n) / static_cast<double>(buff_capacity - window_size - n);
 
-  const auto avg_loop_size_is_stable = n >= ((buff_capacity + 1) / 2);
+  const auto cfx_of_variation_is_stable = r1 >= 0.45 && r1 <= 0.55;
+
+  n = 0;
+  for (auto it1 = avg_loop_size_buff.begin() + 1,
+            it2 = avg_loop_size_buff.begin() + static_cast<std::ptrdiff_t>(window_size + 1);
+       it2 != avg_loop_size_buff.end(); ++it1, ++it2) {
+    const auto n1 = math::mean(it1 - 1, it2 - 1);
+    const auto n2 = math::mean(it1, it2);
+    n += static_cast<size_t>(n1 > n2);
+  }
+  const auto r2 = static_cast<double>(n) / static_cast<double>(buff_capacity - window_size - n);
+
+  const auto avg_loop_size_is_stable = r2 >= 0.45 && r2 <= 0.55;
 
 #if 0
+  const auto cov_std =
+      math::standard_dev(cfx_of_variation_buff.begin(), cfx_of_variation_buff.end());
+  const auto avg_cov = math::mean(cfx_of_variation_buff.begin(), cfx_of_variation_buff.end());
   const auto avg_loop_size =
       std::accumulate(avg_loop_size_buff.begin(), avg_loop_size_buff.end(), 0.0) /
       static_cast<double>(buff_capacity);
 
-  fmt::print(stderr, FMT_STRING("{}\n"), fmt::join(avg_loop_size_buff, "\t"));
+  // fmt::print(stderr, FMT_STRING("{}\n"), fmt::join(avg_loop_size_buff, "\t"));
 
-  fmt::print(stderr,
-             FMT_STRING("avg_loop_size={}; avg_cov={}; cov_std={}; n={}/{}; cov={}; size={};\n"),
-             avg_loop_size, avg_cov, cov_std, n, avg_loop_size_buff.size(),
-             cfx_of_variation_is_stable ? "OK" : "KO", avg_loop_size_is_stable ? "OK" : "KO");
+  fmt::print(
+      stderr,
+      FMT_STRING(
+          "avg_loop_size={}; avg_cov={}; cov_std={}; r1={}; r2={}; cov={}; avg_loop_size={};\n"),
+      avg_loop_size, avg_cov, cov_std, r1, r2, cfx_of_variation_is_stable ? "OK" : "KO",
+      avg_loop_size_is_stable ? "OK" : "KO");
 #endif
   return avg_loop_size_is_stable && cfx_of_variation_is_stable;
 }
@@ -1034,10 +1052,11 @@ void Simulation::run_burnin(State& s, const double lef_binding_rate_burnin) cons
       s.num_active_lefs = std::min(s.num_active_lefs + num_lefs_to_bind, s.num_lefs);
     } else {
       Simulation::compute_loop_size_stats(s.get_lefs(), s.get_cfx_of_variation(),
-                                          s.get_avg_loop_sizes(), this->burnin_window_size);
+                                          s.get_avg_loop_sizes(), this->burnin_history_length);
 
       s.burnin_completed = Simulation::evaluate_burnin(
-          s.get_cfx_of_variation(), s.get_avg_loop_sizes(), this->burnin_window_size);
+          s.get_cfx_of_variation(), s.get_avg_loop_sizes(), this->burnin_history_length,
+          this->burnin_smoothing_window_size);
 
       if (!s.burnin_completed && s.epoch >= this->max_burnin_epochs) {
         s.burnin_completed = true;
@@ -1047,9 +1066,9 @@ void Simulation::run_burnin(State& s, const double lef_binding_rate_burnin) cons
                        "within --max-burnin-epochs={} epochs."),
             s.chrom->name(), s.cell_id, this->max_burnin_epochs);
       }
-      // if (s.burnin_completed) {
-      //  fmt::print(stdout, FMT_STRING("TID={}; burnin epochs={}\n"), s.id, s.num_burnin_epochs);
-      //}
+      if (s.burnin_completed) {
+        fmt::print(stdout, FMT_STRING("TID={}; burnin epochs={}\n"), s.id, s.num_burnin_epochs);
+      }
     }
     // Guard against the rare occasion where the poisson prng samples 0 in the first epoch
   } while (s.num_active_lefs == 0);

@@ -54,6 +54,7 @@ class Cli {
   void make_simulation_subcommand();
   void make_perturbate_subcommand();
   void make_replay_subcommand();
+  void validate_args() const;
   void transform_args();
 };
 

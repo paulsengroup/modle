@@ -81,6 +81,13 @@ inline bool detect_path_collision(
 [[nodiscard]] inline std::string detect_path_collision(
     const boost::filesystem::path& p, bool force_overwrite = false,
     boost::filesystem::file_type expected_type = boost::filesystem::regular_file);
+
+struct identity {
+  template <class T>
+  [[nodiscard]] constexpr T&& operator()(T&& a) const noexcept;
+  using is_transparent = void;
+};
+
 }  // namespace modle::utils
 
 #include "../../../utils_impl.hpp"  // IWYU pragma: export
