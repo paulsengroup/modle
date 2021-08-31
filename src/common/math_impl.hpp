@@ -25,6 +25,7 @@ double mean(InputIt begin, InputIt end, UnaryOperation op) {
 template <class InputIt, class OutputIt, class I, class UnaryOperation, class>
 size_t moving_average(InputIt input_begin, InputIt input_end, OutputIt output_begin,
                       const I window_size, UnaryOperation op) {
+  using OutputItValueT = typename OutputIt::value_type;
   if (static_cast<std::ptrdiff_t>(window_size) >= std::distance(input_begin, input_end)) {
     *output_begin = OutputItValueT(math::mean(input_begin, input_end, op));
     return 1;

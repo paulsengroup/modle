@@ -21,7 +21,7 @@ TEST_CASE("Mean", "[utils][short]") {
   const auto result = Approx(5.0);
 
   CHECK(math::mean(v1.begin(), v1.end()) == result);
-  CHECK(math::mean(v2.begin(), v2.end(), [](const auto fp) { return fp.n; }) == result);
+  CHECK(math::mean(v2.begin(), v2.end(), [](const auto& fp) { return fp.n; }) == result);
 }
 
 TEST_CASE("Moving average", "[utils][short]") {
@@ -44,7 +44,7 @@ TEST_CASE("Moving average", "[utils][short]") {
   output.clear();
   output.resize(results.size());
   REQUIRE(math::moving_average(v2.begin(), v2.end(), output.begin(), window_size,
-                               [](const auto fp) { return fp.n; }) == v1.size() - window_size);
+                               [](const auto& fp) { return fp.n; }) == v1.size() - window_size);
 
   for (size_t i = 0; i < results.size(); ++i) {
     CHECK(results[i] == Approx(output[i]));
@@ -65,8 +65,8 @@ TEST_CASE("Sum of squared deviations", "[utils][short]") {
   const auto result = Approx(110.0);
 
   CHECK(math::sum_of_squared_deviations(v1.begin(), v1.end()) == result);
-  CHECK(math::sum_of_squared_deviations(v2.begin(), v2.end(), [](const auto fp) { return fp.n; }) ==
-        result);
+  CHECK(math::sum_of_squared_deviations(v2.begin(), v2.end(),
+                                        [](const auto& fp) { return fp.n; }) == result);
 }
 
 TEST_CASE("Variance", "[utils][short]") {
@@ -78,7 +78,7 @@ TEST_CASE("Variance", "[utils][short]") {
   const auto result = Approx(10.0);
 
   CHECK(math::variance(v1.begin(), v1.end()) == result);
-  CHECK(math::variance(v2.begin(), v2.end(), [](const auto fp) { return fp.n; }) == result);
+  CHECK(math::variance(v2.begin(), v2.end(), [](const auto& fp) { return fp.n; }) == result);
 }
 
 TEST_CASE("Standard Deviation", "[utils][short]") {
@@ -90,6 +90,6 @@ TEST_CASE("Standard Deviation", "[utils][short]") {
   const auto result = Approx(3.1622776601683795);
 
   CHECK(math::standard_dev(v1.begin(), v1.end()) == result);
-  CHECK(math::standard_dev(v2.begin(), v2.end(), [](const auto fp) { return fp.n; }) == result);
+  CHECK(math::standard_dev(v2.begin(), v2.end(), [](const auto& fp) { return fp.n; }) == result);
 }
 }  // namespace modle::test::math

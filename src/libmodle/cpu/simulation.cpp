@@ -947,12 +947,15 @@ void Simulation::compute_loop_size_stats(const absl::Span<const Lef> lefs,
     avg_loop_size_buff.clear();
     return;
   }
+
   const auto avg_loop_size = [&]() {
     return static_cast<double>(std::accumulate(
                lefs.begin(), lefs.end(), bp_t(0),
                [](bp_t accumulator, const auto& lef) { return accumulator + lef.loop_size(); })) /
            static_cast<double>(lefs.size());
   }();
+  // const auto avg_loop_size =
+  //     math::mean(lefs.begin(), lefs.end(), [](const auto& lef) { return lef.loop_size(); });
 
   const auto avg_loop_size_std = [&]() {
     const auto sum_of_squared_devs = std::accumulate(
@@ -963,6 +966,10 @@ void Simulation::compute_loop_size_stats(const absl::Span<const Lef> lefs,
 
     return std::sqrt(sum_of_squared_devs / static_cast<double>(lefs.size()));
   }();
+
+  // const auto avg_loop_size_std =
+  //     math::standard_dev(lefs.begin(), lefs.end(), avg_loop_size,
+  //                        [](const auto& lef) { return lef->loop_size(); });
 
   if (avg_loop_size_buff.size() == buff_capacity) {
     avg_loop_size_buff.pop_front();
@@ -985,15 +992,6 @@ bool Simulation::evaluate_burnin(const std::deque<double>& cfx_of_variation_buff
 
   (void)avg_loop_size_buff;
 
-  /*
-  const auto cov_std =
-      math::standard_dev(cfx_of_variation_buff.begin(), cfx_of_variation_buff.end());
-
-  const auto cfx_of_variation_is_stable = cov_std <= 0.02;
-  // if (!cfx_of_variation_is_stable) {
-  //   return false;
-  // }
-*/
   // Count the number of adjacent pairs of values where the first value is larger than the second
   // This visually corresponds to a local dip in the avg loop size plot
   // When we are in a stable state the above line should be relatively flat. For this reason, we
@@ -1009,7 +1007,7 @@ bool Simulation::evaluate_burnin(const std::deque<double>& cfx_of_variation_buff
   }
   const auto r1 = static_cast<double>(n) / static_cast<double>(buff_capacity - window_size - n);
 
-  const auto cfx_of_variation_is_stable = r1 >= 0.45 && r1 <= 0.55;
+  const auto cfx_of_variation_is_stable = r1 >= 0.95 && r1 <= 1.05;
 
   n = 0;
   for (auto it1 = avg_loop_size_buff.begin() + 1,
@@ -1021,7 +1019,7 @@ bool Simulation::evaluate_burnin(const std::deque<double>& cfx_of_variation_buff
   }
   const auto r2 = static_cast<double>(n) / static_cast<double>(buff_capacity - window_size - n);
 
-  const auto avg_loop_size_is_stable = r2 >= 0.45 && r2 <= 0.55;
+  const auto avg_loop_size_is_stable = r2 >= 0.95 && r2 <= 1.05;
 
 #if 0
   const auto cov_std =
@@ -1066,12 +1064,23 @@ void Simulation::run_burnin(State& s, const double lef_binding_rate_burnin) cons
                        "within --max-burnin-epochs={} epochs."),
             s.chrom->name(), s.cell_id, this->max_burnin_epochs);
       }
+
       if (s.burnin_completed) {
         fmt::print(stdout, FMT_STRING("TID={}; burnin epochs={}\n"), s.id, s.num_burnin_epochs);
       }
     }
     // Guard against the rare occasion where the poisson prng samples 0 in the first epoch
   } while (s.num_active_lefs == 0);
+}
+
+void print_avg_loop_size(const Simulation::State& s) {
+  std::vector<bp_t> loop_sizes(s.num_active_lefs, 0);
+  std::transform(s.get_lefs().begin(), s.get_lefs().end(), loop_sizes.begin(),
+                 [](const auto& lef) { return lef.loop_size(); });
+  // chrom_name, cell_id, epoch, burnin_epochs, num_lefs, num_active_lefs, loop_sizes
+  fmt::print(stdout, FMT_COMPILE("{}\t{}\t{}\t{}\t{}\t{}\t{}\n"), s.chrom->name(), s.cell_id,
+             s.epoch, s.num_burnin_epochs, s.num_lefs, s.num_active_lefs,
+             fmt::join(loop_sizes, "\t"));
 }
 
 void Simulation::simulate_one_cell(State& s) const {
@@ -1139,6 +1148,9 @@ void Simulation::simulate_one_cell(State& s) const {
       Simulation::select_and_bind_lefs(s);
 
       if (s.burnin_completed) {  // Register contacts
+        //   if (s.num_burnin_epochs < 450 || s.num_burnin_epochs >= 4000) {
+        //     print_avg_loop_size(s);
+        //   }
         this->sample_and_register_contacts(s, avg_nlefs_to_sample);
         if (s.num_target_contacts != 0 && s.num_contacts >= s.num_target_contacts) {
           return;  // Enough contact have been generated. Yay!
@@ -1229,17 +1241,6 @@ void Simulation::sample_and_register_contacts(State& s, const double avg_nlefs_t
     s.num_contacts +=
         this->register_contacts(start_pos + 1, end_pos - 1, *s.contacts, s.get_lefs(), lef_idx);
   }
-}
-
-void print_avg_loop_size(const size_t epoch, const size_t num_active_lefs,
-                         const bool burnin_completed, const Simulation::State& state) {
-  std::vector<bp_t> loop_sizes(num_active_lefs, 0);
-  std::transform(state.get_lefs().begin(), state.get_lefs().end(), loop_sizes.begin(),
-                 [](const auto& lef) { return lef.fwd_unit.pos() - lef.rev_unit.pos(); });
-  // chrom_name, cell_id, epoch, burnin_completed, num_lefs, num_active_lefs, loop_sizes
-  fmt::print(stdout, FMT_COMPILE("{}\t{}\t{}\t{}\t{}\t{}\t{}\n"), state.chrom->name(),
-             state.cell_id, epoch, burnin_completed ? "True" : "False", state.num_lefs,
-             num_active_lefs, fmt::join(loop_sizes, "\t"));
 }
 
 }  // namespace modle

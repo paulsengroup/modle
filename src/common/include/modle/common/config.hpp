@@ -72,8 +72,8 @@ struct Config {  // NOLINT(altera-struct-pack-align)
 
   // Burn-in
   bool skip_burnin{false};
-  size_t burnin_history_length{75};
-  size_t burnin_smoothing_window_size{15};
+  size_t burnin_history_length{100};
+  size_t burnin_smoothing_window_size{5};
   size_t max_burnin_epochs{(std::numeric_limits<size_t>::max)()};
   size_t burnin_target_epochs_for_lef_activation{0};
   double burnin_speed_coefficient{1.0};
