@@ -1,80 +1,81 @@
-FROM fedora:34 AS modle_base
+FROM conanio/clang11 AS builder
 
-ARG build_dir='/tmp/modle/cmake-build'
-# The following args are set through --build-arg(s) at build time
-ARG cpus
-ARG ver
-ARG build_type
-ARG skip_tests
+ARG src_dir='/home/conan/modle'
+ARG build_dir='/home/conan/modle/build'
+ARG staging_dir='/home/conan/modle/staging'
+ARG install_dir='/usr/local'
 
 ARG LIBBIGWIG_VER=0.4.6
 ARG THREAD_POOL_VER=2.0.0
 ARG XOSHIRO_CPP_VER=1.1
-ARG CONAN_VER=1.38.0
+ARG SCIPY_VER=1.7.1
 
-# Required by new bincrafter artifactory
+ARG CONAN_V2=1
 ARG CONAN_REVISIONS_ENABLED=1
+ARG CONAN_NON_INTERACTIVE=1
+ARG CONAN_CMAKE_GENERATOR=Ninja
 
-ENV CC=/usr/bin/gcc
-ENV CXX=/usr/bin/g++
-ENV LD=/usr/bin/ld
-ENV SHELL=/usr/bin/bash
-ENV PATH='/usr/bin:/usr/local/bin'
+# Update system repo and install required tools
+RUN sudo apt-get update                            \
+    && sudo apt-get install -y ninja-build         \
+    && pip install scipy=="${SCIPY_VER}"
+
+RUN mkdir -p "$src_dir" "$build_dir"
+
+COPY conanfile.py "$src_dir"
+
+RUN sudo chown -R conan "$src_dir"
+
+RUN cd "$build_dir"                              \
+    && conan install "$src_dir/conanfile.py"     \
+                  --build outdated               \
+                  -s compiler.cppstd=17          \
+                  -s build_type=RelWithDebInfo   \
+                  -s compiler.libcxx=libstdc++11 \
+                  -o enable_testing=ON
+
+COPY cmake                  "$src_dir/cmake"
+COPY "external/libBigWig-$LIBBIGWIG_VER.tar.xz"                \
+     "$src_dir/external/libBigWig-$LIBBIGWIG_VER.tar.xz"
+COPY "external/thread-pool-$THREAD_POOL_VER.tar.xz"            \
+     "$src_dir/external/thread-pool-$THREAD_POOL_VER.tar.xz"
+COPY "external/Xoshiro-cpp-$XOSHIRO_CPP_VER.tar.xz"            \
+     "$src_dir/external/Xoshiro-cpp-$XOSHIRO_CPP_VER.tar.xz"
+COPY src                    "$src_dir/src"
+COPY test                   "$src_dir/test"
+COPY CMakeLists.txt         "$src_dir/CMakeLists.txt"
+COPY LICENSE                "$src_dir/LICENSE"
+
+RUN sudo chown -R conan "$src_dir"
+RUN cd "$build_dir"                                \
+    && cmake -DCMAKE_BUILD_TYPE=RelWithDebInfo     \
+             -DENABLE_IPO=ON                       \
+             -DWARNINGS_AS_ERRORS=ON               \
+             -DENABLE_TESTING=ON                   \
+             -DCMAKE_INSTALL_PREFIX="$staging_dir" \
+             -G Ninja                              \
+             "$src_dir"
+
+RUN cd "$build_dir"                  \
+    && cmake --build . -j "$(nproc)" \
+    && ctest -j "$(nproc)"           \
+             --test-dir .            \
+             --schedule-random       \
+             --output-on-failure     \
+             --no-tests=error        \
+    && cmake --install .
+
+FROM ubuntu:bionic AS base
+
+ARG staging_dir='/home/conan/modle/staging'
+ARG install_dir='/usr/local'
+ARG ver
+
+COPY --from=builder "$staging_dir" "$install_dir"
 
 LABEL maintainer='Roberto Rossini <roberros@uio.no>'
 LABEL version="$ver"
 WORKDIR /data
 ENTRYPOINT ["/usr/local/bin/modle"]
 
-COPY cmake                  /tmp/modle/cmake
-COPY "external/libBigWig-$LIBBIGWIG_VER.tar.xz"                \
-     "/tmp/modle/external/libBigWig-$LIBBIGWIG_VER.tar.xz"
-COPY "external/thread-pool-$THREAD_POOL_VER.tar.xz"            \
-     "/tmp/modle/external/thread-pool-$THREAD_POOL_VER.tar.xz"
-COPY "external/Xoshiro-cpp-$XOSHIRO_CPP_VER.tar.xz"            \
-     "/tmp/modle/external/Xoshiro-cpp-$XOSHIRO_CPP_VER.tar.xz"
-COPY src                    /tmp/modle/src
-COPY test                   /tmp/modle/test
-COPY CMakeLists.txt         /tmp/modle/CMakeLists.txt
-COPY conanfile.py           /tmp/modle/conanfile.py
-COPY LICENSE                /tmp/modle/LICENSE
-
-# Update system repo and install required tools
-RUN dnf update -y \
-    && dnf install -y --setopt=install_weak_deps=False --best            \
-                      bash cmake gcc-c++ git make python3                \
-                      zlib-devel                                         \
-    && python3 -m venv /conan_venv --upgrade-deps                        \
-    && /conan_venv/bin/pip3 --no-cache-dir install conan==${CONAN_VER}   \
-    && mkdir -p /usr/local/bin                                           \
-    && ln -s /conan_venv/bin/conan /usr/local/bin/conan                  \
-    && mkdir "$build_dir" && cd "$build_dir"       \
-    && cmake -DCMAKE_BUILD_TYPE=$build_type        \
-             -DENABLE_IPO=ON                       \
-             -DWARNINGS_AS_ERRORS=ON               \
-             -DENABLE_TESTING=ON                   \
-             -DCMAKE_INSTALL_PREFIX='/usr/local'   \
-             -G 'Unix Makefiles' ..                \
-    && cmake --build "$build_dir" -j "$cpus"       \
-    &&                                             \
-    if [ ! "$skip_tests" = true ]; then            \
-        dnf install -y python3-scipy               \
-        && cd ..                                   \
-        && ctest -j "$cpus"                        \
-                 --test-dir "$build_dir"           \
-                 --schedule-random                 \
-                 --output-on-failure               \
-        && dnf remove -y python3-scipy;            \
-    fi                                             \
-    && cmake --install "$build_dir"                \
-    &&                                             \
-    if [ "$build_type" = "Debug" ]; then           \
-        dnf install -y dnf-plugins-core gdb        \
-     && dnf debuginfo-install -y libstdc++ zlib ;  \
-    else                                           \
-        unlink /usr/local/bin/conan                \
-     && rm -r /conan_venv /root/.conan /tmp/modle  \
-     && dnf remove -y                              \
-        cmake make gcc-c++ git zlib-devel          \
-     && dnf clean all ;                            \
-    fi
+RUN modle --help

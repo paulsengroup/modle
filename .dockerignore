@@ -5,10 +5,10 @@
 !cmake/**
 !external/*.tar.xz
 !src/**
-!tools/**
 !test/CMakeLists.txt
 !test/catch_main.cpp
 !test/data/unit_tests/**
+!test/units/**
 !CMakeLists.txt
 !conanfile.py
 !LICENSE
