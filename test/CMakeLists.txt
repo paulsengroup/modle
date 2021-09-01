@@ -9,21 +9,21 @@ add_executable(catch_main)
 target_sources(
   catch_main
   PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/catch_main.cpp
-          ${CMAKE_CURRENT_SOURCE_DIR}/contact_matrix/contacts_test.cpp
-          ${CMAKE_CURRENT_SOURCE_DIR}/common/math_test.cpp
-          ${CMAKE_CURRENT_SOURCE_DIR}/correlation/common.hpp
-          ${CMAKE_CURRENT_SOURCE_DIR}/correlation/correlation_test.cpp
-          ${CMAKE_CURRENT_SOURCE_DIR}/correlation/correlation_utils_test.cpp
-          ${CMAKE_CURRENT_SOURCE_DIR}/interval_tree/interval_tree_test.cpp
-          ${CMAKE_CURRENT_SOURCE_DIR}/libmodle_io/bed_parser_test.cpp
-          ${CMAKE_CURRENT_SOURCE_DIR}/libmodle_io/bed_tree_test.cpp
-          ${CMAKE_CURRENT_SOURCE_DIR}/libmodle_io/compressed_io_test.cpp
-          ${CMAKE_CURRENT_SOURCE_DIR}/libmodle_io/cooler_test.cpp
-          ${CMAKE_CURRENT_SOURCE_DIR}/libmodle_io/hdf5_test.cpp
-          ${CMAKE_CURRENT_SOURCE_DIR}/simulation_cpu/common.hpp
-          ${CMAKE_CURRENT_SOURCE_DIR}/simulation_cpu/simulation_complex_unit_test.cpp
-          ${CMAKE_CURRENT_SOURCE_DIR}/simulation_cpu/simulation_simple_unit_test.cpp
-          ${CMAKE_CURRENT_SOURCE_DIR}/simulation_internal/extrusion_barriers_test.cpp)
+          ${CMAKE_CURRENT_SOURCE_DIR}/units/contact_matrix/contacts_test.cpp
+          ${CMAKE_CURRENT_SOURCE_DIR}/units/common/math_test.cpp
+          ${CMAKE_CURRENT_SOURCE_DIR}/units/correlation/common.hpp
+          ${CMAKE_CURRENT_SOURCE_DIR}/units/correlation/correlation_test.cpp
+          ${CMAKE_CURRENT_SOURCE_DIR}/units/correlation/correlation_utils_test.cpp
+          ${CMAKE_CURRENT_SOURCE_DIR}/units/interval_tree/interval_tree_test.cpp
+          ${CMAKE_CURRENT_SOURCE_DIR}/units/libmodle_io/bed_parser_test.cpp
+          ${CMAKE_CURRENT_SOURCE_DIR}/units/libmodle_io/bed_tree_test.cpp
+          ${CMAKE_CURRENT_SOURCE_DIR}/units/libmodle_io/compressed_io_test.cpp
+          ${CMAKE_CURRENT_SOURCE_DIR}/units/libmodle_io/cooler_test.cpp
+          ${CMAKE_CURRENT_SOURCE_DIR}/units/libmodle_io/hdf5_test.cpp
+          ${CMAKE_CURRENT_SOURCE_DIR}/units/simulation_cpu/common.hpp
+          ${CMAKE_CURRENT_SOURCE_DIR}/units/simulation_cpu/simulation_complex_unit_test.cpp
+          ${CMAKE_CURRENT_SOURCE_DIR}/units/simulation_cpu/simulation_simple_unit_test.cpp
+          ${CMAKE_CURRENT_SOURCE_DIR}/units/simulation_internal/extrusion_barriers_test.cpp)
 
 target_link_libraries(
   catch_main
