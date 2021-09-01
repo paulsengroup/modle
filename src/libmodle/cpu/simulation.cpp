@@ -1032,10 +1032,6 @@ void Simulation::run_burnin(State& s, const double lef_binding_rate_burnin) cons
                        "within --max-burnin-epochs={} epochs."),
             s.chrom->name(), s.cell_id, this->max_burnin_epochs);
       }
-
-      if (s.burnin_completed) {
-        fmt::print(stdout, FMT_STRING("TID={}; burnin epochs={}\n"), s.id, s.num_burnin_epochs);
-      }
     }
     // Guard against the rare occasion where the poisson prng samples 0 in the first epoch
   } while (s.num_active_lefs == 0);
