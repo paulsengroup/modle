@@ -51,22 +51,8 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Install ccache
-        run: sudo apt install -y ccache
-
       - name: Install unit test dependencies
         run: pip3 install scipy
-
-      - name: ccache cache files
-        uses: actions/cache@v1.1.0
-        with:
-          path: ~/.ccache
-          key: >
-            host-${{matrix.os}}-
-            target-${{matrix.os}}-
-            ${{matrix.compiler.cc}}-
-            ${{matrix.config.build_type}}-
-            ccache
 
       - name: Cache Conan packages
         uses: actions/cache@v2
@@ -103,10 +89,6 @@ jobs:
         if: ${{matrix.config.build_type != 'Debug'}}
         env:
           CONAN_V2_MODE: "1"
-          CCACHE_BASEDIR: ${{runner.workspace}}
-          CCACHE_DIR: ${{runner.workspace}}/.ccache
-          CCACHE_COMPRESS: "true"
-          CCACHE_MAXSIZE: "200M"
         run: |
           waserr='ON'; wlto='ON';     \
           if [[ ${{matrix.os}} == 'ubuntu-18.04' ]]; then \
@@ -125,10 +107,6 @@ jobs:
         if: ${{matrix.config.build_type == 'Debug'}}
         env:
           CONAN_V2_MODE: "1"
-          CCACHE_BASEDIR: ${{runner.workspace}}
-          CCACHE_DIR: ${{runner.workspace}}/.ccache
-          CCACHE_COMPRESS: "true"
-          CCACHE_MAXSIZE: "200M"
         run: |
           waserr='ON'; wlto='ON';     \
           if [[ ${{matrix.os}} == 'ubuntu-18.04' ]]; then \
@@ -145,18 +123,7 @@ jobs:
 
       - name: Build project
         working-directory: ${{runner.workspace}}/build
-        env:
-          CCACHE_BASEDIR: ${{runner.workspace}}
-          CCACHE_DIR: ${{runner.workspace}}/.ccache
-          CCACHE_COMPRESS: "true"
-          CCACHE_MAXSIZE: "200M"
         run: cmake --build . -j $(nproc)
-
-      - name: Print ccache stats
-        env:
-          CCACHE_BASEDIR: ${{runner.workspace}}
-          CCACHE_DIR: ${{runner.workspace}}/.ccache
-        run: ccache --show-stats && ccache --zero-stats
 
       - name: Test project
         working-directory: ${{github.workspace}}
