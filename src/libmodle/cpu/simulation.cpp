@@ -820,15 +820,6 @@ const std::deque<double>& Simulation::State::get_avg_loop_sizes() const noexcept
 bool Simulation::State::is_modle_pert_state() const noexcept { return !this->is_modle_sim_state(); }
 
 bool Simulation::State::is_modle_sim_state() const noexcept {
-  if constexpr (utils::ndebug_not_defined()) {
-    const auto return_val = feats1.empty() && feats2.empty();
-    (void)return_val;
-    assert((deletion_size == 0) == return_val);        // NOLINT
-    assert((window_start == 0) == return_val);         // NOLINT
-    assert((window_end == 0) == return_val);           // NOLINT
-    assert((active_window_start == 0) == return_val);  // NOLINT
-    assert((active_window_end == 0) == return_val);    // NOLINT
-  }
   return feats1.empty() && feats2.empty();
 }
 

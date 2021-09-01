@@ -98,6 +98,8 @@ void Simulation::replay_worker(const uint64_t tid,
   absl::FixedArray<TaskPW> task_buff(task_batch_size);  // Tasks are dequeue in batch.
 
   Simulation::State local_state{};
+  auto local_contacts = std::make_shared<ContactMatrix<contacts_t>>();
+  local_state.contacts = std::make_shared<ContactMatrix<contacts_t>>();
   compressed_io::Writer null_stream{};
   std::mutex null_mutex{};
 
