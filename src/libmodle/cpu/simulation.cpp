@@ -1190,14 +1190,13 @@ void Simulation::sample_and_register_contacts(State& s, const double avg_nlefs_t
   const auto lef_idx = s.get_idx_buff(nlefs_to_sample);
   random_sample(s.get_fwd_ranks().begin(), s.get_fwd_ranks().end(), lef_idx.begin(), lef_idx.size(),
                 s.rand_eng);
-  if constexpr (utils::ndebug_not_defined()) {
-    if (!std::all_of(lef_idx.begin(), lef_idx.end(),
-                     [&](const auto i) { return i < s.num_lefs; })) {
-      throw std::runtime_error(
-          fmt::format(FMT_STRING("lef_idx.size()={}; num_lefs={};\nlef_idx=[{}]\n"), lef_idx.size(),
-                      s.num_lefs, fmt::join(lef_idx, ", ")));
-    }
+#ifndef NDEBUG  // GCC 9.5.0 chokes if we use if constexpr (utils::ndebug_not_defined()) here
+  if (!std::all_of(lef_idx.begin(), lef_idx.end(), [&](const auto i) { return i < s.num_lefs; })) {
+    throw std::runtime_error(
+        fmt::format(FMT_STRING("lef_idx.size()={}; num_lefs={};\nlef_idx=[{}]\n"), lef_idx.size(),
+                    s.num_lefs, fmt::join(lef_idx, ", ")));
   }
+#endif
   const auto start_pos = s.is_modle_sim_state() ? s.chrom->start_pos() : s.window_start;
   const auto end_pos = s.is_modle_sim_state() ? s.chrom->end_pos() : s.window_end;
 
