@@ -42,30 +42,20 @@ if(ENABLE_TESTING)
   target_compile_definitions(project_options INTERFACE ENABLE_TESTING=1)
 endif()
 
-target_compile_definitions(project_options INTERFACE $<$<CONFIG:Release>:BOOST_STACKTRACE_USE_NOOP>)
-
 # Define macros to signal library feature availability
-if(NOT STD_FILESYSTEM_AVAILABLE)
-  target_compile_definitions(project_options INTERFACE MODLE_WITH_BOOST_FILESYSTEM=1)
-endif()
-
-if(CHARCONV_INT_AVAILABLE)
-  target_compile_definitions(project_options INTERFACE MODLE_CHARCONV_INT_AVAILABLE=1)
-endif()
-
-if(CHARCONV_FP_AVAILABLE)
-  target_compile_definitions(project_options INTERFACE MODLE_CHARCONV_FP_AVAILABLE=1)
-endif()
-
-if(VARIANT_AVAILABLE)
-  target_compile_definitions(project_options INTERFACE MODLE_VARIANT_AVAILABLE=1)
-endif()
+target_compile_definitions(
+  project_options
+  INTERFACE $<$<BOOL:CHARCONV_INT_AVAILABLE>:MODLE_CHARCONV_INT_AVAILABLE=1>
+            $<$<BOOL:CHARCONV_FP_AVAILABLE>:MODLE_CHARCONV_FP_AVAILABLE=1>
+            $<$<BOOL:CHARCONV_VARIANT_AVAILABLE>:MODLE_CHARCONV_VARIANT_AVAILABLE=1>)
 
 # Tweak spdlog
-target_compile_definitions(project_options INTERFACE SPDLOG_CLOCK_COARSE=1)
-target_compile_definitions(project_options INTERFACE SPDLOG_DISABLE_DEFAULT_LOGGER=1)
-target_compile_definitions(project_options INTERFACE SPDLOG_NO_ATOMIC_LEVELS=1)
-target_compile_definitions(project_options INTERFACE SPDLOG_PREVENT_CHILD_FD=1)
+target_compile_definitions(
+  project_options
+  INTERFACE SPDLOG_CLOCK_COARSE=1
+            SPDLOG_DISABLE_DEFAULT_LOGGER=1
+            SPDLOG_NO_ATOMIC_LEVELS=1
+            SPDLOG_PREVENT_CHILD_FD=1)
 
 # Tweak fmt
 target_compile_definitions(project_options INTERFACE FMT_ENFORCE_COMPILE_STRING=1)
@@ -125,9 +115,7 @@ if(WITH_BOOST_RANDOM)
 endif()
 
 message(STATUS "CPU arch detected by CMake: ${CMAKE_SYSTEM_PROCESSOR}")
-if(ENABLE_PSO
-   AND "${CMAKE_SYSTEM_PROCESSOR}" STREQUAL "x86_64"
-   OR "${CMAKE_SYSTEM_PROCESSOR}" STREQUAL AMD64)
+if(ENABLE_PSO AND ("${CMAKE_SYSTEM_PROCESSOR}" STREQUAL "x86_64" OR "${CMAKE_SYSTEM_PROCESSOR}" STREQUAL AMD64))
   if(MSVC)
     target_compile_options(project_options INTERFACE /arch:native)
   else()

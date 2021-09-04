@@ -20,7 +20,7 @@
 #include <cassert>               // for assert
 #include <cmath>                 // for HUGE_VAL
 #include <cstddef>               // IWYU pragma: keep for size_t
-#include <cstdint>               // for int64_t, SIZE_MAX, uint64_t
+#include <cstdint>               // for int64_t, uint64_t
 #include <cstdio>                // for fclose, FILE
 #include <cstdlib>               // for strtod
 #include <limits>                // for numeric_limits
@@ -43,50 +43,61 @@ void parse_numeric_or_throw(std::string_view tok, N &field) {
 #ifdef MODLE_CHARCONV_INT_AVAILABLE  // str -> integral
     auto [ptr, err] = std::from_chars(tok.data(), tok.end(), field);
     if (ptr != tok.end() && err != std::errc{}) {
-      throw_except_from_errc(tok, SIZE_MAX, field, ptr, err);
+      throw_except_from_errc(tok, (std::numeric_limits<size_t>::max)(), field, ptr, err);
     }
 #else
     if constexpr (std::is_same_v<N, int32_t>) {  // str -> int32
       const auto tmp = static_cast<N>(std::stol(tok.data(), nullptr));
-      if (tmp == LONG_MAX) {
-        throw_except_from_errc(tok, SIZE_MAX, tmp, nullptr, std::errc::result_out_of_range);
+      if (tmp == (std::numeric_limits<N>::max)()) {
+        throw_except_from_errc(tok, (std::numeric_limits<size_t>::max)(), tmp, nullptr,
+                               std::errc::result_out_of_range);
       } else if (tmp == 0 && tok != "0") {
-        throw_except_from_errc(tok, SIZE_MAX, tmp, nullptr, std::errc::invalid_argument);
+        throw_except_from_errc(tok, (std::numeric_limits<size_t>::max)(), tmp, nullptr,
+                               std::errc::invalid_argument);
       }
       field = tmp;
     } else if constexpr (std::is_same_v<N, int64_t>) {  // str -> int64
       const auto tmp = static_cast<N>(std::stoll(tok.data(), nullptr));
-      if (tmp == LONG_LONG_MAX) {
-        throw_except_from_errc(tok, SIZE_MAX, tmp, nullptr, std::errc::result_out_of_range);
+      if (tmp == (std::numeric_limits<N>::max)()) {
+        throw_except_from_errc(tok, (std::numeric_limits<size_t>::max)(), tmp, nullptr,
+                               std::errc::result_out_of_range);
       } else if (tmp == 0 && tok != "0") {
-        throw_except_from_errc(tok, SIZE_MAX, tmp, nullptr, std::errc::invalid_argument);
+        throw_except_from_errc(tok, (std::numeric_limits<size_t>::max)(), tmp, nullptr,
+                               std::errc::invalid_argument);
       }
       field = tmp;
     } else if constexpr (std::is_same_v<N, uint32_t>) {  // str -> uint32
       const auto tmp = static_cast<N>(std::stoul(tok.data(), nullptr));
-      if (tmp == ULONG_MAX) {
-        throw_except_from_errc(tok, SIZE_MAX, tmp, nullptr, std::errc::result_out_of_range);
+      if (tmp == (std::numeric_limits<N>::max)()) {
+        throw_except_from_errc(tok, (std::numeric_limits<size_t>::max)(), tmp, nullptr,
+                               std::errc::result_out_of_range);
       } else if (tmp == 0 && tok != "0") {
-        throw_except_from_errc(tok, SIZE_MAX, tmp, nullptr, std::errc::invalid_argument);
+        throw_except_from_errc(tok, (std::numeric_limits<size_t>::max)(), tmp, nullptr,
+                               std::errc::invalid_argument);
       }
       field = tmp;
     } else if constexpr (std::is_same_v<N, uint64_t>) {  // str -> uint64
       const auto tmp = static_cast<N>(std::stoull(tok.data(), nullptr));
-      if (tmp == ULONG_LONG_MAX) {
-        throw_except_from_errc(tok, SIZE_MAX, tmp, nullptr, std::errc::result_out_of_range);
+      if (tmp == (std::numeric_limits<N>::max)()) {
+        throw_except_from_errc(tok, (std::numeric_limits<size_t>::max)(), tmp, nullptr,
+                               std::errc::result_out_of_range);
       } else if (tmp == 0 && tok != "0") {
-        throw_except_from_errc(tok, SIZE_MAX, tmp, nullptr, std::errc::invalid_argument);
+        throw_except_from_errc(tok, (std::numeric_limits<size_t>::max)(), tmp, nullptr,
+                               std::errc::invalid_argument);
       }
       field = tmp;
     } else {  // str -> other int
       const auto tmp = std::stoll(tok.data(), nullptr);
       DISABLE_WARNING_PUSH
       DISABLE_WARNING_USELESS_CAST
-      if (tmp == LONG_LONG_MAX || tmp < static_cast<int64_t>((std::numeric_limits<N>::min)()) ||
+      if (tmp == (std::numeric_limits<int64_t>::max)() ||
+          tmp < static_cast<int64_t>((std::numeric_limits<N>::min)()) ||
           tmp > static_cast<int64_t>((std::numeric_limits<N>::max)())) {
-        throw_except_from_errc(tok, SIZE_MAX, tmp, nullptr, std::errc::result_out_of_range);
+        throw_except_from_errc(tok, (std::numeric_limits<size_t>::max)(), tmp, nullptr,
+                               std::errc::result_out_of_range);
       } else if (tmp == 0 && tok != "0") {
-        throw_except_from_errc(tok, SIZE_MAX, tmp, nullptr, std::errc::invalid_argument);
+        throw_except_from_errc(tok, (std::numeric_limits<size_t>::max)(), tmp, nullptr,
+                               std::errc::invalid_argument);
       }
       DISABLE_WARNING_POP
       field = static_cast<N>(tmp);
@@ -100,7 +111,7 @@ void parse_numeric_or_throw(std::string_view tok, N &field) {
     auto [ptr, err] = absl::from_chars(tok.data(), tok.end(), field);
 #endif
     if (ptr != tok.end() && err != std::errc{}) {
-      throw_except_from_errc(tok, SIZE_MAX, field, ptr, err);
+      throw_except_from_errc(tok, (std::numeric_limits<size_t>::max)(), field, ptr, err);
     }
   }
 }
@@ -131,7 +142,7 @@ void throw_except_from_errc(std::string_view tok, size_t idx, const N &field, co
   (void)field;
   static_assert(std::is_arithmetic<N>());
   std::string base_error;
-  if (idx != SIZE_MAX) {
+  if (idx != (std::numeric_limits<size_t>::max)()) {
     base_error = fmt::format(FMT_STRING("Unable to convert field {} ('{}') to a "), idx, tok);
   } else {
     base_error = fmt::format(FMT_STRING("Unable to convert field '{}' to"), tok);
