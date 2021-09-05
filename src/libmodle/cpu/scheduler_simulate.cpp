@@ -74,90 +74,97 @@ void Simulation::run_simulate() {
   moodycamel::BlockingConcurrentQueue<Simulation::Task> task_queue(queue_capacity, 1, 0);
   moodycamel::ProducerToken ptok(task_queue);
 
-  this->_tpool.push_task([&]() {  // This thread is in charge of writing contacts to disk
-    this->write_contacts_to_disk(progress_queue, progress_queue_mutex);
-  });
-
-  for (uint64_t tid = 0; tid < this->nthreads; ++tid) {  // Start simulation threads
-    this->_tpool.push_task([&, tid]() {
-      this->simulate_worker(tid, task_queue, progress_queue, progress_queue_mutex,
-                            task_batch_size_deq);
+  try {
+    this->_tpool.push_task([&]() {  // This thread is in charge of writing contacts to disk
+      this->write_contacts_to_disk(progress_queue, progress_queue_mutex);
     });
-  }
 
-  // The remaining code submits simulation tasks to the queue. Then it waits until all the tasks
-  // have been completed, and contacts have been written to disk
-
-  absl::FixedArray<Task> tasks(task_batch_size_enq);
-  auto taskid = 0UL;
-
-  // Loop over chromosomes
-  for (auto& chrom : this->_genome) {
-    if (!this->ok()) {
-      this->handle_exceptions();
-    }
-    // Don't simulate KO chroms (but write them to disk if the user desires so)
-    if (!chrom.ok() || chrom.num_barriers() == 0) {
-      spdlog::info(FMT_STRING("SKIPPING '{}'..."), chrom.name());
-      if (this->write_contacts_for_ko_chroms) {
-        std::scoped_lock l(progress_queue_mutex);
-        progress_queue.emplace_back(&chrom, num_cells);
-      }
-      continue;
-    }
-
-    {
-      std::scoped_lock l(progress_queue_mutex);
-
-      // Signal that we have started processing the current chrom
-      progress_queue.emplace_back(&chrom, 0UL);
-    }
-
-    // Compute # of LEFs to be simulated based on chrom. sizes
-    const auto nlefs = static_cast<size_t>(std::round(
-        this->number_of_lefs_per_mbp * (static_cast<double>(chrom.simulated_size()) / Mbp)));
-
-    auto target_contacts = 0UL;
-    if (this->target_contact_density != 0) {  // Compute the number of simulation rounds required
-      // to reach the target contact density
-      target_contacts = static_cast<size_t>(std::max(
-          1.0,
-          std::round((this->target_contact_density *
-                      static_cast<double>(chrom.npixels(this->diagonal_width, this->bin_size))) /
-                     static_cast<double>(this->num_cells))));
-    }
-    auto target_epochs =
-        target_contacts == 0UL ? this->simulation_iterations : (std::numeric_limits<size_t>::max)();
-
-    size_t cellid = 0;
-    const auto nbatches = (this->num_cells + task_batch_size_enq - 1) / task_batch_size_enq;
-    for (auto batchid = 0UL; batchid < nbatches; ++batchid) {
-      // Generate a batch of tasks for all the simulations involving the current chrom
-      std::generate(tasks.begin(), tasks.end(), [&]() {
-        return Task{{taskid++, &chrom, cellid++, target_epochs, target_contacts, nlefs,
-                     chrom.barriers().data()}};
+    for (uint64_t tid = 0; tid < this->nthreads; ++tid) {  // Start simulation threads
+      this->_tpool.push_task([&, tid]() {
+        this->simulate_worker(tid, task_queue, progress_queue, progress_queue_mutex,
+                              task_batch_size_deq);
       });
-      const auto ntasks =
-          cellid > this->num_cells ? tasks.size() - (cellid - this->num_cells) : tasks.size();
-      auto sleep_us = 100;  // NOLINT(readability-magic-numbers)
-      while (               // Enqueue tasks
-          !task_queue.try_enqueue_bulk(ptok, std::make_move_iterator(tasks.begin()), ntasks)) {
-        if (!this->ok()) {
-          this->handle_exceptions();
+    }
+
+    // The remaining code submits simulation tasks to the queue. Then it waits until all the tasks
+    // have been completed, and contacts have been written to disk
+
+    absl::FixedArray<Task> tasks(task_batch_size_enq);
+    auto taskid = 0UL;
+
+    // Loop over chromosomes
+    for (auto& chrom : this->_genome) {
+      if (!this->ok()) {
+        this->handle_exceptions();
+      }
+      // Don't simulate KO chroms (but write them to disk if the user desires so)
+      if (!chrom.ok() || chrom.num_barriers() == 0) {
+        spdlog::info(FMT_STRING("SKIPPING '{}'..."), chrom.name());
+        if (this->write_contacts_for_ko_chroms) {
+          std::scoped_lock l(progress_queue_mutex);
+          progress_queue.emplace_back(&chrom, num_cells);
         }
-        sleep_us = std::min(100000, sleep_us * 2);  // NOLINT(readability-magic-numbers)
-        std::this_thread::sleep_for(std::chrono::microseconds(sleep_us));
+        continue;
+      }
+
+      {
+        std::scoped_lock l(progress_queue_mutex);
+
+        // Signal that we have started processing the current chrom
+        progress_queue.emplace_back(&chrom, 0UL);
+      }
+
+      // Compute # of LEFs to be simulated based on chrom. sizes
+      const auto nlefs = static_cast<size_t>(std::round(
+          this->number_of_lefs_per_mbp * (static_cast<double>(chrom.simulated_size()) / Mbp)));
+
+      auto target_contacts = 0UL;
+      if (this->target_contact_density != 0) {  // Compute the number of simulation rounds required
+        // to reach the target contact density
+        target_contacts = static_cast<size_t>(std::max(
+            1.0,
+            std::round((this->target_contact_density *
+                        static_cast<double>(chrom.npixels(this->diagonal_width, this->bin_size))) /
+                       static_cast<double>(this->num_cells))));
+      }
+      auto target_epochs = target_contacts == 0UL ? this->simulation_iterations
+                                                  : (std::numeric_limits<size_t>::max)();
+
+      size_t cellid = 0;
+      const auto nbatches = (this->num_cells + task_batch_size_enq - 1) / task_batch_size_enq;
+      for (auto batchid = 0UL; batchid < nbatches; ++batchid) {
+        // Generate a batch of tasks for all the simulations involving the current chrom
+        std::generate(tasks.begin(), tasks.end(), [&]() {
+          return Task{{taskid++, &chrom, cellid++, target_epochs, target_contacts, nlefs,
+                       chrom.barriers().data()}};
+        });
+        const auto ntasks =
+            cellid > this->num_cells ? tasks.size() - (cellid - this->num_cells) : tasks.size();
+        auto sleep_us = 100;  // NOLINT(readability-magic-numbers)
+        while (               // Enqueue tasks
+            !task_queue.try_enqueue_bulk(ptok, std::make_move_iterator(tasks.begin()), ntasks)) {
+          if (!this->ok()) {
+            this->handle_exceptions();
+          }
+          sleep_us = std::min(100000, sleep_us * 2);  // NOLINT(readability-magic-numbers)
+          std::this_thread::sleep_for(std::chrono::microseconds(sleep_us));
+        }
       }
     }
-  }
 
-  {  // Signal end of simulation to the thread that is writing contacts to disk
-    std::scoped_lock l(progress_queue_mutex);
-    progress_queue.emplace_back(nullptr, 0UL);
+    {  // Signal end of simulation to the thread that is writing contacts to disk
+      std::scoped_lock l(progress_queue_mutex);
+      progress_queue.emplace_back(nullptr, 0UL);
+    }
+    this->_tpool.wait_for_tasks();
+    assert(this->_end_of_simulation);  // NOLINT
+    assert(!this->_exception_thrown);  // NOLINT
+  } catch (...) {
+    this->_exception_thrown = true;
+    this->_tpool.paused = true;
+    this->_tpool.wait_for_tasks();
+    throw;
   }
-  this->_tpool.wait_for_tasks();
-  assert(this->_end_of_simulation);  // NOLINT
-  assert(!this->_exception_thrown);  // NOLINT
 }
 
 void Simulation::simulate_worker(const uint64_t tid,

@@ -44,49 +44,57 @@ void Simulation::run_replay() {
 
   std::mutex cooler_mutex;
 
-  this->_tpool.reset(this->nthreads);
-  for (uint64_t tid = 0; tid < this->nthreads; ++tid) {  // Start simulation threads
-    this->_tpool.push_task([&, tid]() { this->replay_worker(tid, task_queue, cooler_mutex); });
-  }
-
-  const auto task_filter = import_task_filter(this->path_to_task_filter_file);
-
-  std::string task_definition;
-  size_t num_tasks = 0;
-  while (task_reader.getline(task_definition)) {
-    if (!this->ok()) {
-      this->handle_exceptions();
+  try {
+    this->_tpool.reset(this->nthreads);
+    for (uint64_t tid = 0; tid < this->nthreads; ++tid) {  // Start simulation threads
+      this->_tpool.push_task([&, tid]() { this->replay_worker(tid, task_queue, cooler_mutex); });
     }
-    if (num_tasks == tasks.size()) {  // Enqueue a batch of tasks
-      auto sleep_us = 100;            // NOLINT(readability-magic-numbers)
+
+    const auto task_filter = import_task_filter(this->path_to_task_filter_file);
+
+    std::string task_definition;
+    size_t num_tasks = 0;
+    while (task_reader.getline(task_definition)) {
+      if (!this->ok()) {
+        this->handle_exceptions();
+      }
+      if (num_tasks == tasks.size()) {  // Enqueue a batch of tasks
+        auto sleep_us = 100;            // NOLINT(readability-magic-numbers)
+        while (
+            !task_queue.try_enqueue_bulk(ptok, std::make_move_iterator(tasks.begin()), num_tasks)) {
+          if (!this->ok()) {
+            this->handle_exceptions();
+          }  // NOLINTNEXTLINE(readability-magic-numbers)
+          sleep_us = std::min(100000, sleep_us * 2);
+          std::this_thread::sleep_for(std::chrono::microseconds(sleep_us));
+        }
+        num_tasks = 0;
+      }  // NOLINTNEXTLINE(cppcoreguidelines-pro-bounds-constant-array-index)
+      const auto& t = (tasks[num_tasks] = TaskPW::from_string(task_definition, this->_genome));
+      if (task_filter.empty() || task_filter.contains(t.id)) {
+        ++num_tasks;
+      }
+    }
+
+    if (num_tasks != 0) {
       while (
           !task_queue.try_enqueue_bulk(ptok, std::make_move_iterator(tasks.begin()), num_tasks)) {
         if (!this->ok()) {
           this->handle_exceptions();
         }  // NOLINTNEXTLINE(readability-magic-numbers)
-        sleep_us = std::min(100000, sleep_us * 2);
-        std::this_thread::sleep_for(std::chrono::microseconds(sleep_us));
+        std::this_thread::sleep_for(std::chrono::microseconds(100));
       }
-      num_tasks = 0;
-    }  // NOLINTNEXTLINE(cppcoreguidelines-pro-bounds-constant-array-index)
-    const auto& t = (tasks[num_tasks] = TaskPW::from_string(task_definition, this->_genome));
-    if (task_filter.empty() || task_filter.contains(t.id)) {
-      ++num_tasks;
     }
-  }
 
-  if (num_tasks != 0) {
-    while (!task_queue.try_enqueue_bulk(ptok, std::make_move_iterator(tasks.begin()), num_tasks)) {
-      if (!this->ok()) {
-        this->handle_exceptions();
-      }  // NOLINTNEXTLINE(readability-magic-numbers)
-      std::this_thread::sleep_for(std::chrono::microseconds(100));
-    }
+    this->_end_of_simulation = true;
+    this->_tpool.wait_for_tasks();     // Wait on simulate_worker threads
+    assert(!this->_exception_thrown);  // NOLINT
+  } catch (...) {
+    this->_exception_thrown = true;
+    this->_tpool.paused = true;
+    this->_tpool.wait_for_tasks();
+    throw;
   }
-
-  this->_end_of_simulation = true;
-  this->_tpool.wait_for_tasks();     // Wait on simulate_worker threads
-  assert(!this->_exception_thrown);  // NOLINT
 }
 
 void Simulation::replay_worker(const uint64_t tid,
@@ -98,7 +106,6 @@ void Simulation::replay_worker(const uint64_t tid,
   absl::FixedArray<TaskPW> task_buff(task_batch_size);  // Tasks are dequeue in batch.
 
   Simulation::State local_state{};
-  auto local_contacts = std::make_shared<ContactMatrix<contacts_t>>();
   local_state.contacts = std::make_shared<ContactMatrix<contacts_t>>();
   compressed_io::Writer null_stream{};
   std::mutex null_mutex{};
@@ -125,6 +132,7 @@ void Simulation::replay_worker(const uint64_t tid,
         assert(!task.barriers.empty());  // NOLINT
         assert(!task.feats1.empty());    // NOLINT
         assert(!task.feats2.empty());    // NOLINT
+        assert(local_state.contacts);    // NOLINT
 
         local_state = task;  // Set simulation local_state based on task data
         local_state.contacts->resize(local_state.window_end - local_state.window_start,

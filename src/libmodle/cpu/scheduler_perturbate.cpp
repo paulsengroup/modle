@@ -96,177 +96,188 @@ void Simulation::run_perturbate() {
     }
   }
 
-  this->_tpool.reset(this->nthreads);
-  for (uint64_t tid = 0; tid < this->nthreads; ++tid) {  // Start simulation threads
-    this->_tpool.push_task([&, tid]() {
-      this->perturbate_worker(tid, task_queue, out_bedpe_stream, out_stream_mutex, cooler_mutex);
-    });
-  }
-
-  const auto all_deletions =
-      this->path_to_deletion_bed.empty() ? this->generate_deletions() : this->import_deletions();
-
-  size_t task_id = 0;
-  size_t num_tasks = 0;
-  for (auto& chrom : this->_genome) {
-    if (!this->ok()) {
-      this->handle_exceptions();
-    }
-    const auto chrom_name = std::string{chrom.name()};
-    const auto& features = chrom.get_features();
-    const auto& barriers = chrom.barriers();
-    if (features.size() != 2 || barriers.empty()) {
-      continue;  // Skip chromosomes that have less than two "kinds" of features or no barriers
+  try {
+    this->_tpool.reset(this->nthreads);
+    for (uint64_t tid = 0; tid < this->nthreads; ++tid) {  // Start simulation threads
+      this->_tpool.push_task([&, tid]() {
+        this->perturbate_worker(tid, task_queue, out_bedpe_stream, out_stream_mutex, cooler_mutex);
+      });
     }
 
-    if (!all_deletions.contains(chrom_name)) {
-      continue;
-    }
+    const auto all_deletions =
+        this->path_to_deletion_bed.empty() ? this->generate_deletions() : this->import_deletions();
 
-    // The idea here is that given a diagonal width D and a feature F1, in order to track all
-    // possible interactions between F1 and nearby features we need to simulate at least window
-    // 2*D wide centered around F1. If we now consider another feature F2 located 100 bp
-    // downstream of F1, in order to track all possible interactions we need to simulate a 2*D
-    // window centered around F2. Given how close F1 and F2 we basically end up simulating the
-    // same region twice. This can be avoided by extending the window we are simulating by 1*D
-    // left and right, increasing the window width to 4*D. We then define an active window, which
-    // is a 2*D wide region centered inside the 4*D window. Now we simulate loop extrusion over a
-    // 4*D region and record all possible, non-zero contacts between features falling in the 2*D
-    // region. Next, we advance both windows by 1*D, and repeat the same procedure. With this
-    // logic the overlap between subsequent windows is always 3*D. Deletions are performed on the
-    // entire 4*D region, this is because deletions outside of the active window can still affect
-    // interactions between features in the active window. The last problem we have to solve, is
-    // to figure out how to ensure that we don't output the number of contacts for a pair of
-    // features and a given barrier configuration twice. This is likely to happen, as the active
-    // window is 2*D and windows are advanced by only 1*D at a time. The solution to this problem
-    // was to use the center of the two windows as partition point. For features upstream of the
-    // partition point we output all possible pairwise contacts, while for features located
-    // downstream of the partition point we output contacts only if one of the feature
-    // participating in the pair is upstream of the partition point. Consider the following
-    // example: Given four features F1, F2, F3 and F4, where F1 and F2 are located upstream of the
-    // partition point P, while F3 and F4 are located downstream of said point. All features fall
-    // in a D wide region in the active window. For each distinct extrusion barrier configuration
-    // we output the number of contacts for the following pairs (assumin nnz contacts):
-    //
-    // - F1:F2 - both are upstream of P
-    // - F1:F3 - F1 is upstream of P
-    // - F1:F4 - F1 is upstream of P
-    // - F2:F3 - F2 is upstream of P
-    // - F2:F4 - F2 is upstream of P
-    //
-    // - Contacts between F3 and F4 will be produced when simulating the next window, as in that
-    // case they will both be located upstream of the new partition point
-    //
-    // It should be noted that the first and last window on a chromosome need special handling, as
-    // the outer window cannot extend past the chromosomal boundaries. In these cases the active
-    // window is extended such that it goes from 5'-end->3*D for the first window and from P +
-    // 1*D->3'-end, where P is the partition point of the previous window.
-
-    size_t cell_id = 0;
-
-    // Setup the
-    TaskPW base_task{};
-
-    base_task.chrom = &chrom;
-    // Initialize task with the initial window
-    base_task.window_start = 0;
-    base_task.window_end = 4 * this->diagonal_width;
-    base_task.active_window_start = 0;
-    base_task.active_window_end = 3 * this->diagonal_width;
-
-    do {
+    size_t task_id = 0;
+    size_t num_tasks = 0;
+    for (auto& chrom : this->_genome) {
       if (!this->ok()) {
         this->handle_exceptions();
       }
-      // Find all barriers falling within the outer window. Skip over windows with 0 barriers
-      if (!Simulation::map_barriers_to_window(base_task, chrom)) {
+      const auto chrom_name = std::string{chrom.name()};
+      const auto& features = chrom.get_features();
+      const auto& barriers = chrom.barriers();
+      if (features.size() != 2 || barriers.empty()) {
+        continue;  // Skip chromosomes that have less than two "kinds" of features or no barriers
+      }
+
+      if (!all_deletions.contains(chrom_name)) {
         continue;
       }
 
-      // Find all features of type 1 falling within the outer window. Skip over windows with 0
-      // features
-      if (!Simulation::map_features_to_window(base_task, chrom)) {
-        continue;
-      }
+      // The idea here is that given a diagonal width D and a feature F1, in order to track all
+      // possible interactions between F1 and nearby features we need to simulate at least window
+      // 2*D wide centered around F1. If we now consider another feature F2 located 100 bp
+      // downstream of F1, in order to track all possible interactions we need to simulate a 2*D
+      // window centered around F2. Given how close F1 and F2 we basically end up simulating the
+      // same region twice. This can be avoided by extending the window we are simulating by 1*D
+      // left and right, increasing the window width to 4*D. We then define an active window, which
+      // is a 2*D wide region centered inside the 4*D window. Now we simulate loop extrusion over a
+      // 4*D region and record all possible, non-zero contacts between features falling in the 2*D
+      // region. Next, we advance both windows by 1*D, and repeat the same procedure. With this
+      // logic the overlap between subsequent windows is always 3*D. Deletions are performed on the
+      // entire 4*D region, this is because deletions outside of the active window can still affect
+      // interactions between features in the active window. The last problem we have to solve, is
+      // to figure out how to ensure that we don't output the number of contacts for a pair of
+      // features and a given barrier configuration twice. This is likely to happen, as the active
+      // window is 2*D and windows are advanced by only 1*D at a time. The solution to this problem
+      // was to use the center of the two windows as partition point. For features upstream of the
+      // partition point we output all possible pairwise contacts, while for features located
+      // downstream of the partition point we output contacts only if one of the feature
+      // participating in the pair is upstream of the partition point. Consider the following
+      // example: Given four features F1, F2, F3 and F4, where F1 and F2 are located upstream of the
+      // partition point P, while F3 and F4 are located downstream of said point. All features fall
+      // in a D wide region in the active window. For each distinct extrusion barrier configuration
+      // we output the number of contacts for the following pairs (assumin nnz contacts):
+      //
+      // - F1:F2 - both are upstream of P
+      // - F1:F3 - F1 is upstream of P
+      // - F1:F4 - F1 is upstream of P
+      // - F2:F3 - F2 is upstream of P
+      // - F2:F4 - F2 is upstream of P
+      //
+      // - Contacts between F3 and F4 will be produced when simulating the next window, as in that
+      // case they will both be located upstream of the new partition point
+      //
+      // It should be noted that the first and last window on a chromosome need special handling, as
+      // the outer window cannot extend past the chromosomal boundaries. In these cases the active
+      // window is extended such that it goes from 5'-end->3*D for the first window and from P +
+      // 1*D->3'-end, where P is the partition point of the previous window.
 
-      assert(!base_task.barriers.empty());  // NOLINT
-      assert(!base_task.feats1.empty());    // NOLINT
-      assert(!base_task.feats2.empty());    // NOLINT
+      size_t cell_id = 0;
 
-      const auto deletions = [&]() {  // Find deletions mapping to the outer window
-        const auto [first_deletion, last_deletion] =
-            all_deletions.at(chrom_name).equal_range(base_task.window_start, base_task.window_end);
-        return absl::MakeConstSpan(&(*first_deletion), &(*last_deletion));
-      }();
+      // Setup the
+      TaskPW base_task{};
 
-      for (const auto& deletion : deletions) {
-        // Add task to the current batch
-        auto& t = (tasks[num_tasks++] = base_task);  // NOLINT
+      base_task.chrom = &chrom;
+      // Initialize task with the initial window
+      base_task.window_start = 0;
+      base_task.window_end = 4 * this->diagonal_width;
+      base_task.active_window_start = 0;
+      base_task.active_window_end = 3 * this->diagonal_width;
 
-        // Complete task setup
-        t.id = task_id++;
-        t.cell_id = cell_id++;
-        t.deletion_begin = deletion.chrom_start;
-        t.deletion_size = deletion.chrom_end - deletion.chrom_start;
-        t.window_end = std::min(t.window_end, chrom.end_pos());
-        t.active_window_end = std::min(t.active_window_end, chrom.end_pos());
-
-        // Compute the number of simulation rounds required to reach the target contact density
-        if (this->target_contact_density != 0) {
-          // Compute the number of pixels mapping to the outer window
-          const auto npix1 = (t.window_end - t.window_start + this->bin_size - 1) / this->bin_size;
-          const auto npix2 = (this->diagonal_width + this->bin_size - 1) / this->bin_size;
-
-          t.num_target_contacts = static_cast<size_t>(std::max(
-              1.0, std::round(this->target_contact_density * static_cast<double>(npix1 * npix2))));
+      do {
+        if (!this->ok()) {
+          this->handle_exceptions();
+        }
+        // Find all barriers falling within the outer window. Skip over windows with 0 barriers
+        if (!Simulation::map_barriers_to_window(base_task, chrom)) {
+          continue;
         }
 
-        // Compute the number of LEFs based on the window size
-        t.num_lefs = static_cast<size_t>(
-            std::round((static_cast<double>(t.window_end - t.window_start) / Mbp) *
-                       this->number_of_lefs_per_mbp));
-
-        // Compute the target number of epochs based on the target number of contacts
-        t.num_target_epochs = t.num_target_contacts == 0UL ? this->simulation_iterations
-                                                           : (std::numeric_limits<size_t>::max)();
-
-        if (num_tasks == tasks.size()) {  // Enqueue a batch of tasks
-          if (out_task_stream) {
-            out_task_stream.write(fmt::format(FMT_STRING("{}\n"), fmt::join(tasks, "\n")));
-          }
-          auto sleep_us = 100;  // NOLINT(readability-magic-numbers)
-          while (!task_queue.try_enqueue_bulk(ptok, std::make_move_iterator(tasks.begin()),
-                                              num_tasks)) {
-            if (!this->ok()) {
-              this->handle_exceptions();
-            }  // NOLINTNEXTLINE(readability-magic-numbers)
-            sleep_us = std::min(100000, sleep_us * 2);
-            std::this_thread::sleep_for(std::chrono::microseconds(sleep_us));
-          }
-          num_tasks = 0;
+        // Find all features of type 1 falling within the outer window. Skip over windows with 0
+        // features
+        if (!Simulation::map_features_to_window(base_task, chrom)) {
+          continue;
         }
+
+        assert(!base_task.barriers.empty());  // NOLINT
+        assert(!base_task.feats1.empty());    // NOLINT
+        assert(!base_task.feats2.empty());    // NOLINT
+
+        const auto deletions = [&]() {  // Find deletions mapping to the outer window
+          const auto [first_deletion, last_deletion] =
+              all_deletions.at(chrom_name)
+                  .equal_range(base_task.window_start, base_task.window_end);
+          return absl::MakeConstSpan(&(*first_deletion), &(*last_deletion));
+        }();
+
+        for (const auto& deletion : deletions) {
+          // Add task to the current batch
+          auto& t = (tasks[num_tasks++] = base_task);  // NOLINT
+
+          // Complete task setup
+          t.id = task_id++;
+          t.cell_id = cell_id++;
+          t.deletion_begin = deletion.chrom_start;
+          t.deletion_size = deletion.chrom_end - deletion.chrom_start;
+          t.window_end = std::min(t.window_end, chrom.end_pos());
+          t.active_window_end = std::min(t.active_window_end, chrom.end_pos());
+
+          // Compute the number of simulation rounds required to reach the target contact density
+          if (this->target_contact_density != 0) {
+            // Compute the number of pixels mapping to the outer window
+            const auto npix1 =
+                (t.window_end - t.window_start + this->bin_size - 1) / this->bin_size;
+            const auto npix2 = (this->diagonal_width + this->bin_size - 1) / this->bin_size;
+
+            t.num_target_contacts =
+                static_cast<size_t>(std::max(1.0, std::round(this->target_contact_density *
+                                                             static_cast<double>(npix1 * npix2))));
+          }
+
+          // Compute the number of LEFs based on the window size
+          t.num_lefs = static_cast<size_t>(
+              std::round((static_cast<double>(t.window_end - t.window_start) / Mbp) *
+                         this->number_of_lefs_per_mbp));
+
+          // Compute the target number of epochs based on the target number of contacts
+          t.num_target_epochs = t.num_target_contacts == 0UL ? this->simulation_iterations
+                                                             : (std::numeric_limits<size_t>::max)();
+
+          if (num_tasks == tasks.size()) {  // Enqueue a batch of tasks
+            if (out_task_stream) {
+              out_task_stream.write(fmt::format(FMT_STRING("{}\n"), fmt::join(tasks, "\n")));
+            }
+            auto sleep_us = 100;  // NOLINT(readability-magic-numbers)
+            while (!task_queue.try_enqueue_bulk(ptok, std::make_move_iterator(tasks.begin()),
+                                                num_tasks)) {
+              if (!this->ok()) {
+                this->handle_exceptions();
+              }  // NOLINTNEXTLINE(readability-magic-numbers)
+              sleep_us = std::min(100000, sleep_us * 2);
+              std::this_thread::sleep_for(std::chrono::microseconds(sleep_us));
+            }
+            num_tasks = 0;
+          }
+        }
+      } while (Simulation::advance_window(base_task, chrom));
+    }
+
+    // Submit any remaining task
+    if (num_tasks != 0) {
+      if (out_task_stream) {
+        out_task_stream.write(fmt::format(
+            FMT_STRING("{}\n"), fmt::join(tasks.begin(), tasks.begin() + num_tasks, "\n")));
       }
-    } while (Simulation::advance_window(base_task, chrom));
-  }
-
-  // Submit any remaining task
-  if (num_tasks != 0) {
-    if (out_task_stream) {
-      out_task_stream.write(fmt::format(FMT_STRING("{}\n"),
-                                        fmt::join(tasks.begin(), tasks.begin() + num_tasks, "\n")));
+      while (
+          !task_queue.try_enqueue_bulk(ptok, std::make_move_iterator(tasks.begin()), num_tasks)) {
+        if (!this->ok()) {
+          this->handle_exceptions();
+        }  // NOLINTNEXTLINE(readability-magic-numbers)
+        std::this_thread::sleep_for(std::chrono::microseconds(100));
+      }
     }
-    while (!task_queue.try_enqueue_bulk(ptok, std::make_move_iterator(tasks.begin()), num_tasks)) {
-      if (!this->ok()) {
-        this->handle_exceptions();
-      }  // NOLINTNEXTLINE(readability-magic-numbers)
-      std::this_thread::sleep_for(std::chrono::microseconds(100));
-    }
-  }
 
-  this->_end_of_simulation = true;
-  out_task_stream.close();
-  this->_tpool.wait_for_tasks();     // Wait on simulate_worker threads
-  assert(!this->_exception_thrown);  // NOLINT
+    this->_end_of_simulation = true;
+    out_task_stream.close();
+    this->_tpool.wait_for_tasks();     // Wait on simulate_worker threads
+    assert(!this->_exception_thrown);  // NOLINT
+  } catch (...) {
+    this->_exception_thrown = true;
+    this->_tpool.paused = true;
+    this->_tpool.wait_for_tasks();
+    throw;
+  }
 }
 
 void Simulation::perturbate_worker(
