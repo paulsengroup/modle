@@ -4,12 +4,19 @@
 // IWYU pragma: no_include <boost/exception/detail/error_info_impl.hpp>
 // IWYU pragma: no_include <modle/src/utils/utils_impl.hpp>
 
-#if defined(MODLE_CHARCONV_FP_AVAILABLE) || defined(MODLE_CHARCONV_INT_AVAILABLE)
-#include <charconv>  // for from_chars
+// clang-format off
+#include "modle/common/suppress_compiler_warnings.hpp"
+#if defined(MODLE_CHARCONV_FP_AVAILABLE) && defined(MODLE_CHARCONV_INT_AVAILABLE)
+#include <charconv>
+#else
+DISABLE_WARNING_PUSH
+DISABLE_WARNING_DOUBLE_PROMOTION
+DISABLE_WARNING_SHORTEN_64_TO_32
+DISABLE_WARNING_SIGN_CONVERSION
+#include <msstl/charconv.hpp>
+DISABLE_WARNING_POP
 #endif
-#ifndef MODLE_CHARCONV_FP_AVAILABLE
-#include <absl/strings/charconv.h>  // for from_chars (FP)
-#endif
+// clang-format on
 
 #include <absl/strings/match.h>       // for StartsWithIgnoreCase, EndsWith
 #include <absl/strings/str_format.h>  // for absl::StrAppendFormat
@@ -33,86 +40,22 @@
 #include <utility>               // for pair, make_pair
 #include <vector>                // for vector
 
-#include "modle/common/suppress_compiler_warnings.hpp"
-
 namespace modle::utils {
+
+template <class N>
+inline auto from_chars(const char *first, const char *last, N &value) noexcept {
+#if defined(MODLE_CHARCONV_FP_AVAILABLE) && defined(MODLE_CHARCONV_INT_AVAILABLE)
+  return std::from_chars(first, last, value);
+#else
+  return msstl::from_chars(first, last, value);
+#endif
+}
 
 template <typename N, typename>
 void parse_numeric_or_throw(std::string_view tok, N &field) {
-  if constexpr (std::is_integral_v<N>) {
-#ifdef MODLE_CHARCONV_INT_AVAILABLE  // str -> integral
-    auto [ptr, err] = std::from_chars(tok.data(), tok.end(), field);
-    if (ptr != tok.end() && err != std::errc{}) {
-      throw_except_from_errc(tok, (std::numeric_limits<size_t>::max)(), field, ptr, err);
-    }
-#else
-    if constexpr (std::is_same_v<N, int32_t>) {  // str -> int32
-      const auto tmp = static_cast<N>(std::stol(tok.data(), nullptr));
-      if (tmp == (std::numeric_limits<N>::max)()) {
-        throw_except_from_errc(tok, (std::numeric_limits<size_t>::max)(), tmp, nullptr,
-                               std::errc::result_out_of_range);
-      } else if (tmp == 0 && tok != "0") {
-        throw_except_from_errc(tok, (std::numeric_limits<size_t>::max)(), tmp, nullptr,
-                               std::errc::invalid_argument);
-      }
-      field = tmp;
-    } else if constexpr (std::is_same_v<N, int64_t>) {  // str -> int64
-      const auto tmp = static_cast<N>(std::stoll(tok.data(), nullptr));
-      if (tmp == (std::numeric_limits<N>::max)()) {
-        throw_except_from_errc(tok, (std::numeric_limits<size_t>::max)(), tmp, nullptr,
-                               std::errc::result_out_of_range);
-      } else if (tmp == 0 && tok != "0") {
-        throw_except_from_errc(tok, (std::numeric_limits<size_t>::max)(), tmp, nullptr,
-                               std::errc::invalid_argument);
-      }
-      field = tmp;
-    } else if constexpr (std::is_same_v<N, uint32_t>) {  // str -> uint32
-      const auto tmp = static_cast<N>(std::stoul(tok.data(), nullptr));
-      if (tmp == (std::numeric_limits<N>::max)()) {
-        throw_except_from_errc(tok, (std::numeric_limits<size_t>::max)(), tmp, nullptr,
-                               std::errc::result_out_of_range);
-      } else if (tmp == 0 && tok != "0") {
-        throw_except_from_errc(tok, (std::numeric_limits<size_t>::max)(), tmp, nullptr,
-                               std::errc::invalid_argument);
-      }
-      field = tmp;
-    } else if constexpr (std::is_same_v<N, uint64_t>) {  // str -> uint64
-      const auto tmp = static_cast<N>(std::stoull(tok.data(), nullptr));
-      if (tmp == (std::numeric_limits<N>::max)()) {
-        throw_except_from_errc(tok, (std::numeric_limits<size_t>::max)(), tmp, nullptr,
-                               std::errc::result_out_of_range);
-      } else if (tmp == 0 && tok != "0") {
-        throw_except_from_errc(tok, (std::numeric_limits<size_t>::max)(), tmp, nullptr,
-                               std::errc::invalid_argument);
-      }
-      field = tmp;
-    } else {  // str -> other int
-      const auto tmp = std::stoll(tok.data(), nullptr);
-      DISABLE_WARNING_PUSH
-      DISABLE_WARNING_USELESS_CAST
-      if (tmp == (std::numeric_limits<int64_t>::max)() ||
-          tmp < static_cast<int64_t>((std::numeric_limits<N>::min)()) ||
-          tmp > static_cast<int64_t>((std::numeric_limits<N>::max)())) {
-        throw_except_from_errc(tok, (std::numeric_limits<size_t>::max)(), tmp, nullptr,
-                               std::errc::result_out_of_range);
-      } else if (tmp == 0 && tok != "0") {
-        throw_except_from_errc(tok, (std::numeric_limits<size_t>::max)(), tmp, nullptr,
-                               std::errc::invalid_argument);
-      }
-      DISABLE_WARNING_POP
-      field = static_cast<N>(tmp);
-    }
-#endif
-    // str -> floating point
-  } else if constexpr (std::is_floating_point_v<N>) {
-#ifdef MODLE_CHARCONV_FP_AVAILABLE
-    auto [ptr, err] = std::from_chars(tok.data(), tok.end(), field);
-#else
-    auto [ptr, err] = absl::from_chars(tok.data(), tok.end(), field);
-#endif
-    if (ptr != tok.end() && err != std::errc{}) {
-      throw_except_from_errc(tok, (std::numeric_limits<size_t>::max)(), field, ptr, err);
-    }
+  auto [ptr, err] = utils::from_chars(tok.data(), tok.end(), field);
+  if (ptr != tok.end() && err != std::errc{}) {
+    throw_except_from_errc(tok, (std::numeric_limits<size_t>::max)(), field, ptr, err);
   }
 }
 

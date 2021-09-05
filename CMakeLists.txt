@@ -39,26 +39,26 @@ else()
 endif()
 
 if(ENABLE_TESTING)
-  target_compile_definitions(project_options INTERFACE ENABLE_TESTING=1)
+  target_compile_definitions(project_options INTERFACE ENABLE_TESTING)
 endif()
 
 # Define macros to signal library feature availability
 target_compile_definitions(
   project_options
-  INTERFACE $<$<BOOL:CHARCONV_INT_AVAILABLE>:MODLE_CHARCONV_INT_AVAILABLE=1>
-            $<$<BOOL:CHARCONV_FP_AVAILABLE>:MODLE_CHARCONV_FP_AVAILABLE=1>
-            $<$<BOOL:CHARCONV_VARIANT_AVAILABLE>:MODLE_CHARCONV_VARIANT_AVAILABLE=1>)
+  INTERFACE $<$<BOOL:${CHARCONV_INT_AVAILABLE}>:MODLE_CHARCONV_INT_AVAILABLE>
+            $<$<BOOL:${CHARCONV_FP_AVAILABLE}>:MODLE_CHARCONV_FP_AVAILABLE>
+            $<$<BOOL:${CHARCONV_VARIANT_AVAILABLE}>:MODLE_CHARCONV_VARIANT_AVAILABLE>)
 
 # Tweak spdlog
 target_compile_definitions(
   project_options
-  INTERFACE SPDLOG_CLOCK_COARSE=1
-            SPDLOG_DISABLE_DEFAULT_LOGGER=1
-            SPDLOG_NO_ATOMIC_LEVELS=1
-            SPDLOG_PREVENT_CHILD_FD=1)
+  INTERFACE SPDLOG_CLOCK_COARSE
+  INTERFACE SPDLOG_DISABLE_DEFAULT_LOGGER
+  INTERFACE SPDLOG_NO_ATOMIC_LEVELS
+  INTERFACE SPDLOG_PREVENT_CHILD_FD)
 
 # Tweak fmt
-target_compile_definitions(project_options INTERFACE FMT_ENFORCE_COMPILE_STRING=1)
+target_compile_definitions(project_options INTERFACE FMT_ENFORCE_COMPILE_STRING)
 
 # Reduce level of optimization to improve the code profiling experience
 if(OPTIMIZE_FOR_PROFILING)

@@ -67,10 +67,11 @@ check_cxx_source_compiles(
 check_cxx_source_compiles(
   "#include <variant>
 
-     int main(int argc, char* argv[]) {
-        std::variant<int, long> x{};
-        return 0;
-     }"
+   int main(int argc, char* argv[]) {
+      std::variant<int, long> x;
+      (void)x;
+      return 0;
+   }"
   VARIANT_AVAILABLE)
 
 #

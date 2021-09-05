@@ -15,18 +15,22 @@
 #define DISABLE_WARNING_SIGN_COMPARE    DISABLE_WARNING(C4018, C4287, C4388, C4389)
 #define DISABLE_WARNING_SIGN_CONVERSION DISABLE_WARNING(C4308, C4245, C4365)
 #define DISABLE_WARNING_USELESS_CAST
+#define DISABLE_WARNING_DOUBLE_PROMOTION
+#define DISABLE_WARNING_SHORTEN_64_TO_32
 #endif
 
 // Defines for GCC and Clang
 #if defined(__GNUC__) || defined(__clang__)
-#define DO_PRAGMA(X)                    _Pragma(#X)
-#define DISABLE_WARNING_PUSH            DO_PRAGMA(GCC diagnostic push)
-#define DISABLE_WARNING_POP             DO_PRAGMA(GCC diagnostic pop)
-#define DISABLE_WARNING(warningName)    DO_PRAGMA(GCC diagnostic ignored warningName)
+#define DO_PRAGMA(X)                     _Pragma(#X)
+#define DISABLE_WARNING_PUSH             DO_PRAGMA(GCC diagnostic push)
+#define DISABLE_WARNING_POP              DO_PRAGMA(GCC diagnostic pop)
+#define DISABLE_WARNING(warningName)     DO_PRAGMA(GCC diagnostic ignored warningName)
 
-#define DISABLE_WARNING_SIGN_CONVERSION DISABLE_WARNING("-Wsign-conversion")
-#define DISABLE_WARNING_SIGN_COMPARE    DISABLE_WARNING("-Wsign-compare")
-#define DISABLE_WARNING_CONVERSION      DISABLE_WARNING("-Wconversion")
+#define DISABLE_WARNING_SIGN_CONVERSION  DISABLE_WARNING("-Wsign-conversion")
+#define DISABLE_WARNING_SIGN_COMPARE     DISABLE_WARNING("-Wsign-compare")
+#define DISABLE_WARNING_CONVERSION       DISABLE_WARNING("-Wconversion")
+#define DISABLE_WARNING_DOUBLE_PROMOTION DISABLE_WARNING("-Wdouble-promotion")
+#define DISABLE_WARNING_SHORTEN_64_TO_32 DISABLE_WARNING("-Wshorten-64-to-32")
 #endif
 
 // Defines specific to Clang
@@ -56,7 +60,9 @@
 
 #define DISABLE_WARNING_BOOL_COMPARE
 #define DISABLE_WARNING_CONVERSION
+#define DISABLE_WARNING_DOUBLE_PROMOTION
 #define DISABLE_WARNING_IMPL_INT_TO_FLOAT
+#define DISABLE_WARNING_SHORTEN_64_TO_32
 #define DISABLE_WARNING_SIGN_COMPARE
 #define DISABLE_WARNING_SIGN_CONVERSION
 #define DISABLE_WARNING_USELESS_CAST

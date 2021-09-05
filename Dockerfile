@@ -37,6 +37,8 @@ RUN cd "$build_dir"                              \
 COPY cmake                  "$src_dir/cmake"
 COPY "external/libBigWig-$LIBBIGWIG_VER.tar.xz"                \
      "$src_dir/external/libBigWig-$LIBBIGWIG_VER.tar.xz"
+COPY "external/mscharconv.tar.xz"                              \
+     "$src_dir/external/mscharconv.tar.xz"
 COPY "external/thread-pool-$THREAD_POOL_VER.tar.xz"            \
      "$src_dir/external/thread-pool-$THREAD_POOL_VER.tar.xz"
 COPY "external/Xoshiro-cpp-$XOSHIRO_CPP_VER.tar.xz"            \

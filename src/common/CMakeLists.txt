@@ -31,6 +31,7 @@ target_link_libraries(
             Boost::random
             fmt::fmt
             $<$<NOT:$<BOOL:${MODLE_USE_MERSENNE_TWISTER}>>:XoshiroCpp::XoshiroCpp>
-            xxHash::xxhash)
+            xxHash::xxhash
+            mscharconv)
 
 target_include_directories(modle_common INTERFACE include/)
