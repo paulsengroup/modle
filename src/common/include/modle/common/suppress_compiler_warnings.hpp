@@ -30,12 +30,12 @@
 #define DISABLE_WARNING_SIGN_COMPARE     DISABLE_WARNING("-Wsign-compare")
 #define DISABLE_WARNING_CONVERSION       DISABLE_WARNING("-Wconversion")
 #define DISABLE_WARNING_DOUBLE_PROMOTION DISABLE_WARNING("-Wdouble-promotion")
-#define DISABLE_WARNING_SHORTEN_64_TO_32 DISABLE_WARNING("-Wshorten-64-to-32")
 #endif
 
 // Defines specific to Clang
 #ifdef __clang__
-#define DISABLE_WARNING_BOOL_COMPARE DISABLE_WARNING("-Wtautological-constant-out-of-range-compare")
+#define DISABLE_WARNING_BOOL_COMPARE     DISABLE_WARNING("-Wtautological-constant-out-of-range-compare")
+#define DISABLE_WARNING_SHORTEN_64_TO_32 DISABLE_WARNING("-Wshorten-64-to-32")
 #define DISABLE_WARNING_USELESS_CAST
 
 #if defined(__APPLE__) || (__clang_major__ < 11)
@@ -50,6 +50,7 @@
 #define DISABLE_WARNING_BOOL_COMPARE      DISABLE_WARNING("-Wbool-compare")
 #define DISABLE_WARNING_IMPL_INT_TO_FLOAT DISABLE_WARNING("-Wfloat-conversion")
 #define DISABLE_WARNING_USELESS_CAST      DISABLE_WARNING("-Wuseless-cast")
+#define DISABLE_WARNING_SHORTEN_64_TO_32
 #endif
 
 // Defines for unknown/unsupported compilers
