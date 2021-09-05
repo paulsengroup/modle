@@ -58,7 +58,7 @@ macro(run_conan)
     # the project Alternatively a conanfile.txt could be used
     conan_cmake_install(
       PATH_OR_REFERENCE
-      ${CMAKE_SOURCE_DIR}
+      ${CMAKE_CURRENT_SOURCE_DIR}/conanfile.py
       SETTINGS
       ${settings}
       OPTIONS
