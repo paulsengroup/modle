@@ -129,14 +129,10 @@ hsize_t write_number(N &num, const H5::DataSet &dataset, hsize_t file_offset) {
 
     hsize_t file_size{file_offset + BUFF_SIZE};
     dataset.extend(&file_size);
-    DISABLE_WARNING_PUSH
-    DISABLE_WARNING_C_VLA
-    const auto *cbuff = reinterpret_cast<N(*)[BUFF_SIZE]>(&num);  // NOLINT
-    DISABLE_WARNING_POP
 
     auto file_space = dataset.getSpace();
     file_space.selectHyperslab(H5S_SELECT_SET, &BUFF_SIZE, &file_offset);
-    dataset.write(cbuff, getH5_type<N>(), mem_space, file_space);
+    dataset.write(&num, getH5_type<N>(), mem_space, file_space);
 
     return file_size;
   } catch (const H5::Exception &e) {
@@ -169,14 +165,10 @@ hsize_t write_numbers(CN &numbers, const H5::DataSet &dataset, hsize_t file_offs
 
     hsize_t file_size{file_offset + BUFF_SIZE};
     dataset.extend(&file_size);
-    DISABLE_WARNING_PUSH
-    DISABLE_WARNING_C_VLA
-    const auto *cbuff = reinterpret_cast<N(*)[BUFF_SIZE]>(numbers.data());  // NOLINT
-    DISABLE_WARNING_POP
 
     auto file_space = dataset.getSpace();
     file_space.selectHyperslab(H5S_SELECT_SET, &BUFF_SIZE, &file_offset);
-    dataset.write(cbuff, getH5_type<N>(), mem_space, file_space);
+    dataset.write(numbers.data(), getH5_type<N>(), mem_space, file_space);
 
     return file_size;
   } catch (const H5::Exception &e) {
@@ -232,16 +224,12 @@ hsize_t read_numbers(const H5::DataSet &dataset, CN &buff, hsize_t file_offset) 
     if (const auto n_items = static_cast<hsize_t>(file_space.getSimpleExtentNpoints());
         n_items < BUFF_SIZE || BUFF_SIZE == 0) {
       BUFF_SIZE = n_items;
+      assert(BUFF_SIZE > 0);  // NOLINT
       buff.resize(BUFF_SIZE);
     }
 
-    DISABLE_WARNING_PUSH
-    DISABLE_WARNING_C_VLA
-    auto *cbuff = reinterpret_cast<N(*)[BUFF_SIZE]>(buff.data());  // NOLINT
-    DISABLE_WARNING_POP
-
     file_space.selectHyperslab(H5S_SELECT_SET, &BUFF_SIZE, &file_offset);
-    dataset.read(cbuff, getH5_type<N>(), mem_space, file_space);
+    dataset.read(buff.data(), getH5_type<N>(), mem_space, file_space);
 
     return file_offset + BUFF_SIZE;
   } catch (const H5::Exception &e) {
@@ -386,15 +374,9 @@ void read_attribute(const H5::DataSet &d, std::string_view attr_name, T &buff) {
     }
     hsize_t buff_size{0};  // Figure out the appropriate buffer size
     attr.getSpace().getSimpleExtentDims(&buff_size);
+    assert(buff_size > 1);  // NOLINT
     buff.resize(buff_size);
-    assert(buff_size > 1);
-    DISABLE_WARNING_PUSH
-    DISABLE_WARNING_C_VLA
-    auto *cbuff = reinterpret_cast<N(*)[buff_size]>(buff.data());  // NOLINT
-    DISABLE_WARNING_POP
-    const auto dtype = attr.getArrayType();  // It is important to get the array type, and not
-                                             // just the data type here
-    attr.read(attr.getArrayType(), cbuff);
+    attr.read(attr.getArrayType(), buff.data());
   }
 }
 
@@ -556,18 +538,17 @@ bool check_dataset_type(const H5::DataSet &dataset, T type, bool throw_on_failur
 [[nodiscard]] attr_types getCpp_type(const H5::FloatType &h5_type) {
   attr_types type;
   const auto size = h5_type.getSize();
-  switch (size) {
-    case (sizeof(float)):
-      type = static_cast<float>(0);
-      return type;
-    case (sizeof(double)):
-      type = static_cast<double>(0);
-      return type;
-    case (sizeof(long double)):
-      type = static_cast<long double>(0);
-      return type;
-    default:
-      throw std::logic_error("Unreachable code");
+  if (size == sizeof(float)) {
+    type = static_cast<float>(0);
+    return type;
+  }
+  if (size == sizeof(double)) {
+    type = static_cast<double>(0);
+    return type;
+  }
+  if (size == sizeof(long double)) {
+    type = static_cast<long double>(0);
+    return type;
   }
   throw std::logic_error("Unreachable code");
 }
