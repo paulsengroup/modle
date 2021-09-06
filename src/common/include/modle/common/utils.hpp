@@ -61,8 +61,6 @@ template <typename T>
 template <typename T>
 constexpr auto get_printable_type_name() noexcept;
 
-[[maybe_unused]] [[nodiscard]] constexpr bool ndebug_defined() noexcept;
-
 // Various
 
 struct XXH3_Deleter {  // NOLINT
@@ -87,6 +85,19 @@ struct identity {
   [[nodiscard]] constexpr T&& operator()(T&& a) const noexcept;
   using is_transparent = void;
 };
+
+[[maybe_unused]] [[nodiscard]] constexpr bool ndebug_defined() noexcept;
+[[maybe_unused]] [[nodiscard]] constexpr bool ndebug_not_defined() noexcept;
+
+#ifdef __has_cpp_attribute
+#if __has_cpp_attribute(clang::no_destroy)
+#define MODLE_NO_DESTROY [[clang::no_destroy]]
+#else
+#define MODLE_NO_DESTROY
+#endif
+#else
+#define MODLE_NO_DESTROY
+#endif
 
 }  // namespace modle::utils
 

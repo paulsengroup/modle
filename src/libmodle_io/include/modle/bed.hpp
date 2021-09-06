@@ -240,6 +240,7 @@ class Parser {
 };
 
 using namespace std::literals::string_view_literals;
+MODLE_NO_DESTROY
 static const absl::flat_hash_map<std::string_view, char> bed_strand_encoding{
     {"+"sv, '+'},       {"plus"sv, '+'},    {"fwd"sv, '+'},     {"Fwd"sv, '+'},
     {"forward"sv, '+'}, {"Forward"sv, '+'}, {"FWD"sv, '+'},     {"FORWARD"sv, '+'},
@@ -249,12 +250,15 @@ static const absl::flat_hash_map<std::string_view, char> bed_strand_encoding{
     {"NONE"sv, '.'},    {"unknown"sv, '.'}, {"Unknown"sv, '.'}, {"unk"sv, '.'},
     {"Unk"sv, '.'},     {"UNK"sv, '.'}};
 
+MODLE_NO_DESTROY
 static const std::vector<std::string_view> bed_dialects{"BED3"sv, "BED4"sv, "BED5"sv,
                                                         "BED6"sv, "BED9"sv, "BED12"sv};
+MODLE_NO_DESTROY
 static const absl::flat_hash_map<std::string_view, BED::Dialect> str_to_bed_dialect_mappings{
     {"BED3"sv, BED::Dialect::BED3}, {"BED4"sv, BED::Dialect::BED4},
     {"BED5"sv, BED::Dialect::BED5}, {"BED6"sv, BED::Dialect::BED6},
     {"BED9"sv, BED::Dialect::BED9}, {"BED12"sv, BED::Dialect::BED12}};
+MODLE_NO_DESTROY
 static const absl::flat_hash_map<BED::Dialect, std::string_view> bed_dialect_to_str_mappings{
     {BED::Dialect::BED3, "BED3"sv}, {BED::Dialect::BED4, "BED4"sv},
     {BED::Dialect::BED5, "BED5"sv}, {BED::Dialect::BED6, "BED6"sv},

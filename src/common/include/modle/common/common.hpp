@@ -1,9 +1,7 @@
 #pragma once
 
-#include <array>             // for array
-#include <boost/config.hpp>  // for BOOST_LIKELY, BOOST_UNLIKELY
-#include <cstddef>           // IWYU pragma: keep for size_t
-#include <cstdint>           // for uint32_t, uint_fast8_t
+#include <cstddef>  // IWYU pragma: keep for size_t
+#include <cstdint>  // for uint32_t, uint_fast8_t
 
 #include "modle/common/utils.hpp"  // for ndebug_defined
 
