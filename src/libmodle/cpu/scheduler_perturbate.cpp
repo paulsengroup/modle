@@ -477,9 +477,11 @@ void Simulation::simulate_window(Simulation::State& state, compressed_io::Writer
 
     spdlog::info(FMT_STRING("Writing contacts for {} to file {}..."), state.chrom->name(),
                  file_name);
-    const auto t0 = absl::Now();
+
+    absl::Duration duration;
     {
       std::scoped_lock l(cooler_mutex);
+      const auto t0 = absl::Now();
       auto c = cooler::Cooler(file_name, cooler::Cooler::WRITE_ONLY, this->bin_size,
                               this->_genome.chromosome_with_longest_name().name().size());
       for (const auto& chrom : this->_genome) {
@@ -493,9 +495,10 @@ void Simulation::simulate_window(Simulation::State& state, compressed_io::Writer
         c.write_or_append_empty_cmatrix_to_file(chrom.name(), chrom.start_pos(), chrom.end_pos(),
                                                 chrom.size());
       }
+      duration = absl::Now() - t0;
     }
     spdlog::info(FMT_STRING("DONE writing file {} in {}"), file_name,
-                 absl::FormatDuration(absl::Now() - t0));
+                 absl::FormatDuration(duration));
   }
 }
 
