@@ -64,6 +64,19 @@ function(set_project_warnings project_name)
       -Wuseless-cast # warn if you perform a cast to the same type
   )
 
+  if(ENABLE_WEVERYTHING)
+    set(CLANG_WARNINGS
+        ${CLANG_WARNINGS}
+        -Weverything
+        -Wno-c++98-compat
+        -Wno-c++11-compat
+        -Wno-c++14-compat
+        -Wno-c++98-compat-pedantic
+        -Wno-c++11-compat-pedantic
+        -Wno-c++14-compat-pedantic
+        -Wno-documentation-unknown-command)
+  endif()
+
   if(MSVC)
     set(PROJECT_WARNINGS ${MSVC_WARNINGS})
   elseif(CMAKE_CXX_COMPILER_ID MATCHES ".*Clang")

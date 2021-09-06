@@ -33,6 +33,7 @@ option(
   ENABLE_ASSERTIONS
   "Enable assertions and various other runtime checks (this is done regardless of the type passed to CMAKE_BUILD_TYPE)"
   OFF)
+option(ENABLE_WEVERYTHING "Pass -Weverything when compiling with clang (developers only!)" OFF)
 
 if(ENABLE_PCH)
   if(${CMAKE_VERSION} VERSION_LESS "3.16.0")
