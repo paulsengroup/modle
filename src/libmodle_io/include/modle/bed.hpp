@@ -1,9 +1,8 @@
 #pragma once
 
-#include <absl/container/btree_map.h>      // for btree_map
-#include <absl/container/flat_hash_map.h>  // for flat_hash_map
-#include <absl/types/span.h>               // for Span
-#include <xxh3.h>                          // for XXH3_state_t
+#include <absl/container/btree_map.h>  // for btree_map
+#include <absl/types/span.h>           // for Span
+#include <xxh3.h>                      // for XXH3_state_t
 
 #include <boost/filesystem/path.hpp>  // for path
 #include <cstddef>                    // IWYU pragma: keep for size_t
@@ -18,6 +17,7 @@
 
 #include "modle/chrom_sizes.hpp"    // for ChromSizes
 #include "modle/common/common.hpp"  // for bp_t
+#include "modle/common/utils.hpp"   // for ConstMap
 #include "modle/compressed_io.hpp"  // for Reader
 #include "modle/interval_tree.hpp"  // for IITree
 
@@ -240,29 +240,33 @@ class Parser {
 };
 
 using namespace std::literals::string_view_literals;
-MODLE_NO_DESTROY
-static const absl::flat_hash_map<std::string_view, char> bed_strand_encoding{
-    {"+"sv, '+'},       {"plus"sv, '+'},    {"fwd"sv, '+'},     {"Fwd"sv, '+'},
-    {"forward"sv, '+'}, {"Forward"sv, '+'}, {"FWD"sv, '+'},     {"FORWARD"sv, '+'},
-    {"-"sv, '-'},       {"minus"sv, '-'},   {"rev"sv, '-'},     {"Rev"sv, '-'},
-    {"reverse"sv, '-'}, {"Reverse"sv, '-'}, {"REV"sv, '-'},     {"REVERSE"sv, '-'},
-    {"."sv, '.'},       {""sv, '.'},        {"none"sv, '.'},    {"None"sv, '.'},
-    {"NONE"sv, '.'},    {"unknown"sv, '.'}, {"Unknown"sv, '.'}, {"unk"sv, '.'},
-    {"Unk"sv, '.'},     {"UNK"sv, '.'}};
 
-MODLE_NO_DESTROY
-static const std::vector<std::string_view> bed_dialects{"BED3"sv, "BED4"sv, "BED5"sv,
-                                                        "BED6"sv, "BED9"sv, "BED12"sv};
-MODLE_NO_DESTROY
-static const absl::flat_hash_map<std::string_view, BED::Dialect> str_to_bed_dialect_mappings{
-    {"BED3"sv, BED::Dialect::BED3}, {"BED4"sv, BED::Dialect::BED4},
-    {"BED5"sv, BED::Dialect::BED5}, {"BED6"sv, BED::Dialect::BED6},
-    {"BED9"sv, BED::Dialect::BED9}, {"BED12"sv, BED::Dialect::BED12}};
-MODLE_NO_DESTROY
-static const absl::flat_hash_map<BED::Dialect, std::string_view> bed_dialect_to_str_mappings{
-    {BED::Dialect::BED3, "BED3"sv}, {BED::Dialect::BED4, "BED4"sv},
-    {BED::Dialect::BED5, "BED5"sv}, {BED::Dialect::BED6, "BED6"sv},
-    {BED::Dialect::BED9, "BED9"sv}, {BED::Dialect::BED12, "BED12"sv}};
+static constexpr utils::ConstMap<std::string_view, char, 26> bed_strand_encoding{
+    std::make_pair("+"sv, '+'),       std::make_pair("plus"sv, '+'),
+    std::make_pair("fwd"sv, '+'),     std::make_pair("Fwd"sv, '+'),
+    std::make_pair("forward"sv, '+'), std::make_pair("Forward"sv, '+'),
+    std::make_pair("FWD"sv, '+'),     std::make_pair("FORWARD"sv, '+'),
+    std::make_pair("-"sv, '-'),       std::make_pair("minus"sv, '-'),
+    std::make_pair("rev"sv, '-'),     std::make_pair("Rev"sv, '-'),
+    std::make_pair("reverse"sv, '-'), std::make_pair("Reverse"sv, '-'),
+    std::make_pair("REV"sv, '-'),     std::make_pair("REVERSE"sv, '-'),
+    std::make_pair("."sv, '.'),       std::make_pair(""sv, '.'),
+    std::make_pair("none"sv, '.'),    std::make_pair("None"sv, '.'),
+    std::make_pair("NONE"sv, '.'),    std::make_pair("unknown"sv, '.'),
+    std::make_pair("Unknown"sv, '.'), std::make_pair("unk"sv, '.'),
+    std::make_pair("Unk"sv, '.'),     std::make_pair("UNK"sv, '.')};
+
+static constexpr std::array<std::string_view, 6> bed_dialects{"BED3"sv, "BED4"sv, "BED5"sv,
+                                                              "BED6"sv, "BED9"sv, "BED12"sv};
+static constexpr utils::ConstMap<std::string_view, BED::Dialect, 6> str_to_bed_dialect_mappings{
+    std::make_pair("BED3"sv, BED::Dialect::BED3), std::make_pair("BED4"sv, BED::Dialect::BED4),
+    std::make_pair("BED5"sv, BED::Dialect::BED5), std::make_pair("BED6"sv, BED::Dialect::BED6),
+    std::make_pair("BED9"sv, BED::Dialect::BED9), std::make_pair("BED12"sv, BED::Dialect::BED12)};
+
+static constexpr utils::ConstMap<BED::Dialect, std::string_view, 6> bed_dialect_to_str_mappings{
+    std::make_pair(BED::Dialect::BED3, "BED3"sv), std::make_pair(BED::Dialect::BED4, "BED4"sv),
+    std::make_pair(BED::Dialect::BED5, "BED5"sv), std::make_pair(BED::Dialect::BED6, "BED6"sv),
+    std::make_pair(BED::Dialect::BED9, "BED9"sv), std::make_pair(BED::Dialect::BED12, "BED12"sv)};
 
 }  // namespace modle::bed
 

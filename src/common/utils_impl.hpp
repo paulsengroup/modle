@@ -272,4 +272,47 @@ template <class T>
 constexpr T &&identity::operator()(T &&a) const noexcept {
   return std::forward<T>(a);
 }
+
+template <class Key, class Value, size_t Size>
+template <class... Args>
+constexpr ConstMap<Key, Value, Size>::ConstMap(Args &&...args) noexcept
+    : _buff{{std::forward<Args>(args)...}} {}
+
+template <class Key, class Value, size_t Size>
+constexpr const Value &ConstMap<Key, Value, Size>::at(const Key &key) const {
+  const auto itr = this->find(key);
+  if (itr != this->end()) {
+    return itr->second;
+  }
+  throw std::range_error(fmt::format(FMT_STRING("Unable to find key \"{}\""), key));
+}
+
+template <class Key, class Value, size_t Size>
+constexpr const Value &ConstMap<Key, Value, Size>::operator[](const Key &key) const {
+  return *this->find(key);
+}
+
+template <class Key, class Value, size_t Size>
+constexpr typename std::array<std::pair<Key, Value>, Size>::const_iterator
+ConstMap<Key, Value, Size>::find(const Key &key) const noexcept {
+  return std::find_if(this->begin(), this->end(), [&key](const auto &v) { return v.first == key; });
+}
+
+template <class Key, class Value, size_t Size>
+constexpr bool ConstMap<Key, Value, Size>::contains(const Key &key) const noexcept {
+  return this->find(key) != this->_buff.end();
+}
+
+template <class Key, class Value, size_t Size>
+constexpr typename std::array<std::pair<Key, Value>, Size>::const_iterator
+ConstMap<Key, Value, Size>::begin() const noexcept {
+  return this->_buff.begin();
+}
+
+template <class Key, class Value, size_t Size>
+constexpr typename std::array<std::pair<Key, Value>, Size>::const_iterator
+ConstMap<Key, Value, Size>::end() const noexcept {
+  return this->_buff.end();
+}
+
 }  // namespace modle::utils

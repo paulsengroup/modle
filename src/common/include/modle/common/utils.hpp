@@ -99,6 +99,24 @@ struct identity {
 #define MODLE_NO_DESTROY
 #endif
 
+// Source: https://www.youtube.com/watch?v=INn3xa4pMfg
+template <class Key, class Value, size_t Size>
+class ConstMap {
+  std::array<std::pair<Key, Value>, Size> _buff;
+  using const_iterator = typename std::array<std::pair<Key, Value>, Size>::const_iterator;
+
+ public:
+  template <class... Args>
+  constexpr ConstMap(Args&&... args) noexcept;
+  [[nodiscard]] constexpr const Value& at(const Key& key) const;
+  [[nodiscard]] constexpr const Value& operator[](const Key& key) const;
+  [[nodiscard]] constexpr const_iterator find(const Key& key) const noexcept;
+  [[nodiscard]] constexpr bool contains(const Key& key) const noexcept;
+
+  [[nodiscard]] constexpr const_iterator begin() const noexcept;
+  [[nodiscard]] constexpr const_iterator end() const noexcept;
+};
+
 }  // namespace modle::utils
 
 #include "../../../utils_impl.hpp"  // IWYU pragma: export

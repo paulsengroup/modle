@@ -36,7 +36,7 @@ std::string RGB::to_string() const noexcept { return fmt::to_string(*this); }
 
 void BED::parse_strand_or_throw(const std::vector<std::string_view>& toks, uint8_t idx,
                                 char& field) {
-  const auto match = bed_strand_encoding.find(toks[idx]);
+  const auto* const match = bed_strand_encoding.find(toks[idx]);
   if (match == bed_strand_encoding.end()) {
     throw std::runtime_error(fmt::format(FMT_STRING("Unrecognized strand '{}'"), toks[idx]));
   }
@@ -551,10 +551,9 @@ void Parser::reset() {
   try {
     this->_reader.reset();
   } catch (const std::exception& e) {
-    throw std::runtime_error(fmt::format(
-        FMT_STRING(
-            "An error occourred while seeking to the begin of file {} using BED::Parser::reset()"),
-        this->_reader.path()));
+    throw std::runtime_error(fmt::format(FMT_STRING("An error occourred while seeking to the begin "
+                                                    "of file {} using BED::Parser::reset(): {}"),
+                                         this->_reader.path(), e.what()));
   }
   this->_buff.clear();
   this->_num_lines_read = 0;
