@@ -92,7 +92,7 @@ hsize_t write_str(const S &str_, const H5::DataSet &dataset, const H5::StrType &
     dataset.write(buff, str_type, mem_space, file_space);
 
     return file_size;
-  } catch (const H5::Exception &e) {
+  } catch ([[maybe_unused]] const H5::Exception &e) {
     throw std::runtime_error(
         fmt::format(FMT_STRING("The following error occurred while writing strings '{}' to dataset "
                                "'{}' at offset {}:\n{}"),
@@ -135,7 +135,7 @@ hsize_t write_number(N &num, const H5::DataSet &dataset, hsize_t file_offset) {
     dataset.write(&num, getH5_type<N>(), mem_space, file_space);
 
     return file_size;
-  } catch (const H5::Exception &e) {
+  } catch ([[maybe_unused]] const H5::Exception &e) {
     throw std::runtime_error(
         fmt::format(FMT_STRING("The following error occurred while writing number {} to dataset "
                                "'{}' at offset {}:\n{}"),
@@ -171,7 +171,7 @@ hsize_t write_numbers(CN &numbers, const H5::DataSet &dataset, hsize_t file_offs
     dataset.write(numbers.data(), getH5_type<N>(), mem_space, file_space);
 
     return file_size;
-  } catch (const H5::Exception &e) {
+  } catch ([[maybe_unused]] const H5::Exception &e) {
     throw std::runtime_error(fmt::format(
         FMT_STRING(
             "The following error occurred while writing a collection of {} numbers to dataset "
@@ -197,7 +197,7 @@ hsize_t read_number(const H5::DataSet &dataset, N &buff, hsize_t file_offset) {
 
     return file_offset + 1;
 
-  } catch (const H5::Exception &e) {
+  } catch ([[maybe_unused]] const H5::Exception &e) {
     throw std::runtime_error(fmt::format(FMT_STRING("Failed to read a number from dataset '{}' "
                                                     "at offset {} using a buffer size of 1:\n{}"),
                                          dataset.getObjName(), file_offset,
@@ -232,7 +232,7 @@ hsize_t read_numbers(const H5::DataSet &dataset, CN &buff, hsize_t file_offset) 
     dataset.read(buff.data(), getH5_type<N>(), mem_space, file_space);
 
     return file_offset + BUFF_SIZE;
-  } catch (const H5::Exception &e) {
+  } catch ([[maybe_unused]] const H5::Exception &e) {
     throw std::runtime_error(
         fmt::format(FMT_STRING("Failed to read numbers from dataset '{}' at offset {} using a "
                                "buffer size of {} ({} bytes):\n{}"),

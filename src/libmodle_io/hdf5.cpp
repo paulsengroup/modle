@@ -84,7 +84,7 @@ hsize_t read_str(const H5::DataSet &dataset, std::string &buff, hsize_t file_off
 
     return file_offset + 1;
 
-  } catch (const H5::Exception &e) {
+  } catch ([[maybe_unused]] const H5::Exception &e) {
     throw std::runtime_error(
         fmt::format(FMT_STRING("Failed to read a string from dataset '{}' at offset {} using a "
                                "buffer size of 1:\n{}"),
@@ -114,7 +114,7 @@ hsize_t read_strings(const H5::DataSet &dataset, std::vector<std::string> &buff,
 
     return n_strings;
 
-  } catch (const H5::Exception &e) {
+  } catch ([[maybe_unused]] const H5::Exception &e) {
     throw std::runtime_error(
         fmt::format(FMT_STRING("Failed to read strings from dataset '{}' at offset {} using a "
                                "buffer size of {}:\n{}"),
@@ -219,7 +219,7 @@ H5::H5File open_file_for_reading(std::string_view path_to_file) {
     H5::Exception::dontPrint();
     H5::H5File f(std::string{path_to_file.data(), path_to_file.size()}, H5F_ACC_RDONLY);
     return f;
-  } catch (const H5::Exception &e) {
+  } catch ([[maybe_unused]] const H5::Exception &e) {
     throw std::runtime_error(fmt::format(FMT_STRING("Failed to open file {} for reading:\n{}"),
                                          path_to_file, construct_error_stack()));
   }
