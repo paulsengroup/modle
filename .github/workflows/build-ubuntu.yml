@@ -63,7 +63,7 @@ jobs:
             ${{matrix.compiler.cc}}-
             ${{matrix.config.build_type}}-
             ${{hashFiles('conanfile.py')}}-
-            conan
+            conan-0
 
           path: ~/.conan/data
 
