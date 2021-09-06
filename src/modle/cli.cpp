@@ -259,7 +259,8 @@ gen.add_option(
       c.path_to_extr_barriers,
       "Path to BED file containing the extrusion barriers to be used in the simulation.\n"
       "Barriers corresponding to chromosomes that are not part of the simulation will be ignored.")
-      ->check(CLI::ExistingFile);
+      ->check(CLI::ExistingFile)
+      ->required();
 
   extr_barr.add_option(
       "--extrusion-barrier-occupancy",

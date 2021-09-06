@@ -157,17 +157,30 @@ template <typename FormatContext>
 auto fmt::formatter<modle::Simulation::State>::format(const modle::Simulation::State& s,
                                                       FormatContext& ctx) -> decltype(ctx.out()) {
   return fmt::format_to(ctx.out(),
-                        FMT_STRING("State:\n - TaskID {}\n"
-                                   " - Chrom: {}[{}-{}]\n"
-                                   " - CellID: {}\n"
-                                   " - Target epochs: {}\n"
-                                   " - Target contacts: {}\n"
-                                   " - # of LEFs: {}\n"
-                                   " - # Extrusion barriers: {}\n"
-                                   " - seed: {}\n"),
-                        s.id, s.chrom ? s.chrom->name() : "null",
+                        FMT_STRING("State:\n"
+                                   " - TaskID: {:d}\n"
+                                   " - CellID: {:d}\n"
+                                   " - Chrom: {}:{:d}-{:d}\n"
+                                   " - Deletion: {:d}-{:d}\n"
+                                   " - Window: {:d}-{:d}\n"
+                                   " - Active window: {:d}-{:d}\n"
+                                   " - Current epoch: {:d}\n"
+                                   " - Burn-in completed: {}\n"
+                                   " - Target epochs: {:d}\n"
+                                   " - Target contacts: {:d}\n"
+                                   " - # of LEFs: {:d}\n"
+                                   " - # of active LEFs: {:d}\n"
+                                   " - # Extrusion barriers: {:d}\n"
+                                   " - # Type I features: {:d}\n"
+                                   " - # Type II features: {:d}\n"
+                                   " - # of contacts registered: {:d}\n"
+                                   " - seed: {:d}"),
+                        s.id, s.cell_id, s.chrom ? s.chrom->name() : "null",
                         s.chrom ? static_cast<int64_t>(s.chrom->start_pos()) : -1,
-                        s.chrom ? static_cast<int64_t>(s.chrom->end_pos()) : -1, s.cell_id,
-                        s.num_target_epochs, s.num_target_contacts, s.num_lefs, s.barriers.size(),
-                        s.seed);
+                        s.chrom ? static_cast<int64_t>(s.chrom->end_pos()) : -1, s.deletion_begin,
+                        s.deletion_begin + s.deletion_size, s.window_start, s.window_end,
+                        s.active_window_start, s.active_window_end, s.epoch,
+                        s.burnin_completed ? "True" : "False", s.num_target_epochs,
+                        s.num_target_contacts, s.num_lefs, s.num_active_lefs, s.barriers.size(),
+                        s.feats1.size(), s.feats2.size(), s.num_contacts, s.seed);
 }

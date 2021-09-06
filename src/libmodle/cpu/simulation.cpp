@@ -691,6 +691,7 @@ absl::Span<Lef> Simulation::State::get_lefs(size_t size) noexcept {
   if (size == 0) {
     size = this->num_active_lefs;
   }
+  assert(size <= this->lef_buff.size());  // NOLINT
   return absl::MakeSpan(this->lef_buff.data(), size);
 }
 absl::Span<double> Simulation::State::get_lef_unloader_affinities(size_t size) noexcept {
@@ -1101,11 +1102,7 @@ void Simulation::simulate_one_cell(State& s) const {
 
       // Select inactive LEFs and bind them
       Simulation::select_and_bind_lefs(s);
-
       if (s.burnin_completed) {  // Register contacts
-        //   if (s.num_burnin_epochs < 450 || s.num_burnin_epochs >= 4000) {
-        //     print_avg_loop_size(s);
-        //   }
         this->sample_and_register_contacts(s, avg_nlefs_to_sample);
         if (s.num_target_contacts != 0 && s.num_contacts >= s.num_target_contacts) {
           return;  // Enough contact have been generated. Yay!
