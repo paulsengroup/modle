@@ -396,11 +396,12 @@ void Simulation::detect_primary_lef_lef_collisions(
 }
 
 void Simulation::process_secondary_lef_lef_collisions(
-    const Chromosome& chrom, const absl::Span<const Lef> lefs, const size_t nbarriers,
-    const absl::Span<const size_t> rev_lef_ranks, const absl::Span<const size_t> fwd_lef_ranks,
-    const absl::Span<bp_t> rev_moves, const absl::Span<bp_t> fwd_moves,
-    const absl::Span<collision_t> rev_collisions, const absl::Span<collision_t> fwd_collisions,
-    random::PRNG_t& rand_eng, size_t num_rev_units_at_5prime, size_t num_fwd_units_at_3prime) const
+    [[maybe_unused]] const Chromosome& chrom, const absl::Span<const Lef> lefs,
+    const size_t nbarriers, const absl::Span<const size_t> rev_lef_ranks,
+    const absl::Span<const size_t> fwd_lef_ranks, const absl::Span<bp_t> rev_moves,
+    const absl::Span<bp_t> fwd_moves, const absl::Span<collision_t> rev_collisions,
+    const absl::Span<collision_t> fwd_collisions, random::PRNG_t& rand_eng,
+    size_t num_rev_units_at_5prime, size_t num_fwd_units_at_3prime) const
     noexcept(utils::ndebug_defined()) {
   {
     assert(lefs.size() == fwd_lef_ranks.size());     // NOLINT
@@ -411,7 +412,6 @@ void Simulation::process_secondary_lef_lef_collisions(
     assert(lefs.size() == rev_collisions.size());    // NOLINT
     assert(lefs.size() >= num_rev_units_at_5prime);  // NOLINT
     assert(lefs.size() >= num_fwd_units_at_3prime);  // NOLINT
-    (void)chrom;
   }
 
   // Loop over pairs of consecutive fwd units.

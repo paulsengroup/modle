@@ -223,10 +223,9 @@ void Simulation::generate_moves(const Chromosome& chrom, const absl::Span<const 
 }
 
 void Simulation::adjust_moves_of_consecutive_extr_units(
-    const Chromosome& chrom, absl::Span<const Lef> lefs, absl::Span<const size_t> rev_lef_ranks,
-    absl::Span<const size_t> fwd_lef_ranks, absl::Span<bp_t> rev_moves,
-    absl::Span<bp_t> fwd_moves) noexcept(utils::ndebug_defined()) {
-  (void)chrom;
+    [[maybe_unused]] const Chromosome& chrom, absl::Span<const Lef> lefs,
+    absl::Span<const size_t> rev_lef_ranks, absl::Span<const size_t> fwd_lef_ranks,
+    absl::Span<bp_t> rev_moves, absl::Span<bp_t> fwd_moves) noexcept(utils::ndebug_defined()) {
   assert(!lefs.empty());  // NOLINT
 
   // Loop over pairs of consecutive extr. units.
@@ -361,7 +360,7 @@ void Simulation::rank_lefs(const absl::Span<const Lef> lefs,
   }
 }
 
-void Simulation::extrude(const Chromosome& chrom, const absl::Span<Lef> lefs,
+void Simulation::extrude([[maybe_unused]] const Chromosome& chrom, const absl::Span<Lef> lefs,
                          const absl::Span<const bp_t> rev_moves,
                          const absl::Span<const bp_t> fwd_moves,
                          const size_t num_rev_units_at_5prime,
@@ -371,7 +370,6 @@ void Simulation::extrude(const Chromosome& chrom, const absl::Span<Lef> lefs,
     assert(lefs.size() == fwd_moves.size());         // NOLINT
     assert(lefs.size() >= num_rev_units_at_5prime);  // NOLINT
     assert(lefs.size() >= num_fwd_units_at_3prime);  // NOLINT
-    (void)chrom;
   }
 
   auto i1 = num_rev_units_at_5prime == 0 ? 0UL : num_rev_units_at_5prime - 1;
@@ -548,11 +546,10 @@ void Simulation::release_lefs(const absl::Span<Lef> lefs,
 thread_pool Simulation::instantiate_thread_pool() const { return thread_pool(this->nthreads); }
 
 Simulation::Task Simulation::Task::from_string(std::string_view serialized_task, Genome& genome) {
-  const size_t ntoks = 7;
+  [[maybe_unused]] const size_t ntoks = 7;
   const auto sep = '\t';
   const std::vector<std::string_view> toks = absl::StrSplit(serialized_task, sep);
   assert(toks.size() == ntoks);  // NOLINT
-  (void)ntoks;
 
   Task t;
   try {
@@ -592,11 +589,10 @@ Simulation::Task Simulation::Task::from_string(std::string_view serialized_task,
 
 Simulation::TaskPW Simulation::TaskPW::from_string(std::string_view serialized_task,
                                                    Genome& genome) {
-  const size_t ntoks = 15;
+  [[maybe_unused]] const size_t ntoks = 15;
   const auto sep = '\t';
   const std::vector<std::string_view> toks = absl::StrSplit(serialized_task, sep);
   assert(toks.size() == ntoks);  // NOLINT
-  (void)ntoks;
 
   TaskPW t;
   try {
@@ -956,7 +952,7 @@ void Simulation::compute_loop_size_stats(const absl::Span<const Lef> lefs,
 }
 
 bool Simulation::evaluate_burnin(const std::deque<double>& cfx_of_variation_buff,
-                                 const std::deque<double>& avg_loop_size_buff,
+                                 [[maybe_unused]] const std::deque<double>& avg_loop_size_buff,
                                  const size_t buff_capacity, const size_t window_size) noexcept {
   assert(cfx_of_variation_buff.size() == avg_loop_size_buff.size());  // NOLINT
   assert(cfx_of_variation_buff.size() <= buff_capacity);              // NOLINT
@@ -964,8 +960,6 @@ bool Simulation::evaluate_burnin(const std::deque<double>& cfx_of_variation_buff
   if (cfx_of_variation_buff.size() != buff_capacity) {
     return false;
   }
-
-  (void)avg_loop_size_buff;
 
   // Count the number of adjacent pairs of values where the first value is larger than the second
   // This visually corresponds to a local dip in the avg loop size plot
@@ -1029,7 +1023,7 @@ void Simulation::run_burnin(State& s, const double lef_binding_rate_burnin) cons
   } while (s.num_active_lefs == 0);
 }
 
-void print_avg_loop_size(const Simulation::State& s) {
+[[maybe_unused]] void print_avg_loop_size(const Simulation::State& s) {
   std::vector<bp_t> loop_sizes(s.num_active_lefs, 0);
   std::transform(s.get_lefs().begin(), s.get_lefs().end(), loop_sizes.begin(),
                  [](const auto& lef) { return lef.loop_size(); });

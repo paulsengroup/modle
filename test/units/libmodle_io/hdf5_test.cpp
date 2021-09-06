@@ -13,14 +13,14 @@
 #include "modle/common/smartdir.hpp"  // IWYU pragma: keep
 
 namespace modle::test {
-constexpr auto cleanup_on_exit{true};     // Useful for debugging
+const auto cleanup_on_exit{true};         // Useful for debugging
 const SmartDir testdir{cleanup_on_exit};  // NOLINT Using auto here upsets GCC8
 }  // namespace modle::test
 
 namespace modle::test::hdf5 {
 using namespace modle::hdf5;
 
-static constexpr auto MAX_STR_LENGTH = 32UL;
+static const auto MAX_STR_LENGTH = 32UL;
 
 [[nodiscard]] inline H5::StrType init_str_type() {
   auto st = H5::StrType(H5::PredType::C_S1, MAX_STR_LENGTH);

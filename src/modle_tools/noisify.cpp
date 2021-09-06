@@ -31,12 +31,12 @@ namespace modle::tools {
 void noisify_contacts(const noisify_config& c) {
   using pixel_queue_t = moodycamel::BlockingReaderWriterQueue<modle::cooler::Cooler::Pixel>;
 
-  constexpr auto PIXEL_BATCH_SIZE =
+  const auto PIXEL_BATCH_SIZE =
       modle::cooler::Cooler::DEFAULT_HDF5_BUFFER_SIZE / sizeof(modle::cooler::Cooler::Pixel);
   pixel_queue_t pixel_queue(PIXEL_BATCH_SIZE);
   modle::ContactMatrix<> cmatrix{};
 
-  constexpr auto END_OF_PIXEL_QUEUE = modle::cooler::Cooler::Pixel{
+  const auto END_OF_PIXEL_QUEUE = modle::cooler::Cooler::Pixel{
       (std::numeric_limits<size_t>::max)(), (std::numeric_limits<size_t>::max)(),
       (std::numeric_limits<size_t>::max)()};
 

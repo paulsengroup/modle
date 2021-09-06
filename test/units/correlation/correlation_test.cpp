@@ -10,7 +10,7 @@
 #include "modle/common/smartdir.hpp"  // IWYU pragma: keep
 
 namespace modle::test {
-constexpr auto cleanup_on_exit{true};     // Useful for debugging
+const auto cleanup_on_exit{true};         // Useful for debugging
 const SmartDir testdir{cleanup_on_exit};  // NOLINT Using auto here upsets GCC8
 }  // namespace modle::test
 

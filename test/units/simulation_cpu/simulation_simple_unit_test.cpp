@@ -21,7 +21,7 @@ namespace modle::test::libmodle {
 
 TEST_CASE("Bind LEFs 001", "[bind-lefs][simulation][short]") {
   const Chromosome chrom{0, "chr1", 0, 1000, 1000};
-  constexpr auto nlefs = 10UL;
+  const auto nlefs = 10UL;
   std::vector<Lef> lefs(nlefs, Lef{});
   std::vector<size_t> rank1(nlefs), rank2(nlefs);  // NOLINT
   std::iota(rank1.begin(), rank1.end(), 0);
@@ -83,7 +83,7 @@ TEST_CASE("Bind LEFs 002 - No LEFs to bind", "[bind-lefs][simulation][short]") {
   CHECK(rank2.empty());
   CHECK(mask2.empty());
 
-  constexpr auto nlefs = 10UL;
+  const auto nlefs = 10UL;
   std::generate_n(std::back_inserter(lefs), nlefs, []() { return Lef{}; });
   rank1.resize(nlefs);
   std::iota(rank1.begin(), rank1.end(), 0);
@@ -105,7 +105,7 @@ TEST_CASE("Bind LEFs 002 - No LEFs to bind", "[bind-lefs][simulation][short]") {
 
 TEST_CASE("Bind LEFs 003 - Empty mask (i.e. bind all LEFs)", "[bind-lefs][simulation][short]") {
   const Chromosome chrom{0, "chr1", 0, 1000, 1000};
-  constexpr auto nlefs = 10UL;
+  const auto nlefs = 10UL;
   std::vector<Lef> lefs(nlefs, Lef{});
   std::vector<size_t> rank1(nlefs);
   std::vector<size_t> rank2(nlefs);
@@ -194,8 +194,8 @@ const std::vector<Lef> lefs{construct_lef(20, 50, 0),
 
 TEST_CASE("Generate LEF moves 001", "[generate-lef-moves][simulation][long]") {
   const Chromosome chrom{0, "chr1", 1000, 2000, 2000};
-  constexpr auto nlefs = 100UL;
-  constexpr auto iters = 1000UL;
+  const auto nlefs = 100UL;
+  const auto iters = 1000UL;
   // NOLINTNEXTLINE(readability-magic-numbers, cppcoreguidelines-avoid-magic-numbers)
   auto rand_eng = random::PRNG(8312545934532053745ULL);
   std::vector<Lef> lefs(nlefs);
@@ -252,8 +252,7 @@ TEST_CASE("Detect LEF-LEF collisions 001", "[lef-lef-collisions][simulation][sho
   c.fwd_extrusion_speed_std = 0;               // NOLINT
   c.probability_of_extrusion_unit_bypass = 0;  // NOLINT
   const Chromosome chrom{0, "chr1", 0, 30, 30};
-  constexpr auto nlefs = 4UL;
-  (void)nlefs;
+  [[maybe_unused]] const auto nlefs = 4UL;
   // NOLINTNEXTLINE(readability-magic-numbers, cppcoreguidelines-avoid-magic-numbers)
   auto rand_eng = random::PRNG(9589236971571381257ULL);
 
@@ -317,8 +316,7 @@ TEST_CASE("Detect LEF-LEF collisions 002", "[lef-lef-collisions][simulation][sho
   modle::Config c;
   c.probability_of_extrusion_unit_bypass = 0;  // NOLINT
   const Chromosome chrom{0, "chr1", 0, 16, 16};
-  constexpr auto nlefs = 4UL;
-  (void)nlefs;
+  [[maybe_unused]] const auto nlefs = 4UL;
   // NOLINTNEXTLINE(readability-magic-numbers, cppcoreguidelines-avoid-magic-numbers)
   auto rand_eng = random::PRNG(9589236971571381257ULL);
 
@@ -385,7 +383,7 @@ TEST_CASE("Detect LEF-LEF collisions 003", "[lef-lef-collisions][simulation][sho
   modle::Config c;
   c.probability_of_extrusion_unit_bypass = 0;  // NOLINT
   const Chromosome chrom{0, "chr1", 100, 201, 201};
-  constexpr auto nlefs = 3UL;
+  const auto nlefs = 3UL;
   // NOLINTNEXTLINE(readability-magic-numbers, cppcoreguidelines-avoid-magic-numbers)
   auto rand_eng = random::PRNG(3778138500607566040ULL);
 
