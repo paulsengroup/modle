@@ -4,6 +4,7 @@
 
 #include <xxh3.h>  // for XXH3_freeState, XXH3_state_t
 
+#include <array>  // for array
 #include <boost/filesystem/file_status.hpp>
 #include <boost/filesystem/path.hpp>
 #include <cstddef>       // IWYU pragma: keep for size_t
@@ -103,11 +104,16 @@ struct identity {
 template <class Key, class Value, size_t Size>
 class ConstMap {
   std::array<std::pair<Key, Value>, Size> _buff;
-  using const_iterator = typename std::array<std::pair<Key, Value>, Size>::const_iterator;
 
  public:
   template <class... Args>
   constexpr ConstMap(Args&&... args) noexcept;
+
+  using const_iterator = typename std::array<std::pair<Key, Value>, Size>::const_iterator;
+  using key_type = Key;
+  using mapped_type = Value;
+  using value_type = std::pair<const Key, Value>;
+
   [[nodiscard]] constexpr const Value& at(const Key& key) const;
   [[nodiscard]] constexpr const Value& operator[](const Key& key) const;
   [[nodiscard]] constexpr const_iterator find(const Key& key) const noexcept;

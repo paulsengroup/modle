@@ -218,7 +218,7 @@ void Cli::make_filter_barriers_subcommand() {
      "Example: when specifying BED3 through this dialect, we only validate the first three fields.\n"
      "Additional fields (if any) are copied verbatim and can thus in principle contain arbitrary information.\n"
      "Allowed dialects: {}."), fmt::join(bed::bed_dialects, ", ")))
-     ->transform(CLI::CheckedTransformer(bed::str_to_bed_dialect_mappings))
+     ->transform(CLI::CheckedTransformer(&bed::str_to_bed_dialect_mappings))
      ->capture_default_str();
 
   gen.add_flag(

@@ -293,8 +293,8 @@ constexpr const Value &ConstMap<Key, Value, Size>::operator[](const Key &key) co
 }
 
 template <class Key, class Value, size_t Size>
-constexpr typename std::array<std::pair<Key, Value>, Size>::const_iterator
-ConstMap<Key, Value, Size>::find(const Key &key) const noexcept {
+constexpr typename ConstMap<Key, Value, Size>::const_iterator ConstMap<Key, Value, Size>::find(
+    const Key &key) const noexcept {
   return std::find_if(this->begin(), this->end(), [&key](const auto &v) { return v.first == key; });
 }
 
@@ -304,14 +304,14 @@ constexpr bool ConstMap<Key, Value, Size>::contains(const Key &key) const noexce
 }
 
 template <class Key, class Value, size_t Size>
-constexpr typename std::array<std::pair<Key, Value>, Size>::const_iterator
-ConstMap<Key, Value, Size>::begin() const noexcept {
+constexpr typename ConstMap<Key, Value, Size>::const_iterator ConstMap<Key, Value, Size>::begin()
+    const noexcept {
   return this->_buff.begin();
 }
 
 template <class Key, class Value, size_t Size>
-constexpr typename std::array<std::pair<Key, Value>, Size>::const_iterator
-ConstMap<Key, Value, Size>::end() const noexcept {
+constexpr typename ConstMap<Key, Value, Size>::const_iterator ConstMap<Key, Value, Size>::end()
+    const noexcept {
   return this->_buff.end();
 }
 
