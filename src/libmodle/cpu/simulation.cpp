@@ -508,21 +508,25 @@ void Simulation::generate_lef_unloader_affinities(
 
   for (auto i = 0UL; i < lefs.size(); ++i) {
     const auto& lef = lefs[i];
-    if (!lef.is_bound()) {
+    if (BOOST_UNLIKELY(!lef.is_bound())) {
+      // Inactive LEF
       lef_unloader_affinity[i] = 0.0;
-    } else if (BOOST_LIKELY(!is_lef_bar_collision(rev_collisions[i]) ||
-                            !is_lef_bar_collision(fwd_collisions[i]))) {
-      lef_unloader_affinity[i] = 1.0 / this->soft_stall_multiplier;
-    } else {
+    } else if (BOOST_UNLIKELY(is_lef_bar_collision(rev_collisions[i]) &&
+                              is_lef_bar_collision(fwd_collisions[i]))) {
+      // LEF is stalled on both sides by two extrusion barriers
       const auto& rev_barrier = barriers[rev_collisions[i]];
       const auto& fwd_barrier = barriers[fwd_collisions[i]];
 
       if (BOOST_UNLIKELY(rev_barrier.blocking_direction_major() == dna::rev &&
                          fwd_barrier.blocking_direction_major() == dna::fwd)) {
+        // LEF is blocked by a pair of convergent extrusion barriers
         lef_unloader_affinity[i] = 1.0 / this->hard_stall_multiplier;
       } else {
-        lef_unloader_affinity[i] = 1.0;
+        lef_unloader_affinity[i] = 1.0 / this->soft_stall_multiplier;
       }
+    } else {
+      // LEF is stalled on at least one side but not by an extrusion barrier
+      lef_unloader_affinity[i] = 1.0;
     }
   }
 }
@@ -537,10 +541,14 @@ void Simulation::select_lefs_to_release(
 
 void Simulation::release_lefs(const absl::Span<Lef> lefs,
                               const absl::Span<const size_t> lef_idx) noexcept {
+  [[maybe_unused]] bp_t foo = 0;
   for (const auto i : lef_idx) {
     assert(i < lefs.size());  // NOLINT
+    foo += lefs[i].loop_size();
     lefs[i].release();
   }
+  // fmt::print(stdout, FMT_STRING("Avg. loop size at release: {:.0f}\n"),
+  //            static_cast<double>(foo) / static_cast<double>(lef_idx.size()));
 }
 
 thread_pool Simulation::instantiate_thread_pool() const { return thread_pool(this->nthreads); }
@@ -1088,7 +1096,7 @@ void Simulation::simulate_one_cell(State& s) const {
         const auto avg_num_lefs_to_release_in_current_epoch =
             bp_extruded_in_current_epoch / static_cast<double>(this->average_lef_lifetime);
 
-        // Sample nlefs to be released while in burn-in phase
+        // Sample nlefs to be released during the current epoch
         return std::min(s.num_active_lefs,
                         random::poisson_distribution<size_t>{
                             avg_num_lefs_to_release_in_current_epoch}(s.rand_eng));
@@ -1128,7 +1136,6 @@ void Simulation::simulate_one_cell(State& s) const {
                                              s.get_fwd_collisions(),
                                              s.get_lef_unloader_affinities());
 
-      // Reusing this buffer is ok, as at this point we don't need access to collision information
       const auto lef_idx = s.get_idx_buff(num_lefs_to_release);
       Simulation::select_lefs_to_release(lef_idx, s.get_lef_unloader_affinities(), s.rand_eng);
       Simulation::release_lefs(s.get_lefs(), lef_idx);

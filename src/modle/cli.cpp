@@ -543,8 +543,8 @@ const Config& Cli::parse_arguments() {
     // The code in this branch basically tricks CLI11 into parsing a config file by creating a fake
     // argv like: {"modle", "pert", "--config", "myconfig.toml"}
     const auto config_backup = this->_config;
-    constexpr std::string_view config_arg = "--config\0"sv;
     constexpr std::string_view subcmd_arg = "pert\0"sv;
+    constexpr std::string_view config_arg = "--config\0"sv;
     const std::array<const char*, 4> args{this->_exec_name.c_str(), subcmd_arg.data(),
                                           config_arg.data(),
                                           this->_config.path_to_config_file.c_str()};
