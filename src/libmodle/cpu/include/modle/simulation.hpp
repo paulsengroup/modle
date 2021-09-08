@@ -109,7 +109,6 @@ class Simulation : Config {
 
    protected:
     std::vector<Lef> lef_buff{};
-    std::vector<double> lef_unloader_affinity{};
     std::vector<size_t> rank_buff1{};
     std::vector<size_t> rank_buff2{};
     boost::dynamic_bitset<> barrier_mask{};
@@ -123,7 +122,6 @@ class Simulation : Config {
 
    public:
     [[nodiscard]] absl::Span<Lef> get_lefs(size_t size = 0) noexcept;
-    [[nodiscard]] absl::Span<double> get_lef_unloader_affinities(size_t size = 0) noexcept;
     [[nodiscard]] absl::Span<size_t> get_rev_ranks(size_t size = 0) noexcept;
     [[nodiscard]] absl::Span<size_t> get_fwd_ranks(size_t size = 0) noexcept;
     [[nodiscard]] boost::dynamic_bitset<>& get_barrier_mask() noexcept;
@@ -136,8 +134,6 @@ class Simulation : Config {
     [[nodiscard]] std::deque<double>& get_avg_loop_sizes() noexcept;
 
     [[nodiscard]] absl::Span<const Lef> get_lefs(size_t size = 0) const noexcept;
-    [[nodiscard]] absl::Span<const double> get_lef_unloader_affinities(
-        size_t size = 0) const noexcept;
     [[nodiscard]] absl::Span<const size_t> get_rev_ranks(size_t size = 0) const noexcept;
     [[nodiscard]] absl::Span<const size_t> get_fwd_ranks(size_t size = 0) const noexcept;
     [[nodiscard]] const boost::dynamic_bitset<>& get_barrier_mask() const noexcept;
@@ -471,11 +467,10 @@ class Simulation : Config {
                                         absl::Span<double> lef_unloader_affinity) const
       noexcept(utils::ndebug_defined());
 
-  static void select_lefs_to_release(absl::Span<size_t> lef_idx,
-                                     absl::Span<const double> lef_unloader_affinity,
-                                     random::PRNG_t& rand_eng) noexcept(utils::ndebug_defined());
-
-  static void release_lefs(absl::Span<Lef> lefs, absl::Span<const size_t> lef_idx) noexcept;
+  size_t release_lefs(const absl::Span<Lef> lefs, const absl::Span<const ExtrusionBarrier> barriers,
+                      const absl::Span<const collision_t> rev_collisions,
+                      const absl::Span<const collision_t> fwd_collisions,
+                      random::PRNG_t& rand_eng) const noexcept;
 
   [[nodiscard]] static std::pair<bp_t /*rev*/, bp_t /*fwd*/> compute_lef_lef_collision_pos(
       const ExtrusionUnit& rev_unit, const ExtrusionUnit& fwd_unit, bp_t rev_move, bp_t fwd_move);

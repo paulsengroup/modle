@@ -537,24 +537,47 @@ void Simulation::generate_lef_unloader_affinities(
   }
 }
 
-void Simulation::select_lefs_to_release(
-    const absl::Span<size_t> lef_idx, const absl::Span<const double> lef_unloader_affinity,
-    random::PRNG_t& rand_eng) noexcept(utils::ndebug_defined()) {
-  random::discrete_distribution<size_t> idx_gen(lef_unloader_affinity.begin(),
-                                                lef_unloader_affinity.end());
-  std::generate(lef_idx.begin(), lef_idx.end(), [&]() { return idx_gen(rand_eng); });
-}
+size_t Simulation::release_lefs(const absl::Span<Lef> lefs,
+                                const absl::Span<const ExtrusionBarrier> barriers,
+                                const absl::Span<const collision_t> rev_collisions,
+                                const absl::Span<const collision_t> fwd_collisions,
+                                random::PRNG_t& rand_eng) const noexcept {
+  auto compute_lef_unloader_affinity = [&](const auto j) {
+    assert(lefs[j].is_bound());  // NOLINT
 
-void Simulation::release_lefs(const absl::Span<Lef> lefs,
-                              const absl::Span<const size_t> lef_idx) noexcept {
-  [[maybe_unused]] bp_t foo = 0;
-  for (const auto i : lef_idx) {
-    assert(i < lefs.size());  // NOLINT
-    foo += lefs[i].loop_size();
-    lefs[i].release();
+    auto is_lef_bar_collision = [&](const auto k) { return k < barriers.size(); };
+
+    const auto& rev_collision = rev_collisions[j];
+    const auto& fwd_collision = fwd_collisions[j];
+    if (BOOST_LIKELY(!is_lef_bar_collision(rev_collision) ||
+                     !is_lef_bar_collision(fwd_collision))) {
+      return 1.0 / this->soft_stall_multiplier;
+    }
+
+    assert(is_lef_bar_collision(rev_collision));  // NOLINT
+    assert(is_lef_bar_collision(fwd_collision));  // NOLINT
+    const auto& rev_barrier = barriers[rev_collision];
+    const auto& fwd_barrier = barriers[fwd_collision];
+
+    if (BOOST_UNLIKELY(rev_barrier.blocking_direction_major() == dna::rev &&
+                       fwd_barrier.blocking_direction_major() == dna::fwd)) {
+      return 1.0 / this->hard_stall_multiplier;
+    }
+    return 1.0;
+  };
+
+  size_t lefs_released = 0;
+  for (size_t i = 0; i < lefs.size(); ++i) {
+    if (BOOST_LIKELY(lefs[i].is_bound())) {
+      const auto p = compute_lef_unloader_affinity(i) * this->prob_of_lef_release;
+      assert(p >= 0 && p <= 1);  // NOLINT
+      if (BOOST_UNLIKELY(random::bernoulli_trial{p}(rand_eng))) {
+        ++lefs_released;
+        lefs[i].release();
+      }
+    }
   }
-  // fmt::print(stdout, FMT_STRING("Avg. loop size at release: {:.0f}\n"),
-  //            static_cast<double>(foo) / static_cast<double>(lef_idx.size()));
+  return lefs_released;
 }
 
 thread_pool Simulation::instantiate_thread_pool() const { return thread_pool(this->nthreads); }
@@ -670,7 +693,6 @@ void Simulation::State::resize_buffers(size_t new_size) {
     new_size = this->num_lefs;
   }
   lef_buff.resize(new_size);
-  lef_unloader_affinity.resize(new_size);
   rank_buff1.resize(new_size);
   rank_buff2.resize(new_size);
   moves_buff1.resize(new_size);
@@ -684,7 +706,6 @@ void Simulation::State::resize_buffers(size_t new_size) {
 
 void Simulation::State::reset_buffers() {  // TODO figure out which resets are redundant
   std::for_each(lef_buff.begin(), lef_buff.end(), [](auto& lef) { lef.reset(); });
-  std::fill(lef_unloader_affinity.begin(), lef_unloader_affinity.end(), 0.0);
   std::iota(rank_buff1.begin(), rank_buff1.end(), 0);
   std::copy(rank_buff1.begin(), rank_buff1.end(), rank_buff2.begin());
   barrier_mask.reset();
@@ -703,12 +724,6 @@ absl::Span<Lef> Simulation::State::get_lefs(size_t size) noexcept {
   }
   assert(size <= this->lef_buff.size());  // NOLINT
   return absl::MakeSpan(this->lef_buff.data(), size);
-}
-absl::Span<double> Simulation::State::get_lef_unloader_affinities(size_t size) noexcept {
-  if (size == 0) {
-    size = this->num_active_lefs;
-  }
-  return absl::MakeSpan(this->lef_unloader_affinity.data(), size);
 }
 absl::Span<size_t> Simulation::State::get_rev_ranks(size_t size) noexcept {
   if (size == 0) {
@@ -769,13 +784,6 @@ absl::Span<const Lef> Simulation::State::get_lefs(size_t size) const noexcept {
   return absl::MakeConstSpan(this->lef_buff.data(), size);
 }
 
-absl::Span<const double> Simulation::State::get_lef_unloader_affinities(
-    size_t size) const noexcept {
-  if (size == 0) {
-    size = this->num_active_lefs;
-  }
-  return absl::MakeConstSpan(this->lef_unloader_affinity.data(), size);
-}
 absl::Span<const size_t> Simulation::State::get_rev_ranks(size_t size) const noexcept {
   if (size == 0) {
     size = this->num_active_lefs;
@@ -975,10 +983,10 @@ bool Simulation::evaluate_burnin(const std::deque<double>& cfx_of_variation_buff
     return false;
   }
 
-  // Count the number of adjacent pairs of values where the first value is larger than the second
-  // This visually corresponds to a local dip in the avg loop size plot
-  // When we are in a stable state the above line should be relatively flat. For this reason, we
-  // expect n to be roughly equal to 1/2 of all the measurements
+  // Count the number of adjacent pairs of values where the first value is larger than the
+  // second This visually corresponds to a local dip in the avg loop size plot When we are in a
+  // stable state the above line should be relatively flat. For this reason, we expect n to be
+  // roughly equal to 1/2 of all the measurements
   size_t n = 0;
   assert(window_size < buff_capacity);  // NOLINT
   for (auto it1 = cfx_of_variation_buff.begin() + 1,
@@ -1062,7 +1070,8 @@ void Simulation::simulate_one_cell(State& s) const {
     assert((s.num_target_contacts != 0) ==  // NOLINT
            (s.num_target_epochs == (std::numeric_limits<size_t>::max)()));
 
-    // Generate initial extr. barrier states, so that they are already at or close to equilibrium
+    // Generate initial extr. barrier states, so that they are already at or close to
+    // equilibrium
     for (auto i = 0UL; i < s.barriers.size(); ++i) {
       s.get_barrier_mask()[i] = random::bernoulli_trial{s.barriers[i].occupancy()}(s.rand_eng);
     }
@@ -1080,23 +1089,6 @@ void Simulation::simulate_one_cell(State& s) const {
       ////////////////////////
       // Simulate one epoch //
       ////////////////////////
-
-      const auto num_lefs_to_release = [&]() {
-        const auto avg_extrusion_speed = static_cast<double>(
-            s.burnin_completed
-                ? this->rev_extrusion_speed + this->fwd_extrusion_speed
-                : this->rev_extrusion_speed_burnin + this->fwd_extrusion_speed_burnin);
-
-        const auto bp_extruded_in_current_epoch =
-            avg_extrusion_speed * static_cast<double>(s.num_active_lefs);
-        const auto avg_num_lefs_to_release_in_current_epoch =
-            bp_extruded_in_current_epoch / static_cast<double>(this->average_lef_lifetime);
-
-        // Sample nlefs to be released during the current epoch
-        return std::min(s.num_active_lefs,
-                        random::poisson_distribution<size_t>{
-                            avg_num_lefs_to_release_in_current_epoch}(s.rand_eng));
-      }();
 
       // Select inactive LEFs and bind them
       Simulation::select_and_bind_lefs(s);
@@ -1126,15 +1118,9 @@ void Simulation::simulate_one_cell(State& s) const {
       Simulation::extrude(*s.chrom, s.get_lefs(), s.get_rev_moves(), s.get_fwd_moves(),
                           num_rev_units_at_5prime, num_fwd_units_at_3prime);
 
-      // The vector of affinities is used to bias LEF release towards LEFs that are not in a hard
-      // stall condition
-      this->generate_lef_unloader_affinities(s.get_lefs(), s.barriers, s.get_rev_collisions(),
-                                             s.get_fwd_collisions(),
-                                             s.get_lef_unloader_affinities());
-
-      const auto lef_idx = s.get_idx_buff(num_lefs_to_release);
-      Simulation::select_lefs_to_release(lef_idx, s.get_lef_unloader_affinities(), s.rand_eng);
-      Simulation::release_lefs(s.get_lefs(), lef_idx);
+      // Select LEFs to be released in the current epoch and release them
+      this->release_lefs(s.get_lefs(), s.barriers, s.get_rev_collisions(), s.get_fwd_collisions(),
+                         s.rand_eng);
     }
   } catch (const std::exception& err) {
     throw std::runtime_error(fmt::format(
@@ -1190,5 +1176,4 @@ void Simulation::sample_and_register_contacts(State& s, const double avg_nlefs_t
         this->register_contacts(start_pos + 1, end_pos - 1, *s.contacts, s.get_lefs(), lef_idx);
   }
 }
-
 }  // namespace modle
