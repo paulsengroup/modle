@@ -49,7 +49,7 @@ struct Config {  // NOLINT(altera-struct-pack-align)
   size_t simulation_iterations{200};           // NOLINT(readability-magic-numbers, cppcoreguidelines-avoid-magic-numbers)
   double target_contact_density{0.0};
   double number_of_lefs_per_mbp;
-  bp_t average_lef_lifetime{600'000};          // NOLINT(readability-magic-numbers, cppcoreguidelines-avoid-magic-numbers)
+  double prob_of_lef_release{0.015};
   double hard_stall_multiplier{5.0};           // NOLINT(readability-magic-numbers, cppcoreguidelines-avoid-magic-numbers)
   double soft_stall_multiplier{1.0};           // NOLINT(readability-magic-numbers, cppcoreguidelines-avoid-magic-numbers)
   bp_t deletion_size{10'000};                  // NOLINT(readability-magic-numbers, cppcoreguidelines-avoid-magic-numbers)
@@ -75,7 +75,7 @@ struct Config {  // NOLINT(altera-struct-pack-align)
   size_t burnin_history_length{100};
   size_t burnin_smoothing_window_size{5};
   size_t max_burnin_epochs{(std::numeric_limits<size_t>::max)()};
-  size_t burnin_target_epochs_for_lef_activation{0};
+  size_t burnin_target_epochs_for_lef_activation{320};
   double burnin_speed_coefficient{1.0};
   bp_t fwd_extrusion_speed_burnin{(std::numeric_limits<bp_t>::max)()};
   bp_t rev_extrusion_speed_burnin{(std::numeric_limits<bp_t>::max)()};

@@ -124,15 +124,6 @@ void add_common_options(CLI::App& subcommand, modle::Config& c) {
       ->required();
 
   gen.add_option(
-      "--avg-lef-lifetime",
-      c.average_lef_lifetime,
-      "Average LEF lifetime.\n"
-      "This is equal to the average distance an unencumbered LEF is able to move along the DNA before it is released.")
-      ->check(CLI::PositiveNumber)
-      ->transform(utils::str_float_to_str_int)
-      ->capture_default_str();
-
-  gen.add_option(
       "--hard-stall-multiplier", // TODO: Should we rename this?
       c.hard_stall_multiplier,
       "Coefficient to control the DNA-binding stability of LEFs that are stalled on both sides by a pair of "
@@ -193,6 +184,13 @@ void add_common_options(CLI::App& subcommand, modle::Config& c) {
       ->capture_default_str();
 
   gen.add_option(
+      "--burnin-lef-activation-epochs",
+      c.burnin_target_epochs_for_lef_activation,
+      "Number of epochs over which LEFs are activated during the burn-in phase.")
+      ->check(CLI::PositiveNumber)
+      ->capture_default_str();
+
+  gen.add_option(
       "--burnin-target-epochs-for-lef-activation",
        c.burnin_target_epochs_for_lef_activation,
       "Number of epochs over which LEFs are progressively activated and bound to DNA.\n"
@@ -238,6 +236,14 @@ gen.add_option(
       "Base seed to use for random number generation.")
       ->check(CLI::NonNegativeNumber)
       ->transform(utils::str_float_to_str_int)
+      ->capture_default_str();
+
+  gen.add_option(
+      "--prob-of-lef-release",
+      c.prob_of_lef_release,
+      "Probability of LEF release.\n"
+      "The actual probability that is used for a specific LEF is affected --hard-stall-multiplier and --hard-stall-multiplier.")
+      ->check(CLI::PositiveNumber & CLI::Range(0.0, 1.0))
       ->capture_default_str();
 
   prob.add_option(
@@ -697,17 +703,6 @@ void Cli::transform_args() {
     const auto pon = 1.0 - c.ctcf_occupied_self_prob;
     const auto occ = pno / (pno + pon);
     c.extrusion_barrier_occupancy = occ;
-  }
-
-  // Compute the number of epochs to be spent in burn-in phase.
-  // Note: c.burnin_target_epochs_for_lef_activation is the target number of epochs.
-  //       The precise number of epochs cannot be easily computed ahead of time,
-  //       as LEFs are progressively activated using a Poisson process.
-  if (!c.skip_burnin) {
-    const auto avg_extr_speed_burnin =
-        static_cast<double>(c.rev_extrusion_speed_burnin + c.fwd_extrusion_speed_burnin);
-    c.burnin_target_epochs_for_lef_activation = static_cast<size_t>(
-        std::round(static_cast<double>(c.average_lef_lifetime * 4) / avg_extr_speed_burnin));
   }
 }
 
