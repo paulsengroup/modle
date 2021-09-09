@@ -34,7 +34,7 @@ RUN cd "$build_dir"                              \
                   -s compiler.libcxx=libstdc++11 \
                   -o enable_testing=ON
 
-COPY cmake                  "$src_dir/cmake"
+COPY LICENSE                "$src_dir/LICENSE"
 COPY "external/libBigWig-$LIBBIGWIG_VER.tar.xz"                \
      "$src_dir/external/libBigWig-$LIBBIGWIG_VER.tar.xz"
 COPY "external/mscharconv.tar.xz"                              \
@@ -43,10 +43,10 @@ COPY "external/thread-pool-$THREAD_POOL_VER.tar.xz"            \
      "$src_dir/external/thread-pool-$THREAD_POOL_VER.tar.xz"
 COPY "external/Xoshiro-cpp-$XOSHIRO_CPP_VER.tar.xz"            \
      "$src_dir/external/Xoshiro-cpp-$XOSHIRO_CPP_VER.tar.xz"
-COPY src                    "$src_dir/src"
-COPY test                   "$src_dir/test"
+COPY cmake                  "$src_dir/cmake"
 COPY CMakeLists.txt         "$src_dir/CMakeLists.txt"
-COPY LICENSE                "$src_dir/LICENSE"
+COPY test                   "$src_dir/test"
+COPY src                    "$src_dir/src"
 
 RUN sudo chown -R conan "$src_dir"
 RUN cd "$build_dir"                                \
