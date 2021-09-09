@@ -27,7 +27,7 @@
 
 namespace modle {
 
-std::string is_odd_number(std::string_view s) {
+static std::string is_odd_number(std::string_view s) {
   int64_t n;
   try {
     utils::parse_numeric_or_throw(s, n);
@@ -40,7 +40,7 @@ std::string is_odd_number(std::string_view s) {
   return "";
 }
 
-void add_common_options(CLI::App& subcommand, modle::Config& c) {
+static void add_common_options(CLI::App& subcommand, modle::Config& c) {
   auto& s = subcommand;
 
   auto& io = *s.add_option_group("Input/Output", "");
@@ -689,7 +689,7 @@ void Cli::transform_args() {
 
   // Compute the transition probabilities for the HMM used to model extrusion barriers
   const auto pno = 1.0 - c.ctcf_not_occupied_self_prob;
-  if (c.ctcf_occupied_self_prob == 0) {
+  if (c.ctcf_occupied_self_prob == 0.0) {
     const auto occ = c.extrusion_barrier_occupancy;
     const auto pon = (pno - (occ * pno)) / occ;
     c.ctcf_occupied_self_prob = 1.0 - pon;

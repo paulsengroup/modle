@@ -190,8 +190,7 @@ void Chromosome::add_extrusion_barrier(const bed::BED& record, const double ctcf
     // Barrier lies outside of the genomic regions to be simulated
     return;
   }
-
-  if (record.score != 0) {
+  if (record.score != 0.0) {
     // When the score field is zero (i.e. when the extr. barrier does not have a custom
     // occupancy), use the occupancy specified through the CLI
     const auto pblock = record.score;
@@ -263,7 +262,7 @@ Chromosome::contact_matrix_t& Chromosome::contacts() {
   return *this->_contacts;
 }
 
-const std::shared_ptr<Chromosome::contact_matrix_t> Chromosome::contacts_ptr() const {
+std::shared_ptr<const Chromosome::contact_matrix_t> Chromosome::contacts_ptr() const {
   if (this->_contacts) {
     return this->_contacts;
   }
@@ -286,6 +285,8 @@ uint64_t Chromosome::hash(XXH3_state_t* const xxh_state, uint64_t seed, size_t c
     }
   };
 
+  DISABLE_WARNING_PUSH
+  DISABLE_WARNING_USED_BUT_MARKED_UNUSED
   handle_errors(XXH3_64bits_reset_withSeed(xxh_state, seed));
   handle_errors(
       XXH3_64bits_update(xxh_state, this->_name.data(), this->_name.size() * sizeof(char)));

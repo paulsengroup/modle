@@ -86,7 +86,7 @@ class Chromosome {
   bool deallocate_contacts();
   [[nodiscard]] const contact_matrix_t& contacts() const;
   [[nodiscard]] contact_matrix_t& contacts();
-  [[nodiscard]] const std::shared_ptr<contact_matrix_t> contacts_ptr() const;
+  [[nodiscard]] std::shared_ptr<const contact_matrix_t> contacts_ptr() const;
   [[nodiscard]] std::shared_ptr<contact_matrix_t> contacts_ptr();
   [[nodiscard]] uint64_t hash(XXH3_state_t* xxh_state, uint64_t seed, size_t cell_id) const;
   [[nodiscard]] uint64_t hash(uint64_t seed, size_t cell_id) const;

@@ -120,8 +120,8 @@ void Simulation::run_simulate() {
                                    (static_cast<double>(chrom.simulated_size()) / Mbp))));
 
       auto target_contacts = 0UL;
-      if (this->target_contact_density != 0) {  // Compute the number of simulation rounds required
-        // to reach the target contact density
+      // Compute the number of simulation rounds required to reach the target contact density
+      if (this->target_contact_density != 0.0) {
         target_contacts = static_cast<size_t>(std::max(
             1.0,
             std::round((this->target_contact_density *

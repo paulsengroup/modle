@@ -334,7 +334,7 @@ void Simulation::detect_primary_lef_lef_collisions(
     // trial before calling a collision
     if (const auto delta = rev_pos - fwd_pos;
         delta > 0 && delta < rev_moves[rev_idx] + fwd_moves[fwd_idx] &&
-        (this->probability_of_extrusion_unit_bypass == 0 ||
+        (this->probability_of_extrusion_unit_bypass == 0.0 ||
          random::bernoulli_trial{1.0 - this->probability_of_extrusion_unit_bypass}(rand_eng))) {
       // Declare few aliases to reduce code verbosity later on
       const auto& rev_move = rev_moves[rev_idx];
@@ -464,7 +464,7 @@ void Simulation::process_secondary_lef_lef_collisions(
     assert(rev_pos2 - move2 >= chrom.start_pos());  // NOLINT
 
     if (rev_pos2 - move2 <= rev_pos1 - move1 &&
-        (this->probability_of_extrusion_unit_bypass == 0 ||
+        (this->probability_of_extrusion_unit_bypass == 0.0 ||
          random::bernoulli_trial{1.0 - this->probability_of_extrusion_unit_bypass}(rand_eng))) {
       rev_collisions[rev_idx2] = offset + rev_idx1;
       const auto move = rev_pos2 - (rev_pos1 - move1);
@@ -497,7 +497,7 @@ void Simulation::process_secondary_lef_lef_collisions(
     assert(fwd_pos2 + move2 < chrom.end_pos());  // NOLINT
 
     if (fwd_pos1 + move1 >= fwd_pos2 + move2 &&
-        (this->probability_of_extrusion_unit_bypass == 0 ||
+        (this->probability_of_extrusion_unit_bypass == 0.0 ||
          random::bernoulli_trial{1.0 - this->probability_of_extrusion_unit_bypass}(rand_eng))) {
       fwd_collisions[fwd_idx1] = offset + fwd_idx2;
       const auto move = (fwd_pos2 + move2) - fwd_pos1;

@@ -11,9 +11,14 @@
 #include <string>       // for string
 #include <string_view>  // for string_view
 
+#include "modle/common/suppress_compiler_warnings.hpp"
+
 namespace modle::compressed_io {
 using namespace std::literals::string_view_literals;
+DISABLE_WARNING_PUSH
+DISABLE_WARNING_PADDED
 class Reader {
+  DISABLE_WARNING_POP
   using archive_ptr_t = std::unique_ptr<archive, decltype(&archive_read_free)>;
 
  public:
@@ -53,7 +58,10 @@ class Reader {
   [[nodiscard]] std::string_view read_next_token(char sep);
 };
 
+DISABLE_WARNING_PUSH
+DISABLE_WARNING_PADDED
 class Writer {
+  DISABLE_WARNING_POP
  public:
   enum Compression : uint8_t { AUTO = 0, NONE = 1, GZIP = 2, BZIP2 = 3, LZMA = 4, ZSTD = 5 };
 

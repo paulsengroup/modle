@@ -30,6 +30,8 @@
 #include <type_traits>  // for is_integral_v
 #include <vector>       // for vector
 
+#include "modle/common/suppress_compiler_warnings.hpp"
+
 namespace modle {
 
 /* Suppose there are N=2^(K+1)-1 sorted numbers in an array a[]. They
@@ -61,8 +63,11 @@ namespace modle {
  * each node, the maximum value in the subtree descending from the node.
  */
 
+DISABLE_WARNING_PUSH
+DISABLE_WARNING_PADDED
 template <typename I, typename T>
 class IITree {
+  DISABLE_WARNING_POP
   static_assert(std::is_integral_v<I>, "I should be an integral type.");
   struct StackCell;
 

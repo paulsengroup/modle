@@ -75,7 +75,9 @@ function(set_project_warnings project_name)
         -Wno-c++11-compat-pedantic
         -Wno-c++14-compat-pedantic
         -Wno-documentation-unknown-command
-        -Wno-disabled-macro-expansion)
+        -Wno-disabled-macro-expansion
+        -Wno-error=padded
+        -Wno-error=documentation)
   endif()
 
   if(MSVC)

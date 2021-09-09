@@ -59,7 +59,6 @@ class Simulation : Config {
 
  private:
   struct BaseTask {  // NOLINT(altera-struct-pack-align)
-    BaseTask() = default;
     size_t id{};
     Chromosome* chrom{};
     size_t cell_id{};
@@ -71,7 +70,6 @@ class Simulation : Config {
 
  public:
   struct Task : BaseTask {  // NOLINT(altera-struct-pack-align)
-    Task() = default;
     static Task from_string(std::string_view serialized_task, Genome& genome);
   };
 
@@ -100,7 +98,10 @@ class Simulation : Config {
 
     random::PRNG_t rand_eng{};
     uint64_t seed{};
+    DISABLE_WARNING_PUSH
+    DISABLE_WARNING_USED_BUT_MARKED_UNUSED
     std::unique_ptr<XXH3_state_t, utils::XXH3_Deleter> xxh_state{XXH3_createState()};
+    DISABLE_WARNING_POP
 
    protected:
     std::vector<Lef> lef_buff{};

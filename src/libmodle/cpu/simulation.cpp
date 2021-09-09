@@ -161,7 +161,7 @@ bp_t Simulation::generate_rev_move(const Chromosome& chrom, const ExtrusionUnit&
                                    const double avg_extr_speed, const double extr_speed_std,
                                    random::PRNG_t& rand_eng) {
   assert(unit.pos() >= chrom.start_pos());  // NOLINT
-  if (extr_speed_std == 0) {                // When std == 0 always return the avg. extrusion speed
+  if (extr_speed_std == 0.0) {              // When std == 0 always return the avg. extrusion speed
     // (except when unit is close to chrom start pos.)
     return std::min(static_cast<bp_t>(avg_extr_speed), unit.pos() - chrom.start_pos());
   }
@@ -179,7 +179,7 @@ bp_t Simulation::generate_fwd_move(const Chromosome& chrom, const ExtrusionUnit&
                                    random::PRNG_t& rand_eng) {
   // See Simulation::generate_rev_move for comments
   assert(unit.pos() < chrom.end_pos());  // NOLINT
-  if (extr_speed_std == 0) {
+  if (extr_speed_std == 0.0) {
     return std::min(static_cast<bp_t>(avg_extr_speed), (chrom.end_pos() - 1) - unit.pos());
   }
   return std::clamp(
@@ -1031,16 +1031,6 @@ void Simulation::run_burnin(State& s, const double lef_binding_rate_burnin) cons
     }
     // Guard against the rare occasion where the poisson prng samples 0 in the first epoch
   } while (s.num_active_lefs == 0);
-}
-
-[[maybe_unused]] void print_avg_loop_size(const Simulation::State& s) {
-  std::vector<bp_t> loop_sizes(s.num_active_lefs, 0);
-  std::transform(s.get_lefs().begin(), s.get_lefs().end(), loop_sizes.begin(),
-                 [](const auto& lef) { return lef.loop_size(); });
-  // chrom_name, cell_id, epoch, burnin_epochs, num_lefs, num_active_lefs, loop_sizes
-  fmt::print(stdout, FMT_COMPILE("{}\t{}\t{}\t{}\t{}\t{}\t{}\n"), s.chrom->name(), s.cell_id,
-             s.epoch, s.num_burnin_epochs, s.num_lefs, s.num_active_lefs,
-             fmt::join(loop_sizes, "\t"));
 }
 
 void Simulation::simulate_one_cell(State& s) const {

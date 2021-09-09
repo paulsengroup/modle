@@ -399,6 +399,8 @@ uint64_t BED::hash(XXH_INLINE_XXH3_state_t* state, uint64_t seed) const {
     }
   };
 
+  DISABLE_WARNING_PUSH
+  DISABLE_WARNING_USED_BUT_MARKED_UNUSED
   handle_errors(XXH3_64bits_reset_withSeed(state, seed));
   handle_errors(XXH3_64bits_update(state, this->chrom.data(), this->chrom.size() * sizeof(char)));
   handle_errors(XXH3_64bits_update(state, &this->chrom_start, sizeof(decltype(this->chrom_start))));

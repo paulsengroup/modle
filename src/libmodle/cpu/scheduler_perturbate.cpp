@@ -214,7 +214,7 @@ void Simulation::run_perturbate() {
           t.active_window_end = std::min(t.active_window_end, chrom.end_pos());
 
           // Compute the number of simulation rounds required to reach the target contact density
-          if (this->target_contact_density != 0) {
+          if (this->target_contact_density != 0.0) {
             // Compute the number of pixels mapping to the outer window
             const auto npix1 =
                 (t.window_end - t.window_start + this->bin_size - 1) / this->bin_size;
