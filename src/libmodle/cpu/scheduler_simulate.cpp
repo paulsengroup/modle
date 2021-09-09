@@ -115,8 +115,9 @@ void Simulation::run_simulate() {
       }
 
       // Compute # of LEFs to be simulated based on chrom. sizes
-      const auto nlefs = static_cast<size_t>(std::round(
-          this->number_of_lefs_per_mbp * (static_cast<double>(chrom.simulated_size()) / Mbp)));
+      const auto nlefs = static_cast<size_t>(
+          std::max(1.0, std::round(this->number_of_lefs_per_mbp *
+                                   (static_cast<double>(chrom.simulated_size()) / Mbp))));
 
       auto target_contacts = 0UL;
       if (this->target_contact_density != 0) {  // Compute the number of simulation rounds required

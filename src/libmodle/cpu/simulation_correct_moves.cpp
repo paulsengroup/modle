@@ -29,6 +29,7 @@ void Simulation::correct_moves_for_lef_bar_collisions(
       // Compute the distance and update the rev_move such that after extruding once, the rev unit
       // of the current LEF will be located 1bp downstream of the extr. barrier.
       const auto distance = lefs[i].rev_unit.pos() - barrier.pos();
+      assert(distance != 0);  // NOLINT
       rev_moves[i] = distance > 1UL ? distance - 1 : 0UL;
     }
 
@@ -39,6 +40,7 @@ void Simulation::correct_moves_for_lef_bar_collisions(
 
       // Same as above. In this case the unit will be located 1bp upstream of the extr. barrier.
       const auto distance = barrier.pos() - lefs[i].fwd_unit.pos();
+      assert(distance != 0);  // NOLINT
       fwd_moves[i] = distance > 1UL ? distance - 1 : 0UL;
     }
   }

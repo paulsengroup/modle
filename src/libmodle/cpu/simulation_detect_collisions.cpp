@@ -196,6 +196,7 @@ void Simulation::detect_lef_bar_collisions(
         // barrier is less or equal than the distance that the rev extr. unit is set to move in
         // the current iteration. If pblock != 1, then we also require a successful bernoulli
         // trial before calling a collision
+        assert(rev_unit_pos >= barrier.pos());  // NOLINT
         const auto delta = rev_unit_pos - barrier.pos();
         if (delta > 0 && delta <= rev_moves[rev_idx] &&
             (pblock == 1.0 || random::bernoulli_trial{pblock}(rand_eng))) {
@@ -213,8 +214,9 @@ void Simulation::detect_lef_bar_collisions(
                                : this->lef_soft_collision_pblock;
       // Look for the next fwd unit that comes strictly before the current extr. barrier
       while (fwd_unit_pos < barrier.pos()) {
-        if (BOOST_UNLIKELY(++j2 >= j2_end)) {
-          goto end_of_loop;
+        if (BOOST_UNLIKELY(++j2 == j2_end)) {
+          break;  // using break instead of a goto here allows us to properly handle cases where
+                  // there's only one barrier
         }
 
         fwd_idx = fwd_lef_ranks[j2];
@@ -224,21 +226,23 @@ void Simulation::detect_lef_bar_collisions(
       // Decrement j2 by one (if it is legal to do so), so that j2 corresponds to the index of the
       // fwd extr. unit that is located as close as possible to the extr. barrier that is being
       // processed
-      fwd_idx = fwd_lef_ranks[std::min(j2, j2 - 1)];
+      // It is important that we assign to j2, otherwise we risk skipping some LEFs
+      j2 = std::min(j2 - 1, j2);
+      fwd_idx = fwd_lef_ranks[j2];
       fwd_unit_pos = lefs[fwd_idx].fwd_unit.pos();
 
-      if (BOOST_LIKELY(lefs[fwd_idx].is_bound())) {
+      if (BOOST_LIKELY(lefs[fwd_idx].is_bound() && barrier.pos() > fwd_unit_pos)) {
         const auto delta = barrier.pos() - fwd_unit_pos;
-        if (delta > 0 && delta <= fwd_moves[fwd_idx] &&
+        assert(delta != 0);  // NOLINT
+        if (delta <= fwd_moves[fwd_idx] &&
             (pblock == 1.0 || random::bernoulli_trial{pblock}(rand_eng))) {
           fwd_collisions[fwd_idx] = i;
         }
       }
     }
 
-  end_of_loop:
-    // Return immediately if all extr. units have been processed (regardless of whether there are
-    // still extr. barriers to be processed)
+    //  Return immediately if all extr. units have been processed (regardless of whether there are
+    //  still extr. barriers to be processed)
     if (BOOST_UNLIKELY(j1 == lefs.size() && j2 == j2_end)) {
       return;
     }

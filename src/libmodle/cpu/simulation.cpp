@@ -233,40 +233,42 @@ void Simulation::adjust_moves_of_consecutive_extr_units(
   // direction are processed in 5'-3' direction
   const auto rev_offset = lefs.size() - 1;
   for (auto i = 0UL; i < lefs.size() - 1; ++i) {
-    const auto& idx1 = rev_lef_ranks[rev_offset - 1 - i];
-    const auto& idx2 = rev_lef_ranks[rev_offset - i];
+    {
+      const auto idx1 = rev_lef_ranks[rev_offset - 1 - i];
+      const auto idx2 = rev_lef_ranks[rev_offset - i];
 
-    if (lefs[idx1].is_bound() && lefs[idx2].is_bound()) {
-      assert(lefs[idx1].rev_unit.pos() >= chrom.start_pos() + rev_moves[idx1]);  // NOLINT
-      assert(lefs[idx2].rev_unit.pos() >= chrom.start_pos() + rev_moves[idx2]);  // NOLINT
+      if (lefs[idx1].is_bound() && lefs[idx2].is_bound()) {
+        assert(lefs[idx1].rev_unit.pos() >= chrom.start_pos() + rev_moves[idx1]);  // NOLINT
+        assert(lefs[idx2].rev_unit.pos() >= chrom.start_pos() + rev_moves[idx2]);  // NOLINT
 
-      const auto pos1 = lefs[idx1].rev_unit.pos() - rev_moves[idx1];
-      const auto pos2 = lefs[idx2].rev_unit.pos() - rev_moves[idx2];
+        const auto pos1 = lefs[idx1].rev_unit.pos() - rev_moves[idx1];
+        const auto pos2 = lefs[idx2].rev_unit.pos() - rev_moves[idx2];
 
-      // If moving extr. units 1 and 2 by their respective moves would cause unit 1 (which comes
-      // first in 3'-5' order) to be surpassed by unit 2 (which comes second in 3'-5' order),
-      // increment the move for unit 1 so that after moving both units, unit 1 will be located one
-      // bp upstream of unit 2 in 5'-3' direction.
-      // This mimics what would probably happen in a real system, where extr. unit 2 would most
-      // likely push extr. unit 1, temporarily increasing extr. speed of unit 1.
-      if (pos2 < pos1) {
-        rev_moves[idx1] += pos1 - pos2;
+        // If moving extr. units 1 and 2 by their respective moves would cause unit 1 (which comes
+        // first in 3'-5' order) to be surpassed by unit 2 (which comes second in 3'-5' order),
+        // increment the move for unit 1 so that after moving both units, unit 1 will be located one
+        // bp upstream of unit 2 in 5'-3' direction.
+        // This mimics what would probably happen in a real system, where extr. unit 2 would most
+        // likely push extr. unit 1, temporarily increasing extr. speed of unit 1.
+        if (pos2 < pos1) {
+          rev_moves[idx1] += pos1 - pos2;
+        }
       }
     }
 
-    const auto& idx3 = fwd_lef_ranks[i];
-    const auto& idx4 = fwd_lef_ranks[i + 1];
+    const auto idx1 = fwd_lef_ranks[i];
+    const auto idx2 = fwd_lef_ranks[i + 1];
 
     // See above for detailed comments. The logic is the same used on rev units (but mirrored!)
-    if (lefs[idx3].is_bound() && lefs[idx4].is_bound()) {
-      assert(lefs[idx3].fwd_unit.pos() + fwd_moves[idx3] < chrom.end_pos());  // NOLINT
-      assert(lefs[idx4].fwd_unit.pos() + fwd_moves[idx4] < chrom.end_pos());  // NOLINT
+    if (lefs[idx1].is_bound() && lefs[idx2].is_bound()) {
+      assert(lefs[idx1].fwd_unit.pos() + fwd_moves[idx1] < chrom.end_pos());  // NOLINT
+      assert(lefs[idx1].fwd_unit.pos() + fwd_moves[idx2] < chrom.end_pos());  // NOLINT
 
-      const auto pos3 = lefs[idx3].fwd_unit.pos() + fwd_moves[idx3];
-      const auto pos4 = lefs[idx4].fwd_unit.pos() + fwd_moves[idx4];
+      const auto pos1 = lefs[idx1].fwd_unit.pos() + fwd_moves[idx1];
+      const auto pos2 = lefs[idx2].fwd_unit.pos() + fwd_moves[idx2];
 
-      if (pos3 > pos4) {
-        fwd_moves[idx4] += pos3 - pos4;
+      if (pos1 > pos2) {
+        fwd_moves[idx2] += pos1 - pos2;
       }
     }
   }
