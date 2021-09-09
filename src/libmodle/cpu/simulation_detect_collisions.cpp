@@ -157,14 +157,10 @@ void Simulation::detect_lef_bar_collisions(
   // of the extr. barrier that caused the collision.
 
   // Init indices and position with the rev and fwd extr. units that are the closest to the 5'-end
-  auto j1 = num_rev_units_at_5prime == 0UL ? 0 : num_rev_units_at_5prime - 1;
-  size_t j2 = 0;
-  const auto j2_end = lefs.size() - std::min(num_fwd_units_at_3prime, num_fwd_units_at_3prime - 1);
+  auto j = std::min(num_rev_units_at_5prime, num_rev_units_at_5prime - 1);
 
-  auto rev_idx = rev_lef_ranks[j1];
-  auto fwd_idx = fwd_lef_ranks[j2];
-  auto rev_unit_pos = lefs[rev_idx].rev_unit.pos();
-  auto fwd_unit_pos = lefs[fwd_idx].fwd_unit.pos();
+  auto unit_idx = rev_lef_ranks[j];
+  auto unit_pos = lefs[unit_idx].rev_unit.pos();
 
   // Loop over extr. barriers and find the first, possibly colliding extr. unit
   for (auto i = 0UL; i < extr_barriers.size(); ++i) {
@@ -173,74 +169,77 @@ void Simulation::detect_lef_bar_collisions(
     }
 
     const auto& barrier = extr_barriers[i];
+    assert(j < lefs.size());  // NOLINT
+    // Probability of block is set based on the extr. barrier blocking direction
+    const auto pblock = barrier.blocking_direction_major() == dna::rev
+                            ? this->lef_hard_collision_pblock
+                            : this->lef_soft_collision_pblock;
 
-    if (BOOST_LIKELY(j1 < lefs.size())) {  // Process rev unit
-      // Probability of block is set based on the extr. barrier blocking direction
-      const auto& pblock = barrier.blocking_direction_major() == dna::rev
-                               ? this->lef_hard_collision_pblock
-                               : this->lef_soft_collision_pblock;
-
-      // Look for the first rev extr. unit that comes after the current barrier
-      while (rev_unit_pos <= barrier.pos()) {
-        if (BOOST_UNLIKELY(++j1 >= lefs.size())) {  // All rev units have been processed
-          goto process_fwd_unit;                    // Move to the next section
-        }
-
-        // Update idx and position with those corresponding to the rev extr. unit that comes next
-        rev_idx = rev_lef_ranks[j1];  // in 5'-3' order
-        rev_unit_pos = lefs[rev_idx].rev_unit.pos();
+    // Look for the first rev extr. unit that comes after the current barrier
+    while (unit_pos <= barrier.pos()) {
+      if (BOOST_UNLIKELY(++j == lefs.size())) {  // All rev units have been processed
+        goto process_fwd_unit;                   // Move to the next section
       }
 
-      if (BOOST_LIKELY(lefs[rev_idx].is_bound())) {
-        // We have a LEF-BAR collision event if the distance between the rev. unit and the extr.
-        // barrier is less or equal than the distance that the rev extr. unit is set to move in
-        // the current iteration. If pblock != 1, then we also require a successful bernoulli
-        // trial before calling a collision
-        const auto delta = rev_unit_pos - barrier.pos();
-        if (delta > 0 && delta <= rev_moves[rev_idx] &&
-            (pblock == 1.0 || random::bernoulli_trial{pblock}(rand_eng))) {
-          // Collision detected. Assign barrier idx to the respective entry in the collision mask
-          rev_collisions[rev_idx] = i;
-        }
-      }
+      // Update idx and position with those corresponding to the rev extr. unit that comes next
+      unit_idx = rev_lef_ranks[j];  // in 5'-3' order
+      unit_pos = lefs[unit_idx].rev_unit.pos();
     }
 
-  // Look in the previous section for detailed comments
-  process_fwd_unit:
-    if (BOOST_LIKELY(j2 < j2_end)) {
-      const auto& pblock = barrier.blocking_direction_major() == dna::fwd
-                               ? this->lef_hard_collision_pblock
-                               : this->lef_soft_collision_pblock;
-      // Look for the next fwd unit that comes strictly before the current extr. barrier
-      while (fwd_unit_pos < barrier.pos()) {
-        if (BOOST_UNLIKELY(++j2 >= j2_end)) {
-          goto end_of_loop;
-        }
-
-        fwd_idx = fwd_lef_ranks[j2];
-        fwd_unit_pos = lefs[fwd_idx].fwd_unit.pos();
-      }
-
-      // Decrement j2 by one (if it is legal to do so), so that j2 corresponds to the index of the
-      // fwd extr. unit that is located as close as possible to the extr. barrier that is being
-      // processed
-      fwd_idx = fwd_lef_ranks[std::min(j2, j2 - 1)];
-      fwd_unit_pos = lefs[fwd_idx].fwd_unit.pos();
-
-      if (BOOST_LIKELY(lefs[fwd_idx].is_bound())) {
-        const auto delta = barrier.pos() - fwd_unit_pos;
-        if (delta > 0 && delta <= fwd_moves[fwd_idx] &&
-            (pblock == 1.0 || random::bernoulli_trial{pblock}(rand_eng))) {
-          fwd_collisions[fwd_idx] = i;
-        }
+    if (BOOST_LIKELY(lefs[unit_idx].is_bound())) {
+      // We have a LEF-BAR collision event if the distance between the rev. unit and the extr.
+      // barrier is less or equal than the distance that the rev extr. unit is set to move in
+      // the current iteration. If pblock != 1, then we also require a successful bernoulli
+      // trial before calling a collision
+      assert(unit_pos >= barrier.pos());  // NOLINT
+      const auto delta = unit_pos - barrier.pos();
+      if (delta > 0 && delta <= rev_moves[unit_idx] &&
+          (pblock == 1.0 || random::bernoulli_trial{pblock}(rand_eng))) {
+        // Collision detected. Assign barrier idx to the respective entry in the collision mask
+        rev_collisions[unit_idx] = i;
       }
     }
+  }
 
-  end_of_loop:
-    // Return immediately if all extr. units have been processed (regardless of whether there are
-    // still extr. barriers to be processed)
-    if (BOOST_UNLIKELY(j1 == lefs.size() && j2 == j2_end)) {
-      return;
+// Look in the previous section for detailed comments
+process_fwd_unit:
+  // Init indices and position with the rev and fwd extr. units that are the closest to the 5'-end
+  j = lefs.size() - std::min(num_fwd_units_at_3prime, num_fwd_units_at_3prime - 1);
+
+  assert(j != 0);  // NOLINT
+  unit_idx = fwd_lef_ranks[--j];
+  unit_pos = lefs[unit_idx].fwd_unit.pos();
+
+  // Loop over extr. barriers and find the first, possibly colliding extr. unit
+  assert(!extr_barriers.empty());  // NOLINT
+  const auto sentinel_idx = (std::numeric_limits<size_t>::max)();
+  for (auto i = extr_barriers.size() - 1; i != sentinel_idx; --i) {
+    if (barrier_mask[i] == CTCF::NOT_OCCUPIED) {  // Extrusion barriers that are not occupied are
+      continue;                                   // transparent to extr. units
+    }
+
+    const auto& barrier = extr_barriers[i];
+    // Probability of block is set based on the extr. barrier blocking direction
+    const auto pblock = barrier.blocking_direction_major() == dna::fwd
+                            ? this->lef_hard_collision_pblock
+                            : this->lef_soft_collision_pblock;
+    // Look for the next fwd unit that comes strictly before the current extr. barrier
+    while (unit_pos >= barrier.pos()) {
+      if (BOOST_UNLIKELY(--j == sentinel_idx)) {
+        return;  // using break instead of a goto here allows us to properly handle cases where
+        // there's only one barrier
+      }
+
+      unit_idx = fwd_lef_ranks[j];
+      unit_pos = lefs[unit_idx].fwd_unit.pos();
+    }
+
+    if (BOOST_LIKELY(lefs[unit_idx].is_bound())) {
+      const auto delta = barrier.pos() - unit_pos;
+      if (delta > 0 && delta <= fwd_moves[unit_idx] &&
+          (pblock == 1.0 || random::bernoulli_trial{pblock}(rand_eng))) {
+        fwd_collisions[unit_idx] = i;
+      }
     }
   }
 }
