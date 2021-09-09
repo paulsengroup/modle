@@ -77,9 +77,9 @@ class Writer {
 
  private:
   boost::filesystem::path _path{};
-  Compression _compression{AUTO};
   std::ofstream _fp{};
   boost::iostreams::filtering_ostream _out{};
+  Compression _compression{AUTO};
 
   static constexpr std::array<std::pair<std::string_view, Compression>, 6> ext_mappings{
       std::make_pair(".gz"sv, GZIP),  std::make_pair(".bz2"sv, BZIP2),

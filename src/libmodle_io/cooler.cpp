@@ -133,7 +133,7 @@ Cooler::~Cooler() {
             this->_path_to_file);
       }
     }
-  } catch (const H5::Exception &err) {
+  } catch ([[maybe_unused]] const H5::Exception &e) {
     spdlog::error(FMT_STRING("The following error occurred while finalizing file {}:\n{}"),
                   this->_path_to_file, hdf5::construct_error_stack());
     spdlog::error(FMT_STRING("The content of file {} may be corrupted or incomplete."),
@@ -281,7 +281,7 @@ void Cooler::write_metadata() {
     name = "creation-date";
     str_buff = absl::FormatTime(absl::Now(), absl::UTCTimeZone());
     hdf5::write_or_create_attribute(*this->_fp, name, str_buff);
-  } catch (const H5::Exception &e) {
+  } catch ([[maybe_unused]] const H5::Exception &e) {
     throw std::runtime_error(
         fmt::format(FMT_STRING("The following error occurred while writing metadata to file {}: "
                                "error while writing attribute '{}':\n{}"),
@@ -481,7 +481,7 @@ std::unique_ptr<H5::H5File> Cooler::open_file(const boost::filesystem::path &pat
       (void)validate_file_format(f, flavor, mode, bin_size, true);
     }
     return std::make_unique<H5::H5File>(f);
-  } catch (const H5::Exception &e) {
+  } catch ([[maybe_unused]] const H5::Exception &e) {
     throw std::runtime_error(hdf5::construct_error_stack());
   }
 }
@@ -504,7 +504,7 @@ std::vector<H5::Group> Cooler::open_groups(H5::H5File &f, bool create_if_not_exi
     open_or_create_group(IDX, absl::StrCat(root_path, "indexes"));
 
     return groups;
-  } catch (const H5::Exception &e) {
+  } catch ([[maybe_unused]] const H5::Exception &e) {
     throw std::runtime_error(hdf5::construct_error_stack());
   }
 }
@@ -565,7 +565,7 @@ void Cooler::init_default_datasets() {
     dset[IDX_CHR] =
         f.createDataSet(absl::StrCat(r, "/indexes/chrom_offset"), INT64, mem_space, cp64, ap64);
 
-  } catch (const H5::FileIException &e) {
+  } catch ([[maybe_unused]] const H5::FileIException &e) {
     throw std::runtime_error(fmt::format(
         FMT_STRING("An error occurred while initializing default Cooler dataset on file '{}': {}"),
         this->_path_to_file.string(), hdf5::construct_error_stack()));
@@ -608,7 +608,7 @@ void Cooler::open_default_datasets() {
     d[IDX_BIN1] = f.openDataSet(absl::StrCat(this->_root_path, "indexes/bin1_offset"), ai64);
     d[IDX_CHR] = f.openDataSet(absl::StrCat(this->_root_path, "indexes/chrom_offset"), ai64);
 
-  } catch (const H5::FileIException &e) {
+  } catch ([[maybe_unused]] const H5::FileIException &e) {
     throw std::runtime_error(fmt::format(
         FMT_STRING(
             "An error occurred while trying to open Cooler's default datasets of file '{}': {}"),

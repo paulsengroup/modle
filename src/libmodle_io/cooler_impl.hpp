@@ -279,7 +279,7 @@ void Cooler::write_or_append_cmatrix_to_file(const ContactMatrix<I1> *cmatrix,
     hdf5::write_or_create_attribute(f, "nbins", nbins);
     hdf5::write_or_create_attribute(f, "nnz", this->_nnz);
     // this->_fp->flush(H5F_SCOPE_GLOBAL); // This is probably unnecessary
-  } catch (const H5::Exception &err) {
+  } catch ([[maybe_unused]] const H5::Exception &e) {
     throw std::runtime_error(hdf5::construct_error_stack());
   }
 }

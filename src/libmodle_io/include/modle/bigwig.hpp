@@ -12,7 +12,13 @@
 #include <string_view>  // for string_view
 #include <vector>       // for vector
 
+// clang-format off
+#include "modle/common/suppress_compiler_warnings.hpp"
+// clang-format on
+DISABLE_WARNING_PUSH
+DISABLE_WARNING_PADDED
 #include "libBigWig/bigWig.h"  // for bigWigFile_t
+DISABLE_WARNING_POP
 
 namespace modle::bigwig {
 
