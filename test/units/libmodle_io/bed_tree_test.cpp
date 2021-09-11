@@ -14,7 +14,8 @@ namespace modle::test::bed {
 using namespace modle::bed;
 
 TEST_CASE("BED Tree simple", "[BED][io][long]") {
-  const boost::filesystem::path all_intervals = "test/data/unit_tests/H1_ctcf_all_chroms.bed.gz";
+  const boost::filesystem::path all_intervals =
+      "test/data/unit_tests/H1_hg38_CTCFs_filtered.bed.gz";
 
   Parser p(all_intervals, bed::BED::BED3);
 

@@ -17,6 +17,69 @@ const SmartDir testdir{cleanup_on_exit};  // NOLINT Using auto here upsets GCC8
 namespace modle::test::correlation {
 using namespace modle::correlation;
 
+template <typename N>
+static void test_correlation_w_random_vector(std::string_view method, size_t vector_size,
+                                             size_t iterations, N min, N max) {
+  static_assert(std::is_arithmetic_v<N>, "N should be an arithmetic type.");
+  random::PRNG_t rand_eng{std::random_device{}()};
+
+  std::mutex data_mutex;
+  std::condition_variable input_data_cv;
+  std::condition_variable output_data_cv;
+  std::atomic<bool> input_data_ready{false};
+  std::atomic<bool> output_data_ready{false};
+
+  std::vector<N> v1(vector_size);
+  std::vector<N> v2(vector_size);
+
+  std::atomic<double> rho_py{};
+  std::atomic<double> pv_py{};
+
+  std::thread t([&]() {
+    run_scipy_corr(method, v1, v2, rho_py, pv_py, data_mutex, input_data_cv, output_data_cv,
+                   input_data_ready, output_data_ready);
+  });
+
+  for (size_t i = 0; i < iterations; ++i) {        // NOLINT
+    assert(!input_data_ready);                     // NOLINT
+    generate_random_vect(rand_eng, v1, min, max);  // NOLINT
+    generate_random_vect(rand_eng, v2, min, max);  // NOLINT
+    input_data_ready = true;
+    input_data_cv.notify_one();
+    {
+      std::unique_lock<std::mutex> l(data_mutex);
+      output_data_cv.wait(l, [&]() { return output_data_ready.load(); });
+      output_data_ready = false;
+    }
+
+    const auto [rho, pv] = [&]() {
+      double rho_;
+      double pv_;
+      if (method == "pearson") {
+        rho_ = compute_pearson(v1, v2);
+        pv_ = compute_pearson_significance(rho_, v1.size());
+      } else if (method == "spearman") {
+        rho_ = compute_spearman(v1, v2);
+        pv_ = compute_spearman_significance(rho_, v1.size());
+      }
+      /* else if (method == "kendall") {
+        rho = compute_kendall(v1, v2);
+        pv_ = compute_kendall_significance(rho, v1.size());
+      }
+      */
+      return std::make_pair(rho_, pv_);
+    }();
+
+    CHECK(Approx(rho).margin(0) == rho_py);
+    CHECK(Approx(pv).margin(0) == pv_py);
+  }
+  v1.clear();
+  v2.clear();
+  input_data_ready = true;
+  input_data_cv.notify_one();
+  t.join();
+}
+
 TEST_CASE("Corr. test: Pearson wo ties", "[correlation][pearson][short]") {
   std::vector<uint32_t> v1{17, 86, 60, 77, 47, 3, 70, 87, 88, 92};   // NOLINT
   std::vector<uint32_t> v2{70, 29, 85, 61, 80, 34, 60, 31, 73, 66};  // NOLINT
@@ -36,38 +99,26 @@ TEST_CASE("Corr. test: Pearson w ties", "[correlation][pearson][short]") {
 }
 
 TEST_CASE("Corr. test: Pearson Scipy", "[correlation][pearson][short]") {
-  std::mt19937 rnd_eng{std::random_device{}()};
-  auto v1 = generate_random_vect(rnd_eng, 1'000, 0, 15'000);  // NOLINT
-  auto v2 = generate_random_vect(rnd_eng, 1'000, 0, 15'000);  // NOLINT
+  random::PRNG_t rand_eng{std::random_device{}()};
+  auto v1 = generate_random_vect(rand_eng, 1'000, 0, 15'000);  // NOLINT
+  auto v2 = generate_random_vect(rand_eng, 1'000, 0, 15'000);  // NOLINT
   const auto pcc = compute_pearson(v1, v2);
   const auto pv = compute_pearson_significance(pcc, v1.size());
-  const auto& [pcc_py, pv_py] = corr_scipy(v1, v2, "pearsonr", testdir());
+  const auto [pcc_py, pv_py] = corr_scipy(v1, v2, "pearson");
   CHECK(Approx(pcc).margin(0) == pcc_py);
   CHECK(Approx(pv).margin(0) == pv_py);
 }
 
-TEST_CASE("Corr. test: Pearson Scipy long", "[correlation][pearson][long]") {
-  std::mt19937 rnd_eng{std::random_device{}()};
-  for (auto i = 0UL; i < 100UL; ++i) {                          // NOLINT
-    auto v1 = generate_random_vect(rnd_eng, 1'000, 0, 15'000);  // NOLINT
-    auto v2 = generate_random_vect(rnd_eng, 1'000, 0, 15'000);  // NOLINT
-    const auto pcc = compute_pearson(v1, v2);
-    const auto pv = compute_pearson_significance(pcc, v1.size());
-    const auto& [pcc_py, pv_py] = corr_scipy(v1, v2, "pearsonr", testdir());
-    CHECK(Approx(pcc).margin(0) == pcc_py);
-    CHECK(Approx(pv).margin(0) == pv_py);
-  }
+TEST_CASE("Corr. test: Pearson Scipy long", "[correlation][pearson][medium]") {
+  test_correlation_w_random_vector("pearson", 1'000, 250, 0U, 15'000U);
+  test_correlation_w_random_vector("pearson", 1'000, 250, -7'250, 7'250);
+  test_correlation_w_random_vector("pearson", 1'000, 250, -7'250.0, 7'250.0);
 }
 
-TEST_CASE("Corr. test: Pearson Scipy long vect.", "[correlation][pearson][medium]") {
-  std::mt19937 rnd_eng{std::random_device{}()};
-  auto v1 = generate_random_vect(rnd_eng, 1'000'000, 0, 15'000);  // NOLINT
-  auto v2 = generate_random_vect(rnd_eng, 1'000'000, 0, 15'000);  // NOLINT
-  const auto pcc = compute_pearson(v1, v2);
-  const auto pv = compute_pearson_significance(pcc, v1.size());
-  const auto& [pcc_py, pv_py] = corr_scipy(v1, v2, "pearsonr", testdir());
-  CHECK(Approx(pcc).margin(0) == pcc_py);
-  CHECK(Approx(pv).margin(0) == pv_py);
+TEST_CASE("Corr. test: Pearson Scipy long vect.", "[correlation][pearson][long]") {
+  test_correlation_w_random_vector("pearson", 500'000, 2, 0U, 15'000U);
+  test_correlation_w_random_vector("pearson", 500'000, 2, -7'250, 7'250);
+  test_correlation_w_random_vector("pearson", 500'000, 2, -7'250.0, 7'250.0);
 }
 
 TEST_CASE("Corr. test: Spearman wo ties", "[correlation][spearman][short]") {
@@ -89,38 +140,26 @@ TEST_CASE("Corr. test: Spearman w ties", "[correlation][spearman][short]") {
 }
 
 TEST_CASE("Corr. test: Spearman Scipy", "[correlation][spearman][short]") {
-  std::mt19937 rnd_eng{std::random_device{}()};
-  auto v1 = generate_random_vect(rnd_eng, 1'000, 0, 15'000);  // NOLINT
-  auto v2 = generate_random_vect(rnd_eng, 1'000, 0, 15'000);  // NOLINT
+  random::PRNG_t rand_eng{std::random_device{}()};
+  auto v1 = generate_random_vect(rand_eng, 1'000, 0, 15'000);  // NOLINT
+  auto v2 = generate_random_vect(rand_eng, 1'000, 0, 15'000);  // NOLINT
   const auto rho = compute_spearman(v1, v2);
   const auto pv = compute_spearman_significance(rho, v1.size());
-  const auto& [rho_py, pv_py] = corr_scipy(v1, v2, "spearmanr", testdir());
+  const auto [rho_py, pv_py] = corr_scipy(v1, v2, "spearman");
   CHECK(Approx(rho).margin(0) == rho_py);
   CHECK(Approx(pv).margin(0) == pv_py);
 }
 
 TEST_CASE("Corr. test: Spearman Scipy long", "[correlation][spearman][long]") {
-  std::mt19937 rnd_eng{std::random_device{}()};
-  for (auto i = 0UL; i < 100; ++i) {                            // NOLINT
-    auto v1 = generate_random_vect(rnd_eng, 1'000, 0, 15'000);  // NOLINT
-    auto v2 = generate_random_vect(rnd_eng, 1'000, 0, 15'000);  // NOLINT
-    const auto rho = compute_spearman(v1, v2);
-    const auto pv = compute_spearman_significance(rho, v1.size());
-    const auto& [rho_py, pv_py] = corr_scipy(v1, v2, "spearmanr", testdir());
-    CHECK(Approx(rho).margin(0) == rho_py);
-    CHECK(Approx(pv).margin(0) == pv_py);
-  }
+  test_correlation_w_random_vector("spearman", 1'000, 250, 0U, 15'000U);
+  test_correlation_w_random_vector("spearman", 1'000, 250, -7'250, 7'250);
+  test_correlation_w_random_vector("spearman", 1'000, 250, -7'250.0, 7'250.0);
 }
 
-TEST_CASE("Corr. test: Spearman Scipy long vect.", "[correlation][spearman][medium]") {
-  std::mt19937 rnd_eng{std::random_device{}()};
-  auto v1 = generate_random_vect(rnd_eng, 1'000'000, 0, 15'000);  // NOLINT
-  auto v2 = generate_random_vect(rnd_eng, 1'000'000, 0, 15'000);  // NOLINT
-  const auto rho = compute_spearman(v1, v2);
-  const auto pv = compute_spearman_significance(rho, v1.size());
-  const auto& [rho_py, pv_py] = corr_scipy(v1, v2, "spearmanr", testdir());
-  CHECK(Approx(rho).margin(0) == rho_py);
-  CHECK(Approx(pv).margin(0) == pv_py);
+TEST_CASE("Corr. test: Spearman Scipy long vect.", "[correlation][spearman][long]") {
+  test_correlation_w_random_vector("spearman", 500'000, 2, 0U, 15'000U);
+  test_correlation_w_random_vector("spearman", 500'000, 2, -7'250, 7'250);
+  test_correlation_w_random_vector("spearman", 500'000, 2, -7'250.0, 7'250.0);
 }
 
 TEST_CASE("SED", "[correlation][sed][short]") {

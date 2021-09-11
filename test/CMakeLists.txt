@@ -1,14 +1,15 @@
 find_package(Boost REQUIRED)
 find_package(Catch2 REQUIRED)
+find_package(fmt REQUIRED)
 
 include(CTest)
 include(Catch)
 
-add_executable(catch_main)
+add_executable(test_main)
 
 target_sources(
-  catch_main
-  PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/catch_main.cpp
+  test_main
+  PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/test_main.cpp
           ${CMAKE_CURRENT_SOURCE_DIR}/units/contact_matrix/contacts_test.cpp
           ${CMAKE_CURRENT_SOURCE_DIR}/units/common/math_test.cpp
           ${CMAKE_CURRENT_SOURCE_DIR}/units/correlation/common.hpp
@@ -26,17 +27,18 @@ target_sources(
           ${CMAKE_CURRENT_SOURCE_DIR}/units/simulation_internal/extrusion_barriers_test.cpp)
 
 target_link_libraries(
-  catch_main
+  test_main
   PRIVATE project_warnings
           project_options
           Boost::headers
           Catch2::Catch2
+          fmt::fmt
           Modle::cmatrix
           Modle::common
           Modle::correlation
           Modle::interval_tree
           Modle::libmodle
-          # Modle::libmodle_internal
+          Modle::libmodle_internal
           Modle::libmodle_io)
 
 file(MAKE_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/Testing/)
@@ -44,7 +46,7 @@ file(MAKE_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/Testing/)
 # automatically discover tests that are defined in catch based test files you can modify the unittests. TEST_PREFIX to
 # whatever you want, or use different for different binaries
 catch_discover_tests(
-  catch_main
+  test_main
   TEST_SPEC
   "[short]"
   TEST_SUFFIX
@@ -61,7 +63,7 @@ catch_discover_tests(
   --success)
 
 catch_discover_tests(
-  catch_main
+  test_main
   TEST_SPEC
   "[medium]"
   TEST_SUFFIX
@@ -78,7 +80,7 @@ catch_discover_tests(
   --success)
 
 catch_discover_tests(
-  catch_main
+  test_main
   TEST_SPEC
   "[long]"
   TEST_SUFFIX

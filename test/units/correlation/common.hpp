@@ -1,57 +1,104 @@
 #pragma once
 #include <absl/container/flat_hash_set.h>  // for flat_hash_set, operator!=
 #include <absl/hash/hash.h>                // for Hash
-#include <absl/strings/str_cat.h>          // for StrCat
+#include <fmt/compile.h>
+#include <fmt/format.h>
 
 #include <algorithm>  // for max, generate
 #include <array>      // for array
 #include <boost/container_hash/hash.hpp>
 #include <boost/filesystem/path.hpp>  // for create_directories, exists, path, remove
-#include <cstdint>                    // for uint32_t, int32_t, int64_t
-#include <cstdio>                     // for pclose, fgets, popen, FILE
-#include <fstream>                    // for basic_ofstream, operator<<, basic_ostream
-#include <memory>                     // for allocator, unique_ptr
-#include <numeric>                    // for iota
-#include <stdexcept>                  // for runtime_error
-#include <string>                     // for string, operator+, char_traits, stod
-#include <type_traits>                // for enable_if, is_arithmetic
-#include <utility>                    // for pair
-#include <vector>                     // for vector
+#include <boost/process.hpp>
+#include <cstdint>    // for uint32_t, int32_t, int64_t
+#include <cstdio>     // for pclose, fgets, popen, FILE
+#include <fstream>    // for basic_ofstream, operator<<, basic_ostream
+#include <memory>     // for allocator, unique_ptr
+#include <numeric>    // for iota
+#include <stdexcept>  // for runtime_error
+#include <string>     // for string, operator+, char_traits, stod
+#include <string_view>
+#include <type_traits>  // for enable_if, is_arithmetic
+#include <utility>      // for pair
+#include <vector>       // for vector
 
 #include "modle/common/random.hpp"
+#include "modle/common/utils.hpp"
 
 namespace modle::test::correlation {
+using namespace std::string_view_literals;
 
-template <typename N, typename = typename std::enable_if<std::is_arithmetic<N>::value, N>::type>
-inline void write_vect_to_file(const boost::filesystem::path& fpath, const std::vector<N>& v) {
-  auto fp = std::ofstream(fpath.string());
-  fp << v[0];
-  for (auto i = 1UL; i < v.size(); ++i) {
-    fp << "," << v[i];
-  }
-  fp << std::endl;
-  fp.close();
-}
+static constexpr utils::ConstMap<std::string_view, std::string_view, 3> python_cmds{
+    // clang-format off
+std::make_pair("pearson"sv,
+               "from scipy.stats import pearsonr\n"
+               "from numpy import fromstring\n"
+               "import fileinput\n"
 
-inline std::vector<uint32_t> generate_random_vect(std::mt19937& rnd_eng, uint32_t size,
-                                                  uint32_t min, uint32_t max,
-                                                  bool allow_duplicates = true) {
-  random::uniform_int_distribution<uint32_t> dist(min, max);
-  std::vector<uint32_t> v(size);
+               "for line in fileinput.input():\n"
+               "  v1, _, v2 = line.strip().partition(\"\\t\")\n"
+               "  v1 = fromstring(v1, sep=\",\")\n"
+               "  v2 = fromstring(v2, sep=\",\")\n"
+
+               "  corr, pv = pearsonr(v1, v2)\n"
+               "  print(f\"{corr:.16e}\\t{pv:.16e}\", flush=True)\n"sv),
+
+std::make_pair("spearman"sv,
+               "from scipy.stats import spearmanr\n"
+               "from numpy import fromstring\n"
+               "import fileinput\n"
+
+               "for line in fileinput.input():\n"
+               "  v1, _, v2 = line.strip().partition(\"\\t\")\n"
+               "  v1 = fromstring(v1, sep=\",\")\n"
+               "  v2 = fromstring(v2, sep=\",\")\n"
+
+               "  corr, pv = spearmanr(v1, v2)\n"
+               "  print(f\"{corr:.16e}\\t{pv:.16e}\", flush=True)\n"sv),
+
+std::make_pair("kendall"sv,
+               "from scipy.stats import kendalltau\n"
+               "from numpy import fromstring\n"
+               "import fileinput\n"
+
+               "for line in fileinput.input():\n"
+               "  v1, _, v2 = line.strip().partition(\"\\t\")\n"
+               "  v1 = fromstring(v1, sep=\",\")\n"
+               "  v2 = fromstring(v2, sep=\",\")\n"
+
+               "  corr, pv = kendalltau(v1, v2)\n"
+               "  print(f\"{corr:.16e}\\t{pv:.16e}\", flush=True)\n"sv)
+};
+// clang-format on
+
+template <class N, class = std::enable_if_t<std::is_arithmetic_v<N>>>
+inline void generate_random_vect(random::PRNG_t& rand_eng, std::vector<N>& buff, N min, N max,
+                                 bool allow_duplicates = true) {
+  using dist_t =
+      typename std::conditional<std::is_floating_point_v<N>, random::uniform_real_distribution<N>,
+                                random::uniform_int_distribution<N>>::type;
+  dist_t dist(min, max);
   if (allow_duplicates) {
-    std::generate(v.begin(), v.end(), [&]() { return dist(rnd_eng); });
+    std::generate(buff.begin(), buff.end(), [&]() { return dist(rand_eng); });
   } else {
     absl::flat_hash_set<uint32_t> s;
-    while (s.size() < size) {
-      s.insert(dist(rnd_eng));
+    while (s.size() < buff.size()) {
+      s.insert(dist(rand_eng));
     }
-    v = {s.begin(), s.end()};
+    std::copy(s.begin(), s.end(), buff.begin());
   }
+}
+
+template <class N = uint32_t, class = std::enable_if_t<std::is_arithmetic_v<N>>>
+[[nodiscard]] inline std::vector<N> generate_random_vect(random::PRNG_t& rand_eng, size_t size,
+                                                         uint32_t min, uint32_t max,
+                                                         bool allow_duplicates = true) {
+  std::vector<N> v(size);
+  generate_random_vect(rand_eng, v, min, max, allow_duplicates);
   return v;
 }
 
 inline std::pair<std::vector<uint32_t>, std::vector<uint32_t>> generate_correlated_vects(
-    std::mt19937& rnd_eng, uint32_t size) {
+    random::PRNG_t& rand_eng, uint32_t size) {
   random::uniform_int_distribution<int32_t> dist(static_cast<int32_t>(size) / -50,  // NOLINT
                                                  static_cast<int32_t>(size / 50));  // NOLINT
   std::vector<uint32_t> v1(size);
@@ -61,9 +108,9 @@ inline std::pair<std::vector<uint32_t>, std::vector<uint32_t>> generate_correlat
   for (auto i = 0UL; i < size; ++i) {
     DISABLE_WARNING_PUSH
     DISABLE_WARNING_USELESS_CAST
-    int64_t n = static_cast<int64_t>(v1[i]) + dist(rnd_eng);
+    auto n = static_cast<int64_t>(v1[i]) + dist(rand_eng);
     v1[i] = static_cast<uint32_t>(std::max(int64_t(0), n));
-    n = static_cast<int64_t>(v2[i]) + dist(rnd_eng);
+    n = static_cast<int64_t>(v2[i]) + dist(rand_eng);
     v2[i] = static_cast<uint32_t>(std::max(int64_t(0), n));
     DISABLE_WARNING_POP
   }
@@ -71,48 +118,69 @@ inline std::pair<std::vector<uint32_t>, std::vector<uint32_t>> generate_correlat
 }
 
 template <typename N, typename = typename std::enable_if<std::is_arithmetic<N>::value, N>::type>
+inline void run_scipy_corr(std::string_view method, std::vector<N>& v1, std::vector<N>& v2,
+                           std::atomic<double>& rho, std::atomic<double>& pv,
+                           std::mutex& data_mutex, std::condition_variable& input_data_cv,
+                           std::condition_variable& output_data_cv,
+                           std::atomic<bool>& input_data_ready,
+                           std::atomic<bool>& output_data_ready) {
+  boost::process::ipstream stdout_stream;
+  boost::process::opstream stdin_stream;
+  boost::process::child py(
+      boost::process::search_path("python3").string(), "-c", std::string{python_cmds.at(method)},
+      boost::process::std_in<stdin_stream, boost::process::std_out> stdout_stream);
+  assert(py.running());  // NOLINT
+
+  std::string sbuff;
+  while (true) {
+    {
+      std::unique_lock<std::mutex> l(data_mutex);
+      input_data_cv.wait(l, [&]() { return input_data_ready.load(); });
+      input_data_ready = false;
+    }
+
+    if (v1.empty()) {      // EOQ signal
+      assert(v2.empty());  // NOLINT
+      stdin_stream.pipe().close();
+      py.wait();
+      return;
+    }
+
+    sbuff = fmt::format(FMT_COMPILE("{}\t{}\n"), fmt::join(v1, ","), fmt::join(v2, ","));
+    stdin_stream.write(sbuff.data(), static_cast<std::streamsize>(sbuff.size()));
+    stdin_stream.flush();
+
+    std::getline(stdout_stream, sbuff);
+    const auto sep_idx = sbuff.find('\t');
+    assert(sep_idx < sbuff.size());  // NOLINT
+    rho = utils::parse_numeric_or_throw<double>(std::string_view(sbuff.data(), sep_idx));
+    pv = utils::parse_numeric_or_throw<double>(
+        std::string_view(sbuff.data() + sep_idx + 1, sbuff.size() - sep_idx));
+    output_data_ready = true;
+    output_data_cv.notify_one();
+  }
+}
+
+template <typename N, typename = typename std::enable_if<std::is_arithmetic<N>::value, N>::type>
 [[nodiscard]] inline std::pair<double, double> corr_scipy(const std::vector<N>& v1,
                                                           const std::vector<N>& v2,
-                                                          const std::string& method,
-                                                          const boost::filesystem::path& tmpdir) {
-  if (!boost::filesystem::exists(tmpdir)) {
-    boost::filesystem::create_directories(tmpdir);
-  }
-  const auto f1_path = tmpdir / absl::StrCat(boost::hash_range(v1.begin(), v1.end()), "_f1");
-  const auto f2_path = tmpdir / absl::StrCat(boost::hash_range(v2.begin(), v2.end()), "_f2");
-  write_vect_to_file(f1_path, v1);
-  write_vect_to_file(f2_path, v2);
+                                                          std::string_view method) {
+  boost::process::ipstream stdout_stream;
+  boost::process::opstream stdin_stream;
+  boost::process::spawn(
+      boost::process::search_path("python3").string(), "-c", std::string{python_cmds.at(method)},
+      boost::process::std_in<stdin_stream, boost::process::std_out> stdout_stream);
 
-  const std::string cmd =
-      "python3 -c '"
-      "from scipy.stats import pearsonr, spearmanr, kendalltau; from sys import argv, stderr; "
-      "from numpy import genfromtxt; "
-      "v1 = genfromtxt(argv[1], delimiter=\",\", dtype=int); "
-      "v2 = genfromtxt(argv[2], delimiter=\",\", dtype=int); "
-      "corr, pv = " +
-      method +
-      "(v1, v2); "
-      //      "print(v1, file=stderr); print(v2, file=stderr); "
-      "print(f\"{corr:.16e}\\t{pv:.16e}\", end=\"\");' " +
-      f1_path.string() + " " + f2_path.string();
-  // NOLINTNEXTLINE(readability-magic-numbers, cppcoreguidelines-avoid-magic-numbers)
-  std::array<char, 256> buffer{};
-  std::string result;
-  // TODO: replace this with boost::process
-  std::unique_ptr<FILE, decltype(&pclose)> pipe(popen(cmd.c_str(), "r"), pclose);
-  if (!pipe) {
-    throw std::runtime_error("popen() failed!");
-  }
-  while (fgets(buffer.data(), buffer.size(), pipe.get()) != nullptr) {
-    result += buffer.data();
-    //    printf("%s\n", result.c_str());
-  }
-  boost::filesystem::remove(f1_path);
-  boost::filesystem::remove(f2_path);
+  auto buff = fmt::format(FMT_COMPILE("{}\t{}\n"), fmt::join(v1, ","), fmt::join(v2, ","));
+  stdin_stream.write(buff.data(), static_cast<std::streamsize>(buff.size()));
+  stdin_stream.close();
 
-  const auto rho = std::stod(std::string(result.data(), result.find('\t')));
-  // NOLINTNEXTLINE(cppcoreguidelines-pro-bounds-pointer-arithmetic)
-  const auto pv = std::stod(std::string(result.data() + result.find('\t')));
+  std::getline(stdout_stream, buff);
+  const auto sep_idx = buff.find('\t');
+  assert(sep_idx < buff.size());  // NOLINT
+  const auto rho = utils::parse_numeric_or_throw<double>(std::string_view(buff.data(), sep_idx));
+  const auto pv = utils::parse_numeric_or_throw<double>(
+      std::string_view(buff.data() + sep_idx + 1, buff.size() - sep_idx));
 
   return {rho, pv};
 }

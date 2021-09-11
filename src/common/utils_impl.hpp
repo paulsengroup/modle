@@ -43,7 +43,7 @@ DISABLE_WARNING_POP
 
 namespace modle::utils {
 
-template <class N>
+template <typename N>
 inline auto from_chars(const char *first, const char *last, N &value) noexcept {
 #if defined(MODLE_CHARCONV_FP_AVAILABLE) && defined(MODLE_CHARCONV_INT_AVAILABLE)
   return std::from_chars(first, last, value);
@@ -52,12 +52,19 @@ inline auto from_chars(const char *first, const char *last, N &value) noexcept {
 #endif
 }
 
-template <typename N, typename>
+template <typename N>
 void parse_numeric_or_throw(std::string_view tok, N &field) {
   auto [ptr, err] = utils::from_chars(tok.data(), tok.end(), field);
   if (ptr != tok.end() && err != std::errc{}) {
     throw_except_from_errc(tok, (std::numeric_limits<size_t>::max)(), field, ptr, err);
   }
+}
+
+template <typename N>
+N parse_numeric_or_throw(std::string_view tok) {
+  N field;
+  utils::parse_numeric_or_throw(tok, field);
+  return field;
 }
 
 template <typename N>
@@ -67,16 +74,16 @@ void parse_numeric_or_throw(const std::vector<std::string_view> &toks, size_t id
 
 template <typename N>
 void parse_vect_of_numbers_or_throw(const std::vector<std::string_view> &toks, size_t idx,
-                                    std::vector<N> &field, uint64_t expected_size) {
+                                    std::vector<N> &fields, uint64_t expected_size) {
   static_assert(std::is_arithmetic<N>());
   std::vector<std::string_view> ns = absl::StrSplit(toks[idx], ',');
   if (ns.size() != expected_size) {
     throw std::runtime_error(
         fmt::format(FMT_STRING("Expected {} fields, got {}."), expected_size, ns.size()));
   }
-  field = std::vector<N>(ns.size());
+  fields.resize(ns.size());
   for (size_t i = 0; i < expected_size; ++i) {
-    parse_numeric_or_throw(ns, i, field[i]);
+    parse_numeric_or_throw(ns, i, fields[i]);
   }
 }
 
@@ -95,10 +102,10 @@ void throw_except_from_errc(std::string_view tok, size_t idx, const N &field, co
     if (std::is_unsigned<N>()) {
       base_error += " a positive integral number";
     } else {
-      base_error += "an integral number";
+      base_error += " an integral number";
     }
   } else {
-    base_error += "a real number";
+    base_error += " a real number";
   }
   if (e == std::errc::invalid_argument) {
     if (c != nullptr) {
@@ -209,8 +216,7 @@ void fclose(FILE *fp) noexcept(false) {
 // Try to convert str representations like "1.0" or "1.000000" to "1"
 std::string str_float_to_str_int(const std::string &s) {
   try {
-    double n;
-    parse_numeric_or_throw(s, n);
+    double n = parse_numeric_or_throw<double>(s);
     if (std::trunc(n) == n) {
       return fmt::format(FMT_STRING("{:.0f}"), n);
     }

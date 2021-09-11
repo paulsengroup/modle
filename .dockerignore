@@ -6,7 +6,7 @@
 !external/*.tar.xz
 !src/**
 !test/CMakeLists.txt
-!test/catch_main.cpp
+!test/test_main.cpp
 !test/data/unit_tests/**
 !test/units/**
 !CMakeLists.txt

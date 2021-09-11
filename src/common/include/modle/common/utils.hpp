@@ -19,15 +19,21 @@
 
 namespace modle::utils {
 
-template <typename N, typename = std::enable_if_t<std::is_arithmetic_v<N>>>
+template <typename N>
+inline auto from_chars(const char* first, const char* last, N& value) noexcept;
+
+template <typename N>
 inline void parse_numeric_or_throw(std::string_view tok, N& field);
+
+template <typename N>
+inline N parse_numeric_or_throw(std::string_view tok);
 
 template <typename N>
 inline void parse_numeric_or_throw(const std::vector<std::string_view>& toks, size_t idx, N& field);
 
 template <typename N>
 inline void parse_vect_of_numbers_or_throw(const std::vector<std::string_view>& toks, size_t idx,
-                                           std::vector<N>& field, uint64_t expected_size);
+                                           std::vector<N>& fields, uint64_t expected_size);
 
 template <typename N>
 inline void throw_except_from_errc(std::string_view tok, size_t idx, const N& field, const char* c,
