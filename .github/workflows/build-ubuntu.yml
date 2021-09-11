@@ -5,7 +5,7 @@ name: Ubuntu Builds
 
 on:
   push:
-    branches: [ main, testing-ci, v4, v4.1 ]
+    branches: [ main, testing-ci, v4.1 ]
     paths:
       - ".github/workflows/*.yml"
       - "external/**"
@@ -14,7 +14,7 @@ on:
       - "CMakeLists.txt"
       - "conanfile.py"
   pull_request:
-    branches: [ main, testing-ci, v4, v4.1 ]
+    branches: [ main, testing-ci, v4.1 ]
     paths:
       - ".github/workflows/*.yml"
       - "external/**"
@@ -28,48 +28,49 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os:
-          - ubuntu-18.04
-          - ubuntu-20.04
-        compiler:
-          - cc: gcc
-            cxx: g++
-          - cc: clang
-            cxx: clang++
+        image:
+          - conanio/gcc7:latest
+          - conanio/gcc11:latest
+          - conanio/clang60:latest
+          - conanio/clang11:latest
         config:
           - build_type: Release
           - build_type: Debug
-            sanitizer: ADDRESS
-          - build_type: Debug
-            sanitizer: UNDEFINED_BEHAVIOR
 
-    runs-on: ${{matrix.os}}
+    runs-on: ubuntu-latest
+    container:
+      image: ${{matrix.image}}
+      options: "--user=root -v ${{github.workspace}}:/workspace"
 
     steps:
       - name: Checkout repo
         uses: actions/checkout@v2
-        with:
-          fetch-depth: 0
 
       - name: Install unit test dependencies
         run: pip3 install scipy
 
+      - name: Generate cache key
+        id: conan_cache_key
+        run: |
+          host_os="host-${{runner.os}}"
+          compiler_id="$(basename "$CC")-$(cc -dumpversion)"
+          build_type="${{matrix.config.build_type}}"
+          hash="${{hashFiles('conanfile.py')}}"
+
+          echo "::set-output name=string::$host_os-$compiler_id-$build_type-$hash"
+
       - name: Cache Conan packages
         uses: actions/cache@v2
         with:
-          key: >
-            host-${{matrix.os}}-
-            target-${{matrix.os}}-
-            ${{matrix.compiler.cc}}-
-            ${{matrix.config.build_type}}-
-            ${{hashFiles('conanfile.py')}}-
-            conan-0
-
+          key: conan-${{ steps.conan_cache_key.outputs.string }}
           path: ~/.conan/data
 
       - name: Install Conan
         id: conan
         uses: turtlebrowser/get-conan@main
+
+      - name: Conan version
+        run: echo ${{steps.conan.outputs.version}}
 
       - name: Clean up Conan
         run: |
@@ -77,58 +78,111 @@ jobs:
           conan remove -f "*" --src
           conan remove -f "*" --system-reqs
 
-      - name: Conan version
-        run: echo ${{steps.conan.outputs.version}}
+      - name: Create build directories
+        working-directory: /workspace
+        run: mkdir build build-asan build-ubsan
 
-      - name: Make build directory
-        working-directory: ${{runner.workspace}}
-        run: mkdir build
-
-      - name: Configure project - Release
-        working-directory: ${{runner.workspace}}/build
-        if: ${{matrix.config.build_type != 'Debug'}}
+      - name: Configure project
+        working-directory: /workspace/build
         env:
           CONAN_V2_MODE: "1"
         run: |
-          waserr='ON'; wlto='ON';     \
-          if [[ ${{matrix.os}} == 'ubuntu-18.04' ]]; then \
-            waserr='OFF'; wlto='OFF'; \
-          fi; \
+          waserr='OFF'
+          wlto='OFF'
+
+          compiler="$(basename "$CC")-$(cc -dumpversion)"
+          if [[ "$compiler_id" == gcc-11* ]] || [[ "$compiler_id" == clang-11* ]] ; then
+            waserr='ON'
+            wlto='ON'
+          fi
+
           cmake -DCMAKE_BUILD_TYPE=${{matrix.config.build_type}} \
-                -DCMAKE_C_COMPILER=${{matrix.compiler.cc}}       \
-                -DCMAKE_CXX_COMPILER=${{matrix.compiler.cxx}}    \
                 -DENABLE_IPO=$wlto                               \
                 -DENABLE_TESTING=ON                              \
                 -DWARNINGS_AS_ERRORS=$waserr                     \
-                ${{github.workspace}}
-
-      - name: Configure project - Debug
-        working-directory: ${{runner.workspace}}/build
-        if: ${{matrix.config.build_type == 'Debug'}}
-        env:
-          CONAN_V2_MODE: "1"
-        run: |
-          waserr='ON'; wlto='ON';     \
-          if [[ ${{matrix.os}} == 'ubuntu-18.04' ]]; then \
-            waserr='OFF'; wlto='OFF'; \
-          fi; \
-          cmake -DCMAKE_BUILD_TYPE=${{matrix.config.build_type}}   \
-                -DENABLE_SANITIZER_${{matrix.config.sanitizer}}=ON \
-                -DCMAKE_C_COMPILER=${{matrix.compiler.cc}}         \
-                -DCMAKE_CXX_COMPILER=${{matrix.compiler.cxx}}      \
-                -DENABLE_IPO=$wlto                                 \
-                -DENABLE_TESTING=ON                                \
-                -DWARNINGS_AS_ERRORS=$waserr                       \
-                ${{github.workspace}}
+                /workspace
 
       - name: Build project
-        working-directory: ${{runner.workspace}}/build
+        working-directory: /workspace/build
         run: cmake --build . -j $(nproc)
 
       - name: Test project
-        working-directory: ${{github.workspace}}
+        working-directory: /workspace/build
         run: |
-          ctest --test-dir ${{runner.workspace}}/build \
-                --schedule-random                      \
-                --output-on-failure                    \
+          ctest --test-dir /workspace/build \
+                --schedule-random           \
+                --output-on-failure         \
+                --no-tests=error            \
+                -j $(nproc)
+
+      - name: Configure project - ASAN
+        working-directory: /workspace/build-asan
+        if: >
+          matrix.config.build_type == 'Debug' &&
+             (matrix.image == 'conanio/gcc11:latest' ||
+              matrix.image == 'conanio/clang11:latest')
+        env:
+          CONAN_V2_MODE: "1"
+        run: |
+          cmake -DCMAKE_BUILD_TYPE=Debug      \
+                -DENABLE_SANITIZER_ADDRESS=ON \
+                -DENABLE_TESTING=ON           \
+                -DWARNINGS_AS_ERRORS=ON       \
+                /workspace
+
+      - name: Build project - ASAN
+        working-directory: /workspace/build-asan
+        if: >
+          matrix.config.build_type == 'Debug' &&
+             (matrix.image == 'conanio/gcc11:latest' ||
+              matrix.image == 'conanio/clang11:latest')
+        run: cmake --build . -j $(nproc)
+
+      - name: Test project - ASAN
+        working-directory: /workspace/build-asan
+        if: >
+          matrix.config.build_type == 'Debug' &&
+             (matrix.image == 'conanio/gcc11:latest' ||
+              matrix.image == 'conanio/clang11:latest')
+        run: |
+          ctest --test-dir /workspace/build-asan \
+                --schedule-random                \
+                --output-on-failure              \
+                --no-tests=error                 \
+                -j $(nproc)
+
+      - name: Configure project - UBSAN
+        working-directory: /workspace/build-ubsan
+        if: >
+          matrix.config.build_type == 'Debug' &&
+             (matrix.image == 'conanio/gcc11:latest' ||
+              matrix.image == 'conanio/clang11:latest')
+        env:
+          CONAN_V2_MODE: "1"
+        run: |
+          cmake -DCMAKE_BUILD_TYPE=Debug                 \
+                -DENABLE_SANITIZER_UNDEFINED_BEHAVIOR=ON \
+                -DENABLE_TESTING=ON                      \
+                -DWARNINGS_AS_ERRORS=ON                  \
+                /workspace
+
+      - name: Build project - UBSAN
+        working-directory: /workspace/build-ubsan
+        if: >
+          matrix.config.build_type == 'Debug' &&
+             (matrix.image == 'conanio/gcc11:latest' ||
+              matrix.image == 'conanio/clang11:latest')
+        run: cmake --build . -j $(nproc)
+
+      - name: Test project - UBSAN
+        working-directory: /workspace/build-ubsan
+        if: >
+          matrix.config.build_type == 'Debug' &&
+             (matrix.image == 'conanio/gcc11:latest' ||
+              matrix.image == 'conanio/clang11:latest')
+        run: |
+          ctest --test-dir /workspace/build-ubsan \
+                --schedule-random                 \
+                --output-on-failure               \
+                --no-tests=error                  \
                 -j $(nproc)
