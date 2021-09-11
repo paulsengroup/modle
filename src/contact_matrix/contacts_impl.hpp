@@ -32,6 +32,17 @@
 #include "modle/common/utils.hpp"                       // for ndebug_defined
 
 namespace modle {
+#if defined(__clang__) && __clang_major__ < 7
+template <typename I>
+ContactMatrix<I>::ContactMatrix(ContactMatrix<I> &&other) noexcept
+    : _nrows(other.nrows()),
+      _ncols(other.ncols()),
+      _contacts(std::move(other._contacts)),
+      _tot_contacts(other.get_tot_contacts()),
+      _updates_missed(other.get_n_of_missed_updates()),
+      _locks(std::move(other._locks)) {}
+#endif
+
 template <typename I>
 ContactMatrix<I>::ContactMatrix(const ContactMatrix<I> &other)
     : _nrows(other.nrows()),
@@ -79,6 +90,24 @@ ContactMatrix<I>::ContactMatrix(const absl::Span<const I> contacts, size_t nrows
         std::accumulate(this->_contacts.begin(), this->_contacts.end(), size_t(0));
   }
 }
+
+#if defined(__clang__) && __clang_major__ < 7
+template <typename I>
+ContactMatrix<I> &ContactMatrix<I>::operator=(ContactMatrix &&other) noexcept {
+  if (this == &other) {
+    return *this;
+  }
+
+  this->_nrows = other.nrows();
+  this->_ncols = other.ncols();
+  this->_contacts = std::move(other._contacts);
+  this->_tot_contacts = other._tot_contacts.load();
+  this->_updates_missed = other._updates_missed.load();
+  this->_locks = std::move(other._locks);
+
+  return *this;
+}
+#endif
 
 template <typename I>
 ContactMatrix<I> &ContactMatrix<I>::operator=(const ContactMatrix<I> &other) {

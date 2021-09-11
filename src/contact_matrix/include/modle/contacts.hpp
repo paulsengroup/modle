@@ -25,7 +25,11 @@ class ContactMatrix {
  public:
   // Constructors
   inline ContactMatrix() = default;
+#if defined(__clang__) && __clang_major__ < 7
+  inline ContactMatrix(ContactMatrix<I>&& other) noexcept;
+#else
   inline ContactMatrix(ContactMatrix<I>&& other) noexcept = default;
+#endif
   inline ContactMatrix(const ContactMatrix<I>& other);
   inline ContactMatrix(size_t nrows, size_t ncols, bool fill_with_random_numbers = false);
   template <typename I2, typename = std::enable_if_t<std::is_integral_v<I2>>>
@@ -37,7 +41,11 @@ class ContactMatrix {
 
   // Operators
   [[nodiscard]] inline ContactMatrix& operator=(const ContactMatrix& other);
+#if defined(__clang__) && __clang_major__ < 7
+  [[nodiscard]] inline ContactMatrix& operator=(ContactMatrix&& other) noexcept;
+#else
   [[nodiscard]] inline ContactMatrix& operator=(ContactMatrix&& other) noexcept = default;
+#endif
 
   // Counts getters and setters
   [[nodiscard]] inline I get(size_t row, size_t col) const noexcept(utils::ndebug_defined());
