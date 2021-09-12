@@ -78,7 +78,7 @@ struct Config {  // NOLINT(altera-struct-pack-align)
   bool skip_burnin{false};
   size_t burnin_history_length{100};
   size_t burnin_smoothing_window_size{5};
-  size_t max_burnin_epochs{(std::numeric_limits<size_t>::max)()};
+  size_t max_burnin_epochs{(std::numeric_limits<int64_t>::max)()};
   size_t burnin_target_epochs_for_lef_activation{320};
   double burnin_speed_coefficient{1.0};
   bp_t fwd_extrusion_speed_burnin{(std::numeric_limits<bp_t>::max)()};

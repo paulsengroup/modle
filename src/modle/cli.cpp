@@ -189,13 +189,6 @@ static void add_common_options(CLI::App& subcommand, modle::Config& c) {
       ->capture_default_str();
 
   gen.add_option(
-      "--burnin-lef-activation-epochs",
-      c.burnin_target_epochs_for_lef_activation,
-      "Number of epochs over which LEFs are activated during the burn-in phase.")
-      ->check(CLI::PositiveNumber)
-      ->capture_default_str();
-
-  gen.add_option(
       "--burnin-target-epochs-for-lef-activation",
        c.burnin_target_epochs_for_lef_activation,
       "Number of epochs over which LEFs are progressively activated and bound to DNA.\n"
@@ -203,7 +196,8 @@ static void add_common_options(CLI::App& subcommand, modle::Config& c) {
       "By default this parameter is computed based on the average LEF lifetime, overall extrusion speed "
       "and burn-in extrusion speed coefficient (controlled by --avg-lef-lifetime, --fwd/rev-extrusion-speed "
       "and --burn-in-extr-speed-coefficient respectively).")
-       ->check(CLI::PositiveNumber);
+       ->check(CLI::PositiveNumber)
+       ->capture_default_str();
 
   gen.add_option(
       "--burnin-history-length",
