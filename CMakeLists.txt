@@ -64,6 +64,11 @@ target_compile_definitions(
 # Tweak fmt
 target_compile_definitions(project_options INTERFACE FMT_ENFORCE_COMPILE_STRING)
 
+# Define preproc. variables for proj. versioning
+target_compile_definitions(
+  project_options INTERFACE MODLE_VERSION_MAJOR=${PROJECT_VERSION_MAJOR} MODLE_VERSION_MINOR=${PROJECT_VERSION_MINOR}
+                            MODLE_VERSION_PATCH=${PROJECT_VERSION_PATCH})
+
 # Reduce level of optimization to improve the code profiling experience
 if(OPTIMIZE_FOR_PROFILING)
   if(NOT
