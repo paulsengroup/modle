@@ -179,3 +179,5 @@ endif()
 #]]
 
 add_subdirectory(src)
+
+include(cmake/Packaging.cmake)
