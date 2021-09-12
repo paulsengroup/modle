@@ -41,9 +41,12 @@ target_link_libraries(
           Modle::common
           Modle::correlation
           Modle::interval_tree
-          Modle::libmodle
-          Modle::libmodle_internal
-          Modle::libmodle_io)
+          Modle::libmodle)
+# cmake-format: off
+          # Not explicitly linking to the following targets saves quite a bit of time when compiling
+          # Modle::libmodle_internal
+          # Modle::libmodle_io)
+# cmake-format: on
 
 file(MAKE_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/Testing/)
 
