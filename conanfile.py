@@ -86,3 +86,6 @@ class MoDLE(ConanFile):
         # self.options["libarchive"].with_zstd = True
 
         self.options["xxhash"].utility = False
+
+    def imports(self):
+        self.copy("license*", dst="licenses", folder=True, ignore_case=True)
