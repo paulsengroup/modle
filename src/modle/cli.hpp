@@ -43,6 +43,7 @@ class Cli {
   [[nodiscard]] subcommand get_subcommand() const;
   void print_config(bool print_default_args = false) const;
   void write_config_file(bool write_default_args = false) const;
+  [[nodiscard]] std::string to_json() const;
 
   [[nodiscard]] bool config_file_parsed() const;
 

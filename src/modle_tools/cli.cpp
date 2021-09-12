@@ -15,6 +15,7 @@
 #include <fmt/format.h>                    // for format, FMT_STRING, print
 #include <fmt/ostream.h>                   // for formatbuf<>::int_type
 #include <spdlog/spdlog.h>
+#include <toml++/toml.h>
 
 #include <CLI/CLI.hpp>
 #include <boost/filesystem/path.hpp>  // for path, exists, is_directory, operat...
@@ -764,5 +765,40 @@ modle::tools::config Cli::parse_arguments() {
 }
 
 int Cli::exit(const CLI::ParseError& e) const { return this->_cli.exit(e); }
+
+std::string Cli::to_json() const {
+  std::string buff;
+  for (const auto& line : absl::StrSplit(this->_cli.config_to_str(true, false), '\n')) {
+    if (line.empty()) {
+      continue;
+    }
+    if (line.front() == '[') {  // Begin of the section for the active subcommand
+      absl::StrAppend(&buff, line, "\n");
+      continue;
+    }
+    // Given two subcommands named comm1 and comm2, assuming comm1 was parsed while comm2 was not,
+    // the TOML produced by CLI11 will have values for comm2 formatted as comm2.myarg1=1,
+    // comm2.myarg2="a" etc.
+    // All we are doing here is to look for an argument name containing '.'.
+    // In this way we can filter out entry corresponding to arguments for inactive subcommands
+    const auto arg = line.substr(0, line.find('='));
+    assert(!arg.empty());  // NOLINT
+    if (arg.find('.') == decltype(arg)::npos) {
+      absl::StrAppend(&buff, line, "\n");
+    }
+  }
+
+  try {
+    auto tt = toml::parse(buff);
+    std::stringstream ss;
+    ss << toml::json_formatter{tt};
+    return ss.str();
+  } catch (const std::exception& e) {
+    throw std::runtime_error(fmt::format(
+        FMT_STRING(
+            "The following error occurred while converting MoDLE's config from TOML to JSON: {}"),
+        e.what()));
+  }
+}
 
 }  // namespace modle::tools

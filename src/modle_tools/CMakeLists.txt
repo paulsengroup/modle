@@ -7,6 +7,7 @@ find_package(Boost REQUIRED)
 find_package(CLI11 REQUIRED)
 find_package(readerwriterqueue REQUIRED)
 find_package(spdlog REQUIRED)
+find_package(tomlplusplus REQUIRED)
 
 add_executable(modle_tools main.cpp)
 
@@ -37,6 +38,7 @@ target_link_libraries(
           CLI11::CLI11
           readerwriterqueue::readerwriterqueue
           spdlog::spdlog
+          tomlplusplus::tomlplusplus
           Modle::common
           Modle::correlation
           Modle::libmodle_io)

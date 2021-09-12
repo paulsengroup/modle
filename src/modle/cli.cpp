@@ -10,6 +10,7 @@
 #include <fmt/format.h>                // for format, FMT_STRING, print
 #include <fmt/os.h>
 #include <fmt/ostream.h>  // for formatbuf<>::int_type
+#include <toml++/toml.h>
 
 #include <CLI/App.hpp>                // for Option_group, App
 #include <CLI/Config.hpp>             // IWYU pragma: keep for ConfigBase
@@ -525,6 +526,7 @@ void Cli::make_replay_subcommand() {
 
 void Cli::make_cli() {
   this->_cli.description("Stochastic modeling of DNA loop extrusion.");
+  this->_cli.set_version_flag("-V,--version", std::string{modle_version_long});
   this->_cli.require_subcommand(1);
   this->_cli.set_config("--config", "", "Path to MoDLE's config file.");
 
@@ -722,5 +724,40 @@ void Cli::write_config_file(bool write_default_args) const {
 }
 
 bool Cli::config_file_parsed() const { return !this->_cli.get_config_ptr()->empty(); }
+
+std::string Cli::to_json() const {
+  std::string buff;
+  for (const auto& line : absl::StrSplit(this->_cli.config_to_str(true, false), '\n')) {
+    if (line.empty()) {
+      continue;
+    }
+    if (line.front() == '[') {  // Begin of the section for the active subcommand
+      absl::StrAppend(&buff, line, "\n");
+      continue;
+    }
+    // Given two subcommands named comm1 and comm2, assuming comm1 was parsed while comm2 was not,
+    // the TOML produced by CLI11 will have values for comm2 formatted as comm2.myarg1=1,
+    // comm2.myarg2="a" etc.
+    // All we are doing here is to look for an argument name containing '.'.
+    // In this way we can filter out entry corresponding to arguments for inactive subcommands
+    const auto arg = line.substr(0, line.find('='));
+    assert(!arg.empty());  // NOLINT
+    if (arg.find('.') == decltype(arg)::npos) {
+      absl::StrAppend(&buff, line, "\n");
+    }
+  }
+
+  try {
+    auto tt = toml::parse(buff);
+    std::stringstream ss;
+    ss << toml::json_formatter{tt};
+    return ss.str();
+  } catch (const std::exception& e) {
+    throw std::runtime_error(fmt::format(
+        FMT_STRING(
+            "The following error occurred while converting MoDLE's config from TOML to JSON: {}"),
+        e.what()));
+  }
+}
 
 }  // namespace modle

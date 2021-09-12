@@ -78,6 +78,7 @@ int main(int argc, char** argv) noexcept {
       }
     }
     spdlog::info(FMT_STRING("Command: {}"), fmt::join(config.argv, config.argv + config.argc, " "));
+    spdlog::info(FMT_STRING("Command JSON: {}"), cli->to_json());
     modle::Simulation sim(config);
     switch (cli->get_subcommand()) {
       using subcommand = modle::Cli::subcommand;

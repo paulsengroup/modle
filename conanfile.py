@@ -33,6 +33,7 @@ class MoDLE(ConanFile):
                 "lzo/2.10",
                 "readerwriterqueue/1.0.5",
                 "spdlog/1.9.2",
+                "tomlplusplus/2.5.0",
                 "xxhash/0.8.0",
                 "xz_utils/5.2.5",
                 "zlib/1.2.11"]

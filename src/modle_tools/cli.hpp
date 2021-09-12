@@ -27,6 +27,7 @@ class Cli {
   [[nodiscard]] subcommand get_subcommand() const;
   [[nodiscard]] config parse_arguments();
   [[nodiscard]] int exit(const CLI::ParseError& e) const;
+  [[nodiscard]] std::string to_json() const;
 
  private:
   int _argc;

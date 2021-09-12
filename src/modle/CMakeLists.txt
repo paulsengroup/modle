@@ -7,6 +7,7 @@ find_package(Boost REQUIRED)
 find_package(CLI11 REQUIRED)
 find_package(fmt REQUIRED)
 find_package(spdlog REQUIRED)
+find_package(tomlplusplus REQUIRED)
 find_package(xxHash REQUIRED)
 
 add_executable(modle)
@@ -26,6 +27,7 @@ target_link_libraries(
           CLI11::CLI11
           fmt::fmt
           spdlog::spdlog
+          tomlplusplus::tomlplusplus
           Modle::libmodle
           Modle::common)
 
