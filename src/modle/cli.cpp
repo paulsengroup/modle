@@ -152,14 +152,16 @@ static void add_common_options(CLI::App& subcommand, modle::Config& c) {
       "Average distance in bp covered by a LEF in forward direction during one iteration.\n"
       "By deafult this is set to half of the bin size specified through --bin-size.")
       ->transform(utils::str_float_to_str_int)
-      ->check(CLI::NonNegativeNumber);
+      ->check(CLI::NonNegativeNumber)
+      ->capture_default_str();
 
   gen.add_option(
       "--rev-extrusion-speed",
       c.rev_extrusion_speed,
       "Same as --fwd-extrusion-speed but for the reverse direction.")
       ->transform(utils::str_float_to_str_int)
-      ->check(CLI::NonNegativeNumber);
+      ->check(CLI::NonNegativeNumber)
+      ->capture_default_str();
 
   gen.add_option(
       "--fwd-extrusion-speed-std",
@@ -278,13 +280,15 @@ gen.add_option(
       "--hard-collision-prob",
       c.lef_hard_collision_pblock,
       "Collision probability of a LEF moving towards an extrusion barrier in blocking orientation.")
-      ->check(CLI::Range(0.0, 1.0));
+      ->check(CLI::Range(0.0, 1.0))
+      ->capture_default_str();
 
   extr_barr.add_option(
       "--soft-collision-prob",
       c.lef_soft_collision_pblock,
       "Collision probability of a LEF moving towards an extrusion barrier in non-blocking orientation.")
-      ->check(CLI::Range(0.0, 1.0));
+      ->check(CLI::Range(0.0, 1.0))
+      ->capture_default_str();
 
   extr_barr.add_option(
       "--ctcf-occupied-probability-of-transition-to-self",
@@ -566,6 +570,8 @@ const Config& Cli::parse_arguments() {
   this->transform_args();
   this->_config.argc = _argc;
   this->_config.argv = _argv;
+
+  this->_config.argv_json = this->to_json();
   return this->_config;
 }
 

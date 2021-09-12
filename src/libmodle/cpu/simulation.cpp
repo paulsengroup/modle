@@ -80,6 +80,9 @@ void Simulation::write_contacts_to_disk(std::deque<std::pair<Chromosome*, size_t
                                                                 this->bin_size, max_str_length);
 
   try {
+    if (c && !this->argv_json.empty()) {
+      c->write_metadata_attribute(this->argv_json);
+    }
     // NOLINTNEXTLINE(readability-magic-numbers), cppcoreguidelines-avoid-magic-numbers)
     auto sleep_us = 100;
     while (this->ok()) {  // Structuring the loop in this way allows us to sleep without

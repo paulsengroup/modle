@@ -150,12 +150,12 @@ bool Cooler::is_read_only() const { return this->_mode == Cooler::READ_ONLY; }
 const boost::filesystem::path &Cooler::get_path() const { return this->_path_to_file; }
 
 size_t Cooler::get_nchroms() {
-  assert(this->_fp);
+  assert(this->_fp);  // NOLINT
   if (this->is_cool()) {
     return static_cast<size_t>(hdf5::read_attribute_int(*this->_fp, "nchroms"));
   }
   if (this->is_mcool()) {
-    assert(this->_bin_size != 0);
+    assert(this->_bin_size != 0);  // NOLINT
     return static_cast<size_t>(hdf5::read_attribute_int(
         *this->_fp, "nchroms", absl::StrCat("/resolutions/", this->_bin_size)));
   }
@@ -163,7 +163,7 @@ size_t Cooler::get_nchroms() {
 }
 
 void Cooler::get_chrom_names(std::vector<std::string> &buff) {
-  assert(this->_fp);
+  assert(this->_fp);  // NOLINT
   const auto nchroms = this->get_nchroms();
   buff.resize(nchroms);
   if (!this->_datasets.empty()) {
@@ -174,12 +174,12 @@ void Cooler::get_chrom_names(std::vector<std::string> &buff) {
       auto d = this->_fp->openDataSet("/chroms/name", *this->_aprop_str);
       (void)hdf5::read_strings(d, buff, 0);
     } else if (this->is_mcool()) {
-      assert(this->_bin_size != 0);
+      assert(this->_bin_size != 0);  // NOLINT
       auto d = this->_fp->openDataSet(
           absl::StrCat("/resolutions/", this->_bin_size, "/chroms/name"), *this->_aprop_str);
       (void)hdf5::read_strings(d, buff, 0);
     } else {
-      assert(!this->is_scool());
+      assert(!this->is_scool());  // NOLINT
       buff.clear();
     }
   }
@@ -240,11 +240,11 @@ bool Cooler::has_contacts_for_chrom(size_t chrom_idx) const {
 void Cooler::write_metadata() {
   if (this->is_read_only()) {
     throw std::runtime_error(
-        fmt::format(FMT_STRING("Caught attempt to write metadata to an HDF5 file that is opened in "
+        fmt::format(FMT_STRING("Caught attempt to write metadata to an HDF5 file that is open in "
                                "read-only mode. File name: {}"),
                     this->_path_to_file.string()));
   }
-  assert(this->_bin_size != 0);
+  assert(this->_bin_size != 0);  // NOLINT
   H5::DataSpace attr_space(H5S_SCALAR);
   int64_t int_buff{};
   std::string str_buff{};
@@ -278,13 +278,35 @@ void Cooler::write_metadata() {
     }
 
     name = "generated-by";
-    str_buff =
-        fmt::format(FMT_STRING("MoDLE-v{}.{}.{}"), 0, 0, 1);  // TODO make MoDLE ver a tunable
+    str_buff = modle_version_long;
     hdf5::write_or_create_attribute(*this->_fp, name, str_buff);
 
     name = "creation-date";
     str_buff = absl::FormatTime(absl::Now(), absl::UTCTimeZone());
     hdf5::write_or_create_attribute(*this->_fp, name, str_buff);
+  } catch ([[maybe_unused]] const H5::Exception &e) {
+    throw std::runtime_error(
+        fmt::format(FMT_STRING("The following error occurred while writing metadata to file {}: "
+                               "error while writing attribute '{}':\n{}"),
+                    this->_path_to_file, name, hdf5::construct_error_stack()));
+  }
+}
+void Cooler::write_metadata_attribute(std::string_view metadata_str) {
+  if (this->is_read_only()) {
+    throw std::runtime_error(
+        fmt::format(FMT_STRING("Caught attempt to write metadata to an HDF5 file that is open in "
+                               "read-only mode. File name: {}"),
+                    this->_path_to_file.string()));
+  }
+
+  assert(this->_bin_size != 0);   // NOLINT
+  assert(!metadata_str.empty());  // NOLINT
+  H5::DataSpace attr_space(H5S_SCALAR);
+  const auto name = std::string{"metadata"};
+  const auto buff = std::string{metadata_str};
+
+  try {
+    hdf5::write_or_create_attribute(*this->_fp, name, buff);
   } catch ([[maybe_unused]] const H5::Exception &e) {
     throw std::runtime_error(
         fmt::format(FMT_STRING("The following error occurred while writing metadata to file {}: "
@@ -317,7 +339,7 @@ ContactMatrix<> Cooler::cooler_to_cmatrix(std::string_view chrom_name, size_t nr
   if (prefer_using_balanced_counts &&
       hdf5::has_dataset(*this->_fp, "bins/weight", this->_root_path)) {
     const auto &d = this->_datasets[BIN_WEIGHT];
-    uint8_t cis_only;
+    uint8_t cis_only;  // NOLINT
     try {
       hdf5::read_attribute(d, "cis_only", cis_only);
     } catch (const std::runtime_error &e) {
@@ -348,7 +370,7 @@ ContactMatrix<> Cooler::cooler_to_cmatrix(std::string_view chrom_name, size_t di
                                           std::pair<size_t, size_t> chrom_boundaries,
                                           bool try_common_chrom_prefixes,
                                           bool prefer_using_balanced_counts) {
-  assert(this->_bin_size != 0);
+  assert(this->_bin_size != 0);  // NOLINT
   if (bin_size != 0 && this->_bin_size != bin_size) {
     throw std::runtime_error(fmt::format(
         FMT_STRING(
@@ -385,7 +407,7 @@ size_t Cooler::stream_contacts_for_chrom(
   if (prefer_using_balanced_counts &&
       hdf5::has_dataset(*this->_fp, "bins/weight", this->_root_path)) {
     const auto &d = this->_datasets[BIN_WEIGHT];
-    uint8_t cis_only;
+    uint8_t cis_only;  // NOLINT
     try {
       hdf5::read_attribute(d, "cis_only", cis_only);
     } catch (const std::runtime_error &e) {
@@ -522,13 +544,13 @@ void Cooler::init_default_datasets() {
   this->_dataset_file_offsets.resize(DEFAULT_DATASETS_NR);
   std::fill(this->_dataset_file_offsets.begin(), this->_dataset_file_offsets.end(), 0);
 
-  assert(this->_cprop_str);
-  assert(this->_cprop_int32);
-  assert(this->_cprop_int64);
+  assert(this->_cprop_str);    // NOLINT
+  assert(this->_cprop_int32);  // NOLINT
+  assert(this->_cprop_int64);  // NOLINT
 
-  assert(this->_aprop_str);
-  assert(this->_aprop_int32);
-  assert(this->_aprop_int64);
+  assert(this->_aprop_str);    // NOLINT
+  assert(this->_aprop_int32);  // NOLINT
+  assert(this->_aprop_int64);  // NOLINT
 
   const auto &INT64 = this->INT64_TYPE;
   const auto &INT32 = this->INT32_TYPE;
@@ -577,11 +599,11 @@ void Cooler::init_default_datasets() {
 }
 
 void Cooler::open_default_datasets() {
-  assert(this->_fp);
-  assert(this->_aprop_int32);
-  assert(this->_aprop_int64);
-  assert(this->_aprop_float64);
-  assert(this->_aprop_str);
+  assert(this->_fp);             // NOLINT
+  assert(this->_aprop_int32);    // NOLINT
+  assert(this->_aprop_int64);    // NOLINT
+  assert(this->_aprop_float64);  // NOLINT
+  assert(this->_aprop_str);      // NOLINT
 
   auto &d = this->_datasets;
   auto &f = *this->_fp;
@@ -940,7 +962,7 @@ std::string Cooler::flavor_to_string(Flavor f) {
 
 Cooler::Flavor Cooler::detect_file_flavor(H5::H5File &f) {
   if (const auto &fname = f.getFileName(); absl::EndsWithIgnoreCase(fname, ".cool")) {
-    return COOL;
+    return COOL;  // NOLINTNEXTLINE(readability-else-after-return)
   } else if (absl::EndsWithIgnoreCase(fname, ".mcool")) {
     return MCOOL;
   } else if (absl::EndsWithIgnoreCase(fname, ".scool")) {
@@ -952,7 +974,7 @@ Cooler::Flavor Cooler::detect_file_flavor(H5::H5File &f) {
     hdf5::read_attribute(f, "format", buff);
   }
   if (const auto &fname = f.getFileName(); absl::EndsWithIgnoreCase(fname, "::cooler")) {
-    return COOL;
+    return COOL;  // NOLINTNEXTLINE(readability-else-after-return)
   } else if (absl::EndsWithIgnoreCase(fname, "::mcool")) {
     return MCOOL;
   } else if (absl::EndsWithIgnoreCase(fname, "::scool")) {
@@ -961,10 +983,12 @@ Cooler::Flavor Cooler::detect_file_flavor(H5::H5File &f) {
 
   if (f.nameExists("/resolutions")) {
     return MCOOL;
-  } else if (f.nameExists("/bins") && f.nameExists("/chroms")) {
+  }
+  if (f.nameExists("/bins") && f.nameExists("/chroms")) {
     if (f.nameExists("/pixels") && f.nameExists("/indexes")) {
       return COOL;
-    } else if (f.nameExists("/cells")) {
+    }
+    if (f.nameExists("/cells")) {
       return SCOOL;
     }
   }

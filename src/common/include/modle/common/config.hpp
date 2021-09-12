@@ -43,8 +43,8 @@ struct Config {  // NOLINT(altera-struct-pack-align)
 
   // General settings
   bp_t bin_size{10'000};                       // NOLINT(readability-magic-numbers, cppcoreguidelines-avoid-magic-numbers)
-  bp_t fwd_extrusion_speed{(std::numeric_limits<bp_t>::max)()};
-  bp_t rev_extrusion_speed{(std::numeric_limits<bp_t>::max)()};
+  bp_t fwd_extrusion_speed{bin_size / 2};
+  bp_t rev_extrusion_speed{fwd_extrusion_speed};
   double fwd_extrusion_speed_std{0.05};        // NOLINT(readability-magic-numbers, cppcoreguidelines-avoid-magic-numbers)
   double rev_extrusion_speed_std{fwd_extrusion_speed_std};
   size_t num_cells{5'000};                     // NOLINT(readability-magic-numbers, cppcoreguidelines-avoid-magic-numbers)
@@ -81,8 +81,8 @@ struct Config {  // NOLINT(altera-struct-pack-align)
   size_t max_burnin_epochs{(std::numeric_limits<int64_t>::max)()};
   size_t burnin_target_epochs_for_lef_activation{320};
   double burnin_speed_coefficient{1.0};
-  bp_t fwd_extrusion_speed_burnin{(std::numeric_limits<bp_t>::max)()};
-  bp_t rev_extrusion_speed_burnin{(std::numeric_limits<bp_t>::max)()};
+  bp_t fwd_extrusion_speed_burnin{bp_t(std::round(double(fwd_extrusion_speed) * burnin_speed_coefficient))};
+  bp_t rev_extrusion_speed_burnin{fwd_extrusion_speed_burnin};
 
   // Misc
   bool exclude_chrom_wo_extr_barriers{true};
@@ -90,6 +90,8 @@ struct Config {  // NOLINT(altera-struct-pack-align)
 
   int argc;
   char** argv;
+
+  std::string argv_json{};
   // clang-format on
 };
 

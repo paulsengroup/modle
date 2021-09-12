@@ -116,6 +116,7 @@ class Cooler {
 
   // Write to file
   void write_metadata();
+  void write_metadata_attribute(std::string_view metadata_str);
 
   template <typename I>
   inline void write_or_append_empty_cmatrix_to_file(std::string_view chrom_name, I chrom_start,
