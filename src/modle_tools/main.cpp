@@ -1,3 +1,7 @@
+// Copyright (C) 2021 Roberto Rossini <roberros@uio.no>
+//
+// SPDX-License-Identifier: MIT
+
 #include <absl/debugging/failure_signal_handler.h>
 #include <absl/debugging/symbolize.h>
 #include <fmt/format.h>  // for print

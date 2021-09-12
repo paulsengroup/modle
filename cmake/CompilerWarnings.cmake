@@ -1,3 +1,7 @@
+# Copyright (C) 2021 Roberto Rossini <roberros@uio.no>
+#
+# SPDX-License-Identifier: MIT
+
 # from here:
 #
 # https://github.com/lefticus/cppbestpractices/blob/master/02-Use_the_Tools_Available.md

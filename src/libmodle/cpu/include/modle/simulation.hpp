@@ -1,3 +1,7 @@
+// Copyright (C) 2021 Roberto Rossini <roberros@uio.no>
+//
+// SPDX-License-Identifier: MIT
+
 #pragma once
 
 #include <absl/container/btree_set.h>            // IWYU pragma: keep for btree_set

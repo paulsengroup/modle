@@ -1,3 +1,7 @@
+// Copyright (C) 2021 Roberto Rossini <roberros@uio.no>
+//
+// SPDX-License-Identifier: MIT
+
 // IWYU pragma: private, include "modle/simulation.hpp"
 
 #include "modle/simulation.hpp"

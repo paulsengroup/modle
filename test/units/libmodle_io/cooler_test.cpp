@@ -1,3 +1,7 @@
+// Copyright (C) 2021 Roberto Rossini <roberros@uio.no>
+//
+// SPDX-License-Identifier: MIT
+
 #include "modle/cooler.hpp"  // for Cooler, Cooler::READ_ONLY, Cooler::COOL, Cooler::WRITE_ONLY
 
 #include <absl/types/span.h>  // for Span

@@ -1,3 +1,7 @@
+# Copyright (C) 2021 Roberto Rossini <roberros@uio.no>
+#
+# SPDX-License-Identifier: MIT
+
 option(MODLE_BUILD_UTILS "Enable compilation of MoDLE's utilities (such as modle_tools)" ON)
 
 if(MODLE_BUILD_UTILS)

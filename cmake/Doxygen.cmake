@@ -1,3 +1,7 @@
+# Copyright (C) 2021 Roberto Rossini <roberros@uio.no>
+#
+# SPDX-License-Identifier: MIT
+
 function(enable_doxygen)
   option(ENABLE_DOXYGEN "Enable doxygen doc builds of source" OFF)
   if(ENABLE_DOXYGEN)

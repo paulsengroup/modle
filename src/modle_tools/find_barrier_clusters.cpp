@@ -1,3 +1,7 @@
+// Copyright (C) 2021 Roberto Rossini <roberros@uio.no>
+//
+// SPDX-License-Identifier: MIT
+
 #include <absl/strings/str_format.h>
 #include <fmt/format.h>
 #include <fmt/os.h>

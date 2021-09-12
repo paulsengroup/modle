@@ -1,3 +1,7 @@
+// Copyright (C) 2021 Roberto Rossini <roberros@uio.no>
+//
+// SPDX-License-Identifier: MIT
+
 #pragma once
 
 // IWYU pragma: no_include "modle/src/contact_matrix/contacts_impl.hpp"

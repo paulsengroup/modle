@@ -1,3 +1,7 @@
+// Copyright (C) 2021 Roberto Rossini <roberros@uio.no>
+//
+// SPDX-License-Identifier: MIT
+
 #include <absl/strings/str_split.h>  // for StrSplit, Splitter
 
 #include <algorithm>                  // for sort

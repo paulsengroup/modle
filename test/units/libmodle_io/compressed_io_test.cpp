@@ -1,3 +1,7 @@
+// Copyright (C) 2021 Roberto Rossini <roberros@uio.no>
+//
+// SPDX-License-Identifier: MIT
+
 #include "modle/compressed_io.hpp"  // for Reader
 
 #include <boost/filesystem/path.hpp>  // for exists

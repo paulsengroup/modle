@@ -1,3 +1,7 @@
+# Copyright (C) 2021 Roberto Rossini <roberros@uio.no>
+#
+# SPDX-License-Identifier: MIT
+
 function(enable_sanitizers project_name)
 
   if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU" OR CMAKE_CXX_COMPILER_ID MATCHES ".*Clang")

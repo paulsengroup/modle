@@ -1,3 +1,7 @@
+// Copyright (C) 2021 Roberto Rossini <roberros@uio.no>
+//
+// SPDX-License-Identifier: MIT
+
 #pragma once
 
 #include <absl/container/flat_hash_set.h>  // for BitMask, flat_hash_set, raw_hash_set

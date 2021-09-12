@@ -1,3 +1,7 @@
+// Copyright (C) 2021 Roberto Rossini <roberros@uio.no>
+//
+// SPDX-License-Identifier: MIT
+
 #include "modle/interval_tree.hpp"
 
 #include <absl/strings/str_split.h>

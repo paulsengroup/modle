@@ -1,3 +1,7 @@
+# Copyright (C) 2021 Roberto Rossini <roberros@uio.no>
+#
+# SPDX-License-Identifier: MIT
+
 #
 # This function will prevent in-source builds
 function(AssureOutOfSourceBuilds)

@@ -1,3 +1,6 @@
+# Copyright (C) 2021 Roberto Rossini <roberros@uio.no>
+#
+# SPDX-License-Identifier: MIT
 ---
 Language:        Cpp
 # BasedOnStyle:  Google

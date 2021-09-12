@@ -1,3 +1,7 @@
+// Copyright (C) 2021 Roberto Rossini <roberros@uio.no>
+//
+// SPDX-License-Identifier: MIT
+
 #include <absl/time/clock.h>                      // for Now
 #include <absl/time/time.h>                       // for FormatDuration, operator-, Time
 #include <fmt/format.h>                           // for print, FMT_STRING

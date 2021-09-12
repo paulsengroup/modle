@@ -1,3 +1,7 @@
+// Copyright (C) 2021 Roberto Rossini <roberros@uio.no>
+//
+// SPDX-License-Identifier: MIT
+
 #include "modle/hdf5.hpp"
 
 #include <H5Cpp.h>  // IWYU pragma: keep

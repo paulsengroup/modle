@@ -1,3 +1,7 @@
+# Copyright (C) 2021 Roberto Rossini <roberros@uio.no>
+#
+# SPDX-License-Identifier: MIT
+
 option(ENABLE_USER_LINKER "Enable a specific linker if available" OFF)
 
 include(CheckCXXCompilerFlag)

@@ -1,3 +1,7 @@
+// Copyright (C) 2021 Roberto Rossini <roberros@uio.no>
+//
+// SPDX-License-Identifier: MIT
+
 #include <absl/strings/ascii.h>  // for AsciiStrToLower
 #include <fmt/format.h>          // for print, FMT_STRING, format
 

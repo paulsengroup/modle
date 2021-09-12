@@ -1,3 +1,7 @@
+# Copyright (C) 2021 Roberto Rossini <roberros@uio.no>
+#
+# SPDX-License-Identifier: MIT
+
 option(ENABLE_CACHE "Enable cache if available" ON)
 if(NOT ENABLE_CACHE)
   return()

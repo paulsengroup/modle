@@ -1,3 +1,7 @@
+// Copyright (C) 2021 Roberto Rossini <roberros@uio.no>
+//
+// SPDX-License-Identifier: MIT
+
 #include "modle/correlation.hpp"  // for compute_pearson, compute_pearson_significance, compute_...
 
 #include <boost/filesystem/path.hpp>  // for path

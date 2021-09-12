@@ -1,3 +1,7 @@
+// Copyright (C) 2021 Roberto Rossini <roberros@uio.no>
+//
+// SPDX-License-Identifier: MIT
+
 #pragma once
 
 // Source: https://www.fluentcpp.com/2019/08/30/how-to-disable-a-warning-in-cpp/

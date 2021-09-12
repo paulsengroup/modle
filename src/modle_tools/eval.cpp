@@ -1,3 +1,7 @@
+// Copyright (C) 2021 Roberto Rossini <roberros@uio.no>
+//
+// SPDX-License-Identifier: MIT
+
 #include <absl/algorithm/container.h>      // for c_set_intersection
 #include <absl/container/btree_set.h>      // for btree_set
 #include <absl/container/flat_hash_map.h>  // for flat_hash_map, BitMask, operator!=

@@ -1,3 +1,7 @@
+// Copyright (C) 2021 Roberto Rossini <roberros@uio.no>
+//
+// SPDX-License-Identifier: MIT
+
 #include "modle/extrusion_barriers.hpp"  // for ExtrusionBarrier
 
 #include <catch2/catch.hpp>  // for AssertionHandler, operator""_catch_sr

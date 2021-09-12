@@ -1,3 +1,7 @@
+// Copyright (C) 2021 Roberto Rossini <roberros@uio.no>
+//
+// SPDX-License-Identifier: MIT
+
 #pragma once
 #include <absl/container/flat_hash_map.h>  // for flat_hash_map
 #include <archive.h>                       // for archive

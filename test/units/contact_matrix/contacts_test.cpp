@@ -1,3 +1,7 @@
+// Copyright (C) 2021 Roberto Rossini <roberros@uio.no>
+//
+// SPDX-License-Identifier: MIT
+
 #include "modle/contacts.hpp"  // for ContactMatrix
 
 #include <absl/strings/str_split.h>  // for SplitIterator, Splitter, StrSplit

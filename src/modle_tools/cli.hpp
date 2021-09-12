@@ -1,3 +1,7 @@
+// Copyright (C) 2021 Roberto Rossini <roberros@uio.no>
+//
+// SPDX-License-Identifier: MIT
+
 #include <absl/container/btree_set.h>  // for btree_set
 
 #include <CLI/CLI.hpp>

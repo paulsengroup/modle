@@ -1,3 +1,7 @@
+// Copyright (C) 2021 Roberto Rossini <roberros@uio.no>
+//
+// SPDX-License-Identifier: MIT
+
 #include "../../../src/correlation/correlation_utils.hpp"  // for compute_element_ranks, sort_range_by_idx
 
 #include <catch2/catch.hpp>  // for AssertionHandler, operator""_catch_sr, SourceLineInfo

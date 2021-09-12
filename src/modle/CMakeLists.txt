@@ -1,3 +1,7 @@
+# Copyright (C) 2021 Roberto Rossini <roberros@uio.no>
+#
+# SPDX-License-Identifier: MIT
+
 find_package(absl REQUIRED)
 find_package(Boost REQUIRED)
 find_package(CLI11 REQUIRED)

@@ -1,3 +1,7 @@
+// Copyright (C) 2021 Roberto Rossini <roberros@uio.no>
+//
+// SPDX-License-Identifier: MIT
+
 // IWYU pragma: no_include <ext/alloc_traits.h>
 
 #include "modle/bed.hpp"
