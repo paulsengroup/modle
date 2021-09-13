@@ -2,22 +2,27 @@
 //
 // SPDX-License-Identifier: MIT
 
-#include <absl/debugging/failure_signal_handler.h>
-#include <absl/debugging/symbolize.h>
-#include <fmt/format.h>  // for print
-#include <spdlog/sinks/stdout_color_sinks.h>
-#include <spdlog/spdlog.h>
+#include <absl/debugging/failure_signal_handler.h>  // for InstallFailureSignalHandler, FailureS...
+#include <absl/debugging/symbolize.h>               // for InitializeSymbolizer
+#include <absl/strings/strip.h>                     // for StripSuffix
+#include <absl/types/variant.h>                     // for get
+#include <fmt/format.h>                             // for make_format_args, vformat_to, FMT_STRING
+#include <spdlog/sinks/basic_file_sink.h>           // for basic_file_sink_mt
+#include <spdlog/sinks/stdout_color_sinks.h>        // for stderr_color_sink_mt
+#include <spdlog/spdlog.h>                          // for error, info
 
-#include <boost/filesystem/operations.hpp>  // for create_directories, exists, is_empty, remove_all
-#include <boost/filesystem/path.hpp>        // for path
-#include <cstdio>                           // for stderr
-#include <exception>                        // for exception
-#include <stdexcept>                        // for runtime_error
-#include <system_error>                     // for error_code
+#include <algorithm>    // for max
+#include <cstdio>       // for stderr
+#include <cstring>      // for strlen
+#include <exception>    // for exception
+#include <memory>       // for make_shared, unique_ptr, make_unique
+#include <new>          // for bad_alloc
+#include <stdexcept>    // for runtime_error
+#include <string_view>  // for string_view
+#include <vector>       // for vector
 
-#include "./cli.hpp"               // for Cli, Cli::subcommand, Cli::eval, Cli::stats
-#include "modle_tools/config.hpp"  // for config
-#include "modle_tools/tools.hpp"   // for eval_subcmd, stats_subcmd
+#include "./cli.hpp"              // for Cli, Cli::subcommand, Cli::eval, Cli:...
+#include "modle_tools/tools.hpp"  // for eval_subcmd, filter_barriers_subcmd
 
 int main(int argc, char** argv) {
   absl::InitializeSymbolizer(argv[0]);  // NOLINT(cppcoreguidelines-pro-bounds-pointer-arithmetic)

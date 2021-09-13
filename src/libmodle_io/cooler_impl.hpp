@@ -30,14 +30,14 @@
 #include <absl/time/clock.h>       // for Now
 #include <absl/time/time.h>        // for FormatDuration, operator-, Time
 #include <absl/types/span.h>       // for MakeConstSpan, Span
-#include <fmt/format.h>            // for FMT_STRING, print, format
+#include <fmt/format.h>            // for format, FMT_STRING
 #include <fmt/ostream.h>           // for formatbuf<>::int_type
-#include <spdlog/spdlog.h>
+#include <spdlog/spdlog.h>         // for warn
 
-#include <algorithm>    // for max, min, fill
+#include <algorithm>    // for max, min, generate, fill
 #include <cassert>      // for assert
-#include <cstddef>      // IWYU pragma: keep for size_t
-#include <cstdint>      // for int64_t, int32_t, uint64_t, uint8_t
+#include <cstddef>      // for size_t
+#include <cstdint>      // for int64_t, int32_t, uint8_t
 #include <cstdio>       // for stderr
 #include <memory>       // for unique_ptr, make_unique
 #include <stdexcept>    // for runtime_error
@@ -45,9 +45,10 @@
 #include <string_view>  // for string_view
 #include <vector>       // for vector
 
-#include "modle/common/suppress_compiler_warnings.hpp"  // for DISABLE_WARNING_POP, DISABLE_WARNI...
-#include "modle/contacts.hpp"                           // IWYU pragma: keep for ContactMatrix
-#include "modle/hdf5.hpp"                               // for has_attribute, read_attribute_int
+#include "modle/common/suppress_compiler_warnings.hpp"  // for DISABLE_WARNING_POP, DISABLE_WARN...
+#include "modle/common/utils.hpp"                       // for ndebug_not_defined
+#include "modle/contacts.hpp"                           // for ContactMatrix
+#include "modle/hdf5.hpp"                               // for write_numbers, has_attribute, rea...
 
 namespace modle::cooler {
 

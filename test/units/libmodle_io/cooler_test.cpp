@@ -4,20 +4,24 @@
 
 #include "modle/cooler.hpp"  // for Cooler, Cooler::READ_ONLY, Cooler::COOL, Cooler::WRITE_ONLY
 
-#include <absl/types/span.h>  // for Span
-#include <fmt/format.h>       // for print
-#include <spdlog/sinks/stdout_color_sinks.h>
-#include <spdlog/spdlog.h>
+#include <absl/types/span.h>                  // for Span
+#include <fmt/format.h>                       // for format, make_format_args, vformat_to
+#include <spdlog/sinks/basic_file_sink.h>     // for basic_file_sink_mt
+#include <spdlog/sinks/stdout_color_sinks.h>  // for stderr_color_sink_mt
+#include <spdlog/spdlog.h>                    // for error, info
 
-#include <boost/filesystem/path.hpp>  // for operator/, path, create_directories, is_empty, remove, rem...
-#include <catch2/catch.hpp>  // for operator""_catch_sr, AssertionHandler, SourceLineInfo, Str...
-#include <cstddef>           // IWYU pragma: keep for size_t
-#include <cstdint>           // for uint64_t, int32_t, uint8_t
-#include <memory>            // for allocator
-#include <stdexcept>         // for runtime_error
-#include <string_view>       // for string_view
+#include <boost/cstdint.hpp>                // for int32_t
+#include <boost/filesystem/operations.hpp>  // for remove, create_directories
+#include <boost/filesystem/path.hpp>        // for operator/, path
+#include <catch2/catch.hpp>                 // for operator""_catch_sr, AssertionHandler, Sour...
+#include <cstddef>                          // for size_t
+#include <cstdint>                          // for uint64_t, int32_t, uint8_t
+#include <exception>                        // for exception
+#include <memory>                           // for make_shared, allocator
+#include <stdexcept>                        // for runtime_error
+#include <string_view>                      // for string_view
 
-#include "modle/common/smartdir.hpp"  // IWYU pragma: keep
+#include "modle/common/smartdir.hpp"  // for SmartDir
 #include "modle/contacts.hpp"         // for ContactMatrix
 
 namespace modle::test {

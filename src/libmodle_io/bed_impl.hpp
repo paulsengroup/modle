@@ -5,11 +5,25 @@
 #pragma once
 
 #include <absl/container/btree_map.h>  // for btree_map
+#include <absl/types/span.h>           // for Span, MakeConstSpan
+#include <fmt/format.h>                // for format_parse_context, FMT_STRING, join, format_error
+#include <stdint.h>                    // for uint64_t, uint32_t, uint8_t
 
-#include <cassert>  // for assert
-#include <cstddef>  // for size_t
+#include <algorithm>                  // for min
+#include <array>                      // for array
+#include <boost/filesystem/path.hpp>  // for path
+#include <cassert>                    // for assert
+#include <cstddef>                    // for size_t
+#include <memory>                     // for unique_ptr
+#include <numeric>                    // for accumulate
+#include <string>                     // for string
+#include <string_view>                // for string_view, basic_string_view
+#include <type_traits>                // for add_const<>::type
+#include <utility>                    // for move, pair, make_pair
+#include <vector>                     // for vector
 
-#include "modle/interval_tree.hpp"  // for IITree
+#include "modle/common/common.hpp"  // for bp_t
+#include "modle/interval_tree.hpp"  // for IITree::is_BST, IITree::count, IITree::data_end
 
 namespace modle::bed {
 

@@ -4,22 +4,20 @@
 
 #pragma once
 
-// IWYU pragma: no_include "modle/src/utils/utils_impl.hpp"
+#include <xxh3.h>  // for XXH3_state_t, XXH_INLINE_XXH3_state_t
 
-#include <xxh3.h>  // for XXH3_freeState, XXH3_state_t
-
-#include <array>  // for array
-#include <boost/filesystem/file_status.hpp>
-#include <boost/filesystem/path.hpp>
-#include <cstddef>       // IWYU pragma: keep for size_t
-#include <cstdint>       // for int64_t, uint64_t
-#include <cstdio>        // for FILE
-#include <string>        // for string
-#include <string_view>   // for string_view
-#include <system_error>  // for errc
-#include <type_traits>   // for declval
-#include <utility>       // for pair
-#include <vector>        // for vector
+#include <array>                             // for array
+#include <boost/filesystem/file_status.hpp>  // for regular_file, file_type
+#include <boost/filesystem/path.hpp>         // for path
+#include <cstddef>                           // for size_t
+#include <cstdint>                           // for int64_t, uint64_t
+#include <cstdio>                            // for FILE
+#include <string>                            // for string
+#include <string_view>                       // for string_view
+#include <system_error>                      // for errc
+#include <type_traits>                       // for declval
+#include <utility>                           // for pair
+#include <vector>                            // for vector
 
 namespace modle::utils {
 
@@ -136,3 +134,5 @@ class ConstMap {
 }  // namespace modle::utils
 
 #include "../../../utils_impl.hpp"  // IWYU pragma: export
+// IWYU pragma: no_include <iterator>
+// IWYU pragma: no_include <boost/container/detail/std_fwd.hpp>

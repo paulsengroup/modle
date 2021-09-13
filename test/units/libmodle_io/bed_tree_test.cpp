@@ -2,17 +2,23 @@
 //
 // SPDX-License-Identifier: MIT
 
-#include <absl/strings/str_split.h>
+#include <absl/strings/str_split.h>  // for StrSplit, Splitter
+#include <absl/types/span.h>         // for Span
+#include <fmt/format.h>              // for format
 
-#include <boost/filesystem/path.hpp>
-#include <catch2/catch.hpp>  // for AssertionHandler, operator""_catch_sr, SourceLineInfo
-#include <fstream>
-#include <string>
-#include <string_view>
-#include <vector>
+#include <algorithm>                  // for max, min
+#include <boost/filesystem/path.hpp>  // for path
+#include <catch2/catch.hpp>           // for AssertionHandler, operator""_catch_sr, SourceLineInfo
+#include <cstddef>                    // for size_t
+#include <cstdint>                    // for uint8_t, uint32_t
+#include <string>                     // for basic_string, operator==, string
+#include <string_view>                // for string_view
+#include <vector>                     // for vector
 
-#include "modle/bed.hpp"
-#include "modle/compressed_io.hpp"
+#include "modle/bed.hpp"            // for BED, BED_tree, BED_tree::contains, BED_tree::count_...
+#include "modle/chrom_sizes.hpp"    // for bed
+#include "modle/common/utils.hpp"   // for parse_numeric_or_throw
+#include "modle/compressed_io.hpp"  // for Reader
 
 namespace modle::test::bed {
 using namespace modle::bed;

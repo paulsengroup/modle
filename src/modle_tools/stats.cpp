@@ -5,20 +5,20 @@
 #include <absl/container/flat_hash_map.h>  // for flat_hash_map, BitMask
 #include <absl/container/flat_hash_set.h>  // for flat_hash_set
 #include <absl/strings/str_cat.h>          // for StrCat
-#include <absl/strings/str_join.h>         // for StrJoin
 #include <absl/strings/strip.h>            // for StripSuffix
 #include <absl/types/span.h>               // for Span
-#include <fmt/format.h>                    // for print, FMT_STRING
+#include <fmt/format.h>                    // for format, print, join, FMT_STRING
 #include <fmt/ostream.h>                   // for print
 
 #include <algorithm>                                // for transform
 #include <boost/dynamic_bitset/dynamic_bitset.hpp>  // for dynamic_bitset
-#include <boost/filesystem/path.hpp>                // for path, create_directories, remove_all
+#include <boost/filesystem/operations.hpp>          // for create_directories, exists, remov...
+#include <boost/filesystem/path.hpp>                // for path
 #include <cassert>                                  // for assert
 #include <cmath>                                    // for round
-#include <cstddef>                                  // for size_t
-#include <cstdint>                                  // for uint64_t
-#include <cstdio>                                   // for stdout
+#include <cstdint>                                  // for uint64_t, int64_t
+#include <cstdio>                                   // for size_t, stdout
+#include <exception>                                // for exception
 #include <fstream>                                  // for ofstream, basic_ofstream
 #include <iterator>                                 // for insert_iterator, inserter
 #include <memory>                                   // for unique_ptr, make_unique
@@ -27,12 +27,12 @@
 #include <utility>                                  // for make_pair
 #include <vector>                                   // for vector
 
-#include "modle/bed.hpp"  // for Parser
-#include "modle/common/suppress_compiler_warnings.hpp"
-#include "modle/contacts.hpp"      // for ContactMatrix
-#include "modle/cooler.hpp"        // for Cooler, ContactMatrix, Cooler::READ_ONLY
-#include "modle_tools/config.hpp"  // for config
-#include "modle_tools/tools.hpp"   // for stats_subcmd
+#include "modle/bed.hpp"                                // for Parser
+#include "modle/common/suppress_compiler_warnings.hpp"  // for DISABLE_WARNING_POP, DISABLE_WARN...
+#include "modle/contacts.hpp"                           // for ContactMatrix
+#include "modle/cooler.hpp"                             // for Cooler, ContactMatrix, Cooler::RE...
+#include "modle_tools/config.hpp"                       // for stats_config
+#include "modle_tools/tools.hpp"                        // for stats_subcmd
 
 namespace modle::tools {
 

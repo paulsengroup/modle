@@ -8,18 +8,18 @@
 
 #include <absl/container/fixed_array.h>          // for FixedArray
 #include <absl/types/span.h>                     // for MakeConstSpan, Span
-#include <fmt/format.h>                          // for make_format_args, vformat_to, format
+#include <fmt/format.h>                          // for make_format_args, vformat_to, FMT_STRING
 #include <moodycamel/blockingconcurrentqueue.h>  // for BlockingConcurrentQueue
 #include <moodycamel/concurrentqueue.h>          // for ConsumerToken, ProducerToken
 #include <spdlog/spdlog.h>                       // for info
 
-#include <algorithm>                        // for copy, max, min, find_if, generate
+#include <algorithm>                        // for max, copy, min, find_if, generate
 #include <atomic>                           // for atomic
 #include <boost/filesystem/operations.hpp>  // for exists, remove
 #include <boost/filesystem/path.hpp>        // for path
 #include <cassert>                          // for assert
 #include <chrono>                           // for microseconds, milliseconds
-#include <cmath>                            // for round, floor, log
+#include <cmath>                            // for round
 #include <cstddef>                          // for size_t
 #include <cstdint>                          // for uint64_t
 #include <deque>                            // for deque, operator-, operator!=, _Deque_ite...

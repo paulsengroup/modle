@@ -4,12 +4,16 @@
 
 #pragma once
 
-#include <boost/filesystem/path.hpp>  //  for operator<<, path
-#include <cstdint>                    // for uint32_t, uint64_t
-#include <cstdio>                     // for stderr
+#include <algorithm>                  // for max
+#include <boost/filesystem/path.hpp>  // for path
+#include <cmath>                      // for round
+#include <cstdint>                    // for int64_t, uint64_t
+#include <cstdio>                     // for size_t
 #include <limits>                     // for numeric_limits
-#include <string>                     // for string, allocator, basic_string
-#include <thread>                     // for thread::hardware_concurrency
+#include <string>                     // for string
+#include <string_view>                // for string_view_literals
+#include <thread>                     // for thread
+#include <vector>                     // for vector
 
 #include "modle/common/common.hpp"  // for bp_t
 

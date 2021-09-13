@@ -10,7 +10,7 @@
 #include <type_traits>  // for is_rvalue_reference_v
 
 #include "modle/chrom_sizes.hpp"
-#include "modle/common/common.hpp"
+#include "modle/common/common.hpp"  // for bp_t
 #include "modle/common/suppress_compiler_warnings.hpp"
 
 namespace modle {

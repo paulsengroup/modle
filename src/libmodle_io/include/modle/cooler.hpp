@@ -17,16 +17,18 @@
 
 #include <H5Cpp.h>                                // IWYU pragma: keep
 #include <absl/types/span.h>                      // for Span
-#include <readerwriterqueue/readerwriterqueue.h>  // for BlockingReadWriterQueue
+#include <readerwriterqueue/readerwriterqueue.h>  // for BlockingReaderWriterQueue
 
 #include <boost/filesystem/path.hpp>  // for path
-#include <cstddef>                    // IWYU pragma: keep for size_t
-#include <cstdint>                    // for int64_t, uint_fast8_t, uint32_t, int32_t
+#include <cstddef>                    // for size_t
+#include <cstdint>                    // for int64_t, int32_t, uint_fast8_t, uint32_t
 #include <memory>                     // for unique_ptr, allocator
 #include <string>                     // for string
 #include <string_view>                // for string_view
 #include <utility>                    // for pair
 #include <vector>                     // for vector
+
+#include "modle/contacts.hpp"  // for ContactMatrix
 
 namespace modle {
 template <typename I>

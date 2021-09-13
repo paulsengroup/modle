@@ -4,26 +4,27 @@
 
 #include <absl/time/clock.h>                      // for Now
 #include <absl/time/time.h>                       // for FormatDuration, operator-, Time
-#include <fmt/format.h>                           // for print, FMT_STRING
+#include <fmt/format.h>                           // for format, make_format_args, vfor...
 #include <readerwriterqueue/readerwriterqueue.h>  // for BlockingReaderWriterQueue
-#include <spdlog/spdlog.h>
+#include <spdlog/spdlog.h>                        // for info
 
 #include <algorithm>    // for clamp, min, max, max_element
 #include <cassert>      // for assert
 #include <chrono>       // for milliseconds
 #include <cmath>        // for round
-#include <cstdio>       // for size_t, stderr
+#include <cstdio>       // for size_t
+#include <exception>    // for exception
 #include <functional>   // for ref, hash, reference_wrapper
 #include <limits>       // for numeric_limits
 #include <stdexcept>    // for runtime_error
 #include <string>       // for basic_string
 #include <string_view>  // for hash, string_view
-#include <thread>       // for thread
+#include <thread>       // for sleep_for, thread
 #include <type_traits>  // for add_const<>::type
 #include <utility>      // for tuple_element<>::type
 #include <vector>       // for vector
 
-#include "include/modle_tools/config.hpp"                  // for config
+#include "include/modle_tools/config.hpp"                  // for noisify_config
 #include "modle/common/genextreme_value_distribution.hpp"  // for genextreme_value_distribution
 #include "modle/common/random.hpp"                         // for PRNG
 #include "modle/contacts.hpp"                              // for ContactMatrix

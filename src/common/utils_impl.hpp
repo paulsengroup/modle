@@ -4,14 +4,10 @@
 
 #pragma once
 
-// IWYU pragma: private, include "modle/utils.hpp"
-// IWYU pragma: no_include <boost/exception/detail/error_info_impl.hpp>
-// IWYU pragma: no_include <modle/src/utils/utils_impl.hpp>
-
 // clang-format off
 #include "modle/common/suppress_compiler_warnings.hpp"
 #if defined(MODLE_CHARCONV_FP_AVAILABLE) && defined(MODLE_CHARCONV_INT_AVAILABLE)
-#include <charconv>
+#include <charconv>                          // for from_chars
 #else
 DISABLE_WARNING_PUSH
 DISABLE_WARNING_CONVERSION
@@ -19,31 +15,36 @@ DISABLE_WARNING_DOUBLE_PROMOTION
 DISABLE_WARNING_SHORTEN_64_TO_32
 DISABLE_WARNING_SIGN_CONVERSION
 #include <msstl/charconv.hpp>
+
 DISABLE_WARNING_POP
 #endif
 // clang-format on
 
-#include <absl/strings/match.h>       // for StartsWithIgnoreCase, EndsWith
-#include <absl/strings/str_format.h>  // for absl::StrAppendFormat
+#include <absl/strings/match.h>       // for StartsWithIgnoreCase
+#include <absl/strings/str_format.h>  // for StrAppendFormat
 #include <absl/strings/str_split.h>   // for StrSplit, Splitter
-#include <fmt/format.h>               // for format
+#include <fmt/format.h>               // for format, FMT_STRING, system_error
+#include <xxh3.h>                     // for XXH_INLINE_XXH3_freeState, XXH3_freeState
 
-#include <boost/filesystem.hpp>  // for path, status
-#include <cassert>               // for assert
-#include <cmath>                 // for HUGE_VAL
-#include <cstddef>               // IWYU pragma: keep for size_t
-#include <cstdint>               // for int64_t, uint64_t
-#include <cstdio>                // for fclose, FILE
-#include <cstdlib>               // for strtod
-#include <limits>                // for numeric_limits
-#include <memory>                // for allocator_traits<>::value_type
-#include <stdexcept>             // for runtime_error, logic_error
-#include <string>                // for operator+, string, allocator, basi...
-#include <string_view>           // for string_view, basic_string_view
-#include <system_error>          // for errc, errc::invalid_argument, errc...
-#include <type_traits>           // for __strip_reference_wrapper<>::__type
-#include <utility>               // for pair, make_pair
-#include <vector>                // for vector
+#include <boost/filesystem.hpp>              // for path, status
+#include <boost/filesystem/file_status.hpp>  // for file_type, regular_file, directory_file, fil...
+#include <boost/filesystem/operations.hpp>   // for status
+#include <boost/filesystem/path.hpp>         // for path
+#include <cassert>                           // for assert
+#include <cerrno>                            // for errno
+#include <cmath>                             // for trunc
+#include <cstddef>                           // for size_t
+#include <cstdint>                           // for int64_t, uint64_t
+#include <cstdio>                            // for fclose, FILE, stderr, stdout
+#include <exception>                         // for exception
+#include <limits>                            // for numeric_limits
+#include <stdexcept>                         // for runtime_error, logic_error, range_error
+#include <string>                            // for string
+#include <string_view>                       // for string_view, basic_string_view, operator==
+#include <system_error>                      // for errc, make_error_code, errc::invalid_argument
+#include <type_traits>                       // for __strip_reference_wrapper<>::__type, is_arit...
+#include <utility>                           // for pair, make_pair, forward
+#include <vector>                            // for vector
 
 namespace modle::utils {
 
@@ -326,3 +327,8 @@ constexpr typename ConstMap<Key, Value, Size>::const_iterator ConstMap<Key, Valu
 }
 
 }  // namespace modle::utils
+
+// IWYU pragma: private, include "modle/utils.hpp"
+// IWYU pragma: no_include <boost/exception/detail/error_info_impl.hpp>
+// IWYU pragma: no_include <cstdlib>
+// IWYU pragma: no_include <memory>

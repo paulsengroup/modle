@@ -2,24 +2,23 @@
 //
 // SPDX-License-Identifier: MIT
 
-#include "modle/contacts.hpp"  // for ContactMatrix
-
 #include <absl/strings/str_split.h>  // for SplitIterator, Splitter, StrSplit
-#include <fmt/format.h>              // for string_view, system_error
+#include <fmt/format.h>              // for format
 
+#include <algorithm>                                // for max
 #include <boost/dynamic_bitset/dynamic_bitset.hpp>  // for dynamic_bitset, dynamic_bitset<>::ref...
-#include <boost/filesystem/path.hpp>                // for exists
-#include <catch2/catch.hpp>                         // for AssertionHandler, operator""_catch_sr
-#include <cerrno>                                   // for errno
+#include <boost/filesystem/operations.hpp>          // for exists
+#include <boost/filesystem/path.hpp>                // for path
+#include <catch2/catch.hpp>                         // for operator""_catch_sr, AssertionHandler
 #include <cstdint>                                  // for uint32_t
-#include <memory>                                   // for allocator_traits<>::value_type
 #include <stdexcept>                                // for runtime_error
-#include <string>                                   // for string, getline
-#include <utility>                                  // for move
+#include <string>                                   // for string
+#include <utility>                                  // for pair, move
 #include <vector>                                   // for vector, allocator
 
-#include "modle/common/utils.hpp"   // for ndebug_defined, parse_numeric_or_throw
+#include "modle/common/utils.hpp"   // for parse_numeric_or_throw
 #include "modle/compressed_io.hpp"  // for Reader
+#include "modle/contacts.hpp"       // for ContactMatrix
 
 namespace modle::test::cmatrix {
 

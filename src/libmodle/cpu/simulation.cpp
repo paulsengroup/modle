@@ -6,45 +6,51 @@
 
 #include "modle/simulation.hpp"
 
-#include <H5Cpp.h>                        // IWYU pragma: keep
-#include <absl/container/btree_set.h>     // for btree_iterator
-#include <absl/types/span.h>              // for Span, MakeSpan, MakeConstSpan
-#include <cpp-sort/sorter_facade.h>       // for sorter_facade
-#include <cpp-sort/sorters/pdq_sorter.h>  // for pdq_sort, pdq_sorter
-#include <spdlog/spdlog.h>
+#include <absl/container/btree_set.h>           // for btree_iterator
+#include <absl/strings/str_split.h>             // for StrSplit, Splitter
+#include <absl/types/span.h>                    // for Span, MakeConstSpan, MakeSpan
+#include <cpp-sort/sorter_facade.h>             // for sorter_facade
+#include <cpp-sort/sorters/insertion_sorter.h>  // for insertion_sort, insertion_so...
+#include <cpp-sort/sorters/pdq_sorter.h>        // for pdq_sort, pdq_sorter
+#include <cpp-sort/sorters/split_sorter.h>      // for split_sort, split_sorter
+#include <fmt/ostream.h>                        // for formatbuf<>::int_type
+#include <spdlog/spdlog.h>                      // for info, warn
 
-#include <algorithm>                                // for fill, min, max, clamp, for_each, gene...
-#include <atomic>                                   // for atomic
-#include <boost/dynamic_bitset/dynamic_bitset.hpp>  // for dynamic_bitset, dynamic_bitset<>::ref...
+#include <algorithm>         // for max, fill, min, copy, clamp
+#include <atomic>            // for atomic
+#include <boost/config.hpp>  // IWYU pragma: keep for BOOST_LIKELY, BOOST_UNLIKELY
+#include <boost/dynamic_bitset/dynamic_bitset.hpp>  // for dynamic_bitset, dynamic_bits...
 #include <boost/filesystem/path.hpp>                // for operator<<, path
 #include <cassert>                                  // for assert
 #include <chrono>                                   // for microseconds
-#include <cmath>                                    // for round
-#include <cstddef>                                  // for size_t
-#include <cstdio>                                   // for stderr
+#include <cmath>                                    // for log, round, exp, floor, sqrt
+#include <cstddef>                                  // for size_t, ptrdiff_t
 #include <cstdlib>                                  // for abs
-#include <deque>
-#include <deque>        // for deque
-#include <ios>          // for streamsize
-#include <limits>       // for numeric_limits
-#include <memory>       // for unique_ptr, make_unique, _MakeUniq<>:...
-#include <mutex>        // for mutex
-#include <numeric>      // for iota
-#include <stdexcept>    // for runtime_error
-#include <string>       // for basic_string, string
-#include <string_view>  // for string_view
-#include <thread_pool/thread_pool.hpp>
-#include <utility>  // for make_pair, pair
-#include <vector>   // for vector, vector<>::iterator
+#include <deque>                                    // for _Deque_iterator<>::_Self
+#include <iosfwd>                                   // for streamsize
+#include <limits>                                   // for numeric_limits
+#include <memory>                                   // for shared_ptr, unique_ptr, make...
+#include <mutex>                                    // for mutex
+#include <numeric>                                  // for iota
+#include <stdexcept>                                // for runtime_error
+#include <string>                                   // for string
+#include <string_view>                              // for string_view
+#include <thread>                                   // for sleep_for
+#include <thread_pool/thread_pool.hpp>              // for thread_pool
+#include <utility>                                  // for make_pair, pair
+#include <vector>                                   // for vector, vector<>::iterator
 
-#include "modle/common/common.hpp"  // for BOOST_LIKELY, BOOST_UNLIKELY bp_t...
-#include "modle/common/config.hpp"  // for Config
-#include "modle/common/genextreme_value_distribution.hpp"  // for genextreme_distribution
-#include "modle/common/utils.hpp"                          // for ndebug_defined
-#include "modle/cooler.hpp"                                // for Cooler, Cooler::WRITE_ONLY
-#include "modle/extrusion_barriers.hpp"                    // for update_states, ExtrusionBarrier
-#include "modle/extrusion_factors.hpp"                     // for Lef, ExtrusionUnit
-#include "modle/genome.hpp"                                // for Chromosome, Genome
+#include "modle/common/common.hpp"                         // for bp_t, collision_t, contacts_t
+#include "modle/common/config.hpp"                         // for Config
+#include "modle/common/genextreme_value_distribution.hpp"  // for genextreme_value_distribution
+#include "modle/common/random.hpp"           // for bernoulli_trial, poisson_distribution
+#include "modle/common/random_sampling.hpp"  // for random_sample
+#include "modle/common/utils.hpp"            // for parse_numeric_or_throw, ndeb...
+#include "modle/cooler.hpp"                  // for Cooler, Cooler::WRITE_ONLY
+#include "modle/extrusion_barriers.hpp"      // for ExtrusionBarrier, update_states
+#include "modle/extrusion_factors.hpp"       // for Lef, ExtrusionUnit
+#include "modle/genome.hpp"                  // for Genome::iterator, Chromosome
+#include "modle/interval_tree.hpp"           // for IITree, IITree::data
 
 namespace modle {
 

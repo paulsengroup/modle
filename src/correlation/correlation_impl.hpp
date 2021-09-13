@@ -4,17 +4,13 @@
 
 #pragma once
 
-// IWYU pragma: private, include "modle/correlation.hpp"
-
 #include <absl/types/span.h>  // for Span, MakeConstSpan
 #include <fmt/format.h>       // for FMT_STRING, format
 
 #include <algorithm>                                    // for min, all_of, max, clamp
-#include <boost/exception/exception.hpp>                // for clone_base
 #include <boost/math/distributions/beta.hpp>            // for cdf, beta_distribution
 #include <boost/math/distributions/complement.hpp>      // for complement
 #include <boost/math/distributions/students_t.hpp>      // for cdf, students_t_distribution
-#include <boost/math/policies/policy.hpp>               // for policy
 #include <boost/math/special_functions/fpclassify.hpp>  // for isinf, isnan
 #include <cassert>                                      // for assert
 #include <cmath>                                        // for sqrt, isnan
@@ -26,7 +22,6 @@
 #include <utility>                                      // for make_pair, pair
 #include <vector>                                       // for vector
 
-#include "./correlation_utils.hpp"                      // for compute_element_ranks
 #include "modle/common/suppress_compiler_warnings.hpp"  // for DISABLE_WARNING_CONVERSION, DISAB...
 
 namespace modle::correlation {
@@ -190,3 +185,7 @@ double compute_sed(const std::vector<N1>& v1, const std::vector<N2>& v2) {
 }
 
 }  // namespace modle::correlation
+
+// IWYU pragma: private, include "modle/correlation.hpp"
+// IWYU pragma: no_include <boost/exception/exception.hpp>
+// IWYU pragma: no_include <boost/math/policies/policy.hpp>

@@ -2,21 +2,27 @@
 //
 // SPDX-License-Identifier: MIT
 
+// clang-format off
+#include "modle/simulation.hpp"
+// clang-format on
+
 #include <absl/types/span.h>  // for Span
 
-#include <algorithm>                                // for is_sorted, all_of, max, find_if
+#include <algorithm>         // for is_sorted, min, all_of, find_if, max
+#include <boost/config.hpp>  // IWYU pragma: keep for BOOST_LIKELY, BOOST_UNLIKELY
 #include <boost/dynamic_bitset/dynamic_bitset.hpp>  // for dynamic_bitset
 #include <cassert>                                  // for assert
 #include <cstddef>                                  // for size_t
+#include <iterator>                                 // for reverse_iterator
 #include <limits>                                   // for numeric_limits
 #include <utility>                                  // for make_pair, pair
 
-#include "modle/common/common.hpp"  // for BOOST_LIKELY, BOOST_UNLIKELY, bp_t, random::PRNG_t...
-#include "modle/common/utils.hpp"   // for ndebug_defined
+#include "modle/common/common.hpp"       // for bp_t, collision_t, fwd, rev
+#include "modle/common/random.hpp"       // for bernoulli_trial
+#include "modle/common/utils.hpp"        // for ndebug_defined
 #include "modle/extrusion_barriers.hpp"  // for ExtrusionBarrier, NOT_OCCUPIED
 #include "modle/extrusion_factors.hpp"   // for ExtrusionUnit, Lef
 #include "modle/genome.hpp"              // for Chromosome
-#include "modle/simulation.hpp"
 
 namespace modle {
 

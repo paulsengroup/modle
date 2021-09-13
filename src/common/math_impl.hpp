@@ -4,10 +4,12 @@
 
 #pragma once
 
-#include <cmath>
-#include <iterator>
-#include <numeric>
+#include <cmath>     // for sqrt
+#include <cstddef>   // for size_t, ptrdiff_t
+#include <iterator>  // for distance
+#include <numeric>   // for accumulate
 #include <type_traits>
+#include <vector>  // for vector
 
 namespace modle::math {
 template <class T, class>
@@ -90,3 +92,5 @@ double standard_dev(InputIt input_begin, InputIt input_end, UnaryOperation op) {
 }
 
 }  // namespace modle::math
+
+// IWYU pragma: private, include "modle/math.hpp"

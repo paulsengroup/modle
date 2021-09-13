@@ -5,34 +5,38 @@
 #include <absl/algorithm/container.h>      // for c_set_intersection
 #include <absl/container/btree_set.h>      // for btree_set
 #include <absl/container/flat_hash_map.h>  // for flat_hash_map, BitMask, operator!=
+#include <absl/meta/type_traits.h>         // for remove_reference_t
 #include <absl/strings/match.h>            // for StartsWith
 #include <absl/strings/str_cat.h>          // for StrCat
-#include <absl/strings/str_join.h>         // for StrJoin
+#include <absl/strings/string_view.h>      // for string_view
 #include <absl/strings/strip.h>            // for StripPrefix
 #include <absl/time/clock.h>               // for Now
 #include <absl/time/time.h>                // for FormatDuration, operator-, Time
 #include <absl/types/span.h>               // for Span, MakeConstSpan
-#include <fmt/format.h>                    // for print, FMT_STRING, format
+#include <fmt/format.h>                    // for make_format_args, vformat_to, FMT...
 #include <fmt/ostream.h>                   // for formatbuf<>::int_type
-#include <spdlog/spdlog.h>
+#include <spdlog/spdlog.h>                 // for info, warn
 
-#include <algorithm>                  // for fill, max, transform
-#include <array>                      // for array, array<>::value_type
-#include <boost/filesystem/path.hpp>  // for operator<<, path
-#include <cassert>                    // for assert
-#include <cmath>                      // for sqrt
-#include <cstdint>                    // for int64_t, uint32_t, uint_fast8_t
-#include <cstdio>                     // for size_t, stderr
-#include <functional>                 // for ref
-#include <initializer_list>           // for initializer_list
-#include <iterator>                   // for back_insert_iterator, insert_iter...
-#include <memory>                     // for unique_ptr
-#include <stdexcept>                  // for runtime_error
-#include <string>                     // for string, basic_string
-#include <thread>                     // for thread
-#include <type_traits>                // for is_arithmetic
-#include <utility>                    // for pair, move, make_pair
-#include <vector>                     // for vector
+#include <algorithm>                        // for fill, max, transform
+#include <array>                            // for array, array<>::value_type
+#include <boost/filesystem/operations.hpp>  // for create_directories
+#include <boost/filesystem/path.hpp>        // for path, operator<<
+#include <cassert>                          // for assert
+#include <cmath>                            // for sqrt
+#include <cstdint>                          // for int64_t, uint32_t, uint_fast8_t
+#include <cstdio>                           // for size_t
+#include <exception>                        // for exception
+#include <functional>                       // for ref
+#include <initializer_list>                 // for initializer_list
+#include <iosfwd>                           // for streamsize
+#include <iterator>                         // for back_insert_iterator, insert_iter...
+#include <memory>                           // for unique_ptr
+#include <stdexcept>                        // for runtime_error, logic_error
+#include <string>                           // for string, basic_string
+#include <thread>                           // for thread
+#include <type_traits>                      // for is_arithmetic
+#include <utility>                          // for pair, move, make_pair
+#include <vector>                           // for vector
 
 #include "modle/bed.hpp"                                // for Parser
 #include "modle/bigwig.hpp"                             // for write_range, init_bigwig_file
@@ -42,7 +46,7 @@
 #include "modle/cooler.hpp"                             // for Cooler, Cooler::READ_ONLY
 #include "modle/correlation.hpp"                        // for compute_pearson_significance, com...
 #include "modle/hdf5.hpp"                               // for read_attribute_int
-#include "modle_tools/config.hpp"                       // for config
+#include "modle_tools/config.hpp"                       // for eval_config
 #include "modle_tools/tools.hpp"                        // for eval_subcmd
 
 namespace modle::tools {

@@ -8,8 +8,8 @@
 
 #include <absl/container/flat_hash_map.h>  // for flat_hash_map
 
-#include <cstddef>      // IWYU pragma: keep for size_t
-#include <cstdint>      // for uint64_t, int32_t, uint32_t, uint_fast8_t
+#include <cstddef>      // for size_t
+#include <cstdint>      // for uint64_t, int32_t, uint32_t, uint...
 #include <iterator>     // for pair
 #include <memory>       // for unique_ptr
 #include <string>       // for string
@@ -17,11 +17,13 @@
 #include <vector>       // for vector
 
 // clang-format off
-#include "modle/common/suppress_compiler_warnings.hpp"
+#include "modle/common/suppress_compiler_warnings.hpp"  // for DISABLE_WARNING_PADDED, DISABLE_W...
+
 // clang-format on
 DISABLE_WARNING_PUSH
 DISABLE_WARNING_PADDED
 #include "libBigWig/bigWig.h"  // for bigWigFile_t
+
 DISABLE_WARNING_POP
 
 namespace modle::bigwig {

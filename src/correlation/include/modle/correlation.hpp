@@ -6,7 +6,7 @@
 
 #include <absl/types/span.h>  // for Span
 
-#include <cstddef>  // IWYU pragma: keep for size_t
+#include <cstddef>  // for size_t
 #include <cstdint>  // for uint_fast8_t
 #include <utility>  // for pair
 #include <vector>   // for vector
@@ -38,6 +38,28 @@ template <typename N1, typename N2>
 
 template <typename N1, typename N2>
 [[nodiscard]] inline double compute_sed(absl::Span<const N1> v1, absl::Span<const N2> v2);
+
+namespace utils {
+// Return the indices corresponding to the sorted vector
+template <typename N>
+[[nodiscard]] inline std::vector<size_t> sort_range_by_idx(absl::Span<const N> v);
+
+template <typename N>
+[[nodiscard]] inline std::vector<size_t> sort_range_by_idx(const std::vector<N>& v);
+
+// This returns a vector of integers corresponding to the rank of the values of
+// vector v
+template <typename N>
+[[nodiscard]] inline std::vector<double> compute_element_ranks(absl::Span<const N> v);
+
+template <typename N>
+[[nodiscard]] inline std::vector<double> compute_element_ranks(const std::vector<N>& v);
+}  // namespace utils
+
 }  // namespace modle::correlation
 
-#include "../../correlation_impl.hpp"  // IWYU pragma: export
+#include "../../correlation_impl.hpp"        // IWYU pragma: export
+#include "../../correlation_utils_impl.hpp"  // IWYU pragma: export
+
+// IWYU pragma: private, include "../../correlation_impl.hpp"
+// IWYU pragma: private, include "../../correlation_utils_impl.hpp"

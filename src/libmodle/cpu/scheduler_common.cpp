@@ -6,7 +6,9 @@
 #include "modle/simulation.hpp"
 // clang-format on
 
-#include <absl/container/flat_hash_set.h>  // for flat_hash_set, BitMask
+#include <absl/container/flat_hash_map.h>  // for BitMask
+#include <absl/container/flat_hash_set.h>  // for flat_hash_set
+#include <absl/hash/hash.h>                // for Hash
 #include <absl/strings/match.h>            // for StartsWith
 #include <absl/strings/str_cat.h>          // for StrAppend
 #include <absl/strings/str_format.h>       // for StrAppendFormat
@@ -17,12 +19,13 @@
 #include <fmt/ostream.h>                   // for formatbuf<>::int_type
 #include <spdlog/spdlog.h>                 // for info, error
 
-#include <algorithm>                    // for min, max
-#include <boost/filesystem/path.hpp>    // for path
+#include <algorithm>                    // for min, max, for_each
+#include <boost/filesystem/path.hpp>    // for operator<<, path
 #include <cassert>                      // for assert
-#include <cstddef>                      // IWYU pragma: keep for size_t
+#include <cstddef>                      // for size_t
 #include <cstdint>                      // for uint32_t, uint8_t
 #include <exception>                    // for exception, rethrow_exception
+#include <iosfwd>                       // for streamsize
 #include <stdexcept>                    // for runtime_error
 #include <string>                       // for string
 #include <thread_pool/thread_pool.hpp>  // for thread_pool

@@ -19,7 +19,7 @@
 #include <boost/filesystem/operations.hpp>  // for exists
 #include <cassert>                          // for assert
 #include <chrono>                           // for microseconds, milliseconds
-#include <cstddef>                          // IWYU pragma: keep for size_t
+#include <cstddef>                          // for size_t
 #include <cstdint>                          // for uint64_t
 #include <exception>                        // for exception_ptr, exception, current_exception
 #include <iterator>                         // for move_iterator, make_move_iterator
@@ -33,7 +33,6 @@
 #include "modle/common/common.hpp"  // for contacts_t, bp_t
 #include "modle/compressed_io.hpp"  // for Reader, Writer
 #include "modle/contacts.hpp"       // for ContactMatrix
-#include "modle/simulation.hpp"     // for Simulation::TaskPW, Simulation, Simulati...
 
 namespace modle {
 

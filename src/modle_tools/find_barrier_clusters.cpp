@@ -2,14 +2,28 @@
 //
 // SPDX-License-Identifier: MIT
 
-#include <absl/strings/str_format.h>
-#include <fmt/format.h>
-#include <fmt/os.h>
-#include <spdlog/spdlog.h>
+#include <absl/container/btree_map.h>  // for btree_iterator
+#include <absl/strings/str_format.h>   // for StrAppendFormat
+#include <absl/types/span.h>           // for Span, MakeConstSpan
+#include <fmt/format.h>                // for FMT_STRING, format, make_format_args, print, vform...
+#include <fmt/os.h>                    // for ostream, output_file
+#include <spdlog/spdlog.h>             // for warn
 
-#include "modle/bed.hpp"
-#include "modle_tools/config.hpp"
-#include "modle_tools/tools.hpp"
+#include <boost/filesystem/path.hpp>  // for path
+#include <cstdint>                    // for uint32_t, uint8_t
+#include <cstdio>                     // for size_t, stdout
+#include <exception>                  // for exception
+#include <limits>                     // for numeric_limits
+#include <memory>                     // for unique_ptr, make_unique
+#include <string>                     // for string, basic_string
+#include <type_traits>                // for add_const<>::type
+#include <vector>                     // for vector
+
+#include "modle/bed.hpp"            // for BED, BED_tree, formatter<>::format, formatter<>::p...
+#include "modle/common/common.hpp"  // for bp_t
+#include "modle/interval_tree.hpp"  // for IITree, IITree::IITree<I, T>, IITree::data_begin
+#include "modle_tools/config.hpp"   // for find_barrier_clusters_config
+#include "modle_tools/tools.hpp"    // for find_barrier_clusters_subcmd
 
 namespace modle::tools {
 

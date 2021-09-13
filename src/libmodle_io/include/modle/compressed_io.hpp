@@ -4,18 +4,22 @@
 
 #pragma once
 #include <absl/container/flat_hash_map.h>  // for flat_hash_map
-#include <archive.h>                       // for archive
+#include <archive.h>                       // for archive_read_free, la_ssize_t
 #include <archive_entry.h>                 // for archive_entry_new, archive_entry_free
 
-#include <boost/filesystem/path.hpp>  // for path
-#include <boost/iostreams/filtering_stream.hpp>
-#include <fstream>
+#include <array>                                 // for array
+#include <boost/filesystem/path.hpp>             // for path
+#include <boost/iostreams/filtering_stream.hpp>  // for filtering_ostream
+#include <cstddef>                               // for size_t
+#include <cstdint>                               // for uint8_t
+#include <fstream>                               // for ofstream
 #include <iostream>
 #include <memory>       // for unique_ptr
 #include <string>       // for string
-#include <string_view>  // for string_view
+#include <string_view>  // for operator""sv, basic_string_view
+#include <utility>      // for make_pair, pair
 
-#include "modle/common/suppress_compiler_warnings.hpp"
+#include "modle/common/suppress_compiler_warnings.hpp"  // for DISABLE_WARNING_PADDED, DISABLE_W...
 
 namespace modle::compressed_io {
 using namespace std::literals::string_view_literals;

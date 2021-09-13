@@ -7,11 +7,12 @@
 #include <absl/types/span.h>  // for Span
 
 #include <algorithm>                                // for clamp
-#include <boost/dynamic_bitset/dynamic_bitset.hpp>  // for dynamic_bitset
+#include <boost/dynamic_bitset/dynamic_bitset.hpp>  // for dynamic_bitset, dynamic_bitset<>::ref...
 #include <cassert>                                  // for assert
+#include <limits>                                   // for numeric_limits, numeric_limits<>::digits
 
-#include "modle/common/common.hpp"  // for bp_t, Direction
-#include "modle/common/random.hpp"  // for random::generate_canonical, random::PRNG_t
+#include "modle/common/common.hpp"  // for Direction, fwd, bp_t, rev, none
+#include "modle/common/random.hpp"  // for generate_canonical, PRNG_t
 #include "modle/common/utils.hpp"   // for ndebug_defined
 
 namespace modle {

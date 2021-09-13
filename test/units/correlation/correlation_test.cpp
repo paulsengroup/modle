@@ -4,14 +4,23 @@
 
 #include "modle/correlation.hpp"  // for compute_pearson, compute_pearson_significance, compute_...
 
-#include <boost/filesystem/path.hpp>  // for path
-#include <catch2/catch.hpp>  // for Approx, operator==, AssertionHandler, operator""_catch_sr
-#include <cstdint>           // for uint32_t
-#include <vector>            // for vector, allocator
+#include <absl/container/flat_hash_set.h>  // for BitMask, operator!=
 
-#include "./common.hpp"  // for generate_random_vect, corr_scipy
-#include "modle/common/random.hpp"
-#include "modle/common/smartdir.hpp"  // IWYU pragma: keep
+#include <atomic>              // for atomic
+#include <cassert>             // for assert
+#include <catch2/catch.hpp>    // for Approx, operator==, AssertionHandler, operator...
+#include <condition_variable>  // for condition_variable
+#include <cstdint>             // for uint32_t
+#include <mutex>               // for mutex, unique_lock
+#include <random>              // for random_device
+#include <string>              // for char_traits
+#include <string_view>         // for operator==, basic_string_view, string_view
+#include <thread>              // for thread
+#include <vector>              // for vector
+
+#include "./common.hpp"               // for generate_random_vect, corr_scipy, run_scipy_corr
+#include "modle/common/random.hpp"    // for PRNG_t
+#include "modle/common/smartdir.hpp"  // for SmartDir
 
 namespace modle::test {
 const auto cleanup_on_exit{true};         // Useful for debugging

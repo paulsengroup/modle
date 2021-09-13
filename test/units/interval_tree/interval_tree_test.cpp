@@ -4,15 +4,18 @@
 
 #include "modle/interval_tree.hpp"
 
-#include <absl/strings/str_split.h>
+#include <absl/strings/str_split.h>  // for StrSplit, Splitter, ByAnyChar
+#include <fmt/format.h>              // for format
 
-#include <catch2/catch.hpp>  // for AssertionHandler, operator""_catch_sr
-#include <fstream>
-#include <string_view>
-#include <vector>
+#include <algorithm>                  // for max
+#include <boost/filesystem/path.hpp>  // for path
+#include <catch2/catch.hpp>           // for AssertionHandler, operator""_catch_sr, SourceLineInfo
+#include <string>                     // for string, basic_string, operator==
+#include <string_view>                // for string_view
+#include <vector>                     // for vector, allocator
 
-#include "modle/common/utils.hpp"
-#include "modle/compressed_io.hpp"
+#include "modle/common/utils.hpp"   // for parse_numeric_or_throw
+#include "modle/compressed_io.hpp"  // for Reader
 
 namespace modle::test::interval_tree {
 

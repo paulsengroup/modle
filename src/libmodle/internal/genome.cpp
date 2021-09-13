@@ -4,28 +4,34 @@
 
 #include "modle/genome.hpp"
 
-#include <absl/container/btree_set.h>  // for btree_set
-#include <fmt/format.h>                // for format, FMT_STRING
-#include <fmt/ostream.h>
-#include <spdlog/spdlog.h>
+#include <absl/container/btree_map.h>  // for btree_map
+#include <absl/container/btree_set.h>  // for btree_set, btree_iterator
+#include <absl/time/clock.h>           // for Now
+#include <absl/time/time.h>            // for FormatDuration, operator-, Time
+#include <fmt/format.h>                // for format, make_format_args, vformat_to
+#include <fmt/ostream.h>               // for formatbuf<>::int_type
+#include <spdlog/spdlog.h>             // for info
 
-#include <algorithm>    // for min
+#include <algorithm>    // for max, max_element, find_if
 #include <cassert>      // for assert
+#include <cmath>        // for round
 #include <cstddef>      // for size_t
-#include <cstdint>      // for uint32_t
-#include <iterator>     // for move_iterator
-#include <memory>       // for shared_ptr, make_shared, __shared_ptr_access
+#include <cstdint>      // for uint32_t, uint64_t, uint8_t
+#include <exception>    // for exception
+#include <iosfwd>       // for streamsize
+#include <memory>       // for shared_ptr, __shared_ptr_access
+#include <numeric>      // for accumulate
 #include <stdexcept>    // for runtime_error
-#include <string>       // for char_traits, string, operator==, basic_string<>::_...
-#include <string_view>  // for operator<, string_view, operator!=, operator==
-#include <utility>      // for move
+#include <string>       // for string, char_traits
+#include <string_view>  // for string_view, operator==, operator!=
+#include <utility>      // for move, pair, pair<>::second_type
 #include <vector>       // for vector
 
-#include "modle/bed.hpp"                                // for BED
-#include "modle/chrom_sizes.hpp"                        // for ChromSize
-#include "modle/common/common.hpp"                      // for bp_t, contacts_t
-#include "modle/common/suppress_compiler_warnings.hpp"  // for DISABLE_WARNING_POP, DISABLE_WARNING_PUSH
-#include "modle/common/utils.hpp"                       // for ndebug_defined
+#include "modle/bed.hpp"                                // for BED, Parser, BED_tree, BED_tree::at
+#include "modle/chrom_sizes.hpp"                        // for Parser
+#include "modle/common/common.hpp"                      // for bp_t
+#include "modle/common/suppress_compiler_warnings.hpp"  // for DISABLE_WARNING_PUSH, DISABLE_WAR...
+#include "modle/common/utils.hpp"                       // for XXH3_Deleter, ndebug_defined, XXH...
 #include "modle/contacts.hpp"                           // for ContactMatrix
 #include "modle/extrusion_barriers.hpp"                 // for ExtrusionBarrier
 

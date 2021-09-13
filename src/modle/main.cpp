@@ -2,27 +2,34 @@
 //
 // SPDX-License-Identifier: MIT
 
-#include <absl/debugging/failure_signal_handler.h>
-#include <absl/debugging/symbolize.h>
-#include <absl/time/clock.h>  // for Now
-#include <absl/time/time.h>   // for FormatDuration, operator-, Time
-#include <fmt/format.h>       // for print
-#include <spdlog/sinks/basic_file_sink.h>
-#include <spdlog/sinks/stdout_color_sinks.h>
-#include <spdlog/spdlog.h>
+#include <absl/debugging/failure_signal_handler.h>  // for InstallFailureSignalHandler, FailureS...
+#include <absl/debugging/symbolize.h>               // for InitializeSymbolizer
+#include <absl/strings/strip.h>                     // for StripSuffix
+#include <absl/time/clock.h>                        // for Now
+#include <absl/time/time.h>                         // for FormatDuration, operator-, Time
+#include <fmt/format.h>                             // for make_format_args, vformat_to, FMT_STRING
+#include <fmt/ostream.h>                            // for formatbuf<>::int_type
+#include <spdlog/sinks/basic_file_sink.h>           // for basic_file_sink_mt
+#include <spdlog/sinks/stdout_color_sinks.h>        // for stderr_color_sink_mt
+#include <spdlog/spdlog.h>                          // for error, info
 
-#include <CLI/Error.hpp>  // for ParseError
-#include <cstdio>         // for stderr
-#include <exception>      // for current_exception, exception_ptr, rethrow_...
-#include <iostream>       // for operator<<, basic_ostream, cerr, ostream
-#include <memory>         // for unique_ptr, make_unique
-#include <new>            // for bad_alloc
-#include <stdexcept>      // for runtime_error
-#include <string>         // for basic_string
+#include <algorithm>                        // for max
+#include <boost/filesystem/operations.hpp>  // for create_directories
+#include <boost/filesystem/path.hpp>        // for operator<<, path
+#include <cassert>                          // for assert
+#include <cstdio>                           // for stderr
+#include <cstring>                          // for strlen
+#include <exception>                        // for exception
+#include <iosfwd>                           // for streamsize
+#include <memory>                           // for make_shared, __shared_ptr_access, uni...
+#include <new>                              // for bad_alloc
+#include <stdexcept>                        // for runtime_error
+#include <string>                           // for basic_string
+#include <string_view>                      // for string_view
+#include <vector>                           // for vector
 
-#include "./cli.hpp"                // for Cli
+#include "./cli.hpp"                // for Cli, Cli::subcommand
 #include "modle/common/config.hpp"  // for Config
-#include "modle/common/utils.hpp"   // for traced
 #include "modle/simulation.hpp"     // for Simulation
 
 int main(int argc, char** argv) noexcept {

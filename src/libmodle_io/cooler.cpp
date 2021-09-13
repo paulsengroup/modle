@@ -26,15 +26,14 @@
 #include <H5Cpp.h>                                // IWYU pragma: keep
 #include <absl/strings/match.h>                   // for EndsWithIgnoreCase, StartsWith
 #include <absl/strings/str_cat.h>                 // for StrCat, StrAppend
-#include <absl/strings/str_join.h>                // for StrJoin
-#include <absl/strings/strip.h>                   // for StripPrefix, ConsumePrefix, StripS...
+#include <absl/strings/strip.h>                   // for StripPrefix, ConsumePrefix, Strip...
 #include <absl/time/clock.h>                      // for Now
 #include <absl/time/time.h>                       // for FormatTime, UTCTimeZone
 #include <absl/types/span.h>                      // for Span, MakeConstSpan
-#include <fmt/format.h>                           // for format, FMT_STRING, print
+#include <fmt/format.h>                           // for format, FMT_STRING, make_format_args
 #include <fmt/ostream.h>                          // for formatbuf<>::int_type
 #include <readerwriterqueue/readerwriterqueue.h>  // for BlockingReaderWriterQueue
-#include <spdlog/spdlog.h>                        // for spdlog::info, spdlog::warning
+#include <spdlog/spdlog.h>                        // for error, warn
 
 #include <algorithm>                  // for max, min, fill, find
 #include <array>                      // for array, array<>::value_type
@@ -43,22 +42,23 @@
 #include <chrono>                     // for milliseconds
 #include <cmath>                      // for isnan, round
 #include <cstddef>                    // for size_t
-#include <cstdint>                    // for int64_t, uint32_t, uint8_t, uint_f...
-#include <cstdio>                     // for stderr
+#include <cstdint>                    // for int64_t, int32_t, uint8_t, uint32_t
+#include <exception>                  // for exception
+#include <iosfwd>                     // for streamsize
 #include <iterator>                   // for distance
 #include <limits>                     // for numeric_limits
 #include <memory>                     // for unique_ptr, allocator, make_unique
-#include <sstream>                    // for basic_stringbuf<>::int_type, basic...
 #include <stdexcept>                  // for runtime_error, logic_error
 #include <string>                     // for string, basic_string, operator!=
 #include <string_view>                // for string_view, basic_string_view
-#include <thread>                     // IWYU pragma: keep
+#include <thread>                     // IWYU pragma: keep for sleep_for
 #include <utility>                    // for pair, make_pair, move
 #include <vector>                     // for vector, vector<>::iterator
 
-#include "modle/common/suppress_compiler_warnings.hpp"  // for DISABLE_WARNING_POP, DISABLE_WARNI...
+#include "modle/common/common.hpp"                      // for modle_version_long
+#include "modle/common/suppress_compiler_warnings.hpp"  // for DISABLE_WARNING_POP, DISABLE_WARN...
 #include "modle/contacts.hpp"                           // for ContactMatrix
-#include "modle/hdf5.hpp"                               // for construct_error_stack, has_dataset
+#include "modle/hdf5.hpp"                               // for read_attribute, read_numbers, wri...
 
 namespace modle::cooler {
 

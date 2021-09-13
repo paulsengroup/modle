@@ -4,17 +4,20 @@
 
 #pragma once
 
+#include <array>       // for array
+#include <cstddef>     // for size_t
+#include <cstdint>     // for uint64_t
 #include <functional>  // for function<>::result_type
 #include <limits>      // for numeric_limits
 
-#include "modle/common/utils.hpp"
+#include "modle/common/utils.hpp"  // for ndebug_defined
 
 #if !defined(MODLE_USE_MERSENNE_TWISTER)
 #define USE_XOSHIRO
 #endif
 
 #ifdef USE_XOSHIRO
-#include <Xoshiro-cpp/XoshiroCpp.hpp>  // for XoshiroCpp::Xoshiro256PlusPlus XoshiroCpp::SplitMix64
+#include <Xoshiro-cpp/XoshiroCpp.hpp>  // for SplitMix64, Xoshiro256PlusPlus
 #endif
 
 #if defined(MODLE_USE_MERSENNE_TWISTER) && defined(MODLE_WITH_BOOST_RANDOM)
@@ -23,13 +26,13 @@
 #endif
 
 #ifdef MODLE_WITH_BOOST_RANDOM
-#include <boost/random/bernoulli_distribution.hpp>
-#include <boost/random/discrete_distribution.hpp>
-#include <boost/random/generate_canonical.hpp>
-#include <boost/random/normal_distribution.hpp>
-#include <boost/random/poisson_distribution.hpp>
-#include <boost/random/uniform_int_distribution.hpp>
-#include <boost/random/uniform_real_distribution.hpp>
+#include <boost/random/bernoulli_distribution.hpp>     // for bernoulli_distribution
+#include <boost/random/discrete_distribution.hpp>      // for discrete_distribution
+#include <boost/random/generate_canonical.hpp>         // for generate_canonical
+#include <boost/random/normal_distribution.hpp>        // for normal_distribution
+#include <boost/random/poisson_distribution.hpp>       // for poisson_distribution
+#include <boost/random/uniform_int_distribution.hpp>   // for uniform_int_distribution
+#include <boost/random/uniform_real_distribution.hpp>  // for uniform_real_distribution
 #else
 #include <random>
 #endif

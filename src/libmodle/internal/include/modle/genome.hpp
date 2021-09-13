@@ -4,26 +4,30 @@
 
 #pragma once
 
-#include <absl/container/btree_set.h>  // for btree_set
+#include <absl/container/btree_set.h>  // for btree_set, btree_set_container<>::const_iterator
 #include <absl/types/optional.h>       // for optional
 #include <absl/types/span.h>           // for Span
-#include <xxh3.h>                      // for XXH3_state_t
+#include <xxh3.h>                      // for XXH3_state_t, XXH_INLINE_XXH3_state_t
 
+#include <boost/filesystem/path.hpp>  // for path
 #include <boost/type_traits.hpp>
-#include <cstddef>  // IWYU pragma: keep for size_t
-#include <cstdint>  // for uint32_t
-#include <iterator>
+#include <cstddef>      // for size_t
+#include <cstdint>      // for uint64_t, uint8_t, uint32_t
+#include <iterator>     // for iterator_traits
 #include <limits>       // for numeric_limits
 #include <memory>       // for shared_ptr
+#include <mutex>        // for mutex
 #include <string>       // for string
 #include <string_view>  // for string_view
+#include <type_traits>  // for enable_if_t, remove_cv_t
 #include <vector>       // for vector
 
-#include "modle/bed.hpp"            // for BED
-#include "modle/common/common.hpp"  // for bp_t, contacts_t
-#include "modle/common/utils.hpp"   // for ndebug_defined, XXH3_Deleter
-#include "modle/contacts.hpp"       // for ContactMatrix
-#include "modle/interval_tree.hpp"  // for IITree
+#include "modle/bed.hpp"                 // for BED (ptr only), BED_tree, BED_tree<>::value_type
+#include "modle/common/common.hpp"       // for bp_t, contacts_t
+#include "modle/common/utils.hpp"        // for ndebug_defined
+#include "modle/contacts.hpp"            // for ContactMatrix
+#include "modle/extrusion_barriers.hpp"  // for ExtrusionBarrier
+#include "modle/interval_tree.hpp"       // for IITree, IITree::IITree<I, T>
 
 namespace modle {
 

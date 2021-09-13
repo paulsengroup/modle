@@ -1,20 +1,22 @@
 // Copyright (C) 2021 Roberto Rossini <roberros@uio.no>
-// Copyright (c) 2019     Dana-Farber Cancer Institute
-// Copyright (c) 2021     modified by Roberto Rossini
+// Copyright (C) 2019 Dana-Farber Cancer Institute
 //
 // SPDX-License-Identifier: MIT
 
 #pragma once
 #include <absl/types/span.h>              // for Span
-#include <cpp-sort/sorters/pdq_sorter.h>  // for pdq_sorter
+#include <cpp-sort/sorters/pdq_sorter.h>  // for pdq_sort
 
-#include <array>     // for array
-#include <cassert>   // for assert
-#include <cstddef>   // for size_t
-#include <iterator>  // for iterator_traits
-#include <numeric>   // for iota
-#include <stack>     // for stack
-#include <vector>    // for vector
+#include <algorithm>  // for min
+#include <array>      // for array
+#include <cassert>    // for assert
+#include <cstddef>    // for size_t
+#include <cstdint>    // for int64_t
+#include <iterator>   // for iterator_traits
+#include <numeric>    // for iota
+#include <stack>      // for stack
+#include <utility>    // for pair, make_pair, swap
+#include <vector>     // for vector, vector::size_type
 
 namespace modle {
 

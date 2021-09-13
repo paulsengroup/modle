@@ -9,13 +9,15 @@
 #include <absl/types/span.h>  // for Span
 
 #include <array>        // for array
-#include <cstddef>      // for size_t, std::ptrdiff_t
-#include <cstdint>      // for uint64_t
+#include <cstddef>      // for size_t
+#include <cstdint>      // for int64_t, uint8_t
+#include <iterator>     // for pair
 #include <limits>       // for numeric_limits
-#include <type_traits>  // for is_integral_v
+#include <type_traits>  // for enable_if_t
+#include <utility>      // for pair
 #include <vector>       // for vector
 
-#include "modle/common/suppress_compiler_warnings.hpp"
+#include "modle/common/suppress_compiler_warnings.hpp"  // for DISABLE_WARNING_PADDED, DISABLE_W...
 
 namespace modle {
 
@@ -162,3 +164,5 @@ class IITree {
 }  // namespace modle
 
 #include "../../interval_tree_impl.hpp"  // IWYU pragma: export
+
+// IWYU pragma: no_include "../../interval_tree_impl.hpp"

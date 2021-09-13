@@ -2,24 +2,29 @@
 //
 // SPDX-License-Identifier: MIT
 
-#include <absl/strings/str_join.h>  // TODO remove me
-#include <absl/types/span.h>        // for MakeSpan
+#include <absl/types/span.h>  // for MakeSpan, Span, MakeConstSpan
 
-#include <algorithm>         // for fill
-#include <cassert>           // for assert
-#include <catch2/catch.hpp>  // for AssertionHandler, operator""_catch_sr
-#include <cstddef>           // IWYU pragma: keep for size_t
-#include <memory>            // for allocator_traits<>::value_type
-#include <vector>            // for vector
+#include <algorithm>                                  // for all_of, equal, copy, for_each, gene...
+#include <boost/dynamic_bitset/dynamic_bitset.hpp>    // for dynamic_bitset
+#include <boost/random/bernoulli_distribution.hpp>    // for bernoulli_distribution
+#include <boost/random/uniform_int_distribution.hpp>  // for uniform_int_distribution
+#include <cassert>                                    // for assert
+#include <catch2/catch.hpp>                           // for AssertionHandler, operator""_catch_sr
+#include <cstddef>                                    // for size_t
+#include <iterator>                                   // for back_insert_iterator, back_inserter
+#include <memory>                                     // for allocator, allocator_traits<>::valu...
+#include <numeric>                                    // for iota
+#include <string_view>                                // for string_view
+#include <vector>                                     // for vector
 
-#include "./common.hpp"
-#include "modle/chrom_sizes.hpp"
-#include "modle/common/common.hpp"                      // for bp_t, PRNG, random::PRNG_t
-#include "modle/common/config.hpp"                      // for Config
-#include "modle/common/suppress_compiler_warnings.hpp"  // for DISABLE_WARNING_POP, DISABLE_WARNING_PUSH
-#include "modle/extrusion_barriers.hpp"                 // for ExtrusionBarrier
-#include "modle/extrusion_factors.hpp"                  // for Lef, ExtrusionUnit
-#include "modle/simulation.hpp"  // for Simulation, Simulation::collision_t, seeder
+#include "./common.hpp"                  // for construct_lef, NO_COLLISION, requir...
+#include "modle/common/common.hpp"       // for bp_t, collision_t
+#include "modle/common/config.hpp"       // for Config
+#include "modle/common/random.hpp"       // for PRNG, bernoulli_trial, uniform_int_...
+#include "modle/extrusion_barriers.hpp"  // for ExtrusionBarrier, OCCUPIED, State
+#include "modle/extrusion_factors.hpp"   // for Lef, ExtrusionUnit
+#include "modle/genome.hpp"              // for Chromosome
+#include "modle/simulation.hpp"          // for Simulation
 
 namespace modle::test::libmodle {
 

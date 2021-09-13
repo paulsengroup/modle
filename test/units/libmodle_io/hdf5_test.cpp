@@ -4,17 +4,20 @@
 
 #include "modle/hdf5.hpp"
 
-#include <H5Cpp.h>  // IWYU pragma: keep
+#include <H5Cpp.h>       // IWYU pragma: keep
+#include <fmt/format.h>  // for format
 
-#include <boost/filesystem/path.hpp>  // for path, create_directories, is_empty, operator/, remove, remov...
-#include <catch2/catch.hpp>  // for operator""_catch_sr, AssertionHandler, SourceLineInfo, Strin...
-#include <cstdint>           // for int64_t
-#include <limits>            // for numeric_limits
-#include <string>            // for string, allocator, basic_string, operator==
-#include <string_view>       // for string_view
-#include <vector>            // for vector
+#include <algorithm>                        // for max
+#include <boost/filesystem/operations.hpp>  // for create_directories, is_empty, remove, remove_all
+#include <boost/filesystem/path.hpp>        // for operator/, path
+#include <catch2/catch.hpp>                 // for operator""_catch_sr, AssertionHandler, Source...
+#include <cstdint>                          // for int64_t
+#include <limits>                           // for numeric_limits
+#include <string>                           // for string, basic_string, allocator, operator==
+#include <string_view>                      // for string_view
+#include <vector>                           // for vector
 
-#include "modle/common/smartdir.hpp"  // IWYU pragma: keep
+#include "modle/common/smartdir.hpp"  // for SmartDir
 
 namespace modle::test {
 const auto cleanup_on_exit{true};         // Useful for debugging

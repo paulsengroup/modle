@@ -5,13 +5,14 @@
 #pragma once
 
 #include <absl/types/span.h>  // for Span
-#include <fmt/format.h>
+#include <fmt/format.h>       // for format_parse_context, format_error
 
 #include <boost/dynamic_bitset/dynamic_bitset.hpp>  // for dynamic_bitset
+#include <cassert>                                  // for assert
 #include <cstdint>                                  // for uint_fast8_t
 
-#include "modle/common/common.hpp"  // for bp_t, Direction
-#include "modle/common/random.hpp"  // for random::PRNG_t
+#include "modle/common/common.hpp"  // for bp_t, Direction, fwd, none
+#include "modle/common/random.hpp"  // for PRNG_t
 #include "modle/common/utils.hpp"   // for ndebug_defined
 
 namespace modle {

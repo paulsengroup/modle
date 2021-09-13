@@ -19,8 +19,8 @@
 namespace modle::correlation::utils {
 
 // Return the indices corresponding to the sorted vector
-template <typename N>  // NOLINTNEXTLINE(cppcoreguidelines-avoid-non-const-global-variables)
-[[nodiscard]] inline std::vector<size_t> sort_range_by_idx(absl::Span<const N> v) {
+template <typename N>
+std::vector<size_t> sort_range_by_idx(absl::Span<const N> v) {
   static_assert(std::is_arithmetic<N>::value,
                 "v should be convertible to a span of numeric types.");
   std::vector<size_t> vi(v.size());
@@ -33,15 +33,15 @@ template <typename N>  // NOLINTNEXTLINE(cppcoreguidelines-avoid-non-const-globa
   return vi;
 }
 
-template <typename N>  // NOLINTNEXTLINE(cppcoreguidelines-avoid-non-const-global-variables)
-[[nodiscard]] inline std::vector<size_t> sort_range_by_idx(const std::vector<N>& v) {
+template <typename N>
+std::vector<size_t> sort_range_by_idx(const std::vector<N>& v) {
   return sort_range_by_idx(absl::MakeConstSpan(v));
 }
 
 // This returns a vector of integers corresponding to the rank of the values of
 // vector v
 template <typename N>
-inline std::vector<double> compute_element_ranks(absl::Span<const N> v) {
+std::vector<double> compute_element_ranks(absl::Span<const N> v) {
   static_assert(std::is_arithmetic<N>::value,
                 "v should be convertible to a span of numeric types.");
   const auto vi = sort_range_by_idx(v);
@@ -73,7 +73,7 @@ inline std::vector<double> compute_element_ranks(absl::Span<const N> v) {
 }
 
 template <typename N>
-inline std::vector<double> compute_element_ranks(const std::vector<N>& v) {
+std::vector<double> compute_element_ranks(const std::vector<N>& v) {
   return compute_element_ranks(absl::MakeConstSpan(v));
 }
 

@@ -3,20 +3,20 @@
 // SPDX-License-Identifier: MIT
 
 #include <absl/strings/str_split.h>  // for StrSplit, Splitter
+#include <fmt/format.h>              // for to_string
 
-#include <algorithm>                  // for sort
-#include <boost/filesystem/path.hpp>  // for exists
+#include <algorithm>                  // for sort, max
+#include <boost/filesystem/path.hpp>  // for path
 #include <cassert>                    // for assert
 #include <catch2/catch.hpp>           // for AssertionHandler, operator""_catch_sr, SourceLineInfo
-#include <fstream>                    // for basic_istream, ifstream, basic_ifstream
-#include <memory>                     // for allocator_traits<>::value_type, allocator
 #include <string>                     // for string, basic_string, operator==, char_traits, stoull
 #include <string_view>                // for operator!=, basic_string_view, string_view, operator<
 #include <vector>                     // for vector
 
-#include "absl/strings/match.h"
-#include "modle/bed.hpp"  // for BED, Parser, BED::BED3, bed
-#include "modle/compressed_io.hpp"
+#include "absl/strings/match.h"     // for StrContains
+#include "modle/bed.hpp"            // for BED, Parser, formatter<>::format, BED::BED3
+#include "modle/chrom_sizes.hpp"    // for bed
+#include "modle/compressed_io.hpp"  // for Reader
 
 namespace modle::test::bed {
 using namespace modle::bed;

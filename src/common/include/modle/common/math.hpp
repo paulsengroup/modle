@@ -4,11 +4,10 @@
 
 #pragma once
 
-#include <absl/types/span.h>
+#include <cstddef>      // for size_t
+#include <type_traits>  // for declval, enable_if_t
 
-#include <type_traits>
-
-#include "modle/common/utils.hpp"
+#include "modle/common/utils.hpp"  // for identity
 
 namespace modle::math {
 

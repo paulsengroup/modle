@@ -5,8 +5,8 @@
 #include <absl/container/btree_set.h>  // for btree_set
 
 #include <CLI/CLI.hpp>
-#include <cstdint>  // for uint_fast8_t
-#include <string>   // for string
+#include <cstdint>  // for uint32_t, uint_fast8_t
+#include <string>   // for string, allocator, basic_string
 
 #include "modle_tools/config.hpp"  // for config
 

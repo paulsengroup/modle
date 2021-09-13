@@ -4,15 +4,14 @@
 
 #pragma once
 
-// IWYU pragma: no_include "modle/src/contact_matrix/contacts_impl.hpp"
-
 #include <absl/types/span.h>  // for Span
 
 #include <atomic>                                   // for atomic
 #include <boost/dynamic_bitset/dynamic_bitset.hpp>  // for dynamic_bitset
-#include <cstddef>                                  // IWYU pragma: keep for size_t
-#include <cstdint>                                  // for uint64_t
+#include <cstddef>                                  // for size_t
+#include <cstdint>                                  // for uint64_t, uint32_t
 #include <mutex>                                    // for mutex
+#include <type_traits>                              // for enable_if_t
 #include <utility>                                  // for pair
 #include <vector>                                   // for vector
 
@@ -136,3 +135,4 @@ class ContactMatrix {
 }  // namespace modle
 
 #include "../../contacts_impl.hpp"  // IWYU pragma: export
+// IWYU pragma: no_include "../../contacts_impl.hpp"

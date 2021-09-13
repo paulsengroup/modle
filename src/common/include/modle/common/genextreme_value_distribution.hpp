@@ -3,10 +3,11 @@
 // SPDX-License-Identifier: MIT
 
 #pragma once
-#include <cassert>
-#include <cmath>
+#include <cassert>  // for assert
+#include <cmath>    // for log
+#include <limits>   // for numeric_limits
 
-#include "modle/common/random.hpp"
+#include "modle/common/random.hpp"  // for generate_canonical
 
 namespace modle {
 template <class RealType = double>

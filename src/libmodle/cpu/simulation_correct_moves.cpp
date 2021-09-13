@@ -2,16 +2,20 @@
 //
 // SPDX-License-Identifier: MIT
 
+// clang-format off
+#include "modle/simulation.hpp"
+// clang-format on
+
 #include <absl/types/span.h>  // for Span
 
-#include <cassert>  // for assert
-#include <cstddef>  // for size_t
+#include <boost/config.hpp>  // IWYU pragma: keep for BOOST_UNLIKELY
+#include <cassert>           // for assert
+#include <cstddef>           // for size_t
 
-#include "modle/common/common.hpp"       // for BOOST_LIKELY, BOOST_UNLIKELY, bp_t, collision_t
+#include "modle/common/common.hpp"       // for bp_t, collision_t
 #include "modle/common/utils.hpp"        // for ndebug_defined
 #include "modle/extrusion_barriers.hpp"  // for ExtrusionBarrier
 #include "modle/extrusion_factors.hpp"   // for ExtrusionUnit, Lef
-#include "modle/simulation.hpp"          // for Simulation
 
 namespace modle {
 

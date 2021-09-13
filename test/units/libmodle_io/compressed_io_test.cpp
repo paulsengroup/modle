@@ -4,13 +4,14 @@
 
 #include "modle/compressed_io.hpp"  // for Reader
 
-#include <boost/filesystem/path.hpp>  // for exists
-#include <catch2/catch.hpp>           // for AssertionHandler, operator""_catch_sr, SourceLineInfo
-#include <fstream>                    // for ifstrea, getline
-#include <iostream>
-#include <string>  // for string, basic_string, operator==, char_traits, stoull
+#include <boost/filesystem/operations.hpp>  // for remove
+#include <boost/filesystem/path.hpp>        // for path, operator/
+#include <catch2/catch.hpp>                 // for AssertionHandler, operator""_catch_sr, Source...
+#include <fstream>                          // for ifstream, basic_ios, basic_istream, operator<<
+#include <ios>                              // for cerr
+#include <string>                           // for operator==, string, basic_string, getline
 
-#include "modle/common/smartdir.hpp"  // IWYU pragma: keep
+#include "modle/common/smartdir.hpp"  // for SmartDir
 
 namespace modle::test {
 const auto cleanup_on_exit{true};         // Useful for debugging

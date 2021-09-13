@@ -4,36 +4,30 @@
 
 #pragma once
 
-// IWYU pragma: private, include "modle/contacts.hpp"
-// IWYU pragma: no_include <boost/core/checked_delete.hpp>
-// IWYU pragma: no_include <boost/exception/detail/error_info_impl.hpp>
-// IWYU pragma: no_include <H5Public.h>
-
 #include <absl/strings/str_join.h>        // for StrJoin
-#include <absl/types/span.h>              // for MakeConstSpan, Span
+#include <absl/types/span.h>              // for Span, MakeConstSpan
 #include <cpp-sort/sorter_facade.h>       // for sorter_facade
-#include <cpp-sort/sorters/ska_sorter.h>  // for ska_sort
-#include <fmt/format.h>                   // for FMT_STRING, format
+#include <cpp-sort/sorters/ska_sorter.h>  // for ska_sort, ska_sorter
+#include <fmt/format.h>                   // for FMT_STRING, join
 
-#include <algorithm>                                // for max, fill, copy
+#include <algorithm>                                // for clamp, min, fill, equal_range
 #include <atomic>                                   // for memory_order_relaxed
 #include <boost/dynamic_bitset/dynamic_bitset.hpp>  // for dynamic_bitset
-#include <boost/exception/exception.hpp>            // IWYU pragma: keep for error_info_base
 #include <cassert>                                  // for assert
 #include <cmath>                                    // for round
-#include <cstddef>                                  // IWYU pragma: keep for size_t
+#include <cstddef>                                  // for size_t
 #include <cstdint>                                  // for uint64_t, int64_t
 #include <limits>                                   // for numeric_limits
 #include <mutex>                                    // for mutex
 #include <numeric>                                  // for accumulate
 #include <stdexcept>                                // for runtime_error, logic_error
-#include <type_traits>                              // for is_integral, is_signed
-#include <utility>                                  // for make_pair, pair
+#include <type_traits>                              // for is_integral, is_signed, remove_re...
+#include <utility>                                  // for pair, make_pair, pair<>::second
 #include <vector>                                   // for vector, allocator
 
-#include "modle/common/random.hpp"                      // for random::PRNG, random::seeder
-#include "modle/common/suppress_compiler_warnings.hpp"  // for DISABLE_WARNING_POP, DISABLE_WARNI...
-#include "modle/common/utils.hpp"                       // for ndebug_defined
+#include "modle/common/random.hpp"                      // for PRNG, uniform_int_distribution
+#include "modle/common/suppress_compiler_warnings.hpp"  // for DISABLE_WARNING_PUSH, DISABLE_WAR...
+#include "modle/common/utils.hpp"                       // for ndebug_defined, ndebug_not_defined
 
 namespace modle {
 #if defined(__clang__) && __clang_major__ < 7
@@ -819,3 +813,10 @@ void ContactMatrix<I>::check_overflow_on_subtract(size_t row, size_t col, I2 n) 
 }
 
 }  // namespace modle
+
+// IWYU pragma: private, include "modle/contacts.hpp"
+// IWYU pragma: no_include <boost/core/checked_delete.hpp>
+// IWYU pragma: no_include <boost/exception/detail/error_info_impl.hpp>
+// IWYU pragma: no_include <boost/exception/exception.hpp>
+// IWYU pragma: no_include <boost/move/utility_core.hpp>
+// IWYU pragma: no_include <H5Public.h>

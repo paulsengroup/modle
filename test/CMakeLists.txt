@@ -14,7 +14,7 @@ add_executable(test_main)
 target_sources(
   test_main
   PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/test_main.cpp
-          ${CMAKE_CURRENT_SOURCE_DIR}/units/contact_matrix/contacts_test.cpp
+          ${CMAKE_CURRENT_SOURCE_DIR}/units/contact_matrix/contact_matrix_test.cpp
           ${CMAKE_CURRENT_SOURCE_DIR}/units/common/math_test.cpp
           ${CMAKE_CURRENT_SOURCE_DIR}/units/correlation/common.hpp
           ${CMAKE_CURRENT_SOURCE_DIR}/units/correlation/correlation_test.cpp

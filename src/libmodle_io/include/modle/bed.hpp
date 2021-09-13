@@ -6,24 +6,28 @@
 
 #include <absl/container/btree_map.h>  // for btree_map
 #include <absl/types/span.h>           // for Span
-#include <xxh3.h>                      // for XXH3_state_t
+#include <fmt/format.h>                // for format_parse_context, formatter
+#include <xxh3.h>                      // for XXH3_state_t, XXH_INLINE_XXH3_state_t
 
+#include <algorithm>                  // for max
+#include <array>                      // for array
 #include <boost/filesystem/path.hpp>  // for path
-#include <cstddef>                    // IWYU pragma: keep for size_t
-#include <cstdint>                    // for uint64_t, uint_fast8_t
+#include <cstddef>                    // for size_t
+#include <cstdint>                    // for uint64_t, uint8_t, uint_fast8_t
 #include <fstream>                    // for ifstream
 #include <limits>                     // for numeric_limits
 #include <memory>                     // for unique_ptr
-#include <string>                     // for string, basic_string
-#include <string_view>                // for operator""sv, basic_string_view, string_view
-#include <utility>                    // IWYU pragma: keep for move, pair
+#include <string>                     // for string
+#include <string_view>                // for operator""sv, string_view, basic_string_view, stri...
+#include <type_traits>                // for __strip_reference_wrapper<>::__type
+#include <utility>                    // for make_pair, pair
 #include <vector>                     // for vector
 
 #include "modle/chrom_sizes.hpp"    // for ChromSizes
 #include "modle/common/common.hpp"  // for bp_t
-#include "modle/common/utils.hpp"   // for ConstMap
+#include "modle/common/utils.hpp"   // for ConstMap, ConstMap::ConstMap<Key, Value, Size>
 #include "modle/compressed_io.hpp"  // for Reader
-#include "modle/interval_tree.hpp"  // for IITree
+#include "modle/interval_tree.hpp"  // for IITree, IITree::IITree<I, T>
 
 namespace modle::bed {
 

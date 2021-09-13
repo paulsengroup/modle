@@ -4,21 +4,26 @@
 
 #include "modle/compressed_io.hpp"
 
-#include <archive.h>        // for archive
-#include <archive_entry.h>  // for archive_entry
-#include <fmt/format.h>     // system_error
-#include <fmt/ostream.h>
+#include <absl/strings/ascii.h>  // for AsciiStrToLower
+#include <archive.h>             // for archive_errno, archiv...
+#include <fmt/format.h>          // for format, FMT_STRING
+#include <fmt/ostream.h>         // for formatbuf<>::int_type
 
-#include <boost/filesystem/path.hpp>  // for path
-#include <boost/iostreams/filter/bzip2.hpp>
-#include <boost/iostreams/filter/gzip.hpp>
-#include <boost/iostreams/filter/lzma.hpp>
-#include <boost/iostreams/filter/zstd.hpp>
-#include <cassert>      // for assert
-#include <string>       // for string
-#include <string_view>  // for string_view
+#include <algorithm>                         // for find_if
+#include <boost/filesystem/path.hpp>         // for path, operator<<
+#include <boost/iostreams/close.hpp>         // for close
+#include <boost/iostreams/filter/bzip2.hpp>  // for basic_bzip2_compressor
+#include <boost/iostreams/filter/gzip.hpp>   // for basic_gzip_compressor
+#include <boost/iostreams/filter/lzma.hpp>   // for basic_lzma_compressor
+#include <boost/iostreams/filter/zlib.hpp>   // for best_compression
+#include <boost/iostreams/write.hpp>         // for put, write
+#include <cassert>                           // for assert
+#include <cerrno>                            // for errno
+#include <stdexcept>                         // for runtime_error, logic_...
+#include <string>                            // for string, basic_string
+#include <string_view>                       // for string_view, operator<<
 
-#include "modle/common/utils.hpp"  // for ndebug_defined
+#include "modle/common/utils.hpp"  // for ndebug_not_defined
 
 namespace modle::compressed_io {
 

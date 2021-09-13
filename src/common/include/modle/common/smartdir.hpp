@@ -4,9 +4,10 @@
 
 #pragma once
 
-#include <atomic>
-#include <boost/filesystem.hpp>
-#include <boost/filesystem/path.hpp>
+#include <atomic>                           // for atomic
+#include <boost/filesystem/operations.hpp>  // for create_directories, remove_all, temp_director...
+#include <boost/filesystem/path.hpp>        // for path, operator/
+#include <utility>                          // for move
 
 namespace modle {
 // The point of this class is to provide a reliable way to create a directory that automatically

@@ -3,16 +3,19 @@
 // SPDX-License-Identifier: MIT
 
 #include <absl/strings/ascii.h>  // for AsciiStrToLower
-#include <fmt/format.h>          // for print, FMT_STRING, format
+#include <fmt/format.h>          // for print, FMT_STRING
 
-#include <cassert>  // for assert
-#include <cstddef>  // for size_t
-#include <cstdint>  // for uint64_t
-#include <vector>   // for vector
+#include <cassert>    // for assert
+#include <cstdint>    // for uint64_t, uint32_t, uint8_t
+#include <cstdio>     // for stdout
+#include <memory>     // for allocator_traits<>::value_type
+#include <stdexcept>  // for logic_error
+#include <string>     // for string, operator==
+#include <vector>     // for vector
 
-#include "modle/bed.hpp"           // for Parser
-#include "modle_tools/config.hpp"  // for config
-#include "modle_tools/tools.hpp"
+#include "modle/bed.hpp"           // for BED_tree, Parser, formatter<>::format, formatter<>::parse
+#include "modle_tools/config.hpp"  // for filter_barrier_config
+#include "modle_tools/tools.hpp"   // for filter_barriers_subcmd
 
 namespace modle::tools {
 

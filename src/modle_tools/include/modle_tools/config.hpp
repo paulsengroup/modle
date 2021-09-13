@@ -5,17 +5,19 @@
 #pragma once
 
 #include <absl/container/flat_hash_set.h>  // for BitMask, flat_hash_set, raw_hash_set
-#include <absl/types/variant.h>
+#include <absl/types/variant.h>            // for monostate, variant
 
+#include <algorithm>                        // for max
 #include <boost/filesystem/operations.hpp>  // for temp_directory_path
 #include <boost/filesystem/path.hpp>        // for path
-#include <cstddef>                          // IWYU pragma: keep for size_t
+#include <cstddef>                          // for size_t
 #include <cstdint>                          // for uint64_t
-#include <string>                           // for string
+#include <string>                           // for string, basic_string, allocator
 #include <thread>                           // for thread
 #include <vector>                           // for vector
 
-#include "modle/bed.hpp"  // for BED::Dialect
+#include "modle/bed.hpp"            // for BED, BED::Dialect, BED::BED6
+#include "modle/common/common.hpp"  // for bp_t
 
 namespace modle::tools {
 

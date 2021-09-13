@@ -4,21 +4,22 @@
 
 #include <absl/types/span.h>  // for MakeSpan
 
-#include <algorithm>         // for fill
-#include <cassert>           // for assert
-#include <catch2/catch.hpp>  // for AssertionHandler, operator""_catch_sr
-#include <cstddef>           // IWYU pragma: keep for size_t
-#include <memory>            // for allocator_traits<>::value_type
-#include <vector>            // for vector
+#include <boost/dynamic_bitset/dynamic_bitset.hpp>  // for dynamic_bitset
+#include <cassert>                                  // for assert
+#include <catch2/catch.hpp>                         // for SourceLineInfo, StringRef, TEST_CASE
+#include <cstddef>                                  // for size_t
+#include <memory>                                   // for allocator, allocator_traits<>::value_...
+#include <string_view>                              // for string_view
+#include <vector>                                   // for vector
 
-#include "./common.hpp"
-#include "modle/chrom_sizes.hpp"
-#include "modle/common/common.hpp"                      // for bp_t, PRNG, random::PRNG_t
-#include "modle/common/config.hpp"                      // for Config
-#include "modle/common/suppress_compiler_warnings.hpp"  // for DISABLE_WARNING_POP, DISABLE_WARNING_PUSH
-#include "modle/extrusion_barriers.hpp"                 // for ExtrusionBarrier
-#include "modle/extrusion_factors.hpp"                  // for Lef, ExtrusionUnit
-#include "modle/simulation.hpp"  // for Simulation, Simulation::collision_t, seeder
+#include "./common.hpp"                  // for construct_lef, NO_COLLISION, check_si...
+#include "modle/common/common.hpp"       // for bp_t, collision_t
+#include "modle/common/config.hpp"       // for Config
+#include "modle/common/random.hpp"       // for PRNG
+#include "modle/extrusion_barriers.hpp"  // for ExtrusionBarrier, State, OCCUPIED
+#include "modle/extrusion_factors.hpp"   // for Lef
+#include "modle/genome.hpp"              // for Chromosome
+#include "modle/simulation.hpp"          // for Simulation
 
 namespace modle::test::libmodle {
 

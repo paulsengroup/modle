@@ -13,22 +13,27 @@
 #include <cpp-sort/sorters/ska_sorter.h>        // for ska_sort, ska_sorter
 #include <cpp-sort/sorters/split_sorter.h>      // for split_sort, split_sorter
 #include <fmt/compile.h>
+#include <fmt/format.h>     // for format_parse_context, format_error
 #include <spdlog/spdlog.h>  // for warn
 
-#include <algorithm>                         // for min
-#include <boost/range/adaptor/reversed.hpp>  // for reversed_range, reverse
-#include <cassert>                           // for assert
-#include <cstddef>                           // for size_t
-#include <thread>                            // for thread
-#include <thread_pool/thread_pool.hpp>
-#include <type_traits>  // for declval, decay_t
+#include <algorithm>                                // for min
+#include <boost/dynamic_bitset/dynamic_bitset.hpp>  // for dynamic_bitset
+#include <boost/range/adaptor/reversed.hpp>         // for reversed_range, reverse
+#include <cassert>                                  // for assert
+#include <cstddef>                                  // for size_t
+#include <cstdint>                                  // for int64_t, uint32_t
+#include <limits>                                   // for numeric_limits
+#include <thread>                                   // for thread
+#include <thread_pool/thread_pool.hpp>              // for thread_pool
+#include <type_traits>                              // for declval, decay_t
 
-#include "modle/common/common.hpp"  // for random::PRNG_t
+#include "modle/common/common.hpp"  // for bp_t
 #include "modle/common/math.hpp"
+#include "modle/common/random.hpp"                      // for PRNG_t, uniform_int_distribution
 #include "modle/common/random_sampling.hpp"             // for random_sampe
-#include "modle/common/suppress_compiler_warnings.hpp"  // for DISABLE_WARNING_POP, DISABLE_WARNING_...
-#include "modle/common/utils.hpp"                       // for ndebug_defined
-#include "modle/extrusion_factors.hpp"                  // for Lef
+#include "modle/common/suppress_compiler_warnings.hpp"  // for DISABLE_WARNING_POP, DISABLE_WARN...
+#include "modle/common/utils.hpp"                       // for ndebug_defined, ndebug_not_defined
+#include "modle/extrusion_factors.hpp"                  // for Lef, ExtrusionUnit
 #include "modle/genome.hpp"                             // for Chromosome
 
 namespace modle {
