@@ -20,7 +20,7 @@
 
 namespace modle {
 
-template <typename I = uint32_t>
+template <typename I = contacts_t>
 class ContactMatrix {
   static_assert(std::is_integral_v<I>,
                 "ContactMatrix requires an integral type as template argument.");
