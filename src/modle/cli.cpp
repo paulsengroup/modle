@@ -31,6 +31,7 @@
 #include "modle/common/common.hpp"  // for bp_t, modle_version_long
 #include "modle/common/config.hpp"  // for Config
 #include "modle/common/utils.hpp"   // for str_float_to_str_int, parse_numeric_or_throw
+#include "modle/cooler.hpp"         // for Cooler
 
 namespace modle {
 
@@ -417,6 +418,13 @@ void Cli::make_perturbate_subcommand() {
       "while a log file will be saved at \"/tmp/mycontacts.log\".")
       ->required();
 
+  io.add_option(
+      "--reference-contacts",
+      c.path_to_reference_contacts,
+      "Path to a Cooler file with the contact matrix to use as reference")
+      ->check(CLI::ExistingFile)
+      ->required();
+
   io.add_flag("--write-header,!--no-write-header",
       c.write_header,
       "Write header with column names to output file.")
@@ -652,6 +660,14 @@ void Cli::validate_args() const {
         FMT_STRING("The value passed to {} should be less or equal than that of {} ({} > {})"),
         "--burnin-smoothing-window-size", "--burnin-history-length", c.burnin_smoothing_window_size,
         c.burnin_history_length));
+  }
+
+  if (!c.path_to_reference_contacts.empty()) {
+    try {
+      modle::cooler::Cooler(c.path_to_reference_contacts, cooler::Cooler::READ_ONLY, c.bin_size);
+    } catch (const std::runtime_error& e) {
+      errors.emplace_back(e.what());
+    }
   }
 
   if (!errors.empty()) {

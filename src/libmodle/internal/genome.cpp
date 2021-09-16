@@ -524,6 +524,10 @@ size_t Genome::size() const {
       [](auto accumulator, const auto& chrom) { return accumulator + chrom.size(); });
 }
 
+size_t Genome::number_of_chromosomes() const {
+  return static_cast<size_t>(this->_chromosomes.size());
+}
+
 size_t Genome::simulated_size() const {
   return std::accumulate(this->_chromosomes.begin(), this->_chromosomes.end(), size_t(0),
                          [](auto accumulator, const auto& chrom) {

@@ -879,6 +879,7 @@ Simulation::State& Simulation::State::operator=(const Task& task) {
   if (this->chrom->contacts_ptr()) {
     this->contacts = this->chrom->contacts_ptr();
   }
+  this->reference_contacts = nullptr;
   return *this;
 }
 
@@ -906,6 +907,9 @@ Simulation::State& Simulation::State::operator=(const TaskPW& task) {
 
   this->feats1 = task.feats1;
   this->feats2 = task.feats2;
+
+  assert(task.reference_contacts);  // NOLINT
+  this->reference_contacts = task.reference_contacts;
   return *this;
 }
 

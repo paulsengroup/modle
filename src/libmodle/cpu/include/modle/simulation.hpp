@@ -89,6 +89,8 @@ class Simulation : Config {
     bp_t active_window_start{};
     bp_t active_window_end{};
 
+    std::shared_ptr<const ContactMatrix<contacts_t>> reference_contacts{};
+
     absl::Span<const bed::BED> feats1{};
     absl::Span<const bed::BED> feats2{};
   };
@@ -159,7 +161,10 @@ class Simulation : Config {
 
     absl::Span<const bed::BED> feats1{};
     absl::Span<const bed::BED> feats2{};
+
+    std::shared_ptr<const ContactMatrix<contacts_t>> reference_contacts{nullptr};
     std::shared_ptr<ContactMatrix<contacts_t>> contacts{nullptr};
+
     std::vector<ExtrusionBarrier> barrier_tmp_buff{};
 
     State& operator=(const Task& task);

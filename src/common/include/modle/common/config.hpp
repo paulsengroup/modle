@@ -38,6 +38,7 @@ struct Config {  // NOLINT(altera-struct-pack-align)
   bool quiet{false};
   bool write_contacts_for_ko_chroms{false};
   bool write_tasks_to_disk{true};
+  boost::filesystem::path path_to_reference_contacts{};
   std::vector<boost::filesystem::path> path_to_feature_bed_files{};
   boost::filesystem::path path_to_output_file_bedpe{};
   boost::filesystem::path path_to_deletion_bed{};

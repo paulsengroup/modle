@@ -147,6 +147,7 @@ class Genome {
   [[nodiscard]] bool contains(std::string_view other_chrom_name) const;
 
   [[nodiscard]] size_t size() const;
+  [[nodiscard]] size_t number_of_chromosomes() const;
   [[nodiscard]] size_t simulated_size() const;
 
   [[nodiscard]] const Chromosome& chromosome_with_longest_name() const;

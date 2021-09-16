@@ -50,6 +50,42 @@
 #include "modle/interval_tree.hpp"       // for IITree, IITree::empty, IITree::equal_range
 
 namespace modle {
+
+static void validate_reference_contacts(const Genome& genome, cooler::Cooler& c) {
+  const auto chrom_names = [&]() {
+    auto names = c.get_chrom_names();
+    return absl::flat_hash_set<std::string>{std::make_move_iterator(names.begin()),
+                                            std::make_move_iterator(names.end())};
+  }();
+
+  std::vector<std::string> missing_chromosomes;
+  for (const auto& chrom : genome) {
+    if (!chrom_names.contains(chrom.name())) {
+      missing_chromosomes.emplace_back(chrom.name());
+      continue;
+    }
+  }
+
+  if (!missing_chromosomes.empty()) {
+    throw std::runtime_error(fmt::format(
+        FMT_STRING("Unable to find the following {} chromosomes in file {}:\n - {}"),
+        missing_chromosomes.size(), c.get_path(), fmt::join(missing_chromosomes, "\n - ")));
+  }
+}
+
+[[nodiscard]] static ContactMatrix<> read_reference_contacts(cooler::Cooler& c,
+                                                             std::string_view chrom_name,
+                                                             const bp_t bin_size,
+                                                             const bp_t diagonal_width) {
+  const auto nrows = (diagonal_width + bin_size - 1) / bin_size;
+  const auto chrom_boundaries = std::make_pair(size_t(0), size_t(-1));
+  const auto try_common_prefixes = false;
+  const auto prefer_balanced_counts = false;
+
+  return c.cooler_to_cmatrix(chrom_name, nrows, chrom_boundaries, try_common_prefixes,
+                             prefer_balanced_counts);
+}
+
 void Simulation::run_perturbate() {
   if (!this->skip_output) {  // Write simulation params to file
     assert(boost::filesystem::exists(this->path_to_output_prefix.parent_path()));  // NOLINT
@@ -71,6 +107,10 @@ void Simulation::run_perturbate() {
   auto out_bedpe_stream = compressed_io::Writer(this->path_to_output_file_bedpe);
   auto out_task_stream = compressed_io::Writer(this->path_to_task_file);
 
+  cooler::Cooler reference_cooler(this->path_to_reference_contacts, cooler::Cooler::READ_ONLY,
+                                  bin_size);
+  validate_reference_contacts(this->_genome, reference_cooler);
+
   if (this->write_header) {
     // clang-format off
     constexpr std::string_view header{
@@ -85,6 +125,9 @@ void Simulation::run_perturbate() {
       "score\t"
       "strand1\t"
       "strand2\t"
+      "reference_contacts\t"
+      "contacts\t"
+      "significance\t"
       "deletion_begin\t"
       "deletion_end\t"
       "num_active_barriers\t"
@@ -175,6 +218,9 @@ void Simulation::run_perturbate() {
       TaskPW base_task{};
 
       base_task.chrom = &chrom;
+      base_task.reference_contacts =
+          std::make_shared<const ContactMatrix<>>(read_reference_contacts(
+              reference_cooler, chrom_name, this->bin_size, this->diagonal_width));
       // Initialize task with the initial window
       base_task.window_start = 0;
       base_task.window_end = 4 * this->diagonal_width;
@@ -323,7 +369,8 @@ void Simulation::perturbate_worker(
         assert(!task.feats2.empty());    // NOLINT
         assert(local_state.contacts);    // NOLINT
 
-        local_state = task;  // Set simulation local_state based on task data
+        local_state = task;                      // Set simulation local_state based on task data
+        assert(local_state.reference_contacts);  // NOLINT
         local_state.contacts->resize(local_state.window_end - local_state.window_start,
                                      this->diagonal_width, this->bin_size);
 
@@ -407,7 +454,8 @@ void Simulation::simulate_window(Simulation::State& state, compressed_io::Writer
 
   Simulation::simulate_one_cell(state);
 
-  if (out_stream) {  // Output contacts for valid pairs of features
+  assert(state.reference_contacts);  // NOLINT
+  if (out_stream) {                  // Output contacts for valid pairs of features
     for (auto i = 0UL; i < state.feats1.size(); ++i) {
       const auto& feat1 = state.feats1[i];
       const auto feat1_abs_center_pos = (feat1.chrom_start + feat1.chrom_end + 1) / 2;
@@ -434,6 +482,12 @@ void Simulation::simulate_window(Simulation::State& state, compressed_io::Writer
         if (contacts == 0) {  // Don't output entries with 0 contacts
           continue;
         }
+        const auto reference_contacts =
+            state.reference_contacts->get(feat1_rel_bin, feat2_rel_bin, this->block_size);
+        const auto score = std::min(999.0, std::log2(static_cast<double>(contacts) /
+                                                     static_cast<double>(reference_contacts)));
+
+        const auto significance = math::binomial_test(contacts, reference_contacts + contacts);
 
         // Compute the absolute bin coordinates. This are used to compute the positions shown in
         // the BEDPE file
@@ -446,15 +500,24 @@ void Simulation::simulate_window(Simulation::State& state, compressed_io::Writer
                                        feat2.name.empty() ? "none" : feat2.name);
         absl::StrAppend(  // Append a BEDPE record to the local buffer
             &out_buffer,
-            fmt::format(
-                FMT_COMPILE(
-                    "{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\n"),
-                feat1.chrom, feat1_abs_bin * bin_size, (feat1_abs_bin + 1) * bin_size, feat2.chrom,
-                feat2_abs_bin * bin_size, (feat2_abs_bin + 1) * bin_size, name, contacts,
-                feat1.strand, feat2.strand, state.deletion_begin,
-                state.deletion_begin + state.deletion_size, num_active_barriers,
-                state.barriers.size(), state.active_window_start, state.active_window_end,
-                state.window_start, state.window_end, state.id));
+            fmt::format(  // clang-format off
+                FMT_COMPILE("{}\t{}\t{}\t"
+                            "{}\t{}\t{}\t"
+                            "{}\t{:.4G}\t{}\t"
+                            "{}\t{}\t{}\t"
+                            "{:.4G}\t{}\t{}\t"
+                            "{}\t{}\t{}\t"
+                            "{}\t{}\t{}\t"
+                            "{}\n"),
+                feat1.chrom, feat1_abs_bin * bin_size, (feat1_abs_bin + 1) * bin_size,
+                feat2.chrom, feat2_abs_bin * bin_size, (feat2_abs_bin + 1) * bin_size,
+                name, score, feat1.strand,
+                feat2.strand, reference_contacts, contacts,
+                significance, state.deletion_begin, state.deletion_begin + state.deletion_size,
+                num_active_barriers, state.barriers.size(), state.active_window_start,
+                state.active_window_end, state.window_start, state.window_end,
+                state.id));
+        // clang-format on
       }
     }
 
