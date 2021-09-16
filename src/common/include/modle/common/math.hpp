@@ -81,5 +81,11 @@ template <class InputIt, class UnaryOperation = utils::identity,
                                          UnaryOperation op = utils::identity());
 /////////
 
+enum binomial_test_alternative : uint_fast8_t { TWO_SIDED, GREATER, LESS };
+
+template <binomial_test_alternative alternative = TWO_SIDED, class FP = double, class I,
+          class = std::enable_if<std::is_integral_v<I> && std::is_floating_point_v<FP>>>
+[[nodiscard]] inline FP binomial_test(I k, I n, FP p = 0.5);
+
 }  // namespace modle::math
 #include "../../../math_impl.hpp"  // IWYU pragma: export
