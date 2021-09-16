@@ -83,8 +83,8 @@ static void test_correlation_w_random_vector(std::string_view method, size_t vec
       return std::make_pair(rho_, pv_);
     }();
 
-    CHECK(Approx(rho).margin(0) == rho_py);
-    CHECK(Approx(pv).margin(0) == pv_py);
+    CHECK(Approx(rho) == rho_py);
+    CHECK(Approx(pv) == pv_py);
   }
   v1.clear();
   v2.clear();
@@ -98,8 +98,8 @@ TEST_CASE("Corr. test: Pearson wo ties", "[correlation][pearson][short]") {
   std::vector<uint32_t> v2{70, 29, 85, 61, 80, 34, 60, 31, 73, 66};  // NOLINT
   const auto pcc = compute_pearson(v1, v2);
   const auto pv = compute_pearson_significance(pcc, v1.size());
-  CHECK(Approx(pcc).margin(0) == -0.033621194725622014);  // NOLINT
-  CHECK(Approx(pv).margin(0) == 0.926536715854247);       // NOLINT
+  CHECK(Approx(pcc) == -0.033621194725622014);  // NOLINT
+  CHECK(Approx(pv) == 0.926536715854247);       // NOLINT
 }
 
 TEST_CASE("Corr. test: Pearson w ties", "[correlation][pearson][short]") {
@@ -107,8 +107,8 @@ TEST_CASE("Corr. test: Pearson w ties", "[correlation][pearson][short]") {
   std::vector<uint32_t> v2{70, 29, 85, 61, 80, 34, 60, 31, 73, 66};  // NOLINT
   const auto pcc = compute_pearson(v1, v2);
   const auto pv = compute_pearson_significance(pcc, v1.size());
-  CHECK(Approx(pcc).margin(0) == 0.16426413174421572);  // NOLINT
-  CHECK(Approx(pv).margin(0) == 0.6502118872600098);    // NOLINT
+  CHECK(Approx(pcc) == 0.16426413174421572);  // NOLINT
+  CHECK(Approx(pv) == 0.6502118872600098);    // NOLINT
 }
 
 TEST_CASE("Corr. test: Pearson Scipy", "[correlation][pearson][short]") {
@@ -118,8 +118,8 @@ TEST_CASE("Corr. test: Pearson Scipy", "[correlation][pearson][short]") {
   const auto pcc = compute_pearson(v1, v2);
   const auto pv = compute_pearson_significance(pcc, v1.size());
   const auto [pcc_py, pv_py] = corr_scipy(v1, v2, "pearson");
-  CHECK(Approx(pcc).margin(0) == pcc_py);
-  CHECK(Approx(pv).margin(0) == pv_py);
+  CHECK(Approx(pcc) == pcc_py);
+  CHECK(Approx(pv) == pv_py);
 }
 
 TEST_CASE("Corr. test: Pearson Scipy long", "[correlation][pearson][medium]") {
@@ -139,8 +139,8 @@ TEST_CASE("Corr. test: Spearman wo ties", "[correlation][spearman][short]") {
   std::vector<uint32_t> v2{70, 29, 85, 61, 80, 34, 60, 31, 73, 66};  // NOLINT
   const auto rho = compute_spearman(v1, v2);
   const auto pv = compute_spearman_significance(rho, v1.size());
-  CHECK(Approx(rho).margin(0) == -0.16363636363636364);  // NOLINT
-  CHECK(Approx(pv).margin(0) == 0.6514773427962428);     // NOLINT
+  CHECK(Approx(rho) == -0.16363636363636364);  // NOLINT
+  CHECK(Approx(pv) == 0.6514773427962428);     // NOLINT
 }
 
 TEST_CASE("Corr. test: Spearman w ties", "[correlation][spearman][short]") {
@@ -148,8 +148,8 @@ TEST_CASE("Corr. test: Spearman w ties", "[correlation][spearman][short]") {
   std::vector<uint32_t> v2{70, 29, 85, 61, 80, 34, 60, 31, 73, 66};  // NOLINT
   const auto rho = compute_spearman(v1, v2);
   const auto pv = compute_spearman_significance(rho, v1.size());
-  CHECK(Approx(rho).margin(0) == 0.024316221747202587);  // NOLINT
-  CHECK(Approx(pv).margin(0) == 0.9468397049085097);     // NOLINT
+  CHECK(Approx(rho) == 0.024316221747202587);  // NOLINT
+  CHECK(Approx(pv) == 0.9468397049085097);     // NOLINT
 }
 
 TEST_CASE("Corr. test: Spearman Scipy", "[correlation][spearman][short]") {
@@ -159,8 +159,8 @@ TEST_CASE("Corr. test: Spearman Scipy", "[correlation][spearman][short]") {
   const auto rho = compute_spearman(v1, v2);
   const auto pv = compute_spearman_significance(rho, v1.size());
   const auto [rho_py, pv_py] = corr_scipy(v1, v2, "spearman");
-  CHECK(Approx(rho).margin(0) == rho_py);
-  CHECK(Approx(pv).margin(0) == pv_py);
+  CHECK(Approx(rho) == rho_py);
+  CHECK(Approx(pv) == pv_py);
 }
 
 TEST_CASE("Corr. test: Spearman Scipy long", "[correlation][spearman][long]") {
@@ -179,7 +179,7 @@ TEST_CASE("SED", "[correlation][sed][short]") {
   std::vector<uint32_t> v1{17, 86, 60, 77, 47, 3, 70, 87, 88, 92};   // NOLINT
   std::vector<uint32_t> v2{70, 29, 85, 61, 80, 34, 60, 31, 73, 66};  // NOLINT
   const auto sed = compute_sed(v1, v2);
-  CHECK(Approx(sed).margin(0) == 13125.999999999998);  // NOLINT
+  CHECK(Approx(sed) == 13125.999999999998);  // NOLINT
 }
 
 }  // namespace modle::test::correlation
