@@ -475,6 +475,7 @@ void Simulation::simulate_window(Simulation::State& state, compressed_io::Writer
         const auto feat1_rel_center_pos = feat1_abs_center_pos - state.window_start;
         const auto feat2_rel_center_pos = feat2_abs_center_pos - state.window_start;
 
+        // Compute relative bin coordinates
         const auto feat1_rel_bin = feat1_rel_center_pos / this->bin_size;
         const auto feat2_rel_bin = feat2_rel_center_pos / this->bin_size;
 
@@ -482,17 +483,17 @@ void Simulation::simulate_window(Simulation::State& state, compressed_io::Writer
         if (contacts == 0) {  // Don't output entries with 0 contacts
           continue;
         }
+
+        // Compute absolute bin coordinates. These are used to fetch reference contacts as well as
+        // computing some of the coordinates for the BEDPE output
+        const auto feat1_abs_bin = feat1_abs_center_pos / this->bin_size;
+        const auto feat2_abs_bin = feat2_abs_center_pos / this->bin_size;
         const auto reference_contacts =
-            state.reference_contacts->get(feat1_rel_bin, feat2_rel_bin, this->block_size);
+            state.reference_contacts->get(feat1_abs_bin, feat2_abs_bin, this->block_size);
         const auto score = std::min(999.0, std::log2(static_cast<double>(contacts) /
                                                      static_cast<double>(reference_contacts)));
 
         const auto significance = math::binomial_test(contacts, reference_contacts + contacts);
-
-        // Compute the absolute bin coordinates. This are used to compute the positions shown in
-        // the BEDPE file
-        const auto feat1_abs_bin = (feat1_abs_center_pos + this->bin_size - 1) / this->bin_size;
-        const auto feat2_abs_bin = (feat2_abs_center_pos + this->bin_size - 1) / this->bin_size;
 
         // Generate the name field. The field will be "none;none" in case both features don't have
         // a name
