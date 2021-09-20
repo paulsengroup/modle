@@ -149,6 +149,28 @@ std::string_view Reader::getline(char sep) {
   }
 }
 
+bool Reader::readall(std::string& buff, char sep) {
+  assert(this->is_open());  // NOLINT
+  buff.clear();
+  if (this->eof()) {
+    return false;
+  }
+
+  while (!this->eof()) {
+    (void)this->getline(sep);
+    buff.append(this->_buff.begin(), this->_buff.end());
+    this->_idx = 0;
+    this->_buff.clear();
+  }
+  return true;
+}
+
+std::string Reader::readall(char sep) {
+  std::string buff;
+  this->readall(buff, sep);
+  return buff;
+}
+
 bool Reader::read_next_chunk() {
   assert(!this->eof());     // NOLINT
   assert(this->is_open());  // NOLINT

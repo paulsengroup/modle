@@ -35,6 +35,8 @@ class Reader {
 
   bool getline(std::string& buff, char sep = '\n');
   [[nodiscard]] std::string_view getline(char sep = '\n');
+  bool readall(std::string& buff, char sep = '\n');
+  [[nodiscard]] std::string readall(char sep = '\n');
   [[nodiscard]] bool eof() const noexcept;
   [[nodiscard]] bool is_open() const noexcept;
   void close();
