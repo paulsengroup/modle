@@ -134,11 +134,13 @@ class Cooler {
                                               std::string_view chrom_name, I2 chrom_start,
                                               I2 chrom_end, I2 chrom_length);
   // Read from file
-  [[nodiscard]] ContactMatrix<uint32_t> cooler_to_cmatrix(
+  template <class N = contacts_t, class = std::enable_if<std::is_arithmetic_v<N>>>
+  [[nodiscard]] ContactMatrix<N> cooler_to_cmatrix(
       std::string_view chrom_name, size_t nrows,
       std::pair<size_t, size_t> chrom_boundaries = {0, -1}, bool try_common_chrom_prefixes = true,
       bool prefer_using_balanced_counts = true);
-  [[nodiscard]] ContactMatrix<uint32_t> cooler_to_cmatrix(
+  template <class N = contacts_t, class = std::enable_if<std::is_arithmetic_v<N>>>
+  [[nodiscard]] ContactMatrix<N> cooler_to_cmatrix(
       std::string_view chrom_name, size_t diagonal_width, size_t bin_size,
       std::pair<size_t, size_t> chrom_boundaries = {0, -1}, bool try_common_chrom_prefixes = true,
       bool prefer_using_balanced_counts = true);
@@ -251,14 +253,16 @@ class Cooler {
       std::string_view chrom_name);
   [[nodiscard]] std::pair<int64_t, int64_t> read_chrom_pixels_boundaries(size_t chrom_idx);
 
-  [[nodiscard]] ContactMatrix<uint32_t> cooler_to_cmatrix(std::pair<hsize_t, hsize_t> bin_range,
-                                                          absl::Span<const int64_t> bin1_offset_idx,
-                                                          size_t nrows,
-                                                          double bias_scaling_factor = 1.0,
-                                                          bool prefer_using_balanced_counts = true);
-  [[nodiscard]] ContactMatrix<uint32_t> cooler_to_cmatrix(
-      std::pair<hsize_t, hsize_t> bin_range, const std::vector<int64_t> &bin1_offset_idx,
-      size_t nrows, double scaling_factor = 1.0, bool prefer_using_balanced_counts = true);
+  template <class N = contacts_t, class = std::enable_if<std::is_arithmetic_v<N>>>
+  [[nodiscard]] ContactMatrix<N> cooler_to_cmatrix(std::pair<hsize_t, hsize_t> bin_range,
+                                                   absl::Span<const int64_t> bin1_offset_idx,
+                                                   size_t nrows, double bias_scaling_factor = 1.0,
+                                                   bool prefer_using_balanced_counts = true);
+  template <class N = contacts_t, class = std::enable_if<std::is_arithmetic_v<N>>>
+  [[nodiscard]] ContactMatrix<N> cooler_to_cmatrix(std::pair<hsize_t, hsize_t> bin_range,
+                                                   const std::vector<int64_t> &bin1_offset_idx,
+                                                   size_t nrows, double scaling_factor = 1.0,
+                                                   bool prefer_using_balanced_counts = true);
 
   [[nodiscard]] size_t stream_contacts_for_chrom(
       moodycamel::BlockingReaderWriterQueue<Pixel> &queue, std::pair<hsize_t, hsize_t> bin_range,
