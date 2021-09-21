@@ -22,6 +22,8 @@
 
 namespace modle::test::cmatrix {
 
+inline const boost::filesystem::path data_dir{"test/data/unit_tests"};  // NOLINT
+
 TEST_CASE("CMatrix simple", "[cmatrix][short]") {
   ContactMatrix<> c(10, 100);  // NOLINT
   CHECK(c.get(0, 0) == 0);
@@ -54,9 +56,9 @@ TEST_CASE("CMatrix simple", "[cmatrix][short]") {
 }
 
 TEST_CASE("CMatrix 10x200", "[cmatrix][medium]") {
-  const std::string file_path = "test/data/unit_tests/symm_matrix_200_10.tsv.gz";
-  REQUIRE(boost::filesystem::exists(file_path));
-  const auto m1 = load_matrix_from_file(file_path);
+  const auto input_file = data_dir / "symm_matrix_200_10.tsv.gz";
+  REQUIRE(boost::filesystem::exists(input_file));
+  const auto m1 = load_matrix_from_file(input_file.string());
   ContactMatrix<> m2(10, 200);  // NOLINT
   for (auto i = 0UL; i < m1.size(); ++i) {
     for (auto j = 0UL; j < m1[i].size(); ++j) {
@@ -219,6 +221,34 @@ TEST_CASE("CMatrix get w/ block", "[cmatrix][short]") {
   CHECK(m1.get(0, 0, 5) == 30);
   CHECK(m1.get(22, 27, 5) == 25);
   CHECK(m1.get(99, 99, 5) == 70);
+}
+
+TEST_CASE("CMatrix get w/ block small", "[cmatrix][short]") {
+  const auto reference_file = data_dir / "contacts_chr1_bs9_small.tsv";
+  const auto input_file = data_dir / "contacts_chr1_raw_small.tsv";
+
+  const size_t block_size = 9;
+
+  const auto reference_matrix = [&]() {
+    ContactMatrix<> m;
+    m.import_from_txt(reference_file);
+    return m;
+  }();
+
+  const auto input_matrix = [&]() {
+    ContactMatrix<> m;
+    m.import_from_txt(input_file);
+    return m;
+  }();
+
+  REQUIRE(input_matrix.nrows() == reference_matrix.nrows());
+  REQUIRE(input_matrix.ncols() == reference_matrix.ncols());
+
+  for (size_t i = 0; i < input_matrix.nrows(); ++i) {
+    for (size_t j = 0; j < input_matrix.ncols(); ++j) {
+      CHECK(input_matrix.get(i, j, block_size) == reference_matrix.get(i, j));
+    }
+  }
 }
 
 }  // namespace modle::test::cmatrix
