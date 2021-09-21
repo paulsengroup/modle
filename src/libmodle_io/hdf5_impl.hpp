@@ -62,9 +62,9 @@ hsize_t write_str(const S &str_, const H5::DataSet &dataset, const H5::StrType &
   static_assert(std::is_constructible_v<S, H5std_string>,
                 "S should be a type that can be used to construct a std::string.");
   H5::Exception::dontPrint();
-  constexpr hsize_t RANK{1};  // i.e. number of dimensions
-  constexpr hsize_t BUFF_SIZE{1};
-  constexpr hsize_t MAXDIMS{H5S_UNLIMITED};  // extensible dataset
+  const hsize_t RANK{1};  // i.e. number of dimensions
+  const hsize_t BUFF_SIZE{1};
+  const hsize_t MAXDIMS{H5S_UNLIMITED};  // extensible dataset
 
   const auto &str = [&]() {  // This is mostly useful to allow std::string_view to be passed in
     if constexpr (std::is_convertible_v<S, H5std_string>) {
@@ -96,11 +96,11 @@ hsize_t write_str(const S &str_, const H5::DataSet &dataset, const H5::StrType &
     dataset.write(buff, str_type, mem_space, file_space);
 
     return file_size;
-  } catch ([[maybe_unused]] const H5::Exception &e) {
+  } catch (const H5::Exception &e) {
     throw std::runtime_error(
         fmt::format(FMT_STRING("The following error occurred while writing strings '{}' to dataset "
-                               "'{}' at offset {}:\n{}"),
-                    str, dataset.getObjName(), file_offset, construct_error_stack()));
+                               "'{}' at offset {}: {}"),
+                    str, dataset.getObjName(), file_offset, construct_error_stack(e)));
   }
 }
 
@@ -124,9 +124,9 @@ hsize_t write_number(N &num, const H5::DataSet &dataset, hsize_t file_offset) {
   static_assert(std::is_arithmetic_v<N>, "num should be a numeric type.");
   H5::Exception::dontPrint();
 
-  constexpr hsize_t RANK{1};
-  constexpr hsize_t MAXDIMS{H5S_UNLIMITED};
-  constexpr hsize_t BUFF_SIZE{1};
+  const hsize_t RANK{1};
+  const hsize_t MAXDIMS{H5S_UNLIMITED};
+  const hsize_t BUFF_SIZE{1};
 
   try {
     const auto mem_space{H5::DataSpace(RANK, &BUFF_SIZE, &MAXDIMS)};
@@ -139,11 +139,11 @@ hsize_t write_number(N &num, const H5::DataSet &dataset, hsize_t file_offset) {
     dataset.write(&num, getH5_type<N>(), mem_space, file_space);
 
     return file_size;
-  } catch ([[maybe_unused]] const H5::Exception &e) {
+  } catch (const H5::Exception &e) {
     throw std::runtime_error(
         fmt::format(FMT_STRING("The following error occurred while writing number {} to dataset "
-                               "'{}' at offset {}:\n{}"),
-                    num, dataset.getObjName(), file_offset, construct_error_stack()));
+                               "'{}' at offset {}: {}"),
+                    num, dataset.getObjName(), file_offset, construct_error_stack(e)));
   }
 }
 
@@ -159,8 +159,8 @@ hsize_t write_numbers(CN &numbers, const H5::DataSet &dataset, hsize_t file_offs
   H5::Exception::dontPrint();
 
   using N = std::remove_pointer_t<decltype(numbers.data())>;
-  constexpr hsize_t RANK{1};
-  constexpr hsize_t MAXDIMS{H5S_UNLIMITED};
+  const hsize_t RANK{1};
+  const hsize_t MAXDIMS{H5S_UNLIMITED};
   const auto num_type = getH5_type<N>();
   const hsize_t BUFF_SIZE{numbers.size()};
 
@@ -175,12 +175,12 @@ hsize_t write_numbers(CN &numbers, const H5::DataSet &dataset, hsize_t file_offs
     dataset.write(numbers.data(), getH5_type<N>(), mem_space, file_space);
 
     return file_size;
-  } catch ([[maybe_unused]] const H5::Exception &e) {
+  } catch (const H5::Exception &e) {
     throw std::runtime_error(fmt::format(
         FMT_STRING(
             "The following error occurred while writing a collection of {} numbers to dataset "
-            "'{}' at offset {}:\n{}"),
-        numbers.size(), file_offset, dataset.getObjName(), construct_error_stack()));
+            "'{}' at offset {}: {}"),
+        numbers.size(), file_offset, dataset.getObjName(), construct_error_stack(e)));
   }
 }
 
@@ -188,8 +188,8 @@ template <typename N>
 hsize_t read_number(const H5::DataSet &dataset, N &buff, hsize_t file_offset) {
   static_assert(std::is_integral<N>::value, "I should be a numeric type.");
   H5::Exception::dontPrint();
-  constexpr hsize_t DIMS = 1;
-  constexpr hsize_t RANK = 1;
+  const hsize_t DIMS = 1;
+  const hsize_t RANK = 1;
   try {
     auto mem_space{H5::DataSpace(RANK, &DIMS)};
 
@@ -201,11 +201,11 @@ hsize_t read_number(const H5::DataSet &dataset, N &buff, hsize_t file_offset) {
 
     return file_offset + 1;
 
-  } catch ([[maybe_unused]] const H5::Exception &e) {
-    throw std::runtime_error(fmt::format(FMT_STRING("Failed to read a number from dataset '{}' "
-                                                    "at offset {} using a buffer size of 1:\n{}"),
+  } catch (const H5::Exception &e) {
+    throw std::runtime_error(fmt::format(FMT_STRING("Failed to read a number from dataset \"{}\" "
+                                                    "at offset {} using a buffer size of 1: {}"),
                                          dataset.getObjName(), file_offset,
-                                         construct_error_stack()));
+                                         construct_error_stack(e)));
   }
 }
 
@@ -219,7 +219,7 @@ hsize_t read_numbers(const H5::DataSet &dataset, CN &buff, hsize_t file_offset) 
   using N = std::remove_pointer_t<decltype(buff.data())>;
   H5::Exception::dontPrint();
 
-  constexpr hsize_t RANK{1};  // i.e. number of dimensions
+  const hsize_t RANK{1};  // i.e. number of dimensions
   hsize_t BUFF_SIZE{buff.size()};
 
   try {
@@ -236,12 +236,12 @@ hsize_t read_numbers(const H5::DataSet &dataset, CN &buff, hsize_t file_offset) 
     dataset.read(buff.data(), getH5_type<N>(), mem_space, file_space);
 
     return file_offset + BUFF_SIZE;
-  } catch ([[maybe_unused]] const H5::Exception &e) {
+  } catch (const H5::Exception &e) {
     throw std::runtime_error(
-        fmt::format(FMT_STRING("Failed to read numbers from dataset '{}' at offset {} using a "
-                               "buffer size of {} ({} bytes):\n{}"),
+        fmt::format(FMT_STRING("Failed to read numbers from dataset \"{}\" at offset {} using a "
+                               "buffer of size {} ({} bytes): {}"),
                     dataset.getObjName(), file_offset, BUFF_SIZE, BUFF_SIZE * sizeof(N),
-                    construct_error_stack()));
+                    construct_error_stack(e)));
   }
 }
 

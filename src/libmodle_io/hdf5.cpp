@@ -38,7 +38,7 @@
 
 namespace modle::hdf5 {
 
-std::string construct_error_stack() {
+std::string construct_error_stack(std::string_view function_name, std::string_view detail_msg) {
   std::string buff;
   auto fp = std::unique_ptr<FILE, decltype(&fclose)>(std::tmpfile(), &fclose);
   if (fp) {  // TODO: Make this portable
@@ -46,36 +46,43 @@ std::string construct_error_stack() {
     fseek(fp.get(), 0L, SEEK_END);
     const auto buff_capacity = ftell(fp.get());
     if (buff_capacity < 0) {
-      throw std::runtime_error(
-          "h5pp::construct_error_stack(): unable to determine buffer size required to store an "
-          "error message");
+      return "hdf5::construct_error_stack(): unable to determine buffer size required to store an "
+             "error message";
     }
     auto buff_size = static_cast<size_t>(buff_capacity);
     buff.resize(buff_size);
     if (fseek(fp.get(), 0L, SEEK_SET) != 0) {
-      throw std::runtime_error(
-          "h5pp::construct_error_stack(): failed to seek to the beginning to a temporary file");
+      return "hdf5::construct_error_stack(): failed to seek to the beginning to a temporary file";
     }
     /* Read the entire file into memory. */
     buff_size = fread(buff.data(), sizeof(char), buff_size, fp.get());
     buff.resize(buff_size);
     if (ferror(fp.get()) != 0) {
-      throw std::runtime_error(
-          "h5pp::construct_error_stack(): failed to read error message from temporary file");
+      return "hdf5::construct_error_stack(): failed to read error message from temporary file";
     }
   } else {
-    throw std::runtime_error("h5pp::construct_error_stack(): unable to create temporary file");
+    return "hdf5::construct_error_stack(): unable to create temporary file";
   }
   H5::Exception::clearErrorStack();
-  return buff;
+
+  if (!function_name.empty()) {
+    assert(!detail_msg.empty());  // NOLINT
+    return fmt::format(FMT_STRING("function \"{}\" failed with message \"{}\":\nError stack:\n{}"),
+                       function_name, detail_msg, buff.empty() ? "Not available" : buff);
+  }
+  return fmt::format(FMT_STRING("Error stack: {}"), buff);
+}
+
+std::string construct_error_stack(const H5::Exception &e) {
+  return construct_error_stack(e.getFuncName(), e.getDetailMsg());
 }
 
 hsize_t read_str(const H5::DataSet &dataset, std::string &buff, hsize_t file_offset) {
   try {
     H5::Exception::dontPrint();
 
-    constexpr hsize_t DIMS{1};
-    constexpr hsize_t RANK{1};
+    const hsize_t DIMS{1};
+    const hsize_t RANK{1};
 
     auto type = dataset.getDataType();
     auto file_space = dataset.getSpace();
@@ -100,8 +107,8 @@ hsize_t read_strings(const H5::DataSet &dataset, std::vector<std::string> &buff,
                      hsize_t file_offset) {
   try {
     H5::Exception::dontPrint();
-    constexpr hsize_t DIMS = 1;
-    constexpr hsize_t RANK = 1;
+    const hsize_t DIMS = 1;
+    const hsize_t RANK = 1;
     auto type = dataset.getDataType();
     auto file_space = dataset.getSpace();
 

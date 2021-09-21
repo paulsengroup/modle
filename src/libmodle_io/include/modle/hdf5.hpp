@@ -31,7 +31,10 @@ inline H5::PredType getH5_type();
 
 [[nodiscard]] H5::StrType METADATA_STR_TYPE();
 
-[[nodiscard]] std::string construct_error_stack();
+[[nodiscard]] std::string construct_error_stack(std::string_view function_name = "",
+                                                std::string_view detail_msg = "");
+
+[[nodiscard]] std::string construct_error_stack(const H5::Exception &e);
 
 template <typename S>
 [[nodiscard]] inline hsize_t write_str(const S &str, const H5::DataSet &dataset,

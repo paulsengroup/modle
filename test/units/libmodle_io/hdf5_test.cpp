@@ -38,10 +38,10 @@ static const auto MAX_STR_LENGTH = 32UL;
 }
 
 inline H5::DataSet init_test_str_dataset(H5::H5File& f, std::string_view path = "/test") {
-  constexpr hsize_t rank{1};
-  constexpr hsize_t chunk_dims{1024};
+  const hsize_t rank{1};
+  const hsize_t chunk_dims{1024};
   const H5std_string fill_var{"\0"};  // NOLINT bugprone-string-literal-with-embedded-nul
-  constexpr hsize_t max_dims{H5S_UNLIMITED};
+  const hsize_t max_dims{H5S_UNLIMITED};
   const auto str_type{init_str_type()};
 
   H5::DSetCreatPropList cprop{};
@@ -55,10 +55,10 @@ inline H5::DataSet init_test_str_dataset(H5::H5File& f, std::string_view path = 
 }
 
 inline H5::DataSet init_test_int64_dataset(H5::H5File& f, std::string_view path = "/test") {
-  constexpr hsize_t rank{1};
-  constexpr hsize_t chunk_dims{1024};
+  const hsize_t rank{1};
+  const hsize_t chunk_dims{1024};
   constexpr int64_t fill_var{0};
-  constexpr hsize_t max_dims{H5S_UNLIMITED};
+  const hsize_t max_dims{H5S_UNLIMITED};
 
   H5::DSetCreatPropList cprop{};
   cprop.setChunk(rank, &chunk_dims);
