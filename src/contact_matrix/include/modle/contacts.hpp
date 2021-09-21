@@ -10,6 +10,7 @@
 #include <boost/dynamic_bitset/dynamic_bitset.hpp>  // for dynamic_bitset
 #include <cstddef>                                  // for size_t
 #include <cstdint>                                  // for uint64_t, uint32_t
+#include <iostream>                                 // for cout
 #include <mutex>                                    // for mutex
 #include <type_traits>                              // for enable_if_t
 #include <utility>                                  // for pair
@@ -34,7 +35,8 @@ class ContactMatrix {
   inline ContactMatrix(ContactMatrix<I>&& other) noexcept = default;
 #endif
   inline ContactMatrix(const ContactMatrix<I>& other);
-  inline ContactMatrix(size_t nrows, size_t ncols, bool fill_with_random_numbers = false);
+  inline ContactMatrix(size_t nrows, size_t ncols, bool fill_with_random_numbers = false,
+                       uint64_t seed = 8336046165695760686);
   template <typename I2, typename = std::enable_if_t<std::is_integral_v<I2>>>
   inline ContactMatrix(I2 length, I2 diagonal_width, I2 bin_size,
                        bool fill_with_random_numbers = false);
@@ -85,8 +87,10 @@ class ContactMatrix {
       noexcept(utils::ndebug_defined());
 
   // Debug
-  inline void print(bool full = false) const;
+  inline void print(std::ostream& out_stream = std::cout, bool full = false) const;
+  inline void print(bool full) const;
   [[nodiscard]] inline std::vector<std::vector<I>> generate_symmetric_matrix() const;
+  inline void import_from_txt(const boost::filesystem::path& path, char sep = '\t');
 
   // Mask operations
   inline void generate_mask_for_bins_without_contacts(boost::dynamic_bitset<>& mask) const;
@@ -104,6 +108,8 @@ class ContactMatrix {
   inline void compute_row_wise_contact_histogram(std::vector<uint64_t>& buff) const;
   [[nodiscard]] inline std::vector<uint64_t> compute_row_wise_contact_histogram() const;
   inline void deplete_contacts(double depletion_multiplier = 1.0);
+
+  using value_type = I;
 
  private:
   uint64_t _nrows{0};

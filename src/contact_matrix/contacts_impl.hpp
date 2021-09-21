@@ -9,6 +9,7 @@
 #include <cpp-sort/sorter_facade.h>       // for sorter_facade
 #include <cpp-sort/sorters/ska_sorter.h>  // for ska_sort, ska_sorter
 #include <fmt/format.h>                   // for FMT_STRING, join
+#include <fmt/ostream.h>
 
 #include <algorithm>                                // for clamp, min, fill, equal_range
 #include <atomic>                                   // for memory_order_relaxed
@@ -17,6 +18,7 @@
 #include <cmath>                                    // for round
 #include <cstddef>                                  // for size_t
 #include <cstdint>                                  // for uint64_t, int64_t
+#include <iostream>                                 // for cout
 #include <limits>                                   // for numeric_limits
 #include <mutex>                                    // for mutex
 #include <numeric>                                  // for accumulate
@@ -51,16 +53,18 @@ ContactMatrix<I>::ContactMatrix(const ContactMatrix<I> &other)
       _locks(other._locks.size()) {}
 
 template <typename I>
-ContactMatrix<I>::ContactMatrix(size_t nrows, size_t ncols, bool fill_with_random_numbers)
+ContactMatrix<I>::ContactMatrix(size_t nrows, size_t ncols, bool fill_with_random_numbers,
+                                uint64_t seed)
     : _nrows(std::min(nrows, ncols)),
       _ncols(ncols),
       _contacts(_nrows * _ncols + 1, 0),
       _locks(_ncols) {
   if (fill_with_random_numbers) {
-    auto rand_eng = random::PRNG(1234567890ULL);
-    random::uniform_int_distribution<I> dist{0, (std::numeric_limits<I>::max)()};
-    for (auto i = 0UL; i < _ncols; ++i) {
-      for (auto j = i; j < i + _nrows && j < _ncols; ++j) {
+    auto rand_eng = random::PRNG(seed);
+    random::uniform_int_distribution<I> dist{0,
+                                             std::min(I(65553), (std::numeric_limits<I>::max)())};
+    for (size_t i = 0; i < _ncols; ++i) {
+      for (size_t j = i; j < i + _nrows && j < _ncols; ++j) {
         this->set(i, j, dist(rand_eng));
       }
     }
@@ -170,8 +174,8 @@ I ContactMatrix<I>::get(size_t row, size_t col, size_t block_size) const
 
   // Edges are handled like shown here: https://en.wikipedia.org/wiki/File:Extend_Edge-Handling.png
   const auto bs = static_cast<int64_t>(block_size);
-  const auto first_row = static_cast<int64_t>(row) - ((bs - 1) / 2);
-  const auto first_col = static_cast<int64_t>(col) - ((bs - 1) / 2);
+  const auto first_row = static_cast<int64_t>(row) - (bs / 2);
+  const auto first_col = static_cast<int64_t>(col) - (bs / 2);
   I n{0};
   for (auto i = first_row; i < first_row + bs; ++i) {
     for (auto j = first_col; j < first_col + bs; ++j) {
@@ -525,7 +529,7 @@ constexpr double ContactMatrix<I>::get_matrix_size_in_mb() const noexcept(utils:
 }
 
 template <typename I>
-void ContactMatrix<I>::print(bool full) const {
+void ContactMatrix<I>::print(std::ostream &out_stream, bool full) const {
   if (full) {
     std::vector<I> row(this->_ncols, 0);
     for (size_t y = 0; y < this->_ncols; ++y) {
@@ -543,17 +547,23 @@ void ContactMatrix<I>::print(bool full) const {
           row[x] = this->at(i, j);
         }
       }
-      fmt::print(FMT_STRING("{}\n"), fmt::join(row, "\t"));
+      fmt::print(out_stream, FMT_STRING("{}\n"), fmt::join(row, "\t"));
     }
   } else {
     std::vector<I> row(this->ncols());
     for (auto i = 0UL; i < this->nrows(); ++i) {
-      for (auto j = 0UL; j < this->ncols(); ++j) {
+      for (auto j = i; j < this->ncols(); ++j) {
         row[j] = this->at(i, j);
       }
-      fmt::print(FMT_STRING("{}\n"), fmt::join(row, "\t"));
+      fmt::print(out_stream, FMT_STRING("{}\n"), fmt::join(row, "\t"));
     }
   }
+  out_stream << std::flush;
+}
+
+template <typename I>
+void ContactMatrix<I>::print(bool full) const {
+  this->print(std::cout, full);
 }
 
 template <typename I>
@@ -577,6 +587,28 @@ std::vector<std::vector<I>> ContactMatrix<I>::generate_symmetric_matrix() const 
     m.emplace_back(std::move(row));
   }
   return m;
+}
+
+template <typename I>
+void ContactMatrix<I>::import_from_txt(const boost::filesystem::path &path, const char sep) {
+  assert(boost::filesystem::exists(path));  // NOLINT
+  std::ifstream fp(path.string());
+
+  std::string buff;
+  std::vector<std::string_view> toks;
+  size_t i = 0;
+  while (std::getline(fp, buff)) {
+    toks = absl::StrSplit(buff, sep);
+    if (i == 0) {
+      this->resize(toks.size(), toks.size());
+      this->reset();
+    }
+    for (size_t j = i; j < this->ncols(); ++j) {
+      this->set(i, j, utils::parse_numeric_or_throw<I>(toks[j]));
+    }
+    ++i;
+  }
+  assert(i != 0);  // NOLINT guard against empty files
 }
 
 template <typename I>
