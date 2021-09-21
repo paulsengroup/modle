@@ -164,7 +164,7 @@ TEST_CASE("Reader plain - readall", "[io][reader][long]") {
   const auto buff1 = modle::compressed_io::Reader(ptext_file).readall();
 
   const auto buff2 = [&]() {
-    std::ifstream fp(ptext_file, std::ios::ate);
+    std::ifstream fp(ptext_file.string(), std::ios::ate);
     const auto size = fp.tellg();
     fp.seekg(0, std::ios::beg);
     std::string buff(static_cast<size_t>(size), '\0');
