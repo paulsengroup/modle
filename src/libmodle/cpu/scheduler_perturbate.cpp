@@ -489,7 +489,9 @@ void Simulation::simulate_window(Simulation::State& state, compressed_io::Writer
         const auto feat2_rel_bin = feat2_rel_center_pos / this->bin_size;
 
         const auto contacts = state.contacts->get(feat1_rel_bin, feat2_rel_bin, this->block_size);
-        if (contacts == 0) {  // Don't output entries with 0 contacts
+        const auto reference_contacts =
+            state.reference_contacts->get(feat1_rel_bin, feat2_rel_bin, this->block_size);
+        if (contacts == 0 && reference_contacts == 0) {  // Don't output entries with 0 contacts
           continue;
         }
 
@@ -497,10 +499,14 @@ void Simulation::simulate_window(Simulation::State& state, compressed_io::Writer
         const auto feat1_abs_bin = feat1_abs_center_pos / this->bin_size;
         const auto feat2_abs_bin = feat2_abs_center_pos / this->bin_size;
 
-        const auto reference_contacts =
-            state.reference_contacts->get(feat1_rel_bin, feat2_rel_bin, this->block_size);
-        const auto score = std::min(999.0, std::log2(static_cast<double>(contacts) /
-                                                     static_cast<double>(reference_contacts)));
+        const auto score = [&]() {
+          const double hi = 999;
+          if (reference_contacts == 0) {
+            return hi;
+          }
+          return std::min(hi, std::log2(static_cast<double>(contacts) /
+                                        static_cast<double>(reference_contacts)));
+        }();
 
         const auto significance = math::binomial_test(contacts, reference_contacts + contacts);
 
