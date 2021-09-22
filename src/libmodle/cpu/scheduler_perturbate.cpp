@@ -103,7 +103,9 @@ void Simulation::run_perturbate() {
   std::mutex out_stream_mutex;
   std::mutex cooler_mutex;
 
-  auto out_bedpe_stream = compressed_io::Writer(this->path_to_output_file_bedpe);
+  const auto write_bedpe_to_stdout = this->path_to_output_file_bedpe.empty();
+  auto out_bedpe_file = std::ofstream(this->path_to_output_file_bedpe.string(),
+                                      std::ios_base::binary | std::ios_base::app);
   auto out_task_stream = compressed_io::Writer(this->path_to_task_file);
 
   cooler::Cooler reference_cooler(this->path_to_reference_contacts, cooler::Cooler::READ_ONLY,
@@ -137,18 +139,28 @@ void Simulation::run_perturbate() {
       "window_end\t"
       "task_id\n"};
     // clang-format on
-    if (out_bedpe_stream) {
-      out_bedpe_stream.write(header);
-    } else {
-      fmt::print(stdout, FMT_STRING("{}"), header);
-    }
+    fmt::print(write_bedpe_to_stdout ? std::cout : out_bedpe_file, FMT_STRING("{}"), header);
   }
 
   try {
     this->_tpool.reset(this->nthreads);
     for (uint64_t tid = 0; tid < this->nthreads; ++tid) {  // Start simulation threads
       this->_tpool.push_task([&, tid]() {
-        this->perturbate_worker(tid, task_queue, out_bedpe_stream, out_stream_mutex, cooler_mutex);
+        auto tmp_output_path = this->path_to_output_file_bedpe;
+        tmp_output_path.replace_extension(
+            fmt::format(FMT_STRING("{}{}"), tid, tmp_output_path.extension().string()));
+        this->perturbate_worker(tid, task_queue, tmp_output_path, cooler_mutex);
+
+        if (!this->path_to_output_file_bedpe.empty()) {
+          if (this->ok()) {
+            auto tmp_output = std::ifstream(tmp_output_path.string(), std::ios_base::binary);
+            std::scoped_lock<std::mutex> lck(out_stream_mutex);
+            out_bedpe_file << tmp_output.rdbuf();
+          }
+          if (boost::filesystem::exists(tmp_output_path)) {
+            boost::filesystem::remove(tmp_output_path);
+          }
+        }
       });
     }
 
@@ -341,7 +353,7 @@ void Simulation::run_perturbate() {
 
 void Simulation::perturbate_worker(
     const uint64_t tid, moodycamel::BlockingConcurrentQueue<Simulation::TaskPW>& task_queue,
-    compressed_io::Writer& out_stream, std::mutex& out_stream_mutex, std::mutex& cooler_mutex,
+    const boost::filesystem::path& output_path, std::mutex& cooler_mutex,
     const size_t task_batch_size) {
   spdlog::info(FMT_STRING("Spawning simulation thread {}..."), tid);
   moodycamel::ConsumerToken ctok(task_queue);
@@ -351,6 +363,7 @@ void Simulation::perturbate_worker(
   Simulation::State local_state{};
   auto local_contacts = std::make_shared<ContactMatrix<contacts_t>>();
   local_state.contacts = std::make_shared<ContactMatrix<contacts_t>>();
+  compressed_io::Writer tmp_output_bedpe(output_path);
 
   try {
     while (this->ok()) {  // Try to dequeue a batch of tasks
@@ -383,7 +396,7 @@ void Simulation::perturbate_worker(
         assert(local_state.contacts->nrows() == local_state.reference_contacts->nrows());  // NOLINT
         assert(local_state.contacts->ncols() == local_state.reference_contacts->ncols());  // NOLINT
 
-        Simulation::simulate_window(local_state, out_stream, out_stream_mutex, cooler_mutex);
+        Simulation::simulate_window(local_state, tmp_output_bedpe, cooler_mutex);
       }
     }
   } catch (const std::exception& e) {
@@ -401,8 +414,7 @@ void Simulation::perturbate_worker(
 }
 
 void Simulation::simulate_window(Simulation::State& state, compressed_io::Writer& out_stream,
-                                 std::mutex& out_stream_mutex, std::mutex& cooler_mutex,
-                                 bool write_contacts_to_cooler) const {
+                                 std::mutex& cooler_mutex, bool write_contacts_to_cooler) const {
   spdlog::info(FMT_STRING("Processing {}[{}-{}]; outer_window=[{}-{}]; deletion=[{}-{}];"),
                state.chrom->name(), state.active_window_start, state.active_window_end,
                state.window_start, state.window_end, state.deletion_begin,
@@ -514,9 +526,7 @@ void Simulation::simulate_window(Simulation::State& state, compressed_io::Writer
         // a name
         const auto name = absl::StrCat(feat1.name.empty() ? "none" : feat1.name, ";",
                                        feat2.name.empty() ? "none" : feat2.name);
-        absl::StrAppend(  // Append a BEDPE record to the local buffer
-            &out_buffer,
-            fmt::format(  // clang-format off
+        out_buffer = fmt::format(  // clang-format off
                 FMT_COMPILE("{}\t{}\t{}\t"
                             "{}\t{}\t{}\t"
                             "{}\t{:.4G}\t{}\t"
@@ -532,19 +542,15 @@ void Simulation::simulate_window(Simulation::State& state, compressed_io::Writer
                 significance, state.deletion_begin, state.deletion_begin + state.deletion_size,
                 num_active_barriers, state.barriers.size(), state.active_window_start,
                 state.active_window_end, state.window_start, state.window_end,
-                state.id));
+                state.id);
         // clang-format on
+        // Write the buffer to the appropriate stream
+        if (write_to_stdout) {
+          fmt::print(std::cout, FMT_STRING("{}"), out_buffer);
+        } else {
+          out_stream.write(out_buffer);
+        }
       }
-    }
-
-    // Write the buffer to the appropriate stream
-    if (!out_buffer.empty()) {
-      if (std::scoped_lock l(out_stream_mutex); write_to_stdout) {
-        fmt::print(stdout, FMT_STRING("{}"), out_buffer);
-      } else {
-        out_stream.write(out_buffer);
-      }
-      out_buffer.clear();
     }
   }
 

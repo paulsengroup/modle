@@ -111,7 +111,6 @@ void Simulation::replay_worker(const uint64_t tid,
   Simulation::State local_state{};
   local_state.contacts = std::make_shared<ContactMatrix<contacts_t>>();
   compressed_io::Writer null_stream{};
-  std::mutex null_mutex{};
 
   try {
     while (this->ok()) {  // Try to dequeue a batch of tasks
@@ -141,7 +140,7 @@ void Simulation::replay_worker(const uint64_t tid,
         local_state.contacts->resize(local_state.window_end - local_state.window_start,
                                      this->diagonal_width, this->bin_size);
 
-        Simulation::simulate_window(local_state, null_stream, null_mutex, cooler_mutex, true);
+        Simulation::simulate_window(local_state, null_stream, cooler_mutex, true);
       }
     }
   } catch (const std::exception& e) {
