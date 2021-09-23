@@ -141,8 +141,7 @@ void Simulation::run_perturbate() {
     if (write_bedpe_to_stdout) {
       fmt::print(FMT_STRING("{}"), header);
     } else {
-      compressed_io::Writer out_bedpe_stream(this->path_to_output_file_bedpe);
-      out_task_stream.write(header);
+      compressed_io::Writer(this->path_to_output_file_bedpe).write(header);
     }
   }
 
