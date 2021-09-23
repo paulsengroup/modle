@@ -145,8 +145,14 @@ void Simulation::run_perturbate() {
     }
   }
 
-  auto out_bedpe_file = std::ofstream(this->path_to_output_file_bedpe.string(),
-                                      std::ios_base::binary | std::ios_base::ate);
+  auto out_bedpe_file = std::ofstream(
+      this->path_to_output_file_bedpe.string(),
+      std::ios_base::binary | std::ios_base::in | std::ios_base::out | std::ios_base::ate);
+
+  if (!out_bedpe_file) {
+    throw fmt::system_error(errno, FMT_STRING("Failed to open file {} for writing"),
+                            this->path_to_output_file_bedpe);
+  }
 
   try {
     this->_tpool.reset(this->nthreads);
