@@ -39,7 +39,7 @@ ContactMatrix<N>::ContactMatrix(ContactMatrix<N> &&other) noexcept
     : _nrows(other.nrows()),
       _ncols(other.ncols()),
       _contacts(std::move(other._contacts)),
-      _mtexes(_ncols),
+      _mtxes(_ncols),
       _tot_contacts(other.get_tot_contacts()),
       _updates_missed(other.get_n_of_missed_updates()) {}
 
@@ -107,7 +107,6 @@ ContactMatrix<N> &ContactMatrix<N>::operator=(ContactMatrix<N> &&other) noexcept
   if (this == &other) {
     return *this;
   }
-  _mtx = std::move(other._mtx);
   _nrows = other.nrows();
   _ncols = other.ncols();
   _contacts = std::move(other._contacts);
