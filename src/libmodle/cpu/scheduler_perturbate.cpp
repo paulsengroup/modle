@@ -104,8 +104,6 @@ void Simulation::run_perturbate() {
   std::mutex cooler_mutex;
 
   const auto write_bedpe_to_stdout = this->path_to_output_file_bedpe.empty();
-  auto out_bedpe_file = std::ofstream(this->path_to_output_file_bedpe.string(),
-                                      std::ios_base::binary | std::ios_base::app);
   auto out_task_stream = compressed_io::Writer(this->path_to_task_file);
 
   cooler::Cooler reference_cooler(this->path_to_reference_contacts, cooler::Cooler::READ_ONLY,
@@ -139,8 +137,17 @@ void Simulation::run_perturbate() {
       "window_end\t"
       "task_id\n"};
     // clang-format on
-    fmt::print(write_bedpe_to_stdout ? std::cout : out_bedpe_file, FMT_STRING("{}"), header);
+
+    if (write_bedpe_to_stdout) {
+      fmt::print(FMT_STRING("{}"), header);
+    } else {
+      compressed_io::Writer out_bedpe_stream(this->path_to_output_file_bedpe);
+      out_task_stream.write(header);
+    }
   }
+
+  auto out_bedpe_file = std::ofstream(this->path_to_output_file_bedpe.string(),
+                                      std::ios_base::binary | std::ios_base::app);
 
   try {
     this->_tpool.reset(this->nthreads);
@@ -440,7 +447,7 @@ void Simulation::simulate_window(Simulation::State& state, compressed_io::Writer
 
   const auto write_to_stdout = out_stream.path().empty();
 
-  std::string out_buffer;
+  auto out_buffer = fmt::memory_buffer();
   std::string barrier_str_buff;
   // Figure out whether we are processing the first or last window and compute the partition
   // point
@@ -526,7 +533,7 @@ void Simulation::simulate_window(Simulation::State& state, compressed_io::Writer
         // a name
         const auto name = absl::StrCat(feat1.name.empty() ? "none" : feat1.name, ";",
                                        feat2.name.empty() ? "none" : feat2.name);
-        out_buffer = fmt::format(  // clang-format off
+        fmt::format_to(std::back_inserter(out_buffer),  // clang-format off
                 FMT_COMPILE("{}\t{}\t{}\t"
                             "{}\t{}\t{}\t"
                             "{}\t{:.4G}\t{}\t"
@@ -545,11 +552,13 @@ void Simulation::simulate_window(Simulation::State& state, compressed_io::Writer
                 state.id);
         // clang-format on
         // Write the buffer to the appropriate stream
+        const std::string_view out_buffer_view{out_buffer.data(), out_buffer.size()};
         if (write_to_stdout) {
-          fmt::print(std::cout, FMT_STRING("{}"), out_buffer);
+          fmt::print(FMT_STRING("{}"), out_buffer_view);
         } else {
-          out_stream.write(out_buffer);
+          out_stream.write(out_buffer_view);
         }
+        out_buffer.clear();
       }
     }
   }
