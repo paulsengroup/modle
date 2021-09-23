@@ -523,12 +523,19 @@ void Simulation::simulate_window(Simulation::State& state, compressed_io::Writer
         const auto feat2_abs_bin = feat2_abs_center_pos / this->bin_size;
 
         const auto score = [&]() {
+          const double lo = -999;
           const double hi = 999;
           if (reference_contacts == 0) {
+            assert(contacts > 0);  // NOLINT
             return hi;
           }
-          return std::min(hi, std::log2(static_cast<double>(contacts) /
-                                        static_cast<double>(reference_contacts)));
+          if (contacts == 0) {
+            assert(reference_contacts > 0);  // NOLINT
+            return lo;
+          }
+          return std::clamp(
+              std::log2(static_cast<double>(contacts) / static_cast<double>(reference_contacts)),
+              lo, hi);
         }();
 
         const auto significance = math::binomial_test(contacts, reference_contacts + contacts);
