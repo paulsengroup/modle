@@ -124,8 +124,8 @@ Cooler::~Cooler() {
         auto chrom_idx_offset = this->_dataset_file_offsets[IDX_CHR];
         auto bin1_idx_offset = this->_dataset_file_offsets[IDX_BIN1];
 
-        hsize_t buff;  // NOLINT
         if (chrom_idx_offset != 0) {
+          decltype(this->_nbins) buff;  // NOLINT
           (void)hdf5::read_number(chrom_idx, buff, chrom_idx_offset - 1);
           if (buff != this->_nbins) {
             assert(buff < this->_nbins);  // NOLINT
@@ -133,6 +133,7 @@ Cooler::~Cooler() {
           }
         }
         if (bin1_idx_offset != 0) {
+          decltype(this->_nnz) buff;  // NOLINT
           (void)hdf5::read_number(bin1_idx, buff, bin1_idx_offset - 1);
           if (buff != this->_nnz) {
             assert(buff < this->_nnz);  // NOLINT

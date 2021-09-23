@@ -137,8 +137,8 @@ void Simulation::replay_worker(const uint64_t tid,
         assert(local_state.contacts);    // NOLINT
 
         local_state = task;  // Set simulation local_state based on task data
-        local_state.contacts->resize(local_state.window_end - local_state.window_start,
-                                     this->diagonal_width, this->bin_size);
+        local_state.contacts->unsafe_resize(local_state.window_end - local_state.window_start,
+                                            this->diagonal_width, this->bin_size);
 
         Simulation::simulate_window(local_state, null_stream, cooler_mutex, true);
       }

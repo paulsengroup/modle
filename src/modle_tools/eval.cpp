@@ -498,7 +498,7 @@ void eval_subcmd(const modle::tools::eval_config &c) {
 
     auto cmatrix1 = ref_cooler.cooler_to_cmatrix(chrom_name, nrows, chrom_subrange);
     if (c.deplete_contacts_from_reference) {
-      cmatrix1.deplete_contacts(c.depletion_multiplier);
+      cmatrix1.unsafe_deplete_contacts(c.depletion_multiplier);
     }
     spdlog::info(FMT_STRING("Read {:.2f}M contacts for a {}x{} reference matrix in {} using "
                             "{:.2f} MB of RAM."),

@@ -11,16 +11,16 @@
 
 #include <boost/filesystem/path.hpp>  // for path
 #include <boost/type_traits.hpp>
-#include <cstddef>      // for size_t
-#include <cstdint>      // for uint64_t, uint8_t, uint32_t
-#include <iterator>     // for iterator_traits
-#include <limits>       // for numeric_limits
-#include <memory>       // for shared_ptr
-#include <mutex>        // for mutex
-#include <string>       // for string
-#include <string_view>  // for string_view
-#include <type_traits>  // for enable_if_t, remove_cv_t
-#include <vector>       // for vector
+#include <cstddef>       // for size_t
+#include <cstdint>       // for uint64_t, uint8_t, uint32_t
+#include <iterator>      // for iterator_traits
+#include <limits>        // for numeric_limits
+#include <memory>        // for shared_ptr
+#include <shared_mutex>  // for shared_mutex
+#include <string>        // for string
+#include <string_view>   // for string_view
+#include <type_traits>   // for enable_if_t, remove_cv_t
+#include <vector>        // for vector
 
 #include "modle/bed.hpp"                 // for BED (ptr only), BED_tree, BED_tree<>::value_type
 #include "modle/common/common.hpp"       // for bp_t, contacts_t
@@ -109,8 +109,10 @@ class Chromosome {
   bp_t _size{(std::numeric_limits<bp_t>::max)()};
   size_t _id{(std::numeric_limits<size_t>::max)()};
   IITree<bp_t, ExtrusionBarrier> _barriers{};
+  // Protect _contacts from concurrent writes and allocations/deallocations
+  std::shared_mutex _contacts_mtx{};
   std::shared_ptr<contact_matrix_t> _contacts{};
-  std::mutex _contacts_mutex{};  // Protect _contacts from concurrent allocations/deallocations
+
   std::vector<bed_tree_value_t> _features{};
   bool _ok{true};
 };

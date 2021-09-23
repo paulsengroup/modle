@@ -164,7 +164,7 @@ void Cooler::write_or_append_cmatrix_to_file(const ContactMatrix<I1> *cmatrix,
         spdlog::warn(
             FMT_STRING(
                 "Detected {} missed updates ({:.4f}% of the total number of contacts) for '{}'."),
-            n, 100.0 * cmatrix->get_fraction_of_missed_updates(), chrom_name);
+            n, 100.0 * cmatrix->unsafe_get_fraction_of_missed_updates(), chrom_name);
       }
       // Write chrom name and size
       chrom_name_h5_foffset =
@@ -221,7 +221,7 @@ void Cooler::write_or_append_cmatrix_to_file(const ContactMatrix<I1> *cmatrix,
           // contacts for a certain width along the diagonal). The second condition makes sure we
           // are not reading past the array end
           for (auto j = i; j < i + cmatrix->nrows() && j < cmatrix->ncols(); ++j) {
-            if (const auto m = cmatrix->get(i, j); m != 0) {  // Only write non-zero pixels
+            if (const auto m = cmatrix->unsafe_get(i, j); m != 0) {  // Only write non-zero pixels
               if constexpr (utils::ndebug_not_defined()) {
                 // Make sure we are always reading from the upper-triangle of the underlying square
                 // contact matrix
@@ -373,10 +373,10 @@ hsize_t Cooler::write_bins(I1 chrom_, I2 length_, I3 bin_size_, std::vector<int3
   int64_t end = std::min(length, bin_size);
   hsize_t bins_processed = 0;
   const int64_t nbins = (length + bin_size - 1) / bin_size;
-  const auto nchunks = static_cast<int64_t>((nbins + buff_size - 1) / buff_size);
+  const auto nchunks = (static_cast<hsize_t>(nbins) + buff_size - 1) / buff_size;
   auto &d = this->_datasets;
 
-  for (auto i = 0; i < nchunks; ++i) {
+  for (size_t i = 0; i < nchunks; ++i) {
     const auto chunk_size = std::min(buff_size, static_cast<hsize_t>(nbins) - bins_processed);
     if (chunk_size != buff_size) {
       buff32.resize(chunk_size);
@@ -399,7 +399,7 @@ hsize_t Cooler::write_bins(I1 chrom_, I2 length_, I3 bin_size_, std::vector<int3
   return file_offset;
 }
 
-template <class N, class>
+template <class N>
 ContactMatrix<N> Cooler::cooler_to_cmatrix(std::string_view chrom_name, size_t nrows,
                                            std::pair<size_t, size_t> chrom_boundaries,
                                            bool try_common_chrom_prefixes,
@@ -457,7 +457,7 @@ ContactMatrix<N> Cooler::cooler_to_cmatrix(std::string_view chrom_name, size_t n
                               prefer_using_balanced_counts);
 }
 
-template <class N, class>
+template <class N>
 ContactMatrix<N> Cooler::cooler_to_cmatrix(std::string_view chrom_name, size_t diagonal_width,
                                            size_t bin_size,
                                            std::pair<size_t, size_t> chrom_boundaries,
@@ -475,7 +475,7 @@ ContactMatrix<N> Cooler::cooler_to_cmatrix(std::string_view chrom_name, size_t d
                               prefer_using_balanced_counts);
 }
 
-template <class N, class>
+template <class N>
 ContactMatrix<N> Cooler::cooler_to_cmatrix(std::pair<hsize_t, hsize_t> bin_range,
                                            const std::vector<int64_t> &bin1_offset_idx,
                                            size_t nrows, double scaling_factor,
@@ -484,7 +484,7 @@ ContactMatrix<N> Cooler::cooler_to_cmatrix(std::pair<hsize_t, hsize_t> bin_range
                                     scaling_factor, prefer_using_balanced_counts);
 }
 
-template <class N, class>
+template <class N>
 ContactMatrix<N> Cooler::cooler_to_cmatrix(std::pair<hsize_t, hsize_t> bin_range,
                                            absl::Span<const int64_t> bin1_offset_idx, size_t nrows,
                                            double bias_scaling_factor,
@@ -521,7 +521,8 @@ ContactMatrix<N> Cooler::cooler_to_cmatrix(std::pair<hsize_t, hsize_t> bin_range
     bin2_BUFF.resize(buff_size);
     count_BUFF.resize(buff_size);
 
-    assert(file_offset + buff_size <= this->_idx_bin1_offset.back());  // NOLINT
+    assert(static_cast<int64_t>(file_offset + buff_size) <=
+           this->_idx_bin1_offset.back());  // NOLINT
     (void)hdf5::read_numbers(d[PXL_B1], bin1_BUFF, file_offset);
     (void)hdf5::read_numbers(d[PXL_B2], bin2_BUFF, file_offset);
     (void)hdf5::read_numbers(d[PXL_COUNT], count_BUFF, file_offset);

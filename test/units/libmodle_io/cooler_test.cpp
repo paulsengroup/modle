@@ -68,7 +68,7 @@ TEST_CASE("CMatrix to cooler", "[io][cooler][short]") {
   const uint64_t ncols = (end + bin_size - 1) / bin_size;
 
   ContactMatrix<> cmatrix1{};
-  cmatrix1.import_from_txt(input_file);
+  cmatrix1.unsafe_import_from_txt(input_file);
 
   Cooler(output_file, Cooler::WRITE_ONLY, bin_size, chrom.size())
       .write_or_append_cmatrix_to_file(cmatrix1, chrom, start, end, end);
@@ -77,7 +77,7 @@ TEST_CASE("CMatrix to cooler", "[io][cooler][short]") {
 
   for (size_t i = 0; i < ncols; ++i) {
     for (size_t j = 0; j < ncols; ++j) {
-      CHECK(cmatrix1.get(i, j) == cmatrix2.get(i, j));
+      CHECK(cmatrix1.unsafe_get(i, j) == cmatrix2.unsafe_get(i, j));
     }
   }
 
@@ -100,7 +100,7 @@ TEST_CASE("CMatrix to cooler - multiple chromosomes", "[io][cooler][short]") {
   const uint64_t ncols = (end + bin_size - 1) / bin_size;
 
   ContactMatrix<> cmatrix1{};
-  cmatrix1.import_from_txt(input_file);
+  cmatrix1.unsafe_import_from_txt(input_file);
 
   {
     auto c = Cooler(output_file, Cooler::WRITE_ONLY, bin_size, chrom1.size());
@@ -113,8 +113,8 @@ TEST_CASE("CMatrix to cooler - multiple chromosomes", "[io][cooler][short]") {
 
   for (size_t i = 0; i < ncols; ++i) {
     for (size_t j = 0; j < ncols; ++j) {
-      CHECK(cmatrix1.get(i, j) == cmatrix2.get(i, j));
-      CHECK(cmatrix1.get(i, j) == cmatrix3.get(i, j));
+      CHECK(cmatrix1.unsafe_get(i, j) == cmatrix2.unsafe_get(i, j));
+      CHECK(cmatrix1.unsafe_get(i, j) == cmatrix3.unsafe_get(i, j));
     }
   }
 
@@ -151,7 +151,7 @@ TEST_CASE("Cooler to CMatrix", "[io][cooler][short]") {
     std::transform(toks.begin(), toks.end(), reference_row.begin(),
                    [](const auto tok) { return utils::parse_numeric_or_throw<uint32_t>(tok); });
     for (size_t j = 0; j < cmatrix.ncols(); ++j) {
-      CHECK(cmatrix.get(i, j) == reference_row[j]);
+      CHECK(cmatrix.unsafe_get(i, j) == reference_row[j]);
     }
   }
 
@@ -184,8 +184,8 @@ TEST_CASE("Cooler to CMatrix and CMatrix to Cooler", "[io][cooler][short]") {
   auto c3 = Cooler(test_file_out, Cooler::READ_ONLY);
 
   const auto cmatrix2 = c3.cooler_to_cmatrix(chrom, nrows);
-  const auto& v1 = cmatrix1.get_raw_count_vector();
-  const auto& v2 = cmatrix2.get_raw_count_vector();
+  const auto v1 = cmatrix1.get_raw_count_vector();
+  const auto v2 = cmatrix2.get_raw_count_vector();
   REQUIRE(v1.size() == v2.size());
 
   size_t mismatches = 0;
@@ -237,7 +237,7 @@ TEST_CASE("Cooler to CMatrix and CMatrix to Cooler - all chromosomes", "[io][coo
     REQUIRE(matrix.nrows() == reference.nrows());
     for (size_t j = 0; j < reference.ncols(); ++j) {
       for (size_t k = 0; k < reference.ncols(); ++k) {
-        CHECK(matrix.get(j, k) == reference.get(j, k));
+        CHECK(matrix.unsafe_get(j, k) == reference.unsafe_get(j, k));
       }
     }
   }
@@ -338,7 +338,7 @@ TEST_CASE("Cooler to CMatrix subrange", "[io][cooler][short]") {
 
       const auto b21 = (p1 - start2) / bin_size;
       const auto b22 = (p2 - start2) / bin_size;
-      CHECK(cmatrix1.get(b11, b12) == cmatrix2.get(b21, b22));
+      CHECK(cmatrix1.unsafe_get(b11, b12) == cmatrix2.unsafe_get(b21, b22));
     }
   }
 }

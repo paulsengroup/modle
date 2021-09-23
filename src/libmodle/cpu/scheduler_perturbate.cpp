@@ -278,7 +278,6 @@ void Simulation::run_perturbate() {
         base_task.reference_contacts = std::make_shared<const ContactMatrix<>>(
             read_reference_contacts(reference_cooler, chrom_name, base_task.window_start,
                                     base_task.window_end, this->bin_size, this->diagonal_width));
-
         for (const auto& deletion : deletions) {
           // Add task to the current batch
           auto& t = (tasks[num_tasks++] = base_task);  // NOLINT
@@ -368,7 +367,6 @@ void Simulation::perturbate_worker(
   absl::FixedArray<TaskPW> task_buff(task_batch_size);  // Tasks are dequeue in batch.
 
   Simulation::State local_state{};
-  auto local_contacts = std::make_shared<ContactMatrix<contacts_t>>();
   local_state.contacts = std::make_shared<ContactMatrix<contacts_t>>();
   compressed_io::Writer tmp_output_bedpe(output_path);
 
@@ -398,8 +396,8 @@ void Simulation::perturbate_worker(
 
         local_state = task;                      // Set simulation local_state based on task data
         assert(local_state.reference_contacts);  // NOLINT
-        local_state.contacts->resize(local_state.window_end - local_state.window_start,
-                                     this->diagonal_width, this->bin_size);
+        local_state.contacts->unsafe_resize(local_state.window_end - local_state.window_start,
+                                            this->diagonal_width, this->bin_size);
         assert(local_state.contacts->nrows() == local_state.reference_contacts->nrows());  // NOLINT
         assert(local_state.contacts->ncols() == local_state.reference_contacts->ncols());  // NOLINT
 
@@ -476,9 +474,9 @@ void Simulation::simulate_window(Simulation::State& state, compressed_io::Writer
   // Resize and reset state buffers
   state.resize_buffers();
   state.reset_buffers();
-  state.contacts->resize(state.window_end - state.window_start, this->diagonal_width,
-                         this->bin_size);
-  state.contacts->reset();
+  state.contacts->unsafe_resize(state.window_end - state.window_start, this->diagonal_width,
+                                this->bin_size);
+  state.contacts->unsafe_reset();
 
   Simulation::simulate_one_cell(state);
 
@@ -507,9 +505,10 @@ void Simulation::simulate_window(Simulation::State& state, compressed_io::Writer
         const auto feat1_rel_bin = feat1_rel_center_pos / this->bin_size;
         const auto feat2_rel_bin = feat2_rel_center_pos / this->bin_size;
 
-        const auto contacts = state.contacts->get(feat1_rel_bin, feat2_rel_bin, this->block_size);
+        const auto contacts =
+            state.contacts->unsafe_get(feat1_rel_bin, feat2_rel_bin, this->block_size);
         const auto reference_contacts =
-            state.reference_contacts->get(feat1_rel_bin, feat2_rel_bin, this->block_size);
+            state.reference_contacts->unsafe_get(feat1_rel_bin, feat2_rel_bin, this->block_size);
         if (contacts == 0 && reference_contacts == 0) {  // Don't output entries with 0 contacts
           continue;
         }

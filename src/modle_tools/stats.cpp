@@ -54,7 +54,7 @@ size_t compute_number_of_contacts_after_depletion(const ContactMatrix<I>& cmatri
     for (auto j = i; j < i + cmatrix.nrows() && j < cmatrix.ncols(); ++j) {
       // j - i corresponds to the distance from the diagonal
       // Only process bins that more contacts than average
-      if (const auto n = cmatrix.get(j, i); n > row_wise_avg_contacts[j - i]) {
+      if (const auto n = cmatrix.unsafe_get(j, i); n > row_wise_avg_contacts[j - i]) {
         depl_contacts += n - row_wise_avg_contacts[j - i];
       }
     }
@@ -130,25 +130,26 @@ void stats_subcmd(const modle::tools::stats_config& c) {
     // Read contacts for chrom_name into memory
     auto cmatrix = m1.cooler_to_cmatrix(chrom_name, c.diagonal_width, bin_size);
 
-    const auto hist = cmatrix.compute_row_wise_contact_histogram();
-    const auto mask = cmatrix.generate_mask_for_bins_without_contacts();
+    const auto hist = cmatrix.unsafe_compute_row_wise_contact_histogram();
+    const auto mask = cmatrix.unsafe_generate_mask_for_bins_without_contacts();
 
     const auto chrom_contacts = cmatrix.get_tot_contacts();
     const auto chrom_contacts_after_depl = compute_number_of_contacts_after_depletion(
         cmatrix, hist, mask.count(), c.depletion_multiplier);
     assert(chrom_contacts_after_depl <= chrom_contacts);  // NOLINT
 
-    const auto chrom_avg_contacts =
-        static_cast<double>(chrom_contacts) / static_cast<double>(cmatrix.npixels_after_masking());
-    const auto chrom_avg_contacts_after_depl = static_cast<double>(chrom_contacts_after_depl) /
-                                               static_cast<double>(cmatrix.npixels_after_masking());
+    const auto chrom_avg_contacts = static_cast<double>(chrom_contacts) /
+                                    static_cast<double>(cmatrix.unsafe_npixels_after_masking());
+    const auto chrom_avg_contacts_after_depl =
+        static_cast<double>(chrom_contacts_after_depl) /
+        static_cast<double>(cmatrix.unsafe_npixels_after_masking());
     const auto fraction_of_graylisted_bins =
-        1.0 - (static_cast<double>(cmatrix.npixels_after_masking()) /  // NOLINT
+        1.0 - (static_cast<double>(cmatrix.unsafe_npixels_after_masking()) /  // NOLINT
                static_cast<double>(cmatrix.npixels()));
 
     tot_contacts += chrom_contacts;
     tot_contacts_after_depl += chrom_contacts_after_depl;
-    tot_number_of_pixels += cmatrix.npixels_after_masking();
+    tot_number_of_pixels += cmatrix.unsafe_npixels_after_masking();
 
     // clang-format off
     fmt::print(stdout, FMT_STRING("{}\t{}\t{}\t{}\t{}\t{}\n"),
@@ -165,11 +166,8 @@ void stats_subcmd(const modle::tools::stats_config& c) {
     }
 
     if (m2) {
-      cmatrix.deplete_contacts(c.depletion_multiplier);
-      DISABLE_WARNING_PUSH
-      DISABLE_WARNING_USELESS_CAST
+      cmatrix.unsafe_deplete_contacts(c.depletion_multiplier);
       m2->write_or_append_cmatrix_to_file(cmatrix, chrom_name, int64_t(0), chrom_size, chrom_size);
-      DISABLE_WARNING_POP
     }
   }
 

@@ -75,8 +75,8 @@ void noisify_contacts(const noisify_config& c) {
       }
     });
 
-    cmatrix.reset();
-    cmatrix.resize(nrows, ncols);
+    cmatrix.unsafe_resize(nrows, ncols);
+    cmatrix.unsafe_reset();
     modle::cooler::Cooler::Pixel pixel{};  // NOLINT
     const auto seed =
         c.seed + std::hash<std::string_view>{}(chrom_name) + std::hash<size_t>{}(ncols);

@@ -26,13 +26,13 @@ inline const boost::filesystem::path data_dir{"test/data/unit_tests"};  // NOLIN
 
 TEST_CASE("CMatrix simple", "[cmatrix][short]") {
   ContactMatrix<> c(10, 100);  // NOLINT
-  CHECK(c.get(0, 0) == 0);
+  CHECK(c.unsafe_get(0, 0) == 0);
   c.increment(0, 0);
-  CHECK(c.get(0, 0) == 1);
+  CHECK(c.unsafe_get(0, 0) == 1);
   c.increment(0, 0);
-  CHECK(c.get(0, 0) == 2);
+  CHECK(c.unsafe_get(0, 0) == 2);
   c.subtract(0, 0, 2);
-  CHECK(c.get(0, 0) == 0);
+  CHECK(c.unsafe_get(0, 0) == 0);
 }
 
 [[nodiscard]] inline std::vector<std::vector<uint32_t>> load_matrix_from_file(
@@ -68,7 +68,7 @@ TEST_CASE("CMatrix 10x200", "[cmatrix][medium]") {
     }
   }
 
-  const auto m3 = m2.generate_symmetric_matrix();
+  const auto m3 = m2.unsafe_generate_symmetric_matrix();
   for (auto i = 0UL; i < m1.size(); ++i) {
     for (auto j = 0UL; j < m1[0].size(); ++j) {
       CHECK(m1[i][j] == m3[i][j]);
@@ -78,7 +78,7 @@ TEST_CASE("CMatrix 10x200", "[cmatrix][medium]") {
 
 TEST_CASE("CMatrix Mask", "[cmatrix][short]") {
   ContactMatrix<> m(10, 20);  // NOLINT
-  auto mask = m.generate_mask_for_bins_without_contacts();
+  auto mask = m.unsafe_generate_mask_for_bins_without_contacts();
   REQUIRE(mask.size() == m.ncols());
   CHECK(mask.none());  // Matrix is full of zeros: bitmask should also be all zeros
 
@@ -90,7 +90,7 @@ TEST_CASE("CMatrix Mask", "[cmatrix][short]") {
   }
   // m.print(true);
 
-  mask = m.generate_mask_for_bins_without_contacts();
+  mask = m.unsafe_generate_mask_for_bins_without_contacts();
   REQUIRE(mask.size() == m.ncols());
   for (auto i = 0UL; i < mask.size(); ++i) {
     CHECK((i % 2 != 0) == mask[i]);
@@ -104,7 +104,7 @@ TEST_CASE("CMatrix Mask", "[cmatrix][short]") {
     }
   }
 
-  mask = m.generate_mask_for_bins_without_contacts();
+  mask = m.unsafe_generate_mask_for_bins_without_contacts();
   REQUIRE(mask.size() == m.ncols());
 
   for (auto i = 0UL; i < mask.size(); ++i) {
@@ -119,15 +119,15 @@ TEST_CASE("CMatrix in/decrement", "[cmatrix][short]") {
   m.increment(15, 15);  // NOLINT
 
   CHECK(m.get_tot_contacts() == 2);  // NOLINT
-  CHECK(m.get(0, 0) == 1);
+  CHECK(m.unsafe_get(0, 0) == 1);
 
   m.decrement(0, 0);
   CHECK(m.get_tot_contacts() == 1);
-  CHECK(m.get(0, 0) == 0);
+  CHECK(m.unsafe_get(0, 0) == 0);
 
   REQUIRE(m.get_n_of_missed_updates() == 0);
   m.increment(11, 0);  // NOLINT
-  CHECK(m.get(0, 0) == 0);
+  CHECK(m.unsafe_get(0, 0) == 0);
   CHECK(m.get_n_of_missed_updates() == 1);
   CHECK(m.get_tot_contacts() == 1);
 
@@ -146,84 +146,37 @@ TEST_CASE("CMatrix in/decrement", "[cmatrix][short]") {
 #endif
 }
 
-TEST_CASE("CMatrix in/decrement vector", "[cmatrix][short]") {
-  ContactMatrix<> m(10, 20);  // NOLINT
-  // clang-format off
-  const std::vector<std::pair<size_t, size_t>> pixels{{ 0,  0},   // NOLINT
-                                                          { 5, 10},         // NOLINT
-                                                          { 2,  3},         // NOLINT
-                                                          {15,  0},         // NOLINT
-                                                          { 7,  1},         // NOLINT
-                                                          {25, 25}};        // NOLINT
-  // clang-format on
-  auto pixels_ = pixels;
-
-  m.increment(absl::MakeSpan(pixels_.data(), pixels_.size() - 1));
-
-  CHECK(m.get_n_of_missed_updates() == 1);
-  CHECK(m.get_tot_contacts() == pixels.size() - 2);  // NOLINT
-  for (auto i = 0UL; i < pixels.size() - 1; ++i) {
-    const auto& [row, col] = pixels[i];
-    if (row == 15UL && col == 0UL) {  // NOLINT
-      CHECK(m.get(row, col) == 0);
-      continue;
-    }
-    CHECK(m.get(row, col) == 1);
-  }
-
-#ifndef NDEBUG
-  pixels_ = pixels;
-  // Setting thresh to 0 forces this function to switch to a branch that is supposed to be more
-  CHECK_THROWS_WITH(  // efficient for large  buffers
-      m.increment(absl::MakeSpan(pixels_), 0),
-      Catch::Contains("caught an attempt to access element past the end of the contact matrix"));
-  CHECK(m.get_n_of_missed_updates() == 2);                 // NOLINT
-  CHECK(m.get_tot_contacts() == 2 * (pixels.size() - 2));  // NOLINT
-  for (const auto& [row, col] : pixels) {
-    if (row == 15UL && col == 0UL) {  // NOLINT
-      CHECK(m.get(row, col) == 0);
-      continue;
-    }
-    if (row == 25UL && col == 25UL) {  // NOLINT
-      continue;
-    }
-    CHECK(m.get(row, col) == 2);  // NOLINT
-  }
-
-#endif
-}
-
-TEST_CASE("CMatrix get w/ block", "[cmatrix][short]") {
-  ContactMatrix<> m1(100, 100);  // NOLINT
+TEST_CASE("CMatrix unsafe_get w/ block", "[cmatrix][short]") {
+  ContactMatrix<uint32_t> m1(100, 100);  // NOLINT
   // Fill the upper left corner
-  for (auto i = 0UL; i < 3UL; ++i) {
-    for (auto j = i; j < 3UL; ++j) {
+  for (uint32_t i = 0; i < 3; ++i) {
+    for (uint32_t j = i; j < 3; ++j) {
       m1.set(i, j, i + j);
     }
   }
 
   // Fill a region away from the diagonal
-  for (auto i = 20UL; i < 25UL; ++i) {
-    for (auto j = 25UL; j < 30UL; ++j) {
+  for (uint32_t i = 20; i < 25; ++i) {
+    for (uint32_t j = 25; j < 30; ++j) {
       m1.set(i, j, 1);
     }
   }
 
   // Fill the lower right corner
-  for (auto i = 97UL; i < 100UL; ++i) {
-    for (auto j = 97UL; j < 100UL; ++j) {
-      m1.set(i, j, (i - 97UL) + (j - 97UL));
+  for (uint32_t i = 97; i < 100; ++i) {
+    for (uint32_t j = 97; j < 100; ++j) {
+      m1.set(i, j, (i - 97) + (j - 97));
     }
   }
 
   // m1.print(true);
 
-  CHECK(m1.get(0, 0, 5) == 30);
-  CHECK(m1.get(22, 27, 5) == 25);
-  CHECK(m1.get(99, 99, 5) == 70);
+  CHECK(m1.unsafe_get(0, 0, 5) == 30);
+  CHECK(m1.unsafe_get(22, 27, 5) == 25);
+  CHECK(m1.unsafe_get(99, 99, 5) == 70);
 }
 
-TEST_CASE("CMatrix get w/ block small", "[cmatrix][short]") {
+TEST_CASE("CMatrix unsafe_get w/ block small", "[cmatrix][short]") {
   const auto reference_file = data_dir / "contacts_chr1_bs9_small.tsv";
   const auto input_file = data_dir / "contacts_chr1_raw_small.tsv";
 
@@ -231,13 +184,13 @@ TEST_CASE("CMatrix get w/ block small", "[cmatrix][short]") {
 
   const auto reference_matrix = [&]() {
     ContactMatrix<> m;
-    m.import_from_txt(reference_file);
+    m.unsafe_import_from_txt(reference_file);
     return m;
   }();
 
   const auto input_matrix = [&]() {
     ContactMatrix<> m;
-    m.import_from_txt(input_file);
+    m.unsafe_import_from_txt(input_file);
     return m;
   }();
 
@@ -246,7 +199,7 @@ TEST_CASE("CMatrix get w/ block small", "[cmatrix][short]") {
 
   for (size_t i = 0; i < input_matrix.nrows(); ++i) {
     for (size_t j = 0; j < input_matrix.ncols(); ++j) {
-      CHECK(input_matrix.get(i, j, block_size) == reference_matrix.get(i, j));
+      CHECK(input_matrix.unsafe_get(i, j, block_size) == reference_matrix.unsafe_get(i, j));
     }
   }
 }
