@@ -113,7 +113,6 @@ ContactMatrix<N> &ContactMatrix<N>::operator=(ContactMatrix<N> &&other) noexcept
   _mtxes.resize(_ncols);
   _tot_contacts = other._tot_contacts.load();
   _updates_missed = other._updates_missed.load();
-  _read_only = other._read_only.load();
 
   return *this;
 }
