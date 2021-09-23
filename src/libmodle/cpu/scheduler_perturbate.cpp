@@ -147,7 +147,7 @@ void Simulation::run_perturbate() {
   }
 
   auto out_bedpe_file = std::ofstream(this->path_to_output_file_bedpe.string(),
-                                      std::ios_base::binary | std::ios_base::app);
+                                      std::ios_base::binary | std::ios_base::ate);
 
   try {
     this->_tpool.reset(this->nthreads);
