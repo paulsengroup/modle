@@ -75,6 +75,7 @@ void ExtrusionUnit::release() noexcept(utils::ndebug_defined()) {
 }
 
 bool Lef::is_bound() const noexcept(utils::ndebug_defined()) {
+  // NOLINTNEXTLINE
   assert((this->rev_unit._pos == (std::numeric_limits<bp_t>::max)()) ==
          (this->fwd_unit._pos == (std::numeric_limits<bp_t>::max)()));
   return this->binding_epoch != (std::numeric_limits<size_t>::max)();

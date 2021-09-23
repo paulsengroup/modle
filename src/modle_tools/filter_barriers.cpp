@@ -24,7 +24,7 @@ void filter_barriers_intersection(const modle::tools::filter_barrier_config& c) 
   std::vector<bed::BED_tree<std::string, uint64_t>> intervals(
       c.path_to_bed_files_for_filtering.size());
 
-  for (auto i = 0UL; i < c.path_to_bed_files_for_filtering.size(); ++i) {
+  for (size_t i = 0; i < c.path_to_bed_files_for_filtering.size(); ++i) {
     intervals[i].emplace(
         bed::Parser(c.path_to_bed_files_for_filtering[i], c.bed_dialect, c.strict_bed_validation)
             .parse_all());
@@ -55,7 +55,7 @@ void filter_barriers_pairwise_intersection(const modle::tools::filter_barrier_co
   std::vector<bed::BED_tree<std::string, uint64_t>> intervals(
       c.path_to_bed_files_for_filtering.size());
 
-  for (auto i = 0UL; i < c.path_to_bed_files_for_filtering.size(); ++i) {
+  for (size_t i = 0; i < c.path_to_bed_files_for_filtering.size(); ++i) {
     intervals[i].emplace(
         bed::Parser(c.path_to_bed_files_for_filtering[i], c.bed_dialect, c.strict_bed_validation)
             .parse_all());

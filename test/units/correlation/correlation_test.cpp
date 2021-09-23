@@ -66,8 +66,8 @@ static void test_correlation_w_random_vector(std::string_view method, size_t vec
     }
 
     const auto [rho, pv] = [&]() {
-      double rho_;
-      double pv_;
+      double rho_{};
+      double pv_{};
       if (method == "pearson") {
         rho_ = compute_pearson(v1, v2);
         pv_ = compute_pearson_significance(rho_, v1.size());
@@ -93,6 +93,7 @@ static void test_correlation_w_random_vector(std::string_view method, size_t vec
   t.join();
 }
 
+// NOLINTNEXTLINE(readability-function-cognitive-complexity)
 TEST_CASE("Corr. test: Pearson wo ties", "[correlation][pearson][short]") {
   std::vector<uint32_t> v1{17, 86, 60, 77, 47, 3, 70, 87, 88, 92};   // NOLINT
   std::vector<uint32_t> v2{70, 29, 85, 61, 80, 34, 60, 31, 73, 66};  // NOLINT
@@ -102,6 +103,7 @@ TEST_CASE("Corr. test: Pearson wo ties", "[correlation][pearson][short]") {
   CHECK(Approx(pv) == 0.926536715854247);       // NOLINT
 }
 
+// NOLINTNEXTLINE(readability-function-cognitive-complexity)
 TEST_CASE("Corr. test: Pearson w ties", "[correlation][pearson][short]") {
   std::vector<uint32_t> v1{17, 86, 60, 77, 47, 3, 70, 47, 88, 92};   // NOLINT
   std::vector<uint32_t> v2{70, 29, 85, 61, 80, 34, 60, 31, 73, 66};  // NOLINT
@@ -111,6 +113,7 @@ TEST_CASE("Corr. test: Pearson w ties", "[correlation][pearson][short]") {
   CHECK(Approx(pv) == 0.6502118872600098);    // NOLINT
 }
 
+// NOLINTNEXTLINE(readability-function-cognitive-complexity)
 TEST_CASE("Corr. test: Pearson Scipy", "[correlation][pearson][short]") {
   random::PRNG_t rand_eng{std::random_device{}()};
   auto v1 = generate_random_vect(rand_eng, 1'000, 0, 15'000);  // NOLINT
@@ -122,18 +125,21 @@ TEST_CASE("Corr. test: Pearson Scipy", "[correlation][pearson][short]") {
   CHECK(Approx(pv) == pv_py);
 }
 
+// NOLINTNEXTLINE(readability-function-cognitive-complexity)
 TEST_CASE("Corr. test: Pearson Scipy long", "[correlation][pearson][medium]") {
-  test_correlation_w_random_vector("pearson", 1'000, 250, 0U, 15'000U);
-  test_correlation_w_random_vector("pearson", 1'000, 250, -7'250, 7'250);
-  test_correlation_w_random_vector("pearson", 1'000, 250, -7'250.0, 7'250.0);
+  test_correlation_w_random_vector("pearson", 1'000, 250, 0U, 15'000U);        // NOLINT
+  test_correlation_w_random_vector("pearson", 1'000, 250, -7'250, 7'250);      // NOLINT
+  test_correlation_w_random_vector("pearson", 1'000, 250, -7'250.0, 7'250.0);  // NOLINT
 }
 
+// NOLINTNEXTLINE(readability-function-cognitive-complexity)
 TEST_CASE("Corr. test: Pearson Scipy long vect.", "[correlation][pearson][long]") {
-  test_correlation_w_random_vector("pearson", 500'000, 2, 0U, 15'000U);
-  test_correlation_w_random_vector("pearson", 500'000, 2, -7'250, 7'250);
-  test_correlation_w_random_vector("pearson", 500'000, 2, -7'250.0, 7'250.0);
+  test_correlation_w_random_vector("pearson", 500'000, 2, 0U, 15'000U);        // NOLINT
+  test_correlation_w_random_vector("pearson", 500'000, 2, -7'250, 7'250);      // NOLINT
+  test_correlation_w_random_vector("pearson", 500'000, 2, -7'250.0, 7'250.0);  // NOLINT
 }
 
+// NOLINTNEXTLINE(readability-function-cognitive-complexity)
 TEST_CASE("Corr. test: Spearman wo ties", "[correlation][spearman][short]") {
   std::vector<uint32_t> v1{17, 86, 60, 77, 47, 3, 70, 87, 88, 92};   // NOLINT
   std::vector<uint32_t> v2{70, 29, 85, 61, 80, 34, 60, 31, 73, 66};  // NOLINT
@@ -143,6 +149,7 @@ TEST_CASE("Corr. test: Spearman wo ties", "[correlation][spearman][short]") {
   CHECK(Approx(pv) == 0.6514773427962428);     // NOLINT
 }
 
+// NOLINTNEXTLINE(readability-function-cognitive-complexity)
 TEST_CASE("Corr. test: Spearman w ties", "[correlation][spearman][short]") {
   std::vector<uint32_t> v1{17, 86, 60, 77, 47, 3, 70, 47, 88, 92};   // NOLINT
   std::vector<uint32_t> v2{70, 29, 85, 61, 80, 34, 60, 31, 73, 66};  // NOLINT
@@ -152,6 +159,7 @@ TEST_CASE("Corr. test: Spearman w ties", "[correlation][spearman][short]") {
   CHECK(Approx(pv) == 0.9468397049085097);     // NOLINT
 }
 
+// NOLINTNEXTLINE(readability-function-cognitive-complexity)
 TEST_CASE("Corr. test: Spearman Scipy", "[correlation][spearman][short]") {
   random::PRNG_t rand_eng{std::random_device{}()};
   auto v1 = generate_random_vect(rand_eng, 1'000, 0, 15'000);  // NOLINT
@@ -163,18 +171,21 @@ TEST_CASE("Corr. test: Spearman Scipy", "[correlation][spearman][short]") {
   CHECK(Approx(pv) == pv_py);
 }
 
+// NOLINTNEXTLINE(readability-function-cognitive-complexity)
 TEST_CASE("Corr. test: Spearman Scipy long", "[correlation][spearman][long]") {
-  test_correlation_w_random_vector("spearman", 1'000, 250, 0U, 15'000U);
-  test_correlation_w_random_vector("spearman", 1'000, 250, -7'250, 7'250);
-  test_correlation_w_random_vector("spearman", 1'000, 250, -7'250.0, 7'250.0);
+  test_correlation_w_random_vector("spearman", 1'000, 250, 0U, 15'000U);        // NOLINT
+  test_correlation_w_random_vector("spearman", 1'000, 250, -7'250, 7'250);      // NOLINT
+  test_correlation_w_random_vector("spearman", 1'000, 250, -7'250.0, 7'250.0);  // NOLINT
 }
 
+// NOLINTNEXTLINE(readability-function-cognitive-complexity)
 TEST_CASE("Corr. test: Spearman Scipy long vect.", "[correlation][spearman][long]") {
-  test_correlation_w_random_vector("spearman", 500'000, 2, 0U, 15'000U);
-  test_correlation_w_random_vector("spearman", 500'000, 2, -7'250, 7'250);
-  test_correlation_w_random_vector("spearman", 500'000, 2, -7'250.0, 7'250.0);
+  test_correlation_w_random_vector("spearman", 500'000, 2, 0U, 15'000U);        // NOLINT
+  test_correlation_w_random_vector("spearman", 500'000, 2, -7'250, 7'250);      // NOLINT
+  test_correlation_w_random_vector("spearman", 500'000, 2, -7'250.0, 7'250.0);  // NOLINT
 }
 
+// NOLINTNEXTLINE(readability-function-cognitive-complexity)
 TEST_CASE("SED", "[correlation][sed][short]") {
   std::vector<uint32_t> v1{17, 86, 60, 77, 47, 3, 70, 87, 88, 92};   // NOLINT
   std::vector<uint32_t> v2{70, 29, 85, 61, 80, 34, 60, 31, 73, 66};  // NOLINT

@@ -28,7 +28,7 @@ std::vector<bed::BED> Parser::parse_all(char sep) {
   absl::flat_hash_set<std::string> chrom_names{};
   std::vector<bed::BED> chrom_sizes;
 
-  for (auto i = 1UL, id = 0UL; this->_reader.getline(buff); ++i) {
+  for (size_t i = 1UL, id = 0; this->_reader.getline(buff); ++i) {
     if (buff.empty()) {
       continue;
     }

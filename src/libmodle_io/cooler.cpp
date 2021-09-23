@@ -115,6 +115,7 @@ Cooler::Cooler(boost::filesystem::path path_to_file, IO_MODE mode, size_t bin_si
 }
 DISABLE_WARNING_POP
 
+// NOLINTNEXTLINE(readability-function-cognitive-complexity)
 Cooler::~Cooler() {
   try {
     if (this->_mode == WRITE_ONLY && this->_nchroms != 0 && this->_nbins != 0) {
@@ -216,7 +217,7 @@ std::vector<std::pair<std::string, size_t>> Cooler::get_chroms() {
   this->get_chrom_sizes(size_buff);
   assert(name_buff.size() == size_buff.size());  // NOLINT
   std::vector<std::pair<std::string, size_t>> buff(name_buff.size());
-  for (auto i = 0UL; i < buff.size(); ++i) {
+  for (size_t i = 0; i < buff.size(); ++i) {
     buff[i].first = std::move(name_buff[i]);
     buff[i].second = size_buff[i];
   }
@@ -369,7 +370,7 @@ size_t Cooler::stream_contacts_for_chrom(
             "recent "
             "version of Cooler, or in alternative remove the weight dataset (not recommended).");
       }
-    }
+    }                // NOLINTNEXTLINE(readability-implicit-bool-conversion)
     if (cis_only) {  // --cis-only balancing produces an array of sale factors
       std::vector<double> buff;
       hdf5::read_attribute(d, "scale", buff);
@@ -459,7 +460,7 @@ std::unique_ptr<H5::H5File> Cooler::open_file(const boost::filesystem::path &pat
     return std::make_unique<H5::H5File>(f);
   } catch (const H5::Exception &e) {
     const auto error_msg = hdf5::construct_error_stack();
-    if (error_msg.find("Unable to open file") != std::string::npos) {
+    if (absl::StrContains(error_msg, "Unable to open file")) {
       assert(!boost::filesystem::exists(path));  // NOLINT
       throw std::runtime_error(fmt::format(FMT_STRING("Unable to open file {} for reading"), path));
     }
@@ -675,6 +676,7 @@ std::pair<int64_t, int64_t> Cooler::read_chrom_pixels_boundaries(size_t chrom_id
   return pixel_boundaries;
 }
 
+// NOLINTNEXTLINE(readability-function-cognitive-complexity) TODO: reduce complexity
 size_t Cooler::stream_contacts_for_chrom(moodycamel::BlockingReaderWriterQueue<Pixel> &queue,
                                          std::pair<hsize_t, hsize_t> bin_range,
                                          absl::Span<const int64_t> bin1_offset_idx, size_t nrows,
@@ -700,7 +702,7 @@ size_t Cooler::stream_contacts_for_chrom(moodycamel::BlockingReaderWriterQueue<P
     (void)hdf5::read_numbers(d[BIN_WEIGHT], bin_weights, static_cast<hsize_t>(first_bin));
   }
 
-  for (auto i = 1UL; i < bin1_offset_idx.size(); ++i) {
+  for (size_t i = 1; i < bin1_offset_idx.size(); ++i) {
     const auto file_offset = static_cast<hsize_t>(bin1_offset_idx[i - 1]);
     const auto buff_size =
         std::min(static_cast<size_t>(bin1_offset_idx[i] - bin1_offset_idx[i - 1]), nrows);
@@ -720,7 +722,7 @@ size_t Cooler::stream_contacts_for_chrom(moodycamel::BlockingReaderWriterQueue<P
     assert(bin2_BUFF.size() == buff_size);   // NOLINT
     assert(count_BUFF.size() == buff_size);  // NOLINT
 
-    for (auto j = 0UL; j < buff_size; ++j) {
+    for (size_t j = 0; j < buff_size; ++j) {
       assert(count_BUFF[j] != 0);  // NOLINT
       DISABLE_WARNING_PUSH
       DISABLE_WARNING_SIGN_CONVERSION
@@ -734,6 +736,7 @@ size_t Cooler::stream_contacts_for_chrom(moodycamel::BlockingReaderWriterQueue<P
       if (bin_weights.empty()) {
         while (!queue.try_emplace(Pixel{std::min(bin1, bin2), std::max(bin1, bin2),
                                         static_cast<size_t>(count_BUFF[j])})) {
+          // NOLINTNEXTLINE(readability-magic-numbers)
           std::this_thread::sleep_for(std::chrono::milliseconds(10));
         }
         ++pixel_count;
@@ -751,6 +754,7 @@ size_t Cooler::stream_contacts_for_chrom(moodycamel::BlockingReaderWriterQueue<P
             static_cast<double>(count_BUFF[j]) / (bin1_bias * bin2_bias) / bias_scaling_factor;
         while (!queue.try_emplace(Pixel{std::min(bin1, bin2), std::max(bin1, bin2),
                                         static_cast<size_t>(std::round(count))})) {
+          // NOLINTNEXTLINE(readability-magic-numbers)
           std::this_thread::sleep_for(std::chrono::milliseconds(10));
         }
         ++pixel_count;
@@ -772,7 +776,7 @@ size_t Cooler::stream_contacts_for_chrom(moodycamel::BlockingReaderWriterQueue<P
 size_t Cooler::get_chrom_idx(std::string_view query_chrom_name, bool try_common_chrom_prefixes) {
   // Here's the issue: for a given genome assembly (say hg19), some tools name chromosome as
   // chrN, where N is the chromosome number, while others only use the number N. The purpose
-  // of this lambda is to try to guess few reasonably common prefixes, look them up in the
+  // of this function is to try to guess few reasonably common prefixes, look them up in the
   // Cooler file, then return the chromosome name variant that produced a hit together with
   // the chrom index
 
@@ -783,13 +787,15 @@ size_t Cooler::get_chrom_idx(std::string_view query_chrom_name, bool try_common_
       return static_cast<size_t>(std::distance(chrom_names.begin(), match));
     }
     if (try_common_chrom_prefixes) {
-      std::array<std::string_view, 3> queries;
-      constexpr std::array<std::string_view, 3> prefixes = {"chrom", "chrom", "chrom"};
-      for (auto i = 0U; i < prefixes.size(); ++i) {
-        queries[i] = absl::StartsWith(query_chrom_name, prefixes[i])
-                         ? absl::StripPrefix(query_chrom_name, prefixes[i])
-                         : absl::StrCat(prefixes[i], query_chrom_name);
-      }
+      std::array<std::string, 3> queries;
+      constexpr std::array<std::string_view, 3> prefixes = {"chr", "CHR", "Chr"};
+      std::transform(prefixes.begin(), prefixes.end(), queries.begin(), [&](const auto prefix) {
+        if (absl::StartsWith(query_chrom_name, prefix)) {
+          return std::string{absl::StripPrefix(query_chrom_name, prefix)};
+        }
+        return absl::StrCat(prefix, query_chrom_name);
+      });
+
       for (const auto &q : queries) {
         match = std::find(chrom_names.begin(), chrom_names.end(), q);
         if (match != chrom_names.end()) {
@@ -864,6 +870,8 @@ Cooler::Flavor Cooler::detect_file_flavor(H5::H5File &f) {
   throw std::runtime_error("Unable to detect Cooler file flavor");
 }
 
+// I am not sure there's much to be done to reduce the complexity of this function
+// NOLINTNEXTLINE(readability-function-cognitive-complexity)
 bool Cooler::validate_cool_flavor(H5::H5File &f, size_t bin_size, std::string_view root_path,
                                   bool throw_on_failure, bool check_version) {
   /* The following attributes are being checked:
@@ -933,7 +941,6 @@ bool Cooler::validate_cool_flavor(H5::H5File &f, size_t bin_size, std::string_vi
             FMT_STRING("Expected bin-size attribute to be {}, got {}"), bin_size, int_buff));
       }
     }
-    int_buff = 0;
 
     if (format_version > 2) {
       hdf5::read_attribute(f, "storage-mode", str_buff, root_path);
@@ -1003,7 +1010,7 @@ bool Cooler::validate_cool_flavor(H5::H5File &f, size_t bin_size, std::string_vi
       if (!throw_on_failure) {
         return false;
       }
-      auto attr_name = msg.substr(0, msg.find_first_of("'"));
+      auto attr_name = msg.substr(0, msg.find_first_of('\''));
       throw std::runtime_error(
           fmt::format(FMT_STRING("Missing mandatory attribute '{}'{}"), attr_name,
                       root_path == "/" ? "" : absl::StrCat(" from path '", root_path, "'")));

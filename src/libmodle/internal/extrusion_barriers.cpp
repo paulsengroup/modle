@@ -127,8 +127,8 @@ double ExtrusionBarrier::occupancy() const noexcept(utils::ndebug_defined()) {
 CTCF::State CTCF::next_state(CTCF::State current_state, double occupied_self_transition_prob,
                              double not_occupied_self_transition_prob, random::PRNG_t& rand_eng) {
   assert(occupied_self_transition_prob >= 0 && occupied_self_transition_prob <= 1);  // NOLINT
-  assert(not_occupied_self_transition_prob >= 0 &&
-         not_occupied_self_transition_prob <= 1);  // NOLINT
+  assert(not_occupied_self_transition_prob >= 0 &&                                   // NOLINT
+         not_occupied_self_transition_prob <= 1);
 
   const auto p = random::generate_canonical<double, std::numeric_limits<double>::digits>(rand_eng);
   if (current_state == NOT_OCCUPIED && p > not_occupied_self_transition_prob) {
@@ -145,7 +145,8 @@ void CTCF::update_states(absl::Span<const ExtrusionBarrier> extr_barriers,
                          boost::dynamic_bitset<>& mask,
                          random::PRNG_t& rand_eng) noexcept(utils::ndebug_defined()) {
   assert(extr_barriers.size() == mask.size());  // NOLINT
-  for (auto i = 0UL; i < extr_barriers.size(); ++i) {
+  for (size_t i = 0; i < extr_barriers.size(); ++i) {
+    // NOLINTNEXTLINE(readability-implicit-bool-conversion)
     mask[i] = CTCF::next_state(mask[i] ? CTCF::OCCUPIED : CTCF::NOT_OCCUPIED,
                                extr_barriers[i].prob_occupied_to_occupied(),
                                extr_barriers[i].prob_not_occupied_to_not_occupied(), rand_eng);

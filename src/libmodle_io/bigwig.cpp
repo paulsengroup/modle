@@ -28,7 +28,7 @@ void close_bigwig_file(bigWigFile_t* fp) {
 
 void write_range(const std::string& chrom_name, const std::vector<double>& vals, uint64_t offset,
                  uint64_t span, uint64_t step, bigwig::file& bigwig_fp) {
-  assert(bigwig_fp);
+  assert(bigwig_fp);  // NOLINT
   std::vector<float> fvalues(vals.begin(), vals.end());
   // NOLINTNEXTLINE(readability-implicit-bool-conversion)
   if (bwAddIntervalSpanSteps(bigwig_fp.get(),

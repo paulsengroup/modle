@@ -69,6 +69,7 @@ size_t Simulation::size() const { return this->_genome.size(); }
 
 size_t Simulation::simulated_size() const { return this->_genome.simulated_size(); }
 
+// NOLINTNEXTLINE(readability-function-cognitive-complexity)
 void Simulation::write_contacts_to_disk(std::deque<std::pair<Chromosome*, size_t>>& progress_queue,
                                         std::mutex& progress_queue_mutex) {
   // This thread is in charge of writing contacts to disk
@@ -89,7 +90,7 @@ void Simulation::write_contacts_to_disk(std::deque<std::pair<Chromosome*, size_t
     if (c && !this->argv_json.empty()) {
       c->write_metadata_attribute(this->argv_json);
     }
-    // NOLINTNEXTLINE(readability-magic-numbers), cppcoreguidelines-avoid-magic-numbers)
+    // NOLINTNEXTLINE(readability-magic-numbers, cppcoreguidelines-avoid-magic-numbers)
     auto sleep_us = 100;
     while (this->ok()) {  // Structuring the loop in this way allows us to sleep without
                           // holding the mutex
@@ -115,7 +116,7 @@ void Simulation::write_contacts_to_disk(std::deque<std::pair<Chromosome*, size_t
           continue;
         }
       }
-      sleep_us = 100;  // NOLINT(readability-magic-numbers), cppcoreguidelines-avoid-magic-numbers)
+      sleep_us = 100;  // NOLINT(readability-magic-numbers, cppcoreguidelines-avoid-magic-numbers)
       if (c) {         // c == nullptr only when --skip-output is used
         // NOTE here we have to use pointers instead of references because
         // chrom_to_be_written.contacts() == nullptr is used to signal an empty matrix.
@@ -218,7 +219,7 @@ void Simulation::generate_moves(const Chromosome& chrom, const absl::Span<const 
       burnin_completed ? this->rev_extrusion_speed : this->rev_extrusion_speed_burnin);
   const auto fwd_extr_speed = static_cast<double>(
       burnin_completed ? this->fwd_extrusion_speed : this->fwd_extrusion_speed_burnin);
-  for (auto i = 0UL; i < lefs.size(); ++i) {
+  for (size_t i = 0; i < lefs.size(); ++i) {
     rev_moves[i] = lefs[i].is_bound() ? generate_rev_move(chrom, lefs[i].rev_unit, rev_extr_speed,
                                                           this->rev_extrusion_speed_std, rand_eng)
                                       : 0UL;
@@ -235,6 +236,7 @@ void Simulation::generate_moves(const Chromosome& chrom, const absl::Span<const 
   }
 }
 
+// NOLINTNEXTLINE(readability-function-cognitive-complexity)
 void Simulation::adjust_moves_of_consecutive_extr_units(
     [[maybe_unused]] const Chromosome& chrom, absl::Span<const Lef> lefs,
     absl::Span<const size_t> rev_lef_ranks, absl::Span<const size_t> fwd_lef_ranks,
@@ -245,7 +247,7 @@ void Simulation::adjust_moves_of_consecutive_extr_units(
   // Extr. units moving in rev direction are processed in 3'-5' order, while units moving in fwd
   // direction are processed in 5'-3' direction
   const auto rev_offset = lefs.size() - 1;
-  for (auto i = 0UL; i < lefs.size() - 1; ++i) {
+  for (size_t i = 0; i < lefs.size() - 1; ++i) {
     {
       const auto idx1 = rev_lef_ranks[rev_offset - 1 - i];
       const auto idx2 = rev_lef_ranks[rev_offset - i];
@@ -287,6 +289,7 @@ void Simulation::adjust_moves_of_consecutive_extr_units(
   }
 }
 
+// NOLINTNEXTLINE(readability-function-cognitive-complexity)
 void Simulation::rank_lefs(const absl::Span<const Lef> lefs,
                            const absl::Span<size_t> rev_lef_rank_buff,
                            const absl::Span<size_t> fwd_lef_rank_buff,
@@ -324,9 +327,9 @@ void Simulation::rank_lefs(const absl::Span<const Lef> lefs,
   }
 
   // TODO Figure out a better way to deal with ties
-  auto begin = 0UL;
-  auto end = 0UL;
-  for (auto i = 1UL; i < rev_lef_rank_buff.size(); ++i) {
+  size_t begin{};
+  size_t end{};
+  for (size_t i = 1; i < rev_lef_rank_buff.size(); ++i) {
     const auto& r1 = rev_lef_rank_buff[i - 1];
     const auto& r2 = rev_lef_rank_buff[i];
     if (BOOST_UNLIKELY(lefs[r1].rev_unit.pos() == lefs[r2].rev_unit.pos())) {
@@ -346,11 +349,11 @@ void Simulation::rank_lefs(const absl::Span<const Lef> lefs,
                                 assert(r22 < lefs.size());  // NOLINT
                                 return lefs[r11].binding_epoch < lefs[r22].binding_epoch;
                               });
-      begin = end;
+      // begin = end;
     }
   }
 
-  for (auto i = 1UL; i < fwd_lef_rank_buff.size(); ++i) {
+  for (size_t i = 1; i < fwd_lef_rank_buff.size(); ++i) {
     const auto& r1 = fwd_lef_rank_buff[i - 1];
     const auto& r2 = fwd_lef_rank_buff[i];
     if (BOOST_UNLIKELY(lefs[r1].fwd_unit.pos() == lefs[r2].fwd_unit.pos())) {
@@ -370,7 +373,7 @@ void Simulation::rank_lefs(const absl::Span<const Lef> lefs,
                                 assert(r22 < lefs.size());  // NOLINT
                                 return lefs[r22].binding_epoch < lefs[r11].binding_epoch;
                               });
-      begin = end;
+      // begin = end;
     }
   }
 }
@@ -521,7 +524,7 @@ void Simulation::generate_lef_unloader_affinities(
   // Changing ii -> i raises a -Werror=shadow on GCC 7.5
   auto is_lef_bar_collision = [&](const auto ii) { return ii < barriers.size(); };
 
-  for (auto i = 0UL; i < lefs.size(); ++i) {
+  for (size_t i = 0; i < lefs.size(); ++i) {
     const auto& lef = lefs[i];
     if (BOOST_UNLIKELY(!lef.is_bound())) {
       // Inactive LEF
@@ -1085,7 +1088,7 @@ void Simulation::simulate_one_cell(State& s) const {
 
     // Generate initial extr. barrier states, so that they are already at or close to
     // equilibrium
-    for (auto i = 0UL; i < s.barriers.size(); ++i) {
+    for (size_t i = 0; i < s.barriers.size(); ++i) {
       s.get_barrier_mask()[i] = random::bernoulli_trial{s.barriers[i].occupancy()}(s.rand_eng);
     }
 

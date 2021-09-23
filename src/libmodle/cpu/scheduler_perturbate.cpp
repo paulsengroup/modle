@@ -85,6 +85,7 @@ static void validate_reference_contacts(const Genome& genome, cooler::Cooler& c)
                              prefer_balanced_counts);
 }
 
+// NOLINTNEXTLINE(readability-function-cognitive-complexity)
 void Simulation::run_perturbate() {
   if (!this->skip_output) {  // Write simulation params to file
     assert(boost::filesystem::exists(this->path_to_output_prefix.parent_path()));  // NOLINT
@@ -362,6 +363,7 @@ void Simulation::run_perturbate() {
   }
 }
 
+// NOLINTNEXTLINE(readability-function-cognitive-complexity)
 void Simulation::perturbate_worker(
     const uint64_t tid, moodycamel::BlockingConcurrentQueue<Simulation::TaskPW>& task_queue,
     const boost::filesystem::path& output_path, std::mutex& cooler_mutex,
@@ -423,6 +425,7 @@ void Simulation::perturbate_worker(
   }
 }
 
+// NOLINTNEXTLINE(readability-function-cognitive-complexity)
 void Simulation::simulate_window(Simulation::State& state, compressed_io::Writer& out_stream,
                                  std::mutex& cooler_mutex, bool write_contacts_to_cooler) const {
   spdlog::info(FMT_STRING("Processing {}[{}-{}]; outer_window=[{}-{}]; deletion=[{}-{}];"),
@@ -487,7 +490,7 @@ void Simulation::simulate_window(Simulation::State& state, compressed_io::Writer
 
   assert(state.reference_contacts);  // NOLINT
   if (out_stream) {                  // Output contacts for valid pairs of features
-    for (auto i = 0UL; i < state.feats1.size(); ++i) {
+    for (size_t i = 0; i < state.feats1.size(); ++i) {
       const auto& feat1 = state.feats1[i];
       const auto feat1_abs_center_pos = (feat1.chrom_start + feat1.chrom_end + 1) / 2;
       for (auto j = i; j < state.feats2.size(); ++j) {

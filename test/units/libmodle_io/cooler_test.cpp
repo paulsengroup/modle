@@ -38,6 +38,7 @@ using default_sink_t = spdlog::sinks::null_sink_mt;
 
 inline const boost::filesystem::path data_dir{"test/data/unit_tests"};  // NOLINT
 
+// NOLINTNEXTLINE(readability-function-cognitive-complexity)
 TEST_CASE("cooler ctor", "[io][cooler][short]") {
   const auto test_file = data_dir / "Dixon2012-H1hESC-HindIII-allreps-filtered.1000kb.cool";
   spdlog::set_default_logger(
@@ -53,6 +54,7 @@ TEST_CASE("cooler ctor", "[io][cooler][short]") {
                     Catch::Matchers::Contains("Expected format flavor MCOOL, found COOL"));
 }
 
+// NOLINTNEXTLINE(readability-function-cognitive-complexity)
 TEST_CASE("CMatrix to cooler", "[io][cooler][short]") {
   const auto input_file = data_dir / "cmatrix_001.tsv";
   const auto output_file = testdir() / "cmatrix_to_cooler.cool";
@@ -84,6 +86,7 @@ TEST_CASE("CMatrix to cooler", "[io][cooler][short]") {
   boost::filesystem::remove(output_file);
 }
 
+// NOLINTNEXTLINE(readability-function-cognitive-complexity)
 TEST_CASE("CMatrix to cooler - multiple chromosomes", "[io][cooler][short]") {
   const auto input_file = data_dir / "cmatrix_001.tsv";
   const auto output_file = testdir() / "cmatrix_to_cooler.cool";
@@ -121,6 +124,7 @@ TEST_CASE("CMatrix to cooler - multiple chromosomes", "[io][cooler][short]") {
   boost::filesystem::remove(output_file);
 }
 
+// NOLINTNEXTLINE(readability-function-cognitive-complexity)
 TEST_CASE("Cooler to CMatrix", "[io][cooler][short]") {
   const auto test_file = data_dir / "Dixon2012-H1hESC-HindIII-allreps-filtered.1000kb.cool";
   const auto reference_file =
@@ -158,6 +162,7 @@ TEST_CASE("Cooler to CMatrix", "[io][cooler][short]") {
   CHECK(cmatrix.get_tot_contacts() == 5753412);
 }
 
+// NOLINTNEXTLINE(readability-function-cognitive-complexity)
 TEST_CASE("Cooler to CMatrix and CMatrix to Cooler", "[io][cooler][short]") {
   const auto test_file_in = data_dir / "Dixon2012-H1hESC-HindIII-allreps-filtered.1000kb.cool";
   const auto test_file_out = testdir() / "cmatrix_to_cooler.cool";
@@ -189,7 +194,7 @@ TEST_CASE("Cooler to CMatrix and CMatrix to Cooler", "[io][cooler][short]") {
   REQUIRE(v1.size() == v2.size());
 
   size_t mismatches = 0;
-  for (auto i = 0UL; i < v1.size(); ++i) {
+  for (size_t i = 0; i < v1.size(); ++i) {
     CHECK(v1[i] == v2[i]);
     mismatches += static_cast<uint8_t>(v1[i] != v2[i]);
   }
@@ -199,6 +204,7 @@ TEST_CASE("Cooler to CMatrix and CMatrix to Cooler", "[io][cooler][short]") {
   boost::filesystem::remove(test_file_out);
 }
 
+// NOLINTNEXTLINE(readability-function-cognitive-complexity)
 TEST_CASE("Cooler to CMatrix and CMatrix to Cooler - all chromosomes", "[io][cooler][long]") {
   const auto test_file_in = data_dir / "Dixon2012-H1hESC-HindIII-allreps-filtered.1000kb.cool";
   const auto test_file_out = testdir() / "cmatrix_to_cooler_all_chromosomes.cool";
@@ -245,6 +251,7 @@ TEST_CASE("Cooler to CMatrix and CMatrix to Cooler - all chromosomes", "[io][coo
 }
 
 /*
+// NOLINTNEXTLINE(readability-function-cognitive-complexity)
 TEST_CASE("Cooler testing balanced matrix", "[io][cooler][short]") {
   // const auto test_file = data_dir / "4DNFI5RMAGF9_test.mcool";
   const auto test_file = data_dir / "4DNFIXP4QG5B_10kb.cool";
@@ -270,7 +277,7 @@ TEST_CASE("Cooler testing balanced matrix", "[io][cooler][short]") {
   std::vector<uint64_t> balanced_col_sum(ncols, 0);
   std::vector<uint64_t> raw_col_sum(ncols, 0);
 
-  for (auto i = 0UL; i < ncols; ++i) {
+  for (size_t  i = 0; i < ncols; ++i) {
     for (auto j = i; j < (i + nrows) && j < ncols; ++j) {
       balanced_row_sum[j] += balanced_cmatrix.get(j, i);
       raw_row_sum[j] += raw_cmatrix.get(j, i);
@@ -284,13 +291,13 @@ TEST_CASE("Cooler testing balanced matrix", "[io][cooler][short]") {
   size_t nnz_cols = 0;
   size_t nnz_rows = 0;
 
-  for (auto i = 0UL; i < nrows; ++i) {
+  for (size_t  i = 0; i < nrows; ++i) {
     if (balanced_row_sum[i] != 0) {
       // fmt::print(stderr, "i={}; c={}\n", i, balanced_row_sum[i]);
     }
   }
 
-  for (auto i = 0UL; i < raw_col_sum.size(); ++i) {
+  for (size_t  i = 0; i < raw_col_sum.size(); ++i) {
     if (raw_col_sum[i] != 0 || balanced_col_sum[i] != 0) {
       avg_col_diff +=
           static_cast<int64_t>(raw_col_sum[i]) - static_cast<int64_t>(balanced_col_sum[i]);
@@ -310,6 +317,7 @@ TEST_CASE("Cooler testing balanced matrix", "[io][cooler][short]") {
 }
  */
 
+// NOLINTNEXTLINE(readability-function-cognitive-complexity)
 TEST_CASE("Cooler to CMatrix subrange", "[io][cooler][short]") {
   const auto test_file_in = data_dir / "Dixon2012-H1hESC-HindIII-allreps-filtered.1000kb.cool";
   spdlog::set_default_logger(

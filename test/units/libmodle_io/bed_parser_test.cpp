@@ -55,11 +55,12 @@ inline void compare_bed_records_with_file(std::vector<BED> records, const std::s
     return std::stoull(enda.data(), nullptr) < std::stoull(endb.data(), nullptr);
   });
 
-  for (auto i = 0UL; i < records.size(); ++i) {
+  for (size_t i = 0; i < records.size(); ++i) {
     CHECK(fmt::to_string(records[i]) == lines[i]);
   }
 }
 
+// NOLINTNEXTLINE(readability-function-cognitive-complexity)
 TEST_CASE("BED Parser simple", "[parsers][BED][io][short]") {
   const std::string bed_file = "test/data/unit_tests/sample.bed6.gz";
   auto p = bed::Parser(bed_file);
@@ -73,6 +74,7 @@ TEST_CASE("BED Parser simple", "[parsers][BED][io][short]") {
   CHECK(records[0].strand == '+');
 }
 
+// NOLINTNEXTLINE(readability-function-cognitive-complexity)
 TEST_CASE("BED Parser simple: BED6 -> BED3", "[parsers][BED][io][short]") {
   const std::string bed_file = "test/data/unit_tests/sample.bed6.gz";
   auto p = bed::Parser(bed_file, BED::BED3);
@@ -85,6 +87,7 @@ TEST_CASE("BED Parser simple: BED6 -> BED3", "[parsers][BED][io][short]") {
   CHECK(records[0].strand == '.');
 }
 
+// NOLINTNEXTLINE(readability-function-cognitive-complexity)
 TEST_CASE("BED Parser: BED6", "[parsers][BED][io][medium]") {
   const std::string bed_file = "test/data/unit_tests/sample.bed6.gz";
   auto p = bed::Parser(bed_file);
@@ -92,6 +95,7 @@ TEST_CASE("BED Parser: BED6", "[parsers][BED][io][medium]") {
   compare_bed_records_with_file(records, bed_file);
 }
 
+// NOLINTNEXTLINE(readability-function-cognitive-complexity)
 TEST_CASE("BED Parser: BED9", "[parsers][BED][io][medium]") {
   std::string bed_file = "test/data/unit_tests/sample.bed9.gz";
   auto p = bed::Parser(bed_file);

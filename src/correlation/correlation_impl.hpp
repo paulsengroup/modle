@@ -65,7 +65,7 @@ double compute_pearson(absl::Span<const N1> v1, absl::Span<const N2> v2) {
   double d1 = 0;
   double d2 = 0;
 
-  for (auto i = 1UL; i < v1.size(); ++i) {
+  for (size_t i = 1; i < v1.size(); ++i) {
     auto r1_tmp = v1[i] - r1_avg;
     auto r2_tmp = v2[i] - r2_avg;
     d1 += (i * r1_tmp * r1_tmp) / (i + 1);
@@ -152,7 +152,7 @@ std::pair<std::vector<double>, std::vector<double>> compute_corr(absl::Span<cons
   assert(compute_corr_fp);
   assert(compute_corr_significance_fp);
 
-  for (auto i = 0UL; i < r_vals.size(); ++i) {
+  for (size_t i = 0; i < r_vals.size(); ++i) {
     const auto window_start = i * (window_span - window_overlap);
     const auto window_end = window_start + window_span;
     auto slice1 = absl::MakeConstSpan(v1).subspan(window_start, window_end);
@@ -172,7 +172,7 @@ double compute_sed(absl::Span<const N1> v1, absl::Span<const N2> v2) {
                 "v2 should be convertible to a Span of numeric type");
 
   uint64_t sed{0};
-  for (auto i = 0UL; i < v1.size(); ++i) {
+  for (size_t i = 0; i < v1.size(); ++i) {
     const auto n = v1[i] > v2[i] ? v1[i] - v2[i] : v2[i] - v1[i];
     sed += n * n;
   }

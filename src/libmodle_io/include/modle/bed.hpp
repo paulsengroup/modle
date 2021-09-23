@@ -36,7 +36,7 @@ struct RGB {
   uint8_t g;
   uint8_t b;
 
-  [[nodiscard]] std::string to_string() const noexcept;
+  [[nodiscard]] std::string to_string() const;
 };
 
 struct BED {
@@ -88,7 +88,7 @@ struct BED {
   BED() = default;
   explicit BED(Dialect d);
   explicit BED(std::string_view record, size_t id_ = null_id, Dialect bed_standard = autodetect,
-               bool enforce_std_compliance = true);
+               bool validate = true);
   BED(std::string_view chrom_, bp_t chrom_start_, bp_t chrom_end_);
   BED(const BED& other);
   BED(BED&& other) = default;
@@ -224,7 +224,7 @@ class BED_tree {
 
 class Parser {
  public:
-  explicit Parser(boost::filesystem::path path_to_bed,
+  explicit Parser(const boost::filesystem::path& path_to_bed,
                   BED::Dialect bed_standard = BED::Dialect::autodetect,
                   bool enforce_std_compliance = true);
 

@@ -33,7 +33,7 @@ bigwig::file init_bigwig_file(std::string_view output_path,
   std::vector<char*> chrom_names(chromosomes.size());
   std::vector<uint32_t> chrom_sizes(chromosomes.size());
 
-  for (auto i = 0UL; i < chromosomes.size(); ++i) {
+  for (size_t i = 0; i < chromosomes.size(); ++i) {
     chrom_names[i] = const_cast<char*>(  // NOLINT this should be fine as long as libBigWig doesn't
         chromosomes[i].first.data());    // try to modify the data stored in the char*
 

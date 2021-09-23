@@ -10,6 +10,8 @@
 
 namespace modle::test::libmodle {
 
+// NOLINTNEXTLINE(readability-function-cognitive-complexity)
+// NOLINTNEXTLINE(readability-function-cognitive-complexity)
 TEST_CASE("Extrusion barriers - comparisons", "[barriers][simulation][short]") {
   const auto b1 = ExtrusionBarrier{100, 0.0, 0.0, dna::fwd};
   const auto b2 = ExtrusionBarrier{500, 0.0, 0.0, dna::rev};
@@ -26,6 +28,8 @@ TEST_CASE("Extrusion barriers - comparisons", "[barriers][simulation][short]") {
   CHECK(b2 >= b2);
 }
 
+// NOLINTNEXTLINE(readability-function-cognitive-complexity)
+// NOLINTNEXTLINE(readability-function-cognitive-complexity)
 TEST_CASE("Extrusion barriers - pblock", "[barriers][simulation][short]") {
   const auto pb1 = 0.85;
   const auto pnn1 = 0.7;  // not-occ -> not-occ
@@ -45,6 +49,7 @@ TEST_CASE("Extrusion barriers - pblock", "[barriers][simulation][short]") {
   CHECK(b2.occupancy() == Approx(pb2));
 }
 
+// NOLINTNEXTLINE(readability-function-cognitive-complexity)
 TEST_CASE("Extrusion barriers - blocking direction", "[barriers][simulation][short]") {
   const auto b1 = ExtrusionBarrier{100, 0.0, 0.0, dna::fwd};
   const auto b2 = ExtrusionBarrier{200, 0.0, 0.0, dna::rev};

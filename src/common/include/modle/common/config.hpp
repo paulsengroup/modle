@@ -4,6 +4,8 @@
 
 #pragma once
 
+#include <absl/types/span.h>  // for Span
+
 #include <algorithm>                  // for max
 #include <boost/filesystem/path.hpp>  // for path
 #include <cmath>                      // for round
@@ -93,8 +95,7 @@ struct Config {  // NOLINT(altera-struct-pack-align)
   bool exclude_chrom_wo_extr_barriers{true};
   bool skip_output{false};
 
-  int argc;
-  char** argv;
+  absl::Span<char*> args;
 
   std::string argv_json{};
   // clang-format on

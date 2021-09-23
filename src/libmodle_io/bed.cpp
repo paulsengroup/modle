@@ -35,7 +35,7 @@
 
 namespace modle::bed {
 
-std::string RGB::to_string() const noexcept { return fmt::to_string(*this); }
+std::string RGB::to_string() const { return fmt::to_string(*this); }
 
 void BED::parse_strand_or_throw(const std::vector<std::string_view>& toks, uint8_t idx,
                                 char& field) {
@@ -240,6 +240,7 @@ BED::BED(std::string_view chrom_, bp_t chrom_start_, bp_t chrom_end_)
 
 BED::BED(BED::Dialect d) : _standard(d) {}
 
+// NOLINTNEXTLINE(readability-function-cognitive-complexity)
 BED::BED(std::string_view record, size_t id_, BED::Dialect bed_standard, bool validate) : _id(id_) {
   std::vector<std::string_view> toks;
   for (std::string_view tok : absl::StrSplit(record, absl::ByAnyChar("\t "))) {
@@ -415,10 +416,10 @@ uint64_t BED::hash(XXH_INLINE_XXH3_state_t* state, uint64_t seed) const {
   DISABLE_WARNING_POP
 }
 
-Parser::Parser(boost::filesystem::path path_to_bed, BED::Dialect bed_standard,
+Parser::Parser(const boost::filesystem::path& path_to_bed, BED::Dialect bed_standard,
                bool enforce_std_compliance)
     // For now we always skip the header
-    : _reader(std::move(path_to_bed)),
+    : _reader(path_to_bed),
       _dialect(bed_standard),
       _enforce_std_compliance(enforce_std_compliance),
       _num_lines_read(this->skip_header()) {
@@ -572,7 +573,7 @@ size_t Parser::skip_header() {
     return 0;
   }
   assert(this->_num_records_parsed == 0);  // NOLINT
-  auto num_header_lines = 0ULL;
+  size_t num_header_lines = 0L;
   assert(this->_reader.is_open());  // NOLINT
   while (this->_reader.getline(this->_buff)) {
     if (this->_buff.empty()) {  // Skip empty lines

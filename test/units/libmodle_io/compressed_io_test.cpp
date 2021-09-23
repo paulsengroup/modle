@@ -25,6 +25,7 @@ namespace modle::test::compressed_io {
             << "buff2='" << buff2 << "'\n";
 }
 
+// NOLINTNEXTLINE(readability-function-cognitive-complexity)
 TEST_CASE("Reader plain", "[io][reader][short]") {
   const boost::filesystem::path ptext_file = "test/data/unit_tests/sample.bed9";
 
@@ -41,6 +42,7 @@ TEST_CASE("Reader plain", "[io][reader][short]") {
   CHECK(!std::getline(fp, buff2));
 }
 
+// NOLINTNEXTLINE(readability-function-cognitive-complexity)
 TEST_CASE("Reader plain sv", "[io][reader][short]") {
   const boost::filesystem::path ptext_file = "test/data/unit_tests/sample.bed9";
 
@@ -57,6 +59,7 @@ TEST_CASE("Reader plain sv", "[io][reader][short]") {
   CHECK(!std::getline(fp, buff2));
 }
 
+// NOLINTNEXTLINE(readability-function-cognitive-complexity)
 TEST_CASE("Reader gzip", "[io][reader][short]") {
   const boost::filesystem::path compressed_file = "test/data/unit_tests/sample.bed9.gz";
   const boost::filesystem::path ptext_file = "test/data/unit_tests/sample.bed9";
@@ -74,6 +77,7 @@ TEST_CASE("Reader gzip", "[io][reader][short]") {
   CHECK(!r2.getline(buff1));
 }
 
+// NOLINTNEXTLINE(readability-function-cognitive-complexity)
 TEST_CASE("Reader bzip2", "[io][reader][short]") {
   const boost::filesystem::path compressed_file = "test/data/unit_tests/sample.bed9.bz2";
   const boost::filesystem::path ptext_file = "test/data/unit_tests/sample.bed9";
@@ -90,6 +94,7 @@ TEST_CASE("Reader bzip2", "[io][reader][short]") {
   CHECK(!r2.getline(buff1));
 }
 
+// NOLINTNEXTLINE(readability-function-cognitive-complexity)
 TEST_CASE("Reader lz4", "[io][reader][short]") {
   const boost::filesystem::path compressed_file = "test/data/unit_tests/sample.bed9.lz4";
   const boost::filesystem::path ptext_file = "test/data/unit_tests/sample.bed9";
@@ -106,6 +111,7 @@ TEST_CASE("Reader lz4", "[io][reader][short]") {
   CHECK(!r2.getline(buff1));
 }
 /*
+// NOLINTNEXTLINE(readability-function-cognitive-complexity)
 TEST_CASE("Reader zstd", "[io][reader][short]") {
   const boost::filesystem::path compressed_file = "test/data/unit_tests/sample.bed9.zst";
   const boost::filesystem::path ptext_file = "test/data/unit_tests/sample.bed9";
@@ -123,6 +129,7 @@ TEST_CASE("Reader zstd", "[io][reader][short]") {
 }
  */
 
+// NOLINTNEXTLINE(readability-function-cognitive-complexity)
 TEST_CASE("Reader lzma", "[io][reader][short]") {
   const boost::filesystem::path compressed_file = "test/data/unit_tests/sample.bed9.xz";
   const boost::filesystem::path ptext_file = "test/data/unit_tests/sample.bed9";
@@ -158,6 +165,7 @@ inline void test_writer(modle::compressed_io::Reader& r1, modle::compressed_io::
   CHECK(!r2.getline(buff2));
 }
 
+// NOLINTNEXTLINE(readability-function-cognitive-complexity)
 TEST_CASE("Reader plain - readall", "[io][reader][long]") {
   const boost::filesystem::path ptext_file = "test/data/unit_tests/sample.bed9";
 
@@ -175,6 +183,7 @@ TEST_CASE("Reader plain - readall", "[io][reader][long]") {
   CHECK(buff1 == buff2);
 }
 
+// NOLINTNEXTLINE(readability-function-cognitive-complexity)
 TEST_CASE("Reader plain - empty file", "[io][reader][short]") {
   const auto test_file = testdir() / "empty_file.txt";
   { std::ofstream fp(test_file.string()); }
@@ -186,6 +195,7 @@ TEST_CASE("Reader plain - empty file", "[io][reader][short]") {
   boost::filesystem::remove(test_file);
 }
 
+// NOLINTNEXTLINE(readability-function-cognitive-complexity)
 TEST_CASE("Reader plain - one newline", "[io][reader][short]") {
   const auto test_file = testdir() / "one_newline_file.txt";
   {
@@ -206,6 +216,7 @@ TEST_CASE("Reader plain - one newline", "[io][reader][short]") {
   boost::filesystem::remove(test_file);
 }
 
+// NOLINTNEXTLINE(readability-function-cognitive-complexity)
 TEST_CASE("Reader plain - truncated file", "[io][reader][short]") {
   const auto test_file = testdir() / "truncated_file.txt";
   const std::string buff1{"test"};
@@ -223,6 +234,7 @@ TEST_CASE("Reader plain - truncated file", "[io][reader][short]") {
   boost::filesystem::remove(test_file);
 }
 
+// NOLINTNEXTLINE(readability-function-cognitive-complexity)
 TEST_CASE("Writer plain", "[io][writer][short]") {
   const boost::filesystem::path ptext_file = "test/data/unit_tests/sample.bed9";
   const auto tmpout = testdir() / ptext_file.filename();
@@ -233,6 +245,7 @@ TEST_CASE("Writer plain", "[io][writer][short]") {
   test_writer(r1, w);
 }
 
+// NOLINTNEXTLINE(readability-function-cognitive-complexity)
 TEST_CASE("Writer gzip", "[io][writer][short]") {
   const boost::filesystem::path ptext_file = "test/data/unit_tests/sample.bed9";
   const auto tmpout = testdir() / ptext_file.filename();
@@ -243,6 +256,7 @@ TEST_CASE("Writer gzip", "[io][writer][short]") {
   test_writer(r1, w);
 }
 
+// NOLINTNEXTLINE(readability-function-cognitive-complexity)
 TEST_CASE("Writer bzip2", "[io][writer][short]") {
   const boost::filesystem::path ptext_file = "test/data/unit_tests/sample.bed9";
   const auto tmpout = testdir() / ptext_file.filename();
@@ -253,6 +267,7 @@ TEST_CASE("Writer bzip2", "[io][writer][short]") {
   test_writer(r1, w);
 }
 
+// NOLINTNEXTLINE(readability-function-cognitive-complexity)
 TEST_CASE("Writer lzma", "[io][writer][short]") {
   const boost::filesystem::path ptext_file = "test/data/unit_tests/sample.bed9";
   const auto tmpout = testdir() / ptext_file.filename();
@@ -263,6 +278,7 @@ TEST_CASE("Writer lzma", "[io][writer][short]") {
   test_writer(r1, w);
 }
 /*
+// NOLINTNEXTLINE(readability-function-cognitive-complexity)
 TEST_CASE("Writer zstd", "[io][writer][short]") {
   const boost::filesystem::path ptext_file = "test/data/unit_tests/sample.bed9";
   const auto tmpout = testdir() / ptext_file.filename();

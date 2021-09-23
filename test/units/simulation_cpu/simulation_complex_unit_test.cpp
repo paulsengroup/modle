@@ -23,6 +23,7 @@
 
 namespace modle::test::libmodle {
 
+// NOLINTNEXTLINE(readability-function-cognitive-complexity)
 TEST_CASE("Simulation 001", "[simulation][short]") {
   modle::Config c;
   c.rev_extrusion_speed = 75;                  // NOLINT
@@ -106,6 +107,7 @@ TEST_CASE("Simulation 001", "[simulation][short]") {
                           fwd_collision_mask_expected);
 }
 
+// NOLINTNEXTLINE(readability-function-cognitive-complexity)
 TEST_CASE("Simulation 002", "[simulation][short]") {
   modle::Config c;
   c.rev_extrusion_speed = 75;                  // NOLINT
@@ -189,6 +191,7 @@ TEST_CASE("Simulation 002", "[simulation][short]") {
                           fwd_collision_mask_expected);
 }
 
+// NOLINTNEXTLINE(readability-function-cognitive-complexity)
 TEST_CASE("Simulation 003 - Soft collisions on", "[simulation][short]") {
   modle::Config c;
   c.rev_extrusion_speed = 75;                  // NOLINT
@@ -272,6 +275,7 @@ TEST_CASE("Simulation 003 - Soft collisions on", "[simulation][short]") {
                           fwd_collision_mask_expected);
 }
 
+// NOLINTNEXTLINE(readability-function-cognitive-complexity)
 TEST_CASE("Simulation 004 - Inactive barriers", "[simulation][short]") {
   modle::Config c;
   c.rev_extrusion_speed = 75;                  // NOLINT
@@ -355,6 +359,7 @@ TEST_CASE("Simulation 004 - Inactive barriers", "[simulation][short]") {
                           fwd_collision_mask_expected);
 }
 
+// NOLINTNEXTLINE(readability-function-cognitive-complexity)
 TEST_CASE("Simulation 005 - Multiple LEFs located at the same site", "[simulation][short]") {
   modle::Config c;
   c.rev_extrusion_speed = 25;                  // NOLINT
@@ -431,6 +436,7 @@ TEST_CASE("Simulation 005 - Multiple LEFs located at the same site", "[simulatio
                           fwd_collision_mask_expected);
 }
 
+// NOLINTNEXTLINE(readability-function-cognitive-complexity)
 TEST_CASE("Simulation 006 - Few inactive LEFs", "[simulation][short]") {
   modle::Config c;
   c.rev_extrusion_speed = 25;                  // NOLINT
@@ -510,6 +516,7 @@ TEST_CASE("Simulation 006 - Few inactive LEFs", "[simulation][short]") {
                           fwd_collision_mask_expected);
 }
 
+// NOLINTNEXTLINE(readability-function-cognitive-complexity)
 TEST_CASE("Simulation 007 - LEF-LEF collision overrides LEF-BAR collision 1",
           "[simulation][short]") {
   modle::Config c;
@@ -571,6 +578,7 @@ TEST_CASE("Simulation 007 - LEF-LEF collision overrides LEF-BAR collision 1",
                           fwd_collision_mask_expected);
 }
 
+// NOLINTNEXTLINE(readability-function-cognitive-complexity)
 TEST_CASE("Simulation 008 - LEF-LEF collision overrides LEF-BAR collision 2",
           "[simulation][short]") {
   modle::Config c;
@@ -632,6 +640,7 @@ TEST_CASE("Simulation 008 - LEF-LEF collision overrides LEF-BAR collision 2",
                           fwd_collision_mask_expected);
 }
 
+// NOLINTNEXTLINE(readability-function-cognitive-complexity)
 TEST_CASE("Simulation 009 - Ensure stacked LEFs do not interfere with surrounding extr. barriers",
           "[simulation][short]") {
   modle::Config c;
@@ -707,6 +716,7 @@ TEST_CASE("Simulation 009 - Ensure stacked LEFs do not interfere with surroundin
                           fwd_collision_mask_expected);
 }
 
+// NOLINTNEXTLINE(readability-function-cognitive-complexity)
 TEST_CASE("Simulation 010 - Ensure stacked LEFs do not interfere with surrounding extr. barriers",
           "[simulation][short]") {
   modle::Config c;

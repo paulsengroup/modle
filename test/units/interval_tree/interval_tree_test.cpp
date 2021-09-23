@@ -33,6 +33,7 @@ void test_find_overlaps(const IITree_t& tree, size_t start, size_t end,
   CHECK(static_cast<size_t>(overlap_end - overlap_begin) == num_expected_overlaps);
 }
 
+// NOLINTNEXTLINE(readability-function-cognitive-complexity)
 TEST_CASE("Interval tree simple", "[interval-tree][short]") {
   IITree_t tree{};
 
@@ -58,6 +59,7 @@ TEST_CASE("Interval tree simple", "[interval-tree][short]") {
   test_find_overlaps(tree, 16, 25, 0);  // NOLINT
 }
 
+// NOLINTNEXTLINE(readability-function-cognitive-complexity)
 TEST_CASE("Interval tree chrX", "[interval-tree][short]") {
   const std::string all_intervals = "test/data/unit_tests/interval_tree_all.bed.gz";
   const std::string subset_intervals = "test/data/unit_tests/interval_tree_subset.bed.gz";

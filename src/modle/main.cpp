@@ -84,7 +84,7 @@ int main(int argc, char** argv) noexcept {
         cli->write_config_file();
       }
     }
-    spdlog::info(FMT_STRING("Command: {}"), fmt::join(config.argv, config.argv + config.argc, " "));
+    spdlog::info(FMT_STRING("Command: {}"), fmt::join(config.args, " "));
     modle::Simulation sim(config);
     switch (cli->get_subcommand()) {
       using subcommand = modle::Cli::subcommand;

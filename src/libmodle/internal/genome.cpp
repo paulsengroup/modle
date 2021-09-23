@@ -348,7 +348,7 @@ absl::btree_set<Chromosome> Genome::import_chromosomes(
   // available, then only chromosomes that are present in both files will be selected. Furthermore
   // we are also checking that the subrange lies within the genomic coordinates specified in the
   // chrom. sizes file
-  auto id = 0UL;
+  size_t id = 0;
   absl::btree_set<Chromosome> chromosomes;
   if (path_to_chrom_subranges.empty()) {
     for (auto record : chrom_sizes::Parser(path_to_chrom_sizes).parse_all()) {

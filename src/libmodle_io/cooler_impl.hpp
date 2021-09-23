@@ -157,7 +157,7 @@ void Cooler::write_or_append_cmatrix_to_file(const ContactMatrix<I1> *cmatrix,
           b->pixel_count_buff.clear();
         };
 
-    for (auto chrom_idx = 0UL; chrom_offset + chrom_idx < static_cast<size_t>(this->_nchroms);
+    for (size_t chrom_idx = 0; chrom_offset + chrom_idx < static_cast<size_t>(this->_nchroms);
          ++chrom_idx) {
       if (cmatrix && cmatrix->get_n_of_missed_updates() != 0) {
         const auto &n = cmatrix->get_n_of_missed_updates();
@@ -212,7 +212,7 @@ void Cooler::write_or_append_cmatrix_to_file(const ContactMatrix<I1> *cmatrix,
 
       pxl_offset += (chrom_start + this->_bin_size - 1) / this->_bin_size;
       if (cmatrix) {  // when cmatrix == nullptr we only write chrom/bins/indexes (no pixels)
-        for (auto i = 0UL; i < cmatrix->ncols(); ++i) {  // Iterate over columns in the cmatrix
+        for (size_t i = 0; i < cmatrix->ncols(); ++i) {  // Iterate over columns in the cmatrix
           // Write the first pixel that refers to a given bin1 to the index
           b->idx_bin1_offset_buff.push_back(this->_nnz);
 
@@ -531,7 +531,7 @@ ContactMatrix<N> Cooler::cooler_to_cmatrix(std::pair<hsize_t, hsize_t> bin_range
     assert(bin2_BUFF.size() == buff_size);   // NOLINT
     assert(count_BUFF.size() == buff_size);  // NOLINT
 
-    for (auto j = 0UL; j < buff_size; ++j) {
+    for (size_t j = 0; j < buff_size; ++j) {
       assert(count_BUFF[j] != 0);  // NOLINT
       DISABLE_WARNING_PUSH
       DISABLE_WARNING_SIGN_CONVERSION

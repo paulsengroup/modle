@@ -90,7 +90,7 @@ void noisify_contacts(const noisify_config& c) {
         break;
       }
       assert(pixel.row <= pixel.col);  // NOLINT
-      for (auto i = 0UL; i < pixel.count; ++i) {
+      for (size_t i = 0; i < pixel.count; ++i) {
         const auto pos1 = static_cast<double>(pixel.row * bin_size) + genextreme(rang_eng);
         const auto pos2 = static_cast<double>(pixel.col * bin_size) - genextreme(rang_eng);
         const auto bin1 = std::clamp(

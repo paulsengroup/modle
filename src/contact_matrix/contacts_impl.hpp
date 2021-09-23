@@ -346,7 +346,7 @@ size_t ContactMatrix<N>::unsafe_npixels_after_masking() const {
   };
 
   assert(this->nrows() <= this->ncols());
-  for (auto i = 0UL; i < this->ncols(); ++i) {
+  for (size_t i = 0; i < this->ncols(); ++i) {
     if (!mask[i]) {
       // We are processing pixels in the upper left corner of cmatrix
       if (i < this->nrows()) {
@@ -426,7 +426,7 @@ void ContactMatrix<N>::unsafe_print(std::ostream &out_stream, bool full) const {
     }
   } else {
     std::vector<N> row(this->ncols());
-    for (auto i = 0UL; i < this->nrows(); ++i) {
+    for (size_t i = 0; i < this->nrows(); ++i) {
       for (auto j = i; j < this->ncols(); ++j) {
         row[j] = this->at(i, j);
       }
@@ -572,7 +572,7 @@ void ContactMatrix<N>::unsafe_compute_row_wise_contact_histogram(
   buff.resize(this->nrows());
   std::fill(buff.begin(), buff.end(), 0);
 
-  for (auto i = 0UL; i < this->ncols(); ++i) {
+  for (size_t i = 0; i < this->ncols(); ++i) {
     for (auto j = i; j < i + this->nrows() && j < this->ncols(); ++j) {
       // j - i corresponds to the distance from the diagonal
       buff[j - i] += this->unsafe_get(j, i);

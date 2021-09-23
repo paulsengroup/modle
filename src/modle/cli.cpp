@@ -7,6 +7,7 @@
 #include <absl/strings/str_cat.h>      // for StrAppend
 #include <absl/strings/str_split.h>    // for SplitIterator, Splitter, StrSplit, operator!=
 #include <absl/strings/string_view.h>  // for string_view, basic_string_view, operator""sv
+#include <absl/types/span.h>           // for MakeSpan
 #include <fmt/format.h>                // for format, FMT_STRING, join, print, make_format_...
 #include <fmt/os.h>                    // for output_file, ostream
 #include <fmt/ostream.h>               // for formatbuf<>::int_type
@@ -36,7 +37,7 @@
 namespace modle {
 
 static std::string is_odd_number(std::string_view s) {
-  int64_t n;
+  int64_t n;  // NOLINT
   try {
     utils::parse_numeric_or_throw(s, n);
   } catch (const std::exception& e) {
@@ -578,13 +579,13 @@ const Config& Cli::parse_arguments() {
 
   this->validate_args();
   this->transform_args();
-  this->_config.argc = _argc;
-  this->_config.argv = _argv;
+  this->_config.args = absl::MakeSpan(_argv, static_cast<size_t>(_argc));
 
   this->_config.argv_json = this->to_json();
   return this->_config;
 }
 
+// NOLINTNEXTLINE(readability-function-cognitive-complexity) TODO: reduce complexity
 std::string Cli::detect_path_collisions(modle::Config& c) const {
   std::string collisions;
 
@@ -760,7 +761,7 @@ std::string Cli::to_json() const {
     // In this way we can filter out entry corresponding to arguments for inactive subcommands
     const auto arg = line.substr(0, line.find('='));
     assert(!arg.empty());  // NOLINT
-    if (arg.find('.') == decltype(arg)::npos) {
+    if (!absl::StrContains(arg, '.')) {
       absl::StrAppend(&buff, line, "\n");
     }
   }

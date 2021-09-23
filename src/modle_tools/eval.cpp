@@ -69,7 +69,7 @@ std::vector<std::pair<std::string, int64_t>> select_chromosomes_for_eval(
 
       absl::btree_set<std::pair<std::string, int64_t>> chrom_set;
 
-      for (auto i = 0UL; i < str_buff.size(); ++i) {
+      for (size_t i = 0; i < str_buff.size(); ++i) {
         chrom_set.emplace(str_buff[i], int_buff[i]);
       }
       return chrom_set;

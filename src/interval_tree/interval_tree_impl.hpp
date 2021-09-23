@@ -73,7 +73,7 @@ void IITree<I, T>::make_BST() {
   });
 
   // https://stackoverflow.com/a/22218699
-  for (auto i = 0UL; i < this->size(); i++) {
+  for (size_t i = 0; i < this->size(); i++) {
     while (ranks[i] != i) {
       const auto &j = ranks[i];
       const auto &k = ranks[j];
@@ -93,7 +93,7 @@ void IITree<I, T>::make_BST() {
       return -1LL;
     }
 
-    for (auto i = 0UL; i < this->size(); i += 2) {  // leaves (i.e. at level 0)
+    for (size_t i = 0; i < this->size(); i += 2) {  // leaves (i.e. at level 0)
       this->_max[i] = this->_end[i];
     }
 
@@ -107,7 +107,7 @@ void IITree<I, T>::make_BST() {
     auto k = 1LL;
     const auto k1 = static_cast<int64_t>(this->size());
     for (; 1LL << k <= k1; ++k) {  // process internal nodes in the bottom-up order
-      const auto x = 1ULL << (k - 1);
+      const size_t x = 1L << (k - 1);
       const auto i0 = (x << 1) - 1;
       const auto step = x << 2;
 
@@ -174,7 +174,7 @@ std::pair<T_iterator_const, T_iterator_const> IITree<I, T>::internal_equal_range
   stack.front() = StackCell{this->_max_level, (1ULL << this->_max_level) - 1, false};
 
   // The following guarantees that we visit overlapping intervals in increasing order
-  for (auto t = 1UL; t > 0;) {
+  for (size_t t = 1; t > 0;) {
     assert(t <= 64);  // NOLINT
     const auto cell = stack[--t];
     if (cell.level < 4) {  // we are in a small subtree; traverse every node in this subtree

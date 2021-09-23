@@ -192,7 +192,7 @@ bool has_group(H5::H5File &f, std::string_view name, std::string_view root_path)
   H5O_info2_t info;
   const auto path =
       absl::StrCat(absl::StripSuffix(root_path, "/"), "/", absl::StripPrefix(name, "/"));
-  assert(!path.empty());
+  assert(!path.empty());  // NOLINT
   size_t pos = 0;
   do {
     pos = path.find_first_of('/', pos + 1);
@@ -212,7 +212,7 @@ bool has_dataset(H5::H5File &f, std::string_view name, std::string_view root_pat
   H5O_info2_t info;
   const auto path =
       absl::StrCat(absl::StripSuffix(root_path, "/"), "/", absl::StripPrefix(name, "/"));
-  assert(!path.empty());
+  assert(!path.empty());  // NOLINT
   size_t pos = 0;
   do {
     pos = path.find_first_of('/', pos + 1);

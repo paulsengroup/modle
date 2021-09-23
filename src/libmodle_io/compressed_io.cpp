@@ -265,7 +265,8 @@ void Writer::open(const boost::filesystem::path& path) {
           boost::iostreams::gzip_params(boost::iostreams::gzip::best_compression)));
       break;
     case BZIP2:
-      this->_out.push(boost::iostreams::bzip2_compressor(boost::iostreams::bzip2_params(9)));
+      this->_out.push(
+          boost::iostreams::bzip2_compressor(boost::iostreams::bzip2_params(9)));  // NOLINT
       break;
     case LZMA:
       this->_out.push(boost::iostreams::lzma_compressor(

@@ -56,14 +56,14 @@ void Simulation::bind_lefs(const bp_t start_pos, const bp_t end_pos, const absl:
   }
 
   chrom_pos_generator_t pos_generator{start_pos, end_pos - 1};
-  for (auto i = 0UL; i < lefs.size(); ++i) {
+  for (size_t i = 0; i < lefs.size(); ++i) {
     if (mask.empty() || mask[i]) {  // Bind all LEFs when mask is empty
       lefs[i].bind_at_pos(current_epoch, pos_generator(rand_eng));
     }
   }
 
   if constexpr (utils::ndebug_not_defined()) {
-    for (auto i = 0UL; i < lefs.size(); ++i) {
+    for (size_t i = 0; i < lefs.size(); ++i) {
       if (mask.empty() || mask[i]) {
         assert(lefs[i].rev_unit >= start_pos && lefs[i].rev_unit < end_pos);  // NOLINT
         assert(lefs[i].fwd_unit >= start_pos && lefs[i].fwd_unit < end_pos);  // NOLINT
@@ -98,7 +98,7 @@ void Simulation::select_lefs_to_bind(const absl::Span<const Lef> lefs,
   static_assert(std::is_integral_v<T> || std::is_same_v<MaskT, boost::dynamic_bitset<>>,
                 "mask should be a vector of integral numbers or a boost::dynamic_bitset.");
   assert(lefs.size() == mask.size());  // NOLINT
-  for (auto i = 0UL; i < lefs.size(); ++i) {
+  for (size_t i = 0; i < lefs.size(); ++i) {
     mask[i] = !lefs[i].is_bound();
   }
 }

@@ -47,7 +47,7 @@ template <typename I>
     const std::vector<collision_t>& rev_collision_mask_expected,
     const std::vector<collision_t>& fwd_collision_mask,
     const std::vector<collision_t>& fwd_collision_mask_expected, bool print_debug_info_ = false) {
-  for (auto i = 0UL; i < lefs.size(); ++i) {
+  for (size_t i = 0; i < lefs.size(); ++i) {
     CHECK(rev_collision_mask[i] == rev_collision_mask_expected[i]);
     CHECK(fwd_collision_mask[i] == fwd_collision_mask_expected[i]);
     CHECK(rev_moves[i] == rev_moves_expected[i]);

@@ -38,6 +38,7 @@
 
 namespace modle {
 
+// NOLINTNEXTLINE(readability-function-cognitive-complexity)
 void Simulation::run_simulate() {
   if (!this->skip_output) {  // Write simulation params to file
     assert(boost::filesystem::exists(this->path_to_output_prefix.parent_path()));  // NOLINT
@@ -94,7 +95,7 @@ void Simulation::run_simulate() {
     // have been completed, and contacts have been written to disk
 
     absl::FixedArray<Task> tasks(task_batch_size_enq);
-    auto taskid = 0UL;
+    size_t taskid = 0;
 
     // Loop over chromosomes
     for (auto& chrom : this->_genome) {
@@ -123,7 +124,7 @@ void Simulation::run_simulate() {
           std::max(1.0, std::round(this->number_of_lefs_per_mbp *
                                    (static_cast<double>(chrom.simulated_size()) / Mbp))));
 
-      auto target_contacts = 0UL;
+      size_t target_contacts = 0;
       // Compute the number of simulation rounds required to reach the target contact density
       if (this->target_contact_density != 0.0) {
         target_contacts = static_cast<size_t>(std::max(
@@ -137,7 +138,7 @@ void Simulation::run_simulate() {
 
       size_t cellid = 0;
       const auto nbatches = (this->num_cells + task_batch_size_enq - 1) / task_batch_size_enq;
-      for (auto batchid = 0UL; batchid < nbatches; ++batchid) {
+      for (size_t batchid = 0; batchid < nbatches; ++batchid) {
         // Generate a batch of tasks for all the simulations involving the current chrom
         std::generate(tasks.begin(), tasks.end(), [&]() {
           return Task{{taskid++, &chrom, cellid++, target_epochs, target_contacts, nlefs,

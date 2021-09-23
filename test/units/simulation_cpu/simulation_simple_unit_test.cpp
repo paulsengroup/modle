@@ -28,9 +28,10 @@
 
 namespace modle::test::libmodle {
 
+// NOLINTNEXTLINE(readability-function-cognitive-complexity)
 TEST_CASE("Bind LEFs 001", "[bind-lefs][simulation][short]") {
   const Chromosome chrom{0, "chr1", 0, 1000, 1000};
-  const auto nlefs = 10UL;
+  const size_t nlefs = 10;
   std::vector<Lef> lefs(nlefs, Lef{});
   std::vector<size_t> rank1(nlefs), rank2(nlefs);  // NOLINT
   std::iota(rank1.begin(), rank1.end(), 0);
@@ -39,8 +40,8 @@ TEST_CASE("Bind LEFs 001", "[bind-lefs][simulation][short]") {
   // NOLINTNEXTLINE(readability-magic-numbers, cppcoreguidelines-avoid-magic-numbers)
   auto rand_eng = random::PRNG(8865403569783063175ULL);
 
-  for (auto i = 0UL; i < nlefs; ++i) {
-    mask[i] = random::bernoulli_trial{0.50}(rand_eng);
+  for (size_t i = 0; i < nlefs; ++i) {
+    mask[i] = random::bernoulli_trial{0.50}(rand_eng);  // NOLINT
   }
 
   const auto c = Config{};
@@ -53,9 +54,9 @@ TEST_CASE("Bind LEFs 001", "[bind-lefs][simulation][short]") {
   CHECK(mask.size() == nlefs);
   check_that_lefs_are_sorted_by_idx(lefs, rank1, rank2);
 
-  for (auto i = 0UL; i < nlefs; ++i) {
+  for (size_t i = 0; i < nlefs; ++i) {
     const auto& lef = lefs[i];
-    if (mask[i]) {
+    if (mask[i]) {  // NOLINT(readability-implicit-bool-conversion)
       CHECK(lef.is_bound());
       CHECK(lef.rev_unit.pos() == lef.fwd_unit.pos());
       CHECK(lef.rev_unit.pos() >= chrom.start_pos());
@@ -66,6 +67,7 @@ TEST_CASE("Bind LEFs 001", "[bind-lefs][simulation][short]") {
   }
 }
 
+// NOLINTNEXTLINE(readability-function-cognitive-complexity)
 TEST_CASE("Bind LEFs 002 - No LEFs to bind", "[bind-lefs][simulation][short]") {
   const Chromosome chrom{0, "chr1", 0, 1000, 1000};
   std::vector<Lef> lefs;
@@ -92,12 +94,12 @@ TEST_CASE("Bind LEFs 002 - No LEFs to bind", "[bind-lefs][simulation][short]") {
   CHECK(rank2.empty());
   CHECK(mask2.empty());
 
-  const auto nlefs = 10UL;
+  const size_t nlefs = 10;
   std::generate_n(std::back_inserter(lefs), nlefs, []() { return Lef{}; });
   rank1.resize(nlefs);
   std::iota(rank1.begin(), rank1.end(), 0);
   rank2 = rank1;
-  mask1.resize(nlefs, 0);
+  mask1.resize(nlefs, false);
 
   Simulation{c, false}.test_bind_lefs(chrom, absl::MakeSpan(lefs), absl::MakeSpan(rank1),
                                       absl::MakeSpan(rank2), mask1, rand_eng, 0);
@@ -112,9 +114,10 @@ TEST_CASE("Bind LEFs 002 - No LEFs to bind", "[bind-lefs][simulation][short]") {
   CHECK(std::all_of(lefs.begin(), lefs.end(), [](const auto& lef) { return !lef.is_bound(); }));
 }
 
+// NOLINTNEXTLINE(readability-function-cognitive-complexity)
 TEST_CASE("Bind LEFs 003 - Empty mask (i.e. bind all LEFs)", "[bind-lefs][simulation][short]") {
   const Chromosome chrom{0, "chr1", 0, 1000, 1000};
-  const auto nlefs = 10UL;
+  const size_t nlefs = 10;
   std::vector<Lef> lefs(nlefs, Lef{});
   std::vector<size_t> rank1(nlefs);
   std::vector<size_t> rank2(nlefs);
@@ -138,6 +141,7 @@ TEST_CASE("Bind LEFs 003 - Empty mask (i.e. bind all LEFs)", "[bind-lefs][simula
                     [](const auto& lef) { return lef.rev_unit.pos() == lef.fwd_unit.pos(); }));
 }
 
+// NOLINTNEXTLINE(readability-function-cognitive-complexity)
 TEST_CASE("Adjust LEF moves 001", "[adjust-lef-moves][simulation][short]") {
   const Chromosome chrom{0, "chr1", 0, 101, 101};
   // clang-format off
@@ -167,6 +171,7 @@ const std::vector<Lef> lefs{construct_lef(5, 25, 1),
   CHECK(std::equal(fwd_moves.begin(), fwd_moves.end(), fwd_moves_adjusted.begin()));
 }
 
+// NOLINTNEXTLINE(readability-function-cognitive-complexity)
 TEST_CASE("Adjust LEF moves 002", "[adjust-lef-moves][simulation][short]") {
   const Chromosome chrom{0, "chr1", 10, 400, 400};
   // clang-format off
@@ -195,16 +200,17 @@ const std::vector<Lef> lefs{construct_lef(20, 50, 0),
   Simulation::test_adjust_moves(chrom, lefs, rev_ranks, fwd_ranks, absl::MakeSpan(rev_moves),
                                 absl::MakeSpan(fwd_moves));
 
-  for (auto i = 0UL; i < rev_moves.size(); ++i) {
+  for (size_t i = 0; i < rev_moves.size(); ++i) {
     CHECK(rev_moves[i] == rev_moves_adjusted[i]);
     CHECK(fwd_moves[i] == fwd_moves_adjusted[i]);
   }
 }
 
+// NOLINTNEXTLINE(readability-function-cognitive-complexity)
 TEST_CASE("Generate LEF moves 001", "[generate-lef-moves][simulation][long]") {
   const Chromosome chrom{0, "chr1", 1000, 2000, 2000};
-  const auto nlefs = 100UL;
-  const auto iters = 1000UL;
+  const size_t nlefs = 100;
+  const size_t iters = 1000;
   // NOLINTNEXTLINE(readability-magic-numbers, cppcoreguidelines-avoid-magic-numbers)
   auto rand_eng = random::PRNG(8312545934532053745ULL);
   std::vector<Lef> lefs(nlefs);
@@ -218,7 +224,7 @@ TEST_CASE("Generate LEF moves 001", "[generate-lef-moves][simulation][long]") {
   c.rev_extrusion_speed_std = static_cast<double>(c.rev_extrusion_speed) * 0.2;  // NOLINT
   c.fwd_extrusion_speed_std = static_cast<double>(c.fwd_extrusion_speed) * 0.2;  // NOLINT
 
-  for (auto i = 0UL; i < iters; ++i) {
+  for (size_t i = 0; i < iters; ++i) {
     std::generate(lefs.begin(), lefs.end(), [&]() {
       const auto pos =
           random::uniform_int_distribution<bp_t>{chrom.start_pos(), chrom.end_pos() - 1}(rand_eng);
@@ -253,6 +259,7 @@ TEST_CASE("Generate LEF moves 001", "[generate-lef-moves][simulation][long]") {
   }
 }
 
+// NOLINTNEXTLINE(readability-function-cognitive-complexity)
 TEST_CASE("Detect LEF-LEF collisions 001", "[lef-lef-collisions][simulation][short]") {
   modle::Config c;
   c.rev_extrusion_speed = 3;                   // NOLINT
@@ -261,7 +268,7 @@ TEST_CASE("Detect LEF-LEF collisions 001", "[lef-lef-collisions][simulation][sho
   c.fwd_extrusion_speed_std = 0;               // NOLINT
   c.probability_of_extrusion_unit_bypass = 0;  // NOLINT
   const Chromosome chrom{0, "chr1", 0, 30, 30};
-  [[maybe_unused]] const auto nlefs = 4UL;
+  [[maybe_unused]] const size_t nlefs = 4;
   // NOLINTNEXTLINE(readability-magic-numbers, cppcoreguidelines-avoid-magic-numbers)
   auto rand_eng = random::PRNG(9589236971571381257ULL);
 
@@ -321,11 +328,12 @@ const std::vector<collision_t> fwd_collision_mask_expected{1UL,
                           fwd_collision_mask_expected);
 }
 
+// NOLINTNEXTLINE(readability-function-cognitive-complexity)
 TEST_CASE("Detect LEF-LEF collisions 002", "[lef-lef-collisions][simulation][short]") {
   modle::Config c;
   c.probability_of_extrusion_unit_bypass = 0;  // NOLINT
   const Chromosome chrom{0, "chr1", 0, 16, 16};
-  [[maybe_unused]] const auto nlefs = 4UL;
+  [[maybe_unused]] const size_t nlefs = 4;
   // NOLINTNEXTLINE(readability-magic-numbers, cppcoreguidelines-avoid-magic-numbers)
   auto rand_eng = random::PRNG(9589236971571381257ULL);
 
@@ -388,11 +396,12 @@ const std::vector<collision_t> fwd_collision_mask_expected{5UL,
                           fwd_collision_mask_expected);
 }
 
+// NOLINTNEXTLINE(readability-function-cognitive-complexity)
 TEST_CASE("Detect LEF-LEF collisions 003", "[lef-lef-collisions][simulation][short]") {
   modle::Config c;
   c.probability_of_extrusion_unit_bypass = 0;  // NOLINT
   const Chromosome chrom{0, "chr1", 100, 201, 201};
-  const auto nlefs = 3UL;
+  const size_t nlefs = 3;
   // NOLINTNEXTLINE(readability-magic-numbers, cppcoreguidelines-avoid-magic-numbers)
   auto rand_eng = random::PRNG(3778138500607566040ULL);
 
@@ -453,6 +462,7 @@ const std::vector<collision_t> fwd_collision_mask_expected{REACHED_CHROM_BOUNDAR
                           fwd_collision_mask_expected);
 }
 
+// NOLINTNEXTLINE(readability-function-cognitive-complexity)
 TEST_CASE("Detect LEF-BAR collisions 001 - wo soft collisions fwd CTCFs",
           "[lef-bar-collisions][simulation][short]") {
   modle::Config c;
@@ -517,6 +527,7 @@ const std::vector<ExtrusionBarrier> barriers{ExtrusionBarrier{2, 1.0, 0.0, '+'},
                           fwd_collision_mask_expected);
 }
 
+// NOLINTNEXTLINE(readability-function-cognitive-complexity)
 TEST_CASE("Detect LEF-BAR collisions 002 - wo soft-collisions rev CTCFs",
           "[lef-bar-collisions][simulation][short]") {
   modle::Config c;
@@ -582,6 +593,7 @@ const std::vector<ExtrusionBarrier> barriers{ExtrusionBarrier{2, 1.0, 0.0, '-'},
                           fwd_collision_mask_expected);
 }
 
+// NOLINTNEXTLINE(readability-function-cognitive-complexity)
 TEST_CASE("Detect LEF-BAR collisions 003 - w soft-collisions fwd CTCFs",
           "[lef-bar-collisions][simulation][short]") {
   modle::Config c;
@@ -646,6 +658,7 @@ const std::vector<ExtrusionBarrier> barriers{ExtrusionBarrier{2, 1.0, 0.0, '+'},
                           fwd_collision_mask_expected);
 }
 
+// NOLINTNEXTLINE(readability-function-cognitive-complexity)
 TEST_CASE("Detect LEF-BAR collisions 004 - wo soft-collisions mixed CTCFs",
           "[lef-bar-collisions][simulation][short]") {
   modle::Config c;
@@ -716,6 +729,7 @@ const std::vector<ExtrusionBarrier> barriers{ExtrusionBarrier{25, 1.0, 0.0, '+'}
                           fwd_collision_mask_expected);
 }
 
+// NOLINTNEXTLINE(readability-function-cognitive-complexity)
 TEST_CASE("Detect LEF-BAR collisions 005 - wo soft-collisions mixed CTCFs, different extr. speeds",
           "[lef-bar-collisions][simulation][short]") {
   modle::Config c;
@@ -786,6 +800,7 @@ const std::vector<ExtrusionBarrier> barriers{ExtrusionBarrier{25, 1.0, 0.0, '+'}
                           fwd_collision_mask_expected);
 }
 
+// NOLINTNEXTLINE(readability-function-cognitive-complexity)
 TEST_CASE("LEFs ranking 001 - Rev extr. unit tied", "[simulation][short]") {
   modle::Config c{};
   constexpr size_t nlefs = 6;
@@ -829,19 +844,20 @@ TEST_CASE("LEFs ranking 001 - Rev extr. unit tied", "[simulation][short]") {
 
   Simulation::test_rank_lefs(lefs1, absl::MakeSpan(rev_ranks), absl::MakeSpan(fwd_ranks), false,
                              true);
-  for (auto i = 0UL; i < lefs1.size(); ++i) {
+  for (size_t i = 0; i < lefs1.size(); ++i) {
     CHECK(rev_ranks[i] == rev_ranks_expected1[i]);
     CHECK(fwd_ranks[i] == fwd_ranks_expected1[i]);
   }
 
   Simulation::test_rank_lefs(lefs2, absl::MakeSpan(rev_ranks), absl::MakeSpan(fwd_ranks), false,
                              true);
-  for (auto i = 0UL; i < lefs2.size(); ++i) {
+  for (size_t i = 0; i < lefs2.size(); ++i) {
     CHECK(rev_ranks[i] == rev_ranks_expected2[i]);
     CHECK(fwd_ranks[i] == fwd_ranks_expected2[i]);
   }
 }
 
+// NOLINTNEXTLINE(readability-function-cognitive-complexity)
 TEST_CASE("LEFs ranking 002 - Fwd extr. unit tied", "[simulation][short]") {
   modle::Config c{};
   constexpr size_t nlefs = 6;
@@ -887,14 +903,14 @@ TEST_CASE("LEFs ranking 002 - Fwd extr. unit tied", "[simulation][short]") {
 
   Simulation::test_rank_lefs(lefs1, absl::MakeSpan(rev_ranks), absl::MakeSpan(fwd_ranks), false,
                              true);
-  for (auto i = 0UL; i < lefs1.size(); ++i) {
+  for (size_t i = 0; i < lefs1.size(); ++i) {
     CHECK(rev_ranks[i] == rev_ranks_expected1[i]);
     CHECK(fwd_ranks[i] == fwd_ranks_expected1[i]);
   }
 
   Simulation::test_rank_lefs(lefs2, absl::MakeSpan(rev_ranks), absl::MakeSpan(fwd_ranks), false,
                              true);
-  for (auto i = 0UL; i < lefs2.size(); ++i) {
+  for (size_t i = 0; i < lefs2.size(); ++i) {
     CHECK(rev_ranks[i] == rev_ranks_expected2[i]);
     CHECK(fwd_ranks[i] == fwd_ranks_expected2[i]);
   }

@@ -27,7 +27,7 @@ const SmartDir testdir{cleanup_on_exit};  // NOLINT Using auto here upsets GCC8
 namespace modle::test::hdf5 {
 using namespace modle::hdf5;
 
-static const auto MAX_STR_LENGTH = 32UL;
+static const size_t MAX_STR_LENGTH = 32;
 
 [[nodiscard]] inline H5::StrType init_str_type() {
   auto st = H5::StrType(H5::PredType::C_S1, MAX_STR_LENGTH);
@@ -71,6 +71,7 @@ inline H5::DataSet init_test_int64_dataset(H5::H5File& f, std::string_view path 
                          mem_space, cprop);
 }
 
+// NOLINTNEXTLINE(readability-function-cognitive-complexity)
 TEST_CASE("read_write_strings HDF5", "[io][hdf5][short]") {
   const auto test_file = testdir() / "rw_strings.hdf5";
   boost::filesystem::create_directories(testdir());
@@ -81,14 +82,14 @@ TEST_CASE("read_write_strings HDF5", "[io][hdf5][short]") {
   auto dataset = init_test_str_dataset(f);
 
   CHECK(write_strings(v, dataset, init_str_type(), 0) == v.size());
-  for (auto i = 0UL; i < v.size(); ++i) {
+  for (size_t i = 0; i < v.size(); ++i) {
     const auto buff = read_str(dataset, i);
     CHECK(buff == v[i]);
   }
 
   const auto buffv = read_strings(dataset, 0);
   REQUIRE(buffv.size() == v.size());
-  for (auto i = 0UL; i < v.size(); ++i) {
+  for (size_t i = 0; i < v.size(); ++i) {
     CHECK(v[i] == buffv[i]);
   }
   boost::filesystem::remove_all(testdir());
@@ -97,6 +98,7 @@ TEST_CASE("read_write_strings HDF5", "[io][hdf5][short]") {
   }
 }
 
+// NOLINTNEXTLINE(readability-function-cognitive-complexity)
 TEST_CASE("read_write_ints HDF5", "[io][hdf5][short]") {
   const auto test_file = testdir() / "rw_ints.hdf5";
   boost::filesystem::create_directories(testdir());
@@ -105,7 +107,7 @@ TEST_CASE("read_write_ints HDF5", "[io][hdf5][short]") {
   H5::H5File f(test_file.string(), H5F_ACC_TRUNC);
   auto dataset = init_test_int64_dataset(f);
   int64_t buff{};
-  for (auto i = 0UL; i < v.size(); ++i) {
+  for (size_t i = 0; i < v.size(); ++i) {
     CHECK(write_number(v[i], dataset, i) == i + 1);
     CHECK(read_number(dataset, buff, i) == i + 1);
     CHECK(buff == v[i]);
@@ -115,7 +117,7 @@ TEST_CASE("read_write_ints HDF5", "[io][hdf5][short]") {
   CHECK(write_numbers(v, dataset, 0) == v.size());
   CHECK(read_numbers(dataset, buffv, 0));
   REQUIRE(buffv.size() == v.size());
-  for (auto i = 0UL; i < v.size(); ++i) {
+  for (size_t i = 0; i < v.size(); ++i) {
     CHECK(v[i] == buffv[i]);
   }
   boost::filesystem::remove_all(testdir());
@@ -124,6 +126,7 @@ TEST_CASE("read_write_ints HDF5", "[io][hdf5][short]") {
   }
 }
 
+// NOLINTNEXTLINE(readability-function-cognitive-complexity)
 TEST_CASE("has_group HDF5", "[io][hdf5][short]") {
   const auto test_file = testdir() / "has_group.hdf5";
   boost::filesystem::create_directories(testdir());
@@ -146,6 +149,7 @@ TEST_CASE("has_group HDF5", "[io][hdf5][short]") {
   }
 }
 
+// NOLINTNEXTLINE(readability-function-cognitive-complexity)
 TEST_CASE("check_dataset_type HDF5", "[io][hdf5][short]") {
   const auto test_file = testdir() / "dset_type.hdf5";
   boost::filesystem::create_directories(testdir());
@@ -173,6 +177,7 @@ TEST_CASE("check_dataset_type HDF5", "[io][hdf5][short]") {
   }
 }
 
+// NOLINTNEXTLINE(readability-function-cognitive-complexity)
 TEST_CASE("read_write_string HDF5 - long string", "[io][hdf5][short]") {
   const auto test_file = testdir() / "rw_strings.hdf5";
   boost::filesystem::create_directories(testdir());

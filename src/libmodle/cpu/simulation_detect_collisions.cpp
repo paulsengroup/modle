@@ -26,6 +26,7 @@
 
 namespace modle {
 
+// NOLINTNEXTLINE(readability-function-cognitive-complexity)
 std::pair<size_t, size_t> Simulation::detect_units_at_chrom_boundaries(
     const Chromosome& chrom, absl::Span<const Lef> lefs, absl::Span<const size_t> rev_lef_ranks,
     absl::Span<const size_t> fwd_lef_ranks, absl::Span<const bp_t> rev_moves,
@@ -54,8 +55,8 @@ std::pair<size_t, size_t> Simulation::detect_units_at_chrom_boundaries(
   // Detect if the first rev unit or last fwd unit are about to fall off chrom. boundaries
   // Also detect extr. units that are already at chrom boundaries
 
-  auto num_rev_units_at_5prime = 0UL;
-  auto num_fwd_units_at_3prime = 0UL;
+  size_t num_rev_units_at_5prime = 0;
+  size_t num_fwd_units_at_3prime = 0;
 
   const auto& first_active_fwd_unit = lefs[fwd_lef_ranks[0]].fwd_unit;
   const auto& last_active_rev_unit =
@@ -64,7 +65,7 @@ std::pair<size_t, size_t> Simulation::detect_units_at_chrom_boundaries(
       })].rev_unit;
 
   // Detect and count the number of rev units located at the 5'-end
-  for (auto i = 0UL; i < lefs.size(); ++i) {
+  for (size_t i = 0; i < lefs.size(); ++i) {
     const auto& rev_idx = rev_lef_ranks[i];
     const auto& rev_unit = lefs[rev_idx].rev_unit;
     const auto& rev_move = rev_moves[rev_idx];
@@ -121,6 +122,7 @@ std::pair<size_t, size_t> Simulation::detect_units_at_chrom_boundaries(
   return std::make_pair(num_rev_units_at_5prime, num_fwd_units_at_3prime);
 }
 
+// NOLINTNEXTLINE(readability-function-cognitive-complexity)
 void Simulation::detect_lef_bar_collisions(
     const absl::Span<const Lef> lefs, const absl::Span<const size_t> rev_lef_ranks,
     const absl::Span<const size_t> fwd_lef_ranks, const absl::Span<const bp_t> rev_moves,
@@ -173,7 +175,8 @@ void Simulation::detect_lef_bar_collisions(
   auto unit_pos = lefs[unit_idx].rev_unit.pos();
 
   // Loop over extr. barriers and find the first, possibly colliding extr. unit
-  for (auto i = 0UL; i < extr_barriers.size(); ++i) {
+  for (size_t i = 0; i < extr_barriers.size(); ++i) {
+    // NOLINTNEXTLINE(readability-implicit-bool-conversion)
     if (barrier_mask[i] == CTCF::NOT_OCCUPIED) {  // Extrusion barriers that are not occupied are
       continue;                                   // transparent to extr. units
     }
@@ -224,6 +227,7 @@ process_fwd_unit:
   assert(!extr_barriers.empty());  // NOLINT
   const auto sentinel_idx = (std::numeric_limits<size_t>::max)();
   for (auto i = extr_barriers.size() - 1; i != sentinel_idx; --i) {
+    // NOLINTNEXTLINE(readability-implicit-bool-conversion)
     if (barrier_mask[i] == CTCF::NOT_OCCUPIED) {  // Extrusion barriers that are not occupied are
       continue;                                   // transparent to extr. units
     }
@@ -254,6 +258,7 @@ process_fwd_unit:
   }
 }
 
+// NOLINTNEXTLINE(readability-function-cognitive-complexity)
 void Simulation::detect_primary_lef_lef_collisions(
     const absl::Span<const Lef> lefs, const absl::Span<const ExtrusionBarrier> barriers,
     const absl::Span<const size_t> rev_lef_ranks, const absl::Span<const size_t> fwd_lef_ranks,
@@ -301,7 +306,7 @@ void Simulation::detect_primary_lef_lef_collisions(
   }
 
   //    Initialize indexes so that we skip over rev units at the 5' and fwd units at the 3' (if any)
-  auto i1 = 0UL;
+  size_t i1 = 0;
   auto j1 = num_rev_units_at_5prime;
   const auto i2 = lefs.size() - std::min(num_fwd_units_at_3prime, num_fwd_units_at_3prime - 1);
   const auto j2 = lefs.size();
@@ -404,6 +409,7 @@ void Simulation::detect_primary_lef_lef_collisions(
   }
 }
 
+// NOLINTNEXTLINE(readability-function-cognitive-complexity)
 void Simulation::process_secondary_lef_lef_collisions(
     [[maybe_unused]] const Chromosome& chrom, const absl::Span<const Lef> lefs,
     const size_t nbarriers, const absl::Span<const size_t> rev_lef_ranks,

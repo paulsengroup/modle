@@ -50,7 +50,7 @@ size_t compute_number_of_contacts_after_depletion(const ContactMatrix<I>& cmatri
   });
 
   size_t depl_contacts{0};
-  for (auto i = 0UL; i < cmatrix.ncols(); ++i) {
+  for (size_t i = 0; i < cmatrix.ncols(); ++i) {
     for (auto j = i; j < i + cmatrix.nrows() && j < cmatrix.ncols(); ++j) {
       // j - i corresponds to the distance from the diagonal
       // Only process bins that more contacts than average
@@ -118,7 +118,7 @@ void stats_subcmd(const modle::tools::stats_config& c) {
   size_t tot_contacts_after_depl = 0;
   size_t tot_number_of_pixels = 0;
 
-  for (auto i = 0UL; i < nchroms; ++i) {
+  for (size_t i = 0; i < nchroms; ++i) {
     const auto& chrom_name = chrom_names[i];
     const auto& chrom_size = chrom_sizes[i];
 

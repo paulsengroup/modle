@@ -109,7 +109,7 @@ inline std::pair<std::vector<uint32_t>, std::vector<uint32_t>> generate_correlat
   std::vector<uint32_t> v2(size);
   std::iota(v1.begin(), v1.end(), 0);
   std::iota(v2.begin(), v2.end(), 0);
-  for (auto i = 0UL; i < size; ++i) {
+  for (size_t i = 0; i < size; ++i) {
     DISABLE_WARNING_PUSH
     DISABLE_WARNING_USELESS_CAST
     auto n = static_cast<int64_t>(v1[i]) + dist(rand_eng);
