@@ -21,7 +21,7 @@ class MoDLE(ConanFile):
     author = "Roberto Rossini (roberros@uio.no)"
     settings = "os", "compiler", "build_type", "arch"
     requires = ["abseil/20210324.2",
-                "boost/1.76.0",
+                "boost/1.77.0",
                 "bzip2/1.0.8",
                 "cli11/2.0.0",
                 "concurrentqueue/1.0.3",
