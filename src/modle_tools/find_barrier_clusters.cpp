@@ -123,7 +123,7 @@ void find_barrier_clusters_subcmd(const find_barrier_clusters_config& c) {
         // Print the cluster in BED format if cluster size and span constraints are satisfied
         write_cluster(cluster_, cluster_id, cluster_size, fp);
       } else if (const auto barrier_span = barrier.chrom_end - barrier.chrom_start;
-                 c.min_cluster_size <= 1 && cluster_size <= 1 &&
+                 c.min_cluster_size == 1 && cluster_size <= 1 &&
                  barrier_span >= c.min_cluster_span && barrier_span < c.max_cluster_span) {
         // Handle case where --min-cluster-size=1
         write_single_barrier(cluster_, barrier, barrier_id, fp);
