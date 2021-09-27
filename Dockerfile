@@ -62,13 +62,14 @@ RUN cd "$build_dir"                                \
              -G Ninja                              \
              "$src_dir"
 
-RUN cd "$build_dir"                  \
-    && cmake --build . -j "$(nproc)" \
-    && ctest -j "$(nproc)"           \
-             --test-dir .            \
-             --schedule-random       \
-             --output-on-failure     \
-             --no-tests=error        \
+RUN cd "$build_dir"                   \
+    && cmake --build . -j "$(nproc)"  \
+    && ctest -j "$(nproc)"            \
+             --test-dir .             \
+             --schedule-random        \
+             --output-on-failure      \
+             --no-tests=error         \
+    && rm -rf "$src_dir/test/Testing" \
     && cmake --install .
 
 FROM ubuntu:bionic AS base
