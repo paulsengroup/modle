@@ -11,6 +11,7 @@
 #include <cstddef>                                  // for size_t
 #include <cstdint>                                  // for uint64_t, uint32_t
 #include <iostream>                                 // for cout
+#include <mutex>                                    // for mutex
 #include <type_traits>                              // for enable_if_t
 #include <utility>                                  // for pair
 
@@ -53,8 +54,7 @@ class ContactMatrix {
   [[nodiscard]] inline N unsafe_get(size_t row, size_t col) const noexcept(utils::ndebug_defined());
 
   // block_size is required to be an odd number at the moment
-  [[nodiscard]] inline N unsafe_get(const size_t row, const size_t col,
-                                    const size_t block_size) const
+  [[nodiscard]] inline N unsafe_get(size_t row, size_t col, size_t block_size) const
       noexcept(utils::ndebug_defined());
   inline void unsafe_set(size_t row, size_t col, N n) noexcept(utils::ndebug_defined());
   inline void set(size_t row, size_t col, N n) noexcept(utils::ndebug_defined());

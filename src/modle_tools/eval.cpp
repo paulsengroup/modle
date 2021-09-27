@@ -310,7 +310,9 @@ void eval_subcmd(const modle::tools::eval_config &c) {
                                     chrom_list);
   };
 
-  boost::filesystem::create_directories(c.output_base_name.parent_path());
+  if (const auto &output_dir = c.output_base_name.parent_path(); !output_dir.empty()) {
+    boost::filesystem::create_directories(output_dir.string());
+  }
   // Init files and write bw header
   auto bw_corr_linear_pearson = create_bwig_file("pearson_r_linear.bw", !c.compute_pearson);
   auto bw_pv_linear_pearson = create_bwig_file("pearson_pv_linear.bw", !c.compute_pearson);

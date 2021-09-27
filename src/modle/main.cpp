@@ -70,7 +70,10 @@ int main(int argc, char** argv) noexcept {
     const auto t0 = absl::Now();
     if (!config.skip_output) {
       assert(!config.path_to_log_file.empty());  // NOLINT
-      boost::filesystem::create_directories(config.path_to_output_prefix.parent_path());
+      if (const auto& output_dir = config.path_to_output_prefix.parent_path();
+          !output_dir.empty()) {
+        boost::filesystem::create_directories(output_dir.string());
+      }
       spdlog::logger("tmp_logger", spdlog::default_logger()->sinks().front())
           .info(FMT_STRING("Complete log will be written to file {}"), config.path_to_log_file);
       auto file_sink = spdlog::default_logger()->sinks().emplace_back(
