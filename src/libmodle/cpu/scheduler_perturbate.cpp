@@ -95,8 +95,13 @@ void Simulation::run_perturbate() {
   }
   // TODO Do proper error handling
   // For now we support only the case where exactly two files are specified
-  assert(this->path_to_feature_bed_files.size() == 2);  // NOLINT
-  const size_t task_batch_size_enq = 32;                // NOLINTNEXTLINE
+  if (this->path_to_feature_bed_files.size() != 2) {
+    assert(this->path_to_feature_bed_files.size() != 1);  // NOLINT
+    throw std::runtime_error(
+        "MoDLE perturbate currently does not support processing more than 2 types of features at "
+        "once.");
+  }
+  const size_t task_batch_size_enq = 32;  // NOLINTNEXTLINE
   moodycamel::BlockingConcurrentQueue<TaskPW> task_queue(this->nthreads * 2, 1, 0);
   moodycamel::ProducerToken ptok(task_queue);
   std::array<TaskPW, task_batch_size_enq> tasks;

@@ -475,7 +475,29 @@ absl::btree_set<Chromosome> Genome::instantiate_genome(
     const absl::Span<const boost::filesystem::path> paths_to_extra_features,
     const double ctcf_prob_occ_to_occ, const double ctcf_prob_nocc_to_nocc, bool keep_all_chroms) {
   auto chroms = import_chromosomes(path_to_chrom_sizes, path_to_chrom_subranges, keep_all_chroms);
-  import_barriers(chroms, path_to_extr_barriers, ctcf_prob_occ_to_occ, ctcf_prob_nocc_to_nocc);
+
+  if (chroms.empty()) {
+    if (path_to_chrom_subranges.empty()) {
+      throw std::runtime_error(fmt::format(
+          FMT_STRING("Unable to import any chromosome from file {}. Is the file empty?"),
+          path_to_chrom_sizes));
+    }
+    throw std::runtime_error(
+        fmt::format(FMT_STRING("Unable to import any chromosome from file {} using the ranges "
+                               "specified by file {}. Please make sure that neither of the file is "
+                               "empty and that both files refer to the same genome (i.e. they use "
+                               "the same genomic coordinates)."),
+                    path_to_chrom_sizes, path_to_chrom_subranges));
+  }
+
+  const auto tot_barriers_imported =
+      import_barriers(chroms, path_to_extr_barriers, ctcf_prob_occ_to_occ, ctcf_prob_nocc_to_nocc);
+  if (tot_barriers_imported == 0) {
+    spdlog::warn(FMT_STRING("Unable to import any barrier from file {}. Please make sure you this "
+                            "was not a mistake."),
+                 path_to_extr_barriers);
+  }
+
   for (const auto& path_to_feature_bed : paths_to_extra_features) {
     import_extra_features(chroms, path_to_feature_bed);
   }
