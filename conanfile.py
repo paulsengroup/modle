@@ -23,7 +23,7 @@ class MoDLE(ConanFile):
     requires = ["abseil/20210324.2",
                 "boost/1.76.0",  # 1.77.0 breaks builds with GCC 7
                 "bzip2/1.0.8",
-                "cli11/2.0.0",
+                "cli11/2.1.1",
                 "concurrentqueue/1.0.3",
                 "cpp-sort/1.11.0",
                 "fmt/8.0.1",
