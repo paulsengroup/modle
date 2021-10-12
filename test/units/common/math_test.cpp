@@ -115,38 +115,30 @@ TEST_CASE("Standard Deviation", "[math][short]") {
   CHECK(math::standard_dev(v2.begin(), v2.end(), [](const auto& fp) { return fp.n; }) == result);
 }
 
+// clang-format off
+#define MAKE_BINOM_TEST_CASE(ALTERNATIVE) \
+  std::make_pair(std::string_view{ALTERNATIVE},                           \
+  "try:\n"                                                                \
+  "  from scipy.stats import binomtest\n"                                 \
+  "except ImportError:\n"                                                 \
+  "  from scipy.stats import binom_test as binomtest\n"                   \
+  "import fileinput\n"                                                    \
+  "import sys\n"                                                          \
+                                                                          \
+  "for line in fileinput.input():\n"                                      \
+  "  k, _, n = line.strip().partition(\"\\t\")\n"                         \
+                                                                          \
+  "  result = binomtest(int(k), int(n), alternative='" ALTERNATIVE "')\n" \
+  "  if isinstance(result, float):\n"                                     \
+  "    print(f\"{result:.32e}\", flush=True)\n"                           \
+  "  else:\n"                                                             \
+  "    print(f\"{result.pvalue:.32e}\", flush=True)\n"sv)
+
+
 static constexpr utils::ConstMap<std::string_view, std::string_view, 3> python_cmds{
-    // clang-format off
-    std::make_pair("two-sided"sv,
-                   "from scipy.stats import binomtest\n"
-                   "import fileinput\n"
-                   "import sys\n"
-
-                   "for line in fileinput.input():\n"
-                   "  k, _, n = line.strip().partition(\"\\t\")\n"
-
-                   "  result = binomtest(int(k), int(n), alternative='two-sided')\n"
-                   "  print(f\"{result.pvalue:.32e}\", flush=True)\n"sv),
-
-    std::make_pair("less"sv,
-                   "from scipy.stats import binomtest\n"
-                   "import fileinput\n"
-
-                   "for line in fileinput.input():\n"
-                   "  k, _, n = line.strip().partition(\"\\t\")\n"
-
-                   "  result = binomtest(int(k), int(n), alternative='less')\n"
-                   "  print(f\"{result.pvalue:.16e}\", flush=True)\n"sv),
-
-    std::make_pair("greater"sv,
-                   "from scipy.stats import binomtest\n"
-                   "import fileinput\n"
-
-                   "for line in fileinput.input():\n"
-                   "  k, _, n = line.strip().partition(\"\\t\")\n"
-
-                   "  result = binomtest(int(k), int(n), alternative='greater')\n"
-                   "  print(f\"{result.pvalue:.16e}\", flush=True)\n"sv)
+    MAKE_BINOM_TEST_CASE("two-sided"),
+    MAKE_BINOM_TEST_CASE("less"),
+    MAKE_BINOM_TEST_CASE("greater")
 };  // clang-format on
 
 template <typename N, typename = typename std::enable_if<std::is_arithmetic<N>::value, N>::type>

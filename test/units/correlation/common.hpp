@@ -31,48 +31,26 @@
 namespace modle::test::correlation {
 using namespace std::string_view_literals;
 
+// clang-format off
+#define MAKE_CORR_TEST_CASE(METHOD)                           \
+  std::make_pair(std::string_view{METHOD},                    \
+     "from scipy.stats import " METHOD "\n"                   \
+     "from numpy import fromstring\n"                         \
+     "import fileinput\n"                                     \
+                                                              \
+     "for line in fileinput.input():\n"                       \
+     "  v1, _, v2 = line.strip().partition(\"\\t\")\n"        \
+     "  v1 = fromstring(v1, sep=\",\")\n"                     \
+     "  v2 = fromstring(v2, sep=\",\")\n"                     \
+                                                              \
+     "  corr, pv = " METHOD "(v1, v2)\n"                      \
+     "  print(f\"{corr:.16e}\\t{pv:.16e}\", flush=True)\n"sv)
+
 static constexpr utils::ConstMap<std::string_view, std::string_view, 3> python_cmds{
-    // clang-format off
-std::make_pair("pearson"sv,
-               "from scipy.stats import pearsonr\n"
-               "from numpy import fromstring\n"
-               "import fileinput\n"
-
-               "for line in fileinput.input():\n"
-               "  v1, _, v2 = line.strip().partition(\"\\t\")\n"
-               "  v1 = fromstring(v1, sep=\",\")\n"
-               "  v2 = fromstring(v2, sep=\",\")\n"
-
-               "  corr, pv = pearsonr(v1, v2)\n"
-               "  print(f\"{corr:.16e}\\t{pv:.16e}\", flush=True)\n"sv),
-
-std::make_pair("spearman"sv,
-               "from scipy.stats import spearmanr\n"
-               "from numpy import fromstring\n"
-               "import fileinput\n"
-
-               "for line in fileinput.input():\n"
-               "  v1, _, v2 = line.strip().partition(\"\\t\")\n"
-               "  v1 = fromstring(v1, sep=\",\")\n"
-               "  v2 = fromstring(v2, sep=\",\")\n"
-
-               "  corr, pv = spearmanr(v1, v2)\n"
-               "  print(f\"{corr:.16e}\\t{pv:.16e}\", flush=True)\n"sv),
-
-std::make_pair("kendall"sv,
-               "from scipy.stats import kendalltau\n"
-               "from numpy import fromstring\n"
-               "import fileinput\n"
-
-               "for line in fileinput.input():\n"
-               "  v1, _, v2 = line.strip().partition(\"\\t\")\n"
-               "  v1 = fromstring(v1, sep=\",\")\n"
-               "  v2 = fromstring(v2, sep=\",\")\n"
-
-               "  corr, pv = kendalltau(v1, v2)\n"
-               "  print(f\"{corr:.16e}\\t{pv:.16e}\", flush=True)\n"sv)
-};
-// clang-format on
+    MAKE_CORR_TEST_CASE("pearsonr"),
+    MAKE_CORR_TEST_CASE("spearmanr"),
+    MAKE_CORR_TEST_CASE("kendalltau")
+};  // clang-format on
 
 template <class N, class = std::enable_if_t<std::is_arithmetic_v<N>>>
 inline void generate_random_vect(random::PRNG_t& rand_eng, std::vector<N>& buff, N min, N max,

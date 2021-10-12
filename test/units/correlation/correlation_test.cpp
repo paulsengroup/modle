@@ -68,14 +68,14 @@ static void test_correlation_w_random_vector(std::string_view method, size_t vec
     const auto [rho, pv] = [&]() {
       double rho_{};
       double pv_{};
-      if (method == "pearson") {
+      if (method == "pearsonr") {
         rho_ = compute_pearson(v1, v2);
         pv_ = compute_pearson_significance(rho_, v1.size());
-      } else if (method == "spearman") {
+      } else if (method == "spearmanr") {
         rho_ = compute_spearman(v1, v2);
         pv_ = compute_spearman_significance(rho_, v1.size());
       }
-      /* else if (method == "kendall") {
+      /* else if (method == "kendalltau") {
         rho = compute_kendall(v1, v2);
         pv_ = compute_kendall_significance(rho, v1.size());
       }
@@ -120,23 +120,23 @@ TEST_CASE("Corr. test: Pearson Scipy", "[correlation][pearson][short]") {
   auto v2 = generate_random_vect(rand_eng, 1'000, 0, 15'000);  // NOLINT
   const auto pcc = compute_pearson(v1, v2);
   const auto pv = compute_pearson_significance(pcc, v1.size());
-  const auto [pcc_py, pv_py] = corr_scipy(v1, v2, "pearson");
+  const auto [pcc_py, pv_py] = corr_scipy(v1, v2, "pearsonr");
   CHECK(Approx(pcc) == pcc_py);
   CHECK(Approx(pv) == pv_py);
 }
 
 // NOLINTNEXTLINE(readability-function-cognitive-complexity)
 TEST_CASE("Corr. test: Pearson Scipy long", "[correlation][pearson][medium]") {
-  test_correlation_w_random_vector("pearson", 1'000, 250, 0U, 15'000U);        // NOLINT
-  test_correlation_w_random_vector("pearson", 1'000, 250, -7'250, 7'250);      // NOLINT
-  test_correlation_w_random_vector("pearson", 1'000, 250, -7'250.0, 7'250.0);  // NOLINT
+  test_correlation_w_random_vector("pearsonr", 1'000, 250, 0U, 15'000U);        // NOLINT
+  test_correlation_w_random_vector("pearsonr", 1'000, 250, -7'250, 7'250);      // NOLINT
+  test_correlation_w_random_vector("pearsonr", 1'000, 250, -7'250.0, 7'250.0);  // NOLINT
 }
 
 // NOLINTNEXTLINE(readability-function-cognitive-complexity)
 TEST_CASE("Corr. test: Pearson Scipy long vect.", "[correlation][pearson][long]") {
-  test_correlation_w_random_vector("pearson", 500'000, 2, 0U, 15'000U);        // NOLINT
-  test_correlation_w_random_vector("pearson", 500'000, 2, -7'250, 7'250);      // NOLINT
-  test_correlation_w_random_vector("pearson", 500'000, 2, -7'250.0, 7'250.0);  // NOLINT
+  test_correlation_w_random_vector("pearsonr", 500'000, 2, 0U, 15'000U);        // NOLINT
+  test_correlation_w_random_vector("pearsonr", 500'000, 2, -7'250, 7'250);      // NOLINT
+  test_correlation_w_random_vector("pearsonr", 500'000, 2, -7'250.0, 7'250.0);  // NOLINT
 }
 
 // NOLINTNEXTLINE(readability-function-cognitive-complexity)
@@ -166,23 +166,23 @@ TEST_CASE("Corr. test: Spearman Scipy", "[correlation][spearman][short]") {
   auto v2 = generate_random_vect(rand_eng, 1'000, 0, 15'000);  // NOLINT
   const auto rho = compute_spearman(v1, v2);
   const auto pv = compute_spearman_significance(rho, v1.size());
-  const auto [rho_py, pv_py] = corr_scipy(v1, v2, "spearman");
+  const auto [rho_py, pv_py] = corr_scipy(v1, v2, "spearmanr");
   CHECK(Approx(rho) == rho_py);
   CHECK(Approx(pv) == pv_py);
 }
 
 // NOLINTNEXTLINE(readability-function-cognitive-complexity)
 TEST_CASE("Corr. test: Spearman Scipy long", "[correlation][spearman][long]") {
-  test_correlation_w_random_vector("spearman", 1'000, 250, 0U, 15'000U);        // NOLINT
-  test_correlation_w_random_vector("spearman", 1'000, 250, -7'250, 7'250);      // NOLINT
-  test_correlation_w_random_vector("spearman", 1'000, 250, -7'250.0, 7'250.0);  // NOLINT
+  test_correlation_w_random_vector("spearmanr", 1'000, 250, 0U, 15'000U);        // NOLINT
+  test_correlation_w_random_vector("spearmanr", 1'000, 250, -7'250, 7'250);      // NOLINT
+  test_correlation_w_random_vector("spearmanr", 1'000, 250, -7'250.0, 7'250.0);  // NOLINT
 }
 
 // NOLINTNEXTLINE(readability-function-cognitive-complexity)
 TEST_CASE("Corr. test: Spearman Scipy long vect.", "[correlation][spearman][long]") {
-  test_correlation_w_random_vector("spearman", 500'000, 2, 0U, 15'000U);        // NOLINT
-  test_correlation_w_random_vector("spearman", 500'000, 2, -7'250, 7'250);      // NOLINT
-  test_correlation_w_random_vector("spearman", 500'000, 2, -7'250.0, 7'250.0);  // NOLINT
+  test_correlation_w_random_vector("spearmanr", 500'000, 2, 0U, 15'000U);        // NOLINT
+  test_correlation_w_random_vector("spearmanr", 500'000, 2, -7'250, 7'250);      // NOLINT
+  test_correlation_w_random_vector("spearmanr", 500'000, 2, -7'250.0, 7'250.0);  // NOLINT
 }
 
 // NOLINTNEXTLINE(readability-function-cognitive-complexity)
