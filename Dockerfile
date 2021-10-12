@@ -2,7 +2,7 @@
 #
 # SPDX-License-Identifier: MIT
 
-FROM conanio/clang11 AS builder
+FROM conanio/gcc11-ubuntu16.04:1.41.0 AS builder
 
 ARG src_dir='/home/conan/modle'
 ARG build_dir='/home/conan/modle/build'
@@ -12,7 +12,7 @@ ARG install_dir='/usr/local'
 ARG LIBBIGWIG_VER=0.4.6
 ARG THREAD_POOL_VER=2.0.0
 ARG XOSHIRO_CPP_VER=1.1
-ARG SCIPY_VER=1.7.1
+ARG SCIPY_MIN_VER=1.5.0
 
 ARG CONAN_V2=1
 ARG CONAN_REVISIONS_ENABLED=1
@@ -20,9 +20,10 @@ ARG CONAN_NON_INTERACTIVE=1
 ARG CONAN_CMAKE_GENERATOR=Ninja
 
 # Update system repo and install required tools
-RUN sudo apt-get update                            \
-    && sudo apt-get install -y ninja-build         \
-    && pip install scipy=="${SCIPY_VER}"
+RUN sudo apt-get update                                \
+    && sudo apt-get install -y --no-install-recommends \
+                            ninja-build                \
+    && pip3 install "scipy>=${SCIPY_MIN_VER}"
 
 RUN mkdir -p "$src_dir" "$build_dir"
 
@@ -72,7 +73,7 @@ RUN cd "$build_dir"                   \
     && rm -rf "$src_dir/test/Testing" \
     && cmake --install .
 
-FROM ubuntu:bionic AS base
+FROM ubuntu:21.10 AS base
 
 ARG staging_dir='/home/conan/modle/staging'
 ARG install_dir='/usr/local'

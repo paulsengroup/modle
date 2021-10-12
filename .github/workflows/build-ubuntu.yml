@@ -29,10 +29,10 @@ jobs:
       fail-fast: false
       matrix:
         image:
-          - conanio/gcc7:latest
-          - conanio/gcc11:latest
+          - conanio/gcc7-ubuntu16.04:1.4.1
+          - conanio/gcc11-ubuntu16.04:1.4.1
           - conanio/clang60:latest
-          - conanio/clang11:latest
+          - conanio/clang13-ubuntu16.04:1.41.0
         config:
           - build_type: Release
           - build_type: Debug
