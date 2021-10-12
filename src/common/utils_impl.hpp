@@ -65,12 +65,15 @@ void parse_numeric_or_throw(std::string_view tok, N &field) {
   }
 }
 
+DISABLE_WARNING_PUSH
+DISABLE_WARNING_MAYBE_UNINITIALIZED
 template <typename N>
 N parse_numeric_or_throw(std::string_view tok) {
   N field;
   utils::parse_numeric_or_throw(tok, field);
   return field;
 }
+DISABLE_WARNING_POP
 
 template <typename N>
 void parse_numeric_or_throw(const std::vector<std::string_view> &toks, size_t idx, N &field) {

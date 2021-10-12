@@ -26,23 +26,25 @@
 #define DISABLE_WARNING_FLOAT_EQUAL
 #define DISABLE_WARNING_SWITCH_ENUM
 #define DISABLE_WARNING_SHADOW
+#define DISABLE_WARNING_MAYBE_UNINITIALIZED
 #endif
 
 // Defines for GCC and Clang
 #if defined(__GNUC__) || defined(__clang__)
-#define DO_PRAGMA(X)                     _Pragma(#X)
-#define DISABLE_WARNING_PUSH             DO_PRAGMA(GCC diagnostic push)
-#define DISABLE_WARNING_POP              DO_PRAGMA(GCC diagnostic pop)
-#define DISABLE_WARNING(warningName)     DO_PRAGMA(GCC diagnostic ignored warningName)
+#define DO_PRAGMA(X)                        _Pragma(#X)
+#define DISABLE_WARNING_PUSH                DO_PRAGMA(GCC diagnostic push)
+#define DISABLE_WARNING_POP                 DO_PRAGMA(GCC diagnostic pop)
+#define DISABLE_WARNING(warningName)        DO_PRAGMA(GCC diagnostic ignored warningName)
 
-#define DISABLE_WARNING_SIGN_CONVERSION  DISABLE_WARNING("-Wsign-conversion")
-#define DISABLE_WARNING_SIGN_COMPARE     DISABLE_WARNING("-Wsign-compare")
-#define DISABLE_WARNING_CONVERSION       DISABLE_WARNING("-Wconversion")
-#define DISABLE_WARNING_DOUBLE_PROMOTION DISABLE_WARNING("-Wdouble-promotion")
-#define DISABLE_WARNING_PADDED           DISABLE_WARNING("-Wpadded")
-#define DISABLE_WARNING_FLOAT_EQUAL      DISABLE_WARNING("-Wfloat-equal")
-#define DISABLE_WARNING_SWITCH_ENUM      DISABLE_WARNING("-Wswitch-enum")
-#define DISABLE_WARNING_SHADOW           DISABLE_WARNING("-Wshadow")
+#define DISABLE_WARNING_SIGN_CONVERSION     DISABLE_WARNING("-Wsign-conversion")
+#define DISABLE_WARNING_SIGN_COMPARE        DISABLE_WARNING("-Wsign-compare")
+#define DISABLE_WARNING_CONVERSION          DISABLE_WARNING("-Wconversion")
+#define DISABLE_WARNING_DOUBLE_PROMOTION    DISABLE_WARNING("-Wdouble-promotion")
+#define DISABLE_WARNING_PADDED              DISABLE_WARNING("-Wpadded")
+#define DISABLE_WARNING_FLOAT_EQUAL         DISABLE_WARNING("-Wfloat-equal")
+#define DISABLE_WARNING_SWITCH_ENUM         DISABLE_WARNING("-Wswitch-enum")
+#define DISABLE_WARNING_SHADOW              DISABLE_WARNING("-Wshadow")
+#define DISABLE_WARNING_MAYBE_UNINITIALIZED DISABLE_WARNING("-Wmaybe-uninitialized")
 #endif
 
 // Defines specific to Clang
@@ -87,4 +89,5 @@
 #define DISABLE_WARNING_FLOAT_EQUAL
 #define DISABLE_WARNING_SWITCH_ENUM
 #define DISABLE_WARNING_SHADOW
+#define DISABLE_WARNING_MAYBE_UNINITIALIZED
 #endif
