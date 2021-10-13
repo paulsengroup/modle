@@ -2,11 +2,11 @@
 #
 # SPDX-License-Identifier: MIT
 
-find_package(absl REQUIRED)
-find_package(Boost REQUIRED)
-find_package(concurrentqueue REQUIRED)
-find_package(cpp-sort REQUIRED)
-find_package(spdlog REQUIRED)
+find_package(absl QUIET REQUIRED)
+find_package(Boost QUIET REQUIRED)
+find_package(concurrentqueue QUIET REQUIRED)
+find_package(cpp-sort QUIET REQUIRED)
+find_package(spdlog QUIET REQUIRED)
 
 add_library(libmodle_cpu)
 add_library(Modle::libmodle_cpu ALIAS libmodle_cpu)

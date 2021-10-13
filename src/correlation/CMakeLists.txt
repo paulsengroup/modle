@@ -2,8 +2,8 @@
 #
 # SPDX-License-Identifier: MIT
 
-find_package(absl REQUIRED)
-find_package(Boost REQUIRED)
+find_package(absl QUIET REQUIRED)
+find_package(Boost QUIET REQUIRED)
 
 add_library(modle_correlation INTERFACE)
 add_library(Modle::correlation ALIAS modle_correlation)

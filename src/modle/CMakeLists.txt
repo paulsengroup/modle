@@ -2,13 +2,13 @@
 #
 # SPDX-License-Identifier: MIT
 
-find_package(absl REQUIRED)
-find_package(Boost REQUIRED)
-find_package(CLI11 REQUIRED)
-find_package(fmt REQUIRED)
-find_package(spdlog REQUIRED)
-find_package(tomlplusplus REQUIRED)
-find_package(xxHash REQUIRED)
+find_package(absl QUIET REQUIRED)
+find_package(Boost QUIET REQUIRED)
+find_package(CLI11 QUIET REQUIRED)
+find_package(fmt QUIET REQUIRED)
+find_package(spdlog QUIET REQUIRED)
+find_package(tomlplusplus QUIET REQUIRED)
+find_package(xxHash QUIET REQUIRED)
 
 add_executable(modle)
 

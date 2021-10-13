@@ -2,8 +2,8 @@
 #
 # SPDX-License-Identifier: MIT
 
-find_package(Boost REQUIRED)
-find_package(cpp-sort REQUIRED)
+find_package(Boost QUIET REQUIRED)
+find_package(cpp-sort QUIET REQUIRED)
 
 add_library(cmatrix INTERFACE)
 add_library(Modle::cmatrix ALIAS cmatrix)

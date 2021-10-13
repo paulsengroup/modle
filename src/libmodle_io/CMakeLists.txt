@@ -2,15 +2,15 @@
 #
 # SPDX-License-Identifier: MIT
 
-find_package(absl REQUIRED)
-find_package(Boost REQUIRED)
-find_package(fmt REQUIRED)
-find_package(HDF5 REQUIRED)
-find_package(LibArchive REQUIRED)
-find_package(readerwriterqueue REQUIRED)
-find_package(spdlog REQUIRED)
-find_package(ZLIB REQUIRED)
-find_package(xxHash REQUIRED)
+find_package(absl QUIET REQUIRED)
+find_package(Boost QUIET REQUIRED)
+find_package(fmt QUIET REQUIRED)
+find_package(HDF5 QUIET REQUIRED)
+find_package(LibArchive QUIET REQUIRED)
+find_package(readerwriterqueue QUIET REQUIRED)
+find_package(spdlog QUIET REQUIRED)
+find_package(ZLIB QUIET REQUIRED)
+find_package(xxHash QUIET REQUIRED)
 
 add_library(libmodle_io)
 add_library(Modle::libmodle_io ALIAS libmodle_io)

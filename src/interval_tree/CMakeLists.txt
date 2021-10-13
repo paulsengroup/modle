@@ -2,8 +2,8 @@
 #
 # SPDX-License-Identifier: MIT
 
-find_package(absl REQUIRED)
-find_package(cpp-sort REQUIRED)
+find_package(absl QUIET REQUIRED)
+find_package(cpp-sort QUIET REQUIRED)
 
 add_library(interval_tree INTERFACE)
 add_library(Modle::interval_tree ALIAS interval_tree)
