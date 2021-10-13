@@ -2,6 +2,7 @@
 #
 # SPDX-License-Identifier: MIT
 
+#FROM conanio/gcc10-ubuntu16.04:1.41.0 AS builder
 FROM conanio/gcc11-ubuntu16.04:1.41.0 AS builder
 
 ARG src_dir='/home/conan/modle'
@@ -12,18 +13,15 @@ ARG install_dir='/usr/local'
 ARG LIBBIGWIG_VER=0.4.6
 ARG THREAD_POOL_VER=2.0.0
 ARG XOSHIRO_CPP_VER=1.1
-ARG SCIPY_MIN_VER=1.5.0
 
 ARG CONAN_V2=1
 ARG CONAN_REVISIONS_ENABLED=1
 ARG CONAN_NON_INTERACTIVE=1
 ARG CONAN_CMAKE_GENERATOR=Ninja
 
-# Update system repo and install required tools
 RUN sudo apt-get update                                \
     && sudo apt-get install -y --no-install-recommends \
-                            ninja-build                \
-    && pip3 install "scipy>=${SCIPY_MIN_VER}"
+                            ninja-build
 
 RUN mkdir -p "$src_dir" "$build_dir"
 
@@ -65,15 +63,30 @@ RUN cd "$build_dir"                                \
 
 RUN cd "$build_dir"                   \
     && cmake --build . -j "$(nproc)"  \
+    && cmake --install .
+
+FROM ubuntu:20.04 AS testing
+
+ARG SCIPY_VER="1.5.1"
+ARG src_dir="/home/conan/modle"
+
+RUN sudo apt-get update \
+    && sudo apt-get install -y --no-install-recommends \
+                            python3-pip           \
+    && pip3 install "scipy==${SCIPY_VER}"
+
+COPY --from=builder "$src_dir" "$src_dir"
+COPY --from=builder "/usr/bin/ctest" "/usr/bin/ctest"
+
+RUN cd "$src_dir/build"               \
     && ctest -j "$(nproc)"            \
              --test-dir .             \
              --schedule-random        \
              --output-on-failure      \
              --no-tests=error         \
-    && rm -rf "$src_dir/test/Testing" \
-    && cmake --install .
+    && rm -rf "$src_dir/test/Testing"
 
-FROM ubuntu:21.10 AS base
+FROM ubuntu:20.04 AS base
 
 ARG staging_dir='/home/conan/modle/staging'
 ARG install_dir='/usr/local'
@@ -87,3 +100,4 @@ WORKDIR /data
 ENTRYPOINT ["/usr/local/bin/modle"]
 
 RUN modle --help
+RUN modle_tools --help
