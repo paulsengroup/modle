@@ -145,8 +145,8 @@ jobs:
         working-directory: /workspace/build-asan
         if: >
           matrix.config.build_type == 'Debug' &&
-             (contains(steps.compiler-info.outputs.ID, 'gcc11') ||
-             contains(steps.compiler-info.outputs.ID, 'clang13'))
+             (contains(steps.compiler-info.outputs.ID, 'gcc-11') ||
+             contains(steps.compiler-info.outputs.ID, 'clang-13'))
         env:
           CONAN_V2_MODE: "1"
         run: |
@@ -160,16 +160,16 @@ jobs:
         working-directory: /workspace/build-asan
         if: >
           matrix.config.build_type == 'Debug' &&
-             (contains(steps.compiler-info.outputs.ID, 'gcc11') ||
-              contains(steps.compiler-info.outputs.ID, 'clang13'))
+             (contains(steps.compiler-info.outputs.ID, 'gcc-11') ||
+              contains(steps.compiler-info.outputs.ID, 'clang-13'))
         run: cmake --build . -j $(nproc)
 
       - name: Test project - ASAN
         working-directory: /workspace/build-asan
         if: >
           matrix.config.build_type == 'Debug' &&
-             (contains(steps.compiler-info.outputs.ID, 'gcc11') ||
-              contains(steps.compiler-info.outputs.ID, 'clang13'))
+             (contains(steps.compiler-info.outputs.ID, 'gcc-11') ||
+              contains(steps.compiler-info.outputs.ID, 'clang-13'))
         run: |
           ctest --test-dir /workspace/build-asan \
                 --schedule-random                \
@@ -181,8 +181,8 @@ jobs:
         working-directory: /workspace/build-ubsan
         if: >
           matrix.config.build_type == 'Debug' &&
-             (contains(steps.compiler-info.outputs.ID, 'gcc11') ||
-              contains(steps.compiler-info.outputs.ID, 'clang13'))
+             (contains(steps.compiler-info.outputs.ID, 'gcc-11') ||
+              contains(steps.compiler-info.outputs.ID, 'clang-13'))
         env:
           CONAN_V2_MODE: "1"
         run: |
@@ -196,16 +196,16 @@ jobs:
         working-directory: /workspace/build-ubsan
         if: >
           matrix.config.build_type == 'Debug' &&
-             (contains(steps.compiler-info.outputs.ID, 'gcc11') ||
-              contains(steps.compiler-info.outputs.ID, 'clang13'))
+             (contains(steps.compiler-info.outputs.ID, 'gcc-11') ||
+              contains(steps.compiler-info.outputs.ID, 'clang-13'))
         run: cmake --build . -j $(nproc)
 
       - name: Test project - UBSAN
         working-directory: /workspace/build-ubsan
         if: >
           matrix.config.build_type == 'Debug' &&
-             (contains(steps.compiler-info.outputs.ID, 'gcc11') ||
-              contains(steps.compiler-info.outputs.ID, 'clang13'))
+             (contains(steps.compiler-info.outputs.ID, 'gcc-11') ||
+              contains(steps.compiler-info.outputs.ID, 'clang-13'))
         run: |
           ctest --test-dir /workspace/build-ubsan \
                 --schedule-random                 \
