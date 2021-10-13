@@ -248,7 +248,7 @@ TEST_CASE("Binom test - two-sided randomized", "[math][long]") {
       output_data_cv.wait(l, [&]() { return output_data_ready.load(); });
       output_data_ready = false;
     }
-    const auto pv = math::binomial_test(k, n);
+    const auto pv = math::binomial_test<TWO_SIDED>(k, n);
     CHECK(Approx(pv).margin(1.0e-250) == pv_py);  // NOLINT
   }
   k = 0;

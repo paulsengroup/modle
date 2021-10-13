@@ -35,7 +35,7 @@ RUN cd "$build_dir"                              \
     && conan install "$src_dir/conanfile.py"     \
                   --build outdated               \
                   -s compiler.cppstd=17          \
-                  -s build_type=RelWithDebInfo   \
+                  -s build_type=Release          \
                   -s compiler.libcxx=libstdc++11 \
                   -o enable_testing=ON
 
@@ -55,7 +55,7 @@ COPY src                    "$src_dir/src"
 
 RUN sudo chown -R conan "$src_dir"
 RUN cd "$build_dir"                                \
-    && cmake -DCMAKE_BUILD_TYPE=RelWithDebInfo     \
+    && cmake -DCMAKE_BUILD_TYPE=Release            \
              -DENABLE_IPO=ON                       \
              -DWARNINGS_AS_ERRORS=ON               \
              -DENABLE_TESTING=ON                   \

@@ -91,7 +91,7 @@ jobs:
           wlto='OFF'
 
           compiler="$(basename "$CC")-$(cc -dumpversion)"
-          if [[ "$compiler_id" == gcc-11* ]] || [[ "$compiler_id" == clang-11* ]] ; then
+          if [[ "$compiler_id" == gcc-11* ]] || [[ "$compiler_id" == clang-13* ]] ; then
             waserr='ON'
             wlto='ON'
           fi
@@ -119,8 +119,8 @@ jobs:
         working-directory: /workspace/build-asan
         if: >
           matrix.config.build_type == 'Debug' &&
-             (matrix.image == 'conanio/gcc11:latest' ||
-              matrix.image == 'conanio/clang11:latest')
+             (matrix.image == 'conanio/gcc11-ubuntu16.04:1.41.0' ||
+              matrix.image == 'conanio/clang13-ubuntu16.04:1.41.0')
         env:
           CONAN_V2_MODE: "1"
         run: |
@@ -134,16 +134,16 @@ jobs:
         working-directory: /workspace/build-asan
         if: >
           matrix.config.build_type == 'Debug' &&
-             (matrix.image == 'conanio/gcc11:latest' ||
-              matrix.image == 'conanio/clang11:latest')
+             (matrix.image == 'conanio/gcc11-ubuntu16.04:1.41.0' ||
+              matrix.image == 'conanio/clang13-ubuntu16.04:1.41.0')
         run: cmake --build . -j $(nproc)
 
       - name: Test project - ASAN
         working-directory: /workspace/build-asan
         if: >
           matrix.config.build_type == 'Debug' &&
-             (matrix.image == 'conanio/gcc11:latest' ||
-              matrix.image == 'conanio/clang11:latest')
+             (matrix.image == 'conanio/gcc11-ubuntu16.04:1.41.0' ||
+              matrix.image == 'conanio/clang13-ubuntu16.04:1.41.0')
         run: |
           ctest --test-dir /workspace/build-asan \
                 --schedule-random                \
@@ -155,8 +155,8 @@ jobs:
         working-directory: /workspace/build-ubsan
         if: >
           matrix.config.build_type == 'Debug' &&
-             (matrix.image == 'conanio/gcc11:latest' ||
-              matrix.image == 'conanio/clang11:latest')
+             (matrix.image == 'conanio/gcc11-ubuntu16.04:1.41.0' ||
+              matrix.image == 'conanio/clang13-ubuntu16.04:1.41.0')
         env:
           CONAN_V2_MODE: "1"
         run: |
@@ -170,16 +170,16 @@ jobs:
         working-directory: /workspace/build-ubsan
         if: >
           matrix.config.build_type == 'Debug' &&
-             (matrix.image == 'conanio/gcc11:latest' ||
-              matrix.image == 'conanio/clang11:latest')
+             (matrix.image == 'conanio/gcc11-ubuntu16.04:1.41.0' ||
+              matrix.image == 'conanio/clang13-ubuntu16.04:1.41.0')
         run: cmake --build . -j $(nproc)
 
       - name: Test project - UBSAN
         working-directory: /workspace/build-ubsan
         if: >
           matrix.config.build_type == 'Debug' &&
-             (matrix.image == 'conanio/gcc11:latest' ||
-              matrix.image == 'conanio/clang11:latest')
+             (matrix.image == 'conanio/gcc11-ubuntu16.04:1.41.0' ||
+              matrix.image == 'conanio/clang13-ubuntu16.04:1.41.0')
         run: |
           ctest --test-dir /workspace/build-ubsan \
                 --schedule-random                 \
