@@ -42,6 +42,10 @@ jobs:
       image: ${{matrix.image}}
       options: "--user=root -v ${{github.workspace}}:/workspace"
 
+    defaults:
+      run:
+        shell: bash
+
     steps:
       - name: Checkout repo
         uses: actions/checkout@v2
@@ -49,11 +53,23 @@ jobs:
       - name: Install unit test dependencies
         run: pip3 install scipy
 
+      - name: Collect compiler information
+        id: compiler-info
+        run: |
+          compiler_name="$(basename "$(readlink -f "$(which cc)")")"
+          compiler_ver="$(cc -dumpversion)"
+          compiler_id="${compiler_name}-${compiler_ver}"
+          
+          echo "::set-output name=NAME::$compiler_name"
+          echo "::set-output name=VERSION::$compiler_ver"
+          echo "::set-output name=VERSION_MAJOR::$(echo $compiler_ver | grep -oP '^\d+')"
+          echo "::set-output name=ID::$compiler_id"
+
       - name: Generate cache key
         id: conan_cache_key
         run: |
           host_os="host-${{runner.os}}"
-          compiler_id="$(basename "$CC")-$(cc -dumpversion)"
+          compiler_id="${{ steps.compiler-info.outputs.ID }}"
           build_type="${{matrix.config.build_type}}"
           hash="${{hashFiles('conanfile.py')}}"
 
@@ -87,15 +103,25 @@ jobs:
         env:
           CONAN_V2_MODE: "1"
         run: |
+          set -x
+          
           waserr='OFF'
           wlto='OFF'
+          cname="${{ steps.compiler-info.outputs.NAME }}"
+          ver="${{ steps.compiler-info.outputs.VERSION_MAJOR }}"
 
-          compiler="$(basename "$CC")-$(cc -dumpversion)"
-          if [[ "$compiler_id" == gcc-11* ]] || [[ "$compiler_id" == clang-13* ]] ; then
+          if [[ ${{ steps.compiler-info.outputs.NAME }} == gcc ]] && \
+             [[ ${{ steps.compiler-info.outputs.VERSION_MAJOR }} -ge 9 ]] ; then
             waserr='ON'
             wlto='ON'
           fi
-
+          
+          if [[ ${{ steps.compiler-info.outputs.NAME }} == clang ]] && \
+             [[ ${{ steps.compiler-info.outputs.VERSION_MAJOR }} -ge 10 ]] ; then
+            waserr='ON'
+            wlto='ON'
+          fi
+          
           cmake -DCMAKE_BUILD_TYPE=${{matrix.config.build_type}} \
                 -DENABLE_IPO=$wlto                               \
                 -DENABLE_TESTING=ON                              \
@@ -119,8 +145,8 @@ jobs:
         working-directory: /workspace/build-asan
         if: >
           matrix.config.build_type == 'Debug' &&
-             (matrix.image == 'conanio/gcc11-ubuntu16.04:1.41.0' ||
-              matrix.image == 'conanio/clang13-ubuntu16.04:1.41.0')
+             (contains(steps.compiler-info.outputs.ID, 'gcc11') ||
+             contains(steps.compiler-info.outputs.ID, 'clang13'))
         env:
           CONAN_V2_MODE: "1"
         run: |
@@ -134,16 +160,16 @@ jobs:
         working-directory: /workspace/build-asan
         if: >
           matrix.config.build_type == 'Debug' &&
-             (matrix.image == 'conanio/gcc11-ubuntu16.04:1.41.0' ||
-              matrix.image == 'conanio/clang13-ubuntu16.04:1.41.0')
+             (contains(steps.compiler-info.outputs.ID, 'gcc11') ||
+              contains(steps.compiler-info.outputs.ID, 'clang13'))
         run: cmake --build . -j $(nproc)
 
       - name: Test project - ASAN
         working-directory: /workspace/build-asan
         if: >
           matrix.config.build_type == 'Debug' &&
-             (matrix.image == 'conanio/gcc11-ubuntu16.04:1.41.0' ||
-              matrix.image == 'conanio/clang13-ubuntu16.04:1.41.0')
+             (contains(steps.compiler-info.outputs.ID, 'gcc11') ||
+              contains(steps.compiler-info.outputs.ID, 'clang13'))
         run: |
           ctest --test-dir /workspace/build-asan \
                 --schedule-random                \
@@ -155,8 +181,8 @@ jobs:
         working-directory: /workspace/build-ubsan
         if: >
           matrix.config.build_type == 'Debug' &&
-             (matrix.image == 'conanio/gcc11-ubuntu16.04:1.41.0' ||
-              matrix.image == 'conanio/clang13-ubuntu16.04:1.41.0')
+             (contains(steps.compiler-info.outputs.ID, 'gcc11') ||
+              contains(steps.compiler-info.outputs.ID, 'clang13'))
         env:
           CONAN_V2_MODE: "1"
         run: |
@@ -170,16 +196,16 @@ jobs:
         working-directory: /workspace/build-ubsan
         if: >
           matrix.config.build_type == 'Debug' &&
-             (matrix.image == 'conanio/gcc11-ubuntu16.04:1.41.0' ||
-              matrix.image == 'conanio/clang13-ubuntu16.04:1.41.0')
+             (contains(steps.compiler-info.outputs.ID, 'gcc11') ||
+              contains(steps.compiler-info.outputs.ID, 'clang13'))
         run: cmake --build . -j $(nproc)
 
       - name: Test project - UBSAN
         working-directory: /workspace/build-ubsan
         if: >
           matrix.config.build_type == 'Debug' &&
-             (matrix.image == 'conanio/gcc11-ubuntu16.04:1.41.0' ||
-              matrix.image == 'conanio/clang13-ubuntu16.04:1.41.0')
+             (contains(steps.compiler-info.outputs.ID, 'gcc11') ||
+              contains(steps.compiler-info.outputs.ID, 'clang13'))
         run: |
           ctest --test-dir /workspace/build-ubsan \
                 --schedule-random                 \
