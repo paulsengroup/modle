@@ -2,8 +2,7 @@
 #
 # SPDX-License-Identifier: MIT
 
-#FROM conanio/gcc10-ubuntu16.04:1.41.0 AS builder
-FROM conanio/gcc11-ubuntu16.04:1.41.0 AS builder
+FROM conanio/gcc10-ubuntu16.04:1.41.0 AS builder
 
 ARG src_dir='/home/conan/modle'
 ARG build_dir='/home/conan/modle/build'
