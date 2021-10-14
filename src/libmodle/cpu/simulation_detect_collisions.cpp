@@ -499,7 +499,7 @@ void Simulation::process_secondary_lef_lef_collisions(
          random::bernoulli_trial{1.0 - this->probability_of_extrusion_unit_bypass}(rand_eng))) {
       DISABLE_WARNING_PUSH
       DISABLE_WARNING_SHORTEN_64_TO_32
-      rev_collisions[rev_idx2] = static_cast<collision_t>(offset + rev_idx1);
+      rev_collisions[rev_idx2] = offset + rev_idx1;
       DISABLE_WARNING_POP
       const auto move = rev_pos2 - (rev_pos1 - move1);
       move2 = move > 0UL ? move - 1UL : 0UL;
@@ -535,7 +535,7 @@ void Simulation::process_secondary_lef_lef_collisions(
          random::bernoulli_trial{1.0 - this->probability_of_extrusion_unit_bypass}(rand_eng))) {
       DISABLE_WARNING_PUSH
       DISABLE_WARNING_SHORTEN_64_TO_32
-      fwd_collisions[fwd_idx1] = static_cast<collision_t>(offset + fwd_idx2);
+      fwd_collisions[fwd_idx1] = offset + fwd_idx2;
       DISABLE_WARNING_POP
       const auto move = (fwd_pos2 + move2) - fwd_pos1;
       move1 = move > 0UL ? move - 1UL : 0UL;

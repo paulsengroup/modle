@@ -60,9 +60,12 @@ Simulation::Simulation(const Config& c, bool import_chroms)
                   ? Genome(path_to_chrom_sizes, path_to_extr_barriers, path_to_chrom_subranges,
                            path_to_feature_bed_files, ctcf_occupied_self_prob,
                            ctcf_not_occupied_self_prob, write_contacts_for_ko_chroms)
-                  : Genome{}),
-      DISABLE_WARNING_PUSH DISABLE_WARNING_SHORTEN_64_TO_32 _tpool(c.nthreads + 1) {}
-DISABLE_WARNING_POP
+                  : Genome{}) {
+  DISABLE_WARNING_PUSH
+  DISABLE_WARNING_SHORTEN_64_TO_32
+  _tpool.reset(c.nthreads + 1);
+  DISABLE_WARNING_POP
+}
 
 bool Simulation::ok() const noexcept { return !this->_exception_thrown; }
 
