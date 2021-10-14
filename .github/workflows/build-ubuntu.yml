@@ -70,10 +70,10 @@ jobs:
       - name: Generate cache key
         id: conan_cache_key
         run: |
-          host_os="host-${{runner.os}}"
+          host_os="host-${{ runner.os }}"
           compiler_id="${{ steps.compiler-info.outputs.ID }}"
-          build_type="${{matrix.config.build_type}}"
-          hash="${{hashFiles('conanfile.py')}}"
+          build_type="${{ matrix.config.build_type }}"
+          hash="${{ hashFiles('conanfile.py') }}"
 
           echo "::set-output name=string::$host_os-$compiler_id-$build_type-$hash"
 
@@ -104,15 +104,17 @@ jobs:
           wlto='OFF'
 
           if [[ ${{ steps.compiler-info.outputs.NAME }} == gcc ]] && \
+             [[ ${{ matrix.config.build_type }} != 'Debug' ]]     && \
              [[ ${{ steps.compiler-info.outputs.VERSION_MAJOR }} -ge 9 ]] ; then
             waserr='ON'
             wlto='ON'
           fi
           
           if [[ ${{ steps.compiler-info.outputs.NAME }} == clang ]] && \
+             [[ ${{ matrix.config.build_type }} != 'Debug' ]]     && \
              [[ ${{ steps.compiler-info.outputs.VERSION_MAJOR }} -ge 10 ]] ; then
             waserr='ON'
-            wlto='ON'
+            # wlto='ON' # LTO seems to not be available with clang13-ubuntu16.04:1.41.0
           fi
           
           cmake -DCMAKE_BUILD_TYPE=${{matrix.config.build_type}} \
