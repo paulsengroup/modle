@@ -161,7 +161,10 @@ void Simulation::run_perturbate() {
   }
 
   try {
+    DISABLE_WARNING_PUSH
+    DISABLE_WARNING_SHORTEN_64_TO_32
     this->_tpool.reset(this->nthreads);
+    DISABLE_WARNING_POP
     for (uint64_t tid = 0; tid < this->nthreads; ++tid) {  // Start simulation threads
       this->_tpool.push_task([&, tid]() {
         auto tmp_output_path = this->path_to_output_file_bedpe;

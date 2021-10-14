@@ -209,7 +209,10 @@ void Simulation::detect_lef_bar_collisions(
       if (delta > 0 && delta <= rev_moves[unit_idx] &&
           (pblock == 1.0 || random::bernoulli_trial{pblock}(rand_eng))) {
         // Collision detected. Assign barrier idx to the respective entry in the collision mask
+        DISABLE_WARNING_PUSH
+        DISABLE_WARNING_SHORTEN_64_TO_32
         rev_collisions[unit_idx] = i;
+        DISABLE_WARNING_POP
       }
     }
   }
@@ -252,7 +255,10 @@ process_fwd_unit:
       const auto delta = barrier.pos() - unit_pos;
       if (delta > 0 && delta <= fwd_moves[unit_idx] &&
           (pblock == 1.0 || random::bernoulli_trial{pblock}(rand_eng))) {
+        DISABLE_WARNING_PUSH
+        DISABLE_WARNING_SHORTEN_64_TO_32
         fwd_collisions[unit_idx] = i;
+        DISABLE_WARNING_POP
       }
     }
   }
@@ -365,8 +371,11 @@ void Simulation::detect_primary_lef_lef_collisions(
         // In the simplest case both units are free to move.
         // Thus we update their respective moves so that after calling Simulate::extrude, the two
         // units will be locate at their respective collision sites
+        DISABLE_WARNING_PUSH
+        DISABLE_WARNING_SHORTEN_64_TO_32
         cause_of_collision_rev = barriers.size() + fwd_idx;
         cause_of_collision_fwd = barriers.size() + rev_idx;
+        DISABLE_WARNING_POP
 
       } else if (cause_of_collision_rev != NO_COLLISION && cause_of_collision_fwd == NO_COLLISION) {
         // In this case only the fwd unit is free to move.
@@ -385,12 +394,15 @@ void Simulation::detect_primary_lef_lef_collisions(
         if (BOOST_UNLIKELY(collision_pos_fwd > barrier_pos)) {
           // Detected the mis-prediction mentioned above: make the LEF-BAR collision a LEF-LEF
           // collision
+          DISABLE_WARNING_PUSH
+          DISABLE_WARNING_SHORTEN_64_TO_32
           cause_of_collision_rev = barriers.size() + fwd_idx;
           cause_of_collision_fwd = barriers.size() + rev_idx;
         } else {
           // fwd extr unit is being blocked by a rev unit that is itself being blocked by an extr.
           // barrier
           cause_of_collision_fwd = barriers.size() + rev_idx;
+          DISABLE_WARNING_POP
         }
         // This branch follows the same logic as the previous one. In this case the rev unit is free
         // to move, while the fwd unit has been predicted to be stalled by an extr. barrier
@@ -399,10 +411,13 @@ void Simulation::detect_primary_lef_lef_collisions(
         assert(collision_pos_rev != 0 && collision_pos_fwd != 0);                    // NOLINT
         const auto& barrier_pos = barriers[cause_of_collision_fwd].pos();
         if (BOOST_UNLIKELY(collision_pos_rev < barrier_pos)) {
+          DISABLE_WARNING_PUSH
+          DISABLE_WARNING_SHORTEN_64_TO_32
           cause_of_collision_rev = barriers.size() + fwd_idx;
           cause_of_collision_fwd = barriers.size() + rev_idx;
         } else {
           cause_of_collision_rev = barriers.size() + fwd_idx;
+          DISABLE_WARNING_POP
         }
       }
     }
@@ -482,7 +497,10 @@ void Simulation::process_secondary_lef_lef_collisions(
     if (rev_pos2 - move2 <= rev_pos1 - move1 &&
         (this->probability_of_extrusion_unit_bypass == 0.0 ||
          random::bernoulli_trial{1.0 - this->probability_of_extrusion_unit_bypass}(rand_eng))) {
-      rev_collisions[rev_idx2] = offset + rev_idx1;
+      DISABLE_WARNING_PUSH
+      DISABLE_WARNING_SHORTEN_64_TO_32
+      rev_collisions[rev_idx2] = static_cast<collision_t>(offset + rev_idx1);
+      DISABLE_WARNING_POP
       const auto move = rev_pos2 - (rev_pos1 - move1);
       move2 = move > 0UL ? move - 1UL : 0UL;
     }
@@ -515,7 +533,10 @@ void Simulation::process_secondary_lef_lef_collisions(
     if (fwd_pos1 + move1 >= fwd_pos2 + move2 &&
         (this->probability_of_extrusion_unit_bypass == 0.0 ||
          random::bernoulli_trial{1.0 - this->probability_of_extrusion_unit_bypass}(rand_eng))) {
-      fwd_collisions[fwd_idx1] = offset + fwd_idx2;
+      DISABLE_WARNING_PUSH
+      DISABLE_WARNING_SHORTEN_64_TO_32
+      fwd_collisions[fwd_idx1] = static_cast<collision_t>(offset + fwd_idx2);
+      DISABLE_WARNING_POP
       const auto move = (fwd_pos2 + move2) - fwd_pos1;
       move1 = move > 0UL ? move - 1UL : 0UL;
     }

@@ -48,7 +48,10 @@ void Simulation::run_replay() {
   std::mutex cooler_mutex;
 
   try {
+    DISABLE_WARNING_PUSH
+    DISABLE_WARNING_SHORTEN_64_TO_32
     this->_tpool.reset(this->nthreads);
+    DISABLE_WARNING_POP
     for (uint64_t tid = 0; tid < this->nthreads; ++tid) {  // Start simulation threads
       this->_tpool.push_task([&, tid]() { this->replay_worker(tid, task_queue, cooler_mutex); });
     }

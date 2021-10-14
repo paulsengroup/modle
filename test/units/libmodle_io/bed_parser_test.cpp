@@ -51,7 +51,6 @@ inline void compare_bed_records_with_file(std::vector<BED> records, const std::s
     if (starta != startb) {
       return std::stoull(starta.data(), nullptr) < std::stoull(startb.data(), nullptr);
     }
-    assert(enda != endb);  // NOLINT
     return std::stoull(enda.data(), nullptr) < std::stoull(endb.data(), nullptr);
   });
 
@@ -92,6 +91,7 @@ TEST_CASE("BED Parser: BED6", "[parsers][BED][io][medium]") {
   const std::string bed_file = "test/data/unit_tests/sample.bed6.gz";
   auto p = bed::Parser(bed_file);
   auto records = p.parse_all();
+  REQUIRE(records.size() == 9);
   compare_bed_records_with_file(records, bed_file);
 }
 
@@ -100,6 +100,7 @@ TEST_CASE("BED Parser: BED9", "[parsers][BED][io][medium]") {
   std::string bed_file = "test/data/unit_tests/sample.bed9.gz";
   auto p = bed::Parser(bed_file);
   auto records = p.parse_all();
+  REQUIRE(records.size() == 62580);
   compare_bed_records_with_file(records, bed_file);
 }
 

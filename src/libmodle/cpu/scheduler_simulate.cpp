@@ -46,8 +46,10 @@ void Simulation::run_simulate() {
       boost::filesystem::remove(this->path_to_output_file_cool);
     }
   }
-
+  DISABLE_WARNING_PUSH
+  DISABLE_WARNING_SHORTEN_64_TO_32
   this->_tpool.reset(this->nthreads + 1);
+  DISABLE_WARNING_POP
 
   // These are the threads spawned by simulate_extrusion:
   // - 1 thread to write contacts to disk. This thread pops Chromosome* from a std::deque once the

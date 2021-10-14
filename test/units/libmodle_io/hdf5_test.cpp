@@ -47,6 +47,7 @@ inline H5::DataSet init_test_str_dataset(H5::H5File& f, std::string_view path = 
   H5::DSetCreatPropList cprop{};
   cprop.setChunk(rank, &chunk_dims);
   cprop.setFillValue(str_type, &fill_var);
+  fmt::print(stderr, FMT_STRING("str_size={}\n"), str_type.getSize());
   cprop.setDeflate(1);
 
   auto mem_space{H5::DataSpace(rank, &rank, &max_dims)};

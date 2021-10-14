@@ -61,7 +61,8 @@ Simulation::Simulation(const Config& c, bool import_chroms)
                            path_to_feature_bed_files, ctcf_occupied_self_prob,
                            ctcf_not_occupied_self_prob, write_contacts_for_ko_chroms)
                   : Genome{}),
-      _tpool(c.nthreads + 1) {}
+      DISABLE_WARNING_PUSH DISABLE_WARNING_SHORTEN_64_TO_32 _tpool(c.nthreads + 1) {}
+DISABLE_WARNING_POP
 
 bool Simulation::ok() const noexcept { return !this->_exception_thrown; }
 
@@ -592,7 +593,12 @@ size_t Simulation::release_lefs(const absl::Span<Lef> lefs,
   return lefs_released;
 }
 
-thread_pool Simulation::instantiate_thread_pool() const { return thread_pool(this->nthreads); }
+thread_pool Simulation::instantiate_thread_pool() const {
+  DISABLE_WARNING_PUSH
+  DISABLE_WARNING_SHORTEN_64_TO_32
+  return thread_pool(this->nthreads);
+  DISABLE_WARNING_POP
+}
 
 Simulation::Task Simulation::Task::from_string(std::string_view serialized_task, Genome& genome) {
   [[maybe_unused]] const size_t ntoks = 7;
