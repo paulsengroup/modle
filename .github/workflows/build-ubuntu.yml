@@ -58,7 +58,7 @@ jobs:
       - name: Collect compiler information
         id: compiler-info
         run: |
-          compiler_name="$(basename "$(readlink -f "$(which cc)")")"
+          compiler_name="$(basename "$(readlink -f "$(which cc)")" | grep -o "gcc\|clang")"
           compiler_ver="$(cc -dumpversion)"
           compiler_id="${compiler_name}-${compiler_ver}"
           
@@ -102,8 +102,6 @@ jobs:
           
           waserr='OFF'
           wlto='OFF'
-          cname="${{ steps.compiler-info.outputs.NAME }}"
-          ver="${{ steps.compiler-info.outputs.VERSION_MAJOR }}"
 
           if [[ ${{ steps.compiler-info.outputs.NAME }} == gcc ]] && \
              [[ ${{ steps.compiler-info.outputs.VERSION_MAJOR }} -ge 9 ]] ; then
