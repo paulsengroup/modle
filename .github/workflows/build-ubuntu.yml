@@ -41,6 +41,8 @@ jobs:
     container:
       image: ${{matrix.image}}
       options: "--user=root -v ${{github.workspace}}:/workspace"
+    env:
+      CONAN_USER_HOME: "/workspace"
 
     defaults:
       run:
@@ -79,7 +81,7 @@ jobs:
         uses: actions/cache@v2
         with:
           key: conan-${{ steps.conan_cache_key.outputs.string }}
-          path: ~/.conan/data
+          path: ${{ env.CONAN_USER_HOME }}/.conan/data
 
       - name: Clean up Conan
         run: |
