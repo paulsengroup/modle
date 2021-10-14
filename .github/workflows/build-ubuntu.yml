@@ -81,13 +81,6 @@ jobs:
           key: conan-${{ steps.conan_cache_key.outputs.string }}
           path: ~/.conan/data
 
-      - name: Install Conan
-        id: conan
-        uses: turtlebrowser/get-conan@main
-
-      - name: Conan version
-        run: echo ${{steps.conan.outputs.version}}
-
       - name: Clean up Conan
         run: |
           conan remove -f "*" --builds
