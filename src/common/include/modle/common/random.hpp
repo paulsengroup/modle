@@ -62,7 +62,7 @@ namespace modle::random {
 }
 #endif
 
-using PRNG_t = decltype(std::function{PRNG})::result_type;
+using PRNG_t = std::result_of<decltype (&PRNG)(uint64_t)>::type;
 
 #ifdef MODLE_WITH_BOOST_RANDOM
 using bernoulli_trial = boost::random::bernoulli_distribution<double>;
