@@ -20,14 +20,12 @@
 #include <boost/dynamic_bitset/dynamic_bitset.hpp>  // for dynamic_bitset
 #include <boost/range/adaptor/reversed.hpp>         // for reversed_range, reverse
 #include <cassert>                                  // for assert
-#include <cstddef>                                  // for size_t
-#include <cstdint>                                  // for int64_t, uint32_t
 #include <limits>                                   // for numeric_limits
 #include <thread>                                   // for thread
 #include <thread_pool/thread_pool.hpp>              // for thread_pool
 #include <type_traits>                              // for declval, decay_t
 
-#include "modle/common/common.hpp"  // for bp_t
+#include "modle/common/common.hpp"  // for bp_t, i64, u32
 #include "modle/common/math.hpp"
 #include "modle/common/random.hpp"                      // for PRNG_t, uniform_int_distribution
 #include "modle/common/random_sampling.hpp"             // for random_sampe
@@ -40,11 +38,11 @@ namespace modle {
 
 template <typename MaskT>
 void Simulation::bind_lefs(const bp_t start_pos, const bp_t end_pos, const absl::Span<Lef> lefs,
-                           const absl::Span<size_t> rev_lef_ranks,
-                           const absl::Span<size_t> fwd_lef_ranks, const MaskT& mask,
+                           const absl::Span<usize> rev_lef_ranks,
+                           const absl::Span<usize> fwd_lef_ranks, const MaskT& mask,
                            random::PRNG_t& rand_eng,
-                           size_t current_epoch) noexcept(utils::ndebug_defined()) {
-  using T = std::decay_t<decltype(std::declval<MaskT&>().operator[](std::declval<size_t>()))>;
+                           usize current_epoch) noexcept(utils::ndebug_defined()) {
+  using T = std::decay_t<decltype(std::declval<MaskT&>().operator[](std::declval<usize>()))>;
   static_assert(std::is_integral_v<T> || std::is_same_v<MaskT, boost::dynamic_bitset<>>,
                 "mask should be a vector of integral numbers or a boost::dynamic_bitset.");
   {
@@ -56,14 +54,14 @@ void Simulation::bind_lefs(const bp_t start_pos, const bp_t end_pos, const absl:
   }
 
   chrom_pos_generator_t pos_generator{start_pos, end_pos - 1};
-  for (size_t i = 0; i < lefs.size(); ++i) {
+  for (usize i = 0; i < lefs.size(); ++i) {
     if (mask.empty() || mask[i]) {  // Bind all LEFs when mask is empty
       lefs[i].bind_at_pos(current_epoch, pos_generator(rand_eng));
     }
   }
 
   if constexpr (utils::ndebug_not_defined()) {
-    for (size_t i = 0; i < lefs.size(); ++i) {
+    for (usize i = 0; i < lefs.size(); ++i) {
       if (mask.empty() || mask[i]) {
         assert(lefs[i].rev_unit >= start_pos && lefs[i].rev_unit < end_pos);  // NOLINT
         assert(lefs[i].fwd_unit >= start_pos && lefs[i].fwd_unit < end_pos);  // NOLINT
@@ -83,10 +81,10 @@ void Simulation::bind_lefs(const bp_t start_pos, const bp_t end_pos, const absl:
 
 template <typename MaskT>
 void Simulation::bind_lefs(const Chromosome& chrom, const absl::Span<Lef> lefs,
-                           const absl::Span<size_t> rev_lef_ranks,
-                           const absl::Span<size_t> fwd_lef_ranks, const MaskT& mask,
+                           const absl::Span<usize> rev_lef_ranks,
+                           const absl::Span<usize> fwd_lef_ranks, const MaskT& mask,
                            random::PRNG_t& rand_eng,
-                           size_t current_epoch) noexcept(utils::ndebug_defined()) {
+                           usize current_epoch) noexcept(utils::ndebug_defined()) {
   Simulation::bind_lefs(chrom.start_pos(), chrom.end_pos(), lefs, rev_lef_ranks, fwd_lef_ranks,
                         mask, rand_eng, current_epoch);
 }
@@ -94,11 +92,11 @@ void Simulation::bind_lefs(const Chromosome& chrom, const absl::Span<Lef> lefs,
 template <typename MaskT>
 void Simulation::select_lefs_to_bind(const absl::Span<const Lef> lefs,
                                      MaskT& mask) noexcept(utils::ndebug_defined()) {
-  using T = std::decay_t<decltype(std::declval<MaskT&>().operator[](std::declval<size_t>()))>;
+  using T = std::decay_t<decltype(std::declval<MaskT&>().operator[](std::declval<usize>()))>;
   static_assert(std::is_integral_v<T> || std::is_same_v<MaskT, boost::dynamic_bitset<>>,
                 "mask should be a vector of integral numbers or a boost::dynamic_bitset.");
   assert(lefs.size() == mask.size());  // NOLINT
-  for (size_t i = 0; i < lefs.size(); ++i) {
+  for (usize i = 0; i < lefs.size(); ++i) {
     mask[i] = !lefs[i].is_bound();
   }
 }
@@ -109,11 +107,10 @@ thread_pool Simulation::instantiate_thread_pool(I nthreads_, bool clamp_nthreads
   DISABLE_WARNING_PUSH
   DISABLE_WARNING_USELESS_CAST
   if (clamp_nthreads) {
-    return thread_pool(
-        std::min(std::thread::hardware_concurrency(), static_cast<uint32_t>(nthreads_)));
+    return thread_pool(std::min(std::thread::hardware_concurrency(), static_cast<u32>(nthreads_)));
   }
   assert(nthreads_ > 0);
-  return thread_pool(static_cast<uint32_t>(nthreads_));
+  return thread_pool(static_cast<u32>(nthreads_));
   DISABLE_WARNING_POP
 }
 
@@ -185,10 +182,10 @@ auto fmt::formatter<modle::Simulation::State>::format(const modle::Simulation::S
                                    " - # of contacts registered: {:d}\n"
                                    " - seed: {:d}"),
                         s.id, s.cell_id, s.chrom ? s.chrom->name() : "null",
-                        s.chrom ? static_cast<int64_t>(s.chrom->start_pos()) : -1,
-                        s.chrom ? static_cast<int64_t>(s.chrom->end_pos()) : -1, s.deletion_begin,
-                        s.deletion_begin + s.deletion_size, s.window_start, s.window_end,
-                        s.active_window_start, s.active_window_end, s.epoch,
+                        s.chrom ? static_cast<modle::i64>(s.chrom->start_pos()) : -1,
+                        s.chrom ? static_cast<modle::i64>(s.chrom->end_pos()) : -1,
+                        s.deletion_begin, s.deletion_begin + s.deletion_size, s.window_start,
+                        s.window_end, s.active_window_start, s.active_window_end, s.epoch,
                         s.burnin_completed ? "True" : "False", s.num_target_epochs,
                         s.num_target_contacts, s.num_lefs, s.num_active_lefs, s.barriers.size(),
                         s.feats1.size(), s.feats2.size(), s.num_contacts, s.seed);

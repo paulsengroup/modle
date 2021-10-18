@@ -5,12 +5,11 @@
 #pragma once
 
 #include <array>       // for array
-#include <cstddef>     // for size_t
-#include <cstdint>     // for uint64_t
 #include <functional>  // for function<>::result_type
 #include <limits>      // for numeric_limits
 
-#include "modle/common/utils.hpp"  // for ndebug_defined
+#include "modle/common/common.hpp"  // for u64
+#include "modle/common/utils.hpp"   // for ndebug_defined
 
 #if !defined(MODLE_USE_MERSENNE_TWISTER)
 #define USE_XOSHIRO
@@ -40,35 +39,34 @@
 namespace modle::random {
 
 #if defined(MODLE_USE_MERSENNE_TWISTER) && defined(MODLE_WITH_BOOST_RANDOM)
-[[nodiscard]] inline boost::random::mt19937_64 PRNG(uint64_t seed) noexcept(
-    utils::ndebug_defined()) {
+[[nodiscard]] inline boost::random::mt19937_64 PRNG(u64 seed) noexcept(utils::ndebug_defined()) {
   auto seeder = boost::random::seed_seq{seed};
   return boost::random::mt19937_64{seeder};
 }
 #endif
 
 #if defined(MODLE_USE_MERSENNE_TWISTER) && !defined(MODLE_WITH_BOOST_RANDOM)
-[[nodiscard]] inline std::mt19937_64 PRNG(uint64_t seed) noexcept(utils::ndebug_defined()) {
+[[nodiscard]] inline std::mt19937_64 PRNG(u64 seed) noexcept(utils::ndebug_defined()) {
   auto seeder = std::seed_seq{seed};
   return std::mt19937_64{seeder};
 }
 #endif
 
 #ifdef USE_XOSHIRO
-[[nodiscard]] inline XoshiroCpp::Xoshiro256PlusPlus PRNG(uint64_t seed) noexcept(
+[[nodiscard]] inline XoshiroCpp::Xoshiro256PlusPlus PRNG(u64 seed) noexcept(
     utils::ndebug_defined()) {
   auto seeder = XoshiroCpp::SplitMix64(seed);
   return XoshiroCpp::Xoshiro256PlusPlus(seeder.generateSeedSequence<4>());
 }
 #endif
 
-using PRNG_t = std::result_of<decltype (&PRNG)(uint64_t)>::type;
+using PRNG_t = std::result_of<decltype (&PRNG)(u64)>::type;
 
 #ifdef MODLE_WITH_BOOST_RANDOM
 using bernoulli_trial = boost::random::bernoulli_distribution<double>;
 template <class N>
 using discrete_distribution = boost::random::discrete_distribution<N>;
-template <class N, size_t bits>
+template <class N, usize bits>
 inline N generate_canonical(random::PRNG_t& rand_eng) {
   return boost::random::generate_canonical<N, bits>(rand_eng);
 }
@@ -85,7 +83,7 @@ using uniform_real_distribution = boost::random::uniform_real_distribution<N>;
 using bernoulli_trial = std::bernoulli_distribution;
 template <class N>
 using discrete_distribution = std::discrete_distribution<N>;
-template <class N, size_t bits>
+template <class N, usize bits>
 inline N generate_canonical(random::PRNG_t& rand_eng) {
   return std::generate_canonical<N, bits>(rand_eng);
 }

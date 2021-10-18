@@ -9,7 +9,7 @@
 
 #include <boost/dynamic_bitset/dynamic_bitset.hpp>  // for dynamic_bitset
 #include <cassert>                                  // for assert
-#include <cstdint>                                  // for uint_fast8_t
+#include <cstdint>                                  // for std::uint_fast8_t
 
 #include "modle/common/common.hpp"  // for bp_t, Direction, fwd, none
 #include "modle/common/random.hpp"  // for PRNG_t
@@ -55,7 +55,7 @@ class ExtrusionBarrier {
 };
 
 namespace CTCF {
-enum State : uint_fast8_t { NOT_OCCUPIED = 0, OCCUPIED = 1 };
+enum State : std::uint_fast8_t { NOT_OCCUPIED = 0, OCCUPIED = 1 };
 [[nodiscard]] State next_state(State current_state, double occupied_self_transition_prob,
                                double not_occupied_self_transition_prob, random::PRNG_t& rand_eng);
 //! Update CTCF states for the current iteration based on the states from the previous

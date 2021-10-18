@@ -12,8 +12,7 @@
 #include <algorithm>                  // for max
 #include <array>                      // for array
 #include <boost/filesystem/path.hpp>  // for path
-#include <cstddef>                    // for size_t
-#include <cstdint>                    // for uint64_t, uint8_t, uint_fast8_t
+#include <cstdint>                    // for fast_uint8_t
 #include <fstream>                    // for ifstream
 #include <limits>                     // for numeric_limits
 #include <memory>                     // for unique_ptr
@@ -24,7 +23,7 @@
 #include <vector>                     // for vector
 
 #include "modle/chrom_sizes.hpp"    // for ChromSizes
-#include "modle/common/common.hpp"  // for bp_t
+#include "modle/common/common.hpp"  // for bp_t, u64, u8
 #include "modle/common/utils.hpp"   // for ConstMap, ConstMap::ConstMap<Key, Value, Size>
 #include "modle/compressed_io.hpp"  // for Reader
 #include "modle/interval_tree.hpp"  // for IITree, IITree::IITree<I, T>
@@ -32,16 +31,16 @@
 namespace modle::bed {
 
 struct RGB {
-  uint8_t r;
-  uint8_t g;
-  uint8_t b;
+  u8 r;
+  u8 g;
+  u8 b;
 
   [[nodiscard]] std::string to_string() const;
 };
 
 struct BED {
   friend class Parser;
-  enum Dialect : uint_fast8_t {
+  enum Dialect : std::uint_fast8_t {
     BED3 = 3U,
     BED4 = 4U,
     BED5 = 5U,
@@ -55,7 +54,7 @@ struct BED {
   [[nodiscard]] static Dialect str_to_dialect(std::string_view s);
   [[nodiscard]] static std::string dialect_to_str(Dialect d);
 
-  enum FieldsIdx : uint_fast8_t {
+  enum FieldsIdx : std::uint_fast8_t {
     BED_CHROM_IDX = 0U,
     BED_CHROM_START_IDX = 1U,
     BED_CHROM_END_IDX = 2U,
@@ -70,7 +69,7 @@ struct BED {
     BED_BLOCK_STARTS_IDX = 11U
   };
 
-  enum Fields : uint_fast8_t {
+  enum Fields : std::uint_fast8_t {
     BED_CHROM = BED_CHROM_IDX + 1,
     BED_CHROM_START = BED_CHROM_START_IDX + 1,
     BED_CHROM_END = BED_CHROM_END_IDX + 1,
@@ -87,7 +86,7 @@ struct BED {
 
   BED() = default;
   explicit BED(Dialect d);
-  explicit BED(std::string_view record, size_t id_ = null_id, Dialect bed_standard = autodetect,
+  explicit BED(std::string_view record, usize id_ = null_id, Dialect bed_standard = autodetect,
                bool validate = true);
   BED(std::string_view chrom_, bp_t chrom_start_, bp_t chrom_end_);
   BED(const BED& other);
@@ -103,19 +102,19 @@ struct BED {
   std::string name{};
   double score{};
   char strand{'.'};
-  bp_t thick_start{(std::numeric_limits<uint64_t>::max)()};
-  bp_t thick_end{(std::numeric_limits<uint64_t>::max)()};
+  bp_t thick_start{(std::numeric_limits<bp_t>::max)()};
+  bp_t thick_end{(std::numeric_limits<bp_t>::max)()};
   std::unique_ptr<RGB> rgb{nullptr};
-  uint64_t block_count{(std::numeric_limits<uint64_t>::max)()};
-  std::vector<uint64_t> block_sizes{};
-  std::vector<uint64_t> block_starts{};
+  u64 block_count{(std::numeric_limits<u64>::max)()};
+  std::vector<u64> block_sizes{};
+  std::vector<u64> block_starts{};
   std::string extra_tokens{};
 
   [[nodiscard]] bool operator==(const BED& other) const noexcept;
   [[nodiscard]] bool operator<(const BED& other) const noexcept;
-  [[nodiscard]] size_t id() const noexcept;
-  [[nodiscard]] size_t size() const noexcept;
-  [[nodiscard]] size_t num_fields() const noexcept;
+  [[nodiscard]] usize id() const noexcept;
+  [[nodiscard]] usize size() const noexcept;
+  [[nodiscard]] usize num_fields() const noexcept;
   [[nodiscard]] Dialect get_standard() const noexcept;
   [[nodiscard]] bool empty() const;
   template <typename H>
@@ -124,15 +123,12 @@ struct BED {
   }
 
  private:
-  static constexpr auto null_id = (std::numeric_limits<size_t>::max)();
-  size_t _id{null_id};
+  static constexpr auto null_id = (std::numeric_limits<usize>::max)();
+  usize _id{null_id};
   Dialect _standard{none};
-  static void parse_rgb_or_throw(const std::vector<std::string_view>& toks, uint8_t idx,
-                                 RGB& field);
-  [[nodiscard]] static RGB parse_rgb_or_throw(const std::vector<std::string_view>& toks,
-                                              uint8_t idx);
-  static void parse_strand_or_throw(const std::vector<std::string_view>& toks, uint8_t idx,
-                                    char& field);
+  static void parse_rgb_or_throw(const std::vector<std::string_view>& toks, u8 idx, RGB& field);
+  [[nodiscard]] static RGB parse_rgb_or_throw(const std::vector<std::string_view>& toks, u8 idx);
+  static void parse_strand_or_throw(const std::vector<std::string_view>& toks, u8 idx, char& field);
   [[nodiscard]] static Dialect detect_standard(std::string_view line);
   [[nodiscard]] static Dialect detect_standard(const std::vector<std::string_view>& toks);
   static void validate_record(const std::vector<std::string_view>& toks, Dialect standard);
@@ -152,8 +148,8 @@ struct BED {
   bool parse_block_starts(const std::vector<std::string_view>& toks);
   void parse_extra_tokens(const std::vector<std::string_view>& toks);
 
-  [[nodiscard]] uint64_t hash(XXH3_state_t* state,
-                              uint64_t seed = 17039577131913730910ULL) const;  // NOLINT
+  [[nodiscard]] u64 hash(XXH3_state_t* state,
+                         u64 seed = 17039577131913730910ULL) const;  // NOLINT
 };
 
 template <typename K = std::string, typename I = bp_t>
@@ -190,21 +186,20 @@ class BED_tree {
 
   [[nodiscard]] inline bool contains(const K& chrom_name) const;
   [[nodiscard]] inline bool contains_overlap(const BED& interval) const;
-  [[nodiscard]] inline bool contains_overlap(const K& chrom_name, uint64_t chrom_start,
-                                             uint64_t chrom_end) const;
+  [[nodiscard]] inline bool contains_overlap(const K& chrom_name, u64 chrom_start,
+                                             u64 chrom_end) const;
 
-  [[nodiscard]] inline size_t count_overlaps(const BED& interval) const;
-  [[nodiscard]] inline size_t count_overlaps(const K& chrom_name, uint64_t chrom_start,
-                                             uint64_t chrom_end) const;
+  [[nodiscard]] inline usize count_overlaps(const BED& interval) const;
+  [[nodiscard]] inline usize count_overlaps(const K& chrom_name, u64 chrom_start,
+                                            u64 chrom_end) const;
 
   [[nodiscard]] inline absl::Span<const BED> find_overlaps(const BED& interval) const;
-  [[nodiscard]] inline absl::Span<const BED> find_overlaps(const K& chrom_name,
-                                                           uint64_t chrom_start,
-                                                           uint64_t chrom_end) const;
+  [[nodiscard]] inline absl::Span<const BED> find_overlaps(const K& chrom_name, u64 chrom_start,
+                                                           u64 chrom_end) const;
 
   [[nodiscard]] inline bool empty() const;
-  [[nodiscard]] inline size_t size() const;
-  [[nodiscard]] inline size_t size(const K& chrom_name) const;
+  [[nodiscard]] inline usize size() const;
+  [[nodiscard]] inline usize size(const K& chrom_name) const;
 
   inline void clear();
   inline void clear(const K& chrom_name);
@@ -229,9 +224,9 @@ class Parser {
                   bool enforce_std_compliance = true);
 
   [[nodiscard]] BED parse_next();
-  [[nodiscard]] std::vector<BED> parse_n(size_t num_records);
-  [[nodiscard]] BED_tree<> parse_n_in_interval_tree(size_t num_records);
-  [[nodiscard]] std::string validate(size_t nrecords = 100);  // NOLINT
+  [[nodiscard]] std::vector<BED> parse_n(usize num_records);
+  [[nodiscard]] BED_tree<> parse_n_in_interval_tree(usize num_records);
+  [[nodiscard]] std::string validate(usize nrecords = 100);  // NOLINT
   [[nodiscard]] std::vector<BED> parse_all();
   [[nodiscard]] BED_tree<> parse_all_in_interval_tree();
   void reset();
@@ -241,10 +236,10 @@ class Parser {
   BED::Dialect _dialect;
   bool _enforce_std_compliance;
   std::string _buff{};
-  size_t _num_records_parsed{0};
-  size_t _num_lines_read{0};
+  usize _num_records_parsed{0};
+  usize _num_lines_read{0};
 
-  size_t skip_header();
+  usize skip_header();
 };
 
 using namespace std::literals::string_view_literals;

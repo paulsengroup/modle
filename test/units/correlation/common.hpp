@@ -13,7 +13,6 @@
 #include <boost/container_hash/hash.hpp>
 #include <boost/filesystem/path.hpp>  // for create_directories, exists, path, remove
 #include <boost/process.hpp>
-#include <cstdint>    // for uint32_t, int32_t, int64_t
 #include <cstdio>     // for pclose, fgets, popen, FILE
 #include <fstream>    // for basic_ofstream, operator<<, basic_ostream
 #include <memory>     // for allocator, unique_ptr
@@ -25,6 +24,7 @@
 #include <utility>      // for pair
 #include <vector>       // for vector
 
+#include "modle/common/common.hpp"  // for u32, i32, i64
 #include "modle/common/random.hpp"
 #include "modle/common/utils.hpp"
 
@@ -62,7 +62,7 @@ inline void generate_random_vect(random::PRNG_t& rand_eng, std::vector<N>& buff,
   if (allow_duplicates) {
     std::generate(buff.begin(), buff.end(), [&]() { return dist(rand_eng); });
   } else {
-    absl::flat_hash_set<uint32_t> s;
+    absl::flat_hash_set<u32> s;
     while (s.size() < buff.size()) {
       s.insert(dist(rand_eng));
     }
@@ -70,30 +70,30 @@ inline void generate_random_vect(random::PRNG_t& rand_eng, std::vector<N>& buff,
   }
 }
 
-template <class N = uint32_t, class = std::enable_if_t<std::is_arithmetic_v<N>>>
-[[nodiscard]] inline std::vector<N> generate_random_vect(random::PRNG_t& rand_eng, size_t size,
-                                                         uint32_t min, uint32_t max,
+template <class N = u32, class = std::enable_if_t<std::is_arithmetic_v<N>>>
+[[nodiscard]] inline std::vector<N> generate_random_vect(random::PRNG_t& rand_eng, usize size,
+                                                         u32 min, u32 max,
                                                          bool allow_duplicates = true) {
   std::vector<N> v(size);
   generate_random_vect(rand_eng, v, min, max, allow_duplicates);
   return v;
 }
 
-inline std::pair<std::vector<uint32_t>, std::vector<uint32_t>> generate_correlated_vects(
-    random::PRNG_t& rand_eng, uint32_t size) {
-  random::uniform_int_distribution<int32_t> dist(static_cast<int32_t>(size) / -50,  // NOLINT
-                                                 static_cast<int32_t>(size / 50));  // NOLINT
-  std::vector<uint32_t> v1(size);
-  std::vector<uint32_t> v2(size);
+inline std::pair<std::vector<u32>, std::vector<u32>> generate_correlated_vects(
+    random::PRNG_t& rand_eng, u32 size) {
+  random::uniform_int_distribution<i32> dist(static_cast<i32>(size) / -50,  // NOLINT
+                                             static_cast<i32>(size / 50));  // NOLINT
+  std::vector<u32> v1(size);
+  std::vector<u32> v2(size);
   std::iota(v1.begin(), v1.end(), 0);
   std::iota(v2.begin(), v2.end(), 0);
-  for (size_t i = 0; i < size; ++i) {
+  for (usize i = 0; i < size; ++i) {
     DISABLE_WARNING_PUSH
     DISABLE_WARNING_USELESS_CAST
-    auto n = static_cast<int64_t>(v1[i]) + dist(rand_eng);
-    v1[i] = static_cast<uint32_t>(std::max(int64_t(0), n));
-    n = static_cast<int64_t>(v2[i]) + dist(rand_eng);
-    v2[i] = static_cast<uint32_t>(std::max(int64_t(0), n));
+    auto n = static_cast<i64>(v1[i]) + dist(rand_eng);
+    v1[i] = static_cast<u32>(std::max(i64(0), n));
+    n = static_cast<i64>(v2[i]) + dist(rand_eng);
+    v2[i] = static_cast<u32>(std::max(i64(0), n));
     DISABLE_WARNING_POP
   }
   return {v1, v2};

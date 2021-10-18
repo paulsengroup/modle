@@ -19,10 +19,11 @@
 
 #include <H5Cpp.h>  // IWYU pragma: keep
 
-#include <cstdint>      // for int64_t
 #include <string>       // for string
 #include <string_view>  // for string_view
 #include <vector>       // for vector
+
+#include "modle/common/common.hpp"  // for i64
 
 namespace modle::hdf5 {
 
@@ -78,10 +79,10 @@ inline void read_attribute(std::string_view path_to_file, std::string_view attr_
                                              std::string_view attr_name,
                                              std::string_view path = "/");
 
-[[nodiscard]] int64_t read_attribute_int(H5::H5File &f, std::string_view attr_name,
-                                         std::string_view path = "/");
-[[nodiscard]] int64_t read_attribute_int(std::string_view path_to_file, std::string_view attr_name,
-                                         std::string_view path = "/");
+[[nodiscard]] i64 read_attribute_int(H5::H5File &f, std::string_view attr_name,
+                                     std::string_view path = "/");
+[[nodiscard]] i64 read_attribute_int(std::string_view path_to_file, std::string_view attr_name,
+                                     std::string_view path = "/");
 
 [[nodiscard]] bool has_attribute(const H5::Group &g, std::string_view attr_name);
 [[nodiscard]] bool has_attribute(const H5::DataSet &d, std::string_view attr_name);

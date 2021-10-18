@@ -10,8 +10,7 @@
 #include <spdlog/spdlog.h>             // for warn
 
 #include <boost/filesystem/path.hpp>  // for path
-#include <cstdint>                    // for uint32_t, uint8_t
-#include <cstdio>                     // for size_t, stdout
+#include <cstdio>                     // for stdout
 #include <exception>                  // for exception
 #include <limits>                     // for numeric_limits
 #include <memory>                     // for unique_ptr, make_unique
@@ -20,7 +19,7 @@
 #include <vector>                     // for vector
 
 #include "modle/bed.hpp"            // for BED, BED_tree, formatter<>::format, formatter<>::p...
-#include "modle/common/common.hpp"  // for bp_t
+#include "modle/common/common.hpp"  // for bp_t, u32, u8
 #include "modle/interval_tree.hpp"  // for IITree, IITree::IITree<I, T>, IITree::data_begin
 #include "modle_tools/config.hpp"   // for find_barrier_clusters_config
 #include "modle_tools/tools.hpp"    // for find_barrier_clusters_subcmd
@@ -28,8 +27,8 @@
 namespace modle::tools {
 
 void print_warnings(const bed::BED& cluster, const bed::BED& barrier1,
-                    const find_barrier_clusters_config& c, const size_t cluster_span,
-                    const size_t cluster_size, std::string& warning_buffer) {
+                    const find_barrier_clusters_config& c, const usize cluster_span,
+                    const usize cluster_size, std::string& warning_buffer) {
   warning_buffer.clear();
   if (cluster_span < c.min_cluster_span) {
     absl::StrAppendFormat(&warning_buffer, " Cluster span is too small (%d < %d);", cluster_span,
@@ -51,7 +50,7 @@ void print_warnings(const bed::BED& cluster, const bed::BED& barrier1,
                cluster.chrom_start, cluster.chrom_end, warning_buffer);
 }
 
-void write_cluster(bed::BED& cluster, const size_t cluster_id, const size_t cluster_size,
+void write_cluster(bed::BED& cluster, const usize cluster_id, const usize cluster_size,
                    std::unique_ptr<fmt::ostream>& fp) {
   cluster.name = fmt::format(FMT_STRING("cluster_{:07d}"), cluster_id);
   cluster.score = static_cast<double>(cluster_size);
@@ -62,7 +61,7 @@ void write_cluster(bed::BED& cluster, const size_t cluster_id, const size_t clus
   }
 }
 
-void write_single_barrier(bed::BED& buff, const bed::BED& barrier, const size_t barrier_id,
+void write_single_barrier(bed::BED& buff, const bed::BED& barrier, const usize barrier_id,
                           std::unique_ptr<fmt::ostream>& fp) {
   buff.chrom = barrier.chrom;
   buff.chrom_start = barrier.chrom_start;
@@ -88,14 +87,14 @@ void find_barrier_clusters_subcmd(const find_barrier_clusters_config& c) {
 
   const auto min_cluster_size = c.min_cluster_size;
   const auto max_cluster_size =
-      c.max_cluster_size == 0 ? (std::numeric_limits<size_t>::max)() : c.max_cluster_size;
+      c.max_cluster_size == 0 ? (std::numeric_limits<usize>::max)() : c.max_cluster_size;
   const auto min_cluster_span = c.min_cluster_span;
   const auto max_cluster_span =
       c.max_cluster_span == 0 ? (std::numeric_limits<bp_t>::max)() : c.max_cluster_span;
   std::string warning_buffer;
 
   bed::BED cluster;  //{bed::BED::BED5};
-  size_t cluster_id = 0;
+  usize cluster_id = 0;
 
   for (const auto& [chrom, barriers_itree] : barrier_intervals_gw) {
     // Create two spans corresponding to the barriers and breaking points mapping on the chrom that
@@ -112,10 +111,10 @@ void find_barrier_clusters_subcmd(const find_barrier_clusters_config& c) {
     cluster.chrom = chrom;
     cluster.chrom_start = 0;
     cluster.chrom_end = 0;
-    size_t cluster_size = 0;
+    usize cluster_size = 0;
 
     auto process_cluster = [&](bed::BED& cluster_, const bed::BED& barrier,
-                               const size_t barrier_id) {
+                               const usize barrier_id) {
       const auto cluster_span = cluster_.chrom_end - cluster_.chrom_start;
       if (cluster_span != 0 && cluster_span >= min_cluster_span &&
           cluster_span < max_cluster_span && cluster_size >= min_cluster_size &&
@@ -140,7 +139,7 @@ void find_barrier_clusters_subcmd(const find_barrier_clusters_config& c) {
     // yield an increase in cluster size (i.e. number of barriers belonging to a cluster).
     // Cluster extension is also stopped when overlapping with one or more breaking intervals (e.g.
     // genes, promoters, enhancer etc.)
-    for (size_t i = 1; i < barriers.size(); ++i) {
+    for (usize i = 1; i < barriers.size(); ++i) {
       const auto& b1 = barriers[i - 1];
       const auto& b2 = barriers[i];
       if (b2.chrom_end - b1.chrom_start < c.extension_window &&

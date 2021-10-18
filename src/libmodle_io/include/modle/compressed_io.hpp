@@ -4,14 +4,12 @@
 
 #pragma once
 #include <absl/container/flat_hash_map.h>  // for flat_hash_map
-#include <archive.h>                       // for archive_read_free, la_ssize_t
+#include <archive.h>                       // for archive_read_free, la_susize
 #include <archive_entry.h>                 // for archive_entry_new, archive_entry_free
 
 #include <array>                                 // for array
 #include <boost/filesystem/path.hpp>             // for path
 #include <boost/iostreams/filtering_stream.hpp>  // for filtering_ostream
-#include <cstddef>                               // for size_t
-#include <cstdint>                               // for uint8_t
 #include <fstream>                               // for ofstream
 #include <iostream>
 #include <memory>       // for unique_ptr
@@ -19,6 +17,7 @@
 #include <string_view>  // for operator""sv, basic_string_view
 #include <utility>      // for make_pair, pair
 
+#include "modle/common/common.hpp"                      // for u8
 #include "modle/common/suppress_compiler_warnings.hpp"  // for DISABLE_WARNING_PADDED, DISABLE_W...
 
 namespace modle::compressed_io {
@@ -31,7 +30,7 @@ class Reader {
 
  public:
   Reader() = default;  // NOLINTNEXTLINE
-  Reader(const boost::filesystem::path& path, size_t buff_capacity = 512 * 1024);
+  Reader(const boost::filesystem::path& path, usize buff_capacity = 512 * 1024);
 
   bool getline(std::string& buff, char sep = '\n');
   [[nodiscard]] std::string_view getline(char sep = '\n');
@@ -56,7 +55,7 @@ class Reader {
   std::unique_ptr<archive_entry*> _arc_entry{new archive_entry* };
   std::string _buff{};
   std::string _tok_tmp_buff{};
-  size_t _idx{0};
+  usize _idx{0};
   bool _eof{false};
 
   void handle_libarchive_errors(la_ssize_t errcode) const;
@@ -73,7 +72,14 @@ DISABLE_WARNING_PADDED
 class Writer {
   DISABLE_WARNING_POP
  public:
-  enum Compression : uint8_t { AUTO = 0, NONE = 1, GZIP = 2, BZIP2 = 3, LZMA = 4, ZSTD = 5 };
+  enum Compression : std::uint_fast8_t {
+    AUTO = 0,
+    NONE = 1,
+    GZIP = 2,
+    BZIP2 = 3,
+    LZMA = 4,
+    ZSTD = 5
+  };
 
   Writer() = default;
   explicit Writer(const boost::filesystem::path& path, Compression compression = AUTO);  // NOLINT

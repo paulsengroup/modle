@@ -20,17 +20,16 @@
 namespace modle::test::interval_tree {
 
 struct Record {
-  size_t start;
-  size_t end;
+  usize start;
+  usize end;
   std::string data;
 };
 
-using IITree_t = IITree<size_t, Record>;
+using IITree_t = IITree<usize, Record>;
 
-void test_find_overlaps(const IITree_t& tree, size_t start, size_t end,
-                        size_t num_expected_overlaps) {
+void test_find_overlaps(const IITree_t& tree, usize start, usize end, usize num_expected_overlaps) {
   const auto [overlap_begin, overlap_end] = tree.find_overlaps(start, end);
-  CHECK(static_cast<size_t>(overlap_end - overlap_begin) == num_expected_overlaps);
+  CHECK(static_cast<usize>(overlap_end - overlap_begin) == num_expected_overlaps);
 }
 
 // NOLINTNEXTLINE(readability-function-cognitive-complexity)

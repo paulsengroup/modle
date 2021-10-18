@@ -9,14 +9,13 @@
 #include <absl/types/span.h>  // for Span
 
 #include <array>        // for array
-#include <cstddef>      // for size_t
-#include <cstdint>      // for int64_t, uint8_t
 #include <iterator>     // for pair
 #include <limits>       // for numeric_limits
 #include <type_traits>  // for enable_if_t
 #include <utility>      // for pair
 #include <vector>       // for vector
 
+#include "modle/common/common.hpp"                      // for i64, u8
 #include "modle/common/suppress_compiler_warnings.hpp"  // for DISABLE_WARNING_PADDED, DISABLE_W...
 
 namespace modle {
@@ -65,8 +64,8 @@ class IITree {
   using T_iterator_const = typename std::vector<T>::const_iterator;
 
  public:
-  inline explicit IITree(size_t start_pos_ = 0,
-                         size_t end_pos_ = (std::numeric_limits<size_t>::max)());
+  inline explicit IITree(usize start_pos_ = 0,
+                         usize end_pos_ = (std::numeric_limits<usize>::max)());
 
   template <typename I2, typename = std::enable_if_t<std::is_integral_v<I2>>>
   inline void insert(I2 start, I2 end, const T &data);
@@ -81,25 +80,25 @@ class IITree {
   [[nodiscard]] inline T_iterator_const lower_bound(I start, I end) const noexcept;
   [[nodiscard]] inline T_iterator_const upper_bound(I start, I end) const noexcept;
 
-  [[nodiscard]] inline std::pair<size_t, size_t> equal_range_idx(I start, I end) const noexcept;
-  [[nodiscard]] inline std::pair<size_t, size_t> find_overlaps_idx(I start, I end) const noexcept;
-  [[nodiscard]] inline size_t lower_bound_idx(I start, I end) const noexcept;
-  [[nodiscard]] inline size_t upper_bound_idx(I start, I end) const noexcept;
+  [[nodiscard]] inline std::pair<usize, usize> equal_range_idx(I start, I end) const noexcept;
+  [[nodiscard]] inline std::pair<usize, usize> find_overlaps_idx(I start, I end) const noexcept;
+  [[nodiscard]] inline usize lower_bound_idx(I start, I end) const noexcept;
+  [[nodiscard]] inline usize upper_bound_idx(I start, I end) const noexcept;
 
-  [[nodiscard]] inline size_t count(I start, I end) const noexcept;
+  [[nodiscard]] inline usize count(I start, I end) const noexcept;
 
-  [[nodiscard]] inline constexpr size_t capacity() const noexcept;
+  [[nodiscard]] inline constexpr usize capacity() const noexcept;
   [[nodiscard]] inline constexpr bool empty() const noexcept;
-  [[nodiscard]] inline constexpr size_t size() const noexcept;
+  [[nodiscard]] inline constexpr usize size() const noexcept;
   [[nodiscard]] inline constexpr bool is_BST() const noexcept;
 
-  [[nodiscard]] inline constexpr size_t span() const noexcept;
-  [[nodiscard]] inline constexpr size_t start_pos() const noexcept;
-  [[nodiscard]] inline constexpr size_t end_pos() const noexcept;
+  [[nodiscard]] inline constexpr usize span() const noexcept;
+  [[nodiscard]] inline constexpr usize start_pos() const noexcept;
+  [[nodiscard]] inline constexpr usize end_pos() const noexcept;
 
-  [[nodiscard]] inline I get_overlap_start(size_t i) const;
-  [[nodiscard]] inline I get_overlap_end(size_t i) const;
-  [[nodiscard]] inline const T &get_overlap_data(size_t i) const;
+  [[nodiscard]] inline I get_overlap_start(usize i) const;
+  [[nodiscard]] inline I get_overlap_end(usize i) const;
+  [[nodiscard]] inline const T &get_overlap_data(usize i) const;
 
   [[nodiscard]] inline const absl::Span<const I> starts() const;
   [[nodiscard]] inline const absl::Span<const I> ends() const;
@@ -125,22 +124,22 @@ class IITree {
 
   inline void clear();
 
-  inline void reserve(size_t new_capacity);
+  inline void reserve(usize new_capacity);
   inline void make_BST();
 
  private:
   struct StackCell {
     inline StackCell() = default;
-    inline StackCell(int64_t _level, size_t _node_idx, bool _left_child_alread_processed);
+    inline StackCell(i64 _level, usize _node_idx, bool _left_child_alread_processed);
 
-    int64_t level;
-    size_t node_idx;
+    i64 level;
+    usize node_idx;
     bool left_child_already_processed;
   };
 
-  size_t _start_pos;
-  size_t _end_pos;
-  int64_t _max_level{0};
+  usize _start_pos;
+  usize _end_pos;
+  i64 _max_level{0};
   bool _indexed{true};
 
   std::vector<I> _start;
@@ -149,7 +148,7 @@ class IITree {
   std::vector<T> _data;
 
   // clang-format off
-  enum QueryType : uint8_t {
+  enum QueryType : u8 {
     LOWER_BOUND = 0x01,
     UPPER_BOUND = 0x02,
     EQUAL_RANGE = 0x04,

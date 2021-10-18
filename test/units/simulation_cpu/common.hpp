@@ -21,13 +21,13 @@ namespace modle::test::libmodle {
 inline const auto& REACHED_CHROM_BOUNDARY = Simulation::REACHED_CHROM_BOUNDARY;
 inline const auto& NO_COLLISION = Simulation::NO_COLLISION;
 template <typename I>
-[[nodiscard]] inline Lef construct_lef(I p1, I p2, size_t binding_epoch = 0) {
+[[nodiscard]] inline Lef construct_lef(I p1, I p2, usize binding_epoch = 0) {
   return Lef{binding_epoch, ExtrusionUnit{static_cast<bp_t>(p1)},
              ExtrusionUnit{static_cast<bp_t>(p2)}};
 }
 
 [[maybe_unused]] inline void print_debug_info(
-    size_t i, const std::vector<bp_t>& rev_moves, const std::vector<bp_t>& fwd_moves,
+    usize i, const std::vector<bp_t>& rev_moves, const std::vector<bp_t>& fwd_moves,
     const std::vector<bp_t>& rev_moves_expected, const std::vector<bp_t>& fwd_moves_expected,
     const std::vector<collision_t>& rev_collision_mask,
     const std::vector<collision_t>& rev_collision_mask_expected,
@@ -47,7 +47,7 @@ template <typename I>
     const std::vector<collision_t>& rev_collision_mask_expected,
     const std::vector<collision_t>& fwd_collision_mask,
     const std::vector<collision_t>& fwd_collision_mask_expected, bool print_debug_info_ = false) {
-  for (size_t i = 0; i < lefs.size(); ++i) {
+  for (usize i = 0; i < lefs.size(); ++i) {
     CHECK(rev_collision_mask[i] == rev_collision_mask_expected[i]);
     CHECK(fwd_collision_mask[i] == fwd_collision_mask_expected[i]);
     CHECK(rev_moves[i] == rev_moves_expected[i]);
@@ -62,8 +62,8 @@ template <typename I>
 }
 
 inline void check_that_lefs_are_sorted_by_idx(const std::vector<Lef>& lefs,
-                                              const std::vector<size_t>& rev_ranks,
-                                              const std::vector<size_t>& fwd_ranks) {
+                                              const std::vector<usize>& rev_ranks,
+                                              const std::vector<usize>& fwd_ranks) {
   CHECK(std::is_sorted(fwd_ranks.begin(), fwd_ranks.end(), [&](const auto r1, const auto r2) {
     return lefs[r1].fwd_unit.pos() < lefs[r2].fwd_unit.pos();
   }));
@@ -73,8 +73,8 @@ inline void check_that_lefs_are_sorted_by_idx(const std::vector<Lef>& lefs,
 }
 
 inline void require_that_lefs_are_sorted_by_idx(const std::vector<Lef>& lefs,
-                                                const std::vector<size_t>& rev_ranks,
-                                                const std::vector<size_t>& fwd_ranks) {
+                                                const std::vector<usize>& rev_ranks,
+                                                const std::vector<usize>& fwd_ranks) {
   REQUIRE(std::is_sorted(fwd_ranks.begin(), fwd_ranks.end(), [&](const auto r1, const auto r2) {
     return lefs[r1].fwd_unit.pos() < lefs[r2].fwd_unit.pos();
   }));

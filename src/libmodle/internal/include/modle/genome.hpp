@@ -11,8 +11,6 @@
 
 #include <boost/filesystem/path.hpp>  // for path
 #include <boost/type_traits.hpp>
-#include <cstddef>       // for size_t
-#include <cstdint>       // for uint64_t, uint8_t, uint32_t
 #include <iterator>      // for iterator_traits
 #include <limits>        // for numeric_limits
 #include <memory>        // for shared_ptr
@@ -23,7 +21,7 @@
 #include <vector>        // for vector
 
 #include "modle/bed.hpp"                 // for BED (ptr only), BED_tree, BED_tree<>::value_type
-#include "modle/common/common.hpp"       // for bp_t, contacts_t
+#include "modle/common/common.hpp"       // for bp_t, contacts_t, u64, u32, u8
 #include "modle/common/utils.hpp"        // for ndebug_defined
 #include "modle/contacts.hpp"            // for ContactMatrix
 #include "modle/extrusion_barriers.hpp"  // for ExtrusionBarrier
@@ -40,18 +38,18 @@ class Chromosome {
 
  public:
   Chromosome() = default;
-  Chromosome(size_t id, std::string_view chrom_name, bp_t chrom_start, bp_t chrom_end,
+  Chromosome(usize id, std::string_view chrom_name, bp_t chrom_start, bp_t chrom_end,
              bp_t chrom_size, bool ok_ = true);
 
-  Chromosome(size_t id, const bed::BED& chrom, bool ok_ = true);
-  Chromosome(size_t id, const bed::BED& chrom, const IITree<bp_t, ExtrusionBarrier>& barriers,
+  Chromosome(usize id, const bed::BED& chrom, bool ok_ = true);
+  Chromosome(usize id, const bed::BED& chrom, const IITree<bp_t, ExtrusionBarrier>& barriers,
              bool ok_ = true);
-  Chromosome(size_t id, const bed::BED& chrom, IITree<bp_t, ExtrusionBarrier>&& barriers,
+  Chromosome(usize id, const bed::BED& chrom, IITree<bp_t, ExtrusionBarrier>&& barriers,
              bool ok_ = true);
 
-  Chromosome(size_t id, std::string_view chrom_name, bp_t chrom_start, bp_t chrom_end,
+  Chromosome(usize id, std::string_view chrom_name, bp_t chrom_start, bp_t chrom_end,
              bp_t chrom_size, const IITree<bp_t, ExtrusionBarrier>& barriers, bool ok_ = true);
-  Chromosome(size_t id, std::string_view chrom_name, bp_t chrom_start, bp_t chrom_end,
+  Chromosome(usize id, std::string_view chrom_name, bp_t chrom_start, bp_t chrom_end,
              bp_t chrom_size, IITree<bp_t, ExtrusionBarrier>&& barriers, bool ok_ = true);
 
   ~Chromosome() = default;
@@ -74,17 +72,17 @@ class Chromosome {
                 std::remove_cv_t<typename std::iterator_traits<Iter>::value_type>, bed::BED>>>
   inline void add_extrusion_barrier(Iter barriers_begin, Iter barriers_end);
 
-  [[nodiscard]] size_t id() const;
+  [[nodiscard]] usize id() const;
   [[nodiscard]] std::string_view name() const;
   [[nodiscard]] const char* name_cstr() const;
   [[nodiscard]] constexpr bp_t start_pos() const;
   [[nodiscard]] constexpr bp_t end_pos() const;
   [[nodiscard]] constexpr bp_t size() const;
   [[nodiscard]] constexpr bp_t simulated_size() const;
-  [[nodiscard]] constexpr size_t npixels(bp_t diagonal_width, bp_t bin_size) const;
+  [[nodiscard]] constexpr usize npixels(bp_t diagonal_width, bp_t bin_size) const;
   [[nodiscard]] bool ok() const;
-  [[nodiscard]] size_t num_lefs(double nlefs_per_mbp) const;
-  [[nodiscard]] size_t num_barriers() const;
+  [[nodiscard]] usize num_lefs(double nlefs_per_mbp) const;
+  [[nodiscard]] usize num_barriers() const;
   [[nodiscard]] const IITree<bp_t, ExtrusionBarrier>& barriers() const;
   [[nodiscard]] IITree<bp_t, ExtrusionBarrier>& barriers();
   [[nodiscard]] absl::Span<const bed_tree_value_t> get_features() const;
@@ -96,8 +94,8 @@ class Chromosome {
   [[nodiscard]] contact_matrix_t& contacts();
   [[nodiscard]] std::shared_ptr<const contact_matrix_t> contacts_ptr() const;
   [[nodiscard]] std::shared_ptr<contact_matrix_t> contacts_ptr();
-  [[nodiscard]] uint64_t hash(XXH3_state_t* xxh_state, uint64_t seed, size_t cell_id) const;
-  [[nodiscard]] uint64_t hash(uint64_t seed, size_t cell_id) const;
+  [[nodiscard]] u64 hash(XXH3_state_t* xxh_state, u64 seed, usize cell_id) const;
+  [[nodiscard]] u64 hash(u64 seed, usize cell_id) const;
 
   template <typename H>
   inline friend H AbslHashValue(H h, const Chromosome& c);
@@ -107,7 +105,7 @@ class Chromosome {
   bp_t _start{(std::numeric_limits<bp_t>::max)()};
   bp_t _end{(std::numeric_limits<bp_t>::max)()};
   bp_t _size{(std::numeric_limits<bp_t>::max)()};
-  size_t _id{(std::numeric_limits<size_t>::max)()};
+  usize _id{(std::numeric_limits<usize>::max)()};
   IITree<bp_t, ExtrusionBarrier> _barriers{};
   // Protect _contacts from concurrent writes and allocations/deallocations
   std::shared_mutex _contacts_mtx{};
@@ -148,18 +146,18 @@ class Genome {
   [[nodiscard]] bool contains(const Chromosome& other_chromosome) const;
   [[nodiscard]] bool contains(std::string_view other_chrom_name) const;
 
-  [[nodiscard]] size_t size() const;
-  [[nodiscard]] size_t number_of_chromosomes() const;
-  [[nodiscard]] size_t simulated_size() const;
+  [[nodiscard]] usize size() const;
+  [[nodiscard]] usize number_of_chromosomes() const;
+  [[nodiscard]] usize simulated_size() const;
 
   [[nodiscard]] const Chromosome& chromosome_with_longest_name() const;
   [[nodiscard]] const Chromosome& longest_chromosome() const;
   [[nodiscard]] const Chromosome& chromosome_with_max_nbarriers() const;
-  [[nodiscard]] size_t max_target_contacts(size_t bin_size, size_t diagonal_width,
-                                           double target_contact_density,
-                                           size_t simulation_iterations,
-                                           double lef_fraction_contact_sampling,
-                                           double nlefs_per_mbp, size_t ncells) const;
+  [[nodiscard]] usize max_target_contacts(usize bin_size, usize diagonal_width,
+                                          double target_contact_density,
+                                          usize simulation_iterations,
+                                          double lef_fraction_contact_sampling,
+                                          double nlefs_per_mbp, usize ncells) const;
 
   /// A simple wrapper function that imports chromosomes and extrusion barriers that comprise the
   /// genome that is being simulated.
@@ -184,14 +182,14 @@ class Genome {
 
   /// Parse a BED file containing the genomic coordinates of extrusion barriers and add them to the
   /// Genome
-  static size_t import_barriers(absl::btree_set<Chromosome>& chromosomes,
-                                const boost::filesystem::path& path_to_extr_barriers,
-                                double ctcf_prob_occ_to_occ, double ctcf_prob_nocc_to_nocc);
+  static usize import_barriers(absl::btree_set<Chromosome>& chromosomes,
+                               const boost::filesystem::path& path_to_extr_barriers,
+                               double ctcf_prob_occ_to_occ, double ctcf_prob_nocc_to_nocc);
 
   /// Parse a BED file containing the genomic coordinates of extra features (e.g. promoters,
   /// enhancer) them to the Genome
-  static size_t import_extra_features(absl::btree_set<Chromosome>& chromosomes,
-                                      const boost::filesystem::path& path_to_extra_features);
+  static usize import_extra_features(absl::btree_set<Chromosome>& chromosomes,
+                                     const boost::filesystem::path& path_to_extra_features);
 };
 
 }  // namespace modle

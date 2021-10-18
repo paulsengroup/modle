@@ -33,8 +33,6 @@ DISABLE_WARNING_POP
 #include <cassert>                           // for assert
 #include <cerrno>                            // for errno
 #include <cmath>                             // for trunc
-#include <cstddef>                           // for size_t
-#include <cstdint>                           // for int64_t, uint64_t
 #include <cstdio>                            // for fclose, FILE, stderr, stdout
 #include <exception>                         // for exception
 #include <limits>                            // for numeric_limits
@@ -45,6 +43,8 @@ DISABLE_WARNING_POP
 #include <type_traits>                       // for __strip_reference_wrapper<>::__type, is_arit...
 #include <utility>                           // for pair, make_pair, forward
 #include <vector>                            // for vector
+
+#include "modle/common/common.hpp"  // for i64, u64
 
 namespace modle::utils {
 
@@ -61,7 +61,7 @@ template <typename N>
 void parse_numeric_or_throw(std::string_view tok, N &field) {
   auto [ptr, err] = utils::from_chars(tok.data(), tok.end(), field);
   if (ptr != tok.end() && err != std::errc{}) {
-    throw_except_from_errc(tok, (std::numeric_limits<size_t>::max)(), field, ptr, err);
+    throw_except_from_errc(tok, (std::numeric_limits<usize>::max)(), field, ptr, err);
   }
 }
 
@@ -73,13 +73,13 @@ N parse_numeric_or_throw(std::string_view tok) {
 }
 
 template <typename N>
-void parse_numeric_or_throw(const std::vector<std::string_view> &toks, size_t idx, N &field) {
+void parse_numeric_or_throw(const std::vector<std::string_view> &toks, usize idx, N &field) {
   parse_numeric_or_throw(toks[idx], field);
 }
 
 template <typename N>
-void parse_vect_of_numbers_or_throw(const std::vector<std::string_view> &toks, size_t idx,
-                                    std::vector<N> &fields, uint64_t expected_size) {
+void parse_vect_of_numbers_or_throw(const std::vector<std::string_view> &toks, usize idx,
+                                    std::vector<N> &fields, u64 expected_size) {
   static_assert(std::is_arithmetic<N>());
   std::vector<std::string_view> ns = absl::StrSplit(toks[idx], ',');
   if (ns.size() != expected_size) {
@@ -87,18 +87,18 @@ void parse_vect_of_numbers_or_throw(const std::vector<std::string_view> &toks, s
         fmt::format(FMT_STRING("Expected {} fields, got {}."), expected_size, ns.size()));
   }
   fields.resize(ns.size());
-  for (size_t i = 0; i < expected_size; ++i) {
+  for (usize i = 0; i < expected_size; ++i) {
     parse_numeric_or_throw(ns, i, fields[i]);
   }
 }
 
 template <typename N>
-void throw_except_from_errc(std::string_view tok, size_t idx, const N &field, const char *c,
+void throw_except_from_errc(std::string_view tok, usize idx, const N &field, const char *c,
                             std::errc e) {
   (void)field;
   static_assert(std::is_arithmetic<N>());
   std::string base_error;
-  if (idx != (std::numeric_limits<size_t>::max)()) {
+  if (idx != (std::numeric_limits<usize>::max)()) {
     base_error = fmt::format(FMT_STRING("Unable to convert field {} ('{}') to a "), idx, tok);
   } else {
     base_error = fmt::format(FMT_STRING("Unable to convert field '{}' to"), tok);
@@ -136,13 +136,13 @@ bool chrom_equal_operator(std::string_view chr1, std::string_view chr2) {
   return chrom_equal_operator(std::make_pair(chr1, 0), std::make_pair(chr2, 0));
 }
 
-bool chrom_equal_operator(const std::pair<std::string_view, int64_t> &chr1,
-                          const std::pair<std::string_view, int64_t> &chr2) {
+bool chrom_equal_operator(const std::pair<std::string_view, i64> &chr1,
+                          const std::pair<std::string_view, i64> &chr2) {
   if (chr1.second != chr2.second) {
     return false;
   }
-  size_t offset1 = 0;
-  size_t offset2 = 0;
+  usize offset1 = 0;
+  usize offset2 = 0;
   if (absl::StartsWithIgnoreCase(chr1.first, "chrom")) {
     offset1 = 3;
   }
@@ -156,10 +156,10 @@ bool chrom_less_than_operator(std::string_view chr1, std::string_view chr2) {
   return chrom_less_than_operator(std::make_pair(chr1, 0), std::make_pair(chr2, 0));
 }
 
-bool chrom_less_than_operator(const std::pair<std::string_view, int64_t> &chr1,
-                              const std::pair<std::string_view, int64_t> &chr2) {
-  size_t offset1 = 0;
-  size_t offset2 = 0;
+bool chrom_less_than_operator(const std::pair<std::string_view, i64> &chr1,
+                              const std::pair<std::string_view, i64> &chr2) {
+  usize offset1 = 0;
+  usize offset2 = 0;
   if (absl::StartsWithIgnoreCase(chr1.first, "chrom")) {
     offset1 = 3;
   }
@@ -284,12 +284,12 @@ constexpr T &&identity::operator()(T &&a) const noexcept {
   return std::forward<T>(a);
 }
 
-template <class Key, class Value, size_t Size>
+template <class Key, class Value, usize Size>
 template <class... Args>
 constexpr ConstMap<Key, Value, Size>::ConstMap(Args &&...args) noexcept
     : _buff{{std::forward<Args>(args)...}} {}
 
-template <class Key, class Value, size_t Size>
+template <class Key, class Value, usize Size>
 constexpr const Value &ConstMap<Key, Value, Size>::at(const Key &key) const {
   const auto itr = this->find(key);
   if (itr != this->end()) {
@@ -298,29 +298,29 @@ constexpr const Value &ConstMap<Key, Value, Size>::at(const Key &key) const {
   throw std::range_error(fmt::format(FMT_STRING("Unable to find key \"{}\""), key));
 }
 
-template <class Key, class Value, size_t Size>
+template <class Key, class Value, usize Size>
 constexpr const Value &ConstMap<Key, Value, Size>::operator[](const Key &key) const {
   return *this->find(key);
 }
 
-template <class Key, class Value, size_t Size>
+template <class Key, class Value, usize Size>
 constexpr typename ConstMap<Key, Value, Size>::const_iterator ConstMap<Key, Value, Size>::find(
     const Key &key) const noexcept {
   return std::find_if(this->begin(), this->end(), [&key](const auto &v) { return v.first == key; });
 }
 
-template <class Key, class Value, size_t Size>
+template <class Key, class Value, usize Size>
 constexpr bool ConstMap<Key, Value, Size>::contains(const Key &key) const noexcept {
   return this->find(key) != this->_buff.end();
 }
 
-template <class Key, class Value, size_t Size>
+template <class Key, class Value, usize Size>
 constexpr typename ConstMap<Key, Value, Size>::const_iterator ConstMap<Key, Value, Size>::begin()
     const noexcept {
   return this->_buff.begin();
 }
 
-template <class Key, class Value, size_t Size>
+template <class Key, class Value, usize Size>
 constexpr typename ConstMap<Key, Value, Size>::const_iterator ConstMap<Key, Value, Size>::end()
     const noexcept {
   return this->_buff.end();

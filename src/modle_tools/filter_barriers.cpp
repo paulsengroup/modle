@@ -6,25 +6,24 @@
 #include <fmt/format.h>          // for print, FMT_STRING
 
 #include <cassert>    // for assert
-#include <cstdint>    // for uint64_t, uint32_t, uint8_t
 #include <cstdio>     // for stdout
 #include <memory>     // for allocator_traits<>::value_type
 #include <stdexcept>  // for logic_error
 #include <string>     // for string, operator==
 #include <vector>     // for vector
 
-#include "modle/bed.hpp"           // for BED_tree, Parser, formatter<>::format, formatter<>::parse
-#include "modle_tools/config.hpp"  // for filter_barrier_config
-#include "modle_tools/tools.hpp"   // for filter_barriers_subcmd
+#include "modle/bed.hpp"            // for BED_tree, Parser, formatter<>::format, formatter<>::parse
+#include "modle/common/common.hpp"  // for u64, u32, u8
+#include "modle_tools/config.hpp"   // for filter_barrier_config
+#include "modle_tools/tools.hpp"    // for filter_barriers_subcmd
 
 namespace modle::tools {
 
 void filter_barriers_intersection(const modle::tools::filter_barrier_config& c) {
   assert(!c.path_to_bed_files_for_filtering.empty());  // NOLINT
-  std::vector<bed::BED_tree<std::string, uint64_t>> intervals(
-      c.path_to_bed_files_for_filtering.size());
+  std::vector<bed::BED_tree<std::string, u64>> intervals(c.path_to_bed_files_for_filtering.size());
 
-  for (size_t i = 0; i < c.path_to_bed_files_for_filtering.size(); ++i) {
+  for (usize i = 0; i < c.path_to_bed_files_for_filtering.size(); ++i) {
     intervals[i].emplace(
         bed::Parser(c.path_to_bed_files_for_filtering[i], c.bed_dialect, c.strict_bed_validation)
             .parse_all());
@@ -52,10 +51,9 @@ void filter_barriers_intersection(const modle::tools::filter_barrier_config& c) 
 // TODO: Find a better name than pairwise-intersection
 void filter_barriers_pairwise_intersection(const modle::tools::filter_barrier_config& c) {
   assert(!c.path_to_bed_files_for_filtering.empty());  // NOLINT
-  std::vector<bed::BED_tree<std::string, uint64_t>> intervals(
-      c.path_to_bed_files_for_filtering.size());
+  std::vector<bed::BED_tree<std::string, u64>> intervals(c.path_to_bed_files_for_filtering.size());
 
-  for (size_t i = 0; i < c.path_to_bed_files_for_filtering.size(); ++i) {
+  for (usize i = 0; i < c.path_to_bed_files_for_filtering.size(); ++i) {
     intervals[i].emplace(
         bed::Parser(c.path_to_bed_files_for_filtering[i], c.bed_dialect, c.strict_bed_validation)
             .parse_all());

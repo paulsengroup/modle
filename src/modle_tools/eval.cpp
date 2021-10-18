@@ -23,8 +23,7 @@
 #include <boost/filesystem/path.hpp>        // for path, operator<<
 #include <cassert>                          // for assert
 #include <cmath>                            // for sqrt
-#include <cstdint>                          // for int64_t, uint32_t, uint_fast8_t
-#include <cstdio>                           // for size_t
+#include <cstdio>                           // for usize
 #include <exception>                        // for exception
 #include <functional>                       // for ref
 #include <initializer_list>                 // for initializer_list
@@ -40,6 +39,7 @@
 
 #include "modle/bed.hpp"                                // for Parser
 #include "modle/bigwig.hpp"                             // for write_range, init_bigwig_file
+#include "modle/common/common.hpp"                      // for i64, u32, std::uint_fast8_t
 #include "modle/common/suppress_compiler_warnings.hpp"  // for DISABLE_WARNING_POP, DISABLE_WARN...
 #include "modle/common/utils.hpp"                       // for chrom_less_than_operator
 #include "modle/contacts.hpp"                           // for ContactMatrix
@@ -51,12 +51,12 @@
 
 namespace modle::tools {
 
-enum Transformation : uint_fast8_t { Linear, Cross };
+enum Transformation : std::uint_fast8_t { Linear, Cross };
 
-std::vector<std::pair<std::string, int64_t>> select_chromosomes_for_eval(
-    std::string_view path_to_cooler1, std::string_view path_to_cooler2, size_t bin_size) {
+std::vector<std::pair<std::string, i64>> select_chromosomes_for_eval(
+    std::string_view path_to_cooler1, std::string_view path_to_cooler2, usize bin_size) {
   std::vector<std::string> str_buff;
-  std::vector<int64_t> int_buff;
+  std::vector<i64> int_buff;
 
   auto build_chrom_set = [&](std::string_view path_to_cooler) {
     try {
@@ -67,9 +67,9 @@ std::vector<std::pair<std::string, int64_t>> select_chromosomes_for_eval(
       assert(str_buff.size() == c.get_nchroms());
       assert(int_buff.size() == str_buff.size());
 
-      absl::btree_set<std::pair<std::string, int64_t>> chrom_set;
+      absl::btree_set<std::pair<std::string, i64>> chrom_set;
 
-      for (size_t i = 0; i < str_buff.size(); ++i) {
+      for (usize i = 0; i < str_buff.size(); ++i) {
         chrom_set.emplace(str_buff[i], int_buff[i]);
       }
       return chrom_set;
@@ -80,7 +80,7 @@ std::vector<std::pair<std::string, int64_t>> select_chromosomes_for_eval(
     }
   };
 
-  std::vector<std::pair<std::string, int64_t>> chrom_intersection;
+  std::vector<std::pair<std::string, i64>> chrom_intersection;
   const auto chrom_set1 = build_chrom_set(path_to_cooler1);
   const auto chrom_set2 = build_chrom_set(path_to_cooler2);
 
@@ -93,12 +93,12 @@ std::vector<std::pair<std::string, int64_t>> select_chromosomes_for_eval(
 }
 
 template <typename N>
-void slice_range_w_cross_method(absl::Span<const N> vin, std::vector<N> &vout, size_t nrows,
-                                size_t offset) {
+void slice_range_w_cross_method(absl::Span<const N> vin, std::vector<N> &vout, usize nrows,
+                                usize offset) {
   static_assert(std::is_arithmetic<N>::value, "N should be a numeric type.");
 
-  size_t idx = offset * nrows;
-  for (size_t j = 0; j < nrows; ++j) {
+  usize idx = offset * nrows;
+  for (usize j = 0; j < nrows; ++j) {
     if (idx >= vin.size()) {
       DISABLE_WARNING_PUSH
       DISABLE_WARNING_SIGN_CONVERSION
@@ -110,7 +110,7 @@ void slice_range_w_cross_method(absl::Span<const N> vin, std::vector<N> &vout, s
     idx += nrows + 1;
   }
   idx = offset * nrows - 1;
-  for (size_t j = nrows; j < vout.size(); ++j) {
+  for (usize j = nrows; j < vout.size(); ++j) {
     if (idx > (offset * nrows) + offset) {
       DISABLE_WARNING_PUSH
       DISABLE_WARNING_SIGN_CONVERSION
@@ -123,12 +123,12 @@ void slice_range_w_cross_method(absl::Span<const N> vin, std::vector<N> &vout, s
 }
 
 template <typename N>
-void slice_range_w_linear_method(absl::Span<const N> vin, std::vector<N> &vout, size_t nrows,
-                                 size_t offset) {
+void slice_range_w_linear_method(absl::Span<const N> vin, std::vector<N> &vout, usize nrows,
+                                 usize offset) {
   static_assert(std::is_arithmetic<N>::value, "N should be a numeric type.");
 
-  size_t idx = offset * nrows;
-  for (size_t j = 0; j < vout.size(); ++j) {
+  usize idx = offset * nrows;
+  for (usize j = 0; j < vout.size(); ++j) {
     if (idx >= vin.size() || idx < offset * nrows) {
       DISABLE_WARNING_PUSH
       DISABLE_WARNING_SIGN_CONVERSION
@@ -142,8 +142,8 @@ void slice_range_w_linear_method(absl::Span<const N> vin, std::vector<N> &vout, 
 }
 
 template <typename N>
-void slice_range(absl::Span<const N> vin, std::vector<N> &vout, size_t nrows, Transformation t,
-                 size_t offset) {
+void slice_range(absl::Span<const N> vin, std::vector<N> &vout, usize nrows, Transformation t,
+                 usize offset) {
   vout.resize(2 * nrows - 1);
   switch (t) {
     case Transformation::Cross:
@@ -160,7 +160,7 @@ void slice_range(absl::Span<const N> vin, std::vector<N> &vout, size_t nrows, Tr
 template <typename N1, typename N2>
 void compute_pearson_over_range(absl::Span<const N1> vin1, absl::Span<const N2> vin2,
                                 std::vector<double> &pcc_buff, std::vector<double> &pval_buff,
-                                size_t nrows, size_t ncols, Transformation t) {
+                                usize nrows, usize ncols, Transformation t) {
   assert(vin1.size() == vin2.size());
   pcc_buff.resize(ncols);
   pval_buff.resize(ncols);
@@ -169,7 +169,7 @@ void compute_pearson_over_range(absl::Span<const N1> vin1, absl::Span<const N2> 
   // const auto step = ncols / 25;
   // auto t0 = absl::Now();
 
-  for (size_t i = 0; i < ncols; ++i) {
+  for (usize i = 0; i < ncols; ++i) {
     slice_range(vin1, sub_vin1, nrows, t, i);
     slice_range(vin2, sub_vin2, nrows, t, i);
     pcc_buff[i] = correlation::compute_pearson(sub_vin1, sub_vin2);
@@ -189,7 +189,7 @@ void compute_pearson_over_range(absl::Span<const N1> vin1, absl::Span<const N2> 
 template <typename N1, typename N2>
 void compute_pearson_over_range(const std::vector<N1> &vin1, const std::vector<N2> &vin2,
                                 std::vector<double> &pcc_buff, std::vector<double> &pval_buff,
-                                size_t nrows, size_t ncols, Transformation t) {
+                                usize nrows, usize ncols, Transformation t) {
   compute_pearson_over_range(absl::MakeConstSpan(vin1), absl::MakeConstSpan(vin2), pcc_buff,
                              pval_buff, nrows, ncols, t);
 }
@@ -197,14 +197,14 @@ void compute_pearson_over_range(const std::vector<N1> &vin1, const std::vector<N
 template <typename N1, typename N2>
 void compute_spearman_over_range(absl::Span<const N1> vin1, absl::Span<const N2> vin2,
                                  std::vector<double> &rho_buff, std::vector<double> &pval_buff,
-                                 size_t nrows, size_t ncols, Transformation t) {
+                                 usize nrows, usize ncols, Transformation t) {
   assert(vin1.size() == vin2.size());
   rho_buff.resize(ncols);
   pval_buff.resize(ncols);
   std::vector<N1> sub_vin1(2 * nrows - 1);
   std::vector<N2> sub_vin2(2 * nrows - 1);
 
-  for (size_t i = 0; i < ncols; ++i) {
+  for (usize i = 0; i < ncols; ++i) {
     slice_range(vin1, sub_vin1, nrows, t, i);
     slice_range(vin2, sub_vin2, nrows, t, i);
     rho_buff[i] = correlation::compute_spearman(sub_vin1, sub_vin2);
@@ -215,21 +215,20 @@ void compute_spearman_over_range(absl::Span<const N1> vin1, absl::Span<const N2>
 template <typename N1, typename N2>
 void compute_spearman_over_range(const std::vector<N1> &vin1, const std::vector<N2> &vin2,
                                  std::vector<double> &rho_buff, std::vector<double> &pval_buff,
-                                 size_t nrows, size_t ncols, Transformation t) {
+                                 usize nrows, usize ncols, Transformation t) {
   compute_spearman_over_range(absl::MakeConstSpan(vin1), absl::MakeConstSpan(vin2), rho_buff,
                               pval_buff, nrows, ncols, t);
 }
 
 template <typename N1, typename N2>
 void compute_sed_over_range(absl::Span<const N1> vin1, absl::Span<const N2> vin2,
-                            std::vector<double> &buff, size_t nrows, size_t ncols,
-                            Transformation t) {
+                            std::vector<double> &buff, usize nrows, usize ncols, Transformation t) {
   assert(vin1.size() == vin2.size());
   buff.resize(ncols);
   std::vector<N1> sub_vin1(2 * nrows - 1);
   std::vector<N2> sub_vin2(2 * nrows - 1);
 
-  for (size_t i = 0; i < ncols; ++i) {
+  for (usize i = 0; i < ncols; ++i) {
     slice_range(vin1, sub_vin1, nrows, t, i);
     slice_range(vin2, sub_vin2, nrows, t, i);
     buff[i] = static_cast<double>(correlation::compute_sed(sub_vin1, sub_vin2));
@@ -238,15 +237,14 @@ void compute_sed_over_range(absl::Span<const N1> vin1, absl::Span<const N2> vin2
 
 template <typename N1, typename N2>
 void compute_sed_over_range(const std::vector<N1> &vin1, const std::vector<N2> &vin2,
-                            std::vector<double> &buff, size_t nrows, size_t ncols,
-                            Transformation t) {
+                            std::vector<double> &buff, usize nrows, usize ncols, Transformation t) {
   compute_sed_over_range(absl::MakeConstSpan(vin1), absl::MakeConstSpan(vin2), buff, nrows, ncols,
                          t);
 }
 
 template <typename N1, typename N2>
 void compute_euc_dist_over_range(absl::Span<const N1> vin1, absl::Span<const N2> vin2,
-                                 std::vector<double> &buff, size_t nrows, size_t ncols,
+                                 std::vector<double> &buff, usize nrows, usize ncols,
                                  Transformation t) {
   compute_sed_over_range(vin1, vin2, buff, nrows, ncols, t);
   std::transform(buff.begin(), buff.end(), buff.begin(), [](const auto n) { return std::sqrt(n); });
@@ -254,7 +252,7 @@ void compute_euc_dist_over_range(absl::Span<const N1> vin1, absl::Span<const N2>
 
 template <typename N1, typename N2>
 void compute_euc_dist_over_range(const std::vector<N1> &vin1, const std::vector<N2> &vin2,
-                                 std::vector<double> &buff, size_t nrows, size_t ncols,
+                                 std::vector<double> &buff, usize nrows, usize ncols,
                                  Transformation t) {
   compute_euc_dis_over_range(absl::MakeConstSpan(vin1), absl::MakeConstSpan(vin2), buff, nrows,
                              ncols, t);
@@ -263,7 +261,7 @@ void compute_euc_dist_over_range(const std::vector<N1> &vin1, const std::vector<
 void eval_subcmd(const modle::tools::eval_config &c) {
   assert(c.compute_spearman || c.compute_pearson);  // NOLINT
   const auto bin_size =
-      static_cast<size_t>(hdf5::read_attribute_int(c.path_to_input_matrix.string(), "bin-size"));
+      static_cast<usize>(hdf5::read_attribute_int(c.path_to_input_matrix.string(), "bin-size"));
 
   auto chrom_list =  // This cannot be made const
       select_chromosomes_for_eval(c.path_to_input_matrix.string(),
@@ -276,13 +274,13 @@ void eval_subcmd(const modle::tools::eval_config &c) {
         c.path_to_input_matrix, c.path_to_reference_matrix));
   }
 
-  absl::flat_hash_map<std::string, std::pair<size_t, size_t>> chrom_subranges;
+  absl::flat_hash_map<std::string, std::pair<usize, usize>> chrom_subranges;
   if (!c.path_to_chrom_subranges.empty()) {
     const auto records = bed::Parser(c.path_to_chrom_subranges).parse_all();
     chrom_subranges.reserve(records.size());
     std::transform(records.begin(), records.end(),
                    std::inserter(chrom_subranges, chrom_subranges.end()),
-                   [](const auto &r) -> std::pair<std::string, std::pair<size_t, size_t>> {
+                   [](const auto &r) -> std::pair<std::string, std::pair<usize, usize>> {
                      return {r.chrom, {r.chrom_start, r.chrom_end}};
                    });
   }
@@ -345,9 +343,9 @@ void eval_subcmd(const modle::tools::eval_config &c) {
   std::vector<double> sc_cross_corr_buff;
   std::vector<double> sc_cross_pval_buff;
 
-  auto pcc = [&](std::string_view chrom_name, absl::Span<const uint32_t> v1,
-                 absl::Span<const uint32_t> v2, size_t ncols, size_t offset,
-                 std::vector<double> &corr_buff, std::vector<double> &pval_buff, Transformation t) {
+  auto pcc = [&](std::string_view chrom_name, absl::Span<const u32> v1, absl::Span<const u32> v2,
+                 usize ncols, usize offset, std::vector<double> &corr_buff,
+                 std::vector<double> &pval_buff, Transformation t) {
     if (!c.compute_pearson) {
       return;
     }
@@ -373,9 +371,9 @@ void eval_subcmd(const modle::tools::eval_config &c) {
     }
   };
 
-  auto src = [&](std::string_view chrom_name, absl::Span<const uint32_t> v1,
-                 absl::Span<const uint32_t> v2, size_t ncols, size_t offset,
-                 std::vector<double> &corr_buff, std::vector<double> &pval_buff, Transformation t) {
+  auto src = [&](std::string_view chrom_name, absl::Span<const u32> v1, absl::Span<const u32> v2,
+                 usize ncols, usize offset, std::vector<double> &corr_buff,
+                 std::vector<double> &pval_buff, Transformation t) {
     if (!c.compute_spearman) {
       return;
     }
@@ -401,9 +399,8 @@ void eval_subcmd(const modle::tools::eval_config &c) {
     }
   };
 
-  auto edist = [&](std::string_view chrom_name, absl::Span<const uint32_t> v1,
-                   absl::Span<const uint32_t> v2, size_t ncols, size_t offset,
-                   std::vector<double> &sed_buff, Transformation t) {
+  auto edist = [&](std::string_view chrom_name, absl::Span<const u32> v1, absl::Span<const u32> v2,
+                   usize ncols, usize offset, std::vector<double> &sed_buff, Transformation t) {
     if (!c.compute_edist) {
       return;
     }
@@ -425,10 +422,10 @@ void eval_subcmd(const modle::tools::eval_config &c) {
     }
   };
 
-  absl::flat_hash_map<std::string, size_t> ref_chrom_idxes;
-  absl::flat_hash_map<std::string, size_t> inp_chrom_idxes;
+  absl::flat_hash_map<std::string, usize> ref_chrom_idxes;
+  absl::flat_hash_map<std::string, usize> inp_chrom_idxes;
 
-  size_t i = 0;
+  usize i = 0;
   for (auto &name : ref_cooler.get_chrom_names()) {
     ref_chrom_idxes.emplace(std::move(name), i++);
   }
@@ -461,7 +458,7 @@ void eval_subcmd(const modle::tools::eval_config &c) {
   std::array<std::thread, 6> threads;  // NOLINT
   for (const auto &chrom : chrom_list) {
     const auto &chrom_name = chrom.first;
-    auto chrom_subrange = std::make_pair(0UL, static_cast<size_t>(chrom.second));
+    auto chrom_subrange = std::make_pair(0UL, static_cast<usize>(chrom.second));
     if (!chrom_subranges.empty()) {
       auto it = chrom_subranges.find(chrom_name);
 

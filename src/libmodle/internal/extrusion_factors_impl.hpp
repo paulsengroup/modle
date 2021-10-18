@@ -8,11 +8,9 @@
 
 #include <algorithm>  // for min, clamp
 #include <cassert>    // for assert
-#include <cstddef>    // IWYU pragma: keep for size_t
-#include <cstdint>    // for int64_t
 #include <limits>     // for numeric_limits
 
-#include "modle/common/common.hpp"       // for bp_t
+#include "modle/common/common.hpp"       // for bp_t, i64
 #include "modle/common/utils.hpp"        // for ndebug_defined
 #include "modle/extrusion_barriers.hpp"  // for ExtrusionBarrier
 
@@ -49,14 +47,14 @@ bool ExtrusionUnit::operator==(I other_pos) const noexcept(utils::ndebug_defined
 }
 
 template <typename I>
-int64_t ExtrusionUnit::operator-(I other_pos) const noexcept(utils::ndebug_defined()) {
+i64 ExtrusionUnit::operator-(I other_pos) const noexcept(utils::ndebug_defined()) {
   static_assert(std::is_integral_v<I>, "I should be an integral number");
-  return static_cast<int64_t>(this->pos()) - static_cast<int64_t>(other_pos);
+  return static_cast<i64>(this->pos()) - static_cast<i64>(other_pos);
 }
 
 template <typename I>
-int64_t ExtrusionUnit::operator+(I other_pos) const noexcept(utils::ndebug_defined()) {
+i64 ExtrusionUnit::operator+(I other_pos) const noexcept(utils::ndebug_defined()) {
   static_assert(std::is_integral_v<I>, "I should be an integral number");
-  return static_cast<int64_t>(this->pos() + other_pos);
+  return static_cast<i64>(this->pos() + other_pos);
 }
 }  // namespace modle

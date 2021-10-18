@@ -14,19 +14,18 @@
 #include <boost/math/special_functions/fpclassify.hpp>  // for isinf, isnan
 #include <cassert>                                      // for assert
 #include <cmath>                                        // for sqrt, isnan
-#include <cstddef>                                      // for size_t
-#include <cstdint>                                      // for uint64_t
 #include <cstdlib>                                      // for abs
 #include <stdexcept>                                    // for overflow_error, logic_error, runt...
 #include <type_traits>                                  // for is_arithmetic
 #include <utility>                                      // for make_pair, pair
 #include <vector>                                       // for vector
 
+#include "modle/common/common.hpp"                      // for u64
 #include "modle/common/suppress_compiler_warnings.hpp"  // for DISABLE_WARNING_CONVERSION, DISAB...
 
 namespace modle::correlation {
 
-double compute_pearson_significance(double pcc, size_t n) {
+double compute_pearson_significance(double pcc, usize n) {
   assert(n > 2);  // NOLINT
   const auto ab = static_cast<double>(n) / 2.0 - 1;
   boost::math::beta_distribution<double> dist(ab, ab);
@@ -35,7 +34,7 @@ double compute_pearson_significance(double pcc, size_t n) {
   return 2.0 * boost::math::cdf<double>(dist, 0.5 * (1 - std::abs(pcc)));
 }
 
-double compute_spearman_significance(double rho, size_t n) {
+double compute_spearman_significance(double rho, usize n) {
   assert(n > 2);  // NOLINT
   const auto dof = static_cast<double>(n - 2);
   const double tscore = rho * std::sqrt(dof / ((1.0 + rho) * (1.0 - rho)));
@@ -65,7 +64,7 @@ double compute_pearson(absl::Span<const N1> v1, absl::Span<const N2> v2) {
   double d1 = 0;
   double d2 = 0;
 
-  for (size_t i = 1; i < v1.size(); ++i) {
+  for (usize i = 1; i < v1.size(); ++i) {
     auto r1_tmp = v1[i] - r1_avg;
     auto r2_tmp = v2[i] - r2_avg;
     d1 += (i * r1_tmp * r1_tmp) / (i + 1);
@@ -123,8 +122,8 @@ double compute_spearman(const std::vector<N1>& v1, const std::vector<N2>& v2) {
 template <typename N1, typename N2>
 std::pair<std::vector<double>, std::vector<double>> compute_corr(absl::Span<const N1> v1,
                                                                  absl::Span<const N2> v2,
-                                                                 Algorithm type, size_t window_span,
-                                                                 size_t window_overlap) {
+                                                                 Algorithm type, usize window_span,
+                                                                 usize window_overlap) {
   static_assert(std::is_arithmetic<N1>::value,
                 "v1 should be convertible to a Span of numeric type");
   static_assert(std::is_arithmetic<N2>::value,
@@ -141,7 +140,7 @@ std::pair<std::vector<double>, std::vector<double>> compute_corr(absl::Span<cons
   std::vector<double> p_vals(r_vals.size());
 
   double (*compute_corr_fp)(absl::Span<const N1>, absl::Span<const N2>) = nullptr;
-  double (*compute_corr_significance_fp)(double, size_t) = nullptr;
+  double (*compute_corr_significance_fp)(double, usize) = nullptr;
   if (type == Algorithm::pearson) {
     compute_corr_fp = &compute_pearson;
     compute_corr_significance_fp = (&compute_pearson_significance);
@@ -152,7 +151,7 @@ std::pair<std::vector<double>, std::vector<double>> compute_corr(absl::Span<cons
   assert(compute_corr_fp);
   assert(compute_corr_significance_fp);
 
-  for (size_t i = 0; i < r_vals.size(); ++i) {
+  for (usize i = 0; i < r_vals.size(); ++i) {
     const auto window_start = i * (window_span - window_overlap);
     const auto window_end = window_start + window_span;
     auto slice1 = absl::MakeConstSpan(v1).subspan(window_start, window_end);
@@ -171,8 +170,8 @@ double compute_sed(absl::Span<const N1> v1, absl::Span<const N2> v2) {
   static_assert(std::is_arithmetic<N2>::value,
                 "v2 should be convertible to a Span of numeric type");
 
-  uint64_t sed{0};
-  for (size_t i = 0; i < v1.size(); ++i) {
+  u64 sed{0};
+  for (usize i = 0; i < v1.size(); ++i) {
     const auto n = v1[i] > v2[i] ? v1[i] - v2[i] : v2[i] - v1[i];
     sed += n * n;
   }

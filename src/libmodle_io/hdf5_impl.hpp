@@ -35,8 +35,6 @@
 #include <fmt/format.h>          // for FMT_STRING, format, to_string
 
 #include <cassert>      // for assert
-#include <cstddef>      // for size_t
-#include <cstdint>      // for int32_t, int16_t, int64_t, int8_t
 #include <limits>       // for numeric_limits
 #include <stdexcept>    // for runtime_error, logic_error
 #include <string>       // for string
@@ -44,13 +42,13 @@
 #include <type_traits>  // for decay_t, declval, remove_pointer_t
 #include <vector>       // for vector
 
+#include "modle/common/common.hpp"                      // for i32, i16, i64, i8
 #include "modle/common/suppress_compiler_warnings.hpp"  // for DISABLE_WARNING_POP, DISABLE_WARNI...
 #include "modle/common/utils.hpp"                       // for throw_with_trace, get_printable_ty...
 
 namespace modle::hdf5 {
 
-using attr_types = absl::variant<uint8_t, uint16_t, uint32_t, uint64_t, int8_t, int16_t, int32_t,
-                                 int64_t, float, double, long double>;
+using attr_types = absl::variant<u8, u16, u32, u64, i8, i16, i32, i64, float, double, long double>;
 
 // Predeclare internal functions
 inline attr_types getCpp_type(const H5::IntType &h5_type);
@@ -151,7 +149,7 @@ template <typename CN>
 hsize_t write_numbers(CN &numbers, const H5::DataSet &dataset, hsize_t file_offset) {
   static_assert(std::is_arithmetic_v<std::remove_pointer_t<decltype(std::declval<CN &>().data())>>,
                 "numbers does not have a suitable ::data() member function.");
-  static_assert(std::is_convertible_v<decltype(std::declval<CN &>().size()), size_t>,
+  static_assert(std::is_convertible_v<decltype(std::declval<CN &>().size()), usize>,
                 "numbers does not have a suitable ::size() member function.");
   if (numbers.empty()) {
     return file_offset;
@@ -502,34 +500,34 @@ bool check_dataset_type(const H5::DataSet &dataset, T type, bool throw_on_failur
   assert(size >= 1 && size <= 8);  // NOLINT
   if (is_signed) {
     switch (size) {
-      case (sizeof(int8_t)):
-        type = static_cast<int8_t>(0);
+      case (sizeof(i8)):
+        type = static_cast<i8>(0);
         return type;
-      case (sizeof(int16_t)):
-        type = static_cast<int16_t>(0);
+      case (sizeof(i16)):
+        type = static_cast<i16>(0);
         return type;
-      case (sizeof(int32_t)):
-        type = static_cast<int32_t>(0);
+      case (sizeof(i32)):
+        type = static_cast<i32>(0);
         return type;
-      case (sizeof(int64_t)):
-        type = static_cast<int64_t>(0);
+      case (sizeof(i64)):
+        type = static_cast<i64>(0);
         return type;
       default:
         throw std::logic_error("Unreachable code");
     }
   } else {
     switch (size) {
-      case (sizeof(uint8_t)):
-        type = static_cast<uint8_t>(0);
+      case (sizeof(u8)):
+        type = static_cast<u8>(0);
         return type;
-      case (sizeof(uint16_t)):
-        type = static_cast<uint16_t>(0);
+      case (sizeof(u16)):
+        type = static_cast<u16>(0);
         return type;
-      case (sizeof(uint32_t)):
-        type = static_cast<uint32_t>(0);
+      case (sizeof(u32)):
+        type = static_cast<u32>(0);
         return type;
-      case (sizeof(uint64_t)):
-        type = static_cast<uint64_t>(0);
+      case (sizeof(u64)):
+        type = static_cast<u64>(0);
         return type;
       default:
         throw std::logic_error("Unreachable code");

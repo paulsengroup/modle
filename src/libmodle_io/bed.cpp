@@ -18,7 +18,6 @@
 #include <boost/filesystem/operations.hpp>   // for status
 #include <boost/filesystem/path.hpp>         // for operator<<, path
 #include <cassert>                           // for assert
-#include <cstdint>                           // for uint64_t, uint8_t, uint32_t
 #include <exception>                         // for exception
 #include <fstream>                           // for streamsize
 #include <limits>                            // for numeric_limits
@@ -29,6 +28,7 @@
 #include <vector>                            // for vector
 
 #include "absl/strings/match.h"                         // for StrContains
+#include "modle/common/common.hpp"                      // for u64, u8, u32
 #include "modle/common/suppress_compiler_warnings.hpp"  // for DISABLE_WARNING_PUSH, DISABLE_WAR...
 #include "modle/common/utils.hpp"                       // for parse_numeric_or_throw, ConstMap
 #include "modle/compressed_io.hpp"                      // for Reader
@@ -37,8 +37,7 @@ namespace modle::bed {
 
 std::string RGB::to_string() const { return fmt::to_string(*this); }
 
-void BED::parse_strand_or_throw(const std::vector<std::string_view>& toks, uint8_t idx,
-                                char& field) {
+void BED::parse_strand_or_throw(const std::vector<std::string_view>& toks, u8 idx, char& field) {
   const auto* const match = bed_strand_encoding.find(toks[idx]);
   if (match == bed_strand_encoding.end()) {
     throw std::runtime_error(fmt::format(FMT_STRING("Unrecognized strand '{}'"), toks[idx]));
@@ -46,7 +45,7 @@ void BED::parse_strand_or_throw(const std::vector<std::string_view>& toks, uint8
   field = match->second;
 }
 
-void BED::parse_rgb_or_throw(const std::vector<std::string_view>& toks, uint8_t idx, RGB& field) {
+void BED::parse_rgb_or_throw(const std::vector<std::string_view>& toks, u8 idx, RGB& field) {
   if (toks[idx] == "0") {
     field = RGB{0, 0, 0};
     return;
@@ -61,7 +60,7 @@ void BED::parse_rgb_or_throw(const std::vector<std::string_view>& toks, uint8_t 
   utils::parse_numeric_or_throw(channels, 2, field.b);
 }
 
-RGB BED::parse_rgb_or_throw(const std::vector<std::string_view>& toks, uint8_t idx) {
+RGB BED::parse_rgb_or_throw(const std::vector<std::string_view>& toks, u8 idx) {
   RGB buff;  // NOLINT
   BED::parse_rgb_or_throw(toks, idx, buff);
   return buff;
@@ -241,7 +240,7 @@ BED::BED(std::string_view chrom_, bp_t chrom_start_, bp_t chrom_end_)
 BED::BED(BED::Dialect d) : _standard(d) {}
 
 // NOLINTNEXTLINE(readability-function-cognitive-complexity)
-BED::BED(std::string_view record, size_t id_, BED::Dialect bed_standard, bool validate) : _id(id_) {
+BED::BED(std::string_view record, usize id_, BED::Dialect bed_standard, bool validate) : _id(id_) {
   std::vector<std::string_view> toks;
   for (std::string_view tok : absl::StrSplit(record, absl::ByAnyChar("\t "))) {
     if (!tok.empty()) {
@@ -367,14 +366,14 @@ bool BED::operator<(const BED& other) const noexcept {
 
 BED::Dialect BED::get_standard() const noexcept { return this->_standard; }
 
-size_t BED::id() const noexcept { return this->_id; }
+usize BED::id() const noexcept { return this->_id; }
 
-size_t BED::size() const noexcept { return this->chrom_end - this->chrom_start; }
+usize BED::size() const noexcept { return this->chrom_end - this->chrom_start; }
 
-size_t BED::num_fields() const noexcept {
+usize BED::num_fields() const noexcept {
   assert(this->_standard != autodetect);  // NOLINT
   if (this->_standard != none) {
-    return static_cast<size_t>(this->_standard);
+    return static_cast<usize>(this->_standard);
   }
   if (thick_end == -1ULL) {  // NOLINT
     return BED_THICK_START;
@@ -390,12 +389,12 @@ size_t BED::num_fields() const noexcept {
     return BED_BLOCK_SIZES;
   }
   assert(!extra_tokens.empty());  // NOLINT
-  return BED12 + static_cast<size_t>(std::count(extra_tokens.begin(), extra_tokens.end(), '\t'));
+  return BED12 + static_cast<usize>(std::count(extra_tokens.begin(), extra_tokens.end(), '\t'));
 }
 
 bool BED::empty() const { return chrom.empty(); }
 
-uint64_t BED::hash(XXH_INLINE_XXH3_state_t* state, uint64_t seed) const {
+u64 BED::hash(XXH_INLINE_XXH3_state_t* state, u64 seed) const {
   auto handle_errors = [&](const auto& status) {
     if (status == XXH_ERROR || !state) {
       throw std::runtime_error(
@@ -412,7 +411,7 @@ uint64_t BED::hash(XXH_INLINE_XXH3_state_t* state, uint64_t seed) const {
 
   DISABLE_WARNING_PUSH
   DISABLE_WARNING_USELESS_CAST
-  return static_cast<uint64_t>(XXH3_64bits_digest(state));
+  return static_cast<u64>(XXH3_64bits_digest(state));
   DISABLE_WARNING_POP
 }
 
@@ -451,14 +450,14 @@ BED Parser::parse_next() {
   return record;
 }
 
-std::vector<BED> Parser::parse_n(size_t num_records) {
+std::vector<BED> Parser::parse_n(usize num_records) {
   if (this->_reader.path().empty()) {
     return std::vector<BED>{};
   }
   assert(this->_reader.is_open());  // NOLINT
 
-  using record_idx_t = size_t;
-  using line_num_t = size_t;
+  using record_idx_t = usize;
+  using line_num_t = usize;
   absl::flat_hash_map<BED, std::pair<record_idx_t, line_num_t>> records;
 
   if (num_records != std::numeric_limits<decltype(num_records)>::max()) {
@@ -494,13 +493,13 @@ std::vector<BED> Parser::parse_n(size_t num_records) {
   return _records;
 }
 
-BED_tree<> Parser::parse_n_in_interval_tree(size_t num_records) {
+BED_tree<> Parser::parse_n_in_interval_tree(usize num_records) {
   if (this->_reader.path().empty()) {
     return BED_tree<>{};
   }
   assert(this->_reader.is_open());  // NOLINT
 
-  using line_num_t = size_t;
+  using line_num_t = usize;
   absl::flat_hash_map<BED, line_num_t> records;
   BED_tree<> intervals;
 
@@ -529,7 +528,7 @@ BED_tree<> Parser::parse_n_in_interval_tree(size_t num_records) {
   return intervals;
 }
 
-std::string Parser::validate(size_t nrecords) {
+std::string Parser::validate(usize nrecords) {
   try {
     (void)parse_n(nrecords);
   } catch (const std::runtime_error& e) {
@@ -538,10 +537,10 @@ std::string Parser::validate(size_t nrecords) {
   return "";
 }
 
-std::vector<BED> Parser::parse_all() { return parse_n((std::numeric_limits<size_t>::max)()); }
+std::vector<BED> Parser::parse_all() { return parse_n((std::numeric_limits<usize>::max)()); }
 
 BED_tree<> Parser::parse_all_in_interval_tree() {
-  return parse_n_in_interval_tree((std::numeric_limits<size_t>::max)());
+  return parse_n_in_interval_tree((std::numeric_limits<usize>::max)());
 }
 
 void Parser::reset() {
@@ -568,12 +567,12 @@ void Parser::reset() {
   this->skip_header();
 }
 
-size_t Parser::skip_header() {
+usize Parser::skip_header() {
   if (!this->_reader.is_open()) {
     return 0;
   }
   assert(this->_num_records_parsed == 0);  // NOLINT
-  size_t num_header_lines = 0L;
+  usize num_header_lines = 0L;
   assert(this->_reader.is_open());  // NOLINT
   while (this->_reader.getline(this->_buff)) {
     if (this->_buff.empty()) {  // Skip empty lines

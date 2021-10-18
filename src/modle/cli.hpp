@@ -14,14 +14,13 @@
 #include <CLI/CLI.hpp>                // for App
 #include <boost/filesystem/path.hpp>  // for path, exists, operator<<, is_empty, is_directory
 #include <cmath>                      // for round
-#include <cstdint>                    // for uint8_t
 #include <limits>                     // for numeric_limits
 #include <sstream>                    // for basic_stringbuf<>::int_type, basic_stringbuf<>::po...
 #include <stdexcept>                  // for invalid_argument, out_of_range
 #include <string>                     // for string
 
 #include "./cli.hpp"                // for FMT_COMPILE_STRING
-#include "modle/common/common.hpp"  // for bp_t
+#include "modle/common/common.hpp"  // for bp_t, u8
 #include "modle/common/config.hpp"  // for Config
 
 namespace CLI {
@@ -32,7 +31,7 @@ namespace modle {
 
 class Cli {
  public:
-  enum subcommand : uint8_t { help, simulate, pertubate, replay };
+  enum subcommand : u8 { help, simulate, pertubate, replay };
 
   Cli(int argc, char** argv);
   [[nodiscard]] const Config& parse_arguments();

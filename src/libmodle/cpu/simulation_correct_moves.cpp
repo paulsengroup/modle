@@ -10,7 +10,6 @@
 
 #include <boost/config.hpp>  // IWYU pragma: keep for BOOST_UNLIKELY
 #include <cassert>           // for assert
-#include <cstddef>           // for size_t
 
 #include "modle/common/common.hpp"       // for bp_t, collision_t
 #include "modle/common/utils.hpp"        // for ndebug_defined
@@ -28,7 +27,7 @@ void Simulation::correct_moves_for_lef_bar_collisions(
   // This number corresponds to the index of the barrier that is causing the collision.
   const auto upper_bound = barriers.size();
 
-  for (size_t i = 0; i < lefs.size(); ++i) {
+  for (usize i = 0; i < lefs.size(); ++i) {
     if (BOOST_UNLIKELY(rev_collisions[i] < upper_bound)) {  // Process rev collisions
       const auto& barrier_idx = rev_collisions[i];
       const auto& barrier = barriers[barrier_idx];
@@ -57,7 +56,7 @@ void Simulation::correct_moves_for_lef_bar_collisions(
 // NOLINTNEXTLINE(readability-function-cognitive-complexity)
 void Simulation::correct_moves_for_primary_lef_lef_collisions(
     const absl::Span<const Lef> lefs, const absl::Span<const ExtrusionBarrier> barriers,
-    const absl::Span<const size_t> rev_ranks, const absl::Span<const size_t> fwd_ranks,
+    const absl::Span<const usize> rev_ranks, const absl::Span<const usize> fwd_ranks,
     const absl::Span<bp_t> rev_moves, const absl::Span<bp_t> fwd_moves,
     const absl::Span<const collision_t> rev_collisions,
     const absl::Span<const collision_t> fwd_collisions) noexcept(utils::ndebug_defined()) {

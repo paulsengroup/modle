@@ -10,12 +10,12 @@
 #include <boost/filesystem/operations.hpp>          // for exists
 #include <boost/filesystem/path.hpp>                // for path
 #include <catch2/catch.hpp>                         // for operator""_catch_sr, AssertionHandler
-#include <cstdint>                                  // for uint32_t
 #include <stdexcept>                                // for runtime_error
 #include <string>                                   // for string
 #include <utility>                                  // for pair, move
 #include <vector>                                   // for vector, allocator
 
+#include "modle/common/common.hpp"  // for u32
 #include "modle/common/utils.hpp"   // for parse_numeric_or_throw
 #include "modle/compressed_io.hpp"  // for Reader
 #include "modle/contacts.hpp"       // for ContactMatrix
@@ -36,15 +36,15 @@ TEST_CASE("CMatrix simple", "[cmatrix][short]") {
   CHECK(c.unsafe_get(0, 0) == 0);
 }
 
-[[nodiscard]] inline std::vector<std::vector<uint32_t>> load_matrix_from_file(
+[[nodiscard]] inline std::vector<std::vector<u32>> load_matrix_from_file(
     const std::string& path_to_file, const std::string& sep = "\t") {
-  std::vector<std::vector<uint32_t>> m;
+  std::vector<std::vector<u32>> m;
   compressed_io::Reader r(path_to_file);
   std::string line;
   std::string buff;
-  uint32_t n;  // NOLINT
+  u32 n;  // NOLINT
   while (r.getline(line)) {
-    std::vector<uint32_t> v;
+    std::vector<u32> v;
 
     for (const auto& tok : absl::StrSplit(line, sep)) {
       modle::utils::parse_numeric_or_throw(tok, n);
@@ -62,8 +62,8 @@ TEST_CASE("CMatrix 10x200", "[cmatrix][medium]") {
   REQUIRE(boost::filesystem::exists(input_file));
   const auto m1 = load_matrix_from_file(input_file.string());
   ContactMatrix<> m2(10, 200);  // NOLINT
-  for (size_t i = 0; i < m1.size(); ++i) {
-    for (size_t j = 0; j < m1[i].size(); ++j) {
+  for (usize i = 0; i < m1.size(); ++i) {
+    for (usize j = 0; j < m1[i].size(); ++j) {
       if (m1[i][j] != 0 && j >= i) {
         m2.set(i, j, m1[i][j]);
       }
@@ -71,8 +71,8 @@ TEST_CASE("CMatrix 10x200", "[cmatrix][medium]") {
   }
 
   const auto m3 = m2.unsafe_generate_symmetric_matrix();
-  for (size_t i = 0; i < m1.size(); ++i) {
-    for (size_t j = 0; j < m1[0].size(); ++j) {
+  for (usize i = 0; i < m1.size(); ++i) {
+    for (usize j = 0; j < m1[0].size(); ++j) {
       CHECK(m1[i][j] == m3[i][j]);
     }
   }
@@ -85,7 +85,7 @@ TEST_CASE("CMatrix Mask", "[cmatrix][short]") {
   REQUIRE(mask.size() == m.ncols());
   CHECK(mask.none());  // Matrix is full of zeros: bitmask should also be all zeros
 
-  for (size_t i = 0; i < m.ncols(); ++i) {
+  for (usize i = 0; i < m.ncols(); ++i) {
     for (auto j = i; j < m.ncols(); ++j) {
       // Even row/columns are all zeros: Bitmask should have zeros at pos corresponding to even idx
       m.set(i, j, !(i % 2 == 0 || j % 2 == 0));  // NOLINT(readability-implicit-bool-conversion)
@@ -95,11 +95,11 @@ TEST_CASE("CMatrix Mask", "[cmatrix][short]") {
 
   mask = m.unsafe_generate_mask_for_bins_without_contacts();
   REQUIRE(mask.size() == m.ncols());
-  for (size_t i = 0; i < mask.size(); ++i) {
+  for (usize i = 0; i < mask.size(); ++i) {
     CHECK((i % 2 != 0) == mask[i]);
   }
 
-  for (size_t i = 0; i < m.ncols(); ++i) {
+  for (usize i = 0; i < m.ncols(); ++i) {
     for (auto j = i; j < m.ncols(); ++j) {
       // Each row/column will have half of the fields filled with zeros, and the remaining half with
       // ones: All bits in the bitmask should be set to 1
@@ -110,7 +110,7 @@ TEST_CASE("CMatrix Mask", "[cmatrix][short]") {
   mask = m.unsafe_generate_mask_for_bins_without_contacts();
   REQUIRE(mask.size() == m.ncols());
 
-  for (size_t i = 0; i < mask.size(); ++i) {
+  for (usize i = 0; i < mask.size(); ++i) {
     CHECK(mask[i]);
   }
   // m.print(true);
@@ -152,25 +152,25 @@ TEST_CASE("CMatrix in/decrement", "[cmatrix][short]") {
 
 // NOLINTNEXTLINE(readability-function-cognitive-complexity)
 TEST_CASE("CMatrix unsafe_get w/ block", "[cmatrix][short]") {
-  ContactMatrix<uint32_t> m1(100, 100);  // NOLINT
+  ContactMatrix<u32> m1(100, 100);  // NOLINT
   // Fill the upper left corner
-  for (uint32_t i = 0; i < 3; ++i) {
-    for (uint32_t j = i; j < 3; ++j) {
+  for (u32 i = 0; i < 3; ++i) {
+    for (u32 j = i; j < 3; ++j) {
       m1.set(i, j, i + j);
     }
   }
 
   // Fill a region away from the diagonal
-  for (uint32_t i = 20; i < 25; ++i) {    // NOLINT
-    for (uint32_t j = 25; j < 30; ++j) {  // NOLINT
+  for (u32 i = 20; i < 25; ++i) {    // NOLINT
+    for (u32 j = 25; j < 30; ++j) {  // NOLINT
       m1.set(i, j, 1);
     }
   }
 
   // Fill the lower right corner
-  for (uint32_t i = 97; i < 100; ++i) {    // NOLINT
-    for (uint32_t j = 97; j < 100; ++j) {  // NOLINT
-      m1.set(i, j, (i - 97) + (j - 97));   // NOLINT
+  for (u32 i = 97; i < 100; ++i) {        // NOLINT
+    for (u32 j = 97; j < 100; ++j) {      // NOLINT
+      m1.set(i, j, (i - 97) + (j - 97));  // NOLINT
     }
   }
 
@@ -186,7 +186,7 @@ TEST_CASE("CMatrix unsafe_get w/ block small", "[cmatrix][short]") {
   const auto reference_file = data_dir / "contacts_chr1_bs9_small.tsv";
   const auto input_file = data_dir / "contacts_chr1_raw_small.tsv";
 
-  const size_t block_size = 9;
+  const usize block_size = 9;
 
   const auto reference_matrix = [&]() {
     ContactMatrix<> m;
@@ -203,8 +203,8 @@ TEST_CASE("CMatrix unsafe_get w/ block small", "[cmatrix][short]") {
   REQUIRE(input_matrix.nrows() == reference_matrix.nrows());
   REQUIRE(input_matrix.ncols() == reference_matrix.ncols());
 
-  for (size_t i = 0; i < input_matrix.nrows(); ++i) {
-    for (size_t j = 0; j < input_matrix.ncols(); ++j) {
+  for (usize i = 0; i < input_matrix.nrows(); ++i) {
+    for (usize j = 0; j < input_matrix.ncols(); ++j) {
       CHECK(input_matrix.unsafe_get(i, j, block_size) == reference_matrix.unsafe_get(i, j));
     }
   }

@@ -11,17 +11,17 @@
 #include <spdlog/sinks/stdout_color_sinks.h>  // for stderr_color_sink_mt
 #include <spdlog/spdlog.h>                    // for error, info
 
-#include <boost/cstdint.hpp>                // for int32_t
+#include <boost/cstdint.hpp>                // for i32
 #include <boost/filesystem/operations.hpp>  // for remove, create_directories
 #include <boost/filesystem/path.hpp>        // for operator/, path
 #include <catch2/catch.hpp>                 // for operator""_catch_sr, AssertionHandler, Sour...
-#include <cstddef>                          // for size_t
-#include <cstdint>                          // for uint64_t, int32_t, uint8_t
+#include <cstddef>                          // for usize
 #include <exception>                        // for exception
 #include <memory>                           // for make_shared, allocator
 #include <stdexcept>                        // for runtime_error
 #include <string_view>                      // for string_view
 
+#include "modle/common/common.hpp"    // for u64, i32, u8
 #include "modle/common/smartdir.hpp"  // for SmartDir
 #include "modle/compressed_io.hpp"    // for Reader
 #include "modle/contacts.hpp"         // for ContactMatrix
@@ -63,11 +63,11 @@ TEST_CASE("CMatrix to cooler", "[io][cooler][short]") {
       std::make_shared<spdlog::logger>("main_logger", std::make_shared<default_sink_t>()));
 
   constexpr std::string_view chrom = "chr0";
-  const uint64_t start = 0;
-  const uint64_t end = 300'000;
-  const uint64_t bin_size = 100'000;
-  const uint64_t nrows = 3;
-  const uint64_t ncols = (end + bin_size - 1) / bin_size;
+  const u64 start = 0;
+  const u64 end = 300'000;
+  const u64 bin_size = 100'000;
+  const u64 nrows = 3;
+  const u64 ncols = (end + bin_size - 1) / bin_size;
 
   ContactMatrix<> cmatrix1{};
   cmatrix1.unsafe_import_from_txt(input_file);
@@ -77,8 +77,8 @@ TEST_CASE("CMatrix to cooler", "[io][cooler][short]") {
 
   const auto cmatrix2 = Cooler(output_file, Cooler::READ_ONLY).cooler_to_cmatrix(chrom, nrows);
 
-  for (size_t i = 0; i < ncols; ++i) {
-    for (size_t j = 0; j < ncols; ++j) {
+  for (usize i = 0; i < ncols; ++i) {
+    for (usize j = 0; j < ncols; ++j) {
       CHECK(cmatrix1.unsafe_get(i, j) == cmatrix2.unsafe_get(i, j));
     }
   }
@@ -96,11 +96,11 @@ TEST_CASE("CMatrix to cooler - multiple chromosomes", "[io][cooler][short]") {
 
   constexpr std::string_view chrom1 = "chr1";
   constexpr std::string_view chrom2 = "chr2";
-  const uint64_t start = 0;
-  const uint64_t end = 300'000;
-  const uint64_t bin_size = 100'000;
-  const uint64_t nrows = 3;
-  const uint64_t ncols = (end + bin_size - 1) / bin_size;
+  const u64 start = 0;
+  const u64 end = 300'000;
+  const u64 bin_size = 100'000;
+  const u64 nrows = 3;
+  const u64 ncols = (end + bin_size - 1) / bin_size;
 
   ContactMatrix<> cmatrix1{};
   cmatrix1.unsafe_import_from_txt(input_file);
@@ -114,8 +114,8 @@ TEST_CASE("CMatrix to cooler - multiple chromosomes", "[io][cooler][short]") {
   const auto cmatrix2 = Cooler(output_file, Cooler::READ_ONLY).cooler_to_cmatrix(chrom1, nrows);
   const auto cmatrix3 = Cooler(output_file, Cooler::READ_ONLY).cooler_to_cmatrix(chrom2, nrows);
 
-  for (size_t i = 0; i < ncols; ++i) {
-    for (size_t j = 0; j < ncols; ++j) {
+  for (usize i = 0; i < ncols; ++i) {
+    for (usize j = 0; j < ncols; ++j) {
       CHECK(cmatrix1.unsafe_get(i, j) == cmatrix2.unsafe_get(i, j));
       CHECK(cmatrix1.unsafe_get(i, j) == cmatrix3.unsafe_get(i, j));
     }
@@ -133,9 +133,9 @@ TEST_CASE("Cooler to CMatrix", "[io][cooler][short]") {
       std::make_shared<spdlog::logger>("main_logger", std::make_shared<default_sink_t>()));
 
   constexpr std::string_view chrom = "chr7";
-  const uint64_t end = 159'138'663;
-  const uint64_t bin_size = 1'000'000;
-  const uint64_t ncols = (end + bin_size - 1) / bin_size;
+  const u64 end = 159'138'663;
+  const u64 bin_size = 1'000'000;
+  const u64 ncols = (end + bin_size - 1) / bin_size;
   const auto nrows = ncols;
 
   auto c = Cooler(test_file, Cooler::READ_ONLY);
@@ -146,15 +146,15 @@ TEST_CASE("Cooler to CMatrix", "[io][cooler][short]") {
 
   modle::compressed_io::Reader reader(reference_file);
   std::vector<std::string_view> toks;
-  std::vector<uint32_t> reference_row(ncols, 0);
+  std::vector<u32> reference_row(ncols, 0);
 
-  for (size_t i = 0; i < cmatrix.ncols(); ++i) {
+  for (usize i = 0; i < cmatrix.ncols(); ++i) {
     const auto line = reader.getline();
     toks = absl::StrSplit(line, '\t');
     REQUIRE(toks.size() == ncols);
     std::transform(toks.begin(), toks.end(), reference_row.begin(),
-                   [](const auto tok) { return utils::parse_numeric_or_throw<uint32_t>(tok); });
-    for (size_t j = 0; j < cmatrix.ncols(); ++j) {
+                   [](const auto tok) { return utils::parse_numeric_or_throw<u32>(tok); });
+    for (usize j = 0; j < cmatrix.ncols(); ++j) {
       CHECK(cmatrix.unsafe_get(i, j) == reference_row[j]);
     }
   }
@@ -172,11 +172,11 @@ TEST_CASE("Cooler to CMatrix and CMatrix to Cooler", "[io][cooler][short]") {
   auto c1 = Cooler(test_file_in, Cooler::READ_ONLY);
 
   constexpr std::string_view chrom = "chr1";
-  const uint64_t start = 0;
-  const uint64_t end = 249'250'621;
-  const uint64_t nrows = 25;
+  const u64 start = 0;
+  const u64 end = 249'250'621;
+  const u64 nrows = 25;
   const auto bin_size = c1.get_bin_size();
-  const uint64_t ncols = (end + bin_size - 1) / bin_size;
+  const u64 ncols = (end + bin_size - 1) / bin_size;
 
   const auto cmatrix1 = c1.cooler_to_cmatrix(chrom, nrows, {start, end}, true, false);
   REQUIRE(cmatrix1.nrows() == nrows);
@@ -193,10 +193,10 @@ TEST_CASE("Cooler to CMatrix and CMatrix to Cooler", "[io][cooler][short]") {
   const auto v2 = cmatrix2.get_raw_count_vector();
   REQUIRE(v1.size() == v2.size());
 
-  size_t mismatches = 0;
-  for (size_t i = 0; i < v1.size(); ++i) {
+  usize mismatches = 0;
+  for (usize i = 0; i < v1.size(); ++i) {
     CHECK(v1[i] == v2[i]);
-    mismatches += static_cast<uint8_t>(v1[i] != v2[i]);
+    mismatches += static_cast<u8>(v1[i] != v2[i]);
   }
 
   CHECK(mismatches == 0);
@@ -214,7 +214,7 @@ TEST_CASE("Cooler to CMatrix and CMatrix to Cooler - all chromosomes", "[io][coo
   auto c1 = Cooler(test_file_in, Cooler::READ_ONLY);
 
   const auto bin_size = c1.get_bin_size();
-  const size_t nrows = 25;
+  const usize nrows = 25;
 
   const auto chrom_names = c1.get_chrom_names();
   const auto chrom_sizes = c1.get_chrom_sizes();
@@ -228,21 +228,21 @@ TEST_CASE("Cooler to CMatrix and CMatrix to Cooler - all chromosomes", "[io][coo
   {
     REQUIRE(chrom_names.size() == chrom_sizes.size());
     auto c2 = Cooler(test_file_out, Cooler::WRITE_ONLY, bin_size, max_chrom_name_size + 1);
-    for (size_t i = 0; i < chrom_names.size(); ++i) {
+    for (usize i = 0; i < chrom_names.size(); ++i) {
       matrices.emplace_back(c1.cooler_to_cmatrix(chrom_names[i], nrows, {0, -1}, true, false));
-      c2.write_or_append_cmatrix_to_file(matrices.back(), chrom_names[i], int64_t(0),
-                                         chrom_sizes[i], chrom_sizes[i]);
+      c2.write_or_append_cmatrix_to_file(matrices.back(), chrom_names[i], i64(0), chrom_sizes[i],
+                                         chrom_sizes[i]);
     }
   }
 
   auto c3 = Cooler(test_file_out, Cooler::READ_ONLY);
-  for (size_t i = 0; i < chrom_names.size(); ++i) {
+  for (usize i = 0; i < chrom_names.size(); ++i) {
     const auto matrix = c3.cooler_to_cmatrix(chrom_names[i], nrows, {0, -1}, true, false);
     const auto& reference = matrices[i];
     REQUIRE(matrix.ncols() == reference.ncols());
     REQUIRE(matrix.nrows() == reference.nrows());
-    for (size_t j = 0; j < reference.ncols(); ++j) {
-      for (size_t k = 0; k < reference.ncols(); ++k) {
+    for (usize j = 0; j < reference.ncols(); ++j) {
+      for (usize k = 0; k < reference.ncols(); ++k) {
         CHECK(matrix.unsafe_get(j, k) == reference.unsafe_get(j, k));
       }
     }
@@ -256,11 +256,11 @@ TEST_CASE("Cooler testing balanced matrix", "[io][cooler][short]") {
   // const auto test_file = data_dir / "4DNFI5RMAGF9_test.mcool";
   const auto test_file = data_dir / "4DNFIXP4QG5B_10kb.cool";
 
-  // const uint64_t start = 0;
-  const uint64_t end = 248'956'422;
-  const uint64_t bin_size = 10'000;
-  const uint64_t ncols = (end / bin_size) + (end % bin_size != 0);
-  const uint64_t nrows = ncols;
+  // const u64 start = 0;
+  const u64 end = 248'956'422;
+  const u64 bin_size = 10'000;
+  const u64 ncols = (end / bin_size) + (end % bin_size != 0);
+  const u64 nrows = ncols;
 
   cooler::Cooler c1(test_file, cooler::Cooler::READ_ONLY, bin_size);
 
@@ -272,12 +272,12 @@ TEST_CASE("Cooler testing balanced matrix", "[io][cooler][short]") {
   REQUIRE(raw_cmatrix.nrows() == balanced_cmatrix.nrows());
   REQUIRE(raw_cmatrix.ncols() == balanced_cmatrix.ncols());
 
-  std::vector<uint64_t> balanced_row_sum(ncols, 0);
-  std::vector<uint64_t> raw_row_sum(ncols, 0);
-  std::vector<uint64_t> balanced_col_sum(ncols, 0);
-  std::vector<uint64_t> raw_col_sum(ncols, 0);
+  std::vector<u64> balanced_row_sum(ncols, 0);
+  std::vector<u64> raw_row_sum(ncols, 0);
+  std::vector<u64> balanced_col_sum(ncols, 0);
+  std::vector<u64> raw_col_sum(ncols, 0);
 
-  for (size_t  i = 0; i < ncols; ++i) {
+  for (usize  i = 0; i < ncols; ++i) {
     for (auto j = i; j < (i + nrows) && j < ncols; ++j) {
       balanced_row_sum[j] += balanced_cmatrix.get(j, i);
       raw_row_sum[j] += raw_cmatrix.get(j, i);
@@ -288,19 +288,19 @@ TEST_CASE("Cooler testing balanced matrix", "[io][cooler][short]") {
 
   double avg_col_diff = 0;
   double avg_row_diff = 0;
-  size_t nnz_cols = 0;
-  size_t nnz_rows = 0;
+  usize nnz_cols = 0;
+  usize nnz_rows = 0;
 
-  for (size_t  i = 0; i < nrows; ++i) {
+  for (usize  i = 0; i < nrows; ++i) {
     if (balanced_row_sum[i] != 0) {
       // fmt::print(stderr, "i={}; c={}\n", i, balanced_row_sum[i]);
     }
   }
 
-  for (size_t  i = 0; i < raw_col_sum.size(); ++i) {
+  for (usize  i = 0; i < raw_col_sum.size(); ++i) {
     if (raw_col_sum[i] != 0 || balanced_col_sum[i] != 0) {
       avg_col_diff +=
-          static_cast<int64_t>(raw_col_sum[i]) - static_cast<int64_t>(balanced_col_sum[i]);
+          static_cast<i64>(raw_col_sum[i]) - static_cast<i64>(balanced_col_sum[i]);
       nnz_rows++;
     }
   }
@@ -326,11 +326,11 @@ TEST_CASE("Cooler to CMatrix subrange", "[io][cooler][short]") {
   auto c = Cooler(test_file_in, Cooler::READ_ONLY);
 
   constexpr std::string_view chrom = "chr1";
-  const uint64_t start1 = 0;
-  const uint64_t end1 = 249'250'621;
-  const uint64_t start2 = 50'000'000;
-  const uint64_t end2 = 75'000'000;
-  const uint64_t nrows = 25;
+  const u64 start1 = 0;
+  const u64 end1 = 249'250'621;
+  const u64 start2 = 50'000'000;
+  const u64 end2 = 75'000'000;
+  const u64 nrows = 25;
   const auto bin_size = c.get_bin_size();
 
   const auto cmatrix2 = c.cooler_to_cmatrix(chrom, nrows, {start2, end2}, true, false);

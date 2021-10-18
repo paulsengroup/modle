@@ -9,15 +9,13 @@
 #include <algorithm>                  // for max
 #include <boost/filesystem/path.hpp>  // for path
 #include <cmath>                      // for round
-#include <cstdint>                    // for int64_t, uint64_t
-#include <cstdio>                     // for size_t
 #include <limits>                     // for numeric_limits
 #include <string>                     // for string
 #include <string_view>                // for string_view_literals
 #include <thread>                     // for thread
 #include <vector>                     // for vector
 
-#include "modle/common/common.hpp"  // for bp_t
+#include "modle/common/common.hpp"  // for bp_t, i64, u64
 
 namespace modle {
 using namespace std::literals::string_view_literals;
@@ -54,10 +52,10 @@ struct Config {  // NOLINT(altera-struct-pack-align)
   bp_t rev_extrusion_speed{fwd_extrusion_speed};
   double fwd_extrusion_speed_std{0.05};        // NOLINT(readability-magic-numbers, cppcoreguidelines-avoid-magic-numbers)
   double rev_extrusion_speed_std{fwd_extrusion_speed_std};
-  size_t num_cells{5'000};                     // NOLINT(readability-magic-numbers, cppcoreguidelines-avoid-magic-numbers)
-  size_t nthreads{std::thread::hardware_concurrency()};
+  usize num_cells{5'000};                     // NOLINT(readability-magic-numbers, cppcoreguidelines-avoid-magic-numbers)
+  usize nthreads{std::thread::hardware_concurrency()};
   bp_t diagonal_width{3'000'000 /* 3 Mbp */};  // NOLINT(readability-magic-numbers, cppcoreguidelines-avoid-magic-numbers)
-  size_t simulation_iterations{200};           // NOLINT(readability-magic-numbers, cppcoreguidelines-avoid-magic-numbers)
+  usize simulation_iterations{200};           // NOLINT(readability-magic-numbers, cppcoreguidelines-avoid-magic-numbers)
   double target_contact_density{0.0};
   double number_of_lefs_per_mbp;
   double prob_of_lef_release{0.015};
@@ -65,8 +63,8 @@ struct Config {  // NOLINT(altera-struct-pack-align)
   double soft_stall_multiplier{1.0};           // NOLINT(readability-magic-numbers, cppcoreguidelines-avoid-magic-numbers)
   bp_t deletion_size{10'000};                  // NOLINT(readability-magic-numbers, cppcoreguidelines-avoid-magic-numbers)
   bool compute_reference_matrix{false};
-  size_t block_size{9};                        // NOLINT(readability-magic-numbers, cppcoreguidelines-avoid-magic-numbers)
-  uint64_t seed{0};
+  usize block_size{9};                        // NOLINT(readability-magic-numbers, cppcoreguidelines-avoid-magic-numbers)
+  u64 seed{0};
 
   // Misc probabilities
   double probability_of_extrusion_unit_bypass{0.1};      // NOLINT(readability-magic-numbers, cppcoreguidelines-avoid-magic-numbers)
@@ -83,10 +81,10 @@ struct Config {  // NOLINT(altera-struct-pack-align)
 
   // Burn-in
   bool skip_burnin{false};
-  size_t burnin_history_length{100};
-  size_t burnin_smoothing_window_size{5};
-  size_t max_burnin_epochs{(std::numeric_limits<int64_t>::max)()};
-  size_t burnin_target_epochs_for_lef_activation{320};
+  usize burnin_history_length{100};
+  usize burnin_smoothing_window_size{5};
+  usize max_burnin_epochs{(std::numeric_limits<i64>::max)()};
+  usize burnin_target_epochs_for_lef_activation{320};
   double burnin_speed_coefficient{1.0};
   bp_t fwd_extrusion_speed_burnin{bp_t(std::round(double(fwd_extrusion_speed) * burnin_speed_coefficient))};
   bp_t rev_extrusion_speed_burnin{fwd_extrusion_speed_burnin};

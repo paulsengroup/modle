@@ -26,7 +26,6 @@
 #include <cassert>                          // for assert
 #include <chrono>                           // for microseconds, milliseconds
 #include <cmath>                            // for round
-#include <cstdint>                          // for uint64_t
 #include <cstdio>                           // for stdout
 #include <exception>                        // for exception_ptr, exception, current_exception
 #include <iosfwd>                           // for streamsize
@@ -41,7 +40,7 @@
 #include <vector>                           // for vector
 
 #include "modle/bed.hpp"                 // for BED, BED_tree, BED_tree::at, BED_tree::c...
-#include "modle/common/common.hpp"       // for contacts_t, bp_t
+#include "modle/common/common.hpp"       // for bp_t, contacts_t, u64
 #include "modle/compressed_io.hpp"       // for Writer
 #include "modle/contacts.hpp"            // for ContactMatrix
 #include "modle/cooler.hpp"              // for Cooler, Cooler::WRITE_ONLY
@@ -101,7 +100,7 @@ void Simulation::run_perturbate() {
         "MoDLE perturbate currently does not support processing more than 2 types of features at "
         "once.");
   }
-  const size_t task_batch_size_enq = 32;  // NOLINTNEXTLINE
+  const usize task_batch_size_enq = 32;  // NOLINTNEXTLINE
   moodycamel::BlockingConcurrentQueue<TaskPW> task_queue(this->nthreads * 2, 1, 0);
   moodycamel::ProducerToken ptok(task_queue);
   std::array<TaskPW, task_batch_size_enq> tasks;
@@ -165,7 +164,7 @@ void Simulation::run_perturbate() {
     DISABLE_WARNING_SHORTEN_64_TO_32
     this->_tpool.reset(this->nthreads);
     DISABLE_WARNING_POP
-    for (uint64_t tid = 0; tid < this->nthreads; ++tid) {  // Start simulation threads
+    for (u64 tid = 0; tid < this->nthreads; ++tid) {  // Start simulation threads
       this->_tpool.push_task([&, tid]() {
         auto tmp_output_path = this->path_to_output_file_bedpe;
         tmp_output_path.replace_extension(
@@ -188,8 +187,8 @@ void Simulation::run_perturbate() {
     const auto all_deletions =
         this->path_to_deletion_bed.empty() ? this->generate_deletions() : this->import_deletions();
 
-    size_t task_id = 0;
-    size_t num_tasks = 0;
+    usize task_id = 0;
+    usize num_tasks = 0;
     for (auto& chrom : this->_genome) {
       if (!this->ok()) {
         this->handle_exceptions();
@@ -244,7 +243,7 @@ void Simulation::run_perturbate() {
       // window is extended such that it goes from 5'-end->3*D for the first window and from P +
       // 1*D->3'-end, where P is the partition point of the previous window.
 
-      size_t cell_id = 0;
+      usize cell_id = 0;
 
       // Setup the
       TaskPW base_task{};
@@ -312,18 +311,18 @@ void Simulation::run_perturbate() {
             const auto npix2 = (this->diagonal_width + this->bin_size - 1) / this->bin_size;
 
             t.num_target_contacts =
-                static_cast<size_t>(std::max(1.0, std::round(this->target_contact_density *
-                                                             static_cast<double>(npix1 * npix2))));
+                static_cast<usize>(std::max(1.0, std::round(this->target_contact_density *
+                                                            static_cast<double>(npix1 * npix2))));
           }
 
           // Compute the number of LEFs based on the window size
-          t.num_lefs = static_cast<size_t>(
+          t.num_lefs = static_cast<usize>(
               std::round((static_cast<double>(t.window_end - t.window_start) / Mbp) *
                          this->number_of_lefs_per_mbp));
 
           // Compute the target number of epochs based on the target number of contacts
           t.num_target_epochs = t.num_target_contacts == 0UL ? this->simulation_iterations
-                                                             : (std::numeric_limits<size_t>::max)();
+                                                             : (std::numeric_limits<usize>::max)();
 
           if (num_tasks == tasks.size()) {  // Enqueue a batch of tasks
             if (out_task_stream) {
@@ -373,9 +372,9 @@ void Simulation::run_perturbate() {
 
 // NOLINTNEXTLINE(readability-function-cognitive-complexity)
 void Simulation::perturbate_worker(
-    const uint64_t tid, moodycamel::BlockingConcurrentQueue<Simulation::TaskPW>& task_queue,
+    const u64 tid, moodycamel::BlockingConcurrentQueue<Simulation::TaskPW>& task_queue,
     const boost::filesystem::path& output_path, std::mutex& cooler_mutex,
-    const size_t task_batch_size) {
+    const usize task_batch_size) {
   spdlog::info(FMT_STRING("Spawning simulation thread {}..."), tid);
   moodycamel::ConsumerToken ctok(task_queue);
 
@@ -470,7 +469,7 @@ void Simulation::simulate_window(Simulation::State& state, compressed_io::Writer
   const auto partition_point = state.active_window_start + this->diagonal_width;
 
   // Generate barrier configuration
-  size_t num_active_barriers = 0;
+  usize num_active_barriers = 0;
   state.barrier_tmp_buff.resize(state.barriers.size());
   std::transform(state.barriers.begin(), state.barriers.end(), state.barrier_tmp_buff.begin(),
                  [&](const auto& barrier) {
@@ -498,7 +497,7 @@ void Simulation::simulate_window(Simulation::State& state, compressed_io::Writer
 
   assert(state.reference_contacts);  // NOLINT
   if (out_stream) {                  // Output contacts for valid pairs of features
-    for (size_t i = 0; i < state.feats1.size(); ++i) {
+    for (usize i = 0; i < state.feats1.size(); ++i) {
       const auto& feat1 = state.feats1[i];
       const auto feat1_abs_center_pos = (feat1.chrom_start + feat1.chrom_end + 1) / 2;
       for (auto j = i; j < state.feats2.size(); ++j) {

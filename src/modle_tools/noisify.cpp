@@ -12,7 +12,7 @@
 #include <cassert>      // for assert
 #include <chrono>       // for milliseconds
 #include <cmath>        // for round
-#include <cstdio>       // for size_t
+#include <cstdio>       // for usize
 #include <exception>    // for exception
 #include <functional>   // for ref, hash, reference_wrapper
 #include <limits>       // for numeric_limits
@@ -41,9 +41,9 @@ void noisify_contacts(const noisify_config& c) {
   pixel_queue_t pixel_queue(PIXEL_BATCH_SIZE);
   modle::ContactMatrix<> cmatrix{};
 
-  const auto END_OF_PIXEL_QUEUE = modle::cooler::Cooler::Pixel{
-      (std::numeric_limits<size_t>::max)(), (std::numeric_limits<size_t>::max)(),
-      (std::numeric_limits<size_t>::max)()};
+  const auto END_OF_PIXEL_QUEUE = modle::cooler::Cooler::Pixel{(std::numeric_limits<usize>::max)(),
+                                                               (std::numeric_limits<usize>::max)(),
+                                                               (std::numeric_limits<usize>::max)()};
 
   auto input_cool =
       modle::cooler::Cooler(c.path_to_input_matrix, cooler::Cooler::READ_ONLY, c.bin_size);
@@ -63,9 +63,9 @@ void noisify_contacts(const noisify_config& c) {
   for (const auto& [chrom_name, chrom_size] : input_cool.get_chroms()) {
     const auto t0 = absl::Now();
     spdlog::info(FMT_STRING("Processing contacts for {}..."), chrom_name);
-    const auto ncols = (chrom_size / bin_size) + static_cast<size_t>(chrom_size % bin_size != 0);
+    const auto ncols = (chrom_size / bin_size) + static_cast<usize>(chrom_size % bin_size != 0);
     const auto nrows = std::min(ncols, (c.diagonal_width / bin_size) +
-                                           static_cast<size_t>(c.diagonal_width % bin_size != 0));
+                                           static_cast<usize>(c.diagonal_width % bin_size != 0));
 
     std::thread t([&, chrom_name = chrom_name]() {
       input_cool.stream_contacts_for_chrom(std::ref(pixel_queue), chrom_name, c.diagonal_width,
@@ -79,7 +79,7 @@ void noisify_contacts(const noisify_config& c) {
     cmatrix.unsafe_reset();
     modle::cooler::Cooler::Pixel pixel{};  // NOLINT
     const auto seed =
-        c.seed + std::hash<std::string_view>{}(chrom_name) + std::hash<size_t>{}(ncols);
+        c.seed + std::hash<std::string_view>{}(chrom_name) + std::hash<usize>{}(ncols);
 
     auto rang_eng = random::PRNG(seed);
     auto genextreme = modle::genextreme_value_distribution<double>{
@@ -90,13 +90,13 @@ void noisify_contacts(const noisify_config& c) {
         break;
       }
       assert(pixel.row <= pixel.col);  // NOLINT
-      for (size_t i = 0; i < pixel.count; ++i) {
+      for (usize i = 0; i < pixel.count; ++i) {
         const auto pos1 = static_cast<double>(pixel.row * bin_size) + genextreme(rang_eng);
         const auto pos2 = static_cast<double>(pixel.col * bin_size) - genextreme(rang_eng);
         const auto bin1 = std::clamp(
-            static_cast<size_t>(std::round(pos1 / static_cast<double>(bin_size))), 0UL, ncols - 1);
+            static_cast<usize>(std::round(pos1 / static_cast<double>(bin_size))), 0UL, ncols - 1);
         const auto bin2 = std::clamp(
-            static_cast<size_t>(std::round(pos2 / static_cast<double>(bin_size))), 0UL, ncols - 1);
+            static_cast<usize>(std::round(pos2 / static_cast<double>(bin_size))), 0UL, ncols - 1);
         cmatrix.increment(std::min(bin1, bin2), std::max(bin1, bin2));
       }
     }

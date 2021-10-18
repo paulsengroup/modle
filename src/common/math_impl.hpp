@@ -6,11 +6,12 @@
 
 #include <boost/math/distributions/binomial.hpp>  // for binomial
 #include <cmath>                                  // for sqrt
-#include <cstddef>                                // for size_t, ptrdiff_t
 #include <iterator>                               // for distance
 #include <numeric>                                // for accumulate
 #include <type_traits>
 #include <vector>  // for vector
+
+#include "modle/common/common.hpp"  // for isize
 
 namespace modle::math {
 template <class T, class>
@@ -30,19 +31,19 @@ double mean(InputIt begin, InputIt end, UnaryOperation op) {
 }
 
 template <class InputIt, class OutputIt, class I, class UnaryOperation, class>
-size_t moving_average(InputIt input_begin, InputIt input_end, OutputIt output_begin,
-                      const I window_size, UnaryOperation op) {
+usize moving_average(InputIt input_begin, InputIt input_end, OutputIt output_begin,
+                     const I window_size, UnaryOperation op) {
   using OutputItValueT = typename OutputIt::value_type;
-  if (static_cast<std::ptrdiff_t>(window_size) >= std::distance(input_begin, input_end)) {
+  if (static_cast<isize>(window_size) >= std::distance(input_begin, input_end)) {
     *output_begin = OutputItValueT(math::mean(input_begin, input_end, op));
     return 1;
   }
 
-  for (auto it1 = input_begin, it2 = input_begin + static_cast<std::ptrdiff_t>(window_size);
+  for (auto it1 = input_begin, it2 = input_begin + static_cast<isize>(window_size);
        it2 != input_end; ++it1, ++it2, ++output_begin) {
     *output_begin = OutputItValueT(mean(it1, it2, op));
   }
-  return size_t(std::distance(input_begin, input_end)) - size_t(window_size);
+  return usize(std::distance(input_begin, input_end)) - usize(window_size);
 }
 
 template <class InputIt, class FP, class UnaryOperation, class>

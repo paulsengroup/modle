@@ -19,8 +19,6 @@
 #include <boost/filesystem/operations.hpp>  // for exists
 #include <cassert>                          // for assert
 #include <chrono>                           // for microseconds, milliseconds
-#include <cstddef>                          // for size_t
-#include <cstdint>                          // for uint64_t
 #include <exception>                        // for exception_ptr, exception, current_exception
 #include <iterator>                         // for move_iterator, make_move_iterator
 #include <mutex>                            // for mutex, scoped_lock
@@ -30,7 +28,7 @@
 #include <thread_pool/thread_pool.hpp>      // for thread_pool
 #include <vector>                           // for vector
 
-#include "modle/common/common.hpp"  // for contacts_t, bp_t
+#include "modle/common/common.hpp"  // for bp_t, contacts_t, u64
 #include "modle/compressed_io.hpp"  // for Reader, Writer
 #include "modle/contacts.hpp"       // for ContactMatrix
 
@@ -40,7 +38,7 @@ void Simulation::run_replay() {
   assert(boost::filesystem::exists(this->path_to_task_file));  // NOLINT
   compressed_io::Reader task_reader(this->path_to_task_file);
 
-  const size_t task_batch_size_enq = 32;  // NOLINTNEXTLINE
+  const usize task_batch_size_enq = 32;  // NOLINTNEXTLINE
   moodycamel::BlockingConcurrentQueue<TaskPW> task_queue(this->nthreads * 2, 1, 0);
   moodycamel::ProducerToken ptok(task_queue);
   std::array<TaskPW, task_batch_size_enq> tasks;
@@ -52,14 +50,14 @@ void Simulation::run_replay() {
     DISABLE_WARNING_SHORTEN_64_TO_32
     this->_tpool.reset(this->nthreads);
     DISABLE_WARNING_POP
-    for (uint64_t tid = 0; tid < this->nthreads; ++tid) {  // Start simulation threads
+    for (u64 tid = 0; tid < this->nthreads; ++tid) {  // Start simulation threads
       this->_tpool.push_task([&, tid]() { this->replay_worker(tid, task_queue, cooler_mutex); });
     }
 
     const auto task_filter = import_task_filter(this->path_to_task_filter_file);
 
     std::string task_definition;
-    size_t num_tasks = 0;
+    usize num_tasks = 0;
     while (task_reader.getline(task_definition)) {
       if (!this->ok()) {
         this->handle_exceptions();
@@ -103,9 +101,9 @@ void Simulation::run_replay() {
   }
 }
 
-void Simulation::replay_worker(const uint64_t tid,
+void Simulation::replay_worker(const u64 tid,
                                moodycamel::BlockingConcurrentQueue<Simulation::TaskPW>& task_queue,
-                               std::mutex& cooler_mutex, const size_t task_batch_size) {
+                               std::mutex& cooler_mutex, const usize task_batch_size) {
   spdlog::info(FMT_STRING("Spawning simulation thread {}..."), tid);
   moodycamel::ConsumerToken ctok(task_queue);
 

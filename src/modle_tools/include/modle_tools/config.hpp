@@ -10,14 +10,12 @@
 #include <algorithm>                        // for max
 #include <boost/filesystem/operations.hpp>  // for temp_directory_path
 #include <boost/filesystem/path.hpp>        // for path
-#include <cstddef>                          // for size_t
-#include <cstdint>                          // for uint64_t
 #include <string>                           // for string, basic_string, allocator
 #include <thread>                           // for thread
 #include <vector>                           // for vector
 
 #include "modle/bed.hpp"            // for BED, BED::Dialect, BED::BED6
-#include "modle/common/common.hpp"  // for bp_t
+#include "modle/common/common.hpp"  // for bp_t, u64
 
 namespace modle::tools {
 
@@ -37,15 +35,15 @@ struct eval_config {  // NOLINT
   bool compute_edist{true};
 
   // Reference contacts
-  size_t bin_size{0};
-  size_t diagonal_width;
+  usize bin_size{0};
+  usize diagonal_width;
   double depletion_multiplier{1.0};
   bool deplete_contacts_from_reference{true};
 
   // Other
-  size_t nthreads{std::thread::hardware_concurrency()};
-  size_t sliding_window_size{0};
-  size_t sliding_window_overlap{0};
+  usize nthreads{std::thread::hardware_concurrency()};
+  usize sliding_window_size{0};
+  usize sliding_window_overlap{0};
 };
 
 struct filter_barrier_config {  // NOLINT
@@ -82,14 +80,14 @@ struct noisify_config {  // NOLINT
   bool force{false};
 
   // Generic
-  size_t diagonal_width;
-  size_t bin_size{0};
+  usize diagonal_width;
+  usize bin_size{0};
 
   // Noise properties
   double genextreme_mu{0};
   double genextreme_sigma{7'500};  // NOLINT
   double genextreme_xi{0.001};     // NOLINT
-  uint64_t seed{0};
+  u64 seed{0};
 };
 
 struct stats_config {  // NOLINT
@@ -101,8 +99,8 @@ struct stats_config {  // NOLINT
   bool force{false};
 
   // Contact matrix
-  size_t bin_size{0};
-  size_t diagonal_width;
+  usize bin_size{0};
+  usize diagonal_width;
   std::vector<std::string> chromosomes_excluded_vect{};
   double depletion_multiplier{1.0};
 };

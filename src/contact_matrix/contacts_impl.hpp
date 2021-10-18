@@ -16,8 +16,6 @@
 #include <boost/dynamic_bitset/dynamic_bitset.hpp>  // for dynamic_bitset
 #include <cassert>                                  // for assert
 #include <cmath>                                    // for round
-#include <cstddef>                                  // for size_t
-#include <cstdint>                                  // for uint64_t, int64_t
 #include <iostream>                                 // for cout
 #include <limits>                                   // for numeric_limits
 #include <mutex>                                    // for mutex
@@ -27,6 +25,7 @@
 #include <utility>                                  // for pair, make_pair, pair<>::second
 #include <vector>                                   // for vector, allocator
 
+#include "modle/common/common.hpp"                      // for u64, i64
 #include "modle/common/random.hpp"                      // for PRNG, uniform_int_distribution
 #include "modle/common/suppress_compiler_warnings.hpp"  // for DISABLE_WARNING_PUSH, DISABLE_WAR...
 #include "modle/common/utils.hpp"                       // for ndebug_defined, ndebug_not_defined
@@ -55,8 +54,8 @@ ContactMatrix<N>::ContactMatrix(const ContactMatrix<N> &other)
       _updates_missed(other._updates_missed.load()) {}
 
 template <class N>
-ContactMatrix<N>::ContactMatrix(const size_t nrows, const size_t ncols,
-                                const bool fill_with_random_numbers, const uint64_t seed)
+ContactMatrix<N>::ContactMatrix(const usize nrows, const usize ncols,
+                                const bool fill_with_random_numbers, const u64 seed)
     : _nrows(std::min(nrows, ncols)),
       _ncols(ncols),
       _contacts(_nrows * _ncols + 1, N(0)),
@@ -71,8 +70,8 @@ ContactMatrix<N>::ContactMatrix(const size_t nrows, const size_t ncols,
       return random::uniform_int_distribution<N>{
           0, std::min(N(65553), (std::numeric_limits<N>::max)())};
     }();
-    for (size_t i = 0; i < _ncols; ++i) {
-      for (size_t j = i; j < i + _nrows && j < _ncols; ++j) {
+    for (usize i = 0; i < _ncols; ++i) {
+      for (usize j = i; j < i + _nrows && j < _ncols; ++j) {
         this->set(i, j, dist(rand_eng));
       }
     }
@@ -86,18 +85,17 @@ ContactMatrix<N>::ContactMatrix(const bp_t length, const bp_t diagonal_width, co
                     fill_with_random_numbers) {}
 
 template <class N>
-ContactMatrix<N>::ContactMatrix(const absl::Span<const N> contacts, const size_t nrows,
-                                const size_t ncols, const size_t tot_contacts,
-                                const size_t updates_missed)
+ContactMatrix<N>::ContactMatrix(const absl::Span<const N> contacts, const usize nrows,
+                                const usize ncols, const usize tot_contacts,
+                                const usize updates_missed)
     : _nrows(nrows),
       _ncols(ncols),
       _contacts(contacts.begin(), contacts.end()),
       _mtxes(_ncols),
-      _updates_missed(static_cast<int64_t>(updates_missed)),
-      _tot_contacts(static_cast<int64_t>(tot_contacts)) {
+      _updates_missed(static_cast<i64>(updates_missed)),
+      _tot_contacts(static_cast<i64>(tot_contacts)) {
   if (this->_tot_contacts == 0 && !this->_contacts.empty()) {
-    this->_tot_contacts =
-        std::accumulate(this->_contacts.begin(), this->_contacts.end(), size_t(0));
+    this->_tot_contacts = std::accumulate(this->_contacts.begin(), this->_contacts.end(), usize(0));
   }
 }
 
@@ -140,7 +138,7 @@ ContactMatrix<N> &ContactMatrix<N>::operator=(const ContactMatrix<N> &other) {
 }
 
 template <class N>
-N ContactMatrix<N>::unsafe_get(const size_t row, const size_t col) const
+N ContactMatrix<N>::unsafe_get(const usize row, const usize col) const
     noexcept(utils::ndebug_defined()) {
   const auto [i, j] = transpose_coords(row, col);
   if constexpr (utils::ndebug_not_defined()) {
@@ -160,7 +158,7 @@ N ContactMatrix<N>::unsafe_get(const size_t row, const size_t col) const
 }
 
 template <class N>
-N ContactMatrix<N>::unsafe_get(const size_t row, const size_t col, const size_t block_size) const
+N ContactMatrix<N>::unsafe_get(const usize row, const usize col, const usize block_size) const
     noexcept(utils::ndebug_defined()) {
   assert(block_size > 0);              // NOLINT
   assert(block_size < this->nrows());  // NOLINT
@@ -181,17 +179,15 @@ N ContactMatrix<N>::unsafe_get(const size_t row, const size_t col, const size_t 
   }
 
   // Edges are handled like shown here: https://en.wikipedia.org/wiki/File:Extend_Edge-Handling.png
-  const auto bs = static_cast<int64_t>(block_size);
-  const auto first_row = static_cast<int64_t>(row) - (bs / 2);
-  const auto first_col = static_cast<int64_t>(col) - (bs / 2);
+  const auto bs = static_cast<i64>(block_size);
+  const auto first_row = static_cast<i64>(row) - (bs / 2);
+  const auto first_col = static_cast<i64>(col) - (bs / 2);
   N n{0};
 
   for (auto i = first_row; i < first_row + bs; ++i) {
     for (auto j = first_col; j < first_col + bs; ++j) {
-      const auto ii =
-          static_cast<size_t>(std::clamp(i, int64_t(0), static_cast<int64_t>(this->_ncols - 1)));
-      const auto jj =
-          static_cast<size_t>(std::clamp(j, int64_t(0), static_cast<int64_t>(this->_ncols - 1)));
+      const auto ii = static_cast<usize>(std::clamp(i, i64(0), static_cast<i64>(this->_ncols - 1)));
+      const auto jj = static_cast<usize>(std::clamp(j, i64(0), static_cast<i64>(this->_ncols - 1)));
       n += this->unsafe_get(ii, jj);
     }
   }
@@ -199,13 +195,13 @@ N ContactMatrix<N>::unsafe_get(const size_t row, const size_t col, const size_t 
 }
 
 template <class N>
-void ContactMatrix<N>::unsafe_set(const size_t row, const size_t col,
+void ContactMatrix<N>::unsafe_set(const usize row, const usize col,
                                   const N n) noexcept(utils::ndebug_defined()) {
   this->internal_set(row, col, n, nullptr);
 }
 
 template <class N>
-void ContactMatrix<N>::set(const size_t row, const size_t col,
+void ContactMatrix<N>::set(const usize row, const usize col,
                            const N n) noexcept(utils::ndebug_defined()) {
   const auto [_, j] = transpose_coords(row, col);
   assert(j < this->_mtxes.size());  // NOLINT
@@ -213,7 +209,7 @@ void ContactMatrix<N>::set(const size_t row, const size_t col,
 }
 
 template <class N>
-void ContactMatrix<N>::internal_set(const size_t row, const size_t col, const N n,
+void ContactMatrix<N>::internal_set(const usize row, const usize col, const N n,
                                     std::mutex *mtx) noexcept(utils::ndebug_defined()) {
   const auto [i, j] = this->transpose_coords(row, col);
   if constexpr (utils::ndebug_not_defined()) {
@@ -226,7 +222,7 @@ void ContactMatrix<N>::internal_set(const size_t row, const size_t col, const N 
   }
 
   if (i > this->nrows()) {
-    std::atomic_fetch_add_explicit(&this->_updates_missed, int64_t(1), std::memory_order_relaxed);
+    std::atomic_fetch_add_explicit(&this->_updates_missed, i64(1), std::memory_order_relaxed);
     return;
   }
 
@@ -246,7 +242,7 @@ void ContactMatrix<N>::internal_set(const size_t row, const size_t col, const N 
 }
 
 template <class N>
-void ContactMatrix<N>::add(const size_t row, const size_t col,
+void ContactMatrix<N>::add(const usize row, const usize col,
                            const N n) noexcept(utils::ndebug_defined()) {
   assert(n > 0);  // NOLINT Use subtract to add a negative number
   const auto [i, j] = transpose_coords(row, col);
@@ -261,7 +257,7 @@ void ContactMatrix<N>::add(const size_t row, const size_t col,
     }
   }
   if (i > this->nrows()) {
-    std::atomic_fetch_add_explicit(&this->_updates_missed, int64_t(1), std::memory_order_relaxed);
+    std::atomic_fetch_add_explicit(&this->_updates_missed, i64(1), std::memory_order_relaxed);
     return;
   }
 
@@ -273,7 +269,7 @@ void ContactMatrix<N>::add(const size_t row, const size_t col,
 }
 
 template <class N>
-void ContactMatrix<N>::subtract(const size_t row, const size_t col,
+void ContactMatrix<N>::subtract(const usize row, const usize col,
                                 const N n) noexcept(utils::ndebug_defined()) {
   assert(n >= 0);  // NOLINT Use add to subtract a negative number
   const auto [i, j] = transpose_coords(row, col);
@@ -289,7 +285,7 @@ void ContactMatrix<N>::subtract(const size_t row, const size_t col,
   }
 
   if (i > this->nrows()) {
-    std::atomic_fetch_add_explicit(&this->_updates_missed, int64_t(1), std::memory_order_relaxed);
+    std::atomic_fetch_add_explicit(&this->_updates_missed, i64(1), std::memory_order_relaxed);
     return;
   }
 
@@ -301,32 +297,32 @@ void ContactMatrix<N>::subtract(const size_t row, const size_t col,
 }
 
 template <class N>
-void ContactMatrix<N>::increment(size_t row, size_t col) noexcept(utils::ndebug_defined()) {
+void ContactMatrix<N>::increment(usize row, usize col) noexcept(utils::ndebug_defined()) {
   this->add(row, col, N(1));
 }
 
 template <class N>
-void ContactMatrix<N>::decrement(size_t row, size_t col) noexcept(utils::ndebug_defined()) {
+void ContactMatrix<N>::decrement(usize row, usize col) noexcept(utils::ndebug_defined()) {
   this->subtract(row, col, N(1));
 }
 
 template <class N>
-constexpr size_t ContactMatrix<N>::ncols() const noexcept(utils::ndebug_defined()) {
+constexpr usize ContactMatrix<N>::ncols() const noexcept(utils::ndebug_defined()) {
   return this->_ncols;
 }
 
 template <class N>
-constexpr size_t ContactMatrix<N>::nrows() const noexcept(utils::ndebug_defined()) {
+constexpr usize ContactMatrix<N>::nrows() const noexcept(utils::ndebug_defined()) {
   return this->_nrows;
 }
 
 template <class N>
-constexpr size_t ContactMatrix<N>::npixels() const noexcept(utils::ndebug_defined()) {
+constexpr usize ContactMatrix<N>::npixels() const noexcept(utils::ndebug_defined()) {
   return this->_nrows * this->_ncols;
 }
 
 template <class N>
-size_t ContactMatrix<N>::unsafe_npixels_after_masking() const {
+usize ContactMatrix<N>::unsafe_npixels_after_masking() const {
   auto npixels = this->npixels();
   const auto mask = this->unsafe_generate_mask_for_bins_without_contacts();
   if (mask.all()) {
@@ -336,9 +332,9 @@ size_t ContactMatrix<N>::unsafe_npixels_after_masking() const {
     return 0;
   }
 
-  auto count_zeros = [&mask](size_t start, size_t end) {
+  auto count_zeros = [&mask](usize start, usize end) {
     assert(start <= end);
-    size_t n = 0;
+    usize n = 0;
     while (start < end) {
       n += !mask[start++];
     }
@@ -346,7 +342,7 @@ size_t ContactMatrix<N>::unsafe_npixels_after_masking() const {
   };
 
   assert(this->nrows() <= this->ncols());
-  for (size_t i = 0; i < this->ncols(); ++i) {
+  for (usize i = 0; i < this->ncols(); ++i) {
     if (!mask[i]) {
       // We are processing pixels in the upper left corner of cmatrix
       if (i < this->nrows()) {
@@ -368,8 +364,8 @@ size_t ContactMatrix<N>::unsafe_npixels_after_masking() const {
 }
 
 template <class N>
-constexpr size_t ContactMatrix<N>::get_n_of_missed_updates() const noexcept {
-  return static_cast<size_t>(this->_updates_missed.load());
+constexpr usize ContactMatrix<N>::get_n_of_missed_updates() const noexcept {
+  return static_cast<usize>(this->_updates_missed.load());
 }
 
 template <class N>
@@ -382,8 +378,8 @@ constexpr double ContactMatrix<N>::unsafe_get_fraction_of_missed_updates() const
 }
 
 template <class N>
-constexpr size_t ContactMatrix<N>::get_tot_contacts() const noexcept(utils::ndebug_defined()) {
-  return static_cast<size_t>(this->_tot_contacts.load());
+constexpr usize ContactMatrix<N>::get_tot_contacts() const noexcept(utils::ndebug_defined()) {
+  return static_cast<usize>(this->_tot_contacts.load());
 }
 
 template <class N>
@@ -392,7 +388,7 @@ double ContactMatrix<N>::get_avg_contact_density() const noexcept(utils::ndebug_
 }
 
 template <class N>
-constexpr size_t ContactMatrix<N>::get_matrix_size_in_bytes() const
+constexpr usize ContactMatrix<N>::get_matrix_size_in_bytes() const
     noexcept(utils::ndebug_defined()) {
   return this->npixels() * sizeof(N);
 }
@@ -407,9 +403,9 @@ template <class N>
 void ContactMatrix<N>::unsafe_print(std::ostream &out_stream, bool full) const {
   if (full) {
     std::vector<N> row(this->_ncols, 0);
-    for (size_t y = 0; y < this->_ncols; ++y) {
+    for (usize y = 0; y < this->_ncols; ++y) {
       std::fill(row.begin(), row.end(), 0);
-      for (size_t x = 0; x < this->_ncols; ++x) {
+      for (usize x = 0; x < this->_ncols; ++x) {
         auto j = x;
         auto i = j - y;
         if (y > x) {
@@ -426,7 +422,7 @@ void ContactMatrix<N>::unsafe_print(std::ostream &out_stream, bool full) const {
     }
   } else {
     std::vector<N> row(this->ncols());
-    for (size_t i = 0; i < this->nrows(); ++i) {
+    for (usize i = 0; i < this->nrows(); ++i) {
       for (auto j = i; j < this->ncols(); ++j) {
         row[j] = this->at(i, j);
       }
@@ -445,9 +441,9 @@ template <class N>
 std::vector<std::vector<N>> ContactMatrix<N>::unsafe_generate_symmetric_matrix() const {
   std::vector<std::vector<N>> m;
   m.reserve(this->_ncols);
-  for (size_t y = 0; y < this->_ncols; ++y) {
+  for (usize y = 0; y < this->_ncols; ++y) {
     std::vector<N> row(this->_ncols, 0);
-    for (size_t x = 0; x < this->_ncols; ++x) {
+    for (usize x = 0; x < this->_ncols; ++x) {
       auto j = x;
       auto i = j - y;
       if (y > x) {
@@ -471,14 +467,14 @@ void ContactMatrix<N>::unsafe_import_from_txt(const boost::filesystem::path &pat
 
   std::string buff;
   std::vector<std::string_view> toks;
-  size_t i = 0;
+  usize i = 0;
   while (std::getline(fp, buff)) {
     toks = absl::StrSplit(buff, sep);
     if (i == 0) {
       this->unsafe_resize(toks.size(), toks.size());
       this->unsafe_reset();
     }
-    for (size_t j = i; j < this->ncols(); ++j) {
+    for (usize j = i; j < this->ncols(); ++j) {
       this->set(i, j, utils::parse_numeric_or_throw<N>(toks[j]));
     }
     ++i;
@@ -492,7 +488,7 @@ void ContactMatrix<N>::unsafe_generate_mask_for_bins_without_contacts(
   mask.resize(this->ncols());
   mask.reset();
 
-  for (size_t i = 0; i < this->ncols(); ++i) {
+  for (usize i = 0; i < this->ncols(); ++i) {
     // Set bitmask to 1 if row contains at least one non-zero value
     for (auto j = i; j < (i + this->nrows()) && j < this->ncols(); ++j) {
       if ((mask[i] |= this->unsafe_get(i, j))) {
@@ -528,7 +524,7 @@ void ContactMatrix<N>::unsafe_reset() {
 }
 
 template <class N>
-void ContactMatrix<N>::unsafe_resize(const size_t nrows, const size_t ncols) {
+void ContactMatrix<N>::unsafe_resize(const usize nrows, const usize ncols) {
   if (nrows == this->_nrows && ncols == this->_ncols) {
     return;
   }
@@ -567,12 +563,11 @@ absl::Span<N> ContactMatrix<N>::get_raw_count_vector() {
 }
 
 template <class N>
-void ContactMatrix<N>::unsafe_compute_row_wise_contact_histogram(
-    std::vector<uint64_t> &buff) const {
+void ContactMatrix<N>::unsafe_compute_row_wise_contact_histogram(std::vector<u64> &buff) const {
   buff.resize(this->nrows());
   std::fill(buff.begin(), buff.end(), 0);
 
-  for (size_t i = 0; i < this->ncols(); ++i) {
+  for (usize i = 0; i < this->ncols(); ++i) {
     for (auto j = i; j < i + this->nrows() && j < this->ncols(); ++j) {
       // j - i corresponds to the distance from the diagonal
       buff[j - i] += this->unsafe_get(j, i);
@@ -581,8 +576,8 @@ void ContactMatrix<N>::unsafe_compute_row_wise_contact_histogram(
 }
 
 template <class N>
-std::vector<uint64_t> ContactMatrix<N>::unsafe_compute_row_wise_contact_histogram() const {
-  std::vector<uint64_t> buff(this->nrows());
+std::vector<u64> ContactMatrix<N>::unsafe_compute_row_wise_contact_histogram() const {
+  std::vector<u64> buff(this->nrows());
   this->unsafe_compute_row_wise_contact_histogram(buff);
   return buff;
 }
@@ -592,14 +587,14 @@ void ContactMatrix<N>::unsafe_deplete_contacts(double depletion_multiplier) {
   const auto hist = this->unsafe_compute_row_wise_contact_histogram();
   const auto effective_nbins = this->unsafe_generate_mask_for_bins_without_contacts().count();
   // This histogram contains the average contact number (instead of the total)
-  std::vector<uint64_t> row_wise_avg_contacts(hist.size());
+  std::vector<u64> row_wise_avg_contacts(hist.size());
   std::transform(hist.begin(), hist.end(), row_wise_avg_contacts.begin(), [&](const auto n) {
-    return static_cast<uint64_t>(std::round((depletion_multiplier * static_cast<double>(n)) /
-                                            static_cast<double>(effective_nbins)));
+    return static_cast<u64>(std::round((depletion_multiplier * static_cast<double>(n)) /
+                                       static_cast<double>(effective_nbins)));
   });
 
-  for (size_t i = 0; i < this->ncols(); ++i) {
-    for (size_t j = i; j < i + this->nrows() && j < this->ncols(); ++j) {
+  for (usize i = 0; i < this->ncols(); ++i) {
+    for (usize j = i; j < i + this->nrows() && j < this->ncols(); ++j) {
       // j - i corresponds to the distance from the diagonal
       if (this->unsafe_get(j, i) > row_wise_avg_contacts[j - i]) {
         this->subtract(j, i, static_cast<N>(row_wise_avg_contacts[j - i]));
@@ -611,7 +606,7 @@ void ContactMatrix<N>::unsafe_deplete_contacts(double depletion_multiplier) {
 }
 
 template <class N>
-N &ContactMatrix<N>::at(const size_t i, const size_t j) noexcept(utils::ndebug_defined()) {
+N &ContactMatrix<N>::at(const usize i, const usize j) noexcept(utils::ndebug_defined()) {
   if constexpr (utils::ndebug_not_defined()) {
     if ((j * this->_nrows) + i > this->_contacts.size()) {
       throw std::runtime_error(fmt::format(FMT_STRING("ContactMatrix::at tried to access element "
@@ -625,7 +620,7 @@ N &ContactMatrix<N>::at(const size_t i, const size_t j) noexcept(utils::ndebug_d
 }
 
 template <class N>
-const N &ContactMatrix<N>::at(const size_t i, const size_t j) const
+const N &ContactMatrix<N>::at(const usize i, const usize j) const
     noexcept(utils::ndebug_defined()) {
   if constexpr (utils::ndebug_not_defined()) {
     if ((j * this->_nrows) + i > this->_contacts.size()) {
@@ -640,8 +635,8 @@ const N &ContactMatrix<N>::at(const size_t i, const size_t j) const
 }
 
 template <class N>
-std::pair<size_t, size_t> ContactMatrix<N>::transpose_coords(
-    const size_t row, const size_t col) noexcept(utils::ndebug_defined()) {
+std::pair<usize, usize> ContactMatrix<N>::transpose_coords(
+    const usize row, const usize col) noexcept(utils::ndebug_defined()) {
   if (row > col) {
     return std::make_pair(row - col, row);
   }
@@ -649,7 +644,7 @@ std::pair<size_t, size_t> ContactMatrix<N>::transpose_coords(
 }
 
 template <class N>
-void ContactMatrix<N>::bound_check_column(const size_t col) const {
+void ContactMatrix<N>::bound_check_column(const usize col) const {
   if (col > this->ncols()) {
     throw std::runtime_error(fmt::format(
         FMT_STRING("caught an attempt to access element past the end of the contact matrix: "
@@ -659,7 +654,7 @@ void ContactMatrix<N>::bound_check_column(const size_t col) const {
 }
 
 template <class N>
-void ContactMatrix<N>::check_for_overflow_on_add(const size_t row, const size_t col,
+void ContactMatrix<N>::check_for_overflow_on_add(const usize row, const usize col,
                                                  const N n) const {
   assert(n >= 0);
   const auto lo = (std::numeric_limits<N>::min)();
@@ -681,7 +676,7 @@ void ContactMatrix<N>::check_for_overflow_on_add(const size_t row, const size_t 
 }
 
 template <class N>
-void ContactMatrix<N>::check_for_overflow_on_subtract(size_t row, size_t col, const N n) const {
+void ContactMatrix<N>::check_for_overflow_on_subtract(usize row, usize col, const N n) const {
   assert(n >= 0);
   const auto lo = (std::numeric_limits<N>::min)();
   const auto hi = (std::numeric_limits<N>::max)();

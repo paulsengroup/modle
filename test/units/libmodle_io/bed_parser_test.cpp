@@ -54,7 +54,7 @@ inline void compare_bed_records_with_file(std::vector<BED> records, const std::s
     return std::stoull(enda.data(), nullptr) < std::stoull(endb.data(), nullptr);
   });
 
-  for (size_t i = 0; i < records.size(); ++i) {
+  for (usize i = 0; i < records.size(); ++i) {
     CHECK(fmt::to_string(records[i]) == lines[i]);
   }
 }

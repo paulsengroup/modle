@@ -36,8 +36,6 @@
 
 #include <algorithm>    // for max, min, generate, fill
 #include <cassert>      // for assert
-#include <cstddef>      // for size_t
-#include <cstdint>      // for int64_t, int32_t, uint8_t
 #include <cstdio>       // for stderr
 #include <memory>       // for unique_ptr, make_unique
 #include <stdexcept>    // for runtime_error
@@ -45,6 +43,7 @@
 #include <string_view>  // for string_view
 #include <vector>       // for vector
 
+#include "modle/common/common.hpp"                      // for i64, i32, u8
 #include "modle/common/suppress_compiler_warnings.hpp"  // for DISABLE_WARNING_POP, DISABLE_WARN...
 #include "modle/common/utils.hpp"                       // for ndebug_not_defined
 #include "modle/contacts.hpp"                           // for ContactMatrix
@@ -80,7 +79,7 @@ void Cooler::get_chrom_sizes(std::vector<I> &buff) {
 template <typename I>
 void Cooler::write_or_append_empty_cmatrix_to_file(std::string_view chrom_name, I chrom_start,
                                                    I chrom_end, I chrom_length) {
-  ContactMatrix<int64_t> *null_matrix{nullptr};
+  ContactMatrix<i64> *null_matrix{nullptr};
   Cooler::write_or_append_cmatrix_to_file(null_matrix, chrom_name, chrom_start, chrom_end,
                                           chrom_length);
 }
@@ -103,9 +102,9 @@ void Cooler::write_or_append_cmatrix_to_file(const ContactMatrix<I1> *cmatrix,
   assert(chrom_end_ >= 0);     // NOLINT
   assert(chrom_length_ >= 0);  // NOLINT
   assert(this->_bin_size != 0);
-  const auto chrom_start = static_cast<size_t>(chrom_start_);
-  const auto chrom_end = static_cast<size_t>(chrom_end_);
-  const auto chrom_length = static_cast<size_t>(chrom_length_);
+  const auto chrom_start = static_cast<usize>(chrom_start_);
+  const auto chrom_end = static_cast<usize>(chrom_end_);
+  const auto chrom_length = static_cast<usize>(chrom_length_);
 
   ++this->_nchroms;
 
@@ -157,7 +156,7 @@ void Cooler::write_or_append_cmatrix_to_file(const ContactMatrix<I1> *cmatrix,
           b->pixel_count_buff.clear();
         };
 
-    for (size_t chrom_idx = 0; chrom_offset + chrom_idx < static_cast<size_t>(this->_nchroms);
+    for (usize chrom_idx = 0; chrom_offset + chrom_idx < static_cast<usize>(this->_nchroms);
          ++chrom_idx) {
       if (cmatrix && cmatrix->get_n_of_missed_updates() != 0) {
         const auto &n = cmatrix->get_n_of_missed_updates();
@@ -212,7 +211,7 @@ void Cooler::write_or_append_cmatrix_to_file(const ContactMatrix<I1> *cmatrix,
 
       pxl_offset += (chrom_start + this->_bin_size - 1) / this->_bin_size;
       if (cmatrix) {  // when cmatrix == nullptr we only write chrom/bins/indexes (no pixels)
-        for (size_t i = 0; i < cmatrix->ncols(); ++i) {  // Iterate over columns in the cmatrix
+        for (usize i = 0; i < cmatrix->ncols(); ++i) {  // Iterate over columns in the cmatrix
           // Write the first pixel that refers to a given bin1 to the index
           b->idx_bin1_offset_buff.push_back(this->_nnz);
 
@@ -232,8 +231,8 @@ void Cooler::write_or_append_cmatrix_to_file(const ContactMatrix<I1> *cmatrix,
                       b->pixel_b1_idx_buff.back(), b->pixel_b2_idx_buff.back(), pxl_offset, m));
                 }
               }
-              b->pixel_b1_idx_buff.push_back(static_cast<int64_t>(pxl_offset + i));
-              b->pixel_b2_idx_buff.push_back(static_cast<int64_t>(pxl_offset + j));
+              b->pixel_b1_idx_buff.push_back(static_cast<i64>(pxl_offset + i));
+              b->pixel_b2_idx_buff.push_back(static_cast<i64>(pxl_offset + j));
               b->pixel_count_buff.push_back(m);
               ++this->_nnz;
 
@@ -259,7 +258,7 @@ void Cooler::write_or_append_cmatrix_to_file(const ContactMatrix<I1> *cmatrix,
       {
         const auto new_size =
             b->idx_bin1_offset_buff.size() +
-            ((static_cast<size_t>(chrom_length) - chrom_end + this->_bin_size - 1) /
+            ((static_cast<usize>(chrom_length) - chrom_end + this->_bin_size - 1) /
              this->_bin_size);
         b->idx_bin1_offset_buff.resize(new_size, this->_nnz);
       }
@@ -284,7 +283,7 @@ void Cooler::write_or_append_cmatrix_to_file(const ContactMatrix<I1> *cmatrix,
 
     auto &f = *this->_fp;
     hdf5::write_or_create_attribute(f, "nchroms", this->_nchroms);
-    const auto nbins = static_cast<int64_t>(this->_nbins);
+    const auto nbins = static_cast<i64>(this->_nbins);
     hdf5::write_or_create_attribute(f, "nbins", nbins);
     hdf5::write_or_create_attribute(f, "nnz", this->_nnz);
     // this->_fp->flush(H5F_SCOPE_GLOBAL); // This is probably unnecessary
@@ -295,12 +294,11 @@ void Cooler::write_or_append_cmatrix_to_file(const ContactMatrix<I1> *cmatrix,
 
 template <typename T1, typename T2>
 std::unique_ptr<H5::DSetCreatPropList> Cooler::generate_default_cprop(hsize_t chunk_size,
-                                                                      uint8_t compression_lvl,
-                                                                      T1 type, T2 fill_value) {
-  static_assert(
-      std::is_same_v<T2, int64_t> || std::is_same_v<T2, int32_t> ||
-          std::is_constructible_v<H5std_string, T2>,
-      "fill_value should have one of the following types: int64_t, int32_t or std::string.");
+                                                                      u8 compression_lvl, T1 type,
+                                                                      T2 fill_value) {
+  static_assert(std::is_same_v<T2, i64> || std::is_same_v<T2, i32> ||
+                    std::is_constructible_v<H5std_string, T2>,
+                "fill_value should have one of the following types: i64, i32 or std::string.");
   static_assert(
       (std::is_constructible_v<H5std_string, T2> && std::is_same_v<T1, H5::StrType>) ||
           std::is_same_v<T1, H5::PredType>,
@@ -335,17 +333,17 @@ std::unique_ptr<H5::DSetAccPropList> Cooler::generate_default_aprop([[maybe_unus
 
   // Therefore, if the application will access the same data more than once, w0 should be set closer
   // to 0, and if the application does not, w0 should be set closer to 1.
-  const size_t default_multiplier{100};
+  const usize default_multiplier{100};
   [[maybe_unused]] const auto rdcc_w0_streaming{0.99};
   [[maybe_unused]] const auto rdcc_w0_random{0.01};
   if constexpr (std::is_same_v<T, H5::StrType>) {
     prop.setChunkCache(default_multiplier * (cache_size / chunk_size), cache_size, rdcc_w0_random);
   } else {
     if (type == H5::PredType::NATIVE_INT64 ||
-        type == H5::PredType::NATIVE_DOUBLE) {  // int64_t and double
+        type == H5::PredType::NATIVE_DOUBLE) {  // i64 and double
       prop.setChunkCache(default_multiplier * (cache_size / chunk_size), cache_size,
                          rdcc_w0_streaming);
-    } else if (type == H5::PredType::NATIVE_INT32) {  // int32_t
+    } else if (type == H5::PredType::NATIVE_INT32) {  // i32
       prop.setChunkCache(default_multiplier * (cache_size / (chunk_size + chunk_size)), cache_size,
                          rdcc_w0_streaming);
     } else {
@@ -358,25 +356,25 @@ std::unique_ptr<H5::DSetAccPropList> Cooler::generate_default_aprop([[maybe_unus
 }
 
 template <typename I1, typename I2, typename I3>
-hsize_t Cooler::write_bins(I1 chrom_, I2 length_, I3 bin_size_, std::vector<int32_t> &buff32,
-                           std::vector<int64_t> &buff64, hsize_t file_offset, hsize_t buff_size) {
+hsize_t Cooler::write_bins(I1 chrom_, I2 length_, I3 bin_size_, std::vector<i32> &buff32,
+                           std::vector<i64> &buff64, hsize_t file_offset, hsize_t buff_size) {
   assert(bin_size_ != 0);  // NOLINT
   buff32.resize(buff_size);
   buff64.resize(buff_size);
-  const auto chromosome = static_cast<int32_t>(chrom_);
-  const auto length = static_cast<int64_t>(length_);
-  const auto bin_size = static_cast<int64_t>(bin_size_);
+  const auto chromosome = static_cast<i32>(chrom_);
+  const auto length = static_cast<i64>(length_);
+  const auto bin_size = static_cast<i64>(bin_size_);
 
   std::fill(buff32.begin(), buff32.end(), chromosome);
 
-  int64_t start = 0;
-  int64_t end = std::min(length, bin_size);
+  i64 start = 0;
+  i64 end = std::min(length, bin_size);
   hsize_t bins_processed = 0;
-  const int64_t nbins = (length + bin_size - 1) / bin_size;
+  const i64 nbins = (length + bin_size - 1) / bin_size;
   const auto nchunks = (static_cast<hsize_t>(nbins) + buff_size - 1) / buff_size;
   auto &d = this->_datasets;
 
-  for (size_t i = 0; i < nchunks; ++i) {
+  for (usize i = 0; i < nchunks; ++i) {
     const auto chunk_size = std::min(buff_size, static_cast<hsize_t>(nbins) - bins_processed);
     if (chunk_size != buff_size) {
       buff32.resize(chunk_size);
@@ -400,8 +398,8 @@ hsize_t Cooler::write_bins(I1 chrom_, I2 length_, I3 bin_size_, std::vector<int3
 }
 
 template <class N>
-ContactMatrix<N> Cooler::cooler_to_cmatrix(std::string_view chrom_name, size_t nrows,
-                                           std::pair<size_t, size_t> chrom_boundaries,
+ContactMatrix<N> Cooler::cooler_to_cmatrix(std::string_view chrom_name, usize nrows,
+                                           std::pair<usize, usize> chrom_boundaries,
                                            bool try_common_chrom_prefixes,
                                            bool prefer_using_balanced_counts) {
   assert(this->_fp);                         // NOLINT
@@ -410,14 +408,14 @@ ContactMatrix<N> Cooler::cooler_to_cmatrix(std::string_view chrom_name, size_t n
   assert(!this->_idx_chrom_offset.empty());  // NOLINT
 
   const auto chrom_idx = this->get_chrom_idx(chrom_name, try_common_chrom_prefixes);
-  const auto chrom_size = static_cast<size_t>(this->get_chrom_sizes()[chrom_idx]);
+  const auto chrom_size = static_cast<usize>(this->get_chrom_sizes()[chrom_idx]);
   if (chrom_boundaries.second > chrom_size) {
     chrom_boundaries.second = chrom_size;
   }
 
   assert(chrom_boundaries.first < chrom_boundaries.second);  // NOLINT
   const auto bin_range = [&]() {
-    const auto first_bin_chrom = static_cast<size_t>(this->_idx_chrom_offset[chrom_idx]);
+    const auto first_bin_chrom = static_cast<usize>(this->_idx_chrom_offset[chrom_idx]);
     auto first_bin_range = first_bin_chrom + (chrom_boundaries.first / this->_bin_size);
     auto last_bin_range =
         first_bin_chrom + ((chrom_boundaries.second + this->_bin_size - 1) / this->_bin_size);
@@ -431,7 +429,7 @@ ContactMatrix<N> Cooler::cooler_to_cmatrix(std::string_view chrom_name, size_t n
   if (prefer_using_balanced_counts &&
       hdf5::has_dataset(*this->_fp, "bins/weight", this->_root_path)) {
     const auto &d = this->_datasets[BIN_WEIGHT];
-    uint8_t cis_only;  // NOLINT
+    u8 cis_only;  // NOLINT
     try {
       hdf5::read_attribute(d, "cis_only", cis_only);
     } catch (const std::runtime_error &e) {
@@ -458,9 +456,8 @@ ContactMatrix<N> Cooler::cooler_to_cmatrix(std::string_view chrom_name, size_t n
 }
 
 template <class N>
-ContactMatrix<N> Cooler::cooler_to_cmatrix(std::string_view chrom_name, size_t diagonal_width,
-                                           size_t bin_size,
-                                           std::pair<size_t, size_t> chrom_boundaries,
+ContactMatrix<N> Cooler::cooler_to_cmatrix(std::string_view chrom_name, usize diagonal_width,
+                                           usize bin_size, std::pair<usize, usize> chrom_boundaries,
                                            bool try_common_chrom_prefixes,
                                            bool prefer_using_balanced_counts) {
   assert(this->_bin_size != 0);  // NOLINT
@@ -477,8 +474,8 @@ ContactMatrix<N> Cooler::cooler_to_cmatrix(std::string_view chrom_name, size_t d
 
 template <class N>
 ContactMatrix<N> Cooler::cooler_to_cmatrix(std::pair<hsize_t, hsize_t> bin_range,
-                                           const std::vector<int64_t> &bin1_offset_idx,
-                                           size_t nrows, double scaling_factor,
+                                           const std::vector<i64> &bin1_offset_idx, usize nrows,
+                                           double scaling_factor,
                                            bool prefer_using_balanced_counts) {
   return this->cooler_to_cmatrix<N>(bin_range, absl::MakeConstSpan(bin1_offset_idx), nrows,
                                     scaling_factor, prefer_using_balanced_counts);
@@ -486,7 +483,7 @@ ContactMatrix<N> Cooler::cooler_to_cmatrix(std::pair<hsize_t, hsize_t> bin_range
 
 template <class N>
 ContactMatrix<N> Cooler::cooler_to_cmatrix(std::pair<hsize_t, hsize_t> bin_range,
-                                           absl::Span<const int64_t> bin1_offset_idx, size_t nrows,
+                                           absl::Span<const i64> bin1_offset_idx, usize nrows,
                                            double bias_scaling_factor,
                                            bool prefer_using_balanced_counts) {
   if (this->_datasets.empty()) {
@@ -497,9 +494,9 @@ ContactMatrix<N> Cooler::cooler_to_cmatrix(std::pair<hsize_t, hsize_t> bin_range
   assert(first_bin < last_bin);                            // NOLINT
   assert(last_bin <= first_bin + bin1_offset_idx.size());  // NOLINT
   ContactMatrix<N> cmatrix(nrows, last_bin - first_bin);
-  std::vector<int64_t> bin1_BUFF(nrows);
-  std::vector<int64_t> bin2_BUFF(nrows);
-  std::vector<int64_t> count_BUFF(nrows);
+  std::vector<i64> bin1_BUFF(nrows);
+  std::vector<i64> bin2_BUFF(nrows);
+  std::vector<i64> count_BUFF(nrows);
   std::vector<double> bin_weights;
 
   const auto &d = this->_datasets;
@@ -509,10 +506,10 @@ ContactMatrix<N> Cooler::cooler_to_cmatrix(std::pair<hsize_t, hsize_t> bin_range
     (void)hdf5::read_numbers(d[BIN_WEIGHT], bin_weights, static_cast<hsize_t>(first_bin));
   }
 
-  for (size_t i = 1; i < bin1_offset_idx.size(); ++i) {
+  for (usize i = 1; i < bin1_offset_idx.size(); ++i) {
     const auto file_offset = static_cast<hsize_t>(bin1_offset_idx[i - 1]);
     const auto buff_size =
-        std::min(static_cast<size_t>(bin1_offset_idx[i] - bin1_offset_idx[i - 1]), nrows);
+        std::min(static_cast<usize>(bin1_offset_idx[i] - bin1_offset_idx[i - 1]), nrows);
     if (buff_size == 0) {
       continue;
     }
@@ -521,8 +518,7 @@ ContactMatrix<N> Cooler::cooler_to_cmatrix(std::pair<hsize_t, hsize_t> bin_range
     bin2_BUFF.resize(buff_size);
     count_BUFF.resize(buff_size);
 
-    assert(static_cast<int64_t>(file_offset + buff_size) <=
-           this->_idx_bin1_offset.back());  // NOLINT
+    assert(static_cast<i64>(file_offset + buff_size) <= this->_idx_bin1_offset.back());  // NOLINT
     (void)hdf5::read_numbers(d[PXL_B1], bin1_BUFF, file_offset);
     (void)hdf5::read_numbers(d[PXL_B2], bin2_BUFF, file_offset);
     (void)hdf5::read_numbers(d[PXL_COUNT], count_BUFF, file_offset);
@@ -531,7 +527,7 @@ ContactMatrix<N> Cooler::cooler_to_cmatrix(std::pair<hsize_t, hsize_t> bin_range
     assert(bin2_BUFF.size() == buff_size);   // NOLINT
     assert(count_BUFF.size() == buff_size);  // NOLINT
 
-    for (size_t j = 0; j < buff_size; ++j) {
+    for (usize j = 0; j < buff_size; ++j) {
       assert(count_BUFF[j] != 0);  // NOLINT
       DISABLE_WARNING_PUSH
       DISABLE_WARNING_SIGN_CONVERSION

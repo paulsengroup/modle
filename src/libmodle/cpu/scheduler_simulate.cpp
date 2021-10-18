@@ -20,8 +20,6 @@
 #include <cassert>                          // for assert
 #include <chrono>                           // for microseconds, milliseconds
 #include <cmath>                            // for round
-#include <cstddef>                          // for size_t
-#include <cstdint>                          // for uint64_t
 #include <deque>                            // for deque, operator-, operator!=, _Deque_ite...
 #include <exception>                        // for exception_ptr, exception, current_exception
 #include <iterator>                         // for move_iterator, make_move_iterator
@@ -33,6 +31,7 @@
 #include <utility>                          // for pair
 #include <vector>                           // for vector
 
+#include "modle/common/common.hpp"  // for u64
 #include "modle/genome.hpp"         // for Chromosome, Genome
 #include "modle/interval_tree.hpp"  // for IITree, IITree::data
 
@@ -67,16 +66,16 @@ void Simulation::run_simulate() {
   // few numbers, a pointer and a Span (i.e. ptr + size)
 
   std::mutex progress_queue_mutex;  // Protect rw access to progress_queue
-  std::deque<std::pair<Chromosome*, size_t>> progress_queue;
+  std::deque<std::pair<Chromosome*, usize>> progress_queue;
 
-  const auto task_batch_size_deq = [this]() -> size_t {
+  const auto task_batch_size_deq = [this]() -> usize {
     if (this->num_cells <= this->nthreads) {
       return 1;
     }
     return std::min(16UL, this->num_cells / this->nthreads);  // NOLINT
   }();
-  const size_t task_batch_size_enq = 2 * task_batch_size_deq;  // NOLINTNEXTLINE
-  const size_t queue_capacity = 2 * this->nthreads * task_batch_size_deq;
+  const usize task_batch_size_enq = 2 * task_batch_size_deq;  // NOLINTNEXTLINE
+  const usize queue_capacity = 2 * this->nthreads * task_batch_size_deq;
   // Queue used to submit simulation tasks to the thread pool
   moodycamel::BlockingConcurrentQueue<Simulation::Task> task_queue(queue_capacity, 1, 0);
   moodycamel::ProducerToken ptok(task_queue);
@@ -86,7 +85,7 @@ void Simulation::run_simulate() {
       this->write_contacts_to_disk(progress_queue, progress_queue_mutex);
     });
 
-    for (uint64_t tid = 0; tid < this->nthreads; ++tid) {  // Start simulation threads
+    for (u64 tid = 0; tid < this->nthreads; ++tid) {  // Start simulation threads
       this->_tpool.push_task([&, tid]() {
         this->simulate_worker(tid, task_queue, progress_queue, progress_queue_mutex,
                               task_batch_size_deq);
@@ -97,7 +96,7 @@ void Simulation::run_simulate() {
     // have been completed, and contacts have been written to disk
 
     absl::FixedArray<Task> tasks(task_batch_size_enq);
-    size_t taskid = 0;
+    usize taskid = 0;
 
     // Loop over chromosomes
     for (auto& chrom : this->_genome) {
@@ -122,25 +121,25 @@ void Simulation::run_simulate() {
       }
 
       // Compute # of LEFs to be simulated based on chrom. sizes
-      const auto nlefs = static_cast<size_t>(
+      const auto nlefs = static_cast<usize>(
           std::max(1.0, std::round(this->number_of_lefs_per_mbp *
                                    (static_cast<double>(chrom.simulated_size()) / Mbp))));
 
-      size_t target_contacts = 0;
+      usize target_contacts = 0;
       // Compute the number of simulation rounds required to reach the target contact density
       if (this->target_contact_density != 0.0) {
-        target_contacts = static_cast<size_t>(std::max(
+        target_contacts = static_cast<usize>(std::max(
             1.0,
             std::round((this->target_contact_density *
                         static_cast<double>(chrom.npixels(this->diagonal_width, this->bin_size))) /
                        static_cast<double>(this->num_cells))));
       }
       auto target_epochs = target_contacts == 0UL ? this->simulation_iterations
-                                                  : (std::numeric_limits<size_t>::max)();
+                                                  : (std::numeric_limits<usize>::max)();
 
-      size_t cellid = 0;
+      usize cellid = 0;
       const auto nbatches = (this->num_cells + task_batch_size_enq - 1) / task_batch_size_enq;
-      for (size_t batchid = 0; batchid < nbatches; ++batchid) {
+      for (usize batchid = 0; batchid < nbatches; ++batchid) {
         // Generate a batch of tasks for all the simulations involving the current chrom
         std::generate(tasks.begin(), tasks.end(), [&]() {
           return Task{{taskid++, &chrom, cellid++, target_epochs, target_contacts, nlefs,
@@ -175,10 +174,10 @@ void Simulation::run_simulate() {
   }
 }
 
-void Simulation::simulate_worker(const uint64_t tid,
+void Simulation::simulate_worker(const u64 tid,
                                  moodycamel::BlockingConcurrentQueue<Simulation::Task>& task_queue,
-                                 std::deque<std::pair<Chromosome*, size_t>>& progress_queue,
-                                 std::mutex& progress_queue_mutex, const size_t task_batch_size) {
+                                 std::deque<std::pair<Chromosome*, usize>>& progress_queue,
+                                 std::mutex& progress_queue_mutex, const usize task_batch_size) {
   spdlog::info(FMT_STRING("Spawning simulation thread {}..."), tid);
 
   moodycamel::ConsumerToken ctok(task_queue);
@@ -218,7 +217,7 @@ void Simulation::simulate_worker(const uint64_t tid,
 
         if (task.cell_id == 0) {
           // Print a status update when we are processing cell #0 for a given chromosome
-          const auto target_epochs = static_cast<size_t>(std::max(
+          const auto target_epochs = static_cast<usize>(std::max(
               1.0, std::round(
                        (this->target_contact_density * static_cast<double>(task.chrom->npixels(
                                                            this->diagonal_width, this->bin_size))) /

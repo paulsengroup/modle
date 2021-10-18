@@ -20,7 +20,6 @@
 #include <boost/filesystem/path.hpp>        // for path, operator<<
 #include <cassert>                          // for assert
 #include <cmath>                            // for round
-#include <cstdint>                          // for int64_t
 #include <cstdio>                           // for stderr
 #include <exception>                        // for exception
 #include <limits>                           // for numeric_limits
@@ -29,7 +28,7 @@
 #include <string>                           // for allocator, string, basic_string
 #include <vector>                           // for vector
 
-#include "modle/common/common.hpp"  // for bp_t, modle_version_long
+#include "modle/common/common.hpp"  // for bp_t, i64, modle_version_long
 #include "modle/common/config.hpp"  // for Config
 #include "modle/common/utils.hpp"   // for str_float_to_str_int, parse_numeric_or_throw
 #include "modle/cooler.hpp"         // for Cooler
@@ -37,7 +36,7 @@
 namespace modle {
 
 static std::string is_odd_number(std::string_view s) {
-  int64_t n;  // NOLINT
+  i64 n;  // NOLINT
   try {
     utils::parse_numeric_or_throw(s, n);
   } catch (const std::exception& e) {
@@ -579,7 +578,7 @@ const Config& Cli::parse_arguments() {
 
   this->validate_args();
   this->transform_args();
-  this->_config.args = absl::MakeSpan(_argv, static_cast<size_t>(_argc));
+  this->_config.args = absl::MakeSpan(_argv, static_cast<usize>(_argc));
 
   this->_config.argv_json = this->to_json();
   return this->_config;

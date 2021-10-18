@@ -22,7 +22,7 @@
 #include <boost/filesystem/operations.hpp>   // for exists, is_directory, is_regular_file, status
 #include <boost/filesystem/path.hpp>         // for path, operator<<, path::iterator, operator==
 #include <cassert>                           // for assert
-#include <cstdio>                            // for size_t
+#include <cstdio>                            // for usize
 #include <exception>                         // for exception
 #include <initializer_list>                  // for initializer_list
 #include <ostream>                           // for streamsize, stringstream, basic_ostream
@@ -46,7 +46,7 @@ void Cli::make_eval_subcommand() {
                                   "Compare MoDLE's output with other contact matrices using "
                                   "various correlation tests.")
                   ->fallthrough()
-                  ->preparse_callback([this]([[maybe_unused]] size_t i) {
+                  ->preparse_callback([this]([[maybe_unused]] usize i) {
                     assert(this->_config.index() == 0);  // NOLINT empty variant
                     this->_config = eval_config{};
                   });
@@ -178,7 +178,7 @@ void Cli::make_filter_barriers_subcommand() {
       *this->_cli
            .add_subcommand("filter-barriers", "Filter extrusion barriers to be used by MoDLE.")
            ->fallthrough()
-           ->preparse_callback([this]([[maybe_unused]] size_t i) {
+           ->preparse_callback([this]([[maybe_unused]] usize i) {
              assert(this->_config.index() == 0);  // NOLINT empty variant
              this->_config = filter_barrier_config{};
            });
@@ -241,7 +241,7 @@ void Cli::make_find_barrier_clusters_subcommand() {
                   .add_subcommand("find-barrier-clusters",
                                   "Detect clusters of extrusion barriers given a BED file.")
                   ->fallthrough()
-                  ->preparse_callback([this]([[maybe_unused]] size_t i) {
+                  ->preparse_callback([this]([[maybe_unused]] usize i) {
                     assert(this->_config.index() == 0);  // NOLINT empty variant
                     this->_config = find_barrier_clusters_config{};
                   });
@@ -334,7 +334,7 @@ void Cli::make_noisify_subcommand() {
       *this->_cli
            .add_subcommand("noisify", "Add noise to MoDLE's contact matrix in Cooler format.")
            ->fallthrough()
-           ->preparse_callback([this]([[maybe_unused]] size_t i) {
+           ->preparse_callback([this]([[maybe_unused]] usize i) {
              assert(this->_config.index() == 0);  // NOLINT empty variant
              this->_config = noisify_config{};
            });
@@ -416,7 +416,7 @@ void Cli::make_stats_subcommand() {
                   .add_subcommand("statistics",
                                   "Compute several useful statistics for a given Cooler file.")
                   ->fallthrough()
-                  ->preparse_callback([this]([[maybe_unused]] size_t i) {
+                  ->preparse_callback([this]([[maybe_unused]] usize i) {
                     assert(this->_config.index() == 0);  // NOLINT empty variant
                     this->_config = stats_config{};
                   });

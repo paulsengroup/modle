@@ -27,14 +27,14 @@
 
 #include <algorithm>    // for max
 #include <cassert>      // for assert
-#include <cstddef>      // for size_t
-#include <cstdint>      // for int64_t
 #include <cstdio>       // for fclose, fseek, tmpfile, ferror, fread, ftell, FILE
 #include <memory>       // for unique_ptr
 #include <stdexcept>    // for runtime_error
 #include <string>       // for string, basic_string
 #include <string_view>  // for string_view
 #include <vector>       // for vector
+
+#include "modle/common/common.hpp"  // for i64
 
 namespace modle::hdf5 {
 
@@ -49,7 +49,7 @@ std::string construct_error_stack(std::string_view function_name, std::string_vi
       return "hdf5::construct_error_stack(): unable to determine buffer size required to store an "
              "error message";
     }
-    auto buff_size = static_cast<size_t>(buff_capacity);
+    auto buff_size = static_cast<usize>(buff_capacity);
     buff.resize(buff_size);
     if (fseek(fp.get(), 0L, SEEK_SET) != 0) {
       return "hdf5::construct_error_stack(): failed to seek to the beginning to a temporary file";
@@ -158,15 +158,15 @@ std::string read_attribute_str(std::string_view path_to_file, std::string_view a
   return buff;
 }
 
-int64_t read_attribute_int(H5::H5File &f, std::string_view attr_name, std::string_view path) {
-  int64_t buff;  // NOLINT
+i64 read_attribute_int(H5::H5File &f, std::string_view attr_name, std::string_view path) {
+  i64 buff;  // NOLINT
   read_attribute(f, attr_name, buff, path);
   return buff;
 }
 
-int64_t read_attribute_int(std::string_view path_to_file, std::string_view attr_name,
-                           std::string_view path) {
-  int64_t buff;  // NOLINT
+i64 read_attribute_int(std::string_view path_to_file, std::string_view attr_name,
+                       std::string_view path) {
+  i64 buff;  // NOLINT
   H5::H5File f({path_to_file.data(), path_to_file.size()}, H5F_ACC_RDONLY);
   read_attribute(f, attr_name, buff, path);
   return buff;
@@ -193,7 +193,7 @@ bool has_group(H5::H5File &f, std::string_view name, std::string_view root_path)
   const auto path =
       absl::StrCat(absl::StripSuffix(root_path, "/"), "/", absl::StripPrefix(name, "/"));
   assert(!path.empty());  // NOLINT
-  size_t pos = 0;
+  usize pos = 0;
   do {
     pos = path.find_first_of('/', pos + 1);
     if (!f.nameExists(std::string{path.substr(0, pos)})) {
@@ -213,7 +213,7 @@ bool has_dataset(H5::H5File &f, std::string_view name, std::string_view root_pat
   const auto path =
       absl::StrCat(absl::StripSuffix(root_path, "/"), "/", absl::StripPrefix(name, "/"));
   assert(!path.empty());  // NOLINT
-  size_t pos = 0;
+  usize pos = 0;
   do {
     pos = path.find_first_of('/', pos + 1);
     if (!f.nameExists(std::string{path.substr(0, pos)})) {

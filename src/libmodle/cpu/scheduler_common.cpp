@@ -22,8 +22,6 @@
 #include <algorithm>                    // for min, max, for_each
 #include <boost/filesystem/path.hpp>    // for operator<<, path
 #include <cassert>                      // for assert
-#include <cstddef>                      // for size_t
-#include <cstdint>                      // for uint32_t, uint8_t
 #include <exception>                    // for exception, rethrow_exception
 #include <iosfwd>                       // for streamsize
 #include <stdexcept>                    // for runtime_error
@@ -32,6 +30,7 @@
 #include <vector>                       // for vector
 
 #include "modle/bed.hpp"                 // for BED_tree, BED_tree::size, BED, BED::BED3, BED_...
+#include "modle/common/common.hpp"       // for u32, u8
 #include "modle/common/utils.hpp"        // for parse_numeric_or_throw
 #include "modle/compressed_io.hpp"       // for Reader
 #include "modle/extrusion_barriers.hpp"  // for ExtrusionBarrier
@@ -127,18 +126,18 @@ bool Simulation::map_barriers_to_window(TaskPW& base_task, const Chromosome& chr
   return true;
 }
 
-absl::flat_hash_set<size_t> Simulation::import_task_filter(
+absl::flat_hash_set<usize> Simulation::import_task_filter(
     const boost::filesystem::path& path_to_task_filter) {
   if (path_to_task_filter.empty()) {
-    return absl::flat_hash_set<size_t>{};
+    return absl::flat_hash_set<usize>{};
   }
 
   compressed_io::Reader r(path_to_task_filter);
   std::string buff;
-  size_t i = 0;
-  absl::flat_hash_set<size_t> tasks;
+  usize i = 0;
+  absl::flat_hash_set<usize> tasks;
   try {
-    size_t id;  // NOLINT
+    usize id;  // NOLINT
     for (; r.getline(buff); ++i) {
       utils::parse_numeric_or_throw(buff, id);
       if (tasks.contains(id)) {

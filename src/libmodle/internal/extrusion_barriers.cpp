@@ -145,7 +145,7 @@ void CTCF::update_states(absl::Span<const ExtrusionBarrier> extr_barriers,
                          boost::dynamic_bitset<>& mask,
                          random::PRNG_t& rand_eng) noexcept(utils::ndebug_defined()) {
   assert(extr_barriers.size() == mask.size());  // NOLINT
-  for (size_t i = 0; i < extr_barriers.size(); ++i) {
+  for (usize i = 0; i < extr_barriers.size(); ++i) {
     // NOLINTNEXTLINE(readability-implicit-bool-conversion)
     mask[i] = CTCF::next_state(mask[i] ? CTCF::OCCUPIED : CTCF::NOT_OCCUPIED,
                                extr_barriers[i].prob_occupied_to_occupied(),

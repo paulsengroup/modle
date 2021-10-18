@@ -9,8 +9,6 @@
 #include <array>                             // for array
 #include <boost/filesystem/file_status.hpp>  // for regular_file, file_type
 #include <boost/filesystem/path.hpp>         // for path
-#include <cstddef>                           // for size_t
-#include <cstdint>                           // for int64_t, uint64_t
 #include <cstdio>                            // for FILE
 #include <string>                            // for string
 #include <string_view>                       // for string_view
@@ -18,6 +16,8 @@
 #include <type_traits>                       // for declval
 #include <utility>                           // for pair
 #include <vector>                            // for vector
+
+#include "modle/common/common.hpp"  // for i64, u64
 
 namespace modle::utils {
 
@@ -31,24 +31,23 @@ template <typename N>
 inline N parse_numeric_or_throw(std::string_view tok);
 
 template <typename N>
-inline void parse_numeric_or_throw(const std::vector<std::string_view>& toks, size_t idx, N& field);
+inline void parse_numeric_or_throw(const std::vector<std::string_view>& toks, usize idx, N& field);
 
 template <typename N>
-inline void parse_vect_of_numbers_or_throw(const std::vector<std::string_view>& toks, size_t idx,
-                                           std::vector<N>& fields, uint64_t expected_size);
+inline void parse_vect_of_numbers_or_throw(const std::vector<std::string_view>& toks, usize idx,
+                                           std::vector<N>& fields, u64 expected_size);
 
 template <typename N>
-inline void throw_except_from_errc(std::string_view tok, size_t idx, const N& field, const char* c,
+inline void throw_except_from_errc(std::string_view tok, usize idx, const N& field, const char* c,
                                    std::errc e);
 
 [[nodiscard]] inline bool chrom_equal_operator(std::string_view chr1, std::string_view chr2);
-[[nodiscard]] inline bool chrom_equal_operator(const std::pair<std::string_view, int64_t>& chr1,
-                                               const std::pair<std::string_view, int64_t>& chr2);
+[[nodiscard]] inline bool chrom_equal_operator(const std::pair<std::string_view, i64>& chr1,
+                                               const std::pair<std::string_view, i64>& chr2);
 
 [[nodiscard]] inline bool chrom_less_than_operator(std::string_view chr1, std::string_view chr2);
-[[nodiscard]] inline bool chrom_less_than_operator(
-    const std::pair<std::string_view, int64_t>& chr1,
-    const std::pair<std::string_view, int64_t>& chr2);
+[[nodiscard]] inline bool chrom_less_than_operator(const std::pair<std::string_view, i64>& chr1,
+                                                   const std::pair<std::string_view, i64>& chr2);
 
 // Typetraits stuff
 
@@ -109,7 +108,7 @@ struct identity {
 #endif
 
 // Source: https://www.youtube.com/watch?v=INn3xa4pMfg
-template <class Key, class Value, size_t Size>
+template <class Key, class Value, usize Size>
 class ConstMap {
   std::array<std::pair<Key, Value>, Size> _buff;
 

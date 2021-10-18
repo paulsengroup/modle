@@ -15,8 +15,6 @@
 #include <algorithm>    // for max, max_element, find_if
 #include <cassert>      // for assert
 #include <cmath>        // for round
-#include <cstddef>      // for size_t
-#include <cstdint>      // for uint32_t, uint64_t, uint8_t
 #include <exception>    // for exception
 #include <iosfwd>       // for streamsize
 #include <memory>       // for shared_ptr, __shared_ptr_access
@@ -29,7 +27,7 @@
 
 #include "modle/bed.hpp"                                // for BED, Parser, BED_tree, BED_tree::at
 #include "modle/chrom_sizes.hpp"                        // for Parser
-#include "modle/common/common.hpp"                      // for bp_t
+#include "modle/common/common.hpp"                      // for bp_t, u32, u64, u8
 #include "modle/common/suppress_compiler_warnings.hpp"  // for DISABLE_WARNING_PUSH, DISABLE_WAR...
 #include "modle/common/utils.hpp"                       // for XXH3_Deleter, ndebug_defined, XXH...
 #include "modle/contacts.hpp"                           // for ContactMatrix
@@ -37,12 +35,12 @@
 
 namespace modle {
 
-Chromosome::Chromosome(size_t id, const bed::BED& chrom,
+Chromosome::Chromosome(usize id, const bed::BED& chrom,
                        const IITree<bp_t, ExtrusionBarrier>& barriers, bool ok_)
     : Chromosome(id, chrom.chrom, chrom.thick_start, chrom.thick_end, chrom.size(), barriers, ok_) {
 }
 
-Chromosome::Chromosome(size_t id, const bed::BED& chrom, bool ok_)
+Chromosome::Chromosome(usize id, const bed::BED& chrom, bool ok_)
     : _name(chrom.chrom),
       _start(chrom.chrom_start),
       _end(chrom.chrom_end),
@@ -50,7 +48,7 @@ Chromosome::Chromosome(size_t id, const bed::BED& chrom, bool ok_)
       _id(id),
       _ok(ok_) {}
 
-Chromosome::Chromosome(size_t id, const bed::BED& chrom, IITree<bp_t, ExtrusionBarrier>&& barriers,
+Chromosome::Chromosome(usize id, const bed::BED& chrom, IITree<bp_t, ExtrusionBarrier>&& barriers,
                        bool ok_)
     : Chromosome(id, chrom.chrom, chrom.thick_start, chrom.thick_end, chrom.size(), barriers, ok_) {
 }
@@ -58,7 +56,7 @@ Chromosome::Chromosome(size_t id, const bed::BED& chrom, IITree<bp_t, ExtrusionB
 DISABLE_WARNING_PUSH
 DISABLE_WARNING_SIGN_CONVERSION
 DISABLE_WARNING_CONVERSION
-Chromosome::Chromosome(size_t id, std::string_view chrom_name, bp_t chrom_start, bp_t chrom_end,
+Chromosome::Chromosome(usize id, std::string_view chrom_name, bp_t chrom_start, bp_t chrom_end,
                        bp_t chrom_size, bool ok_)
     : _name(chrom_name),
       _start(chrom_start),
@@ -70,7 +68,7 @@ Chromosome::Chromosome(size_t id, std::string_view chrom_name, bp_t chrom_start,
   assert(chrom_end - chrom_start <= chrom_size);  // NOLINT
 }
 
-Chromosome::Chromosome(size_t id, std::string_view chrom_name, bp_t chrom_start, bp_t chrom_end,
+Chromosome::Chromosome(usize id, std::string_view chrom_name, bp_t chrom_start, bp_t chrom_end,
                        bp_t chrom_size, const IITree<bp_t, ExtrusionBarrier>& barriers, bool ok_)
     : _name(chrom_name),
       _start(chrom_start),
@@ -85,7 +83,7 @@ Chromosome::Chromosome(size_t id, std::string_view chrom_name, bp_t chrom_start,
   _barriers.make_BST();
 }
 
-Chromosome::Chromosome(size_t id, std::string_view chrom_name, bp_t chrom_start, bp_t chrom_end,
+Chromosome::Chromosome(usize id, std::string_view chrom_name, bp_t chrom_start, bp_t chrom_end,
                        bp_t chrom_size, IITree<bp_t, ExtrusionBarrier>&& barriers, bool ok_)
     : _name(chrom_name),
       _start(chrom_start),
@@ -168,7 +166,7 @@ Chromosome& Chromosome::operator=(Chromosome&& other) noexcept {
 }
 
 bool Chromosome::operator==(const Chromosome& other) const noexcept(utils::ndebug_defined()) {
-  if (this->_id == (std::numeric_limits<size_t>::max)()) {
+  if (this->_id == (std::numeric_limits<usize>::max)()) {
     return this->name() == other.name() && this->size() == other.size();
   }
   return this->_id == other._id;
@@ -179,8 +177,8 @@ bool Chromosome::operator==(std::string_view other_name) const noexcept {
 }
 
 bool Chromosome::operator<(const Chromosome& other) const noexcept(utils::ndebug_defined()) {
-  if (this->_id != (std::numeric_limits<size_t>::max)() &&
-      other._id != (std::numeric_limits<size_t>::max)()) {
+  if (this->_id != (std::numeric_limits<usize>::max)() &&
+      other._id != (std::numeric_limits<usize>::max)()) {
     return this->_id < other._id;
   }
 
@@ -218,16 +216,16 @@ void Chromosome::add_extrusion_barrier(const bed::BED& record, const double ctcf
   }
 }
 
-size_t Chromosome::id() const { return this->_id; }
+usize Chromosome::id() const { return this->_id; }
 std::string_view Chromosome::name() const { return this->_name; }
 const char* Chromosome::name_cstr() const { return this->_name.c_str(); }
 
 bool Chromosome::ok() const { return this->_ok; }
 
-size_t Chromosome::num_lefs(double nlefs_per_mbp) const {  // NOLINTNEXTLINE
-  return static_cast<size_t>((static_cast<double>(this->simulated_size()) / 1.0e6) * nlefs_per_mbp);
+usize Chromosome::num_lefs(double nlefs_per_mbp) const {  // NOLINTNEXTLINE
+  return static_cast<usize>((static_cast<double>(this->simulated_size()) / 1.0e6) * nlefs_per_mbp);
 }
-size_t Chromosome::num_barriers() const { return this->_barriers.size(); }
+usize Chromosome::num_barriers() const { return this->_barriers.size(); }
 
 const IITree<bp_t, ExtrusionBarrier>& Chromosome::barriers() const { return this->_barriers; }
 IITree<bp_t, ExtrusionBarrier>& Chromosome::barriers() { return this->_barriers; }
@@ -286,7 +284,7 @@ std::shared_ptr<Chromosome::contact_matrix_t> Chromosome::contacts_ptr() {
   return nullptr;
 }
 
-uint64_t Chromosome::hash(XXH3_state_t* const xxh_state, uint64_t seed, size_t cell_id) const {
+u64 Chromosome::hash(XXH3_state_t* const xxh_state, u64 seed, usize cell_id) const {
   auto handle_errors = [&](const auto& status) {
     if (status == XXH_ERROR || !xxh_state) {
       throw std::runtime_error(
@@ -305,11 +303,11 @@ uint64_t Chromosome::hash(XXH3_state_t* const xxh_state, uint64_t seed, size_t c
 
   DISABLE_WARNING_PUSH
   DISABLE_WARNING_USELESS_CAST
-  return static_cast<uint64_t>(XXH3_64bits_digest(xxh_state));
+  return static_cast<u64>(XXH3_64bits_digest(xxh_state));
   DISABLE_WARNING_POP
 }
 
-uint64_t Chromosome::hash(uint64_t seed, size_t cell_id) const {
+u64 Chromosome::hash(u64 seed, usize cell_id) const {
   std::unique_ptr<XXH3_state_t, utils::XXH3_Deleter> xxh_state{XXH3_createState()};
   return this->hash(xxh_state.get(), seed, cell_id);
 }
@@ -348,7 +346,7 @@ absl::btree_set<Chromosome> Genome::import_chromosomes(
   // available, then only chromosomes that are present in both files will be selected. Furthermore
   // we are also checking that the subrange lies within the genomic coordinates specified in the
   // chrom. sizes file
-  size_t id = 0;
+  usize id = 0;
   absl::btree_set<Chromosome> chromosomes;
   if (path_to_chrom_subranges.empty()) {
     for (auto record : chrom_sizes::Parser(path_to_chrom_sizes).parse_all()) {
@@ -407,17 +405,17 @@ absl::btree_set<Chromosome> Genome::import_chromosomes(
   return chromosomes;
 }
 
-size_t Genome::import_barriers(absl::btree_set<Chromosome>& chromosomes,
-                               const boost::filesystem::path& path_to_extr_barriers,
-                               const double ctcf_prob_occ_to_occ,
-                               const double ctcf_prob_nocc_to_nocc) {
+usize Genome::import_barriers(absl::btree_set<Chromosome>& chromosomes,
+                              const boost::filesystem::path& path_to_extr_barriers,
+                              const double ctcf_prob_occ_to_occ,
+                              const double ctcf_prob_nocc_to_nocc) {
   assert(!chromosomes.empty());            // NOLINT
   assert(!path_to_extr_barriers.empty());  // NOLINT
 
   const auto t0 = absl::Now();
   spdlog::info(FMT_STRING("Importing extrusion barriers from file {}..."), path_to_extr_barriers);
 
-  size_t tot_num_barriers = 0;
+  usize tot_num_barriers = 0;
 
   // Parse all the records from the BED file. The parser will throw in case of duplicates.
   const auto barriers =
@@ -443,15 +441,15 @@ size_t Genome::import_barriers(absl::btree_set<Chromosome>& chromosomes,
   return tot_num_barriers;
 }
 
-size_t Genome::import_extra_features(absl::btree_set<Chromosome>& chromosomes,
-                                     const boost::filesystem::path& path_to_extra_features) {
+usize Genome::import_extra_features(absl::btree_set<Chromosome>& chromosomes,
+                                    const boost::filesystem::path& path_to_extra_features) {
   assert(!chromosomes.empty());             // NOLINT
   assert(!path_to_extra_features.empty());  // NOLINT
 
   const auto t0 = absl::Now();
   spdlog::info(FMT_STRING("Importing features from the following file: {}..."),
                path_to_extra_features);
-  size_t num_features = 0;
+  usize num_features = 0;
 
   // Parse all the records from the BED file. The parser will throw in case of duplicates.
   const auto features = bed::Parser(path_to_extra_features, bed::BED::Dialect::autodetect)
@@ -540,18 +538,18 @@ bool Genome::contains(std::string_view other_chrom_name) const {
   return this->find(other_chrom_name) != this->end();
 }
 
-size_t Genome::size() const {
+usize Genome::size() const {
   return std::accumulate(
       this->_chromosomes.begin(), this->_chromosomes.end(), 0UL,
       [](auto accumulator, const auto& chrom) { return accumulator + chrom.size(); });
 }
 
-size_t Genome::number_of_chromosomes() const {
-  return static_cast<size_t>(this->_chromosomes.size());
+usize Genome::number_of_chromosomes() const {
+  return static_cast<usize>(this->_chromosomes.size());
 }
 
-size_t Genome::simulated_size() const {
-  return std::accumulate(this->_chromosomes.begin(), this->_chromosomes.end(), size_t(0),
+usize Genome::simulated_size() const {
+  return std::accumulate(this->_chromosomes.begin(), this->_chromosomes.end(), usize(0),
                          [](auto accumulator, const auto& chrom) {
                            return accumulator + (chrom.end_pos() - chrom.start_pos());
                          });
@@ -578,15 +576,15 @@ const Chromosome& Genome::chromosome_with_max_nbarriers() const {
       [&](const auto& c1, const auto& c2) { return c1.num_barriers() < c2.num_barriers(); });
 }
 
-size_t Genome::max_target_contacts(size_t bin_size, size_t diagonal_width,
-                                   double target_contact_density, size_t simulation_iterations,
-                                   double lef_fraction_contact_sampling, double nlefs_per_mbp,
-                                   size_t ncells) const {
+usize Genome::max_target_contacts(usize bin_size, usize diagonal_width,
+                                  double target_contact_density, usize simulation_iterations,
+                                  double lef_fraction_contact_sampling, double nlefs_per_mbp,
+                                  usize ncells) const {
   const auto& chrom = this->longest_chromosome();
   if (target_contact_density == 0.0) {
-    const auto nlefs = static_cast<size_t>(
+    const auto nlefs = static_cast<usize>(
         std::round(nlefs_per_mbp * (static_cast<double>(chrom.simulated_size()) / 1.0e6)));
-    return static_cast<size_t>(
+    return static_cast<usize>(
         (static_cast<double>(simulation_iterations * nlefs) * lef_fraction_contact_sampling) /
         static_cast<double>(ncells));
   }
@@ -594,8 +592,8 @@ size_t Genome::max_target_contacts(size_t bin_size, size_t diagonal_width,
   const auto npixels = ((chrom.simulated_size() + bin_size - 1) / bin_size) *
                        ((diagonal_width + bin_size - 1) / bin_size);
 
-  return static_cast<size_t>(std::round((static_cast<double>(npixels) * target_contact_density) /
-                                        static_cast<double>(ncells)));
+  return static_cast<usize>(std::round((static_cast<double>(npixels) * target_contact_density) /
+                                       static_cast<double>(ncells)));
 }
 
 }  // namespace modle

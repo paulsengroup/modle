@@ -9,7 +9,6 @@
 #include <absl/types/span.h>  // for MakeConstSpan, Span
 
 #include <algorithm>    // for sort
-#include <cstddef>      // IWYU pragma: keep for size_t
 #include <numeric>      // for iota
 #include <type_traits>  // for is_arithmetic
 #include <vector>       // for vector
@@ -20,21 +19,21 @@ namespace modle::correlation::utils {
 
 // Return the indices corresponding to the sorted vector
 template <typename N>
-std::vector<size_t> sort_range_by_idx(absl::Span<const N> v) {
+std::vector<usize> sort_range_by_idx(absl::Span<const N> v) {
   static_assert(std::is_arithmetic<N>::value,
                 "v should be convertible to a span of numeric types.");
-  std::vector<size_t> vi(v.size());
+  std::vector<usize> vi(v.size());
   std::iota(vi.begin(), vi.end(), 0);
 
   DISABLE_WARNING_PUSH
   DISABLE_WARNING_SIGN_CONVERSION
-  std::sort(vi.begin(), vi.end(), [&](size_t i1, size_t i2) { return v[i1] < v[i2]; });
+  std::sort(vi.begin(), vi.end(), [&](usize i1, usize i2) { return v[i1] < v[i2]; });
   DISABLE_WARNING_POP
   return vi;
 }
 
 template <typename N>
-std::vector<size_t> sort_range_by_idx(const std::vector<N>& v) {
+std::vector<usize> sort_range_by_idx(const std::vector<N>& v) {
   return sort_range_by_idx(absl::MakeConstSpan(v));
 }
 

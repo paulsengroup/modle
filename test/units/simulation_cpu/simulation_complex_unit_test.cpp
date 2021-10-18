@@ -7,7 +7,7 @@
 #include <boost/dynamic_bitset/dynamic_bitset.hpp>  // for dynamic_bitset
 #include <cassert>                                  // for assert
 #include <catch2/catch.hpp>                         // for SourceLineInfo, StringRef, TEST_CASE
-#include <cstddef>                                  // for size_t
+#include <cstddef>                                  // for usize
 #include <memory>                                   // for allocator, allocator_traits<>::value_...
 #include <string_view>                              // for string_view
 #include <vector>                                   // for vector
@@ -33,8 +33,8 @@ TEST_CASE("Simulation 001", "[simulation][short]") {
   c.probability_of_extrusion_unit_bypass = 0;  // NOLINT
   c.lef_hard_collision_pblock = 1;             // NOLINT
   c.lef_soft_collision_pblock = 0;             // NOLINT
-  const size_t nlefs = 7;
-  const size_t nbarriers = 5;
+  const usize nlefs = 7;
+  const usize nbarriers = 5;
   const Chromosome chrom{0, "chr1", 0, 1000, 1000};
   // NOLINTNEXTLINE(readability-magic-numbers, cppcoreguidelines-avoid-magic-numbers)
   auto rand_eng = random::PRNG(10556020843759504871ULL);
@@ -59,8 +59,8 @@ TEST_CASE("Simulation 001", "[simulation][short]") {
   boost::dynamic_bitset<> barrier_mask;
   barrier_mask.resize(nbarriers, static_cast<bool>(CTCF::State::OCCUPIED));
 
-  const std::vector<size_t> rev_ranks{0, 1, 2, 3, 4, 5, 6};  // NOLINT
-  const std::vector<size_t> fwd_ranks{0, 1, 2, 3, 4, 6, 5};  // NOLINT
+  const std::vector<usize> rev_ranks{0, 1, 2, 3, 4, 5, 6};  // NOLINT
+  const std::vector<usize> fwd_ranks{0, 1, 2, 3, 4, 6, 5};  // NOLINT
 
   std::vector<bp_t> rev_moves{25, 75, 75, 75, 75, 75, 75};  // NOLINT
   std::vector<bp_t> fwd_moves{75, 75, 75, 75, 75, 75, 75};  // NOLINT
@@ -117,8 +117,8 @@ TEST_CASE("Simulation 002", "[simulation][short]") {
   c.probability_of_extrusion_unit_bypass = 0;  // NOLINT
   c.lef_hard_collision_pblock = 1;             // NOLINT
   c.lef_soft_collision_pblock = 0;             // NOLINT
-  const size_t nlefs = 7;
-  const size_t nbarriers = 5;
+  const usize nlefs = 7;
+  const usize nbarriers = 5;
   const Chromosome chrom{0, "chr1", 0, 1000, 1000};
   // NOLINTNEXTLINE(readability-magic-numbers, cppcoreguidelines-avoid-magic-numbers)
   auto rand_eng = random::PRNG(9668495374385482848ULL);
@@ -143,8 +143,8 @@ TEST_CASE("Simulation 002", "[simulation][short]") {
   boost::dynamic_bitset<> barrier_mask;
   barrier_mask.resize(nbarriers, static_cast<bool>(CTCF::State::OCCUPIED));
 
-  const std::vector<size_t> rev_ranks{0, 1, 2, 3, 4, 5, 6};  // NOLINT
-  const std::vector<size_t> fwd_ranks{1, 0, 2, 3, 4, 5, 6};  // NOLINT
+  const std::vector<usize> rev_ranks{0, 1, 2, 3, 4, 5, 6};  // NOLINT
+  const std::vector<usize> fwd_ranks{1, 0, 2, 3, 4, 5, 6};  // NOLINT
 
   std::vector<bp_t> rev_moves{75, 75, 75, 75, 75, 75, 75};  // NOLINT
   std::vector<bp_t> fwd_moves{75, 75, 75, 75, 75, 75, 24};  // NOLINT
@@ -201,8 +201,8 @@ TEST_CASE("Simulation 003 - Soft collisions on", "[simulation][short]") {
   c.probability_of_extrusion_unit_bypass = 0;  // NOLINT
   c.lef_hard_collision_pblock = 1;             // NOLINT
   c.lef_soft_collision_pblock = 1;             // NOLINT
-  const size_t nlefs = 7;
-  const size_t nbarriers = 5;
+  const usize nlefs = 7;
+  const usize nbarriers = 5;
   const Chromosome chrom{0, "chr1", 0, 1000, 1000};
   // NOLINTNEXTLINE(readability-magic-numbers, cppcoreguidelines-avoid-magic-numbers)
   auto rand_eng = random::PRNG(919341715542527390ULL);
@@ -227,8 +227,8 @@ TEST_CASE("Simulation 003 - Soft collisions on", "[simulation][short]") {
   boost::dynamic_bitset<> barrier_mask;
   barrier_mask.resize(nbarriers, static_cast<bool>(CTCF::State::OCCUPIED));
 
-  const std::vector<size_t> rev_ranks{0, 1, 2, 3, 4, 5, 6};  // NOLINT
-  const std::vector<size_t> fwd_ranks{1, 0, 2, 3, 4, 5, 6};  // NOLINT
+  const std::vector<usize> rev_ranks{0, 1, 2, 3, 4, 5, 6};  // NOLINT
+  const std::vector<usize> fwd_ranks{1, 0, 2, 3, 4, 5, 6};  // NOLINT
 
   std::vector<bp_t> rev_moves{75, 75, 75, 75, 75, 75, 75};  // NOLINT
   std::vector<bp_t> fwd_moves{75, 75, 75, 75, 75, 75, 24};  // NOLINT
@@ -285,8 +285,8 @@ TEST_CASE("Simulation 004 - Inactive barriers", "[simulation][short]") {
   c.probability_of_extrusion_unit_bypass = 0;  // NOLINT
   c.lef_hard_collision_pblock = 1;             // NOLINT
   c.lef_soft_collision_pblock = 0;             // NOLINT
-  const size_t nlefs = 7;
-  const size_t nbarriers = 5;
+  const usize nlefs = 7;
+  const usize nbarriers = 5;
   const Chromosome chrom{0, "chr1", 0, 1000, 1000};
   // NOLINTNEXTLINE(readability-magic-numbers, cppcoreguidelines-avoid-magic-numbers)
   auto rand_eng = random::PRNG(138440880292496584ULL);
@@ -311,8 +311,8 @@ TEST_CASE("Simulation 004 - Inactive barriers", "[simulation][short]") {
   boost::dynamic_bitset<> barrier_mask;
   barrier_mask.resize(nbarriers, static_cast<bool>(CTCF::State::NOT_OCCUPIED));
 
-  const std::vector<size_t> rev_ranks{0, 1, 2, 3, 4, 5, 6};  // NOLINT
-  const std::vector<size_t> fwd_ranks{1, 0, 2, 3, 4, 5, 6};  // NOLINT
+  const std::vector<usize> rev_ranks{0, 1, 2, 3, 4, 5, 6};  // NOLINT
+  const std::vector<usize> fwd_ranks{1, 0, 2, 3, 4, 5, 6};  // NOLINT
 
   std::vector<bp_t> rev_moves{75, 75, 75, 75, 75, 75, 75};  // NOLINT
   std::vector<bp_t> fwd_moves{75, 75, 75, 75, 75, 75, 24};  // NOLINT
@@ -369,8 +369,8 @@ TEST_CASE("Simulation 005 - Multiple LEFs located at the same site", "[simulatio
   c.probability_of_extrusion_unit_bypass = 0;  // NOLINT
   c.lef_hard_collision_pblock = 1;             // NOLINT
   c.lef_soft_collision_pblock = 0;             // NOLINT
-  constexpr size_t nlefs = 6;
-  constexpr size_t nbarriers = 1;
+  constexpr usize nlefs = 6;
+  constexpr usize nbarriers = 1;
   const Chromosome chrom{0, "chr1", 0, 150, 150};  // NOLINT
   // NOLINTNEXTLINE(readability-magic-numbers, cppcoreguidelines-avoid-magic-numbers)
   auto rand_eng = random::PRNG(9509334554644345044ULL);
@@ -390,8 +390,8 @@ TEST_CASE("Simulation 005 - Multiple LEFs located at the same site", "[simulatio
   boost::dynamic_bitset<> barrier_mask;
   barrier_mask.resize(nbarriers, static_cast<bool>(CTCF::State::OCCUPIED));
 
-  const std::vector<size_t> rev_ranks{0, 1, 2, 3, 4, 5};  // NOLINT
-  const std::vector<size_t> fwd_ranks{0, 1, 2, 3, 4, 5};  // NOLINT
+  const std::vector<usize> rev_ranks{0, 1, 2, 3, 4, 5};  // NOLINT
+  const std::vector<usize> fwd_ranks{0, 1, 2, 3, 4, 5};  // NOLINT
 
   std::vector<bp_t> rev_moves{25, 25, 25, 25, 25, 25};  // NOLINT
   std::vector<bp_t> fwd_moves{25, 25, 25, 24,  8,  9};  // NOLINT
@@ -446,8 +446,8 @@ TEST_CASE("Simulation 006 - Few inactive LEFs", "[simulation][short]") {
   c.probability_of_extrusion_unit_bypass = 0;  // NOLINT
   c.lef_hard_collision_pblock = 1;             // NOLINT
   c.lef_soft_collision_pblock = 0;             // NOLINT
-  constexpr size_t nlefs = 6;
-  constexpr size_t nbarriers = 1;
+  constexpr usize nlefs = 6;
+  constexpr usize nbarriers = 1;
   const Chromosome chrom{0, "chr1", 0, 150, 150};  // NOLINT
   // NOLINTNEXTLINE(readability-magic-numbers, cppcoreguidelines-avoid-magic-numbers)
   auto rand_eng = random::PRNG(8213068426516999476ULL);
@@ -470,8 +470,8 @@ TEST_CASE("Simulation 006 - Few inactive LEFs", "[simulation][short]") {
   boost::dynamic_bitset<> barrier_mask;
   barrier_mask.resize(nbarriers, static_cast<bool>(CTCF::State::OCCUPIED));
 
-  const std::vector<size_t> rev_ranks{0, 1, 3, 4, 2, 5};  // NOLINT
-  const std::vector<size_t> fwd_ranks{0, 1, 3, 4, 2, 5};  // NOLINT
+  const std::vector<usize> rev_ranks{0, 1, 3, 4, 2, 5};  // NOLINT
+  const std::vector<usize> fwd_ranks{0, 1, 3, 4, 2, 5};  // NOLINT
 
   std::vector<bp_t> rev_moves{25, 25,  0, 25, 25,  0};  // NOLINT
   std::vector<bp_t> fwd_moves{25, 25,  0, 24,  9,  0};  // NOLINT
@@ -527,8 +527,8 @@ TEST_CASE("Simulation 007 - LEF-LEF collision overrides LEF-BAR collision 1",
   c.probability_of_extrusion_unit_bypass = 0;  // NOLINT
   c.lef_hard_collision_pblock = 1;             // NOLINT
   c.lef_soft_collision_pblock = 0;             // NOLINT
-  constexpr size_t nlefs = 2;
-  constexpr size_t nbarriers = 1;
+  constexpr usize nlefs = 2;
+  constexpr usize nbarriers = 1;
   const Chromosome chrom{0, "chr1", 0, 200, 200};  // NOLINT
   // NOLINTNEXTLINE(readability-magic-numbers, cppcoreguidelines-avoid-magic-numbers)
   auto rand_eng = random::PRNG(4003028292286930594ULL);
@@ -544,8 +544,8 @@ TEST_CASE("Simulation 007 - LEF-LEF collision overrides LEF-BAR collision 1",
   boost::dynamic_bitset<> barrier_mask;
   barrier_mask.resize(nbarriers, static_cast<bool>(CTCF::State::OCCUPIED));
 
-  const std::vector<size_t> rev_ranks{0, 1};  // NOLINT
-  const std::vector<size_t> fwd_ranks{0, 1};  // NOLINT
+  const std::vector<usize> rev_ranks{0, 1};  // NOLINT
+  const std::vector<usize> fwd_ranks{0, 1};  // NOLINT
 
   std::vector<bp_t> rev_moves{20, 20};  // NOLINT
   std::vector<bp_t> fwd_moves{20, 20};  // NOLINT
@@ -589,8 +589,8 @@ TEST_CASE("Simulation 008 - LEF-LEF collision overrides LEF-BAR collision 2",
   c.probability_of_extrusion_unit_bypass = 0;  // NOLINT
   c.lef_hard_collision_pblock = 1;             // NOLINT
   c.lef_soft_collision_pblock = 0;             // NOLINT
-  constexpr size_t nlefs = 2;
-  constexpr size_t nbarriers = 1;
+  constexpr usize nlefs = 2;
+  constexpr usize nbarriers = 1;
   const Chromosome chrom{0, "chr1", 0, 200, 200};  // NOLINT
   // NOLINTNEXTLINE(readability-magic-numbers, cppcoreguidelines-avoid-magic-numbers)
   auto rand_eng = random::PRNG(12931236264094635263ULL);
@@ -606,8 +606,8 @@ TEST_CASE("Simulation 008 - LEF-LEF collision overrides LEF-BAR collision 2",
   boost::dynamic_bitset<> barrier_mask;
   barrier_mask.resize(nbarriers, static_cast<bool>(CTCF::State::OCCUPIED));
 
-  const std::vector<size_t> rev_ranks{0, 1};  // NOLINT
-  const std::vector<size_t> fwd_ranks{0, 1};  // NOLINT
+  const std::vector<usize> rev_ranks{0, 1};  // NOLINT
+  const std::vector<usize> fwd_ranks{0, 1};  // NOLINT
 
   std::vector<bp_t> rev_moves{20, 20};  // NOLINT
   std::vector<bp_t> fwd_moves{20, 20};  // NOLINT
@@ -651,8 +651,8 @@ TEST_CASE("Simulation 009 - Ensure stacked LEFs do not interfere with surroundin
   c.probability_of_extrusion_unit_bypass = 0;  // NOLINT
   c.lef_hard_collision_pblock = 1;             // NOLINT
   c.lef_soft_collision_pblock = 0;             // NOLINT
-  constexpr size_t nlefs = 5;
-  constexpr size_t nbarriers = 2;
+  constexpr usize nlefs = 5;
+  constexpr usize nbarriers = 2;
   const Chromosome chrom{0, "chr1", 0, 200, 200};  // NOLINT
   // NOLINTNEXTLINE(readability-magic-numbers, cppcoreguidelines-avoid-magic-numbers)
   auto rand_eng = random::PRNG(8668729858575330735ULL);
@@ -672,8 +672,8 @@ TEST_CASE("Simulation 009 - Ensure stacked LEFs do not interfere with surroundin
   boost::dynamic_bitset<> barrier_mask;
   barrier_mask.resize(nbarriers, static_cast<bool>(CTCF::State::OCCUPIED));
 
-  const std::vector<size_t> rev_ranks{0, 1, 2, 3, 4};  // NOLINT
-  const std::vector<size_t> fwd_ranks{0, 1, 2, 3, 4};  // NOLINT
+  const std::vector<usize> rev_ranks{0, 1, 2, 3, 4};  // NOLINT
+  const std::vector<usize> fwd_ranks{0, 1, 2, 3, 4};  // NOLINT
 
   std::vector<bp_t> rev_moves{10, 10, 10, 10, 10};  // NOLINT
   std::vector<bp_t> fwd_moves{10, 10, 10, 10, 10};  // NOLINT
@@ -727,8 +727,8 @@ TEST_CASE("Simulation 010 - Ensure stacked LEFs do not interfere with surroundin
   c.probability_of_extrusion_unit_bypass = 0;  // NOLINT
   c.lef_hard_collision_pblock = 1;             // NOLINT
   c.lef_soft_collision_pblock = 0;             // NOLINT
-  constexpr size_t nlefs = 6;
-  constexpr size_t nbarriers = 2;
+  constexpr usize nlefs = 6;
+  constexpr usize nbarriers = 2;
   const Chromosome chrom{0, "chr1", 0, 200, 200};  // NOLINT
   // NOLINTNEXTLINE(readability-magic-numbers, cppcoreguidelines-avoid-magic-numbers)
   auto rand_eng = random::PRNG(4320101097510038983ULL);
@@ -749,8 +749,8 @@ TEST_CASE("Simulation 010 - Ensure stacked LEFs do not interfere with surroundin
   boost::dynamic_bitset<> barrier_mask;
   barrier_mask.resize(nbarriers, static_cast<bool>(CTCF::State::OCCUPIED));
 
-  const std::vector<size_t> rev_ranks{0, 1, 2, 5, 3, 4};  // NOLINT
-  const std::vector<size_t> fwd_ranks{0, 5, 1, 2, 3, 4};  // NOLINT
+  const std::vector<usize> rev_ranks{0, 1, 2, 5, 3, 4};  // NOLINT
+  const std::vector<usize> fwd_ranks{0, 5, 1, 2, 3, 4};  // NOLINT
 
   std::vector<bp_t> rev_moves{10, 10, 10, 10, 10, 10};  // NOLINT
   std::vector<bp_t> fwd_moves{10, 10, 10, 10, 10, 10};  // NOLINT

@@ -7,13 +7,11 @@
 #include <absl/container/btree_map.h>  // for btree_map
 #include <absl/types/span.h>           // for Span, MakeConstSpan
 #include <fmt/format.h>                // for format_parse_context, FMT_STRING, join, format_error
-#include <stdint.h>                    // for uint64_t, uint32_t, uint8_t
 
 #include <algorithm>                  // for min
 #include <array>                      // for array
 #include <boost/filesystem/path.hpp>  // for path
 #include <cassert>                    // for assert
-#include <cstddef>                    // for size_t
 #include <memory>                     // for unique_ptr
 #include <numeric>                    // for accumulate
 #include <string>                     // for string
@@ -22,7 +20,7 @@
 #include <utility>                    // for move, pair, make_pair
 #include <vector>                     // for vector
 
-#include "modle/common/common.hpp"  // for bp_t
+#include "modle/common/common.hpp"  // for bp_t, u64, u32, u8, usize
 #include "modle/interval_tree.hpp"  // for IITree::is_BST, IITree::count, IITree::data_end
 
 namespace modle::bed {
@@ -133,8 +131,7 @@ bool BED_tree<K, I>::contains_overlap(const BED& interval) const {
 }
 
 template <typename K, typename I>
-bool BED_tree<K, I>::contains_overlap(const K& chrom_name, uint64_t chrom_start,
-                                      uint64_t chrom_end) const {
+bool BED_tree<K, I>::contains_overlap(const K& chrom_name, u64 chrom_start, u64 chrom_end) const {
   auto it = this->_trees.find(chrom_name);
   if (it == this->_trees.end()) {
     return false;
@@ -145,13 +142,12 @@ bool BED_tree<K, I>::contains_overlap(const K& chrom_name, uint64_t chrom_start,
 }
 
 template <typename K, typename I>
-size_t BED_tree<K, I>::count_overlaps(const BED& interval) const {
+usize BED_tree<K, I>::count_overlaps(const BED& interval) const {
   return this->count_overlaps(interval.chrom, I(interval.chrom_start), I(interval.chrom_end));
 }
 
 template <typename K, typename I>
-size_t BED_tree<K, I>::count_overlaps(const K& chrom_name, uint64_t chrom_start,
-                                      uint64_t chrom_end) const {
+usize BED_tree<K, I>::count_overlaps(const K& chrom_name, u64 chrom_start, u64 chrom_end) const {
   auto it = this->_trees.find(chrom_name);
   if (it == this->_trees.end()) {
     return 0UL;
@@ -162,8 +158,8 @@ size_t BED_tree<K, I>::count_overlaps(const K& chrom_name, uint64_t chrom_start,
 }
 
 template <typename K, typename I>
-absl::Span<const BED> BED_tree<K, I>::find_overlaps(const K& chrom_name, uint64_t chrom_start,
-                                                    uint64_t chrom_end) const {
+absl::Span<const BED> BED_tree<K, I>::find_overlaps(const K& chrom_name, u64 chrom_start,
+                                                    u64 chrom_end) const {
   auto it = this->_trees.find(chrom_name);
   if (it == this->_trees.end()) {
     return absl::Span<const BED>{};
@@ -174,7 +170,7 @@ absl::Span<const BED> BED_tree<K, I>::find_overlaps(const K& chrom_name, uint64_
   if (overlap_begin == it->second.data_end()) {
     return absl::Span<const BED>{};
   }
-  return absl::MakeConstSpan(&(*overlap_begin), static_cast<size_t>(overlap_end - overlap_begin));
+  return absl::MakeConstSpan(&(*overlap_begin), static_cast<usize>(overlap_end - overlap_begin));
 }
 
 template <typename K, typename I>
@@ -188,8 +184,8 @@ bool BED_tree<K, I>::empty() const {
 }
 
 template <typename K, typename I>
-size_t BED_tree<K, I>::size() const {
-  return std::accumulate(this->_trees.begin(), this->_trees.end(), size_t(0),
+usize BED_tree<K, I>::size() const {
+  return std::accumulate(this->_trees.begin(), this->_trees.end(), usize(0),
                          [](const auto accumulator, const auto& node) {
                            const auto& tree = node.second;
                            return accumulator + tree.size();
@@ -197,7 +193,7 @@ size_t BED_tree<K, I>::size() const {
 }
 
 template <typename K, typename I>
-size_t BED_tree<K, I>::size(const K& chrom_name) const {
+usize BED_tree<K, I>::size(const K& chrom_name) const {
   return this->at(chrom_name).size();
 }
 
@@ -261,7 +257,7 @@ constexpr auto fmt::formatter<modle::bed::BED>::parse(format_parse_context& ctx)
   const auto* it = ctx.begin();
   const auto* end = ctx.end();
   const auto fmt_string =
-      std::string_view{&(*ctx.begin()), static_cast<size_t>(ctx.end() - ctx.begin())};
+      std::string_view{&(*ctx.begin()), static_cast<modle::usize>(ctx.end() - ctx.begin())};
   if (it != end) {
     for (const auto& [k, v] : this->presentation_mappings) {
       if (const auto pos = fmt_string.find(k); pos != std::string_view::npos) {
@@ -286,7 +282,7 @@ template <typename FormatContext>
 auto fmt::formatter<modle::bed::BED>::format(const modle::bed::BED& b, FormatContext& ctx)
     -> decltype(ctx.out()) {
   assert(!b.chrom.empty());  // NOLINT
-  const auto n = std::min(b.num_fields(), static_cast<size_t>(this->presentation));
+  const auto n = std::min(b.num_fields(), static_cast<modle::usize>(this->presentation));
   auto it = ctx.out();
   if (n == 3U) {
     it = fmt::format_to(it, FMT_STRING("{}\t{}\t{}"), b.chrom, b.chrom_start, b.chrom_end);

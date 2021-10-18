@@ -4,7 +4,6 @@
 
 #pragma once
 
-#include <cstddef>      // for size_t
 #include <type_traits>  // for declval, enable_if_t
 
 #include "modle/common/utils.hpp"  // for identity
@@ -31,8 +30,8 @@ template <class InputIt, class OutputIt, class I, class UnaryOperation = utils::
           class = std::enable_if_t<
               std::is_integral_v<I> &&
               std::is_invocable_v<UnaryOperation, decltype(*std::declval<InputIt>())>>>
-inline size_t moving_average(InputIt input_begin, InputIt input_end, OutputIt output_begin,
-                             I window_size, UnaryOperation op = utils::identity());
+inline usize moving_average(InputIt input_begin, InputIt input_end, OutputIt output_begin,
+                            I window_size, UnaryOperation op = utils::identity());
 /////////
 
 //  Sum of squared deviations
@@ -81,7 +80,7 @@ template <class InputIt, class UnaryOperation = utils::identity,
                                          UnaryOperation op = utils::identity());
 /////////
 
-enum binomial_test_alternative : uint_fast8_t { TWO_SIDED, GREATER, LESS };
+enum binomial_test_alternative : std::uint_fast8_t { TWO_SIDED, GREATER, LESS };
 
 template <binomial_test_alternative alternative = TWO_SIDED, class FP = double, class I,
           class = std::enable_if<std::is_integral_v<I> && std::is_floating_point_v<FP>>>

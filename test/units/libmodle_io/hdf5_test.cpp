@@ -11,12 +11,12 @@
 #include <boost/filesystem/operations.hpp>  // for create_directories, is_empty, remove, remove_all
 #include <boost/filesystem/path.hpp>        // for operator/, path
 #include <catch2/catch.hpp>                 // for operator""_catch_sr, AssertionHandler, Source...
-#include <cstdint>                          // for int64_t
 #include <limits>                           // for numeric_limits
 #include <string>                           // for string, basic_string, allocator, operator==
 #include <string_view>                      // for string_view
 #include <vector>                           // for vector
 
+#include "modle/common/common.hpp"    // for i64
 #include "modle/common/smartdir.hpp"  // for SmartDir
 
 namespace modle::test {
@@ -27,7 +27,7 @@ const SmartDir testdir{cleanup_on_exit};  // NOLINT Using auto here upsets GCC8
 namespace modle::test::hdf5 {
 using namespace modle::hdf5;
 
-static const size_t MAX_STR_LENGTH = 32;
+static const usize MAX_STR_LENGTH = 32;
 
 [[nodiscard]] inline H5::StrType init_str_type() {
   auto st = H5::StrType(H5::PredType::C_S1, MAX_STR_LENGTH);
@@ -57,7 +57,7 @@ inline H5::DataSet init_test_str_dataset(H5::H5File& f, std::string_view path = 
 inline H5::DataSet init_test_int64_dataset(H5::H5File& f, std::string_view path = "/test") {
   const hsize_t rank{1};
   const hsize_t chunk_dims{1024};
-  constexpr int64_t fill_var{0};
+  constexpr i64 fill_var{0};
   const hsize_t max_dims{H5S_UNLIMITED};
 
   H5::DSetCreatPropList cprop{};
@@ -82,14 +82,14 @@ TEST_CASE("read_write_strings HDF5", "[io][hdf5][short]") {
   auto dataset = init_test_str_dataset(f);
 
   CHECK(write_strings(v, dataset, init_str_type(), 0) == v.size());
-  for (size_t i = 0; i < v.size(); ++i) {
+  for (usize i = 0; i < v.size(); ++i) {
     const auto buff = read_str(dataset, i);
     CHECK(buff == v[i]);
   }
 
   const auto buffv = read_strings(dataset, 0);
   REQUIRE(buffv.size() == v.size());
-  for (size_t i = 0; i < v.size(); ++i) {
+  for (usize i = 0; i < v.size(); ++i) {
     CHECK(v[i] == buffv[i]);
   }
   boost::filesystem::remove_all(testdir());
@@ -102,22 +102,22 @@ TEST_CASE("read_write_strings HDF5", "[io][hdf5][short]") {
 TEST_CASE("read_write_ints HDF5", "[io][hdf5][short]") {
   const auto test_file = testdir() / "rw_ints.hdf5";
   boost::filesystem::create_directories(testdir());
-  std::vector<int64_t> v{(std::numeric_limits<int64_t>::min)(), -10, 0, 10,  // NOLINT
-                         (std::numeric_limits<int64_t>::max)()};
+  std::vector<i64> v{(std::numeric_limits<i64>::min)(), -10, 0, 10,  // NOLINT
+                     (std::numeric_limits<i64>::max)()};
   H5::H5File f(test_file.string(), H5F_ACC_TRUNC);
   auto dataset = init_test_int64_dataset(f);
-  int64_t buff{};
-  for (size_t i = 0; i < v.size(); ++i) {
+  i64 buff{};
+  for (usize i = 0; i < v.size(); ++i) {
     CHECK(write_number(v[i], dataset, i) == i + 1);
     CHECK(read_number(dataset, buff, i) == i + 1);
     CHECK(buff == v[i]);
   }
 
-  std::vector<int64_t> buffv(v.size());
+  std::vector<i64> buffv(v.size());
   CHECK(write_numbers(v, dataset, 0) == v.size());
   CHECK(read_numbers(dataset, buffv, 0));
   REQUIRE(buffv.size() == v.size());
-  for (size_t i = 0; i < v.size(); ++i) {
+  for (usize i = 0; i < v.size(); ++i) {
     CHECK(v[i] == buffv[i]);
   }
   boost::filesystem::remove_all(testdir());

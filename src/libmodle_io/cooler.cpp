@@ -41,8 +41,6 @@
 #include <cassert>                    // for assert
 #include <chrono>                     // for milliseconds
 #include <cmath>                      // for isnan, round
-#include <cstddef>                    // for size_t
-#include <cstdint>                    // for int64_t, int32_t, uint8_t, uint32_t
 #include <exception>                  // for exception
 #include <iosfwd>                     // for streamsize
 #include <iterator>                   // for distance
@@ -55,7 +53,7 @@
 #include <utility>                    // for pair, make_pair, move
 #include <vector>                     // for vector, vector<>::iterator
 
-#include "modle/common/common.hpp"                      // for modle_version_long
+#include "modle/common/common.hpp"  // for  i64, i32, modle_version_long, u8, u32
 #include "modle/common/suppress_compiler_warnings.hpp"  // for DISABLE_WARNING_POP, DISABLE_WARN...
 #include "modle/contacts.hpp"                           // for ContactMatrix
 #include "modle/hdf5.hpp"                               // for read_attribute, read_numbers, wri...
@@ -64,9 +62,9 @@ namespace modle::cooler {
 
 DISABLE_WARNING_PUSH
 DISABLE_WARNING_USELESS_CAST
-Cooler::Cooler(boost::filesystem::path path_to_file, IO_MODE mode, size_t bin_size,
-               size_t max_str_length, std::string_view assembly_name, Flavor flavor, bool validate,
-               uint_fast8_t compression_lvl, size_t chunk_size, size_t cache_size)
+Cooler::Cooler(boost::filesystem::path path_to_file, IO_MODE mode, usize bin_size,
+               usize max_str_length, std::string_view assembly_name, Flavor flavor, bool validate,
+               std::uint_fast8_t compression_lvl, usize chunk_size, usize cache_size)
     : STR_TYPE(generate_default_str_type(max_str_length)),
       _path_to_file(std::move(path_to_file)),
       _mode(mode),
@@ -83,13 +81,13 @@ Cooler::Cooler(boost::filesystem::path path_to_file, IO_MODE mode, size_t bin_si
                                                                Cooler::STR_TYPE, "\0")),
       _cprop_int32(this->is_read_only() ? nullptr
                                         : generate_default_cprop(_chunk_size, _compression_lvl,
-                                                                 Cooler::INT32_TYPE, int32_t(0))),
+                                                                 Cooler::I32, i32(0))),
       _cprop_int64(this->is_read_only() ? nullptr
                                         : generate_default_cprop(_chunk_size, _compression_lvl,
-                                                                 Cooler::INT64_TYPE, int64_t(0))),
+                                                                 Cooler::I64, i64(0))),
       _aprop_str(generate_default_aprop(Cooler::STR_TYPE, _chunk_size, _cache_size)),
-      _aprop_int32(generate_default_aprop(Cooler::INT32_TYPE, _chunk_size, _cache_size)),
-      _aprop_int64(generate_default_aprop(Cooler::INT64_TYPE, _chunk_size, _cache_size)),
+      _aprop_int32(generate_default_aprop(Cooler::I32, _chunk_size, _cache_size)),
+      _aprop_int64(generate_default_aprop(Cooler::I64, _chunk_size, _cache_size)),
       _aprop_float64(
           generate_default_aprop(H5::PredType::NATIVE_DOUBLE, _chunk_size, _cache_size)) {
   assert(this->_flavor != UNK);  // NOLINT
@@ -103,7 +101,7 @@ Cooler::Cooler(boost::filesystem::path path_to_file, IO_MODE mode, size_t bin_si
   if (this->is_read_only()) {
     if (this->_bin_size == 0) {  // i.e. file is cooler
       this->_bin_size =
-          static_cast<size_t>(hdf5::read_attribute_int(*this->_fp, "bin-size", this->_root_path));
+          static_cast<usize>(hdf5::read_attribute_int(*this->_fp, "bin-size", this->_root_path));
     }
     this->open_default_datasets();
     this->read_chrom_offset_idx();
@@ -168,14 +166,14 @@ bool Cooler::is_read_only() const { return this->_mode == Cooler::READ_ONLY; }
 
 const boost::filesystem::path &Cooler::get_path() const { return this->_path_to_file; }
 
-size_t Cooler::get_nchroms() {
+usize Cooler::get_nchroms() {
   assert(this->_fp);  // NOLINT
   if (this->is_cool()) {
-    return static_cast<size_t>(hdf5::read_attribute_int(*this->_fp, "nchroms"));
+    return static_cast<usize>(hdf5::read_attribute_int(*this->_fp, "nchroms"));
   }
   if (this->is_mcool()) {
     assert(this->_bin_size != 0);  // NOLINT
-    return static_cast<size_t>(hdf5::read_attribute_int(
+    return static_cast<usize>(hdf5::read_attribute_int(
         *this->_fp, "nchroms", absl::StrCat("/resolutions/", this->_bin_size)));
   }
   throw std::logic_error("Unreachable code");
@@ -210,22 +208,22 @@ std::vector<std::string> Cooler::get_chrom_names() {
   return buff;
 }
 
-std::vector<std::pair<std::string, size_t>> Cooler::get_chroms() {
+std::vector<std::pair<std::string, usize>> Cooler::get_chroms() {
   std::vector<std::string> name_buff;
-  std::vector<size_t> size_buff;
+  std::vector<usize> size_buff;
   this->get_chrom_names(name_buff);
   this->get_chrom_sizes(size_buff);
   assert(name_buff.size() == size_buff.size());  // NOLINT
-  std::vector<std::pair<std::string, size_t>> buff(name_buff.size());
-  for (size_t i = 0; i < buff.size(); ++i) {
+  std::vector<std::pair<std::string, usize>> buff(name_buff.size());
+  for (usize i = 0; i < buff.size(); ++i) {
     buff[i].first = std::move(name_buff[i]);
     buff[i].second = size_buff[i];
   }
   return buff;
 }
 
-std::vector<int64_t> Cooler::get_chrom_sizes() {
-  std::vector<int64_t> buff;
+std::vector<i64> Cooler::get_chrom_sizes() {
+  std::vector<i64> buff;
   this->get_chrom_sizes(buff);
   return buff;
 }
@@ -234,7 +232,7 @@ bool Cooler::is_cool() const { return this->_flavor == COOL; }
 bool Cooler::is_mcool() const { return this->_flavor == MCOOL; }
 bool Cooler::is_scool() const { return this->_flavor == SCOOL; }
 
-size_t Cooler::get_bin_size() const { return this->_bin_size; }
+usize Cooler::get_bin_size() const { return this->_bin_size; }
 
 bool Cooler::has_contacts_for_chrom(std::string_view chrom_name, bool try_common_chrom_prefixes) {
   assert(this->_fp);  // NOLINT
@@ -242,15 +240,15 @@ bool Cooler::has_contacts_for_chrom(std::string_view chrom_name, bool try_common
   return this->has_contacts_for_chrom(chrom_idx);
 }
 
-bool Cooler::has_contacts_for_chrom(size_t chrom_idx) const {
+bool Cooler::has_contacts_for_chrom(usize chrom_idx) const {
   assert(this->_fp);                                   // NOLINT
   assert(this->is_read_only());                        // NOLINT
   assert(!this->_idx_bin1_offset.empty());             // NOLINT
   assert(!this->_idx_chrom_offset.empty());            // NOLINT
   assert(chrom_idx < this->_idx_chrom_offset.size());  // NOLINT
 
-  const auto first_bin = static_cast<size_t>(this->_idx_chrom_offset[chrom_idx]);
-  const auto last_bin = static_cast<size_t>(this->_idx_chrom_offset[chrom_idx + 1]);
+  const auto first_bin = static_cast<usize>(this->_idx_chrom_offset[chrom_idx]);
+  const auto last_bin = static_cast<usize>(this->_idx_chrom_offset[chrom_idx + 1]);
   assert(last_bin >= first_bin);  // NOLINT
 
   return this->_idx_bin1_offset[first_bin] != this->_idx_bin1_offset[last_bin];
@@ -265,7 +263,7 @@ void Cooler::write_metadata() {
   }
   assert(this->_bin_size != 0);  // NOLINT
   H5::DataSpace attr_space(H5S_SCALAR);
-  int64_t int_buff{};
+  i64 int_buff{};
   std::string str_buff{};
   std::string name{};
 
@@ -283,7 +281,7 @@ void Cooler::write_metadata() {
     hdf5::write_or_create_attribute(*this->_fp, name, str_buff);
 
     name = "bin-size";
-    int_buff = static_cast<int64_t>(this->_bin_size);
+    int_buff = static_cast<i64>(this->_bin_size);
     hdf5::write_or_create_attribute(*this->_fp, name, int_buff);
 
     name = "storage-mode";
@@ -334,23 +332,24 @@ void Cooler::write_metadata_attribute(std::string_view metadata_str) {
   }
 }
 
-size_t Cooler::stream_contacts_for_chrom(
-    moodycamel::BlockingReaderWriterQueue<Cooler::Pixel> &queue, std::string_view chrom_name,
-    size_t nrows, std::pair<size_t, size_t> chrom_boundaries, bool try_common_chrom_prefixes,
-    bool prefer_using_balanced_counts) {
+usize Cooler::stream_contacts_for_chrom(moodycamel::BlockingReaderWriterQueue<Cooler::Pixel> &queue,
+                                        std::string_view chrom_name, usize nrows,
+                                        std::pair<usize, usize> chrom_boundaries,
+                                        bool try_common_chrom_prefixes,
+                                        bool prefer_using_balanced_counts) {
   assert(this->_fp);                         // NOLINT
   assert(!this->_datasets.empty());          // NOLINT
   assert(!this->_idx_bin1_offset.empty());   // NOLINT
   assert(!this->_idx_chrom_offset.empty());  // NOLINT
 
   const auto chrom_idx = this->get_chrom_idx(chrom_name, try_common_chrom_prefixes);
-  const auto chrom_size = static_cast<size_t>(this->get_chrom_sizes()[chrom_idx]);
+  const auto chrom_size = static_cast<usize>(this->get_chrom_sizes()[chrom_idx]);
   if (chrom_boundaries.second > chrom_size) {
     chrom_boundaries.second = chrom_size;
   }
-  const auto bin_range = std::make_pair(static_cast<size_t>(this->_idx_chrom_offset[chrom_idx]) +
+  const auto bin_range = std::make_pair(static_cast<usize>(this->_idx_chrom_offset[chrom_idx]) +
                                             (chrom_boundaries.first / this->_bin_size),
-                                        static_cast<size_t>(this->_idx_chrom_offset[chrom_idx]) +
+                                        static_cast<usize>(this->_idx_chrom_offset[chrom_idx]) +
                                             (chrom_boundaries.second / this->_bin_size));
   const auto bin1_offset_idx = this->get_bin1_offset_idx_for_chrom(chrom_idx, chrom_boundaries);
   double pxl_count_scaling_factor{1.0};
@@ -358,7 +357,7 @@ size_t Cooler::stream_contacts_for_chrom(
   if (prefer_using_balanced_counts &&
       hdf5::has_dataset(*this->_fp, "bins/weight", this->_root_path)) {
     const auto &d = this->_datasets[BIN_WEIGHT];
-    uint8_t cis_only;  // NOLINT
+    u8 cis_only;  // NOLINT
     try {
       hdf5::read_attribute(d, "cis_only", cis_only);
     } catch (const std::runtime_error &e) {
@@ -384,18 +383,19 @@ size_t Cooler::stream_contacts_for_chrom(
                                          pxl_count_scaling_factor, prefer_using_balanced_counts);
 }
 
-size_t Cooler::stream_contacts_for_chrom(
-    moodycamel::BlockingReaderWriterQueue<Cooler::Pixel> &queue, std::string_view chrom_name,
-    size_t diagonal_width, size_t bin_size, std::pair<size_t, size_t> chrom_boundaries,
-    bool try_common_chrom_prefixes, bool prefer_using_balanced_counts) {
+usize Cooler::stream_contacts_for_chrom(moodycamel::BlockingReaderWriterQueue<Cooler::Pixel> &queue,
+                                        std::string_view chrom_name, usize diagonal_width,
+                                        usize bin_size, std::pair<usize, usize> chrom_boundaries,
+                                        bool try_common_chrom_prefixes,
+                                        bool prefer_using_balanced_counts) {
   const auto nrows =
-      (diagonal_width / bin_size) + static_cast<size_t>(diagonal_width % bin_size == 0);
+      (diagonal_width / bin_size) + static_cast<usize>(diagonal_width % bin_size == 0);
   return this->stream_contacts_for_chrom(queue, chrom_name, nrows, chrom_boundaries,
                                          try_common_chrom_prefixes, prefer_using_balanced_counts);
 }
 
 bool Cooler::validate_file_format(H5::H5File &f, Flavor expected_flavor, IO_MODE mode,
-                                  size_t bin_size, bool throw_on_failure) {
+                                  usize bin_size, bool throw_on_failure) {
   if (mode == WRITE_ONLY) {  // File is empty. Nothing to validate here
     return true;
   }
@@ -424,7 +424,7 @@ bool Cooler::validate_file_format(H5::H5File &f, Flavor expected_flavor, IO_MODE
   }
 }
 
-H5::StrType Cooler::generate_default_str_type(size_t max_str_length) {
+H5::StrType Cooler::generate_default_str_type(usize max_str_length) {
   // Cooltools doesn't seem to properly handle variable length strings (H5T_VARIABLE)
   // For the time being we are forced to use fixed length, null-padded strings
   auto st = max_str_length > 0 ? H5::StrType(H5::PredType::C_S1, max_str_length)
@@ -435,9 +435,8 @@ H5::StrType Cooler::generate_default_str_type(size_t max_str_length) {
 }
 
 std::unique_ptr<H5::H5File> Cooler::open_file(const boost::filesystem::path &path, IO_MODE mode,
-                                              size_t bin_size,
-                                              [[maybe_unused]] size_t max_str_length, Flavor flavor,
-                                              bool validate) {
+                                              usize bin_size, [[maybe_unused]] usize max_str_length,
+                                              Flavor flavor, bool validate) {
   if constexpr (utils::ndebug_not_defined()) {
     if (mode == WRITE_ONLY) {
       if (bin_size == 0) {
@@ -469,7 +468,7 @@ std::unique_ptr<H5::H5File> Cooler::open_file(const boost::filesystem::path &pat
 }
 
 std::vector<H5::Group> Cooler::open_groups(H5::H5File &f, bool create_if_not_exist,
-                                           size_t bin_size) {
+                                           usize bin_size) {
   std::vector<H5::Group> groups(4);  // NOLINT
 
   auto open_or_create_group = [&](Cooler::Groups g, const std::string &group_name) {
@@ -508,10 +507,6 @@ void Cooler::init_default_datasets() {
   assert(this->_aprop_int32);  // NOLINT
   assert(this->_aprop_int64);  // NOLINT
 
-  const auto &INT64 = this->INT64_TYPE;
-  const auto &INT32 = this->INT32_TYPE;
-  const auto &STR = this->STR_TYPE;
-
   const auto &cp64 = *this->_cprop_int64;
   const auto &cp32 = *this->_cprop_int32;
   const auto &cps = *this->_cprop_str;
@@ -528,24 +523,22 @@ void Cooler::init_default_datasets() {
     auto mem_space{H5::DataSpace(RANK, &BUFF_SIZE, &MAXDIMS)};
     // Do not change the order of these pushbacks
     dset[chrom_LEN] =
-        f.createDataSet(absl::StrCat(r, "/chroms/length"), INT64, mem_space, cp64, ap64);
-    dset[chrom_NAME] = f.createDataSet(absl::StrCat(r, "/chroms/name"), STR, mem_space, cps, aps);
+        f.createDataSet(absl::StrCat(r, "/chroms/length"), I64, mem_space, cp64, ap64);
+    dset[chrom_NAME] =
+        f.createDataSet(absl::StrCat(r, "/chroms/name"), STR_TYPE, mem_space, cps, aps);
 
-    dset[BIN_CHROM] = f.createDataSet(absl::StrCat(r, "/bins/chrom"), INT64, mem_space, cp64, ap64);
-    dset[BIN_START] = f.createDataSet(absl::StrCat(r, "/bins/start"), INT64, mem_space, cp64, ap64);
-    dset[BIN_END] = f.createDataSet(absl::StrCat(r, "/bins/end"), INT64, mem_space, cp64, ap64);
+    dset[BIN_CHROM] = f.createDataSet(absl::StrCat(r, "/bins/chrom"), I64, mem_space, cp64, ap64);
+    dset[BIN_START] = f.createDataSet(absl::StrCat(r, "/bins/start"), I64, mem_space, cp64, ap64);
+    dset[BIN_END] = f.createDataSet(absl::StrCat(r, "/bins/end"), I64, mem_space, cp64, ap64);
 
-    dset[PXL_B1] =
-        f.createDataSet(absl::StrCat(r, "/pixels/bin1_id"), INT64, mem_space, cp64, ap64);
-    dset[PXL_B2] =
-        f.createDataSet(absl::StrCat(r, "/pixels/bin2_id"), INT64, mem_space, cp64, ap64);
-    dset[PXL_COUNT] =
-        f.createDataSet(absl::StrCat(r, "/pixels/count"), INT32, mem_space, cp32, ap32);
+    dset[PXL_B1] = f.createDataSet(absl::StrCat(r, "/pixels/bin1_id"), I64, mem_space, cp64, ap64);
+    dset[PXL_B2] = f.createDataSet(absl::StrCat(r, "/pixels/bin2_id"), I64, mem_space, cp64, ap64);
+    dset[PXL_COUNT] = f.createDataSet(absl::StrCat(r, "/pixels/count"), I32, mem_space, cp32, ap32);
 
     dset[IDX_BIN1] =
-        f.createDataSet(absl::StrCat(r, "/indexes/bin1_offset"), INT64, mem_space, cp64, ap64);
+        f.createDataSet(absl::StrCat(r, "/indexes/bin1_offset"), I64, mem_space, cp64, ap64);
     dset[IDX_CHR] =
-        f.createDataSet(absl::StrCat(r, "/indexes/chrom_offset"), INT64, mem_space, cp64, ap64);
+        f.createDataSet(absl::StrCat(r, "/indexes/chrom_offset"), I64, mem_space, cp64, ap64);
 
   } catch ([[maybe_unused]] const H5::FileIException &e) {
     throw std::runtime_error(fmt::format(
@@ -598,7 +591,7 @@ void Cooler::open_default_datasets() {
   }
 }
 
-size_t Cooler::read_chrom_offset_idx() {
+usize Cooler::read_chrom_offset_idx() {
   const auto &d = this->_datasets[IDX_CHR];
   const auto buff_size = static_cast<hsize_t>(d.getSpace().getSimpleExtentNpoints());
   this->_idx_chrom_offset.resize(buff_size);
@@ -613,7 +606,7 @@ size_t Cooler::read_chrom_offset_idx() {
   return idx_size;
 }
 
-size_t Cooler::read_bin1_offset_idx() {
+usize Cooler::read_bin1_offset_idx() {
   const auto &d = this->_datasets[IDX_BIN1];
   const auto buff_size = static_cast<hsize_t>(d.getSpace().getSimpleExtentNpoints());
   this->_idx_bin1_offset.resize(buff_size);
@@ -628,17 +621,17 @@ size_t Cooler::read_bin1_offset_idx() {
   return idx_size;
 }
 
-absl::Span<const int64_t> Cooler::get_bin1_offset_idx_for_chrom(
-    size_t chrom_idx, std::pair<size_t, size_t> chrom_subrange) {
+absl::Span<const i64> Cooler::get_bin1_offset_idx_for_chrom(
+    usize chrom_idx, std::pair<usize, usize> chrom_subrange) {
   assert(!this->_idx_bin1_offset.empty());             // NOLINT
   assert(!this->_idx_chrom_offset.empty());            // NOLINT
   assert(chrom_idx < this->_idx_chrom_offset.size());  // NOLINT
-  const auto chrom_start_bin = static_cast<size_t>(this->_idx_chrom_offset[chrom_idx]) +
+  const auto chrom_start_bin = static_cast<usize>(this->_idx_chrom_offset[chrom_idx]) +
                                (chrom_subrange.first / this->_bin_size);
   const auto chrom_end_bin =
       chrom_subrange.second == std::numeric_limits<decltype(chrom_subrange.second)>::max()
-          ? static_cast<size_t>(this->_idx_chrom_offset[chrom_idx + 1])
-          : static_cast<size_t>(this->_idx_chrom_offset[chrom_idx]) +
+          ? static_cast<usize>(this->_idx_chrom_offset[chrom_idx + 1])
+          : static_cast<usize>(this->_idx_chrom_offset[chrom_idx]) +
                 ((chrom_subrange.second + this->_bin_size - 1) / this->_bin_size);
   DISABLE_WARNING_PUSH
   DISABLE_WARNING_SIGN_COMPARE
@@ -650,25 +643,25 @@ absl::Span<const int64_t> Cooler::get_bin1_offset_idx_for_chrom(
       .subspan(chrom_start_bin, chrom_end_bin - chrom_start_bin + 1);
 }
 
-absl::Span<const int64_t> Cooler::get_bin1_offset_idx_for_chrom(
-    std::string_view chrom_name, std::pair<size_t, size_t> chrom_subrange) {
+absl::Span<const i64> Cooler::get_bin1_offset_idx_for_chrom(
+    std::string_view chrom_name, std::pair<usize, usize> chrom_subrange) {
   const auto chrom_idx = get_chrom_idx(chrom_name);
   return get_bin1_offset_idx_for_chrom(chrom_idx, chrom_subrange);
 }
 
-std::pair<int64_t, int64_t> Cooler::read_chrom_pixels_boundaries(std::string_view chrom_name) {
+std::pair<i64, i64> Cooler::read_chrom_pixels_boundaries(std::string_view chrom_name) {
   const auto chrom_idx = get_chrom_idx(chrom_name);
   return read_chrom_pixels_boundaries(chrom_idx);
 }
 
-std::pair<int64_t, int64_t> Cooler::read_chrom_pixels_boundaries(size_t chrom_idx) {
+std::pair<i64, i64> Cooler::read_chrom_pixels_boundaries(usize chrom_idx) {
   assert(chrom_idx < this->_idx_chrom_offset.size());  // NOLINT
   assert(!this->_idx_chrom_offset.empty());            // NOLINT
-  const auto chrom_start_bin = static_cast<size_t>(this->_idx_chrom_offset[chrom_idx]);
-  const auto chrom_end_bin = static_cast<size_t>(this->_idx_chrom_offset[chrom_idx + 1]);
+  const auto chrom_start_bin = static_cast<usize>(this->_idx_chrom_offset[chrom_idx]);
+  const auto chrom_end_bin = static_cast<usize>(this->_idx_chrom_offset[chrom_idx + 1]);
   assert(chrom_end_bin >= chrom_start_bin);  // NOLINT
 
-  std::pair<int64_t, int64_t> pixel_boundaries{};
+  std::pair<i64, i64> pixel_boundaries{};
   const auto &d = this->_datasets[IDX_BIN1];
   (void)hdf5::read_number(d, pixel_boundaries.first, chrom_start_bin);
   (void)hdf5::read_number(d, pixel_boundaries.second, chrom_end_bin);
@@ -677,11 +670,11 @@ std::pair<int64_t, int64_t> Cooler::read_chrom_pixels_boundaries(size_t chrom_id
 }
 
 // NOLINTNEXTLINE(readability-function-cognitive-complexity) TODO: reduce complexity
-size_t Cooler::stream_contacts_for_chrom(moodycamel::BlockingReaderWriterQueue<Pixel> &queue,
-                                         std::pair<hsize_t, hsize_t> bin_range,
-                                         absl::Span<const int64_t> bin1_offset_idx, size_t nrows,
-                                         double bias_scaling_factor,
-                                         bool prefer_using_balanced_counts) {
+usize Cooler::stream_contacts_for_chrom(moodycamel::BlockingReaderWriterQueue<Pixel> &queue,
+                                        std::pair<hsize_t, hsize_t> bin_range,
+                                        absl::Span<const i64> bin1_offset_idx, usize nrows,
+                                        double bias_scaling_factor,
+                                        bool prefer_using_balanced_counts) {
   if (this->_datasets.empty()) {
     this->open_default_datasets();
   }
@@ -689,11 +682,11 @@ size_t Cooler::stream_contacts_for_chrom(moodycamel::BlockingReaderWriterQueue<P
   const auto &[first_bin, last_bin] = bin_range;
   assert(first_bin < last_bin);                            // NOLINT
   assert(last_bin <= first_bin + bin1_offset_idx.size());  // NOLINT
-  std::vector<int64_t> bin1_BUFF(nrows);
-  std::vector<int64_t> bin2_BUFF(nrows);
-  std::vector<int64_t> count_BUFF(nrows);
+  std::vector<i64> bin1_BUFF(nrows);
+  std::vector<i64> bin2_BUFF(nrows);
+  std::vector<i64> count_BUFF(nrows);
   std::vector<double> bin_weights;
-  size_t pixel_count = 0;
+  usize pixel_count = 0;
 
   const auto &d = this->_datasets;
   if (prefer_using_balanced_counts &&
@@ -702,10 +695,10 @@ size_t Cooler::stream_contacts_for_chrom(moodycamel::BlockingReaderWriterQueue<P
     (void)hdf5::read_numbers(d[BIN_WEIGHT], bin_weights, static_cast<hsize_t>(first_bin));
   }
 
-  for (size_t i = 1; i < bin1_offset_idx.size(); ++i) {
+  for (usize i = 1; i < bin1_offset_idx.size(); ++i) {
     const auto file_offset = static_cast<hsize_t>(bin1_offset_idx[i - 1]);
     const auto buff_size =
-        std::min(static_cast<size_t>(bin1_offset_idx[i] - bin1_offset_idx[i - 1]), nrows);
+        std::min(static_cast<usize>(bin1_offset_idx[i] - bin1_offset_idx[i - 1]), nrows);
     if (buff_size == 0) {
       continue;
     }
@@ -722,7 +715,7 @@ size_t Cooler::stream_contacts_for_chrom(moodycamel::BlockingReaderWriterQueue<P
     assert(bin2_BUFF.size() == buff_size);   // NOLINT
     assert(count_BUFF.size() == buff_size);  // NOLINT
 
-    for (size_t j = 0; j < buff_size; ++j) {
+    for (usize j = 0; j < buff_size; ++j) {
       assert(count_BUFF[j] != 0);  // NOLINT
       DISABLE_WARNING_PUSH
       DISABLE_WARNING_SIGN_CONVERSION
@@ -734,8 +727,8 @@ size_t Cooler::stream_contacts_for_chrom(moodycamel::BlockingReaderWriterQueue<P
         break;
       }
       if (bin_weights.empty()) {
-        while (!queue.try_emplace(Pixel{std::min(bin1, bin2), std::max(bin1, bin2),
-                                        static_cast<size_t>(count_BUFF[j])})) {
+        while (!queue.try_emplace(
+            Pixel{std::min(bin1, bin2), std::max(bin1, bin2), static_cast<usize>(count_BUFF[j])})) {
           // NOLINTNEXTLINE(readability-magic-numbers)
           std::this_thread::sleep_for(std::chrono::milliseconds(10));
         }
@@ -753,7 +746,7 @@ size_t Cooler::stream_contacts_for_chrom(moodycamel::BlockingReaderWriterQueue<P
         const auto count =
             static_cast<double>(count_BUFF[j]) / (bin1_bias * bin2_bias) / bias_scaling_factor;
         while (!queue.try_emplace(Pixel{std::min(bin1, bin2), std::max(bin1, bin2),
-                                        static_cast<size_t>(std::round(count))})) {
+                                        static_cast<usize>(std::round(count))})) {
           // NOLINTNEXTLINE(readability-magic-numbers)
           std::this_thread::sleep_for(std::chrono::milliseconds(10));
         }
@@ -765,15 +758,15 @@ size_t Cooler::stream_contacts_for_chrom(moodycamel::BlockingReaderWriterQueue<P
   return pixel_count;
 }
 
-size_t Cooler::stream_contacts_for_chrom(moodycamel::BlockingReaderWriterQueue<Pixel> &queue,
-                                         std::pair<hsize_t, hsize_t> bin_range,
-                                         const std::vector<int64_t> &bin1_offset_idx, size_t nrows,
-                                         double scaling_factor, bool prefer_using_balanced_counts) {
+usize Cooler::stream_contacts_for_chrom(moodycamel::BlockingReaderWriterQueue<Pixel> &queue,
+                                        std::pair<hsize_t, hsize_t> bin_range,
+                                        const std::vector<i64> &bin1_offset_idx, usize nrows,
+                                        double scaling_factor, bool prefer_using_balanced_counts) {
   return this->stream_contacts_for_chrom(queue, bin_range, absl::MakeConstSpan(bin1_offset_idx),
                                          nrows, scaling_factor, prefer_using_balanced_counts);
 }
 
-size_t Cooler::get_chrom_idx(std::string_view query_chrom_name, bool try_common_chrom_prefixes) {
+usize Cooler::get_chrom_idx(std::string_view query_chrom_name, bool try_common_chrom_prefixes) {
   // Here's the issue: for a given genome assembly (say hg19), some tools name chromosome as
   // chrN, where N is the chromosome number, while others only use the number N. The purpose
   // of this function is to try to guess few reasonably common prefixes, look them up in the
@@ -784,7 +777,7 @@ size_t Cooler::get_chrom_idx(std::string_view query_chrom_name, bool try_common_
     const auto chrom_names = hdf5::read_strings(this->_datasets[chrom_NAME], 0);
     auto match = std::find(chrom_names.begin(), chrom_names.end(), query_chrom_name);
     if (match != chrom_names.end()) {
-      return static_cast<size_t>(std::distance(chrom_names.begin(), match));
+      return static_cast<usize>(std::distance(chrom_names.begin(), match));
     }
     if (try_common_chrom_prefixes) {
       std::array<std::string, 3> queries;
@@ -799,7 +792,7 @@ size_t Cooler::get_chrom_idx(std::string_view query_chrom_name, bool try_common_
       for (const auto &q : queries) {
         match = std::find(chrom_names.begin(), chrom_names.end(), q);
         if (match != chrom_names.end()) {
-          return static_cast<size_t>(std::distance(chrom_names.begin(), match));
+          return static_cast<usize>(std::distance(chrom_names.begin(), match));
         }
       }
       throw std::runtime_error(
@@ -872,7 +865,7 @@ Cooler::Flavor Cooler::detect_file_flavor(H5::H5File &f) {
 
 // I am not sure there's much to be done to reduce the complexity of this function
 // NOLINTNEXTLINE(readability-function-cognitive-complexity)
-bool Cooler::validate_cool_flavor(H5::H5File &f, size_t bin_size, std::string_view root_path,
+bool Cooler::validate_cool_flavor(H5::H5File &f, usize bin_size, std::string_view root_path,
                                   bool throw_on_failure, bool check_version) {
   /* The following attributes are being checked:
    * format
@@ -883,10 +876,10 @@ bool Cooler::validate_cool_flavor(H5::H5File &f, size_t bin_size, std::string_vi
    */
 
   std::string str_buff{};
-  int64_t int_buff{};
+  i64 int_buff{};
 
-  constexpr int64_t min_format_ver = 2;
-  constexpr int64_t max_format_ver = 3;
+  constexpr i64 min_format_ver = 2;
+  constexpr i64 max_format_ver = 3;
 
   try {
     // Checking attributes
@@ -918,7 +911,7 @@ bool Cooler::validate_cool_flavor(H5::H5File &f, size_t bin_size, std::string_vi
             min_format_ver, max_format_ver, int_buff));
       }
     }
-    const auto format_version = static_cast<uint8_t>(int_buff);
+    const auto format_version = static_cast<u8>(int_buff);
     int_buff = 0;
 
     hdf5::read_attribute(f, "bin-type", str_buff, root_path);
@@ -933,7 +926,7 @@ bool Cooler::validate_cool_flavor(H5::H5File &f, size_t bin_size, std::string_vi
 
     if (bin_size != 0) {
       hdf5::read_attribute(f, "bin-size", int_buff, root_path);
-      if (static_cast<int64_t>(bin_size) != int_buff) {
+      if (static_cast<i64>(bin_size) != int_buff) {
         if (!throw_on_failure) {
           return false;
         }
@@ -1020,10 +1013,10 @@ bool Cooler::validate_cool_flavor(H5::H5File &f, size_t bin_size, std::string_vi
   return true;
 }
 
-bool Cooler::validate_multires_cool_flavor(H5::H5File &f, size_t bin_size,
+bool Cooler::validate_multires_cool_flavor(H5::H5File &f, usize bin_size,
                                            std::string_view root_path, bool throw_on_failure) {
-  constexpr int64_t min_format_ver = 2;
-  constexpr int64_t max_format_ver = 3;
+  constexpr i64 min_format_ver = 2;
+  constexpr i64 max_format_ver = 3;
 
   if (bin_size == 0) {
     throw std::runtime_error(
@@ -1077,7 +1070,7 @@ bool Cooler::validate_multires_cool_flavor(H5::H5File &f, size_t bin_size,
       throw_on_failure, false);
 }
 
-Cooler::InternalBuffers::InternalBuffers(size_t buff_size) {
+Cooler::InternalBuffers::InternalBuffers(usize buff_size) {
   bin_pos_buff.reserve(buff_size);
   bin_chrom_buff.reserve(buff_size);
   pixel_b1_idx_buff.reserve(buff_size);
@@ -1087,6 +1080,6 @@ Cooler::InternalBuffers::InternalBuffers(size_t buff_size) {
   idx_chrom_offset_buff.reserve(buff_size);
 }
 
-size_t Cooler::InternalBuffers::capacity() const { return this->bin_pos_buff.capacity(); }
+usize Cooler::InternalBuffers::capacity() const { return this->bin_pos_buff.capacity(); }
 
 }  // namespace modle::cooler

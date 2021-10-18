@@ -12,7 +12,6 @@
 #include <boost/config.hpp>  // IWYU pragma: keep for BOOST_LIKELY, BOOST_UNLIKELY
 #include <boost/dynamic_bitset/dynamic_bitset.hpp>  // for dynamic_bitset
 #include <cassert>                                  // for assert
-#include <cstddef>                                  // for size_t
 #include <iterator>                                 // for reverse_iterator
 #include <limits>                                   // for numeric_limits
 #include <utility>                                  // for make_pair, pair
@@ -27,9 +26,9 @@
 namespace modle {
 
 // NOLINTNEXTLINE(readability-function-cognitive-complexity)
-std::pair<size_t, size_t> Simulation::detect_units_at_chrom_boundaries(
-    const Chromosome& chrom, absl::Span<const Lef> lefs, absl::Span<const size_t> rev_lef_ranks,
-    absl::Span<const size_t> fwd_lef_ranks, absl::Span<const bp_t> rev_moves,
+std::pair<usize, usize> Simulation::detect_units_at_chrom_boundaries(
+    const Chromosome& chrom, absl::Span<const Lef> lefs, absl::Span<const usize> rev_lef_ranks,
+    absl::Span<const usize> fwd_lef_ranks, absl::Span<const bp_t> rev_moves,
     absl::Span<const bp_t> fwd_moves, absl::Span<collision_t> rev_collisions,
     absl::Span<collision_t> fwd_collisions) {
   {
@@ -55,8 +54,8 @@ std::pair<size_t, size_t> Simulation::detect_units_at_chrom_boundaries(
   // Detect if the first rev unit or last fwd unit are about to fall off chrom. boundaries
   // Also detect extr. units that are already at chrom boundaries
 
-  size_t num_rev_units_at_5prime = 0;
-  size_t num_fwd_units_at_3prime = 0;
+  usize num_rev_units_at_5prime = 0;
+  usize num_fwd_units_at_3prime = 0;
 
   const auto& first_active_fwd_unit = lefs[fwd_lef_ranks[0]].fwd_unit;
   const auto& last_active_rev_unit =
@@ -65,7 +64,7 @@ std::pair<size_t, size_t> Simulation::detect_units_at_chrom_boundaries(
       })].rev_unit;
 
   // Detect and count the number of rev units located at the 5'-end
-  for (size_t i = 0; i < lefs.size(); ++i) {
+  for (usize i = 0; i < lefs.size(); ++i) {
     const auto& rev_idx = rev_lef_ranks[i];
     const auto& rev_unit = lefs[rev_idx].rev_unit;
     const auto& rev_move = rev_moves[rev_idx];
@@ -124,12 +123,12 @@ std::pair<size_t, size_t> Simulation::detect_units_at_chrom_boundaries(
 
 // NOLINTNEXTLINE(readability-function-cognitive-complexity)
 void Simulation::detect_lef_bar_collisions(
-    const absl::Span<const Lef> lefs, const absl::Span<const size_t> rev_lef_ranks,
-    const absl::Span<const size_t> fwd_lef_ranks, const absl::Span<const bp_t> rev_moves,
+    const absl::Span<const Lef> lefs, const absl::Span<const usize> rev_lef_ranks,
+    const absl::Span<const usize> fwd_lef_ranks, const absl::Span<const bp_t> rev_moves,
     const absl::Span<const bp_t> fwd_moves, const absl::Span<const ExtrusionBarrier> extr_barriers,
     const boost::dynamic_bitset<>& barrier_mask, const absl::Span<collision_t> rev_collisions,
     const absl::Span<collision_t> fwd_collisions, random::PRNG_t& rand_eng,
-    size_t num_rev_units_at_5prime, size_t num_fwd_units_at_3prime) const
+    usize num_rev_units_at_5prime, usize num_fwd_units_at_3prime) const
     noexcept(utils::ndebug_defined()) {
   {
     assert(lefs.size() == fwd_lef_ranks.size());                       // NOLINT
@@ -175,7 +174,7 @@ void Simulation::detect_lef_bar_collisions(
   auto unit_pos = lefs[unit_idx].rev_unit.pos();
 
   // Loop over extr. barriers and find the first, possibly colliding extr. unit
-  for (size_t i = 0; i < extr_barriers.size(); ++i) {
+  for (usize i = 0; i < extr_barriers.size(); ++i) {
     // NOLINTNEXTLINE(readability-implicit-bool-conversion)
     if (barrier_mask[i] == CTCF::NOT_OCCUPIED) {  // Extrusion barriers that are not occupied are
       continue;                                   // transparent to extr. units
@@ -228,7 +227,7 @@ process_fwd_unit:
 
   // Loop over extr. barriers and find the first, possibly colliding extr. unit
   assert(!extr_barriers.empty());  // NOLINT
-  const auto sentinel_idx = (std::numeric_limits<size_t>::max)();
+  const auto sentinel_idx = (std::numeric_limits<usize>::max)();
   for (auto i = extr_barriers.size() - 1; i != sentinel_idx; --i) {
     // NOLINTNEXTLINE(readability-implicit-bool-conversion)
     if (barrier_mask[i] == CTCF::NOT_OCCUPIED) {  // Extrusion barriers that are not occupied are
@@ -267,10 +266,10 @@ process_fwd_unit:
 // NOLINTNEXTLINE(readability-function-cognitive-complexity)
 void Simulation::detect_primary_lef_lef_collisions(
     const absl::Span<const Lef> lefs, const absl::Span<const ExtrusionBarrier> barriers,
-    const absl::Span<const size_t> rev_lef_ranks, const absl::Span<const size_t> fwd_lef_ranks,
+    const absl::Span<const usize> rev_lef_ranks, const absl::Span<const usize> fwd_lef_ranks,
     const absl::Span<const bp_t> rev_moves, const absl::Span<const bp_t> fwd_moves,
     const absl::Span<collision_t> rev_collisions, const absl::Span<collision_t> fwd_collisions,
-    random::PRNG_t& rand_eng, size_t num_rev_units_at_5prime, size_t num_fwd_units_at_3prime) const
+    random::PRNG_t& rand_eng, usize num_rev_units_at_5prime, usize num_fwd_units_at_3prime) const
     noexcept(utils::ndebug_defined()) {
   {
     assert(lefs.size() == fwd_lef_ranks.size());                       // NOLINT
@@ -312,7 +311,7 @@ void Simulation::detect_primary_lef_lef_collisions(
   }
 
   //    Initialize indexes so that we skip over rev units at the 5' and fwd units at the 3' (if any)
-  size_t i1 = 0;
+  usize i1 = 0;
   auto j1 = num_rev_units_at_5prime;
   const auto i2 = lefs.size() - std::min(num_fwd_units_at_3prime, num_fwd_units_at_3prime - 1);
   const auto j2 = lefs.size();
@@ -427,11 +426,11 @@ void Simulation::detect_primary_lef_lef_collisions(
 // NOLINTNEXTLINE(readability-function-cognitive-complexity)
 void Simulation::process_secondary_lef_lef_collisions(
     [[maybe_unused]] const Chromosome& chrom, const absl::Span<const Lef> lefs,
-    const size_t nbarriers, const absl::Span<const size_t> rev_lef_ranks,
-    const absl::Span<const size_t> fwd_lef_ranks, const absl::Span<bp_t> rev_moves,
+    const usize nbarriers, const absl::Span<const usize> rev_lef_ranks,
+    const absl::Span<const usize> fwd_lef_ranks, const absl::Span<bp_t> rev_moves,
     const absl::Span<bp_t> fwd_moves, const absl::Span<collision_t> rev_collisions,
     const absl::Span<collision_t> fwd_collisions, random::PRNG_t& rand_eng,
-    size_t num_rev_units_at_5prime, size_t num_fwd_units_at_3prime) const
+    usize num_rev_units_at_5prime, usize num_fwd_units_at_3prime) const
     noexcept(utils::ndebug_defined()) {
   {
     assert(lefs.size() == fwd_lef_ranks.size());     // NOLINT

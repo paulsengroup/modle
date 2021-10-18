@@ -12,12 +12,12 @@
 #include <boost/process.hpp>
 #include <catch2/catch.hpp>
 #include <condition_variable>
-#include <cstdint>
 #include <mutex>
 #include <string_view>
 #include <thread>
 #include <vector>
 
+#include "modle/common/common.hpp"
 #include "modle/common/random.hpp"
 #include "modle/common/utils.hpp"
 
@@ -31,7 +31,7 @@ struct FP {
 
 // NOLINTNEXTLINE(readability-function-cognitive-complexity)
 TEST_CASE("Mean", "[math][short]") {
-  const std::vector<uint8_t> v1{0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10};
+  const std::vector<u8> v1{0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10};
   std::vector<FP> v2(v1.size());
   std::transform(v1.begin(), v1.end(), v2.begin(),
                  [](const auto n) { return FP{static_cast<float>(n)}; });
@@ -44,8 +44,8 @@ TEST_CASE("Mean", "[math][short]") {
 
 // NOLINTNEXTLINE(readability-function-cognitive-complexity)
 TEST_CASE("Moving average", "[math][short]") {
-  const size_t window_size = 3;
-  const std::vector<uint8_t> v1{0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10};
+  const usize window_size = 3;
+  const std::vector<u8> v1{0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10};
   std::vector<FP> v2(v1.size());
   std::transform(v1.begin(), v1.end(), v2.begin(),
                  [](const auto n) { return FP{static_cast<float>(n)}; });
@@ -56,7 +56,7 @@ TEST_CASE("Moving average", "[math][short]") {
   REQUIRE(math::moving_average(v1.begin(), v1.end(), output.begin(), window_size) ==
           v1.size() - window_size);
 
-  for (size_t i = 0; i < results.size(); ++i) {
+  for (usize i = 0; i < results.size(); ++i) {
     CHECK(results[i] == Approx(output[i]));
   }
 
@@ -65,7 +65,7 @@ TEST_CASE("Moving average", "[math][short]") {
   REQUIRE(math::moving_average(v2.begin(), v2.end(), output.begin(), window_size,
                                [](const auto& fp) { return fp.n; }) == v1.size() - window_size);
 
-  for (size_t i = 0; i < results.size(); ++i) {
+  for (usize i = 0; i < results.size(); ++i) {
     CHECK(results[i] == Approx(output[i]));
   }
 
@@ -77,7 +77,7 @@ TEST_CASE("Moving average", "[math][short]") {
 
 // NOLINTNEXTLINE(readability-function-cognitive-complexity)
 TEST_CASE("Sum of squared deviations", "[math][short]") {
-  const std::vector<uint8_t> v1{0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10};
+  const std::vector<u8> v1{0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10};
   std::vector<FP> v2(v1.size());
   std::transform(v1.begin(), v1.end(), v2.begin(),
                  [](const auto n) { return FP{static_cast<float>(n)}; });
@@ -91,7 +91,7 @@ TEST_CASE("Sum of squared deviations", "[math][short]") {
 
 // NOLINTNEXTLINE(readability-function-cognitive-complexity)
 TEST_CASE("Variance", "[math][short]") {
-  const std::vector<uint8_t> v1{0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10};
+  const std::vector<u8> v1{0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10};
   std::vector<FP> v2(v1.size());
   std::transform(v1.begin(), v1.end(), v2.begin(),
                  [](const auto n) { return FP{static_cast<float>(n)}; });
@@ -104,7 +104,7 @@ TEST_CASE("Variance", "[math][short]") {
 
 // NOLINTNEXTLINE(readability-function-cognitive-complexity)
 TEST_CASE("Standard Deviation", "[math][short]") {
-  const std::vector<uint8_t> v1{0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10};
+  const std::vector<u8> v1{0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10};
   std::vector<FP> v2(v1.size());
   std::transform(v1.begin(), v1.end(), v2.begin(),
                  [](const auto n) { return FP{static_cast<float>(n)}; });
@@ -215,7 +215,7 @@ TEST_CASE("Binom test - greater", "[math][short]") {
 TEST_CASE("Binom test - two-sided randomized", "[math][long]") {
   // random::PRNG_t rand_eng{4888025265521095494};//std::random_device{}()};
   random::PRNG_t rand_eng{std::random_device{}()};
-  const size_t iterations = 5'000;
+  const usize iterations = 5'000;
 
   std::mutex data_mutex;
   std::condition_variable input_data_cv;
@@ -223,8 +223,8 @@ TEST_CASE("Binom test - two-sided randomized", "[math][long]") {
   std::atomic<bool> input_data_ready{false};
   std::atomic<bool> output_data_ready{false};
 
-  int64_t k{-1};
-  int64_t n{-1};
+  i64 k{-1};
+  i64 n{-1};
 
   std::atomic<double> pv_py{};
 
@@ -233,11 +233,11 @@ TEST_CASE("Binom test - two-sided randomized", "[math][long]") {
               input_data_ready, output_data_ready);
   });
 
-  for (size_t i = 0; i < iterations; ++i) {  // NOLINT
-    assert(!input_data_ready);               // NOLINT
+  for (usize i = 0; i < iterations; ++i) {  // NOLINT
+    assert(!input_data_ready);              // NOLINT
     do {
-      k = random::uniform_int_distribution<int64_t>{0, 5000}(rand_eng);      // NOLINT
-      n = k + random::uniform_int_distribution<int64_t>{0, 5000}(rand_eng);  // NOLINT
+      k = random::uniform_int_distribution<i64>{0, 5000}(rand_eng);      // NOLINT
+      n = k + random::uniform_int_distribution<i64>{0, 5000}(rand_eng);  // NOLINT
     } while (k + n == 0);
 
     input_data_ready = true;

@@ -16,8 +16,7 @@
 #include <boost/filesystem/path.hpp>                // for path
 #include <cassert>                                  // for assert
 #include <cmath>                                    // for round
-#include <cstdint>                                  // for uint64_t, int64_t
-#include <cstdio>                                   // for size_t, stdout
+#include <cstdio>                                   // for usize, stdout
 #include <exception>                                // for exception
 #include <fstream>                                  // for ofstream, basic_ofstream
 #include <iterator>                                 // for insert_iterator, inserter
@@ -28,6 +27,7 @@
 #include <vector>                                   // for vector
 
 #include "modle/bed.hpp"                                // for Parser
+#include "modle/common/common.hpp"                      // for u64, i64
 #include "modle/common/suppress_compiler_warnings.hpp"  // for DISABLE_WARNING_POP, DISABLE_WARN...
 #include "modle/contacts.hpp"                           // for ContactMatrix
 #include "modle/cooler.hpp"                             // for Cooler, ContactMatrix, Cooler::RE...
@@ -37,20 +37,19 @@
 namespace modle::tools {
 
 template <typename I>
-size_t compute_number_of_contacts_after_depletion(const ContactMatrix<I>& cmatrix,
-                                                  absl::Span<const uint64_t> hist,
-                                                  size_t effective_nbins,
-                                                  double depletion_multiplier) {
+usize compute_number_of_contacts_after_depletion(const ContactMatrix<I>& cmatrix,
+                                                 absl::Span<const u64> hist, usize effective_nbins,
+                                                 double depletion_multiplier) {
   assert(hist.size() == cmatrix.nrows());
   // This histogram contains the average contact number (instead of the total)
-  std::vector<uint64_t> row_wise_avg_contacts(hist.size());
+  std::vector<u64> row_wise_avg_contacts(hist.size());
   std::transform(hist.begin(), hist.end(), row_wise_avg_contacts.begin(), [&](const auto n) {
-    return static_cast<uint64_t>(std::round((depletion_multiplier * static_cast<double>(n)) /
-                                            static_cast<double>(effective_nbins)));
+    return static_cast<u64>(std::round((depletion_multiplier * static_cast<double>(n)) /
+                                       static_cast<double>(effective_nbins)));
   });
 
-  size_t depl_contacts{0};
-  for (size_t i = 0; i < cmatrix.ncols(); ++i) {
+  usize depl_contacts{0};
+  for (usize i = 0; i < cmatrix.ncols(); ++i) {
     for (auto j = i; j < i + cmatrix.nrows() && j < cmatrix.ncols(); ++j) {
       // j - i corresponds to the distance from the diagonal
       // Only process bins that more contacts than average
@@ -79,7 +78,7 @@ void stats_subcmd(const modle::tools::stats_config& c) {
   const auto chrom_names = m1.get_chrom_names();
   const auto chrom_sizes = m1.get_chrom_sizes();
 
-  absl::flat_hash_map<std::string, size_t> chrom_start_offsets;
+  absl::flat_hash_map<std::string, usize> chrom_start_offsets;
   if (!c.path_to_chrom_subranges.empty()) {
     modle::bed::Parser p(c.path_to_chrom_subranges);
     const auto buff = p.parse_all();
@@ -101,7 +100,7 @@ void stats_subcmd(const modle::tools::stats_config& c) {
     boost::filesystem::create_directories(
         boost::filesystem::path(path_to_output_hist).parent_path());
     hist_file = std::make_unique<std::ofstream>(path_to_output_hist);
-    std::vector<size_t> buff(c.diagonal_width / bin_size);
+    std::vector<usize> buff(c.diagonal_width / bin_size);
     std::iota(buff.begin(), buff.end(), 0);
     // TODO: Consider whether it make sense to write this header
     fmt::print(*hist_file, FMT_STRING("#{}\n"), fmt::join(buff, "\t"));
@@ -114,11 +113,11 @@ void stats_subcmd(const modle::tools::stats_config& c) {
           "chrom_name\ttot_number_of_contacts_1\ttot_number_of_contacts_2\tavg_number_of_contacts_"
           "1\tavg_number_of_contacts_2\tfraction_of_graylisted_bins\n"));
 
-  size_t tot_contacts = 0;
-  size_t tot_contacts_after_depl = 0;
-  size_t tot_number_of_pixels = 0;
+  usize tot_contacts = 0;
+  usize tot_contacts_after_depl = 0;
+  usize tot_number_of_pixels = 0;
 
-  for (size_t i = 0; i < nchroms; ++i) {
+  for (usize i = 0; i < nchroms; ++i) {
     const auto& chrom_name = chrom_names[i];
     const auto& chrom_size = chrom_sizes[i];
 
@@ -167,7 +166,7 @@ void stats_subcmd(const modle::tools::stats_config& c) {
 
     if (m2) {
       cmatrix.unsafe_deplete_contacts(c.depletion_multiplier);
-      m2->write_or_append_cmatrix_to_file(cmatrix, chrom_name, int64_t(0), chrom_size, chrom_size);
+      m2->write_or_append_cmatrix_to_file(cmatrix, chrom_name, i64(0), chrom_size, chrom_size);
     }
   }
 

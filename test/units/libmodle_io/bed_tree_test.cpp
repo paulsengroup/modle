@@ -9,14 +9,14 @@
 #include <algorithm>                  // for max, min
 #include <boost/filesystem/path.hpp>  // for path
 #include <catch2/catch.hpp>           // for AssertionHandler, operator""_catch_sr, SourceLineInfo
-#include <cstddef>                    // for size_t
-#include <cstdint>                    // for uint8_t, uint32_t
+#include <cstddef>                    // for usize
 #include <string>                     // for basic_string, operator==, string
 #include <string_view>                // for string_view
 #include <vector>                     // for vector
 
 #include "modle/bed.hpp"            // for BED, BED_tree, BED_tree::contains, BED_tree::count_...
 #include "modle/chrom_sizes.hpp"    // for bed
+#include "modle/common/common.hpp"  // for u8, u32
 #include "modle/common/utils.hpp"   // for parse_numeric_or_throw
 #include "modle/compressed_io.hpp"  // for Reader
 
@@ -59,7 +59,7 @@ TEST_CASE("BED Tree multiple overlaps", "[BED][io][long]") {
   std::vector<std::string_view> toks;
   while (r.getline(buff)) {
     toks = absl::StrSplit(buff, '\t');
-    size_t num_expected_overlaps, start, end;  // NOLINT
+    usize num_expected_overlaps, start, end;  // NOLINT
     const auto chrom = std::string{toks.front()};
     utils::parse_numeric_or_throw(toks[1], start);
     utils::parse_numeric_or_throw(toks[2], end);

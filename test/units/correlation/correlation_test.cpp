@@ -10,7 +10,6 @@
 #include <cassert>             // for assert
 #include <catch2/catch.hpp>    // for Approx, operator==, AssertionHandler, operator...
 #include <condition_variable>  // for condition_variable
-#include <cstdint>             // for uint32_t
 #include <mutex>               // for mutex, unique_lock
 #include <random>              // for random_device
 #include <string>              // for char_traits
@@ -19,6 +18,7 @@
 #include <vector>              // for vector
 
 #include "./common.hpp"               // for generate_random_vect, corr_scipy, run_scipy_corr
+#include "modle/common/common.hpp"    // for u32
 #include "modle/common/random.hpp"    // for PRNG_t
 #include "modle/common/smartdir.hpp"  // for SmartDir
 
@@ -31,8 +31,8 @@ namespace modle::test::correlation {
 using namespace modle::correlation;
 
 template <typename N>
-static void test_correlation_w_random_vector(std::string_view method, size_t vector_size,
-                                             size_t iterations, N min, N max) {
+static void test_correlation_w_random_vector(std::string_view method, usize vector_size,
+                                             usize iterations, N min, N max) {
   static_assert(std::is_arithmetic_v<N>, "N should be an arithmetic type.");
   random::PRNG_t rand_eng{std::random_device{}()};
 
@@ -53,7 +53,7 @@ static void test_correlation_w_random_vector(std::string_view method, size_t vec
                    input_data_ready, output_data_ready);
   });
 
-  for (size_t i = 0; i < iterations; ++i) {        // NOLINT
+  for (usize i = 0; i < iterations; ++i) {         // NOLINT
     assert(!input_data_ready);                     // NOLINT
     generate_random_vect(rand_eng, v1, min, max);  // NOLINT
     generate_random_vect(rand_eng, v2, min, max);  // NOLINT
@@ -95,8 +95,8 @@ static void test_correlation_w_random_vector(std::string_view method, size_t vec
 
 // NOLINTNEXTLINE(readability-function-cognitive-complexity)
 TEST_CASE("Corr. test: Pearson wo ties", "[correlation][pearson][short]") {
-  std::vector<uint32_t> v1{17, 86, 60, 77, 47, 3, 70, 87, 88, 92};   // NOLINT
-  std::vector<uint32_t> v2{70, 29, 85, 61, 80, 34, 60, 31, 73, 66};  // NOLINT
+  std::vector<u32> v1{17, 86, 60, 77, 47, 3, 70, 87, 88, 92};   // NOLINT
+  std::vector<u32> v2{70, 29, 85, 61, 80, 34, 60, 31, 73, 66};  // NOLINT
   const auto pcc = compute_pearson(v1, v2);
   const auto pv = compute_pearson_significance(pcc, v1.size());
   CHECK(Approx(pcc) == -0.033621194725622014);  // NOLINT
@@ -105,8 +105,8 @@ TEST_CASE("Corr. test: Pearson wo ties", "[correlation][pearson][short]") {
 
 // NOLINTNEXTLINE(readability-function-cognitive-complexity)
 TEST_CASE("Corr. test: Pearson w ties", "[correlation][pearson][short]") {
-  std::vector<uint32_t> v1{17, 86, 60, 77, 47, 3, 70, 47, 88, 92};   // NOLINT
-  std::vector<uint32_t> v2{70, 29, 85, 61, 80, 34, 60, 31, 73, 66};  // NOLINT
+  std::vector<u32> v1{17, 86, 60, 77, 47, 3, 70, 47, 88, 92};   // NOLINT
+  std::vector<u32> v2{70, 29, 85, 61, 80, 34, 60, 31, 73, 66};  // NOLINT
   const auto pcc = compute_pearson(v1, v2);
   const auto pv = compute_pearson_significance(pcc, v1.size());
   CHECK(Approx(pcc) == 0.16426413174421572);  // NOLINT
@@ -141,8 +141,8 @@ TEST_CASE("Corr. test: Pearson Scipy long vect.", "[correlation][pearson][long]"
 
 // NOLINTNEXTLINE(readability-function-cognitive-complexity)
 TEST_CASE("Corr. test: Spearman wo ties", "[correlation][spearman][short]") {
-  std::vector<uint32_t> v1{17, 86, 60, 77, 47, 3, 70, 87, 88, 92};   // NOLINT
-  std::vector<uint32_t> v2{70, 29, 85, 61, 80, 34, 60, 31, 73, 66};  // NOLINT
+  std::vector<u32> v1{17, 86, 60, 77, 47, 3, 70, 87, 88, 92};   // NOLINT
+  std::vector<u32> v2{70, 29, 85, 61, 80, 34, 60, 31, 73, 66};  // NOLINT
   const auto rho = compute_spearman(v1, v2);
   const auto pv = compute_spearman_significance(rho, v1.size());
   CHECK(Approx(rho) == -0.16363636363636364);  // NOLINT
@@ -151,8 +151,8 @@ TEST_CASE("Corr. test: Spearman wo ties", "[correlation][spearman][short]") {
 
 // NOLINTNEXTLINE(readability-function-cognitive-complexity)
 TEST_CASE("Corr. test: Spearman w ties", "[correlation][spearman][short]") {
-  std::vector<uint32_t> v1{17, 86, 60, 77, 47, 3, 70, 47, 88, 92};   // NOLINT
-  std::vector<uint32_t> v2{70, 29, 85, 61, 80, 34, 60, 31, 73, 66};  // NOLINT
+  std::vector<u32> v1{17, 86, 60, 77, 47, 3, 70, 47, 88, 92};   // NOLINT
+  std::vector<u32> v2{70, 29, 85, 61, 80, 34, 60, 31, 73, 66};  // NOLINT
   const auto rho = compute_spearman(v1, v2);
   const auto pv = compute_spearman_significance(rho, v1.size());
   CHECK(Approx(rho) == 0.024316221747202587);  // NOLINT
@@ -187,8 +187,8 @@ TEST_CASE("Corr. test: Spearman Scipy long vect.", "[correlation][spearman][long
 
 // NOLINTNEXTLINE(readability-function-cognitive-complexity)
 TEST_CASE("SED", "[correlation][sed][short]") {
-  std::vector<uint32_t> v1{17, 86, 60, 77, 47, 3, 70, 87, 88, 92};   // NOLINT
-  std::vector<uint32_t> v2{70, 29, 85, 61, 80, 34, 60, 31, 73, 66};  // NOLINT
+  std::vector<u32> v1{17, 86, 60, 77, 47, 3, 70, 87, 88, 92};   // NOLINT
+  std::vector<u32> v2{70, 29, 85, 61, 80, 34, 60, 31, 73, 66};  // NOLINT
   const auto sed = compute_sed(v1, v2);
   CHECK(Approx(sed) == 13125.999999999998);  // NOLINT
 }

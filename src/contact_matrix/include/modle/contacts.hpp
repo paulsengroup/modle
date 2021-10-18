@@ -8,15 +8,13 @@
 
 #include <atomic>                                   // for atomic
 #include <boost/dynamic_bitset/dynamic_bitset.hpp>  // for dynamic_bitset
-#include <cstddef>                                  // for size_t
-#include <cstdint>                                  // for uint64_t, uint32_t
 #include <iostream>                                 // for cout
 #include <mutex>                                    // for mutex
 #include <type_traits>                              // for enable_if_t
 #include <utility>                                  // for pair
 
-#include "modle/common/common.hpp"
-#include "modle/common/utils.hpp"  // for ndebug_defined
+#include "modle/common/common.hpp"  // for u64, u32
+#include "modle/common/utils.hpp"   // for ndebug_defined
 
 namespace modle {
 
@@ -34,12 +32,12 @@ class ContactMatrix {
   inline ContactMatrix(ContactMatrix<N>&& other) noexcept = default;
 #endif
   inline ContactMatrix(const ContactMatrix<N>& other);
-  inline ContactMatrix(size_t nrows, size_t ncols, bool fill_with_random_numbers = false,
-                       uint64_t seed = 8336046165695760686);
+  inline ContactMatrix(usize nrows, usize ncols, bool fill_with_random_numbers = false,
+                       u64 seed = 8336046165695760686);
   inline ContactMatrix(bp_t length, bp_t diagonal_width, bp_t bin_size,
                        bool fill_with_random_numbers = false);
-  inline ContactMatrix(absl::Span<const N> contacts, size_t nrows, size_t ncols,
-                       size_t tot_contacts = 0, size_t updates_missed = 0);
+  inline ContactMatrix(absl::Span<const N> contacts, usize nrows, usize ncols,
+                       usize tot_contacts = 0, usize updates_missed = 0);
   inline ~ContactMatrix() = default;
 
   // Operators
@@ -51,33 +49,33 @@ class ContactMatrix {
 #endif
 
   // Counts getters and setters
-  [[nodiscard]] inline N unsafe_get(size_t row, size_t col) const noexcept(utils::ndebug_defined());
+  [[nodiscard]] inline N unsafe_get(usize row, usize col) const noexcept(utils::ndebug_defined());
 
   // block_size is required to be an odd number at the moment
-  [[nodiscard]] inline N unsafe_get(size_t row, size_t col, size_t block_size) const
+  [[nodiscard]] inline N unsafe_get(usize row, usize col, usize block_size) const
       noexcept(utils::ndebug_defined());
-  inline void unsafe_set(size_t row, size_t col, N n) noexcept(utils::ndebug_defined());
-  inline void set(size_t row, size_t col, N n) noexcept(utils::ndebug_defined());
+  inline void unsafe_set(usize row, usize col, N n) noexcept(utils::ndebug_defined());
+  inline void set(usize row, usize col, N n) noexcept(utils::ndebug_defined());
 
   // The following four methods are thread-safe but operations are not atomic, as without locking it
   // is not possible to ensure that updates to pixels and total counters are atomic.
   // In order to avoid overflows, special care should be taken when N is unsigned and add/subtract
   // or increment/decrement are called from different threads
-  inline void add(size_t row, size_t col, N n) noexcept(utils::ndebug_defined());
-  inline void subtract(size_t row, size_t col, N) noexcept(utils::ndebug_defined());
-  inline void increment(size_t row, size_t col) noexcept(utils::ndebug_defined());
-  inline void decrement(size_t row, size_t col) noexcept(utils::ndebug_defined());
+  inline void add(usize row, usize col, N n) noexcept(utils::ndebug_defined());
+  inline void subtract(usize row, usize col, N) noexcept(utils::ndebug_defined());
+  inline void increment(usize row, usize col) noexcept(utils::ndebug_defined());
+  inline void decrement(usize row, usize col) noexcept(utils::ndebug_defined());
 
   // Shape/statistics getters
-  [[nodiscard]] inline constexpr size_t ncols() const noexcept(utils::ndebug_defined());
-  [[nodiscard]] inline constexpr size_t nrows() const noexcept(utils::ndebug_defined());
-  [[nodiscard]] inline constexpr size_t npixels() const noexcept(utils::ndebug_defined());
-  [[nodiscard]] inline size_t unsafe_npixels_after_masking() const;
-  [[nodiscard]] inline constexpr size_t get_n_of_missed_updates() const noexcept;
+  [[nodiscard]] inline constexpr usize ncols() const noexcept(utils::ndebug_defined());
+  [[nodiscard]] inline constexpr usize nrows() const noexcept(utils::ndebug_defined());
+  [[nodiscard]] inline constexpr usize npixels() const noexcept(utils::ndebug_defined());
+  [[nodiscard]] inline usize unsafe_npixels_after_masking() const;
+  [[nodiscard]] inline constexpr usize get_n_of_missed_updates() const noexcept;
   [[nodiscard]] inline constexpr double unsafe_get_fraction_of_missed_updates() const noexcept;
-  [[nodiscard]] inline constexpr size_t get_tot_contacts() const noexcept(utils::ndebug_defined());
+  [[nodiscard]] inline constexpr usize get_tot_contacts() const noexcept(utils::ndebug_defined());
   [[nodiscard]] inline double get_avg_contact_density() const noexcept(utils::ndebug_defined());
-  [[nodiscard]] inline constexpr size_t get_matrix_size_in_bytes() const
+  [[nodiscard]] inline constexpr usize get_matrix_size_in_bytes() const
       noexcept(utils::ndebug_defined());
   [[nodiscard]] inline constexpr double get_matrix_size_in_mb() const
       noexcept(utils::ndebug_defined());
@@ -97,37 +95,37 @@ class ContactMatrix {
   inline void clear_missed_updates_counter();
   inline void unsafe_reset();
   // Note: upon resizing the content of a ContactMatrix is invalidated
-  inline void unsafe_resize(size_t nrows, size_t ncols);
+  inline void unsafe_resize(usize nrows, usize ncols);
   inline void unsafe_resize(bp_t length, bp_t diagonal_width, bp_t bin_size);
   [[nodiscard]] inline bool empty() const;
   [[nodiscard]] inline absl::Span<const N> get_raw_count_vector() const;
   [[nodiscard]] inline absl::Span<N> get_raw_count_vector();
-  inline void unsafe_compute_row_wise_contact_histogram(std::vector<uint64_t>& buff) const;
-  [[nodiscard]] inline std::vector<uint64_t> unsafe_compute_row_wise_contact_histogram() const;
+  inline void unsafe_compute_row_wise_contact_histogram(std::vector<u64>& buff) const;
+  [[nodiscard]] inline std::vector<u64> unsafe_compute_row_wise_contact_histogram() const;
   inline void unsafe_deplete_contacts(double depletion_multiplier = 1.0);
 
   using value_type = N;
 
  private:
-  uint64_t _nrows{0};
-  uint64_t _ncols{0};
+  u64 _nrows{0};
+  u64 _ncols{0};
   std::vector<N> _contacts{};
   std::vector<std::mutex> _mtxes{};  // Each mutex protects one row of bins
-  std::atomic<int64_t> _tot_contacts{0};
-  std::atomic<int64_t> _updates_missed{0};
+  std::atomic<i64> _tot_contacts{0};
+  std::atomic<i64> _updates_missed{0};
 
-  [[nodiscard]] inline N& at(size_t i, size_t j) noexcept(utils::ndebug_defined());
-  [[nodiscard]] inline const N& at(size_t i, size_t j) const noexcept(utils::ndebug_defined());
+  [[nodiscard]] inline N& at(usize i, usize j) noexcept(utils::ndebug_defined());
+  [[nodiscard]] inline const N& at(usize i, usize j) const noexcept(utils::ndebug_defined());
 
-  [[nodiscard]] inline static std::pair<size_t, size_t> transpose_coords(
-      size_t row, size_t col) noexcept(utils::ndebug_defined());
-  inline void bound_check_column(size_t col) const;
-  inline void check_for_overflow_on_add(size_t row, size_t col, N n) const;
-  inline void check_for_overflow_on_subtract(size_t row, size_t col, N n) const;
+  [[nodiscard]] inline static std::pair<usize, usize> transpose_coords(
+      usize row, usize col) noexcept(utils::ndebug_defined());
+  inline void bound_check_column(usize col) const;
+  inline void check_for_overflow_on_add(usize row, usize col, N n) const;
+  inline void check_for_overflow_on_subtract(usize row, usize col, N n) const;
 
-  [[nodiscard]] inline N internal_get(size_t row, size_t col, size_t block_size,
-                                      std::mutex* mtx) const noexcept(utils::ndebug_defined());
-  inline void internal_set(size_t row, size_t col, N n,
+  [[nodiscard]] inline N internal_get(usize row, usize col, usize block_size, std::mutex* mtx) const
+      noexcept(utils::ndebug_defined());
+  inline void internal_set(usize row, usize col, N n,
                            std::mutex* mtx) noexcept(utils::ndebug_defined());
 
   [[nodiscard]] constexpr double internal_get_fraction_of_missed_updates(

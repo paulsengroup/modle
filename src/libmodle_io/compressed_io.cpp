@@ -27,7 +27,7 @@
 
 namespace modle::compressed_io {
 
-Reader::Reader(const boost::filesystem::path& path, size_t buff_capacity) {
+Reader::Reader(const boost::filesystem::path& path, usize buff_capacity) {
   this->_buff.reserve(buff_capacity);
   this->open(path);
 }
@@ -185,7 +185,7 @@ bool Reader::read_next_chunk() {
     this->_tok_tmp_buff.clear();
     return false;
   }
-  this->_buff.resize(static_cast<size_t>(bytes_read));
+  this->_buff.resize(static_cast<usize>(bytes_read));
   this->_idx = 0;
   return true;
 }
@@ -199,14 +199,14 @@ bool Reader::read_next_token(std::string& buff, char sep) {
   }
 
   const auto pos = this->_buff.find(sep, this->_idx);
-  const auto i = static_cast<int64_t>(this->_idx);
+  const auto i = static_cast<i64>(this->_idx);
   if (pos == std::string::npos) {
     buff.append(this->_buff.begin() + i, this->_buff.end());
     return false;
   }
 
   assert(pos >= this->_idx);  // NOLINT
-  buff.append(this->_buff.begin() + i, this->_buff.begin() + static_cast<int64_t>(pos));
+  buff.append(this->_buff.begin() + i, this->_buff.begin() + static_cast<i64>(pos));
   this->_idx = pos + 1;
   return true;
 }
@@ -220,7 +220,7 @@ std::string_view Reader::read_next_token(char sep) {
   }
 
   const auto pos = this->_buff.find(sep, this->_idx);
-  const auto i = static_cast<int64_t>(this->_idx);
+  const auto i = static_cast<i64>(this->_idx);
   if (pos == std::string::npos) {
     this->_tok_tmp_buff.append(this->_buff.begin() + i, this->_buff.end());
     return std::string_view{};
@@ -229,12 +229,11 @@ std::string_view Reader::read_next_token(char sep) {
   assert(pos >= this->_idx);  // NOLINT
   this->_idx = pos + 1;
   if (this->_tok_tmp_buff.empty()) {  // NOLINTNEXTLINE
-    return std::string_view{this->_buff.data() + static_cast<size_t>(i),
-                            pos - static_cast<size_t>(i)};
+    return std::string_view{this->_buff.data() + static_cast<usize>(i),
+                            pos - static_cast<usize>(i)};
   }
 
-  this->_tok_tmp_buff.append(this->_buff.begin() + i,
-                             this->_buff.begin() + static_cast<int64_t>(pos));
+  this->_tok_tmp_buff.append(this->_buff.begin() + i, this->_buff.begin() + static_cast<i64>(pos));
   DISABLE_WARNING_PUSH
 #if __GNUC__ < 8
   // The following two warnings seem to be a false positive produced by GCC 7.5
