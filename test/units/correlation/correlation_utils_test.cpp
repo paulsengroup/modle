@@ -14,7 +14,8 @@ using namespace modle::correlation;
 TEST_CASE("Corr. test utils: sort vect. by idx", "[correlation][utils][short]") {
   const std::vector<u32> v{10, 5, 67, 3, 60, 45, 49, 1000};
   const std::vector<u32> expected{3, 1, 0, 5, 6, 4, 2, 7};
-  const auto vi = modle::correlation::utils::sort_range_by_idx(v);
+  std::vector<usize> vi;
+  Spearman<>::test_sort_by_index(v.begin(), v.end(), vi);
   REQUIRE(vi.size() == expected.size());
   for (usize i = 0; i < expected.size(); ++i) {
     CHECK(vi[i] == expected[i]);
@@ -25,10 +26,12 @@ TEST_CASE("Corr. test utils: sort vect. by idx", "[correlation][utils][short]") 
 TEST_CASE("Corr. test utils: compute ranks wo ties", "[correlation][utils][short]") {
   const std::vector<u32> v{10, 5, 67, 3, 60, 45, 49, 1000};
   const std::vector<u32> expected{2, 1, 6, 0, 5, 3, 4, 7};
-  const auto vi = modle::correlation::utils::compute_element_ranks(v);
-  REQUIRE(vi.size() == expected.size());
+  std::vector<double> vr;
+  std::vector<usize> vi;
+  Spearman<>::test_compute_element_ranks(v.begin(), v.end(), vr, vi);
+  REQUIRE(vr.size() == expected.size());
   for (usize i = 0; i < expected.size(); ++i) {
-    CHECK(vi[i] == expected[i]);
+    CHECK(vr[i] == expected[i]);
   }
 }
 
@@ -36,10 +39,12 @@ TEST_CASE("Corr. test utils: compute ranks wo ties", "[correlation][utils][short
 TEST_CASE("Corr. test utils: compute ranks w ties", "[correlation][utils][short]") {
   const std::vector<u32> v{10, 5, 67, 3, 67, 45, 49, 1000};
   const std::vector<double> expected{2, 1, 5.5, 0, 5.5, 3, 4, 7};
-  const auto vi = modle::correlation::utils::compute_element_ranks(v);
-  REQUIRE(vi.size() == expected.size());
+  std::vector<double> vr;
+  std::vector<usize> vi;
+  Spearman<>::test_compute_element_ranks(v.begin(), v.end(), vr, vi);
+  REQUIRE(vr.size() == expected.size());
   for (usize i = 0; i < expected.size(); ++i) {
-    CHECK(vi[i] == expected[i]);
+    CHECK(vr[i] == expected[i]);
   }
 }
 }  // namespace modle::test::correlation
