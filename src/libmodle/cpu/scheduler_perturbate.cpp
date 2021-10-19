@@ -47,6 +47,7 @@
 #include "modle/extrusion_barriers.hpp"  // for ExtrusionBarrier
 #include "modle/genome.hpp"              // for Chromosome, Genome
 #include "modle/interval_tree.hpp"       // for IITree, IITree::empty, IITree::equal_range
+#include "modle/stats/tests.hpp"         // for binomial_test
 
 namespace modle {
 
@@ -548,7 +549,7 @@ void Simulation::simulate_window(Simulation::State& state, compressed_io::Writer
               lo, hi);
         }();
 
-        const auto significance = math::binomial_test(contacts, reference_contacts + contacts);
+        const auto significance = stats::binomial_test(contacts, reference_contacts + contacts);
 
         // Generate the name field. The field will be "none;none" in case both features don't have
         // a name

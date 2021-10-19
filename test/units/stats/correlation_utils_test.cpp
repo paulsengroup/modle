@@ -5,7 +5,7 @@
 #include <vector>            // for vector
 
 #include "modle/common/common.hpp"  // for u32
-#include "modle/correlation.hpp"
+#include "modle/stats/correlation.hpp"
 
 namespace modle::test::correlation {
 using namespace modle::correlation;

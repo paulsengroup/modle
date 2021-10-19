@@ -47,7 +47,7 @@ class Pearson {
   template <class It1, class It2>
   [[nodiscard]] static inline FP test_compute_pcc(It1 begin1, It1 end1, It2 begin2) {
     return compute_pcc(begin1, end1, begin2);
-  };
+  }
 
   template <class I, class = std::enable_if<std::is_integral_v<I>>>
   [[nodiscard]] static inline FP test_compute_significance(FP pcc, I n) {
@@ -138,6 +138,6 @@ class SED {
 
 }  // namespace modle::correlation
 
-#include "../../correlation_impl.hpp"  // IWYU pragma: export
+#include "../../../correlation_impl.hpp"  // IWYU pragma: export
 
 // IWYU pragma: private, include "../../correlation_impl.hpp"

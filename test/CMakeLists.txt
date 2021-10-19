@@ -15,10 +15,11 @@ target_sources(
   test_main
   PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/test_main.cpp
           ${CMAKE_CURRENT_SOURCE_DIR}/units/contact_matrix/contact_matrix_test.cpp
-          ${CMAKE_CURRENT_SOURCE_DIR}/units/common/math_test.cpp
-          ${CMAKE_CURRENT_SOURCE_DIR}/units/correlation/common.hpp
-          ${CMAKE_CURRENT_SOURCE_DIR}/units/correlation/correlation_test.cpp
-          ${CMAKE_CURRENT_SOURCE_DIR}/units/correlation/correlation_utils_test.cpp
+          ${CMAKE_CURRENT_SOURCE_DIR}/units/stats/common.hpp
+          ${CMAKE_CURRENT_SOURCE_DIR}/units/stats/correlation_test.cpp
+          ${CMAKE_CURRENT_SOURCE_DIR}/units/stats/correlation_utils_test.cpp
+          ${CMAKE_CURRENT_SOURCE_DIR}/units/stats/descriptive_test.cpp
+          ${CMAKE_CURRENT_SOURCE_DIR}/units/stats/tests_test.cpp
           ${CMAKE_CURRENT_SOURCE_DIR}/units/interval_tree/interval_tree_test.cpp
           ${CMAKE_CURRENT_SOURCE_DIR}/units/libmodle_io/bed_parser_test.cpp
           ${CMAKE_CURRENT_SOURCE_DIR}/units/libmodle_io/bed_tree_test.cpp
@@ -39,9 +40,9 @@ target_link_libraries(
           fmt::fmt
           Modle::cmatrix
           Modle::common
-          Modle::correlation
           Modle::interval_tree
-          Modle::libmodle)
+          Modle::libmodle
+          Modle::stats)
 # cmake-format: off
           # Not explicitly linking to the following targets saves quite a bit of time when compiling
           # Modle::libmodle_internal

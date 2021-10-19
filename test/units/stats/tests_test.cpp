@@ -2,7 +2,7 @@
 //
 // SPDX-License-Identifier: MIT
 
-#include "modle/common/math.hpp"
+#include "modle/stats/tests.hpp"
 
 #include <fmt/compile.h>
 #include <fmt/format.h>
@@ -21,99 +21,13 @@
 #include "modle/common/random.hpp"
 #include "modle/common/utils.hpp"
 
-namespace modle::test::math {
-using namespace modle::math;
+namespace modle::test::stats {
+using namespace modle::stats;
 using namespace std::string_view_literals;
 
 struct FP {
   float n;
 };
-
-// NOLINTNEXTLINE(readability-function-cognitive-complexity)
-TEST_CASE("Mean", "[math][short]") {
-  const std::vector<u8> v1{0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10};
-  std::vector<FP> v2(v1.size());
-  std::transform(v1.begin(), v1.end(), v2.begin(),
-                 [](const auto n) { return FP{static_cast<float>(n)}; });
-
-  const auto result = Approx(5.0);
-
-  CHECK(math::mean(v1.begin(), v1.end()) == result);
-  CHECK(math::mean(v2.begin(), v2.end(), [](const auto& fp) { return fp.n; }) == result);
-}
-
-// NOLINTNEXTLINE(readability-function-cognitive-complexity)
-TEST_CASE("Moving average", "[math][short]") {
-  const usize window_size = 3;
-  const std::vector<u8> v1{0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10};
-  std::vector<FP> v2(v1.size());
-  std::transform(v1.begin(), v1.end(), v2.begin(),
-                 [](const auto n) { return FP{static_cast<float>(n)}; });
-
-  const std::vector<double> results{1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0};
-
-  std::vector<double> output(results.size());
-  REQUIRE(math::moving_average(v1.begin(), v1.end(), output.begin(), window_size) ==
-          v1.size() - window_size);
-
-  for (usize i = 0; i < results.size(); ++i) {
-    CHECK(results[i] == Approx(output[i]));
-  }
-
-  output.clear();
-  output.resize(results.size());
-  REQUIRE(math::moving_average(v2.begin(), v2.end(), output.begin(), window_size,
-                               [](const auto& fp) { return fp.n; }) == v1.size() - window_size);
-
-  for (usize i = 0; i < results.size(); ++i) {
-    CHECK(results[i] == Approx(output[i]));
-  }
-
-  output.clear();
-  output.resize(1);
-  REQUIRE(math::moving_average(v1.begin(), v1.end(), output.begin(), v1.size() + 1) == 1);
-  CHECK(math::mean(v1.begin(), v1.end()) == Approx(output.front()));
-}
-
-// NOLINTNEXTLINE(readability-function-cognitive-complexity)
-TEST_CASE("Sum of squared deviations", "[math][short]") {
-  const std::vector<u8> v1{0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10};
-  std::vector<FP> v2(v1.size());
-  std::transform(v1.begin(), v1.end(), v2.begin(),
-                 [](const auto n) { return FP{static_cast<float>(n)}; });
-
-  const auto result = Approx(110.0);
-
-  CHECK(math::sum_of_squared_deviations(v1.begin(), v1.end()) == result);
-  CHECK(math::sum_of_squared_deviations(v2.begin(), v2.end(),
-                                        [](const auto& fp) { return fp.n; }) == result);
-}
-
-// NOLINTNEXTLINE(readability-function-cognitive-complexity)
-TEST_CASE("Variance", "[math][short]") {
-  const std::vector<u8> v1{0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10};
-  std::vector<FP> v2(v1.size());
-  std::transform(v1.begin(), v1.end(), v2.begin(),
-                 [](const auto n) { return FP{static_cast<float>(n)}; });
-
-  const auto result = Approx(10.0);
-
-  CHECK(math::variance(v1.begin(), v1.end()) == result);
-  CHECK(math::variance(v2.begin(), v2.end(), [](const auto& fp) { return fp.n; }) == result);
-}
-
-// NOLINTNEXTLINE(readability-function-cognitive-complexity)
-TEST_CASE("Standard Deviation", "[math][short]") {
-  const std::vector<u8> v1{0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10};
-  std::vector<FP> v2(v1.size());
-  std::transform(v1.begin(), v1.end(), v2.begin(),
-                 [](const auto n) { return FP{static_cast<float>(n)}; });
-
-  const auto result = Approx(3.1622776601683795);
-
-  CHECK(math::standard_dev(v1.begin(), v1.end()) == result);
-  CHECK(math::standard_dev(v2.begin(), v2.end(), [](const auto& fp) { return fp.n; }) == result);
-}
 
 // clang-format off
 #define MAKE_BINOM_TEST_CASE(ALTERNATIVE) \
@@ -187,8 +101,8 @@ TEST_CASE("Binom test - two-sided", "[math][short]") {
   const auto result_two_sided_n1 = Approx(2.1004568301653535e-06);
   const auto result_two_sided_n2 = Approx(0.20009222902827126);
 
-  CHECK(math::binomial_test<TWO_SIDED>(k, n1) == result_two_sided_n1);
-  CHECK(math::binomial_test<TWO_SIDED>(k, n2) == result_two_sided_n2);
+  CHECK(stats::binomial_test<TWO_SIDED>(k, n1) == result_two_sided_n1);
+  CHECK(stats::binomial_test<TWO_SIDED>(k, n2) == result_two_sided_n2);
 }
 
 // NOLINTNEXTLINE(readability-function-cognitive-complexity)
@@ -198,7 +112,7 @@ TEST_CASE("Binom test - less", "[math][short]") {
 
   const auto result_less = Approx(0.9999995628468261);
 
-  CHECK(math::binomial_test<LESS>(k, n) == result_less);
+  CHECK(stats::binomial_test<LESS>(k, n) == result_less);
 }
 
 // NOLINTNEXTLINE(readability-function-cognitive-complexity)
@@ -208,7 +122,7 @@ TEST_CASE("Binom test - greater", "[math][short]") {
 
   const auto result_greater = Approx(1.0502284150826767e-06);
 
-  CHECK(math::binomial_test<GREATER>(k, n) == result_greater);
+  CHECK(stats::binomial_test<GREATER>(k, n) == result_greater);
 }
 
 // NOLINTNEXTLINE(readability-function-cognitive-complexity)
@@ -248,7 +162,7 @@ TEST_CASE("Binom test - two-sided randomized", "[math][long]") {
       output_data_cv.wait(l, [&]() { return output_data_ready.load(); });
       output_data_ready = false;
     }
-    const auto pv = math::binomial_test<TWO_SIDED>(k, n);
+    const auto pv = stats::binomial_test<TWO_SIDED>(k, n);
     CHECK(Approx(pv).margin(1.0e-250) == pv_py);  // NOLINT
   }
   k = 0;
@@ -258,4 +172,4 @@ TEST_CASE("Binom test - two-sided randomized", "[math][long]") {
   t.join();
 }
 
-}  // namespace modle::test::math
+}  // namespace modle::test::stats

@@ -2,7 +2,7 @@
 //
 // SPDX-License-Identifier: MIT
 
-#include "modle/correlation.hpp"  // for compute_pearson, compute_pearson_significance, compute_...
+#include "modle/stats/correlation.hpp"  // for compute_pearson, compute_pearson_significance, compute_...
 
 #include <absl/container/flat_hash_set.h>  // for BitMask, operator!=
 

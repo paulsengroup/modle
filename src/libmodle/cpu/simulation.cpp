@@ -50,6 +50,7 @@
 #include "modle/extrusion_factors.hpp"       // for Lef, ExtrusionUnit
 #include "modle/genome.hpp"                  // for Genome::iterator, Chromosome
 #include "modle/interval_tree.hpp"           // for IITree, IITree::data
+#include "modle/stats/descriptive.hpp"
 
 namespace modle {
 
@@ -983,9 +984,9 @@ void Simulation::compute_loop_size_stats(const absl::Span<const Lef> lefs,
   }
 
   const auto avg_loop_size =
-      math::mean(lefs.begin(), lefs.end(), [](const auto& lef) { return lef.loop_size(); });
+      stats::mean(lefs.begin(), lefs.end(), [](const auto& lef) { return lef.loop_size(); });
 
-  const auto avg_loop_size_std = math::standard_dev(
+  const auto avg_loop_size_std = stats::standard_dev(
       lefs.begin(), lefs.end(), avg_loop_size, [](const auto& lef) { return lef.loop_size(); });
 
   if (avg_loop_size_buff.size() == buff_capacity) {
@@ -1016,8 +1017,8 @@ bool Simulation::evaluate_burnin(const std::deque<double>& cfx_of_variation_buff
   for (auto it1 = cfx_of_variation_buff.begin() + 1,
             it2 = cfx_of_variation_buff.begin() + static_cast<isize>(window_size + 1);
        it2 != cfx_of_variation_buff.end(); ++it1, ++it2) {
-    const auto n1 = math::mean(it1 - 1, it2 - 1);
-    const auto n2 = math::mean(it1, it2);
+    const auto n1 = stats::mean(it1 - 1, it2 - 1);
+    const auto n2 = stats::mean(it1, it2);
     n += static_cast<usize>(n1 > n2);
   }
   const auto r1 = static_cast<double>(n) / static_cast<double>(buff_capacity - window_size - n);
@@ -1031,8 +1032,8 @@ bool Simulation::evaluate_burnin(const std::deque<double>& cfx_of_variation_buff
   for (auto it1 = avg_loop_size_buff.begin() + 1,
             it2 = avg_loop_size_buff.begin() + static_cast<isize>(window_size + 1);
        it2 != avg_loop_size_buff.end(); ++it1, ++it2) {
-    const auto n1 = math::mean(it1 - 1, it2 - 1);
-    const auto n2 = math::mean(it1, it2);
+    const auto n1 = stats::mean(it1 - 1, it2 - 1);
+    const auto n2 = stats::mean(it1, it2);
     n += static_cast<usize>(n1 > n2);
   }
   const auto r2 = static_cast<double>(n) / static_cast<double>(buff_capacity - window_size - n);

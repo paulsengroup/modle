@@ -25,8 +25,7 @@
 #include <thread_pool/thread_pool.hpp>              // for thread_pool
 #include <type_traits>                              // for declval, decay_t
 
-#include "modle/common/common.hpp"  // for bp_t, i64, u32
-#include "modle/common/math.hpp"
+#include "modle/common/common.hpp"                      // for bp_t, i64, u32
 #include "modle/common/random.hpp"                      // for PRNG_t, uniform_int_distribution
 #include "modle/common/random_sampling.hpp"             // for random_sampe
 #include "modle/common/suppress_compiler_warnings.hpp"  // for DISABLE_WARNING_POP, DISABLE_WARN...

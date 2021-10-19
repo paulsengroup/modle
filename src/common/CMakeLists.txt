@@ -16,12 +16,10 @@ target_sources(
   INTERFACE ${CMAKE_CURRENT_SOURCE_DIR}/include/modle/common/common.hpp
             ${CMAKE_CURRENT_SOURCE_DIR}/include/modle/common/config.hpp
             ${CMAKE_CURRENT_SOURCE_DIR}/include/modle/common/genextreme_value_distribution.hpp
-            ${CMAKE_CURRENT_SOURCE_DIR}/include/modle/common/math.hpp
             ${CMAKE_CURRENT_SOURCE_DIR}/include/modle/common/random.hpp
             ${CMAKE_CURRENT_SOURCE_DIR}/include/modle/common/random_sampling.hpp
             ${CMAKE_CURRENT_SOURCE_DIR}/include/modle/common/suppress_compiler_warnings.hpp
             ${CMAKE_CURRENT_SOURCE_DIR}/include/modle/common/utils.hpp
-            ${CMAKE_CURRENT_SOURCE_DIR}/math_impl.hpp
             ${CMAKE_CURRENT_SOURCE_DIR}/utils_impl.hpp)
 
 target_link_libraries(

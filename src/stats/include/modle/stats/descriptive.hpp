@@ -8,7 +8,7 @@
 
 #include "modle/common/utils.hpp"  // for identity
 
-namespace modle::math {
+namespace modle::stats {
 
 template <class T, class = std::enable_if_t<std::is_arithmetic_v<T>>>
 constexpr T abs_diff(T a, T b) noexcept;
@@ -80,11 +80,5 @@ template <class InputIt, class UnaryOperation = utils::identity,
                                          UnaryOperation op = utils::identity());
 /////////
 
-enum binomial_test_alternative : std::uint_fast8_t { TWO_SIDED, GREATER, LESS };
-
-template <binomial_test_alternative alternative = TWO_SIDED, class FP = double, class I,
-          class = std::enable_if<std::is_integral_v<I> && std::is_floating_point_v<FP>>>
-[[nodiscard]] inline FP binomial_test(I k, I n, FP p = 0.5);
-
-}  // namespace modle::math
-#include "../../../math_impl.hpp"  // IWYU pragma: export
+}  // namespace modle::stats
+#include "../../../descriptive_impl.hpp"  // IWYU pragma: export

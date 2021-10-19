@@ -33,6 +33,7 @@ target_link_libraries(
           cpp-sort::cpp-sort
           Modle::cmatrix
           Modle::common
+          Modle::stats
   PUBLIC absl::btree
          absl::fixed_array
          absl::flat_hash_map
