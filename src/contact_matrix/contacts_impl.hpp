@@ -486,12 +486,12 @@ std::vector<std::vector<N>> ContactMatrix<N>::unsafe_generate_symmetric_matrix()
   for (usize y = 0; y < this->_ncols; ++y) {
     std::vector<N> row(this->_ncols, 0);
     for (usize x = 0; x < this->_ncols; ++x) {
-      auto j = x;
-      auto i = j - y;
-      if (y > x) {
-        j = y;
-        i = j - x;
-      }
+      const auto [j, i] = [&]() {
+        if (y > x) {
+          return std::make_pair(y, y - x);
+        }
+        return std::make_pair(x, x - y);
+      }();
 
       if (i < this->_nrows) {
         row[x] = this->at(i, j);
@@ -525,7 +525,8 @@ void ContactMatrix<N>::unsafe_import_from_txt(const boost::filesystem::path &pat
 }
 
 template <class N>
-void ContactMatrix<N>::unsafe_generate_mask_for_bins_without_contacts(
+__attribute__((no_sanitize("integer"))) void
+ContactMatrix<N>::unsafe_generate_mask_for_bins_without_contacts(
     boost::dynamic_bitset<> &mask) const {
   mask.resize(this->ncols());
   mask.reset();
@@ -538,6 +539,7 @@ void ContactMatrix<N>::unsafe_generate_mask_for_bins_without_contacts(
       }
     }
     // Set bitmask to 1 if column "above" the current bin contains at least one non-zero value
+    // NOTE i - this->nrows() can overflow. This is intended
     for (auto j = i; j > 0 && j > (i - this->nrows()); --j) {
       if ((mask[i] |= this->unsafe_get(i, j))) {
         break;
