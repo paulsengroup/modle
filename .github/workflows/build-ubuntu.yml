@@ -53,7 +53,18 @@ jobs:
         uses: actions/checkout@v2
 
       - name: Install unit test dependencies
-        run: pip3 install scipy
+        run: |
+          pip3 install scipy
+          
+          sudo ln -snf /usr/share/zoneinfo/CET /etc/localtime
+          sudo echo CET > /etc/timezone
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends  \
+                               r-base libcurl4-openssl-dev \
+                               libssl-dev libxml2-dev
+          
+          echo "options(Ncpus = $(nproc))" > "$HOME/.Rprofile"
+          Rscript -e 'install.packages("wCorr")'
 
       - name: Collect compiler information
         id: compiler-info

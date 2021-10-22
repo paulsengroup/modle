@@ -67,12 +67,19 @@ RUN cd "$build_dir"                   \
 FROM ubuntu:20.04 AS testing
 
 ARG SCIPY_VER="1.5.1"
+ARG WCORR_VER="1.9.5"
 ARG src_dir="/home/conan/modle"
 
-RUN sudo apt-get update \
-    && sudo apt-get install -y --no-install-recommends \
-                            python3-pip           \
-    && pip3 install "scipy==${SCIPY_VER}"
+RUN ln -snf /usr/share/zoneinfo/CET /etc/localtime \
+    && echo CET > /etc/timezone
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends              \
+                       python3-pip r-base libcurl4-openssl-dev \
+                       libssl-dev libxml2-dev
+RUN pip3 install "scipy==${SCIPY_VER}"
+RUN echo "options(Ncpus = $(nproc))" > "$HOME/.Rprofile" \
+    && Rscript -e 'install.packages("devtools")'         \
+    && Rscript -e "library(devtools); devtools::install_version(\"wCorr\", version=\"${WCORR_VER}\");"
 
 COPY --from=builder "$src_dir" "$src_dir"
 COPY --from=builder "/usr/bin/ctest" "/usr/bin/ctest"

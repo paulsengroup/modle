@@ -10,6 +10,7 @@
 #include <boost/filesystem/file_status.hpp>  // for regular_file, file_type
 #include <boost/filesystem/path.hpp>         // for path
 #include <cstdio>                            // for FILE
+#include <iterator>                          // for random_access_iterator_tag
 #include <string>                            // for string
 #include <string_view>                       // for string_view
 #include <system_error>                      // for errc
@@ -128,6 +129,29 @@ class ConstMap {
 
   [[nodiscard]] constexpr const_iterator begin() const noexcept;
   [[nodiscard]] constexpr const_iterator end() const noexcept;
+};
+
+template <class T>
+class RepeatIterator {
+  T _value;
+
+ public:
+  using value_type = T;
+  using iterator_category = std::random_access_iterator_tag;
+
+  RepeatIterator() = delete;
+  explicit RepeatIterator(T value);
+
+  [[nodiscard]] constexpr const T& operator*() const;
+
+  constexpr const RepeatIterator& operator++() const;
+  constexpr const RepeatIterator& operator++(int) const;
+  constexpr const RepeatIterator& operator+=(usize i) const;
+  constexpr const RepeatIterator& operator+(usize i) const;
+  constexpr const RepeatIterator& operator--() const;
+  constexpr const RepeatIterator& operator--(int) const;
+  constexpr const RepeatIterator& operator-=(usize i) const;
+  constexpr const RepeatIterator& operator-(usize i) const;
 };
 
 }  // namespace modle::utils

@@ -4,14 +4,16 @@
 
 #pragma once
 
-#include <absl/types/span.h>  // for Span
+#include <absl/types/optional.h>  // for optional
+#include <absl/types/span.h>      // for Span
 
 #include <utility>  // for pair
 #include <vector>   // for vector
 
 #include "modle/common/common.hpp"  // for std::uint_fast8_t
+#include "modle/common/utils.hpp"   // for RepeatIterator
 
-namespace modle::correlation {
+namespace modle::stats {
 
 template <class FP>
 class Spearman;
@@ -30,14 +32,23 @@ class Pearson {
     FP pvalue{1};
   };
 
-  template <class It1, class It2>
-  [[nodiscard]] inline Result operator()(It1 begin1, It1 end1, It2 begin2) const;
+  template <class It1, class It2, class It3>
+  [[nodiscard]] inline Result operator()(It1 first1, It1 last1, It2 first2,
+                                         It3 weight_first = utils::RepeatIterator<FP>(1)) const;
+
   template <class Range1, class Range2>
   [[nodiscard]] inline Result operator()(const Range1& r1, const Range2& r2) const;
+  template <class Range1, class Range2, class Range3>
+  [[nodiscard]] inline Result operator()(const Range1& r1, const Range2& r2,
+                                         const Range3& weights) const;
 
  private:
   template <class It1, class It2>
-  [[nodiscard]] static inline FP compute_pcc(It1 begin1, It1 end1, It2 begin2);
+  [[nodiscard]] static inline FP compute_pcc(It1 first1, It1 last1, It2 first2);
+
+  template <class It1, class It2, class It3>
+  [[nodiscard]] static inline FP compute_weighted_pcc(It1 first1, It1 last1, It2 first2,
+                                                      It3 weight_first);
 
   template <class I, class = std::enable_if<std::is_integral_v<I>>>
   [[nodiscard]] static inline FP compute_significance(FP pcc, I n);
@@ -45,12 +56,13 @@ class Pearson {
 #ifdef ENABLE_TESTING
  public:
   template <class It1, class It2>
-  [[nodiscard]] static inline FP test_compute_pcc(It1 begin1, It1 end1, It2 begin2) {
-    return compute_pcc(begin1, end1, begin2);
+  [[maybe_unused]] [[nodiscard]] static inline FP test_compute_pcc(It1 first1, It1 last1,
+                                                                   It2 first2) {
+    return compute_pcc(first1, last1, first2);
   }
 
   template <class I, class = std::enable_if<std::is_integral_v<I>>>
-  [[nodiscard]] static inline FP test_compute_significance(FP pcc, I n) {
+  [[maybe_unused]] [[nodiscard]] static inline FP test_compute_significance(FP pcc, I n) {
     return compute_significance(pcc, n);
   }
 #endif
@@ -74,50 +86,33 @@ class Spearman {
     FP pvalue{1};
   };
 
-  template <class It1, class It2>
-  [[nodiscard]] inline Result operator()(It1 begin1, It1 end1, It2 begin2);
+  template <class It1, class It2, class It3>
+  [[nodiscard]] inline Result operator()(It1 first1, It1 last1, It2 first2,
+                                         It3 weight_first = utils::RepeatIterator<FP>(1));
+
   template <class Range1, class Range2>
   [[nodiscard]] inline Result operator()(const Range1& r1, const Range2& r2);
+  template <class Range1, class Range2, class Range3>
+  [[nodiscard]] inline Result operator()(const Range1& r1, const Range2& r2, const Range3& weights);
 
  private:
-  // Return the indices corresponding to the sorted vector
-  template <class It>
-  static inline void sort_by_index(It it_begin, It it_end, std::vector<usize>& idx_buff);
-
-  // This returns a vector of floating point numbers corresponding to the rank of the values from
-  // the collection delimited by \p it_begin and \p it_end
-  template <class It>
-  static inline void compute_element_ranks(It it_begin, It it_end, std::vector<FP>& rank_buff,
-                                           std::vector<usize>& idx_buff);
-
   template <class It1, class It2>
-  [[nodiscard]] inline FP compute_rho(It1 begin1, It1 end1, It2 begin2);
+  [[nodiscard]] inline FP compute_rho(It1 first1, It1 last1, It2 first2);
+  template <class It1, class It2, class It3>
+  [[nodiscard]] inline FP compute_weighted_rho(It1 first1, It1 last1, It2 first2, It3 weight_first);
 
   template <class I, class = std::enable_if<std::is_integral_v<I>>>
   [[nodiscard]] static inline FP compute_significance(FP rho, I n);
 
 #ifdef ENABLE_TESTING
  public:
-  template <class It>
-  static inline void test_sort_by_index(It it_begin, It it_end, std::vector<usize>& idx_buff) {
-    return sort_by_index(it_begin, it_end, idx_buff);
-  }
-
-  // This returns a vector of floating point numbers corresponding to the rank of the values from
-  // the collection delimited by \p it_begin and \p it_end
-  template <class It>
-  static inline void test_compute_element_ranks(It it_begin, It it_end, std::vector<FP>& rank_buff,
-                                                std::vector<usize>& idx_buff) {
-    return compute_element_ranks(it_begin, it_end, rank_buff, idx_buff);
-  }
-
   template <class It1, class It2>
-  [[nodiscard]] inline FP test_compute_rho(It1 begin1, It1 end1, It2 begin2) {
-    return compute_rho(begin1, end1, begin2);
+  [[maybe_unused]] [[nodiscard]] inline FP test_compute_rho(It1 first1, It1 last1, It2 first2) {
+    return compute_rho(first1, last1, first2);
   }
 
   template <class I, class = std::enable_if<std::is_integral_v<I>>>
-  [[nodiscard]] static inline FP test_compute_significance(FP rho, I n) {
+  [[maybe_unused]] [[nodiscard]] static inline FP test_compute_significance(FP rho, I n) {
     return compute_significance(rho, n);
   }
 #endif
@@ -131,12 +126,31 @@ class SED {
  public:
   inline SED() = default;
   template <class It1, class It2>
-  [[nodiscard]] inline FP operator()(It1 begin1, It1 end1, It2 begin2) const;
+  [[nodiscard]] inline FP operator()(It1 first1, It1 last1, It2 first2) const;
   template <class Range1, class Range2>
   [[nodiscard]] inline FP operator()(const Range1& r1, const Range2& r2) const;
 };
 
-}  // namespace modle::correlation
+namespace internal {
+
+// Return the indices corresponding to the sorted vector
+template <class It>
+inline void sort_by_index(It first, It last, std::vector<usize>& idx_buff);
+
+// This returns a vector of floating point numbers corresponding to the rank of the values from
+// the collection delimited by \p first and \p last
+template <class It, class FP, class = std::enable_if_t<std::is_floating_point_v<FP>>>
+inline void compute_element_ranks(It first, It last, std::vector<FP>& rank_buff,
+                                  std::vector<usize>& idx_buff);
+
+// https://rdrr.io/cran/wCorr/f/inst/doc/wCorrFormulas.pdf
+template <class It1, class It2, class FP, class = std::enable_if_t<std::is_floating_point_v<FP>>>
+inline void compute_weighted_element_ranks(It1 first, It1 last, It2 weight_first,
+                                           std::vector<FP>& rank_buff,
+                                           std::vector<usize>& idx_buff);
+}  // namespace internal
+
+}  // namespace modle::stats
 
 #include "../../../correlation_impl.hpp"  // IWYU pragma: export
 

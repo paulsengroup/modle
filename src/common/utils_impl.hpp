@@ -326,6 +326,54 @@ constexpr typename ConstMap<Key, Value, Size>::const_iterator ConstMap<Key, Valu
   return this->_buff.end();
 }
 
+template <class T>
+RepeatIterator<T>::RepeatIterator(T value) : _value(std::move(value)) {}
+
+template <class T>
+constexpr const T &RepeatIterator<T>::operator*() const {
+  return this->_value;
+}
+
+template <class T>
+constexpr const RepeatIterator<T> &RepeatIterator<T>::operator++() const {
+  return *this;
+}
+
+template <class T>
+constexpr const RepeatIterator<T> &RepeatIterator<T>::operator++(int) const {
+  return *this;
+}
+
+template <class T>
+constexpr const RepeatIterator<T> &RepeatIterator<T>::operator+=([[maybe_unused]] usize i) const {
+  return *this;
+}
+
+template <class T>
+constexpr const RepeatIterator<T> &RepeatIterator<T>::operator+([[maybe_unused]] usize i) const {
+  return *this;
+}
+
+template <class T>
+constexpr const RepeatIterator<T> &RepeatIterator<T>::operator--() const {
+  return *this;
+}
+
+template <class T>
+constexpr const RepeatIterator<T> &RepeatIterator<T>::operator--(int) const {
+  return *this;
+}
+
+template <class T>
+constexpr const RepeatIterator<T> &RepeatIterator<T>::operator-=([[maybe_unused]] usize i) const {
+  return *this;
+}
+
+template <class T>
+constexpr const RepeatIterator<T> &RepeatIterator<T>::operator-([[maybe_unused]] usize i) const {
+  return *this;
+}
+
 }  // namespace modle::utils
 
 // IWYU pragma: private, include "modle/utils.hpp"
