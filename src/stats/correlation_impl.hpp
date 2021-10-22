@@ -48,8 +48,7 @@ template <class Range1, class Range2>
 typename Pearson<FP>::Result Pearson<FP>::operator()(const Range1& r1, const Range2& r2) const {
   assert(std::distance(std::begin(r1), std::end(r1)) ==
          std::distance(std::begin(r2), std::end(r2)));  // NOLINT
-  return this->operator()(std::begin(r1), std::end(r1), std::begin(r2),
-                          utils::RepeatIterator<FP>(1));
+  return (*this)(std::begin(r1), std::end(r1), std::begin(r2), utils::RepeatIterator<FP>(1));
 }
 
 template <class FP>
@@ -61,7 +60,7 @@ typename Pearson<FP>::Result Pearson<FP>::operator()(const Range1& r1, const Ran
   assert(std::distance(std::begin(r1), std::end(r1)) ==
          std::distance(std::begin(weights), std::end(weights)));  // NOLINT
 
-  return this->operator()(std::begin(r1), std::end(r1), std::begin(r2), std::begin(weights));
+  return (*this)(std::begin(r1), std::end(r1), std::begin(r2), std::begin(weights));
 }
 
 /*
@@ -186,8 +185,7 @@ template <class Range1, class Range2>
 typename Spearman<FP>::Result Spearman<FP>::operator()(const Range1& r1, const Range2& r2) {
   assert(std::distance(std::begin(r1), std::end(r1)) ==
          std::distance(std::begin(r2), std::end(r2)));  // NOLINT
-  return this->operator()(std::begin(r1), std::end(r1), std::begin(r2),
-                          utils::RepeatIterator<FP>(1));
+  return (*this)(std::begin(r1), std::end(r1), std::begin(r2), utils::RepeatIterator<FP>(1));
 }
 
 template <class FP>
@@ -198,7 +196,7 @@ typename Spearman<FP>::Result Spearman<FP>::operator()(const Range1& r1, const R
          std::distance(std::begin(r2), std::end(r2)));  // NOLINT
   assert(std::distance(std::begin(r1), std::end(r1)) ==
          std::distance(std::begin(weights), std::end(weights)));  // NOLINT
-  return this->operator()(std::begin(r1), std::end(r1), std::begin(r2), std::begin(weights));
+  return (*this)(std::begin(r1), std::end(r1), std::begin(r2), std::begin(weights));
 }
 
 template <class FP>
@@ -233,7 +231,7 @@ template <class Range1, class Range2>
 [[nodiscard]] inline FP SED<FP>::operator()(const Range1& r1, const Range2& r2) const {
   assert(std::distance(std::begin(r1), std::end(r1)) ==
          std::distance(std::begin(r2), std::end(r2)));  // NOLINT
-  return this->operator()(std::begin(r1), std::end(r1), std::begin(r2));
+  return (*this)(std::begin(r1), std::end(r1), std::begin(r2));
 }
 
 namespace internal {
