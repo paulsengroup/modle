@@ -8,7 +8,7 @@ include(FetchContent)
 FetchContent_Declare(
   libBigWig
   URL ${CMAKE_CURRENT_SOURCE_DIR}/external/libBigWig-0.4.6.tar.xz
-  URL_HASH SHA512=9c1fbc8232be9f1098f373c1b3546af7d9c7306785d0927f921e75d735ad77f24d4f9dd21cb4a82cdc90b07cfffee129ec38c5ca67de7d3f7137efd596c60a53
+  URL_HASH SHA512=bd46602381cafa6d910d17b75f4db6b21a29b6fc455d33dbd4a7ee576d62c4fd64e7e55416fb0af0d89ab4c3cd99ea896aad1af55f55bc6dab2da84b7875c439
 )
 FetchContent_Declare(
   mscharconv
