@@ -50,6 +50,10 @@ class ContactMatrix {
 
   // Counts getters and setters
   [[nodiscard]] inline N unsafe_get(usize row, usize col) const noexcept(utils::ndebug_defined());
+  inline void unsafe_get_column(usize col, std::vector<N>& buff, usize row_offset = 0) const
+      noexcept(utils::ndebug_defined());
+  inline void unsafe_get_row(usize row, std::vector<N>& buff, usize col_offset = 0) const
+      noexcept(utils::ndebug_defined());
 
   // block_size is required to be an odd number at the moment
   [[nodiscard]] inline N unsafe_get(usize row, usize col, usize block_size) const

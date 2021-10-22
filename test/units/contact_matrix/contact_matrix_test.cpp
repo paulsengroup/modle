@@ -210,4 +210,97 @@ TEST_CASE("CMatrix unsafe_get w/ block small", "[cmatrix][short]") {
   }
 }
 
+// NOLINTNEXTLINE(readability-function-cognitive-complexity)
+TEST_CASE("CMatrix get column", "[cmatrix][short]") {
+  ContactMatrix<> c(10, 100);  // NOLINT
+
+  const usize col = 25;  // Set a column of pixels to 1
+  for (usize i = 0; i < c.nrows(); ++i) {
+    c.set(col - i, col, static_cast<u32>(i));
+  }
+
+  REQUIRE(c.get_tot_contacts() == 45);  // NOLINT
+  REQUIRE(c.get_n_of_missed_updates() == 0);
+
+  std::vector<u32> buff;
+  // Test getting a column of pixels
+  c.unsafe_get_column(col, buff);
+  REQUIRE(buff.size() == c.nrows());
+  for (usize i = 0; i < c.nrows(); ++i) {
+    CHECK(buff[i] == i);
+  }
+
+  // Test getting a column of pixel skipping the first 5 values (starting from the diagonal)
+  const usize offset = 5;
+  c.unsafe_get_column(col, buff, offset);
+
+  REQUIRE(buff.size() == c.nrows() - offset);
+  for (usize i = 0; i < c.nrows() - offset; ++i) {
+    CHECK(buff[i] == i + offset);
+  }
+
+  // Test getting the first column of pixels
+  c.set(0, 0, 1);
+  c.unsafe_get_column(0, buff);
+  REQUIRE(buff.size() == c.nrows());
+  CHECK(buff.front() == 1);
+  for (usize i = 1; i < c.nrows(); ++i) {
+    CHECK(buff[i] == 0);
+  }
+
+  // Test getting the last column of pixels (which is truncated)
+  c.set(c.ncols(), c.ncols(), 1);
+  c.unsafe_get_column(c.ncols(), buff);
+  REQUIRE(buff.size() == 1);
+  CHECK(buff.front() == 1);
+}
+
+// NOLINTNEXTLINE(readability-function-cognitive-complexity)
+TEST_CASE("CMatrix get row", "[cmatrix][short]") {
+  ContactMatrix<> c(10, 100);  // NOLINT
+
+  const usize row = 25;  // Set a row of pixels to 1
+  for (usize i = 0; i < c.nrows(); ++i) {
+    c.set(row, row - i, static_cast<u32>(i));
+  }
+
+  REQUIRE(c.get_tot_contacts() == 45);  // NOLINT
+  REQUIRE(c.get_n_of_missed_updates() == 0);
+
+  std::vector<u32> buff;
+  c.unsafe_get_row(row, buff);
+
+  // Test getting a row of pixels
+  REQUIRE(buff.size() == c.nrows());
+  for (usize i = 0; i < c.nrows(); ++i) {
+    CHECK(buff[i] == i);
+  }
+
+  // Test getting a row of pixel skipping the first 5 values (starting from the diagonal)
+  const usize offset = 5;
+  c.unsafe_get_row(row, buff, offset);
+
+  REQUIRE(buff.size() == c.nrows() - offset);
+  for (usize i = 0; i < c.nrows() - offset; ++i) {
+    CHECK(buff[i] == offset + i);
+  }
+
+  // Test getting the first row of pixels
+  c.set(0, 0, 1);
+  c.unsafe_get_row(0, buff);
+  REQUIRE(buff.size() == 1);
+  CHECK(buff.front() == 1);
+
+  // Test getting the last row of pixels (which is truncated)
+  for (usize i = 0; i < c.nrows(); ++i) {
+    c.set(c.ncols() - 1, c.ncols() - 1 - i, 1);
+  }
+
+  c.unsafe_get_row(c.ncols() - 1, buff);
+  REQUIRE(buff.size() == c.nrows());
+  for (usize i = 0; i < c.nrows(); ++i) {
+    CHECK(buff[i] == 1);
+  }
+}
+
 }  // namespace modle::test::cmatrix

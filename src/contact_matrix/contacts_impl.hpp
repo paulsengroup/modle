@@ -59,7 +59,7 @@ ContactMatrix<N>::ContactMatrix(const usize nrows, const usize ncols,
     : _nrows(std::min(nrows, ncols)),
       _ncols(ncols),
       _contacts(_nrows * _ncols + 1, N(0)),
-      _mtxes(_ncols) {
+      _mtxes(_ncols + 1) {
   if (fill_with_random_numbers) {
     auto rand_eng = random::PRNG(seed);
 
@@ -67,8 +67,8 @@ ContactMatrix<N>::ContactMatrix(const usize nrows, const usize ncols,
       if constexpr (std::is_floating_point_v<N>) {
         return random::uniform_real_distribution<N>{0, 65553};
       }
-      return random::uniform_int_distribution<N>{
-          0, std::min(N(65553), (std::numeric_limits<N>::max)())};
+      uint64_t max_ = std::min(u64(65553), static_cast<u64>((std::numeric_limits<N>::max)()));
+      return random::uniform_int_distribution<N>{0, static_cast<N>(max_)};
     }();
     for (usize i = 0; i < _ncols; ++i) {
       for (usize j = i; j < i + _nrows && j < _ncols; ++j) {
@@ -155,6 +155,48 @@ N ContactMatrix<N>::unsafe_get(const usize row, const usize col) const
   }
 
   return this->at(i, j);
+}
+
+// NOTE the pixels returned by this function go from the diagonal towards the periphery
+// Example: given the following matrix
+//          1  2  3
+//          2  4  5
+//          3  5  6
+// Fetching col #3 would yield 6 5 3
+template <class N>
+void ContactMatrix<N>::unsafe_get_column(const usize col, std::vector<N> &buff,
+                                         const usize row_offset) const
+    noexcept(utils::ndebug_defined()) {
+  assert(row_offset <= col);  // NOLINT
+  const auto [rowt, colt] = transpose_coords(col - row_offset, col);
+
+  const auto first_idx = (colt * this->nrows()) + rowt;
+  const auto last_idx = std::min(first_idx + this->nrows() - row_offset, this->_contacts.size());
+
+  buff.resize(last_idx - first_idx);
+
+  const auto first = this->_contacts.begin() + static_cast<isize>(first_idx);
+  const auto last = this->_contacts.begin() + static_cast<isize>(last_idx);
+  std::copy(first, last, buff.begin());
+}
+
+// NOTE the pixels returned by this function go from the diagonal towards the periphery
+// Example: given the following matrix
+//          1  2  3
+//          2  4  5
+//          3  5  6
+// Fetching col #1 would yield 1 2 3
+template <class N>
+void ContactMatrix<N>::unsafe_get_row(const usize row, std::vector<N> &buff,
+                                      const usize col_offset) const
+    noexcept(utils::ndebug_defined()) {
+  assert(row >= col_offset);  // NOLINT
+  buff.resize(std::min(row + 1, this->nrows()) - col_offset);
+
+  for (usize i = 0; i < buff.size(); ++i) {
+    assert(i < row + 1);  // NOLINT
+    buff[i] = this->unsafe_get(row, row - col_offset - i);
+  }
 }
 
 template <class N>
@@ -434,7 +476,7 @@ void ContactMatrix<N>::unsafe_print(std::ostream &out_stream, bool full) const {
 
 template <class N>
 void ContactMatrix<N>::unsafe_print(bool full) const {
-  this->print(std::cout, full);
+  this->unsafe_print(std::cout, full);
 }
 
 template <class N>
