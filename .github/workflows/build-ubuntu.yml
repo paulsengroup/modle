@@ -64,7 +64,7 @@ jobs:
                                libssl-dev libxml2-dev
           
           echo "options(Ncpus = $(nproc))" > "$HOME/.Rprofile"
-          Rscript -e 'install.packages("wCorr")'
+          Rscript -e 'install.packages("wCorr", repos="https://cloud.r-project.org")'
 
       - name: Collect compiler information
         id: compiler-info
