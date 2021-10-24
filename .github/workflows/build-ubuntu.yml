@@ -80,7 +80,7 @@ jobs:
         uses: actions/cache@v2
         with:
           key: host-${{ runner.os }}-${{ steps.compiler-info.outputs.ID }}-R-${{ env.R_VERSION }}
-          path: /workspace/R/${R_VERSION}
+          path: /workspace/R/${{ env.R_VERSION }}
 
       - name: Install unit test dependencies
         run: |
