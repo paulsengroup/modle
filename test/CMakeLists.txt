@@ -15,11 +15,6 @@ target_sources(
   test_main
   PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/test_main.cpp
           ${CMAKE_CURRENT_SOURCE_DIR}/units/contact_matrix/contact_matrix_test.cpp
-          ${CMAKE_CURRENT_SOURCE_DIR}/units/stats/common.hpp
-          ${CMAKE_CURRENT_SOURCE_DIR}/units/stats/correlation_test.cpp
-          ${CMAKE_CURRENT_SOURCE_DIR}/units/stats/correlation_utils_test.cpp
-          ${CMAKE_CURRENT_SOURCE_DIR}/units/stats/descriptive_test.cpp
-          ${CMAKE_CURRENT_SOURCE_DIR}/units/stats/tests_test.cpp
           ${CMAKE_CURRENT_SOURCE_DIR}/units/interval_tree/interval_tree_test.cpp
           ${CMAKE_CURRENT_SOURCE_DIR}/units/libmodle_io/bed_parser_test.cpp
           ${CMAKE_CURRENT_SOURCE_DIR}/units/libmodle_io/bed_tree_test.cpp
@@ -29,7 +24,12 @@ target_sources(
           ${CMAKE_CURRENT_SOURCE_DIR}/units/simulation_cpu/common.hpp
           ${CMAKE_CURRENT_SOURCE_DIR}/units/simulation_cpu/simulation_complex_unit_test.cpp
           ${CMAKE_CURRENT_SOURCE_DIR}/units/simulation_cpu/simulation_simple_unit_test.cpp
-          ${CMAKE_CURRENT_SOURCE_DIR}/units/simulation_internal/extrusion_barriers_test.cpp)
+          ${CMAKE_CURRENT_SOURCE_DIR}/units/simulation_internal/extrusion_barriers_test.cpp
+          ${CMAKE_CURRENT_SOURCE_DIR}/units/stats/common.hpp
+          ${CMAKE_CURRENT_SOURCE_DIR}/units/stats/correlation_test.cpp
+          ${CMAKE_CURRENT_SOURCE_DIR}/units/stats/correlation_utils_test.cpp
+          ${CMAKE_CURRENT_SOURCE_DIR}/units/stats/descriptive_test.cpp
+          ${CMAKE_CURRENT_SOURCE_DIR}/units/stats/tests_test.cpp)
 
 target_link_libraries(
   test_main
