@@ -73,13 +73,16 @@ ARG src_dir="/home/conan/modle"
 RUN ln -snf /usr/share/zoneinfo/CET /etc/localtime \
     && echo CET > /etc/timezone
 RUN apt-get update \
-    && apt-get install -y --no-install-recommends              \
-                       python3-pip r-base libcurl4-openssl-dev \
-                       libssl-dev libxml2-dev
+    && apt-get install -y --no-install-recommends                            \
+                       gcc g++ r-base r-cran-minqa r-cran-mnormt r-cran-rcpp \
+                       r-cran-rcpparmadillo libblas-dev libcurl4-openssl-dev \
+                       liblapack-dev libssl-dev libxml2-dev \
+
 RUN pip3 install "scipy==${SCIPY_VER}"
-RUN echo "options(Ncpus = $(nproc))" > "$HOME/.Rprofile" \
-    && Rscript -e 'install.packages("devtools")'         \
-    && Rscript -e "library(devtools); devtools::install_version(\"wCorr\", version=\"${WCORR_VER}\");"
+RUN echo "options(Ncpus = $(nproc))" > "$HOME/.Rprofile"           \
+    && Rscript --no-save -e 'install.packages("devtools")'         \
+    && Rscript --no-save -e "library(devtools); devtools::install_version(\"wCorr\",  dependencies=c(\"Depends\", \"Imports\", \"LinkingTo\"), version=\"${WCORR_VER}\")" \
+    && Rscript --no-save -e 'quit(status=as.integer(!library("wCorr", character.only=T, logical.return=T)), save="no")' &> /dev/null
 
 COPY --from=builder "$src_dir" "$src_dir"
 COPY --from=builder "/usr/bin/ctest" "/usr/bin/ctest"

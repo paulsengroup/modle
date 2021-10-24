@@ -43,6 +43,8 @@ jobs:
       options: "--user=root -v ${{github.workspace}}:/workspace"
     env:
       CONAN_USER_HOME: "/workspace"
+      R_VERSION: "4.1.1"
+      R_BUILD_DIR: "/workspace/r-build"
 
     defaults:
       run:
@@ -51,20 +53,6 @@ jobs:
     steps:
       - name: Checkout repo
         uses: actions/checkout@v2
-
-      - name: Install unit test dependencies
-        run: |
-          pip3 install scipy
-          
-          sudo ln -snf /usr/share/zoneinfo/CET /etc/localtime
-          sudo echo CET > /etc/timezone
-          sudo apt-get update
-          sudo apt-get install -y --no-install-recommends  \
-                               r-base libcurl4-openssl-dev \
-                               libssl-dev libxml2-dev
-          
-          echo "options(Ncpus = $(nproc))" > "$HOME/.Rprofile"
-          Rscript -e 'install.packages("wCorr", repos="https://cloud.r-project.org")'
 
       - name: Collect compiler information
         id: compiler-info
@@ -78,7 +66,7 @@ jobs:
           echo "::set-output name=VERSION_MAJOR::$(echo $compiler_ver | grep -oP '^\d+')"
           echo "::set-output name=ID::$compiler_id"
 
-      - name: Generate cache key
+      - name: Generate Conan cache key
         id: conan_cache_key
         run: |
           host_os="host-${{ runner.os }}"
@@ -87,6 +75,51 @@ jobs:
           hash="${{ hashFiles('conanfile.py') }}"
 
           echo "::set-output name=string::$host_os-$compiler_id-$build_type-$hash"
+
+      - name: Cache R
+        uses: actions/cache@v2
+        with:
+          key: host-${{ runner.os }}-${{ steps.compiler-info.outputs.ID }}-R-${{ env.R_VERSION }}
+          path: |
+            /workspace/R-${R_VERSION}.tar.gz
+            /workspace/r-build
+            /workspace/R/${R_VERSION}
+
+      - name: Install unit test dependencies
+        run: |
+          pip3 install scipy
+          
+          sudo -i
+          apt-get update
+          apt-get install -y gcc g++ gfortran libblas-dev libcurl4-openssl-dev \
+                             liblapack-dev libpcre2-dev libssl-dev libxml2-dev
+          
+          export PATH="$PATH:/workspace/R/${R_VERSION}/bin"
+          echo "/workspace/R/${R_VERSION}/bin" >> $GITHUB_PATH
+          
+          if ! [ -x "$(command -v Rscript)" ]; then
+            mkdir -p /workspace/r-build
+            cd /workspace/r-build
+            curl -LOC - "https://cran.rstudio.com/src/base/R-4/R-${R_VERSION}.tar.gz"
+            tar -xf "R-${R_VERSION}.tar.gz"
+            cd R-${R_VERSION}
+            ./configure --prefix=/workspace/R/${R_VERSION} \
+                        --enable-memory-profiling          \
+                        --enable-R-shlib                   \
+                        --with-blas                        \
+                        --with-lapack                      \
+                        --with-x=no
+            make -j $(nproc)
+            make install
+            
+            
+            sudo ln -snf /usr/share/zoneinfo/CET /etc/localtime
+            echo CET | tee /etc/timezone > /dev/null
+            
+            echo "options(Ncpus = $(nproc))" | sudo tee "$HOME/.Rprofile" > /dev/null
+            Rscript --no-save -e 'install.packages("wCorr", dependencies=c("Depends", "Imports", "LinkingTo"), repos="https://cloud.r-project.org")'
+            Rscript --no-save -e 'quit(status=!library("wCorr", character.only=T, logical.return=T), save="no")' &> /dev/null
+          fi
 
       - name: Cache Conan packages
         uses: actions/cache@v2
