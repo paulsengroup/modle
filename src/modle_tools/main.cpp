@@ -51,8 +51,8 @@ int main(int argc, char** argv) {
 
     // TODO: move this inside the subcommands
     /*
-    if (!config.output_base_name.empty()) {
-      boost::filesystem::create_directories(config.output_base_name.parent_path());
+    if (!config.output_prefix.empty()) {
+      boost::filesystem::create_directories(config.output_prefix.parent_path());
     }
      */
 
@@ -60,11 +60,7 @@ int main(int argc, char** argv) {
       case modle::tools::Cli::subcommand::eval:
         modle::tools::eval_subcmd(absl::get<modle::tools::eval_config>(config));
         return 0;
-      case modle::tools::Cli::subcommand::filter_barriers:
-        modle::tools::filter_barriers_subcmd(
-            absl::get<modle::tools::filter_barrier_config>(config));
-        return 0;
-      case modle::tools::Cli::subcommand::find_barrier_clusters:
+      case modle::tools::Cli::subcommand::fbcl:
         modle::tools::find_barrier_clusters_subcmd(
             absl::get<modle::tools::find_barrier_clusters_config>(config));
         return 0;
@@ -80,6 +76,7 @@ int main(int argc, char** argv) {
             "you see this message, please file an issue on GitHub");
     }
   } catch (const CLI::ParseError& e) {
+    assert(cli);          // NOLINT
     return cli->exit(e);  //  This takes care of formatting and printing error messages (if any)
   } catch (const std::bad_alloc& err) {
     spdlog::error(FMT_STRING("FAILURE! Unable to allocate enough memory: {}"), err.what());
@@ -92,7 +89,9 @@ int main(int argc, char** argv) {
         e.what());
     return 1;
   } catch (const std::exception& e) {
-    spdlog::error(FMT_STRING("FAILURE! An error occurred during simulation: {}."), e.what());
+    assert(cli);  // NOLINT
+    spdlog::error(FMT_STRING("FAILURE! modle_tools {} encountered the following error: {}."),
+                  cli->get_printable_subcommand(), e.what());
     return 1;
   } catch (...) {
     spdlog::error(

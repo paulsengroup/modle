@@ -40,8 +40,9 @@ target_link_libraries(
           spdlog::spdlog
           tomlplusplus::tomlplusplus
           Modle::common
-          Modle::correlation
-          Modle::libmodle_io)
+          Modle::libmodle_io
+          Modle::stats
+          thread-pool)
 
 target_include_directories(modle_tools PRIVATE include)
 

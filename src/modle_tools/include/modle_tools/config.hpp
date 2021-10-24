@@ -22,11 +22,11 @@ namespace modle::tools {
 struct eval_config {  // NOLINT
   // IO
   boost::filesystem::path path_to_input_matrix;
-  boost::filesystem::path output_base_name;
+  boost::filesystem::path output_prefix;
   boost::filesystem::path path_to_reference_matrix;
   boost::filesystem::path path_to_chrom_subranges;
+  boost::filesystem::path path_to_features_bed;
   boost::filesystem::path tmp_dir{boost::filesystem::temp_directory_path()};
-  bool keep_tmp_files{false};
   bool force{false};
 
   // Correlation methods
@@ -37,13 +37,9 @@ struct eval_config {  // NOLINT
   // Reference contacts
   usize bin_size{0};
   usize diagonal_width;
-  double depletion_multiplier{1.0};
-  bool deplete_contacts_from_reference{true};
 
   // Other
   usize nthreads{std::thread::hardware_concurrency()};
-  usize sliding_window_size{0};
-  usize sliding_window_overlap{0};
 };
 
 struct filter_barrier_config {  // NOLINT

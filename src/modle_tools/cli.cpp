@@ -62,23 +62,22 @@ void Cli::make_eval_subcommand() {
 
   // clang-format off
   io.add_option(
-     "-i,--input",
+     "-i,--input-matrix",
      c.path_to_input_matrix,
      "Path to a contact matrix in Cooler format.")
      ->check(CLI::ExistingFile)
      ->required();
 
   io.add_option(
-     "-o,--output-base-name",
-     c.output_base_name,
-     "Base file name (including directories) to use for output.")
+     "-o,--output-prefix",
+     c.output_prefix,
+     "Output prefix (including directories) to use for output.")
      ->required();
 
   io.add_option(
-     "--reference-matrix",
+     "-r,--reference-matrix",
      c.path_to_reference_matrix,
-     "Path to contact matrix to use as reference when computing the correlation.\n"
-     "Formats accepted: Cooler.")
+     "Path to contact matrix in Cooler format to use as reference.\n")
      ->required();
 
   io.add_option(
@@ -88,16 +87,10 @@ void Cli::make_eval_subcommand() {
      ->check(CLI::ExistingFile);
 
   io.add_option(
-     "--tmp-dir",
-     c.tmp_dir,
-     "Path where to store temporary files.")
-     ->capture_default_str();
-
-  io.add_flag(
-     "--keep-temporary-files",
-     c.keep_tmp_files,
-     "Do not delete temporary files.")
-     ->capture_default_str();
+      "--features-bed",
+      c.path_to_features_bed,
+      "Path to BED file with the list of features used to compute correlation metrics.")
+      ->check(CLI::ExistingFile);
 
   io.add_flag(
      "-f,--force",
@@ -135,103 +128,12 @@ void Cli::make_eval_subcommand() {
      ->transform(utils::str_float_to_str_int)
      ->required();
      
-  ref.add_option(
-     "--depletion-multiplier",
-     c.depletion_multiplier,
-     "Multiplier used to control the magnitude of the depletion.")
-     ->check(CLI::NonNegativeNumber)
-     ->capture_default_str();
-
-  ref.add_flag(
-     "--deplete-reference-contacts,!--no-deplete-reference-contacts",
-     c.deplete_contacts_from_reference,
-     "Deplete contacts along the diagonal from the reference matrix.")
-     ->capture_default_str();
-
   gen.add_option(
      "-t,--threads",
      c.nthreads,
      "CPU threads to allocate.")
      ->check(CLI::PositiveNumber);
 
-  gen.add_option(
-     "--sliding-window-size",
-     c.sliding_window_size,
-     "Sliding window size. By default this is set to the diagonal width of MoDLE's contact matrix.")
-     ->check(CLI::NonNegativeNumber)
-     ->transform(utils::str_float_to_str_int);
-
-  gen.add_option(
-     "--sliding-window-overlap",
-     c.sliding_window_overlap,
-     "Overlap between consecutive sliding-windows.")
-     ->check(CLI::NonNegativeNumber)
-     ->transform(utils::str_float_to_str_int)
-     ->capture_default_str();
-
-  // clang-format on
-  this->_config = absl::monostate{};
-}
-
-void Cli::make_filter_barriers_subcommand() {
-  auto& sc =
-      *this->_cli
-           .add_subcommand("filter-barriers", "Filter extrusion barriers to be used by MoDLE.")
-           ->fallthrough()
-           ->preparse_callback([this]([[maybe_unused]] usize i) {
-             assert(this->_config.index() == 0);  // NOLINT empty variant
-             this->_config = filter_barrier_config{};
-           });
-
-  this->_config = filter_barrier_config{};
-  auto& c = absl::get<filter_barrier_config>(this->_config);
-
-  auto& io = *sc.add_option_group("Input/Output", "");
-  auto& gen = *sc.add_option_group("Generic", "");
-
-  // clang-format off
-  io.add_option(
-     "--extrusion-barriers-motif-bed",
-     c.path_to_extrusion_barrier_motifs_bed,
-     "Path to a BED file containing the list of extrusion barriers to be filtered.")
-     ->check(CLI::ExistingFile)
-     ->required();
-
-  io.add_option(
-     "bedFiles",
-     c.path_to_bed_files_for_filtering,
-     "One or more path to BED files containing records to be used to select records from the file specified through --extrusion-barriers-motif-bed.")
-     ->check(CLI::ExistingFile)
-     ->required();
-
-  gen.add_option(
-     "-f,--filtering-criterion",
-     c.filtering_criterion,
-     fmt::format(FMT_STRING("Filtering criterion. Accepted values are: {}"), fmt::join(this->_filtering_criteria, ", ")))
-     ->check(
-     [this](const auto &str){
-     if (this->_filtering_criteria.contains(CLI::detail::to_lower(str))) {
-     return std::string{};
-     }
-     return fmt::format(FMT_STRING("\"{}\" is not a valid filtering criterion. Allowed criteria are: {}."), str, fmt::join(this->_filtering_criteria, ", "));
-     })
-     ->capture_default_str();
-
-  gen.add_option(
-     "--bed-dialect",
-     c.bed_dialect,
-     fmt::format(FMT_STRING("Specify the BED dialect to use when parsing input files.\n"
-     "Example: when specifying BED3 through this dialect, we only validate the first three fields.\n"
-     "Additional fields (if any) are copied verbatim and can thus in principle contain arbitrary information.\n"
-     "Allowed dialects: {}."), fmt::join(bed::bed_dialects, ", ")))
-     ->transform(CLI::CheckedTransformer(&bed::str_to_bed_dialect_mappings))
-     ->capture_default_str();
-
-  gen.add_flag(
-     "--strict-bed-validation,!--no-strict-bed-validation",
-     c.strict_bed_validation,
-     "Toggle strict BED file format validation on or off.")
-     ->capture_default_str();
   // clang-format on
   this->_config = absl::monostate{};
 }
@@ -497,120 +399,106 @@ void Cli::make_cli() {
   this->_cli.require_subcommand(1);
 
   this->make_eval_subcommand();
-  this->make_filter_barriers_subcommand();
   this->make_find_barrier_clusters_subcommand();
   this->make_noisify_subcommand();
   this->make_stats_subcommand();
 }
 
-std::string Cli::validate_eval_subcommand() {
+void Cli::validate_eval_subcommand() const {
   assert(this->_cli.get_subcommand("eval")->parsed());  // NOLINT
-  std::string errors;
-  auto& c = absl::get<eval_config>(this->_config);
-  if (!boost::filesystem::is_directory(c.output_base_name) &&
-      boost::filesystem::exists(c.output_base_name)) {
-    absl::StrAppendFormat(
-        &errors, "--output-dir should point to a directory or a non-existing path. Is \"%s\"",
-        c.output_base_name.string());
-  }
+  std::vector<std::string> errors;
+  const auto& c = absl::get<eval_config>(this->_config);
 
-  if (c.path_to_reference_matrix.extension() == ".mcool" && c.bin_size == 0) {
-    absl::StrAppend(&errors,
-                    "--bin-size is required when the contact matrix passed with "
-                    "--reference-matrix is in .mcool format.\n");
-  }
-
-  if (const auto* s = "/modle_tools/"; !absl::EndsWithIgnoreCase(c.tmp_dir.string(), s)) {
-    c.tmp_dir += s;
-  }
-  if (!boost::filesystem::is_directory(c.tmp_dir) && boost::filesystem::exists(c.tmp_dir)) {
-    absl::StrAppendFormat(
-        &errors, "--tmp-dir should point to a directory or a non-existing path. Is \"%s\"\n",
-        c.tmp_dir.string());
+  try {
+    (void)cooler::Cooler(c.path_to_input_matrix, cooler::Cooler::READ_ONLY, c.bin_size);
+    (void)cooler::Cooler(c.path_to_reference_matrix, cooler::Cooler::READ_ONLY, c.bin_size);
+  } catch (const std::exception& e) {
+    if (absl::StartsWith(e.what(), "Cooler::open_file(): bin_size cannot be 0")) {
+      errors.emplace_back(
+          fmt::format(FMT_STRING("File {} appears to be in .mcool format. --bin-size is required"
+                                 "when one or both contact matrices are in .mcool format"),
+                      c.path_to_reference_matrix));
+    } else {
+      errors.emplace_back(fmt::format(FMT_STRING("{}"), e.what()));
+    }
   }
 
   if (!c.force) {
-    std::vector<std::string> collisions;
-    for (std::string_view suffix :
-         {"rho", "tau", "rho_pv", "tau_pv"}) {  // TODO Update this section
-      for (std::string_view ext : {"tsv.bz2", "bwig"}) {
-        if (auto file = fmt::format(FMT_STRING("{}_{}.{}"), c.output_base_name, suffix, ext);
-            boost::filesystem::exists(file)) {
-          collisions.emplace_back(file);
+    constexpr std::array<std::string_view, 2> stripe_directions{"horizontal", "vertical"};
+    constexpr std::array<std::string_view, 3> correlation_methods{"eucl_dist", "pearson",
+                                                                  "spearman"};
+    constexpr std::array<std::string_view, 1> extensions{"bw"};
+
+    std::vector<std::string> name_collisions;
+    for (const auto method : correlation_methods) {
+      for (const auto direction : stripe_directions) {
+        for (const auto extension : extensions) {
+          const boost::filesystem::path fname = fmt::format(
+              FMT_STRING("{}_{}_{}.{}"), c.output_prefix.string(), method, direction, extension);
+          auto collision =
+              utils::detect_path_collision(fname, c.force, boost::filesystem::regular_file);
+          if (!collision.empty()) {
+            name_collisions.emplace_back(std::move(collision));
+          }
         }
       }
     }
-    if (!collisions.empty()) {
-      absl::StrAppendFormat(
-          &errors,
-          "Detected %lu file name collisions: refusing to proceed. Pass --force to "
-          "overwrite existing file(s).\nColliding file(s):\n - %s",
-          collisions.size(), absl::StrJoin(collisions, "\n - "));
+    if (!name_collisions.empty()) {
+      errors.emplace_back(fmt::format(
+          FMT_STRING("Detected {} file name collision(s): refusing to proceed. Pass --force to "
+                     "overwrite existing file(s).\n   Colliding file name(s):\n    - {}"),
+          name_collisions.size(), fmt::join(name_collisions, ".\n    - ")));
     }
   }
 
-  if (c.sliding_window_size != 0 && c.sliding_window_size <= c.sliding_window_overlap) {
-    absl::StrAppendFormat(&errors,
-                          "--sliding-window-size should be > --sliding-window-overlap: "
-                          "--sliding-window-size=%lu --sliding-window-overlap=%lu.",
-                          c.sliding_window_size, c.sliding_window_overlap);
+  if (!errors.empty()) {
+    throw std::runtime_error(
+        fmt::format(FMT_STRING("The following error(s) where encountered while validating CLI "
+                               "arguments and input file(s):\n - {}"),
+                    fmt::join(errors, "\n - ")));
   }
-  return errors;
 }
 
-std::string Cli::validate_filter_barriers_subcommand() const {
-  std::string errors;
-  assert(this->_cli.get_subcommand("filter-barriers")->parsed());  // NOLINT
-  const auto& c = absl::get<filter_barrier_config>(this->_config);
-
-  auto valitade_bed = [&](const auto& path) {
-    if (boost::filesystem::is_regular_file(path)) {
-      const auto status = bed::Parser(path, c.bed_dialect, c.strict_bed_validation).validate();
-      if (!status.empty()) {
-        absl::StrAppendFormat(&errors, "Validation failed for file \"%s\": %s\n", path.string(),
-                              absl::StripPrefix(status, "An error occurred while reading file"));
-      }
-    }
-  };
-
-  valitade_bed(c.path_to_extrusion_barrier_motifs_bed);
-  assert(!c.path_to_extrusion_barrier_motifs_bed.empty());  // NOLINT
-  for (const auto& path : c.path_to_extrusion_barrier_motifs_bed) {
-    valitade_bed(path);
-  }
-
-  return errors;
-}
-
-std::string Cli::validate_find_barrier_clusters_subcommand() const {
+void Cli::validate_find_barrier_clusters_subcommand() const {
   assert(this->_cli.get_subcommand("find-barrier-clusters")->parsed());  // NOLINT
-  std::string errors;
-  auto& c = absl::get<find_barrier_clusters_config>(this->_config);
+  std::vector<std::string> errors;
+  const auto& c = absl::get<find_barrier_clusters_config>(this->_config);
 
   assert(boost::filesystem::exists(c.path_to_input_barriers));  // NOLINT
-  utils::detect_path_collision(c.path_to_output, errors, c.force, boost::filesystem::regular_file);
+
+  if (auto collision =
+          utils::detect_path_collision(c.path_to_output, c.force, boost::filesystem::regular_file);
+      !collision.empty()) {
+    errors.push_back(collision);
+  }
 
   if (c.min_cluster_span >= c.max_cluster_span && c.max_cluster_span != 0) {
-    absl::StrAppendFormat(&errors,
-                          "--min-cluster-span should be strictly less than --max-cluster-span.\n"
-                          "Got:\n"
-                          "--min-cluster-span=%d\n"
-                          "--max-cluster-span=%d\n",
-                          c.min_cluster_span, c.max_cluster_span);
+    errors.emplace_back(fmt::format(
+        FMT_STRING("--min-cluster-span should be strictly less than --max-cluster-span.\n"
+                   "Found:\n"
+                   "  --min-cluster-span={}\n"
+                   "  --max-cluster-span={}"),
+        c.min_cluster_span, c.max_cluster_span));
   }
 
   if (c.min_cluster_size >= c.max_cluster_size && c.max_cluster_size != 0) {
-    absl::StrAppendFormat(&errors,
-                          "--min-cluster-size should be strictly less than --max-cluster-size.\n"
-                          "Got:\n"
-                          "--min-cluster-size=%d\n"
-                          "--max-cluster-size=%d\n",
-                          c.min_cluster_size, c.max_cluster_size);
+    errors.emplace_back(fmt::format(
+        FMT_STRING("--min-cluster-size should be strictly less than --max-cluster-size.\n"
+                   "Found:\n"
+                   "  --min-cluster-size={}\n"
+                   "  --max-cluster-size={}"),
+        c.min_cluster_size, c.max_cluster_size));
   }
-  return errors;
+
+  if (!errors.empty()) {
+    throw std::runtime_error(
+        fmt::format(FMT_STRING("The following error(s) where encountered while validating CLI "
+                               "arguments and input file(s):\n - {}"),
+                    fmt::join(errors, "\n - ")));
+  }
 }
 
-std::string Cli::validate_stats_subcommand() const {
+void Cli::validate_stats_subcommand() const {
   std::string errors;
   assert(this->_cli.get_subcommand("stats")->parsed());  // NOLINT
   const auto& c = absl::get<stats_config>(this->_config);
@@ -653,10 +541,15 @@ std::string Cli::validate_stats_subcommand() const {
                             c.output_path_for_histograms);
     }
   }
-  return errors;
+  if (!errors.empty()) {
+    throw std::runtime_error(
+        fmt::format(FMT_STRING("The following error(s) where encountered while validating CLI "
+                               "arguments and input file(s):\n{}"),
+                    errors));
+  }
 }
 
-std::string Cli::validate_noisify_subcommand() const {
+void Cli::validate_noisify_subcommand() const {
   std::string errors;
   assert(this->_cli.get_subcommand("noisify")->parsed());  // NOLINT
   const auto& c = absl::get<noisify_config>(this->_config);
@@ -692,33 +585,35 @@ std::string Cli::validate_noisify_subcommand() const {
                             c.path_to_output_matrix.string());
     }
   }
-  return errors;
+  if (!errors.empty()) {
+    throw std::runtime_error(
+        fmt::format(FMT_STRING("The following error(s) where encountered while validating CLI "
+                               "arguments and input file(s):\n{}"),
+                    errors));
+  }
 }
 
-bool Cli::validate() {  // TODO: Refactor this function
-  std::string errors;
+void Cli::validate() const {
   if (this->_cli.get_subcommand("eval")->parsed()) {
-    errors = this->validate_eval_subcommand();
-  } else if (this->_cli.get_subcommand("filter-barriers")->parsed()) {
-    errors = this->validate_filter_barriers_subcommand();
+    this->validate_eval_subcommand();
   } else if (this->_cli.get_subcommand("find-barrier-clusters")->parsed()) {
-    errors = this->validate_find_barrier_clusters_subcommand();
+    this->validate_find_barrier_clusters_subcommand();
   } else if (this->_cli.get_subcommand("noisify")->parsed()) {
-    errors = this->validate_noisify_subcommand();
+    this->validate_noisify_subcommand();
   } else if (this->_cli.get_subcommand("stats")->parsed()) {
-    errors = this->validate_stats_subcommand();
+    this->validate_stats_subcommand();
   } else {
     throw std::logic_error("Unreachable code");
   }
-
-  if (!errors.empty()) {
-    spdlog::error(FMT_STRING("FAILURE! The following issues have been detected:\n{}"), errors);
-  }
-  return errors.empty();
 }
 
-bool Cli::is_ok() const { return (this->_exit_code != 0) && this->_subcommand != subcommand::help; }
-Cli::subcommand Cli::get_subcommand() const { return this->_subcommand; }
+bool Cli::is_ok() const noexcept {
+  return (this->_exit_code != 0) && this->_subcommand != subcommand::help;
+}
+Cli::subcommand Cli::get_subcommand() const noexcept { return this->_subcommand; }
+std::string_view Cli::get_printable_subcommand() const noexcept {
+  return Cli::subcommand_to_str(this->get_subcommand());
+}
 modle::tools::config Cli::parse_arguments() {
   this->_cli.name(this->_exec_name);
   this->_cli.parse(this->_argc, this->_argv);
@@ -726,10 +621,8 @@ modle::tools::config Cli::parse_arguments() {
   try {
     if (this->_cli.get_subcommand("evaluate")->parsed()) {
       this->_subcommand = subcommand::eval;
-    } else if (this->_cli.get_subcommand("filter-barriers")->parsed()) {
-      this->_subcommand = subcommand::filter_barriers;
     } else if (this->_cli.get_subcommand("find-barrier-clusters")->parsed()) {
-      this->_subcommand = subcommand::find_barrier_clusters;
+      this->_subcommand = subcommand::fbcl;
     } else if (this->_cli.get_subcommand("noisify")->parsed()) {
       this->_subcommand = subcommand::noisify;
     } else if (this->_cli.get_subcommand("statistics")->parsed()) {
@@ -755,14 +648,9 @@ modle::tools::config Cli::parse_arguments() {
         "An unknown error occurred while parsing CLI arguments! If you see this message, please "
         "file an issue on GitHub");
   }
-
-  try {
-    this->_exit_code = static_cast<int>(this->validate());
-    return this->_config;
-  } catch (const std::exception& e) {
-    throw std::runtime_error(fmt::format(
-        FMT_STRING("The following error occourred while validating CLI arguments: {}"), e.what()));
-  }
+  this->validate();
+  this->_exit_code = 0;
+  return this->_config;
 }
 
 int Cli::exit(const CLI::ParseError& e) const { return this->_cli.exit(e); }
@@ -799,6 +687,22 @@ std::string Cli::to_json() const {
         FMT_STRING(
             "The following error occurred while converting MoDLE's config from TOML to JSON: {}"),
         e.what()));
+  }
+}
+
+std::string_view Cli::subcommand_to_str(subcommand s) noexcept {
+  switch (s) {
+    case eval:
+      return "evaluate";
+    case fbcl:
+      return "find-barrier-clusters";
+    case noisify:
+      return "noisify";
+    case stats:
+      return "stats";
+    default:
+      assert(s == help);  // NOLINT
+      return "--help";
   }
 }
 
