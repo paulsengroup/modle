@@ -524,13 +524,9 @@ void ContactMatrix<N>::unsafe_import_from_txt(const boost::filesystem::path &pat
   assert(i != 0);  // NOLINT guard against empty files
 }
 
-DISABLE_WARNING_PUSH
-DISABLE_WARNING_ATTRIBUTES
 template <class N>
-__attribute__((no_sanitize("integer"))) void
-ContactMatrix<N>::unsafe_generate_mask_for_bins_without_contacts(
+void ContactMatrix<N>::unsafe_generate_mask_for_bins_without_contacts(
     boost::dynamic_bitset<> &mask) const {
-  DISABLE_WARNING_POP
   mask.resize(this->ncols());
   mask.reset();
 

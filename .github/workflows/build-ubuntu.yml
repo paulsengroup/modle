@@ -80,10 +80,7 @@ jobs:
         uses: actions/cache@v2
         with:
           key: host-${{ runner.os }}-${{ steps.compiler-info.outputs.ID }}-R-${{ env.R_VERSION }}
-          path: |
-            /workspace/R-${R_VERSION}.tar.gz
-            /workspace/r-build
-            /workspace/R/${R_VERSION}
+          path: /workspace/R/${R_VERSION}
 
       - name: Install unit test dependencies
         run: |
@@ -100,18 +97,16 @@ jobs:
           if ! [ -x "$(command -v Rscript)" ]; then
             mkdir -p /workspace/r-build
             cd /workspace/r-build
-            curl -LOC - "https://cran.rstudio.com/src/base/R-4/R-${R_VERSION}.tar.gz"
-            tar -xf "R-${R_VERSION}.tar.gz"
-            cd R-${R_VERSION}
-            ./configure --prefix=/workspace/R/${R_VERSION} \
-                        --enable-memory-profiling          \
-                        --enable-R-shlib                   \
-                        --with-blas                        \
-                        --with-lapack                      \
+            curl -L "https://cran.rstudio.com/src/base/R-4/R-${R_VERSION}.tar.gz" | tar -xzf -
+            cd "R-${R_VERSION}"
+            ./configure --prefix=/workspace/R/"${R_VERSION}" \
+                        --enable-memory-profiling            \
+                        --enable-R-shlib                     \
+                        --with-blas                          \
+                        --with-lapack                        \
                         --with-x=no
             make -j $(nproc)
             make install
-            
             
             sudo ln -snf /usr/share/zoneinfo/CET /etc/localtime
             echo CET | tee /etc/timezone > /dev/null

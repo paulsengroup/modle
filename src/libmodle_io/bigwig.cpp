@@ -59,7 +59,12 @@ Writer::~Writer() {
 void Writer::write_chromosomes(const char* const* chrom_names, const u32* chrom_sizes,
                                const usize num_chroms) {
   assert(this->_fp);  // NOLINT
+  // GCC7 fails to parse this if constexpr
+#if defined(__GNUC__) && !defined(__clang__) && __GNUC__ == 7
+  if (utils::ndebug_not_defined()) {
+#else
   if constexpr (utils::ndebug_not_defined()) {
+#endif
     if (this->_initialized) {
       throw std::runtime_error(
           fmt::format(FMT_STRING("bigwig::Writer::write_chromosomes() was called twice on file {}"),
