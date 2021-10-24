@@ -423,7 +423,12 @@ Parser::Parser(const boost::filesystem::path& path_to_bed, BED::Dialect bed_stan
       _enforce_std_compliance(enforce_std_compliance),
       _num_lines_read(this->skip_header()) {
   if (this->_dialect == BED::autodetect) {
-    this->_dialect = BED::detect_standard(this->_buff);
+    try {
+      this->_dialect = BED::detect_standard(this->_buff);
+    } catch (const std::runtime_error& e) {
+      throw std::runtime_error(fmt::format(
+          FMT_STRING("An error occurred while parsing file {}: {}"), path_to_bed, e.what()));
+    }
   }
 }
 

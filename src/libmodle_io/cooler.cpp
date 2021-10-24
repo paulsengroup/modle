@@ -841,11 +841,13 @@ Cooler::Flavor Cooler::detect_file_flavor(H5::H5File &f) {
   if (hdf5::has_attribute(f, "format")) {
     hdf5::read_attribute(f, "format", buff);
   }
-  if (const auto &fname = f.getFileName(); absl::EndsWithIgnoreCase(fname, "::cooler")) {
-    return COOL;  // NOLINTNEXTLINE(readability-else-after-return)
-  } else if (absl::EndsWithIgnoreCase(fname, "::mcool")) {
+  if (absl::EndsWithIgnoreCase(buff, "::cooler")) {
+    return COOL;
+  }
+  if (absl::EndsWithIgnoreCase(buff, "::mcool")) {
     return MCOOL;
-  } else if (absl::EndsWithIgnoreCase(fname, "::scool")) {
+  }
+  if (absl::EndsWithIgnoreCase(buff, "::scool")) {
     return SCOOL;
   }
 
