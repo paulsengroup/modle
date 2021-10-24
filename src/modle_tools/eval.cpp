@@ -149,7 +149,7 @@ using ChromSet = absl::btree_map<std::string, std::pair<bp_t, bp_t>, cppsort::na
       fmt::format(FMT_STRING("{}_{}"), base_name, absl::StripPrefix(suffix, "_")));
   bw->write_chromosomes(chrom_list);
   return bw;
-};
+}
 
 enum CorrMethod : std::uint_fast8_t { pearson, spearman };
 enum StripeDirection : std::uint_fast8_t { vertical, horizontal };
