@@ -4,7 +4,8 @@
 
 #pragma once
 
-#include <xxh3.h>  // for XXH3_state_t, XXH_INLINE_XXH3_state_t
+#include <fmt/format.h>  // for format_parse_context, formatter
+#include <xxh3.h>        // for XXH3_state_t, XXH_INLINE_XXH3_state_t
 
 #include <array>                             // for array
 #include <boost/filesystem/file_status.hpp>  // for regular_file, file_type
@@ -154,7 +155,56 @@ class RepeatIterator {
   constexpr const RepeatIterator& operator-(usize i) const;
 };
 
+class CommonChromName {
+  std::string _name;
+  // This is needed because in C++17 most string methods (including data() and size()) are not
+  // constexpr
+  char* _name_ptr;
+  usize _name_size;
+
+  static constexpr std::array<std::string_view, 3> prefixes{"chr", "CHR", "Chr"};
+
+ public:
+  CommonChromName() = default;
+  inline CommonChromName(std::string_view name);
+
+  constexpr bool operator==(const CommonChromName& other) const noexcept;
+  constexpr bool operator==(std::string_view other) const noexcept;
+
+  constexpr bool operator!=(const CommonChromName& other) const noexcept;
+  constexpr bool operator!=(std::string_view other) const noexcept;
+
+  constexpr bool operator>(const CommonChromName& other) const noexcept;
+  constexpr bool operator>(std::string_view other) const noexcept;
+
+  constexpr bool operator>=(const CommonChromName& other) const noexcept;
+  constexpr bool operator>=(std::string_view other) const noexcept;
+
+  constexpr bool operator<(const CommonChromName& other) const noexcept;
+  constexpr bool operator<(std::string_view other) const noexcept;
+
+  constexpr bool operator<=(const CommonChromName& other) const noexcept;
+  constexpr bool operator<=(std::string_view other) const noexcept;
+
+  [[nodiscard]] constexpr std::string_view name() const noexcept;
+  [[nodiscard]] constexpr std::string_view full_name() const noexcept;
+  [[nodiscard]] constexpr const char* data() const noexcept;
+  [[nodiscard]] constexpr char* data() noexcept;
+  [[nodiscard]] constexpr const char* c_str() const noexcept;
+
+ private:
+  [[nodiscard]] static constexpr std::string_view strip_prefix(std::string_view name) noexcept;
+};
+
 }  // namespace modle::utils
+
+template <>
+struct fmt::formatter<modle::utils::CommonChromName> {
+  inline constexpr auto parse(format_parse_context& ctx) -> decltype(ctx.begin());
+  template <typename FormatContext>
+  inline auto format(const modle::utils::CommonChromName& c, FormatContext& ctx)
+      -> decltype(ctx.out());
+};
 
 #include "../../../utils_impl.hpp"  // IWYU pragma: export
 // IWYU pragma: no_include <iterator>

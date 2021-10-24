@@ -74,6 +74,10 @@ template <class It1, class It2, class It3>
 FP Pearson<FP>::compute_weighted_pcc(It1 first1, It1 last1, It2 first2, It3 weight_first) {
   const auto size = std::distance(first1, last1);
   assert(size >= 0);  // NOLINT
+  if (BOOST_UNLIKELY(std::all_of(first1, last1, [](const auto n) { return n == 0; }) ||
+                     std::all_of(first2, first2 + size, [](const auto n) { return n == 0; }))) {
+    return std::numeric_limits<FP>::quiet_NaN();  // FP(0);
+  }
 
   const auto wmean1 = stats::weighted_mean(first1, last1, weight_first);
   const auto wmean2 = stats::weighted_mean(first2, first2 + size, weight_first);
@@ -98,6 +102,9 @@ FP Pearson<FP>::compute_pcc(It1 first1, It1 last1, It2 first2) {
 template <class FP>
 template <class I, class>
 FP Pearson<FP>::compute_significance(const FP pcc, const I n) {
+  if (BOOST_UNLIKELY(std::isnan(pcc))) {
+    return std::numeric_limits<FP>::quiet_NaN();
+  }
   assert(n > I(2));  // NOLINT
   const auto ab = (static_cast<FP>(n) / FP(2)) - 1;
   boost::math::beta_distribution<FP> dist(ab, ab);
@@ -155,6 +162,9 @@ template <class FP>
 template <class I, class>
 FP Spearman<FP>::compute_significance(const FP rho, const I n) {
   assert(n > I(2));  // NOLINT
+  if (BOOST_UNLIKELY(std::isnan(rho))) {
+    return std::numeric_limits<FP>::quiet_NaN();
+  }
   const auto dof = static_cast<FP>(n - 2);
   const double tscore = rho * std::sqrt(dof / ((FP(1) + rho) * (FP(1) - rho)));
   boost::math::students_t_distribution<FP> dist(dof);
