@@ -28,7 +28,7 @@ class MoDLE(ConanFile):
                 "cpp-sort/1.11.0",
                 "fmt/8.0.1",
                 "hdf5/1.12.0",
-                "libarchive/3.5.1",
+                "libarchive/3.5.2",
                 "lz4/1.9.3",
                 "lzo/2.10",
                 "readerwriterqueue/1.0.5",
