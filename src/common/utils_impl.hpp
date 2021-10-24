@@ -20,11 +20,11 @@ DISABLE_WARNING_POP
 #endif
 // clang-format on
 
-#include <absl/strings/match.h>       // for StartsWithIgnoreCase
-#include <absl/strings/str_format.h>  // for StrAppendFormat
-#include <absl/strings/str_split.h>   // for StrSplit, Splitter
-#include <fmt/format.h>               // for format, FMT_STRING, system_error
-#include <xxh3.h>                     // for XXH_INLINE_XXH3_freeState, XXH3_freeState
+#include <absl/strings/match.h>      // for StartsWithIgnoreCase
+#include <absl/strings/str_split.h>  // for StrSplit, Splitter
+#include <fmt/format.h>              // for format, FMT_STRING, system_error
+#include <fmt/ostream.h>
+#include <xxh3.h>  // for XXH_INLINE_XXH3_freeState, XXH3_freeState
 
 #include <boost/filesystem.hpp>              // for path, status
 #include <boost/filesystem/file_status.hpp>  // for file_type, regular_file, directory_file, fil...
@@ -48,7 +48,7 @@ DISABLE_WARNING_POP
 
 namespace modle::utils {
 
-template <typename N>
+template <class N>
 inline auto from_chars(const char *first, const char *last, N &value) noexcept {
 #if defined(MODLE_CHARCONV_FP_AVAILABLE) && defined(MODLE_CHARCONV_INT_AVAILABLE)
   return std::from_chars(first, last, value);
@@ -57,7 +57,7 @@ inline auto from_chars(const char *first, const char *last, N &value) noexcept {
 #endif
 }
 
-template <typename N>
+template <class N>
 void parse_numeric_or_throw(std::string_view tok, N &field) {
   auto [ptr, err] = utils::from_chars(tok.data(), tok.end(), field);
   if (ptr != tok.end() && err != std::errc{}) {
@@ -65,19 +65,19 @@ void parse_numeric_or_throw(std::string_view tok, N &field) {
   }
 }
 
-template <typename N>
+template <class N>
 N parse_numeric_or_throw(std::string_view tok) {
   N field{};
   utils::parse_numeric_or_throw(tok, field);
   return field;
 }
 
-template <typename N>
+template <class N>
 void parse_numeric_or_throw(const std::vector<std::string_view> &toks, usize idx, N &field) {
   parse_numeric_or_throw(toks[idx], field);
 }
 
-template <typename N>
+template <class N>
 void parse_vect_of_numbers_or_throw(const std::vector<std::string_view> &toks, usize idx,
                                     std::vector<N> &fields, u64 expected_size) {
   static_assert(std::is_arithmetic<N>());
@@ -92,7 +92,7 @@ void parse_vect_of_numbers_or_throw(const std::vector<std::string_view> &toks, u
   }
 }
 
-template <typename N>
+template <class N>
 void throw_except_from_errc(std::string_view tok, usize idx, const N &field, const char *c,
                             std::errc e) {
   (void)field;
@@ -176,7 +176,7 @@ bool chrom_less_than_operator(const std::pair<std::string_view, i64> &chr1,
   return false;
 }
 
-template <typename T>
+template <class T>
 constexpr auto get_printable_type_name() noexcept {
   std::string_view name = "Error: unsupported compiler";
   std::string_view prefix;
@@ -248,17 +248,16 @@ bool detect_path_collision(const boost::filesystem::path &p, std::string &error_
   if (expected_type != path_type) {
     switch (path_type) {
       case boost::filesystem::regular_file:
-        absl::StrAppendFormat(&error_msg,
-                              "Path \"%s\" already exists and is actually a file. Please remove "
-                              "the file and try again",
-                              p.string());
+        error_msg +=
+            fmt::format(FMT_STRING("Path {} already exists and is actually a file. Please remove "
+                                   "the file and try again"),
+                        p);
         return false;
       case boost::filesystem::directory_file:
-        absl::StrAppendFormat(
-            &error_msg,
-            "Path \"%s\" already exists and is actually a directory. Please remove "
-            "the directory and try again",
-            p.string());
+        error_msg += fmt::format(
+            FMT_STRING("Path {} already exists and is actually a directory. Please remove "
+                       "the directory and try again"),
+            p);
         return false;
       default:  // For the time being we only handle regular files and folders
         return true;
@@ -270,8 +269,7 @@ bool detect_path_collision(const boost::filesystem::path &p, std::string &error_
   }
 
   if (path_type == boost::filesystem::regular_file) {
-    absl::StrAppendFormat(&error_msg, "File \"%s\" already exists. Pass --force to overwrite",
-                          p.string());
+    error_msg += fmt::format(FMT_STRING("File {} already exists. Pass --force to overwrite"), p);
     return false;
   }
   return true;
