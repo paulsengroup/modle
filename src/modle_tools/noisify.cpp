@@ -24,11 +24,11 @@
 #include <utility>      // for tuple_element<>::type
 #include <vector>       // for vector
 
-#include "include/modle_tools/config.hpp"                  // for noisify_config
 #include "modle/common/genextreme_value_distribution.hpp"  // for genextreme_value_distribution
 #include "modle/common/random.hpp"                         // for PRNG
 #include "modle/contacts.hpp"                              // for ContactMatrix
 #include "modle/cooler.hpp"                                // for Cooler::Pixel, Cooler, Cooler:...
+#include "modle_tools/config.hpp"                          // for noisify_config
 #include "modle_tools/tools.hpp"                           // for noisify_subcmd
 
 namespace modle::tools {

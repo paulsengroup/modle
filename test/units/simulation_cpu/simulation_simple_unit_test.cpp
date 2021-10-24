@@ -10,7 +10,6 @@
 #include <boost/random/uniform_int_distribution.hpp>  // for uniform_int_distribution
 #include <cassert>                                    // for assert
 #include <catch2/catch.hpp>                           // for AssertionHandler, operator""_catch_sr
-#include <cstddef>                                    // for usize
 #include <iterator>                                   // for back_insert_iterator, back_inserter
 #include <memory>                                     // for allocator, allocator_traits<>::valu...
 #include <numeric>                                    // for iota
@@ -18,7 +17,7 @@
 #include <vector>                                     // for vector
 
 #include "./common.hpp"                  // for construct_lef, NO_COLLISION, requir...
-#include "modle/common/common.hpp"       // for bp_t, collision_t
+#include "modle/common/common.hpp"       // for usize, bp_t, collision_t
 #include "modle/common/config.hpp"       // for Config
 #include "modle/common/random.hpp"       // for PRNG, bernoulli_trial, uniform_int_...
 #include "modle/extrusion_barriers.hpp"  // for ExtrusionBarrier, OCCUPIED, State

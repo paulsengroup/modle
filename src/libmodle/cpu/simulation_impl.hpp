@@ -6,28 +6,19 @@
 
 // IWYU pragma: private, include "modle/simulation.hpp"
 
-#include <absl/strings/str_join.h>              // for StrJoin
-#include <absl/types/span.h>                    // for Span
-#include <cpp-sort/sorters/counting_sorter.h>   // for counting_sort, counting_sorter
-#include <cpp-sort/sorters/insertion_sorter.h>  // for insertion_sorter
-#include <cpp-sort/sorters/ska_sorter.h>        // for ska_sort, ska_sorter
-#include <cpp-sort/sorters/split_sorter.h>      // for split_sort, split_sorter
-#include <fmt/compile.h>
-#include <fmt/format.h>     // for format_parse_context, format_error
-#include <spdlog/spdlog.h>  // for warn
+#include <absl/types/span.h>  // for Span
+#include <fmt/format.h>       // for format_parse_context, format_error
 
 #include <algorithm>                                // for min
 #include <boost/dynamic_bitset/dynamic_bitset.hpp>  // for dynamic_bitset
-#include <boost/range/adaptor/reversed.hpp>         // for reversed_range, reverse
 #include <cassert>                                  // for assert
 #include <limits>                                   // for numeric_limits
 #include <thread>                                   // for thread
 #include <thread_pool/thread_pool.hpp>              // for thread_pool
 #include <type_traits>                              // for declval, decay_t
 
-#include "modle/common/common.hpp"                      // for bp_t, i64, u32
-#include "modle/common/random.hpp"                      // for PRNG_t, uniform_int_distribution
-#include "modle/common/random_sampling.hpp"             // for random_sampe
+#include "modle/common/common.hpp"                      // for usize, bp_t, i64, u32
+#include "modle/common/random.hpp"                      // for PRNG_t
 #include "modle/common/suppress_compiler_warnings.hpp"  // for DISABLE_WARNING_POP, DISABLE_WARN...
 #include "modle/common/utils.hpp"                       // for ndebug_defined, ndebug_not_defined
 #include "modle/extrusion_factors.hpp"                  // for Lef, ExtrusionUnit

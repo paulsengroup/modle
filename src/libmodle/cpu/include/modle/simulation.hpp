@@ -4,8 +4,6 @@
 
 #pragma once
 
-#include <absl/container/btree_set.h>            // IWYU pragma: keep for btree_set
-#include <absl/container/flat_hash_map.h>        // for flat_hash_map
 #include <absl/container/flat_hash_set.h>        // for flat_hash_set
 #include <absl/types/span.h>                     // for Span
 #include <fmt/format.h>                          // for format_parse_context, formatter
@@ -13,13 +11,12 @@
 #include <xxh3.h>                                // for XXH_INLINE_XXH3_createState, XXH3...
 
 #include <atomic>                                   // for atomic
-#include <boost/circular_buffer.hpp>                // for circular_buffer
 #include <boost/dynamic_bitset/dynamic_bitset.hpp>  // for dynamic_bitset
 #include <boost/filesystem/path.hpp>                // for path
 #include <deque>                                    // for deque
 #include <exception>                                // for exception_ptr
 #include <limits>                                   // for numeric_limits
-#include <memory>                                   // for allocator, shared_ptr, unique_ptr
+#include <memory>                                   // for shared_ptr, allocator, unique_ptr
 #include <mutex>                                    // for mutex
 #include <string>                                   // for string
 #include <string_view>                              // for string_view
@@ -28,20 +25,24 @@
 #include <vector>                                   // for vector
 
 #include "modle/bed.hpp"                                // for BED (ptr only), BED_tree
+#include "modle/common/common.hpp"                      // for usize, bp_t, collision_t, contacts_t
 #include "modle/common/config.hpp"                      // for Config
 #include "modle/common/random.hpp"                      // for PRNG_t, normal_distribution, unif...
 #include "modle/common/suppress_compiler_warnings.hpp"  // for DISABLE_WARNING_POP, DISABLE_WARN...
 #include "modle/common/utils.hpp"                       // for ndebug_defined, XXH3_Deleter, XXH...
-#include "modle/compressed_io.hpp"                      // for Writer
 #include "modle/contacts.hpp"                           // for ContactMatrix
 #include "modle/extrusion_barriers.hpp"                 // for ExtrusionBarrier
 #include "modle/extrusion_factors.hpp"                  // for Lef, ExtrusionUnit (ptr only)
 #include "modle/genome.hpp"                             // for Chromosome (ptr only), Genome
 
+namespace modle {
+
+namespace compressed_io {
+class Writer;
+}
+
 template <typename I, typename T>
 class IITree;
-
-namespace modle {
 
 class Simulation : Config {
  public:

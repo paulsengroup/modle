@@ -6,7 +6,8 @@
 
 #include <type_traits>  // for declval, enable_if_t
 
-#include "modle/common/utils.hpp"  // for identity
+#include "modle/common/common.hpp"  // for usize
+#include "modle/common/utils.hpp"   // for identity
 
 namespace modle::stats {
 

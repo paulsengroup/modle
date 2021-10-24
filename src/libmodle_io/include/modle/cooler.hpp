@@ -20,8 +20,8 @@
 #include <readerwriterqueue/readerwriterqueue.h>  // for BlockingReaderWriterQueue
 
 #include <boost/filesystem/path.hpp>  // for path
+#include <cstdint>                    // for uint_fast8_t
 #include <memory>                     // for unique_ptr, allocator
-#include <shared_mutex>               // for shared_mutex
 #include <string>                     // for string
 #include <string_view>                // for string_view
 #include <utility>                    // for pair

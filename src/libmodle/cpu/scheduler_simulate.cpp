@@ -6,6 +6,7 @@
 #include "modle/simulation.hpp"
 // clang-format on
 
+#include <absl/container/btree_map.h>            // for btree_iterator
 #include <absl/container/fixed_array.h>          // for FixedArray
 #include <absl/types/span.h>                     // for MakeConstSpan, Span
 #include <fmt/format.h>                          // for make_format_args, vformat_to, FMT_STRING
@@ -26,14 +27,15 @@
 #include <limits>                           // for numeric_limits
 #include <mutex>                            // for mutex, scoped_lock
 #include <stdexcept>                        // for runtime_error
-#include <thread>                           // for sleep_for
+#include <thread>                           // IWYU pragma: keep for sleep_for
 #include <thread_pool/thread_pool.hpp>      // for thread_pool
 #include <utility>                          // for pair
 #include <vector>                           // for vector
 
-#include "modle/common/common.hpp"  // for u64
-#include "modle/genome.hpp"         // for Chromosome, Genome
-#include "modle/interval_tree.hpp"  // for IITree, IITree::data
+#include "modle/common/common.hpp"                      // for u64
+#include "modle/common/suppress_compiler_warnings.hpp"  // for DISABLE_WARNING_POP, DISABLE_WARN...
+#include "modle/genome.hpp"                             // for Chromosome, Genome
+#include "modle/interval_tree.hpp"                      // for IITree, IITree::data
 
 namespace modle {
 

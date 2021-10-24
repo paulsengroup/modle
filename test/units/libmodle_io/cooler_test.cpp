@@ -2,27 +2,27 @@
 //
 // SPDX-License-Identifier: MIT
 
-#include "modle/cooler.hpp"  // for Cooler, Cooler::READ_ONLY, Cooler::COOL, Cooler::WRITE_ONLY
+#include "modle/cooler.hpp"
 
-#include <absl/types/span.h>                  // for Span
-#include <fmt/format.h>                       // for format, make_format_args, vformat_to
-#include <spdlog/sinks/basic_file_sink.h>     // for basic_file_sink_mt
-#include <spdlog/sinks/null_sink.h>           // for null_sink
-#include <spdlog/sinks/stdout_color_sinks.h>  // for stderr_color_sink_mt
-#include <spdlog/spdlog.h>                    // for error, info
+#include <absl/strings/str_split.h>  // for StrSplit, Splitter
+#include <absl/types/span.h>         // for Span
+#include <fmt/format.h>              // for format, make_format_args, vformat_to
+#include <spdlog/logger.h>           // for logger
+#include <spdlog/sinks/null_sink.h>  // for null_sink_mt
+#include <spdlog/spdlog-inl.h>       // for set_default_logger
 
-#include <boost/cstdint.hpp>                // for i32
+#include <algorithm>                        // for max, max_element, transform
 #include <boost/filesystem/operations.hpp>  // for remove, create_directories
 #include <boost/filesystem/path.hpp>        // for operator/, path
-#include <catch2/catch.hpp>                 // for operator""_catch_sr, AssertionHandler, Sour...
-#include <cstddef>                          // for usize
+#include <catch2/catch.hpp>                 // for operator""_catch_sr, AssertionHandler, Source...
 #include <exception>                        // for exception
-#include <memory>                           // for make_shared, allocator
+#include <memory>                           // for make_shared, allocator_traits<>::value_type
 #include <stdexcept>                        // for runtime_error
 #include <string_view>                      // for string_view
 
-#include "modle/common/common.hpp"    // for u64, i32, u8
+#include "modle/common/common.hpp"    // for u64, u32, usize, i64, u8
 #include "modle/common/smartdir.hpp"  // for SmartDir
+#include "modle/common/utils.hpp"     // for parse_numeric_or_throw
 #include "modle/compressed_io.hpp"    // for Reader
 #include "modle/contacts.hpp"         // for ContactMatrix
 

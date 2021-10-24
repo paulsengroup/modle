@@ -9,13 +9,17 @@
 #include <absl/time/time.h>                         // for FormatDuration, operator-, Time
 #include <fmt/format.h>                             // for make_format_args, vformat_to, FMT_STRING
 #include <fmt/ostream.h>                            // for formatbuf<>::int_type
+#include <spdlog/common.h>                          // for sink_ptr, spdlog_ex, err
+#include <spdlog/logger.h>                          // for logger
 #include <spdlog/sinks/basic_file_sink.h>           // for basic_file_sink_mt
+#include <spdlog/sinks/sink.h>                      // for sink
 #include <spdlog/sinks/stdout_color_sinks.h>        // for stderr_color_sink_mt
 #include <spdlog/spdlog.h>                          // for error, info
 
+#include <CLI/CLI.hpp>                      // for ParseError
 #include <algorithm>                        // for max
 #include <boost/filesystem/operations.hpp>  // for create_directories
-#include <boost/filesystem/path.hpp>        // for operator<<, path
+#include <boost/filesystem/path.hpp>        // for path, operator<<
 #include <cassert>                          // for assert
 #include <cstdio>                           // for stderr
 #include <cstring>                          // for strlen

@@ -34,7 +34,7 @@
 #include <stdexcept>                                // for runtime_error
 #include <string>                                   // for string
 #include <string_view>                              // for string_view
-#include <thread>                                   // for sleep_for
+#include <thread>                                   // IWYU pragma: keep for sleep_for
 #include <thread_pool/thread_pool.hpp>              // for thread_pool
 #include <utility>                                  // for make_pair, pair
 #include <vector>                                   // for vector, vector<>::iterator

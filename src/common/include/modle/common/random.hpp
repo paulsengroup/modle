@@ -4,9 +4,8 @@
 
 #pragma once
 
-#include <array>       // for array
-#include <functional>  // for function<>::result_type
-#include <limits>      // for numeric_limits
+#include <array>        // for array
+#include <type_traits>  // for result_of
 
 #include "modle/common/common.hpp"  // for u64
 #include "modle/common/utils.hpp"   // for ndebug_defined

@@ -8,7 +8,7 @@
 #include <boost/filesystem/path.hpp>        // for path, operator/
 #include <catch2/catch.hpp>                 // for AssertionHandler, operator""_catch_sr, Source...
 #include <fstream>                          // for ifstream, basic_ios, basic_istream, operator<<
-#include <ios>                              // for cerr
+#include <iostream>                         // for cerr
 #include <string>                           // for operator==, string, basic_string, getline
 
 #include "modle/common/smartdir.hpp"  // for SmartDir

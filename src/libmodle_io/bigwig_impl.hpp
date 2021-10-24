@@ -6,12 +6,10 @@
 
 // IWYU pragma: private, include "modle/bigwig.hpp"
 
-#include <absl/container/flat_hash_map.h>  // for flat_hash_map
-#include <absl/strings/match.h>            // for StartsWith
-#include <fmt/format.h>                    // for FMT_STRING, format
-#include <fmt/ostream.h>
+#include <absl/types/span.h>  // for Span, MakeSpan
+#include <fmt/format.h>       // for FMT_STRING, format
 
-#include <iterator>     // for pair
+#include <cassert>      // for assert
 #include <limits>       // for numeric_limits
 #include <stdexcept>    // for runtime_error
 #include <string>       // for string
@@ -19,8 +17,9 @@
 #include <type_traits>  // for is_arithmetic, is_signed
 #include <vector>       // for vector
 
-#include "libBigWig/bigWig.h"       // for bwAddIntervalSpanSteps
-#include "modle/common/common.hpp"  // for u32, u64, i32
+#include "libBigWig/bigWig.h"                           // for bwAddIntervalSpanSteps
+#include "modle/common/common.hpp"                      // for u32, u64, i32
+#include "modle/common/suppress_compiler_warnings.hpp"  // for DISABLE_WARNING_POP, DISABLE_WARN...
 
 namespace modle::io::bigwig {
 

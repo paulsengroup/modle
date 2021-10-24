@@ -7,22 +7,26 @@
 #include <absl/strings/strip.h>                     // for StripSuffix
 #include <absl/types/variant.h>                     // for get
 #include <fmt/format.h>                             // for make_format_args, vformat_to, FMT_STRING
-#include <spdlog/sinks/basic_file_sink.h>           // for basic_file_sink_mt
+#include <spdlog/common.h>                          // for sink_ptr, spdlog_ex
+#include <spdlog/logger.h>                          // for logger
+#include <spdlog/sinks/sink.h>                      // for sink
 #include <spdlog/sinks/stdout_color_sinks.h>        // for stderr_color_sink_mt
-#include <spdlog/spdlog.h>                          // for error, info
+#include <spdlog/spdlog.h>                          // for error
 
+#include <CLI/CLI.hpp>  // for ParseError
 #include <algorithm>    // for max
+#include <cassert>      // for assert
 #include <cstdio>       // for stderr
 #include <cstring>      // for strlen
 #include <exception>    // for exception
-#include <memory>       // for make_shared, unique_ptr, make_unique
+#include <memory>       // for unique_ptr, make_shared, make_unique
 #include <new>          // for bad_alloc
 #include <stdexcept>    // for runtime_error
 #include <string_view>  // for string_view
 #include <vector>       // for vector
 
 #include "./cli.hpp"              // for Cli, Cli::subcommand, Cli::eval, Cli:...
-#include "modle_tools/tools.hpp"  // for eval_subcmd, filter_barriers_subcmd
+#include "modle_tools/tools.hpp"  // for eval_subcmd, find_barrier_clusters_su...
 
 int main(int argc, char** argv) {
   absl::InitializeSymbolizer(argv[0]);  // NOLINT(cppcoreguidelines-pro-bounds-pointer-arithmetic)

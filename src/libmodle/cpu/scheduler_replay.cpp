@@ -7,6 +7,7 @@
 // clang-format on
 
 #include <absl/container/fixed_array.h>          // for FixedArray
+#include <absl/container/flat_hash_set.h>        // for flat_hash_set, BitMask
 #include <absl/types/span.h>                     // for Span, MakeConstSpan
 #include <fmt/format.h>                          // for format, make_format_args, vformat_to
 #include <moodycamel/blockingconcurrentqueue.h>  // for BlockingConcurrentQueue
@@ -21,10 +22,11 @@
 #include <chrono>                           // for microseconds, milliseconds
 #include <exception>                        // for exception_ptr, exception, current_exception
 #include <iterator>                         // for move_iterator, make_move_iterator
+#include <memory>                           // for shared_ptr, make_shared, __shared...
 #include <mutex>                            // for mutex, scoped_lock
 #include <stdexcept>                        // for runtime_error
 #include <string>                           // for string
-#include <thread>                           // for sleep_for
+#include <thread>                           // IWYU pragma: keep for sleep_for
 #include <thread_pool/thread_pool.hpp>      // for thread_pool
 #include <vector>                           // for vector
 

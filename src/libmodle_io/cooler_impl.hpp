@@ -25,29 +25,28 @@
 // IWYU pragma: no_include "hdf5_impl.hpp"
 // IWYU pragma: no_include <ssrteam>
 
-#include <H5Cpp.h>                 // IWYU pragma: keep
+#include <H5Cpp.h>
+#include <absl/strings/match.h>    // for StrContains
 #include <absl/strings/str_cat.h>  // for StrCat
-#include <absl/time/clock.h>       // for Now
-#include <absl/time/time.h>        // for FormatDuration, operator-, Time
-#include <absl/types/span.h>       // for MakeConstSpan, Span
+#include <absl/types/span.h>       // for Span, MakeConstSpan
 #include <fmt/format.h>            // for format, FMT_STRING
-#include <fmt/ostream.h>           // for formatbuf<>::int_type
 #include <spdlog/spdlog.h>         // for warn
 
 #include <algorithm>    // for max, min, generate, fill
 #include <cassert>      // for assert
-#include <cstdio>       // for stderr
+#include <cmath>        // for isnan, round
 #include <memory>       // for unique_ptr, make_unique
 #include <stdexcept>    // for runtime_error
 #include <string>       // for string
 #include <string_view>  // for string_view
+#include <utility>      // for pair, make_pair
 #include <vector>       // for vector
 
-#include "modle/common/common.hpp"                      // for i64, i32, u8
+#include "modle/common/common.hpp"                      // for i64, i32, usize, u8
 #include "modle/common/suppress_compiler_warnings.hpp"  // for DISABLE_WARNING_POP, DISABLE_WARN...
 #include "modle/common/utils.hpp"                       // for ndebug_not_defined
 #include "modle/contacts.hpp"                           // for ContactMatrix
-#include "modle/hdf5.hpp"                               // for write_numbers, has_attribute, rea...
+#include "modle/hdf5.hpp"                               // for write_numbers, read_numbers, has_...
 
 namespace modle::cooler {
 

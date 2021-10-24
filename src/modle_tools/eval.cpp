@@ -2,40 +2,44 @@
 //
 // SPDX-License-Identifier: MIT
 
-#include <absl/algorithm/container.h>             // for c_set_intersection
-#include <absl/container/btree_set.h>             // for btree_set
-#include <absl/time/clock.h>                      // for Now
-#include <absl/time/time.h>                       // for FormatDuration, operator-, Time
-#include <absl/types/span.h>                      // for Span, MakeConstSpan
-#include <cpp-sort/comparators/natural_less.h>    // for natural_less
-#include <fmt/format.h>                           // for make_format_args, vformat_to, FMT...
-#include <fmt/ostream.h>                          // for formatbuf<>::int_type
-#include <readerwriterqueue/readerwriterqueue.h>  // for readerwriterqueue
-#include <spdlog/spdlog.h>                        // for info, warn
+#include <absl/algorithm/container.h>           // for c_set_intersection
+#include <absl/container/btree_map.h>           // for btree_map, btree_iterator, map_params<>::...
+#include <absl/strings/strip.h>                 // for StripPrefix
+#include <absl/time/clock.h>                    // for Now
+#include <absl/time/time.h>                     // for FormatDuration, operator-, Time
+#include <absl/types/span.h>                    // for MakeSpan
+#include <cpp-sort/comparators/natural_less.h>  // for natural_less_t
+#include <fmt/format.h>                         // for format, make_format_args, vformat_to, FMT...
+#include <fmt/ostream.h>                        // for formatbuf<>::int_type
+#include <spdlog/spdlog.h>                      // for info
 
-#include <algorithm>                        // for fill, max, transform
+#include <algorithm>                        // for transform, max
 #include <boost/filesystem/operations.hpp>  // for create_directories
-#include <boost/filesystem/path.hpp>        // for path, operator<<
+#include <boost/filesystem/path.hpp>        // for operator<<, path
 #include <cassert>                          // for assert
-#include <cmath>                            // for sqrt
-#include <iterator>                         // for back_insert_iterator, insert_iter...
-#include <memory>                           // for shared_ptr, unique_ptr
-#include <stdexcept>                        // for runtime_error, logic_error
+#include <cstdint>                          // for uint_fast8_t
+#include <cstdio>                           // for stderr
+#include <exception>                        // for exception
+#include <iosfwd>                           // for streamsize
+#include <iterator>                         // for insert_iterator, inserter
+#include <memory>                           // for unique_ptr, shared_ptr, __shared_ptr_access
+#include <stdexcept>                        // for runtime_error, overflow_error
 #include <string>                           // for string, basic_string
+#include <string_view>                      // for string_view
 #include <thread_pool/thread_pool.hpp>      // for thread_pool
-#include <type_traits>                      // for is_arithmetic
-#include <utility>                          // for pair, move, make_pair
+#include <utility>                          // for tuple_element<>::type, pair, make_pair
 #include <vector>                           // for vector
 
-#include "modle/bed.hpp"                                // for Parser
-#include "modle/bigwig.hpp"                             // for write_range, init_bigwig_file
-#include "modle/common/common.hpp"                      // for i64, u32, std::uint_fast8_t
-#include "modle/common/suppress_compiler_warnings.hpp"  // for DISABLE_WARNING_POP, DISABLE_WARN...
-#include "modle/contacts.hpp"                           // for ContactMatrix
-#include "modle/cooler.hpp"                             // for Cooler, Cooler::READ_ONLY
-#include "modle/stats/correlation.hpp"                  // for compute_pearson_significance, com...
-#include "modle_tools/config.hpp"                       // for eval_config
-#include "modle_tools/tools.hpp"                        // for eval_subcmd
+#include "modle/bed.hpp"                // for BED_tree, BED_tree<>::value_type, Parser
+#include "modle/bigwig.hpp"             // for Writer
+#include "modle/common/common.hpp"      // for u32, usize, bp_t, u8, i64
+#include "modle/common/utils.hpp"       // for identity::operator()
+#include "modle/contacts.hpp"           // for ContactMatrix
+#include "modle/cooler.hpp"             // for Cooler, Cooler::READ_ONLY
+#include "modle/interval_tree.hpp"      // for IITree, IITree::IITree<I, T>, IITree::empty
+#include "modle/stats/correlation.hpp"  // for Pearson, Spearman
+#include "modle_tools/config.hpp"       // for eval_config
+#include "modle_tools/tools.hpp"        // for eval_subcmd
 
 namespace modle::tools {
 

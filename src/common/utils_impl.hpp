@@ -5,10 +5,10 @@
 #pragma once
 
 // clang-format off
-#include "modle/common/suppress_compiler_warnings.hpp"
 #if defined(MODLE_CHARCONV_FP_AVAILABLE) && defined(MODLE_CHARCONV_INT_AVAILABLE)
-#include <charconv>                          // for from_chars
+#include <charconv>                                     // for from_chars
 #else
+#include "modle/common/suppress_compiler_warnings.hpp"  // IWYU pragma: keep
 DISABLE_WARNING_PUSH
 DISABLE_WARNING_CONVERSION
 DISABLE_WARNING_DOUBLE_PROMOTION
@@ -23,18 +23,17 @@ DISABLE_WARNING_POP
 #include <absl/strings/match.h>      // for StartsWithIgnoreCase
 #include <absl/strings/str_split.h>  // for StrSplit, Splitter
 #include <fmt/format.h>              // for format, FMT_STRING, system_error
-#include <fmt/ostream.h>
-#include <xxh3.h>  // for XXH_INLINE_XXH3_freeState, XXH3_freeState
+#include <fmt/ostream.h>             // for formatbuf<>::int_type
+#include <xxh3.h>                    // for XXH_INLINE_XXH3_freeState, XXH3_freeState
 
-#include <boost/filesystem.hpp>              // for path, status
 #include <boost/filesystem/file_status.hpp>  // for file_type, regular_file, directory_file, fil...
 #include <boost/filesystem/operations.hpp>   // for status
-#include <boost/filesystem/path.hpp>         // for path
-#include <cassert>                           // for assert
+#include <boost/filesystem/path.hpp>         // for operator<<, path
 #include <cerrno>                            // for errno
 #include <cmath>                             // for trunc
 #include <cstdio>                            // for fclose, FILE, stderr, stdout
 #include <exception>                         // for exception
+#include <iosfwd>                            // for streamsize
 #include <limits>                            // for numeric_limits
 #include <stdexcept>                         // for runtime_error, logic_error, range_error
 #include <string>                            // for string
@@ -44,7 +43,7 @@ DISABLE_WARNING_POP
 #include <utility>                           // for pair, make_pair, forward
 #include <vector>                            // for vector
 
-#include "modle/common/common.hpp"  // for i64, u64
+#include "modle/common/common.hpp"  // for usize, i64, u64
 
 namespace modle::utils {
 
@@ -221,7 +220,7 @@ void fclose(FILE *fp) noexcept(false) {
 // Try to convert str representations like "1.0" or "1.000000" to "1"
 std::string str_float_to_str_int(const std::string &s) {
   try {
-    double n = parse_numeric_or_throw<double>(s);
+    auto n = parse_numeric_or_throw<double>(s);
     if (std::trunc(n) == n) {
       return fmt::format(FMT_STRING("{:.0f}"), n);
     }

@@ -4,31 +4,31 @@
 
 #pragma once
 
-#include <absl/strings/str_join.h>        // for StrJoin
-#include <absl/types/span.h>              // for Span, MakeConstSpan
-#include <cpp-sort/sorter_facade.h>       // for sorter_facade
-#include <cpp-sort/sorters/ska_sorter.h>  // for ska_sort, ska_sorter
-#include <fmt/format.h>                   // for FMT_STRING, join
-#include <fmt/ostream.h>
+#include <absl/strings/str_split.h>  // for StrSplit, Splitter
+#include <absl/types/span.h>         // for Span, MakeConstSpan, MakeSpan
+#include <fmt/format.h>              // for FMT_STRING, join
 
-#include <algorithm>                                // for clamp, min, fill, equal_range
-#include <atomic>                                   // for memory_order_relaxed
+#include <algorithm>                                // for min, clamp, fill, max
+#include <atomic>                                   // for atomic_fetch_add_explicit, memory_ord...
 #include <boost/dynamic_bitset/dynamic_bitset.hpp>  // for dynamic_bitset
+#include <boost/filesystem/operations.hpp>          // for exists
+#include <boost/filesystem/path.hpp>                // for path
 #include <cassert>                                  // for assert
 #include <cmath>                                    // for round
-#include <iostream>                                 // for cout
+#include <fstream>                                  // IWYU pragma: keep for ifstream
+#include <iostream>                                 // for basic_istream, flush, ifstream, ostream
 #include <limits>                                   // for numeric_limits
-#include <mutex>                                    // for mutex
+#include <mutex>                                    // for mutex, scoped_lock, unique_lock
 #include <numeric>                                  // for accumulate
 #include <stdexcept>                                // for runtime_error, logic_error
-#include <type_traits>                              // for is_integral, is_signed, remove_re...
-#include <utility>                                  // for pair, make_pair, pair<>::second
-#include <vector>                                   // for vector, allocator
+#include <string>                                   // for getline, string
+#include <string_view>                              // for string_view
+#include <utility>                                  // for make_pair, pair
+#include <vector>                                   // for vector, allocator, swap
 
-#include "modle/common/common.hpp"                      // for u64, i64
-#include "modle/common/random.hpp"                      // for PRNG, uniform_int_distribution
-#include "modle/common/suppress_compiler_warnings.hpp"  // for DISABLE_WARNING_PUSH, DISABLE_WAR...
-#include "modle/common/utils.hpp"                       // for ndebug_defined, ndebug_not_defined
+#include "modle/common/common.hpp"  // for usize, i64, u64, bp_t, isize
+#include "modle/common/random.hpp"  // for PRNG, uniform_int_distribution, unifo...
+#include "modle/common/utils.hpp"   // for ndebug_defined, ndebug_not_defined
 
 namespace modle {
 
@@ -67,7 +67,7 @@ ContactMatrix<N>::ContactMatrix(const usize nrows, const usize ncols,
       if constexpr (std::is_floating_point_v<N>) {
         return random::uniform_real_distribution<N>{0, 65553};
       }
-      uint64_t max_ = std::min(u64(65553), static_cast<u64>((std::numeric_limits<N>::max)()));
+      u64 max_ = std::min(u64(65553), static_cast<u64>((std::numeric_limits<N>::max)()));
       return random::uniform_int_distribution<N>{0, static_cast<N>(max_)};
     }();
     for (usize i = 0; i < _ncols; ++i) {

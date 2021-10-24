@@ -4,11 +4,8 @@
 
 #pragma once
 
-#include <absl/types/optional.h>  // for optional
-#include <absl/types/span.h>      // for Span
-
-#include <utility>  // for pair
-#include <vector>   // for vector
+#include <type_traits>  // for enable_if, enable_if_t
+#include <vector>       // for vector
 
 #include "modle/common/common.hpp"  // for std::uint_fast8_t
 #include "modle/common/utils.hpp"   // for RepeatIterator

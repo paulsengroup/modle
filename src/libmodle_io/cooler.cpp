@@ -35,26 +35,28 @@
 #include <readerwriterqueue/readerwriterqueue.h>  // for BlockingReaderWriterQueue
 #include <spdlog/spdlog.h>                        // for error, warn
 
-#include <algorithm>                  // for max, min, fill, find
-#include <array>                      // for array, array<>::value_type
-#include <boost/filesystem/path.hpp>  // for operator<<, path
-#include <cassert>                    // for assert
-#include <chrono>                     // for milliseconds
-#include <cmath>                      // for isnan, round
-#include <exception>                  // for exception
-#include <iosfwd>                     // for streamsize
-#include <iterator>                   // for distance
-#include <limits>                     // for numeric_limits
-#include <memory>                     // for unique_ptr, allocator, make_unique
-#include <stdexcept>                  // for runtime_error, logic_error
-#include <string>                     // for string, basic_string, operator!=
-#include <string_view>                // for string_view, basic_string_view
-#include <thread>                     // IWYU pragma: keep for sleep_for
-#include <utility>                    // for pair, make_pair, move
-#include <vector>                     // for vector, vector<>::iterator
+#include <algorithm>                        // for max, min, fill, find
+#include <array>                            // for array, array<>::value_type
+#include <boost/filesystem/operations.hpp>  // for exists
+#include <boost/filesystem/path.hpp>        // for operator<<, path
+#include <cassert>                          // for assert
+#include <chrono>                           // for milliseconds
+#include <cmath>                            // for isnan, round
+#include <exception>                        // for exception
+#include <iosfwd>                           // for streamsize
+#include <iterator>                         // for distance
+#include <limits>                           // for numeric_limits
+#include <memory>                           // for unique_ptr, allocator, make_unique
+#include <stdexcept>                        // for runtime_error, logic_error
+#include <string>                           // for string, basic_string, operator!=
+#include <string_view>                      // for string_view, basic_string_view
+#include <thread>                           // IWYU pragma: keep for sleep_for
+#include <utility>                          // for pair, make_pair, move
+#include <vector>                           // for vector, vector<>::iterator
 
 #include "modle/common/common.hpp"  // for  i64, i32, modle_version_long, u8, u32
 #include "modle/common/suppress_compiler_warnings.hpp"  // for DISABLE_WARNING_POP, DISABLE_WARN...
+#include "modle/common/utils.hpp"                       // for ndebug_not_defined
 #include "modle/contacts.hpp"                           // for ContactMatrix
 #include "modle/hdf5.hpp"                               // for read_attribute, read_numbers, wri...
 

@@ -7,7 +7,6 @@
 
 #include <algorithm>                  // for sort, max
 #include <boost/filesystem/path.hpp>  // for path
-#include <cassert>                    // for assert
 #include <catch2/catch.hpp>           // for AssertionHandler, operator""_catch_sr, SourceLineInfo
 #include <string>                     // for string, basic_string, operator==, char_traits, stoull
 #include <string_view>                // for operator!=, basic_string_view, string_view, operator<
@@ -16,6 +15,7 @@
 #include "absl/strings/match.h"     // for StrContains
 #include "modle/bed.hpp"            // for BED, Parser, formatter<>::format, BED::BED3
 #include "modle/chrom_sizes.hpp"    // for bed
+#include "modle/common/common.hpp"  // for usize
 #include "modle/compressed_io.hpp"  // for Reader
 
 namespace modle::test::bed {

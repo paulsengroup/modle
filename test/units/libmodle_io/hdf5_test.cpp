@@ -4,8 +4,12 @@
 
 #include "modle/hdf5.hpp"
 
-#include <H5Cpp.h>       // IWYU pragma: keep
-#include <fmt/format.h>  // for format
+#include <H5Cpp.h>
+#include <H5DataSpace.h>   // for DataSpace
+#include <H5DcreatProp.h>  // for DSetCreatPropList
+#include <H5Exception.h>   // for Exception, H5std_string
+#include <H5Spublic.h>     // for H5S_UNLIMITED
+#include <fmt/format.h>    // for format
 
 #include <algorithm>                        // for max
 #include <boost/filesystem/operations.hpp>  // for create_directories, is_empty, remove, remove_all
@@ -16,7 +20,8 @@
 #include <string_view>                      // for string_view
 #include <vector>                           // for vector
 
-#include "modle/common/common.hpp"    // for i64
+#include "H5Ppublic.h"                // for H5F_ACC_TRUNC, H5T_CSET_ASCII, H5T_STR_NULLPAD
+#include "modle/common/common.hpp"    // for i64, usize
 #include "modle/common/smartdir.hpp"  // for SmartDir
 
 namespace modle::test {

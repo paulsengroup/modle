@@ -9,11 +9,9 @@
 #include <fmt/format.h>                // for format_parse_context, formatter
 #include <xxh3.h>                      // for XXH3_state_t, XXH_INLINE_XXH3_state_t
 
-#include <algorithm>                  // for max
 #include <array>                      // for array
 #include <boost/filesystem/path.hpp>  // for path
 #include <cstdint>                    // for fast_uint8_t
-#include <fstream>                    // for ifstream
 #include <limits>                     // for numeric_limits
 #include <memory>                     // for unique_ptr
 #include <string>                     // for string

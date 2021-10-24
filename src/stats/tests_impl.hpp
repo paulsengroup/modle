@@ -1,6 +1,17 @@
-#include <algorithm>                              // for min
-#include <boost/math/distributions/binomial.hpp>  // for binomial_distribution
-#include <cassert>
+// Copyright (C) 2021 Roberto Rossini <roberros@uio.no>
+//
+// SPDX-License-Identifier: MIT
+
+#pragma once
+
+#include <algorithm>                                // for min, max
+#include <boost/math/distributions/binomial.hpp>    // for cdf, pdf, binomial_distribution
+#include <boost/math/distributions/complement.hpp>  // for complement
+#include <cassert>                                  // for assert
+#include <cmath>                                    // for ceil, floor, trunc
+
+#include "modle/common/random.hpp"                      // for binomial_distribution
+#include "modle/common/suppress_compiler_warnings.hpp"  // for DISABLE_WARNING_POP, DISABLE_WARN...
 
 namespace modle::stats {
 // https://github.com/scipy/scipy/blob/47bb6febaa10658c72962b9615d5d5aa2513fa3a/scipy/stats/_binomtest.py#L204

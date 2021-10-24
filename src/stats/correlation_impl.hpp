@@ -13,11 +13,10 @@
 #include <boost/math/special_functions/fpclassify.hpp>  // for isinf, isnan
 #include <cassert>                                      // for assert
 #include <cmath>                                        // for sqrt, isnan
-#include <cstdlib>                                      // for abs
+#include <iterator>                                     // for begin, end, distance
+#include <limits>                                       // for numeric_limits
 #include <numeric>
-#include <stdexcept>    // for overflow_error, logic_error, runt...
 #include <type_traits>  // for is_arithmetic
-#include <utility>      // for make_pair, pair
 #include <vector>       // for vector
 
 #include "modle/common/common.hpp"                      // for u64

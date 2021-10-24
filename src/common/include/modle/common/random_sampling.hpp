@@ -8,10 +8,10 @@
 
 #pragma once
 
-#include <algorithm>
-#include <iterator>
+#include <algorithm>  // IWYU pragma: keep for min
+#include <iterator>   // for distance
 
-#include "modle/common/random.hpp"
+#include "modle/common/random.hpp"  // for uniform_int_distribution
 
 namespace modle {
 // Adapted from libcxx

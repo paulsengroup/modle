@@ -6,19 +6,16 @@
 
 #include <absl/types/span.h>  // for Span
 
-#include <algorithm>                  // for max
 #include <boost/filesystem/path.hpp>  // for path
 #include <cmath>                      // for round
 #include <limits>                     // for numeric_limits
 #include <string>                     // for string
-#include <string_view>                // for string_view_literals
 #include <thread>                     // for thread
 #include <vector>                     // for vector
 
 #include "modle/common/common.hpp"  // for bp_t, i64, u64
 
 namespace modle {
-using namespace std::literals::string_view_literals;
 class Cli;
 class Simulation;
 

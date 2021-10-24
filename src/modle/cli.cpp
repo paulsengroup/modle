@@ -546,6 +546,7 @@ void Cli::make_cli() {
 Cli::Cli(int argc, char** argv) : _argc(argc), _argv(argv), _exec_name(*argv) { this->make_cli(); }
 
 const Config& Cli::parse_arguments() {
+  using namespace std::string_view_literals;
   if (this->_cli.parsed()) {
     return this->_config;
   }

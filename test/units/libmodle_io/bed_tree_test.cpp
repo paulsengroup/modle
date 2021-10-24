@@ -9,14 +9,13 @@
 #include <algorithm>                  // for max, min
 #include <boost/filesystem/path.hpp>  // for path
 #include <catch2/catch.hpp>           // for AssertionHandler, operator""_catch_sr, SourceLineInfo
-#include <cstddef>                    // for usize
 #include <string>                     // for basic_string, operator==, string
 #include <string_view>                // for string_view
 #include <vector>                     // for vector
 
 #include "modle/bed.hpp"            // for BED, BED_tree, BED_tree::contains, BED_tree::count_...
 #include "modle/chrom_sizes.hpp"    // for bed
-#include "modle/common/common.hpp"  // for u8, u32
+#include "modle/common/common.hpp"  // for usize, u8
 #include "modle/common/utils.hpp"   // for parse_numeric_or_throw
 #include "modle/compressed_io.hpp"  // for Reader
 

@@ -24,30 +24,32 @@
 #include <boost/filesystem/operations.hpp>  // for exists, remove
 #include <boost/filesystem/path.hpp>        // for operator<<, path
 #include <cassert>                          // for assert
+#include <cerrno>                           // for errno
 #include <chrono>                           // for microseconds, milliseconds
 #include <cmath>                            // for round
-#include <cstdio>                           // for stdout
 #include <exception>                        // for exception_ptr, exception, current_exception
-#include <iosfwd>                           // for streamsize
+#include <fstream>                          // for streamsize, operator|
 #include <iterator>                         // for move_iterator, make_move_iterator
 #include <limits>                           // for numeric_limits
+#include <memory>                           // for shared_ptr, __shared_pt...
 #include <mutex>                            // for mutex, scoped_lock
 #include <stdexcept>                        // for runtime_error
 #include <string>                           // for string, basic_string
 #include <string_view>                      // for string_view
-#include <thread>                           // for sleep_for
 #include <thread_pool/thread_pool.hpp>      // for thread_pool
+#include <utility>                          // for make_pair, tuple_elemen...
 #include <vector>                           // for vector
 
-#include "modle/bed.hpp"                 // for BED, BED_tree, BED_tree::at, BED_tree::c...
-#include "modle/common/common.hpp"       // for bp_t, contacts_t, u64
-#include "modle/compressed_io.hpp"       // for Writer
-#include "modle/contacts.hpp"            // for ContactMatrix
-#include "modle/cooler.hpp"              // for Cooler, Cooler::WRITE_ONLY
-#include "modle/extrusion_barriers.hpp"  // for ExtrusionBarrier
-#include "modle/genome.hpp"              // for Chromosome, Genome
-#include "modle/interval_tree.hpp"       // for IITree, IITree::empty, IITree::equal_range
-#include "modle/stats/tests.hpp"         // for binomial_test
+#include "modle/bed.hpp"            // for BED, BED_tree, BED_tree::at, BED_tree::c...
+#include "modle/common/common.hpp"  // for bp_t, contacts_t, u64
+#include "modle/common/suppress_compiler_warnings.hpp"  // for DISABLE_WARNING_POP
+#include "modle/compressed_io.hpp"                      // for Writer
+#include "modle/contacts.hpp"                           // for ContactMatrix
+#include "modle/cooler.hpp"                             // for Cooler, Cooler::WRITE_ONLY
+#include "modle/extrusion_barriers.hpp"                 // for ExtrusionBarrier
+#include "modle/genome.hpp"                             // for Chromosome, Genome
+#include "modle/interval_tree.hpp"  // for IITree, IITree::empty, IITree::equal_range
+#include "modle/stats/tests.hpp"    // for binomial_test
 
 namespace modle {
 

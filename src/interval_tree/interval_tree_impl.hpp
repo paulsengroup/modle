@@ -12,11 +12,10 @@
 #include <cassert>    // for assert
 #include <iterator>   // for iterator_traits
 #include <numeric>    // for iota
-#include <stack>      // for stack
 #include <utility>    // for pair, make_pair, swap
 #include <vector>     // for vector, vector::usizeype
 
-#include "modle/common/common.hpp"  // for i64
+#include "modle/common/common.hpp"  // for usize, i64
 
 namespace modle {
 

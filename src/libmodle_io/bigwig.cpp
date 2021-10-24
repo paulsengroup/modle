@@ -9,13 +9,12 @@
 
 #include <boost/filesystem/path.hpp>  // for file_size
 #include <cassert>                    // for assert
-#include <memory>                     // for allocator, unique_ptr
+#include <cerrno>                     // for errno
+#include <iosfwd>                     // for streamsize
 #include <mutex>                      // for scoped_lock
 #include <stdexcept>                  // for runtime_error
 #include <string>                     // for string
-#include <string_view>                // for string_view
-#include <utility>
-#include <vector>  // for vector
+#include <utility>                    // for move
 
 #include "libBigWig/bigWig.h"  // for bwCleanup, bwClose, bwAddIntervalSpanSteps, bwCreateChromList
 #include "modle/common/common.hpp"  // for u32, u64, i32, i64

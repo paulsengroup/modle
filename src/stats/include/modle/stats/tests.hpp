@@ -4,7 +4,8 @@
 
 #pragma once
 
-#include <type_traits>  // for declval, enable_if_t
+#include <cstdint>      // for uint_fast8_t
+#include <type_traits>  // for enable_if_t
 
 #include "modle/common/utils.hpp"  // for identity
 
@@ -16,4 +17,4 @@ template <binomial_test_alternative alternative = TWO_SIDED, class FP = double, 
 [[nodiscard]] inline FP binomial_test(I k, I n, FP p = 0.5);
 
 }  // namespace modle::stats
-#include "../../../test_impl.hpp"  // IWYU pragma: export
+#include "../../../tests_impl.hpp"  // IWYU pragma: export

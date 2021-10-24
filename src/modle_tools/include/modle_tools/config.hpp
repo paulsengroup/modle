@@ -4,18 +4,16 @@
 
 #pragma once
 
-#include <absl/container/flat_hash_set.h>  // for BitMask, flat_hash_set, raw_hash_set
-#include <absl/types/variant.h>            // for monostate, variant
+#include <absl/types/variant.h>  // for monostate, variant
 
-#include <algorithm>                        // for max
 #include <boost/filesystem/operations.hpp>  // for temp_directory_path
 #include <boost/filesystem/path.hpp>        // for path
-#include <string>                           // for string, basic_string, allocator
+#include <string>                           // for string, allocator, basic_string
 #include <thread>                           // for thread
 #include <vector>                           // for vector
 
 #include "modle/bed.hpp"            // for BED, BED::Dialect, BED::BED6
-#include "modle/common/common.hpp"  // for bp_t, u64
+#include "modle/common/common.hpp"  // for usize, bp_t, u64
 
 namespace modle::tools {
 

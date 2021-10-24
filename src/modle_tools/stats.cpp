@@ -22,6 +22,7 @@
 #include <iterator>                                 // for insert_iterator, inserter
 #include <memory>                                   // for unique_ptr, make_unique
 #include <numeric>                                  // for iota
+#include <stdexcept>                                // for runtime_error
 #include <string>                                   // for string, basic_string
 #include <utility>                                  // for make_pair
 #include <vector>                                   // for vector

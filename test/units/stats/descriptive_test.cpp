@@ -4,22 +4,13 @@
 
 #include "modle/stats/descriptive.hpp"
 
-#include <fmt/compile.h>
-#include <fmt/format.h>
+#include <algorithm>         // for transform
+#include <catch2/catch.hpp>  // for Approx, operator==, AssertionHandler, operator""_catc...
+#include <string_view>       // for string_view_literals
+#include <vector>            // for vector
 
-#include <algorithm>
-#include <atomic>
-#include <boost/process.hpp>
-#include <catch2/catch.hpp>
-#include <condition_variable>
-#include <mutex>
-#include <string_view>
-#include <thread>
-#include <vector>
-
-#include "modle/common/common.hpp"
-#include "modle/common/random.hpp"
-#include "modle/common/utils.hpp"
+#include "modle/common/common.hpp"  // for u8, usize
+#include "modle/common/utils.hpp"   // for identity::operator(), identity
 
 namespace modle::test::stats {
 using namespace modle::stats;

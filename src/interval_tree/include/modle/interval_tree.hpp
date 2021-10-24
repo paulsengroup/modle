@@ -8,7 +8,6 @@
 
 #include <absl/types/span.h>  // for Span
 
-#include <array>        // for array
 #include <iterator>     // for pair
 #include <limits>       // for numeric_limits
 #include <type_traits>  // for enable_if_t

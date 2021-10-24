@@ -23,7 +23,8 @@
 #include <string>                            // for string, basic_string
 #include <string_view>                       // for string_view, operator<<
 
-#include "modle/common/utils.hpp"  // for ndebug_not_defined
+#include "modle/common/common.hpp"  // for usize
+#include "modle/common/utils.hpp"   // for ndebug_not_defined
 
 namespace modle::compressed_io {
 

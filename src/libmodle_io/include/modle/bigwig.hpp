@@ -9,9 +9,12 @@
 #include <absl/types/span.h>  // for Span
 
 #include <boost/filesystem/path.hpp>  // for path
+#include <cstdint>                    // for uint_fast8_t
 #include <mutex>                      // for mutex
+#include <string_view>                // for string_view
+#include <type_traits>                // for enable_if
 
-#include "modle/common/common.hpp"  // for u64, i32, u32, uint...
+#include "modle/common/common.hpp"  // for u32, usize, u64
 
 // clang-format off
 #include "modle/common/suppress_compiler_warnings.hpp"  // for DISABLE_WARNING_PADDED, DISABLE_W...

@@ -4,14 +4,13 @@
 
 #pragma once
 
-#include <cmath>     // for sqrt
 #include <iterator>  // for distance
 #include <numeric>   // for accumulate
-#include <type_traits>
-#include <vector>  // for vector
+#include <vector>    // for vector
 
-#include "modle/common/common.hpp"  // for isize
-#include "modle/common/suppress_compiler_warnings.hpp"
+#include "modle/common/common.hpp"                      // for usize, isize
+#include "modle/common/suppress_compiler_warnings.hpp"  // for DISABLE_WARNING_POP, DISABLE_WARN...
+#include "modle/common/utils.hpp"                       // for RepeatIterator::operator*, Repeat...
 
 namespace modle::stats {
 template <class T, class>

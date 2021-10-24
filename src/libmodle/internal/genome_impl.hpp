@@ -4,13 +4,9 @@
 
 #pragma once
 
-#include <algorithm>    // for for_each
-#include <cassert>      // for assert
-#include <type_traits>  // for is_rvalue_reference_v
+#include <algorithm>  // IWYU pragma: keep for for_each
 
-#include "modle/chrom_sizes.hpp"
 #include "modle/common/common.hpp"  // for bp_t
-#include "modle/common/suppress_compiler_warnings.hpp"
 
 namespace modle {
 

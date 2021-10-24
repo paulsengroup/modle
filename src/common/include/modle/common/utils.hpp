@@ -4,14 +4,12 @@
 
 #pragma once
 
-#include <fmt/format.h>  // for format_parse_context, formatter
-#include <xxh3.h>        // for XXH3_state_t, XXH_INLINE_XXH3_state_t
+#include <xxh3.h>  // for XXH3_state_t, XXH_INLINE_XXH3_state_t
 
 #include <array>                             // for array
 #include <boost/filesystem/file_status.hpp>  // for regular_file, file_type
 #include <boost/filesystem/path.hpp>         // for path
 #include <cstdio>                            // for FILE
-#include <iterator>                          // for random_access_iterator_tag
 #include <string>                            // for string
 #include <string_view>                       // for string_view
 #include <system_error>                      // for errc
@@ -19,7 +17,7 @@
 #include <utility>                           // for pair
 #include <vector>                            // for vector
 
-#include "modle/common/common.hpp"  // for i64, u64
+#include "modle/common/common.hpp"  // for usize, i64, u64
 
 namespace modle::utils {
 

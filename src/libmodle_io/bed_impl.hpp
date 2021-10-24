@@ -4,9 +4,8 @@
 
 #pragma once
 
-#include <absl/container/btree_map.h>  // for btree_map
-#include <absl/types/span.h>           // for Span, MakeConstSpan
-#include <fmt/format.h>                // for format_parse_context, FMT_STRING, join, format_error
+#include <absl/types/span.h>  // for Span, MakeConstSpan
+#include <fmt/format.h>       // for format_parse_context, FMT_STRING, join, format_error
 
 #include <algorithm>                  // for min
 #include <array>                      // for array
@@ -21,7 +20,6 @@
 #include <vector>                     // for vector
 
 #include "modle/common/common.hpp"  // for bp_t, u64, u32, u8, usize
-#include "modle/interval_tree.hpp"  // for IITree::is_BST, IITree::count, IITree::data_end
 
 namespace modle::bed {
 

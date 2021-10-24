@@ -6,13 +6,8 @@
 
 // IWYU pragma: private, include "modle/extrusion_factors.hpp"
 
-#include <algorithm>  // for min, clamp
-#include <cassert>    // for assert
-#include <limits>     // for numeric_limits
-
-#include "modle/common/common.hpp"       // for bp_t, i64
-#include "modle/common/utils.hpp"        // for ndebug_defined
-#include "modle/extrusion_barriers.hpp"  // for ExtrusionBarrier
+#include "modle/common/common.hpp"  // for bp_t, i64
+#include "modle/common/utils.hpp"   // for ndebug_defined
 
 namespace modle {
 
