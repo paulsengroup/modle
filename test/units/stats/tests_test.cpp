@@ -146,8 +146,7 @@ TEST_CASE("Binom test - greater", "[math][short]") {
 
 // NOLINTNEXTLINE(readability-function-cognitive-complexity)
 TEST_CASE("Binom test - two-sided randomized", "[math][long]") {
-  // random::PRNG_t rand_eng{4888025265521095494};//std::random_device{}()};
-  random::PRNG_t rand_eng{std::random_device{}()};
+  random::PRNG_t rand_eng{4888025265521095494};
   const usize iterations = 5'000;
 
   std::mutex data_mutex;
