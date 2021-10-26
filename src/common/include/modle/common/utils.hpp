@@ -136,21 +136,28 @@ class RepeatIterator {
 
  public:
   using value_type = T;
-  using iterator_category = std::random_access_iterator_tag;
+  using difference_type = isize;
+  using pointer = T*;
+  using reference = T&;
+  using iterator_category = std::bidirectional_iterator_tag;
 
   RepeatIterator() = delete;
   explicit RepeatIterator(T value);
 
   [[nodiscard]] constexpr const T& operator*() const;
+  [[nodiscard]] constexpr const T& operator[](usize i) const;
 
   constexpr const RepeatIterator& operator++() const;
-  constexpr const RepeatIterator& operator++(int) const;
+  constexpr const RepeatIterator operator++(int) const;
   constexpr const RepeatIterator& operator+=(usize i) const;
   constexpr const RepeatIterator& operator+(usize i) const;
   constexpr const RepeatIterator& operator--() const;
-  constexpr const RepeatIterator& operator--(int) const;
+  constexpr const RepeatIterator operator--(int) const;
   constexpr const RepeatIterator& operator-=(usize i) const;
   constexpr const RepeatIterator& operator-(usize i) const;
+
+  constexpr bool operator==(const RepeatIterator& other) const;
+  constexpr bool operator!=(const RepeatIterator& other) const;
 };
 }  // namespace modle::utils
 

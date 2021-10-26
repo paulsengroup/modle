@@ -332,12 +332,17 @@ constexpr const T &RepeatIterator<T>::operator*() const {
 }
 
 template <class T>
+constexpr const T &RepeatIterator<T>::operator[]([[maybe_unused]] usize i) const {
+  return *this;
+}
+
+template <class T>
 constexpr const RepeatIterator<T> &RepeatIterator<T>::operator++() const {
   return *this;
 }
 
 template <class T>
-constexpr const RepeatIterator<T> &RepeatIterator<T>::operator++(int) const {
+constexpr const RepeatIterator<T> RepeatIterator<T>::operator++(int) const {
   return *this;
 }
 
@@ -357,7 +362,7 @@ constexpr const RepeatIterator<T> &RepeatIterator<T>::operator--() const {
 }
 
 template <class T>
-constexpr const RepeatIterator<T> &RepeatIterator<T>::operator--(int) const {
+constexpr const RepeatIterator<T> RepeatIterator<T>::operator--(int) const {
   return *this;
 }
 
@@ -369,6 +374,16 @@ constexpr const RepeatIterator<T> &RepeatIterator<T>::operator-=([[maybe_unused]
 template <class T>
 constexpr const RepeatIterator<T> &RepeatIterator<T>::operator-([[maybe_unused]] usize i) const {
   return *this;
+}
+
+template <class T>
+constexpr bool RepeatIterator<T>::operator==([[maybe_unused]] const RepeatIterator &other) const {
+  return false;
+}
+
+template <class T>
+constexpr bool RepeatIterator<T>::operator!=([[maybe_unused]] const RepeatIterator &other) const {
+  return !(*this == other);
 }
 
 }  // namespace modle::utils
