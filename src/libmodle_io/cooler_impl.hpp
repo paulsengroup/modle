@@ -501,7 +501,7 @@ ContactMatrix<N> Cooler::cooler_to_cmatrix(std::pair<hsize_t, hsize_t> bin_range
   const auto &d = this->_datasets;
   if (prefer_using_balanced_counts &&
       hdf5::has_dataset(*this->_fp, "bins/weight", this->_root_path)) {
-    bin_weights.resize(last_bin - first_bin + 1);
+    bin_weights.resize(last_bin - first_bin);
     (void)hdf5::read_numbers(d[BIN_WEIGHT], bin_weights, static_cast<hsize_t>(first_bin));
   }
 

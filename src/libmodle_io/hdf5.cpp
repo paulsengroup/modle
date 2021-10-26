@@ -67,10 +67,11 @@ std::string construct_error_stack(std::string_view function_name, std::string_vi
 
   if (!function_name.empty()) {
     assert(!detail_msg.empty());  // NOLINT
-    return fmt::format(FMT_STRING("function \"{}\" failed with message \"{}\":\nError stack:\n{}"),
-                       function_name, detail_msg, buff.empty() ? "Not available" : buff);
+    return fmt::format(
+        FMT_STRING("function \"{}\" failed with message \"{}\":\n HDF5 error stack:\n{}"),
+        function_name, detail_msg, buff.empty() ? "Not available" : buff);
   }
-  return fmt::format(FMT_STRING("Error stack: {}"), buff);
+  return fmt::format(FMT_STRING("HDF5 error stack: {}"), buff);
 }
 
 std::string construct_error_stack(const H5::Exception &e) {
