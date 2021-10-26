@@ -72,11 +72,6 @@ template <class FP>
 template <class It1, class It2, class It3>
 FP Pearson<FP>::compute_weighted_pcc(It1 first1, It1 last1, It2 first2, It3 weight_first) {
   const auto size = std::distance(first1, last1);
-  assert(size >= 0);  // NOLINT
-  if (BOOST_UNLIKELY(std::all_of(first1, last1, [](const auto n) { return n == 0; }) ||
-                     std::all_of(first2, first2 + size, [](const auto n) { return n == 0; }))) {
-    return std::numeric_limits<FP>::quiet_NaN();  // FP(0);
-  }
 
   const auto wmean1 = stats::weighted_mean(first1, last1, weight_first);
   const auto wmean2 = stats::weighted_mean(first2, first2 + size, weight_first);
@@ -87,7 +82,6 @@ FP Pearson<FP>::compute_weighted_pcc(It1 first1, It1 last1, It2 first2, It3 weig
   const auto cov3 = stats::weighted_covariance(first1, last1, first2, weight_first, wmean1, wmean2);
 
   const auto pcc = std::clamp(cov3 / std::sqrt(cov1 * cov2), -1.0, 1.0);
-  assert(!std::isnan(pcc));  // NOLINT
 
   return pcc;
 }
