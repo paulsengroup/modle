@@ -693,7 +693,7 @@ usize Cooler::stream_contacts_for_chrom(moodycamel::BlockingReaderWriterQueue<Pi
   const auto &d = this->_datasets;
   if (prefer_using_balanced_counts &&
       hdf5::has_dataset(*this->_fp, "bins/weight", this->_root_path)) {
-    bin_weights.resize(last_bin - first_bin + 1);
+    bin_weights.resize(last_bin - first_bin);
     (void)hdf5::read_numbers(d[BIN_WEIGHT], bin_weights, static_cast<hsize_t>(first_bin));
   }
 
@@ -725,7 +725,7 @@ usize Cooler::stream_contacts_for_chrom(moodycamel::BlockingReaderWriterQueue<Pi
       DISABLE_WARNING_CONVERSION
       const auto bin1 = bin1_BUFF[j] - first_bin;
       const auto bin2 = bin2_BUFF[j] - first_bin;
-      if (bin2 >= i + nrows - 1 || bin2 >= bin1_offset_idx.size()) {
+      if (bin2 >= i + nrows - 1 || bin2 >= bin1_offset_idx.size() - 1) {
         break;
       }
       if (bin_weights.empty()) {
