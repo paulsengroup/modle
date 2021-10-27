@@ -92,23 +92,29 @@ void Cli::make_eval_subcommand() {
       ->check(CLI::ExistingFile);
 
   io.add_flag(
+      "--exclude-zero-pixels,!--include-zero-pixels",
+      c.exclude_zero_pxls,
+      "When computing the correlation between a pair of rows/columns of pixels, exclude bins corresponding to pixels that are 0 in either of the rows or columns.")
+      ->capture_default_str();
+
+  io.add_flag(
      "-f,--force",
      c.force,
      "Overwrite existing file(s).")
      ->capture_default_str();
 
   corr.add_flag(
-     "--eucl-dist",
-     c.compute_edist,
+     "--eucl-dist,!--no-eucl-dist",
+     c.compute_eucl_dist,
      "Compute Euclidean distance.");
 
   corr.add_flag(
-     "--pearson",
+     "--pearson,!--no-pearson",
      c.compute_pearson,
      "Compute Pearson correlation.");
 
   corr.add_flag(
-     "--spearman",
+     "--spearman,!--no-spearman",
      c.compute_spearman,
      "Compute Spearman rank correlation.");
 
@@ -420,6 +426,10 @@ void Cli::validate_eval_subcommand() const {
     } else {
       errors.emplace_back(fmt::format(FMT_STRING("{}"), e.what()));
     }
+  }
+
+  if (c.compute_pearson + c.compute_spearman + c.compute_eucl_dist == 0) {
+    errors.emplace_back("At least one of --pearson, --spearman or --eucl-dist should be specified");
   }
 
   if (!c.force) {

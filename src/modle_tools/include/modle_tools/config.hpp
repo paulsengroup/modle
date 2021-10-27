@@ -30,7 +30,7 @@ struct eval_config {  // NOLINT
   // Correlation methods
   bool compute_spearman{true};
   bool compute_pearson{true};
-  bool compute_edist{true};
+  bool compute_eucl_dist{true};
 
   // Reference contacts
   usize bin_size{0};
@@ -38,6 +38,7 @@ struct eval_config {  // NOLINT
 
   // Other
   usize nthreads{std::thread::hardware_concurrency()};
+  bool exclude_zero_pxls{false};
 };
 
 struct filter_barrier_config {  // NOLINT

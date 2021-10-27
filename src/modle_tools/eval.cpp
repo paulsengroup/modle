@@ -4,6 +4,7 @@
 
 #include <absl/algorithm/container.h>           // for c_set_intersection
 #include <absl/container/btree_map.h>           // for btree_map, btree_iterator, map_params<>::...
+#include <absl/container/flat_hash_map.h>       // for flat_hash_map
 #include <absl/strings/strip.h>                 // for StripPrefix
 #include <absl/time/clock.h>                    // for Now
 #include <absl/time/time.h>                     // for FormatDuration, operator-, Time
@@ -20,6 +21,7 @@
 #include <cstdint>                          // for uint_fast8_t
 #include <cstdio>                           // for stderr
 #include <exception>                        // for exception
+#include <future>                           // for future
 #include <iosfwd>                           // for streamsize
 #include <iterator>                         // for insert_iterator, inserter
 #include <memory>                           // for unique_ptr, shared_ptr, __shared_ptr_access
@@ -155,22 +157,42 @@ using ChromSet = absl::btree_map<std::string, std::pair<bp_t, bp_t>, cppsort::na
   return bw;
 }
 
-enum CorrMethod : std::uint_fast8_t { pearson, spearman };
+enum CorrMethod : std::uint_fast8_t { pearson, spearman, eucl_dist };
 enum StripeDirection : std::uint_fast8_t { vertical, horizontal };
 
-template <CorrMethod correlation_method, StripeDirection stripe_direction>
-static std::vector<double> compute_correlation(const bp_t bin_size,
-                                               std::shared_ptr<ContactMatrix<>> ref_contacts,
-                                               std::shared_ptr<ContactMatrix<>> tgt_contacts,
-                                               const bed::BED_tree<>::value_type &features,
-                                               const std::vector<double> &weights = {}) {
-  assert(ref_contacts->nrows() == tgt_contacts->nrows());              // NOLINT
-  assert(weights.empty() || weights.size() == ref_contacts->nrows());  // NOLINT
+template <class N, class = std::enable_if_t<std::is_arithmetic_v<N>>>
+static size_t mask_zero_pixels(const std::vector<N> &v1, const std::vector<N> &v2,
+                               std::vector<double> &weights) {
+  assert(v1.size() == v2.size());       // NOLINT
+  assert(v1.size() == weights.size());  // NOLINT
+
+  usize masked_pixels = 0;
+  for (usize i = 0; i < v1.size(); ++i) {
+    if (v1[i] == N(0) || v2[i] == N(0)) {
+      ++masked_pixels;
+      weights[i] = 0;
+    }
+  }
+  return masked_pixels;
+}
+
+template <CorrMethod correlation_method, StripeDirection stripe_direction,
+          class WeightIt = utils::RepeatIterator<double>>
+static std::vector<double> compute_correlation(
+    const bp_t bin_size, std::shared_ptr<ContactMatrix<>> ref_contacts,
+    std::shared_ptr<ContactMatrix<>> tgt_contacts, const bed::BED_tree<>::value_type &features,
+    const bool mask_zero_pixels_, WeightIt weight_first = utils::RepeatIterator<double>(1)) {
+  assert(ref_contacts->nrows() == tgt_contacts->nrows());  // NOLINT
   const auto nrows = ref_contacts->nrows();
   const auto ncols = ref_contacts->ncols();
 
   std::vector<u32> ref_pixel_buff(nrows);
   std::vector<u32> tgt_pixel_buff(nrows);
+  std::vector<double> weight_buff;
+  if (!std::is_same_v<WeightIt, utils::RepeatIterator<double>> || mask_zero_pixels_) {
+    weight_buff.resize(nrows);
+  }
+
   std::vector<double> correlation_buff(ncols, 0.0);
 
   auto corr_fx = [&]() {
@@ -197,9 +219,16 @@ static std::vector<double> compute_correlation(const bp_t bin_size,
       ref_pixel_buff.resize(nrows);
       tgt_pixel_buff.resize(nrows);
 
+      if (mask_zero_pixels_) {
+        std::copy_n(weight_first, nrows, weight_buff.begin());
+        mask_zero_pixels(ref_pixel_buff, tgt_pixel_buff, weight_buff);
+      }
+
       [[maybe_unused]] const auto &[corr, pval] =
-          weights.empty() ? corr_fx(ref_pixel_buff, tgt_pixel_buff)
-                          : corr_fx(ref_pixel_buff, tgt_pixel_buff, weights);
+          !weight_buff.empty() ? corr_fx(ref_pixel_buff.begin(), ref_pixel_buff.end(),
+                                         tgt_pixel_buff.begin(), weight_buff.begin())
+                               : corr_fx(ref_pixel_buff.begin(), ref_pixel_buff.end(),
+                                         tgt_pixel_buff.begin(), weight_first);
       correlation_buff[i] = corr;
     }
     start_pos += bin_size;
@@ -208,8 +237,51 @@ static std::vector<double> compute_correlation(const bp_t bin_size,
   return correlation_buff;
 }
 
+template <CorrMethod correlation_method, StripeDirection stripe_direction>
+static std::vector<double> compute_correlation(const bp_t bin_size,
+                                               std::shared_ptr<ContactMatrix<>> ref_contacts,
+                                               std::shared_ptr<ContactMatrix<>> tgt_contacts,
+                                               const bed::BED_tree<>::value_type &features,
+                                               const bool mask_zero_pixels_,
+                                               const std::vector<double> &weights) {
+  assert(ref_contacts->nrows() == tgt_contacts->nrows());              // NOLINT
+  assert(weights.empty() || ref_contacts->nrows() == weights.size());  // NOLINT
+  return compute_correlation<correlation_method, stripe_direction>(
+      bin_size, ref_contacts, tgt_contacts, features, mask_zero_pixels_, weights.begin());
+}
+
+absl::flat_hash_map<std::pair<CorrMethod, StripeDirection>, std::unique_ptr<io::bigwig::Writer>>
+init_bwigs(const modle::tools::eval_config &c, const ChromSet &chroms) {
+  std::vector<std::pair<std::string, usize>> chrom_vect(static_cast<usize>(chroms.size()));
+  std::transform(chroms.begin(), chroms.end(), chrom_vect.begin(), [](const auto &chrom) {
+    return std::make_pair(chrom.first, chrom.second.second);
+  });
+
+  absl::flat_hash_map<std::pair<CorrMethod, StripeDirection>, std::unique_ptr<io::bigwig::Writer>>
+      bwigs;
+  bwigs.emplace(std::make_pair(pearson, vertical),
+                create_bwig_file(chrom_vect, c.output_prefix.string(), "pearson_vertical.bw",
+                                 !c.compute_pearson));
+  bwigs.emplace(std::make_pair(pearson, horizontal),
+                create_bwig_file(chrom_vect, c.output_prefix.string(), "pearson_horizontal.bw",
+                                 !c.compute_pearson));
+  bwigs.emplace(std::make_pair(spearman, vertical),
+                create_bwig_file(chrom_vect, c.output_prefix.string(), "spearman_vertical.bw",
+                                 !c.compute_spearman));
+  bwigs.emplace(std::make_pair(spearman, horizontal),
+                create_bwig_file(chrom_vect, c.output_prefix.string(), "spearman_horizontal.bw",
+                                 !c.compute_spearman));
+  bwigs.emplace(std::make_pair(eucl_dist, vertical),
+                create_bwig_file(chrom_vect, c.output_prefix.string(), "eucl_dist_vertical.bw",
+                                 !c.compute_eucl_dist));
+  bwigs.emplace(std::make_pair(eucl_dist, horizontal),
+                create_bwig_file(chrom_vect, c.output_prefix.string(), "eucl_dist_horizontal.bw",
+                                 !c.compute_eucl_dist));
+  return bwigs;
+}
+
 void eval_subcmd(const modle::tools::eval_config &c) {
-  assert(c.compute_spearman || c.compute_pearson || c.compute_edist);  // NOLINT
+  assert(c.compute_spearman || c.compute_pearson || c.compute_eucl_dist);  // NOLINT
   auto ref_cooler =
       cooler::Cooler(c.path_to_reference_matrix, cooler::Cooler::READ_ONLY, c.bin_size);
   auto tgt_cooler = cooler::Cooler(c.path_to_input_matrix, cooler::Cooler::READ_ONLY, c.bin_size);
@@ -243,43 +315,16 @@ void eval_subcmd(const modle::tools::eval_config &c) {
     boost::filesystem::create_directories(output_dir.string());
   }
 
-  // Init files and write bw header
-  std::vector<std::pair<std::string, usize>> chrom_vect(static_cast<usize>(chromosomes.size()));
-  std::transform(chromosomes.begin(), chromosomes.end(), chrom_vect.begin(), [](const auto &chrom) {
-    return std::make_pair(chrom.first, chrom.second.second);
-  });
-  auto init_bw = [&, bn = c.output_prefix.string()](const auto &suffix, bool skip) {
-    struct bw {
-      std::vector<double> buff{};
-      std::unique_ptr<io::bigwig::Writer> writer{nullptr};
-    };
-    bw bw;
-    bw.writer = create_bwig_file(chrom_vect, bn, suffix, skip);
-    return bw;
-  };
-
-  auto bw_pearson_vertical = init_bw("pearson_vertical.bw", !c.compute_pearson);
-  auto bw_pearson_horizontal = init_bw("pearson_horizontal.bw", !c.compute_pearson);
-  auto bw_spearman_vertical = init_bw("spearman_vertical.bw", !c.compute_pearson);
-  auto bw_spearman_horizontal = init_bw("spearman_horizontal.bw", !c.compute_pearson);
-  auto bw_sed_vertical = init_bw("eucl_dist_vertical.bw", !c.compute_edist);
-  auto bw_sed_horizontal = init_bw("eucl_dist_horizontal.bw", !c.compute_edist);
+  const auto bwigs = init_bwigs(c, chromosomes);
 
   const auto nrows = (c.diagonal_width + bin_size - 1) / bin_size;
   assert(nrows != 0);  // NOLINT
 
   const auto t0 = absl::Now();
-  thread_pool tpool(6);  // NOLINT
+  thread_pool tpool(c.nthreads);
+  std::vector<std::future<bool>> return_codes(6);
   for (const auto &[chrom_name_sv, chrom_range] : chromosomes) {
-    const auto t00 = absl::Now();
     const std::string chrom_name{chrom_name_sv};
-    auto ref_contacts = std::make_shared<ContactMatrix<>>(
-        ref_cooler.cooler_to_cmatrix(chrom_name, nrows, chrom_range));
-    auto tgt_contacts = std::make_shared<ContactMatrix<>>(
-        tgt_cooler.cooler_to_cmatrix(chrom_name, nrows, chrom_range));
-    fmt::print(stderr, FMT_STRING("Read contacts for {} in {}\n"), chrom_name,
-               absl::FormatDuration(absl::Now() - t00));
-
     const auto &chrom_features = [&]() {
       if (!features.contains(chrom_name)) {
         return bed::BED_tree<>::value_type{};
@@ -287,64 +332,83 @@ void eval_subcmd(const modle::tools::eval_config &c) {
       return features.at(chrom_name);
     }();
 
-    // TODO handle exceptions in threads
-    if (const auto &bw_fp = bw_pearson_vertical.writer; bw_fp) {
-      tpool.push_task([&]() {
-        auto t1 = absl::Now();
+    const auto t1 = absl::Now();
+    spdlog::info(FMT_STRING("Reading contacts for {}..."), chrom_name_sv);
+
+    auto ref_contacts = std::make_shared<ContactMatrix<>>(
+        ref_cooler.cooler_to_cmatrix(chrom_name, nrows, chrom_range));
+    auto tgt_contacts = std::make_shared<ContactMatrix<>>(
+        tgt_cooler.cooler_to_cmatrix(chrom_name, nrows, chrom_range));
+    spdlog::info(FMT_STRING("Read {} contacts for {} in {}"),
+                 ref_contacts->get_tot_contacts() + tgt_contacts->get_tot_contacts(), chrom_name_sv,
+                 absl::FormatDuration(absl::Now() - t1));
+
+    return_codes.clear();
+    if (const auto &bw_fp = bwigs.at({pearson, vertical}); bw_fp) {
+      auto &code = return_codes.emplace_back();
+      code = tpool.submit([&]() {
+        auto t2 = absl::Now();
         auto corr = compute_correlation<pearson, vertical>(bin_size, ref_contacts, tgt_contacts,
-                                                           chrom_features);
+                                                           chrom_features, c.exclude_zero_pxls);
         spdlog::info(
             FMT_STRING("Pearson correlation for vertical stripes from chrom {} computed in {}."),
-            chrom_name, absl::FormatDuration(absl::Now() - t1));
-        t1 = absl::Now();
+            chrom_name, absl::FormatDuration(absl::Now() - t2));
+        t2 = absl::Now();
         bw_fp->write_range(chrom_name, absl::MakeSpan(corr), bin_size, bin_size);
         spdlog::info(FMT_STRING("Correlation values written to file {} in {}."), bw_fp->path(),
-                     absl::FormatDuration(absl::Now() - t1));
+                     absl::FormatDuration(absl::Now() - t2));
       });
     }
-    if (const auto &bw_fp = bw_pearson_horizontal.writer; bw_fp) {
-      tpool.push_task([&]() {
-        auto t1 = absl::Now();
+    if (const auto &bw_fp = bwigs.at({pearson, horizontal}); bw_fp) {
+      auto &code = return_codes.emplace_back();
+      code = tpool.submit([&]() {
+        auto t2 = absl::Now();
         auto corr = compute_correlation<pearson, horizontal>(bin_size, ref_contacts, tgt_contacts,
-                                                             chrom_features);
+                                                             chrom_features, c.exclude_zero_pxls);
         spdlog::info(
             FMT_STRING("Pearson correlation for horizontal stripes from chrom {} computed in {}."),
-            chrom_name, absl::FormatDuration(absl::Now() - t1));
-        t1 = absl::Now();
+            chrom_name, absl::FormatDuration(absl::Now() - t2));
+        t2 = absl::Now();
         bw_fp->write_range(chrom_name, absl::MakeSpan(corr), bin_size, bin_size);
         spdlog::info(FMT_STRING("Correlation values written to file {} in {}."), bw_fp->path(),
-                     absl::FormatDuration(absl::Now() - t1));
+                     absl::FormatDuration(absl::Now() - t2));
       });
     }
-    if (const auto &bw_fp = bw_spearman_vertical.writer; bw_fp) {
-      tpool.push_task([&]() {
-        auto t1 = absl::Now();
+    if (const auto &bw_fp = bwigs.at({spearman, vertical}); bw_fp) {
+      auto &code = return_codes.emplace_back();
+      code = tpool.submit([&]() {
+        auto t2 = absl::Now();
         auto corr = compute_correlation<spearman, vertical>(bin_size, ref_contacts, tgt_contacts,
-                                                            chrom_features);
+                                                            chrom_features, c.exclude_zero_pxls);
         spdlog::info(
             FMT_STRING("Spearman correlation for vertical stripes from chrom {} computed in {}."),
-            chrom_name, absl::FormatDuration(absl::Now() - t1));
-        t1 = absl::Now();
+            chrom_name, absl::FormatDuration(absl::Now() - t2));
+        t2 = absl::Now();
         bw_fp->write_range(chrom_name, absl::MakeSpan(corr), bin_size, bin_size);
         spdlog::info(FMT_STRING("Correlation values written to file {} in {}."), bw_fp->path(),
-                     absl::FormatDuration(absl::Now() - t1));
+                     absl::FormatDuration(absl::Now() - t2));
       });
     }
-    if (const auto &bw_fp = bw_spearman_horizontal.writer; bw_fp) {
-      tpool.push_task([&]() {
-        auto t1 = absl::Now();
+    if (const auto &bw_fp = bwigs.at({spearman, horizontal}); bw_fp) {
+      auto &code = return_codes.emplace_back();
+      code = tpool.submit([&]() {
+        auto t2 = absl::Now();
         auto corr = compute_correlation<spearman, horizontal>(bin_size, ref_contacts, tgt_contacts,
-                                                              chrom_features);
+                                                              chrom_features, c.exclude_zero_pxls);
         spdlog::info(
             FMT_STRING("Spearman correlation for horizontal stripes from chrom {} computed in {}."),
-            chrom_name, absl::FormatDuration(absl::Now() - t1));
-        t1 = absl::Now();
+            chrom_name, absl::FormatDuration(absl::Now() - t2));
+        t2 = absl::Now();
         bw_fp->write_range(chrom_name, absl::MakeSpan(corr), bin_size, bin_size);
         spdlog::info(FMT_STRING("Correlation values written to file {} in {}."), bw_fp->path(),
-                     absl::FormatDuration(absl::Now() - t1));
+                     absl::FormatDuration(absl::Now() - t2));
       });
     }
     tpool.wait_for_tasks();
+    // Catch exception raised in worker threads
+    for (auto &code : return_codes) {
+      code.get();
+    }
   }
   spdlog::info(FMT_STRING("DONE in {}!"), absl::FormatDuration(absl::Now() - t0));
 }
