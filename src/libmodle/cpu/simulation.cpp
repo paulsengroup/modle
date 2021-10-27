@@ -542,9 +542,9 @@ void Simulation::generate_lef_unloader_affinities(
       if (BOOST_UNLIKELY(rev_barrier.blocking_direction_major() == dna::rev &&
                          fwd_barrier.blocking_direction_major() == dna::fwd)) {
         // LEF is blocked by a pair of convergent extrusion barriers
-        lef_unloader_affinity[i] = 1.0 / this->hard_stall_multiplier;
+        lef_unloader_affinity[i] = 1.0 / this->hard_stall_lef_stability_multiplier;
       } else {
-        lef_unloader_affinity[i] = 1.0 / this->soft_stall_multiplier;
+        lef_unloader_affinity[i] = 1.0 / this->soft_stall_lef_stability_multiplier;
       }
     } else {
       // LEF is stalled on at least one side but not by an extrusion barrier
@@ -567,7 +567,7 @@ usize Simulation::release_lefs(const absl::Span<Lef> lefs,
     const auto& fwd_collision = fwd_collisions[j];
     if (BOOST_LIKELY(!is_lef_bar_collision(rev_collision) ||
                      !is_lef_bar_collision(fwd_collision))) {
-      return 1.0 / this->soft_stall_multiplier;
+      return 1.0 / this->soft_stall_lef_stability_multiplier;
     }
 
     assert(is_lef_bar_collision(rev_collision));  // NOLINT
@@ -577,7 +577,7 @@ usize Simulation::release_lefs(const absl::Span<Lef> lefs,
 
     if (BOOST_UNLIKELY(rev_barrier.blocking_direction_major() == dna::rev &&
                        fwd_barrier.blocking_direction_major() == dna::fwd)) {
-      return 1.0 / this->hard_stall_multiplier;
+      return 1.0 / this->hard_stall_lef_stability_multiplier;
     }
     return 1.0;
   };

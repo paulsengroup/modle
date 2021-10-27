@@ -132,8 +132,8 @@ static void add_common_options(CLI::App& subcommand, modle::Config& c) {
       ->required();
 
   gen.add_option(
-      "--hard-stall-multiplier", // TODO: Should we rename this?
-      c.hard_stall_multiplier,
+      "--hard-stall-lef-stability-multiplier",
+      c.hard_stall_lef_stability_multiplier,
       "Coefficient to control the DNA-binding stability of LEFs that are stalled on both sides by a pair of "
       "extrusion barriers in convergent orientation.\n"
       "Setting this to 1 makes the DNA-binding stability of hard-stalled LEFs identical to that of unobstructed LEFs.")
@@ -141,8 +141,8 @@ static void add_common_options(CLI::App& subcommand, modle::Config& c) {
       ->capture_default_str();
 
   gen.add_option(
-      "--soft-stall-multiplier", // TODO: Should we rename this?
-      c.soft_stall_multiplier,
+      "--soft-stall-lef-stability-multiplier",
+      c.soft_stall_lef_stability_multiplier,
       "Coefficient to control the DNA-binding stability of a LEF that is stalled by one or more extrusion barriers "
       "in a non-blocking orientation.\n"
       "Setting this to 1 makes the DNA-binding stability of soft-stalled LEFs identical to that of unobstructed LEFs.")
