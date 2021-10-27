@@ -261,7 +261,7 @@ TEST_CASE("CMatrix get row", "[cmatrix][short]") {
 
   const usize row = 25;  // Set a row of pixels to 1
   for (usize i = 0; i < c.nrows(); ++i) {
-    c.set(row, row - i, static_cast<u32>(i));
+    c.set(row, row + i, static_cast<u32>(i));
   }
 
   REQUIRE(c.get_tot_contacts() == 45);  // NOLINT
@@ -286,21 +286,21 @@ TEST_CASE("CMatrix get row", "[cmatrix][short]") {
   }
 
   // Test getting the first row of pixels
-  c.set(0, 0, 1);
+  for (usize i = 0; i < c.nrows(); ++i) {
+    c.set(0, i, static_cast<u32>(i));
+  }
+
   c.unsafe_get_row(0, buff);
-  REQUIRE(buff.size() == 1);
-  CHECK(buff.front() == 1);
+  REQUIRE(buff.size() == 10);
+  for (usize i = 0; i < c.nrows(); ++i) {
+    CHECK(buff[i] == i);
+  }
 
   // Test getting the last row of pixels (which is truncated)
-  for (usize i = 0; i < c.nrows(); ++i) {
-    c.set(c.ncols() - 1, c.ncols() - 1 - i, 1);
-  }
-
+  c.set(c.ncols() - 1, c.ncols() - 1, 1);
   c.unsafe_get_row(c.ncols() - 1, buff);
-  REQUIRE(buff.size() == c.nrows());
-  for (usize i = 0; i < c.nrows(); ++i) {
-    CHECK(buff[i] == 1);
-  }
+  REQUIRE(buff.size() == 1);
+  CHECK(buff.front() == 1);
 }
 
 }  // namespace modle::test::cmatrix

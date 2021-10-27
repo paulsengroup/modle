@@ -191,11 +191,10 @@ void ContactMatrix<N>::unsafe_get_row(const usize row, std::vector<N> &buff,
                                       const usize col_offset) const
     noexcept(utils::ndebug_defined()) {
   assert(row >= col_offset);  // NOLINT
-  buff.resize(std::min(row + 1, this->nrows()) - col_offset);
+  buff.resize(std::clamp(this->ncols() - row - col_offset, usize(0), this->nrows() - col_offset));
 
   for (usize i = 0; i < buff.size(); ++i) {
-    assert(i < row + 1);  // NOLINT
-    buff[i] = this->unsafe_get(row, row - col_offset - i);
+    buff[i] = this->unsafe_get(row, row + col_offset + i);
   }
 }
 
