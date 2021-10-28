@@ -5,6 +5,7 @@
 #include <absl/algorithm/container.h>           // for c_set_intersection
 #include <absl/container/btree_map.h>           // for btree_map, btree_iterator, map_params<>::...
 #include <absl/container/flat_hash_map.h>       // for flat_hash_map
+#include <absl/strings/ascii.h>                 // AsciiStrToLower
 #include <absl/strings/strip.h>                 // for StripPrefix
 #include <absl/time/clock.h>                    // for Now
 #include <absl/time/time.h>                     // for FormatDuration, operator-, Time
@@ -145,6 +146,94 @@ using ChromSet = absl::btree_map<std::string, std::pair<bp_t, bp_t>, cppsort::na
   return chrom_subranges;
 }
 
+[[nodiscard]] static isize find_col_idx(const boost::filesystem::path &path_to_weights,
+                                        std::string_view header, std::string_view col_name) {
+  const auto toks = absl::StrSplit(header, '\t');
+  const auto it = std::find(toks.begin(), toks.end(), col_name);
+  if (it == toks.end()) {
+    throw std::runtime_error(
+        fmt::format(FMT_STRING("Unable to find column \"{}\" in the header \"{}\" of file {}"),
+                    col_name, header, path_to_weights));
+  }
+  return std::distance(toks.begin(), it);
+}
+
+template <class Range>
+[[nodiscard]] static isize find_col_idx(const boost::filesystem::path &path_to_weights,
+                                        std::string_view header, const Range &col_names) {
+  assert(col_names.size() > 1);  // NOLINT
+  for (const auto &name : col_names) {
+    try {
+      return find_col_idx(path_to_weights, header, name);
+    } catch (const std::exception &e) {
+      if (!absl::StartsWith(e.what(), "Unable to find column")) {
+        throw;
+      }
+    }
+  }
+  throw std::runtime_error(fmt::format(
+      FMT_STRING(
+          "Unable to find any columns named like \"{}\" or \"{}\" in header \"{}\" of file {}"),
+      fmt::join(col_names.begin(), col_names.end() - 1, "\", \""), col_names.back(), header,
+      path_to_weights));
+}
+
+[[nodiscard]] static absl::flat_hash_map<std::string, std::vector<double>> import_weights(
+    const boost::filesystem::path &path_to_weights, const std::string_view weight_column_name,
+    const usize nbins, const bool reciprocal_weights) {
+  assert(nbins != 0);  // NOLINT
+  absl::flat_hash_map<std::string, std::vector<double>> weights;
+
+  if (path_to_weights.empty()) {
+    return weights;
+  }
+
+  assert(boost::filesystem::exists(path_to_weights));  // NOLINT
+  compressed_io::Reader r(path_to_weights);
+
+  std::string buff;
+  r.getline(buff);
+  if (buff.empty()) {
+    throw std::runtime_error(
+        fmt::format(FMT_STRING("Falied to read header from file {}: file appears to be empty"),
+                    path_to_weights));
+  }
+  using namespace std::string_view_literals;
+  const auto col_chrom_idx =
+      find_col_idx(path_to_weights, buff, std::array<std::string_view, 2>{"chrom"sv, "region"sv});
+  const auto col_diag_idx = find_col_idx(path_to_weights, buff, "diag"sv);
+  const auto col_weight_idx = find_col_idx(path_to_weights, buff, weight_column_name);
+
+  for (usize i = 1; r.getline(buff); ++i) {
+    const auto toks = absl::StrSplit(buff, '\t');
+    if (const auto ntoks = std::distance(toks.begin(), toks.end()); ntoks < col_weight_idx) {
+      throw std::runtime_error(fmt::format(
+          FMT_STRING(
+              "Failed to parse column \"{}\" at line #{}: expected at least {} columns, found {}"),
+          weight_column_name, i, col_weight_idx, ntoks));
+    }
+    const std::string_view chrom = *std::next(toks.begin(), col_chrom_idx);
+    weights.try_emplace(chrom, nbins, 0);  // try_emplace a vector of doubles
+    const auto diag = utils::parse_numeric_or_throw<usize>(*std::next(toks.begin(), col_diag_idx));
+    if (diag >= nbins) {
+      continue;
+    }
+    const auto weight =
+        utils::parse_numeric_or_throw<double>(*std::next(toks.begin(), col_weight_idx));
+    weights.at(chrom)[diag] = [&]() {
+      if (std::isnan(weight) || weight == 0.0) {
+        return 0.0;
+      }
+      if (reciprocal_weights) {
+        return 1.0 / weight;
+      }
+      return weight;
+    }();
+  }
+
+  return weights;
+}
+
 [[nodiscard]] static std::unique_ptr<io::bigwig::Writer> create_bwig_file(
     std::vector<std::pair<std::string, usize>> &chrom_list, std::string_view base_name,
     std::string_view suffix, bool skip) {
@@ -190,6 +279,7 @@ static std::vector<double> compute_correlation(
   std::vector<double> weight_buff;
   if (!std::is_same_v<WeightIt, utils::RepeatIterator<double>> || mask_zero_pixels_) {
     weight_buff.resize(nrows);
+    std::copy_n(weight_first, nrows, weight_buff.begin());
   }
 
   std::vector<double> correlation_buff(ncols, 0.0);
@@ -242,7 +332,7 @@ static std::vector<double> compute_correlation(std::shared_ptr<ContactMatrix<>> 
 }
 
 absl::flat_hash_map<std::pair<CorrMethod, StripeDirection>, std::unique_ptr<io::bigwig::Writer>>
-init_bwigs(const modle::tools::eval_config &c, const ChromSet &chroms) {
+init_bwigs(const modle::tools::eval_config &c, const ChromSet &chroms, const bool weighted) {
   std::vector<std::pair<std::string, usize>> chrom_vect(static_cast<usize>(chroms.size()));
   std::transform(chroms.begin(), chroms.end(), chrom_vect.begin(), [](const auto &chrom) {
     return std::make_pair(chrom.first, chrom.second.second);
@@ -251,28 +341,102 @@ init_bwigs(const modle::tools::eval_config &c, const ChromSet &chroms) {
   absl::flat_hash_map<std::pair<CorrMethod, StripeDirection>, std::unique_ptr<io::bigwig::Writer>>
       bwigs;
   bwigs.emplace(std::make_pair(pearson, vertical),
-                create_bwig_file(chrom_vect, c.output_prefix.string(), "pearson_vertical.bw",
-                                 !c.compute_pearson));
+                create_bwig_file(
+                    chrom_vect, c.output_prefix.string(),
+                    fmt::format(FMT_STRING("pearson{}_vertical.bw"), weighted ? "_weighted" : ""),
+                    !c.compute_pearson));
   bwigs.emplace(std::make_pair(pearson, horizontal),
-                create_bwig_file(chrom_vect, c.output_prefix.string(), "pearson_horizontal.bw",
-                                 !c.compute_pearson));
+                create_bwig_file(
+                    chrom_vect, c.output_prefix.string(),
+                    fmt::format(FMT_STRING("pearson{}_horizontal.bw"), weighted ? "_weighted" : ""),
+                    !c.compute_pearson));
   bwigs.emplace(std::make_pair(spearman, vertical),
-                create_bwig_file(chrom_vect, c.output_prefix.string(), "spearman_vertical.bw",
-                                 !c.compute_spearman));
+                create_bwig_file(
+                    chrom_vect, c.output_prefix.string(),
+                    fmt::format(FMT_STRING("spearman{}_vertical.bw"), weighted ? "_weighted" : ""),
+                    !c.compute_spearman));
   bwigs.emplace(std::make_pair(spearman, horizontal),
-                create_bwig_file(chrom_vect, c.output_prefix.string(), "spearman_horizontal.bw",
+                create_bwig_file(chrom_vect, c.output_prefix.string(),
+                                 fmt::format(FMT_STRING("spearman{}_horizontal.bw"),
+                                             weighted ? "_weighted" : ""),
                                  !c.compute_spearman));
+  /*
   bwigs.emplace(std::make_pair(eucl_dist, vertical),
                 create_bwig_file(chrom_vect, c.output_prefix.string(), "eucl_dist_vertical.bw",
                                  !c.compute_eucl_dist));
   bwigs.emplace(std::make_pair(eucl_dist, horizontal),
                 create_bwig_file(chrom_vect, c.output_prefix.string(), "eucl_dist_horizontal.bw",
                                  !c.compute_eucl_dist));
+ */
   return bwigs;
 }
 
+[[nodiscard]] [[maybe_unused]] static constexpr std::string_view corr_method_to_str(
+    const CorrMethod m) {
+  if (m == pearson) {
+    return "Pearson correlation";
+  }
+  if (m == spearman) {
+    return "Spearman correlation";
+  }
+
+  if (m == eucl_dist) {
+    return "Euclidean distance";
+  }
+  std::abort();
+}
+
+[[nodiscard]] [[maybe_unused]] static constexpr std::string_view direction_to_str(
+    const StripeDirection m) {
+  if (m == vertical) {
+    return "Vertical";
+  }
+  if (m == horizontal) {
+    return "Horizontal";
+  }
+  std::abort();
+}
+
+template <CorrMethod correlation_method, StripeDirection stripe_direction>
+[[nodiscard]] static std::future<bool> submit_task(
+    const std::string &chrom_name,
+    const absl::flat_hash_map<std::pair<CorrMethod, StripeDirection>,
+                              std::unique_ptr<io::bigwig::Writer>> &bwigs,
+    thread_pool &tpool, std::shared_ptr<ContactMatrix<>> &ref_contacts,
+    std::shared_ptr<ContactMatrix<>> &tgt_contacts, const bool exclude_zero_pixels,
+    const usize bin_size, const absl::flat_hash_map<std::string, std::vector<double>> &weights) {
+  return tpool.submit([&]() {
+    try {
+      auto t0 = absl::Now();
+      auto corr = [&]() {
+        if (weights.empty()) {
+          return compute_correlation<correlation_method, stripe_direction>(
+              ref_contacts, tgt_contacts, exclude_zero_pixels);
+        }
+        return compute_correlation<correlation_method, stripe_direction>(
+            ref_contacts, tgt_contacts, exclude_zero_pixels, weights.at(chrom_name));
+      }();
+
+      spdlog::info(FMT_STRING("{} for {} stripes from chrom {} computed in {}."),
+                   corr_method_to_str(correlation_method),
+                   absl::AsciiStrToLower(direction_to_str(stripe_direction)), chrom_name,
+                   absl::FormatDuration(absl::Now() - t0));
+      t0 = absl::Now();
+      const auto &bw = bwigs.at({correlation_method, stripe_direction});
+      bw->write_range(chrom_name, absl::MakeSpan(corr), bin_size, bin_size);
+      spdlog::info(FMT_STRING("{} values have been written to file {} in {}."), corr.size(),
+                   bw->path(), absl::FormatDuration(absl::Now() - t0));
+    } catch (const std::exception &e) {
+      throw std::runtime_error(fmt::format(
+          FMT_STRING("The following error occurred while computing {} on {} stripes for {}: {}"),
+          corr_method_to_str(correlation_method),
+          absl::AsciiStrToLower(direction_to_str(stripe_direction)), chrom_name, e.what()));
+    }
+  });
+}
+
 void eval_subcmd(const modle::tools::eval_config &c) {
-  assert(c.compute_spearman || c.compute_pearson || c.compute_eucl_dist);  // NOLINT
+  assert(c.compute_spearman || c.compute_pearson /*|| c.compute_eucl_dist*/);  // NOLINT
   auto ref_cooler =
       cooler::Cooler(c.path_to_reference_matrix, cooler::Cooler::READ_ONLY, c.bin_size);
   auto tgt_cooler = cooler::Cooler(c.path_to_input_matrix, cooler::Cooler::READ_ONLY, c.bin_size);
@@ -281,6 +445,23 @@ void eval_subcmd(const modle::tools::eval_config &c) {
 
   // This cannot be made const
   auto chromosomes = select_chromosomes_for_eval(ref_cooler, tgt_cooler, c.path_to_chrom_subranges);
+
+  const auto weights =
+      import_weights(c.path_to_weights, c.weight_column_name,
+                     (c.diagonal_width + bin_size - 1) / bin_size, c.reciprocal_weights);
+  if (!weights.empty()) {
+    std::vector<std::string> missing_chroms;
+    for (const auto &[chrom, _] : chromosomes) {
+      if (!weights.contains(chrom)) {
+        missing_chroms.push_back(chrom);
+      }
+    }
+    if (!missing_chroms.empty()) {
+      throw std::runtime_error(fmt::format(
+          FMT_STRING("Unable to import weights from file {} for the following chromosomes: {}"),
+          c.path_to_weights, fmt::join(missing_chroms, ", ")));
+    }
+  }
 
   if (chromosomes.size() == 1) {
     spdlog::info(FMT_STRING("Computing correlation for chromosome: \"{}\""),
@@ -297,7 +478,7 @@ void eval_subcmd(const modle::tools::eval_config &c) {
     boost::filesystem::create_directories(output_dir.string());
   }
 
-  const auto bwigs = init_bwigs(c, chromosomes);
+  const auto bwigs = init_bwigs(c, chromosomes, !weights.empty());
 
   const auto nrows = (c.diagonal_width + bin_size - 1) / bin_size;
   assert(nrows != 0);  // NOLINT
@@ -320,66 +501,31 @@ void eval_subcmd(const modle::tools::eval_config &c) {
                  absl::FormatDuration(absl::Now() - t1));
 
     return_codes.clear();
-    if (const auto &bw_fp = bwigs.at({pearson, vertical}); bw_fp) {
-      auto &code = return_codes.emplace_back();
-      code = tpool.submit([&]() {
-        auto t2 = absl::Now();
-        auto corr =
-            compute_correlation<pearson, vertical>(ref_contacts, tgt_contacts, c.exclude_zero_pxls);
-        spdlog::info(
-            FMT_STRING("Pearson correlation for vertical stripes from chrom {} computed in {}."),
-            chrom_name, absl::FormatDuration(absl::Now() - t2));
-        t2 = absl::Now();
-        bw_fp->write_range(chrom_name, absl::MakeSpan(corr), bin_size, bin_size);
-        spdlog::info(FMT_STRING("Correlation values written to file {} in {}."), bw_fp->path(),
-                     absl::FormatDuration(absl::Now() - t2));
-      });
+
+    if (bwigs.contains({spearman, horizontal})) {
+      return_codes.emplace_back(
+          submit_task<spearman, horizontal>(chrom_name, bwigs, tpool, ref_contacts, tgt_contacts,
+                                            c.exclude_zero_pxls, bin_size, weights));
     }
-    if (const auto &bw_fp = bwigs.at({pearson, horizontal}); bw_fp) {
-      auto &code = return_codes.emplace_back();
-      code = tpool.submit([&]() {
-        auto t2 = absl::Now();
-        auto corr = compute_correlation<pearson, horizontal>(ref_contacts, tgt_contacts,
-                                                             c.exclude_zero_pxls);
-        spdlog::info(
-            FMT_STRING("Pearson correlation for horizontal stripes from chrom {} computed in {}."),
-            chrom_name, absl::FormatDuration(absl::Now() - t2));
-        t2 = absl::Now();
-        bw_fp->write_range(chrom_name, absl::MakeSpan(corr), bin_size, bin_size);
-        spdlog::info(FMT_STRING("Correlation values written to file {} in {}."), bw_fp->path(),
-                     absl::FormatDuration(absl::Now() - t2));
-      });
+
+    if (bwigs.contains({spearman, vertical})) {
+      return_codes.emplace_back(
+          submit_task<spearman, vertical>(chrom_name, bwigs, tpool, ref_contacts, tgt_contacts,
+                                          c.exclude_zero_pxls, bin_size, weights));
     }
-    if (const auto &bw_fp = bwigs.at({spearman, vertical}); bw_fp) {
-      auto &code = return_codes.emplace_back();
-      code = tpool.submit([&]() {
-        auto t2 = absl::Now();
-        auto corr = compute_correlation<spearman, vertical>(ref_contacts, tgt_contacts,
-                                                            c.exclude_zero_pxls);
-        spdlog::info(
-            FMT_STRING("Spearman correlation for vertical stripes from chrom {} computed in {}."),
-            chrom_name, absl::FormatDuration(absl::Now() - t2));
-        t2 = absl::Now();
-        bw_fp->write_range(chrom_name, absl::MakeSpan(corr), bin_size, bin_size);
-        spdlog::info(FMT_STRING("Correlation values written to file {} in {}."), bw_fp->path(),
-                     absl::FormatDuration(absl::Now() - t2));
-      });
+
+    if (bwigs.contains({pearson, horizontal})) {
+      return_codes.emplace_back(
+          submit_task<pearson, horizontal>(chrom_name, bwigs, tpool, ref_contacts, tgt_contacts,
+                                           c.exclude_zero_pxls, bin_size, weights));
     }
-    if (const auto &bw_fp = bwigs.at({spearman, horizontal}); bw_fp) {
-      auto &code = return_codes.emplace_back();
-      code = tpool.submit([&]() {
-        auto t2 = absl::Now();
-        auto corr = compute_correlation<spearman, horizontal>(ref_contacts, tgt_contacts,
-                                                              c.exclude_zero_pxls);
-        spdlog::info(
-            FMT_STRING("Spearman correlation for horizontal stripes from chrom {} computed in {}."),
-            chrom_name, absl::FormatDuration(absl::Now() - t2));
-        t2 = absl::Now();
-        bw_fp->write_range(chrom_name, absl::MakeSpan(corr), bin_size, bin_size);
-        spdlog::info(FMT_STRING("Correlation values written to file {} in {}."), bw_fp->path(),
-                     absl::FormatDuration(absl::Now() - t2));
-      });
+
+    if (bwigs.contains({pearson, vertical})) {
+      return_codes.emplace_back(
+          submit_task<pearson, vertical>(chrom_name, bwigs, tpool, ref_contacts, tgt_contacts,
+                                         c.exclude_zero_pxls, bin_size, weights));
     }
+
     tpool.wait_for_tasks();
     // Catch exception raised in worker threads
     for (auto &code : return_codes) {

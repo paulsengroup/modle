@@ -23,14 +23,13 @@ struct eval_config {  // NOLINT
   boost::filesystem::path output_prefix;
   boost::filesystem::path path_to_reference_matrix;
   boost::filesystem::path path_to_chrom_subranges;
-  boost::filesystem::path path_to_features_bed;
-  boost::filesystem::path tmp_dir{boost::filesystem::temp_directory_path()};
+  boost::filesystem::path path_to_weights;
   bool force{false};
 
   // Correlation methods
   bool compute_spearman{true};
   bool compute_pearson{true};
-  bool compute_eucl_dist{true};
+  // bool compute_eucl_dist{true};
 
   // Reference contacts
   usize bin_size{0};
@@ -39,6 +38,8 @@ struct eval_config {  // NOLINT
   // Other
   usize nthreads{std::thread::hardware_concurrency()};
   bool exclude_zero_pxls{false};
+  std::string weight_column_name{"balanced.sum"};
+  bool reciprocal_weights{false};
 };
 
 struct filter_barrier_config {  // NOLINT

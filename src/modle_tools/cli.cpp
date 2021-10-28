@@ -85,6 +85,29 @@ void Cli::make_eval_subcommand() {
      "Path to BED file with subranges of the chromosomes to be processed.")
      ->check(CLI::ExistingFile);
 
+  io.add_option(
+     "--weight-file",
+     c.path_to_weights,
+     "Path to a TSV file containing the weights to apply to pixels before computing the correlation values.\n"
+     "Other TSV files should have an header with column names. Columns \"chrom\" and \"diag\" are required"
+     " and should store chromosome names and distance from the diagonal in bins respectively.\n"
+     "The name of the column storing the weights can be specified through --weight-column-name.")
+     ->check(CLI::ExistingFile);
+
+  io.add_option(
+     "--weight-column-name",
+     c.weight_column_name,
+     "Name of the column from the file specified though --weight-file containing the weight values.")
+     ->check(CLI::Number)
+     ->needs("--weight-file")
+     ->capture_default_str();
+
+  io.add_flag(
+     "--reciprocal-weights",
+     c.reciprocal_weights,
+     "Weights are computed by taking the reciprocal of numbers read from the file specified through --weight-file.")
+     ->capture_default_str();
+
   io.add_flag(
       "--exclude-zero-pixels,!--include-zero-pixels",
       c.exclude_zero_pxls,
@@ -97,10 +120,12 @@ void Cli::make_eval_subcommand() {
      "Overwrite existing file(s).")
      ->capture_default_str();
 
+  /*
   corr.add_flag(
      "--eucl-dist,!--no-eucl-dist",
      c.compute_eucl_dist,
      "Compute Euclidean distance.");
+  */
 
   corr.add_flag(
      "--pearson,!--no-pearson",
@@ -422,8 +447,10 @@ void Cli::validate_eval_subcommand() const {
     }
   }
 
-  if (c.compute_pearson + c.compute_spearman + c.compute_eucl_dist == 0) {
-    errors.emplace_back("At least one of --pearson, --spearman or --eucl-dist should be specified");
+  if (c.compute_pearson + c.compute_spearman /*+ c.compute_eucl_dist*/ == 0) {
+    // errors.emplace_back("At least one of --pearson, --spearman or --eucl-dist should be
+    // specified");
+    errors.emplace_back("At least one of --pearson, --spearman or should be specified");
   }
 
   if (!c.force) {
