@@ -179,8 +179,7 @@ static size_t mask_zero_pixels(const std::vector<N> &v1, const std::vector<N> &v
 template <CorrMethod correlation_method, StripeDirection stripe_direction,
           class WeightIt = utils::RepeatIterator<double>>
 static std::vector<double> compute_correlation(
-    const bp_t bin_size, std::shared_ptr<ContactMatrix<>> ref_contacts,
-    std::shared_ptr<ContactMatrix<>> tgt_contacts, const bed::BED_tree<>::value_type &features,
+    std::shared_ptr<ContactMatrix<>> ref_contacts, std::shared_ptr<ContactMatrix<>> tgt_contacts,
     const bool mask_zero_pixels_, WeightIt weight_first = utils::RepeatIterator<double>(1)) {
   assert(ref_contacts->nrows() == tgt_contacts->nrows());  // NOLINT
   const auto nrows = ref_contacts->nrows();
@@ -204,50 +203,42 @@ static std::vector<double> compute_correlation(
     }
   }();
 
-  bp_t start_pos = 0;
-  bp_t end_pos = bin_size;
   for (usize i = 0; i < ncols; ++i) {
-    if (features.empty() || features.overlaps_with(start_pos, end_pos)) {
-      if constexpr (stripe_direction == vertical) {
-        ref_contacts->unsafe_get_column(i, ref_pixel_buff);
-        tgt_contacts->unsafe_get_column(i, tgt_pixel_buff);
-      } else {
-        static_assert(stripe_direction == horizontal);
-        ref_contacts->unsafe_get_row(i, ref_pixel_buff);
-        tgt_contacts->unsafe_get_row(i, tgt_pixel_buff);
-      }
-      ref_pixel_buff.resize(nrows);
-      tgt_pixel_buff.resize(nrows);
-
-      if (mask_zero_pixels_) {
-        std::copy_n(weight_first, nrows, weight_buff.begin());
-        mask_zero_pixels(ref_pixel_buff, tgt_pixel_buff, weight_buff);
-      }
-
-      [[maybe_unused]] const auto &[corr, pval] =
-          !weight_buff.empty() ? corr_fx(ref_pixel_buff.begin(), ref_pixel_buff.end(),
-                                         tgt_pixel_buff.begin(), weight_buff.begin())
-                               : corr_fx(ref_pixel_buff.begin(), ref_pixel_buff.end(),
-                                         tgt_pixel_buff.begin(), weight_first);
-      correlation_buff[i] = corr;
+    if constexpr (stripe_direction == vertical) {
+      ref_contacts->unsafe_get_column(i, ref_pixel_buff);
+      tgt_contacts->unsafe_get_column(i, tgt_pixel_buff);
+    } else {
+      static_assert(stripe_direction == horizontal);
+      ref_contacts->unsafe_get_row(i, ref_pixel_buff);
+      tgt_contacts->unsafe_get_row(i, tgt_pixel_buff);
     }
-    start_pos += bin_size;
-    end_pos += bin_size;
+    ref_pixel_buff.resize(nrows);
+    tgt_pixel_buff.resize(nrows);
+
+    if (mask_zero_pixels_) {
+      std::copy_n(weight_first, nrows, weight_buff.begin());
+      mask_zero_pixels(ref_pixel_buff, tgt_pixel_buff, weight_buff);
+    }
+
+    [[maybe_unused]] const auto &[corr, pval] =
+        !weight_buff.empty() ? corr_fx(ref_pixel_buff.begin(), ref_pixel_buff.end(),
+                                       tgt_pixel_buff.begin(), weight_buff.begin())
+                             : corr_fx(ref_pixel_buff.begin(), ref_pixel_buff.end(),
+                                       tgt_pixel_buff.begin(), weight_first);
+    correlation_buff[i] = corr;
   }
   return correlation_buff;
 }
 
 template <CorrMethod correlation_method, StripeDirection stripe_direction>
-static std::vector<double> compute_correlation(const bp_t bin_size,
-                                               std::shared_ptr<ContactMatrix<>> ref_contacts,
+static std::vector<double> compute_correlation(std::shared_ptr<ContactMatrix<>> ref_contacts,
                                                std::shared_ptr<ContactMatrix<>> tgt_contacts,
-                                               const bed::BED_tree<>::value_type &features,
                                                const bool mask_zero_pixels_,
                                                const std::vector<double> &weights) {
   assert(ref_contacts->nrows() == tgt_contacts->nrows());              // NOLINT
   assert(weights.empty() || ref_contacts->nrows() == weights.size());  // NOLINT
   return compute_correlation<correlation_method, stripe_direction>(
-      bin_size, ref_contacts, tgt_contacts, features, mask_zero_pixels_, weights.begin());
+      ref_contacts, tgt_contacts, mask_zero_pixels_, weights.begin());
 }
 
 absl::flat_hash_map<std::pair<CorrMethod, StripeDirection>, std::unique_ptr<io::bigwig::Writer>>
@@ -291,15 +282,6 @@ void eval_subcmd(const modle::tools::eval_config &c) {
   // This cannot be made const
   auto chromosomes = select_chromosomes_for_eval(ref_cooler, tgt_cooler, c.path_to_chrom_subranges);
 
-  const auto features = [&]() {
-    if (c.path_to_features_bed.empty()) {
-      return bed::BED_tree<>{};
-    }
-
-    // TODO drop chromosomes not found in chromosomes
-    return bed::Parser(c.path_to_features_bed).parse_all_in_interval_tree();
-  }();
-
   if (chromosomes.size() == 1) {
     spdlog::info(FMT_STRING("Computing correlation for chromosome: \"{}\""),
                  chromosomes.begin()->first);
@@ -325,12 +307,6 @@ void eval_subcmd(const modle::tools::eval_config &c) {
   std::vector<std::future<bool>> return_codes(6);
   for (const auto &[chrom_name_sv, chrom_range] : chromosomes) {
     const std::string chrom_name{chrom_name_sv};
-    const auto &chrom_features = [&]() {
-      if (!features.contains(chrom_name)) {
-        return bed::BED_tree<>::value_type{};
-      }
-      return features.at(chrom_name);
-    }();
 
     const auto t1 = absl::Now();
     spdlog::info(FMT_STRING("Reading contacts for {}..."), chrom_name_sv);
@@ -348,8 +324,8 @@ void eval_subcmd(const modle::tools::eval_config &c) {
       auto &code = return_codes.emplace_back();
       code = tpool.submit([&]() {
         auto t2 = absl::Now();
-        auto corr = compute_correlation<pearson, vertical>(bin_size, ref_contacts, tgt_contacts,
-                                                           chrom_features, c.exclude_zero_pxls);
+        auto corr =
+            compute_correlation<pearson, vertical>(ref_contacts, tgt_contacts, c.exclude_zero_pxls);
         spdlog::info(
             FMT_STRING("Pearson correlation for vertical stripes from chrom {} computed in {}."),
             chrom_name, absl::FormatDuration(absl::Now() - t2));
@@ -363,8 +339,8 @@ void eval_subcmd(const modle::tools::eval_config &c) {
       auto &code = return_codes.emplace_back();
       code = tpool.submit([&]() {
         auto t2 = absl::Now();
-        auto corr = compute_correlation<pearson, horizontal>(bin_size, ref_contacts, tgt_contacts,
-                                                             chrom_features, c.exclude_zero_pxls);
+        auto corr = compute_correlation<pearson, horizontal>(ref_contacts, tgt_contacts,
+                                                             c.exclude_zero_pxls);
         spdlog::info(
             FMT_STRING("Pearson correlation for horizontal stripes from chrom {} computed in {}."),
             chrom_name, absl::FormatDuration(absl::Now() - t2));
@@ -378,8 +354,8 @@ void eval_subcmd(const modle::tools::eval_config &c) {
       auto &code = return_codes.emplace_back();
       code = tpool.submit([&]() {
         auto t2 = absl::Now();
-        auto corr = compute_correlation<spearman, vertical>(bin_size, ref_contacts, tgt_contacts,
-                                                            chrom_features, c.exclude_zero_pxls);
+        auto corr = compute_correlation<spearman, vertical>(ref_contacts, tgt_contacts,
+                                                            c.exclude_zero_pxls);
         spdlog::info(
             FMT_STRING("Spearman correlation for vertical stripes from chrom {} computed in {}."),
             chrom_name, absl::FormatDuration(absl::Now() - t2));
@@ -393,8 +369,8 @@ void eval_subcmd(const modle::tools::eval_config &c) {
       auto &code = return_codes.emplace_back();
       code = tpool.submit([&]() {
         auto t2 = absl::Now();
-        auto corr = compute_correlation<spearman, horizontal>(bin_size, ref_contacts, tgt_contacts,
-                                                              chrom_features, c.exclude_zero_pxls);
+        auto corr = compute_correlation<spearman, horizontal>(ref_contacts, tgt_contacts,
+                                                              c.exclude_zero_pxls);
         spdlog::info(
             FMT_STRING("Spearman correlation for horizontal stripes from chrom {} computed in {}."),
             chrom_name, absl::FormatDuration(absl::Now() - t2));

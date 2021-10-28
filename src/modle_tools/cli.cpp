@@ -85,12 +85,6 @@ void Cli::make_eval_subcommand() {
      "Path to BED file with subranges of the chromosomes to be processed.")
      ->check(CLI::ExistingFile);
 
-  io.add_option(
-      "--features-bed",
-      c.path_to_features_bed,
-      "Path to BED file with the list of features used to compute correlation metrics.")
-      ->check(CLI::ExistingFile);
-
   io.add_flag(
       "--exclude-zero-pixels,!--include-zero-pixels",
       c.exclude_zero_pxls,
