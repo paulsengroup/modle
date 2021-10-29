@@ -45,14 +45,40 @@ Writer::Writer(boost::filesystem::path name, uint_fast8_t zoom_levels, usize buf
   }
 }
 
+Writer::Writer(Writer&& other) noexcept
+    : _fname(std::move(other._fname)),
+      _fp(other._fp),
+      _zoom_levels(other._zoom_levels),
+      _buff_size(other._buff_size),
+      _initialized(other._initialized),
+      _offset(other._offset) {
+  other._fp = nullptr;
+}
+
 Writer::~Writer() {
   if (this->_fp) {
     bwClose(this->_fp);
+    std::scoped_lock<std::mutex> l(Writer::_global_state_mutex);
+    if (--Writer::_global_bigwig_files_opened == 0) {
+      bwCleanup();
+    }
   }
-  std::scoped_lock<std::mutex> l(Writer::_global_state_mutex);
-  if (--Writer::_global_bigwig_files_opened == 0) {
-    bwCleanup();
+}
+
+Writer& Writer::operator=(Writer&& other) noexcept {
+  if (this == &other) {
+    return *this;
   }
+
+  this->_fname = std::move(other._fname);
+  this->_fp = other._fp;
+  this->_zoom_levels = other._zoom_levels;
+  this->_buff_size = other._buff_size;
+  this->_initialized = other._initialized;
+  this->_offset = other._offset;
+  other._fp = nullptr;
+
+  return *this;
 }
 
 void Writer::write_chromosomes(const char* const* chrom_names, const u32* chrom_sizes,

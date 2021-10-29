@@ -46,13 +46,13 @@ class Writer {
  public:
   Writer() = default;
   Writer(const Writer&) = delete;
-  Writer(Writer&&) = default;
+  Writer(Writer&& other) noexcept;
   explicit Writer(boost::filesystem::path name, uint_fast8_t zoom_levels = DEFAULT_ZOOM_LEVELS,
                   usize buff_size = DEFAULT_BUFFER_SIZE);
   ~Writer();
 
   Writer& operator=(const Writer&) = delete;
-  Writer& operator=(Writer&&) = default;
+  Writer& operator=(Writer&& other) noexcept;
 
   template <class Chromosomes>
   inline void write_chromosomes(const Chromosomes& chroms);
