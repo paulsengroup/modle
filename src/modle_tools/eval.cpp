@@ -234,15 +234,12 @@ template <class Range>
   return weights;
 }
 
-[[nodiscard]] static std::unique_ptr<io::bigwig::Writer> create_bwig_file(
+[[nodiscard]] static io::bigwig::Writer create_bwig_file(
     std::vector<std::pair<std::string, usize>> &chrom_list, std::string_view base_name,
-    std::string_view suffix, bool skip) {
-  if (skip) {
-    return nullptr;
-  }
-  auto bw = std::make_unique<io::bigwig::Writer>(
+    std::string_view suffix) {
+  auto bw = io::bigwig::Writer(
       fmt::format(FMT_STRING("{}_{}"), base_name, absl::StripPrefix(suffix, "_")));
-  bw->write_chromosomes(chrom_list);
+  bw.write_chromosomes(chrom_list);
   return bw;
 }
 
@@ -331,35 +328,35 @@ static std::vector<double> compute_correlation(std::shared_ptr<ContactMatrix<>> 
       ref_contacts, tgt_contacts, mask_zero_pixels_, weights.begin());
 }
 
-absl::flat_hash_map<std::pair<CorrMethod, StripeDirection>, std::unique_ptr<io::bigwig::Writer>>
-init_bwigs(const modle::tools::eval_config &c, const ChromSet &chroms, const bool weighted) {
+absl::flat_hash_map<std::pair<CorrMethod, StripeDirection>, io::bigwig::Writer> init_bwigs(
+    const modle::tools::eval_config &c, const ChromSet &chroms, const bool weighted) {
   std::vector<std::pair<std::string, usize>> chrom_vect(static_cast<usize>(chroms.size()));
   std::transform(chroms.begin(), chroms.end(), chrom_vect.begin(), [](const auto &chrom) {
     return std::make_pair(chrom.first, chrom.second.second);
   });
 
-  absl::flat_hash_map<std::pair<CorrMethod, StripeDirection>, std::unique_ptr<io::bigwig::Writer>>
-      bwigs;
-  bwigs.emplace(std::make_pair(pearson, vertical),
-                create_bwig_file(
-                    chrom_vect, c.output_prefix.string(),
-                    fmt::format(FMT_STRING("pearson{}_vertical.bw"), weighted ? "_weighted" : ""),
-                    !c.compute_pearson));
-  bwigs.emplace(std::make_pair(pearson, horizontal),
-                create_bwig_file(
-                    chrom_vect, c.output_prefix.string(),
-                    fmt::format(FMT_STRING("pearson{}_horizontal.bw"), weighted ? "_weighted" : ""),
-                    !c.compute_pearson));
-  bwigs.emplace(std::make_pair(spearman, vertical),
-                create_bwig_file(
-                    chrom_vect, c.output_prefix.string(),
-                    fmt::format(FMT_STRING("spearman{}_vertical.bw"), weighted ? "_weighted" : ""),
-                    !c.compute_spearman));
-  bwigs.emplace(std::make_pair(spearman, horizontal),
-                create_bwig_file(chrom_vect, c.output_prefix.string(),
-                                 fmt::format(FMT_STRING("spearman{}_horizontal.bw"),
-                                             weighted ? "_weighted" : ""),
-                                 !c.compute_spearman));
+  absl::flat_hash_map<std::pair<CorrMethod, StripeDirection>, io::bigwig::Writer> bwigs;
+  if (c.compute_pearson) {
+    bwigs.emplace(std::make_pair(pearson, vertical),
+                  create_bwig_file(chrom_vect, c.output_prefix.string(),
+                                   fmt::format(FMT_STRING("pearson{}_vertical.bw"),
+                                               weighted ? "_weighted" : "")));
+    bwigs.emplace(std::make_pair(pearson, horizontal),
+                  create_bwig_file(chrom_vect, c.output_prefix.string(),
+                                   fmt::format(FMT_STRING("pearson{}_horizontal.bw"),
+                                               weighted ? "_weighted" : "")));
+  }
+
+  if (c.compute_spearman) {
+    bwigs.emplace(std::make_pair(spearman, vertical),
+                  create_bwig_file(chrom_vect, c.output_prefix.string(),
+                                   fmt::format(FMT_STRING("spearman{}_vertical.bw"),
+                                               weighted ? "_weighted" : "")));
+    bwigs.emplace(std::make_pair(spearman, horizontal),
+                  create_bwig_file(chrom_vect, c.output_prefix.string(),
+                                   fmt::format(FMT_STRING("spearman{}_horizontal.bw"),
+                                               weighted ? "_weighted" : "")));
+  }
   /*
   bwigs.emplace(std::make_pair(eucl_dist, vertical),
                 create_bwig_file(chrom_vect, c.output_prefix.string(), "eucl_dist_vertical.bw",
@@ -400,8 +397,7 @@ init_bwigs(const modle::tools::eval_config &c, const ChromSet &chroms, const boo
 template <CorrMethod correlation_method, StripeDirection stripe_direction>
 [[nodiscard]] static std::future<bool> submit_task(
     const std::string &chrom_name,
-    const absl::flat_hash_map<std::pair<CorrMethod, StripeDirection>,
-                              std::unique_ptr<io::bigwig::Writer>> &bwigs,
+    absl::flat_hash_map<std::pair<CorrMethod, StripeDirection>, io::bigwig::Writer> &bwigs,
     thread_pool &tpool, std::shared_ptr<ContactMatrix<>> &ref_contacts,
     std::shared_ptr<ContactMatrix<>> &tgt_contacts, const bool exclude_zero_pixels,
     const usize bin_size, const absl::flat_hash_map<std::string, std::vector<double>> &weights) {
@@ -422,10 +418,10 @@ template <CorrMethod correlation_method, StripeDirection stripe_direction>
                    absl::AsciiStrToLower(direction_to_str(stripe_direction)), chrom_name,
                    absl::FormatDuration(absl::Now() - t0));
       t0 = absl::Now();
-      const auto &bw = bwigs.at({correlation_method, stripe_direction});
-      bw->write_range(chrom_name, absl::MakeSpan(corr), bin_size, bin_size);
+      auto &bw = bwigs.at({correlation_method, stripe_direction});
+      bw.write_range(chrom_name, absl::MakeSpan(corr), bin_size, bin_size);
       spdlog::info(FMT_STRING("{} values have been written to file {} in {}."), corr.size(),
-                   bw->path(), absl::FormatDuration(absl::Now() - t0));
+                   bw.path(), absl::FormatDuration(absl::Now() - t0));
     } catch (const std::exception &e) {
       throw std::runtime_error(fmt::format(
           FMT_STRING("The following error occurred while computing {} on {} stripes for {}: {}"),
@@ -478,7 +474,7 @@ void eval_subcmd(const modle::tools::eval_config &c) {
     boost::filesystem::create_directories(output_dir.string());
   }
 
-  const auto bwigs = init_bwigs(c, chromosomes, !weights.empty());
+  auto bwigs = init_bwigs(c, chromosomes, !weights.empty());
 
   const auto nrows = (c.diagonal_width + bin_size - 1) / bin_size;
   assert(nrows != 0);  // NOLINT
