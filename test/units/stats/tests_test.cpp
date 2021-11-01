@@ -112,7 +112,7 @@ static void run_scipy(std::string_view method, N& n1, N& n2, std::atomic<double>
 }
 
 // NOLINTNEXTLINE(readability-function-cognitive-complexity)
-TEST_CASE("Binom test - two-sided", "[math][short]") {
+TEST_CASE("Binom test - two-sided", "[stats][short]") {
   const auto k = 100;
   const auto n1 = 143;
   const auto n2 = 220;
@@ -125,7 +125,7 @@ TEST_CASE("Binom test - two-sided", "[math][short]") {
 }
 
 // NOLINTNEXTLINE(readability-function-cognitive-complexity)
-TEST_CASE("Binom test - less", "[math][short]") {
+TEST_CASE("Binom test - less", "[stats][short]") {
   const auto k = 100;
   const auto n = 143;
 
@@ -135,7 +135,7 @@ TEST_CASE("Binom test - less", "[math][short]") {
 }
 
 // NOLINTNEXTLINE(readability-function-cognitive-complexity)
-TEST_CASE("Binom test - greater", "[math][short]") {
+TEST_CASE("Binom test - greater", "[stats][short]") {
   const auto k = 100;
   const auto n = 143;
 
@@ -145,7 +145,7 @@ TEST_CASE("Binom test - greater", "[math][short]") {
 }
 
 // NOLINTNEXTLINE(readability-function-cognitive-complexity)
-TEST_CASE("Binom test - two-sided randomized", "[math][long]") {
+TEST_CASE("Binom test - two-sided randomized", "[stats][long]") {
   random::PRNG_t rand_eng{4888025265521095494};
   const usize iterations = 5'000;
 

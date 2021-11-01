@@ -21,7 +21,7 @@ struct FP {
 };
 
 // NOLINTNEXTLINE(readability-function-cognitive-complexity)
-TEST_CASE("Mean", "[math][short]") {
+TEST_CASE("Mean", "[stats][short]") {
   const std::vector<u8> v1{0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10};
   std::vector<FP> v2(v1.size());
   std::transform(v1.begin(), v1.end(), v2.begin(),
@@ -34,7 +34,7 @@ TEST_CASE("Mean", "[math][short]") {
 }
 
 // NOLINTNEXTLINE(readability-function-cognitive-complexity)
-TEST_CASE("Moving average", "[math][short]") {
+TEST_CASE("Moving average", "[stats][short]") {
   const usize window_size = 3;
   const std::vector<u8> v1{0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10};
   std::vector<FP> v2(v1.size());
@@ -67,7 +67,7 @@ TEST_CASE("Moving average", "[math][short]") {
 }
 
 // NOLINTNEXTLINE(readability-function-cognitive-complexity)
-TEST_CASE("Sum of squared deviations", "[math][short]") {
+TEST_CASE("Sum of squared deviations", "[stats][short]") {
   const std::vector<u8> v1{0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10};
   std::vector<FP> v2(v1.size());
   std::transform(v1.begin(), v1.end(), v2.begin(),
@@ -81,7 +81,7 @@ TEST_CASE("Sum of squared deviations", "[math][short]") {
 }
 
 // NOLINTNEXTLINE(readability-function-cognitive-complexity)
-TEST_CASE("Variance", "[math][short]") {
+TEST_CASE("Variance", "[stats][short]") {
   const std::vector<u8> v1{0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10};
   std::vector<FP> v2(v1.size());
   std::transform(v1.begin(), v1.end(), v2.begin(),
@@ -94,7 +94,7 @@ TEST_CASE("Variance", "[math][short]") {
 }
 
 // NOLINTNEXTLINE(readability-function-cognitive-complexity)
-TEST_CASE("Standard Deviation", "[math][short]") {
+TEST_CASE("Standard Deviation", "[stats][short]") {
   const std::vector<u8> v1{0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10};
   std::vector<FP> v2(v1.size());
   std::transform(v1.begin(), v1.end(), v2.begin(),
