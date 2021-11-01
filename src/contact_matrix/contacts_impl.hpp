@@ -28,7 +28,9 @@
 
 #include "modle/common/common.hpp"  // for usize, i64, u64, bp_t, isize
 #include "modle/common/random.hpp"  // for PRNG, uniform_int_distribution, unifo...
-#include "modle/common/utils.hpp"   // for ndebug_defined, ndebug_not_defined
+#include "modle/common/suppress_compiler_warnings.hpp"
+#include "modle/common/utils.hpp"  // for ndebug_defined, ndebug_not_defined
+#include "modle/stats/misc.hpp"    // for compute_gauss_kernel
 
 namespace modle {
 
@@ -66,9 +68,10 @@ ContactMatrix<N>::ContactMatrix(const usize nrows, const usize ncols,
     auto dist = []() {
       if constexpr (std::is_floating_point_v<N>) {
         return random::uniform_real_distribution<N>{0, 65553};
+      } else {
+        u64 max_ = std::min(u64(65553), static_cast<u64>((std::numeric_limits<N>::max)()));
+        return random::uniform_int_distribution<N>{0, static_cast<N>(max_)};
       }
-      u64 max_ = std::min(u64(65553), static_cast<u64>((std::numeric_limits<N>::max)()));
-      return random::uniform_int_distribution<N>{0, static_cast<N>(max_)};
     }();
     for (usize i = 0; i < _ncols; ++i) {
       for (usize j = i; j < i + _nrows && j < _ncols; ++j) {
@@ -236,6 +239,45 @@ N ContactMatrix<N>::unsafe_get(const usize row, const usize col, const usize blo
 }
 
 template <class N>
+void ContactMatrix<N>::unsafe_get(const usize row, const usize col, const usize block_size,
+                                  std::vector<N> &buff) const noexcept(utils::ndebug_defined()) {
+  assert(block_size > 0);              // NOLINT
+  assert(block_size < this->nrows());  // NOLINT
+  // For now we only support blocks with an odd size
+  assert(block_size % 2 != 0);  // NOLINT
+  if (BOOST_UNLIKELY(block_size == 1)) {
+    buff.resize(1);
+    buff.front() = this->unsafe_get(row, col);
+    return;
+  }
+
+  if constexpr (utils::ndebug_not_defined()) {
+    const auto [i, j] = transpose_coords(row, col);
+    if (i >= this->ncols() || j >= this->ncols()) {
+      throw std::logic_error(fmt::format(
+          FMT_STRING("ContactMatrix<N>::get(row={}, col={}) tried to access an element outside of "
+                     "the space {}x{}, which is what this contact matrix is supposed to represent"),
+          row, col, col, col));
+    }
+  }
+
+  // Edges are handled like shown here: https://en.wikipedia.org/wiki/File:Extend_Edge-Handling.png
+  const auto bs = static_cast<i64>(block_size);
+  const auto first_row = static_cast<i64>(row) - (bs / 2);
+  const auto first_col = static_cast<i64>(col) - (bs / 2);
+  buff.resize(block_size * block_size);
+
+  usize k = 0;
+  for (auto i = first_row; i < first_row + bs; ++i) {
+    for (auto j = first_col; j < first_col + bs; ++j) {
+      const auto ii = static_cast<usize>(std::clamp(i, i64(0), static_cast<i64>(this->_ncols - 1)));
+      const auto jj = static_cast<usize>(std::clamp(j, i64(0), static_cast<i64>(this->_ncols - 1)));
+      buff[k++] = this->unsafe_get(ii, jj);
+    }
+  }
+}
+
+template <class N>
 void ContactMatrix<N>::unsafe_set(const usize row, const usize col,
                                   const N n) noexcept(utils::ndebug_defined()) {
   this->internal_set(row, col, n, nullptr);
@@ -274,10 +316,16 @@ void ContactMatrix<N>::internal_set(const usize row, const usize col, const N n,
     return std::unique_lock<std::mutex>{};
   }();
   auto &m = this->at(i, j);
-  if (n > m) {
-    this->_tot_contacts += n - m;
+  if constexpr (std::is_floating_point_v<N>) {
+    std::atomic<N> f{n};
+    for (double g = f; !f.compare_exchange_strong(g, g + n);)
+      ;
   } else {
-    this->_tot_contacts -= m - n;
+    if (n > m) {
+      this->_tot_contacts += n - m;
+    } else {
+      this->_tot_contacts -= m - n;
+    }
   }
   m = n;
 }
@@ -736,6 +784,41 @@ void ContactMatrix<N>::check_for_overflow_on_subtract(usize row, usize col, cons
                    "number outside of range {}-{}"),
         this->_tot_contacts, n, lo, hi));
   }
+}
+
+template <class N>
+ContactMatrix<double> ContactMatrix<N>::blur(const double sigma, const double cutoff) const
+    noexcept(utils::ndebug_defined()) {
+  ContactMatrix<double> bmatrix(this->nrows(), this->ncols());
+
+  const auto gauss_kernel = stats::compute_gauss_kernel(sigma, cutoff);
+  std::vector<N> pixels(gauss_kernel.size());
+
+  [[maybe_unused]] const auto block_size =
+      static_cast<usize>(std::sqrt(static_cast<double>(gauss_kernel.size())));
+  assert(block_size * block_size == gauss_kernel.size());  // NOLINT
+
+  auto convolve = [&gauss_kernel](const std::vector<N> &buff) {
+    assert(gauss_kernel.size() == buff.size());  // NOLINT
+    double tot = 0.0;
+    for (usize i = 0; i < buff.size(); ++i) {
+      DISABLE_WARNING_PUSH
+      DISABLE_WARNING_USELESS_CAST
+      tot += gauss_kernel[i] * static_cast<double>(buff[i]);
+      DISABLE_WARNING_POP
+    }
+
+    return tot;
+  };
+
+  for (usize i = 0; i < this->ncols(); ++i) {
+    for (usize j = i; j < this->ncols(); ++j) {
+      this->unsafe_get(i, j, block_size, pixels);
+      bmatrix.set(i, j, convolve(pixels));
+    }
+  }
+
+  return bmatrix;
 }
 
 }  // namespace modle

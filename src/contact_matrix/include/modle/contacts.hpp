@@ -22,7 +22,7 @@ namespace modle {
 template <class N = contacts_t>
 class ContactMatrix {
   static_assert(std::is_arithmetic_v<N>,
-                "ContactMatrix requires an integral type as template argument.");
+                "ContactMatrix requires a numeric type as template argument.");
 
  public:
   // Constructors
@@ -59,6 +59,9 @@ class ContactMatrix {
   // block_size is required to be an odd number at the moment
   [[nodiscard]] inline N unsafe_get(usize row, usize col, usize block_size) const
       noexcept(utils::ndebug_defined());
+  inline void unsafe_get(usize row, usize col, usize block_size, std::vector<N>& buff) const
+      noexcept(utils::ndebug_defined());
+
   inline void unsafe_set(usize row, usize col, N n) noexcept(utils::ndebug_defined());
   inline void set(usize row, usize col, N n) noexcept(utils::ndebug_defined());
 
@@ -108,6 +111,8 @@ class ContactMatrix {
   inline void unsafe_compute_row_wise_contact_histogram(std::vector<u64>& buff) const;
   [[nodiscard]] inline std::vector<u64> unsafe_compute_row_wise_contact_histogram() const;
   inline void unsafe_deplete_contacts(double depletion_multiplier = 1.0);
+  [[nodiscard]] inline ContactMatrix<double> blur(double sigma = 1, double cutoff = 0.005) const
+      noexcept(utils::ndebug_defined());
 
   using value_type = N;
 
@@ -116,7 +121,7 @@ class ContactMatrix {
   u64 _ncols{0};
   std::vector<N> _contacts{};
   std::vector<std::mutex> _mtxes{};  // Each mutex protects one row of bins
-  std::atomic<i64> _tot_contacts{0};
+  std::atomic<N> _tot_contacts{0};
   std::atomic<i64> _updates_missed{0};
 
   [[nodiscard]] inline N& at(usize i, usize j) noexcept(utils::ndebug_defined());

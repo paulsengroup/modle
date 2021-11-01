@@ -9,11 +9,12 @@
 #include <boost/dynamic_bitset/dynamic_bitset.hpp>  // for dynamic_bitset, dynamic_bitset<>::ref...
 #include <boost/filesystem/operations.hpp>          // for exists
 #include <boost/filesystem/path.hpp>                // for path
-#include <catch2/catch.hpp>                         // for operator""_catch_sr, AssertionHandler
-#include <stdexcept>                                // for runtime_error
-#include <string>                                   // for string
-#include <utility>                                  // for pair, move
-#include <vector>                                   // for vector, allocator
+#include <boost/process.hpp>
+#include <catch2/catch.hpp>  // for operator""_catch_sr, AssertionHandler
+#include <stdexcept>         // for runtime_error
+#include <string>            // for string
+#include <utility>           // for pair, move
+#include <vector>            // for vector, allocator
 
 #include "modle/common/common.hpp"  // for u32
 #include "modle/common/utils.hpp"   // for parse_numeric_or_throw
@@ -23,6 +24,21 @@
 namespace modle::test::cmatrix {
 
 inline const boost::filesystem::path data_dir{"test/data/unit_tests"};  // NOLINT
+
+// clang-format off
+constexpr auto SCIPY_GAUSSIAN_BLUR_CMD{
+    "#!/usr/bin/env python3\n"
+    "from scipy.ndimage import gaussian_filter\n"
+    "import numpy as np\n"
+    "from sys import stdin\n"
+    "if __name__ == \"__main__\":\n"
+    "    shape = [{:d}, {:d}]\n"
+    "    sigma = {:.16e}\n"
+    "    buff = stdin.read().replace(\"\\n\", \",\")[:-1]\n"
+    "    m = np.fromstring(buff, sep=\",\", dtype=float)\n"
+    "    m = gaussian_filter(m.reshape(shape), sigma, truncate={})\n"
+    "    print(\",\".join([str(n) for n in m.flatten()]))\n"};
+// clang-format on
 
 // NOLINTNEXTLINE(readability-function-cognitive-complexity)
 TEST_CASE("CMatrix simple", "[cmatrix][short]") {
@@ -301,6 +317,74 @@ TEST_CASE("CMatrix get row", "[cmatrix][short]") {
   c.unsafe_get_row(c.ncols() - 1, buff);
   REQUIRE(buff.size() == 1);
   CHECK(buff.front() == 1);
+}
+
+// NOLINTNEXTLINE(readability-function-cognitive-complexity)
+TEST_CASE("CMatrix blur", "[cmatrix][short]") {
+  const auto reference_file = data_dir / "contacts_chr1_bs9_small.tsv";
+  const auto input_matrix = [&]() {
+    ContactMatrix<> m;
+    m.unsafe_import_from_txt(reference_file);
+    return m;
+  }();
+
+  auto compute_reference_matrix = [&input_matrix](auto shape, auto sigma, auto trunc) {
+    boost::process::ipstream stdout_stream;
+    boost::process::opstream stdin_stream;
+    auto py = boost::process::child(
+        boost::process::search_path("python3").string(), "-c",
+        fmt::format(FMT_STRING(SCIPY_GAUSSIAN_BLUR_CMD), shape, shape, sigma, trunc),
+        boost::process::std_in<stdin_stream, boost::process::std_out> stdout_stream);
+    assert(py.running());  // NOLINT
+    {
+      std::vector<contacts_t> buff(input_matrix.ncols());
+      for (usize i = 0; i < input_matrix.ncols(); ++i) {
+        buff.clear();
+        for (usize j = 0; j < input_matrix.ncols(); ++j) {
+          buff.push_back(input_matrix.unsafe_get(i, j));
+        }
+        const auto sbuff = fmt::format(FMT_STRING("{}\n"), fmt::join(buff, ","));
+        stdin_stream.write(sbuff.data(), static_cast<std::streamsize>(sbuff.size()));
+      }
+      stdin_stream.flush();
+    }
+    stdin_stream.pipe().close();
+
+    const auto reference_matrix = [&]() {
+      std::string sbuff;
+      std::getline(stdout_stream, sbuff);
+
+      std::vector<double> buff;
+      for (const auto& tok : absl::StrSplit(sbuff, ',')) {
+        buff.push_back(utils::parse_numeric_or_throw<double>(tok));
+      }
+      assert(buff.size() == input_matrix.nrows() * input_matrix.ncols());  // NOLINT
+      ContactMatrix<double> m(input_matrix.nrows(), input_matrix.ncols());
+      for (usize i = 0; i < input_matrix.nrows(); ++i) {
+        for (auto j = i; j < input_matrix.ncols(); ++j) {
+          m.set(i, j, buff[(i * m.nrows()) + j]);
+        }
+      }
+      return m;
+    }();
+    py.wait();
+    return reference_matrix;
+  };
+
+  constexpr std::array<double, 3> sigmas{0.5, 1.0, 1.5};
+  constexpr std::array<double, 3> cutoffs{3.0, 3.0, 3.0};
+
+  for (usize i = 0; i < sigmas.size(); ++i) {
+    const auto reference_matrix =
+        compute_reference_matrix(input_matrix.ncols(), sigmas[i], cutoffs[i]);
+    const auto blurred_matrix = input_matrix.blur(sigmas[i]);
+
+    for (usize j = 4; j < input_matrix.nrows(); ++j) {       // NOLINT
+      for (auto k = j; k < input_matrix.ncols() - 4; ++k) {  // NOLINT
+        CHECK(Approx(reference_matrix.unsafe_get(j, k)) == blurred_matrix.unsafe_get(j, k));
+      }
+    }
+  }
 }
 
 }  // namespace modle::test::cmatrix

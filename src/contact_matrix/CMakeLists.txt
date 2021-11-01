@@ -18,7 +18,8 @@ target_link_libraries(
             project_options
             Boost::headers
             cpp-sort::cpp-sort
-            Modle::common)
+            Modle::common
+            Modle::stats)
 
 if(ENABLE_PCH)
   target_precompile_headers(
