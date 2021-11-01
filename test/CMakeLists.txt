@@ -29,6 +29,7 @@ target_sources(
           ${CMAKE_CURRENT_SOURCE_DIR}/units/stats/correlation_test.cpp
           ${CMAKE_CURRENT_SOURCE_DIR}/units/stats/correlation_utils_test.cpp
           ${CMAKE_CURRENT_SOURCE_DIR}/units/stats/descriptive_test.cpp
+          ${CMAKE_CURRENT_SOURCE_DIR}/units/stats/misc_test.cpp
           ${CMAKE_CURRENT_SOURCE_DIR}/units/stats/tests_test.cpp)
 
 target_link_libraries(
