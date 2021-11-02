@@ -56,7 +56,7 @@ TEST_CASE("cooler ctor", "[io][cooler][short]") {
 
 // NOLINTNEXTLINE(readability-function-cognitive-complexity)
 TEST_CASE("CMatrix to cooler", "[io][cooler][short]") {
-  const auto input_file = data_dir / "cmatrix_001.tsv";
+  const auto input_file = data_dir / "cmatrix_001.tsv.gz";
   const auto output_file = testdir() / "cmatrix_to_cooler.cool";
   boost::filesystem::create_directories(testdir());
   spdlog::set_default_logger(
@@ -88,7 +88,7 @@ TEST_CASE("CMatrix to cooler", "[io][cooler][short]") {
 
 // NOLINTNEXTLINE(readability-function-cognitive-complexity)
 TEST_CASE("CMatrix to cooler - multiple chromosomes", "[io][cooler][short]") {
-  const auto input_file = data_dir / "cmatrix_001.tsv";
+  const auto input_file = data_dir / "cmatrix_001.tsv.gz";
   const auto output_file = testdir() / "cmatrix_to_cooler.cool";
   boost::filesystem::create_directories(testdir());
   spdlog::set_default_logger(

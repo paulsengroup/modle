@@ -19,6 +19,7 @@ target_link_libraries(
             Boost::headers
             cpp-sort::cpp-sort
             Modle::common
+            Modle::libmodle_io
             Modle::stats)
 
 if(ENABLE_PCH)

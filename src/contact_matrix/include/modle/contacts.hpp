@@ -111,7 +111,12 @@ class ContactMatrix {
   inline void unsafe_compute_row_wise_contact_histogram(std::vector<u64>& buff) const;
   [[nodiscard]] inline std::vector<u64> unsafe_compute_row_wise_contact_histogram() const;
   inline void unsafe_deplete_contacts(double depletion_multiplier = 1.0);
-  [[nodiscard]] inline ContactMatrix<double> blur(double sigma = 1, double cutoff = 0.005) const
+
+  [[nodiscard]] inline ContactMatrix<double> blur(double sigma, double cutoff = 0.005) const
+      noexcept(utils::ndebug_defined());
+  [[nodiscard]] inline ContactMatrix<double> gaussian_diff(
+      double sigma1, double sigma2, double min_value = -(std::numeric_limits<double>::max)(),
+      double max_value = (std::numeric_limits<double>::max)()) const
       noexcept(utils::ndebug_defined());
 
   using value_type = N;
@@ -133,13 +138,8 @@ class ContactMatrix {
   inline void check_for_overflow_on_add(usize row, usize col, N n) const;
   inline void check_for_overflow_on_subtract(usize row, usize col, N n) const;
 
-  [[nodiscard]] inline N internal_get(usize row, usize col, usize block_size, std::mutex* mtx) const
-      noexcept(utils::ndebug_defined());
   inline void internal_set(usize row, usize col, N n,
                            std::mutex* mtx) noexcept(utils::ndebug_defined());
-
-  [[nodiscard]] constexpr double internal_get_fraction_of_missed_updates(
-      std::mutex* mtx) const noexcept;
 };
 }  // namespace modle
 

@@ -38,7 +38,59 @@ constexpr auto SCIPY_GAUSSIAN_BLUR_CMD{
     "    m = np.fromstring(buff, sep=\",\", dtype=float)\n"
     "    m = gaussian_filter(m.reshape(shape), sigma, truncate={})\n"
     "    print(\",\".join([str(n) for n in m.flatten()]))\n"};
+
+constexpr auto SCIPY_GAUSSIAN_DIFFERENCE_CMD{
+    "#!/usr/bin/env python3\n"
+    "from scipy.ndimage import gaussian_filter\n"
+    "import numpy as np\n"
+    "from sys import stdin\n"
+    "if __name__ == \"__main__\":\n"
+    "    shape = [{:d}, {:d}]\n"
+    "    sigma1 = {:.16e}\n"
+    "    sigma2 = {:.16e}\n"
+    "    assert sigma1 < sigma2\n"
+    "    trunc = {:.16e}\n"
+    "    buff = stdin.read().replace(\"\\n\", \",\")[:-1]\n"
+    "    m = np.fromstring(buff, sep=\",\", dtype=float)\n"
+    "    m1 = gaussian_filter(m.reshape(shape), sigma1, truncate=trunc)\n"
+    "    m2 = gaussian_filter(m.reshape(shape), sigma2, truncate=trunc)\n"
+    "    print(\",\".join([str(n) for n in (m1 - m2).flatten()]))\n"};
 // clang-format on
+
+template <class N>
+static void write_cmatrix_to_stream(const ContactMatrix<N>& m, boost::process::opstream& s) {
+  std::vector<contacts_t> buff(m.ncols());
+  for (usize i = 0; i < m.ncols(); ++i) {
+    buff.clear();
+    for (usize j = 0; j < m.ncols(); ++j) {
+      buff.push_back(m.unsafe_get(i, j));
+    }
+    const auto sbuff = fmt::format(FMT_STRING("{}\n"), fmt::join(buff, ","));
+    s.write(sbuff.data(), static_cast<std::streamsize>(sbuff.size()));
+  }
+  s.flush();
+  s.pipe().close();
+}
+
+template <class N>
+[[nodiscard]] static ContactMatrix<N> read_cmatrix_from_stream(const usize ncols, const usize nrows,
+                                                               boost::process::ipstream& s) {
+  std::string sbuff;
+  std::getline(s, sbuff);
+
+  std::vector<double> buff;
+  for (const auto& tok : absl::StrSplit(sbuff, ',')) {
+    buff.push_back(utils::parse_numeric_or_throw<double>(tok));
+  }
+  REQUIRE(buff.size() == nrows * ncols);
+  ContactMatrix<double> m(nrows, ncols);
+  for (usize i = 0; i < nrows; ++i) {
+    for (auto j = i; j < ncols; ++j) {
+      m.set(i, j, buff[(i * m.nrows()) + j]);
+    }
+  }
+  return m;
+}
 
 // NOLINTNEXTLINE(readability-function-cognitive-complexity)
 TEST_CASE("CMatrix simple", "[cmatrix][short]") {
@@ -321,7 +373,7 @@ TEST_CASE("CMatrix get row", "[cmatrix][short]") {
 
 // NOLINTNEXTLINE(readability-function-cognitive-complexity)
 TEST_CASE("CMatrix blur", "[cmatrix][short]") {
-  const auto reference_file = data_dir / "contacts_chr1_bs9_small.tsv";
+  const auto reference_file = data_dir / "cmatrix_002.tsv.gz";
   const auto input_matrix = [&]() {
     ContactMatrix<> m;
     m.unsafe_import_from_txt(reference_file);
@@ -336,39 +388,10 @@ TEST_CASE("CMatrix blur", "[cmatrix][short]") {
         fmt::format(FMT_STRING(SCIPY_GAUSSIAN_BLUR_CMD), shape, shape, sigma, trunc),
         boost::process::std_in<stdin_stream, boost::process::std_out> stdout_stream);
     assert(py.running());  // NOLINT
-    {
-      std::vector<contacts_t> buff(input_matrix.ncols());
-      for (usize i = 0; i < input_matrix.ncols(); ++i) {
-        buff.clear();
-        for (usize j = 0; j < input_matrix.ncols(); ++j) {
-          buff.push_back(input_matrix.unsafe_get(i, j));
-        }
-        const auto sbuff = fmt::format(FMT_STRING("{}\n"), fmt::join(buff, ","));
-        stdin_stream.write(sbuff.data(), static_cast<std::streamsize>(sbuff.size()));
-      }
-      stdin_stream.flush();
-    }
-    stdin_stream.pipe().close();
 
-    const auto reference_matrix = [&]() {
-      std::string sbuff;
-      std::getline(stdout_stream, sbuff);
-
-      std::vector<double> buff;
-      for (const auto& tok : absl::StrSplit(sbuff, ',')) {
-        buff.push_back(utils::parse_numeric_or_throw<double>(tok));
-      }
-      assert(buff.size() == input_matrix.nrows() * input_matrix.ncols());  // NOLINT
-      ContactMatrix<double> m(input_matrix.nrows(), input_matrix.ncols());
-      for (usize i = 0; i < input_matrix.nrows(); ++i) {
-        for (auto j = i; j < input_matrix.ncols(); ++j) {
-          m.set(i, j, buff[(i * m.nrows()) + j]);
-        }
-      }
-      return m;
-    }();
-    py.wait();
-    return reference_matrix;
+    write_cmatrix_to_stream(input_matrix, stdin_stream);
+    return read_cmatrix_from_stream<double>(input_matrix.nrows(), input_matrix.ncols(),
+                                            stdout_stream);
   };
 
   constexpr std::array<double, 3> sigmas{0.5, 1.0, 1.5};
@@ -383,6 +406,49 @@ TEST_CASE("CMatrix blur", "[cmatrix][short]") {
       for (auto k = j; k < input_matrix.ncols() - 4; ++k) {  // NOLINT
         CHECK(Approx(reference_matrix.unsafe_get(j, k)) == blurred_matrix.unsafe_get(j, k));
       }
+    }
+  }
+}
+
+// NOLINTNEXTLINE(readability-function-cognitive-complexity)
+TEST_CASE("CMatrix difference of gaussians", "[cmatrix][short]") {
+  const auto reference_file = data_dir / "cmatrix_002.tsv.gz";
+  const auto input_matrix = [&]() {
+    ContactMatrix<> m;
+    m.unsafe_import_from_txt(reference_file);
+    return m;
+  }();
+
+  auto compute_reference_matrix = [&input_matrix](auto shape, auto sigma1, auto sigma2,
+                                                  auto trunc) {
+    boost::process::ipstream stdout_stream;
+    boost::process::opstream stdin_stream;
+    auto py = boost::process::child(
+        boost::process::search_path("python3").string(), "-c",
+        fmt::format(FMT_STRING(SCIPY_GAUSSIAN_DIFFERENCE_CMD), shape, shape, sigma1, sigma2, trunc),
+        boost::process::std_in<stdin_stream, boost::process::std_out> stdout_stream);
+    assert(py.running());  // NOLINT
+
+    write_cmatrix_to_stream(input_matrix, stdin_stream);
+    return read_cmatrix_from_stream<double>(input_matrix.nrows(), input_matrix.ncols(),
+                                            stdout_stream);
+  };
+
+  const double sigma1 = 1.0;
+  const double sigma2 = 1.6;
+  const double trunc = 3.0;
+  const auto reference_matrix =
+      compute_reference_matrix(input_matrix.ncols(), sigma1, sigma2, trunc);
+  const auto gauss_diff_matrix = input_matrix.gaussian_diff(sigma1, sigma2);
+
+  const auto m1 = input_matrix.blur(sigma1);
+  const auto m2 = input_matrix.blur(sigma2);
+
+  for (usize j = 4; j < input_matrix.nrows(); ++j) {       // NOLINT
+    for (auto k = j; k < input_matrix.ncols() - 4; ++k) {  // NOLINT
+      CHECK(Approx(reference_matrix.unsafe_get(j, k)) == gauss_diff_matrix.unsafe_get(j, k));
+      CHECK(Approx(m1.unsafe_get(j, k) - m2.unsafe_get(j, k)) ==
+            gauss_diff_matrix.unsafe_get(j, k));
     }
   }
 }

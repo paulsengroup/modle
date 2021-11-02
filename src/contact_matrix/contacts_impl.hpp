@@ -29,8 +29,9 @@
 #include "modle/common/common.hpp"  // for usize, i64, u64, bp_t, isize
 #include "modle/common/random.hpp"  // for PRNG, uniform_int_distribution, unifo...
 #include "modle/common/suppress_compiler_warnings.hpp"
-#include "modle/common/utils.hpp"  // for ndebug_defined, ndebug_not_defined
-#include "modle/stats/misc.hpp"    // for compute_gauss_kernel
+#include "modle/common/utils.hpp"   // for ndebug_defined, ndebug_not_defined
+#include "modle/compressed_io.hpp"  // for CompressedReader
+#include "modle/stats/misc.hpp"     // for compute_gauss_kernel
 
 namespace modle {
 
@@ -552,12 +553,12 @@ std::vector<std::vector<N>> ContactMatrix<N>::unsafe_generate_symmetric_matrix()
 template <class N>
 void ContactMatrix<N>::unsafe_import_from_txt(const boost::filesystem::path &path, const char sep) {
   assert(boost::filesystem::exists(path));  // NOLINT
-  std::ifstream fp(path.string());
+  compressed_io::Reader r(path);
 
   std::string buff;
   std::vector<std::string_view> toks;
   usize i = 0;
-  while (std::getline(fp, buff)) {
+  while (r.getline(buff)) {
     toks = absl::StrSplit(buff, sep);
     if (i == 0) {
       this->unsafe_resize(toks.size(), toks.size());
@@ -798,23 +799,43 @@ ContactMatrix<double> ContactMatrix<N>::blur(const double sigma, const double cu
       static_cast<usize>(std::sqrt(static_cast<double>(gauss_kernel.size())));
   assert(block_size * block_size == gauss_kernel.size());  // NOLINT
 
-  auto convolve = [&gauss_kernel](const std::vector<N> &buff) {
-    assert(gauss_kernel.size() == buff.size());  // NOLINT
-    double tot = 0.0;
-    for (usize i = 0; i < buff.size(); ++i) {
-      DISABLE_WARNING_PUSH
-      DISABLE_WARNING_USELESS_CAST
-      tot += gauss_kernel[i] * static_cast<double>(buff[i]);
-      DISABLE_WARNING_POP
-    }
-
-    return tot;
-  };
-
   for (usize i = 0; i < this->ncols(); ++i) {
     for (usize j = i; j < this->ncols(); ++j) {
       this->unsafe_get(i, j, block_size, pixels);
-      bmatrix.set(i, j, convolve(pixels));
+      bmatrix.set(i, j, utils::convolve(gauss_kernel, pixels));
+    }
+  }
+
+  return bmatrix;
+}
+
+template <class N>
+ContactMatrix<double> ContactMatrix<N>::gaussian_diff(const double sigma1, const double sigma2,
+                                                      const double min_value,
+                                                      const double max_value) const
+    noexcept(utils::ndebug_defined()) {
+  assert(sigma1 <= sigma2);  // NOLINT
+  ContactMatrix<double> bmatrix(this->nrows(), this->ncols());
+
+  const auto gauss_kernel1 = stats::compute_gauss_kernel(sigma1);
+  const auto gauss_kernel2 = stats::compute_gauss_kernel(/*sqrt(kernel1.size(), */ sigma2);
+  std::vector<N> pixels(std::max(gauss_kernel1.size(), gauss_kernel2.size()));
+
+  [[maybe_unused]] const auto block_size1 =
+      static_cast<usize>(std::sqrt(static_cast<double>(gauss_kernel1.size())));
+  [[maybe_unused]] const auto block_size2 =
+      static_cast<usize>(std::sqrt(static_cast<double>(gauss_kernel2.size())));
+  assert(block_size1 * block_size1 <= gauss_kernel1.size());  // NOLINT
+  assert(block_size2 * block_size2 <= gauss_kernel2.size());  // NOLINT
+
+  for (usize i = 0; i < this->ncols(); ++i) {
+    for (usize j = i; j < this->ncols(); ++j) {
+      this->unsafe_get(i, j, block_size1, pixels);
+      const auto n1 = utils::convolve(gauss_kernel1, pixels);
+      this->unsafe_get(i, j, block_size2, pixels);
+      const auto n2 = utils::convolve(gauss_kernel2, pixels);
+
+      bmatrix.set(i, j, std::clamp(n1 - n2, min_value, max_value));
     }
   }
 
