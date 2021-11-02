@@ -44,6 +44,7 @@ DISABLE_WARNING_POP
 #include <vector>                            // for vector
 
 #include "modle/common/common.hpp"  // for usize, i64, u64
+#include "modle/common/suppress_compiler_warnings.hpp"
 
 namespace modle::utils {
 
@@ -384,6 +385,25 @@ constexpr bool RepeatIterator<T>::operator==([[maybe_unused]] const RepeatIterat
 template <class T>
 constexpr bool RepeatIterator<T>::operator!=([[maybe_unused]] const RepeatIterator &other) const {
   return !(*this == other);
+}
+
+template <class InputIt1, class InputIt2, class N, class>
+constexpr N convolve(InputIt1 kernel_first, InputIt1 kernel_last, InputIt2 buff_first) {
+  N tot = 0;
+  for (; kernel_first != kernel_last; ++kernel_first, ++buff_first) {
+    DISABLE_WARNING_PUSH
+    DISABLE_WARNING_USELESS_CAST
+    tot += static_cast<N>(*kernel_first) * static_cast<N>(*buff_first);
+    DISABLE_WARNING_POP
+  }
+
+  return tot;
+}
+
+template <class Rng1, class Rng2, class N, class>
+constexpr N convolve(const Rng1 &kernel, const Rng2 &buff) {
+  assert(kernel.size() == buff.size());  // NOLINT
+  return convolve(kernel.begin(), kernel.end(), buff.begin());
 }
 
 }  // namespace modle::utils
