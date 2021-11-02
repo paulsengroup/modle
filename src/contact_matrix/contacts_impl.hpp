@@ -800,7 +800,7 @@ ContactMatrix<double> ContactMatrix<N>::blur(const double sigma, const double cu
   assert(block_size * block_size == gauss_kernel.size());  // NOLINT
 
   for (usize i = 0; i < this->ncols(); ++i) {
-    for (usize j = i; j < this->ncols(); ++j) {
+    for (usize j = i; j < std::min(i + this->nrows(), this->ncols()); ++j) {
       this->unsafe_get(i, j, block_size, pixels);
       bmatrix.set(i, j, utils::convolve(gauss_kernel, pixels));
     }
@@ -829,7 +829,7 @@ ContactMatrix<double> ContactMatrix<N>::gaussian_diff(const double sigma1, const
   assert(block_size2 * block_size2 <= gauss_kernel2.size());  // NOLINT
 
   for (usize i = 0; i < this->ncols(); ++i) {
-    for (usize j = i; j < this->ncols(); ++j) {
+    for (usize j = i; j < std::min(i + this->nrows(), this->ncols()); ++j) {
       this->unsafe_get(i, j, block_size1, pixels);
       const auto n1 = utils::convolve(gauss_kernel1, pixels);
       this->unsafe_get(i, j, block_size2, pixels);

@@ -51,9 +51,9 @@ constexpr auto SCIPY_GAUSSIAN_DIFFERENCE_CMD{
     "    assert sigma1 < sigma2\n"
     "    trunc = {:.16e}\n"
     "    buff = stdin.read().replace(\"\\n\", \",\")[:-1]\n"
-    "    m = np.fromstring(buff, sep=\",\", dtype=float)\n"
-    "    m1 = gaussian_filter(m.reshape(shape), sigma1, truncate=trunc)\n"
-    "    m2 = gaussian_filter(m.reshape(shape), sigma2, truncate=trunc)\n"
+    "    m = np.fromstring(buff, sep=\",\", dtype=float).reshape(shape)\n"
+    "    m1 = gaussian_filter(m, sigma1, truncate=trunc)\n"
+    "    m2 = gaussian_filter(m, sigma2, truncate=trunc)\n"
     "    print(\",\".join([str(n) for n in (m1 - m2).flatten()]))\n"};
 // clang-format on
 
