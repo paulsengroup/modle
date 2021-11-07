@@ -168,6 +168,10 @@ template <class InputIt1, class InputIt2, class N = double,
 template <class Rng1, class Rng2, class N = double,
           class = std::enable_if_t<std::is_arithmetic_v<N>>>
 [[nodiscard]] constexpr N convolve(const Rng1& kernel, const Rng2& buff);
+
+template <class I, class = std::enable_if_t<std::is_integral_v<I>>>
+[[nodiscard]] constexpr I next_pow2(I n) noexcept;
+
 }  // namespace modle::utils
 
 #include "../../../utils_impl.hpp"  // IWYU pragma: export

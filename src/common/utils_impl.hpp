@@ -406,6 +406,36 @@ constexpr N convolve(const Rng1 &kernel, const Rng2 &buff) {
   return convolve(kernel.begin(), kernel.end(), buff.begin());
 }
 
+template <class I, class>
+constexpr I next_pow2(const I n) noexcept {
+  DISABLE_WARNING_PUSH
+  DISABLE_WARNING_USELESS_CAST
+  using ull = unsigned long long;
+  if constexpr (std::is_signed_v<I>) {
+    assert(n >= 0);  // NOLINT;
+    return static_cast<I>(next_pow2(static_cast<ull>(n)));
+  } else {
+    auto m = static_cast<ull>(n);
+#ifndef __GNUC__
+    // https://graphics.stanford.edu/~seander/bithacks.html#RoundUpPowerOf2
+    --m;
+    m |= m >> 1;
+    m |= m >> 2;
+    m |= m >> 4;
+    m |= m >> 8;
+    m |= m >> 16;
+    m |= m >> 32;
+    return static_cast<I>(m + 1);
+#else
+    // https://jameshfisher.com/2018/03/30/round-up-power-2/
+    // https://gcc.gnu.org/onlinedocs/gcc/Other-Builtins.html
+
+    return static_cast<I>(m <= 1 ? m : u64(1) << (u64(64) - u64(__builtin_clzll(m - 1))));
+#endif
+  }
+  DISABLE_WARNING_POP
+}
+
 }  // namespace modle::utils
 
 // IWYU pragma: private, include "modle/utils.hpp"
