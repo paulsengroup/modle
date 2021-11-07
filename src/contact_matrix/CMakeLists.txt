@@ -8,7 +8,9 @@ find_package(cpp-sort QUIET REQUIRED)
 add_library(cmatrix INTERFACE)
 add_library(Modle::cmatrix ALIAS cmatrix)
 
-target_sources(cmatrix INTERFACE ${CMAKE_CURRENT_SOURCE_DIR}/contacts_impl.hpp)
+target_sources(
+  cmatrix INTERFACE ${CMAKE_CURRENT_SOURCE_DIR}/contacts_impl.hpp ${CMAKE_CURRENT_SOURCE_DIR}/contacts_safe_impl.hpp
+                    ${CMAKE_CURRENT_SOURCE_DIR}/contacts_unsafe_impl.hpp)
 
 target_include_directories(cmatrix INTERFACE include/)
 

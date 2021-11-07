@@ -4,34 +4,26 @@
 
 #pragma once
 
-#include <absl/strings/str_split.h>  // for StrSplit, Splitter
-#include <absl/types/span.h>         // for Span, MakeConstSpan, MakeSpan
-#include <fmt/format.h>              // for FMT_STRING, join
+#include <absl/types/span.h>  // for Span, MakeConstSpan, MakeSpan
+#include <fmt/format.h>       // for FMT_STRING
+#include <xxh3.h>             // for XXH_INLINE_XXH3_64bits, XXH3_64bits
 
-#include <algorithm>                                // for min, clamp, fill, max
-#include <atomic>                                   // for atomic_fetch_add_explicit, memory_ord...
-#include <boost/dynamic_bitset/dynamic_bitset.hpp>  // for dynamic_bitset
-#include <boost/filesystem/operations.hpp>          // for exists
-#include <boost/filesystem/path.hpp>                // for path
-#include <cassert>                                  // for assert
-#include <cmath>                                    // for round
-#include <fstream>                                  // IWYU pragma: keep for ifstream
-#include <iostream>                                 // for basic_istream, flush, ifstream, ostream
-#include <limits>                                   // for numeric_limits
-#include <mutex>                                    // for mutex, scoped_lock, unique_lock
-#include <numeric>                                  // for accumulate
-#include <stdexcept>                                // for runtime_error, logic_error
-#include <string>                                   // for getline, string
-#include <string_view>                              // for string_view
-#include <utility>                                  // for make_pair, pair
-#include <vector>                                   // for vector, allocator, swap
+#include <algorithm>         // for min, clamp
+#include <array>             // for array
+#include <boost/config.hpp>  // IWYU pragma: keep for BOOST_UNLIKELY
+#include <cassert>           // for assert
+#include <cmath>             // for sqrt
+#include <fstream>
+#include <limits>        // for numeric_limits
+#include <mutex>         // for unique_lock
+#include <shared_mutex>  // for shared_lock, shared_mutex
+#include <stdexcept>     // for runtime_error, logic_error
+#include <utility>       // for make_pair, pair
 
-#include "modle/common/common.hpp"  // for usize, i64, u64, bp_t, isize
-#include "modle/common/random.hpp"  // for PRNG, uniform_int_distribution, unifo...
-#include "modle/common/suppress_compiler_warnings.hpp"
-#include "modle/common/utils.hpp"   // for ndebug_defined, ndebug_not_defined
-#include "modle/compressed_io.hpp"  // for CompressedReader
-#include "modle/stats/misc.hpp"     // for compute_gauss_kernel
+#include "modle/common/common.hpp"                      // for usize, u64, bp_t, i64
+#include "modle/common/random.hpp"                      // for PRNG, uniform_int_distribution
+#include "modle/common/suppress_compiler_warnings.hpp"  // for DISABLE_WARNING_POP, DISABLE_WARN...
+#include "modle/common/utils.hpp"                       // for ndebug_not_defined, next_pow2
 
 namespace modle {
 
@@ -41,8 +33,9 @@ ContactMatrix<N>::ContactMatrix(ContactMatrix<N> &&other) noexcept
     : _nrows(other.nrows()),
       _ncols(other.ncols()),
       _contacts(std::move(other._contacts)),
-      _mtxes(_ncols),
-      _tot_contacts(other.get_tot_contacts()),
+      _mtxes(compute_number_of_mutexes(this->nrows(), this->ncols())),
+      _tot_contacts(other._tot_contacts.load()),
+      _tot_contacts_outdated(other._tot_contacts_outdated.load()),
       _updates_missed(other.get_n_of_missed_updates()) {}
 
 #endif
@@ -52,8 +45,9 @@ ContactMatrix<N>::ContactMatrix(const ContactMatrix<N> &other)
     : _nrows(other.nrows()),
       _ncols(other.ncols()),
       _contacts(other._contacts),
-      _mtxes(_ncols),
+      _mtxes(compute_number_of_mutexes(this->nrows(), this->ncols())),
       _tot_contacts(other._tot_contacts.load()),
+      _tot_contacts_outdated(other._tot_contacts_outdated.load()),
       _updates_missed(other._updates_missed.load()) {}
 
 template <class N>
@@ -62,7 +56,7 @@ ContactMatrix<N>::ContactMatrix(const usize nrows, const usize ncols,
     : _nrows(std::min(nrows, ncols)),
       _ncols(ncols),
       _contacts(_nrows * _ncols + 1, N(0)),
-      _mtxes(_ncols + 1) {
+      _mtxes(compute_number_of_mutexes(this->nrows(), this->ncols())) {
   if (fill_with_random_numbers) {
     auto rand_eng = random::PRNG(seed);
 
@@ -95,13 +89,9 @@ ContactMatrix<N>::ContactMatrix(const absl::Span<const N> contacts, const usize 
     : _nrows(nrows),
       _ncols(ncols),
       _contacts(contacts.begin(), contacts.end()),
-      _mtxes(_ncols),
+      _mtxes(compute_number_of_mutexes(this->nrows(), this->ncols())),
       _updates_missed(static_cast<i64>(updates_missed)),
-      _tot_contacts(static_cast<i64>(tot_contacts)) {
-  if (this->_tot_contacts == 0 && !this->_contacts.empty()) {
-    this->_tot_contacts = std::accumulate(this->_contacts.begin(), this->_contacts.end(), usize(0));
-  }
-}
+      _tot_contacts(static_cast<i64>(tot_contacts)) {}
 
 #if defined(__clang__) && __clang_major__ < 7
 template <class N>
@@ -109,13 +99,15 @@ ContactMatrix<N> &ContactMatrix<N>::operator=(ContactMatrix<N> &&other) noexcept
   if (this == &other) {
     return *this;
   }
+
+  const auto lck = other.lock();
   _nrows = other.nrows();
   _ncols = other.ncols();
   _contacts = std::move(other._contacts);
-  _mtxes.resize(_ncols);
+  _mtxes = std::vector<std::shared_mutex>(other._mtxes.size());
   _tot_contacts = other._tot_contacts.load();
+  _tot_contacts_outdated = other._tot_contacts_outdated.load();
   _updates_missed = other._updates_missed.load();
-
   return *this;
 }
 #endif
@@ -126,6 +118,7 @@ ContactMatrix<N> &ContactMatrix<N>::operator=(const ContactMatrix<N> &other) {
     return *this;
   }
 
+  const auto lck = other.lock();
   _nrows = other.nrows();
   _ncols = other.ncols();
   if (!_contacts.empty()) {
@@ -134,323 +127,52 @@ ContactMatrix<N> &ContactMatrix<N>::operator=(const ContactMatrix<N> &other) {
   } else {
     _contacts = other._contacts;
   }
-  _mtxes.resize(_ncols);
+  _mtxes.resize(other._mtxes.size());
   _tot_contacts = other._tot_contacts.load();
+  _tot_contacts_outdated = other._tot_contacts_outdated.load();
   _updates_missed = other._updates_missed.load();
 
   return *this;
 }
 
 template <class N>
-N ContactMatrix<N>::unsafe_get(const usize row, const usize col) const
-    noexcept(utils::ndebug_defined()) {
-  const auto [i, j] = transpose_coords(row, col);
-  if constexpr (utils::ndebug_not_defined()) {
-    if (i >= this->ncols() || j >= this->ncols()) {
-      throw std::logic_error(fmt::format(
-          FMT_STRING("ContactMatrix<N>::get(row={}, col={}) tried to access an element outside of "
-                     "the space {}x{}, which is what this contact matrix is supposed to represent"),
-          row, col, col, col));
-    }
-  }
-
-  if (i >= this->nrows()) {
-    return 0;
-  }
-
-  return this->at(i, j);
-}
-
-// NOTE the pixels returned by this function go from the diagonal towards the periphery
-// Example: given the following matrix
-//          1  2  3
-//          2  4  5
-//          3  5  6
-// Fetching col #3 would yield 6 5 3
-template <class N>
-void ContactMatrix<N>::unsafe_get_column(const usize col, std::vector<N> &buff,
-                                         const usize row_offset) const
-    noexcept(utils::ndebug_defined()) {
-  assert(row_offset <= col);  // NOLINT
-  const auto [rowt, colt] = transpose_coords(col - row_offset, col);
-
-  const auto first_idx = (colt * this->nrows()) + rowt;
-  const auto last_idx = std::min(first_idx + this->nrows() - row_offset, this->_contacts.size());
-
-  buff.resize(last_idx - first_idx);
-
-  const auto first = this->_contacts.begin() + static_cast<isize>(first_idx);
-  const auto last = this->_contacts.begin() + static_cast<isize>(last_idx);
-  std::copy(first, last, buff.begin());
-}
-
-// NOTE the pixels returned by this function go from the diagonal towards the periphery
-// Example: given the following matrix
-//          1  2  3
-//          2  4  5
-//          3  5  6
-// Fetching col #1 would yield 1 2 3
-template <class N>
-void ContactMatrix<N>::unsafe_get_row(const usize row, std::vector<N> &buff,
-                                      const usize col_offset) const
-    noexcept(utils::ndebug_defined()) {
-  assert(row >= col_offset);  // NOLINT
-  buff.resize(std::clamp(this->ncols() - row - col_offset, usize(0), this->nrows() - col_offset));
-
-  for (usize i = 0; i < buff.size(); ++i) {
-    buff[i] = this->unsafe_get(row, row + col_offset + i);
-  }
+typename ContactMatrix<N>::pixel_write_lock ContactMatrix<N>::lock_pixel_write(
+    const usize row, const usize col) const {
+  auto l1 = std::shared_lock<std::shared_mutex>(this->_global_mtx, std::defer_lock);
+  auto l2 = std::unique_lock<std::shared_mutex>(this->_mtxes[this->get_pixel_mutex_idx(row, col)],
+                                                std::defer_lock);
+  std::lock(l1, l2);
+  return std::make_pair(std::move(l1), std::move(l2));
 }
 
 template <class N>
-N ContactMatrix<N>::unsafe_get(const usize row, const usize col, const usize block_size) const
-    noexcept(utils::ndebug_defined()) {
-  assert(block_size > 0);              // NOLINT
-  assert(block_size < this->nrows());  // NOLINT
-  // For now we only support blocks with an odd size
-  assert(block_size % 2 != 0);  // NOLINT
-  if (block_size == 1) {
-    return this->unsafe_get(row, col);
-  }
-
-  if constexpr (utils::ndebug_not_defined()) {
-    const auto [i, j] = transpose_coords(row, col);
-    if (i >= this->ncols() || j >= this->ncols()) {
-      throw std::logic_error(fmt::format(
-          FMT_STRING("ContactMatrix<N>::get(row={}, col={}) tried to access an element outside of "
-                     "the space {}x{}, which is what this contact matrix is supposed to represent"),
-          row, col, col, col));
-    }
-  }
-
-  // Edges are handled like shown here: https://en.wikipedia.org/wiki/File:Extend_Edge-Handling.png
-  const auto bs = static_cast<i64>(block_size);
-  const auto first_row = static_cast<i64>(row) - (bs / 2);
-  const auto first_col = static_cast<i64>(col) - (bs / 2);
-  N n{0};
-
-  for (auto i = first_row; i < first_row + bs; ++i) {
-    for (auto j = first_col; j < first_col + bs; ++j) {
-      const auto ii = static_cast<usize>(std::clamp(i, i64(0), static_cast<i64>(this->_ncols - 1)));
-      const auto jj = static_cast<usize>(std::clamp(j, i64(0), static_cast<i64>(this->_ncols - 1)));
-      n += this->unsafe_get(ii, jj);
-    }
-  }
-  return n;
+typename ContactMatrix<N>::pixel_read_lock ContactMatrix<N>::lock_pixel_read(
+    const usize row, const usize col) const {
+  auto l1 = std::shared_lock<std::shared_mutex>(this->_global_mtx, std::defer_lock);
+  auto l2 = std::shared_lock<std::shared_mutex>(this->_mtxes[this->get_pixel_mutex_idx(row, col)],
+                                                std::defer_lock);
+  std::lock(l1, l2);
+  return std::make_pair(std::move(l1), std::move(l2));
 }
 
 template <class N>
-void ContactMatrix<N>::unsafe_get(const usize row, const usize col, const usize block_size,
-                                  std::vector<N> &buff) const noexcept(utils::ndebug_defined()) {
-  assert(block_size > 0);              // NOLINT
-  assert(block_size < this->nrows());  // NOLINT
-  // For now we only support blocks with an odd size
-  assert(block_size % 2 != 0);  // NOLINT
-  if (BOOST_UNLIKELY(block_size == 1)) {
-    buff.resize(1);
-    buff.front() = this->unsafe_get(row, col);
-    return;
-  }
-
-  if constexpr (utils::ndebug_not_defined()) {
-    const auto [i, j] = transpose_coords(row, col);
-    if (i >= this->ncols() || j >= this->ncols()) {
-      throw std::logic_error(fmt::format(
-          FMT_STRING("ContactMatrix<N>::get(row={}, col={}) tried to access an element outside of "
-                     "the space {}x{}, which is what this contact matrix is supposed to represent"),
-          row, col, col, col));
-    }
-  }
-
-  // Edges are handled like shown here: https://en.wikipedia.org/wiki/File:Extend_Edge-Handling.png
-  const auto bs = static_cast<i64>(block_size);
-  const auto first_row = static_cast<i64>(row) - (bs / 2);
-  const auto first_col = static_cast<i64>(col) - (bs / 2);
-  buff.resize(block_size * block_size);
-
-  usize k = 0;
-  for (auto i = first_row; i < first_row + bs; ++i) {
-    for (auto j = first_col; j < first_col + bs; ++j) {
-      const auto ii = static_cast<usize>(std::clamp(i, i64(0), static_cast<i64>(this->_ncols - 1)));
-      const auto jj = static_cast<usize>(std::clamp(j, i64(0), static_cast<i64>(this->_ncols - 1)));
-      buff[k++] = this->unsafe_get(ii, jj);
-    }
-  }
+std::unique_lock<std::shared_mutex> ContactMatrix<N>::lock() const {
+  return std::unique_lock<std::shared_mutex>(this->_global_mtx);
 }
 
 template <class N>
-void ContactMatrix<N>::unsafe_set(const usize row, const usize col,
-                                  const N n) noexcept(utils::ndebug_defined()) {
-  this->internal_set(row, col, n, nullptr);
-}
-
-template <class N>
-void ContactMatrix<N>::set(const usize row, const usize col,
-                           const N n) noexcept(utils::ndebug_defined()) {
-  const auto [_, j] = transpose_coords(row, col);
-  assert(j < this->_mtxes.size());  // NOLINT
-  this->internal_set(row, col, n, &this->_mtxes[j]);
-}
-
-template <class N>
-void ContactMatrix<N>::internal_set(const usize row, const usize col, const N n,
-                                    std::mutex *mtx) noexcept(utils::ndebug_defined()) {
-  const auto [i, j] = this->transpose_coords(row, col);
-  if constexpr (utils::ndebug_not_defined()) {
-    try {
-      this->bound_check_column(j);
-    } catch (const std::runtime_error &err) {
-      throw std::logic_error(
-          fmt::format(FMT_STRING("ContactMatrix::set({}, {}, {}): {})"), i, j, n, err.what()));
-    }
-  }
-
-  if (i > this->nrows()) {
-    std::atomic_fetch_add_explicit(&this->_updates_missed, i64(1), std::memory_order_relaxed);
-    return;
-  }
-
-  [[maybe_unused]] auto lck = [&]() {
-    if (mtx) {
-      return std::unique_lock(*mtx);
-    }
-    return std::unique_lock<std::mutex>{};
-  }();
-  auto &m = this->at(i, j);
-  if constexpr (std::is_floating_point_v<N>) {
-    std::atomic<N> f{n};
-    for (double g = f; !f.compare_exchange_strong(g, g + n);)
-      ;
-  } else {
-    if (n > m) {
-      this->_tot_contacts += n - m;
-    } else {
-      this->_tot_contacts -= m - n;
-    }
-  }
-  m = n;
-}
-
-template <class N>
-void ContactMatrix<N>::add(const usize row, const usize col,
-                           const N n) noexcept(utils::ndebug_defined()) {
-  assert(n > 0);  // NOLINT Use subtract to add a negative number
-  const auto [i, j] = transpose_coords(row, col);
-
-  if constexpr (utils::ndebug_not_defined()) {
-    try {
-      this->bound_check_column(j);
-      this->check_for_overflow_on_add(i, j, n);
-    } catch (const std::runtime_error &err) {
-      throw std::logic_error(
-          fmt::format(FMT_STRING("ContactMatrix::add({}, {}, {}): {})"), row, col, n, err.what()));
-    }
-  }
-  if (i > this->nrows()) {
-    std::atomic_fetch_add_explicit(&this->_updates_missed, i64(1), std::memory_order_relaxed);
-    return;
-  }
-
-  {
-    std::scoped_lock<std::mutex> lck(this->_mtxes[j]);
-    this->at(i, j) += n;
-  }
-  this->_tot_contacts += n;
-}
-
-template <class N>
-void ContactMatrix<N>::subtract(const usize row, const usize col,
-                                const N n) noexcept(utils::ndebug_defined()) {
-  assert(n >= 0);  // NOLINT Use add to subtract a negative number
-  const auto [i, j] = transpose_coords(row, col);
-
-  if constexpr (utils::ndebug_not_defined()) {
-    try {
-      this->bound_check_column(j);
-      this->check_for_overflow_on_subtract(i, j, n);
-    } catch (const std::runtime_error &err) {
-      throw std::logic_error(fmt::format(FMT_STRING("ContactMatrix::subtract({}, {}, {}): {})"),
-                                         row, col, n, err.what()));
-    }
-  }
-
-  if (i > this->nrows()) {
-    std::atomic_fetch_add_explicit(&this->_updates_missed, i64(1), std::memory_order_relaxed);
-    return;
-  }
-
-  {
-    std::scoped_lock<std::mutex> lck(this->_mtxes[j]);
-    this->at(i, j) -= n;
-  }
-  this->_tot_contacts -= n;
-}
-
-template <class N>
-void ContactMatrix<N>::increment(usize row, usize col) noexcept(utils::ndebug_defined()) {
-  this->add(row, col, N(1));
-}
-
-template <class N>
-void ContactMatrix<N>::decrement(usize row, usize col) noexcept(utils::ndebug_defined()) {
-  this->subtract(row, col, N(1));
-}
-
-template <class N>
-constexpr usize ContactMatrix<N>::ncols() const noexcept(utils::ndebug_defined()) {
+constexpr usize ContactMatrix<N>::ncols() const {
   return this->_ncols;
 }
 
 template <class N>
-constexpr usize ContactMatrix<N>::nrows() const noexcept(utils::ndebug_defined()) {
+constexpr usize ContactMatrix<N>::nrows() const {
   return this->_nrows;
 }
 
 template <class N>
-constexpr usize ContactMatrix<N>::npixels() const noexcept(utils::ndebug_defined()) {
+constexpr usize ContactMatrix<N>::npixels() const {
   return this->_nrows * this->_ncols;
-}
-
-template <class N>
-usize ContactMatrix<N>::unsafe_npixels_after_masking() const {
-  auto npixels = this->npixels();
-  const auto mask = this->unsafe_generate_mask_for_bins_without_contacts();
-  if (mask.all()) {
-    return npixels;
-  }
-  if (mask.none()) {
-    return 0;
-  }
-
-  auto count_zeros = [&mask](usize start, usize end) {
-    assert(start <= end);
-    usize n = 0;
-    while (start < end) {
-      n += !mask[start++];
-    }
-    return n;
-  };
-
-  assert(this->nrows() <= this->ncols());
-  for (usize i = 0; i < this->ncols(); ++i) {
-    if (!mask[i]) {
-      // We are processing pixels in the upper left corner of cmatrix
-      if (i < this->nrows()) {
-        npixels -= this->nrows() - count_zeros(0UL, i);
-        npixels -= i;
-        assert(npixels <= this->npixels());
-        // We are processing pixels in the lower right corner of cmatrix
-      } else if (i > this->ncols() - this->nrows()) {
-        npixels -= this->nrows() - count_zeros(i - this->nrows(), i);
-        npixels -= this->ncols() - i;
-        assert(npixels <= this->npixels());
-      } else {  // We are processing pixels in the center of the cmatrix
-        npixels -= (2 * this->nrows()) - 1 - count_zeros(i - this->nrows(), i);
-        assert(npixels <= this->npixels());
-      }
-    }
-  }
-  return npixels;
 }
 
 template <class N>
@@ -459,147 +181,14 @@ constexpr usize ContactMatrix<N>::get_n_of_missed_updates() const noexcept {
 }
 
 template <class N>
-constexpr double ContactMatrix<N>::unsafe_get_fraction_of_missed_updates() const noexcept {
-  if (this->empty()) {
-    return 0.0;
-  }
-  return static_cast<double>(this->get_n_of_missed_updates()) /
-         static_cast<double>(this->get_tot_contacts() + this->get_n_of_missed_updates());
-}
-
-template <class N>
-constexpr usize ContactMatrix<N>::get_tot_contacts() const noexcept(utils::ndebug_defined()) {
-  return static_cast<usize>(this->_tot_contacts.load());
-}
-
-template <class N>
-double ContactMatrix<N>::get_avg_contact_density() const noexcept(utils::ndebug_defined()) {
-  return static_cast<double>(this->get_tot_contacts()) / static_cast<double>(this->npixels());
-}
-
-template <class N>
-constexpr usize ContactMatrix<N>::get_matrix_size_in_bytes() const
-    noexcept(utils::ndebug_defined()) {
+constexpr usize ContactMatrix<N>::get_matrix_size_in_bytes() const {
   return this->npixels() * sizeof(N);
 }
 
 template <class N>
-constexpr double ContactMatrix<N>::get_matrix_size_in_mb() const noexcept(utils::ndebug_defined()) {
+constexpr double ContactMatrix<N>::get_matrix_size_in_mb() const {
   const double mb = 1.0e6;
   return static_cast<double>(this->get_matrix_size_in_bytes()) / mb;
-}
-
-template <class N>
-void ContactMatrix<N>::unsafe_print(std::ostream &out_stream, bool full) const {
-  if (full) {
-    std::vector<N> row(this->_ncols, 0);
-    for (usize y = 0; y < this->_ncols; ++y) {
-      std::fill(row.begin(), row.end(), 0);
-      for (usize x = 0; x < this->_ncols; ++x) {
-        auto j = x;
-        auto i = j - y;
-        if (y > x) {
-          j = y;
-          i = j - x;
-        }
-        if (i >= this->_nrows) {
-          row[x] = 0;
-        } else {
-          row[x] = this->at(i, j);
-        }
-      }
-      fmt::print(out_stream, FMT_STRING("{}\n"), fmt::join(row, "\t"));
-    }
-  } else {
-    std::vector<N> row(this->ncols());
-    for (usize i = 0; i < this->nrows(); ++i) {
-      for (auto j = i; j < this->ncols(); ++j) {
-        row[j] = this->at(i, j);
-      }
-      fmt::print(out_stream, FMT_STRING("{}\n"), fmt::join(row, "\t"));
-    }
-  }
-  out_stream << std::flush;
-}
-
-template <class N>
-void ContactMatrix<N>::unsafe_print(bool full) const {
-  this->unsafe_print(std::cout, full);
-}
-
-template <class N>
-std::vector<std::vector<N>> ContactMatrix<N>::unsafe_generate_symmetric_matrix() const {
-  std::vector<std::vector<N>> m;
-  m.reserve(this->_ncols);
-  for (usize y = 0; y < this->_ncols; ++y) {
-    std::vector<N> row(this->_ncols, 0);
-    for (usize x = 0; x < this->_ncols; ++x) {
-      const auto [j, i] = [&]() {
-        if (y > x) {
-          return std::make_pair(y, y - x);
-        }
-        return std::make_pair(x, x - y);
-      }();
-
-      if (i < this->_nrows) {
-        row[x] = this->at(i, j);
-      }
-    }
-    m.emplace_back(std::move(row));
-  }
-  return m;
-}
-
-template <class N>
-void ContactMatrix<N>::unsafe_import_from_txt(const boost::filesystem::path &path, const char sep) {
-  assert(boost::filesystem::exists(path));  // NOLINT
-  compressed_io::Reader r(path);
-
-  std::string buff;
-  std::vector<std::string_view> toks;
-  usize i = 0;
-  while (r.getline(buff)) {
-    toks = absl::StrSplit(buff, sep);
-    if (i == 0) {
-      this->unsafe_resize(toks.size(), toks.size());
-      this->unsafe_reset();
-    }
-    for (usize j = i; j < this->ncols(); ++j) {
-      this->set(i, j, utils::parse_numeric_or_throw<N>(toks[j]));
-    }
-    ++i;
-  }
-  assert(i != 0);  // NOLINT guard against empty files
-}
-
-template <class N>
-void ContactMatrix<N>::unsafe_generate_mask_for_bins_without_contacts(
-    boost::dynamic_bitset<> &mask) const {
-  mask.resize(this->ncols());
-  mask.reset();
-
-  for (usize i = 0; i < this->ncols(); ++i) {
-    // Set bitmask to 1 if row contains at least one non-zero value
-    for (auto j = i; j < (i + this->nrows()) && j < this->ncols(); ++j) {
-      if ((mask[i] |= this->unsafe_get(i, j))) {
-        break;
-      }
-    }
-    // Set bitmask to 1 if column "above" the current bin contains at least one non-zero value
-    // NOTE i - this->nrows() can overflow. This is intended
-    for (auto j = i; j > 0 && j > (i - this->nrows()); --j) {
-      if ((mask[i] |= this->unsafe_get(i, j))) {
-        break;
-      }
-    }
-  }
-}
-
-template <class N>
-boost::dynamic_bitset<> ContactMatrix<N>::unsafe_generate_mask_for_bins_without_contacts() const {
-  boost::dynamic_bitset<> mask{};
-  this->unsafe_generate_mask_for_bins_without_contacts(mask);
-  return mask;
 }
 
 template <class N>
@@ -608,39 +197,8 @@ void ContactMatrix<N>::clear_missed_updates_counter() {
 }
 
 template <class N>
-void ContactMatrix<N>::unsafe_reset() {
-  std::fill(this->_contacts.begin(), this->_contacts.end(), 0);
-  this->_tot_contacts = 0;
-  this->clear_missed_updates_counter();
-}
-
-template <class N>
-void ContactMatrix<N>::unsafe_resize(const usize nrows, const usize ncols) {
-  if (nrows == this->_nrows && ncols == this->_ncols) {
-    return;
-  }
-
-  if (ncols != this->_ncols) {
-    std::vector<std::mutex> mtxes(ncols);
-    std::swap(this->_mtxes, mtxes);
-  }
-
-  this->_nrows = std::min(nrows, ncols);
-  this->_ncols = ncols;
-  this->_contacts.resize(this->npixels(), N(0));
-}
-
-template <class N>
-void ContactMatrix<N>::unsafe_resize(const bp_t length, const bp_t diagonal_width,
-                                     const bp_t bin_size) {
-  const auto nrows = (diagonal_width + bin_size - 1) / bin_size;
-  const auto ncols = (length + bin_size - 1) / bin_size;
-  this->unsafe_resize(nrows, ncols);
-}
-
-template <class N>
 bool ContactMatrix<N>::empty() const {
-  return this->_tot_contacts == 0;
+  return this->_tot_contacts == 0 && !this->_tot_contacts_outdated;
 }
 
 template <class N>
@@ -654,80 +212,8 @@ absl::Span<N> ContactMatrix<N>::get_raw_count_vector() {
 }
 
 template <class N>
-void ContactMatrix<N>::unsafe_compute_row_wise_contact_histogram(std::vector<u64> &buff) const {
-  buff.resize(this->nrows());
-  std::fill(buff.begin(), buff.end(), 0);
-
-  for (usize i = 0; i < this->ncols(); ++i) {
-    for (auto j = i; j < i + this->nrows() && j < this->ncols(); ++j) {
-      // j - i corresponds to the distance from the diagonal
-      buff[j - i] += this->unsafe_get(j, i);
-    }
-  }
-}
-
-template <class N>
-std::vector<u64> ContactMatrix<N>::unsafe_compute_row_wise_contact_histogram() const {
-  std::vector<u64> buff(this->nrows());
-  this->unsafe_compute_row_wise_contact_histogram(buff);
-  return buff;
-}
-
-template <class N>
-void ContactMatrix<N>::unsafe_deplete_contacts(double depletion_multiplier) {
-  const auto hist = this->unsafe_compute_row_wise_contact_histogram();
-  const auto effective_nbins = this->unsafe_generate_mask_for_bins_without_contacts().count();
-  // This histogram contains the average contact number (instead of the total)
-  std::vector<u64> row_wise_avg_contacts(hist.size());
-  std::transform(hist.begin(), hist.end(), row_wise_avg_contacts.begin(), [&](const auto n) {
-    return static_cast<u64>(std::round((depletion_multiplier * static_cast<double>(n)) /
-                                       static_cast<double>(effective_nbins)));
-  });
-
-  for (usize i = 0; i < this->ncols(); ++i) {
-    for (usize j = i; j < i + this->nrows() && j < this->ncols(); ++j) {
-      // j - i corresponds to the distance from the diagonal
-      if (this->unsafe_get(j, i) > row_wise_avg_contacts[j - i]) {
-        this->subtract(j, i, static_cast<N>(row_wise_avg_contacts[j - i]));
-      } else {
-        this->set(j, i, N(0));
-      }
-    }
-  }
-}
-
-template <class N>
-N &ContactMatrix<N>::at(const usize i, const usize j) noexcept(utils::ndebug_defined()) {
-  if constexpr (utils::ndebug_not_defined()) {
-    if ((j * this->_nrows) + i > this->_contacts.size()) {
-      throw std::runtime_error(fmt::format(FMT_STRING("ContactMatrix::at tried to access element "
-                                                      "m[{}][{}] of a matrix of shape [{}][{}]! "
-                                                      "({} >= {})"),
-                                           i, j, this->nrows(), this->ncols(),
-                                           (j * this->_nrows) + i, this->_contacts.size()));
-    }
-  }
-  return this->_contacts[(j * this->_nrows) + i];
-}
-
-template <class N>
-const N &ContactMatrix<N>::at(const usize i, const usize j) const
-    noexcept(utils::ndebug_defined()) {
-  if constexpr (utils::ndebug_not_defined()) {
-    if ((j * this->_nrows) + i > this->_contacts.size()) {
-      throw std::runtime_error(fmt::format(FMT_STRING("ContactMatrix::at tried to access element "
-                                                      "m[{}][{}] of a matrix of shape [{}][{}]! "
-                                                      "({} >= {})"),
-                                           i, j, this->nrows(), this->ncols(),
-                                           (j * this->_nrows) + i, this->_contacts.size()));
-    }
-  }
-  return this->_contacts[(j * this->_nrows) + i];
-}
-
-template <class N>
-std::pair<usize, usize> ContactMatrix<N>::transpose_coords(
-    const usize row, const usize col) noexcept(utils::ndebug_defined()) {
+constexpr std::pair<usize, usize> ContactMatrix<N>::transpose_coords(const usize row,
+                                                                     const usize col) noexcept {
   if (row > col) {
     return std::make_pair(row - col, row);
   }
@@ -735,12 +221,14 @@ std::pair<usize, usize> ContactMatrix<N>::transpose_coords(
 }
 
 template <class N>
-void ContactMatrix<N>::bound_check_column(const usize col) const {
-  if (col > this->ncols()) {
-    throw std::runtime_error(fmt::format(
-        FMT_STRING("caught an attempt to access element past the end of the contact matrix: "
-                   "j={}; ncols={}: j > ncols"),
-        col, this->ncols()));
+void ContactMatrix<N>::bound_check_coords(const usize row, const usize col) const {
+  if constexpr (utils::ndebug_not_defined()) {
+    if (BOOST_UNLIKELY(row >= this->ncols() || col >= this->ncols())) {
+      throw std::logic_error(
+          fmt::format(FMT_STRING("Detected an out-of-bound read: attempt to access "
+                                 "item at {}:{} of a matrix of shape {}x{} ({}x{})"),
+                      row, col, this->ncols(), this->ncols(), this->nrows(), this->ncols()));
+    }
   }
 }
 
@@ -788,58 +276,26 @@ void ContactMatrix<N>::check_for_overflow_on_subtract(usize row, usize col, cons
 }
 
 template <class N>
-ContactMatrix<double> ContactMatrix<N>::blur(const double sigma, const double cutoff) const
-    noexcept(utils::ndebug_defined()) {
-  ContactMatrix<double> bmatrix(this->nrows(), this->ncols());
-
-  const auto gauss_kernel = stats::compute_gauss_kernel(sigma, cutoff);
-  std::vector<N> pixels(gauss_kernel.size());
-
-  [[maybe_unused]] const auto block_size =
-      static_cast<usize>(std::sqrt(static_cast<double>(gauss_kernel.size())));
-  assert(block_size * block_size == gauss_kernel.size());  // NOLINT
-
-  for (usize i = 0; i < this->ncols(); ++i) {
-    for (usize j = i; j < std::min(i + this->nrows(), this->ncols()); ++j) {
-      this->unsafe_get(i, j, block_size, pixels);
-      bmatrix.set(i, j, utils::convolve(gauss_kernel, pixels));
-    }
-  }
-
-  return bmatrix;
+usize ContactMatrix<N>::hash_coordinates(const usize i, const usize j) noexcept {
+  const std::array<usize, 2> buff{i, j};
+  DISABLE_WARNING_PUSH
+  DISABLE_WARNING_USELESS_CAST
+  return static_cast<usize>(XXH3_64bits(buff.data(), sizeof(usize) * 2));
+  DISABLE_WARNING_POP
 }
 
 template <class N>
-ContactMatrix<double> ContactMatrix<N>::gaussian_diff(const double sigma1, const double sigma2,
-                                                      const double min_value,
-                                                      const double max_value) const
-    noexcept(utils::ndebug_defined()) {
-  assert(sigma1 <= sigma2);  // NOLINT
-  ContactMatrix<double> bmatrix(this->nrows(), this->ncols());
+constexpr usize ContactMatrix<N>::compute_number_of_mutexes(const usize rows,
+                                                            const usize cols) noexcept {
+  return std::clamp(utils::next_pow2((rows * cols) / usize(1000)), usize(256), usize(2097152));
+}
 
-  const auto gauss_kernel1 = stats::compute_gauss_kernel(sigma1);
-  const auto gauss_kernel2 = stats::compute_gauss_kernel(/*sqrt(kernel1.size(), */ sigma2);
-  std::vector<N> pixels(std::max(gauss_kernel1.size(), gauss_kernel2.size()));
-
-  [[maybe_unused]] const auto block_size1 =
-      static_cast<usize>(std::sqrt(static_cast<double>(gauss_kernel1.size())));
-  [[maybe_unused]] const auto block_size2 =
-      static_cast<usize>(std::sqrt(static_cast<double>(gauss_kernel2.size())));
-  assert(block_size1 * block_size1 <= gauss_kernel1.size());  // NOLINT
-  assert(block_size2 * block_size2 <= gauss_kernel2.size());  // NOLINT
-
-  for (usize i = 0; i < this->ncols(); ++i) {
-    for (usize j = i; j < std::min(i + this->nrows(), this->ncols()); ++j) {
-      this->unsafe_get(i, j, block_size1, pixels);
-      const auto n1 = utils::convolve(gauss_kernel1, pixels);
-      this->unsafe_get(i, j, block_size2, pixels);
-      const auto n2 = utils::convolve(gauss_kernel2, pixels);
-
-      bmatrix.set(i, j, std::clamp(n1 - n2, min_value, max_value));
-    }
-  }
-
-  return bmatrix;
+template <class N>
+usize ContactMatrix<N>::get_pixel_mutex_idx(const usize row, const usize col) const noexcept {
+  assert(!this->_mtxes.empty());         // NOLINT
+  assert(this->_mtxes.size() % 2 == 0);  // NOLINT
+  // equivalent to hash_coordinates(row, col) % this->_mtxes.size() when _mtxes.size() % 2 == 0
+  return (hash_coordinates(row, col) & (this->_mtxes.size() - 1));
 }
 
 }  // namespace modle

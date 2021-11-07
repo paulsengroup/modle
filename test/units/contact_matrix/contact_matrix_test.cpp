@@ -5,16 +5,18 @@
 #include <absl/strings/str_split.h>  // for SplitIterator, Splitter, StrSplit
 #include <fmt/format.h>              // for format
 
-#include <algorithm>                                // for max
+#include <algorithm>                                // for generate, max
 #include <boost/dynamic_bitset/dynamic_bitset.hpp>  // for dynamic_bitset, dynamic_bitset<>::ref...
 #include <boost/filesystem/operations.hpp>          // for exists
 #include <boost/filesystem/path.hpp>                // for path
 #include <boost/process.hpp>
-#include <catch2/catch.hpp>  // for operator""_catch_sr, AssertionHandler
-#include <stdexcept>         // for runtime_error
-#include <string>            // for string
-#include <utility>           // for pair, move
-#include <vector>            // for vector, allocator
+#include <catch2/catch.hpp>             // for operator""_catch_sr, AssertionHandler
+#include <stdexcept>                    // for runtime_error
+#include <string>                       // for string
+#include <thread>                       // for sleep_for
+#include <thread_pool/thread_pool.hpp>  // for thread_pool
+#include <utility>                      // for pair, move
+#include <vector>                       // for vector, allocator
 
 #include "modle/common/common.hpp"  // for u32
 #include "modle/common/utils.hpp"   // for parse_numeric_or_throw
@@ -63,7 +65,7 @@ static void write_cmatrix_to_stream(const ContactMatrix<N>& m, boost::process::o
   for (usize i = 0; i < m.ncols(); ++i) {
     buff.clear();
     for (usize j = 0; j < m.ncols(); ++j) {
-      buff.push_back(m.unsafe_get(i, j));
+      buff.push_back(m.get(i, j));
     }
     const auto sbuff = fmt::format(FMT_STRING("{}\n"), fmt::join(buff, ","));
     s.write(sbuff.data(), static_cast<std::streamsize>(sbuff.size()));
@@ -95,13 +97,13 @@ template <class N>
 // NOLINTNEXTLINE(readability-function-cognitive-complexity)
 TEST_CASE("CMatrix simple", "[cmatrix][short]") {
   ContactMatrix<> c(10, 100);  // NOLINT
-  CHECK(c.unsafe_get(0, 0) == 0);
+  CHECK(c.get(0, 0) == 0);
   c.increment(0, 0);
-  CHECK(c.unsafe_get(0, 0) == 1);
+  CHECK(c.get(0, 0) == 1);
   c.increment(0, 0);
-  CHECK(c.unsafe_get(0, 0) == 2);
+  CHECK(c.get(0, 0) == 2);
   c.subtract(0, 0, 2);
-  CHECK(c.unsafe_get(0, 0) == 0);
+  CHECK(c.get(0, 0) == 0);
 }
 
 [[nodiscard]] inline std::vector<std::vector<u32>> load_matrix_from_file(
@@ -191,35 +193,33 @@ TEST_CASE("CMatrix in/decrement", "[cmatrix][short]") {
   m.increment(15, 15);  // NOLINT
 
   CHECK(m.get_tot_contacts() == 2);  // NOLINT
-  CHECK(m.unsafe_get(0, 0) == 1);
+  CHECK(m.get(0, 0) == 1);
 
   m.decrement(0, 0);
   CHECK(m.get_tot_contacts() == 1);
-  CHECK(m.unsafe_get(0, 0) == 0);
+  CHECK(m.get(0, 0) == 0);
 
   REQUIRE(m.get_n_of_missed_updates() == 0);
   m.increment(11, 0);  // NOLINT
-  CHECK(m.unsafe_get(0, 0) == 0);
+  CHECK(m.get(0, 0) == 0);
   CHECK(m.get_n_of_missed_updates() == 1);
   CHECK(m.get_tot_contacts() == 1);
 
-#ifndef NDEBUG
-  CHECK_THROWS_WITH(
-      m.increment(25, 25),  // NOLINT
-      Catch::Contains("caught an attempt to access element past the end of the contact matrix"));
-  CHECK(m.get_n_of_missed_updates() == 1);
-  CHECK(m.get_tot_contacts() == 1);
+  if constexpr (utils::ndebug_not_defined()) {
+    CHECK_THROWS_WITH(m.increment(25, 25),  // NOLINT
+                      Catch::Contains("Detected an out-of-bound read: attempt to access item at"));
+    CHECK(m.get_n_of_missed_updates() == 1);
+    CHECK(m.get_tot_contacts() == 1);
 
-  CHECK_THROWS_WITH(
-      m.decrement(25, 25),  // NOLINT
-      Catch::Contains("caught an attempt to access element past the end of the contact matrix"));
-  CHECK(m.get_n_of_missed_updates() == 1);
-  CHECK(m.get_tot_contacts() == 1);
-#endif
+    CHECK_THROWS_WITH(m.decrement(25, 25),  // NOLINT
+                      Catch::Contains("Detected an out-of-bound read: attempt to access item at"));
+    CHECK(m.get_n_of_missed_updates() == 1);
+    CHECK(m.get_tot_contacts() == 1);
+  }
 }
 
 // NOLINTNEXTLINE(readability-function-cognitive-complexity)
-TEST_CASE("CMatrix unsafe_get w/ block", "[cmatrix][short]") {
+TEST_CASE("CMatrix get w/ block", "[cmatrix][short]") {
   ContactMatrix<u32> m1(100, 100);  // NOLINT
   // Fill the upper left corner
   for (u32 i = 0; i < 3; ++i) {
@@ -244,13 +244,13 @@ TEST_CASE("CMatrix unsafe_get w/ block", "[cmatrix][short]") {
 
   // m1.print(true);
 
-  CHECK(m1.unsafe_get(0, 0, 5) == 30);
-  CHECK(m1.unsafe_get(22, 27, 5) == 25);
-  CHECK(m1.unsafe_get(99, 99, 5) == 70);
+  CHECK(m1.unsafe_get_block(0, 0, 5) == 30);
+  CHECK(m1.unsafe_get_block(22, 27, 5) == 25);
+  CHECK(m1.unsafe_get_block(99, 99, 5) == 70);
 }
 
 // NOLINTNEXTLINE(readability-function-cognitive-complexity)
-TEST_CASE("CMatrix unsafe_get w/ block small", "[cmatrix][short]") {
+TEST_CASE("CMatrix get w/ block small", "[cmatrix][short]") {
   const auto reference_file = data_dir / "contacts_chr1_bs9_small.tsv";
   const auto input_file = data_dir / "contacts_chr1_raw_small.tsv";
 
@@ -273,7 +273,7 @@ TEST_CASE("CMatrix unsafe_get w/ block small", "[cmatrix][short]") {
 
   for (usize i = 0; i < input_matrix.nrows(); ++i) {
     for (usize j = 0; j < input_matrix.ncols(); ++j) {
-      CHECK(input_matrix.unsafe_get(i, j, block_size) == reference_matrix.unsafe_get(i, j));
+      CHECK(input_matrix.unsafe_get_block(i, j, block_size) == reference_matrix.get(i, j));
     }
   }
 }
@@ -317,8 +317,8 @@ TEST_CASE("CMatrix get column", "[cmatrix][short]") {
   }
 
   // Test getting the last column of pixels (which is truncated)
-  c.set(c.ncols(), c.ncols(), 1);
-  c.unsafe_get_column(c.ncols(), buff);
+  c.set(c.ncols() - 1, c.ncols() - 1, 1);
+  c.unsafe_get_column(c.ncols() - 1, buff);
   REQUIRE(buff.size() == 1);
   CHECK(buff.front() == 1);
 }
@@ -404,7 +404,7 @@ TEST_CASE("CMatrix blur", "[cmatrix][short]") {
 
     for (usize j = 4; j < input_matrix.nrows(); ++j) {       // NOLINT
       for (auto k = j; k < input_matrix.ncols() - 4; ++k) {  // NOLINT
-        CHECK(Approx(reference_matrix.unsafe_get(j, k)) == blurred_matrix.unsafe_get(j, k));
+        CHECK(Approx(reference_matrix.get(j, k)) == blurred_matrix.get(j, k));
       }
     }
   }
@@ -439,18 +439,65 @@ TEST_CASE("CMatrix difference of gaussians", "[cmatrix][short]") {
   const double trunc = 3.0;
   const auto reference_matrix =
       compute_reference_matrix(input_matrix.ncols(), sigma1, sigma2, trunc);
-  const auto gauss_diff_matrix = input_matrix.gaussian_diff(sigma1, sigma2);
+  const auto gauss_diff_matrix = input_matrix.unsafe_gaussian_diff(sigma1, sigma2);
 
   const auto m1 = input_matrix.blur(sigma1);
   const auto m2 = input_matrix.blur(sigma2);
 
   for (usize j = 4; j < input_matrix.nrows(); ++j) {       // NOLINT
     for (auto k = j; k < input_matrix.ncols() - 4; ++k) {  // NOLINT
-      CHECK(Approx(reference_matrix.unsafe_get(j, k)) == gauss_diff_matrix.unsafe_get(j, k));
-      CHECK(Approx(m1.unsafe_get(j, k) - m2.unsafe_get(j, k)) ==
-            gauss_diff_matrix.unsafe_get(j, k));
+      CHECK(Approx(reference_matrix.get(j, k)) == gauss_diff_matrix.get(j, k));
+      CHECK(Approx(m1.get(j, k) - m2.get(j, k)) == gauss_diff_matrix.get(j, k));
     }
   }
 }
+
+#ifdef MODLE_ENABLE_SANITIZER_THREAD
+// NOLINTNEXTLINE(readability-function-cognitive-complexity)
+TEST_CASE("CMatrix TSAN", "[cmatrix][long]") {
+  ContactMatrix<i64> m(10, 10);  // NOLINT
+  std::atomic<bool> stop_sig = false;
+
+  auto generate_contacts = [&](u64 seed) {
+    auto rand_eng = random::PRNG(seed);
+    random::uniform_int_distribution<usize> idx_gen(0, m.ncols() - 1);
+
+    usize i = 0;
+    while (!stop_sig) {
+      m.increment(idx_gen(rand_eng), idx_gen(rand_eng));
+      ++i;
+    }
+    return i;
+  };
+
+  const auto nthreads = std::max(u32(2), std::thread::hardware_concurrency());
+  thread_pool tpool(nthreads);
+  std::vector<std::future<usize>> num_contacts_generated(nthreads - 1);
+  std::generate(num_contacts_generated.begin(), num_contacts_generated.end(),
+                [&]() { return tpool.submit(generate_contacts, u64(random::random_device{}())); });
+
+  auto return_code = tpool.submit([&]() {
+    auto rand_eng = random::PRNG(u64(random::random_device{}()));
+    random::uniform_int_distribution<usize> idx_gen(0, m.ncols() - 1);
+
+    while (!stop_sig) {
+      CHECK(m.get(idx_gen(rand_eng), idx_gen(rand_eng)) >= 0);
+    }
+  });
+
+  std::this_thread::sleep_for(std::chrono::seconds(15));  // NOLINT
+  stop_sig = true;
+  tpool.wait_for_tasks();
+
+  u64 tot_contacts_expected = 0;
+  for (auto& n : num_contacts_generated) {
+    tot_contacts_expected += n.get();
+  }
+  [[maybe_unused]] const auto c = return_code.get();
+
+  CHECK(m.get_tot_contacts() == tot_contacts_expected);
+  CHECK(m.get_n_of_missed_updates() == 0);
+}
+#endif
 
 }  // namespace modle::test::cmatrix

@@ -10,12 +10,14 @@
 #include <boost/dynamic_bitset/dynamic_bitset.hpp>  // for dynamic_bitset
 #include <boost/filesystem/path.hpp>                // for path
 #include <iostream>                                 // for cout, ostream
-#include <mutex>                                    // for mutex
+#include <limits>                                   // for numeric_limits
+#include <mutex>                                    // for unique_lock
+#include <shared_mutex>                             // for shared_mutex, shared_lock
+#include <type_traits>                              // for enable_if_t
 #include <utility>                                  // for pair
 #include <vector>                                   // for vector
 
-#include "modle/common/common.hpp"  // for usize, bp_t, u64, i64, contacts_t
-#include "modle/common/utils.hpp"   // for ndebug_defined
+#include "modle/common/common.hpp"  // for usize, bp_t, u64, contacts_t, i64
 
 namespace modle {
 
@@ -23,6 +25,23 @@ template <class N = contacts_t>
 class ContactMatrix {
   static_assert(std::is_arithmetic_v<N>,
                 "ContactMatrix requires a numeric type as template argument.");
+
+ public:
+  using value_type = N;
+  using pixel_write_lock =
+      std::pair<std::shared_lock<std::shared_mutex>, std::unique_lock<std::shared_mutex>>;
+  using pixel_read_lock =
+      std::pair<std::shared_lock<std::shared_mutex>, std::shared_lock<std::shared_mutex>>;
+
+ private:
+  u64 _nrows{0};
+  u64 _ncols{0};
+  std::vector<N> _contacts{};
+  mutable std::vector<std::shared_mutex> _mtxes{};
+  mutable std::shared_mutex _global_mtx{};
+  mutable std::atomic<N> _tot_contacts{0};
+  mutable std::atomic<bool> _tot_contacts_outdated{false};
+  std::atomic<i64> _updates_missed{0};
 
  public:
   // Constructors
@@ -49,44 +68,44 @@ class ContactMatrix {
   [[nodiscard]] inline ContactMatrix<N>& operator=(ContactMatrix<N>&& other) noexcept = default;
 #endif
 
-  // Counts getters and setters
-  [[nodiscard]] inline N unsafe_get(usize row, usize col) const noexcept(utils::ndebug_defined());
-  inline void unsafe_get_column(usize col, std::vector<N>& buff, usize row_offset = 0) const
-      noexcept(utils::ndebug_defined());
-  inline void unsafe_get_row(usize row, std::vector<N>& buff, usize col_offset = 0) const
-      noexcept(utils::ndebug_defined());
+  // Thread-safe count getters and setters
+  [[nodiscard]] inline N get(usize row, usize col) const;
+  inline void set(usize row, usize col, N n);
+  inline void add(usize row, usize col, N n);
+  inline void subtract(usize row, usize col, N n);
+  inline void increment(usize row, usize col);
+  inline void decrement(usize row, usize col);
 
+  // Thread-UNsafe count getters and setters
+  [[nodiscard]] inline N unsafe_get(usize row, usize col) const;
+  inline void unsafe_set(usize row, usize col, N n);
+  inline void unsafe_add(usize row, usize col, N n);
+  inline void unsafe_subtract(usize row, usize col, N n);
+  inline void unsafe_increment(usize row, usize col);
+  inline void unsafe_decrement(usize row, usize col);
+
+  inline void unsafe_get_column(usize col, std::vector<N>& buff, usize row_offset = 0) const;
+  inline void unsafe_get_row(usize row, std::vector<N>& buff, usize col_offset = 0) const;
   // block_size is required to be an odd number at the moment
-  [[nodiscard]] inline N unsafe_get(usize row, usize col, usize block_size) const
-      noexcept(utils::ndebug_defined());
-  inline void unsafe_get(usize row, usize col, usize block_size, std::vector<N>& buff) const
-      noexcept(utils::ndebug_defined());
-
-  inline void unsafe_set(usize row, usize col, N n) noexcept(utils::ndebug_defined());
-  inline void set(usize row, usize col, N n) noexcept(utils::ndebug_defined());
-
-  // The following four methods are thread-safe but operations are not atomic, as without locking it
-  // is not possible to ensure that updates to pixels and total counters are atomic.
-  // In order to avoid overflows, special care should be taken when N is unsigned and add/subtract
-  // or increment/decrement are called from different threads
-  inline void add(usize row, usize col, N n) noexcept(utils::ndebug_defined());
-  inline void subtract(usize row, usize col, N) noexcept(utils::ndebug_defined());
-  inline void increment(usize row, usize col) noexcept(utils::ndebug_defined());
-  inline void decrement(usize row, usize col) noexcept(utils::ndebug_defined());
+  inline void unsafe_get_block(usize row, usize col, usize block_size, std::vector<N>& buff) const;
+  [[nodiscard]] inline N unsafe_get_block(usize row, usize col, usize block_size) const;
 
   // Shape/statistics getters
-  [[nodiscard]] inline constexpr usize ncols() const noexcept(utils::ndebug_defined());
-  [[nodiscard]] inline constexpr usize nrows() const noexcept(utils::ndebug_defined());
-  [[nodiscard]] inline constexpr usize npixels() const noexcept(utils::ndebug_defined());
+  [[nodiscard]] inline constexpr usize ncols() const;
+  [[nodiscard]] inline constexpr usize nrows() const;
+  [[nodiscard]] inline constexpr usize npixels() const;
   [[nodiscard]] inline usize unsafe_npixels_after_masking() const;
   [[nodiscard]] inline constexpr usize get_n_of_missed_updates() const noexcept;
   [[nodiscard]] inline constexpr double unsafe_get_fraction_of_missed_updates() const noexcept;
-  [[nodiscard]] inline constexpr usize get_tot_contacts() const noexcept(utils::ndebug_defined());
-  [[nodiscard]] inline double get_avg_contact_density() const noexcept(utils::ndebug_defined());
-  [[nodiscard]] inline constexpr usize get_matrix_size_in_bytes() const
-      noexcept(utils::ndebug_defined());
-  [[nodiscard]] inline constexpr double get_matrix_size_in_mb() const
-      noexcept(utils::ndebug_defined());
+  [[nodiscard]] inline double get_fraction_of_missed_updates() const;
+  [[nodiscard]] inline usize get_tot_contacts() const;
+  [[nodiscard]] inline usize unsafe_get_tot_contacts() const noexcept;
+  [[nodiscard]] inline double get_avg_contact_density() const;
+  [[nodiscard]] inline double unsafe_get_avg_contact_density() const;
+  [[nodiscard]] inline constexpr usize get_matrix_size_in_bytes() const;
+  [[nodiscard]] inline constexpr double get_matrix_size_in_mb() const;
+  [[nodiscard]] inline N max_count() const noexcept;
+  [[nodiscard]] inline N unsafe_max_count() const noexcept;
 
   // Debug
   inline void unsafe_print(std::ostream& out_stream = std::cout, bool full = false) const;
@@ -101,6 +120,7 @@ class ContactMatrix {
 
   // Misc
   inline void clear_missed_updates_counter();
+  inline void reset();
   inline void unsafe_reset();
   // Note: upon resizing the content of a ContactMatrix is invalidated
   inline void unsafe_resize(usize nrows, usize ncols);
@@ -112,36 +132,35 @@ class ContactMatrix {
   [[nodiscard]] inline std::vector<u64> unsafe_compute_row_wise_contact_histogram() const;
   inline void unsafe_deplete_contacts(double depletion_multiplier = 1.0);
 
-  [[nodiscard]] inline ContactMatrix<double> blur(double sigma, double cutoff = 0.005) const
-      noexcept(utils::ndebug_defined());
-  [[nodiscard]] inline ContactMatrix<double> gaussian_diff(
+  [[nodiscard]] inline ContactMatrix<double> blur(double sigma, double cutoff = 0.005) const;
+  [[nodiscard]] inline ContactMatrix<double> unsafe_gaussian_diff(
       double sigma1, double sigma2, double min_value = -(std::numeric_limits<double>::max)(),
-      double max_value = (std::numeric_limits<double>::max)()) const
-      noexcept(utils::ndebug_defined());
-
-  using value_type = N;
+      double max_value = (std::numeric_limits<double>::max)()) const;
+  template <class FP = double, class = std::enable_if_t<std::is_floating_point_v<FP>>>
+  [[nodiscard]] inline ContactMatrix<FP> normalize() const;
 
  private:
-  u64 _nrows{0};
-  u64 _ncols{0};
-  std::vector<N> _contacts{};
-  std::vector<std::mutex> _mtxes{};  // Each mutex protects one row of bins
-  std::atomic<N> _tot_contacts{0};
-  std::atomic<i64> _updates_missed{0};
+  [[nodiscard]] inline N& unsafe_at(usize i, usize j);
+  [[nodiscard]] inline const N& unsafe_at(usize i, usize j) const;
 
-  [[nodiscard]] inline N& at(usize i, usize j) noexcept(utils::ndebug_defined());
-  [[nodiscard]] inline const N& at(usize i, usize j) const noexcept(utils::ndebug_defined());
-
-  [[nodiscard]] inline static std::pair<usize, usize> transpose_coords(
-      usize row, usize col) noexcept(utils::ndebug_defined());
-  inline void bound_check_column(usize col) const;
+  [[nodiscard]] constexpr static std::pair<usize, usize> transpose_coords(usize row,
+                                                                          usize col) noexcept;
+  inline void bound_check_coords(usize row, usize col) const;
   inline void check_for_overflow_on_add(usize row, usize col, N n) const;
   inline void check_for_overflow_on_subtract(usize row, usize col, N n) const;
 
-  inline void internal_set(usize row, usize col, N n,
-                           std::mutex* mtx) noexcept(utils::ndebug_defined());
+  [[nodiscard]] inline std::unique_lock<std::shared_mutex> lock() const;
+  [[nodiscard]] inline pixel_read_lock lock_pixel_read(usize row, usize col) const;
+  [[nodiscard]] inline pixel_write_lock lock_pixel_write(usize row, usize col) const;
+  [[nodiscard]] static inline usize hash_coordinates(usize i, usize j) noexcept;
+  [[nodiscard]] static constexpr usize compute_number_of_mutexes(usize rows, usize cols) noexcept;
+  [[nodiscard]] inline usize get_pixel_mutex_idx(usize row, usize col) const noexcept;
 };
 }  // namespace modle
 
-#include "../../contacts_impl.hpp"  // IWYU pragma: export
-// IWYU pragma: no_include "../../contacts_impl.hpp"
+#include "../../contacts_impl.hpp"         // IWYU pragma: export
+#include "../../contacts_safe_impl.hpp"    // IWYU pragma: export
+#include "../../contacts_unsafe_impl.hpp"  // IWYU pragma: export
+// IWYU pragma: "../../contacts_impl.hpp"
+// IWYU pragma: "../../contacts_safe_impl.hpp"
+// IWYU pragma: "../../contacts_unsafe_impl.hpp"
