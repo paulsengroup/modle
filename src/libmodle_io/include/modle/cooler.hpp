@@ -17,6 +17,7 @@
 
 #include <H5Cpp.h>                                // IWYU pragma: keep
 #include <absl/types/span.h>                      // for Span
+#include <absl/types/variant.h>                   // for variant, monostate
 #include <readerwriterqueue/readerwriterqueue.h>  // for BlockingReaderWriterQueue
 
 #include <boost/filesystem/path.hpp>  // for path
@@ -57,17 +58,19 @@ class Cooler {
   };
 
  private:
+  template <class N>
   struct InternalBuffers {
-    explicit InternalBuffers(usize buff_size = 1024 * 1024 / sizeof(i64));  // 1 MB
+    static_assert(std::is_arithmetic_v<N>);
+    inline explicit InternalBuffers(usize buff_size = 1024 * 1024 / sizeof(i64));  // 1 MB
     std::vector<i64> bin_pos_buff;
     std::vector<i32> bin_chrom_buff;
     std::vector<i64> pixel_b1_idx_buff;
     std::vector<i64> pixel_b2_idx_buff;
-    std::vector<i64> pixel_count_buff;
+    std::vector<N> pixel_count_buff;
     std::vector<i64> idx_bin1_offset_buff;
     std::vector<i64> idx_chrom_offset_buff;
 
-    [[nodiscard]] usize capacity() const;
+    [[nodiscard]] inline usize capacity() const;
   };
 
  public:
@@ -100,7 +103,7 @@ class Cooler {
   void get_chrom_names(std::vector<std::string> &buff);
   [[nodiscard]] std::vector<std::string> get_chrom_names();
 
-  template <typename I>
+  template <class I>
   inline void get_chrom_sizes(std::vector<I> &buff);
   [[nodiscard]] std::vector<i64> get_chrom_sizes();
 
@@ -120,19 +123,21 @@ class Cooler {
   void write_metadata();
   void write_metadata_attribute(std::string_view metadata_str);
 
-  template <typename I>
+  template <class I>
   inline void write_or_append_empty_cmatrix_to_file(std::string_view chrom_name, I chrom_start,
                                                     I chrom_end, I chrom_length);
 
-  template <typename I1, typename I2>
-  inline void write_or_append_cmatrix_to_file(const ContactMatrix<I1> &cmatrix,
-                                              std::string_view chrom_name, I2 chrom_start,
-                                              I2 chrom_end, I2 chrom_length);
+  template <class N, class I,
+            class = std::enable_if_t<std::is_arithmetic_v<N> && std::is_integral_v<I>>>
+  inline void write_or_append_cmatrix_to_file(const ContactMatrix<N> &cmatrix,
+                                              std::string_view chrom_name, I chrom_start,
+                                              I chrom_end, I chrom_length);
 
-  template <typename I1, typename I2>
-  inline void write_or_append_cmatrix_to_file(const ContactMatrix<I1> *cmatrix,
-                                              std::string_view chrom_name, I2 chrom_start,
-                                              I2 chrom_end, I2 chrom_length);
+  template <class N, class I,
+            class = std::enable_if_t<std::is_arithmetic_v<N> && std::is_integral_v<I>>>
+  inline void write_or_append_cmatrix_to_file(const ContactMatrix<N> *cmatrix,
+                                              std::string_view chrom_name, I chrom_start,
+                                              I chrom_end, I chrom_length);
   // Read from file
   template <class N = contacts_t>
   [[nodiscard]] ContactMatrix<N> cooler_to_cmatrix(
@@ -189,7 +194,7 @@ class Cooler {
   std::unique_ptr<H5::DSetAccPropList> _aprop_int64{nullptr};
   std::unique_ptr<H5::DSetAccPropList> _aprop_float64{nullptr};
 
-  std::unique_ptr<InternalBuffers> _buff{nullptr};
+  absl::variant<absl::monostate, InternalBuffers<double>, InternalBuffers<i64>> _buff{};
 
   std::vector<i64> _idx_chrom_offset{};
   std::vector<i64> _idx_bin1_offset{};
@@ -214,10 +219,10 @@ class Cooler {
   };
 
   [[nodiscard]] static H5::StrType generate_default_str_type(usize max_str_length);
-  template <typename T1, typename T2>
+  template <class T1, class T2>
   [[nodiscard]] inline static std::unique_ptr<H5::DSetCreatPropList> generate_default_cprop(
       hsize_t chunk_size, u8 compression_lvl, T1 type, T2 fill_value);
-  template <typename T>
+  template <class T>
   [[nodiscard]] inline static std::unique_ptr<H5::DSetAccPropList> generate_default_aprop(
       T type, hsize_t chunk_size, hsize_t cache_size);
 
@@ -232,7 +237,7 @@ class Cooler {
   void init_default_datasets();
   void open_default_datasets();
 
-  template <typename I1, typename I2, typename I3>
+  template <class I1, class I2, class I3>
   [[nodiscard]] inline hsize_t write_bins(I1 chrom, I2 length, I3 bin_size,
                                           std::vector<i32> &buff32, std::vector<i64> &buff64,
                                           hsize_t file_offset,

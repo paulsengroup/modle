@@ -1074,16 +1074,4 @@ bool Cooler::validate_multires_cool_flavor(H5::H5File &f, usize bin_size,
       throw_on_failure, false);
 }
 
-Cooler::InternalBuffers::InternalBuffers(usize buff_size) {
-  bin_pos_buff.reserve(buff_size);
-  bin_chrom_buff.reserve(buff_size);
-  pixel_b1_idx_buff.reserve(buff_size);
-  pixel_b2_idx_buff.reserve(buff_size);
-  pixel_count_buff.reserve(buff_size);
-  idx_bin1_offset_buff.reserve(buff_size);
-  idx_chrom_offset_buff.reserve(buff_size);
-}
-
-usize Cooler::InternalBuffers::capacity() const { return this->bin_pos_buff.capacity(); }
-
 }  // namespace modle::cooler

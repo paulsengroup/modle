@@ -79,7 +79,7 @@ TEST_CASE("CMatrix to cooler", "[io][cooler][short]") {
 
   for (usize i = 0; i < ncols; ++i) {
     for (usize j = 0; j < ncols; ++j) {
-      CHECK(cmatrix1.unsafe_get(i, j) == cmatrix2.unsafe_get(i, j));
+      CHECK(cmatrix1.get(i, j) == cmatrix2.get(i, j));
     }
   }
 
@@ -116,8 +116,8 @@ TEST_CASE("CMatrix to cooler - multiple chromosomes", "[io][cooler][short]") {
 
   for (usize i = 0; i < ncols; ++i) {
     for (usize j = 0; j < ncols; ++j) {
-      CHECK(cmatrix1.unsafe_get(i, j) == cmatrix2.unsafe_get(i, j));
-      CHECK(cmatrix1.unsafe_get(i, j) == cmatrix3.unsafe_get(i, j));
+      CHECK(cmatrix1.get(i, j) == cmatrix2.get(i, j));
+      CHECK(cmatrix1.get(i, j) == cmatrix3.get(i, j));
     }
   }
 
@@ -155,7 +155,7 @@ TEST_CASE("Cooler to CMatrix", "[io][cooler][short]") {
     std::transform(toks.begin(), toks.end(), reference_row.begin(),
                    [](const auto tok) { return utils::parse_numeric_or_throw<u32>(tok); });
     for (usize j = 0; j < cmatrix.ncols(); ++j) {
-      CHECK(cmatrix.unsafe_get(i, j) == reference_row[j]);
+      CHECK(cmatrix.get(i, j) == reference_row[j]);
     }
   }
 
@@ -243,7 +243,7 @@ TEST_CASE("Cooler to CMatrix and CMatrix to Cooler - all chromosomes", "[io][coo
     REQUIRE(matrix.nrows() == reference.nrows());
     for (usize j = 0; j < reference.ncols(); ++j) {
       for (usize k = 0; k < reference.ncols(); ++k) {
-        CHECK(matrix.unsafe_get(j, k) == reference.unsafe_get(j, k));
+        CHECK(matrix.get(j, k) == reference.get(j, k));
       }
     }
   }
@@ -346,7 +346,7 @@ TEST_CASE("Cooler to CMatrix subrange", "[io][cooler][short]") {
 
       const auto b21 = (p1 - start2) / bin_size;
       const auto b22 = (p2 - start2) / bin_size;
-      CHECK(cmatrix1.unsafe_get(b11, b12) == cmatrix2.unsafe_get(b21, b22));
+      CHECK(cmatrix1.get(b11, b12) == cmatrix2.get(b21, b22));
     }
   }
 }

@@ -29,6 +29,7 @@
 #include <absl/strings/match.h>    // for StrContains
 #include <absl/strings/str_cat.h>  // for StrCat
 #include <absl/types/span.h>       // for Span, MakeConstSpan
+#include <absl/types/variant.h>    // for variant, monostate, get, holds_alternative
 #include <fmt/format.h>            // for format, FMT_STRING
 #include <spdlog/spdlog.h>         // for warn
 
@@ -50,7 +51,7 @@
 
 namespace modle::cooler {
 
-template <typename I>
+template <class I>
 void Cooler::get_chrom_sizes(std::vector<I> &buff) {
   static_assert(std::is_integral_v<I>, "buff should be a vector of integers.");
   assert(this->_fp);
@@ -75,7 +76,7 @@ void Cooler::get_chrom_sizes(std::vector<I> &buff) {
   }
 }
 
-template <typename I>
+template <class I>
 void Cooler::write_or_append_empty_cmatrix_to_file(std::string_view chrom_name, I chrom_start,
                                                    I chrom_end, I chrom_length) {
   ContactMatrix<i64> *null_matrix{nullptr};
@@ -83,20 +84,18 @@ void Cooler::write_or_append_empty_cmatrix_to_file(std::string_view chrom_name, 
                                           chrom_length);
 }
 
-template <typename I1, typename I2>
-void Cooler::write_or_append_cmatrix_to_file(const ContactMatrix<I1> &cmatrix,
-                                             std::string_view chrom_name, I2 chrom_start,
-                                             I2 chrom_end, I2 chrom_length) {
+template <class N, class I, class>
+void Cooler::write_or_append_cmatrix_to_file(const ContactMatrix<N> &cmatrix,
+                                             std::string_view chrom_name, I chrom_start,
+                                             I chrom_end, I chrom_length) {
   Cooler::write_or_append_cmatrix_to_file(&cmatrix, chrom_name, chrom_start, chrom_end,
                                           chrom_length);
 }
 
-template <typename I1, typename I2>
-void Cooler::write_or_append_cmatrix_to_file(const ContactMatrix<I1> *cmatrix,
-                                             std::string_view chrom_name, I2 chrom_start_,
-                                             I2 chrom_end_, I2 chrom_length_) {
-  static_assert(std::is_integral_v<I1>, "I1 should be an integral type.");
-  static_assert(std::is_integral_v<I2>, "I2 should be an integral type.");
+template <class N, class I, class>
+void Cooler::write_or_append_cmatrix_to_file(const ContactMatrix<N> *cmatrix,
+                                             std::string_view chrom_name, I chrom_start_,
+                                             I chrom_end_, I chrom_length_) {
   assert(chrom_start_ >= 0);   // NOLINT
   assert(chrom_end_ >= 0);     // NOLINT
   assert(chrom_length_ >= 0);  // NOLINT
@@ -107,11 +106,11 @@ void Cooler::write_or_append_cmatrix_to_file(const ContactMatrix<I1> *cmatrix,
 
   ++this->_nchroms;
 
-  // Declare one buffer for each dataset
-  if (!this->_buff) {
-    this->_buff = std::make_unique<InternalBuffers>();
+  using N1 = std::conditional_t<std::is_floating_point_v<N>, i64, double>;
+  if (absl::holds_alternative<absl::monostate>(this->_buff)) {
+    this->_buff = InternalBuffers<N1>{};
   }
-  auto &b = this->_buff;
+  auto &b = absl::get<InternalBuffers<N1>>(this->_buff);
 
   // Declare aliases to file offsets for HDF5 datasets
   auto &chrom_name_h5_foffset = this->_dataset_file_offsets[chrom_NAME];
@@ -144,15 +143,15 @@ void Cooler::write_or_append_cmatrix_to_file(const ContactMatrix<I1> *cmatrix,
     auto write_pixels_to_file =
         [&]() {  // Lambda used to write pixel data to file. Mostly useful to reduce code bloat
           pixel_b1_id_h5_foffset =
-              hdf5::write_numbers(b->pixel_b1_idx_buff, d[PXL_B1], pixel_b1_id_h5_foffset);
+              hdf5::write_numbers(b.pixel_b1_idx_buff, d[PXL_B1], pixel_b1_id_h5_foffset);
           pixel_b2_id_h5_foffset =
-              hdf5::write_numbers(b->pixel_b2_idx_buff, d[PXL_B2], pixel_b2_id_h5_foffset);
+              hdf5::write_numbers(b.pixel_b2_idx_buff, d[PXL_B2], pixel_b2_id_h5_foffset);
           pixel_count_h5_foffset =
-              hdf5::write_numbers(b->pixel_count_buff, d[PXL_COUNT], pixel_count_h5_foffset);
+              hdf5::write_numbers(b.pixel_count_buff, d[PXL_COUNT], pixel_count_h5_foffset);
 
-          b->pixel_b1_idx_buff.clear();
-          b->pixel_b2_idx_buff.clear();
-          b->pixel_count_buff.clear();
+          b.pixel_b1_idx_buff.clear();
+          b.pixel_b2_idx_buff.clear();
+          b.pixel_count_buff.clear();
         };
 
     for (usize chrom_idx = 0; chrom_offset + chrom_idx < static_cast<usize>(this->_nchroms);
@@ -170,12 +169,12 @@ void Cooler::write_or_append_cmatrix_to_file(const ContactMatrix<I1> *cmatrix,
       chrom_length_h5_foffset =
           hdf5::write_number(chrom_length, d[chrom_LEN], chrom_length_h5_foffset);
       // Add idx of the first bin belonging to the chromosome that is being processed
-      b->idx_chrom_offset_buff.emplace_back(this->_nbins);
+      b.idx_chrom_offset_buff.emplace_back(this->_nbins);
 
       // Write all fixed-size bins for the current chromosome. Maybe in the future we can switch to
       // use variable-size bins
       this->_nbins = this->write_bins(chrom_offset + chrom_idx, chrom_length, this->_bin_size,
-                                      b->bin_chrom_buff, b->bin_pos_buff, this->_nbins);
+                                      b.bin_chrom_buff, b.bin_pos_buff, this->_nbins);
       // Update file offsets of bin_* datasets
       bin_chrom_name_h5_foffset = this->_nbins;
       bin_start_h5_foffset = this->_nbins;
@@ -189,30 +188,30 @@ void Cooler::write_or_append_cmatrix_to_file(const ContactMatrix<I1> *cmatrix,
       // corresponding to the genomic region 0-2 Mbp. A more elegant solution would be to use
       // variable bin-size and write a single 2 Mbp bin.
       {
-        const auto new_size = b->idx_bin1_offset_buff.size() +
-                              ((chrom_start + this->_bin_size - 1) / this->_bin_size);
-        b->idx_bin1_offset_buff.resize(new_size, this->_nnz);
+        const auto new_size =
+            b.idx_bin1_offset_buff.size() + ((chrom_start + this->_bin_size - 1) / this->_bin_size);
+        b.idx_bin1_offset_buff.resize(new_size, this->_nnz);
       }
       idx_bin1_offset_h5_foffset =
-          hdf5::write_numbers(b->idx_bin1_offset_buff, d[IDX_BIN1], idx_bin1_offset_h5_foffset);
-      b->idx_bin1_offset_buff.clear();
+          hdf5::write_numbers(b.idx_bin1_offset_buff, d[IDX_BIN1], idx_bin1_offset_h5_foffset);
+      b.idx_bin1_offset_buff.clear();
 
       if (!cmatrix || cmatrix->ncols() == 0) {
         DISABLE_WARNING_PUSH
         DISABLE_WARNING_SIGN_CONVERSION
-        b->idx_bin1_offset_buff.resize((chrom_length + this->_bin_size - 1) / this->_bin_size,
-                                       this->_nnz);
+        b.idx_bin1_offset_buff.resize((chrom_length + this->_bin_size - 1) / this->_bin_size,
+                                      this->_nnz);
         DISABLE_WARNING_POP
         idx_bin1_offset_h5_foffset =
-            hdf5::write_numbers(b->idx_bin1_offset_buff, d[IDX_BIN1], idx_bin1_offset_h5_foffset);
-        b->idx_bin1_offset_buff.clear();
+            hdf5::write_numbers(b.idx_bin1_offset_buff, d[IDX_BIN1], idx_bin1_offset_h5_foffset);
+        b.idx_bin1_offset_buff.clear();
       }
 
       pxl_offset += (chrom_start + this->_bin_size - 1) / this->_bin_size;
       if (cmatrix) {  // when cmatrix == nullptr we only write chrom/bins/indexes (no pixels)
         for (usize i = 0; i < cmatrix->ncols(); ++i) {  // Iterate over columns in the cmatrix
           // Write the first pixel that refers to a given bin1 to the index
-          b->idx_bin1_offset_buff.push_back(this->_nnz);
+          b.idx_bin1_offset_buff.push_back(this->_nnz);
 
           // Iterate over rows of the cmatrix. The first condition serves the purpose to avoid
           // reading data from regions that are full of zeros by design (because cmatrix only stores
@@ -227,26 +226,28 @@ void Cooler::write_or_append_cmatrix_to_file(const ContactMatrix<I1> *cmatrix,
                   throw std::runtime_error(fmt::format(
                       FMT_STRING("Cooler::write_or_append_cmatrix_to_file(): b1 > b2: b1={}; "
                                  "b2={}; offset={}; m={}\n"),
-                      b->pixel_b1_idx_buff.back(), b->pixel_b2_idx_buff.back(), pxl_offset, m));
+                      b.pixel_b1_idx_buff.back(), b.pixel_b2_idx_buff.back(), pxl_offset, m));
                 }
               }
-              b->pixel_b1_idx_buff.push_back(static_cast<i64>(pxl_offset + i));
-              b->pixel_b2_idx_buff.push_back(static_cast<i64>(pxl_offset + j));
-              b->pixel_count_buff.push_back(m);
+              b.pixel_b1_idx_buff.push_back(static_cast<i64>(pxl_offset + i));
+              b.pixel_b2_idx_buff.push_back(static_cast<i64>(pxl_offset + j));
+              DISABLE_WARNING_PUSH
+              DISABLE_WARNING_USELESS_CAST
+              b.pixel_count_buff.push_back(static_cast<N1>(m));
+              DISABLE_WARNING_POP
               ++this->_nnz;
 
-              if (b->pixel_b1_idx_buff.size() ==
-                  b->capacity()) {  // Write pixels to disk when buffer is full
+              if (b.pixel_b1_idx_buff.size() ==
+                  b.capacity()) {  // Write pixels to disk when buffer is full
                 write_pixels_to_file();
               }
             }
           }
 
-          if (b->idx_bin1_offset_buff.size() ==
-              b->capacity()) {  // Write bin idx when buffer is full
-            idx_bin1_offset_h5_foffset = hdf5::write_numbers(b->idx_bin1_offset_buff, d[IDX_BIN1],
+          if (b.idx_bin1_offset_buff.size() == b.capacity()) {  // Write bin idx when buffer is full
+            idx_bin1_offset_h5_foffset = hdf5::write_numbers(b.idx_bin1_offset_buff, d[IDX_BIN1],
                                                              idx_bin1_offset_h5_foffset);
-            b->idx_bin1_offset_buff.clear();
+            b.idx_bin1_offset_buff.clear();
           }
         }
       }
@@ -256,29 +257,29 @@ void Cooler::write_or_append_cmatrix_to_file(const ContactMatrix<I1> *cmatrix,
       // previous comment for an example
       {
         const auto new_size =
-            b->idx_bin1_offset_buff.size() +
+            b.idx_bin1_offset_buff.size() +
             ((static_cast<usize>(chrom_length) - chrom_end + this->_bin_size - 1) /
              this->_bin_size);
-        b->idx_bin1_offset_buff.resize(new_size, this->_nnz);
+        b.idx_bin1_offset_buff.resize(new_size, this->_nnz);
       }
       idx_bin1_offset_h5_foffset =
-          hdf5::write_numbers(b->idx_bin1_offset_buff, d[IDX_BIN1], idx_bin1_offset_h5_foffset);
-      b->idx_bin1_offset_buff.clear();
+          hdf5::write_numbers(b.idx_bin1_offset_buff, d[IDX_BIN1], idx_bin1_offset_h5_foffset);
+      b.idx_bin1_offset_buff.clear();
 
       pxl_offset = this->_nbins;
     }
 
     // Write all non-empty buffers to disk
-    if (!b->pixel_b1_idx_buff.empty()) {
+    if (!b.pixel_b1_idx_buff.empty()) {
       write_pixels_to_file();
     }
 
     // Writing the chrom_index only at the end should be ok, given that most of the time we are
     // processing 20-100 chrom
-    idx_chrom_offset_h5_foffset = hdf5::write_number(b->idx_chrom_offset_buff.back(), d[IDX_CHR],
-                                                     idx_chrom_offset_h5_foffset);
+    idx_chrom_offset_h5_foffset =
+        hdf5::write_number(b.idx_chrom_offset_buff.back(), d[IDX_CHR], idx_chrom_offset_h5_foffset);
     idx_bin1_offset_h5_foffset =
-        hdf5::write_numbers(b->idx_bin1_offset_buff, d[IDX_BIN1], idx_bin1_offset_h5_foffset);
+        hdf5::write_numbers(b.idx_bin1_offset_buff, d[IDX_BIN1], idx_bin1_offset_h5_foffset);
 
     auto &f = *this->_fp;
     hdf5::write_or_create_attribute(f, "nchroms", this->_nchroms);
@@ -291,7 +292,7 @@ void Cooler::write_or_append_cmatrix_to_file(const ContactMatrix<I1> *cmatrix,
   }
 }
 
-template <typename T1, typename T2>
+template <class T1, class T2>
 std::unique_ptr<H5::DSetCreatPropList> Cooler::generate_default_cprop(hsize_t chunk_size,
                                                                       u8 compression_lvl, T1 type,
                                                                       T2 fill_value) {
@@ -316,7 +317,7 @@ std::unique_ptr<H5::DSetCreatPropList> Cooler::generate_default_cprop(hsize_t ch
   return std::make_unique<H5::DSetCreatPropList>(prop);
 }
 
-template <typename T>
+template <class T>
 std::unique_ptr<H5::DSetAccPropList> Cooler::generate_default_aprop([[maybe_unused]] T type,
                                                                     hsize_t chunk_size,
                                                                     hsize_t cache_size) {
@@ -354,7 +355,7 @@ std::unique_ptr<H5::DSetAccPropList> Cooler::generate_default_aprop([[maybe_unus
   return std::make_unique<H5::DSetAccPropList>(prop);
 }
 
-template <typename I1, typename I2, typename I3>
+template <class I1, class I2, class I3>
 hsize_t Cooler::write_bins(I1 chrom_, I2 length_, I3 bin_size_, std::vector<i32> &buff32,
                            std::vector<i64> &buff64, hsize_t file_offset, hsize_t buff_size) {
   assert(bin_size_ != 0);  // NOLINT
@@ -532,6 +533,7 @@ ContactMatrix<N> Cooler::cooler_to_cmatrix(std::pair<hsize_t, hsize_t> bin_range
       DISABLE_WARNING_SIGN_CONVERSION
       DISABLE_WARNING_SIGN_COMPARE
       DISABLE_WARNING_CONVERSION
+      DISABLE_WARNING_USELESS_CAST
       const auto bin1 = bin1_BUFF[j] - first_bin;
       const auto bin2 = bin2_BUFF[j] - first_bin;
       if (bin2 >= i + nrows - 1 || bin2 >= bin1_offset_idx.size() - 1) {
@@ -551,13 +553,33 @@ ContactMatrix<N> Cooler::cooler_to_cmatrix(std::pair<hsize_t, hsize_t> bin_range
         // https://github.com/open2c/cooler/issues/35
         const auto count =
             static_cast<double>(count_BUFF[j]) / (bin1_bias * bin2_bias) / bias_scaling_factor;
-        cmatrix.set(bin2, bin1, static_cast<N>(std::round(count)));
+        if constexpr (std::is_integral_v<N>) {
+          cmatrix.set(bin2, bin1, static_cast<N>(std::round(count)));
+        } else {
+          cmatrix.set(bin2, bin1, static_cast<N>(count));
+        }
         DISABLE_WARNING_POP
       }
     }
   }
 
   return cmatrix;
+}
+
+template <class N>
+Cooler::InternalBuffers<N>::InternalBuffers(usize buff_size) {
+  bin_pos_buff.reserve(buff_size);
+  bin_chrom_buff.reserve(buff_size);
+  pixel_b1_idx_buff.reserve(buff_size);
+  pixel_b2_idx_buff.reserve(buff_size);
+  pixel_count_buff.reserve(buff_size);
+  idx_bin1_offset_buff.reserve(buff_size);
+  idx_chrom_offset_buff.reserve(buff_size);
+}
+
+template <class N>
+usize Cooler::InternalBuffers<N>::capacity() const {
+  return this->bin_pos_buff.capacity();
 }
 
 }  // namespace modle::cooler
