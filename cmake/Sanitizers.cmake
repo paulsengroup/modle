@@ -95,4 +95,12 @@ function(enable_sanitizers project_name)
     endif()
   endif()
 
+  target_compile_definitions(
+    ${project_name}
+    INTERFACE $<$<BOOL:${ENABLE_SANITIZER_ADDRESS}>:MODLE_ENABLE_SANITIZER_ADDRESS>
+              $<$<BOOL:${ENABLE_SANITIZER_LEAK}>:MODLE_ENABLE_SANITIZER_LEAK>
+              $<$<BOOL:${ENABLE_SANITIZER_UNDEFINED_BEHAVIOR}>:MODLE_ENABLE_SANITIZER_UNDEFINED_BEHAVIOR>
+              $<$<BOOL:${ENABLE_SANITIZER_THREAD}>:MODLE_ENABLE_SANITIZER_THREAD>
+              $<$<BOOL:${ENABLE_SANITIZER_MEMORY}>:MODLE_ENABLE_SANITIZER_MEMORY>)
+
 endfunction()
