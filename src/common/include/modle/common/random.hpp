@@ -29,6 +29,7 @@
 #include <boost/random/generate_canonical.hpp>         // for generate_canonical
 #include <boost/random/normal_distribution.hpp>        // for normal_distribution
 #include <boost/random/poisson_distribution.hpp>       // for poisson_distribution
+#include <boost/random/random_device.hpp>              // for random_device
 #include <boost/random/uniform_int_distribution.hpp>   // for uniform_int_distribution
 #include <boost/random/uniform_real_distribution.hpp>  // for uniform_real_distribution
 #else
@@ -78,6 +79,8 @@ using uniform_int_distribution = boost::random::uniform_int_distribution<N>;
 template <class N>
 using uniform_real_distribution = boost::random::uniform_real_distribution<N>;
 
+using random_device = boost::random_device;
+
 #else
 using bernoulli_trial = std::bernoulli_distribution;
 template <class N>
@@ -94,6 +97,8 @@ template <class N>
 using uniform_int_distribution = std::uniform_int_distribution<N>;
 template <class N>
 using uniform_real_distribution = std::uniform_real_distribution<N>;
+
+using random_device = std::random_device;
 
 #endif
 
