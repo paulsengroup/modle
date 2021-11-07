@@ -286,7 +286,7 @@ std::shared_ptr<Chromosome::contact_matrix_t> Chromosome::contacts_ptr() {
 
 u64 Chromosome::hash(XXH3_state_t* const xxh_state, u64 seed, usize cell_id) const {
   auto handle_errors = [&](const auto& status) {
-    if (status == XXH_ERROR || !xxh_state) {
+    if (BOOST_UNLIKELY(status == XXH_ERROR || !xxh_state)) {
       throw std::runtime_error(
           fmt::format(FMT_STRING("Failed to hash '{}' for cell #{} using seed {}"), this->name(),
                       cell_id, seed));

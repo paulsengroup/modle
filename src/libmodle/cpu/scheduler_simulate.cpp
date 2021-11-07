@@ -119,7 +119,7 @@ void Simulation::run_simulate() {
         std::scoped_lock l(progress_queue_mutex);
 
         // Signal that we have started processing the current chrom
-        progress_queue.emplace_back(&chrom, 0UL);
+        progress_queue.emplace_back(&chrom, usize(0));
       }
 
       // Compute # of LEFs to be simulated based on chrom. sizes
@@ -163,7 +163,7 @@ void Simulation::run_simulate() {
 
     {  // Signal end of simulation to the thread that is writing contacts to disk
       std::scoped_lock l(progress_queue_mutex);
-      progress_queue.emplace_back(nullptr, 0UL);
+      progress_queue.emplace_back(nullptr, usize(0));
     }
     this->_tpool.wait_for_tasks();
     assert(this->_end_of_simulation);  // NOLINT
@@ -226,7 +226,7 @@ void Simulation::simulate_worker(const u64 tid,
                        (this->lef_fraction_contact_sampling *
                         static_cast<double>(this->num_cells * task.num_lefs)))));
 
-          spdlog::info(FMT_STRING("Simulating ~{} epochs for '{}' across {} cells..."),
+          spdlog::info(FMT_STRING("Simulating ~{} epochs for \"{}\" across {} cells..."),
                        target_epochs, task.chrom->name(), num_cells);
         }
 
@@ -234,7 +234,7 @@ void Simulation::simulate_worker(const u64 tid,
         Simulation::simulate_one_cell(local_state);
 
         // Update progress for the current chrom
-        std::scoped_lock l1(progress_queue_mutex);
+        std::scoped_lock l(progress_queue_mutex);
         auto progress = std::find_if(progress_queue.begin(), progress_queue.end(),
                                      [&](const auto& p) { return task.chrom == p.first; });
         assert(progress != progress_queue.end());  // NOLINT

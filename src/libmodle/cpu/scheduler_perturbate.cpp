@@ -524,9 +524,9 @@ void Simulation::simulate_window(Simulation::State& state, compressed_io::Writer
         const auto feat2_rel_bin = feat2_rel_center_pos / this->bin_size;
 
         const auto contacts =
-            state.contacts->unsafe_get(feat1_rel_bin, feat2_rel_bin, this->block_size);
-        const auto reference_contacts =
-            state.reference_contacts->unsafe_get(feat1_rel_bin, feat2_rel_bin, this->block_size);
+            state.contacts->unsafe_get_block(feat1_rel_bin, feat2_rel_bin, this->block_size);
+        const auto reference_contacts = state.reference_contacts->unsafe_get_block(
+            feat1_rel_bin, feat2_rel_bin, this->block_size);
         if (contacts == 0 && reference_contacts == 0) {  // Don't output entries with 0 contacts
           continue;
         }
