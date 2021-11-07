@@ -262,17 +262,17 @@ static size_t mask_zero_pixels(const std::vector<N> &v1, const std::vector<N> &v
   return masked_pixels;
 }
 
-template <CorrMethod correlation_method, StripeDirection stripe_direction,
+template <CorrMethod correlation_method, StripeDirection stripe_direction, class N,
           class WeightIt = utils::RepeatIterator<double>>
 static std::vector<double> compute_correlation(
-    std::shared_ptr<ContactMatrix<>> ref_contacts, std::shared_ptr<ContactMatrix<>> tgt_contacts,
+    std::shared_ptr<ContactMatrix<N>> ref_contacts, std::shared_ptr<ContactMatrix<N>> tgt_contacts,
     const bool mask_zero_pixels_, WeightIt weight_first = utils::RepeatIterator<double>(1)) {
   assert(ref_contacts->nrows() == tgt_contacts->nrows());  // NOLINT
   const auto nrows = ref_contacts->nrows();
   const auto ncols = ref_contacts->ncols();
 
-  std::vector<u32> ref_pixel_buff(nrows);
-  std::vector<u32> tgt_pixel_buff(nrows);
+  std::vector<double> ref_pixel_buff(nrows);
+  std::vector<double> tgt_pixel_buff(nrows);
   std::vector<double> weight_buff;
   if (!std::is_same_v<WeightIt, utils::RepeatIterator<double>> || mask_zero_pixels_) {
     weight_buff.resize(nrows);
@@ -317,9 +317,9 @@ static std::vector<double> compute_correlation(
   return correlation_buff;
 }
 
-template <CorrMethod correlation_method, StripeDirection stripe_direction>
-static std::vector<double> compute_correlation(std::shared_ptr<ContactMatrix<>> ref_contacts,
-                                               std::shared_ptr<ContactMatrix<>> tgt_contacts,
+template <CorrMethod correlation_method, StripeDirection stripe_direction, class N>
+static std::vector<double> compute_correlation(std::shared_ptr<ContactMatrix<N>> ref_contacts,
+                                               std::shared_ptr<ContactMatrix<N>> tgt_contacts,
                                                const bool mask_zero_pixels_,
                                                const std::vector<double> &weights) {
   assert(ref_contacts->nrows() == tgt_contacts->nrows());              // NOLINT
@@ -394,12 +394,12 @@ absl::flat_hash_map<std::pair<CorrMethod, StripeDirection>, io::bigwig::Writer> 
   std::abort();
 }
 
-template <CorrMethod correlation_method, StripeDirection stripe_direction>
+template <CorrMethod correlation_method, StripeDirection stripe_direction, class N>
 [[nodiscard]] static std::future<bool> submit_task(
     const std::string &chrom_name,
     absl::flat_hash_map<std::pair<CorrMethod, StripeDirection>, io::bigwig::Writer> &bwigs,
-    thread_pool &tpool, std::shared_ptr<ContactMatrix<>> &ref_contacts,
-    std::shared_ptr<ContactMatrix<>> &tgt_contacts, const bool exclude_zero_pixels,
+    thread_pool &tpool, std::shared_ptr<ContactMatrix<N>> &ref_contacts,
+    std::shared_ptr<ContactMatrix<N>> &tgt_contacts, const bool exclude_zero_pixels,
     const usize bin_size, const absl::flat_hash_map<std::string, std::vector<double>> &weights) {
   return tpool.submit([&]() {
     try {
@@ -488,10 +488,12 @@ void eval_subcmd(const modle::tools::eval_config &c) {
     const auto t1 = absl::Now();
     spdlog::info(FMT_STRING("Reading contacts for {}..."), chrom_name_sv);
 
-    auto ref_contacts = std::make_shared<ContactMatrix<>>(
-        ref_cooler.cooler_to_cmatrix(chrom_name, nrows, chrom_range));
-    auto tgt_contacts = std::make_shared<ContactMatrix<>>(
-        tgt_cooler.cooler_to_cmatrix(chrom_name, nrows, chrom_range));
+    auto ref_contacts = std::make_shared<ContactMatrix<double>>(
+        ref_cooler.cooler_to_cmatrix(chrom_name, nrows, chrom_range)
+            .unsafe_gaussian_diff(1.0, 1.6));
+    auto tgt_contacts = std::make_shared<ContactMatrix<double>>(
+        tgt_cooler.cooler_to_cmatrix(chrom_name, nrows, chrom_range)
+            .unsafe_gaussian_diff(1.0, 1.6));
     spdlog::info(FMT_STRING("Read {} contacts for {} in {}"),
                  ref_contacts->get_tot_contacts() + tgt_contacts->get_tot_contacts(), chrom_name_sv,
                  absl::FormatDuration(absl::Now() - t1));
