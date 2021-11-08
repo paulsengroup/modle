@@ -141,7 +141,6 @@ target_link_libraries(
             Modle::common
             Modle::io_hdf5)
 
-set_target_properties(libmodle_io_cooler PROPERTIES OUTPUT_NAME modle_io_cooler)
 install(
   TARGETS libmodle_io_cooler
   ARCHIVE

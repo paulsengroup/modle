@@ -93,6 +93,8 @@ void transform_subcmd(const modle::tools::transform_config& c) {
           return input_cooler.cooler_to_cmatrix(chrom_name, c.diagonal_width, bin_size)
               .unsafe_gaussian_diff(sigma1, sigma2);
         }
+        default:
+          throw std::logic_error("Unreachable code");
       }
     }();
 
