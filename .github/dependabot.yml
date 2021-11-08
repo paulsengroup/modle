@@ -1,3 +1,6 @@
+# Copyright (c) 2021 Roberto Rossini (roberros@uio.no)
+# SPDX-License-Identifier: MIT
+
 version: 2
 updates:
   # Maintain dependencies for GitHub Actions
