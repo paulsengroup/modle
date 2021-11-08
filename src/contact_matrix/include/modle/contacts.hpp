@@ -53,7 +53,7 @@ class ContactMatrix {
   // Constructors
   inline ContactMatrix() = default;
 #if defined(__clang__) && __clang_major__ < 7
-  inline ContactMatrix(ContactMatrix<N>&& other) noexcept;
+  inline ContactMatrix(ContactMatrix<N>&& other) = default;
 #else
   inline ContactMatrix(ContactMatrix<N>&& other) noexcept = default;
 #endif
@@ -69,7 +69,7 @@ class ContactMatrix {
   // Operators
   [[nodiscard]] inline ContactMatrix<N>& operator=(const ContactMatrix<N>& other);
 #if defined(__clang__) && __clang_major__ < 7
-  [[nodiscard]] inline ContactMatrix<N>& operator=(ContactMatrix<N>&& other) noexcept;
+  [[nodiscard]] inline ContactMatrix<N>& operator=(ContactMatrix<N>&& other) = default;
 #else
   [[nodiscard]] inline ContactMatrix<N>& operator=(ContactMatrix<N>&& other) noexcept = default;
 #endif

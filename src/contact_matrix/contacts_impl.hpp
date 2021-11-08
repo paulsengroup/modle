@@ -27,19 +27,6 @@
 
 namespace modle {
 
-#if defined(__clang__) && __clang_major__ < 7
-template <class N>
-ContactMatrix<N>::ContactMatrix(ContactMatrix<N> &&other) noexcept
-    : _nrows(other.nrows()),
-      _ncols(other.ncols()),
-      _contacts(std::move(other._contacts)),
-      _mtxes(compute_number_of_mutexes(this->nrows(), this->ncols())),
-      _tot_contacts(other._tot_contacts.load()),
-      _tot_contacts_outdated(other._tot_contacts_outdated.load()),
-      _updates_missed(other.get_n_of_missed_updates()) {}
-
-#endif
-
 template <class N>
 ContactMatrix<N>::ContactMatrix(const ContactMatrix<N> &other)
     : _nrows(other.nrows()),
@@ -92,25 +79,6 @@ ContactMatrix<N>::ContactMatrix(const absl::Span<const N> contacts, const usize 
       _mtxes(compute_number_of_mutexes(this->nrows(), this->ncols())),
       _updates_missed(static_cast<i64>(updates_missed)),
       _tot_contacts(static_cast<i64>(tot_contacts)) {}
-
-#if defined(__clang__) && __clang_major__ < 7
-template <class N>
-ContactMatrix<N> &ContactMatrix<N>::operator=(ContactMatrix<N> &&other) noexcept {
-  if (this == &other) {
-    return *this;
-  }
-
-  const auto lck = other.lock();
-  _nrows = other.nrows();
-  _ncols = other.ncols();
-  _contacts = std::move(other._contacts);
-  _mtxes = std::vector<std::shared_mutex>(other._mtxes.size());
-  _tot_contacts = other._tot_contacts.load();
-  _tot_contacts_outdated = other._tot_contacts_outdated.load();
-  _updates_missed = other._updates_missed.load();
-  return *this;
-}
-#endif
 
 template <class N>
 ContactMatrix<N> &ContactMatrix<N>::operator=(const ContactMatrix<N> &other) {

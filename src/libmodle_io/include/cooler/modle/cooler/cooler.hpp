@@ -155,8 +155,13 @@ class Cooler {
 
   Cooler(const Cooler &) = delete;
   Cooler &operator=(const Cooler &) = delete;
+#if defined(__clang__) && __clang_major__ < 7
+  Cooler(Cooler &&) = default;
+  Cooler &operator=(Cooler &&) = default;
+#else
   Cooler(Cooler &&) noexcept = default;
   Cooler &operator=(Cooler &&) noexcept = default;
+#endif
 
   // Getters
   [[nodiscard]] constexpr bool is_read_only() const noexcept;
