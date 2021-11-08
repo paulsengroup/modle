@@ -27,26 +27,26 @@
 #include "modle/common/genextreme_value_distribution.hpp"  // for genextreme_value_distribution
 #include "modle/common/random.hpp"                         // for PRNG
 #include "modle/contacts.hpp"                              // for ContactMatrix
-#include "modle/cooler.hpp"                                // for Cooler::Pixel, Cooler, Cooler:...
+#include "modle/cooler/cooler.hpp"                         // for Cooler::Pixel, Cooler, Cooler:...
 #include "modle_tools/config.hpp"                          // for noisify_config
 #include "modle_tools/tools.hpp"                           // for noisify_subcmd
 
 namespace modle::tools {
 
 void noisify_contacts(const noisify_config& c) {
-  using pixel_queue_t = moodycamel::BlockingReaderWriterQueue<modle::cooler::Cooler::Pixel>;
+  using pixel_queue_t = moodycamel::BlockingReaderWriterQueue<modle::cooler::Cooler<>::Pixel>;
 
   const auto PIXEL_BATCH_SIZE =
-      modle::cooler::Cooler::DEFAULT_HDF5_BUFFER_SIZE / sizeof(modle::cooler::Cooler::Pixel);
+      modle::cooler::Cooler<>::DEFAULT_HDF5_BUFFER_SIZE / sizeof(modle::cooler::Cooler<>::Pixel);
   pixel_queue_t pixel_queue(PIXEL_BATCH_SIZE);
   modle::ContactMatrix<> cmatrix{};
 
-  const auto END_OF_PIXEL_QUEUE = modle::cooler::Cooler::Pixel{(std::numeric_limits<usize>::max)(),
-                                                               (std::numeric_limits<usize>::max)(),
-                                                               (std::numeric_limits<usize>::max)()};
+  const auto END_OF_PIXEL_QUEUE = modle::cooler::Cooler<>::Pixel{
+      (std::numeric_limits<contacts_t>::max)(), (std::numeric_limits<contacts_t>::max)(),
+      (std::numeric_limits<contacts_t>::max)()};
 
-  auto input_cool =
-      modle::cooler::Cooler(c.path_to_input_matrix, cooler::Cooler::READ_ONLY, c.bin_size);
+  auto input_cool = modle::cooler::Cooler(c.path_to_input_matrix,
+                                          cooler::Cooler<>::IO_MODE::READ_ONLY, c.bin_size);
 
   const auto bin_size = input_cool.get_bin_size();
   const auto max_chrom_name_size = [&]() {
@@ -57,7 +57,7 @@ void noisify_contacts(const noisify_config& c) {
     return it->size();
   }();
 
-  modle::cooler::Cooler output_cool(c.path_to_output_matrix, cooler::Cooler::WRITE_ONLY,
+  modle::cooler::Cooler output_cool(c.path_to_output_matrix, cooler::Cooler<>::IO_MODE::WRITE_ONLY,
                                     input_cool.get_bin_size(), max_chrom_name_size);
 
   for (const auto& [chrom_name, chrom_size] : input_cool.get_chroms()) {
@@ -77,7 +77,7 @@ void noisify_contacts(const noisify_config& c) {
 
     cmatrix.unsafe_resize(nrows, ncols);
     cmatrix.unsafe_reset();
-    modle::cooler::Cooler::Pixel pixel{};  // NOLINT
+    modle::cooler::Cooler<>::Pixel pixel{};  // NOLINT
     const auto seed =
         c.seed + std::hash<std::string_view>{}(chrom_name) + std::hash<usize>{}(ncols);
 

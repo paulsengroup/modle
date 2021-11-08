@@ -5,6 +5,7 @@
 find_package(absl QUIET REQUIRED)
 find_package(Boost QUIET REQUIRED)
 find_package(CLI11 QUIET REQUIRED)
+find_package(cpp-sort QUIET REQUIRED)
 find_package(readerwriterqueue QUIET REQUIRED)
 find_package(spdlog QUIET REQUIRED)
 find_package(tomlplusplus QUIET REQUIRED)
@@ -19,7 +20,8 @@ target_sources(
           ${CMAKE_CURRENT_SOURCE_DIR}/eval.cpp
           ${CMAKE_CURRENT_SOURCE_DIR}/find_barrier_clusters.cpp
           ${CMAKE_CURRENT_SOURCE_DIR}/noisify.cpp
-          ${CMAKE_CURRENT_SOURCE_DIR}/stats.cpp)
+          ${CMAKE_CURRENT_SOURCE_DIR}/stats.cpp
+          ${CMAKE_CURRENT_SOURCE_DIR}/transform.cpp)
 
 target_link_libraries(
   modle_tools
@@ -27,19 +29,29 @@ target_link_libraries(
           project_options
           absl::algorithm_container
           absl::btree
+          absl::failure_signal_handler
           absl::flat_hash_map
           absl::flat_hash_set
-          absl::failure_signal_handler
+          absl::span
           absl::strings
+          absl::str_format
           absl::symbolize
           absl::time
+          absl::variant
+          Boost::filesystem
           Boost::headers
           CLI11::CLI11
+          cpp-sort::cpp-sort
+          fmt::fmt
           readerwriterqueue::readerwriterqueue
-          spdlog::spdlog
           tomlplusplus::tomlplusplus
+          spdlog::spdlog
+          Modle::cmatrix
           Modle::common
-          Modle::libmodle_io
+          Modle::interval_tree
+          Modle::io_bed
+          Modle::io_bigwig
+          Modle::io_cooler
           Modle::stats
           thread-pool)
 

@@ -18,7 +18,7 @@
 #include <type_traits>                // for add_const<>::type
 #include <vector>                     // for vector
 
-#include "modle/bed.hpp"            // for BED, BED_tree, formatter<>::format, formatter<>::p...
+#include "modle/bed/bed.hpp"        // for BED, BED_tree, formatter<>::format, formatter<>::p...
 #include "modle/common/common.hpp"  // for bp_t, u32, u8
 #include "modle/interval_tree.hpp"  // for IITree, IITree::IITree<I, T>, IITree::data_begin
 #include "modle_tools/config.hpp"   // for find_barrier_clusters_config

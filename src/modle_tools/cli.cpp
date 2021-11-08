@@ -29,10 +29,10 @@
 #include <utility>                           // for move
 #include <vector>                            // for vector
 
-#include "modle/bed.hpp"            // for Parser, bed_dialects, str_to_bed_dialect_m...
+#include "modle/bed/bed.hpp"        // for Parser, bed_dialects, str_to_bed_dialect_m...
 #include "modle/common/common.hpp"  // for usize
 #include "modle/common/utils.hpp"   // for str_float_to_str_int, ConstMap::begin, Con...
-#include "modle/cooler.hpp"         // for Cooler, Cooler::READ_ONLY
+#include "modle/cooler/cooler.hpp"  // for Cooler, Cooler::READ_ONLY
 #include "modle_tools/config.hpp"   // for eval_config, find_barrier_clusters_config
 
 namespace modle::tools {
@@ -120,12 +120,10 @@ void Cli::make_eval_subcommand() {
      "Overwrite existing file(s).")
      ->capture_default_str();
 
-  /*
   corr.add_flag(
      "--eucl-dist,!--no-eucl-dist",
      c.compute_eucl_dist,
      "Compute Euclidean distance.");
-  */
 
   corr.add_flag(
      "--pearson,!--no-pearson",
@@ -148,7 +146,7 @@ void Cli::make_eval_subcommand() {
      "-w,--diagonal-width",
      c.diagonal_width,
      "Diagonal width to use when computing correlation coefficients.")
-     ->check(CLI::NonNegativeNumber)
+     ->check(CLI::PositiveNumber)
      ->transform(utils::str_float_to_str_int)
      ->required();
      
@@ -296,7 +294,7 @@ void Cli::make_noisify_subcommand() {
      "-w,--diagonal-width",
      c.diagonal_width,
      "Diagonal width of the input contact matrix.")
-     ->check(CLI::NonNegativeNumber)
+     ->check(CLI::PositiveNumber)
      ->transform(utils::str_float_to_str_int)
      ->required();
 
@@ -414,10 +412,103 @@ void Cli::make_stats_subcommand() {
   this->_config = absl::monostate{};
 }
 
+void Cli::make_transform_subcommand() {
+  auto& sc = *this->_cli
+                  .add_subcommand("transform",
+                                  "Transform contacts in a matrix in Cooler format for a given "
+                                  "resolution and bin size.")
+                  ->fallthrough()
+                  ->preparse_callback([this]([[maybe_unused]] usize i) {
+                    assert(this->_config.index() == 0);  // NOLINT empty variant
+                    this->_config = transform_config{};
+                  });
+
+  this->_config = transform_config{};
+  auto& c = absl::get<transform_config>(this->_config);
+
+  auto& io = *sc.add_option_group("Input/Output", "");
+  auto& trans = *sc.add_option_group("Transformations", "");
+  auto& mat = *sc.add_option_group("Contact matrix", "");
+  auto& gen = *sc.add_option_group("Generic", "");
+
+  // clang-format off
+  io.add_option(
+      "-i,--input-matrix",
+      c.path_to_input_matrix,
+      "Path to a contact matrix in Cooler format.")
+      ->check(CLI::ExistingFile)
+      ->required();
+
+  io.add_option(
+      "-o,--output-matrix",
+      c.path_to_output_matrix,
+      "Path to output matrix.")
+      ->required();
+
+  io.add_flag(
+      "-f,--force",
+      c.force,
+      "Overwrite existing file(s).")
+      ->capture_default_str();
+
+  trans.add_option(
+      "-m,!--method",
+      c.method,
+      "Transformation method to apply to the input contact matrix.")
+      ->transform(CLI::CheckedTransformer(transform_config::transformation_map, CLI::ignore_case))
+      ->capture_default_str();
+
+  trans.add_option(
+      "--normalization-range",
+      c.normalization_range,
+      "Pair of comma separated numbers representing the range of normalized values.")
+      ->check(CLI::NonNegativeNumber)
+      ->capture_default_str();
+
+  trans.add_option(
+      "--gaussian-blur-sigma",
+      c.gaussian_blur_sigma,
+      "Sigma parameter of the gaussian kernel used during transformation.")
+      ->check(CLI::PositiveNumber)
+      ->capture_default_str();
+
+  trans.add_option(
+      "--gaussian-blur-multiplier",
+      c.gaussian_blur_sigma_multiplier,
+      "Multiplier to use when transforming using the difference of gaussians. This multiplier is used to compute the sigma value of the more blurry contact matrix based on the sigma value specifie through --gaussian-blur-sigma.")
+      ->check(CLI::PositiveNumber)
+      ->capture_default_str();
+
+  mat.add_option(
+      "-b,--bin-size",
+      c.bin_size,
+      "Bin size in base pairs.\n"
+      "Only used when the input contact matrix is in .mcool format.")
+      ->check(CLI::PositiveNumber)
+      ->transform(utils::str_float_to_str_int);
+
+  mat.add_option(
+      "-w,--diagonal-width",
+      c.diagonal_width,
+      "Diagonal width to use during transformation.")
+      ->check(CLI::PositiveNumber)
+      ->transform(utils::str_float_to_str_int)
+      ->required();
+
+  gen.add_option(
+      "-t,--threads",
+      c.nthreads,
+      "CPU threads to allocate.")
+      ->check(CLI::PositiveNumber);
+
+  // clang-format on
+  this->_config = absl::monostate{};
+}
+
 void Cli::make_cli() {
   this->_cli.name(this->_exec_name);
   this->_cli.description(
-      "Modle's helper tool.\n"
+      "MoDLE's helper tool.\n"
       "This tool can be used to perform common pre and post-process operations on MoDLE's "
       "input and output files.");
   this->_cli.require_subcommand(1);
@@ -426,6 +517,7 @@ void Cli::make_cli() {
   this->make_find_barrier_clusters_subcommand();
   this->make_noisify_subcommand();
   this->make_stats_subcommand();
+  this->make_transform_subcommand();
 }
 
 void Cli::validate_eval_subcommand() const {
@@ -434,8 +526,9 @@ void Cli::validate_eval_subcommand() const {
   const auto& c = absl::get<eval_config>(this->_config);
 
   try {
-    (void)cooler::Cooler(c.path_to_input_matrix, cooler::Cooler::READ_ONLY, c.bin_size);
-    (void)cooler::Cooler(c.path_to_reference_matrix, cooler::Cooler::READ_ONLY, c.bin_size);
+    (void)cooler::Cooler(c.path_to_input_matrix, cooler::Cooler<>::IO_MODE::READ_ONLY, c.bin_size);
+    (void)cooler::Cooler(c.path_to_reference_matrix, cooler::Cooler<>::IO_MODE::READ_ONLY,
+                         c.bin_size);
   } catch (const std::exception& e) {
     if (absl::StartsWith(e.what(), "Cooler::open_file(): bin_size cannot be 0")) {
       errors.emplace_back(
@@ -447,10 +540,8 @@ void Cli::validate_eval_subcommand() const {
     }
   }
 
-  if (c.compute_pearson + c.compute_spearman /*+ c.compute_eucl_dist*/ == 0) {
-    // errors.emplace_back("At least one of --pearson, --spearman or --eucl-dist should be
-    // specified");
-    errors.emplace_back("At least one of --pearson, --spearman or should be specified");
+  if (c.compute_pearson + c.compute_spearman + c.compute_eucl_dist == 0) {
+    errors.emplace_back("At least one of --eucl-dist, --pearson or --spearman should be specified");
   }
 
   if (!c.force) {
@@ -543,7 +634,7 @@ void Cli::validate_stats_subcommand() const {
   }
 
   try {
-    cooler::Cooler f(c.path_to_input_matrix, cooler::Cooler::READ_ONLY, c.bin_size);
+    cooler::Cooler f(c.path_to_input_matrix, cooler::Cooler<>::IO_MODE::READ_ONLY, c.bin_size);
   } catch (const std::runtime_error& e) {
     if (absl::EndsWith(e.what(),  // NOLINT
                        "A bin size other than 0 is required when calling "
@@ -586,7 +677,7 @@ void Cli::validate_noisify_subcommand() const {
 
   assert(boost::filesystem::exists(c.path_to_input_matrix));  // NOLINT
   try {
-    cooler::Cooler f(c.path_to_input_matrix, cooler::Cooler::READ_ONLY, c.bin_size);
+    cooler::Cooler f(c.path_to_input_matrix, cooler::Cooler<>::IO_MODE::READ_ONLY, c.bin_size);
   } catch (const std::runtime_error& e) {
     if (absl::EndsWith(e.what(),  // NOLINT
                        "A bin size other than 0 is required when calling "
@@ -623,6 +714,49 @@ void Cli::validate_noisify_subcommand() const {
   }
 }
 
+void Cli::validate_transform_subcommand() const {
+  assert(this->_cli.get_subcommand("transform")->parsed());  // NOLINT
+  std::vector<std::string> errors;
+  const auto& c = absl::get<transform_config>(this->_config);
+
+  if (auto collision = utils::detect_path_collision(c.path_to_output_matrix, c.force,
+                                                    boost::filesystem::regular_file);
+      !collision.empty()) {
+    errors.push_back(collision);
+  }
+
+  try {
+    (void)cooler::Cooler(c.path_to_input_matrix, cooler::Cooler<>::IO_MODE::READ_ONLY, c.bin_size);
+  } catch (const std::exception& e) {
+    if (absl::StartsWith(e.what(), "Cooler::open_file(): bin_size cannot be 0")) {
+      errors.emplace_back(
+          fmt::format(FMT_STRING("File {} appears to be in .mcool format. --bin-size is required"
+                                 "when --input-matrix is in .mcool format"),
+                      c.path_to_input_matrix));
+    } else {
+      errors.emplace_back(fmt::format(FMT_STRING("{}"), e.what()));
+    }
+  }
+
+  using t = transform_config::transformation;
+  if (c.method == t::normalize) {
+    if (const auto [lb, ub] = c.normalization_range; lb >= ub) {
+      errors.push_back(
+          fmt::format(FMT_STRING("The upper bound for the normalization range specified through "
+                                 "--normalization range is expected to be strictly larger than the "
+                                 "lower bound.\n   - Lower bound: {}\n   - Upper bound: {}\n"),
+                      lb, ub));
+    }
+  }
+
+  if (!errors.empty()) {
+    throw std::runtime_error(
+        fmt::format(FMT_STRING("The following error(s) where encountered while validating CLI "
+                               "arguments and input file(s):\n - {}"),
+                    fmt::join(errors, "\n - ")));
+  }
+}
+
 void Cli::validate() const {
   if (this->_cli.get_subcommand("eval")->parsed()) {
     this->validate_eval_subcommand();
@@ -632,6 +766,8 @@ void Cli::validate() const {
     this->validate_noisify_subcommand();
   } else if (this->_cli.get_subcommand("stats")->parsed()) {
     this->validate_stats_subcommand();
+  } else if (this->_cli.get_subcommand("transform")->parsed()) {
+    this->validate_transform_subcommand();
   } else {
     throw std::logic_error("Unreachable code");
   }
@@ -657,6 +793,8 @@ modle::tools::config Cli::parse_arguments() {
       this->_subcommand = subcommand::noisify;
     } else if (this->_cli.get_subcommand("statistics")->parsed()) {
       this->_subcommand = subcommand::stats;
+    } else if (this->_cli.get_subcommand("transform")->parsed()) {
+      this->_subcommand = subcommand::transform;
     } else {
       this->_subcommand = subcommand::help;
     }
@@ -730,6 +868,8 @@ std::string_view Cli::subcommand_to_str(subcommand s) noexcept {
       return "noisify";
     case stats:
       return "stats";
+    case transform:
+      return "transform";
     default:
       assert(s == help);  // NOLINT
       return "--help";

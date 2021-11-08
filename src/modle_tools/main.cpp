@@ -29,6 +29,7 @@
 #include "modle_tools/tools.hpp"  // for eval_subcmd, find_barrier_clusters_su...
 
 int main(int argc, char** argv) {
+  using namespace modle::tools;
   absl::InitializeSymbolizer(argv[0]);  // NOLINT(cppcoreguidelines-pro-bounds-pointer-arithmetic)
   absl::FailureSignalHandlerOptions options;
   // TODO: figure out a way to make this callback async-signal-safe
@@ -41,7 +42,7 @@ int main(int argc, char** argv) {
     }
   };
   absl::InstallFailureSignalHandler(options);
-  std::unique_ptr<modle::tools::Cli> cli{nullptr};
+  std::unique_ptr<Cli> cli{nullptr};
   spdlog::set_default_logger(std::make_shared<spdlog::logger>("main_logger"));
   {
     auto stderr_sink = spdlog::default_logger()->sinks().emplace_back(
@@ -50,7 +51,7 @@ int main(int argc, char** argv) {
     stderr_sink->set_pattern("[%Y-%m-%d %T.%e] %^[%l]%$: %v");
   }
   try {
-    cli = std::make_unique<modle::tools::Cli>(argc, argv);
+    cli = std::make_unique<Cli>(argc, argv);
     const auto config = cli->parse_arguments();
 
     // TODO: move this inside the subcommands
@@ -60,24 +61,29 @@ int main(int argc, char** argv) {
     }
      */
 
-    switch (cli->get_subcommand()) {
-      case modle::tools::Cli::subcommand::eval:
-        modle::tools::eval_subcmd(absl::get<modle::tools::eval_config>(config));
-        return 0;
-      case modle::tools::Cli::subcommand::fbcl:
-        modle::tools::find_barrier_clusters_subcmd(
-            absl::get<modle::tools::find_barrier_clusters_config>(config));
-        return 0;
-      case modle::tools::Cli::subcommand::stats:
-        modle::tools::stats_subcmd(absl::get<modle::tools::stats_config>(config));
-        return 0;
-      case modle::tools::Cli::subcommand::noisify:
-        modle::tools::noisify_subcmd(absl::get<modle::tools::noisify_config>(config));
-        return 0;
-      default:
-        throw std::runtime_error(
-            "Default branch in switch statement in modle_tools::main() should be unreachable! If "
-            "you see this message, please file an issue on GitHub");
+    {
+      using subcmd = Cli::subcommand;
+      switch (cli->get_subcommand()) {
+        case subcmd::eval:
+          eval_subcmd(absl::get<eval_config>(config));
+          return 0;
+        case subcmd::fbcl:
+          find_barrier_clusters_subcmd(absl::get<find_barrier_clusters_config>(config));
+          return 0;
+        case subcmd::stats:
+          stats_subcmd(absl::get<stats_config>(config));
+          return 0;
+        case subcmd::noisify:
+          noisify_subcmd(absl::get<noisify_config>(config));
+          return 0;
+        case subcmd::transform:
+          transform_subcmd(absl::get<transform_config>(config));
+          return 0;
+        default:
+          throw std::runtime_error(
+              "Default branch in switch statement in modle_tools::main() should be unreachable! If "
+              "you see this message, please file an issue on GitHub");
+      }
     }
   } catch (const CLI::ParseError& e) {
     assert(cli);          // NOLINT

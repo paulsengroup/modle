@@ -33,12 +33,12 @@
 #include <utility>                          // for tuple_element<>::type, pair, make_pair
 #include <vector>                           // for vector
 
-#include "modle/bed.hpp"                // for BED_tree, BED_tree<>::value_type, Parser
-#include "modle/bigwig.hpp"             // for Writer
+#include "modle/bed/bed.hpp"            // for BED_tree, BED_tree<>::value_type, Parser
+#include "modle/bigwig/bigwig.hpp"      // for Writer
 #include "modle/common/common.hpp"      // for u32, usize, bp_t, u8, i64
 #include "modle/common/utils.hpp"       // for identity::operator()
 #include "modle/contacts.hpp"           // for ContactMatrix
-#include "modle/cooler.hpp"             // for Cooler, Cooler::READ_ONLY
+#include "modle/cooler/cooler.hpp"      // for Cooler, Cooler::READ_ONLY
 #include "modle/interval_tree.hpp"      // for IITree, IITree::IITree<I, T>, IITree::empty
 #include "modle/stats/correlation.hpp"  // for Pearson, Spearman
 #include "modle_tools/config.hpp"       // for eval_config
@@ -63,7 +63,7 @@ using ChromSet = absl::btree_map<std::string, std::pair<bp_t, bp_t>, cppsort::na
   return chroms;
 }
 
-[[nodiscard]] static ChromSet import_chroms_from_cool(cooler::Cooler &cooler_file) {
+[[nodiscard]] static ChromSet import_chroms_from_cool(cooler::Cooler<> &cooler_file) {
   try {
     ChromSet chrom_set;
     auto chroms = cooler_file.get_chroms();
@@ -82,7 +82,7 @@ using ChromSet = absl::btree_map<std::string, std::pair<bp_t, bp_t>, cppsort::na
 }
 
 [[nodiscard]] static ChromSet select_chromosomes_for_eval(
-    cooler::Cooler &c1, cooler::Cooler &c2,
+    cooler::Cooler<> &c1, cooler::Cooler<> &c2,
     const boost::filesystem::path &path_to_chrom_subranges) {
   // Import chromosomes from Cooler files and select shared chromosomes
   const auto chrom_set1 = import_chroms_from_cool(c1);
@@ -434,8 +434,9 @@ template <CorrMethod correlation_method, StripeDirection stripe_direction, class
 void eval_subcmd(const modle::tools::eval_config &c) {
   assert(c.compute_spearman || c.compute_pearson /*|| c.compute_eucl_dist*/);  // NOLINT
   auto ref_cooler =
-      cooler::Cooler(c.path_to_reference_matrix, cooler::Cooler::READ_ONLY, c.bin_size);
-  auto tgt_cooler = cooler::Cooler(c.path_to_input_matrix, cooler::Cooler::READ_ONLY, c.bin_size);
+      cooler::Cooler(c.path_to_reference_matrix, cooler::Cooler<>::IO_MODE::READ_ONLY, c.bin_size);
+  auto tgt_cooler =
+      cooler::Cooler(c.path_to_input_matrix, cooler::Cooler<>::IO_MODE::READ_ONLY, c.bin_size);
 
   const auto bin_size = ref_cooler.get_bin_size();
 

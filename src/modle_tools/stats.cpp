@@ -27,11 +27,11 @@
 #include <utility>                                  // for make_pair
 #include <vector>                                   // for vector
 
-#include "modle/bed.hpp"                                // for Parser
+#include "modle/bed/bed.hpp"                            // for Parser
 #include "modle/common/common.hpp"                      // for u64, i64
 #include "modle/common/suppress_compiler_warnings.hpp"  // for DISABLE_WARNING_POP, DISABLE_WARN...
 #include "modle/contacts.hpp"                           // for ContactMatrix
-#include "modle/cooler.hpp"                             // for Cooler, ContactMatrix, Cooler::RE...
+#include "modle/cooler/cooler.hpp"                      // for Cooler, ContactMatrix, Cooler::RE...
 #include "modle_tools/config.hpp"                       // for stats_config
 #include "modle_tools/tools.hpp"                        // for stats_subcmd
 
@@ -66,9 +66,9 @@ usize compute_number_of_contacts_after_depletion(const ContactMatrix<I>& cmatrix
 void stats_subcmd(const modle::tools::stats_config& c) {
   const auto& path_to_output_hist = c.output_path_for_histograms;
 
-  cooler::Cooler m1(c.path_to_input_matrix, cooler::Cooler::READ_ONLY, c.bin_size);
+  cooler::Cooler m1(c.path_to_input_matrix, cooler::Cooler<>::IO_MODE::READ_ONLY, c.bin_size);
 
-  std::unique_ptr<cooler::Cooler> m2{nullptr};
+  std::unique_ptr<cooler::Cooler<>> m2{nullptr};
   std::unique_ptr<std::ofstream> hist_file{nullptr};
 
   const auto chromosomes_excluded = absl::flat_hash_set<std::string>(
@@ -94,7 +94,7 @@ void stats_subcmd(const modle::tools::stats_config& c) {
     const auto path =
         absl::StrCat(absl::StripSuffix(c.path_to_input_matrix.string(), ext), "_depl.cool");
     boost::filesystem::remove_all(path);
-    m2 = std::make_unique<cooler::Cooler>(path, cooler::Cooler::WRITE_ONLY, bin_size);
+    m2 = std::make_unique<cooler::Cooler<>>(path, cooler::Cooler<>::IO_MODE::WRITE_ONLY, bin_size);
   }
 
   if (!path_to_output_hist.empty()) {  // Create hist. file

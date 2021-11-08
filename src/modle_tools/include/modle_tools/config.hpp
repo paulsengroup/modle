@@ -12,8 +12,9 @@
 #include <thread>                           // for thread
 #include <vector>                           // for vector
 
-#include "modle/bed.hpp"            // for BED, BED::Dialect, BED::BED6
+#include "modle/bed/bed.hpp"        // for BED, BED::Dialect, BED::BED6
 #include "modle/common/common.hpp"  // for usize, bp_t, u64
+#include "modle/common/utils.hpp"   // for ConstMap
 
 namespace modle::tools {
 
@@ -27,9 +28,9 @@ struct eval_config {  // NOLINT
   bool force{false};
 
   // Correlation methods
-  bool compute_spearman{true};
-  bool compute_pearson{true};
-  // bool compute_eucl_dist{true};
+  bool compute_pearson{false};
+  bool compute_spearman{false};
+  bool compute_eucl_dist{true};
 
   // Reference contacts
   usize bin_size{0};
@@ -40,17 +41,6 @@ struct eval_config {  // NOLINT
   bool exclude_zero_pxls{false};
   std::string weight_column_name{"balanced.sum"};
   bool reciprocal_weights{false};
-};
-
-struct filter_barrier_config {  // NOLINT
-  // IO
-  boost::filesystem::path path_to_extrusion_barrier_motifs_bed;
-  std::vector<boost::filesystem::path> path_to_bed_files_for_filtering;
-
-  // Other
-  std::string filtering_criterion{"intersection"};
-  bed::BED::Dialect bed_dialect{bed::BED::Dialect::BED6};
-  bool strict_bed_validation{true};
 };
 
 struct find_barrier_clusters_config {  // NOLINT
@@ -101,13 +91,48 @@ struct stats_config {  // NOLINT
   double depletion_multiplier{1.0};
 };
 
+struct transform_config {  // NOLINT
+  // IO
+  boost::filesystem::path path_to_input_matrix;
+  boost::filesystem::path path_to_output_matrix;
+  bool force{false};
+
+  // Transformation methods
+  enum class transformation : std::uint_fast8_t {
+    normalize,
+    gaussian_blur,
+    difference_of_gaussians
+  };
+  transformation method;
+
+  // clang-format off
+  inline static const std::array<std::pair<std::string, transformation>, 3> transformation_map{
+      std::make_pair("normalize", transformation::normalize),
+      std::make_pair("gaussian_blur", transformation::gaussian_blur),
+      std::make_pair("difference_of_gaussians", transformation::difference_of_gaussians)
+  };
+  // clang-format on
+
+  // Transformation settings
+  std::pair<double, double> normalization_range{0.0, 1.0};
+  double gaussian_blur_sigma{1.0};
+  double gaussian_blur_sigma_multiplier{1.6};  // NOLINT, approx. Laplacian of Gaussian
+
+  // Matrix options
+  usize bin_size{0};
+  usize diagonal_width;
+
+  // Other
+  usize nthreads{std::thread::hardware_concurrency()};
+};
+
 // clang-format off
 using config = absl::variant<absl::monostate,
                              eval_config,
-                             filter_barrier_config,
                              find_barrier_clusters_config,
                              noisify_config,
-                             stats_config>;
+                             stats_config,
+                             transform_config>;
 // clang-format on
 
 }  // namespace modle::tools
