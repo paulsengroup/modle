@@ -76,7 +76,7 @@ RUN apt-get update \
     && apt-get install -y --no-install-recommends                            \
                        gcc g++ r-base r-cran-minqa r-cran-mnormt r-cran-rcpp \
                        r-cran-rcpparmadillo libblas-dev libcurl4-openssl-dev \
-                       liblapack-dev libssl-dev libxml2-dev \
+                       liblapack-dev libssl-dev libxml2-dev
 
 RUN pip3 install "scipy==${SCIPY_VER}"
 RUN echo "options(Ncpus = $(nproc))" > "$HOME/.Rprofile"           \
