@@ -23,15 +23,18 @@ target_link_libraries(
   libmodle_internal
   PRIVATE project_options
           project_warnings
-          absl::span
-          Modle::common
-          Modle::cmatrix
+          absl::time
+          spdlog::spdlog
+          Modle::io_chrom_sizes
   PUBLIC absl::btree
-         absl::optional
+         absl::span
          Boost::filesystem
+         Boost::headers
          fmt::fmt
-         xxHash::xxhash
-         spdlog::spdlog
-         Modle::libmodle_io)
+         xxHash::xxHash
+         Modle::cmatrix
+         Modle::common
+         Modle::io_bed
+         Modle::interval_tree)
 
 target_include_directories(libmodle_internal PUBLIC include/)

@@ -2,7 +2,7 @@
 //
 // SPDX-License-Identifier: MIT
 
-#include "modle/bigwig.hpp"
+#include "modle/bigwig/bigwig.hpp"
 
 #include <fmt/format.h>  // for format, FMT_STRING
 #include <fmt/ostream.h>

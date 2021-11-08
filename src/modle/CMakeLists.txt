@@ -8,7 +8,6 @@ find_package(CLI11 QUIET REQUIRED)
 find_package(fmt QUIET REQUIRED)
 find_package(spdlog QUIET REQUIRED)
 find_package(tomlplusplus QUIET REQUIRED)
-find_package(xxHash QUIET REQUIRED)
 
 add_executable(modle)
 
@@ -19,6 +18,7 @@ target_link_libraries(
   PRIVATE project_warnings
           project_options
           absl::failure_signal_handler
+          absl::span
           absl::strings
           absl::symbolize
           absl::time
@@ -28,8 +28,9 @@ target_link_libraries(
           fmt::fmt
           spdlog::spdlog
           tomlplusplus::tomlplusplus
-          Modle::libmodle
-          Modle::common)
+          Modle::common
+          Modle::io_cooler
+          Modle::libmodle)
 
 include(GNUInstallDirs)
 install(

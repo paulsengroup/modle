@@ -18,10 +18,10 @@
 #include <utility>                      // for pair, move
 #include <vector>                       // for vector, allocator
 
-#include "modle/common/common.hpp"  // for u32
-#include "modle/common/utils.hpp"   // for parse_numeric_or_throw
-#include "modle/compressed_io.hpp"  // for Reader
-#include "modle/contacts.hpp"       // for ContactMatrix
+#include "modle/common/common.hpp"                // for u32
+#include "modle/common/utils.hpp"                 // for parse_numeric_or_throw
+#include "modle/compressed_io/compressed_io.hpp"  // for Reader
+#include "modle/contacts.hpp"                     // for ContactMatrix
 
 namespace modle::test::cmatrix {
 
@@ -399,8 +399,8 @@ TEST_CASE("CMatrix blur", "[cmatrix][short]") {
 
   for (usize i = 0; i < sigmas.size(); ++i) {
     const auto reference_matrix =
-        compute_reference_matrix(input_matrix.ncols(), sigmas[i], cutoffs[i]);
-    const auto blurred_matrix = input_matrix.blur(sigmas[i]);
+        compute_reference_matrix(input_matrix.ncols(), sigmas[i], cutoffs[i]);  // NOLINT
+    const auto blurred_matrix = input_matrix.blur(sigmas[i]);                   // NOLINT
 
     for (usize j = 4; j < input_matrix.nrows(); ++j) {       // NOLINT
       for (auto k = j; k < input_matrix.ncols() - 4; ++k) {  // NOLINT

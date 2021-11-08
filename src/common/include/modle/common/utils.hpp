@@ -120,6 +120,8 @@ class ConstMap {
   using key_type = Key;
   using mapped_type = Value;
   using value_type = std::pair<const Key, Value>;
+  using first_type = const Key;
+  using second_type = Value;
 
   [[nodiscard]] constexpr const Value& at(const Key& key) const;
   [[nodiscard]] constexpr const Value& operator[](const Key& key) const;

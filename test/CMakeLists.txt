@@ -2,9 +2,12 @@
 #
 # SPDX-License-Identifier: MIT
 
+find_package(absl REQUIRED QUIET)
 find_package(Boost REQUIRED QUIET)
 find_package(Catch2 REQUIRED QUIET)
 find_package(fmt REQUIRED QUIET)
+find_package(HDF5 REQUIRED QUIET)
+find_package(spdlog REQUIRED QUIET)
 
 include(CTest)
 include(Catch)
@@ -36,19 +39,29 @@ target_link_libraries(
   test_main
   PRIVATE project_warnings
           project_options
+          absl::flat_hash_set
+          absl::hash
+          absl::span
+          absl::strings
+          Boost::filesystem
           Boost::headers
           Catch2::Catch2
           fmt::fmt
+          HDF5::HDF5
+          spdlog::spdlog
           Modle::cmatrix
           Modle::common
           Modle::interval_tree
-          Modle::libmodle
-          Modle::stats)
-# cmake-format: off
-          # Not explicitly linking to the following targets saves quite a bit of time when compiling
-          # Modle::libmodle_internal
-          # Modle::libmodle_io)
-# cmake-format: on
+          Modle::io_bed
+          Modle::io_bigwig
+          Modle::io_chrom_sizes
+          Modle::io_compressed
+          Modle::io_cooler
+          Modle::io_hdf5
+          Modle::libmodle_cpu
+          Modle::libmodle_internal
+          Modle::stats
+          thread-pool)
 
 file(MAKE_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/Testing/)
 

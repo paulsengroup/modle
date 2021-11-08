@@ -7,7 +7,7 @@
 #include <boost/filesystem/path.hpp>  // for filesystem::path
 #include <vector>                     // for vector
 
-#include "modle/compressed_io.hpp"  // for Reader
+#include "modle/compressed_io/compressed_io.hpp"  // for Reader
 
 namespace modle::bed {
 struct BED;

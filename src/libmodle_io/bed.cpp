@@ -4,10 +4,11 @@
 
 // IWYU pragma: no_include <ext/alloc_traits.h>
 
-#include "modle/bed.hpp"
+#include "modle/bed/bed.hpp"
 
 #include <absl/container/flat_hash_map.h>  // for flat_hash_map, raw_hash_set<>::it...
 #include <absl/hash/hash.h>                // for Hash
+#include <absl/strings/match.h>            // for StrContains
 #include <absl/strings/str_join.h>         // for StrJoin
 #include <absl/strings/str_split.h>        // for StrSplit, Splitter, SplitIterator
 #include <fmt/format.h>                    // for format, FMT_STRING, join, to_string
@@ -27,11 +28,10 @@
 #include <utility>                           // for pair, move, make_pair
 #include <vector>                            // for vector
 
-#include "absl/strings/match.h"                         // for StrContains
 #include "modle/common/common.hpp"                      // for u64, u8, u32
 #include "modle/common/suppress_compiler_warnings.hpp"  // for DISABLE_WARNING_PUSH, DISABLE_WAR...
 #include "modle/common/utils.hpp"                       // for parse_numeric_or_throw, ConstMap
-#include "modle/compressed_io.hpp"                      // for Reader
+#include "modle/compressed_io/compressed_io.hpp"        // for Reader
 
 namespace modle::bed {
 

@@ -11,7 +11,6 @@
 #include <atomic>                                                 // for atomic
 #include <boost/exception/exception.hpp>                          // for clone_base
 #include <boost/filesystem/path.hpp>                              // for path
-#include <boost/fusion/sequence/intrinsic/at_key.hpp>             // for at_key
 #include <boost/math/distributions/complement.hpp>                // for complement
 #include <boost/math/distributions/detail/derived_accessors.hpp>  // for cdf, pdf
 #include <boost/process/child.hpp>                                // for child::child
@@ -20,7 +19,6 @@
 #include <boost/process/io.hpp>                                   // for std_in, std_in_, std_out
 #include <boost/process/pipe.hpp>                                 // for opstream, ipstream
 #include <boost/process/search_path.hpp>                          // for search_path
-#include <boost/random/uniform_int_distribution.hpp>              // for uniform_int_distribution
 #include <cassert>                                                // for assert
 #include <catch2/catch.hpp>                                       // for Approx, operator==, Ass...
 #include <cmath>                                                  // for trunc

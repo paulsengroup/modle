@@ -29,13 +29,13 @@
 #include <thread_pool/thread_pool.hpp>  // for thread_pool
 #include <vector>                       // for vector
 
-#include "modle/bed.hpp"                 // for BED_tree, BED_tree::size, BED, BED::BED3, BED_...
-#include "modle/common/common.hpp"       // for u32, u8
-#include "modle/common/utils.hpp"        // for parse_numeric_or_throw
-#include "modle/compressed_io.hpp"       // for Reader
-#include "modle/extrusion_barriers.hpp"  // for ExtrusionBarrier
-#include "modle/genome.hpp"              // for Chromosome, Genome
-#include "modle/interval_tree.hpp"       // for IITree, IITree::data_end, IITree::equal_range
+#include "modle/bed/bed.hpp"        // for BED_tree, BED_tree::size, BED, BED::BED3, BED_...
+#include "modle/common/common.hpp"  // for u32, u8
+#include "modle/common/utils.hpp"   // for parse_numeric_or_throw
+#include "modle/compressed_io/compressed_io.hpp"  // for Reader
+#include "modle/extrusion_barriers.hpp"           // for ExtrusionBarrier
+#include "modle/genome.hpp"                       // for Chromosome, Genome
+#include "modle/interval_tree.hpp"  // for IITree, IITree::data_end, IITree::equal_range
 
 namespace modle {
 

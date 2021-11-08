@@ -45,7 +45,7 @@
 #include "modle/common/random.hpp"           // for bernoulli_trial, poisson_distribution
 #include "modle/common/random_sampling.hpp"  // for random_sample
 #include "modle/common/utils.hpp"            // for parse_numeric_or_throw, ndeb...
-#include "modle/cooler.hpp"                  // for Cooler, Cooler::WRITE_ONLY
+#include "modle/cooler/cooler.hpp"           // for Cooler, Cooler::WRITE_ONLY
 #include "modle/extrusion_barriers.hpp"      // for ExtrusionBarrier, update_states
 #include "modle/extrusion_factors.hpp"       // for Lef, ExtrusionUnit
 #include "modle/genome.hpp"                  // for Genome::iterator, Chromosome
@@ -86,9 +86,10 @@ void Simulation::write_contacts_to_disk(std::deque<std::pair<Chromosome*, usize>
           .size();
 
   auto c = this->skip_output ? nullptr
-                             : std::make_unique<cooler::Cooler>(this->path_to_output_file_cool,
-                                                                cooler::Cooler::WRITE_ONLY,
-                                                                this->bin_size, max_str_length);
+                             : std::make_unique<cooler::Cooler<contacts_t>>(
+                                   this->path_to_output_file_cool,
+                                   cooler::Cooler<contacts_t>::IO_MODE::WRITE_ONLY, this->bin_size,
+                                   max_str_length);
 
   try {
     if (c && !this->argv_json.empty()) {

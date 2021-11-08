@@ -7,6 +7,7 @@ find_package(Boost QUIET REQUIRED)
 find_package(concurrentqueue QUIET REQUIRED)
 find_package(cpp-sort QUIET REQUIRED)
 find_package(spdlog QUIET REQUIRED)
+find_package(xxHash QUIET REQUIRED)
 
 add_library(libmodle_cpu)
 add_library(Modle::libmodle_cpu ALIAS libmodle_cpu)
@@ -29,22 +30,29 @@ target_link_libraries(
   libmodle_cpu
   PRIVATE project_warnings
           project_options
-          absl::span
+          absl::btree
+          absl::fixed_array
+          absl::hash
+          absl::strings
+          absl::str_format
+          absl::time
           cpp-sort::cpp-sort
-          Modle::cmatrix
-          Modle::common
+          spdlog::spdlog
+          Modle::interval_tree
+          Modle::io_compressed
+          Modle::io_cooler
           Modle::stats
-  PUBLIC absl::btree
-         absl::fixed_array
-         absl::flat_hash_map
-         absl::flat_hash_set
-         absl::strings
-         absl::time
+  PUBLIC absl::flat_hash_set
+         absl::span
          Boost::filesystem
+         Boost::headers
          concurrentqueue::concurrentqueue
-         spdlog::spdlog
-         Modle::libmodle_io
+         fmt::fmt
+         xxHash::xxHash
+         Modle::cmatrix
+         Modle::common
          Modle::libmodle_internal
+         Modle::io_bed
          thread-pool)
 
 if(ENABLE_PCH)

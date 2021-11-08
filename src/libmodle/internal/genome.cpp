@@ -25,8 +25,8 @@
 #include <utility>      // for move, pair, pair<>::second_type
 #include <vector>       // for vector
 
-#include "modle/bed.hpp"                                // for BED, Parser, BED_tree, BED_tree::at
-#include "modle/chrom_sizes.hpp"                        // for Parser
+#include "modle/bed/bed.hpp"                            // for BED, Parser, BED_tree, BED_tree::at
+#include "modle/chrom_sizes/chrom_sizes.hpp"            // for Parser
 #include "modle/common/common.hpp"                      // for bp_t, u32, u64, u8
 #include "modle/common/suppress_compiler_warnings.hpp"  // for DISABLE_WARNING_PUSH, DISABLE_WAR...
 #include "modle/common/utils.hpp"                       // for XXH3_Deleter, ndebug_defined, XXH...

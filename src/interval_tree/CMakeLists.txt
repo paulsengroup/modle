@@ -17,4 +17,5 @@ target_link_libraries(
   INTERFACE project_options
             project_warnings
             absl::span
-            cpp-sort::cpp-sort)
+            cpp-sort::cpp-sort
+            Modle::common)

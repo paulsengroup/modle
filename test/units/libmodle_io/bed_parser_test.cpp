@@ -12,11 +12,10 @@
 #include <string_view>                // for operator!=, basic_string_view, string_view, operator<
 #include <vector>                     // for vector
 
-#include "absl/strings/match.h"     // for StrContains
-#include "modle/bed.hpp"            // for BED, Parser, formatter<>::format, BED::BED3
-#include "modle/chrom_sizes.hpp"    // for bed
-#include "modle/common/common.hpp"  // for usize
-#include "modle/compressed_io.hpp"  // for Reader
+#include "absl/strings/match.h"                   // for StrContains
+#include "modle/bed/bed.hpp"                      // for BED, Parser, formatter<>::format, BED::BED3
+#include "modle/common/common.hpp"                // for usize
+#include "modle/compressed_io/compressed_io.hpp"  // for Reader
 
 namespace modle::test::bed {
 using namespace modle::bed;

@@ -2,8 +2,11 @@
 #
 # SPDX-License-Identifier: MIT
 
+find_package(absl QUIET REQUIRED)
 find_package(Boost QUIET REQUIRED)
 find_package(cpp-sort QUIET REQUIRED)
+find_package(fmt QUIET REQUIRED)
+find_package(xxHash QUIET REQUIRED)
 
 add_library(cmatrix INTERFACE)
 add_library(Modle::cmatrix ALIAS cmatrix)
@@ -18,10 +21,15 @@ target_link_libraries(
   cmatrix
   INTERFACE project_warnings
             project_options
+            absl::span
+            absl::strings
+            Boost::filesystem
             Boost::headers
             cpp-sort::cpp-sort
+            fmt::fmt
+            xxHash::xxHash
             Modle::common
-            Modle::libmodle_io
+            Modle::io_compressed
             Modle::stats)
 
 if(ENABLE_PCH)

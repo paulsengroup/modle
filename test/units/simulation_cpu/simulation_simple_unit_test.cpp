@@ -4,17 +4,15 @@
 
 #include <absl/types/span.h>  // for MakeSpan, Span, MakeConstSpan
 
-#include <algorithm>                                  // for all_of, equal, copy, for_each, gene...
-#include <boost/dynamic_bitset/dynamic_bitset.hpp>    // for dynamic_bitset
-#include <boost/random/bernoulli_distribution.hpp>    // for bernoulli_distribution
-#include <boost/random/uniform_int_distribution.hpp>  // for uniform_int_distribution
-#include <cassert>                                    // for assert
-#include <catch2/catch.hpp>                           // for AssertionHandler, operator""_catch_sr
-#include <iterator>                                   // for back_insert_iterator, back_inserter
-#include <memory>                                     // for allocator, allocator_traits<>::valu...
-#include <numeric>                                    // for iota
-#include <string_view>                                // for string_view
-#include <vector>                                     // for vector
+#include <algorithm>                                // for all_of, equal, copy, for_each, gene...
+#include <boost/dynamic_bitset/dynamic_bitset.hpp>  // for dynamic_bitset
+#include <cassert>                                  // for assert
+#include <catch2/catch.hpp>                         // for AssertionHandler, operator""_catch_sr
+#include <iterator>                                 // for back_insert_iterator, back_inserter
+#include <memory>                                   // for allocator, allocator_traits<>::valu...
+#include <numeric>                                  // for iota
+#include <string_view>                              // for string_view
+#include <vector>                                   // for vector
 
 #include "./common.hpp"                  // for construct_lef, NO_COLLISION, requir...
 #include "modle/common/common.hpp"       // for usize, bp_t, collision_t

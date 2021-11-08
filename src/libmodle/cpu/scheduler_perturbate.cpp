@@ -40,12 +40,12 @@
 #include <utility>                          // for make_pair, tuple_elemen...
 #include <vector>                           // for vector
 
-#include "modle/bed.hpp"            // for BED, BED_tree, BED_tree::at, BED_tree::c...
+#include "modle/bed/bed.hpp"        // for BED, BED_tree, BED_tree::at, BED_tree::c...
 #include "modle/common/common.hpp"  // for bp_t, contacts_t, u64
 #include "modle/common/suppress_compiler_warnings.hpp"  // for DISABLE_WARNING_POP
-#include "modle/compressed_io.hpp"                      // for Writer
+#include "modle/compressed_io/compressed_io.hpp"        // for Writer
 #include "modle/contacts.hpp"                           // for ContactMatrix
-#include "modle/cooler.hpp"                             // for Cooler, Cooler::WRITE_ONLY
+#include "modle/cooler/cooler.hpp"                      // for Cooler, Cooler::WRITE_ONLY
 #include "modle/extrusion_barriers.hpp"                 // for ExtrusionBarrier
 #include "modle/genome.hpp"                             // for Chromosome, Genome
 #include "modle/interval_tree.hpp"  // for IITree, IITree::empty, IITree::equal_range
@@ -53,7 +53,7 @@
 
 namespace modle {
 
-static void validate_reference_contacts(const Genome& genome, cooler::Cooler& c) {
+static void validate_reference_contacts(const Genome& genome, cooler::Cooler<contacts_t>& c) {
   const auto chrom_names = [&]() {
     auto names = c.get_chrom_names();
     return absl::flat_hash_set<std::string>{std::make_move_iterator(names.begin()),
@@ -76,8 +76,8 @@ static void validate_reference_contacts(const Genome& genome, cooler::Cooler& c)
 }
 
 [[nodiscard]] static ContactMatrix<> read_reference_contacts(
-    cooler::Cooler& c, std::string_view chrom_name, const bp_t window_start, const bp_t window_end,
-    const bp_t bin_size, const bp_t diagonal_width) {
+    cooler::Cooler<contacts_t>& c, std::string_view chrom_name, const bp_t window_start,
+    const bp_t window_end, const bp_t bin_size, const bp_t diagonal_width) {
   const auto nrows = (diagonal_width + bin_size - 1) / bin_size;
   const auto chrom_boundaries = std::make_pair(window_start, window_end - 1);
   const auto try_common_prefixes = false;
@@ -114,8 +114,8 @@ void Simulation::run_perturbate() {
   const auto write_bedpe_to_stdout = this->path_to_output_file_bedpe.empty();
   auto out_task_stream = compressed_io::Writer(this->path_to_task_file);
 
-  cooler::Cooler reference_cooler(this->path_to_reference_contacts, cooler::Cooler::READ_ONLY,
-                                  bin_size);
+  cooler::Cooler reference_cooler(this->path_to_reference_contacts,
+                                  cooler::Cooler<contacts_t>::IO_MODE::READ_ONLY, bin_size);
   validate_reference_contacts(this->_genome, reference_cooler);
 
   if (this->write_header) {
@@ -606,8 +606,9 @@ void Simulation::simulate_window(Simulation::State& state, compressed_io::Writer
     {
       std::scoped_lock l(cooler_mutex);
       const auto t0 = absl::Now();
-      auto c = cooler::Cooler(file_name, cooler::Cooler::WRITE_ONLY, this->bin_size,
-                              this->_genome.chromosome_with_longest_name().name().size());
+      auto c =
+          cooler::Cooler(file_name, cooler::Cooler<contacts_t>::IO_MODE::WRITE_ONLY, this->bin_size,
+                         this->_genome.chromosome_with_longest_name().name().size());
       for (const auto& chrom : this->_genome) {
         if (&chrom == state.chrom) {
           c.write_or_append_cmatrix_to_file(*state.contacts, state.chrom->name(),

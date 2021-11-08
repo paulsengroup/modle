@@ -23,7 +23,6 @@
 DISABLE_WARNING_PUSH
 DISABLE_WARNING_PADDED
 #include "libBigWig/bigWig.h"  // for bigWigFile_t
-
 DISABLE_WARNING_POP
 
 namespace modle::io::bigwig {
@@ -68,4 +67,4 @@ class Writer {
 
 }  // namespace modle::io::bigwig
 
-#include "../../bigwig_impl.hpp"  // IWYU pragma: export
+#include "../../../../bigwig_impl.hpp"  // IWYU pragma: export

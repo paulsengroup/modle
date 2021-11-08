@@ -2,7 +2,7 @@
 //
 // SPDX-License-Identifier: MIT
 
-#include "modle/compressed_io.hpp"
+#include "modle/compressed_io/compressed_io.hpp"
 
 #include <absl/strings/ascii.h>  // for AsciiStrToLower
 #include <archive.h>             // for archive_errno, archiv...

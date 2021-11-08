@@ -26,8 +26,8 @@ target_link_libraries(
   modle_common
   INTERFACE project_options
             project_warnings
+            absl::span
             absl::strings
-            absl::str_format
             Boost::headers
             Boost::filesystem
             Boost::random

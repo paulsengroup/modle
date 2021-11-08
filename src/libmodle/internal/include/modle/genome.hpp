@@ -18,7 +18,7 @@
 #include <type_traits>                // for enable_if_t, remove_cv_t
 #include <vector>                     // for vector
 
-#include "modle/bed.hpp"                 // for BED (ptr only), BED_tree, BED_tree<>::value_type
+#include "modle/bed/bed.hpp"             // for BED (ptr only), BED_tree, BED_tree<>::value_type
 #include "modle/common/common.hpp"       // for bp_t, contacts_t, u64, u32, u8
 #include "modle/common/utils.hpp"        // for ndebug_defined
 #include "modle/contacts.hpp"            // for ContactMatrix

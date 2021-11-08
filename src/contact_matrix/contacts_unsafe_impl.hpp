@@ -24,9 +24,9 @@
 #include <utility>                                  // for make_pair
 #include <vector>                                   // for vector
 
-#include "modle/common/common.hpp"  // for usize, i64, u64, bp_t, isize
-#include "modle/common/utils.hpp"   // for convolve, parse_numeric_or_throw
-#include "modle/compressed_io.hpp"  // for Reader
+#include "modle/common/common.hpp"                // for usize, i64, u64, bp_t, isize
+#include "modle/common/utils.hpp"                 // for convolve, parse_numeric_or_throw
+#include "modle/compressed_io/compressed_io.hpp"  // for Reader
 
 namespace modle {
 
@@ -239,7 +239,7 @@ usize ContactMatrix<N>::unsafe_npixels_after_masking() const {
 
 template <class N>
 constexpr double ContactMatrix<N>::unsafe_get_fraction_of_missed_updates() const noexcept {
-  if (this->empty() || this->get_n_of_missed_updates() == N(0)) {
+  if (this->empty() || this->get_n_of_missed_updates() == 0) {
     return 0.0;
   }
   const auto missed_updates = static_cast<double>(this->get_n_of_missed_updates());
@@ -262,8 +262,16 @@ double ContactMatrix<N>::unsafe_get_avg_contact_density() const {
 }
 
 template <class N>
-N ContactMatrix<N>::unsafe_max_count() const noexcept {
-  if (this->get_tot_contacts() == 0) {
+N ContactMatrix<N>::unsafe_get_min_count() const noexcept {
+  if (this->unsafe_get_tot_contacts() == 0) {
+    return 0;
+  }
+  return *std::min_element(this->_contacts.begin(), this->_contacts.end());
+}
+
+template <class N>
+N ContactMatrix<N>::unsafe_get_max_count() const noexcept {
+  if (this->unsafe_get_tot_contacts() == 0) {
     return 0;
   }
   return *std::max_element(this->_contacts.begin(), this->_contacts.end());
@@ -499,6 +507,30 @@ ContactMatrix<double> ContactMatrix<N>::unsafe_gaussian_diff(const double sigma1
   }
   return bmatrix;
 }
+
+template <class N>
+template <class FP, class>
+ContactMatrix<FP> ContactMatrix<N>::unsafe_normalize(const double lb, const double ub) const {
+  assert(ub >= lb);  // NOLINT
+
+  const auto min_count = this->unsafe_get_min_count();
+  const auto max_count = this->unsafe_get_max_count();
+  const auto scaling_factor = static_cast<FP>(ub - lb);
+
+  ContactMatrix<FP> m(this->nrows(), this->ncols());
+  std::transform(
+      this->_contacts.begin(), this->_contacts.end(), m._contacts.begin(), [&](const auto count) {
+        // https://stats.stackexchange.com/a/281164
+        const auto n = static_cast<FP>(count - min_count) / static_cast<FP>(max_count - min_count);
+        return (n * scaling_factor) + static_cast<FP>(lb);
+      });
+
+  m._updates_missed = this->_updates_missed.load();
+  m._tot_contacts_outdated = true;
+
+  return m;
+}
+
 }  // namespace modle
 
 // IWYU pragma: private, include "modle/contacts.hpp"

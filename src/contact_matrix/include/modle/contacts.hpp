@@ -33,6 +33,12 @@ class ContactMatrix {
   using pixel_read_lock =
       std::pair<std::shared_lock<std::shared_mutex>, std::shared_lock<std::shared_mutex>>;
 
+  // This allows methods from different instantiations of the ContactMatrix template class:
+  // Example: allowing ContactMatrix<int> to access private member variables and functions from
+  // class ContactMatrix<double>
+  template <class M>
+  friend class ContactMatrix;
+
  private:
   u64 _nrows{0};
   u64 _ncols{0};
@@ -104,8 +110,10 @@ class ContactMatrix {
   [[nodiscard]] inline double unsafe_get_avg_contact_density() const;
   [[nodiscard]] inline constexpr usize get_matrix_size_in_bytes() const;
   [[nodiscard]] inline constexpr double get_matrix_size_in_mb() const;
-  [[nodiscard]] inline N max_count() const noexcept;
-  [[nodiscard]] inline N unsafe_max_count() const noexcept;
+  [[nodiscard]] inline N get_min_count() const noexcept;
+  [[nodiscard]] inline N unsafe_get_min_count() const noexcept;
+  [[nodiscard]] inline N get_max_count() const noexcept;
+  [[nodiscard]] inline N unsafe_get_max_count() const noexcept;
 
   // Debug
   inline void unsafe_print(std::ostream& out_stream = std::cout, bool full = false) const;
@@ -137,7 +145,9 @@ class ContactMatrix {
       double sigma1, double sigma2, double min_value = -(std::numeric_limits<double>::max)(),
       double max_value = (std::numeric_limits<double>::max)()) const;
   template <class FP = double, class = std::enable_if_t<std::is_floating_point_v<FP>>>
-  [[nodiscard]] inline ContactMatrix<FP> normalize() const;
+  [[nodiscard]] inline ContactMatrix<FP> unsafe_normalize(double lb = 0.0, double ub = 1.0) const;
+  template <class FP = double, class = std::enable_if_t<std::is_floating_point_v<FP>>>
+  [[nodiscard]] inline ContactMatrix<FP> normalize(double lb = 0.0, double ub = 1.0) const;
 
  private:
   [[nodiscard]] inline N& unsafe_at(usize i, usize j);

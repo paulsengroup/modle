@@ -20,11 +20,10 @@
 #include <utility>                    // for make_pair, pair
 #include <vector>                     // for vector
 
-#include "modle/chrom_sizes.hpp"    // for ChromSizes
 #include "modle/common/common.hpp"  // for bp_t, u64, u8
 #include "modle/common/utils.hpp"   // for ConstMap, ConstMap::ConstMap<Key, Value, Size>
-#include "modle/compressed_io.hpp"  // for Reader
-#include "modle/interval_tree.hpp"  // for IITree, IITree::IITree<I, T>
+#include "modle/compressed_io/compressed_io.hpp"  // for Reader
+#include "modle/interval_tree.hpp"                // for IITree, IITree::IITree<I, T>
 
 namespace modle::bed {
 
@@ -311,4 +310,4 @@ struct fmt::formatter<modle::bed::BED> {
                             std::make_pair("bed12", modle::bed::BED::BED12)};
 };
 
-#include "../../bed_impl.hpp"  // IWYU pragma: export
+#include "../../../../bed_impl.hpp"  // IWYU pragma: export

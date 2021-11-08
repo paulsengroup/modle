@@ -159,7 +159,6 @@ hsize_t write_numbers(CN &numbers, const H5::DataSet &dataset, hsize_t file_offs
   using N = std::remove_pointer_t<decltype(numbers.data())>;
   const hsize_t RANK{1};
   const hsize_t MAXDIMS{H5S_UNLIMITED};
-  const auto num_type = getH5_type<N>();
   const hsize_t BUFF_SIZE{numbers.size()};
 
   try {

@@ -13,9 +13,9 @@
 #include "modle/common/common.hpp"  // for usize, i64, u64, bp_t, isize
 #include "modle/common/random.hpp"  // for PRNG, uniform_int_distribution, unifo...
 #include "modle/common/suppress_compiler_warnings.hpp"
-#include "modle/common/utils.hpp"   // for convolve ndebug_defined, ndebug_not_defined
-#include "modle/compressed_io.hpp"  // for CompressedReader
-#include "modle/stats/misc.hpp"     // for compute_gauss_kernel
+#include "modle/common/utils.hpp"                 // for convolve ndebug_defined, ndebug_not_defined
+#include "modle/compressed_io/compressed_io.hpp"  // for CompressedReader
+#include "modle/stats/misc.hpp"                   // for compute_gauss_kernel
 
 namespace modle {
 
@@ -114,7 +114,16 @@ usize ContactMatrix<N>::get_tot_contacts() const {
 }
 
 template <class N>
-N ContactMatrix<N>::max_count() const noexcept {
+N ContactMatrix<N>::get_min_count() const noexcept {
+  if (this->get_tot_contacts() == 0) {
+    return 0;
+  }
+  const auto lck = this->lock();
+  return *std::min_element(this->_contacts.begin(), this->_contacts.end());
+}
+
+template <class N>
+N ContactMatrix<N>::get_max_count() const noexcept {
   if (this->get_tot_contacts() == 0) {
     return 0;
   }
@@ -151,9 +160,9 @@ ContactMatrix<double> ContactMatrix<N>::blur(const double sigma, const double cu
 
 template <class N>
 template <class FP, class>
-ContactMatrix<FP> ContactMatrix<N>::normalize() const {
+ContactMatrix<FP> ContactMatrix<N>::normalize(const double lb, const double ub) const {
   const auto lck = this->lock();
-  return this->unsafe_normalize();
+  return this->unsafe_normalize(lb, ub);
 }
 }  // namespace modle
 

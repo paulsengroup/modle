@@ -2,7 +2,7 @@
 //
 // SPDX-License-Identifier: MIT
 
-#include "modle/hdf5.hpp"
+#include "modle/hdf5/hdf5.hpp"
 
 #include <H5Cpp.h>
 #include <H5DataSpace.h>   // for DataSpace

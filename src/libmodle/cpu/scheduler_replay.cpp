@@ -30,9 +30,9 @@
 #include <thread_pool/thread_pool.hpp>      // for thread_pool
 #include <vector>                           // for vector
 
-#include "modle/common/common.hpp"  // for bp_t, contacts_t, u64
-#include "modle/compressed_io.hpp"  // for Reader, Writer
-#include "modle/contacts.hpp"       // for ContactMatrix
+#include "modle/common/common.hpp"                // for bp_t, contacts_t, u64
+#include "modle/compressed_io/compressed_io.hpp"  // for Reader, Writer
+#include "modle/contacts.hpp"                     // for ContactMatrix
 
 namespace modle {
 

@@ -31,7 +31,7 @@
 #include "modle/common/common.hpp"  // for bp_t, i64, modle_version_long
 #include "modle/common/config.hpp"  // for Config
 #include "modle/common/utils.hpp"   // for str_float_to_str_int, parse_numeric_or_throw
-#include "modle/cooler.hpp"         // for Cooler
+#include "modle/cooler/cooler.hpp"  // for Cooler
 
 namespace modle {
 
@@ -665,7 +665,8 @@ void Cli::validate_args() const {
 
   if (!c.path_to_reference_contacts.empty()) {
     try {
-      modle::cooler::Cooler(c.path_to_reference_contacts, cooler::Cooler::READ_ONLY, c.bin_size);
+      modle::cooler::Cooler<>(c.path_to_reference_contacts, cooler::Cooler<>::IO_MODE::READ_ONLY,
+                              c.bin_size);
     } catch (const std::runtime_error& e) {
       errors.emplace_back(e.what());
     }

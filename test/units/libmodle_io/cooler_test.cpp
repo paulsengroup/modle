@@ -2,7 +2,7 @@
 //
 // SPDX-License-Identifier: MIT
 
-#include "modle/cooler.hpp"
+#include "modle/cooler/cooler.hpp"
 
 #include <absl/strings/str_split.h>  // for StrSplit, Splitter
 #include <absl/types/span.h>         // for Span
@@ -20,11 +20,11 @@
 #include <stdexcept>                        // for runtime_error
 #include <string_view>                      // for string_view
 
-#include "modle/common/common.hpp"    // for u64, u32, usize, i64, u8
-#include "modle/common/smartdir.hpp"  // for SmartDir
-#include "modle/common/utils.hpp"     // for parse_numeric_or_throw
-#include "modle/compressed_io.hpp"    // for Reader
-#include "modle/contacts.hpp"         // for ContactMatrix
+#include "modle/common/common.hpp"                // for u64, u32, usize, i64, u8
+#include "modle/common/smartdir.hpp"              // for SmartDir
+#include "modle/common/utils.hpp"                 // for parse_numeric_or_throw
+#include "modle/compressed_io/compressed_io.hpp"  // for Reader
+#include "modle/contacts.hpp"                     // for ContactMatrix
 
 namespace modle::test {
 const auto cleanup_on_exit{true};         // Useful for debugging
@@ -33,6 +33,7 @@ const SmartDir testdir{cleanup_on_exit};  // NOLINT Using auto here upsets GCC8
 
 namespace modle::test::cooler {
 using namespace modle::cooler;
+using Cooler = Cooler<>;
 // using default_sink_t = spdlog::sinks::stderr_color_sink_mt;
 using default_sink_t = spdlog::sinks::null_sink_mt;
 
@@ -44,13 +45,14 @@ TEST_CASE("cooler ctor", "[io][cooler][short]") {
   spdlog::set_default_logger(
       std::make_shared<spdlog::logger>("main_logger", std::make_shared<default_sink_t>()));
   {
-    auto c = Cooler(test_file, Cooler::READ_ONLY);  // NOLINT
+    auto c = Cooler(test_file, Cooler::IO_MODE::READ_ONLY);  // NOLINT
     CHECK(c.is_read_only());
   }
 
   H5::H5File f(test_file.string(), H5F_ACC_RDONLY);
-  CHECK(Cooler::validate_file_format(f, Cooler::COOL));
-  CHECK_THROWS_WITH(!Cooler::validate_file_format(f, Cooler::MCOOL, Cooler::READ_ONLY, 1'000'000),
+  CHECK(Cooler::validate_file_format(f, Cooler::FLAVOR::COOL));
+  CHECK_THROWS_WITH(!Cooler::validate_file_format(f, Cooler::FLAVOR::MCOOL,
+                                                  Cooler::IO_MODE::READ_ONLY, 1'000'000),
                     Catch::Matchers::Contains("Expected format flavor MCOOL, found COOL"));
 }
 
@@ -72,10 +74,11 @@ TEST_CASE("CMatrix to cooler", "[io][cooler][short]") {
   ContactMatrix<> cmatrix1{};
   cmatrix1.unsafe_import_from_txt(input_file);
 
-  Cooler(output_file, Cooler::WRITE_ONLY, bin_size, chrom.size())
+  Cooler(output_file, Cooler::IO_MODE::WRITE_ONLY, bin_size, chrom.size())
       .write_or_append_cmatrix_to_file(cmatrix1, chrom, start, end, end);
 
-  const auto cmatrix2 = Cooler(output_file, Cooler::READ_ONLY).cooler_to_cmatrix(chrom, nrows);
+  const auto cmatrix2 =
+      Cooler(output_file, Cooler::IO_MODE::READ_ONLY).cooler_to_cmatrix(chrom, nrows);
 
   for (usize i = 0; i < ncols; ++i) {
     for (usize j = 0; j < ncols; ++j) {
@@ -106,13 +109,15 @@ TEST_CASE("CMatrix to cooler - multiple chromosomes", "[io][cooler][short]") {
   cmatrix1.unsafe_import_from_txt(input_file);
 
   {
-    auto c = Cooler(output_file, Cooler::WRITE_ONLY, bin_size, chrom1.size());
+    auto c = Cooler(output_file, Cooler::IO_MODE::WRITE_ONLY, bin_size, chrom1.size());
     c.write_or_append_cmatrix_to_file(cmatrix1, chrom1, start, end, end);
     c.write_or_append_cmatrix_to_file(cmatrix1, chrom2, start, end, end);
   }
 
-  const auto cmatrix2 = Cooler(output_file, Cooler::READ_ONLY).cooler_to_cmatrix(chrom1, nrows);
-  const auto cmatrix3 = Cooler(output_file, Cooler::READ_ONLY).cooler_to_cmatrix(chrom2, nrows);
+  const auto cmatrix2 =
+      Cooler(output_file, Cooler::IO_MODE::READ_ONLY).cooler_to_cmatrix(chrom1, nrows);
+  const auto cmatrix3 =
+      Cooler(output_file, Cooler::IO_MODE::READ_ONLY).cooler_to_cmatrix(chrom2, nrows);
 
   for (usize i = 0; i < ncols; ++i) {
     for (usize j = 0; j < ncols; ++j) {
@@ -138,7 +143,7 @@ TEST_CASE("Cooler to CMatrix", "[io][cooler][short]") {
   const u64 ncols = (end + bin_size - 1) / bin_size;
   const auto nrows = ncols;
 
-  auto c = Cooler(test_file, Cooler::READ_ONLY);
+  auto c = Cooler(test_file, Cooler::IO_MODE::READ_ONLY);
 
   auto cmatrix = c.cooler_to_cmatrix(chrom, nrows, {0, -1}, true, false);
   CHECK(cmatrix.nrows() == nrows);
@@ -169,7 +174,7 @@ TEST_CASE("Cooler to CMatrix and CMatrix to Cooler", "[io][cooler][short]") {
   spdlog::set_default_logger(
       std::make_shared<spdlog::logger>("main_logger", std::make_shared<default_sink_t>()));
 
-  auto c1 = Cooler(test_file_in, Cooler::READ_ONLY);
+  auto c1 = Cooler(test_file_in, Cooler::IO_MODE::READ_ONLY);
 
   constexpr std::string_view chrom = "chr1";
   const u64 start = 0;
@@ -183,10 +188,10 @@ TEST_CASE("Cooler to CMatrix and CMatrix to Cooler", "[io][cooler][short]") {
   REQUIRE(cmatrix1.ncols() == ncols);
 
   {
-    auto c2 = Cooler(test_file_out, Cooler::WRITE_ONLY, bin_size, chrom.size());
+    auto c2 = Cooler(test_file_out, Cooler::IO_MODE::WRITE_ONLY, bin_size, chrom.size());
     c2.write_or_append_cmatrix_to_file(cmatrix1, chrom, start, end, end);
   }
-  auto c3 = Cooler(test_file_out, Cooler::READ_ONLY);
+  auto c3 = Cooler(test_file_out, Cooler::IO_MODE::READ_ONLY);
 
   const auto cmatrix2 = c3.cooler_to_cmatrix(chrom, nrows);
   const auto v1 = cmatrix1.get_raw_count_vector();
@@ -211,7 +216,7 @@ TEST_CASE("Cooler to CMatrix and CMatrix to Cooler - all chromosomes", "[io][coo
   spdlog::set_default_logger(
       std::make_shared<spdlog::logger>("main_logger", std::make_shared<default_sink_t>()));
 
-  auto c1 = Cooler(test_file_in, Cooler::READ_ONLY);
+  auto c1 = Cooler(test_file_in, Cooler::IO_MODE::READ_ONLY);
 
   const auto bin_size = c1.get_bin_size();
   const usize nrows = 25;
@@ -227,7 +232,7 @@ TEST_CASE("Cooler to CMatrix and CMatrix to Cooler - all chromosomes", "[io][coo
 
   {
     REQUIRE(chrom_names.size() == chrom_sizes.size());
-    auto c2 = Cooler(test_file_out, Cooler::WRITE_ONLY, bin_size, max_chrom_name_size + 1);
+    auto c2 = Cooler(test_file_out, Cooler::IO_MODE::WRITE_ONLY, bin_size, max_chrom_name_size + 1);
     for (usize i = 0; i < chrom_names.size(); ++i) {
       matrices.emplace_back(c1.cooler_to_cmatrix(chrom_names[i], nrows, {0, -1}, true, false));
       c2.write_or_append_cmatrix_to_file(matrices.back(), chrom_names[i], i64(0), chrom_sizes[i],
@@ -235,7 +240,7 @@ TEST_CASE("Cooler to CMatrix and CMatrix to Cooler - all chromosomes", "[io][coo
     }
   }
 
-  auto c3 = Cooler(test_file_out, Cooler::READ_ONLY);
+  auto c3 = Cooler(test_file_out, Cooler::IO_MODE::READ_ONLY);
   for (usize i = 0; i < chrom_names.size(); ++i) {
     const auto matrix = c3.cooler_to_cmatrix(chrom_names[i], nrows, {0, -1}, true, false);
     const auto& reference = matrices[i];
@@ -262,7 +267,7 @@ TEST_CASE("Cooler testing balanced matrix", "[io][cooler][short]") {
   const u64 ncols = (end / bin_size) + (end % bin_size != 0);
   const u64 nrows = ncols;
 
-  cooler::Cooler c1(test_file, cooler::Cooler::READ_ONLY, bin_size);
+  Cooler::FLAVOR::COOLer c1(test_file, Cooler::FLAVOR::COOLer<>::IO_MODE::READ_ONLY, bin_size);
 
   const auto balanced_cmatrix = c1.cooler_to_cmatrix("chr1", nrows, false, true);
   const auto raw_cmatrix = c1.cooler_to_cmatrix("chr1", nrows, false, false);
@@ -323,7 +328,7 @@ TEST_CASE("Cooler to CMatrix subrange", "[io][cooler][short]") {
   spdlog::set_default_logger(
       std::make_shared<spdlog::logger>("main_logger", std::make_shared<default_sink_t>()));
 
-  auto c = Cooler(test_file_in, Cooler::READ_ONLY);
+  auto c = Cooler(test_file_in, Cooler::IO_MODE::READ_ONLY);
 
   constexpr std::string_view chrom = "chr1";
   const u64 start1 = 0;

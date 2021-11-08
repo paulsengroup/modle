@@ -24,7 +24,7 @@
 #include <utility>                                  // for pair
 #include <vector>                                   // for vector
 
-#include "modle/bed.hpp"                                // for BED (ptr only), BED_tree
+#include "modle/bed/bed.hpp"                            // for BED (ptr only), BED_tree
 #include "modle/common/common.hpp"                      // for usize, bp_t, collision_t, contacts_t
 #include "modle/common/config.hpp"                      // for Config
 #include "modle/common/random.hpp"                      // for PRNG_t, normal_distribution, unif...

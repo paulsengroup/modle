@@ -2,7 +2,7 @@
 //
 // SPDX-License-Identifier: MIT
 
-#include "modle/compressed_io.hpp"  // for Reader
+#include "modle/compressed_io/compressed_io.hpp"  // for Reader
 
 #include <boost/filesystem/operations.hpp>  // for remove
 #include <boost/filesystem/path.hpp>        // for path, operator/
