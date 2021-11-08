@@ -74,15 +74,16 @@ RUN ln -snf /usr/share/zoneinfo/CET /etc/localtime \
     && echo CET > /etc/timezone
 RUN apt-get update \
     && apt-get install -y --no-install-recommends                            \
-                       gcc g++ r-base r-cran-minqa r-cran-mnormt r-cran-rcpp \
-                       r-cran-rcpparmadillo libblas-dev libcurl4-openssl-dev \
-                       liblapack-dev libssl-dev libxml2-dev
+                       gcc g++ gfortran make python3-pip r-base r-cran-minqa \
+                       r-cran-mnormt r-cran-rcpp r-cran-rcpparmadillo        \
+                       libblas-dev libcurl4-openssl-dev liblapack-dev        \
+                       libssl-dev libxml2-dev
 
 RUN pip3 install "scipy==${SCIPY_VER}"
 RUN echo "options(Ncpus = $(nproc))" > "$HOME/.Rprofile"           \
     && Rscript --no-save -e 'install.packages("devtools")'         \
     && Rscript --no-save -e "library(devtools); devtools::install_version(\"wCorr\",  dependencies=c(\"Depends\", \"Imports\", \"LinkingTo\"), version=\"${WCORR_VER}\")" \
-    && Rscript --no-save -e 'quit(status=as.integer(!library("wCorr", character.only=T, logical.return=T)), save="no")' &> /dev/null
+    && Rscript --no-save -e 'quit(status=as.integer(!library("wCorr", character.only=T, logical.return=T)), save="no")' #&> /dev/null
 
 COPY --from=builder "$src_dir" "$src_dir"
 COPY --from=builder "/usr/bin/ctest" "/usr/bin/ctest"
@@ -101,7 +102,7 @@ ARG staging_dir='/home/conan/modle/staging'
 ARG install_dir='/usr/local'
 ARG ver
 
-COPY --from=builder "$staging_dir" "$install_dir"
+COPY --from=testing "$staging_dir" "$install_dir"
 
 LABEL maintainer='Roberto Rossini <roberros@uio.no>'
 LABEL version="$ver"
