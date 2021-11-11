@@ -263,7 +263,17 @@ void Cooler<N>::write_or_append_cmatrix_to_file(const ContactMatrix<M> *cmatrix,
           // contacts for a certain width along the diagonal). The second condition makes sure we
           // are not reading past the array end
           for (auto j = i; j < i + cmatrix->nrows() && j < cmatrix->ncols(); ++j) {
-            if (const auto m = cmatrix->unsafe_get(i, j); m != 0) {  // Only write non-zero pixels
+            const auto m = [&]() {
+              DISABLE_WARNING_PUSH
+              DISABLE_WARNING_USELESS_CAST
+              if constexpr (std::is_floating_point_v<M> && !std::is_floating_point_v<value_type>) {
+                return static_cast<value_type>(std::round(cmatrix->unsafe_get(i, j)));
+              } else {
+                return static_cast<value_type>(cmatrix->unsafe_get(i, j));
+              }
+              DISABLE_WARNING_POP
+            }();
+            if (m != value_type(0)) {  // Only write non-zero pixels
               if constexpr (utils::ndebug_not_defined()) {
                 // Make sure we are always reading from the upper-triangle of the underlying square
                 // contact matrix
@@ -276,10 +286,9 @@ void Cooler<N>::write_or_append_cmatrix_to_file(const ContactMatrix<M> *cmatrix,
               }
               b.pixel_b1_idx_buff.push_back(static_cast<i64>(pxl_offset + i));
               b.pixel_b2_idx_buff.push_back(static_cast<i64>(pxl_offset + j));
-              DISABLE_WARNING_PUSH
-              DISABLE_WARNING_USELESS_CAST
-              b.pixel_count_buff.push_back(static_cast<value_type>(m));
-              DISABLE_WARNING_POP
+
+              b.pixel_count_buff.push_back(m);
+
               ++this->_nnz;
 
               if (b.pixel_b1_idx_buff.size() ==
