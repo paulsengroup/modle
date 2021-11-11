@@ -120,6 +120,12 @@ void Cli::make_eval_subcommand() {
      "Overwrite existing file(s).")
      ->capture_default_str();
 
+  io.add_flag(
+     "--normalize,!--no-normalize",
+     c.normalize,
+     "Normalize matricesto range 0-1 before comparing them.")
+     ->capture_default_str();
+
   corr.add_flag(
      "--eucl-dist,!--no-eucl-dist",
      c.compute_eucl_dist,
@@ -463,6 +469,14 @@ void Cli::make_transform_subcommand() {
       c.normalization_range,
       "Pair of comma separated numbers representing the range of normalized values.")
       ->check(CLI::NonNegativeNumber)
+      ->delimiter(',')
+      ->capture_default_str();
+
+  trans.add_option(
+      "--saturation-range",
+      c.saturation_range,
+      "Pair of comma separated numbers representing the saturation values. Value saturation is applied prior to normalization.")
+      ->delimiter(',')
       ->capture_default_str();
 
   trans.add_option(
@@ -744,6 +758,16 @@ void Cli::validate_transform_subcommand() const {
       errors.push_back(
           fmt::format(FMT_STRING("The upper bound for the normalization range specified through "
                                  "--normalization range is expected to be strictly larger than the "
+                                 "lower bound.\n   - Lower bound: {}\n   - Upper bound: {}\n"),
+                      lb, ub));
+    }
+  }
+
+  if (const auto [lb, ub] = c.normalization_range; !std::isinf(lb) || !std::isinf(ub)) {
+    if (lb >= ub) {
+      errors.push_back(
+          fmt::format(FMT_STRING("The upper bound for the saturation range specified through "
+                                 "--saturation range is expected to be strictly larger than the "
                                  "lower bound.\n   - Lower bound: {}\n   - Upper bound: {}\n"),
                       lb, ub));
     }

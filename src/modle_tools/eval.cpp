@@ -63,7 +63,8 @@ using ChromSet = absl::btree_map<std::string, std::pair<bp_t, bp_t>, cppsort::na
   return chroms;
 }
 
-[[nodiscard]] static ChromSet import_chroms_from_cool(cooler::Cooler<> &cooler_file) {
+template <class N>
+[[nodiscard]] static ChromSet import_chroms_from_cool(cooler::Cooler<N> &cooler_file) {
   try {
     ChromSet chrom_set;
     auto chroms = cooler_file.get_chroms();
@@ -81,8 +82,9 @@ using ChromSet = absl::btree_map<std::string, std::pair<bp_t, bp_t>, cppsort::na
   }
 }
 
+template <class N>
 [[nodiscard]] static ChromSet select_chromosomes_for_eval(
-    cooler::Cooler<> &c1, cooler::Cooler<> &c2,
+    cooler::Cooler<N> &c1, cooler::Cooler<N> &c2,
     const boost::filesystem::path &path_to_chrom_subranges) {
   // Import chromosomes from Cooler files and select shared chromosomes
   const auto chrom_set1 = import_chroms_from_cool(c1);
@@ -264,7 +266,7 @@ static size_t mask_zero_pixels(const std::vector<N> &v1, const std::vector<N> &v
 
 template <CorrMethod correlation_method, StripeDirection stripe_direction, class N,
           class WeightIt = utils::RepeatIterator<double>>
-static std::vector<double> compute_correlation(
+static std::vector<double> compute_metric(
     std::shared_ptr<ContactMatrix<N>> ref_contacts, std::shared_ptr<ContactMatrix<N>> tgt_contacts,
     const bool mask_zero_pixels_, WeightIt weight_first = utils::RepeatIterator<double>(1)) {
   assert(ref_contacts->nrows() == tgt_contacts->nrows());  // NOLINT
@@ -284,9 +286,11 @@ static std::vector<double> compute_correlation(
   auto corr_fx = [&]() {
     if constexpr (correlation_method == pearson) {
       return stats::Pearson<double>{};
-    } else {
-      static_assert(correlation_method == spearman);
+    } else if constexpr (correlation_method == spearman) {
       return stats::Spearman<double>{nrows};
+    } else {
+      static_assert(correlation_method == eucl_dist);
+      return stats::SED<double>{};
     }
   }();
 
@@ -307,25 +311,33 @@ static std::vector<double> compute_correlation(
       mask_zero_pixels(ref_pixel_buff, tgt_pixel_buff, weight_buff);
     }
 
-    [[maybe_unused]] const auto &[corr, pval] =
-        !weight_buff.empty() ? corr_fx(ref_pixel_buff.begin(), ref_pixel_buff.end(),
-                                       tgt_pixel_buff.begin(), weight_buff.begin())
-                             : corr_fx(ref_pixel_buff.begin(), ref_pixel_buff.end(),
-                                       tgt_pixel_buff.begin(), weight_first);
-    correlation_buff[i] = corr;
+    if constexpr (correlation_method != eucl_dist) {
+      [[maybe_unused]] const auto &[corr, pval] =
+          !weight_buff.empty() ? corr_fx(ref_pixel_buff.begin(), ref_pixel_buff.end(),
+                                         tgt_pixel_buff.begin(), weight_buff.begin())
+                               : corr_fx(ref_pixel_buff.begin(), ref_pixel_buff.end(),
+                                         tgt_pixel_buff.begin(), weight_first);
+      correlation_buff[i] = corr;
+    } else {
+      correlation_buff[i] = !weight_buff.empty()
+                                ? corr_fx(ref_pixel_buff.begin(), ref_pixel_buff.end(),
+                                          tgt_pixel_buff.begin(), weight_buff.begin())
+                                : corr_fx(ref_pixel_buff.begin(), ref_pixel_buff.end(),
+                                          tgt_pixel_buff.begin(), weight_first);
+    }
   }
   return correlation_buff;
 }
 
 template <CorrMethod correlation_method, StripeDirection stripe_direction, class N>
-static std::vector<double> compute_correlation(std::shared_ptr<ContactMatrix<N>> ref_contacts,
-                                               std::shared_ptr<ContactMatrix<N>> tgt_contacts,
-                                               const bool mask_zero_pixels_,
-                                               const std::vector<double> &weights) {
+static std::vector<double> compute_metric(std::shared_ptr<ContactMatrix<N>> ref_contacts,
+                                          std::shared_ptr<ContactMatrix<N>> tgt_contacts,
+                                          const bool mask_zero_pixels_,
+                                          const std::vector<double> &weights) {
   assert(ref_contacts->nrows() == tgt_contacts->nrows());              // NOLINT
   assert(weights.empty() || ref_contacts->nrows() == weights.size());  // NOLINT
-  return compute_correlation<correlation_method, stripe_direction>(
-      ref_contacts, tgt_contacts, mask_zero_pixels_, weights.begin());
+  return compute_metric<correlation_method, stripe_direction>(ref_contacts, tgt_contacts,
+                                                              mask_zero_pixels_, weights.begin());
 }
 
 absl::flat_hash_map<std::pair<CorrMethod, StripeDirection>, io::bigwig::Writer> init_bwigs(
@@ -357,14 +369,17 @@ absl::flat_hash_map<std::pair<CorrMethod, StripeDirection>, io::bigwig::Writer> 
                                    fmt::format(FMT_STRING("spearman{}_horizontal.bw"),
                                                weighted ? "_weighted" : "")));
   }
-  /*
-  bwigs.emplace(std::make_pair(eucl_dist, vertical),
-                create_bwig_file(chrom_vect, c.output_prefix.string(), "eucl_dist_vertical.bw",
-                                 !c.compute_eucl_dist));
-  bwigs.emplace(std::make_pair(eucl_dist, horizontal),
-                create_bwig_file(chrom_vect, c.output_prefix.string(), "eucl_dist_horizontal.bw",
-                                 !c.compute_eucl_dist));
- */
+
+  if (c.compute_eucl_dist) {
+    bwigs.emplace(std::make_pair(eucl_dist, vertical),
+                  create_bwig_file(chrom_vect, c.output_prefix.string(),
+                                   fmt::format(FMT_STRING("eucl_dist{}_vertical.bw"),
+                                               weighted ? "_weighted" : "")));
+    bwigs.emplace(std::make_pair(eucl_dist, horizontal),
+                  create_bwig_file(chrom_vect, c.output_prefix.string(),
+                                   fmt::format(FMT_STRING("eucl_dist{}_horizontal.bw"),
+                                               weighted ? "_weighted" : "")));
+  }
   return bwigs;
 }
 
@@ -406,10 +421,10 @@ template <CorrMethod correlation_method, StripeDirection stripe_direction, class
       auto t0 = absl::Now();
       auto corr = [&]() {
         if (weights.empty()) {
-          return compute_correlation<correlation_method, stripe_direction>(
-              ref_contacts, tgt_contacts, exclude_zero_pixels);
+          return compute_metric<correlation_method, stripe_direction>(ref_contacts, tgt_contacts,
+                                                                      exclude_zero_pixels);
         }
-        return compute_correlation<correlation_method, stripe_direction>(
+        return compute_metric<correlation_method, stripe_direction>(
             ref_contacts, tgt_contacts, exclude_zero_pixels, weights.at(chrom_name));
       }();
 
@@ -432,11 +447,11 @@ template <CorrMethod correlation_method, StripeDirection stripe_direction, class
 }
 
 void eval_subcmd(const modle::tools::eval_config &c) {
-  assert(c.compute_spearman || c.compute_pearson /*|| c.compute_eucl_dist*/);  // NOLINT
-  auto ref_cooler =
-      cooler::Cooler(c.path_to_reference_matrix, cooler::Cooler<>::IO_MODE::READ_ONLY, c.bin_size);
-  auto tgt_cooler =
-      cooler::Cooler(c.path_to_input_matrix, cooler::Cooler<>::IO_MODE::READ_ONLY, c.bin_size);
+  assert(c.compute_spearman || c.compute_pearson || c.compute_eucl_dist);  // NOLINT
+  auto ref_cooler = cooler::Cooler<double>(c.path_to_reference_matrix,
+                                           cooler::Cooler<double>::IO_MODE::READ_ONLY, c.bin_size);
+  auto tgt_cooler = cooler::Cooler<double>(c.path_to_input_matrix,
+                                           cooler::Cooler<double>::IO_MODE::READ_ONLY, c.bin_size);
 
   const auto bin_size = ref_cooler.get_bin_size();
 
@@ -446,6 +461,8 @@ void eval_subcmd(const modle::tools::eval_config &c) {
   const auto weights =
       import_weights(c.path_to_weights, c.weight_column_name,
                      (c.diagonal_width + bin_size - 1) / bin_size, c.reciprocal_weights);
+
+  // Import weights
   if (!weights.empty()) {
     std::vector<std::string> missing_chroms;
     for (const auto &[chrom, _] : chromosomes) {
@@ -455,7 +472,7 @@ void eval_subcmd(const modle::tools::eval_config &c) {
     }
     if (!missing_chroms.empty()) {
       throw std::runtime_error(fmt::format(
-          FMT_STRING("Unable to import weights from file {} for the following chromosomes: {}"),
+          FMT_STRING("Failed to import weights from file {} for the following chromosomes: {}"),
           c.path_to_weights, fmt::join(missing_chroms, ", ")));
     }
   }
@@ -482,7 +499,10 @@ void eval_subcmd(const modle::tools::eval_config &c) {
 
   const auto t0 = absl::Now();
   thread_pool tpool(c.nthreads);
-  std::vector<std::future<bool>> return_codes(6);
+
+  std::vector<std::future<bool>> return_codes(  // 2 return codes per method
+      2 * (c.compute_pearson + c.compute_spearman + c.compute_eucl_dist));  // NOLINT
+
   for (const auto &[chrom_name_sv, chrom_range] : chromosomes) {
     const std::string chrom_name{chrom_name_sv};
 
@@ -490,14 +510,33 @@ void eval_subcmd(const modle::tools::eval_config &c) {
     spdlog::info(FMT_STRING("Reading contacts for {}..."), chrom_name_sv);
 
     auto ref_contacts = std::make_shared<ContactMatrix<double>>(
-        ref_cooler.cooler_to_cmatrix(chrom_name, nrows, chrom_range)
-            .unsafe_gaussian_diff(1.0, 1.6));
+        ref_cooler.cooler_to_cmatrix(chrom_name, nrows, chrom_range));
     auto tgt_contacts = std::make_shared<ContactMatrix<double>>(
-        tgt_cooler.cooler_to_cmatrix(chrom_name, nrows, chrom_range)
-            .unsafe_gaussian_diff(1.0, 1.6));
+        tgt_cooler.cooler_to_cmatrix(chrom_name, nrows, chrom_range));
     spdlog::info(FMT_STRING("Read {} contacts for {} in {}"),
                  ref_contacts->get_tot_contacts() + tgt_contacts->get_tot_contacts(), chrom_name_sv,
                  absl::FormatDuration(absl::Now() - t1));
+
+    // Normalize contact matrix before computing the correlation/distance metrics
+    if (c.normalize) {
+      const auto t00 = absl::Now();
+      spdlog::info(FMT_STRING("Normalizing contact matrices for {}..."), chrom_name_sv);
+      return_codes[0] = tpool.submit([&]() { ref_contacts->normalize_inplace(); });
+      return_codes[1] = tpool.submit([&]() { tgt_contacts->normalize_inplace(); });
+      tpool.wait_for_tasks();
+      try {
+        // Handle exceptions thrown inside threads
+        std::ignore = return_codes[0];
+        std::ignore = return_codes[1];
+      } catch (const std::exception &e) {
+        throw std::runtime_error(fmt::format(
+            FMT_STRING(
+                "The following error occurred while normalizing contact matrices for {}: {}"),
+            chrom_name_sv, e.what()));
+      }
+      spdlog::info(FMT_STRING("DONE! Normalization took {}."),
+                   absl::FormatDuration(absl::Now() - t00));
+    }
 
     return_codes.clear();
 
@@ -525,10 +564,22 @@ void eval_subcmd(const modle::tools::eval_config &c) {
                                          c.exclude_zero_pxls, bin_size, weights));
     }
 
+    if (bwigs.contains({eucl_dist, horizontal})) {
+      return_codes.emplace_back(
+          submit_task<eucl_dist, horizontal>(chrom_name, bwigs, tpool, ref_contacts, tgt_contacts,
+                                             c.exclude_zero_pxls, bin_size, weights));
+    }
+
+    if (bwigs.contains({eucl_dist, vertical})) {
+      return_codes.emplace_back(
+          submit_task<eucl_dist, vertical>(chrom_name, bwigs, tpool, ref_contacts, tgt_contacts,
+                                           c.exclude_zero_pxls, bin_size, weights));
+    }
+
     tpool.wait_for_tasks();
-    // Catch exception raised in worker threads
+    // Raise exception raised in worker threads if any
     for (auto &code : return_codes) {
-      code.get();
+      std::ignore = code.get();
     }
   }
   spdlog::info(FMT_STRING("DONE in {}!"), absl::FormatDuration(absl::Now() - t0));

@@ -47,8 +47,8 @@
 namespace modle::tools {
 
 void transform_subcmd(const modle::tools::transform_config& c) {
-  auto input_cooler =
-      cooler::Cooler(c.path_to_input_matrix, cooler::Cooler<>::IO_MODE::READ_ONLY, c.bin_size);
+  auto input_cooler = cooler::Cooler<double>(
+      c.path_to_input_matrix, cooler::Cooler<double>::IO_MODE::READ_ONLY, c.bin_size);
   const auto max_chrom_name_size = [&]() {
     const auto& chrom_names = input_cooler.get_chrom_names();
     const auto it =
@@ -60,29 +60,43 @@ void transform_subcmd(const modle::tools::transform_config& c) {
   assert(c.force || !boost::filesystem::exists(c.path_to_output_matrix));  // NOLINT
   auto output_cooler =
       cooler::Cooler<double>(c.path_to_output_matrix, cooler::Cooler<double>::IO_MODE::WRITE_ONLY,
-                             c.bin_size, max_chrom_name_size);
+                             input_cooler.get_bin_size(), max_chrom_name_size);
 
   const auto bin_size = input_cooler.get_bin_size();
 
   const auto t0 = absl::Now();
   spdlog::info(FMT_STRING("Transforming contacts from file {}..."), input_cooler.get_path());
   for (const auto& [chrom_name, chrom_size] : input_cooler.get_chroms()) {
-    const auto m = [&, chrom_name = chrom_name]() {
+    auto m = [&, chrom_name = chrom_name]() {
+      auto m = input_cooler.cooler_to_cmatrix(chrom_name, c.diagonal_width, bin_size);
+      const auto [lb_sat, ub_sat] = c.saturation_range;
       using t = transform_config::transformation;
       switch (c.method) {
         case t::normalize: {
-          const auto lb = c.normalization_range.first;
-          const auto ub = c.normalization_range.second;
+          const auto lb_norm = c.normalization_range.first;
+          const auto ub_norm = c.normalization_range.second;
           spdlog::info(FMT_STRING("Normalizing contacts for {} to the {:.4g}-{:.4g} range..."),
-                       chrom_name, lb, ub);
-          return input_cooler.cooler_to_cmatrix(chrom_name, c.diagonal_width, bin_size)
-              .normalize(lb, ub);
+                       chrom_name, lb_norm, ub_norm);
+          // Clamp contacts before normalizing
+          if (!std::isinf(lb_sat) || !std::isinf(ub_sat)) {
+            m.clamp_inplace(lb_sat, ub_sat);
+          }
+          m.normalize_inplace(lb_norm, ub_norm);
+          return m;
         }
-        case t::gaussian_blur:
+
+        case t::gaussian_blur: {
           spdlog::info(FMT_STRING("Applying Gaussian blur with sigma={:.4g} to contacts for {}..."),
                        c.gaussian_blur_sigma, chrom_name);
-          return input_cooler.cooler_to_cmatrix(chrom_name, c.diagonal_width, bin_size)
-              .blur(c.gaussian_blur_sigma);
+          auto mm = input_cooler.cooler_to_cmatrix(chrom_name, c.diagonal_width, bin_size)
+                        .blur(c.gaussian_blur_sigma);
+          if (c.method != transform_config::transformation::normalize &&
+              (!std::isinf(c.saturation_range.first) || !std::isinf(c.saturation_range.second))) {
+            mm.clamp_inplace(c.saturation_range.first, c.saturation_range.second);
+          }
+          return mm;
+        }
+
         case t::difference_of_gaussians: {
           const auto sigma1 = c.gaussian_blur_sigma;
           const auto sigma2 = sigma1 * c.gaussian_blur_sigma_multiplier;
@@ -91,7 +105,7 @@ void transform_subcmd(const modle::tools::transform_config& c) {
                   "Computing the difference of Gaussians for {} (sigma1={:.4g}; sigma2={:.4g})..."),
               chrom_name, sigma1, sigma2);
           return input_cooler.cooler_to_cmatrix(chrom_name, c.diagonal_width, bin_size)
-              .unsafe_gaussian_diff(sigma1, sigma2);
+              .unsafe_gaussian_diff(sigma1, sigma2, lb_sat, ub_sat);
         }
         default:
           throw std::logic_error("Unreachable code");

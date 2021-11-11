@@ -26,6 +26,7 @@ struct eval_config {  // NOLINT
   boost::filesystem::path path_to_chrom_subranges;
   boost::filesystem::path path_to_weights;
   bool force{false};
+  bool normalize{true};
 
   // Correlation methods
   bool compute_pearson{false};
@@ -115,6 +116,8 @@ struct transform_config {  // NOLINT
 
   // Transformation settings
   std::pair<double, double> normalization_range{0.0, 1.0};
+  std::pair<double, double> saturation_range{-std::numeric_limits<double>::infinity(),
+                                             std::numeric_limits<double>::infinity()};
   double gaussian_blur_sigma{1.0};
   double gaussian_blur_sigma_multiplier{1.6};  // NOLINT, approx. Laplacian of Gaussian
 
