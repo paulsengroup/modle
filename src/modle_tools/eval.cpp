@@ -501,7 +501,7 @@ void eval_subcmd(const modle::tools::eval_config &c) {
   thread_pool tpool(c.nthreads);
 
   std::vector<std::future<bool>> return_codes(  // 2 return codes per method
-      2 * (c.compute_pearson + c.compute_spearman + c.compute_eucl_dist));  // NOLINT
+      usize(2 * (c.compute_pearson + c.compute_spearman + c.compute_eucl_dist)));  // NOLINT
 
   for (const auto &[chrom_name_sv, chrom_range] : chromosomes) {
     const std::string chrom_name{chrom_name_sv};

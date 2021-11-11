@@ -68,7 +68,7 @@ void transform_subcmd(const modle::tools::transform_config& c) {
   spdlog::info(FMT_STRING("Transforming contacts from file {}..."), input_cooler.get_path());
   for (const auto& [chrom_name, chrom_size] : input_cooler.get_chroms()) {
     auto m = [&, chrom_name = chrom_name]() {
-      auto m = input_cooler.cooler_to_cmatrix(chrom_name, c.diagonal_width, bin_size);
+      auto m1 = input_cooler.cooler_to_cmatrix(chrom_name, c.diagonal_width, bin_size);
       const auto [lb_sat, ub_sat] = c.saturation_range;
       using t = transform_config::transformation;
       switch (c.method) {
@@ -79,22 +79,22 @@ void transform_subcmd(const modle::tools::transform_config& c) {
                        chrom_name, lb_norm, ub_norm);
           // Clamp contacts before normalizing
           if (!std::isinf(lb_sat) || !std::isinf(ub_sat)) {
-            m.clamp_inplace(lb_sat, ub_sat);
+            m1.clamp_inplace(lb_sat, ub_sat);
           }
-          m.normalize_inplace(lb_norm, ub_norm);
-          return m;
+          m1.normalize_inplace(lb_norm, ub_norm);
+          return m1;
         }
 
         case t::gaussian_blur: {
           spdlog::info(FMT_STRING("Applying Gaussian blur with sigma={:.4g} to contacts for {}..."),
                        c.gaussian_blur_sigma, chrom_name);
-          auto mm = input_cooler.cooler_to_cmatrix(chrom_name, c.diagonal_width, bin_size)
+          auto m2 = input_cooler.cooler_to_cmatrix(chrom_name, c.diagonal_width, bin_size)
                         .blur(c.gaussian_blur_sigma);
           if (c.method != transform_config::transformation::normalize &&
               (!std::isinf(c.saturation_range.first) || !std::isinf(c.saturation_range.second))) {
-            mm.clamp_inplace(c.saturation_range.first, c.saturation_range.second);
+            m2.clamp_inplace(c.saturation_range.first, c.saturation_range.second);
           }
-          return mm;
+          return m2;
         }
 
         case t::difference_of_gaussians: {
