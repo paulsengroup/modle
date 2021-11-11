@@ -151,12 +151,16 @@ class RepeatIterator {
 
   constexpr const RepeatIterator& operator++() const;
   constexpr const RepeatIterator operator++(int) const;
-  constexpr const RepeatIterator& operator+=(usize i) const;
-  constexpr const RepeatIterator& operator+(usize i) const;
+  template <class I, class = std::enable_if<std::is_integral_v<I>>>
+  constexpr const RepeatIterator& operator+=(I i) const;
+  template <class I, class = std::enable_if<std::is_integral_v<I>>>
+  constexpr const RepeatIterator& operator+(I i) const;
   constexpr const RepeatIterator& operator--() const;
   constexpr const RepeatIterator operator--(int) const;
-  constexpr const RepeatIterator& operator-=(usize i) const;
-  constexpr const RepeatIterator& operator-(usize i) const;
+  template <class I, class = std::enable_if<std::is_integral_v<I>>>
+  constexpr const RepeatIterator& operator-=(I i) const;
+  template <class I, class = std::enable_if<std::is_integral_v<I>>>
+  constexpr const RepeatIterator& operator-(I i) const;
 
   constexpr bool operator==(const RepeatIterator& other) const;
   constexpr bool operator!=(const RepeatIterator& other) const;

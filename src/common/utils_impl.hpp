@@ -348,12 +348,14 @@ constexpr const RepeatIterator<T> RepeatIterator<T>::operator++(int) const {
 }
 
 template <class T>
-constexpr const RepeatIterator<T> &RepeatIterator<T>::operator+=([[maybe_unused]] usize i) const {
+template <class I, class>
+constexpr const RepeatIterator<T> &RepeatIterator<T>::operator+=([[maybe_unused]] I i) const {
   return *this;
 }
 
 template <class T>
-constexpr const RepeatIterator<T> &RepeatIterator<T>::operator+([[maybe_unused]] usize i) const {
+template <class I, class>
+constexpr const RepeatIterator<T> &RepeatIterator<T>::operator+([[maybe_unused]] I i) const {
   return *this;
 }
 
@@ -368,12 +370,14 @@ constexpr const RepeatIterator<T> RepeatIterator<T>::operator--(int) const {
 }
 
 template <class T>
-constexpr const RepeatIterator<T> &RepeatIterator<T>::operator-=([[maybe_unused]] usize i) const {
+template <class I, class>
+constexpr const RepeatIterator<T> &RepeatIterator<T>::operator-=([[maybe_unused]] I i) const {
   return *this;
 }
 
 template <class T>
-constexpr const RepeatIterator<T> &RepeatIterator<T>::operator-([[maybe_unused]] usize i) const {
+template <class I, class>
+constexpr const RepeatIterator<T> &RepeatIterator<T>::operator-([[maybe_unused]] I i) const {
   return *this;
 }
 
