@@ -29,9 +29,10 @@ struct eval_config {  // NOLINT
   bool normalize{true};
 
   // Correlation methods
-  bool compute_pearson{false};
-  bool compute_spearman{false};
   bool compute_eucl_dist{true};
+  bool compute_pearson{false};
+  bool compute_rmse{false};
+  bool compute_spearman{false};
 
   // Reference contacts
   usize bin_size{0};

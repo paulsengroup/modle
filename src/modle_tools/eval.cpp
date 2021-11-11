@@ -245,7 +245,7 @@ template <class Range>
   return bw;
 }
 
-enum CorrMethod : std::uint_fast8_t { pearson, spearman, eucl_dist };
+enum EvalMetric : std::uint_fast8_t { pearson, spearman, eucl_dist, rmse };
 enum StripeDirection : std::uint_fast8_t { vertical, horizontal };
 
 template <class N, class = std::enable_if_t<std::is_arithmetic_v<N>>>
@@ -264,7 +264,7 @@ static size_t mask_zero_pixels(const std::vector<N> &v1, const std::vector<N> &v
   return masked_pixels;
 }
 
-template <CorrMethod correlation_method, StripeDirection stripe_direction, class N,
+template <EvalMetric metric, StripeDirection stripe_direction, class N,
           class WeightIt = utils::RepeatIterator<double>>
 static std::vector<double> compute_metric(
     std::shared_ptr<ContactMatrix<N>> ref_contacts, std::shared_ptr<ContactMatrix<N>> tgt_contacts,
@@ -283,16 +283,32 @@ static std::vector<double> compute_metric(
 
   std::vector<double> correlation_buff(ncols, 0.0);
 
-  auto corr_fx = [&]() {
-    if constexpr (correlation_method == pearson) {
-      return stats::Pearson<double>{};
-    } else if constexpr (correlation_method == spearman) {
-      return stats::Spearman<double>{nrows};
+  auto compute_metric = [&]() {
+    if constexpr (metric == pearson) {
+      if (weight_buff.empty()) {
+        return stats::Pearson<double>{}(ref_pixel_buff, tgt_pixel_buff).pcc;
+      }
+      return stats::Pearson<double>{}(ref_pixel_buff, tgt_pixel_buff, weight_buff).pcc;
+    } else if constexpr (metric == spearman) {
+      if (weight_buff.empty()) {
+        return stats::Spearman<double>{nrows}(ref_pixel_buff, tgt_pixel_buff).rho;
+      }
+      return stats::Spearman<double>{nrows}(ref_pixel_buff, tgt_pixel_buff, weight_buff).rho;
+    } else if constexpr (metric == eucl_dist) {
+      if (weight_buff.empty()) {
+        return stats::sed(ref_pixel_buff.begin(), ref_pixel_buff.end(), tgt_pixel_buff.begin());
+      }
+      return stats::weighted_sed(ref_pixel_buff.begin(), ref_pixel_buff.end(),
+                                 tgt_pixel_buff.begin(), weight_buff.begin());
     } else {
-      static_assert(correlation_method == eucl_dist);
-      return stats::SED<double>{};
+      static_assert(metric == rmse);
+      if (weight_buff.empty()) {
+        return stats::rmse(ref_pixel_buff.begin(), ref_pixel_buff.end(), tgt_pixel_buff.begin());
+      }
+      return stats::weighted_rmse(ref_pixel_buff.begin(), ref_pixel_buff.end(),
+                                  tgt_pixel_buff.begin(), weight_buff.begin());
     }
-  }();
+  };
 
   for (usize i = 0; i < ncols; ++i) {
     if constexpr (stripe_direction == vertical) {
@@ -311,43 +327,30 @@ static std::vector<double> compute_metric(
       mask_zero_pixels(ref_pixel_buff, tgt_pixel_buff, weight_buff);
     }
 
-    if constexpr (correlation_method != eucl_dist) {
-      [[maybe_unused]] const auto &[corr, pval] =
-          !weight_buff.empty() ? corr_fx(ref_pixel_buff.begin(), ref_pixel_buff.end(),
-                                         tgt_pixel_buff.begin(), weight_buff.begin())
-                               : corr_fx(ref_pixel_buff.begin(), ref_pixel_buff.end(),
-                                         tgt_pixel_buff.begin(), weight_first);
-      correlation_buff[i] = corr;
-    } else {
-      correlation_buff[i] = !weight_buff.empty()
-                                ? corr_fx(ref_pixel_buff.begin(), ref_pixel_buff.end(),
-                                          tgt_pixel_buff.begin(), weight_buff.begin())
-                                : corr_fx(ref_pixel_buff.begin(), ref_pixel_buff.end(),
-                                          tgt_pixel_buff.begin(), weight_first);
-    }
+    correlation_buff[i] = compute_metric();
   }
   return correlation_buff;
 }
 
-template <CorrMethod correlation_method, StripeDirection stripe_direction, class N>
+template <EvalMetric metric, StripeDirection stripe_direction, class N>
 static std::vector<double> compute_metric(std::shared_ptr<ContactMatrix<N>> ref_contacts,
                                           std::shared_ptr<ContactMatrix<N>> tgt_contacts,
                                           const bool mask_zero_pixels_,
                                           const std::vector<double> &weights) {
   assert(ref_contacts->nrows() == tgt_contacts->nrows());              // NOLINT
   assert(weights.empty() || ref_contacts->nrows() == weights.size());  // NOLINT
-  return compute_metric<correlation_method, stripe_direction>(ref_contacts, tgt_contacts,
-                                                              mask_zero_pixels_, weights.begin());
+  return compute_metric<metric, stripe_direction>(ref_contacts, tgt_contacts, mask_zero_pixels_,
+                                                  weights.begin());
 }
 
-absl::flat_hash_map<std::pair<CorrMethod, StripeDirection>, io::bigwig::Writer> init_bwigs(
+absl::flat_hash_map<std::pair<EvalMetric, StripeDirection>, io::bigwig::Writer> init_bwigs(
     const modle::tools::eval_config &c, const ChromSet &chroms, const bool weighted) {
   std::vector<std::pair<std::string, usize>> chrom_vect(static_cast<usize>(chroms.size()));
   std::transform(chroms.begin(), chroms.end(), chrom_vect.begin(), [](const auto &chrom) {
     return std::make_pair(chrom.first, chrom.second.second);
   });
 
-  absl::flat_hash_map<std::pair<CorrMethod, StripeDirection>, io::bigwig::Writer> bwigs;
+  absl::flat_hash_map<std::pair<EvalMetric, StripeDirection>, io::bigwig::Writer> bwigs;
   if (c.compute_pearson) {
     bwigs.emplace(std::make_pair(pearson, vertical),
                   create_bwig_file(chrom_vect, c.output_prefix.string(),
@@ -380,11 +383,22 @@ absl::flat_hash_map<std::pair<CorrMethod, StripeDirection>, io::bigwig::Writer> 
                                    fmt::format(FMT_STRING("eucl_dist{}_horizontal.bw"),
                                                weighted ? "_weighted" : "")));
   }
+
+  if (c.compute_rmse) {
+    bwigs.emplace(std::make_pair(rmse, vertical),
+                  create_bwig_file(
+                      chrom_vect, c.output_prefix.string(),
+                      fmt::format(FMT_STRING("rmse{}_vertical.bw"), weighted ? "_weighted" : "")));
+    bwigs.emplace(std::make_pair(rmse, horizontal),
+                  create_bwig_file(chrom_vect, c.output_prefix.string(),
+                                   fmt::format(FMT_STRING("rmse{}_horizontal.bw"),
+                                               weighted ? "_weighted" : "")));
+  }
   return bwigs;
 }
 
 [[nodiscard]] [[maybe_unused]] static constexpr std::string_view corr_method_to_str(
-    const CorrMethod m) {
+    const EvalMetric m) {
   if (m == pearson) {
     return "Pearson correlation";
   }
@@ -394,6 +408,10 @@ absl::flat_hash_map<std::pair<CorrMethod, StripeDirection>, io::bigwig::Writer> 
 
   if (m == eucl_dist) {
     return "Euclidean distance";
+  }
+
+  if (m == rmse) {
+    return "RMSE";
   }
   std::abort();
 }
@@ -409,10 +427,10 @@ absl::flat_hash_map<std::pair<CorrMethod, StripeDirection>, io::bigwig::Writer> 
   std::abort();
 }
 
-template <CorrMethod correlation_method, StripeDirection stripe_direction, class N>
+template <EvalMetric metric, StripeDirection stripe_direction, class N>
 [[nodiscard]] static std::future<bool> submit_task(
     const std::string &chrom_name,
-    absl::flat_hash_map<std::pair<CorrMethod, StripeDirection>, io::bigwig::Writer> &bwigs,
+    absl::flat_hash_map<std::pair<EvalMetric, StripeDirection>, io::bigwig::Writer> &bwigs,
     thread_pool &tpool, std::shared_ptr<ContactMatrix<N>> &ref_contacts,
     std::shared_ptr<ContactMatrix<N>> &tgt_contacts, const bool exclude_zero_pixels,
     const usize bin_size, const absl::flat_hash_map<std::string, std::vector<double>> &weights) {
@@ -421,33 +439,34 @@ template <CorrMethod correlation_method, StripeDirection stripe_direction, class
       auto t0 = absl::Now();
       auto corr = [&]() {
         if (weights.empty()) {
-          return compute_metric<correlation_method, stripe_direction>(ref_contacts, tgt_contacts,
-                                                                      exclude_zero_pixels);
+          return compute_metric<metric, stripe_direction>(ref_contacts, tgt_contacts,
+                                                          exclude_zero_pixels);
         }
-        return compute_metric<correlation_method, stripe_direction>(
+        return compute_metric<metric, stripe_direction>(
             ref_contacts, tgt_contacts, exclude_zero_pixels, weights.at(chrom_name));
       }();
 
       spdlog::info(FMT_STRING("{} for {} stripes from chrom {} computed in {}."),
-                   corr_method_to_str(correlation_method),
+                   corr_method_to_str(metric),
                    absl::AsciiStrToLower(direction_to_str(stripe_direction)), chrom_name,
                    absl::FormatDuration(absl::Now() - t0));
       t0 = absl::Now();
-      auto &bw = bwigs.at({correlation_method, stripe_direction});
+      auto &bw = bwigs.at({metric, stripe_direction});
       bw.write_range(chrom_name, absl::MakeSpan(corr), bin_size, bin_size);
       spdlog::info(FMT_STRING("{} values have been written to file {} in {}."), corr.size(),
                    bw.path(), absl::FormatDuration(absl::Now() - t0));
     } catch (const std::exception &e) {
       throw std::runtime_error(fmt::format(
           FMT_STRING("The following error occurred while computing {} on {} stripes for {}: {}"),
-          corr_method_to_str(correlation_method),
-          absl::AsciiStrToLower(direction_to_str(stripe_direction)), chrom_name, e.what()));
+          corr_method_to_str(metric), absl::AsciiStrToLower(direction_to_str(stripe_direction)),
+          chrom_name, e.what()));
     }
   });
 }
 
 void eval_subcmd(const modle::tools::eval_config &c) {
-  assert(c.compute_spearman || c.compute_pearson || c.compute_eucl_dist);  // NOLINT
+  assert(c.compute_spearman || c.compute_pearson || c.compute_eucl_dist ||
+         c.compute_rmse);  // NOLINT
   auto ref_cooler = cooler::Cooler<double>(c.path_to_reference_matrix,
                                            cooler::Cooler<double>::IO_MODE::READ_ONLY, c.bin_size);
   auto tgt_cooler = cooler::Cooler<double>(c.path_to_input_matrix,
@@ -478,13 +497,13 @@ void eval_subcmd(const modle::tools::eval_config &c) {
   }
 
   if (chromosomes.size() == 1) {
-    spdlog::info(FMT_STRING("Computing correlation for chromosome: \"{}\""),
+    spdlog::info(FMT_STRING("Computing metric(s) for chromosome: \"{}\""),
                  chromosomes.begin()->first);
   } else {
     std::vector<std::string> chrom_names(static_cast<usize>(chromosomes.size()));
     std::transform(chromosomes.begin(), chromosomes.end(), chrom_names.begin(),
                    [](const auto &chrom) { return chrom.first; });
-    spdlog::info(FMT_STRING("Computing correlation for the following {} chromosomes: \"{}\""),
+    spdlog::info(FMT_STRING("Computing metric(s) for the following {} chromosomes: \"{}\""),
                  chromosomes.size(), fmt::join(chrom_names, "\", \""));
   }
 
@@ -501,7 +520,8 @@ void eval_subcmd(const modle::tools::eval_config &c) {
   thread_pool tpool(c.nthreads);
 
   std::vector<std::future<bool>> return_codes(  // 2 return codes per method
-      usize(2 * (c.compute_pearson + c.compute_spearman + c.compute_eucl_dist)));  // NOLINT
+      usize(2 * (c.compute_pearson + c.compute_spearman + c.compute_eucl_dist +
+                 c.compute_rmse)));  // NOLINT
 
   for (const auto &[chrom_name_sv, chrom_range] : chromosomes) {
     const std::string chrom_name{chrom_name_sv};
@@ -574,6 +594,18 @@ void eval_subcmd(const modle::tools::eval_config &c) {
       return_codes.emplace_back(
           submit_task<eucl_dist, vertical>(chrom_name, bwigs, tpool, ref_contacts, tgt_contacts,
                                            c.exclude_zero_pxls, bin_size, weights));
+    }
+
+    if (bwigs.contains({rmse, horizontal})) {
+      return_codes.emplace_back(
+          submit_task<rmse, horizontal>(chrom_name, bwigs, tpool, ref_contacts, tgt_contacts,
+                                        c.exclude_zero_pxls, bin_size, weights));
+    }
+
+    if (bwigs.contains({rmse, vertical})) {
+      return_codes.emplace_back(submit_task<rmse, vertical>(chrom_name, bwigs, tpool, ref_contacts,
+                                                            tgt_contacts, c.exclude_zero_pxls,
+                                                            bin_size, weights));
     }
 
     tpool.wait_for_tasks();

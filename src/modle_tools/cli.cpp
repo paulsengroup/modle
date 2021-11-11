@@ -131,6 +131,11 @@ void Cli::make_eval_subcommand() {
      c.compute_eucl_dist,
      "Compute Euclidean distance.");
 
+corr.add_flag(
+      "--rmse,!--no-rmse",
+      c.compute_rmse,
+      "Compute RMSE (root mean squared error).");
+
   corr.add_flag(
      "--pearson,!--no-pearson",
      c.compute_pearson,
@@ -554,22 +559,22 @@ void Cli::validate_eval_subcommand() const {
     }
   }
 
-  if (c.compute_pearson + c.compute_spearman + c.compute_eucl_dist == 0) {
-    errors.emplace_back("At least one of --eucl-dist, --pearson or --spearman should be specified");
+  if (c.compute_pearson + c.compute_spearman + c.compute_eucl_dist + c.compute_rmse == 0) {
+    errors.emplace_back(
+        "At least one of --eucl-dist, --pearson, --rmse or --spearman should be specified");
   }
 
   if (!c.force) {
     constexpr std::array<std::string_view, 2> stripe_directions{"horizontal", "vertical"};
-    constexpr std::array<std::string_view, 3> correlation_methods{"eucl_dist", "pearson",
-                                                                  "spearman"};
+    constexpr std::array<std::string_view, 4> metrics{"eucl_dist", "pearson", "rmse", "spearman"};
     constexpr std::array<std::string_view, 1> extensions{"bw"};
 
     std::vector<std::string> name_collisions;
-    for (const auto method : correlation_methods) {
+    for (const auto metric : metrics) {
       for (const auto direction : stripe_directions) {
         for (const auto extension : extensions) {
           const boost::filesystem::path fname = fmt::format(
-              FMT_STRING("{}_{}_{}.{}"), c.output_prefix.string(), method, direction, extension);
+              FMT_STRING("{}_{}_{}.{}"), c.output_prefix.string(), metric, direction, extension);
           auto collision =
               utils::detect_path_collision(fname, c.force, boost::filesystem::regular_file);
           if (!collision.empty()) {
