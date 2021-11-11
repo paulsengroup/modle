@@ -269,12 +269,4 @@ TEST_CASE("Corr. test: Weighted Spearman long vect.", "[correlation][spearman][l
   test_correlation_w_random_vector("weighted_spearman", 500'000, 2, -7'250.0, 7'250.0);  // NOLINT
 }
 
-// NOLINTNEXTLINE(readability-function-cognitive-complexity)
-TEST_CASE("SED", "[correlation][sed][short]") {
-  const std::vector<u32> v1{17, 86, 60, 77, 47, 3, 70, 87, 88, 92};   // NOLINT
-  const std::vector<u32> v2{70, 29, 85, 61, 80, 34, 60, 31, 73, 66};  // NOLINT
-  const auto sed = SED{}(v1, v2);
-  CHECK(Approx(sed) == 13125.999999999998);  // NOLINT
-}
-
 }  // namespace modle::test::stats

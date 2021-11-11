@@ -114,6 +114,38 @@ template <class InputIt1, class InputIt2, class UnaryOperation = utils::identity
 [[nodiscard]] inline double weighted_covariance(InputIt1 first1, InputIt1 last1, InputIt1 first2,
                                                 InputIt2 weight_first,
                                                 UnaryOperation op = utils::identity());
+
+/////////
+
+// SED
+//
+
+template <class InputIt, class UnaryOperation = utils::identity,
+          class = std::enable_if_t<
+              std::is_invocable_v<UnaryOperation, decltype(*std::declval<InputIt>())>>>
+[[nodiscard]] inline double sed(InputIt first1, InputIt last1, InputIt first2,
+                                UnaryOperation op = utils::identity()) noexcept;
+template <class InputIt1, class InputIt2, class UnaryOperation = utils::identity,
+          class = std::enable_if_t<
+              std::is_invocable_v<UnaryOperation, decltype(*std::declval<InputIt1>())>>>
+[[nodiscard]] inline double weighted_sed(InputIt1 first1, InputIt1 last1, InputIt1 first2,
+                                         InputIt2 weight_first,
+                                         UnaryOperation op = utils::identity()) noexcept;
+/////////
+
+// RMSE
+//
+template <class InputIt, class UnaryOperation = utils::identity,
+          class = std::enable_if_t<
+              std::is_invocable_v<UnaryOperation, decltype(*std::declval<InputIt>())>>>
+[[nodiscard]] inline double rmse(InputIt first1, InputIt last1, InputIt first2,
+                                 UnaryOperation op = utils::identity());
+template <class InputIt1, class InputIt2, class UnaryOperation = utils::identity,
+          class = std::enable_if_t<
+              std::is_invocable_v<UnaryOperation, decltype(*std::declval<InputIt1>())>>>
+[[nodiscard]] inline double weighted_rmse(InputIt1 first1, InputIt1 last1, InputIt1 first2,
+                                          InputIt2 weight_first,
+                                          UnaryOperation op = utils::identity());
 /////////
 
 }  // namespace modle::stats

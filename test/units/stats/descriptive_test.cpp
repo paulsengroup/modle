@@ -105,4 +105,39 @@ TEST_CASE("Standard Deviation", "[stats][short]") {
   CHECK(stats::standard_dev(v1.begin(), v1.end()) == result);
   CHECK(stats::standard_dev(v2.begin(), v2.end(), [](const auto& fp) { return fp.n; }) == result);
 }
+
+// NOLINTNEXTLINE(readability-function-cognitive-complexity)
+TEST_CASE("SED", "[stats][short]") {
+  const std::vector<double> v1{-21.65393487, 43.10503862, -28.29768021, 34.10045857, -43.84182432,
+                               -44.43248959, -5.82815809, 17.21738318,  20.59312136, 12.29917826};
+  const std::vector<double> v2{33.80650183,  -23.34010343, -43.32704456, -37.97380374, 20.67554989,
+                               -45.59723581, 13.65381298,  -45.2267169,  -28.00073264, 26.58993515};
+
+  const std::vector<double> weights{0.97302005, 0.05226173, 0.15995629, 0.31495018, 0.95241483,
+                                    0.87420081, 0.21360278, 0.0822476,  0.26402032, 0.49666325};
+  // computed with scipy.spatial.distance.euclidean
+  const auto result = Approx(154.65977964758991);          // NOLINT
+  const auto result_weighted = Approx(99.94033647108283);  // NOLINT
+
+  CHECK(stats::sed(v1.begin(), v1.end(), v2.begin()) == result);
+  CHECK(stats::weighted_sed(v1.begin(), v1.end(), v2.begin(), weights.begin()) == result_weighted);
+}
+
+// NOLINTNEXTLINE(readability-function-cognitive-complexity)
+TEST_CASE("RMSE", "[stats][short]") {
+  const std::vector<double> v1{-21.65393487, 43.10503862, -28.29768021, 34.10045857, -43.84182432,
+                               -44.43248959, -5.82815809, 17.21738318,  20.59312136, 12.29917826};
+  const std::vector<double> v2{33.80650183,  -23.34010343, -43.32704456, -37.97380374, 20.67554989,
+                               -45.59723581, 13.65381298,  -45.2267169,  -28.00073264, 26.58993515};
+
+  const std::vector<double> weights{0.97302005, 0.05226173, 0.15995629, 0.31495018, 0.95241483,
+                                    0.87420081, 0.21360278, 0.0822476,  0.26402032, 0.49666325};
+
+  // computed with mean_squared_error from sklearn.metrics
+  const auto result = Approx(48.90771661061378);           // NOLINT
+  const auto result_weighted = Approx(47.73515476405454);  // NOLINT
+
+  CHECK(stats::rmse(v1.begin(), v1.end(), v2.begin()) == result);
+  CHECK(stats::weighted_rmse(v1.begin(), v1.end(), v2.begin(), weights.begin()) == result_weighted);
+}
 }  // namespace modle::test::stats

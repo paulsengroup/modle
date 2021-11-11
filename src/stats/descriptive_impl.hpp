@@ -154,6 +154,62 @@ double weighted_covariance(InputIt1 first1, InputIt1 last1, InputIt1 first2, Inp
                              mean(first2, first2 + std::distance(first1, last1)), op);
 }
 
+template <class InputIt, class UnaryOperation, class>
+double sed(InputIt first1, InputIt last1, InputIt first2, UnaryOperation op) noexcept {
+  return weighted_sed(first1, last1, first2, utils::RepeatIterator<double>(1), op);
+}
+template <class InputIt1, class InputIt2, class UnaryOperation, class>
+double weighted_sed(InputIt1 first1, InputIt1 last1, InputIt1 first2, InputIt2 weight_first,
+                    UnaryOperation op) noexcept {
+  const isize size = std::distance(first1, last1);
+  assert(size >= 0);  // NOLINT
+
+  double sed = 0;
+  for (isize i = 0; i < size; ++i) {
+    const auto n1 = op(*(first1 + i));
+    const auto n2 = op(*(first2 + i));
+    const auto w = *(weight_first + i);
+    const auto n = [&]() {
+      if constexpr (std::is_unsigned_v<decltype(op(*first1))>) {
+        return n1 > n2 ? n1 - n2 : n2 - n1;
+      } else {
+        return n2 - n1;
+      }
+    }();
+    DISABLE_WARNING_PUSH
+    DISABLE_WARNING_USELESS_CAST
+    sed += static_cast<double>(w) * static_cast<double>(n * n);
+    DISABLE_WARNING_POP
+  }
+
+  return std::sqrt(sed);
+}
+
+template <class InputIt, class UnaryOperation, class>
+double rmse(InputIt first1, InputIt last1, InputIt first2, UnaryOperation op) {
+  return weighted_rmse(first1, last1, first2, utils::RepeatIterator<double>(1), op);
+}
+
+template <class InputIt1, class InputIt2, class UnaryOperation, class>
+double weighted_rmse(InputIt1 first1, InputIt1 last1, InputIt1 first2, InputIt2 weight_first,
+                     UnaryOperation op) {
+  isize n = 0;
+  double tot = 0;
+  double tot_w = 0;
+  auto it1 = first1;
+  auto it2 = first2;
+  auto it3 = weight_first;
+  for (; it1 != last1; ++n, ++it1, ++it2, ++it3) {
+    DISABLE_WARNING_PUSH
+    DISABLE_WARNING_USELESS_CAST  // NOLINTNEXTLINE
+        tot += std::pow(static_cast<double>(op(*it1) - op(*it2)), 2.0) * static_cast<double>(*it3);
+    tot_w += static_cast<double>(*it3);
+    DISABLE_WARNING_POP
+  }
+
+  return std::sqrt(tot / tot_w);
+}
+
 }  // namespace modle::stats
 
 // IWYU pragma: private, include "modle/math.hpp"

@@ -45,21 +45,21 @@ typename Pearson<FP>::Result Pearson<FP>::operator()(It1 first1, It1 last1, It2 
 template <class FP>
 template <class Range1, class Range2>
 typename Pearson<FP>::Result Pearson<FP>::operator()(const Range1& r1, const Range2& r2) const {
-  assert(std::distance(std::begin(r1), std::end(r1)) ==
-         std::distance(std::begin(r2), std::end(r2)));  // NOLINT
-  return (*this)(std::begin(r1), std::end(r1), std::begin(r2), utils::RepeatIterator<FP>(1));
+  assert(std::distance(std::cbegin(r1), std::cend(r1)) ==
+         std::distance(std::cbegin(r2), std::cend(r2)));  // NOLINT
+  return (*this)(std::cbegin(r1), std::cend(r1), std::cbegin(r2), utils::RepeatIterator<FP>(1));
 }
 
 template <class FP>
 template <class Range1, class Range2, class Range3>
 typename Pearson<FP>::Result Pearson<FP>::operator()(const Range1& r1, const Range2& r2,
                                                      const Range3& weights) const {
-  assert(std::distance(std::begin(r1), std::end(r1)) ==
-         std::distance(std::begin(r2), std::end(r2)));  // NOLINT
-  assert(std::distance(std::begin(r1), std::end(r1)) ==
-         std::distance(std::begin(weights), std::end(weights)));  // NOLINT
+  assert(std::distance(std::cbegin(r1), std::cend(r1)) ==
+         std::distance(std::cbegin(r2), std::cend(r2)));  // NOLINT
+  assert(std::distance(std::cbegin(r1), std::cend(r1)) ==
+         std::distance(std::cbegin(weights), std::cend(weights)));  // NOLINT
 
-  return (*this)(std::begin(r1), std::end(r1), std::begin(r2), std::begin(weights));
+  return (*this)(std::cbegin(r1), std::cend(r1), std::cbegin(r2), std::cbegin(weights));
 }
 
 /*
@@ -186,81 +186,20 @@ typename Spearman<FP>::Result Spearman<FP>::operator()(It1 first1, It1 last1, It
 template <class FP>
 template <class Range1, class Range2>
 typename Spearman<FP>::Result Spearman<FP>::operator()(const Range1& r1, const Range2& r2) {
-  assert(std::distance(std::begin(r1), std::end(r1)) ==
-         std::distance(std::begin(r2), std::end(r2)));  // NOLINT
-  return (*this)(std::begin(r1), std::end(r1), std::begin(r2), utils::RepeatIterator<FP>(1));
+  assert(std::distance(std::cbegin(r1), std::cend(r1)) ==
+         std::distance(std::cbegin(r2), std::cend(r2)));  // NOLINT
+  return (*this)(std::cbegin(r1), std::cend(r1), std::cbegin(r2), utils::RepeatIterator<FP>(1));
 }
 
 template <class FP>
 template <class Range1, class Range2, class Range3>
 typename Spearman<FP>::Result Spearman<FP>::operator()(const Range1& r1, const Range2& r2,
                                                        const Range3& weights) {
-  assert(std::distance(std::begin(r1), std::end(r1)) ==
-         std::distance(std::begin(r2), std::end(r2)));  // NOLINT
-  assert(std::distance(std::begin(r1), std::end(r1)) ==
-         std::distance(std::begin(weights), std::end(weights)));  // NOLINT
-  return (*this)(std::begin(r1), std::end(r1), std::begin(r2), std::begin(weights));
-}
-
-template <class FP>
-template <class It1, class It2>
-inline FP SED<FP>::compute_sed(It1 first1, It1 last1, It2 first2) const {
-  return (*this)(first1, last1, first2, utils::RepeatIterator<FP>(1));
-}
-
-template <class FP>
-template <class It1, class It2, class It3>
-inline FP SED<FP>::compute_weighted_sed(It1 first1, It1 last1, It2 first2, It3 weight_first) const {
-  const isize size = std::distance(first1, last1);
-  assert(size >= 0);  // NOLINT
-
-  FP sed = 0;
-  for (isize i = 0; i < size; ++i) {
-    const auto n1 = *(first1 + i);
-    const auto n2 = *(first2 + i);
-    const auto w = *(weight_first + i);
-    const auto n = [&]() {
-      if constexpr (std::is_unsigned_v<decltype(*first1)>) {
-        return n1 > n2 ? n1 - n2 : n2 - n1;
-      } else {
-        return n2 - n1;
-      }
-    }();
-    DISABLE_WARNING_PUSH
-    DISABLE_WARNING_USELESS_CAST
-    sed += static_cast<FP>(w) * static_cast<FP>(n * n);
-    DISABLE_WARNING_POP
-  }
-
-  return sed;
-}
-
-template <class FP>
-template <class Range1, class Range2, class Range3>
-[[nodiscard]] inline FP SED<FP>::operator()(const Range1& r1, const Range2& r2,
-                                            const Range3& weights) const {
-  assert(std::distance(std::begin(r1), std::end(r1)) ==
-         std::distance(std::begin(r2), std::end(r2)));  // NOLINT
-  return (*this)(std::begin(r1), std::end(r1), std::begin(r2), std::begin(weights));
-}
-
-template <class FP>
-template <class Range1, class Range2>
-[[nodiscard]] inline FP SED<FP>::operator()(const Range1& r1, const Range2& r2) const {
-  assert(std::distance(std::begin(r1), std::end(r1)) ==
-         std::distance(std::begin(r2), std::end(r2)));  // NOLINT
-  return (*this)(std::begin(r1), std::end(r1), std::begin(r2));
-}
-
-template <class FP>
-template <class It1, class It2>
-[[nodiscard]] inline FP SED<FP>::operator()(It1 first1, It1 last1, It2 first2) const {
-  return compute_sed(first1, last1, first2);
-}
-template <class FP>
-template <class It1, class It2, class It3>
-[[nodiscard]] inline FP SED<FP>::operator()(It1 first1, It1 last1, It2 first2, It3 weights) const {
-  return compute_weighted_sed(first1, last1, first2, weights);
+  assert(std::distance(std::cbegin(r1), std::cend(r1)) ==
+         std::distance(std::cbegin(r2), std::cend(r2)));  // NOLINT
+  assert(std::distance(std::cbegin(r1), std::cend(r1)) ==
+         std::distance(std::cbegin(weights), std::cend(weights)));  // NOLINT
+  return (*this)(std::cbegin(r1), std::cend(r1), std::cbegin(r2), std::cbegin(weights));
 }
 
 namespace internal {
