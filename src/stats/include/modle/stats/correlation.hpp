@@ -124,8 +124,20 @@ class SED {
   inline SED() = default;
   template <class It1, class It2>
   [[nodiscard]] inline FP operator()(It1 first1, It1 last1, It2 first2) const;
+  template <class It1, class It2, class It3>
+  [[nodiscard]] inline FP operator()(It1 first1, It1 last1, It2 first2, It3 weights) const;
   template <class Range1, class Range2>
   [[nodiscard]] inline FP operator()(const Range1& r1, const Range2& r2) const;
+  template <class Range1, class Range2, class Range3>
+  [[nodiscard]] inline FP operator()(const Range1& r1, const Range2& r2,
+                                     const Range3& weights) const;
+
+ private:
+  template <class It1, class It2>
+  [[nodiscard]] inline FP compute_sed(It1 first1, It1 last1, It2 first2) const;
+  template <class It1, class It2, class It3>
+  [[nodiscard]] inline FP compute_weighted_sed(It1 first1, It1 last1, It2 first2,
+                                               It3 weight_first) const;
 };
 
 namespace internal {
