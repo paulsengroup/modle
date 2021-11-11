@@ -82,8 +82,9 @@ RUN apt-get update \
 RUN pip3 install "scipy==${SCIPY_VER}"
 RUN echo "options(Ncpus = $(nproc))" > "$HOME/.Rprofile"           \
     && Rscript --no-save -e 'install.packages("devtools")'         \
-    && Rscript --no-save -e "library(devtools); devtools::install_version(\"wCorr\",  dependencies=c(\"Depends\", \"Imports\", \"LinkingTo\"), version=\"${WCORR_VER}\")" \
-    && Rscript --no-save -e 'quit(status=as.integer(!library("wCorr", character.only=T, logical.return=T)), save="no")' &> /dev/null
+                         -e "library(devtools); devtools::install_version(\"wCorr\",  dependencies=c(\"Depends\", \"Imports\", \"LinkingTo\"), version=\"${WCORR_VER}\")" > /dev/null 2>&1 \
+
+RUN Rscript --no-save -e 'quit(status=as.integer(!library("wCorr", character.only=T, logical.return=T)), save="no")'
 
 COPY --from=builder "$src_dir" "$src_dir"
 COPY --from=builder "/usr/bin/ctest" "/usr/bin/ctest"
