@@ -142,12 +142,19 @@ class ContactMatrix {
 
   [[nodiscard]] inline ContactMatrix<double> blur(double sigma, double cutoff = 0.005) const;
   [[nodiscard]] inline ContactMatrix<double> unsafe_gaussian_diff(
-      double sigma1, double sigma2, double min_value = -(std::numeric_limits<double>::max)(),
+      double sigma1, double sigma2, double min_value = std::numeric_limits<double>::lowest(),
       double max_value = (std::numeric_limits<double>::max)()) const;
   template <class FP = double, class = std::enable_if_t<std::is_floating_point_v<FP>>>
   [[nodiscard]] inline ContactMatrix<FP> unsafe_normalize(double lb = 0.0, double ub = 1.0) const;
   template <class FP = double, class = std::enable_if_t<std::is_floating_point_v<FP>>>
   [[nodiscard]] inline ContactMatrix<FP> normalize(double lb = 0.0, double ub = 1.0) const;
+  [[nodiscard]] inline ContactMatrix<N> unsafe_clamp(N lb, N ub) const;
+  [[nodiscard]] inline ContactMatrix<N> clamp(N lb, N ub) const;
+
+  inline void unsafe_normalize_inplace(N lb = 0, N ub = 1) noexcept;
+  inline void normalize_inplace(N lb = 0, N ub = 1) noexcept;
+  inline void unsafe_clamp_inplace(N lb, N ub) noexcept;
+  inline void clamp_inplace(N lb, N ub) noexcept;
 
  private:
   [[nodiscard]] inline N& unsafe_at(usize i, usize j);
@@ -165,6 +172,13 @@ class ContactMatrix {
   [[nodiscard]] static inline usize hash_coordinates(usize i, usize j) noexcept;
   [[nodiscard]] static constexpr usize compute_number_of_mutexes(usize rows, usize cols) noexcept;
   [[nodiscard]] inline usize get_pixel_mutex_idx(usize row, usize col) const noexcept;
+
+  template <class M, class = std::enable_if_t<std::is_floating_point_v<M>>>
+  static inline void unsafe_normalize(const ContactMatrix<N>& input_matrix,
+                                      ContactMatrix<M>& output_matrix, M lb = 0, M ub = 1) noexcept;
+
+  static inline void unsafe_clamp(const ContactMatrix<N>& input_matrix,
+                                  ContactMatrix<N>& output_matrix, N lb, N ub) noexcept;
 };
 }  // namespace modle
 

@@ -509,26 +509,70 @@ ContactMatrix<double> ContactMatrix<N>::unsafe_gaussian_diff(const double sigma1
 }
 
 template <class N>
+template <class M, class>
+void ContactMatrix<N>::unsafe_normalize(const ContactMatrix<N> &input_matrix,
+                                        ContactMatrix<M> &output_matrix, M lb, M ub) noexcept {
+  assert(ub >= lb);  // NOLINT
+  // The unsafe resize takes care of the case where &input_matrix == &output_matrix
+  output_matrix.unsafe_resize(input_matrix.nrows(), input_matrix.ncols());
+
+  const auto min_count = input_matrix.unsafe_get_min_count();
+  const auto max_count = input_matrix.unsafe_get_max_count();
+  const auto scaling_factor = ub - lb;
+
+  DISABLE_WARNING_PUSH
+  DISABLE_WARNING_USELESS_CAST
+  std::transform(input_matrix._contacts.begin(), input_matrix._contacts.end(),
+                 output_matrix._contacts.begin(), [&](const auto count) {
+                   // https://stats.stackexchange.com/a/281164
+                   const auto n =
+                       static_cast<M>(count - min_count) / static_cast<M>(max_count - min_count);
+                   return (n * scaling_factor) + static_cast<M>(lb);
+                 });
+  DISABLE_WARNING_POP
+
+  output_matrix._updates_missed = input_matrix._updates_missed.load();
+  output_matrix._tot_contacts_outdated = true;
+}
+
+template <class N>
 template <class FP, class>
 ContactMatrix<FP> ContactMatrix<N>::unsafe_normalize(const double lb, const double ub) const {
-  assert(ub >= lb);  // NOLINT
-
-  const auto min_count = this->unsafe_get_min_count();
-  const auto max_count = this->unsafe_get_max_count();
-  const auto scaling_factor = static_cast<FP>(ub - lb);
-
   ContactMatrix<FP> m(this->nrows(), this->ncols());
-  std::transform(
-      this->_contacts.begin(), this->_contacts.end(), m._contacts.begin(), [&](const auto count) {
-        // https://stats.stackexchange.com/a/281164
-        const auto n = static_cast<FP>(count - min_count) / static_cast<FP>(max_count - min_count);
-        return (n * scaling_factor) + static_cast<FP>(lb);
-      });
-
-  m._updates_missed = this->_updates_missed.load();
-  m._tot_contacts_outdated = true;
-
+  ContactMatrix<N>::unsafe_normalize(*this, m, lb, ub);
   return m;
+}
+
+template <class N>
+inline void ContactMatrix<N>::unsafe_normalize_inplace(const N lb, const N ub) noexcept {
+  ContactMatrix<N>::unsafe_normalize(*this, *this, lb, ub);
+}
+
+template <class N>
+void ContactMatrix<N>::unsafe_clamp(const ContactMatrix<N> &input_matrix,
+                                    ContactMatrix<N> &output_matrix, const N lb,
+                                    const N ub) noexcept {
+  assert(lb <= ub);  // NOLINT
+  // The unsafe resize takes care of the case where &input_matrix == &output_matrix
+  output_matrix.unsafe_resize(input_matrix.nrows(), input_matrix.ncols());
+
+  std::transform(input_matrix._contacts.begin(), input_matrix._contacts.end(),
+                 output_matrix._contacts.begin(),
+                 [&](const auto count) { return std::clamp(count, lb, ub); });
+  output_matrix._updates_missed = input_matrix._updates_missed.load();
+  output_matrix._tot_contacts_outdated = true;
+}
+
+template <class N>
+ContactMatrix<N> ContactMatrix<N>::unsafe_clamp(const N lb, const N ub) const {
+  ContactMatrix<N> m(this->nrows(), this->ncols());
+  ContactMatrix<N>::unsafe_clamp(*this, m, lb, ub);
+  return m;
+}
+
+template <class N>
+inline void ContactMatrix<N>::unsafe_clamp_inplace(const N lb, const N ub) noexcept {
+  ContactMatrix<N>::unsafe_clamp(*this, *this, lb, ub);
 }
 
 }  // namespace modle

@@ -164,6 +164,26 @@ ContactMatrix<FP> ContactMatrix<N>::normalize(const double lb, const double ub) 
   const auto lck = this->lock();
   return this->unsafe_normalize(lb, ub);
 }
+
+template <class N>
+inline void ContactMatrix<N>::normalize_inplace(const N lb, const N ub) noexcept {
+  const auto lck = this->lock();
+  this->unsafe_normalize_inplace(lb, ub);
+}
+
+template <class N>
+ContactMatrix<N> ContactMatrix<N>::clamp(const N lb, const N ub) const {
+  const auto lck = this->lock();
+  ContactMatrix<N> m(this->nrows(), this->ncols());
+  ContactMatrix<N>::unsafe_clamp(*this, m, lb, ub);
+  return m;
+}
+
+template <class N>
+inline void ContactMatrix<N>::clamp_inplace(const N lb, const N ub) noexcept {
+  const auto lck = this->lock();
+  ContactMatrix<N>::unsafe_clamp(*this, *this, lb, ub);
+}
 }  // namespace modle
 
 // IWYU pragma: private, include "modle/contacts.hpp"
