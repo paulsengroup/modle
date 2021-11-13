@@ -104,9 +104,11 @@ int main(int argc, char** argv) {
                   cli->get_printable_subcommand(), e.what());
     return 1;
   } catch (...) {
-    spdlog::error(
-        FMT_STRING("FAILURE! An error occurred during simulation: Caught an unhandled exception! "
-                   "If you see this message, please file an issue on GitHub."));
+    spdlog::error(FMT_STRING("FAILURE! modle_tools {} encountered the following error: Caught an "
+                             "unhandled exception! "
+                             "If you see this message, please file an issue on GitHub."),
+                  cli->get_printable_subcommand());
+    throw;
     return 1;
   }
   return 0;

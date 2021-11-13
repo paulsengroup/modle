@@ -51,6 +51,7 @@ target_link_libraries(
           Modle::interval_tree
           Modle::io_bed
           Modle::io_bigwig
+          Modle::io_compressed
           Modle::io_cooler
           Modle::stats
           thread-pool)

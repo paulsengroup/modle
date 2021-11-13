@@ -498,6 +498,27 @@ void Cli::make_transform_subcommand() {
       ->check(CLI::PositiveNumber)
       ->capture_default_str();
 
+  trans.add_option(
+      "--binary-discretization-value",
+      c.discretization_val,
+      "Partition value used to discretize the transformed matrix to binary values. Values strictly larger than the threshold will be discretized to one while all other values will be discretized to zero.");
+
+  trans.add_option(
+      "--discretization-ranges-tsv",
+      c.path_to_discretization_ranges_tsv,
+      "Path to a TSV with the discratization ranges.\n"
+      "The TSV should have three columns.\n"
+      "The first two columns contain the first and last values (open-close inteval) of a discretization interval, while the third column contains the discretization value.\n"
+      "Values not falling in any discretization interval are left unmodified.\n"
+      "To make an interval start/end at infinity specify -inf or inf.")
+      ->check(CLI::ExistingFile);
+
+  trans.add_flag(
+      "--float-contacts,!--no-float-contacts",
+      c.floating_point,
+      "Treat contacts as floating point numbers.")
+      ->capture_default_str();
+
   mat.add_option(
       "-b,--bin-size",
       c.bin_size,
@@ -521,6 +542,10 @@ void Cli::make_transform_subcommand() {
       ->check(CLI::PositiveNumber);
 
   // clang-format on
+
+  trans.get_option("--binary-discretization-value")
+      ->excludes(trans.get_option("--discretization-ranges-tsv"));
+
   this->_config = absl::monostate{};
 }
 

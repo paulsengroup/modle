@@ -103,15 +103,17 @@ struct transform_config {  // NOLINT
   enum class transformation : std::uint_fast8_t {
     normalize,
     gaussian_blur,
-    difference_of_gaussians
+    difference_of_gaussians,
+    discretize
   };
   transformation method;
 
   // clang-format off
-  inline static const std::array<std::pair<std::string, transformation>, 3> transformation_map{
+  inline static const std::array<std::pair<std::string, transformation>, 4> transformation_map{
       std::make_pair("normalize", transformation::normalize),
       std::make_pair("gaussian_blur", transformation::gaussian_blur),
-      std::make_pair("difference_of_gaussians", transformation::difference_of_gaussians)
+      std::make_pair("difference_of_gaussians", transformation::difference_of_gaussians),
+      std::make_pair("discretize", transformation::discretize)
   };
   // clang-format on
 
@@ -121,6 +123,10 @@ struct transform_config {  // NOLINT
                                              std::numeric_limits<double>::infinity()};
   double gaussian_blur_sigma{1.0};
   double gaussian_blur_sigma_multiplier{1.6};  // NOLINT, approx. Laplacian of Gaussian
+
+  double discretization_val{std::numeric_limits<double>::quiet_NaN()};
+  boost::filesystem::path path_to_discretization_ranges_tsv{};
+  bool floating_point{true};
 
   // Matrix options
   usize bin_size{0};
