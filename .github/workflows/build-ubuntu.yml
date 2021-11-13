@@ -7,7 +7,7 @@ on:
   push:
     branches: [ main, testing-ci, v4.1 ]
     paths:
-      - ".github/workflows/*.yml"
+      - ".github/workflows/build-ubuntu.yml"
       - "external/**"
       - "src/**"
       - "test/**"
@@ -16,7 +16,7 @@ on:
   pull_request:
     branches: [ main, testing-ci, v4.1 ]
     paths:
-      - ".github/workflows/*.yml"
+      - ".github/workflows/build-ubuntu.yml"
       - "external/**"
       - "src/**"
       - "test/**"
