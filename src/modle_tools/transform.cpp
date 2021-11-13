@@ -165,14 +165,15 @@ void transform_subcmd(const modle::tools::transform_config& c) {
   boost::filesystem::create_directories(c.path_to_output_matrix.parent_path());
   std::mutex output_cooler_mtx;  // Protect access to output coolers
   auto output_cooler = [&]() {
-    using T = absl::variant<cooler::Cooler<double>, cooler::Cooler<i32>>;
+    using CoolerV = absl::variant<cooler::Cooler<double>, cooler::Cooler<i32>>;
     if (c.floating_point) {
-      return T(cooler::Cooler<double>(c.path_to_output_matrix,
-                                      cooler::Cooler<double>::IO_MODE::WRITE_ONLY,
-                                      input_cooler.get_bin_size(), max_chrom_name_size));
+      return CoolerV(absl::in_place_type<cooler::Cooler<double>>, c.path_to_output_matrix,
+                     cooler::Cooler<double>::IO_MODE::WRITE_ONLY, input_cooler.get_bin_size(),
+                     max_chrom_name_size);
     }
-    return T(cooler::Cooler<i32>(c.path_to_output_matrix, cooler::Cooler<i32>::IO_MODE::WRITE_ONLY,
-                                 input_cooler.get_bin_size(), max_chrom_name_size));
+    return CoolerV(absl::in_place_type<cooler::Cooler<i32>>, c.path_to_output_matrix,
+                   cooler::Cooler<i32>::IO_MODE::WRITE_ONLY, input_cooler.get_bin_size(),
+                   max_chrom_name_size);
   }();
 
   const auto bin_size = input_cooler.get_bin_size();
