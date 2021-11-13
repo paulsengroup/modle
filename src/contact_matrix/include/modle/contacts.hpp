@@ -21,6 +21,9 @@
 
 namespace modle {
 
+template <class N, class T>
+class IITree;
+
 template <class N = contacts_t>
 class ContactMatrix {
   static_assert(std::is_arithmetic_v<N>,
@@ -67,11 +70,11 @@ class ContactMatrix {
   inline ~ContactMatrix() = default;
 
   // Operators
-  [[nodiscard]] inline ContactMatrix<N>& operator=(const ContactMatrix<N>& other);
+  inline ContactMatrix<N>& operator=(const ContactMatrix<N>& other);
 #if defined(__clang__) && __clang_major__ < 7
-  [[nodiscard]] inline ContactMatrix<N>& operator=(ContactMatrix<N>&& other) = default;
+  inline ContactMatrix<N>& operator=(ContactMatrix<N>&& other) = default;
 #else
-  [[nodiscard]] inline ContactMatrix<N>& operator=(ContactMatrix<N>&& other) noexcept = default;
+  inline ContactMatrix<N>& operator=(ContactMatrix<N>&& other) noexcept = default;
 #endif
 
   // Thread-safe count getters and setters
@@ -150,11 +153,26 @@ class ContactMatrix {
   [[nodiscard]] inline ContactMatrix<FP> normalize(double lb = 0.0, double ub = 1.0) const;
   [[nodiscard]] inline ContactMatrix<N> unsafe_clamp(N lb, N ub) const;
   [[nodiscard]] inline ContactMatrix<N> clamp(N lb, N ub) const;
+  template <class N1, class N2>
+  [[nodiscard]] inline ContactMatrix<N1> discretize(const IITree<N2, N1>& mappings) const;
+  template <class N1, class N2>
+  [[nodiscard]] inline ContactMatrix<N1> unsafe_discretize(const IITree<N2, N1>& mappings) const;
+
+  // Convert a matrix of type N to a matrix of type M
+  // When N is a floating point type and M isn't, contacts are round before casting them to M
+  template <class M, class = std::enable_if_t<!std::is_same_v<N, M>>>
+  [[nodiscard]] inline ContactMatrix<M> as() const;
+  template <class M, class = std::enable_if_t<!std::is_same_v<N, M>>>
+  [[nodiscard]] inline ContactMatrix<M> unsafe_as() const;
 
   inline void unsafe_normalize_inplace(N lb = 0, N ub = 1) noexcept;
   inline void normalize_inplace(N lb = 0, N ub = 1) noexcept;
   inline void unsafe_clamp_inplace(N lb, N ub) noexcept;
   inline void clamp_inplace(N lb, N ub) noexcept;
+  template <class M>
+  inline void discretize_inplace(const IITree<M, N>& mappings) noexcept;
+  template <class M>
+  inline void unsafe_discretize_inplace(const IITree<M, N>& mappings) noexcept;
 
  private:
   [[nodiscard]] inline N& unsafe_at(usize i, usize j);
@@ -179,6 +197,10 @@ class ContactMatrix {
 
   static inline void unsafe_clamp(const ContactMatrix<N>& input_matrix,
                                   ContactMatrix<N>& output_matrix, N lb, N ub) noexcept;
+  template <class N1, class N2>
+  static inline void unsafe_discretize(const ContactMatrix<N>& input_matrix,
+                                       ContactMatrix<N1>& output_matrix,
+                                       const IITree<N2, N1>& mappings) noexcept;
 };
 }  // namespace modle
 

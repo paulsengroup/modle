@@ -86,7 +86,8 @@ ContactMatrix<N> &ContactMatrix<N>::operator=(const ContactMatrix<N> &other) {
     return *this;
   }
 
-  const auto lck = other.lock();
+  const auto lck1 = this->lock();
+  const auto lck2 = other.lock();
   _nrows = other.nrows();
   _ncols = other.ncols();
   if (!_contacts.empty()) {
@@ -95,7 +96,7 @@ ContactMatrix<N> &ContactMatrix<N>::operator=(const ContactMatrix<N> &other) {
   } else {
     _contacts = other._contacts;
   }
-  _mtxes.resize(other._mtxes.size());
+  _mtxes = std::vector<std::shared_mutex>(other._mtxes.size());
   _tot_contacts = other._tot_contacts.load();
   _tot_contacts_outdated = other._tot_contacts_outdated.load();
   _updates_missed = other._updates_missed.load();

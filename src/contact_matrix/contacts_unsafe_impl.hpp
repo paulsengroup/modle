@@ -27,6 +27,7 @@
 #include "modle/common/common.hpp"                // for usize, i64, u64, bp_t, isize
 #include "modle/common/utils.hpp"                 // for convolve, parse_numeric_or_throw
 #include "modle/compressed_io/compressed_io.hpp"  // for Reader
+#include "modle/interval_tree.hpp"                // for IITree
 
 namespace modle {
 
@@ -573,6 +574,57 @@ ContactMatrix<N> ContactMatrix<N>::unsafe_clamp(const N lb, const N ub) const {
 template <class N>
 inline void ContactMatrix<N>::unsafe_clamp_inplace(const N lb, const N ub) noexcept {
   ContactMatrix<N>::unsafe_clamp(*this, *this, lb, ub);
+}
+
+template <class N>
+template <class N1, class N2>
+void ContactMatrix<N>::unsafe_discretize(const ContactMatrix<N> &input_matrix,
+                                         ContactMatrix<N1> &output_matrix,
+                                         const IITree<N2, N1> &mappings) noexcept {
+  output_matrix.unsafe_resize(input_matrix.nrows(), input_matrix.ncols());
+  DISABLE_WARNING_PUSH
+  DISABLE_WARNING_USELESS_CAST
+  std::transform(input_matrix._contacts.begin(), input_matrix._contacts.end(),
+                 output_matrix._contacts.begin(), [&](const auto n) {
+                   if (auto it = mappings.find_overlaps(static_cast<N>(n), static_cast<N>(n));
+                       it.first != it.second) {
+                     return *it.first;
+                   }
+                   return static_cast<N1>(n);
+                 });
+  DISABLE_WARNING_POP
+  output_matrix._tot_contacts_outdated = true;
+  output_matrix._updates_missed = input_matrix._updates_missed.load();
+}
+
+template <class N>
+template <class N1, class N2>
+ContactMatrix<N1> ContactMatrix<N>::unsafe_discretize(const IITree<N2, N1> &mappings) const {
+  ContactMatrix<N1> m(this->nrows(), this->ncols());
+  ContactMatrix<N>::unsafe_discretize(*this, m, mappings);
+  return m;
+}
+
+template <class N>
+template <class M>
+void ContactMatrix<N>::unsafe_discretize_inplace(const IITree<M, N> &mappings) noexcept {
+  ContactMatrix<N>::unsafe_discretize(*this, *this, mappings);
+}
+
+template <class N>
+template <class M, class>
+ContactMatrix<M> ContactMatrix<N>::unsafe_as() const {
+  ContactMatrix<M> m(this->nrows(), this->ncols());
+  std::transform(this->_contacts.begin(), this->_contacts.end(), m._contacts.begin(),
+                 [](const auto n) {
+                   if constexpr (std::is_floating_point_v<N> && !std::is_floating_point_v<M>) {
+                     return static_cast<M>(std::round(n));
+                   } else {
+                     return static_cast<M>(n);
+                   }
+                 });
+  m._tot_contats_outdated = true;
+  m._updates_missed = this->_updates_missed.load();
 }
 
 }  // namespace modle

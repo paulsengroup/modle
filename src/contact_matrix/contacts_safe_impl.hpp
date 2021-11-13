@@ -184,6 +184,28 @@ inline void ContactMatrix<N>::clamp_inplace(const N lb, const N ub) noexcept {
   const auto lck = this->lock();
   ContactMatrix<N>::unsafe_clamp(*this, *this, lb, ub);
 }
+
+template <class N>
+template <class N1, class N2>
+ContactMatrix<N1> ContactMatrix<N>::discretize(const IITree<N2, N1>& mappings) const {
+  const auto lck = this->lock();
+  return this->unsafe_discretize<N1>(mappings);
+}
+
+template <class N>
+template <class M>
+void ContactMatrix<N>::discretize_inplace(const IITree<M, N>& mappings) noexcept {
+  const auto lck = this->lock();
+  this->unsafe_discretize_inplace(mappings);
+}
+
+template <class N>
+template <class M, class>
+ContactMatrix<M> ContactMatrix<N>::as() const {
+  const auto lck = this->lock();
+  return this->as<M>();
+}
+
 }  // namespace modle
 
 // IWYU pragma: private, include "modle/contacts.hpp"
