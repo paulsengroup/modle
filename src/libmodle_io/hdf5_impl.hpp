@@ -54,11 +54,12 @@ using attr_types = absl::variant<u8, u16, u32, u64, i8, i16, i32, i64, float, do
 inline attr_types getCpp_type(const H5::IntType &h5_type);
 inline attr_types getCpp_type(const H5::FloatType &h5_type);
 
-template <typename S>
+template <class S>
 hsize_t write_str(const S &str_, const H5::DataSet &dataset, const H5::StrType &str_type,
                   hsize_t file_offset) {
   static_assert(std::is_constructible_v<S, H5std_string>,
                 "S should be a type that can be used to construct a std::string.");
+  const auto lck = internal::lock();
   H5::Exception::dontPrint();
   const hsize_t RANK{1};  // i.e. number of dimensions
   const hsize_t BUFF_SIZE{1};
@@ -71,15 +72,15 @@ hsize_t write_str(const S &str_, const H5::DataSet &dataset, const H5::StrType &
     return std::string{str_};
   }();
 
-#ifndef NDEBUG
-  if (str.size() > str_type.getSize()) {
-    throw std::runtime_error(
-        fmt::format(FMT_STRING("The following error occurred while writing strings '{}' to dataset "
-                               "'{}' at offset {}:\n string does not fit in the receiving dataset: "
-                               "string length: {}; Max. string length: {}"),
-                    str, dataset.getObjName(), file_offset, str.size(), str_type.getSize()));
+  if constexpr (utils::ndebug_not_defined()) {
+    if (str.size() > str_type.getSize()) {
+      throw std::runtime_error(fmt::format(
+          FMT_STRING("The following error occurred while writing strings '{}' to dataset "
+                     "'{}' at offset {}:\n string does not fit in the receiving dataset: "
+                     "string length: {}; Max. string length: {}"),
+          str, dataset.getObjName(), file_offset, str.size(), str_type.getSize()));
+    }
   }
-#endif
 
   try {
     auto mem_space{H5::DataSpace(RANK, &BUFF_SIZE, &MAXDIMS)};
@@ -102,7 +103,7 @@ hsize_t write_str(const S &str_, const H5::DataSet &dataset, const H5::StrType &
   }
 }
 
-template <typename CS>
+template <class CS>
 hsize_t write_strings(const CS &strings, const H5::DataSet &dataset, const H5::StrType &str_type,
                       hsize_t file_offset, bool write_empty_strings) {
   static_assert(std::is_convertible_v<decltype(*strings.begin()), H5std_string> &&
@@ -117,9 +118,10 @@ hsize_t write_strings(const CS &strings, const H5::DataSet &dataset, const H5::S
   return file_offset;
 }
 
-template <typename N>
+template <class N>
 hsize_t write_number(N &num, const H5::DataSet &dataset, hsize_t file_offset) {
   static_assert(std::is_arithmetic_v<N>, "num should be a numeric type.");
+  const auto lck = internal::lock();
   H5::Exception::dontPrint();
 
   const hsize_t RANK{1};
@@ -145,7 +147,7 @@ hsize_t write_number(N &num, const H5::DataSet &dataset, hsize_t file_offset) {
   }
 }
 
-template <typename CN>
+template <class CN>
 hsize_t write_numbers(CN &numbers, const H5::DataSet &dataset, hsize_t file_offset) {
   static_assert(std::is_arithmetic_v<std::remove_pointer_t<decltype(std::declval<CN &>().data())>>,
                 "numbers does not have a suitable ::data() member function.");
@@ -154,6 +156,7 @@ hsize_t write_numbers(CN &numbers, const H5::DataSet &dataset, hsize_t file_offs
   if (numbers.empty()) {
     return file_offset;
   }
+  const auto lck = internal::lock();
   H5::Exception::dontPrint();
 
   using N = std::remove_pointer_t<decltype(numbers.data())>;
@@ -181,9 +184,10 @@ hsize_t write_numbers(CN &numbers, const H5::DataSet &dataset, hsize_t file_offs
   }
 }
 
-template <typename N>
+template <class N>
 hsize_t read_number(const H5::DataSet &dataset, N &buff, hsize_t file_offset) {
   static_assert(std::is_integral<N>::value, "I should be a numeric type.");
+  const auto lck = internal::lock();
   H5::Exception::dontPrint();
   const hsize_t DIMS = 1;
   const hsize_t RANK = 1;
@@ -206,7 +210,7 @@ hsize_t read_number(const H5::DataSet &dataset, N &buff, hsize_t file_offset) {
   }
 }
 
-template <typename CN>
+template <class CN>
 hsize_t read_numbers(const H5::DataSet &dataset, CN &buff, hsize_t file_offset) {
   static_assert(std::is_arithmetic_v<std::decay_t<decltype(*std::declval<CN &>().begin())>>,
                 "numbers does not have a suitable ::begin() member function.");
@@ -214,6 +218,7 @@ hsize_t read_numbers(const H5::DataSet &dataset, CN &buff, hsize_t file_offset) 
                 "numbers does not have a suitable ::end() member function.");
 
   using N = std::remove_pointer_t<decltype(buff.data())>;
+  const auto lck = internal::lock();
   H5::Exception::dontPrint();
 
   const hsize_t RANK{1};  // i.e. number of dimensions
@@ -242,17 +247,18 @@ hsize_t read_numbers(const H5::DataSet &dataset, CN &buff, hsize_t file_offset) 
   }
 }
 
-template <typename T>
-void read_attribute(std::string_view path_to_file, std::string_view attr_name, T &buff,
-                    std::string_view path) {
-  H5::H5File f(std::string{path_to_file.data(), path_to_file.size()}, H5F_ACC_RDONLY);
+template <class T>
+void read_attribute(const boost::filesystem::path &path_to_file, std::string_view attr_name,
+                    T &buff, std::string_view path) {
+  auto f = open_file_for_reading(path_to_file);
   read_attribute(f, attr_name, buff, path);
 }
 
-template <typename T>
+template <class T>
 void read_attribute(H5::H5File &f, std::string_view attr_name, T &buff, std::string_view path) {
+  const auto lck = internal::lock();
   auto g = f.openGroup(std::string{path});
-  if (!has_attribute(g, attr_name)) {
+  if (!hdf5::has_attribute(g, attr_name)) {
     throw std::runtime_error(fmt::format(
         FMT_STRING("Unable to find an attribute named '{}' in group '/{}'"), attr_name, path));
   }
@@ -352,7 +358,7 @@ void read_attribute(H5::H5File &f, std::string_view attr_name, T &buff, std::str
       vars);
 }
 
-template <typename T>
+template <class T>
 void read_attribute(const H5::DataSet &d, std::string_view attr_name, T &buff) {
   if (!has_attribute(d, attr_name)) {
     throw std::runtime_error(
@@ -360,6 +366,7 @@ void read_attribute(const H5::DataSet &d, std::string_view attr_name, T &buff) {
                     d.getObjName()));
   }
 
+  const auto lck = internal::lock();
   auto attr = d.openAttribute(std::string{attr_name});
   if constexpr (std::is_constructible_v<H5std_string, T>) {  // string-like (scalar)
     buff.clear();
@@ -381,7 +388,7 @@ void read_attribute(const H5::DataSet &d, std::string_view attr_name, T &buff) {
   }
 }
 
-template <typename T>
+template <class T>
 inline void write_or_create_attribute(H5::H5File &f, std::string_view attr_name, T &buff,
                                       std::string_view path) {
   // TODO handle array attributes
@@ -390,9 +397,11 @@ inline void write_or_create_attribute(H5::H5File &f, std::string_view attr_name,
     throw std::runtime_error(fmt::format(FMT_STRING("Unable to find group '{}'"), path));
   }
 
+  const auto attribute_exists = hdf5::has_attribute(f, std::string{attr_name}, std::string{path});
+  const auto lck = internal::lock();
   auto g = f.openGroup(std::string{path});
   if constexpr (std::is_convertible_v<T, H5std_string>) {
-    if (hdf5::has_attribute(f, std::string{attr_name}, std::string{path})) {
+    if (attribute_exists) {
       auto attr = g.openAttribute(std::string{attr_name});
       attr.write(attr.getDataType(), buff);
     } else {
@@ -400,7 +409,7 @@ inline void write_or_create_attribute(H5::H5File &f, std::string_view attr_name,
       attr.write(attr.getDataType(), buff);
     }
   } else {
-    if (hdf5::has_attribute(f, std::string{attr_name}, std::string{path})) {
+    if (attribute_exists) {
       auto attr = g.openAttribute(std::string{attr_name});
       attr.write(attr.getDataType(), &buff);
     } else {
@@ -410,11 +419,12 @@ inline void write_or_create_attribute(H5::H5File &f, std::string_view attr_name,
   }
 }
 
-template <typename T>
+template <class T>
 bool check_dataset_type(const H5::DataSet &dataset, T type, bool throw_on_failure) {
   static_assert(std::is_base_of_v<H5::DataType, T>,
                 "type should have a type that is derived from H5::DataType (such as PredType, "
                 "IntType or StrType).");
+  const auto lck = internal::lock();
   const auto actual_type = dataset.getTypeClass();
   const auto expected_type = type.getClass();
   if (actual_type != expected_type) {
@@ -554,7 +564,7 @@ bool check_dataset_type(const H5::DataSet &dataset, T type, bool throw_on_failur
   throw std::logic_error("Unreachable code");
 }
 
-template <typename DataType>
+template <class DataType>
 inline H5::PredType getH5_type() {
   // Taken from github.com/DavidAce/h5pp:
   // https://github.com/DavidAce/h5pp/blob/master/h5pp/include/h5pp/details/h5ppUtils.h
@@ -577,6 +587,18 @@ inline H5::PredType getH5_type() {
   // clang-format on
 
   throw std::logic_error("getH5_type(): Unable to map C++ type to a H5T");
+}
+
+template <class DType>
+H5::DataSet create_dataset(H5::H5File &f, const std::string &name, const DType &type,
+                           const H5::DSetCreatPropList &create_prop,
+                           const H5::DSetAccPropList &access_prop) {
+  const hsize_t RANK{1};                 // i.e. number of dimensions
+  const hsize_t MAXDIMS{H5S_UNLIMITED};  // extensible dataset
+  const hsize_t BUFF_SIZE{1};            // Dummy buffer size
+  const auto lck = internal::lock();
+  auto mem_space{H5::DataSpace(RANK, &BUFF_SIZE, &MAXDIMS)};
+  return f.createDataSet(name, type, mem_space, create_prop, access_prop);
 }
 
 }  // namespace modle::hdf5

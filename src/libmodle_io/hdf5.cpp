@@ -25,22 +25,28 @@
 #include <fcntl.h>                 // for SEEK_END, SEEK_SET
 #include <fmt/format.h>            // for format, FMT_STRING
 
-#include <algorithm>    // for max
-#include <cassert>      // for assert
-#include <cstdio>       // for fclose, fseek, tmpfile, ferror, fread, ftell, FILE
-#include <memory>       // for unique_ptr
-#include <stdexcept>    // for runtime_error
-#include <string>       // for string, basic_string
-#include <string_view>  // for string_view
-#include <vector>       // for vector
+#include <algorithm>                  // for max
+#include <boost/filesystem/path.hpp>  // for path
+#include <cassert>                    // for assert
+#include <cstdio>                     // for fclose, fseek, tmpfile, ferror, fread, ftell, FILE
+#include <memory>                     // for unique_ptr
+#include <stdexcept>                  // for runtime_error
+#include <string>                     // for string, basic_string
+#include <string_view>                // for string_view
+#include <vector>                     // for vector
 
 #include "modle/common/common.hpp"  // for i64
 
 namespace modle::hdf5 {
 
+std::scoped_lock<std::recursive_mutex> internal::lock() {
+  return std::scoped_lock<std::recursive_mutex>(hdf5::internal::global_mtx);
+}
+
 std::string construct_error_stack(std::string_view function_name, std::string_view detail_msg) {
   std::string buff;
   auto fp = std::unique_ptr<FILE, decltype(&fclose)>(std::tmpfile(), &fclose);
+  const auto lck = internal::lock();
   if (fp) {  // TODO: Make this portable
     H5::Exception::printErrorStack(fp.get());
     fseek(fp.get(), 0L, SEEK_END);
@@ -80,6 +86,7 @@ std::string construct_error_stack(const H5::Exception &e) {
 
 hsize_t read_str(const H5::DataSet &dataset, std::string &buff, hsize_t file_offset) {
   try {
+    const auto lck = internal::lock();
     H5::Exception::dontPrint();
 
     const hsize_t DIMS{1};
@@ -107,6 +114,7 @@ hsize_t read_str(const H5::DataSet &dataset, std::string &buff, hsize_t file_off
 hsize_t read_strings(const H5::DataSet &dataset, std::vector<std::string> &buff,
                      hsize_t file_offset) {
   try {
+    const auto lck = internal::lock();
     H5::Exception::dontPrint();
     const hsize_t DIMS = 1;
     const hsize_t RANK = 1;
@@ -151,10 +159,10 @@ std::string read_attribute_str(H5::H5File &f, std::string_view attr_name, std::s
   return buff;
 }
 
-std::string read_attribute_str(std::string_view path_to_file, std::string_view attr_name,
-                               std::string_view path) {
+std::string read_attribute_str(const boost::filesystem::path &path_to_file,
+                               std::string_view attr_name, std::string_view path) {
   std::string buff;
-  H5::H5File f({path_to_file.data(), path_to_file.size()}, H5F_ACC_RDONLY);
+  auto f = open_file_for_reading(path_to_file);
   read_attribute(f, attr_name, buff, path);
   return buff;
 }
@@ -165,25 +173,28 @@ i64 read_attribute_int(H5::H5File &f, std::string_view attr_name, std::string_vi
   return buff;
 }
 
-i64 read_attribute_int(std::string_view path_to_file, std::string_view attr_name,
+i64 read_attribute_int(const boost::filesystem::path &path_to_file, std::string_view attr_name,
                        std::string_view path) {
   i64 buff;  // NOLINT
-  H5::H5File f({path_to_file.data(), path_to_file.size()}, H5F_ACC_RDONLY);
+  auto f = open_file_for_reading(path_to_file);
   read_attribute(f, attr_name, buff, path);
   return buff;
 }
 
 bool has_attribute(const H5::Group &g, std::string_view attr_name) {
   absl::ConsumePrefix(&attr_name, "/");
+  const auto lck = internal::lock();
   return g.attrExists(std::string{attr_name});
 }
 
 bool has_attribute(const H5::DataSet &d, std::string_view attr_name) {
   absl::ConsumePrefix(&attr_name, "/");
+  const auto lck = internal::lock();
   return d.attrExists(std::string{attr_name});
 }
 
 bool has_attribute(H5::H5File &f, std::string_view attr_name, std::string_view path) {
+  const auto lck = internal::lock();
   auto g = f.openGroup(std::string{path});
 
   return has_attribute(g, attr_name);
@@ -195,6 +206,7 @@ bool has_group(H5::H5File &f, std::string_view name, std::string_view root_path)
       absl::StrCat(absl::StripSuffix(root_path, "/"), "/", absl::StripPrefix(name, "/"));
   assert(!path.empty());  // NOLINT
   usize pos = 0;
+  const auto lck = internal::lock();
   do {
     pos = path.find_first_of('/', pos + 1);
     if (!f.nameExists(std::string{path.substr(0, pos)})) {
@@ -215,6 +227,7 @@ bool has_dataset(H5::H5File &f, std::string_view name, std::string_view root_pat
       absl::StrCat(absl::StripSuffix(root_path, "/"), "/", absl::StripPrefix(name, "/"));
   assert(!path.empty());  // NOLINT
   usize pos = 0;
+  const auto lck = internal::lock();
   do {
     pos = path.find_first_of('/', pos + 1);
     if (!f.nameExists(std::string{path.substr(0, pos)})) {
@@ -226,14 +239,35 @@ bool has_dataset(H5::H5File &f, std::string_view name, std::string_view root_pat
   return info.type == H5O_TYPE_DATASET;
 }
 
-H5::H5File open_file_for_reading(std::string_view path_to_file) {
+H5::H5File open_file_for_reading(const boost::filesystem::path &path_to_file) {
+  const auto &path_to_file_ = path_to_file.string();
   try {
+    const auto lck = internal::lock();
     H5::Exception::dontPrint();
-    H5::H5File f(std::string{path_to_file.data(), path_to_file.size()}, H5F_ACC_RDONLY);
+    H5::H5File f(std::string{path_to_file_.data(), path_to_file_.size()}, H5F_ACC_RDONLY);
     return f;
   } catch ([[maybe_unused]] const H5::Exception &e) {
     throw std::runtime_error(fmt::format(FMT_STRING("Failed to open file {} for reading:\n{}"),
                                          path_to_file, construct_error_stack()));
   }
+}
+
+H5::H5File open_file_for_writing(const boost::filesystem::path &path_to_file) {
+  const auto &path_to_file_ = path_to_file.string();
+  try {
+    const auto lck = internal::lock();
+    H5::Exception::dontPrint();
+    H5::H5File f(std::string{path_to_file_.data(), path_to_file_.size()}, H5F_ACC_TRUNC);
+    return f;
+  } catch ([[maybe_unused]] const H5::Exception &e) {
+    throw std::runtime_error(fmt::format(FMT_STRING("Failed to open file {} for writing:\n{}"),
+                                         path_to_file, construct_error_stack()));
+  }
+}
+
+H5::DataSet open_dataset(H5::H5File &f, const std::string &name,
+                         const H5::DSetAccPropList &access_prop) {
+  const auto lck = internal::lock();
+  return f.openDataSet(name, access_prop);
 }
 }  // namespace modle::hdf5
