@@ -19,46 +19,43 @@
 
 namespace modle {
 
-template <typename I, typename T>
-IITree<I, T>::StackCell::StackCell(i64 _level, usize _node_idx, bool _left_child_alread_processed)
+template <class N, class T>
+IITree<N, T>::StackCell::StackCell(i64 _level, usize _node_idx, bool _left_child_alread_processed)
     : level(_level),
       node_idx(_node_idx),
       left_child_already_processed(_left_child_alread_processed) {}
 
-template <typename I, typename T>
-IITree<I, T>::IITree(usize start_pos_, usize end_pos_)
-    : _start_pos(start_pos_), _end_pos(end_pos_) {
+template <class N, class T>
+IITree<N, T>::IITree(N start_pos_, N end_pos_) : _start_pos(start_pos_), _end_pos(end_pos_) {
   assert(start_pos_ <= end_pos_);  // NOLINT
 }
 
-template <typename I, typename T>
-template <typename I2, typename>
-void IITree<I, T>::insert(const I2 start, const I2 end, const T &data) {
-  assert(this->start_pos() <= static_cast<usize>(start));  // NOLINT
-  assert(this->end_pos() > static_cast<usize>(end));       // NOLINT
+template <class N, class T>
+void IITree<N, T>::insert(const N start, const N end, const T &data) {
+  assert(this->start_pos() <= start);  // NOLINT
+  assert(this->end_pos() > end);       // NOLINT
 
   this->_indexed = false;
-  this->_start.emplace_back(I2(start));
-  this->_end.emplace_back(I2(end));
-  this->_max.emplace_back(I2(end));
+  this->_start.emplace_back(N(start));
+  this->_end.emplace_back(N(end));
+  this->_max.emplace_back(N(end));
   this->_data.emplace_back(data);
 }
 
-template <typename I, typename T>
-template <typename I2, typename>
-void IITree<I, T>::emplace(const I2 start, const I2 end, T &&data) {
-  assert(this->start_pos() <= static_cast<usize>(start));  // NOLINT
-  assert(this->end_pos() > static_cast<usize>(end));       // NOLINT
+template <class N, class T>
+void IITree<N, T>::emplace(const N start, const N end, T &&data) {
+  assert(this->start_pos() <= start);  // NOLINT
+  assert(this->end_pos() > end);       // NOLINT
 
   this->_indexed = false;
-  this->_start.emplace_back(I2(start));
-  this->_end.emplace_back(I2(end));
-  this->_max.emplace_back(I2(end));
+  this->_start.emplace_back(N(start));
+  this->_end.emplace_back(N(end));
+  this->_max.emplace_back(N(end));
   this->_data.emplace_back(std::move(data));
 }
 
-template <typename I, typename T>
-void IITree<I, T>::make_BST() {
+template <class N, class T>
+void IITree<N, T>::make_BST() {
   if (this->_data.empty() || this->_indexed) {
     return;
   }
@@ -99,7 +96,7 @@ void IITree<I, T>::make_BST() {
     auto [last_i, last] = [&]() {
       auto i = this->size() - 1;
       i -= i % 2;
-      return std::make_pair(i, static_cast<I>(this->_end[i]));
+      return std::make_pair(i, static_cast<N>(this->_end[i]));
     }();
 
     auto k = 1LL;
@@ -111,9 +108,9 @@ void IITree<I, T>::make_BST() {
 
       for (auto i = i0; i < this->size(); i += step) {  // i0 is the first node
         // traverse all nodes at level level
-        I el = this->_max[i - x];                                // _max value of the left child
-        I er = i + x < this->size() ? this->_max[i + x] : last;  // of the right child
-        I e = this->_end[i];
+        N el = this->_max[i - x];                                // _max value of the left child
+        N er = i + x < this->size() ? this->_max[i + x] : last;  // of the right child
+        N e = this->_end[i];
         e = e > el ? e : el;
         e = e > er ? e : er;
         this->_max[i] = e;  // set the _max value for node i
@@ -132,15 +129,15 @@ void IITree<I, T>::make_BST() {
 }
 
 // GCC chokes if we use an using directive here
-#define T_iterator       typename IITree<I, T>::T_iterator
-#define I_iterator       typename IITree<I, T>::I_iterator
-#define T_iterator_const typename IITree<I, T>::T_iterator_const
-#define I_iterator_const typename IITree<I, T>::I_iterator_const
+#define T_iterator       typename IITree<N, T>::T_iterator
+#define I_iterator       typename IITree<N, T>::I_iterator
+#define T_iterator_const typename IITree<N, T>::T_iterator_const
+#define I_iterator_const typename IITree<N, T>::I_iterator_const
 
-template <typename I, typename T>
-template <typename IITree<I, T>::QueryType Mode>
-std::pair<T_iterator_const, T_iterator_const> IITree<I, T>::internal_equal_range(
-    const I start, const I end) const noexcept {
+template <class N, class T>
+template <typename IITree<N, T>::QueryType Mode>
+std::pair<T_iterator_const, T_iterator_const> IITree<N, T>::internal_equal_range(
+    const N start, const N end) const noexcept {
   assert(start <= end);  // NOLINT
   std::array<StackCell, 64> stack;
   if (this->_max_level < 0) {
@@ -220,66 +217,66 @@ return_stmt:
   return std::make_pair(overlap_begin, overlap_end);
 }
 
-template <typename I, typename T>
-std::pair<T_iterator_const, T_iterator_const> IITree<I, T>::equal_range(
-    const I start, const I end) const noexcept {
+template <class N, class T>
+std::pair<T_iterator_const, T_iterator_const> IITree<N, T>::equal_range(
+    const N start, const N end) const noexcept {
   return this->internal_equal_range<QueryType::EQUAL_RANGE>(start, end);
 }
 
-template <typename I, typename T>
-std::pair<T_iterator_const, T_iterator_const> IITree<I, T>::find_overlaps(
-    const I start, const I end) const noexcept {
+template <class N, class T>
+std::pair<T_iterator_const, T_iterator_const> IITree<N, T>::find_overlaps(
+    const N start, const N end) const noexcept {
   return this->equal_range(start, end);
 }
 
-template <typename I, typename T>
-T_iterator_const IITree<I, T>::lower_bound(const I start, const I end) const noexcept {
+template <class N, class T>
+T_iterator_const IITree<N, T>::lower_bound(const N start, const N end) const noexcept {
   const auto [overlap_begin, _] = this->internal_equal_range<QueryType::LOWER_BOUND>(start, end);
   return overlap_begin;
 }
 
-template <typename I, typename T>
-T_iterator_const IITree<I, T>::upper_bound(const I start, const I end) const noexcept {
+template <class N, class T>
+T_iterator_const IITree<N, T>::upper_bound(const N start, const N end) const noexcept {
   const auto [_, overlap_end] = this->internal_equal_range<QueryType::UPPER_BOUND>(start, end);
   return overlap_end;
 }
 
-template <typename I, typename T>
-std::pair<usize, usize> IITree<I, T>::equal_range_idx(const I start, const I end) const noexcept {
+template <class N, class T>
+std::pair<usize, usize> IITree<N, T>::equal_range_idx(const N start, const N end) const noexcept {
   const auto [overlap_begin, overlap_end] =
       this->internal_equal_range<QueryType::EQUAL_RANGE>(start, end);
 
   return std::make_pair(overlap_begin - this->_data.begin(), overlap_end - this->_data.begin());
 }
 
-template <typename I, typename T>
-std::pair<usize, usize> IITree<I, T>::find_overlaps_idx(const I start, const I end) const noexcept {
+template <class N, class T>
+std::pair<usize, usize> IITree<N, T>::find_overlaps_idx(const N start, const N end) const noexcept {
   return this->equal_range_idx(start, end);
 }
 
-template <typename I, typename T>
-usize IITree<I, T>::lower_bound_idx(const I start, const I end) const noexcept {
+template <class N, class T>
+usize IITree<N, T>::lower_bound_idx(const N start, const N end) const noexcept {
   const auto [overlap_begin, _] = this->internal_equal_range<QueryType::LOWER_BOUND>(start, end);
   (void)_;
   return this->_data.begin() - overlap_begin;
 }
 
-template <typename I, typename T>
-usize IITree<I, T>::upper_bound_idx(const I start, const I end) const noexcept {
+template <class N, class T>
+usize IITree<N, T>::upper_bound_idx(const N start, const N end) const noexcept {
   const auto [_, overlap_end] = this->internal_equal_range<QueryType::UPPER_BOUND>(start, end);
   (void)_;
   return this->_data.begin() - overlap_end;
 }
 
-template <typename I, typename T>
-bool IITree<I, T>::overlaps_with(const I start, const I end) const noexcept {
+template <class N, class T>
+bool IITree<N, T>::overlaps_with(const N start, const N end) const noexcept {
   const auto [overlap_begin, _] = this->internal_equal_range<QueryType::CONTAINS>(start, end);
   (void)_;
   return overlap_begin != this->_data.end();
 }
 
-template <typename I, typename T>
-usize IITree<I, T>::count(const I start, const I end) const noexcept {
+template <class N, class T>
+usize IITree<N, T>::count(const N start, const N end) const noexcept {
   const auto [overlap_begin, overlap_end] =
       this->internal_equal_range<QueryType::EQUAL_RANGE>(start, end);
   if (overlap_begin == this->_data.end()) {
@@ -289,55 +286,55 @@ usize IITree<I, T>::count(const I start, const I end) const noexcept {
   return static_cast<usize>(overlap_end - overlap_begin);
 }
 
-template <typename I, typename T>
-constexpr usize IITree<I, T>::size() const noexcept {
+template <class N, class T>
+constexpr usize IITree<N, T>::size() const noexcept {
   assert(this->_data.size() == this->_start.size());  // NOLINT
   assert(this->_data.size() == this->_end.size());    // NOLINT
   assert(this->_data.size() == this->_max.size());    // NOLINT
   return this->_data.size();
 }
 
-template <typename I, typename T>
-constexpr bool IITree<I, T>::is_BST() const noexcept {
+template <class N, class T>
+constexpr bool IITree<N, T>::is_BST() const noexcept {
   return this->_indexed;
 }
 
-template <typename I, typename T>
-constexpr usize IITree<I, T>::span() const noexcept {
+template <class N, class T>
+constexpr usize IITree<N, T>::span() const noexcept {
   assert(this->start_pos() <= this->end_pos());  // NOLINT
   return this->end_pos() - this->start_pos();
 }
 
-template <typename I, typename T>
-constexpr usize IITree<I, T>::start_pos() const noexcept {
+template <class N, class T>
+constexpr N IITree<N, T>::start_pos() const noexcept {
   return this->_start_pos;
 }
 
-template <typename I, typename T>
-constexpr usize IITree<I, T>::end_pos() const noexcept {
+template <class N, class T>
+constexpr N IITree<N, T>::end_pos() const noexcept {
   return this->_end_pos;
 }
 
-template <typename I, typename T>
-constexpr usize IITree<I, T>::capacity() const noexcept {
+template <class N, class T>
+constexpr usize IITree<N, T>::capacity() const noexcept {
   return this->_data.capacity();
 }
 
-template <typename I, typename T>
-constexpr bool IITree<I, T>::empty() const noexcept {
+template <class N, class T>
+constexpr bool IITree<N, T>::empty() const noexcept {
   return this->_data.empty();
 }
 
-template <typename I, typename T>
-void IITree<I, T>::reserve(const usize new_capacity) {
+template <class N, class T>
+void IITree<N, T>::reserve(const usize new_capacity) {
   this->_start.reserve(new_capacity);
   this->_end.reserve(new_capacity);
   this->_max.reserve(new_capacity);
   this->_data.reserve(new_capacity);
 }
 
-template <typename I, typename T>
-void IITree<I, T>::clear() {
+template <class N, class T>
+void IITree<N, T>::clear() {
   this->_start.clear();
   this->_end.clear();
   this->_max.clear();
@@ -347,93 +344,93 @@ void IITree<I, T>::clear() {
   this->_indexed = false;
 }
 
-template <typename I, typename T>
-I IITree<I, T>::get_overlap_start(const usize i) const {
+template <class N, class T>
+N IITree<N, T>::get_overlap_start(const usize i) const {
   return this->_start[i];
 }
 
-template <typename I, typename T>
-I IITree<I, T>::get_overlap_end(const usize i) const {
+template <class N, class T>
+N IITree<N, T>::get_overlap_end(const usize i) const {
   return this->_end[i];
 }
 
-template <typename I, typename T>
-const T &IITree<I, T>::get_overlap_data(const usize i) const {
+template <class N, class T>
+const T &IITree<N, T>::get_overlap_data(const usize i) const {
   return this->_data[i];
 }
 
-template <typename I, typename T>
-const absl::Span<const I> IITree<I, T>::starts() const {
+template <class N, class T>
+const absl::Span<const N> IITree<N, T>::starts() const {
   return this->_start;
 }
 
-template <typename I, typename T>
-const absl::Span<const I> IITree<I, T>::ends() const {
+template <class N, class T>
+const absl::Span<const N> IITree<N, T>::ends() const {
   return this->_data;
 }
 
-template <typename I, typename T>
-const absl::Span<const T> IITree<I, T>::data() const {
+template <class N, class T>
+const absl::Span<const T> IITree<N, T>::data() const {
   return this->_data;
 }
 
-template <typename I, typename T>
-I_iterator IITree<I, T>::starts_begin() {
+template <class N, class T>
+I_iterator IITree<N, T>::starts_begin() {
   return this->_start.begin();
 }
 
-template <typename I, typename T>
-I_iterator IITree<I, T>::starts_end() {
+template <class N, class T>
+I_iterator IITree<N, T>::starts_end() {
   return this->_start.end();
 }
 
-template <typename I, typename T>
-I_iterator IITree<I, T>::ends_begin() {
+template <class N, class T>
+I_iterator IITree<N, T>::ends_begin() {
   return this->_end.begin();
 }
 
-template <typename I, typename T>
-I_iterator IITree<I, T>::ends_end() {
+template <class N, class T>
+I_iterator IITree<N, T>::ends_end() {
   return this->_end.end();
 }
 
-template <typename I, typename T>
-T_iterator IITree<I, T>::data_begin() {
+template <class N, class T>
+T_iterator IITree<N, T>::data_begin() {
   return this->_data.begin();
 }
 
-template <typename I, typename T>
-T_iterator IITree<I, T>::data_end() {
+template <class N, class T>
+T_iterator IITree<N, T>::data_end() {
   return this->_data.end();
 }
 
-template <typename I, typename T>
-I_iterator_const IITree<I, T>::starts_begin() const {
+template <class N, class T>
+I_iterator_const IITree<N, T>::starts_begin() const {
   return this->_starts.begin();
 }
 
-template <typename I, typename T>
-I_iterator_const IITree<I, T>::starts_end() const {
+template <class N, class T>
+I_iterator_const IITree<N, T>::starts_end() const {
   return this->_start.end();
 }
 
-template <typename I, typename T>
-I_iterator_const IITree<I, T>::ends_begin() const {
+template <class N, class T>
+I_iterator_const IITree<N, T>::ends_begin() const {
   return this->_end.begin();
 }
 
-template <typename I, typename T>
-I_iterator_const IITree<I, T>::ends_end() const {
+template <class N, class T>
+I_iterator_const IITree<N, T>::ends_end() const {
   return this->_end.end();
 }
 
-template <typename I, typename T>
-T_iterator_const IITree<I, T>::data_begin() const {
+template <class N, class T>
+T_iterator_const IITree<N, T>::data_begin() const {
   return this->_data.begin();
 }
 
-template <typename I, typename T>
-T_iterator_const IITree<I, T>::data_end() const {
+template <class N, class T>
+T_iterator_const IITree<N, T>::data_end() const {
   return this->_data.end();
 }
 

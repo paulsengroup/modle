@@ -50,41 +50,39 @@ namespace modle {
 
 DISABLE_WARNING_PUSH
 DISABLE_WARNING_PADDED
-template <typename I, typename T>
+template <class N, class T>
 class IITree {
   DISABLE_WARNING_POP
-  static_assert(std::is_integral_v<I>, "I should be an integral type.");
+  static_assert(std::is_arithmetic_v<N>);
   struct StackCell;
 
-  using I_iterator = typename std::vector<I>::iterator;
+  using I_iterator = typename std::vector<N>::iterator;
   using T_iterator = typename std::vector<T>::iterator;
 
-  using I_iterator_const = typename std::vector<I>::const_iterator;
+  using I_iterator_const = typename std::vector<N>::const_iterator;
   using T_iterator_const = typename std::vector<T>::const_iterator;
 
- public:
-  inline explicit IITree(usize start_pos_ = 0,
-                         usize end_pos_ = (std::numeric_limits<usize>::max)());
+ public:  // NOLINTNEXTLINE(google-explicit-constructor)
+  inline IITree(N start_pos_ = std::numeric_limits<N>::lowest(),
+                N end_pos_ = (std::numeric_limits<N>::max)());
 
-  template <typename I2, typename = std::enable_if_t<std::is_integral_v<I2>>>
-  inline void insert(I2 start, I2 end, const T &data);
-  template <typename I2, typename = std::enable_if_t<std::is_integral_v<I2>>>
-  inline void emplace(I2 start, I2 end, T &&data);
+  inline void insert(N start, N end, const T &data);
+  inline void emplace(N start, N end, T &&data);
 
-  [[nodiscard]] inline bool overlaps_with(I start, I end) const noexcept;
+  [[nodiscard]] inline bool overlaps_with(N start, N end) const noexcept;
   [[nodiscard]] inline std::pair<T_iterator_const, T_iterator_const> equal_range(
-      I start, I end) const noexcept;
+      N start, N end) const noexcept;
   [[nodiscard]] inline std::pair<T_iterator_const, T_iterator_const> find_overlaps(
-      I start, I end) const noexcept;
-  [[nodiscard]] inline T_iterator_const lower_bound(I start, I end) const noexcept;
-  [[nodiscard]] inline T_iterator_const upper_bound(I start, I end) const noexcept;
+      N start, N end) const noexcept;
+  [[nodiscard]] inline T_iterator_const lower_bound(N start, N end) const noexcept;
+  [[nodiscard]] inline T_iterator_const upper_bound(N start, N end) const noexcept;
 
-  [[nodiscard]] inline std::pair<usize, usize> equal_range_idx(I start, I end) const noexcept;
-  [[nodiscard]] inline std::pair<usize, usize> find_overlaps_idx(I start, I end) const noexcept;
-  [[nodiscard]] inline usize lower_bound_idx(I start, I end) const noexcept;
-  [[nodiscard]] inline usize upper_bound_idx(I start, I end) const noexcept;
+  [[nodiscard]] inline std::pair<usize, usize> equal_range_idx(N start, N end) const noexcept;
+  [[nodiscard]] inline std::pair<usize, usize> find_overlaps_idx(N start, N end) const noexcept;
+  [[nodiscard]] inline usize lower_bound_idx(N start, N end) const noexcept;
+  [[nodiscard]] inline usize upper_bound_idx(N start, N end) const noexcept;
 
-  [[nodiscard]] inline usize count(I start, I end) const noexcept;
+  [[nodiscard]] inline usize count(N start, N end) const noexcept;
 
   [[nodiscard]] inline constexpr usize capacity() const noexcept;
   [[nodiscard]] inline constexpr bool empty() const noexcept;
@@ -92,15 +90,15 @@ class IITree {
   [[nodiscard]] inline constexpr bool is_BST() const noexcept;
 
   [[nodiscard]] inline constexpr usize span() const noexcept;
-  [[nodiscard]] inline constexpr usize start_pos() const noexcept;
-  [[nodiscard]] inline constexpr usize end_pos() const noexcept;
+  [[nodiscard]] inline constexpr N start_pos() const noexcept;
+  [[nodiscard]] inline constexpr N end_pos() const noexcept;
 
-  [[nodiscard]] inline I get_overlap_start(usize i) const;
-  [[nodiscard]] inline I get_overlap_end(usize i) const;
+  [[nodiscard]] inline N get_overlap_start(usize i) const;
+  [[nodiscard]] inline N get_overlap_end(usize i) const;
   [[nodiscard]] inline const T &get_overlap_data(usize i) const;
 
-  [[nodiscard]] inline const absl::Span<const I> starts() const;
-  [[nodiscard]] inline const absl::Span<const I> ends() const;
+  [[nodiscard]] inline const absl::Span<const N> starts() const;
+  [[nodiscard]] inline const absl::Span<const N> ends() const;
   [[nodiscard]] inline const absl::Span<const T> data() const;
 
   [[nodiscard]] inline I_iterator starts_begin();
@@ -136,14 +134,14 @@ class IITree {
     bool left_child_already_processed;
   };
 
-  usize _start_pos;
-  usize _end_pos;
+  N _start_pos;
+  N _end_pos;
   i64 _max_level{0};
   bool _indexed{true};
 
-  std::vector<I> _start;
-  std::vector<I> _end;
-  std::vector<I> _max;
+  std::vector<N> _start;
+  std::vector<N> _end;
+  std::vector<N> _max;
   std::vector<T> _data;
 
   // clang-format off
@@ -156,8 +154,8 @@ class IITree {
   // clang-format on
 
   template <QueryType Mode>
-  inline std::pair<T_iterator_const, T_iterator_const> internal_equal_range(I start,
-                                                                            I end) const noexcept;
+  inline std::pair<T_iterator_const, T_iterator_const> internal_equal_range(N start,
+                                                                            N end) const noexcept;
 };
 }  // namespace modle
 
