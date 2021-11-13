@@ -387,6 +387,7 @@ std::unique_ptr<H5::H5File> Cooler<N>::open_file(const boost::filesystem::path &
                                                  usize bin_size,
                                                  [[maybe_unused]] usize max_str_length,
                                                  FLAVOR flavor, bool validate) {
+  assert(boost::filesystem::is_directory(path.parent_path()));  // NOLINT
   if constexpr (utils::ndebug_not_defined()) {
     if (mode == IO_MODE::WRITE_ONLY) {
       if (bin_size == 0) {
@@ -402,7 +403,8 @@ std::unique_ptr<H5::H5File> Cooler<N>::open_file(const boost::filesystem::path &
     }
   }
   try {
-    H5::H5File f(path.c_str(), mode == IO_MODE::READ_ONLY ? H5F_ACC_RDONLY : H5F_ACC_TRUNC);
+    auto f = mode == IO_MODE::READ_ONLY ? hdf5::open_file_for_reading(path)
+                                        : hdf5::open_file_for_writing(path);
     if (validate) {
       (void)validate_file_format(f, flavor, mode, bin_size, true);
     }
@@ -530,10 +532,6 @@ std::pair<i64, i64> Cooler<N>::read_chrom_pixels_boundaries(usize chrom_idx) {
 
 template <class N>
 void Cooler<N>::init_default_datasets() {
-  const hsize_t RANK{1};                 // i.e. number of dimensions
-  const hsize_t MAXDIMS{H5S_UNLIMITED};  // extensible dataset
-  const hsize_t BUFF_SIZE{1};            // Dummy buffer size
-
   this->_datasets.resize(DEFAULT_DATASETS_NR);
   this->_dataset_file_offsets.resize(DEFAULT_DATASETS_NR);
   std::fill(this->_dataset_file_offsets.begin(), this->_dataset_file_offsets.end(), 0);
@@ -561,36 +559,34 @@ void Cooler<N>::init_default_datasets() {
   auto r = absl::StripSuffix(this->_root_path, "/");
 
   try {
-    auto mem_space{H5::DataSpace(RANK, &BUFF_SIZE, &MAXDIMS)};
     // Do not change the order of these pushbacks
-    dset[chrom_LEN] = f.createDataSet(absl::StrCat(r, "/chroms/length"), H5::PredType::NATIVE_INT64,
-                                      mem_space, cpi64, api64);
-    dset[chrom_NAME] =
-        f.createDataSet(absl::StrCat(r, "/chroms/name"), STR_TYPE, mem_space, cps, aps);
+    dset[chrom_LEN] = hdf5::create_dataset(f, absl::StrCat(r, "/chroms/length"),
+                                           H5::PredType::NATIVE_INT64, cpi64, api64);
+    dset[chrom_NAME] = hdf5::create_dataset(f, absl::StrCat(r, "/chroms/name"), STR_TYPE, cps, aps);
 
-    dset[BIN_CHROM] = f.createDataSet(absl::StrCat(r, "/bins/chrom"), H5::PredType::NATIVE_INT64,
-                                      mem_space, cpi64, api64);
-    dset[BIN_START] = f.createDataSet(absl::StrCat(r, "/bins/start"), H5::PredType::NATIVE_INT64,
-                                      mem_space, cpi64, api64);
-    dset[BIN_END] = f.createDataSet(absl::StrCat(r, "/bins/end"), H5::PredType::NATIVE_INT64,
-                                    mem_space, cpi64, api64);
+    dset[BIN_CHROM] = hdf5::create_dataset(f, absl::StrCat(r, "/bins/chrom"),
+                                           H5::PredType::NATIVE_INT64, cpi64, api64);
+    dset[BIN_START] = hdf5::create_dataset(f, absl::StrCat(r, "/bins/start"),
+                                           H5::PredType::NATIVE_INT64, cpi64, api64);
+    dset[BIN_END] = hdf5::create_dataset(f, absl::StrCat(r, "/bins/end"),
+                                         H5::PredType::NATIVE_INT64, cpi64, api64);
 
-    dset[PXL_B1] = f.createDataSet(absl::StrCat(r, "/pixels/bin1_id"), H5::PredType::NATIVE_INT64,
-                                   mem_space, cpi64, api64);
-    dset[PXL_B2] = f.createDataSet(absl::StrCat(r, "/pixels/bin2_id"), H5::PredType::NATIVE_INT64,
-                                   mem_space, cpi64, api64);
+    dset[PXL_B1] = hdf5::create_dataset(f, absl::StrCat(r, "/pixels/bin1_id"),
+                                        H5::PredType::NATIVE_INT64, cpi64, api64);
+    dset[PXL_B2] = hdf5::create_dataset(f, absl::StrCat(r, "/pixels/bin2_id"),
+                                        H5::PredType::NATIVE_INT64, cpi64, api64);
     if constexpr (std::is_floating_point_v<N>) {
-      dset[PXL_COUNT] = f.createDataSet(absl::StrCat(r, "/pixels/count"),
-                                        H5::PredType::NATIVE_DOUBLE, mem_space, cpf64, apf64);
+      dset[PXL_COUNT] = hdf5::create_dataset(f, absl::StrCat(r, "/pixels/count"),
+                                             H5::PredType::NATIVE_DOUBLE, cpf64, apf64);
     } else {
-      dset[PXL_COUNT] = f.createDataSet(absl::StrCat(r, "/pixels/count"),
-                                        H5::PredType::NATIVE_INT32, mem_space, cpi32, api32);
+      dset[PXL_COUNT] = hdf5::create_dataset(f, absl::StrCat(r, "/pixels/count"),
+                                             H5::PredType::NATIVE_INT32, cpi32, api32);
     }
 
-    dset[IDX_BIN1] = f.createDataSet(absl::StrCat(r, "/indexes/bin1_offset"),
-                                     H5::PredType::NATIVE_INT64, mem_space, cpi64, api64);
-    dset[IDX_CHR] = f.createDataSet(absl::StrCat(r, "/indexes/chrom_offset"),
-                                    H5::PredType::NATIVE_INT64, mem_space, cpi64, api64);
+    dset[IDX_BIN1] = hdf5::create_dataset(f, absl::StrCat(r, "/indexes/bin1_offset"),
+                                          H5::PredType::NATIVE_INT64, cpi64, api64);
+    dset[IDX_CHR] = hdf5::create_dataset(f, absl::StrCat(r, "/indexes/chrom_offset"),
+                                         H5::PredType::NATIVE_INT64, cpi64, api64);
 
   } catch ([[maybe_unused]] const H5::FileIException &e) {
     throw std::runtime_error(fmt::format(
@@ -619,26 +615,30 @@ void Cooler<N>::open_default_datasets() {
   this->_dataset_file_offsets.resize(DEFAULT_DATASETS_NR);
   std::fill(this->_dataset_file_offsets.begin(), this->_dataset_file_offsets.end(), 0);
   try {
-    d[chrom_LEN] = f.openDataSet(absl::StrCat(this->_root_path, "chroms/length"), achrom_size);
-    d[chrom_NAME] = f.openDataSet(absl::StrCat(this->_root_path, "chroms/name"), achrom_name);
+    d[chrom_LEN] =
+        hdf5::open_dataset(f, absl::StrCat(this->_root_path, "chroms/length"), achrom_size);
+    d[chrom_NAME] =
+        hdf5::open_dataset(f, absl::StrCat(this->_root_path, "chroms/name"), achrom_name);
 
-    d[BIN_CHROM] = f.openDataSet(absl::StrCat(this->_root_path, "bins/chrom"), ai64);
-    d[BIN_START] = f.openDataSet(absl::StrCat(this->_root_path, "bins/start"), ai64);
-    d[BIN_END] = f.openDataSet(absl::StrCat(this->_root_path, "bins/end"), ai64);
+    d[BIN_CHROM] = hdf5::open_dataset(f, absl::StrCat(this->_root_path, "bins/chrom"), ai64);
+    d[BIN_START] = hdf5::open_dataset(f, absl::StrCat(this->_root_path, "bins/start"), ai64);
+    d[BIN_END] = hdf5::open_dataset(f, absl::StrCat(this->_root_path, "bins/end"), ai64);
     if (hdf5::has_dataset(f, "bins/weight", this->_root_path)) {
-      d[BIN_WEIGHT] = f.openDataSet(absl::StrCat(this->_root_path, "bins/weight"), af64);
+      d[BIN_WEIGHT] = hdf5::open_dataset(f, absl::StrCat(this->_root_path, "bins/weight"), af64);
     }
 
-    d[PXL_B1] = f.openDataSet(absl::StrCat(this->_root_path, "pixels/bin1_id"), ai64);
-    d[PXL_B2] = f.openDataSet(absl::StrCat(this->_root_path, "pixels/bin2_id"), ai64);
+    d[PXL_B1] = hdf5::open_dataset(f, absl::StrCat(this->_root_path, "pixels/bin1_id"), ai64);
+    d[PXL_B2] = hdf5::open_dataset(f, absl::StrCat(this->_root_path, "pixels/bin2_id"), ai64);
     if constexpr (std::is_floating_point_v<N>) {
-      d[PXL_COUNT] = f.openDataSet(absl::StrCat(this->_root_path, "pixels/count"), af64);
+      d[PXL_COUNT] = hdf5::open_dataset(f, absl::StrCat(this->_root_path, "pixels/count"), af64);
     } else {
-      d[PXL_COUNT] = f.openDataSet(absl::StrCat(this->_root_path, "pixels/count"), ai32);
+      d[PXL_COUNT] = hdf5::open_dataset(f, absl::StrCat(this->_root_path, "pixels/count"), ai32);
     }
 
-    d[IDX_BIN1] = f.openDataSet(absl::StrCat(this->_root_path, "indexes/bin1_offset"), ai64);
-    d[IDX_CHR] = f.openDataSet(absl::StrCat(this->_root_path, "indexes/chrom_offset"), ai64);
+    d[IDX_BIN1] =
+        hdf5::open_dataset(f, absl::StrCat(this->_root_path, "indexes/bin1_offset"), ai64);
+    d[IDX_CHR] =
+        hdf5::open_dataset(f, absl::StrCat(this->_root_path, "indexes/chrom_offset"), ai64);
 
   } catch ([[maybe_unused]] const H5::FileIException &e) {
     throw std::runtime_error(fmt::format(

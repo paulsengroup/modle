@@ -46,7 +46,6 @@ void Cooler<N>::write_metadata() {
                     this->_path_to_file.string()));
   }
   assert(this->_bin_size != 0);  // NOLINT
-  H5::DataSpace attr_space(H5S_SCALAR);
   i64 int_buff{};
   std::string str_buff{};
   std::string name{};
@@ -104,7 +103,6 @@ void Cooler<N>::write_metadata_attribute(std::string_view metadata_str) {
 
   assert(this->_bin_size != 0);   // NOLINT
   assert(!metadata_str.empty());  // NOLINT
-  H5::DataSpace attr_space(H5S_SCALAR);
   const std::string name = "metadata";
   const std::string buff{metadata_str};
 

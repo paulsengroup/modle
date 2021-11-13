@@ -137,7 +137,7 @@ ContactMatrix<N> Cooler<N>::cooler_to_cmatrix(std::pair<hsize_t, hsize_t> bin_ra
   ContactMatrix<N> cmatrix(nrows, last_bin - first_bin);
   std::vector<i64> bin1_BUFF(nrows);
   std::vector<i64> bin2_BUFF(nrows);
-  std::vector<i64> count_BUFF(nrows);
+  std::vector<N> count_BUFF(nrows);
   std::vector<double> bin_weights;
 
   const auto &d = this->_datasets;
@@ -181,7 +181,7 @@ ContactMatrix<N> Cooler<N>::cooler_to_cmatrix(std::pair<hsize_t, hsize_t> bin_ra
         break;
       }
       if (bin_weights.empty()) {
-        cmatrix.set(bin2, bin1, static_cast<N>(count_BUFF[j]));
+        cmatrix.set(bin2, bin1, count_BUFF[j]);
       } else {
         // According to Cooler documentations, NaN means that a bin has been excluded by the
         // matrix balancing procedure. In this case we set the count to 0
@@ -197,7 +197,7 @@ ContactMatrix<N> Cooler<N>::cooler_to_cmatrix(std::pair<hsize_t, hsize_t> bin_ra
         if constexpr (std::is_integral_v<N>) {
           cmatrix.set(bin2, bin1, static_cast<N>(std::round(count)));
         } else {
-          cmatrix.set(bin2, bin1, static_cast<N>(count));
+          cmatrix.set(bin2, bin1, count);
         }
         DISABLE_WARNING_POP
       }
