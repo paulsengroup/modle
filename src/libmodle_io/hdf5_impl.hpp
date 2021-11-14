@@ -30,9 +30,8 @@
 // IWYU pragma: no_include <H5Spublic.h>
 // IWYU pragma: no_include <H5public.h>
 
-#include <H5Cpp.h>               // IWYU pragma: keep
-#include <absl/types/variant.h>  // for visit, variant
-#include <fmt/format.h>          // for FMT_STRING, format, to_string
+#include <H5Cpp.h>       // IWYU pragma: keep
+#include <fmt/format.h>  // for FMT_STRING, format, to_string
 
 #include <cassert>      // for assert
 #include <limits>       // for numeric_limits
@@ -47,12 +46,6 @@
 #include "modle/common/utils.hpp"                       // for throw_with_trace, get_printable_ty...
 
 namespace modle::hdf5 {
-
-using attr_types = absl::variant<u8, u16, u32, u64, i8, i16, i32, i64, float, double, long double>;
-
-// Predeclare internal functions
-inline attr_types getCpp_type(const H5::IntType &h5_type);
-inline attr_types getCpp_type(const H5::FloatType &h5_type);
 
 template <class S>
 hsize_t write_str(const S &str_, const H5::DataSet &dataset, const H5::StrType &str_type,
@@ -113,7 +106,7 @@ hsize_t write_strings(const CS &strings, const H5::DataSet &dataset, const H5::S
     return file_offset;
   }
   for (const auto &s : strings) {
-    (void)write_str(s, dataset, str_type, file_offset++);
+    std::ignore = write_str(s, dataset, str_type, file_offset++);
   }
   return file_offset;
 }
@@ -312,10 +305,10 @@ void read_attribute(H5::H5File &f, std::string_view attr_name, T &buff, std::str
     }
   }
 
-  // Map HDF5 type to C++ type using std::variant
+  // Map HDF5 type to C++ type using absl::variant
   assert(h5_class == H5T_INTEGER || h5_class == H5T_FLOAT);  // NOLINT
-  auto vars =
-      h5_class == H5T_INTEGER ? getCpp_type(attr.getIntType()) : getCpp_type(attr.getFloatType());
+  auto vars = h5_class == H5T_INTEGER ? get_cpp_arithmetic_type(attr.getIntType())
+                                      : get_cpp_arithmetic_type(attr.getFloatType());
   // Visit the appropriate variant and read the attribute
   absl::visit([&](auto &&var) { attr.read(attr.getDataType(), &var); }, vars);
 
@@ -499,32 +492,36 @@ bool check_dataset_type(const H5::DataSet &dataset, T type, bool throw_on_failur
   return t;
 }
 
-[[nodiscard]] attr_types getCpp_type(const H5::IntType &h5_type) {
+template <class H5Type>
+[[nodiscard]] attr_types get_cpp_arithmetic_type(const H5Type &h5_type) {
+  static_assert(std::is_base_of_v<H5Type, H5::IntType> || std::is_base_of_v<H5Type, H5::FloatType>);
+
+  attr_types type;  // NOLINT
+  const auto size = h5_type.getSize();
   DISABLE_WARNING_PUSH
   DISABLE_WARNING_USELESS_CAST
-  attr_types type;
-  assert(h5_type.getSign() != H5T_SGN_ERROR);  // NOLINT
-  const bool is_signed = h5_type.getSign() == H5T_SGN_NONE;
-  const auto size = h5_type.getSize();
-  assert(size >= 1 && size <= 8);  // NOLINT
-  if (is_signed) {
-    switch (size) {
-      case (sizeof(i8)):
-        type = static_cast<i8>(0);
-        return type;
-      case (sizeof(i16)):
-        type = static_cast<i16>(0);
-        return type;
-      case (sizeof(i32)):
-        type = static_cast<i32>(0);
-        return type;
-      case (sizeof(i64)):
-        type = static_cast<i64>(0);
-        return type;
-      default:
-        throw std::logic_error("Unreachable code");
+  if constexpr (std::is_same_v<H5Type, H5::IntType>) {
+    assert(h5_type.getSign() != H5T_SGN_ERROR);  // NOLINT
+    const bool is_signed = h5_type.getSign() == H5T_SGN_NONE;
+    assert(size >= 1 && size <= 8);  // NOLINT
+    if (is_signed) {
+      switch (size) {
+        case (sizeof(i8)):
+          type = static_cast<i8>(0);
+          return type;
+        case (sizeof(i16)):
+          type = static_cast<i16>(0);
+          return type;
+        case (sizeof(i32)):
+          type = static_cast<i32>(0);
+          return type;
+        case (sizeof(i64)):
+          type = static_cast<i64>(0);
+          return type;
+        default:
+          throw std::logic_error("Unreachable code");
+      }
     }
-  } else {
     switch (size) {
       case (sizeof(u8)):
         type = static_cast<u8>(0);
@@ -541,27 +538,23 @@ bool check_dataset_type(const H5::DataSet &dataset, T type, bool throw_on_failur
       default:
         throw std::logic_error("Unreachable code");
     }
+  } else {
+    switch (size) {
+      case (sizeof(float)):
+        type = static_cast<float>(0);
+        return type;
+      case (sizeof(double)):
+        type = static_cast<double>(0);
+        return type;
+      case (sizeof(long double)):
+        type = static_cast<long double>(0);
+        return type;
+      default:
+        throw std::logic_error("Unreachable code");
+    }
   }
+  throw std::logic_error("Unreachable code");
   DISABLE_WARNING_POP
-  throw std::logic_error("Unreachable code");
-}
-
-[[nodiscard]] attr_types getCpp_type(const H5::FloatType &h5_type) {
-  attr_types type;
-  const auto size = h5_type.getSize();
-  if (size == sizeof(float)) {
-    type = static_cast<float>(0);
-    return type;
-  }
-  if (size == sizeof(double)) {
-    type = static_cast<double>(0);
-    return type;
-  }
-  if (size == sizeof(long double)) {
-    type = static_cast<long double>(0);
-    return type;
-  }
-  throw std::logic_error("Unreachable code");
 }
 
 template <class DataType>
@@ -601,4 +594,39 @@ H5::DataSet create_dataset(H5::H5File &f, const std::string &name, const DType &
   return f.createDataSet(name, type, mem_space, create_prop, access_prop);
 }
 
+template <class T1, class T2>
+H5::DSetCreatPropList generate_creat_prop_list(const hsize_t chunk_size, const u8 compression_lvl,
+                                               [[maybe_unused]] const T1 type,
+                                               [[maybe_unused]] const T2 fill_value) {
+  const auto lck = internal::lock();
+  H5::DSetCreatPropList prop{};
+  prop.setChunk(1, &chunk_size);
+  prop.setDeflate(compression_lvl);
+  if constexpr (!std::is_constructible_v<H5std_string, T2>) {
+    prop.setFillValue(type, &fill_value);
+  }
+
+  return prop;
+}
+
+template <class T>
+H5::DSetAccPropList generate_acc_prop_list([[maybe_unused]] T type, hsize_t chunk_size,
+                                           hsize_t cache_size, const double rdcc_w0,
+                                           const double multiplier) {
+  // https://support.hdfgroup.org/HDF5/doc/Advanced/Chunking/index.html
+  // The w0 parameter affects how the library decides which chunk to evict when it needs room in
+  // the cache. If w0 is set to 0, then the library will always evict the least recently used
+  // chunk in cache. If w0 is set to 1, the library will always evict the least recently used
+  // chunk which has been fully read or written, and if none have been fully read or written, it
+  // will evict the least recently used chunk. If w0 is between 0 and 1, the behavior will be a
+  // blend of the two.
+
+  // Therefore, if the application will access the same data more than once, w0 should be set
+  // closer to 0, and if the application does not, w0 should be set closer to 1.
+  const auto nslots = static_cast<usize>(multiplier * static_cast<double>(cache_size / chunk_size));
+  const auto lck = internal::lock();
+  H5::DSetAccPropList prop{};
+  prop.setChunkCache(nslots, cache_size, rdcc_w0);
+  return prop;
+}
 }  // namespace modle::hdf5

@@ -17,7 +17,8 @@
 // IWYU pragma: no_include <H5public.h>
 // IWYU pragma: no_include <H5StrType.h>
 
-#include <H5Cpp.h>  // IWYU pragma: keep
+#include <H5Cpp.h>               // IWYU pragma: keep
+#include <absl/types/variant.h>  // for variant
 
 #include <boost/filesystem/path.hpp>  // for path
 #include <mutex>                      // recursive_mutex, unique_lock
@@ -36,6 +37,10 @@ static std::recursive_mutex global_mtx;  // NOLINT
 
 template <class DataType>
 inline H5::PredType getH5_type();
+
+using attr_types = absl::variant<u8, u16, u32, u64, i8, i16, i32, i64, float, double, long double>;
+template <class H5Type>
+[[nodiscard]] attr_types get_cpp_arithmetic_type(const H5Type &h5_type);
 
 [[nodiscard]] H5::StrType METADATA_STR_TYPE();
 
@@ -119,6 +124,15 @@ template <class T>
 
 [[nodiscard]] H5::H5File open_file_for_reading(const boost::filesystem::path &path_to_file);
 [[nodiscard]] H5::H5File open_file_for_writing(const boost::filesystem::path &path_to_file);
+
+template <class T1, class T2>
+[[nodiscard]] inline H5::DSetCreatPropList generate_creat_prop_list(hsize_t chunk_size,
+                                                                    u8 compression_lvl, T1 type,
+                                                                    T2 fill_value);
+template <class T>
+[[nodiscard]] inline H5::DSetAccPropList generate_acc_prop_list(T type, hsize_t chunk_size,
+                                                                hsize_t cache_size, double rdcc_w0,
+                                                                double multiplier = 100.0);
 
 }  // namespace modle::hdf5
 

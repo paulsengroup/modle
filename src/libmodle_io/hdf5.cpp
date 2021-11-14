@@ -33,6 +33,7 @@
 #include <stdexcept>                  // for runtime_error
 #include <string>                     // for string, basic_string
 #include <string_view>                // for string_view
+#include <tuple>                      // for ignore
 #include <vector>                     // for vector
 
 #include "modle/common/common.hpp"  // for i64
@@ -144,12 +145,12 @@ hsize_t read_strings(const H5::DataSet &dataset, std::vector<std::string> &buff,
 
 std::string read_str(const H5::DataSet &dataset, hsize_t file_offset) {
   std::string buff;
-  (void)read_str(dataset, buff, file_offset);
+  std::ignore = read_str(dataset, buff, file_offset);
   return buff;
 }
 std::vector<std::string> read_strings(const H5::DataSet &dataset, hsize_t file_offset) {
   std::vector<std::string> buff;
-  (void)read_strings(dataset, buff, file_offset);
+  std::ignore = read_strings(dataset, buff, file_offset);
   return buff;
 }
 

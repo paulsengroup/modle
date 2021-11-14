@@ -32,6 +32,7 @@
 
 #include <string>       // for string
 #include <string_view>  // for string_view
+#include <tuple>        // for ignore
 
 #include "modle/hdf5/hdf5.hpp"  // for read_attribute, read_numbers, wri...
 
@@ -370,10 +371,10 @@ hsize_t Cooler<N>::write_bins(I1 chrom_, I2 length_, I3 bin_size_, std::vector<i
       buff32.resize(chunk_size);
       buff64.resize(chunk_size);
     }
-    (void)hdf5::write_numbers(buff32, d[BIN_CHROM], file_offset);
+    std::ignore = hdf5::write_numbers(buff32, d[BIN_CHROM], file_offset);
 
     std::generate(buff64.begin(), buff64.end(), [&]() { return (start += bin_size) - bin_size; });
-    (void)hdf5::write_numbers(buff64, d[BIN_START], file_offset);
+    std::ignore = hdf5::write_numbers(buff64, d[BIN_START], file_offset);
 
     std::generate(buff64.begin(), buff64.end(), [&]() { return (end += bin_size) - bin_size; });
     if (chunk_size != buff_size) {

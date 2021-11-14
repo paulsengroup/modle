@@ -5,6 +5,7 @@
 #pragma once
 
 #include <absl/strings/str_cat.h>  // for StrCat, StrAppend
+#include <absl/types/variant.h>    // for visit
 #include <spdlog/spdlog.h>         // for error, warn
 
 #include <boost/filesystem/path.hpp>  // for path
@@ -12,6 +13,7 @@
 #include <cstdint>                    // for uint_fast8_t
 #include <exception>                  // for exception
 #include <memory>                     // for make_unique
+#include <tuple>                      // for ignore
 
 #include "modle/common/common.hpp"  // for i32, i64, usize
 #include "modle/hdf5/hdf5.hpp"      // for read_attribute, read_numbers, wri...
@@ -94,18 +96,18 @@ Cooler<N>::~Cooler() {
 
         if (chrom_idx_offset != 0) {
           decltype(this->_nbins) buff;  // NOLINT
-          (void)hdf5::read_number(chrom_idx, buff, chrom_idx_offset - 1);
+          std::ignore = hdf5::read_number(chrom_idx, buff, chrom_idx_offset - 1);
           if (buff != this->_nbins) {
             assert(buff < this->_nbins);  // NOLINT
-            (void)hdf5::write_number(this->_nbins, chrom_idx, chrom_idx_offset);
+            std::ignore = hdf5::write_number(this->_nbins, chrom_idx, chrom_idx_offset);
           }
         }
         if (bin1_idx_offset != 0) {
           decltype(this->_nnz) buff;  // NOLINT
-          (void)hdf5::read_number(bin1_idx, buff, bin1_idx_offset - 1);
+          std::ignore = hdf5::read_number(bin1_idx, buff, bin1_idx_offset - 1);
           if (buff != this->_nnz) {
             assert(buff < this->_nnz);  // NOLINT
-            (void)hdf5::write_number(this->_nnz, bin1_idx, bin1_idx_offset);
+            std::ignore = hdf5::write_number(this->_nnz, bin1_idx, bin1_idx_offset);
           }
         }
       } else {
@@ -162,16 +164,16 @@ void Cooler<N>::get_chrom_names(std::vector<std::string> &buff) {
   buff.resize(nchroms);
   if (!this->_datasets.empty()) {
     const auto &d = this->_datasets[chrom_NAME];
-    (void)hdf5::read_strings(d, buff, 0);
+    std::ignore = hdf5::read_strings(d, buff, 0);
   } else {
     if (this->is_cool()) {
       auto d = this->_fp->openDataSet("/chroms/name", *this->_aprop_str);
-      (void)hdf5::read_strings(d, buff, 0);
+      std::ignore = hdf5::read_strings(d, buff, 0);
     } else if (this->is_mcool()) {
       assert(this->_bin_size != 0);  // NOLINT
       auto d = this->_fp->openDataSet(
           absl::StrCat("/resolutions/", this->_bin_size, "/chroms/name"), *this->_aprop_str);
-      (void)hdf5::read_strings(d, buff, 0);
+      std::ignore = hdf5::read_strings(d, buff, 0);
     } else {
       assert(!this->is_scool());  // NOLINT
       buff.clear();
@@ -195,16 +197,16 @@ void Cooler<N>::get_chrom_sizes(std::vector<I> &buff) {
   buff.resize(nchroms);
   if (!this->_datasets.empty()) {
     const auto &d = this->_datasets[chrom_LEN];
-    (void)hdf5::read_numbers(d, buff, 0);
+    std::ignore = hdf5::read_numbers(d, buff, 0);
   } else {
     if (this->is_cool()) {
       auto d = this->_fp->openDataSet("/chroms/length", *this->_aprop_str);
-      (void)hdf5::read_numbers(d, buff, 0);
+      std::ignore = hdf5::read_numbers(d, buff, 0);
     } else if (this->is_mcool()) {
       assert(this->_bin_size != 0);
       auto d = this->_fp->openDataSet(
           absl::StrCat("/resolutions/", this->_bin_size, "/chroms/length"), *this->_aprop_str);
-      (void)hdf5::read_numbers(d, buff, 0);
+      std::ignore = hdf5::read_numbers(d, buff, 0);
     } else {
       assert(!this->is_scool());
       buff.clear();
@@ -333,14 +335,8 @@ std::unique_ptr<H5::DSetCreatPropList> Cooler<N>::generate_default_cprop(
       "Incompatible data type for variables type and fill_value: if T2 is string "
       "constructible, then T1 must be H5::StrType, else T2 is integral and type is H5::PredType");
 
-  H5::DSetCreatPropList prop{};
-  prop.setChunk(1, &chunk_size);
-  prop.setDeflate(compression_lvl);
-  if constexpr (!std::is_constructible_v<H5std_string, T2>) {
-    prop.setFillValue(type, &fill_value);
-  }
-
-  return std::make_unique<H5::DSetCreatPropList>(prop);
+  return std::make_unique<H5::DSetCreatPropList>(
+      hdf5::generate_creat_prop_list(chunk_size, compression_lvl, type, fill_value));
 }
 
 template <class N>
@@ -350,36 +346,32 @@ std::unique_ptr<H5::DSetAccPropList> Cooler<N>::generate_default_aprop([[maybe_u
                                                                        hsize_t cache_size) {
   static_assert(std::is_same_v<T, H5::StrType> || std::is_same_v<T, H5::PredType>,
                 "type should be of type H5::StrType or H5::PredType");
-  H5::DSetAccPropList prop{};
-  // https://support.hdfgroup.org/HDF5/doc/Advanced/Chunking/index.html
-  // The w0 parameter affects how the library decides which chunk to evict when it needs room in the
-  // cache. If w0 is set to 0, then the library will always evict the least recently used chunk in
-  // cache. If w0 is set to 1, the library will always evict the least recently used chunk which has
-  // been fully read or written, and if none have been fully read or written, it will evict the
-  // least recently used chunk. If w0 is between 0 and 1, the behavior will be a blend of the two.
-
-  // Therefore, if the application will access the same data more than once, w0 should be set closer
-  // to 0, and if the application does not, w0 should be set closer to 1.
-  const usize default_multiplier{100};
   [[maybe_unused]] const auto rdcc_w0_streaming{0.99};
   [[maybe_unused]] const auto rdcc_w0_random{0.01};
-  if constexpr (std::is_same_v<T, H5::StrType>) {
-    prop.setChunkCache(default_multiplier * (cache_size / chunk_size), cache_size, rdcc_w0_random);
-  } else {
-    if (type == H5::PredType::NATIVE_INT64 ||
-        type == H5::PredType::NATIVE_DOUBLE) {  // i64 and double
-      prop.setChunkCache(default_multiplier * (cache_size / chunk_size), cache_size,
-                         rdcc_w0_streaming);
-    } else if (type == H5::PredType::NATIVE_INT32) {  // i32
-      prop.setChunkCache(default_multiplier * (cache_size / (chunk_size + chunk_size)), cache_size,
-                         rdcc_w0_streaming);
-    } else {
-      throw std::runtime_error(
-          "Cooler<N>::generate_default_aprop(), type should have type H5::StrType or be one of "
-          "Cooler::I64, Cooler::I32, Cooler::F64");
+
+  chunk_size = [&]() {
+    if constexpr (std::is_same_v<T, H5::StrType>) {
+      return chunk_size;
     }
-  }
-  return std::make_unique<H5::DSetAccPropList>(prop);
+    if (type == H5::PredType::NATIVE_INT64 || type == H5::PredType::NATIVE_UINT64 ||
+        type == H5::PredType::NATIVE_DOUBLE) {
+      return chunk_size;
+    }
+    if (type == H5::PredType::NATIVE_INT32 || type == H5::PredType::NATIVE_UINT32) {
+      return chunk_size / 2;
+    }
+    if (type == H5::PredType::NATIVE_INT16 || type == H5::PredType::NATIVE_UINT16) {
+      return chunk_size / 4;
+    }
+    if (type == H5::PredType::NATIVE_INT8 || type == H5::PredType::NATIVE_UINT8) {
+      return chunk_size / 8;
+    }
+    throw std::runtime_error(
+        "Cooler<N>::generate_default_aprop() was called with an unsupported H5 PredType/StrType");
+  }();
+
+  return std::make_unique<H5::DSetAccPropList>(
+      hdf5::generate_acc_prop_list(type, chunk_size, cache_size, rdcc_w0_streaming));
 }
 
 template <class N>
@@ -406,7 +398,7 @@ std::unique_ptr<H5::H5File> Cooler<N>::open_file(const boost::filesystem::path &
     auto f = mode == IO_MODE::READ_ONLY ? hdf5::open_file_for_reading(path)
                                         : hdf5::open_file_for_writing(path);
     if (validate) {
-      (void)validate_file_format(f, flavor, mode, bin_size, true);
+      std::ignore = validate_file_format(f, flavor, mode, bin_size, true);
     }
     return std::make_unique<H5::H5File>(f);
   } catch (const H5::Exception &e) {
@@ -524,8 +516,8 @@ std::pair<i64, i64> Cooler<N>::read_chrom_pixels_boundaries(usize chrom_idx) {
 
   std::pair<i64, i64> pixel_boundaries{};
   const auto &d = this->_datasets[IDX_BIN1];
-  (void)hdf5::read_number(d, pixel_boundaries.first, chrom_start_bin);
-  (void)hdf5::read_number(d, pixel_boundaries.second, chrom_end_bin);
+  std::ignore = hdf5::read_number(d, pixel_boundaries.first, chrom_start_bin);
+  std::ignore = hdf5::read_number(d, pixel_boundaries.second, chrom_end_bin);
 
   return pixel_boundaries;
 }

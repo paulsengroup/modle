@@ -30,6 +30,7 @@
 
 #include <cassert>      // for assert
 #include <string_view>  // for string_view
+#include <tuple>        // for ignore
 #include <utility>      // for make_pair
 
 #include "modle/common/common.hpp"  // for i64, i32, u8, u32
@@ -144,7 +145,7 @@ ContactMatrix<N> Cooler<N>::cooler_to_cmatrix(std::pair<hsize_t, hsize_t> bin_ra
   if (prefer_using_balanced_counts &&
       hdf5::has_dataset(*this->_fp, "bins/weight", this->_root_path)) {
     bin_weights.resize(last_bin - first_bin);
-    (void)hdf5::read_numbers(d[BIN_WEIGHT], bin_weights, static_cast<hsize_t>(first_bin));
+    std::ignore = hdf5::read_numbers(d[BIN_WEIGHT], bin_weights, static_cast<hsize_t>(first_bin));
   }
 
   for (usize i = 1; i < bin1_offset_idx.size(); ++i) {
@@ -160,9 +161,9 @@ ContactMatrix<N> Cooler<N>::cooler_to_cmatrix(std::pair<hsize_t, hsize_t> bin_ra
     count_BUFF.resize(buff_size);
 
     assert(static_cast<i64>(file_offset + buff_size) <= this->_idx_bin1_offset.back());  // NOLINT
-    (void)hdf5::read_numbers(d[PXL_B1], bin1_BUFF, file_offset);
-    (void)hdf5::read_numbers(d[PXL_B2], bin2_BUFF, file_offset);
-    (void)hdf5::read_numbers(d[PXL_COUNT], count_BUFF, file_offset);
+    std::ignore = hdf5::read_numbers(d[PXL_B1], bin1_BUFF, file_offset);
+    std::ignore = hdf5::read_numbers(d[PXL_B2], bin2_BUFF, file_offset);
+    std::ignore = hdf5::read_numbers(d[PXL_COUNT], count_BUFF, file_offset);
 
     assert(bin1_BUFF.size() == buff_size);   // NOLINT
     assert(bin2_BUFF.size() == buff_size);   // NOLINT
@@ -293,7 +294,7 @@ usize Cooler<N>::stream_contacts_for_chrom(moodycamel::BlockingReaderWriterQueue
   if (prefer_using_balanced_counts &&
       hdf5::has_dataset(*this->_fp, "bins/weight", this->_root_path)) {
     bin_weights.resize(last_bin - first_bin);
-    (void)hdf5::read_numbers(d[BIN_WEIGHT], bin_weights, static_cast<hsize_t>(first_bin));
+    std::ignore = hdf5::read_numbers(d[BIN_WEIGHT], bin_weights, static_cast<hsize_t>(first_bin));
   }
 
   for (usize i = 1; i < bin1_offset_idx.size(); ++i) {
@@ -308,9 +309,9 @@ usize Cooler<N>::stream_contacts_for_chrom(moodycamel::BlockingReaderWriterQueue
     bin2_BUFF.resize(buff_size);
     count_BUFF.resize(buff_size);
 
-    (void)hdf5::read_numbers(d[PXL_B1], bin1_BUFF, file_offset);
-    (void)hdf5::read_numbers(d[PXL_B2], bin2_BUFF, file_offset);
-    (void)hdf5::read_numbers(d[PXL_COUNT], count_BUFF, file_offset);
+    std::ignore = hdf5::read_numbers(d[PXL_B1], bin1_BUFF, file_offset);
+    std::ignore = hdf5::read_numbers(d[PXL_B2], bin2_BUFF, file_offset);
+    std::ignore = hdf5::read_numbers(d[PXL_COUNT], count_BUFF, file_offset);
 
     assert(bin1_BUFF.size() == buff_size);   // NOLINT
     assert(bin2_BUFF.size() == buff_size);   // NOLINT
