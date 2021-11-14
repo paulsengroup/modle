@@ -60,7 +60,7 @@ static modle::IITree<double, double> import_discretization_ranges(const boost::f
 
   std::string buff;
   std::vector<std::string_view> toks(3);
-  usize i;
+  usize i;  // NOLINT(cppcoreguidelines-init-variables)
   for (i = 1; r.getline(buff); ++i) {
     toks = absl::StrSplit(buff, sep);
     try {
@@ -71,8 +71,8 @@ static modle::IITree<double, double> import_discretization_ranges(const boost::f
       }
 
       const auto start = utils::parse_numeric_or_throw<double>(toks[0]);
-      const auto end = utils::parse_numeric_or_throw<double>(toks[0]);
-      const auto value = utils::parse_numeric_or_throw<double>(toks[0]);
+      const auto end = utils::parse_numeric_or_throw<double>(toks[1]);
+      const auto value = utils::parse_numeric_or_throw<double>(toks[2]);
 
       if (start >= end) {
         throw std::runtime_error(
@@ -239,6 +239,8 @@ void transform_subcmd(const modle::tools::transform_config& c) {
   }
   spdlog::info(FMT_STRING("DONE! Processed {} chromosomes in {}!"), i,
                absl::FormatDuration(absl::Now() - t0));
+  spdlog::info(FMT_STRING("Transformed contacts have been saved to file {}"),
+               c.path_to_output_matrix);
 }
 
 }  // namespace modle::tools

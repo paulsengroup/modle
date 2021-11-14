@@ -60,12 +60,12 @@ void Simulation::bind_lefs(const bp_t start_pos, const bp_t end_pos, const absl:
   }
 
   Simulation::rank_lefs(lefs, rev_lef_ranks, fwd_lef_ranks, current_epoch != 0);
-  {
-    using IT = std::decay_t<decltype(rev_lef_ranks.front())>;
-    assert(std::all_of(
-        rev_lef_ranks.begin(), rev_lef_ranks.end(),  // NOLINT
-        [&](const auto i) { return i < lefs.size() || i == (std::numeric_limits<IT>::max)(); }));
-  }
+
+  assert(std::all_of(rev_lef_ranks.begin(), rev_lef_ranks.end(),  // NOLINT
+                     [&](const auto i) {
+                       using IT = std::decay_t<decltype(rev_lef_ranks.front())>;
+                       return i < lefs.size() || i == (std::numeric_limits<IT>::max)();
+                     }));
 }
 
 template <typename MaskT>
