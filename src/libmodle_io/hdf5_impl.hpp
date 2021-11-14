@@ -105,6 +105,7 @@ hsize_t write_strings(const CS &strings, const H5::DataSet &dataset, const H5::S
   if (!write_empty_strings && strings.empty()) {
     return file_offset;
   }
+  const auto lck = internal::lock();
   for (const auto &s : strings) {
     std::ignore = write_str(s, dataset, str_type, file_offset++);
   }
@@ -243,6 +244,7 @@ hsize_t read_numbers(const H5::DataSet &dataset, CN &buff, hsize_t file_offset) 
 template <class T>
 void read_attribute(const boost::filesystem::path &path_to_file, std::string_view attr_name,
                     T &buff, std::string_view path) {
+  const auto lck = internal::lock();
   auto f = open_file_for_reading(path_to_file);
   read_attribute(f, attr_name, buff, path);
 }
@@ -385,13 +387,14 @@ template <class T>
 inline void write_or_create_attribute(H5::H5File &f, std::string_view attr_name, T &buff,
                                       std::string_view path) {
   // TODO handle array attributes
+  const auto lck = internal::lock();
   H5::DataSpace attr_space(H5S_SCALAR);
   if (!hdf5::has_group(f, path)) {
     throw std::runtime_error(fmt::format(FMT_STRING("Unable to find group '{}'"), path));
   }
 
   const auto attribute_exists = hdf5::has_attribute(f, std::string{attr_name}, std::string{path});
-  const auto lck = internal::lock();
+
   auto g = f.openGroup(std::string{path});
   if constexpr (std::is_convertible_v<T, H5std_string>) {
     if (attribute_exists) {
