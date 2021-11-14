@@ -18,6 +18,7 @@
 #include <limits>                           // for numeric_limits
 #include <string>                           // for string, basic_string, allocator, operator==
 #include <string_view>                      // for string_view
+#include <tuple>                            // for ignore
 #include <vector>                           // for vector
 
 #include "H5Ppublic.h"                // for H5F_ACC_TRUNC, H5T_CSET_ASCII, H5T_STR_NULLPAD
@@ -136,7 +137,7 @@ TEST_CASE("has_group HDF5", "[io][hdf5][short]") {
   const auto test_file = testdir() / "has_group.hdf5";
   boost::filesystem::create_directories(testdir());
   H5::H5File f(test_file.string(), H5F_ACC_TRUNC);
-  (void)init_test_int64_dataset(f);
+  std::ignore = init_test_int64_dataset(f);
   f.createGroup("/g1");
   f.createGroup("/g1/1");
 

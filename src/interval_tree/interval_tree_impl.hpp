@@ -256,22 +256,22 @@ std::pair<usize, usize> IITree<N, T>::find_overlaps_idx(const N start, const N e
 
 template <class N, class T>
 usize IITree<N, T>::lower_bound_idx(const N start, const N end) const noexcept {
-  const auto [overlap_begin, _] = this->internal_equal_range<QueryType::LOWER_BOUND>(start, end);
-  (void)_;
+  [[maybe_unused]] const auto [overlap_begin, _] =
+      this->internal_equal_range<QueryType::LOWER_BOUND>(start, end);
   return this->_data.begin() - overlap_begin;
 }
 
 template <class N, class T>
 usize IITree<N, T>::upper_bound_idx(const N start, const N end) const noexcept {
-  const auto [_, overlap_end] = this->internal_equal_range<QueryType::UPPER_BOUND>(start, end);
-  (void)_;
+  [[maybe_unused]] const auto [_, overlap_end] =
+      this->internal_equal_range<QueryType::UPPER_BOUND>(start, end);
   return this->_data.begin() - overlap_end;
 }
 
 template <class N, class T>
 bool IITree<N, T>::overlaps_with(const N start, const N end) const noexcept {
-  const auto [overlap_begin, _] = this->internal_equal_range<QueryType::CONTAINS>(start, end);
-  (void)_;
+  [[maybe_unused]] const auto [overlap_begin, _] =
+      this->internal_equal_range<QueryType::CONTAINS>(start, end);
   return overlap_begin != this->_data.end();
 }
 

@@ -26,6 +26,7 @@
 #include <stdexcept>                         // for runtime_error, invalid_argument, out_of_range
 #include <string>                            // for string, allocator, basic_string
 #include <string_view>                       // for basic_string_view, string_view, basic_stri...
+#include <tuple>                             // for ignore
 #include <utility>                           // for move
 #include <vector>                            // for vector
 
@@ -570,9 +571,10 @@ void Cli::validate_eval_subcommand() const {
   const auto& c = absl::get<eval_config>(this->_config);
 
   try {
-    (void)cooler::Cooler(c.path_to_input_matrix, cooler::Cooler<>::IO_MODE::READ_ONLY, c.bin_size);
-    (void)cooler::Cooler(c.path_to_reference_matrix, cooler::Cooler<>::IO_MODE::READ_ONLY,
-                         c.bin_size);
+    std::ignore =
+        cooler::Cooler(c.path_to_input_matrix, cooler::Cooler<>::IO_MODE::READ_ONLY, c.bin_size);
+    std::ignore = cooler::Cooler(c.path_to_reference_matrix, cooler::Cooler<>::IO_MODE::READ_ONLY,
+                                 c.bin_size);
   } catch (const std::exception& e) {
     if (absl::StartsWith(e.what(), "Cooler::open_file(): bin_size cannot be 0")) {
       errors.emplace_back(
@@ -770,7 +772,8 @@ void Cli::validate_transform_subcommand() const {
   }
 
   try {
-    (void)cooler::Cooler(c.path_to_input_matrix, cooler::Cooler<>::IO_MODE::READ_ONLY, c.bin_size);
+    std::ignore =
+        cooler::Cooler(c.path_to_input_matrix, cooler::Cooler<>::IO_MODE::READ_ONLY, c.bin_size);
   } catch (const std::exception& e) {
     if (absl::StartsWith(e.what(), "Cooler::open_file(): bin_size cannot be 0")) {
       errors.emplace_back(

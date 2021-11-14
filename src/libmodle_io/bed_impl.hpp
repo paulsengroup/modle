@@ -15,6 +15,7 @@
 #include <numeric>                    // for accumulate
 #include <string>                     // for string
 #include <string_view>                // for string_view, basic_string_view
+#include <tuple>                      // for ignore
 #include <type_traits>                // for add_const<>::type
 #include <utility>                    // for move, pair, make_pair
 #include <vector>                     // for vector
@@ -37,8 +38,7 @@ using iterator_t = typename BED_tree<K, I>::iterator;
 
 template <typename K, typename I>
 std::pair<iterator_t<K, I>, bool> BED_tree<K, I>::insert(BED interval) {
-  auto [node, inserted] = this->_trees.try_emplace(interval.chrom, IITree_t{});
-  (void)inserted;
+  [[maybe_unused]] auto [node, inserted] = this->_trees.try_emplace(interval.chrom, IITree_t{});
   node->second.insert(I(interval.chrom_start), I(interval.chrom_end), std::move(interval));
   return std::make_pair(node, true);
 }
@@ -51,8 +51,8 @@ std::pair<iterator_t<K, I>, bool> BED_tree<K, I>::insert(const K& chrom_name, va
 template <typename K, typename I>
 std::pair<iterator_t<K, I>, bool> BED_tree<K, I>::insert(const K& chrom_name, I chrom_start,
                                                          I chrom_end) {
-  auto [node, inserted] = this->_trees.try_emplace(std::move(chrom_name), IITree_t{});
-  (void)inserted;
+  [[maybe_unused]] auto [node, inserted] =
+      this->_trees.try_emplace(std::move(chrom_name), IITree_t{});
   node->second.insert(chrom_start, chrom_end, BED{chrom_name, bp_t(chrom_start), bp_t(chrom_end)});
   return std::make_pair(node, true);
 }
@@ -60,8 +60,7 @@ std::pair<iterator_t<K, I>, bool> BED_tree<K, I>::insert(const K& chrom_name, I 
 template <typename K, typename I>
 std::pair<iterator_t<K, I>, bool> BED_tree<K, I>::emplace(BED&& interval) {
 #if __GNUC__ > 7
-  auto [node, inserted] = this->_trees.try_emplace(interval.chrom, IITree_t{});
-  (void)inserted;
+  [[maybe_unused]] auto [node, inserted] = this->_trees.try_emplace(interval.chrom, IITree_t{});
   node->second.emplace(I(interval.chrom_start), I(interval.chrom_end), std::move(interval));
   return std::make_pair(node, true);
 #else
@@ -86,8 +85,7 @@ std::pair<iterator_t<K, I>, bool> BED_tree<K, I>::emplace(const K& chrom_name, v
 template <typename K, typename I>
 void BED_tree<K, I>::insert(const absl::Span<const BED> intervals) {
   for (const auto& interval : intervals) {
-    auto [node, inserted] = this->_trees.try_emplace(interval.chrom, IITree_t{});
-    (void)inserted;
+    [[maybe_unused]] auto [node, inserted] = this->_trees.try_emplace(interval.chrom, IITree_t{});
     node->second.insert(I(interval.chrom_start), I(interval.chrom_end), interval);
   }
 }
@@ -95,8 +93,7 @@ void BED_tree<K, I>::insert(const absl::Span<const BED> intervals) {
 template <typename K, typename I>
 void BED_tree<K, I>::emplace(std::vector<BED>&& intervals) {
   for (auto&& interval : intervals) {
-    auto [node, inserted] = this->_trees.try_emplace(interval.chrom, IITree_t{});
-    (void)inserted;
+    [[maybe_unused]] auto [node, inserted] = this->_trees.try_emplace(interval.chrom, IITree_t{});
     node->second.emplace(I(interval.chrom_start), I(interval.chrom_end), std::move(interval));
   }
 }

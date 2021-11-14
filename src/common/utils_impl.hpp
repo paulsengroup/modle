@@ -93,9 +93,8 @@ void parse_vect_of_numbers_or_throw(const std::vector<std::string_view> &toks, u
 }
 
 template <class N>
-void throw_except_from_errc(std::string_view tok, usize idx, const N &field, const char *c,
-                            std::errc e) {
-  (void)field;
+void throw_except_from_errc(std::string_view tok, usize idx, [[maybe_unused]] const N &field,
+                            const char *c, std::errc e) {
   static_assert(std::is_arithmetic<N>());
   std::string base_error;
   if (idx != (std::numeric_limits<usize>::max)()) {

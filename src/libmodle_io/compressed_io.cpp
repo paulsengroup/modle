@@ -22,6 +22,7 @@
 #include <stdexcept>                         // for runtime_error, logic_...
 #include <string>                            // for string, basic_string
 #include <string_view>                       // for string_view, operator<<
+#include <tuple>                             // for ignore
 
 #include "modle/common/common.hpp"  // for usize
 #include "modle/common/utils.hpp"   // for ndebug_not_defined
@@ -158,7 +159,7 @@ bool Reader::readall(std::string& buff, char sep) {
   }
 
   while (!this->eof()) {
-    (void)this->getline(sep);
+    std::ignore = this->getline(sep);
     buff.append(this->_buff.begin(), this->_buff.end());
     this->_idx = 0;
     this->_buff.clear();

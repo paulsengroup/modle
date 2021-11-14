@@ -535,7 +535,7 @@ BED_tree<> Parser::parse_n_in_interval_tree(usize num_records) {
 
 std::string Parser::validate(usize nrecords) {
   try {
-    (void)parse_n(nrecords);
+    std::ignore = parse_n(nrecords);
   } catch (const std::runtime_error& e) {
     return e.what();
   }
