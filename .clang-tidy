@@ -2,7 +2,7 @@
 #
 # SPDX-License-Identifier: MIT
 ---
-Checks: '*,-fuchsia-*,-google-*,-zircon-*,-llvm-*,-llvmlibc-*,-modernize-use-trailing-return-type,-altera-struct-pack-align,-cppcoreguidelines-avoid-magic-numbers'
+Checks: '*,-fuchsia-*,-google-*,-zircon-*,-llvm-*,-llvmlibc-*,-altera-*,-modernize-use-trailing-return-type,-cppcoreguidelines-avoid-magic-numbers'
 WarningsAsErrors: ''
 HeaderFilterRegex: ''
 FormatStyle: none
