@@ -439,6 +439,13 @@ constexpr I next_pow2(const I n) noexcept {
   DISABLE_WARNING_POP
 }
 
+template <class T>
+constexpr std::future<T> make_ready_future(T &&v) {
+  std::promise<T> p;
+  p.set_value(std::forward<T>(v));
+  return p.get_future();
+}
+
 }  // namespace modle::utils
 
 // IWYU pragma: private, include "modle/utils.hpp"
