@@ -26,6 +26,7 @@
 #include <stdexcept>                         // for runtime_error, invalid_argument, out_of_range
 #include <string>                            // for string, allocator, basic_string
 #include <string_view>                       // for basic_string_view, string_view, basic_stri...
+#include <thread>                            // for hardware_concurrency
 #include <tuple>                             // for ignore
 #include <utility>                           // for move
 #include <vector>                            // for vector
@@ -166,7 +167,8 @@ corr.add_flag(
      "-t,--threads",
      c.nthreads,
      "CPU threads to allocate.")
-     ->check(CLI::PositiveNumber);
+     ->check(CLI::PositiveNumber)
+     ->transform(CLI::Bound(1U, std::thread::hardware_concurrency()));
 
   // clang-format on
   this->_config = absl::monostate{};
@@ -464,7 +466,7 @@ void Cli::make_transform_subcommand() {
       ->capture_default_str();
 
   trans.add_option(
-      "-m,!--method",
+      "-m,--method",
       c.method,
       "Transformation method to apply to the input contact matrix.")
       ->transform(CLI::CheckedTransformer(transform_config::transformation_map, CLI::ignore_case))
@@ -540,7 +542,8 @@ void Cli::make_transform_subcommand() {
       "-t,--threads",
       c.nthreads,
       "CPU threads to allocate.")
-      ->check(CLI::PositiveNumber);
+      ->check(CLI::PositiveNumber)
+      ->transform(CLI::Bound(1U, std::thread::hardware_concurrency()));
 
   // clang-format on
 

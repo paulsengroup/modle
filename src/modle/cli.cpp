@@ -26,6 +26,7 @@
 #include <sstream>                          // for streamsize, stringstream, basic_ostream
 #include <stdexcept>                        // for invalid_argument, out_of_range, runtime_error
 #include <string>                           // for allocator, string, basic_string
+#include <thread>                           // for hardware_concurrency
 #include <vector>                           // for vector
 
 #include "modle/common/common.hpp"  // for bp_t, i64, modle_version_long
@@ -97,7 +98,7 @@ static void add_common_options(CLI::App& subcommand, modle::Config& c) {
       "Number of simulate_worker threads used to run the simulation.\n"
       "By default MoDLE will try to use all available threads.")
       ->check(CLI::PositiveNumber)
-      ->transform(utils::str_float_to_str_int)
+      ->transform(CLI::Bound(1U, std::thread::hardware_concurrency()))
       ->capture_default_str();
 
   gen.add_option(
@@ -527,7 +528,7 @@ void Cli::make_replay_subcommand() {
       "Number of simulate_worker threads used to run the simulation.\n"
       "By default MoDLE will try to use all available threads.")
       ->check(CLI::PositiveNumber)
-      ->transform(utils::str_float_to_str_int)
+      ->transform(CLI::Bound(1U, std::thread::hardware_concurrency()))
       ->capture_default_str();
   // clang-format on
 }
