@@ -478,38 +478,6 @@ const N &ContactMatrix<N>::unsafe_at(const usize i, const usize j) const {
 }
 
 template <class N>
-ContactMatrix<double> ContactMatrix<N>::unsafe_gaussian_diff(const double sigma1,
-                                                             const double sigma2,
-                                                             const double min_value,
-                                                             const double max_value) const {
-  assert(sigma1 <= sigma2);  // NOLINT
-  ContactMatrix<double> bmatrix(this->nrows(), this->ncols());
-
-  const auto gauss_kernel1 = stats::compute_gauss_kernel(sigma1);
-  const auto gauss_kernel2 = stats::compute_gauss_kernel(/*sqrt(kernel1.size(), */ sigma2);
-  std::vector<N> pixels(std::max(gauss_kernel1.size(), gauss_kernel2.size()));
-
-  [[maybe_unused]] const auto block_size1 =
-      static_cast<usize>(std::sqrt(static_cast<double>(gauss_kernel1.size())));
-  [[maybe_unused]] const auto block_size2 =
-      static_cast<usize>(std::sqrt(static_cast<double>(gauss_kernel2.size())));
-  assert(block_size1 * block_size1 <= gauss_kernel1.size());  // NOLINT
-  assert(block_size2 * block_size2 <= gauss_kernel2.size());  // NOLINT
-
-  for (usize i = 0; i < this->ncols(); ++i) {
-    for (usize j = i; j < std::min(i + this->nrows(), this->ncols()); ++j) {
-      this->unsafe_get_block(i, j, block_size1, pixels);
-      const auto n1 = utils::convolve(gauss_kernel1, pixels);
-      this->unsafe_get_block(i, j, block_size2, pixels);
-      const auto n2 = utils::convolve(gauss_kernel2, pixels);
-
-      bmatrix.set(i, j, std::clamp(n1 - n2, min_value, max_value));
-    }
-  }
-  return bmatrix;
-}
-
-template <class N>
 template <class M, class>
 void ContactMatrix<N>::unsafe_normalize(const ContactMatrix<N> &input_matrix,
                                         ContactMatrix<M> &output_matrix, M lb, M ub) noexcept {

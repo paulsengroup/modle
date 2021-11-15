@@ -13,6 +13,7 @@
 #include <limits>                                   // for numeric_limits
 #include <mutex>                                    // for unique_lock
 #include <shared_mutex>                             // for shared_mutex, shared_lock
+#include <thread_pool/thread_pool.hpp>              // for thread_pool
 #include <type_traits>                              // for enable_if_t
 #include <utility>                                  // for pair
 #include <vector>                                   // for vector
@@ -143,10 +144,11 @@ class ContactMatrix {
   [[nodiscard]] inline std::vector<u64> unsafe_compute_row_wise_contact_histogram() const;
   inline void unsafe_deplete_contacts(double depletion_multiplier = 1.0);
 
-  [[nodiscard]] inline ContactMatrix<double> blur(double sigma, double cutoff = 0.005) const;
-  [[nodiscard]] inline ContactMatrix<double> unsafe_gaussian_diff(
+  [[nodiscard]] inline ContactMatrix<double> blur(double sigma, double cutoff = 0.005,
+                                                  thread_pool* tpool = nullptr) const;
+  [[nodiscard]] inline ContactMatrix<double> gaussian_diff(
       double sigma1, double sigma2, double min_value = std::numeric_limits<double>::lowest(),
-      double max_value = (std::numeric_limits<double>::max)()) const;
+      double max_value = (std::numeric_limits<double>::max)(), thread_pool* tpool = nullptr) const;
   template <class FP = double, class = std::enable_if_t<std::is_floating_point_v<FP>>>
   [[nodiscard]] inline ContactMatrix<FP> unsafe_normalize(double lb = 0.0, double ub = 1.0) const;
   template <class FP = double, class = std::enable_if_t<std::is_floating_point_v<FP>>>

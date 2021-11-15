@@ -4,11 +4,12 @@
 
 #pragma once
 
-#include <atomic>   // for atomic_fetch_add_explicit
-#include <cassert>  // for assert
-#include <cmath>    // for sqrt
-#include <fstream>  // IWYU pragma: keep for ifstream
-#include <vector>   // for vector
+#include <atomic>                       // for atomic_fetch_add_explicit
+#include <cassert>                      // for assert
+#include <cmath>                        // for sqrt
+#include <fstream>                      // IWYU pragma: keep for ifstream
+#include <thread_pool/thread_pool.hpp>  // for thread_pool, parallelize_loop
+#include <vector>                       // for vector
 
 #include "modle/common/common.hpp"  // for usize, i64, u64, bp_t, isize
 #include "modle/common/random.hpp"  // for PRNG, uniform_int_distribution, unifo...
@@ -138,22 +139,73 @@ void ContactMatrix<N>::reset() {
 }
 
 template <class N>
-ContactMatrix<double> ContactMatrix<N>::blur(const double sigma, const double cutoff) const {
+ContactMatrix<double> ContactMatrix<N>::blur(const double sigma, const double cutoff,
+                                             thread_pool* tpool) const {
   ContactMatrix<double> bmatrix(this->nrows(), this->ncols());
 
   const auto gauss_kernel = stats::compute_gauss_kernel(sigma, cutoff);
-  std::vector<N> pixels(gauss_kernel.size());
 
   [[maybe_unused]] const auto block_size =
       static_cast<usize>(std::sqrt(static_cast<double>(gauss_kernel.size())));
   assert(block_size * block_size == gauss_kernel.size());  // NOLINT
 
-  const auto lck = this->lock();
-  for (usize i = 0; i < this->ncols(); ++i) {
-    for (usize j = i; j < std::min(i + this->nrows(), this->ncols()); ++j) {
-      this->unsafe_get_block(i, j, block_size, pixels);
-      bmatrix.set(i, j, utils::convolve(gauss_kernel, pixels));
+  auto apply_kernel = [this, &bmatrix, &gauss_kernel, block_size](const usize i0, const usize i1) {
+    std::vector<N> pixels(gauss_kernel.size());
+    for (usize i = i0; i < i1; ++i) {
+      for (usize j = i; j < std::min(i + this->nrows(), this->ncols()); ++j) {
+        this->unsafe_get_block(i, j, block_size, pixels);
+        bmatrix.unsafe_set(i, j, utils::convolve(gauss_kernel, pixels));
+      }
     }
+  };
+
+  const auto lck = this->lock();
+  if (tpool) {
+    tpool->template parallelize_loop(usize(0), this->ncols(), apply_kernel);
+  } else {
+    apply_kernel(0, this->ncols());
+  }
+  return bmatrix;
+}
+
+template <class N>
+ContactMatrix<double> ContactMatrix<N>::gaussian_diff(const double sigma1, const double sigma2,
+                                                      const double min_value,
+                                                      const double max_value,
+                                                      thread_pool* tpool) const {
+  assert(sigma1 <= sigma2);  // NOLINT
+  ContactMatrix<double> bmatrix(this->nrows(), this->ncols());
+
+  const auto gauss_kernel1 = stats::compute_gauss_kernel(sigma1);
+  const auto gauss_kernel2 = stats::compute_gauss_kernel(sigma2);
+
+  [[maybe_unused]] const auto block_size1 =
+      static_cast<usize>(std::sqrt(static_cast<double>(gauss_kernel1.size())));
+  [[maybe_unused]] const auto block_size2 =
+      static_cast<usize>(std::sqrt(static_cast<double>(gauss_kernel2.size())));
+  assert(block_size1 * block_size1 <= gauss_kernel1.size());  // NOLINT
+  assert(block_size2 * block_size2 <= gauss_kernel2.size());  // NOLINT
+
+  auto compute_gauss_diff = [this, &bmatrix, &gauss_kernel1, &gauss_kernel2, block_size1,
+                             block_size2, min_value, max_value](const usize i0, const usize i1) {
+    std::vector<N> pixels(std::max(gauss_kernel1.size(), gauss_kernel2.size()));
+    for (usize i = i0; i < i1; ++i) {
+      for (usize j = i; j < std::min(i + this->nrows(), this->ncols()); ++j) {
+        this->unsafe_get_block(i, j, block_size1, pixels);
+        const auto n1 = utils::convolve(gauss_kernel1, pixels);
+        this->unsafe_get_block(i, j, block_size2, pixels);
+        const auto n2 = utils::convolve(gauss_kernel2, pixels);
+
+        bmatrix.set(i, j, std::clamp(n1 - n2, min_value, max_value));
+      }
+    }
+  };
+
+  const auto lck = this->lock();
+  if (tpool) {
+    tpool->template parallelize_loop(usize(0), this->ncols(), compute_gauss_diff);
+  } else {
+    compute_gauss_diff(0, this->ncols());
   }
   return bmatrix;
 }

@@ -115,12 +115,12 @@ template <class N>
 
 template <class N>
 [[nodiscard]] static ContactMatrix<double> run_gaussian_blur(
-    std::string_view chrom_name, ContactMatrix<N>& m, const double sigma,
+    thread_pool& tpool, std::string_view chrom_name, ContactMatrix<N>& m, const double sigma,
     const std::pair<double, double> saturation_range) {
   const auto [lower_bound_sat, upper_bound_sat] = saturation_range;
   spdlog::info(FMT_STRING("Applying Gaussian blur with sigma={:.4g} to contacts for {}..."), sigma,
                chrom_name);
-  auto m2 = m.blur(sigma);
+  auto m2 = m.blur(sigma, 0.005, &tpool);
   if (!std::isinf(lower_bound_sat) || !std::isinf(upper_bound_sat)) {
     m2.clamp_inplace(lower_bound_sat, upper_bound_sat);
   }
@@ -129,20 +129,20 @@ template <class N>
 
 template <class N>
 [[nodiscard]] static ContactMatrix<double> run_difference_of_gaussians(
-    std::string_view chrom_name, ContactMatrix<N>& m, const double sigma1, const double sigma2,
-    const std::pair<double, double> saturation_range) {
+    thread_pool& tpool, std::string_view chrom_name, ContactMatrix<N>& m, const double sigma1,
+    const double sigma2, const std::pair<double, double> saturation_range) {
   const auto [lower_bound_sat, upper_bound_sat] = saturation_range;
   spdlog::info(FMT_STRING("Computing the difference of Gaussians for {} (sigma1={:.4g}; "
                           "sigma2={:.4g})..."),
                chrom_name, sigma1, sigma2);
-  return m.unsafe_gaussian_diff(sigma1, sigma2, lower_bound_sat, upper_bound_sat);
+  return m.gaussian_diff(sigma1, sigma2, lower_bound_sat, upper_bound_sat, &tpool);
 }
 
 using ContactMatrixVariant = absl::variant<ContactMatrix<double>, ContactMatrix<i32>>;
 template <class N>
 [[nodiscard]] static ContactMatrixVariant process_chromosome(
-    const std::string_view chrom_name, const bp_t bin_size, cooler::Cooler<N>& cooler,
-    std::mutex& cooler_mtx, const modle::tools::transform_config& c,
+    thread_pool& tpool, const std::string_view chrom_name, const bp_t bin_size,
+    cooler::Cooler<N>& cooler, std::mutex& cooler_mtx, const modle::tools::transform_config& c,
     const modle::IITree<double, double>& discretization_ranges) {
   auto t1 = absl::Now();
   spdlog::info(FMT_STRING("Processing contacts for {}..."), chrom_name);
@@ -155,9 +155,9 @@ template <class N>
       case t::normalize:
         return run_normalization(chrom_name, m, c.normalization_range, c.saturation_range);
       case t::gaussian_blur:
-        return run_gaussian_blur(chrom_name, m, c.gaussian_blur_sigma, c.saturation_range);
+        return run_gaussian_blur(tpool, chrom_name, m, c.gaussian_blur_sigma, c.saturation_range);
       case t::difference_of_gaussians:
-        return run_difference_of_gaussians(chrom_name, m, c.gaussian_blur_sigma,
+        return run_difference_of_gaussians(tpool, chrom_name, m, c.gaussian_blur_sigma,
                                            c.gaussian_blur_sigma * c.gaussian_blur_sigma_multiplier,
                                            c.saturation_range);
       default:
@@ -277,7 +277,7 @@ void transform_subcmd(const modle::tools::transform_config& c) {
   const auto chroms = input_cooler.get_chroms();
   const auto bin_size = input_cooler.get_bin_size();
 
-  thread_pool tpool(std::min(c.nthreads, chroms.size() + 1));
+  thread_pool tpool(std::max(c.nthreads, usize(2)));
 
   std::mutex output_matrices_mtx;
   std::deque<std::future<ContactMatrixVariant>> output_matrices;
@@ -291,9 +291,10 @@ void transform_subcmd(const modle::tools::transform_config& c) {
   const auto t0 = absl::Now();
   spdlog::info(FMT_STRING("Transforming contacts from file {}..."), input_cooler.get_path());
   for (usize i = 0; i < chroms.size(); ++i) {
+    /*
     auto result_fut = tpool.submit([&, chrom_name = chroms[i].first]() -> ContactMatrixVariant {
       try {
-        return process_chromosome(chrom_name, bin_size, input_cooler, input_cooler_mtx, c,
+        return process_chromosome(tpool, chrom_name, bin_size, input_cooler, input_cooler_mtx, c,
                                   discretization_ranges);
       } catch (const std::exception& e) {
         throw std::runtime_error(
@@ -301,6 +302,10 @@ void transform_subcmd(const modle::tools::transform_config& c) {
                         chrom_name, e.what()));
       }
     });
+     */
+    auto result_fut =
+        utils::make_ready_future(process_chromosome(tpool, chroms[i].first, bin_size, input_cooler,
+                                                    input_cooler_mtx, c, discretization_ranges));
     std::scoped_lock<std::mutex> lck(output_matrices_mtx);
     output_matrices.emplace_back(std::move(result_fut));
   }

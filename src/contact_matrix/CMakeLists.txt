@@ -30,7 +30,8 @@ target_link_libraries(
             xxHash::xxHash
             Modle::common
             Modle::io_compressed
-            Modle::stats)
+            Modle::stats
+            thread-pool)
 
 if(ENABLE_PCH)
   target_precompile_headers(
