@@ -167,7 +167,7 @@ void ContactMatrix<N>::clear_missed_updates_counter() {
 
 template <class N>
 bool ContactMatrix<N>::empty() const {
-  return this->_tot_contacts == 0 && !this->_tot_contacts_outdated;
+  return this->get_tot_contacts() == 0;
 }
 
 template <class N>

@@ -517,6 +517,17 @@ void ContactMatrix<N>::unsafe_normalize(const ContactMatrix<N> &input_matrix,
   // The unsafe resize takes care of the case where &input_matrix == &output_matrix
   output_matrix.unsafe_resize(input_matrix.nrows(), input_matrix.ncols());
 
+  if (input_matrix.empty()) {
+    if (&input_matrix == &output_matrix) {
+      return;
+    }
+    std::fill(output_matrix._contacts.begin(), output_matrix._contacts.end(), M(0));
+    output_matrix._updates_missed = input_matrix._updates_missed.load();
+    output_matrix._tot_contacts = 0;
+    output_matrix._tot_contacts_outdated = false;
+    return;
+  }
+
   const auto min_count = input_matrix.unsafe_get_min_count();
   const auto max_count = input_matrix.unsafe_get_max_count();
   const auto scaling_factor = ub - lb;
