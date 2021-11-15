@@ -167,12 +167,13 @@ void Cooler<N>::get_chrom_names(std::vector<std::string> &buff) {
     std::ignore = hdf5::read_strings(d, buff, 0);
   } else {
     if (this->is_cool()) {
-      auto d = this->_fp->openDataSet("/chroms/name", *this->_aprop_str);
+      auto d = hdf5::open_dataset(*this->_fp, "/chroms/name", *this->_aprop_str);
       std::ignore = hdf5::read_strings(d, buff, 0);
     } else if (this->is_mcool()) {
       assert(this->_bin_size != 0);  // NOLINT
-      auto d = this->_fp->openDataSet(
-          absl::StrCat("/resolutions/", this->_bin_size, "/chroms/name"), *this->_aprop_str);
+      auto d = hdf5::open_dataset(*this->_fp,
+                                  absl::StrCat("/resolutions/", this->_bin_size, "/chroms/name"),
+                                  *this->_aprop_str);
       std::ignore = hdf5::read_strings(d, buff, 0);
     } else {
       assert(!this->is_scool());  // NOLINT
@@ -200,12 +201,13 @@ void Cooler<N>::get_chrom_sizes(std::vector<I> &buff) {
     std::ignore = hdf5::read_numbers(d, buff, 0);
   } else {
     if (this->is_cool()) {
-      auto d = this->_fp->openDataSet("/chroms/length", *this->_aprop_str);
+      auto d = hdf5::open_dataset(*this->_fp, "/chroms/length", *this->_aprop_str);
       std::ignore = hdf5::read_numbers(d, buff, 0);
     } else if (this->is_mcool()) {
       assert(this->_bin_size != 0);
-      auto d = this->_fp->openDataSet(
-          absl::StrCat("/resolutions/", this->_bin_size, "/chroms/length"), *this->_aprop_str);
+      auto d = hdf5::open_dataset(*this->_fp,
+                                  absl::StrCat("/resolutions/", this->_bin_size, "/chroms/length"),
+                                  *this->_aprop_str);
       std::ignore = hdf5::read_numbers(d, buff, 0);
     } else {
       assert(!this->is_scool());
@@ -305,7 +307,7 @@ bool Cooler<N>::validate_file_format(H5::H5File &f, FLAVOR expected_flavor, IO_M
 
   } catch (const std::runtime_error &e) {
     throw std::runtime_error(fmt::format(FMT_STRING("Cooler validation for file '{}' failed: {}"),
-                                         f.getFileName(), e.what()));
+                                         hdf5::get_file_name(f), e.what()));
   }
 }
 
@@ -419,18 +421,21 @@ std::vector<H5::Group> Cooler<N>::open_groups(H5::H5File &f, bool create_if_not_
                                               usize bin_size) {
   std::vector<H5::Group> groups(4);  // NOLINT
 
-  auto open_or_create_group = [&](Cooler::Groups g, const std::string &group_name) {
-    groups[g] = create_if_not_exist && !f.nameExists(group_name) ? f.createGroup(group_name)
-                                                                 : f.openGroup(group_name);
-  };
   const std::string root_path = bin_size != 0 && hdf5::has_group(f, "/resolutions")
                                     ? absl::StrCat("/resolutions/", bin_size, "/")
                                     : "";
   try {
-    open_or_create_group(chrom, absl::StrCat(root_path, "chroms"));
-    open_or_create_group(BIN, absl::StrCat(root_path, "bins"));
-    open_or_create_group(PXL, absl::StrCat(root_path, "pixels"));
-    open_or_create_group(IDX, absl::StrCat(root_path, "indexes"));
+    if (create_if_not_exist) {
+      groups[chrom] = hdf5::open_or_create_group(f, absl::StrCat(root_path, "chroms"));
+      groups[BIN] = hdf5::open_or_create_group(f, absl::StrCat(root_path, "bins"));
+      groups[PXL] = hdf5::open_or_create_group(f, absl::StrCat(root_path, "pixels"));
+      groups[IDX] = hdf5::open_or_create_group(f, absl::StrCat(root_path, "indexes"));
+    } else {
+      groups[chrom] = hdf5::open_group(f, absl::StrCat(root_path, "chroms"));
+      groups[BIN] = hdf5::open_group(f, absl::StrCat(root_path, "bins"));
+      groups[PXL] = hdf5::open_group(f, absl::StrCat(root_path, "pixels"));
+      groups[IDX] = hdf5::open_group(f, absl::StrCat(root_path, "indexes"));
+    }
 
     return groups;
   } catch ([[maybe_unused]] const H5::Exception &e) {
@@ -706,7 +711,7 @@ std::string Cooler<N>::flavor_to_string(FLAVOR f) {
 
 template <class N>
 typename Cooler<N>::FLAVOR Cooler<N>::detect_file_flavor(H5::H5File &f) {
-  if (const auto &fname = f.getFileName(); absl::EndsWithIgnoreCase(fname, ".cool")) {
+  if (const auto &fname = hdf5::get_file_name(f); absl::EndsWithIgnoreCase(fname, ".cool")) {
     return FLAVOR::COOL;  // NOLINTNEXTLINE(readability-else-after-return)
   } else if (absl::EndsWithIgnoreCase(fname, ".mcool")) {
     return FLAVOR::MCOOL;
@@ -728,14 +733,14 @@ typename Cooler<N>::FLAVOR Cooler<N>::detect_file_flavor(H5::H5File &f) {
     return FLAVOR::SCOOL;
   }
 
-  if (f.nameExists("/resolutions")) {
+  if (hdf5::has_group(f, "/resolutions")) {
     return FLAVOR::MCOOL;
   }
-  if (f.nameExists("/bins") && f.nameExists("/chroms")) {
-    if (f.nameExists("/pixels") && f.nameExists("/indexes")) {
+  if (hdf5::has_group(f, "/bins") && hdf5::has_group(f, "/chroms")) {
+    if (hdf5::has_group(f, "/pixels") && hdf5::has_group(f, "/indexes")) {
       return FLAVOR::COOL;
     }
-    if (f.nameExists("/cells")) {
+    if (hdf5::has_group(f, "/cells")) {
       return FLAVOR::SCOOL;
     }
   }
@@ -776,7 +781,7 @@ bool Cooler<N>::validate_cool_flavor(H5::H5File &f, usize bin_size, std::string_
       }
     } else {
       spdlog::warn(FMT_STRING("WARNING: missing attribute 'format' in file '{}'\n"),
-                   f.getFileName());
+                   hdf5::get_file_name(f));
     }
     str_buff.clear();
 
@@ -917,7 +922,8 @@ bool Cooler<N>::validate_multires_cool_flavor(H5::H5File &f, usize bin_size,
                       format));
     }
   } else {
-    spdlog::warn(FMT_STRING("WARNING: missing attribute 'format' in file '{}'\n"), f.getFileName());
+    spdlog::warn(FMT_STRING("WARNING: missing attribute 'format' in file '{}'\n"),
+                 hdf5::get_file_name(f));
   }
 
   if (const auto format_ver = hdf5::read_attribute_int(f, "format-version", root_path);

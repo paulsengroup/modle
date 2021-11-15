@@ -48,7 +48,7 @@ std::string construct_error_stack(std::string_view function_name, std::string_vi
   std::string buff;
   auto fp = std::unique_ptr<FILE, decltype(&fclose)>(std::tmpfile(), &fclose);
   const auto lck = internal::lock();
-  if (fp) {  // TODO: Make this portable
+  if (fp) {
     H5::Exception::printErrorStack(fp.get());
     fseek(fp.get(), 0L, SEEK_END);
     const auto buff_capacity = ftell(fp.get());
@@ -163,6 +163,7 @@ std::string read_attribute_str(H5::H5File &f, std::string_view attr_name, std::s
 std::string read_attribute_str(const boost::filesystem::path &path_to_file,
                                std::string_view attr_name, std::string_view path) {
   std::string buff;
+  const auto lck = internal::lock();
   auto f = open_file_for_reading(path_to_file);
   read_attribute(f, attr_name, buff, path);
   return buff;
@@ -177,6 +178,7 @@ i64 read_attribute_int(H5::H5File &f, std::string_view attr_name, std::string_vi
 i64 read_attribute_int(const boost::filesystem::path &path_to_file, std::string_view attr_name,
                        std::string_view path) {
   i64 buff;  // NOLINT
+  const auto lck = internal::lock();
   auto f = open_file_for_reading(path_to_file);
   read_attribute(f, attr_name, buff, path);
   return buff;
@@ -270,5 +272,30 @@ H5::DataSet open_dataset(H5::H5File &f, const std::string &name,
                          const H5::DSetAccPropList &access_prop) {
   const auto lck = internal::lock();
   return f.openDataSet(name, access_prop);
+}
+
+H5::Group open_group(H5::H5File &f, const std::string &name) {
+  const auto lck = internal::lock();
+  assert(hdf5::has_group(f, name));  // NOLINT
+  return f.openGroup(name);
+}
+
+H5::Group create_group(H5::H5File &f, const std::string &name) {
+  const auto lck = internal::lock();
+  assert(!hdf5::has_group(f, name));  // NOLINT
+  return f.createGroup(name);
+}
+
+H5::Group open_or_create_group(H5::H5File &f, const std::string &name) {
+  const auto lck = internal::lock();
+  if (hdf5::has_group(f, name)) {
+    return hdf5::open_group(f, name);
+  }
+  return hdf5::create_group(f, name);
+}
+
+std::string get_file_name(H5::H5File &f) {
+  const auto lck = internal::lock();
+  return f.getFileName();
 }
 }  // namespace modle::hdf5

@@ -252,7 +252,7 @@ void read_attribute(const boost::filesystem::path &path_to_file, std::string_vie
 template <class T>
 void read_attribute(H5::H5File &f, std::string_view attr_name, T &buff, std::string_view path) {
   const auto lck = internal::lock();
-  auto g = f.openGroup(std::string{path});
+  auto g = hdf5::open_group(f, std::string{path});
   if (!hdf5::has_attribute(g, attr_name)) {
     throw std::runtime_error(fmt::format(
         FMT_STRING("Unable to find an attribute named '{}' in group '/{}'"), attr_name, path));

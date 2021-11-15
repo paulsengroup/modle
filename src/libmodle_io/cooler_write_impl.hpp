@@ -141,7 +141,7 @@ void Cooler<N>::write_or_append_cmatrix_to_file(const ContactMatrix<M> *cmatrix,
                                                 std::string_view chrom_name, I chrom_start_,
                                                 I chrom_end_, I chrom_length_) {
   static_assert(std::is_floating_point_v<N> == std::is_floating_point_v<M>,
-                "Cooler<> and ContactMatrix<> template arguments should both be integral or "
+                "Cooler<N> and ContactMatrix<M> template arguments should both be integral or "
                 "floating point types.");
   assert(chrom_start_ >= 0);   // NOLINT
   assert(chrom_end_ >= 0);     // NOLINT

@@ -32,7 +32,7 @@ namespace modle::hdf5 {
 
 namespace internal {
 [[nodiscard]] std::scoped_lock<std::recursive_mutex> lock();
-static std::recursive_mutex global_mtx;  // NOLINT
+inline static std::recursive_mutex global_mtx;  // NOLINT
 }  // namespace internal
 
 template <class DataType>
@@ -113,6 +113,10 @@ template <class DType>
 [[nodiscard]] H5::DataSet open_dataset(H5::H5File &f, const std::string &name,
                                        const H5::DSetAccPropList &access_prop);
 
+[[nodiscard]] H5::Group open_group(H5::H5File &f, const std::string &name);
+[[nodiscard]] H5::Group create_group(H5::H5File &f, const std::string &name);
+[[nodiscard]] H5::Group open_or_create_group(H5::H5File &f, const std::string &name);
+
 [[nodiscard]] bool has_group(H5::H5File &f, std::string_view name,
                              std::string_view root_path = "/");
 [[nodiscard]] bool has_dataset(H5::H5File &f, std::string_view name,
@@ -133,6 +137,8 @@ template <class T>
 [[nodiscard]] inline H5::DSetAccPropList generate_acc_prop_list(T type, hsize_t chunk_size,
                                                                 hsize_t cache_size, double rdcc_w0,
                                                                 double multiplier = 100.0);
+
+[[nodiscard]] std::string get_file_name(H5::H5File &f);
 
 }  // namespace modle::hdf5
 
