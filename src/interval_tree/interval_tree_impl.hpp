@@ -33,7 +33,7 @@ IITree<N, T>::IITree(N start_pos_, N end_pos_) : _start_pos(start_pos_), _end_po
 template <class N, class T>
 void IITree<N, T>::insert(const N start, const N end, const T &data) {
   assert(this->start_pos() <= start);  // NOLINT
-  assert(this->end_pos() > end);       // NOLINT
+  assert(this->end_pos() >= end);      // NOLINT
 
   this->_indexed = false;
   this->_start.emplace_back(N(start));
@@ -45,7 +45,7 @@ void IITree<N, T>::insert(const N start, const N end, const T &data) {
 template <class N, class T>
 void IITree<N, T>::emplace(const N start, const N end, T &&data) {
   assert(this->start_pos() <= start);  // NOLINT
-  assert(this->end_pos() > end);       // NOLINT
+  assert(this->end_pos() >= end);      // NOLINT
 
   this->_indexed = false;
   this->_start.emplace_back(N(start));
