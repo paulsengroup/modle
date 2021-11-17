@@ -300,7 +300,7 @@ static double compute_custom_metric(const std::vector<N> &ref_pixels,
 
 template <StripeDirection stripe_direction, class N, class WeightIt = utils::RepeatIterator<double>>
 static std::vector<double> compute_metric(
-    const enum eval_config::metric metric, std::shared_ptr<ContactMatrix<N>> ref_contacts,
+    const enum eval_config::Metric metric, std::shared_ptr<ContactMatrix<N>> ref_contacts,
     std::shared_ptr<ContactMatrix<N>> tgt_contacts, const bool mask_zero_pixels_,
     [[maybe_unused]] WeightIt weight_first = utils::RepeatIterator<double>(1)) {
   assert(ref_contacts->nrows() == tgt_contacts->nrows());  // NOLINT
@@ -318,8 +318,7 @@ static std::vector<double> compute_metric(
   std::vector<double> score_buff(ncols, 0.0);
 
   auto compute_metric_once = [&]() {
-    using m = enum eval_config::metric;
-
+    using m = eval_config::Metric;
     switch (metric) {
       case m::custom:
         return compute_custom_metric(ref_pixel_buff, tgt_pixel_buff);
@@ -375,7 +374,7 @@ static std::vector<double> compute_metric(
 }
 
 template <StripeDirection stripe_direction, class N>
-static std::vector<double> compute_metric(const enum eval_config::metric metric,
+static std::vector<double> compute_metric(const enum eval_config::Metric metric,
                                           std::shared_ptr<ContactMatrix<N>> ref_contacts,
                                           std::shared_ptr<ContactMatrix<N>> tgt_contacts,
                                           const bool mask_zero_pixels_,
@@ -387,24 +386,25 @@ static std::vector<double> compute_metric(const enum eval_config::metric metric,
 }
 
 [[nodiscard]] [[maybe_unused]] static constexpr std::string_view corr_method_to_str(
-    const enum eval_config::metric m, bool prettify = false) {
-  using mm = enum eval_config::metric;
-  if (m == mm::custom) {
-    return prettify ? "Custom metric" : "custom_metric";
+    const enum eval_config::Metric metric, bool prettify = false) {
+  // GCC 10 builds break if we use "using m = eval_config::Metric;"
+  using m = eval_config::Metric;  // m;
+  if (metric == m::custom) {
+    return prettify ? "Custom metric" : "custom_metric";  // NOLINT
   }
-  if (m == mm::pearson) {
-    return prettify ? "Pearson correlation" : "pearson_corr";
+  if (metric == m::pearson) {
+    return prettify ? "Pearson correlation" : "pearson_corr";  // NOLINT
   }
-  if (m == mm::spearman) {
-    return prettify ? "Spearman correlation" : "spearman_corr";
-  }
-
-  if (m == mm::eucl_dist) {
-    return prettify ? "Euclidean distance" : "eucl_dist";
+  if (metric == m::spearman) {
+    return prettify ? "Spearman correlation" : "spearman_corr";  // NOLINT
   }
 
-  if (m == mm::rmse) {
-    return prettify ? "RMSE" : "rmse";
+  if (metric == m::eucl_dist) {
+    return prettify ? "Euclidean distance" : "eucl_dist";  // NOLINT
+  }
+
+  if (metric == m::rmse) {
+    return prettify ? "RMSE" : "rmse";  // NOLINT
   }
   std::abort();
 }
@@ -443,7 +443,7 @@ static std::vector<double> compute_metric(const enum eval_config::metric metric,
 }
 
 template <StripeDirection stripe_direction, class N>
-static void run_task(const enum eval_config::metric metric, const std::string &chrom_name,
+static void run_task(const enum eval_config::Metric metric, const std::string &chrom_name,
                      absl::flat_hash_map<StripeDirection, io::bigwig::Writer> &bwigs,
                      std::shared_ptr<ContactMatrix<N>> &ref_contacts,
                      std::shared_ptr<ContactMatrix<N>> &tgt_contacts,

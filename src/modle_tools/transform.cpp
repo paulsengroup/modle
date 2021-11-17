@@ -150,7 +150,7 @@ template <class N>
     std::unique_lock<std::mutex> lck(cooler_mtx);
     auto m = cooler.cooler_to_cmatrix(chrom_name, c.diagonal_width, bin_size);
     lck.unlock();
-    using t = transform_config::transformation;
+    using t = transform_config::Transformation;
     switch (c.method) {
       case t::normalize:
         return run_normalization(chrom_name, m, c.normalization_range, c.saturation_range);

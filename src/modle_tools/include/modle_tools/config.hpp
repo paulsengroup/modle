@@ -29,16 +29,16 @@ struct eval_config {  // NOLINT
   bool normalize{false};
 
   // Metrics
-  enum class metric : std::uint_fast8_t { custom, eucl_dist, pearson, rmse, spearman };
-  metric metric{metric::custom};
+  enum class Metric : std::uint_fast8_t { custom, eucl_dist, pearson, rmse, spearman };
+  Metric metric{Metric::custom};
 
-  inline static const std::array<std::pair<std::string, enum metric>, 5> metric_map{
+  inline static const std::array<std::pair<std::string, enum Metric>, 5> metric_map{
       // clang-format off
-      std::make_pair("custom", metric::custom),
-      std::make_pair("eucl_dist", metric::eucl_dist),
-      std::make_pair("pearson", metric::pearson),
-      std::make_pair("rmse", metric::rmse),
-      std::make_pair("spearman", metric::spearman),
+      std::make_pair("custom", Metric::custom),
+      std::make_pair("eucl_dist", Metric::eucl_dist),
+      std::make_pair("pearson", Metric::pearson),
+      std::make_pair("rmse", Metric::rmse),
+      std::make_pair("spearman", Metric::spearman),
       // clang-format on
   };
 
@@ -108,20 +108,20 @@ struct transform_config {  // NOLINT
   bool force{false};
 
   // Transformation methods
-  enum class transformation : std::uint_fast8_t {
+  enum class Transformation : std::uint_fast8_t {
     normalize,
     gaussian_blur,
     difference_of_gaussians,
     discretize
   };
-  transformation method;
+  Transformation method;
 
   // clang-format off
-  inline static const std::array<std::pair<std::string, transformation>, 4> transformation_map{
-      std::make_pair("normalize", transformation::normalize),
-      std::make_pair("gaussian_blur", transformation::gaussian_blur),
-      std::make_pair("difference_of_gaussians", transformation::difference_of_gaussians),
-      std::make_pair("discretize", transformation::discretize)
+  inline static const std::array<std::pair<std::string, Transformation>, 4> transformation_map{
+      std::make_pair("normalize", Transformation::normalize),
+      std::make_pair("gaussian_blur", Transformation::gaussian_blur),
+      std::make_pair("difference_of_gaussians", Transformation::difference_of_gaussians),
+      std::make_pair("discretize", Transformation::discretize)
   };
   // clang-format on
 

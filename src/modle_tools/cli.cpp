@@ -575,7 +575,7 @@ void Cli::validate_eval_subcommand() const {
     }
   }
 
-  if (c.metric == eval_config::metric::custom) {
+  if (c.metric == eval_config::Metric::custom) {
     const auto& io_group = *this->_cli.get_subcommand("eval")->get_option_group("Input/Output");
     const auto& gen_group = *this->_cli.get_subcommand("eval")->get_option_group("Generic");
 
@@ -792,7 +792,7 @@ void Cli::validate_transform_subcommand() const {
     }
   }
 
-  using t = transform_config::transformation;
+  using t = transform_config::Transformation;
   if (c.method == t::normalize) {
     if (const auto [lb, ub] = c.normalization_range; lb >= ub) {
       errors.push_back(
