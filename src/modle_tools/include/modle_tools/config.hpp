@@ -29,16 +29,16 @@ struct eval_config {  // NOLINT
   bool normalize{false};
 
   // Metrics
-  enum class metrics : std::uint_fast8_t { custom, eucl_dist, pearson, rmse, spearman };
-  metrics metric{metrics::custom};
+  enum class metric : std::uint_fast8_t { custom, eucl_dist, pearson, rmse, spearman };
+  metric metric{metric::custom};
 
-  inline static const std::array<std::pair<std::string, metrics>, 5> metric_map{
+  inline static const std::array<std::pair<std::string, enum metric>, 5> metric_map{
       // clang-format off
-      std::make_pair("custom", metrics::custom),
-      std::make_pair("eucl_dist", metrics::eucl_dist),
-      std::make_pair("pearson", metrics::pearson),
-      std::make_pair("rmse", metrics::rmse),
-      std::make_pair("spearman", metrics::spearman),
+      std::make_pair("custom", metric::custom),
+      std::make_pair("eucl_dist", metric::eucl_dist),
+      std::make_pair("pearson", metric::pearson),
+      std::make_pair("rmse", metric::rmse),
+      std::make_pair("spearman", metric::spearman),
       // clang-format on
   };
 

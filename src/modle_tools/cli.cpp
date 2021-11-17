@@ -575,7 +575,7 @@ void Cli::validate_eval_subcommand() const {
     }
   }
 
-  if (c.metric == eval_config::metrics::custom) {
+  if (c.metric == eval_config::metric::custom) {
     const auto& io_group = *this->_cli.get_subcommand("eval")->get_option_group("Input/Output");
     const auto& gen_group = *this->_cli.get_subcommand("eval")->get_option_group("Generic");
 
