@@ -6,6 +6,7 @@
 #include <absl/container/btree_map.h>           // for btree_map, btree_iterator, map_params<>::...
 #include <absl/container/flat_hash_map.h>       // for flat_hash_map
 #include <absl/strings/ascii.h>                 // AsciiStrToLower
+#include <absl/strings/str_replace.h>           // for ReplaceAll
 #include <absl/strings/strip.h>                 // for StripPrefix
 #include <absl/time/clock.h>                    // for Now
 #include <absl/time/time.h>                     // for FormatDuration, operator-, Time
@@ -15,7 +16,7 @@
 #include <fmt/ostream.h>                        // for formatbuf<>::int_type
 #include <spdlog/spdlog.h>                      // for info
 
-#include <algorithm>                        // for transform, max
+#include <algorithm>                        // for all_of, find_if, transform, minmax, max
 #include <boost/filesystem/operations.hpp>  // for create_directories
 #include <boost/filesystem/path.hpp>        // for operator<<, path
 #include <cassert>                          // for assert
@@ -97,11 +98,11 @@ template <class N>
   if (chrom_intersection.empty()) {
     throw std::runtime_error(fmt::format(
         FMT_STRING("Files {} and {} have 0 chromosomes in common. "
-                   "Make sure both files are using the same genome assembly as reference"),
+                   "Please make sure both files are using the same genome assembly as reference"),
         c1.get_path(), c2.get_path()));
   }
 
-  // Look for conflicting information in Cooler files
+  // Look for conflicting information between Cooler files
   std::string err;
   for (const auto &[name, range] : chrom_intersection) {
     if (chrom_set1.at(name).second != chrom_set2.at(name).second) {
@@ -122,7 +123,7 @@ template <class N>
     return chrom_intersection;
   }
 
-  // Look for conflicting information in Cooler files and BED file
+  // Look for conflicting information between Cooler files and BED file
   for (const auto &[name, range] : chrom_subranges) {
     const auto it = chrom_intersection.find(name);
     if (it == chrom_intersection.end()) {
@@ -245,8 +246,7 @@ template <class Range>
   return bw;
 }
 
-enum EvalMetric : std::uint_fast8_t { pearson, spearman, eucl_dist, rmse };
-enum StripeDirection : std::uint_fast8_t { vertical, horizontal };
+enum class StripeDirection : std::uint_fast8_t { vertical, horizontal };
 
 template <class N, class = std::enable_if_t<std::is_arithmetic_v<N>>>
 static size_t mask_zero_pixels(const std::vector<N> &v1, const std::vector<N> &v2,
@@ -264,11 +264,42 @@ static size_t mask_zero_pixels(const std::vector<N> &v1, const std::vector<N> &v
   return masked_pixels;
 }
 
-template <EvalMetric metric, StripeDirection stripe_direction, class N,
-          class WeightIt = utils::RepeatIterator<double>>
+template <class N>
+static double compute_custom_metric(const std::vector<N> &ref_pixels,
+                                    const std::vector<N> &tgt_pixels) {
+  assert(ref_pixels.size() == tgt_pixels.size());           // NOLINT
+  assert(std::all_of(ref_pixels.begin(), ref_pixels.end(),  // NOLINT
+                     [&](const auto n) { return n == 0 || n == 1; }));
+  assert(std::all_of(tgt_pixels.begin(), tgt_pixels.end(),  // NOLINT
+                     [&](const auto n) { return n == 0 || n == 1; }));
+
+  // Do a backward search for the first non-zero pixel
+  auto non_zero_backward_search = [](const auto &vect) -> usize {
+    const auto it = std::find_if(vect.rbegin(), vect.rend(), [](const auto n) { return n != 0; });
+    if (BOOST_UNLIKELY(it == vect.rend())) {
+      return 0;
+    }
+    return static_cast<usize>(vect.rend() - 1 - it);
+  };
+
+  // the two backward searches find the index of the last non-zero pixel in the reference and target
+  // vector of pixels respectively. These two indices are used to mark the end of a stripe produced
+  // by DNA loop extrusion.
+  const auto [i0, i1] =
+      std::minmax(non_zero_backward_search(ref_pixels), non_zero_backward_search(tgt_pixels));
+
+  usize score = 0;
+  for (auto i = i0; i != i1; ++i) {  // Count mismatches of pixels between i0 and i1
+    score += ref_pixels[i] != tgt_pixels[i];
+  }
+  return static_cast<double>(score);
+}
+
+template <StripeDirection stripe_direction, class N, class WeightIt = utils::RepeatIterator<double>>
 static std::vector<double> compute_metric(
-    std::shared_ptr<ContactMatrix<N>> ref_contacts, std::shared_ptr<ContactMatrix<N>> tgt_contacts,
-    const bool mask_zero_pixels_, WeightIt weight_first = utils::RepeatIterator<double>(1)) {
+    const eval_config::metrics metric, std::shared_ptr<ContactMatrix<N>> ref_contacts,
+    std::shared_ptr<ContactMatrix<N>> tgt_contacts, const bool mask_zero_pixels_,
+    WeightIt weight_first = utils::RepeatIterator<double>(1)) {
   assert(ref_contacts->nrows() == tgt_contacts->nrows());  // NOLINT
   const auto nrows = ref_contacts->nrows();
   const auto ncols = ref_contacts->ncols();
@@ -281,41 +312,52 @@ static std::vector<double> compute_metric(
     std::copy_n(weight_first, nrows, weight_buff.begin());
   }
 
-  std::vector<double> correlation_buff(ncols, 0.0);
+  std::vector<double> score_buff(ncols, 0.0);
 
   auto compute_metric = [&]() {
-    if constexpr (metric == pearson) {
-      if (weight_buff.empty()) {
-        return stats::Pearson<double>{}(ref_pixel_buff, tgt_pixel_buff).pcc;
-      }
-      return stats::Pearson<double>{}(ref_pixel_buff, tgt_pixel_buff, weight_buff).pcc;
-    } else if constexpr (metric == spearman) {
-      if (weight_buff.empty()) {
-        return stats::Spearman<double>{nrows}(ref_pixel_buff, tgt_pixel_buff).rho;
-      }
-      return stats::Spearman<double>{nrows}(ref_pixel_buff, tgt_pixel_buff, weight_buff).rho;
-    } else if constexpr (metric == eucl_dist) {
+    using m = eval_config::metrics;
+
+    if (metric == m::custom) {
+      return compute_custom_metric(ref_pixel_buff, tgt_pixel_buff);
+    }
+
+    if (metric == m::eucl_dist) {
       if (weight_buff.empty()) {
         return stats::sed(ref_pixel_buff.begin(), ref_pixel_buff.end(), tgt_pixel_buff.begin());
       }
       return stats::weighted_sed(ref_pixel_buff.begin(), ref_pixel_buff.end(),
                                  tgt_pixel_buff.begin(), weight_buff.begin());
-    } else {
-      static_assert(metric == rmse);
+    }
+
+    if (metric == m::pearson) {
+      if (weight_buff.empty()) {
+        return stats::Pearson<double>{}(ref_pixel_buff, tgt_pixel_buff).pcc;
+      }
+      return stats::Pearson<double>{}(ref_pixel_buff, tgt_pixel_buff, weight_buff).pcc;
+    }
+
+    if (metric == m::rmse) {
       if (weight_buff.empty()) {
         return stats::rmse(ref_pixel_buff.begin(), ref_pixel_buff.end(), tgt_pixel_buff.begin());
       }
       return stats::weighted_rmse(ref_pixel_buff.begin(), ref_pixel_buff.end(),
                                   tgt_pixel_buff.begin(), weight_buff.begin());
     }
+
+    assert(metric == m::spearman);  // NOLINT
+    if (weight_buff.empty()) {
+      return stats::Spearman<double>{nrows}(ref_pixel_buff, tgt_pixel_buff).rho;
+    }
+    return stats::Spearman<double>{nrows}(ref_pixel_buff, tgt_pixel_buff, weight_buff).rho;
   };
 
   for (usize i = 0; i < ncols; ++i) {
-    if constexpr (stripe_direction == vertical) {
+    using d = StripeDirection;
+    if constexpr (stripe_direction == d::vertical) {
       ref_contacts->unsafe_get_column(i, ref_pixel_buff);
       tgt_contacts->unsafe_get_column(i, tgt_pixel_buff);
     } else {
-      static_assert(stripe_direction == horizontal);
+      static_assert(stripe_direction == d::horizontal);
       ref_contacts->unsafe_get_row(i, ref_pixel_buff);
       tgt_contacts->unsafe_get_row(i, tgt_pixel_buff);
     }
@@ -327,12 +369,12 @@ static std::vector<double> compute_metric(
       mask_zero_pixels(ref_pixel_buff, tgt_pixel_buff, weight_buff);
     }
 
-    correlation_buff[i] = compute_metric();
+    score_buff[i] = compute_metric();
   }
-  return correlation_buff;
+  return score_buff;
 }
 
-template <EvalMetric metric, StripeDirection stripe_direction, class N>
+template <eval_config::metrics metric, StripeDirection stripe_direction, class N>
 static std::vector<double> compute_metric(std::shared_ptr<ContactMatrix<N>> ref_contacts,
                                           std::shared_ptr<ContactMatrix<N>> tgt_contacts,
                                           const bool mask_zero_pixels_,
@@ -343,95 +385,67 @@ static std::vector<double> compute_metric(std::shared_ptr<ContactMatrix<N>> ref_
                                                   weights.begin());
 }
 
-absl::flat_hash_map<std::pair<EvalMetric, StripeDirection>, io::bigwig::Writer> init_bwigs(
-    const modle::tools::eval_config &c, const ChromSet &chroms, const bool weighted) {
-  std::vector<std::pair<std::string, usize>> chrom_vect(static_cast<usize>(chroms.size()));
-  std::transform(chroms.begin(), chroms.end(), chrom_vect.begin(), [](const auto &chrom) {
-    return std::make_pair(chrom.first, chrom.second.second);
-  });
-
-  absl::flat_hash_map<std::pair<EvalMetric, StripeDirection>, io::bigwig::Writer> bwigs;
-  if (c.compute_pearson) {
-    bwigs.emplace(std::make_pair(pearson, vertical),
-                  create_bwig_file(chrom_vect, c.output_prefix.string(),
-                                   fmt::format(FMT_STRING("pearson{}_vertical.bw"),
-                                               weighted ? "_weighted" : "")));
-    bwigs.emplace(std::make_pair(pearson, horizontal),
-                  create_bwig_file(chrom_vect, c.output_prefix.string(),
-                                   fmt::format(FMT_STRING("pearson{}_horizontal.bw"),
-                                               weighted ? "_weighted" : "")));
-  }
-
-  if (c.compute_spearman) {
-    bwigs.emplace(std::make_pair(spearman, vertical),
-                  create_bwig_file(chrom_vect, c.output_prefix.string(),
-                                   fmt::format(FMT_STRING("spearman{}_vertical.bw"),
-                                               weighted ? "_weighted" : "")));
-    bwigs.emplace(std::make_pair(spearman, horizontal),
-                  create_bwig_file(chrom_vect, c.output_prefix.string(),
-                                   fmt::format(FMT_STRING("spearman{}_horizontal.bw"),
-                                               weighted ? "_weighted" : "")));
-  }
-
-  if (c.compute_eucl_dist) {
-    bwigs.emplace(std::make_pair(eucl_dist, vertical),
-                  create_bwig_file(chrom_vect, c.output_prefix.string(),
-                                   fmt::format(FMT_STRING("eucl_dist{}_vertical.bw"),
-                                               weighted ? "_weighted" : "")));
-    bwigs.emplace(std::make_pair(eucl_dist, horizontal),
-                  create_bwig_file(chrom_vect, c.output_prefix.string(),
-                                   fmt::format(FMT_STRING("eucl_dist{}_horizontal.bw"),
-                                               weighted ? "_weighted" : "")));
-  }
-
-  if (c.compute_rmse) {
-    bwigs.emplace(std::make_pair(rmse, vertical),
-                  create_bwig_file(
-                      chrom_vect, c.output_prefix.string(),
-                      fmt::format(FMT_STRING("rmse{}_vertical.bw"), weighted ? "_weighted" : "")));
-    bwigs.emplace(std::make_pair(rmse, horizontal),
-                  create_bwig_file(chrom_vect, c.output_prefix.string(),
-                                   fmt::format(FMT_STRING("rmse{}_horizontal.bw"),
-                                               weighted ? "_weighted" : "")));
-  }
-  return bwigs;
-}
-
 [[nodiscard]] [[maybe_unused]] static constexpr std::string_view corr_method_to_str(
-    const EvalMetric m) {
-  if (m == pearson) {
-    return "Pearson correlation";
+    const eval_config::metrics m, bool prettify = false) {
+  using mm = eval_config::metrics;
+  if (m == mm::custom) {
+    return prettify ? "Custom metric" : "custom_metric";
   }
-  if (m == spearman) {
-    return "Spearman correlation";
+  if (m == mm::pearson) {
+    return prettify ? "Pearson correlation" : "pearson_corr";
+  }
+  if (m == mm::spearman) {
+    return prettify ? "Spearman correlation" : "spearman_corr";
   }
 
-  if (m == eucl_dist) {
-    return "Euclidean distance";
+  if (m == mm::eucl_dist) {
+    return prettify ? "Euclidean distance" : "eucl_dist";
   }
 
-  if (m == rmse) {
-    return "RMSE";
+  if (m == mm::rmse) {
+    return prettify ? "RMSE" : "rmse";
   }
   std::abort();
 }
 
 [[nodiscard]] [[maybe_unused]] static constexpr std::string_view direction_to_str(
     const StripeDirection m) {
-  if (m == vertical) {
+  if (m == StripeDirection::vertical) {
     return "Vertical";
   }
-  if (m == horizontal) {
+  if (m == StripeDirection::horizontal) {
     return "Horizontal";
   }
   std::abort();
 }
 
-template <EvalMetric metric, StripeDirection stripe_direction, class N>
+[[nodiscard]] static absl::flat_hash_map<StripeDirection, io::bigwig::Writer> init_bwigs(
+    const modle::tools::eval_config &c, const ChromSet &chroms, const bool weighted) {
+  std::vector<std::pair<std::string, usize>> chrom_vect(static_cast<usize>(chroms.size()));
+  std::transform(chroms.begin(), chroms.end(), chrom_vect.begin(), [](const auto &chrom) {
+    return std::make_pair(chrom.first, chrom.second.second);
+  });
+
+  absl::flat_hash_map<StripeDirection, io::bigwig::Writer> bwigs;
+
+  const auto name = corr_method_to_str(c.metric);
+  bwigs.emplace(StripeDirection::vertical,
+                create_bwig_file(chrom_vect, c.output_prefix.string(),
+                                 fmt::format(FMT_STRING("{}{}_vertical.bw"), name,
+                                             weighted ? "_weighted" : "")));
+  bwigs.emplace(StripeDirection::horizontal,
+                create_bwig_file(chrom_vect, c.output_prefix.string(),
+                                 fmt::format(FMT_STRING("{}{}_horizontal.bw"), name,
+                                             weighted ? "_weighted" : "")));
+
+  return bwigs;
+}
+
+template <StripeDirection stripe_direction, class N>
 [[nodiscard]] static std::future<bool> submit_task(
-    const std::string &chrom_name,
-    absl::flat_hash_map<std::pair<EvalMetric, StripeDirection>, io::bigwig::Writer> &bwigs,
-    thread_pool &tpool, std::shared_ptr<ContactMatrix<N>> &ref_contacts,
+    const eval_config::metrics metric, const std::string &chrom_name,
+    absl::flat_hash_map<StripeDirection, io::bigwig::Writer> &bwigs, thread_pool &tpool,
+    std::shared_ptr<ContactMatrix<N>> &ref_contacts,
     std::shared_ptr<ContactMatrix<N>> &tgt_contacts, const bool exclude_zero_pixels,
     const usize bin_size, const absl::flat_hash_map<std::string, std::vector<double>> &weights) {
   return tpool.submit([&]() {
@@ -439,34 +453,33 @@ template <EvalMetric metric, StripeDirection stripe_direction, class N>
       auto t0 = absl::Now();
       auto corr = [&]() {
         if (weights.empty()) {
-          return compute_metric<metric, stripe_direction>(ref_contacts, tgt_contacts,
-                                                          exclude_zero_pixels);
+          return compute_metric<stripe_direction>(metric, ref_contacts, tgt_contacts,
+                                                  exclude_zero_pixels);
         }
-        return compute_metric<metric, stripe_direction>(
-            ref_contacts, tgt_contacts, exclude_zero_pixels, weights.at(chrom_name));
+        return compute_metric<stripe_direction>(metric, ref_contacts, tgt_contacts,
+                                                exclude_zero_pixels,
+                                                weights.at(chrom_name).begin());
       }();
 
       spdlog::info(FMT_STRING("{} for {} stripes from chrom {} computed in {}."),
-                   corr_method_to_str(metric),
+                   corr_method_to_str(metric, true),
                    absl::AsciiStrToLower(direction_to_str(stripe_direction)), chrom_name,
                    absl::FormatDuration(absl::Now() - t0));
       t0 = absl::Now();
-      auto &bw = bwigs.at({metric, stripe_direction});
+      auto &bw = bwigs.at(stripe_direction);
       bw.write_range(chrom_name, absl::MakeSpan(corr), bin_size, bin_size);
       spdlog::info(FMT_STRING("{} values have been written to file {} in {}."), corr.size(),
                    bw.path(), absl::FormatDuration(absl::Now() - t0));
     } catch (const std::exception &e) {
       throw std::runtime_error(fmt::format(
           FMT_STRING("The following error occurred while computing {} on {} stripes for {}: {}"),
-          corr_method_to_str(metric), absl::AsciiStrToLower(direction_to_str(stripe_direction)),
-          chrom_name, e.what()));
+          corr_method_to_str(metric, true),
+          absl::AsciiStrToLower(direction_to_str(stripe_direction)), chrom_name, e.what()));
     }
   });
 }
 
 void eval_subcmd(const modle::tools::eval_config &c) {
-  assert(c.compute_spearman || c.compute_pearson || c.compute_eucl_dist ||
-         c.compute_rmse);  // NOLINT
   auto ref_cooler = cooler::Cooler<double>(c.path_to_reference_matrix,
                                            cooler::Cooler<double>::IO_MODE::READ_ONLY, c.bin_size);
   auto tgt_cooler = cooler::Cooler<double>(c.path_to_input_matrix,
@@ -519,9 +532,7 @@ void eval_subcmd(const modle::tools::eval_config &c) {
   const auto t0 = absl::Now();
   thread_pool tpool(c.nthreads);
 
-  std::vector<std::future<bool>> return_codes(  // 2 return codes per method
-      usize(2 * (c.compute_pearson + c.compute_spearman + c.compute_eucl_dist +
-                 c.compute_rmse)));  // NOLINT
+  std::array<std::future<bool>, 2> return_codes;
 
   for (const auto &[chrom_name_sv, chrom_range] : chromosomes) {
     const std::string chrom_name{chrom_name_sv};
@@ -545,7 +556,7 @@ void eval_subcmd(const modle::tools::eval_config &c) {
       return_codes[1] = tpool.submit([&]() { tgt_contacts->normalize_inplace(); });
       tpool.wait_for_tasks();
       try {
-        // Handle exceptions thrown inside threads
+        // Handle exceptions thrown inside worker threads
         std::ignore = return_codes[0];
         std::ignore = return_codes[1];
       } catch (const std::exception &e) {
@@ -558,61 +569,17 @@ void eval_subcmd(const modle::tools::eval_config &c) {
                    absl::FormatDuration(absl::Now() - t00));
     }
 
-    return_codes.clear();
-
-    if (bwigs.contains({spearman, horizontal})) {
-      return_codes.emplace_back(
-          submit_task<spearman, horizontal>(chrom_name, bwigs, tpool, ref_contacts, tgt_contacts,
-                                            c.exclude_zero_pxls, bin_size, weights));
-    }
-
-    if (bwigs.contains({spearman, vertical})) {
-      return_codes.emplace_back(
-          submit_task<spearman, vertical>(chrom_name, bwigs, tpool, ref_contacts, tgt_contacts,
-                                          c.exclude_zero_pxls, bin_size, weights));
-    }
-
-    if (bwigs.contains({pearson, horizontal})) {
-      return_codes.emplace_back(
-          submit_task<pearson, horizontal>(chrom_name, bwigs, tpool, ref_contacts, tgt_contacts,
-                                           c.exclude_zero_pxls, bin_size, weights));
-    }
-
-    if (bwigs.contains({pearson, vertical})) {
-      return_codes.emplace_back(
-          submit_task<pearson, vertical>(chrom_name, bwigs, tpool, ref_contacts, tgt_contacts,
-                                         c.exclude_zero_pxls, bin_size, weights));
-    }
-
-    if (bwigs.contains({eucl_dist, horizontal})) {
-      return_codes.emplace_back(
-          submit_task<eucl_dist, horizontal>(chrom_name, bwigs, tpool, ref_contacts, tgt_contacts,
-                                             c.exclude_zero_pxls, bin_size, weights));
-    }
-
-    if (bwigs.contains({eucl_dist, vertical})) {
-      return_codes.emplace_back(
-          submit_task<eucl_dist, vertical>(chrom_name, bwigs, tpool, ref_contacts, tgt_contacts,
-                                           c.exclude_zero_pxls, bin_size, weights));
-    }
-
-    if (bwigs.contains({rmse, horizontal})) {
-      return_codes.emplace_back(
-          submit_task<rmse, horizontal>(chrom_name, bwigs, tpool, ref_contacts, tgt_contacts,
-                                        c.exclude_zero_pxls, bin_size, weights));
-    }
-
-    if (bwigs.contains({rmse, vertical})) {
-      return_codes.emplace_back(submit_task<rmse, vertical>(chrom_name, bwigs, tpool, ref_contacts,
-                                                            tgt_contacts, c.exclude_zero_pxls,
-                                                            bin_size, weights));
-    }
-
+    using d = StripeDirection;
+    return_codes[0] =
+        submit_task<d::horizontal>(c.metric, chrom_name, bwigs, tpool, ref_contacts, tgt_contacts,
+                                   c.exclude_zero_pxls, bin_size, weights);
+    return_codes[1] =
+        submit_task<d::vertical>(c.metric, chrom_name, bwigs, tpool, ref_contacts, tgt_contacts,
+                                 c.exclude_zero_pxls, bin_size, weights);
     tpool.wait_for_tasks();
-    // Raise exception raised in worker threads if any
-    for (auto &code : return_codes) {
-      std::ignore = code.get();
-    }
+    // Raise exceptions thrown inside worker threads (if any)
+    std::ignore = return_codes[0];
+    std::ignore = return_codes[1];
   }
   spdlog::info(FMT_STRING("DONE in {}!"), absl::FormatDuration(absl::Now() - t0));
 }

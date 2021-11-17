@@ -57,8 +57,6 @@ void Cli::make_eval_subcommand() {
   auto& c = absl::get<eval_config>(this->_config);
 
   auto& io = *sc.add_option_group("Input/Output", "");
-  auto& corr = *sc.add_option_group("Correlation metrics", "");
-  auto& ref = *sc.add_option_group("Reference contact matrix", "");
   auto& gen = *sc.add_option_group("Generic", "");
 
   // clang-format off
@@ -96,73 +94,59 @@ void Cli::make_eval_subcommand() {
      "The name of the column storing the weights can be specified through --weight-column-name.")
      ->check(CLI::ExistingFile);
 
-  io.add_option(
-     "--weight-column-name",
-     c.weight_column_name,
-     "Name of the column from the file specified though --weight-file containing the weight values.")
-     ->check(CLI::Number)
-     ->needs("--weight-file")
-     ->capture_default_str();
-
-  io.add_flag(
-     "--reciprocal-weights",
-     c.reciprocal_weights,
-     "Weights are computed by taking the reciprocal of numbers read from the file specified through --weight-file.")
-     ->capture_default_str();
-
-  io.add_flag(
-      "--exclude-zero-pixels,!--include-zero-pixels",
-      c.exclude_zero_pxls,
-      "When computing the correlation between a pair of rows/columns of pixels, exclude bins corresponding to pixels that are 0 in either of the rows or columns.")
-      ->capture_default_str();
-
   io.add_flag(
      "-f,--force",
      c.force,
      "Overwrite existing file(s).")
      ->capture_default_str();
 
-  io.add_flag(
+  gen.add_option(
+      "--weight-column-name",
+      c.weight_column_name,
+      "Name of the column from the file specified though --weight-file containing the weight values.")
+      ->check(CLI::Number)
+      ->capture_default_str();
+
+  gen.add_flag(
      "--normalize,!--no-normalize",
      c.normalize,
-     "Normalize matricesto range 0-1 before comparing them.")
+     "Normalize matrices to range 0-1 before comparing them.")
      ->capture_default_str();
 
-  corr.add_flag(
-     "--eucl-dist,!--no-eucl-dist",
-     c.compute_eucl_dist,
-     "Compute Euclidean distance.");
+  gen.add_option(
+      "-m,--metric",
+      c.metric,
+      "Transformation method to apply to the input contact matrix.")
+      ->transform(CLI::CheckedTransformer(eval_config::metric_map, CLI::ignore_case))
+      ->capture_default_str();
 
-corr.add_flag(
-      "--rmse,!--no-rmse",
-      c.compute_rmse,
-      "Compute RMSE (root mean squared error).");
-
-  corr.add_flag(
-     "--pearson,!--no-pearson",
-     c.compute_pearson,
-     "Compute Pearson correlation.");
-
-  corr.add_flag(
-     "--spearman,!--no-spearman",
-     c.compute_spearman,
-     "Compute Spearman rank correlation.");
-
-  ref.add_option("-b,--bin-size",
+  gen.add_option("-b,--bin-size",
      c.bin_size,
      "Bin size in base pairs.\n"
      "Only used when the contact matrix passed to --reference-matrix is in .mcool format.")
      ->check(CLI::PositiveNumber)
      ->transform(utils::str_float_to_str_int);
 
-  ref.add_option(
+  gen.add_option(
      "-w,--diagonal-width",
      c.diagonal_width,
      "Diagonal width to use when computing correlation coefficients.")
      ->check(CLI::PositiveNumber)
      ->transform(utils::str_float_to_str_int)
      ->required();
-     
+
+  gen.add_flag(
+      "--reciprocal-weights",
+      c.reciprocal_weights,
+      "Weights are computed by taking the reciprocal of numbers read from the file specified through --weight-file.")
+      ->capture_default_str();
+
+  gen.add_flag(
+      "--exclude-zero-pixels,!--include-zero-pixels",
+      c.exclude_zero_pxls,
+      "When computing the correlation between a pair of rows/columns of pixels, exclude bins corresponding to pixels that are 0 in either of the rows or columns.")
+      ->capture_default_str();
+
   gen.add_option(
      "-t,--threads",
      c.nthreads,
@@ -171,6 +155,8 @@ corr.add_flag(
      ->transform(CLI::Bound(1U, std::thread::hardware_concurrency()));
 
   // clang-format on
+  gen.get_option("--reciprocal-weights")->needs(io.get_option("--weight-file"));
+  gen.get_option("--weight-column-name")->needs(io.get_option("--weight-file"));
   this->_config = absl::monostate{};
 }
 
@@ -589,27 +575,45 @@ void Cli::validate_eval_subcommand() const {
     }
   }
 
-  if (c.compute_pearson + c.compute_spearman + c.compute_eucl_dist + c.compute_rmse == 0) {
-    errors.emplace_back(
-        "At least one of --eucl-dist, --pearson, --rmse or --spearman should be specified");
+  if (c.metric == eval_config::metrics::custom) {
+    const auto& io_group = *this->_cli.get_subcommand("eval")->get_option_group("Input/Output");
+    const auto& gen_group = *this->_cli.get_subcommand("eval")->get_option_group("Generic");
+
+    constexpr std::array<std::string_view, 4> gen_option_names{
+        "--weight-column-name", "--reciprocal-weights", "--exclude-zero-pixels", "--normalize"};
+
+    if (const auto* name = "--weight-file"; !io_group.get_option(name)->empty()) {
+      errors.emplace_back(fmt::format(FMT_STRING("{} is not allowed when --metric=custom."), name));
+    }
+
+    for (const auto& name : gen_option_names) {
+      if (!gen_group.get_option(std::string{name})->empty()) {
+        errors.emplace_back(
+            fmt::format(FMT_STRING("{} is not allowed when --metric=custom."), name));
+      }
+    }
   }
 
   if (!c.force) {
     constexpr std::array<std::string_view, 2> stripe_directions{"horizontal", "vertical"};
-    constexpr std::array<std::string_view, 4> metrics{"eucl_dist", "pearson", "rmse", "spearman"};
-    constexpr std::array<std::string_view, 1> extensions{"bw"};
+    constexpr std::array<std::string_view, 2> extensions{"bw", "tsv.gz"};
 
     std::vector<std::string> name_collisions;
-    for (const auto metric : metrics) {
-      for (const auto direction : stripe_directions) {
-        for (const auto extension : extensions) {
-          const boost::filesystem::path fname = fmt::format(
-              FMT_STRING("{}_{}_{}.{}"), c.output_prefix.string(), metric, direction, extension);
-          auto collision =
-              utils::detect_path_collision(fname, c.force, boost::filesystem::regular_file);
-          if (!collision.empty()) {
-            name_collisions.emplace_back(std::move(collision));
-          }
+    const auto metric_name = [&]() {
+      const auto* it = std::find_if(eval_config::metric_map.begin(), eval_config::metric_map.end(),
+                                    [&](const auto p) { return p.second == c.metric; });
+      assert(it != eval_config::metric_map.end());  // NOLINT
+      return it->first;
+    }();
+
+    for (const auto direction : stripe_directions) {
+      for (const auto extension : extensions) {
+        const boost::filesystem::path fname = fmt::format(
+            FMT_STRING("{}_{}_{}.{}"), c.output_prefix.string(), metric_name, direction, extension);
+        auto collision =
+            utils::detect_path_collision(fname, c.force, boost::filesystem::regular_file);
+        if (!collision.empty()) {
+          name_collisions.emplace_back(std::move(collision));
         }
       }
     }

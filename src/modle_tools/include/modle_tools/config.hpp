@@ -26,13 +26,21 @@ struct eval_config {  // NOLINT
   boost::filesystem::path path_to_chrom_subranges;
   boost::filesystem::path path_to_weights;
   bool force{false};
-  bool normalize{true};
+  bool normalize{false};
 
-  // Correlation methods
-  bool compute_eucl_dist{true};
-  bool compute_pearson{false};
-  bool compute_rmse{false};
-  bool compute_spearman{false};
+  // Metrics
+  enum class metrics : std::uint_fast8_t { custom, eucl_dist, pearson, rmse, spearman };
+  metrics metric{metrics::custom};
+
+  inline static const std::array<std::pair<std::string, metrics>, 5> metric_map{
+      // clang-format off
+      std::make_pair("custom", metrics::custom),
+      std::make_pair("eucl_dist", metrics::eucl_dist),
+      std::make_pair("pearson", metrics::pearson),
+      std::make_pair("rmse", metrics::rmse),
+      std::make_pair("spearman", metrics::spearman),
+      // clang-format on
+  };
 
   // Reference contacts
   usize bin_size{0};
