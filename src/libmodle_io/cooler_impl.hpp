@@ -381,7 +381,7 @@ std::unique_ptr<H5::H5File> Cooler<N>::open_file(const boost::filesystem::path &
                                                  usize bin_size,
                                                  [[maybe_unused]] usize max_str_length,
                                                  FLAVOR flavor, bool validate) {
-  assert(boost::filesystem::is_directory(path.parent_path()));  // NOLINT
+  assert(!path.has_parent_path() || boost::filesystem::is_directory(path.parent_path()));  // NOLINT
   if constexpr (utils::ndebug_not_defined()) {
     if (mode == IO_MODE::WRITE_ONLY) {
       if (bin_size == 0) {

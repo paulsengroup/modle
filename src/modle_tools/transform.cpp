@@ -193,7 +193,9 @@ static void write_contacts_to_file(const modle::tools::transform_config& c, std:
     }();
 
     assert(c.force || !boost::filesystem::exists(c.path_to_output_matrix));  // NOLINT
-    boost::filesystem::create_directories(c.path_to_output_matrix.parent_path());
+    if (c.path_to_output_matrix.has_parent_path()) {
+      boost::filesystem::create_directories(c.path_to_output_matrix.parent_path());
+    }
     auto cooler_variant = [&]() {
       std::scoped_lock<std::mutex> lck(cooler_mtx);
       using CoolerV = absl::variant<cooler::Cooler<double>, cooler::Cooler<i32>>;
