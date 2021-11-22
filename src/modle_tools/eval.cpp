@@ -12,6 +12,7 @@
 #include <absl/time/time.h>                     // for FormatDuration, operator-, Time
 #include <absl/types/span.h>                    // for MakeSpan
 #include <cpp-sort/comparators/natural_less.h>  // for natural_less_t
+#include <fmt/compile.h>                        // for FMT_COMPILE
 #include <fmt/format.h>                         // for format, make_format_args, vformat_to, FMT...
 #include <fmt/ostream.h>                        // for formatbuf<>::int_type
 #include <spdlog/spdlog.h>                      // for info
@@ -265,8 +266,8 @@ static size_t mask_zero_pixels(const std::vector<N> &v1, const std::vector<N> &v
 }
 
 template <class N>
-static double compute_custom_metric(const std::vector<N> &ref_pixels,
-                                    const std::vector<N> &tgt_pixels) {
+[[nodiscard]] static auto compute_custom_metric(const std::vector<N> &ref_pixels,
+                                                const std::vector<N> &tgt_pixels) {
   assert(ref_pixels.size() == tgt_pixels.size());           // NOLINT
   assert(std::all_of(ref_pixels.begin(), ref_pixels.end(),  // NOLINT
                      [&](const auto n) { return n == 0 || n == 1; }));
@@ -295,11 +296,25 @@ static double compute_custom_metric(const std::vector<N> &ref_pixels,
   for (auto i = i0; i != i1; ++i) {  // Count mismatches of pixels between i0 and i1
     score += ref_pixels[i] != tgt_pixels[i];
   }
-  return static_cast<double>(score);
+
+  struct CustomMetric {
+    double misclassified_pixels;
+    double pixels_considered;
+  };
+
+  const auto abs_num_of_misclassified_pixels = static_cast<double>(score);
+  const auto rel_fraction_of_correctly_classified_pixels =
+      static_cast<double>((i1 - i0) - score) / static_cast<double>(i1 - i0);
+  return CustomMetric{abs_num_of_misclassified_pixels, rel_fraction_of_correctly_classified_pixels};
 }
 
+struct MetricsBuff {
+  std::vector<double> metric1;
+  std::vector<double> metric2;
+};
+
 template <StripeDirection stripe_direction, class N, class WeightIt = utils::RepeatIterator<double>>
-static std::vector<double> compute_metric(
+[[nodiscard]] static auto compute_metric(
     const enum eval_config::Metric metric, std::shared_ptr<ContactMatrix<N>> ref_contacts,
     std::shared_ptr<ContactMatrix<N>> tgt_contacts, const bool mask_zero_pixels_,
     [[maybe_unused]] WeightIt weight_first = utils::RepeatIterator<double>(1)) {
@@ -315,37 +330,56 @@ static std::vector<double> compute_metric(
     std::copy_n(weight_first, nrows, weight_buff.begin());
   }
 
-  std::vector<double> score_buff(ncols, 0.0);
+  MetricsBuff score_buff;
+  score_buff.metric1.resize(ncols, 0.0);
+  score_buff.metric2.resize(ncols, 0.0);
+
+  // The scoring functions used down below either return a single double or a struct with two fields
+  // with different names. This lambda uses structure binding to convert structs with two fields
+  // into a pair.
+  // If val is of fundamental type (e.g. double), then this function returns a pair of val and 0
+  auto marshall_metric = [](const auto val) {
+    using T = decltype(val);
+    if constexpr (std::is_fundamental_v<T>) {
+      return std::make_pair(val, static_cast<T>(0));
+    } else {
+      const auto [a, b] = val;
+      return std::make_pair(a, b);
+    }
+  };
 
   auto compute_metric_once = [&]() {
     using m = eval_config::Metric;
     switch (metric) {
       case m::custom:
-        return compute_custom_metric(ref_pixel_buff, tgt_pixel_buff);
+        return marshall_metric(compute_custom_metric(ref_pixel_buff, tgt_pixel_buff));
 
       case m::eucl_dist:
-        if (weight_buff.empty()) {
-          return stats::sed(ref_pixel_buff.begin(), ref_pixel_buff.end(), tgt_pixel_buff.begin());
-        }
-        return stats::weighted_sed(ref_pixel_buff.begin(), ref_pixel_buff.end(),
-                                   tgt_pixel_buff.begin(), weight_buff.begin());
+        return marshall_metric(
+            weight_buff.empty()
+                ? stats::sed(ref_pixel_buff.begin(), ref_pixel_buff.end(), tgt_pixel_buff.begin())
+                : stats::weighted_sed(ref_pixel_buff.begin(), ref_pixel_buff.end(),
+                                      tgt_pixel_buff.begin(), weight_buff.begin()));
+
       case m::pearson:
-        if (weight_buff.empty()) {
-          return stats::Pearson<double>{}(ref_pixel_buff, tgt_pixel_buff).pcc;
-        }
-        return stats::Pearson<double>{}(ref_pixel_buff, tgt_pixel_buff, weight_buff).pcc;
+        return marshall_metric(
+            weight_buff.empty() ? stats::Pearson<double>{}(ref_pixel_buff, tgt_pixel_buff) :
+
+                                stats::Pearson<double>{}(ref_pixel_buff, tgt_pixel_buff,
+                                                         weight_buff));
 
       case m::rmse:
-        if (weight_buff.empty()) {
-          return stats::rmse(ref_pixel_buff.begin(), ref_pixel_buff.end(), tgt_pixel_buff.begin());
-        }
-        return stats::weighted_rmse(ref_pixel_buff.begin(), ref_pixel_buff.end(),
-                                    tgt_pixel_buff.begin(), weight_buff.begin());
+        return marshall_metric(
+            weight_buff.empty()
+                ? stats::rmse(ref_pixel_buff.begin(), ref_pixel_buff.end(), tgt_pixel_buff.begin())
+                : stats::weighted_rmse(ref_pixel_buff.begin(), ref_pixel_buff.end(),
+                                       tgt_pixel_buff.begin(), weight_buff.begin()));
+
       case m::spearman:
-        if (weight_buff.empty()) {
-          return stats::Spearman<double>{nrows}(ref_pixel_buff, tgt_pixel_buff).rho;
-        }
-        return stats::Spearman<double>{nrows}(ref_pixel_buff, tgt_pixel_buff, weight_buff).rho;
+        return marshall_metric(
+            weight_buff.empty()
+                ? stats::Spearman<double>{nrows}(ref_pixel_buff, tgt_pixel_buff)
+                : stats::Spearman<double>{nrows}(ref_pixel_buff, tgt_pixel_buff, weight_buff));
     }
     std::abort();  // Unreachable code
   };
@@ -368,17 +402,19 @@ static std::vector<double> compute_metric(
       mask_zero_pixels(ref_pixel_buff, tgt_pixel_buff, weight_buff);
     }
 
-    score_buff[i] = compute_metric_once();
+    const auto [s1, s2] = compute_metric_once();
+    score_buff.metric1[i] = s1;
+    score_buff.metric2[i] = s2;
   }
   return score_buff;
 }
 
 template <StripeDirection stripe_direction, class N>
-static std::vector<double> compute_metric(const enum eval_config::Metric metric,
-                                          std::shared_ptr<ContactMatrix<N>> ref_contacts,
-                                          std::shared_ptr<ContactMatrix<N>> tgt_contacts,
-                                          const bool mask_zero_pixels_,
-                                          const std::vector<double> &weights) {
+[[nodiscard]] static auto compute_metric(const enum eval_config::Metric metric,
+                                         std::shared_ptr<ContactMatrix<N>> ref_contacts,
+                                         std::shared_ptr<ContactMatrix<N>> tgt_contacts,
+                                         const bool mask_zero_pixels_,
+                                         const std::vector<double> &weights) {
   assert(ref_contacts->nrows() == tgt_contacts->nrows());              // NOLINT
   assert(weights.empty() || ref_contacts->nrows() == weights.size());  // NOLINT
   return compute_metric<stripe_direction>(metric, ref_contacts, tgt_contacts, mask_zero_pixels_,
@@ -387,8 +423,7 @@ static std::vector<double> compute_metric(const enum eval_config::Metric metric,
 
 [[nodiscard]] [[maybe_unused]] static constexpr std::string_view corr_method_to_str(
     const enum eval_config::Metric metric, bool prettify = false) {
-  // GCC 10 builds break if we use "using m = eval_config::Metric;"
-  using m = eval_config::Metric;  // m;
+  using m = eval_config::Metric;
   if (metric == m::custom) {
     return prettify ? "Custom metric" : "custom_metric";  // NOLINT
   }
@@ -420,31 +455,69 @@ static std::vector<double> compute_metric(const enum eval_config::Metric metric,
   std::abort();
 }
 
-[[nodiscard]] static absl::flat_hash_map<StripeDirection, io::bigwig::Writer> init_bwigs(
-    const modle::tools::eval_config &c, const ChromSet &chroms, const bool weighted) {
+[[nodiscard]] static auto init_writers(const modle::tools::eval_config &c, const ChromSet &chroms,
+                                       const bool weighted) {
   std::vector<std::pair<std::string, usize>> chrom_vect(static_cast<usize>(chroms.size()));
   std::transform(chroms.begin(), chroms.end(), chrom_vect.begin(), [](const auto &chrom) {
     return std::make_pair(chrom.first, chrom.second.second);
   });
 
-  absl::flat_hash_map<StripeDirection, io::bigwig::Writer> bwigs;
+  struct OutputWriters {
+    std::unique_ptr<io::bigwig::Writer> bwig{nullptr};
+    std::unique_ptr<compressed_io::Writer> tsv_gz{nullptr};
+  };
+
+  absl::flat_hash_map<StripeDirection, OutputWriters> files;
+
+  auto write_tsv_header = [&](auto it) {
+    switch (c.metric) {
+      case eval_config::Metric::custom:
+        it.first->second.tsv_gz->write(
+            "chrom\tchrom_start\tchrom_end\tabsolute_number_of_misclassified_"
+            "pixels\trelative_fraction_of_correctly_classified_pixels\tscore\n");
+        break;
+      case eval_config::Metric::eucl_dist:
+        [[fallthrough]];
+      case eval_config::Metric::rmse:
+        it.first->second.tsv_gz->write("chrom\tchrom_start\tchrom_end\tscore\n");
+        break;
+      case eval_config::Metric::spearman:
+        [[fallthrough]];
+      case eval_config::Metric::pearson:
+        it.first->second.tsv_gz->write(
+            "chrom\tchrom_start\tchrom_end\tcorrelation\tsignificance\n");
+    }
+  };
 
   const auto name = corr_method_to_str(c.metric);
-  bwigs.emplace(StripeDirection::vertical,
-                create_bwig_file(chrom_vect, c.output_prefix.string(),
-                                 fmt::format(FMT_STRING("{}{}_vertical.bw"), name,
-                                             weighted ? "_weighted" : "")));
-  bwigs.emplace(StripeDirection::horizontal,
-                create_bwig_file(chrom_vect, c.output_prefix.string(),
-                                 fmt::format(FMT_STRING("{}{}_horizontal.bw"), name,
-                                             weighted ? "_weighted" : "")));
+  const auto bname1 = fmt::format(FMT_STRING("{}{}_vertical"), name, weighted ? "_weighted" : "");
+  const auto bname2 = fmt::format(FMT_STRING("{}{}_horizontal"), name, weighted ? "_weighted" : "");
+  auto it = files.emplace(
+      StripeDirection::vertical,
+      OutputWriters{
+          // clang-format off
+          std::make_unique<io::bigwig::Writer>(create_bwig_file(chrom_vect, c.output_prefix.string(), fmt::format(FMT_STRING("{}.bw"), bname1))),
+          std::make_unique<compressed_io::Writer>(fmt::format(FMT_STRING("{}_{}.tsv.gz"), c.output_prefix.string(), bname1))
+          // clang-format on
+      });
+  write_tsv_header(it);
 
-  return bwigs;
+  it = files.emplace(
+      StripeDirection::horizontal,
+      OutputWriters{
+          // clang-format off
+          std::make_unique<io::bigwig::Writer>(create_bwig_file(chrom_vect, c.output_prefix.string(), fmt::format(FMT_STRING("{}.bw"), bname2))),
+          std::make_unique<compressed_io::Writer>(fmt::format(FMT_STRING("{}_{}.bed.gz"), c.output_prefix.string(), bname2))
+          // clang-format on
+      });
+  write_tsv_header(it);
+
+  return files;
 }
 
-template <StripeDirection stripe_direction, class N>
+template <StripeDirection stripe_direction, class Writers, class N>
 static void run_task(const enum eval_config::Metric metric, const std::string &chrom_name,
-                     absl::flat_hash_map<StripeDirection, io::bigwig::Writer> &bwigs,
+                     const std::pair<usize, usize> chrom_range, Writers &writers,
                      std::shared_ptr<ContactMatrix<N>> &ref_contacts,
                      std::shared_ptr<ContactMatrix<N>> &tgt_contacts,
                      const bool exclude_zero_pixels, const usize bin_size,
@@ -463,10 +536,42 @@ static void run_task(const enum eval_config::Metric metric, const std::string &c
                  absl::AsciiStrToLower(direction_to_str(stripe_direction)), chrom_name,
                  absl::FormatDuration(absl::Now() - t0));
     t0 = absl::Now();
-    auto &bw = bwigs.at(stripe_direction);
-    bw.write_range(chrom_name, absl::MakeSpan(metrics), bin_size, bin_size);
-    spdlog::info(FMT_STRING("{} values have been written to file {} in {}."), metrics.size(),
-                 bw.path(), absl::FormatDuration(absl::Now() - t0));
+    auto &[bw, bed_gz] = writers.at(stripe_direction);
+    bw->write_range(chrom_name, absl::MakeSpan(metrics.metric1), bin_size, bin_size);
+    const auto [chrom_start, chrom_end] = chrom_range;
+    std::string buff;
+    auto format_tsv_record = [&](const std::string_view chrom_name_, const auto start_pos,
+                                 const auto end_pos, const auto score1, const auto score2) {
+      switch (metric) {
+        case eval_config::Metric::eucl_dist:
+          [[fallthrough]];
+        case eval_config::Metric::rmse:
+          assert(score2 == 0.0);  // NOLINT
+          return fmt::format(FMT_COMPILE("{}\t{}\t{}\t{}\n"), chrom_name_, start_pos, end_pos,
+                             score1);
+          break;
+        case eval_config::Metric::spearman:
+          [[fallthrough]];
+        case eval_config::Metric::pearson:
+          [[fallthrough]];
+        case eval_config::Metric::custom: {
+          return fmt::format(FMT_COMPILE("{}\t{}\t{}\t{}\t{}\n"), chrom_name_, start_pos, end_pos,
+                             score1, score2);
+        }
+      }
+      std::abort();  // Unreachable code
+    };
+
+    for (usize i = 0; i < metrics.metric1.size(); ++i) {
+      const auto start_pos = chrom_start + (bin_size * i);
+      const auto end_pos = std::min(start_pos + bin_size, chrom_end);
+      buff =
+          format_tsv_record(chrom_name, start_pos, end_pos, metrics.metric1[i], metrics.metric2[i]);
+      bed_gz->write(buff);
+    }
+    spdlog::info(FMT_STRING("{} values have been written to files \"{}.{{tsv.gz,bw}}\" in {}."),
+                 metrics.metric1.size(), bw->path().stem().string(),
+                 absl::FormatDuration(absl::Now() - t0));
   } catch (const std::exception &e) {
     throw std::runtime_error(fmt::format(
         FMT_STRING("The following error occurred while computing {} on {} stripes for {}: {}"),
@@ -520,7 +625,7 @@ void eval_subcmd(const modle::tools::eval_config &c) {
     boost::filesystem::create_directories(output_dir.string());
   }
 
-  auto bwigs = init_bwigs(c, chromosomes, !weights.empty());
+  auto writers = init_writers(c, chromosomes, !weights.empty());
 
   const auto nrows = (c.diagonal_width + bin_size - 1) / bin_size;
   assert(nrows != 0);  // NOLINT
@@ -566,12 +671,12 @@ void eval_subcmd(const modle::tools::eval_config &c) {
     }
 
     using d = StripeDirection;
-    return_codes[0] = tpool.submit([&]() {
-      run_task<d::horizontal>(c.metric, chrom_name, bwigs, ref_contacts, tgt_contacts,
-                              c.exclude_zero_pxls, bin_size, weights);
+    return_codes[0] = tpool.submit([&, chrom_range = chrom_range]() {
+      run_task<d::horizontal>(c.metric, chrom_name, chrom_range, writers, ref_contacts,
+                              tgt_contacts, c.exclude_zero_pxls, bin_size, weights);
     });
-    return_codes[1] = tpool.submit([&]() {
-      run_task<d::vertical>(c.metric, chrom_name, bwigs, ref_contacts, tgt_contacts,
+    return_codes[1] = tpool.submit([&, chrom_range = chrom_range]() {
+      run_task<d::vertical>(c.metric, chrom_name, chrom_range, writers, ref_contacts, tgt_contacts,
                             c.exclude_zero_pxls, bin_size, weights);
     });
     tpool.wait_for_tasks();
