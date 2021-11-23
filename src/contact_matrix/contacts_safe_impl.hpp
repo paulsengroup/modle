@@ -258,6 +258,11 @@ ContactMatrix<M> ContactMatrix<N>::as() const {
   return this->as<M>();
 }
 
+template <class N>
+bool ContactMatrix<N>::empty() const {
+  return this->get_tot_contacts() == 0;
+}
+
 }  // namespace modle
 
 // IWYU pragma: private, include "modle/contacts.hpp"

@@ -166,11 +166,6 @@ void ContactMatrix<N>::clear_missed_updates_counter() {
 }
 
 template <class N>
-bool ContactMatrix<N>::empty() const {
-  return this->get_tot_contacts() == 0;
-}
-
-template <class N>
 absl::Span<const N> ContactMatrix<N>::get_raw_count_vector() const {
   return absl::MakeConstSpan(this->_contacts);
 }

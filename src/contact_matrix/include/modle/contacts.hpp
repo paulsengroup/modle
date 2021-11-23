@@ -138,6 +138,7 @@ class ContactMatrix {
   inline void unsafe_resize(usize nrows, usize ncols);
   inline void unsafe_resize(bp_t length, bp_t diagonal_width, bp_t bin_size);
   [[nodiscard]] inline bool empty() const;
+  [[nodiscard]] inline bool unsafe_empty() const;
   [[nodiscard]] inline absl::Span<const N> get_raw_count_vector() const;
   [[nodiscard]] inline absl::Span<N> get_raw_count_vector();
   inline void unsafe_compute_row_wise_contact_histogram(std::vector<u64>& buff) const;

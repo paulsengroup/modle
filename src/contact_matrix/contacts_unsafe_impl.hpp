@@ -485,7 +485,7 @@ void ContactMatrix<N>::unsafe_normalize(const ContactMatrix<N> &input_matrix,
   // The unsafe resize takes care of the case where &input_matrix == &output_matrix
   output_matrix.unsafe_resize(input_matrix.nrows(), input_matrix.ncols());
 
-  if (input_matrix.empty()) {
+  if (input_matrix.unsafe_empty()) {
     if (&input_matrix == &output_matrix) {
       return;
     }
@@ -604,6 +604,11 @@ ContactMatrix<M> ContactMatrix<N>::unsafe_as() const {
                  });
   m._tot_contats_outdated = true;
   m._updates_missed = this->_updates_missed.load();
+}
+
+template <class N>
+bool ContactMatrix<N>::unsafe_empty() const {
+  return this->unsafe_get_tot_contacts() == 0;
 }
 
 }  // namespace modle
