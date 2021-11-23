@@ -456,7 +456,7 @@ void Cli::make_transform_subcommand() {
       c.method,
       "Transformation method to apply to the input contact matrix.")
       ->transform(CLI::CheckedTransformer(transform_config::transformation_map, CLI::ignore_case))
-      ->capture_default_str();
+      ->required();
 
   trans.add_option(
       "--normalization-range",

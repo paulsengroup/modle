@@ -15,7 +15,8 @@
 #include <cpp-sort/comparators/natural_less.h>  // for natural_less_t
 #include <fmt/format.h>                         // for format, make_format_args, vformat_to, FMT...
 #include <fmt/ostream.h>                        // for formatbuf<>::int_type
-#include <spdlog/spdlog.h>                      // for info
+#include <readerwriterqueue/readerwriterqueue.h>
+#include <spdlog/spdlog.h>  // for info
 
 #include <algorithm>                        // for transform, max
 #include <boost/filesystem/operations.hpp>  // for create_directories
@@ -138,18 +139,15 @@ template <class N>
   return m.gaussian_diff(sigma1, sigma2, lower_bound_sat, upper_bound_sat, &tpool);
 }
 
-using ContactMatrixVariant = absl::variant<ContactMatrix<double>, ContactMatrix<i32>>;
 template <class N>
-[[nodiscard]] static ContactMatrixVariant process_chromosome(
+[[nodiscard]] static ContactMatrix<double> process_chromosome(
     thread_pool& tpool, const std::string_view chrom_name, const bp_t bin_size,
-    cooler::Cooler<N>& cooler, std::mutex& cooler_mtx, const modle::tools::transform_config& c,
+    cooler::Cooler<N>& cooler, const modle::tools::transform_config& c,
     const modle::IITree<double, double>& discretization_ranges) {
   auto t1 = absl::Now();
   spdlog::info(FMT_STRING("Processing contacts for {}..."), chrom_name);
   auto matrix = [&, chrom_name = chrom_name]() {
-    std::unique_lock<std::mutex> lck(cooler_mtx);
     auto m = cooler.cooler_to_cmatrix(chrom_name, c.diagonal_width, bin_size);
-    lck.unlock();
     using t = transform_config::Transformation;
     switch (c.method) {
       case t::normalize:
@@ -171,92 +169,7 @@ template <class N>
 
   spdlog::info(FMT_STRING("{} processing took {}"), chrom_name,
                absl::FormatDuration(absl::Now() - t1));
-  if (c.floating_point) {
-    return matrix;
-  }
-  return matrix.template as<i32>();
-}
-
-static void write_contacts_to_file(const modle::tools::transform_config& c, std::mutex& cooler_mtx,
-                                   const bp_t bin_size,
-                                   std::deque<std::future<ContactMatrixVariant>>& matrix_queue,
-                                   std::mutex& matrix_queue_mtx,
-                                   const std::vector<std::pair<std::string, bp_t>>& chroms) {
-  assert(bin_size != 0);  // NOLINT
-  usize i = 0;
-  try {
-    const auto max_chrom_name_size = [&]() {
-      const auto it = std::max_element(
-          chroms.begin(), chroms.end(),
-          [](const auto& c1, const auto& c2) { return c1.first.size() < c2.first.size(); });
-      return it->first.size();
-    }();
-
-    assert(c.force || !boost::filesystem::exists(c.path_to_output_matrix));  // NOLINT
-    if (c.path_to_output_matrix.has_parent_path()) {
-      boost::filesystem::create_directories(c.path_to_output_matrix.parent_path());
-    }
-    auto cooler_variant = [&]() {
-      std::scoped_lock<std::mutex> lck(cooler_mtx);
-      using CoolerV = absl::variant<cooler::Cooler<double>, cooler::Cooler<i32>>;
-      if (c.floating_point) {
-        return CoolerV(absl::in_place_type<cooler::Cooler<double>>, c.path_to_output_matrix,
-                       cooler::Cooler<double>::IO_MODE::WRITE_ONLY, bin_size, max_chrom_name_size);
-      }
-      return CoolerV(absl::in_place_type<cooler::Cooler<i32>>, c.path_to_output_matrix,
-                     cooler::Cooler<i32>::IO_MODE::WRITE_ONLY, bin_size, max_chrom_name_size);
-    }();
-
-    while (true) {
-      const auto queue_is_empty = [&]() {
-        std::scoped_lock<std::mutex> lck(matrix_queue_mtx);
-        return matrix_queue.empty();
-      }();
-
-      if (queue_is_empty) {
-        // NOLINTNEXTLINE(readability-magic-numbers, cppcoreguidelines-avoid-magic-numbers)
-        std::this_thread::sleep_for(std::chrono::milliseconds(50));
-        continue;
-      }
-
-      const auto matrix_variant = [&]() {
-        // Wait for the next matrix to become available. Also catch exceptions from other worker
-        // threads
-        auto m = matrix_queue.front().get();
-        std::scoped_lock<std::mutex> lck(matrix_queue_mtx);
-        matrix_queue.pop_front();
-        return m;
-      }();
-
-      const auto& [chrom_name, chrom_size] = chroms[i];
-      if (c.floating_point) {
-        using M = double;
-        const auto& matrix = absl::get<ContactMatrix<M>>(matrix_variant);
-        if (matrix.empty()) {  // EOQ signal
-          return;
-        }
-        auto& cooler = absl::get<cooler::Cooler<M>>(cooler_variant);
-        std::scoped_lock<std::mutex> lck(cooler_mtx);
-        cooler.write_or_append_cmatrix_to_file(matrix, chrom_name, usize(0), chrom_size,
-                                               chrom_size);
-      } else {
-        using M = i32;
-        const auto& matrix = absl::get<ContactMatrix<M>>(matrix_variant);
-        if (matrix.empty()) {  // EOQ signal
-          return;
-        }
-        auto& cooler = absl::get<cooler::Cooler<M>>(cooler_variant);
-        std::scoped_lock<std::mutex> lck(cooler_mtx);
-        cooler.write_or_append_cmatrix_to_file(matrix, chrom_name, usize(0), chrom_size,
-                                               chrom_size);
-      }
-      ++i;
-    }
-  } catch (const std::exception& e) {
-    throw std::runtime_error(fmt::format(
-        FMT_STRING("The following error occurred while writing contacts for {} to file {}: {}"),
-        chroms[i].first, c.path_to_output_matrix, e.what()));
-  }
+  return matrix;
 }
 
 void transform_subcmd(const modle::tools::transform_config& c) {
@@ -272,56 +185,45 @@ void transform_subcmd(const modle::tools::transform_config& c) {
   }();
 
   // The underlying HDF5 API is not yet thread safe, so we need to use this global mutex
-  std::mutex input_cooler_mtx;  // Protect access to input and output coolers
-  // std::mutex output_cooler_mtx;  // Protect access to input and output coolers
   auto input_cooler = cooler::Cooler<double>(
       c.path_to_input_matrix, cooler::Cooler<double>::IO_MODE::READ_ONLY, c.bin_size);
   const auto chroms = input_cooler.get_chroms();
   const auto bin_size = input_cooler.get_bin_size();
+  const auto max_chrom_name_size = [&]() {
+    const auto it = std::max_element(
+        chroms.begin(), chroms.end(),
+        [](const auto& c1, const auto& c2) { return c1.first.size() < c2.first.size(); });
+    return it->first.size();
+  }();
 
-  thread_pool tpool(std::max(c.nthreads, usize(2)));
+  std::unique_ptr<cooler::Cooler<double>> cooler_dbl{nullptr};
+  std::unique_ptr<cooler::Cooler<i32>> cooler_int{nullptr};
+  if (c.floating_point) {
+    using CoolerT = cooler::Cooler<double>;
+    cooler_dbl = std::make_unique<CoolerT>(c.path_to_output_matrix, CoolerT::IO_MODE::WRITE_ONLY,
+                                           bin_size, max_chrom_name_size);
+  } else {
+    using CoolerT = cooler::Cooler<i32>;
+    cooler_int = std::make_unique<CoolerT>(c.path_to_output_matrix, CoolerT::IO_MODE::WRITE_ONLY,
+                                           bin_size, max_chrom_name_size);
+  }
 
-  std::mutex output_matrices_mtx;
-  std::deque<std::future<ContactMatrixVariant>> output_matrices;
-
-  // TODO rewrite this part using a conditional variable.
-  auto writer_return_code = tpool.submit([&]() {
-    write_contacts_to_file(c, input_cooler_mtx, bin_size, output_matrices, output_matrices_mtx,
-                           chroms);
-  });
+  thread_pool tpool(c.nthreads);
 
   const auto t0 = absl::Now();
   spdlog::info(FMT_STRING("Transforming contacts from file {}..."), input_cooler.get_path());
-  for (usize i = 0; i < chroms.size(); ++i) {
-    /*
-    auto result_fut = tpool.submit([&, chrom_name = chroms[i].first]() -> ContactMatrixVariant {
-      try {
-        return process_chromosome(tpool, chrom_name, bin_size, input_cooler, input_cooler_mtx, c,
-                                  discretization_ranges);
-      } catch (const std::exception& e) {
-        throw std::runtime_error(
-            fmt::format(FMT_STRING("The following error occurred while processing {}: {}"),
-                        chrom_name, e.what()));
-      }
-    });
-     */
-    auto result_fut =
-        utils::make_ready_future(process_chromosome(tpool, chroms[i].first, bin_size, input_cooler,
-                                                    input_cooler_mtx, c, discretization_ranges));
-    std::scoped_lock<std::mutex> lck(output_matrices_mtx);
-    output_matrices.emplace_back(std::move(result_fut));
-  }
-
-  {  // Signal EOQ
-    ContactMatrixVariant eoq;
+  for (const auto& [chrom_name, chrom_size] : chroms) {
+    const auto matrix_dbl =
+        process_chromosome(tpool, chrom_name, bin_size, input_cooler, c, discretization_ranges);
     if (c.floating_point) {
-      eoq = ContactMatrix<double>{};
+      assert(cooler_dbl);  // NOLINT
+      cooler_dbl->write_or_append_cmatrix_to_file(matrix_dbl, chrom_name, usize(0), chrom_size,
+                                                  chrom_size);
     } else {
-      eoq = ContactMatrix<i32>{};
+      assert(cooler_int);  // NOLINT
+      cooler_int->write_or_append_cmatrix_to_file(matrix_dbl.as<i32>(), chrom_name, usize(0),
+                                                  chrom_size, chrom_size);
     }
-    auto fut = utils::make_ready_future(std::move(eoq));
-    std::scoped_lock<std::mutex> lck(output_matrices_mtx);
-    output_matrices.emplace_back(std::move(fut));
   }
 
   tpool.wait_for_tasks();
