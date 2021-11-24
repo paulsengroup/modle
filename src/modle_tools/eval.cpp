@@ -291,21 +291,17 @@ template <class N>
   const auto [i0, i1] =
       std::minmax({non_zero_backward_search(ref_pixels), non_zero_backward_search(tgt_pixels)});
 
-  assert(i0 <= i1);  // NOLINT
   usize score = 0;
   for (auto i = i0; i != i1; ++i) {  // Count mismatches of pixels between i0 and i1
     score += ref_pixels[i] != tgt_pixels[i];
   }
 
   struct CustomMetric {
-    double misclassified_pixels;
-    double pixels_considered;
+    double correctly_classified_pixels;
+    double incorrectly_classified_pixels;
   };
 
-  const auto abs_num_of_misclassified_pixels = static_cast<double>(score);
-  const auto rel_fraction_of_correctly_classified_pixels =
-      static_cast<double>((i1 - i0) - score) / static_cast<double>(i1 - i0);
-  return CustomMetric{abs_num_of_misclassified_pixels, rel_fraction_of_correctly_classified_pixels};
+  return CustomMetric{static_cast<double>(i1 - i0 - score), static_cast<double>(score)};
 }
 
 struct MetricsBuff {
@@ -492,8 +488,8 @@ template <StripeDirection stripe_direction, class N>
   switch (c.metric) {
     case eval_config::Metric::custom: {
       constexpr std::string_view header =
-          "chrom\tchrom_start\tchrom_end\tabsolute_number_of_misclassified_pixels\trelative_"
-          "fraction_of_correctly_classified_pixels\tscore\n";
+          "chrom\tchrom_start\tchrom_end\tcorrectly_classified_pixels\tincorrectly_classified_"
+          "pixels\n";
       writers.horizontal.tsv_gz->write(header);
       writers.vertical.tsv_gz->write(header);
       break;
