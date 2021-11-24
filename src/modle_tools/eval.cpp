@@ -268,11 +268,11 @@ static size_t mask_zero_pixels(const std::vector<N> &v1, const std::vector<N> &v
 template <class N>
 [[nodiscard]] static auto compute_custom_metric(const std::vector<N> &ref_pixels,
                                                 const std::vector<N> &tgt_pixels) {
-  assert(ref_pixels.size() == tgt_pixels.size());           // NOLINT
-  assert(std::all_of(ref_pixels.begin(), ref_pixels.end(),  // NOLINT
-                     [&](const auto n) { return n == 0 || n == 1; }));
-  assert(std::all_of(tgt_pixels.begin(), tgt_pixels.end(),  // NOLINT
-                     [&](const auto n) { return n == 0 || n == 1; }));
+  assert(ref_pixels.size() == tgt_pixels.size());  // NOLINT
+  // assert(std::all_of(ref_pixels.begin(), ref_pixels.end(),  // NOLINT
+  //                    [&](const auto n) { return n == 0 || n == 1; }));
+  // assert(std::all_of(tgt_pixels.begin(), tgt_pixels.end(),  // NOLINT
+  //                    [&](const auto n) { return n == 0 || n == 1; }));
 
   // Do a backward search for the first non-zero pixel
   auto non_zero_backward_search = [](const auto &vect) -> usize {
@@ -462,57 +462,61 @@ template <StripeDirection stripe_direction, class N>
     return std::make_pair(chrom.first, chrom.second.second);
   });
 
-  struct OutputWriters {
-    std::unique_ptr<io::bigwig::Writer> bwig{nullptr};
-    std::unique_ptr<compressed_io::Writer> tsv_gz{nullptr};
-  };
-
-  absl::flat_hash_map<StripeDirection, OutputWriters> files;
-
-  auto write_tsv_header = [&](auto it) {
-    switch (c.metric) {
-      case eval_config::Metric::custom:
-        it.first->second.tsv_gz->write(
-            "chrom\tchrom_start\tchrom_end\tabsolute_number_of_misclassified_"
-            "pixels\trelative_fraction_of_correctly_classified_pixels\tscore\n");
-        break;
-      case eval_config::Metric::eucl_dist:
-        [[fallthrough]];
-      case eval_config::Metric::rmse:
-        it.first->second.tsv_gz->write("chrom\tchrom_start\tchrom_end\tscore\n");
-        break;
-      case eval_config::Metric::spearman:
-        [[fallthrough]];
-      case eval_config::Metric::pearson:
-        it.first->second.tsv_gz->write(
-            "chrom\tchrom_start\tchrom_end\tcorrelation\tsignificance\n");
-    }
-  };
-
   const auto name = corr_method_to_str(c.metric);
   const auto bname1 = fmt::format(FMT_STRING("{}{}_vertical"), name, weighted ? "_weighted" : "");
   const auto bname2 = fmt::format(FMT_STRING("{}{}_horizontal"), name, weighted ? "_weighted" : "");
-  auto it = files.emplace(
-      StripeDirection::vertical,
-      OutputWriters{
-          // clang-format off
+
+  struct Writer {
+    struct InternalWriterPair {
+      std::unique_ptr<io::bigwig::Writer> bwig{nullptr};
+      std::unique_ptr<compressed_io::Writer> tsv_gz{nullptr};
+    };
+    InternalWriterPair horizontal;
+    InternalWriterPair vertical;
+  };
+
+  Writer writers;
+  writers.vertical = Writer::InternalWriterPair{
+      // clang-format off
           std::make_unique<io::bigwig::Writer>(create_bwig_file(chrom_vect, c.output_prefix.string(), fmt::format(FMT_STRING("{}.bw"), bname1))),
           std::make_unique<compressed_io::Writer>(fmt::format(FMT_STRING("{}_{}.tsv.gz"), c.output_prefix.string(), bname1))
-          // clang-format on
-      });
-  write_tsv_header(it);
-
-  it = files.emplace(
-      StripeDirection::horizontal,
-      OutputWriters{
-          // clang-format off
+      // clang-format on
+  };
+  writers.horizontal = Writer::InternalWriterPair{
+      // clang-format off
           std::make_unique<io::bigwig::Writer>(create_bwig_file(chrom_vect, c.output_prefix.string(), fmt::format(FMT_STRING("{}.bw"), bname2))),
-          std::make_unique<compressed_io::Writer>(fmt::format(FMT_STRING("{}_{}.bed.gz"), c.output_prefix.string(), bname2))
-          // clang-format on
-      });
-  write_tsv_header(it);
+          std::make_unique<compressed_io::Writer>(fmt::format(FMT_STRING("{}_{}.tsv.gz"), c.output_prefix.string(), bname2))
+      // clang-format on
+  };
 
-  return files;
+  switch (c.metric) {
+    case eval_config::Metric::custom: {
+      constexpr std::string_view header =
+          "chrom\tchrom_start\tchrom_end\tabsolute_number_of_misclassified_pixels\trelative_"
+          "fraction_of_correctly_classified_pixels\tscore\n";
+      writers.horizontal.tsv_gz->write(header);
+      writers.vertical.tsv_gz->write(header);
+      break;
+    }
+    case eval_config::Metric::eucl_dist:
+      [[fallthrough]];
+    case eval_config::Metric::rmse: {
+      constexpr std::string_view header = "chrom\tchrom_start\tchrom_end\tscore\n";
+      writers.horizontal.tsv_gz->write(header);
+      writers.vertical.tsv_gz->write(header);
+      break;
+    }
+    case eval_config::Metric::spearman:
+      [[fallthrough]];
+    case eval_config::Metric::pearson: {
+      constexpr std::string_view header =
+          "chrom\tchrom_start\tchrom_end\tcorrelation\tsignificance\n";
+      writers.horizontal.tsv_gz->write(header);
+      writers.vertical.tsv_gz->write(header);
+    }
+  }
+
+  return writers;
 }
 
 template <StripeDirection stripe_direction, class Writers, class N>
@@ -536,8 +540,9 @@ static void run_task(const enum eval_config::Metric metric, const std::string &c
                  absl::AsciiStrToLower(direction_to_str(stripe_direction)), chrom_name,
                  absl::FormatDuration(absl::Now() - t0));
     t0 = absl::Now();
-    auto &[bw, bed_gz] = writers.at(stripe_direction);
-    bw->write_range(chrom_name, absl::MakeSpan(metrics.metric1), bin_size, bin_size);
+    auto &writer =
+        stripe_direction == StripeDirection::horizontal ? writers.horizontal : writers.vertical;
+    writer.bwig->write_range(chrom_name, absl::MakeSpan(metrics.metric1), bin_size, bin_size);
     const auto [chrom_start, chrom_end] = chrom_range;
     std::string buff;
     auto format_tsv_record = [&](const std::string_view chrom_name_, const auto start_pos,
@@ -549,7 +554,6 @@ static void run_task(const enum eval_config::Metric metric, const std::string &c
           assert(score2 == 0.0);  // NOLINT
           return fmt::format(FMT_COMPILE("{}\t{}\t{}\t{}\n"), chrom_name_, start_pos, end_pos,
                              score1);
-          break;
         case eval_config::Metric::spearman:
           [[fallthrough]];
         case eval_config::Metric::pearson:
@@ -567,10 +571,10 @@ static void run_task(const enum eval_config::Metric metric, const std::string &c
       const auto end_pos = std::min(start_pos + bin_size, chrom_end);
       buff =
           format_tsv_record(chrom_name, start_pos, end_pos, metrics.metric1[i], metrics.metric2[i]);
-      bed_gz->write(buff);
+      writer.tsv_gz->write(buff);
     }
     spdlog::info(FMT_STRING("{} values have been written to files \"{}.{{tsv.gz,bw}}\" in {}."),
-                 metrics.metric1.size(), bw->path().stem().string(),
+                 metrics.metric1.size(), writer.bwig->path().stem().string(),
                  absl::FormatDuration(absl::Now() - t0));
   } catch (const std::exception &e) {
     throw std::runtime_error(fmt::format(
