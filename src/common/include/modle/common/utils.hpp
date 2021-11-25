@@ -183,6 +183,15 @@ template <class T>
 [[nodiscard]] constexpr std::future<T> make_ready_future(T&& v);
 }  // namespace modle::utils
 
+template <bool remove_source_files = false>
+inline void concatenate_files(
+    const boost::filesystem::path& path_to_dest,
+    std::initializer_list<std::reference_wrapper<const boost::filesystem::path>> path_to_sources);
+
+template <bool remove_source_files = false>
+inline void concatenate_files(const boost::filesystem::path& path_to_dest,
+                              const boost::filesystem::path& path_to_sources);
+
 #include "../../../utils_impl.hpp"  // IWYU pragma: export
 // IWYU pragma: no_include <iterator>
 // IWYU pragma: no_include <boost/container/detail/std_fwd.hpp>

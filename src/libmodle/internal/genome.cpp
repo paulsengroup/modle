@@ -244,7 +244,7 @@ void Chromosome::increment_contacts(bp_t bin1, bp_t bin2) {
 }
 
 bool Chromosome::allocate_contacts(bp_t bin_size, bp_t diagonal_width) {
-  if (std::scoped_lock l(this->_contacts_mtx); !this->_contacts) {
+  if (std::scoped_lock lck(this->_contacts_mtx); !this->_contacts) {
     this->_contacts =
         std::make_shared<contact_matrix_t>(this->simulated_size(), diagonal_width, bin_size);
     return true;

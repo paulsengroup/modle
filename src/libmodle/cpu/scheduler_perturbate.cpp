@@ -376,7 +376,7 @@ void Simulation::run_perturbate() {
 // NOLINTNEXTLINE(readability-function-cognitive-complexity)
 void Simulation::perturbate_worker(
     const u64 tid, moodycamel::BlockingConcurrentQueue<Simulation::TaskPW>& task_queue,
-    const boost::filesystem::path& output_path, std::mutex& cooler_mutex,
+    const boost::filesystem::path& output_path, std::mutex& cooler_mtx,
     const usize task_batch_size) {
   spdlog::info(FMT_STRING("Spawning simulation thread {}..."), tid);
   moodycamel::ConsumerToken ctok(task_queue);
@@ -418,7 +418,7 @@ void Simulation::perturbate_worker(
         assert(local_state.contacts->nrows() == local_state.reference_contacts->nrows());  // NOLINT
         assert(local_state.contacts->ncols() == local_state.reference_contacts->ncols());  // NOLINT
 
-        Simulation::simulate_window(local_state, tmp_output_bedpe, cooler_mutex);
+        Simulation::simulate_window(local_state, tmp_output_bedpe, cooler_mtx);
       }
     }
   } catch (const std::exception& e) {
@@ -437,7 +437,7 @@ void Simulation::perturbate_worker(
 
 // NOLINTNEXTLINE(readability-function-cognitive-complexity)
 void Simulation::simulate_window(Simulation::State& state, compressed_io::Writer& out_stream,
-                                 std::mutex& cooler_mutex, bool write_contacts_to_cooler) const {
+                                 std::mutex& cooler_mtx, bool write_contacts_to_cooler) const {
   spdlog::info(FMT_STRING("Processing {}[{}-{}]; outer_window=[{}-{}]; deletion=[{}-{}];"),
                state.chrom->name(), state.active_window_start, state.active_window_end,
                state.window_start, state.window_end, state.deletion_begin,
@@ -604,7 +604,7 @@ void Simulation::simulate_window(Simulation::State& state, compressed_io::Writer
 
     absl::Duration duration;
     {
-      std::scoped_lock l(cooler_mutex);
+      std::scoped_lock lck(cooler_mtx);
       const auto t0 = absl::Now();
       auto c =
           cooler::Cooler(file_name, cooler::Cooler<contacts_t>::IO_MODE::WRITE_ONLY, this->bin_size,

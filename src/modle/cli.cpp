@@ -56,8 +56,8 @@ static void add_common_options(CLI::App& subcommand, modle::Config& c) {
   auto& gen = *s.add_option_group("Generic", "");
   auto& prob = *s.add_option_group("Probabilities", "");
   auto& rand = *s.add_option_group("Random", "");
-  auto& hidden = *s.add_option_group("", "");
   auto& extr_barr = *s.add_option_group("Extrusion Barriers", "");
+  auto& dbg = *s.add_option_group("Debug/Profiling", "");
 
   // clang-format off
   io.add_option(
@@ -213,7 +213,7 @@ static void add_common_options(CLI::App& subcommand, modle::Config& c) {
       ->check(CLI::PositiveNumber)
       ->capture_default_str();
 
-gen.add_option(
+   gen.add_option(
       "--burnin-smoothing-window-size",
       c.burnin_smoothing_window_size,
       "Window size used to smooth values during the burnin phase.")
@@ -345,15 +345,20 @@ gen.add_option(
       ->check(CLI::NonNegativeNumber)
       ->capture_default_str();
 
-  hidden.add_flag("--skip-output", c.skip_output, "Don't write output files. Useful for profiling.")->configurable(false);
+  dbg.add_flag(
+      "--skip-output",
+      c.skip_output,
+      "Don't write output files. Useful for profiling.")
+      ->capture_default_str();
 
-  gen.get_option("--target-contact-density")->excludes(gen.get_option("--number-of-iterations"));
+    gen.get_option("--target-contact-density")->excludes(gen.get_option("--number-of-iterations"));
   extr_barr.get_option("--extrusion-barrier-occupancy")->excludes("--ctcf-occupied-probability-of-transition-to-self");
-  // clang-format on
+
 
   rand.get_option("--mu")->needs(rand.get_option("--randomize-contacts"));
   rand.get_option("--sigma")->needs(rand.get_option("--randomize-contacts"));
   rand.get_option("--xi")->needs(rand.get_option("--randomize-contacts"));
+  // clang-format on
 }
 
 void Cli::make_simulation_subcommand() {
@@ -369,6 +374,7 @@ void Cli::make_simulation_subcommand() {
   auto& c = this->_config;
   auto& io = *s.get_option_group("Input/Output");
   auto& gen = *s.get_option_group("Generic");
+  auto& dbg = *s.add_option_group("Debug/Profiling", "");
 
   // clang-format off
   io.add_option(
@@ -396,6 +402,15 @@ void Cli::make_simulation_subcommand() {
       ->check(CLI::PositiveNumber)
       ->transform(utils::str_float_to_str_int)
       ->capture_default_str();
+
+  dbg.add_flag(
+      "--log-model-internal-state",
+      c.log_model_internal_state,
+      "Produce a detailed log of the model internal state throughout a simulation.\n"
+      "Passing this flag often causes a noticeable reduction in MoDLE's throughput.")
+      ->capture_default_str();
+
+  s.get_option_group("Debug/Profiling")->get_option("--skip-output")->excludes(dbg.get_option("--log-model-internal-state"));
   // clang-format on
 }
 
@@ -625,6 +640,10 @@ std::string Cli::detect_path_collisions(modle::Config& c) const {
   if (boost::filesystem::exists(c.path_to_log_file)) {
     absl::StrAppend(&collisions, check_for_path_collisions(c.path_to_log_file));
   }
+  if (this->get_subcommand() == simulate && !c.path_to_model_state_log_file.empty() &&
+      boost::filesystem::exists(c.path_to_model_state_log_file)) {
+    absl::StrAppend(&collisions, check_for_path_collisions(c.path_to_model_state_log_file));
+  }
   if (this->get_subcommand() != subcommand::replay &&
       boost::filesystem::exists(c.path_to_config_file)) {
     absl::StrAppend(&collisions, check_for_path_collisions(c.path_to_config_file));
@@ -693,6 +712,10 @@ void Cli::transform_args() {
   if (this->get_subcommand() == subcommand::pertubate) {
     c.path_to_task_file = c.path_to_output_prefix;
     c.path_to_task_file += "_tasks.tsv.gz";
+  }
+  if (this->get_subcommand() == subcommand::simulate) {
+    c.path_to_model_state_log_file = c.path_to_output_prefix;
+    c.path_to_model_state_log_file += "_internal_state_log.tsv.gz";
   }
 
   c.path_to_output_file_cool += ".cool";

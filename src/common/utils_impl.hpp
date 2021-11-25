@@ -33,7 +33,7 @@ DISABLE_WARNING_POP
 #include <cmath>                             // for trunc
 #include <cstdio>                            // for fclose, FILE, stderr, stdout
 #include <exception>                         // for exception
-#include <iosfwd>                            // for streamsize
+#include <fstream>                           // for ifstrea, ofstream, streamsize
 #include <limits>                            // for numeric_limits
 #include <stdexcept>                         // for runtime_error, logic_error, range_error
 #include <string>                            // for string
@@ -444,6 +444,37 @@ constexpr std::future<T> make_ready_future(T &&v) {
   std::promise<T> p;
   p.set_value(std::forward<T>(v));
   return p.get_future();
+}
+
+template <bool remove_source_files>
+void concatenate_files(
+    const boost::filesystem::path &path_to_dest,
+    std::initializer_list<std::reference_wrapper<const boost::filesystem::path>> path_to_sources) {
+  auto out_file = std::ofstream(path_to_dest.string(), std::ios_base::binary | std::ios_base::in |
+                                                           std::ios_base::out | std::ios_base::ate);
+  if (!out_file) {
+    throw fmt::system_error(errno, FMT_STRING("Failed to open file {} for writing"), path_to_dest);
+  }
+
+  for (const auto &path : path_to_sources) {
+    try {
+      auto input = std::ifstream(path.get().string(), std::ios_base::binary);
+      out_file << input.rdbuf();
+      if (remove_source_files) {
+        boost::filesystem::remove(path);
+      }
+    } catch (const std::exception &e) {
+      throw std::runtime_error(fmt::format(
+          FMT_STRING("The following error occurred while appending file {} to file {}: {}"), path,
+          path_to_dest, e.what()));
+    }
+  }
+}
+
+template <bool remove_source_files>
+void concatenate_files(const boost::filesystem::path &path_to_dest,
+                       const boost::filesystem::path &path_to_src) {
+  concatenate_files<remove_source_files>(path_to_dest, {{path_to_src}});
 }
 
 }  // namespace modle::utils

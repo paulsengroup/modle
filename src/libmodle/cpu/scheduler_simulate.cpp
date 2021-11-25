@@ -82,6 +82,12 @@ void Simulation::run_simulate() {
   moodycamel::BlockingConcurrentQueue<Simulation::Task> task_queue(queue_capacity, 1, 0);
   moodycamel::ProducerToken ptok(task_queue);
 
+  std::mutex model_state_logger_mtx;  // Protect rw access to the log file located at
+                                      // this->path_to_model_state_log_file
+  if (this->log_model_internal_state && !this->skip_output) {
+    compressed_io::Writer(this->path_to_model_state_log_file).write(model_state_log_header);
+  }
+
   try {
     this->_tpool.push_task([&]() {  // This thread is in charge of writing contacts to disk
       this->write_contacts_to_disk(progress_queue, progress_queue_mutex);
@@ -90,7 +96,7 @@ void Simulation::run_simulate() {
     for (u64 tid = 0; tid < this->nthreads; ++tid) {  // Start simulation threads
       this->_tpool.push_task([&, tid]() {
         this->simulate_worker(tid, task_queue, progress_queue, progress_queue_mutex,
-                              task_batch_size_deq);
+                              model_state_logger_mtx, task_batch_size_deq);
       });
     }
 
@@ -109,14 +115,14 @@ void Simulation::run_simulate() {
       if (!chrom.ok() || chrom.num_barriers() == 0) {
         spdlog::info(FMT_STRING("SKIPPING '{}'..."), chrom.name());
         if (this->write_contacts_for_ko_chroms) {
-          std::scoped_lock l(progress_queue_mutex);
+          std::scoped_lock lck(progress_queue_mutex);
           progress_queue.emplace_back(&chrom, num_cells);
         }
         continue;
       }
 
       {
-        std::scoped_lock l(progress_queue_mutex);
+        std::scoped_lock lck(progress_queue_mutex);
 
         // Signal that we have started processing the current chrom
         progress_queue.emplace_back(&chrom, usize(0));
@@ -162,7 +168,7 @@ void Simulation::run_simulate() {
     }
 
     {  // Signal end of simulation to the thread that is writing contacts to disk
-      std::scoped_lock l(progress_queue_mutex);
+      std::scoped_lock lck(progress_queue_mutex);
       progress_queue.emplace_back(nullptr, usize(0));
     }
     this->_tpool.wait_for_tasks();
@@ -179,7 +185,8 @@ void Simulation::run_simulate() {
 void Simulation::simulate_worker(const u64 tid,
                                  moodycamel::BlockingConcurrentQueue<Simulation::Task>& task_queue,
                                  std::deque<std::pair<Chromosome*, usize>>& progress_queue,
-                                 std::mutex& progress_queue_mutex, const usize task_batch_size) {
+                                 std::mutex& progress_queue_mtx, std::mutex& model_state_logger_mtx,
+                                 const usize task_batch_size) {
   spdlog::info(FMT_STRING("Spawning simulation thread {}..."), tid);
 
   moodycamel::ConsumerToken ctok(task_queue);
@@ -192,6 +199,15 @@ void Simulation::simulate_worker(const u64 tid,
   // throughout the simulation
   Simulation::State local_state;
 
+  const auto tmp_model_internal_state_log_path = [&]() {
+    auto p = this->path_to_model_state_log_file;
+    if (this->log_model_internal_state && !this->skip_output) {
+      p.replace_extension(fmt::format(FMT_STRING("{}{}"), tid, p.extension().string()));
+      local_state.model_state_logger = std::make_unique<compressed_io::Writer>(p);
+    }
+    return p;
+  }();
+
   try {
     while (this->ok()) {  // Try to dequeue a batch of tasks
       const auto avail_tasks = task_queue.wait_dequeue_bulk_timed(
@@ -200,6 +216,13 @@ void Simulation::simulate_worker(const u64 tid,
       if (avail_tasks == 0) {
         if (this->_end_of_simulation) {
           // Reached end of simulation (i.e. all tasks have been processed)
+          if (!tmp_model_internal_state_log_path.empty()) {
+            // Ensure all records have been written to disk
+            local_state.model_state_logger = nullptr;
+            std::scoped_lock<std::mutex> lck(model_state_logger_mtx);
+            utils::concatenate_files<true>(this->path_to_model_state_log_file,
+                                           tmp_model_internal_state_log_path);
+          }
           return;
         }
         // Keep waiting until one or more tasks become available
@@ -234,7 +257,7 @@ void Simulation::simulate_worker(const u64 tid,
         Simulation::simulate_one_cell(local_state);
 
         // Update progress for the current chrom
-        std::scoped_lock l(progress_queue_mutex);
+        std::scoped_lock lckck(progress_queue_mtx);
         auto progress = std::find_if(progress_queue.begin(), progress_queue.end(),
                                      [&](const auto& p) { return task.chrom == p.first; });
         assert(progress != progress_queue.end());  // NOLINT

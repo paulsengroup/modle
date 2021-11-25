@@ -30,6 +30,7 @@ struct Config {  // NOLINT(altera-struct-pack-align)
   boost::filesystem::path path_to_output_file_cool{};
   boost::filesystem::path path_to_config_file{};
   boost::filesystem::path path_to_log_file;
+  boost::filesystem::path path_to_model_state_log_file;
   boost::filesystem::path path_to_extr_barriers;
   bool force{false};
   bool quiet{false};
@@ -44,23 +45,23 @@ struct Config {  // NOLINT(altera-struct-pack-align)
   bool write_header{true};
 
   // General settings
-  bp_t bin_size{10'000};                       // NOLINT(readability-magic-numbers, cppcoreguidelines-avoid-magic-numbers)
+  bp_t bin_size{10'000};                                     // NOLINT(readability-magic-numbers, cppcoreguidelines-avoid-magic-numbers)
   bp_t fwd_extrusion_speed{bin_size / 2};
   bp_t rev_extrusion_speed{fwd_extrusion_speed};
-  double fwd_extrusion_speed_std{0.05};        // NOLINT(readability-magic-numbers, cppcoreguidelines-avoid-magic-numbers)
+  double fwd_extrusion_speed_std{0.05};                      // NOLINT(readability-magic-numbers, cppcoreguidelines-avoid-magic-numbers)
   double rev_extrusion_speed_std{fwd_extrusion_speed_std};
-  usize num_cells{5'000};                     // NOLINT(readability-magic-numbers, cppcoreguidelines-avoid-magic-numbers)
+  usize num_cells{5'000};                                    // NOLINT(readability-magic-numbers, cppcoreguidelines-avoid-magic-numbers)
   usize nthreads{std::thread::hardware_concurrency()};
-  bp_t diagonal_width{3'000'000 /* 3 Mbp */};  // NOLINT(readability-magic-numbers, cppcoreguidelines-avoid-magic-numbers)
-  usize simulation_iterations{200};           // NOLINT(readability-magic-numbers, cppcoreguidelines-avoid-magic-numbers)
+  bp_t diagonal_width{3'000'000 /* 3 Mbp */};                // NOLINT(readability-magic-numbers, cppcoreguidelines-avoid-magic-numbers)
+  usize simulation_iterations{200};                          // NOLINT(readability-magic-numbers, cppcoreguidelines-avoid-magic-numbers)
   double target_contact_density{0.0};
   double number_of_lefs_per_mbp;
   double prob_of_lef_release{0.015};
   double hard_stall_lef_stability_multiplier{5.0};           // NOLINT(readability-magic-numbers, cppcoreguidelines-avoid-magic-numbers)
   double soft_stall_lef_stability_multiplier{1.0};           // NOLINT(readability-magic-numbers, cppcoreguidelines-avoid-magic-numbers)
-  bp_t deletion_size{10'000};                  // NOLINT(readability-magic-numbers, cppcoreguidelines-avoid-magic-numbers)
+  bp_t deletion_size{10'000};                                // NOLINT(readability-magic-numbers, cppcoreguidelines-avoid-magic-numbers)
   bool compute_reference_matrix{false};
-  usize block_size{9};                        // NOLINT(readability-magic-numbers, cppcoreguidelines-avoid-magic-numbers)
+  usize block_size{9};                                       // NOLINT(readability-magic-numbers, cppcoreguidelines-avoid-magic-numbers)
   u64 seed{0};
 
   // Misc probabilities
@@ -89,6 +90,7 @@ struct Config {  // NOLINT(altera-struct-pack-align)
   // Misc
   bool exclude_chrom_wo_extr_barriers{true};
   bool skip_output{false};
+  bool log_model_internal_state{false};
 
   absl::Span<char*> args;
 

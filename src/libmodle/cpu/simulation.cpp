@@ -13,8 +13,9 @@
 #include <cpp-sort/sorters/insertion_sorter.h>  // for insertion_sort, insertion_so...
 #include <cpp-sort/sorters/pdq_sorter.h>        // for pdq_sort, pdq_sorter
 #include <cpp-sort/sorters/split_sorter.h>      // for split_sort, split_sorter
-#include <fmt/ostream.h>                        // for formatbuf<>::int_type
-#include <spdlog/spdlog.h>                      // for info, warn
+#include <fmt/compile.h>
+#include <fmt/ostream.h>    // for formatbuf<>::int_type
+#include <spdlog/spdlog.h>  // for info, warn
 
 #include <algorithm>         // for max, fill, min, copy, clamp
 #include <atomic>            // for atomic
@@ -75,7 +76,7 @@ usize Simulation::simulated_size() const { return this->_genome.simulated_size()
 
 // NOLINTNEXTLINE(readability-function-cognitive-complexity)
 void Simulation::write_contacts_to_disk(std::deque<std::pair<Chromosome*, usize>>& progress_queue,
-                                        std::mutex& progress_queue_mutex) {
+                                        std::mutex& progress_queue_mtx) {
   // This thread is in charge of writing contacts to disk
   Chromosome* chrom_to_be_written = nullptr;
   const auto max_str_length =
@@ -102,7 +103,7 @@ void Simulation::write_contacts_to_disk(std::deque<std::pair<Chromosome*, usize>
       sleep_us = std::min(500000, sleep_us * 2);  // NOLINT
       std::this_thread::sleep_for(std::chrono::microseconds(sleep_us));
       {
-        std::scoped_lock l(progress_queue_mutex);
+        std::scoped_lock lck(progress_queue_mtx);
         if (progress_queue.empty()) {
           // There are no contacts to write to disk at the moment. Go back to sleep
           continue;
@@ -155,7 +156,7 @@ void Simulation::write_contacts_to_disk(std::deque<std::pair<Chromosome*, usize>
       chrom_to_be_written->deallocate_contacts();
     }
   } catch (const std::exception& err) {
-    std::scoped_lock l(this->_exceptions_mutex);
+    std::scoped_lock lck(this->_exceptions_mutex);
     if (chrom_to_be_written) {
       this->_exceptions.emplace_back(std::make_exception_ptr(std::runtime_error(fmt::format(
           FMT_STRING("The following error occurred while writing contacts for '{}' to file {}: {}"),
@@ -167,7 +168,7 @@ void Simulation::write_contacts_to_disk(std::deque<std::pair<Chromosome*, usize>
     }
     this->_exception_thrown = true;
   } catch (...) {
-    std::scoped_lock l(this->_exceptions_mutex);
+    std::scoped_lock lck(this->_exceptions_mutex);
     this->_exceptions.emplace_back(std::make_exception_ptr(
         std::runtime_error("An unhandled exception was caught! This should never happen! "
                            "If you see this message, please file an issue on GitHub.")));
@@ -1144,6 +1145,11 @@ void Simulation::simulate_one_cell(State& s) const {
       Simulation::extrude(*s.chrom, s.get_lefs(), s.get_rev_moves(), s.get_fwd_moves(),
                           num_rev_units_at_5prime, num_fwd_units_at_3prime);
 
+      // Log model internal state
+      Simulation::dump_stats(s.id, s.epoch, s.cell_id, !s.burnin_completed, *s.chrom, s.get_lefs(),
+                             s.barriers, s.get_barrier_mask(), s.get_rev_collisions(),
+                             s.get_fwd_collisions(), *s.model_state_logger);
+
       // Select LEFs to be released in the current epoch and release them
       this->release_lefs(s.get_lefs(), s.barriers, s.get_rev_collisions(), s.get_fwd_collisions(),
                          s.rand_eng);
@@ -1201,5 +1207,76 @@ void Simulation::sample_and_register_contacts(State& s, const double avg_nlefs_t
     s.num_contacts +=
         this->register_contacts(start_pos + 1, end_pos - 1, *s.contacts, s.get_lefs(), lef_idx);
   }
+}
+
+void Simulation::dump_stats(const usize task_id, const usize epoch, const usize cell_id,
+                            const bool burnin, const Chromosome& chrom,
+                            const absl::Span<const Lef> lefs,
+                            absl::Span<const ExtrusionBarrier> barriers,
+                            const boost::dynamic_bitset<>& barrier_mask,
+                            const absl::Span<const collision_t> rev_collisions,
+                            const absl::Span<const collision_t> fwd_collisions,
+                            compressed_io::Writer& log_writer) const
+    noexcept(utils::ndebug_defined()) {
+  if (BOOST_LIKELY(!this->log_model_internal_state)) {
+    return;
+  }
+  assert(log_writer);  // NOLINT
+
+  const auto barriers_occupied = barrier_mask.count();
+  const auto effective_barrier_occupancy =
+      static_cast<double>(barriers_occupied) / static_cast<double>(barriers.size());
+
+  const auto lefs_stalled_rev =
+      std::count_if(rev_collisions.begin(), rev_collisions.end(),
+                    [](const auto collision) { return collision != NO_COLLISION; });
+  const auto lefs_stalled_fwd =
+      std::count_if(fwd_collisions.begin(), fwd_collisions.end(),
+                    [](const auto collision) { return collision != NO_COLLISION; });
+  const auto lefs_stalled_both = [&]() {
+    usize stalls = 0;
+    for (usize i = 0; i < lefs.size(); ++i) {
+      // NOLINTNEXTLINE(readability-implicit-bool-conversion)
+      stalls += rev_collisions[i] != NO_COLLISION && fwd_collisions[i] != NO_COLLISION;
+    }
+    return stalls;
+  }();
+
+  auto is_lef_bar_collision = [&](const auto ii) { return ii < barriers.size(); };
+  auto is_primary_lef_lef_collision = [&](const auto ii) {
+    return ii >= barriers.size() && ii < barriers.size() + lefs.size();
+  };
+  auto is_secondary_lef_lef_collision = [&](const auto ii) {
+    return ii >= barriers.size() + lefs.size() && ii < barriers.size() + (2 * lefs.size());
+  };
+
+  auto count_collisions = [&](auto filter_fx) {
+    const auto n1 = std::count_if(rev_collisions.begin(), rev_collisions.end(), filter_fx);
+    const auto n2 = std::count_if(fwd_collisions.begin(), fwd_collisions.end(), filter_fx);
+    return static_cast<usize>(n1 + n2);
+  };
+
+  const auto lef_bar_collisions = count_collisions(is_lef_bar_collision);
+  const auto lef_lef_primary_collisions = count_collisions(is_primary_lef_lef_collision);
+  const auto lef_lef_secondary_collisions = count_collisions(is_secondary_lef_lef_collision);
+
+  // TODO log number of units at chrom boundaries
+
+  const auto avg_loop_size =
+      stats::mean(lefs.begin(), lefs.end(), [](const auto& lef) { return lef.loop_size(); });
+
+  // clang-format off
+  log_writer.write(fmt::format(
+      FMT_COMPILE("{}\t{}\t{}\t"
+                  "{}\t{}\t{}\t"
+                  "{}\t{}\t{}\t"
+                  "{}\t{}\t{}\t"
+                  "{}\t{}\n"),
+      task_id, epoch, cell_id,
+      chrom.name(), burnin ? "True" : "False", effective_barrier_occupancy,
+      lefs.size(), lefs_stalled_rev, lefs_stalled_fwd,
+      lefs_stalled_both, lef_bar_collisions, lef_lef_primary_collisions,
+      lef_lef_secondary_collisions, avg_loop_size));
+  // clang-format on
 }
 }  // namespace modle

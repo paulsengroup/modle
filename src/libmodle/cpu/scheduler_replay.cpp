@@ -105,7 +105,7 @@ void Simulation::run_replay() {
 
 void Simulation::replay_worker(const u64 tid,
                                moodycamel::BlockingConcurrentQueue<Simulation::TaskPW>& task_queue,
-                               std::mutex& cooler_mutex, const usize task_batch_size) {
+                               std::mutex& cooler_mtx, const usize task_batch_size) {
   spdlog::info(FMT_STRING("Spawning simulation thread {}..."), tid);
   moodycamel::ConsumerToken ctok(task_queue);
 
@@ -143,7 +143,7 @@ void Simulation::replay_worker(const u64 tid,
         local_state.contacts->unsafe_resize(local_state.window_end - local_state.window_start,
                                             this->diagonal_width, this->bin_size);
 
-        Simulation::simulate_window(local_state, null_stream, cooler_mutex, true);
+        Simulation::simulate_window(local_state, null_stream, cooler_mtx, true);
       }
     }
   } catch (const std::exception& e) {
