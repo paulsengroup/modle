@@ -149,44 +149,6 @@ TEST_CASE("CMatrix 10x200", "[cmatrix][medium]") {
 }
 
 // NOLINTNEXTLINE(readability-function-cognitive-complexity)
-TEST_CASE("CMatrix Mask", "[cmatrix][short]") {
-  ContactMatrix<> m(10, 20);  // NOLINT
-  auto mask = m.unsafe_generate_mask_for_bins_without_contacts();
-  REQUIRE(mask.size() == m.ncols());
-  CHECK(mask.none());  // Matrix is full of zeros: bitmask should also be all zeros
-
-  for (usize i = 0; i < m.ncols(); ++i) {
-    for (auto j = i; j < m.ncols(); ++j) {
-      // Even row/columns are all zeros: Bitmask should have zeros at pos corresponding to even idx
-      m.set(i, j, !(i % 2 == 0 || j % 2 == 0));  // NOLINT(readability-implicit-bool-conversion)
-    }
-  }
-  // m.print(true);
-
-  mask = m.unsafe_generate_mask_for_bins_without_contacts();
-  REQUIRE(mask.size() == m.ncols());
-  for (usize i = 0; i < mask.size(); ++i) {
-    CHECK((i % 2 != 0) == mask[i]);
-  }
-
-  for (usize i = 0; i < m.ncols(); ++i) {
-    for (auto j = i; j < m.ncols(); ++j) {
-      // Each row/column will have half of the fields filled with zeros, and the remaining half with
-      // ones: All bits in the bitmask should be set to 1
-      m.set(i, j, !(i % 2 == 0 && j % 2 == 0));  // NOLINT(readability-implicit-bool-conversion)
-    }
-  }
-
-  mask = m.unsafe_generate_mask_for_bins_without_contacts();
-  REQUIRE(mask.size() == m.ncols());
-
-  for (usize i = 0; i < mask.size(); ++i) {
-    CHECK(mask[i]);
-  }
-  // m.print(true);
-}
-
-// NOLINTNEXTLINE(readability-function-cognitive-complexity)
 TEST_CASE("CMatrix in/decrement", "[cmatrix][short]") {
   ContactMatrix<> m(10, 20);  // NOLINT
   m.increment(0, 0);
@@ -540,10 +502,11 @@ TEST_CASE("CMatrix difference of gaussians - parallel", "[cmatrix][long]") {
 
 #ifdef MODLE_ENABLE_SANITIZER_THREAD
 // NOLINTNEXTLINE(readability-function-cognitive-complexity)
-TEST_CASE("CMatrix TSAN", "[cmatrix][long]") {
-  ContactMatrix<i64> m(10, 10);  // NOLINT
+TEST_CASE("CMatrix pixel locking TSAN", "[cmatrix][long]") {
+  ContactMatrix<i64> m(100, 10);  // NOLINT
   std::atomic<bool> stop_sig = false;
 
+  // Increment a random pixel by 1 until stop_sign is flipped
   auto generate_contacts = [&](u64 seed) {
     auto rand_eng = random::PRNG(seed);
     random::uniform_int_distribution<usize> idx_gen(0, m.ncols() - 1);
@@ -558,20 +521,82 @@ TEST_CASE("CMatrix TSAN", "[cmatrix][long]") {
 
   const auto nthreads = std::max(u32(2), std::thread::hardware_concurrency());
   thread_pool tpool(nthreads);
+
+  // Submit nthreads - 1 tasks generating contacts
   std::vector<std::future<usize>> num_contacts_generated(nthreads - 1);
   std::generate(num_contacts_generated.begin(), num_contacts_generated.end(),
                 [&]() { return tpool.submit(generate_contacts, u64(random::random_device{}())); });
 
+  // Submit 1 task reading random pixels from the matrix
+  volatile i64 dummy_counter = 0;
   auto return_code = tpool.submit([&]() {
     auto rand_eng = random::PRNG(u64(random::random_device{}()));
     random::uniform_int_distribution<usize> idx_gen(0, m.ncols() - 1);
 
     while (!stop_sig) {
-      CHECK(m.get(idx_gen(rand_eng), idx_gen(rand_eng)) >= 0);
+      dummy_counter += m.get(idx_gen(rand_eng), idx_gen(rand_eng));
     }
   });
 
   std::this_thread::sleep_for(std::chrono::seconds(15));  // NOLINT
+  // std::this_thread::sleep_for(std::chrono::seconds(3600));  // NOLINT
+
+  stop_sig = true;
+  tpool.wait_for_tasks();
+
+  u64 tot_contacts_expected = 0;
+  for (auto& n : num_contacts_generated) {
+    tot_contacts_expected += n.get();
+  }
+  [[maybe_unused]] const auto c = return_code.get();
+
+  CHECK(m.get_tot_contacts() == tot_contacts_expected);
+  CHECK(m.get_n_of_missed_updates() == 0);
+}
+
+// NOLINTNEXTLINE(readability-function-cognitive-complexity)
+TEST_CASE("CMatrix global locking TSAN", "[cmatrix][long]") {
+  ContactMatrix<i64> m(100, 10);  // NOLINT
+  std::atomic<bool> stop_sig = false;
+
+  // Increment a random pixel by 1 until stop_sign is flipped
+  auto generate_contacts = [&](u64 seed) {
+    auto rand_eng = random::PRNG(seed);
+    random::uniform_int_distribution<usize> idx_gen(0, m.ncols() - 1);
+
+    usize i = 0;
+    while (!stop_sig) {
+      m.increment(idx_gen(rand_eng), idx_gen(rand_eng));
+      ++i;
+    }
+    return i;
+  };
+
+  const auto nthreads = std::max(u32(2), std::thread::hardware_concurrency());
+  thread_pool tpool(nthreads);
+
+  // Submit nthreads - 1 tasks generating contacts
+  std::vector<std::future<usize>> num_contacts_generated(nthreads - 1);
+  std::generate(num_contacts_generated.begin(), num_contacts_generated.end(),
+                [&]() { return tpool.submit(generate_contacts, u64(random::random_device{}())); });
+
+  // Submit 1 task computing the calling get_tot_contacts() (which locks the entire matrix)
+  u64 tot_contacts = 0;
+  auto return_code = tpool.submit([&]() {
+    auto rand_eng = random::PRNG(u64(random::random_device{}()));
+    random::uniform_int_distribution<i64> sleep_gen(0, 100);
+    while (!stop_sig) {
+      std::this_thread::sleep_for(std::chrono::milliseconds(sleep_gen(rand_eng)));
+      CHECK(m.get_n_of_missed_updates() == 0);
+      const auto n = m.get_tot_contacts();
+      CHECK(n >= tot_contacts);
+      tot_contacts = n;
+    }
+  });
+
+  std::this_thread::sleep_for(std::chrono::seconds(15));  // NOLINT
+  // std::this_thread::sleep_for(std::chrono::seconds(3600));  // NOLINT
+
   stop_sig = true;
   tpool.wait_for_tasks();
 

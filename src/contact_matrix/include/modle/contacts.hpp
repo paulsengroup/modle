@@ -11,14 +11,14 @@
 #include <boost/filesystem/path.hpp>                // for path
 #include <iostream>                                 // for cout, ostream
 #include <limits>                                   // for numeric_limits
-#include <mutex>                                    // for unique_lock
-#include <shared_mutex>                             // for shared_mutex, shared_lock
+#include <mutex>                                    // for unique_lock, mutex
 #include <thread_pool/thread_pool.hpp>              // for thread_pool
 #include <type_traits>                              // for enable_if_t
 #include <utility>                                  // for pair
 #include <vector>                                   // for vector
 
 #include "modle/common/common.hpp"  // for usize, bp_t, u64, contacts_t, i64
+#include "modle/common/utils.hpp"   // for LockRangeExclusive
 
 namespace modle {
 
@@ -32,10 +32,6 @@ class ContactMatrix {
 
  public:
   using value_type = N;
-  using pixel_write_lock =
-      std::pair<std::shared_lock<std::shared_mutex>, std::unique_lock<std::shared_mutex>>;
-  using pixel_read_lock =
-      std::pair<std::shared_lock<std::shared_mutex>, std::shared_lock<std::shared_mutex>>;
 
   // This allows methods from different instantiations of the ContactMatrix template class:
   // Example: allowing ContactMatrix<int> to access private member variables and functions from
@@ -44,11 +40,11 @@ class ContactMatrix {
   friend class ContactMatrix;
 
  private:
+  using mutex_t = std::mutex;
   u64 _nrows{0};
   u64 _ncols{0};
   std::vector<N> _contacts{};
-  mutable std::vector<std::shared_mutex> _mtxes{};
-  mutable std::shared_mutex _global_mtx{};
+  mutable std::vector<mutex_t> _mtxes{};
   mutable std::atomic<N> _tot_contacts{0};
   mutable std::atomic<bool> _tot_contacts_outdated{false};
   std::atomic<i64> _updates_missed{0};
@@ -104,19 +100,18 @@ class ContactMatrix {
   [[nodiscard]] inline constexpr usize ncols() const;
   [[nodiscard]] inline constexpr usize nrows() const;
   [[nodiscard]] inline constexpr usize npixels() const;
-  [[nodiscard]] inline usize unsafe_npixels_after_masking() const;
   [[nodiscard]] inline constexpr usize get_n_of_missed_updates() const noexcept;
-  [[nodiscard]] inline constexpr double unsafe_get_fraction_of_missed_updates() const noexcept;
   [[nodiscard]] inline double get_fraction_of_missed_updates() const;
   [[nodiscard]] inline usize get_tot_contacts() const;
-  [[nodiscard]] inline usize unsafe_get_tot_contacts() const noexcept;
   [[nodiscard]] inline double get_avg_contact_density() const;
-  [[nodiscard]] inline double unsafe_get_avg_contact_density() const;
   [[nodiscard]] inline constexpr usize get_matrix_size_in_bytes() const;
-  [[nodiscard]] inline constexpr double get_matrix_size_in_mb() const;
   [[nodiscard]] inline N get_min_count() const noexcept;
-  [[nodiscard]] inline N unsafe_get_min_count() const noexcept;
   [[nodiscard]] inline N get_max_count() const noexcept;
+
+  [[nodiscard]] inline constexpr double unsafe_get_fraction_of_missed_updates() const noexcept;
+  [[nodiscard]] inline usize unsafe_get_tot_contacts() const noexcept;
+  [[nodiscard]] inline double unsafe_get_avg_contact_density() const;
+  [[nodiscard]] inline N unsafe_get_min_count() const noexcept;
   [[nodiscard]] inline N unsafe_get_max_count() const noexcept;
 
   // Debug
@@ -124,11 +119,6 @@ class ContactMatrix {
   inline void unsafe_print(bool full) const;
   [[nodiscard]] inline std::vector<std::vector<N>> unsafe_generate_symmetric_matrix() const;
   inline void unsafe_import_from_txt(const boost::filesystem::path& path, char sep = '\t');
-
-  // Mask operations
-  inline void unsafe_generate_mask_for_bins_without_contacts(boost::dynamic_bitset<>& mask) const;
-  [[nodiscard]] inline boost::dynamic_bitset<> unsafe_generate_mask_for_bins_without_contacts()
-      const;
 
   // Misc
   inline void clear_missed_updates_counter();
@@ -141,9 +131,6 @@ class ContactMatrix {
   [[nodiscard]] inline bool unsafe_empty() const;
   [[nodiscard]] inline absl::Span<const N> get_raw_count_vector() const;
   [[nodiscard]] inline absl::Span<N> get_raw_count_vector();
-  inline void unsafe_compute_row_wise_contact_histogram(std::vector<u64>& buff) const;
-  [[nodiscard]] inline std::vector<u64> unsafe_compute_row_wise_contact_histogram() const;
-  inline void unsafe_deplete_contacts(double depletion_multiplier = 1.0);
 
   [[nodiscard]] inline ContactMatrix<double> blur(double sigma, double cutoff = 0.005,
                                                   thread_pool* tpool = nullptr) const;
@@ -187,9 +174,8 @@ class ContactMatrix {
   inline void check_for_overflow_on_add(usize row, usize col, N n) const;
   inline void check_for_overflow_on_subtract(usize row, usize col, N n) const;
 
-  [[nodiscard]] inline std::unique_lock<std::shared_mutex> lock() const;
-  [[nodiscard]] inline pixel_read_lock lock_pixel_read(usize row, usize col) const;
-  [[nodiscard]] inline pixel_write_lock lock_pixel_write(usize row, usize col) const;
+  [[nodiscard]] inline utils::LockRangeExclusive<mutex_t> lock() const;
+  [[nodiscard]] inline std::unique_lock<mutex_t> lock_pixel(usize row, usize col) const;
   [[nodiscard]] static inline usize hash_coordinates(usize i, usize j) noexcept;
   [[nodiscard]] static constexpr usize compute_number_of_mutexes(usize rows, usize cols) noexcept;
   [[nodiscard]] inline usize get_pixel_mutex_idx(usize row, usize col) const noexcept;

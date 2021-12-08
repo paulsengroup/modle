@@ -96,7 +96,7 @@ ContactMatrix<N> &ContactMatrix<N>::operator=(const ContactMatrix<N> &other) {
   } else {
     _contacts = other._contacts;
   }
-  _mtxes = std::vector<std::shared_mutex>(other._mtxes.size());
+  _mtxes = std::vector<mutex_t>(other._mtxes.size());
   _tot_contacts = other._tot_contacts.load();
   _tot_contacts_outdated = other._tot_contacts_outdated.load();
   _updates_missed = other._updates_missed.load();
@@ -105,28 +105,16 @@ ContactMatrix<N> &ContactMatrix<N>::operator=(const ContactMatrix<N> &other) {
 }
 
 template <class N>
-typename ContactMatrix<N>::pixel_write_lock ContactMatrix<N>::lock_pixel_write(
-    const usize row, const usize col) const {
-  auto l1 = std::shared_lock<std::shared_mutex>(this->_global_mtx, std::defer_lock);
-  auto l2 = std::unique_lock<std::shared_mutex>(this->_mtxes[this->get_pixel_mutex_idx(row, col)],
-                                                std::defer_lock);
-  std::lock(l1, l2);
-  return std::make_pair(std::move(l1), std::move(l2));
+std::unique_lock<typename ContactMatrix<N>::mutex_t> ContactMatrix<N>::lock_pixel(usize row,
+                                                                                  usize col) const {
+  return std::unique_lock<ContactMatrix<N>::mutex_t>(
+      this->_mtxes[this->get_pixel_mutex_idx(row, col)]);
 }
 
 template <class N>
-typename ContactMatrix<N>::pixel_read_lock ContactMatrix<N>::lock_pixel_read(
-    const usize row, const usize col) const {
-  auto l1 = std::shared_lock<std::shared_mutex>(this->_global_mtx, std::defer_lock);
-  auto l2 = std::shared_lock<std::shared_mutex>(this->_mtxes[this->get_pixel_mutex_idx(row, col)],
-                                                std::defer_lock);
-  std::lock(l1, l2);
-  return std::make_pair(std::move(l1), std::move(l2));
-}
 
-template <class N>
-std::unique_lock<std::shared_mutex> ContactMatrix<N>::lock() const {
-  return std::unique_lock<std::shared_mutex>(this->_global_mtx);
+utils::LockRangeExclusive<typename ContactMatrix<N>::mutex_t> ContactMatrix<N>::lock() const {
+  return utils::LockRangeExclusive<mutex_t>(this->_mtxes);
 }
 
 template <class N>
@@ -152,12 +140,6 @@ constexpr usize ContactMatrix<N>::get_n_of_missed_updates() const noexcept {
 template <class N>
 constexpr usize ContactMatrix<N>::get_matrix_size_in_bytes() const {
   return this->npixels() * sizeof(N);
-}
-
-template <class N>
-constexpr double ContactMatrix<N>::get_matrix_size_in_mb() const {
-  const double mb = 1.0e6;
-  return static_cast<double>(this->get_matrix_size_in_bytes()) / mb;
 }
 
 template <class N>
@@ -251,7 +233,9 @@ usize ContactMatrix<N>::hash_coordinates(const usize i, const usize j) noexcept 
 template <class N>
 constexpr usize ContactMatrix<N>::compute_number_of_mutexes(const usize rows,
                                                             const usize cols) noexcept {
-  return std::clamp(utils::next_pow2((rows * cols) / usize(1000)), usize(256), usize(2097152));
+  const auto nthreads = static_cast<usize>(std::thread::hardware_concurrency());
+  const auto max_dim = std::max(rows, cols);
+  return utils::next_pow2(std::min(max_dim, 1000 * nthreads));
 }
 
 template <class N>

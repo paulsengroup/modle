@@ -29,7 +29,7 @@ N ContactMatrix<N>::get(const usize row, const usize col) const {
     return 0;
   }
 
-  const auto lck = this->lock_pixel_read(i, j);
+  const auto lck = this->lock_pixel(i, j);
   return this->unsafe_at(i, j);
 }
 
@@ -43,7 +43,7 @@ void ContactMatrix<N>::set(const usize row, const usize col, const N n) {
     return;
   }
 
-  const auto lck = this->lock_pixel_write(i, j);
+  const auto lck = this->lock_pixel(i, j);
   this->unsafe_at(i, j) = n;
   this->_tot_contacts_outdated = true;
 }
@@ -59,7 +59,7 @@ void ContactMatrix<N>::add(const usize row, const usize col, const N n) {
     return;
   }
 
-  const auto lck = this->lock_pixel_write(i, j);
+  const auto lck = this->lock_pixel(i, j);
   this->unsafe_at(i, j) += n;
   this->_tot_contacts_outdated = true;
 }
@@ -75,7 +75,7 @@ void ContactMatrix<N>::subtract(const usize row, const usize col, const N n) {
     return;
   }
 
-  const auto lck = this->lock_pixel_write(i, j);
+  const auto lck = this->lock_pixel(i, j);
   this->unsafe_at(i, j) -= n;
   this->_tot_contacts_outdated = true;
 }
@@ -134,7 +134,7 @@ N ContactMatrix<N>::get_max_count() const noexcept {
 
 template <class N>
 void ContactMatrix<N>::reset() {
-  const auto lck = this->lock();
+  const auto lck = this->exclusive_lock();
   this->unsafe_reset();
 }
 
@@ -145,8 +145,7 @@ ContactMatrix<double> ContactMatrix<N>::blur(const double sigma, const double cu
 
   const auto gauss_kernel = stats::compute_gauss_kernel(sigma, cutoff);
 
-  [[maybe_unused]] const auto block_size =
-      static_cast<usize>(std::sqrt(static_cast<double>(gauss_kernel.size())));
+  const auto block_size = static_cast<usize>(std::sqrt(static_cast<double>(gauss_kernel.size())));
   assert(block_size * block_size == gauss_kernel.size());  // NOLINT
 
   auto apply_kernel = [this, &bmatrix, &gauss_kernel, block_size](const usize i0, const usize i1) {
@@ -255,7 +254,7 @@ template <class N>
 template <class M, class>
 ContactMatrix<M> ContactMatrix<N>::as() const {
   const auto lck = this->lock();
-  return this->as<M>();
+  return this->unsafe_as<M>();
 }
 
 template <class N>

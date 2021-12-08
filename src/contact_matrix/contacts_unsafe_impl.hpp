@@ -197,48 +197,6 @@ void ContactMatrix<N>::unsafe_decrement(usize row, usize col) {
 }
 
 template <class N>
-usize ContactMatrix<N>::unsafe_npixels_after_masking() const {
-  auto npixels = this->npixels();
-  const auto mask = this->unsafe_generate_mask_for_bins_without_contacts();
-  if (mask.all()) {
-    return npixels;
-  }
-  if (mask.none()) {
-    return 0;
-  }
-
-  auto count_zeros = [&mask](usize start, usize end) {
-    assert(start <= end);
-    usize n = 0;
-    while (start < end) {
-      n += !mask[start++];
-    }
-    return n;
-  };
-
-  assert(this->nrows() <= this->ncols());
-  for (usize i = 0; i < this->ncols(); ++i) {
-    if (!mask[i]) {
-      // We are processing pixels in the upper left corner of cmatrix
-      if (i < this->nrows()) {
-        npixels -= this->nrows() - count_zeros(0UL, i);
-        npixels -= i;
-        assert(npixels <= this->npixels());
-        // We are processing pixels in the lower right corner of cmatrix
-      } else if (i > this->ncols() - this->nrows()) {
-        npixels -= this->nrows() - count_zeros(i - this->nrows(), i);
-        npixels -= this->ncols() - i;
-        assert(npixels <= this->npixels());
-      } else {  // We are processing pixels in the center of the cmatrix
-        npixels -= (2 * this->nrows()) - 1 - count_zeros(i - this->nrows(), i);
-        assert(npixels <= this->npixels());
-      }
-    }
-  }
-  return npixels;
-}
-
-template <class N>
 constexpr double ContactMatrix<N>::unsafe_get_fraction_of_missed_updates() const noexcept {
   if (this->empty() || this->get_n_of_missed_updates() == 0) {
     return 0.0;
@@ -362,36 +320,6 @@ void ContactMatrix<N>::unsafe_import_from_txt(const boost::filesystem::path &pat
 }
 
 template <class N>
-void ContactMatrix<N>::unsafe_generate_mask_for_bins_without_contacts(
-    boost::dynamic_bitset<> &mask) const {
-  mask.resize(this->ncols());
-  mask.reset();
-
-  for (usize i = 0; i < this->ncols(); ++i) {
-    // Set bitmask to 1 if row contains at least one non-zero value
-    for (auto j = i; j < (i + this->nrows()) && j < this->ncols(); ++j) {
-      if ((mask[i] |= this->unsafe_get(i, j))) {
-        break;
-      }
-    }
-    // Set bitmask to 1 if column "above" the current bin contains at least one non-zero value
-    // NOTE i - this->nrows() can overflow. This is intended
-    for (auto j = i; j > 0 && j > (i - this->nrows()); --j) {
-      if ((mask[i] |= this->unsafe_get(i, j))) {
-        break;
-      }
-    }
-  }
-}
-
-template <class N>
-boost::dynamic_bitset<> ContactMatrix<N>::unsafe_generate_mask_for_bins_without_contacts() const {
-  boost::dynamic_bitset<> mask{};
-  this->unsafe_generate_mask_for_bins_without_contacts(mask);
-  return mask;
-}
-
-template <class N>
 void ContactMatrix<N>::unsafe_reset() {
   std::fill(this->_contacts.begin(), this->_contacts.end(), 0);
   this->_tot_contacts = 0;
@@ -404,14 +332,17 @@ void ContactMatrix<N>::unsafe_resize(const usize nrows, const usize ncols) {
     return;
   }
 
-  if (ncols != this->_ncols) {
-    std::vector<std::shared_mutex> mtxes(compute_number_of_mutexes(nrows, ncols));
+  if (const auto num_mtxes = compute_number_of_mutexes(nrows, ncols);
+      num_mtxes > this->_mtxes.size()) {
+    std::vector<mutex_t> mtxes(num_mtxes);
     std::swap(this->_mtxes, mtxes);
   }
 
   this->_nrows = std::min(nrows, ncols);
   this->_ncols = ncols;
-  this->_contacts.resize(this->npixels(), N(0));
+  if (this->npixels() > this->_contacts.size()) {
+    this->_contacts.resize(this->npixels(), N(0));
+  }
 }
 
 template <class N>
@@ -420,49 +351,6 @@ void ContactMatrix<N>::unsafe_resize(const bp_t length, const bp_t diagonal_widt
   const auto nrows = (diagonal_width + bin_size - 1) / bin_size;
   const auto ncols = (length + bin_size - 1) / bin_size;
   this->unsafe_resize(nrows, ncols);
-}
-
-template <class N>
-void ContactMatrix<N>::unsafe_compute_row_wise_contact_histogram(std::vector<u64> &buff) const {
-  buff.resize(this->nrows());
-  std::fill(buff.begin(), buff.end(), 0);
-
-  for (usize i = 0; i < this->ncols(); ++i) {
-    for (auto j = i; j < i + this->nrows() && j < this->ncols(); ++j) {
-      // j - i corresponds to the distance from the diagonal
-      buff[j - i] += this->unsafe_get(j, i);
-    }
-  }
-}
-
-template <class N>
-std::vector<u64> ContactMatrix<N>::unsafe_compute_row_wise_contact_histogram() const {
-  std::vector<u64> buff(this->nrows());
-  this->unsafe_compute_row_wise_contact_histogram(buff);
-  return buff;
-}
-
-template <class N>
-void ContactMatrix<N>::unsafe_deplete_contacts(double depletion_multiplier) {
-  const auto hist = this->unsafe_compute_row_wise_contact_histogram();
-  const auto effective_nbins = this->unsafe_generate_mask_for_bins_without_contacts().count();
-  // This histogram contains the average contact number (instead of the total)
-  std::vector<u64> row_wise_avg_contacts(hist.size());
-  std::transform(hist.begin(), hist.end(), row_wise_avg_contacts.begin(), [&](const auto n) {
-    return static_cast<u64>(std::round((depletion_multiplier * static_cast<double>(n)) /
-                                       static_cast<double>(effective_nbins)));
-  });
-
-  for (usize i = 0; i < this->ncols(); ++i) {
-    for (usize j = i; j < i + this->nrows() && j < this->ncols(); ++j) {
-      // j - i corresponds to the distance from the diagonal
-      if (this->unsafe_get(j, i) > row_wise_avg_contacts[j - i]) {
-        this->subtract(j, i, static_cast<N>(row_wise_avg_contacts[j - i]));
-      } else {
-        this->set(j, i, N(0));
-      }
-    }
-  }
 }
 
 template <class N>
@@ -602,8 +490,10 @@ ContactMatrix<M> ContactMatrix<N>::unsafe_as() const {
                      return static_cast<M>(n);
                    }
                  });
-  m._tot_contats_outdated = true;
+  m._tot_contacts_outdated = true;
   m._updates_missed = this->_updates_missed.load();
+
+  return m;
 }
 
 template <class N>
