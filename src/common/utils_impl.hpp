@@ -477,6 +477,55 @@ void concatenate_files(const boost::filesystem::path &path_to_dest,
   concatenate_files<remove_source_files>(path_to_dest, {{path_to_src}});
 }
 
+template <class MutexT>
+LockRangeExclusive<MutexT>::LockRangeExclusive(const absl::Span<MutexT> mutexes) {
+  usize i = 0;
+  try {
+    for (; i < mutexes.size(); ++i) {
+      mutexes[i].lock();
+    }
+  } catch ([[maybe_unused]] const std::exception &e) {
+    for (i = i - 1; i != 0; --i) {
+      mutexes[i].unlock();
+    }
+    throw;
+  }
+  this->_mutexes = mutexes;
+}
+
+template <class MutexT>
+LockRangeExclusive<MutexT>::LockRangeExclusive(std::vector<MutexT> &mutexes)
+    : LockRangeExclusive(absl::MakeSpan(mutexes)) {}
+
+template <class MutexT>
+LockRangeExclusive<MutexT>::~LockRangeExclusive() noexcept {
+  std::for_each(this->_mutexes.begin(), this->_mutexes.end(), [](auto &m) { m.unlock(); });
+}
+
+template <class MutexT>
+LockRangeShared<MutexT>::LockRangeShared(const absl::Span<MutexT> mutexes) {
+  usize i = 0;
+  try {
+    for (; i < mutexes.size(); ++i) {
+      mutexes[i].lock();
+    }
+  } catch ([[maybe_unused]] const std::exception &e) {
+    for (i = i - 1; i != 0; --i) {
+      mutexes[i].unlock();
+    }
+    throw;
+  }
+  this->_mutexes = mutexes;
+}
+
+template <class MutexT>
+LockRangeShared<MutexT>::LockRangeShared(std::vector<MutexT> &mutexes)
+    : LockRangeShared(absl::MakeSpan(mutexes)) {}
+
+template <class MutexT>
+LockRangeShared<MutexT>::~LockRangeShared() noexcept {
+  std::for_each(this->_mutexes.begin(), this->_mutexes.end(), [](auto &m) { m.unlock_shared(); });
+}
 }  // namespace modle::utils
 
 // IWYU pragma: private, include "modle/utils.hpp"

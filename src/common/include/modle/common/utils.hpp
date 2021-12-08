@@ -4,7 +4,8 @@
 
 #pragma once
 
-#include <xxh3.h>  // for XXH3_state_t, XXH_INLINE_XXH3_state_t
+#include <absl/types/span.h>  // for Span
+#include <xxh3.h>             // for XXH3_state_t, XXH_INLINE_XXH3_state_t
 
 #include <array>                             // for array
 #include <boost/filesystem/file_status.hpp>  // for regular_file, file_type
@@ -181,7 +182,6 @@ template <class I, class = std::enable_if_t<std::is_integral_v<I>>>
 
 template <class T>
 [[nodiscard]] constexpr std::future<T> make_ready_future(T&& v);
-}  // namespace modle::utils
 
 template <bool remove_source_files = false>
 inline void concatenate_files(
@@ -190,7 +190,41 @@ inline void concatenate_files(
 
 template <bool remove_source_files = false>
 inline void concatenate_files(const boost::filesystem::path& path_to_dest,
-                              const boost::filesystem::path& path_to_sources);
+                              const boost::filesystem::path& path_to_src);
+
+template <class MutexT>
+class LockRangeExclusive {
+  absl::Span<MutexT> _mutexes{};
+
+ public:
+  LockRangeExclusive() = default;
+  explicit LockRangeExclusive(absl::Span<MutexT> mutexes);
+  explicit LockRangeExclusive(std::vector<MutexT>& mutexes);
+  ~LockRangeExclusive() noexcept;
+
+  LockRangeExclusive(const LockRangeExclusive& other) = delete;
+  LockRangeExclusive(LockRangeExclusive&& other) noexcept = delete;
+  LockRangeExclusive& operator=(const LockRangeExclusive& other) = delete;
+  LockRangeExclusive& operator=(LockRangeExclusive&& other) noexcept = delete;
+};
+
+template <class MutexT>
+class LockRangeShared {
+  absl::Span<MutexT> _mutexes{};
+
+ public:
+  LockRangeShared() = default;
+  explicit LockRangeShared(absl::Span<MutexT> mutexes);
+  explicit LockRangeShared(std::vector<MutexT>& mutexes);
+  ~LockRangeShared() noexcept;
+
+  LockRangeShared(const LockRangeShared& other) = delete;
+  LockRangeShared(LockRangeShared&& other) noexcept = delete;
+  LockRangeShared& operator=(const LockRangeShared& other) = delete;
+  LockRangeShared& operator=(LockRangeShared&& other) noexcept = delete;
+};
+
+}  // namespace modle::utils
 
 #include "../../../utils_impl.hpp"  // IWYU pragma: export
 // IWYU pragma: no_include <iterator>
