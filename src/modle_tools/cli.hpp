@@ -18,7 +18,6 @@ class Cli {
     eval,
     fbcl,
     noisify,
-    stats,
     transform,
   };
   Cli(int argc, char** argv);
@@ -42,14 +41,12 @@ class Cli {
   void make_eval_subcommand();
   void make_find_barrier_clusters_subcommand();
   void make_noisify_subcommand();
-  void make_stats_subcommand();
   void make_transform_subcommand();
   void make_cli();
 
   void validate_eval_subcommand() const;
   void validate_find_barrier_clusters_subcommand() const;
   void validate_noisify_subcommand() const;
-  void validate_stats_subcommand() const;
   void validate_transform_subcommand() const;
   void validate() const;
 };

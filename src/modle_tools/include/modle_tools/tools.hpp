@@ -16,7 +16,6 @@ struct transform_config;
 void eval_subcmd(const modle::tools::eval_config &c);
 void find_barrier_clusters_subcmd(const modle::tools::find_barrier_clusters_config &c);
 void noisify_subcmd(const modle::tools::noisify_config &c);
-void stats_subcmd(const modle::tools::stats_config &c);
 void transform_subcmd(const modle::tools::transform_config &c);
 
 }  // namespace modle::tools

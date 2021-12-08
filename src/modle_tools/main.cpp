@@ -70,9 +70,6 @@ int main(int argc, char** argv) {
         case subcmd::fbcl:
           find_barrier_clusters_subcmd(absl::get<find_barrier_clusters_config>(config));
           return 0;
-        case subcmd::stats:
-          stats_subcmd(absl::get<stats_config>(config));
-          return 0;
         case subcmd::noisify:
           noisify_subcmd(absl::get<noisify_config>(config));
           return 0;

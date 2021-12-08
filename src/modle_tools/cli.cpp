@@ -335,83 +335,6 @@ void Cli::make_noisify_subcommand() {
   this->_config = absl::monostate{};
 }
 
-void Cli::make_stats_subcommand() {
-  auto& sc = *this->_cli
-                  .add_subcommand("statistics",
-                                  "Compute several useful statistics for a given Cooler file.")
-                  ->fallthrough()
-                  ->preparse_callback([this]([[maybe_unused]] usize i) {
-                    assert(this->_config.index() == 0);  // NOLINT empty variant
-                    this->_config = stats_config{};
-                  });
-  sc.alias("stats");
-
-  this->_config = stats_config{};
-  auto& c = absl::get<stats_config>(this->_config);
-
-  auto& io = *sc.add_option_group("Input/Output", "");
-  auto& cm = *sc.add_option_group("Contact matrix", "");
-
-  // clang-format off
-  io.add_option(
-     "-i,--input",
-     c.path_to_input_matrix,
-     "Path to a contact matrix in Cooler format.")
-     ->check(CLI::ExistingFile)
-     ->required();
-
-  io.add_option(
-     "--chromosome-subrange-file",
-     c.path_to_chrom_subranges,
-     "Path to BED file with subranges of the chromosomes to be processed.")
-     ->check(CLI::ExistingFile);
-
-  io.add_option(
-      "--path-to-histograms",
-      c.output_path_for_histograms,
-      "Path where to output contact histograms.");
-
-  io.add_flag(
-      "--dump-depleted-matrices",
-      c.dump_depleted_matrices,
-      "Dump contact matrices used to calculate the normalized average contact density.");
-
-  io.add_flag(
-     "-f,--force",
-     c.force,
-     "Overwrite existing file(s).")
-     ->capture_default_str();
-
-  cm.add_option(
-     "--bin-size",
-     c.bin_size,
-     "Bin size to use when calculating the statistics. Required in case of MCool files.")
-     ->check(CLI::PositiveNumber);
-
-  cm.add_option(
-     "-w,--diagonal-width",
-     c.diagonal_width,
-     "Diagonal width.")
-     ->check(CLI::PositiveNumber)
-     ->transform(utils::str_float_to_str_int)
-     ->required();
-
-  cm.add_option(
-     "--exclude-chromosomes",
-     c.chromosomes_excluded_vect,
-     "Comma-separated list of chromosomes to skip when calculating chromosome statistics.")
-     ->delimiter(',');
-
-  cm.add_option(
-     "--depletion-multiplier",
-     c.depletion_multiplier,
-     "Multiplier used to control the magnitude of the depletion.")
-     ->check(CLI::NonNegativeNumber)
-     ->capture_default_str();
-  // clang-format on
-  this->_config = absl::monostate{};
-}
-
 void Cli::make_transform_subcommand() {
   auto& sc = *this->_cli
                   .add_subcommand("transform",
@@ -550,7 +473,6 @@ void Cli::make_cli() {
   this->make_eval_subcommand();
   this->make_find_barrier_clusters_subcommand();
   this->make_noisify_subcommand();
-  this->make_stats_subcommand();
   this->make_transform_subcommand();
 }
 
@@ -672,57 +594,6 @@ void Cli::validate_find_barrier_clusters_subcommand() const {
   }
 }
 
-void Cli::validate_stats_subcommand() const {
-  std::string errors;
-  assert(this->_cli.get_subcommand("stats")->parsed());  // NOLINT
-  const auto& c = absl::get<stats_config>(this->_config);
-
-  if (!c.path_to_chrom_subranges.empty()) {
-    auto p = modle::bed::Parser(c.path_to_chrom_subranges);
-    if (const auto s = p.validate(); !s.empty()) {
-      absl::StrAppendFormat(&errors,
-                            "Validation of file \"%s\" failed with the following error: %s.\n",
-                            c.path_to_input_matrix.string(), s);
-    }
-  }
-
-  try {
-    cooler::Cooler f(c.path_to_input_matrix, cooler::Cooler<>::IO_MODE::READ_ONLY, c.bin_size);
-  } catch (const std::runtime_error& e) {
-    if (absl::EndsWith(e.what(),  // NOLINT
-                       "A bin size other than 0 is required when calling "
-                       "Cooler::validate_multires_cool_flavor()")) {
-      absl::StrAppendFormat(&errors,
-                            "File \"%s\" appears to be a multi-resolution Cooler. --bin-size is a "
-                            "mandatory argument when processing .mcool files.\n",
-                            c.path_to_input_matrix.string());
-    } else {
-      absl::StrAppendFormat(&errors,
-                            "Validation of file \"%s\" failed with the following error: %s.\n",
-                            c.path_to_input_matrix.string(), e.what());
-    }
-  }
-
-  if (!c.force) {
-    const auto ext = c.path_to_input_matrix.extension().string();
-    const auto path =
-        absl::StrCat(absl::StripSuffix(c.path_to_input_matrix.string(), ext), "_depl.cool");
-    if (boost::filesystem::exists(path)) {
-      absl::StrAppendFormat(&errors, "File \"%s\" already exists. Pass --force to overwrite", path);
-    }
-    if (boost::filesystem::exists(c.output_path_for_histograms)) {
-      absl::StrAppendFormat(&errors, "File \"%s\" already exists. Pass --force to overwrite",
-                            c.output_path_for_histograms);
-    }
-  }
-  if (!errors.empty()) {
-    throw std::runtime_error(
-        fmt::format(FMT_STRING("The following error(s) where encountered while validating CLI "
-                               "arguments and input file(s):\n{}"),
-                    errors));
-  }
-}
-
 void Cli::validate_noisify_subcommand() const {
   std::string errors;
   assert(this->_cli.get_subcommand("noisify")->parsed());  // NOLINT
@@ -828,8 +699,6 @@ void Cli::validate() const {
     this->validate_find_barrier_clusters_subcommand();
   } else if (this->_cli.get_subcommand("noisify")->parsed()) {
     this->validate_noisify_subcommand();
-  } else if (this->_cli.get_subcommand("stats")->parsed()) {
-    this->validate_stats_subcommand();
   } else if (this->_cli.get_subcommand("transform")->parsed()) {
     this->validate_transform_subcommand();
   } else {
@@ -855,8 +724,6 @@ modle::tools::config Cli::parse_arguments() {
       this->_subcommand = subcommand::fbcl;
     } else if (this->_cli.get_subcommand("noisify")->parsed()) {
       this->_subcommand = subcommand::noisify;
-    } else if (this->_cli.get_subcommand("statistics")->parsed()) {
-      this->_subcommand = subcommand::stats;
     } else if (this->_cli.get_subcommand("transform")->parsed()) {
       this->_subcommand = subcommand::transform;
     } else {
@@ -930,8 +797,6 @@ std::string_view Cli::subcommand_to_str(subcommand s) noexcept {
       return "find-barrier-clusters";
     case noisify:
       return "noisify";
-    case stats:
-      return "stats";
     case transform:
       return "transform";
     default:
