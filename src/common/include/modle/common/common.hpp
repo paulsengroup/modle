@@ -67,6 +67,15 @@ using bp_t = u64;
 using collision_t = std::uint_fast32_t;
 using contacts_t = u32;
 
+// See https://clang.llvm.org/docs/ThreadSanitizer.html#has-feature-thread-sanitizer
+#define MODLE_NO_TSAN
+#if defined(__has_feature)
+#if __has_feature(thread_sanitizer)
+#undef MODLE_NO_TSAN
+#define MODLE_NO_TSAN __attribute__((no_sanitize("thread")))
+#endif
+#endif
+
 namespace dna {
 enum Direction : std::uint_fast8_t { none = 0, fwd = 1, rev = 2, both = 3 };
 }  // namespace dna
