@@ -253,7 +253,7 @@ bool Chromosome::allocate_contacts(bp_t bin_size, bp_t diagonal_width) {
 }
 
 bool Chromosome::deallocate_contacts() {
-  if (this->_contacts) {
+  if (std::scoped_lock lck(this->_contacts_mtx); this->_contacts) {
     this->_contacts = nullptr;
     return true;
   }
