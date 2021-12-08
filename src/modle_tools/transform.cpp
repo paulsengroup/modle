@@ -196,6 +196,10 @@ void transform_subcmd(const modle::tools::transform_config& c) {
     return it->first.size();
   }();
 
+  if (const auto& output_dir = c.path_to_output_matrix.parent_path(); !output_dir.empty()) {
+    boost::filesystem::create_directories(output_dir.string());
+  }
+
   std::unique_ptr<cooler::Cooler<double>> cooler_dbl{nullptr};
   std::unique_ptr<cooler::Cooler<i32>> cooler_int{nullptr};
   if (c.floating_point) {
