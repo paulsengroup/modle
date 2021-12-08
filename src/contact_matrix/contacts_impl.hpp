@@ -233,9 +233,14 @@ usize ContactMatrix<N>::hash_coordinates(const usize i, const usize j) noexcept 
 template <class N>
 constexpr usize ContactMatrix<N>::compute_number_of_mutexes(const usize rows,
                                                             const usize cols) noexcept {
+  if (rows + cols == 0) {
+    return 0;
+  }
   const auto nthreads = static_cast<usize>(std::thread::hardware_concurrency());
   const auto max_dim = std::max(rows, cols);
-  return utils::next_pow2(std::min(max_dim, 1000 * nthreads));
+  // Clamping to 2-n is needed because get_pixel_mutex_idx expects the number of
+  // mutexes to be a multiple of 2
+  return utils::next_pow2(std::clamp(max_dim, usize(2), 1000 * nthreads));
 }
 
 template <class N>
