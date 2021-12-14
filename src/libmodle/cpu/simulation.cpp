@@ -518,43 +518,6 @@ usize Simulation::register_contacts_w_randomization(bp_t start_pos, bp_t end_pos
   return new_contacts;
 }
 
-void Simulation::generate_lef_unloader_affinities(
-    const absl::Span<const Lef> lefs, const absl::Span<const ExtrusionBarrier> barriers,
-    const absl::Span<const collision_t> rev_collisions,
-    const absl::Span<const collision_t> fwd_collisions,
-    const absl::Span<double> lef_unloader_affinity) const noexcept(utils::ndebug_defined()) {
-  assert(lefs.size() == rev_collisions.size());         // NOLINT
-  assert(lefs.size() == fwd_collisions.size());         // NOLINT
-  assert(lefs.size() == lef_unloader_affinity.size());  // NOLINT
-
-  // Changing ii -> i raises a -Werror=shadow on GCC 7.5
-  auto is_lef_bar_collision = [&](const auto ii) { return ii < barriers.size(); };
-
-  for (usize i = 0; i < lefs.size(); ++i) {
-    const auto& lef = lefs[i];
-    if (BOOST_UNLIKELY(!lef.is_bound())) {
-      // Inactive LEF
-      lef_unloader_affinity[i] = 0.0;
-    } else if (BOOST_UNLIKELY(is_lef_bar_collision(rev_collisions[i]) &&
-                              is_lef_bar_collision(fwd_collisions[i]))) {
-      // LEF is stalled on both sides by two extrusion barriers
-      const auto& rev_barrier = barriers[rev_collisions[i]];
-      const auto& fwd_barrier = barriers[fwd_collisions[i]];
-
-      if (BOOST_UNLIKELY(rev_barrier.blocking_direction_major() == dna::rev &&
-                         fwd_barrier.blocking_direction_major() == dna::fwd)) {
-        // LEF is blocked by a pair of convergent extrusion barriers
-        lef_unloader_affinity[i] = 1.0 / this->hard_stall_lef_stability_multiplier;
-      } else {
-        lef_unloader_affinity[i] = 1.0 / this->soft_stall_lef_stability_multiplier;
-      }
-    } else {
-      // LEF is stalled on at least one side but not by an extrusion barrier
-      lef_unloader_affinity[i] = 1.0;
-    }
-  }
-}
-
 usize Simulation::release_lefs(const absl::Span<Lef> lefs,
                                const absl::Span<const ExtrusionBarrier> barriers,
                                const absl::Span<const collision_t> rev_collisions,
@@ -563,25 +526,28 @@ usize Simulation::release_lefs(const absl::Span<Lef> lefs,
   auto compute_lef_unloader_affinity = [&](const auto j) {
     assert(lefs[j].is_bound());  // NOLINT
 
-    auto is_lef_bar_collision = [&](const auto k) { return k < barriers.size(); };
+    auto is_lef_bar_hard_collision = [&](const auto k, dna::Direction d) {
+      assert(d == dna::rev || d == dna::fwd);  // NOLINT
+      if (k < barriers.size()) {               // is_lef_bar_collision
+        return barriers[k].blocking_direction_major() == d;
+      }
+      return false;
+    };
 
-    const auto& rev_collision = rev_collisions[j];
-    const auto& fwd_collision = fwd_collisions[j];
-    if (BOOST_LIKELY(!is_lef_bar_collision(rev_collision) ||
-                     !is_lef_bar_collision(fwd_collision))) {
-      return 1.0 / this->soft_stall_lef_stability_multiplier;
+    const auto num_hard_collisions =
+        static_cast<u8>(is_lef_bar_hard_collision(rev_collisions[j], dna::rev) +
+                        is_lef_bar_hard_collision(fwd_collisions[j], dna::fwd));
+
+    switch (num_hard_collisions) {
+      case 0:
+        return 1.0;
+      case 1:
+        return 1.0 / this->soft_stall_lef_stability_multiplier;
+      case 2:
+        return 1.0 / this->hard_stall_lef_stability_multiplier;
+      default:
+        std::abort();  // Unreachable code
     }
-
-    assert(is_lef_bar_collision(rev_collision));  // NOLINT
-    assert(is_lef_bar_collision(fwd_collision));  // NOLINT
-    const auto& rev_barrier = barriers[rev_collision];
-    const auto& fwd_barrier = barriers[fwd_collision];
-
-    if (BOOST_UNLIKELY(rev_barrier.blocking_direction_major() == dna::rev &&
-                       fwd_barrier.blocking_direction_major() == dna::fwd)) {
-      return 1.0 / this->hard_stall_lef_stability_multiplier;
-    }
-    return 1.0;
   };
 
   usize lefs_released = 0;
@@ -601,7 +567,7 @@ usize Simulation::release_lefs(const absl::Span<Lef> lefs,
 thread_pool Simulation::instantiate_thread_pool() const {
   DISABLE_WARNING_PUSH
   DISABLE_WARNING_SHORTEN_64_TO_32
-  return thread_pool(this->nthreads);
+  return {this->nthreads};
   DISABLE_WARNING_POP
 }
 

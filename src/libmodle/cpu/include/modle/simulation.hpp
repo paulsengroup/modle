@@ -467,13 +467,6 @@ class Simulation : Config {
   inline static void select_lefs_to_bind(absl::Span<const Lef> lefs,
                                          MaskT& mask) noexcept(utils::ndebug_defined());
 
-  void generate_lef_unloader_affinities(absl::Span<const Lef> lefs,
-                                        absl::Span<const ExtrusionBarrier> barriers,
-                                        absl::Span<const collision_t> rev_collisions,
-                                        absl::Span<const collision_t> fwd_collisions,
-                                        absl::Span<double> lef_unloader_affinity) const
-      noexcept(utils::ndebug_defined());
-
   usize release_lefs(absl::Span<Lef> lefs, absl::Span<const ExtrusionBarrier> barriers,
                      absl::Span<const collision_t> rev_collisions,
                      absl::Span<const collision_t> fwd_collisions,
