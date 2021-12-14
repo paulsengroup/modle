@@ -52,20 +52,20 @@ void Simulation::run_simulate() {
   this->_tpool.reset(this->nthreads + 1);
   DISABLE_WARNING_POP
 
-  // These are the threads spawned by simulate_extrusion:
+  // These are the threads spawned by run_simulate:
   // - 1 thread to write contacts to disk. This thread pops Chromosome* from a std::deque once the
   //   simulation on the Chromosome* has been ultimated. This thread is also responsible of
-  // freeing memory as soon as it is not needed by any other thread.
+  //   freeing memory as soon as it is not needed by any other thread.
   // - The main thread (i.e. this thread), which loops over chromosomes, instantiates data
   //   structures that are shared across simulation threads (e.g. the vector of extr. barriers),
-  // then it submits simulation tasks to a concurrent queue
+  //   then it submits simulation tasks to a concurrent queue
   // - N simulation threads. These threads pop tasks from the concurrent queue fed by the main
   //   thread and carry out the actual simulation
   //
   // Switching to this thread-layout allowed us to significantly reduce memory allocations, as by
   // running few simulation threads for the whole simulation allows us to recycle buffers more
-  // efficiently. Most of the time, the only data moved are tasks, which are structs consisting of
-  // few numbers, a pointer and a Span (i.e. ptr + size)
+  // efficiently. Most of the time, the only data moved are tasks, which are implemented as
+  // light-weight structs
 
   std::mutex progress_queue_mutex;  // Protect rw access to progress_queue
   std::deque<std::pair<Chromosome*, usize>> progress_queue;
@@ -74,10 +74,12 @@ void Simulation::run_simulate() {
     if (this->num_cells <= this->nthreads) {
       return 1;
     }
-    return std::min(16UL, this->num_cells / this->nthreads);  // NOLINT
+    return std::min(usize(16), this->num_cells / this->nthreads);  // NOLINT
   }();
+
   const usize task_batch_size_enq = 2 * task_batch_size_deq;  // NOLINTNEXTLINE
   const usize queue_capacity = 2 * this->nthreads * task_batch_size_deq;
+
   // Queue used to submit simulation tasks to the thread pool
   moodycamel::BlockingConcurrentQueue<Simulation::Task> task_queue(queue_capacity, 1, 0);
   moodycamel::ProducerToken ptok(task_queue);
@@ -101,7 +103,7 @@ void Simulation::run_simulate() {
     }
 
     // The remaining code submits simulation tasks to the queue. Then it waits until all the tasks
-    // have been completed, and contacts have been written to disk
+    // have been completed and contacts have been written to disk
 
     absl::FixedArray<Task> tasks(task_batch_size_enq);
     usize taskid = 0;
@@ -142,13 +144,13 @@ void Simulation::run_simulate() {
                         static_cast<double>(chrom.npixels(this->diagonal_width, this->bin_size))) /
                        static_cast<double>(this->num_cells))));
       }
-      auto target_epochs = target_contacts == 0UL ? this->simulation_iterations
-                                                  : (std::numeric_limits<usize>::max)();
+      auto target_epochs =
+          target_contacts == 0 ? this->simulation_iterations : (std::numeric_limits<usize>::max)();
 
       usize cellid = 0;
       const auto nbatches = (this->num_cells + task_batch_size_enq - 1) / task_batch_size_enq;
       for (usize batchid = 0; batchid < nbatches; ++batchid) {
-        // Generate a batch of tasks for all the simulations involving the current chrom
+        // Generate a batch of tasks for the current chrom
         std::generate(tasks.begin(), tasks.end(), [&]() {
           return Task{{taskid++, &chrom, cellid++, target_epochs, target_contacts, nlefs,
                        chrom.barriers().data()}};
@@ -257,7 +259,7 @@ void Simulation::simulate_worker(const u64 tid,
         Simulation::simulate_one_cell(local_state);
 
         // Update progress for the current chrom
-        std::scoped_lock lckck(progress_queue_mtx);
+        std::scoped_lock lck(progress_queue_mtx);
         auto progress = std::find_if(progress_queue.begin(), progress_queue.end(),
                                      [&](const auto& p) { return task.chrom == p.first; });
         assert(progress != progress_queue.end());  // NOLINT
