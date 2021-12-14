@@ -159,7 +159,7 @@ template <class N>
                                            c.gaussian_blur_sigma * c.gaussian_blur_sigma_multiplier,
                                            c.saturation_range);
       default:
-        throw std::logic_error("Unreachable code");
+        std::abort();  // Unreachable code
     }
   }();
 

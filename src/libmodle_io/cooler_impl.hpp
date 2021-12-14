@@ -154,7 +154,7 @@ usize Cooler<N>::get_nchroms() {
     return static_cast<usize>(hdf5::read_attribute_int(
         *this->_fp, "nchroms", absl::StrCat("/resolutions/", this->_bin_size)));
   }
-  throw std::logic_error("Unreachable code");
+  std::abort();  // Unreachable code
 }
 
 template <class N>
@@ -302,7 +302,7 @@ bool Cooler<N>::validate_file_format(H5::H5File &f, FLAVOR expected_flavor, IO_M
       case FLAVOR::SCOOL:
         throw std::runtime_error("SCOOL flavor is not yet supported");
       default:
-        throw std::logic_error("Unreachable code");
+        std::abort();  // Unreachable code
     }
 
   } catch (const std::runtime_error &e) {

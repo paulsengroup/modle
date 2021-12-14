@@ -702,7 +702,7 @@ void Cli::validate() const {
   } else if (this->_cli.get_subcommand("transform")->parsed()) {
     this->validate_transform_subcommand();
   } else {
-    throw std::logic_error("Unreachable code");
+    std::abort();  // Unreachable code
   }
 }
 
