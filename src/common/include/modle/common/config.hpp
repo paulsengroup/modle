@@ -53,10 +53,10 @@ struct Config {  // NOLINT(altera-struct-pack-align)
   usize num_cells{5'000};                                    // NOLINT(readability-magic-numbers, cppcoreguidelines-avoid-magic-numbers)
   usize nthreads{std::thread::hardware_concurrency()};
   bp_t diagonal_width{3'000'000 /* 3 Mbp */};                // NOLINT(readability-magic-numbers, cppcoreguidelines-avoid-magic-numbers)
-  usize simulation_iterations{200};                          // NOLINT(readability-magic-numbers, cppcoreguidelines-avoid-magic-numbers)
+  usize simulation_epochs{200};                          // NOLINT(readability-magic-numbers, cppcoreguidelines-avoid-magic-numbers)
   double target_contact_density{0.0};
   double number_of_lefs_per_mbp;
-  double prob_of_lef_release{0.015};
+  double prob_of_lef_release{0.015};                         // NOLINT(readability-magic-numbers, cppcoreguidelines-avoid-magic-numbers)
   double hard_stall_lef_stability_multiplier{5.0};           // NOLINT(readability-magic-numbers, cppcoreguidelines-avoid-magic-numbers)
   double soft_stall_lef_stability_multiplier{1.0};           // NOLINT(readability-magic-numbers, cppcoreguidelines-avoid-magic-numbers)
   bp_t deletion_size{10'000};                                // NOLINT(readability-magic-numbers, cppcoreguidelines-avoid-magic-numbers)
@@ -74,7 +74,7 @@ struct Config {  // NOLINT(altera-struct-pack-align)
   double lef_fraction_contact_sampling{0.025};           // NOLINT(readability-magic-numbers, cppcoreguidelines-avoid-magic-numbers)
   bool randomize_contacts{false};
   double genextreme_mu{0};                               // NOLINT(readability-magic-numbers, cppcoreguidelines-avoid-magic-numbers)
-  double genextreme_sigma{5'000};                       // NOLINT(readability-magic-numbers, cppcoreguidelines-avoid-magic-numbers)
+  double genextreme_sigma{5'000};                        // NOLINT(readability-magic-numbers, cppcoreguidelines-avoid-magic-numbers)
   double genextreme_xi{0.001};                           // NOLINT(readability-magic-numbers, cppcoreguidelines-avoid-magic-numbers)
 
   // Burn-in

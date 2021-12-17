@@ -113,7 +113,7 @@ static void add_common_options(CLI::App& subcommand, modle::Config& c) {
 
   gen.add_option(
       "--number-of-iterations",
-      c.simulation_iterations,
+      c.simulation_epochs,
       "Number of simulation iterations to run on each cell.")
       ->check(CLI::PositiveNumber)
       ->transform(utils::str_float_to_str_int)

@@ -132,7 +132,7 @@ bool BED::parse_chrom_end(const std::vector<std::string_view>& toks) {
   if (this->chrom_start > this->chrom_end) {
     throw std::runtime_error(
         fmt::format(FMT_STRING("Invalid BED record detected: chrom_start > chrom_end: chrom='{}'; "
-                               "overlap_start={}; _end={}"),
+                               "start={}; end={}"),
                     this->chrom, this->chrom_start, this->chrom_end));
   }
   return this->_standard == BED3;
