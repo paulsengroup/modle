@@ -77,6 +77,7 @@ class Chromosome {
   [[nodiscard]] constexpr bp_t end_pos() const;
   [[nodiscard]] constexpr bp_t size() const;
   [[nodiscard]] constexpr bp_t simulated_size() const;
+  [[nodiscard]] usize npixels() const;
   [[nodiscard]] constexpr usize npixels(bp_t diagonal_width, bp_t bin_size) const;
   [[nodiscard]] bool ok() const;
   [[nodiscard]] usize num_lefs(double nlefs_per_mbp) const;
@@ -84,8 +85,6 @@ class Chromosome {
   [[nodiscard]] const IITree<bp_t, ExtrusionBarrier>& barriers() const;
   [[nodiscard]] IITree<bp_t, ExtrusionBarrier>& barriers();
   [[nodiscard]] absl::Span<const bed_tree_value_t> get_features() const;
-  void increment_contacts(bp_t pos1, bp_t pos2, bp_t bin_size);
-  void increment_contacts(bp_t bin1, bp_t bin2);
   bool allocate_contacts(bp_t bin_size, bp_t diagonal_width);
   bool deallocate_contacts();
   [[nodiscard]] const contact_matrix_t& contacts() const;

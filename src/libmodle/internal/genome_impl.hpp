@@ -21,7 +21,7 @@ constexpr usize Chromosome::npixels(bp_t diagonal_width, bp_t bin_size) const {
   const auto npix1 = (diagonal_width + bin_size - 1) / bin_size;
   const auto npix2 = (this->simulated_size() + bin_size - 1) / bin_size;
 
-  return npix1 * npix2;
+  return std::min(npix1, npix2) * npix2;
 }
 
 template <typename H>

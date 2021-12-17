@@ -233,16 +233,6 @@ absl::Span<const Chromosome::bed_tree_value_t> Chromosome::get_features() const 
   return this->_features;
 }
 
-void Chromosome::increment_contacts(bp_t pos1, bp_t pos2, bp_t bin_size) {
-  assert(this->_contacts);  // NOLINT
-  this->_contacts->increment((pos1 - this->_start) / bin_size, (pos2 - this->_start) / bin_size);
-}
-
-void Chromosome::increment_contacts(bp_t bin1, bp_t bin2) {
-  assert(this->_contacts);  // NOLINT
-  this->_contacts->increment(bin1, bin2);
-}
-
 bool Chromosome::allocate_contacts(bp_t bin_size, bp_t diagonal_width) {
   if (std::scoped_lock lck(this->_contacts_mtx); !this->_contacts) {
     this->_contacts =
@@ -258,6 +248,11 @@ bool Chromosome::deallocate_contacts() {
     return true;
   }
   return false;
+}
+
+usize Chromosome::npixels() const {
+  assert(this->_contacts);  // NOLINT
+  return this->contacts().npixels();
 }
 
 const Chromosome::contact_matrix_t& Chromosome::contacts() const {
