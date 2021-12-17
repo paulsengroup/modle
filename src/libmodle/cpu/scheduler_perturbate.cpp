@@ -324,7 +324,7 @@ void Simulation::run_perturbate() {
                          this->number_of_lefs_per_mbp));
 
           // Compute the target number of epochs based on the target number of contacts
-          t.num_target_epochs = t.num_target_contacts == 0UL ? this->simulation_iterations
+          t.num_target_epochs = t.num_target_contacts == 0UL ? this->simulation_epochs
                                                              : (std::numeric_limits<usize>::max)();
 
           if (num_tasks == tasks.size()) {  // Enqueue a batch of tasks

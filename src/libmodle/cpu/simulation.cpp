@@ -66,6 +66,32 @@ Simulation::Simulation(const Config& c, bool import_chroms)
   DISABLE_WARNING_SHORTEN_64_TO_32
   _tpool.reset(c.nthreads + 1);
   DISABLE_WARNING_POP
+
+  std::vector<std::string> warnings;
+  for (const auto& chrom : this->_genome) {
+    if (chrom.simulated_size() < this->diagonal_width) {
+      warnings.emplace_back(fmt::format(FMT_STRING("{}: simulated_size={}; total_size={};"),
+                                        chrom.name(), chrom.simulated_size(), chrom.size()));
+    }
+  }
+  if (!warnings.empty()) {
+    spdlog::warn(FMT_STRING("The simulated size for the following {} chromosome(s) is smaller than "
+                            "the simulation diagonal width ({} bp). Is this intended?\n - {}"),
+                 warnings.size(), this->diagonal_width, fmt::join(warnings, "\n - "));
+  }
+  warnings.clear();
+  const usize min_pixels = 250'000;
+  for (const auto& chrom : this->_genome) {
+    if (const auto npixels = chrom.npixels(this->diagonal_width, this->bin_size);
+        npixels < min_pixels) {
+      warnings.emplace_back(fmt::format(FMT_STRING("{}: {} pixels"), chrom.name(), npixels));
+    }
+  }
+  if (!warnings.empty()) {
+    spdlog::warn(FMT_STRING("The contact matrix for the following {} chromosome(s) appears to be "
+                            "really small (less than {} pixels). Is this intended?\n - {}"),
+                 warnings.size(), min_pixels, fmt::join(warnings, "\n - "));
+  }
 }
 
 bool Simulation::ok() const noexcept { return !this->_exception_thrown; }
@@ -708,20 +734,20 @@ void Simulation::State::reset_buffers() {  // TODO figure out which resets are r
 }
 
 absl::Span<Lef> Simulation::State::get_lefs(usize size) noexcept {
-  if (size == 0) {
+  if (size == State::npos) {
     size = this->num_active_lefs;
   }
   assert(size <= this->lef_buff.size());  // NOLINT
   return absl::MakeSpan(this->lef_buff.data(), size);
 }
 absl::Span<usize> Simulation::State::get_rev_ranks(usize size) noexcept {
-  if (size == 0) {
+  if (size == State::npos) {
     size = this->num_active_lefs;
   }
   return absl::MakeSpan(this->rank_buff1.data(), size);
 }
 absl::Span<usize> Simulation::State::get_fwd_ranks(usize size) noexcept {
-  if (size == 0) {
+  if (size == State::npos) {
     size = this->num_active_lefs;
   }
   return absl::MakeSpan(this->rank_buff2.data(), size);
@@ -730,31 +756,31 @@ boost::dynamic_bitset<>& Simulation::State::get_barrier_mask() noexcept {
   return this->barrier_mask;
 }
 absl::Span<bp_t> Simulation::State::get_rev_moves(usize size) noexcept {
-  if (size == 0) {
+  if (size == State::npos) {
     size = this->num_active_lefs;
   }
   return absl::MakeSpan(this->moves_buff1.data(), size);
 }
 absl::Span<bp_t> Simulation::State::get_fwd_moves(usize size) noexcept {
-  if (size == 0) {
+  if (size == State::npos) {
     size = this->num_active_lefs;
   }
   return absl::MakeSpan(this->moves_buff2.data(), size);
 }
 absl::Span<usize> Simulation::State::get_idx_buff(usize size) noexcept {
-  if (size == 0) {
+  if (size == State::npos) {
     size = this->num_active_lefs;
   }
   return absl::MakeSpan(this->idx_buff.data(), size);
 }
 absl::Span<collision_t> Simulation::State::get_rev_collisions(usize size) noexcept {
-  if (size == 0) {
+  if (size == State::npos) {
     size = this->num_active_lefs;
   }
   return absl::MakeSpan(this->collision_buff1.data(), size);
 }
 absl::Span<collision_t> Simulation::State::get_fwd_collisions(usize size) noexcept {
-  if (size == 0) {
+  if (size == State::npos) {
     size = this->num_active_lefs;
   }
   return absl::MakeSpan(this->collision_buff2.data(), size);
@@ -767,20 +793,20 @@ std::deque<double>& Simulation::State::get_avg_loop_sizes() noexcept {
 }
 
 absl::Span<const Lef> Simulation::State::get_lefs(usize size) const noexcept {
-  if (size == 0) {
+  if (size == State::npos) {
     size = this->num_active_lefs;
   }
   return absl::MakeConstSpan(this->lef_buff.data(), size);
 }
 
 absl::Span<const usize> Simulation::State::get_rev_ranks(usize size) const noexcept {
-  if (size == 0) {
+  if (size == State::npos) {
     size = this->num_active_lefs;
   }
   return absl::MakeConstSpan(this->rank_buff1.data(), size);
 }
 absl::Span<const usize> Simulation::State::get_fwd_ranks(usize size) const noexcept {
-  if (size == 0) {
+  if (size == State::npos) {
     size = this->num_active_lefs;
   }
   return absl::MakeConstSpan(this->rank_buff2.data(), size);
@@ -789,31 +815,31 @@ const boost::dynamic_bitset<>& Simulation::State::get_barrier_mask() const noexc
   return this->barrier_mask;
 }
 absl::Span<const bp_t> Simulation::State::get_rev_moves(usize size) const noexcept {
-  if (size == 0) {
+  if (size == State::npos) {
     size = this->num_active_lefs;
   }
   return absl::MakeConstSpan(this->moves_buff1.data(), size);
 }
 absl::Span<const bp_t> Simulation::State::get_fwd_moves(usize size) const noexcept {
-  if (size == 0) {
+  if (size == State::npos) {
     size = this->num_active_lefs;
   }
   return absl::MakeConstSpan(this->moves_buff2.data(), size);
 }
 absl::Span<const usize> Simulation::State::get_idx_buff(usize size) const noexcept {
-  if (size == 0) {
+  if (size == State::npos) {
     size = this->num_active_lefs;
   }
   return absl::MakeConstSpan(this->idx_buff.data(), size);
 }
 absl::Span<const collision_t> Simulation::State::get_rev_collisions(usize size) const noexcept {
-  if (size == 0) {
+  if (size == State::npos) {
     size = this->num_active_lefs;
   }
   return absl::MakeConstSpan(this->collision_buff1.data(), size);
 }
 absl::Span<const collision_t> Simulation::State::get_fwd_collisions(usize size) const noexcept {
-  if (size == 0) {
+  if (size == State::npos) {
     size = this->num_active_lefs;
   }
   return absl::MakeConstSpan(this->collision_buff2.data(), size);
@@ -1028,7 +1054,7 @@ void Simulation::run_burnin(State& s, const double lef_binding_rate_burnin) cons
       if (!s.burnin_completed && s.epoch >= this->max_burnin_epochs) {
         s.burnin_completed = true;
         spdlog::warn(
-            FMT_STRING("The burn-in phase for '{}' from cell #{} was terminated earlier than "
+            FMT_STRING("The burn-in phase for \"{}\" from cell #{} was terminated earlier than "
                        "it should've as its simulation instance failed to stabilize "
                        "within --max-burnin-epochs={} epochs."),
             s.chrom->name(), s.cell_id, this->max_burnin_epochs);
@@ -1044,7 +1070,6 @@ void Simulation::simulate_one_cell(State& s) const {
   assert(!s.burnin_completed);       // NOLINT
   assert(s.num_active_lefs == 0);    // NOLINT
 
-  // use the current epoch when generating error messages
   try {
     // Seed is computed based on chrom. name, size and cellid
     s.seed = s.chrom->hash(s.xxh_state.get(), this->seed, s.cell_id);
@@ -1058,10 +1083,14 @@ void Simulation::simulate_one_cell(State& s) const {
     const auto avg_nlefs_to_sample =
         static_cast<double>(s.num_lefs) * this->lef_fraction_contact_sampling;
 
-    // Local counter for the number of contacts generated by the current kernel instance
+    // Init the local counter for the number of contacts generated by the current kernel instance
     s.num_contacts = 0;
-    assert((s.num_target_contacts != 0) ==  // NOLINT
-           (s.num_target_epochs == (std::numeric_limits<usize>::max)()));
+    assert([&]() {  // NOLINT
+      if (s.num_target_contacts != 0) {
+        return s.num_target_epochs == (std::numeric_limits<usize>::max)();
+      }
+      return s.num_target_epochs != (std::numeric_limits<usize>::max)();
+    }());
 
     // Generate initial extr. barrier states, so that they are already at or close to
     // equilibrium
@@ -1073,6 +1102,7 @@ void Simulation::simulate_one_cell(State& s) const {
       s.num_active_lefs = s.num_lefs;
       s.burnin_completed = true;
     }
+
     for (; s.epoch < std::max(s.num_burnin_epochs + s.num_target_epochs, s.num_target_epochs);
          ++s.epoch) {
       if (!s.burnin_completed) {
@@ -1244,5 +1274,28 @@ void Simulation::dump_stats(const usize task_id, const usize epoch, const usize 
       lefs_stalled_both, lef_bar_collisions, lef_lef_primary_collisions,
       lef_lef_secondary_collisions, avg_loop_size));
   // clang-format on
+}
+
+usize Simulation::compute_tot_target_epochs() const noexcept {
+  if (this->target_contact_density == 0.0) {
+    assert(this->simulation_epochs != 0);  // NOLINT
+    return this->num_cells * this->simulation_epochs;
+  }
+  return (std::numeric_limits<usize>::max)();
+}
+
+usize Simulation::compute_tot_target_contacts(const usize npixels) const noexcept {
+  if (this->target_contact_density == 0.0) {
+    return (std::numeric_limits<usize>::max)();
+  }
+
+  const auto tot = this->target_contact_density * static_cast<double>(npixels);
+  return std::max(usize(1), static_cast<usize>(std::round(tot)));
+}
+
+usize Simulation::compute_num_lefs(const usize size_bp) const noexcept {
+  const auto size_mbp = static_cast<double>(size_bp) / Mbp;
+  return std::max(usize(1),
+                  static_cast<usize>(std::round(this->number_of_lefs_per_mbp * size_mbp)));
 }
 }  // namespace modle

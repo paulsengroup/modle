@@ -122,28 +122,32 @@ class Simulation : Config {
     std::deque<double> cfx_of_variation_buff{};
     std::deque<double> avg_loop_size_buff{};
 
+    static constexpr usize npos = absl::Span<usize>::npos;
+
    public:
-    [[nodiscard]] absl::Span<Lef> get_lefs(usize size = 0) noexcept;
-    [[nodiscard]] absl::Span<usize> get_rev_ranks(usize size = 0) noexcept;
-    [[nodiscard]] absl::Span<usize> get_fwd_ranks(usize size = 0) noexcept;
+    [[nodiscard]] absl::Span<Lef> get_lefs(usize size = npos) noexcept;
+    [[nodiscard]] absl::Span<usize> get_rev_ranks(usize size = npos) noexcept;
+    [[nodiscard]] absl::Span<usize> get_fwd_ranks(usize size = npos) noexcept;
     [[nodiscard]] boost::dynamic_bitset<>& get_barrier_mask() noexcept;
-    [[nodiscard]] absl::Span<bp_t> get_rev_moves(usize size = 0) noexcept;
-    [[nodiscard]] absl::Span<bp_t> get_fwd_moves(usize size = 0) noexcept;
-    [[nodiscard]] absl::Span<usize> get_idx_buff(usize size = 0) noexcept;
-    [[nodiscard]] absl::Span<collision_t> get_rev_collisions(usize size = 0) noexcept;
-    [[nodiscard]] absl::Span<collision_t> get_fwd_collisions(usize size = 0) noexcept;
+    [[nodiscard]] absl::Span<bp_t> get_rev_moves(usize size = npos) noexcept;
+    [[nodiscard]] absl::Span<bp_t> get_fwd_moves(usize size = npos) noexcept;
+    [[nodiscard]] absl::Span<usize> get_idx_buff(usize size = npos) noexcept;
+    [[nodiscard]] absl::Span<collision_t> get_rev_collisions(usize size = npos) noexcept;
+    [[nodiscard]] absl::Span<collision_t> get_fwd_collisions(usize size = npos) noexcept;
     [[nodiscard]] std::deque<double>& get_cfx_of_variation() noexcept;
     [[nodiscard]] std::deque<double>& get_avg_loop_sizes() noexcept;
 
-    [[nodiscard]] absl::Span<const Lef> get_lefs(usize size = 0) const noexcept;
-    [[nodiscard]] absl::Span<const usize> get_rev_ranks(usize size = 0) const noexcept;
-    [[nodiscard]] absl::Span<const usize> get_fwd_ranks(usize size = 0) const noexcept;
+    [[nodiscard]] absl::Span<const Lef> get_lefs(usize size = npos) const noexcept;
+    [[nodiscard]] absl::Span<const usize> get_rev_ranks(usize size = npos) const noexcept;
+    [[nodiscard]] absl::Span<const usize> get_fwd_ranks(usize size = npos) const noexcept;
     [[nodiscard]] const boost::dynamic_bitset<>& get_barrier_mask() const noexcept;
-    [[nodiscard]] absl::Span<const bp_t> get_rev_moves(usize size = 0) const noexcept;
-    [[nodiscard]] absl::Span<const bp_t> get_fwd_moves(usize size = 0) const noexcept;
-    [[nodiscard]] absl::Span<const usize> get_idx_buff(usize size = 0) const noexcept;
-    [[nodiscard]] absl::Span<const collision_t> get_rev_collisions(usize size = 0) const noexcept;
-    [[nodiscard]] absl::Span<const collision_t> get_fwd_collisions(usize size = 0) const noexcept;
+    [[nodiscard]] absl::Span<const bp_t> get_rev_moves(usize size = npos) const noexcept;
+    [[nodiscard]] absl::Span<const bp_t> get_fwd_moves(usize size = npos) const noexcept;
+    [[nodiscard]] absl::Span<const usize> get_idx_buff(usize size = npos) const noexcept;
+    [[nodiscard]] absl::Span<const collision_t> get_rev_collisions(
+        usize size = npos) const noexcept;
+    [[nodiscard]] absl::Span<const collision_t> get_fwd_collisions(
+        usize size = npos) const noexcept;
     [[nodiscard]] const std::deque<double>& get_cfx_of_variation() const noexcept;
     [[nodiscard]] const std::deque<double>& get_avg_loop_sizes() const noexcept;
 
@@ -500,6 +504,10 @@ class Simulation : Config {
                   const boost::dynamic_bitset<>& barrier_mask,
                   absl::Span<const usize> rev_lef_ranks, absl::Span<const usize> fwd_lef_ranks,
                   compressed_io::Writer& log_writer) const noexcept(utils::ndebug_defined());
+
+  [[nodiscard]] usize compute_tot_target_epochs() const noexcept;
+  [[nodiscard]] usize compute_tot_target_contacts(usize npixels) const noexcept;
+  [[nodiscard]] usize compute_num_lefs(const usize size_bp) const noexcept;
 
 #ifdef ENABLE_TESTING
  public:
