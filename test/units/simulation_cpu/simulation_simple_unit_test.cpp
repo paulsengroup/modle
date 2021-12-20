@@ -463,12 +463,12 @@ const std::vector<collision_t> fwd_collision_mask_expected{REACHED_CHROM_BOUNDAR
 TEST_CASE("Detect LEF-BAR collisions 001 - wo soft collisions fwd CTCFs",
           "[lef-bar-collisions][simulation][short]") {
   modle::Config c;
-  c.rev_extrusion_speed = 2;        // NOLINT
-  c.rev_extrusion_speed_std = 0;    // NOLINT
-  c.fwd_extrusion_speed = 2;        // NOLINT
-  c.fwd_extrusion_speed_std = 0;    // NOLINT
-  c.lef_hard_collision_pblock = 1;  // NOLINT
-  c.lef_soft_collision_pblock = 0;  // NOLINT
+  c.rev_extrusion_speed = 2;             // NOLINT
+  c.rev_extrusion_speed_std = 0;         // NOLINT
+  c.fwd_extrusion_speed = 2;             // NOLINT
+  c.fwd_extrusion_speed_std = 0;         // NOLINT
+  c.lef_bar_major_collision_pblock = 1;  // NOLINT
+  c.lef_bar_minor_collision_pblock = 0;  // NOLINT
   constexpr usize nlefs = 3;
   constexpr usize nbarriers = 3;
   // NOLINTNEXTLINE(readability-magic-numbers, cppcoreguidelines-avoid-magic-numbers)
@@ -528,12 +528,12 @@ const std::vector<ExtrusionBarrier> barriers{ExtrusionBarrier{2, 1.0, 0.0, '+'},
 TEST_CASE("Detect LEF-BAR collisions 002 - wo soft-collisions rev CTCFs",
           "[lef-bar-collisions][simulation][short]") {
   modle::Config c;
-  c.rev_extrusion_speed = 2;        // NOLINT
-  c.rev_extrusion_speed_std = 0;    // NOLINT
-  c.fwd_extrusion_speed = 2;        // NOLINT
-  c.fwd_extrusion_speed_std = 0;    // NOLINT
-  c.lef_hard_collision_pblock = 1;  // NOLINT
-  c.lef_soft_collision_pblock = 0;  // NOLINT
+  c.rev_extrusion_speed = 2;             // NOLINT
+  c.rev_extrusion_speed_std = 0;         // NOLINT
+  c.fwd_extrusion_speed = 2;             // NOLINT
+  c.fwd_extrusion_speed_std = 0;         // NOLINT
+  c.lef_bar_major_collision_pblock = 1;  // NOLINT
+  c.lef_bar_minor_collision_pblock = 0;  // NOLINT
   constexpr usize nlefs = 3;
   constexpr usize nbarriers = 3;
   // NOLINTNEXTLINE(readability-magic-numbers, cppcoreguidelines-avoid-magic-numbers)
@@ -594,12 +594,12 @@ const std::vector<ExtrusionBarrier> barriers{ExtrusionBarrier{2, 1.0, 0.0, '-'},
 TEST_CASE("Detect LEF-BAR collisions 003 - w soft-collisions fwd CTCFs",
           "[lef-bar-collisions][simulation][short]") {
   modle::Config c;
-  c.rev_extrusion_speed = 2;        // NOLINT
-  c.rev_extrusion_speed_std = 0;    // NOLINT
-  c.fwd_extrusion_speed = 2;        // NOLINT
-  c.fwd_extrusion_speed_std = 0;    // NOLINT
-  c.lef_hard_collision_pblock = 1;  // NOLINT
-  c.lef_soft_collision_pblock = 1;  // NOLINT
+  c.rev_extrusion_speed = 2;             // NOLINT
+  c.rev_extrusion_speed_std = 0;         // NOLINT
+  c.fwd_extrusion_speed = 2;             // NOLINT
+  c.fwd_extrusion_speed_std = 0;         // NOLINT
+  c.lef_bar_major_collision_pblock = 1;  // NOLINT
+  c.lef_bar_minor_collision_pblock = 1;  // NOLINT
   constexpr usize nlefs = 3;
   constexpr usize nbarriers = 3;
   // NOLINTNEXTLINE(readability-magic-numbers, cppcoreguidelines-avoid-magic-numbers)
@@ -659,12 +659,12 @@ const std::vector<ExtrusionBarrier> barriers{ExtrusionBarrier{2, 1.0, 0.0, '+'},
 TEST_CASE("Detect LEF-BAR collisions 004 - wo soft-collisions mixed CTCFs",
           "[lef-bar-collisions][simulation][short]") {
   modle::Config c;
-  c.rev_extrusion_speed = 5;        // NOLINT
-  c.rev_extrusion_speed_std = 0;    // NOLINT
-  c.fwd_extrusion_speed = 5;        // NOLINT
-  c.fwd_extrusion_speed_std = 0;    // NOLINT
-  c.lef_hard_collision_pblock = 1;  // NOLINT
-  c.lef_soft_collision_pblock = 0;  // NOLINT
+  c.rev_extrusion_speed = 5;             // NOLINT
+  c.rev_extrusion_speed_std = 0;         // NOLINT
+  c.fwd_extrusion_speed = 5;             // NOLINT
+  c.fwd_extrusion_speed_std = 0;         // NOLINT
+  c.lef_bar_major_collision_pblock = 1;  // NOLINT
+  c.lef_bar_minor_collision_pblock = 0;  // NOLINT
   const usize nlefs = 5;
   const usize nbarriers = 4;
   // NOLINTNEXTLINE(readability-magic-numbers, cppcoreguidelines-avoid-magic-numbers)
@@ -730,12 +730,12 @@ const std::vector<ExtrusionBarrier> barriers{ExtrusionBarrier{25, 1.0, 0.0, '+'}
 TEST_CASE("Detect LEF-BAR collisions 005 - wo soft-collisions mixed CTCFs, different extr. speeds",
           "[lef-bar-collisions][simulation][short]") {
   modle::Config c;
-  c.rev_extrusion_speed = 2;        // NOLINT
-  c.rev_extrusion_speed_std = 0;    // NOLINT
-  c.fwd_extrusion_speed = 5;        // NOLINT
-  c.fwd_extrusion_speed_std = 0;    // NOLINT
-  c.lef_hard_collision_pblock = 1;  // NOLINT
-  c.lef_soft_collision_pblock = 0;  // NOLINT
+  c.rev_extrusion_speed = 2;             // NOLINT
+  c.rev_extrusion_speed_std = 0;         // NOLINT
+  c.fwd_extrusion_speed = 5;             // NOLINT
+  c.fwd_extrusion_speed_std = 0;         // NOLINT
+  c.lef_bar_major_collision_pblock = 1;  // NOLINT
+  c.lef_bar_minor_collision_pblock = 0;  // NOLINT
   const usize nlefs = 5;
   const usize nbarriers = 4;
   // NOLINTNEXTLINE(readability-magic-numbers, cppcoreguidelines-avoid-magic-numbers)

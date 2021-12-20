@@ -281,15 +281,15 @@ static void add_common_options(CLI::App& subcommand, modle::Config& c) {
       ->check(CLI::Range(0.0, 1.0));
 
   extr_barr.add_option(
-      "--hard-collision-prob",
-      c.lef_hard_collision_pblock,
+      "--lef-bar-major-collision-prob",
+      c.lef_bar_major_collision_pblock,
       "Collision probability of a LEF moving towards an extrusion barrier in blocking orientation.")
       ->check(CLI::Range(0.0, 1.0))
       ->capture_default_str();
 
   extr_barr.add_option(
-      "--soft-collision-prob",
-      c.lef_soft_collision_pblock,
+      "--lef-bar-minor-collision-prob",
+      c.lef_bar_minor_collision_pblock,
       "Collision probability of a LEF moving towards an extrusion barrier in non-blocking orientation.")
       ->check(CLI::Range(0.0, 1.0))
       ->capture_default_str();

@@ -30,8 +30,8 @@ TEST_CASE("Simulation 001", "[simulation][short]") {
   c.fwd_extrusion_speed = 75;                  // NOLINT
   c.fwd_extrusion_speed_std = 0;               // NOLINT
   c.probability_of_extrusion_unit_bypass = 0;  // NOLINT
-  c.lef_hard_collision_pblock = 1;             // NOLINT
-  c.lef_soft_collision_pblock = 0;             // NOLINT
+  c.lef_bar_major_collision_pblock = 1;        // NOLINT
+  c.lef_bar_minor_collision_pblock = 0;        // NOLINT
   const usize nlefs = 7;
   const usize nbarriers = 5;
   const Chromosome chrom{0, "chr1", 0, 1000, 1000};
@@ -114,8 +114,8 @@ TEST_CASE("Simulation 002", "[simulation][short]") {
   c.fwd_extrusion_speed = 75;                  // NOLINT
   c.fwd_extrusion_speed_std = 0;               // NOLINT
   c.probability_of_extrusion_unit_bypass = 0;  // NOLINT
-  c.lef_hard_collision_pblock = 1;             // NOLINT
-  c.lef_soft_collision_pblock = 0;             // NOLINT
+  c.lef_bar_major_collision_pblock = 1;        // NOLINT
+  c.lef_bar_minor_collision_pblock = 0;        // NOLINT
   const usize nlefs = 7;
   const usize nbarriers = 5;
   const Chromosome chrom{0, "chr1", 0, 1000, 1000};
@@ -198,8 +198,8 @@ TEST_CASE("Simulation 003 - Soft collisions on", "[simulation][short]") {
   c.fwd_extrusion_speed = 75;                  // NOLINT
   c.fwd_extrusion_speed_std = 0;               // NOLINT
   c.probability_of_extrusion_unit_bypass = 0;  // NOLINT
-  c.lef_hard_collision_pblock = 1;             // NOLINT
-  c.lef_soft_collision_pblock = 1;             // NOLINT
+  c.lef_bar_major_collision_pblock = 1;        // NOLINT
+  c.lef_bar_minor_collision_pblock = 1;        // NOLINT
   const usize nlefs = 7;
   const usize nbarriers = 5;
   const Chromosome chrom{0, "chr1", 0, 1000, 1000};
@@ -282,8 +282,8 @@ TEST_CASE("Simulation 004 - Inactive barriers", "[simulation][short]") {
   c.fwd_extrusion_speed = 75;                  // NOLINT
   c.fwd_extrusion_speed_std = 0;               // NOLINT
   c.probability_of_extrusion_unit_bypass = 0;  // NOLINT
-  c.lef_hard_collision_pblock = 1;             // NOLINT
-  c.lef_soft_collision_pblock = 0;             // NOLINT
+  c.lef_bar_major_collision_pblock = 1;        // NOLINT
+  c.lef_bar_minor_collision_pblock = 0;        // NOLINT
   const usize nlefs = 7;
   const usize nbarriers = 5;
   const Chromosome chrom{0, "chr1", 0, 1000, 1000};
@@ -366,8 +366,8 @@ TEST_CASE("Simulation 005 - Multiple LEFs located at the same site", "[simulatio
   c.fwd_extrusion_speed = 25;                  // NOLINT
   c.fwd_extrusion_speed_std = 0;               // NOLINT
   c.probability_of_extrusion_unit_bypass = 0;  // NOLINT
-  c.lef_hard_collision_pblock = 1;             // NOLINT
-  c.lef_soft_collision_pblock = 0;             // NOLINT
+  c.lef_bar_major_collision_pblock = 1;        // NOLINT
+  c.lef_bar_minor_collision_pblock = 0;        // NOLINT
   constexpr usize nlefs = 6;
   constexpr usize nbarriers = 1;
   const Chromosome chrom{0, "chr1", 0, 150, 150};  // NOLINT
@@ -443,8 +443,8 @@ TEST_CASE("Simulation 006 - Few inactive LEFs", "[simulation][short]") {
   c.fwd_extrusion_speed = 25;                  // NOLINT
   c.fwd_extrusion_speed_std = 0;               // NOLINT
   c.probability_of_extrusion_unit_bypass = 0;  // NOLINT
-  c.lef_hard_collision_pblock = 1;             // NOLINT
-  c.lef_soft_collision_pblock = 0;             // NOLINT
+  c.lef_bar_major_collision_pblock = 1;        // NOLINT
+  c.lef_bar_minor_collision_pblock = 0;        // NOLINT
   constexpr usize nlefs = 6;
   constexpr usize nbarriers = 1;
   const Chromosome chrom{0, "chr1", 0, 150, 150};  // NOLINT
@@ -524,8 +524,8 @@ TEST_CASE("Simulation 007 - LEF-LEF collision overrides LEF-BAR collision 1",
   c.fwd_extrusion_speed = 20;                  // NOLINT
   c.fwd_extrusion_speed_std = 0;               // NOLINT
   c.probability_of_extrusion_unit_bypass = 0;  // NOLINT
-  c.lef_hard_collision_pblock = 1;             // NOLINT
-  c.lef_soft_collision_pblock = 0;             // NOLINT
+  c.lef_bar_major_collision_pblock = 1;        // NOLINT
+  c.lef_bar_minor_collision_pblock = 0;        // NOLINT
   constexpr usize nlefs = 2;
   constexpr usize nbarriers = 1;
   const Chromosome chrom{0, "chr1", 0, 200, 200};  // NOLINT
@@ -586,8 +586,8 @@ TEST_CASE("Simulation 008 - LEF-LEF collision overrides LEF-BAR collision 2",
   c.fwd_extrusion_speed = 20;                  // NOLINT
   c.fwd_extrusion_speed_std = 0;               // NOLINT
   c.probability_of_extrusion_unit_bypass = 0;  // NOLINT
-  c.lef_hard_collision_pblock = 1;             // NOLINT
-  c.lef_soft_collision_pblock = 0;             // NOLINT
+  c.lef_bar_major_collision_pblock = 1;        // NOLINT
+  c.lef_bar_minor_collision_pblock = 0;        // NOLINT
   constexpr usize nlefs = 2;
   constexpr usize nbarriers = 1;
   const Chromosome chrom{0, "chr1", 0, 200, 200};  // NOLINT
@@ -648,8 +648,8 @@ TEST_CASE("Simulation 009 - Ensure stacked LEFs do not interfere with surroundin
   c.fwd_extrusion_speed = 10;                  // NOLINT
   c.fwd_extrusion_speed_std = 0;               // NOLINT
   c.probability_of_extrusion_unit_bypass = 0;  // NOLINT
-  c.lef_hard_collision_pblock = 1;             // NOLINT
-  c.lef_soft_collision_pblock = 0;             // NOLINT
+  c.lef_bar_major_collision_pblock = 1;        // NOLINT
+  c.lef_bar_minor_collision_pblock = 0;        // NOLINT
   constexpr usize nlefs = 5;
   constexpr usize nbarriers = 2;
   const Chromosome chrom{0, "chr1", 0, 200, 200};  // NOLINT
@@ -724,8 +724,8 @@ TEST_CASE("Simulation 010 - Ensure stacked LEFs do not interfere with surroundin
   c.fwd_extrusion_speed = 10;                  // NOLINT
   c.fwd_extrusion_speed_std = 0;               // NOLINT
   c.probability_of_extrusion_unit_bypass = 0;  // NOLINT
-  c.lef_hard_collision_pblock = 1;             // NOLINT
-  c.lef_soft_collision_pblock = 0;             // NOLINT
+  c.lef_bar_major_collision_pblock = 1;        // NOLINT
+  c.lef_bar_minor_collision_pblock = 0;        // NOLINT
   constexpr usize nlefs = 6;
   constexpr usize nbarriers = 2;
   const Chromosome chrom{0, "chr1", 0, 200, 200};  // NOLINT
