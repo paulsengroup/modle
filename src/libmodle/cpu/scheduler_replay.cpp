@@ -117,16 +117,11 @@ void Simulation::replay_worker(const u64 tid,
 
   try {
     while (this->ok()) {  // Try to dequeue a batch of tasks
-      const auto avail_tasks = task_queue.wait_dequeue_bulk_timed(
-          ctok, task_buff.begin(), task_buff.size(), std::chrono::milliseconds(10));
-      // Check whether dequeue operation timed-out before any task became available
+      const auto avail_tasks = this->consume_tasks_blocking(task_queue, ctok, task_buff);
       if (avail_tasks == 0) {
-        if (this->_end_of_simulation) {
-          // Reached end of simulation (i.e. all tasks have been processed)
-          return;
-        }
-        // Keep waiting until one or more tasks become available
-        continue;
+        assert(this->_end_of_simulation);  // NOLINT
+        // Reached end of simulation (i.e. all tasks have been processed)
+        return;
       }
 
       // Loop over new tasks

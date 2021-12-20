@@ -185,8 +185,8 @@ void Simulation::detect_lef_bar_collisions(
     assert(j < lefs.size());  // NOLINT
     // Probability of block is set based on the extr. barrier blocking direction
     const auto pblock = barrier.blocking_direction_major() == dna::rev
-                            ? this->lef_hard_collision_pblock
-                            : this->lef_soft_collision_pblock;
+                            ? this->lef_bar_major_collision_pblock
+                            : this->lef_bar_minor_collision_pblock;
 
     // Look for the first rev extr. unit that comes after the current barrier
     while (unit_pos <= barrier.pos()) {
@@ -238,13 +238,12 @@ process_fwd_unit:
     const auto& barrier = extr_barriers[i];
     // Probability of block is set based on the extr. barrier blocking direction
     const auto pblock = barrier.blocking_direction_major() == dna::fwd
-                            ? this->lef_hard_collision_pblock
-                            : this->lef_soft_collision_pblock;
+                            ? this->lef_bar_major_collision_pblock
+                            : this->lef_bar_minor_collision_pblock;
     // Look for the next fwd unit that comes strictly before the current extr. barrier
     while (unit_pos >= barrier.pos()) {
       if (BOOST_UNLIKELY(--j == sentinel_idx)) {
-        return;  // using break instead of a goto here allows us to properly handle cases where
-        // there's only one barrier
+        return;
       }
 
       unit_idx = fwd_lef_ranks[j];
@@ -273,6 +272,7 @@ void Simulation::detect_primary_lef_lef_collisions(
     random::PRNG_t& rand_eng, usize num_rev_units_at_5prime, usize num_fwd_units_at_3prime) const
     noexcept(utils::ndebug_defined()) {
   {
+    assert(!lefs.empty());                                             // NOLINT
     assert(lefs.size() == fwd_lef_ranks.size());                       // NOLINT
     assert(lefs.size() == rev_lef_ranks.size());                       // NOLINT
     assert(lefs.size() == fwd_moves.size());                           // NOLINT
@@ -386,7 +386,7 @@ void Simulation::detect_primary_lef_lef_collisions(
         // between the two units there's an extr. barrier, and one of the two units manages to
         // bypass the extr. barrier, then there's a chance that the LEF-LEF collision will take
         // place before the LEF-BAR collision (whether this happens or not depends on the distance
-        // between the extr. units and the extr. barriers, as well as their respective extr. speed
+        // between the extr. units and the extr. barriers, as well as their respective extr. speed)
 
         assert(cause_of_collision_rev < barriers.size() /* is LEF-BAR collision*/);  // NOLINT
         assert(collision_pos_rev != 0 && collision_pos_fwd != 0);                    // NOLINT

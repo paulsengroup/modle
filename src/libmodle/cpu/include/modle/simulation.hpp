@@ -439,15 +439,7 @@ class Simulation : Config {
       absl::Span<bp_t> rev_moves, absl::Span<bp_t> fwd_moves,
       absl::Span<const collision_t> rev_collisions,
       absl::Span<const collision_t> fwd_collisions) noexcept(utils::ndebug_defined());
-  /*
-    /// Correct moves to comply with the constraints imposed by secondary LEF-LEF collisions.
-    static void correct_moves_for_secondary_lef_lef_collisions(
-        absl::Span<const Lef> lefs, usize nbarriers, absl::Span<const usize> rev_ranks,
-        absl::Span<const usize> fwd_ranks, absl::Span<bp_t> rev_moves, absl::Span<bp_t> fwd_moves,
-        absl::Span<const collision_t> rev_collisions, absl::Span<const collision_t> fwd_collisions,
-        usize num_rev_units_at_5prime = 0,
-        usize num_fwd_units_at_3prime = 0) noexcept(utils::ndebug_defined());
-  */
+
   /// Register contacts for chromosome \p chrom using the position the extrusion units of the LEFs
   /// in \p lefs whose index is present in \p selected_lef_idx.
   usize register_contacts(Chromosome& chrom, absl::Span<const Lef> lefs,
@@ -507,7 +499,12 @@ class Simulation : Config {
 
   [[nodiscard]] usize compute_tot_target_epochs() const noexcept;
   [[nodiscard]] usize compute_tot_target_contacts(usize npixels) const noexcept;
-  [[nodiscard]] usize compute_num_lefs(const usize size_bp) const noexcept;
+  [[nodiscard]] usize compute_num_lefs(usize size_bp) const noexcept;
+
+  template <class TaskT>
+  [[nodiscard]] usize consume_tasks_blocking(moodycamel::BlockingConcurrentQueue<TaskT>& task_queue,
+                                             moodycamel::ConsumerToken& ctok,
+                                             absl::FixedArray<TaskT>& task_buff);
 
 #ifdef ENABLE_TESTING
  public:

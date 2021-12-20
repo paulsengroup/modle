@@ -103,6 +103,27 @@ thread_pool Simulation::instantiate_thread_pool(I nthreads_, bool clamp_nthreads
   DISABLE_WARNING_POP
 }
 
+template <class TaskT>
+usize Simulation::consume_tasks_blocking(moodycamel::BlockingConcurrentQueue<TaskT>& task_queue,
+                                         moodycamel::ConsumerToken& ctok,
+                                         absl::FixedArray<TaskT>& task_buff) {
+  while (this->ok()) {
+    const auto avail_tasks = task_queue.wait_dequeue_bulk_timed(
+        ctok, task_buff.begin(), task_buff.size(), std::chrono::milliseconds(10));
+    // Check whether dequeue operation timed-out before any task became available
+    if (avail_tasks == 0) {
+      // Reached end of simulation (i.e. all tasks have been processed)
+      if (this->_end_of_simulation) {
+        return 0;
+      }
+      // Keep waiting until one or more tasks become available
+      continue;
+    }
+    return avail_tasks;
+  }
+  return 0;
+}
+
 }  // namespace modle
 
 constexpr auto fmt::formatter<modle::Simulation::Task>::parse(format_parse_context& ctx)
