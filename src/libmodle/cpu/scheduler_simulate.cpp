@@ -209,8 +209,9 @@ void Simulation::simulate_worker(const u64 tid,
       if (avail_tasks == 0) {
         if (this->_end_of_simulation) {
           // Reached end of simulation (i.e. all tasks have been processed)
-          if (!tmp_model_internal_state_log_path.empty()) {
-            // Ensure all records have been written to disk
+          if (this->log_model_internal_state && !this->skip_output) {
+            assert(!tmp_model_internal_state_log_path.empty());  // NOLINT
+            // Ensure all log records have been written to disk
             local_state.model_state_logger = nullptr;
             std::scoped_lock<std::mutex> lck(model_state_logger_mtx);
             utils::concatenate_files<true>(this->path_to_model_state_log_file,
