@@ -4,12 +4,12 @@
 
 #pragma once
 
+#include <absl/base/optimization.h>  // IWYU pragma: keep for ABSL_PREDICT_FALSE
 #include <absl/strings/str_split.h>  // for StrSplit, Splitter
 #include <fmt/format.h>              // for FMT_STRING, join
 
 #include <algorithm>                                // for clamp, fill, max, min
 #include <atomic>                                   // for atomic_fetch_add_explicit
-#include <boost/config.hpp>                         // IWYU pragma: keep for BOOST_UNLIKELY
 #include <boost/dynamic_bitset/dynamic_bitset.hpp>  // for dynamic_bitset
 #include <boost/filesystem/operations.hpp>          // for exists
 #include <boost/filesystem/path.hpp>                // for path
@@ -120,7 +120,7 @@ void ContactMatrix<N>::unsafe_get_block(const usize row, const usize col, const 
   assert(block_size < this->nrows());  // NOLINT
   // For now we only support blocks with an odd size
   assert(block_size % 2 != 0);  // NOLINT
-  if (BOOST_UNLIKELY(block_size == 1)) {
+  if (ABSL_PREDICT_FALSE(block_size == 1)) {
     buff.resize(1);
     buff.front() = this->get(row, col);
     return;

@@ -4,6 +4,8 @@
 
 #pragma once
 
+#include <absl/base/macros.h>  // for ABSL_INTERNAL_UNREACHABLE
+
 #include <cstddef>      // IWYU pragma: keep for size_t, ptrdiff_t
 #include <cstdint>      // for i8, i16, i32, i64, u8 ...
 #include <string_view>  // for string_view
@@ -37,6 +39,16 @@ static_assert(sizeof(i8) == 1);
 static_assert(sizeof(i16) == 2);
 static_assert(sizeof(i32) == 4);
 static_assert(sizeof(i64) == 8);
+
+using u8f = std::uint_fast8_t;
+using u16f = std::uint_fast16_t;
+using u32f = std::uint_fast32_t;
+using u64f = std::uint_fast64_t;
+
+using i8f = std::int_fast8_t;
+using i16f = std::int_fast16_t;
+using i32f = std::int_fast32_t;
+using i64f = std::int_fast64_t;
 
 static_assert(MODLE_VERSION_MAJOR >= 0);
 static_assert(MODLE_VERSION_MINOR >= 0);
@@ -76,8 +88,10 @@ using contacts_t = u32;
 #endif
 #endif
 
+#define MODLE_UNREACHABLE_CODE ABSL_INTERNAL_UNREACHABLE
+
 namespace dna {
-enum Direction : std::uint_fast8_t { none = 0, fwd = 1, rev = 2, both = 3 };
+enum Direction : u8f { none = 0, fwd = 1, rev = 2, both = 3 };
 }  // namespace dna
 
 }  // namespace modle

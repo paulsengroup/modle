@@ -8,7 +8,6 @@
 #include <array>                                 // for array
 #include <boost/filesystem/path.hpp>             // for path
 #include <boost/iostreams/filtering_stream.hpp>  // for filtering_ostream
-#include <cstdint>                               // for uint_fast8_t
 #include <fstream>                               // for ofstream
 #include <memory>                                // for unique_ptr
 #include <string>                                // for string
@@ -73,14 +72,7 @@ DISABLE_WARNING_PADDED
 class Writer {
   DISABLE_WARNING_POP
  public:
-  enum Compression : std::uint_fast8_t {
-    AUTO = 0,
-    NONE = 1,
-    GZIP = 2,
-    BZIP2 = 3,
-    LZMA = 4,
-    ZSTD = 5
-  };
+  enum Compression : u8f { AUTO = 0, NONE = 1, GZIP = 2, BZIP2 = 3, LZMA = 4, ZSTD = 5 };
 
   Writer() = default;
   explicit Writer(const boost::filesystem::path& path, Compression compression = AUTO);  // NOLINT

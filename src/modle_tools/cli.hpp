@@ -3,7 +3,6 @@
 // SPDX-License-Identifier: MIT
 
 #include <CLI/CLI.hpp>  // for App
-#include <cstdint>      // for uint_fast8_t
 #include <string>       // for string
 #include <string_view>  // for string_view
 
@@ -13,7 +12,7 @@ namespace modle::tools {
 
 class Cli {
  public:
-  enum subcommand : std::uint_fast8_t {
+  enum subcommand : u8f {
     help,
     eval,
     fbcl,

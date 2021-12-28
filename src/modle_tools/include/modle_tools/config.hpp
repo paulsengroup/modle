@@ -29,7 +29,7 @@ struct eval_config {  // NOLINT
   bool normalize{false};
 
   // Metrics
-  enum class Metric : std::uint_fast8_t { custom, eucl_dist, pearson, rmse, spearman };
+  enum class Metric : u8f { custom, eucl_dist, pearson, rmse, spearman };
   Metric metric{Metric::custom};
 
   inline static const std::array<std::pair<std::string, enum Metric>, 5> metric_map{
@@ -108,12 +108,7 @@ struct transform_config {  // NOLINT
   bool force{false};
 
   // Transformation methods
-  enum class Transformation : std::uint_fast8_t {
-    normalize,
-    gaussian_blur,
-    difference_of_gaussians,
-    discretize
-  };
+  enum class Transformation : u8f { normalize, gaussian_blur, difference_of_gaussians, discretize };
   Transformation method;
 
   // clang-format off

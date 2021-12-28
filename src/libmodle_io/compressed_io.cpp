@@ -281,7 +281,7 @@ void Writer::open(const boost::filesystem::path& path) {
       break;
     case AUTO:
       if constexpr (utils::ndebug_not_defined()) {
-        std::abort();  // Unreachable code
+        MODLE_UNREACHABLE_CODE;
       }
   }
   this->_path = path;

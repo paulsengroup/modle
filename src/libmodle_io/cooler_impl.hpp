@@ -10,7 +10,6 @@
 
 #include <boost/filesystem/path.hpp>  // for path
 #include <cassert>                    // for assert
-#include <cstdint>                    // for uint_fast8_t
 #include <exception>                  // for exception
 #include <memory>                     // for make_unique
 #include <tuple>                      // for ignore
@@ -23,8 +22,7 @@ namespace modle::cooler {
 template <class N>
 Cooler<N>::Cooler(boost::filesystem::path path_to_file, IO_MODE mode, usize bin_size,
                   usize max_str_length, std::string_view assembly_name, FLAVOR flavor,
-                  bool validate, std::uint_fast8_t compression_lvl, usize chunk_size,
-                  usize cache_size)
+                  bool validate, u8f compression_lvl, usize chunk_size, usize cache_size)
     : STR_TYPE(generate_default_str_type(max_str_length)),
       _path_to_file(std::move(path_to_file)),
       _mode(mode),
@@ -154,7 +152,7 @@ usize Cooler<N>::get_nchroms() {
     return static_cast<usize>(hdf5::read_attribute_int(
         *this->_fp, "nchroms", absl::StrCat("/resolutions/", this->_bin_size)));
   }
-  std::abort();  // Unreachable code
+  MODLE_UNREACHABLE_CODE;
 }
 
 template <class N>
@@ -302,7 +300,7 @@ bool Cooler<N>::validate_file_format(H5::H5File &f, FLAVOR expected_flavor, IO_M
       case FLAVOR::SCOOL:
         throw std::runtime_error("SCOOL flavor is not yet supported");
       default:
-        std::abort();  // Unreachable code
+        MODLE_UNREACHABLE_CODE;
     }
 
   } catch (const std::runtime_error &e) {

@@ -424,6 +424,21 @@ class Simulation : Config {
       absl::Span<collision_t> rev_collisions, absl::Span<collision_t> fwd_collisions,
       random::PRNG_t& rand_eng, usize num_rev_units_at_5prime = 0,
       usize num_fwd_units_at_3prime = 0) const noexcept(utils::ndebug_defined());
+  /*
+    void correct_overlapping_lefs(const Chromosome& chrom, absl::Span<Lef> lefs,
+                                  absl::Span<usize> rev_lef_ranks, absl::Span<usize> fwd_lef_ranks,
+                                  absl::Span<bp_t> rev_moves, absl::Span<bp_t> fwd_moves,
+                                  absl::Span<const collision_t> rev_collisions,
+                                  absl::Span<const collision_t> fwd_collisions,
+                                  usize num_rev_units_at_5prime = 0,
+                                  usize num_fwd_units_at_3prime = 0) const
+        noexcept(utils::ndebug_defined());
+  */
+  void correct_overlapping_lefs([[maybe_unused]] const Chromosome& chrom,
+                                const absl::Span<Lef> lefs, const absl::Span<usize> rev_lef_ranks,
+                                const absl::Span<usize> fwd_lef_ranks,
+                                usize num_rev_units_at_5prime, usize num_fwd_units_at_3prime) const
+      noexcept(utils::ndebug_defined());
 
   /// Correct moves to comply with the constraints imposed by LEF-BAR collisions.
   static void correct_moves_for_lef_bar_collisions(

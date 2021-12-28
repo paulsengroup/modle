@@ -9,7 +9,6 @@
 #include <absl/types/span.h>  // for Span
 
 #include <boost/filesystem/path.hpp>  // for path
-#include <cstdint>                    // for uint_fast8_t
 #include <mutex>                      // for mutex
 #include <string_view>                // for string_view
 #include <type_traits>                // for enable_if

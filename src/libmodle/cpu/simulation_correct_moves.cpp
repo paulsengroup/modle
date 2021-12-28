@@ -6,10 +6,10 @@
 #include "modle/simulation.hpp"
 // clang-format on
 
-#include <absl/types/span.h>  // for Span
+#include <absl/base/optimization.h>  // IWYU pragma: keep for ABSL_PREDICT_FALSE
+#include <absl/types/span.h>         // for Span
 
-#include <boost/config.hpp>  // IWYU pragma: keep for BOOST_UNLIKELY
-#include <cassert>           // for assert
+#include <cassert>  // for assert
 
 #include "modle/common/common.hpp"       // for bp_t, collision_t
 #include "modle/common/utils.hpp"        // for ndebug_defined
@@ -28,7 +28,7 @@ void Simulation::correct_moves_for_lef_bar_collisions(
   const auto upper_bound = barriers.size();
 
   for (usize i = 0; i < lefs.size(); ++i) {
-    if (BOOST_UNLIKELY(rev_collisions[i] < upper_bound)) {  // Process rev collisions
+    if (ABSL_PREDICT_FALSE(rev_collisions[i] < upper_bound)) {  // Process rev collisions
       const auto& barrier_idx = rev_collisions[i];
       const auto& barrier = barriers[barrier_idx];
       assert(lefs[i].rev_unit.pos() > barrier.pos());  // NOLINT
@@ -40,7 +40,7 @@ void Simulation::correct_moves_for_lef_bar_collisions(
       rev_moves[i] = std::min(distance, distance - 1);
     }
 
-    if (BOOST_UNLIKELY(fwd_collisions[i] < upper_bound)) {  // Process fwd collisions
+    if (ABSL_PREDICT_FALSE(fwd_collisions[i] < upper_bound)) {  // Process fwd collisions
       const auto& barrier_idx = fwd_collisions[i];
       const auto& barrier = barriers[barrier_idx];
       assert(lefs[i].fwd_unit.pos() < barrier.pos());  // NOLINT
@@ -74,7 +74,7 @@ void Simulation::correct_moves_for_primary_lef_lef_collisions(
 
   for (auto rev_idx : rev_ranks) {  // Loop over rev units in 5'-3' order
     if (auto rev_collision = rev_collisions[rev_idx];
-        BOOST_UNLIKELY(is_lef_lef_primary_collision(rev_collision))) {
+        ABSL_PREDICT_FALSE(is_lef_lef_primary_collision(rev_collision))) {
       // Decode the index of the fwd unit involved in the current collision
       rev_collision -= lower_bound;
       const auto& fwd_idx = rev_collision;
@@ -122,7 +122,7 @@ void Simulation::correct_moves_for_primary_lef_lef_collisions(
   // will have to do.
   for (auto fwd_idx : fwd_ranks) {
     if (auto fwd_collision = fwd_collisions[fwd_idx];
-        BOOST_UNLIKELY(is_lef_lef_primary_collision(fwd_collision))) {
+        ABSL_PREDICT_FALSE(is_lef_lef_primary_collision(fwd_collision))) {
       fwd_collision -= lower_bound;
       const auto& rev_idx = fwd_collision;
 

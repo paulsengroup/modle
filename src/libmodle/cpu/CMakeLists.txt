@@ -15,7 +15,8 @@ set_target_properties(libmodle_cpu PROPERTIES OUTPUT_NAME modle_cpu)
 
 target_sources(
   libmodle_cpu
-  PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/simulation.cpp
+  PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/collision_encoding_impl.hpp
+          ${CMAKE_CURRENT_SOURCE_DIR}/simulation.cpp
           ${CMAKE_CURRENT_SOURCE_DIR}/simulation_correct_moves.cpp
           ${CMAKE_CURRENT_SOURCE_DIR}/simulation_detect_collisions.cpp
           ${CMAKE_CURRENT_SOURCE_DIR}/simulation_impl.hpp

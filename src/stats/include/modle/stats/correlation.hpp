@@ -7,7 +7,7 @@
 #include <type_traits>  // for enable_if, enable_if_t
 #include <vector>       // for vector
 
-#include "modle/common/common.hpp"  // for std::uint_fast8_t
+#include "modle/common/common.hpp"  // for u8f
 #include "modle/common/utils.hpp"   // for RepeatIterator
 
 namespace modle::stats {

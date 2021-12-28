@@ -522,7 +522,7 @@ template <class H5Type>
           type = static_cast<i64>(0);
           return type;
         default:
-          std::abort();  // Unreachable code
+          MODLE_UNREACHABLE_CODE;
       }
     }
     switch (size) {
@@ -539,7 +539,7 @@ template <class H5Type>
         type = static_cast<u64>(0);
         return type;
       default:
-        std::abort();  // Unreachable code
+        MODLE_UNREACHABLE_CODE;
     }
   } else {
     switch (size) {
@@ -553,10 +553,10 @@ template <class H5Type>
         type = static_cast<long double>(0);
         return type;
       default:
-        std::abort();  // Unreachable code
+        MODLE_UNREACHABLE_CODE;
     }
   }
-  std::abort();  // Unreachable code
+  MODLE_UNREACHABLE_CODE;
   DISABLE_WARNING_POP
 }
 

@@ -21,14 +21,13 @@
 #include <readerwriterqueue/readerwriterqueue.h>  // for BlockingReaderWriterQueue
 
 #include <boost/filesystem/path.hpp>  // for path
-#include <cstdint>                    // for uint_fast8_t
 #include <memory>                     // for unique_ptr, allocator
 #include <string>                     // for string
 #include <string_view>                // for string_view
 #include <utility>                    // for pair
 #include <vector>                     // for vector
 
-#include "modle/common/common.hpp"  // for i64, i32, std::uint_fast8_t, u32
+#include "modle/common/common.hpp"  // for i64, i32, u8f, u32
 #include "modle/contacts.hpp"       // for ContactMatrix
 
 namespace modle {
@@ -44,11 +43,11 @@ class Cooler {
 
  public:
   using value_type = std::conditional_t<std::is_floating_point_v<N>, double, i32>;
-  enum class IO_MODE : std::uint_fast8_t {
+  enum class IO_MODE : u8f {
     READ_ONLY,
     WRITE_ONLY
   };  // TODO Replace WRITE_ONLY with TRUNCATE and APPEND?
-  enum class FLAVOR : std::uint_fast8_t {
+  enum class FLAVOR : u8f {
     UNK = 0,
     AUTO = 1,
     COOL = 2,
@@ -95,8 +94,8 @@ class Cooler {
   i64 _nchroms{0};
   i64 _nnz{0};
 
-  enum Groups : std::uint_fast8_t { chrom = 0, BIN = 1, PXL = 2, IDX = 3 };
-  enum Datasets : std::uint_fast8_t {
+  enum Groups : u8f { chrom = 0, BIN = 1, PXL = 2, IDX = 3 };
+  enum Datasets : u8f {
     chrom_LEN = 0,
     chrom_NAME = 1,
     BIN_CHROM = 2,
@@ -137,7 +136,7 @@ class Cooler {
   };
 
  public:
-  static constexpr std::uint_fast8_t DEFAULT_COMPRESSION_LEVEL = 6;
+  static constexpr u8f DEFAULT_COMPRESSION_LEVEL = 6;
   static constexpr usize DEFAULT_HDF5_BUFFER_SIZE = 1024 * 1024ULL;      // 1MB
   static constexpr usize DEFAULT_HDF5_CHUNK_SIZE = 1024 * 1024ULL;       // 1MB
   static constexpr usize DEFAULT_HDF5_CACHE_SIZE = 16 * 1024 * 1024ULL;  // 16MB
@@ -146,8 +145,7 @@ class Cooler {
   inline explicit Cooler(boost::filesystem::path path_to_file, IO_MODE mode = IO_MODE::READ_ONLY,
                          usize bin_size = 0, usize max_str_length = 0,
                          std::string_view assembly_name = "", FLAVOR flavor = FLAVOR::AUTO,
-                         bool validate = true,
-                         std::uint_fast8_t compression_lvl = DEFAULT_COMPRESSION_LEVEL,
+                         bool validate = true, u8f compression_lvl = DEFAULT_COMPRESSION_LEVEL,
                          usize chunk_size = DEFAULT_HDF5_CHUNK_SIZE,
                          usize cache_size = DEFAULT_HDF5_CACHE_SIZE);
 

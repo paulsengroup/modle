@@ -22,7 +22,6 @@
 #include <boost/filesystem/operations.hpp>  // for create_directories
 #include <boost/filesystem/path.hpp>        // for operator<<, path
 #include <cassert>                          // for assert
-#include <cstdint>                          // for uint_fast8_t
 #include <cstdio>                           // for stderr
 #include <exception>                        // for exception
 #include <future>                           // for future
@@ -159,7 +158,7 @@ template <class N>
                                            c.gaussian_blur_sigma * c.gaussian_blur_sigma_multiplier,
                                            c.saturation_range);
       default:
-        std::abort();  // Unreachable code
+        MODLE_UNREACHABLE_CODE;
     }
   }();
 

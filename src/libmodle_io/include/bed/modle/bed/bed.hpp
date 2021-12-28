@@ -11,7 +11,6 @@
 
 #include <array>                      // for array
 #include <boost/filesystem/path.hpp>  // for path
-#include <cstdint>                    // for fast_uint8_t
 #include <limits>                     // for numeric_limits
 #include <memory>                     // for unique_ptr
 #include <string>                     // for string
@@ -37,7 +36,7 @@ struct RGB {
 
 struct BED {
   friend class Parser;
-  enum Dialect : std::uint_fast8_t {
+  enum Dialect : u8f {
     BED3 = 3U,
     BED4 = 4U,
     BED5 = 5U,
@@ -51,7 +50,7 @@ struct BED {
   [[nodiscard]] static Dialect str_to_dialect(std::string_view s);
   [[nodiscard]] static std::string dialect_to_str(Dialect d);
 
-  enum FieldsIdx : std::uint_fast8_t {
+  enum FieldsIdx : u8f {
     BED_CHROM_IDX = 0U,
     BED_CHROM_START_IDX = 1U,
     BED_CHROM_END_IDX = 2U,
@@ -66,7 +65,7 @@ struct BED {
     BED_BLOCK_STARTS_IDX = 11U
   };
 
-  enum Fields : std::uint_fast8_t {
+  enum Fields : u8f {
     BED_CHROM = BED_CHROM_IDX + 1,
     BED_CHROM_START = BED_CHROM_START_IDX + 1,
     BED_CHROM_END = BED_CHROM_END_IDX + 1,

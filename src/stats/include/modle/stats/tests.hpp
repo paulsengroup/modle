@@ -10,7 +10,7 @@
 #include "modle/common/utils.hpp"  // for identity
 
 namespace modle::stats {
-enum binomial_test_alternative : std::uint_fast8_t { TWO_SIDED, GREATER, LESS };
+enum binomial_test_alternative : u8f { TWO_SIDED, GREATER, LESS };
 
 template <binomial_test_alternative alternative = TWO_SIDED, class FP = double, class I,
           class = std::enable_if<std::is_integral_v<I> && std::is_floating_point_v<FP>>>

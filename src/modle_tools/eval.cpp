@@ -21,7 +21,6 @@
 #include <boost/filesystem/operations.hpp>  // for create_directories
 #include <boost/filesystem/path.hpp>        // for operator<<, path
 #include <cassert>                          // for assert
-#include <cstdint>                          // for uint_fast8_t
 #include <cstdio>                           // for stderr
 #include <exception>                        // for exception
 #include <future>                           // for future
@@ -247,7 +246,7 @@ template <class Range>
   return bw;
 }
 
-enum class StripeDirection : std::uint_fast8_t { vertical, horizontal };
+enum class StripeDirection : u8f { vertical, horizontal };
 
 template <class N, class = std::enable_if_t<std::is_arithmetic_v<N>>>
 static size_t mask_zero_pixels(const std::vector<N> &v1, const std::vector<N> &v2,
@@ -277,7 +276,7 @@ template <class N>
   // Do a backward search for the first non-zero pixel
   auto non_zero_backward_search = [](const auto &vect) -> usize {
     const auto it = std::find_if(vect.rbegin(), vect.rend(), [](const auto n) { return n != 0; });
-    if (BOOST_UNLIKELY(it == vect.rend())) {
+    if (ABSL_PREDICT_FALSE(it == vect.rend())) {
       return 0;
     }
     return static_cast<usize>(vect.rend() - 1 - it);
@@ -377,7 +376,7 @@ template <StripeDirection stripe_direction, class N, class WeightIt = utils::Rep
                 ? stats::Spearman<double>{nrows}(ref_pixel_buff, tgt_pixel_buff)
                 : stats::Spearman<double>{nrows}(ref_pixel_buff, tgt_pixel_buff, weight_buff));
     }
-    std::abort();  // Unreachable code
+    MODLE_UNREACHABLE_CODE;
   };
 
   for (usize i = 0; i < ncols; ++i) {
@@ -559,7 +558,7 @@ static void run_task(const enum eval_config::Metric metric, const std::string &c
                              score1, score2);
         }
       }
-      std::abort();  // Unreachable code
+      MODLE_UNREACHABLE_CODE;
     };
 
     for (usize i = 0; i < metrics.metric1.size(); ++i) {
