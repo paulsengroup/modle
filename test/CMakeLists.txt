@@ -24,6 +24,7 @@ target_sources(
           ${CMAKE_CURRENT_SOURCE_DIR}/units/libmodle_io/compressed_io_test.cpp
           ${CMAKE_CURRENT_SOURCE_DIR}/units/libmodle_io/cooler_test.cpp
           ${CMAKE_CURRENT_SOURCE_DIR}/units/libmodle_io/hdf5_test.cpp
+          ${CMAKE_CURRENT_SOURCE_DIR}/units/simulation_cpu/collision_encoding_test.cpp
           ${CMAKE_CURRENT_SOURCE_DIR}/units/simulation_cpu/common.hpp
           ${CMAKE_CURRENT_SOURCE_DIR}/units/simulation_cpu/simulation_complex_unit_test.cpp
           ${CMAKE_CURRENT_SOURCE_DIR}/units/simulation_cpu/simulation_simple_unit_test.cpp
