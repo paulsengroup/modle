@@ -31,8 +31,9 @@ class CollisionEvent {
   static constexpr usize RESERVED_EVENT_BITS = 8;
 
  public:
-  constexpr CollisionEvent() = default;
-  // clang complains if the constructor is not defined here NOLINTNEXTLINE(hicpp-explicit-conversions)
+  // clang and gcc7 complain if the constructors are not explicitly defined here
+  constexpr CollisionEvent() noexcept : _event(0) {}
+  // NOLINTNEXTLINE(hicpp-explicit-conversions)
   constexpr CollisionEvent(I event) noexcept : _event(event) {}
 
   constexpr CollisionEvent operator|(CollisionEvent other) const noexcept;

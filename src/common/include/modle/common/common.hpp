@@ -76,7 +76,7 @@ constexpr std::string_view modle_version =
 #undef MODLE_XCONCAT
 
 using bp_t = u64;
-using collision_t = std::uint_fast32_t;
+using collision_t = std::uint_fast32_t;  // TODO removeme
 using contacts_t = u32;
 
 // See https://clang.llvm.org/docs/ThreadSanitizer.html#has-feature-thread-sanitizer

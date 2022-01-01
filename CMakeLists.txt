@@ -53,17 +53,6 @@ target_compile_definitions(
             $<$<BOOL:${CHARCONV_FP_AVAILABLE}>:MODLE_CHARCONV_FP_AVAILABLE>
             $<$<BOOL:${CHARCONV_VARIANT_AVAILABLE}>:MODLE_CHARCONV_VARIANT_AVAILABLE>)
 
-# Tweak spdlog
-target_compile_definitions(
-  project_options
-  INTERFACE SPDLOG_CLOCK_COARSE
-  INTERFACE SPDLOG_DISABLE_DEFAULT_LOGGER
-  INTERFACE SPDLOG_NO_ATOMIC_LEVELS
-  INTERFACE SPDLOG_PREVENT_CHILD_FD)
-
-# Tweak fmt
-target_compile_definitions(project_options INTERFACE FMT_ENFORCE_COMPILE_STRING)
-
 # Define preproc. variables for proj. versioning
 target_compile_definitions(
   project_options INTERFACE MODLE_VERSION_MAJOR=${PROJECT_VERSION_MAJOR} MODLE_VERSION_MINOR=${PROJECT_VERSION_MINOR}
@@ -169,6 +158,26 @@ endif()
 
 # Prepare external dependencies
 include(cmake/FetchExternalDeps.cmake)
+
+# Tweak spdlog
+target_compile_definitions(
+        project_options
+        INTERFACE SPDLOG_CLOCK_COARSE
+        INTERFACE SPDLOG_DISABLE_DEFAULT_LOGGER
+        INTERFACE SPDLOG_NO_ATOMIC_LEVELS
+        INTERFACE SPDLOG_PREVENT_CHILD_FD)
+
+# Tweak fmt
+target_compile_definitions(project_options INTERFACE FMT_ENFORCE_COMPILE_STRING)
+
+# Tweak boost
+find_package(Boost QUIET REQUIRED)
+
+if(Boost_VERSION_STRING VERSION_GREATER_EQUAL 1.77.0)
+  target_compile_definitions(project_options INTERFACE BOOST_FILESYSTEM_VERSION=4)
+elseif(Boost_VERSION_STRING VERSION_GREATER 1.44.0)
+  target_compile_definitions(project_options INTERFACE BOOST_FILESYSTEM_VERSION=3)
+endif()
 
 if(ENABLE_TESTING)
   enable_testing()
