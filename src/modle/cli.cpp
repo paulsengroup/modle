@@ -37,14 +37,13 @@
 namespace modle {
 
 static std::string is_odd_number(std::string_view s) {
-  i64 n;  // NOLINT
   try {
-    utils::parse_numeric_or_throw(s, n);
+    const auto n = utils::parse_numeric_or_throw<i64>(s);
+    if (n % 2 == 0) {
+      return fmt::format(FMT_STRING("{} is not an odd number"), n);
+    }
   } catch (const std::exception& e) {
     return fmt::format(FMT_STRING("Failed parsing number: ({}): {}"), s, e.what());
-  }
-  if (n % 2 == 0) {
-    return fmt::format(FMT_STRING("{} is not an odd number"), n);
   }
   return "";
 }
