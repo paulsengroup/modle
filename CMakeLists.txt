@@ -71,7 +71,7 @@ if(OPTIMIZE_FOR_PROFILING)
     set(CMAKE_BUILD_TYPE "RelWithDebInfo")
   endif()
 
-  target_compile_options(project_options INTERFACE -O1)
+  target_compile_options(project_options INTERFACE -O1 -fno-omit-frame-pointer)
 endif()
 
 # Source:
