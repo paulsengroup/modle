@@ -43,10 +43,10 @@ ContactMatrix<N> Cooler<N>::cooler_to_cmatrix(std::string_view chrom_name, usize
                                               std::pair<usize, usize> chrom_boundaries,
                                               bool try_common_chrom_prefixes,
                                               bool prefer_using_balanced_counts) {
-  assert(this->_fp);                         // NOLINT
-  assert(!this->_datasets.empty());          // NOLINT
-  assert(!this->_idx_bin1_offset.empty());   // NOLINT
-  assert(!this->_idx_chrom_offset.empty());  // NOLINT
+  assert(this->_fp);
+  assert(!this->_datasets.empty());
+  assert(!this->_idx_bin1_offset.empty());
+  assert(!this->_idx_chrom_offset.empty());
 
   const auto chrom_idx = this->get_chrom_idx(chrom_name, try_common_chrom_prefixes);
   const auto chrom_size = static_cast<usize>(this->get_chrom_sizes()[chrom_idx]);
@@ -54,7 +54,7 @@ ContactMatrix<N> Cooler<N>::cooler_to_cmatrix(std::string_view chrom_name, usize
     chrom_boundaries.second = chrom_size;
   }
 
-  assert(chrom_boundaries.first < chrom_boundaries.second);  // NOLINT
+  assert(chrom_boundaries.first < chrom_boundaries.second);
   const auto bin_range = [&]() {
     const auto first_bin_chrom = static_cast<usize>(this->_idx_chrom_offset[chrom_idx]);
     auto first_bin_range = first_bin_chrom + (chrom_boundaries.first / this->_bin_size);
@@ -70,7 +70,7 @@ ContactMatrix<N> Cooler<N>::cooler_to_cmatrix(std::string_view chrom_name, usize
   if (prefer_using_balanced_counts &&
       hdf5::has_dataset(*this->_fp, "bins/weight", this->_root_path)) {
     const auto &d = this->_datasets[BIN_WEIGHT];
-    u8 cis_only;  // NOLINT
+    u8 cis_only;
     try {
       hdf5::read_attribute(d, "cis_only", cis_only);
     } catch (const std::runtime_error &e) {
@@ -102,7 +102,7 @@ ContactMatrix<N> Cooler<N>::cooler_to_cmatrix(std::string_view chrom_name, usize
                                               std::pair<usize, usize> chrom_boundaries,
                                               bool try_common_chrom_prefixes,
                                               bool prefer_using_balanced_counts) {
-  assert(this->_bin_size != 0);  // NOLINT
+  assert(this->_bin_size != 0);
   if (bin_size != 0 && this->_bin_size != bin_size) {
     throw std::runtime_error(fmt::format(
         FMT_STRING(
@@ -133,8 +133,8 @@ ContactMatrix<N> Cooler<N>::cooler_to_cmatrix(std::pair<hsize_t, hsize_t> bin_ra
   }
 
   const auto [first_bin, last_bin] = bin_range;
-  assert(first_bin < last_bin);                            // NOLINT
-  assert(last_bin <= first_bin + bin1_offset_idx.size());  // NOLINT
+  assert(first_bin < last_bin);
+  assert(last_bin <= first_bin + bin1_offset_idx.size());
   ContactMatrix<N> cmatrix(nrows, last_bin - first_bin);
   std::vector<i64> bin1_BUFF(nrows);
   std::vector<i64> bin2_BUFF(nrows);
@@ -160,17 +160,17 @@ ContactMatrix<N> Cooler<N>::cooler_to_cmatrix(std::pair<hsize_t, hsize_t> bin_ra
     bin2_BUFF.resize(buff_size);
     count_BUFF.resize(buff_size);
 
-    assert(static_cast<i64>(file_offset + buff_size) <= this->_idx_bin1_offset.back());  // NOLINT
+    assert(static_cast<i64>(file_offset + buff_size) <= this->_idx_bin1_offset.back());
     std::ignore = hdf5::read_numbers(d[PXL_B1], bin1_BUFF, file_offset);
     std::ignore = hdf5::read_numbers(d[PXL_B2], bin2_BUFF, file_offset);
     std::ignore = hdf5::read_numbers(d[PXL_COUNT], count_BUFF, file_offset);
 
-    assert(bin1_BUFF.size() == buff_size);   // NOLINT
-    assert(bin2_BUFF.size() == buff_size);   // NOLINT
-    assert(count_BUFF.size() == buff_size);  // NOLINT
+    assert(bin1_BUFF.size() == buff_size);
+    assert(bin2_BUFF.size() == buff_size);
+    assert(count_BUFF.size() == buff_size);
 
     for (usize j = 0; j < buff_size; ++j) {
-      assert(count_BUFF[j] != 0);  // NOLINT
+      assert(count_BUFF[j] != 0);
       DISABLE_WARNING_PUSH
       DISABLE_WARNING_SIGN_CONVERSION
       DISABLE_WARNING_SIGN_COMPARE
@@ -213,10 +213,10 @@ usize Cooler<N>::stream_contacts_for_chrom(
     moodycamel::BlockingReaderWriterQueue<Cooler::Pixel> &queue, std::string_view chrom_name,
     usize nrows, std::pair<usize, usize> chrom_boundaries, bool try_common_chrom_prefixes,
     bool prefer_using_balanced_counts) {
-  assert(this->_fp);                         // NOLINT
-  assert(!this->_datasets.empty());          // NOLINT
-  assert(!this->_idx_bin1_offset.empty());   // NOLINT
-  assert(!this->_idx_chrom_offset.empty());  // NOLINT
+  assert(this->_fp);
+  assert(!this->_datasets.empty());
+  assert(!this->_idx_bin1_offset.empty());
+  assert(!this->_idx_chrom_offset.empty());
 
   const auto chrom_idx = this->get_chrom_idx(chrom_name, try_common_chrom_prefixes);
   const auto chrom_size = static_cast<usize>(this->get_chrom_sizes()[chrom_idx]);
@@ -233,7 +233,7 @@ usize Cooler<N>::stream_contacts_for_chrom(
   if (prefer_using_balanced_counts &&
       hdf5::has_dataset(*this->_fp, "bins/weight", this->_root_path)) {
     const auto &d = this->_datasets[BIN_WEIGHT];
-    u8 cis_only;  // NOLINT
+    u8 cis_only;
     try {
       hdf5::read_attribute(d, "cis_only", cis_only);
     } catch (const std::runtime_error &e) {
@@ -282,8 +282,8 @@ usize Cooler<N>::stream_contacts_for_chrom(moodycamel::BlockingReaderWriterQueue
   }
 
   const auto &[first_bin, last_bin] = bin_range;
-  assert(first_bin < last_bin);                            // NOLINT
-  assert(last_bin <= first_bin + bin1_offset_idx.size());  // NOLINT
+  assert(first_bin < last_bin);
+  assert(last_bin <= first_bin + bin1_offset_idx.size());
   std::vector<i64> bin1_BUFF(nrows);
   std::vector<i64> bin2_BUFF(nrows);
   std::vector<i64> count_BUFF(nrows);
@@ -313,12 +313,12 @@ usize Cooler<N>::stream_contacts_for_chrom(moodycamel::BlockingReaderWriterQueue
     std::ignore = hdf5::read_numbers(d[PXL_B2], bin2_BUFF, file_offset);
     std::ignore = hdf5::read_numbers(d[PXL_COUNT], count_BUFF, file_offset);
 
-    assert(bin1_BUFF.size() == buff_size);   // NOLINT
-    assert(bin2_BUFF.size() == buff_size);   // NOLINT
-    assert(count_BUFF.size() == buff_size);  // NOLINT
+    assert(bin1_BUFF.size() == buff_size);
+    assert(bin2_BUFF.size() == buff_size);
+    assert(count_BUFF.size() == buff_size);
 
     for (usize j = 0; j < buff_size; ++j) {
-      assert(count_BUFF[j] != 0);  // NOLINT
+      assert(count_BUFF[j] != 0);
       DISABLE_WARNING_PUSH
       DISABLE_WARNING_SIGN_CONVERSION
       DISABLE_WARNING_SIGN_COMPARE
@@ -331,7 +331,6 @@ usize Cooler<N>::stream_contacts_for_chrom(moodycamel::BlockingReaderWriterQueue
       if (bin_weights.empty()) {
         while (!queue.try_emplace(Pixel{std::min(bin1, bin2), std::max(bin1, bin2),
                                         static_cast<contacts_t>(count_BUFF[j])})) {
-          // NOLINTNEXTLINE(readability-magic-numbers)
           std::this_thread::sleep_for(std::chrono::milliseconds(10));
         }
         ++pixel_count;
@@ -349,7 +348,6 @@ usize Cooler<N>::stream_contacts_for_chrom(moodycamel::BlockingReaderWriterQueue
             static_cast<double>(count_BUFF[j]) / (bin1_bias * bin2_bias) / bias_scaling_factor;
         while (!queue.try_emplace(Pixel{std::min(bin1, bin2), std::max(bin1, bin2),
                                         static_cast<contacts_t>(std::round(count))})) {
-          // NOLINTNEXTLINE(readability-magic-numbers)
           std::this_thread::sleep_for(std::chrono::milliseconds(10));
         }
         ++pixel_count;

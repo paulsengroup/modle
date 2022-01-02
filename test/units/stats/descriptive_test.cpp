@@ -116,8 +116,8 @@ TEST_CASE("SED", "[stats][short]") {
   const std::vector<double> weights{0.97302005, 0.05226173, 0.15995629, 0.31495018, 0.95241483,
                                     0.87420081, 0.21360278, 0.0822476,  0.26402032, 0.49666325};
   // computed with scipy.spatial.distance.euclidean
-  const auto result = Approx(154.65977964758991);          // NOLINT
-  const auto result_weighted = Approx(99.94033647108283);  // NOLINT
+  const auto result = Approx(154.65977964758991);
+  const auto result_weighted = Approx(99.94033647108283);
 
   CHECK(stats::sed(v1.begin(), v1.end(), v2.begin()) == result);
   CHECK(stats::weighted_sed(v1.begin(), v1.end(), v2.begin(), weights.begin()) == result_weighted);
@@ -134,8 +134,8 @@ TEST_CASE("RMSE", "[stats][short]") {
                                     0.87420081, 0.21360278, 0.0822476,  0.26402032, 0.49666325};
 
   // computed with mean_squared_error from sklearn.metrics
-  const auto result = Approx(48.90771661061378);           // NOLINT
-  const auto result_weighted = Approx(47.73515476405454);  // NOLINT
+  const auto result = Approx(48.90771661061378);
+  const auto result_weighted = Approx(47.73515476405454);
 
   CHECK(stats::rmse(v1.begin(), v1.end(), v2.begin()) == result);
   CHECK(stats::weighted_rmse(v1.begin(), v1.end(), v2.begin(), weights.begin()) == result_weighted);

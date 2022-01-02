@@ -37,10 +37,10 @@
 namespace modle {
 
 void Simulation::run_replay() {
-  assert(boost::filesystem::exists(this->path_to_task_file));  // NOLINT
+  assert(boost::filesystem::exists(this->path_to_task_file));
   compressed_io::Reader task_reader(this->path_to_task_file);
 
-  const usize task_batch_size_enq = 32;  // NOLINTNEXTLINE
+  const usize task_batch_size_enq = 32;
   moodycamel::BlockingConcurrentQueue<TaskPW> task_queue(this->nthreads * 2, 1, 0);
   moodycamel::ProducerToken ptok(task_queue);
   std::array<TaskPW, task_batch_size_enq> tasks;
@@ -65,17 +65,17 @@ void Simulation::run_replay() {
         this->handle_exceptions();
       }
       if (num_tasks == tasks.size()) {  // Enqueue a batch of tasks
-        auto sleep_us = 100;            // NOLINT(readability-magic-numbers)
+        auto sleep_us = 100;
         while (
             !task_queue.try_enqueue_bulk(ptok, std::make_move_iterator(tasks.begin()), num_tasks)) {
           if (!this->ok()) {
             this->handle_exceptions();
-          }  // NOLINTNEXTLINE(readability-magic-numbers)
+          }
           sleep_us = std::min(100000, sleep_us * 2);
           std::this_thread::sleep_for(std::chrono::microseconds(sleep_us));
         }
         num_tasks = 0;
-      }  // NOLINTNEXTLINE(cppcoreguidelines-pro-bounds-constant-array-index)
+      }
       const auto& t = (tasks[num_tasks] = TaskPW::from_string(task_definition, this->_genome));
       if (task_filter.empty() || task_filter.contains(t.id)) {
         ++num_tasks;
@@ -87,14 +87,14 @@ void Simulation::run_replay() {
           !task_queue.try_enqueue_bulk(ptok, std::make_move_iterator(tasks.begin()), num_tasks)) {
         if (!this->ok()) {
           this->handle_exceptions();
-        }  // NOLINTNEXTLINE(readability-magic-numbers)
+        }
         std::this_thread::sleep_for(std::chrono::microseconds(100));
       }
     }
 
     this->_end_of_simulation = true;
-    this->_tpool.wait_for_tasks();     // Wait on simulate_worker threads
-    assert(!this->_exception_thrown);  // NOLINT
+    this->_tpool.wait_for_tasks();  // Wait on simulate_worker threads
+    assert(!this->_exception_thrown);
   } catch (...) {
     this->_exception_thrown = true;
     this->_tpool.paused = true;
@@ -119,7 +119,7 @@ void Simulation::replay_worker(const u64 tid,
     while (this->ok()) {  // Try to dequeue a batch of tasks
       const auto avail_tasks = this->consume_tasks_blocking(task_queue, ctok, task_buff);
       if (avail_tasks == 0) {
-        assert(this->_end_of_simulation);  // NOLINT
+        assert(this->_end_of_simulation);
         // Reached end of simulation (i.e. all tasks have been processed)
         return;
       }
@@ -129,10 +129,10 @@ void Simulation::replay_worker(const u64 tid,
         if (!this->ok()) {
           return;
         }
-        assert(!task.barriers.empty());  // NOLINT
-        assert(!task.feats1.empty());    // NOLINT
-        assert(!task.feats2.empty());    // NOLINT
-        assert(local_state.contacts);    // NOLINT
+        assert(!task.barriers.empty());
+        assert(!task.feats1.empty());
+        assert(!task.feats2.empty());
+        assert(local_state.contacts);
 
         local_state = task;  // Set simulation local_state based on task data
         local_state.contacts->unsafe_resize(local_state.window_end - local_state.window_start,

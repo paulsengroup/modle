@@ -36,8 +36,8 @@ void test_find_overlaps(const IITree_t& tree, usize start, usize end, usize num_
 TEST_CASE("Interval tree simple", "[interval-tree][short]") {
   IITree_t tree{};
 
-  tree.insert(0, 10, Record{});  // NOLINT
-  tree.insert(5, 15, Record{});  // NOLINT
+  tree.insert(0, 10, Record{});
+  tree.insert(5, 15, Record{});
 
   tree.make_BST();
 
@@ -50,12 +50,12 @@ TEST_CASE("Interval tree simple", "[interval-tree][short]") {
   CHECK(tree.overlaps_with(0, 25));
   CHECK(!tree.overlaps_with(16, 25));
 
-  test_find_overlaps(tree, 0, 4, 1);    // NOLINT
-  test_find_overlaps(tree, 0, 10, 2);   // NOLINT
-  test_find_overlaps(tree, 5, 15, 2);   // NOLINT
-  test_find_overlaps(tree, 0, 15, 2);   // NOLINT
-  test_find_overlaps(tree, 0, 25, 2);   // NOLINT
-  test_find_overlaps(tree, 16, 25, 0);  // NOLINT
+  test_find_overlaps(tree, 0, 4, 1);
+  test_find_overlaps(tree, 0, 10, 2);
+  test_find_overlaps(tree, 5, 15, 2);
+  test_find_overlaps(tree, 0, 15, 2);
+  test_find_overlaps(tree, 0, 25, 2);
+  test_find_overlaps(tree, 16, 25, 0);
 }
 
 // NOLINTNEXTLINE(readability-function-cognitive-complexity)
@@ -85,7 +85,7 @@ TEST_CASE("Interval tree chrX", "[interval-tree][short]") {
     tree.insert(record.start, record.end, record);
   }
 
-  REQUIRE(tree.size() == 2118);  // NOLINT
+  REQUIRE(tree.size() == 2118);
   tree.make_BST();
 
   r.open(subset_intervals);

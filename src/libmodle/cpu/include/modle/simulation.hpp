@@ -95,32 +95,32 @@ class Simulation : Config {
 
   struct State : BaseTask {  // NOLINT(altera-struct-pack-align)
     State() = default;
-    usize epoch{};
-    bool burnin_completed{false};
-    usize num_active_lefs{0};
-    usize num_burnin_epochs{0};
-    usize num_contacts{0};
+    usize epoch{};                 // NOLINT
+    bool burnin_completed{false};  // NOLINT
+    usize num_active_lefs{0};      // NOLINT
+    usize num_burnin_epochs{0};    // NOLINT
+    usize num_contacts{0};         // NOLINT
 
-    random::PRNG_t rand_eng{};
-    u64 seed{};
+    random::PRNG_t rand_eng{};  // NOLINT
+    u64 seed{};                 // NOLINT
     DISABLE_WARNING_PUSH
     DISABLE_WARNING_USED_BUT_MARKED_UNUSED
-    std::unique_ptr<XXH3_state_t, utils::XXH3_Deleter> xxh_state{XXH3_createState()};
+    std::unique_ptr<XXH3_state_t, utils::XXH3_Deleter> xxh_state{XXH3_createState()};  // NOLINT
     DISABLE_WARNING_POP
-    std::unique_ptr<compressed_io::Writer> model_state_logger{nullptr};
+    std::unique_ptr<compressed_io::Writer> model_state_logger{nullptr};  // NOLINT
 
    protected:
-    std::vector<Lef> lef_buff{};
-    std::vector<usize> rank_buff1{};
-    std::vector<usize> rank_buff2{};
-    boost::dynamic_bitset<> barrier_mask{};
-    std::vector<bp_t> moves_buff1{};
-    std::vector<bp_t> moves_buff2{};
-    std::vector<usize> idx_buff{};
-    std::vector<CollisionT> collision_buff1{};
-    std::vector<CollisionT> collision_buff2{};
-    std::deque<double> cfx_of_variation_buff{};
-    std::deque<double> avg_loop_size_buff{};
+    std::vector<Lef> lef_buff{};                 // NOLINT
+    std::vector<usize> rank_buff1{};             // NOLINT
+    std::vector<usize> rank_buff2{};             // NOLINT
+    boost::dynamic_bitset<> barrier_mask{};      // NOLINT
+    std::vector<bp_t> moves_buff1{};             // NOLINT
+    std::vector<bp_t> moves_buff2{};             // NOLINT
+    std::vector<usize> idx_buff{};               // NOLINT
+    std::vector<CollisionT> collision_buff1{};   // NOLINT
+    std::vector<CollisionT> collision_buff2{};   // NOLINT
+    std::deque<double> cfx_of_variation_buff{};  // NOLINT
+    std::deque<double> avg_loop_size_buff{};     // NOLINT
 
     static constexpr usize npos = absl::Span<usize>::npos;
 
@@ -153,21 +153,21 @@ class Simulation : Config {
     [[nodiscard]] bool is_modle_sim_state() const noexcept;
 
     // These fields are specific to modle pert
-    bp_t deletion_begin{};
-    bp_t deletion_size{};
-    bp_t window_start{};
-    bp_t window_end{};
-    bp_t active_window_start{};
-    bp_t active_window_end{};
+    bp_t deletion_begin{};       // NOLINT
+    bp_t deletion_size{};        // NOLINT
+    bp_t window_start{};         // NOLINT
+    bp_t window_end{};           // NOLINT
+    bp_t active_window_start{};  // NOLINT
+    bp_t active_window_end{};    // NOLINT
 
-    absl::Span<const bed::BED> feats1{};
-    absl::Span<const bed::BED> feats2{};
+    absl::Span<const bed::BED> feats1{};  // NOLINT
+    absl::Span<const bed::BED> feats2{};  // NOLINT
 
-    std::shared_ptr<std::mutex> contacts_mtx{nullptr};
-    std::shared_ptr<const ContactMatrix<contacts_t>> reference_contacts{nullptr};
-    std::shared_ptr<ContactMatrix<contacts_t>> contacts{nullptr};
+    std::shared_ptr<std::mutex> contacts_mtx{nullptr};                             // NOLINT
+    std::shared_ptr<const ContactMatrix<contacts_t>> reference_contacts{nullptr};  // NOLINT
+    std::shared_ptr<ContactMatrix<contacts_t>> contacts{nullptr};                  // NOLINT
 
-    std::vector<ExtrusionBarrier> barrier_tmp_buff{};
+    std::vector<ExtrusionBarrier> barrier_tmp_buff{};  // NOLINT
 
     State& operator=(const Task& task);
     State& operator=(const TaskPW& task);
@@ -185,7 +185,7 @@ class Simulation : Config {
   Genome _genome{};
   std::atomic<bool> _end_of_simulation{false};
   std::atomic<bool> _exception_thrown{false};
-  std::vector<std::exception_ptr> _exceptions{};
+  std::vector<std::exception_ptr> _exceptions{};  // NOLINT(bugprone-throw-keyword-missing)
   std::mutex _exceptions_mutex{};
   thread_pool _tpool;
 
@@ -243,16 +243,15 @@ class Simulation : Config {
   void simulate_worker(u64 tid, moodycamel::BlockingConcurrentQueue<Simulation::Task>& task_queue,
                        std::deque<std::pair<Chromosome*, usize>>& progress_queue,
                        std::mutex& progress_queue_mtx, std::mutex& model_state_logger_mtx,
-                       usize task_batch_size = 32);  // NOLINT
+                       usize task_batch_size = 32);
 
   void perturbate_worker(u64 tid,
                          moodycamel::BlockingConcurrentQueue<Simulation::TaskPW>& task_queue,
                          const boost::filesystem::path& tmp_output_path, std::mutex& cooler_mtx,
-                         usize task_batch_size = 1);  // NOLINT
+                         usize task_batch_size = 1);
 
   void replay_worker(u64 tid, moodycamel::BlockingConcurrentQueue<Simulation::TaskPW>& task_queue,
-                     std::mutex& cooler_mtx,
-                     usize task_batch_size = 32);  // NOLINT
+                     std::mutex& cooler_mtx, usize task_batch_size = 32);
 
   /// Bind inactive LEFs, then sort them by their genomic coordinates.
 
@@ -430,12 +429,12 @@ class Simulation : Config {
                                   usize num_rev_units_at_5prime = 0,
                                   usize num_fwd_units_at_3prime = 0) const
         noexcept(utils::ndebug_defined());
-  */
-  void correct_overlapping_lefs([[maybe_unused]] const Chromosome& chrom,
-                                const absl::Span<Lef> lefs, const absl::Span<usize> rev_lef_ranks,
-                                const absl::Span<usize> fwd_lef_ranks,
-                                usize num_rev_units_at_5prime, usize num_fwd_units_at_3prime) const
-      noexcept(utils::ndebug_defined());
+    void correct_overlapping_lefs([[maybe_unused]] const Chromosome& chrom,
+                                  absl::Span<Lef> lefs, const absl::Span<usize> rev_lef_ranks,
+                                  absl::Span<usize> fwd_lef_ranks,
+                                  usize num_rev_units_at_5prime, usize num_fwd_units_at_3prime)
+    const noexcept(utils::ndebug_defined());
+   */
 
   /// Correct moves to comply with the constraints imposed by LEF-BAR collisions.
   static void correct_moves_for_lef_bar_collisions(

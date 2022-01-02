@@ -61,7 +61,7 @@ void BED::parse_rgb_or_throw(const std::vector<std::string_view>& toks, u8 idx, 
 }
 
 RGB BED::parse_rgb_or_throw(const std::vector<std::string_view>& toks, u8 idx) {
-  RGB buff;  // NOLINT
+  RGB buff;
   BED::parse_rgb_or_throw(toks, idx, buff);
   return buff;
 }
@@ -96,7 +96,7 @@ BED::Dialect BED::detect_standard(const std::vector<std::string_view>& toks) {
 }
 
 void BED::validate_record(const std::vector<std::string_view>& toks, const Dialect standard) {
-  assert(toks.size() >= BED3);  // NOLINT
+  assert(toks.size() >= BED3);
   if (standard == none) {
     return;
   }
@@ -139,15 +139,14 @@ bool BED::parse_chrom_end(const std::vector<std::string_view>& toks) {
 }
 
 bool BED::parse_name(const std::vector<std::string_view>& toks) {
-  assert(this->_standard >= BED4);  // NOLINT
+  assert(this->_standard >= BED4);
   this->name = toks[BED_NAME_IDX];
   return this->_standard == BED4;
 }
 
 bool BED::parse_score(const std::vector<std::string_view>& toks, bool validate) {
-  assert(this->_standard >= BED5);  // NOLINT
+  assert(this->_standard >= BED5);
   utils::parse_numeric_or_throw(toks, BED_SCORE_IDX, this->score);
-  // NOLINTNEXTLINE(readability-magic-numbers, cppcoreguidelines-avoid-magic-numbers)
   if (this->_standard != none && validate && (this->score < 0 || this->score > 1000)) {
     throw std::runtime_error(fmt::format(
         FMT_STRING(
@@ -158,13 +157,13 @@ bool BED::parse_score(const std::vector<std::string_view>& toks, bool validate) 
 }
 
 bool BED::parse_strand(const std::vector<std::string_view>& toks) {
-  assert(this->_standard >= BED6);  // NOLINT
+  assert(this->_standard >= BED6);
   parse_strand_or_throw(toks, BED_STRAND_IDX, this->strand);
   return this->_standard == BED6;
 }
 
 bool BED::parse_thick_start(const std::vector<std::string_view>& toks, bool validate) {
-  assert(this->_standard >= 7);  // NOLINT
+  assert(this->_standard >= 7);
   utils::parse_numeric_or_throw(toks, BED_THICK_START_IDX, this->thick_start);
   if (validate && this->thick_start < this->chrom_start) {
     throw std::runtime_error(fmt::format(
@@ -176,7 +175,7 @@ bool BED::parse_thick_start(const std::vector<std::string_view>& toks, bool vali
 }
 
 bool BED::parse_thick_end(const std::vector<std::string_view>& toks, bool validate) {
-  assert(this->_standard >= 8);  // NOLINT
+  assert(this->_standard >= 8);
   utils::parse_numeric_or_throw(toks, BED_THICK_END_IDX, this->thick_end);
   if (validate && this->thick_end > this->chrom_end) {
     throw std::runtime_error(
@@ -194,43 +193,43 @@ bool BED::parse_thick_end(const std::vector<std::string_view>& toks, bool valida
 }
 
 bool BED::parse_item_rgb(const std::vector<std::string_view>& toks) {
-  assert(this->_standard >= BED9);  // NOLINT
+  assert(this->_standard >= BED9);
   this->rgb = std::make_unique<RGB>(parse_rgb_or_throw(toks, BED_ITEM_RGB_IDX));
   return this->_standard == BED9;
 }
 
 bool BED::parse_block_count(const std::vector<std::string_view>& toks) {
-  assert(this->_standard >= 10);  // NOLINT
+  assert(this->_standard >= 10);
   utils::parse_numeric_or_throw(toks, BED_BLOCK_COUNT_IDX, this->block_count);
   return this->_standard == none && toks.size() == BED_BLOCK_COUNT;
 }
 
 bool BED::parse_block_sizes(const std::vector<std::string_view>& toks) {
-  assert(this->_standard >= 11);  // NOLINT
+  assert(this->_standard >= 11);
   utils::parse_vect_of_numbers_or_throw(toks, BED_BLOCK_SIZES_IDX, this->block_sizes,
                                         this->block_count);
   return this->_standard == none && toks.size() == BED_BLOCK_SIZES;
 }
 bool BED::parse_block_starts(const std::vector<std::string_view>& toks) {
-  assert(this->_standard >= 12);  // NOLINT
+  assert(this->_standard >= 12);
   utils::parse_vect_of_numbers_or_throw(toks, BED_BLOCK_STARTS_IDX, this->block_starts,
                                         this->block_count);
   return this->_standard == BED12;
 }
 void BED::parse_extra_tokens(const std::vector<std::string_view>& toks) {
-  assert(this->_standard == none);  // NOLINT
-  assert(toks.size() >= BED12);     // NOLINT
+  assert(this->_standard == none);
+  assert(toks.size() >= BED12);
   // Copy non-whitespace tokens
   this->extra_tokens = absl::StrJoin(toks.begin() + BED12, toks.end(), "\t");
 }
 
 BED::Dialect BED::str_to_dialect(std::string_view s) {
-  assert(bed::str_to_bed_dialect_mappings.contains(s));  // NOLINT
+  assert(bed::str_to_bed_dialect_mappings.contains(s));
   return bed::str_to_bed_dialect_mappings.at(s);
 }
 
 std::string BED::dialect_to_str(Dialect d) {
-  assert(bed::bed_dialect_to_str_mappings.contains(d));  // NOLINT
+  assert(bed::bed_dialect_to_str_mappings.contains(d));
   return std::string{bed::bed_dialect_to_str_mappings.at(d)};
 }
 
@@ -279,22 +278,22 @@ BED::BED(std::string_view record, usize id_, BED::Dialect bed_standard, bool val
       return;
     }
     if (this->parse_thick_start(toks, validate)) {
-      assert(bed_standard == none);  // NOLINT
+      assert(bed_standard == none);
       return;
     }
     if (this->parse_thick_end(toks, validate)) {
-      assert(bed_standard == none);  // NOLINT
+      assert(bed_standard == none);
       return;
     }
     if (this->parse_item_rgb(toks)) {
       return;
     }
     if (this->parse_block_count(toks)) {
-      assert(bed_standard == none);  // NOLINT
+      assert(bed_standard == none);
       return;
     }
     if (this->parse_block_sizes(toks)) {
-      assert(bed_standard == none);  // NOLINT
+      assert(bed_standard == none);
       return;
     }
     if (this->parse_block_starts(toks)) {
@@ -371,24 +370,24 @@ usize BED::id() const noexcept { return this->_id; }
 usize BED::size() const noexcept { return this->chrom_end - this->chrom_start; }
 
 usize BED::num_fields() const noexcept {
-  assert(this->_standard != autodetect);  // NOLINT
+  assert(this->_standard != autodetect);
   if (this->_standard != none) {
     return static_cast<usize>(this->_standard);
   }
-  if (thick_end == -1ULL) {  // NOLINT
+  if (thick_end == -1ULL) {
     return BED_THICK_START;
   }
   if (!rgb) {
     return BED_THICK_END;
   }
-  assert(block_count != -1ULL);  // NOLINT
+  assert(block_count != -1ULL);
   if (block_sizes.empty()) {
     return BED_BLOCK_COUNT;
   }
   if (block_starts.empty()) {
     return BED_BLOCK_SIZES;
   }
-  assert(!extra_tokens.empty());  // NOLINT
+  assert(!extra_tokens.empty());
   return BED12 + static_cast<usize>(std::count(extra_tokens.begin(), extra_tokens.end(), '\t'));
 }
 
@@ -459,7 +458,7 @@ std::vector<BED> Parser::parse_n(usize num_records) {
   if (this->_reader.path().empty()) {
     return std::vector<BED>{};
   }
-  assert(this->_reader.is_open());  // NOLINT
+  assert(this->_reader.is_open());
 
   using record_idx_t = usize;
   using line_num_t = usize;
@@ -491,7 +490,7 @@ std::vector<BED> Parser::parse_n(usize num_records) {
 
   std::vector<BED> _records(records.size());
   for (const auto& [record, idx] : records) {
-    assert(idx.first < _records.size());  // NOLINT
+    assert(idx.first < _records.size());
     _records[idx.first] = record;
   }
 
@@ -502,7 +501,7 @@ BED_tree<> Parser::parse_n_in_interval_tree(usize num_records) {
   if (this->_reader.path().empty()) {
     return BED_tree<>{};
   }
-  assert(this->_reader.is_open());  // NOLINT
+  assert(this->_reader.is_open());
 
   using line_num_t = usize;
   absl::flat_hash_map<BED, line_num_t> records;
@@ -576,9 +575,9 @@ usize Parser::skip_header() {
   if (!this->_reader.is_open()) {
     return 0;
   }
-  assert(this->_num_records_parsed == 0);  // NOLINT
+  assert(this->_num_records_parsed == 0);
   usize num_header_lines = 0L;
-  assert(this->_reader.is_open());  // NOLINT
+  assert(this->_reader.is_open());
   while (this->_reader.getline(this->_buff)) {
     if (this->_buff.empty()) {  // Skip empty lines
       ++num_header_lines;

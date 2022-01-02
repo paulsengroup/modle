@@ -64,8 +64,8 @@ Chromosome::Chromosome(usize id, std::string_view chrom_name, bp_t chrom_start, 
       _size(chrom_size),
       _id(id),
       _ok(ok_) {
-  assert(chrom_start <= chrom_end);               // NOLINT
-  assert(chrom_end - chrom_start <= chrom_size);  // NOLINT
+  assert(chrom_start <= chrom_end);
+  assert(chrom_end - chrom_start <= chrom_size);
 }
 
 Chromosome::Chromosome(usize id, std::string_view chrom_name, bp_t chrom_start, bp_t chrom_end,
@@ -77,8 +77,8 @@ Chromosome::Chromosome(usize id, std::string_view chrom_name, bp_t chrom_start, 
       _id(id),
       _barriers(barriers),
       _ok(ok_) {
-  assert(chrom_start <= chrom_end);               // NOLINT
-  assert(chrom_end - chrom_start <= chrom_size);  // NOLINT
+  assert(chrom_start <= chrom_end);
+  assert(chrom_end - chrom_start <= chrom_size);
 
   _barriers.make_BST();
 }
@@ -92,8 +92,8 @@ Chromosome::Chromosome(usize id, std::string_view chrom_name, bp_t chrom_start, 
       _id(id),
       _barriers(std::move(barriers)),
       _ok(ok_) {
-  assert(chrom_start <= chrom_end);               // NOLINT
-  assert(chrom_end - chrom_start <= chrom_size);  // NOLINT
+  assert(chrom_start <= chrom_end);
+  assert(chrom_end - chrom_start <= chrom_size);
 
   _barriers.make_BST();
 }
@@ -222,7 +222,7 @@ const char* Chromosome::name_cstr() const { return this->_name.c_str(); }
 
 bool Chromosome::ok() const { return this->_ok; }
 
-usize Chromosome::num_lefs(double nlefs_per_mbp) const {  // NOLINTNEXTLINE
+usize Chromosome::num_lefs(double nlefs_per_mbp) const {
   return static_cast<usize>((static_cast<double>(this->simulated_size()) / 1.0e6) * nlefs_per_mbp);
 }
 usize Chromosome::num_barriers() const { return this->_barriers.size(); }
@@ -251,17 +251,17 @@ bool Chromosome::deallocate_contacts() {
 }
 
 usize Chromosome::npixels() const {
-  assert(this->_contacts);  // NOLINT
+  assert(this->_contacts);
   return this->contacts().npixels();
 }
 
 const Chromosome::contact_matrix_t& Chromosome::contacts() const {
-  assert(this->_contacts);  // NOLINT
+  assert(this->_contacts);
   return *this->_contacts;
 }
 
 Chromosome::contact_matrix_t& Chromosome::contacts() {
-  assert(this->_contacts);  // NOLINT
+  assert(this->_contacts);
   return *this->_contacts;
 }
 
@@ -321,7 +321,7 @@ Genome::Genome(const boost::filesystem::path& path_to_chrom_sizes,
 absl::btree_set<Chromosome> Genome::import_chromosomes(
     const boost::filesystem::path& path_to_chrom_sizes,
     const boost::filesystem::path& path_to_chrom_subranges, bool keep_all_chroms) {
-  assert(!path_to_chrom_sizes.empty());  // NOLINT
+  assert(!path_to_chrom_sizes.empty());
 
   const auto t0 = absl::Now();
   if (path_to_chrom_subranges.empty()) {
@@ -404,8 +404,8 @@ usize Genome::import_barriers(absl::btree_set<Chromosome>& chromosomes,
                               const boost::filesystem::path& path_to_extr_barriers,
                               const double ctcf_prob_occ_to_occ,
                               const double ctcf_prob_nocc_to_nocc) {
-  assert(!chromosomes.empty());            // NOLINT
-  assert(!path_to_extr_barriers.empty());  // NOLINT
+  assert(!chromosomes.empty());
+  assert(!path_to_extr_barriers.empty());
 
   const auto t0 = absl::Now();
   spdlog::info(FMT_STRING("Importing extrusion barriers from file {}..."), path_to_extr_barriers);
@@ -438,8 +438,8 @@ usize Genome::import_barriers(absl::btree_set<Chromosome>& chromosomes,
 
 usize Genome::import_extra_features(absl::btree_set<Chromosome>& chromosomes,
                                     const boost::filesystem::path& path_to_extra_features) {
-  assert(!chromosomes.empty());             // NOLINT
-  assert(!path_to_extra_features.empty());  // NOLINT
+  assert(!chromosomes.empty());
+  assert(!path_to_extra_features.empty());
 
   const auto t0 = absl::Now();
   spdlog::info(FMT_STRING("Importing features from the following file: {}..."),
@@ -551,21 +551,21 @@ usize Genome::simulated_size() const {
 }
 
 const Chromosome& Genome::chromosome_with_longest_name() const {
-  assert(!this->_chromosomes.empty());  // NOLINT
+  assert(!this->_chromosomes.empty());
   return *std::max_element(
       this->_chromosomes.begin(), this->_chromosomes.end(),
       [&](const auto& c1, const auto& c2) { return c1.name().size() < c2.name().size(); });
 }
 
 const Chromosome& Genome::longest_chromosome() const {
-  assert(!this->_chromosomes.empty());  // NOLINT
+  assert(!this->_chromosomes.empty());
   return *std::max_element(
       this->_chromosomes.begin(), this->_chromosomes.end(),
       [&](const auto& c1, const auto& c2) { return c1.simulated_size() < c2.simulated_size(); });
 }
 
 const Chromosome& Genome::chromosome_with_max_nbarriers() const {
-  assert(!this->_chromosomes.empty());  // NOLINT
+  assert(!this->_chromosomes.empty());
   return *std::max_element(
       this->_chromosomes.begin(), this->_chromosomes.end(),
       [&](const auto& c1, const auto& c2) { return c1.num_barriers() < c2.num_barriers(); });

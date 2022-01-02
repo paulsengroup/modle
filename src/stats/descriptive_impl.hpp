@@ -46,17 +46,17 @@ double weighted_mean(InputIt1 first, InputIt1 last, InputIt2 weight_first, Unary
 }
 
 template <class InputIt, class OutputIt, class I, class UnaryOperation, class>
-usize moving_average(InputIt first, InputIt last, OutputIt output_begin, const I window_size,
+usize moving_average(InputIt first, InputIt last, OutputIt output_first, const I window_size,
                      UnaryOperation op) {
   using OutputItValueT = typename OutputIt::value_type;
   if (static_cast<isize>(window_size) >= std::distance(first, last)) {
-    *output_begin = OutputItValueT(stats::mean(first, last, op));
+    *output_first = OutputItValueT(stats::mean(first, last, op));
     return 1;
   }
 
   for (auto it1 = first, it2 = first + static_cast<isize>(window_size); it2 != last;
-       ++it1, ++it2, ++output_begin) {
-    *output_begin = OutputItValueT(mean(it1, it2, op));
+       ++it1, ++it2, ++output_first) {
+    *output_first = OutputItValueT(mean(it1, it2, op));
   }
   return usize(std::distance(first, last)) - usize(window_size);
 }
@@ -162,7 +162,7 @@ template <class InputIt1, class InputIt2, class UnaryOperation, class>
 double weighted_sed(InputIt1 first1, InputIt1 last1, InputIt1 first2, InputIt2 weight_first,
                     UnaryOperation op) noexcept {
   const isize size = std::distance(first1, last1);
-  assert(size >= 0);  // NOLINT
+  assert(size >= 0);
 
   double sed = 0;
   for (isize i = 0; i < size; ++i) {
@@ -201,8 +201,8 @@ double weighted_rmse(InputIt1 first1, InputIt1 last1, InputIt1 first2, InputIt2 
   auto it3 = weight_first;
   for (; it1 != last1; ++n, ++it1, ++it2, ++it3) {
     DISABLE_WARNING_PUSH
-    DISABLE_WARNING_USELESS_CAST  // NOLINTNEXTLINE
-        tot += std::pow(static_cast<double>(op(*it1) - op(*it2)), 2.0) * static_cast<double>(*it3);
+    DISABLE_WARNING_USELESS_CAST
+    tot += std::pow(static_cast<double>(op(*it1) - op(*it2)), 2.0) * static_cast<double>(*it3);
     tot_w += static_cast<double>(*it3);
     DISABLE_WARNING_POP
   }

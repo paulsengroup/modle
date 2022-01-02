@@ -2,7 +2,21 @@
 #
 # SPDX-License-Identifier: MIT
 ---
-Checks: '*,-fuchsia-*,-google-*,-zircon-*,-llvm-*,-llvmlibc-*,-altera-*,-modernize-use-trailing-return-type,-cppcoreguidelines-avoid-magic-numbers'
+#Checks: '*,-fuchsia-*,-google-*,-zircon-*,-llvm-*,-llvmlibc-*,-altera-*,-modernize-use-trailing-return-type,-cppcoreguidelines-avoid-magic-numbers,-cppcoreguidelines-pro-bounds-constant-array-index'
+Checks: >
+  *,
+  -fuchsia-*,
+  -google-*,
+  -zircon-*,
+  -llvm-*,
+  -llvmlibc-*,
+  -altera-*,
+  -modernize-use-trailing-return-type,
+  -cppcoreguidelines-avoid-magic-numbers,
+  -cppcoreguidelines-pro-bounds-array-to-pointer-decay,
+  -cppcoreguidelines-pro-bounds-constant-array-index,
+  -cppcoreguidelines-avoid-magic-numbers,
+  -readability-magic-numbers
 WarningsAsErrors: ''
 HeaderFilterRegex: ''
 FormatStyle: none
@@ -11,5 +25,5 @@ CheckOptions:
     value: '1'
   - key: readability-implicit-bool-conversion.AllowPointerConditions
     value: '1'
-  - key: readability-magic-numbers.IgnorePowersOf2IntegerValues
-    value: '1'
+  - key: cppcoreguidelines-macro-usage.AllowedRegexp
+    value: 'DISABLE_WARNING_.*,MAKE_.*TEST_CASE'

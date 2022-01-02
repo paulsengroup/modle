@@ -73,7 +73,6 @@ void ExtrusionUnit::release() noexcept(utils::ndebug_defined()) {
 }
 
 bool Lef::is_bound() const noexcept(utils::ndebug_defined()) {
-  // NOLINTNEXTLINE
   assert((this->rev_unit._pos == (std::numeric_limits<bp_t>::max)()) ==
          (this->fwd_unit._pos == (std::numeric_limits<bp_t>::max)()));
   return this->binding_epoch != (std::numeric_limits<usize>::max)();
@@ -95,7 +94,7 @@ void Lef::release() noexcept(utils::ndebug_defined()) {
 void Lef::reset() noexcept(utils::ndebug_defined()) { this->release(); }
 
 bp_t Lef::loop_size() const noexcept {
-  assert(this->rev_unit.pos() <= this->fwd_unit.pos());  // NOLINT
+  assert(this->rev_unit.pos() <= this->fwd_unit.pos());
   return this->fwd_unit.pos() - this->rev_unit.pos();
 }
 }  // namespace modle

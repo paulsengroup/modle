@@ -77,7 +77,7 @@ void noisify_contacts(const noisify_config& c) {
 
     cmatrix.unsafe_resize(nrows, ncols);
     cmatrix.unsafe_reset();
-    modle::cooler::Cooler<>::Pixel pixel{};  // NOLINT
+    modle::cooler::Cooler<>::Pixel pixel{};
     const auto seed =
         c.seed + std::hash<std::string_view>{}(chrom_name) + std::hash<usize>{}(ncols);
 
@@ -89,7 +89,7 @@ void noisify_contacts(const noisify_config& c) {
       if (pixel == END_OF_PIXEL_QUEUE) {
         break;
       }
-      assert(pixel.row <= pixel.col);  // NOLINT
+      assert(pixel.row <= pixel.col);
       for (usize i = 0; i < pixel.count; ++i) {
         const auto pos1 = static_cast<double>(pixel.row * bin_size) + genextreme(rang_eng);
         const auto pos2 = static_cast<double>(pixel.col * bin_size) - genextreme(rang_eng);

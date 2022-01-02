@@ -37,7 +37,7 @@
 #include "modle/simulation.hpp"     // for Simulation
 
 int main(int argc, char** argv) noexcept {
-  absl::InitializeSymbolizer(argv[0]);  // NOLINT(cppcoreguidelines-pro-bounds-pointer-arithmetic)
+  absl::InitializeSymbolizer(argv[0]);
   absl::FailureSignalHandlerOptions options;
   // TODO: figure out a way to make this callback async-signal-safe
   options.writerfn = [](const char* buff) {
@@ -67,13 +67,13 @@ int main(int argc, char** argv) noexcept {
       return 1;
     }
     if (config.quiet) {
-      assert(spdlog::default_logger()->sinks().size() == 1);  // NOLINT
+      assert(spdlog::default_logger()->sinks().size() == 1);
       spdlog::default_logger()->sinks().front()->set_level(spdlog::level::err);
     }
 
     const auto t0 = absl::Now();
     if (!config.skip_output) {
-      assert(!config.path_to_log_file.empty());  // NOLINT
+      assert(!config.path_to_log_file.empty());
       if (const auto& output_dir = config.path_to_output_prefix.parent_path();
           !output_dir.empty()) {
         boost::filesystem::create_directories(output_dir.string());

@@ -51,7 +51,7 @@ N ContactMatrix<N>::unsafe_get(const usize row, const usize col) const {
 template <class N>
 void ContactMatrix<N>::unsafe_get_column(const usize col, std::vector<N> &buff,
                                          const usize row_offset) const {
-  assert(row_offset <= col);  // NOLINT
+  assert(row_offset <= col);
   const auto [rowt, colt] = transpose_coords(col - row_offset, col);
   this->bound_check_coords(rowt, colt);
 
@@ -60,7 +60,7 @@ void ContactMatrix<N>::unsafe_get_column(const usize col, std::vector<N> &buff,
       first_idx + std::min(this->ncols() - colt - row_offset, this->nrows() - row_offset);
 
   buff.resize(last_idx - first_idx);
-  assert(buff.size() <= this->nrows());  // NOLINT
+  assert(buff.size() <= this->nrows());
 
   const auto first = this->_contacts.begin() + static_cast<isize>(first_idx);
   const auto last = this->_contacts.begin() + static_cast<isize>(last_idx);
@@ -77,7 +77,7 @@ void ContactMatrix<N>::unsafe_get_column(const usize col, std::vector<N> &buff,
 template <class N>
 void ContactMatrix<N>::unsafe_get_row(const usize row, std::vector<N> &buff,
                                       const usize col_offset) const {
-  assert(row >= col_offset);  // NOLINT
+  assert(row >= col_offset);
   buff.resize(std::clamp(this->ncols() - row - col_offset, usize(0), this->nrows() - col_offset));
 
   for (usize i = 0; i < buff.size(); ++i) {
@@ -88,10 +88,10 @@ void ContactMatrix<N>::unsafe_get_row(const usize row, std::vector<N> &buff,
 template <class N>
 N ContactMatrix<N>::unsafe_get_block(const usize row, const usize col,
                                      const usize block_size) const {
-  assert(block_size > 0);              // NOLINT
-  assert(block_size < this->nrows());  // NOLINT
+  assert(block_size > 0);
+  assert(block_size < this->nrows());
   // For now we only support blocks with an odd size
-  assert(block_size % 2 != 0);  // NOLINT
+  assert(block_size % 2 != 0);
   if (block_size == 1) {
     return this->get(row, col);
   }
@@ -115,10 +115,10 @@ N ContactMatrix<N>::unsafe_get_block(const usize row, const usize col,
 template <class N>
 void ContactMatrix<N>::unsafe_get_block(const usize row, const usize col, const usize block_size,
                                         std::vector<N> &buff) const {
-  assert(block_size > 0);              // NOLINT
-  assert(block_size < this->nrows());  // NOLINT
+  assert(block_size > 0);
+  assert(block_size < this->nrows());
   // For now we only support blocks with an odd size
-  assert(block_size % 2 != 0);  // NOLINT
+  assert(block_size % 2 != 0);
   if (MODLE_UNLIKELY(block_size == 1)) {
     buff.resize(1);
     buff.front() = this->get(row, col);
@@ -157,7 +157,7 @@ void ContactMatrix<N>::unsafe_set(const usize row, const usize col, const N n) {
 
 template <class N>
 void ContactMatrix<N>::unsafe_add(const usize row, const usize col, const N n) {
-  assert(n > 0);  // NOLINT Use subtract to add a negative number
+  assert(n > 0);
   const auto [i, j] = transpose_coords(row, col);
   this->bound_check_coords(i, j);
 
@@ -172,7 +172,7 @@ void ContactMatrix<N>::unsafe_add(const usize row, const usize col, const N n) {
 
 template <class N>
 void ContactMatrix<N>::unsafe_subtract(const usize row, const usize col, const N n) {
-  assert(n >= 0);  // NOLINT Use add to subtract a negative number
+  assert(n >= 0);
   const auto [i, j] = transpose_coords(row, col);
   this->bound_check_coords(i, j);
 
@@ -298,7 +298,7 @@ std::vector<std::vector<N>> ContactMatrix<N>::unsafe_generate_symmetric_matrix()
 
 template <class N>
 void ContactMatrix<N>::unsafe_import_from_txt(const boost::filesystem::path &path, const char sep) {
-  assert(boost::filesystem::exists(path));  // NOLINT
+  assert(boost::filesystem::exists(path));
   compressed_io::Reader r(path);
 
   std::string buff;
@@ -315,7 +315,7 @@ void ContactMatrix<N>::unsafe_import_from_txt(const boost::filesystem::path &pat
     }
     ++i;
   }
-  assert(i != 0);  // NOLINT guard against empty files
+  assert(i != 0);
 }
 
 template <class N>
@@ -368,7 +368,7 @@ template <class N>
 template <class M, class>
 void ContactMatrix<N>::unsafe_normalize(const ContactMatrix<N> &input_matrix,
                                         ContactMatrix<M> &output_matrix, M lb, M ub) noexcept {
-  assert(ub >= lb);  // NOLINT
+  assert(ub >= lb);
   // The unsafe resize takes care of the case where &input_matrix == &output_matrix
   output_matrix.unsafe_resize(input_matrix.nrows(), input_matrix.ncols());
 
@@ -419,7 +419,7 @@ template <class N>
 void ContactMatrix<N>::unsafe_clamp(const ContactMatrix<N> &input_matrix,
                                     ContactMatrix<N> &output_matrix, const N lb,
                                     const N ub) noexcept {
-  assert(lb <= ub);  // NOLINT
+  assert(lb <= ub);
   // The unsafe resize takes care of the case where &input_matrix == &output_matrix
   output_matrix.unsafe_resize(input_matrix.nrows(), input_matrix.ncols());
 

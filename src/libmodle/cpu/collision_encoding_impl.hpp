@@ -150,22 +150,22 @@ constexpr I Collision<I>::lshift_event(const CollisionEventT event) noexcept {
 
 template <class I>
 constexpr void Collision<I>::set_idx(const usize idx) noexcept {
-  assert(is_valid_index(idx));  // NOLINT
+  assert(is_valid_index(idx));
   this->_collision |= idx & INDEX_MASK;
 }
 
 template <class I>
 constexpr void Collision<I>::add_event(const CollisionEventT event) noexcept {
-  assert(is_valid_event(event));  // NOLINT
+  assert(is_valid_event(event));
   this->_collision |= Collision<I>::lshift_event(event);
   this->validate();
 }
 
 template <class I>
 constexpr void Collision<I>::set_event(const CollisionEventT event) noexcept {
-  assert(is_valid_event(event));  // NOLINT
+  assert(is_valid_event(event));
   this->_collision = Collision<I>::lshift_event(event) | (this->_collision & INDEX_MASK);
-  assert(is_valid_event(this->decode_event()));  // NOLINT
+  assert(is_valid_event(this->decode_event()));
 }
 
 template <class I>
@@ -226,13 +226,13 @@ constexpr bool Collision<I>::collision_avoided() const noexcept {
 
 template <class I>
 constexpr bool Collision<I>::collision_occurred(const CollisionEventT c) const noexcept {
-  assert((c & COLLISION) == 0);  // NOLINT
+  assert((c & COLLISION) == 0);
   return this->decode_event() == (c | COLLISION);
 }
 
 template <class I>
 constexpr bool Collision<I>::collision_avoided(const CollisionEventT c) const noexcept {
-  assert((c & COLLISION) == 0);  // NOLINT
+  assert((c & COLLISION) == 0);
   return !this->collision_occurred() && this->decode_event() == c;
 }
 
@@ -258,7 +258,7 @@ auto fmt::formatter<modle::Collision<>>::format(const modle::Collision<>& c, For
   if (presentation == 's') {
     return fmt::format_to(ctx.out(), FMT_STRING("{}"), c());
   }
-  assert(presentation == 'l');  //  NOLINT
+  assert(presentation == 'l');
   return fmt::format_to(ctx.out(), FMT_STRING("idx={}; event={:08b};"), c.decode_index(),
                         c.decode_event()());
 }

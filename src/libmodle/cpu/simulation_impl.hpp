@@ -36,10 +36,10 @@ void Simulation::bind_lefs(const bp_t start_pos, const bp_t end_pos, const absl:
   static_assert(std::is_integral_v<T> || std::is_same_v<MaskT, boost::dynamic_bitset<>>,
                 "mask should be a vector of integral numbers or a boost::dynamic_bitset.");
   {
-    assert(lefs.size() <= mask.size() || mask.empty());             // NOLINT
-    assert(std::all_of(rev_lef_ranks.begin(), rev_lef_ranks.end(),  // NOLINT
+    assert(lefs.size() <= mask.size() || mask.empty());
+    assert(std::all_of(rev_lef_ranks.begin(), rev_lef_ranks.end(),
                        [&](const auto i) { return i < lefs.size(); }));
-    assert(std::all_of(fwd_lef_ranks.begin(), fwd_lef_ranks.end(),  // NOLINT
+    assert(std::all_of(fwd_lef_ranks.begin(), fwd_lef_ranks.end(),
                        [&](const auto i) { return i < lefs.size(); }));
   }
 
@@ -53,19 +53,18 @@ void Simulation::bind_lefs(const bp_t start_pos, const bp_t end_pos, const absl:
   if constexpr (utils::ndebug_not_defined()) {
     for (usize i = 0; i < lefs.size(); ++i) {
       if (mask.empty() || mask[i]) {
-        assert(lefs[i].rev_unit >= start_pos && lefs[i].rev_unit < end_pos);  // NOLINT
-        assert(lefs[i].fwd_unit >= start_pos && lefs[i].fwd_unit < end_pos);  // NOLINT
+        assert(lefs[i].rev_unit >= start_pos && lefs[i].rev_unit < end_pos);
+        assert(lefs[i].fwd_unit >= start_pos && lefs[i].fwd_unit < end_pos);
       }
     }
   }
 
   Simulation::rank_lefs(lefs, rev_lef_ranks, fwd_lef_ranks, current_epoch != 0);
 
-  assert(std::all_of(rev_lef_ranks.begin(), rev_lef_ranks.end(),  // NOLINT
-                     [&](const auto i) {
-                       using IT = std::decay_t<decltype(rev_lef_ranks.front())>;
-                       return i < lefs.size() || i == (std::numeric_limits<IT>::max)();
-                     }));
+  assert(std::all_of(rev_lef_ranks.begin(), rev_lef_ranks.end(), [&](const auto i) {
+    using IT = std::decay_t<decltype(rev_lef_ranks.front())>;
+    return i < lefs.size() || i == (std::numeric_limits<IT>::max)();
+  }));
 }
 
 template <typename MaskT>
@@ -84,7 +83,7 @@ void Simulation::select_lefs_to_bind(const absl::Span<const Lef> lefs,
   using T = std::decay_t<decltype(std::declval<MaskT&>().operator[](std::declval<usize>()))>;
   static_assert(std::is_integral_v<T> || std::is_same_v<MaskT, boost::dynamic_bitset<>>,
                 "mask should be a vector of integral numbers or a boost::dynamic_bitset.");
-  assert(lefs.size() == mask.size());  // NOLINT
+  assert(lefs.size() == mask.size());
   for (usize i = 0; i < lefs.size(); ++i) {
     mask[i] = !lefs[i].is_bound();
   }
@@ -137,7 +136,7 @@ constexpr auto fmt::formatter<modle::Simulation::Task>::parse(format_parse_conte
 template <typename FormatContext>
 auto fmt::formatter<modle::Simulation::Task>::format(const modle::Simulation::Task& t,
                                                      FormatContext& ctx) -> decltype(ctx.out()) {
-  assert(t.chrom);  // NOLINT
+  assert(t.chrom);
   return fmt::format_to(ctx.out(), FMT_STRING("{}\t{}\t{}\t{}\t{}\t{}\t{}"), t.id, t.chrom->name(),
                         t.cell_id, t.num_target_epochs, t.num_target_contacts, t.num_lefs,
                         t.barriers.size());

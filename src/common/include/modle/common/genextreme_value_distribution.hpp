@@ -24,9 +24,9 @@ class genextreme_value_distribution {
    public:
     using distribution_type = genextreme_value_distribution;
 
-    explicit param_type(result_type mu = 0, result_type sigma = 1, result_type xi = 0.1)  // NOLINT
+    explicit param_type(result_type mu = 0, result_type sigma = 1, result_type xi = 0.1)
         : _mu(mu), _sigma(sigma), _xi(xi) {
-      assert(sigma > 0);  // NOLINT
+      assert(sigma > 0);
     }
 
     [[nodiscard]] inline result_type mu() const { return _mu; }
@@ -47,7 +47,7 @@ class genextreme_value_distribution {
  public:
   // constructors and reset functions
   inline explicit genextreme_value_distribution(result_type mu = 0, result_type sigma = 1,
-                                                result_type xi = 0.1)  // NOLINT
+                                                result_type xi = 0.1)
       : _p(param_type(mu, sigma, xi)) {}
   inline explicit genextreme_value_distribution(const param_type& p) : _p(p) {}
   inline void reset() {}

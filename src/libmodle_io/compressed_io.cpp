@@ -77,7 +77,7 @@ Reader::operator bool() const { return this->is_open() && !this->eof(); }
 bool Reader::operator!() const { return !this->operator bool(); }
 
 bool Reader::eof() const noexcept {
-  assert(this->is_open());  // NOLINT
+  assert(this->is_open());
   return this->_eof;
 }
 
@@ -118,7 +118,7 @@ void Reader::handle_libarchive_errors() const {
 }
 
 bool Reader::getline(std::string& buff, char sep) {
-  assert(this->is_open());  // NOLINT
+  assert(this->is_open());
   buff.clear();
   if (this->eof()) {
     return false;
@@ -126,7 +126,7 @@ bool Reader::getline(std::string& buff, char sep) {
 
   while (!this->read_next_token(buff, sep)) {
     if (!this->read_next_chunk()) {
-      assert(this->eof());  // NOLINT
+      assert(this->eof());
       return !buff.empty();
     }
   }
@@ -134,7 +134,7 @@ bool Reader::getline(std::string& buff, char sep) {
 }
 
 std::string_view Reader::getline(char sep) {
-  assert(this->is_open());  // NOLINT
+  assert(this->is_open());
   if (this->eof()) {
     return std::string_view{};
   }
@@ -145,14 +145,14 @@ std::string_view Reader::getline(char sep) {
       return tok;
     }
     if (!this->read_next_chunk()) {
-      assert(this->eof());  // NOLINT
+      assert(this->eof());
       return std::string_view{};
     }
   }
 }
 
 bool Reader::readall(std::string& buff, char sep) {
-  assert(this->is_open());  // NOLINT
+  assert(this->is_open());
   buff.clear();
   if (this->eof()) {
     return false;
@@ -174,8 +174,8 @@ std::string Reader::readall(char sep) {
 }
 
 bool Reader::read_next_chunk() {
-  assert(!this->eof());     // NOLINT
-  assert(this->is_open());  // NOLINT
+  assert(!this->eof());
+  assert(this->is_open());
   this->_buff.resize(this->_buff.capacity());
   const auto bytes_read =
       archive_read_data(this->_arc.get(), this->_buff.data(), this->_buff.capacity());
@@ -193,9 +193,9 @@ bool Reader::read_next_chunk() {
 }
 
 bool Reader::read_next_token(std::string& buff, char sep) {
-  assert(!this->eof());                      // NOLINT
-  assert(this->is_open());                   // NOLINT
-  assert(this->_idx <= this->_buff.size());  // NOLINT
+  assert(!this->eof());
+  assert(this->is_open());
+  assert(this->_idx <= this->_buff.size());
   if (this->_idx == this->_buff.size()) {
     return false;
   }
@@ -207,16 +207,16 @@ bool Reader::read_next_token(std::string& buff, char sep) {
     return false;
   }
 
-  assert(pos >= this->_idx);  // NOLINT
+  assert(pos >= this->_idx);
   buff.append(this->_buff.begin() + i, this->_buff.begin() + static_cast<i64>(pos));
   this->_idx = pos + 1;
   return true;
 }
 
 std::string_view Reader::read_next_token(char sep) {
-  assert(!this->eof());                      // NOLINT
-  assert(this->is_open());                   // NOLINT
-  assert(this->_idx <= this->_buff.size());  // NOLINT
+  assert(!this->eof());
+  assert(this->is_open());
+  assert(this->_idx <= this->_buff.size());
   if (this->_idx == this->_buff.size()) {
     return std::string_view{};
   }
@@ -228,9 +228,9 @@ std::string_view Reader::read_next_token(char sep) {
     return std::string_view{};
   }
 
-  assert(pos >= this->_idx);  // NOLINT
+  assert(pos >= this->_idx);
   this->_idx = pos + 1;
-  if (this->_tok_tmp_buff.empty()) {  // NOLINTNEXTLINE
+  if (this->_tok_tmp_buff.empty()) {
     return std::string_view{this->_buff.data() + static_cast<usize>(i),
                             pos - static_cast<usize>(i)};
   }
@@ -266,8 +266,7 @@ void Writer::open(const boost::filesystem::path& path) {
           boost::iostreams::gzip_params(boost::iostreams::gzip::best_compression)));
       break;
     case BZIP2:
-      this->_out.push(
-          boost::iostreams::bzip2_compressor(boost::iostreams::bzip2_params(9)));  // NOLINT
+      this->_out.push(boost::iostreams::bzip2_compressor(boost::iostreams::bzip2_params(9)));
       break;
     case LZMA:
       this->_out.push(boost::iostreams::lzma_compressor(

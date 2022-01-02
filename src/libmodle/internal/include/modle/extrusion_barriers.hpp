@@ -47,10 +47,12 @@ class ExtrusionBarrier {
   [[nodiscard]] double occupancy() const noexcept(utils::ndebug_defined());
 
  protected:
-  bp_t _pos;                                             // NOLINT
-  double _occupied_to_occupied_transition_prob;          // NOLINT
-  double _non_occupied_to_not_occupied_transition_prob;  // NOLINT
-  dna::Direction _blocking_direction{dna::none};         // NOLINT
+  // clang-format off
+  bp_t _pos{(std::numeric_limits<bp_t>::max)()};           // NOLINT(cppcoreguidelines-non-private-member-variables-in-classes)
+  double _occupied_to_occupied_transition_prob{};          // NOLINT(cppcoreguidelines-non-private-member-variables-in-classes)
+  double _non_occupied_to_not_occupied_transition_prob{};  // NOLINT(cppcoreguidelines-non-private-member-variables-in-classes)
+  dna::Direction _blocking_direction{dna::none};           // NOLINT(cppcoreguidelines-non-private-member-variables-in-classes)
+  // clang-format on
 };
 
 namespace CTCF {
@@ -78,7 +80,7 @@ struct fmt::formatter<modle::ExtrusionBarrier> {
     const auto* it = ctx.begin();
     const auto* end = ctx.end();
     if (it != end && (*it == 's' || *it == 'f')) {
-      presentation = *it++;
+      presentation = *it++;  // NOLINT(cppcoreguidelines-pro-bounds-pointer-arithmetic)
     }
 
     // Check if reached the end of the range:

@@ -137,7 +137,7 @@ absl::flat_hash_set<usize> Simulation::import_task_filter(
   usize i = 0;
   absl::flat_hash_set<usize> tasks;
   try {
-    usize id;  // NOLINT
+    usize id;
     for (; r.getline(buff); ++i) {
       utils::parse_numeric_or_throw(buff, id);
       if (tasks.contains(id)) {
@@ -160,8 +160,8 @@ absl::flat_hash_set<usize> Simulation::import_task_filter(
 }
 
 void Simulation::rethrow_exceptions() const {
-  assert(!this->ok());                 // NOLINT
-  assert(!this->_exceptions.empty());  // NOLINT
+  assert(!this->ok());
+  assert(!this->_exceptions.empty());
 
   std::string error_msg = "The following error(s) occurred while simulating loop extrusion:";
   for (const auto& exc_ptr : this->_exceptions) {
@@ -179,7 +179,7 @@ void Simulation::rethrow_exceptions() const {
 }
 
 void Simulation::handle_exceptions() {
-  assert(!this->ok());  // NOLINT
+  assert(!this->ok());
   spdlog::error("MoDLE encountered an exception. Shutting down worker threads...");
   this->_tpool.wait_for_tasks();  // Wait on simulate_worker threads
   this->rethrow_exceptions();

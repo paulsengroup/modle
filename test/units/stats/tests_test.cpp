@@ -82,7 +82,7 @@ static void run_scipy(std::string_view method, N& n1, N& n2, std::atomic<double>
   boost::process::child py(
       boost::process::search_path("python3").string(), "-c", std::string{python_cmds.at(method)},
       boost::process::std_in<stdin_stream, boost::process::std_out> stdout_stream);
-  assert(py.running());  // NOLINT
+  assert(py.running());
 
   std::string sbuff;
   while (true) {
@@ -163,11 +163,11 @@ TEST_CASE("Binom test - two-sided randomized", "[stats][long]") {
               input_data_ready, output_data_ready);
   });
 
-  for (usize i = 0; i < iterations; ++i) {  // NOLINT
-    assert(!input_data_ready);              // NOLINT
+  for (usize i = 0; i < iterations; ++i) {
+    assert(!input_data_ready);
     do {
-      k = random::uniform_int_distribution<i64>{0, 5000}(rand_eng);      // NOLINT
-      n = k + random::uniform_int_distribution<i64>{0, 5000}(rand_eng);  // NOLINT
+      k = random::uniform_int_distribution<i64>{0, 5000}(rand_eng);
+      n = k + random::uniform_int_distribution<i64>{0, 5000}(rand_eng);
     } while (k + n == 0);
 
     input_data_ready = true;
@@ -179,7 +179,7 @@ TEST_CASE("Binom test - two-sided randomized", "[stats][long]") {
       output_data_ready = false;
     }
     const auto pv = stats::binomial_test<TWO_SIDED>(k, n);
-    CHECK(Approx(pv).margin(1.0e-250) == pv_py);  // NOLINT
+    CHECK(Approx(pv).margin(1.0e-250) == pv_py);
   }
   k = 0;
   n = 0;

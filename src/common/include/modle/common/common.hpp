@@ -58,12 +58,15 @@ constexpr u8 modle_version_major{MODLE_VERSION_MAJOR};
 constexpr u8 modle_version_minor{MODLE_VERSION_MINOR};
 constexpr u8 modle_version_patch{MODLE_VERSION_PATCH};
 
+// clang-format off
 // String macros
-#define MODLE_XSTR(x)               MODLE_STR(x)
-#define MODLE_STR(x)                #x
-#define MODLE_CONCAT(x, y, z, sep)  x##sep##y##sep##z
-#define MODLE_XCONCAT(x, y, z, sep) MODLE_CONCAT(x, y, z, sep)
+#define MODLE_XSTR(x)               MODLE_STR(x)                // NOLINT(cppcoreguidelines-macro-usage)
+#define MODLE_STR(x)                #x                          // NOLINT(cppcoreguidelines-macro-usage)
+#define MODLE_CONCAT(x, y, z, sep)  x##sep##y##sep##z           // NOLINT(cppcoreguidelines-macro-usage)
+#define MODLE_XCONCAT(x, y, z, sep) MODLE_CONCAT(x, y, z, sep)  // NOLINT(cppcoreguidelines-macro-usage)
+// clang-format on
 
+// NOLINTNEXTLINE(cppcoreguidelines-macro-usage)
 #define MODLE_VERSION \
   MODLE_XCONCAT(MODLE_VERSION_MAJOR, MODLE_VERSION_MINOR, MODLE_VERSION_PATCH, .)
 
@@ -83,14 +86,14 @@ using contacts_t = u32;
 #define MODLE_NO_TSAN
 #if defined(__has_feature)
 #if __has_feature(thread_sanitizer)
-#undef MODLE_NO_TSAN
+#undef MODLE_NO_TSAN  // NOLINTNEXTLINE(cppcoreguidelines-macro-usage)
 #define MODLE_NO_TSAN __attribute__((no_sanitize("thread")))
 #endif
 #endif
 
-#define MODLE_UNREACHABLE_CODE ABSL_INTERNAL_UNREACHABLE
-#define MODLE_LIKELY           ABSL_PREDICT_TRUE
-#define MODLE_UNLIKELY         ABSL_PREDICT_FALSE
+#define MODLE_UNREACHABLE_CODE ABSL_INTERNAL_UNREACHABLE  // NOLINT(cppcoreguidelines-macro-usage)
+#define MODLE_LIKELY           ABSL_PREDICT_TRUE          // NOLINT(cppcoreguidelines-macro-usage)
+#define MODLE_UNLIKELY         ABSL_PREDICT_FALSE         // NOLINT(cppcoreguidelines-macro-usage)
 
 namespace dna {
 enum Direction : u8f { none = 0, fwd = 1, rev = 2, both = 3 };

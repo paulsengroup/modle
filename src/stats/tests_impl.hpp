@@ -17,10 +17,10 @@ namespace modle::stats {
 // https://github.com/scipy/scipy/blob/47bb6febaa10658c72962b9615d5d5aa2513fa3a/scipy/stats/_binomtest.py#L204
 template <binomial_test_alternative alternative, class FP, class I, class>
 FP binomial_test(const I k, const I n, const FP p) {
-  assert(k >= 0);                    // NOLINT
-  assert(n > 0);                     // NOLINT
-  assert(n >= k);                    // NOLINT
-  assert(p >= FP(0) && p <= FP(1));  // NOLINT
+  assert(k >= 0);
+  assert(n > 0);
+  assert(n >= k);
+  assert(p >= FP(0) && p <= FP(1));
 
   using binom_distr = boost::math::binomial_distribution<FP>;
   auto distr = binom_distr(FP(n), p);
@@ -43,14 +43,14 @@ FP binomial_test(const I k, const I n, const FP p) {
     return std::min(FP(1), sf(distr, k - 1));
   }
 
-  assert(alternative == ALTERNATIVE::TWO_SIDED);  // NOLINT
+  assert(alternative == ALTERNATIVE::TWO_SIDED);
   if (FP(k) == p * FP(n)) {
     return FP(1);
   }
 
   // https://github.com/scipy/scipy/blob/47bb6febaa10658c72962b9615d5d5aa2513fa3a/scipy/stats/_binomtest.py#L337
   auto binary_search_over_binom_pmf = [&pmf, &distr](auto d, auto x0, auto x1, auto cfx) {
-    assert(cfx == 1 || cfx == -1);  // NOLINT
+    assert(cfx == 1 || cfx == -1);
     auto fx = [&](auto x) { return cfx * pmf(distr, x); };
     while (x0 < x1) {
       const auto x = x0 + ((x1 - x0) / 2);

@@ -90,7 +90,7 @@ static void validate_reference_contacts(const Genome& genome, cooler::Cooler<con
 // NOLINTNEXTLINE(readability-function-cognitive-complexity)
 void Simulation::run_perturbate() {
   if (!this->skip_output) {  // Write simulation params to file
-    assert(boost::filesystem::exists(this->path_to_output_prefix.parent_path()));  // NOLINT
+    assert(boost::filesystem::exists(this->path_to_output_prefix.parent_path()));
     if (this->force) {
       boost::filesystem::remove(this->path_to_output_file_bedpe);
     }
@@ -98,12 +98,12 @@ void Simulation::run_perturbate() {
   // TODO Do proper error handling
   // For now we support only the case where exactly two files are specified
   if (this->path_to_feature_bed_files.size() != 2) {
-    assert(this->path_to_feature_bed_files.size() != 1);  // NOLINT
+    assert(this->path_to_feature_bed_files.size() != 1);
     throw std::runtime_error(
         "MoDLE perturbate currently does not support processing more than 2 types of features at "
         "once.");
   }
-  const usize task_batch_size_enq = 32;  // NOLINTNEXTLINE
+  const usize task_batch_size_enq = 32;
   moodycamel::BlockingConcurrentQueue<TaskPW> task_queue(this->nthreads * 2, 1, 0);
   moodycamel::ProducerToken ptok(task_queue);
   std::array<TaskPW, task_batch_size_enq> tasks;
@@ -272,9 +272,9 @@ void Simulation::run_perturbate() {
           continue;
         }
 
-        assert(!base_task.barriers.empty());  // NOLINT
-        assert(!base_task.feats1.empty());    // NOLINT
-        assert(!base_task.feats2.empty());    // NOLINT
+        assert(!base_task.barriers.empty());
+        assert(!base_task.feats1.empty());
+        assert(!base_task.feats2.empty());
 
         const auto deletions = [&]() {  // Find deletions mapping to the outer window
           const auto [first_deletion, last_deletion] =
@@ -296,7 +296,7 @@ void Simulation::run_perturbate() {
                                     base_task.window_end, this->bin_size, this->diagonal_width));
         for (const auto& deletion : deletions) {
           // Add task to the current batch
-          auto& t = (tasks[num_tasks++] = base_task);  // NOLINT
+          auto& t = (tasks[num_tasks++] = base_task);
 
           // Complete task setup
           t.id = task_id++;
@@ -331,12 +331,12 @@ void Simulation::run_perturbate() {
             if (out_task_stream) {
               out_task_stream.write(fmt::format(FMT_STRING("{}\n"), fmt::join(tasks, "\n")));
             }
-            auto sleep_us = 100;  // NOLINT(readability-magic-numbers)
+            auto sleep_us = 100;
             while (!task_queue.try_enqueue_bulk(ptok, std::make_move_iterator(tasks.begin()),
                                                 num_tasks)) {
               if (!this->ok()) {
                 this->handle_exceptions();
-              }  // NOLINTNEXTLINE(readability-magic-numbers)
+              }
               sleep_us = std::min(100000, sleep_us * 2);
               std::this_thread::sleep_for(std::chrono::microseconds(sleep_us));
             }
@@ -356,15 +356,15 @@ void Simulation::run_perturbate() {
           !task_queue.try_enqueue_bulk(ptok, std::make_move_iterator(tasks.begin()), num_tasks)) {
         if (!this->ok()) {
           this->handle_exceptions();
-        }  // NOLINTNEXTLINE(readability-magic-numbers)
+        }
         std::this_thread::sleep_for(std::chrono::microseconds(100));
       }
     }
 
     this->_end_of_simulation = true;
     out_task_stream.close();
-    this->_tpool.wait_for_tasks();     // Wait on simulate_worker threads
-    assert(!this->_exception_thrown);  // NOLINT
+    this->_tpool.wait_for_tasks();  // Wait on simulate_worker threads
+    assert(!this->_exception_thrown);
   } catch (...) {
     this->_exception_thrown = true;
     this->_tpool.paused = true;
@@ -391,7 +391,7 @@ void Simulation::perturbate_worker(
     while (this->ok()) {  // Try to dequeue a batch of tasks
       const auto avail_tasks = this->consume_tasks_blocking(task_queue, ctok, task_buff);
       if (avail_tasks == 0) {
-        assert(this->_end_of_simulation);  // NOLINT
+        assert(this->_end_of_simulation);
         // Reached end of simulation (i.e. all tasks have been processed)
         return;
       }
@@ -401,17 +401,17 @@ void Simulation::perturbate_worker(
         if (!this->ok()) {
           return;
         }
-        assert(!task.barriers.empty());  // NOLINT
-        assert(!task.feats1.empty());    // NOLINT
-        assert(!task.feats2.empty());    // NOLINT
-        assert(local_state.contacts);    // NOLINT
+        assert(!task.barriers.empty());
+        assert(!task.feats1.empty());
+        assert(!task.feats2.empty());
+        assert(local_state.contacts);
 
-        local_state = task;                      // Set simulation local_state based on task data
-        assert(local_state.reference_contacts);  // NOLINT
+        local_state = task;  // Set simulation local_state based on task data
+        assert(local_state.reference_contacts);
         local_state.contacts->unsafe_resize(local_state.window_end - local_state.window_start,
                                             this->diagonal_width, this->bin_size);
-        assert(local_state.contacts->nrows() == local_state.reference_contacts->nrows());  // NOLINT
-        assert(local_state.contacts->ncols() == local_state.reference_contacts->ncols());  // NOLINT
+        assert(local_state.contacts->nrows() == local_state.reference_contacts->nrows());
+        assert(local_state.contacts->ncols() == local_state.reference_contacts->ncols());
 
         Simulation::simulate_window(local_state, tmp_output_bedpe, cooler_mtx);
       }
@@ -493,8 +493,8 @@ void Simulation::simulate_window(Simulation::State& state, compressed_io::Writer
 
   Simulation::simulate_one_cell(state);
 
-  assert(state.reference_contacts);  // NOLINT
-  if (out_stream) {                  // Output contacts for valid pairs of features
+  assert(state.reference_contacts);
+  if (out_stream) {  // Output contacts for valid pairs of features
     for (usize i = 0; i < state.feats1.size(); ++i) {
       const auto& feat1 = state.feats1[i];
       const auto feat1_abs_center_pos = (feat1.chrom_start + feat1.chrom_end + 1) / 2;
@@ -534,11 +534,11 @@ void Simulation::simulate_window(Simulation::State& state, compressed_io::Writer
           const double lo = -999;
           const double hi = 999;
           if (reference_contacts == 0) {
-            assert(contacts > 0);  // NOLINT
+            assert(contacts > 0);
             return hi;
           }
           if (contacts == 0) {
-            assert(reference_contacts > 0);  // NOLINT
+            assert(reference_contacts > 0);
             return lo;
           }
           return std::clamp(
@@ -611,7 +611,7 @@ void Simulation::simulate_window(Simulation::State& state, compressed_io::Writer
                                             state.chrom->size());
           continue;
         }
-        assert(chrom.contacts_ptr() == nullptr);  // NOLINT
+        assert(chrom.contacts_ptr() == nullptr);
         c.write_or_append_empty_cmatrix_to_file(chrom.name(), chrom.start_pos(), chrom.end_pos(),
                                                 chrom.size());
       }

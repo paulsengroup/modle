@@ -50,7 +50,7 @@ void ContactMatrix<N>::set(const usize row, const usize col, const N n) {
 
 template <class N>
 void ContactMatrix<N>::add(const usize row, const usize col, const N n) {
-  assert(n > 0);  // NOLINT Use subtract to add a negative number
+  assert(n > 0);
   const auto [i, j] = transpose_coords(row, col);
   this->bound_check_coords(i, j);
 
@@ -66,7 +66,7 @@ void ContactMatrix<N>::add(const usize row, const usize col, const N n) {
 
 template <class N>
 void ContactMatrix<N>::subtract(const usize row, const usize col, const N n) {
-  assert(n >= 0);  // NOLINT Use add to subtract a negative number
+  assert(n >= 0);
   const auto [i, j] = transpose_coords(row, col);
   this->bound_check_coords(i, j);
 
@@ -146,7 +146,7 @@ ContactMatrix<double> ContactMatrix<N>::blur(const double sigma, const double cu
   const auto gauss_kernel = stats::compute_gauss_kernel(sigma, cutoff);
 
   const auto block_size = static_cast<usize>(std::sqrt(static_cast<double>(gauss_kernel.size())));
-  assert(block_size * block_size == gauss_kernel.size());  // NOLINT
+  assert(block_size * block_size == gauss_kernel.size());
 
   auto apply_kernel = [this, &bmatrix, &gauss_kernel, block_size](const usize i0, const usize i1) {
     std::vector<N> pixels(gauss_kernel.size());
@@ -172,7 +172,7 @@ ContactMatrix<double> ContactMatrix<N>::gaussian_diff(const double sigma1, const
                                                       const double min_value,
                                                       const double max_value,
                                                       thread_pool* tpool) const {
-  assert(sigma1 <= sigma2);  // NOLINT
+  assert(sigma1 <= sigma2);
   ContactMatrix<double> bmatrix(this->nrows(), this->ncols());
 
   const auto gauss_kernel1 = stats::compute_gauss_kernel(sigma1);
@@ -182,8 +182,8 @@ ContactMatrix<double> ContactMatrix<N>::gaussian_diff(const double sigma1, const
       static_cast<usize>(std::sqrt(static_cast<double>(gauss_kernel1.size())));
   [[maybe_unused]] const auto block_size2 =
       static_cast<usize>(std::sqrt(static_cast<double>(gauss_kernel2.size())));
-  assert(block_size1 * block_size1 <= gauss_kernel1.size());  // NOLINT
-  assert(block_size2 * block_size2 <= gauss_kernel2.size());  // NOLINT
+  assert(block_size1 * block_size1 <= gauss_kernel1.size());
+  assert(block_size2 * block_size2 <= gauss_kernel2.size());
 
   auto compute_gauss_diff = [this, &bmatrix, &gauss_kernel1, &gauss_kernel2, block_size1,
                              block_size2, min_value, max_value](const usize i0, const usize i1) {

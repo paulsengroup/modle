@@ -29,8 +29,10 @@
 #include "modle/common/smartdir.hpp"  // for SmartDir
 
 namespace modle::test {
-const auto cleanup_on_exit{true};         // Useful for debugging
-const SmartDir testdir{cleanup_on_exit};  // NOLINT Using auto here upsets GCC8
+[[maybe_unused]] static const boost::filesystem::path& testdir(bool cleanup_on_exit = true) {
+  static const SmartDir dir{cleanup_on_exit};
+  return dir();
+}
 }  // namespace modle::test
 
 namespace modle::test::stats {
@@ -62,12 +64,12 @@ static void test_correlation_w_random_vector(std::string_view method, usize vect
 
   auto pearson = Pearson<>{};
   auto spearman = Spearman<>{};
-  for (usize i = 0; i < iterations; ++i) {         // NOLINT
-    assert(!input_data_ready);                     // NOLINT
-    generate_random_vect(rand_eng, v1, min, max);  // NOLINT
-    generate_random_vect(rand_eng, v2, min, max);  // NOLINT
+  for (usize i = 0; i < iterations; ++i) {
+    assert(!input_data_ready);
+    generate_random_vect(rand_eng, v1, min, max);
+    generate_random_vect(rand_eng, v2, min, max);
     if (absl::StartsWith(method, "weighted_")) {
-      generate_random_vect(rand_eng, weights, 0.0, 1.0);  // NOLINT
+      generate_random_vect(rand_eng, weights, 0.0, 1.0);
       // fmt::print(stderr, FMT_STRING("{}\n"), fmt::join(weights, ","));
     }
     input_data_ready = true;
@@ -94,7 +96,7 @@ static void test_correlation_w_random_vector(std::string_view method, usize vect
         return std::make_pair(res.rho, res.pvalue);
       }
 
-      assert(method == "weighted_spearman"sv);  // NOLINT
+      assert(method == "weighted_spearman"sv);
       const auto res = spearman(v1, v2, weights);
       return std::make_pair(res.rho, res.pvalue);
     }();
@@ -111,47 +113,47 @@ static void test_correlation_w_random_vector(std::string_view method, usize vect
 
 // NOLINTNEXTLINE(readability-function-cognitive-complexity)
 TEST_CASE("Corr. test: Pearson wo ties", "[correlation][pearson][short]") {
-  const std::vector<u32> v1{17, 86, 60, 77, 47, 3, 70, 87, 88, 92};   // NOLINT
-  const std::vector<u32> v2{70, 29, 85, 61, 80, 34, 60, 31, 73, 66};  // NOLINT
+  const std::vector<u32> v1{17, 86, 60, 77, 47, 3, 70, 87, 88, 92};
+  const std::vector<u32> v2{70, 29, 85, 61, 80, 34, 60, 31, 73, 66};
   const auto [pcc, pv] = Pearson<>{}(v1, v2);
-  CHECK(Approx(pcc) == -0.033621194725622014);  // NOLINT
-  CHECK(Approx(pv) == 0.926536715854247);       // NOLINT
+  CHECK(Approx(pcc) == -0.033621194725622014);
+  CHECK(Approx(pv) == 0.926536715854247);
 }
 
 // NOLINTNEXTLINE(readability-function-cognitive-complexity)
 TEST_CASE("Corr. test: Weighted Pearson wo ties", "[correlation][pearson][short]") {
-  const std::vector<u32> v1{17, 86, 60, 77, 47, 3, 70, 87, 88, 92};               // NOLINT
-  const std::vector<u32> v2{70, 29, 85, 61, 80, 34, 60, 31, 73, 66};              // NOLINT
-  const std::vector<double> w{0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0};  // NOLINT
+  const std::vector<u32> v1{17, 86, 60, 77, 47, 3, 70, 87, 88, 92};
+  const std::vector<u32> v2{70, 29, 85, 61, 80, 34, 60, 31, 73, 66};
+  const std::vector<double> w{0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0};
   const auto [pcc, pv] = Pearson<>{}(v1, v2, w);
-  CHECK(Approx(pcc) == 0.1892337717235999250409);  // NOLINT
-  CHECK(Approx(pv) == -1.0);                       // NOLINT
+  CHECK(Approx(pcc) == 0.1892337717235999250409);
+  CHECK(Approx(pv) == -1.0);
 }
 
 // NOLINTNEXTLINE(readability-function-cognitive-complexity)
 TEST_CASE("Corr. test: Pearson w ties", "[correlation][pearson][short]") {
-  std::vector<u32> v1{17, 86, 60, 77, 47, 3, 70, 47, 88, 92};   // NOLINT
-  std::vector<u32> v2{70, 29, 85, 61, 80, 34, 60, 31, 73, 66};  // NOLINT
+  std::vector<u32> v1{17, 86, 60, 77, 47, 3, 70, 47, 88, 92};
+  std::vector<u32> v2{70, 29, 85, 61, 80, 34, 60, 31, 73, 66};
   const auto [pcc, pv] = Pearson<>{}(v1, v2);
-  CHECK(Approx(pcc) == 0.16426413174421572);  // NOLINT
-  CHECK(Approx(pv) == 0.6502118872600098);    // NOLINT
+  CHECK(Approx(pcc) == 0.16426413174421572);
+  CHECK(Approx(pv) == 0.6502118872600098);
 }
 
 // NOLINTNEXTLINE(readability-function-cognitive-complexity)
 TEST_CASE("Corr. test: Weighted Pearson w ties", "[correlation][pearson][short]") {
-  const std::vector<u32> v1{17, 86, 60, 77, 47, 3, 70, 47, 88, 92};               // NOLINT
-  const std::vector<u32> v2{70, 29, 85, 61, 80, 34, 60, 31, 73, 66};              // NOLINT
-  const std::vector<double> w{0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0};  // NOLINT
+  const std::vector<u32> v1{17, 86, 60, 77, 47, 3, 70, 47, 88, 92};
+  const std::vector<u32> v2{70, 29, 85, 61, 80, 34, 60, 31, 73, 66};
+  const std::vector<double> w{0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0};
   const auto [pcc, pv] = Pearson<>{}(v1, v2, w);
-  CHECK(Approx(pcc) == 0.5009581087644285890548);  // NOLINT
-  CHECK(Approx(pv) == -1.0);                       // NOLINT
+  CHECK(Approx(pcc) == 0.5009581087644285890548);
+  CHECK(Approx(pv) == -1.0);
 }
 
 // NOLINTNEXTLINE(readability-function-cognitive-complexity)
 TEST_CASE("Corr. test: Pearson", "[correlation][pearson][short]") {
-  random::PRNG_t rand_eng{2427588200550938527ULL};                   // NOLINT
-  const auto v1 = generate_random_vect(rand_eng, 1'000, 0, 15'000);  // NOLINT
-  const auto v2 = generate_random_vect(rand_eng, 1'000, 0, 15'000);  // NOLINT
+  random::PRNG_t rand_eng{2427588200550938527ULL};
+  const auto v1 = generate_random_vect(rand_eng, 1'000, 0, 15'000);
+  const auto v2 = generate_random_vect(rand_eng, 1'000, 0, 15'000);
   std::vector<double> dummy_weights{};
   const auto [pcc, pv] = Pearson<>{}(v1, v2);
   const auto [pcc_reference, pv_reference] = external_corr(v1, v2, dummy_weights, "pearson");
@@ -161,10 +163,10 @@ TEST_CASE("Corr. test: Pearson", "[correlation][pearson][short]") {
 
 // NOLINTNEXTLINE(readability-function-cognitive-complexity)
 TEST_CASE("Corr. test: Weighted Pearson", "[correlation][pearson][short]") {
-  random::PRNG_t rand_eng{17383284879759537016ULL};                  // NOLINT
-  const auto v1 = generate_random_vect(rand_eng, 1'000, 0, 15'000);  // NOLINT
-  const auto v2 = generate_random_vect(rand_eng, 1'000, 0, 15'000);  // NOLINT
-  const auto w = generate_random_vect(rand_eng, 1'000, 0.0, 1.0);    // NOLINT
+  random::PRNG_t rand_eng{17383284879759537016ULL};
+  const auto v1 = generate_random_vect(rand_eng, 1'000, 0, 15'000);
+  const auto v2 = generate_random_vect(rand_eng, 1'000, 0, 15'000);
+  const auto w = generate_random_vect(rand_eng, 1'000, 0.0, 1.0);
   const auto [pcc, pv] = Pearson<>{}(v1, v2, w);
   const auto [pcc_reference, pv_reference] = external_corr(v1, v2, w, "weighted_pearson");
   CHECK(Approx(pcc) == pcc_reference);
@@ -173,55 +175,55 @@ TEST_CASE("Corr. test: Weighted Pearson", "[correlation][pearson][short]") {
 
 // NOLINTNEXTLINE(readability-function-cognitive-complexity)
 TEST_CASE("Corr. test: Pearson long", "[correlation][pearson][medium]") {
-  test_correlation_w_random_vector("pearson", 1'000, 250, 0U, 15'000U);        // NOLINT
-  test_correlation_w_random_vector("pearson", 1'000, 250, -7'250, 7'250);      // NOLINT
-  test_correlation_w_random_vector("pearson", 1'000, 250, -7'250.0, 7'250.0);  // NOLINT
+  test_correlation_w_random_vector("pearson", 1'000, 250, 0U, 15'000U);
+  test_correlation_w_random_vector("pearson", 1'000, 250, -7'250, 7'250);
+  test_correlation_w_random_vector("pearson", 1'000, 250, -7'250.0, 7'250.0);
 }
 
 // NOLINTNEXTLINE(readability-function-cognitive-complexity)
 TEST_CASE("Corr. test: Pearson long vect.", "[correlation][pearson][long]") {
-  test_correlation_w_random_vector("pearson", 500'000, 2, 0U, 15'000U);        // NOLINT
-  test_correlation_w_random_vector("pearson", 500'000, 2, -7'250, 7'250);      // NOLINT
-  test_correlation_w_random_vector("pearson", 500'000, 2, -7'250.0, 7'250.0);  // NOLINT
+  test_correlation_w_random_vector("pearson", 500'000, 2, 0U, 15'000U);
+  test_correlation_w_random_vector("pearson", 500'000, 2, -7'250, 7'250);
+  test_correlation_w_random_vector("pearson", 500'000, 2, -7'250.0, 7'250.0);
 }
 
 // NOLINTNEXTLINE(readability-function-cognitive-complexity)
 TEST_CASE("Corr. test: Weighted Pearson long", "[correlation][pearson][medium]") {
-  test_correlation_w_random_vector("weighted_pearson", 1'000, 250, 0U, 15'000U);        // NOLINT
-  test_correlation_w_random_vector("weighted_pearson", 1'000, 250, -7'250, 7'250);      // NOLINT
-  test_correlation_w_random_vector("weighted_pearson", 1'000, 250, -7'250.0, 7'250.0);  // NOLINT
+  test_correlation_w_random_vector("weighted_pearson", 1'000, 250, 0U, 15'000U);
+  test_correlation_w_random_vector("weighted_pearson", 1'000, 250, -7'250, 7'250);
+  test_correlation_w_random_vector("weighted_pearson", 1'000, 250, -7'250.0, 7'250.0);
 }
 
 // NOLINTNEXTLINE(readability-function-cognitive-complexity)
 TEST_CASE("Corr. test: Weighted Pearson long vect.", "[correlation][pearson][long]") {
-  test_correlation_w_random_vector("weighted_pearson", 500'000, 2, 0U, 15'000U);        // NOLINT
-  test_correlation_w_random_vector("weighted_pearson", 500'000, 2, -7'250, 7'250);      // NOLINT
-  test_correlation_w_random_vector("weighted_pearson", 500'000, 2, -7'250.0, 7'250.0);  // NOLINT
+  test_correlation_w_random_vector("weighted_pearson", 500'000, 2, 0U, 15'000U);
+  test_correlation_w_random_vector("weighted_pearson", 500'000, 2, -7'250, 7'250);
+  test_correlation_w_random_vector("weighted_pearson", 500'000, 2, -7'250.0, 7'250.0);
 }
 
 // NOLINTNEXTLINE(readability-function-cognitive-complexity)
 TEST_CASE("Corr. test: Spearman wo ties", "[correlation][spearman][short]") {
-  const std::vector<u32> v1{17, 86, 60, 77, 47, 3, 70, 87, 88, 92};   // NOLINT
-  const std::vector<u32> v2{70, 29, 85, 61, 80, 34, 60, 31, 73, 66};  // NOLINT
+  const std::vector<u32> v1{17, 86, 60, 77, 47, 3, 70, 87, 88, 92};
+  const std::vector<u32> v2{70, 29, 85, 61, 80, 34, 60, 31, 73, 66};
   const auto [rho, pv] = Spearman<>{}(v1, v2);
-  CHECK(Approx(rho) == -0.16363636363636364);  // NOLINT
-  CHECK(Approx(pv) == 0.6514773427962428);     // NOLINT
+  CHECK(Approx(rho) == -0.16363636363636364);
+  CHECK(Approx(pv) == 0.6514773427962428);
 }
 
 // NOLINTNEXTLINE(readability-function-cognitive-complexity)
 TEST_CASE("Corr. test: Spearman w ties", "[correlation][spearman][short]") {
-  const std::vector<u32> v1{17, 86, 60, 77, 47, 3, 70, 47, 88, 92};   // NOLINT
-  const std::vector<u32> v2{70, 29, 85, 61, 80, 34, 60, 31, 73, 66};  // NOLINT
+  const std::vector<u32> v1{17, 86, 60, 77, 47, 3, 70, 47, 88, 92};
+  const std::vector<u32> v2{70, 29, 85, 61, 80, 34, 60, 31, 73, 66};
   const auto [rho, pv] = Spearman<>{}(v1, v2);
-  CHECK(Approx(rho) == 0.024316221747202587);  // NOLINT
-  CHECK(Approx(pv) == 0.9468397049085097);     // NOLINT
+  CHECK(Approx(rho) == 0.024316221747202587);
+  CHECK(Approx(pv) == 0.9468397049085097);
 }
 
 // NOLINTNEXTLINE(readability-function-cognitive-complexity)
 TEST_CASE("Corr. test: Spearman", "[correlation][spearman][short]") {
-  random::PRNG_t rand_eng{3860329809333667103ULL};                   // NOLINT
-  const auto v1 = generate_random_vect(rand_eng, 1'000, 0, 15'000);  // NOLINT
-  const auto v2 = generate_random_vect(rand_eng, 1'000, 0, 15'000);  // NOLINT
+  random::PRNG_t rand_eng{3860329809333667103ULL};
+  const auto v1 = generate_random_vect(rand_eng, 1'000, 0, 15'000);
+  const auto v2 = generate_random_vect(rand_eng, 1'000, 0, 15'000);
   std::vector<double> dummy_weights{};
   const auto [rho, pv] = Spearman<>{}(v1, v2);
   const auto [rho_reference, pv_reference] = external_corr(v1, v2, dummy_weights, "spearman");
@@ -231,10 +233,10 @@ TEST_CASE("Corr. test: Spearman", "[correlation][spearman][short]") {
 
 // NOLINTNEXTLINE(readability-function-cognitive-complexity)
 TEST_CASE("Corr. test: Weighted Spearman", "[correlation][spearman][short]") {
-  random::PRNG_t rand_eng{8469130800688738654ULL};                   // NOLINT
-  const auto v1 = generate_random_vect(rand_eng, 1'000, 0, 15'000);  // NOLINT
-  const auto v2 = generate_random_vect(rand_eng, 1'000, 0, 15'000);  // NOLINT
-  const auto w = generate_random_vect(rand_eng, 1'000, 0.0, 1.0);    // NOLINT
+  random::PRNG_t rand_eng{8469130800688738654ULL};
+  const auto v1 = generate_random_vect(rand_eng, 1'000, 0, 15'000);
+  const auto v2 = generate_random_vect(rand_eng, 1'000, 0, 15'000);
+  const auto w = generate_random_vect(rand_eng, 1'000, 0.0, 1.0);
   const auto [rho, pv] = Spearman<>{}(v1, v2, w);
   const auto [rho_reference, pv_reference] = external_corr(v1, v2, w, "weighted_spearman");
   CHECK(Approx(rho) == rho_reference);
@@ -243,30 +245,30 @@ TEST_CASE("Corr. test: Weighted Spearman", "[correlation][spearman][short]") {
 
 // NOLINTNEXTLINE(readability-function-cognitive-complexity)
 TEST_CASE("Corr. test: Spearman long", "[correlation][spearman][long]") {
-  test_correlation_w_random_vector("spearman", 1'000, 250, 0U, 15'000U);        // NOLINT
-  test_correlation_w_random_vector("spearman", 1'000, 250, -7'250, 7'250);      // NOLINT
-  test_correlation_w_random_vector("spearman", 1'000, 250, -7'250.0, 7'250.0);  // NOLINT
+  test_correlation_w_random_vector("spearman", 1'000, 250, 0U, 15'000U);
+  test_correlation_w_random_vector("spearman", 1'000, 250, -7'250, 7'250);
+  test_correlation_w_random_vector("spearman", 1'000, 250, -7'250.0, 7'250.0);
 }
 
 // NOLINTNEXTLINE(readability-function-cognitive-complexity)
 TEST_CASE("Corr. test: Spearman long vect.", "[correlation][spearman][long]") {
-  test_correlation_w_random_vector("spearman", 500'000, 2, 0U, 15'000U);        // NOLINT
-  test_correlation_w_random_vector("spearman", 500'000, 2, -7'250, 7'250);      // NOLINT
-  test_correlation_w_random_vector("spearman", 500'000, 2, -7'250.0, 7'250.0);  // NOLINT
+  test_correlation_w_random_vector("spearman", 500'000, 2, 0U, 15'000U);
+  test_correlation_w_random_vector("spearman", 500'000, 2, -7'250, 7'250);
+  test_correlation_w_random_vector("spearman", 500'000, 2, -7'250.0, 7'250.0);
 }
 
 // NOLINTNEXTLINE(readability-function-cognitive-complexity)
 TEST_CASE("Corr. test: Weighted Spearman long", "[correlation][spearman][medium]") {
-  test_correlation_w_random_vector("weighted_spearman", 1'000, 250, 0U, 15'000U);        // NOLINT
-  test_correlation_w_random_vector("weighted_spearman", 1'000, 250, -7'250, 7'250);      // NOLINT
-  test_correlation_w_random_vector("weighted_spearman", 1'000, 250, -7'250.0, 7'250.0);  // NOLINT
+  test_correlation_w_random_vector("weighted_spearman", 1'000, 250, 0U, 15'000U);
+  test_correlation_w_random_vector("weighted_spearman", 1'000, 250, -7'250, 7'250);
+  test_correlation_w_random_vector("weighted_spearman", 1'000, 250, -7'250.0, 7'250.0);
 }
 
 // NOLINTNEXTLINE(readability-function-cognitive-complexity)
 TEST_CASE("Corr. test: Weighted Spearman long vect.", "[correlation][spearman][long]") {
-  test_correlation_w_random_vector("weighted_spearman", 500'000, 2, 0U, 15'000U);        // NOLINT
-  test_correlation_w_random_vector("weighted_spearman", 500'000, 2, -7'250, 7'250);      // NOLINT
-  test_correlation_w_random_vector("weighted_spearman", 500'000, 2, -7'250.0, 7'250.0);  // NOLINT
+  test_correlation_w_random_vector("weighted_spearman", 500'000, 2, 0U, 15'000U);
+  test_correlation_w_random_vector("weighted_spearman", 500'000, 2, -7'250, 7'250);
+  test_correlation_w_random_vector("weighted_spearman", 500'000, 2, -7'250.0, 7'250.0);
 }
 
 }  // namespace modle::test::stats

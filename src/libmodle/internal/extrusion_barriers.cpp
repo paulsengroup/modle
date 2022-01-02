@@ -24,11 +24,10 @@ ExtrusionBarrier::ExtrusionBarrier(bp_t pos, double transition_prob_blocking_to_
       _non_occupied_to_not_occupied_transition_prob(transition_prob_non_blocking_to_non_blocking),
       _blocking_direction(motif_direction == dna::Direction::fwd ? dna::Direction::rev
                                                                  : dna::Direction::fwd) {
-  // NOLINTNEXTLINE
   assert(motif_direction == dna::Direction::fwd || motif_direction == dna::Direction::rev);
-  assert(transition_prob_blocking_to_blocking >= 0.0 &&  // NOLINT
+  assert(transition_prob_blocking_to_blocking >= 0.0 &&
          transition_prob_blocking_to_blocking <= 1.0);
-  assert(transition_prob_non_blocking_to_non_blocking >= 0.0 &&  // NOLINT
+  assert(transition_prob_non_blocking_to_non_blocking >= 0.0 &&
          transition_prob_non_blocking_to_non_blocking <= 1.0);
 }
 
@@ -39,11 +38,10 @@ ExtrusionBarrier::ExtrusionBarrier(bp_t pos, double transition_prob_blocking_to_
       _occupied_to_occupied_transition_prob(transition_prob_blocking_to_blocking),
       _non_occupied_to_not_occupied_transition_prob(transition_prob_non_blocking_to_non_blocking),
       _blocking_direction(motif_direction == '+' ? dna::Direction::rev : dna::Direction::fwd) {
-  // NOLINTNEXTLINE
   assert(motif_direction == '+' || motif_direction == '-');
-  assert(transition_prob_blocking_to_blocking >= 0.0 &&  // NOLINT
+  assert(transition_prob_blocking_to_blocking >= 0.0 &&
          transition_prob_blocking_to_blocking <= 1.0);
-  assert(transition_prob_non_blocking_to_non_blocking >= 0.0 &&  // NOLINT
+  assert(transition_prob_non_blocking_to_non_blocking >= 0.0 &&
          transition_prob_non_blocking_to_non_blocking <= 1.0);
 }
 
@@ -113,7 +111,7 @@ double ExtrusionBarrier::compute_blocking_to_blocking_transition_probabilities_f
 }
 double ExtrusionBarrier::occupancy() const noexcept(utils::ndebug_defined()) {
   // Make sure this was not default constructed
-  assert(this->_blocking_direction != dna::none);  // NOLINT
+  assert(this->_blocking_direction != dna::none);
 
   // pno = Transition prob. from non-occupied to occupied
   // pon = Transition prob. from occupied to non-occupied
@@ -126,9 +124,8 @@ double ExtrusionBarrier::occupancy() const noexcept(utils::ndebug_defined()) {
 
 CTCF::State CTCF::next_state(CTCF::State current_state, double occupied_self_transition_prob,
                              double not_occupied_self_transition_prob, random::PRNG_t& rand_eng) {
-  assert(occupied_self_transition_prob >= 0 && occupied_self_transition_prob <= 1);  // NOLINT
-  assert(not_occupied_self_transition_prob >= 0 &&                                   // NOLINT
-         not_occupied_self_transition_prob <= 1);
+  assert(occupied_self_transition_prob >= 0 && occupied_self_transition_prob <= 1);
+  assert(not_occupied_self_transition_prob >= 0 && not_occupied_self_transition_prob <= 1);
 
   const auto p = random::generate_canonical<double, std::numeric_limits<double>::digits>(rand_eng);
   if (current_state == NOT_OCCUPIED && p > not_occupied_self_transition_prob) {
@@ -144,7 +141,7 @@ CTCF::State CTCF::next_state(CTCF::State current_state, double occupied_self_tra
 void CTCF::update_states(absl::Span<const ExtrusionBarrier> extr_barriers,
                          boost::dynamic_bitset<>& mask,
                          random::PRNG_t& rand_eng) noexcept(utils::ndebug_defined()) {
-  assert(extr_barriers.size() == mask.size());  // NOLINT
+  assert(extr_barriers.size() == mask.size());
   for (usize i = 0; i < extr_barriers.size(); ++i) {
     // NOLINTNEXTLINE(readability-implicit-bool-conversion)
     mask[i] = CTCF::next_state(mask[i] ? CTCF::OCCUPIED : CTCF::NOT_OCCUPIED,

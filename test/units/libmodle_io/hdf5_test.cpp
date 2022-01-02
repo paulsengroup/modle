@@ -26,8 +26,10 @@
 #include "modle/common/smartdir.hpp"  // for SmartDir
 
 namespace modle::test {
-const auto cleanup_on_exit{true};         // Useful for debugging
-const SmartDir testdir{cleanup_on_exit};  // NOLINT Using auto here upsets GCC8
+[[maybe_unused]] static const boost::filesystem::path& testdir(bool cleanup_on_exit = true) {
+  static const SmartDir dir{cleanup_on_exit};
+  return dir();
+}
 }  // namespace modle::test
 
 namespace modle::test::hdf5 {
@@ -108,7 +110,7 @@ TEST_CASE("read_write_strings HDF5", "[io][hdf5][short]") {
 TEST_CASE("read_write_ints HDF5", "[io][hdf5][short]") {
   const auto test_file = testdir() / "rw_ints.hdf5";
   boost::filesystem::create_directories(testdir());
-  std::vector<i64> v{(std::numeric_limits<i64>::min)(), -10, 0, 10,  // NOLINT
+  std::vector<i64> v{(std::numeric_limits<i64>::min)(), -10, 0, 10,
                      (std::numeric_limits<i64>::max)()};
   H5::H5File f(test_file.string(), H5F_ACC_TRUNC);
   auto dataset = init_test_int64_dataset(f);

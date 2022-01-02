@@ -46,7 +46,7 @@ template <class FP>
 template <class Range1, class Range2>
 typename Pearson<FP>::Result Pearson<FP>::operator()(const Range1& r1, const Range2& r2) const {
   assert(std::distance(std::cbegin(r1), std::cend(r1)) ==
-         std::distance(std::cbegin(r2), std::cend(r2)));  // NOLINT
+         std::distance(std::cbegin(r2), std::cend(r2)));
   return (*this)(std::cbegin(r1), std::cend(r1), std::cbegin(r2), utils::RepeatIterator<FP>(1));
 }
 
@@ -55,9 +55,9 @@ template <class Range1, class Range2, class Range3>
 typename Pearson<FP>::Result Pearson<FP>::operator()(const Range1& r1, const Range2& r2,
                                                      const Range3& weights) const {
   assert(std::distance(std::cbegin(r1), std::cend(r1)) ==
-         std::distance(std::cbegin(r2), std::cend(r2)));  // NOLINT
+         std::distance(std::cbegin(r2), std::cend(r2)));
   assert(std::distance(std::cbegin(r1), std::cend(r1)) ==
-         std::distance(std::cbegin(weights), std::cend(weights)));  // NOLINT
+         std::distance(std::cbegin(weights), std::cend(weights)));
 
   return (*this)(std::cbegin(r1), std::cend(r1), std::cbegin(r2), std::cbegin(weights));
 }
@@ -98,11 +98,10 @@ FP Pearson<FP>::compute_significance(const FP pcc, const I n) {
   if (MODLE_UNLIKELY(std::isnan(pcc))) {
     return std::numeric_limits<FP>::quiet_NaN();
   }
-  assert(n > I(2));  // NOLINT
+  assert(n > I(2));
   const auto ab = (static_cast<FP>(n) / FP(2)) - 1;
   boost::math::beta_distribution<FP> dist(ab, ab);
   // https://github.com/scipy/scipy/blob/6703631bcd15750e86f4098b0421efabcac0f7c2/scipy/stats/stats.py#L3885
-  // NOLINTNEXTLINE(readability-magic-numbers, cppcoreguidelines-avoid-magic-numbers)
   return FP(2) * boost::math::cdf<FP>(dist, FP(0.5) * (FP(1) - std::abs(pcc)));
 }
 
@@ -112,7 +111,7 @@ Spearman<FP>::Spearman(const usize n) : _rank_buff1(n), _rank_buff2(n), _idx_buf
 template <class FP>
 template <class It1, class It2>
 FP Spearman<FP>::compute_rho(It1 first1, It1 last1, It2 first2) {
-  assert(std::distance(first1, last1) >= 0);  // NOLINT
+  assert(std::distance(first1, last1) >= 0);
 
   const auto size = static_cast<usize>(std::distance(first1, last1));
   auto last2 = first2 + static_cast<isize>(size);
@@ -132,7 +131,7 @@ FP Spearman<FP>::compute_rho(It1 first1, It1 last1, It2 first2) {
 template <class FP>
 template <class It1, class It2, class It3>
 FP Spearman<FP>::compute_weighted_rho(It1 first1, It1 last1, It2 first2, It3 weight_first) {
-  assert(std::distance(first1, last1) >= 0);  // NOLINT
+  assert(std::distance(first1, last1) >= 0);
 
   const auto size = static_cast<usize>(std::distance(first1, last1));
   auto last2 = first2 + static_cast<isize>(size);
@@ -154,7 +153,7 @@ FP Spearman<FP>::compute_weighted_rho(It1 first1, It1 last1, It2 first2, It3 wei
 template <class FP>
 template <class I, class>
 FP Spearman<FP>::compute_significance(const FP rho, const I n) {
-  assert(n > I(2));  // NOLINT
+  assert(n > I(2));
   if (MODLE_UNLIKELY(std::isnan(rho))) {
     return std::numeric_limits<FP>::quiet_NaN();
   }
@@ -163,7 +162,6 @@ FP Spearman<FP>::compute_significance(const FP rho, const I n) {
   boost::math::students_t_distribution<FP> dist(dof);
   // https://github.com/scipy/scipy/blob/6703631bcd15750e86f4098b0421efabcac0f7c2/scipy/stats/stats.py#L4229
   // 2 * survival function
-  // NOLINTNEXTLINE(readability-magic-numbers, cppcoreguidelines-avoid-magic-numbers)
   return FP(2) * boost::math::cdf<FP>(boost::math::complement(dist, std::fabs(tscore)));
 }
 
@@ -187,7 +185,7 @@ template <class FP>
 template <class Range1, class Range2>
 typename Spearman<FP>::Result Spearman<FP>::operator()(const Range1& r1, const Range2& r2) {
   assert(std::distance(std::cbegin(r1), std::cend(r1)) ==
-         std::distance(std::cbegin(r2), std::cend(r2)));  // NOLINT
+         std::distance(std::cbegin(r2), std::cend(r2)));
   return (*this)(std::cbegin(r1), std::cend(r1), std::cbegin(r2), utils::RepeatIterator<FP>(1));
 }
 
@@ -196,9 +194,9 @@ template <class Range1, class Range2, class Range3>
 typename Spearman<FP>::Result Spearman<FP>::operator()(const Range1& r1, const Range2& r2,
                                                        const Range3& weights) {
   assert(std::distance(std::cbegin(r1), std::cend(r1)) ==
-         std::distance(std::cbegin(r2), std::cend(r2)));  // NOLINT
+         std::distance(std::cbegin(r2), std::cend(r2)));
   assert(std::distance(std::cbegin(r1), std::cend(r1)) ==
-         std::distance(std::cbegin(weights), std::cend(weights)));  // NOLINT
+         std::distance(std::cbegin(weights), std::cend(weights)));
   return (*this)(std::cbegin(r1), std::cend(r1), std::cbegin(r2), std::cbegin(weights));
 }
 
@@ -206,7 +204,7 @@ namespace internal {
 
 template <class It>
 void sort_by_index(It first, It last, std::vector<usize>& idx_buff) {
-  assert(std::distance(first, last) >= 0);  // NOLINT
+  assert(std::distance(first, last) >= 0);
   idx_buff.resize(static_cast<usize>(std::distance(first, last)));
   std::iota(idx_buff.begin(), idx_buff.end(), 0);
 
@@ -221,7 +219,7 @@ void sort_by_index(It first, It last, std::vector<usize>& idx_buff) {
 template <class It, class FP, class>
 void compute_element_ranks(It first, It last, std::vector<FP>& rank_buff,
                            std::vector<usize>& idx_buff) {
-  assert(std::distance(first, last) >= 0);  // NOLINT
+  assert(std::distance(first, last) >= 0);
   const auto size = static_cast<usize>(std::distance(first, last));
   rank_buff.resize(size);
   idx_buff.resize(size);
@@ -246,8 +244,6 @@ void compute_element_ranks(It first, It last, std::vector<FP>& rank_buff,
         }
         return size;
       }();
-
-      // NOLINTNEXTLINE(readability-magic-numbers, cppcoreguidelines-avoid-magic-numbers)
       const auto avg_rank = static_cast<FP>(lower_bound_idx + upper_bound_idx - 1) / FP(2);
       // Assign the average rank to all tied elements
       for (i = lower_bound_idx; i < upper_bound_idx; ++i) {
@@ -266,7 +262,7 @@ void compute_element_ranks(It first, It last, std::vector<FP>& rank_buff,
 template <class It1, class It2, class FP, class>
 void compute_weighted_element_ranks(It1 first, It1 last, It2 weight_first,
                                     std::vector<FP>& rank_buff, std::vector<usize>& idx_buff) {
-  assert(std::distance(first, last) >= 0);  // NOLINT
+  assert(std::distance(first, last) >= 0);
   const auto size = static_cast<usize>(std::distance(first, last));
   rank_buff.resize(size);
   idx_buff.resize(size);
@@ -307,7 +303,6 @@ void compute_weighted_element_ranks(It1 first, It1 last, It2 weight_first,
       const auto avg_tie_weight = weight_sum_ties / static_cast<FP>(num_ties);
 
       // weight_sum == aj, the rest corresponds to the bj term in the eq from wCorrFormulas.pdf
-      // NOLINTNEXTLINE(readability-magic-numbers, cppcoreguidelines-avoid-magic-numbers)
       const auto avg_rank = weight_sum + ((static_cast<FP>(num_ties + 1) / FP(2)) * avg_tie_weight);
       // Assign the average rank to all tied elements
       for (i = lower_bound_idx; i < upper_bound_idx; ++i) {

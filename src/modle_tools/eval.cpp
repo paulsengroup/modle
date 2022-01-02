@@ -164,7 +164,7 @@ template <class N>
 template <class Range>
 [[nodiscard]] static isize find_col_idx(const boost::filesystem::path &path_to_weights,
                                         std::string_view header, const Range &col_names) {
-  assert(col_names.size() > 1);  // NOLINT
+  assert(col_names.size() > 1);
   for (const auto &name : col_names) {
     try {
       return find_col_idx(path_to_weights, header, name);
@@ -184,14 +184,14 @@ template <class Range>
 [[nodiscard]] static absl::flat_hash_map<std::string, std::vector<double>> import_weights(
     const boost::filesystem::path &path_to_weights, const std::string_view weight_column_name,
     const usize nbins, const bool reciprocal_weights) {
-  assert(nbins != 0);  // NOLINT
+  assert(nbins != 0);
   absl::flat_hash_map<std::string, std::vector<double>> weights;
 
   if (path_to_weights.empty()) {
     return weights;
   }
 
-  assert(boost::filesystem::exists(path_to_weights));  // NOLINT
+  assert(boost::filesystem::exists(path_to_weights));
   compressed_io::Reader r(path_to_weights);
 
   std::string buff;
@@ -251,8 +251,8 @@ enum class StripeDirection : u8f { vertical, horizontal };
 template <class N, class = std::enable_if_t<std::is_arithmetic_v<N>>>
 static size_t mask_zero_pixels(const std::vector<N> &v1, const std::vector<N> &v2,
                                std::vector<double> &weights) {
-  assert(v1.size() == v2.size());       // NOLINT
-  assert(v1.size() == weights.size());  // NOLINT
+  assert(v1.size() == v2.size());
+  assert(v1.size() == weights.size());
 
   usize masked_pixels = 0;
   for (usize i = 0; i < v1.size(); ++i) {
@@ -267,10 +267,10 @@ static size_t mask_zero_pixels(const std::vector<N> &v1, const std::vector<N> &v
 template <class N>
 [[nodiscard]] static auto compute_custom_metric(const std::vector<N> &ref_pixels,
                                                 const std::vector<N> &tgt_pixels) {
-  assert(ref_pixels.size() == tgt_pixels.size());  // NOLINT
-  // assert(std::all_of(ref_pixels.begin(), ref_pixels.end(),  // NOLINT
+  assert(ref_pixels.size() == tgt_pixels.size());
+  // assert(std::all_of(ref_pixels.begin(), ref_pixels.end(),
   //                    [&](const auto n) { return n == 0 || n == 1; }));
-  // assert(std::all_of(tgt_pixels.begin(), tgt_pixels.end(),  // NOLINT
+  // assert(std::all_of(tgt_pixels.begin(), tgt_pixels.end(),
   //                    [&](const auto n) { return n == 0 || n == 1; }));
 
   // Do a backward search for the first non-zero pixel
@@ -313,7 +313,7 @@ template <StripeDirection stripe_direction, class N, class WeightIt = utils::Rep
     const enum eval_config::Metric metric, std::shared_ptr<ContactMatrix<N>> ref_contacts,
     std::shared_ptr<ContactMatrix<N>> tgt_contacts, const bool mask_zero_pixels_,
     [[maybe_unused]] WeightIt weight_first = utils::RepeatIterator<double>(1)) {
-  assert(ref_contacts->nrows() == tgt_contacts->nrows());  // NOLINT
+  assert(ref_contacts->nrows() == tgt_contacts->nrows());
   const auto nrows = ref_contacts->nrows();
   const auto ncols = ref_contacts->ncols();
 
@@ -410,8 +410,8 @@ template <StripeDirection stripe_direction, class N>
                                          std::shared_ptr<ContactMatrix<N>> tgt_contacts,
                                          const bool mask_zero_pixels_,
                                          const std::vector<double> &weights) {
-  assert(ref_contacts->nrows() == tgt_contacts->nrows());              // NOLINT
-  assert(weights.empty() || ref_contacts->nrows() == weights.size());  // NOLINT
+  assert(ref_contacts->nrows() == tgt_contacts->nrows());
+  assert(weights.empty() || ref_contacts->nrows() == weights.size());
   return compute_metric<stripe_direction>(metric, ref_contacts, tgt_contacts, mask_zero_pixels_,
                                           weights.begin());
 }
@@ -420,21 +420,21 @@ template <StripeDirection stripe_direction, class N>
     const enum eval_config::Metric metric, bool prettify = false) {
   using m = eval_config::Metric;
   if (metric == m::custom) {
-    return prettify ? "Custom metric" : "custom_metric";  // NOLINT
+    return prettify ? "Custom metric" : "custom_metric";
   }
   if (metric == m::pearson) {
-    return prettify ? "Pearson correlation" : "pearson_corr";  // NOLINT
+    return prettify ? "Pearson correlation" : "pearson_corr";
   }
   if (metric == m::spearman) {
-    return prettify ? "Spearman correlation" : "spearman_corr";  // NOLINT
+    return prettify ? "Spearman correlation" : "spearman_corr";
   }
 
   if (metric == m::eucl_dist) {
-    return prettify ? "Euclidean distance" : "eucl_dist";  // NOLINT
+    return prettify ? "Euclidean distance" : "eucl_dist";
   }
 
   if (metric == m::rmse) {
-    return prettify ? "RMSE" : "rmse";  // NOLINT
+    return prettify ? "RMSE" : "rmse";
   }
   std::abort();
 }
@@ -546,7 +546,7 @@ static void run_task(const enum eval_config::Metric metric, const std::string &c
         case eval_config::Metric::eucl_dist:
           [[fallthrough]];
         case eval_config::Metric::rmse:
-          assert(score2 == 0.0);  // NOLINT
+          assert(score2 == 0.0);
           return fmt::format(FMT_COMPILE("{}\t{}\t{}\t{}\n"), chrom_name_, start_pos, end_pos,
                              score1);
         case eval_config::Metric::spearman:
@@ -627,7 +627,7 @@ void eval_subcmd(const modle::tools::eval_config &c) {
   auto writers = init_writers(c, chromosomes, !weights.empty());
 
   const auto nrows = (c.diagonal_width + bin_size - 1) / bin_size;
-  assert(nrows != 0);  // NOLINT
+  assert(nrows != 0);
 
   const auto t0 = absl::Now();
   thread_pool tpool(c.nthreads);

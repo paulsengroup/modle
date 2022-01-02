@@ -33,23 +33,23 @@ std::pair<usize, usize> Simulation::detect_units_at_chrom_boundaries(
     absl::Span<const bp_t> fwd_moves, absl::Span<CollisionT> rev_collisions,
     absl::Span<CollisionT> fwd_collisions) {
   {
-    assert(lefs.size() == fwd_lef_ranks.size());                       // NOLINT
-    assert(lefs.size() == rev_lef_ranks.size());                       // NOLINT
-    assert(lefs.size() == fwd_moves.size());                           // NOLINT
-    assert(lefs.size() == rev_moves.size());                           // NOLINT
-    assert(lefs.size() == fwd_collisions.size());                      // NOLINT
-    assert(lefs.size() == rev_collisions.size());                      // NOLINT
-    assert(std::is_sorted(fwd_lef_ranks.begin(), fwd_lef_ranks.end(),  // NOLINT
+    assert(lefs.size() == fwd_lef_ranks.size());
+    assert(lefs.size() == rev_lef_ranks.size());
+    assert(lefs.size() == fwd_moves.size());
+    assert(lefs.size() == rev_moves.size());
+    assert(lefs.size() == fwd_collisions.size());
+    assert(lefs.size() == rev_collisions.size());
+    assert(std::is_sorted(fwd_lef_ranks.begin(), fwd_lef_ranks.end(),
                           [&](const auto r1, const auto r2) {
                             return lefs[r1].fwd_unit.pos() < lefs[r2].fwd_unit.pos();
                           }));
-    assert(std::is_sorted(rev_lef_ranks.begin(), rev_lef_ranks.end(),  // NOLINT
+    assert(std::is_sorted(rev_lef_ranks.begin(), rev_lef_ranks.end(),
                           [&](const auto r1, const auto r2) {
                             return lefs[r1].rev_unit.pos() < lefs[r2].rev_unit.pos();
                           }));
-    assert(std::all_of(rev_collisions.begin(), rev_collisions.end(),  // NOLINT
+    assert(std::all_of(rev_collisions.begin(), rev_collisions.end(),
                        [&](const CollisionT c) { return c() == 0; }));
-    assert(std::all_of(fwd_collisions.begin(), fwd_collisions.end(),  // NOLINT
+    assert(std::all_of(fwd_collisions.begin(), fwd_collisions.end(),
                        [&](const CollisionT c) { return c() == 0; }));
   }
   // Detect if the first rev unit or last fwd unit are about to fall off chrom. boundaries
@@ -70,12 +70,12 @@ std::pair<usize, usize> Simulation::detect_units_at_chrom_boundaries(
     const auto& rev_unit = lefs[rev_idx].rev_unit;
     const auto& rev_move = rev_moves[rev_idx];
 
-    assert(lefs[rev_idx].is_bound());                        // NOLINT
-    assert(chrom.start_pos() + rev_move <= rev_unit.pos());  // NOLINT
+    assert(lefs[rev_idx].is_bound());
+    assert(chrom.start_pos() + rev_move <= rev_unit.pos());
 
     const usize _5prime_idx = 5;
     if (rev_unit.pos() == chrom.start_pos()) {  // Unit already at the 5'-end
-      assert(rev_moves[rev_idx] == 0);          // NOLINT
+      assert(rev_moves[rev_idx] == 0);
       ++num_rev_units_at_5prime;
       rev_collisions[rev_idx].set(_5prime_idx, CollisionT::COLLISION | CollisionT::CHROM_BOUNDARY);
 
@@ -105,9 +105,9 @@ std::pair<usize, usize> Simulation::detect_units_at_chrom_boundaries(
     }
 
     const usize _3prime_idx = 3;
-    assert(fwd_unit.pos() + fwd_move < chrom.end_pos());  // NOLINT
+    assert(fwd_unit.pos() + fwd_move < chrom.end_pos());
     if (fwd_unit.pos() == chrom.end_pos() - 1) {
-      assert(fwd_moves[fwd_idx] == 0);  // NOLINT
+      assert(fwd_moves[fwd_idx] == 0);
       ++num_fwd_units_at_3prime;
       fwd_collisions[fwd_idx].set(_3prime_idx, CollisionT::COLLISION | CollisionT::CHROM_BOUNDARY);
 
@@ -134,20 +134,20 @@ void Simulation::detect_lef_bar_collisions(
     usize num_rev_units_at_5prime, usize num_fwd_units_at_3prime) const
     noexcept(utils::ndebug_defined()) {
   {
-    assert(lefs.size() == fwd_lef_ranks.size());                       // NOLINT
-    assert(lefs.size() == rev_lef_ranks.size());                       // NOLINT
-    assert(lefs.size() == fwd_moves.size());                           // NOLINT
-    assert(lefs.size() == rev_moves.size());                           // NOLINT
-    assert(lefs.size() == fwd_collisions.size());                      // NOLINT
-    assert(lefs.size() == rev_collisions.size());                      // NOLINT
-    assert(barrier_mask.size() == extr_barriers.size());               // NOLINT
-    assert(lefs.size() >= num_rev_units_at_5prime);                    // NOLINT
-    assert(lefs.size() >= num_fwd_units_at_3prime);                    // NOLINT
-    assert(std::is_sorted(fwd_lef_ranks.begin(), fwd_lef_ranks.end(),  // NOLINT
+    assert(lefs.size() == fwd_lef_ranks.size());
+    assert(lefs.size() == rev_lef_ranks.size());
+    assert(lefs.size() == fwd_moves.size());
+    assert(lefs.size() == rev_moves.size());
+    assert(lefs.size() == fwd_collisions.size());
+    assert(lefs.size() == rev_collisions.size());
+    assert(barrier_mask.size() == extr_barriers.size());
+    assert(lefs.size() >= num_rev_units_at_5prime);
+    assert(lefs.size() >= num_fwd_units_at_3prime);
+    assert(std::is_sorted(fwd_lef_ranks.begin(), fwd_lef_ranks.end(),
                           [&](const auto r1, const auto r2) {
                             return lefs[r1].fwd_unit.pos() < lefs[r2].fwd_unit.pos();
                           }));
-    assert(std::is_sorted(rev_lef_ranks.begin(), rev_lef_ranks.end(),  // NOLINT
+    assert(std::is_sorted(rev_lef_ranks.begin(), rev_lef_ranks.end(),
                           [&](const auto r1, const auto r2) {
                             return lefs[r1].rev_unit.pos() < lefs[r2].rev_unit.pos();
                           }));
@@ -184,7 +184,7 @@ void Simulation::detect_lef_bar_collisions(
     }
 
     const auto& barrier = extr_barriers[i];
-    assert(j < lefs.size());  // NOLINT
+    assert(j < lefs.size());
     // Probability of block is set based on the extr. barrier blocking direction
     const auto pblock = barrier.blocking_direction_major() == dna::rev
                             ? this->lef_bar_major_collision_pblock
@@ -206,7 +206,7 @@ void Simulation::detect_lef_bar_collisions(
       // barrier is less or equal than the distance that the rev extr. unit is set to move in
       // the current iteration. If pblock != 1, then we also require a successful bernoulli
       // trial before calling a collision
-      assert(unit_pos >= barrier.pos());  // NOLINT
+      assert(unit_pos >= barrier.pos());
       const auto delta = unit_pos - barrier.pos();
       if (delta > 0 && delta <= rev_moves[unit_idx] &&
           (pblock == 1.0 || random::bernoulli_trial{pblock}(rand_eng))) {
@@ -221,12 +221,12 @@ process_fwd_unit:
   // Init indices and position with the rev and fwd extr. units that are the closest to the 5'-end
   j = lefs.size() - std::min(num_fwd_units_at_3prime, num_fwd_units_at_3prime - 1);
 
-  assert(j != 0);  // NOLINT
+  assert(j != 0);
   unit_idx = fwd_lef_ranks[--j];
   unit_pos = lefs[unit_idx].fwd_unit.pos();
 
   // Loop over extr. barriers and find the first, possibly colliding extr. unit
-  assert(!extr_barriers.empty());  // NOLINT
+  assert(!extr_barriers.empty());
   const auto sentinel_idx = (std::numeric_limits<usize>::max)();
   for (auto i = extr_barriers.size() - 1; i != sentinel_idx; --i) {
     // NOLINTNEXTLINE(readability-implicit-bool-conversion)
@@ -268,20 +268,20 @@ void Simulation::detect_primary_lef_lef_collisions(
     random::PRNG_t& rand_eng, usize num_rev_units_at_5prime, usize num_fwd_units_at_3prime) const
     noexcept(utils::ndebug_defined()) {
   {
-    assert(!lefs.empty());                                             // NOLINT
-    assert(lefs.size() == fwd_lef_ranks.size());                       // NOLINT
-    assert(lefs.size() == rev_lef_ranks.size());                       // NOLINT
-    assert(lefs.size() == fwd_moves.size());                           // NOLINT
-    assert(lefs.size() == rev_moves.size());                           // NOLINT
-    assert(lefs.size() == fwd_collisions.size());                      // NOLINT
-    assert(lefs.size() == rev_collisions.size());                      // NOLINT
-    assert(lefs.size() >= num_rev_units_at_5prime);                    // NOLINT
-    assert(lefs.size() >= num_fwd_units_at_3prime);                    // NOLINT
-    assert(std::is_sorted(fwd_lef_ranks.begin(), fwd_lef_ranks.end(),  // NOLINT
+    assert(!lefs.empty());
+    assert(lefs.size() == fwd_lef_ranks.size());
+    assert(lefs.size() == rev_lef_ranks.size());
+    assert(lefs.size() == fwd_moves.size());
+    assert(lefs.size() == rev_moves.size());
+    assert(lefs.size() == fwd_collisions.size());
+    assert(lefs.size() == rev_collisions.size());
+    assert(lefs.size() >= num_rev_units_at_5prime);
+    assert(lefs.size() >= num_fwd_units_at_3prime);
+    assert(std::is_sorted(fwd_lef_ranks.begin(), fwd_lef_ranks.end(),
                           [&](const auto r1, const auto r2) {
                             return lefs[r1].fwd_unit.pos() < lefs[r2].fwd_unit.pos();
                           }));
-    assert(std::is_sorted(rev_lef_ranks.begin(), rev_lef_ranks.end(),  // NOLINT
+    assert(std::is_sorted(rev_lef_ranks.begin(), rev_lef_ranks.end(),
                           [&](const auto r1, const auto r2) {
                             return lefs[r1].rev_unit.pos() < lefs[r2].rev_unit.pos();
                           }));
@@ -379,8 +379,8 @@ void Simulation::detect_primary_lef_lef_collisions(
         // place before the LEF-BAR collision (whether this happens or not depends on the distance
         // between the extr. units and the extr. barriers, as well as their respective extr. speed)
 
-        assert(rev_collision.collision_occurred(CollisionT::LEF_BAR));  // NOLINT
-        assert(collision_pos_rev != 0 && collision_pos_fwd != 0);       // NOLINT
+        assert(rev_collision.collision_occurred(CollisionT::LEF_BAR));
+        assert(collision_pos_rev != 0 && collision_pos_fwd != 0);
         const auto& barrier_pos = barriers[rev_collision.decode_index()].pos();
         if (MODLE_UNLIKELY(collision_pos_fwd > barrier_pos)) {
           // Detected the mis-prediction mentioned above: make the LEF-BAR collision a LEF-LEF
@@ -388,7 +388,7 @@ void Simulation::detect_primary_lef_lef_collisions(
           rev_collision.set(fwd_idx, CollisionT::COLLISION | CollisionT::LEF_LEF_PRIMARY);
           fwd_collision.set(rev_idx, CollisionT::COLLISION | CollisionT::LEF_LEF_PRIMARY);
         } else {
-          assert(rev_collision.collision_occurred(CollisionT::LEF_BAR));  // NOLINT
+          assert(rev_collision.collision_occurred(CollisionT::LEF_BAR));
 
           // fwd extr unit is being blocked by a rev unit that is itself being blocked by an extr.
           // barrier
@@ -397,8 +397,8 @@ void Simulation::detect_primary_lef_lef_collisions(
         // This branch follows the same logic as the previous one. In this case the rev unit is free
         // to move, while the fwd unit has been predicted to be stalled by an extr. barrier
       } else if (!rev_collision.collision_occurred() && fwd_collision.collision_occurred()) {
-        assert(fwd_collision.collision_occurred(CollisionT::LEF_BAR));  // NOLINT
-        assert(collision_pos_rev != 0 && collision_pos_fwd != 0);       // NOLINT
+        assert(fwd_collision.collision_occurred(CollisionT::LEF_BAR));
+        assert(collision_pos_rev != 0 && collision_pos_fwd != 0);
         const auto& barrier_pos = barriers[fwd_collision.decode_index()].pos();
         rev_collision.set(fwd_idx, CollisionT::COLLISION | CollisionT::LEF_LEF_PRIMARY);
         if (MODLE_UNLIKELY(collision_pos_rev < barrier_pos)) {
@@ -418,14 +418,14 @@ void Simulation::process_secondary_lef_lef_collisions(
     random::PRNG_t& rand_eng, usize num_rev_units_at_5prime, usize num_fwd_units_at_3prime) const
     noexcept(utils::ndebug_defined()) {
   {
-    assert(lefs.size() == fwd_lef_ranks.size());     // NOLINT
-    assert(lefs.size() == rev_lef_ranks.size());     // NOLINT
-    assert(lefs.size() == fwd_moves.size());         // NOLINT
-    assert(lefs.size() == rev_moves.size());         // NOLINT
-    assert(lefs.size() == fwd_collisions.size());    // NOLINT
-    assert(lefs.size() == rev_collisions.size());    // NOLINT
-    assert(lefs.size() >= num_rev_units_at_5prime);  // NOLINT
-    assert(lefs.size() >= num_fwd_units_at_3prime);  // NOLINT
+    assert(lefs.size() == fwd_lef_ranks.size());
+    assert(lefs.size() == rev_lef_ranks.size());
+    assert(lefs.size() == fwd_moves.size());
+    assert(lefs.size() == rev_moves.size());
+    assert(lefs.size() == fwd_collisions.size());
+    assert(lefs.size() == rev_collisions.size());
+    assert(lefs.size() >= num_rev_units_at_5prime);
+    assert(lefs.size() >= num_fwd_units_at_3prime);
   }
 
   // Loop over pairs of consecutive fwd units.
@@ -467,11 +467,11 @@ void Simulation::process_secondary_lef_lef_collisions(
     auto& move1 = rev_moves[rev_idx1];
     auto& move2 = rev_moves[rev_idx2];
 
-    assert(rev_pos2 >= rev_pos1);                   // NOLINT
-    assert(rev_pos1 >= move1);                      // NOLINT
-    assert(rev_pos2 >= move2);                      // NOLINT
-    assert(rev_pos1 - move1 >= chrom.start_pos());  // NOLINT
-    assert(rev_pos2 - move2 >= chrom.start_pos());  // NOLINT
+    assert(rev_pos2 >= rev_pos1);
+    assert(rev_pos1 >= move1);
+    assert(rev_pos2 >= move2);
+    assert(rev_pos1 - move1 >= chrom.start_pos());
+    assert(rev_pos2 - move2 >= chrom.start_pos());
 
     if (rev_pos2 - move2 <= rev_pos1 - move1) {
       if (this->probability_of_extrusion_unit_bypass == 0.0 ||
@@ -482,7 +482,7 @@ void Simulation::process_secondary_lef_lef_collisions(
         move2 = std::min(move, move - 1);
       } else {
         const auto final_pos = rev_pos2 - move2;
-        assert(rev_pos1 >= final_pos);  // NOLINT
+        assert(rev_pos1 >= final_pos);
         move1 = rev_pos1 - final_pos;
       }
     }
@@ -491,7 +491,7 @@ void Simulation::process_secondary_lef_lef_collisions(
   // Loop over fwd units in 3'-5' direction, and skip over units that are located at the 3'-end.
   // Look in the section above for detailed comments
   auto i = lefs.size() - std::min(num_fwd_units_at_3prime, num_fwd_units_at_3prime - 1) - 1;
-  assert(i < lefs.size());  // NOLINT
+  assert(i < lefs.size());
   for (; i > 0; --i) {
     // index of the ith fwd unit in 3'-5' order (i.e. U2)
     const auto& fwd_idx2 = fwd_lef_ranks[i];
@@ -510,9 +510,9 @@ void Simulation::process_secondary_lef_lef_collisions(
     auto& move1 = fwd_moves[fwd_idx1];
     auto& move2 = fwd_moves[fwd_idx2];
 
-    assert(fwd_pos2 >= fwd_pos1);                // NOLINT
-    assert(fwd_pos1 + move1 < chrom.end_pos());  // NOLINT
-    assert(fwd_pos2 + move2 < chrom.end_pos());  // NOLINT
+    assert(fwd_pos2 >= fwd_pos1);
+    assert(fwd_pos1 + move1 < chrom.end_pos());
+    assert(fwd_pos2 + move2 < chrom.end_pos());
 
     if (fwd_pos1 + move1 >= fwd_pos2 + move2) {
       if (this->probability_of_extrusion_unit_bypass == 0.0 ||
@@ -562,22 +562,22 @@ void Simulation::correct_overlapping_lefs(
     auto& move1 = rev_moves[rev_idx1];
     auto& move2 = rev_moves[rev_idx2];
 
-    assert(rev_pos2 >= rev_pos1);                   // NOLINT
-    assert(rev_pos1 >= move1);                      // NOLINT
-    assert(rev_pos2 >= move2);                      // NOLINT
-    assert(rev_pos1 - move1 >= chrom.start_pos());  // NOLINT
-    assert(rev_pos2 - move2 >= chrom.start_pos());  // NOLINT
+    assert(rev_pos2 >= rev_pos1);
+    assert(rev_pos1 >= move1);
+    assert(rev_pos2 >= move2);
+    assert(rev_pos1 - move1 >= chrom.start_pos());
+    assert(rev_pos2 - move2 >= chrom.start_pos());
 
     if (rev_pos2 - move2 == rev_pos1 - move1) {
       const auto pos = rev_pos2 - move2;
-      assert(pos <= rev_pos1);  // NOLINT
+      assert(pos <= rev_pos1);
       lefs[rev_idx1].rev_unit.bind_at_pos(rev_pos2);
       lefs[rev_idx2].rev_unit.bind_at_pos(rev_pos1);
       std::swap(rev_lef_ranks[i], rev_lef_ranks[i - 1]);
       move1 = rev_pos1 - pos;
       move2 = rev_pos2 - pos;
-      // assert(lefs[rev_idx1].rev_unit.pos() <= lefs[rev_idx1].fwd_unit.pos());  // NOLINT
-      // assert(lefs[rev_idx2].rev_unit.pos() <= lefs[rev_idx2].fwd_unit.pos());  // NOLINT
+      // assert(lefs[rev_idx1].rev_unit.pos() <= lefs[rev_idx1].fwd_unit.pos());
+      // assert(lefs[rev_idx2].rev_unit.pos() <= lefs[rev_idx2].fwd_unit.pos());
     }
   }
   // Loop over fwd units in 3'-5' direction, and skip over units that are located at the 3'-end.
@@ -600,20 +600,20 @@ void Simulation::correct_overlapping_lefs(
     auto& move1 = fwd_moves[fwd_idx1];
     auto& move2 = fwd_moves[fwd_idx2];
 
-    assert(fwd_pos2 >= fwd_pos1);                // NOLINT
-    assert(fwd_pos1 + move1 < chrom.end_pos());  // NOLINT
-    assert(fwd_pos2 + move2 < chrom.end_pos());  // NOLINT
+    assert(fwd_pos2 >= fwd_pos1);
+    assert(fwd_pos1 + move1 < chrom.end_pos());
+    assert(fwd_pos2 + move2 < chrom.end_pos());
 
     if (fwd_pos1 + move1 == fwd_pos2 + move2) {
       const auto pos = fwd_pos1 + move1;
-      assert(pos >= fwd_pos2);  // NOLINT
+      assert(pos >= fwd_pos2);
       lefs[fwd_idx1].fwd_unit.bind_at_pos(fwd_pos2);
       lefs[fwd_idx2].fwd_unit.bind_at_pos(fwd_pos1);
       std::swap(fwd_lef_ranks[i], fwd_lef_ranks[i - 1]);
       move1 = pos - fwd_pos1;
       move2 = pos - fwd_pos2;
-      // assert(lefs[fwd_idx1].rev_unit.pos() <= lefs[fwd_idx1].fwd_unit.pos());  // NOLINT
-      // assert(lefs[fwd_idx2].rev_unit.pos() <= lefs[fwd_idx2].fwd_unit.pos());  // NOLINT
+      // assert(lefs[fwd_idx1].rev_unit.pos() <= lefs[fwd_idx1].fwd_unit.pos());
+      // assert(lefs[fwd_idx2].rev_unit.pos() <= lefs[fwd_idx2].fwd_unit.pos());
     }
   }
 }
@@ -648,7 +648,7 @@ void Simulation::correct_overlapping_lefs([[maybe_unused]] const Chromosome& chr
       continue;
     }
 
-    assert(rev_pos1 < rev_pos2);  // NOLINT
+    assert(rev_pos1 < rev_pos2);
     // We want to distribute (i1 - i0) units one after the other using (i1 - i0) bp
     for (auto i = i0; i < i1; ++i) {
       rev_idx2 = rev_lef_ranks[i];
@@ -679,7 +679,7 @@ process_fwd_units:
       continue;
     }
 
-    assert(fwd_pos1 < fwd_pos2);  // NOLINT
+    assert(fwd_pos1 < fwd_pos2);
     // We want to distribute (i1 - i0) units one after the other using (i1 - i0) bp
     for (auto i = i0; i < i1; ++i) {
       fwd_idx2 = fwd_lef_ranks[i];

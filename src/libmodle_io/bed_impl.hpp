@@ -131,7 +131,7 @@ bool BED_tree<K, I>::contains_overlap(const K& chrom_name, u64 chrom_start, u64 
   if (it == this->_trees.end()) {
     return false;
   }
-  assert(it->second.is_BST());  // NOLINT You forgot to call index/make_BST()!
+  assert(it->second.is_BST());
 
   return it->second.overlaps_with(chrom_start, chrom_end);
 }
@@ -147,7 +147,7 @@ usize BED_tree<K, I>::count_overlaps(const K& chrom_name, u64 chrom_start, u64 c
   if (it == this->_trees.end()) {
     return 0UL;
   }
-  assert(it->second.is_BST());  // NOLINT You forgot to call index/make_BST()!
+  assert(it->second.is_BST());
 
   return it->second.count(chrom_start, chrom_end);
 }
@@ -159,7 +159,7 @@ absl::Span<const BED> BED_tree<K, I>::find_overlaps(const K& chrom_name, u64 chr
   if (it == this->_trees.end()) {
     return absl::Span<const BED>{};
   }
-  assert(it->second.is_BST());  // NOLINT You forgot to call index/make_BST()!
+  assert(it->second.is_BST());
 
   const auto [overlap_begin, overlap_end] = it->second.find_overlaps(chrom_start, chrom_end);
   if (overlap_begin == it->second.data_end()) {
@@ -276,7 +276,7 @@ constexpr auto fmt::formatter<modle::bed::BED>::parse(format_parse_context& ctx)
 template <typename FormatContext>
 auto fmt::formatter<modle::bed::BED>::format(const modle::bed::BED& b, FormatContext& ctx)
     -> decltype(ctx.out()) {
-  assert(!b.chrom.empty());  // NOLINT
+  assert(!b.chrom.empty());
   const auto n = std::min(b.num_fields(), static_cast<modle::usize>(this->presentation));
   auto it = ctx.out();
   if (n == 3U) {
@@ -291,12 +291,12 @@ auto fmt::formatter<modle::bed::BED>::format(const modle::bed::BED& b, FormatCon
     it = fmt::format_to(it, FMT_STRING("{}\t{}\t{}\t{}\t{}\t{}"), b.chrom, b.chrom_start,
                         b.chrom_end, b.name, b.score, b.strand);
   } else if (n == 9U) {
-    assert(b.rgb);  // NOLINT
+    assert(b.rgb);
     it =
         fmt::format_to(it, FMT_STRING("{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}"), b.chrom, b.chrom_start,
                        b.chrom_end, b.name, b.score, b.strand, b.thick_start, b.thick_end, *b.rgb);
   } else if (n >= 12U) {
-    assert(b.rgb);  // NOLINT
+    assert(b.rgb);
     it = fmt::format_to(it, FMT_STRING("{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}"), b.chrom,
                         b.chrom_start, b.chrom_end, b.name, b.score, b.strand, b.thick_start,
                         b.thick_end, *b.rgb, fmt::join(b.block_sizes, ","),

@@ -22,7 +22,7 @@
 
 namespace modle::io::bigwig {
 
-Writer::Writer(boost::filesystem::path name, uint_fast8_t zoom_levels, usize buff_size)
+Writer::Writer(boost::filesystem::path name, std::uint_fast8_t zoom_levels, usize buff_size)
     : _fname(std::move(name)), _zoom_levels(zoom_levels), _buff_size(buff_size) {
   std::scoped_lock<std::mutex> l(Writer::_global_state_mutex);
   if (Writer::_global_bigwig_files_opened == 0) {
@@ -83,7 +83,7 @@ Writer& Writer::operator=(Writer&& other) noexcept {
 
 void Writer::write_chromosomes(const char* const* chrom_names, const u32* chrom_sizes,
                                const usize num_chroms) {
-  assert(this->_fp);  // NOLINT
+  assert(this->_fp);  // NOLINT(hicpp-no-array-decay)
   // GCC7 fails to parse this if constexpr
 #if defined(__GNUC__) && !defined(__clang__) && __GNUC__ == 7
   if (utils::ndebug_not_defined()) {

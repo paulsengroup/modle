@@ -244,8 +244,8 @@ constexpr usize ContactMatrix<N>::compute_number_of_mutexes(const usize rows,
 
 template <class N>
 usize ContactMatrix<N>::get_pixel_mutex_idx(const usize row, const usize col) const noexcept {
-  assert(!this->_mtxes.empty());         // NOLINT
-  assert(this->_mtxes.size() % 2 == 0);  // NOLINT
+  assert(!this->_mtxes.empty());
+  assert(this->_mtxes.size() % 2 == 0);
   // equivalent to hash_coordinates(row, col) % this->_mtxes.size() when _mtxes.size() % 2 == 0
   return (hash_coordinates(row, col) & (this->_mtxes.size() - 1));
 }

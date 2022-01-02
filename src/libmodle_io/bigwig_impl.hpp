@@ -51,7 +51,7 @@ void Writer::write_chromosomes(const Chromosomes& chroms) {
               FMT_STRING(
                   "We currently don't support writing chromosomes longer than ~4.29 Gbp (2^32 "
                   "bp) to bigWig files. '{}' has a length of {:.4f} Gbp"),
-              chrom.first, static_cast<double>(chrom.second) / 1e9));  // NOLINT
+              chrom.first, static_cast<double>(chrom.second) / 1e9));
         }
       }
       if constexpr (std::is_signed<chrom_size_t>()) {
@@ -74,7 +74,7 @@ void Writer::write_chromosomes(const Chromosomes& chroms) {
 template <class Str>
 void Writer::write_chromosomes(const absl::Span<Str> chrom_names,
                                const absl::Span<const u32> chrom_sizes) {
-  assert(chrom_names.size() == chrom_sizes.size());  // NOLINT
+  assert(chrom_names.size() == chrom_sizes.size());
   if constexpr (std::is_same_v<std::remove_cv_t<Str>, char**>) {
     write_chromosomes(chrom_names.data(), chrom_sizes.data(), chrom_names.size());
   }
@@ -95,8 +95,8 @@ void Writer::write_chromosomes(const absl::Span<Str> chrom_names,
 template <class N, class>
 void Writer::write_range(std::string_view chrom_name, const absl::Span<N> values, u64 span,
                          u64 step) {
-  assert(this->_initialized);  // NOLINT
-  assert(this->_fp);           // NOLINT
+  assert(this->_initialized);
+  assert(this->_fp);
   std::vector<float> fvalues;
   auto fvalues_span = [&]() {
     if constexpr (std::is_same_v<N, float>) {

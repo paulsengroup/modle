@@ -14,8 +14,10 @@
 #include "modle/common/smartdir.hpp"  // for SmartDir
 
 namespace modle::test {
-const auto cleanup_on_exit{true};         // Useful for debugging
-const SmartDir testdir{cleanup_on_exit};  // NOLINT Using auto here upsets GCC8
+[[maybe_unused]] static const boost::filesystem::path& testdir(bool cleanup_on_exit = true) {
+  static const SmartDir dir{cleanup_on_exit};
+  return dir();
+}
 }  // namespace modle::test
 
 namespace modle::test::compressed_io {

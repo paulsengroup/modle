@@ -30,7 +30,7 @@
 
 int main(int argc, char** argv) {
   using namespace modle::tools;
-  absl::InitializeSymbolizer(argv[0]);  // NOLINT(cppcoreguidelines-pro-bounds-pointer-arithmetic)
+  absl::InitializeSymbolizer(argv[0]);
   absl::FailureSignalHandlerOptions options;
   // TODO: figure out a way to make this callback async-signal-safe
   options.writerfn = [](const char* buff) {
@@ -83,7 +83,7 @@ int main(int argc, char** argv) {
       }
     }
   } catch (const CLI::ParseError& e) {
-    assert(cli);          // NOLINT
+    assert(cli);
     return cli->exit(e);  //  This takes care of formatting and printing error messages (if any)
   } catch (const std::bad_alloc& err) {
     spdlog::error(FMT_STRING("FAILURE! Unable to allocate enough memory: {}"), err.what());
@@ -96,7 +96,7 @@ int main(int argc, char** argv) {
         e.what());
     return 1;
   } catch (const std::exception& e) {
-    assert(cli);  // NOLINT
+    assert(cli);
     spdlog::error(FMT_STRING("FAILURE! modle_tools {} encountered the following error: {}."),
                   cli->get_printable_subcommand(), e.what());
     return 1;

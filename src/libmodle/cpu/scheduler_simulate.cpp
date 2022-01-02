@@ -42,7 +42,7 @@ namespace modle {
 // NOLINTNEXTLINE(readability-function-cognitive-complexity)
 void Simulation::run_simulate() {
   if (!this->skip_output) {  // Write simulation params to file
-    assert(boost::filesystem::exists(this->path_to_output_prefix.parent_path()));  // NOLINT
+    assert(boost::filesystem::exists(this->path_to_output_prefix.parent_path()));
     if (this->force) {
       boost::filesystem::remove(this->path_to_output_file_cool);
     }
@@ -74,10 +74,10 @@ void Simulation::run_simulate() {
     if (this->num_cells <= this->nthreads) {
       return 1;
     }
-    return std::min(usize(16), this->num_cells / this->nthreads);  // NOLINT
+    return std::min(usize(16), this->num_cells / this->nthreads);
   }();
 
-  const usize task_batch_size_enq = 2 * task_batch_size_deq;  // NOLINTNEXTLINE
+  const usize task_batch_size_enq = 2 * task_batch_size_deq;
   const usize queue_capacity = 2 * this->nthreads * task_batch_size_deq;
 
   // Queue used to submit simulation tasks to the thread pool
@@ -148,13 +148,13 @@ void Simulation::run_simulate() {
         });
         const auto ntasks =
             cellid > this->num_cells ? tasks.size() - (cellid - this->num_cells) : tasks.size();
-        auto sleep_us = 100;  // NOLINT(readability-magic-numbers)
-        while (               // Enqueue tasks
+        auto sleep_us = 100;
+        while (  // Enqueue tasks
             !task_queue.try_enqueue_bulk(ptok, std::make_move_iterator(tasks.begin()), ntasks)) {
           if (!this->ok()) {
             this->handle_exceptions();
           }
-          sleep_us = std::min(100000, sleep_us * 2);  // NOLINT(readability-magic-numbers)
+          sleep_us = std::min(100000, sleep_us * 2);
           std::this_thread::sleep_for(std::chrono::microseconds(sleep_us));
         }
       }
@@ -165,8 +165,8 @@ void Simulation::run_simulate() {
       progress_queue.emplace_back(nullptr, usize(0));
     }
     this->_tpool.wait_for_tasks();
-    assert(this->_end_of_simulation);  // NOLINT
-    assert(!this->_exception_thrown);  // NOLINT
+    assert(this->_end_of_simulation);
+    assert(!this->_exception_thrown);
   } catch (...) {
     this->_exception_thrown = true;
     this->_tpool.paused = true;
@@ -205,10 +205,10 @@ void Simulation::simulate_worker(const u64 tid,
     while (this->ok()) {
       const auto avail_tasks = this->consume_tasks_blocking(task_queue, ctok, task_buff);
       if (avail_tasks == 0) {
-        assert(this->_end_of_simulation);  // NOLINT
+        assert(this->_end_of_simulation);
         // Reached end of simulation (i.e. all tasks have been processed)
         if (this->log_model_internal_state && !this->skip_output) {
-          assert(!tmp_model_internal_state_log_path.empty());  // NOLINT
+          assert(!tmp_model_internal_state_log_path.empty());
           // Ensure all log records have been written to disk
           local_state.model_state_logger = nullptr;
           std::scoped_lock<std::mutex> lck(model_state_logger_mtx);
@@ -256,7 +256,7 @@ void Simulation::simulate_worker(const u64 tid,
         std::scoped_lock lck(progress_queue_mtx);
         auto progress = std::find_if(progress_queue.begin(), progress_queue.end(),
                                      [&](const auto& p) { return task.chrom == p.first; });
-        assert(progress != progress_queue.end());  // NOLINT
+        assert(progress != progress_queue.end());
 
         if (++progress->second == num_cells && !this->_exception_thrown) {
           // We are done simulating loop-extrusion on task.chrom: print a status update

@@ -54,17 +54,17 @@ Cooler<N>::Cooler(boost::filesystem::path path_to_file, IO_MODE mode, usize bin_
       _aprop_int64(generate_default_aprop(H5::PredType::NATIVE_INT64, _chunk_size, _cache_size)),
       _aprop_float64(
           generate_default_aprop(H5::PredType::NATIVE_DOUBLE, _chunk_size, _cache_size)) {
-  assert(this->_flavor != FLAVOR::UNK);  // NOLINT
+  assert(this->_flavor != FLAVOR::UNK);
   if (this->is_read_only() && this->_flavor == FLAVOR::AUTO) {
     this->_flavor = Cooler::detect_file_flavor(*this->_fp);
   }
   if (this->is_mcool()) {
-    assert(this->_bin_size != 0);  // NOLINT
+    assert(this->_bin_size != 0);
     absl::StrAppend(&this->_root_path, "resolutions/", this->_bin_size, "/");
   }
   if (this->is_read_only()) {
     if (this->_bin_size == 0) {  // i.e. file is cooler
-      assert(this->is_cool());   // NOLINT
+      assert(this->is_cool());
       DISABLE_WARNING_PUSH
       DISABLE_WARNING_USELESS_CAST
       this->_bin_size =
@@ -93,18 +93,18 @@ Cooler<N>::~Cooler() {
         auto bin1_idx_offset = this->_dataset_file_offsets[IDX_BIN1];
 
         if (chrom_idx_offset != 0) {
-          decltype(this->_nbins) buff;  // NOLINT
+          decltype(this->_nbins) buff;
           std::ignore = hdf5::read_number(chrom_idx, buff, chrom_idx_offset - 1);
           if (buff != this->_nbins) {
-            assert(buff < this->_nbins);  // NOLINT
+            assert(buff < this->_nbins);
             std::ignore = hdf5::write_number(this->_nbins, chrom_idx, chrom_idx_offset);
           }
         }
         if (bin1_idx_offset != 0) {
-          decltype(this->_nnz) buff;  // NOLINT
+          decltype(this->_nnz) buff;
           std::ignore = hdf5::read_number(bin1_idx, buff, bin1_idx_offset - 1);
           if (buff != this->_nnz) {
-            assert(buff < this->_nnz);  // NOLINT
+            assert(buff < this->_nnz);
             std::ignore = hdf5::write_number(this->_nnz, bin1_idx, bin1_idx_offset);
           }
         }
@@ -143,12 +143,12 @@ const boost::filesystem::path &Cooler<N>::get_path() const {
 
 template <class N>
 usize Cooler<N>::get_nchroms() {
-  assert(this->_fp);  // NOLINT
+  assert(this->_fp);
   if (this->is_cool()) {
     return static_cast<usize>(hdf5::read_attribute_int(*this->_fp, "nchroms"));
   }
   if (this->is_mcool()) {
-    assert(this->_bin_size != 0);  // NOLINT
+    assert(this->_bin_size != 0);
     return static_cast<usize>(hdf5::read_attribute_int(
         *this->_fp, "nchroms", absl::StrCat("/resolutions/", this->_bin_size)));
   }
@@ -157,7 +157,7 @@ usize Cooler<N>::get_nchroms() {
 
 template <class N>
 void Cooler<N>::get_chrom_names(std::vector<std::string> &buff) {
-  assert(this->_fp);  // NOLINT
+  assert(this->_fp);
   const auto nchroms = this->get_nchroms();
   buff.resize(nchroms);
   if (!this->_datasets.empty()) {
@@ -168,13 +168,13 @@ void Cooler<N>::get_chrom_names(std::vector<std::string> &buff) {
       auto d = hdf5::open_dataset(*this->_fp, "/chroms/name", *this->_aprop_str);
       std::ignore = hdf5::read_strings(d, buff, 0);
     } else if (this->is_mcool()) {
-      assert(this->_bin_size != 0);  // NOLINT
+      assert(this->_bin_size != 0);
       auto d = hdf5::open_dataset(*this->_fp,
                                   absl::StrCat("/resolutions/", this->_bin_size, "/chroms/name"),
                                   *this->_aprop_str);
       std::ignore = hdf5::read_strings(d, buff, 0);
     } else {
-      assert(!this->is_scool());  // NOLINT
+      assert(!this->is_scool());
       buff.clear();
     }
   }
@@ -227,7 +227,7 @@ std::vector<std::pair<std::string, usize>> Cooler<N>::get_chroms() {
   std::vector<usize> size_buff;
   this->get_chrom_names(name_buff);
   this->get_chrom_sizes(size_buff);
-  assert(name_buff.size() == size_buff.size());  // NOLINT
+  assert(name_buff.size() == size_buff.size());
   std::vector<std::pair<std::string, usize>> buff(name_buff.size());
   for (usize i = 0; i < buff.size(); ++i) {
     buff[i].first = std::move(name_buff[i]);
@@ -257,22 +257,22 @@ constexpr usize Cooler<N>::get_bin_size() const noexcept {
 template <class N>
 bool Cooler<N>::has_contacts_for_chrom(std::string_view chrom_name,
                                        bool try_common_chrom_prefixes) {
-  assert(this->_fp);  // NOLINT
+  assert(this->_fp);
   const auto chrom_idx = this->get_chrom_idx(chrom_name, try_common_chrom_prefixes);
   return this->has_contacts_for_chrom(chrom_idx);
 }
 
 template <class N>
 bool Cooler<N>::has_contacts_for_chrom(usize chrom_idx) const {
-  assert(this->_fp);                                   // NOLINT
-  assert(this->is_read_only());                        // NOLINT
-  assert(!this->_idx_bin1_offset.empty());             // NOLINT
-  assert(!this->_idx_chrom_offset.empty());            // NOLINT
-  assert(chrom_idx < this->_idx_chrom_offset.size());  // NOLINT
+  assert(this->_fp);
+  assert(this->is_read_only());
+  assert(!this->_idx_bin1_offset.empty());
+  assert(!this->_idx_chrom_offset.empty());
+  assert(chrom_idx < this->_idx_chrom_offset.size());
 
   const auto first_bin = static_cast<usize>(this->_idx_chrom_offset[chrom_idx]);
   const auto last_bin = static_cast<usize>(this->_idx_chrom_offset[chrom_idx + 1]);
-  assert(last_bin >= first_bin);  // NOLINT
+  assert(last_bin >= first_bin);
 
   return this->_idx_bin1_offset[first_bin] != this->_idx_bin1_offset[last_bin];
 }
@@ -379,7 +379,7 @@ std::unique_ptr<H5::H5File> Cooler<N>::open_file(const boost::filesystem::path &
                                                  usize bin_size,
                                                  [[maybe_unused]] usize max_str_length,
                                                  FLAVOR flavor, bool validate) {
-  assert(!path.has_parent_path() || boost::filesystem::is_directory(path.parent_path()));  // NOLINT
+  assert(!path.has_parent_path() || boost::filesystem::is_directory(path.parent_path()));
   if constexpr (utils::ndebug_not_defined()) {
     if (mode == IO_MODE::WRITE_ONLY) {
       if (bin_size == 0) {
@@ -417,7 +417,7 @@ std::unique_ptr<H5::H5File> Cooler<N>::open_file(const boost::filesystem::path &
 template <class N>
 std::vector<H5::Group> Cooler<N>::open_groups(H5::H5File &f, bool create_if_not_exist,
                                               usize bin_size) {
-  std::vector<H5::Group> groups(4);  // NOLINT
+  std::vector<H5::Group> groups(4);
 
   const std::string root_path = bin_size != 0 && hdf5::has_group(f, "/resolutions")
                                     ? absl::StrCat("/resolutions/", bin_size, "/")
@@ -476,9 +476,9 @@ usize Cooler<N>::read_bin1_offset_idx() {
 template <class N>
 absl::Span<const i64> Cooler<N>::get_bin1_offset_idx_for_chrom(
     usize chrom_idx, std::pair<usize, usize> chrom_subrange) {
-  assert(!this->_idx_bin1_offset.empty());             // NOLINT
-  assert(!this->_idx_chrom_offset.empty());            // NOLINT
-  assert(chrom_idx < this->_idx_chrom_offset.size());  // NOLINT
+  assert(!this->_idx_bin1_offset.empty());
+  assert(!this->_idx_chrom_offset.empty());
+  assert(chrom_idx < this->_idx_chrom_offset.size());
   const auto chrom_start_bin = static_cast<usize>(this->_idx_chrom_offset[chrom_idx]) +
                                (chrom_subrange.first / this->_bin_size);
   const auto chrom_end_bin =
@@ -488,8 +488,8 @@ absl::Span<const i64> Cooler<N>::get_bin1_offset_idx_for_chrom(
                 ((chrom_subrange.second + this->_bin_size - 1) / this->_bin_size);
   DISABLE_WARNING_PUSH
   DISABLE_WARNING_SIGN_COMPARE
-  assert(chrom_end_bin <= this->_idx_chrom_offset[chrom_idx + 1]);  // NOLINT
-  assert(chrom_end_bin >= chrom_start_bin);                         // NOLINT
+  assert(chrom_end_bin <= this->_idx_chrom_offset[chrom_idx + 1]);
+  assert(chrom_end_bin >= chrom_start_bin);
   DISABLE_WARNING_POP
 
   return absl::MakeConstSpan(this->_idx_bin1_offset)
@@ -511,11 +511,11 @@ std::pair<i64, i64> Cooler<N>::read_chrom_pixels_boundaries(std::string_view chr
 
 template <class N>
 std::pair<i64, i64> Cooler<N>::read_chrom_pixels_boundaries(usize chrom_idx) {
-  assert(chrom_idx < this->_idx_chrom_offset.size());  // NOLINT
-  assert(!this->_idx_chrom_offset.empty());            // NOLINT
+  assert(chrom_idx < this->_idx_chrom_offset.size());
+  assert(!this->_idx_chrom_offset.empty());
   const auto chrom_start_bin = static_cast<usize>(this->_idx_chrom_offset[chrom_idx]);
   const auto chrom_end_bin = static_cast<usize>(this->_idx_chrom_offset[chrom_idx + 1]);
-  assert(chrom_end_bin >= chrom_start_bin);  // NOLINT
+  assert(chrom_end_bin >= chrom_start_bin);
 
   std::pair<i64, i64> pixel_boundaries{};
   const auto &d = this->_datasets[IDX_BIN1];
@@ -531,13 +531,13 @@ void Cooler<N>::init_default_datasets() {
   this->_dataset_file_offsets.resize(DEFAULT_DATASETS_NR);
   std::fill(this->_dataset_file_offsets.begin(), this->_dataset_file_offsets.end(), 0);
 
-  assert(this->_cprop_str);    // NOLINT
-  assert(this->_cprop_int32);  // NOLINT
-  assert(this->_cprop_int64);  // NOLINT
+  assert(this->_cprop_str);
+  assert(this->_cprop_int32);
+  assert(this->_cprop_int64);
 
-  assert(this->_aprop_str);    // NOLINT
-  assert(this->_aprop_int32);  // NOLINT
-  assert(this->_aprop_int64);  // NOLINT
+  assert(this->_aprop_str);
+  assert(this->_aprop_int32);
+  assert(this->_aprop_int64);
 
   const auto &cpi64 = *this->_cprop_int64;
   [[maybe_unused]] const auto &cpi32 = *this->_cprop_int32;
@@ -592,11 +592,11 @@ void Cooler<N>::init_default_datasets() {
 
 template <class N>
 void Cooler<N>::open_default_datasets() {
-  assert(this->_fp);             // NOLINT
-  assert(this->_aprop_int32);    // NOLINT
-  assert(this->_aprop_int64);    // NOLINT
-  assert(this->_aprop_float64);  // NOLINT
-  assert(this->_aprop_str);      // NOLINT
+  assert(this->_fp);
+  assert(this->_aprop_int32);
+  assert(this->_aprop_int64);
+  assert(this->_aprop_float64);
+  assert(this->_aprop_str);
 
   auto &d = this->_datasets;
   auto &f = *this->_fp;

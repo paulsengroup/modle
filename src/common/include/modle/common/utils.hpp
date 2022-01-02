@@ -73,11 +73,9 @@ constexpr auto get_printable_type_name() noexcept;
 
 // Various
 
-struct XXH3_Deleter {  // NOLINT
+struct XXH3_Deleter {
   inline void operator()(XXH3_state_t* state) noexcept;
 };
-
-inline void fclose(FILE* fp) noexcept(false);
 
 // Try to convert str representations like "1.0" or "1.000000" to "1"
 [[nodiscard]] inline std::string str_float_to_str_int(const std::string& s);

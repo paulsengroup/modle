@@ -25,7 +25,10 @@
 
 namespace modle::test::cmatrix {
 
-inline const boost::filesystem::path data_dir{"test/data/unit_tests"};  // NOLINT
+[[maybe_unused]] static const boost::filesystem::path& data_dir() {
+  static const boost::filesystem::path data_dir{"test/data/unit_tests"};
+  return data_dir;
+}
 
 // clang-format off
 constexpr auto SCIPY_GAUSSIAN_BLUR_CMD{
@@ -96,7 +99,7 @@ template <class N>
 
 // NOLINTNEXTLINE(readability-function-cognitive-complexity)
 TEST_CASE("CMatrix simple", "[cmatrix][short]") {
-  ContactMatrix<> c(10, 100);  // NOLINT
+  ContactMatrix<> c(10, 100);
   CHECK(c.get(0, 0) == 0);
   c.increment(0, 0);
   CHECK(c.get(0, 0) == 1);
@@ -112,7 +115,7 @@ TEST_CASE("CMatrix simple", "[cmatrix][short]") {
   compressed_io::Reader r(path_to_file);
   std::string line;
   std::string buff;
-  u32 n;  // NOLINT
+  u32 n{};
   while (r.getline(line)) {
     std::vector<u32> v;
 
@@ -128,10 +131,10 @@ TEST_CASE("CMatrix simple", "[cmatrix][short]") {
 
 // NOLINTNEXTLINE(readability-function-cognitive-complexity)
 TEST_CASE("CMatrix 10x200", "[cmatrix][medium]") {
-  const auto input_file = data_dir / "symm_matrix_200_10.tsv.gz";
+  const auto input_file = data_dir() / "symm_matrix_200_10.tsv.gz";
   REQUIRE(boost::filesystem::exists(input_file));
   const auto m1 = load_matrix_from_file(input_file.string());
-  ContactMatrix<> m2(10, 200);  // NOLINT
+  ContactMatrix<> m2(10, 200);
   for (usize i = 0; i < m1.size(); ++i) {
     for (usize j = 0; j < m1[i].size(); ++j) {
       if (m1[i][j] != 0 && j >= i) {
@@ -150,11 +153,11 @@ TEST_CASE("CMatrix 10x200", "[cmatrix][medium]") {
 
 // NOLINTNEXTLINE(readability-function-cognitive-complexity)
 TEST_CASE("CMatrix in/decrement", "[cmatrix][short]") {
-  ContactMatrix<> m(10, 20);  // NOLINT
+  ContactMatrix<> m(10, 20);
   m.increment(0, 0);
-  m.increment(15, 15);  // NOLINT
+  m.increment(15, 15);
 
-  CHECK(m.get_tot_contacts() == 2);  // NOLINT
+  CHECK(m.get_tot_contacts() == 2);
   CHECK(m.get(0, 0) == 1);
 
   m.decrement(0, 0);
@@ -162,18 +165,18 @@ TEST_CASE("CMatrix in/decrement", "[cmatrix][short]") {
   CHECK(m.get(0, 0) == 0);
 
   REQUIRE(m.get_n_of_missed_updates() == 0);
-  m.increment(11, 0);  // NOLINT
+  m.increment(11, 0);
   CHECK(m.get(0, 0) == 0);
   CHECK(m.get_n_of_missed_updates() == 1);
   CHECK(m.get_tot_contacts() == 1);
 
   if constexpr (utils::ndebug_not_defined()) {
-    CHECK_THROWS_WITH(m.increment(25, 25),  // NOLINT
+    CHECK_THROWS_WITH(m.increment(25, 25),
                       Catch::Contains("Detected an out-of-bound read: attempt to access item at"));
     CHECK(m.get_n_of_missed_updates() == 1);
     CHECK(m.get_tot_contacts() == 1);
 
-    CHECK_THROWS_WITH(m.decrement(25, 25),  // NOLINT
+    CHECK_THROWS_WITH(m.decrement(25, 25),
                       Catch::Contains("Detected an out-of-bound read: attempt to access item at"));
     CHECK(m.get_n_of_missed_updates() == 1);
     CHECK(m.get_tot_contacts() == 1);
@@ -182,7 +185,7 @@ TEST_CASE("CMatrix in/decrement", "[cmatrix][short]") {
 
 // NOLINTNEXTLINE(readability-function-cognitive-complexity)
 TEST_CASE("CMatrix get w/ block", "[cmatrix][short]") {
-  ContactMatrix<u32> m1(100, 100);  // NOLINT
+  ContactMatrix<u32> m1(100, 100);
   // Fill the upper left corner
   for (u32 i = 0; i < 3; ++i) {
     for (u32 j = i; j < 3; ++j) {
@@ -191,16 +194,16 @@ TEST_CASE("CMatrix get w/ block", "[cmatrix][short]") {
   }
 
   // Fill a region away from the diagonal
-  for (u32 i = 20; i < 25; ++i) {    // NOLINT
-    for (u32 j = 25; j < 30; ++j) {  // NOLINT
+  for (u32 i = 20; i < 25; ++i) {
+    for (u32 j = 25; j < 30; ++j) {
       m1.set(i, j, 1);
     }
   }
 
   // Fill the lower right corner
-  for (u32 i = 97; i < 100; ++i) {        // NOLINT
-    for (u32 j = 97; j < 100; ++j) {      // NOLINT
-      m1.set(i, j, (i - 97) + (j - 97));  // NOLINT
+  for (u32 i = 97; i < 100; ++i) {
+    for (u32 j = 97; j < 100; ++j) {
+      m1.set(i, j, (i - 97) + (j - 97));
     }
   }
 
@@ -213,8 +216,8 @@ TEST_CASE("CMatrix get w/ block", "[cmatrix][short]") {
 
 // NOLINTNEXTLINE(readability-function-cognitive-complexity)
 TEST_CASE("CMatrix get w/ block small", "[cmatrix][short]") {
-  const auto reference_file = data_dir / "contacts_chr1_bs9_small.tsv";
-  const auto input_file = data_dir / "contacts_chr1_raw_small.tsv";
+  const auto reference_file = data_dir() / "contacts_chr1_bs9_small.tsv";
+  const auto input_file = data_dir() / "contacts_chr1_raw_small.tsv";
 
   const usize block_size = 9;
 
@@ -242,14 +245,14 @@ TEST_CASE("CMatrix get w/ block small", "[cmatrix][short]") {
 
 // NOLINTNEXTLINE(readability-function-cognitive-complexity)
 TEST_CASE("CMatrix get column", "[cmatrix][short]") {
-  ContactMatrix<> c(10, 100);  // NOLINT
+  ContactMatrix<> c(10, 100);
 
   const usize col = 25;  // Set a column of pixels to 1
   for (usize i = 0; i < c.nrows(); ++i) {
     c.set(col - i, col, static_cast<u32>(i));
   }
 
-  REQUIRE(c.get_tot_contacts() == 45);  // NOLINT
+  REQUIRE(c.get_tot_contacts() == 45);
   REQUIRE(c.get_n_of_missed_updates() == 0);
 
   std::vector<u32> buff;
@@ -287,14 +290,14 @@ TEST_CASE("CMatrix get column", "[cmatrix][short]") {
 
 // NOLINTNEXTLINE(readability-function-cognitive-complexity)
 TEST_CASE("CMatrix get row", "[cmatrix][short]") {
-  ContactMatrix<> c(10, 100);  // NOLINT
+  ContactMatrix<> c(10, 100);
 
   const usize row = 25;  // Set a row of pixels to 1
   for (usize i = 0; i < c.nrows(); ++i) {
     c.set(row, row + i, static_cast<u32>(i));
   }
 
-  REQUIRE(c.get_tot_contacts() == 45);  // NOLINT
+  REQUIRE(c.get_tot_contacts() == 45);
   REQUIRE(c.get_n_of_missed_updates() == 0);
 
   std::vector<u32> buff;
@@ -335,7 +338,7 @@ TEST_CASE("CMatrix get row", "[cmatrix][short]") {
 
 // NOLINTNEXTLINE(readability-function-cognitive-complexity)
 TEST_CASE("CMatrix blur", "[cmatrix][long]") {
-  const auto reference_file = data_dir / "cmatrix_002.tsv.gz";
+  const auto reference_file = data_dir() / "cmatrix_002.tsv.gz";
   const auto input_matrix = [&]() {
     ContactMatrix<> m;
     m.unsafe_import_from_txt(reference_file);
@@ -349,7 +352,7 @@ TEST_CASE("CMatrix blur", "[cmatrix][long]") {
         boost::process::search_path("python3").string(), "-c",
         fmt::format(FMT_STRING(SCIPY_GAUSSIAN_BLUR_CMD), shape, shape, sigma, trunc),
         boost::process::std_in<stdin_stream, boost::process::std_out> stdout_stream);
-    assert(py.running());  // NOLINT
+    assert(py.running());
 
     write_cmatrix_to_stream(input_matrix, stdin_stream);
     return read_cmatrix_from_stream<double>(input_matrix.nrows(), input_matrix.ncols(),
@@ -361,11 +364,11 @@ TEST_CASE("CMatrix blur", "[cmatrix][long]") {
 
   for (usize i = 0; i < sigmas.size(); ++i) {
     const auto reference_matrix =
-        compute_reference_matrix(input_matrix.ncols(), sigmas[i], cutoffs[i]);  // NOLINT
-    const auto blurred_matrix = input_matrix.blur(sigmas[i]);                   // NOLINT
+        compute_reference_matrix(input_matrix.ncols(), sigmas[i], cutoffs[i]);
+    const auto blurred_matrix = input_matrix.blur(sigmas[i]);
 
-    for (usize j = 4; j < input_matrix.nrows(); ++j) {       // NOLINT
-      for (auto k = j; k < input_matrix.ncols() - 4; ++k) {  // NOLINT
+    for (usize j = 4; j < input_matrix.nrows(); ++j) {
+      for (auto k = j; k < input_matrix.ncols() - 4; ++k) {
         CHECK(Approx(reference_matrix.get(j, k)) == blurred_matrix.get(j, k));
       }
     }
@@ -374,7 +377,7 @@ TEST_CASE("CMatrix blur", "[cmatrix][long]") {
 
 // NOLINTNEXTLINE(readability-function-cognitive-complexity)
 TEST_CASE("CMatrix blur parallel", "[cmatrix][long]") {
-  const auto reference_file = data_dir / "cmatrix_002.tsv.gz";
+  const auto reference_file = data_dir() / "cmatrix_002.tsv.gz";
   const auto input_matrix = [&]() {
     ContactMatrix<> m;
     m.unsafe_import_from_txt(reference_file);
@@ -388,7 +391,7 @@ TEST_CASE("CMatrix blur parallel", "[cmatrix][long]") {
         boost::process::search_path("python3").string(), "-c",
         fmt::format(FMT_STRING(SCIPY_GAUSSIAN_BLUR_CMD), shape, shape, sigma, trunc),
         boost::process::std_in<stdin_stream, boost::process::std_out> stdout_stream);
-    assert(py.running());  // NOLINT
+    assert(py.running());
 
     write_cmatrix_to_stream(input_matrix, stdin_stream);
     return read_cmatrix_from_stream<double>(input_matrix.nrows(), input_matrix.ncols(),
@@ -401,11 +404,11 @@ TEST_CASE("CMatrix blur parallel", "[cmatrix][long]") {
   thread_pool tpool;
   for (usize i = 0; i < sigmas.size(); ++i) {
     const auto reference_matrix =
-        compute_reference_matrix(input_matrix.ncols(), sigmas[i], cutoffs[i]);  // NOLINT
-    const auto blurred_matrix = input_matrix.blur(sigmas[i], 0.005, &tpool);    // NOLINT
+        compute_reference_matrix(input_matrix.ncols(), sigmas[i], cutoffs[i]);
+    const auto blurred_matrix = input_matrix.blur(sigmas[i], 0.005, &tpool);
 
-    for (usize j = 4; j < input_matrix.nrows(); ++j) {       // NOLINT
-      for (auto k = j; k < input_matrix.ncols() - 4; ++k) {  // NOLINT
+    for (usize j = 4; j < input_matrix.nrows(); ++j) {
+      for (auto k = j; k < input_matrix.ncols() - 4; ++k) {
         CHECK(Approx(reference_matrix.get(j, k)) == blurred_matrix.get(j, k));
       }
     }
@@ -414,7 +417,7 @@ TEST_CASE("CMatrix blur parallel", "[cmatrix][long]") {
 
 // NOLINTNEXTLINE(readability-function-cognitive-complexity)
 TEST_CASE("CMatrix difference of gaussians", "[cmatrix][long]") {
-  const auto reference_file = data_dir / "cmatrix_002.tsv.gz";
+  const auto reference_file = data_dir() / "cmatrix_002.tsv.gz";
   const auto input_matrix = [&]() {
     ContactMatrix<> m;
     m.unsafe_import_from_txt(reference_file);
@@ -429,7 +432,7 @@ TEST_CASE("CMatrix difference of gaussians", "[cmatrix][long]") {
         boost::process::search_path("python3").string(), "-c",
         fmt::format(FMT_STRING(SCIPY_GAUSSIAN_DIFFERENCE_CMD), shape, shape, sigma1, sigma2, trunc),
         boost::process::std_in<stdin_stream, boost::process::std_out> stdout_stream);
-    assert(py.running());  // NOLINT
+    assert(py.running());
 
     write_cmatrix_to_stream(input_matrix, stdin_stream);
     return read_cmatrix_from_stream<double>(input_matrix.nrows(), input_matrix.ncols(),
@@ -446,8 +449,8 @@ TEST_CASE("CMatrix difference of gaussians", "[cmatrix][long]") {
   const auto m1 = input_matrix.blur(sigma1);
   const auto m2 = input_matrix.blur(sigma2);
 
-  for (usize j = 4; j < input_matrix.nrows(); ++j) {       // NOLINT
-    for (auto k = j; k < input_matrix.ncols() - 4; ++k) {  // NOLINT
+  for (usize j = 4; j < input_matrix.nrows(); ++j) {
+    for (auto k = j; k < input_matrix.ncols() - 4; ++k) {
       CHECK(Approx(reference_matrix.get(j, k)) == gauss_diff_matrix.get(j, k));
       CHECK(Approx(m1.get(j, k) - m2.get(j, k)) == gauss_diff_matrix.get(j, k));
     }
@@ -456,7 +459,7 @@ TEST_CASE("CMatrix difference of gaussians", "[cmatrix][long]") {
 
 // NOLINTNEXTLINE(readability-function-cognitive-complexity)
 TEST_CASE("CMatrix difference of gaussians - parallel", "[cmatrix][long]") {
-  const auto reference_file = data_dir / "cmatrix_002.tsv.gz";
+  const auto reference_file = data_dir() / "cmatrix_002.tsv.gz";
   const auto input_matrix = [&]() {
     ContactMatrix<> m;
     m.unsafe_import_from_txt(reference_file);
@@ -471,7 +474,7 @@ TEST_CASE("CMatrix difference of gaussians - parallel", "[cmatrix][long]") {
         boost::process::search_path("python3").string(), "-c",
         fmt::format(FMT_STRING(SCIPY_GAUSSIAN_DIFFERENCE_CMD), shape, shape, sigma1, sigma2, trunc),
         boost::process::std_in<stdin_stream, boost::process::std_out> stdout_stream);
-    assert(py.running());  // NOLINT
+    assert(py.running());
 
     write_cmatrix_to_stream(input_matrix, stdin_stream);
     return read_cmatrix_from_stream<double>(input_matrix.nrows(), input_matrix.ncols(),
@@ -492,8 +495,8 @@ TEST_CASE("CMatrix difference of gaussians - parallel", "[cmatrix][long]") {
   const auto m1 = input_matrix.blur(sigma1);
   const auto m2 = input_matrix.blur(sigma2);
 
-  for (usize j = 4; j < input_matrix.nrows(); ++j) {       // NOLINT
-    for (auto k = j; k < input_matrix.ncols() - 4; ++k) {  // NOLINT
+  for (usize j = 4; j < input_matrix.nrows(); ++j) {
+    for (auto k = j; k < input_matrix.ncols() - 4; ++k) {
       CHECK(Approx(reference_matrix.get(j, k)) == gauss_diff_matrix.get(j, k));
       CHECK(Approx(m1.get(j, k) - m2.get(j, k)) == gauss_diff_matrix.get(j, k));
     }
@@ -503,7 +506,7 @@ TEST_CASE("CMatrix difference of gaussians - parallel", "[cmatrix][long]") {
 #ifdef MODLE_ENABLE_SANITIZER_THREAD
 // NOLINTNEXTLINE(readability-function-cognitive-complexity)
 TEST_CASE("CMatrix pixel locking TSAN", "[cmatrix][long]") {
-  ContactMatrix<i64> m(100, 10);  // NOLINT
+  ContactMatrix<i64> m(100, 10);
   std::atomic<bool> stop_sig = false;
 
   // Increment a random pixel by 1 until stop_sign is flipped
@@ -538,8 +541,8 @@ TEST_CASE("CMatrix pixel locking TSAN", "[cmatrix][long]") {
     }
   });
 
-  std::this_thread::sleep_for(std::chrono::seconds(15));  // NOLINT
-  // std::this_thread::sleep_for(std::chrono::seconds(3600));  // NOLINT
+  std::this_thread::sleep_for(std::chrono::seconds(15));
+  // std::this_thread::sleep_for(std::chrono::seconds(3600));
 
   stop_sig = true;
   tpool.wait_for_tasks();
@@ -556,7 +559,7 @@ TEST_CASE("CMatrix pixel locking TSAN", "[cmatrix][long]") {
 
 // NOLINTNEXTLINE(readability-function-cognitive-complexity)
 TEST_CASE("CMatrix global locking TSAN", "[cmatrix][long]") {
-  ContactMatrix<i64> m(100, 10);  // NOLINT
+  ContactMatrix<i64> m(100, 10);
   std::atomic<bool> stop_sig = false;
 
   // Increment a random pixel by 1 until stop_sign is flipped
@@ -594,8 +597,8 @@ TEST_CASE("CMatrix global locking TSAN", "[cmatrix][long]") {
     }
   });
 
-  std::this_thread::sleep_for(std::chrono::seconds(15));  // NOLINT
-  // std::this_thread::sleep_for(std::chrono::seconds(3600));  // NOLINT
+  std::this_thread::sleep_for(std::chrono::seconds(15));
+  // std::this_thread::sleep_for(std::chrono::seconds(3600));
 
   stop_sig = true;
   tpool.wait_for_tasks();

@@ -19,7 +19,8 @@ namespace modle {
 class Cli;
 class Simulation;
 
-struct Config {  // NOLINT(altera-struct-pack-align)
+// NOLINTNEXTLINE(altera-struct-pack-align,clang-analyzer-optin.performance.Padding)
+struct Config {
   friend Cli;
   friend Simulation;
   // clang-format off
@@ -45,37 +46,37 @@ struct Config {  // NOLINT(altera-struct-pack-align)
   bool write_header{true};
 
   // General settings
-  bp_t bin_size{10'000};                                     // NOLINT(readability-magic-numbers, cppcoreguidelines-avoid-magic-numbers)
+  bp_t bin_size{10'000};
   bp_t fwd_extrusion_speed{bin_size / 2};
   bp_t rev_extrusion_speed{fwd_extrusion_speed};
-  double fwd_extrusion_speed_std{0.05};                      // NOLINT(readability-magic-numbers, cppcoreguidelines-avoid-magic-numbers)
+  double fwd_extrusion_speed_std{0.05};
   double rev_extrusion_speed_std{fwd_extrusion_speed_std};
-  usize num_cells{5'000};                                    // NOLINT(readability-magic-numbers, cppcoreguidelines-avoid-magic-numbers)
+  usize num_cells{5'000};
   usize nthreads{std::thread::hardware_concurrency()};
-  bp_t diagonal_width{3'000'000 /* 3 Mbp */};                // NOLINT(readability-magic-numbers, cppcoreguidelines-avoid-magic-numbers)
-  usize simulation_epochs{200};                          // NOLINT(readability-magic-numbers, cppcoreguidelines-avoid-magic-numbers)
+  bp_t diagonal_width{3'000'000 /* 3 Mbp */};
+  usize simulation_epochs{200};
   double target_contact_density{0.0};
   double number_of_lefs_per_mbp;
-  double prob_of_lef_release{0.015};                         // NOLINT(readability-magic-numbers, cppcoreguidelines-avoid-magic-numbers)
-  double hard_stall_lef_stability_multiplier{5.0};           // NOLINT(readability-magic-numbers, cppcoreguidelines-avoid-magic-numbers)
-  double soft_stall_lef_stability_multiplier{1.0};           // NOLINT(readability-magic-numbers, cppcoreguidelines-avoid-magic-numbers)
-  bp_t deletion_size{10'000};                                // NOLINT(readability-magic-numbers, cppcoreguidelines-avoid-magic-numbers)
+  double prob_of_lef_release{0.015};
+  double hard_stall_lef_stability_multiplier{5.0};
+  double soft_stall_lef_stability_multiplier{1.0};
+  bp_t deletion_size{10'000};
   bool compute_reference_matrix{false};
-  usize block_size{9};                                       // NOLINT(readability-magic-numbers, cppcoreguidelines-avoid-magic-numbers)
+  usize block_size{9};
   u64 seed{0};
 
   // Misc probabilities
-  double probability_of_extrusion_unit_bypass{0.1};      // NOLINT(readability-magic-numbers, cppcoreguidelines-avoid-magic-numbers)
-  double extrusion_barrier_occupancy{0.825};             // NOLINT(readability-magic-numbers, cppcoreguidelines-avoid-magic-numbers)
-  double ctcf_occupied_self_prob{0.0};                   // NOLINT(readability-magic-numbers, cppcoreguidelines-avoid-magic-numbers)
-  double ctcf_not_occupied_self_prob{0.70};              // NOLINT(readability-magic-numbers, cppcoreguidelines-avoid-magic-numbers)
-  double lef_bar_major_collision_pblock{1.0};            // NOLINT(readability-magic-numbers, cppcoreguidelines-avoid-magic-numbers)
-  double lef_bar_minor_collision_pblock{0.0};            // NOLINT(readability-magic-numbers, cppcoreguidelines-avoid-magic-numbers)
-  double lef_fraction_contact_sampling{0.025};           // NOLINT(readability-magic-numbers, cppcoreguidelines-avoid-magic-numbers)
+  double probability_of_extrusion_unit_bypass{0.1};
+  double extrusion_barrier_occupancy{0.825};
+  double ctcf_occupied_self_prob{0.0};
+  double ctcf_not_occupied_self_prob{0.70};
+  double lef_bar_major_collision_pblock{1.0};
+  double lef_bar_minor_collision_pblock{0.0};
+  double lef_fraction_contact_sampling{0.025};
   bool randomize_contacts{false};
-  double genextreme_mu{0};                               // NOLINT(readability-magic-numbers, cppcoreguidelines-avoid-magic-numbers)
-  double genextreme_sigma{5'000};                        // NOLINT(readability-magic-numbers, cppcoreguidelines-avoid-magic-numbers)
-  double genextreme_xi{0.001};                           // NOLINT(readability-magic-numbers, cppcoreguidelines-avoid-magic-numbers)
+  double genextreme_mu{0};
+  double genextreme_sigma{5'000};
+  double genextreme_xi{0.001};
 
   // Burn-in
   bool skip_burnin{false};

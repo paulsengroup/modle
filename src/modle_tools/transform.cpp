@@ -219,11 +219,11 @@ void transform_subcmd(const modle::tools::transform_config& c) {
     const auto matrix_dbl =
         process_chromosome(tpool, chrom_name, bin_size, input_cooler, c, discretization_ranges);
     if (c.floating_point) {
-      assert(cooler_dbl);  // NOLINT
+      assert(cooler_dbl);
       cooler_dbl->write_or_append_cmatrix_to_file(matrix_dbl, chrom_name, usize(0), chrom_size,
                                                   chrom_size);
     } else {
-      assert(cooler_int);  // NOLINT
+      assert(cooler_int);
       cooler_int->write_or_append_cmatrix_to_file(matrix_dbl.as<i32>(), chrom_name, usize(0),
                                                   chrom_size, chrom_size);
     }

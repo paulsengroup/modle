@@ -34,7 +34,7 @@ std::vector<bed::BED> Parser::parse_all(char sep) {
     }
 
     tokens = absl::StrSplit(buff, sep);
-    assert(!tokens.empty());  // NOLINT; This should only happen at EOF, which is handled elsewhere
+    assert(!tokens.empty());
     try {
       if (tokens.size() < 2) {
         throw std::runtime_error(fmt::format(FMT_STRING("Expected 2 or more tokens, got {}: '{}'"),

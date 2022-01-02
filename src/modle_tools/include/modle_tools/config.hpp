@@ -18,7 +18,7 @@
 
 namespace modle::tools {
 
-struct eval_config {  // NOLINT
+struct eval_config {
   // IO
   boost::filesystem::path path_to_input_matrix;
   boost::filesystem::path output_prefix;
@@ -53,7 +53,7 @@ struct eval_config {  // NOLINT
   bool reciprocal_weights{false};
 };
 
-struct find_barrier_clusters_config {  // NOLINT
+struct find_barrier_clusters_config {
   // IO
   boost::filesystem::path path_to_input_barriers;
   boost::filesystem::path path_to_output;
@@ -62,14 +62,14 @@ struct find_barrier_clusters_config {  // NOLINT
   bool quiet{false};
 
   // Cluster properties
-  bp_t extension_window{5000};  // NOLINT
+  bp_t extension_window{5000};
   bp_t min_cluster_span{0};
   bp_t max_cluster_span{0};
   bp_t min_cluster_size{0};
   bp_t max_cluster_size{0};
 };
 
-struct noisify_config {  // NOLINT
+struct noisify_config {
   // IO
   boost::filesystem::path path_to_input_matrix;
   boost::filesystem::path path_to_output_matrix;
@@ -81,12 +81,12 @@ struct noisify_config {  // NOLINT
 
   // Noise properties
   double genextreme_mu{0};
-  double genextreme_sigma{7'500};  // NOLINT
-  double genextreme_xi{0.001};     // NOLINT
+  double genextreme_sigma{7'500};
+  double genextreme_xi{0.001};
   u64 seed{0};
 };
 
-struct stats_config {  // NOLINT
+struct stats_config {
   // IO
   boost::filesystem::path path_to_input_matrix;
   boost::filesystem::path path_to_chrom_subranges;
@@ -101,7 +101,7 @@ struct stats_config {  // NOLINT
   double depletion_multiplier{1.0};
 };
 
-struct transform_config {  // NOLINT
+struct transform_config {
   // IO
   boost::filesystem::path path_to_input_matrix;
   boost::filesystem::path path_to_output_matrix;

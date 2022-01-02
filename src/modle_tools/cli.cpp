@@ -48,7 +48,7 @@ void Cli::make_eval_subcommand() {
                                   "various correlation tests.")
                   ->fallthrough()
                   ->preparse_callback([this]([[maybe_unused]] usize i) {
-                    assert(this->_config.index() == 0);  // NOLINT empty variant
+                    assert(this->_config.index() == 0);
                     this->_config = eval_config{};
                   });
   sc.alias("eval");
@@ -166,7 +166,7 @@ void Cli::make_find_barrier_clusters_subcommand() {
                                   "Detect clusters of extrusion barriers given a BED file.")
                   ->fallthrough()
                   ->preparse_callback([this]([[maybe_unused]] usize i) {
-                    assert(this->_config.index() == 0);  // NOLINT empty variant
+                    assert(this->_config.index() == 0);
                     this->_config = find_barrier_clusters_config{};
                   });
 
@@ -259,7 +259,7 @@ void Cli::make_noisify_subcommand() {
            .add_subcommand("noisify", "Add noise to MoDLE's contact matrix in Cooler format.")
            ->fallthrough()
            ->preparse_callback([this]([[maybe_unused]] usize i) {
-             assert(this->_config.index() == 0);  // NOLINT empty variant
+             assert(this->_config.index() == 0);
              this->_config = noisify_config{};
            });
 
@@ -342,7 +342,7 @@ void Cli::make_transform_subcommand() {
                                   "resolution and bin size.")
                   ->fallthrough()
                   ->preparse_callback([this]([[maybe_unused]] usize i) {
-                    assert(this->_config.index() == 0);  // NOLINT empty variant
+                    assert(this->_config.index() == 0);
                     this->_config = transform_config{};
                   });
 
@@ -477,7 +477,7 @@ void Cli::make_cli() {
 }
 
 void Cli::validate_eval_subcommand() const {
-  assert(this->_cli.get_subcommand("eval")->parsed());  // NOLINT
+  assert(this->_cli.get_subcommand("eval")->parsed());
   std::vector<std::string> errors;
   const auto& c = absl::get<eval_config>(this->_config);
 
@@ -524,7 +524,7 @@ void Cli::validate_eval_subcommand() const {
     const auto metric_name = [&]() {
       const auto* it = std::find_if(eval_config::metric_map.begin(), eval_config::metric_map.end(),
                                     [&](const auto p) { return p.second == c.metric; });
-      assert(it != eval_config::metric_map.end());  // NOLINT
+      assert(it != eval_config::metric_map.end());
       return it->first;
     }();
 
@@ -556,11 +556,11 @@ void Cli::validate_eval_subcommand() const {
 }
 
 void Cli::validate_find_barrier_clusters_subcommand() const {
-  assert(this->_cli.get_subcommand("find-barrier-clusters")->parsed());  // NOLINT
+  assert(this->_cli.get_subcommand("find-barrier-clusters")->parsed());
   std::vector<std::string> errors;
   const auto& c = absl::get<find_barrier_clusters_config>(this->_config);
 
-  assert(boost::filesystem::exists(c.path_to_input_barriers));  // NOLINT
+  assert(boost::filesystem::exists(c.path_to_input_barriers));
 
   if (auto collision =
           utils::detect_path_collision(c.path_to_output, c.force, boost::filesystem::regular_file);
@@ -596,14 +596,14 @@ void Cli::validate_find_barrier_clusters_subcommand() const {
 
 void Cli::validate_noisify_subcommand() const {
   std::string errors;
-  assert(this->_cli.get_subcommand("noisify")->parsed());  // NOLINT
+  assert(this->_cli.get_subcommand("noisify")->parsed());
   const auto& c = absl::get<noisify_config>(this->_config);
 
-  assert(boost::filesystem::exists(c.path_to_input_matrix));  // NOLINT
+  assert(boost::filesystem::exists(c.path_to_input_matrix));
   try {
     cooler::Cooler f(c.path_to_input_matrix, cooler::Cooler<>::IO_MODE::READ_ONLY, c.bin_size);
   } catch (const std::runtime_error& e) {
-    if (absl::EndsWith(e.what(),  // NOLINT
+    if (absl::EndsWith(e.what(),
                        "A bin size other than 0 is required when calling "
                        "Cooler::validate_multires_cool_flavor()")) {
       absl::StrAppendFormat(
@@ -639,7 +639,7 @@ void Cli::validate_noisify_subcommand() const {
 }
 
 void Cli::validate_transform_subcommand() const {
-  assert(this->_cli.get_subcommand("transform")->parsed());  // NOLINT
+  assert(this->_cli.get_subcommand("transform")->parsed());
   std::vector<std::string> errors;
   const auto& c = absl::get<transform_config>(this->_config);
 
@@ -770,7 +770,7 @@ std::string Cli::to_json() const {
     // All we are doing here is to look for an argument name containing '.'.
     // In this way we can filter out entry corresponding to arguments for inactive subcommands
     const auto arg = line.substr(0, line.find('='));
-    assert(!arg.empty());  // NOLINT
+    assert(!arg.empty());
     if (arg.find('.') == decltype(arg)::npos) {
       absl::StrAppend(&buff, line, "\n");
     }
@@ -800,7 +800,7 @@ std::string_view Cli::subcommand_to_str(subcommand s) noexcept {
     case transform:
       return "transform";
     default:
-      assert(s == help);  // NOLINT
+      assert(s == help);
       return "--help";
   }
 }

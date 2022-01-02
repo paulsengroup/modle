@@ -37,7 +37,7 @@ std::vector<FP> compute_gauss_kernel(const usize size, const FP sigma) {
 
 template <class FP, class>
 void compute_gauss_kernel(const usize size, std::vector<FP>& buff, const FP sigma) {
-  assert(size % 2 != 0);  // NOLINT
+  assert(size % 2 != 0);
   buff.resize(size * size);
   const auto q = FP(2) * sigma * sigma;
   const auto denom = q * boost::math::constants::pi<FP>();

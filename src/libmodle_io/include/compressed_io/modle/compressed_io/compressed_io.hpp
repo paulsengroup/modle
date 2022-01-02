@@ -29,8 +29,8 @@ class Reader {
   using archive_ptr_t = std::unique_ptr<archive, decltype(&archive_read_free)>;
 
  public:
-  Reader() = default;  // NOLINTNEXTLINE
-  Reader(const boost::filesystem::path& path, usize buff_capacity = 512 * 1024);
+  Reader() = default;
+  explicit Reader(const boost::filesystem::path& path, usize buff_capacity = 512 * 1024);
 
   bool getline(std::string& buff, char sep = '\n');
   [[nodiscard]] std::string_view getline(char sep = '\n');
@@ -75,7 +75,7 @@ class Writer {
   enum Compression : u8f { AUTO = 0, NONE = 1, GZIP = 2, BZIP2 = 3, LZMA = 4, ZSTD = 5 };
 
   Writer() = default;
-  explicit Writer(const boost::filesystem::path& path, Compression compression = AUTO);  // NOLINT
+  explicit Writer(const boost::filesystem::path& path, Compression compression = AUTO);
 
   [[nodiscard]] bool is_open() const noexcept;
   void close();

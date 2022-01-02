@@ -144,8 +144,7 @@ struct BED {
   bool parse_block_starts(const std::vector<std::string_view>& toks);
   void parse_extra_tokens(const std::vector<std::string_view>& toks);
 
-  [[nodiscard]] u64 hash(XXH3_state_t* state,
-                         u64 seed = 17039577131913730910ULL) const;  // NOLINT
+  [[nodiscard]] u64 hash(XXH3_state_t* state, u64 seed = 17039577131913730910ULL) const;
 };
 
 template <typename K = std::string, typename I = bp_t>
@@ -222,7 +221,7 @@ class Parser {
   [[nodiscard]] BED parse_next();
   [[nodiscard]] std::vector<BED> parse_n(usize num_records);
   [[nodiscard]] BED_tree<> parse_n_in_interval_tree(usize num_records);
-  [[nodiscard]] std::string validate(usize nrecords = 100);  // NOLINT
+  [[nodiscard]] std::string validate(usize nrecords = 100);
   [[nodiscard]] std::vector<BED> parse_all();
   [[nodiscard]] BED_tree<> parse_all_in_interval_tree();
   void reset();

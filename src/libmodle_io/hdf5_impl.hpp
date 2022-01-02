@@ -224,7 +224,7 @@ hsize_t read_numbers(const H5::DataSet &dataset, CN &buff, hsize_t file_offset) 
     if (const auto n_items = static_cast<hsize_t>(file_space.getSimpleExtentNpoints());
         n_items < BUFF_SIZE || BUFF_SIZE == 0) {
       BUFF_SIZE = n_items;
-      assert(BUFF_SIZE > 0);  // NOLINT
+      assert(BUFF_SIZE > 0);
       buff.resize(BUFF_SIZE);
     }
 
@@ -308,7 +308,7 @@ void read_attribute(H5::H5File &f, std::string_view attr_name, T &buff, std::str
   }
 
   // Map HDF5 type to C++ type using absl::variant
-  assert(h5_class == H5T_INTEGER || h5_class == H5T_FLOAT);  // NOLINT
+  assert(h5_class == H5T_INTEGER || h5_class == H5T_FLOAT);
   auto vars = h5_class == H5T_INTEGER ? get_cpp_arithmetic_type(attr.getIntType())
                                       : get_cpp_arithmetic_type(attr.getFloatType());
   // Visit the appropriate variant and read the attribute
@@ -338,15 +338,14 @@ void read_attribute(H5::H5File &f, std::string_view attr_name, T &buff, std::str
           DISABLE_WARNING_CONVERSION
           DISABLE_WARNING_SIGN_CONVERSION
 #endif
-          if (v >= (std::numeric_limits<T>::min)() &&
-              v <= (std::numeric_limits<T>::max)()) {  // NOLINT
+          if (v >= (std::numeric_limits<T>::min)() && v <= (std::numeric_limits<T>::max)()) {
             DISABLE_WARNING_POP
             buff = static_cast<T>(v);
           } else {
             throw std::runtime_error(fmt::format(
                 FMT_STRING("Unable to store attribute '{}' with value {} in a buffer with "
                            "type {}. Reason: value does not fit in the receiver"),
-                attr_name, v, utils::get_printable_type_name<T>()));  // NOLINT
+                attr_name, v, utils::get_printable_type_name<T>()));
           }
         }
       },
@@ -377,7 +376,7 @@ void read_attribute(const H5::DataSet &d, std::string_view attr_name, T &buff) {
     }
     hsize_t buff_size{0};  // Figure out the appropriate buffer size
     attr.getSpace().getSimpleExtentDims(&buff_size);
-    assert(buff_size > 1);  // NOLINT
+    assert(buff_size > 1);
     buff.resize(buff_size);
     attr.read(attr.getArrayType(), buff.data());
   }
@@ -499,14 +498,14 @@ template <class H5Type>
 [[nodiscard]] attr_types get_cpp_arithmetic_type(const H5Type &h5_type) {
   static_assert(std::is_base_of_v<H5Type, H5::IntType> || std::is_base_of_v<H5Type, H5::FloatType>);
 
-  attr_types type;  // NOLINT
+  attr_types type;
   const auto size = h5_type.getSize();
   DISABLE_WARNING_PUSH
   DISABLE_WARNING_USELESS_CAST
   if constexpr (std::is_same_v<H5Type, H5::IntType>) {
-    assert(h5_type.getSign() != H5T_SGN_ERROR);  // NOLINT
+    assert(h5_type.getSign() != H5T_SGN_ERROR);
     const bool is_signed = h5_type.getSign() == H5T_SGN_NONE;
-    assert(size >= 1 && size <= 8);  // NOLINT
+    assert(size >= 1 && size <= 8);
     if (is_signed) {
       switch (size) {
         case (sizeof(i8)):
@@ -566,20 +565,20 @@ inline H5::PredType getH5_type() {
   // https://github.com/DavidAce/h5pp/blob/master/h5pp/include/h5pp/details/h5ppUtils.h
   // clang-format off
   using DecayType = typename std::decay_t<DataType>;
-  if constexpr (std::is_same_v<DecayType, short>) return H5::PredType::NATIVE_SHORT;               // NOLINT
-  if constexpr (std::is_same_v<DecayType, int>) return H5::PredType::NATIVE_INT;                   // NOLINT
-  if constexpr (std::is_same_v<DecayType, long>) return H5::PredType::NATIVE_LONG;                 // NOLINT
-  if constexpr (std::is_same_v<DecayType, long long>) return H5::PredType::NATIVE_LLONG;           // NOLINT
-  if constexpr (std::is_same_v<DecayType, unsigned short>) return H5::PredType::NATIVE_USHORT;     // NOLINT
-  if constexpr (std::is_same_v<DecayType, unsigned int>) return H5::PredType::NATIVE_UINT;         // NOLINT
-  if constexpr (std::is_same_v<DecayType, unsigned long>) return H5::PredType::NATIVE_ULONG;       // NOLINT
-  if constexpr (std::is_same_v<DecayType, unsigned long long>) return H5::PredType::NATIVE_ULLONG; // NOLINT
-  if constexpr (std::is_same_v<DecayType, double>) return H5::PredType::NATIVE_DOUBLE;             // NOLINT
-  if constexpr (std::is_same_v<DecayType, long double>) return H5::PredType::NATIVE_LDOUBLE;       // NOLINT
-  if constexpr (std::is_same_v<DecayType, float>) return H5::PredType::NATIVE_FLOAT;               // NOLINT
-  if constexpr (std::is_same_v<DecayType, bool>) return H5::PredType::NATIVE_UINT8;                // NOLINT
-  if constexpr (std::is_same_v<DecayType, std::string>) return H5::PredType::C_S1;                 // NOLINT
-  if constexpr (std::is_same_v<DecayType, char>) return H5::PredType::C_S1;                        // NOLINT
+  if constexpr (std::is_same_v<DecayType, short>) return H5::PredType::NATIVE_SHORT;
+  if constexpr (std::is_same_v<DecayType, int>) return H5::PredType::NATIVE_INT;
+  if constexpr (std::is_same_v<DecayType, long>) return H5::PredType::NATIVE_LONG;
+  if constexpr (std::is_same_v<DecayType, long long>) return H5::PredType::NATIVE_LLONG;
+  if constexpr (std::is_same_v<DecayType, unsigned short>) return H5::PredType::NATIVE_USHORT;
+  if constexpr (std::is_same_v<DecayType, unsigned int>) return H5::PredType::NATIVE_UINT;
+  if constexpr (std::is_same_v<DecayType, unsigned long>) return H5::PredType::NATIVE_ULONG;
+  if constexpr (std::is_same_v<DecayType, unsigned long long>) return H5::PredType::NATIVE_ULLONG;
+  if constexpr (std::is_same_v<DecayType, double>) return H5::PredType::NATIVE_DOUBLE;
+  if constexpr (std::is_same_v<DecayType, long double>) return H5::PredType::NATIVE_LDOUBLE;
+  if constexpr (std::is_same_v<DecayType, float>) return H5::PredType::NATIVE_FLOAT;
+  if constexpr (std::is_same_v<DecayType, bool>) return H5::PredType::NATIVE_UINT8;
+  if constexpr (std::is_same_v<DecayType, std::string>) return H5::PredType::C_S1;
+  if constexpr (std::is_same_v<DecayType, char>) return H5::PredType::C_S1;
   // clang-format on
 
   throw std::logic_error("getH5_type(): Unable to map C++ type to a H5T");

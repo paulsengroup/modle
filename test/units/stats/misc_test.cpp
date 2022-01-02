@@ -37,7 +37,7 @@ constexpr auto GENERATE_REFERENCE_KERNEL_CMD{
       boost::process::search_path("python3").string(), "-c",
       fmt::format(FMT_STRING(GENERATE_REFERENCE_KERNEL_CMD), size, sigma),
       boost::process::std_in.close(), boost::process::std_out > stdout_stream);
-  assert(c.running());  // NOLINT
+  assert(c.running());
 
   std::string sbuff;
   std::getline(stdout_stream, sbuff);
@@ -47,15 +47,15 @@ constexpr auto GENERATE_REFERENCE_KERNEL_CMD{
     buff.push_back(utils::parse_numeric_or_throw<double>(tok));
   }
 
-  assert(buff.size() == size * size);           // NOLINT
-  assert(!std::getline(stdout_stream, sbuff));  // NOLINT
+  assert(buff.size() == size * size);
+  assert(!std::getline(stdout_stream, sbuff));
   return buff;
 }
 
 // NOLINTNEXTLINE(readability-function-cognitive-complexity)
 TEST_CASE("Gaussian kernel", "[stats][short]") {
-  for (usize size = 3; size < 25; size += 2) {                  // NOLINT
-    for (const auto sigma : {0.5, 1.0, 1.5, 2.5, 6.3, 10.0}) {  // NOLINT
+  for (usize size = 3; size < 25; size += 2) {
+    for (const auto sigma : {0.5, 1.0, 1.5, 2.5, 6.3, 10.0}) {
       const auto ref_kernel = generate_reference_kernel(size, sigma);
       const auto kernel = compute_gauss_kernel(size, sigma);
       REQUIRE(ref_kernel.size() == kernel.size());

@@ -73,7 +73,7 @@ std::string construct_error_stack(std::string_view function_name, std::string_vi
   H5::Exception::clearErrorStack();
 
   if (!function_name.empty()) {
-    assert(!detail_msg.empty());  // NOLINT
+    assert(!detail_msg.empty());
     return fmt::format(
         FMT_STRING("function \"{}\" failed with message \"{}\":\n HDF5 error stack:\n{}"),
         function_name, detail_msg, buff.empty() ? "Not available" : buff);
@@ -170,14 +170,14 @@ std::string read_attribute_str(const boost::filesystem::path &path_to_file,
 }
 
 i64 read_attribute_int(H5::H5File &f, std::string_view attr_name, std::string_view path) {
-  i64 buff;  // NOLINT
+  i64 buff;
   read_attribute(f, attr_name, buff, path);
   return buff;
 }
 
 i64 read_attribute_int(const boost::filesystem::path &path_to_file, std::string_view attr_name,
                        std::string_view path) {
-  i64 buff;  // NOLINT
+  i64 buff;
   const auto lck = internal::lock();
   auto f = open_file_for_reading(path_to_file);
   read_attribute(f, attr_name, buff, path);
@@ -207,7 +207,7 @@ bool has_group(H5::H5File &f, std::string_view name, std::string_view root_path)
   H5O_info2_t info;
   const auto path =
       absl::StrCat(absl::StripSuffix(root_path, "/"), "/", absl::StripPrefix(name, "/"));
-  assert(!path.empty());  // NOLINT
+  assert(!path.empty());
   usize pos = 0;
   const auto lck = internal::lock();
   do {
@@ -228,7 +228,7 @@ bool has_dataset(H5::H5File &f, std::string_view name, std::string_view root_pat
   H5O_info2_t info;
   const auto path =
       absl::StrCat(absl::StripSuffix(root_path, "/"), "/", absl::StripPrefix(name, "/"));
-  assert(!path.empty());  // NOLINT
+  assert(!path.empty());
   usize pos = 0;
   const auto lck = internal::lock();
   do {
@@ -276,13 +276,13 @@ H5::DataSet open_dataset(H5::H5File &f, const std::string &name,
 
 H5::Group open_group(H5::H5File &f, const std::string &name) {
   const auto lck = internal::lock();
-  assert(hdf5::has_group(f, name));  // NOLINT
+  assert(hdf5::has_group(f, name));
   return f.openGroup(name);
 }
 
 H5::Group create_group(H5::H5File &f, const std::string &name) {
   const auto lck = internal::lock();
-  assert(!hdf5::has_group(f, name));  // NOLINT
+  assert(!hdf5::has_group(f, name));
   return f.createGroup(name);
 }
 

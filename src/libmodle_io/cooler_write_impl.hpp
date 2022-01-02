@@ -46,7 +46,7 @@ void Cooler<N>::write_metadata() {
                                "read-only mode. File name: {}"),
                     this->_path_to_file.string()));
   }
-  assert(this->_bin_size != 0);  // NOLINT
+  assert(this->_bin_size != 0);
   i64 int_buff{};
   std::string str_buff{};
   std::string name{};
@@ -102,8 +102,8 @@ void Cooler<N>::write_metadata_attribute(std::string_view metadata_str) {
                     this->_path_to_file.string()));
   }
 
-  assert(this->_bin_size != 0);   // NOLINT
-  assert(!metadata_str.empty());  // NOLINT
+  assert(this->_bin_size != 0);
+  assert(!metadata_str.empty());
   const std::string name = "metadata";
   const std::string buff{metadata_str};
 
@@ -143,9 +143,9 @@ void Cooler<N>::write_or_append_cmatrix_to_file(const ContactMatrix<M> *cmatrix,
   static_assert(std::is_floating_point_v<N> == std::is_floating_point_v<M>,
                 "Cooler<N> and ContactMatrix<M> template arguments should both be integral or "
                 "floating point types.");
-  assert(chrom_start_ >= 0);   // NOLINT
-  assert(chrom_end_ >= 0);     // NOLINT
-  assert(chrom_length_ >= 0);  // NOLINT
+  assert(chrom_start_ >= 0);
+  assert(chrom_end_ >= 0);
+  assert(chrom_length_ >= 0);
   assert(this->_bin_size != 0);
   const auto chrom_start = static_cast<usize>(chrom_start_);
   const auto chrom_end = static_cast<usize>(chrom_end_);
@@ -153,7 +153,7 @@ void Cooler<N>::write_or_append_cmatrix_to_file(const ContactMatrix<M> *cmatrix,
 
   ++this->_nchroms;
 
-  assert(this->_buff);  // NOLINT
+  assert(this->_buff);
   auto &b = *this->_buff;
 
   // Declare aliases to file offsets for HDF5 datasets
@@ -349,7 +349,7 @@ template <class N>
 template <class I1, class I2, class I3>
 hsize_t Cooler<N>::write_bins(I1 chrom_, I2 length_, I3 bin_size_, std::vector<i32> &buff32,
                               std::vector<i64> &buff64, hsize_t file_offset, hsize_t buff_size) {
-  assert(bin_size_ != 0);  // NOLINT
+  assert(bin_size_ != 0);
   buff32.resize(buff_size);
   buff64.resize(buff_size);
   const auto chromosome = static_cast<i32>(chrom_);
@@ -383,7 +383,7 @@ hsize_t Cooler<N>::write_bins(I1 chrom_, I2 length_, I3 bin_size_, std::vector<i
     file_offset = hdf5::write_numbers(buff64, d[BIN_END], file_offset);
     bins_processed += chunk_size;
   }
-  assert(buff64.back() == length);  // NOLINT
+  assert(buff64.back() == length);
 
   return file_offset;
 }

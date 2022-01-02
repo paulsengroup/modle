@@ -208,15 +208,6 @@ constexpr bool ndebug_defined() noexcept {
 
 constexpr bool ndebug_not_defined() noexcept { return !ndebug_defined(); }
 
-void fclose(FILE *fp) noexcept(false) {
-  if (!fp || fp == stdout || fp == stderr) {
-    return;
-  }
-  if (std::fclose(fp) != 0) {  // NOLINT
-    throw fmt::system_error(errno, FMT_STRING("Failed to close a file handle"));
-  }
-}
-
 // Try to convert str representations like "1.0" or "1.000000" to "1"
 std::string str_float_to_str_int(const std::string &s) {
   try {
@@ -405,7 +396,7 @@ constexpr N convolve(InputIt1 kernel_first, InputIt1 kernel_last, InputIt2 buff_
 
 template <class Rng1, class Rng2, class N, class>
 constexpr N convolve(const Rng1 &kernel, const Rng2 &buff) {
-  assert(kernel.size() == buff.size());  // NOLINT
+  assert(kernel.size() == buff.size());
   return convolve(kernel.begin(), kernel.end(), buff.begin());
 }
 
@@ -415,7 +406,7 @@ constexpr I next_pow2(const I n) noexcept {
   DISABLE_WARNING_USELESS_CAST
   using ull = unsigned long long;
   if constexpr (std::is_signed_v<I>) {
-    assert(n >= 0);  // NOLINT;
+    assert(n >= 0);
     return static_cast<I>(next_pow2(static_cast<ull>(n)));
   } else {
     auto m = static_cast<ull>(n);

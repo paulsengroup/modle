@@ -14,7 +14,7 @@ namespace modle {
 // deletes istelf as well as its content by default.
 // This can be prevented by setting the internal flag to true.
 // The default constructor will create a unique, randomly named directory under the system tmpdir
-class SmartDir {  // NOLINT
+class SmartDir {
  public:
   [[maybe_unused]] inline SmartDir() {
     boost::filesystem::path path{
@@ -32,6 +32,9 @@ class SmartDir {  // NOLINT
     this->set_delete_on_destruction(delete_on_destruction);
   }
 
+  SmartDir(const SmartDir& other) = delete;
+  SmartDir(SmartDir&& other) = delete;
+
   inline ~SmartDir() {
     if (this->get_delete_on_destruction()) {
       boost::filesystem::remove_all(this->_path);
@@ -48,6 +51,9 @@ class SmartDir {  // NOLINT
   [[maybe_unused]] inline void set_delete_on_destruction(const bool flag) noexcept {
     this->_delete_on_destruction = flag;
   }
+
+  SmartDir& operator=(const SmartDir& other) = delete;
+  SmartDir& operator=(SmartDir&& other) = delete;
 
  private:
   boost::filesystem::path _path;

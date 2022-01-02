@@ -32,7 +32,9 @@ namespace modle::hdf5 {
 
 namespace internal {
 [[nodiscard]] std::scoped_lock<std::recursive_mutex> lock();
-inline static std::recursive_mutex global_mtx;  // NOLINT
+// NOLINTNEXTLINE(cppcoreguidelines-avoid-non-const-global-variables)
+inline static std::recursive_mutex global_mtx;
+
 }  // namespace internal
 
 template <class DataType>

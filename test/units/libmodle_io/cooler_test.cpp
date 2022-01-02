@@ -27,8 +27,10 @@
 #include "modle/contacts.hpp"                     // for ContactMatrix
 
 namespace modle::test {
-const auto cleanup_on_exit{true};         // Useful for debugging
-const SmartDir testdir{cleanup_on_exit};  // NOLINT Using auto here upsets GCC8
+[[maybe_unused]] static const boost::filesystem::path& testdir(bool cleanup_on_exit = true) {
+  static const SmartDir dir{cleanup_on_exit};
+  return dir();
+}
 }  // namespace modle::test
 
 namespace modle::test::cooler {
@@ -37,7 +39,7 @@ using Cooler = Cooler<>;
 // using default_sink_t = spdlog::sinks::stderr_color_sink_mt;
 using default_sink_t = spdlog::sinks::null_sink_mt;
 
-inline const boost::filesystem::path data_dir{"test/data/unit_tests"};  // NOLINT
+inline const boost::filesystem::path data_dir{"test/data/unit_tests"};
 
 // NOLINTNEXTLINE(readability-function-cognitive-complexity)
 TEST_CASE("cooler ctor", "[io][cooler][short]") {
@@ -45,7 +47,7 @@ TEST_CASE("cooler ctor", "[io][cooler][short]") {
   spdlog::set_default_logger(
       std::make_shared<spdlog::logger>("main_logger", std::make_shared<default_sink_t>()));
   {
-    auto c = Cooler(test_file, Cooler::IO_MODE::READ_ONLY);  // NOLINT
+    auto c = Cooler(test_file, Cooler::IO_MODE::READ_ONLY);
     CHECK(c.is_read_only());
   }
 

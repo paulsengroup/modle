@@ -574,7 +574,7 @@ const Config& Cli::parse_arguments() {
   } else if (this->_cli.get_subcommand("perturbate")->parsed()) {
     this->_subcommand = pertubate;
   } else {
-    assert(this->_cli.get_subcommand("replay")->parsed());  // NOLINT
+    assert(this->_cli.get_subcommand("replay")->parsed());
     this->_subcommand = replay;
     // The code in this branch basically tricks CLI11 into parsing a config file by creating a fake
     // argv like: {"modle", "pert", "--config", "myconfig.toml"}
@@ -609,7 +609,7 @@ std::string Cli::detect_path_collisions(modle::Config& c) const {
   }
 
   auto check_for_path_collisions = [](const boost::filesystem::path& path) -> std::string {
-    assert(!path.empty());  // NOLINT
+    assert(!path.empty());
     if (boost::filesystem::exists(path)) {
       if (boost::filesystem::is_directory(path)) {
         return fmt::format(
@@ -674,8 +674,8 @@ void Cli::validate_args() const {
   std::vector<std::string> errors;
 
   if (c.burnin_smoothing_window_size > c.burnin_history_length) {
-    assert(this->_cli.get_option("--burnin-smoothing-window-size"));  // NOLINT
-    assert(this->_cli.get_option("--burnin-history-length"));         // NOLINT
+    assert(this->_cli.get_option("--burnin-smoothing-window-size"));
+    assert(this->_cli.get_option("--burnin-history-length"));
     errors.emplace_back(fmt::format(
         FMT_STRING("The value passed to {} should be less or equal than that of {} ({} > {})"),
         "--burnin-smoothing-window-size", "--burnin-history-length", c.burnin_smoothing_window_size,
@@ -724,10 +724,10 @@ void Cli::transform_args() {
 
   // Compute mean and std for rev and fwd extrusion speed
   if (auto& speed = c.rev_extrusion_speed; speed == (std::numeric_limits<bp_t>::max)()) {
-    speed = static_cast<bp_t>(std::round(static_cast<double>(c.bin_size) / 2.0));  // NOLINT
+    speed = static_cast<bp_t>(std::round(static_cast<double>(c.bin_size) / 2.0));
   }
   if (auto& speed = c.fwd_extrusion_speed; speed == (std::numeric_limits<bp_t>::max)()) {
-    speed = static_cast<bp_t>(std::round(static_cast<double>(c.bin_size) / 2.0));  // NOLINT
+    speed = static_cast<bp_t>(std::round(static_cast<double>(c.bin_size) / 2.0));
   }
 
   if (auto& stddev = c.fwd_extrusion_speed_std; stddev > 0 && stddev < 1) {
@@ -784,7 +784,7 @@ std::string Cli::to_json() const {
     // All we are doing here is to look for an argument name containing '.'.
     // In this way we can filter out entry corresponding to arguments for inactive subcommands
     const auto arg = line.substr(0, line.find('='));
-    assert(!arg.empty());  // NOLINT
+    assert(!arg.empty());
     if (!absl::StrContains(arg, '.')) {
       absl::StrAppend(&buff, line, "\n");
     }

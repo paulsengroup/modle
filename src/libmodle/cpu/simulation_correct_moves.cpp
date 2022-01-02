@@ -30,12 +30,12 @@ void Simulation::correct_moves_for_lef_bar_collisions(
             rev_collisions[i].collision_occurred(CollisionT::LEF_BAR))) {  // Process rev collisions
       const auto barrier_idx = rev_collisions[i].decode_index();
       const auto& barrier = barriers[barrier_idx];
-      assert(lefs[i].rev_unit.pos() > barrier.pos());  // NOLINT
+      assert(lefs[i].rev_unit.pos() > barrier.pos());
 
       // Compute the distance and update the rev_move such that after extruding once, the rev unit
       // of the current LEF will be located 1bp downstream of the extr. barrier.
       const auto distance = lefs[i].rev_unit.pos() - barrier.pos();
-      assert(distance != 0);  // NOLINT
+      assert(distance != 0);
       rev_moves[i] = std::min(distance, distance - 1);
     }
 
@@ -43,11 +43,11 @@ void Simulation::correct_moves_for_lef_bar_collisions(
             fwd_collisions[i].collision_occurred(CollisionT::LEF_BAR))) {  // Process fwd collisions
       const auto barrier_idx = fwd_collisions[i].decode_index();
       const auto& barrier = barriers[barrier_idx];
-      assert(lefs[i].fwd_unit.pos() < barrier.pos());  // NOLINT
+      assert(lefs[i].fwd_unit.pos() < barrier.pos());
 
       // Same as above. In this case the unit will be located 1bp upstream of the extr. barrier.
       const auto distance = barrier.pos() - lefs[i].fwd_unit.pos();
-      assert(distance != 0);  // NOLINT
+      assert(distance != 0);
       fwd_moves[i] = std::min(distance, distance - 1);
     }
   }
@@ -76,8 +76,8 @@ void Simulation::correct_moves_for_primary_lef_lef_collisions(
         auto& fwd_move = fwd_moves[fwd_idx];
 
         const auto [p1, p2] = compute_lef_lef_collision_pos(rev_unit, fwd_unit, rev_move, fwd_move);
-        assert(rev_unit.pos() >= p1);  // NOLINT
-        assert(fwd_unit.pos() <= p2);  // NOLINT
+        assert(rev_unit.pos() >= p1);
+        assert(fwd_unit.pos() <= p2);
 
         // Update the moves of the involved units, so that after the next call to extrude these
         // two units will be located nex to each others at the collision site.
@@ -95,7 +95,7 @@ void Simulation::correct_moves_for_primary_lef_lef_collisions(
         auto& rev_move = rev_moves[rev_idx];
         const auto& fwd_move = fwd_moves[fwd_idx];
 
-        assert(rev_unit.pos() >= fwd_unit.pos() + fwd_move);  // NOLINT
+        assert(rev_unit.pos() >= fwd_unit.pos() + fwd_move);
         rev_move = rev_unit.pos() - (fwd_unit.pos() + fwd_move) - 1;
       }
     }
@@ -117,7 +117,7 @@ void Simulation::correct_moves_for_primary_lef_lef_collisions(
         const auto& rev_move = rev_moves[rev_idx];
         auto& fwd_move = fwd_moves[fwd_idx];
 
-        assert(rev_unit.pos() >= fwd_unit.pos() + rev_move);  // NOLINT
+        assert(rev_unit.pos() >= fwd_unit.pos() + rev_move);
         fwd_move = (rev_unit.pos() - rev_move) - fwd_unit.pos() - 1;
       }
     }

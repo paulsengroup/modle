@@ -27,9 +27,9 @@ DISABLE_WARNING_POP
 namespace modle::io::bigwig {
 
 class Writer {
-  static inline u32 _global_bigwig_files_opened{0};  // NOLINT
+  static inline u32 _global_bigwig_files_opened{0};
   // This mutex protects read and write access to _global_bigwig_files_opened
-  static inline std::mutex _global_state_mutex;  // NOLINT
+  static inline std::mutex _global_state_mutex;
 
   static constexpr uint_fast8_t DEFAULT_ZOOM_LEVELS{10};
   static constexpr usize DEFAULT_BUFFER_SIZE{1U << 17U};  // 128 KiB

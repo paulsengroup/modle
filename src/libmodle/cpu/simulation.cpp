@@ -121,11 +121,10 @@ void Simulation::write_contacts_to_disk(std::deque<std::pair<Chromosome*, usize>
     if (c && !this->argv_json.empty()) {
       c->write_metadata_attribute(this->argv_json);
     }
-    // NOLINTNEXTLINE(readability-magic-numbers, cppcoreguidelines-avoid-magic-numbers)
     auto sleep_us = 100;
     while (this->ok()) {  // Structuring the loop in this way allows us to sleep without
                           // holding the mutex
-      sleep_us = std::min(500000, sleep_us * 2);  // NOLINT
+      sleep_us = std::min(500000, sleep_us * 2);
       std::this_thread::sleep_for(std::chrono::microseconds(sleep_us));
       {
         std::scoped_lock lck(progress_queue_mtx);
@@ -139,16 +138,16 @@ void Simulation::write_contacts_to_disk(std::deque<std::pair<Chromosome*, usize>
           break;
         }
         // count == ncells signals that we are done simulating the current chromosome
-        else if (count == num_cells) {  // NOLINT
+        else if (count == num_cells) {
           chrom_to_be_written = chrom;
           progress_queue.pop_front();
         } else {
-          assert(count < num_cells);  // NOLINT
+          assert(count < num_cells);
           continue;
         }
       }
-      sleep_us = 100;  // NOLINT(readability-magic-numbers, cppcoreguidelines-avoid-magic-numbers)
-      if (c) {         // c == nullptr only when --skip-output is used
+      sleep_us = 100;
+      if (c) {  // c == nullptr only when --skip-output is used
         // NOTE here we have to use pointers instead of references because
         // chrom_to_be_written.contacts() == nullptr is used to signal an empty matrix.
         // In this case, c->write_or_append_cmatrix_to_file() will create an entry in the chroms and
@@ -167,11 +166,11 @@ void Simulation::write_contacts_to_disk(std::deque<std::pair<Chromosome*, usize>
             chrom_to_be_written->size());
 
         if (chrom_to_be_written->contacts_ptr()) {
-          spdlog::info(
-              FMT_STRING("Written {} contacts for '{}' in {:.2f}M pixels to file {}."),
-              chrom_to_be_written->contacts().get_tot_contacts(), chrom_to_be_written->name(),
-              static_cast<double>(chrom_to_be_written->contacts().npixels()) / 1.0e6,  // NOLINT
-              c->get_path());
+          spdlog::info(FMT_STRING("Written {} contacts for '{}' in {:.2f}M pixels to file {}."),
+                       chrom_to_be_written->contacts().get_tot_contacts(),
+                       chrom_to_be_written->name(),
+                       static_cast<double>(chrom_to_be_written->contacts().npixels()) / 1.0e6,
+                       c->get_path());
         } else {
           spdlog::info(FMT_STRING("Created an entry for '{}' in file {}."),
                        chrom_to_be_written->name(), c->get_path());
@@ -205,8 +204,8 @@ void Simulation::write_contacts_to_disk(std::deque<std::pair<Chromosome*, usize>
 bp_t Simulation::generate_rev_move(const Chromosome& chrom, const ExtrusionUnit& unit,
                                    const double avg_extr_speed, const double extr_speed_std,
                                    random::PRNG_t& rand_eng) {
-  assert(unit.pos() >= chrom.start_pos());  // NOLINT
-  if (extr_speed_std == 0.0) {              // When std == 0 always return the avg. extrusion speed
+  assert(unit.pos() >= chrom.start_pos());
+  if (extr_speed_std == 0.0) {  // When std == 0 always return the avg. extrusion speed
     // (except when unit is close to chrom start pos.)
     return std::min(static_cast<bp_t>(avg_extr_speed), unit.pos() - chrom.start_pos());
   }
@@ -223,7 +222,7 @@ bp_t Simulation::generate_fwd_move(const Chromosome& chrom, const ExtrusionUnit&
                                    const double avg_extr_speed, const double extr_speed_std,
                                    random::PRNG_t& rand_eng) {
   // See Simulation::generate_rev_move for comments
-  assert(unit.pos() < chrom.end_pos());  // NOLINT
+  assert(unit.pos() < chrom.end_pos());
   if (extr_speed_std == 0.0) {
     return std::min(static_cast<bp_t>(avg_extr_speed), (chrom.end_pos() - 1) - unit.pos());
   }
@@ -239,10 +238,10 @@ void Simulation::generate_moves(const Chromosome& chrom, const absl::Span<const 
                                 const bool burnin_completed, random::PRNG_t& rand_eng,
                                 bool adjust_moves_) const noexcept(utils::ndebug_defined()) {
   {
-    assert(lefs.size() == fwd_lef_ranks.size());  // NOLINT
-    assert(lefs.size() == rev_lef_ranks.size());  // NOLINT
-    assert(lefs.size() == fwd_moves.size());      // NOLINT
-    assert(lefs.size() == rev_moves.size());      // NOLINT
+    assert(lefs.size() == fwd_lef_ranks.size());
+    assert(lefs.size() == rev_lef_ranks.size());
+    assert(lefs.size() == fwd_moves.size());
+    assert(lefs.size() == rev_moves.size());
   }
 
   // As long as a LEF is bound to DNA, always generate a move
@@ -272,7 +271,7 @@ void Simulation::adjust_moves_of_consecutive_extr_units(
     [[maybe_unused]] const Chromosome& chrom, absl::Span<const Lef> lefs,
     absl::Span<const usize> rev_lef_ranks, absl::Span<const usize> fwd_lef_ranks,
     absl::Span<bp_t> rev_moves, absl::Span<bp_t> fwd_moves) noexcept(utils::ndebug_defined()) {
-  assert(!lefs.empty());  // NOLINT
+  assert(!lefs.empty());
 
   // Loop over pairs of consecutive extr. units.
   // Extr. units moving in rev direction are processed in 3'-5' order, while units moving in fwd
@@ -284,8 +283,8 @@ void Simulation::adjust_moves_of_consecutive_extr_units(
       const auto idx2 = rev_lef_ranks[rev_offset - i];
 
       if (lefs[idx1].is_bound() && lefs[idx2].is_bound()) {
-        assert(lefs[idx1].rev_unit.pos() >= chrom.start_pos() + rev_moves[idx1]);  // NOLINT
-        assert(lefs[idx2].rev_unit.pos() >= chrom.start_pos() + rev_moves[idx2]);  // NOLINT
+        assert(lefs[idx1].rev_unit.pos() >= chrom.start_pos() + rev_moves[idx1]);
+        assert(lefs[idx2].rev_unit.pos() >= chrom.start_pos() + rev_moves[idx2]);
 
         const auto pos1 = lefs[idx1].rev_unit.pos() - rev_moves[idx1];
         const auto pos2 = lefs[idx2].rev_unit.pos() - rev_moves[idx2];
@@ -307,8 +306,8 @@ void Simulation::adjust_moves_of_consecutive_extr_units(
 
     // See above for detailed comments. The logic is the same used on rev units (but mirrored!)
     if (lefs[idx1].is_bound() && lefs[idx2].is_bound()) {
-      assert(lefs[idx1].fwd_unit.pos() + fwd_moves[idx1] < chrom.end_pos());  // NOLINT
-      assert(lefs[idx1].fwd_unit.pos() + fwd_moves[idx2] < chrom.end_pos());  // NOLINT
+      assert(lefs[idx1].fwd_unit.pos() + fwd_moves[idx1] < chrom.end_pos());
+      assert(lefs[idx1].fwd_unit.pos() + fwd_moves[idx2] < chrom.end_pos());
 
       const auto pos1 = lefs[idx1].fwd_unit.pos() + fwd_moves[idx1];
       const auto pos2 = lefs[idx2].fwd_unit.pos() + fwd_moves[idx2];
@@ -326,19 +325,19 @@ void Simulation::rank_lefs(const absl::Span<const Lef> lefs,
                            const absl::Span<usize> fwd_lef_rank_buff,
                            bool ranks_are_partially_sorted,
                            bool init_buffers) noexcept(utils::ndebug_defined()) {
-  assert(lefs.size() == fwd_lef_rank_buff.size());  // NOLINT
-  assert(lefs.size() == rev_lef_rank_buff.size());  // NOLINT
+  assert(lefs.size() == fwd_lef_rank_buff.size());
+  assert(lefs.size() == rev_lef_rank_buff.size());
 
   auto rev_comparator = [&](const auto r1, const auto r2) constexpr noexcept {
-    assert(r1 < lefs.size());  // NOLINT
-    assert(r2 < lefs.size());  // NOLINT
+    assert(r1 < lefs.size());
+    assert(r2 < lefs.size());
     return lefs[r1].rev_unit.pos() < lefs[r2].rev_unit.pos();
   };
 
   // See comments for rev_comparator.
   auto fwd_comparator = [&](const auto r1, const auto r2) constexpr noexcept {
-    assert(r1 < lefs.size());  // NOLINT
-    assert(r2 < lefs.size());  // NOLINT
+    assert(r1 < lefs.size());
+    assert(r2 < lefs.size());
     return lefs[r1].fwd_unit.pos() < lefs[r2].fwd_unit.pos();
   };
 
@@ -376,8 +375,8 @@ void Simulation::rank_lefs(const absl::Span<const Lef> lefs,
       end = i;
       cppsort::insertion_sort(rev_lef_rank_buff.begin() + begin, rev_lef_rank_buff.begin() + end,
                               [&lefs](const auto r11, const auto r22) {
-                                assert(r11 < lefs.size());  // NOLINT
-                                assert(r22 < lefs.size());  // NOLINT
+                                assert(r11 < lefs.size());
+                                assert(r22 < lefs.size());
                                 return lefs[r11].binding_epoch < lefs[r22].binding_epoch;
                               });
       // begin = end;
@@ -400,8 +399,8 @@ void Simulation::rank_lefs(const absl::Span<const Lef> lefs,
       end = i;
       cppsort::insertion_sort(fwd_lef_rank_buff.begin() + begin, fwd_lef_rank_buff.begin() + end,
                               [&lefs](const auto r11, const auto r22) {
-                                assert(r11 < lefs.size());  // NOLINT
-                                assert(r22 < lefs.size());  // NOLINT
+                                assert(r11 < lefs.size());
+                                assert(r22 < lefs.size());
                                 return lefs[r22].binding_epoch < lefs[r11].binding_epoch;
                               });
       // begin = end;
@@ -415,10 +414,10 @@ void Simulation::extrude([[maybe_unused]] const Chromosome& chrom, const absl::S
                          const usize num_rev_units_at_5prime,
                          const usize num_fwd_units_at_3prime) noexcept(utils::ndebug_defined()) {
   {
-    assert(lefs.size() == rev_moves.size());         // NOLINT
-    assert(lefs.size() == fwd_moves.size());         // NOLINT
-    assert(lefs.size() >= num_rev_units_at_5prime);  // NOLINT
-    assert(lefs.size() >= num_fwd_units_at_3prime);  // NOLINT
+    assert(lefs.size() == rev_moves.size());
+    assert(lefs.size() == fwd_moves.size());
+    assert(lefs.size() >= num_rev_units_at_5prime);
+    assert(lefs.size() >= num_fwd_units_at_3prime);
   }
 
   auto i1 = std::min(num_rev_units_at_5prime, num_rev_units_at_5prime - 1);
@@ -428,16 +427,16 @@ void Simulation::extrude([[maybe_unused]] const Chromosome& chrom, const absl::S
     if (MODLE_UNLIKELY(!lef.is_bound())) {  // Do not process inactive LEFs
       continue;
     }
-    // assert(lef.rev_unit.pos() <= lef.fwd_unit.pos());                 // NOLINT
-    assert(lef.rev_unit.pos() >= chrom.start_pos() + rev_moves[i1]);  // NOLINT
-    assert(lef.fwd_unit.pos() + fwd_moves[i1] < chrom.end_pos());     // NOLINT
+    // assert(lef.rev_unit.pos() <= lef.fwd_unit.pos());
+    assert(lef.rev_unit.pos() >= chrom.start_pos() + rev_moves[i1]);
+    assert(lef.fwd_unit.pos() + fwd_moves[i1] < chrom.end_pos());
 
     // Extrude rev unit
     lef.rev_unit._pos -= rev_moves[i1];  // Advance extr. unit in 3'-5' direction
 
     // Extrude fwd unit
-    lef.fwd_unit._pos += fwd_moves[i1];                // Advance extr. unit in 5'-3' direction
-    assert(lef.rev_unit.pos() <= lef.fwd_unit.pos());  // NOLINT
+    lef.fwd_unit._pos += fwd_moves[i1];  // Advance extr. unit in 5'-3' direction
+    assert(lef.rev_unit.pos() <= lef.fwd_unit.pos());
   }
 }
 
@@ -455,19 +454,19 @@ std::pair<bp_t, bp_t> Simulation::compute_lef_lef_collision_pos(const ExtrusionU
 
   const auto collision_pos =
       fwd_pos + static_cast<bp_t>(std::round((static_cast<double>(fwd_speed) * time_to_collision)));
-  assert(collision_pos <= rev_pos);  // NOLINT
+  assert(collision_pos <= rev_pos);
 #ifndef NDEBUG
   const auto collision_pos_ =
       static_cast<double>(rev_pos) - static_cast<double>(rev_speed) * time_to_collision;
-  assert(abs(static_cast<double>(collision_pos) - collision_pos_) < 1.0);  // NOLINT
+  assert(abs(static_cast<double>(collision_pos) - collision_pos_) < 1.0);
 #endif
   if (MODLE_UNLIKELY(collision_pos == fwd_pos)) {
-    assert(collision_pos >= fwd_pos);      // NOLINT
-    assert(collision_pos + 1 <= rev_pos);  // NOLINT
+    assert(collision_pos >= fwd_pos);
+    assert(collision_pos + 1 <= rev_pos);
     return std::make_pair(collision_pos + 1, collision_pos);
   }
-  assert(collision_pos > 0);             // NOLINT
-  assert(collision_pos - 1 >= fwd_pos);  // NOLINT
+  assert(collision_pos > 0);
+  assert(collision_pos - 1 >= fwd_pos);
   return std::make_pair(collision_pos, collision_pos - 1);
 }
 
@@ -485,7 +484,7 @@ usize Simulation::register_contacts(const bp_t start_pos, const bp_t end_pos,
   // beginning/end of a chromosome)
   usize new_contacts = 0;
   for (const auto i : selected_lef_idx) {
-    assert(i < lefs.size());  // NOLINT
+    assert(i < lefs.size());
     const auto& lef = lefs[i];
     if (MODLE_LIKELY(lef.is_bound() && lef.rev_unit.pos() > start_pos &&
                      lef.rev_unit.pos() < end_pos && lef.fwd_unit.pos() > start_pos &&
@@ -519,7 +518,7 @@ usize Simulation::register_contacts_w_randomization(bp_t start_pos, bp_t end_pos
 
   usize new_contacts = 0;
   for (const auto i : selected_lef_idx) {
-    assert(i < lefs.size());  // NOLINT
+    assert(i < lefs.size());
     const auto& lef = lefs[i];
     if (MODLE_LIKELY(lef.is_bound() && lef.rev_unit.pos() > start_pos &&
                      lef.rev_unit.pos() < end_pos && lef.fwd_unit.pos() > start_pos &&
@@ -549,10 +548,10 @@ usize Simulation::release_lefs(const absl::Span<Lef> lefs,
                                const absl::Span<const CollisionT> fwd_collisions,
                                random::PRNG_t& rand_eng) const noexcept {
   auto compute_lef_unloader_affinity = [&](const auto j) {
-    assert(lefs[j].is_bound());  // NOLINT
+    assert(lefs[j].is_bound());
 
     auto is_lef_bar_hard_collision = [&](const auto c, dna::Direction d) {
-      assert(d == dna::rev || d == dna::fwd);  // NOLINT
+      assert(d == dna::rev || d == dna::fwd);
       if (c.collision_occurred(CollisionT::LEF_BAR)) {
         return barriers[c.decode_index()].blocking_direction_major() == d;
       }
@@ -579,7 +578,7 @@ usize Simulation::release_lefs(const absl::Span<Lef> lefs,
   for (usize i = 0; i < lefs.size(); ++i) {
     if (MODLE_LIKELY(lefs[i].is_bound())) {
       const auto p = compute_lef_unloader_affinity(i) * this->prob_of_lef_release;
-      assert(p >= 0 && p <= 1);  // NOLINT
+      assert(p >= 0 && p <= 1);
       if (MODLE_UNLIKELY(random::bernoulli_trial{p}(rand_eng))) {
         ++lefs_released;
         lefs[i].release();
@@ -600,7 +599,7 @@ Simulation::Task Simulation::Task::from_string(std::string_view serialized_task,
   [[maybe_unused]] const usize ntoks = 7;
   const auto sep = '\t';
   const std::vector<std::string_view> toks = absl::StrSplit(serialized_task, sep);
-  assert(toks.size() == ntoks);  // NOLINT
+  assert(toks.size() == ntoks);
 
   Task t;
   try {
@@ -611,7 +610,7 @@ Simulation::Task Simulation::Task::from_string(std::string_view serialized_task,
     utils::parse_numeric_or_throw(toks[i++], t.num_target_epochs);
     utils::parse_numeric_or_throw(toks[i++], t.num_target_contacts);
     utils::parse_numeric_or_throw(toks[i++], t.num_lefs);
-    usize num_barriers_expected;  // NOLINT
+    usize num_barriers_expected;
     utils::parse_numeric_or_throw(toks[i++], num_barriers_expected);
 
     auto chrom_it = genome.find(chrom_name);
@@ -643,7 +642,7 @@ Simulation::TaskPW Simulation::TaskPW::from_string(std::string_view serialized_t
   [[maybe_unused]] const usize ntoks = 15;
   const auto sep = '\t';
   const std::vector<std::string_view> toks = absl::StrSplit(serialized_task, sep);
-  assert(toks.size() == ntoks);  // NOLINT
+  assert(toks.size() == ntoks);
 
   TaskPW t;
   try {
@@ -654,7 +653,7 @@ Simulation::TaskPW Simulation::TaskPW::from_string(std::string_view serialized_t
     utils::parse_numeric_or_throw(toks[i++], t.num_target_epochs);
     utils::parse_numeric_or_throw(toks[i++], t.num_target_contacts);
     utils::parse_numeric_or_throw(toks[i++], t.num_lefs);
-    usize num_barriers_expected;  // NOLINT
+    usize num_barriers_expected;
     utils::parse_numeric_or_throw(toks[i++], num_barriers_expected);
     utils::parse_numeric_or_throw(toks[i++], t.deletion_begin);
     utils::parse_numeric_or_throw(toks[i++], t.deletion_size);
@@ -662,8 +661,8 @@ Simulation::TaskPW Simulation::TaskPW::from_string(std::string_view serialized_t
     utils::parse_numeric_or_throw(toks[i++], t.window_end);
     utils::parse_numeric_or_throw(toks[i++], t.active_window_start);
     utils::parse_numeric_or_throw(toks[i++], t.active_window_end);
-    usize num_feats1_expected;  // NOLINT
-    usize num_feats2_expected;  // NOLINT
+    usize num_feats1_expected;
+    usize num_feats2_expected;
     utils::parse_numeric_or_throw(toks[i++], num_feats1_expected);
     utils::parse_numeric_or_throw(toks[i++], num_feats2_expected);
 
@@ -681,7 +680,7 @@ Simulation::TaskPW Simulation::TaskPW::from_string(std::string_view serialized_t
     }
     t.barriers = absl::MakeConstSpan(t.chrom->barriers().data());
 
-    assert(t.chrom->get_features().size() == 2);  // NOLINT
+    assert(t.chrom->get_features().size() == 2);
     Simulation::map_barriers_to_window(t, *t.chrom);
     Simulation::map_features_to_window(t, *t.chrom);
 
@@ -736,7 +735,7 @@ absl::Span<Lef> Simulation::State::get_lefs(usize size) noexcept {
   if (size == State::npos) {
     size = this->num_active_lefs;
   }
-  assert(size <= this->lef_buff.size());  // NOLINT
+  assert(size <= this->lef_buff.size());
   return absl::MakeSpan(this->lef_buff.data(), size);
 }
 absl::Span<usize> Simulation::State::get_rev_ranks(usize size) noexcept {
@@ -915,7 +914,7 @@ Simulation::State& Simulation::State::operator=(const TaskPW& task) {
   this->feats1 = task.feats1;
   this->feats2 = task.feats2;
 
-  assert(task.reference_contacts);  // NOLINT
+  assert(task.reference_contacts);
   this->reference_contacts = task.reference_contacts;
   return *this;
 }
@@ -970,7 +969,7 @@ void Simulation::compute_loop_size_stats(const absl::Span<const Lef> lefs,
                                          std::deque<double>& cfx_of_variation_buff,
                                          std::deque<double>& avg_loop_size_buff,
                                          const usize buff_capacity) noexcept {
-  assert(cfx_of_variation_buff.size() == avg_loop_size_buff.size());  // NOLINT
+  assert(cfx_of_variation_buff.size() == avg_loop_size_buff.size());
   if (lefs.empty()) {
     cfx_of_variation_buff.clear();
     avg_loop_size_buff.clear();
@@ -995,8 +994,8 @@ void Simulation::compute_loop_size_stats(const absl::Span<const Lef> lefs,
 bool Simulation::evaluate_burnin(const std::deque<double>& cfx_of_variation_buff,
                                  [[maybe_unused]] const std::deque<double>& avg_loop_size_buff,
                                  const usize buff_capacity, const usize window_size) noexcept {
-  assert(cfx_of_variation_buff.size() == avg_loop_size_buff.size());  // NOLINT
-  assert(cfx_of_variation_buff.size() <= buff_capacity);              // NOLINT
+  assert(cfx_of_variation_buff.size() == avg_loop_size_buff.size());
+  assert(cfx_of_variation_buff.size() <= buff_capacity);
 
   if (cfx_of_variation_buff.size() != buff_capacity) {
     return false;
@@ -1007,7 +1006,7 @@ bool Simulation::evaluate_burnin(const std::deque<double>& cfx_of_variation_buff
   // stable state the above line should be relatively flat. For this reason, we expect n to be
   // roughly equal to 1/2 of all the measurements
   usize n = 0;
-  assert(window_size < buff_capacity);  // NOLINT
+  assert(window_size < buff_capacity);
   for (auto it1 = cfx_of_variation_buff.begin() + 1,
             it2 = cfx_of_variation_buff.begin() + static_cast<isize>(window_size + 1);
        it2 != cfx_of_variation_buff.end(); ++it1, ++it2) {
@@ -1065,10 +1064,10 @@ void Simulation::run_burnin(State& s, const double lef_binding_rate_burnin) cons
 }
 
 void Simulation::simulate_one_cell(State& s) const {
-  assert(s.epoch == 0);              // NOLINT
-  assert(s.num_burnin_epochs == 0);  // NOLINT
-  assert(!s.burnin_completed);       // NOLINT
-  assert(s.num_active_lefs == 0);    // NOLINT
+  assert(s.epoch == 0);
+  assert(s.num_burnin_epochs == 0);
+  assert(!s.burnin_completed);
+  assert(s.num_active_lefs == 0);
 
   try {
     // Seed is computed based on chrom. name, size and cellid
@@ -1085,7 +1084,7 @@ void Simulation::simulate_one_cell(State& s) const {
 
     // Init the local counter for the number of contacts generated by the current kernel instance
     s.num_contacts = 0;
-    assert([&]() {  // NOLINT
+    assert([&]() {
       if (s.num_target_contacts != 0) {
         return s.num_target_epochs == (std::numeric_limits<usize>::max)();
       }
@@ -1176,7 +1175,7 @@ void Simulation::select_and_bind_lefs(State& s) noexcept(utils::ndebug_defined()
 }
 
 void Simulation::sample_and_register_contacts(State& s, const double avg_nlefs_to_sample) const {
-  assert(s.num_active_lefs == s.num_lefs);  // NOLINT
+  assert(s.num_active_lefs == s.num_lefs);
   auto nlefs_to_sample =
       std::min(s.num_lefs, random::poisson_distribution<usize>{avg_nlefs_to_sample}(s.rand_eng));
 
@@ -1201,7 +1200,7 @@ void Simulation::sample_and_register_contacts(State& s, const double avg_nlefs_t
   const auto start_pos = s.is_modle_sim_state() ? s.chrom->start_pos() : s.window_start;
   const auto end_pos = s.is_modle_sim_state() ? s.chrom->end_pos() : s.window_end;
 
-  assert(s.contacts);  // NOLINT
+  assert(s.contacts);
   if (this->randomize_contacts) {
     s.num_contacts += this->register_contacts_w_randomization(
         start_pos + 1, end_pos - 1, *s.contacts, s.get_lefs(), lef_idx, s.rand_eng);
@@ -1223,7 +1222,7 @@ void Simulation::dump_stats(const usize task_id, const usize epoch, const usize 
   if (MODLE_LIKELY(!this->log_model_internal_state)) {
     return;
   }
-  assert(log_writer);  // NOLINT
+  assert(log_writer);
 
   const auto barriers_occupied = barrier_mask.count();
   const auto effective_barrier_occupancy =
@@ -1277,7 +1276,7 @@ void Simulation::dump_stats(const usize task_id, const usize epoch, const usize 
 
 usize Simulation::compute_tot_target_epochs() const noexcept {
   if (this->target_contact_density == 0.0) {
-    assert(this->simulation_epochs != 0);  // NOLINT
+    assert(this->simulation_epochs != 0);
     return this->num_cells * this->simulation_epochs;
   }
   return (std::numeric_limits<usize>::max)();

@@ -101,8 +101,8 @@ template <class N = u32, class = std::enable_if_t<std::is_arithmetic_v<N>>>
 
 inline std::pair<std::vector<u32>, std::vector<u32>> generate_correlated_vects(
     random::PRNG_t& rand_eng, u32 size) {
-  random::uniform_int_distribution<i32> dist(static_cast<i32>(size) / -50,  // NOLINT
-                                             static_cast<i32>(size / 50));  // NOLINT
+  random::uniform_int_distribution<i32> dist(static_cast<i32>(size) / -50,
+                                             static_cast<i32>(size / 50));
   std::vector<u32> v1(size);
   std::vector<u32> v2(size);
   std::iota(v1.begin(), v1.end(), 0);
@@ -147,7 +147,7 @@ inline void run_external_corr(std::string_view method, std::vector<N>& v1, std::
           boost::process::std_in<stdin_stream, boost::process::std_out> stdout_stream,
           boost::process::std_err > stderr_stream);
     }();
-    assert(c.running());  // NOLINT
+    assert(c.running());
 
     std::string sbuff;
     while (true) {
@@ -157,8 +157,8 @@ inline void run_external_corr(std::string_view method, std::vector<N>& v1, std::
         input_data_ready = false;
       }
 
-      if (v1.empty()) {      // EOQ signal
-        assert(v2.empty());  // NOLINT
+      if (v1.empty()) {  // EOQ signal
+        assert(v2.empty());
         stdin_stream.pipe().close();
         c.wait();
         return;
@@ -176,7 +176,7 @@ inline void run_external_corr(std::string_view method, std::vector<N>& v1, std::
 
       std::getline(stdout_stream, sbuff);
       const auto sep_idx = sbuff.find('\t');
-      assert(sep_idx < sbuff.size());  // NOLINT
+      assert(sep_idx < sbuff.size());
       rho = utils::parse_numeric_or_throw<double>(std::string_view(sbuff.data(), sep_idx));
       pv = utils::parse_numeric_or_throw<double>(
           std::string_view(sbuff.data() + sep_idx + 1, sbuff.size() - sep_idx));
@@ -229,7 +229,7 @@ template <typename N, typename = typename std::enable_if<std::is_arithmetic<N>::
 
   std::getline(stdout_stream, buff);
   const auto sep_idx = buff.find('\t');
-  assert(sep_idx < buff.size());  // NOLINT
+  assert(sep_idx < buff.size());
   const auto rho = utils::parse_numeric_or_throw<double>(std::string_view(buff.data(), sep_idx));
   const auto pv = utils::parse_numeric_or_throw<double>(
       std::string_view(buff.data() + sep_idx + 1, buff.size() - sep_idx));
