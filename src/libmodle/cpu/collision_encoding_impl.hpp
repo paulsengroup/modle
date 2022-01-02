@@ -208,7 +208,10 @@ constexpr usize Collision<I>::decode_index() const noexcept {
 
 template <class I>
 constexpr auto Collision<I>::decode_event() const noexcept -> CollisionEventT {
+  DISABLE_WARNING_PUSH
+  DISABLE_WARNING_CONVERSION
   return CollisionEventT(this->_collision >> INDEX_BITS);
+  DISABLE_WARNING_POP
 }
 
 template <class I>

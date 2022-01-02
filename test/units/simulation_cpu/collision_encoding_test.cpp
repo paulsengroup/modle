@@ -23,7 +23,7 @@ namespace modle::test::libmodle {
 TEST_CASE("Collision encoding", "[simulation][short]") {
   usize idx = 5;
   // clang-format off
-  constexpr std::array<CollisionEvent<u8f>, 8> events{
+  const std::array<CollisionEvent<u8f>, 8> events{
         Collision<>::LEF_BAR,
         Collision<>::LEF_LEF_PRIMARY,
         Collision<>::LEF_LEF_SECONDARY,
@@ -43,7 +43,7 @@ TEST_CASE("Collision encoding", "[simulation][short]") {
 
   if constexpr (utils::ndebug_not_defined()) {
     // clang-format off
-    constexpr std::array<CollisionEvent<u8f>, 9> invalid_events{
+    const std::array<CollisionEvent<u8f>, 9> invalid_events{
           Collision<>::COLLISION,
           Collision<>::COLLISION | Collision<>::LEF_BAR | Collision<>::LEF_LEF_PRIMARY,
           Collision<>::LEF_BAR | Collision<>::LEF_LEF_PRIMARY
