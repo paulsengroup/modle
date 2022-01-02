@@ -4,6 +4,8 @@
 
 #pragma once
 
+#include <fmt/format.h>  // for formatter
+
 #include <bitset>  // for bitset
 #include <type_traits>
 
@@ -59,36 +61,34 @@ class Collision {
   static constexpr usize EVENT_BITS = CollisionEventT::EVENT_BITS;
   static constexpr usize RESERVED_EVENT_BITS = CollisionEventT::RESERVED_EVENT_BITS;
   static constexpr usize INDEX_BITS = (sizeof(I) * 8) - RESERVED_EVENT_BITS;
-  static constexpr I EVENT_MASK = (~I(0)) << INDEX_BITS;
+  static constexpr I EVENT_MASK = (~I(0)) << (INDEX_BITS - 1);
   static constexpr I INDEX_MASK = ~EVENT_MASK;
 
  public:
-  constexpr Collision() noexcept = default;
+  constexpr Collision() noexcept : _collision(0) {}
   constexpr Collision(usize idx, CollisionEventT event) noexcept(utils::ndebug_defined());
 
   constexpr void set_idx(usize idx) noexcept;
-  constexpr void set_event(CollisionEvent<u8f> event) noexcept;
+  constexpr void add_event(CollisionEventT event) noexcept;
+  constexpr void set_event(CollisionEventT event) noexcept;
   constexpr void set(usize idx, CollisionEventT event) noexcept;
+  constexpr void clear() noexcept;
 
   constexpr bool operator==(Collision other) const noexcept;
   constexpr bool operator!=(Collision other) const noexcept;
+  [[nodiscard]] constexpr I operator()() const noexcept;
+  [[nodiscard]] constexpr I& operator()() noexcept;
 
   [[nodiscard]] constexpr usize decode_index() const noexcept;
   [[nodiscard]] constexpr CollisionEventT decode_event() const noexcept;
 
   [[nodiscard]] constexpr bool collision_occurred() const noexcept;
   [[nodiscard]] constexpr bool collision_avoided() const noexcept;
-
-  [[nodiscard]] constexpr bool is_chrom_boundary_collision() const noexcept;
-  [[nodiscard]] constexpr bool is_chrom_boundary_collision_5p() const noexcept;
-  [[nodiscard]] constexpr bool is_chrom_boundary_collision_3p() const noexcept;
-
-  [[nodiscard]] constexpr bool is_lef_bar_collision() const noexcept;
-
-  [[nodiscard]] constexpr bool is_lef_lef_primary_collision() const noexcept;
-  [[nodiscard]] constexpr bool is_lef_lef_secondary_collision() const noexcept;
+  [[nodiscard]] constexpr bool collision_occurred(CollisionEventT c) const noexcept;
+  [[nodiscard]] constexpr bool collision_avoided(CollisionEventT c) const noexcept;
 
   // clang-format off
+  static constexpr CollisionEventT NO_COLLISION =      0b0000'0000;
   static constexpr CollisionEventT COLLISION =         0b0001'0000;
   static constexpr CollisionEventT CHROM_BOUNDARY =    0b0000'1000;
   static constexpr CollisionEventT LEF_BAR =           0b0000'0100;
@@ -100,10 +100,23 @@ class Collision {
   [[nodiscard]] static constexpr I encode(usize idx,
                                           CollisionEventT event) noexcept(utils::ndebug_defined());
   [[nodiscard]] static constexpr bool is_valid_index(usize idx) noexcept(utils::ndebug_defined());
-  [[nodiscard]] static constexpr bool is_valid_event(CollisionEvent<u8f> event) noexcept(
+  [[nodiscard]] static constexpr bool is_valid_event(CollisionEventT event) noexcept(
       utils::ndebug_defined());
+  constexpr void validate() const;
+  static constexpr void validate(usize idx, CollisionEventT event);
+  [[nodiscard]] static constexpr I lshift_event(CollisionEventT event) noexcept;
 };
 
 }  // namespace modle
+
+template <>
+struct fmt::formatter<modle::Collision<>> {
+  char presentation = 's';  // s == short, l == long
+  constexpr auto parse(format_parse_context& ctx) -> decltype(ctx.begin());
+  // Formats the point p using the parsed format specification (presentation)
+  // stored in this formatter.
+  template <typename FormatContext>
+  inline auto format(const modle::Collision<>& c, FormatContext& ctx) -> decltype(ctx.out());
+};
 
 #include "../../collision_encoding_impl.hpp"

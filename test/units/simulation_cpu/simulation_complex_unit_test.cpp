@@ -12,7 +12,7 @@
 #include <vector>                                   // for vector
 
 #include "./common.hpp"                  // for construct_lef, NO_COLLISION, check_si...
-#include "modle/common/common.hpp"       // for bp_t, collision_t, usize
+#include "modle/common/common.hpp"       // for bp_t, usize
 #include "modle/common/config.hpp"       // for Config
 #include "modle/common/random.hpp"       // for PRNG
 #include "modle/extrusion_barriers.hpp"  // for ExtrusionBarrier, State, OCCUPIED
@@ -64,33 +64,33 @@ TEST_CASE("Simulation 001", "[simulation][short]") {
   std::vector<bp_t> rev_moves{25, 75, 75, 75, 75, 75, 75};  // NOLINT
   std::vector<bp_t> fwd_moves{75, 75, 75, 75, 75, 75, 75};  // NOLINT
 
-  const std::vector<collision_t> rev_collision_mask_expected{REACHED_CHROM_BOUNDARY,
-                                                             1UL,
-                                                             6UL,
-                                                             14UL,
-                                                             8UL,
-                                                             NO_COLLISION,
-                                                             NO_COLLISION};
-  const std::vector<collision_t> fwd_collision_mask_expected{0UL,
-                                                             7UL,
-                                                             15UL,
-                                                             2UL,
-                                                             NO_COLLISION,
-                                                             NO_COLLISION,
-                                                             NO_COLLISION};
-  std::vector<collision_t> rev_collision_mask(nlefs, NO_COLLISION);
-  std::vector<collision_t> fwd_collision_mask(nlefs, NO_COLLISION);
+  const std::vector<CollisionT> rev_collisions_expected{{5, CHROM_BOUNDARY},
+                                                        {1, LEF_BAR},
+                                                        {1, LEF_LEF_PRIMARY},
+                                                        {2, LEF_LEF_SECONDARY},
+                                                        {3, LEF_LEF_PRIMARY},
+                                                        {},
+                                                        {}};
+  const std::vector<CollisionT> fwd_collisions_expected{{0, LEF_BAR},
+                                                        {2, LEF_LEF_PRIMARY},
+                                                        {3, LEF_LEF_SECONDARY},
+                                                        {2, LEF_BAR},
+                                                        {},
+                                                        {},
+                                                        {}};
+  std::vector<CollisionT> rev_collisions(nlefs);
+  std::vector<CollisionT> fwd_collisions(nlefs);
 
   const std::vector<bp_t> rev_moves_expected{25, 44, 25, 54, 25, 75, 75};  // NOLINT
   const std::vector<bp_t> fwd_moves_expected{69, 24, 48, 0, 75, 75, 75};   // NOLINT
   // clang-format on
 
-  assert(lefs.size() == nlefs);                         // NOLINT
-  assert(barriers.size() == nbarriers);                 // NOLINT
-  assert(rev_collision_mask_expected.size() == nlefs);  // NOLINT
-  assert(fwd_collision_mask_expected.size() == nlefs);  // NOLINT
-  assert(rev_collision_mask.size() == nlefs);           // NOLINT
-  assert(fwd_collision_mask.size() == nlefs);           // NOLINT
+  assert(lefs.size() == nlefs);                     // NOLINT
+  assert(barriers.size() == nbarriers);             // NOLINT
+  assert(rev_collisions_expected.size() == nlefs);  // NOLINT
+  assert(fwd_collisions_expected.size() == nlefs);  // NOLINT
+  assert(rev_collisions.size() == nlefs);           // NOLINT
+  assert(fwd_collisions.size() == nlefs);           // NOLINT
   require_that_lefs_are_sorted_by_idx(lefs, rev_ranks, fwd_ranks);
 
   Simulation::test_adjust_moves(chrom, lefs, rev_ranks, fwd_ranks, absl::MakeSpan(rev_moves),
@@ -98,12 +98,12 @@ TEST_CASE("Simulation 001", "[simulation][short]") {
 
   modle::Simulation{c, false}.test_process_collisions(
       chrom, lefs, rev_ranks, fwd_ranks, absl::MakeSpan(rev_moves), absl::MakeSpan(fwd_moves),
-      barriers, barrier_mask, absl::MakeSpan(rev_collision_mask),
-      absl::MakeSpan(fwd_collision_mask), rand_eng);
+      barriers, barrier_mask, absl::MakeSpan(rev_collisions), absl::MakeSpan(fwd_collisions),
+      rand_eng);
 
   check_simulation_result(lefs, rev_moves, fwd_moves, rev_moves_expected, fwd_moves_expected,
-                          rev_collision_mask, rev_collision_mask_expected, fwd_collision_mask,
-                          fwd_collision_mask_expected);
+                          rev_collisions, rev_collisions_expected, fwd_collisions,
+                          fwd_collisions_expected);
 }
 
 // NOLINTNEXTLINE(readability-function-cognitive-complexity)
@@ -148,33 +148,33 @@ TEST_CASE("Simulation 002", "[simulation][short]") {
   std::vector<bp_t> rev_moves{75, 75, 75, 75, 75, 75, 75};  // NOLINT
   std::vector<bp_t> fwd_moves{75, 75, 75, 75, 75, 75, 24};  // NOLINT
 
-  const std::vector<collision_t> rev_collision_mask_expected{NO_COLLISION,
-                                                             NO_COLLISION,
-                                                             NO_COLLISION,
-                                                             2UL,
-                                                             15UL,
-                                                             9UL,
-                                                             4UL};
-  const std::vector<collision_t> fwd_collision_mask_expected{NO_COLLISION,
-                                                             NO_COLLISION,
-                                                             8UL,
-                                                             16UL,
-                                                             10UL,
-                                                             3UL,
-                                                             REACHED_CHROM_BOUNDARY};
-  std::vector<collision_t> rev_collision_mask(nlefs, NO_COLLISION);
-  std::vector<collision_t> fwd_collision_mask(nlefs, NO_COLLISION);
+  const std::vector<CollisionT> rev_collisions_expected{{},
+                                                        {},
+                                                        {},
+                                                        {2, LEF_BAR},
+                                                        {3, LEF_LEF_SECONDARY},
+                                                        {4, LEF_LEF_PRIMARY},
+                                                        {4, LEF_BAR}};
+  const std::vector<CollisionT> fwd_collisions_expected{{},
+                                                        {},
+                                                        {3, LEF_LEF_PRIMARY},
+                                                        {4, LEF_LEF_SECONDARY},
+                                                        {5, LEF_LEF_PRIMARY},
+                                                        {3, LEF_BAR},
+                                                        {3, CHROM_BOUNDARY}};
+  std::vector<CollisionT> rev_collisions(nlefs);
+  std::vector<CollisionT> fwd_collisions(nlefs);
 
   const std::vector<bp_t> rev_moves_expected{75, 75, 75, 0, 48, 25, 69};   // NOLINT
   const std::vector<bp_t> fwd_moves_expected{75, 75, 25, 53, 24, 44, 24};  // NOLINT
   // clang-format on
 
-  assert(lefs.size() == nlefs);                         // NOLINT
-  assert(barriers.size() == nbarriers);                 // NOLINT
-  assert(rev_collision_mask_expected.size() == nlefs);  // NOLINT
-  assert(fwd_collision_mask_expected.size() == nlefs);  // NOLINT
-  assert(rev_collision_mask.size() == nlefs);           // NOLINT
-  assert(fwd_collision_mask.size() == nlefs);           // NOLINT
+  assert(lefs.size() == nlefs);                     // NOLINT
+  assert(barriers.size() == nbarriers);             // NOLINT
+  assert(rev_collisions_expected.size() == nlefs);  // NOLINT
+  assert(fwd_collisions_expected.size() == nlefs);  // NOLINT
+  assert(rev_collisions.size() == nlefs);           // NOLINT
+  assert(fwd_collisions.size() == nlefs);           // NOLINT
   require_that_lefs_are_sorted_by_idx(lefs, rev_ranks, fwd_ranks);
 
   Simulation::test_adjust_moves(chrom, lefs, rev_ranks, fwd_ranks, absl::MakeSpan(rev_moves),
@@ -182,12 +182,12 @@ TEST_CASE("Simulation 002", "[simulation][short]") {
 
   modle::Simulation{c, false}.test_process_collisions(
       chrom, lefs, rev_ranks, fwd_ranks, absl::MakeSpan(rev_moves), absl::MakeSpan(fwd_moves),
-      barriers, barrier_mask, absl::MakeSpan(rev_collision_mask),
-      absl::MakeSpan(fwd_collision_mask), rand_eng);
+      barriers, barrier_mask, absl::MakeSpan(rev_collisions), absl::MakeSpan(fwd_collisions),
+      rand_eng);
 
   check_simulation_result(lefs, rev_moves, fwd_moves, rev_moves_expected, fwd_moves_expected,
-                          rev_collision_mask, rev_collision_mask_expected, fwd_collision_mask,
-                          fwd_collision_mask_expected);
+                          rev_collisions, rev_collisions_expected, fwd_collisions,
+                          fwd_collisions_expected);
 }
 
 // NOLINTNEXTLINE(readability-function-cognitive-complexity)
@@ -232,33 +232,33 @@ TEST_CASE("Simulation 003 - Soft collisions on", "[simulation][short]") {
   std::vector<bp_t> rev_moves{75, 75, 75, 75, 75, 75, 75};  // NOLINT
   std::vector<bp_t> fwd_moves{75, 75, 75, 75, 75, 75, 24};  // NOLINT
 
-  const std::vector<collision_t> rev_collision_mask_expected{0UL,
-                                                             NO_COLLISION,
-                                                             NO_COLLISION,
-                                                             2UL,
-                                                             15UL,
-                                                             9UL,
-                                                             4UL};
-  const std::vector<collision_t> fwd_collision_mask_expected{1UL,
-                                                             12UL,
-                                                             2UL,
-                                                             16UL,
-                                                             10UL,
-                                                             3UL,
-                                                             REACHED_CHROM_BOUNDARY};
-  std::vector<collision_t> rev_collision_mask(nlefs, NO_COLLISION);
-  std::vector<collision_t> fwd_collision_mask(nlefs, NO_COLLISION);
+  const std::vector<CollisionT> rev_collisions_expected{{0, LEF_BAR},
+                                                        {},
+                                                        {},
+                                                        {2, LEF_BAR},
+                                                        {3, LEF_LEF_SECONDARY},
+                                                        {4, LEF_LEF_PRIMARY},
+                                                        {4, LEF_BAR}};
+  const std::vector<CollisionT> fwd_collisions_expected{{1, LEF_BAR},
+                                                        {0, LEF_LEF_SECONDARY},
+                                                        {2, LEF_BAR},
+                                                        {4, LEF_LEF_SECONDARY},
+                                                        {5, LEF_LEF_PRIMARY},
+                                                        {3, LEF_BAR},
+                                                        {3, CHROM_BOUNDARY}};
+  std::vector<CollisionT> rev_collisions(nlefs);
+  std::vector<CollisionT> fwd_collisions(nlefs);
 
   const std::vector<bp_t> rev_moves_expected{49, 75, 75, 0, 48, 25, 69};   // NOLINT
   const std::vector<bp_t> fwd_moves_expected{24, 48, 24, 53, 24, 44, 24};  // NOLINT
   // clang-format on
 
-  assert(lefs.size() == nlefs);                         // NOLINT
-  assert(barriers.size() == nbarriers);                 // NOLINT
-  assert(rev_collision_mask_expected.size() == nlefs);  // NOLINT
-  assert(fwd_collision_mask_expected.size() == nlefs);  // NOLINT
-  assert(rev_collision_mask.size() == nlefs);           // NOLINT
-  assert(fwd_collision_mask.size() == nlefs);           // NOLINT
+  assert(lefs.size() == nlefs);                     // NOLINT
+  assert(barriers.size() == nbarriers);             // NOLINT
+  assert(rev_collisions_expected.size() == nlefs);  // NOLINT
+  assert(fwd_collisions_expected.size() == nlefs);  // NOLINT
+  assert(rev_collisions.size() == nlefs);           // NOLINT
+  assert(fwd_collisions.size() == nlefs);           // NOLINT
   require_that_lefs_are_sorted_by_idx(lefs, rev_ranks, fwd_ranks);
 
   Simulation::test_adjust_moves(chrom, lefs, rev_ranks, fwd_ranks, absl::MakeSpan(rev_moves),
@@ -266,12 +266,12 @@ TEST_CASE("Simulation 003 - Soft collisions on", "[simulation][short]") {
 
   modle::Simulation{c, false}.test_process_collisions(
       chrom, lefs, rev_ranks, fwd_ranks, absl::MakeSpan(rev_moves), absl::MakeSpan(fwd_moves),
-      barriers, barrier_mask, absl::MakeSpan(rev_collision_mask),
-      absl::MakeSpan(fwd_collision_mask), rand_eng);
+      barriers, barrier_mask, absl::MakeSpan(rev_collisions), absl::MakeSpan(fwd_collisions),
+      rand_eng);
 
   check_simulation_result(lefs, rev_moves, fwd_moves, rev_moves_expected, fwd_moves_expected,
-                          rev_collision_mask, rev_collision_mask_expected, fwd_collision_mask,
-                          fwd_collision_mask_expected);
+                          rev_collisions, rev_collisions_expected, fwd_collisions,
+                          fwd_collisions_expected);
 }
 
 // NOLINTNEXTLINE(readability-function-cognitive-complexity)
@@ -316,33 +316,33 @@ TEST_CASE("Simulation 004 - Inactive barriers", "[simulation][short]") {
   std::vector<bp_t> rev_moves{75, 75, 75, 75, 75, 75, 75};  // NOLINT
   std::vector<bp_t> fwd_moves{75, 75, 75, 75, 75, 75, 24};  // NOLINT
 
-  const std::vector<collision_t> rev_collision_mask_expected{NO_COLLISION,
-                                                             NO_COLLISION,
-                                                             NO_COLLISION,
-                                                             7UL,
-                                                             15UL,
-                                                             9UL,
-                                                             10UL};
-  const std::vector<collision_t> fwd_collision_mask_expected{NO_COLLISION,
-                                                             NO_COLLISION,
-                                                             8UL,
-                                                             16UL,
-                                                             10UL,
-                                                             11UL,
-                                                             REACHED_CHROM_BOUNDARY};
-  std::vector<collision_t> rev_collision_mask(nlefs, NO_COLLISION);
-  std::vector<collision_t> fwd_collision_mask(nlefs, NO_COLLISION);
+  const std::vector<CollisionT> rev_collisions_expected{{},
+                                                        {},
+                                                        {},
+                                                        {2, LEF_LEF_PRIMARY},
+                                                        {3, LEF_LEF_SECONDARY},
+                                                        {4, LEF_LEF_PRIMARY},
+                                                        {5, LEF_LEF_PRIMARY}};
+  const std::vector<CollisionT> fwd_collisions_expected{{},
+                                                        {},
+                                                        {3, LEF_LEF_PRIMARY},
+                                                        {4, LEF_LEF_SECONDARY},
+                                                        {5, LEF_LEF_PRIMARY},
+                                                        {6, LEF_LEF_PRIMARY},
+                                                        {3, CHROM_BOUNDARY}};
+  std::vector<CollisionT> rev_collisions(nlefs);
+  std::vector<CollisionT> fwd_collisions(nlefs);
 
   const std::vector<bp_t> rev_moves_expected{75, 75, 75, 13, 61, 25, 60};  // NOLINT
   const std::vector<bp_t> fwd_moves_expected{75, 75, 12, 53, 24, 59, 24};  // NOLINT
   // clang-format on
 
-  assert(lefs.size() == nlefs);                         // NOLINT
-  assert(barriers.size() == nbarriers);                 // NOLINT
-  assert(rev_collision_mask_expected.size() == nlefs);  // NOLINT
-  assert(fwd_collision_mask_expected.size() == nlefs);  // NOLINT
-  assert(rev_collision_mask.size() == nlefs);           // NOLINT
-  assert(fwd_collision_mask.size() == nlefs);           // NOLINT
+  assert(lefs.size() == nlefs);                     // NOLINT
+  assert(barriers.size() == nbarriers);             // NOLINT
+  assert(rev_collisions_expected.size() == nlefs);  // NOLINT
+  assert(fwd_collisions_expected.size() == nlefs);  // NOLINT
+  assert(rev_collisions.size() == nlefs);           // NOLINT
+  assert(fwd_collisions.size() == nlefs);           // NOLINT
   require_that_lefs_are_sorted_by_idx(lefs, rev_ranks, fwd_ranks);
 
   Simulation::test_adjust_moves(chrom, lefs, rev_ranks, fwd_ranks, absl::MakeSpan(rev_moves),
@@ -350,12 +350,12 @@ TEST_CASE("Simulation 004 - Inactive barriers", "[simulation][short]") {
 
   modle::Simulation{c, false}.test_process_collisions(
       chrom, lefs, rev_ranks, fwd_ranks, absl::MakeSpan(rev_moves), absl::MakeSpan(fwd_moves),
-      barriers, barrier_mask, absl::MakeSpan(rev_collision_mask),
-      absl::MakeSpan(fwd_collision_mask), rand_eng);
+      barriers, barrier_mask, absl::MakeSpan(rev_collisions), absl::MakeSpan(fwd_collisions),
+      rand_eng);
 
   check_simulation_result(lefs, rev_moves, fwd_moves, rev_moves_expected, fwd_moves_expected,
-                          rev_collision_mask, rev_collision_mask_expected, fwd_collision_mask,
-                          fwd_collision_mask_expected);
+                          rev_collisions, rev_collisions_expected, fwd_collisions,
+                          fwd_collisions_expected);
 }
 
 // NOLINTNEXTLINE(readability-function-cognitive-complexity)
@@ -395,31 +395,31 @@ TEST_CASE("Simulation 005 - Multiple LEFs located at the same site", "[simulatio
   std::vector<bp_t> rev_moves{25, 25, 25, 25, 25, 25};  // NOLINT
   std::vector<bp_t> fwd_moves{25, 25, 25, 24,  8,  9};  // NOLINT
   // clang-format off
-  const std::vector<collision_t> rev_collision_mask_expected{NO_COLLISION,
-                                                             1UL,
-                                                             8UL,
-                                                             9UL,
-                                                             4UL,
-                                                             11UL};
-  const std::vector<collision_t> fwd_collision_mask_expected{2UL,
-                                                             9UL,
-                                                             0UL,
-                                                             5UL,
-                                                             12UL,
-                                                             REACHED_CHROM_BOUNDARY};
-  std::vector<collision_t> rev_collision_mask(nlefs, NO_COLLISION);
-  std::vector<collision_t> fwd_collision_mask(nlefs, NO_COLLISION);
+  const std::vector<CollisionT> rev_collisions_expected{{},
+                                                        {0, LEF_LEF_PRIMARY},
+                                                        {1, LEF_LEF_SECONDARY},
+                                                        {2, LEF_LEF_SECONDARY},
+                                                        {3, LEF_LEF_PRIMARY},
+                                                        {4, LEF_LEF_SECONDARY}};
+  const std::vector<CollisionT> fwd_collisions_expected{{1, LEF_LEF_PRIMARY},
+                                                        {2, LEF_LEF_SECONDARY},
+                                                        {0, LEF_BAR},
+                                                        {4, LEF_LEF_PRIMARY},
+                                                        {5, LEF_LEF_SECONDARY},
+                                                        {3, CHROM_BOUNDARY}};
+  std::vector<CollisionT> rev_collisions(nlefs);
+  std::vector<CollisionT> fwd_collisions(nlefs);
 
   const std::vector<bp_t> rev_moves_expected{25, 5, 4, 8, 8, 7};   // NOLINT
   const std::vector<bp_t> fwd_moves_expected{4, 18, 19, 6, 8, 9};  // NOLINT
   // clang-format on
 
-  assert(lefs.size() == nlefs);                         // NOLINT
-  assert(barriers.size() == nbarriers);                 // NOLINT
-  assert(rev_collision_mask_expected.size() == nlefs);  // NOLINT
-  assert(fwd_collision_mask_expected.size() == nlefs);  // NOLINT
-  assert(rev_collision_mask.size() == nlefs);           // NOLINT
-  assert(fwd_collision_mask.size() == nlefs);           // NOLINT
+  assert(lefs.size() == nlefs);                     // NOLINT
+  assert(barriers.size() == nbarriers);             // NOLINT
+  assert(rev_collisions_expected.size() == nlefs);  // NOLINT
+  assert(fwd_collisions_expected.size() == nlefs);  // NOLINT
+  assert(rev_collisions.size() == nlefs);           // NOLINT
+  assert(fwd_collisions.size() == nlefs);           // NOLINT
   require_that_lefs_are_sorted_by_idx(lefs, rev_ranks, fwd_ranks);
 
   Simulation::test_adjust_moves(chrom, lefs, rev_ranks, fwd_ranks, absl::MakeSpan(rev_moves),
@@ -427,12 +427,12 @@ TEST_CASE("Simulation 005 - Multiple LEFs located at the same site", "[simulatio
 
   modle::Simulation{c, false}.test_process_collisions(
       chrom, lefs, rev_ranks, fwd_ranks, absl::MakeSpan(rev_moves), absl::MakeSpan(fwd_moves),
-      barriers, barrier_mask, absl::MakeSpan(rev_collision_mask),
-      absl::MakeSpan(fwd_collision_mask), rand_eng);
+      barriers, barrier_mask, absl::MakeSpan(rev_collisions), absl::MakeSpan(fwd_collisions),
+      rand_eng);
 
   check_simulation_result(lefs, rev_moves, fwd_moves, rev_moves_expected, fwd_moves_expected,
-                          rev_collision_mask, rev_collision_mask_expected, fwd_collision_mask,
-                          fwd_collision_mask_expected);
+                          rev_collisions, rev_collisions_expected, fwd_collisions,
+                          fwd_collisions_expected);
 }
 
 // NOLINTNEXTLINE(readability-function-cognitive-complexity)
@@ -475,31 +475,31 @@ TEST_CASE("Simulation 006 - Few inactive LEFs", "[simulation][short]") {
   std::vector<bp_t> rev_moves{25, 25,  0, 25, 25,  0};  // NOLINT
   std::vector<bp_t> fwd_moves{25, 25,  0, 24,  9,  0};  // NOLINT
   // clang-format off
-  const std::vector<collision_t> rev_collision_mask_expected{NO_COLLISION,
-                                                             1UL,
-                                                             NO_COLLISION,
-                                                             8UL,
-                                                             4UL,
-                                                             NO_COLLISION};
-  const std::vector<collision_t> fwd_collision_mask_expected{2UL,
-                                                             0UL,
-                                                             NO_COLLISION,
-                                                             5UL,
-                                                             REACHED_CHROM_BOUNDARY,
-                                                             NO_COLLISION};
-  std::vector<collision_t> rev_collision_mask(nlefs, NO_COLLISION);
-  std::vector<collision_t> fwd_collision_mask(nlefs, NO_COLLISION);
+  const std::vector<CollisionT> rev_collisions_expected{{},
+                                                        {0, LEF_LEF_PRIMARY},
+                                                        {},
+                                                        {1, LEF_LEF_SECONDARY},
+                                                        {3, LEF_LEF_PRIMARY},
+                                                        {}};
+  const std::vector<CollisionT> fwd_collisions_expected{{1, LEF_LEF_PRIMARY},
+                                                        {0, LEF_BAR},
+                                                        {},
+                                                        {4, LEF_LEF_PRIMARY},
+                                                        {3, CHROM_BOUNDARY},
+                                                        {}};
+  std::vector<CollisionT> rev_collisions(nlefs);
+  std::vector<CollisionT> fwd_collisions(nlefs);
 
   const std::vector<bp_t> rev_moves_expected{25, 5, 0, 9, 8, 0};  // NOLINT
   const std::vector<bp_t> fwd_moves_expected{4, 19, 0, 6, 9, 0};  // NOLINT
   // clang-format on
 
-  assert(lefs.size() == nlefs);                         // NOLINT
-  assert(barriers.size() == nbarriers);                 // NOLINT
-  assert(rev_collision_mask_expected.size() == nlefs);  // NOLINT
-  assert(fwd_collision_mask_expected.size() == nlefs);  // NOLINT
-  assert(rev_collision_mask.size() == nlefs);           // NOLINT
-  assert(fwd_collision_mask.size() == nlefs);           // NOLINT
+  assert(lefs.size() == nlefs);                     // NOLINT
+  assert(barriers.size() == nbarriers);             // NOLINT
+  assert(rev_collisions_expected.size() == nlefs);  // NOLINT
+  assert(fwd_collisions_expected.size() == nlefs);  // NOLINT
+  assert(rev_collisions.size() == nlefs);           // NOLINT
+  assert(fwd_collisions.size() == nlefs);           // NOLINT
   require_that_lefs_are_sorted_by_idx(lefs, rev_ranks, fwd_ranks);
 
   Simulation::test_adjust_moves(chrom, lefs, rev_ranks, fwd_ranks, absl::MakeSpan(rev_moves),
@@ -507,12 +507,12 @@ TEST_CASE("Simulation 006 - Few inactive LEFs", "[simulation][short]") {
 
   modle::Simulation{c, false}.test_process_collisions(
       chrom, lefs, rev_ranks, fwd_ranks, absl::MakeSpan(rev_moves), absl::MakeSpan(fwd_moves),
-      barriers, barrier_mask, absl::MakeSpan(rev_collision_mask),
-      absl::MakeSpan(fwd_collision_mask), rand_eng);
+      barriers, barrier_mask, absl::MakeSpan(rev_collisions), absl::MakeSpan(fwd_collisions),
+      rand_eng);
 
   check_simulation_result(lefs, rev_moves, fwd_moves, rev_moves_expected, fwd_moves_expected,
-                          rev_collision_mask, rev_collision_mask_expected, fwd_collision_mask,
-                          fwd_collision_mask_expected);
+                          rev_collisions, rev_collisions_expected, fwd_collisions,
+                          fwd_collisions_expected);
 }
 
 // NOLINTNEXTLINE(readability-function-cognitive-complexity)
@@ -550,31 +550,31 @@ TEST_CASE("Simulation 007 - LEF-LEF collision overrides LEF-BAR collision 1",
   std::vector<bp_t> fwd_moves{20, 20};  // NOLINT
   // clang-format on
 
-  const std::vector<collision_t> rev_collision_mask_expected{NO_COLLISION, 1UL};
-  const std::vector<collision_t> fwd_collision_mask_expected{2UL, NO_COLLISION};
-  std::vector<collision_t> rev_collision_mask(nlefs, NO_COLLISION);
-  std::vector<collision_t> fwd_collision_mask(nlefs, NO_COLLISION);
+  const std::vector<CollisionT> rev_collisions_expected{{}, {0, LEF_LEF_PRIMARY}};
+  const std::vector<CollisionT> fwd_collisions_expected{{1, LEF_LEF_PRIMARY}, {}};
+  std::vector<CollisionT> rev_collisions(nlefs);
+  std::vector<CollisionT> fwd_collisions(nlefs);
 
   const std::vector<bp_t> rev_moves_expected{20, 7};  // NOLINT
   const std::vector<bp_t> fwd_moves_expected{7, 20};  // NOLINT
   // clang-format on
 
-  assert(lefs.size() == nlefs);                         // NOLINT
-  assert(barriers.size() == nbarriers);                 // NOLINT
-  assert(rev_collision_mask_expected.size() == nlefs);  // NOLINT
-  assert(fwd_collision_mask_expected.size() == nlefs);  // NOLINT
-  assert(rev_collision_mask.size() == nlefs);           // NOLINT
-  assert(fwd_collision_mask.size() == nlefs);           // NOLINT
+  assert(lefs.size() == nlefs);                     // NOLINT
+  assert(barriers.size() == nbarriers);             // NOLINT
+  assert(rev_collisions_expected.size() == nlefs);  // NOLINT
+  assert(fwd_collisions_expected.size() == nlefs);  // NOLINT
+  assert(rev_collisions.size() == nlefs);           // NOLINT
+  assert(fwd_collisions.size() == nlefs);           // NOLINT
   require_that_lefs_are_sorted_by_idx(lefs, rev_ranks, fwd_ranks);
 
   modle::Simulation{c, false}.test_process_collisions(
       chrom, lefs, rev_ranks, fwd_ranks, absl::MakeSpan(rev_moves), absl::MakeSpan(fwd_moves),
-      barriers, barrier_mask, absl::MakeSpan(rev_collision_mask),
-      absl::MakeSpan(fwd_collision_mask), rand_eng);
+      barriers, barrier_mask, absl::MakeSpan(rev_collisions), absl::MakeSpan(fwd_collisions),
+      rand_eng);
 
   check_simulation_result(lefs, rev_moves, fwd_moves, rev_moves_expected, fwd_moves_expected,
-                          rev_collision_mask, rev_collision_mask_expected, fwd_collision_mask,
-                          fwd_collision_mask_expected);
+                          rev_collisions, rev_collisions_expected, fwd_collisions,
+                          fwd_collisions_expected);
 }
 
 // NOLINTNEXTLINE(readability-function-cognitive-complexity)
@@ -612,31 +612,31 @@ TEST_CASE("Simulation 008 - LEF-LEF collision overrides LEF-BAR collision 2",
   std::vector<bp_t> fwd_moves{20, 20};  // NOLINT
   // clang-format on
 
-  const std::vector<collision_t> rev_collision_mask_expected{NO_COLLISION, 1UL};
-  const std::vector<collision_t> fwd_collision_mask_expected{2UL, NO_COLLISION};
-  std::vector<collision_t> rev_collision_mask(nlefs, NO_COLLISION);
-  std::vector<collision_t> fwd_collision_mask(nlefs, NO_COLLISION);
+  const std::vector<CollisionT> rev_collisions_expected{{}, {0, LEF_LEF_PRIMARY}};
+  const std::vector<CollisionT> fwd_collisions_expected{{1, LEF_LEF_PRIMARY}, {}};
+  std::vector<CollisionT> rev_collisions(nlefs);
+  std::vector<CollisionT> fwd_collisions(nlefs);
 
   const std::vector<bp_t> rev_moves_expected{20, 7};  // NOLINT
   const std::vector<bp_t> fwd_moves_expected{7, 20};  // NOLINT
   // clang-format on
 
-  assert(lefs.size() == nlefs);                         // NOLINT
-  assert(barriers.size() == nbarriers);                 // NOLINT
-  assert(rev_collision_mask_expected.size() == nlefs);  // NOLINT
-  assert(fwd_collision_mask_expected.size() == nlefs);  // NOLINT
-  assert(rev_collision_mask.size() == nlefs);           // NOLINT
-  assert(fwd_collision_mask.size() == nlefs);           // NOLINT
+  assert(lefs.size() == nlefs);                     // NOLINT
+  assert(barriers.size() == nbarriers);             // NOLINT
+  assert(rev_collisions_expected.size() == nlefs);  // NOLINT
+  assert(fwd_collisions_expected.size() == nlefs);  // NOLINT
+  assert(rev_collisions.size() == nlefs);           // NOLINT
+  assert(fwd_collisions.size() == nlefs);           // NOLINT
   require_that_lefs_are_sorted_by_idx(lefs, rev_ranks, fwd_ranks);
 
   modle::Simulation{c, false}.test_process_collisions(
       chrom, lefs, rev_ranks, fwd_ranks, absl::MakeSpan(rev_moves), absl::MakeSpan(fwd_moves),
-      barriers, barrier_mask, absl::MakeSpan(rev_collision_mask),
-      absl::MakeSpan(fwd_collision_mask), rand_eng);
+      barriers, barrier_mask, absl::MakeSpan(rev_collisions), absl::MakeSpan(fwd_collisions),
+      rand_eng);
 
   check_simulation_result(lefs, rev_moves, fwd_moves, rev_moves_expected, fwd_moves_expected,
-                          rev_collision_mask, rev_collision_mask_expected, fwd_collision_mask,
-                          fwd_collision_mask_expected);
+                          rev_collisions, rev_collisions_expected, fwd_collisions,
+                          fwd_collisions_expected);
 }
 
 // NOLINTNEXTLINE(readability-function-cognitive-complexity)
@@ -677,29 +677,29 @@ TEST_CASE("Simulation 009 - Ensure stacked LEFs do not interfere with surroundin
   std::vector<bp_t> rev_moves{10, 10, 10, 10, 10};  // NOLINT
   std::vector<bp_t> fwd_moves{10, 10, 10, 10, 10};  // NOLINT
   // clang-format off
-  const std::vector<collision_t> rev_collision_mask_expected{NO_COLLISION,
-                                                             0UL,
-                                                             8UL,
-                                                             3UL,
-                                                             10UL};
-  const std::vector<collision_t> fwd_collision_mask_expected{3UL,
-                                                             5UL,
-                                                             NO_COLLISION,
-                                                             NO_COLLISION,
-                                                             NO_COLLISION};
-  std::vector<collision_t> rev_collision_mask(nlefs, NO_COLLISION);
-  std::vector<collision_t> fwd_collision_mask(nlefs, NO_COLLISION);
+  const std::vector<CollisionT> rev_collisions_expected{{},
+                                                        {0, LEF_BAR},
+                                                        {1, LEF_LEF_SECONDARY},
+                                                        {1, LEF_LEF_PRIMARY},
+                                                        {3, LEF_LEF_SECONDARY}};
+  const std::vector<CollisionT> fwd_collisions_expected{{1, LEF_LEF_PRIMARY},
+                                                        {3, LEF_LEF_PRIMARY},
+                                                        {},
+                                                        {},
+                                                        {}};
+  std::vector<CollisionT> rev_collisions(nlefs);
+  std::vector<CollisionT> fwd_collisions(nlefs);
 
   const std::vector<bp_t> rev_moves_expected{10, 0, 0, 0, 0};    // NOLINT
   const std::vector<bp_t> fwd_moves_expected{0, 0, 10, 10, 10};  // NOLINT
   // clang-format on
 
-  assert(lefs.size() == nlefs);                         // NOLINT
-  assert(barriers.size() == nbarriers);                 // NOLINT
-  assert(rev_collision_mask_expected.size() == nlefs);  // NOLINT
-  assert(fwd_collision_mask_expected.size() == nlefs);  // NOLINT
-  assert(rev_collision_mask.size() == nlefs);           // NOLINT
-  assert(fwd_collision_mask.size() == nlefs);           // NOLINT
+  assert(lefs.size() == nlefs);                     // NOLINT
+  assert(barriers.size() == nbarriers);             // NOLINT
+  assert(rev_collisions_expected.size() == nlefs);  // NOLINT
+  assert(fwd_collisions_expected.size() == nlefs);  // NOLINT
+  assert(rev_collisions.size() == nlefs);           // NOLINT
+  assert(fwd_collisions.size() == nlefs);           // NOLINT
   require_that_lefs_are_sorted_by_idx(lefs, rev_ranks, fwd_ranks);
 
   Simulation::test_adjust_moves(chrom, lefs, rev_ranks, fwd_ranks, absl::MakeSpan(rev_moves),
@@ -707,12 +707,12 @@ TEST_CASE("Simulation 009 - Ensure stacked LEFs do not interfere with surroundin
 
   modle::Simulation{c, false}.test_process_collisions(
       chrom, lefs, rev_ranks, fwd_ranks, absl::MakeSpan(rev_moves), absl::MakeSpan(fwd_moves),
-      barriers, barrier_mask, absl::MakeSpan(rev_collision_mask),
-      absl::MakeSpan(fwd_collision_mask), rand_eng);
+      barriers, barrier_mask, absl::MakeSpan(rev_collisions), absl::MakeSpan(fwd_collisions),
+      rand_eng);
 
   check_simulation_result(lefs, rev_moves, fwd_moves, rev_moves_expected, fwd_moves_expected,
-                          rev_collision_mask, rev_collision_mask_expected, fwd_collision_mask,
-                          fwd_collision_mask_expected);
+                          rev_collisions, rev_collisions_expected, fwd_collisions,
+                          fwd_collisions_expected);
 }
 
 // NOLINTNEXTLINE(readability-function-cognitive-complexity)
@@ -754,31 +754,31 @@ TEST_CASE("Simulation 010 - Ensure stacked LEFs do not interfere with surroundin
   std::vector<bp_t> rev_moves{10, 10, 10, 10, 10, 10};  // NOLINT
   std::vector<bp_t> fwd_moves{10, 10, 10, 10, 10, 10};  // NOLINT
   // clang-format off
-  const std::vector<collision_t> rev_collision_mask_expected{NO_COLLISION,
-                                                             0UL,
-                                                             9UL,
-                                                             3UL,
-                                                             11UL,
-                                                             10UL};
-  const std::vector<collision_t> fwd_collision_mask_expected{3UL,
-                                                             5UL,
-                                                             NO_COLLISION,
-                                                             NO_COLLISION,
-                                                             NO_COLLISION,
-                                                             9UL};
-  std::vector<collision_t> rev_collision_mask(nlefs, NO_COLLISION);
-  std::vector<collision_t> fwd_collision_mask(nlefs, NO_COLLISION);
+  const std::vector<CollisionT> rev_collisions_expected{{},
+                                                        {0, LEF_BAR},
+                                                        {1, LEF_LEF_SECONDARY},
+                                                        {1, LEF_LEF_PRIMARY},
+                                                        {3, LEF_LEF_SECONDARY},
+                                                        {2, LEF_LEF_SECONDARY}};
+  const std::vector<CollisionT> fwd_collisions_expected{{1, LEF_LEF_PRIMARY},
+                                                        {3, LEF_LEF_PRIMARY},
+                                                        {},
+                                                        {},
+                                                        {},
+                                                        {1, LEF_LEF_SECONDARY}};
+  std::vector<CollisionT> rev_collisions(nlefs);
+  std::vector<CollisionT> fwd_collisions(nlefs);
 
   const std::vector<bp_t> rev_moves_expected{10, 0, 0, 0, 0, 0};    // NOLINT
   const std::vector<bp_t> fwd_moves_expected{0, 0, 10, 10, 10, 0};  // NOLINT
   // clang-format on
 
-  assert(lefs.size() == nlefs);                         // NOLINT
-  assert(barriers.size() == nbarriers);                 // NOLINT
-  assert(rev_collision_mask_expected.size() == nlefs);  // NOLINT
-  assert(fwd_collision_mask_expected.size() == nlefs);  // NOLINT
-  assert(rev_collision_mask.size() == nlefs);           // NOLINT
-  assert(fwd_collision_mask.size() == nlefs);           // NOLINT
+  assert(lefs.size() == nlefs);                     // NOLINT
+  assert(barriers.size() == nbarriers);             // NOLINT
+  assert(rev_collisions_expected.size() == nlefs);  // NOLINT
+  assert(fwd_collisions_expected.size() == nlefs);  // NOLINT
+  assert(rev_collisions.size() == nlefs);           // NOLINT
+  assert(fwd_collisions.size() == nlefs);           // NOLINT
   require_that_lefs_are_sorted_by_idx(lefs, rev_ranks, fwd_ranks);
 
   Simulation::test_adjust_moves(chrom, lefs, rev_ranks, fwd_ranks, absl::MakeSpan(rev_moves),
@@ -786,11 +786,12 @@ TEST_CASE("Simulation 010 - Ensure stacked LEFs do not interfere with surroundin
 
   modle::Simulation{c, false}.test_process_collisions(
       chrom, lefs, rev_ranks, fwd_ranks, absl::MakeSpan(rev_moves), absl::MakeSpan(fwd_moves),
-      barriers, barrier_mask, absl::MakeSpan(rev_collision_mask),
-      absl::MakeSpan(fwd_collision_mask), rand_eng);
+      barriers, barrier_mask, absl::MakeSpan(rev_collisions), absl::MakeSpan(fwd_collisions),
+      rand_eng);
 
   check_simulation_result(lefs, rev_moves, fwd_moves, rev_moves_expected, fwd_moves_expected,
-                          rev_collision_mask, rev_collision_mask_expected, fwd_collision_mask,
-                          fwd_collision_mask_expected);
+                          rev_collisions, rev_collisions_expected, fwd_collisions,
+                          fwd_collisions_expected);
 }
+
 }  // namespace modle::test::libmodle

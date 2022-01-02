@@ -131,7 +131,7 @@ constexpr auto fmt::formatter<modle::Simulation::Task>::parse(format_parse_conte
   if (ctx.begin() != ctx.end() && *ctx.begin() != '}') {
     throw fmt::format_error("invalid format");
   }
-  return ctx.begin();
+  return ctx.end();
 }
 
 template <typename FormatContext>
@@ -148,7 +148,7 @@ constexpr auto fmt::formatter<modle::Simulation::TaskPW>::parse(format_parse_con
   if (ctx.begin() != ctx.end() && *ctx.begin() != '}') {
     throw fmt::format_error("invalid format");
   }
-  return ctx.begin();
+  return ctx.end();
 }
 
 template <typename FormatContext>
@@ -166,7 +166,7 @@ constexpr auto fmt::formatter<modle::Simulation::State>::parse(format_parse_cont
   if (ctx.begin() != ctx.end() && *ctx.begin() != '}') {
     throw fmt::format_error("invalid format");
   }
-  return ctx.begin();
+  return ctx.end();
 }
 
 template <typename FormatContext>

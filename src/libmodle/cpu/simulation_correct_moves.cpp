@@ -6,12 +6,11 @@
 #include "modle/simulation.hpp"
 // clang-format on
 
-#include <absl/base/optimization.h>  // IWYU pragma: keep for ABSL_PREDICT_FALSE
-#include <absl/types/span.h>         // for Span
+#include <absl/types/span.h>  // for Span
 
 #include <cassert>  // for assert
 
-#include "modle/common/common.hpp"       // for bp_t, collision_t
+#include "modle/common/common.hpp"       // for bp_t
 #include "modle/common/utils.hpp"        // for ndebug_defined
 #include "modle/extrusion_barriers.hpp"  // for ExtrusionBarrier
 #include "modle/extrusion_factors.hpp"   // for ExtrusionUnit, Lef
@@ -21,15 +20,15 @@ namespace modle {
 void Simulation::correct_moves_for_lef_bar_collisions(
     const absl::Span<const Lef> lefs, const absl::Span<const ExtrusionBarrier> barriers,
     const absl::Span<bp_t> rev_moves, const absl::Span<bp_t> fwd_moves,
-    const absl::Span<const collision_t> rev_collisions,
-    const absl::Span<const collision_t> fwd_collisions) noexcept(utils::ndebug_defined()) {
+    const absl::Span<const CollisionT> rev_collisions,
+    const absl::Span<const CollisionT> fwd_collisions) noexcept(utils::ndebug_defined()) {
   // LEF-BAR collisions are encoded with a number between 0 and nbarriers
   // This number corresponds to the index of the barrier that is causing the collision.
-  const auto upper_bound = barriers.size();
 
   for (usize i = 0; i < lefs.size(); ++i) {
-    if (ABSL_PREDICT_FALSE(rev_collisions[i] < upper_bound)) {  // Process rev collisions
-      const auto& barrier_idx = rev_collisions[i];
+    if (MODLE_UNLIKELY(
+            rev_collisions[i].collision_occurred(CollisionT::LEF_BAR))) {  // Process rev collisions
+      const auto barrier_idx = rev_collisions[i].decode_index();
       const auto& barrier = barriers[barrier_idx];
       assert(lefs[i].rev_unit.pos() > barrier.pos());  // NOLINT
 
@@ -40,8 +39,9 @@ void Simulation::correct_moves_for_lef_bar_collisions(
       rev_moves[i] = std::min(distance, distance - 1);
     }
 
-    if (ABSL_PREDICT_FALSE(fwd_collisions[i] < upper_bound)) {  // Process fwd collisions
-      const auto& barrier_idx = fwd_collisions[i];
+    if (MODLE_UNLIKELY(
+            fwd_collisions[i].collision_occurred(CollisionT::LEF_BAR))) {  // Process fwd collisions
+      const auto barrier_idx = fwd_collisions[i].decode_index();
       const auto& barrier = barriers[barrier_idx];
       assert(lefs[i].fwd_unit.pos() < barrier.pos());  // NOLINT
 
@@ -55,32 +55,18 @@ void Simulation::correct_moves_for_lef_bar_collisions(
 
 // NOLINTNEXTLINE(readability-function-cognitive-complexity)
 void Simulation::correct_moves_for_primary_lef_lef_collisions(
-    const absl::Span<const Lef> lefs, const absl::Span<const ExtrusionBarrier> barriers,
-    const absl::Span<const usize> rev_ranks, const absl::Span<const usize> fwd_ranks,
-    const absl::Span<bp_t> rev_moves, const absl::Span<bp_t> fwd_moves,
-    const absl::Span<const collision_t> rev_collisions,
-    const absl::Span<const collision_t> fwd_collisions) noexcept(utils::ndebug_defined()) {
+    const absl::Span<const Lef> lefs, const absl::Span<const usize> rev_ranks,
+    const absl::Span<const usize> fwd_ranks, const absl::Span<bp_t> rev_moves,
+    const absl::Span<bp_t> fwd_moves, const absl::Span<const CollisionT> rev_collisions,
+    const absl::Span<const CollisionT> fwd_collisions) noexcept(utils::ndebug_defined()) {
   // Primary LEF-LEF collisions are encoded with a number between nbarriers and nbarriers + nlefs.
   // Given a pair of extr. units that are moving in opposite directions, the index i corresponding
   // to the extr. unit that is causing the collision is encoded as nbarriers + i.
-  const auto lower_bound = barriers.size();
-  const auto upper_bound = lower_bound + lefs.size();
-
-  auto is_lef_lef_primary_collision = [&](const auto i) constexpr {
-    return i >= lower_bound && i < upper_bound;
-  };
-
-  auto is_lef_bar_collision = [&](const auto i) constexpr { return i < lower_bound; };
-
   for (auto rev_idx : rev_ranks) {  // Loop over rev units in 5'-3' order
-    if (auto rev_collision = rev_collisions[rev_idx];
-        ABSL_PREDICT_FALSE(is_lef_lef_primary_collision(rev_collision))) {
-      // Decode the index of the fwd unit involved in the current collision
-      rev_collision -= lower_bound;
-      const auto& fwd_idx = rev_collision;
+    if (MODLE_UNLIKELY(rev_collisions[rev_idx].collision_occurred(CollisionT::LEF_LEF_PRIMARY))) {
+      const auto fwd_idx = rev_collisions[rev_idx].decode_index();
 
-      if (auto fwd_collision = fwd_collisions[fwd_idx];
-          is_lef_lef_primary_collision(fwd_collision)) {
+      if (fwd_collisions[fwd_idx].collision_occurred(CollisionT::LEF_LEF_PRIMARY)) {
         // This branch handles the typical case, where a pair of extr. units moving in opposite
         // direction bumped into each other, causing a primary LEF-LEF collision.
         const auto& rev_unit = lefs[rev_idx].rev_unit;
@@ -98,7 +84,7 @@ void Simulation::correct_moves_for_primary_lef_lef_collisions(
         rev_move = rev_unit.pos() - p1;
         fwd_move = p2 - fwd_unit.pos();
 
-      } else if (is_lef_bar_collision(fwd_collision)) {
+      } else if (fwd_collisions[fwd_idx].collision_occurred(CollisionT::LEF_BAR)) {
         // This branch handles the special case where the fwd unit involved in the collision is
         // blocked by an extrusion barrier, and thus cannot be moved.
         // In this case we update the move such that after extrusion, the rev unit will be located
@@ -121,13 +107,10 @@ void Simulation::correct_moves_for_primary_lef_lef_collisions(
   // There may be a way to handle this case directly in the first pass, but for the time being, this
   // will have to do.
   for (auto fwd_idx : fwd_ranks) {
-    if (auto fwd_collision = fwd_collisions[fwd_idx];
-        ABSL_PREDICT_FALSE(is_lef_lef_primary_collision(fwd_collision))) {
-      fwd_collision -= lower_bound;
-      const auto& rev_idx = fwd_collision;
+    if (MODLE_UNLIKELY(fwd_collisions[fwd_idx].collision_occurred(CollisionT::LEF_LEF_PRIMARY))) {
+      const auto rev_idx = fwd_collisions[fwd_idx].decode_index();
 
-      if (const auto& rev_collision = rev_collisions[rev_idx];
-          is_lef_bar_collision(rev_collision)) {
+      if (rev_collisions[rev_idx].collision_occurred(CollisionT::LEF_BAR)) {
         const auto& rev_unit = lefs[rev_idx].rev_unit;
         const auto& fwd_unit = lefs[fwd_idx].fwd_unit;
 

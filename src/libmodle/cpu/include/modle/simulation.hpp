@@ -25,7 +25,8 @@
 #include <vector>                                   // for vector
 
 #include "modle/bed/bed.hpp"                            // for BED (ptr only), BED_tree
-#include "modle/common/common.hpp"                      // for usize, bp_t, collision_t, contacts_t
+#include "modle/collision_encoding.hpp"                 // for Collision<>
+#include "modle/common/common.hpp"                      // for usize, bp_t, contacts_t
 #include "modle/common/config.hpp"                      // for Config
 #include "modle/common/random.hpp"                      // for PRNG_t, normal_distribution, unif...
 #include "modle/common/suppress_compiler_warnings.hpp"  // for DISABLE_WARNING_POP, DISABLE_WARN...
@@ -56,11 +57,10 @@ class Simulation : Config {
   using lef_move_generator_t = random::normal_distribution<double>;
   using chrom_pos_generator_t = random::uniform_int_distribution<bp_t>;
 
-  static constexpr auto NO_COLLISION = (std::numeric_limits<collision_t>::max)();
-  static constexpr auto REACHED_CHROM_BOUNDARY = (std::numeric_limits<collision_t>::max)() - 1;
   static constexpr auto Mbp = 1.0e6;
 
  private:
+  using CollisionT = Collision<u32f>;
   struct BaseTask {  // NOLINT(altera-struct-pack-align)
     usize id{};
     Chromosome* chrom{};
@@ -117,8 +117,8 @@ class Simulation : Config {
     std::vector<bp_t> moves_buff1{};
     std::vector<bp_t> moves_buff2{};
     std::vector<usize> idx_buff{};
-    std::vector<collision_t> collision_buff1{};
-    std::vector<collision_t> collision_buff2{};
+    std::vector<CollisionT> collision_buff1{};
+    std::vector<CollisionT> collision_buff2{};
     std::deque<double> cfx_of_variation_buff{};
     std::deque<double> avg_loop_size_buff{};
 
@@ -132,8 +132,8 @@ class Simulation : Config {
     [[nodiscard]] absl::Span<bp_t> get_rev_moves(usize size = npos) noexcept;
     [[nodiscard]] absl::Span<bp_t> get_fwd_moves(usize size = npos) noexcept;
     [[nodiscard]] absl::Span<usize> get_idx_buff(usize size = npos) noexcept;
-    [[nodiscard]] absl::Span<collision_t> get_rev_collisions(usize size = npos) noexcept;
-    [[nodiscard]] absl::Span<collision_t> get_fwd_collisions(usize size = npos) noexcept;
+    [[nodiscard]] absl::Span<CollisionT> get_rev_collisions(usize size = npos) noexcept;
+    [[nodiscard]] absl::Span<CollisionT> get_fwd_collisions(usize size = npos) noexcept;
     [[nodiscard]] std::deque<double>& get_cfx_of_variation() noexcept;
     [[nodiscard]] std::deque<double>& get_avg_loop_sizes() noexcept;
 
@@ -144,10 +144,8 @@ class Simulation : Config {
     [[nodiscard]] absl::Span<const bp_t> get_rev_moves(usize size = npos) const noexcept;
     [[nodiscard]] absl::Span<const bp_t> get_fwd_moves(usize size = npos) const noexcept;
     [[nodiscard]] absl::Span<const usize> get_idx_buff(usize size = npos) const noexcept;
-    [[nodiscard]] absl::Span<const collision_t> get_rev_collisions(
-        usize size = npos) const noexcept;
-    [[nodiscard]] absl::Span<const collision_t> get_fwd_collisions(
-        usize size = npos) const noexcept;
+    [[nodiscard]] absl::Span<const CollisionT> get_rev_collisions(usize size = npos) const noexcept;
+    [[nodiscard]] absl::Span<const CollisionT> get_fwd_collisions(usize size = npos) const noexcept;
     [[nodiscard]] const std::deque<double>& get_cfx_of_variation() const noexcept;
     [[nodiscard]] const std::deque<double>& get_avg_loop_sizes() const noexcept;
 
@@ -355,9 +353,9 @@ class Simulation : Config {
       const Chromosome& chrom, absl::Span<const Lef> lefs,
       absl::Span<const ExtrusionBarrier> barriers, const boost::dynamic_bitset<>& barrier_mask,
       absl::Span<const usize> rev_lef_ranks, absl::Span<const usize> fwd_lef_ranks,
-      absl::Span<bp_t> rev_moves, absl::Span<bp_t> fwd_moves,
-      absl::Span<collision_t> rev_collisions, absl::Span<collision_t> fwd_collisions,
-      random::PRNG_t& rand_eng) const noexcept(utils::ndebug_defined());
+      absl::Span<bp_t> rev_moves, absl::Span<bp_t> fwd_moves, absl::Span<CollisionT> rev_collisions,
+      absl::Span<CollisionT> fwd_collisions, random::PRNG_t& rand_eng) const
+      noexcept(utils::ndebug_defined());
 
   /// Detect and stall LEFs with one or more extrusion units located at chromosomal boundaries.
 
@@ -366,8 +364,8 @@ class Simulation : Config {
   static std::pair<usize, usize> detect_units_at_chrom_boundaries(
       const Chromosome& chrom, absl::Span<const Lef> lefs, absl::Span<const usize> rev_lef_ranks,
       absl::Span<const usize> fwd_lef_ranks, absl::Span<const bp_t> rev_moves,
-      absl::Span<const bp_t> fwd_moves, absl::Span<collision_t> rev_collisions,
-      absl::Span<collision_t> fwd_collisions);
+      absl::Span<const bp_t> fwd_moves, absl::Span<CollisionT> rev_collisions,
+      absl::Span<CollisionT> fwd_collisions);
 
   /// Detect collisions between LEFs and extrusion barriers.
 
@@ -380,8 +378,8 @@ class Simulation : Config {
                                  absl::Span<const bp_t> rev_moves, absl::Span<const bp_t> fwd_moves,
                                  absl::Span<const ExtrusionBarrier> extr_barriers,
                                  const boost::dynamic_bitset<>& barrier_mask,
-                                 absl::Span<collision_t> rev_collisions,
-                                 absl::Span<collision_t> fwd_collisions, random::PRNG_t& rand_eng,
+                                 absl::Span<CollisionT> rev_collisions,
+                                 absl::Span<CollisionT> fwd_collisions, random::PRNG_t& rand_eng,
                                  usize num_rev_units_at_5prime = 0,
                                  usize num_fwd_units_at_3prime = 0) const
       noexcept(utils::ndebug_defined());
@@ -398,7 +396,7 @@ class Simulation : Config {
       absl::Span<const Lef> lefs, absl::Span<const ExtrusionBarrier> barriers,
       absl::Span<const usize> rev_lef_ranks, absl::Span<const usize> fwd_lef_ranks,
       absl::Span<const bp_t> rev_moves, absl::Span<const bp_t> fwd_moves,
-      absl::Span<collision_t> rev_collisions, absl::Span<collision_t> fwd_collisions,
+      absl::Span<CollisionT> rev_collisions, absl::Span<CollisionT> fwd_collisions,
       random::PRNG_t& rand_eng, usize num_rev_units_at_5prime = 0,
       usize num_fwd_units_at_3prime = 0) const noexcept(utils::ndebug_defined());
 
@@ -418,18 +416,17 @@ class Simulation : Config {
   //! The index i is encoded as num_barriers + num_lefs + i.
   // clang-format on
   void process_secondary_lef_lef_collisions(
-      const Chromosome& chrom, absl::Span<const Lef> lefs, usize nbarriers,
-      absl::Span<const usize> rev_lef_ranks, absl::Span<const usize> fwd_lef_ranks,
-      absl::Span<bp_t> rev_moves, absl::Span<bp_t> fwd_moves,
-      absl::Span<collision_t> rev_collisions, absl::Span<collision_t> fwd_collisions,
+      const Chromosome& chrom, absl::Span<const Lef> lefs, absl::Span<const usize> rev_lef_ranks,
+      absl::Span<const usize> fwd_lef_ranks, absl::Span<bp_t> rev_moves, absl::Span<bp_t> fwd_moves,
+      absl::Span<CollisionT> rev_collisions, absl::Span<CollisionT> fwd_collisions,
       random::PRNG_t& rand_eng, usize num_rev_units_at_5prime = 0,
       usize num_fwd_units_at_3prime = 0) const noexcept(utils::ndebug_defined());
   /*
     void correct_overlapping_lefs(const Chromosome& chrom, absl::Span<Lef> lefs,
                                   absl::Span<usize> rev_lef_ranks, absl::Span<usize> fwd_lef_ranks,
                                   absl::Span<bp_t> rev_moves, absl::Span<bp_t> fwd_moves,
-                                  absl::Span<const collision_t> rev_collisions,
-                                  absl::Span<const collision_t> fwd_collisions,
+                                  absl::Span<const CollisionT> rev_collisions,
+                                  absl::Span<const CollisionT> fwd_collisions,
                                   usize num_rev_units_at_5prime = 0,
                                   usize num_fwd_units_at_3prime = 0) const
         noexcept(utils::ndebug_defined());
@@ -444,16 +441,15 @@ class Simulation : Config {
   static void correct_moves_for_lef_bar_collisions(
       absl::Span<const Lef> lefs, absl::Span<const ExtrusionBarrier> barriers,
       absl::Span<bp_t> rev_moves, absl::Span<bp_t> fwd_moves,
-      absl::Span<const collision_t> rev_collisions,
-      absl::Span<const collision_t> fwd_collisions) noexcept(utils::ndebug_defined());
+      absl::Span<const CollisionT> rev_collisions,
+      absl::Span<const CollisionT> fwd_collisions) noexcept(utils::ndebug_defined());
 
   /// Correct moves to comply with the constraints imposed by primary LEF-LEF collisions.
   static void correct_moves_for_primary_lef_lef_collisions(
-      absl::Span<const Lef> lefs, absl::Span<const ExtrusionBarrier> barriers,
-      absl::Span<const usize> rev_ranks, absl::Span<const usize> fwd_ranks,
-      absl::Span<bp_t> rev_moves, absl::Span<bp_t> fwd_moves,
-      absl::Span<const collision_t> rev_collisions,
-      absl::Span<const collision_t> fwd_collisions) noexcept(utils::ndebug_defined());
+      absl::Span<const Lef> lefs, absl::Span<const usize> rev_ranks,
+      absl::Span<const usize> fwd_ranks, absl::Span<bp_t> rev_moves, absl::Span<bp_t> fwd_moves,
+      absl::Span<const CollisionT> rev_collisions,
+      absl::Span<const CollisionT> fwd_collisions) noexcept(utils::ndebug_defined());
 
   /// Register contacts for chromosome \p chrom using the position the extrusion units of the LEFs
   /// in \p lefs whose index is present in \p selected_lef_idx.
@@ -479,8 +475,8 @@ class Simulation : Config {
                                          MaskT& mask) noexcept(utils::ndebug_defined());
 
   usize release_lefs(absl::Span<Lef> lefs, absl::Span<const ExtrusionBarrier> barriers,
-                     absl::Span<const collision_t> rev_collisions,
-                     absl::Span<const collision_t> fwd_collisions,
+                     absl::Span<const CollisionT> rev_collisions,
+                     absl::Span<const CollisionT> fwd_collisions,
                      random::PRNG_t& rand_eng) const noexcept;
 
   [[nodiscard]] static std::pair<bp_t /*rev*/, bp_t /*fwd*/> compute_lef_lef_collision_pos(
@@ -509,7 +505,8 @@ class Simulation : Config {
   void dump_stats(usize task_id, usize epoch, usize cell_id, bool burnin, const Chromosome& chrom,
                   absl::Span<const Lef> lefs, absl::Span<const ExtrusionBarrier> barriers,
                   const boost::dynamic_bitset<>& barrier_mask,
-                  absl::Span<const usize> rev_lef_ranks, absl::Span<const usize> fwd_lef_ranks,
+                  absl::Span<const CollisionT> rev_lef_collisions,
+                  absl::Span<const CollisionT> fwd_lef_collisions,
                   compressed_io::Writer& log_writer) const noexcept(utils::ndebug_defined());
 
   [[nodiscard]] usize compute_tot_target_epochs() const noexcept;
@@ -564,7 +561,7 @@ class Simulation : Config {
       const Chromosome& chrom, const absl::Span<const Lef> lefs,
       const absl::Span<const usize> rev_lef_ranks, const absl::Span<const usize> fwd_lef_ranks,
       const absl::Span<const bp_t> rev_moves, const absl::Span<const bp_t> fwd_moves,
-      const absl::Span<collision_t> rev_collisions, const absl::Span<collision_t> fwd_collisions) {
+      const absl::Span<CollisionT> rev_collisions, const absl::Span<CollisionT> fwd_collisions) {
     Simulation::detect_units_at_chrom_boundaries(chrom, lefs, rev_lef_ranks, fwd_lef_ranks,
                                                  rev_moves, fwd_moves, rev_collisions,
                                                  fwd_collisions);
@@ -575,8 +572,8 @@ class Simulation : Config {
       const absl::Span<const usize> fwd_lef_rank_buff, const absl::Span<const bp_t> rev_move_buff,
       const absl::Span<const bp_t> fwd_move_buff,
       const absl::Span<const ExtrusionBarrier> extr_barriers,
-      const boost::dynamic_bitset<>& barrier_mask, const absl::Span<collision_t> rev_collisions,
-      const absl::Span<collision_t> fwd_collisions, random::PRNG_t& rand_eng) {
+      const boost::dynamic_bitset<>& barrier_mask, const absl::Span<CollisionT> rev_collisions,
+      const absl::Span<CollisionT> fwd_collisions, random::PRNG_t& rand_eng) {
     Simulation::detect_lef_bar_collisions(lefs, rev_lef_rank_buff, fwd_lef_rank_buff, rev_move_buff,
                                           fwd_move_buff, extr_barriers, barrier_mask,
                                           rev_collisions, fwd_collisions, rand_eng);
@@ -585,19 +582,18 @@ class Simulation : Config {
   inline static void test_correct_moves_for_lef_bar_collisions(
       const absl::Span<const Lef> lefs, const absl::Span<const ExtrusionBarrier> barriers,
       const absl::Span<bp_t> rev_moves, const absl::Span<bp_t> fwd_moves,
-      const absl::Span<const collision_t> rev_collisions,
-      const absl::Span<const collision_t> fwd_collisions) {
+      const absl::Span<const CollisionT> rev_collisions,
+      const absl::Span<const CollisionT> fwd_collisions) {
     Simulation::correct_moves_for_lef_bar_collisions(lefs, barriers, rev_moves, fwd_moves,
                                                      rev_collisions, fwd_collisions);
   }
 
   inline static void test_adjust_moves_for_primary_lef_lef_collisions(
-      absl::Span<const Lef> lefs, absl::Span<const ExtrusionBarrier> barriers,
-      absl::Span<const usize> rev_ranks, absl::Span<const usize> fwd_ranks,
-      absl::Span<bp_t> rev_moves, absl::Span<bp_t> fwd_moves,
-      absl::Span<const collision_t> rev_collisions, absl::Span<const collision_t> fwd_collisions) {
+      absl::Span<const Lef> lefs, absl::Span<const usize> rev_ranks,
+      absl::Span<const usize> fwd_ranks, absl::Span<bp_t> rev_moves, absl::Span<bp_t> fwd_moves,
+      absl::Span<const CollisionT> rev_collisions, absl::Span<const CollisionT> fwd_collisions) {
     Simulation::correct_moves_for_primary_lef_lef_collisions(
-        lefs, barriers, rev_ranks, fwd_ranks, rev_moves, fwd_moves, rev_collisions, fwd_collisions);
+        lefs, rev_ranks, fwd_ranks, rev_moves, fwd_moves, rev_collisions, fwd_collisions);
   }
 
   inline void test_process_collisions(
@@ -605,8 +601,8 @@ class Simulation : Config {
       const absl::Span<const usize> rev_lef_rank_buff,
       const absl::Span<const usize> fwd_lef_rank_buff, const absl::Span<bp_t> rev_move_buff,
       const absl::Span<bp_t> fwd_move_buff, const absl::Span<const ExtrusionBarrier> extr_barriers,
-      const boost::dynamic_bitset<>& barrier_mask, const absl::Span<collision_t> rev_collisions,
-      const absl::Span<collision_t> fwd_collisions, random::PRNG_t& rand_eng) {
+      const boost::dynamic_bitset<>& barrier_mask, const absl::Span<CollisionT> rev_collisions,
+      const absl::Span<CollisionT> fwd_collisions, random::PRNG_t& rand_eng) {
     const auto [num_rev_units_at_5prime, num_fwd_units_at_3prime] =
         Simulation::detect_units_at_chrom_boundaries(chrom, lefs, rev_lef_rank_buff,
                                                      fwd_lef_rank_buff, rev_move_buff,
@@ -625,32 +621,42 @@ class Simulation : Config {
                                                      fwd_move_buff, rev_collisions, fwd_collisions);
 
     Simulation::correct_moves_for_primary_lef_lef_collisions(
-        lefs, extr_barriers, rev_lef_rank_buff, fwd_lef_rank_buff, rev_move_buff, fwd_move_buff,
-        rev_collisions, fwd_collisions);
+        lefs, rev_lef_rank_buff, fwd_lef_rank_buff, rev_move_buff, fwd_move_buff, rev_collisions,
+        fwd_collisions);
 
-    this->process_secondary_lef_lef_collisions(chrom, lefs, extr_barriers.size(), rev_lef_rank_buff,
-                                               fwd_lef_rank_buff, rev_move_buff, fwd_move_buff,
-                                               rev_collisions, fwd_collisions, rand_eng,
-                                               num_rev_units_at_5prime, num_fwd_units_at_3prime);
+    this->process_secondary_lef_lef_collisions(
+        chrom, lefs, rev_lef_rank_buff, fwd_lef_rank_buff, rev_move_buff, fwd_move_buff,
+        rev_collisions, fwd_collisions, rand_eng, num_rev_units_at_5prime, num_fwd_units_at_3prime);
   }
 
   inline void test_process_lef_lef_collisions(
       const Chromosome& chrom, absl::Span<const Lef> lefs,
       absl::Span<const ExtrusionBarrier> extr_barriers, absl::Span<const usize> rev_lef_rank_buff,
       absl::Span<const usize> fwd_lef_rank_buff, absl::Span<bp_t> rev_move_buff,
-      absl::Span<bp_t> fwd_move_buff, absl::Span<collision_t> rev_collisions,
-      absl::Span<collision_t> fwd_collisions, random::PRNG_t& rand_eng) {
+      absl::Span<bp_t> fwd_move_buff, absl::Span<CollisionT> rev_collisions,
+      absl::Span<CollisionT> fwd_collisions, random::PRNG_t& rand_eng) {
     Simulation::detect_primary_lef_lef_collisions(lefs, extr_barriers, rev_lef_rank_buff,
                                                   fwd_lef_rank_buff, rev_move_buff, fwd_move_buff,
                                                   rev_collisions, fwd_collisions, rand_eng);
 
     Simulation::correct_moves_for_primary_lef_lef_collisions(
-        lefs, extr_barriers, rev_lef_rank_buff, fwd_lef_rank_buff, rev_move_buff, fwd_move_buff,
-        rev_collisions, fwd_collisions);
+        lefs, rev_lef_rank_buff, fwd_lef_rank_buff, rev_move_buff, fwd_move_buff, rev_collisions,
+        fwd_collisions);
 
     Simulation::process_secondary_lef_lef_collisions(
-        chrom, lefs, extr_barriers.size(), rev_lef_rank_buff, fwd_lef_rank_buff, rev_move_buff,
-        fwd_move_buff, rev_collisions, fwd_collisions, rand_eng);
+        chrom, lefs, rev_lef_rank_buff, fwd_lef_rank_buff, rev_move_buff, fwd_move_buff,
+        rev_collisions, fwd_collisions, rand_eng);
+  }
+
+  inline void test_detect_primary_lef_lef_collisions(
+      absl::Span<const Lef> lefs, absl::Span<const ExtrusionBarrier> extr_barriers,
+      absl::Span<const usize> rev_lef_rank_buff, absl::Span<const usize> fwd_lef_rank_buff,
+      absl::Span<bp_t> rev_move_buff, absl::Span<bp_t> fwd_move_buff,
+      absl::Span<CollisionT> rev_collisions, absl::Span<CollisionT> fwd_collisions,
+      random::PRNG_t& rand_eng) {
+    Simulation::detect_primary_lef_lef_collisions(lefs, extr_barriers, rev_lef_rank_buff,
+                                                  fwd_lef_rank_buff, rev_move_buff, fwd_move_buff,
+                                                  rev_collisions, fwd_collisions, rand_eng);
   }
 
 #endif
