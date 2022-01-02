@@ -4,7 +4,8 @@
 
 #pragma once
 
-#include <absl/base/macros.h>  // for ABSL_INTERNAL_UNREACHABLE
+#include <absl/base/macros.h>        // for ABSL_INTERNAL_UNREACHABLE
+#include <absl/base/optimization.h>  // IWYU pragma: keep for ABSL_PREDICT_TRUE, ABSL_PREDICT_FALSE
 
 #include <cstddef>      // IWYU pragma: keep for size_t, ptrdiff_t
 #include <cstdint>      // for i8, i16, i32, i64, u8 ...
@@ -76,7 +77,6 @@ constexpr std::string_view modle_version =
 #undef MODLE_XCONCAT
 
 using bp_t = u64;
-using collision_t = std::uint_fast32_t;  // TODO removeme
 using contacts_t = u32;
 
 // See https://clang.llvm.org/docs/ThreadSanitizer.html#has-feature-thread-sanitizer
@@ -89,6 +89,8 @@ using contacts_t = u32;
 #endif
 
 #define MODLE_UNREACHABLE_CODE ABSL_INTERNAL_UNREACHABLE
+#define MODLE_LIKELY           ABSL_PREDICT_TRUE
+#define MODLE_UNLIKELY         ABSL_PREDICT_FALSE
 
 namespace dna {
 enum Direction : u8f { none = 0, fwd = 1, rev = 2, both = 3 };

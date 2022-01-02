@@ -276,7 +276,7 @@ template <class N>
   // Do a backward search for the first non-zero pixel
   auto non_zero_backward_search = [](const auto &vect) -> usize {
     const auto it = std::find_if(vect.rbegin(), vect.rend(), [](const auto n) { return n != 0; });
-    if (ABSL_PREDICT_FALSE(it == vect.rend())) {
+    if (MODLE_UNLIKELY(it == vect.rend())) {
       return 0;
     }
     return static_cast<usize>(vect.rend() - 1 - it);

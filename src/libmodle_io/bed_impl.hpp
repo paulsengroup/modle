@@ -238,7 +238,7 @@ constexpr auto fmt::formatter<modle::bed::RGB>::parse(format_parse_context& ctx)
   if (ctx.begin() != ctx.end() && *ctx.begin() != '}') {
     throw fmt::format_error("invalid format");
   }
-  return ctx.begin();
+  return ctx.end();
 }
 
 template <typename FormatContext>

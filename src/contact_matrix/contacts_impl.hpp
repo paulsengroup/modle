@@ -4,10 +4,9 @@
 
 #pragma once
 
-#include <absl/base/optimization.h>  // IWYU pragma: keep for ABSL_PREDICT_FALSE
-#include <absl/types/span.h>         // for Span, MakeConstSpan, MakeSpan
-#include <fmt/format.h>              // for FMT_STRING
-#include <xxh3.h>                    // for XXH_INLINE_XXH3_64bits, XXH3_64bits
+#include <absl/types/span.h>  // for Span, MakeConstSpan, MakeSpan
+#include <fmt/format.h>       // for FMT_STRING
+#include <xxh3.h>             // for XXH_INLINE_XXH3_64bits, XXH3_64bits
 
 #include <algorithm>  // for min, clamp
 #include <array>      // for array
@@ -169,7 +168,7 @@ constexpr std::pair<usize, usize> ContactMatrix<N>::transpose_coords(const usize
 template <class N>
 void ContactMatrix<N>::bound_check_coords(const usize row, const usize col) const {
   if constexpr (utils::ndebug_not_defined()) {
-    if (ABSL_PREDICT_FALSE(row >= this->ncols() || col >= this->ncols())) {
+    if (MODLE_UNLIKELY(row >= this->ncols() || col >= this->ncols())) {
       throw std::logic_error(
           fmt::format(FMT_STRING("Detected an out-of-bound read: attempt to access "
                                  "item at {}:{} of a matrix of shape {}x{} ({}x{})"),
