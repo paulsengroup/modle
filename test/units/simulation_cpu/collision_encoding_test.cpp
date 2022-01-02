@@ -93,7 +93,7 @@ TEST_CASE("Collision encoding", "[simulation][short]") {
 
 // NOLINTNEXTLINE(readability-function-cognitive-complexity)
 TEST_CASE("Collision encoding - Chromosomal boundaries", "[simulation][short]") {
-  for (const auto idx : std::array<usize, 2>{3, 5}) {  // NOLINT
+  for (const auto idx : std::array<usize, 2>{3, 5}) {
     auto event = Collision<>::COLLISION | Collision<>::CHROM_BOUNDARY;
     CHECK(Collision<>{idx, event}.collision_occurred());
     CHECK(Collision<>{idx, event}.collision_occurred(Collision<>::CHROM_BOUNDARY));
@@ -112,7 +112,7 @@ TEST_CASE("Collision encoding - Chromosomal boundaries", "[simulation][short]") 
 
 // NOLINTNEXTLINE(readability-function-cognitive-complexity)
 TEST_CASE("Collision encoding - LEF-BAR", "[simulation][short]") {
-  const usize idx = 123;  // NOLINT
+  const usize idx = 123;
 
   CollisionEvent<u8f> event = Collision<>::COLLISION() | Collision<>::LEF_BAR();
   CHECK(Collision<>{idx, event}.collision_occurred());
@@ -131,7 +131,7 @@ TEST_CASE("Collision encoding - LEF-BAR", "[simulation][short]") {
 
 // NOLINTNEXTLINE(readability-function-cognitive-complexity)
 TEST_CASE("Collision encoding - LEF-LEF primary", "[simulation][short]") {
-  const usize idx = 123;  // NOLINT
+  const usize idx = 123;
 
   CollisionEvent<u8f> event = Collision<>::COLLISION() | Collision<>::LEF_LEF_PRIMARY();
   CHECK(Collision<>{idx, event}.collision_occurred());
@@ -150,7 +150,7 @@ TEST_CASE("Collision encoding - LEF-LEF primary", "[simulation][short]") {
 
 // NOLINTNEXTLINE(readability-function-cognitive-complexity)
 TEST_CASE("Collision encoding - LEF-LEF secondary", "[simulation][short]") {
-  const usize idx = 123;  // NOLINT
+  const usize idx = 123;
 
   CollisionEvent<u8f> event = Collision<>::COLLISION() | Collision<>::LEF_LEF_SECONDARY();
   CHECK(Collision<>{idx, event}.collision_occurred());

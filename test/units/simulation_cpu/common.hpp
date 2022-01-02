@@ -28,19 +28,19 @@ constexpr auto LEF_LEF_SECONDARY = COLLISION | CollisionT::LEF_LEF_SECONDARY;
 
 constexpr auto C = COLLISION;
 
-template <typename I>
+template <class I>
 [[nodiscard]] inline Lef construct_lef(I p1, I p2, usize binding_epoch = 0) {
   return Lef{binding_epoch, ExtrusionUnit{static_cast<bp_t>(p1)},
              ExtrusionUnit{static_cast<bp_t>(p2)}};
 }
 
+template <class BPCollection, class CollisionCollection>
 [[maybe_unused]] inline void print_debug_info(
-    usize i, const std::vector<bp_t>& rev_moves, const std::vector<bp_t>& fwd_moves,
-    const std::vector<bp_t>& rev_moves_expected, const std::vector<bp_t>& fwd_moves_expected,
-    const std::vector<CollisionT>& rev_collisions,
-    const std::vector<CollisionT>& rev_collisions_expected,
-    const std::vector<CollisionT>& fwd_collisions,
-    const std::vector<CollisionT>& fwd_collisions_expected) {
+    usize i, const BPCollection& rev_moves, const BPCollection& fwd_moves,
+    const BPCollection& rev_moves_expected, const BPCollection& fwd_moves_expected,
+    const CollisionCollection& rev_collisions, const CollisionCollection& rev_collisions_expected,
+    const CollisionCollection& fwd_collisions, const CollisionCollection& fwd_collisions_expected) {
+  static_assert(std::is_same_v<typename BPCollection::value_type, bp_t>);
   fmt::print(stderr, FMT_STRING("i={}; rev_move={}/{}; fwd_move={}/{};\n"), i, rev_moves[i],
              rev_moves_expected[i], fwd_moves[i], fwd_moves_expected[i]);
   fmt::print(
@@ -50,23 +50,25 @@ template <typename I>
       fwd_collisions_expected[i]);
 }
 
-[[maybe_unused]] inline void print_debug_info(
-    usize i, const std::vector<CollisionT>& rev_collisions,
-    const std::vector<CollisionT>& rev_collisions_expected,
-    const std::vector<CollisionT>& fwd_collisions,
-    const std::vector<CollisionT>& fwd_collisions_expected) {
+template <class CollisionCollection>
+[[maybe_unused]] inline void print_debug_info(usize i, const CollisionCollection& rev_collisions,
+                                              const CollisionCollection& rev_collisions_expected,
+                                              const CollisionCollection& fwd_collisions,
+                                              const CollisionCollection& fwd_collisions_expected) {
   fmt::print(stderr, FMT_STRING("i={}; rev_status=[{:l}\t{:l}]; fwd_status=[{:l}\t{:l}];\n"), i,
              rev_collisions[i], rev_collisions_expected[i], fwd_collisions[i],
              fwd_collisions_expected[i]);
 }
 
+template <class LefCollection, class BPCollection, class CollisionCollection>
 [[maybe_unused]] inline void check_simulation_result(
-    const std::vector<Lef>& lefs, const std::vector<bp_t>& rev_moves,
-    const std::vector<bp_t>& fwd_moves, const std::vector<bp_t>& rev_moves_expected,
-    const std::vector<bp_t>& fwd_moves_expected, const std::vector<CollisionT>& rev_collisions,
-    const std::vector<CollisionT>& rev_collisions_expected,
-    const std::vector<CollisionT>& fwd_collisions,
-    const std::vector<CollisionT>& fwd_collisions_expected, bool print_debug_info_ = false) {
+    const LefCollection& lefs, const BPCollection& rev_moves, const BPCollection& fwd_moves,
+    const BPCollection& rev_moves_expected, const BPCollection& fwd_moves_expected,
+    const CollisionCollection& rev_collisions, const CollisionCollection& rev_collisions_expected,
+    const CollisionCollection& fwd_collisions, const CollisionCollection& fwd_collisions_expected,
+    bool print_debug_info_ = false) {
+  static_assert(std::is_same_v<typename LefCollection::value_type, Lef>);
+  static_assert(std::is_same_v<typename BPCollection::value_type, bp_t>);
   for (usize i = 0; i < lefs.size(); ++i) {
     CHECK(rev_collisions[i] == rev_collisions_expected[i]);
     CHECK(fwd_collisions[i] == fwd_collisions_expected[i]);
@@ -81,11 +83,14 @@ template <typename I>
   }
 }
 
-[[maybe_unused]] inline void check_collisions(
-    const std::vector<Lef>& lefs, const std::vector<CollisionT>& rev_collisions,
-    const std::vector<CollisionT>& rev_collisions_expected,
-    const std::vector<CollisionT>& fwd_collisions,
-    const std::vector<CollisionT>& fwd_collisions_expected, bool print_debug_info_ = false) {
+template <class LefCollection, class CollisionCollection>
+[[maybe_unused]] inline void check_collisions(const LefCollection& lefs,
+                                              const CollisionCollection& rev_collisions,
+                                              const CollisionCollection& rev_collisions_expected,
+                                              const CollisionCollection& fwd_collisions,
+                                              const CollisionCollection& fwd_collisions_expected,
+                                              bool print_debug_info_ = false) {
+  static_assert(std::is_same_v<typename LefCollection::value_type, Lef>);
   for (usize i = 0; i < lefs.size(); ++i) {
     CHECK(rev_collisions[i] == rev_collisions_expected[i]);
     CHECK(fwd_collisions[i] == fwd_collisions_expected[i]);
@@ -101,10 +106,10 @@ template <typename I>
 [[maybe_unused]] inline void check_moves(
     const std::vector<Lef>& lefs, const std::vector<bp_t>& rev_moves,
     const std::vector<bp_t>& fwd_moves, const std::vector<bp_t>& rev_moves_expected,
-    const std::vector<bp_t>& fwd_moves_expected, const std::vector<CollisionT>& rev_collisions,
-    const std::vector<CollisionT>& rev_collisions_expected,
-    const std::vector<CollisionT>& fwd_collisions,
-    const std::vector<CollisionT>& fwd_collisions_expected, bool print_debug_info_ = false) {
+    const std::vector<bp_t>& fwd_moves_expected, const CollisionCollection& rev_collisions,
+    const CollisionCollection& rev_collisions_expected,
+    const CollisionCollection& fwd_collisions,
+    const CollisionCollection& fwd_collisions_expected, bool print_debug_info_ = false) {
   for (usize i = 0; i < lefs.size(); ++i) {
     CHECK(rev_collisions[i] == rev_collisions_expected[i]);
     CHECK(fwd_collisions[i] == fwd_collisions_expected[i]);
@@ -120,9 +125,12 @@ template <typename I>
 }
  */
 
-inline void check_that_lefs_are_sorted_by_idx(const std::vector<Lef>& lefs,
-                                              const std::vector<usize>& rev_ranks,
-                                              const std::vector<usize>& fwd_ranks) {
+template <class LefCollection, class UsizeCollection>
+inline void check_that_lefs_are_sorted_by_idx(const LefCollection& lefs,
+                                              const UsizeCollection& rev_ranks,
+                                              const UsizeCollection& fwd_ranks) {
+  static_assert(std::is_same_v<typename LefCollection::value_type, Lef>);
+  static_assert(std::is_same_v<typename UsizeCollection::value_type, usize>);
   CHECK(std::is_sorted(fwd_ranks.begin(), fwd_ranks.end(), [&](const auto r1, const auto r2) {
     return lefs[r1].fwd_unit.pos() < lefs[r2].fwd_unit.pos();
   }));
@@ -131,9 +139,12 @@ inline void check_that_lefs_are_sorted_by_idx(const std::vector<Lef>& lefs,
   }));
 }
 
-inline void require_that_lefs_are_sorted_by_idx(const std::vector<Lef>& lefs,
-                                                const std::vector<usize>& rev_ranks,
-                                                const std::vector<usize>& fwd_ranks) {
+template <class LefCollection, class UsizeCollection>
+inline void require_that_lefs_are_sorted_by_idx(const LefCollection& lefs,
+                                                const UsizeCollection& rev_ranks,
+                                                const UsizeCollection& fwd_ranks) {
+  static_assert(std::is_same_v<typename LefCollection::value_type, Lef>);
+  static_assert(std::is_same_v<typename UsizeCollection::value_type, usize>);
   REQUIRE(std::is_sorted(fwd_ranks.begin(), fwd_ranks.end(), [&](const auto r1, const auto r2) {
     return lefs[r1].fwd_unit.pos() < lefs[r2].fwd_unit.pos();
   }));
@@ -161,7 +172,7 @@ inline void require_that_lefs_are_sorted_by_idx(const std::vector<Lef>& lefs,
     std::string_view name, bp_t chrom_size, bp_t chrom_start = 0,
     bp_t chrom_end = (std::numeric_limits<bp_t>::max)()) {
   chrom_end = std::min(chrom_end, chrom_size);
-  assert(chrom_start < chrom_end);  // NOLINT
+  assert(chrom_start < chrom_end);
   return {0, name, chrom_start, chrom_end, chrom_size};
 }
 }  // namespace modle::test::libmodle
