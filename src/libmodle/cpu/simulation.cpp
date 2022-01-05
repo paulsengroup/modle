@@ -201,34 +201,32 @@ void Simulation::write_contacts_to_disk(std::deque<std::pair<Chromosome*, usize>
   this->_end_of_simulation = true;
 }
 
-bp_t Simulation::generate_rev_move(const Chromosome& chrom, const ExtrusionUnit& unit,
-                                   const double avg_extr_speed, const double extr_speed_std,
-                                   random::PRNG_t& rand_eng) {
-  assert(unit.pos() >= chrom.start_pos());
-  if (extr_speed_std == 0.0) {  // When std == 0 always return the avg. extrusion speed
-    // (except when unit is close to chrom start pos.)
-    return std::min(static_cast<bp_t>(avg_extr_speed), unit.pos() - chrom.start_pos());
-  }
-  // Generate the move distance (and make sure it is not a negative distance)
-  // NOTE: on my laptop generating doubles from a normal distribution, rounding them, then
-  // casting double to uint is a lot faster (~4x) than drawing uints directly from a Poisson
-  // distr.
-  return std::clamp(
-      static_cast<bp_t>(std::round(lef_move_generator_t{avg_extr_speed, extr_speed_std}(rand_eng))),
-      bp_t(0), unit.pos() - chrom.start_pos());
-}
+// Generate moves for extrusion units moving in the same direction
+template <class MoveGeneratorT>
+static void generate_moves_helper(const absl::Span<const Lef> lefs, const absl::Span<bp_t> moves,
+                                  const double avg_extr_speed, const double extr_speed_std,
+                                  random::PRNG_t& rand_eng) {
+  const bp_t move_int = static_cast<bp_t>(std::round(avg_extr_speed));
+  auto generate_move = [&](const auto& lef) -> bp_t {
+    // Don't bother geerating move for inactive LEFs
+    if (!lef.is_bound()) {
+      return 0;
+    }
 
-bp_t Simulation::generate_fwd_move(const Chromosome& chrom, const ExtrusionUnit& unit,
-                                   const double avg_extr_speed, const double extr_speed_std,
-                                   random::PRNG_t& rand_eng) {
-  // See Simulation::generate_rev_move for comments
-  assert(unit.pos() < chrom.end_pos());
-  if (extr_speed_std == 0.0) {
-    return std::min(static_cast<bp_t>(avg_extr_speed), (chrom.end_pos() - 1) - unit.pos());
+    // When std == 0 always return the avg. extrusion speed
+    if (extr_speed_std == 0.0) {
+      return move_int;
+    }
+    // NOTE: on my laptop generating doubles from a normal distribution, rounding them, then
+    // casting double to uint is a lot faster (~4x) than drawing uints directly from a Poisson
+    // distr.
+    return static_cast<bp_t>(
+        std::round(std::max(0.0, MoveGeneratorT{avg_extr_speed, extr_speed_std}(rand_eng))));
+  };
+
+  for (usize i = 0; i < lefs.size(); ++i) {
+    moves[i] = generate_move(lefs[i]);
   }
-  return std::clamp(
-      static_cast<bp_t>(std::round(lef_move_generator_t{avg_extr_speed, extr_speed_std}(rand_eng))),
-      bp_t(0), (chrom.end_pos() - 1) - unit.pos());
 }
 
 void Simulation::generate_moves(const Chromosome& chrom, const absl::Span<const Lef> lefs,
@@ -244,25 +242,44 @@ void Simulation::generate_moves(const Chromosome& chrom, const absl::Span<const 
     assert(lefs.size() == rev_moves.size());
   }
 
-  // As long as a LEF is bound to DNA, always generate a move
   const auto rev_extr_speed = static_cast<double>(
       burnin_completed ? this->rev_extrusion_speed : this->rev_extrusion_speed_burnin);
   const auto fwd_extr_speed = static_cast<double>(
       burnin_completed ? this->fwd_extrusion_speed : this->fwd_extrusion_speed_burnin);
-  for (usize i = 0; i < lefs.size(); ++i) {
-    rev_moves[i] = lefs[i].is_bound() ? generate_rev_move(chrom, lefs[i].rev_unit, rev_extr_speed,
-                                                          this->rev_extrusion_speed_std, rand_eng)
-                                      : 0UL;
-    fwd_moves[i] = lefs[i].is_bound() ? generate_fwd_move(chrom, lefs[i].fwd_unit, fwd_extr_speed,
-                                                          this->fwd_extrusion_speed_std, rand_eng)
-                                      : 0UL;
-  }
+
+  generate_moves_helper<lef_move_generator_t>(lefs, rev_moves, rev_extr_speed,
+                                              rev_extrusion_speed_std, rand_eng);
+  generate_moves_helper<lef_move_generator_t>(lefs, fwd_moves, fwd_extr_speed,
+                                              fwd_extrusion_speed_std, rand_eng);
 
   if (adjust_moves_) {  // Adjust moves of consecutive extr. units to make LEF behavior more
     // realistic See comments in adjust_moves_of_consecutive_extr_units for more
     // details on what this entails
     Simulation::adjust_moves_of_consecutive_extr_units(chrom, lefs, rev_lef_ranks, fwd_lef_ranks,
                                                        rev_moves, fwd_moves);
+  }
+
+  Simulation::clamp_moves(chrom, lefs, rev_moves, fwd_moves);
+}
+
+void Simulation::clamp_moves(const Chromosome& chrom, const absl::Span<const Lef> lefs,
+                             const absl::Span<bp_t> rev_moves,
+                             const absl::Span<bp_t> fwd_moves) noexcept {
+  for (usize i = 0; i < lefs.size(); ++i) {
+    if (!lefs[i].is_bound()) {
+      assert(rev_moves[i] == 0);
+      assert(fwd_moves[i] == 0);
+      continue;
+    }
+    if (lefs[i].loop_size() == 0 && lefs[i].binding_epoch == 1265 &&
+        lefs[i].rev_unit.pos() == 2504) {
+      [[maybe_unused]] volatile int foo = 0;
+    }
+
+    assert(lefs[i].rev_unit.pos() >= chrom.start_pos());
+    assert(lefs[i].fwd_unit.pos() < chrom.end_pos());
+    rev_moves[i] = std::min(rev_moves[i], lefs[i].rev_unit.pos() - chrom.start_pos());
+    fwd_moves[i] = std::min(fwd_moves[i], chrom.end_pos() - lefs[i].fwd_unit.pos() - 1);
   }
 }
 
@@ -276,44 +293,50 @@ void Simulation::adjust_moves_of_consecutive_extr_units(
   // Loop over pairs of consecutive extr. units.
   // Extr. units moving in rev direction are processed in 3'-5' order, while units moving in fwd
   // direction are processed in 5'-3' direction
-  const auto rev_offset = lefs.size() - 1;
-  for (usize i = 0; i < lefs.size() - 1; ++i) {
-    {
-      const auto idx1 = rev_lef_ranks[rev_offset - 1 - i];
-      const auto idx2 = rev_lef_ranks[rev_offset - i];
+  for (usize i = lefs.size() - 1; i > 0; --i) {
+    const auto i1 = rev_lef_ranks[i - 1];
+    const auto i2 = rev_lef_ranks[i];
 
-      if (lefs[idx1].is_bound() && lefs[idx2].is_bound()) {
-        assert(lefs[idx1].rev_unit.pos() >= chrom.start_pos() + rev_moves[idx1]);
-        assert(lefs[idx2].rev_unit.pos() >= chrom.start_pos() + rev_moves[idx2]);
+    if (lefs[i1].is_bound() && lefs[i2].is_bound()) {
+      // Don't bother processing moves that will cause LEFs to go past chromosomal boundaries: we
+      // have a post-processing pass at the end of generate_moves() to handle this case
+      if (lefs[i1].rev_unit.pos() <= chrom.start_pos() + rev_moves[i1] ||
+          lefs[i2].rev_unit.pos() <= chrom.start_pos() + rev_moves[i2]) {
+        continue;
+      }
 
-        const auto pos1 = lefs[idx1].rev_unit.pos() - rev_moves[idx1];
-        const auto pos2 = lefs[idx2].rev_unit.pos() - rev_moves[idx2];
+      const auto pos1 = lefs[i1].rev_unit.pos() - rev_moves[i1];
+      const auto pos2 = lefs[i2].rev_unit.pos() - rev_moves[i2];
 
-        // If moving extr. units 1 and 2 by their respective moves would cause unit 1 (which comes
-        // first in 3'-5' order) to be surpassed by unit 2 (which comes second in 3'-5' order),
-        // increment the move for unit 1 so that after moving both units, unit 1 will be located one
-        // bp upstream of unit 2 in 5'-3' direction.
-        // This mimics what would probably happen in a real system, where extr. unit 2 would most
-        // likely push extr. unit 1, temporarily increasing extr. speed of unit 1.
-        if (pos2 < pos1) {
-          rev_moves[idx1] += pos1 - pos2;
-        }
+      // If moving extr. units 1 and 2 by their respective moves would cause unit 1 (which comes
+      // first in 3'-5' order) to be surpassed by unit 2 (which comes second in 3'-5' order),
+      // increment the move for unit 1 so that after moving both units, unit 1 will be located one
+      // bp upstream of unit 2 in 5'-3' direction.
+      // This mimics what would probably happen in a real system, where extr. unit 2 would most
+      // likely push extr. unit 1, temporarily increasing extr. speed of unit 1.
+      if (pos2 <= pos1) {
+        rev_moves[i1] += (pos1 - pos2) + 1;
       }
     }
+  }
 
-    const auto idx1 = fwd_lef_ranks[i];
-    const auto idx2 = fwd_lef_ranks[i + 1];
+  // Process fwd units
+  for (usize i = 1; i < lefs.size(); ++i) {
+    const auto i1 = fwd_lef_ranks[i - 1];
+    const auto i2 = fwd_lef_ranks[i];
 
-    // See above for detailed comments. The logic is the same used on rev units (but mirrored!)
-    if (lefs[idx1].is_bound() && lefs[idx2].is_bound()) {
-      assert(lefs[idx1].fwd_unit.pos() + fwd_moves[idx1] < chrom.end_pos());
-      assert(lefs[idx1].fwd_unit.pos() + fwd_moves[idx2] < chrom.end_pos());
+    // See above for detailed comments. The code logic is the same used on rev units (but mirrored!)
+    if (lefs[i1].is_bound() && lefs[i2].is_bound()) {
+      if (lefs[i1].fwd_unit.pos() + fwd_moves[i1] > chrom.end_pos() - 1 ||
+          lefs[i2].fwd_unit.pos() + fwd_moves[i2] > chrom.end_pos() - 1) {
+        continue;
+      }
 
-      const auto pos1 = lefs[idx1].fwd_unit.pos() + fwd_moves[idx1];
-      const auto pos2 = lefs[idx2].fwd_unit.pos() + fwd_moves[idx2];
+      const auto pos1 = lefs[i1].fwd_unit.pos() + fwd_moves[i1];
+      const auto pos2 = lefs[i2].fwd_unit.pos() + fwd_moves[i2];
 
-      if (pos1 > pos2) {
-        fwd_moves[idx2] += pos1 - pos2;
+      if (pos1 >= pos2) {
+        fwd_moves[i2] += (pos1 - pos2) + 1;
       }
     }
   }
@@ -334,7 +357,6 @@ void Simulation::rank_lefs(const absl::Span<const Lef> lefs,
     return lefs[r1].rev_unit.pos() < lefs[r2].rev_unit.pos();
   };
 
-  // See comments for rev_comparator.
   auto fwd_comparator = [&](const auto r1, const auto r2) constexpr noexcept {
     assert(r1 < lefs.size());
     assert(r2 < lefs.size());
@@ -424,18 +446,19 @@ void Simulation::extrude([[maybe_unused]] const Chromosome& chrom, const absl::S
   const auto i2 = lefs.size() - num_fwd_units_at_3prime;
   for (; i1 < i2; ++i1) {
     auto& lef = lefs[i1];
+    const auto& rev_move = rev_moves[i1];
+    const auto& fwd_move = fwd_moves[i1];
     if (MODLE_UNLIKELY(!lef.is_bound())) {  // Do not process inactive LEFs
       continue;
     }
-    // assert(lef.rev_unit.pos() <= lef.fwd_unit.pos());
-    assert(lef.rev_unit.pos() >= chrom.start_pos() + rev_moves[i1]);
-    assert(lef.fwd_unit.pos() + fwd_moves[i1] < chrom.end_pos());
+    assert(lef.rev_unit.pos() >= chrom.start_pos() + rev_move);
+    assert(lef.fwd_unit.pos() + fwd_move < chrom.end_pos());
 
     // Extrude rev unit
-    lef.rev_unit._pos -= rev_moves[i1];  // Advance extr. unit in 3'-5' direction
+    lef.rev_unit._pos -= rev_move;  // Advance extr. unit in 3'-5' direction
 
     // Extrude fwd unit
-    lef.fwd_unit._pos += fwd_moves[i1];  // Advance extr. unit in 5'-3' direction
+    lef.fwd_unit._pos += fwd_move;  // Advance extr. unit in 5'-3' direction
     assert(lef.rev_unit.pos() <= lef.fwd_unit.pos());
   }
 }
@@ -455,11 +478,11 @@ std::pair<bp_t, bp_t> Simulation::compute_lef_lef_collision_pos(const ExtrusionU
   const auto collision_pos =
       fwd_pos + static_cast<bp_t>(std::round((static_cast<double>(fwd_speed) * time_to_collision)));
   assert(collision_pos <= rev_pos);
-#ifndef NDEBUG
-  const auto collision_pos_ =
-      static_cast<double>(rev_pos) - static_cast<double>(rev_speed) * time_to_collision;
-  assert(abs(static_cast<double>(collision_pos) - collision_pos_) < 1.0);
-#endif
+  if constexpr (utils::ndebug_not_defined()) {
+    [[maybe_unused]] const auto collision_pos_ =
+        static_cast<double>(rev_pos) - static_cast<double>(rev_speed) * time_to_collision;
+    assert(abs(static_cast<double>(collision_pos) - collision_pos_) < 1.0);
+  }
   if (MODLE_UNLIKELY(collision_pos == fwd_pos)) {
     assert(collision_pos >= fwd_pos);
     assert(collision_pos + 1 <= rev_pos);
@@ -523,8 +546,8 @@ usize Simulation::register_contacts_w_randomization(bp_t start_pos, bp_t end_pos
     if (MODLE_LIKELY(lef.is_bound() && lef.rev_unit.pos() > start_pos &&
                      lef.rev_unit.pos() < end_pos && lef.fwd_unit.pos() > start_pos &&
                      lef.fwd_unit.pos() < end_pos)) {
-      // We are performing most operations using double to deal with the possibility that the noise
-      // generated to compute p1 is larger than the pos of the rev unit
+      // We are performing most operations using double to deal with the possibility that the
+      // noise generated to compute p1 is larger than the pos of the rev unit
       const auto p1 = static_cast<double>(lef.rev_unit.pos()) - noise_gen(rand_eng);
       const auto p2 = static_cast<double>(lef.fwd_unit.pos()) + noise_gen(rand_eng);
 
@@ -553,6 +576,7 @@ usize Simulation::release_lefs(const absl::Span<Lef> lefs,
     auto is_lef_bar_hard_collision = [&](const auto c, dna::Direction d) {
       assert(d == dna::rev || d == dna::fwd);
       if (c.collision_occurred(CollisionT::LEF_BAR)) {
+        assert(c.decode_index() <= barriers.size());
         return barriers[c.decode_index()].blocking_direction_major() == d;
       }
       return false;
@@ -936,9 +960,9 @@ std::string Simulation::State::to_string() const noexcept {
 }
 
 std::pair<usize, usize> Simulation::process_collisions(
-    const Chromosome& chrom, const absl::Span<const Lef> lefs,
+    const Chromosome& chrom, const absl::Span<Lef> lefs,
     const absl::Span<const ExtrusionBarrier> barriers, const boost::dynamic_bitset<>& barrier_mask,
-    const absl::Span<const usize> rev_lef_ranks, const absl::Span<const usize> fwd_lef_ranks,
+    const absl::Span<usize> rev_lef_ranks, const absl::Span<usize> fwd_lef_ranks,
     const absl::Span<bp_t> rev_moves, const absl::Span<bp_t> fwd_moves,
     const absl::Span<CollisionT> rev_collisions, const absl::Span<CollisionT> fwd_collisions,
     random::PRNG_t& rand_eng) const noexcept(utils::ndebug_defined()) {
@@ -962,6 +986,9 @@ std::pair<usize, usize> Simulation::process_collisions(
   this->process_secondary_lef_lef_collisions(chrom, lefs, rev_lef_ranks, fwd_lef_ranks, rev_moves,
                                              fwd_moves, rev_collisions, fwd_collisions, rand_eng,
                                              num_rev_units_at_5prime, num_fwd_units_at_3prime);
+  Simulation::fix_secondary_lef_lef_collisions(chrom, lefs, barriers, rev_lef_ranks, fwd_lef_ranks,
+                                               rev_moves, fwd_moves, rev_collisions, fwd_collisions,
+                                               num_rev_units_at_5prime, num_fwd_units_at_3prime);
   return std::make_pair(num_rev_units_at_5prime, num_fwd_units_at_3prime);
 }
 
@@ -1141,10 +1168,6 @@ void Simulation::simulate_one_cell(State& s) const {
       // Advance LEFs
       Simulation::extrude(*s.chrom, s.get_lefs(), s.get_rev_moves(), s.get_fwd_moves(),
                           num_rev_units_at_5prime, num_fwd_units_at_3prime);
-
-      // this->correct_overlapping_lefs(*s.chrom, s.get_lefs(), s.get_rev_ranks(),
-      // s.get_fwd_ranks(),
-      //                                num_rev_units_at_5prime, num_fwd_units_at_3prime);
 
       // Log model internal state
       Simulation::dump_stats(s.id, s.epoch, s.cell_id, !s.burnin_completed, *s.chrom, s.get_lefs(),

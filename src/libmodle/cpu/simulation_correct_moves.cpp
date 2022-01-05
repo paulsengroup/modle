@@ -36,7 +36,7 @@ void Simulation::correct_moves_for_lef_bar_collisions(
       // of the current LEF will be located 1bp downstream of the extr. barrier.
       const auto distance = lefs[i].rev_unit.pos() - barrier.pos();
       assert(distance != 0);
-      rev_moves[i] = std::min(distance, distance - 1);
+      rev_moves[i] = distance - 1;
     }
 
     if (MODLE_UNLIKELY(
@@ -48,7 +48,7 @@ void Simulation::correct_moves_for_lef_bar_collisions(
       // Same as above. In this case the unit will be located 1bp upstream of the extr. barrier.
       const auto distance = barrier.pos() - lefs[i].fwd_unit.pos();
       assert(distance != 0);
-      fwd_moves[i] = std::min(distance, distance - 1);
+      fwd_moves[i] = distance - 1;
     }
   }
 }

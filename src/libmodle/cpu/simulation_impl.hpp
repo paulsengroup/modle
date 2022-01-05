@@ -123,6 +123,16 @@ usize Simulation::consume_tasks_blocking(moodycamel::BlockingConcurrentQueue<Tas
   return 0;
 }
 
+constexpr bool Simulation::run_lef_lef_collision_trial(random::PRNG_t& rand_eng) const noexcept {
+  return this->probability_of_extrusion_unit_bypass == 0.0 ||
+         random::bernoulli_trial{1.0 - this->probability_of_extrusion_unit_bypass}(rand_eng);
+}
+
+constexpr bool Simulation::run_lef_bar_collision_trial(const double pblock,
+                                                       random::PRNG_t& rand_eng) const noexcept {
+  return pblock == 1.0 || random::bernoulli_trial{pblock}(rand_eng);
+}
+
 }  // namespace modle
 
 constexpr auto fmt::formatter<modle::Simulation::Task>::parse(format_parse_context& ctx)

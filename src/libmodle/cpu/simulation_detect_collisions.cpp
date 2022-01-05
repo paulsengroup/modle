@@ -186,9 +186,9 @@ void Simulation::detect_lef_bar_collisions(
     const auto& barrier = extr_barriers[i];
     assert(j < lefs.size());
     // Probability of block is set based on the extr. barrier blocking direction
-    const auto pblock = barrier.blocking_direction_major() == dna::rev
-                            ? this->lef_bar_major_collision_pblock
-                            : this->lef_bar_minor_collision_pblock;
+    const auto& pblock = barrier.blocking_direction_major() == dna::rev
+                             ? this->lef_bar_major_collision_pblock
+                             : this->lef_bar_minor_collision_pblock;
 
     // Look for the first rev extr. unit that comes after the current barrier
     while (unit_pos <= barrier.pos()) {
@@ -209,7 +209,7 @@ void Simulation::detect_lef_bar_collisions(
       assert(unit_pos >= barrier.pos());
       const auto delta = unit_pos - barrier.pos();
       if (delta > 0 && delta <= rev_moves[unit_idx] &&
-          (pblock == 1.0 || random::bernoulli_trial{pblock}(rand_eng))) {
+          Simulation::run_lef_bar_collision_trial(pblock, rand_eng)) {
         // Collision detected
         rev_collisions[unit_idx].set(i, CollisionT::COLLISION | CollisionT::LEF_BAR);
       }
@@ -236,9 +236,9 @@ process_fwd_unit:
 
     const auto& barrier = extr_barriers[i];
     // Probability of block is set based on the extr. barrier blocking direction
-    const auto pblock = barrier.blocking_direction_major() == dna::fwd
-                            ? this->lef_bar_major_collision_pblock
-                            : this->lef_bar_minor_collision_pblock;
+    const auto& pblock = barrier.blocking_direction_major() == dna::fwd
+                             ? this->lef_bar_major_collision_pblock
+                             : this->lef_bar_minor_collision_pblock;
     // Look for the next fwd unit that comes strictly before the current extr. barrier
     while (unit_pos >= barrier.pos()) {
       if (MODLE_UNLIKELY(--j == sentinel_idx)) {
@@ -252,7 +252,7 @@ process_fwd_unit:
     if (MODLE_LIKELY(lefs[unit_idx].is_bound())) {
       const auto delta = barrier.pos() - unit_pos;
       if (delta > 0 && delta <= fwd_moves[unit_idx] &&
-          (pblock == 1.0 || random::bernoulli_trial{pblock}(rand_eng))) {
+          Simulation::run_lef_bar_collision_trial(pblock, rand_eng)) {
         fwd_collisions[unit_idx].set(i, CollisionT::COLLISION | CollisionT::LEF_BAR);
       }
     }
@@ -349,10 +349,9 @@ void Simulation::detect_primary_lef_lef_collisions(
     // the sum of their moves.
     // If probability_of_extrusion_unit_bypass != 0, then we also require a successful bernoulli
     // trial before calling a collision
-    if (const auto delta = rev_pos - fwd_pos;
-        delta > 0 && delta < rev_moves[rev_idx] + fwd_moves[fwd_idx] &&
-        (this->probability_of_extrusion_unit_bypass == 0.0 ||
-         random::bernoulli_trial{1.0 - this->probability_of_extrusion_unit_bypass}(rand_eng))) {
+    if (const auto delta = rev_pos - fwd_pos; delta > 0 &&
+                                              delta < rev_moves[rev_idx] + fwd_moves[fwd_idx] &&
+                                              this->run_lef_lef_collision_trial(rand_eng)) {
       // Declare few aliases to reduce code verbosity later on
       const auto& rev_move = rev_moves[rev_idx];
       const auto& fwd_move = fwd_moves[fwd_idx];
@@ -474,16 +473,14 @@ void Simulation::process_secondary_lef_lef_collisions(
     assert(rev_pos2 - move2 >= chrom.start_pos());
 
     if (rev_pos2 - move2 <= rev_pos1 - move1) {
-      if (this->probability_of_extrusion_unit_bypass == 0.0 ||
-          random::bernoulli_trial{1.0 - this->probability_of_extrusion_unit_bypass}(rand_eng)) {
+      if (this->run_lef_lef_collision_trial(rand_eng)) {
         rev_collisions[rev_idx2].set(rev_idx1,
                                      CollisionT::COLLISION | CollisionT::LEF_LEF_SECONDARY);
         const auto move = rev_pos2 - (rev_pos1 - move1);
         move2 = std::min(move, move - 1);
       } else {
-        const auto final_pos = rev_pos2 - move2;
-        assert(rev_pos1 >= final_pos);
-        move1 = rev_pos1 - final_pos;
+        assert(rev_collisions[rev_idx1].collision_occurred());
+        rev_collisions[rev_idx2].set(rev_idx1, CollisionT::LEF_LEF_SECONDARY);
       }
     }
   }
@@ -515,178 +512,105 @@ void Simulation::process_secondary_lef_lef_collisions(
     assert(fwd_pos2 + move2 < chrom.end_pos());
 
     if (fwd_pos1 + move1 >= fwd_pos2 + move2) {
-      if (this->probability_of_extrusion_unit_bypass == 0.0 ||
-          random::bernoulli_trial{1.0 - this->probability_of_extrusion_unit_bypass}(rand_eng)) {
+      if (this->run_lef_lef_collision_trial(rand_eng)) {
         fwd_collisions[fwd_idx1].set(fwd_idx2,
                                      CollisionT::COLLISION | CollisionT::LEF_LEF_SECONDARY);
         const auto move = (fwd_pos2 + move2) - fwd_pos1;
         move1 = std::min(move, move - 1);
       } else {
-        const auto final_pos = fwd_pos1 + move1;
-        move2 = final_pos - fwd_pos2;
+        assert(fwd_collisions[fwd_idx2].collision_occurred());
+        fwd_collisions[fwd_idx1].set(fwd_idx2, CollisionT::LEF_LEF_SECONDARY);
       }
     }
   }
 }
 
-/*
-void Simulation::correct_overlapping_lefs(
+void Simulation::fix_secondary_lef_lef_collisions(
     [[maybe_unused]] const Chromosome& chrom, const absl::Span<Lef> lefs,
+    [[maybe_unused]] const absl::Span<const ExtrusionBarrier> barriers,
     const absl::Span<usize> rev_lef_ranks, const absl::Span<usize> fwd_lef_ranks,
     const absl::Span<bp_t> rev_moves, const absl::Span<bp_t> fwd_moves,
-    const absl::Span<const CollisionT> rev_collisions,
-    const absl::Span<const CollisionT> fwd_collisions, usize num_rev_units_at_5prime,
-    usize num_fwd_units_at_3prime) const noexcept(utils::ndebug_defined()) {
-  const auto num_active_rev_units = std::max(usize(1), num_rev_units_at_5prime);
+    const absl::Span<CollisionT> rev_collisions, const absl::Span<CollisionT> fwd_collisions,
+    const usize num_rev_units_at_5prime,
+    const usize num_fwd_units_at_3prime) noexcept(utils::ndebug_defined()) {
   const auto num_active_fwd_units =
       lefs.size() - std::min(num_fwd_units_at_3prime, num_fwd_units_at_3prime - 1);
 
   // Loop over rev units in 5'-3' direction, and skip over units that are located at the 5'-end
-  for (auto i = num_active_rev_units; i < lefs.size(); ++i) {
-    // index of the ith-1 rev unit in 5'-3' order (i.e. U1)
-    const auto& rev_idx1 = rev_lef_ranks[i - 1];
-    const auto& rev_pos1 = lefs[rev_idx1].rev_unit.pos();
-    if (rev_collisions[rev_idx1] != NO_COLLISION) {
-      // If U1 is not stalled, then it is not possible to have a secondary LEF-LEF collision
-      continue;
-    }
-
-    // index of the ith rev unit in 5'-3' order (i.e. U2)
+  for (auto i = std::max(usize(1), num_rev_units_at_5prime); i < lefs.size(); ++i) {
     const auto& rev_idx2 = rev_lef_ranks[i];
-    const auto& rev_pos2 = lefs[rev_idx2].rev_unit.pos();
-    if (rev_collisions[rev_idx2] != NO_COLLISION) {
-      // LEF-BAR and primary LEF-LEF collisions have precedence over secondary LEF-LEF collisions
-      continue;
-    }
+    const auto& rev_collision2 = rev_collisions[rev_idx2];
+    if (rev_collision2.collision_avoided(CollisionT::LEF_LEF_SECONDARY)) {
+      const auto& rev_idx1 = rev_lef_ranks[i - 1];
+      [[maybe_unused]] const auto& rev_collision1 = rev_collisions[rev_idx1];
+      assert(rev_idx1 == rev_collision2.decode_index());  // idx of the EU blocking EU1
+      assert(rev_collision1.collision_occurred());
 
-    auto& move1 = rev_moves[rev_idx1];
-    auto& move2 = rev_moves[rev_idx2];
+      const auto pos1 = lefs[rev_idx1].rev_unit.pos() - rev_moves[rev_idx1];
+      if (lefs[rev_idx2].rev_unit.pos() > pos1 + 1) {
+        rev_moves[rev_idx2] = lefs[rev_idx2].rev_unit.pos() - (pos1 + 1);
+      } else {
+        rev_moves[rev_idx2] = 0;
+      }
+      rev_collisions[rev_idx2].set(rev_idx1, CollisionT::COLLISION | CollisionT::LEF_LEF_SECONDARY);
 
-    assert(rev_pos2 >= rev_pos1);
-    assert(rev_pos1 >= move1);
-    assert(rev_pos2 >= move2);
-    assert(rev_pos1 - move1 >= chrom.start_pos());
-    assert(rev_pos2 - move2 >= chrom.start_pos());
+      const auto p1 = lefs[rev_idx1].rev_unit._pos;
+      const auto p2 = lefs[rev_idx2].rev_unit._pos;
+      lefs[rev_idx1].rev_unit._pos = std::min(lefs[rev_idx1].fwd_unit._pos, p2);
+      lefs[rev_idx2].rev_unit._pos = std::min(lefs[rev_idx2].fwd_unit._pos, p1);
+      std::swap(rev_collisions[rev_idx1], rev_collisions[rev_idx2]);
+      std::swap(rev_moves[rev_idx1], rev_moves[rev_idx2]);
+      std::swap(rev_lef_ranks[i - 1], rev_lef_ranks[i]);
 
-    if (rev_pos2 - move2 == rev_pos1 - move1) {
-      const auto pos = rev_pos2 - move2;
-      assert(pos <= rev_pos1);
-      lefs[rev_idx1].rev_unit.bind_at_pos(rev_pos2);
-      lefs[rev_idx2].rev_unit.bind_at_pos(rev_pos1);
-      std::swap(rev_lef_ranks[i], rev_lef_ranks[i - 1]);
-      move1 = rev_pos1 - pos;
-      move2 = rev_pos2 - pos;
-      // assert(lefs[rev_idx1].rev_unit.pos() <= lefs[rev_idx1].fwd_unit.pos());
-      // assert(lefs[rev_idx2].rev_unit.pos() <= lefs[rev_idx2].fwd_unit.pos());
+      // Sometime when swapping moves it is possible that the resulting move will cause an extrusion
+      // unit to cross chromosomal boundaries. Right now I can't think of a way around this other
+      // than clamping the moves once again
+      rev_moves[rev_lef_ranks[i - 1]] =
+          std::min(lefs[rev_lef_ranks[i - 1]].rev_unit.pos() - chrom.start_pos(),
+                   rev_moves[rev_lef_ranks[i - 1]]);
+      rev_moves[rev_lef_ranks[i]] = std::min(
+          lefs[rev_lef_ranks[i]].rev_unit.pos() - chrom.start_pos(), rev_moves[rev_lef_ranks[i]]);
+      assert(lefs[rev_lef_ranks[i - 1]].rev_unit.pos() >= rev_moves[rev_lef_ranks[i - 1]]);
+      assert(lefs[rev_lef_ranks[i]].rev_unit.pos() >= rev_moves[rev_lef_ranks[i]]);
     }
   }
-  // Loop over fwd units in 3'-5' direction, and skip over units that are located at the 3'-end.
-  // Look in the section above for detailed comments
-  for (auto i = num_active_fwd_units - 1; i > 0; --i) {
-    // index of the ith fwd unit in 3'-5' order (i.e. U2)
-    const auto& fwd_idx2 = fwd_lef_ranks[i];
-    const auto& fwd_pos2 = lefs[fwd_idx2].fwd_unit.pos();
-    if (MODLE_LIKELY(fwd_collisions[fwd_idx2] == NO_COLLISION)) {
-      // If U2 is not stalled, then it is not possible to have a secondary LEF-LEF collision
-      continue;
-    }
 
-    const auto& fwd_idx1 = fwd_lef_ranks[i - 1];
-    const auto& fwd_pos1 = lefs[fwd_idx1].fwd_unit.pos();
-    if (fwd_collisions[fwd_idx1] != NO_COLLISION) {
-      continue;
-    }
+  // Loop over fwd units in 5'-3' direction, and skip over units that are located at the 5'-end
+  for (usize i = 0; i < num_active_fwd_units - 1; ++i) {
+    const auto& fwd_idx1 = fwd_lef_ranks[i];
+    const auto& fwd_collision1 = fwd_collisions[fwd_idx1];
+    if (fwd_collision1.collision_avoided(CollisionT::LEF_LEF_SECONDARY)) {
+      const auto& fwd_idx2 = fwd_lef_ranks[i + 1];  // idx of the EU blocking EU1
+      [[maybe_unused]] const auto& fwd_collision2 = fwd_collisions[fwd_idx2];
+      assert(fwd_idx2 == fwd_collision1.decode_index());
+      assert(fwd_collision2.collision_occurred());
 
-    auto& move1 = fwd_moves[fwd_idx1];
-    auto& move2 = fwd_moves[fwd_idx2];
+      const auto pos2 = lefs[fwd_idx2].fwd_unit.pos() + fwd_moves[fwd_idx2];
+      if (pos2 > lefs[fwd_idx1].fwd_unit.pos() + 1) {
+        fwd_moves[fwd_idx1] = pos2 - (lefs[fwd_idx1].fwd_unit.pos() + 1);
+      } else {
+        fwd_moves[fwd_idx1] = 0;
+      }
+      fwd_collisions[fwd_idx1].set(fwd_idx2, CollisionT::COLLISION | CollisionT::LEF_LEF_SECONDARY);
 
-    assert(fwd_pos2 >= fwd_pos1);
-    assert(fwd_pos1 + move1 < chrom.end_pos());
-    assert(fwd_pos2 + move2 < chrom.end_pos());
+      const auto p1 = lefs[fwd_idx1].fwd_unit._pos;
+      const auto p2 = lefs[fwd_idx2].fwd_unit._pos;
+      lefs[fwd_idx1].fwd_unit._pos = std::max(lefs[fwd_idx1].rev_unit._pos, p2);
+      lefs[fwd_idx2].fwd_unit._pos = std::max(lefs[fwd_idx2].rev_unit._pos, p1);
+      std::swap(fwd_collisions[fwd_idx1], fwd_collisions[fwd_idx2]);
+      std::swap(fwd_moves[fwd_idx1], fwd_moves[fwd_idx2]);
+      std::swap(fwd_lef_ranks[i], fwd_lef_ranks[i + 1]);
 
-    if (fwd_pos1 + move1 == fwd_pos2 + move2) {
-      const auto pos = fwd_pos1 + move1;
-      assert(pos >= fwd_pos2);
-      lefs[fwd_idx1].fwd_unit.bind_at_pos(fwd_pos2);
-      lefs[fwd_idx2].fwd_unit.bind_at_pos(fwd_pos1);
-      std::swap(fwd_lef_ranks[i], fwd_lef_ranks[i - 1]);
-      move1 = pos - fwd_pos1;
-      move2 = pos - fwd_pos2;
-      // assert(lefs[fwd_idx1].rev_unit.pos() <= lefs[fwd_idx1].fwd_unit.pos());
-      // assert(lefs[fwd_idx2].rev_unit.pos() <= lefs[fwd_idx2].fwd_unit.pos());
+      fwd_moves[fwd_lef_ranks[i]] = std::min(
+          chrom.end_pos() - 1 - lefs[fwd_lef_ranks[i]].fwd_unit.pos(), fwd_moves[fwd_lef_ranks[i]]);
+      fwd_moves[fwd_lef_ranks[i + 1]] =
+          std::min(chrom.end_pos() - 1 - lefs[fwd_lef_ranks[i + 1]].fwd_unit.pos(),
+                   fwd_moves[fwd_lef_ranks[i + 1]]);
+
+      assert(lefs[fwd_lef_ranks[i]].fwd_unit.pos() + fwd_moves[fwd_lef_ranks[i]] < chrom.end_pos());
+      assert(lefs[fwd_lef_ranks[i + 1]].fwd_unit.pos() + fwd_moves[fwd_lef_ranks[i + 1]] <
+             chrom.end_pos());
     }
   }
 }
-
-void Simulation::correct_overlapping_lefs([[maybe_unused]] const Chromosome& chrom,
-                                          const absl::Span<Lef> lefs,
-                                          const absl::Span<usize> rev_lef_ranks,
-                                          const absl::Span<usize> fwd_lef_ranks,
-                                          usize num_rev_units_at_5prime,
-                                          usize num_fwd_units_at_3prime) const
-    noexcept(utils::ndebug_defined()) {
-  // Loop over rev units in 5'-3' direction, and skip over units that are located at the 5'-end
-  auto i0 = num_rev_units_at_5prime;
-  auto i1 = i0 + 1;
-
-  for (; i1 < lefs.size(); ++i0, ++i1) {
-    // index of the ith-1 rev unit in 5'-3' order (i.e. U1)
-    const auto& rev_idx1 = rev_lef_ranks[i0];
-    const auto& rev_pos1 = lefs[rev_idx1].rev_unit.pos();
-    auto rev_idx2 = rev_lef_ranks[i1];
-    auto rev_pos2 = lefs[rev_idx2].rev_unit.pos();
-
-    while (rev_pos2 - rev_pos1 < i1 - i0) {
-      if (++i1 == lefs.size()) {
-        goto process_fwd_units;  // Move to the next section
-      }
-      rev_idx2 = rev_lef_ranks[i1];
-      rev_pos2 = lefs[rev_idx2].rev_unit.pos();
-    }
-
-    if (i0 + 1 == i1) {
-      continue;
-    }
-
-    assert(rev_pos1 < rev_pos2);
-    // We want to distribute (i1 - i0) units one after the other using (i1 - i0) bp
-    for (auto i = i0; i < i1; ++i) {
-      rev_idx2 = rev_lef_ranks[i];
-      lefs[rev_idx2].rev_unit.bind_at_pos(rev_pos1 + i - i0);
-    }
-    i0 = i1 - 1;
-  }
-process_fwd_units:
-  // Loop over fwd units in 3'-5' direction, and skip over units that are located at the 3'-end.
-  // Look in the section above for detailed comments
-  const auto num_active_fwd_units = lefs.size() - num_fwd_units_at_3prime;
-  for (i0 = 0, i1 = 1; i1 < num_active_fwd_units; ++i0, ++i1) {
-    // index of the ith fwd unit in 3'-5' order (i.e. U2)
-    const auto& fwd_idx1 = fwd_lef_ranks[i0];
-    const auto& fwd_pos1 = lefs[fwd_idx1].fwd_unit.pos();
-    auto fwd_idx2 = fwd_lef_ranks[i1];
-    auto fwd_pos2 = lefs[fwd_idx2].fwd_unit.pos();
-
-    while (fwd_pos2 - fwd_pos1 < i1 - i0) {
-      if (++i1 == lefs.size()) {
-        return;
-      }
-      fwd_idx2 = fwd_lef_ranks[i1];
-      fwd_pos2 = lefs[fwd_idx2].fwd_unit.pos();
-    }
-
-    if (i0 + 1 == i1) {
-      continue;
-    }
-
-    assert(fwd_pos1 < fwd_pos2);
-    // We want to distribute (i1 - i0) units one after the other using (i1 - i0) bp
-    for (auto i = i0; i < i1; ++i) {
-      fwd_idx2 = fwd_lef_ranks[i];
-      lefs[fwd_idx2].fwd_unit.bind_at_pos(fwd_pos1 + i - i0);
-    }
-    i0 = i1 - 1;
-  }
-}
- */
 }  // namespace modle
