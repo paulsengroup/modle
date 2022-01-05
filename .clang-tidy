@@ -2,7 +2,6 @@
 #
 # SPDX-License-Identifier: MIT
 ---
-#Checks: '*,-fuchsia-*,-google-*,-zircon-*,-llvm-*,-llvmlibc-*,-altera-*,-modernize-use-trailing-return-type,-cppcoreguidelines-avoid-magic-numbers,-cppcoreguidelines-pro-bounds-constant-array-index'
 Checks: >
   *,
   -fuchsia-*,
@@ -14,6 +13,7 @@ Checks: >
   -modernize-use-trailing-return-type,
   -cppcoreguidelines-avoid-magic-numbers,
   -cppcoreguidelines-pro-bounds-array-to-pointer-decay,
+  -hicpp-no-array-decay,
   -cppcoreguidelines-pro-bounds-constant-array-index,
   -cppcoreguidelines-avoid-magic-numbers,
   -readability-magic-numbers
