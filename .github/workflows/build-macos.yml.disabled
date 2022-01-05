@@ -103,4 +103,6 @@ jobs:
           ctest --test-dir ${{runner.workspace}}/build \
                 --schedule-random                      \
                 --output-on-failure                    \
+                --timeout 60                           \
+                --repeat after-timeout:3               \
                 -j $(nproc)

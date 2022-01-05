@@ -189,6 +189,8 @@ jobs:
                 --schedule-random           \
                 --output-on-failure         \
                 --no-tests=error            \
+                --timeout 60                \
+                --repeat after-timeout:3    \
                 -j $(nproc)
 
       - name: Configure project - ASAN

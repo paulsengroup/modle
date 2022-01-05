@@ -95,6 +95,8 @@ RUN cd "$src_dir/build"               \
              --schedule-random        \
              --output-on-failure      \
              --no-tests=error         \
+             --timeout 60             \
+             --repeat after-timeout:3 \
     && rm -rf "$src_dir/test/Testing"
 
 FROM ubuntu:20.04 AS base
