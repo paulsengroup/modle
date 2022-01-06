@@ -283,8 +283,6 @@ const std::array<CollisionT, nlefs> fwd_collisions_expected{CollisionT{1, LEF_LE
                                                             CollisionT{}};
   // clang-format on
 
-  assert(fwd_collisions_expected.size() == nlefs);
-  assert(rev_collisions_expected.size() == nlefs);
   require_that_lefs_are_sorted_by_idx(lefs, rev_ranks, fwd_ranks);
 
   modle::Simulation::test_detect_units_at_chrom_boundaries(
@@ -343,8 +341,6 @@ TEST_CASE("Process LEF-LEF collisions 001", "[lef-lef-collisions][simulation][sh
   const std::array<bp_t, nlefs> rev_moves_expected{0, 1, 3, 2};
   const std::array<bp_t, nlefs> fwd_moves_expected{0, 2, 1, 2};
 
-  assert(fwd_collisions_expected.size() == nlefs);
-  assert(rev_collisions_expected.size() == nlefs);
   require_that_lefs_are_sorted_by_idx(lefs, rev_ranks, fwd_ranks);
 
   modle::Simulation::test_detect_units_at_chrom_boundaries(
@@ -408,8 +404,6 @@ std::vector<Lef> lefs{
   const std::array<bp_t, nlefs> rev_moves_expected{0, 3, 2, 3};
   const std::array<bp_t, nlefs> fwd_moves_expected{0, 0, 1, 0};
 
-  assert(fwd_collisions_expected.size() == nlefs);
-  assert(rev_collisions_expected.size() == nlefs);
   require_that_lefs_are_sorted_by_idx(lefs, rev_ranks, fwd_ranks);
 
   modle::Simulation::test_detect_units_at_chrom_boundaries(
@@ -460,19 +454,17 @@ std::vector<Lef> lefs{
   std::array<bp_t, nlefs> rev_moves{20, 30, 40};
   std::array<bp_t, nlefs> fwd_moves{20, 40, 59};
   // clang-format off
-const std::array<CollisionT, nlefs> rev_collisions_expected{CollisionT{5, CHROM_BOUNDARY},
-                                                            CollisionT{0, LEF_LEF_SECONDARY},
-                                                      CollisionT{1, LEF_LEF_SECONDARY}};
-const std::array<CollisionT, nlefs> fwd_collisions_expected{CollisionT{3, CHROM_BOUNDARY},
-                                                      CollisionT{0, LEF_LEF_SECONDARY},
-                                                      CollisionT{1, LEF_LEF_SECONDARY}};
+  const std::array<CollisionT, nlefs> rev_collisions_expected{CollisionT{5, CHROM_BOUNDARY},
+                                                              CollisionT{0, LEF_LEF_SECONDARY},
+                                                              CollisionT{1, LEF_LEF_SECONDARY}};
+  const std::array<CollisionT, nlefs> fwd_collisions_expected{CollisionT{3, CHROM_BOUNDARY},
+                                                              CollisionT{0, LEF_LEF_SECONDARY},
+                                                              CollisionT{1, LEF_LEF_SECONDARY}};
   // clang-format on
 
   const std::array<bp_t, nlefs> rev_moves_expected{20, 29, 38};
   const std::array<bp_t, nlefs> fwd_moves_expected{20, 39, 57};
 
-  assert(fwd_collisions_expected.size() == nlefs);
-  assert(rev_collisions_expected.size() == nlefs);
   require_that_lefs_are_sorted_by_idx(lefs, rev_ranks, fwd_ranks);
 
   modle::Simulation::test_detect_units_at_chrom_boundaries(
@@ -504,14 +496,14 @@ TEST_CASE("Detect LEF-BAR collisions 001 - wo soft collisions fwd CTCFs",
   auto rand_eng = random::PRNG(245021575020225667ULL);
 
   // clang-format off
-std::array<Lef, nlefs> lefs{
-    construct_lef(0, 1, 0),
-    construct_lef(3, 4, 1),
-    construct_lef(5, 5, 2)
-};
-const std::vector<ExtrusionBarrier> barriers{ExtrusionBarrier{2, 1.0, 0.0, '+'},
-                                             ExtrusionBarrier{4, 1.0, 0.0, '+'},
-                                             ExtrusionBarrier{8, 1.0, 0.0, '+'}};
+  std::array<Lef, nlefs> lefs{
+      construct_lef(0, 1, 0),
+      construct_lef(3, 4, 1),
+      construct_lef(5, 5, 2)
+  };
+  const std::array<ExtrusionBarrier, nbarriers> barriers{ExtrusionBarrier{2, 1.0, 0.0, '+'},
+                                                         ExtrusionBarrier{4, 1.0, 0.0, '+'},
+                                                         ExtrusionBarrier{8, 1.0, 0.0, '+'}};
   // clang-format on
   boost::dynamic_bitset<> barrier_mask;
   barrier_mask.resize(nbarriers, static_cast<bool>(CTCF::State::OCCUPIED));
@@ -537,11 +529,6 @@ const std::vector<ExtrusionBarrier> barriers{ExtrusionBarrier{2, 1.0, 0.0, '+'},
   const std::array<bp_t, nlefs> rev_moves_expected{0, 0, 0};
   const std::array<bp_t, nlefs> fwd_moves_expected{2, 2, 2};
 
-  assert(barriers.size() == nbarriers);
-  assert(rev_collisions_expected.size() == nlefs);
-  assert(fwd_collisions_expected.size() == nlefs);
-  assert(rev_collisions.size() == nlefs);
-  assert(fwd_collisions.size() == nlefs);
   require_that_lefs_are_sorted_by_idx(lefs, rev_ranks, fwd_ranks);
 
   Simulation{c, false}.test_detect_lef_bar_collisions(
@@ -571,14 +558,14 @@ TEST_CASE("Detect LEF-BAR collisions 002 - wo soft-collisions rev CTCFs",
   auto rand_eng = random::PRNG(502428610956409790ULL);
 
   // clang-format off
-std::array<Lef, nlefs> lefs{
-    construct_lef(0, 1, 0),
-    construct_lef(3, 4, 1),
-    construct_lef(5, 5, 2)
-};
-const std::vector<ExtrusionBarrier> barriers{ExtrusionBarrier{2, 1.0, 0.0, '-'},
-                                             ExtrusionBarrier{4, 1.0, 0.0, '-'},
-                                             ExtrusionBarrier{8, 1.0, 0.0, '-'}};
+  std::array<Lef, nlefs> lefs{
+      construct_lef(0, 1, 0),
+      construct_lef(3, 4, 1),
+      construct_lef(5, 5, 2)
+  };
+  const std::array<ExtrusionBarrier, nbarriers> barriers{ExtrusionBarrier{2, 1.0, 0.0, '-'},
+                                                         ExtrusionBarrier{4, 1.0, 0.0, '-'},
+                                                         ExtrusionBarrier{8, 1.0, 0.0, '-'}};
   // clang-format on
   boost::dynamic_bitset<> barrier_mask;
   barrier_mask.resize(nbarriers, static_cast<bool>(CTCF::State::OCCUPIED));
@@ -604,11 +591,6 @@ const std::vector<ExtrusionBarrier> barriers{ExtrusionBarrier{2, 1.0, 0.0, '-'},
   const std::array<bp_t, nlefs> rev_moves_expected{0, 2, 2};
   const std::array<bp_t, nlefs> fwd_moves_expected{0, 2, 2};
 
-  assert(barriers.size() == nbarriers);
-  assert(rev_collisions_expected.size() == nlefs);
-  assert(fwd_collisions_expected.size() == nlefs);
-  assert(rev_collisions.size() == nlefs);
-  assert(fwd_collisions.size() == nlefs);
   require_that_lefs_are_sorted_by_idx(lefs, rev_ranks, fwd_ranks);
 
   Simulation{c, false}.test_detect_lef_bar_collisions(
@@ -638,14 +620,14 @@ TEST_CASE("Detect LEF-BAR collisions 003 - w soft-collisions fwd CTCFs",
   auto rand_eng = random::PRNG(17304119060106843975ULL);
 
   // clang-format off
-std::array<Lef, nlefs> lefs{
-    construct_lef(0, 1, 0),
-    construct_lef(3, 4, 1),
-    construct_lef(5, 5, 2)
-};
-const std::vector<ExtrusionBarrier> barriers{ExtrusionBarrier{2, 1.0, 0.0, '+'},
-                                             ExtrusionBarrier{4, 1.0, 0.0, '+'},
-                                             ExtrusionBarrier{8, 1.0, 0.0, '+'}};
+  std::array<Lef, nlefs> lefs{
+      construct_lef(0, 1, 0),
+      construct_lef(3, 4, 1),
+      construct_lef(5, 5, 2)
+  };
+  const std::array<ExtrusionBarrier, nbarriers> barriers{ExtrusionBarrier{2, 1.0, 0.0, '+'},
+                                                         ExtrusionBarrier{4, 1.0, 0.0, '+'},
+                                                         ExtrusionBarrier{8, 1.0, 0.0, '+'}};
   // clang-format on
   boost::dynamic_bitset<> barrier_mask;
   barrier_mask.resize(nbarriers, static_cast<bool>(CTCF::State::OCCUPIED));
@@ -671,11 +653,6 @@ const std::vector<ExtrusionBarrier> barriers{ExtrusionBarrier{2, 1.0, 0.0, '+'},
   const std::array<bp_t, nlefs> rev_moves_expected{0, 0, 0};
   const std::array<bp_t, nlefs> fwd_moves_expected{0, 2, 2};
 
-  assert(barriers.size() == nbarriers);
-  assert(rev_collisions_expected.size() == nlefs);
-  assert(fwd_collisions_expected.size() == nlefs);
-  assert(rev_collisions.size() == nlefs);
-  assert(fwd_collisions.size() == nlefs);
   require_that_lefs_are_sorted_by_idx(lefs, rev_ranks, fwd_ranks);
 
   Simulation{c, false}.test_detect_lef_bar_collisions(
@@ -713,7 +690,7 @@ std::array<Lef, nlefs> lefs{
     construct_lef(44, 60, 4)
 };
 
-const std::vector<ExtrusionBarrier> barriers{ExtrusionBarrier{25, 1.0, 0.0, '+'},
+const std::array<ExtrusionBarrier, nbarriers> barriers{ExtrusionBarrier{25, 1.0, 0.0, '+'},
                                              ExtrusionBarrier{27, 1.0, 0.0, '+'},
                                              ExtrusionBarrier{40, 1.0, 0.0, '+'},
                                              ExtrusionBarrier{46, 1.0, 0.0, '-'}};
@@ -746,11 +723,6 @@ const std::vector<ExtrusionBarrier> barriers{ExtrusionBarrier{25, 1.0, 0.0, '+'}
   const std::array<bp_t, nlefs> rev_moves_expected{5, 0, 2, 1, 5};
   const std::array<bp_t, nlefs> fwd_moves_expected{5, 5, 5, 2, 5};
 
-  assert(barriers.size() == nbarriers);
-  assert(rev_collisions_expected.size() == nlefs);
-  assert(fwd_collisions_expected.size() == nlefs);
-  assert(rev_collisions.size() == nlefs);
-  assert(fwd_collisions.size() == nlefs);
   require_that_lefs_are_sorted_by_idx(lefs, rev_ranks, fwd_ranks);
 
   Simulation{c, false}.test_detect_lef_bar_collisions(
@@ -788,10 +760,10 @@ std::array<Lef, nlefs> lefs{
     construct_lef(44, 60, 4)
 };
 
-const std::vector<ExtrusionBarrier> barriers{ExtrusionBarrier{25, 1.0, 0.0, '+'},
-                                             ExtrusionBarrier{27, 1.0, 0.0, '+'},
-                                             ExtrusionBarrier{40, 1.0, 0.0, '+'},
-                                             ExtrusionBarrier{46, 1.0, 0.0, '-'}};
+  const std::array<ExtrusionBarrier, nbarriers> barriers{ExtrusionBarrier{25, 1.0, 0.0, '+'},
+                                                         ExtrusionBarrier{27, 1.0, 0.0, '+'},
+                                                         ExtrusionBarrier{40, 1.0, 0.0, '+'},
+                                                         ExtrusionBarrier{46, 1.0, 0.0, '-'}};
   // clang-format on
   boost::dynamic_bitset<> barrier_mask;
   barrier_mask.resize(nbarriers, static_cast<bool>(CTCF::State::OCCUPIED));
@@ -821,11 +793,6 @@ const std::vector<ExtrusionBarrier> barriers{ExtrusionBarrier{25, 1.0, 0.0, '+'}
   const std::array<bp_t, nlefs> rev_moves_expected{2, 0, 2, 1, 2};
   const std::array<bp_t, nlefs> fwd_moves_expected{5, 5, 5, 2, 5};
 
-  assert(barriers.size() == nbarriers);
-  assert(rev_collisions_expected.size() == nlefs);
-  assert(fwd_collisions_expected.size() == nlefs);
-  assert(rev_collisions.size() == nlefs);
-  assert(fwd_collisions.size() == nlefs);
   require_that_lefs_are_sorted_by_idx(lefs, rev_ranks, fwd_ranks);
 
   Simulation{c, false}.test_detect_lef_bar_collisions(
@@ -864,23 +831,14 @@ TEST_CASE("LEFs ranking 001 - Rev extr. unit tied", "[simulation][short]") {
   };
   // clang-format on
 
-  std::array<usize, nlefs> rev_ranks;
-  std::array<usize, nlefs> fwd_ranks;
+  std::array<usize, nlefs> rev_ranks{};
+  std::array<usize, nlefs> fwd_ranks{};
 
   const std::array<usize, nlefs> rev_ranks_expected1{0, 1, 2, 5, 3, 4};
   const std::array<usize, nlefs> fwd_ranks_expected1{0, 5, 1, 2, 3, 4};
 
   const std::array<usize, nlefs> rev_ranks_expected2{0, 1, 3, 2, 4, 5};
   const std::array<usize, nlefs> fwd_ranks_expected2{0, 2, 1, 3, 4, 5};
-
-  assert(lefs1.size() == nlefs);
-  assert(lefs2.size() == nlefs);
-  assert(rev_ranks.size() == nlefs);
-  assert(fwd_ranks.size() == nlefs);
-  assert(rev_ranks_expected1.size() == nlefs);
-  assert(rev_ranks_expected1.size() == nlefs);
-  assert(fwd_ranks_expected2.size() == nlefs);
-  assert(fwd_ranks_expected2.size() == nlefs);
 
   Simulation::test_rank_lefs(lefs1, absl::MakeSpan(rev_ranks), absl::MakeSpan(fwd_ranks), false,
                              true);
@@ -921,25 +879,14 @@ TEST_CASE("LEFs ranking 002 - Fwd extr. unit tied", "[simulation][short]") {
   };
   // clang-format on
 
-  std::array<usize, nlefs> rev_ranks;
-  std::array<usize, nlefs> fwd_ranks;
+  std::array<usize, nlefs> rev_ranks{};
+  std::array<usize, nlefs> fwd_ranks{};
 
   const std::array<usize, nlefs> rev_ranks_expected1{0, 1, 2, 3, 5, 4};
   const std::array<usize, nlefs> fwd_ranks_expected1{0, 5, 1, 2, 3, 4};
 
   const std::array<usize, nlefs> rev_ranks_expected2{0, 2, 3, 4, 1, 5};
   const std::array<usize, nlefs> fwd_ranks_expected2{0, 1, 2, 3, 4, 5};
-
-  {
-    assert(lefs1.size() == nlefs);
-    assert(lefs2.size() == nlefs);
-    assert(rev_ranks.size() == nlefs);
-    assert(fwd_ranks.size() == nlefs);
-    assert(rev_ranks_expected1.size() == nlefs);
-    assert(rev_ranks_expected1.size() == nlefs);
-    assert(fwd_ranks_expected2.size() == nlefs);
-    assert(fwd_ranks_expected2.size() == nlefs);
-  }
 
   Simulation::test_rank_lefs(lefs1, absl::MakeSpan(rev_ranks), absl::MakeSpan(fwd_ranks), false,
                              true);
