@@ -432,22 +432,14 @@ void Simulation::rank_lefs(const absl::Span<const Lef> lefs,
 
 void Simulation::extrude([[maybe_unused]] const Chromosome& chrom, const absl::Span<Lef> lefs,
                          const absl::Span<const bp_t> rev_moves,
-                         const absl::Span<const bp_t> fwd_moves,
-                         const usize num_rev_units_at_5prime,
-                         const usize num_fwd_units_at_3prime) noexcept(utils::ndebug_defined()) {
-  {
-    assert(lefs.size() == rev_moves.size());
-    assert(lefs.size() == fwd_moves.size());
-    assert(lefs.size() >= num_rev_units_at_5prime);
-    assert(lefs.size() >= num_fwd_units_at_3prime);
-  }
+                         const absl::Span<const bp_t> fwd_moves) noexcept(utils::ndebug_defined()) {
+  assert(lefs.size() == rev_moves.size());
+  assert(lefs.size() == fwd_moves.size());
 
-  auto i1 = std::min(num_rev_units_at_5prime, num_rev_units_at_5prime - 1);
-  const auto i2 = lefs.size() - num_fwd_units_at_3prime;
-  for (; i1 < i2; ++i1) {
-    auto& lef = lefs[i1];
-    const auto& rev_move = rev_moves[i1];
-    const auto& fwd_move = fwd_moves[i1];
+  for (usize i = 0; i < lefs.size(); ++i) {
+    auto& lef = lefs[i];
+    const auto& rev_move = rev_moves[i];
+    const auto& fwd_move = fwd_moves[i];
     if (MODLE_UNLIKELY(!lef.is_bound())) {  // Do not process inactive LEFs
       continue;
     }
@@ -505,6 +497,7 @@ usize Simulation::register_contacts(const bp_t start_pos, const bp_t end_pos,
                                     const absl::Span<const usize> selected_lef_idx) const {
   // Register contacts for the selected LEFs (excluding LEFs that have one of their units at the
   // beginning/end of a chromosome)
+  assert(start_pos <= end_pos);
   usize new_contacts = 0;
   for (const auto i : selected_lef_idx) {
     assert(i < lefs.size());
@@ -1160,14 +1153,12 @@ void Simulation::simulate_one_cell(State& s) const {
                     [&](auto& c) { c.clear(); });
 
       // Detect collision and correct moves
-      const auto [num_rev_units_at_5prime, num_fwd_units_at_3prime] =
-          Simulation::process_collisions(*s.chrom, s.get_lefs(), s.barriers, s.get_barrier_mask(),
-                                         s.get_rev_ranks(), s.get_fwd_ranks(), s.get_rev_moves(),
-                                         s.get_fwd_moves(), s.get_rev_collisions(),
-                                         s.get_fwd_collisions(), s.rand_eng);
+      Simulation::process_collisions(*s.chrom, s.get_lefs(), s.barriers, s.get_barrier_mask(),
+                                     s.get_rev_ranks(), s.get_fwd_ranks(), s.get_rev_moves(),
+                                     s.get_fwd_moves(), s.get_rev_collisions(),
+                                     s.get_fwd_collisions(), s.rand_eng);
       // Advance LEFs
-      Simulation::extrude(*s.chrom, s.get_lefs(), s.get_rev_moves(), s.get_fwd_moves(),
-                          num_rev_units_at_5prime, num_fwd_units_at_3prime);
+      Simulation::extrude(*s.chrom, s.get_lefs(), s.get_rev_moves(), s.get_fwd_moves());
 
       // Log model internal state
       Simulation::dump_stats(s.id, s.epoch, s.cell_id, !s.burnin_completed, *s.chrom, s.get_lefs(),

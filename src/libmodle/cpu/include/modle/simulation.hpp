@@ -326,9 +326,8 @@ class Simulation : Config {
   //! - Simulation::adjust_moves_of_consecutive_extr_units
   //! - Simulation::process_collisions
   static void extrude(const Chromosome& chrom, absl::Span<Lef> lefs,
-                      absl::Span<const bp_t> rev_moves, absl::Span<const bp_t> fwd_moves,
-                      usize num_rev_units_at_5prime = 0,
-                      usize num_fwd_units_at_3prime = 0) noexcept(utils::ndebug_defined());
+                      absl::Span<const bp_t> rev_moves,
+                      absl::Span<const bp_t> fwd_moves) noexcept(utils::ndebug_defined());
 
   //! This is just a wrapper function used to make sure that process_* functions are always called
   //! in the right order
