@@ -28,13 +28,6 @@
 #include "modle/common/random.hpp"    // for PRNG_t
 #include "modle/common/smartdir.hpp"  // for SmartDir
 
-namespace modle::test {
-[[maybe_unused]] static const boost::filesystem::path& testdir(bool cleanup_on_exit = true) {
-  static const SmartDir dir{cleanup_on_exit};
-  return dir();
-}
-}  // namespace modle::test
-
 namespace modle::test::stats {
 using namespace modle::stats;
 

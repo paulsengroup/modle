@@ -26,10 +26,7 @@
 #include "modle/common/smartdir.hpp"  // for SmartDir
 
 namespace modle::test {
-[[maybe_unused]] static const boost::filesystem::path& testdir(bool cleanup_on_exit = true) {
-  static const SmartDir dir{cleanup_on_exit};
-  return dir();
-}
+inline const SmartDir testdir{true};  // NOLINT(cert-err58-cpp)
 }  // namespace modle::test
 
 namespace modle::test::hdf5 {

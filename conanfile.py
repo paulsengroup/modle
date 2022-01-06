@@ -21,7 +21,7 @@ class MoDLE(ConanFile):
     author = "Roberto Rossini (roberros@uio.no)"
     settings = "os", "compiler", "build_type", "arch"
     requires = ["abseil/20211102.0",
-                "boost/1.78.0",  # 1.77.0 breaks builds with GCC 7
+                "boost/1.78.0",
                 "bzip2/1.0.8",
                 "cli11/2.1.1",
                 "concurrentqueue/1.0.3",
