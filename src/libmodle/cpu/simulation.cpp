@@ -986,8 +986,8 @@ std::pair<usize, usize> Simulation::process_collisions(
   this->process_secondary_lef_lef_collisions(chrom, lefs, rev_lef_ranks, fwd_lef_ranks, rev_moves,
                                              fwd_moves, rev_collisions, fwd_collisions, rand_eng,
                                              num_rev_units_at_5prime, num_fwd_units_at_3prime);
-  Simulation::fix_secondary_lef_lef_collisions(chrom, lefs, barriers, rev_lef_ranks, fwd_lef_ranks,
-                                               rev_moves, fwd_moves, rev_collisions, fwd_collisions,
+  Simulation::fix_secondary_lef_lef_collisions(chrom, lefs, rev_lef_ranks, fwd_lef_ranks, rev_moves,
+                                               fwd_moves, rev_collisions, fwd_collisions,
                                                num_rev_units_at_5prime, num_fwd_units_at_3prime);
   return std::make_pair(num_rev_units_at_5prime, num_fwd_units_at_3prime);
 }

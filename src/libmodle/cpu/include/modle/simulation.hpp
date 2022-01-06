@@ -407,10 +407,10 @@ class Simulation : Config {
       usize num_fwd_units_at_3prime = 0) const noexcept(utils::ndebug_defined());
 
   static void fix_secondary_lef_lef_collisions(
-      const Chromosome& chrom, absl::Span<Lef> lefs, absl::Span<const ExtrusionBarrier> barriers,
-      absl::Span<usize> rev_lef_ranks, absl::Span<usize> fwd_lef_ranks, absl::Span<bp_t> rev_moves,
-      absl::Span<bp_t> fwd_moves, absl::Span<CollisionT> rev_collisions,
-      absl::Span<CollisionT> fwd_collisions, usize num_rev_units_at_5prime,
+      const Chromosome& chrom, absl::Span<Lef> lefs, absl::Span<usize> rev_lef_ranks,
+      absl::Span<usize> fwd_lef_ranks, absl::Span<bp_t> rev_moves, absl::Span<bp_t> fwd_moves,
+      absl::Span<CollisionT> rev_collisions, absl::Span<CollisionT> fwd_collisions,
+      usize num_rev_units_at_5prime,
       usize num_fwd_units_at_3prime) noexcept(utils::ndebug_defined());
 
   /// Correct moves to comply with the constraints imposed by LEF-BAR collisions.
@@ -619,11 +619,11 @@ class Simulation : Config {
   static inline void test_fix_secondary_lef_lef_collisions(
       const Chromosome& chrom, const absl::Span<Lef> lefs, const absl::Span<usize> rev_lef_ranks,
       const absl::Span<usize> fwd_lef_ranks, const absl::Span<bp_t> rev_moves,
-      const absl::Span<bp_t> fwd_moves, const absl::Span<const ExtrusionBarrier> extr_barriers,
-      const absl::Span<CollisionT> rev_collisions, const absl::Span<CollisionT> fwd_collisions) {
-    Simulation::fix_secondary_lef_lef_collisions(chrom, lefs, extr_barriers, rev_lef_ranks,
-                                                 fwd_lef_ranks, rev_moves, fwd_moves,
-                                                 rev_collisions, fwd_collisions, 0, 0);
+      const absl::Span<bp_t> fwd_moves, const absl::Span<CollisionT> rev_collisions,
+      const absl::Span<CollisionT> fwd_collisions) {
+    Simulation::fix_secondary_lef_lef_collisions(chrom, lefs, rev_lef_ranks, fwd_lef_ranks,
+                                                 rev_moves, fwd_moves, rev_collisions,
+                                                 fwd_collisions, 0, 0);
   }
 
   inline void test_process_lef_lef_collisions(

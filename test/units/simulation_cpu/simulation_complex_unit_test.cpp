@@ -782,8 +782,8 @@ TEST_CASE("Simulation 011 - fix_secondary_lef_lef_collisions", "[simulation][sho
 
   modle::Simulation::test_fix_secondary_lef_lef_collisions(
       chrom, absl::MakeSpan(lefs), absl::MakeSpan(rev_ranks), absl::MakeSpan(fwd_ranks),
-      absl::MakeSpan(rev_moves), absl::MakeSpan(fwd_moves), barriers,
-      absl::MakeSpan(rev_collisions), absl::MakeSpan(fwd_collisions));
+      absl::MakeSpan(rev_moves), absl::MakeSpan(fwd_moves), absl::MakeSpan(rev_collisions),
+      absl::MakeSpan(fwd_collisions));
 
   CHECK(rev_ranks[0] == 0);
   CHECK(rev_ranks[1] == 1);
@@ -848,8 +848,8 @@ TEST_CASE("Simulation 012 - fix_secondary_lef_lef_collisions", "[simulation][sho
 
   modle::Simulation::test_fix_secondary_lef_lef_collisions(
       chrom, absl::MakeSpan(lefs), absl::MakeSpan(rev_ranks), absl::MakeSpan(fwd_ranks),
-      absl::MakeSpan(rev_moves), absl::MakeSpan(fwd_moves), barriers,
-      absl::MakeSpan(rev_collisions), absl::MakeSpan(fwd_collisions));
+      absl::MakeSpan(rev_moves), absl::MakeSpan(fwd_moves), absl::MakeSpan(rev_collisions),
+      absl::MakeSpan(fwd_collisions));
 
   CHECK(rev_ranks[0] == 1);
   CHECK(rev_ranks[1] == 0);

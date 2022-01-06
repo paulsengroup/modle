@@ -527,37 +527,74 @@ void Simulation::process_secondary_lef_lef_collisions(
 
 void Simulation::fix_secondary_lef_lef_collisions(
     [[maybe_unused]] const Chromosome& chrom, const absl::Span<Lef> lefs,
-    [[maybe_unused]] const absl::Span<const ExtrusionBarrier> barriers,
     const absl::Span<usize> rev_lef_ranks, const absl::Span<usize> fwd_lef_ranks,
     const absl::Span<bp_t> rev_moves, const absl::Span<bp_t> fwd_moves,
     const absl::Span<CollisionT> rev_collisions, const absl::Span<CollisionT> fwd_collisions,
     const usize num_rev_units_at_5prime,
     const usize num_fwd_units_at_3prime) noexcept(utils::ndebug_defined()) {
+  // Let us consider the following scenario:
+  // 1>   2>X
+  // Where 1> and 2> are two consecutive EUs moving in fwd direction and X is an obstacle (e.g. an
+  // extrusion barrier) which is currently blocking EU2.
+  // Let us also assume that the probability of LEF bypass is != 0 and that if unobstructed, EU1 is
+  // set to move past EU2 and X.
+  //
+  // In this scenario EU2 is blocked by obstacle X, and so its move is set to 0.
+  // Let us also assume that the Bernoulli trial to determine whether EU1 is involved in a
+  // LEF-LEF secondary collision caused by EU2 fails (i.e. collision is avoided).
+  //
+  // If EU1's move is left unmodified, EU1 will bypass EU2, X and anything else long its path.
+  //
+  // This function is meant to detrect and address this scenario by correcting EU1's move so that
+  // after move EU1 is located downstream of EU2.
+  //
+  // The case shown above (where EU2 is 1bp upstream of X) is a bit more complicated for the
+  // following reason:
+  // MoDLE currently does not allow extrusion units to move backwards (i.e. against the diretion of
+  // extrusion). This means that it is not possible to modify EU1 and EU2 moves in such a way that
+  // after extrusion EU1 is located downstream of EU2 but upstream of X.
+  // To properly deal with this special case we swap the positions of EU1 and EU2 and we update the
+  // moves so that after extrusion EU2 will be located 1bp upstream of EU1 which will itself ne
+  // located 1bp upstream of X
+
   const auto num_active_fwd_units =
       lefs.size() - std::min(num_fwd_units_at_3prime, num_fwd_units_at_3prime - 1);
 
   // Loop over rev units in 5'-3' direction, and skip over units that are located at the 5'-end
   for (auto i = std::max(usize(1), num_rev_units_at_5prime); i < lefs.size(); ++i) {
+    // The case addressed by If EU2 (the unit corresponding to rev_idx2) avoided a secondary LEF-LEF
+    // collision
     const auto& rev_idx2 = rev_lef_ranks[i];
     const auto& rev_collision2 = rev_collisions[rev_idx2];
-    if (rev_collision2.collision_avoided(CollisionT::LEF_LEF_SECONDARY)) {
+    if (MODLE_UNLIKELY(rev_collision2.collision_avoided(CollisionT::LEF_LEF_SECONDARY))) {
       const auto& rev_idx1 = rev_lef_ranks[i - 1];
       [[maybe_unused]] const auto& rev_collision1 = rev_collisions[rev_idx1];
       assert(rev_idx1 == rev_collision2.decode_index());  // idx of the EU blocking EU1
       assert(rev_collision1.collision_occurred());
 
-      const auto pos1 = lefs[rev_idx1].rev_unit.pos() - rev_moves[rev_idx1];
-      if (lefs[rev_idx2].rev_unit.pos() > pos1 + 1) {
-        rev_moves[rev_idx2] = lefs[rev_idx2].rev_unit.pos() - (pos1 + 1);
+      auto& lef1 = lefs[rev_idx1];
+      auto& lef2 = lefs[rev_idx2];
+      // Position after move of EU1
+      const auto pos1 = lef1.rev_unit.pos() - rev_moves[rev_idx1];
+      // If possible, adjust EU2's move so that after extrusion EU2 will be located 1bp upstream of
+      // EU1
+      if (MODLE_LIKELY(lef2.rev_unit.pos() > pos1 + 1)) {
+        rev_moves[rev_idx2] = lef2.rev_unit.pos() - (pos1 + 1);
       } else {
         rev_moves[rev_idx2] = 0;
       }
+
+      // Mark EU2 as involved in a secondary LEF-LEF collision
       rev_collisions[rev_idx2].set(rev_idx1, CollisionT::COLLISION | CollisionT::LEF_LEF_SECONDARY);
 
-      const auto p1 = lefs[rev_idx1].rev_unit._pos;
-      const auto p2 = lefs[rev_idx2].rev_unit._pos;
-      lefs[rev_idx1].rev_unit._pos = std::min(lefs[rev_idx1].fwd_unit._pos, p2);
-      lefs[rev_idx2].rev_unit._pos = std::min(lefs[rev_idx2].fwd_unit._pos, p1);
+      // Swap EUs position while ensuring that the rev unit does not cross its corresponding fwd
+      // unit
+      const auto p1 = lef1.rev_unit._pos;
+      const auto p2 = lef2.rev_unit._pos;
+      lef1.rev_unit._pos = std::min(lef1.fwd_unit._pos, p2);
+      lef2.rev_unit._pos = std::min(lef2.fwd_unit._pos, p1);
+
+      // Swap collisions, moves and ranks
       std::swap(rev_collisions[rev_idx1], rev_collisions[rev_idx2]);
       std::swap(rev_moves[rev_idx1], rev_moves[rev_idx2]);
       std::swap(rev_lef_ranks[i - 1], rev_lef_ranks[i]);
@@ -575,7 +612,7 @@ void Simulation::fix_secondary_lef_lef_collisions(
     }
   }
 
-  // Loop over fwd units in 5'-3' direction, and skip over units that are located at the 5'-end
+  // Look above for detailed comments
   for (usize i = 0; i < num_active_fwd_units - 1; ++i) {
     const auto& fwd_idx1 = fwd_lef_ranks[i];
     const auto& fwd_collision1 = fwd_collisions[fwd_idx1];
@@ -585,18 +622,21 @@ void Simulation::fix_secondary_lef_lef_collisions(
       assert(fwd_idx2 == fwd_collision1.decode_index());
       assert(fwd_collision2.collision_occurred());
 
-      const auto pos2 = lefs[fwd_idx2].fwd_unit.pos() + fwd_moves[fwd_idx2];
-      if (pos2 > lefs[fwd_idx1].fwd_unit.pos() + 1) {
-        fwd_moves[fwd_idx1] = pos2 - (lefs[fwd_idx1].fwd_unit.pos() + 1);
+      auto& lef1 = lefs[fwd_idx1];
+      auto& lef2 = lefs[fwd_idx2];
+
+      const auto pos2 = lef2.fwd_unit.pos() + fwd_moves[fwd_idx2];
+      if (pos2 > lef1.fwd_unit.pos() + 1) {
+        fwd_moves[fwd_idx1] = pos2 - (lef1.fwd_unit.pos() + 1);
       } else {
         fwd_moves[fwd_idx1] = 0;
       }
       fwd_collisions[fwd_idx1].set(fwd_idx2, CollisionT::COLLISION | CollisionT::LEF_LEF_SECONDARY);
 
-      const auto p1 = lefs[fwd_idx1].fwd_unit._pos;
-      const auto p2 = lefs[fwd_idx2].fwd_unit._pos;
-      lefs[fwd_idx1].fwd_unit._pos = std::max(lefs[fwd_idx1].rev_unit._pos, p2);
-      lefs[fwd_idx2].fwd_unit._pos = std::max(lefs[fwd_idx2].rev_unit._pos, p1);
+      const auto p1 = lef1.fwd_unit._pos;
+      const auto p2 = lef2.fwd_unit._pos;
+      lef1.fwd_unit._pos = std::max(lef1.rev_unit._pos, p2);
+      lef2.fwd_unit._pos = std::max(lef2.rev_unit._pos, p1);
       std::swap(fwd_collisions[fwd_idx1], fwd_collisions[fwd_idx2]);
       std::swap(fwd_moves[fwd_idx1], fwd_moves[fwd_idx2]);
       std::swap(fwd_lef_ranks[i], fwd_lef_ranks[i + 1]);
