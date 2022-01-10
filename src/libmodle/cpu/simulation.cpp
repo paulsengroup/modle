@@ -770,6 +770,9 @@ absl::Span<usize> Simulation::State::get_fwd_ranks(usize size) noexcept {
 boost::dynamic_bitset<>& Simulation::State::get_barrier_mask() noexcept {
   return this->barrier_mask;
 }
+std::vector<ExtrusionBarrier>& Simulation::State::get_barrier_tmp_buff() noexcept {
+  return this->barrier_tmp_buff;
+}
 absl::Span<bp_t> Simulation::State::get_rev_moves(usize size) noexcept {
   if (size == State::npos) {
     size = this->num_active_lefs;
@@ -828,6 +831,9 @@ absl::Span<const usize> Simulation::State::get_fwd_ranks(usize size) const noexc
 }
 const boost::dynamic_bitset<>& Simulation::State::get_barrier_mask() const noexcept {
   return this->barrier_mask;
+}
+const std::vector<ExtrusionBarrier>& Simulation::State::get_barrier_tmp_buff() const noexcept {
+  return this->barrier_tmp_buff;
 }
 absl::Span<const bp_t> Simulation::State::get_rev_moves(usize size) const noexcept {
   if (size == State::npos) {

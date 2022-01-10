@@ -468,8 +468,8 @@ void Simulation::simulate_window(Simulation::State& state, compressed_io::Writer
 
   // Generate barrier configuration
   usize num_active_barriers = 0;
-  state.barrier_tmp_buff.resize(state.barriers.size());
-  std::transform(state.barriers.begin(), state.barriers.end(), state.barrier_tmp_buff.begin(),
+  state.get_barrier_tmp_buff().resize(state.barriers.size());
+  std::transform(state.barriers.begin(), state.barriers.end(), state.get_barrier_tmp_buff().begin(),
                  [&](const auto& barrier) {
                    if (barrier.pos() >= state.deletion_begin &&
                        barrier.pos() < state.deletion_begin + state.deletion_size) {
@@ -482,7 +482,7 @@ void Simulation::simulate_window(Simulation::State& state, compressed_io::Writer
                    return barrier;
                  });
 
-  state.barriers = absl::MakeConstSpan(state.barrier_tmp_buff);
+  state.barriers = absl::MakeConstSpan(state.get_barrier_tmp_buff());
 
   // Resize and reset state buffers
   state.resize_buffers();

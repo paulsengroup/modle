@@ -110,17 +110,18 @@ class Simulation : Config {
     std::unique_ptr<compressed_io::Writer> model_state_logger{nullptr};  // NOLINT
 
    protected:
-    std::vector<Lef> lef_buff{};                 // NOLINT
-    std::vector<usize> rank_buff1{};             // NOLINT
-    std::vector<usize> rank_buff2{};             // NOLINT
-    boost::dynamic_bitset<> barrier_mask{};      // NOLINT
-    std::vector<bp_t> moves_buff1{};             // NOLINT
-    std::vector<bp_t> moves_buff2{};             // NOLINT
-    std::vector<usize> idx_buff{};               // NOLINT
-    std::vector<CollisionT> collision_buff1{};   // NOLINT
-    std::vector<CollisionT> collision_buff2{};   // NOLINT
-    std::deque<double> cfx_of_variation_buff{};  // NOLINT
-    std::deque<double> avg_loop_size_buff{};     // NOLINT
+    std::vector<Lef> lef_buff{};                       // NOLINT
+    std::vector<usize> rank_buff1{};                   // NOLINT
+    std::vector<usize> rank_buff2{};                   // NOLINT
+    boost::dynamic_bitset<> barrier_mask{};            // NOLINT
+    std::vector<ExtrusionBarrier> barrier_tmp_buff{};  // NOLINT
+    std::vector<bp_t> moves_buff1{};                   // NOLINT
+    std::vector<bp_t> moves_buff2{};                   // NOLINT
+    std::vector<usize> idx_buff{};                     // NOLINT
+    std::vector<CollisionT> collision_buff1{};         // NOLINT
+    std::vector<CollisionT> collision_buff2{};         // NOLINT
+    std::deque<double> cfx_of_variation_buff{};        // NOLINT
+    std::deque<double> avg_loop_size_buff{};           // NOLINT
 
     static constexpr usize npos = absl::Span<usize>::npos;
 
@@ -129,6 +130,7 @@ class Simulation : Config {
     [[nodiscard]] absl::Span<usize> get_rev_ranks(usize size = npos) noexcept;
     [[nodiscard]] absl::Span<usize> get_fwd_ranks(usize size = npos) noexcept;
     [[nodiscard]] boost::dynamic_bitset<>& get_barrier_mask() noexcept;
+    [[nodiscard]] std::vector<ExtrusionBarrier>& get_barrier_tmp_buff() noexcept;
     [[nodiscard]] absl::Span<bp_t> get_rev_moves(usize size = npos) noexcept;
     [[nodiscard]] absl::Span<bp_t> get_fwd_moves(usize size = npos) noexcept;
     [[nodiscard]] absl::Span<usize> get_idx_buff(usize size = npos) noexcept;
@@ -141,6 +143,7 @@ class Simulation : Config {
     [[nodiscard]] absl::Span<const usize> get_rev_ranks(usize size = npos) const noexcept;
     [[nodiscard]] absl::Span<const usize> get_fwd_ranks(usize size = npos) const noexcept;
     [[nodiscard]] const boost::dynamic_bitset<>& get_barrier_mask() const noexcept;
+    [[nodiscard]] const std::vector<ExtrusionBarrier>& get_barrier_tmp_buff() const noexcept;
     [[nodiscard]] absl::Span<const bp_t> get_rev_moves(usize size = npos) const noexcept;
     [[nodiscard]] absl::Span<const bp_t> get_fwd_moves(usize size = npos) const noexcept;
     [[nodiscard]] absl::Span<const usize> get_idx_buff(usize size = npos) const noexcept;
@@ -166,8 +169,6 @@ class Simulation : Config {
     std::shared_ptr<std::mutex> contacts_mtx{nullptr};                             // NOLINT
     std::shared_ptr<const ContactMatrix<contacts_t>> reference_contacts{nullptr};  // NOLINT
     std::shared_ptr<ContactMatrix<contacts_t>> contacts{nullptr};                  // NOLINT
-
-    std::vector<ExtrusionBarrier> barrier_tmp_buff{};  // NOLINT
 
     State& operator=(const Task& task);
     State& operator=(const TaskPW& task);
