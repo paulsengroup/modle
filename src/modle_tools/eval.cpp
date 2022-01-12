@@ -96,13 +96,27 @@ template <class N>
                            std::inserter(chrom_intersection, chrom_intersection.begin()));
 
   if (chrom_intersection.empty()) {
-    throw std::runtime_error(fmt::format(
-        FMT_STRING("Files {} and {} have 0 chromosomes in common. "
-                   "Please make sure both files are using the same genome assembly as reference"),
-        c1.get_path(), c2.get_path()));
+    std::vector<std::string> chrom_printable1(static_cast<usize>(chrom_set1.size()));
+    std::vector<std::string> chrom_printable2(static_cast<usize>(chrom_set2.size()));
+
+    std::transform(
+        chrom_set1.begin(), chrom_set1.end(), chrom_printable1.begin(), [&](const auto &c) {
+          return fmt::format(FMT_STRING("{}:{}-{}"), c.first, c.second.first, c.second.second);
+        });
+    std::transform(
+        chrom_set2.begin(), chrom_set2.end(), chrom_printable2.begin(), [&](const auto &c) {
+          return fmt::format(FMT_STRING("{}:{}-{}"), c.first, c.second.first, c.second.second);
+        });
+    throw std::runtime_error(
+        fmt::format(FMT_STRING("Files {} and {} have 0 chromosomes in common. "
+                               "Please make sure both files are using the same genome assembly as "
+                               "reference.\nChromosomes found in file #1:\n - {}\nChromosomes "
+                               "found in file #2:\n - {}"),
+                    c1.get_path(), c2.get_path(), fmt::join(chrom_printable1, "\n - "),
+                    fmt::join(chrom_printable2, "\n - ")));
   }
 
-  // Look for conflicting information between Cooler files
+  // Look for conflicting information in Cooler files
   std::string err;
   for (const auto &[name, range] : chrom_intersection) {
     if (chrom_set1.at(name).second != chrom_set2.at(name).second) {
