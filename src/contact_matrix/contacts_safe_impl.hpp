@@ -142,6 +142,9 @@ template <class N>
 ContactMatrix<double> ContactMatrix<N>::blur(const double sigma, const double cutoff,
                                              thread_pool* tpool) const {
   ContactMatrix<double> bmatrix(this->nrows(), this->ncols());
+  if (this->empty()) {
+    return bmatrix;
+  }
 
   const auto gauss_kernel = stats::compute_gauss_kernel(sigma, cutoff);
 
@@ -174,6 +177,9 @@ ContactMatrix<double> ContactMatrix<N>::gaussian_diff(const double sigma1, const
                                                       thread_pool* tpool) const {
   assert(sigma1 <= sigma2);
   ContactMatrix<double> bmatrix(this->nrows(), this->ncols());
+  if (this->empty()) {
+    return bmatrix;
+  }
 
   const auto gauss_kernel1 = stats::compute_gauss_kernel(sigma1);
   const auto gauss_kernel2 = stats::compute_gauss_kernel(sigma2);
