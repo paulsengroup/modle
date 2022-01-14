@@ -161,7 +161,7 @@ void Cooler<N>::get_chrom_names(std::vector<std::string> &buff) {
   const auto nchroms = this->get_nchroms();
   buff.resize(nchroms);
   if (!this->_datasets.empty()) {
-    const auto &d = this->_datasets[chrom_NAME];
+    const auto &d = this->_datasets[CHROM_NAME];
     std::ignore = hdf5::read_strings(d, buff, 0);
   } else {
     if (this->is_cool()) {
@@ -195,7 +195,7 @@ void Cooler<N>::get_chrom_sizes(std::vector<I> &buff) {
   const auto nchroms = this->get_nchroms();
   buff.resize(nchroms);
   if (!this->_datasets.empty()) {
-    const auto &d = this->_datasets[chrom_LEN];
+    const auto &d = this->_datasets[CHROM_LEN];
     std::ignore = hdf5::read_numbers(d, buff, 0);
   } else {
     if (this->is_cool()) {
@@ -555,9 +555,9 @@ void Cooler<N>::init_default_datasets() {
 
   try {
     // Do not change the order of these pushbacks
-    dset[chrom_LEN] = hdf5::create_dataset(f, absl::StrCat(r, "/chroms/length"),
+    dset[CHROM_LEN] = hdf5::create_dataset(f, absl::StrCat(r, "/chroms/length"),
                                            H5::PredType::NATIVE_INT64, cpi64, api64);
-    dset[chrom_NAME] = hdf5::create_dataset(f, absl::StrCat(r, "/chroms/name"), STR_TYPE, cps, aps);
+    dset[CHROM_NAME] = hdf5::create_dataset(f, absl::StrCat(r, "/chroms/name"), STR_TYPE, cps, aps);
 
     dset[BIN_CHROM] = hdf5::create_dataset(f, absl::StrCat(r, "/bins/chrom"),
                                            H5::PredType::NATIVE_INT64, cpi64, api64);
@@ -610,9 +610,9 @@ void Cooler<N>::open_default_datasets() {
   this->_dataset_file_offsets.resize(DEFAULT_DATASETS_NR);
   std::fill(this->_dataset_file_offsets.begin(), this->_dataset_file_offsets.end(), 0);
   try {
-    d[chrom_LEN] =
+    d[CHROM_LEN] =
         hdf5::open_dataset(f, absl::StrCat(this->_root_path, "chroms/length"), achrom_size);
-    d[chrom_NAME] =
+    d[CHROM_NAME] =
         hdf5::open_dataset(f, absl::StrCat(this->_root_path, "chroms/name"), achrom_name);
 
     d[BIN_CHROM] = hdf5::open_dataset(f, absl::StrCat(this->_root_path, "bins/chrom"), ai64);
@@ -652,7 +652,7 @@ usize Cooler<N>::get_chrom_idx(std::string_view query_chrom_name, bool try_commo
   // the chrom index
 
   try {
-    const auto chrom_names = hdf5::read_strings(this->_datasets[chrom_NAME], 0);
+    const auto chrom_names = hdf5::read_strings(this->_datasets[CHROM_NAME], 0);
     auto match = std::find(chrom_names.begin(), chrom_names.end(), query_chrom_name);
     if (match != chrom_names.end()) {
       return static_cast<usize>(std::distance(chrom_names.begin(), match));

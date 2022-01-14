@@ -96,8 +96,8 @@ class Cooler {
 
   enum Groups : u8f { chrom = 0, BIN = 1, PXL = 2, IDX = 3 };
   enum Datasets : u8f {
-    chrom_LEN = 0,
-    chrom_NAME = 1,
+    CHROM_LEN = 0,
+    CHROM_NAME = 1,
     BIN_CHROM = 2,
     BIN_START = 3,
     BIN_END = 4,

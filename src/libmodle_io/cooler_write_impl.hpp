@@ -157,8 +157,8 @@ void Cooler<N>::write_or_append_cmatrix_to_file(const ContactMatrix<M> *cmatrix,
   auto &b = *this->_buff;
 
   // Declare aliases to file offsets for HDF5 datasets
-  auto &chrom_name_h5_foffset = this->_dataset_file_offsets[chrom_NAME];
-  auto &chrom_length_h5_foffset = this->_dataset_file_offsets[chrom_LEN];
+  auto &chrom_name_h5_foffset = this->_dataset_file_offsets[CHROM_NAME];
+  auto &chrom_length_h5_foffset = this->_dataset_file_offsets[CHROM_LEN];
   auto &bin_chrom_name_h5_foffset = this->_dataset_file_offsets[BIN_CHROM];
   auto &bin_start_h5_foffset = this->_dataset_file_offsets[BIN_START];
   auto &bin_end_h5_foffset = this->_dataset_file_offsets[BIN_END];
@@ -209,9 +209,9 @@ void Cooler<N>::write_or_append_cmatrix_to_file(const ContactMatrix<M> *cmatrix,
       }
       // Write chrom name and size
       chrom_name_h5_foffset =
-          hdf5::write_str(chrom_name, d[chrom_NAME], STR_TYPE, chrom_name_h5_foffset);
+          hdf5::write_str(chrom_name, d[CHROM_NAME], STR_TYPE, chrom_name_h5_foffset);
       chrom_length_h5_foffset =
-          hdf5::write_number(chrom_length, d[chrom_LEN], chrom_length_h5_foffset);
+          hdf5::write_number(chrom_length, d[CHROM_LEN], chrom_length_h5_foffset);
       // Add idx of the first bin belonging to the chromosome that is being processed
       b.idx_chrom_offset_buff.emplace_back(this->_nbins);
 
