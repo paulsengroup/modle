@@ -383,6 +383,28 @@ void read_attribute(const H5::DataSet &d, std::string_view attr_name, T &buff) {
 }
 
 template <class T>
+T read_attribute(const boost::filesystem::path &path_to_file, std::string_view attr_name,
+                 std::string_view path) {
+  T buff;
+  read_attribute(path_to_file, attr_name, buff, path);
+  return buff;
+}
+
+template <class T>
+T read_attribute(H5::H5File &f, std::string_view attr_name, std::string_view path) {
+  T buff;
+  read_attribute(f, attr_name, buff, path);
+  return buff;
+}
+
+template <class T>
+T read_attribute(const H5::DataSet &d, std::string_view attr_name) {
+  T buff;
+  read_attribute(d, attr_name, buff);
+  return buff;
+}
+
+template <class T>
 inline void write_or_create_attribute(H5::H5File &f, std::string_view attr_name, T &buff,
                                       std::string_view path) {
   // TODO handle array attributes

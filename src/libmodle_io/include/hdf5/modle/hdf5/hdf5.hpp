@@ -87,6 +87,15 @@ template <class T>
 inline void read_attribute(const boost::filesystem::path &path_to_file, std::string_view attr_name,
                            T &buff, std::string_view path = "/");
 
+template <class T>
+[[nodiscard]] inline T read_attribute(H5::H5File &f, std::string_view attr_name,
+                                      std::string_view path = "/");
+template <class T>
+[[nodiscard]] inline T read_attribute(const H5::DataSet &d, std::string_view attr_name);
+template <class T>
+[[nodiscard]] inline T read_attribute(const boost::filesystem::path &path_to_file,
+                                      std::string_view attr_name, std::string_view path = "/");
+
 [[nodiscard]] std::string read_attribute_str(H5::H5File &f, std::string_view attr_name,
                                              std::string_view path = "/");
 [[nodiscard]] std::string read_attribute_str(const boost::filesystem::path &path_to_file,
