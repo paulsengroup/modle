@@ -21,11 +21,11 @@ class ExtrusionUnit;
 class ExtrusionBarrier {
  public:
   ExtrusionBarrier() = default;
-  ExtrusionBarrier(bp_t pos, double transition_prob_blocking_to_blocking,
-                   double transition_prob_non_blocking_to_non_blocking,
+  ExtrusionBarrier(bp_t pos, double transition_prob_occupied_to_occupied,
+                   double transition_prob_non_occupied_to_not_occupied,
                    dna::Direction motif_direction);
-  ExtrusionBarrier(bp_t pos, double transition_prob_blocking_to_blocking,
-                   double transition_prob_non_blocking_to_non_blocking, char motif_direction);
+  ExtrusionBarrier(bp_t pos, double transition_prob_occupied_to_occupied,
+                   double transition_prob_not_occupied_to_not_occupied, char motif_direction);
 
   [[nodiscard]] bp_t pos() const noexcept(utils::ndebug_defined());
   [[nodiscard]] bp_t& pos() noexcept(utils::ndebug_defined());
@@ -42,7 +42,7 @@ class ExtrusionBarrier {
   [[nodiscard]] bool operator>=(const ExtrusionBarrier& other) const noexcept;
   [[nodiscard]] bool operator<=(const ExtrusionBarrier& other) const noexcept;
   [[nodiscard]] static double compute_blocking_to_blocking_transition_probabilities_from_pblock(
-      double probability_of_barrier_block,
+      double barrier_occupancy,
       double non_blocking_to_non_blocking_transition_prob) noexcept(utils::ndebug_defined());
   [[nodiscard]] double occupancy() const noexcept(utils::ndebug_defined());
 

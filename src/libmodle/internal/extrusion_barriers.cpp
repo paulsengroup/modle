@@ -16,33 +16,33 @@
 #include "modle/common/utils.hpp"   // for ndebug_defined
 
 namespace modle {
-ExtrusionBarrier::ExtrusionBarrier(bp_t pos, double transition_prob_blocking_to_blocking,
-                                   double transition_prob_non_blocking_to_non_blocking,
+ExtrusionBarrier::ExtrusionBarrier(bp_t pos, double transition_prob_occupied_to_occupied,
+                                   double transition_prob_non_occupied_to_not_occupied,
                                    dna::Direction motif_direction)
     : _pos(pos),
-      _occupied_to_occupied_transition_prob(transition_prob_blocking_to_blocking),
-      _non_occupied_to_not_occupied_transition_prob(transition_prob_non_blocking_to_non_blocking),
+      _occupied_to_occupied_transition_prob(transition_prob_occupied_to_occupied),
+      _non_occupied_to_not_occupied_transition_prob(transition_prob_non_occupied_to_not_occupied),
       _blocking_direction(motif_direction == dna::Direction::fwd ? dna::Direction::rev
                                                                  : dna::Direction::fwd) {
   assert(motif_direction == dna::Direction::fwd || motif_direction == dna::Direction::rev);
-  assert(transition_prob_blocking_to_blocking >= 0.0 &&
-         transition_prob_blocking_to_blocking <= 1.0);
-  assert(transition_prob_non_blocking_to_non_blocking >= 0.0 &&
-         transition_prob_non_blocking_to_non_blocking <= 1.0);
+  assert(transition_prob_occupied_to_occupied >= 0.0 &&
+         transition_prob_occupied_to_occupied <= 1.0);
+  assert(transition_prob_non_occupied_to_not_occupied >= 0.0 &&
+         transition_prob_non_occupied_to_not_occupied <= 1.0);
 }
 
-ExtrusionBarrier::ExtrusionBarrier(bp_t pos, double transition_prob_blocking_to_blocking,
-                                   double transition_prob_non_blocking_to_non_blocking,
+ExtrusionBarrier::ExtrusionBarrier(bp_t pos, double transition_prob_occupied_to_occupied,
+                                   double transition_prob_not_occupied_to_not_occupied,
                                    char motif_direction)
     : _pos(pos),
-      _occupied_to_occupied_transition_prob(transition_prob_blocking_to_blocking),
-      _non_occupied_to_not_occupied_transition_prob(transition_prob_non_blocking_to_non_blocking),
+      _occupied_to_occupied_transition_prob(transition_prob_occupied_to_occupied),
+      _non_occupied_to_not_occupied_transition_prob(transition_prob_not_occupied_to_not_occupied),
       _blocking_direction(motif_direction == '+' ? dna::Direction::rev : dna::Direction::fwd) {
   assert(motif_direction == '+' || motif_direction == '-');
-  assert(transition_prob_blocking_to_blocking >= 0.0 &&
-         transition_prob_blocking_to_blocking <= 1.0);
-  assert(transition_prob_non_blocking_to_non_blocking >= 0.0 &&
-         transition_prob_non_blocking_to_non_blocking <= 1.0);
+  assert(transition_prob_occupied_to_occupied >= 0.0 &&
+         transition_prob_occupied_to_occupied <= 1.0);
+  assert(transition_prob_not_occupied_to_not_occupied >= 0.0 &&
+         transition_prob_not_occupied_to_not_occupied <= 1.0);
 }
 
 bp_t ExtrusionBarrier::pos() const noexcept(utils::ndebug_defined()) { return this->_pos; }
@@ -99,13 +99,13 @@ bool ExtrusionBarrier::operator>=(const ExtrusionBarrier& other) const noexcept 
 }
 
 double ExtrusionBarrier::compute_blocking_to_blocking_transition_probabilities_from_pblock(
-    double probability_of_barrier_block,
+    double barrier_occupancy,
     double non_blocking_to_non_blocking_transition_prob) noexcept(utils::ndebug_defined()) {
   // pno = Transition prob. from non-occupied to occupied
   // pon = Transition prob. from occupied to non-occupied
   // occ = Occupancy
   const auto pno = 1.0 - non_blocking_to_non_blocking_transition_prob;
-  const auto occ = probability_of_barrier_block;
+  const auto occ = barrier_occupancy;
   const auto pon = (pno - (occ * pno)) / occ;
   return std::clamp(1.0 - pon, 0.0, 1.0);
 }
