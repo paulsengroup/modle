@@ -36,8 +36,29 @@
 #include "modle/common/config.hpp"  // for Config
 #include "modle/simulation.hpp"     // for Simulation
 
-int main(int argc, char** argv) noexcept {
-  absl::InitializeSymbolizer(argv[0]);
+void setup_logger_console(const bool quiet) {
+  spdlog::set_default_logger(std::make_shared<spdlog::logger>("main_logger"));
+
+  auto stderr_sink = spdlog::default_logger()->sinks().emplace_back(
+      std::make_shared<spdlog::sinks::stderr_color_sink_mt>());
+  //                        [2021-08-12 17:49:34.581] [info]: my log msg
+  stderr_sink->set_pattern("[%Y-%m-%d %T.%e] %^[%l]%$: %v");
+  if (quiet) {
+    stderr_sink->set_level(spdlog::level::err);
+  }
+}
+
+void setup_logger_file(const boost::filesystem::path& path_to_log_file) {
+  spdlog::logger("tmp_logger", spdlog::default_logger()->sinks().front())
+      .info(FMT_STRING("Complete log will be written to file {}"), path_to_log_file);
+  auto file_sink = spdlog::default_logger()->sinks().emplace_back(
+      std::make_shared<spdlog::sinks::basic_file_sink_mt>(path_to_log_file.string(), true));
+  //                      [2021-08-12 17:49:34.581] [139797797574208] [info]: my log msg
+  file_sink->set_pattern("[%Y-%m-%d %T.%e] [%t] %^[%l]%$: %v");
+}
+
+void setup_failure_signal_handler(const char* argv_0) {
+  absl::InitializeSymbolizer(argv_0);
   absl::FailureSignalHandlerOptions options;
   // TODO: figure out a way to make this callback async-signal-safe
   options.writerfn = [](const char* buff) {
@@ -48,50 +69,42 @@ int main(int argc, char** argv) noexcept {
       spdlog::shutdown();
     }
   };
-  absl::InstallFailureSignalHandler(options);
-  std::unique_ptr<modle::Cli> cli{nullptr};
-  spdlog::set_default_logger(std::make_shared<spdlog::logger>("main_logger"));
-  {
-    auto stderr_sink = spdlog::default_logger()->sinks().emplace_back(
-        std::make_shared<spdlog::sinks::stderr_color_sink_mt>());
-    //                        [2021-08-12 17:49:34.581] [info]: my log msg
-    stderr_sink->set_pattern("[%Y-%m-%d %T.%e] %^[%l]%$: %v");
-  }
 
+  absl::InstallFailureSignalHandler(options);
+}
+
+int main(int argc, char** argv) noexcept {
+  setup_failure_signal_handler(argv[0]);
+
+  std::unique_ptr<modle::Cli> cli{nullptr};
   try {
     cli = std::make_unique<modle::Cli>(argc, argv);
     auto config = cli->parse_arguments();
+    setup_logger_console(config.quiet);
+
     if (const auto collisions = cli->detect_path_collisions(config); !collisions.empty()) {
       spdlog::error(FMT_STRING("FAILURE! The following path collision(s) have been detected:\n{}"),
                     collisions);
       return 1;
     }
-    if (config.quiet) {
-      assert(spdlog::default_logger()->sinks().size() == 1);
-      spdlog::default_logger()->sinks().front()->set_level(spdlog::level::err);
-    }
 
-    const auto t0 = absl::Now();
     if (!config.skip_output) {
       assert(!config.path_to_log_file.empty());
       if (const auto& output_dir = config.path_to_output_prefix.parent_path();
           !output_dir.empty()) {
         boost::filesystem::create_directories(output_dir.string());
       }
-      spdlog::logger("tmp_logger", spdlog::default_logger()->sinks().front())
-          .info(FMT_STRING("Complete log will be written to file {}"), config.path_to_log_file);
-      auto file_sink = spdlog::default_logger()->sinks().emplace_back(
-          std::make_shared<spdlog::sinks::basic_file_sink_mt>(config.path_to_log_file.string(),
-                                                              true));
-      //                      [2021-08-12 17:49:34.581] [139797797574208] [info]: my log msg
-      file_sink->set_pattern("[%Y-%m-%d %T.%e] [%t] %^[%l]%$: %v");
+      setup_logger_file(config.path_to_log_file);
+
       if (!cli->config_file_parsed()) {
         spdlog::info(FMT_STRING("Writing simulation parameters to config file {}"),
                      config.path_to_config_file);
         cli->write_config_file();
       }
     }
+
     spdlog::info(FMT_STRING("Command: {}"), fmt::join(config.args, " "));
+    const auto t0 = absl::Now();
     modle::Simulation sim(config);
     switch (cli->get_subcommand()) {
       using subcommand = modle::Cli::subcommand;
@@ -108,10 +121,9 @@ int main(int argc, char** argv) noexcept {
         sim.run_replay();
         break;
       default:
-        throw std::runtime_error(
-            "Default branch in switch statement in modle::main() should be unreachable! If you see "
-            "this message, please file an issue on GitHub");
+        MODLE_UNREACHABLE_CODE;
     }
+
     spdlog::info(FMT_STRING("Simulation terminated without errors in {}!\n\nBye."),
                  absl::FormatDuration(absl::Now() - t0));
   } catch (const CLI::ParseError& e) {
