@@ -243,9 +243,9 @@ void Simulation::simulate_worker(const u64 tid,
             return std::max(usize(1), static_cast<usize>(static_cast<double>(tot_target_contacts) /
                                                          new_contacts_per_epoch));
           }();
-          spdlog::info(FMT_STRING("Begin processing \"{}\": simulating ~{} epochs across {} cells "
+          spdlog::info(FMT_STRING("Begin processing \"{}\": simulating ~{} epochs across {} cells using {} LEFs "
                                   "(~{} epochs per cell)..."),
-                       task.chrom->name(), tot_target_epochs, this->num_cells,
+                       task.chrom->name(), tot_target_epochs, this->num_cells,  task.num_lefs,
                        tot_target_epochs / this->num_cells);
         }
 
