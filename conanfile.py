@@ -23,10 +23,10 @@ class MoDLE(ConanFile):
     requires = ["abseil/20211102.0",
                 "boost/1.78.0",
                 "bzip2/1.0.8",
-                "cli11/2.1.1",
+                "cli11/2.1.2",
                 "concurrentqueue/1.0.3",
                 "cpp-sort/1.12.1",
-                "fmt/8.0.1",
+                "fmt/8.1.1",
                 "hdf5/1.12.0",
                 "libarchive/3.5.2",
                 "lz4/1.9.3",
@@ -43,7 +43,7 @@ class MoDLE(ConanFile):
 
     def requirements(self):
         if bool(self.options.enable_testing):
-            self.requires("catch2/2.13.7")
+            self.requires("catch2/2.13.8")
 
     def configure(self):
         if self.settings.compiler.cppstd:
