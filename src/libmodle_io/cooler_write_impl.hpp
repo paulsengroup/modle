@@ -88,7 +88,7 @@ void Cooler<N>::write_metadata() {
   } catch ([[maybe_unused]] const H5::Exception &e) {
     throw std::runtime_error(
         fmt::format(FMT_STRING("The following error occurred while writing metadata to file {}: "
-                               "error while writing attribute '{}':\n{}"),
+                               "error while writing attribute \"{}\":\n{}"),
                     this->_path_to_file, name, hdf5::construct_error_stack()));
   }
 }
@@ -112,7 +112,7 @@ void Cooler<N>::write_metadata_attribute(std::string_view metadata_str) {
   } catch ([[maybe_unused]] const H5::Exception &e) {
     throw std::runtime_error(
         fmt::format(FMT_STRING("The following error occurred while writing metadata to file {}: "
-                               "error while writing attribute '{}':\n{}"),
+                               "error while writing attribute \"{}\":\n{}"),
                     this->_path_to_file, name, hdf5::construct_error_stack()));
   }
 }
@@ -204,7 +204,7 @@ void Cooler<N>::write_or_append_cmatrix_to_file(const ContactMatrix<M> *cmatrix,
         const auto &n = cmatrix->get_n_of_missed_updates();
         spdlog::warn(
             FMT_STRING(
-                "Detected {} missed updates ({:.4f}% of the total number of contacts) for '{}'."),
+                "Detected {} missed updates ({:.4f}% of the total number of contacts) for \"{}\"."),
             n, 100.0 * cmatrix->unsafe_get_fraction_of_missed_updates(), chrom_name);
       }
       // Write chrom name and size

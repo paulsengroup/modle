@@ -594,7 +594,7 @@ void Simulation::simulate_window(Simulation::State& state, compressed_io::Writer
           file_name));
     }
 
-    spdlog::info(FMT_STRING("Writing contacts for {} to file {}..."), state.chrom->name(),
+    spdlog::info(FMT_STRING("Writing contacts for \"{}\" to file {}..."), state.chrom->name(),
                  file_name);
 
     absl::Duration duration;

@@ -283,7 +283,7 @@ u64 Chromosome::hash(XXH3_state_t* const xxh_state, u64 seed, usize cell_id) con
   auto handle_errors = [&](const auto& status) {
     if (MODLE_UNLIKELY(status == XXH_ERROR || !xxh_state)) {
       throw std::runtime_error(
-          fmt::format(FMT_STRING("Failed to hash '{}' for cell #{} using seed {}"), this->name(),
+          fmt::format(FMT_STRING("Failed to hash \"{}\" for cell #{} using seed {}"), this->name(),
                       cell_id, seed));
     }
   };
@@ -362,7 +362,7 @@ absl::btree_set<Chromosome> Genome::import_chromosomes(
           ranges.try_emplace(std::string{record.chrom}, record);
       if (!new_insertion) {
         throw std::runtime_error(
-            fmt::format(FMT_STRING("Found more than one entry for chromosome '{}' in file {}"),
+            fmt::format(FMT_STRING("Found more than one entry for chromosome \"{}\" in file {}"),
                         record.chrom, path_to_chrom_subranges));
       }
     }
@@ -376,8 +376,8 @@ absl::btree_set<Chromosome> Genome::import_chromosomes(
       const auto& end_pos = match->second.chrom_end;
       if (begin_pos < record.chrom_start || end_pos > record.chrom_end) {
         throw std::runtime_error(fmt::format(
-            FMT_STRING("According to the chrom.sizes file {}, chromosome '{}' should have a size "
-                       "of '{}', but the subrange specified in BED file {} extends past this "
+            FMT_STRING("According to the chrom.sizes file {}, chromosome \"{}\" should have a size "
+                       "of \"{}\", but the subrange specified in BED file {} extends past this "
                        "region: range {}:{}-{} does not fit in range {}:{}-{}"),
             path_to_chrom_sizes, record.chrom, record.chrom_end, path_to_chrom_subranges,
             record.chrom, begin_pos, end_pos, record.chrom, record.chrom_start, record.chrom_end));

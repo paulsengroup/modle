@@ -50,14 +50,14 @@ void Writer::write_chromosomes(const Chromosomes& chroms) {
           throw std::runtime_error(fmt::format(
               FMT_STRING(
                   "We currently don't support writing chromosomes longer than ~4.29 Gbp (2^32 "
-                  "bp) to bigWig files. '{}' has a length of {:.4f} Gbp"),
+                  "bp) to bigWig files. \"{}\" has a length of {:.4f} Gbp"),
               chrom.first, static_cast<double>(chrom.second) / 1e9));
         }
       }
       if constexpr (std::is_signed<chrom_size_t>()) {
         if (chrom.second < 0) {
           throw std::runtime_error(fmt::format(
-              FMT_STRING("'{}' appears to have a negative length of {} bp. This is not allowed"),
+              FMT_STRING("\"{}\" appears to have a negative length of {} bp. This is not allowed"),
               chrom.first, chrom.second));
         }
       }

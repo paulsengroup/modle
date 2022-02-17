@@ -115,7 +115,7 @@ void Simulation::run_simulate() {
       }
       // Don't simulate KO chroms (but write them to disk if the user desires so)
       if (!chrom.ok() || chrom.num_barriers() == 0) {
-        spdlog::info(FMT_STRING("SKIPPING '{}'..."), chrom.name());
+        spdlog::info(FMT_STRING("SKIPPING \"{}\"..."), chrom.name());
         if (this->write_contacts_for_ko_chroms) {
           std::scoped_lock lck(progress_queue_mutex);
           progress_queue.emplace_back(&chrom, num_cells);
@@ -260,7 +260,7 @@ void Simulation::simulate_worker(const u64 tid,
 
         if (++progress->second == num_cells && !this->_exception_thrown) {
           // We are done simulating loop-extrusion on task.chrom: print a status update
-          spdlog::info(FMT_STRING("Simulation for '{}' successfully completed."),
+          spdlog::info(FMT_STRING("Simulation of \"{}\" successfully completed."),
                        task.chrom->name());
         }
       }

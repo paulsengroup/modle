@@ -98,9 +98,9 @@ void throw_except_from_errc(std::string_view tok, usize idx, [[maybe_unused]] co
   static_assert(std::is_arithmetic<N>());
   std::string base_error;
   if (idx != (std::numeric_limits<usize>::max)()) {
-    base_error = fmt::format(FMT_STRING("Unable to convert field {} ('{}') to a "), idx, tok);
+    base_error = fmt::format(FMT_STRING("Unable to convert field {} (\"{}\") to a "), idx, tok);
   } else {
-    base_error = fmt::format(FMT_STRING("Unable to convert field '{}' to"), tok);
+    base_error = fmt::format(FMT_STRING("Unable to convert field \"{}\" to"), tok);
   }
   if (std::is_integral<N>()) {
     if (std::is_unsigned<N>()) {
@@ -114,7 +114,7 @@ void throw_except_from_errc(std::string_view tok, usize idx, [[maybe_unused]] co
   if (e == std::errc::invalid_argument) {
     if (c != nullptr) {
       throw std::runtime_error(
-          fmt::format(FMT_STRING("{}. Reason: found an invalid character '{}'"), base_error, *c));
+          fmt::format(FMT_STRING("{}. Reason: found an invalid character \"{}\""), base_error, *c));
     }
     throw std::runtime_error(
         fmt::format(FMT_STRING("{}. Reason: found an invalid character"), base_error));
@@ -127,7 +127,7 @@ void throw_except_from_errc(std::string_view tok, usize idx, [[maybe_unused]] co
   throw std::logic_error(
       fmt::format(FMT_STRING("{}. If you see this error, report it to the developers on "
                              "GitHub.\nBED::throw_except_from_errc "
-                             "called with an invalid std::errc '{}'. This should not be possible!"),
+                             "called with an invalid std::errc \"{}\". This should not be possible!"),
                   base_error, std::make_error_code(e).message()));
 }
 

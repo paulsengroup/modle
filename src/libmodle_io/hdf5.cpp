@@ -106,7 +106,7 @@ hsize_t read_str(const H5::DataSet &dataset, std::string &buff, hsize_t file_off
 
   } catch ([[maybe_unused]] const H5::Exception &e) {
     throw std::runtime_error(
-        fmt::format(FMT_STRING("Failed to read a string from dataset '{}' at offset {} using a "
+        fmt::format(FMT_STRING("Failed to read a string from dataset \"{}\" at offset {} using a "
                                "buffer size of 1:\n{}"),
                     dataset.getObjName(), file_offset, construct_error_stack()));
   }
@@ -137,7 +137,7 @@ hsize_t read_strings(const H5::DataSet &dataset, std::vector<std::string> &buff,
 
   } catch ([[maybe_unused]] const H5::Exception &e) {
     throw std::runtime_error(
-        fmt::format(FMT_STRING("Failed to read strings from dataset '{}' at offset {} using a "
+        fmt::format(FMT_STRING("Failed to read strings from dataset \"{}\" at offset {} using a "
                                "buffer size of {}:\n{}"),
                     dataset.getObjName(), file_offset, buff.size(), construct_error_stack()));
   }
@@ -221,7 +221,7 @@ bool has_group(H5::H5File &f, std::string_view name, std::string_view root_path)
     return true;
   }
   throw std::runtime_error(
-      fmt::format(FMT_STRING("'{}' exists but is not a group"), absl::StrCat(root_path, name)));
+      fmt::format(FMT_STRING("\"{}\" exists but is not a group"), absl::StrCat(root_path, name)));
 }
 
 bool has_dataset(H5::H5File &f, std::string_view name, std::string_view root_path) {

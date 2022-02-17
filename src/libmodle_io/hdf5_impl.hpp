@@ -68,8 +68,8 @@ hsize_t write_str(const S &str_, const H5::DataSet &dataset, const H5::StrType &
   if constexpr (utils::ndebug_not_defined()) {
     if (str.size() > str_type.getSize()) {
       throw std::runtime_error(fmt::format(
-          FMT_STRING("The following error occurred while writing strings '{}' to dataset "
-                     "'{}' at offset {}:\n string does not fit in the receiving dataset: "
+          FMT_STRING("The following error occurred while writing strings \"{}\" to dataset "
+                     "\"{}\" at offset {}:\n string does not fit in the receiving dataset: "
                      "string length: {}; Max. string length: {}"),
           str, dataset.getObjName(), file_offset, str.size(), str_type.getSize()));
     }
@@ -90,8 +90,8 @@ hsize_t write_str(const S &str_, const H5::DataSet &dataset, const H5::StrType &
     return file_size;
   } catch (const H5::Exception &e) {
     throw std::runtime_error(
-        fmt::format(FMT_STRING("The following error occurred while writing strings '{}' to dataset "
-                               "'{}' at offset {}: {}"),
+        fmt::format(FMT_STRING("The following error occurred while writing strings \"{}\" to dataset "
+                               "\"{}\" at offset {}: {}"),
                     str, dataset.getObjName(), file_offset, construct_error_stack(e)));
   }
 }
@@ -136,7 +136,7 @@ hsize_t write_number(N &num, const H5::DataSet &dataset, hsize_t file_offset) {
   } catch (const H5::Exception &e) {
     throw std::runtime_error(
         fmt::format(FMT_STRING("The following error occurred while writing number {} to dataset "
-                               "'{}' at offset {}: {}"),
+                               "\"{}\" at offset {}: {}"),
                     num, dataset.getObjName(), file_offset, construct_error_stack(e)));
   }
 }
@@ -173,7 +173,7 @@ hsize_t write_numbers(CN &numbers, const H5::DataSet &dataset, hsize_t file_offs
     throw std::runtime_error(fmt::format(
         FMT_STRING(
             "The following error occurred while writing a collection of {} numbers to dataset "
-            "'{}' at offset {}: {}"),
+            "\"{}\" at offset {}: {}"),
         numbers.size(), file_offset, dataset.getObjName(), construct_error_stack(e)));
   }
 }
@@ -255,7 +255,7 @@ void read_attribute(H5::H5File &f, std::string_view attr_name, T &buff, std::str
   auto g = hdf5::open_group(f, std::string{path});
   if (!hdf5::has_attribute(g, attr_name)) {
     throw std::runtime_error(fmt::format(
-        FMT_STRING("Unable to find an attribute named '{}' in group '/{}'"), attr_name, path));
+        FMT_STRING("Unable to find an attribute named \"{}\" in group '/{}'"), attr_name, path));
   }
   auto attr = g.openAttribute(std::string{attr_name});
 
@@ -324,7 +324,7 @@ void read_attribute(H5::H5File &f, std::string_view attr_name, T &buff, std::str
   if constexpr (std::is_integral_v<T> != std::is_integral_v<VT> &&
                 std::is_constructible_v<H5std_string, VT>) {
     throw std::runtime_error(fmt::format(
-        FMT_STRING("Unable to store attribute '{}' of type {} into a buffer of type {}"), attr_name,
+        FMT_STRING("Unable to store attribute \"{}\" of type {} into a buffer of type {}"), attr_name,
         utils::get_printable_type_name<T>(), utils::get_printable_type_name<VT>()));
   }
   absl::visit(
@@ -343,7 +343,7 @@ void read_attribute(H5::H5File &f, std::string_view attr_name, T &buff, std::str
             buff = static_cast<T>(v);
           } else {
             throw std::runtime_error(fmt::format(
-                FMT_STRING("Unable to store attribute '{}' with value {} in a buffer with "
+                FMT_STRING("Unable to store attribute \"{}\" with value {} in a buffer with "
                            "type {}. Reason: value does not fit in the receiver"),
                 attr_name, v, utils::get_printable_type_name<T>()));
           }
@@ -356,7 +356,7 @@ template <class T>
 void read_attribute(const H5::DataSet &d, std::string_view attr_name, T &buff) {
   if (!has_attribute(d, attr_name)) {
     throw std::runtime_error(
-        fmt::format(FMT_STRING("Unable to find an attribute named '{}' in dataset '{}'"), attr_name,
+        fmt::format(FMT_STRING("Unable to find an attribute named \"{}\" in dataset \"{}\""), attr_name,
                     d.getObjName()));
   }
 
@@ -411,7 +411,7 @@ inline void write_or_create_attribute(H5::H5File &f, std::string_view attr_name,
   const auto lck = internal::lock();
   H5::DataSpace attr_space(H5S_SCALAR);
   if (!hdf5::has_group(f, path)) {
-    throw std::runtime_error(fmt::format(FMT_STRING("Unable to find group '{}'"), path));
+    throw std::runtime_error(fmt::format(FMT_STRING("Unable to find group \"{}\""), path));
   }
 
   const auto attribute_exists = hdf5::has_attribute(f, std::string{attr_name}, std::string{path});
@@ -447,7 +447,7 @@ bool check_dataset_type(const H5::DataSet &dataset, T type, bool throw_on_failur
   if (actual_type != expected_type) {
     if (throw_on_failure) {
       throw std::runtime_error(
-          fmt::format(FMT_STRING("'{}' exists but has incorrect datatype"), dataset.getObjName()));
+          fmt::format(FMT_STRING("\"{}\" exists but has incorrect datatype"), dataset.getObjName()));
     }
     return false;
   }
@@ -456,7 +456,7 @@ bool check_dataset_type(const H5::DataSet &dataset, T type, bool throw_on_failur
   if (actual_size != expected_size) {
     if (throw_on_failure) {
       throw std::runtime_error(fmt::format(
-          FMT_STRING("'{}' exists but has incorrect datasize (expected {} bytes, got {})"),
+          FMT_STRING("\"{}\" exists but has incorrect datasize (expected {} bytes, got {})"),
           dataset.getObjName(), expected_size, actual_size));
     }
     return false;
@@ -468,7 +468,7 @@ bool check_dataset_type(const H5::DataSet &dataset, T type, bool throw_on_failur
     if (actual_charset != expected_charset) {
       if (throw_on_failure) {
         throw std::runtime_error(
-            fmt::format(FMT_STRING("'{}' exists but has incorrect CharSet"), dataset.getObjName()));
+            fmt::format(FMT_STRING("\"{}\" exists but has incorrect CharSet"), dataset.getObjName()));
       }
       return false;
     }
@@ -477,7 +477,7 @@ bool check_dataset_type(const H5::DataSet &dataset, T type, bool throw_on_failur
     if (actual_padding != expected_padding) {
       if (throw_on_failure) {
         throw std::runtime_error(fmt::format(
-            FMT_STRING("'{}' exists but has incorrect String padding"), dataset.getObjName()));
+            FMT_STRING("\"{}\" exists but has incorrect String padding"), dataset.getObjName()));
       }
       return false;
     }
@@ -487,7 +487,7 @@ bool check_dataset_type(const H5::DataSet &dataset, T type, bool throw_on_failur
       if (auto t = H5::IntType(type); t.getSign() != actual_sign) {
         if (throw_on_failure) {
           throw std::runtime_error(fmt::format(
-              FMT_STRING("'{}' exists but has incorrect signedness"), dataset.getObjName()));
+              FMT_STRING("\"{}\" exists but has incorrect signedness"), dataset.getObjName()));
         }
         return false;
       }
@@ -498,7 +498,7 @@ bool check_dataset_type(const H5::DataSet &dataset, T type, bool throw_on_failur
       if (auto t = H5::FloatType(type); t.getPrecision() != actual_precision) {
         if (throw_on_failure) {
           throw std::runtime_error(fmt::format(
-              FMT_STRING("'{}' exists but has incorrect precision"), dataset.getObjName()));
+              FMT_STRING("\"{}\" exists but has incorrect precision"), dataset.getObjName()));
         }
         return false;
       }

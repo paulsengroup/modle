@@ -304,7 +304,7 @@ bool Cooler<N>::validate_file_format(H5::H5File &f, FLAVOR expected_flavor, IO_M
     }
 
   } catch (const std::runtime_error &e) {
-    throw std::runtime_error(fmt::format(FMT_STRING("Cooler validation for file '{}' failed: {}"),
+    throw std::runtime_error(fmt::format(FMT_STRING("Cooler validation for file \"{}\" failed: {}"),
                                          hdf5::get_file_name(f), e.what()));
   }
 }
@@ -451,7 +451,7 @@ usize Cooler<N>::read_chrom_offset_idx() {
   if (idx_size != this->_idx_chrom_offset.size()) {
     throw std::runtime_error(
         fmt::format(FMT_STRING("An error occurred while reading dataset 'indexes/chrom_offset' "
-                               "from file '{}': expected to read {} numbers, but only read {}"),
+                               "from file \"{}\": expected to read {} numbers, but only read {}"),
                     this->_path_to_file, buff_size, idx_size));
   }
   return idx_size;
@@ -467,7 +467,7 @@ usize Cooler<N>::read_bin1_offset_idx() {
   if (idx_size != this->_idx_bin1_offset.size()) {
     throw std::runtime_error(
         fmt::format(FMT_STRING("An error occurred while reading dataset 'indexes/chrom_offset' "
-                               "from file '{}': expected to read {} numbers, but only read {}"),
+                               "from file \"{}\": expected to read {} numbers, but only read {}"),
                     this->_path_to_file, buff_size, idx_size));
   }
   return idx_size;
@@ -585,7 +585,7 @@ void Cooler<N>::init_default_datasets() {
 
   } catch ([[maybe_unused]] const H5::FileIException &e) {
     throw std::runtime_error(fmt::format(
-        FMT_STRING("An error occurred while initializing default Cooler dataset on file '{}': {}"),
+        FMT_STRING("An error occurred while initializing default Cooler dataset on file \"{}\": {}"),
         this->_path_to_file.string(), hdf5::construct_error_stack()));
   }
 }
@@ -638,7 +638,7 @@ void Cooler<N>::open_default_datasets() {
   } catch ([[maybe_unused]] const H5::FileIException &e) {
     throw std::runtime_error(fmt::format(
         FMT_STRING(
-            "An error occurred while trying to open Cooler's default datasets of file '{}': {}"),
+            "An error occurred while trying to open Cooler's default datasets of file \"{}\": {}"),
         this->_path_to_file, hdf5::construct_error_stack()));
   }
 }
@@ -674,18 +674,18 @@ usize Cooler<N>::get_chrom_idx(std::string_view query_chrom_name, bool try_commo
         }
       }
       throw std::runtime_error(
-          fmt::format(FMT_STRING("Unable to find a chromosome named '{}'. The following chromosome "
-                                 "name variants were searched: '{}'"),
+          fmt::format(FMT_STRING("Unable to find a chromosome named \"{}\". The following chromosome "
+                                 "name variants were searched: \"{}\""),
                       query_chrom_name, fmt::join(queries, "', '")));
     }
     throw std::runtime_error(
-        fmt::format(FMT_STRING("Unable to find a chromosome named '{}'"), query_chrom_name));
+        fmt::format(FMT_STRING("Unable to find a chromosome named \"{}\""), query_chrom_name));
   } catch (const std::exception &e) {
     if (absl::StartsWith(e.what(), "Unable to find a chromosome")) {
       throw;
     }
     throw std::runtime_error(fmt::format(FMT_STRING("The following error occurred while looking up "
-                                                    "'{}' in dataset chroms/name of file '{}': {}"),
+                                                    "\"{}\" in dataset chroms/name of file \"{}\": {}"),
                                          query_chrom_name, this->_path_to_file, e.what()));
   }
 }
@@ -774,11 +774,11 @@ bool Cooler<N>::validate_cool_flavor(H5::H5File &f, usize bin_size, std::string_
         }
         throw std::runtime_error(fmt::format(
             FMT_STRING(
-                "File is not in Cooler format: format attribute should be HDF5::Cooler, is '{}'"),
+                "File is not in Cooler format: format attribute should be HDF5::Cooler, is \"{}\""),
             str_buff));
       }
     } else {
-      spdlog::warn(FMT_STRING("WARNING: missing attribute 'format' in file '{}'\n"),
+      spdlog::warn(FMT_STRING("WARNING: missing attribute 'format' in file \"{}\"\n"),
                    hdf5::get_file_name(f));
     }
     str_buff.clear();
@@ -803,7 +803,7 @@ bool Cooler<N>::validate_cool_flavor(H5::H5File &f, usize bin_size, std::string_
         return false;
       }
       throw std::runtime_error(
-          fmt::format(FMT_STRING("Expected bin-type attribute to be 'fixed', got '{}'"), str_buff));
+          fmt::format(FMT_STRING("Expected bin-type attribute to be 'fixed', got \"{}\""), str_buff));
     }
     str_buff.clear();
 
@@ -825,7 +825,7 @@ bool Cooler<N>::validate_cool_flavor(H5::H5File &f, usize bin_size, std::string_
           return false;
         }
         throw std::runtime_error(fmt::format(
-            FMT_STRING("Expected storage-mode attribute to be 'symmetric-upper', got '{}'"),
+            FMT_STRING("Expected storage-mode attribute to be 'symmetric-upper', got \"{}\""),
             str_buff));
       }
     }
@@ -888,7 +888,7 @@ bool Cooler<N>::validate_cool_flavor(H5::H5File &f, usize bin_size, std::string_
       }
       auto attr_name = msg.substr(0, msg.find_first_of('\''));
       throw std::runtime_error(
-          fmt::format(FMT_STRING("Missing mandatory attribute '{}'{}"), attr_name,
+          fmt::format(FMT_STRING("Missing mandatory attribute \"{}\"{}"), attr_name,
                       root_path == "/" ? "" : absl::StrCat(" from path '", root_path, "'")));
     }
     throw;
@@ -916,11 +916,11 @@ bool Cooler<N>::validate_multires_cool_flavor(H5::H5File &f, usize bin_size,
       }
       throw std::runtime_error(
           fmt::format(FMT_STRING("File is not in Multires-Cooler (MCool) format: format attribute "
-                                 "should be HDF5::MCOOL, is '{}'"),
+                                 "should be HDF5::MCOOL, is \"{}\""),
                       format));
     }
   } else {
-    spdlog::warn(FMT_STRING("WARNING: missing attribute 'format' in file '{}'\n"),
+    spdlog::warn(FMT_STRING("WARNING: missing attribute 'format' in file \"{}\"\n"),
                  hdf5::get_file_name(f));
   }
 

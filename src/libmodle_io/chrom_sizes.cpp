@@ -37,19 +37,19 @@ std::vector<bed::BED> Parser::parse_all(char sep) {
     assert(!tokens.empty());
     try {
       if (tokens.size() < 2) {
-        throw std::runtime_error(fmt::format(FMT_STRING("Expected 2 or more tokens, got {}: '{}'"),
+        throw std::runtime_error(fmt::format(FMT_STRING("Expected 2 or more tokens, got {}: \"{}\""),
                                              tokens.size(), buff));
       }
       tokens.insert(tokens.begin() + 1, "0");
       if (const auto& chrom_name = tokens.front(); chrom_names.contains(chrom_name)) {
         throw std::runtime_error(
-            fmt::format(FMT_STRING("Found multiple records for chrom '{}'"), chrom_name));
+            fmt::format(FMT_STRING("Found multiple records for chrom \"{}\""), chrom_name));
       }
       chrom_sizes.emplace_back(absl::StrJoin(tokens, "\t"), id++, bed::BED::BED3);
     } catch (const std::runtime_error& e) {
       throw std::runtime_error(
           fmt::format(FMT_STRING("Encountered a malformed record at line {} of file \"{}\": {}.\n "
-                                 "Line that triggered the error:\n'{}'"),
+                                 "Line that triggered the error:\n\"{}\""),
                       i, this->_reader.path_string(), e.what(), buff.data()));
     }
   }

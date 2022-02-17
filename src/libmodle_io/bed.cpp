@@ -40,7 +40,7 @@ std::string RGB::to_string() const { return fmt::to_string(*this); }
 void BED::parse_strand_or_throw(const std::vector<std::string_view>& toks, u8 idx, char& field) {
   const auto* const match = bed_strand_encoding.find(toks[idx]);
   if (match == bed_strand_encoding.end()) {
-    throw std::runtime_error(fmt::format(FMT_STRING("Unrecognized strand '{}'"), toks[idx]));
+    throw std::runtime_error(fmt::format(FMT_STRING("Unrecognized strand \"{}\""), toks[idx]));
   }
   field = match->second;
 }
@@ -52,7 +52,7 @@ void BED::parse_rgb_or_throw(const std::vector<std::string_view>& toks, u8 idx, 
   }
   const std::vector<std::string_view> channels = absl::StrSplit(toks[idx], ',');
   if (channels.size() != 3) {
-    throw std::runtime_error(fmt::format(FMT_STRING("RGB: expected 3 fields, got {}: '{}'"),
+    throw std::runtime_error(fmt::format(FMT_STRING("RGB: expected 3 fields, got {}: \"{}\""),
                                          channels.size(), toks[idx]));
   }
   utils::parse_numeric_or_throw(channels, 0, field.r);
@@ -73,7 +73,7 @@ BED::Dialect BED::detect_standard(std::string_view line) {
 BED::Dialect BED::detect_standard(const std::vector<std::string_view>& toks) {
   if (toks.size() < BED3) {
     throw std::runtime_error(fmt::format(
-        FMT_STRING("Expected at least 3 fields, got {}.\nRecord that caused the error: '{}'"),
+        FMT_STRING("Expected at least 3 fields, got {}.\nRecord that caused the error: \"{}\""),
         toks.size(), fmt::join(toks, "\t")));
   }
 
@@ -131,7 +131,7 @@ bool BED::parse_chrom_end(const std::vector<std::string_view>& toks) {
   utils::parse_numeric_or_throw(toks, BED_CHROM_END_IDX, this->chrom_end);
   if (this->chrom_start > this->chrom_end) {
     throw std::runtime_error(
-        fmt::format(FMT_STRING("Invalid BED record detected: chrom_start > chrom_end: chrom='{}'; "
+        fmt::format(FMT_STRING("Invalid BED record detected: chrom_start > chrom_end: chrom=\"{}\"; "
                                "start={}; end={}"),
                     this->chrom, this->chrom_start, this->chrom_end));
   }
@@ -167,7 +167,7 @@ bool BED::parse_thick_start(const std::vector<std::string_view>& toks, bool vali
   utils::parse_numeric_or_throw(toks, BED_THICK_START_IDX, this->thick_start);
   if (validate && this->thick_start < this->chrom_start) {
     throw std::runtime_error(fmt::format(
-        FMT_STRING("Invalid BED record detected: thick_start < chrom_start: chrom='{}'; "
+        FMT_STRING("Invalid BED record detected: thick_start < chrom_start: chrom=\"{}\"; "
                    "overlap_start={}; thick_start={}"),
         this->chrom, this->chrom_start, this->thick_start));
   }
@@ -179,13 +179,13 @@ bool BED::parse_thick_end(const std::vector<std::string_view>& toks, bool valida
   utils::parse_numeric_or_throw(toks, BED_THICK_END_IDX, this->thick_end);
   if (validate && this->thick_end > this->chrom_end) {
     throw std::runtime_error(
-        fmt::format(FMT_STRING("Invalid BED record detected: thick_end > chrom_end: chrom='{}'; "
+        fmt::format(FMT_STRING("Invalid BED record detected: thick_end > chrom_end: chrom=\"{}\"; "
                                "overlap_start={}; thick_start={}"),
                     this->chrom, this->chrom_end, this->thick_end));
   }
   if (validate && this->thick_start > this->thick_end) {
     throw std::runtime_error(
-        fmt::format(FMT_STRING("Invalid BED record detected: thick_start > thick_end: chrom='{}'; "
+        fmt::format(FMT_STRING("Invalid BED record detected: thick_start > thick_end: chrom=\"{}\"; "
                                "thick_start={}; thick_end={}"),
                     this->chrom, this->chrom_start, this->chrom_end));
   }
@@ -254,7 +254,7 @@ BED::BED(std::string_view record, usize id_, BED::Dialect bed_standard, bool val
               "Refer to "
               "https://bedtools.readthedocs.io/_end/latest/content/general-usage.html#bed-format "
               "for the BED format specification.\n"
-              "Record that caused the error: '{}'"),
+              "Record that caused the error: \"{}\""),
           toks.size(), fmt::join(toks, "\t")));
     }
   }
@@ -303,7 +303,7 @@ BED::BED(std::string_view record, usize id_, BED::Dialect bed_standard, bool val
 
   } catch (const std::exception& e) {
     throw std::runtime_error(fmt::format(
-        FMT_STRING("An error occurred while parsing the following BED record '{}':\n  {}"), record,
+        FMT_STRING("An error occurred while parsing the following BED record \"{}\":\n  {}"), record,
         e.what()));
   }
 }
@@ -483,7 +483,7 @@ std::vector<BED> Parser::parse_n(usize num_records) {
       const auto& other_record_line = node->second.second;
       throw std::runtime_error(fmt::format(
           FMT_STRING("Detected duplicate record at line {} of file {}. First occurrence was at "
-                     "line {}.\n - First occurrence:  '{}'\n - Second occurrence: '{}'"),
+                     "line {}.\n - First occurrence:  \"{}\"\n - Second occurrence: \"{}\""),
           this->_num_lines_read, this->_reader.path(), other_record_line, record, other_record));
     }
   }
@@ -521,7 +521,7 @@ BED_tree<> Parser::parse_n_in_interval_tree(usize num_records) {
       const auto& other_record = node->first;
       throw std::runtime_error(fmt::format(
           FMT_STRING("Detected duplicate record at line {} of file {}. First occurrence was at "
-                     "line {}.\n - First occurrence:  '{}'\n - Second occurrence: '{}'"),
+                     "line {}.\n - First occurrence:  \"{}\"\n - Second occurrence: \"{}\""),
           this->_num_lines_read, this->_reader.path(), other_record_line, record, other_record));
     }
 
@@ -550,7 +550,7 @@ BED_tree<> Parser::parse_all_in_interval_tree() {
 void Parser::reset() {
   if (boost::filesystem::status(this->_reader.path()).type() == boost::filesystem::fifo_file) {
     throw std::runtime_error(fmt::format(
-        FMT_STRING("BED::Parser::reset() was called on a file that is a FIFO: file path '{}'"),
+        FMT_STRING("BED::Parser::reset() was called on a file that is a FIFO: file path \"{}\""),
         this->_reader.path()));
   }
   if (!this->_reader.is_open()) {

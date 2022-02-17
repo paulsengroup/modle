@@ -153,10 +153,10 @@ void Simulation::write_contacts_to_disk(std::deque<std::pair<Chromosome*, usize>
         // In this case, c->write_or_append_cmatrix_to_file() will create an entry in the chroms and
         // bins datasets, as well as update the appropriate index
         if (chrom_to_be_written->contacts_ptr()) {
-          spdlog::info(FMT_STRING("Writing contacts for '{}' to file {}..."),
+          spdlog::info(FMT_STRING("Writing contacts for \"{}\" to file {}..."),
                        chrom_to_be_written->name(), c->get_path());
         } else {
-          spdlog::info(FMT_STRING("Creating an empty entry for '{}' in file {}..."),
+          spdlog::info(FMT_STRING("Creating an empty entry for \"{}\" in file {}..."),
                        chrom_to_be_written->name(), c->get_path());
         }
 
@@ -166,13 +166,13 @@ void Simulation::write_contacts_to_disk(std::deque<std::pair<Chromosome*, usize>
             chrom_to_be_written->size());
 
         if (chrom_to_be_written->contacts_ptr()) {
-          spdlog::info(FMT_STRING("Written {} contacts for '{}' in {:.2f}M pixels to file {}."),
+          spdlog::info(FMT_STRING("Written {} contacts for \"{}\" in {:.2f}M pixels to file {}."),
                        chrom_to_be_written->contacts().get_tot_contacts(),
                        chrom_to_be_written->name(),
                        static_cast<double>(chrom_to_be_written->contacts().npixels()) / 1.0e6,
                        c->get_path());
         } else {
-          spdlog::info(FMT_STRING("Created an entry for '{}' in file {}."),
+          spdlog::info(FMT_STRING("Created an entry for \"{}\" in file {}."),
                        chrom_to_be_written->name(), c->get_path());
         }
       }
@@ -183,7 +183,7 @@ void Simulation::write_contacts_to_disk(std::deque<std::pair<Chromosome*, usize>
     std::scoped_lock lck(this->_exceptions_mutex);
     if (chrom_to_be_written) {
       this->_exceptions.emplace_back(std::make_exception_ptr(std::runtime_error(fmt::format(
-          FMT_STRING("The following error occurred while writing contacts for '{}' to file {}: {}"),
+          FMT_STRING("The following error occurred while writing contacts for \"{}\" to file {}: {}"),
           chrom_to_be_written->name(), c->get_path(), err.what()))));
     } else {
       this->_exceptions.emplace_back(std::make_exception_ptr(std::runtime_error(fmt::format(
