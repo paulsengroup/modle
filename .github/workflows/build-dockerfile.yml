@@ -5,7 +5,7 @@ name: Build Docker Container
 
 on:
   push:
-    branches: [ main, testing-ci, v4, v4.1 ]
+    branches: [ main, devel, testing-ci ]
     paths:
       - ".github/workflows/build-dockerfile.yml"
       - "cmake/**"
@@ -16,7 +16,7 @@ on:
       - "Dockerfile"
       - "conanfile.py"
   pull_request:
-    branches: [ main, testing-ci, v4, v4.1 ]
+    branches: [ main, devel, testing-ci ]
     paths:
       - ".github/workflows/build-dockerfile.yml"
       - "cmake/**"

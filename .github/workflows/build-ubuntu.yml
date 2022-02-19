@@ -5,7 +5,7 @@ name: Ubuntu Builds
 
 on:
   push:
-    branches: [ main, testing-ci, v4.1 ]
+    branches: [ main, devel, testing-ci ]
     paths:
       - ".github/workflows/build-ubuntu.yml"
       - "cmake/**"
@@ -15,7 +15,7 @@ on:
       - "CMakeLists.txt"
       - "conanfile.py"
   pull_request:
-    branches: [ main, testing-ci, v4.1 ]
+    branches: [ main, devel, testing-ci ]
     paths:
       - ".github/workflows/build-ubuntu.yml"
       - "cmake/**"
@@ -31,10 +31,10 @@ jobs:
       fail-fast: false
       matrix:
         image:
-          - conanio/gcc7-ubuntu16.04:1.43.1
-          - conanio/gcc11-ubuntu16.04:1.43.1
-          - conanio/clang60:1.43.1
-          - conanio/clang13-ubuntu16.04:1.43.1
+          - conanio/gcc7-ubuntu16.04:1.45.0
+          - conanio/gcc11-ubuntu16.04:1.45.0
+          - conanio/clang60:1.45.0
+          - conanio/clang13-ubuntu16.04:1.45.0
         config:
           - build_type: Release
           - build_type: Debug
@@ -45,7 +45,7 @@ jobs:
       options: "--user=root -v ${{github.workspace}}:/workspace"
     env:
       CONAN_USER_HOME: "/workspace"
-      R_VERSION: "4.1.1"
+      R_VERSION: "4.1.2"
       R_BUILD_DIR: "/workspace/r-build"
 
     defaults:
