@@ -45,8 +45,6 @@ jobs:
       options: "--user=root -v ${{github.workspace}}:/workspace"
     env:
       CONAN_USER_HOME: "/workspace"
-      R_VERSION: "4.1.2"
-      R_BUILD_DIR: "/workspace/r-build"
 
     defaults:
       run:
@@ -78,61 +76,32 @@ jobs:
 
           echo "::set-output name=string::$host_os-$compiler_id-$build_type-$hash"
 
-      - name: Cache R
-        uses: actions/cache@v2
-        with:
-          key: >
-            host-${{ runner.os }}-${{ steps.compiler-info.outputs.ID }}-R-${{ env.R_VERSION }}-${{ hashFiles('.github/workflows/build-ubuntu.yml') }}
-          path: /workspace/R/${{ env.R_VERSION }}
-
       - name: Install unit test dependencies
         run: |
           pip3 install scipy
 
-          sudo -i
-          apt-get update
-          apt-get install -y gfortran libblas-dev libcurl4-openssl-dev         \
-                             liblapack-dev libpcre2-dev libssl-dev libxml2-dev
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends software-properties-common dirmngr
 
-          export PATH="$PATH:/workspace/R/${R_VERSION}/bin"
-          echo "/workspace/R/${R_VERSION}/bin" >> $GITHUB_PATH
+          sys_python="$(readlink -f /usr/bin/python3.?)"
+          sudo sed -i "s|^\#\!.*python.*|\#\!$sys_python|" "$(which lsb_release)"
+          sudo sed -i "s|^\#\!.*python.*|\#\!$sys_python|" "$(which add-apt-repository)"
 
-          if ! [ -x "$(command -v Rscript)" ]; then
-            mkdir -p "$HOME/.R"
+          curl -L 'https://cloud.r-project.org/bin/linux/ubuntu/marutter_pubkey.asc' |
+            sudo tee -a /etc/apt/trusted.gpg.d/cran_ubuntu_key.asc > /dev/null
+          sudo /usr/bin/python3.? /usr/bin/add-apt-repository "deb https://cloud.r-project.org/bin/linux/ubuntu $(lsb_release -cs)-cran40/"
 
-            if [[ ${{ steps.compiler-info.outputs.NAME }} == gcc ]]; then
-              export CC="$(which gcc)"
-              export CXX="$(which g++)"
-            else
-              export CC="$(which clang)"
-              export CXX="$(which clang++)"
-            fi
-            export FC="$(which gfortran)"
-            export F77="$FC"
+          sudo apt-get install -y --no-install-recommends r-base        \
+                                                          r-base-dev    \
+                                                          r-cran-minqa  \
+                                                          r-cran-mnormt \
+                                                          r-cran-rcpparmadillo
 
-            printf "CC=%s\nCXX=%s\nFC=%s\nF77=%s\n" "$CC" "$CXX" "$FC" "$F77" |
-              tee "$HOME/.R/Makevars"
-            echo "options(Ncpus = $(nproc))" | sudo tee "$HOME/.Rprofile" > /dev/null
+          echo "options(Ncpus = $(nproc))" | sudo tee "$HOME/.Rprofile" > /dev/null
+          sudo cp "$HOME/.Rprofile" /root/
 
-            mkdir -p /workspace/r-build
-            cd /workspace/r-build
-            curl -L "https://cran.rstudio.com/src/base/R-4/R-${R_VERSION}.tar.gz" | tar -xzf -
-            cd "R-${R_VERSION}"
-            ./configure --prefix=/workspace/R/"${R_VERSION}" \
-                        --enable-memory-profiling            \
-                        --enable-R-shlib                     \
-                        --with-blas                          \
-                        --with-lapack                        \
-                        --with-x=no
-            make -j $(nproc)
-            make install
-
-            sudo ln -snf /usr/share/zoneinfo/CET /etc/localtime
-            echo CET | tee /etc/timezone > /dev/null
-
-            Rscript --no-save -e 'install.packages("wCorr", dependencies=c("Depends", "Imports", "LinkingTo"), repos="https://cloud.r-project.org")'
-            Rscript --no-save -e 'quit(status=!library("wCorr", character.only=T, logical.return=T), save="no")' &> /dev/null
-          fi
+          sudo Rscript --no-save -e 'install.packages("wCorr", dependencies=c("Depends", "Imports", "LinkingTo"), repos="https://cloud.r-project.org")'
+          Rscript --no-save -e 'quit(status=!library("wCorr", character.only=T, logical.return=T), save="no")' &> /dev/null
 
       - name: Cache Conan packages
         uses: actions/cache@v2
