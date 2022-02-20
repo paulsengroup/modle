@@ -2,7 +2,7 @@
 #
 # SPDX-License-Identifier: MIT
 
-cmake_minimum_required(VERSION 3.11)
+cmake_minimum_required(VERSION 3.16)
 
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake/modules/")
 
@@ -31,6 +31,7 @@ project(
   MoDLE
   LANGUAGES CXX
   VERSION 0.0.1
+  HOMEPAGE_URL https://github.com/robomics/modle
   DESCRIPTION "MoDLE: stochastic modeling of DNA loop extrusion.")
 
 get_property(BUILDING_MULTI_CONFIG GLOBAL PROPERTY GENERATOR_IS_MULTI_CONFIG)
@@ -82,7 +83,7 @@ set(ENABLE_CONAN_DEFAULT ON)
 set(ENABLE_CPPCHECK_DEFAULT OFF)
 set(ENABLE_DOXYGEN_USER OFF)
 set(ENABLE_DOXYGEN_DEVELOPER ON)
-set(ENABLE_IPO_DEFAULT ON)
+set(ENABLE_IPO_DEFAULT OFF)
 set(ENABLE_PCH_DEFAULT OFF)
 
 option(MODLE_USE_MERSENNE_TWISTER "Use Mersenne Twister instead of Xoshiro as default PRNG engine" OFF)
