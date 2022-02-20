@@ -102,7 +102,7 @@ void IITree<N, T>::make_BST() {
     auto k = 1LL;
     const auto k1 = static_cast<i64>(this->size());
     for (; 1LL << k <= k1; ++k) {  // process internal nodes in the bottom-up order
-      const usize x = 1L << (k - 1);
+      const auto x = static_cast<usize>(1L << (k - 1));
       const auto i0 = (x << 1) - 1;
       const auto step = x << 2;
 

@@ -166,7 +166,8 @@ constexpr std::pair<usize, usize> ContactMatrix<N>::transpose_coords(const usize
 }
 
 template <class N>
-void ContactMatrix<N>::bound_check_coords(const usize row, const usize col) const {
+void ContactMatrix<N>::bound_check_coords([[maybe_unused]] const usize row,
+                                          [[maybe_unused]] const usize col) const {
   if constexpr (utils::ndebug_not_defined()) {
     if (MODLE_UNLIKELY(row >= this->ncols() || col >= this->ncols())) {
       throw std::logic_error(

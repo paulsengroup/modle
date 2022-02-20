@@ -105,9 +105,11 @@ const typename BED_tree<K, I>::value_type& BED_tree<K, I>::at(const K& chrom) co
 
 template <typename K, typename I>
 void BED_tree<K, I>::index() {
-  // TODO Workaround the -Wduplicated-branches produced by GCC 7.5
+  DISABLE_WARNING_PUSH
+  DISABLE_WARNING_DUPLICATED_BRANCHES
   std::for_each(this->_trees.begin(), this->_trees.end(),
                 [](auto& node) { node.second.make_BST(); });
+  DISABLE_WARNING_POP
 }
 
 template <typename K, typename I>
