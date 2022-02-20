@@ -4,176 +4,30 @@
 
 #pragma once
 
-// clang-format off
-#if defined(MODLE_CHARCONV_FP_AVAILABLE) && defined(MODLE_CHARCONV_INT_AVAILABLE)
-#include <charconv>                                     // for from_chars
-#else
-#include "modle/common/suppress_compiler_warnings.hpp"  // IWYU pragma: keep
-DISABLE_WARNING_PUSH
-DISABLE_WARNING_CONVERSION
-DISABLE_WARNING_DOUBLE_PROMOTION
-DISABLE_WARNING_SHORTEN_64_TO_32
-DISABLE_WARNING_SIGN_CONVERSION
-#include <msstl/charconv.hpp>
+#include <absl/strings/match.h>  // for StartsWithIgnoreCase
+#include <absl/types/span.h>     // for MakeSpan, Span
+#include <fmt/format.h>          // for compile_string_to_view, FMT_STRING
+#include <xxh3.h>                // for XXH_INLINE_XXH3_freeState, XXH3_f...
 
-DISABLE_WARNING_POP
-#endif
-// clang-format on
+#include <boost/filesystem/operations.hpp>  // for remove
+#include <boost/filesystem/path.hpp>        // for path
+#include <cassert>                          // for assert
+#include <cerrno>                           // for errno
+#include <exception>                        // for exception
+#include <fstream>                          // for operator|, ios_base, basic_ostrea...
+#include <functional>                       // for reference_wrapper
+#include <future>                           // for future, promise
+#include <initializer_list>                 // for initializer_list
+#include <stdexcept>                        // for range_error, runtime_error
+#include <string_view>                      // for string_view, basic_string_view
+#include <type_traits>                      // for __strip_reference_wrapper<>::__type
+#include <utility>                          // for pair, make_pair, forward
+#include <vector>                           // for vector
 
-#include <absl/strings/match.h>      // for StartsWithIgnoreCase
-#include <absl/strings/str_split.h>  // for StrSplit, Splitter
-#include <fmt/format.h>              // for format, FMT_STRING, system_error
-#include <fmt/ostream.h>             // for formatbuf<>::int_type
-#include <xxh3.h>                    // for XXH_INLINE_XXH3_freeState, XXH3_freeState
-
-#include <boost/filesystem/file_status.hpp>  // for file_type, regular_file, directory_file, fil...
-#include <boost/filesystem/operations.hpp>   // for status
-#include <boost/filesystem/path.hpp>         // for operator<<, path
-#include <cerrno>                            // for errno
-#include <cmath>                             // for trunc
-#include <cstdio>                            // for fclose, FILE, stderr, stdout
-#include <exception>                         // for exception
-#include <fstream>                           // for ifstrea, ofstream, streamsize
-#include <limits>                            // for numeric_limits
-#include <stdexcept>                         // for runtime_error, logic_error, range_error
-#include <string>                            // for string
-#include <string_view>                       // for string_view, basic_string_view, operator==
-#include <system_error>                      // for errc, make_error_code, errc::invalid_argument
-#include <type_traits>                       // for __strip_reference_wrapper<>::__type, is_arit...
-#include <utility>                           // for pair, make_pair, forward
-#include <vector>                            // for vector
-
-#include "modle/common/common.hpp"  // for usize, i64, u64
-#include "modle/common/suppress_compiler_warnings.hpp"
+#include "modle/common/common.hpp"                      // for usize, i64, u64
+#include "modle/common/suppress_compiler_warnings.hpp"  // for DISABLE_WARNING_POP, DISABLE_WARN...
 
 namespace modle::utils {
-
-template <class N>
-inline auto from_chars(const char *first, const char *last, N &value) noexcept {
-#if defined(MODLE_CHARCONV_FP_AVAILABLE) && defined(MODLE_CHARCONV_INT_AVAILABLE)
-  return std::from_chars(first, last, value);
-#else
-  return msstl::from_chars(first, last, value);
-#endif
-}
-
-template <class N>
-void parse_numeric_or_throw(std::string_view tok, N &field) {
-  auto [ptr, err] = utils::from_chars(tok.data(), tok.end(), field);
-  if (ptr != tok.end() && err != std::errc{}) {
-    throw_except_from_errc(tok, (std::numeric_limits<usize>::max)(), field, ptr, err);
-  }
-}
-
-template <class N>
-N parse_numeric_or_throw(std::string_view tok) {
-  N field{};
-  utils::parse_numeric_or_throw(tok, field);
-  return field;
-}
-
-template <class N>
-void parse_numeric_or_throw(const std::vector<std::string_view> &toks, usize idx, N &field) {
-  parse_numeric_or_throw(toks[idx], field);
-}
-
-template <class N>
-void parse_vect_of_numbers_or_throw(const std::vector<std::string_view> &toks, usize idx,
-                                    std::vector<N> &fields, u64 expected_size) {
-  static_assert(std::is_arithmetic<N>());
-  std::vector<std::string_view> ns = absl::StrSplit(toks[idx], ',');
-  if (ns.size() != expected_size) {
-    throw std::runtime_error(
-        fmt::format(FMT_STRING("Expected {} fields, got {}."), expected_size, ns.size()));
-  }
-  fields.resize(ns.size());
-  for (usize i = 0; i < expected_size; ++i) {
-    parse_numeric_or_throw(ns, i, fields[i]);
-  }
-}
-
-template <class N>
-void throw_except_from_errc(std::string_view tok, usize idx, [[maybe_unused]] const N &field,
-                            const char *c, std::errc e) {
-  static_assert(std::is_arithmetic<N>());
-  std::string base_error;
-  if (idx != (std::numeric_limits<usize>::max)()) {
-    base_error = fmt::format(FMT_STRING("Unable to convert field {} (\"{}\") to a "), idx, tok);
-  } else {
-    base_error = fmt::format(FMT_STRING("Unable to convert field \"{}\" to"), tok);
-  }
-  if (std::is_integral<N>()) {
-    if (std::is_unsigned<N>()) {
-      base_error += " a positive integral number";
-    } else {
-      base_error += " an integral number";
-    }
-  } else {
-    base_error += " a real number";
-  }
-  if (e == std::errc::invalid_argument) {
-    if (c != nullptr) {
-      throw std::runtime_error(
-          fmt::format(FMT_STRING("{}. Reason: found an invalid character \"{}\""), base_error, *c));
-    }
-    throw std::runtime_error(
-        fmt::format(FMT_STRING("{}. Reason: found an invalid character"), base_error));
-  }
-  if (e == std::errc::result_out_of_range) {
-    throw std::runtime_error(fmt::format(
-        FMT_STRING("{}. Reason: number {} is outside the range of representable numbers [{}, {}]."),
-        base_error, tok, (std::numeric_limits<N>::min)(), (std::numeric_limits<N>::max)()));
-  }
-  throw std::logic_error(
-      fmt::format(FMT_STRING("{}. If you see this error, report it to the developers on "
-                             "GitHub.\nBED::throw_except_from_errc "
-                             "called with an invalid std::errc \"{}\". This should not be possible!"),
-                  base_error, std::make_error_code(e).message()));
-}
-
-bool chrom_equal_operator(std::string_view chr1, std::string_view chr2) {
-  return chrom_equal_operator(std::make_pair(chr1, 0), std::make_pair(chr2, 0));
-}
-
-bool chrom_equal_operator(const std::pair<std::string_view, i64> &chr1,
-                          const std::pair<std::string_view, i64> &chr2) {
-  if (chr1.second != chr2.second) {
-    return false;
-  }
-  usize offset1 = 0;
-  usize offset2 = 0;
-  if (absl::StartsWithIgnoreCase(chr1.first, "chrom")) {
-    offset1 = 3;
-  }
-  if (absl::StartsWithIgnoreCase(chr2.first, "chrom")) {
-    offset2 = 3;
-  }
-  return chr1.first.substr(offset1) == chr2.first.substr(offset2);
-}
-
-bool chrom_less_than_operator(std::string_view chr1, std::string_view chr2) {
-  return chrom_less_than_operator(std::make_pair(chr1, 0), std::make_pair(chr2, 0));
-}
-
-bool chrom_less_than_operator(const std::pair<std::string_view, i64> &chr1,
-                              const std::pair<std::string_view, i64> &chr2) {
-  usize offset1 = 0;
-  usize offset2 = 0;
-  if (absl::StartsWithIgnoreCase(chr1.first, "chrom")) {
-    offset1 = 3;
-  }
-  if (absl::StartsWithIgnoreCase(chr2.first, "chrom")) {
-    offset2 = 3;
-  }
-  if (chr1.first.substr(offset1) < chr2.first.substr(offset2)) {
-    return true;
-  }
-
-  if (chr1.first.substr(offset1) == chr2.first.substr(offset2)) {
-    return chr1.second < chr2.second;
-  }
-  return false;
-}
 
 template <class T>
 constexpr auto get_printable_type_name() noexcept {
@@ -207,63 +61,6 @@ constexpr bool ndebug_defined() noexcept {
 }
 
 constexpr bool ndebug_not_defined() noexcept { return !ndebug_defined(); }
-
-// Try to convert str representations like "1.0" or "1.000000" to "1"
-std::string str_float_to_str_int(const std::string &s) {
-  try {
-    auto n = parse_numeric_or_throw<double>(s);
-    if (std::trunc(n) == n) {
-      return fmt::format(FMT_STRING("{:.0f}"), n);
-    }
-  } catch (const std::exception &e) {  // Let CLI deal with invalid numbers
-    return s;
-  }
-  return s;
-}
-
-std::string detect_path_collision(const boost::filesystem::path &p, bool force_overwrite,
-                                  boost::filesystem::file_type expected_type) {
-  std::string error_msg;
-  detect_path_collision(p, error_msg, force_overwrite, expected_type);
-  return error_msg;
-}
-
-bool detect_path_collision(const boost::filesystem::path &p, std::string &error_msg,
-                           bool force_overwrite, boost::filesystem::file_type expected_type) {
-  const auto path_type = boost::filesystem::status(p).type();
-  if (force_overwrite && path_type == boost::filesystem::file_not_found) {
-    return true;
-  }
-
-  if (expected_type != path_type) {
-    switch (path_type) {
-      case boost::filesystem::regular_file:
-        error_msg +=
-            fmt::format(FMT_STRING("Path {} already exists and is actually a file. Please remove "
-                                   "the file and try again"),
-                        p);
-        return false;
-      case boost::filesystem::directory_file:
-        error_msg += fmt::format(
-            FMT_STRING("Path {} already exists and is actually a directory. Please remove "
-                       "the directory and try again"),
-            p);
-        return false;
-      default:  // For the time being we only handle regular files and folders
-        return true;
-    }
-  }
-
-  if (force_overwrite) {
-    return true;
-  }
-
-  if (path_type == boost::filesystem::regular_file) {
-    error_msg += fmt::format(FMT_STRING("File {} already exists. Pass --force to overwrite"), p);
-    return false;
-  }
-  return true;
-}
 
 void XXH3_Deleter::operator()(XXH3_state_t *state) noexcept { XXH3_freeState(state); }
 

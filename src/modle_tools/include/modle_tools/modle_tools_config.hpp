@@ -38,7 +38,7 @@ struct eval_config {
       std::make_pair("eucl_dist", Metric::eucl_dist),
       std::make_pair("pearson", Metric::pearson),
       std::make_pair("rmse", Metric::rmse),
-      std::make_pair("spearman", Metric::spearman),
+      std::make_pair("spearman", Metric::spearman)
       // clang-format on
   };
 
@@ -140,12 +140,12 @@ struct transform_config {
 };
 
 // clang-format off
-using config = absl::variant<absl::monostate,
-                             eval_config,
-                             find_barrier_clusters_config,
-                             noisify_config,
-                             stats_config,
-                             transform_config>;
+using modle_tools_config = absl::variant<absl::monostate,
+                                         eval_config,
+                                         find_barrier_clusters_config,
+                                         noisify_config,
+                                         stats_config,
+                                         transform_config>;
 // clang-format on
 
 }  // namespace modle::tools

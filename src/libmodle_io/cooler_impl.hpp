@@ -6,7 +6,8 @@
 
 #include <absl/strings/str_cat.h>  // for StrCat, StrAppend
 #include <absl/types/variant.h>    // for visit
-#include <spdlog/spdlog.h>         // for error, warn
+#include <fmt/ostream.h>
+#include <spdlog/spdlog.h>  // for error, warn
 
 #include <boost/filesystem/path.hpp>  // for path
 #include <cassert>                    // for assert
@@ -585,7 +586,8 @@ void Cooler<N>::init_default_datasets() {
 
   } catch ([[maybe_unused]] const H5::FileIException &e) {
     throw std::runtime_error(fmt::format(
-        FMT_STRING("An error occurred while initializing default Cooler dataset on file \"{}\": {}"),
+        FMT_STRING(
+            "An error occurred while initializing default Cooler dataset on file \"{}\": {}"),
         this->_path_to_file.string(), hdf5::construct_error_stack()));
   }
 }
@@ -673,10 +675,10 @@ usize Cooler<N>::get_chrom_idx(std::string_view query_chrom_name, bool try_commo
           return static_cast<usize>(std::distance(chrom_names.begin(), match));
         }
       }
-      throw std::runtime_error(
-          fmt::format(FMT_STRING("Unable to find a chromosome named \"{}\". The following chromosome "
-                                 "name variants were searched: \"{}\""),
-                      query_chrom_name, fmt::join(queries, "', '")));
+      throw std::runtime_error(fmt::format(
+          FMT_STRING("Unable to find a chromosome named \"{}\". The following chromosome "
+                     "name variants were searched: \"{}\""),
+          query_chrom_name, fmt::join(queries, "', '")));
     }
     throw std::runtime_error(
         fmt::format(FMT_STRING("Unable to find a chromosome named \"{}\""), query_chrom_name));
@@ -684,9 +686,10 @@ usize Cooler<N>::get_chrom_idx(std::string_view query_chrom_name, bool try_commo
     if (absl::StartsWith(e.what(), "Unable to find a chromosome")) {
       throw;
     }
-    throw std::runtime_error(fmt::format(FMT_STRING("The following error occurred while looking up "
-                                                    "\"{}\" in dataset chroms/name of file \"{}\": {}"),
-                                         query_chrom_name, this->_path_to_file, e.what()));
+    throw std::runtime_error(
+        fmt::format(FMT_STRING("The following error occurred while looking up "
+                               "\"{}\" in dataset chroms/name of file \"{}\": {}"),
+                    query_chrom_name, this->_path_to_file, e.what()));
   }
 }
 
@@ -802,8 +805,8 @@ bool Cooler<N>::validate_cool_flavor(H5::H5File &f, usize bin_size, std::string_
       if (!throw_on_failure) {
         return false;
       }
-      throw std::runtime_error(
-          fmt::format(FMT_STRING("Expected bin-type attribute to be 'fixed', got \"{}\""), str_buff));
+      throw std::runtime_error(fmt::format(
+          FMT_STRING("Expected bin-type attribute to be 'fixed', got \"{}\""), str_buff));
     }
     str_buff.clear();
 

@@ -21,8 +21,8 @@
 #include "modle/bed/bed.hpp"        // for BED, BED_tree, formatter<>::format, formatter<>::p...
 #include "modle/common/common.hpp"  // for bp_t, u32, u8
 #include "modle/interval_tree.hpp"  // for IITree, IITree::IITree<I, T>, IITree::data_begin
-#include "modle_tools/config.hpp"   // for find_barrier_clusters_config
-#include "modle_tools/tools.hpp"    // for find_barrier_clusters_subcmd
+#include "modle_tools/modle_tools_config.hpp"  // for find_barrier_clusters_config
+#include "modle_tools/tools.hpp"               // for find_barrier_clusters_subcmd
 
 namespace modle::tools {
 

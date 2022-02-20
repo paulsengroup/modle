@@ -24,7 +24,8 @@
 #include <vector>                                   // for vector
 
 #include "modle/common/common.hpp"                // for usize, i64, u64, bp_t, isize
-#include "modle/common/utils.hpp"                 // for convolve, parse_numeric_or_throw
+#include "modle/common/numeric_utils.hpp"         // for parse_numeric_or_throw
+#include "modle/common/utils.hpp"                 // for convolve
 #include "modle/compressed_io/compressed_io.hpp"  // for Reader
 #include "modle/interval_tree.hpp"                // for IITree
 

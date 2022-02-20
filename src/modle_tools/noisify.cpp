@@ -2,9 +2,10 @@
 //
 // SPDX-License-Identifier: MIT
 
-#include <absl/time/clock.h>                      // for Now
-#include <absl/time/time.h>                       // for FormatDuration, operator-, Time
-#include <fmt/format.h>                           // for format, make_format_args, vfor...
+#include <absl/time/clock.h>  // for Now
+#include <absl/time/time.h>   // for FormatDuration, operator-, Time
+#include <fmt/format.h>       // for format, make_format_args, vfor...
+#include <fmt/ostream.h>
 #include <readerwriterqueue/readerwriterqueue.h>  // for BlockingReaderWriterQueue
 #include <spdlog/spdlog.h>                        // for info
 
@@ -28,7 +29,7 @@
 #include "modle/common/random.hpp"                         // for PRNG
 #include "modle/contacts.hpp"                              // for ContactMatrix
 #include "modle/cooler/cooler.hpp"                         // for Cooler::Pixel, Cooler, Cooler:...
-#include "modle_tools/config.hpp"                          // for noisify_config
+#include "modle_tools/modle_tools_config.hpp"              // for noisify_config
 #include "modle_tools/tools.hpp"                           // for noisify_subcmd
 
 namespace modle::tools {

@@ -25,89 +25,180 @@ on:
       - "CMakeLists.txt"
       - "conanfile.py"
 
+
+env:
+  CONAN_USER_HOME: "${{ github.workspace }}/conan-cache"
+  CONAN_USER_HOME_SHORT: "${{ github.workspace }}/conan-cache/short"
+  CONAN_V2_MODE: "1"
+  CCACHE_BASEDIR: "${{ github.workspace }}/ccache-cache"
+  CCACHE_COMPRESS: "false" # Let GHA cache do the compression
+  CCACHE_MAXSIZE: "1G"
+  R_HOME_USER: "${{ github.workspace }}/r-cache"
+  PIP_CACHE_DIR: "${{ github.workspace }}/pip-cache"
+
 jobs:
   build:
+    runs-on: ubuntu-latest
     strategy:
       fail-fast: false
       matrix:
         image:
-          - conanio/gcc7-ubuntu16.04:1.45.0
-          - conanio/gcc11-ubuntu16.04:1.45.0
-          - conanio/clang60:1.45.0
-          - conanio/clang13-ubuntu16.04:1.45.0
-        config:
-          - build_type: Release
-          - build_type: Debug
+          - ubuntu:20.04
+        compiler:
+          - gcc-7.5
+          - gcc-11.2
+          - llvm-6.0.1
+          - llvm-13.0.1
+        generator:
+          - "Ninja Multi-Config"
+        build_type:
+          - Release
+          - Debug
+        with_asan:
+          - OFF
+        warnings_as_errors:
+          - OFF
 
-    runs-on: ubuntu-latest
+        include:
+          # Add an ASAN build for the latest GCC/Clang version
+          - image: ubuntu:20.04
+            compiler: gcc-11.2
+            generator: "Ninja Multi-Config"
+            build_type: Debug
+            with_asan: ON
+            warnings_as_errors: ON
+          - image: ubuntu:20.04
+            compiler: llvm-13.0.1
+            generator: "Ninja Multi-Config"
+            build_type: Debug
+            with_asan: ON
+            warnings_as_errors: ON
+
+          # Make sure project builds when using make
+          - image: ubuntu:20.04
+            compiler: llvm-13.0.1
+            generator: "Unix Makefiles"
+            build_type: Debug
+            with_asan: OFF
+            warnings_as_errors: ON
+
     container:
       image: ${{matrix.image}}
-      options: "--user=root -v ${{github.workspace}}:/workspace"
-    env:
-      CONAN_USER_HOME: "/workspace"
+      options: "--user=root -v ${{github.workspace}}:${{github.workspace}}"
 
     defaults:
       run:
         shell: bash
 
     steps:
-      - name: Checkout repo
-        uses: actions/checkout@v2
+      - uses: actions/checkout@v2
 
-      - name: Collect compiler information
-        id: compiler-info
-        run: |
-          compiler_name="$(basename "$(readlink -f "$(which cc)")" | grep -o "gcc\|clang")"
-          compiler_ver="$(cc -dumpversion)"
-          compiler_id="${compiler_name}-${compiler_ver}"
-
-          echo "::set-output name=NAME::$compiler_name"
-          echo "::set-output name=VERSION::$compiler_ver"
-          echo "::set-output name=VERSION_MAJOR::$(echo $compiler_ver | grep -oP '^\d+')"
-          echo "::set-output name=ID::$compiler_id"
+      # TODO make sure no step is referring to compiler-info variables
 
       - name: Generate Conan cache key
         id: conan_cache_key
         run: |
           host_os="host-${{ runner.os }}"
-          compiler_id="${{ steps.compiler-info.outputs.ID }}"
-          build_type="${{ matrix.config.build_type }}"
+          image="${{ matrix.image }}"
+          compiler="${{ matrix.compiler }}"
+          generator="${{ matrix.generator }}"
+          build_type="${{ matrix.build_type }}"
           hash="${{ hashFiles('conanfile.py') }}"
 
-          echo "::set-output name=string::$host_os-$compiler_id-$build_type-$hash"
+          echo "::set-output name=string::$host_os-$image-$compiler-$generator-$build_type-$hash"
+
+      - name: Generate Ccache cache key
+        id: ccache_cache_key
+        run: |
+          host_os="host-${{ runner.os }}"
+          image="${{ matrix.image }}"
+          compiler="${{ matrix.compiler }}"
+
+          echo "::set-output name=string::$host_os-$image-$compiler"
+
+      - name: Generate R cache key
+        id: r_cache_key
+        run: |
+          host_os="host-${{ runner.os }}"
+          image="${{ matrix.image }}"
+
+          echo "::set-output name=string::$host_os-$image
+
+      - name: Generate pip cache key
+        id: pip_cache_key
+        run: |
+          host_os="host-${{ runner.os }}"
+          image="${{ matrix.image }}"
+
+          echo "::set-output name=string::$host_os-$image
+
+      - name: Cache R home
+        uses: actions/cache@v2
+        with:
+          key: r-home-${{}}
+          path: ${{ env.R_HOME_USER }}
+
+      - name: Cache pip
+        uses: actions/cache@v2
+        with:
+          key: r-home-${{}}
+          path: ${{ env.R_HOME_USER }}
 
       - name: Install unit test dependencies
         run: |
-          pip3 install scipy
+          # Make sure timezone information is properly set to avoid
+          # interactive prompts when installing R
+          ln -snf /usr/share/zoneinfo/CET /etc/localtime
+          echo CET | tee /etc/timezone > /dev/null
 
-          sudo apt-get update
-          sudo apt-get install -y --no-install-recommends software-properties-common dirmngr
-
-          sys_python="$(readlink -f /usr/bin/python3.?)"
-          sudo sed -i "s|^\#\!.*python.*|\#\!$sys_python|" "$(which lsb_release)"
-          sudo sed -i "s|^\#\!.*python.*|\#\!$sys_python|" "$(which add-apt-repository)"
+          # Install Scipy and add-apt-repository
+          apt-get update -q
+          apt-get install -y -q --no-install-recommends curl          \
+                                                     dirmngr          \
+                                                     python3-scipy    \
+                                                     software-properties-common
 
           curl -L 'https://cloud.r-project.org/bin/linux/ubuntu/marutter_pubkey.asc' |
-            sudo tee -a /etc/apt/trusted.gpg.d/cran_ubuntu_key.asc > /dev/null
-          sudo /usr/bin/python3.? /usr/bin/add-apt-repository "deb https://cloud.r-project.org/bin/linux/ubuntu $(lsb_release -cs)-cran40/"
+            tee -a /etc/apt/trusted.gpg.d/cran_ubuntu_key.asc > /dev/null
+          add-apt-repository "deb https://cloud.r-project.org/bin/linux/ubuntu $(lsb_release -cs)-cran40/"
 
-          sudo apt-get install -y --no-install-recommends r-base        \
-                                                          r-base-dev    \
-                                                          r-cran-minqa  \
-                                                          r-cran-mnormt \
-                                                          r-cran-rcpparmadillo
+          # Install a modern version of R as well as dependencies needed to build wCorr
+          apt-get install -y -q --no-install-recommends r-base        \
+                                                        r-base-dev    \
+                                                        r-cran-minqa  \
+                                                        r-cran-mnormt \
+                                                        r-cran-rcpparmadillo
 
-          echo "options(Ncpus = $(nproc))" | sudo tee "$HOME/.Rprofile" > /dev/null
-          sudo cp "$HOME/.Rprofile" /root/
+          # Enable parallel compilation for R packages
+          echo "options(Ncpus = $(nproc))" | tee "$HOME/.Rprofile" > /dev/null
 
-          sudo Rscript --no-save -e 'install.packages("wCorr", dependencies=c("Depends", "Imports", "LinkingTo"), repos="https://cloud.r-project.org")'
+          # Install and test wCorr
+          Rscript --no-save -e 'install.packages("wCorr", dependencies=c("Depends", "Imports", "LinkingTo"), repos="https://cloud.r-project.org")'
           Rscript --no-save -e 'quit(status=!library("wCorr", character.only=T, logical.return=T), save="no")' &> /dev/null
+
+          R --version
+          python3 --version
 
       - name: Cache Conan packages
         uses: actions/cache@v2
         with:
           key: conan-${{ steps.conan_cache_key.outputs.string }}
-          path: ${{ env.CONAN_USER_HOME }}/.conan/data
+          path: ${{ env.CONAN_USER_HOME }}
+
+      - name: Cache Ccache folder
+        uses: actions/cache@v2
+        with:
+          key: ccache-${{ steps.ccache_key.outputs.string }}
+          path: ${{ env.CCACHE_BASEDIR }}
+
+      - name: Install build dependencies
+        uses: aminya/setup-cpp@v1
+        with:
+          compiler: ${{ matrix.compiler }}
+          cmake: true
+          ninja: true
+          conan: true
+          ccache: true
 
       - name: Clean up Conan
         run: |
@@ -115,14 +206,12 @@ jobs:
           conan remove -f "*" --src
           conan remove -f "*" --system-reqs
 
-      - name: Create build directories
-        working-directory: /workspace
-        run: mkdir build build-asan build-ubsan
+      - name: Create build directory
+        working-directory: ${{ github.workspace }}
+        run: mkdir build
 
       - name: Configure project
-        working-directory: /workspace/build
-        env:
-          CONAN_V2_MODE: "1"
+        working-directory: ${{ github.workspace }}/build
         run: |
           set -x
 
@@ -235,3 +324,6 @@ jobs:
                 --output-on-failure               \
                 --no-tests=error                  \
                 -j $(nproc)
+
+      - name: Print Ccache statistics
+        run: ccache -sv

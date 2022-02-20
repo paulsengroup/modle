@@ -23,6 +23,7 @@ class MoDLE(ConanFile):
     requires = ["abseil/20211102.0",
                 "boost/1.78.0",
                 "bzip2/1.0.8",
+                "catch2/2.13.8",
                 "cli11/2.1.2",
                 "concurrentqueue/1.0.3",
                 "cpp-sort/1.12.1",
@@ -31,6 +32,7 @@ class MoDLE(ConanFile):
                 "libarchive/3.5.2",
                 "lz4/1.9.3",
                 "lzo/2.10",
+                "range-v3/0.11.0",
                 "readerwriterqueue/1.0.5",
                 "spdlog/1.9.2",
                 "tomlplusplus/2.5.0",
@@ -39,11 +41,7 @@ class MoDLE(ConanFile):
                 "zlib/1.2.11"]
     # "zstd/1.4.8"]
 
-    generators = "cmake", "gcc", "txt", "cmake_find_package"
-
-    def requirements(self):
-        if bool(self.options.enable_testing):
-            self.requires("catch2/2.13.8")
+    generators = "cmake_find_package_multi"
 
     def configure(self):
         if self.settings.compiler.cppstd:

@@ -202,10 +202,17 @@ void Cooler<N>::write_or_append_cmatrix_to_file(const ContactMatrix<M> *cmatrix,
          ++chrom_idx) {
       if (cmatrix && cmatrix->get_n_of_missed_updates() != 0) {
         const auto &n = cmatrix->get_n_of_missed_updates();
-        spdlog::warn(
-            FMT_STRING(
-                "Detected {} missed updates ({:.4f}% of the total number of contacts) for \"{}\"."),
-            n, 100.0 * cmatrix->unsafe_get_fraction_of_missed_updates(), chrom_name);
+        const auto pct = 100.0 * cmatrix->unsafe_get_fraction_of_missed_updates();
+        if (pct >= 0.01) {
+          spdlog::warn(FMT_STRING("Detected {} missed updates for \"{}\" ({:.4f}% of the total "
+                                  "number of contacts)."),
+                       n, chrom_name, 100.0 * cmatrix->unsafe_get_fraction_of_missed_updates(),
+                       chrom_name);
+        } else {
+          spdlog::warn(FMT_STRING("Detected {} missed updates for \"{}\" (less than {:.2f}% of the "
+                                  "total number of contacts)."),
+                       n, chrom_name, 0.01, chrom_name);
+        }
       }
       // Write chrom name and size
       chrom_name_h5_foffset =

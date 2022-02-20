@@ -14,7 +14,7 @@
 #include <string_view>                // for string_view
 #include <vector>                     // for vector, allocator
 
-#include "modle/common/utils.hpp"                 // for parse_numeric_or_throw
+#include "modle/common/numeric_utils.hpp"         // for parse_numeric_or_throw
 #include "modle/compressed_io/compressed_io.hpp"  // for Reader
 
 namespace modle::test::interval_tree {

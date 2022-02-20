@@ -29,8 +29,9 @@
 #include <vector>                            // for vector
 
 #include "modle/common/common.hpp"                      // for u64, u8, u32
+#include "modle/common/numeric_utils.hpp"               // for parse_numeric_or_throw
 #include "modle/common/suppress_compiler_warnings.hpp"  // for DISABLE_WARNING_PUSH, DISABLE_WAR...
-#include "modle/common/utils.hpp"                       // for parse_numeric_or_throw, ConstMap
+#include "modle/common/utils.hpp"                       // for ConstMap
 #include "modle/compressed_io/compressed_io.hpp"        // for Reader
 
 namespace modle::bed {
@@ -130,10 +131,10 @@ void BED::parse_chrom_start(const std::vector<std::string_view>& toks) {
 bool BED::parse_chrom_end(const std::vector<std::string_view>& toks) {
   utils::parse_numeric_or_throw(toks, BED_CHROM_END_IDX, this->chrom_end);
   if (this->chrom_start > this->chrom_end) {
-    throw std::runtime_error(
-        fmt::format(FMT_STRING("Invalid BED record detected: chrom_start > chrom_end: chrom=\"{}\"; "
-                               "start={}; end={}"),
-                    this->chrom, this->chrom_start, this->chrom_end));
+    throw std::runtime_error(fmt::format(
+        FMT_STRING("Invalid BED record detected: chrom_start > chrom_end: chrom=\"{}\"; "
+                   "start={}; end={}"),
+        this->chrom, this->chrom_start, this->chrom_end));
   }
   return this->_standard == BED3;
 }
@@ -184,10 +185,10 @@ bool BED::parse_thick_end(const std::vector<std::string_view>& toks, bool valida
                     this->chrom, this->chrom_end, this->thick_end));
   }
   if (validate && this->thick_start > this->thick_end) {
-    throw std::runtime_error(
-        fmt::format(FMT_STRING("Invalid BED record detected: thick_start > thick_end: chrom=\"{}\"; "
-                               "thick_start={}; thick_end={}"),
-                    this->chrom, this->chrom_start, this->chrom_end));
+    throw std::runtime_error(fmt::format(
+        FMT_STRING("Invalid BED record detected: thick_start > thick_end: chrom=\"{}\"; "
+                   "thick_start={}; thick_end={}"),
+        this->chrom, this->chrom_start, this->chrom_end));
   }
   return this->_standard == none && toks.size() == BED_THICK_END;
 }
@@ -303,8 +304,8 @@ BED::BED(std::string_view record, usize id_, BED::Dialect bed_standard, bool val
 
   } catch (const std::exception& e) {
     throw std::runtime_error(fmt::format(
-        FMT_STRING("An error occurred while parsing the following BED record \"{}\":\n  {}"), record,
-        e.what()));
+        FMT_STRING("An error occurred while parsing the following BED record \"{}\":\n  {}"),
+        record, e.what()));
   }
 }
 

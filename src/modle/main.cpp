@@ -32,9 +32,9 @@
 #include <string_view>                      // for string_view
 #include <vector>                           // for vector
 
-#include "./cli.hpp"                // for Cli, Cli::subcommand
-#include "modle/common/config.hpp"  // for Config
-#include "modle/simulation.hpp"     // for Simulation
+#include "./cli.hpp"                           // for Cli, Cli::subcommand
+#include "modle/common/simulation_config.hpp"  // for Config
+#include "modle/simulation.hpp"                // for Simulation
 
 void setup_logger_console(const bool quiet) {
   spdlog::set_default_logger(std::make_shared<spdlog::logger>("main_logger"));
@@ -73,6 +73,21 @@ void setup_failure_signal_handler(const char* argv_0) {
   absl::InstallFailureSignalHandler(options);
 }
 
+void write_param_summary_to_log(const modle::Config& c) {
+  spdlog::info(FMT_STRING("Command: {}"), fmt::join(c.args, " "));
+  spdlog::info(FMT_STRING("Simulation will use up to {} out of {} available CPU cores."),
+               c.nthreads, std::thread::hardware_concurrency());
+  if (c.stopping_criterion == modle::Config::StoppingCriterion::contact_density) {
+    spdlog::info(FMT_STRING("Using --target-contact-density={:.2f} as stopping criterion."),
+                 c.target_contact_density);
+  } else {
+    spdlog::info(FMT_STRING("Using --target-number-of-epochs={} as stropping criterion."),
+                 c.target_simulation_epochs);
+  }
+  spdlog::info(FMT_STRING("Contact sampling strategy: {}."),
+               modle::Cli::contact_sampling_strategy_map.at(c.contact_sampling_strategy));
+}
+
 int main(int argc, char** argv) noexcept {
   setup_failure_signal_handler(argv[0]);
 
@@ -103,7 +118,7 @@ int main(int argc, char** argv) noexcept {
       }
     }
 
-    spdlog::info(FMT_STRING("Command: {}"), fmt::join(config.args, " "));
+    write_param_summary_to_log(config);
     const auto t0 = absl::Now();
     modle::Simulation sim(config);
     switch (cli->get_subcommand()) {

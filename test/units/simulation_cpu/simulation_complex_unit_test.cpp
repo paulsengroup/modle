@@ -11,14 +11,14 @@
 #include <string_view>                              // for string_view
 #include <vector>                                   // for vector
 
-#include "./common.hpp"                  // for construct_lef, NO_COLLISION, check_si...
-#include "modle/common/common.hpp"       // for bp_t, usize
-#include "modle/common/config.hpp"       // for Config
-#include "modle/common/random.hpp"       // for PRNG
-#include "modle/extrusion_barriers.hpp"  // for ExtrusionBarrier, State, OCCUPIED
-#include "modle/extrusion_factors.hpp"   // for Lef
-#include "modle/genome.hpp"              // for Chromosome
-#include "modle/simulation.hpp"          // for Simulation
+#include "./common.hpp"                        // for construct_lef, NO_COLLISION, check_si...
+#include "modle/common/common.hpp"             // for bp_t, usize
+#include "modle/common/random.hpp"             // for PRNG
+#include "modle/common/simulation_config.hpp"  // for Config
+#include "modle/extrusion_barriers.hpp"        // for ExtrusionBarrier, State, OCCUPIED
+#include "modle/extrusion_factors.hpp"         // for Lef
+#include "modle/genome.hpp"                    // for Chromosome
+#include "modle/simulation.hpp"                // for Simulation
 
 namespace modle::test::libmodle {
 

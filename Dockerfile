@@ -9,6 +9,7 @@ ARG build_dir='/home/conan/modle/build'
 ARG staging_dir='/home/conan/modle/staging'
 ARG install_dir='/usr/local'
 
+ARG BITFLAGS_VER=1.5.0
 ARG LIBBIGWIG_VER=0.4.6
 ARG THREAD_POOL_VER=2.0.0
 ARG XOSHIRO_CPP_VER=1.1
@@ -37,6 +38,8 @@ RUN cd "$build_dir"                              \
                   -o enable_testing=ON
 
 COPY LICENSE                "$src_dir/LICENSE"
+COPY "external/bitflags-$BITFLAGS_VER.tar.xz"                  \
+     "$src_dir/external/bitflags-$BITFLAGS_VER.tar.xz"
 COPY "external/libBigWig-$LIBBIGWIG_VER.tar.xz"                \
      "$src_dir/external/libBigWig-$LIBBIGWIG_VER.tar.xz"
 COPY "external/mscharconv.tar.xz"                              \

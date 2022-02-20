@@ -27,8 +27,8 @@
 #include "modle/bed/bed.hpp"                            // for BED (ptr only), BED_tree
 #include "modle/collision_encoding.hpp"                 // for Collision<>
 #include "modle/common/common.hpp"                      // for usize, bp_t, contacts_t
-#include "modle/common/config.hpp"                      // for Config
 #include "modle/common/random.hpp"                      // for PRNG_t, normal_distribution, unif...
+#include "modle/common/simulation_config.hpp"           // for Config
 #include "modle/common/suppress_compiler_warnings.hpp"  // for DISABLE_WARNING_POP, DISABLE_WARN...
 #include "modle/common/utils.hpp"                       // for ndebug_defined, XXH3_Deleter, XXH...
 #include "modle/contacts.hpp"                           // for ContactMatrix
@@ -429,22 +429,18 @@ class Simulation : Config {
 
   /// Register contacts for chromosome \p chrom using the position the extrusion units of the LEFs
   /// in \p lefs whose index is present in \p selected_lef_idx.
-  usize register_contacts(Chromosome& chrom, absl::Span<const Lef> lefs,
-                          absl::Span<const usize> selected_lef_idx) const;
-
-  usize register_contacts(bp_t start_pos, bp_t end_pos, ContactMatrix<contacts_t>& contacts,
-                          absl::Span<const Lef> lefs,
-                          absl::Span<const usize> selected_lef_idx) const;
-
-  usize register_contacts_w_randomization(Chromosome& chrom, absl::Span<const Lef> lefs,
-                                          absl::Span<const usize> selected_lef_idx,
-                                          random::PRNG_t& rand_eng) const;
-
-  usize register_contacts_w_randomization(bp_t start_pos, bp_t end_pos,
-                                          ContactMatrix<contacts_t>& contacts,
-                                          absl::Span<const Lef> lefs,
-                                          absl::Span<const usize> selected_lef_idx,
-                                          random::PRNG_t& rand_eng) const;
+  usize register_contacts_loop(Chromosome& chrom, absl::Span<const Lef> lefs,
+                               absl::Span<const usize> selected_lef_idx,
+                               random::PRNG_t& rand_eng) const;
+  usize register_contacts_loop(bp_t start_pos, bp_t end_pos, ContactMatrix<contacts_t>& contacts,
+                               absl::Span<const Lef> lefs, absl::Span<const usize> selected_lef_idx,
+                               random::PRNG_t& rand_eng) const;
+  usize register_contacts_tad(Chromosome& chrom, absl::Span<const Lef> lefs,
+                              absl::Span<const usize> selected_lef_idx,
+                              random::PRNG_t& rand_eng) const;
+  usize register_contacts_tad(bp_t start_pos, bp_t end_pos, ContactMatrix<contacts_t>& contacts,
+                              absl::Span<const Lef> lefs, absl::Span<const usize> selected_lef_idx,
+                              random::PRNG_t& rand_eng) const;
 
   template <typename MaskT>
   inline static void select_lefs_to_bind(absl::Span<const Lef> lefs,

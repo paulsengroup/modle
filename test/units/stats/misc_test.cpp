@@ -11,7 +11,7 @@
 #include <catch2/catch.hpp>
 #include <vector>
 
-#include "modle/common/utils.hpp"
+#include "modle/common/numeric_utils.hpp"
 
 namespace modle::test::stats {
 using namespace modle::stats;

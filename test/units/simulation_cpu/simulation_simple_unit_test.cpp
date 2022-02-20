@@ -14,14 +14,14 @@
 #include <string_view>                              // for string_view
 #include <vector>                                   // for vector
 
-#include "./common.hpp"                  // for construct_lef, NO_COLLISION, requir...
-#include "modle/common/common.hpp"       // for usize, bp_t
-#include "modle/common/config.hpp"       // for Config
-#include "modle/common/random.hpp"       // for PRNG, bernoulli_trial, uniform_int_...
-#include "modle/extrusion_barriers.hpp"  // for ExtrusionBarrier, OCCUPIED, State
-#include "modle/extrusion_factors.hpp"   // for Lef, ExtrusionUnit
-#include "modle/genome.hpp"              // for Chromosome
-#include "modle/simulation.hpp"          // for Simulation
+#include "./common.hpp"                        // for construct_lef, NO_COLLISION, requir...
+#include "modle/common/common.hpp"             // for usize, bp_t
+#include "modle/common/random.hpp"             // for PRNG, bernoulli_trial, uniform_int_...
+#include "modle/common/simulation_config.hpp"  // for Config
+#include "modle/extrusion_barriers.hpp"        // for ExtrusionBarrier, OCCUPIED, State
+#include "modle/extrusion_factors.hpp"         // for Lef, ExtrusionUnit
+#include "modle/genome.hpp"                    // for Chromosome
+#include "modle/simulation.hpp"                // for Simulation
 
 namespace modle::test::libmodle {
 

@@ -44,7 +44,7 @@
 #include "modle/cooler/cooler.hpp"                // for Cooler, Cooler::READ_ONLY
 #include "modle/interval_tree.hpp"                // for IITree, IITree::IITree<I, T>, IITree::empty
 #include "modle/stats/correlation.hpp"            // for Pearson, Spearman
-#include "modle_tools/config.hpp"                 // for eval_config
+#include "modle_tools/modle_tools_config.hpp"     // for eval_config
 #include "modle_tools/tools.hpp"                  // for eval_subcmd
 
 namespace modle::tools {

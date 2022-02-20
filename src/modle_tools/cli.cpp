@@ -31,11 +31,12 @@
 #include <utility>                           // for move
 #include <vector>                            // for vector
 
-#include "modle/bed/bed.hpp"        // for Parser, bed_dialects, str_to_bed_dialect_m...
-#include "modle/common/common.hpp"  // for usize
-#include "modle/common/utils.hpp"   // for str_float_to_str_int, ConstMap::begin, Con...
-#include "modle/cooler/cooler.hpp"  // for Cooler, Cooler::READ_ONLY
-#include "modle_tools/config.hpp"   // for eval_config, find_barrier_clusters_config
+#include "modle/bed/bed.hpp"  // for Parser, bed_dialects, str_to_bed_dialect_m...
+#include "modle/common/cli_utils.hpp"
+#include "modle/common/common.hpp"             // for usize
+#include "modle/common/utils.hpp"              // for str_float_to_str_int, ConstMap::begin, Con...
+#include "modle/cooler/cooler.hpp"             // for Cooler, Cooler::READ_ONLY
+#include "modle_tools/modle_tools_config.hpp"  // for eval_config, find_barrier_clusters_config
 
 namespace modle::tools {
 
@@ -713,7 +714,7 @@ Cli::subcommand Cli::get_subcommand() const noexcept { return this->_subcommand;
 std::string_view Cli::get_printable_subcommand() const noexcept {
   return Cli::subcommand_to_str(this->get_subcommand());
 }
-modle::tools::config Cli::parse_arguments() {
+modle::tools::modle_tools_config Cli::parse_arguments() {
   this->_cli.name(this->_exec_name);
   this->_cli.parse(this->_argc, this->_argv);
 

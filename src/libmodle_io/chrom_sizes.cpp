@@ -37,8 +37,8 @@ std::vector<bed::BED> Parser::parse_all(char sep) {
     assert(!tokens.empty());
     try {
       if (tokens.size() < 2) {
-        throw std::runtime_error(fmt::format(FMT_STRING("Expected 2 or more tokens, got {}: \"{}\""),
-                                             tokens.size(), buff));
+        throw std::runtime_error(fmt::format(
+            FMT_STRING("Expected 2 or more tokens, got {}: \"{}\""), tokens.size(), buff));
       }
       tokens.insert(tokens.begin() + 1, "0");
       if (const auto& chrom_name = tokens.front(); chrom_names.contains(chrom_name)) {

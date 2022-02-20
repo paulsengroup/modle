@@ -29,10 +29,11 @@
 #include <thread>                           // for hardware_concurrency
 #include <vector>                           // for vector
 
-#include "modle/common/common.hpp"  // for bp_t, i64, modle_version_long
-#include "modle/common/config.hpp"  // for Config
-#include "modle/common/utils.hpp"   // for str_float_to_str_int, parse_numeric_or_throw
-#include "modle/cooler/cooler.hpp"  // for Cooler
+#include "modle/common/cli_utils.hpp"
+#include "modle/common/common.hpp"             // for bp_t, i64, modle_version_long
+#include "modle/common/simulation_config.hpp"  // for Config
+#include "modle/common/utils.hpp"              // for parse_numeric_or_throw
+#include "modle/cooler/cooler.hpp"             // for Cooler
 
 namespace modle {
 
@@ -46,6 +47,18 @@ static std::string is_odd_number(std::string_view s) {
     return fmt::format(FMT_STRING("Failed parsing number: ({}): {}"), s, e.what());
   }
   return "";
+}
+
+// These stream operators are needed to properly serialize enums when writing the config file to
+// TOML or JSON
+std::ostream& operator<<(std::ostream& os, const Config::StoppingCriterion& criterion) {
+  os << Cli::stopping_criterion_map.at(criterion);
+  return os;
+}
+
+std::ostream& operator<<(std::ostream& os, const Config::ContactSamplingStrategy strategy) {
+  os << Cli::contact_sampling_strategy_map.at(strategy);
+  return os;
 }
 
 static void add_common_options(CLI::App& subcommand, modle::Config& c) {
@@ -111,9 +124,9 @@ static void add_common_options(CLI::App& subcommand, modle::Config& c) {
       ->capture_default_str();
 
   gen.add_option(
-      "--number-of-iterations",
-      c.simulation_epochs,
-      "Number of simulation iterations to run on each cell.")
+      "--target-number-of-epochs",
+      c.target_simulation_epochs,
+      "Number of epochs to simulate for each individual cell.")
       ->check(CLI::PositiveNumber)
       ->transform(utils::str_float_to_str_int)
       ->capture_default_str();
@@ -122,14 +135,46 @@ static void add_common_options(CLI::App& subcommand, modle::Config& c) {
       "--target-contact-density",
       c.target_contact_density,
       "The average number of contacts to generate for each chromosome before the simulation is halted.")
-      ->check(CLI::PositiveNumber);
+      ->check(CLI::NonNegativeNumber);
+
+  gen.add_option(
+      "-s,--stopping-criterion",
+      c.stopping_criterion,
+      fmt::format(FMT_STRING("Simulation stopping criterion. Should be one of {}."),
+                  utils::format_collection_to_english_list(Cli::stopping_criterion_map.keys_view(), ", ", " or ")))
+      ->transform(CLI::CheckedTransformer(Cli::stopping_criterion_map))
+      ->capture_default_str();
+
+  gen.add_option(
+      "--contact-sampling-strategy",
+      c.contact_sampling_strategy,
+      fmt::format(FMT_STRING("Strategy to use when sampling contacts. Should be one of {}.\n"
+                             "When one of the -with-noise strategy is specified, contacts are"
+                             "randomized by applying a random offset to the location of the extrusion units of LEF.\n"
+                             "Offsets are drawn from a genextreme distrubution.\n"
+                             "The distribution parameters can be controlled through the options --mu, --sigma and --xi."),
+                             utils::format_collection_to_english_list(Cli::contact_sampling_strategy_map.keys_view(), ", ", " or ")))
+            ->transform(CLI::CheckedTransformer(Cli::contact_sampling_strategy_map))
+            ->capture_default_str();
+
+  gen.add_option(
+      "--num-of-tad-contacts-per-sampling-event",
+      c.number_of_tad_contacts_per_sampling_event,
+      "Number of TAD contacts to sample for a LEF that has been selected for contact sampling.")
+      ->capture_default_str();
+
+  gen.add_option(
+      "--num-of-loop-contacts-per-sampling-event",
+      c.number_of_loop_contacts_per_sampling_event,
+      "Number of loop contacts to sample for a LEF that has been selected for contact sampling.")
+      ->capture_default_str();
 
   gen.add_option(
       "--lefs-per-mbp",
       c.number_of_lefs_per_mbp,
       "Number of loop extrusion factors (LEFs) per Mbp of simulated DNA.")
       ->check(CLI::NonNegativeNumber)
-      ->required();
+      ->capture_default_str();
 
   gen.add_option(
       "--hard-stall-lef-stability-multiplier",
@@ -314,15 +359,6 @@ static void add_common_options(CLI::App& subcommand, modle::Config& c) {
       "Do not simulate loop extrusion on chromosomes without any extrusion barrier.")
       ->capture_default_str();
 
-
-  rand.add_flag(
-      "--randomize-contacts",
-      c.randomize_contacts,
-      "Enable randomization when collecting contacts.\n"
-      "Contacts are randomized by drawing offsets from a genextreme distrubution.\n"
-      "The distribution properties can be controlled through the parameters --mu, --sigma and --xi.")
-      ->capture_default_str();
-
   rand.add_option(
       "--mu,--genextr-location",
       c.genextreme_mu,
@@ -350,13 +386,8 @@ static void add_common_options(CLI::App& subcommand, modle::Config& c) {
       "Don't write output files. Useful for profiling.")
       ->capture_default_str();
 
-    gen.get_option("--target-contact-density")->excludes(gen.get_option("--number-of-iterations"));
+  gen.get_option("--target-contact-density")->excludes(gen.get_option("--target-number-of-epochs"));
   extr_barr.get_option("--extrusion-barrier-occupancy")->excludes("--ctcf-occupied-probability-of-transition-to-self");
-
-
-  rand.get_option("--mu")->needs(rand.get_option("--randomize-contacts"));
-  rand.get_option("--sigma")->needs(rand.get_option("--randomize-contacts"));
-  rand.get_option("--xi")->needs(rand.get_option("--randomize-contacts"));
   // clang-format on
 }
 
@@ -673,9 +704,18 @@ void Cli::validate_args() const {
   const auto& c = this->_config;
   std::vector<std::string> errors;
 
+  const auto* subcmd = [&]() {
+    for (const auto& subcmd_ : {"sim", "pert", "replay"}) {
+      if (auto* s = this->_cli.get_subcommand(subcmd_); s->parsed()) {
+        return s;
+      }
+    }
+    MODLE_UNREACHABLE_CODE;
+  }();
+
   if (c.burnin_smoothing_window_size > c.burnin_history_length) {
-    assert(this->_cli.get_option("--burnin-smoothing-window-size"));
-    assert(this->_cli.get_option("--burnin-history-length"));
+    assert(subcmd->get_option_group("Generic")->get_option("--burnin-smoothing-window-size"));
+    assert(subcmd->get_option_group("Generic")->get_option("--burnin-history-length"));
     errors.emplace_back(fmt::format(
         FMT_STRING("The value passed to {} should be less or equal than that of {} ({} > {})"),
         "--burnin-smoothing-window-size", "--burnin-history-length", c.burnin_smoothing_window_size,
@@ -689,6 +729,40 @@ void Cli::validate_args() const {
     } catch (const std::runtime_error& e) {
       errors.emplace_back(e.what());
     }
+  }
+
+  // NOLINTNEXTLINE(readability-implicit-bool-conversion)
+  if (!(c.contact_sampling_strategy & Config::ContactSamplingStrategy::noisify)) {
+    const auto& group = subcmd->get_option_group("Random");
+    for (const std::string label : {"--mu", "--sigma", "--xi"}) {
+      if (!group->get_option(label)->empty()) {
+        errors.emplace_back(fmt::format(FMT_STRING("Option {} requires the strategy passed to "
+                                                   "--contact-sampling-strategy to be one of "
+                                                   "the *-with-noise strategies."),
+                                        label));
+      }
+    }
+  }
+
+  // NOLINTNEXTLINE(readability-implicit-bool-conversion)
+  if (c.contact_sampling_strategy & Config::ContactSamplingStrategy::tad &&
+      !subcmd->get_option_group("Generic")
+           ->get_option("--num-of-tad-contacts-per-sampling-event")
+           ->empty()) {
+    errors.emplace_back(
+        "--num-of-tad-contacts-per-sampling-event is not allowed when the sampling strategy passed "
+        "through --contact-sampling-strategy does not involve sampling contacts from TADs.");
+  }
+
+  // NOLINTNEXTLINE(readability-implicit-bool-conversion)
+  if (c.contact_sampling_strategy & Config::ContactSamplingStrategy::loop &&
+      !subcmd->get_option_group("Generic")
+           ->get_option("--num-of-loop-contacts-per-sampling-event")
+           ->empty()) {
+    errors.emplace_back(
+        "--num-of-loop-contacts-per-sampling-event is not allowed when the sampling strategy "
+        "passed "
+        "through --contact-sampling-strategy does not involve sampling contacts from loops.");
   }
 
   if (!errors.empty()) {
@@ -763,7 +837,9 @@ void Cli::print_config(bool print_default_args) const {
 
 void Cli::write_config_file(bool write_default_args) const {
   auto fp = fmt::output_file(this->_config.path_to_config_file.string());
-  fp.print(FMT_STRING("{}\n"), this->_cli.config_to_str(write_default_args, true));
+  fp.print(FMT_STRING("# Config created by {} on {}\n{}\n"), modle_version_long,
+           absl::FormatTime(absl::Now(), absl::UTCTimeZone()),
+           this->_cli.config_to_str(write_default_args, true));
 }
 
 bool Cli::config_file_parsed() const { return !this->_cli.get_config_ptr()->empty(); }

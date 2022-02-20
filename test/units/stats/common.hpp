@@ -25,8 +25,8 @@
 #include <vector>       // for vector
 
 #include "modle/common/common.hpp"  // for u32, i32, i64
+#include "modle/common/numeric_utils.hpp"
 #include "modle/common/random.hpp"
-#include "modle/common/utils.hpp"
 
 namespace modle::test::stats {
 using namespace std::string_view_literals;

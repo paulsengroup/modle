@@ -15,7 +15,7 @@
 
 #include "modle/bed/bed.hpp"        // for BED, BED_tree, BED_tree::contains, BED_tree::count_...
 #include "modle/common/common.hpp"  // for usize, u8
-#include "modle/common/utils.hpp"   // for parse_numeric_or_throw
+#include "modle/common/numeric_utils.hpp"         // for parse_numeric_or_throw
 #include "modle/compressed_io/compressed_io.hpp"  // for Reader
 
 namespace modle::test::bed {

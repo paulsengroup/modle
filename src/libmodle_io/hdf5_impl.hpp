@@ -41,9 +41,10 @@
 #include <type_traits>  // for decay_t, declval, remove_pointer_t
 #include <vector>       // for vector
 
-#include "modle/common/common.hpp"                      // for i32, i16, i64, i8
+#include "modle/common/common.hpp"  // for i32, i16, i64, i8
+#include "modle/common/numeric_utils.hpp"
 #include "modle/common/suppress_compiler_warnings.hpp"  // for DISABLE_WARNING_POP, DISABLE_WARNI...
-#include "modle/common/utils.hpp"                       // for throw_with_trace, get_printable_ty...
+#include "modle/common/utils.hpp"
 
 namespace modle::hdf5 {
 
@@ -89,10 +90,10 @@ hsize_t write_str(const S &str_, const H5::DataSet &dataset, const H5::StrType &
 
     return file_size;
   } catch (const H5::Exception &e) {
-    throw std::runtime_error(
-        fmt::format(FMT_STRING("The following error occurred while writing strings \"{}\" to dataset "
-                               "\"{}\" at offset {}: {}"),
-                    str, dataset.getObjName(), file_offset, construct_error_stack(e)));
+    throw std::runtime_error(fmt::format(
+        FMT_STRING("The following error occurred while writing strings \"{}\" to dataset "
+                   "\"{}\" at offset {}: {}"),
+        str, dataset.getObjName(), file_offset, construct_error_stack(e)));
   }
 }
 
@@ -324,8 +325,8 @@ void read_attribute(H5::H5File &f, std::string_view attr_name, T &buff, std::str
   if constexpr (std::is_integral_v<T> != std::is_integral_v<VT> &&
                 std::is_constructible_v<H5std_string, VT>) {
     throw std::runtime_error(fmt::format(
-        FMT_STRING("Unable to store attribute \"{}\" of type {} into a buffer of type {}"), attr_name,
-        utils::get_printable_type_name<T>(), utils::get_printable_type_name<VT>()));
+        FMT_STRING("Unable to store attribute \"{}\" of type {} into a buffer of type {}"),
+        attr_name, utils::get_printable_type_name<T>(), utils::get_printable_type_name<VT>()));
   }
   absl::visit(
       [&](auto &&v) {  // NOLINT unused-parameter
@@ -356,8 +357,8 @@ template <class T>
 void read_attribute(const H5::DataSet &d, std::string_view attr_name, T &buff) {
   if (!has_attribute(d, attr_name)) {
     throw std::runtime_error(
-        fmt::format(FMT_STRING("Unable to find an attribute named \"{}\" in dataset \"{}\""), attr_name,
-                    d.getObjName()));
+        fmt::format(FMT_STRING("Unable to find an attribute named \"{}\" in dataset \"{}\""),
+                    attr_name, d.getObjName()));
   }
 
   const auto lck = internal::lock();
@@ -446,8 +447,8 @@ bool check_dataset_type(const H5::DataSet &dataset, T type, bool throw_on_failur
   const auto expected_type = type.getClass();
   if (actual_type != expected_type) {
     if (throw_on_failure) {
-      throw std::runtime_error(
-          fmt::format(FMT_STRING("\"{}\" exists but has incorrect datatype"), dataset.getObjName()));
+      throw std::runtime_error(fmt::format(FMT_STRING("\"{}\" exists but has incorrect datatype"),
+                                           dataset.getObjName()));
     }
     return false;
   }
@@ -467,8 +468,8 @@ bool check_dataset_type(const H5::DataSet &dataset, T type, bool throw_on_failur
     const auto actual_charset = dataset.getStrType().getCset();
     if (actual_charset != expected_charset) {
       if (throw_on_failure) {
-        throw std::runtime_error(
-            fmt::format(FMT_STRING("\"{}\" exists but has incorrect CharSet"), dataset.getObjName()));
+        throw std::runtime_error(fmt::format(FMT_STRING("\"{}\" exists but has incorrect CharSet"),
+                                             dataset.getObjName()));
       }
       return false;
     }

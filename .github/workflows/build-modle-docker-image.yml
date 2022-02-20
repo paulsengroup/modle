@@ -1,7 +1,7 @@
 # Copyright (c) 2021 Roberto Rossini (roberros@uio.no)
 # SPDX-License-Identifier: MIT
 
-name: Build Docker Container
+name: Build MoDLE's docker image
 
 on:
   push:

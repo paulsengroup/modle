@@ -6,10 +6,11 @@
 #include "modle/simulation.hpp"
 // clang-format on
 
-#include <absl/container/btree_map.h>            // for btree_iterator
-#include <absl/container/fixed_array.h>          // for FixedArray
-#include <absl/types/span.h>                     // for MakeConstSpan, Span
-#include <fmt/format.h>                          // for make_format_args, vformat_to, FMT_STRING
+#include <absl/container/btree_map.h>    // for btree_iterator
+#include <absl/container/fixed_array.h>  // for FixedArray
+#include <absl/types/span.h>             // for MakeConstSpan, Span
+#include <fmt/format.h>                  // for make_format_args, vformat_to, FMT_STRING
+#include <fmt/ostream.h>
 #include <moodycamel/blockingconcurrentqueue.h>  // for BlockingConcurrentQueue
 #include <moodycamel/concurrentqueue.h>          // for ConsumerToken, ProducerToken
 #include <spdlog/spdlog.h>                       // for info
@@ -239,14 +240,18 @@ void Simulation::simulate_worker(const u64 tid,
             const auto tot_target_contacts =
                 this->compute_tot_target_contacts(task.chrom->npixels());
             const auto new_contacts_per_epoch =
-                static_cast<double>(task.num_lefs) * this->lef_fraction_contact_sampling;
+                static_cast<double>(task.num_lefs) * this->lef_fraction_contact_sampling *
+                static_cast<double>(this->number_of_tad_contacts_per_sampling_event +
+                                    this->number_of_loop_contacts_per_sampling_event);
             return std::max(usize(1), static_cast<usize>(static_cast<double>(tot_target_contacts) /
                                                          new_contacts_per_epoch));
           }();
-          spdlog::info(FMT_STRING("Begin processing \"{}\": simulating ~{} epochs across {} cells using {} LEFs "
-                                  "(~{} epochs per cell)..."),
-                       task.chrom->name(), tot_target_epochs, this->num_cells,  task.num_lefs,
-                       tot_target_epochs / this->num_cells);
+          spdlog::info(
+              FMT_STRING(
+                  "Begin processing \"{}\": simulating ~{} epochs across {} cells using {} LEFs "
+                  "(~{} epochs per cell)..."),
+              task.chrom->name(), tot_target_epochs, this->num_cells, task.num_lefs,
+              tot_target_epochs / this->num_cells);
         }
 
         // Start the simulation kernel

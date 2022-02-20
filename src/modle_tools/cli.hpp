@@ -6,7 +6,7 @@
 #include <string>       // for string
 #include <string_view>  // for string_view
 
-#include "modle_tools/config.hpp"  // for config
+#include "modle_tools/modle_tools_config.hpp"  // for config
 
 namespace modle::tools {
 
@@ -23,7 +23,7 @@ class Cli {
   [[nodiscard]] bool is_ok() const noexcept;
   [[nodiscard]] subcommand get_subcommand() const noexcept;
   [[nodiscard]] std::string_view get_printable_subcommand() const noexcept;
-  [[nodiscard]] config parse_arguments();
+  [[nodiscard]] modle_tools_config parse_arguments();
   [[nodiscard]] int exit(const CLI::ParseError& e) const;
   [[nodiscard]] std::string to_json() const;
   [[nodiscard]] static std::string_view subcommand_to_str(subcommand s) noexcept;
@@ -33,7 +33,7 @@ class Cli {
   char** _argv;
   std::string _exec_name;
   int _exit_code{1};
-  config _config{};
+  modle_tools_config _config{};
   CLI::App _cli{};
   subcommand _subcommand{subcommand::help};
 

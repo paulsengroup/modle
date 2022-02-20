@@ -40,16 +40,16 @@
 #include <vector>                                   // for vector, vector<>::iterator
 
 #include "modle/common/common.hpp"                         // for bp_t, contacts_t
-#include "modle/common/config.hpp"                         // for Config
 #include "modle/common/genextreme_value_distribution.hpp"  // for genextreme_value_distribution
-#include "modle/common/random.hpp"           // for bernoulli_trial, poisson_distribution
-#include "modle/common/random_sampling.hpp"  // for random_sample
-#include "modle/common/utils.hpp"            // for parse_numeric_or_throw, ndeb...
-#include "modle/cooler/cooler.hpp"           // for Cooler, Cooler::WRITE_ONLY
-#include "modle/extrusion_barriers.hpp"      // for ExtrusionBarrier, update_states
-#include "modle/extrusion_factors.hpp"       // for Lef, ExtrusionUnit
-#include "modle/genome.hpp"                  // for Genome::iterator, Chromosome
-#include "modle/interval_tree.hpp"           // for IITree, IITree::data
+#include "modle/common/random.hpp"             // for bernoulli_trial, poisson_distribution
+#include "modle/common/random_sampling.hpp"    // for random_sample
+#include "modle/common/simulation_config.hpp"  // for Config
+#include "modle/common/utils.hpp"              // for parse_numeric_or_throw, ndeb...
+#include "modle/cooler/cooler.hpp"             // for Cooler, Cooler::WRITE_ONLY
+#include "modle/extrusion_barriers.hpp"        // for ExtrusionBarrier, update_states
+#include "modle/extrusion_factors.hpp"         // for Lef, ExtrusionUnit
+#include "modle/genome.hpp"                    // for Genome::iterator, Chromosome
+#include "modle/interval_tree.hpp"             // for IITree, IITree::data
 #include "modle/stats/descriptive.hpp"
 
 namespace modle {
@@ -183,7 +183,8 @@ void Simulation::write_contacts_to_disk(std::deque<std::pair<Chromosome*, usize>
     std::scoped_lock lck(this->_exceptions_mutex);
     if (chrom_to_be_written) {
       this->_exceptions.emplace_back(std::make_exception_ptr(std::runtime_error(fmt::format(
-          FMT_STRING("The following error occurred while writing contacts for \"{}\" to file {}: {}"),
+          FMT_STRING(
+              "The following error occurred while writing contacts for \"{}\" to file {}: {}"),
           chrom_to_be_written->name(), c->get_path(), err.what()))));
     } else {
       this->_exceptions.emplace_back(std::make_exception_ptr(std::runtime_error(fmt::format(
@@ -483,79 +484,6 @@ std::pair<bp_t, bp_t> Simulation::compute_lef_lef_collision_pos(const ExtrusionU
   assert(collision_pos > 0);
   assert(collision_pos - 1 >= fwd_pos);
   return std::make_pair(collision_pos, collision_pos - 1);
-}
-
-usize Simulation::register_contacts(Chromosome& chrom, const absl::Span<const Lef> lefs,
-                                    const absl::Span<const usize> selected_lef_idx) const {
-  return this->register_contacts(chrom.start_pos() + 1, chrom.end_pos() - 1, chrom.contacts(), lefs,
-                                 selected_lef_idx);
-}
-
-usize Simulation::register_contacts(const bp_t start_pos, const bp_t end_pos,
-                                    ContactMatrix<contacts_t>& contacts,
-                                    const absl::Span<const Lef> lefs,
-                                    const absl::Span<const usize> selected_lef_idx) const {
-  // Register contacts for the selected LEFs (excluding LEFs that have one of their units at the
-  // beginning/end of a chromosome)
-  assert(start_pos <= end_pos);
-  usize new_contacts = 0;
-  for (const auto i : selected_lef_idx) {
-    assert(i < lefs.size());
-    const auto& lef = lefs[i];
-    if (MODLE_LIKELY(lef.is_bound() && lef.rev_unit.pos() > start_pos &&
-                     lef.rev_unit.pos() < end_pos && lef.fwd_unit.pos() > start_pos &&
-                     lef.fwd_unit.pos() < end_pos)) {
-      const auto pos1 = lef.rev_unit.pos() - start_pos;
-      const auto pos2 = lef.fwd_unit.pos() - start_pos;
-      contacts.increment(pos1 / this->bin_size, pos2 / this->bin_size);
-      ++new_contacts;
-    }
-  }
-  return new_contacts;
-}
-
-usize Simulation::register_contacts_w_randomization(Chromosome& chrom, absl::Span<const Lef> lefs,
-                                                    absl::Span<const usize> selected_lef_idx,
-                                                    random::PRNG_t& rand_eng) const {
-  return this->register_contacts_w_randomization(chrom.start_pos() + 1, chrom.end_pos() - 1,
-                                                 chrom.contacts(), lefs, selected_lef_idx,
-                                                 rand_eng);
-}
-
-usize Simulation::register_contacts_w_randomization(bp_t start_pos, bp_t end_pos,
-                                                    ContactMatrix<contacts_t>& contacts,
-                                                    absl::Span<const Lef> lefs,
-                                                    absl::Span<const usize> selected_lef_idx,
-                                                    random::PRNG_t& rand_eng) const {
-  auto noise_gen = genextreme_value_distribution<double>{
-      this->genextreme_mu, this->genextreme_sigma, this->genextreme_xi};
-  const auto start_pos_dbl = static_cast<double>(start_pos);
-  const auto end_pos_dbl = static_cast<double>(end_pos);
-
-  usize new_contacts = 0;
-  for (const auto i : selected_lef_idx) {
-    assert(i < lefs.size());
-    const auto& lef = lefs[i];
-    if (MODLE_LIKELY(lef.is_bound() && lef.rev_unit.pos() > start_pos &&
-                     lef.rev_unit.pos() < end_pos && lef.fwd_unit.pos() > start_pos &&
-                     lef.fwd_unit.pos() < end_pos)) {
-      // We are performing most operations using double to deal with the possibility that the
-      // noise generated to compute p1 is larger than the pos of the rev unit
-      const auto p1 = static_cast<double>(lef.rev_unit.pos()) - noise_gen(rand_eng);
-      const auto p2 = static_cast<double>(lef.fwd_unit.pos()) + noise_gen(rand_eng);
-
-      if (MODLE_UNLIKELY(p1 < start_pos_dbl || p2 < start_pos_dbl || p1 >= end_pos_dbl ||
-                         p2 >= end_pos_dbl)) {
-        continue;
-      }
-
-      const auto pos1 = static_cast<bp_t>(p1) - start_pos;
-      const auto pos2 = static_cast<bp_t>(p2) - start_pos;
-      contacts.increment(pos1 / this->bin_size, pos2 / this->bin_size);
-      ++new_contacts;
-    }
-  }
-  return new_contacts;
 }
 
 usize Simulation::release_lefs(const absl::Span<Lef> lefs,
@@ -1194,42 +1122,6 @@ void Simulation::select_and_bind_lefs(State& s) noexcept(utils::ndebug_defined()
                         s.get_fwd_ranks(), lef_mask, s.rand_eng, s.epoch);
 }
 
-void Simulation::sample_and_register_contacts(State& s, const double avg_nlefs_to_sample) const {
-  assert(s.num_active_lefs == s.num_lefs);
-  auto nlefs_to_sample =
-      std::min(s.num_lefs, random::poisson_distribution<usize>{avg_nlefs_to_sample}(s.rand_eng));
-
-  if (s.num_target_contacts != 0) {  // When using the target contact density as stopping
-    // criterion, don't overshoot the target number of contacts
-    nlefs_to_sample = std::min(nlefs_to_sample, s.num_target_contacts - s.num_contacts);
-  }
-
-  // Select LEFs to be used for contact registration.
-  // We are sampling from fwd ranks to avoid having to allocate a vector of indices just to
-  // do this sampling
-  const auto lef_idx = s.get_idx_buff(nlefs_to_sample);
-  random_sample(s.get_fwd_ranks().begin(), s.get_fwd_ranks().end(), lef_idx.begin(), lef_idx.size(),
-                s.rand_eng);
-#ifndef NDEBUG  // GCC 9.5.0 chokes if we use if constexpr (utils::ndebug_not_defined()) here
-  if (!std::all_of(lef_idx.begin(), lef_idx.end(), [&](const auto i) { return i < s.num_lefs; })) {
-    throw std::runtime_error(
-        fmt::format(FMT_STRING("lef_idx.size()={}; num_lefs={};\nlef_idx=[{}]\n"), lef_idx.size(),
-                    s.num_lefs, fmt::join(lef_idx, ", ")));
-  }
-#endif
-  const auto start_pos = s.is_modle_sim_state() ? s.chrom->start_pos() : s.window_start;
-  const auto end_pos = s.is_modle_sim_state() ? s.chrom->end_pos() : s.window_end;
-
-  assert(s.contacts);
-  if (this->randomize_contacts) {
-    s.num_contacts += this->register_contacts_w_randomization(
-        start_pos + 1, end_pos - 1, *s.contacts, s.get_lefs(), lef_idx, s.rand_eng);
-  } else {
-    s.num_contacts +=
-        this->register_contacts(start_pos + 1, end_pos - 1, *s.contacts, s.get_lefs(), lef_idx);
-  }
-}
-
 void Simulation::dump_stats(const usize task_id, const usize epoch, const usize cell_id,
                             const bool burnin, const Chromosome& chrom,
                             const absl::Span<const Lef> lefs,
@@ -1295,18 +1187,22 @@ void Simulation::dump_stats(const usize task_id, const usize epoch, const usize 
 }
 
 usize Simulation::compute_tot_target_epochs() const noexcept {
-  if (this->target_contact_density == 0.0) {
-    assert(this->simulation_epochs != 0);
-    return this->num_cells * this->simulation_epochs;
+  using SC = StoppingCriterion;
+  if (this->stopping_criterion == SC::simulation_epochs) {
+    assert(this->target_simulation_epochs != 0);
+    return this->num_cells * this->target_simulation_epochs;
   }
+  assert(this->stopping_criterion == SC::contact_density);
   return (std::numeric_limits<usize>::max)();
 }
 
 usize Simulation::compute_tot_target_contacts(const usize npixels) const noexcept {
-  if (this->target_contact_density == 0.0) {
+  using SC = StoppingCriterion;
+  if (this->stopping_criterion == SC::simulation_epochs) {
     return (std::numeric_limits<usize>::max)();
   }
 
+  assert(this->stopping_criterion == SC::contact_density);
   const auto tot = this->target_contact_density * static_cast<double>(npixels);
   return std::max(usize(1), static_cast<usize>(std::round(tot)));
 }

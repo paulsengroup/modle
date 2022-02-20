@@ -34,9 +34,9 @@
 #include <utility>                                                // for make_pair
 #include <vector>                                                 // for vector
 
-#include "modle/common/common.hpp"  // for i64, usize
-#include "modle/common/random.hpp"  // for PRNG_t, uniform_int_dis...
-#include "modle/common/utils.hpp"   // for parse_numeric_or_throw
+#include "modle/common/common.hpp"         // for i64, usize
+#include "modle/common/numeric_utils.hpp"  // for parse_numeric_or_throw
+#include "modle/common/random.hpp"         // for PRNG_t, uniform_int_dis...
 
 namespace modle::test::stats {
 using namespace modle::stats;
