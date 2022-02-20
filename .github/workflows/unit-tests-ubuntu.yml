@@ -1,0 +1,250 @@
+# Copyright (c) 2021 Roberto Rossini (roberros@uio.no)
+# SPDX-License-Identifier: MIT
+
+name: Unit tests Ubuntu
+
+on:
+  push:
+    branches: [ main, devel, testing-ci ]
+    paths:
+      - ".github/workflows/unit-tests-ubuntu.yml"
+      - "cmake/**"
+      - "external/**"
+      - "src/**"
+      - "test/**"
+      - "CMakeLists.txt"
+      - "conanfile.py"
+  pull_request:
+    branches: [ main, devel, testing-ci ]
+    paths:
+      - ".github/workflows/unit-tests-ubuntu.yml"
+      - "cmake/**"
+      - "external/**"
+      - "src/**"
+      - "test/**"
+      - "CMakeLists.txt"
+      - "conanfile.py"
+
+env:
+  CONAN_USER_HOME: "${{ github.workspace }}/conan-cache"
+  CONAN_USER_HOME_SHORT: "${{ github.workspace }}/conan-cache/short"
+  CONAN_V2_MODE: "1"
+  CCACHE_BASEDIR: "${{ github.workspace }}/ccache-cache"
+  CCACHE_NOCOMPRESS: "" # Let GHA cache do the compression
+  CCACHE_MAXSIZE: "500M"
+  R_HOME_USER: "${{ github.workspace }}/r-cache"
+  PIP_CACHE_DIR: "${{ github.workspace }}/pip-cache"
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        image:
+          - ubuntu:20.04
+        compiler:
+          - gcc-7
+          - gcc-11
+          - llvm-6.0.1
+          - llvm-13.0.0
+        generator:
+          - "Ninja"
+        cmake:
+          - 3.22.2
+        build_type:
+          - Release
+          - Debug
+        developer_mode:
+          - ON
+
+
+        include:
+          # Make sure project builds when using make
+          - image: ubuntu:20.04
+            compiler: llvm-13.0.0
+            generator: "Unix Makefiles"
+            cmake: 3.22.2
+            build_type: Debug
+            developer_mode: OFF
+          # Make sure project builds with cmake 3.16
+          - image: ubuntu:20.04
+            compiler: llvm-13.0.0
+            generator: "Ninja"
+            cmake: 3.16.9
+            build_type: Debug
+            developer_mode: OFF
+
+    container:
+      image: ${{ matrix.image }}
+      options: "--user=root -v ${{ github.workspace }}:${{ github.workspace }}"
+
+    defaults:
+      run:
+        shell: bash
+
+    steps:
+      - uses: actions/checkout@v2
+
+      - name: Generate Conan cache key
+        id: conan_cache_key
+        run: |
+          host_os="host-${{ runner.os }}"
+          image="${{ matrix.image }}"
+          compiler="${{ matrix.compiler }}"
+          generator="${{ matrix.generator }}"
+          build_type="${{ matrix.build_type }}"
+          hash="${{ hashFiles('conanfile.py') }}"
+
+          echo "::set-output name=string::$host_os-$image-$compiler-$generator-$build_type-$hash"
+
+      - name: Generate Ccache cache key
+        id: ccache_cache_key
+        run: |
+          host_os="host-${{ runner.os }}"
+          image="${{ matrix.image }}"
+          compiler="${{ matrix.compiler }}"
+
+          echo "::set-output name=string::$host_os-$image-$compiler"
+
+      - name: Generate R cache key
+        id: r_cache_key
+        run: |
+          host_os="host-${{ runner.os }}"
+          image="${{ matrix.image }}"
+
+          echo "::set-output name=string::$host_os-$image"
+
+      - name: Generate pip cache key
+        id: pip_cache_key
+        run: |
+          host_os="host-${{ runner.os }}"
+          image="${{ matrix.image }}"
+
+          echo "::set-output name=string::$host_os-$image"
+
+      - name: Cache R home
+        uses: actions/cache@v2
+        with:
+          key: r-home-${{ steps.r_cache_key.outputs.string }}
+          path: ${{ env.R_HOME_USER }}
+
+      - name: Cache pip
+        uses: actions/cache@v2
+        with:
+          key: pip-cache-${{ steps.pip_cache_key.outputs.string }}
+          path: ${{ env.PIP_CACHE_DIR }}
+
+      - name: Install unit test dependencies
+        run: |
+          # Make sure timezone information is properly set to avoid
+          # interactive prompts when installing R
+          ln -snf /usr/share/zoneinfo/CET /etc/localtime
+          echo CET | tee /etc/timezone > /dev/null
+
+          # Install Scipy and add-apt-repository
+          apt-get update -q
+          apt-get install -y -q --no-install-recommends curl             \
+                                                        dirmngr          \
+                                                        python3-scipy    \
+                                                        software-properties-common
+
+          curl -L 'https://cloud.r-project.org/bin/linux/ubuntu/marutter_pubkey.asc' |
+            tee -a /etc/apt/trusted.gpg.d/cran_ubuntu_key.asc > /dev/null
+          add-apt-repository "deb https://cloud.r-project.org/bin/linux/ubuntu $(lsb_release -cs)-cran40/"
+          add-apt-repository -y ppa:c2d4u.team/c2d4u4.0+
+
+          # Install a modern version of R as well as dependencies needed to build wCorr
+          apt-get install -y -q --no-install-recommends r-base        \
+                                                        r-base-dev    \
+                                                        r-cran-minqa  \
+                                                        r-cran-mnormt \
+                                                        r-cran-rcpparmadillo
+
+          # Enable parallel compilation for R packages
+          echo "options(Ncpus = $(nproc))" > "$HOME/.Rprofile"
+          echo "MAKEFLAGS = -j$(nproc)" >> /etc/R/Makeconf
+
+          # Install and test wCorr
+          Rscript --no-save -e 'install.packages("wCorr", dependencies=c("Depends", "Imports", "LinkingTo"), repos="https://cloud.r-project.org")'
+          Rscript --no-save -e 'quit(status=!library("wCorr", character.only=T, logical.return=T), save="no")'
+
+          R --version
+          python3 --version
+
+      - name: Cache Conan packages
+        uses: actions/cache@v2
+        with:
+          key: conan-${{ steps.conan_cache_key.outputs.string }}
+          path: ${{ env.CONAN_USER_HOME }}
+
+      - name: Cache Ccache folder
+        uses: actions/cache@v2
+        with:
+          key: ccache-${{ steps.ccache_key.outputs.string }}
+          path: ${{ env.CCACHE_BASEDIR }}
+
+      - name: Install build dependencies
+        uses: aminya/setup-cpp@v1
+        with:
+          compiler: ${{ matrix.compiler }}
+          ccache: true
+          cmake: ${{ matrix.cmake }}
+          conan: true
+          # gcovr: true
+          ninja: true
+
+      - name: Clean up Conan
+        run: |
+          conan remove -f "*" --builds
+          conan remove -f "*" --src
+          conan remove -f "*" --system-reqs
+
+      - name: Update Conan profile
+        run: |
+          rm -f "${{ env.CONAN_USER_HOME }}/.conan/profiles/default"
+          conan profile new "${{ env.CONAN_USER_HOME }}/.conan/profiles/default" --detect
+          conan profile update settings.compiler.libcxx=libstdc++11 default
+          conan profile update settings.compiler.cppstd=17 default
+
+      - name: Configure project
+        run: |
+          mkdir ${{ github.workspace }}/build
+          cmake -DCMAKE_BUILD_TYPE=${{ matrix.build_type }}          \
+                -DCMAKE_C_COMPILER="$(which clang)"                  \
+                -DCMAKE_CXX_COMPILER="$(which clang++)"              \
+                -DENABLE_DEVELOPER_MODE=${{ matrix.developer_mode }} \
+                -DOPT_ENABLE_CLANG_TIDY=OFF                          \
+                -DOPT_ENABLE_CPPCHECK=OFF                            \
+                -G "${{ matrix.generator }}"                         \
+                -B "${{ github.workspace }}/build"                   \
+                "${{ github.workspace }}"
+
+      - name: Build project
+        run: cmake --build ${{ github.workspace }}/build -j $(nproc)
+
+      - name: Print Ccache statistics
+        run: ccache -s
+
+      - name: Test project
+        run: |
+          ctest --test-dir ${{ github.workspace }}/build \
+                --schedule-random                        \
+                --output-on-failure                      \
+                --no-tests=error                         \
+                --timeout 120                            \
+                --repeat after-timeout:3                 \
+                -j $(nproc)
+
+      # - name: Generate test coverage report
+      #   if: >
+      #     matrix.build_type == 'Debug'
+      #   working-directory: ${{ github.workspace }}/build
+      #   run: |
+      #     gcovr --delete                       \
+      #           --root ${{ github.workspace }} \
+      #           --exclude test                 \
+      #           --print-summary                \
+      #           --xml-pretty                   \
+      #           --xml                          \
+      #           -o coverage.xml .
