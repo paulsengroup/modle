@@ -2,15 +2,15 @@
 #
 # SPDX-License-Identifier: MIT
 
-find_package(absl QUIET REQUIRED)
-find_package(Boost QUIET REQUIRED)
-find_package(fmt QUIET REQUIRED)
-find_package(HDF5 QUIET REQUIRED)
-find_package(LibArchive QUIET REQUIRED)
-find_package(readerwriterqueue QUIET REQUIRED)
-find_package(spdlog QUIET REQUIRED)
-find_package(ZLIB QUIET REQUIRED)
-find_package(xxHash QUIET REQUIRED)
+find_package(absl CONFIG REQUIRED)
+find_package(Boost CONFIG REQUIRED)
+find_package(fmt CONFIG REQUIRED)
+find_package(HDF5 CONFIG REQUIRED)
+find_package(LibArchive CONFIG REQUIRED)
+find_package(readerwriterqueue CONFIG REQUIRED)
+find_package(spdlog CONFIG REQUIRED)
+find_package(ZLIB CONFIG REQUIRED)
+find_package(xxHash CONFIG REQUIRED)
 
 # BED
 add_library(libmodle_io_bed)
@@ -21,17 +21,21 @@ target_include_directories(libmodle_io_bed PUBLIC include/bed)
 
 target_link_libraries(
   libmodle_io_bed
-  PRIVATE project_warnings project_options absl::strings
-  PUBLIC absl::btree
-         absl::flat_hash_map
-         absl::hash
-         absl::span
-         Boost::filesystem
-         fmt::fmt
-         xxHash::xxHash
-         Modle::common
-         Modle::interval_tree
-         Modle::io_compressed)
+  PRIVATE project_warnings project_options
+  PUBLIC Modle::common Modle::interval_tree Modle::io_compressed)
+
+target_link_system_libraries(
+  libmodle_io_bed
+  PRIVATE
+  absl::strings
+  PUBLIC
+  absl::btree
+  absl::flat_hash_map
+  absl::hash
+  absl::span
+  Boost::filesystem
+  fmt::fmt
+  xxHash::xxHash)
 
 set_target_properties(libmodle_io_bed PROPERTIES OUTPUT_NAME modle_io_bed)
 install(
@@ -51,11 +55,15 @@ target_include_directories(libmodle_io_bigwig PUBLIC include/bigwig)
 target_link_libraries(
   libmodle_io_bigwig
   PRIVATE project_warnings project_options
-  PUBLIC absl::span
-         Boost::filesystem
-         fmt::fmt
-         Modle::common
-         libBigWig::libbigwig)
+  PUBLIC Modle::common)
+
+target_link_system_libraries(
+  libmodle_io_bigwig
+  PUBLIC
+  absl::span
+  Boost::filesystem
+  fmt::fmt
+  libBigWig::libbigwig)
 
 add_dependencies(libmodle_io_bigwig libBigWig)
 target_compile_definitions(libmodle_io_bigwig PRIVATE -DNOCURL)
@@ -76,13 +84,17 @@ target_include_directories(libmodle_io_chrom_sizes PUBLIC include/chrom_sizes)
 
 target_link_libraries(
   libmodle_io_chrom_sizes
-  PRIVATE project_warnings
-          project_options
-          absl::flat_hash_set
-          absl::strings
-          fmt::fmt
-          Modle::io_bed
-  PUBLIC Boost::filesystem Modle::common Modle::io_compressed)
+  PRIVATE project_warnings project_options Modle::io_bed
+  PUBLIC Modle::common Modle::io_compressed)
+
+target_link_system_libraries(
+  libmodle_io_chrom_sizes
+  PRIVATE
+  absl::flat_hash_set
+  absl::strings
+  fmt::fmt
+  PUBLIC
+  Boost::filesystem)
 
 set_target_properties(libmodle_io_chrom_sizes PROPERTIES OUTPUT_NAME modle_io_chrom_sizes)
 install(
@@ -100,14 +112,20 @@ target_include_directories(libmodle_io_compressed PUBLIC include/compressed_io)
 
 target_link_libraries(
   libmodle_io_compressed
-  PRIVATE project_warnings
-          project_options
-          absl::strings
-          fmt::fmt
-  PUBLIC Boost::filesystem
-         Boost::iostreams
-         LibArchive::LibArchive
-         Modle::common)
+  PRIVATE project_warnings project_options
+  PUBLIC Modle::common)
+
+target_link_system_libraries(
+  libmodle_io_compressed
+  PRIVATE
+  project_warnings
+  project_options
+  absl::strings
+  fmt::fmt
+  PUBLIC
+  Boost::filesystem
+  Boost::iostreams
+  LibArchive::LibArchive)
 
 set_target_properties(libmodle_io_compressed PROPERTIES OUTPUT_NAME modle_io_compressed)
 install(
@@ -130,16 +148,20 @@ target_link_libraries(
   libmodle_io_cooler
   INTERFACE project_warnings
             project_options
-            absl::span
-            absl::strings
-            absl::time
-            absl::variant
-            Boost::filesystem
-            fmt::fmt
-            readerwriterqueue::readerwriterqueue
-            spdlog::spdlog
             Modle::common
             Modle::io_hdf5)
+
+target_link_system_libraries(
+  libmodle_io_cooler
+  INTERFACE
+  absl::span
+  absl::strings
+  absl::time
+  absl::variant
+  Boost::filesystem
+  fmt::fmt
+  readerwriterqueue::readerwriterqueue
+  spdlog::spdlog)
 
 install(
   TARGETS libmodle_io_cooler
@@ -157,10 +179,16 @@ target_include_directories(libmodle_io_hdf5 PUBLIC include/hdf5)
 target_link_libraries(
   libmodle_io_hdf5
   PRIVATE project_warnings project_options absl::strings
-  PUBLIC absl::variant
-         fmt::fmt
-         Modle::common
-         HDF5::HDF5)
+  PUBLIC Modle::common)
+
+target_link_system_libraries(
+  libmodle_io_hdf5
+  PRIVATE
+  absl::strings
+  PUBLIC
+  absl::variant
+  fmt::fmt
+  HDF5::HDF5)
 
 set_target_properties(libmodle_io_hdf5 PROPERTIES OUTPUT_NAME modle_io_hdf5)
 install(

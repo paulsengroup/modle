@@ -2,11 +2,11 @@
 #
 # SPDX-License-Identifier: MIT
 
-find_package(absl QUIET REQUIRED)
-find_package(Boost QUIET REQUIRED)
-find_package(fmt QUIET REQUIRED)
-find_package(spdlog QUIET REQUIRED)
-find_package(xxHash QUIET REQUIRED)
+find_package(absl CONFIG REQUIRED)
+find_package(Boost CONFIG REQUIRED)
+find_package(fmt CONFIG REQUIRED)
+find_package(spdlog CONFIG REQUIRED)
+find_package(xxHash CONFIG REQUIRED)
 
 add_library(libmodle_internal)
 add_library(Modle::libmodle_internal ALIAS libmodle_internal)
@@ -21,20 +21,23 @@ target_sources(
           ${CMAKE_CURRENT_SOURCE_DIR}/extrusion_factors_impl.hpp)
 target_link_libraries(
   libmodle_internal
-  PRIVATE project_options
-          project_warnings
-          absl::time
-          spdlog::spdlog
-          Modle::io_chrom_sizes
-  PUBLIC absl::btree
-         absl::span
-         Boost::filesystem
-         Boost::headers
-         fmt::fmt
-         xxHash::xxHash
-         Modle::cmatrix
+  PRIVATE project_options project_warnings Modle::io_chrom_sizes
+  PUBLIC Modle::cmatrix
          Modle::common
          Modle::io_bed
          Modle::interval_tree)
+
+target_link_system_libraries(
+  libmodle_internal
+  PRIVATE
+  absl::time
+  spdlog::spdlog
+  PUBLIC
+  absl::btree
+  absl::span
+  Boost::filesystem
+  Boost::headers
+  fmt::fmt
+  xxHash::xxHash)
 
 target_include_directories(libmodle_internal PUBLIC include/)

@@ -2,10 +2,11 @@
 #
 # SPDX-License-Identifier: MIT
 
-find_package(absl QUIET REQUIRED)
-find_package(Boost QUIET REQUIRED)
-find_package(fmt QUIET REQUIRED)
-find_package(xxHash QUIET REQUIRED)
+find_package(absl CONFIG REQUIRED)
+find_package(Boost CONFIG REQUIRED)
+find_package(fmt CONFIG REQUIRED)
+find_package(range-v3 CONFIG REQUIRED)
+find_package(xxHash CONFIG REQUIRED)
 
 add_library(modle_common INTERFACE)
 
@@ -14,7 +15,7 @@ add_library(Modle::common ALIAS modle_common)
 target_sources(
   modle_common
   INTERFACE ${CMAKE_CURRENT_SOURCE_DIR}/include/modle/common/common.hpp
-            ${CMAKE_CURRENT_SOURCE_DIR}/include/modle/common/config.hpp
+            ${CMAKE_CURRENT_SOURCE_DIR}/include/modle/common/simulation_config.hpp
             ${CMAKE_CURRENT_SOURCE_DIR}/include/modle/common/genextreme_value_distribution.hpp
             ${CMAKE_CURRENT_SOURCE_DIR}/include/modle/common/random.hpp
             ${CMAKE_CURRENT_SOURCE_DIR}/include/modle/common/random_sampling.hpp
@@ -22,18 +23,21 @@ target_sources(
             ${CMAKE_CURRENT_SOURCE_DIR}/include/modle/common/utils.hpp
             ${CMAKE_CURRENT_SOURCE_DIR}/utils_impl.hpp)
 
-target_link_libraries(
+target_link_libraries(modle_common INTERFACE project_options project_warnings)
+
+target_link_system_libraries(
   modle_common
-  INTERFACE project_options
-            project_warnings
-            absl::span
-            absl::strings
-            Boost::headers
-            Boost::filesystem
-            Boost::random
-            fmt::fmt
-            $<$<NOT:$<BOOL:${MODLE_USE_MERSENNE_TWISTER}>>:XoshiroCpp::XoshiroCpp>
-            xxHash::xxhash
-            mscharconv)
+  INTERFACE
+  absl::span
+  absl::strings
+  bitflags::bitflags
+  Boost::headers
+  Boost::filesystem
+  Boost::random
+  fmt::fmt
+  range-v3::range-v3
+  $<$<NOT:$<BOOL:${MODLE_USE_MERSENNE_TWISTER}>>:XoshiroCpp::XoshiroCpp>
+  xxHash::xxhash
+  mscharconv)
 
 target_include_directories(modle_common INTERFACE include/)

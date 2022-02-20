@@ -2,12 +2,12 @@
 #
 # SPDX-License-Identifier: MIT
 
-find_package(absl QUIET REQUIRED)
-find_package(Boost QUIET REQUIRED)
-find_package(CLI11 QUIET REQUIRED)
-find_package(fmt QUIET REQUIRED)
-find_package(spdlog QUIET REQUIRED)
-find_package(tomlplusplus QUIET REQUIRED)
+find_package(absl CONFIG REQUIRED)
+find_package(Boost CONFIG REQUIRED)
+find_package(CLI11 CONFIG REQUIRED)
+find_package(fmt CONFIG REQUIRED)
+find_package(spdlog CONFIG REQUIRED)
+find_package(tomlplusplus CONFIG REQUIRED)
 
 add_executable(modle)
 
@@ -17,20 +17,26 @@ target_link_libraries(
   modle
   PRIVATE project_warnings
           project_options
-          absl::failure_signal_handler
-          absl::span
-          absl::strings
-          absl::symbolize
-          absl::time
-          Boost::filesystem
-          Boost::headers
           CLI11::CLI11
           fmt::fmt
-          spdlog::spdlog
-          tomlplusplus::tomlplusplus
           Modle::common
           Modle::io_cooler
           Modle::libmodle)
+
+target_link_system_libraries(
+  modle
+  PRIVATE
+  absl::failure_signal_handler
+  absl::span
+  absl::strings
+  absl::symbolize
+  absl::time
+  Boost::filesystem
+  Boost::headers
+  CLI11::CLI11
+  fmt::fmt
+  spdlog::spdlog
+  tomlplusplus::tomlplusplus)
 
 include(GNUInstallDirs)
 install(

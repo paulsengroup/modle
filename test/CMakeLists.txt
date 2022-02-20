@@ -2,12 +2,12 @@
 #
 # SPDX-License-Identifier: MIT
 
-find_package(absl REQUIRED QUIET)
-find_package(Boost REQUIRED QUIET)
-find_package(Catch2 REQUIRED QUIET)
-find_package(fmt REQUIRED QUIET)
-find_package(HDF5 REQUIRED QUIET)
-find_package(spdlog REQUIRED QUIET)
+find_package(absl CONFIG REQUIRED)
+find_package(Boost CONFIG REQUIRED)
+find_package(Catch2 CONFIG REQUIRED)
+find_package(fmt CONFIG REQUIRED)
+find_package(HDF5 CONFIG REQUIRED)
+find_package(spdlog CONFIG REQUIRED)
 
 include(CTest)
 include(Catch)
@@ -17,6 +17,7 @@ add_executable(test_main)
 target_sources(
   test_main
   PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/test_main.cpp
+          ${CMAKE_CURRENT_SOURCE_DIR}/units/common/cli_utils_test.cpp
           ${CMAKE_CURRENT_SOURCE_DIR}/units/contact_matrix/contact_matrix_test.cpp
           ${CMAKE_CURRENT_SOURCE_DIR}/units/interval_tree/interval_tree_test.cpp
           ${CMAKE_CURRENT_SOURCE_DIR}/units/libmodle_io/bed_parser_test.cpp
@@ -40,16 +41,6 @@ target_link_libraries(
   test_main
   PRIVATE project_warnings
           project_options
-          absl::flat_hash_set
-          absl::hash
-          absl::span
-          absl::strings
-          Boost::filesystem
-          Boost::headers
-          Catch2::Catch2
-          fmt::fmt
-          HDF5::HDF5
-          spdlog::spdlog
           Modle::cmatrix
           Modle::common
           Modle::interval_tree
@@ -61,8 +52,22 @@ target_link_libraries(
           Modle::io_hdf5
           Modle::libmodle_cpu
           Modle::libmodle_internal
-          Modle::stats
-          thread-pool)
+          Modle::stats)
+
+target_link_system_libraries(
+  test_main
+  PRIVATE
+  absl::flat_hash_set
+  absl::hash
+  absl::span
+  absl::strings
+  Boost::filesystem
+  Boost::headers
+  Catch2::Catch2
+  fmt::fmt
+  HDF5::HDF5
+  spdlog::spdlog
+  thread-pool)
 
 file(MAKE_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/Testing/)
 

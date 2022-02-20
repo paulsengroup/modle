@@ -2,11 +2,11 @@
 #
 # SPDX-License-Identifier: MIT
 
-find_package(absl QUIET REQUIRED)
-find_package(Boost QUIET REQUIRED)
-find_package(cpp-sort QUIET REQUIRED)
-find_package(fmt QUIET REQUIRED)
-find_package(xxHash QUIET REQUIRED)
+find_package(absl CONFIG REQUIRED)
+find_package(Boost CONFIG REQUIRED)
+find_package(cpp-sort CONFIG REQUIRED)
+find_package(fmt CONFIG REQUIRED)
+find_package(xxHash CONFIG REQUIRED)
 
 add_library(cmatrix INTERFACE)
 add_library(Modle::cmatrix ALIAS cmatrix)
@@ -21,25 +21,18 @@ target_link_libraries(
   cmatrix
   INTERFACE project_warnings
             project_options
-            absl::span
-            absl::strings
-            Boost::filesystem
-            Boost::headers
-            cpp-sort::cpp-sort
-            fmt::fmt
-            xxHash::xxHash
             Modle::common
             Modle::io_compressed
-            Modle::stats
-            thread-pool)
+            Modle::stats)
 
-if(ENABLE_PCH)
-  target_precompile_headers(
-    cmatrix
-    INTERFACE
-    <cstdint>
-    <utility>
-    <vector>
-    <boost/dynamic_bitset/dynamic_bitset.hpp>
-    [["modle/contacts.hpp"]])
-endif()
+target_link_system_libraries(
+  cmatrix
+  INTERFACE
+  absl::span
+  absl::strings
+  Boost::filesystem
+  Boost::headers
+  cpp-sort::cpp-sort
+  fmt::fmt
+  xxHash::xxHash
+  thread-pool)
