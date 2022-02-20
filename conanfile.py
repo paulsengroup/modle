@@ -41,7 +41,7 @@ class MoDLE(ConanFile):
                 "zlib/1.2.11"]
     # "zstd/1.4.8"]
 
-    generators = "cmake_find_package_multi"
+    generators = "cmake", "gcc", "txt", "cmake_find_package", "cmake_find_package_multi"
 
     def configure(self):
         if self.settings.compiler.cppstd:
