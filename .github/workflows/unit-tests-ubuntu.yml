@@ -181,7 +181,7 @@ jobs:
       - name: Cache Ccache folder
         uses: actions/cache@v2
         with:
-          key: ccache-${{ steps.ccache_key.outputs.string }}
+          key: ccache-${{ steps.ccache_cache_key.outputs.string }}
           path: ${{ env.CCACHE_BASEDIR }}
 
       - name: Install build dependencies
