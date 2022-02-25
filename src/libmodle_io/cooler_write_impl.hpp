@@ -174,6 +174,23 @@ void Cooler<N>::write_or_append_cmatrix_to_file(const ContactMatrix<M> *cmatrix,
     this->_nnz = hdf5::has_attribute(*this->_fp, "nnz", this->_root_path)
                      ? hdf5::read_attribute_int(*this->_fp, "nnz", this->_root_path)
                      : 0;
+
+    DISABLE_WARNING_PUSH
+    DISABLE_WARNING_USELESS_CAST
+    // Total number of contacts
+    if constexpr (IS_FP) {
+      this->_sum =
+          static_cast<N>(hdf5::has_attribute(*this->_fp, "sum", this->_root_path)
+                             ? hdf5::read_attribute<double>(*this->_fp, "sum", this->_root_path)
+                             : 0.0);
+    } else {
+      this->_sum =
+          static_cast<N>(hdf5::has_attribute(*this->_fp, "sum", this->_root_path)
+                             ? hdf5::read_attribute_int(*this->_fp, "sum", this->_root_path)
+                             : 0);
+    }
+    DISABLE_WARNING_POP
+
     // Idx of the first non-zero pixel of the current chrom
     auto pxl_offset =
         static_cast<hsize_t>(hdf5::has_attribute(*this->_fp, "nbins", this->_root_path)
@@ -341,11 +358,17 @@ void Cooler<N>::write_or_append_cmatrix_to_file(const ContactMatrix<M> *cmatrix,
     idx_bin1_offset_h5_foffset =
         hdf5::write_numbers(b.idx_bin1_offset_buff, d[IDX_BIN1], idx_bin1_offset_h5_foffset);
 
+    DISABLE_WARNING_PUSH
+    DISABLE_WARNING_USELESS_CAST
+    this->_sum += static_cast<_SumT>(cmatrix->get_tot_contacts());
+    DISABLE_WARNING_POP
+
     auto &f = *this->_fp;
     hdf5::write_or_create_attribute(f, "nchroms", this->_nchroms);
     const auto nbins = static_cast<i64>(this->_nbins);
     hdf5::write_or_create_attribute(f, "nbins", nbins);
     hdf5::write_or_create_attribute(f, "nnz", this->_nnz);
+    hdf5::write_or_create_attribute(f, "sum", this->_sum);
     // this->_fp->flush(H5F_SCOPE_GLOBAL); // This is probably unnecessary
   } catch ([[maybe_unused]] const H5::Exception &e) {
     throw std::runtime_error(hdf5::construct_error_stack());

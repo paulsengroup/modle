@@ -42,7 +42,8 @@ class Cooler {
   static_assert(std::is_arithmetic_v<N>);
 
  public:
-  using value_type = std::conditional_t<std::is_floating_point_v<N>, double, i32>;
+  static constexpr bool IS_FP = std::is_floating_point_v<N>;
+  using value_type = std::conditional_t<IS_FP, double, i32>;
   enum class IO_MODE : u8f {
     READ_ONLY,
     WRITE_ONLY
@@ -93,6 +94,8 @@ class Cooler {
   hsize_t _nbins{0};
   i64 _nchroms{0};
   i64 _nnz{0};
+  using _SumT = typename std::conditional<IS_FP, double, i64>::type;
+  _SumT _sum{0};
 
   enum Groups : u8f { chrom = 0, BIN = 1, PXL = 2, IDX = 3 };
   enum Datasets : u8f {

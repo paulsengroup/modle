@@ -70,6 +70,17 @@ Cooler<N>::Cooler(boost::filesystem::path path_to_file, IO_MODE mode, usize bin_
       DISABLE_WARNING_USELESS_CAST
       this->_bin_size =
           static_cast<usize>(hdf5::read_attribute_int(*this->_fp, "bin-size", this->_root_path));
+      this->_nnz = static_cast<i64>(hdf5::read_attribute_int(*this->_fp, "nnz", this->_root_path));
+      if (hdf5::has_attribute(*this->_fp, "sum", this->_root_path)) {
+        using SumT = decltype(this->_sum);
+        if constexpr (IS_FP) {
+          this->_sum =
+              static_cast<SumT>(hdf5::read_attribute<double>(*this->_fp, "sum", this->_root_path));
+        } else {
+          this->_sum =
+              static_cast<SumT>(hdf5::read_attribute_int(*this->_fp, "sum", this->_root_path));
+        }
+      }
       DISABLE_WARNING_POP
     }
     this->open_default_datasets();
@@ -114,7 +125,8 @@ Cooler<N>::~Cooler() {
             FMT_STRING(
                 "Message for the developers: ~Cooler() for file {} was called on a closed "
                 "file handle. This should never happen, as whenever Cooler objects are created "
-                "in write-mode the file handle is supposed to be closed upon object destruction!"),
+                "in write-mode the file handle is supposed to be closed upon object "
+                "destruction!"),
             this->_path_to_file);
       }
     }
@@ -638,10 +650,10 @@ void Cooler<N>::open_default_datasets() {
         hdf5::open_dataset(f, absl::StrCat(this->_root_path, "indexes/chrom_offset"), ai64);
 
   } catch ([[maybe_unused]] const H5::FileIException &e) {
-    throw std::runtime_error(fmt::format(
-        FMT_STRING(
-            "An error occurred while trying to open Cooler's default datasets of file \"{}\": {}"),
-        this->_path_to_file, hdf5::construct_error_stack()));
+    throw std::runtime_error(
+        fmt::format(FMT_STRING("An error occurred while trying to open Cooler's default datasets "
+                               "of file \"{}\": {}"),
+                    this->_path_to_file, hdf5::construct_error_stack()));
   }
 }
 
@@ -775,10 +787,10 @@ bool Cooler<N>::validate_cool_flavor(H5::H5File &f, usize bin_size, std::string_
         if (!throw_on_failure) {
           return false;
         }
-        throw std::runtime_error(fmt::format(
-            FMT_STRING(
-                "File is not in Cooler format: format attribute should be HDF5::Cooler, is \"{}\""),
-            str_buff));
+        throw std::runtime_error(
+            fmt::format(FMT_STRING("File is not in Cooler format: format attribute should be "
+                                   "HDF5::Cooler, is \"{}\""),
+                        str_buff));
       }
     } else {
       spdlog::warn(FMT_STRING("WARNING: missing attribute 'format' in file \"{}\"\n"),
