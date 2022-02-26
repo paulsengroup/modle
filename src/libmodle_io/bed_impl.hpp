@@ -51,8 +51,7 @@ std::pair<iterator_t<K, I>, bool> BED_tree<K, I>::insert(const K& chrom_name, va
 template <typename K, typename I>
 std::pair<iterator_t<K, I>, bool> BED_tree<K, I>::insert(const K& chrom_name, I chrom_start,
                                                          I chrom_end) {
-  [[maybe_unused]] auto [node, inserted] =
-      this->_trees.try_emplace(std::move(chrom_name), IITree_t{});
+  auto node = this->_trees.try_emplace(std::move(chrom_name), IITree_t{}).first;
   node->second.insert(chrom_start, chrom_end, BED{chrom_name, bp_t(chrom_start), bp_t(chrom_end)});
   return std::make_pair(node, true);
 }

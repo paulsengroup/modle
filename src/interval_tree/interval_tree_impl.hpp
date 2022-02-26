@@ -270,8 +270,7 @@ usize IITree<N, T>::upper_bound_idx(const N start, const N end) const noexcept {
 
 template <class N, class T>
 bool IITree<N, T>::overlaps_with(const N start, const N end) const noexcept {
-  [[maybe_unused]] const auto [overlap_begin, _] =
-      this->internal_equal_range<QueryType::CONTAINS>(start, end);
+  const auto overlap_begin = this->internal_equal_range<QueryType::CONTAINS>(start, end).first;
   return overlap_begin != this->_data.end();
 }
 

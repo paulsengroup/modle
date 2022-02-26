@@ -97,8 +97,7 @@ TEST_CASE("Interval tree chrX", "[interval-tree][short]") {
 
     CHECK(tree.overlaps_with(record.start, record.end));
     CHECK(tree.count(record.start, record.end) == 1);
-    [[maybe_unused]] const auto [overlap_begin, overlap_end] =
-        tree.find_overlaps(record.start, record.end);
+    const auto overlap_begin = tree.find_overlaps(record.start, record.end).first;
 
     CHECK(overlap_begin->start == record.start);
     CHECK(overlap_begin->end == record.end);

@@ -156,7 +156,7 @@ class Cooler {
 
   Cooler(const Cooler &) = delete;
   Cooler &operator=(const Cooler &) = delete;
-#if defined(__clang__) && __clang_major__ < 7
+#if defined(__clang__) && __clang_major__ < 8
   Cooler(Cooler &&) = default;
   Cooler &operator=(Cooler &&) = default;
 #else

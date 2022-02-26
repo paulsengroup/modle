@@ -49,25 +49,25 @@ FP binomial_test(const I k, const I n, const FP p) {
   }
 
   // https://github.com/scipy/scipy/blob/47bb6febaa10658c72962b9615d5d5aa2513fa3a/scipy/stats/_binomtest.py#L337
-  auto binary_search_over_binom_pmf = [&pmf, &distr](auto d, auto x0, auto x1, auto cfx) {
+  auto binary_search_over_binom_pmf = [&pmf, &distr](auto d_, auto x0_, auto x1_, auto cfx) {
     assert(cfx == 1 || cfx == -1);
-    auto fx = [&](auto x) { return cfx * pmf(distr, x); };
-    while (x0 < x1) {
-      const auto x = x0 + ((x1 - x0) / 2);
+    auto fx = [&](auto x_) { return cfx * pmf(distr, x_); };
+    while (x0_ < x1_) {
+      const auto x = x0_ + ((x1_ - x0_) / 2);
       const auto y = fx(x);
-      if (y < d) {
-        x0 = x + 1;
-      } else if (y > d) {
-        x1 = x - 1;
+      if (y < d_) {
+        x0_ = x + 1;
+      } else if (y > d_) {
+        x1_ = x - 1;
       } else {
         return x;
       }
     }
 
-    if (fx(x0) <= d) {
-      return x0;
+    if (fx(x0_) <= d_) {
+      return x0_;
     }
-    return x0 - 1;
+    return x0_ - 1;
   };
 
   const auto d = pmf(distr, k);

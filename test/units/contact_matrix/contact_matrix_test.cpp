@@ -439,15 +439,15 @@ TEST_CASE("CMatrix difference of gaussians", "[cmatrix][long]") {
                                             stdout_stream);
   };
 
-  const double sigma1 = 1.0;
-  const double sigma2 = 1.6;
-  const double trunc = 3.0;
+  const double sigma1_ = 1.0;
+  const double sigma2_ = 1.6;
+  const double trunc_ = 3.0;
   const auto reference_matrix =
-      compute_reference_matrix(input_matrix.ncols(), sigma1, sigma2, trunc);
-  const auto gauss_diff_matrix = input_matrix.gaussian_diff(sigma1, sigma2);
+      compute_reference_matrix(input_matrix.ncols(), sigma1_, sigma2_, trunc_);
+  const auto gauss_diff_matrix = input_matrix.gaussian_diff(sigma1_, sigma2_);
 
-  const auto m1 = input_matrix.blur(sigma1);
-  const auto m2 = input_matrix.blur(sigma2);
+  const auto m1 = input_matrix.blur(sigma1_);
+  const auto m2 = input_matrix.blur(sigma2_);
 
   for (usize j = 4; j < input_matrix.nrows(); ++j) {
     for (auto k = j; k < input_matrix.ncols() - 4; ++k) {
@@ -481,19 +481,19 @@ TEST_CASE("CMatrix difference of gaussians - parallel", "[cmatrix][long]") {
                                             stdout_stream);
   };
 
-  const double sigma1 = 1.0;
-  const double sigma2 = 1.6;
-  const double trunc = 3.0;
+  const double sigma1_ = 1.0;
+  const double sigma2_ = 1.6;
+  const double trunc_ = 3.0;
 
   thread_pool tpool;
   const auto reference_matrix =
-      compute_reference_matrix(input_matrix.ncols(), sigma1, sigma2, trunc);
+      compute_reference_matrix(input_matrix.ncols(), sigma1_, sigma2_, trunc_);
   const auto gauss_diff_matrix =
-      input_matrix.gaussian_diff(sigma1, sigma2, std::numeric_limits<double>::lowest(),
+      input_matrix.gaussian_diff(sigma1_, sigma2_, std::numeric_limits<double>::lowest(),
                                  (std::numeric_limits<double>::max)(), &tpool);
 
-  const auto m1 = input_matrix.blur(sigma1);
-  const auto m2 = input_matrix.blur(sigma2);
+  const auto m1 = input_matrix.blur(sigma1_);
+  const auto m2 = input_matrix.blur(sigma2_);
 
   for (usize j = 4; j < input_matrix.nrows(); ++j) {
     for (auto k = j; k < input_matrix.ncols() - 4; ++k) {

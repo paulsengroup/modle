@@ -118,12 +118,15 @@ template <class N>
 
   // Look for conflicting information in Cooler files
   std::string err;
-  for (const auto &[name, range] : chrom_intersection) {
+  DISABLE_WARNING_PUSH
+  DISABLE_WARNING_UNUSED_VARIABLE
+  for (const auto &[name, _] : chrom_intersection) {
     if (chrom_set1.at(name).second != chrom_set2.at(name).second) {
       err += fmt::format(FMT_STRING("\n - \"{}\" has size {} in file #1 and {} in file #2"), name,
                          chrom_set1.at(name).second, chrom_set2.at(name).second);
     }
   }
+  DISABLE_WARNING_POP
 
   if (!err.empty()) {
     throw std::runtime_error(
@@ -554,21 +557,21 @@ static void run_task(const enum eval_config::Metric metric, const std::string &c
     writer.bwig->write_range(chrom_name, absl::MakeSpan(metrics.metric1), bin_size, bin_size);
     const auto [chrom_start, chrom_end] = chrom_range;
     std::string buff;
-    auto format_tsv_record = [&](const std::string_view chrom_name_, const auto start_pos,
-                                 const auto end_pos, const auto score1, const auto score2) {
+    auto format_tsv_record = [&](const std::string_view chrom_name_, const auto start_pos_,
+                                 const auto end_pos_, const auto score1, const auto score2) {
       switch (metric) {
         case eval_config::Metric::eucl_dist:
           [[fallthrough]];
         case eval_config::Metric::rmse:
           assert(score2 == 0.0);
-          return fmt::format(FMT_COMPILE("{}\t{}\t{}\t{}\n"), chrom_name_, start_pos, end_pos,
+          return fmt::format(FMT_COMPILE("{}\t{}\t{}\t{}\n"), chrom_name_, start_pos_, end_pos_,
                              score1);
         case eval_config::Metric::spearman:
           [[fallthrough]];
         case eval_config::Metric::pearson:
           [[fallthrough]];
         case eval_config::Metric::custom: {
-          return fmt::format(FMT_COMPILE("{}\t{}\t{}\t{}\t{}\n"), chrom_name_, start_pos, end_pos,
+          return fmt::format(FMT_COMPILE("{}\t{}\t{}\t{}\t{}\n"), chrom_name_, start_pos_, end_pos_,
                              score1, score2);
         }
       }
@@ -611,11 +614,14 @@ void eval_subcmd(const modle::tools::eval_config &c) {
   // Import weights
   if (!weights.empty()) {
     std::vector<std::string> missing_chroms;
+    DISABLE_WARNING_PUSH
+    DISABLE_WARNING_UNUSED_VARIABLE
     for (const auto &[chrom, _] : chromosomes) {
       if (!weights.contains(chrom)) {
         missing_chroms.push_back(chrom);
       }
     }
+    DISABLE_WARNING_POP
     if (!missing_chroms.empty()) {
       throw std::runtime_error(fmt::format(
           FMT_STRING("Failed to import weights from file {} for the following chromosomes: {}"),

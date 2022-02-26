@@ -501,6 +501,7 @@ absl::Span<const i64> Cooler<N>::get_bin1_offset_idx_for_chrom(
                 ((chrom_subrange.second + this->_bin_size - 1) / this->_bin_size);
   DISABLE_WARNING_PUSH
   DISABLE_WARNING_SIGN_COMPARE
+  DISABLE_WARNING_SIGN_CONVERSION
   assert(chrom_end_bin <= this->_idx_chrom_offset[chrom_idx + 1]);
   assert(chrom_end_bin >= chrom_start_bin);
   DISABLE_WARNING_POP

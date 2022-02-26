@@ -52,7 +52,7 @@ class ContactMatrix {
  public:
   // Constructors
   inline ContactMatrix() = default;
-#if defined(__clang__) && __clang_major__ < 7
+#if defined(__clang__) && __clang_major__ < 8
   inline ContactMatrix(ContactMatrix<N>&& other) = default;
 #else
   inline ContactMatrix(ContactMatrix<N>&& other) noexcept = default;
@@ -68,7 +68,7 @@ class ContactMatrix {
 
   // Operators
   inline ContactMatrix<N>& operator=(const ContactMatrix<N>& other);
-#if defined(__clang__) && __clang_major__ < 7
+#if defined(__clang__) && __clang_major__ < 8
   inline ContactMatrix<N>& operator=(ContactMatrix<N>&& other) = default;
 #else
   inline ContactMatrix<N>& operator=(ContactMatrix<N>&& other) noexcept = default;
