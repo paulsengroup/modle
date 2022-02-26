@@ -16,7 +16,7 @@ sudo docker run robomics/modle:main --help
 Building MoDLE requires a compiler toolchain supporting C++17, such as:
 
 - GCC 7 and newer
-- Clang 6 and newer
+- Clang 7 and newer
 - Apple-Clang 10.0 and newer
 
 MoDLE is being developed on Linux and should run on most UNIX-like OS (including macOS).
