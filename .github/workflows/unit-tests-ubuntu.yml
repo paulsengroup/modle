@@ -44,9 +44,9 @@ jobs:
         image:
           - ubuntu:20.04
         compiler:
-          - gcc-8
+          - gcc-7
           - gcc-11
-          - llvm-6.0.1
+          - llvm-7.0.1
           - llvm-13.0.0
         generator:
           - "Ninja"
