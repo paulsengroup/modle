@@ -85,6 +85,7 @@ struct Config {
   // Misc probabilities
   double probability_of_extrusion_unit_bypass{0.1};
   double extrusion_barrier_occupancy{0.825};
+  bool override_extrusion_barrier_occupancy{false};
   double ctcf_occupied_self_prob{0.0};
   double ctcf_not_occupied_self_prob{0.70};
   double lef_bar_major_collision_pblock{1.0};

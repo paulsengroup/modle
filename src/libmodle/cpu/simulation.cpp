@@ -66,6 +66,19 @@ Simulation::Simulation(const Config& c, bool import_chroms)
   _tpool.reset(c.nthreads + 1);
   DISABLE_WARNING_POP
 
+  // Override barrier occupancies read from BED file
+  if (c.override_extrusion_barrier_occupancy) {
+    for (auto& chrom : this->_genome) {
+      auto& barriers = chrom.barriers();
+      std::transform(barriers.data_begin(), barriers.data_end(), barriers.data_begin(),
+                     [&](const auto& barrier) {
+                       return ExtrusionBarrier{barrier.pos(), c.ctcf_occupied_self_prob,
+                                               c.ctcf_not_occupied_self_prob,
+                                               barrier.blocking_direction_minor()};
+                     });
+    }
+  }
+
   std::vector<std::string> warnings;
   for (const auto& chrom : this->_genome) {
     if (chrom.simulated_size() < this->diagonal_width) {

@@ -320,8 +320,9 @@ static void add_common_options(CLI::App& subcommand, modle::Config& c) {
   extr_barr.add_option(
       "--extrusion-barrier-occupancy",
       c.extrusion_barrier_occupancy,
-      "Probability that an extrusion barrier will be active (i.e. occupied) at any given time."
-      "This parameter provides an easier mean to set --ctcf-occupied-probability-of-transition-to-self.")
+      "Probability that an extrusion barrier will be active (i.e. occupied) at any given time.\n"
+      "This parameter provides an easier mean to set --ctcf-occupied-probability-of-transition-to-self."
+      "Passing this parameter will override barrier occupancies read from the BED file specified through --extrusion-barrier-file.")
       ->check(CLI::Range(0.0, 1.0));
 
   extr_barr.add_option(
@@ -704,14 +705,7 @@ void Cli::validate_args() const {
   const auto& c = this->_config;
   std::vector<std::string> errors;
 
-  const auto* subcmd = [&]() {
-    for (const auto& subcmd_ : {"sim", "pert", "replay"}) {
-      if (auto* s = this->_cli.get_subcommand(subcmd_); s->parsed()) {
-        return s;
-      }
-    }
-    MODLE_UNREACHABLE_CODE;
-  }();
+  const auto* subcmd = this->get_subcommand_ptr();
 
   if (c.burnin_smoothing_window_size > c.burnin_history_length) {
     assert(subcmd->get_option_group("Generic")->get_option("--burnin-smoothing-window-size"));
@@ -773,6 +767,24 @@ void Cli::validate_args() const {
   }
 }
 
+CLI::App* Cli::get_subcommand_ptr() {
+  for (const auto& subcmd : {"sim", "pert", "replay"}) {
+    if (auto* s = this->_cli.get_subcommand(subcmd); s->parsed()) {
+      return s;
+    }
+  }
+  MODLE_UNREACHABLE_CODE;
+}
+
+const CLI::App* Cli::get_subcommand_ptr() const {
+  for (const auto& subcmd : {"sim", "pert", "replay"}) {
+    if (auto* s = this->_cli.get_subcommand(subcmd); s->parsed()) {
+      return s;
+    }
+  }
+  MODLE_UNREACHABLE_CODE;
+}
+
 void Cli::transform_args() {
   auto& c = this->_config;
 
@@ -826,6 +838,14 @@ void Cli::transform_args() {
     const auto pon = 1.0 - c.ctcf_occupied_self_prob;
     const auto occ = pno / (pno + pon);
     c.extrusion_barrier_occupancy = occ;
+  }
+
+  const auto* subcmd = this->get_subcommand_ptr();
+
+  if (!subcmd->get_option_group("Extrusion Barriers")
+           ->get_option("--extrusion-barrier-occupancy")
+           ->empty()) {
+    c.override_extrusion_barrier_occupancy = true;
   }
 }
 

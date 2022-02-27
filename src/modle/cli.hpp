@@ -51,6 +51,8 @@ class Cli {
   void make_replay_subcommand();
   void validate_args() const;
   void transform_args();
+  [[nodiscard]] CLI::App* get_subcommand_ptr();
+  [[nodiscard]] const CLI::App* get_subcommand_ptr() const;
 
  public:
   using StoppingCriterionMappings = utils::CliEnumMappings<Config::StoppingCriterion>;
