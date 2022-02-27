@@ -172,8 +172,8 @@ jobs:
           R --version
           python3 --version
 
-          if [[ ${{ matrix.compiler }} == llvm-7.0.1 ]]; then
-            apt-get install -y libtinfo5
+          if [[ ${{ matrix.compiler }} == llvm-7* ]]; then
+            apt-get install -y libtinfo5 libtinfo-dev
           fi
 
       - name: Cache Conan packages
