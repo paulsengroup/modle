@@ -46,8 +46,8 @@ jobs:
         compiler:
           - gcc-7
           - gcc-11
-          - llvm-7.0.1
-          - llvm-13.0.0
+          - llvm-7
+          - llvm-13
         generator:
           - "Ninja"
         cmake:
@@ -105,7 +105,7 @@ jobs:
           image="${{ matrix.image }}"
           compiler="${{ matrix.compiler }}"
 
-          echo "::set-output name=string::$host_os-$image-$compiler"
+          echo "::set-output name=string::$host_os-$image-$compiler-$generator"
 
       - name: Generate R cache key
         id: r_cache_key
@@ -171,6 +171,10 @@ jobs:
 
           R --version
           python3 --version
+
+          if [[ ${{ matrix.compiler }} == llvm-7.0.1 ]]; then
+            apt-get install -y libtinfo5
+          fi
 
       - name: Cache Conan packages
         uses: actions/cache@v2
