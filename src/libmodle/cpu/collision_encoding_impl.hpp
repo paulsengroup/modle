@@ -105,6 +105,8 @@ constexpr bool Collision<I>::is_valid_event(const CollisionEventT event) noexcep
   return ok;
 }
 
+DISABLE_WARNING_PUSH
+DISABLE_WARNING_UNUSED_PARAMETER
 template <class I>
 constexpr void Collision<I>::validate(const usize idx, const CollisionEventT event) {
   if constexpr (utils::ndebug_not_defined()) {
@@ -137,6 +139,7 @@ constexpr void Collision<I>::validate(const usize idx, const CollisionEventT eve
     }
   }
 }
+DISABLE_WARNING_POP
 
 template <class I>
 constexpr void Collision<I>::validate() const {

@@ -15,7 +15,7 @@ add_executable(modle_tools main.cpp)
 target_sources(
   modle_tools
   PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/cli.hpp
-        ${CMAKE_CURRENT_SOURCE_DIR}/include/modle_tools/modle_tools_config.hpp
+          ${CMAKE_CURRENT_SOURCE_DIR}/include/modle_tools/modle_tools_config.hpp
           ${CMAKE_CURRENT_SOURCE_DIR}/cli.cpp
           ${CMAKE_CURRENT_SOURCE_DIR}/eval.cpp
           ${CMAKE_CURRENT_SOURCE_DIR}/find_barrier_clusters.cpp

@@ -13,7 +13,9 @@ set(CMAKE_CXX_STANDARD 17)
 # -std=gnu++20 for example when compiling with PCH enabled
 set(CMAKE_CXX_EXTENSIONS OFF)
 
-set(ENABLE_DEVELOPER_MODE OFF CACHE BOOL "Enable 'developer mode'")
+set(ENABLE_DEVELOPER_MODE
+    OFF
+    CACHE BOOL "Enable 'developer mode'")
 
 include(FetchContent)
 # cmake-format: off
@@ -52,6 +54,7 @@ if(BUILDING_MULTI_CONFIG)
 endif()
 
 include(${_project_options_SOURCE_DIR}/src/DynamicProjectOptions.cmake)
+include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/CompilerWarnings.cmake)
 
 # dynamic_project_options sets recommended defaults and provides user and developer modes and full GUI support for
 # choosing options at configure time
@@ -74,7 +77,15 @@ dynamic_project_options(
   # if a file does not have an internalAstError, we get an unmatchedSuppression error
   --suppress=unmatchedSuppression
   --suppress=passedByValue
-  --inconclusive)
+  --inconclusive
+  MSVC_WARNINGS
+  ${MSVC_WARNINGS}
+  CLANG_WARNINGS
+  ${CLANG_WARNINGS}
+  GCC_WARNINGS
+  ${GCC_WARNINGS}
+  CUDA_WARNINGS
+  ${CUDA_WARNINGS})
 
 set(ENABLE_CACHE_DEVELOPER ON)
 set(ENABLE_CACHE_USER OFF)
