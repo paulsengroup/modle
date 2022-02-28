@@ -1,6 +1,6 @@
-// Copyright (C) 2021 Roberto Rossini <roberros@uio.no>
-// Copyright (c) 2019     Dana-Farber Cancer Institute
-// Copyright (c) 2021     modified by Roberto Rossini
+// Copyright (C) 2022 Roberto Rossini <roberros@uio.no>
+// Copyright (C) 2019     Dana-Farber Cancer Institute
+// Copyright (C) 2021     modified by Roberto Rossini
 //
 // SPDX-License-Identifier: MIT
 

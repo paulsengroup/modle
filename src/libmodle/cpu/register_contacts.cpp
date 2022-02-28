@@ -1,4 +1,4 @@
-// Copyright (c) 2022 Roberto Rossini <roberros@uio.no>
+// Copyright (C) 2022 Roberto Rossini <roberros@uio.no>
 //
 // SPDX-License-Identifier: MIT
 

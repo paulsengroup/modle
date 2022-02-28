@@ -1,6 +1,6 @@
 MIT License
 
-Copyright (c) 2020 Roberto Rossini
+Copyright (C) 2020 Roberto Rossini
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -26,7 +26,7 @@ In addition, certain files include the notices provided below.
 Files from archive external/bitflags-x.y.z.tar.xz:
     MIT License
 
-    Copyright (c) 2020 Marin Peko
+    Copyright (C) 2020 Marin Peko
 
     Permission is hereby granted, free of charge, to any person obtaining a copy
     of this software and associated documentation files (the "Software"), to deal
@@ -49,8 +49,8 @@ Files from archive external/bitflags-x.y.z.tar.xz:
 Files from archive external/libBigWig-x.y.z.tar.xz:
     The MIT License (MIT)
 
-    Copyright (c) 2021 Roberto Rossini <roberros@uio.no>
-    Copyright (c) 2015 Devon Ryan
+    Copyright (C) 2022 Roberto Rossini <roberros@uio.no>
+    Copyright (C) 2015 Devon Ryan
 
     Permission is hereby granted, free of charge, to any person obtaining a copy
     of this software and associated documentation files (the "Software"), to deal
@@ -73,7 +73,7 @@ Files from archive external/libBigWig-x.y.z.tar.xz:
 Files from archive external/mscharconv.tar.xz:
     Microsoft C++ Standard Library
 
-    Copyright (c) Microsoft Corporation
+    Copyright (C) Microsoft Corporation
 
     Licensed under the Apache License, Version 2.0 (the "License");
     you may not use this file except in compliance with the License.
@@ -107,7 +107,7 @@ Files from archive external/mscharconv.tar.xz:
 Files from archive external/thread-pool-2.0.0.tar.xz:
     MIT License
 
-    Copyright (c) 2021 Barak Shoshany
+    Copyright (C) 2021 Barak Shoshany
 
     Permission is hereby granted, free of charge, to any person obtaining a copy
     of this software and associated documentation files (the "Software"), to deal
@@ -130,7 +130,7 @@ Files from archive external/thread-pool-2.0.0.tar.xz:
 Files from archive external/Xoshiro-cpp-1.1.tar.xz:ù
     MIT License
 
-    Copyright (c) 2020 Ryo Suzuki <reputeless@gmail.com>
+    Copyright (C) 2020 Ryo Suzuki <reputeless@gmail.com>
 
     Permission is hereby granted, free of charge, to any person obtaining a copy
     of this software and associated documentation files (the "Software"), to deal
