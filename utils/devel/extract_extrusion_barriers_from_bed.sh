@@ -24,8 +24,7 @@ BEGIN {
           $7 -= start;
           $8 -= start;
         }
-        # Set score to 0.8 (will be used as barrier strength)
-        $5 = 0.8;
+        $5 = prob_of_block;
         # In this particular file, strand information is stored in the name field.
         # The following copies the name column to the strand column
         $6 = tolower($4);
