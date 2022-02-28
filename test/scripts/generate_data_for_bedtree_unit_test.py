@@ -1,5 +1,9 @@
 #!/usr/bin/env python3
 
+# Copyright (c) 2022 Roberto Rossini <roberros@uio.no>
+#
+# SPDX-License-Identifier: MIT
+
 import numpy as np
 import pandas as pd
 import argparse

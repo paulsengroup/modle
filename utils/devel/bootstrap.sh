@@ -1,5 +1,9 @@
 #!/usr/bin/env bash
 
+# Copyright (C) 2022 Roberto Rossini <roberros@uio.no>
+#
+# SPDX-License-Identifier: MIT
+
 # Requires python3 and a compiler (gcc, clang or apple clang) installed
 # TODO: allow users to specify a different /tmp dir.
 # TODO: setup conan to write everything (including data/) inside the tmp dir

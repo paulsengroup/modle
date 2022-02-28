@@ -1,4 +1,9 @@
 #!/bin/sh
+
+# Copyright (c) 2022 Roberto Rossini <roberros@uio.no>
+#
+# SPDX-License-Identifier: MIT
+
 # Adapted from https://github.com/uber/NullAway/blob/master/config/hooks/pre-commit
 
 set -e

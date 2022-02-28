@@ -1,5 +1,9 @@
 #!/usr/bin/env bash
 
+# Copyright (C) 2022 Roberto Rossini <roberros@uio.no>
+#
+# SPDX-License-Identifier: MIT
+
 if [ $# -ne 5 ]; then
     echo "Usage:    $0 file.bed chr chr_start chr_end prob_of_barr_block"
     echo "Example:  $0 file.bed chr7 78000000 87000000 0.8"

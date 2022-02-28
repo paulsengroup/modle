@@ -1,5 +1,9 @@
 #!/usr/bin/env bash
 
+# Copyright (c) 2022 Roberto Rossini <roberros@uio.no>
+#
+# SPDX-License-Identifier: MIT
+
 set -e
 
 if ! systemctl is-active --quiet docker.service; then

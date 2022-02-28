@@ -1,3 +1,9 @@
+<!--
+Copyright (C) 2022 Roberto Rossini <roberros@uio.no>
+
+SPDX-License-Identifier: MIT
+-->
+
 # Using git hooks for this repo
 
 - Install clang-format and cmake-format

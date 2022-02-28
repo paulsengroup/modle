@@ -1,4 +1,9 @@
 #!/usr/bin/env python3
+
+# Copyright (C) 2022 Roberto Rossini <roberros@uio.no>
+#
+# SPDX-License-Identifier: MIT
+
 import pandas as pd
 import numpy as np
 from matplotlib import pyplot as plt
