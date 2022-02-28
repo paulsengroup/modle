@@ -1,2 +1,0 @@
-/tmp/dummy_data/sample.bw
-/tmp/dummy_data/sample.bw
