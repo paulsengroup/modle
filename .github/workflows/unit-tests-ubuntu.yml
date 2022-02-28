@@ -31,7 +31,7 @@ env:
   CONAN_V2_MODE: "1"
   CCACHE_DIR: "${{ github.workspace }}/ccache-cache"
   CCACHE_COMPRESSLEVEL: "13"
-  CCACHE_MAXSIZE: "100M"
+  CCACHE_MAXSIZE: "250M"
 
 jobs:
   build:
@@ -114,6 +114,11 @@ jobs:
           key: ccache-${{ steps.ccache_cache_key.outputs.string }}
           path: ${{ env.CCACHE_DIR }}
 
+      - name: Install ccache
+        run: |
+          apt-get update
+          apt-get install -y -q ccache
+
       - name: Install unit test dependencies
         run: |
           # Make sure timezone information is properly set to avoid
@@ -160,7 +165,7 @@ jobs:
         uses: aminya/setup-cpp@v1
         with:
           compiler: ${{ matrix.compiler }}
-          ccache: true
+          ccache: false
           cmake: ${{ matrix.cmake }}
           conan: true
           # gcovr: true
