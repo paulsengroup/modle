@@ -29,11 +29,9 @@ env:
   CONAN_USER_HOME: "${{ github.workspace }}/conan-cache"
   CONAN_USER_HOME_SHORT: "${{ github.workspace }}/conan-cache/short"
   CONAN_V2_MODE: "1"
-  CCACHE_BASEDIR: "${{ github.workspace }}/ccache-cache"
-  CCACHE_NOCOMPRESS: "" # Let GHA cache do the compression
-  CCACHE_MAXSIZE: "500M"
-  R_HOME_USER: "${{ github.workspace }}/r-cache"
-  PIP_CACHE_DIR: "${{ github.workspace }}/pip-cache"
+  CCACHE_DIR: "${{ github.workspace }}/ccache-cache"
+  CCACHE_COMPRESSLEVEL: "13"
+  CCACHE_MAXSIZE: "100M"
 
 jobs:
   build:
@@ -104,36 +102,17 @@ jobs:
           host_os="host-${{ runner.os }}"
           image="${{ matrix.image }}"
           compiler="${{ matrix.compiler }}"
+          generator="${{ matrix.generator }}"
+          build_type="${{ matrix.build_type }}"
+          hash="${{ hashFiles('.github/workflows/unit-tests-ubuntu.yml') }}"
 
-          echo "::set-output name=string::$host_os-$image-$compiler-$generator"
+          echo "::set-output name=string::$host_os-$image-$compiler-$generator-$build_type-$hash"
 
-      - name: Generate R cache key
-        id: r_cache_key
-        run: |
-          host_os="host-${{ runner.os }}"
-          image="${{ matrix.image }}"
-
-          echo "::set-output name=string::$host_os-$image"
-
-      - name: Generate pip cache key
-        id: pip_cache_key
-        run: |
-          host_os="host-${{ runner.os }}"
-          image="${{ matrix.image }}"
-
-          echo "::set-output name=string::$host_os-$image"
-
-      - name: Cache R home
+      - name: Cache Ccache folder
         uses: actions/cache@v2
         with:
-          key: r-home-${{ steps.r_cache_key.outputs.string }}
-          path: ${{ env.R_HOME_USER }}
-
-      - name: Cache pip
-        uses: actions/cache@v2
-        with:
-          key: pip-cache-${{ steps.pip_cache_key.outputs.string }}
-          path: ${{ env.PIP_CACHE_DIR }}
+          key: ccache-${{ steps.ccache_cache_key.outputs.string }}
+          path: ${{ env.CCACHE_DIR }}
 
       - name: Install unit test dependencies
         run: |
@@ -155,14 +134,19 @@ jobs:
           add-apt-repository -y ppa:c2d4u.team/c2d4u4.0+
 
           # Install a modern version of R as well as dependencies needed to build wCorr
-          apt-get install -y -q --no-install-recommends r-base        \
-                                                        r-base-dev    \
-                                                        r-cran-minqa  \
-                                                        r-cran-mnormt \
-                                                        r-cran-rcpparmadillo
+          apt-get install -y -q ccache        \
+                                r-base        \
+                                r-base-dev    \
+                                r-cran-minqa  \
+                                r-cran-mnormt \
+                                r-cran-rcpparmadillo
 
-          # Enable parallel compilation for R packages
-          echo "options(Ncpus = $(nproc))" > "$HOME/.Rprofile"
+          echo "options(Ncpus = $(nproc))" | tee /etc/R/Rprofile.site
+
+          mv /etc/R/Makeconf /etc/R/Makeconf.old
+          sed -E "s|=\s+gcc|= ccache $(which gcc)|g" /etc/R/Makeconf.old |
+          sed -E "s|=\s+g[+]{2}|= ccache $(which g++)|g" |
+          sed -E "s|=\s+gfortran|= ccache $(which gfortran)|g" > /etc/R/Makeconf
           echo "MAKEFLAGS = -j$(nproc)" >> /etc/R/Makeconf
 
           # Install and test wCorr
@@ -171,22 +155,6 @@ jobs:
 
           R --version
           python3 --version
-
-          if [[ ${{ matrix.compiler }} == llvm-7* ]]; then
-            apt-get install -y libtinfo5 libtinfo-dev
-          fi
-
-      - name: Cache Conan packages
-        uses: actions/cache@v2
-        with:
-          key: conan-${{ steps.conan_cache_key.outputs.string }}
-          path: ${{ env.CONAN_USER_HOME }}
-
-      - name: Cache Ccache folder
-        uses: actions/cache@v2
-        with:
-          key: ccache-${{ steps.ccache_cache_key.outputs.string }}
-          path: ${{ env.CCACHE_BASEDIR }}
 
       - name: Install build dependencies
         uses: aminya/setup-cpp@v1
@@ -197,6 +165,18 @@ jobs:
           conan: true
           # gcovr: true
           ninja: true
+
+      - name: Patch Clang 7
+        if: "contains(matrix.compiler, 'llvm-7')"
+        run: |
+          apt-get update
+          apt-get install -y libtinfo5 libtinfo-dev
+
+      - name: Cache Conan packages
+        uses: actions/cache@v2
+        with:
+          key: conan-${{ steps.conan_cache_key.outputs.string }}
+          path: ${{ env.CONAN_USER_HOME }}
 
       - name: Clean up Conan
         run: |
