@@ -93,7 +93,10 @@ template <class N>
 
   ChromSet chrom_intersection;
   absl::c_set_intersection(chrom_set1, chrom_set2,
-                           std::inserter(chrom_intersection, chrom_intersection.begin()));
+                           std::inserter(chrom_intersection, chrom_intersection.begin()),
+                           [&](const auto &chrom1, const auto &chrom2) {
+                             return cppsort::natural_less(chrom1.first, chrom2.first);
+                           });
 
   if (chrom_intersection.empty()) {
     std::vector<std::string> chrom_printable1(static_cast<usize>(chrom_set1.size()));
@@ -601,6 +604,18 @@ void eval_subcmd(const modle::tools::eval_config &c) {
                                            cooler::Cooler<double>::IO_MODE::READ_ONLY, c.bin_size);
   auto tgt_cooler = cooler::Cooler<double>(c.path_to_input_matrix,
                                            cooler::Cooler<double>::IO_MODE::READ_ONLY, c.bin_size);
+
+  if (c.bin_size == 0) {  // Bin size was not specified
+    const auto &ref_bin_size = ref_cooler.get_bin_size();
+    const auto &tgt_bin_size = tgt_cooler.get_bin_size();
+    if (ref_bin_size != tgt_bin_size) {
+      throw std::runtime_error(fmt::format(
+          FMT_STRING("Reference and input matrices appear to have different bin sizes:\n"
+                     " - {}: {} bp\n"
+                     " - {}: {} bp"),
+          c.path_to_reference_matrix, ref_bin_size, c.path_to_input_matrix, tgt_bin_size));
+    }
+  }
 
   const auto bin_size = ref_cooler.get_bin_size();
 
