@@ -31,7 +31,7 @@ env:
   CONAN_V2_MODE: "1"
   CCACHE_DIR: "${{ github.workspace }}/ccache-cache"
   CCACHE_COMPRESSLEVEL: "13"
-  CCACHE_MAXSIZE: "250M"
+  CCACHE_MAXSIZE: "500M"
 
 jobs:
   build:
@@ -39,13 +39,13 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        image:
-          - ubuntu:20.04
+        os-version:
+          - 20.04
         compiler:
           - gcc-7
           - gcc-11
-          - llvm-7
-          - llvm-13
+          - clang-6.0
+          - clang-13
         generator:
           - "Ninja"
         cmake:
@@ -56,26 +56,25 @@ jobs:
         developer_mode:
           - ON
 
-
         include:
           # Make sure project builds when using make
-          - image: ubuntu:20.04
-            compiler: llvm-13.0.0
+          - os-version: 20.04
+            compiler: clang-13
             generator: "Unix Makefiles"
             cmake: 3.22.2
             build_type: Debug
             developer_mode: OFF
           # Make sure project builds with cmake 3.16
-          - image: ubuntu:20.04
-            compiler: llvm-13.0.0
+          - os-version: 20.04
+            compiler: clang-13
             generator: "Ninja"
-            cmake: 3.16.9
+            cmake: 3.16.8
             build_type: Debug
             developer_mode: OFF
 
     container:
-      image: ${{ matrix.image }}
-      options: "--user=root -v ${{ github.workspace }}:${{ github.workspace }}"
+      image: ghcr.io/robomics/ci-docker-images/modle/ubuntu-${{ matrix.os-version }}-cxx-${{ matrix.compiler }}:latest
+      options: "-v ${{ github.workspace }}:${{ github.workspace }}"
 
     defaults:
       run:
@@ -83,6 +82,21 @@ jobs:
 
     steps:
       - uses: actions/checkout@v2
+
+      - name: Extract CMake version
+        id: cmake-version
+        run: |
+          cmake_version="$(cmake --version | head -n 1 | grep -oP '\d+\.\d+\.\d+')"
+          echo "Detected CMake version: \"$cmake_version\""
+
+          echo "::set-output name=version::$cmake_version"
+
+      - name: Change CMake version
+        if: ${{ !startsWith(steps.cmake-version.outputs.version, matrix.cmake) }}
+        run: |
+          apt-get update -q
+          apt-get install -y python3-pip
+          pip install "cmake==${{ matrix.cmake}}"
 
       - name: Generate Conan cache key
         id: conan_cache_key
@@ -114,69 +128,6 @@ jobs:
           key: ccache-${{ steps.ccache_cache_key.outputs.string }}
           path: ${{ env.CCACHE_DIR }}
 
-      - name: Install ccache
-        run: |
-          apt-get update
-          apt-get install -y -q ccache
-
-      - name: Install unit test dependencies
-        run: |
-          # Make sure timezone information is properly set to avoid
-          # interactive prompts when installing R
-          ln -snf /usr/share/zoneinfo/CET /etc/localtime
-          echo CET | tee /etc/timezone > /dev/null
-
-          # Install Scipy and add-apt-repository
-          apt-get update -q
-          apt-get install -y -q --no-install-recommends curl             \
-                                                        dirmngr          \
-                                                        python3-scipy    \
-                                                        software-properties-common
-
-          curl -L 'https://cloud.r-project.org/bin/linux/ubuntu/marutter_pubkey.asc' |
-            tee -a /etc/apt/trusted.gpg.d/cran_ubuntu_key.asc > /dev/null
-          add-apt-repository "deb https://cloud.r-project.org/bin/linux/ubuntu $(lsb_release -cs)-cran40/"
-          add-apt-repository -y ppa:c2d4u.team/c2d4u4.0+
-
-          # Install a modern version of R as well as dependencies needed to build wCorr
-          apt-get install -y -q ccache        \
-                                r-base        \
-                                r-base-dev    \
-                                r-cran-minqa  \
-                                r-cran-mnormt \
-                                r-cran-rcpparmadillo
-
-          echo "options(Ncpus = $(nproc))" | tee /etc/R/Rprofile.site
-
-          mv /etc/R/Makeconf /etc/R/Makeconf.old
-          sed -E "s|=\s+gcc|= ccache $(which gcc)|g" /etc/R/Makeconf.old |
-          sed -E "s|=\s+g[+]{2}|= ccache $(which g++)|g" |
-          sed -E "s|=\s+gfortran|= ccache $(which gfortran)|g" > /etc/R/Makeconf
-          echo "MAKEFLAGS = -j$(nproc)" >> /etc/R/Makeconf
-
-          # Install and test wCorr
-          Rscript --no-save -e 'install.packages("wCorr", dependencies=c("Depends", "Imports", "LinkingTo"), repos="https://cloud.r-project.org")'
-          Rscript --no-save -e 'quit(status=!library("wCorr", character.only=T, logical.return=T), save="no")'
-
-          R --version
-          python3 --version
-
-      - name: Install build dependencies
-        uses: aminya/setup-cpp@v1
-        with:
-          compiler: ${{ matrix.compiler }}
-          ccache: false
-          cmake: ${{ matrix.cmake }}
-          conan: true
-          # gcovr: true
-          ninja: true
-
-      - name: Patch Clang 7
-        if: "contains(matrix.compiler, 'llvm-7')"
-        run: |
-          apt-get update
-          apt-get install -y libtinfo5 libtinfo-dev
-
       - name: Cache Conan packages
         uses: actions/cache@v2
         with:
@@ -189,19 +140,10 @@ jobs:
           conan remove -f "*" --src
           conan remove -f "*" --system-reqs
 
-      - name: Update Conan profile
-        run: |
-          rm -f "${{ env.CONAN_USER_HOME }}/.conan/profiles/default"
-          conan profile new "${{ env.CONAN_USER_HOME }}/.conan/profiles/default" --detect
-          conan profile update settings.compiler.libcxx=libstdc++11 default
-          conan profile update settings.compiler.cppstd=17 default
-
       - name: Configure project
         run: |
           mkdir ${{ github.workspace }}/build
           cmake -DCMAKE_BUILD_TYPE=${{ matrix.build_type }}          \
-                -DCMAKE_C_COMPILER="$(which clang)"                  \
-                -DCMAKE_CXX_COMPILER="$(which clang++)"              \
                 -DENABLE_DEVELOPER_MODE=${{ matrix.developer_mode }} \
                 -DOPT_ENABLE_CLANG_TIDY=OFF                          \
                 -DOPT_ENABLE_CPPCHECK=OFF                            \
