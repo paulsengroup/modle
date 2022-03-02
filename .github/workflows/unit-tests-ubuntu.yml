@@ -98,40 +98,35 @@ jobs:
           apt-get install -y python3-pip
           pip install "cmake==${{ matrix.cmake}}"
 
-      - name: Generate Conan cache key
-        id: conan_cache_key
+      - name: Generate cache key
+        id: cache-key
         run: |
           host_os="host-${{ runner.os }}"
           image="${{ matrix.image }}"
           compiler="${{ matrix.compiler }}"
           generator="${{ matrix.generator }}"
           build_type="${{ matrix.build_type }}"
-          hash="${{ hashFiles('conanfile.py') }}"
+          hash="${{ hashFiles('conanfile.py', '.github/workflows/unit-tests-ubuntu.yml') }}"
 
-          echo "::set-output name=string::$host_os-$image-$compiler-$generator-$build_type-$hash"
+          # This can be used by to always update a cache entry (useful e.g. for ccache)
+          current_date="$(date '+%s')"
 
-      - name: Generate Ccache cache key
-        id: ccache_cache_key
-        run: |
-          host_os="host-${{ runner.os }}"
-          image="${{ matrix.image }}"
-          compiler="${{ matrix.compiler }}"
-          generator="${{ matrix.generator }}"
-          build_type="${{ matrix.build_type }}"
-          hash="${{ hashFiles('.github/workflows/unit-tests-ubuntu.yml') }}"
-
-          echo "::set-output name=string::$host_os-$image-$compiler-$generator-$build_type-$hash"
+          echo "::set-output name=key::$host_os-$image-$compiler-$generator-$build_type-$hash"
+          echo "::set-output name=restore-key::$host_os-$image-$compiler-$generator-$build_type"
+          echo "::set-output name=date::$current_date"
 
       - name: Cache Ccache folder
         uses: actions/cache@v2
         with:
-          key: ccache-${{ steps.ccache_cache_key.outputs.string }}
+          key: ccache-${{ steps.cache-key.outputs.key }}-${{ steps.cache-key.outputs.date }}
+          restore-key: ccache-${{ steps.cache-key.outputs.restore-key }}
           path: ${{ env.CCACHE_DIR }}
 
       - name: Cache Conan packages
         uses: actions/cache@v2
         with:
-          key: conan-${{ steps.conan_cache_key.outputs.string }}
+          key: conan-${{ steps.cache-key.outputs.key }}
+          restore-key: conan-${{ steps.cache-key.outputs.restore-key }}
           path: ${{ env.CONAN_USER_HOME }}
 
       - name: Clean up Conan
