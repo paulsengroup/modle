@@ -288,11 +288,11 @@ static void add_common_options(CLI::App& subcommand, modle::Config& c) {
       ->capture_default_str();
 
   gen.add_option(
-      "--prob-of-lef-release",
-      c.prob_of_lef_release,
-      "Probability of LEF release.\n"
-      "The actual probability that is used for a specific LEF is affected --hard-stall-multiplier and --hard-stall-multiplier.")
-      ->check(CLI::PositiveNumber & CLI::Range(0.0, 1.0))
+      "--avg-lef-processivity",
+      c.avg_lef_processivity,
+      "Average LEF processivity in bp.\n"
+      "The average LEF processivity corresponds to the average size of a loop extruded by an unobstructed LEF.")
+      ->check(CLI::PositiveNumber)
       ->capture_default_str();
 
   prob.add_option(
@@ -827,6 +827,13 @@ void Cli::transform_args() {
       std::round(c.burnin_speed_coefficient * static_cast<double>(c.rev_extrusion_speed)));
   c.fwd_extrusion_speed_burnin = static_cast<bp_t>(
       std::round(c.burnin_speed_coefficient * static_cast<double>(c.fwd_extrusion_speed)));
+
+  // Compute the probability of LEF release from avg. processivity and two-sided extr. speed
+  c.prob_of_lef_release = static_cast<double>(c.rev_extrusion_speed + c.fwd_extrusion_speed) /
+                          static_cast<double>(c.avg_lef_processivity);
+  c.prob_of_lef_release_burnin =
+      static_cast<double>(c.rev_extrusion_speed_burnin + c.fwd_extrusion_speed_burnin) /
+      static_cast<double>(c.avg_lef_processivity);
 
   // Compute the transition probabilities for the HMM used to model extrusion barriers
   const auto pno = 1.0 - c.ctcf_not_occupied_self_prob;

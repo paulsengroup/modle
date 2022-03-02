@@ -503,7 +503,8 @@ usize Simulation::release_lefs(const absl::Span<Lef> lefs,
                                const absl::Span<const ExtrusionBarrier> barriers,
                                const absl::Span<const CollisionT> rev_collisions,
                                const absl::Span<const CollisionT> fwd_collisions,
-                               random::PRNG_t& rand_eng) const noexcept {
+                               random::PRNG_t& rand_eng,
+                               const bool burnin_completed) const noexcept {
   auto compute_lef_unloader_affinity = [&](const auto j) {
     assert(lefs[j].is_bound());
 
@@ -532,10 +533,13 @@ usize Simulation::release_lefs(const absl::Span<Lef> lefs,
     }
   };
 
+  const auto& base_prob_lef_release =
+      burnin_completed ? this->prob_of_lef_release : this->prob_of_lef_release_burnin;
+
   usize lefs_released = 0;
   for (usize i = 0; i < lefs.size(); ++i) {
     if (MODLE_LIKELY(lefs[i].is_bound())) {
-      const auto p = compute_lef_unloader_affinity(i) * this->prob_of_lef_release;
+      const auto p = compute_lef_unloader_affinity(i) * base_prob_lef_release;
       assert(p >= 0 && p <= 1);
       if (MODLE_UNLIKELY(random::bernoulli_trial{p}(rand_eng))) {
         ++lefs_released;
@@ -1114,7 +1118,7 @@ void Simulation::simulate_one_cell(State& s) const {
 
       // Select LEFs to be released in the current epoch and release them
       this->release_lefs(s.get_lefs(), s.barriers, s.get_rev_collisions(), s.get_fwd_collisions(),
-                         s.rand_eng);
+                         s.rand_eng, s.burnin_completed);
     }
   } catch (const std::exception& err) {
     throw std::runtime_error(fmt::format(

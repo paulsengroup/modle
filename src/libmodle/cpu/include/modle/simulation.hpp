@@ -448,8 +448,8 @@ class Simulation : Config {
 
   usize release_lefs(absl::Span<Lef> lefs, absl::Span<const ExtrusionBarrier> barriers,
                      absl::Span<const CollisionT> rev_collisions,
-                     absl::Span<const CollisionT> fwd_collisions,
-                     random::PRNG_t& rand_eng) const noexcept;
+                     absl::Span<const CollisionT> fwd_collisions, random::PRNG_t& rand_eng,
+                     bool burnin_completed) const noexcept;
 
   [[nodiscard]] static std::pair<bp_t /*rev*/, bp_t /*fwd*/> compute_lef_lef_collision_pos(
       const ExtrusionUnit& rev_unit, const ExtrusionUnit& fwd_unit, bp_t rev_move, bp_t fwd_move);
