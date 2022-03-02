@@ -170,7 +170,7 @@ static void add_common_options(CLI::App& subcommand, modle::Config& c) {
       ->capture_default_str();
 
   gen.add_option(
-      "--lefs-per-mbp",
+      "--lef-density,--lefs-per-mbp",
       c.number_of_lefs_per_mbp,
       "Number of loop extrusion factors (LEFs) per Mbp of simulated DNA.")
       ->check(CLI::NonNegativeNumber)
