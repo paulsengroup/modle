@@ -36,8 +36,6 @@ struct Config {
   FLAG(loop)
   END_BITFLAGS(ContactSamplingStrategy)
 
-  // clang-format off
-  // IO
   boost::filesystem::path path_to_chrom_sizes;
   boost::filesystem::path path_to_chrom_subranges;
   boost::filesystem::path path_to_output_prefix;
@@ -57,43 +55,60 @@ struct Config {
   boost::filesystem::path path_to_task_file;
   boost::filesystem::path path_to_task_filter_file{};
   bool write_header{true};
+  bool skip_output{false};
+  bool log_model_internal_state{false};
 
-  // General settings
-  bp_t bin_size{5'000};
-  bp_t fwd_extrusion_speed{bin_size / 2};
-  bp_t rev_extrusion_speed{fwd_extrusion_speed};
-  double fwd_extrusion_speed_std{0.05};
-  double rev_extrusion_speed_std{fwd_extrusion_speed_std};
-  usize num_cells{512};
-  usize nthreads{std::thread::hardware_concurrency()};
-  bp_t diagonal_width{3'000'000 /* 3 Mbp */};
+  // Stopping criteria
   usize target_simulation_epochs{2000};
   double target_contact_density{1.0};
   StoppingCriterion stopping_criterion{StoppingCriterion::contact_density};
-  ContactSamplingStrategy contact_sampling_strategy{ContactSamplingStrategy::tad | ContactSamplingStrategy::loop | ContactSamplingStrategy::noisify};
+
+  // Contact matrix and sampling params
+  bp_t bin_size{5'000};
+  bp_t diagonal_width{3'000'000 /* 3 Mbp */};
+  ContactSamplingStrategy contact_sampling_strategy{ContactSamplingStrategy::tad |
+                                                    ContactSamplingStrategy::loop |
+                                                    ContactSamplingStrategy::noisify};
   u64 number_of_loop_contacts_per_sampling_event{1};
   u64 number_of_tad_contacts_per_sampling_event{5};
-  double number_of_lefs_per_mbp{20};
-  double prob_of_lef_release{0.015};
-  double hard_stall_lef_stability_multiplier{5.0};
-  double soft_stall_lef_stability_multiplier{1.0};
-  bp_t deletion_size{10'000};
-  bool compute_reference_matrix{false};
-  usize block_size{9};
-  u64 seed{0};
-
-  // Misc probabilities
-  double probability_of_extrusion_unit_bypass{0.1};
-  double extrusion_barrier_occupancy{0.825};
-  bool override_extrusion_barrier_occupancy{false};
-  double ctcf_occupied_self_prob{0.0};
-  double ctcf_not_occupied_self_prob{0.70};
-  double lef_bar_major_collision_pblock{1.0};
-  double lef_bar_minor_collision_pblock{0.0};
   double lef_fraction_contact_sampling{0.025};
   double genextreme_mu{0};
   double genextreme_sigma{5'000};
   double genextreme_xi{0.001};
+  bool exclude_chrom_wo_extr_barriers{true};
+
+  // LEFs params
+  bp_t fwd_extrusion_speed{bin_size / 2};
+  bp_t rev_extrusion_speed{fwd_extrusion_speed};
+  double fwd_extrusion_speed_std{0.05};
+  double rev_extrusion_speed_std{fwd_extrusion_speed_std};
+  double number_of_lefs_per_mbp{20};
+  double prob_of_lef_release{};
+  double prob_of_lef_release_burnin{};
+  u64 avg_lef_processivity{300'000};
+
+  // Extrusion barrier params
+  double extrusion_barrier_occupancy{0.825};
+  bool override_extrusion_barrier_occupancy{false};
+  double ctcf_occupied_self_prob{0.0};
+  double ctcf_not_occupied_self_prob{0.70};
+
+  // Collision/stall params
+  double hard_stall_lef_stability_multiplier{5.0};
+  double soft_stall_lef_stability_multiplier{1.0};
+  double probability_of_extrusion_unit_bypass{0.1};
+  double lef_bar_major_collision_pblock{1.0};
+  double lef_bar_minor_collision_pblock{0.0};
+
+  // Miscellaneous
+  usize num_cells{512};
+  usize nthreads{std::thread::hardware_concurrency()};
+  u64 seed{0};
+
+  // MoDLE perturbate
+  bp_t deletion_size{10'000};
+  bool compute_reference_matrix{false};
+  usize block_size{9};
 
   // Burn-in
   bool skip_burnin{false};
@@ -102,18 +117,11 @@ struct Config {
   usize max_burnin_epochs{(std::numeric_limits<i64>::max)()};
   usize burnin_target_epochs_for_lef_activation{320};
   double burnin_speed_coefficient{1.0};
-  bp_t fwd_extrusion_speed_burnin{bp_t(std::round(double(fwd_extrusion_speed) * burnin_speed_coefficient))};
+  bp_t fwd_extrusion_speed_burnin{bp_t(double(fwd_extrusion_speed) * burnin_speed_coefficient)};
   bp_t rev_extrusion_speed_burnin{fwd_extrusion_speed_burnin};
 
-  // Misc
-  bool exclude_chrom_wo_extr_barriers{true};
-  bool skip_output{false};
-  bool log_model_internal_state{false};
-
   absl::Span<char*> args;
-
   std::string argv_json{};
-  // clang-format on
 };
 
 }  // namespace modle
