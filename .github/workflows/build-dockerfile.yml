@@ -34,7 +34,7 @@ jobs:
         id: meta
         uses: docker/metadata-action@v3
         with:
-          images: robomics/modle,ghcr.io/robomics/modle
+          images: ${{ github.repository }},ghcr.io/${{ github.repository }}/modle/modle
           tags: |
             type=ref,event=branch
             type=ref,event=pr

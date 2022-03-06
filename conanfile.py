@@ -15,8 +15,8 @@ class MoDLE(ConanFile):
     default_options = {"enable_testing": "ON"}
 
     name = "MoDLE"
-    version = "0.0.1"
-    homepage = "https://github.com/robomics"
+    version = "0.4.1"
+    homepage = "https://github.com/paulsengroup/modle"
     license = "MIT"
     author = "Roberto Rossini (roberros@uio.no)"
     settings = "os", "compiler", "build_type", "arch"
