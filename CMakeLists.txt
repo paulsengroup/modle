@@ -3,7 +3,7 @@ cmake_minimum_required(VERSION 3.11)
 project(
   modle
   LANGUAGES CXX
-  VERSION 0.0.1
+  VERSION 0.3.0
   DESCRIPTION "MoDLE: stochastic modeling of DNA loop extrusion.")
 
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake/modules/")
