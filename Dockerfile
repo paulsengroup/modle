@@ -85,6 +85,8 @@ RUN cd "$build_dir"                          \
 COPY LICENSE                "$src_dir/LICENSE"
 COPY "external/bitflags-$BITFLAGS_VER.tar.xz"                  \
      "$src_dir/external/bitflags-$BITFLAGS_VER.tar.xz"
+COPY "external/cmake-git-version-tracking.tar.xz"              \
+     "$src_dir/external/cmake-git-version-tracking.tar.xz"
 COPY "external/libBigWig-$LIBBIGWIG_VER.tar.xz"                \
      "$src_dir/external/libBigWig-$LIBBIGWIG_VER.tar.xz"
 COPY "external/mscharconv.tar.xz"                              \
