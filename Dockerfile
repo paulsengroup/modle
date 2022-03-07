@@ -2,7 +2,57 @@
 #
 # SPDX-License-Identifier: MIT
 
-FROM ubuntu:20.04 AS builder
+##### IMPORTANT #####
+# This Dockerfile requires several build arguments to be defined through --build-arg
+# Example (assuming command is run from the repository's root):
+#       docker build \
+#         --build-arg "BUILD_BASE_IMAGE=ghcr.io/paulsengroup/ci-docker-images/ubuntu-20.04-cxx-clang-13:latest" \
+#         --build-arg "TEST_BASE_IMAGE=ghcr.io/paulsengroup/ci-docker-images/modle/ubuntu-20.04-cxx-clang-13:latest" \
+#         --build-arg "FINAL_BASE_IMAGE=docker.io/library/ubuntu" \
+#         --build-arg "FINAL_BASE_IMAGE_TAG=20.04" \
+#         --build-arg "FINAL_BASE_IMAGE_DIGEST=$(sudo docker inspect --format='{{index .RepoDigests 0}}' docker.io/library/ubuntu:20.04 | grep -o '[[:alnum:]:]\+$')" \
+#         --build-arg "C_COMPILER=clang-13" \
+#         --build-arg "CXX_COMPILER=clang++-13" \
+#         --build-arg "GIT_HASH=$(git rev-parse HEAD)" \
+#         --build-arg "GIT_SHORT_HASH=$(git rev-parse --short HEAD)" \
+#         --build-arg "CREATION_DATE=$(date --iso-8601)" \
+#         --build-arg "VERSION=x.y.z"                      \
+#         -t modle:latest \
+#         -t modle:x.y.z  \
+#         -t modle:$(date --iso-8601 | tr -d '\-' ) \
+#         .
+#####################
+
+ARG BUILD_BASE_IMAGE
+ARG TEST_BASE_IMAGE
+ARG FINAL_BASE_IMAGE
+ARG FINAL_BASE_IMAGE_DIGEST
+
+FROM "$BUILD_BASE_IMAGE" AS builder
+ARG BUILD_BASE_IMAGE
+ARG TEST_BASE_IMAGE
+ARG FINAL_BASE_IMAGE
+ARG FINAL_BASE_IMAGE_TAG
+ARG FINAL_BASE_IMAGE_DIGEST
+
+ARG C_COMPILER
+ARG CXX_COMPILER
+
+ARG GIT_HASH
+ARG GIT_SHORT_HASH
+ARG CREATION_DATE
+
+# Make sure all build arguments have been defined
+RUN if [ -z "$BUILD_BASE_IMAGE" ]; then echo "Missing BUILD_BASE_IMAGE --build-arg" && exit 1; fi \
+&&  if [ -z "$TEST_BASE_IMAGE" ]; then echo "Missing TEST_BASE_IMAGE --build-arg" && exit 1; fi \
+&&  if [ -z "$FINAL_BASE_IMAGE" ]; then echo "Missing FINAL_BASE_IMAGE --build-arg" && exit 1; fi \
+&&  if [ -z "$FINAL_BASE_IMAGE_TAG" ]; then echo "Missing FINAL_BASE_IMAGE_TAG --build-arg" && exit 1; fi \
+&&  if [ -z "$FINAL_BASE_IMAGE_DIGEST" ]; then echo "Missing FINAL_BASE_IMAGE_DIGEST --build-arg" && exit 1; fi \
+&&  if [ -z "$C_COMPILER" ]; then echo "Missing C_COMPILER --build-arg" && exit 1; fi \
+&&  if [ -z "$CXX_COMPILER" ]; then echo "Missing CXX_COMPILER --build-arg" && exit 1; fi \
+&&  if [ -z "$GIT_HASH" ]; then echo "Missing GIT_HASH --build-arg" && exit 1; fi \
+&&  if [ -z "$GIT_SHORT_HASH" ]; then echo "Missing GIT_SHORT_HASH --build-arg" && exit 1; fi \
+&&  if [ -z "$CREATION_DATE" ]; then echo "Missing CREATION_DATE --build-arg" && exit 1; fi
 
 ARG src_dir='/root/modle'
 ARG build_dir='/root/modle/build'
@@ -14,39 +64,24 @@ ARG LIBBIGWIG_VER=0.4.6
 ARG THREAD_POOL_VER=2.0.0
 ARG XOSHIRO_CPP_VER=1.1
 
-ARG CONAN_VERSION='1.45.*'
 ENV CONAN_V2=1
 ENV CONAN_REVISIONS_ENABLED=1
 ENV CONAN_NON_INTERACTIVE=1
 ENV CONAN_CMAKE_GENERATOR=Ninja
 
-ENV CC=clang-12
-ENV CXX=clang++-12
+ENV CC="$C_COMPILER"
+ENV CXX="$CXX_COMPILER"
 
-RUN apt-get update                            \
-&& apt-get install -y --no-install-recommends \
-                   cmake                      \
-                   clang-12                   \
-                   make                       \
-                   ninja-build                \
-                   python3-pip
-
-RUN pip3 install "conan==$CONAN_VERSION"
-
+# Build MoDLE's deps using Conan
 RUN mkdir -p "$src_dir" "$build_dir"
 
 COPY conanfile.py "$src_dir"
-
-
-RUN conan profile new "$HOME/.conan/profiles/default" --detect        \
-&& conan profile update settings.compiler.libcxx=libstdc++11 default  \
-&& conan profile update settings.compiler.cppstd=17 default
-
 RUN cd "$build_dir"                          \
 && conan install "$src_dir/conanfile.py"     \
               --build outdated               \
               -s build_type=Release
 
+# Copy source files
 COPY LICENSE                "$src_dir/LICENSE"
 COPY "external/bitflags-$BITFLAGS_VER.tar.xz"                  \
      "$src_dir/external/bitflags-$BITFLAGS_VER.tar.xz"
@@ -63,6 +98,7 @@ COPY CMakeLists.txt         "$src_dir/CMakeLists.txt"
 COPY test                   "$src_dir/test"
 COPY src                    "$src_dir/src"
 
+# Configure project
 RUN cd "$build_dir"                            \
 && cmake -DCMAKE_BUILD_TYPE=Release            \
          -DENABLE_DEVELOPER_MODE=OFF           \
@@ -71,43 +107,17 @@ RUN cd "$build_dir"                            \
          -G Ninja                              \
          "$src_dir"
 
+# Build and install project
 RUN cd "$build_dir"               \
 && cmake --build . -j "$(nproc)"  \
 && cmake --install .
 
-FROM ubuntu:20.04 AS testing
+ARG TEST_BASE_IMAGE
+FROM "$TEST_BASE_IMAGE" AS testing
 
-ARG SCIPY_VER="1.5.1"
-ARG WCORR_VER="1.9.5"
 ARG src_dir="/root/modle"
 
-RUN ln -snf /usr/share/zoneinfo/CET /etc/localtime \
-&& echo CET | tee /etc/timezone > /dev/null
-
-RUN apt-get update -q \
-&& apt-get install -y -q --no-install-recommends cmake                      \
-                                                 curl                       \
-                                                 dirmngr                    \
-                                                 python3-pip                \
-                                                 software-properties-common
-
-RUN curl -L 'https://cloud.r-project.org/bin/linux/ubuntu/marutter_pubkey.asc' | \
-    tee -a /etc/apt/trusted.gpg.d/cran_ubuntu_key.asc > /dev/null \
-&& add-apt-repository "deb https://cloud.r-project.org/bin/linux/ubuntu $(lsb_release -cs)-cran40/" \
-&& add-apt-repository -y ppa:c2d4u.team/c2d4u4.0+
-
-RUN apt-get install -y -q --no-install-recommends r-base        \
-                                                  r-base-dev    \
-                                                  r-cran-minqa  \
-                                                  r-cran-mnormt \
-                                                  r-cran-rcpparmadillo
-
-RUN echo "options(Ncpus = $(nproc))" | tee "$HOME/.Rprofile" > /dev/null \
-&& Rscript --no-save -e 'install.packages("wCorr", dependencies=c("Depends", "Imports", "LinkingTo"), repos="https://cloud.r-project.org")' \
-&& Rscript --no-save -e 'quit(status=!library("wCorr", character.only=T, logical.return=T), save="no")'
-
-RUN pip3 install "scipy==${SCIPY_VER}"
-
+# Run test suite
 COPY --from=builder "$src_dir" "$src_dir"
 RUN cd "$src_dir/build"           \
 && ctest -j "$(nproc)"            \
@@ -119,18 +129,44 @@ RUN cd "$src_dir/build"           \
          --repeat after-timeout:3 \
 && rm -rf "$src_dir/test/Testing"
 
-FROM ubuntu:20.04 AS base
+
+ARG FINAL_BASE_IMAGE
+ARG FINAL_BASE_IMAGE_DIGEST
+FROM "${FINAL_BASE_IMAGE}@${FINAL_BASE_IMAGE_DIGEST}" AS base
 
 ARG staging_dir='/root/modle/staging'
 ARG install_dir='/usr/local'
-ARG ver
 
-COPY --from=testing "$staging_dir" "$install_dir"
+ARG BUILD_BASE_IMAGE
+ARG FINAL_BASE_IMAGE
+ARG FINAL_BASE_IMAGE_DIGEST
 
-LABEL maintainer='Roberto Rossini <roberros@uio.no>'
-LABEL version="$ver"
+ARG GIT_HASH
+ARG GIT_SHORT_HASH
+ARG VERSION
+ARG CREATION_DATE
+
+# Export project binaries to the final build stage
+COPY --from=builder "$staging_dir" "$install_dir"
+
 WORKDIR /data
 ENTRYPOINT ["/usr/local/bin/modle"]
 
 RUN modle --help
 RUN modle_tools --help
+
+# https://github.com/opencontainers/image-spec/blob/main/annotations.md#pre-defined-annotation-keys
+LABEL org.opencontainers.image.authors='Roberto Rossini <roberros@uio.no>'
+LABEL org.opencontainers.image.url='https://github.com/paulsengroup/modle'
+LABEL org.opencontainers.image.documentation='https://github.com/paulsengroup/modle'
+LABEL org.opencontainers.image.source='https://github.com/paulsengroup/modle'
+LABEL org.opencontainers.image.licenses='MIT'
+LABEL org.opencontainers.image.title='MoDLE'
+LABEL org.opencontainers.image.description='High-performance stochastic modeling of DNA loop extrusion interactions'
+LABEL org.opencontainers.image.base.digest="$FINAL_BASE_IMAGE_DIGEST"
+LABEL org.opencontainers.image.base.name="$FINAL_BASE_IMAGE"
+LABEL paulsengroup.modle.image.build-base="$BUILD_BASE_IMAGE"
+
+LABEL org.opencontainers.image.revision="$GIT_HASH"
+LABEL org.opencontainers.image.created="$CREATION_DATE"
+LABEL org.opencontainers.image.version="${VERSION:-sha-$GIT_SHORT_HASH}"

@@ -14,5 +14,5 @@
 !test/data/unit_tests/**
 !test/units/**
 !CMakeLists.txt
-!conanfile.py
+!conanfile.*
 !LICENSE
