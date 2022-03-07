@@ -191,8 +191,7 @@ ContactMatrix<N> Cooler<N>::cooler_to_cmatrix(std::pair<hsize_t, hsize_t> bin_ra
         }
         const auto bin1_bias = bin_weights[bin1];
         const auto bin2_bias = bin_weights[bin2];
-        // See https://github.com/robomics/modle/issues/36 and
-        // https://github.com/open2c/cooler/issues/35
+        // See https://github.com/open2c/cooler/issues/35
         const auto count =
             static_cast<double>(count_BUFF[j]) / (bin1_bias * bin2_bias) / bias_scaling_factor;
         if constexpr (std::is_integral_v<N>) {
@@ -342,8 +341,7 @@ usize Cooler<N>::stream_contacts_for_chrom(moodycamel::BlockingReaderWriterQueue
         }
         const auto bin1_bias = bin_weights[bin1];
         const auto bin2_bias = bin_weights[bin2];
-        // See https://github.com/robomics/modle/issues/36 and
-        // https://github.com/open2c/cooler/issues/35
+        // See https://github.com/open2c/cooler/issues/35
         const auto count =
             static_cast<double>(count_BUFF[j]) / (bin1_bias * bin2_bias) / bias_scaling_factor;
         while (!queue.try_emplace(Pixel{std::min(bin1, bin2), std::max(bin1, bin2),

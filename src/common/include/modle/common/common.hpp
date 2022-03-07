@@ -7,15 +7,8 @@
 #include <absl/base/macros.h>        // for ABSL_INTERNAL_UNREACHABLE
 #include <absl/base/optimization.h>  // IWYU pragma: keep for ABSL_PREDICT_TRUE, ABSL_PREDICT_FALSE
 
-#include <cstddef>      // IWYU pragma: keep for size_t, ptrdiff_t
-#include <cstdint>      // for i8, i16, i32, i64, u8 ...
-#include <string_view>  // for string_view
-
-// These variables are defined by CMake based on the value set through the project() command
-#if !defined(MODLE_VERSION_MAJOR) || !defined(MODLE_VERSION_MINOR) || !defined(MODLE_VERSION_PATCH)
-#error \
-    "Project was not configured properly: MODLE_VERSION_* preprocessor variables do not appear to be defined"
-#endif
+#include <cstddef>  // IWYU pragma: keep for size_t, ptrdiff_t
+#include <cstdint>  // for i8, i16, i32, i64, u8 ...
 
 namespace modle {
 
@@ -50,34 +43,6 @@ using i8f = std::int_fast8_t;
 using i16f = std::int_fast16_t;
 using i32f = std::int_fast32_t;
 using i64f = std::int_fast64_t;
-
-static_assert(MODLE_VERSION_MAJOR >= 0);
-static_assert(MODLE_VERSION_MINOR >= 0);
-static_assert(MODLE_VERSION_PATCH >= 0);
-constexpr u8 modle_version_major{MODLE_VERSION_MAJOR};
-constexpr u8 modle_version_minor{MODLE_VERSION_MINOR};
-constexpr u8 modle_version_patch{MODLE_VERSION_PATCH};
-
-// clang-format off
-// String macros
-#define MODLE_XSTR(x)               MODLE_STR(x)                // NOLINT(cppcoreguidelines-macro-usage)
-#define MODLE_STR(x)                #x                          // NOLINT(cppcoreguidelines-macro-usage)
-#define MODLE_CONCAT(x, y, z, sep)  x##sep##y##sep##z           // NOLINT(cppcoreguidelines-macro-usage)
-#define MODLE_XCONCAT(x, y, z, sep) MODLE_CONCAT(x, y, z, sep)  // NOLINT(cppcoreguidelines-macro-usage)
-// clang-format on
-
-// NOLINTNEXTLINE(cppcoreguidelines-macro-usage)
-#define MODLE_VERSION \
-  MODLE_XCONCAT(MODLE_VERSION_MAJOR, MODLE_VERSION_MINOR, MODLE_VERSION_PATCH, .)
-
-constexpr std::string_view modle_version_long{"MoDLE-v" MODLE_XSTR(MODLE_VERSION)};
-constexpr std::string_view modle_version =
-    modle_version_long.substr(std::string_view{"MoDLE-v"}.size());
-#undef MODLE_VERSION
-#undef MODLE_XSTR
-#undef MODLE_STR
-#undef MODLE_CONCAT
-#undef MODLE_XCONCAT
 
 using bp_t = u64;
 using contacts_t = u32;

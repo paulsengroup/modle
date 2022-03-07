@@ -1,0 +1,18 @@
+// This file was created automatically by CMake.
+#pragma once
+
+#include <string_view>
+#include <cstdint>
+#include "modle/version/git.hpp"
+
+namespace modle::version {
+
+static constexpr std::string_view str_long{"MoDLE-v" "@MODLE_PROJECT_VERSION@"};
+static constexpr auto str{str_long.substr(std::string_view{"MoDLE-v"}.size())};
+
+static constexpr std::uint_fast8_t major{@MODLE_PROJECT_VERSION_MAJOR@};
+static constexpr std::uint_fast8_t minor{@MODLE_PROJECT_VERSION_MINOR@};
+static constexpr std::uint_fast8_t patch{@MODLE_PROJECT_VERSION_PATCH@};
+static constexpr std::string_view suffix{"@MODLE_PROJECT_VERSION_SUFFIX@"};
+
+}  // namespace modle::version

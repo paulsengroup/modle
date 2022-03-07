@@ -33,12 +33,15 @@
 
 #include "modle/bed/bed.hpp"  // for Parser, bed_dialects, str_to_bed_dialect_m...
 #include "modle/common/cli_utils.hpp"
-#include "modle/common/common.hpp"             // for usize
-#include "modle/common/utils.hpp"              // for str_float_to_str_int, ConstMap::begin, Con...
-#include "modle/cooler/cooler.hpp"             // for Cooler, Cooler::READ_ONLY
+#include "modle/common/common.hpp"  // for usize
+#include "modle/common/utils.hpp"   // for str_float_to_str_int, ConstMap::begin, Con...
+#include "modle/cooler/cooler.hpp"  // for Cooler, Cooler::READ_ONLY
+#include "modle/version/version.hpp"
 #include "modle_tools/modle_tools_config.hpp"  // for eval_config, find_barrier_clusters_config
 
 namespace modle::tools {
+
+namespace version = modle::version;
 
 Cli::Cli(int argc, char** argv) : _argc(argc), _argv(argv), _exec_name(*argv) { this->make_cli(); }
 
@@ -469,6 +472,7 @@ void Cli::make_cli() {
       "MoDLE's helper tool.\n"
       "This tool can be used to perform common pre and post-process operations on MoDLE's "
       "input and output files.");
+  this->_cli.set_version_flag("-V,--version", std::string{modle::tools::version::str_long});
   this->_cli.require_subcommand(1);
 
   this->make_eval_subcommand();
