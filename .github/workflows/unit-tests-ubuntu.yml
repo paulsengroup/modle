@@ -73,7 +73,7 @@ jobs:
             developer_mode: OFF
 
     container:
-      image: ghcr.io/robomics/ci-docker-images/modle/ubuntu-${{ matrix.os-version }}-cxx-${{ matrix.compiler }}:latest
+      image: ghcr.io/${{ github.repository_owner }}/ci-docker-images/modle/ubuntu-${{ matrix.os-version }}-cxx-${{ matrix.compiler }}:latest
       options: "-v ${{ github.workspace }}:${{ github.workspace }}"
 
     defaults:
