@@ -22,5 +22,3 @@ Dockerfile*
 cmake-build*
 gmon.out
 perf.*
-src/config/git.cpp
-src/config/version.cpp

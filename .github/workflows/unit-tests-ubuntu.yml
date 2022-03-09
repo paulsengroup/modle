@@ -5,7 +5,7 @@ name: Unit tests Ubuntu
 
 on:
   push:
-    branches: [ main, devel, testing-ci ]
+    branches: [ main, devel, ci-devel ]
     paths:
       - ".github/workflows/unit-tests-ubuntu.yml"
       - "cmake/**"
@@ -15,7 +15,7 @@ on:
       - "CMakeLists.txt"
       - "conanfile.py"
   pull_request:
-    branches: [ main, devel, testing-ci ]
+    branches: [ main, devel, ci-devel ]
     paths:
       - ".github/workflows/unit-tests-ubuntu.yml"
       - "cmake/**"
@@ -64,7 +64,7 @@ jobs:
             cmake: 3.22.2
             build_type: Debug
             developer_mode: OFF
-          # Make sure project builds with cmake 3.16
+          # Make sure project builds with CMake 3.16
           - os-version: 20.04
             compiler: clang-13
             generator: "Ninja"
@@ -147,10 +147,6 @@ jobs:
                 -B "${{ github.workspace }}/build"                   \
                 "${{ github.workspace }}"
 
-      - name: Inspect automatically generated cpp files
-        run: |
-          cat src/config/*.cpp
-
       - name: Build project
         run: cmake --build ${{ github.workspace }}/build -j $(nproc)
 
@@ -166,6 +162,11 @@ jobs:
                 --timeout 120                            \
                 --repeat after-timeout:3                 \
                 -j $(nproc)
+
+      - name: Inspect MoDLE version
+        run: |
+          ${{ github.workspace }}/build/src/modle/modle --version
+          ${{ github.workspace }}/build/src/modle_tools/modle_tools --version
 
       # - name: Generate test coverage report
       #   if: >

@@ -5,7 +5,7 @@ name: Build Docker image
 
 on:
   push:
-    branches: [ main, devel, testing-ci ]
+    branches: [ main, devel, ci-devel ]
     paths:
       - ".github/workflows/build-docker-image.yml"
       - "cmake/**"
@@ -16,7 +16,7 @@ on:
       - "Dockerfile"
       - "conanfile.py"
   pull_request:
-    branches: [ main, devel, testing-ci ]
+    branches: [ main, devel, ci-devel ]
     paths:
       - ".github/workflows/build-docker-image.yml"
       - "cmake/**"
