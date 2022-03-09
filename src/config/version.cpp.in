@@ -34,13 +34,13 @@ static void generate_suffix(std::string* buff) {
   const auto short_hash_suffix = std::string{"-"} + std::string{git::describe()};
   const auto short_version = fmt::format(FMT_STRING("{}.{}.{}"), major(), minor(), patch());
 
-  const auto tag_prefix = "v" + short_version + "-";
-  if (absl::StripPrefix(git::tag(), "v" + short_version + "-") ==
-      std::string{raw_suffix} + is_dirty_suffix) {
-    *buff = std::string{raw_suffix} + is_dirty_suffix;
+  const auto expected_release_tag = "v" + short_version + (raw_suffix.empty() ? "" : "-" + std::string{raw_suffix});
+  if (git::tag() == expected_release_tag) {
+    *buff = std::string{raw_suffix};
   } else {
-    *buff = std::string{raw_suffix} + short_hash_suffix + is_dirty_suffix;
+    *buff = std::string{raw_suffix} + short_hash_suffix;
   }
+  buff->append(is_dirty_suffix);
 }
 
 }  // namespace internal
