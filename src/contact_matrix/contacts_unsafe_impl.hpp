@@ -153,7 +153,7 @@ void ContactMatrix<N>::unsafe_set(const usize row, const usize col, const N n) {
   }
 
   this->unsafe_at(i, j) = n;
-  this->_tot_contacts_outdated = true;
+  this->_global_stats_outdated = true;
 }
 
 template <class N>
@@ -168,7 +168,7 @@ void ContactMatrix<N>::unsafe_add(const usize row, const usize col, const N n) {
   }
 
   this->unsafe_at(i, j) += n;
-  this->_tot_contacts_outdated = true;
+  this->_global_stats_outdated = true;
 }
 
 template <class N>
@@ -183,7 +183,7 @@ void ContactMatrix<N>::unsafe_subtract(const usize row, const usize col, const N
   }
 
   this->unsafe_at(i, j) -= n;
-  this->_tot_contacts_outdated = true;
+  this->_global_stats_outdated = true;
 }
 
 template <class N>
@@ -206,12 +206,19 @@ constexpr double ContactMatrix<N>::unsafe_get_fraction_of_missed_updates() const
 }
 
 template <class N>
-usize ContactMatrix<N>::unsafe_get_tot_contacts() const noexcept {
-  if (this->_tot_contacts_outdated) {
-    this->_tot_contacts = std::accumulate(this->_contacts.begin(), this->_contacts.end(), N(0));
-    this->_tot_contacts_outdated = false;
+N ContactMatrix<N>::unsafe_get_tot_contacts() const noexcept {
+  if (this->_global_stats_outdated) {
+    this->unsafe_update_global_stats();
   }
-  return static_cast<usize>(this->_tot_contacts.load());
+  return this->_tot_contacts.load();
+}
+
+template <class N>
+usize ContactMatrix<N>::unsafe_get_nnz() const noexcept {
+  if (this->_global_stats_outdated) {
+    this->unsafe_update_global_stats();
+  }
+  return this->_nnz.load();
 }
 
 template <class N>
@@ -380,7 +387,7 @@ void ContactMatrix<N>::unsafe_normalize(const ContactMatrix<N> &input_matrix,
     std::fill(output_matrix._contacts.begin(), output_matrix._contacts.end(), M(0));
     output_matrix._updates_missed = input_matrix._updates_missed.load();
     output_matrix._tot_contacts = 0;
-    output_matrix._tot_contacts_outdated = false;
+    output_matrix._global_stats_outdated = false;
     return;
   }
 
@@ -400,7 +407,7 @@ void ContactMatrix<N>::unsafe_normalize(const ContactMatrix<N> &input_matrix,
   DISABLE_WARNING_POP
 
   output_matrix._updates_missed = input_matrix._updates_missed.load();
-  output_matrix._tot_contacts_outdated = true;
+  output_matrix._global_stats_outdated = true;
 }
 
 template <class N>
@@ -428,7 +435,7 @@ void ContactMatrix<N>::unsafe_clamp(const ContactMatrix<N> &input_matrix,
                  output_matrix._contacts.begin(),
                  [&](const auto count) { return std::clamp(count, lb, ub); });
   output_matrix._updates_missed = input_matrix._updates_missed.load();
-  output_matrix._tot_contacts_outdated = true;
+  output_matrix._global_stats_outdated = true;
 }
 
 template <class N>
@@ -460,7 +467,7 @@ void ContactMatrix<N>::unsafe_discretize(const ContactMatrix<N> &input_matrix,
                    return static_cast<N1>(n);
                  });
   DISABLE_WARNING_POP
-  output_matrix._tot_contacts_outdated = true;
+  output_matrix._global_stats_outdated = true;
   output_matrix._updates_missed = input_matrix._updates_missed.load();
 }
 
@@ -490,7 +497,7 @@ ContactMatrix<M> ContactMatrix<N>::unsafe_as() const {
                      return static_cast<M>(n);
                    }
                  });
-  m._tot_contacts_outdated = true;
+  m._global_stats_outdated = true;
   m._updates_missed = this->_updates_missed.load();
 
   return m;
@@ -499,6 +506,17 @@ ContactMatrix<M> ContactMatrix<N>::unsafe_as() const {
 template <class N>
 bool ContactMatrix<N>::unsafe_empty() const {
   return this->unsafe_get_tot_contacts() == 0;
+}
+
+template <class N>
+void ContactMatrix<N>::unsafe_update_global_stats() const noexcept {
+  assert(this->_global_stats_outdated);
+  this->_nnz = usize(std::count_if(this->_contacts.begin(), this->_contacts.end(),
+                                   [&](const auto n) { return n != N(0); }));
+  assert(this->_nnz <= this->npixels());
+
+  this->_tot_contacts = std::accumulate(this->_contacts.begin(), this->_contacts.end(), N(0));
+  this->_global_stats_outdated = false;
 }
 
 }  // namespace modle
