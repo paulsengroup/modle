@@ -46,7 +46,8 @@ class ContactMatrix {
   std::vector<N> _contacts{};
   mutable std::vector<mutex_t> _mtxes{};
   mutable std::atomic<N> _tot_contacts{0};
-  mutable std::atomic<bool> _tot_contacts_outdated{false};
+  mutable std::atomic<usize> _nnz{npixels()};
+  mutable std::atomic<bool> _global_stats_outdated{false};
   std::atomic<i64> _updates_missed{0};
 
  public:
@@ -102,14 +103,16 @@ class ContactMatrix {
   [[nodiscard]] inline constexpr usize npixels() const;
   [[nodiscard]] inline constexpr usize get_n_of_missed_updates() const noexcept;
   [[nodiscard]] inline double get_fraction_of_missed_updates() const;
-  [[nodiscard]] inline usize get_tot_contacts() const;
+  [[nodiscard]] inline N get_tot_contacts() const;
+  [[nodiscard]] inline usize get_nnz() const;
   [[nodiscard]] inline double get_avg_contact_density() const;
   [[nodiscard]] inline constexpr usize get_matrix_size_in_bytes() const;
   [[nodiscard]] inline N get_min_count() const noexcept;
   [[nodiscard]] inline N get_max_count() const noexcept;
 
   [[nodiscard]] inline constexpr double unsafe_get_fraction_of_missed_updates() const noexcept;
-  [[nodiscard]] inline usize unsafe_get_tot_contacts() const noexcept;
+  [[nodiscard]] inline N unsafe_get_tot_contacts() const noexcept;
+  [[nodiscard]] inline usize unsafe_get_nnz() const noexcept;
   [[nodiscard]] inline double unsafe_get_avg_contact_density() const;
   [[nodiscard]] inline N unsafe_get_min_count() const noexcept;
   [[nodiscard]] inline N unsafe_get_max_count() const noexcept;
@@ -190,6 +193,8 @@ class ContactMatrix {
   static inline void unsafe_discretize(const ContactMatrix<N>& input_matrix,
                                        ContactMatrix<N1>& output_matrix,
                                        const IITree<N2, N1>& mappings) noexcept;
+
+  inline void unsafe_update_global_stats() const noexcept;
 };
 }  // namespace modle
 

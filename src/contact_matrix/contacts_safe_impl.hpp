@@ -45,7 +45,7 @@ void ContactMatrix<N>::set(const usize row, const usize col, const N n) {
 
   const auto lck = this->lock_pixel(i, j);
   this->unsafe_at(i, j) = n;
-  this->_tot_contacts_outdated = true;
+  this->_global_stats_outdated = true;
 }
 
 template <class N>
@@ -61,7 +61,7 @@ void ContactMatrix<N>::add(const usize row, const usize col, const N n) {
 
   const auto lck = this->lock_pixel(i, j);
   this->unsafe_at(i, j) += n;
-  this->_tot_contacts_outdated = true;
+  this->_global_stats_outdated = true;
 }
 
 template <class N>
@@ -77,7 +77,7 @@ void ContactMatrix<N>::subtract(const usize row, const usize col, const N n) {
 
   const auto lck = this->lock_pixel(i, j);
   this->unsafe_at(i, j) -= n;
-  this->_tot_contacts_outdated = true;
+  this->_global_stats_outdated = true;
 }
 
 template <class N>
@@ -106,12 +106,21 @@ double ContactMatrix<N>::get_avg_contact_density() const {
 }
 
 template <class N>
-usize ContactMatrix<N>::get_tot_contacts() const {
-  if (this->_tot_contacts_outdated) {
+N ContactMatrix<N>::get_tot_contacts() const {
+  if (this->_global_stats_outdated) {
     const auto lck = this->lock();
     return this->unsafe_get_tot_contacts();
   }
-  return static_cast<usize>(this->_tot_contacts.load());
+  return this->_tot_contacts.load();
+}
+
+template <class N>
+usize ContactMatrix<N>::get_nnz() const {
+  if (this->_global_stats_outdated) {
+    const auto lck = this->lock();
+    return this->unsafe_get_nnz();
+  }
+  return this->_nnz.load();
 }
 
 template <class N>
