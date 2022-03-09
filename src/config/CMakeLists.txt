@@ -11,8 +11,9 @@ add_library(Modle::config ALIAS modle_config)
 
 add_dependencies(modle_config check_git)
 
-# Sometimes the hook that is supposed to generate these files (usually git.cpp) does not work. Other times the file is
-# created at config time, but is not updated at build time. Touching both files seems to address both issues.
+# Sometimes the hook that is supposed to generate these files (usually git.cpp) does not work.
+# Other times the file is created at config time, but is not updated at build time.
+# Touching both files seems to address both issues.
 file(TOUCH ${CMAKE_CURRENT_BINARY_DIR}/git.cpp ${CMAKE_CURRENT_BINARY_DIR}/version.cpp)
 
 target_sources(
