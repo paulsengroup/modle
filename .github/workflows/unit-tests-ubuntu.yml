@@ -147,6 +147,10 @@ jobs:
                 -B "${{ github.workspace }}/build"                   \
                 "${{ github.workspace }}"
 
+      - name: Inspect automatically generated cpp files
+        run: |
+          cat src/config/*.cpp
+
       - name: Build project
         run: cmake --build ${{ github.workspace }}/build -j $(nproc)
 
