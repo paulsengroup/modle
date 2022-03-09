@@ -208,6 +208,5 @@ if(ENABLE_TESTING)
 endif()
 
 add_subdirectory(src)
-add_dependencies(project_options _cmake-git-version-tracking)
 
 # include(cmake/Packaging.cmake)
