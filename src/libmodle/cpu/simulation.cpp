@@ -1112,9 +1112,13 @@ void Simulation::simulate_one_cell(State& s) const {
       Simulation::extrude(*s.chrom, s.get_lefs(), s.get_rev_moves(), s.get_fwd_moves());
 
       // Log model internal state
-      Simulation::dump_stats(s.id, s.epoch, s.cell_id, !s.burnin_completed, *s.chrom, s.get_lefs(),
-                             s.barriers, s.get_barrier_mask(), s.get_rev_collisions(),
-                             s.get_fwd_collisions(), *s.model_state_logger);
+      if (MODLE_LIKELY(!this->log_model_internal_state)) {
+        assert(s.model_state_logger);
+        Simulation::dump_stats(s.id, s.epoch, s.cell_id, !s.burnin_completed, *s.chrom,
+                               s.get_lefs(), s.barriers, s.get_barrier_mask(),
+                               s.get_rev_collisions(), s.get_fwd_collisions(),
+                               *s.model_state_logger);
+      }
 
       // Select LEFs to be released in the current epoch and release them
       this->release_lefs(s.get_lefs(), s.barriers, s.get_rev_collisions(), s.get_fwd_collisions(),
@@ -1148,9 +1152,7 @@ void Simulation::dump_stats(const usize task_id, const usize epoch, const usize 
                             const absl::Span<const CollisionT> fwd_collisions,
                             compressed_io::Writer& log_writer) const
     noexcept(utils::ndebug_defined()) {
-  if (MODLE_LIKELY(!this->log_model_internal_state)) {
-    return;
-  }
+  assert(this->log_model_internal_state);
   assert(log_writer);
 
   const auto barriers_occupied = barrier_mask.count();
