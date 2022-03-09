@@ -6,6 +6,9 @@ SPDX-License-Identifier: MIT
 
 # MoDLE
 
+[![Unit tests Ubuntu](https://github.com/paulsengroup/modle/actions/workflows/unit-tests-ubuntu.yml/badge.svg?branch=main)](https://github.com/paulsengroup/modle/actions/workflows/unit-tests-ubuntu.yml)
+[![Unit tests Ubuntu](https://github.com/paulsengroup/modle/actions/workflows/unit-tests-ubuntu.yml/badge.svg?branch=devel)](https://github.com/paulsengroup/modle/actions/workflows/unit-tests-ubuntu.yml)
+[![Build Docker image](https://github.com/paulsengroup/modle/actions/workflows/build-docker-image.yml/badge.svg)](https://github.com/paulsengroup/modle/actions/workflows/build-docker-image.yml)
 
 ## Using MoDLE
 
