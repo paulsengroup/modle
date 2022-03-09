@@ -5,14 +5,28 @@
 # Ignore everything
 **
 
-# Allowed files and directory
+# Allowed directories
+!.git/**
+!.github/**
 !cmake/**
-!external/*.tar.xz
+!config/**
+!external/**
 !src/**
+!test/data/unit_tests/**
+!test/scripts/**
+!test/units/**
+!utils/**
+
+# Allowed files
+!.clang*
+!.cmake-format.yaml
+!.dockerignore
+!.editorconfig
+!.git*
+!CMakeLists.txt
+!Dockerfile
+!LICENSE
+!README.md
+!conanfile.*
 !test/CMakeLists.txt
 !test/test_main.cpp
-!test/data/unit_tests/**
-!test/units/**
-!CMakeLists.txt
-!conanfile.*
-!LICENSE

@@ -149,6 +149,7 @@ target_link_libraries(
   INTERFACE project_warnings
             project_options
             Modle::common
+            Modle::config
             Modle::io_hdf5)
 
 target_link_system_libraries(

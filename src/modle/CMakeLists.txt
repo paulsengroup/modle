@@ -20,6 +20,7 @@ target_link_libraries(
           CLI11::CLI11
           fmt::fmt
           Modle::common
+          Modle::config
           Modle::io_cooler
           Modle::libmodle)
 

@@ -82,23 +82,7 @@ RUN cd "$build_dir"                          \
               -s build_type=Release
 
 # Copy source files
-COPY LICENSE                "$src_dir/LICENSE"
-COPY "external/bitflags-$BITFLAGS_VER.tar.xz"                  \
-     "$src_dir/external/bitflags-$BITFLAGS_VER.tar.xz"
-COPY "external/cmake-git-version-tracking.tar.xz"              \
-     "$src_dir/external/cmake-git-version-tracking.tar.xz"
-COPY "external/libBigWig-$LIBBIGWIG_VER.tar.xz"                \
-     "$src_dir/external/libBigWig-$LIBBIGWIG_VER.tar.xz"
-COPY "external/mscharconv.tar.xz"                              \
-     "$src_dir/external/mscharconv.tar.xz"
-COPY "external/thread-pool-$THREAD_POOL_VER.tar.xz"            \
-     "$src_dir/external/thread-pool-$THREAD_POOL_VER.tar.xz"
-COPY "external/Xoshiro-cpp-$XOSHIRO_CPP_VER.tar.xz"            \
-     "$src_dir/external/Xoshiro-cpp-$XOSHIRO_CPP_VER.tar.xz"
-COPY cmake                  "$src_dir/cmake"
-COPY CMakeLists.txt         "$src_dir/CMakeLists.txt"
-COPY test                   "$src_dir/test"
-COPY src                    "$src_dir/src"
+COPY . "$src_dir"
 
 # Configure project
 RUN cd "$build_dir"                            \
@@ -156,6 +140,7 @@ ENTRYPOINT ["/usr/local/bin/modle"]
 
 RUN modle --help
 RUN modle_tools --help
+RUN modle --version
 
 # https://github.com/opencontainers/image-spec/blob/main/annotations.md#pre-defined-annotation-keys
 LABEL org.opencontainers.image.authors='Roberto Rossini <roberros@uio.no>'

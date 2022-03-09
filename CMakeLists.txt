@@ -30,7 +30,6 @@ FetchContent_MakeAvailable(_project_options)
 include(${_project_options_SOURCE_DIR}/Index.cmake)
 
 include(cmake/Versioning.cmake)
-message(STATUS "Configuring project with version ${MODLE_PROJECT_VERSION}")
 project(
   MoDLE
   LANGUAGES CXX
@@ -211,4 +210,4 @@ endif()
 add_subdirectory(src)
 add_dependencies(project_options _cmake-git-version-tracking)
 
-include(cmake/Packaging.cmake)
+# include(cmake/Packaging.cmake)

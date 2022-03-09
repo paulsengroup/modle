@@ -28,6 +28,7 @@ target_link_libraries(
           project_options
           Modle::cmatrix
           Modle::common
+          Modle::config
           Modle::interval_tree
           Modle::io_bed
           Modle::io_bigwig

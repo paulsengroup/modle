@@ -33,8 +33,8 @@
 #include "modle/common/common.hpp"             // for bp_t, i64
 #include "modle/common/simulation_config.hpp"  // for Config
 #include "modle/common/utils.hpp"              // for parse_numeric_or_throw
+#include "modle/config/version.hpp"            // modle_version_long
 #include "modle/cooler/cooler.hpp"             // for Cooler
-#include "modle/version/version.hpp"           // modle_version_long
 
 namespace modle {
 
@@ -582,7 +582,7 @@ void Cli::make_replay_subcommand() {
 
 void Cli::make_cli() {
   this->_cli.description("Stochastic modeling of DNA loop extrusion.");
-  this->_cli.set_version_flag("-V,--version", std::string{modle::version::str_long});
+  this->_cli.set_version_flag("-V,--version", std::string{modle::config::version::str_long()});
   this->_cli.require_subcommand(1);
   this->_cli.set_config("--config", "", "Path to MoDLE's config file.");
 
@@ -865,7 +865,7 @@ void Cli::print_config(bool print_default_args) const {
 
 void Cli::write_config_file(bool write_default_args) const {
   auto fp = fmt::output_file(this->_config.path_to_config_file.string());
-  fp.print(FMT_STRING("# Config created by {} on {}\n{}\n"), modle::version::str_long,
+  fp.print(FMT_STRING("# Config created by {} on {}\n{}\n"), modle::config::version::str_long(),
            absl::FormatTime(absl::Now(), absl::UTCTimeZone()),
            this->_cli.config_to_str(write_default_args, true));
 }

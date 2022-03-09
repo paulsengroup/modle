@@ -33,7 +33,9 @@
 #include <vector>                           // for vector
 
 #include "./cli.hpp"                           // for Cli, Cli::subcommand
+#include "modle/common/common.hpp"             // for usize
 #include "modle/common/simulation_config.hpp"  // for Config
+#include "modle/config/version.hpp"            // for str_long
 #include "modle/simulation.hpp"                // for Simulation
 
 void setup_logger_console(const bool quiet) {
@@ -46,15 +48,20 @@ void setup_logger_console(const bool quiet) {
   if (quiet) {
     stderr_sink->set_level(spdlog::level::err);
   }
+  spdlog::info(FMT_STRING("Running MoDLE v{}"), modle::config::version::str());
 }
 
 void setup_logger_file(const boost::filesystem::path& path_to_log_file) {
   spdlog::logger("tmp_logger", spdlog::default_logger()->sinks().front())
       .info(FMT_STRING("Complete log will be written to file {}"), path_to_log_file);
+
   auto file_sink = spdlog::default_logger()->sinks().emplace_back(
       std::make_shared<spdlog::sinks::basic_file_sink_mt>(path_to_log_file.string(), true));
   //                      [2021-08-12 17:49:34.581] [139797797574208] [info]: my log msg
   file_sink->set_pattern("[%Y-%m-%d %T.%e] [%t] %^[%l]%$: %v");
+
+  spdlog::logger("tmp_logger", file_sink)
+      .info(FMT_STRING("Running MoDLE v{}"), modle::config::version::str());
 }
 
 void setup_failure_signal_handler(const char* argv_0) {
@@ -89,6 +96,7 @@ void write_param_summary_to_log(const modle::Config& c) {
 }
 
 int main(int argc, char** argv) noexcept {
+  // NOLINT(cppcoreguidelines-pro-bounds-pointer-arithmetic)
   setup_failure_signal_handler(argv[0]);
 
   std::unique_ptr<modle::Cli> cli{nullptr};

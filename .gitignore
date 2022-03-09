@@ -2,25 +2,25 @@
 #
 # SPDX-License-Identifier: MIT
 
+# Ignored directories
 .cache/
 .idea/
 .run/
 .vscode/
-Testing/
 build/
 containers/
 docs/
 external/
 scratch/
-venv/
-Dockerfile*
-Singularity*
-cmake-build*
-gmon.out
-perf.*
-scripts/fix_remote_devel.sh
 test/Testing
 test/data
 test/settings
-*.sif
-*.ipynb*
+venv/
+
+# Ignored files
+Dockerfile*
+cmake-build*
+gmon.out
+perf.*
+src/config/git.cpp
+src/config/version.cpp
