@@ -179,11 +179,13 @@ void Simulation::write_contacts_to_disk(std::deque<std::pair<Chromosome*, usize>
             chrom_to_be_written->size());
 
         if (chrom_to_be_written->contacts_ptr()) {
-          spdlog::info(FMT_STRING("Written {} contacts for \"{}\" in {:.2f}M pixels to file {}."),
-                       chrom_to_be_written->contacts().get_tot_contacts(),
-                       chrom_to_be_written->name(),
-                       static_cast<double>(chrom_to_be_written->contacts().npixels()) / 1.0e6,
-                       c->get_path());
+          spdlog::info(
+              FMT_STRING("Written {} contacts for \"{}\" across {:.2f}M out of {:.2f}M pixels to "
+                         "file {}."),
+              chrom_to_be_written->contacts().get_tot_contacts(), chrom_to_be_written->name(),
+              static_cast<double>(chrom_to_be_written->contacts().get_nnz()) / 1.0e6,
+              static_cast<double>(chrom_to_be_written->contacts().npixels()) / 1.0e6,
+              c->get_path());
         } else {
           spdlog::info(FMT_STRING("Created an entry for \"{}\" in file {}."),
                        chrom_to_be_written->name(), c->get_path());
