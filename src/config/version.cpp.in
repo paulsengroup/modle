@@ -1,0 +1,87 @@
+// Copyright (C) 2022 Roberto Rossini <roberros@uio.no>
+//
+// SPDX-License-Identifier: MIT
+
+// This file was generated automatically by CMake.
+#include "modle/config/version.hpp"
+
+#include <absl/strings/strip.h>
+#include <fmt/format.h>
+
+#include <cstdint>
+#include <mutex>
+#include <string_view>
+
+#include "modle/common/common.hpp"
+#include "modle/config/git.hpp"
+
+namespace modle::config::version {
+namespace internal {
+
+// NOLINTNEXTLINE(cppcoreguidelines-avoid-non-const-global-variables)
+std::once_flag suffix_available, str_available, str_long_available;
+
+static void generate_suffix(std::string* buff) {
+  namespace git = modle::config::git;
+  assert(buff);
+  constexpr std::string_view raw_suffix{"@MODLE_PROJECT_VERSION_SUFFIX@"};
+  if (!git::state_available()) {
+    *buff = std::string{raw_suffix};
+    return;
+  }
+
+  const std::string is_dirty_suffix = git::is_dirty() ? "-dirty" : "";
+  const auto short_hash_suffix = std::string{"-"} + std::string{git::describe()};
+  const auto short_version = fmt::format(FMT_STRING("{}.{}.{}"), major(), minor(), patch());
+
+  const auto expected_release_tag = "v" + short_version + (raw_suffix.empty() ? "" : "-" + std::string{raw_suffix});
+  if (git::tag() == expected_release_tag) {
+    *buff = std::string{raw_suffix};
+  } else {
+    *buff = std::string{raw_suffix} + short_hash_suffix;
+  }
+  buff->append(is_dirty_suffix);
+}
+
+}  // namespace internal
+
+u8f major() noexcept {
+  return @MODLE_PROJECT_VERSION_MAJOR@;
+}
+u8f minor() noexcept {
+  return @MODLE_PROJECT_VERSION_MINOR@;
+}
+u8f patch() noexcept {
+  return @MODLE_PROJECT_VERSION_PATCH@;
+}
+
+std::string_view suffix() noexcept {
+  static std::string buff{};
+  std::call_once(internal::suffix_available, internal::generate_suffix, &buff);
+  return buff;
+}
+
+std::string_view str() noexcept {
+  static std::string buff{};
+  auto make_str = [](std::string* _buff) {
+    if (suffix().empty()) {
+      *_buff = fmt::format(FMT_STRING("{}.{}.{}"), major(), minor(), patch());
+    } else {
+      *_buff = fmt::format(FMT_STRING("{}.{}.{}-{}"), major(), minor(), patch(), suffix());
+    }
+  };
+  std::call_once(internal::str_available, make_str, &buff);
+  return buff;
+}
+
+std::string_view str_long() noexcept {
+  static std::string buff{};
+  auto make_str = [](std::string* _buff) {
+
+  *_buff = fmt::format(FMT_STRING("MoDLE-v{}"), str()); };
+
+  std::call_once(internal::str_long_available, make_str, &buff);
+  return buff;
+}
+
+}  // namespace modle::config::version

@@ -5,7 +5,7 @@ name: Unit tests Ubuntu
 
 on:
   push:
-    branches: [ main, devel, testing-ci ]
+    branches: [ main, devel, ci-devel ]
     paths:
       - ".github/workflows/unit-tests-ubuntu.yml"
       - "cmake/**"
@@ -14,8 +14,11 @@ on:
       - "test/**"
       - "CMakeLists.txt"
       - "conanfile.py"
+    tags:
+      - 'v*.*.*'
+
   pull_request:
-    branches: [ main, devel, testing-ci ]
+    branches: [ main, devel, ci-devel ]
     paths:
       - ".github/workflows/unit-tests-ubuntu.yml"
       - "cmake/**"
@@ -64,7 +67,7 @@ jobs:
             cmake: 3.22.2
             build_type: Debug
             developer_mode: OFF
-          # Make sure project builds with cmake 3.16
+          # Make sure project builds with CMake 3.16
           - os-version: 20.04
             compiler: clang-13
             generator: "Ninja"
@@ -73,7 +76,7 @@ jobs:
             developer_mode: OFF
 
     container:
-      image: ghcr.io/robomics/ci-docker-images/modle/ubuntu-${{ matrix.os-version }}-cxx-${{ matrix.compiler }}:latest
+      image: ghcr.io/${{ github.repository_owner }}/ci-docker-images/modle/ubuntu-${{ matrix.os-version }}-cxx-${{ matrix.compiler }}:latest
       options: "-v ${{ github.workspace }}:${{ github.workspace }}"
 
     defaults:
@@ -162,6 +165,11 @@ jobs:
                 --timeout 120                            \
                 --repeat after-timeout:3                 \
                 -j $(nproc)
+
+      - name: Inspect MoDLE version
+        run: |
+          ${{ github.workspace }}/build/src/modle/modle --version
+          ${{ github.workspace }}/build/src/modle_tools/modle_tools --version
 
       # - name: Generate test coverage report
       #   if: >

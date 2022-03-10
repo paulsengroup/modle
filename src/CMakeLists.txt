@@ -10,6 +10,7 @@ if(MODLE_BUILD_UTILS)
 endif()
 
 add_subdirectory(common EXCLUDE_FROM_ALL)
+add_subdirectory(config EXCLUDE_FROM_ALL)
 add_subdirectory(contact_matrix EXCLUDE_FROM_ALL)
 add_subdirectory(interval_tree EXCLUDE_FROM_ALL)
 add_subdirectory(libmodle_io EXCLUDE_FROM_ALL)

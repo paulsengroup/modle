@@ -34,6 +34,7 @@
 #include <string_view>  // for string_view
 #include <tuple>        // for ignore
 
+#include "modle/config/version.hpp"
 #include "modle/hdf5/hdf5.hpp"  // for read_attribute, read_numbers, wri...
 
 namespace modle::cooler {
@@ -79,7 +80,7 @@ void Cooler<N>::write_metadata() {
     }
 
     name = "generated-by";
-    str_buff = modle_version_long;
+    str_buff = modle::config::version::str_long();
     hdf5::write_or_create_attribute(*this->_fp, name, str_buff);
 
     name = "creation-date";

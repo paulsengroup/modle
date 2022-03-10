@@ -503,6 +503,38 @@ TEST_CASE("CMatrix difference of gaussians - parallel", "[cmatrix][long]") {
   }
 }
 
+// NOLINTNEXTLINE(readability-function-cognitive-complexity)
+TEST_CASE("CMatrix test get_nnz", "[cmatrix][short]") {
+  ContactMatrix<> m(10, 10);
+  m.set(1, 1, 100);
+  CHECK(m.get_nnz() == 1);
+
+  m.set(1, 2, 100);
+  CHECK(m.get_nnz() == 2);
+
+  m.set(1, 2, 100);
+  CHECK(m.get_nnz() == 2);
+
+  m.set(1, 2, 0);
+  CHECK(m.get_nnz() == 1);
+}
+
+// NOLINTNEXTLINE(readability-function-cognitive-complexity)
+TEST_CASE("CMatrix test get_tot_contacts", "[cmatrix][short]") {
+  ContactMatrix<> m(10, 10);
+  m.set(1, 1, 100);
+  CHECK(m.get_tot_contacts() == 100);
+
+  m.set(1, 2, 100);
+  CHECK(m.get_tot_contacts() == 200);
+
+  m.set(1, 2, 100);
+  CHECK(m.get_tot_contacts() == 200);
+
+  m.set(1, 2, 0);
+  CHECK(m.get_tot_contacts() == 100);
+}
+
 #ifdef MODLE_ENABLE_SANITIZER_THREAD
 // NOLINTNEXTLINE(readability-function-cognitive-complexity)
 TEST_CASE("CMatrix pixel locking TSAN", "[cmatrix][long]") {

@@ -33,7 +33,7 @@ ContactMatrix<N>::ContactMatrix(const ContactMatrix<N> &other)
       _contacts(other._contacts),
       _mtxes(compute_number_of_mutexes(this->nrows(), this->ncols())),
       _tot_contacts(other._tot_contacts.load()),
-      _tot_contacts_outdated(other._tot_contacts_outdated.load()),
+      _global_stats_outdated(other._global_stats_outdated.load()),
       _updates_missed(other._updates_missed.load()) {}
 
 template <class N>
@@ -97,7 +97,7 @@ ContactMatrix<N> &ContactMatrix<N>::operator=(const ContactMatrix<N> &other) {
   }
   _mtxes = std::vector<mutex_t>(other._mtxes.size());
   _tot_contacts = other._tot_contacts.load();
-  _tot_contacts_outdated = other._tot_contacts_outdated.load();
+  _global_stats_outdated = other._global_stats_outdated.load();
   _updates_missed = other._updates_missed.load();
 
   return *this;
