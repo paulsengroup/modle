@@ -33,7 +33,7 @@ It is in theory possible to compile and run MoDLE on Windows, but we don't offic
 
 In addition to a C++17 compiler, building MoDLE requires the following tools:
 
-- CMake >= 3.11
+- CMake >= 3.16
 - Conan (recommended v1.30 or newer)
 
 ### Installing Conan
