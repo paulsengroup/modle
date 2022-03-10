@@ -7,15 +7,14 @@ SPDX-License-Identifier: MIT
 # MoDLE
 
 [![Unit tests Ubuntu](https://github.com/paulsengroup/modle/actions/workflows/unit-tests-ubuntu.yml/badge.svg?branch=main)](https://github.com/paulsengroup/modle/actions/workflows/unit-tests-ubuntu.yml)
-[![Unit tests Ubuntu](https://github.com/paulsengroup/modle/actions/workflows/unit-tests-ubuntu.yml/badge.svg?branch=devel)](https://github.com/paulsengroup/modle/actions/workflows/unit-tests-ubuntu.yml)
 [![Build Docker image](https://github.com/paulsengroup/modle/actions/workflows/build-docker-image.yml/badge.svg)](https://github.com/paulsengroup/modle/actions/workflows/build-docker-image.yml)
 
 ## Using MoDLE
 
-The recommended way to run MoDLE is using the official containers hosted on [dockerhub](https://hub.docker.com/repository/docker/robomics/modle) and [ghcr.io](https://github.com/robomics/modle/pkgs/container/modle)
+The recommended way to run MoDLE is using the official containers hosted on [dockerhub](https://hub.docker.com/repository/docker/paulsengroup/modle) and [ghcr.io](https://github.com/paulsengroup/modle/pkgs/container/modle)
 
 ```bash
-sudo docker run robomics/modle:main --help
+sudo docker run paulsengroup/modle:1.0.0-rc.1 --help
 ```
 
 ## Building MoDLE
