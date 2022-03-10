@@ -4,6 +4,10 @@
 name: Unit tests Ubuntu
 
 on:
+  create:
+    tags:
+      - 'v*.*.*'
+
   push:
     branches: [ main, devel, ci-devel ]
     paths:

@@ -4,6 +4,10 @@
 name: Build Docker image
 
 on:
+  create:
+    tags:
+      - 'v*.*.*'
+
   push:
     branches: [ main, devel, ci-devel ]
     paths:
@@ -83,11 +87,14 @@ jobs:
         uses: docker/metadata-action@v3
         with:
           images: ${{ github.repository }},ghcr.io/${{ github.repository }}
+          flavor: |
+            latest=true
           tags: |
             type=semver,priority=1000,pattern={{version}}
             type=sha,priority=900
-            type=ref,priority=800,event=branch
-            type=ref,priority=700,event=pr
+            type=raw,value=stable,priority=800,enable=${{ !startsWith(github.ref, 'refs/tags/v') }}
+            type=ref,priority=700,event=branch
+            type=ref,priority=600,event=pr
 
       - name: Login to DockerHub
         if: github.event_name != 'pull_request'
