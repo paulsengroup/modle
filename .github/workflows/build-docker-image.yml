@@ -15,6 +15,9 @@ on:
       - "CMakeLists.txt"
       - "Dockerfile"
       - "conanfile.py"
+    tags:
+      - 'v*.*.*'
+
   pull_request:
     branches: [ main, devel, ci-devel ]
     paths:

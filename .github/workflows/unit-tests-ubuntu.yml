@@ -14,6 +14,9 @@ on:
       - "test/**"
       - "CMakeLists.txt"
       - "conanfile.py"
+    tags:
+      - 'v*.*.*'
+
   pull_request:
     branches: [ main, devel, ci-devel ]
     paths:
