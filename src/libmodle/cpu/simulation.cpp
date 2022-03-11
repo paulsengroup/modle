@@ -1114,7 +1114,7 @@ void Simulation::simulate_one_cell(State& s) const {
       Simulation::extrude(*s.chrom, s.get_lefs(), s.get_rev_moves(), s.get_fwd_moves());
 
       // Log model internal state
-      if (MODLE_LIKELY(!this->log_model_internal_state)) {
+      if (MODLE_UNLIKELY(this->log_model_internal_state)) {
         assert(s.model_state_logger);
         Simulation::dump_stats(s.id, s.epoch, s.cell_id, !s.burnin_completed, *s.chrom,
                                s.get_lefs(), s.barriers, s.get_barrier_mask(),
