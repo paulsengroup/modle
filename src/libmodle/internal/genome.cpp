@@ -485,9 +485,10 @@ absl::btree_set<Chromosome> Genome::instantiate_genome(
   const auto tot_barriers_imported =
       import_barriers(chroms, path_to_extr_barriers, ctcf_prob_occ_to_occ, ctcf_prob_nocc_to_nocc);
   if (tot_barriers_imported == 0) {
-    spdlog::warn(FMT_STRING("Unable to import any barrier from file {}. Please make sure you this "
-                            "was not a mistake."),
-                 path_to_extr_barriers);
+    spdlog::warn(
+        FMT_STRING(
+            "Unable to import any barrier from file {}. Please make sure this was not a mistake."),
+        path_to_extr_barriers);
   }
 
   for (const auto& path_to_feature_bed : paths_to_extra_features) {

@@ -41,4 +41,3 @@ function(ConfigureVersioning input_config_folder output_config_folder)
 endfunction()
 
 configureversioning("${CMAKE_CURRENT_SOURCE_DIR}/src/config" "${CMAKE_CURRENT_BINARY_DIR}/src/config")
-
