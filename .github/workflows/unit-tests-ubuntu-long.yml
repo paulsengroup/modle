@@ -1,7 +1,7 @@
 # Copyright (C) 2022 Roberto Rossini (roberros@uio.no)
 # SPDX-License-Identifier: MIT
 
-name: Unit tests Ubuntu
+name: Unit tests Ubuntu - FULL
 
 on:
   create:
@@ -48,29 +48,63 @@ jobs:
         os-version:
           - 20.04
         compiler:
+          - gcc-7
           - gcc-11
+          - clang-7
           - clang-13
         generator:
           - "Ninja"
         cmake:
           - 3.22.2
         build_type:
+          - Release
           - Debug
         developer_mode:
           - ON
+
+        include:
+          # Make sure project builds when using make
+          - os-version: 20.04
+            compiler: clang-13
+            generator: "Unix Makefiles"
+            cmake: 3.22.2
+            build_type: Debug
+            developer_mode: OFF
+          # Make sure project builds with CMake 3.16
+          - os-version: 20.04
+            compiler: clang-13
+            generator: "Ninja"
+            cmake: 3.16.8
+            build_type: Debug
+            developer_mode: OFF
 
     container:
       image: ghcr.io/${{ github.repository_owner }}/ci-docker-images/modle/ubuntu-${{ matrix.os-version }}-cxx-${{ matrix.compiler }}:latest
       options: "-v ${{ github.workspace }}:${{ github.workspace }}"
 
+    if: contains(github.event.head_commit.message, "[ci full]")
+
     defaults:
       run:
         shell: bash
 
-    if: !contains(github.event.head_commit.message, "[ci full]")
-
     steps:
       - uses: actions/checkout@v3
+
+      - name: Extract CMake version
+        id: cmake-version
+        run: |
+          cmake_version="$(cmake --version | head -n 1 | grep -oP '\d+\.\d+\.\d+')"
+          echo "Detected CMake version: \"$cmake_version\""
+
+          echo "::set-output name=version::$cmake_version"
+
+      - name: Change CMake version
+        if: ${{ !startsWith(steps.cmake-version.outputs.version, matrix.cmake) }}
+        run: |
+          apt-get update -q
+          apt-get install -y python3-pip
+          pip install "cmake==${{ matrix.cmake}}"
 
       - name: Generate cache key
         id: cache-key
@@ -146,3 +180,16 @@ jobs:
         run: |
           ${{ github.workspace }}/build/src/modle/modle --version
           ${{ github.workspace }}/build/src/modle_tools/modle_tools --version
+
+      # - name: Generate test coverage report
+      #   if: >
+      #     matrix.build_type == 'Debug'
+      #   working-directory: ${{ github.workspace }}/build
+      #   run: |
+      #     gcovr --delete                       \
+      #           --root ${{ github.workspace }} \
+      #           --exclude test                 \
+      #           --print-summary                \
+      #           --xml-pretty                   \
+      #           --xml                          \
+      #           -o coverage.xml .
