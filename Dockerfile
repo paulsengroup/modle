@@ -126,7 +126,7 @@ COPY --from=builder "$staging_dir" "$install_dir"
 COPY test/scripts/modle_integration_test_simple.sh "$src_dir/test/scripts/modle_integration_test_simple.sh"
 COPY test/data/integration_tests/ "$src_dir/test/data/integration_tests/"
 
-RUN "$src_dir/test/scripts/modle_integration_test_simple.sh"
+RUN "$src_dir/test/scripts/modle_integration_test_simple.sh" "$install_dir/bin/modle"
 
 ARG FINAL_BASE_IMAGE
 ARG FINAL_BASE_IMAGE_DIGEST
