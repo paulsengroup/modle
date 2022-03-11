@@ -12,6 +12,7 @@
 !config/**
 !external/**
 !src/**
+!test/data/integration_tests/**
 !test/data/unit_tests/**
 !test/scripts/**
 !test/units/**
