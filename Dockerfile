@@ -99,7 +99,7 @@ RUN cd "$build_dir"               \
 && cmake --install .
 
 ARG TEST_BASE_IMAGE
-FROM "$TEST_BASE_IMAGE" AS testing
+FROM "$TEST_BASE_IMAGE" AS unit-testing
 
 ARG src_dir="/root/modle"
 
@@ -115,6 +115,18 @@ RUN cd "$src_dir/build"           \
          --repeat after-timeout:3 \
 && rm -rf "$src_dir/test/Testing"
 
+ARG FINAL_BASE_IMAGE
+ARG FINAL_BASE_IMAGE_DIGEST
+FROM "${FINAL_BASE_IMAGE}@${FINAL_BASE_IMAGE_DIGEST}" AS integration-testing
+
+ARG staging_dir='/root/modle/staging'
+ARG install_dir='/usr/local'
+
+COPY --from=builder "$staging_dir" "$install_dir"
+COPY test/scripts/modle_integration_test_simple.sh "$src_dir/test/scripts/modle_integration_test_simple.sh"
+COPY test/data/integration_tests/ "$src_dir/test/data/integration_tests/"
+
+RUN "$src_dir/test/scripts/modle_integration_test_simple.sh"
 
 ARG FINAL_BASE_IMAGE
 ARG FINAL_BASE_IMAGE_DIGEST

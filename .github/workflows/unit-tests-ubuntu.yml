@@ -22,7 +22,6 @@ on:
       - 'v*.*.*'
 
   pull_request:
-    branches: [ main, devel, ci-devel ]
     paths:
       - ".github/workflows/unit-tests-ubuntu.yml"
       - "cmake/**"
@@ -160,15 +159,20 @@ jobs:
       - name: Print Ccache statistics
         run: ccache -s
 
-      - name: Test project
+      - name: Run unit tests
+        working-directory: ${{ github.workspace }}/build
         run: |
-          ctest --test-dir ${{ github.workspace }}/build \
-                --schedule-random                        \
-                --output-on-failure                      \
-                --no-tests=error                         \
-                --timeout 120                            \
-                --repeat after-timeout:3                 \
+          ctest --test-dir .             \
+                --schedule-random        \
+                --output-on-failure      \
+                --no-tests=error         \
+                --timeout 120            \
+                --repeat after-timeout:3 \
                 -j $(nproc)
+
+      - name: Run integration tests
+        working-directory: ${{ github.workspace }}/test/scripts
+        run: ./modle_integration_test_simple.sh
 
       - name: Inspect MoDLE version
         run: |
