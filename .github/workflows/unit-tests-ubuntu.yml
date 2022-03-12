@@ -172,7 +172,7 @@ jobs:
 
       - name: Run integration tests
         working-directory: ${{ github.workspace }}/test/scripts
-        run: ./modle_integration_test_simple.sh
+        run: ./modle_integration_test_simple.sh ${{ github.workspace }}/build/src/modle/modle
 
       - name: Inspect MoDLE version
         run: |
