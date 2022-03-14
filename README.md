@@ -62,11 +62,16 @@ MoDLE's binaries will be located inside the `build/modle/` folder.
 ### Testing MoDLE
 
 ```bash
+# Unit tests
+
 ctest -j 8                 \
       --test-dir .         \
       --schedule-random    \
       --output-on-failure  \
       --no-tests=error
+
+# Integration test
+test/scripts/modle_integration_test_simple.sh build/src/modle/modle
 ```
 
 ### Installing MoDLE
