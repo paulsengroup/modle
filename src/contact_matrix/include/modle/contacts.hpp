@@ -59,10 +59,10 @@ class ContactMatrix {
   inline ContactMatrix(ContactMatrix<N>&& other) noexcept = default;
 #endif
   inline ContactMatrix(const ContactMatrix<N>& other);
-  inline ContactMatrix(usize nrows, usize ncols, bool fill_with_random_numbers = false,
-                       u64 seed = 8336046165695760686);
-  inline ContactMatrix(bp_t length, bp_t diagonal_width, bp_t bin_size,
-                       bool fill_with_random_numbers = false);
+  template <bool fill_with_random_numbers = false, u64 seed = 8336046165695760686>
+  inline ContactMatrix(usize nrows, usize ncols);
+  template <bool fill_with_random_numbers = false, u64 seed = 8336046165695760686>
+  inline ContactMatrix(bp_t length, bp_t diagonal_width, bp_t bin_size);
   inline ContactMatrix(absl::Span<const N> contacts, usize nrows, usize ncols,
                        usize tot_contacts = 0, usize updates_missed = 0);
   inline ~ContactMatrix() = default;
