@@ -14,7 +14,7 @@ SPDX-License-Identifier: MIT
 The recommended way to run MoDLE is using the official containers hosted on [dockerhub](https://hub.docker.com/repository/docker/paulsengroup/modle) and [ghcr.io](https://github.com/paulsengroup/modle/pkgs/container/modle)
 
 ```bash
-sudo docker run paulsengroup/modle:1.0.0-rc.1 --help
+sudo docker run paulsengroup/modle:1.0.0-rc.2 --help
 ```
 
 ## Building MoDLE
@@ -34,12 +34,12 @@ It is in theory possible to compile and run MoDLE on Windows, but we don't offic
 In addition to a C++17 compiler, building MoDLE requires the following tools:
 
 - CMake >= 3.16
-- Conan (recommended v1.30 or newer)
+- Conan >= 1.43
 
 ### Installing Conan
 
 Conan can be installed with one of the following methods:
-- `pip3 install "conan>=1.30"`
+- `pip3 install "conan>=1.43"`
 - `brew install conan`
 
 ### Compiling MoDLE
@@ -49,8 +49,8 @@ The instructions assume the build machine has 8 CPU cores.
 Feel free to adjust `-j 8` to match the number of CPU cores available on your machine.
 
 ```bash
-mkdir build
-cd build
+mkdir build/
+cd build/
 
 cmake ..
 
@@ -61,22 +61,27 @@ MoDLE's binaries will be located inside the `build/modle/` folder.
 
 ### Testing MoDLE
 
-```bash
-# Unit tests
+Some of the unit tests depends on [SciPy](https://scipy.org/) and [wCorr](https://cran.r-project.org/web/packages/wCorr/index.html), so make sure to have both packages installed before running `ctest`.
 
+In alternative, you can pass `-E '(Corr\.)|(Binom) test` to `ctest` to exclude those units from the test suite.
+
+To run the unit tests, run the following from inside the `build/` folder:
+```bash
 ctest -j 8                 \
-      --test-dir .         \
+      --test-dir build     \
       --schedule-random    \
       --output-on-failure  \
       --no-tests=error
+```
 
-# Integration test
+To run the integration tests, run the following from the repository root:
+```bash
 test/scripts/modle_integration_test_simple.sh build/src/modle/modle
 ```
 
 ### Installing MoDLE
 
-This will install MoDLE files unde the prefix specified through `-DCMAKE_INSTALL_PREFIX` (`/usr/local` by default)
+This will install MoDLE files unde the prefix specified through `-DCMAKE_INSTALL_PREFIX` (`/usr/local` by default. NOTE: `-DCMAKE_INSTALL_PREFIX` should be specified when running the first `cmake` command in the [first](https://github.com/paulsengroup/modle#compiling-modle) step)
 
 ```
 cmake --install .
