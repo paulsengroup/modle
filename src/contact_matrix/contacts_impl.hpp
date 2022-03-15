@@ -37,13 +37,13 @@ ContactMatrix<N>::ContactMatrix(const ContactMatrix<N> &other)
       _updates_missed(other._updates_missed.load()) {}
 
 template <class N>
-ContactMatrix<N>::ContactMatrix(const usize nrows, const usize ncols,
-                                const bool fill_with_random_numbers, const u64 seed)
+template <bool fill_with_random_numbers, u64 seed>
+ContactMatrix<N>::ContactMatrix(const usize nrows, const usize ncols)
     : _nrows(std::min(nrows, ncols)),
       _ncols(ncols),
       _contacts(_nrows * _ncols + 1, N(0)),
       _mtxes(compute_number_of_mutexes(this->nrows(), this->ncols())) {
-  if (fill_with_random_numbers) {
+  if constexpr (fill_with_random_numbers) {
     auto rand_eng = random::PRNG(seed);
 
     auto dist = []() {
@@ -63,10 +63,10 @@ ContactMatrix<N>::ContactMatrix(const usize nrows, const usize ncols,
 }
 
 template <class N>
-ContactMatrix<N>::ContactMatrix(const bp_t length, const bp_t diagonal_width, const bp_t bin_size,
-                                const bool fill_with_random_numbers)
-    : ContactMatrix((diagonal_width + bin_size - 1) / bin_size, (length + bin_size - 1) / bin_size,
-                    fill_with_random_numbers) {}
+template <bool fill_with_random_numbers, u64 seed>
+ContactMatrix<N>::ContactMatrix(const bp_t length, const bp_t diagonal_width, const bp_t bin_size)
+    : ContactMatrix((diagonal_width + bin_size - 1) / bin_size,
+                    (length + bin_size - 1) / bin_size) {}
 
 template <class N>
 ContactMatrix<N>::ContactMatrix(const absl::Span<const N> contacts, const usize nrows,

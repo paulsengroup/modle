@@ -534,6 +534,8 @@ void Cli::validate_eval_subcommand() const {
       return it->first;
     }();
 
+    DISABLE_WARNING_PUSH
+    DISABLE_WARNING_RANGE_LOOP_ANALYSIS
     for (const auto direction : stripe_directions) {
       for (const auto extension : extensions) {
         const boost::filesystem::path fname = fmt::format(
@@ -545,6 +547,7 @@ void Cli::validate_eval_subcommand() const {
         }
       }
     }
+    DISABLE_WARNING_PUSH
     if (!name_collisions.empty()) {
       errors.emplace_back(fmt::format(
           FMT_STRING("Detected {} file name collision(s): refusing to proceed. Pass --force to "
