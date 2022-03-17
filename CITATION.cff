@@ -1,0 +1,32 @@
+# This CITATION.cff file was generated with cffinit.
+# Visit https://bit.ly/cffinit to generate yours today!
+
+cff-version: 1.2.0
+title: >-
+  MoDLE: High-performance stochastic modeling of DNA
+  loop extrusion interactions
+message: >-
+  If you use this software, please cite it using the
+  metadata from this file.
+type: software
+authors:
+  - given-names: Roberto
+    family-names: Rossini
+    email: roberros@uio.no
+    affiliation: University of Oslo
+    orcid: 'https://orcid.org/0000-0003-3096-1470'
+  - given-names: Jonas
+    family-names: Paulsen
+    email: jonas.paulsen@ibv.uio.no
+    affiliation: University of Oslo
+  - orcid: 'https://orcid.org/0000-0002-9329-9974'
+    given-names: Torbjørn
+    family-names: Rognes
+    email: torognes@ifi.uio.no
+    affiliation: University of Oslo
+  - orcid: 'https://orcid.org/0000-0001-5127-5459'
+    given-names: Anthony
+    family-names: Mathelier
+    email: anthony.mathelier@ncmm.uio.no
+    affiliation: Centre for Molecular Medicine Norway
+
