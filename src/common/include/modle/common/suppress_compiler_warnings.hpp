@@ -33,6 +33,7 @@
     #define DISABLE_WARNING_DUPLICATED_BRANCHES
     #define DISABLE_WARNING_UNUSED_VARIABLE
     #define DISABLE_WARNING_UNUSED_PARAMETER
+    #define DISABLE_WARNING_RANGE_LOOP_ANALYSIS
 #endif
 
 // Defines for GCC and Clang
@@ -59,6 +60,7 @@
     #define DISABLE_WARNING_BOOL_COMPARE           DISABLE_WARNING("-Wtautological-constant-out-of-range-compare")
     #define DISABLE_WARNING_SHORTEN_64_TO_32       DISABLE_WARNING("-Wshorten-64-to-32")
     #define DISABLE_WARNING_USED_BUT_MARKED_UNUSED DISABLE_WARNING("-Wused-but-marked-unused")
+    #define DISABLE_WARNING_RANGE_LOOP_ANALYSIS    DISABLE_WARNING("-Wrange-loop-analysis")
     #define DISABLE_WARNING_DUPLICATED_BRANCHES
     #define DISABLE_WARNING_USELESS_CAST
     #define DISABLE_WARNING_MAYBE_UNINITIALIZED
@@ -86,6 +88,7 @@
     #define DISABLE_WARNING_UNUSED_PARAMETER       DISABLE_WARNING("-Wunused-but-set-parameter")
     #define DISABLE_WARNING_SHORTEN_64_TO_32
     #define DISABLE_WARNING_USED_BUT_MARKED_UNUSED
+    #define DISABLE_WARNING_RANGE_LOOP_ANALYSIS
 #endif
 
 // Defines for unknown/unsupported compilers
@@ -112,6 +115,7 @@
     #define DISABLE_WARNING_DUPLICATED_BRANCHES
     #define DISABLE_WARNING_UNUSED_VARIABLE
     #define DISABLE_WARNING_UNUSED_PARAMETER
+    #define DISABLE_WARNING_RANGE_LOOP_ANALYSIS
 #endif
 
 // clang-format on

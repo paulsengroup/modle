@@ -211,7 +211,7 @@ void transform_subcmd(const modle::tools::transform_config& c) {
                                            bin_size, max_chrom_name_size);
   }
 
-  thread_pool tpool(c.nthreads);
+  thread_pool tpool(static_cast<u32>(c.nthreads));
 
   const auto t0 = absl::Now();
   spdlog::info(FMT_STRING("Transforming contacts from file {}..."), input_cooler.get_path());

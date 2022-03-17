@@ -665,7 +665,7 @@ void eval_subcmd(const modle::tools::eval_config &c) {
   assert(nrows != 0);
 
   const auto t0 = absl::Now();
-  thread_pool tpool(c.nthreads);
+  thread_pool tpool(static_cast<u32>(c.nthreads));
 
   std::array<std::future<bool>, 2> return_codes;
 

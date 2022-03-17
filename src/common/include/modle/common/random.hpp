@@ -60,11 +60,7 @@ namespace modle::random {
 }
 #endif
 
-#ifdef __APPLE__
-using PRNG_t = std::invoke_result<decltype (&PRNG)(u64), u64>;
-#else
-using PRNG_t = decltype(std::function{PRNG})::result_type;
-#endif
+using PRNG_t = decltype(PRNG(u64(1)));
 
 #ifdef MODLE_WITH_BOOST_RANDOM
 using bernoulli_trial = boost::random::bernoulli_distribution<double>;
