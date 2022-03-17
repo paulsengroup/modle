@@ -24,4 +24,9 @@ authors:
     family-names: Rognes
     email: torognes@ifi.uio.no
     affiliation: University of Oslo
+  - orcid: 'https://orcid.org/0000-0001-5127-5459'
+    given-names: Anthony
+    family-names: Mathelier
+    email: anthony.mathelier@ncmm.uio.no
+    affiliation: Centre for Molecular Medicine Norway
 
