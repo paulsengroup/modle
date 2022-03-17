@@ -206,7 +206,7 @@ constexpr double ContactMatrix<N>::unsafe_get_fraction_of_missed_updates() const
 }
 
 template <class N>
-N ContactMatrix<N>::unsafe_get_tot_contacts() const noexcept {
+auto ContactMatrix<N>::unsafe_get_tot_contacts() const noexcept -> sum_t {
   if (this->_global_stats_outdated) {
     this->unsafe_update_global_stats();
   }
@@ -515,7 +515,14 @@ void ContactMatrix<N>::unsafe_update_global_stats() const noexcept {
                                    [&](const auto n) { return n != N(0); }));
   assert(this->_nnz <= this->npixels());
 
-  this->_tot_contacts = std::accumulate(this->_contacts.begin(), this->_contacts.end(), N(0));
+  this->_tot_contacts = std::accumulate(this->_contacts.begin(), this->_contacts.end(), sum_t(0),
+                                        [&](const auto accumulator, const auto n) {
+                                          DISABLE_WARNING_PUSH
+                                          DISABLE_WARNING_USELESS_CAST
+                                          return accumulator + static_cast<sum_t>(n);
+                                          DISABLE_WARNING_POP
+                                        });
+
   this->_global_stats_outdated = false;
 }
 

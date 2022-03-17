@@ -106,7 +106,7 @@ double ContactMatrix<N>::get_avg_contact_density() const {
 }
 
 template <class N>
-N ContactMatrix<N>::get_tot_contacts() const {
+auto ContactMatrix<N>::get_tot_contacts() const -> sum_t {
   if (this->_global_stats_outdated) {
     const auto lck = this->lock();
     return this->unsafe_get_tot_contacts();
