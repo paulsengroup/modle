@@ -431,16 +431,16 @@ class Simulation : Config {
   /// in \p lefs whose index is present in \p selected_lef_idx.
   usize register_contacts_loop(Chromosome& chrom, absl::Span<const Lef> lefs,
                                absl::Span<const usize> selected_lef_idx,
-                               random::PRNG_t& rand_eng) const;
+                               usize max_num_contacts_to_register, random::PRNG_t& rand_eng) const;
   usize register_contacts_loop(bp_t start_pos, bp_t end_pos, ContactMatrix<contacts_t>& contacts,
                                absl::Span<const Lef> lefs, absl::Span<const usize> selected_lef_idx,
-                               random::PRNG_t& rand_eng) const;
+                               usize max_num_contacts_to_register, random::PRNG_t& rand_eng) const;
   usize register_contacts_tad(Chromosome& chrom, absl::Span<const Lef> lefs,
                               absl::Span<const usize> selected_lef_idx,
-                              random::PRNG_t& rand_eng) const;
+                              usize max_num_contacts_to_register, random::PRNG_t& rand_eng) const;
   usize register_contacts_tad(bp_t start_pos, bp_t end_pos, ContactMatrix<contacts_t>& contacts,
                               absl::Span<const Lef> lefs, absl::Span<const usize> selected_lef_idx,
-                              random::PRNG_t& rand_eng) const;
+                              usize max_num_contacts_to_register, random::PRNG_t& rand_eng) const;
 
   template <typename MaskT>
   inline static void select_lefs_to_bind(absl::Span<const Lef> lefs,

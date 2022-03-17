@@ -98,7 +98,7 @@ template <class N>
 Cooler<N>::~Cooler() {
   try {
     if (!this->is_read_only() && this->_nchroms != 0 && this->_nbins != 0) {
-      if (this->_fp) {
+      if (MODLE_LIKELY(this->_fp)) {
         auto &chrom_idx = this->_datasets[IDX_CHR];
         auto &bin1_idx = this->_datasets[IDX_BIN1];
         auto chrom_idx_offset = this->_dataset_file_offsets[IDX_CHR];
@@ -120,6 +120,9 @@ Cooler<N>::~Cooler() {
             std::ignore = hdf5::write_number(this->_nnz, bin1_idx, bin1_idx_offset);
           }
         }
+
+        hdf5::write_or_create_attribute(*this->_fp, "nnz", this->_nnz);
+        hdf5::write_or_create_attribute(*this->_fp, "sum", this->_sum);
       } else {
         spdlog::error(
             FMT_STRING(

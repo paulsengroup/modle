@@ -26,11 +26,6 @@ void Simulation::sample_and_register_contacts(State& s, const double avg_nlefs_t
   auto nlefs_to_sample =
       std::min(s.num_lefs, random::poisson_distribution<usize>{avg_nlefs_to_sample}(s.rand_eng));
 
-  if (s.num_target_contacts != 0) {  // When using the target contact density as stopping
-    // criterion, don't overshoot the target number of contacts
-    nlefs_to_sample = std::min(nlefs_to_sample, s.num_target_contacts - s.num_contacts);
-  }
-
   // Select LEFs to be used for contact registration.
   // We are sampling from fwd ranks to avoid having to allocate a vector of indices just to
   // do this sampling
@@ -48,16 +43,20 @@ void Simulation::sample_and_register_contacts(State& s, const double avg_nlefs_t
   const auto end_pos = s.is_modle_sim_state() ? s.chrom->end_pos() : s.window_end;
 
   assert(s.contacts);
-  s.num_contacts += this->register_contacts_loop(start_pos + 1, end_pos - 1, *s.contacts,
-                                                 s.get_lefs(), lef_idx, s.rand_eng);
-  s.num_contacts += this->register_contacts_tad(start_pos + 1, end_pos - 1, *s.contacts,
-                                                s.get_lefs(), lef_idx, s.rand_eng);
+  s.num_contacts +=
+      this->register_contacts_loop(start_pos + 1, end_pos - 1, *s.contacts, s.get_lefs(), lef_idx,
+                                   s.num_target_contacts - s.num_contacts, s.rand_eng);
+  s.num_contacts +=
+      this->register_contacts_tad(start_pos + 1, end_pos - 1, *s.contacts, s.get_lefs(), lef_idx,
+                                  s.num_target_contacts - s.num_contacts, s.rand_eng);
+  assert(s.num_contacts <= s.num_target_contacts);
 }
 
 usize Simulation::register_contacts_loop(const bp_t start_pos, const bp_t end_pos,
                                          ContactMatrix<contacts_t>& contacts,
                                          const absl::Span<const Lef> lefs,
                                          const absl::Span<const usize> lef_idx,
+                                         const usize max_num_contacts_to_register,
                                          random::PRNG_t& rand_eng) const {
   // Register contacts for the selected LEFs (excluding LEFs that have one of their units at the
   // beginning/end of a chromosome)
@@ -91,6 +90,9 @@ usize Simulation::register_contacts_loop(const bp_t start_pos, const bp_t end_po
                      lef.rev_unit.pos() < end_pos && lef.fwd_unit.pos() > start_pos &&
                      lef.fwd_unit.pos() < end_pos)) {
       for (usize j = 0; j < this->number_of_loop_contacts_per_sampling_event; ++j) {
+        if (MODLE_UNLIKELY(new_contacts == max_num_contacts_to_register)) {
+          return new_contacts;
+        }
         // We are performing most operations using double to deal with the possibility that the
         // noise generated to compute p1 is larger than the pos of the rev unit
         const auto [p1, p2] = std::minmax({static_cast<double>(lef.rev_unit.pos()) - noise_gen(),
@@ -115,6 +117,7 @@ usize Simulation::register_contacts_tad(bp_t start_pos, bp_t end_pos,
                                         ContactMatrix<contacts_t>& contacts,
                                         absl::Span<const Lef> lefs,
                                         const absl::Span<const usize> lef_idx,
+                                        const usize max_num_contacts_to_register,
                                         random::PRNG_t& rand_eng) const {
   // Register contacts for the selected LEFs (excluding LEFs that have one of their units at the
   // beginning/end of a chromosome)
@@ -156,6 +159,9 @@ usize Simulation::register_contacts_tad(bp_t start_pos, bp_t end_pos,
         continue;
       }
       for (usize j = 0; j < this->number_of_tad_contacts_per_sampling_event; ++j) {
+        if (MODLE_UNLIKELY(new_contacts == max_num_contacts_to_register)) {
+          return new_contacts;
+        }
         const auto p11 = random::uniform_int_distribution<bp_t>{static_cast<bp_t>(p1),
                                                                 static_cast<bp_t>(p2)}(rand_eng);
         const auto p22 = random::uniform_int_distribution<bp_t>{static_cast<bp_t>(p1),
@@ -173,16 +179,20 @@ usize Simulation::register_contacts_tad(bp_t start_pos, bp_t end_pos,
 
 usize Simulation::register_contacts_loop(Chromosome& chrom, const absl::Span<const Lef> lefs,
                                          const absl::Span<const usize> selected_lef_idx,
+                                         const usize max_num_contacts_to_register,
                                          random::PRNG_t& rand_eng) const {
   return this->register_contacts_loop(chrom.start_pos() + 1, chrom.end_pos() - 1, chrom.contacts(),
-                                      lefs, selected_lef_idx, rand_eng);
+                                      lefs, selected_lef_idx, max_num_contacts_to_register,
+                                      rand_eng);
 }
 
 usize Simulation::register_contacts_tad(Chromosome& chrom, absl::Span<const Lef> lefs,
                                         absl::Span<const usize> selected_lef_idx,
+                                        const usize max_num_contacts_to_register,
                                         random::PRNG_t& rand_eng) const {
   return this->register_contacts_tad(chrom.start_pos() + 1, chrom.end_pos() - 1, chrom.contacts(),
-                                     lefs, selected_lef_idx, rand_eng);
+                                     lefs, selected_lef_idx, max_num_contacts_to_register,
+                                     rand_eng);
 }
 
 }  // namespace modle
