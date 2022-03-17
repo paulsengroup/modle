@@ -394,7 +394,7 @@ usize BED::num_fields() const noexcept {
 
 bool BED::empty() const { return chrom.empty(); }
 
-u64 BED::hash(XXH_INLINE_XXH3_state_t* state, u64 seed) const {
+u64 BED::hash(XXH3_state_t* state, u64 seed) const {
   auto handle_errors = [&](const auto& status) {
     if (status == XXH_ERROR || !state) {
       throw std::runtime_error(
