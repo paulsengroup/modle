@@ -6,7 +6,7 @@
 
 #include <absl/types/span.h>  // for Span, MakeConstSpan, MakeSpan
 #include <fmt/format.h>       // for FMT_STRING
-#include <xxh3.h>             // for XXH_INLINE_XXH3_64bits, XXH3_64bits
+#include <xxhash.h>           // for XXH_INLINE_XXH3_64bits, XXH3_64bits
 
 #include <algorithm>  // for min, clamp
 #include <array>      // for array

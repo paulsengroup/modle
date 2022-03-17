@@ -7,7 +7,7 @@
 #include <absl/strings/match.h>  // for StartsWithIgnoreCase
 #include <absl/types/span.h>     // for MakeSpan, Span
 #include <fmt/format.h>          // for compile_string_to_view, FMT_STRING
-#include <xxh3.h>                // for XXH_INLINE_XXH3_freeState, XXH3_f...
+#include <xxhash.h>              // for XXH_INLINE_XXH3_freeState, XXH3_f...
 
 #include <boost/filesystem/operations.hpp>  // for remove
 #include <boost/filesystem/path.hpp>        // for path
