@@ -135,16 +135,24 @@ void Simulation::run_simulate() {
       const auto nlefs = this->compute_num_lefs(chrom.simulated_size());
 
       const auto npixels = chrom.npixels(this->diagonal_width, this->bin_size);
-      const auto target_contacts =
-          (this->compute_tot_target_contacts(npixels) + this->num_cells - 1) / this->num_cells;
+      const auto tot_target_contacts = this->compute_tot_target_contacts(npixels);
       const auto target_epochs = this->compute_tot_target_epochs();
 
+      const auto target_contacts_per_cell =
+          (tot_target_contacts + this->num_cells - 1) / this->num_cells;
+
+      usize tot_target_contacts_rolling_count = 0;
       usize cellid = 0;
       const auto nbatches = (this->num_cells + task_batch_size_enq - 1) / task_batch_size_enq;
       for (usize batchid = 0; batchid < nbatches; ++batchid) {
         // Generate a batch of tasks for the current chrom
         std::generate(tasks.begin(), tasks.end(), [&]() {
-          return Task{{taskid++, &chrom, cellid++, target_epochs, target_contacts, nlefs,
+          // This is needed to not overshoot the target contact density
+          const auto effective_target_contacts = std::min(
+              target_contacts_per_cell, tot_target_contacts - tot_target_contacts_rolling_count);
+          tot_target_contacts_rolling_count += effective_target_contacts;
+
+          return Task{{taskid++, &chrom, cellid++, target_epochs, effective_target_contacts, nlefs,
                        chrom.barriers().data()}};
         });
         const auto ntasks =
