@@ -8,7 +8,7 @@
 #include <absl/types/span.h>                     // for Span
 #include <fmt/format.h>                          // for format_parse_context, formatter
 #include <moodycamel/blockingconcurrentqueue.h>  // for BlockingConcurrentQueue
-#include <xxh3.h>                                // for XXH_INLINE_XXH3_createState, XXH3...
+#include <xxhash.h>                              // for XXH_INLINE_XXH3_createState, XXH3...
 
 #include <atomic>                                   // for atomic
 #include <boost/dynamic_bitset/dynamic_bitset.hpp>  // for dynamic_bitset

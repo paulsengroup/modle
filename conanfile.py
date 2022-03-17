@@ -19,7 +19,7 @@ class MoDLE(ConanFile):
               "concurrentqueue/1.0.3",
               "cpp-sort/1.12.1",
               "fmt/8.1.1",
-              "hdf5/1.12.0",
+              "hdf5/1.12.1",
               "libarchive/3.6.0",
               "lz4/1.9.3",
               "lzo/2.10",
@@ -27,7 +27,7 @@ class MoDLE(ConanFile):
               "readerwriterqueue/1.0.6",
               "spdlog/1.9.2",
               "tomlplusplus/2.5.0",
-              "xxhash/0.8.0",
+              "xxhash/0.8.1",
               "xz_utils/5.2.5",
               "zlib/1.2.11"]
   # "zstd/1.4.8"]

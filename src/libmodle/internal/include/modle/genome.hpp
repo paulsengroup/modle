@@ -6,7 +6,7 @@
 
 #include <absl/container/btree_set.h>  // for btree_set, btree_set_container<>::const_iterator
 #include <absl/types/span.h>           // for Span
-#include <xxh3.h>                      // for XXH3_state_t, XXH_INLINE_XXH3_state_t
+#include <xxhash.h>                    // for XXH3_state_t, XXH_INLINE_XXH3_state_t
 
 #include <boost/filesystem/path.hpp>  // for path
 #include <iterator>                   // for iterator_traits
