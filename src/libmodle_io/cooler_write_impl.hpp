@@ -181,14 +181,14 @@ void Cooler<N>::write_or_append_cmatrix_to_file(const ContactMatrix<M> *cmatrix,
     // Total number of contacts
     if constexpr (IS_FP) {
       this->_sum =
-          static_cast<N>(hdf5::has_attribute(*this->_fp, "sum", this->_root_path)
-                             ? hdf5::read_attribute<double>(*this->_fp, "sum", this->_root_path)
-                             : 0.0);
+          static_cast<sum_t>(hdf5::has_attribute(*this->_fp, "sum", this->_root_path)
+                                 ? hdf5::read_attribute<double>(*this->_fp, "sum", this->_root_path)
+                                 : 0.0);
     } else {
       this->_sum =
-          static_cast<N>(hdf5::has_attribute(*this->_fp, "sum", this->_root_path)
-                             ? hdf5::read_attribute_int(*this->_fp, "sum", this->_root_path)
-                             : 0);
+          static_cast<sum_t>(hdf5::has_attribute(*this->_fp, "sum", this->_root_path)
+                                 ? hdf5::read_attribute_int(*this->_fp, "sum", this->_root_path)
+                                 : 0);
     }
     DISABLE_WARNING_POP
 
@@ -222,14 +222,15 @@ void Cooler<N>::write_or_append_cmatrix_to_file(const ContactMatrix<M> *cmatrix,
         const auto &n = cmatrix->get_n_of_missed_updates();
         const auto pct = 100.0 * cmatrix->unsafe_get_fraction_of_missed_updates();
         if (pct >= 0.01) {
-          spdlog::warn(FMT_STRING("Detected {} missed updates for \"{}\" ({:.4f}% of the total "
+          spdlog::warn(FMT_STRING("Detected {} missed update(s) for \"{}\" ({:.4f}% of the total "
                                   "number of contacts)."),
                        n, chrom_name, 100.0 * cmatrix->unsafe_get_fraction_of_missed_updates(),
                        chrom_name);
         } else {
-          spdlog::warn(FMT_STRING("Detected {} missed updates for \"{}\" (less than {:.2f}% of the "
-                                  "total number of contacts)."),
-                       n, chrom_name, 0.01, chrom_name);
+          spdlog::warn(
+              FMT_STRING("Detected {} missed update(s) for \"{}\" (less than {:.2f}% of the "
+                         "total number of contacts)."),
+              n, chrom_name, 0.01, chrom_name);
         }
       }
       // Write chrom name and size
@@ -361,7 +362,7 @@ void Cooler<N>::write_or_append_cmatrix_to_file(const ContactMatrix<M> *cmatrix,
 
     DISABLE_WARNING_PUSH
     DISABLE_WARNING_USELESS_CAST
-    this->_sum += static_cast<_SumT>(cmatrix->get_tot_contacts());
+    this->_sum += static_cast<sum_t>(cmatrix->get_tot_contacts());
     DISABLE_WARNING_POP
 
     auto &f = *this->_fp;
