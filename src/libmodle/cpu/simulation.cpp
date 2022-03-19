@@ -1090,8 +1090,6 @@ void Simulation::simulate_one_cell(State& s) const {
       if (s.burnin_completed) {  // Register contacts
         this->sample_and_register_contacts(s, avg_nlefs_to_sample);
         if (s.num_target_contacts != 0 && s.num_contacts >= s.num_target_contacts) {
-          fmt::print(stderr, FMT_STRING("got {}, expected {}!\n"), s.num_contacts,
-                     s.num_target_contacts);
           assert(s.num_contacts == s.num_target_contacts);
           return;  // Enough contacts have been generated. Yay!
         }

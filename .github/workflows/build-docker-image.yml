@@ -23,6 +23,7 @@ on:
       - 'v*.*.*'
 
   pull_request:
+    branches: [ main, devel, ci-devel ]
     paths:
       - ".github/workflows/build-docker-image.yml"
       - "cmake/**"

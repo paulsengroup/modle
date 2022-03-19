@@ -20,9 +20,15 @@ outdir="$(mktemp -d -t ci-XXXXXXXXXX)"
 
 trap 'rm -rf -- "$outdir"' EXIT
 
-"$modle_bin" sim -c <(grep '^chr22' "$chrom_sizes") \
-                 --extrusion-barrier-file <(xz -dc "$extr_barriers" | grep '^chr22') \
+# Only include chr2, chr20, chr21 and chr22
+"$modle_bin" sim -c <(grep '^chr2' "$chrom_sizes") \
+                 --extrusion-barrier-file <(xz -dc "$extr_barriers" | grep '^chr2') \
                  -o "$outdir/out" \
-                 --bin-size 15000 \
-                 --ncells "$(nproc)" \
-                 --max-burnin-epochs 1000
+                 --bin-size 20000 \
+                 --ncells 4 \
+                 --max-burnin-epochs 5000
+
+echo "Comparing $outdir/out.cool with $data_dir/reference_001.cool..."
+h5diff --exclude-attribute / \
+       -c "$outdir/out.cool" \
+          "$data_dir/reference_001.cool"
