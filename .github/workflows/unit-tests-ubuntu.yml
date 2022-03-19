@@ -82,14 +82,25 @@ jobs:
           conan remove -f "*" --src
           conan remove -f "*" --system-reqs
 
-      - name: Install dependencies
+      - name: Install build dependencies
         run: |
-          conan install conanfile.py --build outdated -s build_type=Release
-          conan install conanfile.py --build outdated -s build_type=Debug
+          mkdir build
+
+          for build_type in Release Debug; do
+            for dev_mode in ON OFF; do
+              rm -rf build/*
+              cmake -DCMAKE_BUILD_TYPE=Debug   \
+                    -DENABLE_DEVELOPER_MODE=ON \
+                    -DENABLE_TESTING=ON        \
+                    -S "$src_dir"              \
+                    -G Ninja                   \
+                    -B build
+            done
+          done
+
 
   build-project-short:
     runs-on: ubuntu-latest
-    if: "!contains(github.event.head_commit.message, '[ci full]')"
     needs: build-dependencies
     strategy:
       fail-fast: false
@@ -153,8 +164,9 @@ jobs:
                 -DOPT_ENABLE_CLANG_TIDY=OFF                          \
                 -DOPT_ENABLE_CPPCHECK=OFF                            \
                 -G "${{ matrix.generator }}"                         \
-                -B "${{ github.workspace }}/build"                   \
-                "${{ github.workspace }}"
+                -S "${{ github.workspace }}"                         \
+                -B "${{ github.workspace }}/build"
+
 
       - name: Build project
         run: cmake --build ${{ github.workspace }}/build -j $(nproc)
