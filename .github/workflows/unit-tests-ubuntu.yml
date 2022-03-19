@@ -152,8 +152,7 @@ jobs:
       - name: Cache Conan packages
         uses: actions/cache@v2
         with:
-          key: conan-${{ steps.cache-key.outputs.key }}
-          restore-keys: conan-${{ steps.cache-key.outputs.restore-key }}
+          key: conan-${{ steps.cache-key.outputs.restore-key }}
           path: ${{ env.CONAN_USER_HOME }}
 
       - name: Configure project
@@ -282,8 +281,7 @@ jobs:
       - name: Cache Conan packages
         uses: actions/cache@v2
         with:
-          key: conan-${{ steps.cache-key.outputs.key }}
-          restore-keys: conan-${{ steps.cache-key.outputs.restore-key }}
+          key: conan-${{ steps.cache-key.outputs.restore-key }}
           path: ${{ env.CONAN_USER_HOME }}
 
       - name: Configure project
