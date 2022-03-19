@@ -41,10 +41,10 @@ env:
   CCACHE_MAXSIZE: "500M"
 
 jobs:
-  build:
+  build-dependencies:
     runs-on: ubuntu-latest
     strategy:
-      fail-fast: false
+      fail-fast: true
       matrix:
         os-version:
           - 20.04
@@ -53,64 +53,72 @@ jobs:
           - gcc-11
           - clang-7
           - clang-13
-        generator:
-          - "Ninja"
-        cmake:
-          - 3.22.2
-        build_type:
-          - Release
-          - Debug
-        developer_mode:
-          - ON
-
-        include:
-          # Make sure project builds when using make
-          - os-version: 20.04
-            compiler: clang-13
-            generator: "Unix Makefiles"
-            cmake: 3.22.2
-            build_type: Debug
-            developer_mode: OFF
-          # Make sure project builds with CMake 3.16
-          - os-version: 20.04
-            compiler: clang-13
-            generator: "Ninja"
-            cmake: 3.16.8
-            build_type: Debug
-            developer_mode: OFF
 
     container:
-      image: ghcr.io/${{ github.repository_owner }}/ci-docker-images/modle/ubuntu-${{ matrix.os-version }}-cxx-${{ matrix.compiler }}:latest
+      image: ghcr.io/paulsengroup/ci-docker-images/modle/ubuntu-${{ matrix.os-version }}-cxx-${{ matrix.compiler }}:latest
       options: "-v ${{ github.workspace }}:${{ github.workspace }}"
-
-    defaults:
-      run:
-        shell: bash
 
     steps:
       - uses: actions/checkout@v3
 
-      - name: Extract CMake version
-        id: cmake-version
+      - name: Generate cache key
+        id: cache-key
         run: |
-          cmake_version="$(cmake --version | head -n 1 | grep -oP '\d+\.\d+\.\d+')"
-          echo "Detected CMake version: \"$cmake_version\""
+          host_os="host-${{ runner.os }}"
+          compiler="${{ matrix.compiler }}"
+          hash="${{ hashFiles('conanfile.py', '.github/workflows/unit-tests-ubuntu.yml') }}"
 
-          echo "::set-output name=version::$cmake_version"
+          echo "::set-output name=key::$host_os-$compiler-$hash"
 
-      - name: Change CMake version
-        if: ${{ !startsWith(steps.cmake-version.outputs.version, matrix.cmake) }}
+      - name: Cache Conan packages
+        uses: actions/cache@v2
+        with:
+          key: conan-${{ steps.cache-key.outputs.key }}
+          path: ${{ env.CONAN_USER_HOME }}
+
+      - name: Clean up Conan
         run: |
-          apt-get update -q
-          apt-get install -y python3-pip
-          pip install "cmake==${{ matrix.cmake}}"
+          conan remove -f "*" --builds
+          conan remove -f "*" --src
+          conan remove -f "*" --system-reqs
+
+      - name: Install dependencies
+        run: |
+          conan install conanfile.py --build outdated -s build_type=Release
+          conan install conanfile.py --build outdated -s build_type=Debug
+
+  build-project-short:
+    runs-on: ubuntu-latest
+    if: "!contains(github.event.head_commit.message, '[ci full]')"
+    needs: build-dependencies
+    strategy:
+      fail-fast: false
+      matrix:
+        os-version:
+          - 20.04
+        compiler:
+          - gcc-11
+          - clang-13
+        generator:
+          - Ninja
+        cmake:
+          - 3.22.2
+        build_type:
+          - Debug
+        developer_mode:
+          - ON
+
+    container:
+      image: ghcr.io/paulsengroup/ci-docker-images/modle/ubuntu-${{ matrix.os-version }}-cxx-${{ matrix.compiler }}:latest
+      options: "-v ${{ github.workspace }}:${{ github.workspace }}"
+
+    steps:
+      - uses: actions/checkout@v3
 
       - name: Generate cache key
         id: cache-key
         run: |
-          flag=0  # Change this flag to force-update cache entries
           host_os="host-${{ runner.os }}"
-          image="${{ matrix.image }}"
           compiler="${{ matrix.compiler }}"
           generator="${{ matrix.generator }}"
           build_type="${{ matrix.build_type }}"
@@ -119,8 +127,8 @@ jobs:
           # This can be used by to always update a cache entry (useful e.g. for ccache)
           current_date="$(date '+%s')"
 
-          echo "::set-output name=key::$host_os-$image-$compiler-$generator-$build_type-$flag-$hash"
-          echo "::set-output name=restore-key::$host_os-$image-$compiler-$generator-$build_type-$flag"
+          echo "::set-output name=key::$host_os-$compiler-$hash-$generator-$build_type"
+          echo "::set-output name=restore-key::$host_os-$compiler-$hash"
           echo "::set-output name=date::$current_date"
 
       - name: Cache Ccache folder
@@ -136,12 +144,6 @@ jobs:
           key: conan-${{ steps.cache-key.outputs.key }}
           restore-keys: conan-${{ steps.cache-key.outputs.restore-key }}
           path: ${{ env.CONAN_USER_HOME }}
-
-      - name: Clean up Conan
-        run: |
-          conan remove -f "*" --builds
-          conan remove -f "*" --src
-          conan remove -f "*" --system-reqs
 
       - name: Configure project
         run: |
@@ -180,15 +182,131 @@ jobs:
           ${{ github.workspace }}/build/src/modle/modle --version
           ${{ github.workspace }}/build/src/modle_tools/modle_tools --version
 
-      # - name: Generate test coverage report
-      #   if: >
-      #     matrix.build_type == 'Debug'
-      #   working-directory: ${{ github.workspace }}/build
-      #   run: |
-      #     gcovr --delete                       \
-      #           --root ${{ github.workspace }} \
-      #           --exclude test                 \
-      #           --print-summary                \
-      #           --xml-pretty                   \
-      #           --xml                          \
-      #           -o coverage.xml .
+  build-project-long:
+    needs: build-dependencies
+    if: "contains(github.event.head_commit.message, '[ci full]')"
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        os-version:
+          - 20.04
+        compiler:
+          - gcc-7
+          - gcc-11
+          - clang-7
+          - clang-13
+        generator:
+          - Ninja
+        cmake:
+          - 3.22.2
+        build_type:
+          - Release
+          - Debug
+        developer_mode:
+          - ON
+
+        include:
+          # Make sure project builds when using make
+          - os-version: 20.04
+            compiler: clang-13
+            generator: "Unix Makefiles"
+            cmake: 3.22.2
+            build_type: Debug
+            developer_mode: OFF
+          # Make sure project builds with CMake 3.16
+          - os-version: 20.04
+            compiler: clang-13
+            generator: Ninja
+            cmake: 3.16.8
+            build_type: Debug
+            developer_mode: OFF
+
+        exclude:
+          # Exclude cases covered by the short CI suite
+          - os-version: 20.04
+            compiler: clang-13
+            generator: Ninja
+            cmake: 3.22.2
+            build_type: Debug
+            developer_mode: ON
+          - os-version: 20.04
+            compiler: gcc
+            generator: Ninja
+            cmake: 3.22.2
+            build_type: Debug
+            developer_mode: ON
+
+    container:
+      image: ghcr.io/paulsengroup/ci-docker-images/modle/ubuntu-${{ matrix.os-version }}-cxx-${{ matrix.compiler }}:latest
+      options: "-v ${{ github.workspace }}:${{ github.workspace }}"
+
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Generate cache key
+        id: cache-key
+        run: |
+          host_os="host-${{ runner.os }}"
+          compiler="${{ matrix.compiler }}"
+          generator="${{ matrix.generator }}"
+          build_type="${{ matrix.build_type }}"
+          hash="${{ hashFiles('conanfile.py', '.github/workflows/unit-tests-ubuntu.yml') }}"
+
+          # This can be used by to always update a cache entry (useful e.g. for ccache)
+          current_date="$(date '+%s')"
+
+          echo "::set-output name=key::$host_os-$compiler-$hash-$generator-$build_type"
+          echo "::set-output name=restore-key::$host_os-$compiler-$hash"
+          echo "::set-output name=date::$current_date"
+
+      - name: Cache Ccache folder
+        uses: actions/cache@v2
+        with:
+          key: ccache-${{ steps.cache-key.outputs.key }}-${{ steps.cache-key.outputs.date }}
+          restore-keys: ccache-${{ steps.cache-key.outputs.restore-key }}
+          path: ${{ env.CCACHE_DIR }}
+
+      - name: Cache Conan packages
+        uses: actions/cache@v2
+        with:
+          key: conan-${{ steps.cache-key.outputs.key }}
+          restore-keys: conan-${{ steps.cache-key.outputs.restore-key }}
+          path: ${{ env.CONAN_USER_HOME }}
+
+      - name: Configure project
+        run: |
+          mkdir ${{ github.workspace }}/build
+          cmake -DCMAKE_BUILD_TYPE=${{ matrix.build_type }}          \
+                -DENABLE_DEVELOPER_MODE=${{ matrix.developer_mode }} \
+                -DOPT_ENABLE_CLANG_TIDY=OFF                          \
+                -DOPT_ENABLE_CPPCHECK=OFF                            \
+                -G "${{ matrix.generator }}"                         \
+                -B "${{ github.workspace }}/build"                   \
+                "${{ github.workspace }}"
+
+      - name: Build project
+        run: cmake --build ${{ github.workspace }}/build -j $(nproc)
+
+      - name: Print Ccache statistics
+        run: ccache -s
+
+      - name: Run unit tests
+        working-directory: ${{ github.workspace }}/build
+        run: |
+          ctest --test-dir .             \
+                --schedule-random        \
+                --output-on-failure      \
+                --no-tests=error         \
+                --timeout 120            \
+                --repeat after-timeout:3 \
+                -j $(nproc)
+
+      - name: Run integration tests
+        working-directory: ${{ github.workspace }}/test/scripts
+        run: ./modle_integration_test_simple.sh ${{ github.workspace }}/build/src/modle/modle
+
+      - name: Inspect MoDLE version
+        run: |
+          ${{ github.workspace }}/build/src/modle/modle --version
+          ${{ github.workspace }}/build/src/modle_tools/modle_tools --version
