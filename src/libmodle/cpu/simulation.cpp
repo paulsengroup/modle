@@ -287,10 +287,6 @@ void Simulation::clamp_moves(const Chromosome& chrom, const absl::Span<const Lef
       assert(fwd_moves[i] == 0);
       continue;
     }
-    if (lefs[i].loop_size() == 0 && lefs[i].binding_epoch == 1265 &&
-        lefs[i].rev_unit.pos() == 2504) {
-      [[maybe_unused]] volatile int foo = 0;
-    }
 
     assert(lefs[i].rev_unit.pos() >= chrom.start_pos());
     assert(lefs[i].fwd_unit.pos() < chrom.end_pos());
