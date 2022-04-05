@@ -460,7 +460,7 @@ void Cli::make_perturbate_subcommand() {
 
   auto& c = this->_config;
   auto& io = *s.get_option_group("Input/Output");
-  auto& gen = *s.get_option_group("Generic");:0
+  auto& gen = *s.get_option_group("Generic");
 
 
   // clang-format off
