@@ -13,8 +13,8 @@ modle_bin="$1"
 
 data_dir="$(readlink -f "$(dirname "$0")/../data/integration_tests")"
 
-chrom_sizes="$data_dir/GRCh38.chrom.sizes"
-extr_barriers="$data_dir/GRCh38_H1_RAD21_occupancy.bed.xz"
+chrom_sizes="$data_dir/grch38.chrom.sizes"
+extr_barriers="$data_dir/grch38_h1_extrusion_barriers.bed.xz"
 
 outdir="$(mktemp -d -t ci-XXXXXXXXXX)"
 
