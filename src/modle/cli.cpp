@@ -447,15 +447,21 @@ void Cli::make_simulation_subcommand() {
 }
 
 void Cli::make_perturbate_subcommand() {
+  // TODO add description
+  // clang-format off
   auto& s = *this->_cli.add_subcommand("perturbate", "TODO.")
                  ->configurable()
-                 ->fallthrough();  // TODO add description
+                 ->fallthrough()
+                 ->group("");
+  // clang-format on
+
   s.alias("pert");
   add_common_options(s, this->_config);
 
   auto& c = this->_config;
   auto& io = *s.get_option_group("Input/Output");
-  auto& gen = *s.get_option_group("Generic");
+  auto& gen = *s.get_option_group("Generic");:0
+
 
   // clang-format off
   io.add_option(
@@ -529,7 +535,12 @@ void Cli::make_perturbate_subcommand() {
 }
 
 void Cli::make_replay_subcommand() {
-  auto& s = *this->_cli.add_subcommand("replay", "TODO")->fallthrough();
+  // TODO add description
+  // clang-format off
+  auto& s = *this->_cli.add_subcommand("replay", "TODO")
+                 ->fallthrough()
+                 ->group("");
+  // clang-format on
   s.alias("rpl");
 
   auto& c = this->_config;
@@ -584,7 +595,7 @@ void Cli::make_cli() {
   this->_cli.description("Stochastic modeling of DNA loop extrusion.");
   this->_cli.set_version_flag("-V,--version", std::string{modle::config::version::str_long()});
   this->_cli.require_subcommand(1);
-  this->_cli.set_config("--config", "", "Path to MoDLE's config file.");
+  this->_cli.set_config("--config", "", "Path to MoDLE's config file (optional).", false);
 
   this->make_simulation_subcommand();
   this->make_perturbate_subcommand();
