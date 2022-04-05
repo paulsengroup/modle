@@ -22,9 +22,6 @@ void Simulation::correct_moves_for_lef_bar_collisions(
     const absl::Span<bp_t> rev_moves, const absl::Span<bp_t> fwd_moves,
     const absl::Span<const CollisionT> rev_collisions,
     const absl::Span<const CollisionT> fwd_collisions) noexcept(utils::ndebug_defined()) {
-  // LEF-BAR collisions are encoded with a number between 0 and nbarriers
-  // This number corresponds to the index of the barrier that is causing the collision.
-
   for (usize i = 0; i < lefs.size(); ++i) {
     if (MODLE_UNLIKELY(
             rev_collisions[i].collision_occurred(CollisionT::LEF_BAR))) {  // Process rev collisions

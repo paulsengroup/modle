@@ -296,7 +296,7 @@ void Simulation::detect_primary_lef_lef_collisions(
   //      certain threshold, then we may have a LEF-LEF collision.
   //      If the probability of unit bypass is 0, then we always predict a LEF-LEF collision. If
   //      this probability is larger than 0, then we predict a LEF-LEF collision based on the
-  //      outcome of a bernoulli trial with probability of success equal to 1 - the prob. of bypass
+  //      outcome of a Bernoulli trial with probability of success equal to 1 - the prob. of bypass
   //    - If a LEF-LEF collision caused by two extr. unit moving in opposite direction is detected,
   //      encode the index of the extr. unit that caused the collision in the appropriate collision
   //      mask. This kind of collisions are encoded as offset + i, where offset = nbarriers and i =
@@ -545,7 +545,7 @@ void Simulation::fix_secondary_lef_lef_collisions(
   //
   // If EU1's move is left unmodified, EU1 will bypass EU2, X and anything else long its path.
   //
-  // This function is meant to detrect and address this scenario by correcting EU1's move so that
+  // This function is meant to detect and address this scenario by correcting EU1's move so that
   // after move EU1 is located downstream of EU2.
   //
   // The case shown above (where EU2 is 1bp upstream of X) is a bit more complicated for the
