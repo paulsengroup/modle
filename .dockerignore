@@ -24,6 +24,7 @@
 !.dockerignore
 !.editorconfig
 !.git*
+!CITATION.cff
 !CMakeLists.txt
 !Dockerfile
 !LICENSE

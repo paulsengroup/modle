@@ -76,10 +76,14 @@ ENV CXX="$CXX_COMPILER"
 RUN mkdir -p "$src_dir" "$build_dir"
 
 COPY conanfile.py "$src_dir"
-RUN cd "$build_dir"                          \
-&& conan install "$src_dir/conanfile.py"     \
-              --build outdated               \
-              -s build_type=Release
+RUN cd "$build_dir"                             \
+&& conan install "$src_dir/conanfile.py"        \
+                 --build                        \
+                 --env "CC=$CC"                 \
+                 --env "CXX=$CXX"               \
+                 -s build_type=Release          \
+                 -s compiler.libcxx=libstdc++11 \
+                 -s compiler.cppstd=17
 
 # Copy source files
 COPY . "$src_dir"
