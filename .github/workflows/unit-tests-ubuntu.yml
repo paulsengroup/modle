@@ -41,24 +41,75 @@ env:
   CCACHE_MAXSIZE: "500M"
 
 jobs:
-  build-dependencies:
+  build-dependencies-short:
     runs-on: ubuntu-latest
     strategy:
       fail-fast: true
       matrix:
         include:
           - { compiler: gcc-7,     os: 'ubuntu-20.04' }
+          - { compiler: gcc-11,    os: 'ubuntu-22.04' }
+          - { compiler: clang-7,   os: 'ubuntu-20.04' }
+          - { compiler: clang-13,  os: 'ubuntu-22.04' }
+
+    container:
+      image: ghcr.io/paulsengroup/ci-docker-images/modle/${{ matrix.os }}-cxx-${{ matrix.compiler }}:latest
+      options: "-v ${{ github.workspace }}:${{ github.workspace }}"
+
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Generate cache key
+        id: cache-key
+        run: |
+          os="${{ matrix.os }}"
+          compiler="${{ matrix.compiler }}"
+          hash="${{ hashFiles('conanfile.py', '.github/workflows/unit-tests-ubuntu.yml') }}"
+
+          echo "::set-output name=key::$os-$compiler-$hash"
+
+      - name: Cache Conan packages
+        id: cache-conan
+        uses: actions/cache@v3
+        with:
+          key: conan-${{ steps.cache-key.outputs.key }}
+          path: ${{ env.CONAN_USER_HOME }}
+
+      - name: Clean up Conan
+        if: steps.cache-conan.outputs.cache-hit != 'true'
+        run: |
+          conan remove -f "*" --builds
+          conan remove -f "*" --src
+          conan remove -f "*" --system-reqs
+
+      - name: Install build dependencies
+        if: steps.cache-conan.outputs.cache-hit != 'true'
+        run: |
+          mkdir build
+
+          for build_type in Release Debug; do
+            conan install conanfile.py        \
+               --build outdated               \
+               -s build_type=${build_type}    \
+               -s compiler.libcxx=libstdc++11 \
+               -s compiler.cppstd=17
+          done
+
+  build-dependencies-long:
+    if: "contains(github.event.head_commit.message, '[ci full]')"
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: true
+      matrix:
+        include:
           - { compiler: gcc-8,     os: 'ubuntu-20.04' }
           - { compiler: gcc-9,     os: 'ubuntu-22.04' }
           - { compiler: gcc-10,    os: 'ubuntu-22.04' }
-          - { compiler: gcc-11,    os: 'ubuntu-22.04' }
-          - { compiler: clang-7,   os: 'ubuntu-20.04' }
           - { compiler: clang-8,   os: 'ubuntu-20.04' }
           - { compiler: clang-9,   os: 'ubuntu-20.04' }
           - { compiler: clang-10,  os: 'ubuntu-20.04' }
           - { compiler: clang-11,  os: 'ubuntu-22.04' }
           - { compiler: clang-12,  os: 'ubuntu-22.04' }
-          - { compiler: clang-13,  os: 'ubuntu-22.04' }
 
     container:
       image: ghcr.io/paulsengroup/ci-docker-images/modle/${{ matrix.os }}-cxx-${{ matrix.compiler }}:latest
@@ -106,7 +157,7 @@ jobs:
 
   build-project-short:
     runs-on: ubuntu-latest
-    needs: build-dependencies
+    needs: build-dependencies-short
     strategy:
       fail-fast: false
       matrix:
@@ -191,7 +242,7 @@ jobs:
           ${{ github.workspace }}/build/src/modle_tools/modle_tools --version
 
   build-project-long:
-    needs: build-dependencies
+    needs: [build-dependencies-short, build-dependencies-long]
     if: "contains(github.event.head_commit.message, '[ci full]')"
     runs-on: ubuntu-latest
     strategy:
@@ -245,7 +296,7 @@ jobs:
           current_date="$(date '+%s')"
 
           echo "::set-output name=key::$os-$compiler-$hash-$generator-$build_type"
-          echo "::set-output name=restore-key::$host_os-$compiler-$hash"
+          echo "::set-output name=restore-key::$os-$compiler-$hash"
           echo "::set-output name=date::$current_date"
 
       - name: Cache Ccache folder
