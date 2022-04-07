@@ -126,11 +126,14 @@ FROM "${FINAL_BASE_IMAGE}@${FINAL_BASE_IMAGE_DIGEST}" AS integration-testing
 ARG staging_dir='/root/modle/staging'
 ARG install_dir='/usr/local'
 
-COPY --from=builder "$staging_dir" "$install_dir"
+COPY --from=unit-testing "$staging_dir" "$install_dir"
+COPY --from=unit-testing /usr/local/bin/h5diff /usr/local/bin/h5diff
 COPY test/scripts/modle_integration_test_simple.sh "$src_dir/test/scripts/modle_integration_test_simple.sh"
 COPY test/data/integration_tests/ "$src_dir/test/data/integration_tests/"
 
-RUN "$src_dir/test/scripts/modle_integration_test_simple.sh" "$install_dir/bin/modle"
+RUN apt-get update \
+&& apt-get install xz-utils \
+&& "$src_dir/test/scripts/modle_integration_test_simple.sh" "$install_dir/bin/modle"
 
 ARG FINAL_BASE_IMAGE
 ARG FINAL_BASE_IMAGE_DIGEST
@@ -149,7 +152,7 @@ ARG VERSION
 ARG CREATION_DATE
 
 # Export project binaries to the final build stage
-COPY --from=builder "$staging_dir" "$install_dir"
+COPY --from=integration-testing "$staging_dir" "$install_dir"
 
 WORKDIR /data
 ENTRYPOINT ["/usr/local/bin/modle"]
