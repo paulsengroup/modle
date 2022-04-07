@@ -84,8 +84,8 @@ Writer& Writer::operator=(Writer&& other) noexcept {
 void Writer::write_chromosomes(const char* const* chrom_names, const u32* chrom_sizes,
                                const usize num_chroms) {
   assert(this->_fp);  // NOLINT(hicpp-no-array-decay)
-  // GCC7 fails to parse this if constexpr
-#if defined(__GNUC__) && !defined(__clang__) && __GNUC__ == 7
+  // GCC 8 and older fails to parse this if constexpr
+#if defined(__GNUC__) && !defined(__clang__) && __GNUC__ < 9
   if (utils::ndebug_not_defined()) {
 #else
   if constexpr (utils::ndebug_not_defined()) {
