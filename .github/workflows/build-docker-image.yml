@@ -48,7 +48,7 @@ jobs:
           set -u
 
           OS_NAME='ubuntu'
-          OS_VERSION='20.04'
+          OS_VERSION='22.04'
           C_COMPILER='clang-13'
           CXX_COMPILER='clang++-13'
 
