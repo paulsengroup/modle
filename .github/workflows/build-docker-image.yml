@@ -57,6 +57,8 @@ jobs:
 
           FINAL_BASE_IMAGE="docker.io/library/$OS_NAME"
           FINAL_BASE_IMAGE_TAG="$OS_VERSION"
+          sudo docker pull "$FINAL_BASE_IMAGE:$FINAL_BASE_IMAGE_TAG"
+          
           FINAL_BASE_IMAGE_DIGEST="$(docker inspect --format='{{index .RepoDigests 0}}' "$FINAL_BASE_IMAGE:$FINAL_BASE_IMAGE_TAG" | grep -o '[[:alnum:]:]\+$')"
 
           GIT_HASH="$(git rev-parse HEAD)"
