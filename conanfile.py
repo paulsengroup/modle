@@ -15,7 +15,7 @@ class MoDLE(ConanFile):
               "boost/1.78.0",
               "bzip2/1.0.8",
               "catch2/2.13.8",
-              "cli11/2.1.2",
+              "cli11/2.2.0",
               "concurrentqueue/1.0.3",
               "cpp-sort/1.12.1",
               "fmt/8.1.1",
