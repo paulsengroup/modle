@@ -33,7 +33,7 @@ std::string str_float_to_str_int(const std::string &s) {
     if (std::trunc(n) == n) {
       return fmt::format(FMT_STRING("{:.0f}"), n);
     }
-  } catch (const std::exception &e) {  // Let the callee deal with invalid numbers
+  } catch (const std::exception &e) {  // Let the caller deal with invalid numbers
     return s;
   }
   return s;
