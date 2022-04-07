@@ -70,7 +70,7 @@ jobs:
       - name: Generate cache key
         id: cache-key
         run: |
-          os="host-${{ matrix.os }}"
+          os="${{ matrix.os }}"
           compiler="${{ matrix.compiler }}"
           hash="${{ hashFiles('conanfile.py', '.github/workflows/unit-tests-ubuntu.yml') }}"
 
@@ -126,7 +126,7 @@ jobs:
       - name: Generate cache key
         id: cache-key
         run: |
-          os="host-${{ matrix.os }}"
+          os="${{ matrix.os }}"
           compiler="${{ matrix.compiler }}"
           generator="${{ matrix.generator }}"
           build_type="${{ matrix.build_type }}"
@@ -235,7 +235,7 @@ jobs:
       - name: Generate cache key
         id: cache-key
         run: |
-          os="host-${{ matrix.os }}"
+          os="${{ matrix.os }}"
           compiler="${{ matrix.compiler }}"
           generator="${{ matrix.generator }}"
           build_type="${{ matrix.build_type }}"
