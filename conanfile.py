@@ -29,14 +29,19 @@ class MoDLE(ConanFile):
               "tomlplusplus/2.5.0",
               "xxhash/0.8.1",
               "xz_utils/5.2.5",
-              "zlib/1.2.11"]
+              "zlib/1.2.12"]
   # "zstd/1.4.8"]
 
   generators = "cmake", "gcc", "txt", "cmake_find_package", "cmake_find_package_multi"
 
+  def validate(self):
+      if self.settings.compiler.get_safe("cppstd"):
+          tools.check_min_cppstd(self, 17)
+
   def configure(self):
-    if self.settings.compiler.cppstd:
-      tools.check_min_cppstd(self, 17)
+
+    if self.settings.compiler in ["clang", "gcc"]:
+        self.settings.compiler.libcxx = "libstdc++11"
 
     # Set settings for dependencies
     self.options["boost"].system_no_deprecated = True
