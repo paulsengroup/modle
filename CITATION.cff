@@ -1,32 +1,44 @@
-# This CITATION.cff file was generated with cffinit.
-# Visit https://bit.ly/cffinit to generate yours today!
+# Copyright (C) 2022 Roberto Rossini <roberros@uio.no>
+#
+# SPDX-License-Identifier: MIT
 
 cff-version: 1.2.0
-title: >-
-  MoDLE: High-performance stochastic modeling of DNA
-  loop extrusion interactions
+title: MoDLE
+abstract: >-
+  High-performance stochastic modeling of DNA
+  loop extrusion interactions.
 message: >-
   If you use this software, please cite it using the
   metadata from this file.
 type: software
+license: MIT
+repository-code: "https://github.com/paulsengroup/modle"
+identifiers:
+  - description: This is the collection of archived snapshots of all versions of MoDLE
+    type: doi
+    value: "10.5281/zenodo.6424697"
 authors:
   - given-names: Roberto
     family-names: Rossini
+    orcid: 'https://orcid.org/0000-0003-3096-1470'
     email: roberros@uio.no
     affiliation: University of Oslo
-    orcid: 'https://orcid.org/0000-0003-3096-1470'
-  - given-names: Jonas
-    family-names: Paulsen
-    email: jonas.paulsen@ibv.uio.no
-    affiliation: University of Oslo
-  - orcid: 'https://orcid.org/0000-0002-9329-9974'
-    given-names: Torbjørn
-    family-names: Rognes
-    email: torognes@ifi.uio.no
-    affiliation: University of Oslo
-  - orcid: 'https://orcid.org/0000-0001-5127-5459'
-    given-names: Anthony
+  - given-names: Vipin
+    family-names: Kumar
+    email: vipin.kumar@ncmm.uio.no
+    affiliation: Centre for Molecular Medicine Norway
+  - given-names: Anthony
     family-names: Mathelier
+    orcid: 'https://orcid.org/0000-0001-5127-5459'
     email: anthony.mathelier@ncmm.uio.no
     affiliation: Centre for Molecular Medicine Norway
-
+  - given-names: Torbjørn
+    family-names: Rognes
+    orcid: 'https://orcid.org/0000-0002-9329-9974'
+    email: torognes@ifi.uio.no
+    affiliation: University of Oslo
+  - given-names: Jonas
+    family-names: Paulsen
+    orcid: 'https://orcid.org/0000-0002-7918-5495'
+    email: jonas.paulsen@ibv.uio.no
+    affiliation: University of Oslo
