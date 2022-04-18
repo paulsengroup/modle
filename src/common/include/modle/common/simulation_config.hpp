@@ -47,7 +47,6 @@ struct Config {
   bool force{false};
   bool quiet{false};
   bool write_contacts_for_ko_chroms{false};
-  bool write_tasks_to_disk{true};
   boost::filesystem::path path_to_reference_contacts{};
   std::vector<boost::filesystem::path> path_to_feature_bed_files{};
   boost::filesystem::path path_to_output_file_bedpe{};
@@ -75,7 +74,6 @@ struct Config {
   double genextreme_mu{0};
   double genextreme_sigma{5'000};
   double genextreme_xi{0.001};
-  bool exclude_chrom_wo_extr_barriers{true};
 
   // LEFs params
   bp_t fwd_extrusion_speed{bin_size / 2};

@@ -355,12 +355,6 @@ static void add_common_options(CLI::App& subcommand, modle::Config& c) {
       ->check(CLI::Range(0.0, 1.0))
       ->capture_default_str();
 
-  extr_barr.add_flag(
-      "--exclude-chrom-wo-barriers,!--keep-chrom-without-barriers",
-      c.exclude_chrom_wo_extr_barriers,
-      "Do not simulate loop extrusion on chromosomes without any extrusion barrier.")
-      ->capture_default_str();
-
   rand.add_option(
       "--mu,--genextr-location",
       c.genextreme_mu,
@@ -522,12 +516,6 @@ void Cli::make_perturbate_subcommand() {
       c.path_to_deletion_bed,
       "Path to a BED file containing the list deletions to perform when perturbating extrusion barriers.")
       ->check(CLI::ExistingFile);
-
-  gen.add_flag(
-      "--write-tasks,!--no-write-taks",
-      c.write_tasks_to_disk,
-      "Write tasks to disk.")
-      ->capture_default_str();
   // clang-format on
 
   gen.get_option("--deletion-size")->excludes("--deletion-list");
