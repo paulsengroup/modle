@@ -190,10 +190,7 @@ class Simulation : Config {
   std::mutex _exceptions_mutex{};
   thread_pool _tpool;
 
-  static constexpr std::string_view model_state_log_header =
-      "task_id\tepoch\tcell_id\tchrom\tburnin\tbarrier_occupancy\tnum_active_lefs\tnum_stalls_"
-      "rev\tnum_stalls_fwd\tnum_stalls_both\tnum_lef_bar_collisions\tnum_primary_lef_lef_"
-      "collisions\tnum_secondary_lef_lef_collisions\tavg_loop_size\n";
+  static constexpr auto& model_internal_state_log_header = Config::model_internal_state_log_header;
 
   [[nodiscard]] bool ok() const noexcept;
 

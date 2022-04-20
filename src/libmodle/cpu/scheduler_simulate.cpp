@@ -88,7 +88,8 @@ void Simulation::run_simulate() {
   std::mutex model_state_logger_mtx;  // Protect rw access to the log file located at
                                       // this->path_to_model_state_log_file
   if (this->log_model_internal_state && !this->skip_output) {
-    compressed_io::Writer(this->path_to_model_state_log_file).write(model_state_log_header);
+    compressed_io::Writer(this->path_to_model_state_log_file)
+        .write(model_internal_state_log_header);
   }
 
   try {
@@ -114,13 +115,11 @@ void Simulation::run_simulate() {
       if (!this->ok()) {
         this->handle_exceptions();
       }
-      // Don't simulate KO chroms (but write them to disk if the user desires so)
-      if (!chrom.ok() || chrom.num_barriers() == 0) {
+      // Don't bother simulating chromosomes without barriers
+      if (!this->simulate_chromosomes_wo_barriers && chrom.num_barriers() == 0) {
         spdlog::info(FMT_STRING("SKIPPING \"{}\"..."), chrom.name());
-        if (this->write_contacts_for_ko_chroms) {
-          std::scoped_lock lck(progress_queue_mutex);
-          progress_queue.emplace_back(&chrom, num_cells);
-        }
+        std::scoped_lock lck(progress_queue_mutex);
+        progress_queue.emplace_back(&chrom, num_cells);
         continue;
       }
 

@@ -36,47 +36,37 @@
 namespace modle {
 
 Chromosome::Chromosome(usize id, const bed::BED& chrom,
-                       const IITree<bp_t, ExtrusionBarrier>& barriers, bool ok_)
-    : Chromosome(id, chrom.chrom, chrom.thick_start, chrom.thick_end, chrom.size(), barriers, ok_) {
-}
+                       const IITree<bp_t, ExtrusionBarrier>& barriers)
+    : Chromosome(id, chrom.chrom, chrom.thick_start, chrom.thick_end, chrom.size(), barriers) {}
 
-Chromosome::Chromosome(usize id, const bed::BED& chrom, bool ok_)
+Chromosome::Chromosome(usize id, const bed::BED& chrom)
     : _name(chrom.chrom),
       _start(chrom.chrom_start),
       _end(chrom.chrom_end),
       _size(chrom.size()),
-      _id(id),
-      _ok(ok_) {}
+      _id(id) {}
 
-Chromosome::Chromosome(usize id, const bed::BED& chrom, IITree<bp_t, ExtrusionBarrier>&& barriers,
-                       bool ok_)
-    : Chromosome(id, chrom.chrom, chrom.thick_start, chrom.thick_end, chrom.size(), barriers, ok_) {
-}
+Chromosome::Chromosome(usize id, const bed::BED& chrom, IITree<bp_t, ExtrusionBarrier>&& barriers)
+    : Chromosome(id, chrom.chrom, chrom.thick_start, chrom.thick_end, chrom.size(), barriers) {}
 
 DISABLE_WARNING_PUSH
 DISABLE_WARNING_SIGN_CONVERSION
 DISABLE_WARNING_CONVERSION
 Chromosome::Chromosome(usize id, std::string_view chrom_name, bp_t chrom_start, bp_t chrom_end,
-                       bp_t chrom_size, bool ok_)
-    : _name(chrom_name),
-      _start(chrom_start),
-      _end(chrom_end),
-      _size(chrom_size),
-      _id(id),
-      _ok(ok_) {
+                       bp_t chrom_size)
+    : _name(chrom_name), _start(chrom_start), _end(chrom_end), _size(chrom_size), _id(id) {
   assert(chrom_start <= chrom_end);
   assert(chrom_end - chrom_start <= chrom_size);
 }
 
 Chromosome::Chromosome(usize id, std::string_view chrom_name, bp_t chrom_start, bp_t chrom_end,
-                       bp_t chrom_size, const IITree<bp_t, ExtrusionBarrier>& barriers, bool ok_)
+                       bp_t chrom_size, const IITree<bp_t, ExtrusionBarrier>& barriers)
     : _name(chrom_name),
       _start(chrom_start),
       _end(chrom_end),
       _size(chrom_size),
       _id(id),
-      _barriers(barriers),
-      _ok(ok_) {
+      _barriers(barriers) {
   assert(chrom_start <= chrom_end);
   assert(chrom_end - chrom_start <= chrom_size);
 
@@ -84,14 +74,13 @@ Chromosome::Chromosome(usize id, std::string_view chrom_name, bp_t chrom_start, 
 }
 
 Chromosome::Chromosome(usize id, std::string_view chrom_name, bp_t chrom_start, bp_t chrom_end,
-                       bp_t chrom_size, IITree<bp_t, ExtrusionBarrier>&& barriers, bool ok_)
+                       bp_t chrom_size, IITree<bp_t, ExtrusionBarrier>&& barriers)
     : _name(chrom_name),
       _start(chrom_start),
       _end(chrom_end),
       _size(chrom_size),
       _id(id),
-      _barriers(std::move(barriers)),
-      _ok(ok_) {
+      _barriers(std::move(barriers)) {
   assert(chrom_start <= chrom_end);
   assert(chrom_end - chrom_start <= chrom_size);
 
@@ -107,8 +96,7 @@ Chromosome::Chromosome(const Chromosome& other)
       _id(other._id),
       _barriers(other._barriers),
       _contacts(other._contacts),
-      _features(other._features),
-      _ok(other._ok) {
+      _features(other._features) {
   _barriers.make_BST();
 }
 
@@ -120,8 +108,7 @@ Chromosome::Chromosome(Chromosome&& other) noexcept
       _id(other._id),
       _barriers(std::move(other._barriers)),
       _contacts(std::move(other._contacts)),
-      _features(std::move(other._features)),
-      _ok(other._ok) {
+      _features(std::move(other._features)) {
   _barriers.make_BST();
 }
 
@@ -138,7 +125,6 @@ Chromosome& Chromosome::operator=(const Chromosome& other) {
   _barriers = other._barriers;
   _contacts = other._contacts;
   _features = other._features;
-  _ok = other._ok;
 
   _barriers.make_BST();
 
@@ -158,7 +144,6 @@ Chromosome& Chromosome::operator=(Chromosome&& other) noexcept {
   _barriers = std::move(other._barriers);
   _contacts = std::move(other._contacts);
   _features = std::move(other._features);
-  _ok = other._ok;
 
   _barriers.make_BST();
 
@@ -219,8 +204,6 @@ void Chromosome::add_extrusion_barrier(const bed::BED& record, const double ctcf
 usize Chromosome::id() const { return this->_id; }
 std::string_view Chromosome::name() const { return this->_name; }
 const char* Chromosome::name_cstr() const { return this->_name.c_str(); }
-
-bool Chromosome::ok() const { return this->_ok; }
 
 usize Chromosome::num_lefs(double nlefs_per_mbp) const {
   return static_cast<usize>((static_cast<double>(this->simulated_size()) / 1.0e6) * nlefs_per_mbp);
@@ -311,16 +294,14 @@ Genome::Genome(const boost::filesystem::path& path_to_chrom_sizes,
                const boost::filesystem::path& path_to_extr_barriers,
                const boost::filesystem::path& path_to_chrom_subranges,
                const absl::Span<const boost::filesystem::path> paths_to_extra_features,
-               const double ctcf_prob_occ_to_occ, const double ctcf_prob_nocc_to_nocc,
-               bool keep_all_chroms)
-    : _chromosomes(instantiate_genome(
-          path_to_chrom_sizes, path_to_extr_barriers, path_to_chrom_subranges,
-          paths_to_extra_features, ctcf_prob_occ_to_occ, ctcf_prob_nocc_to_nocc, keep_all_chroms)) {
-}
+               const double ctcf_prob_occ_to_occ, const double ctcf_prob_nocc_to_nocc)
+    : _chromosomes(instantiate_genome(path_to_chrom_sizes, path_to_extr_barriers,
+                                      path_to_chrom_subranges, paths_to_extra_features,
+                                      ctcf_prob_occ_to_occ, ctcf_prob_nocc_to_nocc)) {}
 
 absl::btree_set<Chromosome> Genome::import_chromosomes(
     const boost::filesystem::path& path_to_chrom_sizes,
-    const boost::filesystem::path& path_to_chrom_subranges, bool keep_all_chroms) {
+    const boost::filesystem::path& path_to_chrom_subranges) {
   assert(!path_to_chrom_sizes.empty());
 
   const auto t0 = absl::Now();
@@ -389,10 +370,8 @@ absl::btree_set<Chromosome> Genome::import_chromosomes(
       record.thick_end = record.chrom_end;
     }
 
-    if (keep_all_chroms || match != chrom_ranges.end()) {
-      chromosomes.emplace(id++, record.chrom, record.thick_start, record.thick_end, record.size(),
-                          match != chrom_ranges.end());
-    }
+    chromosomes.emplace(id++, record.chrom, record.thick_start, record.thick_end, record.size(),
+                        match != chrom_ranges.end());
   }
 
   print_status_update_on_return(chromosomes.size());
@@ -465,8 +444,8 @@ absl::btree_set<Chromosome> Genome::instantiate_genome(
     const boost::filesystem::path& path_to_extr_barriers,
     const boost::filesystem::path& path_to_chrom_subranges,
     const absl::Span<const boost::filesystem::path> paths_to_extra_features,
-    const double ctcf_prob_occ_to_occ, const double ctcf_prob_nocc_to_nocc, bool keep_all_chroms) {
-  auto chroms = import_chromosomes(path_to_chrom_sizes, path_to_chrom_subranges, keep_all_chroms);
+    const double ctcf_prob_occ_to_occ, const double ctcf_prob_nocc_to_nocc) {
+  auto chroms = import_chromosomes(path_to_chrom_sizes, path_to_chrom_subranges);
 
   if (chroms.empty()) {
     if (path_to_chrom_subranges.empty()) {

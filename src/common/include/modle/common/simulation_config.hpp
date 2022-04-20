@@ -46,7 +46,6 @@ struct Config {
   boost::filesystem::path path_to_extr_barriers;
   bool force{false};
   bool quiet{false};
-  bool write_contacts_for_ko_chroms{false};
   boost::filesystem::path path_to_reference_contacts{};
   std::vector<boost::filesystem::path> path_to_feature_bed_files{};
   boost::filesystem::path path_to_output_file_bedpe{};
@@ -99,6 +98,7 @@ struct Config {
   double lef_bar_minor_collision_pblock{0.0};
 
   // Miscellaneous
+  bool simulate_chromosomes_wo_barriers{false};
   usize num_cells{512};
   usize nthreads{std::thread::hardware_concurrency()};
   u64 seed{0};
@@ -117,6 +117,11 @@ struct Config {
   double burnin_speed_coefficient{1.0};
   bp_t fwd_extrusion_speed_burnin{bp_t(double(fwd_extrusion_speed) * burnin_speed_coefficient)};
   bp_t rev_extrusion_speed_burnin{fwd_extrusion_speed_burnin};
+
+  static constexpr std::string_view model_internal_state_log_header =
+      "task_id\tepoch\tcell_id\tchrom\tburnin\tbarrier_occupancy\tnum_active_lefs\tnum_stalls_"
+      "rev\tnum_stalls_fwd\tnum_stalls_both\tnum_lef_bar_collisions\tnum_primary_lef_lef_"
+      "collisions\tnum_secondary_lef_lef_collisions\tavg_loop_size\n";
 
   absl::Span<char*> args;
   std::string argv_json{};

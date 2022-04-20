@@ -360,10 +360,12 @@ void Cooler<N>::write_or_append_cmatrix_to_file(const ContactMatrix<M> *cmatrix,
     idx_bin1_offset_h5_foffset =
         hdf5::write_numbers(b.idx_bin1_offset_buff, d[IDX_BIN1], idx_bin1_offset_h5_foffset);
 
-    DISABLE_WARNING_PUSH
-    DISABLE_WARNING_USELESS_CAST
-    this->_sum += static_cast<sum_t>(cmatrix->get_tot_contacts());
-    DISABLE_WARNING_POP
+    if (cmatrix) {  // Guard against nullptr deref
+      DISABLE_WARNING_PUSH
+      DISABLE_WARNING_USELESS_CAST
+      this->_sum += static_cast<sum_t>(cmatrix->get_tot_contacts());
+      DISABLE_WARNING_POP
+    }
 
     auto &f = *this->_fp;
     hdf5::write_or_create_attribute(f, "nchroms", this->_nchroms);

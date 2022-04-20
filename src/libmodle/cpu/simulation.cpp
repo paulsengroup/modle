@@ -56,11 +56,10 @@ namespace modle {
 
 Simulation::Simulation(const Config& c, bool import_chroms)
     : Config(c),
-      _genome(import_chroms
-                  ? Genome(path_to_chrom_sizes, path_to_extr_barriers, path_to_chrom_subranges,
-                           path_to_feature_bed_files, ctcf_occupied_self_prob,
-                           ctcf_not_occupied_self_prob, write_contacts_for_ko_chroms)
-                  : Genome{}) {
+      _genome(import_chroms ? Genome(path_to_chrom_sizes, path_to_extr_barriers,
+                                     path_to_chrom_subranges, path_to_feature_bed_files,
+                                     ctcf_occupied_self_prob, ctcf_not_occupied_self_prob)
+                            : Genome{}) {
   DISABLE_WARNING_PUSH
   DISABLE_WARNING_SHORTEN_64_TO_32
   _tpool.reset(c.nthreads + 1);
@@ -169,7 +168,7 @@ void Simulation::write_contacts_to_disk(std::deque<std::pair<Chromosome*, usize>
           spdlog::info(FMT_STRING("Writing contacts for \"{}\" to file {}..."),
                        chrom_to_be_written->name(), c->get_path());
         } else {
-          spdlog::info(FMT_STRING("Creating an empty entry for \"{}\" in file {}..."),
+          spdlog::info(FMT_STRING("Writing bin table for \"{}\" to file {}..."),
                        chrom_to_be_written->name(), c->get_path());
         }
 
@@ -186,9 +185,6 @@ void Simulation::write_contacts_to_disk(std::deque<std::pair<Chromosome*, usize>
               static_cast<double>(chrom_to_be_written->contacts().get_nnz()) / 1.0e6,
               static_cast<double>(chrom_to_be_written->contacts().npixels()) / 1.0e6,
               c->get_path());
-        } else {
-          spdlog::info(FMT_STRING("Created an entry for \"{}\" in file {}."),
-                       chrom_to_be_written->name(), c->get_path());
         }
       }
       // Deallocate the contact matrix to free up unused memory
