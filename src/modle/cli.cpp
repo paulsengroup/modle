@@ -80,20 +80,21 @@ static void add_common_options(CLI::App& subcommand, modle::Config& config) {
 
   auto& misc = *s.add_option_group("Miscellaneous");
 
-  auto& io_adv = *s.add_option_group("Advanced/IO",
-                                     "Advanced options controlling MoDLE input, output and logs.");
-  auto& lef_adv = *s.add_option_group("Advanced/Extrusion Factors",
-                                      "Advanced options controlling how LEFs are simulated.");
+  auto& adv = *s.add_option_group("Advanced");
 
-  auto& barr_adv = *s.add_option_group("Advanced/Extrusion Barriers",
-                                       "Advanced options controlling how extrusion are simulated.");
+  auto& io_adv =
+      *adv.add_option_group("IO", "Advanced options controlling MoDLE input, output and logs.");
+  auto& lef_adv = *adv.add_option_group("Extrusion Factors",
+                                        "Advanced options controlling how LEFs are simulated.");
 
-  auto& cgen_adv =
-      *s.add_option_group("Advanced/Contact generation",
-                          "Advanced options affecting contact sampling and registration.");
+  auto& barr_adv = *adv.add_option_group(
+      "Extrusion Barriers", "Advanced options controlling how extrusion are simulated.");
 
-  auto& burnin_adv = *s.add_option_group("Advanced/Burn-in",
-                                         "Options defining the simulation stopping criterion.");
+  auto& cgen_adv = *adv.add_option_group(
+      "Contact generation", "Advanced options affecting contact sampling and registration.");
+
+  auto& burnin_adv =
+      *adv.add_option_group("Burn-in", "Options defining the simulation stopping criterion.");
 
   // clang-format off
   io.add_option(
@@ -510,7 +511,7 @@ void Cli::make_perturbate_subcommand() {
   auto& io = *s.get_option_group("IO");
   auto& misc = *s.get_option_group("Miscellaneous");
 
-  auto& io_adv = *s.get_option_group("Advanced/IO");
+  auto& io_adv = *s.get_option_group("Advanced")->get_option_group("IO");
 
   // Remove unused flags/options
   io_adv.remove_option(io_adv.get_option("--simulate-chromosomes-wo-barriers"));
@@ -769,9 +770,12 @@ void Cli::validate_args() const {
   const auto* subcmd = this->get_subcommand_ptr();
 
   if (c.burnin_smoothing_window_size > c.burnin_history_length) {
-    assert(
-        subcmd->get_option_group("Advanced/Burn-in")->get_option("--burnin-smoothing-window-size"));
-    assert(subcmd->get_option_group("Advanced/Burn-in")->get_option("--burnin-history-length"));
+    assert(subcmd->get_option_group("Advanced")
+               ->get_option_group("Burn-in")
+               ->get_option("--burnin-smoothing-window-size"));
+    assert(subcmd->get_option_group("Advanced")
+               ->get_option_group("Burn-in")
+               ->get_option("--burnin-history-length"));
     errors.emplace_back(fmt::format(
         FMT_STRING("The value passed to {} should be less or equal than that of {} ({} > {})"),
         "--burnin-smoothing-window-size", "--burnin-history-length", c.burnin_smoothing_window_size,
@@ -789,7 +793,8 @@ void Cli::validate_args() const {
 
   // NOLINTNEXTLINE(readability-implicit-bool-conversion)
   if (!(c.contact_sampling_strategy & Config::ContactSamplingStrategy::noisify)) {
-    const auto& group = subcmd->get_option_group("Advanced/Contact generation");
+    const auto& group =
+        subcmd->get_option_group("Advanced")->get_option_group("Contact generation");
     for (const std::string label : {"--mu", "--sigma", "--xi"}) {
       if (!group->get_option(label)->empty()) {
         errors.emplace_back(fmt::format(FMT_STRING("Option {} requires the strategy passed to "
@@ -802,7 +807,8 @@ void Cli::validate_args() const {
 
   // NOLINTNEXTLINE(readability-implicit-bool-conversion)
   if (c.contact_sampling_strategy & Config::ContactSamplingStrategy::tad &&
-      !subcmd->get_option_group("Advanced/Contact generation")
+      !subcmd->get_option_group("Advanced")
+           ->get_option_group("Contact generation")
            ->get_option("--num-of-tad-contacts-per-sampling-event")
            ->empty()) {
     errors.emplace_back(
@@ -812,7 +818,8 @@ void Cli::validate_args() const {
 
   // NOLINTNEXTLINE(readability-implicit-bool-conversion)
   if (c.contact_sampling_strategy & Config::ContactSamplingStrategy::loop &&
-      !subcmd->get_option_group("Advanced/Contact generation")
+      !subcmd->get_option_group("Advanced")
+           ->get_option_group("Contact generation")
            ->get_option("--num-of-loop-contacts-per-sampling-event")
            ->empty()) {
     errors.emplace_back(
@@ -824,8 +831,8 @@ void Cli::validate_args() const {
   if (c.number_of_tad_contacts_per_sampling_event + c.number_of_loop_contacts_per_sampling_event ==
       0) {
     // clang-format off
-    assert(subcmd->get_option_group("Advanced/Contact generation")->get_option("--num-of-tad-contacts-per-sampling-event"));
-    assert(subcmd->get_option_group("Advanced/Contact generation")->get_option("--num-of-loop-contacts-per-sampling-event"));
+    assert(subcmd->get_option_group("Advanced")->get_option_group("Contact generation")->get_option("--num-of-tad-contacts-per-sampling-event"));
+    assert(subcmd->get_option_group("Advanced")->get_option_group("Contact generation")->get_option("--num-of-loop-contacts-per-sampling-event"));
     // clang-format on
     errors.emplace_back(
         "--num-of-tad-contacts-per-sampling-event and --num-of-loop-contacts-per-sampling-event "
