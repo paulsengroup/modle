@@ -174,7 +174,7 @@ static void add_common_options(CLI::App& subcommand, modle::Config& config) {
       "--lef-density,--lefs-per-mbp",
       c.number_of_lefs_per_mbp,
       "Loop extrusion factor (LEF) density expressed as the number of LEF per Mbp of DNA simulated.")
-      ->check(CLI::NonNegativeNumber)
+      ->check(CLI::PositiveNumber)
       ->capture_default_str();
 
   lefbar.add_option(
@@ -396,7 +396,7 @@ static void add_common_options(CLI::App& subcommand, modle::Config& config) {
       "                   --target-contact-density 2\n"
       "         Assuming chr1 is exactly 250 Mbp long, MoDLE will schedule simulation instances to yield a total of 150 000 contacts for chr1:\n"
       "         2 * (250e6 / 100e3) * (3e6 / 100e3) = 150e3.")
-      ->check(CLI::NonNegativeNumber);
+      ->check(CLI::PositiveNumber);
 
   misc.add_option(
       "--ncells",
