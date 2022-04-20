@@ -134,7 +134,7 @@ int main(int argc, char** argv) noexcept {
       case subcommand::simulate:
         sim.run_simulate();
         break;
-      case subcommand::pertubate:
+      case subcommand::perturbate:
         if (config.compute_reference_matrix) {
           sim.run_simulate();
         }
@@ -151,8 +151,8 @@ int main(int argc, char** argv) noexcept {
                  absl::FormatDuration(absl::Now() - t0));
   } catch (const CLI::ParseError& e) {
     return cli->exit(e);  //  This takes care of formatting and printing error messages (if any)
-  } catch (const std::bad_alloc& err) {
-    spdlog::error(FMT_STRING("FAILURE! Unable to allocate enough memory: {}"), err.what());
+  } catch (const std::bad_alloc& e) {
+    spdlog::error(FMT_STRING("FAILURE! Unable to allocate enough memory: {}"), e.what());
     return 1;
   } catch (const spdlog::spdlog_ex& e) {
     fmt::print(
