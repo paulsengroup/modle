@@ -17,16 +17,18 @@
 namespace modle::utils {
 
 // Try to convert str representations like "1.0" or "1.000000" to "1"
-[[nodiscard]] inline std::string str_float_to_str_int(const std::string& s);
+[[nodiscard]] inline std::string trim_trailing_zeros_from_decimal_digits(std::string&& s);
 
-[[nodiscard]] inline std::string replace_non_alpha_char(const std::string& s, char replacement);
 template <char replacement = '_'>
-[[nodiscard]] inline std::string replace_non_alpha_char(const std::string& s);
+[[nodiscard]] inline std::string replace_non_alpha_char(std::string&& s);
 
 template <class Collection>
 [[nodiscard]] inline std::string format_collection_to_english_list(const Collection& collection,
                                                                    std::string_view sep = ", ",
                                                                    std::string_view last_sep = "");
+
+template <class N = double>
+[[nodiscard]] inline bool is_finite_number(const std::string& s);
 
 // Returns false in case a collision was detected
 inline bool detect_path_collision(
@@ -77,9 +79,16 @@ class CliEnumMappings {
   [[nodiscard]] inline auto values_view() const -> decltype(ranges::views::values(this->_mappings));
 };
 
+namespace cli {
 class Formatter : public CLI::Formatter {
   [[nodiscard]] inline std::string make_option_opts(const CLI::Option* opt) const override;
 };
+
+struct IsFinite : public CLI::Validator {
+  [[nodiscard]] inline IsFinite(bool nan_ok = false);
+};
+
+}  // namespace cli
 
 }  // namespace modle::utils
 

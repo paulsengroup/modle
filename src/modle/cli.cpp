@@ -239,7 +239,7 @@ static std::vector<CLI::App*> add_common_options(CLI::App& subcommand, modle::Co
       "Moving distances can be shortened by collision events taking place during the current epoch.\n"
       "By deafult extrusion speed is set to half the bin size specified through the --resolution\n"
       "option.")
-      ->transform(utils::str_float_to_str_int)
+      ->transform(utils::trim_trailing_zeros_from_decimal_digits)
       ->check(CLI::NonNegativeNumber)
       ->capture_default_str();
 
@@ -247,7 +247,7 @@ static std::vector<CLI::App*> add_common_options(CLI::App& subcommand, modle::Co
       "--rev-extrusion-speed",
       c.rev_extrusion_speed,
       "Same as --fwd-extrusion-speed but for extrusion units moving in 3'-5' direction.")
-      ->transform(utils::str_float_to_str_int)
+      ->transform(utils::trim_trailing_zeros_from_decimal_digits)
       ->check(CLI::NonNegativeNumber)
       ->capture_default_str();
 
@@ -337,7 +337,7 @@ static std::vector<CLI::App*> add_common_options(CLI::App& subcommand, modle::Co
       "NOTE: MoDLE simulation always take place at 1 bp resolution.\n"
       "      This parameter only affects the resolution of the output contact matrix.")
       ->check(CLI::PositiveNumber)
-      ->transform(utils::str_float_to_str_int)
+      ->transform(utils::trim_trailing_zeros_from_decimal_digits)
       ->capture_default_str();
 
   cgen.add_option(
@@ -350,7 +350,7 @@ static std::vector<CLI::App*> add_common_options(CLI::App& subcommand, modle::Co
       "Setting --diagonal-width to very large values (i.e. tens of Mbp) will significantly\n"
       "increase MoDLE's memory requirements.")
       ->check(CLI::PositiveNumber)
-      ->transform(utils::str_float_to_str_int)
+      ->transform(utils::trim_trailing_zeros_from_decimal_digits)
       ->capture_default_str();
 
   cgen_adv.add_option(
@@ -408,7 +408,7 @@ static std::vector<CLI::App*> add_common_options(CLI::App& subcommand, modle::Co
       "Each simulation instance will run exactly --target-number-of-epochs epochs after burn-in\n"
       "phase. Has no effect when --stopping-criterion=\"contact-density\".")
       ->check(CLI::PositiveNumber)
-      ->transform(utils::str_float_to_str_int)
+      ->transform(utils::trim_trailing_zeros_from_decimal_digits)
       ->capture_default_str();
 
   stopping.add_option(
@@ -433,7 +433,7 @@ static std::vector<CLI::App*> add_common_options(CLI::App& subcommand, modle::Co
       "generated across all simulation instances. To achieve good performance and CPU utilization\n"
       "we recommend setting --ncells equal to the number of available CPU cores.")
       ->check(CLI::PositiveNumber)
-      ->transform(utils::str_float_to_str_int)
+      ->transform(utils::trim_trailing_zeros_from_decimal_digits)
       ->capture_default_str();
 
   misc.add_option(
@@ -452,7 +452,7 @@ static std::vector<CLI::App*> add_common_options(CLI::App& subcommand, modle::Co
       c.seed,
       "Base seed to use for random number generation.")
       ->check(CLI::NonNegativeNumber)
-      ->transform(utils::str_float_to_str_int)
+      ->transform(utils::trim_trailing_zeros_from_decimal_digits)
       ->capture_default_str();
 
   burnin_adv.add_flag(
@@ -606,7 +606,7 @@ void Cli::make_perturbate_subcommand() {
       "Size of the block of pixels to use when generating contacts for a pair of features. Must be an odd number.")
       ->check(CLI::Range(1UL, std::numeric_limits<decltype(c.block_size)>::max()) |
               CLI::Validator(is_odd_number, "ODD-NUMBER", ""))
-      ->transform(utils::str_float_to_str_int)
+      ->transform(utils::trim_trailing_zeros_from_decimal_digits)
       ->capture_default_str();
 
   misc.add_option(
@@ -615,7 +615,7 @@ void Cli::make_perturbate_subcommand() {
       "Size of deletion in bp. Used to enable/disable extrusion barriers and compute the total number of contacts between pairs of feats1.\n"
       "Specify 0 to compute all possible combinations. Ignored when --mode=\"cluster\".")
       ->check(CLI::NonNegativeNumber)
-      ->transform(utils::str_float_to_str_int)
+      ->transform(utils::trim_trailing_zeros_from_decimal_digits)
       ->capture_default_str();
 
   misc.add_option(
@@ -705,7 +705,7 @@ void Cli::make_cli() {
   this->_cli.set_version_flag("-V,--version", std::string{modle::config::version::str_long()});
   this->_cli.require_subcommand(1);
   this->_cli.set_config("--config", "", "Path to MoDLE's config file (optional).", false);
-  this->_cli.formatter(std::make_shared<utils::Formatter>());
+  this->_cli.formatter(std::make_shared<utils::cli::Formatter>());
   this->_cli.get_formatter()->column_width(30);
 
   auto option_ptrs = this->_cli.get_options();

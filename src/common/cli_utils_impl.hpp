@@ -27,31 +27,6 @@
 
 namespace modle::utils {
 
-// Try to convert str representations like "1.0" or "1.000000" to "1"
-std::string str_float_to_str_int(const std::string &s) {
-  try {
-    auto n = parse_numeric_or_throw<double>(s);
-    if (std::trunc(n) == n) {
-      return fmt::format(FMT_STRING("{:.0f}"), n);
-    }
-  } catch (const std::exception &e) {  // Let the caller deal with invalid numbers
-    return s;
-  }
-  return s;
-}
-
-template <char replacement>
-std::string replace_non_alpha_char(const std::string &s) {
-  return replace_non_alpha_char(s, replacement);
-}
-
-std::string replace_non_alpha_char(const std::string &s, const char replacement) {
-  auto ss = s;
-  std::transform(ss.begin(), ss.end(), ss.begin(),
-                 [&](const auto c) { return c ? std::isalpha(c) : replacement; });
-  return ss;
-}
-
 template <class Collection>
 std::string format_collection_to_english_list(const Collection &collection,
                                               const std::string_view sep,
@@ -69,6 +44,26 @@ std::string format_collection_to_english_list(const Collection &collection,
   const auto second_to_last = std::end(collection) - 1;
   return fmt::format(FMT_STRING("{}{}{}"), fmt::join(first, second_to_last, sep), last_sep,
                      *second_to_last);
+}
+
+std::string trim_trailing_zeros_from_decimal_digits(std::string &&s) {
+  try {
+    auto n = parse_numeric_or_throw<double>(s);
+    if (std::trunc(n) == n) {
+      return fmt::format(FMT_STRING("{:.0f}"), n);
+    }
+
+  } catch ([[maybe_unused]] const std::exception &e) {
+    // Let the caller deal with invalid numbers
+  }
+  return s;
+}
+
+template <char replacement>
+std::string replace_non_alpha_chars(std::string &&s) {
+  std::replace_if(
+      s.begin(), s.end(), [](const auto c) { return !std::isalpha(c); }, replacement);
+  return s;
 }
 
 std::string detect_path_collision(const boost::filesystem::path &p, bool force_overwrite,
@@ -197,6 +192,7 @@ auto CliEnumMappings<EnumT, StringT>::values_view() const
   return this->_mappings | ranges::views::values;
 }
 
+namespace cli {
 std::string Formatter::make_option_opts(const CLI::Option *opt) const {
   if (!opt->get_option_text().empty()) {
     return opt->get_option_text();
@@ -262,6 +258,24 @@ std::string Formatter::make_option_opts(const CLI::Option *opt) const {
 
   return out;
 }
+
+IsFinite::IsFinite(bool nan_ok) {
+  description("ISFINITE");
+
+  func_ = [nan_ok](const std::string &input) -> std::string {
+    try {
+      auto n = parse_numeric_or_throw<double>(input);
+      if (std::isfinite(n) || (nan_ok && !std::isnan(n))) {
+        return "";
+      }
+      return fmt::format(FMT_STRING("Value {} is not a finite number"), n);
+    } catch ([[maybe_unused]] const std::exception &e) {
+      return fmt::format(FMT_STRING("Value {} could not be converted"), input);
+    }
+  };
+}
+
+}  // namespace cli
 
 }  // namespace modle::utils
 

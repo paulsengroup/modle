@@ -43,71 +43,86 @@ namespace modle::tools {
 
 namespace config = modle::config;
 
+// These stream operators are needed to properly serialize enums when writing the config file to
+// TOML or JSON
+std::ostream& operator<<(std::ostream& os, const eval_config::Metric& metric) {
+  os << eval_config::metric_map.at(metric);
+  return os;
+}
+
+std::ostream& operator<<(std::ostream& os, const transform_config::Transformation& method) {
+  os << transform_config::transformation_map.at(method);
+  return os;
+}
+
 Cli::Cli(int argc, char** argv) : _argc(argc), _argv(argv), _exec_name(*argv) { this->make_cli(); }
 
 void Cli::make_eval_subcommand() {
-  auto& sc = *this->_cli
-                  .add_subcommand("evaluate",
-                                  "Compare MoDLE's output with other contact matrices using "
-                                  "various correlation tests.")
-                  ->fallthrough()
-                  ->preparse_callback([this]([[maybe_unused]] usize i) {
-                    assert(this->_config.index() == 0);
-                    this->_config = eval_config{};
-                  });
+  auto& sc =
+      *this->_cli
+           .add_subcommand("evaluate", "Helper tool to compare contact matrices in cooler format.")
+           ->fallthrough()
+           ->preparse_callback([this]([[maybe_unused]] usize i) {
+             assert(this->_config.index() == 0);
+             this->_config = eval_config{};
+           });
   sc.alias("eval");
 
   this->_config = eval_config{};
   auto& c = absl::get<eval_config>(this->_config);
 
-  auto& io = *sc.add_option_group("Input/Output", "");
+  auto& io = *sc.add_option_group("IO", "");
   auto& gen = *sc.add_option_group("Generic", "");
 
   // clang-format off
   io.add_option(
      "-i,--input-matrix",
      c.path_to_input_matrix,
-     "Path to a contact matrix in Cooler format.")
+     "Path to a contact matrix in cooler format.")
      ->check(CLI::ExistingFile)
      ->required();
 
   io.add_option(
      "-o,--output-prefix",
      c.output_prefix,
-     "Output prefix (including directories) to use for output.")
+     "Output prefix.\n"
+     "Can be an absolute or relative path including the file name but without the extension.")
      ->required();
 
   io.add_option(
      "-r,--reference-matrix",
      c.path_to_reference_matrix,
-     "Path to contact matrix in Cooler format to use as reference.\n")
+     "Path to a contact matrix in cooler format to use as reference.")
      ->required();
 
   io.add_option(
-     "--chromosome-subrange-file",
+     "--chrom-subranges",
      c.path_to_chrom_subranges,
-     "Path to BED file with subranges of the chromosomes to be processed.")
+     "Path to a BED file with chromosome subranges to be processed.")
      ->check(CLI::ExistingFile);
 
   io.add_option(
      "--weight-file",
      c.path_to_weights,
-     "Path to a TSV file containing the weights to apply to pixels before computing the correlation values.\n"
-     "Other TSV files should have an header with column names. Columns \"chrom\" and \"diag\" are required"
-     " and should store chromosome names and distance from the diagonal in bins respectively.\n"
+     "Path to a TSV file containing the weights to apply to pixels before computing the\n"
+     "correlation. The TSV should have an header with at least the following columns:\n"
+     " - chrom\n"
+     " - diag\n"
+     "Storing chromosome name and distance from the diagonal in bins to which the weight applies\n"
+     "respectively. This file is often generated using cooltools expected-cis.\n"
      "The name of the column storing the weights can be specified through --weight-column-name.")
      ->check(CLI::ExistingFile);
 
   io.add_flag(
      "-f,--force",
      c.force,
-     "Overwrite existing file(s).")
+     "Overwrite existing files (if any).")
      ->capture_default_str();
 
   gen.add_option(
       "--weight-column-name",
       c.weight_column_name,
-      "Name of the column from the file specified though --weight-file containing the weight values.")
+      "Label for the weight column (see --weight-file description for more details).")
       ->check(CLI::Number)
       ->capture_default_str();
 
@@ -120,41 +135,46 @@ void Cli::make_eval_subcommand() {
   gen.add_option(
       "-m,--metric",
       c.metric,
-      "Transformation method to apply to the input contact matrix.")
+      fmt::format(FMT_STRING("Comparison metric.\n"
+                             "Supported metrics:\n"
+                             " - {}"),
+                  fmt::join(eval_config::metric_map.keys_view(), "\n - ")))
       ->transform(CLI::CheckedTransformer(eval_config::metric_map, CLI::ignore_case))
       ->capture_default_str();
 
-  gen.add_option("-b,--bin-size",
+  gen.add_option("-r,--resolution",
      c.bin_size,
-     "Bin size in base pairs.\n"
-     "Only used when the contact matrix passed to --reference-matrix is in .mcool format.")
+     "Resolution in base pairs.\n"
+     "Only used when the contact matrix passed to --reference-matrix is in\n"
+     "multires-cooler format.")
      ->check(CLI::PositiveNumber)
-     ->transform(utils::str_float_to_str_int);
+     ->transform(utils::trim_trailing_zeros_from_decimal_digits);
 
   gen.add_option(
      "-w,--diagonal-width",
      c.diagonal_width,
-     "Diagonal width to use when computing correlation coefficients.")
+     "Width of the subdiagonal window to consider for comparison.")
      ->check(CLI::PositiveNumber)
-     ->transform(utils::str_float_to_str_int)
+     ->transform(utils::trim_trailing_zeros_from_decimal_digits)
      ->required();
 
   gen.add_flag(
       "--reciprocal-weights",
       c.reciprocal_weights,
-      "Weights are computed by taking the reciprocal of numbers read from the file specified through --weight-file.")
+      "Use the weights reciprocal instead of the actual weights.")
       ->capture_default_str();
 
   gen.add_flag(
       "--exclude-zero-pixels,!--include-zero-pixels",
       c.exclude_zero_pxls,
-      "When computing the correlation between a pair of rows/columns of pixels, exclude bins corresponding to pixels that are 0 in either of the rows or columns.")
+      "When comparing rows or columns of pixels, ignore pairs of pixels where one or\n"
+      "both pixels are zero.")
       ->capture_default_str();
 
   gen.add_option(
      "-t,--threads",
      c.nthreads,
-     "CPU threads to allocate.")
+     "Number of worker threads.")
      ->check(CLI::PositiveNumber)
      ->transform(CLI::Bound(1U, std::thread::hardware_concurrency()));
 
@@ -172,7 +192,8 @@ void Cli::make_find_barrier_clusters_subcommand() {
                   ->preparse_callback([this]([[maybe_unused]] usize i) {
                     assert(this->_config.index() == 0);
                     this->_config = find_barrier_clusters_config{};
-                  });
+                  })
+                  ->group("");
 
   sc.alias("fbcl");
 
@@ -265,7 +286,8 @@ void Cli::make_noisify_subcommand() {
            ->preparse_callback([this]([[maybe_unused]] usize i) {
              assert(this->_config.index() == 0);
              this->_config = noisify_config{};
-           });
+           })
+           ->group("");
 
   this->_config = noisify_config{};
   auto& c = absl::get<noisify_config>(this->_config);
@@ -299,7 +321,7 @@ void Cli::make_noisify_subcommand() {
      c.diagonal_width,
      "Diagonal width of the input contact matrix.")
      ->check(CLI::PositiveNumber)
-     ->transform(utils::str_float_to_str_int)
+     ->transform(utils::trim_trailing_zeros_from_decimal_digits)
      ->required();
 
   gen.add_option(
@@ -342,8 +364,8 @@ void Cli::make_noisify_subcommand() {
 void Cli::make_transform_subcommand() {
   auto& sc = *this->_cli
                   .add_subcommand("transform",
-                                  "Transform contacts in a matrix in Cooler format for a given "
-                                  "resolution and bin size.")
+                                  "Transform contact matrices in cooler format using one of the "
+                                  "supported transformation methods.")
                   ->fallthrough()
                   ->preparse_callback([this]([[maybe_unused]] usize i) {
                     assert(this->_config.index() == 0);
@@ -362,33 +384,36 @@ void Cli::make_transform_subcommand() {
   io.add_option(
       "-i,--input-matrix",
       c.path_to_input_matrix,
-      "Path to a contact matrix in Cooler format.")
+      "Path to a contact matrix in cooler format.")
       ->check(CLI::ExistingFile)
       ->required();
 
   io.add_option(
       "-o,--output-matrix",
       c.path_to_output_matrix,
-      "Path to output matrix.")
+      "Path to output matrix in cooler format.")
       ->required();
 
   io.add_flag(
       "-f,--force",
       c.force,
-      "Overwrite existing file(s).")
+      "Overwrite existing files (if any).")
       ->capture_default_str();
 
   trans.add_option(
       "-m,--method",
       c.method,
-      "Transformation method to apply to the input contact matrix.")
+      fmt::format(FMT_STRING("Transformation method to apply to the input contact matrix.\n"
+                             "Supported methods:\n"
+                             " - {}"),
+      fmt::join(transform_config::transformation_map.keys_view(), "\n - ")))
       ->transform(CLI::CheckedTransformer(transform_config::transformation_map, CLI::ignore_case))
       ->required();
 
   trans.add_option(
       "--normalization-range",
       c.normalization_range,
-      "Pair of comma separated numbers representing the range of normalized values.")
+      "Lower and upper bound for the normalization range as a comma-separate pair of values.")
       ->check(CLI::NonNegativeNumber)
       ->delimiter(',')
       ->capture_default_str();
@@ -396,65 +421,74 @@ void Cli::make_transform_subcommand() {
   trans.add_option(
       "--saturation-range",
       c.saturation_range,
-      "Pair of comma separated numbers representing the saturation values. Value saturation is applied prior to normalization.")
+      "Lower and upper bound for the saturation range as a comma-separate pair of values.")
       ->delimiter(',')
       ->capture_default_str();
 
   trans.add_option(
       "--gaussian-blur-sigma",
       c.gaussian_blur_sigma,
-      "Sigma parameter of the gaussian kernel used during transformation.")
+      "Gaussian kernel sigma.\n"
+      "Controls the level of blurriness applied to contact matrices when using the\n"
+      "difference of Gaussians as transformation method.")
       ->check(CLI::PositiveNumber)
       ->capture_default_str();
 
   trans.add_option(
       "--gaussian-blur-multiplier",
       c.gaussian_blur_sigma_multiplier,
-      "Multiplier to use when transforming using the difference of gaussians. This multiplier is used to compute the sigma value of the more blurry contact matrix based on the sigma value specifie through --gaussian-blur-sigma.")
-      ->check(CLI::PositiveNumber)
+      "Gaussian blur multiplier.\n"
+      "Multiplier used to compute the sigma of the Gaussian kernel used to generate the more\n"
+      "blurry contact matrix.")
+      ->check(CLI::Bound(1.0, std::numeric_limits<double>::infinity()))
       ->capture_default_str();
 
   trans.add_option(
       "--binary-discretization-value",
       c.discretization_val,
-      "Partition value used to discretize the transformed matrix to binary values. Values strictly larger than the threshold will be discretized to one while all other values will be discretized to zero.");
+      "Threshold for the step function used to discretize pixels.\n"
+      "Pixels above the threshold are mapped to 1, while all the other are mapped to 0.")
+      ->check(utils::cli::IsFinite());
 
   trans.add_option(
       "--discretization-ranges-tsv",
       c.path_to_discretization_ranges_tsv,
       "Path to a TSV with the discratization ranges.\n"
       "The TSV should have three columns.\n"
-      "The first two columns contain the first and last values (open-close inteval) of a discretization interval, while the third column contains the discretization value.\n"
+      "The first two columns contain the first and last values (open-close inteval)\n"
+      "of a discretization interval, while the third column contains the discretization value.\n"
       "Values not falling in any discretization interval are left unmodified.\n"
       "To make an interval start/end at infinity specify -inf or inf.")
       ->check(CLI::ExistingFile);
 
   trans.add_flag(
-      "--float-contacts,!--no-float-contacts",
+      "--float-contacts,!--integer-contacts",
       c.floating_point,
-      "Treat contacts as floating point numbers.")
+      "Use floating point or integer numbers to represent contacts.")
       ->capture_default_str();
 
   mat.add_option(
-      "-b,--bin-size",
+      "-r,--resolution",
       c.bin_size,
-      "Bin size in base pairs.\n"
-      "Only used when the input contact matrix is in .mcool format.")
+      "Resolution in base pairs.\n"
+      "Only used when the contact matrix passed to --reference-matrix is in\n"
+      "multires-cooler format.")
       ->check(CLI::PositiveNumber)
-      ->transform(utils::str_float_to_str_int);
+      ->transform(utils::trim_trailing_zeros_from_decimal_digits);
 
   mat.add_option(
       "-w,--diagonal-width",
       c.diagonal_width,
-      "Diagonal width to use during transformation.")
+      "Width of the subdiagonal window to transform.\n"
+      "Pixels outside the window are set to 0.")
       ->check(CLI::PositiveNumber)
-      ->transform(utils::str_float_to_str_int)
+      ->transform(utils::trim_trailing_zeros_from_decimal_digits)
       ->required();
 
   gen.add_option(
       "-t,--threads",
       c.nthreads,
-      "CPU threads to allocate.")
+      "Number of worker threads.")
       ->check(CLI::PositiveNumber)
       ->transform(CLI::Bound(1U, std::thread::hardware_concurrency()));
 
@@ -470,11 +504,12 @@ void Cli::make_cli() {
   this->_cli.name(this->_exec_name);
   this->_cli.description(
       "MoDLE's helper tool.\n"
-      "This tool can be used to perform common pre and post-process operations on MoDLE's "
-      "input and output files.");
+      "This tool can be used to perform common pre and post-process operations\n"
+      "on MoDLE's input/output files.");
   this->_cli.set_version_flag("-V,--version",
                               "MoDLE-tools-" + std::string{modle::tools::config::version::str()});
   this->_cli.require_subcommand(1);
+  this->_cli.formatter(std::make_shared<utils::cli::Formatter>());
 
   this->make_eval_subcommand();
   this->make_find_barrier_clusters_subcommand();
