@@ -4,6 +4,8 @@
 
 #pragma once
 
+#include <absl/container/flat_hash_set.h>
+
 #include <CLI/CLI.hpp>  // for App
 #include <string>       // for string
 
@@ -44,6 +46,7 @@ class Cli {
   Config _config;
   CLI::App _cli{};
   subcommand _subcommand{subcommand::help};
+  absl::flat_hash_set<CLI::Option*> _options{};
 
   void make_cli();
   void make_simulation_subcommand();

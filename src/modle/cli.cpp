@@ -62,7 +62,7 @@ std::ostream& operator<<(std::ostream& os, const Config::ContactSamplingStrategy
   return os;
 }
 
-static void add_common_options(CLI::App& subcommand, modle::Config& config) {
+static std::vector<CLI::App*> add_common_options(CLI::App& subcommand, modle::Config& config) {
   auto& s = subcommand;
   auto& c = config;
 
@@ -112,9 +112,12 @@ static void add_common_options(CLI::App& subcommand, modle::Config& config) {
   io.add_option(
       "-b,--extrusion-barrier-file",
       c.path_to_extr_barriers,
-      "Path to a file in BED6+ format with the genomic coordinates of extrusion barriers to be simulated.\n"
-      "The score field in a BED record should be a number between 0 and 1 and is interpreted as the extrusion barrier occupancy for the extrusion barrier described by the record.\n"
-      "Barriers mapping on chromosomes not listed in the chrom.sizes file passed through the --chrom-sizes option are ignored.")
+      "Path to a file in BED6+ format with the genomic coordinates of extrusion barriers to be\n"
+      "simulated. The score field in a BED record should be a number between 0 and 1 and is\n"
+      "interpreted as the extrusion barrier occupancy for the extrusion barrier described\n"
+      "by the record.\n"
+      "Barriers mapping on chromosomes not listed in the chrom.sizes file passed through\n"
+      "the --chrom-sizes option are ignored.")
       ->check(CLI::ExistingFile)
       ->required();
 
@@ -148,10 +151,12 @@ static void add_common_options(CLI::App& subcommand, modle::Config& config) {
       c.log_model_internal_state,
       fmt::format(FMT_STRING(
                       "Collect detailed statistics regarding the internal state of MoDLE simulation instance(s).\n"
-                      "Statistics will be written to a compressed file under the prefix specified through the --output-prefix option.\n"
-                      "Example: with --output-prefix=/tmp/myprefix, statistics will be written to file /tmp/myprefix_internal_state.log.gz.\n"
-                      "Depending on the input file(s) and parameters, specifying this option may hinder simulation throughput.\n"
-                      "Currently the following metrics are collected:\n"
+                      "Statistics will be written to a compressed file under the prefix specified through the\n"
+                      "--output-prefix option.\n"
+                      "Example: modle sim --output-prefix=/tmp/myprefix\n"
+                               "statistics will be written to file /tmp/myprefix_internal_state.log.gz.\n"
+                      "Depending on the input file(s) and parameters, specifying this option may hinder\n"
+                      "simulation throughput. Currently the following metrics are collected:\n"
                       " - {}"),
                   fmt::join(absl::StrSplit(Config::model_internal_state_log_header, '\t'), "\n - ")))
       ->capture_default_str();
@@ -160,8 +165,9 @@ static void add_common_options(CLI::App& subcommand, modle::Config& config) {
       "--simulate-chromosomes-wo-barriers,!--skip-chromosomes-wo-barriers",
       c.simulate_chromosomes_wo_barriers,
       "Enable/disable simulation of loop extrusion for chromosomes with 0 extrusion barriers.\n"
-      "When --skip-chromosomes-wo-barriers is passed, entries for chromosomes without barriers will "
-      "still be written to the output .cool file, but no contacts will be generated for those chromosomes.")
+      "When --skip-chromosomes-wo-barriers is passed, entries for chromosomes without barriers\n"
+      "will still be written to the output .cool file, but no contacts will be generated for\n"
+      "those chromosomes.")
       ->capture_default_str();
 
   io_adv.add_flag(
@@ -181,7 +187,8 @@ static void add_common_options(CLI::App& subcommand, modle::Config& config) {
       "--avg-lef-processivity",
       c.avg_lef_processivity,
       "Average LEF processivity in bp.\n"
-      "The average LEF processivity corresponds to the average size of loops extruded by unobstructed LEFs.")
+      "The average LEF processivity corresponds to the average size of loops extruded by\n"
+      "unobstructed LEFs.")
       ->check(CLI::PositiveNumber)
       ->capture_default_str();
 
@@ -197,25 +204,26 @@ static void add_common_options(CLI::App& subcommand, modle::Config& config) {
       c.extrusion_barrier_occupancy,
       "Probability that an extrusion barrier is occupied (i.e. blocking) at any given time.\n"
       "This parameter provides an easier mean to set --extrusion-barrier-bound-stp.\n"
-      "Passing this parameter will override barrier occupancies read from the BED file specified through --extrusion-barrier-file.")
+      "Passing this parameter will override barrier occupancies read from the BED file specified\n"
+      "through --extrusion-barrier-file.")
       ->check(CLI::Range(0.0, 1.0));
 
   lef_adv.add_option(
       "--hard-stall-lef-stability-multiplier",
       c.hard_stall_lef_stability_multiplier,
-      "Coefficient to control the DNA-binding stability of LEFs that are stalled on both sides by a pair of "
-      "extrusion barriers in convergent orientation.\n"
-      "Setting this to 1 makes the DNA-binding stability of hard-stalled LEFs identical to that of unobstructed LEFs.\n"
-      "Has no effects when --lef-bar-major-collision-prob=0.")
+      "Coefficient to control the DNA-binding stability of LEFs that are stalled on both sides by a\n"
+      "pair of extrusion barriers in convergent orientation.\n"
+      "Setting this to 1 makes the DNA-binding stability of hard-stalled LEFs identical to that of\n"
+      "unobstructed LEFs. Has no effects when --lef-bar-major-collision-prob=0.")
       ->check(CLI::NonNegativeNumber)
       ->capture_default_str();
 
   lef_adv.add_option(
       "--soft-stall-lef-stability-multiplier",
       c.soft_stall_lef_stability_multiplier,
-      "Coefficient to control the DNA-binding stability of LEFs stalled by one or more extrusion barriers "
-      "in a non-blocking orientation.\n"
-      "Setting this to 1 makes the DNA-binding stability of soft-stalled LEFs identical to that of unobstructed LEFs.\n"
+      "Coefficient to control the DNA-binding stability of LEFs stalled by one or more extrusion\n"
+      "barriers in a non-blocking orientation. Setting this to 1 makes the DNA-binding stability\n"
+      "of soft-stalled LEFs identical to that of unobstructed LEFs.\n"
       "Has no effects when --lef-bar-minor-collision-prob=0.")
       ->check(CLI::NonNegativeNumber)
       ->capture_default_str();
@@ -225,10 +233,12 @@ static void add_common_options(CLI::App& subcommand, modle::Config& config) {
       c.fwd_extrusion_speed,
       "Average extrusion speed expressed in bp/epoch for forward-moving extrusion units.\n"
       "Extrusion units are assigned a candidate moving distance at the beginning of every epoch.\n"
-      "Moves are sampled from a normal distribution centered around --fwd-extrusion-speed and with --fwd-extrusion-speed-std as its standard deviation.\n"
-      "Candidate moves represent the maximum distance a given extrusion unit is set to travel during the current epoch.\n"
+      "Moves are sampled from a normal distribution centered around --fwd-extrusion-speed and with\n"
+      "--fwd-extrusion-speed-std as its standard deviation. Candidate moves represent the maximum\n"
+      "distance a given extrusion unit is set to travel during the current epoch.\n"
       "Moving distances can be shortened by collision events taking place during the current epoch.\n"
-      "By deafult extrusion speed is set to half the bin size specified through the --resolution option.")
+      "By deafult extrusion speed is set to half the bin size specified through the --resolution\n"
+      "option.")
       ->transform(utils::str_float_to_str_int)
       ->check(CLI::NonNegativeNumber)
       ->capture_default_str();
@@ -244,10 +254,12 @@ static void add_common_options(CLI::App& subcommand, modle::Config& config) {
   lef_adv.add_option(
       "--fwd-extrusion-speed-std",
       c.fwd_extrusion_speed_std,
-      "Standard deviation of the normal distribution used to sample candidate moves for extrusion units moving in 5'-3' direction.\n"
-      "See help message for --fwd-extrusion-speed for more details regarding candidate moves.\n"
+      "Standard deviation of the normal distribution used to sample candidate moves for extrusion\n"
+      "units moving in 5'-3' direction. See help message for --fwd-extrusion-speed for more details\n"
+      "regarding candidate moves.\n"
       "Specifying --fwd-extrusion-speed-std=0 will make candidate moves deterministic.\n"
-      "Standard deviations between 0 and 1 are interpreted a percentage of the average extrusion speed.\n"
+      "Standard deviations between 0 and 1 are interpreted a percentage of the average extrusion\n"
+      "speed.\n"
       "Example: when running modle sim --fwd-extrusion-speed=10000 ...\n"
       "         --fwd-extrusion-speed-std=0.1 and --fwd-extrusion-speed-std=1000 are equivalent.")
       ->check(CLI::NonNegativeNumber)
@@ -263,14 +275,16 @@ static void add_common_options(CLI::App& subcommand, modle::Config& config) {
   barr_adv.add_option(
       "--lef-bar-major-collision-prob",
       c.lef_bar_major_collision_pblock,
-      "Probability of collision between LEFs and extrusion barriers where barriers are pointing towards the extrusion direction.")
+      "Probability of collision between LEFs and extrusion barriers where barriers are pointing\n"
+      "towards the extrusion direction.")
       ->check(CLI::Range(0.0, 1.0))
       ->capture_default_str();
 
   barr_adv.add_option(
       "--lef-bar-minor-collision-prob",
       c.lef_bar_minor_collision_pblock,
-      "Probability of collision between LEFs and extrusion barriers where barriers are pointing away from the extrusion direction.")
+      "Probability of collision between LEFs and extrusion barriers where barriers are pointing\n"
+      "away from the extrusion direction.")
       ->check(CLI::Range(0.0, 1.0))
       ->capture_default_str();
 
@@ -278,26 +292,31 @@ static void add_common_options(CLI::App& subcommand, modle::Config& config) {
       "--extrusion-barrier-bound-stp",
       c.ctcf_occupied_self_prob,
       "Self-transition probability for extrusion barriers in the \"bound\" state.\n"
-      "In other words, the probability that an extrusion barrier that is active in the current epoch will remain active during the next epoch.")
+      "In other words, the probability that an extrusion barrier that is active in the current epoch\n"
+      "will remain active during the next epoch.")
       ->check(CLI::Range(0.0, 1.0));
 
   barr_adv.add_option(
       "--extrusion-barrier-not-bound-stp",
       c.ctcf_not_occupied_self_prob,
       "Self-transition probability for extrusion barriers in the \"not-bound\" state.\n"
-      "In other words, the probability that an extrusion barrier that is inactive in the current epoch will remain inactive during the next epoch.")
+      "In other words, the probability that an extrusion barrier that is inactive in the current\n"
+      "epoch will remain inactive during the next epoch.")
       ->check(CLI::Range(0.0, 1.0))
       ->capture_default_str();
 
   cgen.add_option(
       "--contact-sampling-strategy",
       c.contact_sampling_strategy,
-      fmt::format(FMT_STRING("Strategy to use when sampling contacts. Should be one of {}.\n"
-                             "When one of the *-with-noise strategies is specified, contacts are"
-                             "randomized by applying a random offset to the location of LEF extrusion units.\n"
+      fmt::format(FMT_STRING("Strategy to use when sampling contacts.\n"
+                             "Should be one of:\n"
+                             "- {}\n"
+                             "When one of the *-with-noise strategies is specified, contacts are randomized by\n"
+                             "applying a random offset to the location of LEF extrusion units.\n"
                              "Offsets are drawn from a genextreme distrubution.\n"
-                             "The distribution parameters can be controlled through the options --mu, --sigma and --xi."),
-                  utils::format_collection_to_english_list(Cli::contact_sampling_strategy_map.keys_view(), ", ", " or ")))
+                             "The distribution parameters can be controlled through the options --mu, --sigma\n"
+                             "and --xi."),
+                  fmt::join(Cli::contact_sampling_strategy_map.keys_view(), "\n - ")))
       ->transform(CLI::CheckedTransformer(Cli::contact_sampling_strategy_map))
       ->capture_default_str();
 
@@ -305,9 +324,9 @@ static void add_common_options(CLI::App& subcommand, modle::Config& config) {
       "--lef-fraction-for-contact-sampling",
       c.lef_fraction_contact_sampling,
       "Fraction of LEFs to use for contact sampling.\n"
-      "The actual number of LEFs to use for contact sampling in a given epoch is drawn from a Poisson distribution "
-      "with lambda=lf*|lefs|, where --lef-fraction-for-contact-sampling=lf and |lefs| is equal to total number of LEFs "
-      "in the current simulation instance.")
+      "The actual number of LEFs to use for contact sampling in a given epoch is drawn from a\n"
+      "Poisson distribution with lambda=lf*|lefs|, where --lef-fraction-for-contact-sampling=lf\n"
+      "and |lefs| is equal to total number of LEFs in the current simulation instance.")
       ->check(CLI::Range(0.0, 1.0))
       ->capture_default_str();
 
@@ -325,9 +344,11 @@ static void add_common_options(CLI::App& subcommand, modle::Config& config) {
       "-w,--diagonal-width",
       c.diagonal_width,
       "Width of the subdiagonal window for the in-memory contact matrix.\n"
-      "This setting affects the maximum distance of a pair of bins whose interactions will be tracked by MoDLE.\n"
+      "This setting affects the maximum distance of a pair of bins whose interactions will be\n"
+      "tracked by MoDLE.\n"
       "As a rule of thumb, --diagonal-width should roughly 10x the average LEF processivity\n."
-      "Setting --diagonal-width to very large values (i.e. tens of Mbp) will significantly increase MoDLE's memory requirements.")
+      "Setting --diagonal-width to very large values (i.e. tens of Mbp) will significantly\n"
+      "increase MoDLE's memory requirements.")
       ->check(CLI::PositiveNumber)
       ->transform(utils::str_float_to_str_int)
       ->capture_default_str();
@@ -336,34 +357,39 @@ static void add_common_options(CLI::App& subcommand, modle::Config& config) {
       "--num-of-tad-contacts-per-sampling-event",
       c.number_of_tad_contacts_per_sampling_event,
       "Number of TAD contacts to sample each sampling event.\n"
-      "Setting --num-of-tad-contacts-per-sampling-event=0 will yield a contact matrix where contacts are concentrated on stripes and dots.")
+      "Setting --num-of-tad-contacts-per-sampling-event=0 will yield a contact matrix where\n"
+      "contacts are concentrated on stripes and dots.")
       ->capture_default_str();
 
   cgen_adv.add_option(
       "--num-of-loop-contacts-per-sampling-event",
       c.number_of_loop_contacts_per_sampling_event,
       "Number of LEF-mediated contacts to sample each sampling event.\n"
-      "Setting --num-of-loop-contacts-per-sampling-event=0 will yield a contact matrix without stripes and dots.")
+      "Setting --num-of-loop-contacts-per-sampling-event=0 will yield a contact matrix without\n"
+      "stripes and dots.")
       ->capture_default_str();
 
   cgen_adv.add_option(
       "--mu,--genextr-location",
       c.genextreme_mu,
-      "Location parameter (mu) of the generalized extreme value distribution used to add noise to molecular contacts.")
+      "Location parameter (mu) of the generalized extreme value distribution used to add noise to\n"
+      "molecular contacts.")
       ->check(CLI::NonNegativeNumber)
       ->capture_default_str();
 
   cgen_adv.add_option(
       "--sigma,--genextr-scale",
       c.genextreme_sigma,
-      "Scale parameter (sigma) of the generalized extreme value distribution used to add noise to molecular contacts.")
+      "Scale parameter (sigma) of the generalized extreme value distribution used to add noise to\n"
+      "molecular contacts.")
       ->check(CLI::NonNegativeNumber)
       ->capture_default_str();
 
   cgen_adv.add_option(
       "--xi,--genextr-shape",
       c.genextreme_xi,
-      "Shape parameter (xi) of the generalized extreme value distribution used to add noise to molecular contacts.")
+      "Shape parameter (xi) of the generalized extreme value distribution used to add noise to\n"
+      "molecular contacts.")
       ->check(CLI::NonNegativeNumber)
       ->capture_default_str();
 
@@ -379,8 +405,8 @@ static void add_common_options(CLI::App& subcommand, modle::Config& config) {
       "--target-number-of-epochs",
       c.target_simulation_epochs,
       "Target number of epochs to be simulated.\n"
-      "Each simulation instance will run exactly --target-number-of-epochs epochs after burn-in phase.\n"
-      "Has no effect when --stopping-criterion=\"contact-density\".")
+      "Each simulation instance will run exactly --target-number-of-epochs epochs after burn-in\n"
+      "phase. Has no effect when --stopping-criterion=\"contact-density\".")
       ->check(CLI::PositiveNumber)
       ->transform(utils::str_float_to_str_int)
       ->capture_default_str();
@@ -394,17 +420,18 @@ static void add_common_options(CLI::App& subcommand, modle::Config& config) {
       "                   --diagonal-width 3000000            \\\n"
       "                   --resolution 100000                 \\\n"
       "                   --target-contact-density 2\n"
-      "         Assuming chr1 is exactly 250 Mbp long, MoDLE will schedule simulation instances to yield a total of 150 000 contacts for chr1:\n"
-      "         2 * (250e6 / 100e3) * (3e6 / 100e3) = 150e3.")
+      "         Assuming chr1 is exactly 250 Mbp long, MoDLE will schedule simulation instances to yield\n"
+      "         a total of 150 000 contacts for chr1: 2 * (250e6 / 100e3) * (3e6 / 100e3) = 150e3.")
       ->check(CLI::PositiveNumber);
 
   misc.add_option(
       "--ncells",
       c.num_cells,
       "Number of simulation instances or cells to simulate.\n"
-      "Loop extrusion will be simulated independently for every chromosome across --ncells simulation instances.\n"
-      "The final contact matrix is produced by accumulating contacts generated across all simulation instances.\n"
-      "To achieve good performance and CPU utilization we recommend setting --ncells equal to the number of available CPU cores.")
+      "Loop extrusion will be simulated independently for every chromosome across --ncells\n"
+      "simulation instances. The final contact matrix is produced by accumulating contacts\n"
+      "generated across all simulation instances. To achieve good performance and CPU utilization\n"
+      "we recommend setting --ncells equal to the number of available CPU cores.")
       ->check(CLI::PositiveNumber)
       ->transform(utils::str_float_to_str_int)
       ->capture_default_str();
@@ -413,8 +440,9 @@ static void add_common_options(CLI::App& subcommand, modle::Config& config) {
       "-t,--threads",
       c.nthreads,
       "Number of worker threads used to run simulation instances.\n"
-      "By default MoDLE will spawn a number of worker threads equal to the number of logical CPU cores.\n"
-      "Sometimes slightly better performance can be obtained by setting --threads equal to the number of physical CPU cores.\n")
+      "By default MoDLE will spawn a number of worker threads equal to the number of logical CPU\n"
+      "cores. On high core count machines a slightly better performance can usually be obtained\n"
+      "by setting --threads equal to the number of physical CPU cores.\n")
       ->check(CLI::PositiveNumber)
       ->transform(CLI::Bound(1U, std::thread::hardware_concurrency()))
       ->capture_default_str();
@@ -438,9 +466,9 @@ static void add_common_options(CLI::App& subcommand, modle::Config& config) {
        c.burnin_target_epochs_for_lef_activation,
       "Number of epochs over which LEFs are progressively activated and bound to DNA.\n"
       "Note: this number is approximate, as LEFs are activated using a Possion process.\n"
-      "By default this parameter is computed based on the average LEF processivity, overall extrusion speed "
-      "and burn-in extrusion speed coefficient (--avg-lef-processivity, --fwd/rev-extrusion-speed "
-      "and --burn-in-extr-speed-coefficient respectively).")
+      "By default this parameter is computed based on the average LEF processivity, overall\n"
+      "extrusion speed and burn-in extrusion speed coefficient (--avg-lef-processivity,\n"
+      "--fwd/rev-extrusion-speed and --burn-in-extr-speed-coefficient respectively).")
        ->check(CLI::PositiveNumber)
        ->capture_default_str();
 
@@ -454,7 +482,8 @@ static void add_common_options(CLI::App& subcommand, modle::Config& config) {
   burnin_adv.add_option(
       "--burnin-smoothing-window-size",
       c.burnin_smoothing_window_size,
-      "Window size used to smooth metrics monitored to decide when the burn-in phase should be terminated.")
+      "Window size used to smooth metrics monitored to decide when the burn-in phase should be\n"
+      "terminated.")
       ->check(CLI::PositiveNumber)
       ->capture_default_str();
 
@@ -463,16 +492,19 @@ static void add_common_options(CLI::App& subcommand, modle::Config& config) {
        c.max_burnin_epochs,
        "Upper bound for the burn-in phase duration.\n"
        "This is especially useful when simlating loop extrusion with very few LEFs.\n"
-       "When this is the case, --max-burnin-epochs=100000 can be used as a very conservative threshold.")
+       "When this is the case, --max-burnin-epochs=100000 can be used as a very conservative\n"
+       "threshold.")
        ->check(CLI::PositiveNumber)
-       ->capture_default_str();
+       ->default_str("inf");
 
   burnin_adv.add_option(
       "--burnin-extr-speed-coefficient",
       c.burnin_speed_coefficient,
       "Extrusion speed coefficient to apply during the burn-in phase.\n"
-      "Setting this to numbers > 1.0 will speed-up the burn-in phase, as the average loop size will stabilize faster.\n"
-      "This parameter has many gotchas. For the time being we don't recommend changing this parameter.")
+      "Setting this to numbers > 1.0 will speed-up the burn-in phase, as the average loop size will\n"
+      "stabilize faster.\n"
+      "IMPORTANT: Setting this parameter to values other than 1.0 comes with many gotchas.\n"
+      "           For the time being, tuning this parameter is not reccommended.")
       ->check(CLI::PositiveNumber)
       ->capture_default_str();
 
@@ -481,6 +513,14 @@ static void add_common_options(CLI::App& subcommand, modle::Config& config) {
   stopping.get_option("--target-contact-density")->excludes(stopping.get_option("--target-number-of-epochs"));
   lefbar.get_option("--extrusion-barrier-occupancy")->excludes(barr_adv.get_option("--extrusion-barrier-bound-stp"));
   // clang-format on
+
+  std::array<std::reference_wrapper<CLI::App>, 10> option_groups{
+      io, lefbar, cgen, stopping, misc, io_adv, lef_adv, barr_adv, cgen_adv, burnin_adv};
+  std::vector<CLI::App*> option_groups_ptrs(option_groups.size());
+  std::transform(option_groups.begin(), option_groups.end(), option_groups_ptrs.begin(),
+                 [](auto& grp) { return &(grp.get()); });
+
+  return option_groups_ptrs;
 }
 
 void Cli::make_simulation_subcommand() {
@@ -492,7 +532,12 @@ void Cli::make_simulation_subcommand() {
            ->fallthrough()
            ->configurable();
   s.alias("sim");
-  add_common_options(s, this->_config);
+  auto option_group_ptrs = add_common_options(s, this->_config);
+  for (auto* og : option_group_ptrs) {
+    auto option_ptrs = og->get_options();
+    std::move(option_ptrs.begin(), option_ptrs.end(),
+              std::inserter(this->_options, this->_options.begin()));
+  }
 }
 
 void Cli::make_perturbate_subcommand() {
@@ -581,6 +626,13 @@ void Cli::make_perturbate_subcommand() {
   // clang-format on
 
   misc.get_option("--deletion-size")->excludes("--deletion-list");
+
+  auto option_group_ptrs = add_common_options(s, this->_config);
+  for (auto* og : option_group_ptrs) {
+    auto option_ptrs = og->get_options();
+    std::move(option_ptrs.begin(), option_ptrs.end(),
+              std::inserter(this->_options, this->_options.begin()));
+  }
 }
 
 void Cli::make_replay_subcommand() {
@@ -639,6 +691,12 @@ void Cli::make_replay_subcommand() {
       ->transform(CLI::Bound(1U, std::thread::hardware_concurrency()))
       ->capture_default_str();
   // clang-format on
+
+  for (auto* og : {&io, &various}) {
+    auto option_ptrs = og->get_options();
+    std::move(option_ptrs.begin(), option_ptrs.end(),
+              std::inserter(this->_options, this->_options.begin()));
+  }
 }
 
 void Cli::make_cli() {
@@ -647,10 +705,24 @@ void Cli::make_cli() {
   this->_cli.set_version_flag("-V,--version", std::string{modle::config::version::str_long()});
   this->_cli.require_subcommand(1);
   this->_cli.set_config("--config", "", "Path to MoDLE's config file (optional).", false);
+  this->_cli.formatter(std::make_shared<utils::Formatter>());
+  this->_cli.get_formatter()->column_width(30);
+
+  auto option_ptrs = this->_cli.get_options();
+  std::move(option_ptrs.begin(), option_ptrs.end(),
+            std::inserter(this->_options, this->_options.begin()));
 
   this->make_simulation_subcommand();
   this->make_perturbate_subcommand();
   this->make_replay_subcommand();
+
+  if (auto it = this->_options.find(static_cast<CLI::Option*>(nullptr));
+      it != this->_options.end()) {
+    this->_options.erase(it);
+  }
+
+  // break_long_help_lines(this->_options.begin(), this->_options.end(),
+  //                       140 - this->_cli.get_formatter()->get_column_width());
 }
 
 Cli::Cli(int argc, char** argv) : _argc(argc), _argv(argv), _exec_name(*argv) { this->make_cli(); }
@@ -670,8 +742,8 @@ const Config& Cli::parse_arguments() {
   } else {
     assert(this->_cli.get_subcommand("replay")->parsed());
     this->_subcommand = replay;
-    // The code in this branch basically tricks CLI11 into parsing a config file by creating a fake
-    // argv like: {"modle", "pert", "--config", "myconfig.toml"}
+    // The code in this branch basically tricks CLI11 into parsing a config file by creating a
+    // fake argv like: {"modle", "pert", "--config", "myconfig.toml"}
     const auto config_backup = this->_config;
     constexpr std::string_view subcmd_arg = "pert\0";
     constexpr std::string_view config_arg = "--config\0";
@@ -812,8 +884,8 @@ void Cli::validate_args() const {
            ->get_option("--num-of-tad-contacts-per-sampling-event")
            ->empty()) {
     errors.emplace_back(
-        "--num-of-tad-contacts-per-sampling-event is not allowed when the sampling strategy passed "
-        "through --contact-sampling-strategy does not involve sampling contacts from TADs.");
+        "--num-of-tad-contacts-per-sampling-event is not allowed when the sampling strategy "
+        "passed through --contact-sampling-strategy does not involve sampling contacts from TADs.");
   }
 
   // NOLINTNEXTLINE(readability-implicit-bool-conversion)
@@ -961,8 +1033,8 @@ std::string Cli::to_json() const {
       absl::StrAppend(&buff, line, "\n");
       continue;
     }
-    // Given two subcommands named comm1 and comm2, assuming comm1 was parsed while comm2 was not,
-    // the TOML produced by CLI11 will have values for comm2 formatted as comm2.myarg1=1,
+    // Given two subcommands named comm1 and comm2, assuming comm1 was parsed while comm2 was
+    // not, the TOML produced by CLI11 will have values for comm2 formatted as comm2.myarg1=1,
     // comm2.myarg2="a" etc.
     // All we are doing here is to look for an argument name containing '.'.
     // In this way we can filter out entry corresponding to arguments for inactive subcommands
@@ -979,10 +1051,10 @@ std::string Cli::to_json() const {
     ss << toml::json_formatter{tt};
     return ss.str();
   } catch (const std::exception& e) {
-    throw std::runtime_error(fmt::format(
-        FMT_STRING(
-            "The following error occurred while converting MoDLE's config from TOML to JSON: {}"),
-        e.what()));
+    throw std::runtime_error(
+        fmt::format(FMT_STRING("The following error occurred while converting MoDLE's config "
+                               "from TOML to JSON: {}"),
+                    e.what()));
   }
 }
 

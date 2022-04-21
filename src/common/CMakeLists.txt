@@ -4,6 +4,7 @@
 
 find_package(absl CONFIG REQUIRED)
 find_package(Boost CONFIG REQUIRED)
+find_package(CLI11 CONFIG REQUIRED)
 find_package(fmt CONFIG REQUIRED)
 find_package(range-v3 CONFIG REQUIRED)
 find_package(xxHash CONFIG REQUIRED)
@@ -34,6 +35,7 @@ target_link_system_libraries(
   Boost::headers
   Boost::filesystem
   Boost::random
+  CLI11::CLI11
   fmt::fmt
   range-v3::range-v3
   $<$<NOT:$<BOOL:${MODLE_USE_MERSENNE_TWISTER}>>:XoshiroCpp::XoshiroCpp>

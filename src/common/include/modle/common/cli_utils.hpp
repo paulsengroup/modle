@@ -6,6 +6,7 @@
 
 #include <absl/container/fixed_array.h>
 
+#include <CLI/Formatter.hpp>
 #include <boost/filesystem/file_status.hpp>  // for regular_file, file_type
 #include <boost/filesystem/path.hpp>         // for path
 #include <initializer_list>
@@ -74,6 +75,10 @@ class CliEnumMappings {
 
   [[nodiscard]] inline auto keys_view() const -> decltype(ranges::views::keys(this->_mappings));
   [[nodiscard]] inline auto values_view() const -> decltype(ranges::views::values(this->_mappings));
+};
+
+class Formatter : public CLI::Formatter {
+  [[nodiscard]] inline std::string make_option_opts(const CLI::Option* opt) const override;
 };
 
 }  // namespace modle::utils

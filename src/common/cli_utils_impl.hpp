@@ -4,6 +4,7 @@
 
 #pragma once
 
+#include <absl/strings/str_replace.h>
 #include <cpp-sort/comparators/natural_less.h>
 #include <cpp-sort/sorters/insertion_sorter.h>
 #include <fmt/format.h>   // for compile_string_to_view, FMT_STRING, formatbu...
@@ -194,6 +195,72 @@ auto CliEnumMappings<EnumT, StringT>::values_view() const
     -> decltype(ranges::views::values(this->_mappings)) {
   auto foo = this->_mappings | ranges::views::values;
   return this->_mappings | ranges::views::values;
+}
+
+std::string Formatter::make_option_opts(const CLI::Option *opt) const {
+  if (!opt->get_option_text().empty()) {
+    return opt->get_option_text();
+  }
+
+  auto str_contains = [](const auto s, const auto query) {
+    return s.find(query) != decltype(s)::npos;
+  };
+
+  std::string out;
+  if (opt->get_type_size() != 0) {
+    // Format default values so that the help string reads like: --my-option=17.0
+    if (!opt->get_default_str().empty()) {
+      if (absl::StartsWith(opt->get_type_name(), "FLOAT")) {
+        auto s = opt->get_default_str();
+        if (s.find('.') == std::string::npos) {
+          s += ".0";
+        }
+        out += fmt::format(FMT_STRING("={}"), s);
+      } else {
+        out += fmt::format(FMT_STRING("={}"), opt->get_default_str());
+      }
+    }
+
+    // Format param domain using open/closed interval notation
+    if (const auto &t = opt->get_type_name(); str_contains(t, " in ")) {
+      const auto p1 = t.find("[", t.find(" in "));
+      const auto p2 = t.find("]", t.find(" in "));
+      if (p1 != std::string::npos && p2 != std::string::npos && p2 > p1) {
+        out += " " + absl::StrReplaceAll(t.substr(p1, p2), {{" - ", ", "}});
+      }
+    } else if (str_contains(t, "POSITIVE")) {
+      out += " (0, inf]";
+    } else if (str_contains(t, "NONNEGATIVE") || str_contains(t, "UINT")) {
+      out += " [0, inf]";
+    }
+
+    if (opt->get_expected_max() == CLI::detail::expected_max_vector_size) {
+      out += " ...";
+    } else if (opt->get_expected_min() > 1) {
+      out += fmt::format(FMT_STRING(" x {}"), opt->get_expected());
+    }
+
+    if (opt->get_required()) {
+      out += " required";
+    }
+  }
+  if (!opt->get_envname().empty()) {
+    out += fmt::format(FMT_STRING(" ({}: {})"), get_label("env"), opt->get_envname());
+  }
+  if (!opt->get_needs().empty()) {
+    out += fmt::format(FMT_STRING(" {}:"), get_label("needs"));
+    for (const auto *op : opt->get_needs()) {
+      out += fmt::format(FMT_STRING(" {}"), op->get_name());
+    }
+  }
+  if (!opt->get_excludes().empty()) {
+    out += fmt::format(FMT_STRING(" {}:"), get_label("excludes"));
+    for (const auto *op : opt->get_excludes()) {
+      out += fmt::format(FMT_STRING(" {}"), op->get_name());
+    }
+  }
+
+  return absl::AsciiStrToLower(out);
 }
 
 }  // namespace modle::utils
