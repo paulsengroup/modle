@@ -22,9 +22,9 @@ trap 'rm -rf -- "$outdir"' EXIT
 
 # Only include chr2, chr20, chr21 and chr22
 "$modle_bin" sim -c <(grep '^chr2' "$chrom_sizes") \
-                 --extrusion-barrier-file <(xz -dc "$extr_barriers" | grep '^chr2') \
+                 -b <(xz -dc "$extr_barriers" | grep '^chr2') \
                  -o "$outdir/out" \
-                 --bin-size 20000 \
+                 -r 20000 \
                  --ncells 4 \
                  --max-burnin-epochs 5000
 
