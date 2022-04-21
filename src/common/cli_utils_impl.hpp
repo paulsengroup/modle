@@ -241,7 +241,7 @@ std::string Formatter::make_option_opts(const CLI::Option *opt) const {
     }
 
     if (opt->get_required()) {
-      out += " required";
+      out += " REQUIRED";
     }
   }
   if (!opt->get_envname().empty()) {
@@ -260,7 +260,7 @@ std::string Formatter::make_option_opts(const CLI::Option *opt) const {
     }
   }
 
-  return absl::AsciiStrToLower(out);
+  return out;
 }
 
 }  // namespace modle::utils
