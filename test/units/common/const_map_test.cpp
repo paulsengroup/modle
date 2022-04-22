@@ -23,7 +23,11 @@ TEST_CASE("ConstMap Ctor", "[utils][short]") {
   CHECK_THROWS(CMap(keys.begin(), keys.end() - 1, vals.begin()));
   CHECK_THROWS(CMap(keys.begin(), keys.end() + 1, vals.begin()));
 
-  CHECK_THROWS(CMap{{"1", 1}, {"1", 2}, {"3", 3}, {"4", 4}, {"5", 5}});
+  if constexpr (modle::utils::ndebug_not_defined()) {
+    CHECK_THROWS(CMap{{"1", 1}, {"1", 2}, {"3", 3}, {"4", 4}, {"5", 5}});
+  } else {
+    CHECK_NOTHROW(CMap{{"1", 1}, {"1", 2}, {"3", 3}, {"4", 4}, {"5", 5}});
+  }
 }
 
 // NOLINTNEXTLINE(readability-function-cognitive-complexity)
