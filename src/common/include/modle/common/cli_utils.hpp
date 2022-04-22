@@ -20,10 +20,10 @@
 namespace modle::utils {
 
 // Try to convert str representations like "1.0" or "1.000000" to "1"
-[[nodiscard]] inline std::string trim_trailing_zeros_from_decimal_digits(std::string&& s);
+[[nodiscard]] inline std::string trim_trailing_zeros_from_decimal_digits(std::string& s);
 
 template <char replacement = '_'>
-[[nodiscard]] inline std::string replace_non_alpha_char(std::string&& s);
+[[nodiscard]] inline std::string replace_non_alpha_char(std::string& s);
 
 template <class Collection>
 [[nodiscard]] inline std::string format_collection_to_english_list(const Collection& collection,
@@ -87,9 +87,33 @@ class Formatter : public CLI::Formatter {
   [[nodiscard]] inline std::string make_option_opts(const CLI::Option* opt) const override;
 };
 
-struct IsFinite : public CLI::Validator {
-  [[nodiscard]] inline IsFinite(bool nan_ok = false);
+static constexpr ConstMap<std::string_view, bp_t, 10> genomic_distance_unit_multiplier_map{
+    {"bp", bp_t(1)},
+    {"k", bp_t(1'000)},
+    {"kb", bp_t(1'000)},
+    {"kbp", bp_t(1'000)},
+    {"m", bp_t(1'000'000)},
+    {"mb", bp_t(1'000'000)},
+    {"mbp", bp_t(1'000'000)},
+    {"g", bp_t(1'000'000'000)},
+    {"gb", bp_t(1'000'000'000)},
+    {"gbp", bp_t(1'000'000'000)}};
+
+struct IsFiniteValidator : public CLI::Validator {
+  inline explicit IsFiniteValidator(bool nan_ok = false);
 };
+
+struct TrimTrailingZerosFromDecimalDigitValidator : public CLI::Transformer {
+  inline TrimTrailingZerosFromDecimalDigitValidator();
+};
+
+struct AsGenomicDistanceTransformer : public CLI::CheckedTransformer {
+  inline AsGenomicDistanceTransformer();
+};
+
+inline const auto IsFinite = IsFiniteValidator();
+inline const auto TrimTrailingZerosFromDecimalDigit = TrimTrailingZerosFromDecimalDigitValidator();
+inline const auto AsGenomicDistance = AsGenomicDistanceTransformer();
 
 }  // namespace cli
 

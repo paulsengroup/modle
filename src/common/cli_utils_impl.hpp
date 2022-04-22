@@ -46,7 +46,7 @@ std::string format_collection_to_english_list(const Collection &collection,
                      *second_to_last);
 }
 
-std::string trim_trailing_zeros_from_decimal_digits(std::string &&s) {
+std::string trim_trailing_zeros_from_decimal_digits(std::string &s) {
   try {
     auto n = parse_numeric_or_throw<double>(s);
     if (std::trunc(n) == n) {
@@ -60,7 +60,7 @@ std::string trim_trailing_zeros_from_decimal_digits(std::string &&s) {
 }
 
 template <char replacement>
-std::string replace_non_alpha_chars(std::string &&s) {
+std::string replace_non_alpha_chars(std::string &s) {
   std::replace_if(
       s.begin(), s.end(), [](const auto c) { return !std::isalpha(c); }, replacement);
   return s;
@@ -225,9 +225,9 @@ std::string Formatter::make_option_opts(const CLI::Option *opt) const {
         out += " " + absl::StrReplaceAll(t.substr(p1, p2), {{" - ", ", "}});
       }
     } else if (str_contains(t, "POSITIVE")) {
-      out += " (0, inf]";
+      out += " (0, inf)";
     } else if (str_contains(t, "NONNEGATIVE") || str_contains(t, "UINT")) {
-      out += " [0, inf]";
+      out += " [0, inf)";
     }
 
     if (opt->get_expected_max() == CLI::detail::expected_max_vector_size) {
@@ -259,7 +259,7 @@ std::string Formatter::make_option_opts(const CLI::Option *opt) const {
   return out;
 }
 
-IsFinite::IsFinite(bool nan_ok) {
+IsFiniteValidator::IsFiniteValidator(bool nan_ok) {
   description("ISFINITE");
 
   func_ = [nan_ok](const std::string &input) -> std::string {
@@ -271,6 +271,77 @@ IsFinite::IsFinite(bool nan_ok) {
       return fmt::format(FMT_STRING("Value {} is not a finite number"), n);
     } catch ([[maybe_unused]] const std::exception &e) {
       return fmt::format(FMT_STRING("Value {} could not be converted"), input);
+    }
+  };
+}
+
+TrimTrailingZerosFromDecimalDigitValidator::TrimTrailingZerosFromDecimalDigitValidator()
+    : CLI::Transformer({}) {
+  description("Trim trailing zeros from the decimal portion of FP numbers");
+
+  func_ = [](std::string &input) {
+    std::ignore = trim_trailing_zeros_from_decimal_digits(input);
+    return std::string{};
+  };
+}
+
+AsGenomicDistanceTransformer::AsGenomicDistanceTransformer() : CLI::CheckedTransformer({}) {
+  description("Convert common multiple of genomic distances to bp");
+
+  func_ = [](std::string &input) -> std::string {
+    const auto &mappings = genomic_distance_unit_multiplier_map;
+
+    std::string_view s{input};
+    // Look for the first non-alpha char
+    auto unit_rbegin = std::find_if(s.rbegin(), s.rend(),
+                                    [&](const auto &c) { return !std::isalpha(c, std::locale()); });
+
+    // input is empty or there are no digits preceding the unit
+    if (unit_rbegin == s.rend()) {
+      throw CLI::ValidationError(fmt::format(FMT_STRING("Value {} could not be converted"), input));
+    }
+
+    // input does not have a unit
+    if (unit_rbegin == s.rbegin()) {
+      try {  // Make sure input can be parsed to a positive integer
+        std::ignore = utils::parse_numeric_or_throw<bp_t>(input);
+      } catch ([[maybe_unused]] const std::exception &e) {
+        throw CLI::ValidationError(
+            fmt::format(FMT_STRING("Unable to convert {} to a number"), input));
+      }
+      return "";  // input validation was successful
+    }
+
+    const auto i = s.size() - static_cast<usize>(std::distance(s.rbegin(), unit_rbegin));
+    auto num_str = input.substr(0, i);
+    auto unit = input.substr(i);
+
+    // Look-up the appropriate multiplier
+    auto it = mappings.find(absl::AsciiStrToLower(unit));
+    if (it == mappings.end()) {
+      throw CLI::ValidationError(fmt::format(FMT_STRING("{} unit not recognized.\n"
+                                                        "Valid units:\n - {}"),
+                                             unit, fmt::join(mappings.keys(), "\n - ")));
+    }
+
+    const auto &multiplier = *it.second;
+    try {  // Make sure input can be parsed to a positive integer
+      const auto m =
+          static_cast<double>(multiplier) * utils::parse_numeric_or_throw<double>(num_str);
+
+      if (std::trunc(m) != m) {  // Ensure double can be represented as a whole number
+        throw CLI::ValidationError(fmt::format(
+            FMT_STRING(
+                "Unable to convert {} to a number of base-pairs ({} is not an integral number)"),
+            s, m));
+      }
+      input = fmt::format(FMT_STRING("{:.0f}"), m);
+      return "";  // input validation and transformation were successful
+    } catch (const CLI::ValidationError &e) {
+      throw;
+    } catch ([[maybe_unused]] const std::exception &e) {
+      throw CLI::ValidationError(
+          fmt::format(FMT_STRING("Unable to convert {} to a number"), num_str));
     }
   };
 }

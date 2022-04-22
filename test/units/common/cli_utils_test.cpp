@@ -43,4 +43,31 @@ TEST_CASE("CliEnumMappings", "[utils][short]") {
   CHECK(test_enum_map.at("a-plus-b-plus-c") == (TestEnum::a | TestEnum::b | TestEnum::c));
 }
 
+// NOLINTNEXTLINE(readability-function-cognitive-complexity)
+TEST_CASE("AsGenomicDistance CLI transform operator", "[utils][short]") {
+  auto fx = [&](std::string&& s) {
+    modle::utils::cli::AsGenomicDistance(s);
+    return s;
+  };
+
+  CHECK(fx("10000") == "10000");
+  CHECK(fx("10kb") == "10000");
+  CHECK(fx("10KB") == "10000");
+  CHECK(fx("10KBP") == "10000");
+  CHECK(fx("10KbP") == "10000");
+  CHECK(fx("10k") == "10000");
+
+  CHECK(fx("5.5kb") == "5500");
+  CHECK(fx("0.5kb") == "500");
+
+  CHECK(fx("1e6kb") == fx("1gbp"));
+
+  CHECK_THROWS_AS(fx("10kbpp"), CLI::ValidationError);
+  CHECK_THROWS_AS(fx("0.0001kb"), CLI::ValidationError);
+  CHECK_THROWS_AS(fx("!10gbp"), CLI::ValidationError);
+  CHECK_THROWS_AS(fx(" 10gbp"), CLI::ValidationError);
+  CHECK_THROWS_AS(fx(""), CLI::ValidationError);
+  CHECK_THROWS_AS(fx("kb"), CLI::ValidationError);
+}
+
 }  // namespace modle::test::utils

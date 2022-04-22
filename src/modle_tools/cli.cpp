@@ -148,14 +148,14 @@ void Cli::make_eval_subcommand() {
      "Only used when the contact matrix passed to --reference-matrix is in\n"
      "multires-cooler format.")
      ->check(CLI::PositiveNumber)
-     ->transform(utils::trim_trailing_zeros_from_decimal_digits);
+     ->transform(utils::cli::TrimTrailingZerosFromDecimalDigit | utils::cli::AsGenomicDistance);
 
   gen.add_option(
      "-w,--diagonal-width",
      c.diagonal_width,
      "Width of the subdiagonal window to consider for comparison.")
      ->check(CLI::PositiveNumber)
-     ->transform(utils::trim_trailing_zeros_from_decimal_digits)
+     ->transform(utils::cli::TrimTrailingZerosFromDecimalDigit | utils::cli::AsGenomicDistance)
      ->required();
 
   gen.add_flag(
@@ -321,7 +321,7 @@ void Cli::make_noisify_subcommand() {
      c.diagonal_width,
      "Diagonal width of the input contact matrix.")
      ->check(CLI::PositiveNumber)
-     ->transform(utils::trim_trailing_zeros_from_decimal_digits)
+     ->transform(utils::cli::TrimTrailingZerosFromDecimalDigit)
      ->required();
 
   gen.add_option(
@@ -447,8 +447,8 @@ void Cli::make_transform_subcommand() {
       "--binary-discretization-value",
       c.discretization_val,
       "Threshold for the step function used to discretize pixels.\n"
-      "Pixels above the threshold are mapped to 1, while all the other are mapped to 0.")
-      ->check(utils::cli::IsFinite());
+      "Pixels above the threshold are mapped to 1, while all the others are mapped to 0.")
+      ->check(utils::cli::IsFinite);
 
   trans.add_option(
       "--discretization-ranges-tsv",
@@ -474,7 +474,7 @@ void Cli::make_transform_subcommand() {
       "Only used when the contact matrix passed to --reference-matrix is in\n"
       "multires-cooler format.")
       ->check(CLI::PositiveNumber)
-      ->transform(utils::trim_trailing_zeros_from_decimal_digits);
+      ->transform(utils::cli::TrimTrailingZerosFromDecimalDigit | utils::cli::AsGenomicDistance);
 
   mat.add_option(
       "-w,--diagonal-width",
@@ -482,7 +482,7 @@ void Cli::make_transform_subcommand() {
       "Width of the subdiagonal window to transform.\n"
       "Pixels outside the window are set to 0.")
       ->check(CLI::PositiveNumber)
-      ->transform(utils::trim_trailing_zeros_from_decimal_digits)
+      ->transform(utils::cli::TrimTrailingZerosFromDecimalDigit | utils::cli::AsGenomicDistance)
       ->required();
 
   gen.add_option(
