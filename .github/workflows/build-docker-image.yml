@@ -49,8 +49,8 @@ jobs:
 
           OS_NAME='ubuntu'
           OS_VERSION='22.04'
-          C_COMPILER='clang-13'
-          CXX_COMPILER='clang++-13'
+          C_COMPILER='clang-14'
+          CXX_COMPILER='clang++-14'
 
           BUILD_BASE_IMAGE="ghcr.io/${{ github.repository_owner }}/ci-docker-images/modle/$OS_NAME-$OS_VERSION-cxx-$C_COMPILER:latest"
           TEST_BASE_IMAGE="$BUILD_BASE_IMAGE"
@@ -58,7 +58,7 @@ jobs:
           FINAL_BASE_IMAGE="docker.io/library/$OS_NAME"
           FINAL_BASE_IMAGE_TAG="$OS_VERSION"
           sudo docker pull "$FINAL_BASE_IMAGE:$FINAL_BASE_IMAGE_TAG"
-          
+
           FINAL_BASE_IMAGE_DIGEST="$(docker inspect --format='{{index .RepoDigests 0}}' "$FINAL_BASE_IMAGE:$FINAL_BASE_IMAGE_TAG" | grep -o '[[:alnum:]:]\+$')"
 
           GIT_HASH="$(git rev-parse HEAD)"
