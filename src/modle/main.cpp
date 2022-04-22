@@ -18,6 +18,7 @@
 
 #include <CLI/CLI.hpp>                      // for ParseError
 #include <algorithm>                        // for max
+#include <boost/filesystem/exception.hpp>   // for filesystem::filesystem_exception
 #include <boost/filesystem/operations.hpp>  // for create_directories
 #include <boost/filesystem/path.hpp>        // for path, operator<<
 #include <cassert>                          // for assert
@@ -39,29 +40,31 @@
 #include "modle/simulation.hpp"                // for Simulation
 
 void setup_logger_console(const bool quiet) {
-  spdlog::set_default_logger(std::make_shared<spdlog::logger>("main_logger"));
-
-  auto stderr_sink = spdlog::default_logger()->sinks().emplace_back(
-      std::make_shared<spdlog::sinks::stderr_color_sink_mt>());
+  auto stderr_sink = std::make_shared<spdlog::sinks::stderr_color_sink_mt>();
   //                        [2021-08-12 17:49:34.581] [info]: my log msg
   stderr_sink->set_pattern("[%Y-%m-%d %T.%e] %^[%l]%$: %v");
   if (quiet) {
     stderr_sink->set_level(spdlog::level::err);
   }
+
+  auto main_logger = std::make_shared<spdlog::logger>("main_logger", stderr_sink);
+
+  spdlog::set_default_logger(main_logger);
   spdlog::info(FMT_STRING("Running MoDLE v{}"), modle::config::version::str());
 }
 
 void setup_logger_file(const boost::filesystem::path& path_to_log_file) {
-  spdlog::logger("tmp_logger", spdlog::default_logger()->sinks().front())
-      .info(FMT_STRING("Complete log will be written to file {}"), path_to_log_file);
+  spdlog::info(FMT_STRING("Complete log will be written to file {}"), path_to_log_file);
 
-  auto file_sink = spdlog::default_logger()->sinks().emplace_back(
-      std::make_shared<spdlog::sinks::basic_file_sink_mt>(path_to_log_file.string(), true));
+  auto file_sink =
+      std::make_shared<spdlog::sinks::basic_file_sink_mt>(path_to_log_file.string(), true);
   //                      [2021-08-12 17:49:34.581] [139797797574208] [info]: my log msg
   file_sink->set_pattern("[%Y-%m-%d %T.%e] [%t] %^[%l]%$: %v");
 
   spdlog::logger("tmp_logger", file_sink)
       .info(FMT_STRING("Running MoDLE v{}"), modle::config::version::str());
+
+  spdlog::default_logger()->sinks().emplace_back(std::move(file_sink));
 }
 
 void setup_failure_signal_handler(const char* argv_0) {
@@ -70,11 +73,14 @@ void setup_failure_signal_handler(const char* argv_0) {
   // TODO: figure out a way to make this callback async-signal-safe
   options.writerfn = [](const char* buff) {
     if (buff) {
-      const std::string_view buff_{buff, strlen(buff)};
-      spdlog::error(FMT_STRING("{}"), absl::StripSuffix(buff_, "\n"));
-    } else {
-      spdlog::shutdown();
+      const std::string_view buff_sv{buff, strlen(buff)};
+      if (spdlog::default_logger()) {
+        spdlog::error(FMT_STRING("{}"), absl::StripSuffix(buff_sv, "\n"));
+      } else {
+        fmt::print(stderr, FMT_STRING("{}"), buff_sv);
+      }
     }
+    spdlog::shutdown();
   };
 
   absl::InstallFailureSignalHandler(options);
@@ -93,22 +99,23 @@ void write_param_summary_to_log(const modle::Config& c) {
   }
   spdlog::info(FMT_STRING("Contact sampling strategy: {}."),
                modle::Cli::contact_sampling_strategy_map.at(c.contact_sampling_strategy));
+  spdlog::info(FMT_STRING("Contact matrix resolution: {}bp"), c.bin_size);
 }
 
-int main(int argc, char** argv) noexcept {
-  // NOLINT(cppcoreguidelines-pro-bounds-pointer-arithmetic)
-  setup_failure_signal_handler(argv[0]);
-
+std::tuple<int, modle::Cli::subcommand, modle::Config> parse_cli_and_setup_logger(int argc,
+                                                                                  char** argv) {
   std::unique_ptr<modle::Cli> cli{nullptr};
   try {
     cli = std::make_unique<modle::Cli>(argc, argv);
     auto config = cli->parse_arguments();
+    const auto subcmd = cli->get_subcommand();
     setup_logger_console(config.quiet);
 
     if (const auto collisions = cli->detect_path_collisions(config); !collisions.empty()) {
-      spdlog::error(FMT_STRING("FAILURE! The following path collision(s) have been detected:\n{}"),
-                    collisions);
-      return 1;
+      throw boost::filesystem::filesystem_error(
+          fmt::format(FMT_STRING("Detected {} path collision(s):\n{}"), collisions.size(),
+                      collisions),
+          std::make_error_code(std::errc::file_exists));
     }
 
     if (!config.skip_output) {
@@ -126,10 +133,43 @@ int main(int argc, char** argv) noexcept {
       }
     }
 
+    return std::make_tuple(0, subcmd, config);
+  } catch (const CLI::ParseError& e) {
+    assert(cli);
+    //  This takes care of formatting and printing error messages (if any)
+    return std::make_tuple(cli->exit(e), modle::Cli::subcommand::help, modle::Config{});
+
+  } catch (const boost::filesystem::filesystem_error& e) {
+    spdlog::error(FMT_STRING("FAILURE! One or more filesystem error(s) occurred: {}."), e.what());
+    return std::make_tuple(1, modle::Cli::subcommand::help, modle::Config{});
+  } catch (const spdlog::spdlog_ex& e) {
+    fmt::print(
+        stderr,
+        FMT_STRING(
+            "FAILURE! An error occurred while setting up the main application logger: {}.\n"),
+        e.what());
+    return std::make_tuple(1, modle::Cli::subcommand::help, modle::Config{});
+  }
+}
+
+int main(int argc, char** argv) noexcept {
+  // No need to set up the signal handler w/ symbol support when proj. is built in Debug mode
+  if constexpr (modle::utils::ndebug_defined()) {
+    // NOLINTNEXTLINE(cppcoreguidelines-pro-bounds-pointer-arithmetic)
+    setup_failure_signal_handler(argv[0]);
+  }
+
+  try {
+    const auto [ec, subcmd, config] = parse_cli_and_setup_logger(argc, argv);
+    if (ec != 0 || subcmd == modle::Cli::subcommand::help) {
+      return ec;
+    }
+
+    assert(spdlog::default_logger());
     write_param_summary_to_log(config);
     const auto t0 = absl::Now();
     modle::Simulation sim(config);
-    switch (cli->get_subcommand()) {
+    switch (subcmd) {
       using subcommand = modle::Cli::subcommand;
       case subcommand::simulate:
         sim.run_simulate();
@@ -149,17 +189,8 @@ int main(int argc, char** argv) noexcept {
 
     spdlog::info(FMT_STRING("Simulation terminated without errors in {}!\n\nBye."),
                  absl::FormatDuration(absl::Now() - t0));
-  } catch (const CLI::ParseError& e) {
-    return cli->exit(e);  //  This takes care of formatting and printing error messages (if any)
   } catch (const std::bad_alloc& e) {
-    spdlog::error(FMT_STRING("FAILURE! Unable to allocate enough memory: {}"), e.what());
-    return 1;
-  } catch (const spdlog::spdlog_ex& e) {
-    fmt::print(
-        stderr,
-        FMT_STRING(
-            "FAILURE! An error occurred while setting up the main application logger: {}.\n"),
-        e.what());
+    spdlog::error(FMT_STRING("FAILURE! Unable to allocate enough memory: {}."), e.what());
     return 1;
   } catch (const std::exception& e) {
     spdlog::error(FMT_STRING("FAILURE! An error occurred during simulation: {}."), e.what());
