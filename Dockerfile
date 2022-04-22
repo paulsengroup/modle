@@ -91,6 +91,7 @@ COPY . "$src_dir"
 # Configure project
 RUN cd "$build_dir"                            \
 && cmake -DCMAKE_BUILD_TYPE=Release            \
+         -DWARNINGS_AS_ERRORS=ON               \
          -DENABLE_DEVELOPER_MODE=OFF           \
          -DENABLE_TESTING=ON                   \
          -DCMAKE_INSTALL_PREFIX="$staging_dir" \
