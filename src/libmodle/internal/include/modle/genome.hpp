@@ -37,18 +37,16 @@ class Chromosome {
  public:
   Chromosome() = default;
   Chromosome(usize id, std::string_view chrom_name, bp_t chrom_start, bp_t chrom_end,
-             bp_t chrom_size, bool ok_ = true);
+             bp_t chrom_size);
 
-  Chromosome(usize id, const bed::BED& chrom, bool ok_ = true);
-  Chromosome(usize id, const bed::BED& chrom, const IITree<bp_t, ExtrusionBarrier>& barriers,
-             bool ok_ = true);
-  Chromosome(usize id, const bed::BED& chrom, IITree<bp_t, ExtrusionBarrier>&& barriers,
-             bool ok_ = true);
+  Chromosome(usize id, const bed::BED& chrom);
+  Chromosome(usize id, const bed::BED& chrom, const IITree<bp_t, ExtrusionBarrier>& barriers);
+  Chromosome(usize id, const bed::BED& chrom, IITree<bp_t, ExtrusionBarrier>&& barriers);
 
   Chromosome(usize id, std::string_view chrom_name, bp_t chrom_start, bp_t chrom_end,
-             bp_t chrom_size, const IITree<bp_t, ExtrusionBarrier>& barriers, bool ok_ = true);
+             bp_t chrom_size, const IITree<bp_t, ExtrusionBarrier>& barriers);
   Chromosome(usize id, std::string_view chrom_name, bp_t chrom_start, bp_t chrom_end,
-             bp_t chrom_size, IITree<bp_t, ExtrusionBarrier>&& barriers, bool ok_ = true);
+             bp_t chrom_size, IITree<bp_t, ExtrusionBarrier>&& barriers);
 
   ~Chromosome() = default;
 
@@ -79,7 +77,6 @@ class Chromosome {
   [[nodiscard]] constexpr bp_t simulated_size() const;
   [[nodiscard]] usize npixels() const;
   [[nodiscard]] constexpr usize npixels(bp_t diagonal_width, bp_t bin_size) const;
-  [[nodiscard]] bool ok() const;
   [[nodiscard]] usize num_lefs(double nlefs_per_mbp) const;
   [[nodiscard]] usize num_barriers() const;
   [[nodiscard]] const IITree<bp_t, ExtrusionBarrier>& barriers() const;
@@ -109,7 +106,6 @@ class Chromosome {
   std::shared_ptr<contact_matrix_t> _contacts{};
 
   std::vector<bed_tree_value_t> _features{};
-  bool _ok{true};
 };
 
 class Genome {
@@ -119,7 +115,7 @@ class Genome {
          const boost::filesystem::path& path_to_extr_barriers,
          const boost::filesystem::path& path_to_chrom_subranges,
          absl::Span<const boost::filesystem::path> paths_to_extra_features,
-         double ctcf_prob_occ_to_occ, double ctcf_prob_nocc_to_nocc, bool keep_all_chroms);
+         double ctcf_prob_occ_to_occ, double ctcf_prob_nocc_to_nocc);
 
   using iterator = absl::btree_set<Chromosome>::iterator;
   using const_iterator = absl::btree_set<Chromosome>::const_iterator;
@@ -163,7 +159,7 @@ class Genome {
       const boost::filesystem::path& path_to_extr_barriers,
       const boost::filesystem::path& path_to_chrom_subranges,
       absl::Span<const boost::filesystem::path> paths_to_extra_features,
-      double ctcf_prob_occ_to_occ, double ctcf_prob_nocc_to_nocc, bool keep_all_chroms);
+      double ctcf_prob_occ_to_occ, double ctcf_prob_nocc_to_nocc);
 
  private:
   absl::btree_set<Chromosome> _chromosomes{};
@@ -175,7 +171,7 @@ class Genome {
   //! simulate loop extrusion on a sub-region of a chromosome from the chrom.sizes file.
   [[nodiscard]] static absl::btree_set<Chromosome> import_chromosomes(
       const boost::filesystem::path& path_to_chrom_sizes,
-      const boost::filesystem::path& path_to_chrom_subranges, bool keep_all_chroms);
+      const boost::filesystem::path& path_to_chrom_subranges);
 
   /// Parse a BED file containing the genomic coordinates of extrusion barriers and add them to the
   /// Genome

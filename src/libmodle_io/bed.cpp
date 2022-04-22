@@ -39,11 +39,11 @@ namespace modle::bed {
 std::string RGB::to_string() const { return fmt::to_string(*this); }
 
 void BED::parse_strand_or_throw(const std::vector<std::string_view>& toks, u8 idx, char& field) {
-  const auto* const match = bed_strand_encoding.find(toks[idx]);
+  const auto match = bed_strand_encoding.find(toks[idx]);
   if (match == bed_strand_encoding.end()) {
     throw std::runtime_error(fmt::format(FMT_STRING("Unrecognized strand \"{}\""), toks[idx]));
   }
-  field = match->second;
+  field = *match.second;
 }
 
 void BED::parse_rgb_or_throw(const std::vector<std::string_view>& toks, u8 idx, RGB& field) {

@@ -17,8 +17,6 @@ target_link_libraries(
   modle
   PRIVATE project_warnings
           project_options
-          CLI11::CLI11
-          fmt::fmt
           Modle::common
           Modle::config
           Modle::io_cooler
@@ -28,6 +26,7 @@ target_link_system_libraries(
   modle
   PRIVATE
   absl::failure_signal_handler
+  absl::flat_hash_map
   absl::span
   absl::strings
   absl::symbolize

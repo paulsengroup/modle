@@ -4,6 +4,7 @@
 
 #pragma once
 
+#include <absl/strings/str_replace.h>
 #include <cpp-sort/comparators/natural_less.h>
 #include <cpp-sort/sorters/insertion_sorter.h>
 #include <fmt/format.h>   // for compile_string_to_view, FMT_STRING, formatbu...
@@ -26,31 +27,6 @@
 
 namespace modle::utils {
 
-// Try to convert str representations like "1.0" or "1.000000" to "1"
-std::string str_float_to_str_int(const std::string &s) {
-  try {
-    auto n = parse_numeric_or_throw<double>(s);
-    if (std::trunc(n) == n) {
-      return fmt::format(FMT_STRING("{:.0f}"), n);
-    }
-  } catch (const std::exception &e) {  // Let the caller deal with invalid numbers
-    return s;
-  }
-  return s;
-}
-
-template <char replacement>
-std::string replace_non_alpha_char(const std::string &s) {
-  return replace_non_alpha_char(s, replacement);
-}
-
-std::string replace_non_alpha_char(const std::string &s, const char replacement) {
-  auto ss = s;
-  std::transform(ss.begin(), ss.end(), ss.begin(),
-                 [&](const auto c) { return c ? std::isalpha(c) : replacement; });
-  return ss;
-}
-
 template <class Collection>
 std::string format_collection_to_english_list(const Collection &collection,
                                               const std::string_view sep,
@@ -68,6 +44,26 @@ std::string format_collection_to_english_list(const Collection &collection,
   const auto second_to_last = std::end(collection) - 1;
   return fmt::format(FMT_STRING("{}{}{}"), fmt::join(first, second_to_last, sep), last_sep,
                      *second_to_last);
+}
+
+std::string trim_trailing_zeros_from_decimal_digits(std::string &s) {
+  try {
+    auto n = parse_numeric_or_throw<double>(s);
+    if (std::trunc(n) == n) {
+      return fmt::format(FMT_STRING("{:.0f}"), n);
+    }
+
+  } catch ([[maybe_unused]] const std::exception &e) {
+    // Let the caller deal with invalid numbers
+  }
+  return s;
+}
+
+template <char replacement>
+std::string replace_non_alpha_chars(std::string &s) {
+  std::replace_if(
+      s.begin(), s.end(), [](const auto c) { return !std::isalpha(c); }, replacement);
+  return s;
 }
 
 std::string detect_path_collision(const boost::filesystem::path &p, bool force_overwrite,
@@ -195,6 +191,162 @@ auto CliEnumMappings<EnumT, StringT>::values_view() const
   auto foo = this->_mappings | ranges::views::values;
   return this->_mappings | ranges::views::values;
 }
+
+namespace cli {
+std::string Formatter::make_option_opts(const CLI::Option *opt) const {
+  if (!opt->get_option_text().empty()) {
+    return opt->get_option_text();
+  }
+
+  auto str_contains = [](const auto s, const auto query) {
+    return s.find(query) != decltype(s)::npos;
+  };
+
+  std::string out;
+  if (opt->get_type_size() != 0) {
+    // Format default values so that the help string reads like: --my-option=17.0
+    if (!opt->get_default_str().empty()) {
+      if (absl::StartsWith(opt->get_type_name(), "FLOAT")) {
+        auto s = opt->get_default_str();
+        if (s.find('.') == std::string::npos) {
+          s += ".0";
+        }
+        out += fmt::format(FMT_STRING("={}"), s);
+      } else {
+        out += fmt::format(FMT_STRING("={}"), opt->get_default_str());
+      }
+    }
+
+    // Format param domain using open/closed interval notation
+    if (const auto &t = opt->get_type_name(); str_contains(t, " in ")) {
+      const auto p1 = t.find("[", t.find(" in "));
+      const auto p2 = t.find("]", t.find(" in "));
+      if (p1 != std::string::npos && p2 != std::string::npos && p2 > p1) {
+        out += " " + absl::StrReplaceAll(t.substr(p1, p2), {{" - ", ", "}});
+      }
+    } else if (str_contains(t, "POSITIVE")) {
+      out += " (0, inf)";
+    } else if (str_contains(t, "NONNEGATIVE") || str_contains(t, "UINT")) {
+      out += " [0, inf)";
+    }
+
+    if (opt->get_expected_max() == CLI::detail::expected_max_vector_size) {
+      out += " ...";
+    } else if (opt->get_expected_min() > 1) {
+      out += fmt::format(FMT_STRING(" x {}"), opt->get_expected());
+    }
+
+    if (opt->get_required()) {
+      out += " REQUIRED";
+    }
+  }
+  if (!opt->get_envname().empty()) {
+    out += fmt::format(FMT_STRING(" ({}: {})"), get_label("env"), opt->get_envname());
+  }
+  if (!opt->get_needs().empty()) {
+    out += fmt::format(FMT_STRING(" {}:"), get_label("needs"));
+    for (const auto *op : opt->get_needs()) {
+      out += fmt::format(FMT_STRING(" {}"), op->get_name());
+    }
+  }
+  if (!opt->get_excludes().empty()) {
+    out += fmt::format(FMT_STRING(" {}:"), get_label("excludes"));
+    for (const auto *op : opt->get_excludes()) {
+      out += fmt::format(FMT_STRING(" {}"), op->get_name());
+    }
+  }
+
+  return out;
+}
+
+IsFiniteValidator::IsFiniteValidator(bool nan_ok) {
+  description("ISFINITE");
+
+  func_ = [nan_ok](const std::string &input) -> std::string {
+    try {
+      auto n = parse_numeric_or_throw<double>(input);
+      if (std::isfinite(n) || (nan_ok && !std::isnan(n))) {
+        return "";
+      }
+      return fmt::format(FMT_STRING("Value {} is not a finite number"), n);
+    } catch ([[maybe_unused]] const std::exception &e) {
+      return fmt::format(FMT_STRING("Value {} could not be converted"), input);
+    }
+  };
+}
+
+TrimTrailingZerosFromDecimalDigitValidator::TrimTrailingZerosFromDecimalDigitValidator()
+    : CLI::Transformer({}) {
+  description("Trim trailing zeros from the decimal portion of FP numbers");
+
+  func_ = [](std::string &input) {
+    std::ignore = trim_trailing_zeros_from_decimal_digits(input);
+    return std::string{};
+  };
+}
+
+AsGenomicDistanceTransformer::AsGenomicDistanceTransformer() : CLI::CheckedTransformer({}) {
+  description("Convert common multiple of genomic distances to bp");
+
+  func_ = [](std::string &input) -> std::string {
+    const auto &mappings = genomic_distance_unit_multiplier_map;
+
+    std::string_view s{input};
+    // Look for the first non-alpha char
+    auto unit_rbegin = std::find_if(s.rbegin(), s.rend(),
+                                    [&](const auto &c) { return !std::isalpha(c, std::locale()); });
+
+    // input is empty or there are no digits preceding the unit
+    if (unit_rbegin == s.rend()) {
+      throw CLI::ValidationError(fmt::format(FMT_STRING("Value {} could not be converted"), input));
+    }
+
+    // input does not have a unit
+    if (unit_rbegin == s.rbegin()) {
+      try {  // Make sure input can be parsed to a positive integer
+        std::ignore = utils::parse_numeric_or_throw<bp_t>(input);
+      } catch ([[maybe_unused]] const std::exception &e) {
+        throw CLI::ValidationError(
+            fmt::format(FMT_STRING("Unable to convert {} to a number"), input));
+      }
+      return "";  // input validation was successful
+    }
+
+    const auto i = s.size() - static_cast<usize>(std::distance(s.rbegin(), unit_rbegin));
+    auto num_str = input.substr(0, i);
+    auto unit = input.substr(i);
+
+    // Look-up the appropriate multiplier
+    auto it = mappings.find(absl::AsciiStrToLower(unit));
+    if (it == mappings.end()) {
+      throw CLI::ValidationError(fmt::format(FMT_STRING("{} unit not recognized.\n"
+                                                        "Valid units:\n - {}"),
+                                             unit, fmt::join(mappings.keys(), "\n - ")));
+    }
+
+    const auto &multiplier = *it.second;
+    try {  // Make sure input can be parsed to a positive integer
+      const auto m =
+          static_cast<double>(multiplier) * utils::parse_numeric_or_throw<double>(num_str);
+
+      if (std::trunc(m) != m) {  // Ensure double can be represented as a whole number
+        throw CLI::ValidationError(fmt::format(
+            FMT_STRING(
+                "Unable to convert {} to a number of base-pairs ({} is not an integral number)"),
+            s, m));
+      }
+      input = fmt::format(FMT_STRING("{:.0f}"), m);
+      return "";  // input validation and transformation were successful
+    } catch (const CLI::ValidationError &e) {
+      throw;
+    } catch ([[maybe_unused]] const std::exception &e) {
+      throw CLI::ValidationError(
+          fmt::format(FMT_STRING("Unable to convert {} to a number"), num_str));
+    }
+  };
+}
+
+}  // namespace cli
 
 }  // namespace modle::utils
 

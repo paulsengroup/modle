@@ -12,9 +12,10 @@
 #include <thread>                           // for thread
 #include <vector>                           // for vector
 
-#include "modle/bed/bed.hpp"        // for BED, BED::Dialect, BED::BED6
-#include "modle/common/common.hpp"  // for usize, bp_t, u64
-#include "modle/common/utils.hpp"   // for ConstMap
+#include "modle/bed/bed.hpp"           // for BED, BED::Dialect, BED::BED6
+#include "modle/common/cli_utils.hpp"  // for CliEnumMappings
+#include "modle/common/common.hpp"     // for usize, bp_t, u64
+#include "modle/common/utils.hpp"      // for ConstMap
 
 namespace modle::tools {
 
@@ -32,13 +33,14 @@ struct eval_config {
   enum class Metric : u8f { custom, eucl_dist, pearson, rmse, spearman };
   Metric metric{Metric::custom};
 
-  inline static const std::array<std::pair<std::string, enum Metric>, 5> metric_map{
+  // NOLINTNEXTLINE(cert-err58-cpp)
+  inline static const utils::CliEnumMappings<enum Metric> metric_map{
       // clang-format off
-      std::make_pair("custom", Metric::custom),
-      std::make_pair("eucl_dist", Metric::eucl_dist),
-      std::make_pair("pearson", Metric::pearson),
-      std::make_pair("rmse", Metric::rmse),
-      std::make_pair("spearman", Metric::spearman)
+      {"custom", Metric::custom},
+      {"eucl_dist", Metric::eucl_dist},
+      {"pearson", Metric::pearson},
+      {"rmse", Metric::rmse},
+      {"spearman", Metric::spearman}
       // clang-format on
   };
 
@@ -111,14 +113,15 @@ struct transform_config {
   enum class Transformation : u8f { normalize, gaussian_blur, difference_of_gaussians, discretize };
   Transformation method;
 
-  // clang-format off
-  inline static const std::array<std::pair<std::string, Transformation>, 4> transformation_map{
-      std::make_pair("normalize", Transformation::normalize),
-      std::make_pair("gaussian_blur", Transformation::gaussian_blur),
-      std::make_pair("difference_of_gaussians", Transformation::difference_of_gaussians),
-      std::make_pair("discretize", Transformation::discretize)
+  // NOLINTNEXTLINE(cert-err58-cpp)
+  inline static const utils::CliEnumMappings<enum Transformation> transformation_map{
+      // clang-format off
+      {"normalize", Transformation::normalize},
+      {"gaussian_blur", Transformation::gaussian_blur},
+      {"difference_of_gaussians", Transformation::difference_of_gaussians},
+      {"discretize", Transformation::discretize}
+      // clang-format on
   };
-  // clang-format on
 
   // Transformation settings
   std::pair<double, double> normalization_range{0.0, 1.0};

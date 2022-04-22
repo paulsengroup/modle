@@ -6,6 +6,7 @@
 
 #include <absl/container/fixed_array.h>
 
+#include <CLI/Formatter.hpp>
 #include <boost/filesystem/file_status.hpp>  // for regular_file, file_type
 #include <boost/filesystem/path.hpp>         // for path
 #include <initializer_list>
@@ -13,19 +14,24 @@
 #include <string>       // for string
 #include <string_view>  // for string_view
 
+#include "modle/common/common.hpp"
+#include "modle/common/const_map.hpp"
+
 namespace modle::utils {
 
 // Try to convert str representations like "1.0" or "1.000000" to "1"
-[[nodiscard]] inline std::string str_float_to_str_int(const std::string& s);
+[[nodiscard]] inline std::string trim_trailing_zeros_from_decimal_digits(std::string& s);
 
-[[nodiscard]] inline std::string replace_non_alpha_char(const std::string& s, char replacement);
 template <char replacement = '_'>
-[[nodiscard]] inline std::string replace_non_alpha_char(const std::string& s);
+[[nodiscard]] inline std::string replace_non_alpha_char(std::string& s);
 
 template <class Collection>
 [[nodiscard]] inline std::string format_collection_to_english_list(const Collection& collection,
                                                                    std::string_view sep = ", ",
                                                                    std::string_view last_sep = "");
+
+template <class N = double>
+[[nodiscard]] inline bool is_finite_number(const std::string& s);
 
 // Returns false in case a collision was detected
 inline bool detect_path_collision(
@@ -75,6 +81,41 @@ class CliEnumMappings {
   [[nodiscard]] inline auto keys_view() const -> decltype(ranges::views::keys(this->_mappings));
   [[nodiscard]] inline auto values_view() const -> decltype(ranges::views::values(this->_mappings));
 };
+
+namespace cli {
+class Formatter : public CLI::Formatter {
+  [[nodiscard]] inline std::string make_option_opts(const CLI::Option* opt) const override;
+};
+
+static constexpr ConstMap<std::string_view, bp_t, 10> genomic_distance_unit_multiplier_map{
+    {"bp", bp_t(1)},
+    {"k", bp_t(1'000)},
+    {"kb", bp_t(1'000)},
+    {"kbp", bp_t(1'000)},
+    {"m", bp_t(1'000'000)},
+    {"mb", bp_t(1'000'000)},
+    {"mbp", bp_t(1'000'000)},
+    {"g", bp_t(1'000'000'000)},
+    {"gb", bp_t(1'000'000'000)},
+    {"gbp", bp_t(1'000'000'000)}};
+
+struct IsFiniteValidator : public CLI::Validator {
+  inline explicit IsFiniteValidator(bool nan_ok = false);
+};
+
+struct TrimTrailingZerosFromDecimalDigitValidator : public CLI::Transformer {
+  inline TrimTrailingZerosFromDecimalDigitValidator();
+};
+
+struct AsGenomicDistanceTransformer : public CLI::CheckedTransformer {
+  inline AsGenomicDistanceTransformer();
+};
+
+inline const auto IsFinite = IsFiniteValidator();
+inline const auto TrimTrailingZerosFromDecimalDigit = TrimTrailingZerosFromDecimalDigitValidator();
+inline const auto AsGenomicDistance = AsGenomicDistanceTransformer();
+
+}  // namespace cli
 
 }  // namespace modle::utils
 

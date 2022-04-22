@@ -8,7 +8,6 @@
 #include <type_traits>  // for result_of
 
 #include "modle/common/common.hpp"  // for u64
-#include "modle/common/utils.hpp"   // for ndebug_defined
 
 #if !defined(MODLE_USE_MERSENNE_TWISTER)
 #define USE_XOSHIRO
