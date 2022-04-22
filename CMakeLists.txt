@@ -21,8 +21,8 @@ include(FetchContent)
 # cmake-format: off
 FetchContent_Declare(
         _project_options
-        URL https://github.com/cpp-best-practices/project_options/archive/refs/tags/v0.20.0.tar.gz
-        URL_HASH SHA512=2bc61405ccd3eba79721780a4c6c9eaed9c82393fce3618e1288247f929cd1c82997eeafc08e1f76be5689a6c695a477b0bb5d2e236be0134783f325c3af67ee
+        URL https://github.com/cpp-best-practices/project_options/archive/refs/tags/v0.21.0.tar.gz
+        URL_HASH SHA512=91d6f073cdc5ad9c3b42019c56d6bc570e07b827257c4e66630679e5517bb302e343d2602400b9e870dd1a5e7bad235f5516cf4df9dff5c7cddbece3c2b3137b
 )
 # cmake-format: on
 

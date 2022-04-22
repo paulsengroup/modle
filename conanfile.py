@@ -11,13 +11,13 @@ class MoDLE(ConanFile):
   license = "MIT"
   author = "Roberto Rossini (roberros@uio.no)"
   settings = "os", "compiler", "build_type", "arch"
-  requires = ["abseil/20211102.0#469a22da5f3d4beeb200450447aa5d04",
+  requires = ["abseil/20211102.0#5d5a47e060d1987040f8631c2b426d71",
               "boost/1.78.0",
               "bzip2/1.0.8",
-              "catch2/2.13.8",
+              "catch2/2.13.9",
               "cli11/2.2.0",
               "concurrentqueue/1.0.3",
-              "cpp-sort/1.12.1",
+              "cpp-sort/1.13.0",
               "fmt/8.1.1",
               "hdf5/1.12.1",
               "libarchive/3.6.0",
@@ -26,7 +26,7 @@ class MoDLE(ConanFile):
               "range-v3/0.11.0",
               "readerwriterqueue/1.0.6",
               "spdlog/1.9.2",
-              "tomlplusplus/2.5.0",
+              "tomlplusplus/3.0.1",  # v3.0.1 invokes UB on toml++/impl/unicode.h:139:13
               "xxhash/0.8.1",
               "xz_utils/5.2.5",
               "zlib/1.2.12"]
@@ -35,13 +35,13 @@ class MoDLE(ConanFile):
   generators = "cmake", "gcc", "txt", "cmake_find_package", "cmake_find_package_multi"
 
   def validate(self):
-      if self.settings.compiler.get_safe("cppstd"):
-          tools.check_min_cppstd(self, 17)
+    if self.settings.compiler.get_safe("cppstd"):
+      tools.check_min_cppstd(self, 17)
 
   def configure(self):
 
     if self.settings.compiler in ["clang", "gcc"]:
-        self.settings.compiler.libcxx = "libstdc++11"
+      self.settings.compiler.libcxx = "libstdc++11"
 
     # Set settings for dependencies
     self.options["boost"].system_no_deprecated = True
