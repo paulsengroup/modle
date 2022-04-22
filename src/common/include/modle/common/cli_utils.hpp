@@ -14,6 +14,9 @@
 #include <string>       // for string
 #include <string_view>  // for string_view
 
+#include "modle/common/common.hpp"
+#include "modle/common/const_map.hpp"
+
 namespace modle::utils {
 
 // Try to convert str representations like "1.0" or "1.000000" to "1"

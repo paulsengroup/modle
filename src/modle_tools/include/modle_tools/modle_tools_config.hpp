@@ -36,11 +36,11 @@ struct eval_config {
   // NOLINTNEXTLINE(cert-err58-cpp)
   inline static const utils::CliEnumMappings<enum Metric> metric_map{
       // clang-format off
-      std::make_pair("custom", Metric::custom),
-      std::make_pair("eucl_dist", Metric::eucl_dist),
-      std::make_pair("pearson", Metric::pearson),
-      std::make_pair("rmse", Metric::rmse),
-      std::make_pair("spearman", Metric::spearman)
+      {"custom", Metric::custom},
+      {"eucl_dist", Metric::eucl_dist},
+      {"pearson", Metric::pearson},
+      {"rmse", Metric::rmse},
+      {"spearman", Metric::spearman}
       // clang-format on
   };
 
@@ -116,10 +116,10 @@ struct transform_config {
   // NOLINTNEXTLINE(cert-err58-cpp)
   inline static const utils::CliEnumMappings<enum Transformation> transformation_map{
       // clang-format off
-      std::make_pair("normalize", Transformation::normalize),
-      std::make_pair("gaussian_blur", Transformation::gaussian_blur),
-      std::make_pair("difference_of_gaussians", Transformation::difference_of_gaussians),
-      std::make_pair("discretize", Transformation::discretize)
+      {"normalize", Transformation::normalize},
+      {"gaussian_blur", Transformation::gaussian_blur},
+      {"difference_of_gaussians", Transformation::difference_of_gaussians},
+      {"discretize", Transformation::discretize}
       // clang-format on
   };
 

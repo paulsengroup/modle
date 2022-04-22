@@ -16,6 +16,7 @@ add_library(Modle::common ALIAS modle_common)
 target_sources(
   modle_common
   INTERFACE ${CMAKE_CURRENT_SOURCE_DIR}/include/modle/common/common.hpp
+            ${CMAKE_CURRENT_SOURCE_DIR}/include/modle/common/const_map.hpp
             ${CMAKE_CURRENT_SOURCE_DIR}/include/modle/common/simulation_config.hpp
             ${CMAKE_CURRENT_SOURCE_DIR}/include/modle/common/genextreme_value_distribution.hpp
             ${CMAKE_CURRENT_SOURCE_DIR}/include/modle/common/random.hpp

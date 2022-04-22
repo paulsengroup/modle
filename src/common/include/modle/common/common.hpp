@@ -11,6 +11,19 @@
 #include <cstdint>  // for i8, i16, i32, i64, u8 ...
 
 namespace modle {
+namespace utils {
+[[maybe_unused]] [[nodiscard]] constexpr bool ndebug_defined() noexcept {
+#ifdef NDEBUG
+  return true;
+#else
+  return false;
+#endif
+}
+
+[[maybe_unused]] [[nodiscard]] constexpr bool ndebug_not_defined() noexcept {
+  return !ndebug_defined();
+}
+};  // namespace utils
 
 // Define short aliases for common integral types
 using u8 = std::uint8_t;

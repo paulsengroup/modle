@@ -42,9 +42,6 @@ struct XXH3_Deleter {
   inline void operator()(XXH3_state_t* state) noexcept;
 };
 
-[[maybe_unused]] [[nodiscard]] constexpr bool ndebug_defined() noexcept;
-[[maybe_unused]] [[nodiscard]] constexpr bool ndebug_not_defined() noexcept;
-
 #ifdef __has_cpp_attribute
 #if __has_cpp_attribute(clang::no_destroy)
 #define MODLE_NO_DESTROY [[clang::no_destroy]]
@@ -54,31 +51,6 @@ struct XXH3_Deleter {
 #else
 #define MODLE_NO_DESTROY
 #endif
-
-// Source: https://www.youtube.com/watch?v=INn3xa4pMfg
-template <class Key, class Value, usize Size>
-class ConstMap {
-  std::array<std::pair<Key, Value>, Size> _buff;
-
- public:
-  template <class... Args>
-  constexpr ConstMap(Args&&... args) noexcept;
-
-  using const_iterator = typename std::array<std::pair<Key, Value>, Size>::const_iterator;
-  using key_type = Key;
-  using mapped_type = Value;
-  using value_type = std::pair<const Key, Value>;
-  using first_type = const Key;
-  using second_type = Value;
-
-  [[nodiscard]] constexpr const Value& at(const Key& key) const;
-  [[nodiscard]] constexpr const Value& operator[](const Key& key) const;
-  [[nodiscard]] constexpr const_iterator find(const Key& key) const noexcept;
-  [[nodiscard]] constexpr bool contains(const Key& key) const noexcept;
-
-  [[nodiscard]] constexpr const_iterator begin() const noexcept;
-  [[nodiscard]] constexpr const_iterator end() const noexcept;
-};
 
 template <class T>
 class RepeatIterator {
