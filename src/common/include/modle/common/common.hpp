@@ -23,7 +23,7 @@ namespace utils {
 [[maybe_unused]] [[nodiscard]] constexpr bool ndebug_not_defined() noexcept {
   return !ndebug_defined();
 }
-};  // namespace utils
+}  // namespace utils
 
 // Define short aliases for common integral types
 using u8 = std::uint8_t;

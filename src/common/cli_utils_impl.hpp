@@ -23,6 +23,7 @@
 #include <string>       // for string, basic_string
 #include <string_view>  // for string_view
 
+#include "modle/common/suppress_compiler_warnings.hpp"
 #include "modle/common/numeric_utils.hpp"  // for parse_numeric_or_throw
 
 namespace modle::utils {
@@ -290,8 +291,10 @@ AsGenomicDistanceTransformer::AsGenomicDistanceTransformer() : CLI::CheckedTrans
 
   func_ = [](std::string &input) -> std::string {
     const auto &mappings = genomic_distance_unit_multiplier_map;
-
+    DISABLE_WARNING_PUSH
+    DISABLE_WARNING_CONVERSION
     std::string_view s{input};
+    DISABLE_WARNING_POP
     // Look for the first non-alpha char
     auto unit_rbegin = std::find_if(s.rbegin(), s.rend(),
                                     [&](const auto &c) { return !std::isalpha(c, std::locale()); });
