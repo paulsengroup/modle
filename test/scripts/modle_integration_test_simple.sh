@@ -4,8 +4,24 @@ set -e
 set -o pipefail
 set -u
 
+ok=true
+
 if [ $# -ne 1 ]; then
   2>&1 echo "Usage: $0 path_to_modle_bin"
+  ok=false
+fi
+
+if ! command -v h5diff; then
+  2>&1 echo "Unable to find h5diff in your PATH"
+  ok=false
+fi
+
+if ! command -v xz 2; then
+  2>&1 echo "Unable to find xz in your PATH"
+  ok=false
+fi
+
+if ! $ok; then
   exit 1
 fi
 
