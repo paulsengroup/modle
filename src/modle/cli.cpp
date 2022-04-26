@@ -189,7 +189,8 @@ static std::vector<CLI::App*> add_common_options(CLI::App& subcommand, modle::Co
       "Average LEF processivity in bp.\n"
       "The average LEF processivity corresponds to the average size of loops extruded by\n"
       "unobstructed LEFs.")
-      ->check(CLI::PositiveNumber | utils::cli::AsGenomicDistance)
+      ->transform(utils::cli::AsGenomicDistance)
+      ->check(CLI::PositiveNumber)
       ->capture_default_str();
 
   lefbar.add_option(

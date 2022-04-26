@@ -59,6 +59,7 @@ TEST_CASE("AsGenomicDistance CLI transform operator", "[utils][short]") {
 
   CHECK(fx("5.5kb") == "5500");
   CHECK(fx("0.5kb") == "500");
+  CHECK(fx("1mbp") == "1000000");
 
   CHECK(fx("1e6kb") == fx("1gbp"));
 
