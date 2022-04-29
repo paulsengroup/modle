@@ -42,13 +42,20 @@ void Simulation::sample_and_register_contacts(State& s, const double avg_nlefs_t
   const auto start_pos = s.is_modle_sim_state() ? s.chrom->start_pos() : s.window_start;
   const auto end_pos = s.is_modle_sim_state() ? s.chrom->end_pos() : s.window_end;
 
+  auto compute_max_num_contacts_to_register = [&, this]() {
+    if (this->target_contact_density > 0.0) {
+      return s.num_target_contacts - s.num_contacts;
+    }
+    return std::numeric_limits<usize>::max();
+  };
+
   assert(s.contacts);
   s.num_contacts +=
       this->register_contacts_loop(start_pos + 1, end_pos - 1, *s.contacts, s.get_lefs(), lef_idx,
-                                   s.num_target_contacts - s.num_contacts, s.rand_eng);
+                                   compute_max_num_contacts_to_register(), s.rand_eng);
   s.num_contacts +=
       this->register_contacts_tad(start_pos + 1, end_pos - 1, *s.contacts, s.get_lefs(), lef_idx,
-                                  s.num_target_contacts - s.num_contacts, s.rand_eng);
+                                  compute_max_num_contacts_to_register(), s.rand_eng);
   assert(s.num_contacts <= s.num_target_contacts);
 }
 

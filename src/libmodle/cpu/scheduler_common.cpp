@@ -180,7 +180,7 @@ void Simulation::rethrow_exceptions() const {
 
 void Simulation::handle_exceptions() {
   assert(!this->ok());
-  spdlog::error("MoDLE encountered an exception. Shutting down worker threads...");
+  spdlog::error(FMT_STRING("MoDLE encountered an exception. Shutting down worker threads..."));
   this->_tpool.wait_for_tasks();  // Wait on simulate_worker threads
   this->rethrow_exceptions();
 }

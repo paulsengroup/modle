@@ -240,7 +240,7 @@ void Simulation::simulate_worker(const u64 tid,
         if (task.cell_id == 0) {
           // Print a status update when we are processing cell #0 for a given chromosome
           const auto tot_target_epochs = [&]() {
-            if (this->target_contact_density == 0.0) {
+            if (this->target_contact_density < 0.0) {
               return this->compute_tot_target_epochs();
             }
 
@@ -258,11 +258,19 @@ void Simulation::simulate_worker(const u64 tid,
                   "Begin processing \"{}\": simulating ~{} epochs across {} cells using {} LEFs "
                   "(~{} epochs per cell)..."),
               task.chrom->name(), tot_target_epochs, this->num_cells, task.num_lefs,
-              tot_target_epochs / this->num_cells);
+              (tot_target_epochs + this->num_cells - 1) / this->num_cells);
         }
 
-        // Start the simulation kernel
-        Simulation::simulate_one_cell(local_state);
+        // When simulating using the target contact density as stopping criterion across a large
+        // number of cells, if the total number of contacts to be simulated is low (e.g. because a
+        // chromosome is small, the resolution is low, or the target contact density is very small),
+        // some of the tasks may have num_target_contacts = 0.
+        // These tasks can be safely skipped as they won't have any effect on the output contact
+        // matrix.
+        if (MODLE_LIKELY(task.num_target_epochs != (std::numeric_limits<usize>::max)() ||
+                         task.num_target_contacts != 0)) {
+          Simulation::simulate_one_cell(local_state);
+        }
 
         // Update progress for the current chrom
         std::scoped_lock lck(progress_queue_mtx);
