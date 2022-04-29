@@ -912,6 +912,23 @@ void Cli::validate_args() const {
         "cannot both be set to zero.");
   }
 
+  if (c.stopping_criterion == Config::StoppingCriterion::simulation_epochs &&
+      subcmd->get_option_group("Stopping criterion")
+          ->get_option("--target-number-of-epochs")
+          ->empty()) {
+    errors.emplace_back(
+        "--stopping-criterion=simulation-epochs requires option --target-number-of-epochs to be "
+        "specified and to be finite.");
+  }
+
+  if (c.stopping_criterion == Config::StoppingCriterion::contact_density &&
+      !subcmd->get_option_group("Stopping criterion")
+           ->get_option("--target-number-of-epochs")
+           ->empty()) {
+    errors.emplace_back(
+        "--stopping-criterion=contact-density excludes option --target-number-of-epochs.");
+  }
+
   if (!errors.empty()) {
     throw std::runtime_error(fmt::format(
         FMT_STRING(
@@ -1006,6 +1023,10 @@ void Cli::transform_args() {
            ->get_option("--extrusion-barrier-occupancy")
            ->empty()) {
     c.override_extrusion_barrier_occupancy = true;
+  }
+
+  if (c.stopping_criterion == Config::StoppingCriterion::simulation_epochs) {
+    c.target_contact_density = -1;
   }
 }
 

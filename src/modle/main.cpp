@@ -39,6 +39,8 @@
 #include "modle/config/version.hpp"            // for str_long
 #include "modle/simulation.hpp"                // for Simulation
 
+static std::atomic<bool> logger_ready{false};
+
 void setup_logger_console(const bool quiet) {
   auto stderr_sink = std::make_shared<spdlog::sinks::stderr_color_sink_mt>();
   //                        [2021-08-12 17:49:34.581] [info]: my log msg
@@ -51,6 +53,8 @@ void setup_logger_console(const bool quiet) {
 
   spdlog::set_default_logger(main_logger);
   spdlog::info(FMT_STRING("Running MoDLE v{}"), modle::config::version::str());
+
+  logger_ready = true;
 }
 
 void setup_logger_file(const boost::filesystem::path& path_to_log_file) {
@@ -65,6 +69,8 @@ void setup_logger_file(const boost::filesystem::path& path_to_log_file) {
       .info(FMT_STRING("Running MoDLE v{}"), modle::config::version::str());
 
   spdlog::default_logger()->sinks().emplace_back(std::move(file_sink));
+
+  logger_ready = true;
 }
 
 void setup_failure_signal_handler(const char* argv_0) {
@@ -74,7 +80,7 @@ void setup_failure_signal_handler(const char* argv_0) {
   options.writerfn = [](const char* buff) {
     if (buff) {
       const std::string_view buff_sv{buff, strlen(buff)};
-      if (spdlog::default_logger()) {
+      if (logger_ready) {
         spdlog::error(FMT_STRING("{}"), absl::StripSuffix(buff_sv, "\n"));
       } else {
         fmt::print(stderr, FMT_STRING("{}"), buff_sv);
@@ -154,6 +160,16 @@ std::tuple<int, modle::Cli::subcommand, modle::Config> parse_cli_and_setup_logge
   }
 }
 
+template <typename... Args>
+void try_log_fatal_error(fmt::format_string<Args...> fmt, Args&&... args) {
+  if (logger_ready) {
+    assert(spdlog::default_logger());
+    spdlog::error(fmt, std::forward<Args>(args)...);
+  } else {
+    fmt::print(stderr, fmt, std::forward<Args>(args)...);
+  }
+}
+
 int main(int argc, char** argv) noexcept {
   // No need to set up the signal handler w/ symbol support when proj. is built in Debug mode
   if constexpr (modle::utils::ndebug_defined()) {
@@ -192,13 +208,13 @@ int main(int argc, char** argv) noexcept {
     spdlog::info(FMT_STRING("Simulation terminated without errors in {}!\n\nBye."),
                  absl::FormatDuration(absl::Now() - t0));
   } catch (const std::bad_alloc& e) {
-    spdlog::error(FMT_STRING("FAILURE! Unable to allocate enough memory: {}."), e.what());
+    try_log_fatal_error(FMT_STRING("FAILURE! Unable to allocate enough memory: {}."), e.what());
     return 1;
   } catch (const std::exception& e) {
-    spdlog::error(FMT_STRING("FAILURE! An error occurred during simulation: {}."), e.what());
+    try_log_fatal_error(FMT_STRING("FAILURE! An error occurred during simulation: {}."), e.what());
     return 1;
   } catch (...) {
-    spdlog::error(
+    try_log_fatal_error(
         FMT_STRING("FAILURE! An error occurred during simulation: Caught an unhandled exception! "
                    "If you see this message, please file an issue on GitHub."));
     return 1;
