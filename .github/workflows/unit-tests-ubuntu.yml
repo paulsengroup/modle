@@ -224,6 +224,9 @@ jobs:
       - name: Run unit tests
         working-directory: ${{ github.workspace }}/build
         run: |
+
+          mkdir -p /tmp/
+          TMPDIR=/tmp \
           ctest --test-dir .             \
                 --schedule-random        \
                 --output-on-failure      \
@@ -242,7 +245,7 @@ jobs:
           ${{ github.workspace }}/build/src/modle_tools/modle_tools --version
 
   build-project-long:
-    needs: [build-dependencies-short, build-dependencies-long]
+    needs: [ build-dependencies-short, build-dependencies-long ]
     if: "contains(github.event.head_commit.message, '[ci full]')"
     runs-on: ubuntu-latest
     strategy:
