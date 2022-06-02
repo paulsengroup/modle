@@ -11,10 +11,10 @@
 #include <iostream>                         // for cerr
 #include <string>                           // for operator==, string, basic_string, getline
 
-#include "modle/common/smartdir.hpp"  // for SmartDir
+#include "modle/test/self_deleting_folder.hpp"  // for SelfDeletingFolder
 
 namespace modle::test {
-inline const SmartDir testdir{true};  // NOLINT(cert-err58-cpp)
+inline const SelfDeletingFolder testdir{true};  // NOLINT(cert-err58-cpp)
 }  // namespace modle::test
 
 namespace modle::test::compressed_io {

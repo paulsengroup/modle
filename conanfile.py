@@ -11,8 +11,8 @@ class MoDLE(ConanFile):
   license = "MIT"
   author = "Roberto Rossini (roberros@uio.no)"
   settings = "os", "compiler", "build_type", "arch"
-  requires = ["abseil/20211102.0#5d5a47e060d1987040f8631c2b426d71",
-              "boost/1.78.0",
+  requires = ["abseil/20211102.0",
+              "boost/1.79.0",
               "bzip2/1.0.8",
               "catch2/2.13.9",
               "cli11/2.2.0",
@@ -20,13 +20,13 @@ class MoDLE(ConanFile):
               "cpp-sort/1.13.0",
               "fmt/8.1.1",
               "hdf5/1.12.1",
-              "libarchive/3.6.0",
+              "libarchive/3.6.1",
               "lz4/1.9.3",
               "lzo/2.10",
               "range-v3/0.11.0",
               "readerwriterqueue/1.0.6",
               "spdlog/1.9.2",
-              "tomlplusplus/3.0.1",  # v3.0.1 invokes UB on toml++/impl/unicode.h:139:13
+              "tomlplusplus/3.1.0",
               "xxhash/0.8.1",
               "xz_utils/5.2.5",
               "zlib/1.2.12"]

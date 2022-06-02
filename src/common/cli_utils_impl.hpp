@@ -23,8 +23,8 @@
 #include <string>       // for string, basic_string
 #include <string_view>  // for string_view
 
-#include "modle/common/suppress_compiler_warnings.hpp"
 #include "modle/common/numeric_utils.hpp"  // for parse_numeric_or_throw
+#include "modle/common/suppress_compiler_warnings.hpp"
 
 namespace modle::utils {
 

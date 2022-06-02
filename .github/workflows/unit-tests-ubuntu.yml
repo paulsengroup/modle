@@ -48,9 +48,9 @@ jobs:
       matrix:
         include:
           - { compiler: gcc-7,     os: 'ubuntu-20.04' }
-          - { compiler: gcc-11,    os: 'ubuntu-22.04' }
+          - { compiler: gcc-12,    os: 'ubuntu-22.04' }
           - { compiler: clang-7,   os: 'ubuntu-20.04' }
-          - { compiler: clang-13,  os: 'ubuntu-22.04' }
+          - { compiler: clang-14,  os: 'ubuntu-22.04' }
 
     container:
       image: ghcr.io/paulsengroup/ci-docker-images/modle/${{ matrix.os }}-cxx-${{ matrix.compiler }}:latest
@@ -105,11 +105,13 @@ jobs:
           - { compiler: gcc-8,     os: 'ubuntu-20.04' }
           - { compiler: gcc-9,     os: 'ubuntu-22.04' }
           - { compiler: gcc-10,    os: 'ubuntu-22.04' }
+          - { compiler: gcc-11,    os: 'ubuntu-22.04' }
           - { compiler: clang-8,   os: 'ubuntu-20.04' }
           - { compiler: clang-9,   os: 'ubuntu-20.04' }
           - { compiler: clang-10,  os: 'ubuntu-20.04' }
           - { compiler: clang-11,  os: 'ubuntu-22.04' }
           - { compiler: clang-12,  os: 'ubuntu-22.04' }
+          - { compiler: clang-13,  os: 'ubuntu-22.04' }
 
     container:
       image: ghcr.io/paulsengroup/ci-docker-images/modle/${{ matrix.os }}-cxx-${{ matrix.compiler }}:latest
@@ -162,10 +164,10 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - { compiler: gcc-7,    os: 'ubuntu-20.04', generator: Ninja, cmake: 3.22.3, build_type: Debug, developer_mode: OFF }
-          - { compiler: gcc-11,   os: 'ubuntu-22.04', generator: Ninja, cmake: 3.22.3, build_type: Debug, developer_mode: ON }
-          - { compiler: clang-7,  os: 'ubuntu-20.04', generator: Ninja, cmake: 3.22.3, build_type: Debug, developer_mode: OFF }
-          - { compiler: clang-13, os: 'ubuntu-22.04', generator: Ninja, cmake: 3.22.3, build_type: Debug, developer_mode: ON }
+          - { compiler: gcc-7,    os: 'ubuntu-20.04', generator: Ninja, build_type: Debug, developer_mode: OFF }
+          - { compiler: gcc-12,   os: 'ubuntu-22.04', generator: Ninja, build_type: Debug, developer_mode: ON }
+          - { compiler: clang-7,  os: 'ubuntu-20.04', generator: Ninja, build_type: Debug, developer_mode: OFF }
+          - { compiler: clang-14, os: 'ubuntu-22.04', generator: Ninja, build_type: Debug, developer_mode: ON }
 
     container:
       image: ghcr.io/paulsengroup/ci-docker-images/modle/${{ matrix.os }}-cxx-${{ matrix.compiler }}:latest
@@ -205,6 +207,7 @@ jobs:
 
       - name: Configure project
         run: |
+          git config --global --add safe.directory ${{ github.workspace }}
           mkdir ${{ github.workspace }}/build
           cmake -DCMAKE_BUILD_TYPE=${{ matrix.build_type }}          \
                 -DENABLE_DEVELOPER_MODE=${{ matrix.developer_mode }} \
@@ -253,31 +256,37 @@ jobs:
       matrix:
         include:
           # Debug builds
-          - { compiler: gcc-8,     os: 'ubuntu-20.04',  generator: Ninja, cmake: 3.22.3, build_type: Debug, developer_mode: OFF }
-          - { compiler: gcc-9,     os: 'ubuntu-22.04',  generator: Ninja, cmake: 3.22.3, build_type: Debug, developer_mode: OFF }
-          - { compiler: gcc-10,    os: 'ubuntu-22.04',  generator: Ninja, cmake: 3.22.3, build_type: Debug, developer_mode: ON }
-          - { compiler: clang-8,   os: 'ubuntu-20.04',  generator: Ninja, cmake: 3.22.3, build_type: Debug, developer_mode: OFF }
-          - { compiler: clang-9,   os: 'ubuntu-20.04',  generator: Ninja, cmake: 3.22.3, build_type: Debug, developer_mode: OFF }
-          - { compiler: clang-10,  os: 'ubuntu-20.04',  generator: Ninja, cmake: 3.22.3, build_type: Debug, developer_mode: OFF }
-          - { compiler: clang-11,  os: 'ubuntu-22.04',  generator: Ninja, cmake: 3.22.3, build_type: Debug, developer_mode: OFF }
-          - { compiler: clang-12,  os: 'ubuntu-22.04',  generator: Ninja, cmake: 3.22.3, build_type: Debug, developer_mode: ON }
+          - { compiler: gcc-8,     os: 'ubuntu-20.04',  generator: Ninja, cmake: '3.22.*', conan: '1.49.*', build_type: Debug, developer_mode: OFF }
+          - { compiler: gcc-9,     os: 'ubuntu-22.04',  generator: Ninja, cmake: '3.22.*', conan: '1.49.*', build_type: Debug, developer_mode: OFF }
+          - { compiler: gcc-10,    os: 'ubuntu-22.04',  generator: Ninja, cmake: '3.22.*', conan: '1.49.*', build_type: Debug, developer_mode: OFF }
+          - { compiler: gcc-11,    os: 'ubuntu-22.04',  generator: Ninja, cmake: '3.22.*', conan: '1.49.*', build_type: Debug, developer_mode: ON }
+          - { compiler: clang-8,   os: 'ubuntu-20.04',  generator: Ninja, cmake: '3.22.*', conan: '1.49.*', build_type: Debug, developer_mode: OFF }
+          - { compiler: clang-9,   os: 'ubuntu-20.04',  generator: Ninja, cmake: '3.22.*', conan: '1.49.*', build_type: Debug, developer_mode: OFF }
+          - { compiler: clang-10,  os: 'ubuntu-20.04',  generator: Ninja, cmake: '3.22.*', conan: '1.49.*', build_type: Debug, developer_mode: OFF }
+          - { compiler: clang-11,  os: 'ubuntu-22.04',  generator: Ninja, cmake: '3.22.*', conan: '1.49.*', build_type: Debug, developer_mode: OFF }
+          - { compiler: clang-12,  os: 'ubuntu-22.04',  generator: Ninja, cmake: '3.22.*', conan: '1.49.*', build_type: Debug, developer_mode: OFF }
+          - { compiler: clang-13,  os: 'ubuntu-22.04',  generator: Ninja, cmake: '3.22.*', conan: '1.49.*', build_type: Debug, developer_mode: ON }
           # Release builds
-          - { compiler: gcc-7,     os: 'ubuntu-20.04',  generator: Ninja, cmake: 3.22.3, build_type: Release, developer_mode: OFF }
-          - { compiler: gcc-8,     os: 'ubuntu-20.04',  generator: Ninja, cmake: 3.22.3, build_type: Release, developer_mode: OFF }
-          - { compiler: gcc-9,     os: 'ubuntu-22.04',  generator: Ninja, cmake: 3.22.3, build_type: Release, developer_mode: OFF }
-          - { compiler: gcc-10,    os: 'ubuntu-22.04',  generator: Ninja, cmake: 3.22.3, build_type: Release, developer_mode: ON }
-          - { compiler: gcc-11,    os: 'ubuntu-22.04',  generator: Ninja, cmake: 3.22.3, build_type: Release, developer_mode: ON }
-          - { compiler: clang-7,   os: 'ubuntu-20.04',  generator: Ninja, cmake: 3.22.3, build_type: Release, developer_mode: OFF }
-          - { compiler: clang-8,   os: 'ubuntu-20.04',  generator: Ninja, cmake: 3.22.3, build_type: Release, developer_mode: OFF }
-          - { compiler: clang-9,   os: 'ubuntu-20.04',  generator: Ninja, cmake: 3.22.3, build_type: Release, developer_mode: OFF }
-          - { compiler: clang-10,  os: 'ubuntu-20.04',  generator: Ninja, cmake: 3.22.3, build_type: Release, developer_mode: OFF }
-          - { compiler: clang-11,  os: 'ubuntu-22.04',  generator: Ninja, cmake: 3.22.3, build_type: Release, developer_mode: OFF }
-          - { compiler: clang-12,  os: 'ubuntu-22.04',  generator: Ninja, cmake: 3.22.3, build_type: Release, developer_mode: ON }
-          - { compiler: clang-13,  os: 'ubuntu-22.04',  generator: Ninja, cmake: 3.22.3, build_type: Release, developer_mode: ON }
+          - { compiler: gcc-7,     os: 'ubuntu-20.04',  generator: Ninja, cmake: '3.22.*', conan: '1.49.*', build_type: Release, developer_mode: OFF }
+          - { compiler: gcc-8,     os: 'ubuntu-20.04',  generator: Ninja, cmake: '3.22.*', conan: '1.49.*', build_type: Release, developer_mode: OFF }
+          - { compiler: gcc-9,     os: 'ubuntu-22.04',  generator: Ninja, cmake: '3.22.*', conan: '1.49.*', build_type: Release, developer_mode: OFF }
+          - { compiler: gcc-10,    os: 'ubuntu-22.04',  generator: Ninja, cmake: '3.22.*', conan: '1.49.*', build_type: Release, developer_mode: ON }
+          - { compiler: gcc-11,    os: 'ubuntu-22.04',  generator: Ninja, cmake: '3.22.*', conan: '1.49.*', build_type: Release, developer_mode: ON }
+          - { compiler: gcc-12,    os: 'ubuntu-22.04',  generator: Ninja, cmake: '3.22.*', conan: '1.49.*', build_type: Release, developer_mode: ON }
+          - { compiler: clang-7,   os: 'ubuntu-20.04',  generator: Ninja, cmake: '3.22.*', conan: '1.49.*', build_type: Release, developer_mode: OFF }
+          - { compiler: clang-8,   os: 'ubuntu-20.04',  generator: Ninja, cmake: '3.22.*', conan: '1.49.*', build_type: Release, developer_mode: OFF }
+          - { compiler: clang-9,   os: 'ubuntu-20.04',  generator: Ninja, cmake: '3.22.*', conan: '1.49.*', build_type: Release, developer_mode: OFF }
+          - { compiler: clang-10,  os: 'ubuntu-20.04',  generator: Ninja, cmake: '3.22.*', conan: '1.49.*', build_type: Release, developer_mode: OFF }
+          - { compiler: clang-11,  os: 'ubuntu-22.04',  generator: Ninja, cmake: '3.22.*', conan: '1.49.*', build_type: Release, developer_mode: OFF }
+          - { compiler: clang-12,  os: 'ubuntu-22.04',  generator: Ninja, cmake: '3.22.*', conan: '1.49.*', build_type: Release, developer_mode: ON }
+          - { compiler: clang-13,  os: 'ubuntu-22.04',  generator: Ninja, cmake: '3.22.*', conan: '1.49.*', build_type: Release, developer_mode: ON }
+          - { compiler: clang-14,  os: 'ubuntu-22.04',  generator: Ninja, cmake: '3.22.*', conan: '1.49.*', build_type: Release, developer_mode: ON }
           # Make sure project builds with make
-          - { compiler: clang-13,  os: 'ubuntu-22.04',  generator: "Unix Makefiles", cmake: 3.22.3, build_type: Release, developer_mode: OFF }
+          - { compiler: clang-14,  os: 'ubuntu-22.04',  generator: "Unix Makefiles", cmake: '3.22.*', conan: '1.49.*', build_type: Release, developer_mode: OFF }
           # Make sure project builds with CMake 3.16
-          - { compiler: clang-13,  os: 'ubuntu-22.04',  generator: Ninja, cmake: 3.16.8, build_type: Release, developer_mode: OFF }
+          - { compiler: clang-14,  os: 'ubuntu-22.04',  generator: Ninja, cmake: '3.16.8', conan: '1.49.*', build_type: Release, developer_mode: OFF }
+          # Make sure project builds with Conan 1.43
+          - { compiler: clang-14,  os: 'ubuntu-22.04',  generator: Ninja, cmake: '3.22.*', conan: '1.43.0', build_type: Release, developer_mode: OFF }
 
     container:
       image: ghcr.io/paulsengroup/ci-docker-images/modle/${{ matrix.os }}-cxx-${{ matrix.compiler }}:latest
@@ -285,6 +294,18 @@ jobs:
 
     steps:
       - uses: actions/checkout@v3
+
+      - name: Update build deps
+        run: |
+          pattern='[[:digit:]]\+\.[[:digit:]]\+\.[[:digit:]]\+$'
+
+          if [[ $(cmake --version | grep -o "$pattern") != ${{ matrix.cmake }} ]]; then
+            pip install "cmake==${{ matrix.cmake }}"
+          fi
+
+          if [[ $(conan --version | grep -o "$pattern") != ${{ matrix.conan }} ]]; then
+            pip install "conan==${{ matrix.conan }}"
+          fi
 
       - name: Generate cache key
         id: cache-key
@@ -317,6 +338,7 @@ jobs:
 
       - name: Configure project
         run: |
+          git config --global --add safe.directory ${{ github.workspace }}
           mkdir ${{ github.workspace }}/build
           cmake -DCMAKE_BUILD_TYPE=${{ matrix.build_type }}          \
                 -DENABLE_DEVELOPER_MODE=${{ matrix.developer_mode }} \

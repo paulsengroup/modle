@@ -23,10 +23,10 @@
 #include <utility>                        // for make_pair
 #include <vector>                         // for vector
 
-#include "./common.hpp"               // for generate_random_vect, external_corr, run_exter...
-#include "modle/common/common.hpp"    // for u32, usize
-#include "modle/common/random.hpp"    // for PRNG_t
-#include "modle/common/smartdir.hpp"  // for SmartDir
+#include "./common.hpp"             // for generate_random_vect, external_corr, run_exter...
+#include "modle/common/common.hpp"  // for u32, usize
+#include "modle/common/random.hpp"  // for PRNG_t
+#include "modle/test/self_deleting_folder.hpp"  // for SelfDeletingFolder
 
 namespace modle::test::stats {
 using namespace modle::stats;

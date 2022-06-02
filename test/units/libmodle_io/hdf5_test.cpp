@@ -21,12 +21,12 @@
 #include <tuple>                            // for ignore
 #include <vector>                           // for vector
 
-#include "H5Ppublic.h"                // for H5F_ACC_TRUNC, H5T_CSET_ASCII, H5T_STR_NULLPAD
-#include "modle/common/common.hpp"    // for i64, usize
-#include "modle/common/smartdir.hpp"  // for SmartDir
+#include "H5Ppublic.h"              // for H5F_ACC_TRUNC, H5T_CSET_ASCII, H5T_STR_NULLPAD
+#include "modle/common/common.hpp"  // for i64, usize
+#include "modle/test/self_deleting_folder.hpp"  // for SelfDeletingFolder
 
 namespace modle::test {
-inline const SmartDir testdir{true};  // NOLINT(cert-err58-cpp)
+inline const SelfDeletingFolder testdir{true};  // NOLINT(cert-err58-cpp)
 }  // namespace modle::test
 
 namespace modle::test::hdf5 {

@@ -21,13 +21,13 @@
 #include <string_view>                      // for string_view
 
 #include "modle/common/common.hpp"                // for u64, u32, usize, i64, u8
-#include "modle/common/smartdir.hpp"              // for SmartDir
 #include "modle/common/utils.hpp"                 // for parse_numeric_or_throw
 #include "modle/compressed_io/compressed_io.hpp"  // for Reader
 #include "modle/contacts.hpp"                     // for ContactMatrix
+#include "modle/test/self_deleting_folder.hpp"    // for SelfDeletingFolder
 
 namespace modle::test {
-inline const SmartDir testdir{true};  // NOLINT(cert-err58-cpp)
+inline const SelfDeletingFolder testdir{true};  // NOLINT(cert-err58-cpp)
 }  // namespace modle::test
 
 namespace modle::test::cooler {
