@@ -45,7 +45,7 @@ TEST_CASE("CliEnumMappings", "[utils][short]") {
 
 // NOLINTNEXTLINE(readability-function-cognitive-complexity)
 TEST_CASE("AsGenomicDistance CLI transform operator", "[utils][short]") {
-  auto fx = [&](std::string&& s) {
+  auto fx = [&](std::string s) {
     modle::utils::cli::AsGenomicDistance(s);
     return s;
   };
