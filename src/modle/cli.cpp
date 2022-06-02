@@ -879,7 +879,7 @@ void Cli::validate_args() const {
   }
 
   // NOLINTNEXTLINE(readability-implicit-bool-conversion)
-  if (c.contact_sampling_strategy & Config::ContactSamplingStrategy::tad &&
+  if (!(c.contact_sampling_strategy & Config::ContactSamplingStrategy::tad) &&
       !subcmd->get_option_group("Advanced")
            ->get_option_group("Contact generation")
            ->get_option("--num-of-tad-contacts-per-sampling-event")
@@ -890,7 +890,7 @@ void Cli::validate_args() const {
   }
 
   // NOLINTNEXTLINE(readability-implicit-bool-conversion)
-  if (c.contact_sampling_strategy & Config::ContactSamplingStrategy::loop &&
+  if (!(c.contact_sampling_strategy & Config::ContactSamplingStrategy::loop) &&
       !subcmd->get_option_group("Advanced")
            ->get_option_group("Contact generation")
            ->get_option("--num-of-loop-contacts-per-sampling-event")
