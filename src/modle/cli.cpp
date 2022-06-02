@@ -979,10 +979,16 @@ void Cli::transform_args() {
   c.path_to_config_file += "_config.toml";
 
   // Compute mean and std for rev and fwd extrusion speed
-  if (auto& speed = c.rev_extrusion_speed; speed == (std::numeric_limits<bp_t>::max)()) {
+  const auto [rev_speed_parsed, fwd_speed_parsed] = [this]() {
+    auto* grp = this->_cli.get_subcommand("simulate")->get_option_group("Advanced")->get_option_group("Extrusion Factors");
+
+    return std::make_pair(!grp->get_option("--rev-extrusion-speed")->empty(),
+                          !grp->get_option("--fwd-extrusion-speed")->empty());
+  }();
+  if (auto& speed = c.rev_extrusion_speed; !rev_speed_parsed) {
     speed = (c.bin_size + 1) / 2;
   }
-  if (auto& speed = c.fwd_extrusion_speed; speed == (std::numeric_limits<bp_t>::max)()) {
+  if (auto& speed = c.fwd_extrusion_speed; !fwd_speed_parsed) {
     speed = (c.bin_size + 1) / 2;
   }
 

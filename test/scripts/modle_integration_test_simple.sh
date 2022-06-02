@@ -40,7 +40,9 @@ trap 'rm -rf -- "$outdir"' EXIT
 "$modle_bin" sim -c <(grep '^chr2' "$chrom_sizes") \
                  -b <(xz -dc "$extr_barriers" | grep '^chr2') \
                  -o "$outdir/out" \
-                 -r 20000 \
+                 -r 20kb \
+                 --rev-extrusion-speed 2.5kb \
+                 --fwd-extrusion-speed 2.5kb \
                  --ncells 4 \
                  --max-burnin-epochs 5000
 
