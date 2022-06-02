@@ -299,11 +299,11 @@ jobs:
         run: |
           pattern='[[:digit:]]\+\.[[:digit:]]\+\.[[:digit:]]\+$'
 
-          if [[ $(cmake --version | grep -o "$pattern" != ${{ matrix.cmake }} ]]; then
+          if [[ $(cmake --version | grep -o "$pattern") != ${{ matrix.cmake }} ]]; then
             pip install "cmake==${{ matrix.cmake }}"
           fi
 
-          if [[ $(conan --version | grep -o "$pattern" != ${{ matrix.cmake }} ]]; then
+          if [[ $(conan --version | grep -o "$pattern") != ${{ matrix.conan }} ]]; then
             pip install "conan==${{ matrix.conan }}"
           fi
 
