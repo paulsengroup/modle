@@ -322,13 +322,17 @@ static std::vector<CLI::App*> add_common_options(CLI::App& subcommand, modle::Co
       ->capture_default_str();
 
   cgen.add_option(
-      "--lef-fraction-for-contact-sampling",
-      c.lef_fraction_contact_sampling,
-      "Fraction of LEFs to use for contact sampling.\n"
-      "The actual number of LEFs to use for contact sampling in a given epoch is drawn from a\n"
-      "Poisson distribution with lambda=lf*|lefs|, where --lef-fraction-for-contact-sampling=lf\n"
-      "and |lefs| is equal to total number of LEFs in the current simulation instance.")
-      ->check(CLI::Range(0.0, 1.0))
+      "--contact-sampling-interval",
+      c.contact_sampling_interval,
+      "Average number of base-pairs extruded by one LEF between two subsequent sampling events\n"
+      "(assuming no collision have occurred).\n"
+      "Specifying shorter intervals will increase the frequency of sampling frequency, producing more\n"
+      "contacts when --stopping-criterion=simulation-epochs or reducing the number of epochs simulated\n"
+      "in case --stopping-criterion=contact-density.\n"
+      "Using sampling intervals that are significantly smaller than the average LEF processivity is usually\n"
+      "not recommended, as will cause MoDLE to sample many contacts from a single loop.")
+      ->check(CLI::PositiveNumber)
+      ->transform(utils::cli::TrimTrailingZerosFromDecimalDigit | utils::cli::AsGenomicDistance)
       ->capture_default_str();
 
   cgen.add_option(
@@ -355,19 +359,15 @@ static std::vector<CLI::App*> add_common_options(CLI::App& subcommand, modle::Co
       ->capture_default_str();
 
   cgen_adv.add_option(
-      "--num-of-tad-contacts-per-sampling-event",
-      c.number_of_tad_contacts_per_sampling_event,
-      "Number of TAD contacts to sample each sampling event.\n"
-      "Setting --num-of-tad-contacts-per-sampling-event=0 will yield a contact matrix where\n"
-      "contacts are concentrated on stripes and dots.")
-      ->capture_default_str();
-
-  cgen_adv.add_option(
-      "--num-of-loop-contacts-per-sampling-event",
-      c.number_of_loop_contacts_per_sampling_event,
-      "Number of LEF-mediated contacts to sample each sampling event.\n"
-      "Setting --num-of-loop-contacts-per-sampling-event=0 will yield a contact matrix without\n"
-      "stripes and dots.")
+      "--tad-to-loop-contact-ratio",
+      c.tad_to_loop_contact_ratio,
+      "Ratio between the number of TAD and loop contacts.\n"
+      "Loop contacts are sampled using the position of the extrusion units of a LEF.\n"
+      "This type of contact visually correspond to stripes and dots in the output matrix.\n"
+      "TAD contacts are sampled from the body of a loop and visually correspond to TADs.\n"
+      "Use \"0\" to disable sampling of TAD contacts.\n"
+      "Use \"inf\" to disable sampling of loop contacts.")
+      ->check(CLI::NonNegativeNumber)
       ->capture_default_str();
 
   cgen_adv.add_option(
