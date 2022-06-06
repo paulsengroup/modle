@@ -39,6 +39,7 @@
 #include "modle/config/version.hpp"            // for str_long
 #include "modle/simulation.hpp"                // for Simulation
 
+// NOLINTNEXTLINE(cppcoreguidelines-avoid-non-const-global-variables)
 static std::atomic<bool> logger_ready{false};
 
 void setup_logger_console(const bool quiet) {
