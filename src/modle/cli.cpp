@@ -863,53 +863,44 @@ void Cli::validate_args() const {
       errors.emplace_back(e.what());
     }
   }
+  const auto& cgen_adv =
+      subcmd->get_option_group("Advanced")->get_option_group("Contact generation");
 
+  using CS = Config::ContactSamplingStrategy;
   // NOLINTNEXTLINE(readability-implicit-bool-conversion)
-  if (!(c.contact_sampling_strategy & Config::ContactSamplingStrategy::noisify)) {
-    const auto& group =
-        subcmd->get_option_group("Advanced")->get_option_group("Contact generation");
+  if (!(c.contact_sampling_strategy & CS::noisify)) {
     for (const std::string label : {"--mu", "--sigma", "--xi"}) {
-      if (!group->get_option(label)->empty()) {
-        errors.emplace_back(fmt::format(FMT_STRING("Option {} requires the strategy passed to "
-                                                   "--contact-sampling-strategy to be one of "
-                                                   "the *-with-noise strategies."),
-                                        label));
+      if (!cgen_adv->get_option(label)->empty()) {
+        this->_warnings.emplace_back(fmt::format(
+            FMT_STRING("Option {} has no effect. Reason: {} requires the strategy passed to "
+                       "--contact-sampling-strategy to be one of the *-with-noise strategies."),
+            label, label));
       }
     }
   }
 
-  // NOLINTNEXTLINE(readability-implicit-bool-conversion)
-  if (!(c.contact_sampling_strategy & Config::ContactSamplingStrategy::tad) &&
-      !subcmd->get_option_group("Advanced")
-           ->get_option_group("Contact generation")
-           ->get_option("--num-of-tad-contacts-per-sampling-event")
-           ->empty()) {
-    errors.emplace_back(
-        "--num-of-tad-contacts-per-sampling-event is not allowed when the sampling strategy "
-        "passed through --contact-sampling-strategy does not involve sampling contacts from TADs.");
-  }
+  if (!cgen_adv->get_option("--tad-to-loop-contact-ratio")->empty()) {
+    const bool sample_loop_contacts = c.contact_sampling_strategy & CS::loop;
+    const bool sample_tad_contacts = c.contact_sampling_strategy & CS::tad;
+    assert(sample_loop_contacts || sample_tad_contacts);
 
-  // NOLINTNEXTLINE(readability-implicit-bool-conversion)
-  if (!(c.contact_sampling_strategy & Config::ContactSamplingStrategy::loop) &&
-      !subcmd->get_option_group("Advanced")
-           ->get_option_group("Contact generation")
-           ->get_option("--num-of-loop-contacts-per-sampling-event")
-           ->empty()) {
-    errors.emplace_back(
-        "--num-of-loop-contacts-per-sampling-event is not allowed when the sampling strategy "
-        "passed through --contact-sampling-strategy does not involve sampling contacts from "
-        "loops.");
-  }
-
-  if (c.number_of_tad_contacts_per_sampling_event + c.number_of_loop_contacts_per_sampling_event ==
-      0) {
-    // clang-format off
-    assert(subcmd->get_option_group("Advanced")->get_option_group("Contact generation")->get_option("--num-of-tad-contacts-per-sampling-event"));
-    assert(subcmd->get_option_group("Advanced")->get_option_group("Contact generation")->get_option("--num-of-loop-contacts-per-sampling-event"));
-    // clang-format on
-    errors.emplace_back(
-        "--num-of-tad-contacts-per-sampling-event and --num-of-loop-contacts-per-sampling-event "
-        "cannot both be set to zero.");
+    if (sample_loop_contacts && !sample_tad_contacts && c.tad_to_loop_contact_ratio != 0) {
+      this->_warnings.emplace_back(
+          fmt::format(FMT_STRING("Option --tad-to-loop-contact-ratio={} has no effect. Reason: "
+                                 "--tad-to-loop-contact-ratio is implicitly set to 0 when "
+                                 "--contact-sampling-strategy={}"),
+                      c.tad_to_loop_contact_ratio,
+                      Cli::contact_sampling_strategy_map.at(c.contact_sampling_strategy)));
+    }
+    if (!sample_loop_contacts && sample_tad_contacts &&
+        c.tad_to_loop_contact_ratio != std::numeric_limits<double>::infinity()) {
+      this->_warnings.emplace_back(
+          fmt::format(FMT_STRING("Option --tad-to-loop-contact-ratio={} has no effect. Reason: "
+                                 "--tad-to-loop-contact-ratio is implicitly set to inf when "
+                                 "--contact-sampling-strategy={}"),
+                      c.tad_to_loop_contact_ratio,
+                      Cli::contact_sampling_strategy_map.at(c.contact_sampling_strategy)));
+    }
   }
 
   if (c.stopping_criterion == Config::StoppingCriterion::simulation_epochs &&
@@ -980,7 +971,9 @@ void Cli::transform_args() {
 
   // Compute mean and std for rev and fwd extrusion speed
   const auto [rev_speed_parsed, fwd_speed_parsed] = [this]() {
-    auto* grp = this->_cli.get_subcommand("simulate")->get_option_group("Advanced")->get_option_group("Extrusion Factors");
+    auto* grp = this->_cli.get_subcommand("simulate")
+                    ->get_option_group("Advanced")
+                    ->get_option_group("Extrusion Factors");
 
     return std::make_pair(!grp->get_option("--rev-extrusion-speed")->empty(),
                           !grp->get_option("--fwd-extrusion-speed")->empty());
@@ -1023,6 +1016,17 @@ void Cli::transform_args() {
     c.extrusion_barrier_occupancy = occ;
   }
 
+  using CS = Config::ContactSamplingStrategy;
+  const auto sample_loop_contacts = c.contact_sampling_strategy & CS::loop;
+  const auto sample_tad_contacts = c.contact_sampling_strategy & CS::tad;
+  assert(sample_loop_contacts || sample_tad_contacts);
+  if (sample_loop_contacts && !sample_tad_contacts) {
+    c.tad_to_loop_contact_ratio = 0;
+  }
+  if (!sample_loop_contacts && sample_tad_contacts) {
+    c.tad_to_loop_contact_ratio = std::numeric_limits<double>::infinity();
+  }
+
   const auto* subcmd = this->get_subcommand_ptr();
 
   if (!subcmd->get_option_group("Extrusion Barriers and Factors")
@@ -1050,6 +1054,12 @@ void Cli::write_config_file(bool write_default_args) const {
 }
 
 bool Cli::config_file_parsed() const { return !this->_cli.get_config_ptr()->empty(); }
+
+void Cli::log_warnings() const {
+  for (const auto& warning : this->_warnings) {
+    spdlog::warn(FMT_STRING("{}"), warning);
+  }
+}
 
 std::string Cli::to_json() const {
   std::string buff;

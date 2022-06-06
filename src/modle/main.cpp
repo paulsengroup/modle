@@ -140,6 +140,8 @@ std::tuple<int, modle::Cli::subcommand, modle::Config> parse_cli_and_setup_logge
       }
     }
 
+    cli->log_warnings();
+
     return std::make_tuple(0, subcmd, config);
     // NOTE: GCC7 crashes if using modle::Config{} instead of modle::Config() in the catch blocks
     // below
