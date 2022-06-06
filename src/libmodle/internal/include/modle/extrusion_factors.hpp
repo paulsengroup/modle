@@ -18,55 +18,61 @@ class ExtrusionUnit {
   friend class Simulation;
 
  public:
-  ExtrusionUnit() noexcept = default;
-  explicit ExtrusionUnit(bp_t pos) noexcept;
-  void bind_at_pos(bp_t pos) noexcept(utils::ndebug_defined());
-  [[nodiscard]] bp_t pos() const noexcept(utils::ndebug_defined());
-  [[nodiscard]] bool operator<(const ExtrusionUnit& other) const noexcept(utils::ndebug_defined());
-  [[nodiscard]] bool operator<(const ExtrusionBarrier& barrier) const
+  constexpr ExtrusionUnit() noexcept = default;
+  constexpr explicit ExtrusionUnit(bp_t pos) noexcept;
+  constexpr void bind_at_pos(bp_t pos) noexcept(utils::ndebug_defined());
+  [[nodiscard]] constexpr bp_t pos() const noexcept(utils::ndebug_defined());
+  [[nodiscard]] constexpr bool operator<(const ExtrusionUnit& other) const
+      noexcept(utils::ndebug_defined());
+  [[nodiscard]] constexpr bool operator<(const ExtrusionBarrier& barrier) const
       noexcept(utils::ndebug_defined());
   template <typename I>
-  [[nodiscard]] inline bool operator<(I other_pos) const noexcept(utils::ndebug_defined());
-  [[nodiscard]] bool operator>(const ExtrusionUnit& other) const noexcept(utils::ndebug_defined());
-  [[nodiscard]] bool operator>(const ExtrusionBarrier& barrier) const
+  [[nodiscard]] constexpr bool operator<(I other_pos) const noexcept(utils::ndebug_defined());
+  [[nodiscard]] constexpr bool operator>(const ExtrusionUnit& other) const
+      noexcept(utils::ndebug_defined());
+  [[nodiscard]] constexpr bool operator>(const ExtrusionBarrier& barrier) const
       noexcept(utils::ndebug_defined());
   template <typename I>
-  [[nodiscard]] inline bool operator>(I other_pos) const noexcept(utils::ndebug_defined());
-  [[nodiscard]] bool operator<=(const ExtrusionUnit& other) const noexcept(utils::ndebug_defined());
-  [[nodiscard]] bool operator<=(const ExtrusionBarrier& barrier) const
+  [[nodiscard]] constexpr bool operator>(I other_pos) const noexcept(utils::ndebug_defined());
+  [[nodiscard]] constexpr bool operator<=(const ExtrusionUnit& other) const
+      noexcept(utils::ndebug_defined());
+  [[nodiscard]] constexpr bool operator<=(const ExtrusionBarrier& barrier) const
       noexcept(utils::ndebug_defined());
   template <typename I>
-  [[nodiscard]] inline bool operator<=(I other_pos) const noexcept(utils::ndebug_defined());
-  [[nodiscard]] bool operator>=(const ExtrusionUnit& other) const noexcept(utils::ndebug_defined());
-  [[nodiscard]] bool operator>=(const ExtrusionBarrier& barrier) const
+  [[nodiscard]] constexpr bool operator<=(I other_pos) const noexcept(utils::ndebug_defined());
+  [[nodiscard]] constexpr bool operator>=(const ExtrusionUnit& other) const
+      noexcept(utils::ndebug_defined());
+  [[nodiscard]] constexpr bool operator>=(const ExtrusionBarrier& barrier) const
       noexcept(utils::ndebug_defined());
   template <typename I>
-  [[nodiscard]] inline bool operator>=(I other_pos) const noexcept(utils::ndebug_defined());
-  [[nodiscard]] bool operator==(const ExtrusionUnit& other) const noexcept(utils::ndebug_defined());
-  [[nodiscard]] bool operator==(const ExtrusionBarrier& barrier) const
+  [[nodiscard]] constexpr bool operator>=(I other_pos) const noexcept(utils::ndebug_defined());
+  [[nodiscard]] constexpr bool operator==(const ExtrusionUnit& other) const
+      noexcept(utils::ndebug_defined());
+  [[nodiscard]] constexpr bool operator==(const ExtrusionBarrier& barrier) const
       noexcept(utils::ndebug_defined());
   template <typename I>
-  [[nodiscard]] inline bool operator==(I other_pos) const noexcept(utils::ndebug_defined());
-  [[nodiscard]] i64 operator-(const ExtrusionUnit& other) const noexcept(utils::ndebug_defined());
-  [[nodiscard]] i64 operator-(const ExtrusionBarrier& other_barrier) const
+  [[nodiscard]] constexpr bool operator==(I other_pos) const noexcept(utils::ndebug_defined());
+  [[nodiscard]] constexpr i64 operator-(const ExtrusionUnit& other) const
+      noexcept(utils::ndebug_defined());
+  [[nodiscard]] constexpr i64 operator-(const ExtrusionBarrier& other_barrier) const
       noexcept(utils::ndebug_defined());
   template <typename I>
-  [[nodiscard]] inline i64 operator-(I other_pos) const noexcept(utils::ndebug_defined());
+  [[nodiscard]] constexpr i64 operator-(I other_pos) const noexcept(utils::ndebug_defined());
   template <typename I>
-  [[nodiscard]] inline i64 operator+(I other_pos) const noexcept(utils::ndebug_defined());
-  void release() noexcept(utils::ndebug_defined());
+  [[nodiscard]] constexpr i64 operator+(I other_pos) const noexcept(utils::ndebug_defined());
+  constexpr void release() noexcept(utils::ndebug_defined());
 
  private:
   bp_t _pos{(std::numeric_limits<bp_t>::max)()};
 };
 
 struct Lef {
-  Lef() = default;
-  [[nodiscard]] bool is_bound() const noexcept(utils::ndebug_defined());
-  void bind_at_pos(usize current_epoch, bp_t pos) noexcept(utils::ndebug_defined());
-  void release() noexcept(utils::ndebug_defined());
-  void reset() noexcept(utils::ndebug_defined());
-  [[nodiscard]] bp_t loop_size() const noexcept;
+  constexpr Lef() = default;
+  [[nodiscard]] constexpr bool is_bound() const noexcept(utils::ndebug_defined());
+  constexpr void bind_at_pos(usize current_epoch, bp_t pos) noexcept(utils::ndebug_defined());
+  constexpr void release() noexcept(utils::ndebug_defined());
+  constexpr void reset() noexcept(utils::ndebug_defined());
+  [[nodiscard]] constexpr bp_t loop_size() const noexcept;
 
   usize binding_epoch{(std::numeric_limits<usize>::max)()};
   ExtrusionUnit rev_unit{};

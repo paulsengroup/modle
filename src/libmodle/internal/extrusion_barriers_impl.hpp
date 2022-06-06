@@ -2,7 +2,7 @@
 //
 // SPDX-License-Identifier: MIT
 
-#include "modle/extrusion_barriers.hpp"
+#pragma once
 
 #include <absl/types/span.h>  // for Span
 
@@ -16,9 +16,9 @@
 #include "modle/common/utils.hpp"   // for ndebug_defined
 
 namespace modle {
-ExtrusionBarrier::ExtrusionBarrier(bp_t pos, double transition_prob_occupied_to_occupied,
-                                   double transition_prob_non_occupied_to_not_occupied,
-                                   dna::Direction motif_direction)
+constexpr ExtrusionBarrier::ExtrusionBarrier(bp_t pos, double transition_prob_occupied_to_occupied,
+                                             double transition_prob_non_occupied_to_not_occupied,
+                                             dna::Direction motif_direction)
     : _pos(pos),
       _occupied_to_occupied_transition_prob(transition_prob_occupied_to_occupied),
       _non_occupied_to_not_occupied_transition_prob(transition_prob_non_occupied_to_not_occupied),
@@ -31,9 +31,9 @@ ExtrusionBarrier::ExtrusionBarrier(bp_t pos, double transition_prob_occupied_to_
          transition_prob_non_occupied_to_not_occupied <= 1.0);
 }
 
-ExtrusionBarrier::ExtrusionBarrier(bp_t pos, double transition_prob_occupied_to_occupied,
-                                   double transition_prob_not_occupied_to_not_occupied,
-                                   char motif_direction)
+constexpr ExtrusionBarrier::ExtrusionBarrier(bp_t pos, double transition_prob_occupied_to_occupied,
+                                             double transition_prob_not_occupied_to_not_occupied,
+                                             char motif_direction)
     : _pos(pos),
       _occupied_to_occupied_transition_prob(transition_prob_occupied_to_occupied),
       _non_occupied_to_not_occupied_transition_prob(transition_prob_not_occupied_to_not_occupied),
@@ -45,60 +45,66 @@ ExtrusionBarrier::ExtrusionBarrier(bp_t pos, double transition_prob_occupied_to_
          transition_prob_not_occupied_to_not_occupied <= 1.0);
 }
 
-bp_t ExtrusionBarrier::pos() const noexcept(utils::ndebug_defined()) { return this->_pos; }
-bp_t& ExtrusionBarrier::pos() noexcept(utils::ndebug_defined()) { return this->_pos; }
-double ExtrusionBarrier::prob_occupied_to_occupied() const noexcept(utils::ndebug_defined()) {
+constexpr bp_t ExtrusionBarrier::pos() const noexcept(utils::ndebug_defined()) {
+  return this->_pos;
+}
+constexpr bp_t& ExtrusionBarrier::pos() noexcept(utils::ndebug_defined()) { return this->_pos; }
+constexpr double ExtrusionBarrier::prob_occupied_to_occupied() const
+    noexcept(utils::ndebug_defined()) {
   return this->_occupied_to_occupied_transition_prob;
 }
 
-double ExtrusionBarrier::prob_occupied_to_not_occupied() const noexcept(utils::ndebug_defined()) {
+constexpr double ExtrusionBarrier::prob_occupied_to_not_occupied() const
+    noexcept(utils::ndebug_defined()) {
   return 1.0 - prob_occupied_to_occupied();
 }
 
-double ExtrusionBarrier::prob_not_occupied_to_not_occupied() const
+constexpr double ExtrusionBarrier::prob_not_occupied_to_not_occupied() const
     noexcept(utils::ndebug_defined()) {
   return this->_non_occupied_to_not_occupied_transition_prob;
 }
 
-double ExtrusionBarrier::prob_not_occupied_to_occupied() const noexcept(utils::ndebug_defined()) {
+constexpr double ExtrusionBarrier::prob_not_occupied_to_occupied() const
+    noexcept(utils::ndebug_defined()) {
   return 1.0 - prob_not_occupied_to_not_occupied();
 }
 
-dna::Direction ExtrusionBarrier::blocking_direction_major() const
+constexpr dna::Direction ExtrusionBarrier::blocking_direction_major() const
     noexcept(utils::ndebug_defined()) {
   return this->_blocking_direction;
 }
 
-dna::Direction ExtrusionBarrier::blocking_direction_minor() const
+constexpr dna::Direction ExtrusionBarrier::blocking_direction_minor() const
     noexcept(utils::ndebug_defined()) {
   return this->_blocking_direction == dna::fwd ? dna::rev : dna::fwd;
 }
 
-bool ExtrusionBarrier::operator==(const ExtrusionBarrier& other) const noexcept {
+constexpr bool ExtrusionBarrier::operator==(const ExtrusionBarrier& other) const noexcept {
   return this->pos() == other.pos();
 }
 
-bool ExtrusionBarrier::operator!=(const ExtrusionBarrier& other) const noexcept {
+constexpr bool ExtrusionBarrier::operator!=(const ExtrusionBarrier& other) const noexcept {
   return !(*this == other);
 }
 
-bool ExtrusionBarrier::operator<(const ExtrusionBarrier& other) const noexcept {
+constexpr bool ExtrusionBarrier::operator<(const ExtrusionBarrier& other) const noexcept {
   return this->pos() < other.pos();
 }
 
-bool ExtrusionBarrier::operator>(const ExtrusionBarrier& other) const noexcept {
+constexpr bool ExtrusionBarrier::operator>(const ExtrusionBarrier& other) const noexcept {
   return this->pos() > other.pos();
 }
 
-bool ExtrusionBarrier::operator<=(const ExtrusionBarrier& other) const noexcept {
+constexpr bool ExtrusionBarrier::operator<=(const ExtrusionBarrier& other) const noexcept {
   return this->pos() <= other.pos();
 }
 
-bool ExtrusionBarrier::operator>=(const ExtrusionBarrier& other) const noexcept {
+constexpr bool ExtrusionBarrier::operator>=(const ExtrusionBarrier& other) const noexcept {
   return this->pos() >= other.pos();
 }
 
-double ExtrusionBarrier::compute_blocking_to_blocking_transition_probabilities_from_pblock(
+constexpr double
+ExtrusionBarrier::compute_blocking_to_blocking_transition_probabilities_from_pblock(
     double barrier_occupancy,
     double non_blocking_to_non_blocking_transition_prob) noexcept(utils::ndebug_defined()) {
   // pno = Transition prob. from non-occupied to occupied
@@ -109,7 +115,7 @@ double ExtrusionBarrier::compute_blocking_to_blocking_transition_probabilities_f
   const auto pon = (pno - (occ * pno)) / occ;
   return std::clamp(1.0 - pon, 0.0, 1.0);
 }
-double ExtrusionBarrier::occupancy() const noexcept(utils::ndebug_defined()) {
+constexpr double ExtrusionBarrier::occupancy() const noexcept(utils::ndebug_defined()) {
   // Make sure this was not default constructed
   assert(this->_blocking_direction != dna::none);
 
@@ -151,3 +157,38 @@ void CTCF::update_states(absl::Span<const ExtrusionBarrier> extr_barriers,
 }
 
 }  // namespace modle
+
+constexpr auto fmt::formatter<modle::ExtrusionBarrier>::parse(format_parse_context& ctx)
+    -> decltype(ctx.begin()) {
+  const auto* it = ctx.begin();
+  const auto* end = ctx.end();
+  if (it != end && (*it == 's' || *it == 'f')) {
+    presentation = *it++;  // NOLINT(cppcoreguidelines-pro-bounds-pointer-arithmetic)
+  }
+
+  // Check if reached the end of the range:
+  if (it != end && *it != '}') {
+    throw fmt::format_error("invalid format");
+  }
+
+  // Return an iterator past the end of the parsed range:
+  return it;
+}
+
+// Formats the point p using the parsed format specification (presentation)
+// stored in this formatter.
+template <typename FormatContext>
+inline auto fmt::formatter<modle::ExtrusionBarrier>::format(const modle::ExtrusionBarrier& b,
+                                                            FormatContext& ctx)
+    -> decltype(ctx.out()) {
+  // ctx.out() is an output iterator to write to.
+  if (presentation == 's') {
+    return fmt::format_to(ctx.out(), "ExtrusionBarrier{{pos={}; motif_direction={}}}", b.pos(),
+                          b.blocking_direction_major() == modle::dna::fwd ? "rev" : "fwd");
+  }
+  assert(presentation == 'f');
+  return fmt::format_to(ctx.out(),
+                        "ExtrusionBarrier{{pos={}; motif_direction={}; Pbb={:.4f}; Puu={:.4f}}}",
+                        b.pos(), b.blocking_direction_major() == modle::dna::fwd ? "rev" : "fwd",
+                        b.prob_occupied_to_occupied(), b.prob_not_occupied_to_not_occupied());
+}

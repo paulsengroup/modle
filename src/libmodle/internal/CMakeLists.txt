@@ -13,12 +13,8 @@ add_library(Modle::libmodle_internal ALIAS libmodle_internal)
 set_target_properties(libmodle_internal PROPERTIES OUTPUT_NAME modle_internal)
 
 target_sources(
-  libmodle_internal
-  PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/genome.cpp
-          ${CMAKE_CURRENT_SOURCE_DIR}/genome_impl.hpp
-          ${CMAKE_CURRENT_SOURCE_DIR}/extrusion_barriers.cpp
-          ${CMAKE_CURRENT_SOURCE_DIR}/extrusion_factors.cpp
-          ${CMAKE_CURRENT_SOURCE_DIR}/extrusion_factors_impl.hpp)
+  libmodle_internal PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/genome.cpp ${CMAKE_CURRENT_SOURCE_DIR}/genome_impl.hpp
+                            ${CMAKE_CURRENT_SOURCE_DIR}/extrusion_factors_impl.hpp)
 target_link_libraries(
   libmodle_internal
   PRIVATE project_options project_warnings Modle::io_chrom_sizes
