@@ -986,10 +986,10 @@ void Cli::transform_args() {
                           !grp->get_option("--fwd-extrusion-speed")->empty());
   }();
   if (auto& speed = c.rev_extrusion_speed; !rev_speed_parsed) {
-    speed = (c.bin_size + 1) / 2;
+    speed = c.bin_size * 8 / 10;  // 0.8 * c.bin_size
   }
   if (auto& speed = c.fwd_extrusion_speed; !fwd_speed_parsed) {
-    speed = (c.bin_size + 1) / 2;
+    speed = c.bin_size * 8 / 10;
   }
 
   if (auto& stddev = c.fwd_extrusion_speed_std; stddev > 0 && stddev < 1) {

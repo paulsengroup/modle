@@ -75,7 +75,7 @@ struct Config {
   double genextreme_xi{0.001};
 
   // LEFs params
-  bp_t fwd_extrusion_speed{(bin_size + 1) / 2};
+  bp_t fwd_extrusion_speed{bin_size * 8 / 10};  // 80% of the bin size
   bp_t rev_extrusion_speed{fwd_extrusion_speed};
   double fwd_extrusion_speed_std{0.05};
   double rev_extrusion_speed_std{fwd_extrusion_speed_std};
