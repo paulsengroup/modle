@@ -173,32 +173,39 @@ bool Chromosome::operator<(const Chromosome& other) const noexcept(utils::ndebug
   return this->size() < other.size();
 }
 
-void Chromosome::add_extrusion_barrier(const bed::BED& record, const double ctcf_prob_occ_to_occ,
-                                       const double ctcf_prob_nocc_to_nocc) {
-  if (record.strand != '+' && record.strand != '-') {
-    return;
+struct ComputeBarrierStpResult {
+  double stp_active;
+  double stp_inactive;
+};
+
+[[nodiscard]] static constexpr ComputeBarrierStpResult compute_barrier_stp(
+    double score, double default_stp_active, double default_stp_inactive) {
+  if (score != 0.0) {
+    // When the score field is zero (i.e. when the extr. barrier does not have a custom
+    // occupancy), use the default self-transition probabilities
+    const auto occupancy = score;
+    const auto stp_active =
+        ExtrusionBarrier::compute_stp_active_from_occupancy(default_stp_inactive, occupancy);
+    return {stp_active, default_stp_inactive};
   }
+  return {default_stp_active, default_stp_inactive};
+}
+
+void Chromosome::add_extrusion_barrier(const bed::BED& record,
+                                       const double default_barrier_stp_active,
+                                       const double default_barrier_stp_inactive) {
+  assert(record.strand == '+' || record.strand == '-' || record.strand == '.');
+
   const auto pos = (record.chrom_start + record.chrom_end + 1) / 2;
   if (pos < this->start_pos() || pos >= this->end_pos()) {
     // Barrier lies outside of the genomic regions to be simulated
     return;
   }
-  if (record.score != 0.0) {
-    // When the score field is zero (i.e. when the extr. barrier does not have a custom
-    // occupancy), use the occupancy specified through the CLI
-    const auto pblock = record.score;
-    const auto pno = ctcf_prob_nocc_to_nocc;
-    const auto poo =
-        ExtrusionBarrier::compute_blocking_to_blocking_transition_probabilities_from_pblock(pblock,
-                                                                                            pno);
-
-    this->_barriers.emplace(record.chrom_start, record.chrom_end,
-                            ExtrusionBarrier{pos, poo, pno, record.strand});
-  } else {
-    this->_barriers.emplace(
-        record.chrom_start, record.chrom_end,
-        ExtrusionBarrier{pos, ctcf_prob_occ_to_occ, ctcf_prob_nocc_to_nocc, record.strand});
-  }
+  const auto [barrier_stp_active, barrier_stp_inactive] =
+      compute_barrier_stp(record.score, default_barrier_stp_active, default_barrier_stp_inactive);
+  this->_barriers.emplace(
+      record.chrom_start, record.chrom_end,
+      ExtrusionBarrier{pos, barrier_stp_active, barrier_stp_inactive, record.strand});
 }
 
 usize Chromosome::id() const { return this->_id; }

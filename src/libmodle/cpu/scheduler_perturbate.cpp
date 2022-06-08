@@ -467,22 +467,15 @@ void Simulation::simulate_window(Simulation::State& state, compressed_io::Writer
   const auto partition_point = state.active_window_start + this->diagonal_width;
 
   // Generate barrier configuration
-  usize num_active_barriers = 0;
-  state.get_barrier_tmp_buff().resize(state.barriers.size());
-  std::transform(state.barriers.begin(), state.barriers.end(), state.get_barrier_tmp_buff().begin(),
-                 [&](const auto& barrier) {
-                   if (barrier.pos() >= state.deletion_begin &&
-                       barrier.pos() < state.deletion_begin + state.deletion_size) {
-                     // Do not change ( -> {. We don't want to construct the object using the
-                     // initializer list
-                     return ExtrusionBarrier(barrier.pos(), 0.0, 1.0,
-                                             barrier.blocking_direction_major());
-                   }
-                   ++num_active_barriers;
-                   return barrier;
-                 });
-
-  state.barriers = absl::MakeConstSpan(state.get_barrier_tmp_buff());
+  usize num_active_barriers = state.barriers.size();
+  for (usize i = 0; i < state.barriers.size(); ++i) {
+    if (state.barriers.pos(i) >= state.deletion_begin &&
+        state.barriers.pos(i) < state.deletion_begin + state.deletion_size) {
+      state.barriers.set(i, state.barriers.pos(i), state.barriers.direction(i), 0.0, 1.0,
+                         ExtrusionBarriers::State::INACTIVE);
+      num_active_barriers--;
+    }
+  }
 
   // Resize and reset state buffers
   state.resize_buffers();

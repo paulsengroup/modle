@@ -17,27 +17,26 @@
 #include <fmt/ostream.h>    // for formatbuf<>::int_type
 #include <spdlog/spdlog.h>  // for info, warn
 
-#include <algorithm>                                // for max, fill, min, copy, clamp
-#include <atomic>                                   // for atomic
-#include <boost/dynamic_bitset/dynamic_bitset.hpp>  // for dynamic_bitset, dynamic_bits...
-#include <boost/filesystem/path.hpp>                // for operator<<, path
-#include <cassert>                                  // for assert
-#include <chrono>                                   // for microseconds
-#include <cmath>                                    // for log, round, exp, floor, sqrt
-#include <cstdlib>                                  // for abs
-#include <deque>                                    // for _Deque_iterator<>::_Self
-#include <iosfwd>                                   // for streamsize
-#include <limits>                                   // for numeric_limits
-#include <memory>                                   // for shared_ptr, unique_ptr, make...
-#include <mutex>                                    // for mutex
-#include <numeric>                                  // for iota
-#include <stdexcept>                                // for runtime_error
-#include <string>                                   // for string
-#include <string_view>                              // for string_view
-#include <thread>                                   // IWYU pragma: keep for sleep_for
-#include <thread_pool/thread_pool.hpp>              // for thread_pool
-#include <utility>                                  // for make_pair, pair
-#include <vector>                                   // for vector, vector<>::iterator
+#include <algorithm>                    // for max, fill, min, copy, clamp
+#include <atomic>                       // for atomic
+#include <boost/filesystem/path.hpp>    // for operator<<, path
+#include <cassert>                      // for assert
+#include <chrono>                       // for microseconds
+#include <cmath>                        // for log, round, exp, floor, sqrt
+#include <cstdlib>                      // for abs
+#include <deque>                        // for _Deque_iterator<>::_Self
+#include <iosfwd>                       // for streamsize
+#include <limits>                       // for numeric_limits
+#include <memory>                       // for shared_ptr, unique_ptr, make...
+#include <mutex>                        // for mutex
+#include <numeric>                      // for iota
+#include <stdexcept>                    // for runtime_error
+#include <string>                       // for string
+#include <string_view>                  // for string_view
+#include <thread>                       // IWYU pragma: keep for sleep_for
+#include <thread_pool/thread_pool.hpp>  // for thread_pool
+#include <utility>                      // for make_pair, pair
+#include <vector>                       // for vector, vector<>::iterator
 
 #include "modle/common/common.hpp"                         // for bp_t, contacts_t
 #include "modle/common/dna.hpp"                            // for dna::REV, dna::FWD
@@ -72,9 +71,9 @@ Simulation::Simulation(const Config& c, bool import_chroms)
       auto& barriers = chrom.barriers();
       std::transform(barriers.data_begin(), barriers.data_end(), barriers.data_begin(),
                      [&](const auto& barrier) {
-                       return ExtrusionBarrier{barrier.pos(), c.ctcf_occupied_self_prob,
+                       return ExtrusionBarrier{barrier.pos, c.ctcf_occupied_self_prob,
                                                c.ctcf_not_occupied_self_prob,
-                                               barrier.blocking_direction_minor()};
+                                               barrier.blocking_direction.complement()};
                      });
     }
   }
@@ -494,8 +493,7 @@ std::pair<bp_t, bp_t> Simulation::compute_lef_lef_collision_pos(const ExtrusionU
   return std::make_pair(collision_pos, collision_pos - 1);
 }
 
-usize Simulation::release_lefs(const absl::Span<Lef> lefs,
-                               const absl::Span<const ExtrusionBarrier> barriers,
+usize Simulation::release_lefs(const absl::Span<Lef> lefs, const ExtrusionBarriers& barriers,
                                const absl::Span<const CollisionT> rev_collisions,
                                const absl::Span<const CollisionT> fwd_collisions,
                                random::PRNG_t& rand_eng,
@@ -507,7 +505,7 @@ usize Simulation::release_lefs(const absl::Span<Lef> lefs,
       assert(d == dna::REV || d == dna::FWD);
       if (c.collision_occurred(CollisionT::LEF_BAR)) {
         assert(c.decode_index() <= barriers.size());
-        return barriers[c.decode_index()].blocking_direction_major() == d;
+        return barriers.direction(c.decode_index()) == d;
       }
       return false;
     };
@@ -610,18 +608,15 @@ Simulation::TaskPW Simulation::TaskPW::from_string(std::string_view serialized_t
     utils::parse_numeric_or_throw(toks[i++], t.num_target_epochs);
     utils::parse_numeric_or_throw(toks[i++], t.num_target_contacts);
     utils::parse_numeric_or_throw(toks[i++], t.num_lefs);
-    usize num_barriers_expected;
-    utils::parse_numeric_or_throw(toks[i++], num_barriers_expected);
+    const auto num_barriers_expected = utils::parse_numeric_or_throw<usize>(toks[i++]);
     utils::parse_numeric_or_throw(toks[i++], t.deletion_begin);
     utils::parse_numeric_or_throw(toks[i++], t.deletion_size);
     utils::parse_numeric_or_throw(toks[i++], t.window_start);
     utils::parse_numeric_or_throw(toks[i++], t.window_end);
     utils::parse_numeric_or_throw(toks[i++], t.active_window_start);
     utils::parse_numeric_or_throw(toks[i++], t.active_window_end);
-    usize num_feats1_expected;
-    usize num_feats2_expected;
-    utils::parse_numeric_or_throw(toks[i++], num_feats1_expected);
-    utils::parse_numeric_or_throw(toks[i++], num_feats2_expected);
+    const auto num_feats1_expected = utils::parse_numeric_or_throw<usize>(toks[i++]);
+    const auto num_feats2_expected = utils::parse_numeric_or_throw<usize>(toks[i++]);
 
     auto chrom_it = genome.find(chrom_name);
     if (chrom_it == genome.end()) {
@@ -670,20 +665,16 @@ void Simulation::State::resize_buffers(usize new_size) {
   idx_buff.resize(new_size);
   collision_buff1.resize(new_size);
   collision_buff2.resize(new_size);
-
-  this->get_barrier_mask().resize(this->barriers.size());
 }
 
 void Simulation::State::reset_buffers() {  // TODO figure out which resets are redundant
   std::for_each(lef_buff.begin(), lef_buff.end(), [](auto& lef) { lef.reset(); });
   std::iota(rank_buff1.begin(), rank_buff1.end(), 0);
   std::copy(rank_buff1.begin(), rank_buff1.end(), rank_buff2.begin());
-  barrier_mask.reset();
   std::fill(moves_buff1.begin(), moves_buff1.end(), 0);
   std::fill(moves_buff2.begin(), moves_buff2.end(), 0);
   std::for_each(collision_buff1.begin(), collision_buff1.end(), [&](auto& c) { c.clear(); });
   std::for_each(collision_buff2.begin(), collision_buff2.end(), [&](auto& c) { c.clear(); });
-  barrier_tmp_buff.clear();
   cfx_of_variation_buff.clear();
   avg_loop_size_buff.clear();
 }
@@ -706,12 +697,6 @@ absl::Span<usize> Simulation::State::get_fwd_ranks(usize size) noexcept {
     size = this->num_active_lefs;
   }
   return absl::MakeSpan(this->rank_buff2.data(), size);
-}
-boost::dynamic_bitset<>& Simulation::State::get_barrier_mask() noexcept {
-  return this->barrier_mask;
-}
-std::vector<ExtrusionBarrier>& Simulation::State::get_barrier_tmp_buff() noexcept {
-  return this->barrier_tmp_buff;
 }
 absl::Span<bp_t> Simulation::State::get_rev_moves(usize size) noexcept {
   if (size == State::npos) {
@@ -768,12 +753,6 @@ absl::Span<const usize> Simulation::State::get_fwd_ranks(usize size) const noexc
     size = this->num_active_lefs;
   }
   return absl::MakeConstSpan(this->rank_buff2.data(), size);
-}
-const boost::dynamic_bitset<>& Simulation::State::get_barrier_mask() const noexcept {
-  return this->barrier_mask;
-}
-const std::vector<ExtrusionBarrier>& Simulation::State::get_barrier_tmp_buff() const noexcept {
-  return this->barrier_tmp_buff;
 }
 absl::Span<const bp_t> Simulation::State::get_rev_moves(usize size) const noexcept {
   if (size == State::npos) {
@@ -833,7 +812,7 @@ Simulation::State& Simulation::State::operator=(const Task& task) {
   this->num_target_epochs = task.num_target_epochs;
   this->num_target_contacts = task.num_target_contacts;
   this->num_lefs = task.num_lefs;
-  this->barriers = task.barriers;
+  this->barriers = ExtrusionBarriers{task.barriers.begin(), task.barriers.end()};
 
   this->deletion_begin = 0;
   this->deletion_size = 0;
@@ -865,7 +844,7 @@ Simulation::State& Simulation::State::operator=(const TaskPW& task) {
   this->num_target_epochs = task.num_target_epochs;
   this->num_target_contacts = task.num_target_contacts;
   this->num_lefs = task.num_lefs;
-  this->barriers = task.barriers;
+  this->barriers = ExtrusionBarriers{task.barriers.begin(), task.barriers.end()};
 
   this->deletion_begin = task.deletion_begin;
   this->deletion_size = task.deletion_size;
@@ -899,8 +878,7 @@ std::string Simulation::State::to_string() const noexcept {
 }
 
 std::pair<usize, usize> Simulation::process_collisions(
-    const Chromosome& chrom, const absl::Span<Lef> lefs,
-    const absl::Span<const ExtrusionBarrier> barriers, const boost::dynamic_bitset<>& barrier_mask,
+    const Chromosome& chrom, const absl::Span<Lef> lefs, ExtrusionBarriers& barriers,
     const absl::Span<usize> rev_lef_ranks, const absl::Span<usize> fwd_lef_ranks,
     const absl::Span<bp_t> rev_moves, const absl::Span<bp_t> fwd_moves,
     const absl::Span<CollisionT> rev_collisions, const absl::Span<CollisionT> fwd_collisions,
@@ -911,7 +889,7 @@ std::pair<usize, usize> Simulation::process_collisions(
                                                    fwd_collisions);
 
   this->detect_lef_bar_collisions(lefs, rev_lef_ranks, fwd_lef_ranks, rev_moves, fwd_moves,
-                                  barriers, barrier_mask, rev_collisions, fwd_collisions, rand_eng,
+                                  barriers, rev_collisions, fwd_collisions, rand_eng,
                                   num_rev_units_at_5prime, num_fwd_units_at_3prime);
 
   this->detect_primary_lef_lef_collisions(lefs, barriers, rev_lef_ranks, fwd_lef_ranks, rev_moves,
@@ -1057,9 +1035,7 @@ void Simulation::simulate_one_cell(State& s) const {
 
     // Generate initial extr. barrier states, so that they are already at or close to
     // equilibrium
-    for (usize i = 0; i < s.barriers.size(); ++i) {
-      s.get_barrier_mask()[i] = random::bernoulli_trial{s.barriers[i].occupancy()}(s.rand_eng);
-    }
+    s.barriers.init_states(s.rand_eng);
 
     if (this->skip_burnin) {
       s.num_active_lefs = s.num_lefs;
@@ -1095,7 +1071,7 @@ void Simulation::simulate_one_cell(State& s) const {
       this->generate_moves(*s.chrom, s.get_lefs(), s.get_rev_ranks(), s.get_fwd_ranks(),
                            s.get_rev_moves(), s.get_fwd_moves(), s.burnin_completed, s.rand_eng);
 
-      CTCF::update_states(s.barriers, s.get_barrier_mask(), s.rand_eng);
+      s.barriers.next_state(s.rand_eng);
 
       // Reset collision masks
       std::for_each(s.get_rev_collisions().begin(), s.get_rev_collisions().end(),
@@ -1104,10 +1080,9 @@ void Simulation::simulate_one_cell(State& s) const {
                     [&](auto& c) { c.clear(); });
 
       // Detect collision and correct moves
-      Simulation::process_collisions(*s.chrom, s.get_lefs(), s.barriers, s.get_barrier_mask(),
-                                     s.get_rev_ranks(), s.get_fwd_ranks(), s.get_rev_moves(),
-                                     s.get_fwd_moves(), s.get_rev_collisions(),
-                                     s.get_fwd_collisions(), s.rand_eng);
+      Simulation::process_collisions(*s.chrom, s.get_lefs(), s.barriers, s.get_rev_ranks(),
+                                     s.get_fwd_ranks(), s.get_rev_moves(), s.get_fwd_moves(),
+                                     s.get_rev_collisions(), s.get_fwd_collisions(), s.rand_eng);
       // Advance LEFs
       Simulation::extrude(*s.chrom, s.get_lefs(), s.get_rev_moves(), s.get_fwd_moves());
 
@@ -1115,9 +1090,8 @@ void Simulation::simulate_one_cell(State& s) const {
       if (MODLE_UNLIKELY(this->log_model_internal_state)) {
         assert(s.model_state_logger);
         Simulation::dump_stats(s.id, s.epoch, s.cell_id, !s.burnin_completed, *s.chrom,
-                               s.get_lefs(), s.barriers, s.get_barrier_mask(),
-                               s.get_rev_collisions(), s.get_fwd_collisions(),
-                               *s.model_state_logger);
+                               s.get_lefs(), s.barriers, s.get_rev_collisions(),
+                               s.get_fwd_collisions(), *s.model_state_logger);
       }
 
       // Select LEFs to be released in the current epoch and release them
@@ -1145,9 +1119,7 @@ void Simulation::select_and_bind_lefs(State& s) noexcept(utils::ndebug_defined()
 
 void Simulation::dump_stats(const usize task_id, const usize epoch, const usize cell_id,
                             const bool burnin, const Chromosome& chrom,
-                            const absl::Span<const Lef> lefs,
-                            absl::Span<const ExtrusionBarrier> barriers,
-                            const boost::dynamic_bitset<>& barrier_mask,
+                            const absl::Span<const Lef> lefs, const ExtrusionBarriers& barriers,
                             const absl::Span<const CollisionT> rev_collisions,
                             const absl::Span<const CollisionT> fwd_collisions,
                             compressed_io::Writer& log_writer) const
@@ -1155,7 +1127,7 @@ void Simulation::dump_stats(const usize task_id, const usize epoch, const usize 
   assert(this->log_model_internal_state);
   assert(log_writer);
 
-  const auto barriers_occupied = barrier_mask.count();
+  const auto barriers_occupied = barriers.count_active();
   const auto effective_barrier_occupancy =
       static_cast<double>(barriers_occupied) / static_cast<double>(barriers.size());
 

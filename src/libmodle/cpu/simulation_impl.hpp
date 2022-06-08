@@ -9,13 +9,12 @@
 #include <absl/types/span.h>  // for Span
 #include <fmt/format.h>       // for format_parse_context, format_error
 
-#include <algorithm>                                // for min
-#include <boost/dynamic_bitset/dynamic_bitset.hpp>  // for dynamic_bitset
-#include <cassert>                                  // for assert
-#include <limits>                                   // for numeric_limits
-#include <thread>                                   // for thread
-#include <thread_pool/thread_pool.hpp>              // for thread_pool
-#include <type_traits>                              // for declval, decay_t
+#include <algorithm>                    // for min
+#include <cassert>                      // for assert
+#include <limits>                       // for numeric_limits
+#include <thread>                       // for thread
+#include <thread_pool/thread_pool.hpp>  // for thread_pool
+#include <type_traits>                  // for declval, decay_t
 
 #include "modle/common/common.hpp"                      // for usize, bp_t, i64, u32
 #include "modle/common/random.hpp"                      // for PRNG_t

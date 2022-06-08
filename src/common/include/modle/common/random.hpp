@@ -52,7 +52,7 @@ namespace modle::random {
 #endif
 
 #ifdef USE_XOSHIRO
-[[nodiscard]] inline XoshiroCpp::Xoshiro256PlusPlus PRNG(u64 seed) noexcept(
+[[nodiscard]] constexpr XoshiroCpp::Xoshiro256PlusPlus PRNG(u64 seed) noexcept(
     utils::ndebug_defined()) {
   auto seeder = XoshiroCpp::SplitMix64(seed);
   return XoshiroCpp::Xoshiro256PlusPlus(seeder.generateSeedSequence<4>());

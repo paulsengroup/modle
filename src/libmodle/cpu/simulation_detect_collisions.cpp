@@ -8,12 +8,11 @@
 
 #include <absl/types/span.h>  // for Span
 
-#include <algorithm>                                // for is_sorted, min, all_of, find_if, max
-#include <boost/dynamic_bitset/dynamic_bitset.hpp>  // for dynamic_bitset
-#include <cassert>                                  // for assert
-#include <iterator>                                 // for reverse_iterator
-#include <limits>                                   // for numeric_limits
-#include <utility>                                  // for make_pair, pair
+#include <algorithm>  // for is_sorted, min, all_of, find_if, max
+#include <cassert>    // for assert
+#include <iterator>   // for reverse_iterator
+#include <limits>     // for numeric_limits
+#include <utility>    // for make_pair, pair
 
 #include "modle/collision_encoding.hpp"
 #include "modle/common/common.hpp"                      // for bp_t
@@ -129,10 +128,9 @@ std::pair<usize, usize> Simulation::detect_units_at_chrom_boundaries(
 void Simulation::detect_lef_bar_collisions(
     const absl::Span<const Lef> lefs, const absl::Span<const usize> rev_lef_ranks,
     const absl::Span<const usize> fwd_lef_ranks, const absl::Span<const bp_t> rev_moves,
-    const absl::Span<const bp_t> fwd_moves, const absl::Span<const ExtrusionBarrier> extr_barriers,
-    const boost::dynamic_bitset<>& barrier_mask, const absl::Span<CollisionT> rev_collisions,
-    const absl::Span<CollisionT> fwd_collisions, random::PRNG_t& rand_eng,
-    usize num_rev_units_at_5prime, usize num_fwd_units_at_3prime) const
+    const absl::Span<const bp_t> fwd_moves, const ExtrusionBarriers& barriers,
+    const absl::Span<CollisionT> rev_collisions, const absl::Span<CollisionT> fwd_collisions,
+    random::PRNG_t& rand_eng, usize num_rev_units_at_5prime, usize num_fwd_units_at_3prime) const
     noexcept(utils::ndebug_defined()) {
   {
     assert(lefs.size() == fwd_lef_ranks.size());
@@ -141,7 +139,6 @@ void Simulation::detect_lef_bar_collisions(
     assert(lefs.size() == rev_moves.size());
     assert(lefs.size() == fwd_collisions.size());
     assert(lefs.size() == rev_collisions.size());
-    assert(barrier_mask.size() == extr_barriers.size());
     assert(lefs.size() >= num_rev_units_at_5prime);
     assert(lefs.size() >= num_fwd_units_at_3prime);
     assert(std::is_sorted(fwd_lef_ranks.begin(), fwd_lef_ranks.end(),
@@ -178,21 +175,18 @@ void Simulation::detect_lef_bar_collisions(
   auto unit_pos = lefs[unit_idx].rev_unit.pos();
 
   // Loop over extr. barriers and find the first, possibly colliding extr. unit
-  for (usize i = 0; i < extr_barriers.size(); ++i) {
-    // NOLINTNEXTLINE(readability-implicit-bool-conversion)
-    if (barrier_mask[i] == CTCF::NOT_OCCUPIED) {  // Extrusion barriers that are not occupied are
-      continue;                                   // transparent to extr. units
+  for (usize i = 0; i < barriers.size(); ++i) {
+    if (barriers.is_not_active(i)) {  // Inactive barriers are trnsparent to extr. units
+      continue;
     }
 
-    const auto& barrier = extr_barriers[i];
     assert(j < lefs.size());
     // Probability of block is set based on the extr. barrier blocking direction
-    const auto& pblock = barrier.blocking_direction_major() == dna::rev
-                             ? this->lef_bar_major_collision_pblock
-                             : this->lef_bar_minor_collision_pblock;
+    const auto& pblock = barriers.direction(i) == dna::REV ? this->lef_bar_major_collision_pblock
+                                                           : this->lef_bar_minor_collision_pblock;
 
     // Look for the first rev extr. unit that comes after the current barrier
-    while (unit_pos <= barrier.pos()) {
+    while (unit_pos <= barriers.pos(i)) {
       if (MODLE_UNLIKELY(++j == lefs.size())) {  // All rev units have been processed
         goto process_fwd_unit;                   // Move to the next section
       }
@@ -207,8 +201,8 @@ void Simulation::detect_lef_bar_collisions(
       // barrier is less or equal than the distance that the rev extr. unit is set to move in
       // the current iteration. If pblock != 1, then we also require a successful bernoulli
       // trial before calling a collision
-      assert(unit_pos >= barrier.pos());
-      const auto delta = unit_pos - barrier.pos();
+      assert(unit_pos >= barriers.pos(i));
+      const auto delta = unit_pos - barriers.pos(i);
       if (delta > 0 && delta <= rev_moves[unit_idx] &&
           Simulation::run_lef_bar_collision_trial(pblock, rand_eng)) {
         // Collision detected
@@ -227,21 +221,18 @@ process_fwd_unit:
   unit_pos = lefs[unit_idx].fwd_unit.pos();
 
   // Loop over extr. barriers and find the first, possibly colliding extr. unit
-  assert(!extr_barriers.empty());
+  assert(!barriers.empty());
   const auto sentinel_idx = (std::numeric_limits<usize>::max)();
-  for (auto i = extr_barriers.size() - 1; i != sentinel_idx; --i) {
-    // NOLINTNEXTLINE(readability-implicit-bool-conversion)
-    if (barrier_mask[i] == CTCF::NOT_OCCUPIED) {  // Extrusion barriers that are not occupied are
-      continue;                                   // transparent to extr. units
+  for (auto i = barriers.size() - 1; i != sentinel_idx; --i) {
+    if (barriers.is_not_active(i)) {  // Inactive barriers are trnsparent to extr. units
+      continue;
     }
 
-    const auto& barrier = extr_barriers[i];
     // Probability of block is set based on the extr. barrier blocking direction
-    const auto& pblock = barrier.blocking_direction_major() == dna::fwd
-                             ? this->lef_bar_major_collision_pblock
-                             : this->lef_bar_minor_collision_pblock;
+    const auto& pblock = barriers.direction(i) == dna::FWD ? this->lef_bar_major_collision_pblock
+                                                           : this->lef_bar_minor_collision_pblock;
     // Look for the next fwd unit that comes strictly before the current extr. barrier
-    while (unit_pos >= barrier.pos()) {
+    while (unit_pos >= barriers.pos(i)) {
       if (MODLE_UNLIKELY(--j == sentinel_idx)) {
         return;
       }
@@ -251,7 +242,7 @@ process_fwd_unit:
     }
 
     if (MODLE_LIKELY(lefs[unit_idx].is_bound())) {
-      const auto delta = barrier.pos() - unit_pos;
+      const auto delta = barriers.pos(i) - unit_pos;
       if (delta > 0 && delta <= fwd_moves[unit_idx] &&
           Simulation::run_lef_bar_collision_trial(pblock, rand_eng)) {
         fwd_collisions[unit_idx].set(i, CollisionT::COLLISION | CollisionT::LEF_BAR);
@@ -262,7 +253,7 @@ process_fwd_unit:
 
 // NOLINTNEXTLINE(readability-function-cognitive-complexity)
 void Simulation::detect_primary_lef_lef_collisions(
-    const absl::Span<const Lef> lefs, const absl::Span<const ExtrusionBarrier> barriers,
+    const absl::Span<const Lef> lefs, const ExtrusionBarriers& barriers,
     const absl::Span<const usize> rev_lef_ranks, const absl::Span<const usize> fwd_lef_ranks,
     const absl::Span<const bp_t> rev_moves, const absl::Span<const bp_t> fwd_moves,
     const absl::Span<CollisionT> rev_collisions, const absl::Span<CollisionT> fwd_collisions,
@@ -381,7 +372,7 @@ void Simulation::detect_primary_lef_lef_collisions(
 
         assert(rev_collision.collision_occurred(CollisionT::LEF_BAR));
         assert(collision_pos_rev != 0 && collision_pos_fwd != 0);
-        const auto& barrier_pos = barriers[rev_collision.decode_index()].pos();
+        const auto barrier_pos = barriers.pos(rev_collision.decode_index());
         if (MODLE_UNLIKELY(collision_pos_fwd > barrier_pos)) {
           // Detected the mis-prediction mentioned above: make the LEF-BAR collision a LEF-LEF
           // collision
@@ -399,7 +390,7 @@ void Simulation::detect_primary_lef_lef_collisions(
       } else if (!rev_collision.collision_occurred() && fwd_collision.collision_occurred()) {
         assert(fwd_collision.collision_occurred(CollisionT::LEF_BAR));
         assert(collision_pos_rev != 0 && collision_pos_fwd != 0);
-        const auto& barrier_pos = barriers[fwd_collision.decode_index()].pos();
+        const auto barrier_pos = barriers.pos(fwd_collision.decode_index());
         rev_collision.set(fwd_idx, CollisionT::COLLISION | CollisionT::LEF_LEF_PRIMARY);
         if (MODLE_UNLIKELY(collision_pos_rev < barrier_pos)) {
           fwd_collision.set(rev_idx, CollisionT::COLLISION | CollisionT::LEF_LEF_PRIMARY);
