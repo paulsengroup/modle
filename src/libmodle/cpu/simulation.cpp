@@ -1012,11 +1012,7 @@ void Simulation::simulate_one_cell(State& s) const {
   assert(s.num_burnin_epochs == 0);
   assert(!s.burnin_completed);
   assert(s.num_active_lefs == 0);
-  if (s.num_target_contacts != 0) {  // NOLINT
-    assert(s.num_target_epochs == (std::numeric_limits<usize>::max)());
-  } else {
-    assert(s.num_target_epochs != (std::numeric_limits<usize>::max)());
-  }
+  assert(s.num_target_epochs != (std::numeric_limits<usize>::max)());
 
   try {
     // Seed is computed based on chrom. name, size and cellid
