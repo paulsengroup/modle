@@ -40,6 +40,7 @@
 #include <vector>                                   // for vector, vector<>::iterator
 
 #include "modle/common/common.hpp"                         // for bp_t, contacts_t
+#include "modle/common/dna.hpp"                            // for dna::REV, dna::FWD
 #include "modle/common/genextreme_value_distribution.hpp"  // for genextreme_value_distribution
 #include "modle/common/random.hpp"             // for bernoulli_trial, poisson_distribution
 #include "modle/common/random_sampling.hpp"    // for random_sample
@@ -503,7 +504,7 @@ usize Simulation::release_lefs(const absl::Span<Lef> lefs,
     assert(lefs[j].is_bound());
 
     auto is_lef_bar_hard_collision = [&](const auto c, dna::Direction d) {
-      assert(d == dna::rev || d == dna::fwd);
+      assert(d == dna::REV || d == dna::FWD);
       if (c.collision_occurred(CollisionT::LEF_BAR)) {
         assert(c.decode_index() <= barriers.size());
         return barriers[c.decode_index()].blocking_direction_major() == d;
@@ -512,8 +513,8 @@ usize Simulation::release_lefs(const absl::Span<Lef> lefs,
     };
 
     const auto num_hard_collisions =
-        static_cast<u8>(is_lef_bar_hard_collision(rev_collisions[j], dna::rev) +
-                        is_lef_bar_hard_collision(fwd_collisions[j], dna::fwd));
+        static_cast<u8>(is_lef_bar_hard_collision(rev_collisions[j], dna::REV) +
+                        is_lef_bar_hard_collision(fwd_collisions[j], dna::FWD));
 
     switch (num_hard_collisions) {
       case 0:

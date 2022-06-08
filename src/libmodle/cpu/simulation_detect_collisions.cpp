@@ -16,7 +16,8 @@
 #include <utility>                                  // for make_pair, pair
 
 #include "modle/collision_encoding.hpp"
-#include "modle/common/common.hpp"                      // for bp_t, fwd, rev
+#include "modle/common/common.hpp"                      // for bp_t
+#include "modle/common/dna.hpp"                         // for dna::REV, dna::FWD
 #include "modle/common/random.hpp"                      // for bernoulli_trial
 #include "modle/common/suppress_compiler_warnings.hpp"  // for DISABLE_WARNING_POP, DISABLE_WARN...
 #include "modle/common/utils.hpp"                       // for ndebug_defined

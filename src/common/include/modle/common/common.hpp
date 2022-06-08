@@ -73,8 +73,4 @@ using contacts_t = u32;
 #define MODLE_LIKELY           ABSL_PREDICT_TRUE          // NOLINT(cppcoreguidelines-macro-usage)
 #define MODLE_UNLIKELY         ABSL_PREDICT_FALSE         // NOLINT(cppcoreguidelines-macro-usage)
 
-namespace dna {
-enum Direction : u8f { none = 0, fwd = 1, rev = 2, both = 3 };
-}  // namespace dna
-
 }  // namespace modle
