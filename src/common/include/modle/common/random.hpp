@@ -4,23 +4,9 @@
 
 #pragma once
 
-#include <array>        // for array
-#include <type_traits>  // for result_of
+#include <Xoshiro-cpp/XoshiroCpp.hpp>  // for SplitMix64, Xoshiro256PlusPlus
 
 #include "modle/common/common.hpp"  // for u64
-
-#if !defined(MODLE_USE_MERSENNE_TWISTER)
-#define USE_XOSHIRO
-#endif
-
-#ifdef USE_XOSHIRO
-#include <Xoshiro-cpp/XoshiroCpp.hpp>  // for SplitMix64, Xoshiro256PlusPlus
-#endif
-
-#if defined(MODLE_USE_MERSENNE_TWISTER) && defined(MODLE_WITH_BOOST_RANDOM)
-#include <boost/random/mersenne_twister.hpp>
-#include <boost/random/seed_seq.hpp>
-#endif
 
 #ifdef MODLE_WITH_BOOST_RANDOM
 #include <boost/random/bernoulli_distribution.hpp>     // for bernoulli_distribution
@@ -36,28 +22,11 @@
 #endif
 
 namespace modle::random {
-
-#if defined(MODLE_USE_MERSENNE_TWISTER) && defined(MODLE_WITH_BOOST_RANDOM)
-[[nodiscard]] inline boost::random::mt19937_64 PRNG(u64 seed) noexcept(utils::ndebug_defined()) {
-  auto seeder = boost::random::seed_seq{seed};
-  return boost::random::mt19937_64{seeder};
-}
-#endif
-
-#if defined(MODLE_USE_MERSENNE_TWISTER) && !defined(MODLE_WITH_BOOST_RANDOM)
-[[nodiscard]] inline std::mt19937_64 PRNG(u64 seed) noexcept(utils::ndebug_defined()) {
-  auto seeder = std::seed_seq{seed};
-  return std::mt19937_64{seeder};
-}
-#endif
-
-#ifdef USE_XOSHIRO
 [[nodiscard]] constexpr XoshiroCpp::Xoshiro256PlusPlus PRNG(u64 seed) noexcept(
     utils::ndebug_defined()) {
   auto seeder = XoshiroCpp::SplitMix64(seed);
   return XoshiroCpp::Xoshiro256PlusPlus(seeder.generateSeedSequence<4>());
 }
-#endif
 
 using PRNG_t = decltype(PRNG(u64(1)));
 
