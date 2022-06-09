@@ -39,7 +39,7 @@ target_link_system_libraries(
   CLI11::CLI11
   fmt::fmt
   range-v3::range-v3
-  $<$<NOT:$<BOOL:${MODLE_USE_MERSENNE_TWISTER}>>:XoshiroCpp::XoshiroCpp>
+  XoshiroCpp::XoshiroCpp
   xxHash::xxhash
   mscharconv)
 
