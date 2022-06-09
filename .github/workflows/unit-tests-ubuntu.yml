@@ -205,6 +205,12 @@ jobs:
           key: conan-${{ steps.cache-key.outputs.restore-key }}
           path: ${{ env.CONAN_USER_HOME }}
 
+      - name: Cache test datasets
+        uses: actions/cache@v3
+        with:
+          key: test-dataset-${{ hashFiles('cmake/FetchTestDataset.cmake') }}
+          path: ${{ github.workspace }}/test/data/modle_test_data.tar.gz
+
       - name: Configure project
         run: |
           git config --global --add safe.directory ${{ github.workspace }}
@@ -335,6 +341,12 @@ jobs:
         with:
           key: conan-${{ steps.cache-key.outputs.restore-key }}
           path: ${{ env.CONAN_USER_HOME }}
+
+      - name: Cache test datasets
+        uses: actions/cache@v3
+        with:
+          key: test-dataset-${{ hashFiles('cmake/FetchTestDataset.cmake') }}
+          path: ${{ github.workspace }}/test/data/modle_test_data.tar.gz
 
       - name: Configure project
         run: |
