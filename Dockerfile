@@ -78,7 +78,7 @@ RUN mkdir -p "$src_dir" "$build_dir"
 COPY conanfile.py "$src_dir"
 RUN cd "$build_dir"                             \
 && conan install "$src_dir/conanfile.py"        \
-                 --build                        \
+                 --build=outdated               \
                  --env "CC=$CC"                 \
                  --env "CXX=$CXX"               \
                  -s build_type=Release          \
@@ -124,13 +124,14 @@ ARG FINAL_BASE_IMAGE
 ARG FINAL_BASE_IMAGE_DIGEST
 FROM "${FINAL_BASE_IMAGE}@${FINAL_BASE_IMAGE_DIGEST}" AS integration-testing
 
+ARG src_dir="/root/modle"
 ARG staging_dir='/root/modle/staging'
 ARG install_dir='/usr/local'
 
 COPY --from=unit-testing "$staging_dir" "$staging_dir"
+COPY --from=unit-testing "$src_dir/test/data/integration_tests/" "$src_dir/test/data/integration_tests/"
 COPY --from=unit-testing /usr/local/bin/h5diff /usr/local/bin/h5diff
 COPY test/scripts/modle_integration_test_simple.sh "$src_dir/test/scripts/modle_integration_test_simple.sh"
-COPY test/data/integration_tests/ "$src_dir/test/data/integration_tests/"
 
 RUN apt-get update \
 && apt-get install xz-utils \
