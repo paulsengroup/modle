@@ -204,6 +204,7 @@ if(ENABLE_TESTING)
   enable_testing()
   message("Building unit tests.")
   target_compile_definitions(project_options INTERFACE ENABLE_TESTING)
+  include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/FetchTestDataset.cmake)
   add_subdirectory(test)
 endif()
 
