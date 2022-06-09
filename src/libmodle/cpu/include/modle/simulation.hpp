@@ -426,18 +426,16 @@ class Simulation : Config {
 
   /// Register contacts for chromosome \p chrom using the position the extrusion units of the LEFs
   /// in \p lefs whose index is present in \p selected_lef_idx.
-  usize register_contacts_loop(Chromosome& chrom, absl::Span<const Lef> lefs,
-                               absl::Span<const usize> selected_lef_idx,
-                               usize max_num_contacts_to_register, random::PRNG_t& rand_eng) const;
-  usize register_contacts_loop(bp_t start_pos, bp_t end_pos, ContactMatrix<contacts_t>& contacts,
-                               absl::Span<const Lef> lefs, absl::Span<const usize> selected_lef_idx,
-                               usize max_num_contacts_to_register, random::PRNG_t& rand_eng) const;
-  usize register_contacts_tad(Chromosome& chrom, absl::Span<const Lef> lefs,
-                              absl::Span<const usize> selected_lef_idx,
-                              usize max_num_contacts_to_register, random::PRNG_t& rand_eng) const;
-  usize register_contacts_tad(bp_t start_pos, bp_t end_pos, ContactMatrix<contacts_t>& contacts,
-                              absl::Span<const Lef> lefs, absl::Span<const usize> selected_lef_idx,
-                              usize max_num_contacts_to_register, random::PRNG_t& rand_eng) const;
+  void register_contacts_loop(Chromosome& chrom, absl::Span<const Lef> lefs,
+                              usize num_contacts_to_register, random::PRNG_t& rand_eng) const;
+  void register_contacts_loop(bp_t start_pos, bp_t end_pos, ContactMatrix<contacts_t>& contacts,
+                              absl::Span<const Lef> lefs, usize num_contacts_to_register,
+                              random::PRNG_t& rand_eng) const;
+  void register_contacts_tad(Chromosome& chrom, absl::Span<const Lef> lefs,
+                             usize num_contacts_to_register, random::PRNG_t& rand_eng) const;
+  void register_contacts_tad(bp_t start_pos, bp_t end_pos, ContactMatrix<contacts_t>& contacts,
+                             absl::Span<const Lef> lefs, usize num_contacts_to_register,
+                             random::PRNG_t& rand_eng) const;
 
   template <typename MaskT>
   inline static void select_lefs_to_bind(absl::Span<const Lef> lefs,
@@ -470,7 +468,7 @@ class Simulation : Config {
 
   void run_burnin(State& s, double lef_binding_rate_burnin) const;
 
-  void sample_and_register_contacts(State& s, double avg_nlefs_to_sample) const;
+  void sample_and_register_contacts(State& s, usize num_contacts_to_sample) const;
   void dump_stats(usize task_id, usize epoch, usize cell_id, bool burnin, const Chromosome& chrom,
                   absl::Span<const Lef> lefs, absl::Span<const ExtrusionBarrier> barriers,
                   const boost::dynamic_bitset<>& barrier_mask,
@@ -478,9 +476,11 @@ class Simulation : Config {
                   absl::Span<const CollisionT> fwd_lef_collisions,
                   compressed_io::Writer& log_writer) const noexcept(utils::ndebug_defined());
 
-  [[nodiscard]] usize compute_tot_target_epochs() const noexcept;
-  [[nodiscard]] usize compute_tot_target_contacts(usize npixels) const noexcept;
+  [[nodiscard]] usize compute_tot_target_epochs(usize nlefs, usize npixels) const noexcept;
+  [[nodiscard]] usize compute_contacts_per_epoch(usize nlefs) const noexcept;
   [[nodiscard]] usize compute_num_lefs(usize size_bp) const noexcept;
+
+  void print_status_update(const Task& t) const noexcept;
 
   template <class TaskT>
   [[nodiscard]] usize consume_tasks_blocking(moodycamel::BlockingConcurrentQueue<TaskT>& task_queue,

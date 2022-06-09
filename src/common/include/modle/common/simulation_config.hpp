@@ -67,22 +67,21 @@ struct Config {
   ContactSamplingStrategy contact_sampling_strategy{ContactSamplingStrategy::tad |
                                                     ContactSamplingStrategy::loop |
                                                     ContactSamplingStrategy::noisify};
-  u64 number_of_loop_contacts_per_sampling_event{1};
-  u64 number_of_tad_contacts_per_sampling_event{5};
-  double lef_fraction_contact_sampling{0.025};
+  double tad_to_loop_contact_ratio{5.0};
   double genextreme_mu{0};
   double genextreme_sigma{5'000};
   double genextreme_xi{0.001};
 
   // LEFs params
-  bp_t fwd_extrusion_speed{(bin_size + 1) / 2};
+  bp_t fwd_extrusion_speed{bin_size * 8 / 10};  // 80% of the bin size
   bp_t rev_extrusion_speed{fwd_extrusion_speed};
   double fwd_extrusion_speed_std{0.05};
   double rev_extrusion_speed_std{fwd_extrusion_speed_std};
   double number_of_lefs_per_mbp{20};
   double prob_of_lef_release{};
   double prob_of_lef_release_burnin{};
-  u64 avg_lef_processivity{300'000};
+  bp_t avg_lef_processivity{300'000};
+  bp_t contact_sampling_interval{50'000};
 
   // Extrusion barrier params
   double extrusion_barrier_occupancy{0.825};

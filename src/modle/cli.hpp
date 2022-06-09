@@ -38,6 +38,7 @@ class Cli {
   [[nodiscard]] std::string to_json() const;
 
   [[nodiscard]] bool config_file_parsed() const;
+  void log_warnings() const;
 
  private:
   int _argc;
@@ -47,6 +48,7 @@ class Cli {
   CLI::App _cli{};
   subcommand _subcommand{subcommand::help};
   absl::flat_hash_set<CLI::Option*> _options{};
+  mutable std::vector<std::string> _warnings{};
 
   void make_cli();
   void make_simulation_subcommand();

@@ -134,8 +134,9 @@ void Simulation::run_simulate() {
       const auto nlefs = this->compute_num_lefs(chrom.simulated_size());
 
       const auto npixels = chrom.npixels(this->diagonal_width, this->bin_size);
-      const auto tot_target_contacts = this->compute_tot_target_contacts(npixels);
-      const auto target_epochs = this->compute_tot_target_epochs();
+      const auto tot_target_contacts = static_cast<usize>(
+          std::round(static_cast<double>(npixels) * this->target_contact_density));
+      const auto target_epochs = this->compute_tot_target_epochs(nlefs, npixels);
 
       const auto target_contacts_per_cell =
           (tot_target_contacts + this->num_cells - 1) / this->num_cells;
@@ -238,27 +239,7 @@ void Simulation::simulate_worker(const u64 tid,
         local_state.reset_buffers();   // Clear all buffers
 
         if (task.cell_id == 0) {
-          // Print a status update when we are processing cell #0 for a given chromosome
-          const auto tot_target_epochs = [&]() {
-            if (this->target_contact_density < 0.0) {
-              return this->compute_tot_target_epochs();
-            }
-
-            const auto tot_target_contacts =
-                this->compute_tot_target_contacts(task.chrom->npixels());
-            const auto new_contacts_per_epoch =
-                static_cast<double>(task.num_lefs) * this->lef_fraction_contact_sampling *
-                static_cast<double>(this->number_of_tad_contacts_per_sampling_event +
-                                    this->number_of_loop_contacts_per_sampling_event);
-            return std::max(usize(1), static_cast<usize>(static_cast<double>(tot_target_contacts) /
-                                                         new_contacts_per_epoch));
-          }();
-          spdlog::info(
-              FMT_STRING(
-                  "Begin processing \"{}\": simulating ~{} epochs across {} cells using {} LEFs "
-                  "(~{} epochs per cell)..."),
-              task.chrom->name(), tot_target_epochs, this->num_cells, task.num_lefs,
-              (tot_target_epochs + this->num_cells - 1) / this->num_cells);
+          this->print_status_update(task);
         }
 
         // When simulating using the target contact density as stopping criterion across a large

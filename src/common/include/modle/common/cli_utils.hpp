@@ -111,9 +111,10 @@ struct AsGenomicDistanceTransformer : public CLI::CheckedTransformer {
   inline AsGenomicDistanceTransformer();
 };
 
-inline const auto IsFinite = IsFiniteValidator();
+inline const auto AsGenomicDistance = AsGenomicDistanceTransformer();  // NOLINT(cert-err58-cpp)
+inline const auto IsFinite = IsFiniteValidator();                      // NOLINT(cert-err58-cpp)
+// NOLINTNEXTLINE(cert-err58-cpp)
 inline const auto TrimTrailingZerosFromDecimalDigit = TrimTrailingZerosFromDecimalDigitValidator();
-inline const auto AsGenomicDistance = AsGenomicDistanceTransformer();
 
 }  // namespace cli
 

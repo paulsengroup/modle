@@ -39,6 +39,7 @@
 #include "modle/config/version.hpp"            // for str_long
 #include "modle/simulation.hpp"                // for Simulation
 
+// NOLINTNEXTLINE(cppcoreguidelines-avoid-non-const-global-variables)
 static std::atomic<bool> logger_ready{false};
 
 void setup_logger_console(const bool quiet) {
@@ -138,6 +139,8 @@ std::tuple<int, modle::Cli::subcommand, modle::Config> parse_cli_and_setup_logge
         cli->write_config_file();
       }
     }
+
+    cli->log_warnings();
 
     return std::make_tuple(0, subcmd, config);
     // NOTE: GCC7 crashes if using modle::Config{} instead of modle::Config() in the catch blocks

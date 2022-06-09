@@ -322,13 +322,17 @@ static std::vector<CLI::App*> add_common_options(CLI::App& subcommand, modle::Co
       ->capture_default_str();
 
   cgen.add_option(
-      "--lef-fraction-for-contact-sampling",
-      c.lef_fraction_contact_sampling,
-      "Fraction of LEFs to use for contact sampling.\n"
-      "The actual number of LEFs to use for contact sampling in a given epoch is drawn from a\n"
-      "Poisson distribution with lambda=lf*|lefs|, where --lef-fraction-for-contact-sampling=lf\n"
-      "and |lefs| is equal to total number of LEFs in the current simulation instance.")
-      ->check(CLI::Range(0.0, 1.0))
+      "--contact-sampling-interval",
+      c.contact_sampling_interval,
+      "Average number of base-pairs extruded by one LEF between two subsequent sampling events\n"
+      "(assuming no collision have occurred).\n"
+      "Specifying shorter intervals will increase the frequency of sampling frequency, producing more\n"
+      "contacts when --stopping-criterion=simulation-epochs or reducing the number of epochs simulated\n"
+      "in case --stopping-criterion=contact-density.\n"
+      "Using sampling intervals that are significantly smaller than the average LEF processivity is usually\n"
+      "not recommended, as will cause MoDLE to sample many contacts from a single loop.")
+      ->check(CLI::PositiveNumber)
+      ->transform(utils::cli::TrimTrailingZerosFromDecimalDigit | utils::cli::AsGenomicDistance)
       ->capture_default_str();
 
   cgen.add_option(
@@ -355,19 +359,15 @@ static std::vector<CLI::App*> add_common_options(CLI::App& subcommand, modle::Co
       ->capture_default_str();
 
   cgen_adv.add_option(
-      "--num-of-tad-contacts-per-sampling-event",
-      c.number_of_tad_contacts_per_sampling_event,
-      "Number of TAD contacts to sample each sampling event.\n"
-      "Setting --num-of-tad-contacts-per-sampling-event=0 will yield a contact matrix where\n"
-      "contacts are concentrated on stripes and dots.")
-      ->capture_default_str();
-
-  cgen_adv.add_option(
-      "--num-of-loop-contacts-per-sampling-event",
-      c.number_of_loop_contacts_per_sampling_event,
-      "Number of LEF-mediated contacts to sample each sampling event.\n"
-      "Setting --num-of-loop-contacts-per-sampling-event=0 will yield a contact matrix without\n"
-      "stripes and dots.")
+      "--tad-to-loop-contact-ratio",
+      c.tad_to_loop_contact_ratio,
+      "Ratio between the number of TAD and loop contacts.\n"
+      "Loop contacts are sampled using the position of the extrusion units of a LEF.\n"
+      "This type of contact visually correspond to stripes and dots in the output matrix.\n"
+      "TAD contacts are sampled from the body of a loop and visually correspond to TADs.\n"
+      "Use \"0\" to disable sampling of TAD contacts.\n"
+      "Use \"inf\" to disable sampling of loop contacts.")
+      ->check(CLI::NonNegativeNumber)
       ->capture_default_str();
 
   cgen_adv.add_option(
@@ -863,53 +863,44 @@ void Cli::validate_args() const {
       errors.emplace_back(e.what());
     }
   }
+  const auto& cgen_adv =
+      subcmd->get_option_group("Advanced")->get_option_group("Contact generation");
 
+  using CS = Config::ContactSamplingStrategy;
   // NOLINTNEXTLINE(readability-implicit-bool-conversion)
-  if (!(c.contact_sampling_strategy & Config::ContactSamplingStrategy::noisify)) {
-    const auto& group =
-        subcmd->get_option_group("Advanced")->get_option_group("Contact generation");
+  if (!(c.contact_sampling_strategy & CS::noisify)) {
     for (const std::string label : {"--mu", "--sigma", "--xi"}) {
-      if (!group->get_option(label)->empty()) {
-        errors.emplace_back(fmt::format(FMT_STRING("Option {} requires the strategy passed to "
-                                                   "--contact-sampling-strategy to be one of "
-                                                   "the *-with-noise strategies."),
-                                        label));
+      if (!cgen_adv->get_option(label)->empty()) {
+        this->_warnings.emplace_back(fmt::format(
+            FMT_STRING("Option {} has no effect. Reason: {} requires the strategy passed to "
+                       "--contact-sampling-strategy to be one of the *-with-noise strategies."),
+            label, label));
       }
     }
   }
 
-  // NOLINTNEXTLINE(readability-implicit-bool-conversion)
-  if (!(c.contact_sampling_strategy & Config::ContactSamplingStrategy::tad) &&
-      !subcmd->get_option_group("Advanced")
-           ->get_option_group("Contact generation")
-           ->get_option("--num-of-tad-contacts-per-sampling-event")
-           ->empty()) {
-    errors.emplace_back(
-        "--num-of-tad-contacts-per-sampling-event is not allowed when the sampling strategy "
-        "passed through --contact-sampling-strategy does not involve sampling contacts from TADs.");
-  }
+  if (!cgen_adv->get_option("--tad-to-loop-contact-ratio")->empty()) {
+    const bool sample_loop_contacts = c.contact_sampling_strategy & CS::loop;
+    const bool sample_tad_contacts = c.contact_sampling_strategy & CS::tad;
+    assert(sample_loop_contacts || sample_tad_contacts);
 
-  // NOLINTNEXTLINE(readability-implicit-bool-conversion)
-  if (!(c.contact_sampling_strategy & Config::ContactSamplingStrategy::loop) &&
-      !subcmd->get_option_group("Advanced")
-           ->get_option_group("Contact generation")
-           ->get_option("--num-of-loop-contacts-per-sampling-event")
-           ->empty()) {
-    errors.emplace_back(
-        "--num-of-loop-contacts-per-sampling-event is not allowed when the sampling strategy "
-        "passed through --contact-sampling-strategy does not involve sampling contacts from "
-        "loops.");
-  }
-
-  if (c.number_of_tad_contacts_per_sampling_event + c.number_of_loop_contacts_per_sampling_event ==
-      0) {
-    // clang-format off
-    assert(subcmd->get_option_group("Advanced")->get_option_group("Contact generation")->get_option("--num-of-tad-contacts-per-sampling-event"));
-    assert(subcmd->get_option_group("Advanced")->get_option_group("Contact generation")->get_option("--num-of-loop-contacts-per-sampling-event"));
-    // clang-format on
-    errors.emplace_back(
-        "--num-of-tad-contacts-per-sampling-event and --num-of-loop-contacts-per-sampling-event "
-        "cannot both be set to zero.");
+    if (sample_loop_contacts && !sample_tad_contacts && c.tad_to_loop_contact_ratio != 0) {
+      this->_warnings.emplace_back(
+          fmt::format(FMT_STRING("Option --tad-to-loop-contact-ratio={} has no effect. Reason: "
+                                 "--tad-to-loop-contact-ratio is implicitly set to 0 when "
+                                 "--contact-sampling-strategy={}"),
+                      c.tad_to_loop_contact_ratio,
+                      Cli::contact_sampling_strategy_map.at(c.contact_sampling_strategy)));
+    }
+    if (!sample_loop_contacts && sample_tad_contacts &&
+        c.tad_to_loop_contact_ratio != std::numeric_limits<double>::infinity()) {
+      this->_warnings.emplace_back(
+          fmt::format(FMT_STRING("Option --tad-to-loop-contact-ratio={} has no effect. Reason: "
+                                 "--tad-to-loop-contact-ratio is implicitly set to inf when "
+                                 "--contact-sampling-strategy={}"),
+                      c.tad_to_loop_contact_ratio,
+                      Cli::contact_sampling_strategy_map.at(c.contact_sampling_strategy)));
+    }
   }
 
   if (c.stopping_criterion == Config::StoppingCriterion::simulation_epochs &&
@@ -980,16 +971,18 @@ void Cli::transform_args() {
 
   // Compute mean and std for rev and fwd extrusion speed
   const auto [rev_speed_parsed, fwd_speed_parsed] = [this]() {
-    auto* grp = this->_cli.get_subcommand("simulate")->get_option_group("Advanced")->get_option_group("Extrusion Factors");
+    auto* grp = this->_cli.get_subcommand("simulate")
+                    ->get_option_group("Advanced")
+                    ->get_option_group("Extrusion Factors");
 
     return std::make_pair(!grp->get_option("--rev-extrusion-speed")->empty(),
                           !grp->get_option("--fwd-extrusion-speed")->empty());
   }();
   if (auto& speed = c.rev_extrusion_speed; !rev_speed_parsed) {
-    speed = (c.bin_size + 1) / 2;
+    speed = c.bin_size * 8 / 10;  // 0.8 * c.bin_size
   }
   if (auto& speed = c.fwd_extrusion_speed; !fwd_speed_parsed) {
-    speed = (c.bin_size + 1) / 2;
+    speed = c.bin_size * 8 / 10;
   }
 
   if (auto& stddev = c.fwd_extrusion_speed_std; stddev > 0 && stddev < 1) {
@@ -1023,6 +1016,17 @@ void Cli::transform_args() {
     c.extrusion_barrier_occupancy = occ;
   }
 
+  using CS = Config::ContactSamplingStrategy;
+  const auto sample_loop_contacts = c.contact_sampling_strategy & CS::loop;
+  const auto sample_tad_contacts = c.contact_sampling_strategy & CS::tad;
+  assert(sample_loop_contacts || sample_tad_contacts);
+  if (sample_loop_contacts && !sample_tad_contacts) {
+    c.tad_to_loop_contact_ratio = 0;
+  }
+  if (!sample_loop_contacts && sample_tad_contacts) {
+    c.tad_to_loop_contact_ratio = std::numeric_limits<double>::infinity();
+  }
+
   const auto* subcmd = this->get_subcommand_ptr();
 
   if (!subcmd->get_option_group("Extrusion Barriers and Factors")
@@ -1050,6 +1054,12 @@ void Cli::write_config_file(bool write_default_args) const {
 }
 
 bool Cli::config_file_parsed() const { return !this->_cli.get_config_ptr()->empty(); }
+
+void Cli::log_warnings() const {
+  for (const auto& warning : this->_warnings) {
+    spdlog::warn(FMT_STRING("{}"), warning);
+  }
+}
 
 std::string Cli::to_json() const {
   std::string buff;

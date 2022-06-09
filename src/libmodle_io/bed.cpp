@@ -116,7 +116,7 @@ void BED::validate_record(const std::vector<std::string_view>& toks, const Diale
     throw std::runtime_error(fmt::format(
         FMT_STRING(
             "Invalid BED record detected: Expected BED record with at least {} fields, got {}"),
-        standard, ntoks));
+        static_cast<std::underlying_type_t<Dialect>>(standard), ntoks));
   }
 }
 
@@ -474,7 +474,8 @@ std::vector<BED> Parser::parse_n(usize num_records) {
     if (this->_dialect != BED::none && record.num_fields() < this->_dialect) {
       throw std::runtime_error(fmt::format(
           FMT_STRING("Expected BED record with at least {} fields, got {} at line {} of file {}"),
-          this->_dialect, record.size(), this->_num_lines_read, this->_reader.path()));
+          static_cast<std::underlying_type_t<BED::Dialect>>(this->_dialect), record.size(),
+          this->_num_lines_read, this->_reader.path()));
     }
 
     if (auto [node, new_insertion] = records.try_emplace(
@@ -513,7 +514,8 @@ BED_tree<> Parser::parse_n_in_interval_tree(usize num_records) {
     if (this->_dialect != BED::none && record.num_fields() < this->_dialect) {
       throw std::runtime_error(fmt::format(
           FMT_STRING("Expected BED record with at least {} fields, got {} at line {} of file {}"),
-          this->_dialect, record.size(), this->_num_lines_read, this->_reader.path()));
+          static_cast<std::underlying_type_t<BED::Dialect>>(this->_dialect), record.size(),
+          this->_num_lines_read, this->_reader.path()));
     }
 
     if (auto [node, new_insertion] = records.try_emplace(record, this->_num_lines_read);
