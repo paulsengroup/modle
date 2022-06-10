@@ -86,8 +86,8 @@ struct Config {
   // Extrusion barrier params
   double extrusion_barrier_occupancy{0.825};
   bool override_extrusion_barrier_occupancy{false};
-  double ctcf_occupied_self_prob{0.0};
-  double ctcf_not_occupied_self_prob{0.70};
+  double barrier_occupied_stp{0.0};
+  double barrier_not_occupied_stp{0.70};
 
   // Collision/stall params
   double hard_stall_lef_stability_multiplier{5.0};
@@ -101,6 +101,7 @@ struct Config {
   usize num_cells{512};
   usize nthreads{std::thread::hardware_concurrency()};
   u64 seed{0};
+  bp_t probability_normalization_factor{rev_extrusion_speed + fwd_extrusion_speed};
 
   // MoDLE perturbate
   bp_t deletion_size{10'000};
@@ -118,9 +119,11 @@ struct Config {
   bp_t rev_extrusion_speed_burnin{fwd_extrusion_speed_burnin};
 
   static constexpr std::string_view model_internal_state_log_header =
-      "task_id\tepoch\tcell_id\tchrom\tburnin\tbarrier_occupancy\tnum_active_lefs\tnum_stalls_"
-      "rev\tnum_stalls_fwd\tnum_stalls_both\tnum_lef_bar_collisions\tnum_primary_lef_lef_"
-      "collisions\tnum_secondary_lef_lef_collisions\tavg_loop_size\n";
+      "task_id\tepoch\tcell_id\t"
+      "chrom\tburnin\tbarrier_occupancy\t"
+      "num_active_lefs\tnum_stalls_rev\tnum_stalls_fwd\t"
+      "num_stalls_both\tnum_lef_bar_collisions\tnum_primary_lef_lef_collisions\t"
+      "num_secondary_lef_lef_collisions\tavg_loop_size\n";
 
   absl::Span<char*> args;
   std::string argv_json{};
