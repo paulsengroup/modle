@@ -63,4 +63,31 @@ TEST_CASE("Extrusion barriers - sort", "[barriers][simulation][short]") {
   CHECK(std::is_sorted(barriers.pos().begin(), barriers.pos().end()));
 }
 
+// NOLINTNEXTLINE(readability-function-cognitive-complexity)
+TEST_CASE("Extrusion barriers - compute_occupancy", "[barriers][simulation][short]") {
+  auto stp_active = 1.0;
+  auto stp_inactive = 0.0;
+  CHECK(ExtrusionBarrier::compute_occupancy_from_stp(stp_active, stp_inactive) == 1.0);
+
+  stp_active = 0.0;
+  stp_inactive = 1.0;
+  CHECK(ExtrusionBarrier::compute_occupancy_from_stp(stp_active, stp_inactive) == 0.0);
+
+  stp_active = 0.7;
+  stp_inactive = 0.7;
+  CHECK(ExtrusionBarrier::compute_occupancy_from_stp(stp_active, stp_inactive) == 0.5);
+
+  stp_active = 0.7;
+  stp_inactive = 0.5;
+  CHECK(ExtrusionBarrier::compute_occupancy_from_stp(stp_active, stp_inactive) == Approx(0.625));
+
+  stp_active = 1.0;
+  stp_inactive = 0.5;
+  CHECK(ExtrusionBarrier::compute_occupancy_from_stp(stp_active, stp_inactive) == 1.0);
+
+  stp_active = 0.7;
+  stp_inactive = 1.0;
+  CHECK(ExtrusionBarrier::compute_occupancy_from_stp(stp_active, stp_inactive) == 0.0);
+}
+
 }  // namespace modle::test::libmodle
