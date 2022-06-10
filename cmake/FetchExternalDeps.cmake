@@ -32,36 +32,18 @@ FetchContent_Declare(
 )
 # cmake-format: on
 
-FetchContent_GetProperties(bitflags)
-FetchContent_GetProperties(libBigWig)
-FetchContent_GetProperties(mscharconv)
-FetchContent_GetProperties(thread-pool)
-FetchContent_GetProperties(Xoshiro)
-
-if(NOT ${bitflags}_POPULATED)
-  FetchContent_Populate(bitflags)
-endif()
-add_subdirectory(${bitflags_SOURCE_DIR} ${bitflags_BINARY_DIR} EXCLUDE_FROM_ALL)
-
 set(WITH_CURL
     OFF
     CACHE INTERNAL "")
-if(NOT ${libbigwig}_POPULATED)
-  FetchContent_Populate(libBigWig)
-endif()
-add_subdirectory(${libbigwig_SOURCE_DIR} ${libbigwig_BINARY_DIR} EXCLUDE_FROM_ALL)
+FetchContent_MakeAvailable(
+  bitflags
+  libBigWig
+  mscharconv
+  thread-pool)
 
-if(NOT ${mscharconv}_POPULATED)
-  FetchContent_Populate(mscharconv)
-endif()
-add_subdirectory(${mscharconv_SOURCE_DIR} ${mscharconv_BINARY_DIR})
-
-if(NOT ${thread-pool}_POPULATED)
-  FetchContent_Populate(thread-pool)
-endif()
-add_subdirectory(${thread-pool_SOURCE_DIR} ${thread-pool_BINARY_DIR})
-
-if(NOT ${xoshiro-cpp}_POPULATED)
-  FetchContent_Populate(Xoshiro-cpp)
-endif()
-add_subdirectory(${xoshiro-cpp_SOURCE_DIR} ${xoshiro-cpp_BINARY_DIR})
+FetchContent_MakeAvailable(
+  bitflags
+  libBigWig
+  mscharconv
+  thread-pool
+  Xoshiro-cpp)
