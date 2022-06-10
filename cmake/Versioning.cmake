@@ -1,3 +1,7 @@
+# Copyright (C) 2022 Roberto Rossini <roberros@uio.no>
+#
+# SPDX-License-Identifier: MIT
+
 set(MODLE_PROJECT_VERSION_MAJOR 1)
 set(MODLE_PROJECT_VERSION_MINOR 0)
 set(MODLE_PROJECT_VERSION_PATCH 0)
