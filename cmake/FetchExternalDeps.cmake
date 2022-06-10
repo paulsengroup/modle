@@ -35,11 +35,6 @@ FetchContent_Declare(
 set(WITH_CURL
     OFF
     CACHE INTERNAL "")
-FetchContent_MakeAvailable(
-  bitflags
-  libBigWig
-  mscharconv
-  thread-pool)
 
 FetchContent_MakeAvailable(
   bitflags
