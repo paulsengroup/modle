@@ -27,7 +27,7 @@
 
 namespace modle {
 
-class ExtrusionBarrier;
+struct ExtrusionBarrier;
 
 class Chromosome {
   using contact_matrix_t = ContactMatrix<contacts_t>;
@@ -60,8 +60,8 @@ class Chromosome {
   [[nodiscard]] bool operator==(std::string_view other_name) const noexcept;
   [[nodiscard]] bool operator<(const Chromosome& other) const noexcept(utils::ndebug_defined());
 
-  void add_extrusion_barrier(const bed::BED& record, double ctcf_prob_occ_to_occ,
-                             double ctcf_prob_nocc_to_nocc);
+  void add_extrusion_barrier(const bed::BED& record, double default_barrier_stp_active,
+                             double default_barrier_stp_inactive);
 
   template <typename Iter,
             typename = std::enable_if_t<std::is_same_v<

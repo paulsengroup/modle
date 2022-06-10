@@ -24,18 +24,11 @@ namespace modle::test::libmodle {
 
 // NOLINTNEXTLINE(readability-function-cognitive-complexity)
 TEST_CASE("Simulation 001", "[simulation][short]") {
-  modle::Config c;
-  c.rev_extrusion_speed = 75;
-  c.rev_extrusion_speed_std = 0;
-  c.fwd_extrusion_speed = 75;
-  c.fwd_extrusion_speed_std = 0;
-  c.probability_of_extrusion_unit_bypass = 0;
-  c.lef_bar_major_collision_pblock = 1;
-  c.lef_bar_minor_collision_pblock = 0;
+  const auto c = init_config(75, 75);
   const usize nlefs = 7;
   const usize nbarriers = 5;
   const Chromosome chrom{0, "chr1", 0, 1000, 1000};
-  auto rand_eng = random::PRNG(10556020843759504871ULL);
+  auto rand_eng = DEFAULT_PRNG;
 
   // clang-format off
   std::array<Lef, nlefs> lefs{
@@ -48,14 +41,13 @@ TEST_CASE("Simulation 001", "[simulation][short]") {
       construct_lef(650, 650, 6)
   };
 
-  const std::array<ExtrusionBarrier, nbarriers> barriers{ExtrusionBarrier{100, 1.0, 0.0, '-'},
-                                                         ExtrusionBarrier{105, 1.0, 0.0, '+'},
-                                                         ExtrusionBarrier{400, 1.0, 0.0, '-'},
-                                                         ExtrusionBarrier{600, 1.0, 0.0, '-'},
-                                                         ExtrusionBarrier{850, 1.0, 0.0, '+'}};
-  // clang-format off
-  boost::dynamic_bitset<> barrier_mask;
-  barrier_mask.resize(nbarriers, static_cast<bool>(CTCF::State::OCCUPIED));
+  const auto barriers = construct_barriers(ExtrusionBarrier{100, 1.0, 0.0, '-'},
+                                           ExtrusionBarrier{105, 1.0, 0.0, '+'},
+                                           ExtrusionBarrier{400, 1.0, 0.0, '-'},
+                                           ExtrusionBarrier{600, 1.0, 0.0, '-'},
+                                           ExtrusionBarrier{850, 1.0, 0.0, '+'});
+  // clang-format on
+  REQUIRE(barriers.size() == nbarriers);
 
   const std::array<usize, nlefs> rev_ranks{0, 1, 2, 3, 4, 5, 6};
   const std::array<usize, nlefs> fwd_ranks{0, 1, 2, 3, 4, 6, 5};
@@ -63,6 +55,7 @@ TEST_CASE("Simulation 001", "[simulation][short]") {
   std::array<bp_t, nlefs> rev_moves{25, 75, 75, 75, 75, 75, 75};
   std::array<bp_t, nlefs> fwd_moves{75, 75, 75, 75, 75, 75, 75};
 
+  // clang-format off
   const std::array<CollisionT, nlefs> rev_collisions_expected{CollisionT{5, CHROM_BOUNDARY},
                                                               CollisionT{1, LEF_BAR},
                                                               CollisionT{1, LEF_LEF_PRIMARY},
@@ -81,7 +74,7 @@ TEST_CASE("Simulation 001", "[simulation][short]") {
   std::array<CollisionT, nlefs> fwd_collisions;
 
   const std::array<bp_t, nlefs> rev_moves_expected{25, 44, 25, 54, 25, 75, 75};
-  const std::array<bp_t, nlefs> fwd_moves_expected{69, 24, 48, 0, 75, 75, 75};
+  const std::array<bp_t, nlefs> fwd_moves_expected{69, 24, 48,  0, 75, 75, 75};
   // clang-format on
 
   require_that_lefs_are_sorted_by_idx(lefs, rev_ranks, fwd_ranks);
@@ -91,7 +84,7 @@ TEST_CASE("Simulation 001", "[simulation][short]") {
 
   modle::Simulation{c, false}.test_process_collisions(
       chrom, absl::MakeSpan(lefs), rev_ranks, fwd_ranks, absl::MakeSpan(rev_moves),
-      absl::MakeSpan(fwd_moves), barriers, barrier_mask, absl::MakeSpan(rev_collisions),
+      absl::MakeSpan(fwd_moves), barriers, absl::MakeSpan(rev_collisions),
       absl::MakeSpan(fwd_collisions), rand_eng);
 
   check_simulation_result(lefs, rev_moves, fwd_moves, rev_moves_expected, fwd_moves_expected,
@@ -101,18 +94,11 @@ TEST_CASE("Simulation 001", "[simulation][short]") {
 
 // NOLINTNEXTLINE(readability-function-cognitive-complexity)
 TEST_CASE("Simulation 002", "[simulation][short]") {
-  modle::Config c;
-  c.rev_extrusion_speed = 75;
-  c.rev_extrusion_speed_std = 0;
-  c.fwd_extrusion_speed = 75;
-  c.fwd_extrusion_speed_std = 0;
-  c.probability_of_extrusion_unit_bypass = 0;
-  c.lef_bar_major_collision_pblock = 1;
-  c.lef_bar_minor_collision_pblock = 0;
+  const auto c = init_config(75, 75);
   const usize nlefs = 7;
   const usize nbarriers = 5;
   const Chromosome chrom{0, "chr1", 0, 1000, 1000};
-  auto rand_eng = random::PRNG(9668495374385482848ULL);
+  auto rand_eng = DEFAULT_PRNG;
 
   // clang-format off
   std::array<Lef, nlefs> lefs{
@@ -125,14 +111,13 @@ TEST_CASE("Simulation 002", "[simulation][short]") {
       construct_lef(970, 975, 6)
   };
 
-  const std::array<ExtrusionBarrier, nbarriers> barriers{ExtrusionBarrier{150, 1.0, 0.0, '-'},
-                                                         ExtrusionBarrier{400, 1.0, 0.0, '+'},
-                                                         ExtrusionBarrier{600, 1.0, 0.0, '+'},
-                                                         ExtrusionBarrier{895, 1.0, 0.0, '-'},
-                                                         ExtrusionBarrier{900, 1.0, 0.0, '+'}};
-  // clang-format off
-  boost::dynamic_bitset<> barrier_mask;
-  barrier_mask.resize(nbarriers, static_cast<bool>(CTCF::State::OCCUPIED));
+  const auto barriers = construct_barriers(ExtrusionBarrier{150, 1.0, 0.0, '-'},
+                                           ExtrusionBarrier{400, 1.0, 0.0, '+'},
+                                           ExtrusionBarrier{600, 1.0, 0.0, '+'},
+                                           ExtrusionBarrier{895, 1.0, 0.0, '-'},
+                                           ExtrusionBarrier{900, 1.0, 0.0, '+'});
+  // clang-format on
+  REQUIRE(barriers.size() == nbarriers);
 
   const std::array<usize, nlefs> rev_ranks{0, 1, 2, 3, 4, 5, 6};
   const std::array<usize, nlefs> fwd_ranks{1, 0, 2, 3, 4, 5, 6};
@@ -157,7 +142,8 @@ TEST_CASE("Simulation 002", "[simulation][short]") {
   std::array<CollisionT, nlefs> rev_collisions;
   std::array<CollisionT, nlefs> fwd_collisions;
 
-  const std::array<bp_t, nlefs> rev_moves_expected{75, 75, 75, 0, 48, 25, 69};
+  // clang-format off
+  const std::array<bp_t, nlefs> rev_moves_expected{75, 75, 75,  0, 48, 25, 69};
   const std::array<bp_t, nlefs> fwd_moves_expected{75, 75, 25, 53, 24, 44, 24};
   // clang-format on
 
@@ -168,7 +154,7 @@ TEST_CASE("Simulation 002", "[simulation][short]") {
 
   modle::Simulation{c, false}.test_process_collisions(
       chrom, absl::MakeSpan(lefs), rev_ranks, fwd_ranks, absl::MakeSpan(rev_moves),
-      absl::MakeSpan(fwd_moves), barriers, barrier_mask, absl::MakeSpan(rev_collisions),
+      absl::MakeSpan(fwd_moves), barriers, absl::MakeSpan(rev_collisions),
       absl::MakeSpan(fwd_collisions), rand_eng);
 
   check_simulation_result(lefs, rev_moves, fwd_moves, rev_moves_expected, fwd_moves_expected,
@@ -178,18 +164,13 @@ TEST_CASE("Simulation 002", "[simulation][short]") {
 
 // NOLINTNEXTLINE(readability-function-cognitive-complexity)
 TEST_CASE("Simulation 003 - Soft collisions on", "[simulation][short]") {
-  modle::Config c;
-  c.rev_extrusion_speed = 75;
-  c.rev_extrusion_speed_std = 0;
-  c.fwd_extrusion_speed = 75;
-  c.fwd_extrusion_speed_std = 0;
-  c.probability_of_extrusion_unit_bypass = 0;
+  auto c = init_config(75, 75);
   c.lef_bar_major_collision_pblock = 1;
   c.lef_bar_minor_collision_pblock = 1;
   const usize nlefs = 7;
   const usize nbarriers = 5;
   const Chromosome chrom{0, "chr1", 0, 1000, 1000};
-  auto rand_eng = random::PRNG(919341715542527390ULL);
+  auto rand_eng = DEFAULT_PRNG;
 
   // clang-format off
   std::array<Lef, nlefs> lefs{
@@ -202,14 +183,13 @@ TEST_CASE("Simulation 003 - Soft collisions on", "[simulation][short]") {
       construct_lef(970, 975, 6)
   };
 
-  const std::array<ExtrusionBarrier, nbarriers> barriers{ExtrusionBarrier{150, 1.0, 0.0, '-'},
-                                                         ExtrusionBarrier{400, 1.0, 0.0, '+'},
-                                                         ExtrusionBarrier{600, 1.0, 0.0, '+'},
-                                                         ExtrusionBarrier{895, 1.0, 0.0, '-'},
-                                                         ExtrusionBarrier{900, 1.0, 0.0, '+'}};
-  // clang-format off
-  boost::dynamic_bitset<> barrier_mask;
-  barrier_mask.resize(nbarriers, static_cast<bool>(CTCF::State::OCCUPIED));
+  const auto barriers = construct_barriers(ExtrusionBarrier{150, 1.0, 0.0, '-'},
+                                           ExtrusionBarrier{400, 1.0, 0.0, '+'},
+                                           ExtrusionBarrier{600, 1.0, 0.0, '+'},
+                                           ExtrusionBarrier{895, 1.0, 0.0, '-'},
+                                           ExtrusionBarrier{900, 1.0, 0.0, '+'});
+  // clang-format on
+  REQUIRE(barriers.size() == nbarriers);
 
   const std::array<usize, nlefs> rev_ranks{0, 1, 2, 3, 4, 5, 6};
   const std::array<usize, nlefs> fwd_ranks{1, 0, 2, 3, 4, 5, 6};
@@ -217,6 +197,7 @@ TEST_CASE("Simulation 003 - Soft collisions on", "[simulation][short]") {
   std::array<bp_t, nlefs> rev_moves{75, 75, 75, 75, 75, 75, 75};
   std::array<bp_t, nlefs> fwd_moves{75, 75, 75, 75, 75, 75, 24};
 
+  // clang-format off
   const std::array<CollisionT, nlefs> rev_collisions_expected{CollisionT{0, LEF_BAR},
                                                               CollisionT{},
                                                               CollisionT{},
@@ -234,7 +215,7 @@ TEST_CASE("Simulation 003 - Soft collisions on", "[simulation][short]") {
   std::array<CollisionT, nlefs> rev_collisions;
   std::array<CollisionT, nlefs> fwd_collisions;
 
-  const std::array<bp_t, nlefs> rev_moves_expected{49, 75, 75, 0, 48, 25, 69};
+  const std::array<bp_t, nlefs> rev_moves_expected{49, 75, 75,  0, 48, 25, 69};
   const std::array<bp_t, nlefs> fwd_moves_expected{24, 48, 24, 53, 24, 44, 24};
   // clang-format on
 
@@ -245,7 +226,7 @@ TEST_CASE("Simulation 003 - Soft collisions on", "[simulation][short]") {
 
   modle::Simulation{c, false}.test_process_collisions(
       chrom, absl::MakeSpan(lefs), rev_ranks, fwd_ranks, absl::MakeSpan(rev_moves),
-      absl::MakeSpan(fwd_moves), barriers, barrier_mask, absl::MakeSpan(rev_collisions),
+      absl::MakeSpan(fwd_moves), barriers, absl::MakeSpan(rev_collisions),
       absl::MakeSpan(fwd_collisions), rand_eng);
 
   check_simulation_result(lefs, rev_moves, fwd_moves, rev_moves_expected, fwd_moves_expected,
@@ -255,18 +236,11 @@ TEST_CASE("Simulation 003 - Soft collisions on", "[simulation][short]") {
 
 // NOLINTNEXTLINE(readability-function-cognitive-complexity)
 TEST_CASE("Simulation 004 - Inactive barriers", "[simulation][short]") {
-  modle::Config c;
-  c.rev_extrusion_speed = 75;
-  c.rev_extrusion_speed_std = 0;
-  c.fwd_extrusion_speed = 75;
-  c.fwd_extrusion_speed_std = 0;
-  c.probability_of_extrusion_unit_bypass = 0;
-  c.lef_bar_major_collision_pblock = 1;
-  c.lef_bar_minor_collision_pblock = 0;
+  const auto c = init_config(75, 75);
   const usize nlefs = 7;
   const usize nbarriers = 5;
   const Chromosome chrom{0, "chr1", 0, 1000, 1000};
-  auto rand_eng = random::PRNG(138440880292496584ULL);
+  auto rand_eng = DEFAULT_PRNG;
 
   // clang-format off
   std::array<Lef, nlefs> lefs{
@@ -279,14 +253,14 @@ TEST_CASE("Simulation 004 - Inactive barriers", "[simulation][short]") {
       construct_lef(970, 975, 6)
   };
 
-  const std::array<ExtrusionBarrier, nbarriers> barriers{ExtrusionBarrier{150, 1.0, 0.0, '-'},
-                                                         ExtrusionBarrier{400, 1.0, 0.0, '+'},
-                                                         ExtrusionBarrier{600, 1.0, 0.0, '+'},
-                                                         ExtrusionBarrier{895, 1.0, 0.0, '-'},
-                                                         ExtrusionBarrier{900, 1.0, 0.0, '+'}};
-  // clang-format off
-  boost::dynamic_bitset<> barrier_mask;
-  barrier_mask.resize(nbarriers, static_cast<bool>(CTCF::State::NOT_OCCUPIED));
+  constexpr auto s =ExtrusionBarriers::State::INACTIVE;
+  const auto barriers = construct_barriers<s>(ExtrusionBarrier{150, 1.0, 0.0, '-'},
+                                              ExtrusionBarrier{400, 1.0, 0.0, '+'},
+                                              ExtrusionBarrier{600, 1.0, 0.0, '+'},
+                                              ExtrusionBarrier{895, 1.0, 0.0, '-'},
+                                              ExtrusionBarrier{900, 1.0, 0.0, '+'});
+  // clang-format on
+  REQUIRE(barriers.size() == nbarriers);
 
   const std::array<usize, nlefs> rev_ranks{0, 1, 2, 3, 4, 5, 6};
   const std::array<usize, nlefs> fwd_ranks{1, 0, 2, 3, 4, 5, 6};
@@ -313,7 +287,6 @@ TEST_CASE("Simulation 004 - Inactive barriers", "[simulation][short]") {
 
   const std::array<bp_t, nlefs> rev_moves_expected{75, 75, 75, 13, 61, 25, 60};
   const std::array<bp_t, nlefs> fwd_moves_expected{75, 75, 12, 53, 24, 59, 24};
-  // clang-format on
 
   require_that_lefs_are_sorted_by_idx(lefs, rev_ranks, fwd_ranks);
 
@@ -322,7 +295,7 @@ TEST_CASE("Simulation 004 - Inactive barriers", "[simulation][short]") {
 
   modle::Simulation{c, false}.test_process_collisions(
       chrom, absl::MakeSpan(lefs), rev_ranks, fwd_ranks, absl::MakeSpan(rev_moves),
-      absl::MakeSpan(fwd_moves), barriers, barrier_mask, absl::MakeSpan(rev_collisions),
+      absl::MakeSpan(fwd_moves), barriers, absl::MakeSpan(rev_collisions),
       absl::MakeSpan(fwd_collisions), rand_eng);
 
   check_simulation_result(lefs, rev_moves, fwd_moves, rev_moves_expected, fwd_moves_expected,
@@ -332,18 +305,11 @@ TEST_CASE("Simulation 004 - Inactive barriers", "[simulation][short]") {
 
 // NOLINTNEXTLINE(readability-function-cognitive-complexity)
 TEST_CASE("Simulation 005 - Multiple LEFs located at the same site", "[simulation][short]") {
-  modle::Config c;
-  c.rev_extrusion_speed = 25;
-  c.rev_extrusion_speed_std = 0;
-  c.fwd_extrusion_speed = 25;
-  c.fwd_extrusion_speed_std = 0;
-  c.probability_of_extrusion_unit_bypass = 0;
-  c.lef_bar_major_collision_pblock = 1;
-  c.lef_bar_minor_collision_pblock = 0;
+  const auto c = init_config(25, 25);
   constexpr usize nlefs = 6;
   constexpr usize nbarriers = 1;
   const Chromosome chrom{0, "chr1", 0, 150, 150};
-  auto rand_eng = random::PRNG(9509334554644345044ULL);
+  auto rand_eng = DEFAULT_PRNG;
 
   // clang-format off
   std::array<Lef, nlefs> lefs{
@@ -355,17 +321,15 @@ TEST_CASE("Simulation 005 - Multiple LEFs located at the same site", "[simulatio
       construct_lef(140, 140, 5)
   };
 
-  const std::array<ExtrusionBarrier, nbarriers> barriers{ExtrusionBarrier{100, 1.0, 0.0, '-'}};
-
-  boost::dynamic_bitset<> barrier_mask;
-  barrier_mask.resize(nbarriers, static_cast<bool>(CTCF::State::OCCUPIED));
+  const auto barriers = construct_barriers(ExtrusionBarrier{100, 1.0, 0.0, '-'});
+  REQUIRE(barriers.size() == nbarriers);
 
   const std::array<usize, nlefs> rev_ranks{0, 1, 2, 3, 4, 5};
   const std::array<usize, nlefs> fwd_ranks{0, 1, 2, 3, 4, 5};
 
   std::array<bp_t, nlefs> rev_moves{25, 25, 25, 25, 25, 25};
   std::array<bp_t, nlefs> fwd_moves{25, 25, 25, 24,  8,  9};
-  // clang-format off
+
   const std::array<CollisionT, nlefs> rev_collisions_expected{CollisionT{},
                                                               CollisionT{0, LEF_LEF_PRIMARY},
                                                               CollisionT{1, LEF_LEF_SECONDARY},
@@ -381,8 +345,8 @@ TEST_CASE("Simulation 005 - Multiple LEFs located at the same site", "[simulatio
   std::array<CollisionT, nlefs> rev_collisions;
   std::array<CollisionT, nlefs> fwd_collisions;
 
-  const std::array<bp_t, nlefs> rev_moves_expected{25, 5, 4, 8, 8, 7};
-  const std::array<bp_t, nlefs> fwd_moves_expected{4, 18, 19, 6, 8, 9};
+  const std::array<bp_t, nlefs> rev_moves_expected{25,  5,  4, 8, 8, 7};
+  const std::array<bp_t, nlefs> fwd_moves_expected{ 4, 18, 19, 6, 8, 9};
   // clang-format on
 
   require_that_lefs_are_sorted_by_idx(lefs, rev_ranks, fwd_ranks);
@@ -392,7 +356,7 @@ TEST_CASE("Simulation 005 - Multiple LEFs located at the same site", "[simulatio
 
   modle::Simulation{c, false}.test_process_collisions(
       chrom, absl::MakeSpan(lefs), rev_ranks, fwd_ranks, absl::MakeSpan(rev_moves),
-      absl::MakeSpan(fwd_moves), barriers, barrier_mask, absl::MakeSpan(rev_collisions),
+      absl::MakeSpan(fwd_moves), barriers, absl::MakeSpan(rev_collisions),
       absl::MakeSpan(fwd_collisions), rand_eng);
 
   check_simulation_result(lefs, rev_moves, fwd_moves, rev_moves_expected, fwd_moves_expected,
@@ -402,18 +366,11 @@ TEST_CASE("Simulation 005 - Multiple LEFs located at the same site", "[simulatio
 
 // NOLINTNEXTLINE(readability-function-cognitive-complexity)
 TEST_CASE("Simulation 006 - Few inactive LEFs", "[simulation][short]") {
-  modle::Config c;
-  c.rev_extrusion_speed = 25;
-  c.rev_extrusion_speed_std = 0;
-  c.fwd_extrusion_speed = 25;
-  c.fwd_extrusion_speed_std = 0;
-  c.probability_of_extrusion_unit_bypass = 0;
-  c.lef_bar_major_collision_pblock = 1;
-  c.lef_bar_minor_collision_pblock = 0;
+  const auto c = init_config(25, 25);
   constexpr usize nlefs = 6;
   constexpr usize nbarriers = 1;
   const Chromosome chrom{0, "chr1", 0, 150, 150};
-  auto rand_eng = random::PRNG(8213068426516999476ULL);
+  auto rand_eng = DEFAULT_PRNG;
 
   // clang-format off
   std::array<Lef, nlefs> lefs{
@@ -428,16 +385,14 @@ TEST_CASE("Simulation 006 - Few inactive LEFs", "[simulation][short]") {
   lefs[2].release();
   lefs[5].release();
 
-  const std::array<ExtrusionBarrier, nbarriers> barriers{ExtrusionBarrier{100, 1.0, 0.0, '-'}};
-
-  boost::dynamic_bitset<> barrier_mask;
-  barrier_mask.resize(nbarriers, static_cast<bool>(CTCF::State::OCCUPIED));
+  const auto barriers = construct_barriers(ExtrusionBarrier{100, 1.0, 0.0, '-'});
+  REQUIRE(barriers.size() == nbarriers);
 
   const std::array<usize, nlefs> rev_ranks{0, 1, 3, 4, 2, 5};
   const std::array<usize, nlefs> fwd_ranks{0, 1, 3, 4, 2, 5};
 
-  std::array<bp_t, nlefs> rev_moves{25, 25,  0, 25, 25,  0};
-  std::array<bp_t, nlefs> fwd_moves{25, 25,  0, 24,  9,  0};
+  std::array<bp_t, nlefs> rev_moves{25, 25, 0, 25, 25, 0};
+  std::array<bp_t, nlefs> fwd_moves{25, 25, 0, 24,  9, 0};
   // clang-format off
   const std::array<CollisionT, nlefs> rev_collisions_expected{CollisionT{},
                                                               CollisionT{0, LEF_LEF_PRIMARY},
@@ -454,8 +409,8 @@ TEST_CASE("Simulation 006 - Few inactive LEFs", "[simulation][short]") {
   std::array<CollisionT, nlefs> rev_collisions;
   std::array<CollisionT, nlefs> fwd_collisions;
 
-  const std::array<bp_t, nlefs> rev_moves_expected{25, 5, 0, 9, 8, 0};
-  const std::array<bp_t, nlefs> fwd_moves_expected{4, 19, 0, 6, 9, 0};
+  const std::array<bp_t, nlefs> rev_moves_expected{25,  5, 0, 9, 8, 0};
+  const std::array<bp_t, nlefs> fwd_moves_expected{ 4, 19, 0, 6, 9, 0};
   // clang-format on
 
   require_that_lefs_are_sorted_by_idx(lefs, rev_ranks, fwd_ranks);
@@ -465,7 +420,7 @@ TEST_CASE("Simulation 006 - Few inactive LEFs", "[simulation][short]") {
 
   modle::Simulation{c, false}.test_process_collisions(
       chrom, absl::MakeSpan(lefs), rev_ranks, fwd_ranks, absl::MakeSpan(rev_moves),
-      absl::MakeSpan(fwd_moves), barriers, barrier_mask, absl::MakeSpan(rev_collisions),
+      absl::MakeSpan(fwd_moves), barriers, absl::MakeSpan(rev_collisions),
       absl::MakeSpan(fwd_collisions), rand_eng);
 
   check_simulation_result(lefs, rev_moves, fwd_moves, rev_moves_expected, fwd_moves_expected,
@@ -476,18 +431,11 @@ TEST_CASE("Simulation 006 - Few inactive LEFs", "[simulation][short]") {
 // NOLINTNEXTLINE(readability-function-cognitive-complexity)
 TEST_CASE("Simulation 007 - LEF-LEF collision overrides LEF-BAR collision 1",
           "[simulation][short]") {
-  modle::Config c;
-  c.rev_extrusion_speed = 20;
-  c.rev_extrusion_speed_std = 0;
-  c.fwd_extrusion_speed = 20;
-  c.fwd_extrusion_speed_std = 0;
-  c.probability_of_extrusion_unit_bypass = 0;
-  c.lef_bar_major_collision_pblock = 1;
-  c.lef_bar_minor_collision_pblock = 0;
+  const auto c = init_config(20, 20);
   constexpr usize nlefs = 2;
   constexpr usize nbarriers = 1;
   const Chromosome chrom{0, "chr1", 0, 200, 200};
-  auto rand_eng = random::PRNG(4003028292286930594ULL);
+  auto rand_eng = DEFAULT_PRNG;
 
   // clang-format off
   std::array<Lef, nlefs> lefs{
@@ -495,17 +443,15 @@ TEST_CASE("Simulation 007 - LEF-LEF collision overrides LEF-BAR collision 1",
       construct_lef(110, 150, 1)
   };
 
-  const std::array<ExtrusionBarrier, nbarriers> barriers{ExtrusionBarrier{100, 1.0, 0.0, '+'}};
-
-  boost::dynamic_bitset<> barrier_mask;
-  barrier_mask.resize(nbarriers, static_cast<bool>(CTCF::State::OCCUPIED));
+  const auto barriers = construct_barriers(ExtrusionBarrier{100, 1.0, 0.0, '+'});
+  // clang-format on
+  REQUIRE(barriers.size() == nbarriers);
 
   const std::array<usize, nlefs> rev_ranks{0, 1};
   const std::array<usize, nlefs> fwd_ranks{0, 1};
 
   std::array<bp_t, nlefs> rev_moves{20, 20};
   std::array<bp_t, nlefs> fwd_moves{20, 20};
-  // clang-format on
 
   const std::array<CollisionT, nlefs> rev_collisions_expected{CollisionT{},
                                                               CollisionT{0, LEF_LEF_PRIMARY}};
@@ -514,15 +460,16 @@ TEST_CASE("Simulation 007 - LEF-LEF collision overrides LEF-BAR collision 1",
   std::array<CollisionT, nlefs> rev_collisions;
   std::array<CollisionT, nlefs> fwd_collisions;
 
-  const std::array<bp_t, nlefs> rev_moves_expected{20, 7};
-  const std::array<bp_t, nlefs> fwd_moves_expected{7, 20};
+  // clang-format off
+  const std::array<bp_t, nlefs> rev_moves_expected{20,  7};
+  const std::array<bp_t, nlefs> fwd_moves_expected{ 7, 20};
   // clang-format on
 
   require_that_lefs_are_sorted_by_idx(lefs, rev_ranks, fwd_ranks);
 
   modle::Simulation{c, false}.test_process_collisions(
       chrom, absl::MakeSpan(lefs), rev_ranks, fwd_ranks, absl::MakeSpan(rev_moves),
-      absl::MakeSpan(fwd_moves), barriers, barrier_mask, absl::MakeSpan(rev_collisions),
+      absl::MakeSpan(fwd_moves), barriers, absl::MakeSpan(rev_collisions),
       absl::MakeSpan(fwd_collisions), rand_eng);
 
   check_simulation_result(lefs, rev_moves, fwd_moves, rev_moves_expected, fwd_moves_expected,
@@ -533,36 +480,28 @@ TEST_CASE("Simulation 007 - LEF-LEF collision overrides LEF-BAR collision 1",
 // NOLINTNEXTLINE(readability-function-cognitive-complexity)
 TEST_CASE("Simulation 008 - LEF-LEF collision overrides LEF-BAR collision 2",
           "[simulation][short]") {
-  modle::Config c;
-  c.rev_extrusion_speed = 20;
-  c.rev_extrusion_speed_std = 0;
-  c.fwd_extrusion_speed = 20;
-  c.fwd_extrusion_speed_std = 0;
-  c.probability_of_extrusion_unit_bypass = 0;
-  c.lef_bar_major_collision_pblock = 1;
-  c.lef_bar_minor_collision_pblock = 0;
+  const auto c = init_config(20, 20);
   constexpr usize nlefs = 2;
   constexpr usize nbarriers = 1;
   const Chromosome chrom{0, "chr1", 0, 200, 200};
-  auto rand_eng = random::PRNG(12931236264094635263ULL);
+  auto rand_eng = DEFAULT_PRNG;
 
   // clang-format off
   std::array<Lef, nlefs> lefs{
       construct_lef(50, 90, 0),
       construct_lef(105, 150, 1)
   };
+  // clang-format on
 
-  const std::array<ExtrusionBarrier, nbarriers> barriers{ExtrusionBarrier{100, 1.0, 0.0, '-'}};
-
-  boost::dynamic_bitset<> barrier_mask;
-  barrier_mask.resize(nbarriers, static_cast<bool>(CTCF::State::OCCUPIED));
+  const auto barriers = construct_barriers(ExtrusionBarrier{100, 1.0, 0.0, '-'});
+  // clang-format on
+  REQUIRE(barriers.size() == nbarriers);
 
   const std::array<usize, nlefs> rev_ranks{0, 1};
   const std::array<usize, nlefs> fwd_ranks{0, 1};
 
   std::array<bp_t, nlefs> rev_moves{20, 20};
   std::array<bp_t, nlefs> fwd_moves{20, 20};
-  // clang-format on
 
   const std::array<CollisionT, nlefs> rev_collisions_expected{CollisionT{},
                                                               CollisionT{0, LEF_LEF_PRIMARY}};
@@ -571,15 +510,16 @@ TEST_CASE("Simulation 008 - LEF-LEF collision overrides LEF-BAR collision 2",
   std::array<CollisionT, nlefs> rev_collisions;
   std::array<CollisionT, nlefs> fwd_collisions;
 
-  const std::array<bp_t, nlefs> rev_moves_expected{20, 7};
-  const std::array<bp_t, nlefs> fwd_moves_expected{7, 20};
+  // clang-format off
+  const std::array<bp_t, nlefs> rev_moves_expected{20,  7};
+  const std::array<bp_t, nlefs> fwd_moves_expected{ 7, 20};
   // clang-format on
 
   require_that_lefs_are_sorted_by_idx(lefs, rev_ranks, fwd_ranks);
 
   modle::Simulation{c, false}.test_process_collisions(
       chrom, absl::MakeSpan(lefs), rev_ranks, fwd_ranks, absl::MakeSpan(rev_moves),
-      absl::MakeSpan(fwd_moves), barriers, barrier_mask, absl::MakeSpan(rev_collisions),
+      absl::MakeSpan(fwd_moves), barriers, absl::MakeSpan(rev_collisions),
       absl::MakeSpan(fwd_collisions), rand_eng);
 
   check_simulation_result(lefs, rev_moves, fwd_moves, rev_moves_expected, fwd_moves_expected,
@@ -590,18 +530,11 @@ TEST_CASE("Simulation 008 - LEF-LEF collision overrides LEF-BAR collision 2",
 // NOLINTNEXTLINE(readability-function-cognitive-complexity)
 TEST_CASE("Simulation 009 - Ensure stacked LEFs do not interfere with surrounding extr. barriers",
           "[simulation][short]") {
-  modle::Config c;
-  c.rev_extrusion_speed = 10;
-  c.rev_extrusion_speed_std = 0;
-  c.fwd_extrusion_speed = 10;
-  c.fwd_extrusion_speed_std = 0;
-  c.probability_of_extrusion_unit_bypass = 0;
-  c.lef_bar_major_collision_pblock = 1;
-  c.lef_bar_minor_collision_pblock = 0;
+  const auto c = init_config(10, 10);
   constexpr usize nlefs = 5;
   constexpr usize nbarriers = 2;
   const Chromosome chrom{0, "chr1", 0, 200, 200};
-  auto rand_eng = random::PRNG(8668729858575330735ULL);
+  auto rand_eng = DEFAULT_PRNG;
 
   // clang-format off
   std::array<Lef, nlefs> lefs{
@@ -612,11 +545,10 @@ TEST_CASE("Simulation 009 - Ensure stacked LEFs do not interfere with surroundin
       construct_lef(105, 112, 4)
   };
 
-  const std::array<ExtrusionBarrier, nbarriers> barriers{ExtrusionBarrier{100, 1.0, 0.0, '+'},
-                                                         ExtrusionBarrier{105, 1.0, 0.0, '-'}};
-
-  boost::dynamic_bitset<> barrier_mask;
-  barrier_mask.resize(nbarriers, static_cast<bool>(CTCF::State::OCCUPIED));
+  const auto barriers = construct_barriers(ExtrusionBarrier{100, 1.0, 0.0, '+'},
+                                           ExtrusionBarrier{105, 1.0, 0.0, '-'});
+  // clang-format on
+  REQUIRE(barriers.size() == nbarriers);
 
   const std::array<usize, nlefs> rev_ranks{0, 1, 2, 3, 4};
   const std::array<usize, nlefs> fwd_ranks{0, 1, 2, 3, 4};
@@ -633,12 +565,12 @@ TEST_CASE("Simulation 009 - Ensure stacked LEFs do not interfere with surroundin
                                                               CollisionT{3, LEF_LEF_PRIMARY},
                                                               CollisionT{},
                                                               CollisionT{},
-                                                        CollisionT{}};
+                                                              CollisionT{}};
   std::array<CollisionT, nlefs> rev_collisions;
   std::array<CollisionT, nlefs> fwd_collisions;
 
-  const std::array<bp_t, nlefs> rev_moves_expected{10, 0, 0, 0, 0};
-  const std::array<bp_t, nlefs> fwd_moves_expected{0, 0, 10, 10, 10};
+  const std::array<bp_t, nlefs> rev_moves_expected{10, 0,  0,  0,  0};
+  const std::array<bp_t, nlefs> fwd_moves_expected{0,  0, 10, 10, 10};
   // clang-format on
 
   require_that_lefs_are_sorted_by_idx(lefs, rev_ranks, fwd_ranks);
@@ -648,7 +580,7 @@ TEST_CASE("Simulation 009 - Ensure stacked LEFs do not interfere with surroundin
 
   modle::Simulation{c, false}.test_process_collisions(
       chrom, absl::MakeSpan(lefs), rev_ranks, fwd_ranks, absl::MakeSpan(rev_moves),
-      absl::MakeSpan(fwd_moves), barriers, barrier_mask, absl::MakeSpan(rev_collisions),
+      absl::MakeSpan(fwd_moves), barriers, absl::MakeSpan(rev_collisions),
       absl::MakeSpan(fwd_collisions), rand_eng);
 
   check_simulation_result(lefs, rev_moves, fwd_moves, rev_moves_expected, fwd_moves_expected,
@@ -659,18 +591,11 @@ TEST_CASE("Simulation 009 - Ensure stacked LEFs do not interfere with surroundin
 // NOLINTNEXTLINE(readability-function-cognitive-complexity)
 TEST_CASE("Simulation 010 - Ensure stacked LEFs do not interfere with surrounding extr. barriers",
           "[simulation][short]") {
-  modle::Config c;
-  c.rev_extrusion_speed = 10;
-  c.rev_extrusion_speed_std = 0;
-  c.fwd_extrusion_speed = 10;
-  c.fwd_extrusion_speed_std = 0;
-  c.probability_of_extrusion_unit_bypass = 0;
-  c.lef_bar_major_collision_pblock = 1;
-  c.lef_bar_minor_collision_pblock = 0;
+  const auto c = init_config(10, 10);
   constexpr usize nlefs = 6;
   constexpr usize nbarriers = 2;
   const Chromosome chrom{0, "chr1", 0, 200, 200};
-  auto rand_eng = random::PRNG(4320101097510038983ULL);
+  auto rand_eng = DEFAULT_PRNG;
 
   // clang-format off
   std::array<Lef, nlefs> lefs{
@@ -682,11 +607,10 @@ TEST_CASE("Simulation 010 - Ensure stacked LEFs do not interfere with surroundin
       construct_lef(102, 102, 5)
   };
 
-  const std::array<ExtrusionBarrier, nbarriers> barriers{ExtrusionBarrier{100, 1.0, 0.0, '+'},
-                                                         ExtrusionBarrier{105, 1.0, 0.0, '-'}};
-
-  boost::dynamic_bitset<> barrier_mask;
-  barrier_mask.resize(nbarriers, static_cast<bool>(CTCF::State::OCCUPIED));
+  const auto barriers = construct_barriers(ExtrusionBarrier{100, 1.0, 0.0, '+'},
+                                           ExtrusionBarrier{105, 1.0, 0.0, '-'});
+  // clang-format on
+  REQUIRE(barriers.size() == nbarriers);
 
   const std::array<usize, nlefs> rev_ranks{0, 1, 2, 5, 3, 4};
   const std::array<usize, nlefs> fwd_ranks{0, 5, 1, 2, 3, 4};
@@ -709,8 +633,8 @@ TEST_CASE("Simulation 010 - Ensure stacked LEFs do not interfere with surroundin
   std::array<CollisionT, nlefs> rev_collisions;
   std::array<CollisionT, nlefs> fwd_collisions;
 
-  const std::array<bp_t, nlefs> rev_moves_expected{10, 0, 0, 0, 0, 0};
-  const std::array<bp_t, nlefs> fwd_moves_expected{0, 0, 10, 10, 10, 0};
+  const std::array<bp_t, nlefs> rev_moves_expected{10, 0,  0,  0,  0, 0};
+  const std::array<bp_t, nlefs> fwd_moves_expected{ 0, 0, 10, 10, 10, 0};
   // clang-format on
 
   require_that_lefs_are_sorted_by_idx(lefs, rev_ranks, fwd_ranks);
@@ -720,7 +644,7 @@ TEST_CASE("Simulation 010 - Ensure stacked LEFs do not interfere with surroundin
 
   modle::Simulation{c, false}.test_process_collisions(
       chrom, absl::MakeSpan(lefs), rev_ranks, fwd_ranks, absl::MakeSpan(rev_moves),
-      absl::MakeSpan(fwd_moves), barriers, barrier_mask, absl::MakeSpan(rev_collisions),
+      absl::MakeSpan(fwd_moves), barriers, absl::MakeSpan(rev_collisions),
       absl::MakeSpan(fwd_collisions), rand_eng);
 
   check_simulation_result(lefs, rev_moves, fwd_moves, rev_moves_expected, fwd_moves_expected,
@@ -730,7 +654,7 @@ TEST_CASE("Simulation 010 - Ensure stacked LEFs do not interfere with surroundin
 
 // NOLINTNEXTLINE(readability-function-cognitive-complexity)
 TEST_CASE("Simulation 011 - fix_secondary_lef_lef_collisions", "[simulation][short]") {
-  auto c = init_config();
+  auto c = init_config(3, 2);
   c.probability_of_extrusion_unit_bypass = 0.25;
   constexpr usize nlefs = 2;
   constexpr usize nbarriers = 1;
@@ -743,13 +667,11 @@ TEST_CASE("Simulation 011 - fix_secondary_lef_lef_collisions", "[simulation][sho
   std::array<Lef, nlefs> lefs{
       construct_lef(25, 95, 0),
       construct_lef(50, 99, 0)
-
   };
+  // clang-format on
 
-  const std::array<ExtrusionBarrier, nbarriers> barriers{ExtrusionBarrier{100, 1.0, 0.0, '-'}};
-
-  boost::dynamic_bitset<> barrier_mask;
-  barrier_mask.resize(nbarriers, static_cast<bool>(CTCF::State::OCCUPIED));
+  const auto barriers = construct_barriers(ExtrusionBarrier{100, 1.0, 0.0, '-'});
+  REQUIRE(barriers.size() == nbarriers);
 
   std::array<usize, nlefs> rev_ranks{0, 1};
   std::array<usize, nlefs> fwd_ranks{0, 1};
@@ -760,14 +682,16 @@ TEST_CASE("Simulation 011 - fix_secondary_lef_lef_collisions", "[simulation][sho
   std::array<CollisionT, nlefs> rev_collisions_expected{CollisionT{},
                                                         CollisionT{}};
   std::array<CollisionT, nlefs> fwd_collisions_expected{CollisionT{0, LEF_BAR},
-                                                        CollisionT{1, LEF_LEF_SECONDARY}};//0, LEF_BAR}};
-  // Important! The expecte collisions and moves look the opposite of one would expect
+                                                        CollisionT{1, LEF_LEF_SECONDARY}};
+  // clang-format on
+  // Important! The expected collisions and moves look the opposite of one would expect
   // because fix_secondary_lef_lef_collisions is swapping ranks
   std::array<CollisionT, nlefs> rev_collisions;
   std::array<CollisionT, nlefs> fwd_collisions;
 
+  // clang-format off
   const std::array<bp_t, nlefs> rev_moves_expected{10, 10};
-  const std::array<bp_t, nlefs> fwd_moves_expected{0, 3};
+  const std::array<bp_t, nlefs> fwd_moves_expected{ 0,  3};
   // clang-format on
 
   require_that_lefs_are_sorted_by_idx(lefs, rev_ranks, fwd_ranks);
@@ -777,7 +701,7 @@ TEST_CASE("Simulation 011 - fix_secondary_lef_lef_collisions", "[simulation][sho
 
   modle::Simulation{c, false}.test_process_collisions(
       chrom, absl::MakeSpan(lefs), rev_ranks, fwd_ranks, absl::MakeSpan(rev_moves),
-      absl::MakeSpan(fwd_moves), barriers, barrier_mask, absl::MakeSpan(rev_collisions),
+      absl::MakeSpan(fwd_moves), barriers, absl::MakeSpan(rev_collisions),
       absl::MakeSpan(fwd_collisions), rand_eng);
 
   modle::Simulation::test_fix_secondary_lef_lef_collisions(
@@ -796,26 +720,23 @@ TEST_CASE("Simulation 011 - fix_secondary_lef_lef_collisions", "[simulation][sho
 }
 // NOLINTNEXTLINE(readability-function-cognitive-complexity)
 TEST_CASE("Simulation 012 - fix_secondary_lef_lef_collisions", "[simulation][short]") {
-  auto c = init_config();
+  auto c = init_config(3, 2);
   c.probability_of_extrusion_unit_bypass = 0.25;
   constexpr usize nlefs = 2;
   constexpr usize nbarriers = 1;
   const Chromosome chrom{0, "chr1", 0, 200, 200};
   // DO NOT CHANGE SEED!
-  // The outcome of this test depends on the seedo
+  // The outcome of this test depends on the seed
   auto rand_eng = random::PRNG(752741483ULL);
 
   // clang-format off
   std::array<Lef, nlefs> lefs{
       construct_lef(26, 75, 0),
       construct_lef(30, 80, 0)
-
   };
 
-  const std::array<ExtrusionBarrier, nbarriers> barriers{ExtrusionBarrier{25, 1.0, 0.0, '+'}};
-
-  boost::dynamic_bitset<> barrier_mask;
-  barrier_mask.resize(nbarriers, static_cast<bool>(CTCF::State::OCCUPIED));
+  const auto barriers = construct_barriers(ExtrusionBarrier{25, 1.0, 0.0, '+'});
+  REQUIRE(barriers.size() == nbarriers);
 
   std::array<usize, nlefs> rev_ranks{0, 1};
   std::array<usize, nlefs> fwd_ranks{0, 1};
@@ -843,7 +764,7 @@ TEST_CASE("Simulation 012 - fix_secondary_lef_lef_collisions", "[simulation][sho
 
   modle::Simulation{c, false}.test_process_collisions(
       chrom, absl::MakeSpan(lefs), rev_ranks, fwd_ranks, absl::MakeSpan(rev_moves),
-      absl::MakeSpan(fwd_moves), barriers, barrier_mask, absl::MakeSpan(rev_collisions),
+      absl::MakeSpan(fwd_moves), barriers, absl::MakeSpan(rev_collisions),
       absl::MakeSpan(fwd_collisions), rand_eng);
 
   modle::Simulation::test_fix_secondary_lef_lef_collisions(

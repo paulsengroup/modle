@@ -18,7 +18,7 @@
 namespace modle {
 
 void Simulation::correct_moves_for_lef_bar_collisions(
-    const absl::Span<const Lef> lefs, const absl::Span<const ExtrusionBarrier> barriers,
+    const absl::Span<const Lef> lefs, const ExtrusionBarriers& barriers,
     const absl::Span<bp_t> rev_moves, const absl::Span<bp_t> fwd_moves,
     const absl::Span<const CollisionT> rev_collisions,
     const absl::Span<const CollisionT> fwd_collisions) noexcept(utils::ndebug_defined()) {
@@ -26,12 +26,12 @@ void Simulation::correct_moves_for_lef_bar_collisions(
     if (MODLE_UNLIKELY(
             rev_collisions[i].collision_occurred(CollisionT::LEF_BAR))) {  // Process rev collisions
       const auto barrier_idx = rev_collisions[i].decode_index();
-      const auto& barrier = barriers[barrier_idx];
-      assert(lefs[i].rev_unit.pos() > barrier.pos());
+      const auto barrier_pos = barriers.pos(barrier_idx);
+      assert(lefs[i].rev_unit.pos() > barrier_pos);
 
       // Compute the distance and update the rev_move such that after extruding once, the rev unit
       // of the current LEF will be located 1bp downstream of the extr. barrier.
-      const auto distance = lefs[i].rev_unit.pos() - barrier.pos();
+      const auto distance = lefs[i].rev_unit.pos() - barrier_pos;
       assert(distance != 0);
       rev_moves[i] = distance - 1;
     }
@@ -39,11 +39,11 @@ void Simulation::correct_moves_for_lef_bar_collisions(
     if (MODLE_UNLIKELY(
             fwd_collisions[i].collision_occurred(CollisionT::LEF_BAR))) {  // Process fwd collisions
       const auto barrier_idx = fwd_collisions[i].decode_index();
-      const auto& barrier = barriers[barrier_idx];
-      assert(lefs[i].fwd_unit.pos() < barrier.pos());
+      const auto barrier_pos = barriers.pos(barrier_idx);
+      assert(lefs[i].fwd_unit.pos() < barrier_pos);
 
       // Same as above. In this case the unit will be located 1bp upstream of the extr. barrier.
-      const auto distance = barrier.pos() - lefs[i].fwd_unit.pos();
+      const auto distance = barrier_pos - lefs[i].fwd_unit.pos();
       assert(distance != 0);
       fwd_moves[i] = distance - 1;
     }

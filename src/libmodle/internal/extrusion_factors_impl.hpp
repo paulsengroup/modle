@@ -8,7 +8,6 @@
 
 #include "modle/common/common.hpp"  // for bp_t, i64
 #include "modle/common/utils.hpp"   // for ndebug_defined
-#include "modle/extrusion_barriers.hpp"
 
 namespace modle {
 
@@ -66,55 +65,30 @@ constexpr bool ExtrusionUnit::operator<(const ExtrusionUnit& other) const
     noexcept(utils::ndebug_defined()) {
   return this->pos() < other.pos();
 }
-constexpr bool ExtrusionUnit::operator<(const ExtrusionBarrier& barrier) const
-    noexcept(utils::ndebug_defined()) {
-  return this->pos() < barrier.pos();
-}
 
 constexpr bool ExtrusionUnit::operator>(const ExtrusionUnit& other) const
     noexcept(utils::ndebug_defined()) {
   return this->pos() > other.pos();
-}
-constexpr bool ExtrusionUnit::operator>(const ExtrusionBarrier& barrier) const
-    noexcept(utils::ndebug_defined()) {
-  return this->pos() > barrier.pos();
 }
 
 constexpr bool ExtrusionUnit::operator<=(const ExtrusionUnit& other) const
     noexcept(utils::ndebug_defined()) {
   return this->pos() <= other.pos();
 }
-constexpr bool ExtrusionUnit::operator<=(const ExtrusionBarrier& barrier) const
-    noexcept(utils::ndebug_defined()) {
-  return this->pos() <= barrier.pos();
-}
 
 constexpr bool ExtrusionUnit::operator>=(const ExtrusionUnit& other) const
     noexcept(utils::ndebug_defined()) {
   return this->pos() >= other.pos();
-}
-constexpr bool ExtrusionUnit::operator>=(const ExtrusionBarrier& barrier) const
-    noexcept(utils::ndebug_defined()) {
-  return this->pos() >= barrier.pos();
 }
 
 constexpr bool ExtrusionUnit::operator==(const ExtrusionUnit& other) const
     noexcept(utils::ndebug_defined()) {
   return this->pos() == other.pos();
 }
-constexpr bool ExtrusionUnit::operator==(const ExtrusionBarrier& barrier) const
-    noexcept(utils::ndebug_defined()) {
-  return this->pos() == barrier.pos();
-}
 
 constexpr i64 ExtrusionUnit::operator-(const ExtrusionUnit& other) const
     noexcept(utils::ndebug_defined()) {
   return static_cast<i64>(this->pos()) - static_cast<i64>(other.pos());
-}
-
-constexpr i64 ExtrusionUnit::operator-(const ExtrusionBarrier& other_barrier) const
-    noexcept(utils::ndebug_defined()) {
-  return static_cast<i64>(this->pos()) - static_cast<i64>(other_barrier.pos());
 }
 
 constexpr void ExtrusionUnit::release() noexcept(utils::ndebug_defined()) {

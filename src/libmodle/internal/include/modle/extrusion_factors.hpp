@@ -11,8 +11,6 @@
 
 namespace modle {
 
-class ExtrusionBarrier;
-
 class ExtrusionUnit {
   friend struct Lef;
   friend class Simulation;
@@ -24,37 +22,25 @@ class ExtrusionUnit {
   [[nodiscard]] constexpr bp_t pos() const noexcept(utils::ndebug_defined());
   [[nodiscard]] constexpr bool operator<(const ExtrusionUnit& other) const
       noexcept(utils::ndebug_defined());
-  [[nodiscard]] constexpr bool operator<(const ExtrusionBarrier& barrier) const
-      noexcept(utils::ndebug_defined());
   template <typename I>
   [[nodiscard]] constexpr bool operator<(I other_pos) const noexcept(utils::ndebug_defined());
   [[nodiscard]] constexpr bool operator>(const ExtrusionUnit& other) const
-      noexcept(utils::ndebug_defined());
-  [[nodiscard]] constexpr bool operator>(const ExtrusionBarrier& barrier) const
       noexcept(utils::ndebug_defined());
   template <typename I>
   [[nodiscard]] constexpr bool operator>(I other_pos) const noexcept(utils::ndebug_defined());
   [[nodiscard]] constexpr bool operator<=(const ExtrusionUnit& other) const
       noexcept(utils::ndebug_defined());
-  [[nodiscard]] constexpr bool operator<=(const ExtrusionBarrier& barrier) const
-      noexcept(utils::ndebug_defined());
   template <typename I>
   [[nodiscard]] constexpr bool operator<=(I other_pos) const noexcept(utils::ndebug_defined());
   [[nodiscard]] constexpr bool operator>=(const ExtrusionUnit& other) const
-      noexcept(utils::ndebug_defined());
-  [[nodiscard]] constexpr bool operator>=(const ExtrusionBarrier& barrier) const
       noexcept(utils::ndebug_defined());
   template <typename I>
   [[nodiscard]] constexpr bool operator>=(I other_pos) const noexcept(utils::ndebug_defined());
   [[nodiscard]] constexpr bool operator==(const ExtrusionUnit& other) const
       noexcept(utils::ndebug_defined());
-  [[nodiscard]] constexpr bool operator==(const ExtrusionBarrier& barrier) const
-      noexcept(utils::ndebug_defined());
   template <typename I>
   [[nodiscard]] constexpr bool operator==(I other_pos) const noexcept(utils::ndebug_defined());
   [[nodiscard]] constexpr i64 operator-(const ExtrusionUnit& other) const
-      noexcept(utils::ndebug_defined());
-  [[nodiscard]] constexpr i64 operator-(const ExtrusionBarrier& other_barrier) const
       noexcept(utils::ndebug_defined());
   template <typename I>
   [[nodiscard]] constexpr i64 operator-(I other_pos) const noexcept(utils::ndebug_defined());

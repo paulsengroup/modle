@@ -18,6 +18,8 @@
 
 namespace modle::test::libmodle {
 
+inline constexpr auto DEFAULT_PRNG{random::PRNG(10556020843759504871ULL)};
+
 using CollisionT = Collision<u32f>;
 constexpr auto NO_COLLISION = CollisionT::NO_COLLISION;
 constexpr auto COLLISION = CollisionT::COLLISION;
@@ -102,29 +104,6 @@ template <class LefCollection, class CollisionCollection>
   }
 }
 
-/*
-[[maybe_unused]] inline void check_moves(
-    const std::vector<Lef>& lefs, const std::vector<bp_t>& rev_moves,
-    const std::vector<bp_t>& fwd_moves, const std::vector<bp_t>& rev_moves_expected,
-    const std::vector<bp_t>& fwd_moves_expected, const CollisionCollection& rev_collisions,
-    const CollisionCollection& rev_collisions_expected,
-    const CollisionCollection& fwd_collisions,
-    const CollisionCollection& fwd_collisions_expected, bool print_debug_info_ = false) {
-  for (usize i = 0; i < lefs.size(); ++i) {
-    CHECK(rev_collisions[i] == rev_collisions_expected[i]);
-    CHECK(fwd_collisions[i] == fwd_collisions_expected[i]);
-    CHECK(rev_moves[i] == rev_moves_expected[i]);
-    CHECK(fwd_moves[i] == fwd_moves_expected[i]);
-
-    if (print_debug_info_) {
-      print_debug_info(i, rev_moves, fwd_moves, rev_moves_expected, fwd_moves_expected,
-                       rev_collisions, rev_collisions_expected, fwd_collisions,
-                       fwd_collisions_expected);
-    }
-  }
-}
- */
-
 template <class LefCollection, class UsizeCollection>
 inline void check_that_lefs_are_sorted_by_idx(const LefCollection& lefs,
                                               const UsizeCollection& rev_ranks,
@@ -153,8 +132,7 @@ inline void require_that_lefs_are_sorted_by_idx(const LefCollection& lefs,
   }));
 }
 
-[[nodiscard]] inline modle::Config init_config(usize rev_extrusion_speed = 3,
-                                               usize fwd_extrusion_speed = 2,
+[[nodiscard]] inline modle::Config init_config(usize rev_extrusion_speed, usize fwd_extrusion_speed,
                                                double rev_extrusion_speed_std = 0,
                                                double fwd_extrusion_speed_std = 0) noexcept {
   modle::Config c;
@@ -164,6 +142,8 @@ inline void require_that_lefs_are_sorted_by_idx(const LefCollection& lefs,
   c.fwd_extrusion_speed = fwd_extrusion_speed;
   c.fwd_extrusion_speed_std = fwd_extrusion_speed_std;
   c.probability_of_extrusion_unit_bypass = 0;
+  c.lef_bar_major_collision_pblock = 1;
+  c.lef_bar_minor_collision_pblock = 0;
 
   return c;
 }
@@ -175,4 +155,16 @@ inline void require_that_lefs_are_sorted_by_idx(const LefCollection& lefs,
   assert(chrom_start < chrom_end);
   return {0, name, chrom_start, chrom_end, chrom_size};
 }
+
+// This function is here as a compatibility layer between the old and new way to construct extrusion
+// barriers, and should be removed at some point in the future.
+template <ExtrusionBarriers::State state = ExtrusionBarriers::State::ACTIVE, class... Args>
+[[nodiscard]] inline ExtrusionBarriers construct_barriers(Args... barriers) {
+  ExtrusionBarriers barriers_;
+  for (const auto& barrier : {barriers...}) {
+    barriers_.push_back(barrier, state);
+  }
+  return barriers_;
+}
+
 }  // namespace modle::test::libmodle

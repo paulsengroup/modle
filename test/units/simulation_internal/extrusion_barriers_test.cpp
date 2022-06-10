@@ -11,10 +11,9 @@
 namespace modle::test::libmodle {
 
 // NOLINTNEXTLINE(readability-function-cognitive-complexity)
-// NOLINTNEXTLINE(readability-function-cognitive-complexity)
 TEST_CASE("Extrusion barriers - comparisons", "[barriers][simulation][short]") {
-  const auto b1 = ExtrusionBarrier{100, 0.0, 0.0, dna::fwd};
-  const auto b2 = ExtrusionBarrier{500, 0.0, 0.0, dna::rev};
+  const auto b1 = ExtrusionBarrier{100, 0.0, 0.0, dna::FWD};
+  const auto b2 = ExtrusionBarrier{500, 0.0, 0.0, dna::REV};
 
   CHECK(b1 == b1);
   CHECK(b1 != b2);
@@ -29,44 +28,66 @@ TEST_CASE("Extrusion barriers - comparisons", "[barriers][simulation][short]") {
 }
 
 // NOLINTNEXTLINE(readability-function-cognitive-complexity)
-// NOLINTNEXTLINE(readability-function-cognitive-complexity)
-TEST_CASE("Extrusion barriers - pblock", "[barriers][simulation][short]") {
-  const auto pb1 = 0.85;
-  const auto pnn1 = 0.7;  // not-occ -> not-occ
-  const auto poo1 =       // occ -> occ
-      ExtrusionBarrier::compute_blocking_to_blocking_transition_probabilities_from_pblock(pb1,
-                                                                                          pnn1);
-  const auto pb2 = 0.93;
-  const auto pnn2 = 0.65;  // not-occ -> not-occ
-  const auto poo2 =        // occ -> occ
-      ExtrusionBarrier::compute_blocking_to_blocking_transition_probabilities_from_pblock(pb2,
-                                                                                          pnn2);
+TEST_CASE("Extrusion barriers - occupancy", "[barriers][simulation][short]") {
+  const auto occupancy1 = 0.85;
+  const auto occupancy2 = 0.93;
 
-  const auto b1 = ExtrusionBarrier{100, poo1, pnn1, dna::fwd};
-  const auto b2 = ExtrusionBarrier{200, poo2, pnn2, dna::rev};
+  const auto stp_inactive1 = 0.7;
+  const auto stp_inactive2 = 0.65;
+  const auto stp_active1 =
+      ExtrusionBarrier::compute_stp_active_from_occupancy(stp_inactive1, occupancy1);
+  const auto stp_active2 =
+      ExtrusionBarrier::compute_stp_active_from_occupancy(stp_inactive2, occupancy2);
 
-  CHECK(b1.occupancy() == Approx(pb1));
-  CHECK(b2.occupancy() == Approx(pb2));
+  using State = ExtrusionBarriers::State;
+  const auto barriers = ExtrusionBarriers{{100, 200},
+                                          {dna::FWD, dna::REV},
+                                          {stp_active1, stp_active2},
+                                          {stp_inactive1, stp_inactive2},
+                                          {State::ACTIVE, State::ACTIVE}};
+
+  CHECK(barriers.occupancy(0) == Approx(occupancy1));
+  CHECK(barriers.occupancy(1) == Approx(occupancy2));
 }
 
 // NOLINTNEXTLINE(readability-function-cognitive-complexity)
-TEST_CASE("Extrusion barriers - blocking direction", "[barriers][simulation][short]") {
-  const auto b1 = ExtrusionBarrier{100, 0.0, 0.0, dna::fwd};
-  const auto b2 = ExtrusionBarrier{200, 0.0, 0.0, dna::rev};
-  const auto b3 = ExtrusionBarrier{300, 0.0, 0.0, '+'};
-  const auto b4 = ExtrusionBarrier{400, 0.0, 0.0, '-'};
+TEST_CASE("Extrusion barriers - sort", "[barriers][simulation][short]") {
+  using State = ExtrusionBarriers::State;
+  auto barriers = ExtrusionBarriers{{100, 400, 200, 300},
+                                    {dna::FWD, dna::FWD, dna::FWD, dna::FWD},
+                                    {0.0, 0.0, 0.0, 0.0},
+                                    {0.0, 0.0, 0.0, 0.0},
+                                    {State::ACTIVE, State::ACTIVE, State::ACTIVE, State::ACTIVE}};
 
-  CHECK(b1.blocking_direction_major() == dna::rev);
-  CHECK(b1.blocking_direction_minor() == dna::fwd);
+  barriers.sort();
+  CHECK(std::is_sorted(barriers.pos().begin(), barriers.pos().end()));
+}
 
-  CHECK(b2.blocking_direction_major() == dna::fwd);
-  CHECK(b2.blocking_direction_minor() == dna::rev);
+// NOLINTNEXTLINE(readability-function-cognitive-complexity)
+TEST_CASE("Extrusion barriers - compute_occupancy", "[barriers][simulation][short]") {
+  auto stp_active = 1.0;
+  auto stp_inactive = 0.0;
+  CHECK(ExtrusionBarrier::compute_occupancy_from_stp(stp_active, stp_inactive) == 1.0);
 
-  CHECK(b3.blocking_direction_major() == dna::rev);
-  CHECK(b3.blocking_direction_minor() == dna::fwd);
+  stp_active = 0.0;
+  stp_inactive = 1.0;
+  CHECK(ExtrusionBarrier::compute_occupancy_from_stp(stp_active, stp_inactive) == 0.0);
 
-  CHECK(b4.blocking_direction_major() == dna::fwd);
-  CHECK(b4.blocking_direction_minor() == dna::rev);
+  stp_active = 0.7;
+  stp_inactive = 0.7;
+  CHECK(ExtrusionBarrier::compute_occupancy_from_stp(stp_active, stp_inactive) == 0.5);
+
+  stp_active = 0.7;
+  stp_inactive = 0.5;
+  CHECK(ExtrusionBarrier::compute_occupancy_from_stp(stp_active, stp_inactive) == Approx(0.625));
+
+  stp_active = 1.0;
+  stp_inactive = 0.5;
+  CHECK(ExtrusionBarrier::compute_occupancy_from_stp(stp_active, stp_inactive) == 1.0);
+
+  stp_active = 0.7;
+  stp_inactive = 1.0;
+  CHECK(ExtrusionBarrier::compute_occupancy_from_stp(stp_active, stp_inactive) == 0.0);
 }
 
 }  // namespace modle::test::libmodle

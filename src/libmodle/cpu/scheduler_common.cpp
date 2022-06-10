@@ -55,8 +55,8 @@ bed::BED_tree<> Simulation::generate_deletions() const {
   for (const auto& chrom : this->_genome) {
     for (const auto& barrier : chrom.barriers().data()) {
       // Compute the span of the deletion
-      const auto deletion_size_ = std::min(barrier.pos() + 1, this->deletion_size);
-      const auto deletion_begin = barrier.pos() + 1 - deletion_size_;
+      const auto deletion_size_ = std::min(barrier.pos + 1, this->deletion_size);
+      const auto deletion_begin = barrier.pos + 1 - deletion_size_;
       const auto deletion_end = deletion_begin + deletion_size_;
       deletions.insert(std::string{chrom.name()}, deletion_begin, deletion_end);
     }
