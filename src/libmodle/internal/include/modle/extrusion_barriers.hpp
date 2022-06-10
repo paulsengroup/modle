@@ -126,65 +126,6 @@ struct ExtrusionBarrier {
   static constexpr double compute_occupancy_from_stp(TP stp_active, TP stp_inactive) noexcept;
 };
 }  // namespace modle
-/*
-class ExtrusionBarrier {
- public:
-  constexpr ExtrusionBarrier() = default;
-  constexpr ExtrusionBarrier(bp_t pos, double transition_prob_active_to_active,
-                             double transition_prob_inactive_to_inactive,
-                             dna::Direction motif_direction);
-  constexpr ExtrusionBarrier(bp_t pos, double transition_prob_active_to_active,
-                             double transition_prob_inactive_to_inactive, char motif_direction);
-
-  [[nodiscard]] constexpr bp_t pos() const noexcept(utils::ndebug_defined());
-  [[nodiscard]] constexpr bp_t& pos() noexcept(utils::ndebug_defined());
-  [[nodiscard]] constexpr double tp_active_to_active() const noexcept(utils::ndebug_defined());
-  [[nodiscard]] constexpr double tp_active_to_inactive() const noexcept(utils::ndebug_defined());
-  [[nodiscard]] constexpr double tp_inactive_to_inactive() const noexcept(utils::ndebug_defined());
-  [[nodiscard]] constexpr double tp_inactive_to_active() const noexcept(utils::ndebug_defined());
-  [[nodiscard]] constexpr dna::Direction blocking_direction_major() const
-      noexcept(utils::ndebug_defined());
-  [[nodiscard]] constexpr dna::Direction blocking_direction_minor() const
-      noexcept(utils::ndebug_defined());
-  [[nodiscard]] constexpr bool operator==(const ExtrusionBarrier& other) const noexcept;
-  [[nodiscard]] constexpr bool operator!=(const ExtrusionBarrier& other) const noexcept;
-  [[nodiscard]] constexpr bool operator<(const ExtrusionBarrier& other) const noexcept;
-  [[nodiscard]] constexpr bool operator>(const ExtrusionBarrier& other) const noexcept;
-  [[nodiscard]] constexpr bool operator>=(const ExtrusionBarrier& other) const noexcept;
-  [[nodiscard]] constexpr bool operator<=(const ExtrusionBarrier& other) const noexcept;
-  [[nodiscard]] constexpr static double compute_tp_active_to_active(
-      double occupancy, double tp_inactive_to_inactive) noexcept(utils::ndebug_defined());
-  [[nodiscard]] constexpr double occupancy() const noexcept(utils::ndebug_defined());
-
- protected:
-  // clang-format off
-  bp_t _pos{(std::numeric_limits<bp_t>::max)()};  // NOLINT(cppcoreguidelines-non-private-member-variables-in-classes)
-  double _tp_active_to_active{};                  // NOLINT(cppcoreguidelines-non-private-member-variables-in-classes)
-  double _tp_inactive_to_inactive{};              // NOLINT(cppcoreguidelines-non-private-member-variables-in-classes)
-  dna::Direction _blocking_direction{dna::none};  // NOLINT(cppcoreguidelines-non-private-member-variables-in-classes)
-  // clang-format on
-};
-
-namespace CTCF {
-enum State : u8f { NOT_OCCUPIED = 0, OCCUPIED = 1 };
-[[nodiscard]] inline State next_state(State current_state, double occupied_self_transition_prob,
-                                      double not_occupied_self_transition_prob,
-                                      random::PRNG_t& rand_eng);
-//! Update CTCF states for the current iteration based on the states from the previous
-//! iteration.
-
-//! \param extr_barriers
-//! \param mask bitset used to store CTCF states. States will be updated inplace. Bits set to 0
-//!        represent CTCFs in NOT_OCCUPIED state, while bits set to 1 represent CTCFs in
-//!        OCCUPIED state
-//! \param rand_eng
-inline void update_states(absl::Span<const ExtrusionBarrier> extr_barriers,
-                          boost::dynamic_bitset<>& mask,
-                          random::PRNG_t& rand_eng) noexcept(utils::ndebug_defined());
-
-}  // namespace CTCF
-}  // namespace modle
- */
 
 template <>
 struct fmt::formatter<modle::ExtrusionBarrier> {
