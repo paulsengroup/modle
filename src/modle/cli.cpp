@@ -353,7 +353,7 @@ static std::vector<CLI::App*> add_common_options(CLI::App& subcommand, modle::Co
       "Width of the subdiagonal window for the in-memory contact matrix.\n"
       "This setting affects the maximum distance of a pair of bins whose interactions will be\n"
       "tracked by MoDLE.\n"
-      "As a rule of thumb, --diagonal-width should roughly 10x the average LEF processivity\n."
+      "As a rule of thumb, --diagonal-width should roughly 10x the average LEF processivity.\n"
       "Setting --diagonal-width to very large values (i.e. tens of Mbp) will significantly\n"
       "increase MoDLE's memory requirements.")
       ->check(CLI::PositiveNumber)
@@ -542,6 +542,12 @@ static std::vector<CLI::App*> add_common_options(CLI::App& subcommand, modle::Co
       " - --probability-of-lef-bypass")
             ->check(CLI::PositiveNumber)
       ->transform(utils::cli::TrimTrailingZerosFromDecimalDigit | utils::cli::AsGenomicDistance)
+      ->capture_default_str();
+
+  misc_adv.add_flag(
+      "--normalize-probabilities,!--no-normalize-probabilities",
+      c.normalize_probabilities,
+      "Toggle on/off normalization of transition and collision probabilities using --probability-normalization-factor.")
       ->capture_default_str();
 
   // Address option dependencies/incompatibilities
@@ -955,6 +961,15 @@ void Cli::validate_args() const {
         "--stopping-criterion=contact-density excludes option --target-number-of-epochs.");
   }
 
+  if (!c.normalize_probabilities && !subcmd->get_option_group("Advanced")
+                                         ->get_option_group("Miscellaneous")
+                                         ->get_option("--probability-normalization-factor")
+                                         ->empty()) {
+    this->_warnings.emplace_back(
+        fmt::format(FMT_STRING("Option --probability-normalization-factor ha no effect. Reason: "
+                               "CLI option --no-normalize-probabilities was passed by the user.")));
+  }
+
   if (!errors.empty()) {
     throw std::runtime_error(fmt::format(
         FMT_STRING(
@@ -1006,20 +1021,18 @@ constexpr double compute_occupancy_from_stp(double stp_active, double stp_inacti
   return std::clamp(occupancy, 0.0, 1.0);
 }
 
-void Cli::transform_args() {
-  auto& c = this->_config;
-
-  // Generate output file paths from output prefix
+/// Generate output file paths from output prefix
+static void cli_update_paths(Cli::subcommand subcommand, Config& c) {
   c.path_to_output_file_cool = c.path_to_output_prefix;
   c.path_to_output_file_bedpe =
       !c.path_to_feature_bed_files.empty() ? c.path_to_output_prefix : boost::filesystem::path{};
   c.path_to_log_file = c.path_to_output_prefix;
   c.path_to_config_file = c.path_to_output_prefix;
-  if (this->get_subcommand() == subcommand::perturbate) {
+  if (subcommand == Cli::subcommand::perturbate) {
     c.path_to_task_file = c.path_to_output_prefix;
     c.path_to_task_file += "_tasks.tsv.gz";
   }
-  if (this->get_subcommand() == subcommand::simulate) {
+  if (subcommand == Cli::subcommand::simulate) {
     c.path_to_model_state_log_file = c.path_to_output_prefix;
     c.path_to_model_state_log_file += "_internal_state.log.gz";
   }
@@ -1028,16 +1041,16 @@ void Cli::transform_args() {
   c.path_to_output_file_bedpe += !c.path_to_output_file_bedpe.empty() ? ".bedpe.gz" : "";
   c.path_to_log_file += ".log";
   c.path_to_config_file += "_config.toml";
+}
 
-  // Compute mean and std for rev and fwd extrusion speed
-  const auto [rev_speed_parsed, fwd_speed_parsed] = [this]() {
-    auto* grp = this->_cli.get_subcommand("simulate")
-                    ->get_option_group("Advanced")
-                    ->get_option_group("Extrusion Factors");
+/// Compute mean and std for rev and fwd extrusion speed
+static void cli_update_extr_speed(const CLI::App& cli, Config& c) {
+  auto* grp = cli.get_subcommand("simulate")
+                  ->get_option_group("Advanced")
+                  ->get_option_group("Extrusion Factors");
+  const auto rev_speed_parsed = !grp->get_option("--rev-extrusion-speed")->empty();
+  const auto fwd_speed_parsed = !grp->get_option("--fwd-extrusion-speed")->empty();
 
-    return std::make_pair(!grp->get_option("--rev-extrusion-speed")->empty(),
-                          !grp->get_option("--fwd-extrusion-speed")->empty());
-  }();
   if (auto& speed = c.rev_extrusion_speed; !rev_speed_parsed) {
     speed = c.bin_size * 8 / 10;  // 0.8 * c.bin_size
   }
@@ -1056,19 +1069,23 @@ void Cli::transform_args() {
       std::round(c.burnin_speed_coefficient * static_cast<double>(c.rev_extrusion_speed)));
   c.fwd_extrusion_speed_burnin = static_cast<bp_t>(
       std::round(c.burnin_speed_coefficient * static_cast<double>(c.fwd_extrusion_speed)));
+}
 
-  // Compute the probability of LEF release from avg. processivity and two-sided extr. speed
+/// Compute the probability of LEF release from the avg. processivity and overall extr. speed
+static constexpr void cli_compute_prob_of_lef_release(Config& c) {
   c.prob_of_lef_release = static_cast<double>(c.rev_extrusion_speed + c.fwd_extrusion_speed) /
                           static_cast<double>(c.avg_lef_processivity);
   c.prob_of_lef_release_burnin =
       static_cast<double>(c.rev_extrusion_speed_burnin + c.fwd_extrusion_speed_burnin) /
       static_cast<double>(c.avg_lef_processivity);
+}
 
-  const auto extrusion_barrier_occupancy_parsed = [this]() {
-    auto* grp =
-        this->_cli.get_subcommand("simulate")->get_option_group("Extrusion Barriers and Factors");
-    return !grp->get_option("--extrusion-barrier-occupancy")->empty();
-  }();
+/// Compute the self transition probabilities used to model extrusion barriers
+static void cli_update_barrier_stp_and_occupancy(const CLI::App& cli, Config& c) {
+  auto* grp = cli.get_subcommand("simulate")->get_option_group("Extrusion Barriers and Factors");
+
+  const auto extrusion_barrier_occupancy_parsed =
+      !grp->get_option("--extrusion-barrier-occupancy")->empty();
 
   if (extrusion_barrier_occupancy_parsed) {
     c.barrier_occupied_stp = compute_stp_active_from_occupancy(c.barrier_not_occupied_stp,
@@ -1077,13 +1094,22 @@ void Cli::transform_args() {
     c.extrusion_barrier_occupancy =
         compute_occupancy_from_stp(c.barrier_occupied_stp, c.barrier_not_occupied_stp);
   }
+}
 
-  // Normalize probabilities
+/// Normalize transition probabilities based on the overall extrusion speed
+static void cli_normalize_probabilities(Config& c) {
   if (const auto ratio = static_cast<double>(c.rev_extrusion_speed + c.fwd_extrusion_speed) /
                          static_cast<double>(c.probability_normalization_factor);
       ratio != 1.0) {
-    auto stable_pow = [](double base, double exp) constexpr noexcept {
+    /// Numerically stable alternative to std::pow(base, exp) for positive bases
+    auto stable_pow = [](double base, double exp) noexcept {
       assert(base >= 0);
+      if (base == 0.0) {
+        return 0.0;
+      }
+      if (base == 1.0) {
+        return 1.0;
+      }
       return std::exp(std::log(base) * exp);
     };
 
@@ -1094,21 +1120,20 @@ void Cli::transform_args() {
                                                                c.extrusion_barrier_occupancy);
 
     if (const auto p = c.probability_of_extrusion_unit_bypass; p != 0.0 && p != 1.0) {
-      c.probability_of_extrusion_unit_bypass =
-          std::min(c.probability_of_extrusion_unit_bypass * ratio, 1.0);
+      c.probability_of_extrusion_unit_bypass = std::min(p * ratio, 1.0);
     }
 
-    if (const auto p = c.lef_bar_major_collision_pblock; p != 0.0 && p != 1.0) {
-      c.lef_bar_major_collision_pblock = stable_pow(c.lef_bar_major_collision_pblock, ratio);
-    }
-    if (const auto p = c.lef_bar_minor_collision_pblock; p != 0.0 && p != 1.0) {
-      c.lef_bar_minor_collision_pblock = stable_pow(c.lef_bar_minor_collision_pblock, ratio);
-    }
+    c.lef_bar_major_collision_pblock = stable_pow(c.lef_bar_major_collision_pblock, ratio);
+    c.lef_bar_minor_collision_pblock = stable_pow(c.lef_bar_minor_collision_pblock, ratio);
   }
+}
 
+static constexpr void cli_update_tad_to_loop_contact_ratio(Config& c) {
   using CS = Config::ContactSamplingStrategy;
-  const auto sample_loop_contacts = c.contact_sampling_strategy & CS::loop;
-  const auto sample_tad_contacts = c.contact_sampling_strategy & CS::tad;
+
+  const auto sample_loop_contacts = bool(c.contact_sampling_strategy & CS::loop);
+  const auto sample_tad_contacts = bool(c.contact_sampling_strategy & CS::tad);
+
   assert(sample_loop_contacts || sample_tad_contacts);
   if (sample_loop_contacts && !sample_tad_contacts) {
     c.tad_to_loop_contact_ratio = 0;
@@ -1116,17 +1141,29 @@ void Cli::transform_args() {
   if (!sample_loop_contacts && sample_tad_contacts) {
     c.tad_to_loop_contact_ratio = std::numeric_limits<double>::infinity();
   }
+}
+
+void Cli::transform_args() {
+  cli_update_paths(this->get_subcommand(), this->_config);
+  cli_update_extr_speed(this->_cli, this->_config);
+  cli_compute_prob_of_lef_release(this->_config);
+  cli_update_barrier_stp_and_occupancy(this->_cli, this->_config);
+  cli_update_tad_to_loop_contact_ratio(this->_config);
+
+  if (this->_config.normalize_probabilities) {
+    cli_normalize_probabilities(this->_config);
+  }
 
   const auto* subcmd = this->get_subcommand_ptr();
 
   if (!subcmd->get_option_group("Extrusion Barriers and Factors")
            ->get_option("--extrusion-barrier-occupancy")
            ->empty()) {
-    c.override_extrusion_barrier_occupancy = true;
+    this->_config.override_extrusion_barrier_occupancy = true;
   }
 
-  if (c.stopping_criterion == Config::StoppingCriterion::simulation_epochs) {
-    c.target_contact_density = -1;
+  if (this->_config.stopping_criterion == Config::StoppingCriterion::simulation_epochs) {
+    this->_config.target_contact_density = -1;
   }
 }
 

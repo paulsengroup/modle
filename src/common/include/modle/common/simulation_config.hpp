@@ -102,6 +102,7 @@ struct Config {
   usize nthreads{std::thread::hardware_concurrency()};
   u64 seed{0};
   bp_t probability_normalization_factor{rev_extrusion_speed + fwd_extrusion_speed};
+  bool normalize_probabilities{true};
 
   // MoDLE perturbate
   bp_t deletion_size{10'000};
