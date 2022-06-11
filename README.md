@@ -20,7 +20,7 @@ and [dockerhub](https://hub.docker.com/repository/docker/paulsengroup/modle).
 sudo docker run ghcr.io/paulsengroup/modle:1.0.0-rc.3 --help
 
 # Using Singularity/Apptainer
-singularity run docker://ghcr.io/paulsengroup/modle:1.0.0-rc.3 --help
+singularity run docker://ghcr.io/paulsengroup/modle:1.0.0-rc.5 --help
 ```
 
 ## Building MoDLE
@@ -29,8 +29,8 @@ singularity run docker://ghcr.io/paulsengroup/modle:1.0.0-rc.3 --help
 
 Building MoDLE requires a compiler toolchain supporting C++17, such as:
 
-- GCC 7 and newer
-- Clang 7 and newer
+- GCC 8 and newer
+- Clang 8 and newer
 - Apple-Clang 10.0 and newer
 
 MoDLE is developed on a Linux machine and should run on most UNIX-like OSes (including macOS).
@@ -88,32 +88,37 @@ Replace `cmake ..` with `cmake -DCMAKE_INSTALL_PREFIX="$HOME/.local/" ..` to ins
 The path passed to CMake through `-DCMAKE_INSTALL_PREFIX` can be in principle any path where your user has write
 permissions.
 
-### Testing MoDLE
+### Running automated tests
 
-Some of MoDLE's unit test depend on [SciPy](https://scipy.org/)
-and [wCorr](https://cran.r-project.org/web/packages/wCorr/index.html), so make sure to have both packages installed
-before running `ctest`.
-
-Alternatively, pass `-E '(Corr\.)|(Binom) test` to `ctest` to exclude unit tests with external dependencies from the
-test suite.
-
-To launch the test suite, run the following commands from the repository root:
-
+Run the following command from the repository root:
 ```bash
 cd build/
 
+# Run unit tests
 ctest -j 8                 \
       --test-dir .         \
       --schedule-random    \
       --output-on-failure  \
-      --no-tests=error
+      --no-tests=error     \
+      -E '(SciPy)|(wCorr)'
+
+# Run integration test
+../test/scripts/modle_integration_test_simple.sh src/modle/modle
 ```
+<details>
+<summary>For developers</summary>
+To run the full test suite, remove `-E '(SciPy)|(wCorr)` from the above snipped.
 
-To launch the integration tests, run the following command from the repository root:
+Some of MoDLE's unit tests depend the following libraries:
+- [SciPy](https://scipy.org/)
+- [wCorr](https://cran.r-project.org/web/packages/wCorr/index.html)
 
+These libraries can be installed as follows:
 ```bash
-test/scripts/modle_integration_test_simple.sh build/src/modle/modle
+python3 -m pip install scipy
+Rscript --no-save -e 'install.packages("wCorr", dependencies=c("Depends", "Imports", "LinkingTo"), repos="https://cloud.r-project.org")'
 ```
+</details>
 
 ### Installing MoDLE
 
@@ -195,7 +200,7 @@ Commands in this section assume you are running MoDLE using Singularity/Apptaine
 
 Test datasets are located under `test/data/integration_tests`.
 
-If you are running MoDLE without using containers, replace `singularity run docker://ghcr.io/paulsengroup/modle:1.0.0-rc.3` with `modle` in the coming examples.
+If you are running MoDLE without using containers, replace `singularity run docker://ghcr.io/paulsengroup/modle:1.0.0-rc.5` with `modle` in the coming examples.
 
 #### Required input files
 
@@ -210,14 +215,14 @@ The ___name___ field is ignored, while the ___score___ field is optional.
 When ___score___ is non-zero, its value will be used to set the occupancy for the extrusion barrier defined by the current line.
 
 The ___strand___ field is required and is used to define the extrusion barrier direction.
-As of `v1.0.0-rc.3`, this field should be set to the direction of the CTCF motif.
+As of `v1.0.0-rc.5`, this field should be set to the direction of the CTCF motif.
 Barriers without strand information (i.e. with strand '.') will be ignored.
 
 Sample chrom.sizes and BED file(s) are available inside folder `test/data/integration_tests`.
 
 #### Running a simulation with default settings
 ```bash
-singularity run docker://ghcr.io/paulsengroup/modle:1.0.0-rc.3   \
+singularity run docker://ghcr.io/paulsengroup/modle:1.0.0-rc.5   \
     simulate \
     --chrom-sizes test/data/integration_tests/grch38.chrom.sizes \
     --extrusion-barrier-file test/data/integration_tests/grch38_h1_extrusion_barriers.bed.xz \
@@ -242,7 +247,7 @@ File `prefix_config.toml` from the previous section is a config file that can be
 
 ```bash
 # Run a simulation with the same parameter as the previous example
-singularity run docker://ghcr.io/paulsengroup/modle:1.0.0-rc.3 \
+singularity run docker://ghcr.io/paulsengroup/modle:1.0.0-rc.5 \
     --config path/to/output/prefix_config.toml
 ```
 
@@ -254,7 +259,7 @@ This can be useful when running a batch of simulations using a large number of o
 ```bash
 # The following command will run a simulation using parameters from the previous example as starting point,
 # but using a custom lef density and overriding the output prefix specified by the config file.
-singularity run docker://ghcr.io/paulsengroup/modle:1.0.0-rc.3 \
+singularity run docker://ghcr.io/paulsengroup/modle:1.0.0-rc.5 \
     simulate \
     --config path/to/output/prefix_config.toml \
     --lef-density 15 \
@@ -267,13 +272,13 @@ Adding a line like `my-option=my_value` to the config file is equivalent to pass
 
 For an up-to-date list of supported CLI options, please refer to MoDLE's help message:
 ```bash
-singularity run docker://ghcr.io/paulsengroup/modle:1.0.0-rc.3 simulate --help
+singularity run docker://ghcr.io/paulsengroup/modle:1.0.0-rc.5 simulate --help
 ```
 
 #### Closing remarks
 MoDLE automatically detects and handles compressed input files.
 
-As of `v1.0.0-rc.3`, the following compression algorithms are supported:
+As of `v1.0.0-rc.5`, the following compression algorithms are supported:
 
 - bzip2
 - gzip
