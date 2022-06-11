@@ -144,7 +144,7 @@ TEST_CASE("Binom test - greater", "[stats][short]") {
 }
 
 // NOLINTNEXTLINE(readability-function-cognitive-complexity)
-TEST_CASE("Binom test - two-sided randomized", "[stats][long]") {
+TEST_CASE("Binom test - two-sided randomized (SciPy)", "[stats][long]") {
   random::PRNG_t rand_eng{4888025265521095494};
   const usize iterations = 5'000;
 

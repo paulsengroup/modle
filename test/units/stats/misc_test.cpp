@@ -53,7 +53,7 @@ constexpr auto GENERATE_REFERENCE_KERNEL_CMD{
 }
 
 // NOLINTNEXTLINE(readability-function-cognitive-complexity)
-TEST_CASE("Gaussian kernel", "[stats][short]") {
+TEST_CASE("Gaussian kernel (SciPy)", "[stats][short]") {
   for (usize size = 3; size < 25; size += 2) {
     for (const auto sigma : {0.5, 1.0, 1.5, 2.5, 6.3, 10.0}) {
       const auto ref_kernel = generate_reference_kernel(size, sigma);

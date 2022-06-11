@@ -337,7 +337,7 @@ TEST_CASE("CMatrix get row", "[cmatrix][short]") {
 }
 
 // NOLINTNEXTLINE(readability-function-cognitive-complexity)
-TEST_CASE("CMatrix blur", "[cmatrix][long]") {
+TEST_CASE("CMatrix blur (SciPy)", "[cmatrix][long]") {
   const auto reference_file = data_dir() / "cmatrix_002.tsv.gz";
   const auto input_matrix = [&]() {
     ContactMatrix<> m;
@@ -376,7 +376,7 @@ TEST_CASE("CMatrix blur", "[cmatrix][long]") {
 }
 
 // NOLINTNEXTLINE(readability-function-cognitive-complexity)
-TEST_CASE("CMatrix blur parallel", "[cmatrix][long]") {
+TEST_CASE("CMatrix blur parallel (SciPy)", "[cmatrix][long]") {
   const auto reference_file = data_dir() / "cmatrix_002.tsv.gz";
   const auto input_matrix = [&]() {
     ContactMatrix<> m;
@@ -416,7 +416,7 @@ TEST_CASE("CMatrix blur parallel", "[cmatrix][long]") {
 }
 
 // NOLINTNEXTLINE(readability-function-cognitive-complexity)
-TEST_CASE("CMatrix difference of gaussians", "[cmatrix][long]") {
+TEST_CASE("CMatrix difference of gaussians (SciPy)", "[cmatrix][long]") {
   const auto reference_file = data_dir() / "cmatrix_002.tsv.gz";
   const auto input_matrix = [&]() {
     ContactMatrix<> m;
@@ -458,7 +458,7 @@ TEST_CASE("CMatrix difference of gaussians", "[cmatrix][long]") {
 }
 
 // NOLINTNEXTLINE(readability-function-cognitive-complexity)
-TEST_CASE("CMatrix difference of gaussians - parallel", "[cmatrix][long]") {
+TEST_CASE("CMatrix difference of gaussians - parallel (SciPy)", "[cmatrix][long]") {
   const auto reference_file = data_dir() / "cmatrix_002.tsv.gz";
   const auto input_matrix = [&]() {
     ContactMatrix<> m;

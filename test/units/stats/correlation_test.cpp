@@ -167,28 +167,28 @@ TEST_CASE("Corr. test: Weighted Pearson", "[correlation][pearson][short]") {
 }
 
 // NOLINTNEXTLINE(readability-function-cognitive-complexity)
-TEST_CASE("Corr. test: Pearson long", "[correlation][pearson][medium]") {
+TEST_CASE("Corr. test: Pearson long (SciPy)", "[correlation][pearson][medium]") {
   test_correlation_w_random_vector("pearson", 1'000, 250, 0U, 15'000U);
   test_correlation_w_random_vector("pearson", 1'000, 250, -7'250, 7'250);
   test_correlation_w_random_vector("pearson", 1'000, 250, -7'250.0, 7'250.0);
 }
 
 // NOLINTNEXTLINE(readability-function-cognitive-complexity)
-TEST_CASE("Corr. test: Pearson long vect.", "[correlation][pearson][long]") {
+TEST_CASE("Corr. test: Pearson long vect. (SciPy)", "[correlation][pearson][long]") {
   test_correlation_w_random_vector("pearson", 500'000, 2, 0U, 15'000U);
   test_correlation_w_random_vector("pearson", 500'000, 2, -7'250, 7'250);
   test_correlation_w_random_vector("pearson", 500'000, 2, -7'250.0, 7'250.0);
 }
 
 // NOLINTNEXTLINE(readability-function-cognitive-complexity)
-TEST_CASE("Corr. test: Weighted Pearson long", "[correlation][pearson][medium]") {
+TEST_CASE("Corr. test: Weighted Pearson long (wCorr)", "[correlation][pearson][medium]") {
   test_correlation_w_random_vector("weighted_pearson", 1'000, 250, 0U, 15'000U);
   test_correlation_w_random_vector("weighted_pearson", 1'000, 250, -7'250, 7'250);
   test_correlation_w_random_vector("weighted_pearson", 1'000, 250, -7'250.0, 7'250.0);
 }
 
 // NOLINTNEXTLINE(readability-function-cognitive-complexity)
-TEST_CASE("Corr. test: Weighted Pearson long vect.", "[correlation][pearson][long]") {
+TEST_CASE("Corr. test: Weighted Pearson long vect. (wCorr)", "[correlation][pearson][long]") {
   test_correlation_w_random_vector("weighted_pearson", 500'000, 2, 0U, 15'000U);
   test_correlation_w_random_vector("weighted_pearson", 500'000, 2, -7'250, 7'250);
   test_correlation_w_random_vector("weighted_pearson", 500'000, 2, -7'250.0, 7'250.0);
@@ -237,28 +237,28 @@ TEST_CASE("Corr. test: Weighted Spearman", "[correlation][spearman][short]") {
 }
 
 // NOLINTNEXTLINE(readability-function-cognitive-complexity)
-TEST_CASE("Corr. test: Spearman long", "[correlation][spearman][long]") {
+TEST_CASE("Corr. test: Spearman long (SciPy)", "[correlation][spearman][long]") {
   test_correlation_w_random_vector("spearman", 1'000, 250, 0U, 15'000U);
   test_correlation_w_random_vector("spearman", 1'000, 250, -7'250, 7'250);
   test_correlation_w_random_vector("spearman", 1'000, 250, -7'250.0, 7'250.0);
 }
 
 // NOLINTNEXTLINE(readability-function-cognitive-complexity)
-TEST_CASE("Corr. test: Spearman long vect.", "[correlation][spearman][long]") {
+TEST_CASE("Corr. test: Spearman long vect. (SciPy)", "[correlation][spearman][long]") {
   test_correlation_w_random_vector("spearman", 500'000, 2, 0U, 15'000U);
   test_correlation_w_random_vector("spearman", 500'000, 2, -7'250, 7'250);
   test_correlation_w_random_vector("spearman", 500'000, 2, -7'250.0, 7'250.0);
 }
 
 // NOLINTNEXTLINE(readability-function-cognitive-complexity)
-TEST_CASE("Corr. test: Weighted Spearman long", "[correlation][spearman][medium]") {
+TEST_CASE("Corr. test: Weighted Spearman long (wCorr)", "[correlation][spearman][medium]") {
   test_correlation_w_random_vector("weighted_spearman", 1'000, 250, 0U, 15'000U);
   test_correlation_w_random_vector("weighted_spearman", 1'000, 250, -7'250, 7'250);
   test_correlation_w_random_vector("weighted_spearman", 1'000, 250, -7'250.0, 7'250.0);
 }
 
 // NOLINTNEXTLINE(readability-function-cognitive-complexity)
-TEST_CASE("Corr. test: Weighted Spearman long vect.", "[correlation][spearman][long]") {
+TEST_CASE("Corr. test: Weighted Spearman long vect. (wCorr)", "[correlation][spearman][long]") {
   test_correlation_w_random_vector("weighted_spearman", 500'000, 2, 0U, 15'000U);
   test_correlation_w_random_vector("weighted_spearman", 500'000, 2, -7'250, 7'250);
   test_correlation_w_random_vector("weighted_spearman", 500'000, 2, -7'250.0, 7'250.0);
