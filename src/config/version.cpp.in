@@ -41,6 +41,10 @@ static void generate_suffix(std::string* buff) {
     *buff = std::string{raw_suffix} + short_hash_suffix;
   }
   buff->append(is_dirty_suffix);
+
+  if (buff->front() == '-') {
+    buff->erase(0, 1);
+  }
 }
 
 }  // namespace internal
