@@ -292,7 +292,7 @@ jobs:
           # Make sure project builds with CMake 3.18
           - { compiler: clang-14,  os: 'ubuntu-22.04',  generator: Ninja, cmake: '3.18.4', conan: '1.49.*', build_type: Release, developer_mode: OFF }
           # Make sure project builds with Conan 1.43
-          - { compiler: clang-14,  os: 'ubuntu-22.04',  generator: Ninja, cmake: '3.22.*', conan: '1.43.*', build_type: Release, developer_mode: OFF }
+          - { compiler: clang-14,  os: 'ubuntu-22.04',  generator: Ninja, cmake: '3.22.*', conan: '1.45.*', build_type: Release, developer_mode: OFF }
 
     container:
       image: ghcr.io/paulsengroup/ci-docker-images/modle/${{ matrix.os }}-cxx-${{ matrix.compiler }}:latest

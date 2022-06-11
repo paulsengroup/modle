@@ -2,7 +2,7 @@
 #
 # SPDX-License-Identifier: MIT
 
-cmake_minimum_required(VERSION 3.16)
+cmake_minimum_required(VERSION 3.18)
 
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake/modules/")
 
@@ -22,8 +22,8 @@ include(FetchContent)
 # cmake-format: off
 FetchContent_Declare(
         _project_options
-        URL https://github.com/cpp-best-practices/project_options/archive/refs/tags/v0.21.0.tar.gz
-        URL_HASH SHA512=91d6f073cdc5ad9c3b42019c56d6bc570e07b827257c4e66630679e5517bb302e343d2602400b9e870dd1a5e7bad235f5516cf4df9dff5c7cddbece3c2b3137b
+        URL https://github.com/cpp-best-practices/project_options/archive/refs/tags/v0.22.0.tar.gz
+        URL_HASH SHA512=485d4c8d7a1d56c4a90b9e35bc16fa6644211f4f6959369cb8c73a0bec28cf1ad19c73ed7243d6fcca4cf5a15ebf507fd01023713f58e484e5af14d5f1c6b750
 )
 # cmake-format: on
 
