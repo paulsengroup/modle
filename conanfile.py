@@ -7,6 +7,7 @@ from conans import ConanFile, tools
 
 class MoDLE(ConanFile):
   name = "MoDLE"
+  version = "1.0.0-rc.5"
   homepage = "https://github.com/paulsengroup/modle"
   license = "MIT"
   author = "Roberto Rossini (roberros@uio.no)"
@@ -32,7 +33,7 @@ class MoDLE(ConanFile):
               "zlib/1.2.12"]
   # "zstd/1.4.8"]
 
-  generators = "cmake", "gcc", "txt", "cmake_find_package", "cmake_find_package_multi"
+  generators = "cmake", "cmake_find_package", "cmake_find_package_multi"
 
   def validate(self):
     if self.settings.compiler.get_safe("cppstd"):
