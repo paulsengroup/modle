@@ -945,10 +945,10 @@ bool Simulation::evaluate_burnin(const std::deque<double>& cfx_of_variation_buff
     return false;
   }
 
-  // Count the number of adjacent pairs of values where the first value is larger than the
-  // second This visually corresponds to a local dip in the avg loop size plot When we are in a
-  // stable state the above line should be relatively flat. For this reason, we expect n to be
-  // roughly equal to 1/2 of all the measurements
+  // Count the number of adjacent pairs of values where the first value is larger than the second.
+  // This visually corresponds to a local dip in the avg loop size plot.
+  // When we are in a stable state the above line should be relatively flat.
+  // For this reason, we expect n to be roughly equal to 1/2 of all the measurements
   usize n = 0;
   assert(window_size < buff_capacity);
   for (auto it1 = cfx_of_variation_buff.begin() + 1,
@@ -993,6 +993,7 @@ void Simulation::run_burnin(State& s, const double lef_binding_rate_burnin) cons
       s.burnin_completed = Simulation::evaluate_burnin(
           s.get_cfx_of_variation(), s.get_avg_loop_sizes(), this->burnin_history_length,
           this->burnin_smoothing_window_size);
+      s.burnin_completed &= this->min_burnin_epochs > s.epoch;
 
       if (!s.burnin_completed && s.epoch >= this->max_burnin_epochs) {
         s.burnin_completed = true;
@@ -1060,6 +1061,10 @@ void Simulation::simulate_one_cell(State& s) const {
       if (s.burnin_completed) {  // Register contacts
         this->sample_and_register_contacts(s, sampling_events_per_epoch);
         if (s.num_target_contacts != 0 && s.num_contacts >= s.num_target_contacts) {
+          spdlog::debug(FMT_STRING("Simulation for cell #{} of {} took {} epochs ({} for burnin "
+                                   "and {} for the rest of the simulation)"),
+                        s.cell_id, s.chrom->name(), s.epoch, s.num_burnin_epochs,
+                        s.epoch - s.num_burnin_epochs);
           return;  // Enough contacts have been generated. Yay!
         }
       }

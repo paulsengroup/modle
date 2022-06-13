@@ -195,14 +195,15 @@ void Chromosome::add_extrusion_barrier(const bed::BED& record,
                                        const double default_barrier_stp_active,
                                        const double default_barrier_stp_inactive) {
   assert(record.strand == '+' || record.strand == '-' || record.strand == '.');
-
   const auto pos = (record.chrom_start + record.chrom_end + 1) / 2;
   if (pos < this->start_pos() || pos >= this->end_pos()) {
     // Barrier lies outside of the genomic regions to be simulated
     return;
   }
+
   const auto [barrier_stp_active, barrier_stp_inactive] =
       compute_barrier_stp(record.score, default_barrier_stp_active, default_barrier_stp_inactive);
+
   this->_barriers.emplace(
       record.chrom_start, record.chrom_end,
       ExtrusionBarrier{pos, barrier_stp_active, barrier_stp_inactive, record.strand});
@@ -410,8 +411,11 @@ usize Genome::import_barriers(absl::btree_set<Chromosome>& chromosomes,
                          "between 0 and 1, got {:.4g}."),
               record.chrom, record.chrom_start, record.chrom_end, record.score));
         }
-        chrom.add_extrusion_barrier(record, ctcf_prob_occ_to_occ, ctcf_prob_nocc_to_nocc);
-        ++tot_num_barriers;
+        if (record.strand == '+' || record.strand == '-') {
+          // For now we don't support barriers without strand information
+          chrom.add_extrusion_barrier(record, ctcf_prob_occ_to_occ, ctcf_prob_nocc_to_nocc);
+          ++tot_num_barriers;
+        }
       }
     }
     chrom.barriers().make_BST();

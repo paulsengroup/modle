@@ -20,22 +20,6 @@ class Direction {
   // 2 = fwd
   // 3 = both
 
-  explicit Direction(char d) {
-    switch (d) {
-      case '.':
-        this->_direction = 0;
-        break;
-      case '-':
-        this->_direction = 1;
-        break;
-      case '+':
-        this->_direction = 2;
-        break;
-      default:
-        throw std::runtime_error("Invalid dna::Direction '" + std::string{d} + "\"");
-    }
-  }
-
  public:
   constexpr Direction() = delete;
   template <u8f direction>
@@ -43,6 +27,18 @@ class Direction {
     static_assert(direction <= 3);
   }
   explicit constexpr Direction(u8f direction) : _direction(direction) { assert(direction <= 3); }
+  [[nodiscard]] static Direction from_char(char d) {
+    switch (d) {
+      case '.':
+        return Direction(0);
+      case '-':
+        return Direction(1);
+      case '+':
+        return Direction(2);
+      default:
+        throw std::runtime_error("Invalid dna::Direction '" + std::string{d} + "\"");
+    }
+  }
 
   [[nodiscard]] constexpr Direction complement() const noexcept {
     switch (_direction) {
@@ -51,9 +47,9 @@ class Direction {
       case 3:
         return Direction{this->_direction};
       case 1:
-        return Direction{u8f(2)};
+        return Direction{2};
       case 2:
-        return Direction{u8f(3)};
+        return Direction{1};
       default:
         MODLE_UNREACHABLE_CODE;
     }
@@ -69,16 +65,16 @@ class Direction {
 constexpr bool operator==(Direction a, Direction b) noexcept {
   return a._direction == b._direction;
 }
-inline bool operator==(char a, Direction b) { return Direction(a) == b; }
+inline bool operator==(char a, Direction b) { return Direction::from_char(a) == b; }
 
 inline bool operator==(Direction a, char b) { return b == a; }
 constexpr bool operator!=(Direction a, Direction b) noexcept { return !(a == b); }
 inline bool operator!=(char a, Direction b) { return !(a == b); }
 inline bool operator!=(Direction a, char b) { return !(a == b); }
 
-[[maybe_unused]] inline constexpr Direction NONE{u8f(0)};
-[[maybe_unused]] inline constexpr Direction REV{u8f(1)};
-[[maybe_unused]] inline constexpr Direction FWD{u8f(2)};
-[[maybe_unused]] inline constexpr Direction BOTH{u8f(3)};
+[[maybe_unused]] inline constexpr Direction NONE{0};
+[[maybe_unused]] inline constexpr Direction REV{1};
+[[maybe_unused]] inline constexpr Direction FWD{2};
+[[maybe_unused]] inline constexpr Direction BOTH{3};
 
 }  // namespace modle::dna

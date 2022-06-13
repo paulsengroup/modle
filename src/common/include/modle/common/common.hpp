@@ -23,6 +23,17 @@ namespace utils {
 [[maybe_unused]] [[nodiscard]] constexpr bool ndebug_not_defined() noexcept {
   return !ndebug_defined();
 }
+
+// to avoid useless casts (see https://github.com/nlohmann/json/issues/2893#issuecomment-889152324)
+template <class T, class U>
+[[maybe_unused]] [[nodiscard]] constexpr T conditional_static_cast(U value) {
+  if constexpr (std::is_same_v<T, U>) {
+    return value;
+  } else {
+    return static_cast<T>(value);
+  }
+}
+
 }  // namespace utils
 
 // Define short aliases for common integral types

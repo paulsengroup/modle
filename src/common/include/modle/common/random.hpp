@@ -9,14 +9,15 @@
 #include "modle/common/common.hpp"  // for u64
 
 #ifdef MODLE_WITH_BOOST_RANDOM
-#include <boost/random/bernoulli_distribution.hpp>     // for bernoulli_distribution
-#include <boost/random/discrete_distribution.hpp>      // for discrete_distribution
-#include <boost/random/generate_canonical.hpp>         // for generate_canonical
-#include <boost/random/normal_distribution.hpp>        // for normal_distribution
-#include <boost/random/poisson_distribution.hpp>       // for poisson_distribution
-#include <boost/random/random_device.hpp>              // for random_device
-#include <boost/random/uniform_int_distribution.hpp>   // for uniform_int_distribution
-#include <boost/random/uniform_real_distribution.hpp>  // for uniform_real_distribution
+#include <boost/random/bernoulli_distribution.hpp>
+#include <boost/random/binomial_distribution.hpp>
+#include <boost/random/discrete_distribution.hpp>
+#include <boost/random/generate_canonical.hpp>
+#include <boost/random/normal_distribution.hpp>
+#include <boost/random/poisson_distribution.hpp>
+#include <boost/random/random_device.hpp>
+#include <boost/random/uniform_int_distribution.hpp>
+#include <boost/random/uniform_real_distribution.hpp>
 #else
 #include <random>
 #endif
@@ -32,6 +33,8 @@ using PRNG_t = decltype(PRNG(u64(1)));
 
 #ifdef MODLE_WITH_BOOST_RANDOM
 using bernoulli_trial = boost::random::bernoulli_distribution<double>;
+template <class N>
+using binomial_distribution = boost::random::binomial_distribution<N>;
 template <class N>
 using discrete_distribution = boost::random::discrete_distribution<N>;
 template <class N, usize bits>
@@ -51,6 +54,8 @@ using random_device = boost::random_device;
 
 #else
 using bernoulli_trial = std::bernoulli_distribution;
+template <class N>
+using binomial_distribution = std::binomial_distribution<N>;
 template <class N>
 using discrete_distribution = std::discrete_distribution<N>;
 template <class N, usize bits>

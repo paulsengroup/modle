@@ -113,7 +113,8 @@ struct Config {
   bool skip_burnin{false};
   usize burnin_history_length{100};
   usize burnin_smoothing_window_size{5};
-  usize max_burnin_epochs{(std::numeric_limits<i64>::max)()};
+  usize min_burnin_epochs{0};
+  usize max_burnin_epochs{(std::numeric_limits<usize>::max)()};
   usize burnin_target_epochs_for_lef_activation{320};
   double burnin_speed_coefficient{1.0};
   bp_t fwd_extrusion_speed_burnin{bp_t(double(fwd_extrusion_speed) * burnin_speed_coefficient)};

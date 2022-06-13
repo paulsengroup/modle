@@ -491,14 +491,21 @@ static std::vector<CLI::App*> add_common_options(CLI::App& subcommand, modle::Co
       ->capture_default_str();
 
   burnin_adv.add_option(
+      "--min-burnin-epochs",
+      c.min_burnin_epochs,
+      "Lower bound for the burn-in phase duration.")
+      ->check(CLI::NonNegativeNumber)
+      ->capture_default_str();
+
+  burnin_adv.add_option(
       "--max-burnin-epochs",
-       c.max_burnin_epochs,
-       "Upper bound for the burn-in phase duration.\n"
-       "This is especially useful when simlating loop extrusion with very few LEFs.\n"
-       "When this is the case, --max-burnin-epochs=100000 can be used as a very conservative\n"
-       "threshold.")
-       ->check(CLI::PositiveNumber)
-       ->default_str("inf");
+      c.max_burnin_epochs,
+      "Upper bound for the burn-in phase duration.\n"
+      "This is especially useful when simlating loop extrusion with very few LEFs.\n"
+      "When this is the case, --max-burnin-epochs=100000 can be used as a very conservative\n"
+      "threshold.")
+      ->check(CLI::PositiveNumber)
+      ->default_str("inf");
 
   burnin_adv.add_option(
       "--burnin-extr-speed-coefficient",
@@ -970,6 +977,12 @@ void Cli::validate_args() const {
                                "CLI option --no-normalize-probabilities was passed by the user.")));
   }
 
+  if (c.min_burnin_epochs > c.max_burnin_epochs) {
+    errors.emplace_back(fmt::format(
+        FMT_STRING("--min-burnin-epochs={} cannot be greater than --max-burnin-epochs={}."),
+        c.min_burnin_epochs, c.max_burnin_epochs));
+  }
+
   if (!errors.empty()) {
     throw std::runtime_error(fmt::format(
         FMT_STRING(
@@ -1143,12 +1156,21 @@ static constexpr void cli_update_tad_to_loop_contact_ratio(Config& c) {
   }
 }
 
+void cli_update_burnin_params(Config& c) {
+  const auto lef_activation_bp = 5 * c.avg_lef_processivity;
+  c.burnin_target_epochs_for_lef_activation = std::min(
+      c.max_burnin_epochs,
+      utils::conditional_static_cast<usize>(
+          lef_activation_bp / (c.rev_extrusion_speed_burnin + c.fwd_extrusion_speed_burnin)));
+}
+
 void Cli::transform_args() {
   cli_update_paths(this->get_subcommand(), this->_config);
   cli_update_extr_speed(this->_cli, this->_config);
   cli_compute_prob_of_lef_release(this->_config);
   cli_update_barrier_stp_and_occupancy(this->_cli, this->_config);
   cli_update_tad_to_loop_contact_ratio(this->_config);
+  cli_update_burnin_params(this->_config);
 
   if (this->_config.normalize_probabilities) {
     cli_normalize_probabilities(this->_config);
