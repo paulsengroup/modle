@@ -1159,8 +1159,9 @@ static constexpr void cli_update_tad_to_loop_contact_ratio(Config& c) {
 void cli_update_burnin_params(Config& c) {
   const auto lef_activation_bp = 5 * c.avg_lef_processivity;
   c.burnin_target_epochs_for_lef_activation = std::min(
-      c.max_burnin_epochs, static_cast<usize>(lef_activation_bp / (c.rev_extrusion_speed_burnin +
-                                                                   c.fwd_extrusion_speed_burnin)));
+      c.max_burnin_epochs,
+      utils::conditional_static_cast<usize>(
+          lef_activation_bp / (c.rev_extrusion_speed_burnin + c.fwd_extrusion_speed_burnin)));
 }
 
 void Cli::transform_args() {
