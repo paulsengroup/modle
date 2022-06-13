@@ -491,14 +491,21 @@ static std::vector<CLI::App*> add_common_options(CLI::App& subcommand, modle::Co
       ->capture_default_str();
 
   burnin_adv.add_option(
+      "--min-burnin-epochs",
+      c.min_burnin_epochs,
+      "Lower bound for the burn-in phase duration.")
+      ->check(CLI::NonNegativeNumber)
+      ->capture_default_str();
+
+  burnin_adv.add_option(
       "--max-burnin-epochs",
-       c.max_burnin_epochs,
-       "Upper bound for the burn-in phase duration.\n"
-       "This is especially useful when simlating loop extrusion with very few LEFs.\n"
-       "When this is the case, --max-burnin-epochs=100000 can be used as a very conservative\n"
-       "threshold.")
-       ->check(CLI::PositiveNumber)
-       ->default_str("inf");
+      c.max_burnin_epochs,
+      "Upper bound for the burn-in phase duration.\n"
+      "This is especially useful when simlating loop extrusion with very few LEFs.\n"
+      "When this is the case, --max-burnin-epochs=100000 can be used as a very conservative\n"
+      "threshold.")
+      ->check(CLI::PositiveNumber)
+      ->default_str("inf");
 
   burnin_adv.add_option(
       "--burnin-extr-speed-coefficient",
@@ -968,6 +975,12 @@ void Cli::validate_args() const {
     this->_warnings.emplace_back(
         fmt::format(FMT_STRING("Option --probability-normalization-factor ha no effect. Reason: "
                                "CLI option --no-normalize-probabilities was passed by the user.")));
+  }
+
+  if (c.min_burnin_epochs > c.max_burnin_epochs) {
+    errors.emplace_back(fmt::format(
+        FMT_STRING("--min-burnin-epochs={} cannot be greater than --max-burnin-epochs={}."),
+        c.min_burnin_epochs, c.max_burnin_epochs));
   }
 
   if (!errors.empty()) {
