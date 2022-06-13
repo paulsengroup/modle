@@ -1156,12 +1156,20 @@ static constexpr void cli_update_tad_to_loop_contact_ratio(Config& c) {
   }
 }
 
+void cli_update_burnin_params(Config& c) {
+  const auto lef_activation_bp = 5 * c.avg_lef_processivity;
+  c.burnin_target_epochs_for_lef_activation = std::min(
+      c.max_burnin_epochs, static_cast<usize>(lef_activation_bp / (c.rev_extrusion_speed_burnin +
+                                                                   c.fwd_extrusion_speed_burnin)));
+}
+
 void Cli::transform_args() {
   cli_update_paths(this->get_subcommand(), this->_config);
   cli_update_extr_speed(this->_cli, this->_config);
   cli_compute_prob_of_lef_release(this->_config);
   cli_update_barrier_stp_and_occupancy(this->_cli, this->_config);
   cli_update_tad_to_loop_contact_ratio(this->_config);
+  cli_update_burnin_params(this->_config);
 
   if (this->_config.normalize_probabilities) {
     cli_normalize_probabilities(this->_config);
