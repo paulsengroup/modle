@@ -18,7 +18,6 @@ on:
       - 'v*.*.*'
 
   pull_request:
-    branches: [ main, devel, ci-devel ]
     paths:
       - ".github/workflows/unit-tests-ubuntu.yml"
       - "cmake/**"
