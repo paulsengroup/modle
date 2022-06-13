@@ -4,10 +4,6 @@
 name: Build Docker image
 
 on:
-  create:
-    tags:
-      - 'v*.*.*'
-
   push:
     branches: [ main, devel, ci-devel ]
     paths:
@@ -20,7 +16,7 @@ on:
       - "Dockerfile"
       - "conanfile.py"
     tags:
-      - 'v*.*.*'
+      - 'v*.*+.*'
 
   pull_request:
     branches: [ main, devel, ci-devel ]
