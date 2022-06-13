@@ -15,10 +15,9 @@ on:
       - "CMakeLists.txt"
       - "conanfile.py"
     tags:
-      - 'v*.*+.*'
+      - 'v*.*.*'
 
   pull_request:
-    branches: [ main, devel, ci-devel ]
     paths:
       - ".github/workflows/unit-tests-ubuntu.yml"
       - "cmake/**"

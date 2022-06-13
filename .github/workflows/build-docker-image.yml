@@ -16,10 +16,9 @@ on:
       - "Dockerfile"
       - "conanfile.py"
     tags:
-      - 'v*.*+.*'
+      - 'v*.*.*'
 
   pull_request:
-    branches: [ main, devel, ci-devel ]
     paths:
       - ".github/workflows/build-docker-image.yml"
       - "cmake/**"
