@@ -70,8 +70,9 @@ struct PosPair {
   return lefs[i];
 }
 
-[[nodiscard]] static constexpr usize compute_num_contacts_loop(
-    const usize num_contacts, const double tad_to_loop_contact_ratio, random::PRNG_t& rand_eng) {
+[[nodiscard]] static usize compute_num_contacts_loop(const usize num_contacts,
+                                                     const double tad_to_loop_contact_ratio,
+                                                     random::PRNG_t& rand_eng) {
   // Handle special case where TAD contact sampling has been disabled
   if (tad_to_loop_contact_ratio == 0) {
     return num_contacts;
