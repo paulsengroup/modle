@@ -71,7 +71,7 @@ struct PosPair {
 }
 
 [[nodiscard]] static constexpr usize compute_num_contacts_loop(
-    const usize num_contacts, const double tad_to_loop_contact_ratio) {
+    const usize num_contacts, const double tad_to_loop_contact_ratio, random::PRNG_t& rand_eng) {
   // Handle special case where TAD contact sampling has been disabled
   if (tad_to_loop_contact_ratio == 0) {
     return num_contacts;
@@ -84,10 +84,10 @@ struct PosPair {
   }
 
   const auto prob_loop_contact = 1.0 / (tad_to_loop_contact_ratio + 1.0);
-  const auto num_loop_contacts = std::round(prob_loop_contact * static_cast<double>(num_contacts));
-
-  assert(static_cast<usize>(num_loop_contacts) <= num_contacts);
-  return static_cast<usize>(num_loop_contacts);
+  // Using usize as template param the distribution causes an ambiguous call to abs() inside
+  // boost::random (boost v1.79)
+  return static_cast<usize>(
+      random::binomial_distribution<isize>{isize(num_contacts), prob_loop_contact}(rand_eng));
 }
 
 void Simulation::sample_and_register_contacts(State& s, usize num_contacts_to_sample) const {
@@ -107,8 +107,8 @@ void Simulation::sample_and_register_contacts(State& s, usize num_contacts_to_sa
   const auto start_pos = s.is_modle_sim_state() ? s.chrom->start_pos() : s.window_start;
   const auto end_pos = s.is_modle_sim_state() ? s.chrom->end_pos() : s.window_end;
 
-  const auto num_loop_contacts =
-      compute_num_contacts_loop(num_contacts_to_sample, this->tad_to_loop_contact_ratio);
+  const auto num_loop_contacts = compute_num_contacts_loop(
+      num_contacts_to_sample, this->tad_to_loop_contact_ratio, s.rand_eng);
   const auto num_tad_contacts = num_contacts_to_sample - num_loop_contacts;
 
   assert(s.contacts);
