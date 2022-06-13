@@ -4,10 +4,6 @@
 name: Unit tests Ubuntu
 
 on:
-  create:
-    tags:
-      - 'v*.*.*'
-
   push:
     branches: [ main, devel, ci-devel ]
     paths:
@@ -19,7 +15,7 @@ on:
       - "CMakeLists.txt"
       - "conanfile.py"
     tags:
-      - 'v*.*.*'
+      - 'v*.*+.*'
 
   pull_request:
     branches: [ main, devel, ci-devel ]
