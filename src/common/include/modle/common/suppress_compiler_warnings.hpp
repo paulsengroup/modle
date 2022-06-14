@@ -65,16 +65,16 @@
     #define DISABLE_WARNING_USELESS_CAST
     #define DISABLE_WARNING_MAYBE_UNINITIALIZED
 
-    #if __clang_major__ >= 13
-        #define DISABLE_WARNING_UNUSED_PARAMETER DISABLE_WARNING("-Wunused-but-set-parameter")
+    #if defined(__APPLE__) || (__clang_major__ < 11)
+        #define DISABLE_WARNING_IMPL_INT_TO_FLOAT  DISABLE_WARNING("-Wimplicit-const-int-float-conversion")
     #else
-        #define DISABLE_WARNING_UNUSED_PARAMETER
+        #define DISABLE_WARNING_IMPL_INT_TO_FLOAT
     #endif
 
-    #if defined(__APPLE__) || (__clang_major__ < 11)
-        #define DISABLE_WARNING_IMPL_INT_TO_FLOAT
+    #if __has_warning("-Wunused-but-set-parameter")
+        #define DISABLE_WARNING_UNUSED_PARAMETER   DISABLE_WARNING("-Wunused-but-set-parameter")
     #else
-        #define DISABLE_WARNING_IMPL_INT_TO_FLOAT DISABLE_WARNING("-Wimplicit-const-int-float-conversion")
+        #define DISABLE_WARNING_UNUSED_PARAMETER
     #endif
 #endif
 

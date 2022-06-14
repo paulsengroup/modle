@@ -143,7 +143,7 @@ TEST_CASE("Corr. test: Weighted Pearson w ties", "[correlation][pearson][short]"
 }
 
 // NOLINTNEXTLINE(readability-function-cognitive-complexity)
-TEST_CASE("Corr. test: Pearson", "[correlation][pearson][short]") {
+TEST_CASE("Corr. test: Pearson (SciPy)", "[correlation][pearson][short]") {
   random::PRNG_t rand_eng{2427588200550938527ULL};
   const auto v1 = generate_random_vect(rand_eng, 1'000, 0, 15'000);
   const auto v2 = generate_random_vect(rand_eng, 1'000, 0, 15'000);
@@ -155,7 +155,7 @@ TEST_CASE("Corr. test: Pearson", "[correlation][pearson][short]") {
 }
 
 // NOLINTNEXTLINE(readability-function-cognitive-complexity)
-TEST_CASE("Corr. test: Weighted Pearson", "[correlation][pearson][short]") {
+TEST_CASE("Corr. test: Weighted Pearson (wCorr)", "[correlation][pearson][short]") {
   random::PRNG_t rand_eng{17383284879759537016ULL};
   const auto v1 = generate_random_vect(rand_eng, 1'000, 0, 15'000);
   const auto v2 = generate_random_vect(rand_eng, 1'000, 0, 15'000);
@@ -213,7 +213,7 @@ TEST_CASE("Corr. test: Spearman w ties", "[correlation][spearman][short]") {
 }
 
 // NOLINTNEXTLINE(readability-function-cognitive-complexity)
-TEST_CASE("Corr. test: Spearman", "[correlation][spearman][short]") {
+TEST_CASE("Corr. test: Spearman (SciPy)", "[correlation][spearman][short]") {
   random::PRNG_t rand_eng{3860329809333667103ULL};
   const auto v1 = generate_random_vect(rand_eng, 1'000, 0, 15'000);
   const auto v2 = generate_random_vect(rand_eng, 1'000, 0, 15'000);
@@ -225,7 +225,7 @@ TEST_CASE("Corr. test: Spearman", "[correlation][spearman][short]") {
 }
 
 // NOLINTNEXTLINE(readability-function-cognitive-complexity)
-TEST_CASE("Corr. test: Weighted Spearman", "[correlation][spearman][short]") {
+TEST_CASE("Corr. test: Weighted Spearman (wCorr)", "[correlation][spearman][short]") {
   random::PRNG_t rand_eng{8469130800688738654ULL};
   const auto v1 = generate_random_vect(rand_eng, 1'000, 0, 15'000);
   const auto v2 = generate_random_vect(rand_eng, 1'000, 0, 15'000);
