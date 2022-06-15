@@ -77,7 +77,8 @@ cmake -DCMAKE_BUILD_TYPE=Release ..
 cmake --build . -j 8
 ```
 
-#### Notes
+<details>
+<summary>Notes</summary>
 
 By default, running the commands listed in
 section [Installing MoDLE](https://github.com/paulsengroup/modle#installing-modle) will install MoDLE
@@ -86,6 +87,7 @@ under `/usr/local/` (i.e. the actual binary will be located at `/usr/local/bin/m
 Pass `-DCMAKE_INSTALL_PREFIX="$HOME/.local/"` to the first CMake command (before `..`) to install MoDLE for your user only. In this case MoDLE binary will be located at `~/.local/bin/modle`
 
 The path passed to CMake through `-DCMAKE_INSTALL_PREFIX` can be in principle any path where your user has write permissions.
+</details>
 
 ### Running automated tests
 
