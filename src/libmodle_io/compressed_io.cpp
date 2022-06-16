@@ -16,6 +16,7 @@
 #include <boost/iostreams/filter/gzip.hpp>   // for basic_gzip_compressor
 #include <boost/iostreams/filter/lzma.hpp>   // for basic_lzma_compressor
 #include <boost/iostreams/filter/zlib.hpp>   // for best_compression
+#include <boost/iostreams/filter/zstd.hpp>   // for best_compression
 #include <boost/iostreams/write.hpp>         // for put, write
 #include <cassert>                           // for assert
 #include <cerrno>                            // for errno
@@ -274,10 +275,10 @@ void Writer::open(const boost::filesystem::path& path) {
       this->_out.push(boost::iostreams::lzma_compressor(
           boost::iostreams::lzma_params(boost::iostreams::lzma::best_compression)));
       break;
-    case ZSTD:  // Disabled
-      // this->_out.push(boost::iostreams::zstd_compressor(
-      //     boost::iostreams::zstd_params(boost::iostreams::zstd::best_compression)));
-      throw std::runtime_error("ZSTD compression not available.");
+    case ZSTD:
+      this->_out.push(boost::iostreams::zstd_compressor(
+          boost::iostreams::zstd_params(boost::iostreams::zstd::best_compression)));
+      break;
     case NONE:
       break;
     case AUTO:

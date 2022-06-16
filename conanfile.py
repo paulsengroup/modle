@@ -33,8 +33,8 @@ class MoDLE(ConanFile):
               "tomlplusplus/3.1.0",
               "xxhash/0.8.1",
               "xz_utils/5.2.5",
-              "zlib/1.2.12"]
-  # "zstd/1.4.8"]
+              "zlib/1.2.12",
+              "zstd/1.5.2"]
 
   generators = "cmake", "cmake_find_package", "cmake_find_package_multi"
 
@@ -54,7 +54,7 @@ class MoDLE(ConanFile):
     self.options["boost"].zlib = True
     self.options["boost"].bzip2 = True
     self.options["boost"].lzma = True
-    # self.options["boost"].zstd = True
+    self.options["boost"].zstd = True
     self.options["boost"].without_chrono = True
     self.options["boost"].without_context = True
     self.options["boost"].without_contract = True
@@ -86,7 +86,7 @@ class MoDLE(ConanFile):
     self.options["libarchive"].with_lz4 = True
     self.options["libarchive"].with_lzo = True
     self.options["libarchive"].with_lzma = True
-    # self.options["libarchive"].with_zstd = True
+    self.options["libarchive"].with_zstd = True
 
     self.options["xxhash"].utility = False
 
