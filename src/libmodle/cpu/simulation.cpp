@@ -14,17 +14,16 @@
 #include <cpp-sort/sorters/pdq_sorter.h>        // for pdq_sort, pdq_sorter
 #include <cpp-sort/sorters/split_sorter.h>      // for split_sort, split_sorter
 #include <fmt/compile.h>
-#include <fmt/ostream.h>    // for formatbuf<>::int_type
 #include <spdlog/spdlog.h>  // for info, warn
 
 #include <algorithm>                    // for max, fill, min, copy, clamp
 #include <atomic>                       // for atomic
-#include <boost/filesystem/path.hpp>    // for operator<<, path
 #include <cassert>                      // for assert
 #include <chrono>                       // for microseconds
 #include <cmath>                        // for log, round, exp, floor, sqrt
 #include <cstdlib>                      // for abs
 #include <deque>                        // for _Deque_iterator<>::_Self
+#include <filesystem>                   // for operator<<, path
 #include <iosfwd>                       // for streamsize
 #include <limits>                       // for numeric_limits
 #include <memory>                       // for shared_ptr, unique_ptr, make...
@@ -38,8 +37,9 @@
 #include <utility>                      // for make_pair, pair
 #include <vector>                       // for vector, vector<>::iterator
 
-#include "modle/common/common.hpp"                         // for bp_t, contacts_t
-#include "modle/common/dna.hpp"                            // for dna::REV, dna::FWD
+#include "modle/common/common.hpp"  // for bp_t, contacts_t
+#include "modle/common/dna.hpp"     // for dna::REV, dna::FWD
+#include "modle/common/fmt_std_helper.hpp"
 #include "modle/common/genextreme_value_distribution.hpp"  // for genextreme_value_distribution
 #include "modle/common/random.hpp"             // for bernoulli_trial, poisson_distribution
 #include "modle/common/random_sampling.hpp"    // for random_sample

@@ -63,7 +63,7 @@
     #define DISABLE_WARNING_DUPLICATED_BRANCHES
     #define DISABLE_WARNING_MAYBE_UNINITIALIZED
 
-    #if defined(__APPLE__) || (__clang_major__ < 11)
+    #if defined(__APPLE__) || (__clang_major__ == 11)
         #define DISABLE_WARNING_IMPL_INT_TO_FLOAT  DISABLE_WARNING("-Wimplicit-const-int-float-conversion")
     #else
         #define DISABLE_WARNING_IMPL_INT_TO_FLOAT

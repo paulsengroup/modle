@@ -10,10 +10,9 @@
 #include <algorithm>                                // for clamp, fill, max, min
 #include <atomic>                                   // for atomic_fetch_add_explicit
 #include <boost/dynamic_bitset/dynamic_bitset.hpp>  // for dynamic_bitset
-#include <boost/filesystem/operations.hpp>          // for exists
-#include <boost/filesystem/path.hpp>                // for path
 #include <cassert>                                  // for assert
 #include <cmath>                                    // for sqrt, round
+#include <filesystem>                               // for path
 #include <fstream>                                  // for flush, ostream
 #include <iostream>                                 // for cout
 #include <numeric>                                  // for accumulate
@@ -305,8 +304,8 @@ std::vector<std::vector<N>> ContactMatrix<N>::unsafe_generate_symmetric_matrix()
 }
 
 template <class N>
-void ContactMatrix<N>::unsafe_import_from_txt(const boost::filesystem::path &path, const char sep) {
-  assert(boost::filesystem::exists(path));
+void ContactMatrix<N>::unsafe_import_from_txt(const std::filesystem::path &path, const char sep) {
+  assert(std::filesystem::exists(path));
   compressed_io::Reader r(path);
 
   std::string buff;

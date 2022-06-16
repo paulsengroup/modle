@@ -11,9 +11,9 @@
 #include <xxhash.h>                              // for XXH_INLINE_XXH3_createState, XXH3...
 
 #include <atomic>                       // for atomic
-#include <boost/filesystem/path.hpp>    // for path
 #include <deque>                        // for deque
 #include <exception>                    // for exception_ptr
+#include <filesystem>                   // for path
 #include <limits>                       // for numeric_limits
 #include <memory>                       // for shared_ptr, allocator, unique_ptr
 #include <mutex>                        // for mutex
@@ -241,7 +241,7 @@ class Simulation : Config {
 
   void perturbate_worker(u64 tid,
                          moodycamel::BlockingConcurrentQueue<Simulation::TaskPW>& task_queue,
-                         const boost::filesystem::path& tmp_output_path, std::mutex& cooler_mtx,
+                         const std::filesystem::path& tmp_output_path, std::mutex& cooler_mtx,
                          usize task_batch_size = 1);
 
   void replay_worker(u64 tid, moodycamel::BlockingConcurrentQueue<Simulation::TaskPW>& task_queue,
@@ -446,7 +446,7 @@ class Simulation : Config {
   [[nodiscard]] bed::BED_tree<> import_deletions() const;
   [[nodiscard]] bed::BED_tree<> generate_deletions() const;
   [[nodiscard]] static absl::flat_hash_set<usize> import_task_filter(
-      const boost::filesystem::path& path_to_task_filter);
+      const std::filesystem::path& path_to_task_filter);
 
   [[noreturn]] void rethrow_exceptions() const;
   [[noreturn]] void handle_exceptions();

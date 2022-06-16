@@ -55,7 +55,6 @@ target_link_system_libraries(
   PUBLIC
   absl::flat_hash_set
   absl::span
-  Boost::filesystem
   Boost::headers
   concurrentqueue::concurrentqueue
   fmt::fmt

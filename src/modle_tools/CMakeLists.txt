@@ -50,7 +50,6 @@ target_link_system_libraries(
   absl::symbolize
   absl::time
   absl::variant
-  Boost::filesystem
   Boost::headers
   CLI11::CLI11
   cpp-sort::cpp-sort

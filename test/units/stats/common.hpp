@@ -11,14 +11,14 @@
 #include <algorithm>  // for max, generate
 #include <array>      // for array
 #include <boost/container_hash/hash.hpp>
-#include <boost/filesystem/path.hpp>  // for create_directories, exists, path, remove
 #include <boost/process.hpp>
-#include <cstdio>     // for pclose, fgets, popen, FILE
-#include <fstream>    // for basic_ofstream, operator<<, basic_ostream
-#include <memory>     // for allocator, unique_ptr
-#include <numeric>    // for iota
-#include <stdexcept>  // for runtime_error
-#include <string>     // for string, operator+, char_traits, stod
+#include <cstdio>      // for pclose, fgets, popen, FILE
+#include <filesystem>  // for create_directories, exists, path, remove
+#include <fstream>     // for basic_ofstream, operator<<, basic_ostream
+#include <memory>      // for allocator, unique_ptr
+#include <numeric>     // for iota
+#include <stdexcept>   // for runtime_error
+#include <string>      // for string, operator+, char_traits, stod
 #include <string_view>
 #include <type_traits>  // for enable_if, is_arithmetic
 #include <utility>      // for pair

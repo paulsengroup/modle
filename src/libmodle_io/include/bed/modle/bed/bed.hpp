@@ -9,15 +9,15 @@
 #include <fmt/format.h>                // for format_parse_context, formatter
 #include <xxhash.h>                    // for XXH3_state_t, XXH_INLINE_XXH3_state_t
 
-#include <array>                      // for array
-#include <boost/filesystem/path.hpp>  // for path
-#include <limits>                     // for numeric_limits
-#include <memory>                     // for unique_ptr
-#include <string>                     // for string
-#include <string_view>                // for operator""sv, string_view, basic_string_view, stri...
-#include <type_traits>                // for __strip_reference_wrapper<>::__type
-#include <utility>                    // for make_pair, pair
-#include <vector>                     // for vector
+#include <array>        // for array
+#include <filesystem>   // for path
+#include <limits>       // for numeric_limits
+#include <memory>       // for unique_ptr
+#include <string>       // for string
+#include <string_view>  // for operator""sv, string_view, basic_string_view, stri...
+#include <type_traits>  // for __strip_reference_wrapper<>::__type
+#include <utility>      // for make_pair, pair
+#include <vector>       // for vector
 
 #include "modle/common/common.hpp"     // for bp_t, u64, u8
 #include "modle/common/const_map.hpp"  // for ConstMap, ConstMap::ConstMap<Key, Value, Size>
@@ -156,7 +156,7 @@ class BED_tree {
 
  public:
   inline BED_tree() = default;
-  inline explicit BED_tree(const boost::filesystem::path& path_to_bed,
+  inline explicit BED_tree(const std::filesystem::path& path_to_bed,
                            BED::Dialect dialect = BED::Dialect::autodetect);
 
   using node_type = typename BED_tree_t::node_type;
@@ -214,7 +214,7 @@ class BED_tree {
 
 class Parser {
  public:
-  explicit Parser(const boost::filesystem::path& path_to_bed,
+  explicit Parser(const std::filesystem::path& path_to_bed,
                   BED::Dialect bed_standard = BED::Dialect::autodetect,
                   bool enforce_std_compliance = true);
 

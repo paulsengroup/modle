@@ -11,14 +11,13 @@
 #include <spdlog/sinks/null_sink.h>  // for null_sink_mt
 #include <spdlog/spdlog.h>           // for set_default_logger
 
-#include <algorithm>                        // for max, max_element, transform
-#include <boost/filesystem/operations.hpp>  // for remove, create_directories
-#include <boost/filesystem/path.hpp>        // for operator/, path
-#include <catch2/catch.hpp>                 // for operator""_catch_sr, AssertionHandler, Source...
-#include <exception>                        // for exception
-#include <memory>                           // for make_shared, allocator_traits<>::value_type
-#include <stdexcept>                        // for runtime_error
-#include <string_view>                      // for string_view
+#include <algorithm>         // for max, max_element, transform
+#include <catch2/catch.hpp>  // for operator""_catch_sr, AssertionHandler, Source...
+#include <exception>         // for exception
+#include <filesystem>        // for operator/, path
+#include <memory>            // for make_shared, allocator_traits<>::value_type
+#include <stdexcept>         // for runtime_error
+#include <string_view>       // for string_view
 
 #include "modle/common/common.hpp"                // for u64, u32, usize, i64, u8
 #include "modle/common/utils.hpp"                 // for parse_numeric_or_throw
@@ -36,7 +35,7 @@ using Cooler = Cooler<>;
 // using default_sink_t = spdlog::sinks::stderr_color_sink_mt;
 using default_sink_t = spdlog::sinks::null_sink_mt;
 
-inline const boost::filesystem::path data_dir{"test/data/unit_tests"};
+inline const std::filesystem::path data_dir{"test/data/unit_tests"};
 
 // NOLINTNEXTLINE(readability-function-cognitive-complexity)
 TEST_CASE("cooler ctor", "[io][cooler][short]") {
@@ -59,7 +58,7 @@ TEST_CASE("cooler ctor", "[io][cooler][short]") {
 TEST_CASE("CMatrix to cooler", "[io][cooler][short]") {
   const auto input_file = data_dir / "cmatrix_001.tsv.gz";
   const auto output_file = testdir() / "cmatrix_to_cooler.cool";
-  boost::filesystem::create_directories(testdir());
+  std::filesystem::create_directories(testdir());
   spdlog::set_default_logger(
       std::make_shared<spdlog::logger>("main_logger", std::make_shared<default_sink_t>()));
 
@@ -85,14 +84,14 @@ TEST_CASE("CMatrix to cooler", "[io][cooler][short]") {
     }
   }
 
-  boost::filesystem::remove(output_file);
+  std::filesystem::remove(output_file);
 }
 
 // NOLINTNEXTLINE(readability-function-cognitive-complexity)
 TEST_CASE("CMatrix to cooler - multiple chromosomes", "[io][cooler][short]") {
   const auto input_file = data_dir / "cmatrix_001.tsv.gz";
   const auto output_file = testdir() / "cmatrix_to_cooler.cool";
-  boost::filesystem::create_directories(testdir());
+  std::filesystem::create_directories(testdir());
   spdlog::set_default_logger(
       std::make_shared<spdlog::logger>("main_logger", std::make_shared<default_sink_t>()));
 
@@ -125,7 +124,7 @@ TEST_CASE("CMatrix to cooler - multiple chromosomes", "[io][cooler][short]") {
     }
   }
 
-  boost::filesystem::remove(output_file);
+  std::filesystem::remove(output_file);
 }
 
 // NOLINTNEXTLINE(readability-function-cognitive-complexity)
@@ -205,7 +204,7 @@ TEST_CASE("Cooler to CMatrix and CMatrix to Cooler", "[io][cooler][short]") {
 
   CHECK(mismatches == 0);
 
-  boost::filesystem::remove(test_file_out);
+  std::filesystem::remove(test_file_out);
 }
 
 // NOLINTNEXTLINE(readability-function-cognitive-complexity)
@@ -251,7 +250,7 @@ TEST_CASE("Cooler to CMatrix and CMatrix to Cooler - all chromosomes", "[io][coo
       }
     }
   }
-  boost::filesystem::remove(test_file_out);
+  std::filesystem::remove(test_file_out);
 }
 
 /*

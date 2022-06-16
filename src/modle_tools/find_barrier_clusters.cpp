@@ -9,14 +9,14 @@
 #include <fmt/os.h>                    // for ostream, output_file
 #include <spdlog/spdlog.h>             // for warn
 
-#include <boost/filesystem/path.hpp>  // for path
-#include <cstdio>                     // for stdout
-#include <exception>                  // for exception
-#include <limits>                     // for numeric_limits
-#include <memory>                     // for unique_ptr, make_unique
-#include <string>                     // for string, basic_string
-#include <type_traits>                // for add_const<>::type
-#include <vector>                     // for vector
+#include <cstdio>       // for stdout
+#include <exception>    // for exception
+#include <filesystem>   // for path
+#include <limits>       // for numeric_limits
+#include <memory>       // for unique_ptr, make_unique
+#include <string>       // for string, basic_string
+#include <type_traits>  // for add_const<>::type
+#include <vector>       // for vector
 
 #include "modle/bed/bed.hpp"        // for BED, BED_tree, formatter<>::format, formatter<>::p...
 #include "modle/common/common.hpp"  // for bp_t, u32, u8

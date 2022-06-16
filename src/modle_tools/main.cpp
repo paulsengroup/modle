@@ -57,7 +57,7 @@ int main(int argc, char** argv) {
     // TODO: move this inside the subcommands
     /*
     if (!config.output_prefix.empty()) {
-      boost::filesystem::create_directories(config.output_prefix.parent_path());
+      std::filesystem::create_directories(config.output_prefix.parent_path());
     }
      */
 

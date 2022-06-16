@@ -31,7 +31,6 @@ target_link_system_libraries(
   absl::strings
   absl::symbolize
   absl::time
-  Boost::filesystem
   Boost::headers
   CLI11::CLI11
   fmt::fmt

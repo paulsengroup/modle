@@ -14,29 +14,28 @@
 #include <cpp-sort/comparators/natural_less.h>  // for natural_less_t
 #include <fmt/compile.h>                        // for FMT_COMPILE
 #include <fmt/format.h>                         // for format, make_format_args, vformat_to, FMT...
-#include <fmt/ostream.h>                        // for formatbuf<>::int_type
 #include <spdlog/spdlog.h>                      // for info
 
-#include <algorithm>                        // for all_of, find_if, transform, minmax, max
-#include <boost/filesystem/operations.hpp>  // for create_directories
-#include <boost/filesystem/path.hpp>        // for operator<<, path
-#include <cassert>                          // for assert
-#include <cstdio>                           // for stderr
-#include <exception>                        // for exception
-#include <future>                           // for future
-#include <iosfwd>                           // for streamsize
-#include <iterator>                         // for insert_iterator, inserter
-#include <memory>                           // for unique_ptr, shared_ptr, __shared_ptr_access
-#include <stdexcept>                        // for runtime_error, overflow_error
-#include <string>                           // for string, basic_string
-#include <string_view>                      // for string_view
-#include <thread_pool/thread_pool.hpp>      // for thread_pool
-#include <utility>                          // for tuple_element<>::type, pair, make_pair
-#include <vector>                           // for vector
+#include <algorithm>                    // for all_of, find_if, transform, minmax, max
+#include <cassert>                      // for assert
+#include <cstdio>                       // for stderr
+#include <exception>                    // for exception
+#include <filesystem>                   // for operator<<, path
+#include <future>                       // for future
+#include <iosfwd>                       // for streamsize
+#include <iterator>                     // for insert_iterator, inserter
+#include <memory>                       // for unique_ptr, shared_ptr, __shared_ptr_access
+#include <stdexcept>                    // for runtime_error, overflow_error
+#include <string>                       // for string, basic_string
+#include <string_view>                  // for string_view
+#include <thread_pool/thread_pool.hpp>  // for thread_pool
+#include <utility>                      // for tuple_element<>::type, pair, make_pair
+#include <vector>                       // for vector
 
-#include "modle/bed/bed.hpp"                   // for BED_tree, BED_tree<>::value_type, Parser
-#include "modle/bigwig/bigwig.hpp"             // for Writer
-#include "modle/common/common.hpp"             // for u32, usize, bp_t, u8, i64
+#include "modle/bed/bed.hpp"        // for BED_tree, BED_tree<>::value_type, Parser
+#include "modle/bigwig/bigwig.hpp"  // for Writer
+#include "modle/common/common.hpp"  // for u32, usize, bp_t, u8, i64
+#include "modle/common/fmt_std_helper.hpp"
 #include "modle/common/utils.hpp"              // for identity::operator()
 #include "modle/contacts.hpp"                  // for ContactMatrix
 #include "modle/cooler/cooler.hpp"             // for Cooler, Cooler::READ_ONLY
@@ -50,7 +49,7 @@ namespace modle::tools {
 using ChromSet = absl::btree_map<std::string, std::pair<bp_t, bp_t>, cppsort::natural_less_t>;
 
 [[nodiscard]] static ChromSet import_chrom_subranges(
-    const boost::filesystem::path &path_to_chrom_subranges) {
+    const std::filesystem::path &path_to_chrom_subranges) {
   if (path_to_chrom_subranges.empty()) {
     return ChromSet{};
   }
@@ -86,7 +85,7 @@ template <class N>
 template <class N>
 [[nodiscard]] static ChromSet select_chromosomes_for_eval(
     cooler::Cooler<N> &c1, cooler::Cooler<N> &c2,
-    const boost::filesystem::path &path_to_chrom_subranges) {
+    const std::filesystem::path &path_to_chrom_subranges) {
   // Import chromosomes from Cooler files and select shared chromosomes
   const auto chrom_set1 = import_chroms_from_cool(c1);
   const auto chrom_set2 = import_chroms_from_cool(c2);
@@ -169,7 +168,7 @@ template <class N>
   return chrom_subranges;
 }
 
-[[nodiscard]] static isize find_col_idx(const boost::filesystem::path &path_to_weights,
+[[nodiscard]] static isize find_col_idx(const std::filesystem::path &path_to_weights,
                                         std::string_view header, std::string_view col_name) {
   const auto toks = absl::StrSplit(header, '\t');
   const auto it = std::find(toks.begin(), toks.end(), col_name);
@@ -182,7 +181,7 @@ template <class N>
 }
 
 template <class Range>
-[[nodiscard]] static isize find_col_idx(const boost::filesystem::path &path_to_weights,
+[[nodiscard]] static isize find_col_idx(const std::filesystem::path &path_to_weights,
                                         std::string_view header, const Range &col_names) {
   assert(col_names.size() > 1);
   for (const auto &name : col_names) {
@@ -202,7 +201,7 @@ template <class Range>
 }
 
 [[nodiscard]] static absl::flat_hash_map<std::string, std::vector<double>> import_weights(
-    const boost::filesystem::path &path_to_weights, const std::string_view weight_column_name,
+    const std::filesystem::path &path_to_weights, const std::string_view weight_column_name,
     const usize nbins, const bool reciprocal_weights) {
   assert(nbins != 0);
   absl::flat_hash_map<std::string, std::vector<double>> weights;
@@ -211,7 +210,7 @@ template <class Range>
     return weights;
   }
 
-  assert(boost::filesystem::exists(path_to_weights));
+  assert(std::filesystem::exists(path_to_weights));
   compressed_io::Reader r(path_to_weights);
 
   std::string buff;
@@ -656,7 +655,7 @@ void eval_subcmd(const modle::tools::eval_config &c) {
   }
 
   if (const auto &output_dir = c.output_prefix.parent_path(); !output_dir.empty()) {
-    boost::filesystem::create_directories(output_dir.string());
+    std::filesystem::create_directories(output_dir.string());
   }
 
   auto writers = init_writers(c, chromosomes, !weights.empty());

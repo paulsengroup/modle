@@ -14,21 +14,21 @@
 #include <moodycamel/concurrentqueue.h>          // for ConsumerToken, ProducerToken
 #include <spdlog/spdlog.h>                       // for info
 
-#include <algorithm>                        // for max, min
-#include <array>                            // for array, array<>::value_type
-#include <atomic>                           // for atomic
-#include <boost/filesystem/operations.hpp>  // for exists
-#include <cassert>                          // for assert
-#include <chrono>                           // for microseconds, milliseconds
-#include <exception>                        // for exception_ptr, exception, current_exception
-#include <iterator>                         // for move_iterator, make_move_iterator
-#include <memory>                           // for shared_ptr, make_shared, __shared...
-#include <mutex>                            // for mutex, scoped_lock
-#include <stdexcept>                        // for runtime_error
-#include <string>                           // for string
-#include <thread>                           // IWYU pragma: keep for sleep_for
-#include <thread_pool/thread_pool.hpp>      // for thread_pool
-#include <vector>                           // for vector
+#include <algorithm>                    // for max, min
+#include <array>                        // for array, array<>::value_type
+#include <atomic>                       // for atomic
+#include <cassert>                      // for assert
+#include <chrono>                       // for microseconds, milliseconds
+#include <exception>                    // for exception_ptr, exception, current_exception
+#include <filesystem>                   // for exists
+#include <iterator>                     // for move_iterator, make_move_iterator
+#include <memory>                       // for shared_ptr, make_shared, __shared...
+#include <mutex>                        // for mutex, scoped_lock
+#include <stdexcept>                    // for runtime_error
+#include <string>                       // for string
+#include <thread>                       // IWYU pragma: keep for sleep_for
+#include <thread_pool/thread_pool.hpp>  // for thread_pool
+#include <vector>                       // for vector
 
 #include "modle/common/common.hpp"                // for bp_t, contacts_t, u64
 #include "modle/compressed_io/compressed_io.hpp"  // for Reader, Writer
@@ -37,7 +37,7 @@
 namespace modle {
 
 void Simulation::run_replay() {
-  assert(boost::filesystem::exists(this->path_to_task_file));
+  assert(std::filesystem::exists(this->path_to_task_file));
   compressed_io::Reader task_reader(this->path_to_task_file);
 
   const usize task_batch_size_enq = 32;

@@ -7,10 +7,9 @@
 
 #include <algorithm>                                // for generate, max
 #include <boost/dynamic_bitset/dynamic_bitset.hpp>  // for dynamic_bitset, dynamic_bitset<>::ref...
-#include <boost/filesystem/operations.hpp>          // for exists
-#include <boost/filesystem/path.hpp>                // for path
 #include <boost/process.hpp>
 #include <catch2/catch.hpp>             // for operator""_catch_sr, AssertionHandler
+#include <filesystem>                   // for path
 #include <stdexcept>                    // for runtime_error
 #include <string>                       // for string
 #include <thread>                       // for sleep_for
@@ -25,8 +24,8 @@
 
 namespace modle::test::cmatrix {
 
-[[maybe_unused]] static const boost::filesystem::path& data_dir() {
-  static const boost::filesystem::path data_dir{"test/data/unit_tests"};
+[[maybe_unused]] static const std::filesystem::path& data_dir() {
+  static const std::filesystem::path data_dir{"test/data/unit_tests"};
   return data_dir;
 }
 
@@ -132,7 +131,7 @@ TEST_CASE("CMatrix simple", "[cmatrix][short]") {
 // NOLINTNEXTLINE(readability-function-cognitive-complexity)
 TEST_CASE("CMatrix 10x200", "[cmatrix][medium]") {
   const auto input_file = data_dir() / "symm_matrix_200_10.tsv.gz";
-  REQUIRE(boost::filesystem::exists(input_file));
+  REQUIRE(std::filesystem::exists(input_file));
   const auto m1 = load_matrix_from_file(input_file.string());
   ContactMatrix<> m2(10, 200);
   for (usize i = 0; i < m1.size(); ++i) {

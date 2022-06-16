@@ -16,14 +16,21 @@ add_library(Modle::common ALIAS modle_common)
 
 target_sources(
   modle_common
-  INTERFACE ${CMAKE_CURRENT_SOURCE_DIR}/include/modle/common/common.hpp
+  INTERFACE ${CMAKE_CURRENT_SOURCE_DIR}/include/modle/common/cli_utils.hpp
+            ${CMAKE_CURRENT_SOURCE_DIR}/include/modle/common/common.hpp
             ${CMAKE_CURRENT_SOURCE_DIR}/include/modle/common/const_map.hpp
-            ${CMAKE_CURRENT_SOURCE_DIR}/include/modle/common/simulation_config.hpp
+            ${CMAKE_CURRENT_SOURCE_DIR}/include/modle/common/dna.hpp
+            ${CMAKE_CURRENT_SOURCE_DIR}/include/modle/common/fmt_std_helper.hpp
             ${CMAKE_CURRENT_SOURCE_DIR}/include/modle/common/genextreme_value_distribution.hpp
+            ${CMAKE_CURRENT_SOURCE_DIR}/include/modle/common/numeric_utils.hpp
             ${CMAKE_CURRENT_SOURCE_DIR}/include/modle/common/random.hpp
             ${CMAKE_CURRENT_SOURCE_DIR}/include/modle/common/random_sampling.hpp
+            ${CMAKE_CURRENT_SOURCE_DIR}/include/modle/common/simulation_config.hpp
             ${CMAKE_CURRENT_SOURCE_DIR}/include/modle/common/suppress_compiler_warnings.hpp
             ${CMAKE_CURRENT_SOURCE_DIR}/include/modle/common/utils.hpp
+            ${CMAKE_CURRENT_SOURCE_DIR}/cli_utils_impl.hpp
+            ${CMAKE_CURRENT_SOURCE_DIR}/const_map_impl.hpp
+            ${CMAKE_CURRENT_SOURCE_DIR}/numeric_utils_impl.hpp
             ${CMAKE_CURRENT_SOURCE_DIR}/utils_impl.hpp)
 
 target_link_libraries(modle_common INTERFACE project_options project_warnings)
@@ -35,7 +42,6 @@ target_link_system_libraries(
   absl::strings
   bitflags::bitflags
   Boost::headers
-  Boost::filesystem
   Boost::random
   CLI11::CLI11
   FastFloat::fast_float

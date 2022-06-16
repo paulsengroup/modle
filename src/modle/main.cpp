@@ -8,7 +8,6 @@
 #include <absl/time/clock.h>                        // for Now
 #include <absl/time/time.h>                         // for FormatDuration, operator-, Time
 #include <fmt/format.h>                             // for make_format_args, vformat_to, FMT_STRING
-#include <fmt/ostream.h>                            // for formatbuf<>::int_type
 #include <spdlog/common.h>                          // for sink_ptr, spdlog_ex, err
 #include <spdlog/logger.h>                          // for logger
 #include <spdlog/sinks/basic_file_sink.h>           // for basic_file_sink_mt
@@ -16,25 +15,24 @@
 #include <spdlog/sinks/stdout_color_sinks.h>        // for stderr_color_sink_mt
 #include <spdlog/spdlog.h>                          // for error, info
 
-#include <CLI/CLI.hpp>                      // for ParseError
-#include <algorithm>                        // for max
-#include <boost/filesystem/exception.hpp>   // for filesystem::filesystem_exception
-#include <boost/filesystem/operations.hpp>  // for create_directories
-#include <boost/filesystem/path.hpp>        // for path, operator<<
-#include <cassert>                          // for assert
-#include <cstdio>                           // for stderr
-#include <cstring>                          // for strlen
-#include <exception>                        // for exception
-#include <iosfwd>                           // for streamsize
-#include <memory>                           // for make_shared, __shared_ptr_access, uni...
-#include <new>                              // for bad_alloc
-#include <stdexcept>                        // for runtime_error
-#include <string>                           // for basic_string
-#include <string_view>                      // for string_view
-#include <vector>                           // for vector
+#include <CLI/CLI.hpp>  // for ParseError
+#include <algorithm>    // for max
+#include <cassert>      // for assert
+#include <cstdio>       // for stderr
+#include <cstring>      // for strlen
+#include <exception>    // for exception
+#include <filesystem>   // for path, operator<<
+#include <iosfwd>       // for streamsize
+#include <memory>       // for make_shared, __shared_ptr_access, uni...
+#include <new>          // for bad_alloc
+#include <stdexcept>    // for runtime_error
+#include <string>       // for basic_string
+#include <string_view>  // for string_view
+#include <vector>       // for vector
 
-#include "./cli.hpp"                           // for Cli, Cli::subcommand
-#include "modle/common/common.hpp"             // for usize
+#include "./cli.hpp"                // for Cli, Cli::subcommand
+#include "modle/common/common.hpp"  // for usize
+#include "modle/common/fmt_std_helper.hpp"
 #include "modle/common/simulation_config.hpp"  // for Config
 #include "modle/config/version.hpp"            // for str_long
 #include "modle/simulation.hpp"                // for Simulation
@@ -58,7 +56,7 @@ void setup_logger_console(const bool quiet) {
   logger_ready = true;
 }
 
-void setup_logger_file(const boost::filesystem::path& path_to_log_file) {
+void setup_logger_file(const std::filesystem::path& path_to_log_file) {
   spdlog::info(FMT_STRING("Complete log will be written to file {}"), path_to_log_file);
 
   auto file_sink =
@@ -119,9 +117,9 @@ std::tuple<int, modle::Cli::subcommand, modle::Config> parse_cli_and_setup_logge
     setup_logger_console(config.quiet);
 
     if (const auto collisions = cli->detect_path_collisions(config); !collisions.empty()) {
-      throw boost::filesystem::filesystem_error(
-          fmt::format(FMT_STRING("Detected the following path collision(s):\n{}"), collisions.size(),
-                      collisions),
+      throw std::filesystem::filesystem_error(
+          fmt::format(FMT_STRING("Detected the following path collision(s):\n{}"),
+                      collisions.size(), collisions),
           std::make_error_code(std::errc::file_exists));
     }
 
@@ -129,7 +127,7 @@ std::tuple<int, modle::Cli::subcommand, modle::Config> parse_cli_and_setup_logge
       assert(!config.path_to_log_file.empty());
       if (const auto& output_dir = config.path_to_output_prefix.parent_path();
           !output_dir.empty()) {
-        boost::filesystem::create_directories(output_dir.string());
+        std::filesystem::create_directories(output_dir.string());
       }
       setup_logger_file(config.path_to_log_file);
 
@@ -150,7 +148,7 @@ std::tuple<int, modle::Cli::subcommand, modle::Config> parse_cli_and_setup_logge
     //  This takes care of formatting and printing error messages (if any)
     return std::make_tuple(cli->exit(e), modle::Cli::subcommand::help, modle::Config());
 
-  } catch (const boost::filesystem::filesystem_error& e) {
+  } catch (const std::filesystem::filesystem_error& e) {
     spdlog::error(FMT_STRING("FAILURE! One or more filesystem error(s) occurred: {}."), e.what());
     return std::make_tuple(1, modle::Cli::subcommand::help, modle::Config());
   } catch (const spdlog::spdlog_ex& e) {

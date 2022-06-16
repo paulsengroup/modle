@@ -11,15 +11,14 @@
 #include <H5Spublic.h>     // for H5S_UNLIMITED
 #include <fmt/format.h>    // for format
 
-#include <algorithm>                        // for max
-#include <boost/filesystem/operations.hpp>  // for create_directories, is_empty, remove, remove_all
-#include <boost/filesystem/path.hpp>        // for operator/, path
-#include <catch2/catch.hpp>                 // for operator""_catch_sr, AssertionHandler, Source...
-#include <limits>                           // for numeric_limits
-#include <string>                           // for string, basic_string, allocator, operator==
-#include <string_view>                      // for string_view
-#include <tuple>                            // for ignore
-#include <vector>                           // for vector
+#include <algorithm>         // for max
+#include <catch2/catch.hpp>  // for operator""_catch_sr, AssertionHandler, Source...
+#include <filesystem>        // for operator/, path
+#include <limits>            // for numeric_limits
+#include <string>            // for string, basic_string, allocator, operator==
+#include <string_view>       // for string_view
+#include <tuple>             // for ignore
+#include <vector>            // for vector
 
 #include "H5Ppublic.h"              // for H5F_ACC_TRUNC, H5T_CSET_ASCII, H5T_STR_NULLPAD
 #include "modle/common/common.hpp"  // for i64, usize
@@ -79,7 +78,7 @@ inline H5::DataSet init_test_int64_dataset(H5::H5File& f, std::string_view path 
 // NOLINTNEXTLINE(readability-function-cognitive-complexity)
 TEST_CASE("read_write_strings HDF5", "[io][hdf5][short]") {
   const auto test_file = testdir() / "rw_strings.hdf5";
-  boost::filesystem::create_directories(testdir());
+  std::filesystem::create_directories(testdir());
 
   std::vector<std::string> v{"0", "QWERTY", "ABCDE", "0123456789", "!\"#¤%&/()=?"};
 
@@ -97,16 +96,16 @@ TEST_CASE("read_write_strings HDF5", "[io][hdf5][short]") {
   for (usize i = 0; i < v.size(); ++i) {
     CHECK(v[i] == buffv[i]);
   }
-  boost::filesystem::remove_all(testdir());
-  if (const auto& p = testdir().parent_path(); boost::filesystem::is_empty(p)) {
-    boost::filesystem::remove(p);
+  std::filesystem::remove_all(testdir());
+  if (const auto& p = testdir().parent_path(); std::filesystem::is_empty(p)) {
+    std::filesystem::remove(p);
   }
 }
 
 // NOLINTNEXTLINE(readability-function-cognitive-complexity)
 TEST_CASE("read_write_ints HDF5", "[io][hdf5][short]") {
   const auto test_file = testdir() / "rw_ints.hdf5";
-  boost::filesystem::create_directories(testdir());
+  std::filesystem::create_directories(testdir());
   std::vector<i64> v{(std::numeric_limits<i64>::min)(), -10, 0, 10,
                      (std::numeric_limits<i64>::max)()};
   H5::H5File f(test_file.string(), H5F_ACC_TRUNC);
@@ -125,16 +124,16 @@ TEST_CASE("read_write_ints HDF5", "[io][hdf5][short]") {
   for (usize i = 0; i < v.size(); ++i) {
     CHECK(v[i] == buffv[i]);
   }
-  boost::filesystem::remove_all(testdir());
-  if (const auto& p = testdir().parent_path(); boost::filesystem::is_empty(p)) {
-    boost::filesystem::remove(p);
+  std::filesystem::remove_all(testdir());
+  if (const auto& p = testdir().parent_path(); std::filesystem::is_empty(p)) {
+    std::filesystem::remove(p);
   }
 }
 
 // NOLINTNEXTLINE(readability-function-cognitive-complexity)
 TEST_CASE("has_group HDF5", "[io][hdf5][short]") {
   const auto test_file = testdir() / "has_group.hdf5";
-  boost::filesystem::create_directories(testdir());
+  std::filesystem::create_directories(testdir());
   H5::H5File f(test_file.string(), H5F_ACC_TRUNC);
   std::ignore = init_test_int64_dataset(f);
   f.createGroup("/g1");
@@ -148,16 +147,16 @@ TEST_CASE("has_group HDF5", "[io][hdf5][short]") {
   CHECK(!has_group(f, "2", "g2"));
   CHECK_THROWS_WITH(has_group(f, "test"), Catch::Matchers::EndsWith("exists but is not a group"));
 
-  boost::filesystem::remove_all(testdir());
-  if (const auto& p = testdir().parent_path(); boost::filesystem::is_empty(p)) {
-    boost::filesystem::remove(p);
+  std::filesystem::remove_all(testdir());
+  if (const auto& p = testdir().parent_path(); std::filesystem::is_empty(p)) {
+    std::filesystem::remove(p);
   }
 }
 
 // NOLINTNEXTLINE(readability-function-cognitive-complexity)
 TEST_CASE("check_dataset_type HDF5", "[io][hdf5][short]") {
   const auto test_file = testdir() / "dset_type.hdf5";
-  boost::filesystem::create_directories(testdir());
+  std::filesystem::create_directories(testdir());
   H5::H5File f(test_file.string(), H5F_ACC_TRUNC);
   f.createGroup("/g1");
   auto int_dataset = init_test_int64_dataset(f);
@@ -176,16 +175,16 @@ TEST_CASE("check_dataset_type HDF5", "[io][hdf5][short]") {
   CHECK_THROWS_WITH(check_dataset_type(int_dataset, H5::PredType::NATIVE_UINT64),
                     Catch::Matchers::Contains("incorrect signedness"));
 
-  boost::filesystem::remove_all(testdir());
-  if (const auto& p = testdir().parent_path(); boost::filesystem::is_empty(p)) {
-    boost::filesystem::remove(p);
+  std::filesystem::remove_all(testdir());
+  if (const auto& p = testdir().parent_path(); std::filesystem::is_empty(p)) {
+    std::filesystem::remove(p);
   }
 }
 
 // NOLINTNEXTLINE(readability-function-cognitive-complexity)
 TEST_CASE("read_write_string HDF5 - long string", "[io][hdf5][short]") {
   const auto test_file = testdir() / "rw_strings.hdf5";
-  boost::filesystem::create_directories(testdir());
+  std::filesystem::create_directories(testdir());
 
   std::string s(MAX_STR_LENGTH + 1, '#');
 
@@ -198,9 +197,9 @@ TEST_CASE("read_write_string HDF5 - long string", "[io][hdf5][short]") {
 #else
   CHECK(write_str(s, dataset, init_str_type(), 0) == 1);
 #endif
-  boost::filesystem::remove_all(testdir());
-  if (const auto& p = testdir().parent_path(); boost::filesystem::is_empty(p)) {
-    boost::filesystem::remove(p);
+  std::filesystem::remove_all(testdir());
+  if (const auto& p = testdir().parent_path(); std::filesystem::is_empty(p)) {
+    std::filesystem::remove(p);
   }
 }
 

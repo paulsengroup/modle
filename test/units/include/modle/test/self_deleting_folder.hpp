@@ -7,10 +7,9 @@
 #include <absl/strings/match.h>  // for EndsWith, StartsWith
 
 #include <atomic>                           // for atomic
-#include <boost/filesystem/exception.hpp>   // for filesystem_error
-#include <boost/filesystem/operations.hpp>  // for create_directories, remove_all, temp_director...
-#include <boost/filesystem/path.hpp>        // for path, operator/
-#include <utility>                          // for move
+#include <boost/filesystem/operations.hpp>  // for unique_path
+#include <filesystem>
+#include <utility>  // for move
 
 namespace modle::test {
 // The point of this class is to provide a reliable way to create a directory that automatically
@@ -18,29 +17,29 @@ namespace modle::test {
 // This can be prevented by setting the internal flag to true.
 // The default constructor will create a unique, randomly named directory under the system tmpdir
 class SelfDeletingFolder {
-  boost::filesystem::path _path;
+  std::filesystem::path _path;
   std::atomic<bool> _delete_on_destruction{true};
 
  public:
   [[maybe_unused]] SelfDeletingFolder() {
-    boost::filesystem::path tmpdir{};
+    std::filesystem::path tmpdir{};
     try {
-      tmpdir = boost::filesystem::temp_directory_path();
-    } catch (const boost::filesystem::filesystem_error& e) {
+      tmpdir = std::filesystem::temp_directory_path();
+    } catch (const std::filesystem::filesystem_error& e) {
       // Workaround spurious CI failures due to missing /tmp folder exception
-      assert(absl::StartsWith(e.what(), "boost::filesystem::temp_directory_path: Not a directory"));
+      assert(absl::StartsWith(e.what(), "std::filesystem::temp_directory_path: Not a directory"));
       assert(absl::EndsWith(e.what(), "\"/tmp\""));
       tmpdir = "test/data/unit_tests/scratch";
     }
 
-    _path = tmpdir / boost::filesystem::unique_path();
-    boost::filesystem::create_directories(_path);
+    _path = tmpdir / boost::filesystem::unique_path().string();
+    std::filesystem::create_directories(_path);
   }
 
-  [[maybe_unused]] explicit SelfDeletingFolder(boost::filesystem::path path,
+  [[maybe_unused]] explicit SelfDeletingFolder(std::filesystem::path path,
                                                bool delete_on_destruction = true)
       : _path(std::move(path)), _delete_on_destruction(delete_on_destruction) {
-    boost::filesystem::create_directories(_path);
+    std::filesystem::create_directories(_path);
   }
 
   [[maybe_unused]] explicit SelfDeletingFolder(bool delete_on_destruction) : SelfDeletingFolder() {
@@ -52,11 +51,11 @@ class SelfDeletingFolder {
 
   ~SelfDeletingFolder() {
     if (this->get_delete_on_destruction()) {
-      boost::filesystem::remove_all(this->_path);
+      std::filesystem::remove_all(this->_path);
     }
   }
 
-  [[nodiscard]] const boost::filesystem::path& operator()() const noexcept { return this->_path; }
+  [[nodiscard]] const std::filesystem::path& operator()() const noexcept { return this->_path; }
   [[maybe_unused]] [[nodiscard]] bool get_delete_on_destruction() const noexcept {
     return this->_delete_on_destruction;
   }

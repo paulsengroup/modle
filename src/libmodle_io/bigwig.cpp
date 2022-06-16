@@ -5,23 +5,23 @@
 #include "modle/bigwig/bigwig.hpp"
 
 #include <fmt/format.h>  // for format, FMT_STRING
-#include <fmt/ostream.h>
 
-#include <boost/filesystem/path.hpp>  // for file_size
-#include <cassert>                    // for assert
-#include <cerrno>                     // for errno
-#include <iosfwd>                     // for streamsize
-#include <mutex>                      // for scoped_lock
-#include <stdexcept>                  // for runtime_error
-#include <string>                     // for string
-#include <utility>                    // for move
+#include <cassert>     // for assert
+#include <cerrno>      // for errno
+#include <filesystem>  // for file_size
+#include <iosfwd>      // for streamsize
+#include <mutex>       // for scoped_lock
+#include <stdexcept>   // for runtime_error
+#include <string>      // for string
+#include <utility>     // for move
 
 #include "libBigWig/bigWig.h"  // for bwCleanup, bwClose, bwAddIntervalSpanSteps, bwCreateChromList
 #include "modle/common/common.hpp"  // for u32, u64, i32, i64
+#include "modle/common/fmt_std_helper.hpp"
 
 namespace modle::io::bigwig {
 
-Writer::Writer(boost::filesystem::path name, std::uint_fast8_t zoom_levels, usize buff_size)
+Writer::Writer(std::filesystem::path name, std::uint_fast8_t zoom_levels, usize buff_size)
     : _fname(std::move(name)), _zoom_levels(zoom_levels), _buff_size(buff_size) {
   std::scoped_lock<std::mutex> l(Writer::_global_state_mutex);
   if (Writer::_global_bigwig_files_opened == 0) {
@@ -114,6 +114,6 @@ void Writer::write_chromosomes(const char* const* chrom_names, const u32* chrom_
   this->_initialized = true;
 }
 
-const boost::filesystem::path& Writer::path() const noexcept { return this->_fname; }
+const std::filesystem::path& Writer::path() const noexcept { return this->_fname; }
 
 }  // namespace modle::io::bigwig

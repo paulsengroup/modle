@@ -118,6 +118,9 @@ include(cmake/TestStdlibFeatures.cmake)
 target_compile_definitions(project_options
                            INTERFACE $<$<BOOL:${CHARCONV_VARIANT_AVAILABLE}>:MODLE_CHARCONV_VARIANT_AVAILABLE>)
 
+find_package(Filesystem REQUIRED)
+target_link_libraries(project_options INTERFACE std::filesystem)
+
 # Reduce level of optimization to improve the code profiling experience
 if(OPTIMIZE_FOR_PROFILING)
   if(NOT

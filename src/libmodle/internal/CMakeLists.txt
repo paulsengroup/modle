@@ -35,7 +35,6 @@ target_link_system_libraries(
   PUBLIC
   absl::btree
   absl::span
-  Boost::filesystem
   Boost::headers
   fmt::fmt
   spdlog::spdlog

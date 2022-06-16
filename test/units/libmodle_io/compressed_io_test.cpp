@@ -4,12 +4,11 @@
 
 #include "modle/compressed_io/compressed_io.hpp"  // for Reader
 
-#include <boost/filesystem/operations.hpp>  // for remove
-#include <boost/filesystem/path.hpp>        // for path, operator/
-#include <catch2/catch.hpp>                 // for AssertionHandler, operator""_catch_sr, Source...
-#include <fstream>                          // for ifstream, basic_ios, basic_istream, operator<<
-#include <iostream>                         // for cerr
-#include <string>                           // for operator==, string, basic_string, getline
+#include <catch2/catch.hpp>  // for AssertionHandler, operator""_catch_sr, Source...
+#include <filesystem>        // for path, operator/
+#include <fstream>           // for ifstream, basic_ios, basic_istream, operator<<
+#include <iostream>          // for cerr
+#include <string>            // for operator==, string, basic_string, getline
 
 #include "modle/test/self_deleting_folder.hpp"  // for SelfDeletingFolder
 
@@ -26,7 +25,7 @@ namespace modle::test::compressed_io {
 
 // NOLINTNEXTLINE(readability-function-cognitive-complexity)
 TEST_CASE("Reader plain", "[io][reader][short]") {
-  const boost::filesystem::path ptext_file = "test/data/unit_tests/sample.bed9";
+  const std::filesystem::path ptext_file = "test/data/unit_tests/sample.bed9";
 
   modle::compressed_io::Reader r(ptext_file);
   std::ifstream fp(ptext_file.string());
@@ -43,7 +42,7 @@ TEST_CASE("Reader plain", "[io][reader][short]") {
 
 // NOLINTNEXTLINE(readability-function-cognitive-complexity)
 TEST_CASE("Reader plain sv", "[io][reader][short]") {
-  const boost::filesystem::path ptext_file = "test/data/unit_tests/sample.bed9";
+  const std::filesystem::path ptext_file = "test/data/unit_tests/sample.bed9";
 
   modle::compressed_io::Reader r(ptext_file);
   std::ifstream fp(ptext_file.string());
@@ -60,8 +59,8 @@ TEST_CASE("Reader plain sv", "[io][reader][short]") {
 
 // NOLINTNEXTLINE(readability-function-cognitive-complexity)
 TEST_CASE("Reader gzip", "[io][reader][short]") {
-  const boost::filesystem::path compressed_file = "test/data/unit_tests/sample.bed9.gz";
-  const boost::filesystem::path ptext_file = "test/data/unit_tests/sample.bed9";
+  const std::filesystem::path compressed_file = "test/data/unit_tests/sample.bed9.gz";
+  const std::filesystem::path ptext_file = "test/data/unit_tests/sample.bed9";
 
   modle::compressed_io::Reader r1(compressed_file);
   modle::compressed_io::Reader r2(ptext_file);
@@ -78,8 +77,8 @@ TEST_CASE("Reader gzip", "[io][reader][short]") {
 
 // NOLINTNEXTLINE(readability-function-cognitive-complexity)
 TEST_CASE("Reader bzip2", "[io][reader][short]") {
-  const boost::filesystem::path compressed_file = "test/data/unit_tests/sample.bed9.bz2";
-  const boost::filesystem::path ptext_file = "test/data/unit_tests/sample.bed9";
+  const std::filesystem::path compressed_file = "test/data/unit_tests/sample.bed9.bz2";
+  const std::filesystem::path ptext_file = "test/data/unit_tests/sample.bed9";
 
   modle::compressed_io::Reader r1(compressed_file);
   modle::compressed_io::Reader r2(ptext_file);
@@ -95,8 +94,8 @@ TEST_CASE("Reader bzip2", "[io][reader][short]") {
 
 // NOLINTNEXTLINE(readability-function-cognitive-complexity)
 TEST_CASE("Reader lz4", "[io][reader][short]") {
-  const boost::filesystem::path compressed_file = "test/data/unit_tests/sample.bed9.lz4";
-  const boost::filesystem::path ptext_file = "test/data/unit_tests/sample.bed9";
+  const std::filesystem::path compressed_file = "test/data/unit_tests/sample.bed9.lz4";
+  const std::filesystem::path ptext_file = "test/data/unit_tests/sample.bed9";
 
   modle::compressed_io::Reader r1(compressed_file);
   modle::compressed_io::Reader r2(ptext_file);
@@ -112,8 +111,8 @@ TEST_CASE("Reader lz4", "[io][reader][short]") {
 
 // NOLINTNEXTLINE(readability-function-cognitive-complexity)
 TEST_CASE("Reader zstd", "[io][reader][short]") {
-  const boost::filesystem::path compressed_file = "test/data/unit_tests/sample.bed9.zst";
-  const boost::filesystem::path ptext_file = "test/data/unit_tests/sample.bed9";
+  const std::filesystem::path compressed_file = "test/data/unit_tests/sample.bed9.zst";
+  const std::filesystem::path ptext_file = "test/data/unit_tests/sample.bed9";
 
   modle::compressed_io::Reader r1(compressed_file);
   modle::compressed_io::Reader r2(ptext_file);
@@ -129,8 +128,8 @@ TEST_CASE("Reader zstd", "[io][reader][short]") {
 
 // NOLINTNEXTLINE(readability-function-cognitive-complexity)
 TEST_CASE("Reader lzma", "[io][reader][short]") {
-  const boost::filesystem::path compressed_file = "test/data/unit_tests/sample.bed9.xz";
-  const boost::filesystem::path ptext_file = "test/data/unit_tests/sample.bed9";
+  const std::filesystem::path compressed_file = "test/data/unit_tests/sample.bed9.xz";
+  const std::filesystem::path ptext_file = "test/data/unit_tests/sample.bed9";
 
   modle::compressed_io::Reader r1(compressed_file);
   modle::compressed_io::Reader r2(ptext_file);
@@ -165,7 +164,7 @@ inline void test_writer(modle::compressed_io::Reader& r1, modle::compressed_io::
 
 // NOLINTNEXTLINE(readability-function-cognitive-complexity)
 TEST_CASE("Reader plain - readall", "[io][reader][long]") {
-  const boost::filesystem::path ptext_file = "test/data/unit_tests/sample.bed9";
+  const std::filesystem::path ptext_file = "test/data/unit_tests/sample.bed9";
 
   const auto buff1 = modle::compressed_io::Reader(ptext_file).readall();
 
@@ -190,7 +189,7 @@ TEST_CASE("Reader plain - empty file", "[io][reader][short]") {
   CHECK(r.eof());
   std::string buff;
   CHECK(!r.getline(buff));
-  boost::filesystem::remove(test_file);
+  std::filesystem::remove(test_file);
 }
 
 // NOLINTNEXTLINE(readability-function-cognitive-complexity)
@@ -211,7 +210,7 @@ TEST_CASE("Reader plain - one newline", "[io][reader][short]") {
   CHECK(!r.eof());
   CHECK(!r.getline(buff));
   CHECK(r.eof());
-  boost::filesystem::remove(test_file);
+  std::filesystem::remove(test_file);
 }
 
 // NOLINTNEXTLINE(readability-function-cognitive-complexity)
@@ -229,12 +228,12 @@ TEST_CASE("Reader plain - truncated file", "[io][reader][short]") {
   CHECK(buff1 == buff2);
   CHECK(r.eof());
   CHECK(!r.getline(buff2));
-  boost::filesystem::remove(test_file);
+  std::filesystem::remove(test_file);
 }
 
 // NOLINTNEXTLINE(readability-function-cognitive-complexity)
 TEST_CASE("Writer plain", "[io][writer][short]") {
-  const boost::filesystem::path ptext_file = "test/data/unit_tests/sample.bed9";
+  const std::filesystem::path ptext_file = "test/data/unit_tests/sample.bed9";
   const auto tmpout = testdir() / ptext_file.filename();
 
   modle::compressed_io::Reader r1(ptext_file);
@@ -245,7 +244,7 @@ TEST_CASE("Writer plain", "[io][writer][short]") {
 
 // NOLINTNEXTLINE(readability-function-cognitive-complexity)
 TEST_CASE("Writer gzip", "[io][writer][short]") {
-  const boost::filesystem::path ptext_file = "test/data/unit_tests/sample.bed9";
+  const std::filesystem::path ptext_file = "test/data/unit_tests/sample.bed9";
   const auto tmpout = testdir() / ptext_file.filename();
 
   modle::compressed_io::Reader r1(ptext_file);
@@ -256,7 +255,7 @@ TEST_CASE("Writer gzip", "[io][writer][short]") {
 
 // NOLINTNEXTLINE(readability-function-cognitive-complexity)
 TEST_CASE("Writer bzip2", "[io][writer][short]") {
-  const boost::filesystem::path ptext_file = "test/data/unit_tests/sample.bed9";
+  const std::filesystem::path ptext_file = "test/data/unit_tests/sample.bed9";
   const auto tmpout = testdir() / ptext_file.filename();
 
   modle::compressed_io::Reader r1(ptext_file);
@@ -267,7 +266,7 @@ TEST_CASE("Writer bzip2", "[io][writer][short]") {
 
 // NOLINTNEXTLINE(readability-function-cognitive-complexity)
 TEST_CASE("Writer lzma", "[io][writer][short]") {
-  const boost::filesystem::path ptext_file = "test/data/unit_tests/sample.bed9";
+  const std::filesystem::path ptext_file = "test/data/unit_tests/sample.bed9";
   const auto tmpout = testdir() / ptext_file.filename();
 
   modle::compressed_io::Reader r1(ptext_file);
@@ -278,7 +277,7 @@ TEST_CASE("Writer lzma", "[io][writer][short]") {
 
 // NOLINTNEXTLINE(readability-function-cognitive-complexity)
 TEST_CASE("Writer zstd", "[io][writer][short]") {
-  const boost::filesystem::path ptext_file = "test/data/unit_tests/sample.bed9";
+  const std::filesystem::path ptext_file = "test/data/unit_tests/sample.bed9";
   const auto tmpout = testdir() / ptext_file.filename();
 
   modle::compressed_io::Reader r1(ptext_file);

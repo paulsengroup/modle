@@ -8,10 +8,10 @@
 
 #include <absl/types/span.h>  // for Span
 
-#include <boost/filesystem/path.hpp>  // for path
-#include <mutex>                      // for mutex
-#include <string_view>                // for string_view
-#include <type_traits>                // for enable_if
+#include <filesystem>   // for path
+#include <mutex>        // for mutex
+#include <string_view>  // for string_view
+#include <type_traits>  // for enable_if
 
 #include "modle/common/common.hpp"  // for u32, usize, u64
 
@@ -34,7 +34,7 @@ class Writer {
   static constexpr uint_fast8_t DEFAULT_ZOOM_LEVELS{10};
   static constexpr usize DEFAULT_BUFFER_SIZE{1U << 17U};  // 128 KiB
 
-  boost::filesystem::path _fname{};
+  std::filesystem::path _fname{};
   bigWigFile_t* _fp{nullptr};
   uint_fast8_t _zoom_levels{DEFAULT_ZOOM_LEVELS};
   usize _buff_size{DEFAULT_BUFFER_SIZE};
@@ -45,7 +45,7 @@ class Writer {
   Writer() = default;
   Writer(const Writer&) = delete;
   Writer(Writer&& other) noexcept;
-  explicit Writer(boost::filesystem::path name, uint_fast8_t zoom_levels = DEFAULT_ZOOM_LEVELS,
+  explicit Writer(std::filesystem::path name, uint_fast8_t zoom_levels = DEFAULT_ZOOM_LEVELS,
                   usize buff_size = DEFAULT_BUFFER_SIZE);
   ~Writer();
 
@@ -61,7 +61,7 @@ class Writer {
   template <class N, class = std::enable_if<std::is_arithmetic_v<N>>>
   inline void write_range(std::string_view chrom_name, absl::Span<N> values, u64 span, u64 step);
 
-  [[nodiscard]] const boost::filesystem::path& path() const noexcept;
+  [[nodiscard]] const std::filesystem::path& path() const noexcept;
 };
 
 }  // namespace modle::io::bigwig

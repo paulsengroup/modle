@@ -7,16 +7,16 @@
 #include <absl/types/span.h>  // for Span
 #include <xxhash.h>           // for XXH3_state_t, XXH_INLINE_XXH3_state_t
 
-#include <array>                      // for array
-#include <boost/filesystem/path.hpp>  // for path
-#include <functional>                 // for reference_wrapper
-#include <future>                     // for future
-#include <initializer_list>           // for initializer_list
-#include <string>                     // for string
-#include <string_view>                // for string_view
-#include <type_traits>                // for enable_if, enable_if_t
-#include <utility>                    // for pair
-#include <vector>                     // for vector
+#include <array>             // for array
+#include <filesystem>        // for path
+#include <functional>        // for reference_wrapper
+#include <future>            // for future
+#include <initializer_list>  // for initializer_list
+#include <string>            // for string
+#include <string_view>       // for string_view
+#include <type_traits>       // for enable_if, enable_if_t
+#include <utility>           // for pair
+#include <vector>            // for vector
 
 #include "modle/common/common.hpp"  // for i64, usize, isize
 
@@ -102,13 +102,8 @@ template <class T>
 [[nodiscard]] constexpr std::future<T> make_ready_future(T&& v);
 
 template <bool remove_source_files = false>
-inline void concatenate_files(
-    const boost::filesystem::path& path_to_dest,
-    std::initializer_list<std::reference_wrapper<const boost::filesystem::path>> path_to_sources);
-
-template <bool remove_source_files = false>
-inline void concatenate_files(const boost::filesystem::path& path_to_dest,
-                              const boost::filesystem::path& path_to_src);
+void concatenate_files(const std::filesystem::path& path_to_dest,
+                       const std::filesystem::path& path_to_sources...);
 
 template <class MutexT>
 class LockRangeExclusive {

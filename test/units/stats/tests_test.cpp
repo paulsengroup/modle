@@ -10,7 +10,6 @@
 #include <algorithm>                                              // for find_if
 #include <atomic>                                                 // for atomic
 #include <boost/exception/exception.hpp>                          // for clone_base
-#include <boost/filesystem/path.hpp>                              // for path
 #include <boost/math/distributions/complement.hpp>                // for complement
 #include <boost/math/distributions/detail/derived_accessors.hpp>  // for cdf, pdf
 #include <boost/process/child.hpp>                                // for child::child
@@ -23,6 +22,7 @@
 #include <catch2/catch.hpp>                                       // for Approx, operator==, Ass...
 #include <cmath>                                                  // for trunc
 #include <condition_variable>                                     // for condition_variable
+#include <filesystem>                                             // for path
 #include <memory>                                                 // for make_shared
 #include <mutex>                                                  // for mutex, unique_lock
 #include <ostream>                                                // for basic_ostream::flush

@@ -8,7 +8,7 @@
 
 #include <atomic>                                   // for atomic
 #include <boost/dynamic_bitset/dynamic_bitset.hpp>  // for dynamic_bitset
-#include <boost/filesystem/path.hpp>                // for path
+#include <filesystem>                               // for path
 #include <iostream>                                 // for cout, ostream
 #include <limits>                                   // for numeric_limits
 #include <mutex>                                    // for unique_lock, mutex
@@ -122,7 +122,7 @@ class ContactMatrix {
   inline void unsafe_print(std::ostream& out_stream = std::cout, bool full = false) const;
   inline void unsafe_print(bool full) const;
   [[nodiscard]] inline std::vector<std::vector<N>> unsafe_generate_symmetric_matrix() const;
-  inline void unsafe_import_from_txt(const boost::filesystem::path& path, char sep = '\t');
+  inline void unsafe_import_from_txt(const std::filesystem::path& path, char sep = '\t');
 
   // Misc
   inline void clear_missed_updates_counter();
