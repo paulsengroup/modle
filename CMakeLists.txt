@@ -22,8 +22,8 @@ include(FetchContent)
 # cmake-format: off
 FetchContent_Declare(
         _project_options
-        URL https://github.com/cpp-best-practices/project_options/archive/refs/tags/v0.22.0.tar.gz
-        URL_HASH SHA512=485d4c8d7a1d56c4a90b9e35bc16fa6644211f4f6959369cb8c73a0bec28cf1ad19c73ed7243d6fcca4cf5a15ebf507fd01023713f58e484e5af14d5f1c6b750
+        URL ${CMAKE_CURRENT_SOURCE_DIR}/external/project_options-v0.22.4.tar.xz
+        URL_HASH SHA512=68c5adc27ad2b715eafaa7840ec2d26a21eb9083e8c12c542f0e785acf32d75331cdca156ac143f2e5c12c19aa6c27e3eab2c53a18ef90075490ebd504be4e5a
 )
 # cmake-format: on
 
@@ -81,7 +81,6 @@ set(ENABLE_NATIVE_OPTIMIZATION_DEFAULT OFF)
 set(ENABLE_PCH_DEFAULT OFF)
 
 dynamic_project_options(
-  # CLANG_WARNINGS # Override the defaults for the CLANG warnings GCC_WARNINGS   # Override the defaults for the GCC
   CPPCHECK_OPTIONS
   --enable=performance,portability,style,warning
   --inline-suppr
