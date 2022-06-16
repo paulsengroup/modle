@@ -21,6 +21,7 @@ class MoDLE(ConanFile):
               "cli11/2.2.0",
               "concurrentqueue/1.0.3",
               "cpp-sort/1.13.0",
+              "fast_float/3.4.0",
               "fmt/8.1.1",
               "hdf5/1.12.1",
               "libarchive/3.6.1",

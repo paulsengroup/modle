@@ -115,12 +115,8 @@ target_compile_features(project_options INTERFACE cxx_std_${CMAKE_CXX_STANDARD})
 
 include(cmake/TestStdlibFeatures.cmake)
 
-# Define macros based on library feature availability
-target_compile_definitions(
-  project_options
-  INTERFACE $<$<BOOL:${CHARCONV_INT_AVAILABLE}>:MODLE_CHARCONV_INT_AVAILABLE>
-            $<$<BOOL:${CHARCONV_FP_AVAILABLE}>:MODLE_CHARCONV_FP_AVAILABLE>
-            $<$<BOOL:${CHARCONV_VARIANT_AVAILABLE}>:MODLE_CHARCONV_VARIANT_AVAILABLE>)
+target_compile_definitions(project_options
+                           INTERFACE $<$<BOOL:${CHARCONV_VARIANT_AVAILABLE}>:MODLE_CHARCONV_VARIANT_AVAILABLE>)
 
 # Reduce level of optimization to improve the code profiling experience
 if(OPTIMIZE_FOR_PROFILING)

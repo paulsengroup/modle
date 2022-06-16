@@ -5,6 +5,7 @@
 find_package(absl CONFIG REQUIRED)
 find_package(Boost CONFIG REQUIRED)
 find_package(CLI11 CONFIG REQUIRED)
+find_package(FastFloat CONFIG REQUIRED)
 find_package(fmt CONFIG REQUIRED)
 find_package(range-v3 CONFIG REQUIRED)
 find_package(xxHash CONFIG REQUIRED)
@@ -37,10 +38,10 @@ target_link_system_libraries(
   Boost::filesystem
   Boost::random
   CLI11::CLI11
+  FastFloat::fast_float
   fmt::fmt
   range-v3::range-v3
   XoshiroCpp::XoshiroCpp
-  xxHash::xxhash
-  mscharconv)
+  xxHash::xxhash)
 
 target_include_directories(modle_common INTERFACE include/)

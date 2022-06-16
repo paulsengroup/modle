@@ -4,25 +4,11 @@
 
 #pragma once
 
-// clang-format off
-#if defined(MODLE_CHARCONV_FP_AVAILABLE) && defined(MODLE_CHARCONV_INT_AVAILABLE)
-#include <charconv>                                     // for from_chars
-#else
-#include "modle/common/suppress_compiler_warnings.hpp"  // IWYU pragma: keep
-DISABLE_WARNING_PUSH
-DISABLE_WARNING_CONVERSION
-DISABLE_WARNING_DOUBLE_PROMOTION
-DISABLE_WARNING_SHORTEN_64_TO_32
-DISABLE_WARNING_SIGN_CONVERSION
-#include <msstl/charconv.hpp>
-
-DISABLE_WARNING_POP
-#endif
-// clang-format on
-
 #include <absl/strings/str_split.h>  // for StrSplit, Splitter
+#include <fast_float/fast_float.h>   // for from_chars (fp)
 #include <fmt/format.h>              // for compile_string_to_view, FMT_STRING
 
+#include <charconv>      // for from_chars (int)
 #include <limits>        // for numeric_limits
 #include <stdexcept>     // for runtime_error, logic_error
 #include <string>        // for string
@@ -37,11 +23,11 @@ namespace modle::utils {
 
 template <class N>
 inline auto from_chars(const char *first, const char *last, N &value) noexcept {
-#if defined(MODLE_CHARCONV_FP_AVAILABLE) && defined(MODLE_CHARCONV_INT_AVAILABLE)
-  return std::from_chars(first, last, value);
-#else
-  return msstl::from_chars(first, last, value);
-#endif
+  if constexpr (std::is_integral_v<N>) {
+    return std::from_chars(first, last, value);
+  } else {
+    return fast_float::from_chars(first, last, value);
+  }
 }
 
 template <class N>
