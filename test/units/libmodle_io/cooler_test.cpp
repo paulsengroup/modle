@@ -9,7 +9,7 @@
 #include <fmt/format.h>              // for format, make_format_args, vformat_to
 #include <spdlog/logger.h>           // for logger
 #include <spdlog/sinks/null_sink.h>  // for null_sink_mt
-#include <spdlog/spdlog-inl.h>       // for set_default_logger
+#include <spdlog/spdlog.h>           // for set_default_logger
 
 #include <algorithm>                        // for max, max_element, transform
 #include <boost/filesystem/operations.hpp>  // for remove, create_directories

@@ -179,9 +179,9 @@ include(cmake/FetchExternalDeps.cmake)
 target_compile_definitions(
   project_options
   INTERFACE SPDLOG_CLOCK_COARSE
-  INTERFACE SPDLOG_DISABLE_DEFAULT_LOGGER
-  INTERFACE SPDLOG_NO_ATOMIC_LEVELS
-  INTERFACE SPDLOG_PREVENT_CHILD_FD)
+            SPDLOG_DISABLE_DEFAULT_LOGGER
+            SPDLOG_NO_ATOMIC_LEVELS
+            SPDLOG_PREVENT_CHILD_FD)
 
 # Tweak fmt
 target_compile_definitions(project_options INTERFACE FMT_ENFORCE_COMPILE_STRING)

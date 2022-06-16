@@ -32,13 +32,13 @@ target_link_system_libraries(
   libmodle_internal
   PRIVATE
   absl::time
-  spdlog::spdlog
   PUBLIC
   absl::btree
   absl::span
   Boost::filesystem
   Boost::headers
   fmt::fmt
+  spdlog::spdlog
   xxHash::xxHash)
 
 target_include_directories(libmodle_internal PUBLIC include/)
