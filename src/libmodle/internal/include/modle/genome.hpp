@@ -8,15 +8,15 @@
 #include <absl/types/span.h>           // for Span
 #include <xxhash.h>                    // for XXH3_state_t, XXH_INLINE_XXH3_state_t
 
-#include <boost/filesystem/path.hpp>  // for path
-#include <iterator>                   // for iterator_traits
-#include <limits>                     // for numeric_limits
-#include <memory>                     // for shared_ptr
-#include <shared_mutex>               // for shared_mutex
-#include <string>                     // for string
-#include <string_view>                // for string_view
-#include <type_traits>                // for enable_if_t, remove_cv_t
-#include <vector>                     // for vector
+#include <filesystem>    // for path
+#include <iterator>      // for iterator_traits
+#include <limits>        // for numeric_limits
+#include <memory>        // for shared_ptr
+#include <shared_mutex>  // for shared_mutex
+#include <string>        // for string
+#include <string_view>   // for string_view
+#include <type_traits>   // for enable_if_t, remove_cv_t
+#include <vector>        // for vector
 
 #include "modle/bed/bed.hpp"             // for BED (ptr only), BED_tree, BED_tree<>::value_type
 #include "modle/common/common.hpp"       // for bp_t, contacts_t, u64, u32, u8
@@ -111,10 +111,10 @@ class Chromosome {
 class Genome {
  public:
   Genome() = default;
-  Genome(const boost::filesystem::path& path_to_chrom_sizes,
-         const boost::filesystem::path& path_to_extr_barriers,
-         const boost::filesystem::path& path_to_chrom_subranges,
-         absl::Span<const boost::filesystem::path> paths_to_extra_features,
+  Genome(const std::filesystem::path& path_to_chrom_sizes,
+         const std::filesystem::path& path_to_extr_barriers,
+         const std::filesystem::path& path_to_chrom_subranges,
+         absl::Span<const std::filesystem::path> paths_to_extra_features,
          double ctcf_prob_occ_to_occ, double ctcf_prob_nocc_to_nocc);
 
   using iterator = absl::btree_set<Chromosome>::iterator;
@@ -155,11 +155,11 @@ class Genome {
   /// A simple wrapper function that imports chromosomes and extrusion barriers that comprise the
   /// genome that is being simulated.
   [[nodiscard]] static absl::btree_set<Chromosome> instantiate_genome(
-      const boost::filesystem::path& path_to_chrom_sizes,
-      const boost::filesystem::path& path_to_extr_barriers,
-      const boost::filesystem::path& path_to_chrom_subranges,
-      absl::Span<const boost::filesystem::path> paths_to_extra_features,
-      double ctcf_prob_occ_to_occ, double ctcf_prob_nocc_to_nocc);
+      const std::filesystem::path& path_to_chrom_sizes,
+      const std::filesystem::path& path_to_extr_barriers,
+      const std::filesystem::path& path_to_chrom_subranges,
+      absl::Span<const std::filesystem::path> paths_to_extra_features, double ctcf_prob_occ_to_occ,
+      double ctcf_prob_nocc_to_nocc);
 
  private:
   absl::btree_set<Chromosome> _chromosomes{};
@@ -170,19 +170,19 @@ class Genome {
   //! in the chrom.sizes and BED files. The optional BED file can be used to instruct MoDLE to
   //! simulate loop extrusion on a sub-region of a chromosome from the chrom.sizes file.
   [[nodiscard]] static absl::btree_set<Chromosome> import_chromosomes(
-      const boost::filesystem::path& path_to_chrom_sizes,
-      const boost::filesystem::path& path_to_chrom_subranges);
+      const std::filesystem::path& path_to_chrom_sizes,
+      const std::filesystem::path& path_to_chrom_subranges);
 
   /// Parse a BED file containing the genomic coordinates of extrusion barriers and add them to the
   /// Genome
   static usize import_barriers(absl::btree_set<Chromosome>& chromosomes,
-                               const boost::filesystem::path& path_to_extr_barriers,
+                               const std::filesystem::path& path_to_extr_barriers,
                                double ctcf_prob_occ_to_occ, double ctcf_prob_nocc_to_nocc);
 
   /// Parse a BED file containing the genomic coordinates of extra features (e.g. promoters,
   /// enhancer) them to the Genome
   static usize import_extra_features(absl::btree_set<Chromosome>& chromosomes,
-                                     const boost::filesystem::path& path_to_extra_features);
+                                     const std::filesystem::path& path_to_extra_features);
 };
 
 }  // namespace modle

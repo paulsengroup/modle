@@ -9,18 +9,18 @@
 #include <absl/strings/str_split.h>        // for StrSplit, Splitter
 #include <fmt/format.h>                    // for format, FMT_COMPILE_STRING, FMT_STRING...
 
-#include <boost/filesystem/path.hpp>  // for filesystem::path
-#include <cassert>                    // for assert
-#include <stdexcept>                  // for runtime_error, invalid_argument, out_of_range
-#include <string>                     // for string, operator==
-#include <string_view>                // for string_view
-#include <vector>                     // for vector
+#include <cassert>      // for assert
+#include <filesystem>   // for filesystem::path
+#include <stdexcept>    // for runtime_error, invalid_argument, out_of_range
+#include <string>       // for string, operator==
+#include <string_view>  // for string_view
+#include <vector>       // for vector
 
 #include "modle/bed/bed.hpp"  // for BED
 
 namespace modle::chrom_sizes {
 
-Parser::Parser(const boost::filesystem::path& path_to_chrom_sizes) : _reader(path_to_chrom_sizes) {}
+Parser::Parser(const std::filesystem::path& path_to_chrom_sizes) : _reader(path_to_chrom_sizes) {}
 
 std::vector<bed::BED> Parser::parse_all(char sep) {
   std::string buff;

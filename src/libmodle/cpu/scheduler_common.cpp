@@ -16,13 +16,12 @@
 #include <absl/time/time.h>                // for FormatDuration, operator-, Time
 #include <absl/types/span.h>               // for Span, MakeConstSpan
 #include <fmt/format.h>                    // for format, make_format_args, vformat_to, FMT_STRING
-#include <fmt/ostream.h>                   // for formatbuf<>::int_type
 #include <spdlog/spdlog.h>                 // for info, error
 
 #include <algorithm>                    // for min, max, for_each
-#include <boost/filesystem/path.hpp>    // for operator<<, path
 #include <cassert>                      // for assert
 #include <exception>                    // for exception, rethrow_exception
+#include <filesystem>                   // for operator<<, path
 #include <iosfwd>                       // for streamsize
 #include <stdexcept>                    // for runtime_error
 #include <string>                       // for string
@@ -31,7 +30,8 @@
 
 #include "modle/bed/bed.hpp"        // for BED_tree, BED_tree::size, BED, BED::BED3, BED_...
 #include "modle/common/common.hpp"  // for u32, u8
-#include "modle/common/utils.hpp"   // for parse_numeric_or_throw
+#include "modle/common/fmt_std_helper.hpp"
+#include "modle/common/utils.hpp"                 // for parse_numeric_or_throw
 #include "modle/compressed_io/compressed_io.hpp"  // for Reader
 #include "modle/extrusion_barriers.hpp"           // for ExtrusionBarrier
 #include "modle/genome.hpp"                       // for Chromosome, Genome
@@ -127,7 +127,7 @@ bool Simulation::map_barriers_to_window(TaskPW& base_task, const Chromosome& chr
 }
 
 absl::flat_hash_set<usize> Simulation::import_task_filter(
-    const boost::filesystem::path& path_to_task_filter) {
+    const std::filesystem::path& path_to_task_filter) {
   if (path_to_task_filter.empty()) {
     return absl::flat_hash_set<usize>{};
   }

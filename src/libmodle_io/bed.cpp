@@ -12,23 +12,21 @@
 #include <absl/strings/str_join.h>         // for StrJoin
 #include <absl/strings/str_split.h>        // for StrSplit, Splitter, SplitIterator
 #include <fmt/format.h>                    // for format, FMT_STRING, join, to_string
-#include <fmt/ostream.h>                   // for formatbuf<>::int_type
 
-#include <algorithm>                         // for max, find_if, count, for_each
-#include <boost/filesystem/file_status.hpp>  // for fifo_file, file_status
-#include <boost/filesystem/operations.hpp>   // for status
-#include <boost/filesystem/path.hpp>         // for operator<<, path
-#include <cassert>                           // for assert
-#include <exception>                         // for exception
-#include <fstream>                           // for streamsize
-#include <limits>                            // for numeric_limits
-#include <stdexcept>                         // for runtime_error
-#include <string>                            // for string, basic_string<>::const_ite...
-#include <string_view>                       // for string_view, operator==, basic_st...
-#include <utility>                           // for pair, move, make_pair
-#include <vector>                            // for vector
+#include <algorithm>    // for max, find_if, count, for_each
+#include <cassert>      // for assert
+#include <exception>    // for exception
+#include <filesystem>   // for operator<<, path
+#include <fstream>      // for streamsize
+#include <limits>       // for numeric_limits
+#include <stdexcept>    // for runtime_error
+#include <string>       // for string, basic_string<>::const_ite...
+#include <string_view>  // for string_view, operator==, basic_st...
+#include <utility>      // for pair, move, make_pair
+#include <vector>       // for vector
 
-#include "modle/common/common.hpp"                      // for u64, u8, u32
+#include "modle/common/common.hpp"  // for u64, u8, u32
+#include "modle/common/fmt_std_helper.hpp"
 #include "modle/common/numeric_utils.hpp"               // for parse_numeric_or_throw
 #include "modle/common/suppress_compiler_warnings.hpp"  // for DISABLE_WARNING_PUSH, DISABLE_WAR...
 #include "modle/common/utils.hpp"                       // for ConstMap
@@ -409,13 +407,11 @@ u64 BED::hash(XXH3_state_t* state, u64 seed) const {
   handle_errors(XXH3_64bits_update(state, &this->chrom_start, sizeof(decltype(this->chrom_start))));
   handle_errors(XXH3_64bits_update(state, &this->chrom_end, sizeof(decltype(this->chrom_end))));
 
-  DISABLE_WARNING_PUSH
-  DISABLE_WARNING_USELESS_CAST
-  return static_cast<u64>(XXH3_64bits_digest(state));
+  return utils::conditional_static_cast<u64>(XXH3_64bits_digest(state));
   DISABLE_WARNING_POP
 }
 
-Parser::Parser(const boost::filesystem::path& path_to_bed, BED::Dialect bed_standard,
+Parser::Parser(const std::filesystem::path& path_to_bed, BED::Dialect bed_standard,
                bool enforce_std_compliance)
     // For now we always skip the header
     : _reader(path_to_bed),
@@ -551,7 +547,7 @@ BED_tree<> Parser::parse_all_in_interval_tree() {
 }
 
 void Parser::reset() {
-  if (boost::filesystem::status(this->_reader.path()).type() == boost::filesystem::fifo_file) {
+  if (std::filesystem::status(this->_reader.path()).type() == std::filesystem::file_type::fifo) {
     throw std::runtime_error(fmt::format(
         FMT_STRING("BED::Parser::reset() was called on a file that is a FIFO: file path \"{}\""),
         this->_reader.path()));

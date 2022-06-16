@@ -9,25 +9,25 @@
 #include <absl/time/clock.h>           // for Now
 #include <absl/time/time.h>            // for FormatDuration, operator-, Time
 #include <fmt/format.h>                // for format, make_format_args, vformat_to
-#include <fmt/ostream.h>               // for formatbuf<>::int_type
 #include <spdlog/spdlog.h>             // for info
 
-#include <algorithm>    // for max, max_element, find_if
-#include <cassert>      // for assert
-#include <cmath>        // for round
-#include <exception>    // for exception
+#include <algorithm>  // for max, max_element, find_if
+#include <cassert>    // for assert
+#include <cmath>      // for round
+#include <exception>  // for exception
+#include <filesystem>
 #include <iosfwd>       // for streamsize
 #include <memory>       // for shared_ptr, __shared_ptr_access
 #include <numeric>      // for accumulate
-#include <stdexcept>    // for runtime_error
 #include <string>       // for string, char_traits
 #include <string_view>  // for string_view, operator==, operator!=
 #include <utility>      // for move, pair, pair<>::second_type
 #include <vector>       // for vector
 
-#include "modle/bed/bed.hpp"                            // for BED, Parser, BED_tree, BED_tree::at
-#include "modle/chrom_sizes/chrom_sizes.hpp"            // for Parser
-#include "modle/common/common.hpp"                      // for bp_t, u32, u64, u8
+#include "modle/bed/bed.hpp"                  // for BED, Parser, BED_tree, BED_tree::at
+#include "modle/chrom_sizes/chrom_sizes.hpp"  // for Parser
+#include "modle/common/common.hpp"            // for bp_t, u32, u64, u8
+#include "modle/common/fmt_std_helper.hpp"
 #include "modle/common/suppress_compiler_warnings.hpp"  // for DISABLE_WARNING_PUSH, DISABLE_WAR...
 #include "modle/common/utils.hpp"                       // for XXH3_Deleter, ndebug_defined, XXH...
 #include "modle/contacts.hpp"                           // for ContactMatrix
@@ -287,9 +287,7 @@ u64 Chromosome::hash(XXH3_state_t* const xxh_state, u64 seed, usize cell_id) con
   handle_errors(XXH3_64bits_update(xxh_state, &this->_size, sizeof(decltype(this->_size))));
   handle_errors(XXH3_64bits_update(xxh_state, &cell_id, sizeof(decltype(cell_id))));
 
-  DISABLE_WARNING_PUSH
-  DISABLE_WARNING_USELESS_CAST
-  return static_cast<u64>(XXH3_64bits_digest(xxh_state));
+  return utils::conditional_static_cast<u64>(XXH3_64bits_digest(xxh_state));
   DISABLE_WARNING_POP
 }
 
@@ -298,18 +296,18 @@ u64 Chromosome::hash(u64 seed, usize cell_id) const {
   return this->hash(xxh_state.get(), seed, cell_id);
 }
 
-Genome::Genome(const boost::filesystem::path& path_to_chrom_sizes,
-               const boost::filesystem::path& path_to_extr_barriers,
-               const boost::filesystem::path& path_to_chrom_subranges,
-               const absl::Span<const boost::filesystem::path> paths_to_extra_features,
+Genome::Genome(const std::filesystem::path& path_to_chrom_sizes,
+               const std::filesystem::path& path_to_extr_barriers,
+               const std::filesystem::path& path_to_chrom_subranges,
+               const absl::Span<const std::filesystem::path> paths_to_extra_features,
                const double ctcf_prob_occ_to_occ, const double ctcf_prob_nocc_to_nocc)
     : _chromosomes(instantiate_genome(path_to_chrom_sizes, path_to_extr_barriers,
                                       path_to_chrom_subranges, paths_to_extra_features,
                                       ctcf_prob_occ_to_occ, ctcf_prob_nocc_to_nocc)) {}
 
 absl::btree_set<Chromosome> Genome::import_chromosomes(
-    const boost::filesystem::path& path_to_chrom_sizes,
-    const boost::filesystem::path& path_to_chrom_subranges) {
+    const std::filesystem::path& path_to_chrom_sizes,
+    const std::filesystem::path& path_to_chrom_subranges) {
   assert(!path_to_chrom_sizes.empty());
 
   const auto t0 = absl::Now();
@@ -387,7 +385,7 @@ absl::btree_set<Chromosome> Genome::import_chromosomes(
 }
 
 usize Genome::import_barriers(absl::btree_set<Chromosome>& chromosomes,
-                              const boost::filesystem::path& path_to_extr_barriers,
+                              const std::filesystem::path& path_to_extr_barriers,
                               const double ctcf_prob_occ_to_occ,
                               const double ctcf_prob_nocc_to_nocc) {
   assert(!chromosomes.empty());
@@ -426,7 +424,7 @@ usize Genome::import_barriers(absl::btree_set<Chromosome>& chromosomes,
 }
 
 usize Genome::import_extra_features(absl::btree_set<Chromosome>& chromosomes,
-                                    const boost::filesystem::path& path_to_extra_features) {
+                                    const std::filesystem::path& path_to_extra_features) {
   assert(!chromosomes.empty());
   assert(!path_to_extra_features.empty());
 
@@ -451,10 +449,10 @@ usize Genome::import_extra_features(absl::btree_set<Chromosome>& chromosomes,
 }
 
 absl::btree_set<Chromosome> Genome::instantiate_genome(
-    const boost::filesystem::path& path_to_chrom_sizes,
-    const boost::filesystem::path& path_to_extr_barriers,
-    const boost::filesystem::path& path_to_chrom_subranges,
-    const absl::Span<const boost::filesystem::path> paths_to_extra_features,
+    const std::filesystem::path& path_to_chrom_sizes,
+    const std::filesystem::path& path_to_extr_barriers,
+    const std::filesystem::path& path_to_chrom_subranges,
+    const absl::Span<const std::filesystem::path> paths_to_extra_features,
     const double ctcf_prob_occ_to_occ, const double ctcf_prob_nocc_to_nocc) {
   auto chroms = import_chromosomes(path_to_chrom_sizes, path_to_chrom_subranges);
 

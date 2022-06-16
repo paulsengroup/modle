@@ -33,7 +33,6 @@ target_link_system_libraries(
   absl::flat_hash_map
   absl::hash
   absl::span
-  Boost::filesystem
   fmt::fmt
   xxHash::xxHash)
 
@@ -61,7 +60,6 @@ target_link_system_libraries(
   libmodle_io_bigwig
   PUBLIC
   absl::span
-  Boost::filesystem
   fmt::fmt
   libBigWig::libbigwig)
 
@@ -92,9 +90,8 @@ target_link_system_libraries(
   PRIVATE
   absl::flat_hash_set
   absl::strings
-  fmt::fmt
   PUBLIC
-  Boost::filesystem)
+  fmt::fmt)
 
 set_target_properties(libmodle_io_chrom_sizes PROPERTIES OUTPUT_NAME modle_io_chrom_sizes)
 install(
@@ -121,10 +118,9 @@ target_link_system_libraries(
   project_warnings
   project_options
   absl::strings
-  fmt::fmt
   PUBLIC
-  Boost::filesystem
   Boost::iostreams
+  fmt::fmt
   LibArchive::LibArchive)
 
 set_target_properties(libmodle_io_compressed PROPERTIES OUTPUT_NAME modle_io_compressed)
@@ -159,7 +155,6 @@ target_link_system_libraries(
   absl::strings
   absl::time
   absl::variant
-  Boost::filesystem
   fmt::fmt
   readerwriterqueue::readerwriterqueue
   spdlog::spdlog)

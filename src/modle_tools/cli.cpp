@@ -11,30 +11,28 @@
 #include <absl/strings/strip.h>       // for StripPrefix, StripSuffix
 #include <absl/types/variant.h>       // for get, monostate
 #include <fmt/format.h>               // for format, join, FMT_STRING, make_format_args
-#include <fmt/ostream.h>              // for formatbuf<>::int_type
 #include <toml++/toml.h>              // for array::operator[], operator<<, parse, print_to...
 
 #include <CLI/CLI.hpp>
-#include <algorithm>                         // for max
-#include <array>                             // for array
-#include <boost/filesystem/file_status.hpp>  // for directory_file, file_status, regular_file
-#include <boost/filesystem/operations.hpp>   // for exists, is_directory, is_regular_file, status
-#include <boost/filesystem/path.hpp>         // for path, operator<<, path::iterator, operator==
-#include <cassert>                           // for assert
-#include <exception>                         // for exception
-#include <ostream>                           // for streamsize, stringstream, basic_ostream
-#include <stdexcept>                         // for runtime_error, invalid_argument, out_of_range
-#include <string>                            // for string, allocator, basic_string
-#include <string_view>                       // for basic_string_view, string_view, basic_stri...
-#include <thread>                            // for hardware_concurrency
-#include <tuple>                             // for ignore
-#include <utility>                           // for move
-#include <vector>                            // for vector
+#include <algorithm>    // for max
+#include <array>        // for array
+#include <cassert>      // for assert
+#include <exception>    // for exception
+#include <filesystem>   // for path, operator<<, path::iterator, operator==
+#include <ostream>      // for streamsize, stringstream, basic_ostream
+#include <stdexcept>    // for runtime_error, invalid_argument, out_of_range
+#include <string>       // for string, allocator, basic_string
+#include <string_view>  // for basic_string_view, string_view, basic_stri...
+#include <thread>       // for hardware_concurrency
+#include <tuple>        // for ignore
+#include <utility>      // for move
+#include <vector>       // for vector
 
 #include "modle/bed/bed.hpp"  // for Parser, bed_dialects, str_to_bed_dialect_m...
 #include "modle/common/cli_utils.hpp"
 #include "modle/common/common.hpp"  // for usize
-#include "modle/common/utils.hpp"   // for str_float_to_str_int, ConstMap::begin, Con...
+#include "modle/common/fmt_std_helper.hpp"
+#include "modle/common/utils.hpp"  // for str_float_to_str_int, ConstMap::begin, Con...
 #include "modle/config/version.hpp"
 #include "modle/cooler/cooler.hpp"             // for Cooler, Cooler::READ_ONLY
 #include "modle_tools/modle_tools_config.hpp"  // for eval_config, find_barrier_clusters_config
@@ -573,10 +571,10 @@ void Cli::validate_eval_subcommand() const {
     DISABLE_WARNING_RANGE_LOOP_ANALYSIS
     for (const auto direction : stripe_directions) {
       for (const auto extension : extensions) {
-        const boost::filesystem::path fname = fmt::format(
+        const std::filesystem::path fname = fmt::format(
             FMT_STRING("{}_{}_{}.{}"), c.output_prefix.string(), metric_name, direction, extension);
         auto collision =
-            utils::detect_path_collision(fname, c.force, boost::filesystem::regular_file);
+            utils::detect_path_collision(fname, c.force, std::filesystem::file_type::regular);
         if (!collision.empty()) {
           name_collisions.emplace_back(std::move(collision));
         }
@@ -604,10 +602,10 @@ void Cli::validate_find_barrier_clusters_subcommand() const {
   std::vector<std::string> errors;
   const auto& c = absl::get<find_barrier_clusters_config>(this->_config);
 
-  assert(boost::filesystem::exists(c.path_to_input_barriers));
+  assert(std::filesystem::exists(c.path_to_input_barriers));
 
-  if (auto collision =
-          utils::detect_path_collision(c.path_to_output, c.force, boost::filesystem::regular_file);
+  if (auto collision = utils::detect_path_collision(c.path_to_output, c.force,
+                                                    std::filesystem::file_type::regular);
       !collision.empty()) {
     errors.push_back(collision);
   }
@@ -643,7 +641,7 @@ void Cli::validate_noisify_subcommand() const {
   assert(this->_cli.get_subcommand("noisify")->parsed());
   const auto& c = absl::get<noisify_config>(this->_config);
 
-  assert(boost::filesystem::exists(c.path_to_input_matrix));
+  assert(std::filesystem::exists(c.path_to_input_matrix));
   try {
     cooler::Cooler f(c.path_to_input_matrix, cooler::Cooler<>::IO_MODE::READ_ONLY, c.bin_size);
   } catch (const std::runtime_error& e) {
@@ -662,9 +660,9 @@ void Cli::validate_noisify_subcommand() const {
     }
   }
 
-  if (!c.force && boost::filesystem::exists(c.path_to_output_matrix)) {
-    const auto path_type = boost::filesystem::status(c.path_to_output_matrix).type();
-    if (path_type == boost::filesystem::directory_file) {
+  if (!c.force && std::filesystem::exists(c.path_to_output_matrix)) {
+    const auto path_type = std::filesystem::status(c.path_to_output_matrix).type();
+    if (path_type == std::filesystem::file_type::directory) {
       absl::StrAppendFormat(&errors,
                             "File \"%s\" already exists and is actually a directory. Please remove "
                             "the directory and try again.",
@@ -688,7 +686,7 @@ void Cli::validate_transform_subcommand() const {
   const auto& c = absl::get<transform_config>(this->_config);
 
   if (auto collision = utils::detect_path_collision(c.path_to_output_matrix, c.force,
-                                                    boost::filesystem::regular_file);
+                                                    std::filesystem::file_type::regular);
       !collision.empty()) {
     errors.push_back(collision);
   }

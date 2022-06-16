@@ -2,10 +2,9 @@
 //
 // SPDX-License-Identifier: MIT
 
-#include <absl/time/clock.h>  // for Now
-#include <absl/time/time.h>   // for FormatDuration, operator-, Time
-#include <fmt/format.h>       // for format, make_format_args, vfor...
-#include <fmt/ostream.h>
+#include <absl/time/clock.h>                      // for Now
+#include <absl/time/time.h>                       // for FormatDuration, operator-, Time
+#include <fmt/format.h>                           // for format, make_format_args, vfor...
 #include <readerwriterqueue/readerwriterqueue.h>  // for BlockingReaderWriterQueue
 #include <spdlog/spdlog.h>                        // for info
 
@@ -25,6 +24,7 @@
 #include <utility>      // for tuple_element<>::type
 #include <vector>       // for vector
 
+#include "modle/common/fmt_std_helper.hpp"
 #include "modle/common/genextreme_value_distribution.hpp"  // for genextreme_value_distribution
 #include "modle/common/random.hpp"                         // for PRNG
 #include "modle/contacts.hpp"                              // for ContactMatrix

@@ -14,30 +14,29 @@
 #include <absl/types/variant.h>                 // for get, variant
 #include <cpp-sort/comparators/natural_less.h>  // for natural_less_t
 #include <fmt/format.h>                         // for format, make_format_args, vformat_to, FMT...
-#include <fmt/ostream.h>                        // for formatbuf<>::int_type
 #include <readerwriterqueue/readerwriterqueue.h>
 #include <spdlog/spdlog.h>  // for info
 
-#include <algorithm>                        // for transform, max
-#include <boost/filesystem/operations.hpp>  // for create_directories
-#include <boost/filesystem/path.hpp>        // for operator<<, path
-#include <cassert>                          // for assert
-#include <cstdio>                           // for stderr
-#include <exception>                        // for exception
-#include <future>                           // for future
-#include <iosfwd>                           // for streamsize
-#include <iterator>                         // for insert_iterator, inserter
-#include <memory>                           // for unique_ptr, shared_ptr, __shared_ptr_access
-#include <stdexcept>                        // for runtime_error, overflow_error
-#include <string>                           // for string, basic_string
-#include <string_view>                      // for string_view
-#include <thread_pool/thread_pool.hpp>      // for thread_pool
-#include <utility>                          // for tuple_element<>::type, pair, make_pair
-#include <vector>                           // for vector
+#include <algorithm>                    // for transform, max
+#include <cassert>                      // for assert
+#include <cstdio>                       // for stderr
+#include <exception>                    // for exception
+#include <filesystem>                   // for operator<<, path
+#include <future>                       // for future
+#include <iosfwd>                       // for streamsize
+#include <iterator>                     // for insert_iterator, inserter
+#include <memory>                       // for unique_ptr, shared_ptr, __shared_ptr_access
+#include <stdexcept>                    // for runtime_error, overflow_error
+#include <string>                       // for string, basic_string
+#include <string_view>                  // for string_view
+#include <thread_pool/thread_pool.hpp>  // for thread_pool
+#include <utility>                      // for tuple_element<>::type, pair, make_pair
+#include <vector>                       // for vector
 
-#include "modle/bed/bed.hpp"                      // for BED_tree, BED_tree<>::value_type, Parser
-#include "modle/bigwig/bigwig.hpp"                // for Writer
-#include "modle/common/common.hpp"                // for u32, usize, bp_t, u8, i64
+#include "modle/bed/bed.hpp"        // for BED_tree, BED_tree<>::value_type, Parser
+#include "modle/bigwig/bigwig.hpp"  // for Writer
+#include "modle/common/common.hpp"  // for u32, usize, bp_t, u8, i64
+#include "modle/common/fmt_std_helper.hpp"
 #include "modle/common/utils.hpp"                 // for identity::operator()
 #include "modle/compressed_io/compressed_io.hpp"  // for Reader
 #include "modle/contacts.hpp"                     // for ContactMatrix
@@ -49,7 +48,7 @@
 
 namespace modle::tools {
 
-static modle::IITree<double, double> import_discretization_ranges(const boost::filesystem::path& p,
+static modle::IITree<double, double> import_discretization_ranges(const std::filesystem::path& p,
                                                                   const char sep = '\t') {
   IITree<double, double> ranges;
   if (p.empty()) {
@@ -196,7 +195,7 @@ void transform_subcmd(const modle::tools::transform_config& c) {
   }();
 
   if (const auto& output_dir = c.path_to_output_matrix.parent_path(); !output_dir.empty()) {
-    boost::filesystem::create_directories(output_dir.string());
+    std::filesystem::create_directories(output_dir.string());
   }
 
   std::unique_ptr<cooler::Cooler<double>> cooler_dbl{nullptr};

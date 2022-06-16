@@ -9,20 +9,19 @@
 #include <fmt/format.h>          // for compile_string_to_view, FMT_STRING
 #include <xxhash.h>              // for XXH_INLINE_XXH3_freeState, XXH3_f...
 
-#include <boost/filesystem/operations.hpp>  // for remove
-#include <boost/filesystem/path.hpp>        // for path
-#include <cassert>                          // for assert
-#include <cerrno>                           // for errno
-#include <exception>                        // for exception
-#include <fstream>                          // for operator|, ios_base, basic_ostrea...
-#include <functional>                       // for reference_wrapper
-#include <future>                           // for future, promise
-#include <initializer_list>                 // for initializer_list
-#include <stdexcept>                        // for range_error, runtime_error
-#include <string_view>                      // for string_view, basic_string_view
-#include <type_traits>                      // for __strip_reference_wrapper<>::__type
-#include <utility>                          // for pair, make_pair, forward
-#include <vector>                           // for vector
+#include <cassert>           // for assert
+#include <cerrno>            // for errno
+#include <exception>         // for exception
+#include <filesystem>        // for path
+#include <fstream>           // for operator|, ios_base, basic_ostrea...
+#include <functional>        // for reference_wrapper
+#include <future>            // for future, promise
+#include <initializer_list>  // for initializer_list
+#include <stdexcept>         // for range_error, runtime_error
+#include <string_view>       // for string_view, basic_string_view
+#include <type_traits>       // for __strip_reference_wrapper<>::__type
+#include <utility>           // for pair, make_pair, forward
+#include <vector>            // for vector
 
 #include "modle/common/common.hpp"                      // for usize, i64, u64
 #include "modle/common/suppress_compiler_warnings.hpp"  // for DISABLE_WARNING_POP, DISABLE_WARN...
@@ -130,10 +129,8 @@ template <class InputIt1, class InputIt2, class N, class>
 constexpr N convolve(InputIt1 kernel_first, InputIt1 kernel_last, InputIt2 buff_first) {
   N tot = 0;
   for (; kernel_first != kernel_last; ++kernel_first, ++buff_first) {
-    DISABLE_WARNING_PUSH
-    DISABLE_WARNING_USELESS_CAST
-    tot += static_cast<N>(*kernel_first) * static_cast<N>(*buff_first);
-    DISABLE_WARNING_POP
+    tot += utils::conditional_static_cast<N>(*kernel_first) *
+           utils::conditional_static_cast<N>(*buff_first);
   }
 
   return tot;
@@ -147,14 +144,12 @@ constexpr N convolve(const Rng1 &kernel, const Rng2 &buff) {
 
 template <class I, class>
 constexpr I next_pow2(const I n) noexcept {
-  DISABLE_WARNING_PUSH
-  DISABLE_WARNING_USELESS_CAST
   using ull = unsigned long long;
   if constexpr (std::is_signed_v<I>) {
     assert(n >= 0);
-    return static_cast<I>(next_pow2(static_cast<ull>(n)));
+    return utils::conditional_static_cast<I>(next_pow2(static_cast<ull>(n)));
   } else {
-    auto m = static_cast<ull>(n);
+    auto m = utils::conditional_static_cast<ull>(n);
 #ifndef __GNUC__
     // https://graphics.stanford.edu/~seander/bithacks.html#RoundUpPowerOf2
     --m;
@@ -164,15 +159,15 @@ constexpr I next_pow2(const I n) noexcept {
     m |= m >> 8;
     m |= m >> 16;
     m |= m >> 32;
-    return static_cast<I>(m + 1);
+    return utils::conditional_static_cast<I>(m + 1);
 #else
     // https://jameshfisher.com/2018/03/30/round-up-power-2/
     // https://gcc.gnu.org/onlinedocs/gcc/Other-Builtins.html
 
-    return static_cast<I>(m <= 1 ? m : u64(1) << (u64(64) - u64(__builtin_clzll(m - 1))));
+    return utils::conditional_static_cast<I>(
+        m <= 1 ? m : u64(1) << (u64(64) - u64(__builtin_clzll(m - 1))));
 #endif
   }
-  DISABLE_WARNING_POP
 }
 
 template <class T>
@@ -183,34 +178,27 @@ constexpr std::future<T> make_ready_future(T &&v) {
 }
 
 template <bool remove_source_files>
-void concatenate_files(
-    const boost::filesystem::path &path_to_dest,
-    std::initializer_list<std::reference_wrapper<const boost::filesystem::path>> path_to_sources) {
+void concatenate_files(const std::filesystem::path &path_to_dest,
+                       const std::filesystem::path &path_to_sources...) {
   auto out_file = std::ofstream(path_to_dest.string(), std::ios_base::binary | std::ios_base::in |
                                                            std::ios_base::out | std::ios_base::ate);
   if (!out_file) {
     throw fmt::system_error(errno, FMT_STRING("Failed to open file {} for writing"), path_to_dest);
   }
 
-  for (const auto &path : path_to_sources) {
+  for (const auto &path : {path_to_sources}) {
     try {
-      auto input = std::ifstream(path.get().string(), std::ios_base::binary);
+      auto input = std::ifstream(path.string(), std::ios_base::binary);
       out_file << input.rdbuf();
       if (remove_source_files) {
-        boost::filesystem::remove(path);
+        std::filesystem::remove(path);
       }
     } catch (const std::exception &e) {
       throw std::runtime_error(fmt::format(
           FMT_STRING("The following error occurred while appending file {} to file {}: {}"), path,
-          path_to_dest, e.what()));
+          path_to_dest, std::string{e.what()}));
     }
   }
-}
-
-template <bool remove_source_files>
-void concatenate_files(const boost::filesystem::path &path_to_dest,
-                       const boost::filesystem::path &path_to_src) {
-  concatenate_files<remove_source_files>(path_to_dest, {{path_to_src}});
 }
 
 template <class MutexT>

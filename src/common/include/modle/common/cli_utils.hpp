@@ -7,8 +7,7 @@
 #include <absl/container/fixed_array.h>
 
 #include <CLI/Formatter.hpp>
-#include <boost/filesystem/file_status.hpp>  // for regular_file, file_type
-#include <boost/filesystem/path.hpp>         // for path
+#include <filesystem>  // for path
 #include <initializer_list>
 #include <range/v3/view/map.hpp>
 #include <string>       // for string
@@ -35,11 +34,11 @@ template <class N = double>
 
 // Returns false in case a collision was detected
 inline bool detect_path_collision(
-    const boost::filesystem::path& p, std::string& error_msg, bool force_overwrite = false,
-    boost::filesystem::file_type expected_type = boost::filesystem::regular_file);
+    const std::filesystem::path& p, std::string& error_msg, bool force_overwrite = false,
+    std::filesystem::file_type expected_type = std::filesystem::file_type::regular);
 [[nodiscard]] inline std::string detect_path_collision(
-    const boost::filesystem::path& p, bool force_overwrite = false,
-    boost::filesystem::file_type expected_type = boost::filesystem::regular_file);
+    const std::filesystem::path& p, bool force_overwrite = false,
+    std::filesystem::file_type expected_type = std::filesystem::file_type::regular);
 
 // This class stores pairs of string labels and enums and provides the in a way that is compatible
 // with CLI11

@@ -7,25 +7,25 @@
 #include <absl/types/span.h>  // for Span, MakeConstSpan
 #include <fmt/format.h>       // for format_parse_context, FMT_STRING, join, format_error
 
-#include <algorithm>                  // for min
-#include <array>                      // for array
-#include <boost/filesystem/path.hpp>  // for path
-#include <cassert>                    // for assert
-#include <memory>                     // for unique_ptr
-#include <numeric>                    // for accumulate
-#include <string>                     // for string
-#include <string_view>                // for string_view, basic_string_view
-#include <tuple>                      // for ignore
-#include <type_traits>                // for add_const<>::type
-#include <utility>                    // for move, pair, make_pair
-#include <vector>                     // for vector
+#include <algorithm>    // for min
+#include <array>        // for array
+#include <cassert>      // for assert
+#include <filesystem>   // for path
+#include <memory>       // for unique_ptr
+#include <numeric>      // for accumulate
+#include <string>       // for string
+#include <string_view>  // for string_view, basic_string_view
+#include <tuple>        // for ignore
+#include <type_traits>  // for add_const<>::type
+#include <utility>      // for move, pair, make_pair
+#include <vector>       // for vector
 
 #include "modle/common/common.hpp"  // for bp_t, u64, u32, u8, usize
 
 namespace modle::bed {
 
 template <typename K, typename I>
-BED_tree<K, I>::BED_tree(const boost::filesystem::path& path_to_bed, BED::Dialect dialect)
+BED_tree<K, I>::BED_tree(const std::filesystem::path& path_to_bed, BED::Dialect dialect)
     : BED_tree(path_to_bed.empty()
                    ? BED_tree<>{}
                    : bed::Parser(path_to_bed, dialect).parse_all_in_interval_tree()) {}

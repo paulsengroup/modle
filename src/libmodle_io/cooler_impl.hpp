@@ -6,22 +6,22 @@
 
 #include <absl/strings/str_cat.h>  // for StrCat, StrAppend
 #include <absl/types/variant.h>    // for visit
-#include <fmt/ostream.h>
-#include <spdlog/spdlog.h>  // for error, warn
+#include <spdlog/spdlog.h>         // for error, warn
 
-#include <boost/filesystem/path.hpp>  // for path
-#include <cassert>                    // for assert
-#include <exception>                  // for exception
-#include <memory>                     // for make_unique
-#include <tuple>                      // for ignore
+#include <cassert>     // for assert
+#include <exception>   // for exception
+#include <filesystem>  // for path
+#include <memory>      // for make_unique
+#include <tuple>       // for ignore
 
 #include "modle/common/common.hpp"  // for i32, i64, usize
-#include "modle/hdf5/hdf5.hpp"      // for read_attribute, read_numbers, wri...
+#include "modle/common/fmt_std_helper.hpp"
+#include "modle/hdf5/hdf5.hpp"  // for read_attribute, read_numbers, wri...
 
 namespace modle::cooler {
 
 template <class N>
-Cooler<N>::Cooler(boost::filesystem::path path_to_file, IO_MODE mode, usize bin_size,
+Cooler<N>::Cooler(std::filesystem::path path_to_file, IO_MODE mode, usize bin_size,
                   usize max_str_length, std::string_view assembly_name, FLAVOR flavor,
                   bool validate, u8f compression_lvl, usize chunk_size, usize cache_size)
     : STR_TYPE(generate_default_str_type(max_str_length)),
@@ -66,22 +66,20 @@ Cooler<N>::Cooler(boost::filesystem::path path_to_file, IO_MODE mode, usize bin_
   if (this->is_read_only()) {
     if (this->_bin_size == 0) {  // i.e. file is cooler
       assert(this->is_cool());
-      DISABLE_WARNING_PUSH
-      DISABLE_WARNING_USELESS_CAST
-      this->_bin_size =
-          static_cast<usize>(hdf5::read_attribute_int(*this->_fp, "bin-size", this->_root_path));
-      this->_nnz = static_cast<i64>(hdf5::read_attribute_int(*this->_fp, "nnz", this->_root_path));
+      this->_bin_size = utils::conditional_static_cast<usize>(
+          hdf5::read_attribute_int(*this->_fp, "bin-size", this->_root_path));
+      this->_nnz = utils::conditional_static_cast<i64>(
+          hdf5::read_attribute_int(*this->_fp, "nnz", this->_root_path));
       if (hdf5::has_attribute(*this->_fp, "sum", this->_root_path)) {
         using SumT = decltype(this->_sum);
         if constexpr (IS_FP) {
-          this->_sum =
-              static_cast<SumT>(hdf5::read_attribute<double>(*this->_fp, "sum", this->_root_path));
+          this->_sum = utils::conditional_static_cast<SumT>(
+              hdf5::read_attribute<double>(*this->_fp, "sum", this->_root_path));
         } else {
-          this->_sum =
-              static_cast<SumT>(hdf5::read_attribute_int(*this->_fp, "sum", this->_root_path));
+          this->_sum = utils::conditional_static_cast<SumT>(
+              hdf5::read_attribute_int(*this->_fp, "sum", this->_root_path));
         }
       }
-      DISABLE_WARNING_POP
     }
     this->open_default_datasets();
     this->read_chrom_offset_idx();
@@ -130,7 +128,7 @@ Cooler<N>::~Cooler() {
                 "file handle. This should never happen, as whenever Cooler objects are created "
                 "in write-mode the file handle is supposed to be closed upon object "
                 "destruction!"),
-            this->_path_to_file);
+            this->_path_to_file.string());
       }
     }
   } catch (const H5::Exception &e) {
@@ -153,7 +151,7 @@ constexpr bool Cooler<N>::is_read_only() const noexcept {
 }
 
 template <class N>
-const boost::filesystem::path &Cooler<N>::get_path() const {
+const std::filesystem::path &Cooler<N>::get_path() const {
   return this->_path_to_file;
 }
 
@@ -391,11 +389,11 @@ std::unique_ptr<H5::DSetAccPropList> Cooler<N>::generate_default_aprop([[maybe_u
 }
 
 template <class N>
-std::unique_ptr<H5::H5File> Cooler<N>::open_file(const boost::filesystem::path &path, IO_MODE mode,
+std::unique_ptr<H5::H5File> Cooler<N>::open_file(const std::filesystem::path &path, IO_MODE mode,
                                                  usize bin_size,
                                                  [[maybe_unused]] usize max_str_length,
                                                  FLAVOR flavor, bool validate) {
-  assert(!path.has_parent_path() || boost::filesystem::is_directory(path.parent_path()));
+  assert(!path.has_parent_path() || std::filesystem::is_directory(path.parent_path()));
   if constexpr (utils::ndebug_not_defined()) {
     if (mode == IO_MODE::WRITE_ONLY) {
       if (bin_size == 0) {

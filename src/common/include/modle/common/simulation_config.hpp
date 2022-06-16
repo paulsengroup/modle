@@ -7,12 +7,12 @@
 #include <absl/types/span.h>  // for Span
 
 #include <bitflags/bitflags.hpp>
-#include <boost/filesystem/path.hpp>  // for path
-#include <cmath>                      // for round
-#include <limits>                     // for numeric_limits
-#include <string>                     // for string
-#include <thread>                     // for thread
-#include <vector>                     // for vector
+#include <cmath>       // for round
+#include <filesystem>  // for path
+#include <limits>      // for numeric_limits
+#include <string>      // for string
+#include <thread>      // for thread
+#include <vector>      // for vector
 
 #include "modle/common/common.hpp"  // for bp_t, i64, u64
 
@@ -36,22 +36,22 @@ struct Config {
   FLAG(loop)
   END_BITFLAGS(ContactSamplingStrategy)
 
-  boost::filesystem::path path_to_chrom_sizes;
-  boost::filesystem::path path_to_chrom_subranges;
-  boost::filesystem::path path_to_output_prefix;
-  boost::filesystem::path path_to_output_file_cool{};
-  boost::filesystem::path path_to_config_file{};
-  boost::filesystem::path path_to_log_file;
-  boost::filesystem::path path_to_model_state_log_file;
-  boost::filesystem::path path_to_extr_barriers;
+  std::filesystem::path path_to_chrom_sizes;
+  std::filesystem::path path_to_chrom_subranges;
+  std::filesystem::path path_to_output_prefix;
+  std::filesystem::path path_to_output_file_cool{};
+  std::filesystem::path path_to_config_file{};
+  std::filesystem::path path_to_log_file;
+  std::filesystem::path path_to_model_state_log_file;
+  std::filesystem::path path_to_extr_barriers;
   bool force{false};
   bool quiet{false};
-  boost::filesystem::path path_to_reference_contacts{};
-  std::vector<boost::filesystem::path> path_to_feature_bed_files{};
-  boost::filesystem::path path_to_output_file_bedpe{};
-  boost::filesystem::path path_to_deletion_bed{};
-  boost::filesystem::path path_to_task_file;
-  boost::filesystem::path path_to_task_filter_file{};
+  std::filesystem::path path_to_reference_contacts{};
+  std::vector<std::filesystem::path> path_to_feature_bed_files{};
+  std::filesystem::path path_to_output_file_bedpe{};
+  std::filesystem::path path_to_deletion_bed{};
+  std::filesystem::path path_to_task_file;
+  std::filesystem::path path_to_task_filter_file{};
   bool write_header{true};
   bool skip_output{false};
   bool log_model_internal_state{false};

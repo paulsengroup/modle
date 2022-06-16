@@ -243,8 +243,8 @@ hsize_t read_numbers(const H5::DataSet &dataset, CN &buff, hsize_t file_offset) 
 }
 
 template <class T>
-void read_attribute(const boost::filesystem::path &path_to_file, std::string_view attr_name,
-                    T &buff, std::string_view path) {
+void read_attribute(const std::filesystem::path &path_to_file, std::string_view attr_name, T &buff,
+                    std::string_view path) {
   const auto lck = internal::lock();
   auto f = open_file_for_reading(path_to_file);
   read_attribute(f, attr_name, buff, path);
@@ -383,7 +383,7 @@ void read_attribute(const H5::DataSet &d, std::string_view attr_name, T &buff) {
 }
 
 template <class T>
-T read_attribute(const boost::filesystem::path &path_to_file, std::string_view attr_name,
+T read_attribute(const std::filesystem::path &path_to_file, std::string_view attr_name,
                  std::string_view path) {
   T buff;
   read_attribute(path_to_file, attr_name, buff, path);
@@ -522,8 +522,6 @@ template <class H5Type>
 
   attr_types type;
   const auto size = h5_type.getSize();
-  DISABLE_WARNING_PUSH
-  DISABLE_WARNING_USELESS_CAST
   if constexpr (std::is_same_v<H5Type, H5::IntType>) {
     assert(h5_type.getSign() != H5T_SGN_ERROR);
     const bool is_signed = h5_type.getSign() == H5T_SGN_NONE;
@@ -531,16 +529,16 @@ template <class H5Type>
     if (is_signed) {
       switch (size) {
         case (sizeof(i8)):
-          type = static_cast<i8>(0);
+          type = utils::conditional_static_cast<i8>(0);
           return type;
         case (sizeof(i16)):
-          type = static_cast<i16>(0);
+          type = utils::conditional_static_cast<i16>(0);
           return type;
         case (sizeof(i32)):
-          type = static_cast<i32>(0);
+          type = utils::conditional_static_cast<i32>(0);
           return type;
         case (sizeof(i64)):
-          type = static_cast<i64>(0);
+          type = utils::conditional_static_cast<i64>(0);
           return type;
         default:
           MODLE_UNREACHABLE_CODE;
@@ -548,16 +546,16 @@ template <class H5Type>
     }
     switch (size) {
       case (sizeof(u8)):
-        type = static_cast<u8>(0);
+        type = utils::conditional_static_cast<u8>(0);
         return type;
       case (sizeof(u16)):
-        type = static_cast<u16>(0);
+        type = utils::conditional_static_cast<u16>(0);
         return type;
       case (sizeof(u32)):
-        type = static_cast<u32>(0);
+        type = utils::conditional_static_cast<u32>(0);
         return type;
       case (sizeof(u64)):
-        type = static_cast<u64>(0);
+        type = utils::conditional_static_cast<u64>(0);
         return type;
       default:
         MODLE_UNREACHABLE_CODE;
@@ -565,20 +563,19 @@ template <class H5Type>
   } else {
     switch (size) {
       case (sizeof(float)):
-        type = static_cast<float>(0);
+        type = utils::conditional_static_cast<float>(0);
         return type;
       case (sizeof(double)):
-        type = static_cast<double>(0);
+        type = utils::conditional_static_cast<double>(0);
         return type;
       case (sizeof(long double)):
-        type = static_cast<long double>(0);
+        type = utils::conditional_static_cast<long double>(0);
         return type;
       default:
         MODLE_UNREACHABLE_CODE;
     }
   }
   MODLE_UNREACHABLE_CODE;
-  DISABLE_WARNING_POP
 }
 
 template <class DataType>

@@ -13,35 +13,34 @@
 #include <absl/types/span.h>                     // for Span, MakeConstSpan
 #include <fmt/compile.h>                         // for format, FMT_COMPILE
 #include <fmt/format.h>                          // for format, make_format_args, vformat_to
-#include <fmt/ostream.h>                         // for formatbuf<>::int_type
 #include <moodycamel/blockingconcurrentqueue.h>  // for BlockingConcurrentQueue
 #include <moodycamel/concurrentqueue.h>          // for ConsumerToken, ProducerToken
 #include <spdlog/spdlog.h>                       // for info
 
-#include <algorithm>                        // for min, max, transform
-#include <array>                            // for array, array<>::value_type
-#include <atomic>                           // for atomic
-#include <boost/filesystem/operations.hpp>  // for exists, remove
-#include <boost/filesystem/path.hpp>        // for operator<<, path
-#include <cassert>                          // for assert
-#include <cerrno>                           // for errno
-#include <chrono>                           // for microseconds, milliseconds
-#include <cmath>                            // for round
-#include <exception>                        // for exception_ptr, exception, current_exception
-#include <fstream>                          // for streamsize, operator|
-#include <iterator>                         // for move_iterator, make_move_iterator
-#include <limits>                           // for numeric_limits
-#include <memory>                           // for shared_ptr, __shared_pt...
-#include <mutex>                            // for mutex, scoped_lock
-#include <stdexcept>                        // for runtime_error
-#include <string>                           // for string, basic_string
-#include <string_view>                      // for string_view
-#include <thread_pool/thread_pool.hpp>      // for thread_pool
-#include <utility>                          // for make_pair, tuple_elemen...
-#include <vector>                           // for vector
+#include <algorithm>                    // for min, max, transform
+#include <array>                        // for array, array<>::value_type
+#include <atomic>                       // for atomic
+#include <cassert>                      // for assert
+#include <cerrno>                       // for errno
+#include <chrono>                       // for microseconds, milliseconds
+#include <cmath>                        // for round
+#include <exception>                    // for exception_ptr, exception, current_exception
+#include <filesystem>                   // for operator<<, path
+#include <fstream>                      // for streamsize, operator|
+#include <iterator>                     // for move_iterator, make_move_iterator
+#include <limits>                       // for numeric_limits
+#include <memory>                       // for shared_ptr, __shared_pt...
+#include <mutex>                        // for mutex, scoped_lock
+#include <stdexcept>                    // for runtime_error
+#include <string>                       // for string, basic_string
+#include <string_view>                  // for string_view
+#include <thread_pool/thread_pool.hpp>  // for thread_pool
+#include <utility>                      // for make_pair, tuple_elemen...
+#include <vector>                       // for vector
 
 #include "modle/bed/bed.hpp"        // for BED, BED_tree, BED_tree::at, BED_tree::c...
 #include "modle/common/common.hpp"  // for bp_t, contacts_t, u64
+#include "modle/common/fmt_std_helper.hpp"
 #include "modle/common/suppress_compiler_warnings.hpp"  // for DISABLE_WARNING_POP
 #include "modle/compressed_io/compressed_io.hpp"        // for Writer
 #include "modle/contacts.hpp"                           // for ContactMatrix
@@ -90,9 +89,9 @@ static void validate_reference_contacts(const Genome& genome, cooler::Cooler<con
 // NOLINTNEXTLINE(readability-function-cognitive-complexity)
 void Simulation::run_perturbate() {
   if (!this->skip_output) {  // Write simulation params to file
-    assert(boost::filesystem::exists(this->path_to_output_prefix.parent_path()));
+    assert(std::filesystem::exists(this->path_to_output_prefix.parent_path()));
     if (this->force) {
-      boost::filesystem::remove(this->path_to_output_file_bedpe);
+      std::filesystem::remove(this->path_to_output_file_bedpe);
     }
   }
   // TODO Do proper error handling
@@ -180,8 +179,8 @@ void Simulation::run_perturbate() {
             std::scoped_lock<std::mutex> lck(out_stream_mutex);
             out_bedpe_file << tmp_output.rdbuf();
           }
-          if (boost::filesystem::exists(tmp_output_path)) {
-            boost::filesystem::remove(tmp_output_path);
+          if (std::filesystem::exists(tmp_output_path)) {
+            std::filesystem::remove(tmp_output_path);
           }
         }
       });
@@ -376,8 +375,7 @@ void Simulation::run_perturbate() {
 // NOLINTNEXTLINE(readability-function-cognitive-complexity)
 void Simulation::perturbate_worker(
     const u64 tid, moodycamel::BlockingConcurrentQueue<Simulation::TaskPW>& task_queue,
-    const boost::filesystem::path& output_path, std::mutex& cooler_mtx,
-    const usize task_batch_size) {
+    const std::filesystem::path& output_path, std::mutex& cooler_mtx, const usize task_batch_size) {
   spdlog::info(FMT_STRING("Spawning simulation thread {}..."), tid);
   moodycamel::ConsumerToken ctok(task_queue);
 
@@ -576,12 +574,12 @@ void Simulation::simulate_window(Simulation::State& state, compressed_io::Writer
   }
 
   if (write_contacts_to_cooler) {
-    const auto file_name = boost::filesystem::path(fmt::format(
+    const auto file_name = std::filesystem::path(fmt::format(
         FMT_STRING("{}_{:06d}_{}_window_{}-{}_deletion_{}-{}.cool"),
         this->path_to_output_prefix.string(), state.id, state.chrom->name(), state.window_start,
         state.window_end, state.deletion_begin, state.deletion_begin + state.deletion_size));
 
-    if (!this->force && boost::filesystem::exists(file_name)) {
+    if (!this->force && std::filesystem::exists(file_name)) {
       throw std::runtime_error(fmt::format(
           FMT_STRING("Refusing to overwrite output file {}. Pass --force to overwrite."),
           file_name));

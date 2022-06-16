@@ -52,15 +52,14 @@ target_link_system_libraries(
   absl::str_format
   absl::time
   cpp-sort::cpp-sort
-  spdlog::spdlog
   PUBLIC
   absl::flat_hash_set
   absl::span
-  Boost::filesystem
   Boost::headers
   concurrentqueue::concurrentqueue
   fmt::fmt
   range-v3::range-v3
+  spdlog::spdlog
   xxHash::xxHash
   thread-pool)
 

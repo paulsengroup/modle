@@ -6,12 +6,12 @@
 #include <absl/types/span.h>         // for Span
 #include <fmt/format.h>              // for format
 
-#include <algorithm>                  // for max, min
-#include <boost/filesystem/path.hpp>  // for path
-#include <catch2/catch.hpp>           // for AssertionHandler, operator""_catch_sr, SourceLineInfo
-#include <string>                     // for basic_string, operator==, string
-#include <string_view>                // for string_view
-#include <vector>                     // for vector
+#include <algorithm>         // for max, min
+#include <catch2/catch.hpp>  // for AssertionHandler, operator""_catch_sr, SourceLineInfo
+#include <filesystem>        // for path
+#include <string>            // for basic_string, operator==, string
+#include <string_view>       // for string_view
+#include <vector>            // for vector
 
 #include "modle/bed/bed.hpp"        // for BED, BED_tree, BED_tree::contains, BED_tree::count_...
 #include "modle/common/common.hpp"  // for usize, u8
@@ -23,8 +23,7 @@ using namespace modle::bed;
 
 // NOLINTNEXTLINE(readability-function-cognitive-complexity)
 TEST_CASE("BED Tree simple", "[BED][io][long]") {
-  const boost::filesystem::path all_intervals =
-      "test/data/unit_tests/H1_hg38_CTCFs_filtered.bed.gz";
+  const std::filesystem::path all_intervals = "test/data/unit_tests/H1_hg38_CTCFs_filtered.bed.gz";
 
   Parser p(all_intervals, bed::BED::BED3);
 
@@ -45,8 +44,8 @@ TEST_CASE("BED Tree simple", "[BED][io][long]") {
 
 // NOLINTNEXTLINE(readability-function-cognitive-complexity)
 TEST_CASE("BED Tree multiple overlaps", "[BED][io][long]") {
-  const boost::filesystem::path all_intervals = "test/data/unit_tests/H1_ctcf_all_chroms.bed.gz";
-  const boost::filesystem::path counts_per_interval =
+  const std::filesystem::path all_intervals = "test/data/unit_tests/H1_ctcf_all_chroms.bed.gz";
+  const std::filesystem::path counts_per_interval =
       "test/data/unit_tests/H1_ctcf_all_chroms_per_interval.tsv.gz";
 
   const BED_tree<> intervals{all_intervals, bed::BED::BED3};

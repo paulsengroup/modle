@@ -7,34 +7,35 @@
 #include <absl/strings/ascii.h>  // for AsciiStrToLower
 #include <archive.h>             // for archive_errno, archiv...
 #include <fmt/format.h>          // for format, FMT_STRING
-#include <fmt/ostream.h>         // for formatbuf<>::int_type
 
 #include <algorithm>                         // for find_if
-#include <boost/filesystem/path.hpp>         // for path, operator<<
 #include <boost/iostreams/close.hpp>         // for close
 #include <boost/iostreams/filter/bzip2.hpp>  // for basic_bzip2_compressor
 #include <boost/iostreams/filter/gzip.hpp>   // for basic_gzip_compressor
 #include <boost/iostreams/filter/lzma.hpp>   // for basic_lzma_compressor
 #include <boost/iostreams/filter/zlib.hpp>   // for best_compression
+#include <boost/iostreams/filter/zstd.hpp>   // for best_compression
 #include <boost/iostreams/write.hpp>         // for put, write
 #include <cassert>                           // for assert
 #include <cerrno>                            // for errno
+#include <filesystem>                        // for path, operator<<
 #include <stdexcept>                         // for runtime_error, logic_...
 #include <string>                            // for string, basic_string
 #include <string_view>                       // for string_view, operator<<
 #include <tuple>                             // for ignore
 
 #include "modle/common/common.hpp"  // for usize
-#include "modle/common/utils.hpp"   // for ndebug_not_defined
+#include "modle/common/fmt_std_helper.hpp"
+#include "modle/common/utils.hpp"  // for ndebug_not_defined
 
 namespace modle::compressed_io {
 
-Reader::Reader(const boost::filesystem::path& path, usize buff_capacity) {
+Reader::Reader(const std::filesystem::path& path, usize buff_capacity) {
   this->_buff.reserve(buff_capacity);
   this->open(path);
 }
 
-void Reader::open(const boost::filesystem::path& path) {
+void Reader::open(const std::filesystem::path& path) {
   auto handle_open_errors = [&](la_ssize_t status) {
     if (status == ARCHIVE_EOF) {
       this->_eof = true;
@@ -99,7 +100,7 @@ void Reader::reset() {
   this->_tok_tmp_buff.clear();
 }
 
-const boost::filesystem::path& Reader::path() const noexcept { return this->_path; }
+const std::filesystem::path& Reader::path() const noexcept { return this->_path; }
 std::string Reader::path_string() const noexcept { return this->_path.string(); }
 const char* Reader::path_c_str() const noexcept { return this->_path.c_str(); }
 
@@ -247,12 +248,12 @@ std::string_view Reader::read_next_token(char sep) {
 #endif
 }
 
-Writer::Writer(const boost::filesystem::path& path, Compression compression)
+Writer::Writer(const std::filesystem::path& path, Compression compression)
     : _compression(compression) {
   this->open(path);
 }
 
-void Writer::open(const boost::filesystem::path& path) {
+void Writer::open(const std::filesystem::path& path) {
   this->_out.reset();
   if (this->is_open()) {
     this->close();
@@ -274,10 +275,10 @@ void Writer::open(const boost::filesystem::path& path) {
       this->_out.push(boost::iostreams::lzma_compressor(
           boost::iostreams::lzma_params(boost::iostreams::lzma::best_compression)));
       break;
-    case ZSTD:  // Disabled
-      // this->_out.push(boost::iostreams::zstd_compressor(
-      //     boost::iostreams::zstd_params(boost::iostreams::zstd::best_compression)));
-      throw std::runtime_error("ZSTD compression not available.");
+    case ZSTD:
+      this->_out.push(boost::iostreams::zstd_compressor(
+          boost::iostreams::zstd_params(boost::iostreams::zstd::best_compression)));
+      break;
     case NONE:
       break;
     case AUTO:
@@ -307,11 +308,11 @@ Writer::operator bool() const { return this->is_open(); }
 
 bool Writer::operator!() const { return !this->operator bool(); }
 
-const boost::filesystem::path& Writer::path() const noexcept { return this->_path; }
+const std::filesystem::path& Writer::path() const noexcept { return this->_path; }
 std::string Writer::path_string() const noexcept { return this->_path.string(); }
 const char* Writer::path_c_str() const noexcept { return this->_path.c_str(); }
 
-Writer::Compression Writer::infer_compression_from_ext(const boost::filesystem::path& p) {
+Writer::Compression Writer::infer_compression_from_ext(const std::filesystem::path& p) {
   const auto ext = absl::AsciiStrToLower(p.extension().string());
   const auto* const match = std::find_if(ext_mappings.begin(), ext_mappings.end(),
                                          [&](const auto& mapping) { return mapping.first == ext; });

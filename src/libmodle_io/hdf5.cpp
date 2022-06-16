@@ -24,20 +24,20 @@
 #include <absl/strings/strip.h>    // for ConsumePrefix, StripPrefix, StripSuffix
 #include <fcntl.h>                 // for SEEK_END, SEEK_SET
 #include <fmt/format.h>            // for format, FMT_STRING
-#include <fmt/ostream.h>
 
-#include <algorithm>                  // for max
-#include <boost/filesystem/path.hpp>  // for path
-#include <cassert>                    // for assert
-#include <cstdio>                     // for fclose, fseek, tmpfile, ferror, fread, ftell, FILE
-#include <memory>                     // for unique_ptr
-#include <stdexcept>                  // for runtime_error
-#include <string>                     // for string, basic_string
-#include <string_view>                // for string_view
-#include <tuple>                      // for ignore
-#include <vector>                     // for vector
+#include <algorithm>    // for max
+#include <cassert>      // for assert
+#include <cstdio>       // for fclose, fseek, tmpfile, ferror, fread, ftell, FILE
+#include <filesystem>   // for path
+#include <memory>       // for unique_ptr
+#include <stdexcept>    // for runtime_error
+#include <string>       // for string, basic_string
+#include <string_view>  // for string_view
+#include <tuple>        // for ignore
+#include <vector>       // for vector
 
 #include "modle/common/common.hpp"  // for i64
+#include "modle/common/fmt_std_helper.hpp"
 
 namespace modle::hdf5 {
 
@@ -161,7 +161,7 @@ std::string read_attribute_str(H5::H5File &f, std::string_view attr_name, std::s
   return buff;
 }
 
-std::string read_attribute_str(const boost::filesystem::path &path_to_file,
+std::string read_attribute_str(const std::filesystem::path &path_to_file,
                                std::string_view attr_name, std::string_view path) {
   std::string buff;
   const auto lck = internal::lock();
@@ -176,7 +176,7 @@ i64 read_attribute_int(H5::H5File &f, std::string_view attr_name, std::string_vi
   return buff;
 }
 
-i64 read_attribute_int(const boost::filesystem::path &path_to_file, std::string_view attr_name,
+i64 read_attribute_int(const std::filesystem::path &path_to_file, std::string_view attr_name,
                        std::string_view path) {
   i64 buff;
   const auto lck = internal::lock();
@@ -243,7 +243,7 @@ bool has_dataset(H5::H5File &f, std::string_view name, std::string_view root_pat
   return info.type == H5O_TYPE_DATASET;
 }
 
-H5::H5File open_file_for_reading(const boost::filesystem::path &path_to_file) {
+H5::H5File open_file_for_reading(const std::filesystem::path &path_to_file) {
   const auto &path_to_file_ = path_to_file.string();
   try {
     const auto lck = internal::lock();
@@ -256,7 +256,7 @@ H5::H5File open_file_for_reading(const boost::filesystem::path &path_to_file) {
   }
 }
 
-H5::H5File open_file_for_writing(const boost::filesystem::path &path_to_file) {
+H5::H5File open_file_for_writing(const std::filesystem::path &path_to_file) {
   const auto &path_to_file_ = path_to_file.string();
   try {
     const auto lck = internal::lock();

@@ -175,7 +175,6 @@ ContactMatrix<N> Cooler<N>::cooler_to_cmatrix(std::pair<hsize_t, hsize_t> bin_ra
       DISABLE_WARNING_SIGN_CONVERSION
       DISABLE_WARNING_SIGN_COMPARE
       DISABLE_WARNING_CONVERSION
-      DISABLE_WARNING_USELESS_CAST
       const auto bin1 = bin1_BUFF[j] - first_bin;
       const auto bin2 = bin2_BUFF[j] - first_bin;
       if (bin2 >= i + nrows - 1 || bin2 >= bin1_offset_idx.size() - 1) {
@@ -195,7 +194,7 @@ ContactMatrix<N> Cooler<N>::cooler_to_cmatrix(std::pair<hsize_t, hsize_t> bin_ra
         const auto count =
             static_cast<double>(count_BUFF[j]) / (bin1_bias * bin2_bias) / bias_scaling_factor;
         if constexpr (std::is_integral_v<N>) {
-          cmatrix.set(bin2, bin1, static_cast<N>(std::round(count)));
+          cmatrix.set(bin2, bin1, utils::conditional_static_cast<N>(std::round(count)));
         } else {
           cmatrix.set(bin2, bin1, count);
         }

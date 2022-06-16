@@ -20,11 +20,11 @@
 #include <H5Cpp.h>               // IWYU pragma: keep
 #include <absl/types/variant.h>  // for variant
 
-#include <boost/filesystem/path.hpp>  // for path
-#include <mutex>                      // recursive_mutex, unique_lock
-#include <string>                     // for string
-#include <string_view>                // for string_view
-#include <vector>                     // for vector
+#include <filesystem>   // for path
+#include <mutex>        // recursive_mutex, unique_lock
+#include <string>       // for string
+#include <string_view>  // for string_view
+#include <vector>       // for vector
 
 #include "modle/common/common.hpp"  // for i64
 
@@ -84,7 +84,7 @@ inline void read_attribute(H5::H5File &f, std::string_view attr_name, T &buff,
 template <class T>
 inline void read_attribute(const H5::DataSet &d, std::string_view attr_name, T &buff);
 template <class T>
-inline void read_attribute(const boost::filesystem::path &path_to_file, std::string_view attr_name,
+inline void read_attribute(const std::filesystem::path &path_to_file, std::string_view attr_name,
                            T &buff, std::string_view path = "/");
 
 template <class T>
@@ -93,18 +93,18 @@ template <class T>
 template <class T>
 [[nodiscard]] inline T read_attribute(const H5::DataSet &d, std::string_view attr_name);
 template <class T>
-[[nodiscard]] inline T read_attribute(const boost::filesystem::path &path_to_file,
+[[nodiscard]] inline T read_attribute(const std::filesystem::path &path_to_file,
                                       std::string_view attr_name, std::string_view path = "/");
 
 [[nodiscard]] std::string read_attribute_str(H5::H5File &f, std::string_view attr_name,
                                              std::string_view path = "/");
-[[nodiscard]] std::string read_attribute_str(const boost::filesystem::path &path_to_file,
+[[nodiscard]] std::string read_attribute_str(const std::filesystem::path &path_to_file,
                                              std::string_view attr_name,
                                              std::string_view path = "/");
 
 [[nodiscard]] i64 read_attribute_int(H5::H5File &f, std::string_view attr_name,
                                      std::string_view path = "/");
-[[nodiscard]] i64 read_attribute_int(const boost::filesystem::path &path_to_file,
+[[nodiscard]] i64 read_attribute_int(const std::filesystem::path &path_to_file,
                                      std::string_view attr_name, std::string_view path = "/");
 
 [[nodiscard]] bool has_attribute(const H5::Group &g, std::string_view attr_name);
@@ -137,8 +137,8 @@ template <class T>
 [[nodiscard]] bool check_dataset_type(const H5::DataSet &dataset, T type,
                                       bool throw_on_failure = true);
 
-[[nodiscard]] H5::H5File open_file_for_reading(const boost::filesystem::path &path_to_file);
-[[nodiscard]] H5::H5File open_file_for_writing(const boost::filesystem::path &path_to_file);
+[[nodiscard]] H5::H5File open_file_for_reading(const std::filesystem::path &path_to_file);
+[[nodiscard]] H5::H5File open_file_for_writing(const std::filesystem::path &path_to_file);
 
 template <class T1, class T2>
 [[nodiscard]] inline H5::DSetCreatPropList generate_creat_prop_list(hsize_t chunk_size,

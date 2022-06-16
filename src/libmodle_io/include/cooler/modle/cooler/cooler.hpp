@@ -20,12 +20,12 @@
 #include <absl/types/variant.h>                   // for variant, monostate
 #include <readerwriterqueue/readerwriterqueue.h>  // for BlockingReaderWriterQueue
 
-#include <boost/filesystem/path.hpp>  // for path
-#include <memory>                     // for unique_ptr, allocator
-#include <string>                     // for string
-#include <string_view>                // for string_view
-#include <utility>                    // for pair
-#include <vector>                     // for vector
+#include <filesystem>   // for path
+#include <memory>       // for unique_ptr, allocator
+#include <string>       // for string
+#include <string_view>  // for string_view
+#include <utility>      // for pair
+#include <vector>       // for vector
 
 #include "modle/common/common.hpp"  // for i64, i32, u8f, u32
 #include "modle/contacts.hpp"       // for ContactMatrix
@@ -60,7 +60,7 @@ class Cooler {
   struct InternalBuffers;
 
   H5::StrType STR_TYPE;
-  boost::filesystem::path _path_to_file;
+  std::filesystem::path _path_to_file;
   std::string _root_path{"/"};
   IO_MODE _mode;
   usize _bin_size;
@@ -145,7 +145,7 @@ class Cooler {
   static constexpr usize DEFAULT_HDF5_CACHE_SIZE = 16 * 1024 * 1024ULL;  // 16MB
 
   Cooler() = delete;
-  inline explicit Cooler(boost::filesystem::path path_to_file, IO_MODE mode = IO_MODE::READ_ONLY,
+  inline explicit Cooler(std::filesystem::path path_to_file, IO_MODE mode = IO_MODE::READ_ONLY,
                          usize bin_size = 0, usize max_str_length = 0,
                          std::string_view assembly_name = "", FLAVOR flavor = FLAVOR::AUTO,
                          bool validate = true, u8f compression_lvl = DEFAULT_COMPRESSION_LEVEL,
@@ -166,7 +166,7 @@ class Cooler {
 
   // Getters
   [[nodiscard]] constexpr bool is_read_only() const noexcept;
-  [[nodiscard]] inline const boost::filesystem::path &get_path() const;
+  [[nodiscard]] inline const std::filesystem::path &get_path() const;
 
   [[nodiscard]] inline usize get_nchroms();
 
@@ -244,8 +244,8 @@ class Cooler {
       T type, hsize_t chunk_size, hsize_t cache_size);
 
   [[nodiscard]] static inline std::unique_ptr<H5::H5File> open_file(
-      const boost::filesystem::path &path, IO_MODE mode, usize bin_size = 0,
-      usize max_str_length = 0, FLAVOR flavor = FLAVOR::AUTO, bool validate = true);
+      const std::filesystem::path &path, IO_MODE mode, usize bin_size = 0, usize max_str_length = 0,
+      FLAVOR flavor = FLAVOR::AUTO, bool validate = true);
   [[nodiscard]] static inline std::vector<H5::Group> open_groups(H5::H5File &f,
                                                                  bool create_if_not_exist = false,
                                                                  usize bin_size = 0);

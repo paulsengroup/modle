@@ -10,27 +10,26 @@
 #include <absl/types/span.h>           // for MakeSpan
 #include <fmt/format.h>                // for format, FMT_STRING, join, print, make_format_...
 #include <fmt/os.h>                    // for output_file, ostream
-#include <fmt/ostream.h>               // for formatbuf<>::int_type
 #include <toml++/toml.h>               // for array::operator[], operator<<, parse, print_to...
 
-#include <CLI/CLI.hpp>                      // for Option_group, App
-#include <algorithm>                        // for max
-#include <array>                            // for array
-#include <boost/filesystem/operations.hpp>  // for exists, is_empty, is_directory
-#include <boost/filesystem/path.hpp>        // for path, operator<<
-#include <cassert>                          // for assert
-#include <cmath>                            // for round, pow, log
-#include <cstdio>                           // for stderr
-#include <exception>                        // for exception
-#include <limits>                           // for numeric_limits
-#include <sstream>                          // for streamsize, stringstream, basic_ostream
-#include <stdexcept>                        // for invalid_argument, out_of_range, runtime_error
-#include <string>                           // for allocator, string, basic_string
-#include <thread>                           // for hardware_concurrency
-#include <vector>                           // for vector
+#include <CLI/CLI.hpp>  // for Option_group, App
+#include <algorithm>    // for max
+#include <array>        // for array
+#include <cassert>      // for assert
+#include <cmath>        // for round, pow, log
+#include <cstdio>       // for stderr
+#include <exception>    // for exception
+#include <filesystem>   // for path, operator<<
+#include <limits>       // for numeric_limits
+#include <sstream>      // for streamsize, stringstream, basic_ostream
+#include <stdexcept>    // for invalid_argument, out_of_range, runtime_error
+#include <string>       // for allocator, string, basic_string
+#include <thread>       // for hardware_concurrency
+#include <vector>       // for vector
 
 #include "modle/common/cli_utils.hpp"
-#include "modle/common/common.hpp"             // for bp_t, i64
+#include "modle/common/common.hpp"  // for bp_t, i64
+#include "modle/common/fmt_std_helper.hpp"
 #include "modle/common/simulation_config.hpp"  // for Config
 #include "modle/common/utils.hpp"              // for parse_numeric_or_throw
 #include "modle/config/version.hpp"            // modle_version_long
@@ -823,15 +822,15 @@ std::string Cli::detect_path_collisions(modle::Config& c) const {
     return "";
   }
 
-  auto check_for_path_collisions = [](const boost::filesystem::path& path) -> std::string {
+  auto check_for_path_collisions = [](const std::filesystem::path& path) -> std::string {
     assert(!path.empty());
-    if (boost::filesystem::exists(path)) {
-      if (boost::filesystem::is_directory(path)) {
+    if (std::filesystem::exists(path)) {
+      if (std::filesystem::is_directory(path)) {
         return fmt::format(
             FMT_STRING("Refusing to run the simulation because output file {} already "
                        "exist (and is actually a {}directory). {}.\n"),
-            path, boost::filesystem::is_empty(path) ? "" : "non-empty ",
-            boost::filesystem::is_empty(path)
+            path, std::filesystem::is_empty(path) ? "" : "non-empty ",
+            std::filesystem::is_empty(path)
                 ? " Pass --force to overwrite"
                 : "You should specify a different output path, or manually remove the "
                   "existing directory");
@@ -841,7 +840,7 @@ std::string Cli::detect_path_collisions(modle::Config& c) const {
                      "--force to overwrite.\n"),
           path);
     }
-    if (boost::filesystem::is_directory(path) && !boost::filesystem::is_empty(path)) {
+    if (std::filesystem::is_directory(path) && !std::filesystem::is_empty(path)) {
       return fmt::format(
           FMT_STRING("Refusing to run the simulation because output file {} is a "
                      "non-empty directory. You should specify a different output path, or "
@@ -851,31 +850,31 @@ std::string Cli::detect_path_collisions(modle::Config& c) const {
     return {};
   };
 
-  if (boost::filesystem::exists(c.path_to_log_file)) {
+  if (std::filesystem::exists(c.path_to_log_file)) {
     absl::StrAppend(&collisions, check_for_path_collisions(c.path_to_log_file));
   }
   if (this->get_subcommand() == simulate && !c.path_to_model_state_log_file.empty() &&
-      boost::filesystem::exists(c.path_to_model_state_log_file)) {
+      std::filesystem::exists(c.path_to_model_state_log_file)) {
     absl::StrAppend(&collisions, check_for_path_collisions(c.path_to_model_state_log_file));
   }
   if (this->get_subcommand() != subcommand::replay &&
-      boost::filesystem::exists(c.path_to_config_file)) {
+      std::filesystem::exists(c.path_to_config_file)) {
     absl::StrAppend(&collisions, check_for_path_collisions(c.path_to_config_file));
   }
   if ((this->get_subcommand() == subcommand::simulate ||
        (this->get_subcommand() == subcommand::perturbate &&
         this->_config.compute_reference_matrix)) &&
-      boost::filesystem::exists(c.path_to_output_file_cool)) {
+      std::filesystem::exists(c.path_to_output_file_cool)) {
     absl::StrAppend(&collisions, check_for_path_collisions(c.path_to_output_file_cool));
   }
   if ((this->get_subcommand() == subcommand::perturbate ||
        this->get_subcommand() == subcommand::replay) &&
       !c.path_to_output_file_bedpe.empty() &&
-      boost::filesystem::exists(c.path_to_output_file_bedpe)) {
+      std::filesystem::exists(c.path_to_output_file_bedpe)) {
     absl::StrAppend(&collisions, check_for_path_collisions(c.path_to_output_file_bedpe));
   }
   if (this->get_subcommand() == subcommand::perturbate &&
-      boost::filesystem::exists(this->_config.path_to_task_file)) {
+      std::filesystem::exists(this->_config.path_to_task_file)) {
     absl::StrAppend(&collisions, check_for_path_collisions(c.path_to_task_file));
   }
 
@@ -1038,7 +1037,7 @@ constexpr double compute_occupancy_from_stp(double stp_active, double stp_inacti
 static void cli_update_paths(Cli::subcommand subcommand, Config& c) {
   c.path_to_output_file_cool = c.path_to_output_prefix;
   c.path_to_output_file_bedpe =
-      !c.path_to_feature_bed_files.empty() ? c.path_to_output_prefix : boost::filesystem::path{};
+      !c.path_to_feature_bed_files.empty() ? c.path_to_output_prefix : std::filesystem::path{};
   c.path_to_log_file = c.path_to_output_prefix;
   c.path_to_config_file = c.path_to_output_prefix;
   if (subcommand == Cli::subcommand::perturbate) {

@@ -6,11 +6,10 @@
 
 #include <absl/types/variant.h>  // for monostate, variant
 
-#include <boost/filesystem/operations.hpp>  // for temp_directory_path
-#include <boost/filesystem/path.hpp>        // for path
-#include <string>                           // for string, allocator, basic_string
-#include <thread>                           // for thread
-#include <vector>                           // for vector
+#include <filesystem>  // for path
+#include <string>      // for string, allocator, basic_string
+#include <thread>      // for thread
+#include <vector>      // for vector
 
 #include "modle/bed/bed.hpp"           // for BED, BED::Dialect, BED::BED6
 #include "modle/common/cli_utils.hpp"  // for CliEnumMappings
@@ -21,11 +20,11 @@ namespace modle::tools {
 
 struct eval_config {
   // IO
-  boost::filesystem::path path_to_input_matrix;
-  boost::filesystem::path output_prefix;
-  boost::filesystem::path path_to_reference_matrix;
-  boost::filesystem::path path_to_chrom_subranges;
-  boost::filesystem::path path_to_weights;
+  std::filesystem::path path_to_input_matrix;
+  std::filesystem::path output_prefix;
+  std::filesystem::path path_to_reference_matrix;
+  std::filesystem::path path_to_chrom_subranges;
+  std::filesystem::path path_to_weights;
   bool force{false};
   bool normalize{false};
 
@@ -57,9 +56,9 @@ struct eval_config {
 
 struct find_barrier_clusters_config {
   // IO
-  boost::filesystem::path path_to_input_barriers;
-  boost::filesystem::path path_to_output;
-  boost::filesystem::path path_to_breaking_points;
+  std::filesystem::path path_to_input_barriers;
+  std::filesystem::path path_to_output;
+  std::filesystem::path path_to_breaking_points;
   bool force{false};
   bool quiet{false};
 
@@ -73,8 +72,8 @@ struct find_barrier_clusters_config {
 
 struct noisify_config {
   // IO
-  boost::filesystem::path path_to_input_matrix;
-  boost::filesystem::path path_to_output_matrix;
+  std::filesystem::path path_to_input_matrix;
+  std::filesystem::path path_to_output_matrix;
   bool force{false};
 
   // Generic
@@ -90,8 +89,8 @@ struct noisify_config {
 
 struct stats_config {
   // IO
-  boost::filesystem::path path_to_input_matrix;
-  boost::filesystem::path path_to_chrom_subranges;
+  std::filesystem::path path_to_input_matrix;
+  std::filesystem::path path_to_chrom_subranges;
   std::string output_path_for_histograms{};
   bool dump_depleted_matrices{false};
   bool force{false};
@@ -105,8 +104,8 @@ struct stats_config {
 
 struct transform_config {
   // IO
-  boost::filesystem::path path_to_input_matrix;
-  boost::filesystem::path path_to_output_matrix;
+  std::filesystem::path path_to_input_matrix;
+  std::filesystem::path path_to_output_matrix;
   bool force{false};
 
   // Transformation methods
@@ -131,7 +130,7 @@ struct transform_config {
   double gaussian_blur_sigma_multiplier{1.6};  // NOLINT, approx. Laplacian of Gaussian
 
   double discretization_val{std::numeric_limits<double>::quiet_NaN()};
-  boost::filesystem::path path_to_discretization_ranges_tsv{};
+  std::filesystem::path path_to_discretization_ranges_tsv{};
   bool floating_point{true};
 
   // Matrix options

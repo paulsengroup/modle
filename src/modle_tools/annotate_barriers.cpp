@@ -8,7 +8,7 @@
 
 namespace modle::tools {
 
-static void import_chromosomes(const boost::filesystem::path& path_to_bwig) { io::bigwig:: }
+static void import_chromosomes(const std::filesystem::path& path_to_bwig) { io::bigwig:: }
 
 void annotate_barriers_subcmd(const annotate_barriers_config& c) {}
 

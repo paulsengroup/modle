@@ -30,7 +30,6 @@ target_link_system_libraries(
   INTERFACE
   absl::span
   absl::strings
-  Boost::filesystem
   Boost::headers
   cpp-sort::cpp-sort
   fmt::fmt

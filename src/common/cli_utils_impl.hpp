@@ -7,22 +7,20 @@
 #include <absl/strings/str_replace.h>
 #include <cpp-sort/comparators/natural_less.h>
 #include <cpp-sort/sorters/insertion_sorter.h>
-#include <fmt/format.h>   // for compile_string_to_view, FMT_STRING, formatbu...
-#include <fmt/ostream.h>  // for compile_string_to_view, FMT_STRING, formatbu...
+#include <fmt/format.h>  // for compile_string_to_view, FMT_STRING, formatbu...
 
-#include <algorithm>                         // for transform
-#include <boost/filesystem/file_status.hpp>  // for file_type, regular_file, directory_file, fil...
-#include <boost/filesystem/operations.hpp>   // for status
-#include <boost/filesystem/path.hpp>         // for operator<<, path
-#include <cctype>                            // for isalpha
-#include <cmath>                             // for trunc
-#include <exception>                         // for exception
+#include <algorithm>   // for transform
+#include <cctype>      // for isalpha
+#include <cmath>       // for trunc
+#include <exception>   // for exception
+#include <filesystem>  // for operator<<, path
 #include <range/v3/view/any_view.hpp>
 #include <range/v3/view/map.hpp>
 #include <range/v3/view/zip.hpp>
 #include <string>       // for string, basic_string
 #include <string_view>  // for string_view
 
+#include "modle/common/fmt_std_helper.hpp"
 #include "modle/common/numeric_utils.hpp"  // for parse_numeric_or_throw
 #include "modle/common/suppress_compiler_warnings.hpp"
 
@@ -67,29 +65,30 @@ std::string replace_non_alpha_chars(std::string &s) {
   return s;
 }
 
-std::string detect_path_collision(const boost::filesystem::path &p, bool force_overwrite,
-                                  boost::filesystem::file_type expected_type) {
+std::string detect_path_collision(const std::filesystem::path &p, bool force_overwrite,
+                                  std::filesystem::file_type expected_type) {
   std::string error_msg;
   detect_path_collision(p, error_msg, force_overwrite, expected_type);
   return error_msg;
 }
 
-bool detect_path_collision(const boost::filesystem::path &p, std::string &error_msg,
-                           bool force_overwrite, boost::filesystem::file_type expected_type) {
-  const auto path_type = boost::filesystem::status(p).type();
-  if (force_overwrite && path_type == boost::filesystem::file_not_found) {
+bool detect_path_collision(const std::filesystem::path &p, std::string &error_msg,
+                           bool force_overwrite, std::filesystem::file_type expected_type) {
+  using file_type = std::filesystem::file_type;
+  const auto path_type = std::filesystem::status(p).type();
+  if (force_overwrite && path_type == file_type::not_found) {
     return true;
   }
 
   if (expected_type != path_type) {
     switch (path_type) {
-      case boost::filesystem::regular_file:
+      case file_type::regular:
         error_msg +=
             fmt::format(FMT_STRING("Path {} already exists and is actually a file. Please remove "
                                    "the file and try again"),
                         p);
         return false;
-      case boost::filesystem::directory_file:
+      case file_type::directory:
         error_msg += fmt::format(
             FMT_STRING("Path {} already exists and is actually a directory. Please remove "
                        "the directory and try again"),
@@ -104,7 +103,7 @@ bool detect_path_collision(const boost::filesystem::path &p, std::string &error_
     return true;
   }
 
-  if (path_type == boost::filesystem::regular_file) {
+  if (path_type == file_type::regular) {
     error_msg += fmt::format(FMT_STRING("File {} already exists. Pass --force to overwrite"), p);
     return false;
   }
