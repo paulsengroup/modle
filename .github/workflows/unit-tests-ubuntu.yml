@@ -5,7 +5,7 @@ name: Unit tests Ubuntu
 
 on:
   push:
-    branches: [ main, devel, ci-devel ]
+    branches: [ main ]
     paths:
       - ".github/workflows/unit-tests-ubuntu.yml"
       - "cmake/**"
