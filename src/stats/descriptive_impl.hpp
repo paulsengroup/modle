@@ -35,11 +35,9 @@ double weighted_mean(InputIt1 first, InputIt1 last, InputIt2 weight_first, Unary
   double weight_total = 0;
 
   for (; first != last; ++first, ++weight_first) {
-    DISABLE_WARNING_PUSH
-    DISABLE_WARNING_USELESS_CAST
-    total += static_cast<double>(op(*first)) * static_cast<double>(*weight_first);
-    weight_total += static_cast<double>(*weight_first);
-    DISABLE_WARNING_POP
+    total += utils::conditional_static_cast<double>(op(*first)) *
+             utils::conditional_static_cast<double>(*weight_first);
+    weight_total += utils::conditional_static_cast<double>(*weight_first);
   }
 
   return total / weight_total;
@@ -112,11 +110,10 @@ double covariance(InputIt first1, InputIt last1, InputIt first2, FP mean1, FP me
   double sum_of_squared_devs = 0;
   usize i = 0;
   for (; first1 != last1; ++first1, ++first2, ++i) {
-    DISABLE_WARNING_PUSH
-    DISABLE_WARNING_USELESS_CAST
-    const auto n1 = static_cast<double>(op(*first1)) - static_cast<double>(mean1);
-    const auto n2 = static_cast<double>(op(*first2)) - static_cast<double>(mean2);
-    DISABLE_WARNING_POP
+    const auto n1 = utils::conditional_static_cast<double>(op(*first1)) -
+                    utils::conditional_static_cast<double>(mean1);
+    const auto n2 = utils::conditional_static_cast<double>(op(*first2)) -
+                    utils::conditional_static_cast<double>(mean2);
     sum_of_squared_devs += n1 * n2;
   }
 
@@ -135,13 +132,12 @@ double weighted_covariance(InputIt1 first1, InputIt1 last1, InputIt1 first2, Inp
   double sum_of_squared_devs = 0;
   double weight_sum = 0;
   for (; first1 != last1; ++first1, ++first2, ++weight_first) {
-    DISABLE_WARNING_PUSH
-    DISABLE_WARNING_USELESS_CAST
-    const auto n1 = static_cast<double>(op(*first1)) - static_cast<double>(mean1);
-    const auto n2 = static_cast<double>(op(*first2)) - static_cast<double>(mean2);
-    sum_of_squared_devs += static_cast<double>(*weight_first) * n1 * n2;
-    weight_sum += static_cast<double>(*weight_first);
-    DISABLE_WARNING_POP
+    const auto n1 = utils::conditional_static_cast<double>(op(*first1)) -
+                    utils::conditional_static_cast<double>(mean1);
+    const auto n2 = utils::conditional_static_cast<double>(op(*first2)) -
+                    utils::conditional_static_cast<double>(mean2);
+    sum_of_squared_devs += utils::conditional_static_cast<double>(*weight_first) * n1 * n2;
+    weight_sum += utils::conditional_static_cast<double>(*weight_first);
   }
 
   return sum_of_squared_devs / weight_sum;
@@ -176,10 +172,8 @@ double weighted_sed(InputIt1 first1, InputIt1 last1, InputIt1 first2, InputIt2 w
         return n2 - n1;
       }
     }();
-    DISABLE_WARNING_PUSH
-    DISABLE_WARNING_USELESS_CAST
-    sed += static_cast<double>(w) * static_cast<double>(n * n);
-    DISABLE_WARNING_POP
+    sed +=
+        utils::conditional_static_cast<double>(w) * utils::conditional_static_cast<double>(n * n);
   }
 
   return std::sqrt(sed);
@@ -200,11 +194,9 @@ double weighted_rmse(InputIt1 first1, InputIt1 last1, InputIt1 first2, InputIt2 
   auto it2 = first2;
   auto it3 = weight_first;
   for (; it1 != last1; ++n, ++it1, ++it2, ++it3) {
-    DISABLE_WARNING_PUSH
-    DISABLE_WARNING_USELESS_CAST
-    tot += std::pow(static_cast<double>(op(*it1) - op(*it2)), 2.0) * static_cast<double>(*it3);
-    tot_w += static_cast<double>(*it3);
-    DISABLE_WARNING_POP
+    tot += std::pow(utils::conditional_static_cast<double>(op(*it1) - op(*it2)), 2.0) *
+           utils::conditional_static_cast<double>(*it3);
+    tot_w += utils::conditional_static_cast<double>(*it3);
   }
 
   return std::sqrt(tot / tot_w);

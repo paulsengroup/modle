@@ -130,10 +130,8 @@ template <class InputIt1, class InputIt2, class N, class>
 constexpr N convolve(InputIt1 kernel_first, InputIt1 kernel_last, InputIt2 buff_first) {
   N tot = 0;
   for (; kernel_first != kernel_last; ++kernel_first, ++buff_first) {
-    DISABLE_WARNING_PUSH
-    DISABLE_WARNING_USELESS_CAST
-    tot += static_cast<N>(*kernel_first) * static_cast<N>(*buff_first);
-    DISABLE_WARNING_POP
+    tot += utils::conditional_static_cast<N>(*kernel_first) *
+           utils::conditional_static_cast<N>(*buff_first);
   }
 
   return tot;
@@ -147,14 +145,12 @@ constexpr N convolve(const Rng1 &kernel, const Rng2 &buff) {
 
 template <class I, class>
 constexpr I next_pow2(const I n) noexcept {
-  DISABLE_WARNING_PUSH
-  DISABLE_WARNING_USELESS_CAST
   using ull = unsigned long long;
   if constexpr (std::is_signed_v<I>) {
     assert(n >= 0);
-    return static_cast<I>(next_pow2(static_cast<ull>(n)));
+    return utils::conditional_static_cast<I>(next_pow2(static_cast<ull>(n)));
   } else {
-    auto m = static_cast<ull>(n);
+    auto m = utils::conditional_static_cast<ull>(n);
 #ifndef __GNUC__
     // https://graphics.stanford.edu/~seander/bithacks.html#RoundUpPowerOf2
     --m;
@@ -164,15 +160,15 @@ constexpr I next_pow2(const I n) noexcept {
     m |= m >> 8;
     m |= m >> 16;
     m |= m >> 32;
-    return static_cast<I>(m + 1);
+    return utils::conditional_static_cast<I>(m + 1);
 #else
     // https://jameshfisher.com/2018/03/30/round-up-power-2/
     // https://gcc.gnu.org/onlinedocs/gcc/Other-Builtins.html
 
-    return static_cast<I>(m <= 1 ? m : u64(1) << (u64(64) - u64(__builtin_clzll(m - 1))));
+    return utils::conditional_static_cast<I>(
+        m <= 1 ? m : u64(1) << (u64(64) - u64(__builtin_clzll(m - 1))));
 #endif
   }
-  DISABLE_WARNING_POP
 }
 
 template <class T>

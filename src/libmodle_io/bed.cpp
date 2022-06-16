@@ -409,9 +409,7 @@ u64 BED::hash(XXH3_state_t* state, u64 seed) const {
   handle_errors(XXH3_64bits_update(state, &this->chrom_start, sizeof(decltype(this->chrom_start))));
   handle_errors(XXH3_64bits_update(state, &this->chrom_end, sizeof(decltype(this->chrom_end))));
 
-  DISABLE_WARNING_PUSH
-  DISABLE_WARNING_USELESS_CAST
-  return static_cast<u64>(XXH3_64bits_digest(state));
+  return utils::conditional_static_cast<u64>(XXH3_64bits_digest(state));
   DISABLE_WARNING_POP
 }
 

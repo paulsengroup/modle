@@ -66,22 +66,20 @@ Cooler<N>::Cooler(boost::filesystem::path path_to_file, IO_MODE mode, usize bin_
   if (this->is_read_only()) {
     if (this->_bin_size == 0) {  // i.e. file is cooler
       assert(this->is_cool());
-      DISABLE_WARNING_PUSH
-      DISABLE_WARNING_USELESS_CAST
-      this->_bin_size =
-          static_cast<usize>(hdf5::read_attribute_int(*this->_fp, "bin-size", this->_root_path));
-      this->_nnz = static_cast<i64>(hdf5::read_attribute_int(*this->_fp, "nnz", this->_root_path));
+      this->_bin_size = utils::conditional_static_cast<usize>(
+          hdf5::read_attribute_int(*this->_fp, "bin-size", this->_root_path));
+      this->_nnz = utils::conditional_static_cast<i64>(
+          hdf5::read_attribute_int(*this->_fp, "nnz", this->_root_path));
       if (hdf5::has_attribute(*this->_fp, "sum", this->_root_path)) {
         using SumT = decltype(this->_sum);
         if constexpr (IS_FP) {
-          this->_sum =
-              static_cast<SumT>(hdf5::read_attribute<double>(*this->_fp, "sum", this->_root_path));
+          this->_sum = utils::conditional_static_cast<SumT>(
+              hdf5::read_attribute<double>(*this->_fp, "sum", this->_root_path));
         } else {
-          this->_sum =
-              static_cast<SumT>(hdf5::read_attribute_int(*this->_fp, "sum", this->_root_path));
+          this->_sum = utils::conditional_static_cast<SumT>(
+              hdf5::read_attribute_int(*this->_fp, "sum", this->_root_path));
         }
       }
-      DISABLE_WARNING_POP
     }
     this->open_default_datasets();
     this->read_chrom_offset_idx();

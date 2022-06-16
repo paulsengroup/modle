@@ -287,9 +287,7 @@ u64 Chromosome::hash(XXH3_state_t* const xxh_state, u64 seed, usize cell_id) con
   handle_errors(XXH3_64bits_update(xxh_state, &this->_size, sizeof(decltype(this->_size))));
   handle_errors(XXH3_64bits_update(xxh_state, &cell_id, sizeof(decltype(cell_id))));
 
-  DISABLE_WARNING_PUSH
-  DISABLE_WARNING_USELESS_CAST
-  return static_cast<u64>(XXH3_64bits_digest(xxh_state));
+  return utils::conditional_static_cast<u64>(XXH3_64bits_digest(xxh_state));
   DISABLE_WARNING_POP
 }
 

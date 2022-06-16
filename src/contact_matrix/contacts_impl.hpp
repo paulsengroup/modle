@@ -224,10 +224,7 @@ void ContactMatrix<N>::check_for_overflow_on_subtract(usize row, usize col, cons
 template <class N>
 usize ContactMatrix<N>::hash_coordinates(const usize i, const usize j) noexcept {
   const std::array<usize, 2> buff{i, j};
-  DISABLE_WARNING_PUSH
-  DISABLE_WARNING_USELESS_CAST
-  return static_cast<usize>(XXH3_64bits(buff.data(), sizeof(usize) * 2));
-  DISABLE_WARNING_POP
+  return utils::conditional_static_cast<usize>(XXH3_64bits(buff.data(), sizeof(usize) * 2));
 }
 
 template <class N>

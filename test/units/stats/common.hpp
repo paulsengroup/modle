@@ -109,13 +109,10 @@ inline std::pair<std::vector<u32>, std::vector<u32>> generate_correlated_vects(
   std::iota(v1.begin(), v1.end(), 0);
   std::iota(v2.begin(), v2.end(), 0);
   for (usize i = 0; i < size; ++i) {
-    DISABLE_WARNING_PUSH
-    DISABLE_WARNING_USELESS_CAST
     auto n = static_cast<i64>(v1[i]) + dist(rand_eng);
     v1[i] = static_cast<u32>(std::max(i64(0), n));
     n = static_cast<i64>(v2[i]) + dist(rand_eng);
     v2[i] = static_cast<u32>(std::max(i64(0), n));
-    DISABLE_WARNING_POP
   }
   return {v1, v2};
 }

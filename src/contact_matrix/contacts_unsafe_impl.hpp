@@ -395,16 +395,13 @@ void ContactMatrix<N>::unsafe_normalize(const ContactMatrix<N> &input_matrix,
   const auto max_count = input_matrix.unsafe_get_max_count();
   const auto scaling_factor = ub - lb;
 
-  DISABLE_WARNING_PUSH
-  DISABLE_WARNING_USELESS_CAST
   std::transform(input_matrix._contacts.begin(), input_matrix._contacts.end(),
                  output_matrix._contacts.begin(), [&](const auto count) {
                    // https://stats.stackexchange.com/a/281164
-                   const auto n =
-                       static_cast<M>(count - min_count) / static_cast<M>(max_count - min_count);
-                   return (n * scaling_factor) + static_cast<M>(lb);
+                   const auto n = utils::conditional_static_cast<M>(count - min_count) /
+                                  utils::conditional_static_cast<M>(max_count - min_count);
+                   return (n * scaling_factor) + utils::conditional_static_cast<M>(lb);
                  });
-  DISABLE_WARNING_POP
 
   output_matrix._updates_missed = input_matrix._updates_missed.load();
   output_matrix._global_stats_outdated = true;
@@ -456,17 +453,15 @@ void ContactMatrix<N>::unsafe_discretize(const ContactMatrix<N> &input_matrix,
                                          ContactMatrix<N1> &output_matrix,
                                          const IITree<N2, N1> &mappings) noexcept {
   output_matrix.unsafe_resize(input_matrix.nrows(), input_matrix.ncols());
-  DISABLE_WARNING_PUSH
-  DISABLE_WARNING_USELESS_CAST
   std::transform(input_matrix._contacts.begin(), input_matrix._contacts.end(),
                  output_matrix._contacts.begin(), [&](const auto n) {
-                   if (auto it = mappings.find_overlaps(static_cast<N>(n), static_cast<N>(n));
+                   if (auto it = mappings.find_overlaps(utils::conditional_static_cast<N>(n),
+                                                        utils::conditional_static_cast<N>(n));
                        it.first != it.second) {
                      return *it.first;
                    }
-                   return static_cast<N1>(n);
+                   return utils::conditional_static_cast<N1>(n);
                  });
-  DISABLE_WARNING_POP
   output_matrix._global_stats_outdated = true;
   output_matrix._updates_missed = input_matrix._updates_missed.load();
 }
@@ -515,13 +510,11 @@ void ContactMatrix<N>::unsafe_update_global_stats() const noexcept {
                                    [&](const auto n) { return n != N(0); }));
   assert(this->_nnz <= this->npixels());
 
-  this->_tot_contacts = std::accumulate(this->_contacts.begin(), this->_contacts.end(), sum_t(0),
-                                        [&](const auto accumulator, const auto n) {
-                                          DISABLE_WARNING_PUSH
-                                          DISABLE_WARNING_USELESS_CAST
-                                          return accumulator + static_cast<sum_t>(n);
-                                          DISABLE_WARNING_POP
-                                        });
+  this->_tot_contacts =
+      std::accumulate(this->_contacts.begin(), this->_contacts.end(), sum_t(0),
+                      [&](const auto accumulator, const auto n) {
+                        return accumulator + utils::conditional_static_cast<sum_t>(n);
+                      });
 
   this->_global_stats_outdated = false;
 }

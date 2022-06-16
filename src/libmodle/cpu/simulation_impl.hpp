@@ -91,14 +91,12 @@ void Simulation::select_lefs_to_bind(const absl::Span<const Lef> lefs,
 template <typename I>
 thread_pool Simulation::instantiate_thread_pool(I nthreads_, bool clamp_nthreads) {
   static_assert(std::is_integral_v<I>, "nthreads should have an integral type.");
-  DISABLE_WARNING_PUSH
-  DISABLE_WARNING_USELESS_CAST
   if (clamp_nthreads) {
-    return thread_pool(std::min(std::thread::hardware_concurrency(), static_cast<u32>(nthreads_)));
+    return thread_pool(std::min(std::thread::hardware_concurrency(),
+                                utils::conditional_static_cast<u32>(nthreads_)));
   }
   assert(nthreads_ > 0);
   return thread_pool(static_cast<u32>(nthreads_));
-  DISABLE_WARNING_POP
 }
 
 template <class TaskT>

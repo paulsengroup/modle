@@ -176,21 +176,18 @@ void Cooler<N>::write_or_append_cmatrix_to_file(const ContactMatrix<M> *cmatrix,
                      ? hdf5::read_attribute_int(*this->_fp, "nnz", this->_root_path)
                      : 0;
 
-    DISABLE_WARNING_PUSH
-    DISABLE_WARNING_USELESS_CAST
     // Total number of contacts
     if constexpr (IS_FP) {
-      this->_sum =
-          static_cast<sum_t>(hdf5::has_attribute(*this->_fp, "sum", this->_root_path)
-                                 ? hdf5::read_attribute<double>(*this->_fp, "sum", this->_root_path)
-                                 : 0.0);
+      this->_sum = utils::conditional_static_cast<sum_t>(
+          hdf5::has_attribute(*this->_fp, "sum", this->_root_path)
+              ? hdf5::read_attribute<double>(*this->_fp, "sum", this->_root_path)
+              : 0.0);
     } else {
-      this->_sum =
-          static_cast<sum_t>(hdf5::has_attribute(*this->_fp, "sum", this->_root_path)
-                                 ? hdf5::read_attribute_int(*this->_fp, "sum", this->_root_path)
-                                 : 0);
+      this->_sum = utils::conditional_static_cast<sum_t>(
+          hdf5::has_attribute(*this->_fp, "sum", this->_root_path)
+              ? hdf5::read_attribute_int(*this->_fp, "sum", this->_root_path)
+              : 0);
     }
-    DISABLE_WARNING_POP
 
     // Idx of the first non-zero pixel of the current chrom
     auto pxl_offset =
@@ -289,14 +286,12 @@ void Cooler<N>::write_or_append_cmatrix_to_file(const ContactMatrix<M> *cmatrix,
           // are not reading past the array end
           for (auto j = i; j < i + cmatrix->nrows() && j < cmatrix->ncols(); ++j) {
             const auto m = [&]() {
-              DISABLE_WARNING_PUSH
-              DISABLE_WARNING_USELESS_CAST
               if constexpr (std::is_floating_point_v<M> && !std::is_floating_point_v<value_type>) {
-                return static_cast<value_type>(std::round(cmatrix->unsafe_get(i, j)));
+                return utils::conditional_static_cast<value_type>(
+                    std::round(cmatrix->unsafe_get(i, j)));
               } else {
-                return static_cast<value_type>(cmatrix->unsafe_get(i, j));
+                return utils::conditional_static_cast<value_type>(cmatrix->unsafe_get(i, j));
               }
-              DISABLE_WARNING_POP
             }();
             if (m != value_type(0)) {  // Only write non-zero pixels
               if constexpr (utils::ndebug_not_defined()) {
@@ -361,10 +356,7 @@ void Cooler<N>::write_or_append_cmatrix_to_file(const ContactMatrix<M> *cmatrix,
         hdf5::write_numbers(b.idx_bin1_offset_buff, d[IDX_BIN1], idx_bin1_offset_h5_foffset);
 
     if (cmatrix) {  // Guard against nullptr deref
-      DISABLE_WARNING_PUSH
-      DISABLE_WARNING_USELESS_CAST
-      this->_sum += static_cast<sum_t>(cmatrix->get_tot_contacts());
-      DISABLE_WARNING_POP
+      this->_sum += utils::conditional_static_cast<sum_t>(cmatrix->get_tot_contacts());
     }
 
     auto &f = *this->_fp;

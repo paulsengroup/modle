@@ -25,10 +25,7 @@ namespace modle::io::bigwig {
 
 template <class Chromosomes>
 void Writer::write_chromosomes(const Chromosomes& chroms) {
-  DISABLE_WARNING_PUSH
-  DISABLE_WARNING_USELESS_CAST
-  const auto num_chroms = static_cast<usize>(chroms.size());
-  DISABLE_WARNING_POP
+  const auto num_chroms = utils::conditional_static_cast<usize>(chroms.size());
 
   DISABLE_WARNING_PUSH
   DISABLE_WARNING_SHADOW
