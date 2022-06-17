@@ -117,7 +117,6 @@ RUN cd "$src_dir/build"           \
          --output-on-failure      \
          --no-tests=error         \
          --timeout 60             \
-         --repeat after-timeout:3 \
 && rm -rf "$src_dir/test/Testing"
 
 ARG FINAL_BASE_IMAGE

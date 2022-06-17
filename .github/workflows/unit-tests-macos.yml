@@ -125,12 +125,11 @@ jobs:
       - name: Run unit tests
         working-directory: ${{ github.workspace }}/build
         run: |
-          ctest --test-dir .             \
-                --schedule-random        \
-                --output-on-failure      \
-                --no-tests=error         \
-                --timeout 120            \
-                -j $(nproc)
+          ctest --test-dir .        \
+                --schedule-random   \
+                --output-on-failure \
+                --no-tests=error    \
+                --timeout 60
 
       - name: Inspect MoDLE version
         run: |
