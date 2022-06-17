@@ -27,8 +27,6 @@ class SelfDeletingFolder {
       tmpdir = std::filesystem::temp_directory_path();
     } catch (const std::filesystem::filesystem_error& e) {
       // Workaround spurious CI failures due to missing /tmp folder exception
-      assert(absl::StartsWith(e.what(), "std::filesystem::temp_directory_path: Not a directory"));
-      assert(absl::EndsWith(e.what(), "\"/tmp\""));
       tmpdir = "test/data/unit_tests/scratch";
     }
 
