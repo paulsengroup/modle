@@ -50,6 +50,7 @@ jobs:
       - run: |
           echo 'conan==${{ matrix.conan-ver }}' > requirements.txt
           echo 'cmake==${{ matrix.cmake-ver }}' >> requirements.txt
+          echo 'scipy' >> requirements.txt
 
       - uses: actions/setup-python@v4
         with:
@@ -106,6 +107,21 @@ jobs:
       - name: Build project
         run: cmake --build ${{ github.workspace }}/build -j $(nproc)
 
+      - run: |
+          printf 'Package: foo\nVersion: 0.0.1\nLicense: MIT\nDescription: foo\n"' >> DESCRIPTION
+          printf 'Title: foo\nAuthor: me\nMaintainer: me\nImports: wCorr' >> DESCRIPTION
+
+      - name: Install setup-r action dependencies
+        run: brew install imagemagick@6 libgit2
+
+      - uses: r-lib/actions/setup-r@v2
+        with:
+          r-version: '4.2.0'
+
+      - uses: r-lib/actions/setup-r-dependencies@v2
+        with:
+          cache: true
+
       - name: Run unit tests
         working-directory: ${{ github.workspace }}/build
         run: |
@@ -114,8 +130,6 @@ jobs:
                 --output-on-failure      \
                 --no-tests=error         \
                 --timeout 120            \
-                --repeat after-timeout:3 \
-                -E '(SciPy)|(wCorr)'     \
                 -j $(nproc)
 
       - name: Inspect MoDLE version
