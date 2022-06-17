@@ -45,11 +45,11 @@ trap 'rm -rf -- "$outdir"' EXIT
                  -b <(xz -dc "$extr_barriers" | grep '^chr2') \
                  -o "$outdir/out" \
                  -r 20kb \
-                 --rev-extrusion-speed 2.5kb \
-                 --fwd-extrusion-speed 2.5kb \
+                 --target-contact-density 20 \
                  --ncells 4 \
                  --max-burnin-epochs 5000
 
+# cp "$outdir/out.cool" /tmp/test/data/integration_tests/reference_001.cool
 echo "Comparing $outdir/out.cool with $data_dir/reference_001.cool..."
 h5diff --exclude-attribute / \
        -c "$outdir/out.cool" \
