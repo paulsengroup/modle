@@ -152,23 +152,23 @@ template <class N1, class N2>
   const auto is_spearman = absl::EndsWith(method, "spearman");
 
   if (is_pearson && is_weighted) {
-    const auto res = Pearson{}(data.v1(), data.v2(), data.weights());
+    const auto res = Pearson<>{}(data.v1(), data.v2(), data.weights());
     return std::make_pair(res.pcc, res.pvalue);
   }
 
   if (is_spearman && is_weighted) {
-    const auto res = Spearman{}(data.v1(), data.v2(), data.weights());
+    const auto res = Spearman<>{}(data.v1(), data.v2(), data.weights());
     return std::make_pair(res.rho, res.pvalue);
   }
 
   if (is_pearson) {
-    const auto res = Pearson{}(data.v1(), data.v2());
+    const auto res = Pearson<>{}(data.v1(), data.v2());
     return std::make_pair(res.pcc, res.pvalue);
   }
 
   assert(is_spearman);
 
-  const auto res = Spearman{}(data.v1(), data.v2());
+  const auto res = Spearman<>{}(data.v1(), data.v2());
   return std::make_pair(res.rho, res.pvalue);
 }
 
