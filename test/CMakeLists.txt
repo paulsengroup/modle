@@ -32,7 +32,6 @@ target_sources(
           ${CMAKE_CURRENT_SOURCE_DIR}/units/simulation_cpu/simulation_complex_unit_test.cpp
           ${CMAKE_CURRENT_SOURCE_DIR}/units/simulation_cpu/simulation_simple_unit_test.cpp
           ${CMAKE_CURRENT_SOURCE_DIR}/units/simulation_internal/extrusion_barriers_test.cpp
-          ${CMAKE_CURRENT_SOURCE_DIR}/units/stats/common.hpp
           ${CMAKE_CURRENT_SOURCE_DIR}/units/stats/correlation_test.cpp
           ${CMAKE_CURRENT_SOURCE_DIR}/units/stats/correlation_utils_test.cpp
           ${CMAKE_CURRENT_SOURCE_DIR}/units/stats/descriptive_test.cpp

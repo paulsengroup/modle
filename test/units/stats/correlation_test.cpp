@@ -6,102 +6,287 @@
 
 #include <absl/container/flat_hash_set.h>  // for BitMask, operator!=
 #include <absl/strings/match.h>            // for StartsWith
+#include <fmt/compile.h>                   // for FMT_COMPILE
 #include <fmt/format.h>                    // for format
 
-#include <atomic>                         // for atomic
-#include <boost/exception/exception.hpp>  // for clone_base
-#include <cassert>                        // for assert
-#include <catch2/catch.hpp>               // for Approx, operator==, AssertionHandler, operator...
-#include <condition_variable>             // for condition_variable
-#include <exception>                      // for exception
-#include <mutex>                          // for mutex, unique_lock
-#include <random>                         // for random_device
-#include <stdexcept>                      // for overflow_error
-#include <string>                         // for char_traits
-#include <string_view>                    // for operator==, operator""sv, basic_string_view
-#include <thread>                         // for thread
-#include <utility>                        // for make_pair
-#include <vector>                         // for vector
+#include <boost/exception/exception.hpp>
+#include <boost/process.hpp>
+#include <cassert>           // for assert
+#include <catch2/catch.hpp>  // for Approx, operator==, AssertionHandler, operator...
+#include <exception>         // for exception
+#include <ostream>           // for ostream
+#include <random>            // for random_device
+#include <string>            // for char_traits
+#include <string_view>       // for operator==, operator""sv, basic_string_view
+#include <utility>           // for make_pair
+#include <vector>            // for vector
 
-#include "./common.hpp"             // for generate_random_vect, external_corr, run_exter...
 #include "modle/common/common.hpp"  // for u32, usize
+#include "modle/common/const_map.hpp"
+#include "modle/common/numeric_utils.hpp"
 #include "modle/common/random.hpp"  // for PRNG_t
-#include "modle/test/self_deleting_folder.hpp"  // for SelfDeletingFolder
 
 namespace modle::test::stats {
 using namespace modle::stats;
+using namespace std::string_view_literals;
 
-template <typename N>
-static void test_correlation_w_random_vector(std::string_view method, usize vector_size,
-                                             usize iterations, N min, N max) {
-  static_assert(std::is_arithmetic_v<N>, "N should be an arithmetic type.");
-  random::PRNG_t rand_eng{std::random_device{}()};
+// clang-format off
+#define MAKE_CORR_TEST_CASE(METHOD)                           \
+  std::make_pair(std::string_view{METHOD},                    \
+     "#!/usr/bin/env python3\n"                               \
+     "from scipy.stats import " METHOD "r\n"                  \
+     "from numpy import fromstring\n"                         \
+     "import fileinput\n"                                     \
+                                                              \
+     "for line in fileinput.input():\n"                       \
+     "  v1, _, v2 = line.strip().partition(\"\\t\")\n"        \
+     "  v1 = fromstring(v1, sep=\",\")\n"                     \
+     "  v2 = fromstring(v2, sep=\",\")\n"                     \
+                                                              \
+     "  corr, pv = " METHOD "r(v1, v2)\n"                     \
+     "  print(f\"{corr:.16e}\\t{pv:.16e}\", flush=True)\n"sv)
 
-  std::mutex data_mutex;
-  std::condition_variable input_data_cv;
-  std::condition_variable output_data_cv;
-  std::atomic<bool> input_data_ready{false};
-  std::atomic<bool> output_data_ready{false};
+#define MAKE_WEIGHTED_CORR_TEST_CASE(METHOD)                       \
+  std::make_pair(std::string_view{METHOD},                         \
+     "#!/usr/bin/env Rscript\n"                                    \
+     "library(\"wCorr\")\n"                                        \
+     "f <- file(\"stdin\")\n"                                      \
+     "open(f)\n"                                                   \
+     "method <- sub(\"weighted_\", \"\", \"" METHOD "\")\n"        \
+     "while(length(line <- readLines(f, n=1)) > 0) {\n"            \
+     "   toks <- strsplit(line, '\\t')[[1]]\n"                     \
+     "   v1 <- as.numeric(strsplit(toks[[1]], ',')[[1]])\n"        \
+     "   v2 <- as.numeric(strsplit(toks[[2]], ',')[[1]])\n"        \
+     "   w <- as.numeric(strsplit(toks[[3]], ',')[[1]])\n"         \
+                                                                   \
+     "   corr <- weightedCorr(v1, v2, weights=w, method=method)\n" \
+     "   write(sprintf(\"%.22f\\t-1\", corr), stdout())\n"         \
+     "   flush.console()\n"                                        \
+     "}"sv)
 
-  std::vector<N> v1(vector_size);
-  std::vector<N> v2(vector_size);
-  std::vector<double> weights(vector_size);
+static constexpr utils::ConstMap<std::string_view, std::string_view, 4> external_cmds{
+    MAKE_CORR_TEST_CASE("pearson"),
+    MAKE_CORR_TEST_CASE("spearman"),
+    MAKE_WEIGHTED_CORR_TEST_CASE("weighted_pearson"),
+    MAKE_WEIGHTED_CORR_TEST_CASE("weighted_spearman")
+};  // clang-format on
 
-  std::atomic<double> cfx_reference{};
-  std::atomic<double> pv_reference{};
-
-  std::thread t([&]() {
-    run_external_corr(method, v1, v2, weights, cfx_reference, pv_reference, data_mutex,
-                      input_data_cv, output_data_cv, input_data_ready, output_data_ready);
-  });
-
-  auto pearson = Pearson<>{};
-  auto spearman = Spearman<>{};
-  for (usize i = 0; i < iterations; ++i) {
-    assert(!input_data_ready);
-    generate_random_vect(rand_eng, v1, min, max);
-    generate_random_vect(rand_eng, v2, min, max);
-    if (absl::StartsWith(method, "weighted_")) {
-      generate_random_vect(rand_eng, weights, 0.0, 1.0);
-      // fmt::print(stderr, FMT_STRING("{}\n"), fmt::join(weights, ","));
-    }
-    input_data_ready = true;
-    input_data_cv.notify_one();
-    {
-      std::unique_lock<std::mutex> l(data_mutex);
-      output_data_cv.wait(l, [&]() { return output_data_ready.load(); });
-      output_data_ready = false;
-    }
-
-    const auto [cfx, pv] = [&]() {
-      if (method == "pearson"sv) {
-        const auto res = pearson(v1, v2);
-        return std::make_pair(res.pcc, res.pvalue);
-      }
-
-      if (method == "weighted_pearson"sv) {
-        const auto res = pearson(v1, v2, weights);
-        return std::make_pair(res.pcc, res.pvalue);
-      }
-
-      if (method == "spearman"sv) {
-        const auto res = spearman(v1, v2);
-        return std::make_pair(res.rho, res.pvalue);
-      }
-
-      assert(method == "weighted_spearman"sv);
-      const auto res = spearman(v1, v2, weights);
-      return std::make_pair(res.rho, res.pvalue);
-    }();
-
-    CHECK(Approx(cfx) == cfx_reference);
-    CHECK(Approx(pv) == pv_reference);
+template <class N>
+void generate_random_vector(random::PRNG_t& rand_eng, std::vector<N>& buff, N min, N max,
+                            bool allow_duplicates = true) {
+  using DistrT =
+      typename std::conditional<std::is_floating_point_v<N>, random::uniform_real_distribution<N>,
+                                random::uniform_int_distribution<N>>::type;
+  DistrT dist(min, max);
+  if (allow_duplicates) {
+    std::generate(buff.begin(), buff.end(), [&]() { return dist(rand_eng); });
+    return;
   }
-  v1.clear();
-  v2.clear();
-  input_data_ready = true;
-  input_data_cv.notify_one();
-  t.join();
+
+  absl::flat_hash_set<u32> s(buff.size());
+  while (s.size() < buff.size()) {
+    s.insert(dist(rand_eng));
+  }
+  std::copy(s.begin(), s.end(), buff.begin());
+}
+
+template <class N>
+[[nodiscard]] std::vector<N> generate_random_vector(random::PRNG_t& rand_eng, usize size, N min,
+                                                    N max, bool allow_duplicates = true) {
+  std::vector<N> v(size);
+  generate_random_vector(rand_eng, v, min, max, allow_duplicates);
+  return v;
+}
+
+template <class N1, class N2>
+class CorrelationBuff {
+  static_assert(std::is_arithmetic_v<N1>);
+  static_assert(std::is_arithmetic_v<N2>);
+  std::vector<N1> _v1;
+  std::vector<N1> _v2;
+  std::vector<N2> _weights;
+
+ public:
+  CorrelationBuff() = delete;
+  CorrelationBuff(usize size, bool with_weights)
+      : _v1(size, N1(0)), _v2(size, N1(0)), _weights(with_weights ? size : 0, N2(0)) {}
+  [[nodiscard]] const std::vector<N1>& v1() const noexcept { return this->_v1; }
+  [[nodiscard]] const std::vector<N1>& v2() const noexcept { return this->_v2; }
+  [[nodiscard]] const std::vector<N2>& weights() const noexcept { return this->_weights; }
+
+  void generate(random::PRNG_t& rand_eng, N1 min, N1 max) {
+    assert(this->_v1.size() == this->_v2.size());
+    generate_random_vector(rand_eng, this->_v1, min, max);
+    generate_random_vector(rand_eng, this->_v2, min, max);
+    assert(this->_v1.size() == this->_v2.size());
+
+    if (!this->_weights.empty()) {
+      assert(this->_v1.size() == this->_weights.size());
+      generate_random_vector(rand_eng, this->_weights, N2(0), N2(1));
+      assert(this->_v1.size() == this->_weights.size());
+    }
+  }
+
+  void serialize(std::string& buff) const {
+    if (!this->_weights.empty()) {
+      buff = fmt::format(FMT_COMPILE("{}\t{}\t{}\n"), fmt::join(this->_v1, ","),
+                         fmt::join(this->_v2, ","), fmt::join(this->_weights, ","));
+      return;
+    }
+
+    buff =
+        fmt::format(FMT_COMPILE("{}\t{}\n"), fmt::join(this->_v1, ","), fmt::join(this->_v2, ","));
+  }
+  [[nodiscard]] std::string serialize() const {
+    std::string buff;
+    this->serialize(buff);
+    return buff;
+  }
+};
+
+template <class N1, class N2>
+[[nodiscard]] static std::pair<double, double> compute_correlation(
+    std::string_view method, const CorrelationBuff<N1, N2>& data) {
+  const auto is_weighted = absl::StartsWith(method, "weighted_");
+  const auto is_pearson = absl::EndsWith(method, "pearson");
+  const auto is_spearman = absl::EndsWith(method, "spearman");
+
+  if (is_pearson && is_weighted) {
+    const auto res = Pearson{}(data.v1(), data.v2(), data.weights());
+    return std::make_pair(res.pcc, res.pvalue);
+  }
+
+  if (is_spearman && is_weighted) {
+    const auto res = Spearman{}(data.v1(), data.v2(), data.weights());
+    return std::make_pair(res.rho, res.pvalue);
+  }
+
+  if (is_pearson) {
+    const auto res = Pearson{}(data.v1(), data.v2());
+    return std::make_pair(res.pcc, res.pvalue);
+  }
+
+  assert(is_spearman);
+
+  const auto res = Spearman{}(data.v1(), data.v2());
+  return std::make_pair(res.rho, res.pvalue);
+}
+
+class ExternalCorrelationRunner {
+  boost::process::ipstream _stdout{};
+  boost::process::ipstream _stderr{};
+  boost::process::opstream _stdin{};
+
+  boost::process::child _c{};
+
+ public:
+  ExternalCorrelationRunner() = delete;
+  explicit ExternalCorrelationRunner(std::string_view method) {
+    if (absl::StartsWith(method, "weighted_")) {
+      this->_c = boost::process::child(
+          boost::process::search_path("Rscript").string(), "--quiet", "-e",
+          std::string{external_cmds.at(method)},
+          boost::process::std_in<this->_stdin, boost::process::std_out> this->_stdout,
+          boost::process::std_err > this->_stderr);
+    } else {
+      this->_c = boost::process::child(
+          boost::process::search_path("python3").string(), "-c",
+          std::string{external_cmds.at(method)},
+          boost::process::std_in<this->_stdin, boost::process::std_out> this->_stdout,
+          boost::process::std_err > this->_stderr);
+    }
+    assert(this->_c.running());
+  }
+
+  ~ExternalCorrelationRunner() noexcept {
+    try {
+      assert(!this->_c.running());
+      if (!this->_c) {
+        std::ostringstream buff;
+        buff << this->_stderr.rdbuf();
+        if (const auto s = buff.str(); !s.empty()) {
+          throw std::runtime_error(fmt::format(FMT_STRING("{}\n"), s));
+        }
+      }
+    } catch (const std::exception& e) {
+      fmt::print(
+          stderr,
+          FMT_STRING("An exception was raised while calling ~ExternalCorrelationRunner():  {}"),
+          e.what());
+    } catch (...) {
+      fmt::print(
+          stderr,
+          FMT_STRING("An unknown error occurred while calling ~ExternalCorrelationRunner()\n"));
+    }
+  }
+
+  void wait(std::chrono::milliseconds duration = std::chrono::seconds(15)) {
+    this->_c.wait_for(duration);
+  }
+
+  void write_to_stdin(const std::string& msg) {
+    assert(!msg.empty() && msg.back() == '\n');
+    this->_stdin.write(msg.data(), static_cast<std::streamsize>(msg.size()));
+    this->_stdin.flush();
+  }
+
+  void read_from_stdout(std::string& buff) { std::getline(this->_stdout, buff); }
+  [[nodiscard]] std::string read_from_stdout() {
+    std::string buff;
+    this->read_from_stdout(buff);
+    return buff;
+  }
+
+  void read_from_stderr(std::string& buff) { std::getline(this->_stderr, buff); }
+  [[nodiscard]] std::string read_from_stderr() {
+    std::string buff;
+    this->read_from_stderr(buff);
+    return buff;
+  }
+
+  void signal_end_of_input() { this->_stdin.pipe().close(); }
+};
+
+template <class N1, class N2 = double, usize iterations = 1>
+static void run_correlation_test(std::string_view method, usize vector_size, N1 min, N1 max,
+                                 u64 seed = std::random_device{}()) {
+  static_assert(std::is_arithmetic_v<N1>);
+  static_assert(std::is_arithmetic_v<N2>);
+
+  const auto weighted_corr = absl::StartsWith(method, "weighted_");
+  CorrelationBuff<N1, N2> buff(vector_size, weighted_corr);
+  std::string sbuff;
+  std::vector<std::string_view> tok_buff;
+
+  auto rand_eng = random::PRNG(seed);
+
+  ExternalCorrelationRunner runner(method);
+  try {
+    for (usize i = 0; i < iterations; ++i) {
+      buff.generate(rand_eng, min, max);
+      buff.serialize(sbuff);
+
+      runner.write_to_stdin(sbuff);
+      const auto [corr, pv] = compute_correlation(method, buff);
+      runner.read_from_stdout(sbuff);
+      tok_buff = absl::StrSplit(sbuff, '\t');
+      REQUIRE(tok_buff.size() == 2);
+
+      const auto expected_corr = utils::parse_numeric_or_throw<double>(tok_buff.front());
+      const auto expected_pv = utils::parse_numeric_or_throw<double>(tok_buff.back());
+
+      CHECK(Approx(expected_corr) == corr);
+      CHECK(Approx(expected_pv) == pv);
+    }
+    runner.signal_end_of_input();
+    runner.wait();
+  } catch (const std::exception& e) {
+    const auto stderr_ = runner.read_from_stderr();
+    if (!stderr_.empty()) {
+      throw std::runtime_error(fmt::format(FMT_STRING("{}:\n{}"), e.what(), stderr_));
+    }
+    throw;
+  }
 }
 
 // NOLINTNEXTLINE(readability-function-cognitive-complexity)
@@ -144,54 +329,40 @@ TEST_CASE("Corr. test: Weighted Pearson w ties", "[correlation][pearson][short]"
 
 // NOLINTNEXTLINE(readability-function-cognitive-complexity)
 TEST_CASE("Corr. test: Pearson (SciPy)", "[correlation][pearson][short]") {
-  random::PRNG_t rand_eng{2427588200550938527ULL};
-  const auto v1 = generate_random_vect(rand_eng, 1'000, 0, 15'000);
-  const auto v2 = generate_random_vect(rand_eng, 1'000, 0, 15'000);
-  std::vector<double> dummy_weights{};
-  const auto [pcc, pv] = Pearson<>{}(v1, v2);
-  const auto [pcc_reference, pv_reference] = external_corr(v1, v2, dummy_weights, "pearson");
-  CHECK(Approx(pcc) == pcc_reference);
-  CHECK(Approx(pv) == pv_reference);
+  run_correlation_test("pearson", 1'000, 0, 15'000, 2427588200550938527ULL);
 }
 
 // NOLINTNEXTLINE(readability-function-cognitive-complexity)
 TEST_CASE("Corr. test: Weighted Pearson (wCorr)", "[correlation][pearson][short]") {
-  random::PRNG_t rand_eng{17383284879759537016ULL};
-  const auto v1 = generate_random_vect(rand_eng, 1'000, 0, 15'000);
-  const auto v2 = generate_random_vect(rand_eng, 1'000, 0, 15'000);
-  const auto w = generate_random_vect(rand_eng, 1'000, 0.0, 1.0);
-  const auto [pcc, pv] = Pearson<>{}(v1, v2, w);
-  const auto [pcc_reference, pv_reference] = external_corr(v1, v2, w, "weighted_pearson");
-  CHECK(Approx(pcc) == pcc_reference);
-  CHECK(Approx(pv) == pv_reference);
+  run_correlation_test("weighted_pearson", 1'000, 0, 15'000, 17383284879759537016ULL);
 }
 
 // NOLINTNEXTLINE(readability-function-cognitive-complexity)
 TEST_CASE("Corr. test: Pearson long (SciPy)", "[correlation][pearson][medium]") {
-  test_correlation_w_random_vector("pearson", 1'000, 250, 0U, 15'000U);
-  test_correlation_w_random_vector("pearson", 1'000, 250, -7'250, 7'250);
-  test_correlation_w_random_vector("pearson", 1'000, 250, -7'250.0, 7'250.0);
+  run_correlation_test<u32, double, 250>("pearson", 1'000, 0, 15'000);
+  run_correlation_test<i32, double, 250>("pearson", 1'000, -7'250, 7'250);
+  run_correlation_test<double, double, 250>("pearson", 1'000, -7'250.0, 7'250.0);
 }
 
 // NOLINTNEXTLINE(readability-function-cognitive-complexity)
 TEST_CASE("Corr. test: Pearson long vect. (SciPy)", "[correlation][pearson][long]") {
-  test_correlation_w_random_vector("pearson", 500'000, 2, 0U, 15'000U);
-  test_correlation_w_random_vector("pearson", 500'000, 2, -7'250, 7'250);
-  test_correlation_w_random_vector("pearson", 500'000, 2, -7'250.0, 7'250.0);
+  run_correlation_test<u32, double, 5>("pearson", 100'000, 0U, 15'000U);
+  run_correlation_test<i32, double, 5>("pearson", 100'000, -7'250, 7'250);
+  run_correlation_test<double, double, 5>("pearson", 100'000, -7'250.0, 7'250.0);
 }
 
 // NOLINTNEXTLINE(readability-function-cognitive-complexity)
 TEST_CASE("Corr. test: Weighted Pearson long (wCorr)", "[correlation][pearson][medium]") {
-  test_correlation_w_random_vector("weighted_pearson", 1'000, 250, 0U, 15'000U);
-  test_correlation_w_random_vector("weighted_pearson", 1'000, 250, -7'250, 7'250);
-  test_correlation_w_random_vector("weighted_pearson", 1'000, 250, -7'250.0, 7'250.0);
+  run_correlation_test<u32, double, 250>("weighted_pearson", 1'000, 0U, 15'000U);
+  run_correlation_test<i32, double, 250>("weighted_pearson", 1'000, -7'250, 7'250);
+  run_correlation_test<double, double, 250>("weighted_pearson", 1'000, -7'250.0, 7'250.0);
 }
 
 // NOLINTNEXTLINE(readability-function-cognitive-complexity)
 TEST_CASE("Corr. test: Weighted Pearson long vect. (wCorr)", "[correlation][pearson][long]") {
-  test_correlation_w_random_vector("weighted_pearson", 500'000, 2, 0U, 15'000U);
-  test_correlation_w_random_vector("weighted_pearson", 500'000, 2, -7'250, 7'250);
-  test_correlation_w_random_vector("weighted_pearson", 500'000, 2, -7'250.0, 7'250.0);
+  run_correlation_test<u32, double, 5>("weighted_pearson", 100'000, 0U, 15'000U);
+  run_correlation_test<i32, double, 5>("weighted_pearson", 100'000, -7'250, 7'250);
+  run_correlation_test<double, double, 5>("weighted_pearson", 100'000, -7'250.0, 7'250.0);
 }
 
 // NOLINTNEXTLINE(readability-function-cognitive-complexity)
@@ -214,54 +385,40 @@ TEST_CASE("Corr. test: Spearman w ties", "[correlation][spearman][short]") {
 
 // NOLINTNEXTLINE(readability-function-cognitive-complexity)
 TEST_CASE("Corr. test: Spearman (SciPy)", "[correlation][spearman][short]") {
-  random::PRNG_t rand_eng{3860329809333667103ULL};
-  const auto v1 = generate_random_vect(rand_eng, 1'000, 0, 15'000);
-  const auto v2 = generate_random_vect(rand_eng, 1'000, 0, 15'000);
-  std::vector<double> dummy_weights{};
-  const auto [rho, pv] = Spearman<>{}(v1, v2);
-  const auto [rho_reference, pv_reference] = external_corr(v1, v2, dummy_weights, "spearman");
-  CHECK(Approx(rho) == rho_reference);
-  CHECK(Approx(pv) == pv_reference);
+  run_correlation_test("spearman", 1'000, 0, 15'000, 3860329809333667103ULL);
 }
 
 // NOLINTNEXTLINE(readability-function-cognitive-complexity)
 TEST_CASE("Corr. test: Weighted Spearman (wCorr)", "[correlation][spearman][short]") {
-  random::PRNG_t rand_eng{8469130800688738654ULL};
-  const auto v1 = generate_random_vect(rand_eng, 1'000, 0, 15'000);
-  const auto v2 = generate_random_vect(rand_eng, 1'000, 0, 15'000);
-  const auto w = generate_random_vect(rand_eng, 1'000, 0.0, 1.0);
-  const auto [rho, pv] = Spearman<>{}(v1, v2, w);
-  const auto [rho_reference, pv_reference] = external_corr(v1, v2, w, "weighted_spearman");
-  CHECK(Approx(rho) == rho_reference);
-  CHECK(Approx(pv) == pv_reference);
+  run_correlation_test("weighted_spearman", 1'000, 0, 15'000, 8469130800688738654ULL);
 }
 
 // NOLINTNEXTLINE(readability-function-cognitive-complexity)
 TEST_CASE("Corr. test: Spearman long (SciPy)", "[correlation][spearman][long]") {
-  test_correlation_w_random_vector("spearman", 1'000, 250, 0U, 15'000U);
-  test_correlation_w_random_vector("spearman", 1'000, 250, -7'250, 7'250);
-  test_correlation_w_random_vector("spearman", 1'000, 250, -7'250.0, 7'250.0);
+  run_correlation_test<u32, double, 250>("spearman", 1'000, 0, 15'000);
+  run_correlation_test<i32, double, 250>("spearman", 1'000, -7'250, 7'250);
+  run_correlation_test<double, double, 250>("spearman", 1'000, -7'250.0, 7'250.0);
 }
 
 // NOLINTNEXTLINE(readability-function-cognitive-complexity)
 TEST_CASE("Corr. test: Spearman long vect. (SciPy)", "[correlation][spearman][long]") {
-  test_correlation_w_random_vector("spearman", 500'000, 2, 0U, 15'000U);
-  test_correlation_w_random_vector("spearman", 500'000, 2, -7'250, 7'250);
-  test_correlation_w_random_vector("spearman", 500'000, 2, -7'250.0, 7'250.0);
+  run_correlation_test<u32, double, 5>("spearman", 100'000, 0U, 15'000U);
+  run_correlation_test<i32, double, 5>("spearman", 100'000, -7'250, 7'250);
+  run_correlation_test<double, double, 5>("spearman", 100'000, -7'250.0, 7'250.0);
 }
 
 // NOLINTNEXTLINE(readability-function-cognitive-complexity)
 TEST_CASE("Corr. test: Weighted Spearman long (wCorr)", "[correlation][spearman][medium]") {
-  test_correlation_w_random_vector("weighted_spearman", 1'000, 250, 0U, 15'000U);
-  test_correlation_w_random_vector("weighted_spearman", 1'000, 250, -7'250, 7'250);
-  test_correlation_w_random_vector("weighted_spearman", 1'000, 250, -7'250.0, 7'250.0);
+  run_correlation_test<u32, double, 250>("weighted_spearman", 1'000, 0U, 15'000U);
+  run_correlation_test<i32, double, 250>("weighted_spearman", 1'000, -7'250, 7'250);
+  run_correlation_test<double, double, 250>("weighted_spearman", 1'000, -7'250.0, 7'250.0);
 }
 
 // NOLINTNEXTLINE(readability-function-cognitive-complexity)
 TEST_CASE("Corr. test: Weighted Spearman long vect. (wCorr)", "[correlation][spearman][long]") {
-  test_correlation_w_random_vector("weighted_spearman", 500'000, 2, 0U, 15'000U);
-  test_correlation_w_random_vector("weighted_spearman", 500'000, 2, -7'250, 7'250);
-  test_correlation_w_random_vector("weighted_spearman", 500'000, 2, -7'250.0, 7'250.0);
+  run_correlation_test<u32, double, 5>("weighted_spearman", 100'000, 0U, 15'000U);
+  run_correlation_test<i32, double, 5>("weighted_spearman", 100'000, -7'250, 7'250);
+  run_correlation_test<double, double, 5>("weighted_spearman", 100'000, -7'250.0, 7'250.0);
 }
 
 }  // namespace modle::test::stats
