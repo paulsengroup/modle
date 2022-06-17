@@ -6,7 +6,7 @@ name: Build Docker image
 on:
   create:
     branches-ignore:
-      - "*"
+      - "**"
     tags:
       - 'v*.*.*'
 
