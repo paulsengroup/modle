@@ -993,7 +993,7 @@ void Simulation::run_burnin(State& s, const double lef_binding_rate_burnin) cons
       s.burnin_completed = Simulation::evaluate_burnin(
           s.get_cfx_of_variation(), s.get_avg_loop_sizes(), this->burnin_history_length,
           this->burnin_smoothing_window_size);
-      s.burnin_completed &= this->min_burnin_epochs > s.epoch;
+      s.burnin_completed &= s.epoch > this->min_burnin_epochs;
 
       if (!s.burnin_completed && s.epoch >= this->max_burnin_epochs) {
         s.burnin_completed = true;
