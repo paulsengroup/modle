@@ -9,7 +9,7 @@ required_conan_version = ">=1.45.0"
 
 class MoDLE(ConanFile):
   name = "MoDLE"
-  version = "1.0.0-rc.5"
+  version = "1.0.0-rc.6"
   homepage = "https://github.com/paulsengroup/modle"
   license = "MIT"
   author = "Roberto Rossini (roberros@uio.no)"
