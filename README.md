@@ -17,10 +17,10 @@ and [dockerhub](https://hub.docker.com/repository/docker/paulsengroup/modle).
 
 ```bash
 # Using Docker
-sudo docker run ghcr.io/paulsengroup/modle:1.0.0-rc.5 --help
+sudo docker run ghcr.io/paulsengroup/modle:1.0.0-rc.6 --help
 
 # Using Singularity/Apptainer
-singularity run docker://ghcr.io/paulsengroup/modle:1.0.0-rc.5 --help
+singularity run docker://ghcr.io/paulsengroup/modle:1.0.0-rc.6 --help
 ```
 
 ## Building MoDLE
@@ -295,7 +295,7 @@ When ___score___ is non-zero, its value will be used to set the occupancy for th
 current line.
 
 The ___strand___ field is required and is used to define the extrusion barrier direction.
-As of `v1.0.0-rc.5`, this field should be populated with the direction of the corresponding CTCF binding site.
+As of `v1.0.0-rc.6`, this field should be populated with the direction of the corresponding CTCF binding site.
 Barriers without strand information (i.e. with strand '.') will be ignored.
 
 Sample chrom.sizes and BED file(s) are available inside folder `test/data/integration_tests`.
@@ -303,7 +303,7 @@ Sample chrom.sizes and BED file(s) are available inside folder `test/data/integr
 #### Running a simulation with default settings
 
 ```bash
-singularity run docker://ghcr.io/paulsengroup/modle:1.0.0-rc.5   \
+singularity run docker://ghcr.io/paulsengroup/modle:1.0.0-rc.6   \
     simulate \
     --chrom-sizes test/data/integration_tests/grch38.chrom.sizes \
     --extrusion-barrier-file test/data/integration_tests/grch38_h1_extrusion_barriers.bed.xz \
@@ -333,7 +333,7 @@ same parameters.
 
 ```bash
 # Run a simulation with the same parameter as the previous example
-singularity run docker://ghcr.io/paulsengroup/modle:1.0.0-rc.5 \
+singularity run docker://ghcr.io/paulsengroup/modle:1.0.0-rc.6 \
     --config path/to/output/prefix_config.toml
 ```
 
@@ -346,7 +346,7 @@ handful of parameters need to change across simulation runs.
 ```bash
 # The following command will run a simulation using parameters from the previous example as starting point,
 # but using a custom lef density and overriding the output prefix specified by the config file.
-singularity run docker://ghcr.io/paulsengroup/modle:1.0.0-rc.5 \
+singularity run docker://ghcr.io/paulsengroup/modle:1.0.0-rc.6 \
     simulate \
     --config path/to/output/prefix_config.toml \
     --lef-density 15 \
@@ -360,7 +360,7 @@ Adding a line like `my-option=my_value` to the config file is equivalent to pass
 For an up-to-date list of supported CLI options, please refer to MoDLE's help message:
 
 ```bash
-singularity run docker://ghcr.io/paulsengroup/modle:1.0.0-rc.5 simulate --help
+singularity run docker://ghcr.io/paulsengroup/modle:1.0.0-rc.6 simulate --help
 ```
 
 <details>
@@ -369,15 +369,14 @@ singularity run docker://ghcr.io/paulsengroup/modle:1.0.0-rc.5 simulate --help
 
 MoDLE automatically detects and handles compressed input files.
 
-As of `v1.0.0-rc.5`, the following compression algorithms are supported:
+As of `v1.0.0-rc.6`, the following compression algorithms are supported:
 
 - bzip2
 - gzip
 - LZ4
 - LZO
 - XZ/LZMA
-
-<!-- - ZSTD -->
+- ZSTD
 
 <b>Visualizing simulation result</b>
 
