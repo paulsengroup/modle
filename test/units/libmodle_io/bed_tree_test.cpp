@@ -6,12 +6,12 @@
 #include <absl/types/span.h>         // for Span
 #include <fmt/format.h>              // for format
 
-#include <algorithm>         // for max, min
-#include <catch2/catch.hpp>  // for AssertionHandler, operator""_catch_sr, SourceLineInfo
-#include <filesystem>        // for path
-#include <string>            // for basic_string, operator==, string
-#include <string_view>       // for string_view
-#include <vector>            // for vector
+#include <algorithm>  // for max, min
+#include <catch2/catch_test_macros.hpp>
+#include <filesystem>   // for path
+#include <string>       // for basic_string, operator==, string
+#include <string_view>  // for string_view
+#include <vector>       // for vector
 
 #include "modle/bed/bed.hpp"        // for BED, BED_tree, BED_tree::contains, BED_tree::count_...
 #include "modle/common/common.hpp"  // for usize, u8

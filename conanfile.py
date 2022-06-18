@@ -17,7 +17,7 @@ class MoDLE(ConanFile):
   requires = ["abseil/20211102.0",
               "boost/1.79.0",
               "bzip2/1.0.8",
-              "catch2/2.13.9",
+              "catch2/3.0.1",
               "cli11/2.2.0",
               "concurrentqueue/1.0.3",
               "cpp-sort/1.13.0",

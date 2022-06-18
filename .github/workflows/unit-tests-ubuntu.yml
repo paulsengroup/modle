@@ -234,7 +234,6 @@ jobs:
                 --output-on-failure      \
                 --no-tests=error         \
                 --timeout 120            \
-                --repeat after-timeout:3 \
                 -j $(nproc)
 
       - name: Run integration tests
@@ -359,12 +358,11 @@ jobs:
       - name: Run unit tests
         working-directory: ${{ github.workspace }}/build
         run: |
-          ctest --test-dir .             \
-                --schedule-random        \
-                --output-on-failure      \
-                --no-tests=error         \
-                --timeout 120            \
-                --repeat after-timeout:3 \
+          ctest --test-dir .        \
+                --schedule-random   \
+                --output-on-failure \
+                --no-tests=error    \
+                --timeout 60        \
                 -j $(nproc)
 
       - name: Run integration tests

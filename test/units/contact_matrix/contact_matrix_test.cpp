@@ -8,7 +8,9 @@
 #include <algorithm>                                // for generate, max
 #include <boost/dynamic_bitset/dynamic_bitset.hpp>  // for dynamic_bitset, dynamic_bitset<>::ref...
 #include <boost/process.hpp>
-#include <catch2/catch.hpp>             // for operator""_catch_sr, AssertionHandler
+#include <catch2/catch_approx.hpp>
+#include <catch2/catch_test_macros.hpp>
+#include <catch2/matchers/catch_matchers_string.hpp>
 #include <filesystem>                   // for path
 #include <stdexcept>                    // for runtime_error
 #include <string>                       // for string
@@ -171,12 +173,14 @@ TEST_CASE("CMatrix in/decrement", "[cmatrix][short]") {
 
   if constexpr (utils::ndebug_not_defined()) {
     CHECK_THROWS_WITH(m.increment(25, 25),
-                      Catch::Contains("Detected an out-of-bound read: attempt to access item at"));
+                      Catch::Matchers::ContainsSubstring(
+                          "Detected an out-of-bound read: attempt to access item at"));
     CHECK(m.get_n_of_missed_updates() == 1);
     CHECK(m.get_tot_contacts() == 1);
 
     CHECK_THROWS_WITH(m.decrement(25, 25),
-                      Catch::Contains("Detected an out-of-bound read: attempt to access item at"));
+                      Catch::Matchers::ContainsSubstring(
+                          "Detected an out-of-bound read: attempt to access item at"));
     CHECK(m.get_n_of_missed_updates() == 1);
     CHECK(m.get_tot_contacts() == 1);
   }
@@ -368,7 +372,7 @@ TEST_CASE("CMatrix blur (SciPy)", "[cmatrix][long]") {
 
     for (usize j = 4; j < input_matrix.nrows(); ++j) {
       for (auto k = j; k < input_matrix.ncols() - 4; ++k) {
-        CHECK(Approx(reference_matrix.get(j, k)) == blurred_matrix.get(j, k));
+        CHECK(Catch::Approx(reference_matrix.get(j, k)) == blurred_matrix.get(j, k));
       }
     }
   }
@@ -408,7 +412,7 @@ TEST_CASE("CMatrix blur parallel (SciPy)", "[cmatrix][long]") {
 
     for (usize j = 4; j < input_matrix.nrows(); ++j) {
       for (auto k = j; k < input_matrix.ncols() - 4; ++k) {
-        CHECK(Approx(reference_matrix.get(j, k)) == blurred_matrix.get(j, k));
+        CHECK(Catch::Approx(reference_matrix.get(j, k)) == blurred_matrix.get(j, k));
       }
     }
   }
@@ -450,8 +454,8 @@ TEST_CASE("CMatrix difference of gaussians (SciPy)", "[cmatrix][long]") {
 
   for (usize j = 4; j < input_matrix.nrows(); ++j) {
     for (auto k = j; k < input_matrix.ncols() - 4; ++k) {
-      CHECK(Approx(reference_matrix.get(j, k)) == gauss_diff_matrix.get(j, k));
-      CHECK(Approx(m1.get(j, k) - m2.get(j, k)) == gauss_diff_matrix.get(j, k));
+      CHECK(Catch::Approx(reference_matrix.get(j, k)) == gauss_diff_matrix.get(j, k));
+      CHECK(Catch::Approx(m1.get(j, k) - m2.get(j, k)) == gauss_diff_matrix.get(j, k));
     }
   }
 }
@@ -496,8 +500,8 @@ TEST_CASE("CMatrix difference of gaussians - parallel (SciPy)", "[cmatrix][long]
 
   for (usize j = 4; j < input_matrix.nrows(); ++j) {
     for (auto k = j; k < input_matrix.ncols() - 4; ++k) {
-      CHECK(Approx(reference_matrix.get(j, k)) == gauss_diff_matrix.get(j, k));
-      CHECK(Approx(m1.get(j, k) - m2.get(j, k)) == gauss_diff_matrix.get(j, k));
+      CHECK(Catch::Approx(reference_matrix.get(j, k)) == gauss_diff_matrix.get(j, k));
+      CHECK(Catch::Approx(m1.get(j, k) - m2.get(j, k)) == gauss_diff_matrix.get(j, k));
     }
   }
 }

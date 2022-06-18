@@ -6,7 +6,9 @@
 
 #include <fmt/format.h>
 
-#include <catch2/catch.hpp>  // for SourceLineInfo, StringRef, TEST_CASE
+#include <catch2/catch_test_macros.hpp>
+#include <catch2/matchers/catch_matchers_string.hpp>
+
 namespace modle::test::libmodle {
 
 [[maybe_unused]] static std::string event_to_str(const CollisionEvent<> event) {

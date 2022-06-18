@@ -4,7 +4,8 @@
 
 #include "modle/extrusion_barriers.hpp"  // for ExtrusionBarrier
 
-#include <catch2/catch.hpp>  // for AssertionHandler, operator""_catch_sr
+#include <catch2/catch_approx.hpp>
+#include <catch2/catch_test_macros.hpp>
 
 #include "modle/common/common.hpp"  // for dna::Direction
 
@@ -46,8 +47,8 @@ TEST_CASE("Extrusion barriers - occupancy", "[barriers][simulation][short]") {
                                           {stp_inactive1, stp_inactive2},
                                           {State::ACTIVE, State::ACTIVE}};
 
-  CHECK(barriers.occupancy(0) == Approx(occupancy1));
-  CHECK(barriers.occupancy(1) == Approx(occupancy2));
+  CHECK(barriers.occupancy(0) == Catch::Approx(occupancy1));
+  CHECK(barriers.occupancy(1) == Catch::Approx(occupancy2));
 }
 
 // NOLINTNEXTLINE(readability-function-cognitive-complexity)
@@ -79,7 +80,8 @@ TEST_CASE("Extrusion barriers - compute_occupancy", "[barriers][simulation][shor
 
   stp_active = 0.7;
   stp_inactive = 0.5;
-  CHECK(ExtrusionBarrier::compute_occupancy_from_stp(stp_active, stp_inactive) == Approx(0.625));
+  CHECK(ExtrusionBarrier::compute_occupancy_from_stp(stp_active, stp_inactive) ==
+        Catch::Approx(0.625));
 
   stp_active = 1.0;
   stp_inactive = 0.5;

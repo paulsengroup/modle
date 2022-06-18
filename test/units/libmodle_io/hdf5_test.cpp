@@ -11,14 +11,16 @@
 #include <H5Spublic.h>     // for H5S_UNLIMITED
 #include <fmt/format.h>    // for format
 
-#include <algorithm>         // for max
-#include <catch2/catch.hpp>  // for operator""_catch_sr, AssertionHandler, Source...
-#include <filesystem>        // for operator/, path
-#include <limits>            // for numeric_limits
-#include <string>            // for string, basic_string, allocator, operator==
-#include <string_view>       // for string_view
-#include <tuple>             // for ignore
-#include <vector>            // for vector
+#include <algorithm>  // for max
+#include <catch2/catch_test_macros.hpp>
+#include <catch2/matchers/catch_matchers_contains.hpp>
+#include <catch2/matchers/catch_matchers_string.hpp>
+#include <filesystem>   // for operator/, path
+#include <limits>       // for numeric_limits
+#include <string>       // for string, basic_string, allocator, operator==
+#include <string_view>  // for string_view
+#include <tuple>        // for ignore
+#include <vector>       // for vector
 
 #include "H5Ppublic.h"              // for H5F_ACC_TRUNC, H5T_CSET_ASCII, H5T_STR_NULLPAD
 #include "modle/common/common.hpp"  // for i64, usize
@@ -169,11 +171,11 @@ TEST_CASE("check_dataset_type HDF5", "[io][hdf5][short]") {
   CHECK(!check_dataset_type(str_dataset, H5::PredType::NATIVE_INT64, false));
 
   CHECK_THROWS_WITH(check_dataset_type(int_dataset, H5::PredType::NATIVE_INT),
-                    Catch::Matchers::Contains("incorrect datasize"));
+                    Catch::Matchers::ContainsSubstring("incorrect datasize"));
   CHECK_THROWS_WITH(check_dataset_type(int_dataset, H5::PredType::NATIVE_FLOAT),
                     Catch::Matchers::EndsWith("incorrect datatype"));
   CHECK_THROWS_WITH(check_dataset_type(int_dataset, H5::PredType::NATIVE_UINT64),
-                    Catch::Matchers::Contains("incorrect signedness"));
+                    Catch::Matchers::ContainsSubstring("incorrect signedness"));
 
   std::filesystem::remove_all(testdir());
   if (const auto& p = testdir().parent_path(); std::filesystem::is_empty(p)) {
@@ -192,8 +194,9 @@ TEST_CASE("read_write_string HDF5 - long string", "[io][hdf5][short]") {
   auto dataset = init_test_str_dataset(f);
 
 #ifndef NDEBUG
-  CHECK_THROWS_WITH(write_str(s, dataset, init_str_type(), 0),
-                    Catch::Contains("string does not fit in the receiving dataset"));
+  CHECK_THROWS_WITH(
+      write_str(s, dataset, init_str_type(), 0),
+      Catch::Matchers::ContainsSubstring("string does not fit in the receiving dataset"));
 #else
   CHECK(write_str(s, dataset, init_str_type(), 0) == 1);
 #endif

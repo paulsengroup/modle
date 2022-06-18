@@ -4,11 +4,11 @@
 
 #include "modle/compressed_io/compressed_io.hpp"  // for Reader
 
-#include <catch2/catch.hpp>  // for AssertionHandler, operator""_catch_sr, Source...
-#include <filesystem>        // for path, operator/
-#include <fstream>           // for ifstream, basic_ios, basic_istream, operator<<
-#include <iostream>          // for cerr
-#include <string>            // for operator==, string, basic_string, getline
+#include <catch2/catch_test_macros.hpp>
+#include <filesystem>  // for path, operator/
+#include <fstream>     // for ifstream, basic_ios, basic_istream, operator<<
+#include <iostream>    // for cerr
+#include <string>      // for operator==, string, basic_string, getline
 
 #include "modle/test/self_deleting_folder.hpp"  // for SelfDeletingFolder
 
