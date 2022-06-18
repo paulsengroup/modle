@@ -47,7 +47,15 @@ jobs:
     steps:
       - uses: actions/checkout@v3
 
-      - run: |
+      - name: Detect number available CPUs
+        run: |
+          ncpus=$(python -c 'import multiprocessing as mp; print(mp.cpu_count())')
+
+          echo "CMAKE_BUILD_PARALLEL_LEVEL=$ncpus" >> $GITHUB_ENV
+          echo "CTEST_PARALLEL_LEVEL=$ncpus" >> $GITHUB_ENV
+
+      - name: Generate requirements.txt for pip
+        run: |
           echo 'conan==${{ matrix.conan-ver }}' > requirements.txt
           echo 'cmake==${{ matrix.cmake-ver }}' >> requirements.txt
           echo 'scipy' >> requirements.txt
@@ -105,20 +113,23 @@ jobs:
                 -B "${{ github.workspace }}/build"
 
       - name: Build project
-        run: cmake --build ${{ github.workspace }}/build -j $(nproc)
+        run: cmake --build ${{ github.workspace }}/build
 
-      - run: |
+      - name: Generate R package requirement list
+        run: |
           printf 'Package: foo\nVersion: 0.0.1\nLicense: MIT\nDescription: foo\n"' >> DESCRIPTION
           printf 'Title: foo\nAuthor: me\nMaintainer: me\nImports: wCorr' >> DESCRIPTION
 
       - name: Install setup-r action dependencies
         run: brew install imagemagick@6 libgit2
 
-      - uses: r-lib/actions/setup-r@v2
+      - name: Setup R
+        uses: r-lib/actions/setup-r@v2
         with:
           r-version: '4.2.0'
 
-      - uses: r-lib/actions/setup-r-dependencies@v2
+      - name: Install R packages
+        uses: r-lib/actions/setup-r-dependencies@v2
         with:
           cache: true
 
