@@ -469,7 +469,7 @@ void Simulation::simulate_window(Simulation::State& state, compressed_io::Writer
   for (usize i = 0; i < state.barriers.size(); ++i) {
     if (state.barriers.pos(i) >= state.deletion_begin &&
         state.barriers.pos(i) < state.deletion_begin + state.deletion_size) {
-      state.barriers.set(i, state.barriers.pos(i), state.barriers.direction(i), 0.0, 1.0,
+      state.barriers.set(i, state.barriers.pos(i), state.barriers.block_direction(i), 0.0, 1.0,
                          ExtrusionBarriers::State::INACTIVE);
       num_active_barriers--;
     }

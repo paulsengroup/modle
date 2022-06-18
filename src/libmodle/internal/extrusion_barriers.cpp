@@ -97,11 +97,11 @@ bp_t ExtrusionBarriers::pos(usize i) const noexcept {
 }
 const std::vector<bp_t>& ExtrusionBarriers::pos() const noexcept { return this->_pos; }
 
-dna::Direction ExtrusionBarriers::direction(usize i) const noexcept {
+dna::Direction ExtrusionBarriers::block_direction(usize i) const noexcept {
   this->assert_index_within_bounds(i);
   return this->_direction[i];
 }
-const std::vector<dna::Direction>& ExtrusionBarriers::direction() const noexcept {
+const std::vector<dna::Direction>& ExtrusionBarriers::block_direction() const noexcept {
   return this->_direction;
 }
 
