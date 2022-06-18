@@ -2,7 +2,7 @@
 //
 // SPDX-License-Identifier: MIT
 
-#include <catch2/catch.hpp>  // for operator""_catch_sr, AssertionHandler
+#include <catch2/catch_test_macros.hpp>
 // clang-format off
 #include "modle/common/suppress_compiler_warnings.hpp"
 DISABLE_WARNING_PUSH

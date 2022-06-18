@@ -1,8 +1,8 @@
 // Copyright (C) 2022 Roberto Rossini <roberros@uio.no>
 //
 // SPDX-License-Identifier: MIT
-#include <catch2/catch.hpp>  // for AssertionHandler, operator""_catch_sr, SourceLineInfo
-#include <vector>            // for vector
+#include <catch2/catch_test_macros.hpp>
+#include <vector>  // for vector
 
 #include "modle/common/common.hpp"  // for u32
 #include "modle/stats/correlation.hpp"

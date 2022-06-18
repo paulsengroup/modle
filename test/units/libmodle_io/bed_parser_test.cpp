@@ -5,12 +5,12 @@
 #include <absl/strings/str_split.h>  // for StrSplit, Splitter
 #include <fmt/format.h>              // for to_string
 
-#include <algorithm>         // for sort, max
-#include <catch2/catch.hpp>  // for AssertionHandler, operator""_catch_sr, SourceLineInfo
-#include <filesystem>        // for path
-#include <string>            // for string, basic_string, operator==, char_traits, stoull
-#include <string_view>       // for operator!=, basic_string_view, string_view, operator<
-#include <vector>            // for vector
+#include <algorithm>  // for sort, max
+#include <catch2/catch_test_macros.hpp>
+#include <filesystem>   // for path
+#include <string>       // for string, basic_string, operator==, char_traits, stoull
+#include <string_view>  // for operator!=, basic_string_view, string_view, operator<
+#include <vector>       // for vector
 
 #include "absl/strings/match.h"                   // for StrContains
 #include "modle/bed/bed.hpp"                      // for BED, Parser, formatter<>::format, BED::BED3

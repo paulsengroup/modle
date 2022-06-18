@@ -16,8 +16,7 @@ add_executable(test_main)
 
 target_sources(
   test_main
-  PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/test_main.cpp
-          ${CMAKE_CURRENT_SOURCE_DIR}/units/common/cli_utils_test.cpp
+  PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/units/common/cli_utils_test.cpp
           ${CMAKE_CURRENT_SOURCE_DIR}/units/common/const_map_test.cpp
           ${CMAKE_CURRENT_SOURCE_DIR}/units/common/dna_test.cpp
           ${CMAKE_CURRENT_SOURCE_DIR}/units/contact_matrix/contact_matrix_test.cpp
@@ -66,7 +65,7 @@ target_link_system_libraries(
   absl::strings
   Boost::filesystem
   Boost::headers
-  Catch2::Catch2
+  Catch2::Catch2WithMain
   fmt::fmt
   HDF5::HDF5
   spdlog::spdlog
@@ -84,12 +83,8 @@ catch_discover_tests(
   " - SHORT"
   WORKING_DIRECTORY
   ${CMAKE_CURRENT_SOURCE_DIR}/../
-  REPORTER
-  xml
   OUTPUT_DIR
   ${CMAKE_CURRENT_SOURCE_DIR}/Testing/
-  OUTPUT_SUFFIX
-  .xml
   EXTRA_ARGS
   --success)
 
@@ -101,12 +96,8 @@ catch_discover_tests(
   " - MEDIUM"
   WORKING_DIRECTORY
   ${CMAKE_CURRENT_SOURCE_DIR}/../
-  REPORTER
-  xml
   OUTPUT_DIR
   ${CMAKE_CURRENT_SOURCE_DIR}/Testing/
-  OUTPUT_SUFFIX
-  .xml
   EXTRA_ARGS
   --success)
 
@@ -118,7 +109,7 @@ catch_discover_tests(
   " - LONG"
   WORKING_DIRECTORY
   ${CMAKE_CURRENT_SOURCE_DIR}/../
-  REPORTER
-  compact # This dramatically speeds up the test suit
+  OUTPUT_DIR
+  ${CMAKE_CURRENT_SOURCE_DIR}/Testing/
   EXTRA_ARGS
   --success)

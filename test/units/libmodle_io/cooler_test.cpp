@@ -11,13 +11,14 @@
 #include <spdlog/sinks/null_sink.h>  // for null_sink_mt
 #include <spdlog/spdlog.h>           // for set_default_logger
 
-#include <algorithm>         // for max, max_element, transform
-#include <catch2/catch.hpp>  // for operator""_catch_sr, AssertionHandler, Source...
-#include <exception>         // for exception
-#include <filesystem>        // for operator/, path
-#include <memory>            // for make_shared, allocator_traits<>::value_type
-#include <stdexcept>         // for runtime_error
-#include <string_view>       // for string_view
+#include <algorithm>  // for max, max_element, transform
+#include <catch2/catch_test_macros.hpp>
+#include <catch2/matchers/catch_matchers_string.hpp>
+#include <exception>    // for exception
+#include <filesystem>   // for operator/, path
+#include <memory>       // for make_shared, allocator_traits<>::value_type
+#include <stdexcept>    // for runtime_error
+#include <string_view>  // for string_view
 
 #include "modle/common/common.hpp"                // for u64, u32, usize, i64, u8
 #include "modle/common/utils.hpp"                 // for parse_numeric_or_throw
@@ -51,7 +52,7 @@ TEST_CASE("cooler ctor", "[io][cooler][short]") {
   CHECK(Cooler::validate_file_format(f, Cooler::FLAVOR::COOL));
   CHECK_THROWS_WITH(!Cooler::validate_file_format(f, Cooler::FLAVOR::MCOOL,
                                                   Cooler::IO_MODE::READ_ONLY, 1'000'000),
-                    Catch::Matchers::Contains("Expected format flavor MCOOL, found COOL"));
+                    Catch::Matchers::ContainsSubstring("Expected format flavor MCOOL, found COOL"));
 }
 
 // NOLINTNEXTLINE(readability-function-cognitive-complexity)

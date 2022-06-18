@@ -19,20 +19,21 @@
 #include <boost/process/pipe.hpp>                                 // for opstream, ipstream
 #include <boost/process/search_path.hpp>                          // for search_path
 #include <cassert>                                                // for assert
-#include <catch2/catch.hpp>                                       // for Approx, operator==, Ass...
-#include <cmath>                                                  // for trunc
-#include <condition_variable>                                     // for condition_variable
-#include <filesystem>                                             // for path
-#include <memory>                                                 // for make_shared
-#include <mutex>                                                  // for mutex, unique_lock
-#include <ostream>                                                // for basic_ostream::flush
-#include <random>                                                 // for random_device
-#include <stdexcept>                                              // for overflow_error
-#include <string>                                                 // for string, getline
-#include <string_view>                                            // for string_view, basic_stri...
-#include <thread>                                                 // for thread
-#include <utility>                                                // for make_pair
-#include <vector>                                                 // for vector
+#include <catch2/catch_approx.hpp>
+#include <catch2/catch_test_macros.hpp>
+#include <cmath>               // for trunc
+#include <condition_variable>  // for condition_variable
+#include <filesystem>          // for path
+#include <memory>              // for make_shared
+#include <mutex>               // for mutex, unique_lock
+#include <ostream>             // for basic_ostream::flush
+#include <random>              // for random_device
+#include <stdexcept>           // for overflow_error
+#include <string>              // for string, getline
+#include <string_view>         // for string_view, basic_stri...
+#include <thread>              // for thread
+#include <utility>             // for make_pair
+#include <vector>              // for vector
 
 #include "modle/common/common.hpp"  // for i64, usize
 #include "modle/common/const_map.hpp"
@@ -116,8 +117,8 @@ TEST_CASE("Binom test - two-sided", "[stats][short]") {
   const auto n1 = 143;
   const auto n2 = 220;
 
-  const auto result_two_sided_n1 = Approx(2.1004568301653535e-06);
-  const auto result_two_sided_n2 = Approx(0.20009222902827126);
+  const auto result_two_sided_n1 = Catch::Approx(2.1004568301653535e-06);
+  const auto result_two_sided_n2 = Catch::Approx(0.20009222902827126);
 
   CHECK(stats::binomial_test<TWO_SIDED>(k, n1) == result_two_sided_n1);
   CHECK(stats::binomial_test<TWO_SIDED>(k, n2) == result_two_sided_n2);
@@ -128,7 +129,7 @@ TEST_CASE("Binom test - less", "[stats][short]") {
   const auto k = 100;
   const auto n = 143;
 
-  const auto result_less = Approx(0.9999995628468261);
+  const auto result_less = Catch::Approx(0.9999995628468261);
 
   CHECK(stats::binomial_test<LESS>(k, n) == result_less);
 }
@@ -138,7 +139,7 @@ TEST_CASE("Binom test - greater", "[stats][short]") {
   const auto k = 100;
   const auto n = 143;
 
-  const auto result_greater = Approx(1.0502284150826767e-06);
+  const auto result_greater = Catch::Approx(1.0502284150826767e-06);
 
   CHECK(stats::binomial_test<GREATER>(k, n) == result_greater);
 }
@@ -180,7 +181,7 @@ TEST_CASE("Binom test - two-sided randomized (SciPy)", "[stats][long]") {
       output_data_ready = false;
     }
     const auto pv = stats::binomial_test<TWO_SIDED>(k, n);
-    CHECK(Approx(pv).margin(1.0e-250) == pv_py);
+    CHECK(Catch::Approx(pv).margin(1.0e-250) == pv_py);
   }
   k = 0;
   n = 0;

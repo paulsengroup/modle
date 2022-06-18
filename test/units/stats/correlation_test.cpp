@@ -11,15 +11,16 @@
 
 #include <boost/exception/exception.hpp>
 #include <boost/process.hpp>
-#include <cassert>           // for assert
-#include <catch2/catch.hpp>  // for Approx, operator==, AssertionHandler, operator...
-#include <exception>         // for exception
-#include <ostream>           // for ostream
-#include <random>            // for random_device
-#include <string>            // for char_traits
-#include <string_view>       // for operator==, operator""sv, basic_string_view
-#include <utility>           // for make_pair
-#include <vector>            // for vector
+#include <cassert>  // for assert
+#include <catch2/catch_approx.hpp>
+#include <catch2/catch_test_macros.hpp>
+#include <exception>    // for exception
+#include <ostream>      // for ostream
+#include <random>       // for random_device
+#include <string>       // for char_traits
+#include <string_view>  // for operator==, operator""sv, basic_string_view
+#include <utility>      // for make_pair
+#include <vector>       // for vector
 
 #include "modle/common/common.hpp"  // for u32, usize
 #include "modle/common/const_map.hpp"
@@ -285,8 +286,8 @@ static void run_correlation_test(std::string_view method, usize vector_size, N1 
       const auto expected_corr = utils::parse_numeric_or_throw<double>(tok_buff.front());
       const auto expected_pv = utils::parse_numeric_or_throw<double>(tok_buff.back());
 
-      CHECK(Approx(expected_corr) == corr);
-      CHECK(Approx(expected_pv) == pv);
+      CHECK(Catch::Approx(expected_corr) == corr);
+      CHECK(Catch::Approx(expected_pv) == pv);
     }
     runner.signal_end_of_input();
     runner.wait();
@@ -304,8 +305,8 @@ TEST_CASE("Corr. test: Pearson wo ties", "[correlation][pearson][short]") {
   const std::vector<u32> v1{17, 86, 60, 77, 47, 3, 70, 87, 88, 92};
   const std::vector<u32> v2{70, 29, 85, 61, 80, 34, 60, 31, 73, 66};
   const auto [pcc, pv] = Pearson<>{}(v1, v2);
-  CHECK(Approx(pcc) == -0.033621194725622014);
-  CHECK(Approx(pv) == 0.926536715854247);
+  CHECK(Catch::Approx(pcc) == -0.033621194725622014);
+  CHECK(Catch::Approx(pv) == 0.926536715854247);
 }
 
 // NOLINTNEXTLINE(readability-function-cognitive-complexity)
@@ -314,8 +315,8 @@ TEST_CASE("Corr. test: Weighted Pearson wo ties", "[correlation][pearson][short]
   const std::vector<u32> v2{70, 29, 85, 61, 80, 34, 60, 31, 73, 66};
   const std::vector<double> w{0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0};
   const auto [pcc, pv] = Pearson<>{}(v1, v2, w);
-  CHECK(Approx(pcc) == 0.1892337717235999250409);
-  CHECK(Approx(pv) == -1.0);
+  CHECK(Catch::Approx(pcc) == 0.1892337717235999250409);
+  CHECK(Catch::Approx(pv) == -1.0);
 }
 
 // NOLINTNEXTLINE(readability-function-cognitive-complexity)
@@ -323,8 +324,8 @@ TEST_CASE("Corr. test: Pearson w ties", "[correlation][pearson][short]") {
   std::vector<u32> v1{17, 86, 60, 77, 47, 3, 70, 47, 88, 92};
   std::vector<u32> v2{70, 29, 85, 61, 80, 34, 60, 31, 73, 66};
   const auto [pcc, pv] = Pearson<>{}(v1, v2);
-  CHECK(Approx(pcc) == 0.16426413174421572);
-  CHECK(Approx(pv) == 0.6502118872600098);
+  CHECK(Catch::Approx(pcc) == 0.16426413174421572);
+  CHECK(Catch::Approx(pv) == 0.6502118872600098);
 }
 
 // NOLINTNEXTLINE(readability-function-cognitive-complexity)
@@ -333,8 +334,8 @@ TEST_CASE("Corr. test: Weighted Pearson w ties", "[correlation][pearson][short]"
   const std::vector<u32> v2{70, 29, 85, 61, 80, 34, 60, 31, 73, 66};
   const std::vector<double> w{0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0};
   const auto [pcc, pv] = Pearson<>{}(v1, v2, w);
-  CHECK(Approx(pcc) == 0.5009581087644285890548);
-  CHECK(Approx(pv) == -1.0);
+  CHECK(Catch::Approx(pcc) == 0.5009581087644285890548);
+  CHECK(Catch::Approx(pv) == -1.0);
 }
 
 // NOLINTNEXTLINE(readability-function-cognitive-complexity)
@@ -380,8 +381,8 @@ TEST_CASE("Corr. test: Spearman wo ties", "[correlation][spearman][short]") {
   const std::vector<u32> v1{17, 86, 60, 77, 47, 3, 70, 87, 88, 92};
   const std::vector<u32> v2{70, 29, 85, 61, 80, 34, 60, 31, 73, 66};
   const auto [rho, pv] = Spearman<>{}(v1, v2);
-  CHECK(Approx(rho) == -0.16363636363636364);
-  CHECK(Approx(pv) == 0.6514773427962428);
+  CHECK(Catch::Approx(rho) == -0.16363636363636364);
+  CHECK(Catch::Approx(pv) == 0.6514773427962428);
 }
 
 // NOLINTNEXTLINE(readability-function-cognitive-complexity)
@@ -389,8 +390,8 @@ TEST_CASE("Corr. test: Spearman w ties", "[correlation][spearman][short]") {
   const std::vector<u32> v1{17, 86, 60, 77, 47, 3, 70, 47, 88, 92};
   const std::vector<u32> v2{70, 29, 85, 61, 80, 34, 60, 31, 73, 66};
   const auto [rho, pv] = Spearman<>{}(v1, v2);
-  CHECK(Approx(rho) == 0.024316221747202587);
-  CHECK(Approx(pv) == 0.9468397049085097);
+  CHECK(Catch::Approx(rho) == 0.024316221747202587);
+  CHECK(Catch::Approx(pv) == 0.9468397049085097);
 }
 
 // NOLINTNEXTLINE(readability-function-cognitive-complexity)
