@@ -25,6 +25,11 @@
 #include "modle/common/const_map.hpp"
 #include "modle/common/numeric_utils.hpp"
 #include "modle/common/random.hpp"  // for PRNG_t
+#include "modle/test/self_deleting_folder.hpp"
+
+namespace modle::test {
+inline const SelfDeletingFolder testdir{true};  // NOLINT(cert-err58-cpp)
+}  // namespace modle::test
 
 namespace modle::test::stats {
 using namespace modle::stats;
@@ -178,29 +183,32 @@ class ExternalCorrelationRunner {
   boost::process::opstream _stdin{};
 
   boost::process::child _c{};
+  std::filesystem::path _script{};
 
  public:
   ExternalCorrelationRunner() = delete;
   explicit ExternalCorrelationRunner(std::string_view method) {
-    if (absl::StartsWith(method, "weighted_")) {
-      this->_c = boost::process::child(
-          boost::process::search_path("Rscript").string(), "--quiet", "-e",
-          std::string{external_cmds.at(method)},
-          boost::process::std_in<this->_stdin, boost::process::std_out> this->_stdout,
-          boost::process::std_err > this->_stderr);
-    } else {
-      this->_c = boost::process::child(
-          boost::process::search_path("python3").string(), "-c",
-          std::string{external_cmds.at(method)},
-          boost::process::std_in<this->_stdin, boost::process::std_out> this->_stdout,
-          boost::process::std_err > this->_stderr);
-    }
+    _script = testdir() / boost::filesystem::unique_path().string();
+    std::ofstream f(_script);
+    f << external_cmds.at(method);
+    f.close();
+    std::filesystem::permissions(_script, std::filesystem::perms::owner_exec,
+                                 std::filesystem::perm_options::add);
+
+    const auto exec =
+        boost::process::search_path(absl::StartsWith(method, "weighted_") ? "Rscript" : "python3");
+
+    this->_c = boost::process::child(
+        exec.string(), _script.string(),
+        boost::process::std_in<this->_stdin, boost::process::std_out> this->_stdout,
+        boost::process::std_err > this->_stderr);
+
     assert(this->_c.running());
   }
 
   ~ExternalCorrelationRunner() noexcept {
+    std::filesystem::remove(_script);
     try {
-      assert(!this->_c.running());
       if (!this->_c) {
         std::ostringstream buff;
         buff << this->_stderr.rdbuf();
@@ -231,6 +239,7 @@ class ExternalCorrelationRunner {
   }
 
   void read_from_stdout(std::string& buff) { std::getline(this->_stdout, buff); }
+
   [[nodiscard]] std::string read_from_stdout() {
     std::string buff;
     this->read_from_stdout(buff);
@@ -238,6 +247,7 @@ class ExternalCorrelationRunner {
   }
 
   void read_from_stderr(std::string& buff) { std::getline(this->_stderr, buff); }
+
   [[nodiscard]] std::string read_from_stderr() {
     std::string buff;
     this->read_from_stderr(buff);
