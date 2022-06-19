@@ -324,7 +324,7 @@ Contacts are stored in `path/to/output/prefix.cool`.
 In case any of the output files already exist, MoDLE will refuse to run and print an error message listing the file name
 collisions.
 
-Passing the `--force` flag overrides this behavior and will cause MoDLE to override existing files.
+Passing the `--force` flag overrides this behavior and will cause MoDLE to overwrite existing files.
 
 #### Running a simulation using config files
 
