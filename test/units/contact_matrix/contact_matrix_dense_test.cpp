@@ -2,12 +2,15 @@
 //
 // SPDX-License-Identifier: MIT
 
-#include <absl/strings/str_split.h>  // for SplitIterator, Splitter, StrSplit
-#include <fmt/format.h>              // for format
+#include "modle/contact_matrix_dense.hpp"  // for ContactMatrix
+
+#include <fmt/format.h>  // for format
 
 #include <algorithm>                                // for generate, max
 #include <boost/dynamic_bitset/dynamic_bitset.hpp>  // for dynamic_bitset, dynamic_bitset<>::ref...
-#include <boost/process.hpp>
+#include <boost/process/child.hpp>
+#include <boost/process/io.hpp>
+#include <boost/process/search_path.hpp>
 #include <catch2/catch_approx.hpp>
 #include <catch2/catch_test_macros.hpp>
 #include <catch2/matchers/catch_matchers_string.hpp>
@@ -19,10 +22,8 @@
 #include <utility>                      // for pair, move
 #include <vector>                       // for vector, allocator
 
-#include "modle/common/common.hpp"                // for u32
-#include "modle/common/utils.hpp"                 // for parse_numeric_or_throw
-#include "modle/compressed_io/compressed_io.hpp"  // for Reader
-#include "modle/contacts.hpp"                     // for ContactMatrix
+#include "./common.hpp"
+#include "modle/common/common.hpp"  // for u32
 
 namespace modle::test::cmatrix {
 
@@ -63,41 +64,6 @@ constexpr auto SCIPY_GAUSSIAN_DIFFERENCE_CMD{
     "    print(\",\".join([str(n) for n in (m1 - m2).flatten()]))\n"};
 // clang-format on
 
-template <class N>
-static void write_cmatrix_to_stream(const ContactMatrix<N>& m, boost::process::opstream& s) {
-  std::vector<contacts_t> buff(m.ncols());
-  for (usize i = 0; i < m.ncols(); ++i) {
-    buff.clear();
-    for (usize j = 0; j < m.ncols(); ++j) {
-      buff.push_back(m.get(i, j));
-    }
-    const auto sbuff = fmt::format(FMT_STRING("{}\n"), fmt::join(buff, ","));
-    s.write(sbuff.data(), static_cast<std::streamsize>(sbuff.size()));
-  }
-  s.flush();
-  s.pipe().close();
-}
-
-template <class N>
-[[nodiscard]] static ContactMatrix<N> read_cmatrix_from_stream(const usize ncols, const usize nrows,
-                                                               boost::process::ipstream& s) {
-  std::string sbuff;
-  std::getline(s, sbuff);
-
-  std::vector<double> buff;
-  for (const auto& tok : absl::StrSplit(sbuff, ',')) {
-    buff.push_back(utils::parse_numeric_or_throw<double>(tok));
-  }
-  REQUIRE(buff.size() == nrows * ncols);
-  ContactMatrix<double> m(nrows, ncols);
-  for (usize i = 0; i < nrows; ++i) {
-    for (auto j = i; j < ncols; ++j) {
-      m.set(i, j, buff[(i * m.nrows()) + j]);
-    }
-  }
-  return m;
-}
-
 // NOLINTNEXTLINE(readability-function-cognitive-complexity)
 TEST_CASE("CMatrix simple", "[cmatrix][short]") {
   ContactMatrix<> c(10, 100);
@@ -108,26 +74,6 @@ TEST_CASE("CMatrix simple", "[cmatrix][short]") {
   CHECK(c.get(0, 0) == 2);
   c.subtract(0, 0, 2);
   CHECK(c.get(0, 0) == 0);
-}
-
-[[nodiscard]] inline std::vector<std::vector<u32>> load_matrix_from_file(
-    const std::string& path_to_file, const std::string& sep = "\t") {
-  std::vector<std::vector<u32>> m;
-  compressed_io::Reader r(path_to_file);
-  std::string line;
-  std::string buff;
-  u32 n{};
-  while (r.getline(line)) {
-    std::vector<u32> v;
-
-    for (const auto& tok : absl::StrSplit(line, sep)) {
-      modle::utils::parse_numeric_or_throw(tok, n);
-      v.push_back(n);
-    }
-    m.emplace_back(std::move(v));
-  }
-  REQUIRE(r.eof());
-  return m;
 }
 
 // NOLINTNEXTLINE(readability-function-cognitive-complexity)
@@ -358,8 +304,8 @@ TEST_CASE("CMatrix blur (SciPy)", "[cmatrix][long]") {
     assert(py.running());
 
     write_cmatrix_to_stream(input_matrix, stdin_stream);
-    return read_cmatrix_from_stream<double>(input_matrix.nrows(), input_matrix.ncols(),
-                                            stdout_stream);
+    return read_cmatrix_from_stream<ContactMatrix<double>>(input_matrix.nrows(),
+                                                           input_matrix.ncols(), stdout_stream);
   };
 
   constexpr std::array<double, 3> sigmas{0.5, 1.0, 1.5};
@@ -397,8 +343,8 @@ TEST_CASE("CMatrix blur parallel (SciPy)", "[cmatrix][long]") {
     assert(py.running());
 
     write_cmatrix_to_stream(input_matrix, stdin_stream);
-    return read_cmatrix_from_stream<double>(input_matrix.nrows(), input_matrix.ncols(),
-                                            stdout_stream);
+    return read_cmatrix_from_stream<ContactMatrix<double>>(input_matrix.nrows(),
+                                                           input_matrix.ncols(), stdout_stream);
   };
 
   constexpr std::array<double, 3> sigmas{0.5, 1.0, 1.5};
@@ -438,8 +384,8 @@ TEST_CASE("CMatrix difference of gaussians (SciPy)", "[cmatrix][long]") {
     assert(py.running());
 
     write_cmatrix_to_stream(input_matrix, stdin_stream);
-    return read_cmatrix_from_stream<double>(input_matrix.nrows(), input_matrix.ncols(),
-                                            stdout_stream);
+    return read_cmatrix_from_stream<ContactMatrix<double>>(input_matrix.nrows(),
+                                                           input_matrix.ncols(), stdout_stream);
   };
 
   const double sigma1_ = 1.0;
@@ -480,8 +426,8 @@ TEST_CASE("CMatrix difference of gaussians - parallel (SciPy)", "[cmatrix][long]
     assert(py.running());
 
     write_cmatrix_to_stream(input_matrix, stdin_stream);
-    return read_cmatrix_from_stream<double>(input_matrix.nrows(), input_matrix.ncols(),
-                                            stdout_stream);
+    return read_cmatrix_from_stream<ContactMatrix<double>>(input_matrix.nrows(),
+                                                           input_matrix.ncols(), stdout_stream);
   };
 
   const double sigma1_ = 1.0;

@@ -12,8 +12,10 @@ add_library(cmatrix INTERFACE)
 add_library(Modle::cmatrix ALIAS cmatrix)
 
 target_sources(
-  cmatrix INTERFACE ${CMAKE_CURRENT_SOURCE_DIR}/contacts_impl.hpp ${CMAKE_CURRENT_SOURCE_DIR}/contacts_safe_impl.hpp
-                    ${CMAKE_CURRENT_SOURCE_DIR}/contacts_unsafe_impl.hpp)
+  cmatrix
+  INTERFACE ${CMAKE_CURRENT_SOURCE_DIR}/contact_matrix_dense_impl.hpp
+            ${CMAKE_CURRENT_SOURCE_DIR}/contact_matrix_dense_safe_impl.hpp
+            ${CMAKE_CURRENT_SOURCE_DIR}/contact_matrix_dense_unsafe_impl.hpp)
 
 target_include_directories(cmatrix INTERFACE include/)
 

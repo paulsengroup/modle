@@ -32,7 +32,7 @@
 
 #include "modle/common/common.hpp"                // for bp_t, contacts_t, u64
 #include "modle/compressed_io/compressed_io.hpp"  // for Reader, Writer
-#include "modle/contacts.hpp"                     // for ContactMatrix
+#include "modle/contact_matrix_dense.hpp"         // for ContactMatrix
 
 namespace modle {
 

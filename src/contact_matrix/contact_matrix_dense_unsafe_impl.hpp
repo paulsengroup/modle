@@ -520,7 +520,7 @@ void ContactMatrix<N>::unsafe_update_global_stats() const noexcept {
 
 }  // namespace modle
 
-// IWYU pragma: private, include "modle/contacts.hpp"
+// IWYU pragma: private, include "modle/contact_matrix_dense.hpp"
 // IWYU pragma: no_include <boost/core/checked_delete.hpp>
 // IWYU pragma: no_include <boost/exception/detail/error_info_impl.hpp>
 // IWYU pragma: no_include <boost/exception/exception.hpp>

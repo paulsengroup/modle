@@ -23,7 +23,7 @@
 #include "modle/common/common.hpp"                // for u64, u32, usize, i64, u8
 #include "modle/common/utils.hpp"                 // for parse_numeric_or_throw
 #include "modle/compressed_io/compressed_io.hpp"  // for Reader
-#include "modle/contacts.hpp"                     // for ContactMatrix
+#include "modle/contact_matrix_dense.hpp"         // for ContactMatrix
 #include "modle/test/self_deleting_folder.hpp"    // for SelfDeletingFolder
 
 namespace modle::test {

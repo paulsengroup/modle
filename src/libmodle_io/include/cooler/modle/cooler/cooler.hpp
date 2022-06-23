@@ -27,8 +27,8 @@
 #include <utility>      // for pair
 #include <vector>       // for vector
 
-#include "modle/common/common.hpp"  // for i64, i32, u8f, u32
-#include "modle/contacts.hpp"       // for ContactMatrix
+#include "modle/common/common.hpp"         // for i64, i32, u8f, u32
+#include "modle/contact_matrix_dense.hpp"  // for ContactMatrix
 
 namespace modle {
 template <class N>

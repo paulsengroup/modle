@@ -37,7 +37,7 @@
 #include "modle/common/common.hpp"  // for u32, usize, bp_t, u8, i64
 #include "modle/common/fmt_std_helper.hpp"
 #include "modle/common/utils.hpp"              // for identity::operator()
-#include "modle/contacts.hpp"                  // for ContactMatrix
+#include "modle/contact_matrix_dense.hpp"      // for ContactMatrix
 #include "modle/cooler/cooler.hpp"             // for Cooler, Cooler::READ_ONLY
 #include "modle/interval_tree.hpp"             // for IITree, IITree::IITree<I, T>, IITree::empty
 #include "modle/stats/correlation.hpp"         // for Pearson, Spearman

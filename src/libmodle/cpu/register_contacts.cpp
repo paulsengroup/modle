@@ -14,7 +14,7 @@
 #include "modle/common/common.hpp"                         // for usize, bp_t, contacts_t, MODLE...
 #include "modle/common/genextreme_value_distribution.hpp"  // for genextreme_value_distribution
 #include "modle/common/random.hpp"                         // for PRNG_t, uniform_int_distribution
-#include "modle/contacts.hpp"                              // for ContactMatrix
+#include "modle/contact_matrix_dense.hpp"                  // for ContactMatrix
 #include "modle/extrusion_factors.hpp"                     // for Lef, ExtrusionUnit
 #include "modle/genome.hpp"                                // for Chromosome
 

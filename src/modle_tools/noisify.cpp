@@ -27,7 +27,7 @@
 #include "modle/common/fmt_std_helper.hpp"
 #include "modle/common/genextreme_value_distribution.hpp"  // for genextreme_value_distribution
 #include "modle/common/random.hpp"                         // for PRNG
-#include "modle/contacts.hpp"                              // for ContactMatrix
+#include "modle/contact_matrix_dense.hpp"                  // for ContactMatrix
 #include "modle/cooler/cooler.hpp"                         // for Cooler::Pixel, Cooler, Cooler:...
 #include "modle_tools/modle_tools_config.hpp"              // for noisify_config
 #include "modle_tools/tools.hpp"                           // for noisify_subcmd

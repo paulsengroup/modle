@@ -199,9 +199,9 @@ class ContactMatrix {
 };
 }  // namespace modle
 
-#include "../../contacts_impl.hpp"         // IWYU pragma: export
-#include "../../contacts_safe_impl.hpp"    // IWYU pragma: export
-#include "../../contacts_unsafe_impl.hpp"  // IWYU pragma: export
-// IWYU pragma: "../../contacts_impl.hpp"
-// IWYU pragma: "../../contacts_safe_impl.hpp"
-// IWYU pragma: "../../contacts_unsafe_impl.hpp"
+#include "../../contact_matrix_dense_impl.hpp"         // IWYU pragma: export
+#include "../../contact_matrix_dense_safe_impl.hpp"    // IWYU pragma: export
+#include "../../contact_matrix_dense_unsafe_impl.hpp"  // IWYU pragma: export
+// IWYU pragma: "../../contact_matrix_dense_impl.hpp"
+// IWYU pragma: "../../contact_matrix_dense_safe_impl.hpp"
+// IWYU pragma: "../../contact_matrix_dense_unsafe_impl.hpp"

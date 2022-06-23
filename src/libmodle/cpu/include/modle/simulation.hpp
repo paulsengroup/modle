@@ -30,7 +30,7 @@
 #include "modle/common/simulation_config.hpp"           // for Config
 #include "modle/common/suppress_compiler_warnings.hpp"  // for DISABLE_WARNING_POP, DISABLE_WARN...
 #include "modle/common/utils.hpp"                       // for ndebug_defined, XXH3_Deleter, XXH...
-#include "modle/contacts.hpp"                           // for ContactMatrix
+#include "modle/contact_matrix_dense.hpp"               // for ContactMatrix
 #include "modle/extrusion_barriers.hpp"                 // for ExtrusionBarrier
 #include "modle/extrusion_factors.hpp"                  // for Lef, ExtrusionUnit (ptr only)
 #include "modle/genome.hpp"                             // for Chromosome (ptr only), Genome

@@ -43,7 +43,7 @@
 #include "modle/common/fmt_std_helper.hpp"
 #include "modle/common/suppress_compiler_warnings.hpp"  // for DISABLE_WARNING_POP
 #include "modle/compressed_io/compressed_io.hpp"        // for Writer
-#include "modle/contacts.hpp"                           // for ContactMatrix
+#include "modle/contact_matrix_dense.hpp"               // for ContactMatrix
 #include "modle/cooler/cooler.hpp"                      // for Cooler, Cooler::WRITE_ONLY
 #include "modle/extrusion_barriers.hpp"                 // for ExtrusionBarrier
 #include "modle/genome.hpp"                             // for Chromosome, Genome
