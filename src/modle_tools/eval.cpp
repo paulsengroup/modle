@@ -37,7 +37,7 @@
 #include "modle/common/common.hpp"  // for u32, usize, bp_t, u8, i64
 #include "modle/common/fmt_std_helper.hpp"
 #include "modle/common/utils.hpp"              // for identity::operator()
-#include "modle/contact_matrix_dense.hpp"      // for ContactMatrix
+#include "modle/contact_matrix_dense.hpp"      // for ContactMatrixDense
 #include "modle/cooler/cooler.hpp"             // for Cooler, Cooler::READ_ONLY
 #include "modle/interval_tree.hpp"             // for IITree, IITree::IITree<I, T>, IITree::empty
 #include "modle/stats/correlation.hpp"         // for Pearson, Spearman
@@ -329,8 +329,8 @@ struct MetricsBuff {
 
 template <StripeDirection stripe_direction, class N, class WeightIt = utils::RepeatIterator<double>>
 [[nodiscard]] static auto compute_metric(
-    const enum eval_config::Metric metric, std::shared_ptr<ContactMatrix<N>> ref_contacts,
-    std::shared_ptr<ContactMatrix<N>> tgt_contacts, const bool mask_zero_pixels_,
+    const enum eval_config::Metric metric, std::shared_ptr<ContactMatrixDense<N>> ref_contacts,
+    std::shared_ptr<ContactMatrixDense<N>> tgt_contacts, const bool mask_zero_pixels_,
     [[maybe_unused]] WeightIt weight_first = utils::RepeatIterator<double>(1)) {
   assert(ref_contacts->nrows() == tgt_contacts->nrows());
   const auto nrows = ref_contacts->nrows();
@@ -425,8 +425,8 @@ template <StripeDirection stripe_direction, class N, class WeightIt = utils::Rep
 
 template <StripeDirection stripe_direction, class N>
 [[nodiscard]] static auto compute_metric(const enum eval_config::Metric metric,
-                                         std::shared_ptr<ContactMatrix<N>> ref_contacts,
-                                         std::shared_ptr<ContactMatrix<N>> tgt_contacts,
+                                         std::shared_ptr<ContactMatrixDense<N>> ref_contacts,
+                                         std::shared_ptr<ContactMatrixDense<N>> tgt_contacts,
                                          const bool mask_zero_pixels_,
                                          const std::vector<double> &weights) {
   assert(ref_contacts->nrows() == tgt_contacts->nrows());
@@ -536,8 +536,8 @@ template <StripeDirection stripe_direction, class N>
 template <StripeDirection stripe_direction, class Writers, class N>
 static void run_task(const enum eval_config::Metric metric, const std::string &chrom_name,
                      const std::pair<usize, usize> chrom_range, Writers &writers,
-                     std::shared_ptr<ContactMatrix<N>> &ref_contacts,
-                     std::shared_ptr<ContactMatrix<N>> &tgt_contacts,
+                     std::shared_ptr<ContactMatrixDense<N>> &ref_contacts,
+                     std::shared_ptr<ContactMatrixDense<N>> &tgt_contacts,
                      const bool exclude_zero_pixels, const usize bin_size,
                      const absl::flat_hash_map<std::string, std::vector<double>> &weights) {
   try {
@@ -674,9 +674,9 @@ void eval_subcmd(const modle::tools::eval_config &c) {
     const auto t1 = absl::Now();
     spdlog::info(FMT_STRING("Reading contacts for {}..."), chrom_name_sv);
 
-    auto ref_contacts = std::make_shared<ContactMatrix<double>>(
+    auto ref_contacts = std::make_shared<ContactMatrixDense<double>>(
         ref_cooler.cooler_to_cmatrix(chrom_name, nrows, chrom_range));
-    auto tgt_contacts = std::make_shared<ContactMatrix<double>>(
+    auto tgt_contacts = std::make_shared<ContactMatrixDense<double>>(
         tgt_cooler.cooler_to_cmatrix(chrom_name, nrows, chrom_range));
     spdlog::info(FMT_STRING("Read {} contacts for {} in {}"),
                  ref_contacts->get_tot_contacts() + tgt_contacts->get_tot_contacts(), chrom_name_sv,

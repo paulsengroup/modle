@@ -27,7 +27,7 @@
 #include "modle/common/fmt_std_helper.hpp"
 #include "modle/common/genextreme_value_distribution.hpp"  // for genextreme_value_distribution
 #include "modle/common/random.hpp"                         // for PRNG
-#include "modle/contact_matrix_dense.hpp"                  // for ContactMatrix
+#include "modle/contact_matrix_dense.hpp"                  // for ContactMatrixDense
 #include "modle/cooler/cooler.hpp"                         // for Cooler::Pixel, Cooler, Cooler:...
 #include "modle_tools/modle_tools_config.hpp"              // for noisify_config
 #include "modle_tools/tools.hpp"                           // for noisify_subcmd
@@ -40,7 +40,7 @@ void noisify_contacts(const noisify_config& c) {
   const auto PIXEL_BATCH_SIZE =
       modle::cooler::Cooler<>::DEFAULT_HDF5_BUFFER_SIZE / sizeof(modle::cooler::Cooler<>::Pixel);
   pixel_queue_t pixel_queue(PIXEL_BATCH_SIZE);
-  modle::ContactMatrix<> cmatrix{};
+  modle::ContactMatrixDense<> cmatrix{};
 
   const auto END_OF_PIXEL_QUEUE = modle::cooler::Cooler<>::Pixel{
       (std::numeric_limits<contacts_t>::max)(), (std::numeric_limits<contacts_t>::max)(),

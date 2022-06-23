@@ -32,7 +32,7 @@
 
 #include "modle/common/common.hpp"                // for bp_t, contacts_t, u64
 #include "modle/compressed_io/compressed_io.hpp"  // for Reader, Writer
-#include "modle/contact_matrix_dense.hpp"         // for ContactMatrix
+#include "modle/contact_matrix_dense.hpp"         // for ContactMatrixDense
 
 namespace modle {
 
@@ -112,7 +112,7 @@ void Simulation::replay_worker(const u64 tid,
   absl::FixedArray<TaskPW> task_buff(task_batch_size);  // Tasks are dequeue in batch.
 
   Simulation::State local_state{};
-  local_state.contacts = std::make_shared<ContactMatrix<contacts_t>>();
+  local_state.contacts = std::make_shared<ContactMatrixDense<contacts_t>>();
   compressed_io::Writer null_stream{};
 
   try {

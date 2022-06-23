@@ -26,18 +26,18 @@ template <class N, class T>
 class IITree;
 
 template <class N = contacts_t>
-class ContactMatrix {
+class ContactMatrixDense {
   static_assert(std::is_arithmetic_v<N>,
-                "ContactMatrix requires a numeric type as template argument.");
+                "ContactMatrixDense requires a numeric type as template argument.");
 
  public:
   using value_type = N;
 
-  // This allows methods from different instantiations of the ContactMatrix template class:
-  // Example: allowing ContactMatrix<int> to access private member variables and functions from
-  // class ContactMatrix<double>
+  // This allows methods from different instantiations of the ContactMatrixDense template class:
+  // Example: allowing ContactMatrixDense<int> to access private member variables and functions from
+  // class ContactMatrixDense<double>
   template <class M>
-  friend class ContactMatrix;
+  friend class ContactMatrixDense;
 
  private:
   using mutex_t = std::mutex;
@@ -53,27 +53,27 @@ class ContactMatrix {
 
  public:
   // Constructors
-  inline ContactMatrix() = default;
+  inline ContactMatrixDense() = default;
 #if defined(__clang__) && __clang_major__ < 9
-  inline ContactMatrix(ContactMatrix<N>&& other) = default;
+  inline ContactMatrixDense(ContactMatrixDense<N>&& other) = default;
 #else
-  inline ContactMatrix(ContactMatrix<N>&& other) noexcept = default;
+  inline ContactMatrixDense(ContactMatrixDense<N>&& other) noexcept = default;
 #endif
-  inline ContactMatrix(const ContactMatrix<N>& other);
+  inline ContactMatrixDense(const ContactMatrixDense<N>& other);
   template <bool fill_with_random_numbers = false, u64 seed = 8336046165695760686>
-  inline ContactMatrix(usize nrows, usize ncols);
+  inline ContactMatrixDense(usize nrows, usize ncols);
   template <bool fill_with_random_numbers = false, u64 seed = 8336046165695760686>
-  inline ContactMatrix(bp_t length, bp_t diagonal_width, bp_t bin_size);
-  inline ContactMatrix(absl::Span<const N> contacts, usize nrows, usize ncols,
-                       usize tot_contacts = 0, usize updates_missed = 0);
-  inline ~ContactMatrix() = default;
+  inline ContactMatrixDense(bp_t length, bp_t diagonal_width, bp_t bin_size);
+  inline ContactMatrixDense(absl::Span<const N> contacts, usize nrows, usize ncols,
+                            usize tot_contacts = 0, usize updates_missed = 0);
+  inline ~ContactMatrixDense() = default;
 
   // Operators
-  inline ContactMatrix<N>& operator=(const ContactMatrix<N>& other);
+  inline ContactMatrixDense<N>& operator=(const ContactMatrixDense<N>& other);
 #if defined(__clang__) && __clang_major__ < 9
-  inline ContactMatrix<N>& operator=(ContactMatrix<N>&& other) = default;
+  inline ContactMatrixDense<N>& operator=(ContactMatrixDense<N>&& other) = default;
 #else
-  inline ContactMatrix<N>& operator=(ContactMatrix<N>&& other) noexcept = default;
+  inline ContactMatrixDense<N>& operator=(ContactMatrixDense<N>&& other) noexcept = default;
 #endif
 
   // Thread-safe count getters and setters
@@ -128,7 +128,7 @@ class ContactMatrix {
   inline void clear_missed_updates_counter();
   inline void reset();
   inline void unsafe_reset();
-  // Note: upon resizing the content of a ContactMatrix is invalidated
+  // Note: upon resizing the content of a ContactMatrixDense is invalidated
   inline void unsafe_resize(usize nrows, usize ncols);
   inline void unsafe_resize(bp_t length, bp_t diagonal_width, bp_t bin_size);
   [[nodiscard]] inline bool empty() const;
@@ -136,28 +136,30 @@ class ContactMatrix {
   [[nodiscard]] inline absl::Span<const N> get_raw_count_vector() const;
   [[nodiscard]] inline absl::Span<N> get_raw_count_vector();
 
-  [[nodiscard]] inline ContactMatrix<double> blur(double sigma, double cutoff = 0.005,
-                                                  thread_pool* tpool = nullptr) const;
-  [[nodiscard]] inline ContactMatrix<double> gaussian_diff(
+  [[nodiscard]] inline ContactMatrixDense<double> blur(double sigma, double cutoff = 0.005,
+                                                       thread_pool* tpool = nullptr) const;
+  [[nodiscard]] inline ContactMatrixDense<double> gaussian_diff(
       double sigma1, double sigma2, double min_value = std::numeric_limits<double>::lowest(),
       double max_value = (std::numeric_limits<double>::max)(), thread_pool* tpool = nullptr) const;
   template <class FP = double, class = std::enable_if_t<std::is_floating_point_v<FP>>>
-  [[nodiscard]] inline ContactMatrix<FP> unsafe_normalize(double lb = 0.0, double ub = 1.0) const;
+  [[nodiscard]] inline ContactMatrixDense<FP> unsafe_normalize(double lb = 0.0,
+                                                               double ub = 1.0) const;
   template <class FP = double, class = std::enable_if_t<std::is_floating_point_v<FP>>>
-  [[nodiscard]] inline ContactMatrix<FP> normalize(double lb = 0.0, double ub = 1.0) const;
-  [[nodiscard]] inline ContactMatrix<N> unsafe_clamp(N lb, N ub) const;
-  [[nodiscard]] inline ContactMatrix<N> clamp(N lb, N ub) const;
+  [[nodiscard]] inline ContactMatrixDense<FP> normalize(double lb = 0.0, double ub = 1.0) const;
+  [[nodiscard]] inline ContactMatrixDense<N> unsafe_clamp(N lb, N ub) const;
+  [[nodiscard]] inline ContactMatrixDense<N> clamp(N lb, N ub) const;
   template <class N1, class N2>
-  [[nodiscard]] inline ContactMatrix<N1> discretize(const IITree<N2, N1>& mappings) const;
+  [[nodiscard]] inline ContactMatrixDense<N1> discretize(const IITree<N2, N1>& mappings) const;
   template <class N1, class N2>
-  [[nodiscard]] inline ContactMatrix<N1> unsafe_discretize(const IITree<N2, N1>& mappings) const;
+  [[nodiscard]] inline ContactMatrixDense<N1> unsafe_discretize(
+      const IITree<N2, N1>& mappings) const;
 
   // Convert a matrix of type N to a matrix of type M
   // When N is a floating point type and M isn't, contacts are round before casting them to M
   template <class M, class = std::enable_if_t<!std::is_same_v<N, M>>>
-  [[nodiscard]] inline ContactMatrix<M> as() const;
+  [[nodiscard]] inline ContactMatrixDense<M> as() const;
   template <class M, class = std::enable_if_t<!std::is_same_v<N, M>>>
-  [[nodiscard]] inline ContactMatrix<M> unsafe_as() const;
+  [[nodiscard]] inline ContactMatrixDense<M> unsafe_as() const;
 
   inline void unsafe_normalize_inplace(N lb = 0, N ub = 1) noexcept;
   inline void normalize_inplace(N lb = 0, N ub = 1) noexcept;
@@ -185,14 +187,15 @@ class ContactMatrix {
   [[nodiscard]] inline usize get_pixel_mutex_idx(usize row, usize col) const noexcept;
 
   template <class M, class = std::enable_if_t<std::is_floating_point_v<M>>>
-  static inline void unsafe_normalize(const ContactMatrix<N>& input_matrix,
-                                      ContactMatrix<M>& output_matrix, M lb = 0, M ub = 1) noexcept;
+  static inline void unsafe_normalize(const ContactMatrixDense<N>& input_matrix,
+                                      ContactMatrixDense<M>& output_matrix, M lb = 0,
+                                      M ub = 1) noexcept;
 
-  static inline void unsafe_clamp(const ContactMatrix<N>& input_matrix,
-                                  ContactMatrix<N>& output_matrix, N lb, N ub) noexcept;
+  static inline void unsafe_clamp(const ContactMatrixDense<N>& input_matrix,
+                                  ContactMatrixDense<N>& output_matrix, N lb, N ub) noexcept;
   template <class N1, class N2>
-  static inline void unsafe_discretize(const ContactMatrix<N>& input_matrix,
-                                       ContactMatrix<N1>& output_matrix,
+  static inline void unsafe_discretize(const ContactMatrixDense<N>& input_matrix,
+                                       ContactMatrixDense<N1>& output_matrix,
                                        const IITree<N2, N1>& mappings) noexcept;
 
   inline void unsafe_update_global_stats() const noexcept;

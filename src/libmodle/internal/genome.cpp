@@ -30,7 +30,7 @@
 #include "modle/common/fmt_std_helper.hpp"
 #include "modle/common/suppress_compiler_warnings.hpp"  // for DISABLE_WARNING_PUSH, DISABLE_WAR...
 #include "modle/common/utils.hpp"                       // for XXH3_Deleter, ndebug_defined, XXH...
-#include "modle/contact_matrix_dense.hpp"               // for ContactMatrix
+#include "modle/contact_matrix_dense.hpp"               // for ContactMatrixDense
 #include "modle/extrusion_barriers.hpp"                 // for ExtrusionBarrier
 
 namespace modle {

@@ -39,10 +39,10 @@
 namespace modle::cooler {
 
 template <class N>
-ContactMatrix<N> Cooler<N>::cooler_to_cmatrix(std::string_view chrom_name, usize nrows,
-                                              std::pair<usize, usize> chrom_boundaries,
-                                              bool try_common_chrom_prefixes,
-                                              bool prefer_using_balanced_counts) {
+ContactMatrixDense<N> Cooler<N>::cooler_to_cmatrix(std::string_view chrom_name, usize nrows,
+                                                   std::pair<usize, usize> chrom_boundaries,
+                                                   bool try_common_chrom_prefixes,
+                                                   bool prefer_using_balanced_counts) {
   assert(this->_fp);
   assert(!this->_datasets.empty());
   assert(!this->_idx_bin1_offset.empty());
@@ -97,11 +97,11 @@ ContactMatrix<N> Cooler<N>::cooler_to_cmatrix(std::string_view chrom_name, usize
 }
 
 template <class N>
-ContactMatrix<N> Cooler<N>::cooler_to_cmatrix(std::string_view chrom_name, usize diagonal_width,
-                                              usize bin_size,
-                                              std::pair<usize, usize> chrom_boundaries,
-                                              bool try_common_chrom_prefixes,
-                                              bool prefer_using_balanced_counts) {
+ContactMatrixDense<N> Cooler<N>::cooler_to_cmatrix(std::string_view chrom_name,
+                                                   usize diagonal_width, usize bin_size,
+                                                   std::pair<usize, usize> chrom_boundaries,
+                                                   bool try_common_chrom_prefixes,
+                                                   bool prefer_using_balanced_counts) {
   assert(this->_bin_size != 0);
   if (bin_size != 0 && this->_bin_size != bin_size) {
     throw std::runtime_error(fmt::format(
@@ -115,19 +115,19 @@ ContactMatrix<N> Cooler<N>::cooler_to_cmatrix(std::string_view chrom_name, usize
 }
 
 template <class N>
-ContactMatrix<N> Cooler<N>::cooler_to_cmatrix(std::pair<hsize_t, hsize_t> bin_range,
-                                              const std::vector<i64> &bin1_offset_idx, usize nrows,
-                                              double scaling_factor,
-                                              bool prefer_using_balanced_counts) {
+ContactMatrixDense<N> Cooler<N>::cooler_to_cmatrix(std::pair<hsize_t, hsize_t> bin_range,
+                                                   const std::vector<i64> &bin1_offset_idx,
+                                                   usize nrows, double scaling_factor,
+                                                   bool prefer_using_balanced_counts) {
   return this->cooler_to_cmatrix(bin_range, absl::MakeConstSpan(bin1_offset_idx), nrows,
                                  scaling_factor, prefer_using_balanced_counts);
 }
 
 template <class N>
-ContactMatrix<N> Cooler<N>::cooler_to_cmatrix(std::pair<hsize_t, hsize_t> bin_range,
-                                              absl::Span<const i64> bin1_offset_idx, usize nrows,
-                                              double bias_scaling_factor,
-                                              bool prefer_using_balanced_counts) {
+ContactMatrixDense<N> Cooler<N>::cooler_to_cmatrix(std::pair<hsize_t, hsize_t> bin_range,
+                                                   absl::Span<const i64> bin1_offset_idx,
+                                                   usize nrows, double bias_scaling_factor,
+                                                   bool prefer_using_balanced_counts) {
   if (this->_datasets.empty()) {
     this->open_default_datasets();
   }
@@ -135,7 +135,7 @@ ContactMatrix<N> Cooler<N>::cooler_to_cmatrix(std::pair<hsize_t, hsize_t> bin_ra
   const auto [first_bin, last_bin] = bin_range;
   assert(first_bin < last_bin);
   assert(last_bin <= first_bin + bin1_offset_idx.size());
-  ContactMatrix<N> cmatrix(nrows, last_bin - first_bin);
+  ContactMatrixDense<N> cmatrix(nrows, last_bin - first_bin);
   std::vector<i64> bin1_BUFF(nrows);
   std::vector<i64> bin2_BUFF(nrows);
   std::vector<N> count_BUFF(nrows);

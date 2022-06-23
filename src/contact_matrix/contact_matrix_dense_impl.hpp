@@ -27,7 +27,7 @@
 namespace modle {
 
 template <class N>
-ContactMatrix<N>::ContactMatrix(const ContactMatrix<N> &other)
+ContactMatrixDense<N>::ContactMatrixDense(const ContactMatrixDense<N> &other)
     : _nrows(other.nrows()),
       _ncols(other.ncols()),
       _contacts(other._contacts),
@@ -38,7 +38,7 @@ ContactMatrix<N>::ContactMatrix(const ContactMatrix<N> &other)
 
 template <class N>
 template <bool fill_with_random_numbers, u64 seed>
-ContactMatrix<N>::ContactMatrix(const usize nrows, const usize ncols)
+ContactMatrixDense<N>::ContactMatrixDense(const usize nrows, const usize ncols)
     : _nrows(std::min(nrows, ncols)),
       _ncols(ncols),
       _contacts(_nrows * _ncols + 1, N(0)),
@@ -64,14 +64,15 @@ ContactMatrix<N>::ContactMatrix(const usize nrows, const usize ncols)
 
 template <class N>
 template <bool fill_with_random_numbers, u64 seed>
-ContactMatrix<N>::ContactMatrix(const bp_t length, const bp_t diagonal_width, const bp_t bin_size)
-    : ContactMatrix((diagonal_width + bin_size - 1) / bin_size,
-                    (length + bin_size - 1) / bin_size) {}
+ContactMatrixDense<N>::ContactMatrixDense(const bp_t length, const bp_t diagonal_width,
+                                          const bp_t bin_size)
+    : ContactMatrixDense((diagonal_width + bin_size - 1) / bin_size,
+                         (length + bin_size - 1) / bin_size) {}
 
 template <class N>
-ContactMatrix<N>::ContactMatrix(const absl::Span<const N> contacts, const usize nrows,
-                                const usize ncols, const usize tot_contacts,
-                                const usize updates_missed)
+ContactMatrixDense<N>::ContactMatrixDense(const absl::Span<const N> contacts, const usize nrows,
+                                          const usize ncols, const usize tot_contacts,
+                                          const usize updates_missed)
     : _nrows(nrows),
       _ncols(ncols),
       _contacts(contacts.begin(), contacts.end()),
@@ -80,7 +81,7 @@ ContactMatrix<N>::ContactMatrix(const absl::Span<const N> contacts, const usize 
       _tot_contacts(static_cast<i64>(tot_contacts)) {}
 
 template <class N>
-ContactMatrix<N> &ContactMatrix<N>::operator=(const ContactMatrix<N> &other) {
+ContactMatrixDense<N> &ContactMatrixDense<N>::operator=(const ContactMatrixDense<N> &other) {
   if (this == &other) {
     return *this;
   }
@@ -104,61 +105,62 @@ ContactMatrix<N> &ContactMatrix<N>::operator=(const ContactMatrix<N> &other) {
 }
 
 template <class N>
-std::unique_lock<typename ContactMatrix<N>::mutex_t> ContactMatrix<N>::lock_pixel(usize row,
-                                                                                  usize col) const {
-  return std::unique_lock<ContactMatrix<N>::mutex_t>(
+std::unique_lock<typename ContactMatrixDense<N>::mutex_t> ContactMatrixDense<N>::lock_pixel(
+    usize row, usize col) const {
+  return std::unique_lock<ContactMatrixDense<N>::mutex_t>(
       this->_mtxes[this->get_pixel_mutex_idx(row, col)]);
 }
 
 template <class N>
 
-utils::LockRangeExclusive<typename ContactMatrix<N>::mutex_t> ContactMatrix<N>::lock() const {
+utils::LockRangeExclusive<typename ContactMatrixDense<N>::mutex_t> ContactMatrixDense<N>::lock()
+    const {
   return utils::LockRangeExclusive<mutex_t>(this->_mtxes);
 }
 
 template <class N>
-constexpr usize ContactMatrix<N>::ncols() const {
+constexpr usize ContactMatrixDense<N>::ncols() const {
   return this->_ncols;
 }
 
 template <class N>
-constexpr usize ContactMatrix<N>::nrows() const {
+constexpr usize ContactMatrixDense<N>::nrows() const {
   return this->_nrows;
 }
 
 template <class N>
-constexpr usize ContactMatrix<N>::npixels() const {
+constexpr usize ContactMatrixDense<N>::npixels() const {
   return this->_nrows * this->_ncols;
 }
 
 template <class N>
-constexpr usize ContactMatrix<N>::get_n_of_missed_updates() const noexcept {
+constexpr usize ContactMatrixDense<N>::get_n_of_missed_updates() const noexcept {
   return static_cast<usize>(this->_updates_missed.load());
 }
 
 template <class N>
-constexpr usize ContactMatrix<N>::get_matrix_size_in_bytes() const {
+constexpr usize ContactMatrixDense<N>::get_matrix_size_in_bytes() const {
   return this->npixels() * sizeof(N);
 }
 
 template <class N>
-void ContactMatrix<N>::clear_missed_updates_counter() {
+void ContactMatrixDense<N>::clear_missed_updates_counter() {
   this->_updates_missed = 0;
 }
 
 template <class N>
-absl::Span<const N> ContactMatrix<N>::get_raw_count_vector() const {
+absl::Span<const N> ContactMatrixDense<N>::get_raw_count_vector() const {
   return absl::MakeConstSpan(this->_contacts);
 }
 
 template <class N>
-absl::Span<N> ContactMatrix<N>::get_raw_count_vector() {
+absl::Span<N> ContactMatrixDense<N>::get_raw_count_vector() {
   return absl::MakeSpan(this->_contacts);
 }
 
 template <class N>
-constexpr std::pair<usize, usize> ContactMatrix<N>::transpose_coords(const usize row,
-                                                                     const usize col) noexcept {
+constexpr std::pair<usize, usize> ContactMatrixDense<N>::transpose_coords(
+    const usize row, const usize col) noexcept {
   if (row > col) {
     return std::make_pair(row - col, row);
   }
@@ -166,8 +168,8 @@ constexpr std::pair<usize, usize> ContactMatrix<N>::transpose_coords(const usize
 }
 
 template <class N>
-void ContactMatrix<N>::bound_check_coords([[maybe_unused]] const usize row,
-                                          [[maybe_unused]] const usize col) const {
+void ContactMatrixDense<N>::bound_check_coords([[maybe_unused]] const usize row,
+                                               [[maybe_unused]] const usize col) const {
   if constexpr (utils::ndebug_not_defined()) {
     if (MODLE_UNLIKELY(row >= this->ncols() || col >= this->ncols())) {
       throw std::logic_error(
@@ -179,8 +181,8 @@ void ContactMatrix<N>::bound_check_coords([[maybe_unused]] const usize row,
 }
 
 template <class N>
-void ContactMatrix<N>::check_for_overflow_on_add(const usize row, const usize col,
-                                                 const N n) const {
+void ContactMatrixDense<N>::check_for_overflow_on_add(const usize row, const usize col,
+                                                      const N n) const {
   assert(n >= 0);
   const auto lo = (std::numeric_limits<N>::min)();
   const auto hi = (std::numeric_limits<N>::max)();
@@ -201,7 +203,7 @@ void ContactMatrix<N>::check_for_overflow_on_add(const usize row, const usize co
 }
 
 template <class N>
-void ContactMatrix<N>::check_for_overflow_on_subtract(usize row, usize col, const N n) const {
+void ContactMatrixDense<N>::check_for_overflow_on_subtract(usize row, usize col, const N n) const {
   assert(n >= 0);
   const auto lo = (std::numeric_limits<N>::min)();
   const auto hi = (std::numeric_limits<N>::max)();
@@ -222,14 +224,14 @@ void ContactMatrix<N>::check_for_overflow_on_subtract(usize row, usize col, cons
 }
 
 template <class N>
-usize ContactMatrix<N>::hash_coordinates(const usize i, const usize j) noexcept {
+usize ContactMatrixDense<N>::hash_coordinates(const usize i, const usize j) noexcept {
   const std::array<usize, 2> buff{i, j};
   return utils::conditional_static_cast<usize>(XXH3_64bits(buff.data(), sizeof(usize) * 2));
 }
 
 template <class N>
-constexpr usize ContactMatrix<N>::compute_number_of_mutexes(const usize rows,
-                                                            const usize cols) noexcept {
+constexpr usize ContactMatrixDense<N>::compute_number_of_mutexes(const usize rows,
+                                                                 const usize cols) noexcept {
   if (rows + cols == 0) {
     return 0;
   }
@@ -241,7 +243,7 @@ constexpr usize ContactMatrix<N>::compute_number_of_mutexes(const usize rows,
 }
 
 template <class N>
-usize ContactMatrix<N>::get_pixel_mutex_idx(const usize row, const usize col) const noexcept {
+usize ContactMatrixDense<N>::get_pixel_mutex_idx(const usize row, const usize col) const noexcept {
   assert(!this->_mtxes.empty());
   assert(this->_mtxes.size() % 2 == 0);
   // equivalent to hash_coordinates(row, col) % this->_mtxes.size() when _mtxes.size() % 2 == 0

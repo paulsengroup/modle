@@ -14,7 +14,7 @@
 #include "modle/common/common.hpp"                         // for usize, bp_t, contacts_t, MODLE...
 #include "modle/common/genextreme_value_distribution.hpp"  // for genextreme_value_distribution
 #include "modle/common/random.hpp"                         // for PRNG_t, uniform_int_distribution
-#include "modle/contact_matrix_dense.hpp"                  // for ContactMatrix
+#include "modle/contact_matrix_dense.hpp"                  // for ContactMatrixDense
 #include "modle/extrusion_factors.hpp"                     // for Lef, ExtrusionUnit
 #include "modle/genome.hpp"                                // for Chromosome
 
@@ -123,7 +123,7 @@ void Simulation::sample_and_register_contacts(State& s, usize num_contacts_to_sa
 }
 
 void Simulation::register_contacts_loop(const bp_t start_pos, const bp_t end_pos,
-                                        ContactMatrix<contacts_t>& contacts,
+                                        ContactMatrixDense<contacts_t>& contacts,
                                         const absl::Span<const Lef> lefs,
                                         usize num_contacts_to_register,
                                         random::PRNG_t& rand_eng) const {
@@ -157,7 +157,7 @@ void Simulation::register_contacts_loop(const bp_t start_pos, const bp_t end_pos
 }
 
 void Simulation::register_contacts_tad(bp_t start_pos, bp_t end_pos,
-                                       ContactMatrix<contacts_t>& contacts,
+                                       ContactMatrixDense<contacts_t>& contacts,
                                        absl::Span<const Lef> lefs, usize num_contacts_to_register,
                                        random::PRNG_t& rand_eng) const {
   if (num_contacts_to_register == 0) {

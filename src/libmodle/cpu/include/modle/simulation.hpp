@@ -30,7 +30,7 @@
 #include "modle/common/simulation_config.hpp"           // for Config
 #include "modle/common/suppress_compiler_warnings.hpp"  // for DISABLE_WARNING_POP, DISABLE_WARN...
 #include "modle/common/utils.hpp"                       // for ndebug_defined, XXH3_Deleter, XXH...
-#include "modle/contact_matrix_dense.hpp"               // for ContactMatrix
+#include "modle/contact_matrix_dense.hpp"               // for ContactMatrixDense
 #include "modle/extrusion_barriers.hpp"                 // for ExtrusionBarrier
 #include "modle/extrusion_factors.hpp"                  // for Lef, ExtrusionUnit (ptr only)
 #include "modle/genome.hpp"                             // for Chromosome (ptr only), Genome
@@ -86,7 +86,7 @@ class Simulation : Config {
     bp_t active_window_start{};
     bp_t active_window_end{};
 
-    std::shared_ptr<const ContactMatrix<contacts_t>> reference_contacts{};
+    std::shared_ptr<const ContactMatrixDense<contacts_t>> reference_contacts{};
 
     absl::Span<const bed::BED> feats1{};
     absl::Span<const bed::BED> feats2{};
@@ -162,9 +162,9 @@ class Simulation : Config {
     absl::Span<const bed::BED> feats1{};  // NOLINT
     absl::Span<const bed::BED> feats2{};  // NOLINT
 
-    std::shared_ptr<std::mutex> contacts_mtx{nullptr};                             // NOLINT
-    std::shared_ptr<const ContactMatrix<contacts_t>> reference_contacts{nullptr};  // NOLINT
-    std::shared_ptr<ContactMatrix<contacts_t>> contacts{nullptr};                  // NOLINT
+    std::shared_ptr<std::mutex> contacts_mtx{nullptr};                                  // NOLINT
+    std::shared_ptr<const ContactMatrixDense<contacts_t>> reference_contacts{nullptr};  // NOLINT
+    std::shared_ptr<ContactMatrixDense<contacts_t>> contacts{nullptr};                  // NOLINT
 
     State& operator=(const Task& task);
     State& operator=(const TaskPW& task);
@@ -422,12 +422,12 @@ class Simulation : Config {
   /// in \p lefs whose index is present in \p selected_lef_idx.
   void register_contacts_loop(Chromosome& chrom, absl::Span<const Lef> lefs,
                               usize num_contacts_to_register, random::PRNG_t& rand_eng) const;
-  void register_contacts_loop(bp_t start_pos, bp_t end_pos, ContactMatrix<contacts_t>& contacts,
-                              absl::Span<const Lef> lefs, usize num_contacts_to_register,
-                              random::PRNG_t& rand_eng) const;
+  void register_contacts_loop(bp_t start_pos, bp_t end_pos,
+                              ContactMatrixDense<contacts_t>& contacts, absl::Span<const Lef> lefs,
+                              usize num_contacts_to_register, random::PRNG_t& rand_eng) const;
   void register_contacts_tad(Chromosome& chrom, absl::Span<const Lef> lefs,
                              usize num_contacts_to_register, random::PRNG_t& rand_eng) const;
-  void register_contacts_tad(bp_t start_pos, bp_t end_pos, ContactMatrix<contacts_t>& contacts,
+  void register_contacts_tad(bp_t start_pos, bp_t end_pos, ContactMatrixDense<contacts_t>& contacts,
                              absl::Span<const Lef> lefs, usize num_contacts_to_register,
                              random::PRNG_t& rand_eng) const;
 
