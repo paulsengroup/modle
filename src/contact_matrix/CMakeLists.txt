@@ -6,6 +6,7 @@ find_package(absl CONFIG REQUIRED)
 find_package(Boost CONFIG REQUIRED)
 find_package(cpp-sort CONFIG REQUIRED)
 find_package(fmt CONFIG REQUIRED)
+find_package(libcuckoo CONFIG REQUIRED)
 find_package(xxHash CONFIG REQUIRED)
 
 add_library(cmatrix INTERFACE)
@@ -16,7 +17,8 @@ target_sources(
   INTERFACE ${CMAKE_CURRENT_SOURCE_DIR}/contact_matrix_dense_impl.hpp
             ${CMAKE_CURRENT_SOURCE_DIR}/contact_matrix_dense_safe_impl.hpp
             ${CMAKE_CURRENT_SOURCE_DIR}/contact_matrix_dense_unsafe_impl.hpp
-            ${CMAKE_CURRENT_SOURCE_DIR}/contact_matrix_internal_impl.hpp)
+            ${CMAKE_CURRENT_SOURCE_DIR}/contact_matrix_internal_impl.hpp
+            ${CMAKE_CURRENT_SOURCE_DIR}/contact_matrix_sparse_impl.hpp)
 
 target_include_directories(cmatrix INTERFACE include/)
 
@@ -36,5 +38,6 @@ target_link_system_libraries(
   Boost::headers
   cpp-sort::cpp-sort
   fmt::fmt
+  libcuckoo::libcuckoo
   xxHash::xxHash
   thread-pool)

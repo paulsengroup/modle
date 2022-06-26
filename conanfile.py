@@ -25,6 +25,7 @@ class MoDLE(ConanFile):
               "fmt/8.1.1",
               "hdf5/1.12.1",
               "libarchive/3.6.1",
+              "libcuckoo/0.3.0",
               "lz4/1.9.3",
               "lzo/2.10",
               "range-v3/0.11.0",
