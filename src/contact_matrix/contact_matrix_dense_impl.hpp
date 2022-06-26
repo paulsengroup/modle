@@ -23,6 +23,7 @@
 #include "modle/common/random.hpp"                      // for PRNG, uniform_int_distribution
 #include "modle/common/suppress_compiler_warnings.hpp"  // for DISABLE_WARNING_POP, DISABLE_WARN...
 #include "modle/common/utils.hpp"                       // for ndebug_not_defined, next_pow2
+#include "modle/internal/contact_matrix_internal.hpp"
 
 namespace modle {
 
@@ -33,37 +34,18 @@ ContactMatrixDense<N>::ContactMatrixDense(const ContactMatrixDense<N> &other)
       _contacts(other._contacts),
       _mtxes(compute_number_of_mutexes(this->nrows(), this->ncols())),
       _tot_contacts(other._tot_contacts.load()),
+      _nnz(other._nnz.load()),
       _global_stats_outdated(other._global_stats_outdated.load()),
       _updates_missed(other._updates_missed.load()) {}
 
 template <class N>
-template <bool fill_with_random_numbers, u64 seed>
 ContactMatrixDense<N>::ContactMatrixDense(const usize nrows, const usize ncols)
     : _nrows(std::min(nrows, ncols)),
       _ncols(ncols),
       _contacts(_nrows * _ncols + 1, N(0)),
-      _mtxes(compute_number_of_mutexes(this->nrows(), this->ncols())) {
-  if constexpr (fill_with_random_numbers) {
-    auto rand_eng = random::PRNG(seed);
-
-    auto dist = []() {
-      if constexpr (std::is_floating_point_v<N>) {
-        return random::uniform_real_distribution<N>{0, 65553};
-      } else {
-        u64 max_ = std::min(u64(65553), static_cast<u64>((std::numeric_limits<N>::max)()));
-        return random::uniform_int_distribution<N>{0, static_cast<N>(max_)};
-      }
-    }();
-    for (usize i = 0; i < _ncols; ++i) {
-      for (usize j = i; j < i + _nrows && j < _ncols; ++j) {
-        this->set(i, j, dist(rand_eng));
-      }
-    }
-  }
-}
+      _mtxes(compute_number_of_mutexes(this->nrows(), this->ncols())) {}
 
 template <class N>
-template <bool fill_with_random_numbers, u64 seed>
 ContactMatrixDense<N>::ContactMatrixDense(const bp_t length, const bp_t diagonal_width,
                                           const bp_t bin_size)
     : ContactMatrixDense((diagonal_width + bin_size - 1) / bin_size,
@@ -77,8 +59,45 @@ ContactMatrixDense<N>::ContactMatrixDense(const absl::Span<const N> contacts, co
       _ncols(ncols),
       _contacts(contacts.begin(), contacts.end()),
       _mtxes(compute_number_of_mutexes(this->nrows(), this->ncols())),
-      _updates_missed(static_cast<i64>(updates_missed)),
-      _tot_contacts(static_cast<i64>(tot_contacts)) {}
+      _tot_contacts(static_cast<i64>(tot_contacts)),
+      _global_stats_outdated(true),
+      _updates_missed(static_cast<i64>(updates_missed)) {
+  assert(_contacts.size() == _nrows * _ncols + 1);
+  if (tot_contacts == 0) {
+    this->unsafe_update_global_stats();
+  }
+}
+
+template <class N>
+ContactMatrixDense<N> ContactMatrixDense<N>::create_random_matrix(usize nrows, usize ncols,
+                                                                  u64 seed) {
+  ContactMatrixDense<N> m(nrows, ncols);
+  auto rand_eng = random::PRNG(seed);
+
+  auto dist = [&rand_eng]() {
+    if constexpr (std::is_floating_point_v<N>) {
+      return random::uniform_real_distribution<N>{0, 65553}(rand_eng);
+    } else {
+      u64 max_ = std::min(u64(65553), static_cast<u64>((std::numeric_limits<N>::max)()));
+      return random::uniform_int_distribution<N>{0, static_cast<N>(max_)}(rand_eng);
+    }
+  };
+
+  for (usize i = 0; i < m._ncols; ++i) {
+    for (usize j = i; j < i + m._nrows && j < m._ncols; ++j) {
+      m.set(i, j, dist());
+    }
+  }
+  return m;
+}
+
+template <class N>
+ContactMatrixDense<N> ContactMatrixDense<N>::create_random_matrix(bp_t length, bp_t diagonal_width,
+                                                                  bp_t bin_size, u64 seed) {
+  return ContactMatrixDense<N>::create_random_matrix((diagonal_width + bin_size - 1) / bin_size,
+                                                     (length + bin_size - 1) / bin_size, seed);
+}
+
 
 template <class N>
 ContactMatrixDense<N> &ContactMatrixDense<N>::operator=(const ContactMatrixDense<N> &other) {
@@ -98,6 +117,7 @@ ContactMatrixDense<N> &ContactMatrixDense<N>::operator=(const ContactMatrixDense
   }
   _mtxes = std::vector<mutex_t>(other._mtxes.size());
   _tot_contacts = other._tot_contacts.load();
+  _nnz = other._nnz.load();
   _global_stats_outdated = other._global_stats_outdated.load();
   _updates_missed = other._updates_missed.load();
 
@@ -159,24 +179,10 @@ absl::Span<N> ContactMatrixDense<N>::get_raw_count_vector() {
 }
 
 template <class N>
-constexpr std::pair<usize, usize> ContactMatrixDense<N>::transpose_coords(
-    const usize row, const usize col) noexcept {
-  if (row > col) {
-    return std::make_pair(row - col, row);
-  }
-  return std::make_pair(col - row, col);
-}
-
-template <class N>
 void ContactMatrixDense<N>::bound_check_coords([[maybe_unused]] const usize row,
                                                [[maybe_unused]] const usize col) const {
   if constexpr (utils::ndebug_not_defined()) {
-    if (MODLE_UNLIKELY(row >= this->ncols() || col >= this->ncols())) {
-      throw std::logic_error(
-          fmt::format(FMT_STRING("Detected an out-of-bound read: attempt to access "
-                                 "item at {}:{} of a matrix of shape {}x{} ({}x{})"),
-                      row, col, this->ncols(), this->ncols(), this->nrows(), this->ncols()));
-    }
+    internal::bound_check_coords(*this, row, col);
   }
 }
 

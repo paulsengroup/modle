@@ -47,33 +47,36 @@ class ContactMatrixDense {
   std::vector<N> _contacts{};
   mutable std::vector<mutex_t> _mtxes{};
   mutable std::atomic<sum_t> _tot_contacts{0};
-  mutable std::atomic<usize> _nnz{npixels()};
+  mutable std::atomic<usize> _nnz{0};
   mutable std::atomic<bool> _global_stats_outdated{false};
   std::atomic<i64> _updates_missed{0};
 
  public:
   // Constructors
-  inline ContactMatrixDense() = default;
+  ContactMatrixDense() = default;
 #if defined(__clang__) && __clang_major__ < 9
-  inline ContactMatrixDense(ContactMatrixDense<N>&& other) = default;
+  ContactMatrixDense(ContactMatrixDense<N>&& other) = default;
 #else
-  inline ContactMatrixDense(ContactMatrixDense<N>&& other) noexcept = default;
+  ContactMatrixDense(ContactMatrixDense<N>&& other) noexcept = default;
 #endif
   inline ContactMatrixDense(const ContactMatrixDense<N>& other);
-  template <bool fill_with_random_numbers = false, u64 seed = 8336046165695760686>
   inline ContactMatrixDense(usize nrows, usize ncols);
-  template <bool fill_with_random_numbers = false, u64 seed = 8336046165695760686>
   inline ContactMatrixDense(bp_t length, bp_t diagonal_width, bp_t bin_size);
   inline ContactMatrixDense(absl::Span<const N> contacts, usize nrows, usize ncols,
                             usize tot_contacts = 0, usize updates_missed = 0);
-  inline ~ContactMatrixDense() = default;
+  ~ContactMatrixDense() = default;
+
+  [[nodiscard]] static inline ContactMatrixDense<N> create_random_matrix(
+      usize nrows, usize ncols, u64 seed = 8336046165695760686ULL);
+  [[nodiscard]] static inline ContactMatrixDense<N> create_random_matrix(
+      bp_t length, bp_t diagonal_width, bp_t bin_size, u64 seed = 8336046165695760686ULL);
 
   // Operators
   inline ContactMatrixDense<N>& operator=(const ContactMatrixDense<N>& other);
 #if defined(__clang__) && __clang_major__ < 9
-  inline ContactMatrixDense<N>& operator=(ContactMatrixDense<N>&& other) = default;
+  ContactMatrixDense<N>& operator=(ContactMatrixDense<N>&& other) = default;
 #else
-  inline ContactMatrixDense<N>& operator=(ContactMatrixDense<N>&& other) noexcept = default;
+  ContactMatrixDense<N>& operator=(ContactMatrixDense<N>&& other) noexcept = default;
 #endif
 
   // Thread-safe count getters and setters
@@ -99,19 +102,19 @@ class ContactMatrixDense {
   [[nodiscard]] inline N unsafe_get_block(usize row, usize col, usize block_size) const;
 
   // Shape/statistics getters
-  [[nodiscard]] inline constexpr usize ncols() const;
-  [[nodiscard]] inline constexpr usize nrows() const;
-  [[nodiscard]] inline constexpr usize npixels() const;
-  [[nodiscard]] inline constexpr usize get_n_of_missed_updates() const noexcept;
+  [[nodiscard]] constexpr usize ncols() const;
+  [[nodiscard]] constexpr usize nrows() const;
+  [[nodiscard]] constexpr usize npixels() const;
+  [[nodiscard]] constexpr usize get_n_of_missed_updates() const noexcept;
   [[nodiscard]] inline double get_fraction_of_missed_updates() const;
   [[nodiscard]] inline sum_t get_tot_contacts() const;
   [[nodiscard]] inline usize get_nnz() const;
   [[nodiscard]] inline double get_avg_contact_density() const;
-  [[nodiscard]] inline constexpr usize get_matrix_size_in_bytes() const;
+  [[nodiscard]] constexpr usize get_matrix_size_in_bytes() const;
   [[nodiscard]] inline N get_min_count() const noexcept;
   [[nodiscard]] inline N get_max_count() const noexcept;
 
-  [[nodiscard]] inline constexpr double unsafe_get_fraction_of_missed_updates() const noexcept;
+  [[nodiscard]] constexpr double unsafe_get_fraction_of_missed_updates() const noexcept;
   [[nodiscard]] inline sum_t unsafe_get_tot_contacts() const noexcept;
   [[nodiscard]] inline usize unsafe_get_nnz() const noexcept;
   [[nodiscard]] inline double unsafe_get_avg_contact_density() const;
@@ -174,8 +177,6 @@ class ContactMatrixDense {
   [[nodiscard]] inline N& unsafe_at(usize i, usize j);
   [[nodiscard]] inline const N& unsafe_at(usize i, usize j) const;
 
-  [[nodiscard]] constexpr static std::pair<usize, usize> transpose_coords(usize row,
-                                                                          usize col) noexcept;
   inline void bound_check_coords(usize row, usize col) const;
   inline void check_for_overflow_on_add(usize row, usize col, N n) const;
   inline void check_for_overflow_on_subtract(usize row, usize col, N n) const;

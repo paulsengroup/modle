@@ -32,7 +32,7 @@ namespace modle {
 
 template <class N>
 N ContactMatrixDense<N>::unsafe_get(const usize row, const usize col) const {
-  const auto [i, j] = transpose_coords(row, col);
+  const auto [i, j] = internal::transpose_coords(row, col);
   this->bound_check_coords(i, j);
 
   if (i >= this->nrows()) {
@@ -52,7 +52,7 @@ template <class N>
 void ContactMatrixDense<N>::unsafe_get_column(const usize col, std::vector<N> &buff,
                                               const usize row_offset) const {
   assert(row_offset <= col);
-  const auto [rowt, colt] = transpose_coords(col - row_offset, col);
+  const auto [rowt, colt] = internal::transpose_coords(col - row_offset, col);
   this->bound_check_coords(rowt, colt);
 
   const auto first_idx = (colt * this->nrows()) + row_offset;
@@ -143,7 +143,7 @@ void ContactMatrixDense<N>::unsafe_get_block(const usize row, const usize col,
 
 template <class N>
 void ContactMatrixDense<N>::unsafe_set(const usize row, const usize col, const N n) {
-  const auto [i, j] = this->transpose_coords(row, col);
+  const auto [i, j] = internal::transpose_coords(row, col);
   this->bound_check_coords(i, j);
 
   if (i > this->nrows()) {
@@ -158,7 +158,7 @@ void ContactMatrixDense<N>::unsafe_set(const usize row, const usize col, const N
 template <class N>
 void ContactMatrixDense<N>::unsafe_add(const usize row, const usize col, const N n) {
   assert(n > 0);
-  const auto [i, j] = transpose_coords(row, col);
+  const auto [i, j] = internal::transpose_coords(row, col);
   this->bound_check_coords(i, j);
 
   if (i > this->nrows()) {
@@ -173,7 +173,7 @@ void ContactMatrixDense<N>::unsafe_add(const usize row, const usize col, const N
 template <class N>
 void ContactMatrixDense<N>::unsafe_subtract(const usize row, const usize col, const N n) {
   assert(n >= 0);
-  const auto [i, j] = transpose_coords(row, col);
+  const auto [i, j] = internal::transpose_coords(row, col);
   this->bound_check_coords(i, j);
 
   if (i > this->nrows()) {
@@ -362,14 +362,12 @@ void ContactMatrixDense<N>::unsafe_resize(const bp_t length, const bp_t diagonal
 
 template <class N>
 N &ContactMatrixDense<N>::unsafe_at(const usize i, const usize j) {
-  // this->bound_check_coords(i, j);
-  return this->_contacts[(j * this->_nrows) + i];
+  return this->_contacts[internal::encode_idx(i, j, this->_nrows)];
 }
 
 template <class N>
 const N &ContactMatrixDense<N>::unsafe_at(const usize i, const usize j) const {
-  // this->bound_check_coords(i, j);
-  return this->_contacts[(j * this->_nrows) + i];
+  return this->_contacts[internal::encode_idx(i, j, this->_nrows)];
 }
 
 template <class N>

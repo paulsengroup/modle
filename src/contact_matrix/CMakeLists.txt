@@ -15,7 +15,8 @@ target_sources(
   cmatrix
   INTERFACE ${CMAKE_CURRENT_SOURCE_DIR}/contact_matrix_dense_impl.hpp
             ${CMAKE_CURRENT_SOURCE_DIR}/contact_matrix_dense_safe_impl.hpp
-            ${CMAKE_CURRENT_SOURCE_DIR}/contact_matrix_dense_unsafe_impl.hpp)
+            ${CMAKE_CURRENT_SOURCE_DIR}/contact_matrix_dense_unsafe_impl.hpp
+            ${CMAKE_CURRENT_SOURCE_DIR}/contact_matrix_internal_impl.hpp)
 
 target_include_directories(cmatrix INTERFACE include/)
 

@@ -16,13 +16,14 @@
 #include "modle/common/suppress_compiler_warnings.hpp"
 #include "modle/common/utils.hpp"                 // for convolve ndebug_defined, ndebug_not_defined
 #include "modle/compressed_io/compressed_io.hpp"  // for CompressedReader
-#include "modle/stats/misc.hpp"                   // for compute_gauss_kernel
+#include "modle/internal/contact_matrix_internal.hpp"  // for transpose_coords
+#include "modle/stats/misc.hpp"                        // for compute_gauss_kernel
 
 namespace modle {
 
 template <class N>
 N ContactMatrixDense<N>::get(const usize row, const usize col) const {
-  const auto [i, j] = transpose_coords(row, col);
+  const auto [i, j] = internal::transpose_coords(row, col);
   this->bound_check_coords(i, j);
 
   if (i >= this->nrows()) {
@@ -35,10 +36,10 @@ N ContactMatrixDense<N>::get(const usize row, const usize col) const {
 
 template <class N>
 void ContactMatrixDense<N>::set(const usize row, const usize col, const N n) {
-  const auto [i, j] = this->transpose_coords(row, col);
+  const auto [i, j] = internal::transpose_coords(row, col);
   this->bound_check_coords(i, j);
 
-  if (i > this->nrows()) {
+  if (i >= this->nrows()) {
     std::atomic_fetch_add_explicit(&this->_updates_missed, i64(1), std::memory_order_relaxed);
     return;
   }
@@ -51,10 +52,10 @@ void ContactMatrixDense<N>::set(const usize row, const usize col, const N n) {
 template <class N>
 void ContactMatrixDense<N>::add(const usize row, const usize col, const N n) {
   assert(n > 0);
-  const auto [i, j] = transpose_coords(row, col);
+  const auto [i, j] = internal::transpose_coords(row, col);
   this->bound_check_coords(i, j);
 
-  if (i > this->nrows()) {
+  if (i >= this->nrows()) {
     std::atomic_fetch_add_explicit(&this->_updates_missed, i64(1), std::memory_order_relaxed);
     return;
   }
@@ -67,10 +68,10 @@ void ContactMatrixDense<N>::add(const usize row, const usize col, const N n) {
 template <class N>
 void ContactMatrixDense<N>::subtract(const usize row, const usize col, const N n) {
   assert(n >= 0);
-  const auto [i, j] = transpose_coords(row, col);
+  const auto [i, j] = internal::transpose_coords(row, col);
   this->bound_check_coords(i, j);
 
-  if (i > this->nrows()) {
+  if (i >= this->nrows()) {
     std::atomic_fetch_add_explicit(&this->_updates_missed, i64(1), std::memory_order_relaxed);
     return;
   }
