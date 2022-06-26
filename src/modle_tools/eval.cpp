@@ -35,7 +35,7 @@
 #include "modle/bed/bed.hpp"        // for BED_tree, BED_tree<>::value_type, Parser
 #include "modle/bigwig/bigwig.hpp"  // for Writer
 #include "modle/common/common.hpp"  // for u32, usize, bp_t, u8, i64
-#include "modle/common/fmt_std_helper.hpp"
+#include "modle/common/fmt_helpers.hpp"
 #include "modle/common/utils.hpp"              // for identity::operator()
 #include "modle/contact_matrix_dense.hpp"      // for ContactMatrixDense
 #include "modle/cooler/cooler.hpp"             // for Cooler, Cooler::READ_ONLY

@@ -20,7 +20,7 @@
 #include <string>       // for string, basic_string
 #include <string_view>  // for string_view
 
-#include "modle/common/fmt_std_helper.hpp"
+#include "modle/common/fmt_helpers.hpp"
 #include "modle/common/numeric_utils.hpp"  // for parse_numeric_or_throw
 #include "modle/common/suppress_compiler_warnings.hpp"
 

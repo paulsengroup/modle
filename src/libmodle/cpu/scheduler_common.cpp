@@ -30,7 +30,7 @@
 
 #include "modle/bed/bed.hpp"        // for BED_tree, BED_tree::size, BED, BED::BED3, BED_...
 #include "modle/common/common.hpp"  // for u32, u8
-#include "modle/common/fmt_std_helper.hpp"
+#include "modle/common/fmt_helpers.hpp"
 #include "modle/common/utils.hpp"                 // for parse_numeric_or_throw
 #include "modle/compressed_io/compressed_io.hpp"  // for Reader
 #include "modle/extrusion_barriers.hpp"           // for ExtrusionBarrier

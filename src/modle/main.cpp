@@ -32,7 +32,7 @@
 
 #include "./cli.hpp"                // for Cli, Cli::subcommand
 #include "modle/common/common.hpp"  // for usize
-#include "modle/common/fmt_std_helper.hpp"
+#include "modle/common/fmt_helpers.hpp"
 #include "modle/common/simulation_config.hpp"  // for Config
 #include "modle/config/version.hpp"            // for str_long
 #include "modle/simulation.hpp"                // for Simulation

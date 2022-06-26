@@ -15,7 +15,7 @@
 #include <tuple>       // for ignore
 
 #include "modle/common/common.hpp"  // for i32, i64, usize
-#include "modle/common/fmt_std_helper.hpp"
+#include "modle/common/fmt_helpers.hpp"
 #include "modle/hdf5/hdf5.hpp"  // for read_attribute, read_numbers, wri...
 
 namespace modle::cooler {

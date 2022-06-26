@@ -40,7 +40,7 @@
 
 #include "modle/bed/bed.hpp"        // for BED, BED_tree, BED_tree::at, BED_tree::c...
 #include "modle/common/common.hpp"  // for bp_t, contacts_t, u64
-#include "modle/common/fmt_std_helper.hpp"
+#include "modle/common/fmt_helpers.hpp"
 #include "modle/common/suppress_compiler_warnings.hpp"  // for DISABLE_WARNING_POP
 #include "modle/compressed_io/compressed_io.hpp"        // for Writer
 #include "modle/contact_matrix_dense.hpp"               // for ContactMatrixDense

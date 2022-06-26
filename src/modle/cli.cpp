@@ -29,7 +29,7 @@
 
 #include "modle/common/cli_utils.hpp"
 #include "modle/common/common.hpp"  // for bp_t, i64
-#include "modle/common/fmt_std_helper.hpp"
+#include "modle/common/fmt_helpers.hpp"
 #include "modle/common/simulation_config.hpp"  // for Config
 #include "modle/common/utils.hpp"              // for parse_numeric_or_throw
 #include "modle/config/version.hpp"            // modle_version_long

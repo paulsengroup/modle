@@ -31,7 +31,7 @@
 #include "modle/bed/bed.hpp"  // for Parser, bed_dialects, str_to_bed_dialect_m...
 #include "modle/common/cli_utils.hpp"
 #include "modle/common/common.hpp"  // for usize
-#include "modle/common/fmt_std_helper.hpp"
+#include "modle/common/fmt_helpers.hpp"
 #include "modle/common/utils.hpp"  // for str_float_to_str_int, ConstMap::begin, Con...
 #include "modle/config/version.hpp"
 #include "modle/cooler/cooler.hpp"             // for Cooler, Cooler::READ_ONLY
