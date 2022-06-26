@@ -4,6 +4,7 @@
 
 find_package(absl CONFIG REQUIRED)
 find_package(Boost CONFIG REQUIRED)
+find_package(bshoshany-thread-pool CONFIG REQUIRED)
 find_package(CLI11 CONFIG REQUIRED)
 find_package(cpp-sort CONFIG REQUIRED)
 find_package(readerwriterqueue CONFIG REQUIRED)
@@ -51,13 +52,13 @@ target_link_system_libraries(
   absl::time
   absl::variant
   Boost::headers
+  bshoshany-thread-pool::bshoshany-thread-pool
   CLI11::CLI11
   cpp-sort::cpp-sort
   fmt::fmt
   readerwriterqueue::readerwriterqueue
   tomlplusplus::tomlplusplus
-  spdlog::spdlog
-  thread-pool)
+  spdlog::spdlog)
 
 target_include_directories(modle_tools PRIVATE include)
 

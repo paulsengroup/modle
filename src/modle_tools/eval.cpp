@@ -16,21 +16,21 @@
 #include <fmt/format.h>                         // for format, make_format_args, vformat_to, FMT...
 #include <spdlog/spdlog.h>                      // for info
 
-#include <algorithm>                    // for all_of, find_if, transform, minmax, max
-#include <cassert>                      // for assert
-#include <cstdio>                       // for stderr
-#include <exception>                    // for exception
-#include <filesystem>                   // for operator<<, path
-#include <future>                       // for future
-#include <iosfwd>                       // for streamsize
-#include <iterator>                     // for insert_iterator, inserter
-#include <memory>                       // for unique_ptr, shared_ptr, __shared_ptr_access
-#include <stdexcept>                    // for runtime_error, overflow_error
-#include <string>                       // for string, basic_string
-#include <string_view>                  // for string_view
-#include <thread_pool/thread_pool.hpp>  // for thread_pool
-#include <utility>                      // for tuple_element<>::type, pair, make_pair
-#include <vector>                       // for vector
+#include <BS_thread_pool.hpp>  // for BS::thread_pool
+#include <algorithm>           // for all_of, find_if, transform, minmax, max
+#include <cassert>             // for assert
+#include <cstdio>              // for stderr
+#include <exception>           // for exception
+#include <filesystem>          // for operator<<, path
+#include <future>              // for future
+#include <iosfwd>              // for streamsize
+#include <iterator>            // for insert_iterator, inserter
+#include <memory>              // for unique_ptr, shared_ptr, __shared_ptr_access
+#include <stdexcept>           // for runtime_error, overflow_error
+#include <string>              // for string, basic_string
+#include <string_view>         // for string_view
+#include <utility>             // for tuple_element<>::type, pair, make_pair
+#include <vector>              // for vector
 
 #include "modle/bed/bed.hpp"        // for BED_tree, BED_tree<>::value_type, Parser
 #include "modle/bigwig/bigwig.hpp"  // for Writer
@@ -664,9 +664,9 @@ void eval_subcmd(const modle::tools::eval_config &c) {
   assert(nrows != 0);
 
   const auto t0 = absl::Now();
-  thread_pool tpool(static_cast<u32>(c.nthreads));
+  BS::thread_pool tpool(static_cast<u32>(c.nthreads));
 
-  std::array<std::future<bool>, 2> return_codes;
+  std::array<std::future<void>, 2> return_codes;
 
   for (const auto &[chrom_name_sv, chrom_range] : chromosomes) {
     const std::string chrom_name{chrom_name_sv};

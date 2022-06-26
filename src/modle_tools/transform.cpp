@@ -17,21 +17,21 @@
 #include <readerwriterqueue/readerwriterqueue.h>
 #include <spdlog/spdlog.h>  // for info
 
-#include <algorithm>                    // for transform, max
-#include <cassert>                      // for assert
-#include <cstdio>                       // for stderr
-#include <exception>                    // for exception
-#include <filesystem>                   // for operator<<, path
-#include <future>                       // for future
-#include <iosfwd>                       // for streamsize
-#include <iterator>                     // for insert_iterator, inserter
-#include <memory>                       // for unique_ptr, shared_ptr, __shared_ptr_access
-#include <stdexcept>                    // for runtime_error, overflow_error
-#include <string>                       // for string, basic_string
-#include <string_view>                  // for string_view
-#include <thread_pool/thread_pool.hpp>  // for thread_pool
-#include <utility>                      // for tuple_element<>::type, pair, make_pair
-#include <vector>                       // for vector
+#include <BS_thread_pool.hpp>  // for BS::thread_pool
+#include <algorithm>           // for transform, max
+#include <cassert>             // for assert
+#include <cstdio>              // for stderr
+#include <exception>           // for exception
+#include <filesystem>          // for operator<<, path
+#include <future>              // for future
+#include <iosfwd>              // for streamsize
+#include <iterator>            // for insert_iterator, inserter
+#include <memory>              // for unique_ptr, shared_ptr, __shared_ptr_access
+#include <stdexcept>           // for runtime_error, overflow_error
+#include <string>              // for string, basic_string
+#include <string_view>         // for string_view
+#include <utility>             // for tuple_element<>::type, pair, make_pair
+#include <vector>              // for vector
 
 #include "modle/bed/bed.hpp"        // for BED_tree, BED_tree<>::value_type, Parser
 #include "modle/bigwig/bigwig.hpp"  // for Writer
@@ -114,7 +114,7 @@ template <class N>
 
 template <class N>
 [[nodiscard]] static ContactMatrix<double> run_gaussian_blur(
-    thread_pool& tpool, std::string_view chrom_name, ContactMatrix<N>& m, const double sigma,
+    BS::thread_pool& tpool, std::string_view chrom_name, ContactMatrix<N>& m, const double sigma,
     const std::pair<double, double> saturation_range) {
   const auto [lower_bound_sat, upper_bound_sat] = saturation_range;
   spdlog::info(FMT_STRING("Applying Gaussian blur with sigma={:.4g} to contacts for {}..."), sigma,
@@ -128,7 +128,7 @@ template <class N>
 
 template <class N>
 [[nodiscard]] static ContactMatrix<double> run_difference_of_gaussians(
-    thread_pool& tpool, std::string_view chrom_name, ContactMatrix<N>& m, const double sigma1,
+    BS::thread_pool& tpool, std::string_view chrom_name, ContactMatrix<N>& m, const double sigma1,
     const double sigma2, const std::pair<double, double> saturation_range) {
   const auto [lower_bound_sat, upper_bound_sat] = saturation_range;
   spdlog::info(FMT_STRING("Computing the difference of Gaussians for {} (sigma1={:.4g}; "
@@ -139,7 +139,7 @@ template <class N>
 
 template <class N>
 [[nodiscard]] static ContactMatrix<double> process_chromosome(
-    thread_pool& tpool, const std::string_view chrom_name, const bp_t bin_size,
+    BS::thread_pool& tpool, const std::string_view chrom_name, const bp_t bin_size,
     cooler::Cooler<N>& cooler, const modle::tools::transform_config& c,
     const modle::IITree<double, double>& discretization_ranges) {
   auto t1 = absl::Now();
@@ -210,7 +210,7 @@ void transform_subcmd(const modle::tools::transform_config& c) {
                                            bin_size, max_chrom_name_size);
   }
 
-  thread_pool tpool(static_cast<u32>(c.nthreads));
+  BS::thread_pool tpool(static_cast<u32>(c.nthreads));
 
   const auto t0 = absl::Now();
   spdlog::info(FMT_STRING("Transforming contacts from file {}..."), input_cooler.get_path());

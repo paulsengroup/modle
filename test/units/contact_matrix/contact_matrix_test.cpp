@@ -5,19 +5,19 @@
 #include <absl/strings/str_split.h>  // for SplitIterator, Splitter, StrSplit
 #include <fmt/format.h>              // for format
 
+#include <BS_thread_pool.hpp>                       // for BS::thread_pool
 #include <algorithm>                                // for generate, max
 #include <boost/dynamic_bitset/dynamic_bitset.hpp>  // for dynamic_bitset, dynamic_bitset<>::ref...
 #include <boost/process.hpp>
 #include <catch2/catch_approx.hpp>
 #include <catch2/catch_test_macros.hpp>
 #include <catch2/matchers/catch_matchers_string.hpp>
-#include <filesystem>                   // for path
-#include <stdexcept>                    // for runtime_error
-#include <string>                       // for string
-#include <thread>                       // for sleep_for
-#include <thread_pool/thread_pool.hpp>  // for thread_pool
-#include <utility>                      // for pair, move
-#include <vector>                       // for vector, allocator
+#include <filesystem>  // for path
+#include <stdexcept>   // for runtime_error
+#include <string>      // for string
+#include <thread>      // for sleep_for
+#include <utility>     // for pair, move
+#include <vector>      // for vector, allocator
 
 #include "modle/common/common.hpp"                // for u32
 #include "modle/common/utils.hpp"                 // for parse_numeric_or_throw
@@ -404,7 +404,7 @@ TEST_CASE("CMatrix blur parallel (SciPy)", "[cmatrix][long]") {
   constexpr std::array<double, 3> sigmas{0.5, 1.0, 1.5};
   constexpr std::array<double, 3> cutoffs{3.0, 3.0, 3.0};
 
-  thread_pool tpool;
+  BS::thread_pool tpool;
   for (usize i = 0; i < sigmas.size(); ++i) {
     const auto reference_matrix =
         compute_reference_matrix(input_matrix.ncols(), sigmas[i], cutoffs[i]);
@@ -488,7 +488,7 @@ TEST_CASE("CMatrix difference of gaussians - parallel (SciPy)", "[cmatrix][long]
   const double sigma2_ = 1.6;
   const double trunc_ = 3.0;
 
-  thread_pool tpool;
+  BS::thread_pool tpool;
   const auto reference_matrix =
       compute_reference_matrix(input_matrix.ncols(), sigma1_, sigma2_, trunc_);
   const auto gauss_diff_matrix =
@@ -558,7 +558,7 @@ TEST_CASE("CMatrix pixel locking TSAN", "[cmatrix][long]") {
   };
 
   const auto nthreads = std::max(u32(2), std::thread::hardware_concurrency());
-  thread_pool tpool(nthreads);
+  BS::thread_pool tpool(nthreads);
 
   // Submit nthreads - 1 tasks generating contacts
   std::vector<std::future<usize>> num_contacts_generated(nthreads - 1);
@@ -611,7 +611,7 @@ TEST_CASE("CMatrix global locking TSAN", "[cmatrix][long]") {
   };
 
   const auto nthreads = std::max(u32(2), std::thread::hardware_concurrency());
-  thread_pool tpool(nthreads);
+  BS::thread_pool tpool(nthreads);
 
   // Submit nthreads - 1 tasks generating contacts
   std::vector<std::future<usize>> num_contacts_generated(nthreads - 1);

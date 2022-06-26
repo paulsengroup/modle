@@ -4,6 +4,7 @@
 
 find_package(absl CONFIG REQUIRED)
 find_package(Boost CONFIG REQUIRED)
+find_package(bshoshany-thread-pool CONFIG REQUIRED)
 find_package(concurrentqueue CONFIG REQUIRED)
 find_package(cpp-sort CONFIG REQUIRED)
 find_package(spdlog CONFIG REQUIRED)
@@ -56,12 +57,12 @@ target_link_system_libraries(
   absl::flat_hash_set
   absl::span
   Boost::headers
+  bshoshany-thread-pool::bshoshany-thread-pool
   concurrentqueue::concurrentqueue
   fmt::fmt
   range-v3::range-v3
   spdlog::spdlog
-  xxHash::xxHash
-  thread-pool)
+  xxHash::xxHash)
 
 install(
   TARGETS libmodle_cpu
