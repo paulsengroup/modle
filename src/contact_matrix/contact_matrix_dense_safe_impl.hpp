@@ -26,7 +26,7 @@ N ContactMatrixDense<N>::get(const usize row, const usize col) const {
   const auto [i, j] = internal::transpose_coords(row, col);
   this->bound_check_coords(i, j);
 
-  if (i >= this->nrows()) {
+  if (i > this->nrows()) {
     return 0;
   }
 
@@ -39,7 +39,7 @@ void ContactMatrixDense<N>::set(const usize row, const usize col, const N n) {
   const auto [i, j] = internal::transpose_coords(row, col);
   this->bound_check_coords(i, j);
 
-  if (i >= this->nrows()) {
+  if (i > this->nrows()) {
     std::atomic_fetch_add_explicit(&this->_updates_missed, i64(1), std::memory_order_relaxed);
     return;
   }
@@ -55,7 +55,7 @@ void ContactMatrixDense<N>::add(const usize row, const usize col, const N n) {
   const auto [i, j] = internal::transpose_coords(row, col);
   this->bound_check_coords(i, j);
 
-  if (i >= this->nrows()) {
+  if (i > this->nrows()) {
     std::atomic_fetch_add_explicit(&this->_updates_missed, i64(1), std::memory_order_relaxed);
     return;
   }
@@ -71,7 +71,7 @@ void ContactMatrixDense<N>::subtract(const usize row, const usize col, const N n
   const auto [i, j] = internal::transpose_coords(row, col);
   this->bound_check_coords(i, j);
 
-  if (i >= this->nrows()) {
+  if (i > this->nrows()) {
     std::atomic_fetch_add_explicit(&this->_updates_missed, i64(1), std::memory_order_relaxed);
     return;
   }

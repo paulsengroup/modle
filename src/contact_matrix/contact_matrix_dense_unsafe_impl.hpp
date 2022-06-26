@@ -35,7 +35,7 @@ N ContactMatrixDense<N>::unsafe_get(const usize row, const usize col) const {
   const auto [i, j] = internal::transpose_coords(row, col);
   this->bound_check_coords(i, j);
 
-  if (i >= this->nrows()) {
+  if (i > this->nrows()) {
     return 0;
   }
 
