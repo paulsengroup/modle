@@ -4,8 +4,14 @@
 
 #pragma once
 
+#include <absl/time/clock.h>
+#include <fmt/format.h>
+#include <spdlog/spdlog.h>
+
 #include <algorithm>
+#include <fstream>
 #include <numeric>
+#include <ostream>
 
 #include "modle/common/common.hpp"
 #include "modle/internal/contact_matrix_internal.hpp"
@@ -300,6 +306,102 @@ void ContactMatrixSparse<N>::bound_check_coords([[maybe_unused]] const usize row
   if constexpr (utils::ndebug_not_defined()) {
     internal::bound_check_coords(*this, row, col);
   }
+}
+
+template <class N>
+i64 ContactMatrixSparse<N>::serialize(const std::filesystem::path& path) const {
+  std::ofstream ofs(path, std::ios::binary);
+  ofs.exceptions(std::ios::failbit);
+  return this->serialize(ofs);
+}
+
+template <class N>
+i64 ContactMatrixSparse<N>::serialize(std::ostream& out_stream) const {
+  using HeaderT = internal::SerializedContactMatrixHeader<SumT>;
+  using BuffT = internal::SerializationTmpBuffers<N>;
+
+  try {
+    const auto t0 = absl::Now();
+    const auto tables = this->lock_tables();
+
+    HeaderT header{*this};
+    header.chunk_offsets.resize(this->num_blocks());
+    assert(tables.size() == header.chunk_offsets.size());
+
+    // Reserve space for header
+    header.serialize(out_stream);
+
+    BuffT buff{};
+    for (size_t i = 0; i < this->num_blocks(); ++i) {
+      const auto& block = tables[i];
+      buff.reserve(block.size());
+      buff.clear();
+
+      header.chunk_offsets[i] = out_stream.tellp();
+      for (const auto& [idx, count] : block) {
+        assert(idx < this->npixels());
+        buff.push_back(idx, count);
+      }
+
+      buff.sort();
+      buff.serialize(out_stream);
+    }
+
+    // Write header
+    out_stream.seekp(std::ios::beg);
+    header.serialize(out_stream);
+
+    const auto t1 = absl::Now();
+    spdlog::debug(FMT_STRING("Serialized {} contacts in {}"), header.nnz,
+                  absl::FormatDuration(t1 - t0));
+
+  } catch (const std::exception& e) {
+    throw std::runtime_error(
+        fmt::format(FMT_STRING("The following error occurred while serializing an instance of "
+                               "ContactMatrixSparse: {}"),
+                    e.what()));
+  }
+
+  return out_stream.seekp(std::ios::end).tellp();
+}
+
+template <class N>
+ContactMatrixSparse<N> ContactMatrixSparse<N>::deserialize(const std::filesystem::path& path) {
+  std::ifstream ifs(path, std::ios::binary);
+  ifs.exceptions(std::ios::failbit);
+
+  return deserialize(ifs);
+}
+
+template <class N>
+ContactMatrixSparse<N> ContactMatrixSparse<N>::deserialize(std::istream& in_stream) {
+  using HeaderT = internal::SerializedContactMatrixHeader<SumT>;
+  using BuffT = internal::SerializationTmpBuffers<N>;
+
+  const auto header = HeaderT::deserialize(in_stream);
+  BuffT tmp_buff{};
+
+  ContactMatrixSparse<N> m(header.nrows, header.ncols);
+
+  for (const auto& chunk_offset : header.chunk_offsets) {
+    in_stream.seekg(chunk_offset);
+    BuffT::deserialize(in_stream, tmp_buff);
+    tmp_buff.copy_to_buff(m);
+  }
+
+  assert(m.get_n_of_missed_updates() == 0);
+  m._updates_missed = header.updates_missed;
+  if constexpr (utils::ndebug_not_defined()) {
+    m._global_stats_outdated = true;
+    m.update_global_stats(m.lock_tables());
+    assert(m._tot_contacts == header.tot_contacts);
+    assert(m._nnz == header.nnz);
+  }
+
+  m._tot_contacts = header.tot_contacts;
+  m._nnz = header.nnz;
+
+  return m;
 }
 
 }  // namespace modle

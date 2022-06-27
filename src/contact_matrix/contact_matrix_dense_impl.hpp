@@ -4,9 +4,11 @@
 
 #pragma once
 
+#include <absl/time/clock.h>
 #include <absl/types/span.h>  // for Span, MakeConstSpan, MakeSpan
 #include <fmt/format.h>       // for FMT_STRING
-#include <xxhash.h>           // for XXH_INLINE_XXH3_64bits, XXH3_64bits
+#include <spdlog/spdlog.h>
+#include <xxhash.h>  // for XXH_INLINE_XXH3_64bits, XXH3_64bits
 
 #include <algorithm>  // for min, clamp
 #include <array>      // for array
@@ -222,6 +224,97 @@ usize ContactMatrixDense<N>::get_pixel_mutex_idx(const usize row, const usize co
   assert(this->_mtxes.size() % 2 == 0);
   // equivalent to hash_coordinates(row, col) % this->_mtxes.size() when _mtxes.size() % 2 == 0
   return (hash_coordinates(row, col) & (this->_mtxes.size() - 1));
+}
+
+template <class N>
+i64 ContactMatrixDense<N>::serialize(const std::filesystem::path &path) const {
+  std::ofstream ofs(path, std::ios::binary);
+  ofs.exceptions(std::ios::failbit);
+  return serialize(ofs);
+}
+
+template <class N>
+i64 ContactMatrixDense<N>::serialize(std::ostream &out_stream) const {
+  using HeaderT = internal::SerializedContactMatrixHeader<SumT>;
+  using BuffT = internal::SerializationTmpBuffers<N>;
+
+  try {
+    const auto t0 = absl::Now();
+    auto lck = this->lock();
+    HeaderT header{*this};
+
+    // Reserve space for header
+    header.serialize(out_stream);
+
+    BuffT buff{};
+    usize i = 0;
+    for (auto &chunk_offset : header.chunk_offsets) {
+      chunk_offset = out_stream.tellp();
+      buff.clear();
+
+      for (; !buff.full() && i < this->_contacts.size(); ++i) {
+        if (const auto count = this->_contacts[i]; count != 0) {
+          buff.push_back(i, count);
+        }
+      }
+
+      buff.serialize(out_stream);
+    }
+
+    // Write header
+    out_stream.seekp(std::ios::beg);
+    header.serialize(out_stream);
+
+    const auto t1 = absl::Now();
+    spdlog::debug(FMT_STRING("Serialized {} contacts in {}"), header.nnz,
+                  absl::FormatDuration(t1 - t0));
+
+  } catch (const std::exception &e) {
+    throw std::runtime_error(
+        fmt::format(FMT_STRING("The following error occurred while serializing an instance of "
+                               "ContactMatrixDense: {}"),
+                    e.what()));
+  }
+
+  return out_stream.seekp(std::ios::end).tellp();
+}
+
+template <class N>
+ContactMatrixDense<N> ContactMatrixDense<N>::deserialize(const std::filesystem::path &path) {
+  std::ifstream ifs(path, std::ios::binary);
+  ifs.exceptions(std::ios::failbit);
+  return deserialize(ifs);
+}
+
+template <class N>
+ContactMatrixDense<N> ContactMatrixDense<N>::deserialize(std::istream &in_stream) {
+  using HeaderT = internal::SerializedContactMatrixHeader<SumT>;
+  using BuffT = internal::SerializationTmpBuffers<N>;
+
+  const auto header = HeaderT::deserialize(in_stream);
+
+  BuffT tmp_buff{};
+
+  ContactMatrixDense<N> m(header.nrows, header.ncols);
+  for (const auto &offset : header.chunk_offsets) {
+    in_stream.seekg(offset);
+    BuffT::deserialize(in_stream, tmp_buff);
+    tmp_buff.copy_to_buff(m._contacts);
+  }
+
+  assert(m.get_n_of_missed_updates() == 0);
+  m._updates_missed = header.updates_missed;
+  if constexpr (utils::ndebug_not_defined()) {
+    m._global_stats_outdated = true;
+    m.unsafe_update_global_stats();
+    assert(m._tot_contacts == header.tot_contacts);
+    assert(m._nnz == header.nnz);
+  }
+
+  m._tot_contacts = header.tot_contacts;
+  m._nnz = header.nnz;
+
+  return m;
 }
 
 }  // namespace modle

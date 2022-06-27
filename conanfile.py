@@ -71,7 +71,7 @@ class MoDLE(ConanFile):
     self.options["boost"].without_nowide = True
     self.options["boost"].without_program_options = True
     self.options["boost"].without_python = True
-    self.options["boost"].without_serialization = True
+    self.options["boost"].without_serialization = False
     self.options["boost"].without_test = True
     self.options["boost"].without_thread = True
     self.options["boost"].without_timer = True

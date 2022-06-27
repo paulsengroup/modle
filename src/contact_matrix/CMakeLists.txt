@@ -3,7 +3,7 @@
 # SPDX-License-Identifier: MIT
 
 find_package(absl CONFIG REQUIRED)
-find_package(Boost CONFIG REQUIRED)
+find_package(Boost CONFIG REQUIRED COMPONENTS iostreams serialization)
 find_package(cpp-sort CONFIG REQUIRED)
 find_package(fmt CONFIG REQUIRED)
 find_package(libcuckoo CONFIG REQUIRED)
@@ -36,6 +36,8 @@ target_link_system_libraries(
   absl::span
   absl::strings
   Boost::headers
+  Boost::iostreams
+  Boost::serialization
   cpp-sort::cpp-sort
   fmt::fmt
   libcuckoo::libcuckoo

@@ -66,10 +66,10 @@ class ContactMatrixDense {
                             usize tot_contacts = 0, usize updates_missed = 0);
   ~ContactMatrixDense() = default;
 
-  [[nodiscard]] static inline ContactMatrixDense<N> create_random_matrix(
-      usize nrows, usize ncols, u64 seed = 8336046165695760686ULL);
-  [[nodiscard]] static inline ContactMatrixDense<N> create_random_matrix(
-      bp_t length, bp_t diagonal_width, bp_t bin_size, u64 seed = 8336046165695760686ULL);
+  inline i64 serialize(const std::filesystem::path& path) const;
+  inline i64 serialize(std::ostream& out_stream) const;
+  [[nodiscard]] static inline ContactMatrixDense<N> deserialize(const std::filesystem::path& path);
+  [[nodiscard]] static inline ContactMatrixDense<N> deserialize(std::istream& in_stream);
 
   // Operators
   inline ContactMatrixDense<N>& operator=(const ContactMatrixDense<N>& other);

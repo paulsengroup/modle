@@ -53,11 +53,10 @@ class ContactMatrixSparse {
                              ChunkSize max_chunk_size = default_max_chunk_size);
   ~ContactMatrixSparse() = default;
 
-  [[nodiscard]] static inline ContactMatrixSparse<N> create_random_matrix(
-      usize nrows, usize ncols, usize nnz, u64 seed = 8336046165695760686ULL);
-  [[nodiscard]] static inline ContactMatrixSparse<N> create_random_matrix(
-      bp_t length, bp_t diagonal_width, bp_t bin_size, usize nnz,
-      u64 seed = 8336046165695760686ULL);
+  inline i64 serialize(const std::filesystem::path& path) const;
+  inline i64 serialize(std::ostream& out_stream) const;
+  [[nodiscard]] static inline ContactMatrixSparse<N> deserialize(const std::filesystem::path& path);
+  [[nodiscard]] static inline ContactMatrixSparse<N> deserialize(std::istream& in_stream);
 
   // Operators
   inline ContactMatrixSparse<N>& operator=(const ContactMatrixSparse<N>& other);
