@@ -7,6 +7,7 @@
 #include <boost/serialization/access.hpp>
 #include <ostream>
 #include <type_traits>
+#include <vector>
 
 #include "modle/common/common.hpp"  // for utils::ndebug_defined
 #include "modle/common/pixel.hpp"   // for PixelCoordinates
