@@ -40,7 +40,7 @@ void ContactMatrixDense<N>::set(const usize row, const usize col, const N n) {
   this->bound_check_coords(i, j);
 
   if (i > this->nrows()) {
-    std::atomic_fetch_add_explicit(&this->_updates_missed, i64(1), std::memory_order_relaxed);
+    std::atomic_fetch_add_explicit(&this->_updates_missed, usize(1), std::memory_order_relaxed);
     return;
   }
 
@@ -56,7 +56,7 @@ void ContactMatrixDense<N>::add(const usize row, const usize col, const N n) {
   this->bound_check_coords(i, j);
 
   if (i > this->nrows()) {
-    std::atomic_fetch_add_explicit(&this->_updates_missed, i64(1), std::memory_order_relaxed);
+    std::atomic_fetch_add_explicit(&this->_updates_missed, usize(1), std::memory_order_relaxed);
     return;
   }
 
@@ -72,7 +72,7 @@ void ContactMatrixDense<N>::subtract(const usize row, const usize col, const N n
   this->bound_check_coords(i, j);
 
   if (i > this->nrows()) {
-    std::atomic_fetch_add_explicit(&this->_updates_missed, i64(1), std::memory_order_relaxed);
+    std::atomic_fetch_add_explicit(&this->_updates_missed, usize(1), std::memory_order_relaxed);
     return;
   }
 
@@ -107,7 +107,7 @@ double ContactMatrixDense<N>::get_avg_contact_density() const {
 }
 
 template <class N>
-auto ContactMatrixDense<N>::get_tot_contacts() const -> sum_t {
+auto ContactMatrixDense<N>::get_tot_contacts() const -> SumT {
   if (this->_global_stats_outdated) {
     const auto lck = this->lock();
     return this->unsafe_get_tot_contacts();

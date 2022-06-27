@@ -28,16 +28,16 @@ class ContactMatrixSparse {
 
  private:
   using BlockT = libcuckoo::cuckoohash_map<usize, N>;
-  using sum_t = typename std::conditional<std::is_floating_point_v<N>, double, i64>::type;
+  using SumT = typename std::conditional<std::is_floating_point_v<N>, double, i64>::type;
   static constexpr ChunkSize default_max_chunk_size{1'000'000};
   u64 _nrows{0};
   u64 _ncols{0};
   usize _cols_per_chunk{0};
   mutable std::vector<BlockT> _contact_blocks{};
-  mutable std::atomic<sum_t> _tot_contacts{0};
+  mutable std::atomic<SumT> _tot_contacts{0};
   mutable std::atomic<usize> _nnz{0};
   mutable std::atomic<bool> _global_stats_outdated{false};
-  std::atomic<i64> _updates_missed{0};
+  std::atomic<usize> _updates_missed{0};
 
  public:
   ContactMatrixSparse() = default;
@@ -81,11 +81,11 @@ class ContactMatrixSparse {
 
   [[nodiscard]] constexpr usize get_n_of_missed_updates() const noexcept;
   [[nodiscard]] inline double get_fraction_of_missed_updates() const;
-  [[nodiscard]] inline auto get_tot_contacts() const -> sum_t;
+  [[nodiscard]] inline auto get_tot_contacts() const -> SumT;
   [[nodiscard]] inline usize get_nnz() const;
   [[nodiscard]] inline double get_avg_contact_density() const;
 
-  [[nodiscard]] inline auto unsafe_get_tot_contacts() const -> sum_t;
+  [[nodiscard]] inline auto unsafe_get_tot_contacts() const -> SumT;
   [[nodiscard]] inline double unsafe_get_fraction_of_missed_updates() const;
   [[nodiscard]] inline usize unsafe_get_nnz() const;
   [[nodiscard]] inline double unsafe_get_avg_contact_density() const;

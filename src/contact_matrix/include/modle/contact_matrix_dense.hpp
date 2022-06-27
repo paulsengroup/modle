@@ -41,15 +41,15 @@ class ContactMatrixDense {
 
  private:
   using mutex_t = std::mutex;
-  using sum_t = typename std::conditional<std::is_floating_point_v<N>, double, i64>::type;
+  using SumT = typename std::conditional<std::is_floating_point_v<N>, double, i64>::type;
   u64 _nrows{0};
   u64 _ncols{0};
   std::vector<N> _contacts{};
   mutable std::vector<mutex_t> _mtxes{};
-  mutable std::atomic<sum_t> _tot_contacts{0};
+  mutable std::atomic<SumT> _tot_contacts{0};
   mutable std::atomic<usize> _nnz{0};
   mutable std::atomic<bool> _global_stats_outdated{false};
-  std::atomic<i64> _updates_missed{0};
+  std::atomic<usize> _updates_missed{0};
 
  public:
   // Constructors
@@ -107,7 +107,7 @@ class ContactMatrixDense {
   [[nodiscard]] constexpr usize npixels() const;
   [[nodiscard]] constexpr usize get_n_of_missed_updates() const noexcept;
   [[nodiscard]] inline double get_fraction_of_missed_updates() const;
-  [[nodiscard]] inline sum_t get_tot_contacts() const;
+  [[nodiscard]] inline SumT get_tot_contacts() const;
   [[nodiscard]] inline usize get_nnz() const;
   [[nodiscard]] inline double get_avg_contact_density() const;
   [[nodiscard]] constexpr usize get_matrix_size_in_bytes() const;
@@ -115,7 +115,7 @@ class ContactMatrixDense {
   [[nodiscard]] inline N get_max_count() const noexcept;
 
   [[nodiscard]] constexpr double unsafe_get_fraction_of_missed_updates() const noexcept;
-  [[nodiscard]] inline sum_t unsafe_get_tot_contacts() const noexcept;
+  [[nodiscard]] inline SumT unsafe_get_tot_contacts() const noexcept;
   [[nodiscard]] inline usize unsafe_get_nnz() const noexcept;
   [[nodiscard]] inline double unsafe_get_avg_contact_density() const;
   [[nodiscard]] inline N unsafe_get_min_count() const noexcept;

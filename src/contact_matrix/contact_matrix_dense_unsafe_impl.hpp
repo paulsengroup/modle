@@ -147,7 +147,7 @@ void ContactMatrixDense<N>::unsafe_set(const usize row, const usize col, const N
   this->bound_check_coords(i, j);
 
   if (i > this->nrows()) {
-    std::atomic_fetch_add_explicit(&this->_updates_missed, i64(1), std::memory_order_relaxed);
+    std::atomic_fetch_add_explicit(&this->_updates_missed, usize(1), std::memory_order_relaxed);
     return;
   }
 
@@ -162,7 +162,7 @@ void ContactMatrixDense<N>::unsafe_add(const usize row, const usize col, const N
   this->bound_check_coords(i, j);
 
   if (i > this->nrows()) {
-    std::atomic_fetch_add_explicit(&this->_updates_missed, i64(1), std::memory_order_relaxed);
+    std::atomic_fetch_add_explicit(&this->_updates_missed, usize(1), std::memory_order_relaxed);
     return;
   }
 
@@ -177,7 +177,7 @@ void ContactMatrixDense<N>::unsafe_subtract(const usize row, const usize col, co
   this->bound_check_coords(i, j);
 
   if (i > this->nrows()) {
-    std::atomic_fetch_add_explicit(&this->_updates_missed, i64(1), std::memory_order_relaxed);
+    std::atomic_fetch_add_explicit(&this->_updates_missed, usize(1), std::memory_order_relaxed);
     return;
   }
 
@@ -205,7 +205,7 @@ constexpr double ContactMatrixDense<N>::unsafe_get_fraction_of_missed_updates() 
 }
 
 template <class N>
-auto ContactMatrixDense<N>::unsafe_get_tot_contacts() const noexcept -> sum_t {
+auto ContactMatrixDense<N>::unsafe_get_tot_contacts() const noexcept -> SumT {
   if (this->_global_stats_outdated) {
     this->unsafe_update_global_stats();
   }
@@ -512,9 +512,9 @@ void ContactMatrixDense<N>::unsafe_update_global_stats() const noexcept {
   assert(this->_nnz <= this->npixels());
 
   this->_tot_contacts =
-      std::accumulate(this->_contacts.begin(), this->_contacts.end(), sum_t(0),
+      std::accumulate(this->_contacts.begin(), this->_contacts.end(), SumT(0),
                       [&](const auto accumulator, const auto n) {
-                        return accumulator + utils::conditional_static_cast<sum_t>(n);
+                        return accumulator + utils::conditional_static_cast<SumT>(n);
                       });
 
   this->_global_stats_outdated = false;

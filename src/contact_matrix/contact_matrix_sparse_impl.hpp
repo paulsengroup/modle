@@ -8,7 +8,6 @@
 #include <numeric>
 
 #include "modle/common/common.hpp"
-#include "modle/common/random.hpp"
 #include "modle/internal/contact_matrix_internal.hpp"
 
 namespace modle {
@@ -38,53 +37,6 @@ ContactMatrixSparse<N>::ContactMatrixSparse(bp_t length, bp_t diagonal_width, bp
                           (length + bin_size - 1) / bin_size, max_chunk_size) {}
 
 template <class N>
-ContactMatrixSparse<N> ContactMatrixSparse<N>::create_random_matrix(usize nrows, usize ncols,
-                                                                    usize nnz, u64 seed) {
-  ContactMatrixSparse<N> m(nrows, ncols);
-
-  assert(nnz <= m.npixels());
-
-  auto rand_eng = random::PRNG(seed);
-
-  auto contact_gen = [&rand_eng]() {
-    if constexpr (std::is_floating_point_v<N>) {
-      return random::uniform_real_distribution<N>{1, 65553}(rand_eng);
-    } else {
-      u64 max_ = std::min(u64(65553), static_cast<u64>((std::numeric_limits<N>::max)()));
-      return random::uniform_int_distribution<N>{1, static_cast<N>(max_)}(rand_eng);
-    }
-  };
-
-  auto row_gen = [&, nrows = i64(m.nrows() - 1)]() {
-    return random::uniform_int_distribution<i64>{-nrows, nrows}(rand_eng);
-  };
-
-  auto col_gen = [&, ncols = i64(m.ncols())]() {
-    return random::uniform_int_distribution<i64>{0, ncols - 1}(rand_eng);
-  };
-
-  do {
-    for (usize i = m.unsafe_get_nnz(); i < nnz; ++i) {
-      const auto col = col_gen();
-      const auto row = col + row_gen();
-      if (row < 0 || row >= i64(m.ncols())) {
-        continue;
-      }
-
-      const auto [rowt, colt] =
-          internal::transpose_coords(static_cast<usize>(row), static_cast<usize>(col));
-
-      const auto idx = internal::encode_idx(rowt, colt, m.nrows());
-      auto& block = m.get_block(colt);
-      block.insert(idx, contact_gen());
-    }
-    m._global_stats_outdated = true;
-  } while (m.unsafe_get_nnz() < nnz);
-
-  return m;
-}
-
-template <class N>
 ContactMatrixSparse<N>& ContactMatrixSparse<N>::operator=(const ContactMatrixSparse<N>& other) {
   if (this == &other) {
     return *this;
@@ -100,15 +52,6 @@ ContactMatrixSparse<N>& ContactMatrixSparse<N>::operator=(const ContactMatrixSpa
   _updates_missed = other._updates_missed.load();
 
   return *this;
-}
-
-template <class N>
-ContactMatrixSparse<N> ContactMatrixSparse<N>::create_random_matrix(bp_t length,
-                                                                    bp_t diagonal_width,
-                                                                    bp_t bin_size, usize nnz,
-                                                                    u64 seed) {
-  return ContactMatrixSparse<N>::create_random_matrix(
-      (diagonal_width + bin_size - 1) / bin_size, (length + bin_size - 1) / bin_size, nnz, seed);
 }
 
 template <class N>
@@ -151,7 +94,7 @@ N ContactMatrixSparse<N>::get(usize row, usize col) const {
   const auto [rowt, colt] = internal::transpose_coords(row, col);
   this->bound_check_coords(rowt, colt);
 
-  if (rowt >= this->nrows()) {
+  if (rowt > this->nrows()) {
     return 0;
   }
 
@@ -169,7 +112,7 @@ void ContactMatrixSparse<N>::set(usize row, usize col, N n) {
   this->bound_check_coords(rowt, colt);
 
   if (rowt > this->nrows()) {
-    std::atomic_fetch_add_explicit(&this->_updates_missed, i64(1), std::memory_order_relaxed);
+    std::atomic_fetch_add_explicit(&this->_updates_missed, usize(1), std::memory_order_relaxed);
     return;
   }
 
@@ -195,7 +138,7 @@ void ContactMatrixSparse<N>::add(usize row, usize col, N n) {
   this->bound_check_coords(rowt, colt);
 
   if (rowt > this->nrows()) {
-    std::atomic_fetch_add_explicit(&this->_updates_missed, i64(1), std::memory_order_relaxed);
+    std::atomic_fetch_add_explicit(&this->_updates_missed, usize(1), std::memory_order_relaxed);
     return;
   }
 
@@ -214,7 +157,7 @@ void ContactMatrixSparse<N>::subtract(const usize row, const usize col, const N 
   this->bound_check_coords(rowt, colt);
 
   if (rowt > this->nrows()) {
-    std::atomic_fetch_add_explicit(&this->_updates_missed, i64(1), std::memory_order_relaxed);
+    std::atomic_fetch_add_explicit(&this->_updates_missed, usize(1), std::memory_order_relaxed);
     return;
   }
 
@@ -296,10 +239,10 @@ void ContactMatrixSparse<N>::update_global_stats(
   }
 
   usize nnz{0};
-  sum_t tot_contacts{0};
+  SumT tot_contacts{0};
   for (auto& table : tables) {
     tot_contacts +=
-        std::accumulate(table.begin(), table.end(), sum_t(0),
+        std::accumulate(table.begin(), table.end(), SumT(0),
                         [](auto accumulator, const auto& it) { return accumulator + it.second; });
     nnz += table.size();
   }
@@ -309,7 +252,7 @@ void ContactMatrixSparse<N>::update_global_stats(
 }
 
 template <class N>
-auto ContactMatrixSparse<N>::unsafe_get_tot_contacts() const -> sum_t {
+auto ContactMatrixSparse<N>::unsafe_get_tot_contacts() const -> SumT {
   if (this->_global_stats_outdated) {
     this->update_global_stats(this->lock_tables());
   }
@@ -317,7 +260,7 @@ auto ContactMatrixSparse<N>::unsafe_get_tot_contacts() const -> sum_t {
 }
 
 template <class N>
-auto ContactMatrixSparse<N>::get_tot_contacts() const -> sum_t {
+auto ContactMatrixSparse<N>::get_tot_contacts() const -> SumT {
   auto table_locks = this->lock_tables();
   if (this->_global_stats_outdated) {
     this->update_global_stats(table_locks);

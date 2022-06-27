@@ -7,6 +7,7 @@
 #include <catch2/catch_test_macros.hpp>
 
 #include "modle/common/common.hpp"  // for usize
+#include "modle/common/random.hpp"
 
 namespace modle::test::cmatrix {
 
@@ -44,6 +45,25 @@ TEST_CASE("CMatrix internal: decode_idx", "[cmatrix][short]") {
 
   const auto c2 = internal::decode_idx(9, nrows);
   CHECK(c2 == PixelCoordinates{1, 2});
+}
+
+// NOLINTNEXTLINE(readability-function-cognitive-complexity)
+TEST_CASE("CMatrix internal: encode/decode roundtrip", "[cmatrix][short]") {
+  constexpr usize nrows = 100;
+  constexpr usize ncols = 5000;
+
+  auto rand_eng = random::PRNG(1234567890ULL);
+  for (usize i = 0; i < 1'000'000; ++i) {
+    const auto col = random::uniform_int_distribution<usize>{0, ncols - 1}(rand_eng);
+    const auto row =
+        std::min(col + random::uniform_int_distribution<usize>{0, nrows - 1}(rand_eng), ncols - 1);
+
+    const auto coordst = internal::transpose_coords(row, col);
+    const auto idx = internal::encode_idx(coordst, nrows);
+    CHECK(idx < nrows * ncols);
+    const auto coordst_decoded = internal::decode_idx(idx, nrows);
+    CHECK(coordst_decoded == coordst);
+  }
 }
 
 }  // namespace modle::test::cmatrix

@@ -20,7 +20,6 @@
 #include <utility>       // for make_pair, pair
 
 #include "modle/common/common.hpp"                      // for usize, u64, bp_t, i64
-#include "modle/common/random.hpp"                      // for PRNG, uniform_int_distribution
 #include "modle/common/suppress_compiler_warnings.hpp"  // for DISABLE_WARNING_POP, DISABLE_WARN...
 #include "modle/common/utils.hpp"                       // for ndebug_not_defined, next_pow2
 #include "modle/internal/contact_matrix_internal.hpp"
@@ -61,43 +60,12 @@ ContactMatrixDense<N>::ContactMatrixDense(const absl::Span<const N> contacts, co
       _mtxes(compute_number_of_mutexes(this->nrows(), this->ncols())),
       _tot_contacts(static_cast<i64>(tot_contacts)),
       _global_stats_outdated(true),
-      _updates_missed(static_cast<i64>(updates_missed)) {
+      _updates_missed(updates_missed) {
   assert(_contacts.size() == _nrows * _ncols + 1);
   if (tot_contacts == 0) {
     this->unsafe_update_global_stats();
   }
 }
-
-template <class N>
-ContactMatrixDense<N> ContactMatrixDense<N>::create_random_matrix(usize nrows, usize ncols,
-                                                                  u64 seed) {
-  ContactMatrixDense<N> m(nrows, ncols);
-  auto rand_eng = random::PRNG(seed);
-
-  auto dist = [&rand_eng]() {
-    if constexpr (std::is_floating_point_v<N>) {
-      return random::uniform_real_distribution<N>{0, 65553}(rand_eng);
-    } else {
-      u64 max_ = std::min(u64(65553), static_cast<u64>((std::numeric_limits<N>::max)()));
-      return random::uniform_int_distribution<N>{0, static_cast<N>(max_)}(rand_eng);
-    }
-  };
-
-  for (usize i = 0; i < m._ncols; ++i) {
-    for (usize j = i; j < i + m._nrows && j < m._ncols; ++j) {
-      m.set(i, j, dist());
-    }
-  }
-  return m;
-}
-
-template <class N>
-ContactMatrixDense<N> ContactMatrixDense<N>::create_random_matrix(bp_t length, bp_t diagonal_width,
-                                                                  bp_t bin_size, u64 seed) {
-  return ContactMatrixDense<N>::create_random_matrix((diagonal_width + bin_size - 1) / bin_size,
-                                                     (length + bin_size - 1) / bin_size, seed);
-}
-
 
 template <class N>
 ContactMatrixDense<N> &ContactMatrixDense<N>::operator=(const ContactMatrixDense<N> &other) {
@@ -155,7 +123,7 @@ constexpr usize ContactMatrixDense<N>::npixels() const {
 
 template <class N>
 constexpr usize ContactMatrixDense<N>::get_n_of_missed_updates() const noexcept {
-  return static_cast<usize>(this->_updates_missed.load());
+  return this->_updates_missed.load();
 }
 
 template <class N>

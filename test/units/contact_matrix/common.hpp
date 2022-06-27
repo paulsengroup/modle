@@ -13,6 +13,7 @@
 
 #include "modle/common/common.hpp"
 #include "modle/common/numeric_utils.hpp"
+#include "modle/common/random.hpp"
 #include "modle/compressed_io/compressed_io.hpp"
 
 namespace modle::test::cmatrix {
@@ -70,5 +71,41 @@ template <class ContactMatrixT>
     }
   }
   return m;
+}
+
+template <class ContactMatrix>
+inline void create_random_matrix(ContactMatrix& m, usize nnz, u64 seed = 8336046165695760686ULL) {
+  using N = typename ContactMatrix::value_type;
+  assert(nnz <= m.npixels());
+
+  auto rand_eng = random::PRNG(seed);
+
+  auto contact_gen = [&rand_eng]() {
+    if constexpr (std::is_floating_point_v<N>) {
+      return random::uniform_real_distribution<N>{1, 65553}(rand_eng);
+    } else {
+      u64 max_ = std::min(u64(65553), static_cast<u64>((std::numeric_limits<N>::max)()));
+      return random::uniform_int_distribution<N>{1, static_cast<N>(max_)}(rand_eng);
+    }
+  };
+
+  auto row_gen = [&]() {
+    return random::uniform_int_distribution<usize>{0, m.ncols() - 1}(rand_eng);
+  };
+
+  auto col_gen = [&]() {
+    return random::uniform_int_distribution<usize>{0, m.nrows() - 1}(rand_eng);
+  };
+
+  do {
+    for (usize i = m.unsafe_get_nnz(); i < nnz; ++i) {
+      const auto row = row_gen();
+      const auto col = std::min(row + col_gen(), m.ncols() - 1);
+      if (row < m.ncols()) {
+        m.set(row, col, contact_gen());
+        assert(m.get_n_of_missed_updates() == 0);
+      }
+    }
+  } while (m.unsafe_get_nnz() < nnz);
 }
 }  // namespace modle::test::cmatrix
