@@ -210,7 +210,7 @@ constexpr usize ContactMatrixSparse<N>::npixels() const {
 
 template <class N>
 constexpr usize ContactMatrixSparse<N>::get_n_of_missed_updates() const noexcept {
-  return static_cast<usize>(this->_updates_missed.load());
+  return this->_updates_missed.load();
 }
 
 template <class N>

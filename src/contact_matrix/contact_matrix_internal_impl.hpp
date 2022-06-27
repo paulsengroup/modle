@@ -279,7 +279,7 @@ void SerializationTmpBuffers<N>::serialize(BoostArchive& ar,
 
 template <class N>
 constexpr usize SerializationTmpBuffers<N>::compute_size_from_bytes(usize bytes) noexcept {
-  constexpr usize idx_size = sizeof(decltype(_idx_buff)::value_type);
+  constexpr usize idx_size = sizeof(typename decltype(_idx_buff)::value_type);
   constexpr usize value_size = sizeof(N);
 
   return std::max(usize(1), bytes / (idx_size + value_size));
