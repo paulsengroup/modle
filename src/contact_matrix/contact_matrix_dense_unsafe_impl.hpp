@@ -347,8 +347,8 @@ void ContactMatrixDense<N>::unsafe_resize(const usize nrows, const usize ncols) 
 
   this->_nrows = std::min(nrows, ncols);
   this->_ncols = ncols;
-  if (this->npixels() > this->_contacts.size()) {
-    this->_contacts.resize(this->npixels(), N(0));
+  if (this->npixels() >= this->_contacts.size()) {
+    this->_contacts.resize(this->npixels() + 1, N(0));
   }
 }
 

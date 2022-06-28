@@ -25,6 +25,9 @@ namespace modle {
 template <class N, class T>
 class IITree;
 
+template <class N>
+class ContactMatrixSerde;
+
 template <class N = contacts_t>
 class ContactMatrixDense {
   static_assert(std::is_arithmetic_v<N>,
@@ -38,6 +41,8 @@ class ContactMatrixDense {
   // class ContactMatrixDense<double>
   template <class M>
   friend class ContactMatrixDense;
+
+  friend class ContactMatrixSerde<N>;
 
  private:
   using mutex_t = std::mutex;
@@ -65,11 +70,6 @@ class ContactMatrixDense {
   inline ContactMatrixDense(absl::Span<const N> contacts, usize nrows, usize ncols,
                             usize tot_contacts = 0, usize updates_missed = 0);
   ~ContactMatrixDense() = default;
-
-  inline i64 serialize(const std::filesystem::path& path) const;
-  inline i64 serialize(std::ostream& out_stream) const;
-  [[nodiscard]] static inline ContactMatrixDense<N> deserialize(const std::filesystem::path& path);
-  [[nodiscard]] static inline ContactMatrixDense<N> deserialize(std::istream& in_stream);
 
   // Operators
   inline ContactMatrixDense<N>& operator=(const ContactMatrixDense<N>& other);

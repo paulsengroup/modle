@@ -13,9 +13,14 @@
 
 namespace modle {
 
+template <class N>
+class ContactMatrixSerde;
+
 template <class N = contacts_t>
 class ContactMatrixSparse {
   static_assert(std::is_arithmetic_v<N>);
+
+  friend class ContactMatrixSerde<N>;
 
  public:
   using value_type = N;
@@ -52,11 +57,6 @@ class ContactMatrixSparse {
   inline ContactMatrixSparse(bp_t length, bp_t diagonal_width, bp_t bin_size,
                              ChunkSize max_chunk_size = default_max_chunk_size);
   ~ContactMatrixSparse() = default;
-
-  inline i64 serialize(const std::filesystem::path& path) const;
-  inline i64 serialize(std::ostream& out_stream) const;
-  [[nodiscard]] static inline ContactMatrixSparse<N> deserialize(const std::filesystem::path& path);
-  [[nodiscard]] static inline ContactMatrixSparse<N> deserialize(std::istream& in_stream);
 
   // Operators
   inline ContactMatrixSparse<N>& operator=(const ContactMatrixSparse<N>& other);
