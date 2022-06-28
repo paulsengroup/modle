@@ -23,11 +23,26 @@ ContactMatrixSparse<N>::ContactMatrixSparse(const ContactMatrixSparse<N>& other)
     : _nrows(other.nrows()),
       _ncols(other.ncols()),
       _cols_per_chunk(other._cols_per_chunk),
-      _contact_blocks(other._contact_blocks),
+      // _contact_blocks(other._contact_blocks),
       _tot_contacts(other._tot_contacts.load()),
       _nnz(other._nnz.load()),
       _global_stats_outdated(other._global_stats_outdated.load()),
-      _updates_missed(other._updates_missed.load()) {}
+      _updates_missed(other._updates_missed.load()) {
+  // Temporary workaround for https://github.com/efficient/libcuckoo/issues/148
+  // All of this is just to avoid calling libcuckoo's map and bucker_container copy
+  // constructor/operator
+  const auto tables = other.lock_tables();
+  _contact_blocks.resize(tables.size());
+
+  for (usize i = 0; i < _contact_blocks.size(); ++i) {
+    const auto& table = tables[i];
+    auto& map = _contact_blocks[i];
+    map.reserve(table.size());
+    for (const auto& [k, v] : table) {
+      map.template insert(k, v);
+    }
+  }
+}
 
 template <class N>
 ContactMatrixSparse<N>::ContactMatrixSparse(usize nrows, usize ncols, ChunkSize max_chunk_size)
@@ -51,11 +66,26 @@ ContactMatrixSparse<N>& ContactMatrixSparse<N>::operator=(const ContactMatrixSpa
   _nrows = other.nrows();
   _ncols = other.ncols();
   _cols_per_chunk = other._cols_per_chunk;
-  _contact_blocks = other._contact_blocks;
+  // _contact_blocks = other._contact_blocks;
   _tot_contacts = other._tot_contacts.load();
   _nnz = other._nnz.load();
   _global_stats_outdated = other._global_stats_outdated.load();
   _updates_missed = other._updates_missed.load();
+
+  // Temporary workaround for https://github.com/efficient/libcuckoo/issues/148
+  // All of this is just to avoid calling libcuckoo's map and bucker_container copy
+  // constructor/operator
+  const auto tables = other.lock_tables();
+  _contact_blocks.resize(tables.size());
+
+  for (usize i = 0; i < _contact_blocks.size(); ++i) {
+    const auto& table = tables[i];
+    auto& map = _contact_blocks[i];
+    map.reserve(table.size());
+    for (const auto& [k, v] : table) {
+      map.template insert(k, v);
+    }
+  }
 
   return *this;
 }
