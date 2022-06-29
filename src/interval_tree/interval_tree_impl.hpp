@@ -405,7 +405,7 @@ T_iterator IITree<N, T>::data_end() {
 
 template <class N, class T>
 I_iterator_const IITree<N, T>::starts_begin() const {
-  return this->_starts.begin();
+  return this->_start.begin();
 }
 
 template <class N, class T>
