@@ -17,26 +17,26 @@
 #include <moodycamel/concurrentqueue.h>          // for ConsumerToken, ProducerToken
 #include <spdlog/spdlog.h>                       // for info
 
-#include <algorithm>                    // for min, max, transform
-#include <array>                        // for array, array<>::value_type
-#include <atomic>                       // for atomic
-#include <cassert>                      // for assert
-#include <cerrno>                       // for errno
-#include <chrono>                       // for microseconds, milliseconds
-#include <cmath>                        // for round
-#include <exception>                    // for exception_ptr, exception, current_exception
-#include <filesystem>                   // for operator<<, path
-#include <fstream>                      // for streamsize, operator|
-#include <iterator>                     // for move_iterator, make_move_iterator
-#include <limits>                       // for numeric_limits
-#include <memory>                       // for shared_ptr, __shared_pt...
-#include <mutex>                        // for mutex, scoped_lock
-#include <stdexcept>                    // for runtime_error
-#include <string>                       // for string, basic_string
-#include <string_view>                  // for string_view
-#include <thread_pool/thread_pool.hpp>  // for thread_pool
-#include <utility>                      // for make_pair, tuple_elemen...
-#include <vector>                       // for vector
+#include <BS_thread_pool.hpp>  // for BS::thread_pool
+#include <algorithm>           // for min, max, transform
+#include <array>               // for array, array<>::value_type
+#include <atomic>              // for atomic
+#include <cassert>             // for assert
+#include <cerrno>              // for errno
+#include <chrono>              // for microseconds, milliseconds
+#include <cmath>               // for round
+#include <exception>           // for exception_ptr, exception, current_exception
+#include <filesystem>          // for operator<<, path
+#include <fstream>             // for streamsize, operator|
+#include <iterator>            // for move_iterator, make_move_iterator
+#include <limits>              // for numeric_limits
+#include <memory>              // for shared_ptr, __shared_pt...
+#include <mutex>               // for mutex, scoped_lock
+#include <stdexcept>           // for runtime_error
+#include <string>              // for string, basic_string
+#include <string_view>         // for string_view
+#include <utility>             // for make_pair, tuple_elemen...
+#include <vector>              // for vector
 
 #include "modle/bed/bed.hpp"        // for BED, BED_tree, BED_tree::at, BED_tree::c...
 #include "modle/common/common.hpp"  // for bp_t, contacts_t, u64
@@ -162,10 +162,7 @@ void Simulation::run_perturbate() {
   }
 
   try {
-    DISABLE_WARNING_PUSH
-    DISABLE_WARNING_SHORTEN_64_TO_32
-    this->_tpool.reset(this->nthreads);
-    DISABLE_WARNING_POP
+    this->_tpool.reset(utils::conditional_static_cast<BS::concurrency_t>(this->nthreads));
     for (u64 tid = 0; tid < this->nthreads; ++tid) {  // Start simulation threads
       this->_tpool.push_task([&, tid]() {
         auto tmp_output_path = this->path_to_output_file_bedpe;

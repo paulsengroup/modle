@@ -14,22 +14,22 @@
 #include <moodycamel/concurrentqueue.h>          // for ConsumerToken, ProducerToken
 #include <spdlog/spdlog.h>                       // for info
 
-#include <algorithm>                    // for max, copy, min, find_if, generate
-#include <atomic>                       // for atomic
-#include <cassert>                      // for assert
-#include <chrono>                       // for microseconds, milliseconds
-#include <cmath>                        // for round
-#include <deque>                        // for deque, operator-, operator!=, _Deque_ite...
-#include <exception>                    // for exception_ptr, exception, current_exception
-#include <filesystem>                   // for path
-#include <iterator>                     // for move_iterator, make_move_iterator
-#include <limits>                       // for numeric_limits
-#include <mutex>                        // for mutex, scoped_lock
-#include <stdexcept>                    // for runtime_error
-#include <thread>                       // IWYU pragma: keep for sleep_for
-#include <thread_pool/thread_pool.hpp>  // for thread_pool
-#include <utility>                      // for pair
-#include <vector>                       // for vector
+#include <BS_thread_pool.hpp>  // for BS::thread_pool
+#include <algorithm>           // for max, copy, min, find_if, generate
+#include <atomic>              // for atomic
+#include <cassert>             // for assert
+#include <chrono>              // for microseconds, milliseconds
+#include <cmath>               // for round
+#include <deque>               // for deque, operator-, operator!=, _Deque_ite...
+#include <exception>           // for exception_ptr, exception, current_exception
+#include <filesystem>          // for path
+#include <iterator>            // for move_iterator, make_move_iterator
+#include <limits>              // for numeric_limits
+#include <mutex>               // for mutex, scoped_lock
+#include <stdexcept>           // for runtime_error
+#include <thread>              // IWYU pragma: keep for sleep_for
+#include <utility>             // for pair
+#include <vector>              // for vector
 
 #include "modle/common/common.hpp"  // for u64
 #include "modle/common/fmt_helpers.hpp"
@@ -47,10 +47,7 @@ void Simulation::run_simulate() {
       std::filesystem::remove(this->path_to_output_file_cool);
     }
   }
-  DISABLE_WARNING_PUSH
-  DISABLE_WARNING_SHORTEN_64_TO_32
-  this->_tpool.reset(this->nthreads + 1);
-  DISABLE_WARNING_POP
+  this->_tpool.reset(utils::conditional_static_cast<BS::concurrency_t>(this->nthreads + 1));
 
   // These are the threads spawned by run_simulate:
   // - 1 thread to write contacts to disk. This thread pops Chromosome* from a std::deque once the

@@ -9,12 +9,12 @@
 #include <absl/types/span.h>  // for Span
 #include <fmt/format.h>       // for format_parse_context, format_error
 
-#include <algorithm>                    // for min
-#include <cassert>                      // for assert
-#include <limits>                       // for numeric_limits
-#include <thread>                       // for thread
-#include <thread_pool/thread_pool.hpp>  // for thread_pool
-#include <type_traits>                  // for declval, decay_t
+#include <BS_thread_pool.hpp>  // for BS::thread_pool
+#include <algorithm>           // for min
+#include <cassert>             // for assert
+#include <limits>              // for numeric_limits
+#include <thread>              // for thread
+#include <type_traits>         // for declval, decay_t
 
 #include "modle/common/common.hpp"                      // for usize, bp_t, i64, u32
 #include "modle/common/random.hpp"                      // for PRNG_t
@@ -89,14 +89,14 @@ void Simulation::select_lefs_to_bind(const absl::Span<const Lef> lefs,
 }
 
 template <typename I>
-thread_pool Simulation::instantiate_thread_pool(I nthreads_, bool clamp_nthreads) {
+BS::thread_pool Simulation::instantiate_thread_pool(I nthreads_, bool clamp_nthreads) {
   static_assert(std::is_integral_v<I>, "nthreads should have an integral type.");
   if (clamp_nthreads) {
-    return thread_pool(std::min(std::thread::hardware_concurrency(),
-                                utils::conditional_static_cast<u32>(nthreads_)));
+    return BS::thread_pool(std::min(std::thread::hardware_concurrency(),
+                                    utils::conditional_static_cast<u32>(nthreads_)));
   }
   assert(nthreads_ > 0);
-  return thread_pool(static_cast<u32>(nthreads_));
+  return BS::thread_pool(static_cast<u32>(nthreads_));
 }
 
 template <class TaskT>

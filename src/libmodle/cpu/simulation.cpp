@@ -16,26 +16,26 @@
 #include <fmt/compile.h>
 #include <spdlog/spdlog.h>  // for info, warn
 
-#include <algorithm>                    // for max, fill, min, copy, clamp
-#include <atomic>                       // for atomic
-#include <cassert>                      // for assert
-#include <chrono>                       // for microseconds
-#include <cmath>                        // for log, round, exp, floor, sqrt
-#include <cstdlib>                      // for abs
-#include <deque>                        // for _Deque_iterator<>::_Self
-#include <filesystem>                   // for operator<<, path
-#include <iosfwd>                       // for streamsize
-#include <limits>                       // for numeric_limits
-#include <memory>                       // for shared_ptr, unique_ptr, make...
-#include <mutex>                        // for mutex
-#include <numeric>                      // for iota
-#include <stdexcept>                    // for runtime_error
-#include <string>                       // for string
-#include <string_view>                  // for string_view
-#include <thread>                       // IWYU pragma: keep for sleep_for
-#include <thread_pool/thread_pool.hpp>  // for thread_pool
-#include <utility>                      // for make_pair, pair
-#include <vector>                       // for vector, vector<>::iterator
+#include <BS_thread_pool.hpp>  // for BS::thread_pool
+#include <algorithm>           // for max, fill, min, copy, clamp
+#include <atomic>              // for atomic
+#include <cassert>             // for assert
+#include <chrono>              // for microseconds
+#include <cmath>               // for log, round, exp, floor, sqrt
+#include <cstdlib>             // for abs
+#include <deque>               // for _Deque_iterator<>::_Self
+#include <filesystem>          // for operator<<, path
+#include <iosfwd>              // for streamsize
+#include <limits>              // for numeric_limits
+#include <memory>              // for shared_ptr, unique_ptr, make...
+#include <mutex>               // for mutex
+#include <numeric>             // for iota
+#include <stdexcept>           // for runtime_error
+#include <string>              // for string
+#include <string_view>         // for string_view
+#include <thread>              // IWYU pragma: keep for sleep_for
+#include <utility>             // for make_pair, pair
+#include <vector>              // for vector, vector<>::iterator
 
 #include "modle/common/common.hpp"  // for bp_t, contacts_t
 #include "modle/common/dna.hpp"     // for dna::REV, dna::FWD
@@ -60,10 +60,7 @@ Simulation::Simulation(const Config& c, bool import_chroms)
                                      path_to_chrom_subranges, path_to_feature_bed_files,
                                      barrier_occupied_stp, barrier_not_occupied_stp)
                             : Genome{}) {
-  DISABLE_WARNING_PUSH
-  DISABLE_WARNING_SHORTEN_64_TO_32
-  _tpool.reset(c.nthreads + 1);
-  DISABLE_WARNING_POP
+  _tpool.reset(utils::conditional_static_cast<BS::concurrency_t>(c.nthreads + 1));
 
   // Override barrier occupancies read from BED file
   if (c.override_extrusion_barrier_occupancy) {
@@ -543,11 +540,8 @@ usize Simulation::release_lefs(const absl::Span<Lef> lefs, const ExtrusionBarrie
   return lefs_released;
 }
 
-thread_pool Simulation::instantiate_thread_pool() const {
-  DISABLE_WARNING_PUSH
-  DISABLE_WARNING_SHORTEN_64_TO_32
-  return {this->nthreads};
-  DISABLE_WARNING_POP
+BS::thread_pool Simulation::instantiate_thread_pool() const {
+  return BS::thread_pool{utils::conditional_static_cast<BS::concurrency_t>(this->nthreads)};
 }
 
 Simulation::Task Simulation::Task::from_string(std::string_view serialized_task, Genome& genome) {

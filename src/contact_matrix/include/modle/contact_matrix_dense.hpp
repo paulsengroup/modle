@@ -6,13 +6,13 @@
 
 #include <absl/types/span.h>  // for Span
 
+#include <BS_thread_pool.hpp>                       // for BS::thread_pool
 #include <atomic>                                   // for atomic
 #include <boost/dynamic_bitset/dynamic_bitset.hpp>  // for dynamic_bitset
 #include <filesystem>                               // for path
 #include <iostream>                                 // for cout, ostream
 #include <limits>                                   // for numeric_limits
 #include <mutex>                                    // for unique_lock, mutex
-#include <thread_pool/thread_pool.hpp>              // for thread_pool
 #include <type_traits>                              // for enable_if_t
 #include <utility>                                  // for pair
 #include <vector>                                   // for vector
@@ -140,10 +140,11 @@ class ContactMatrixDense {
   [[nodiscard]] inline absl::Span<N> get_raw_count_vector();
 
   [[nodiscard]] inline ContactMatrixDense<double> blur(double sigma, double cutoff = 0.005,
-                                                       thread_pool* tpool = nullptr) const;
+                                                       BS::thread_pool* tpool = nullptr) const;
   [[nodiscard]] inline ContactMatrixDense<double> gaussian_diff(
       double sigma1, double sigma2, double min_value = std::numeric_limits<double>::lowest(),
-      double max_value = (std::numeric_limits<double>::max)(), thread_pool* tpool = nullptr) const;
+      double max_value = (std::numeric_limits<double>::max)(),
+      BS::thread_pool* tpool = nullptr) const;
   template <class FP = double, class = std::enable_if_t<std::is_floating_point_v<FP>>>
   [[nodiscard]] inline ContactMatrixDense<FP> unsafe_normalize(double lb = 0.0,
                                                                double ub = 1.0) const;

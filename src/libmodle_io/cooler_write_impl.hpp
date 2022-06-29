@@ -178,12 +178,12 @@ void Cooler<N>::write_or_append_cmatrix_to_file(const ContactMatrixDense<M> *cma
 
     // Total number of contacts
     if constexpr (IS_FP) {
-      this->_sum = utils::conditional_static_cast<sum_t>(
+      this->_sum = utils::conditional_static_cast<SumT>(
           hdf5::has_attribute(*this->_fp, "sum", this->_root_path)
               ? hdf5::read_attribute<double>(*this->_fp, "sum", this->_root_path)
               : 0.0);
     } else {
-      this->_sum = utils::conditional_static_cast<sum_t>(
+      this->_sum = utils::conditional_static_cast<SumT>(
           hdf5::has_attribute(*this->_fp, "sum", this->_root_path)
               ? hdf5::read_attribute_int(*this->_fp, "sum", this->_root_path)
               : 0);
@@ -356,7 +356,7 @@ void Cooler<N>::write_or_append_cmatrix_to_file(const ContactMatrixDense<M> *cma
         hdf5::write_numbers(b.idx_bin1_offset_buff, d[IDX_BIN1], idx_bin1_offset_h5_foffset);
 
     if (cmatrix) {  // Guard against nullptr deref
-      this->_sum += utils::conditional_static_cast<sum_t>(cmatrix->get_tot_contacts());
+      this->_sum += utils::conditional_static_cast<SumT>(cmatrix->get_tot_contacts());
     }
 
     auto &f = *this->_fp;

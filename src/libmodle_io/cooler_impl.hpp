@@ -71,7 +71,6 @@ Cooler<N>::Cooler(std::filesystem::path path_to_file, IO_MODE mode, usize bin_si
       this->_nnz = utils::conditional_static_cast<i64>(
           hdf5::read_attribute_int(*this->_fp, "nnz", this->_root_path));
       if (hdf5::has_attribute(*this->_fp, "sum", this->_root_path)) {
-        using SumT = decltype(this->_sum);
         if constexpr (IS_FP) {
           this->_sum = utils::conditional_static_cast<SumT>(
               hdf5::read_attribute<double>(*this->_fp, "sum", this->_root_path));

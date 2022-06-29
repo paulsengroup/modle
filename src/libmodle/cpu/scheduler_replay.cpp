@@ -14,21 +14,21 @@
 #include <moodycamel/concurrentqueue.h>          // for ConsumerToken, ProducerToken
 #include <spdlog/spdlog.h>                       // for info
 
-#include <algorithm>                    // for max, min
-#include <array>                        // for array, array<>::value_type
-#include <atomic>                       // for atomic
-#include <cassert>                      // for assert
-#include <chrono>                       // for microseconds, milliseconds
-#include <exception>                    // for exception_ptr, exception, current_exception
-#include <filesystem>                   // for exists
-#include <iterator>                     // for move_iterator, make_move_iterator
-#include <memory>                       // for shared_ptr, make_shared, __shared...
-#include <mutex>                        // for mutex, scoped_lock
-#include <stdexcept>                    // for runtime_error
-#include <string>                       // for string
-#include <thread>                       // IWYU pragma: keep for sleep_for
-#include <thread_pool/thread_pool.hpp>  // for thread_pool
-#include <vector>                       // for vector
+#include <BS_thread_pool.hpp>  // for BS::thread_pool
+#include <algorithm>           // for max, min
+#include <array>               // for array, array<>::value_type
+#include <atomic>              // for atomic
+#include <cassert>             // for assert
+#include <chrono>              // for microseconds, milliseconds
+#include <exception>           // for exception_ptr, exception, current_exception
+#include <filesystem>          // for exists
+#include <iterator>            // for move_iterator, make_move_iterator
+#include <memory>              // for shared_ptr, make_shared, __shared...
+#include <mutex>               // for mutex, scoped_lock
+#include <stdexcept>           // for runtime_error
+#include <string>              // for string
+#include <thread>              // IWYU pragma: keep for sleep_for
+#include <vector>              // for vector
 
 #include "modle/common/common.hpp"                // for bp_t, contacts_t, u64
 #include "modle/compressed_io/compressed_io.hpp"  // for Reader, Writer
@@ -48,10 +48,7 @@ void Simulation::run_replay() {
   std::mutex cooler_mutex;
 
   try {
-    DISABLE_WARNING_PUSH
-    DISABLE_WARNING_SHORTEN_64_TO_32
-    this->_tpool.reset(this->nthreads);
-    DISABLE_WARNING_POP
+    this->_tpool.reset(utils::conditional_static_cast<BS::concurrency_t>(this->nthreads));
     for (u64 tid = 0; tid < this->nthreads; ++tid) {  // Start simulation threads
       this->_tpool.push_task([&, tid]() { this->replay_worker(tid, task_queue, cooler_mutex); });
     }

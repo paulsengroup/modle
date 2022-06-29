@@ -95,8 +95,8 @@ class Cooler {
   hsize_t _nbins{0};
   i64 _nchroms{0};
   i64 _nnz{0};
-  using sum_t = typename std::conditional<IS_FP, double, i64>::type;
-  sum_t _sum{0};
+  using SumT = typename std::conditional<IS_FP, double, i64>::type;
+  SumT _sum{0};
 
   enum Groups : u8f { chrom = 0, BIN = 1, PXL = 2, IDX = 3 };
   enum Datasets : u8f {
