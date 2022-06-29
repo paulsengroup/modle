@@ -4,12 +4,12 @@
 
 #pragma once
 
-#include <atomic>                       // for atomic_fetch_add_explicit
-#include <cassert>                      // for assert
-#include <cmath>                        // for sqrt
-#include <fstream>                      // IWYU pragma: keep for ifstream
-#include <thread_pool/thread_pool.hpp>  // for thread_pool, parallelize_loop
-#include <vector>                       // for vector
+#include <BS_thread_pool.hpp>  // for BS::thread_pool, parallelize_loop
+#include <atomic>              // for atomic_fetch_add_explicit
+#include <cassert>             // for assert
+#include <cmath>               // for sqrt
+#include <fstream>             // IWYU pragma: keep for ifstream
+#include <vector>              // for vector
 
 #include "modle/common/common.hpp"  // for usize, i64, u64, bp_t, isize
 #include "modle/common/random.hpp"  // for PRNG, uniform_int_distribution, unifo...
@@ -149,7 +149,7 @@ void ContactMatrix<N>::reset() {
 
 template <class N>
 ContactMatrix<double> ContactMatrix<N>::blur(const double sigma, const double cutoff,
-                                             thread_pool* tpool) const {
+                                             BS::thread_pool* tpool) const {
   ContactMatrix<double> bmatrix(this->nrows(), this->ncols());
   if (this->empty()) {
     return bmatrix;
@@ -172,7 +172,8 @@ ContactMatrix<double> ContactMatrix<N>::blur(const double sigma, const double cu
 
   const auto lck = this->lock();
   if (tpool) {
-    tpool->template parallelize_loop(usize(0), this->ncols(), apply_kernel);
+    auto fut = tpool->template parallelize_loop(usize(0), this->ncols(), apply_kernel);
+    fut.wait();
   } else {
     apply_kernel(0, this->ncols());
   }
@@ -183,7 +184,7 @@ template <class N>
 ContactMatrix<double> ContactMatrix<N>::gaussian_diff(const double sigma1, const double sigma2,
                                                       const double min_value,
                                                       const double max_value,
-                                                      thread_pool* tpool) const {
+                                                      BS::thread_pool* tpool) const {
   assert(sigma1 <= sigma2);
   ContactMatrix<double> bmatrix(this->nrows(), this->ncols());
   if (this->empty()) {
@@ -217,7 +218,8 @@ ContactMatrix<double> ContactMatrix<N>::gaussian_diff(const double sigma1, const
 
   const auto lck = this->lock();
   if (tpool) {
-    tpool->template parallelize_loop(usize(0), this->ncols(), compute_gauss_diff);
+    auto fut = tpool->template parallelize_loop(usize(0), this->ncols(), compute_gauss_diff);
+    fut.wait();
   } else {
     compute_gauss_diff(0, this->ncols());
   }

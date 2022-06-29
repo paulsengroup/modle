@@ -4,6 +4,7 @@
 
 find_package(absl CONFIG REQUIRED)
 find_package(Boost CONFIG REQUIRED)
+find_package(bshoshany-thread-pool CONFIG REQUIRED)
 find_package(cpp-sort CONFIG REQUIRED)
 find_package(fmt CONFIG REQUIRED)
 find_package(xxHash CONFIG REQUIRED)
@@ -31,7 +32,7 @@ target_link_system_libraries(
   absl::span
   absl::strings
   Boost::headers
+  bshoshany-thread-pool::bshoshany-thread-pool
   cpp-sort::cpp-sort
   fmt::fmt
-  xxHash::xxHash
-  thread-pool)
+  xxHash::xxHash)

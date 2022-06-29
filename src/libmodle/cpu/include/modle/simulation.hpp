@@ -10,18 +10,18 @@
 #include <moodycamel/blockingconcurrentqueue.h>  // for BlockingConcurrentQueue
 #include <xxhash.h>                              // for XXH_INLINE_XXH3_createState, XXH3...
 
-#include <atomic>                       // for atomic
-#include <deque>                        // for deque
-#include <exception>                    // for exception_ptr
-#include <filesystem>                   // for path
-#include <limits>                       // for numeric_limits
-#include <memory>                       // for shared_ptr, allocator, unique_ptr
-#include <mutex>                        // for mutex
-#include <string>                       // for string
-#include <string_view>                  // for string_view
-#include <thread_pool/thread_pool.hpp>  // for thread_pool
-#include <utility>                      // for pair
-#include <vector>                       // for vector
+#include <BS_thread_pool.hpp>  // for BS::thread_pool
+#include <atomic>              // for atomic
+#include <deque>               // for deque
+#include <exception>           // for exception_ptr
+#include <filesystem>          // for path
+#include <limits>              // for numeric_limits
+#include <memory>              // for shared_ptr, allocator, unique_ptr
+#include <mutex>               // for mutex
+#include <string>              // for string
+#include <string_view>         // for string_view
+#include <utility>             // for pair
+#include <vector>              // for vector
 
 #include "modle/bed/bed.hpp"                            // for BED (ptr only), BED_tree
 #include "modle/collision_encoding.hpp"                 // for Collision<>
@@ -184,15 +184,16 @@ class Simulation : Config {
   std::atomic<bool> _exception_thrown{false};
   std::vector<std::exception_ptr> _exceptions{};  // NOLINT(bugprone-throw-keyword-missing)
   std::mutex _exceptions_mutex{};
-  thread_pool _tpool;
+  BS::thread_pool _tpool;
 
   static constexpr auto& model_internal_state_log_header = Config::model_internal_state_log_header;
 
   [[nodiscard]] bool ok() const noexcept;
 
-  [[nodiscard]] [[maybe_unused]] thread_pool instantiate_thread_pool() const;
+  [[nodiscard]] [[maybe_unused]] BS::thread_pool instantiate_thread_pool() const;
   template <typename I>
-  [[nodiscard]] inline static thread_pool instantiate_thread_pool(I nthreads, bool clamp_nthreads);
+  [[nodiscard]] inline static BS::thread_pool instantiate_thread_pool(I nthreads,
+                                                                      bool clamp_nthreads);
 
   /// Simulate loop extrusion using the parameters and buffers passed through \p state
   void simulate_one_cell(State& s) const;

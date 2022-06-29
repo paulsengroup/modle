@@ -4,6 +4,7 @@
 
 find_package(absl CONFIG REQUIRED)
 find_package(Boost CONFIG REQUIRED)
+find_package(bshoshany-thread-pool CONFIG REQUIRED)
 find_package(Catch2 CONFIG REQUIRED)
 find_package(fmt CONFIG REQUIRED)
 find_package(HDF5 CONFIG REQUIRED)
@@ -65,11 +66,11 @@ target_link_system_libraries(
   absl::strings
   Boost::filesystem
   Boost::headers
+  bshoshany-thread-pool::bshoshany-thread-pool
   Catch2::Catch2WithMain
   fmt::fmt
   HDF5::HDF5
-  spdlog::spdlog
-  thread-pool)
+  spdlog::spdlog)
 
 file(MAKE_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/Testing/)
 
