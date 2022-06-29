@@ -9,6 +9,7 @@
 
 #include <cstddef>  // IWYU pragma: keep for size_t, ptrdiff_t
 #include <cstdint>  // for i8, i16, i32, i64, u8 ...
+#include <type_traits>
 
 namespace modle {
 namespace utils {
