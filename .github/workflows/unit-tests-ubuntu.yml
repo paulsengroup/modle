@@ -238,7 +238,7 @@ jobs:
                 --schedule-random        \
                 --output-on-failure      \
                 --no-tests=error         \
-                --timeout 120            \
+                --timeout 180            \
                 -j $(nproc)
 
       - name: Run integration tests
@@ -259,31 +259,31 @@ jobs:
       matrix:
         include:
           # Debug builds
-          - { compiler: gcc-9,     os: 'ubuntu-22.04',  generator: Ninja, cmake: '3.22.*', conan: '1.49.*', build_type: Debug, developer_mode: OFF }
-          - { compiler: gcc-10,    os: 'ubuntu-22.04',  generator: Ninja, cmake: '3.22.*', conan: '1.49.*', build_type: Debug, developer_mode: OFF }
-          - { compiler: gcc-11,    os: 'ubuntu-22.04',  generator: Ninja, cmake: '3.22.*', conan: '1.49.*', build_type: Debug, developer_mode: ON }
-          - { compiler: clang-9,   os: 'ubuntu-20.04',  generator: Ninja, cmake: '3.22.*', conan: '1.49.*', build_type: Debug, developer_mode: OFF }
-          - { compiler: clang-10,  os: 'ubuntu-20.04',  generator: Ninja, cmake: '3.22.*', conan: '1.49.*', build_type: Debug, developer_mode: OFF }
-          - { compiler: clang-11,  os: 'ubuntu-22.04',  generator: Ninja, cmake: '3.22.*', conan: '1.49.*', build_type: Debug, developer_mode: OFF }
-          - { compiler: clang-12,  os: 'ubuntu-22.04',  generator: Ninja, cmake: '3.22.*', conan: '1.49.*', build_type: Debug, developer_mode: OFF }
-          - { compiler: clang-13,  os: 'ubuntu-22.04',  generator: Ninja, cmake: '3.22.*', conan: '1.49.*', build_type: Debug, developer_mode: ON }
+          - { compiler: gcc-9,     os: 'ubuntu-22.04',  generator: Ninja, cmake: '3.22.*', conan: '1.50.*', build_type: Debug, developer_mode: OFF }
+          - { compiler: gcc-10,    os: 'ubuntu-22.04',  generator: Ninja, cmake: '3.22.*', conan: '1.50.*', build_type: Debug, developer_mode: OFF }
+          - { compiler: gcc-11,    os: 'ubuntu-22.04',  generator: Ninja, cmake: '3.22.*', conan: '1.50.*', build_type: Debug, developer_mode: ON }
+          - { compiler: clang-9,   os: 'ubuntu-20.04',  generator: Ninja, cmake: '3.22.*', conan: '1.50.*', build_type: Debug, developer_mode: OFF }
+          - { compiler: clang-10,  os: 'ubuntu-20.04',  generator: Ninja, cmake: '3.22.*', conan: '1.50.*', build_type: Debug, developer_mode: OFF }
+          - { compiler: clang-11,  os: 'ubuntu-22.04',  generator: Ninja, cmake: '3.22.*', conan: '1.50.*', build_type: Debug, developer_mode: OFF }
+          - { compiler: clang-12,  os: 'ubuntu-22.04',  generator: Ninja, cmake: '3.22.*', conan: '1.50.*', build_type: Debug, developer_mode: OFF }
+          - { compiler: clang-13,  os: 'ubuntu-22.04',  generator: Ninja, cmake: '3.22.*', conan: '1.50.*', build_type: Debug, developer_mode: ON }
           # Release builds
-          - { compiler: gcc-8,     os: 'ubuntu-20.04',  generator: Ninja, cmake: '3.22.*', conan: '1.49.*', build_type: Release, developer_mode: OFF }
-          - { compiler: gcc-9,     os: 'ubuntu-22.04',  generator: Ninja, cmake: '3.22.*', conan: '1.49.*', build_type: Release, developer_mode: OFF }
-          - { compiler: gcc-10,    os: 'ubuntu-22.04',  generator: Ninja, cmake: '3.22.*', conan: '1.49.*', build_type: Release, developer_mode: ON }
-          - { compiler: gcc-11,    os: 'ubuntu-22.04',  generator: Ninja, cmake: '3.22.*', conan: '1.49.*', build_type: Release, developer_mode: ON }
-          - { compiler: gcc-12,    os: 'ubuntu-22.04',  generator: Ninja, cmake: '3.22.*', conan: '1.49.*', build_type: Release, developer_mode: ON }
-          - { compiler: clang-8,   os: 'ubuntu-20.04',  generator: Ninja, cmake: '3.22.*', conan: '1.49.*', build_type: Release, developer_mode: OFF }
-          - { compiler: clang-9,   os: 'ubuntu-20.04',  generator: Ninja, cmake: '3.22.*', conan: '1.49.*', build_type: Release, developer_mode: OFF }
-          - { compiler: clang-10,  os: 'ubuntu-20.04',  generator: Ninja, cmake: '3.22.*', conan: '1.49.*', build_type: Release, developer_mode: OFF }
-          - { compiler: clang-11,  os: 'ubuntu-22.04',  generator: Ninja, cmake: '3.22.*', conan: '1.49.*', build_type: Release, developer_mode: OFF }
-          - { compiler: clang-12,  os: 'ubuntu-22.04',  generator: Ninja, cmake: '3.22.*', conan: '1.49.*', build_type: Release, developer_mode: ON }
-          - { compiler: clang-13,  os: 'ubuntu-22.04',  generator: Ninja, cmake: '3.22.*', conan: '1.49.*', build_type: Release, developer_mode: ON }
-          - { compiler: clang-14,  os: 'ubuntu-22.04',  generator: Ninja, cmake: '3.22.*', conan: '1.49.*', build_type: Release, developer_mode: ON }
+          - { compiler: gcc-8,     os: 'ubuntu-20.04',  generator: Ninja, cmake: '3.22.*', conan: '1.50.*', build_type: Release, developer_mode: OFF }
+          - { compiler: gcc-9,     os: 'ubuntu-22.04',  generator: Ninja, cmake: '3.22.*', conan: '1.50.*', build_type: Release, developer_mode: OFF }
+          - { compiler: gcc-10,    os: 'ubuntu-22.04',  generator: Ninja, cmake: '3.22.*', conan: '1.50.*', build_type: Release, developer_mode: ON }
+          - { compiler: gcc-11,    os: 'ubuntu-22.04',  generator: Ninja, cmake: '3.22.*', conan: '1.50.*', build_type: Release, developer_mode: ON }
+          - { compiler: gcc-12,    os: 'ubuntu-22.04',  generator: Ninja, cmake: '3.22.*', conan: '1.50.*', build_type: Release, developer_mode: ON }
+          - { compiler: clang-8,   os: 'ubuntu-20.04',  generator: Ninja, cmake: '3.22.*', conan: '1.50.*', build_type: Release, developer_mode: OFF }
+          - { compiler: clang-9,   os: 'ubuntu-20.04',  generator: Ninja, cmake: '3.22.*', conan: '1.50.*', build_type: Release, developer_mode: OFF }
+          - { compiler: clang-10,  os: 'ubuntu-20.04',  generator: Ninja, cmake: '3.22.*', conan: '1.50.*', build_type: Release, developer_mode: OFF }
+          - { compiler: clang-11,  os: 'ubuntu-22.04',  generator: Ninja, cmake: '3.22.*', conan: '1.50.*', build_type: Release, developer_mode: OFF }
+          - { compiler: clang-12,  os: 'ubuntu-22.04',  generator: Ninja, cmake: '3.22.*', conan: '1.50.*', build_type: Release, developer_mode: ON }
+          - { compiler: clang-13,  os: 'ubuntu-22.04',  generator: Ninja, cmake: '3.22.*', conan: '1.50.*', build_type: Release, developer_mode: ON }
+          - { compiler: clang-14,  os: 'ubuntu-22.04',  generator: Ninja, cmake: '3.22.*', conan: '1.50.*', build_type: Release, developer_mode: ON }
           # Make sure project builds with make
-          - { compiler: clang-14,  os: 'ubuntu-22.04',  generator: "Unix Makefiles", cmake: '3.22.*', conan: '1.49.*', build_type: Release, developer_mode: OFF }
+          - { compiler: clang-14,  os: 'ubuntu-22.04',  generator: "Unix Makefiles", cmake: '3.22.*', conan: '1.50.*', build_type: Release, developer_mode: OFF }
           # Make sure project builds with CMake 3.18
-          - { compiler: clang-14,  os: 'ubuntu-22.04',  generator: Ninja, cmake: '3.18.4', conan: '1.49.*', build_type: Release, developer_mode: OFF }
+          - { compiler: clang-14,  os: 'ubuntu-22.04',  generator: Ninja, cmake: '3.18.4', conan: '1.50.*', build_type: Release, developer_mode: OFF }
           # Make sure project builds with Conan 1.45
           - { compiler: clang-14,  os: 'ubuntu-22.04',  generator: Ninja, cmake: '3.22.*', conan: '1.45.*', build_type: Release, developer_mode: OFF }
 
@@ -367,7 +367,7 @@ jobs:
                 --schedule-random   \
                 --output-on-failure \
                 --no-tests=error    \
-                --timeout 120       \
+                --timeout 180       \
                 -j $(nproc)
 
       - name: Run integration tests
