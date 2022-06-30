@@ -39,7 +39,7 @@
 
 #include "modle/common/common.hpp"  // for bp_t, contacts_t
 #include "modle/common/dna.hpp"     // for dna::REV, dna::FWD
-#include "modle/common/fmt_std_helper.hpp"
+#include "modle/common/fmt_helpers.hpp"
 #include "modle/common/genextreme_value_distribution.hpp"  // for genextreme_value_distribution
 #include "modle/common/random.hpp"             // for bernoulli_trial, poisson_distribution
 #include "modle/common/random_sampling.hpp"    // for random_sample

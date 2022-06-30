@@ -18,19 +18,19 @@
 #include <type_traits>   // for enable_if_t, remove_cv_t
 #include <vector>        // for vector
 
-#include "modle/bed/bed.hpp"             // for BED (ptr only), BED_tree, BED_tree<>::value_type
-#include "modle/common/common.hpp"       // for bp_t, contacts_t, u64, u32, u8
-#include "modle/common/utils.hpp"        // for ndebug_defined
-#include "modle/contacts.hpp"            // for ContactMatrix
-#include "modle/extrusion_barriers.hpp"  // for ExtrusionBarrier
-#include "modle/interval_tree.hpp"       // for IITree, IITree::IITree<I, T>
+#include "modle/bed/bed.hpp"               // for BED (ptr only), BED_tree, BED_tree<>::value_type
+#include "modle/common/common.hpp"         // for bp_t, contacts_t, u64, u32, u8
+#include "modle/common/utils.hpp"          // for ndebug_defined
+#include "modle/contact_matrix_dense.hpp"  // for ContactMatrixDense
+#include "modle/extrusion_barriers.hpp"    // for ExtrusionBarrier
+#include "modle/interval_tree.hpp"         // for IITree, IITree::IITree<I, T>
 
 namespace modle {
 
 struct ExtrusionBarrier;
 
 class Chromosome {
-  using contact_matrix_t = ContactMatrix<contacts_t>;
+  using contact_matrix_t = ContactMatrixDense<contacts_t>;
   using bed_tree_value_t = bed::BED_tree<>::value_type;
   friend class Genome;
 

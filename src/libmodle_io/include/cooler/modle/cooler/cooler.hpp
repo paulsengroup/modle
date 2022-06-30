@@ -27,12 +27,12 @@
 #include <utility>      // for pair
 #include <vector>       // for vector
 
-#include "modle/common/common.hpp"  // for i64, i32, u8f, u32
-#include "modle/contacts.hpp"       // for ContactMatrix
+#include "modle/common/common.hpp"         // for i64, i32, u8f, u32
+#include "modle/contact_matrix_dense.hpp"  // for ContactMatrixDense
 
 namespace modle {
 template <class N>
-class ContactMatrix;
+class ContactMatrixDense;
 }
 
 namespace modle::cooler {
@@ -44,6 +44,7 @@ class Cooler {
  public:
   static constexpr bool IS_FP = std::is_floating_point_v<N>;
   using value_type = std::conditional_t<IS_FP, double, i32>;
+  using PixelT = Pixel<N>;
   enum class IO_MODE : u8f {
     READ_ONLY,
     WRITE_ONLY
@@ -111,16 +112,6 @@ class Cooler {
     IDX_BIN1 = 9,
     IDX_CHR = 10,
     DEFAULT_DATASETS_NR = 11
-  };
-
- public:
-  struct Pixel {
-    usize row;
-    usize col;
-    N count;
-    [[nodiscard]] bool operator==(const Pixel &other) const {
-      return this->row == other.row && this->col == other.col && this->count == other.count;
-    }
   };
 
  private:
@@ -199,30 +190,30 @@ class Cooler {
 
   template <class M, class I,
             class = std::enable_if_t<std::is_arithmetic_v<N> && std::is_integral_v<I>>>
-  inline void write_or_append_cmatrix_to_file(const ContactMatrix<M> &cmatrix,
+  inline void write_or_append_cmatrix_to_file(const ContactMatrixDense<M> &cmatrix,
                                               std::string_view chrom_name, I chrom_start,
                                               I chrom_end, I chrom_length);
 
   template <class M, class I,
             class = std::enable_if_t<std::is_arithmetic_v<N> && std::is_integral_v<I>>>
-  inline void write_or_append_cmatrix_to_file(const ContactMatrix<M> *cmatrix,
+  inline void write_or_append_cmatrix_to_file(const ContactMatrixDense<M> *cmatrix,
                                               std::string_view chrom_name, I chrom_start,
                                               I chrom_end, I chrom_length);
   // Read from file
-  [[nodiscard]] inline ContactMatrix<N> cooler_to_cmatrix(
+  [[nodiscard]] inline ContactMatrixDense<N> cooler_to_cmatrix(
       std::string_view chrom_name, usize nrows, std::pair<usize, usize> chrom_boundaries = {0, -1},
       bool try_common_chrom_prefixes = true, bool prefer_using_balanced_counts = true);
-  [[nodiscard]] inline ContactMatrix<N> cooler_to_cmatrix(
+  [[nodiscard]] inline ContactMatrixDense<N> cooler_to_cmatrix(
       std::string_view chrom_name, usize diagonal_width, usize bin_size,
       std::pair<usize, usize> chrom_boundaries = {0, -1}, bool try_common_chrom_prefixes = true,
       bool prefer_using_balanced_counts = true);
 
-  inline usize stream_contacts_for_chrom(moodycamel::BlockingReaderWriterQueue<Pixel> &queue,
+  inline usize stream_contacts_for_chrom(moodycamel::BlockingReaderWriterQueue<PixelT> &queue,
                                          std::string_view chrom_name, usize nrows,
                                          std::pair<usize, usize> chrom_boundaries = {0, -1},
                                          bool try_common_chrom_prefixes = true,
                                          bool prefer_using_balanced_counts = true);
-  inline usize stream_contacts_for_chrom(moodycamel::BlockingReaderWriterQueue<Pixel> &queue,
+  inline usize stream_contacts_for_chrom(moodycamel::BlockingReaderWriterQueue<PixelT> &queue,
                                          std::string_view chrom_name, usize diagonal_width,
                                          usize bin_size,
                                          std::pair<usize, usize> chrom_boundaries = {0, -1},
@@ -271,22 +262,19 @@ class Cooler {
       std::string_view chrom_name);
   [[nodiscard]] inline std::pair<i64, i64> read_chrom_pixels_boundaries(usize chrom_idx);
 
-  [[nodiscard]] inline ContactMatrix<N> cooler_to_cmatrix(std::pair<hsize_t, hsize_t> bin_range,
-                                                          absl::Span<const i64> bin1_offset_idx,
-                                                          usize nrows,
-                                                          double bias_scaling_factor = 1.0,
-                                                          bool prefer_using_balanced_counts = true);
-  [[nodiscard]] inline ContactMatrix<N> cooler_to_cmatrix(std::pair<hsize_t, hsize_t> bin_range,
-                                                          const std::vector<i64> &bin1_offset_idx,
-                                                          usize nrows, double scaling_factor = 1.0,
-                                                          bool prefer_using_balanced_counts = true);
+  [[nodiscard]] inline ContactMatrixDense<N> cooler_to_cmatrix(
+      std::pair<hsize_t, hsize_t> bin_range, absl::Span<const i64> bin1_offset_idx, usize nrows,
+      double bias_scaling_factor = 1.0, bool prefer_using_balanced_counts = true);
+  [[nodiscard]] inline ContactMatrixDense<N> cooler_to_cmatrix(
+      std::pair<hsize_t, hsize_t> bin_range, const std::vector<i64> &bin1_offset_idx, usize nrows,
+      double scaling_factor = 1.0, bool prefer_using_balanced_counts = true);
 
   [[nodiscard]] inline usize stream_contacts_for_chrom(
-      moodycamel::BlockingReaderWriterQueue<Pixel> &queue, std::pair<hsize_t, hsize_t> bin_range,
+      moodycamel::BlockingReaderWriterQueue<PixelT> &queue, std::pair<hsize_t, hsize_t> bin_range,
       absl::Span<const i64> bin1_offset_idx, usize nrows, double bias_scaling_factor = 1.0,
       bool prefer_using_balanced_counts = true);
   [[nodiscard]] inline usize stream_contacts_for_chrom(
-      moodycamel::BlockingReaderWriterQueue<Pixel> &queue, std::pair<hsize_t, hsize_t> bin_range,
+      moodycamel::BlockingReaderWriterQueue<PixelT> &queue, std::pair<hsize_t, hsize_t> bin_range,
       const std::vector<i64> &bin1_offset_idx, usize nrows, double scaling_factor = 1.0,
       bool prefer_using_balanced_counts = true);
 

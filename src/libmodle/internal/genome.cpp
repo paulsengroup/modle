@@ -27,10 +27,10 @@
 #include "modle/bed/bed.hpp"                  // for BED, Parser, BED_tree, BED_tree::at
 #include "modle/chrom_sizes/chrom_sizes.hpp"  // for Parser
 #include "modle/common/common.hpp"            // for bp_t, u32, u64, u8
-#include "modle/common/fmt_std_helper.hpp"
+#include "modle/common/fmt_helpers.hpp"
 #include "modle/common/suppress_compiler_warnings.hpp"  // for DISABLE_WARNING_PUSH, DISABLE_WAR...
 #include "modle/common/utils.hpp"                       // for XXH3_Deleter, ndebug_defined, XXH...
-#include "modle/contacts.hpp"                           // for ContactMatrix
+#include "modle/contact_matrix_dense.hpp"               // for ContactMatrixDense
 #include "modle/extrusion_barriers.hpp"                 // for ExtrusionBarrier
 
 namespace modle {

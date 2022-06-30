@@ -26,6 +26,7 @@ class MoDLE(ConanFile):
               "fmt/8.1.1",
               "hdf5/1.12.2",
               "libarchive/3.6.1",
+              "libcuckoo/0.3.0",
               "lz4/1.9.3",
               "lzo/2.10",
               "range-v3/0.12.0",
@@ -72,7 +73,7 @@ class MoDLE(ConanFile):
     self.options["boost"].without_nowide = True
     self.options["boost"].without_program_options = True
     self.options["boost"].without_python = True
-    self.options["boost"].without_serialization = True
+    self.options["boost"].without_serialization = False
     self.options["boost"].without_test = True
     self.options["boost"].without_thread = True
     self.options["boost"].without_timer = True

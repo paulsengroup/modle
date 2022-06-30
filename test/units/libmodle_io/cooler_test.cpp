@@ -23,7 +23,7 @@
 #include "modle/common/common.hpp"                // for u64, u32, usize, i64, u8
 #include "modle/common/utils.hpp"                 // for parse_numeric_or_throw
 #include "modle/compressed_io/compressed_io.hpp"  // for Reader
-#include "modle/contacts.hpp"                     // for ContactMatrix
+#include "modle/contact_matrix_dense.hpp"         // for ContactMatrixDense
 #include "modle/test/self_deleting_folder.hpp"    // for SelfDeletingFolder
 
 namespace modle::test {
@@ -70,7 +70,7 @@ TEST_CASE("CMatrix to cooler", "[io][cooler][short]") {
   const u64 nrows = 3;
   const u64 ncols = (end + bin_size - 1) / bin_size;
 
-  ContactMatrix<> cmatrix1{};
+  ContactMatrixDense<> cmatrix1{};
   cmatrix1.unsafe_import_from_txt(input_file);
 
   Cooler(output_file, Cooler::IO_MODE::WRITE_ONLY, bin_size, chrom.size())
@@ -104,7 +104,7 @@ TEST_CASE("CMatrix to cooler - multiple chromosomes", "[io][cooler][short]") {
   const u64 nrows = 3;
   const u64 ncols = (end + bin_size - 1) / bin_size;
 
-  ContactMatrix<> cmatrix1{};
+  ContactMatrixDense<> cmatrix1{};
   cmatrix1.unsafe_import_from_txt(input_file);
 
   {
@@ -223,7 +223,7 @@ TEST_CASE("Cooler to CMatrix and CMatrix to Cooler - all chromosomes", "[io][coo
   const auto chrom_names = c1.get_chrom_names();
   const auto chrom_sizes = c1.get_chrom_sizes();
 
-  std::vector<ContactMatrix<>> matrices;
+  std::vector<ContactMatrixDense<>> matrices;
   const auto max_chrom_name_size =
       std::max_element(chrom_names.begin(), chrom_names.end(), [](const auto& a, const auto& b) {
         return a.size() < b.size();

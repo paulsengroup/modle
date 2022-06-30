@@ -24,10 +24,10 @@
 #include <utility>      // for tuple_element<>::type
 #include <vector>       // for vector
 
-#include "modle/common/fmt_std_helper.hpp"
+#include "modle/common/fmt_helpers.hpp"
 #include "modle/common/genextreme_value_distribution.hpp"  // for genextreme_value_distribution
 #include "modle/common/random.hpp"                         // for PRNG
-#include "modle/contacts.hpp"                              // for ContactMatrix
+#include "modle/contact_matrix_dense.hpp"                  // for ContactMatrixDense
 #include "modle/cooler/cooler.hpp"                         // for Cooler::Pixel, Cooler, Cooler:...
 #include "modle_tools/modle_tools_config.hpp"              // for noisify_config
 #include "modle_tools/tools.hpp"                           // for noisify_subcmd
@@ -35,14 +35,14 @@
 namespace modle::tools {
 
 void noisify_contacts(const noisify_config& c) {
-  using pixel_queue_t = moodycamel::BlockingReaderWriterQueue<modle::cooler::Cooler<>::Pixel>;
+  using pixel_queue_t = moodycamel::BlockingReaderWriterQueue<modle::cooler::Cooler<>::PixelT>;
 
   const auto PIXEL_BATCH_SIZE =
-      modle::cooler::Cooler<>::DEFAULT_HDF5_BUFFER_SIZE / sizeof(modle::cooler::Cooler<>::Pixel);
+      modle::cooler::Cooler<>::DEFAULT_HDF5_BUFFER_SIZE / sizeof(modle::cooler::Cooler<>::PixelT);
   pixel_queue_t pixel_queue(PIXEL_BATCH_SIZE);
-  modle::ContactMatrix<> cmatrix{};
+  modle::ContactMatrixDense<> cmatrix{};
 
-  const auto END_OF_PIXEL_QUEUE = modle::cooler::Cooler<>::Pixel{
+  const auto END_OF_PIXEL_QUEUE = modle::cooler::Cooler<>::PixelT{
       (std::numeric_limits<contacts_t>::max)(), (std::numeric_limits<contacts_t>::max)(),
       (std::numeric_limits<contacts_t>::max)()};
 
@@ -78,7 +78,7 @@ void noisify_contacts(const noisify_config& c) {
 
     cmatrix.unsafe_resize(nrows, ncols);
     cmatrix.unsafe_reset();
-    modle::cooler::Cooler<>::Pixel pixel{};
+    modle::cooler::Cooler<>::PixelT pixel{};
     const auto seed =
         c.seed + std::hash<std::string_view>{}(chrom_name) + std::hash<usize>{}(ncols);
 
@@ -90,10 +90,10 @@ void noisify_contacts(const noisify_config& c) {
       if (pixel == END_OF_PIXEL_QUEUE) {
         break;
       }
-      assert(pixel.row <= pixel.col);
+      assert(pixel.row() <= pixel.col());
       for (usize i = 0; i < pixel.count; ++i) {
-        const auto pos1 = static_cast<double>(pixel.row * bin_size) + genextreme(rang_eng);
-        const auto pos2 = static_cast<double>(pixel.col * bin_size) - genextreme(rang_eng);
+        const auto pos1 = static_cast<double>(pixel.row() * bin_size) + genextreme(rang_eng);
+        const auto pos2 = static_cast<double>(pixel.col() * bin_size) - genextreme(rang_eng);
         const auto bin1 = std::clamp(
             static_cast<usize>(std::round(pos1 / static_cast<double>(bin_size))), 0UL, ncols - 1);
         const auto bin2 = std::clamp(

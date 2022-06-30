@@ -17,7 +17,7 @@
 
 #include "libBigWig/bigWig.h"  // for bwCleanup, bwClose, bwAddIntervalSpanSteps, bwCreateChromList
 #include "modle/common/common.hpp"  // for u32, u64, i32, i64
-#include "modle/common/fmt_std_helper.hpp"
+#include "modle/common/fmt_helpers.hpp"
 
 namespace modle::io::bigwig {
 

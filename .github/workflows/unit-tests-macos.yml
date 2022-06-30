@@ -38,7 +38,7 @@ env:
   CONAN_V2_MODE: "1"
 
 jobs:
-  build-dependencies:
+  build-project:
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false

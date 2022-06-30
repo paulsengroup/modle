@@ -36,10 +36,10 @@
 #include "modle/bed/bed.hpp"        // for BED_tree, BED_tree<>::value_type, Parser
 #include "modle/bigwig/bigwig.hpp"  // for Writer
 #include "modle/common/common.hpp"  // for u32, usize, bp_t, u8, i64
-#include "modle/common/fmt_std_helper.hpp"
+#include "modle/common/fmt_helpers.hpp"
 #include "modle/common/utils.hpp"                 // for identity::operator()
 #include "modle/compressed_io/compressed_io.hpp"  // for Reader
-#include "modle/contacts.hpp"                     // for ContactMatrix
+#include "modle/contact_matrix_dense.hpp"         // for ContactMatrixDense
 #include "modle/cooler/cooler.hpp"                // for Cooler, Cooler::READ_ONLY
 #include "modle/interval_tree.hpp"                // for IITree, IITree::IITree<I, T>, IITree::empty
 #include "modle/stats/correlation.hpp"            // for Pearson, Spearman
@@ -91,8 +91,8 @@ static modle::IITree<double, double> import_discretization_ranges(const std::fil
 }
 
 template <class N>
-[[nodiscard]] static ContactMatrix<N> run_normalization(
-    std::string_view chrom_name, ContactMatrix<N>& m,
+[[nodiscard]] static ContactMatrixDense<N> run_normalization(
+    std::string_view chrom_name, ContactMatrixDense<N>& m,
     const std::pair<double, double> normalization_range,
     const std::pair<double, double> saturation_range) {
   const auto [lower_bound_norm, upper_bound_norm] = normalization_range;
@@ -113,9 +113,9 @@ template <class N>
 }
 
 template <class N>
-[[nodiscard]] static ContactMatrix<double> run_gaussian_blur(
-    BS::thread_pool& tpool, std::string_view chrom_name, ContactMatrix<N>& m, const double sigma,
-    const std::pair<double, double> saturation_range) {
+[[nodiscard]] static ContactMatrixDense<double> run_gaussian_blur(
+    BS::thread_pool& tpool, std::string_view chrom_name, ContactMatrixDense<N>& m,
+    const double sigma, const std::pair<double, double> saturation_range) {
   const auto [lower_bound_sat, upper_bound_sat] = saturation_range;
   spdlog::info(FMT_STRING("Applying Gaussian blur with sigma={:.4g} to contacts for {}..."), sigma,
                chrom_name);
@@ -127,9 +127,9 @@ template <class N>
 }
 
 template <class N>
-[[nodiscard]] static ContactMatrix<double> run_difference_of_gaussians(
-    BS::thread_pool& tpool, std::string_view chrom_name, ContactMatrix<N>& m, const double sigma1,
-    const double sigma2, const std::pair<double, double> saturation_range) {
+[[nodiscard]] static ContactMatrixDense<double> run_difference_of_gaussians(
+    BS::thread_pool& tpool, std::string_view chrom_name, ContactMatrixDense<N>& m,
+    const double sigma1, const double sigma2, const std::pair<double, double> saturation_range) {
   const auto [lower_bound_sat, upper_bound_sat] = saturation_range;
   spdlog::info(FMT_STRING("Computing the difference of Gaussians for {} (sigma1={:.4g}; "
                           "sigma2={:.4g})..."),
@@ -138,7 +138,7 @@ template <class N>
 }
 
 template <class N>
-[[nodiscard]] static ContactMatrix<double> process_chromosome(
+[[nodiscard]] static ContactMatrixDense<double> process_chromosome(
     BS::thread_pool& tpool, const std::string_view chrom_name, const bp_t bin_size,
     cooler::Cooler<N>& cooler, const modle::tools::transform_config& c,
     const modle::IITree<double, double>& discretization_ranges) {
