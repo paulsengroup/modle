@@ -72,7 +72,6 @@ ContactMatrixDense<N> &ContactMatrixDense<N>::operator=(const ContactMatrixDense
     return *this;
   }
 
-  const auto lck1 = this->lock();
   const auto lck2 = other.lock();
   _nrows = other.nrows();
   _ncols = other.ncols();
