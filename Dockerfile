@@ -115,8 +115,7 @@ RUN cd "$src_dir/build"           \
          --schedule-random        \
          --output-on-failure      \
          --no-tests=error         \
-         --timeout 180
-
+         --timeout 180            \
 && rm -rf "$src_dir/test/Testing"
 
 ARG FINAL_BASE_IMAGE
