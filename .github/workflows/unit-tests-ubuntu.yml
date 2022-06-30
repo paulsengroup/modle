@@ -238,7 +238,7 @@ jobs:
                 --schedule-random        \
                 --output-on-failure      \
                 --no-tests=error         \
-                --timeout 120            \
+                --timeout 180            \
                 -j $(nproc)
 
       - name: Run integration tests
@@ -367,7 +367,7 @@ jobs:
                 --schedule-random   \
                 --output-on-failure \
                 --no-tests=error    \
-                --timeout 60        \
+                --timeout 180       \
                 -j $(nproc)
 
       - name: Run integration tests
