@@ -409,11 +409,8 @@ usize Genome::import_barriers(absl::btree_set<Chromosome>& chromosomes,
                          "between 0 and 1, got {:.4g}."),
               record.chrom, record.chrom_start, record.chrom_end, record.score));
         }
-        if (record.strand == '+' || record.strand == '-') {
-          // For now we don't support barriers without strand information
-          chrom.add_extrusion_barrier(record, ctcf_prob_occ_to_occ, ctcf_prob_nocc_to_nocc);
-          ++tot_num_barriers;
-        }
+        chrom.add_extrusion_barrier(record, ctcf_prob_occ_to_occ, ctcf_prob_nocc_to_nocc);
+        ++tot_num_barriers;
       }
     }
     chrom.barriers().make_BST();

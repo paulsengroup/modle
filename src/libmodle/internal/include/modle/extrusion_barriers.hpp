@@ -73,7 +73,7 @@ class ExtrusionBarriers {
   void clear() noexcept;
 
   [[nodiscard]] bp_t pos(usize i) const noexcept;
-  [[nodiscard]] dna::Direction direction(usize i) const noexcept;
+  [[nodiscard]] dna::Direction block_direction(usize i) const noexcept;
   [[nodiscard]] double stp_active(usize i) const noexcept;
   [[nodiscard]] double stp_inactive(usize i) const noexcept;
   [[nodiscard]] auto state(usize i) const noexcept -> State;
@@ -82,7 +82,7 @@ class ExtrusionBarriers {
   [[nodiscard]] double occupancy(usize i) const noexcept;
 
   [[nodiscard]] const std::vector<bp_t>& pos() const noexcept;
-  [[nodiscard]] const std::vector<dna::Direction>& direction() const noexcept;
+  [[nodiscard]] const std::vector<dna::Direction>& block_direction() const noexcept;
   [[nodiscard]] auto stp_active() const noexcept -> const std::vector<TP>&;
   [[nodiscard]] auto stp_inactive() const noexcept -> const std::vector<TP>&;
   [[nodiscard]] auto state() const noexcept -> const std::vector<State>&;
@@ -125,6 +125,11 @@ struct ExtrusionBarrier {
                                                             double occupancy) noexcept;
   static constexpr double compute_occupancy_from_stp(TP stp_active, TP stp_inactive) noexcept;
 };
+
+namespace internal {
+[[nodiscard]] constexpr dna::Direction char_to_strand(char d);
+}  // namespace internal
+
 }  // namespace modle
 
 template <>

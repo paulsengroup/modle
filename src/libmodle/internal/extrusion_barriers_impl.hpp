@@ -13,6 +13,21 @@
 
 namespace modle {
 
+namespace internal {
+[[nodiscard]] constexpr dna::Direction char_to_strand(char d) {
+  switch (d) {
+    case '-':
+      return dna::REV;
+    case '+':
+      return dna::FWD;
+    case '.':
+      return dna::BOTH;
+    default:
+      throw std::runtime_error("Invalid DNA strand \"" + std::string{d} + "\"");
+  }
+}
+}  // namespace internal
+
 template <class BarrierIt, class StateIt>
 ExtrusionBarriers::ExtrusionBarriers(BarrierIt first_barrier, BarrierIt last_barrier,
                                      StateIt first_state, bool sort)
@@ -51,8 +66,9 @@ constexpr ExtrusionBarrier::ExtrusionBarrier(bp_t pos_, TP transition_prob_activ
     : pos(pos_),
       stp_active(transition_prob_active_to_active),
       stp_inactive(transition_prob_inactive_to_inactive),
-      blocking_direction(motif_direction == dna::FWD ? dna::REV : dna::FWD) {
-  assert(motif_direction == dna::FWD || motif_direction == dna::REV);
+      blocking_direction(motif_direction.complement()) {
+  assert(motif_direction == dna::FWD || motif_direction == dna::REV ||
+         motif_direction == dna::BOTH);
   assert(transition_prob_active_to_active() >= 0.0 && transition_prob_active_to_active() <= 1.0);
   assert(transition_prob_inactive_to_inactive() >= 0.0 &&
          transition_prob_inactive_to_inactive() <= 1.0);
@@ -64,8 +80,7 @@ constexpr ExtrusionBarrier::ExtrusionBarrier(bp_t pos_, TP transition_prob_activ
     : pos(pos_),
       stp_active(transition_prob_active_to_active),
       stp_inactive(transition_prob_inactive_to_inactive),
-      blocking_direction(motif_direction == '+' ? dna::REV : dna::FWD) {
-  assert(motif_direction == '+' || motif_direction == '-');
+      blocking_direction(internal::char_to_strand(motif_direction).complement()) {
   assert(transition_prob_active_to_active() >= 0.0 && transition_prob_active_to_active() <= 1.0);
   assert(transition_prob_inactive_to_inactive() >= 0.0 &&
          transition_prob_inactive_to_inactive() <= 1.0);
@@ -152,13 +167,24 @@ template <typename FormatContext>
 inline auto fmt::formatter<modle::ExtrusionBarrier>::format(const modle::ExtrusionBarrier& b,
                                                             FormatContext& ctx)
     -> decltype(ctx.out()) {
-  // ctx.out() is an output iterator to write to.
+  const auto strand = [&b]() {
+    if (b.blocking_direction == modle::dna::FWD) {
+      return "fwd";
+    }
+    if (b.blocking_direction == modle::dna::REV) {
+      return "rev";
+    }
+    if (b.blocking_direction == modle::dna::BOTH) {
+      return "both";
+    }
+  }();
+
   if (presentation == 's') {
-    return fmt::format_to(ctx.out(), "ExtrusionBarrier{{pos={}; motif_direction={}}}", b.pos,
-                          b.blocking_direction == modle::dna::FWD ? "rev" : "fwd");
+    return fmt::format_to(ctx.out(), "ExtrusionBarrier{{pos={}; blocking_direction={}}}", b.pos,
+                          strand);
   }
   assert(presentation == 'f');
-  return fmt::format_to(
-      ctx.out(), "ExtrusionBarrier{{pos={}; motif_direction={}; Pbb={:.4f}; Puu={:.4f}}}", b.pos,
-      b.blocking_direction == modle::dna::FWD ? "rev" : "fwd", b.stp_active, b.stp_inactive);
+  return fmt::format_to(ctx.out(),
+                        "ExtrusionBarrier{{pos={}; blocking_direction={}; Pbb={:.4f}; Puu={:.4f}}}",
+                        b.pos, strand, b.stp_active, b.stp_inactive);
 }

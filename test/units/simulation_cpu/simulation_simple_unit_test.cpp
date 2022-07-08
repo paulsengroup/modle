@@ -587,7 +587,62 @@ TEST_CASE("Detect LEF-BAR collisions 002 - wo soft-collisions rev CTCFs",
 }
 
 // NOLINTNEXTLINE(readability-function-cognitive-complexity)
-TEST_CASE("Detect LEF-BAR collisions 003 - w soft-collisions fwd CTCFs",
+TEST_CASE("Detect LEF-BAR collisions 003 - bidirectional barriers",
+          "[lef-bar-collisions][simulation][short]") {
+  const auto c = init_config(2, 2);
+  constexpr usize nlefs = 3;
+  constexpr usize nbarriers = 3;
+  auto rand_eng = DEFAULT_PRNG;
+
+  // clang-format off
+  std::array<Lef, nlefs> lefs{
+          construct_lef(0, 1, 0),
+          construct_lef(3, 4, 1),
+          construct_lef(5, 5, 2)
+  };
+  const auto barriers = construct_barriers(ExtrusionBarrier{2, 1.0, 0.0, '.'},
+                                           ExtrusionBarrier{4, 1.0, 0.0, '.'},
+                                           ExtrusionBarrier{8, 1.0, 0.0, '.'});
+  // clang-format on
+  REQUIRE(barriers.size() == nbarriers);
+
+  const std::array<usize, nlefs> rev_ranks{0, 1, 2};
+  const std::array<usize, nlefs> fwd_ranks{0, 1, 2};
+
+  std::array<bp_t, nlefs> rev_moves{0, 2, 2};
+  std::array<bp_t, nlefs> fwd_moves{2, 2, 2};
+
+  // clang-format off
+  const std::array<CollisionT, nlefs> rev_collisions_expected{CollisionT{},
+                                                              CollisionT{0, LEF_BAR},
+                                                              CollisionT{1, LEF_BAR}};
+  const std::array<CollisionT, nlefs> fwd_collisions_expected{CollisionT{0, LEF_BAR},
+                                                              CollisionT{},
+                                                              CollisionT{}};
+  // clang-format on
+
+  std::array<CollisionT, nlefs> rev_collisions;
+  std::array<CollisionT, nlefs> fwd_collisions;
+
+  const std::array<bp_t, nlefs> rev_moves_expected{0, 0, 0};
+  const std::array<bp_t, nlefs> fwd_moves_expected{0, 2, 2};
+
+  require_that_lefs_are_sorted_by_idx(lefs, rev_ranks, fwd_ranks);
+
+  Simulation{c, false}.test_detect_lef_bar_collisions(
+      lefs, rev_ranks, fwd_ranks, absl::MakeSpan(rev_moves), absl::MakeSpan(fwd_moves), barriers,
+      absl::MakeSpan(rev_collisions), absl::MakeSpan(fwd_collisions), rand_eng);
+  Simulation::test_correct_moves_for_lef_bar_collisions(lefs, barriers, absl::MakeSpan(rev_moves),
+                                                        absl::MakeSpan(fwd_moves), rev_collisions,
+                                                        fwd_collisions);
+
+  check_simulation_result(lefs, rev_moves, fwd_moves, rev_moves_expected, fwd_moves_expected,
+                          rev_collisions, rev_collisions_expected, fwd_collisions,
+                          fwd_collisions_expected);
+}
+
+// NOLINTNEXTLINE(readability-function-cognitive-complexity)
+TEST_CASE("Detect LEF-BAR collisions 004 - w soft-collisions fwd barriers",
           "[lef-bar-collisions][simulation][short]") {
   auto c = init_config(2, 2);
   c.lef_bar_major_collision_pblock = 1;
@@ -644,7 +699,7 @@ TEST_CASE("Detect LEF-BAR collisions 003 - w soft-collisions fwd CTCFs",
 }
 
 // NOLINTNEXTLINE(readability-function-cognitive-complexity)
-TEST_CASE("Detect LEF-BAR collisions 004 - wo soft-collisions mixed CTCFs",
+TEST_CASE("Detect LEF-BAR collisions 005 - wo soft-collisions mixed barriers",
           "[lef-bar-collisions][simulation][short]") {
   const auto c = init_config(5, 5);
   const usize nlefs = 5;
@@ -707,8 +762,9 @@ TEST_CASE("Detect LEF-BAR collisions 004 - wo soft-collisions mixed CTCFs",
 }
 
 // NOLINTNEXTLINE(readability-function-cognitive-complexity)
-TEST_CASE("Detect LEF-BAR collisions 005 - wo soft-collisions mixed CTCFs, different extr. speeds",
-          "[lef-bar-collisions][simulation][short]") {
+TEST_CASE(
+    "Detect LEF-BAR collisions 006 - wo soft-collisions mixed barriers, different extr. speeds",
+    "[lef-bar-collisions][simulation][short]") {
   const auto c = init_config(2, 5);
   const usize nlefs = 5;
   const usize nbarriers = 4;
