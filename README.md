@@ -281,7 +281,7 @@ Datasets are automatically downloaded by CMake when running steps from inside fo
 
 <details>
 <summary>If you are not using containers...</summary>
-If you are buiding MoDLE and have followed the <a href="https://github.com/paulsengroup/modle#compiling-modle">instructions</a> for compiling MoDLE, then test datasets have already been downloaded and extracted by CMake, so you can skip the above step.
+If you are building MoDLE and have followed the <a href="https://github.com/paulsengroup/modle#compiling-modle">instructions</a> for compiling MoDLE, then test datasets have already been downloaded and extracted by CMake, so you can skip the above step.
 </details>
 
 #### Required input files
@@ -312,13 +312,13 @@ singularity run docker://ghcr.io/paulsengroup/modle:1.0.0-rc.6   \
     simulate \
     --chrom-sizes test/data/integration_tests/grch38.chrom.sizes \
     --extrusion-barrier-file test/data/integration_tests/grch38_h1_extrusion_barriers.bed.xz \
-    --output-prefix path/to/ouput/prefix
+    --output-prefix path/to/output/prefix
 ```
 
 This will create folder `path/to/output` (if it doesn't already exists), and write the following files inside it:
 
 ```
-path/to/ouput
+path/to/output
 ├── prefix_config.toml
 ├── prefix.cool
 └── prefix.log
@@ -355,7 +355,7 @@ singularity run docker://ghcr.io/paulsengroup/modle:1.0.0-rc.6 \
     simulate \
     --config path/to/output/prefix_config.toml \
     --lef-density 15 \
-    --output-prefix path/to/ouput/prefix2
+    --output-prefix path/to/output/prefix2
 ```
 
 The config file is a text file in TOML format.
