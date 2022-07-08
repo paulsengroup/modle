@@ -89,6 +89,78 @@ Pass `-DCMAKE_INSTALL_PREFIX="$HOME/.local/"` to the first CMake command (before
 The path passed to CMake through `-DCMAKE_INSTALL_PREFIX` can be in principle any path where your user has write permissions.
 </details>
 
+<details>
+<summary>Troubleshooting common errors</summary>
+
+#### Incorrect or incomplete Conan profile
+
+This will cause CMake to exit with an error during project configuration.
+
+When this is the case, the error message should look similar to the following:
+
+```
+ERROR: libBigWig/0.4.6: 'settings.compiler' value not defined
+CMake Error at build/conan.cmake:631 (message):
+  Conan install failed='1'
+```
+
+This issue is usually fixed by forcing Conan to re-detect compiler information:
+
+```bash
+# Backup old profile
+mv ~/.conan/profiles/default ~/.conan/profiles/default.bak
+
+# Write the new profile
+conan profile new ~/.conan/profiles/default --detect
+```
+
+If after running the previous command you see a warning mentioning `GCC OLD ABI COMPATIBILITY`, run:
+
+```bash
+conan profile update settings.compiler.libcxx=libstdc++11 default
+```
+
+On a Linux x86_64 machine with GCC 11 installed, the default profile should look similar to:
+
+```
+[settings]
+os=Linux
+os_build=Linux
+arch=x86_64
+arch_build=x86_64
+compiler=gcc
+compiler.version=11
+compiler.libcxx=libstdc++11
+build_type=Release
+[options]
+[build_requires]
+[env]
+```
+
+On a Mac with Intel CPU the profile will be like:
+
+```
+[settings]
+os=Macos
+os_build=Macos
+arch=x86_64
+arch_build=x86_64
+compiler=apple-clang
+compiler.version=11.0
+compiler.libcxx=libc++
+build_type=Release
+[options]
+[build_requires]
+[env]
+```
+
+Now remove the content of the build folder with e.g. `rm -r build/*` and re-run the steps listed in the [Compiling MoDLE](https://github.com/paulsengroup/modle#compiling-modle) section.
+
+#### Need more help?
+If the above troubleshooting steps did not help, feel free to get in touch by starting a new [discussion](https://github.com/paulsengroup/modle/discussions/new).
+</details>
+
+
 ### Running automated tests
 
 To ensure that the compiled code works as intended, run the following command from the repository root:
@@ -193,73 +265,6 @@ by default).
 cmake --install build/
 ```
 
-<details>
-<summary>Troubleshooting common build errors</summary>
-
-#### Incorrect or incomplete Conan profile
-
-In this case the build process will fail during project configuration (i.e. when running the first CMake command
-in [this](https://github.com/paulsengroup/modle#compiling-modle) section) with an error message similar to the
-following:
-
-```
-ERROR: libBigWig/0.4.6: 'settings.compiler' value not defined
-CMake Error at build/conan.cmake:631 (message):
-  Conan install failed='1'
-```
-
-This issue is usually fixed by forcing Conan to re-detect compiler information:
-
-```bash
-# Backup old profile
-mv ~/.conan/profiles/default ~/.conan/profiles/default.bak
-
-# Write the new profile
-conan profile new ~/.conan/profiles/default --detect
-```
-
-If after running the previous command you see a warning mentioning `GCC OLD ABI COMPATIBILITY`, run:
-
-```bash
-conan profile update settings.compiler.libcxx=libstdc++11 default
-```
-
-On a Linux x86_64 machine with GCC 11 installed, the default profile should look similar to:
-
-```
-[settings]
-os=Linux
-os_build=Linux
-arch=x86_64
-arch_build=x86_64
-compiler=gcc
-compiler.version=11
-compiler.libcxx=libstdc++11
-build_type=Release
-[options]
-[build_requires]
-[env]
-```
-
-On a Mac with Intel CPU the profile will be like:
-
-```
-[settings]
-os=Macos
-os_build=Macos
-arch=x86_64
-arch_build=x86_64
-compiler=apple-clang
-compiler.version=11.0
-compiler.libcxx=libc++
-build_type=Release
-[options]
-[build_requires]
-[env]
-```
-
-</details>
-
 ### Running MoDLE
 
 Commands in this section assume you are running MoDLE using Singularity/Apptainer from the root of this repository.
@@ -276,7 +281,7 @@ Datasets are automatically downloaded by CMake when running steps from inside fo
 
 <details>
 <summary>If you are not using containers...</summary>
-If you are buiding MoDLE and have followed the <a href="https://github.com/paulsengroup/modle#compiling-modle">instructions</a> for compiling MoDLE, then test datasets have already been downloaded and extracted by CMake, so you can skip the above step.
+If you are building MoDLE and have followed the <a href="https://github.com/paulsengroup/modle#compiling-modle">instructions</a> for compiling MoDLE, then test datasets have already been downloaded and extracted by CMake, so you can skip the above step.
 </details>
 
 #### Required input files
@@ -307,13 +312,13 @@ singularity run docker://ghcr.io/paulsengroup/modle:1.0.0-rc.6   \
     simulate \
     --chrom-sizes test/data/integration_tests/grch38.chrom.sizes \
     --extrusion-barrier-file test/data/integration_tests/grch38_h1_extrusion_barriers.bed.xz \
-    --output-prefix path/to/ouput/prefix
+    --output-prefix path/to/output/prefix
 ```
 
 This will create folder `path/to/output` (if it doesn't already exists), and write the following files inside it:
 
 ```
-path/to/ouput
+path/to/output
 ├── prefix_config.toml
 ├── prefix.cool
 └── prefix.log
@@ -350,7 +355,7 @@ singularity run docker://ghcr.io/paulsengroup/modle:1.0.0-rc.6 \
     simulate \
     --config path/to/output/prefix_config.toml \
     --lef-density 15 \
-    --output-prefix path/to/ouput/prefix2
+    --output-prefix path/to/output/prefix2
 ```
 
 The config file is a text file in TOML format.
