@@ -91,7 +91,19 @@ The path passed to CMake through `-DCMAKE_INSTALL_PREFIX` can be in principle an
 
 ### Running automated tests
 
-To ensure that the compiled code works as intended, run the following command from the repository root:
+To ensure that the compiled code works as intended we highly recommend running MoDLE's automated test.
+
+The integration test depends on `h5diff` and `xz`, which can be installed as follows:
+
+```bash
+# Instructions for Ubuntu
+apt-get install -y hdf5-tools xz-utils
+
+# Instructions for macOS
+brew install hdf5 xz
+```
+
+Once the test dependencies are satisfied, the test suite can be started by running the following commands from the repository root:
 
 ```bash
 cd build/
@@ -145,14 +157,17 @@ While the output of the second command should look something like this.
 [2022-06-15 13:28:03.279] [info]: Simulation terminated without errors in 4.259878566s!
 
 Bye.
-Comparing /tmp/ci-OdNlvn6LME/out.cool with /tmp/modle/test/data/integration_tests/reference_001.cool...
+Comparing /tmp/modle-6n3WSvOXxQ/out.cool with /home/roby/github/modle/test/data/integration_tests/reference_001.cool...
+
+### PASS ###
 ```
 
 If the second test reports one or more differences between `out.cool` and `reference_001.cool`, then the test failed.
 
 Test failure example:
 ```
-Comparing /tmp/ci-3Lx4kbWT26/out.cool with /tmp/test/data/integration_tests/reference_001.cool...
+Comparing /tmp/modle-6n3WSvOXxQ/out.cool with /home/roby/github/modle/test/data/integration_tests/reference_001.cool...
+
 dataset: </indexes/bin1_offset> and </indexes/bin1_offset>
 20154 differences found
 Not comparable: </pixels/bin1_id> has rank 1, dimensions [355352], max dimensions [18446744073709551615]
@@ -161,6 +176,8 @@ Not comparable: </pixels/bin2_id> has rank 1, dimensions [355352], max dimension
 and </pixels/bin2_id> has rank 1, dimensions [356001], max dimensions [18446744073709551615]
 Not comparable: </pixels/count> has rank 1, dimensions [355352], max dimensions [18446744073709551615]
 and </pixels/count> has rank 1, dimensions [356001], max dimensions [18446744073709551615]
+
+### FAIL ###
 ```
 
 </details>
