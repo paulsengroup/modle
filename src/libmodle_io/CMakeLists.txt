@@ -106,7 +106,7 @@ target_include_directories(libmodle_io_compressed PUBLIC include/compressed_io)
 target_link_libraries(
   libmodle_io_compressed
   PRIVATE project_warnings project_options
-  PUBLIC Modle::common)
+  PUBLIC Modle::common fmt::fmt)
 
 target_link_system_libraries(
   libmodle_io_compressed
@@ -116,7 +116,6 @@ target_link_system_libraries(
   absl::strings
   PUBLIC
   Boost::iostreams
-  fmt::fmt
   LibArchive::LibArchive)
 
 set_target_properties(libmodle_io_compressed PROPERTIES OUTPUT_NAME modle_io_compressed)
