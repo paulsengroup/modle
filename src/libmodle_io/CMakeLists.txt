@@ -81,15 +81,13 @@ target_include_directories(libmodle_io_chrom_sizes PUBLIC include/chrom_sizes)
 target_link_libraries(
   libmodle_io_chrom_sizes
   PRIVATE project_warnings project_options Modle::io_bed
-  PUBLIC Modle::common Modle::io_compressed)
+  PUBLIC Modle::common Modle::io_compressed fmt::fmt)
 
 target_link_system_libraries(
   libmodle_io_chrom_sizes
   PRIVATE
   absl::flat_hash_set
-  absl::strings
-  PUBLIC
-  fmt::fmt)
+  absl::strings)
 
 set_target_properties(libmodle_io_chrom_sizes PROPERTIES OUTPUT_NAME modle_io_chrom_sizes)
 install(
