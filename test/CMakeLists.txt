@@ -47,6 +47,7 @@ target_link_libraries(
   test_main
   PRIVATE project_warnings
           project_options
+          fmt::fmt
           Modle::cmatrix
           Modle::common
           Modle::interval_tree
@@ -71,7 +72,6 @@ target_link_system_libraries(
   Boost::headers
   bshoshany-thread-pool::bshoshany-thread-pool
   Catch2::Catch2WithMain
-  fmt::fmt
   HDF5::HDF5
   spdlog::spdlog)
 

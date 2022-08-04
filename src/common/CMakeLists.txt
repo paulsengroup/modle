@@ -34,7 +34,7 @@ target_sources(
             ${CMAKE_CURRENT_SOURCE_DIR}/numeric_utils_impl.hpp
             ${CMAKE_CURRENT_SOURCE_DIR}/utils_impl.hpp)
 
-target_link_libraries(modle_common INTERFACE project_options project_warnings)
+target_link_libraries(modle_common INTERFACE project_options project_warnings fmt::fmt)
 
 target_link_system_libraries(
   modle_common
@@ -46,7 +46,6 @@ target_link_system_libraries(
   Boost::random
   CLI11::CLI11
   FastFloat::fast_float
-  fmt::fmt
   range-v3::range-v3
   xoshiro-cpp::xoshiro-cpp
   xxHash::xxhash)
