@@ -41,7 +41,8 @@ target_link_libraries(
   PUBLIC Modle::cmatrix
          Modle::common
          Modle::libmodle_internal
-         Modle::io_bed)
+         Modle::io_bed
+         fmt::fmt)
 
 target_link_system_libraries(
   libmodle_cpu
@@ -59,7 +60,6 @@ target_link_system_libraries(
   Boost::headers
   bshoshany-thread-pool::bshoshany-thread-pool
   concurrentqueue::concurrentqueue
-  fmt::fmt
   range-v3::range-v3
   spdlog::spdlog
   xxHash::xxHash)

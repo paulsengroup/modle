@@ -26,7 +26,8 @@ target_link_libraries(
   PUBLIC Modle::cmatrix
          Modle::common
          Modle::io_bed
-         Modle::interval_tree)
+         Modle::interval_tree
+         fmt::fmt)
 
 target_link_system_libraries(
   libmodle_internal
@@ -36,7 +37,6 @@ target_link_system_libraries(
   absl::btree
   absl::span
   Boost::headers
-  fmt::fmt
   spdlog::spdlog
   xxHash::xxHash)
 

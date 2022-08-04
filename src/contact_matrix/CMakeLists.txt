@@ -29,7 +29,8 @@ target_link_libraries(
             project_options
             Modle::common
             Modle::io_compressed
-            Modle::stats)
+            Modle::stats
+            fmt::fmt)
 
 target_link_system_libraries(
   cmatrix
@@ -41,6 +42,5 @@ target_link_system_libraries(
   Boost::serialization
   bshoshany-thread-pool::bshoshany-thread-pool
   cpp-sort::cpp-sort
-  fmt::fmt
   libcuckoo::libcuckoo
   xxHash::xxHash)

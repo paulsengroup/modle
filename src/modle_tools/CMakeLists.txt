@@ -27,6 +27,7 @@ target_link_libraries(
   modle_tools
   PRIVATE project_warnings
           project_options
+          fmt::fmt
           Modle::cmatrix
           Modle::common
           Modle::config
@@ -55,7 +56,6 @@ target_link_system_libraries(
   bshoshany-thread-pool::bshoshany-thread-pool
   CLI11::CLI11
   cpp-sort::cpp-sort
-  fmt::fmt
   readerwriterqueue::readerwriterqueue
   tomlplusplus::tomlplusplus
   spdlog::spdlog)
