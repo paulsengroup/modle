@@ -88,6 +88,7 @@ struct Config {
   bool override_extrusion_barrier_occupancy{false};
   double barrier_occupied_stp{0.0};
   double barrier_not_occupied_stp{0.70};
+  bool interpret_bed_name_field_as_barrier_not_occupied_stp{false};
 
   // Collision/stall params
   double hard_stall_lef_stability_multiplier{5.0};

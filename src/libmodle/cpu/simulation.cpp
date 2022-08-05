@@ -58,7 +58,8 @@ Simulation::Simulation(const Config& c, bool import_chroms)
     : Config(c),
       _genome(import_chroms ? Genome(path_to_chrom_sizes, path_to_extr_barriers,
                                      path_to_chrom_subranges, path_to_feature_bed_files,
-                                     barrier_occupied_stp, barrier_not_occupied_stp)
+                                     barrier_occupied_stp, barrier_not_occupied_stp,
+                                     interpret_bed_name_field_as_barrier_not_occupied_stp)
                             : Genome{}) {
   _tpool.reset(utils::conditional_static_cast<BS::concurrency_t>(c.nthreads + 1));
 

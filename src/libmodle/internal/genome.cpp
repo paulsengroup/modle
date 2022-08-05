@@ -300,10 +300,11 @@ Genome::Genome(const std::filesystem::path& path_to_chrom_sizes,
                const std::filesystem::path& path_to_extr_barriers,
                const std::filesystem::path& path_to_chrom_subranges,
                const absl::Span<const std::filesystem::path> paths_to_extra_features,
-               const double ctcf_prob_occ_to_occ, const double ctcf_prob_nocc_to_nocc)
+               const double default_barrier_pbb, const double default_barrier_puu, bool interpret_name_field_as_puu)
     : _chromosomes(instantiate_genome(path_to_chrom_sizes, path_to_extr_barriers,
                                       path_to_chrom_subranges, paths_to_extra_features,
-                                      ctcf_prob_occ_to_occ, ctcf_prob_nocc_to_nocc)) {}
+                                      default_barrier_pbb,
+                                      default_barrier_puu, interpret_name_field_as_puu)) {}
 
 absl::btree_set<Chromosome> Genome::import_chromosomes(
     const std::filesystem::path& path_to_chrom_sizes,
@@ -386,8 +387,8 @@ absl::btree_set<Chromosome> Genome::import_chromosomes(
 
 usize Genome::import_barriers(absl::btree_set<Chromosome>& chromosomes,
                               const std::filesystem::path& path_to_extr_barriers,
-                              const double ctcf_prob_occ_to_occ,
-                              const double ctcf_prob_nocc_to_nocc) {
+                              double default_barrier_pbb, double default_barrier_puu,
+                              bool interpret_name_field_as_puu) {
   assert(!chromosomes.empty());
   assert(!path_to_extr_barriers.empty());
 
@@ -409,11 +410,21 @@ usize Genome::import_barriers(absl::btree_set<Chromosome>& chromosomes,
                          "between 0 and 1, got {:.4g}."),
               record.chrom, record.chrom_start, record.chrom_end, record.score));
         }
-        if (record.strand == '+' || record.strand == '-') {
-          // For now we don't support barriers without strand information
-          chrom.add_extrusion_barrier(record, ctcf_prob_occ_to_occ, ctcf_prob_nocc_to_nocc);
-          ++tot_num_barriers;
+
+        if (interpret_name_field_as_puu) {
+          const auto puu = utils::parse_numeric_or_throw<double>(record.name);
+          if (puu < 0 || puu > 1) {
+            throw std::runtime_error(fmt::format(
+                FMT_STRING(
+                    "Invalid score field detected for record {}[{}-{}]: expected name field to be "
+                    "between 0 and 1, got {:.4g}."),
+                record.chrom, record.chrom_start, record.chrom_end, puu));
+          }
+          chrom.add_extrusion_barrier(record, default_barrier_pbb, puu);
+        } else {
+          chrom.add_extrusion_barrier(record, default_barrier_pbb, default_barrier_puu);
         }
+        ++tot_num_barriers;
       }
     }
     chrom.barriers().make_BST();
@@ -452,8 +463,8 @@ absl::btree_set<Chromosome> Genome::instantiate_genome(
     const std::filesystem::path& path_to_chrom_sizes,
     const std::filesystem::path& path_to_extr_barriers,
     const std::filesystem::path& path_to_chrom_subranges,
-    const absl::Span<const std::filesystem::path> paths_to_extra_features,
-    const double ctcf_prob_occ_to_occ, const double ctcf_prob_nocc_to_nocc) {
+    const absl::Span<const std::filesystem::path> paths_to_extra_features, double default_barrier_pbb,
+    double default_barrier_puu, bool interpret_name_field_as_puu) {
   auto chroms = import_chromosomes(path_to_chrom_sizes, path_to_chrom_subranges);
 
   if (chroms.empty()) {
@@ -470,8 +481,7 @@ absl::btree_set<Chromosome> Genome::instantiate_genome(
                     path_to_chrom_sizes, path_to_chrom_subranges));
   }
 
-  const auto tot_barriers_imported =
-      import_barriers(chroms, path_to_extr_barriers, ctcf_prob_occ_to_occ, ctcf_prob_nocc_to_nocc);
+  const auto tot_barriers_imported = import_barriers(chroms, path_to_extr_barriers, default_barrier_pbb, default_barrier_puu, interpret_name_field_as_puu);
   if (tot_barriers_imported == 0) {
     spdlog::warn(
         FMT_STRING(
