@@ -554,10 +554,12 @@ static void run_task(const enum eval_config::Metric metric, const std::string &c
                  absl::AsciiStrToLower(direction_to_str(stripe_direction)), chrom_name,
                  absl::FormatDuration(absl::Now() - t0));
     t0 = absl::Now();
+    const auto [chrom_start, chrom_end] = chrom_range;
     auto &writer =
         stripe_direction == StripeDirection::horizontal ? writers.horizontal : writers.vertical;
-    writer.bwig->write_range(chrom_name, absl::MakeSpan(metrics.metric1), bin_size, bin_size);
-    const auto [chrom_start, chrom_end] = chrom_range;
+    writer.bwig->write_range(chrom_name, absl::MakeSpan(metrics.metric1), bin_size, bin_size,
+                             chrom_start);
+
     std::string buff;
     auto format_tsv_record = [&](const std::string_view chrom_name_, const auto start_pos_,
                                  const auto end_pos_, const auto score1, const auto score2) {

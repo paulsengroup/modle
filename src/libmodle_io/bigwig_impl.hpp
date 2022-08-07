@@ -91,7 +91,7 @@ void Writer::write_chromosomes(const absl::Span<Str> chrom_names,
 
 template <class N, class>
 void Writer::write_range(std::string_view chrom_name, const absl::Span<N> values, u64 span,
-                         u64 step) {
+                         u64 step, u64 offset) {
   assert(this->_initialized);
   assert(this->_fp);
   std::vector<float> fvalues;
@@ -109,7 +109,7 @@ void Writer::write_range(std::string_view chrom_name, const absl::Span<N> values
 
   auto chrom_name_tmp = std::string{chrom_name};
   // NOLINTNEXTLINE(readability-implicit-bool-conversion)
-  if (bwAddIntervalSpanSteps(this->_fp, chrom_name_tmp.data(), this->_offset,
+  if (bwAddIntervalSpanSteps(this->_fp, chrom_name_tmp.data(), static_cast<u32>(offset),
                              static_cast<u32>(span), static_cast<u32>(step), fvalues_span.data(),
                              static_cast<u32>(fvalues_span.size()))) {
     throw std::runtime_error(

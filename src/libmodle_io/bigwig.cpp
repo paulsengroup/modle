@@ -49,8 +49,7 @@ Writer::Writer(Writer&& other) noexcept
       _fp(other._fp),
       _zoom_levels(other._zoom_levels),
       _buff_size(other._buff_size),
-      _initialized(other._initialized),
-      _offset(other._offset) {
+      _initialized(other._initialized) {
   other._fp = nullptr;
 }
 
@@ -74,7 +73,6 @@ Writer& Writer::operator=(Writer&& other) noexcept {
   this->_zoom_levels = other._zoom_levels;
   this->_buff_size = other._buff_size;
   this->_initialized = other._initialized;
-  this->_offset = other._offset;
   other._fp = nullptr;
 
   return *this;
