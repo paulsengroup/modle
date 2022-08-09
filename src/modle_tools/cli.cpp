@@ -537,7 +537,7 @@ void Cli::validate_eval_subcommand() const {
   }
 
   if (c.metric == eval_config::Metric::custom) {
-    const auto& io_group = *this->_cli.get_subcommand("eval")->get_option_group("Input/Output");
+    const auto& io_group = *this->_cli.get_subcommand("eval")->get_option_group("IO");
     const auto& gen_group = *this->_cli.get_subcommand("eval")->get_option_group("Generic");
 
     constexpr std::array<std::string_view, 4> gen_option_names{
