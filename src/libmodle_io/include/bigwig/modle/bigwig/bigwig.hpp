@@ -39,7 +39,6 @@ class Writer {
   uint_fast8_t _zoom_levels{DEFAULT_ZOOM_LEVELS};
   usize _buff_size{DEFAULT_BUFFER_SIZE};
   bool _initialized{false};
-  u32 _offset{0};
 
  public:
   Writer() = default;
@@ -59,7 +58,8 @@ class Writer {
   void write_chromosomes(const char* const* chrom_names, const u32* chrom_sizes, usize num_chroms);
 
   template <class N, class = std::enable_if<std::is_arithmetic_v<N>>>
-  inline void write_range(std::string_view chrom_name, absl::Span<N> values, u64 span, u64 step);
+  inline void write_range(std::string_view chrom_name, absl::Span<N> values, u64 span, u64 step,
+                          u64 offset = 0);
 
   [[nodiscard]] const std::filesystem::path& path() const noexcept;
 };
