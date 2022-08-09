@@ -83,12 +83,12 @@ TEST_CASE("CMatrix Dense serialization", "[cmatrix][serialization][short]") {
 }
 
 // NOLINTNEXTLINE(readability-function-cognitive-complexity)
-TEST_CASE("CMatrix Sparse serialization", "[cmatrix][serialization][short]") {
+TEST_CASE("CMatrix Sparse serialization", "[cmatrix][serialization][medium]") {
   const auto serialized_matrix_path = testdir() / "cmatrix_sparse.serialized.zst";
 
   constexpr bp_t chrom_size = 250'000'000;
-  constexpr bp_t diag_width = 3'000'000;
-  constexpr bp_t bin_size = 10'000;
+  constexpr bp_t diag_width = 30'000'000;
+  constexpr bp_t bin_size = 50'000;
   constexpr usize nnz = 100'000;
 
   constexpr usize ncols = (chrom_size + bin_size - 1) / bin_size;
@@ -180,12 +180,12 @@ TEST_CASE("CMatrix Dense serialization (destructive)", "[cmatrix][serialization]
 }
 
 // NOLINTNEXTLINE(readability-function-cognitive-complexity)
-TEST_CASE("CMatrix Sparse serialization (destructive)", "[cmatrix][serialization][short]") {
+TEST_CASE("CMatrix Sparse serialization (destructive)", "[cmatrix][serialization][medium]") {
   const auto serialized_matrix_path = testdir() / "cmatrix_sparse_destructive.serialized.zst";
 
   constexpr bp_t chrom_size = 250'000'000;
-  constexpr bp_t diag_width = 3'000'000;
-  constexpr bp_t bin_size = 10'000;
+  constexpr bp_t diag_width = 30'000'000;
+  constexpr bp_t bin_size = 50'000;
   constexpr usize nnz = 100'000;
 
   constexpr usize ncols = (chrom_size + bin_size - 1) / bin_size;
@@ -373,12 +373,12 @@ TEST_CASE("CMatrix Dense serialization (FP)", "[cmatrix][serialization][short]")
 }
 
 // NOLINTNEXTLINE(readability-function-cognitive-complexity)
-TEST_CASE("CMatrix Sparse serialization (FP)", "[cmatrix][serialization][short]") {
+TEST_CASE("CMatrix Sparse serialization (FP)", "[cmatrix][serialization][medium]") {
   const auto serialized_matrix_path = testdir() / "cmatrix_sparse_fp.serialized.zst";
 
   constexpr bp_t chrom_size = 250'000'000;
-  constexpr bp_t diag_width = 3'000'000;
-  constexpr bp_t bin_size = 10'000;
+  constexpr bp_t diag_width = 30'000'000;
+  constexpr bp_t bin_size = 50'000;
   constexpr usize nnz = 100'000;
 
   constexpr usize ncols = (chrom_size + bin_size - 1) / bin_size;
