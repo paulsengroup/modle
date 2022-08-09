@@ -94,7 +94,7 @@ void Simulation::run_replay() {
     assert(!this->_exception_thrown);
   } catch (...) {
     this->_exception_thrown = true;
-    this->_tpool.paused = true;
+    this->_tpool.pause();
     this->_tpool.wait_for_tasks();
     throw;
   }
