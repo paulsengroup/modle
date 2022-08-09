@@ -4,7 +4,7 @@
 
 from conans import ConanFile, tools
 
-required_conan_version = ">=1.45.0"
+required_conan_version = ">=1.46.0"
 
 
 class MoDLE(ConanFile):
