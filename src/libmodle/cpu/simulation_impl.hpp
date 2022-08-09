@@ -142,7 +142,8 @@ constexpr auto fmt::formatter<modle::Simulation::Task>::parse(format_parse_conte
 
 template <typename FormatContext>
 auto fmt::formatter<modle::Simulation::Task>::format(const modle::Simulation::Task& t,
-                                                     FormatContext& ctx) -> decltype(ctx.out()) {
+                                                     FormatContext& ctx) const
+    -> decltype(ctx.out()) {
   assert(t.chrom);
   return fmt::format_to(ctx.out(), FMT_STRING("{}\t{}\t{}\t{}\t{}\t{}\t{}"), t.id, t.chrom->name(),
                         t.cell_id, t.num_target_epochs, t.num_target_contacts, t.num_lefs,
@@ -159,7 +160,8 @@ constexpr auto fmt::formatter<modle::Simulation::TaskPW>::parse(format_parse_con
 
 template <typename FormatContext>
 auto fmt::formatter<modle::Simulation::TaskPW>::format(const modle::Simulation::TaskPW& t,
-                                                       FormatContext& ctx) -> decltype(ctx.out()) {
+                                                       FormatContext& ctx) const
+    -> decltype(ctx.out()) {
   return fmt::format_to(
       ctx.out(), FMT_STRING("{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}"), t.id,
       t.chrom ? t.chrom->name() : "null", t.cell_id, t.num_target_epochs, t.num_target_contacts,
@@ -177,7 +179,8 @@ constexpr auto fmt::formatter<modle::Simulation::State>::parse(format_parse_cont
 
 template <typename FormatContext>
 auto fmt::formatter<modle::Simulation::State>::format(const modle::Simulation::State& s,
-                                                      FormatContext& ctx) -> decltype(ctx.out()) {
+                                                      FormatContext& ctx) const
+    -> decltype(ctx.out()) {
   return fmt::format_to(ctx.out(),
                         FMT_STRING("State:\n"
                                    " - TaskID: {:d}\n"

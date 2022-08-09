@@ -116,7 +116,7 @@ struct fmt::formatter<modle::Collision<>> {
   // Formats the point p using the parsed format specification (presentation)
   // stored in this formatter.
   template <typename FormatContext>
-  inline auto format(const modle::Collision<>& c, FormatContext& ctx) -> decltype(ctx.out());
+  inline auto format(const modle::Collision<>& c, FormatContext& ctx) const -> decltype(ctx.out());
 };
 
 #include "../../collision_encoding_impl.hpp"

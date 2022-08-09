@@ -257,7 +257,7 @@ constexpr auto fmt::formatter<modle::Collision<>>::parse(format_parse_context& c
 
 template <typename FormatContext>
 auto fmt::formatter<modle::Collision<>>::format(const modle::Collision<>& c, FormatContext& ctx)
-    -> decltype(ctx.out()) {
+    const -> decltype(ctx.out()) {
   if (presentation == 's') {
     return fmt::format_to(ctx.out(), FMT_STRING("{}"), c());
   }
