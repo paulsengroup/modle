@@ -43,13 +43,13 @@ and [dockerhub](https://hub.docker.com/repository/docker/paulsengroup/modle).
 In addition to a C++17 compiler, building MoDLE requires the following tools:
 
 - CMake >= 3.18
-- Conan >= 1.47
+- Conan >= 1.50
 
 #### Installing Conan
 
 Conan is a package manager for C and C++ applications, and can be installed using pip or Homebrew:
 
-- `pip3 install "conan>=1.47"`
+- `pip3 install "conan>=1.50"`
 - `brew install conan`
 
 ### Getting MoDLE source code
