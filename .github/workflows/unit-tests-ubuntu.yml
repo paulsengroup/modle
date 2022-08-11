@@ -214,6 +214,7 @@ jobs:
           git config --global --add safe.directory ${{ github.workspace }}
           mkdir ${{ github.workspace }}/build
           cmake -DCMAKE_BUILD_TYPE=${{ matrix.build_type }}          \
+                -DENABLE_TESTING=ON                                  \
                 -DENABLE_DEVELOPER_MODE=${{ matrix.developer_mode }} \
                 -DOPT_ENABLE_CLANG_TIDY=OFF                          \
                 -DOPT_ENABLE_CPPCHECK=OFF                            \
@@ -347,6 +348,7 @@ jobs:
           git config --global --add safe.directory ${{ github.workspace }}
           mkdir ${{ github.workspace }}/build
           cmake -DCMAKE_BUILD_TYPE=${{ matrix.build_type }}          \
+                -DENABLE_TESTING=ON                                  \
                 -DENABLE_DEVELOPER_MODE=${{ matrix.developer_mode }} \
                 -DOPT_ENABLE_CLANG_TIDY=OFF                          \
                 -DOPT_ENABLE_CPPCHECK=OFF                            \
