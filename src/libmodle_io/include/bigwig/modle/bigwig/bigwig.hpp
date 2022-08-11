@@ -25,7 +25,7 @@ DISABLE_WARNING_PADDED
 DISABLE_WARNING_POP
 
 // Workaround for "warning: implicit declaration of function ‘strdup’"
-extern "C" { char* strdup(const char*); }
+extern "C" char* strdup(const char*) noexcept;
 
 namespace modle::io::bigwig {
 
