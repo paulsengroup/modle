@@ -24,9 +24,6 @@ DISABLE_WARNING_PADDED
 #include "bigWig.h"  // for bigWigFile_t
 DISABLE_WARNING_POP
 
-// Workaround for "warning: implicit declaration of function ‘strdup’"
-extern "C" char* strdup(const char*) noexcept;
-
 namespace modle::io::bigwig {
 
 class Writer {
