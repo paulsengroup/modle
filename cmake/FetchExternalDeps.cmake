@@ -12,8 +12,8 @@ FetchContent_Declare(
 )
 FetchContent_Declare(
         libBigWig
-        URL ${CMAKE_CURRENT_SOURCE_DIR}/external/libBigWig-0.4.6.tar.xz
-        URL_HASH SHA512=11cfb35da7fa99fe8f73d219654d2cfb838a74b7c6ba5610b826265251bdfcfb4feb2c6e2fc2377edd73154dd971f9604ea0e270bd5830d1f28509f84ad49f7e
+        GIT_REPOSITORY https://github.com/dpryan79/libBigWig.git
+        GIT_TAG b469e34a13c788e4d75e8f891799553b0ac94592
 )
 # cmake-format: on
 
