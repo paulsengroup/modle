@@ -647,7 +647,8 @@ struct fmt::formatter<modle::Simulation::Task> {
   // Formats the point p using the parsed format specification (presentation)
   // stored in this formatter.
   template <typename FormatContext>
-  inline auto format(const modle::Simulation::Task& t, FormatContext& ctx) const -> decltype(ctx.out());
+  inline auto format(const modle::Simulation::Task& t, FormatContext& ctx) const
+      -> decltype(ctx.out());
 };
 
 template <>
@@ -656,7 +657,8 @@ struct fmt::formatter<modle::Simulation::TaskPW> {
   // Formats the point p using the parsed format specification (presentation)
   // stored in this formatter.
   template <typename FormatContext>
-  inline auto format(const modle::Simulation::TaskPW& t, FormatContext& ctx) const -> decltype(ctx.out());
+  inline auto format(const modle::Simulation::TaskPW& t, FormatContext& ctx) const
+      -> decltype(ctx.out());
 };
 
 template <>
@@ -665,7 +667,8 @@ struct fmt::formatter<modle::Simulation::State> {
   // Formats the point p using the parsed format specification (presentation)
   // stored in this formatter.
   template <typename FormatContext>
-  inline auto format(const modle::Simulation::State& s, FormatContext& ctx) const -> decltype(ctx.out());
+  inline auto format(const modle::Simulation::State& s, FormatContext& ctx) const
+      -> decltype(ctx.out());
 };
 
 #include "../../simulation_impl.hpp"  // IWYU pragma: export
