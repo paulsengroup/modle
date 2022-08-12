@@ -43,6 +43,7 @@ struct Config {
   std::filesystem::path path_to_config_file{};
   std::filesystem::path path_to_log_file;
   std::filesystem::path path_to_model_state_log_file;
+  std::filesystem::path path_to_lef_1d_occupancy_bw_file;
   std::filesystem::path path_to_extr_barriers;
   bool force{false};
   bool quiet{false};
@@ -82,6 +83,7 @@ struct Config {
   double prob_of_lef_release_burnin{};
   bp_t avg_lef_processivity{300'000};
   bp_t contact_sampling_interval{50'000};
+  bool track_1d_lef_position{false};
 
   // Extrusion barrier params
   double extrusion_barrier_occupancy{0.825};

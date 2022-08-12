@@ -42,6 +42,7 @@ target_link_libraries(
          Modle::common
          Modle::libmodle_internal
          Modle::io_bed
+         Modle::io_bigwig
          fmt::fmt)
 
 target_link_system_libraries(

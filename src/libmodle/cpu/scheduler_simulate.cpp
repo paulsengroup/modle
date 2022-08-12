@@ -170,6 +170,9 @@ void Simulation::run_simulate() {
       progress_queue.emplace_back(nullptr, usize(0));
     }
     this->_tpool.wait_for_tasks();
+    if (this->track_1d_lef_position) {
+      this->write_1d_lef_occupancy_to_disk();
+    }
     assert(this->_end_of_simulation);
     assert(!this->_exception_thrown);
   } catch (...) {
@@ -229,7 +232,10 @@ void Simulation::simulate_worker(const u64 tid,
           return;
         }
         // Resize and reset buffers
-        task.chrom->allocate_contacts(this->bin_size, this->diagonal_width);
+        task.chrom->allocate_contact_matrix(this->bin_size, this->diagonal_width);
+        if (this->track_1d_lef_position) {
+          task.chrom->allocate_lef_occupancy_buffer(this->bin_size);
+        }
         local_state = task;            // Set simulation state based on task data
         local_state.resize_buffers();  // This resizes buffers based on the nlefs to be simulated
         local_state.reset_buffers();   // Clear all buffers

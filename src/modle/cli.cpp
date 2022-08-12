@@ -210,6 +210,14 @@ static std::vector<CLI::App*> add_common_options(CLI::App& subcommand, modle::Co
       "through --extrusion-barrier-file.")
       ->check(CLI::Range(0.0, 1.0));
 
+  lefbar.add_flag(
+      "--track-1d-lef-position,!--no-track-1d-lef-position",
+      c.track_1d_lef_position,
+      "Toggle on/off tracking of LEF positions in 1D space.\n"
+      "LEF positions are aggregated across all simulated cells and are written to disk in BigWig format\n"
+      "under the prefix specified through --output-prefix.\n")
+      ->capture_default_str();
+
   lef_adv.add_option(
       "--hard-stall-lef-stability-multiplier",
       c.hard_stall_lef_stability_multiplier,
@@ -853,6 +861,11 @@ std::string Cli::detect_path_collisions(modle::Config& c) const {
   if (std::filesystem::exists(c.path_to_log_file)) {
     absl::StrAppend(&collisions, check_for_path_collisions(c.path_to_log_file));
   }
+
+  if (c.track_1d_lef_position && std::filesystem::exists(c.path_to_lef_1d_occupancy_bw_file)) {
+    absl::StrAppend(&collisions, check_for_path_collisions(c.path_to_lef_1d_occupancy_bw_file));
+  }
+
   if (this->get_subcommand() == simulate && !c.path_to_model_state_log_file.empty() &&
       std::filesystem::exists(c.path_to_model_state_log_file)) {
     absl::StrAppend(&collisions, check_for_path_collisions(c.path_to_model_state_log_file));
@@ -1047,6 +1060,11 @@ static void cli_update_paths(Cli::subcommand subcommand, Config& c) {
   if (subcommand == Cli::subcommand::simulate) {
     c.path_to_model_state_log_file = c.path_to_output_prefix;
     c.path_to_model_state_log_file += "_internal_state.log.gz";
+  }
+
+  if (c.track_1d_lef_position) {
+    c.path_to_lef_1d_occupancy_bw_file = c.path_to_output_prefix;
+    c.path_to_lef_1d_occupancy_bw_file += "_lef_1d_occupancy.bw";
   }
 
   c.path_to_output_file_cool += ".cool";

@@ -82,12 +82,19 @@ class Chromosome {
   [[nodiscard]] const IITree<bp_t, ExtrusionBarrier>& barriers() const;
   [[nodiscard]] IITree<bp_t, ExtrusionBarrier>& barriers();
   [[nodiscard]] absl::Span<const bed_tree_value_t> get_features() const;
-  bool allocate_contacts(bp_t bin_size, bp_t diagonal_width);
-  bool deallocate_contacts();
-  [[nodiscard]] const contact_matrix_t& contacts() const;
-  [[nodiscard]] contact_matrix_t& contacts();
-  [[nodiscard]] std::shared_ptr<const contact_matrix_t> contacts_ptr() const;
-  [[nodiscard]] std::shared_ptr<contact_matrix_t> contacts_ptr();
+  bool allocate_contact_matrix(bp_t bin_size, bp_t diagonal_width);
+  bool allocate_lef_occupancy_buffer(bp_t bin_size);
+  bool deallocate_contact_matrix();
+  bool deallocate_lef_occupancy_buffer();
+  [[nodiscard]] const contact_matrix_t& contacts() const noexcept;
+  [[nodiscard]] contact_matrix_t& contacts() noexcept;
+  [[nodiscard]] const std::vector<std::atomic<u64>>& lef_1d_occupancy() const noexcept;
+  [[nodiscard]] std::vector<std::atomic<u64>>& lef_1d_occupancy() noexcept;
+  [[nodiscard]] std::shared_ptr<const contact_matrix_t> contacts_ptr() const noexcept;
+  [[nodiscard]] std::shared_ptr<contact_matrix_t> contacts_ptr() noexcept;
+  [[nodiscard]] std::shared_ptr<const std::vector<std::atomic<u64>>> lef_1d_occupancy_ptr()
+      const noexcept;
+  [[nodiscard]] std::shared_ptr<std::vector<std::atomic<u64>>> lef_1d_occupancy_ptr() noexcept;
   [[nodiscard]] u64 hash(XXH3_state_t* xxh_state, u64 seed, usize cell_id) const;
   [[nodiscard]] u64 hash(u64 seed, usize cell_id) const;
 
@@ -101,9 +108,10 @@ class Chromosome {
   bp_t _size{(std::numeric_limits<bp_t>::max)()};
   usize _id{(std::numeric_limits<usize>::max)()};
   IITree<bp_t, ExtrusionBarrier> _barriers{};
-  // Protect _contacts from concurrent writes and allocations/deallocations
-  std::shared_mutex _contacts_mtx{};
+  // Protect _contacts and _lef_1d_occupancy from concurrent writes and allocations/deallocations
+  std::shared_mutex _buff_mtx{};
   std::shared_ptr<contact_matrix_t> _contacts{};
+  std::shared_ptr<std::vector<std::atomic<u64>>> _lef_1d_occupancy{};
 
   std::vector<bed_tree_value_t> _features{};
 };
