@@ -37,6 +37,7 @@
 #include <utility>             // for make_pair, pair
 #include <vector>              // for vector, vector<>::iterator
 
+#include "modle/bigwig/bigwig.hpp"
 #include "modle/common/common.hpp"  // for bp_t, contacts_t
 #include "modle/common/dna.hpp"     // for dna::REV, dna::FWD
 #include "modle/common/fmt_helpers.hpp"
@@ -185,7 +186,7 @@ void Simulation::write_contacts_to_disk(std::deque<std::pair<Chromosome*, usize>
         }
       }
       // Deallocate the contact matrix to free up unused memory
-      chrom_to_be_written->deallocate_contacts();
+      chrom_to_be_written->deallocate_contact_matrix();
     }
   } catch (const std::exception& err) {
     std::scoped_lock lck(this->_exceptions_mutex);
@@ -208,6 +209,56 @@ void Simulation::write_contacts_to_disk(std::deque<std::pair<Chromosome*, usize>
     this->_exception_thrown = true;
   }
   this->_end_of_simulation = true;
+}
+
+void Simulation::write_1d_lef_occupancy_to_disk() const {
+  if (!this->track_1d_lef_position) {
+    return;
+  }
+
+  try {
+    io::bigwig::Writer bw(this->path_to_lef_1d_occupancy_bw_file.string());
+
+#if 0
+    std::vector<std::string> chrom_names(this->_genome.number_of_chromosomes());
+    std::vector<u32> chrom_sizes(this->_genome.number_of_chromosomes());
+    std::transform(this->_genome.begin(), this->_genome.end(), chrom_names.begin(),
+                   [](const Chromosome& chrom) { return chrom.name(); });
+    std::transform(this->_genome.begin(), this->_genome.end(), chrom_sizes.begin(),
+                   [](const Chromosome& chrom) { return static_cast<u32>(chrom.size()); });
+    bw.write_chromosomes(chrom_names, chrom_sizes);
+#else
+    // TODO removeme
+    std::vector<std::pair<std::string, u32>> chroms(this->_genome.number_of_chromosomes());
+    std::transform(this->_genome.begin(), this->_genome.end(), chroms.begin(),
+                   [](const Chromosome& chrom) {
+                     return std::make_pair(chrom.name(), static_cast<u32>(chrom.size()));
+                   });
+    bw.write_chromosomes(chroms);
+#endif
+
+    for (const Chromosome& chrom : this->_genome) {
+      if (!chrom.lef_1d_occupancy_ptr()) {
+        continue;
+      }
+
+      std::vector<float> buff(chrom.lef_1d_occupancy().size());
+      const auto max_element =
+          std::max_element(chrom.lef_1d_occupancy().begin(), chrom.lef_1d_occupancy().end())
+              ->load();
+
+      std::transform(chrom.lef_1d_occupancy().begin(), chrom.lef_1d_occupancy().end(), buff.begin(),
+                     [&](const auto& n) {
+                       return static_cast<float>(static_cast<double>(n.load()) /
+                                                 static_cast<double>(max_element));
+                     });
+      bw.write_range(chrom.name(), absl::MakeSpan(buff), bin_size, bin_size, chrom.start_pos());
+    }
+  } catch (const std::exception& e) {
+    throw std::runtime_error(
+        fmt::format(FMT_STRING("An error occurred while writing lef occupancy to file {}: {}"),
+                    this->path_to_lef_1d_occupancy_bw_file, e.what()));
+  }
 }
 
 // Generate moves for extrusion units moving in the same direction

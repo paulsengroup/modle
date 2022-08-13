@@ -227,6 +227,9 @@ class Simulation : Config {
   void write_contacts_to_disk(std::deque<std::pair<Chromosome*, usize>>& progress_queue,
                               std::mutex& progress_queue_mtx);
 
+  /// Write LEF occupancy in 1D space to disk as a BigWig file
+  void write_1d_lef_occupancy_to_disk() const;
+
   /// Worker function used to run an instance of the simulation
 
   //! Worker function used to consume Simulation::Tasks from a task queue, setup a
@@ -432,6 +435,14 @@ class Simulation : Config {
                              absl::Span<const Lef> lefs, usize num_contacts_to_register,
                              random::PRNG_t& rand_eng) const;
 
+  void register_1d_lef_occupancy(Chromosome& chrom, absl::Span<const Lef> lefs,
+                                 usize num_sampling_events, random::PRNG_t& rand_eng) const;
+
+  void register_1d_lef_occupancy(bp_t start_pos, bp_t end_pos,
+                                 std::vector<std::atomic<u64>>& occupancy_buff,
+                                 absl::Span<const Lef> lefs, usize num_sampling_events,
+                                 random::PRNG_t& rand_eng) const;
+
   template <typename MaskT>
   inline static void select_lefs_to_bind(absl::Span<const Lef> lefs,
                                          MaskT& mask) noexcept(utils::ndebug_defined());
@@ -463,7 +474,7 @@ class Simulation : Config {
 
   void run_burnin(State& s, double lef_binding_rate_burnin) const;
 
-  void sample_and_register_contacts(State& s, usize num_contacts_to_sample) const;
+  void sample_and_register_contacts(State& s, usize num_sampling_events) const;
   void dump_stats(usize task_id, usize epoch, usize cell_id, bool burnin, const Chromosome& chrom,
                   absl::Span<const Lef> lefs, const ExtrusionBarriers& barriers,
                   absl::Span<const CollisionT> rev_lef_collisions,

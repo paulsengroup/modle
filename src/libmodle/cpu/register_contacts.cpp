@@ -91,26 +91,25 @@ struct PosPair {
       random::binomial_distribution<isize>{isize(num_contacts), prob_loop_contact}(rand_eng));
 }
 
-void Simulation::sample_and_register_contacts(State& s, usize num_contacts_to_sample) const {
+void Simulation::sample_and_register_contacts(State& s, usize num_sampling_events) const {
   assert(s.num_active_lefs == s.num_lefs);
 
   // Ensure we do not overshoot the target contact density
   if (this->target_contact_density > 0.0) {
-    num_contacts_to_sample =
-        std::min(num_contacts_to_sample, s.num_target_contacts - s.num_contacts);
+    num_sampling_events = std::min(num_sampling_events, s.num_target_contacts - s.num_contacts);
   }
 
   // This can happen when simulating a huge number of cells with a low target contact density
-  if (num_contacts_to_sample == 0) {
+  if (num_sampling_events == 0) {
     return;
   }
 
   const auto start_pos = s.is_modle_sim_state() ? s.chrom->start_pos() : s.window_start;
   const auto end_pos = s.is_modle_sim_state() ? s.chrom->end_pos() : s.window_end;
 
-  const auto num_loop_contacts = compute_num_contacts_loop(
-      num_contacts_to_sample, this->tad_to_loop_contact_ratio, s.rand_eng);
-  const auto num_tad_contacts = num_contacts_to_sample - num_loop_contacts;
+  const auto num_loop_contacts =
+      compute_num_contacts_loop(num_sampling_events, this->tad_to_loop_contact_ratio, s.rand_eng);
+  const auto num_tad_contacts = num_sampling_events - num_loop_contacts;
 
   assert(s.contacts);
   this->register_contacts_loop(start_pos + 1, end_pos - 1, *s.contacts, s.get_lefs(),
@@ -118,7 +117,12 @@ void Simulation::sample_and_register_contacts(State& s, usize num_contacts_to_sa
   this->register_contacts_tad(start_pos + 1, end_pos - 1, *s.contacts, s.get_lefs(),
                               num_tad_contacts, s.rand_eng);
 
-  s.num_contacts += num_contacts_to_sample;
+  if (this->track_1d_lef_position) {
+    this->register_1d_lef_occupancy(start_pos + 1, end_pos - 1, s.chrom->lef_1d_occupancy(),
+                                    s.get_lefs(), num_sampling_events, s.rand_eng);
+  }
+
+  s.num_contacts += num_sampling_events;
   assert(s.num_contacts <= s.num_target_contacts);
 }
 
@@ -193,6 +197,40 @@ void Simulation::register_contacts_tad(bp_t start_pos, bp_t end_pos,
   }
 }
 
+void Simulation::register_1d_lef_occupancy(bp_t start_pos, bp_t end_pos,
+                                           std::vector<std::atomic<u64>>& occupancy_buff,
+                                           absl::Span<const Lef> lefs, usize num_sampling_events,
+                                           random::PRNG_t& rand_eng) const {
+  if (num_sampling_events == 0) {
+    return;
+  }
+
+  using CS = ContactSamplingStrategy;
+  // NOLINTNEXTLINE(readability-implicit-bool-conversion)
+  const bool noisify_positions = this->contact_sampling_strategy & CS::noisify;
+
+  while (num_sampling_events != 0) {
+    const auto& lef = sample_lef_with_replacement(lefs, rand_eng);
+    if (MODLE_LIKELY(lef.is_bound() && lef_within_bound(lef, start_pos, end_pos))) {
+      const auto [p1, p2] =
+          randomize_extrusion_unit_positions(lef, this->genextreme_mu, this->genextreme_sigma,
+                                             this->genextreme_xi, noisify_positions, rand_eng);
+
+      if (!pos_within_bound(p1, p2, start_pos, end_pos)) {
+        continue;
+      }
+
+      const auto i1 = utils::conditional_static_cast<usize>((static_cast<bp_t>(p1) - start_pos) /
+                                                            this->bin_size);
+      const auto i2 = utils::conditional_static_cast<usize>((static_cast<bp_t>(p2) - start_pos) /
+                                                            this->bin_size);
+      occupancy_buff[i1]++;
+      occupancy_buff[i2]++;
+      --num_sampling_events;
+    }
+  }
+}
+
 void Simulation::register_contacts_loop(Chromosome& chrom, const absl::Span<const Lef> lefs,
                                         usize num_contacts_to_register,
                                         random::PRNG_t& rand_eng) const {
@@ -205,6 +243,13 @@ void Simulation::register_contacts_tad(Chromosome& chrom, absl::Span<const Lef> 
                                        random::PRNG_t& rand_eng) const {
   this->register_contacts_tad(chrom.start_pos() + 1, chrom.end_pos() - 1, chrom.contacts(), lefs,
                               num_contacts_to_register, rand_eng);
+}
+
+void Simulation::register_1d_lef_occupancy(modle::Chromosome& chrom, absl::Span<const Lef> lefs,
+                                           usize num_sampling_events,
+                                           random::PRNG_t& rand_eng) const {
+  this->register_1d_lef_occupancy(chrom.start_pos() + 1, chrom.end_pos() - 1,
+                                  chrom.lef_1d_occupancy(), lefs, num_sampling_events, rand_eng);
 }
 
 }  // namespace modle

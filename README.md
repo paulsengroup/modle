@@ -169,7 +169,7 @@ The integration test depends on `h5diff` and `xz`, which can be installed as fol
 
 ```bash
 # Instructions for Ubuntu
-apt-get install -y hdf5-tools xz-utils
+apt-get install -y hdf5-tools libdigest-sha-perl xz-utils
 
 # Instructions for macOS
 brew install hdf5 xz
@@ -229,9 +229,10 @@ While the output of the second command should look something like this.
 [2022-06-15 13:28:03.279] [info]: Simulation terminated without errors in 4.259878566s!
 
 Bye.
-Comparing /tmp/modle-6n3WSvOXxQ/out.cool with /home/roby/github/modle/test/data/integration_tests/reference_001.cool...
+Comparing /tmp/modle-6n3WSvOXxQ/out.cool with /tmp/modle/test/data/integration_tests/reference_001.cool...
 
 ### PASS ###
+/tmp/modle-6n3WSvOXxQ/out_lef_1d_occupancy.bw: OK
 ```
 
 If the second test reports one or more differences between `out.cool` and `reference_001.cool`, then the test failed.
