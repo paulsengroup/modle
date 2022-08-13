@@ -12,8 +12,8 @@ FetchContent_Declare(
 )
 FetchContent_Declare(
         libBigWig
-        GIT_REPOSITORY https://github.com/dpryan79/libBigWig.git
-        GIT_TAG b77db88cb8d3f3bfa27df5d0c4f3623fd4445046
+        URL https://github.com/dpryan79/libBigWig/archive/refs/tags/0.4.7.tar.gz
+        URL_HASH SHA512=52f1b7c8e21e16238b3bb07baef6aa3611797b1b5ff44d912c874f8f4527c516a0676877fad21c103b8b25a733e84bef48530f28dc224a79d43f7764eae7ed40
 )
 # cmake-format: on
 
