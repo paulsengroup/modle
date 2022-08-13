@@ -61,7 +61,6 @@ target_link_system_libraries(
   absl::span
   libBigWig::libbigwig)
 
-add_dependencies(libmodle_io_bigwig libBigWig)
 target_compile_definitions(libmodle_io_bigwig PRIVATE -DNOCURL)
 
 set_target_properties(libmodle_io_bigwig PROPERTIES OUTPUT_NAME modle_io_bigwig)

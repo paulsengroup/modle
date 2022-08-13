@@ -257,11 +257,11 @@ template <class Range>
 }
 
 [[nodiscard]] static io::bigwig::Writer create_bwig_file(
-    std::vector<std::pair<std::string, usize>> &chrom_list, std::string_view base_name,
-    std::string_view suffix) {
+    const std::vector<std::string> &chrom_names, const std::vector<u32> &chrom_sizes,
+    std::string_view base_name, std::string_view suffix) {
   auto bw = io::bigwig::Writer(
       fmt::format(FMT_STRING("{}_{}"), base_name, absl::StripPrefix(suffix, "_")));
-  bw.write_chromosomes(chrom_list);
+  bw.write_chromosomes(chrom_names, chrom_sizes);
   return bw;
 }
 
@@ -471,10 +471,14 @@ template <StripeDirection stripe_direction, class N>
 
 [[nodiscard]] static auto init_writers(const modle::tools::eval_config &c, const ChromSet &chroms,
                                        const bool weighted) {
-  std::vector<std::pair<std::string, usize>> chrom_vect(static_cast<usize>(chroms.size()));
-  std::transform(chroms.begin(), chroms.end(), chrom_vect.begin(), [](const auto &chrom) {
-    return std::make_pair(chrom.first, chrom.second.second);
-  });
+  std::vector<std::string> chrom_names(static_cast<usize>(chroms.size()));
+  std::vector<u32> chrom_sizes(static_cast<usize>(chroms.size()));
+
+  std::transform(chroms.begin(), chroms.end(), chrom_names.begin(),
+                 [](const auto &chrom) { return chrom.first; });
+
+  std::transform(chroms.begin(), chroms.end(), chrom_sizes.begin(),
+                 [](const auto &chrom) { return static_cast<u32>(chrom.second.second); });
 
   const auto name = corr_method_to_str(c.metric);
   const auto bname1 = fmt::format(FMT_STRING("{}{}_vertical"), name, weighted ? "_weighted" : "");
@@ -492,13 +496,13 @@ template <StripeDirection stripe_direction, class N>
   Writer writers;
   writers.vertical = Writer::InternalWriterPair{
       // clang-format off
-          std::make_unique<io::bigwig::Writer>(create_bwig_file(chrom_vect, c.output_prefix.string(), fmt::format(FMT_STRING("{}.bw"), bname1))),
+          std::make_unique<io::bigwig::Writer>(create_bwig_file(chrom_names, chrom_sizes, c.output_prefix.string(), fmt::format(FMT_STRING("{}.bw"), bname1))),
           std::make_unique<compressed_io::Writer>(fmt::format(FMT_STRING("{}_{}.tsv.gz"), c.output_prefix.string(), bname1))
       // clang-format on
   };
   writers.horizontal = Writer::InternalWriterPair{
       // clang-format off
-          std::make_unique<io::bigwig::Writer>(create_bwig_file(chrom_vect, c.output_prefix.string(), fmt::format(FMT_STRING("{}.bw"), bname2))),
+          std::make_unique<io::bigwig::Writer>(create_bwig_file(chrom_names, chrom_sizes, c.output_prefix.string(), fmt::format(FMT_STRING("{}.bw"), bname2))),
           std::make_unique<compressed_io::Writer>(fmt::format(FMT_STRING("{}_{}.tsv.gz"), c.output_prefix.string(), bname2))
       // clang-format on
   };

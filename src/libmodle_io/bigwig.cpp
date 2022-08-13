@@ -15,7 +15,7 @@
 #include <string>      // for string
 #include <utility>     // for move
 
-#include "libBigWig/bigWig.h"  // for bwCleanup, bwClose, bwAddIntervalSpanSteps, bwCreateChromList
+#include "bigWig.h"  // for bwCleanup, bwClose, bwAddIntervalSpanSteps, bwCreateChromList
 #include "modle/common/common.hpp"  // for u32, u64, i32, i64
 #include "modle/common/fmt_helpers.hpp"
 
@@ -78,6 +78,16 @@ Writer& Writer::operator=(Writer&& other) noexcept {
   return *this;
 }
 
+void Writer::write_chromosomes(const std::vector<std::string>& chrom_names,
+                               const std::vector<u32>& chrom_sizes) {
+  assert(chrom_names.size() == chrom_sizes.size());
+  std::vector<const char*> chrom_names_ptr(chrom_names.size());
+  std::transform(chrom_names.begin(), chrom_names.end(), chrom_names_ptr.begin(),
+                 [](const std::string& name) { return name.data(); });
+
+  this->write_chromosomes(chrom_names_ptr.data(), chrom_sizes.data(), chrom_names.size());
+}
+
 void Writer::write_chromosomes(const char* const* chrom_names, const u32* chrom_sizes,
                                const usize num_chroms) {
   assert(this->_fp);  // NOLINT(hicpp-no-array-decay)
@@ -99,7 +109,9 @@ void Writer::write_chromosomes(const char* const* chrom_names, const u32* chrom_
         fmt::format(FMT_STRING("Failed to initialize the file header for file {}"), this->_fname));
   }
 
-  this->_fp->cl = bwCreateChromList(chrom_names, chrom_sizes, static_cast<i64>(num_chroms));
+  // NOLINTNEXTLINE(cppcoreguidelines-pro-type-const-cast)
+  this->_fp->cl = bwCreateChromList(const_cast<char**>(chrom_names), const_cast<u32*>(chrom_sizes),
+                                    static_cast<i64>(num_chroms));
   if (!this->_fp->cl) {
     throw std::runtime_error(
         fmt::format(FMT_STRING("Failed to create the chromosome list for file {}"), this->_fname));
