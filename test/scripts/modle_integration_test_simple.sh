@@ -61,8 +61,10 @@ trap 'rm -rf -- "$outdir"' EXIT
                  -r 20kb \
                  --target-contact-density 20 \
                  --ncells 4 \
+                 --track-1d-lef-position \
                  --max-burnin-epochs 5000
 
+# cp "$outdir/out_lef_1d_occupancy.bw" /tmp/test/data/integration_tests/reference_001.bw
 # cp "$outdir/out.cool" /tmp/test/data/integration_tests/reference_001.cool
 echo "Comparing $outdir/out.cool with $data_dir/reference_001.cool..."
 
@@ -93,6 +95,8 @@ if [ "$status" -eq 0 ]; then
   printf '\n### PASS ###\n'
 else
   printf '\n### FAIL ###\n'
+  exit "$status"
 fi
 
-exit "$status"
+bw_checksum="54eb48e520176d0b80a9ee6df66a9d239f5d08e0237499320f4d6b8d1d70b972"
+shasum -c <(echo "$bw_checksum  $outdir/out_lef_1d_occupancy.bw")
