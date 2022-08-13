@@ -344,11 +344,12 @@ Genome::Genome(const std::filesystem::path& path_to_chrom_sizes,
                const std::filesystem::path& path_to_extr_barriers,
                const std::filesystem::path& path_to_chrom_subranges,
                const absl::Span<const std::filesystem::path> paths_to_extra_features,
-               const double default_barrier_pbb, const double default_barrier_puu, bool interpret_name_field_as_puu)
+               const double default_barrier_pbb, const double default_barrier_puu,
+               bool interpret_name_field_as_puu)
     : _chromosomes(instantiate_genome(path_to_chrom_sizes, path_to_extr_barriers,
                                       path_to_chrom_subranges, paths_to_extra_features,
-                                      default_barrier_pbb,
-                                      default_barrier_puu, interpret_name_field_as_puu)) {}
+                                      default_barrier_pbb, default_barrier_puu,
+                                      interpret_name_field_as_puu)) {}
 
 absl::btree_set<Chromosome> Genome::import_chromosomes(
     const std::filesystem::path& path_to_chrom_sizes,
@@ -507,8 +508,8 @@ absl::btree_set<Chromosome> Genome::instantiate_genome(
     const std::filesystem::path& path_to_chrom_sizes,
     const std::filesystem::path& path_to_extr_barriers,
     const std::filesystem::path& path_to_chrom_subranges,
-    const absl::Span<const std::filesystem::path> paths_to_extra_features, double default_barrier_pbb,
-    double default_barrier_puu, bool interpret_name_field_as_puu) {
+    const absl::Span<const std::filesystem::path> paths_to_extra_features,
+    double default_barrier_pbb, double default_barrier_puu, bool interpret_name_field_as_puu) {
   auto chroms = import_chromosomes(path_to_chrom_sizes, path_to_chrom_subranges);
 
   if (chroms.empty()) {
@@ -525,7 +526,9 @@ absl::btree_set<Chromosome> Genome::instantiate_genome(
                     path_to_chrom_sizes, path_to_chrom_subranges));
   }
 
-  const auto tot_barriers_imported = import_barriers(chroms, path_to_extr_barriers, default_barrier_pbb, default_barrier_puu, interpret_name_field_as_puu);
+  const auto tot_barriers_imported =
+      import_barriers(chroms, path_to_extr_barriers, default_barrier_pbb, default_barrier_puu,
+                      interpret_name_field_as_puu);
   if (tot_barriers_imported == 0) {
     spdlog::warn(
         FMT_STRING(
