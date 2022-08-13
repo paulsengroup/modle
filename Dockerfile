@@ -132,7 +132,7 @@ COPY --from=unit-testing /usr/local/bin/h5diff /usr/local/bin/h5diff
 COPY test/scripts/modle_integration_test_simple.sh "$src_dir/test/scripts/modle_integration_test_simple.sh"
 
 RUN apt-get update \
-&& apt-get install xz-utils \
+&& apt-get install libdigest-sha-perl xz-utils \
 && "$src_dir/test/scripts/modle_integration_test_simple.sh" "$staging_dir/bin/modle"
 
 ARG FINAL_BASE_IMAGE
