@@ -115,7 +115,7 @@ class Genome {
          const std::filesystem::path& path_to_extr_barriers,
          const std::filesystem::path& path_to_chrom_subranges,
          absl::Span<const std::filesystem::path> paths_to_extra_features,
-         double ctcf_prob_occ_to_occ, double ctcf_prob_nocc_to_nocc);
+         double default_barrier_pbb, double default_barrier_puu, bool interpret_name_field_as_puu);
 
   using iterator = absl::btree_set<Chromosome>::iterator;
   using const_iterator = absl::btree_set<Chromosome>::const_iterator;
@@ -158,8 +158,8 @@ class Genome {
       const std::filesystem::path& path_to_chrom_sizes,
       const std::filesystem::path& path_to_extr_barriers,
       const std::filesystem::path& path_to_chrom_subranges,
-      absl::Span<const std::filesystem::path> paths_to_extra_features, double ctcf_prob_occ_to_occ,
-      double ctcf_prob_nocc_to_nocc);
+      absl::Span<const std::filesystem::path> paths_to_extra_features, double default_barrier_pbb,
+      double default_barrier_puu, bool interpret_name_field_as_puu);
 
  private:
   absl::btree_set<Chromosome> _chromosomes{};
@@ -177,7 +177,8 @@ class Genome {
   /// Genome
   static usize import_barriers(absl::btree_set<Chromosome>& chromosomes,
                                const std::filesystem::path& path_to_extr_barriers,
-                               double ctcf_prob_occ_to_occ, double ctcf_prob_nocc_to_nocc);
+                               double default_barrier_pbb, double default_barrier_puu,
+                               bool interpret_name_field_as_puu);
 
   /// Parse a BED file containing the genomic coordinates of extra features (e.g. promoters,
   /// enhancer) them to the Genome

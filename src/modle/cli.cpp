@@ -307,6 +307,13 @@ static std::vector<CLI::App*> add_common_options(CLI::App& subcommand, modle::Co
       ->check(CLI::Range(0.0, 1.0))
       ->capture_default_str();
 
+  barr_adv.add_flag(
+      "--interpret-extrusion-barrier-name-as-not-bound-stp",
+      c.interpret_bed_name_field_as_barrier_not_occupied_stp,
+      "Interpret the name field of the extrusion barrier BED file passed through --extrusion-barrier-file\n"
+      "as the not-bound stp for the barrier defined by the BED record.")
+      ->capture_default_str();
+
   cgen.add_option(
       "--contact-sampling-strategy",
       c.contact_sampling_strategy,
@@ -560,6 +567,7 @@ static std::vector<CLI::App*> add_common_options(CLI::App& subcommand, modle::Co
   io_adv.get_option("--skip-output")->excludes(io_adv.get_option("--log-model-internal-state"));
   stopping.get_option("--target-contact-density")->excludes(stopping.get_option("--target-number-of-epochs"));
   lefbar.get_option("--extrusion-barrier-occupancy")->excludes(barr_adv.get_option("--extrusion-barrier-bound-stp"));
+  barr_adv.get_option("--interpret-extrusion-barrier-name-as-not-bound-stp")->excludes(barr_adv.get_option("--extrusion-barrier-not-bound-stp"));
   // clang-format on
 
   std::array<std::reference_wrapper<CLI::App>, 10> option_groups{
