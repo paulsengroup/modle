@@ -255,7 +255,7 @@ jobs:
       - name: Run modle_tools evaluate integration test(s)
         working-directory: ${{ github.workspace }}/test/scripts
         run: |
-          ./modle_tools_transform_eval_test.sh ${{ github.workspace }}/build/src/modle_tools/modle_tools
+          ./modle_tools_eval_integration_test.sh ${{ github.workspace }}/build/src/modle_tools/modle_tools
 
       - name: Inspect MoDLE version
         run: |

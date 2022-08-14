@@ -133,7 +133,7 @@ COPY test/scripts/modle*integration_test.sh "$src_dir/test/scripts/"
 
 RUN apt-get update \
 && apt-get install -y libdigest-sha-perl \
-                      xz-utils \
+                      xz-utils
 
 RUN "$src_dir/test/scripts/modle_integration_test.sh" "$staging_dir/bin/modle"
 RUN "$src_dir/test/scripts/modle_tools_transform_integration_test.sh" "$staging_dir/bin/modle_tools"
