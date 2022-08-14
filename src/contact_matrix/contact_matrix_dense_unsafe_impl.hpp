@@ -35,7 +35,7 @@ N ContactMatrixDense<N>::unsafe_get(const usize row, const usize col) const {
   const auto [i, j] = internal::transpose_coords(row, col);
   this->bound_check_coords(i, j);
 
-  if (i > this->nrows()) {
+  if (i >= this->nrows()) {
     return 0;
   }
 
@@ -93,7 +93,7 @@ N ContactMatrixDense<N>::unsafe_get_block(const usize row, const usize col,
   // For now we only support blocks with an odd size
   assert(block_size % 2 != 0);
   if (block_size == 1) {
-    return this->get(row, col);
+    return this->unsafe_get(row, col);
   }
 
   // Edges are handled like shown here: https://en.wikipedia.org/wiki/File:Extend_Edge-Handling.png
@@ -121,7 +121,7 @@ void ContactMatrixDense<N>::unsafe_get_block(const usize row, const usize col,
   assert(block_size % 2 != 0);
   if (MODLE_UNLIKELY(block_size == 1)) {
     buff.resize(1);
-    buff.front() = this->get(row, col);
+    buff.front() = this->unsafe_get(row, col);
     return;
   }
 
@@ -146,7 +146,7 @@ void ContactMatrixDense<N>::unsafe_set(const usize row, const usize col, const N
   const auto [i, j] = internal::transpose_coords(row, col);
   this->bound_check_coords(i, j);
 
-  if (i > this->nrows()) {
+  if (i >= this->nrows()) {
     std::atomic_fetch_add_explicit(&this->_updates_missed, usize(1), std::memory_order_relaxed);
     return;
   }
@@ -161,7 +161,7 @@ void ContactMatrixDense<N>::unsafe_add(const usize row, const usize col, const N
   const auto [i, j] = internal::transpose_coords(row, col);
   this->bound_check_coords(i, j);
 
-  if (i > this->nrows()) {
+  if (i >= this->nrows()) {
     std::atomic_fetch_add_explicit(&this->_updates_missed, usize(1), std::memory_order_relaxed);
     return;
   }
@@ -176,7 +176,7 @@ void ContactMatrixDense<N>::unsafe_subtract(const usize row, const usize col, co
   const auto [i, j] = internal::transpose_coords(row, col);
   this->bound_check_coords(i, j);
 
-  if (i > this->nrows()) {
+  if (i >= this->nrows()) {
     std::atomic_fetch_add_explicit(&this->_updates_missed, usize(1), std::memory_order_relaxed);
     return;
   }

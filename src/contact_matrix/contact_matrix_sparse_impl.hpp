@@ -124,7 +124,7 @@ N ContactMatrixSparse<N>::get(usize row, usize col) const {
   const auto [rowt, colt] = internal::transpose_coords(row, col);
   this->bound_check_coords(rowt, colt);
 
-  if (rowt > this->nrows()) {
+  if (rowt >= this->nrows()) {
     return 0;
   }
 
@@ -141,7 +141,7 @@ void ContactMatrixSparse<N>::set(usize row, usize col, N n) {
   const auto [rowt, colt] = internal::transpose_coords(row, col);
   this->bound_check_coords(rowt, colt);
 
-  if (rowt > this->nrows()) {
+  if (rowt >= this->nrows()) {
     std::atomic_fetch_add_explicit(&this->_updates_missed, usize(1), std::memory_order_relaxed);
     return;
   }
@@ -167,7 +167,7 @@ void ContactMatrixSparse<N>::add(usize row, usize col, N n) {
   const auto [rowt, colt] = internal::transpose_coords(row, col);
   this->bound_check_coords(rowt, colt);
 
-  if (rowt > this->nrows()) {
+  if (rowt >= this->nrows()) {
     std::atomic_fetch_add_explicit(&this->_updates_missed, usize(1), std::memory_order_relaxed);
     return;
   }
@@ -186,7 +186,7 @@ void ContactMatrixSparse<N>::subtract(const usize row, const usize col, const N 
   const auto [rowt, colt] = internal::transpose_coords(row, col);
   this->bound_check_coords(rowt, colt);
 
-  if (rowt > this->nrows()) {
+  if (rowt >= this->nrows()) {
     std::atomic_fetch_add_explicit(&this->_updates_missed, usize(1), std::memory_order_relaxed);
     return;
   }
