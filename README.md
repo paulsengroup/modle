@@ -18,10 +18,10 @@ and [dockerhub](https://hub.docker.com/repository/docker/paulsengroup/modle).
 
 ```bash
 # Using Docker
-sudo docker run ghcr.io/paulsengroup/modle:1.0.0-rc.6 --help
+sudo docker run ghcr.io/paulsengroup/modle:1.0.0-rc.7 --help
 
 # Using Singularity/Apptainer
-singularity run docker://ghcr.io/paulsengroup/modle:1.0.0-rc.6 --help
+singularity run docker://ghcr.io/paulsengroup/modle:1.0.0-rc.7 --help
 ```
 
 ## Building MoDLE
@@ -166,7 +166,7 @@ If the above troubleshooting steps did not help, feel free to get in touch by st
 
 To ensure that the compiled code works as intended we highly recommend running MoDLE's automated test.
 
-The integration test depends on `h5diff` and `xz`, which can be installed as follows:
+The integration test depends on `h5diff`, `shasum` and `xz`, which can be installed as follows:
 
 ```bash
 # Instructions for Ubuntu
@@ -258,9 +258,9 @@ and </pixels/count> has rank 1, dimensions [356001], max dimensions [18446744073
 
 <details>
 <summary>For developers</summary>
-To run the full test suite, remove `-E '(SciPy)|(wCorr)` from the above snipped.
+To run the full test suite, remove `-E '(SciPy)|(wCorr)` from the above snippet.
 
-Some of MoDLE's unit tests depend the following libraries:
+Some of MoDLE's unit tests depend on the following libraries:
 
 - [SciPy](https://scipy.org/)
 - [wCorr](https://cran.r-project.org/web/packages/wCorr/index.html)
@@ -319,7 +319,7 @@ When ___score___ is non-zero, its value will be used to set the occupancy for th
 current line.
 
 The ___strand___ field is required and is used to define the extrusion barrier direction.
-As of `v1.0.0-rc.6`, this field should be populated with the direction of the corresponding CTCF binding site.
+As of `v1.0.0-rc.7`, this field should be populated with the direction of the corresponding CTCF binding site.
 Barriers without strand information (i.e. with strand '.') will be ignored.
 
 Sample chrom.sizes and BED file(s) are available inside folder `test/data/integration_tests`.
@@ -327,14 +327,14 @@ Sample chrom.sizes and BED file(s) are available inside folder `test/data/integr
 #### Running a simulation with default settings
 
 ```bash
-singularity run docker://ghcr.io/paulsengroup/modle:1.0.0-rc.6   \
+singularity run docker://ghcr.io/paulsengroup/modle:1.0.0-rc.7   \
     simulate \
     --chrom-sizes test/data/integration_tests/grch38.chrom.sizes \
     --extrusion-barrier-file test/data/integration_tests/grch38_h1_extrusion_barriers.bed.xz \
     --output-prefix path/to/output/prefix
 ```
 
-This will create folder `path/to/output` (if it doesn't already exists), and write the following files inside it:
+This will create folder `path/to/output` (if it doesn't already exist), and write the following files inside it:
 
 ```
 path/to/output
@@ -357,7 +357,7 @@ same parameters.
 
 ```bash
 # Run a simulation with the same parameter as the previous example
-singularity run docker://ghcr.io/paulsengroup/modle:1.0.0-rc.6 \
+singularity run docker://ghcr.io/paulsengroup/modle:1.0.0-rc.7 \
     --config path/to/output/prefix_config.toml
 ```
 
@@ -370,7 +370,7 @@ handful of parameters need to change across simulation runs.
 ```bash
 # The following command will run a simulation using parameters from the previous example as starting point,
 # but using a custom lef density and overriding the output prefix specified by the config file.
-singularity run docker://ghcr.io/paulsengroup/modle:1.0.0-rc.6 \
+singularity run docker://ghcr.io/paulsengroup/modle:1.0.0-rc.7 \
     simulate \
     --config path/to/output/prefix_config.toml \
     --lef-density 15 \
@@ -384,7 +384,7 @@ Adding a line like `my-option=my_value` to the config file is equivalent to pass
 For an up-to-date list of supported CLI options, please refer to MoDLE's help message:
 
 ```bash
-singularity run docker://ghcr.io/paulsengroup/modle:1.0.0-rc.6 simulate --help
+singularity run docker://ghcr.io/paulsengroup/modle:1.0.0-rc.7 simulate --help
 ```
 
 <details>
@@ -419,4 +419,4 @@ cooler show -o my_matrix.png my_cooler.cool chr1:10000000-15000000
 cooler show -o my_matrix.png --dpi 600 my_cooler.cool chr1:10000000-15000000
 ```
 
-For a better visuation experience we recommend using [HiGlass](https://github.com/higlass/higlass), in particular the containerized version of HiGlass which is installed and managed through [higlass-manage](https://github.com/higlass/higlass-manage).
+For a better visualization experience we recommend using [HiGlass](https://github.com/higlass/higlass), in particular the containerized version of HiGlass which is installed and managed through [higlass-manage](https://github.com/higlass/higlass-manage).
