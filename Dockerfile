@@ -129,12 +129,15 @@ ARG install_dir='/usr/local'
 COPY --from=unit-testing "$staging_dir" "$staging_dir"
 COPY --from=unit-testing "$src_dir/test/data/integration_tests/" "$src_dir/test/data/integration_tests/"
 COPY --from=unit-testing /usr/local/bin/h5diff /usr/local/bin/h5diff
-COPY test/scripts/modle_integration_test_simple.sh "$src_dir/test/scripts/modle_integration_test_simple.sh"
+COPY test/scripts/modle*integration_test.sh "$src_dir/test/scripts/"
 
 RUN apt-get update \
 && apt-get install -y libdigest-sha-perl \
                       xz-utils \
-&& "$src_dir/test/scripts/modle_integration_test_simple.sh" "$staging_dir/bin/modle"
+
+RUN "$src_dir/test/scripts/modle_integration_test.sh" "$staging_dir/bin/modle"
+RUN "$src_dir/test/scripts/modle_tools_transform_integration_test.sh" "$staging_dir/bin/modle_tools"
+RUN "$src_dir/test/scripts/modle_tools_eval_integration_test.sh" "$staging_dir/bin/modle_tools"
 
 ARG FINAL_BASE_IMAGE
 ARG FINAL_BASE_IMAGE_DIGEST

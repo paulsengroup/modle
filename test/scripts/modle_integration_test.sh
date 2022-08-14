@@ -20,6 +20,11 @@ if ! command -v h5diff &> /dev/null; then
   ok=false
 fi
 
+if ! command -v shasum &> /dev/null; then
+  2>&1 echo "Unable to find shasum in your PATH"
+  ok=false
+fi
+
 if ! command -v xz &> /dev/null; then
   2>&1 echo "Unable to find xz in your PATH"
   ok=false

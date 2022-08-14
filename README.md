@@ -190,7 +190,10 @@ ctest -j 8                 \
       -E '(SciPy)|(wCorr)'
 
 # Run integration test
-../test/scripts/modle_integration_test_simple.sh src/modle/modle
+../test/scripts/modle_integration_test.sh src/modle/modle
+
+../test/scripts/modle_tools_transform_integration_test.sh src/modle_tools/modle_tools
+../test/scripts/modle_tools_eval_integration_test.sh src/modle_tools/modle_tools
 ```
 
 <details>

@@ -242,9 +242,20 @@ jobs:
                 --timeout 180            \
                 -j $(nproc)
 
-      - name: Run integration tests
+      - name: Run modle integration test(s)
         working-directory: ${{ github.workspace }}/test/scripts
-        run: ./modle_integration_test_simple.sh ${{ github.workspace }}/build/src/modle/modle
+        run: ./modle_integration_test.sh ${{ github.workspace }}/build/src/modle/modle
+
+      - name: Run modle_tools transform integration test(s)
+        working-directory: ${{ github.workspace }}/test/scripts
+        run: |
+          ./modle_tools_transform_integration_test.sh ${{ github.workspace }}/build/src/modle_tools/modle_tools
+          ./modle_tools_transform_integration_test.sh ${{ github.workspace }}/build/src/modle_tools/modle_tools
+
+      - name: Run modle_tools evaluate integration test(s)
+        working-directory: ${{ github.workspace }}/test/scripts
+        run: |
+          ./modle_tools_transform_eval_test.sh ${{ github.workspace }}/build/src/modle_tools/modle_tools
 
       - name: Inspect MoDLE version
         run: |
@@ -374,7 +385,7 @@ jobs:
 
       - name: Run integration tests
         working-directory: ${{ github.workspace }}/test/scripts
-        run: ./modle_integration_test_simple.sh ${{ github.workspace }}/build/src/modle/modle
+        run: ./modle_integration_test.sh ${{ github.workspace }}/build/src/modle/modle
 
       - name: Inspect MoDLE version
         run: |
