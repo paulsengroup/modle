@@ -60,8 +60,6 @@ ARG staging_dir='/root/modle/staging'
 ARG install_dir='/usr/local'
 
 ARG BITFLAGS_VER=1.5.0
-ARG LIBBIGWIG_VER=0.4.6
-ARG XOSHIRO_CPP_VER=1.1
 
 ENV CONAN_V2=1
 ENV CONAN_REVISIONS_ENABLED=1
