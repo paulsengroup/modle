@@ -176,9 +176,6 @@ if(WITH_BOOST_RANDOM)
   target_compile_definitions(project_options INTERFACE MODLE_WITH_BOOST_RANDOM=1)
 endif()
 
-# Prepare external dependencies
-include(cmake/FetchExternalDeps.cmake)
-
 # Tweak spdlog
 target_compile_definitions(
   project_options

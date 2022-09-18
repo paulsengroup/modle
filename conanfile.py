@@ -15,6 +15,7 @@ class MoDLE(ConanFile):
   author = "Roberto Rossini (roberros@uio.no)"
   settings = "os", "compiler", "build_type", "arch"
   requires = ["abseil/20220623.0",
+              "bitflags/1.5.0",
               "boost/1.80.0",
               "bshoshany-thread-pool/3.3.0",
               "bzip2/1.0.8",
@@ -26,6 +27,7 @@ class MoDLE(ConanFile):
               "fmt/9.1.0",
               "hdf5/1.12.2",
               "libarchive/3.6.1",
+              "libbigwig/0.4.7",
               "libcuckoo/0.3.1",
               "lz4/1.9.4",
               "lzo/2.10",
