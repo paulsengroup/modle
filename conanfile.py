@@ -2,7 +2,10 @@
 #
 # SPDX-License-Identifier: MIT
 
-from conans import ConanFile, tools
+from conan import ConanFile
+from conan.tools.build import check_min_cppstd
+from conan.tools.scm import Version
+from conan.errors import ConanInvalidConfiguration
 
 required_conan_version = ">=1.50.0"
 
@@ -43,12 +46,15 @@ class MoDLE(ConanFile):
 
   generators = "cmake", "cmake_find_package", "cmake_find_package_multi"
 
+  @property
+  def _minimum_cpp_standard(self):
+    return 17
+
   def validate(self):
-    if self.settings.compiler.get_safe("cppstd"):
-      tools.check_min_cppstd(self, 17)
+    if self.settings.get_safe("compiler.cppstd"):
+      check_min_cppstd(self, self._minimum_cpp_standard)
 
   def configure(self):
-
     if self.settings.compiler in ["clang", "gcc"]:
       self.settings.compiler.libcxx = "libstdc++11"
 
