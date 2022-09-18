@@ -88,7 +88,7 @@ void Cli::make_eval_subcommand() {
      ->required();
 
   io.add_option(
-     "-r,--reference-matrix",
+     "--reference-matrix",
      c.path_to_reference_matrix,
      "Path to a contact matrix in cooler format to use as reference.")
      ->required();
