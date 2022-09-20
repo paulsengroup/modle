@@ -79,15 +79,20 @@ jobs:
                      ${{ secrets.JF_ARTIFACTORY_USERNAME }}
 
       - name: Build Conan packages
-        run: |
-          conan install conanfile.py                \
-             --build=cascade                        \
-             --build=missing                        \
-             --build=outdated                       \
-             --update                               \
-             -s build_type=${{ matrix.build_type }} \
-             -s compiler.libcxx=libstdc++11         \
-             -s compiler.cppstd=17
+        uses: nick-fields/retry@v2
+        with:
+          max_attempts: 3
+          timeout_minutes: 30
+          retry_on: error
+          command: |
+            conan install conanfile.py                \
+               --build=cascade                        \
+               --build=missing                        \
+               --build=outdated                       \
+               --update                               \
+               -s build_type=${{ matrix.build_type }} \
+               -s compiler.libcxx=libstdc++11         \
+               -s compiler.cppstd=17
 
       - name: Test upload recipes and binaries to Artifactory
         if: ${{ github.event_name == 'pull_request' }}
@@ -158,14 +163,19 @@ jobs:
                      ${{ secrets.JF_ARTIFACTORY_USERNAME }}
 
       - name: Build Conan packages
-        run: |
-          conan install conanfile.py                \
-             --build=cascade                        \
-             --build=missing                        \
-             --build=outdated                       \
-             --update                               \
-             -s build_type=${{ matrix.build_type }} \
-             -s compiler.cppstd=17
+        uses: nick-fields/retry@v2
+        with:
+          max_attempts: 3
+          timeout_minutes: 30
+          retry_on: error
+          command: |
+            conan install conanfile.py                \
+               --build=cascade                        \
+               --build=missing                        \
+               --build=outdated                       \
+               --update                               \
+               -s build_type=${{ matrix.build_type }} \
+               -s compiler.cppstd=17
 
       - name: Test upload recipes and binaries to Artifactory
         if: ${{ github.event_name == 'pull_request' }}
