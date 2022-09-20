@@ -1,7 +1,7 @@
 # Copyright (C) 2022 Roberto Rossini (roberros@uio.no)
 # SPDX-License-Identifier: MIT
 
-name: Build Conan binaries
+name: Build Conan binaries for CI
 
 on:
   push:
@@ -23,7 +23,7 @@ concurrency:
 env:
   CONAN_REVISIONS_ENABLED: "1"
   CONAN_V2_MODE: "1"
-  JF_ARTIFACTORY_NAME: "modle-conan"
+  JF_ARTIFACTORY_NAME: "modle-ci-conan"
 
 jobs:
   build-binaries-ubuntu-ci:
