@@ -81,8 +81,9 @@ jobs:
       - name: Build Conan packages
         run: |
           conan install conanfile.py                \
-             --build=outdated                       \
+             --build=cascade                        \
              --build=missing                        \
+             --build=outdated                       \
              --update                               \
              -s build_type=${{ matrix.build_type }} \
              -s compiler.libcxx=libstdc++11         \
@@ -159,8 +160,9 @@ jobs:
       - name: Build Conan packages
         run: |
           conan install conanfile.py                \
-             --build=outdated                       \
+             --build=cascade                        \
              --build=missing                        \
+             --build=outdated                       \
              --update                               \
              -s build_type=${{ matrix.build_type }} \
              -s compiler.cppstd=17
