@@ -50,7 +50,7 @@ In addition to a C++17 compiler, building MoDLE requires the following tools:
 
 Conan is a package manager for C and C++ applications, and can be installed using pip or Homebrew:
 
-- `pip3 install "conan>=1.50"`
+- `pip3 install "conan>=1.51.3"`
 - `brew install conan`
 
 ### Getting MoDLE source code
