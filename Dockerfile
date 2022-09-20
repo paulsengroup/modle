@@ -43,8 +43,6 @@ ARG build_dir='/root/modle/build'
 ARG staging_dir='/root/modle/staging'
 ARG install_dir='/usr/local'
 
-ARG BITFLAGS_VER=1.5.0
-
 ENV CONAN_V2=1
 ENV CONAN_REVISIONS_ENABLED=1
 ENV CONAN_NON_INTERACTIVE=1
