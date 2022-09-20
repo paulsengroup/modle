@@ -76,6 +76,38 @@ jobs:
           echo "::set-output name=restore-key::$os-$compiler-$hash"
           echo "::set-output name=date::$current_date"
 
+      - name: Cache Conan packages
+        id: cache-conan
+        uses: actions/cache@v3
+        with:
+          key: conan-${{ steps.cache-key.outputs.key }}
+          path: ${{ env.CONAN_USER_HOME }}
+
+      - name: Clean up Conan
+        if: steps.cache-conan.outputs.cache-hit != 'true'
+        run: |
+          conan remove -f "*" --builds
+          conan remove -f "*" --src
+          conan remove -f "*" --system-reqs
+
+      - name: Add modle-ci-conan remote
+        if: steps.cache-conan.outputs.cache-hit != 'true'
+        run: |
+          conan remote add --insert 0 \
+                           "$JF_ARTIFACTORY_NAME" \
+                           "https://paulsengroup.jfrog.io/artifactory/api/conan/$JF_ARTIFACTORY_NAME"
+
+      - name: Download build dependencies
+        if: steps.cache-conan.outputs.cache-hit != 'true'
+        run: |
+          conan install conanfile.py                  \
+               --remote "$JF_ARTIFACTORY_NAME"        \
+               --build=never                          \
+               --update                               \
+               -s build_type=${{ matrix.build_type }} \
+               -s compiler.libcxx=libstdc++11         \
+               -s compiler.cppstd=17
+
       - name: Cache Ccache folder
         uses: actions/cache@v3
         with:
@@ -89,21 +121,6 @@ jobs:
           key: test-dataset-${{ hashFiles('cmake/FetchTestDataset.cmake') }}
           path: ${{ github.workspace }}/test/data/modle_test_data.tar.gz
 
-      - name: Add MoDLE CI Conan artifactory
-        run: |
-          conan remote add --insert 0 \
-                           "$JF_ARTIFACTORY_NAME" \
-                           "https://paulsengroup.jfrog.io/artifactory/api/conan/$JF_ARTIFACTORY_NAME"
-
-      - name: Download deps
-        run: |
-          conan install conanfile.py                  \
-               --remote "$JF_ARTIFACTORY_NAME"        \
-               --build=never                          \
-               -s build_type=${{ matrix.build_type }} \
-               -s compiler.libcxx=libstdc++11         \
-               -s compiler.cppstd=17
-
       - name: Configure project
         run: |
           git config --global --add safe.directory ${{ github.workspace }}
@@ -116,7 +133,6 @@ jobs:
                 -G "${{ matrix.generator }}"                         \
                 -S "${{ github.workspace }}"                         \
                 -B "${{ github.workspace }}/build"
-
 
       - name: Build project
         run: cmake --build ${{ github.workspace }}/build -j $(nproc)
@@ -229,6 +245,38 @@ jobs:
           echo "::set-output name=restore-key::$os-$compiler-$hash"
           echo "::set-output name=date::$current_date"
 
+      - name: Cache Conan packages
+        id: cache-conan
+        uses: actions/cache@v3
+        with:
+          key: conan-${{ steps.cache-key.outputs.key }}
+          path: ${{ env.CONAN_USER_HOME }}
+
+      - name: Clean up Conan
+        if: steps.cache-conan.outputs.cache-hit != 'true'
+        run: |
+          conan remove -f "*" --builds
+          conan remove -f "*" --src
+          conan remove -f "*" --system-reqs
+
+      - name: Add modle-ci-conan remote
+        if: steps.cache-conan.outputs.cache-hit != 'true'
+        run: |
+          conan remote add --insert 0 \
+                           "$JF_ARTIFACTORY_NAME" \
+                           "https://paulsengroup.jfrog.io/artifactory/api/conan/$JF_ARTIFACTORY_NAME"
+
+      - name: Download build dependencies
+        if: steps.cache-conan.outputs.cache-hit != 'true'
+        run: |
+          conan install conanfile.py                  \
+               --remote "$JF_ARTIFACTORY_NAME"        \
+               --build=never                          \
+               --update                               \
+               -s build_type=${{ matrix.build_type }} \
+               -s compiler.libcxx=libstdc++11         \
+               -s compiler.cppstd=17
+
       - name: Cache Ccache folder
         uses: actions/cache@v3
         with:
@@ -241,21 +289,6 @@ jobs:
         with:
           key: test-dataset-${{ hashFiles('cmake/FetchTestDataset.cmake') }}
           path: ${{ github.workspace }}/test/data/modle_test_data.tar.gz
-
-      - name: Add MoDLE CI Conan artifactory
-        run: |
-          conan remote add --insert 0 \
-                           "$JF_ARTIFACTORY_NAME" \
-                           "https://paulsengroup.jfrog.io/artifactory/api/conan/$JF_ARTIFACTORY_NAME"
-
-      - name: Download deps
-        run: |
-          conan install conanfile.py                  \
-               --remote "$JF_ARTIFACTORY_NAME"        \
-               --build=never                          \
-               -s build_type=${{ matrix.build_type }} \
-               -s compiler.libcxx=libstdc++11         \
-               -s compiler.cppstd=17
 
       - name: Configure project
         run: |
