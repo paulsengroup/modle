@@ -44,7 +44,6 @@ env:
 jobs:
   build-project-short:
     runs-on: ubuntu-latest
-    needs: build-dependencies-short
     strategy:
       fail-fast: false
       matrix:
@@ -163,7 +162,6 @@ jobs:
           ${{ github.workspace }}/build/src/modle_tools/modle_tools --version
 
   build-project-long:
-    needs: [ build-dependencies-short, build-dependencies-long ]
     if: "contains(github.event.head_commit.message, '[ci full]')"
     runs-on: ubuntu-latest
     strategy:
