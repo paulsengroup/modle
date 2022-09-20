@@ -33,6 +33,7 @@ concurrency:
   cancel-in-progress: true
 
 env:
+  CONAN_REVISIONS_ENABLED: "1"
   CONAN_USER_HOME: "${{ github.workspace }}/conan-cache"
   CONAN_USER_HOME_SHORT: "${{ github.workspace }}/conan-cache/short"
   CONAN_V2_MODE: "1"
