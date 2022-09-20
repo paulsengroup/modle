@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-# Copyright (C) 2022 Roberto Rossini <roberros@uio.no>
+# Copyright (c) 2022 Roberto Rossini <roberros@uio.no>
 #
 # SPDX-License-Identifier: MIT
 
@@ -8,38 +8,31 @@ set -e
 set -u
 set -o pipefail
 
-repo_root="$(git rev-parse --show-toplevel)"
-dockerfile="$repo_root/Dockerfile"
+img_name='modle'
+ver="$(git rev-parse --short HEAD)"
+if ! git diff-index --quiet HEAD --; then
+  ver+="-dirty"
+fi
 
-C_COMPILER='clang-14'
-CXX_COMPILER='clang++-14'
-FINAL_BASE_IMAGE_TAG='22.04'
+echo "Building \"$img_name:$ver\""
 
-BUILD_BASE_IMAGE="ghcr.io/paulsengroup/ci-docker-images/modle/ubuntu-$FINAL_BASE_IMAGE_TAG-cxx-$C_COMPILER:latest"
-TEST_BASE_IMAGE="ghcr.io/paulsengroup/ci-docker-images/modle/ubuntu-$FINAL_BASE_IMAGE_TAG-cxx-$C_COMPILER:latest"
-FINAL_BASE_IMAGE='docker.io/library/ubuntu'
+sudo docker pull docker.io/library/ubuntu:22.04
 
-FINAL_BASE_IMAGE_DIGEST="$(sudo docker inspect --format='{{index .RepoDigests 0}}' "$FINAL_BASE_IMAGE:$FINAL_BASE_IMAGE_TAG" | grep -o '[[:alnum:]:]\+$')"
+sudo docker build \
+  --build-arg "BUILD_BASE_IMAGE=ghcr.io/paulsengroup/ci-docker-images/modle/ubuntu-22.04-cxx-clang-14:latest" \
+  --build-arg "TEST_BASE_IMAGE=ghcr.io/paulsengroup/ci-docker-images/modle/ubuntu-22.04-cxx-clang-14:latest" \
+  --build-arg "FINAL_BASE_IMAGE=docker.io/library/ubuntu" \
+  --build-arg "FINAL_BASE_IMAGE_TAG=22.04" \
+  --build-arg "FINAL_BASE_IMAGE_DIGEST=$(sudo docker inspect --format='{{index .RepoDigests 0}}' docker.io/library/ubuntu:22.04 | grep -o '[[:alnum:]:]\+$')" \
+  --build-arg "C_COMPILER=clang-14" \
+  --build-arg "CXX_COMPILER=clang++-14" \
+  --build-arg "GIT_HASH=$(git rev-parse HEAD)" \
+  --build-arg "GIT_SHORT_HASH=$(git rev-parse --short HEAD)" \
+  --build-arg "CREATION_DATE=$(date --iso-8601)" \
+  -t "$img_name:latest" \
+  -t "$img_name:$(date --iso-8601 | tr -d '\-' )" \
+  -t "$img_name:$ver" \
+  "$(git rev-parse --show-toplevel)"
 
-GIT_HASH="$(git rev-parse HEAD)"
-GIT_SHORT_HASH="$(git rev-parse --short HEAD)"
-CREATION_DATE="$(date --iso-8601)"
-#VERSION="0.0.1" # TODO changeme
-
-
-sudo docker build -f "$dockerfile" \
-    --build-arg "BUILD_BASE_IMAGE=$BUILD_BASE_IMAGE"               \
-    --build-arg "TEST_BASE_IMAGE=$TEST_BASE_IMAGE"                 \
-    --build-arg "FINAL_BASE_IMAGE=$FINAL_BASE_IMAGE"               \
-    --build-arg "FINAL_BASE_IMAGE_TAG=$FINAL_BASE_IMAGE_TAG"       \
-    --build-arg "FINAL_BASE_IMAGE_DIGEST=$FINAL_BASE_IMAGE_DIGEST" \
-    --build-arg "C_COMPILER=$C_COMPILER"                           \
-    --build-arg "CXX_COMPILER=$CXX_COMPILER"                       \
-    --build-arg "GIT_HASH=$GIT_HASH"                               \
-    --build-arg "GIT_SHORT_HASH=$GIT_SHORT_HASH"                   \
-    --build-arg "CREATION_DATE=$CREATION_DATE"                     \
-    -t 'modle:latest'                                              \
-    -t "modle:${VERSION:-sha-$GIT_SHORT_HASH}"                     \
-    -t "modle:${CREATION_DATE//-/}"                                \
-    "$repo_root"
-
+ # sudo singularity build -F "${img_name}_v${ver}.sif" \
+ #                           "docker-daemon://${img_name}:${ver}"
