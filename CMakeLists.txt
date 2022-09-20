@@ -23,8 +23,8 @@ include(FetchContent)
 # cmake-format: off
 FetchContent_Declare(
         _project_options
-        URL ${CMAKE_CURRENT_SOURCE_DIR}/external/project_options-v0.24.1.tar.xz
-        URL_HASH SHA512=aabdd1060ca3375f609ca2b0e9ca47eb7ac46e2a400c7e334c0e6fdd4f1271b0c612bd17206b6245eae5df4969a28f792d6c922917f2806329d2a95b149c6d28
+        URL ${CMAKE_CURRENT_SOURCE_DIR}/external/project_options-v0.25.2.tar.xz
+        URL_HASH SHA512=ff7bdd70e19f5b77913fa18e5e059cbd783015dfab3a32ef073ace9ce9db69248adb07436c69ab893941950fd01e9c48b5f6ec48d198a2188188d1984ddd9d6d
 )
 # cmake-format: on
 
@@ -175,9 +175,6 @@ endif()
 if(WITH_BOOST_RANDOM)
   target_compile_definitions(project_options INTERFACE MODLE_WITH_BOOST_RANDOM=1)
 endif()
-
-# Prepare external dependencies
-include(cmake/FetchExternalDeps.cmake)
 
 # Tweak spdlog
 target_compile_definitions(

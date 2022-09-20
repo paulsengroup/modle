@@ -585,7 +585,7 @@ usize Genome::size() const {
 }
 
 usize Genome::number_of_chromosomes() const {
-  return static_cast<usize>(this->_chromosomes.size());
+  return utils::conditional_static_cast<usize>(this->_chromosomes.size());
 }
 
 usize Genome::simulated_size() const {

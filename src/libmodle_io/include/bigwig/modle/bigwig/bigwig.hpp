@@ -21,7 +21,7 @@
 // clang-format on
 DISABLE_WARNING_PUSH
 DISABLE_WARNING_PADDED
-#include "bigWig.h"  // for bigWigFile_t
+#include "libbigwig/bigWig.h"  // for bigWigFile_t
 DISABLE_WARNING_POP
 
 namespace modle::io::bigwig {

@@ -43,6 +43,7 @@ target_link_libraries(
          Modle::libmodle_internal
          Modle::io_bed
          Modle::io_bigwig
+         concurrentqueue::concurrentqueue
          fmt::fmt)
 
 target_link_system_libraries(
@@ -60,7 +61,6 @@ target_link_system_libraries(
   absl::span
   Boost::headers
   bshoshany-thread-pool::bshoshany-thread-pool
-  concurrentqueue::concurrentqueue
   range-v3::range-v3
   spdlog::spdlog
   xxHash::xxHash)

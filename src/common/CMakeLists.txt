@@ -3,6 +3,7 @@
 # SPDX-License-Identifier: MIT
 
 find_package(absl CONFIG REQUIRED)
+find_package(bitflags CONFIG REQUIRED)
 find_package(Boost CONFIG REQUIRED)
 find_package(CLI11 CONFIG REQUIRED)
 find_package(FastFloat CONFIG REQUIRED)

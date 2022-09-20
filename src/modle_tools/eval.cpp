@@ -471,8 +471,8 @@ template <StripeDirection stripe_direction, class N>
 
 [[nodiscard]] static auto init_writers(const modle::tools::eval_config &c, const ChromSet &chroms,
                                        const bool weighted) {
-  std::vector<std::string> chrom_names(static_cast<usize>(chroms.size()));
-  std::vector<u32> chrom_sizes(static_cast<usize>(chroms.size()));
+  std::vector<std::string> chrom_names(utils::conditional_static_cast<usize>(chroms.size()));
+  std::vector<u32> chrom_sizes(utils::conditional_static_cast<usize>(chroms.size()));
 
   std::transform(chroms.begin(), chroms.end(), chrom_names.begin(),
                  [](const auto &chrom) { return chrom.first; });
@@ -653,7 +653,7 @@ void eval_subcmd(const modle::tools::eval_config &c) {
     spdlog::info(FMT_STRING("Computing metric(s) for chromosome: \"{}\""),
                  chromosomes.begin()->first);
   } else {
-    std::vector<std::string> chrom_names(static_cast<usize>(chromosomes.size()));
+    std::vector<std::string> chrom_names(utils::conditional_static_cast<usize>(chromosomes.size()));
     std::transform(chromosomes.begin(), chromosomes.end(), chrom_names.begin(),
                    [](const auto &chrom) { return chrom.first; });
     spdlog::info(FMT_STRING("Computing metric(s) for the following {} chromosomes: \"{}\""),
