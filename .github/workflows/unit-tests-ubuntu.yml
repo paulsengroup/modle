@@ -39,122 +39,9 @@ env:
   CCACHE_DIR: "${{ github.workspace }}/ccache-cache"
   CCACHE_COMPRESSLEVEL: "13"
   CCACHE_MAXSIZE: "500M"
+  JF_ARTIFACTORY_NAME: "modle-ci-conan"
 
 jobs:
-  build-dependencies-short:
-    runs-on: ubuntu-latest
-    strategy:
-      fail-fast: true
-      matrix:
-        include:
-          - { compiler: gcc-8,     os: 'ubuntu-20.04' }
-          - { compiler: gcc-12,    os: 'ubuntu-22.04' }
-          - { compiler: clang-8,   os: 'ubuntu-20.04' }
-          - { compiler: clang-14,  os: 'ubuntu-22.04' }
-
-    container:
-      image: ghcr.io/paulsengroup/ci-docker-images/modle/${{ matrix.os }}-cxx-${{ matrix.compiler }}:latest
-      options: "-v ${{ github.workspace }}:${{ github.workspace }}"
-
-    steps:
-      - uses: actions/checkout@v3
-
-      - name: Generate cache key
-        id: cache-key
-        run: |
-          os="${{ matrix.os }}"
-          compiler="${{ matrix.compiler }}"
-          hash="${{ hashFiles('conanfile.py', '.github/workflows/unit-tests-ubuntu.yml') }}"
-
-          echo "::set-output name=key::$os-$compiler-$hash"
-
-      - name: Cache Conan packages
-        id: cache-conan
-        uses: actions/cache@v3
-        with:
-          key: conan-${{ steps.cache-key.outputs.key }}
-          path: ${{ env.CONAN_USER_HOME }}
-
-      - name: Clean up Conan
-        if: steps.cache-conan.outputs.cache-hit != 'true'
-        run: |
-          conan remove -f "*" --builds
-          conan remove -f "*" --src
-          conan remove -f "*" --system-reqs
-
-      - name: Install build dependencies
-        if: steps.cache-conan.outputs.cache-hit != 'true'
-        run: |
-          mkdir build
-
-          for build_type in Release Debug; do
-            conan install conanfile.py        \
-               --build outdated               \
-               -s build_type=${build_type}    \
-               -s compiler.libcxx=libstdc++11 \
-               -s compiler.cppstd=17
-          done
-
-  build-dependencies-long:
-    if: "contains(github.event.head_commit.message, '[ci full]')"
-    runs-on: ubuntu-latest
-    strategy:
-      fail-fast: true
-      matrix:
-        include:
-          - { compiler: gcc-9,     os: 'ubuntu-22.04' }
-          - { compiler: gcc-10,    os: 'ubuntu-22.04' }
-          - { compiler: gcc-11,    os: 'ubuntu-22.04' }
-          - { compiler: clang-9,   os: 'ubuntu-20.04' }
-          - { compiler: clang-10,  os: 'ubuntu-20.04' }
-          - { compiler: clang-11,  os: 'ubuntu-22.04' }
-          - { compiler: clang-12,  os: 'ubuntu-22.04' }
-          - { compiler: clang-13,  os: 'ubuntu-22.04' }
-
-    container:
-      image: ghcr.io/paulsengroup/ci-docker-images/modle/${{ matrix.os }}-cxx-${{ matrix.compiler }}:latest
-      options: "-v ${{ github.workspace }}:${{ github.workspace }}"
-
-    steps:
-      - uses: actions/checkout@v3
-
-      - name: Generate cache key
-        id: cache-key
-        run: |
-          os="${{ matrix.os }}"
-          compiler="${{ matrix.compiler }}"
-          hash="${{ hashFiles('conanfile.py', '.github/workflows/unit-tests-ubuntu.yml') }}"
-
-          echo "::set-output name=key::$os-$compiler-$hash"
-
-      - name: Cache Conan packages
-        id: cache-conan
-        uses: actions/cache@v3
-        with:
-          key: conan-${{ steps.cache-key.outputs.key }}
-          path: ${{ env.CONAN_USER_HOME }}
-
-      - name: Clean up Conan
-        if: steps.cache-conan.outputs.cache-hit != 'true'
-        run: |
-          conan remove -f "*" --builds
-          conan remove -f "*" --src
-          conan remove -f "*" --system-reqs
-
-      - name: Install build dependencies
-        if: steps.cache-conan.outputs.cache-hit != 'true'
-        run: |
-          mkdir build
-
-          for build_type in Release Debug; do
-            conan install conanfile.py        \
-               --build outdated               \
-               -s build_type=${build_type}    \
-               -s compiler.libcxx=libstdc++11 \
-               -s compiler.cppstd=17
-          done
-
-
   build-project-short:
     runs-on: ubuntu-latest
     needs: build-dependencies-short
@@ -197,17 +84,30 @@ jobs:
           restore-keys: ccache-${{ steps.cache-key.outputs.restore-key }}
           path: ${{ env.CCACHE_DIR }}
 
-      - name: Cache Conan packages
-        uses: actions/cache@v3
-        with:
-          key: conan-${{ steps.cache-key.outputs.restore-key }}
-          path: ${{ env.CONAN_USER_HOME }}
-
       - name: Cache test datasets
         uses: actions/cache@v3
         with:
           key: test-dataset-${{ hashFiles('cmake/FetchTestDataset.cmake') }}
           path: ${{ github.workspace }}/test/data/modle_test_data.tar.gz
+
+      - name: Login to JFrog Artifactory
+        run: |
+          conan remote add --insert 0 \
+                           "$JF_ARTIFACTORY_NAME" \
+                           "https://paulsengroup.jfrog.io/artifactory/api/conan/$JF_ARTIFACTORY_NAME"
+
+          conan user -p ${{ secrets.JF_ARTIFACTORY_TOKEN }} \
+                     -r "$JF_ARTIFACTORY_NAME"              \
+                     ${{ secrets.JF_ARTIFACTORY_USERNAME }}
+
+      - name: Download deps
+        run: |
+          conan install conanfile.py                  \
+               --remote "$JF_ARTIFACTORY_NAME"        \
+               --build=never                          \
+               -s build_type=${{ matrix.build_type }} \
+               -s compiler.libcxx=libstdc++11         \
+               -s compiler.cppstd=17
 
       - name: Configure project
         run: |
@@ -342,17 +242,30 @@ jobs:
           restore-keys: ccache-${{ steps.cache-key.outputs.restore-key }}
           path: ${{ env.CCACHE_DIR }}
 
-      - name: Cache Conan packages
-        uses: actions/cache@v3
-        with:
-          key: conan-${{ steps.cache-key.outputs.restore-key }}
-          path: ${{ env.CONAN_USER_HOME }}
-
       - name: Cache test datasets
         uses: actions/cache@v3
         with:
           key: test-dataset-${{ hashFiles('cmake/FetchTestDataset.cmake') }}
           path: ${{ github.workspace }}/test/data/modle_test_data.tar.gz
+
+      - name: Login to JFrog Artifactory
+        run: |
+          conan remote add --insert 0 \
+                           "$JF_ARTIFACTORY_NAME" \
+                           "https://paulsengroup.jfrog.io/artifactory/api/conan/$JF_ARTIFACTORY_NAME"
+
+          conan user -p ${{ secrets.JF_ARTIFACTORY_TOKEN }} \
+                     -r "$JF_ARTIFACTORY_NAME"              \
+                     ${{ secrets.JF_ARTIFACTORY_USERNAME }}
+
+      - name: Download deps
+        run: |
+          conan install conanfile.py                  \
+               --remote "$JF_ARTIFACTORY_NAME"        \
+               --build=never                          \
+               -s build_type=${{ matrix.build_type }} \
+               -s compiler.libcxx=libstdc++11         \
+               -s compiler.cppstd=17
 
       - name: Configure project
         run: |
@@ -383,12 +296,22 @@ jobs:
                 --timeout 180       \
                 -j $(nproc)
 
-      - name: Run integration tests
+      - name: Run modle integration test(s)
         working-directory: ${{ github.workspace }}/test/scripts
         run: ./modle_integration_test.sh ${{ github.workspace }}/build/src/modle/modle
+
+      - name: Run modle_tools transform integration test(s)
+        working-directory: ${{ github.workspace }}/test/scripts
+        run: |
+          ./modle_tools_transform_integration_test.sh ${{ github.workspace }}/build/src/modle_tools/modle_tools
+          ./modle_tools_transform_integration_test.sh ${{ github.workspace }}/build/src/modle_tools/modle_tools
+
+      - name: Run modle_tools evaluate integration test(s)
+        working-directory: ${{ github.workspace }}/test/scripts
+        run: |
+          ./modle_tools_eval_integration_test.sh ${{ github.workspace }}/build/src/modle_tools/modle_tools
 
       - name: Inspect MoDLE version
         run: |
           ${{ github.workspace }}/build/src/modle/modle --version
           ${{ github.workspace }}/build/src/modle_tools/modle_tools --version
-
