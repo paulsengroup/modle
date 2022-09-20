@@ -89,15 +89,11 @@ jobs:
           key: test-dataset-${{ hashFiles('cmake/FetchTestDataset.cmake') }}
           path: ${{ github.workspace }}/test/data/modle_test_data.tar.gz
 
-      - name: Login to JFrog Artifactory
+      - name: Add MoDLE CI Conan artifactory
         run: |
           conan remote add --insert 0 \
                            "$JF_ARTIFACTORY_NAME" \
                            "https://paulsengroup.jfrog.io/artifactory/api/conan/$JF_ARTIFACTORY_NAME"
-
-          conan user -p ${{ secrets.JF_ARTIFACTORY_TOKEN }} \
-                     -r "$JF_ARTIFACTORY_NAME"              \
-                     ${{ secrets.JF_ARTIFACTORY_USERNAME }}
 
       - name: Download deps
         run: |
@@ -246,15 +242,11 @@ jobs:
           key: test-dataset-${{ hashFiles('cmake/FetchTestDataset.cmake') }}
           path: ${{ github.workspace }}/test/data/modle_test_data.tar.gz
 
-      - name: Login to JFrog Artifactory
+      - name: Add MoDLE CI Conan artifactory
         run: |
           conan remote add --insert 0 \
                            "$JF_ARTIFACTORY_NAME" \
                            "https://paulsengroup.jfrog.io/artifactory/api/conan/$JF_ARTIFACTORY_NAME"
-
-          conan user -p ${{ secrets.JF_ARTIFACTORY_TOKEN }} \
-                     -r "$JF_ARTIFACTORY_NAME"              \
-                     ${{ secrets.JF_ARTIFACTORY_USERNAME }}
 
       - name: Download deps
         run: |
