@@ -53,6 +53,12 @@ jobs:
     steps:
       - uses: actions/checkout@v3
 
+      - name: Generate requirements.txt for pip
+        run: |
+          echo 'conan==${{ matrix.conan-ver }}' > requirements.txt
+          echo 'cmake==${{ matrix.cmake-ver }}' >> requirements.txt
+          echo 'scipy' >> requirements.txt
+
       - uses: actions/setup-python@v4
         with:
           python-version: '3.10'
@@ -64,12 +70,6 @@ jobs:
 
           echo "CMAKE_BUILD_PARALLEL_LEVEL=$ncpus" >> $GITHUB_ENV
           echo "CTEST_PARALLEL_LEVEL=$ncpus" >> $GITHUB_ENV
-
-      - name: Generate requirements.txt for pip
-        run: |
-          echo 'conan==${{ matrix.conan-ver }}' > requirements.txt
-          echo 'cmake==${{ matrix.cmake-ver }}' >> requirements.txt
-          echo 'scipy' >> requirements.txt
 
       - name: Install deps with PIP
         run: |
