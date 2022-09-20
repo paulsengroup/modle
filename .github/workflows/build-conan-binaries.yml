@@ -162,6 +162,17 @@ jobs:
                      -r "$JF_ARTIFACTORY_NAME"              \
                      ${{ secrets.JF_ARTIFACTORY_USERNAME }}
 
+      - name: Configure Conan
+        if: steps.cache-conan.outputs.cache-hit != 'true'
+        run: |
+          conan profile new "$HOME/profiles/default" --detect --force
+          conan config init
+          conan profile update settings.compiler.cppstd=17 default
+
+          conan remove -f "*" --builds
+          conan remove -f "*" --src
+          conan remove -f "*" --system-reqs
+
       - name: Build Conan packages
         uses: nick-fields/retry@v2
         with:
