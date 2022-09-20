@@ -17,7 +17,7 @@ class MoDLE(ConanFile):
   license = "MIT"
   author = "Roberto Rossini (roberros@uio.no)"
   settings = "os", "compiler", "build_type", "arch"
-  requires = ["abseil/20220623.0@#732381dc99db29b4cfd293684891da56",
+  requires = ["abseil/20220623.0@#afa0bca6db76c58b37d9e44cb8daf302",
               "bitflags/1.5.0@#f49a584785e75c40bf6970615c452b4e",
               "boost/1.80.0@#3264cfe783d4202f76c96b7d5399ff17",
               "bshoshany-thread-pool/3.3.0@#22e99aee6babc19e679754d95dad2de4",
