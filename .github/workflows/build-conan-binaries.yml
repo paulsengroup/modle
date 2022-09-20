@@ -1,0 +1,185 @@
+# Copyright (C) 2022 Roberto Rossini (roberros@uio.no)
+# SPDX-License-Identifier: MIT
+
+name: Build Conan binaries
+
+on:
+  push:
+    branches: [ main ]
+    paths:
+      - ".github/workflows/build-conan-binaries.yml"
+      - "conanfile.py"
+
+  pull_request:
+    paths:
+      - ".github/workflows/build-conan-binaries.yml"
+      - "conanfile.py"
+
+# https://stackoverflow.com/a/72408109
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+env:
+  CONAN_REVISIONS_ENABLED: "1"
+  CONAN_V2_MODE: "1"
+  JF_ARTIFACTORY_NAME: "modle-conan"
+
+jobs:
+  build-binaries-ubuntu-ci:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: true
+      matrix:
+        include:
+          - { compiler: gcc-8,     os: 'ubuntu-20.04', build_type: 'Debug' }
+          - { compiler: gcc-9,     os: 'ubuntu-22.04', build_type: 'Debug' }
+          - { compiler: gcc-10,    os: 'ubuntu-22.04', build_type: 'Debug' }
+          - { compiler: gcc-11,    os: 'ubuntu-22.04', build_type: 'Debug' }
+          - { compiler: gcc-12,    os: 'ubuntu-22.04', build_type: 'Debug' }
+          - { compiler: clang-8,   os: 'ubuntu-20.04', build_type: 'Debug' }
+          - { compiler: clang-9,   os: 'ubuntu-20.04', build_type: 'Debug' }
+          - { compiler: clang-10,  os: 'ubuntu-20.04', build_type: 'Debug' }
+          - { compiler: clang-11,  os: 'ubuntu-22.04', build_type: 'Debug' }
+          - { compiler: clang-12,  os: 'ubuntu-22.04', build_type: 'Debug' }
+          - { compiler: clang-13,  os: 'ubuntu-22.04', build_type: 'Debug' }
+          - { compiler: clang-14,  os: 'ubuntu-22.04', build_type: 'Debug' }
+
+          - { compiler: gcc-8,     os: 'ubuntu-20.04', build_type: 'Release' }
+          - { compiler: gcc-9,     os: 'ubuntu-22.04', build_type: 'Release' }
+          - { compiler: gcc-10,    os: 'ubuntu-22.04', build_type: 'Release' }
+          - { compiler: gcc-11,    os: 'ubuntu-22.04', build_type: 'Release' }
+          - { compiler: gcc-12,    os: 'ubuntu-22.04', build_type: 'Release' }
+          - { compiler: clang-8,   os: 'ubuntu-20.04', build_type: 'Release' }
+          - { compiler: clang-9,   os: 'ubuntu-20.04', build_type: 'Release' }
+          - { compiler: clang-10,  os: 'ubuntu-20.04', build_type: 'Release' }
+          - { compiler: clang-11,  os: 'ubuntu-22.04', build_type: 'Release' }
+          - { compiler: clang-12,  os: 'ubuntu-22.04', build_type: 'Release' }
+          - { compiler: clang-13,  os: 'ubuntu-22.04', build_type: 'Release' }
+          - { compiler: clang-14,  os: 'ubuntu-22.04', build_type: 'Release' }
+
+    container:
+      image: ghcr.io/paulsengroup/ci-docker-images/${{ matrix.os }}-cxx-${{ matrix.compiler }}:latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+
+      - name: Print Conan version
+        run: conan --version
+
+      - name: Login to JFrog Artifactory
+        run: |
+          conan remote add --insert 0 \
+                           "$JF_ARTIFACTORY_NAME" \
+                           "https://paulsengroup.jfrog.io/artifactory/api/conan/$JF_ARTIFACTORY_NAME"
+
+          conan user -p ${{ secrets.JF_ARTIFACTORY_TOKEN }} \
+                     -r "$JF_ARTIFACTORY_NAME"              \
+                     ${{ secrets.JF_ARTIFACTORY_USERNAME }}
+
+      - name: Build Conan packages
+        run: |
+          conan install conanfile.py                \
+             --build=outdated                       \
+             --update                               \
+             -s build_type=${{ matrix.build_type }} \
+             -s compiler.libcxx=libstdc++11         \
+             -s compiler.cppstd=17
+
+      - name: Test upload recipes and binaries to Artifactory
+        if: ${{ github.event_name == 'pull_request' }}
+        run: |
+          conan upload "*"                       \
+                       -r "$JF_ARTIFACTORY_NAME" \
+                       --check                   \
+                       --parallel                \
+                       --confirm                 \
+                       --all                     \
+                       --skip-upload
+
+      - name: Upload recipes and binaries to Artifactory
+        if: ${{ github.event_name != 'pull_request' }}
+        run: |
+          conan upload "*"                       \
+                       -r "$JF_ARTIFACTORY_NAME" \
+                       --check                   \
+                       --parallel                \
+                       --confirm                 \
+                       --all
+
+  build-binaries-macos-ci:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: true
+      matrix:
+        include:
+          - { os: 'macos-10.15', build_type: 'Debug' }
+          - { os: 'macos-11',    build_type: 'Debug' }
+          - { os: 'macos-12',    build_type: 'Debug' }
+
+          - { os: 'macos-10.15', build_type: 'Release' }
+          - { os: 'macos-11',    build_type: 'Release' }
+          - { os: 'macos-12',    build_type: 'Release' }
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+
+      - name: Generate requirements.txt for pip
+        run: |
+          echo 'conan==1.52.*' > requirements.txt
+          echo 'cmake==3.24.*' >> requirements.txt
+
+      - uses: actions/setup-python@v4
+        with:
+          python-version: '3.10'
+
+      - name: Install deps with PIP
+        run: |
+          pip install -r requirements.txt
+
+      - name: Print Conan version
+        run: conan --version
+
+      - name: Print CMake version
+        run: cmake --version
+
+      - name: Login to JFrog Artifactory
+        run: |
+          conan remote add --insert 0 \
+                           "$JF_ARTIFACTORY_NAME" \
+                           "https://paulsengroup.jfrog.io/artifactory/api/conan/$JF_ARTIFACTORY_NAME"
+
+          conan user -p ${{ secrets.JF_ARTIFACTORY_TOKEN }} \
+                     -r "$JF_ARTIFACTORY_NAME"              \
+                     ${{ secrets.JF_ARTIFACTORY_USERNAME }}
+
+      - name: Build Conan packages
+        run: |
+          conan install conanfile.py                \
+             --build=outdated                       \
+             --update                               \
+             -s build_type=${{ matrix.build_type }} \
+             -s compiler.cppstd=17
+
+      - name: Test upload recipes and binaries to Artifactory
+        if: ${{ github.event_name == 'pull_request' }}
+        run: |
+          conan upload "*"                       \
+                       -r "$JF_ARTIFACTORY_NAME" \
+                       --check                   \
+                       --parallel                \
+                       --confirm                 \
+                       --all                     \
+                       --skip-upload
+
+      - name: Upload recipes and binaries to Artifactory
+        if: ${{ github.event_name != 'pull_request' }}
+        run: |
+          conan upload "*"                       \
+                       -r "$JF_ARTIFACTORY_NAME" \
+                       --check                   \
+                       --parallel                \
+                       --confirm                 \
+                       --all
