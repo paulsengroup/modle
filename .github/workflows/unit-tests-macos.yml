@@ -108,6 +108,13 @@ jobs:
           conan remove -f "*" --src
           conan remove -f "*" --system-reqs
 
+      - name: Add modle-ci-conan remote
+        if: steps.cache-conan.outputs.cache-hit != 'true'
+        run: |
+          conan remote add --insert 0 \
+                           "$JF_ARTIFACTORY_NAME" \
+                           "https://paulsengroup.jfrog.io/artifactory/api/conan/$JF_ARTIFACTORY_NAME"
+
       - name: Download build dependencies
         if: steps.cache-conan.outputs.cache-hit != 'true'
         run: |
