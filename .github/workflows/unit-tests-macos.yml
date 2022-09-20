@@ -101,7 +101,7 @@ jobs:
       - name: Configure Conan
         if: steps.cache-conan.outputs.cache-hit != 'true'
         run: |
-          conan profile new "$HOME/.conan/profiles/default" --detect --force
+          conan profile new "$CONAN_USER_HOME/profiles/default" --detect --force
           conan config init
           conan profile update settings.compiler.cppstd=17 default
 
@@ -118,13 +118,18 @@ jobs:
 
       - name: Download build dependencies
         if: steps.cache-conan.outputs.cache-hit != 'true'
-        run: |
-          conan install conanfile.py                  \
-               --remote "$JF_ARTIFACTORY_NAME"        \
-               --build=never                          \
-               --update                               \
-               -s build_type=${{ matrix.build_type }} \
-               -s compiler.cppstd=17
+        uses: nick-fields/retry@v2
+        with:
+          max_attempts: 3
+          timeout_minutes: 5
+          retry_on: error
+          command: |
+            conan install conanfile.py                  \
+                 --remote "$JF_ARTIFACTORY_NAME"        \
+                 --build=never                          \
+                 --update                               \
+                 -s build_type=${{ matrix.build_type }} \
+                 -s compiler.cppstd=17
 
       - name: Cache test datasets
         uses: actions/cache@v3

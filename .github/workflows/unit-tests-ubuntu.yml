@@ -102,14 +102,19 @@ jobs:
 
       - name: Download build dependencies
         if: steps.cache-conan.outputs.cache-hit != 'true'
-        run: |
-          conan install conanfile.py                  \
-               --remote "$JF_ARTIFACTORY_NAME"        \
-               --build=never                          \
-               --update                               \
-               -s build_type=${{ matrix.build_type }} \
-               -s compiler.libcxx=libstdc++11         \
-               -s compiler.cppstd=17
+        uses: nick-fields/retry@v2
+        with:
+          max_attempts: 3
+          timeout_minutes: 5
+          retry_on: error
+          command: |
+            conan install conanfile.py                  \
+                 --remote "$JF_ARTIFACTORY_NAME"        \
+                 --build=never                          \
+                 --update                               \
+                 -s build_type=${{ matrix.build_type }} \
+                 -s compiler.libcxx=libstdc++11         \
+                 -s compiler.cppstd=17
 
       - name: Cache Ccache folder
         uses: actions/cache@v3
@@ -269,14 +274,19 @@ jobs:
 
       - name: Download build dependencies
         if: steps.cache-conan.outputs.cache-hit != 'true'
-        run: |
-          conan install conanfile.py                  \
-               --remote "$JF_ARTIFACTORY_NAME"        \
-               --build=never                          \
-               --update                               \
-               -s build_type=${{ matrix.build_type }} \
-               -s compiler.libcxx=libstdc++11         \
-               -s compiler.cppstd=17
+        uses: nick-fields/retry@v2
+        with:
+          max_attempts: 3
+          timeout_minutes: 5
+          retry_on: error
+          command: |
+            conan install conanfile.py                  \
+                 --remote "$JF_ARTIFACTORY_NAME"        \
+                 --build=never                          \
+                 --update                               \
+                 -s build_type=${{ matrix.build_type }} \
+                 -s compiler.libcxx=libstdc++11         \
+                 -s compiler.cppstd=17
 
       - name: Cache Ccache folder
         uses: actions/cache@v3
