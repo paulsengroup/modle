@@ -46,10 +46,10 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - { compiler: clang, os: 'macos-10.15', conan-ver: '1.52.*', cmake-ver: '3.24.*', build_type: Release, developer_mode: OFF }
-          - { compiler: clang, os: 'macos-11',    conan-ver: '1.52.*', cmake-ver: '3.24.*', build_type: Release, developer_mode: OFF }
-          - { compiler: clang, os: 'macos-12',    conan-ver: '1.52.*', cmake-ver: '3.24.*', build_type: Release, developer_mode: OFF }
-          - { compiler: clang, os: 'macos-12',    conan-ver: '1.52.*', cmake-ver: '3.24.*', build_type: Debug,   developer_mode: OFF }
+          - { compiler-name: clang, compiler-version: '12.0', os: 'macos-10.15', conan-ver: '1.52.*', cmake-ver: '3.24.*', build_type: Release, developer_mode: OFF }
+          - { compiler-name: clang, compiler-version: '13.0', os: 'macos-11',    conan-ver: '1.52.*', cmake-ver: '3.24.*', build_type: Release, developer_mode: OFF }
+          - { compiler-name: clang, compiler-version: '13.1', os: 'macos-12',    conan-ver: '1.52.*', cmake-ver: '3.24.*', build_type: Release, developer_mode: OFF }
+          - { compiler-name: clang, compiler-version: '13.1', os: 'macos-12',    conan-ver: '1.52.*', cmake-ver: '3.24.*', build_type: Debug,   developer_mode: OFF }
 
     steps:
       - uses: actions/checkout@v3
@@ -80,7 +80,7 @@ jobs:
         id: cache-key
         run: |
           os="${{ matrix.os }}"
-          compiler="${{ matrix.compiler }}"
+          compiler="${{ matrix.compiler-name }}"
           build_type="${{ matrix.build_type }}"
           hash="${{ hashFiles('conanfile.py', '.github/workflows/unit-tests-macos.yml') }}"
 
@@ -103,7 +103,6 @@ jobs:
         run: |
           conan profile new "$CONAN_USER_HOME/profiles/default" --detect --force
           conan config init
-          conan profile update settings.compiler.cppstd=17 default
 
           conan remove -f "*" --builds
           conan remove -f "*" --src
@@ -124,11 +123,13 @@ jobs:
           timeout_minutes: 5
           retry_on: error
           command: |
-            conan install conanfile.py                  \
-                 --remote "$JF_ARTIFACTORY_NAME"        \
-                 --build=never                          \
-                 --update                               \
-                 -s build_type=${{ matrix.build_type }} \
+            conan install conanfile.py                              \
+                 --remote "$JF_ARTIFACTORY_NAME"                    \
+                 --build=never                                      \
+                 --update                                           \
+                 -s build_type=${{ matrix.build_type }}             \
+                 -s compiler=${{ matrix.compiler-name }}            \
+                 -s compiler.version=${{ matrix.compiler-version }} \
                  -s compiler.cppstd=17
 
       - name: Cache test datasets
