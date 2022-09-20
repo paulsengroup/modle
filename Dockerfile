@@ -4,23 +4,7 @@
 
 ##### IMPORTANT #####
 # This Dockerfile requires several build arguments to be defined through --build-arg
-# Example (assuming command is run from the repository's root):
-#       docker build \
-#         --build-arg "BUILD_BASE_IMAGE=ghcr.io/paulsengroup/ci-docker-images/ubuntu-22.04-cxx-clang-14:latest" \
-#         --build-arg "TEST_BASE_IMAGE=ghcr.io/paulsengroup/ci-docker-images/modle/ubuntu-22.04-cxx-clang-14:latest" \
-#         --build-arg "FINAL_BASE_IMAGE=docker.io/library/ubuntu" \
-#         --build-arg "FINAL_BASE_IMAGE_TAG=22.04" \
-#         --build-arg "FINAL_BASE_IMAGE_DIGEST=$(sudo docker pull docker.io/library/ubuntu:22.04 &> /dev/null && sudo docker inspect --format='{{index .RepoDigests 0}}' docker.io/library/ubuntu:22.04 | grep -o '[[:alnum:]:]\+$')" \
-#         --build-arg "C_COMPILER=clang-14" \
-#         --build-arg "CXX_COMPILER=clang++-14" \
-#         --build-arg "GIT_HASH=$(git rev-parse HEAD)" \
-#         --build-arg "GIT_SHORT_HASH=$(git rev-parse --short HEAD)" \
-#         --build-arg "CREATION_DATE=$(date --iso-8601)" \
-#         --build-arg "VERSION=x.y.z"                      \
-#         -t modle:latest \
-#         -t modle:x.y.z  \
-#         -t modle:$(date --iso-8601 | tr -d '\-' ) \
-#         .
+# See utils/devel/build_dockerfile.sh for an example of how to build this Dockerfile
 #####################
 
 ARG BUILD_BASE_IMAGE
