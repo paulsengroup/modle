@@ -82,6 +82,7 @@ jobs:
         run: |
           conan install conanfile.py                \
              --build=outdated                       \
+             --build=missing                        \
              --update                               \
              -s build_type=${{ matrix.build_type }} \
              -s compiler.libcxx=libstdc++11         \
@@ -159,6 +160,7 @@ jobs:
         run: |
           conan install conanfile.py                \
              --build=outdated                       \
+             --build=missing                        \
              --update                               \
              -s build_type=${{ matrix.build_type }} \
              -s compiler.cppstd=17
