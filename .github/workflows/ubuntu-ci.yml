@@ -54,10 +54,15 @@ jobs:
         with:
           ref: ${{ github.head_ref }}
 
-      - name: Extract PR commit message
-        if: github.event_name == 'pull_request'
-        id: pr-commit-message
-        run: echo "::set-output name=message::'$(git log -1 --pretty=%B)'"
+      - name: Extract commit message
+        id: extract-commit-message
+        run: |
+          # This is a workaround for empty github.event.head_commit.message when workflow was triggered by a PR
+          if ${{ github.event_name == 'pull_request' }}; then
+            echo "::set-output name=message::'$(git log -1 --pretty=%B)'"
+          else
+            echo "::set-output name=message::'${{ github.event.head_commit.message }}'"
+          fi
 
       - name: Generate matrix
         uses: actions/github-script@v6
@@ -68,10 +73,7 @@ jobs:
             // https://docs.github.com/en/actions/learn-github-actions/contexts#fromjson
             // https://github.com/actions/runner/issues/982#issuecomment-809360765
 
-            var commit_msg = "${{ github.event.head_commit.message }}"
-            if (${{ github.event_name == 'pull_request' }}) {
-              commit_msg = "${{ steps.pr-commit-message.outputs.message }}"
-            }
+            var commit_msg = "${{ steps.extract-commit-message.outputs.message }}"
 
             var ci_short = !commit_msg.includes('[ci full]')
             console.log("Commit message: %s", commit_msg)
