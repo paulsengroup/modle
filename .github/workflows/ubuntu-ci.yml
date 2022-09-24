@@ -7,7 +7,7 @@ on:
   push:
     branches: [ main ]
     paths:
-      - ".github/workflows/unit-tests-ubuntu.yml"
+      - ".github/workflows/ubuntu-ci.yml"
       - "cmake/**"
       - "external/**"
       - "src/**"
@@ -19,7 +19,7 @@ on:
 
   pull_request:
     paths:
-      - ".github/workflows/unit-tests-ubuntu.yml"
+      - ".github/workflows/ubuntu-ci.yml"
       - "cmake/**"
       - "external/**"
       - "src/**"
