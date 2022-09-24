@@ -1,7 +1,7 @@
 # Copyright (C) 2022 Roberto Rossini (roberros@uio.no)
 # SPDX-License-Identifier: MIT
 
-name: Unit tests macOS
+name: MacOS CI
 
 on:
   push:
@@ -33,6 +33,7 @@ concurrency:
   cancel-in-progress: true
 
 env:
+  CONAN_REVISIONS_ENABLED: "1"
   CONAN_USER_HOME: "${{ github.workspace }}/conan-cache"
   CONAN_USER_HOME_SHORT: "${{ github.workspace }}/conan-cache/short"
   CONAN_V2_MODE: "1"
@@ -44,20 +45,13 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - { compiler: clang, os: 'macos-10.15', conan-ver: '1.52.*', cmake-ver: '3.24.*', build_type: Release, developer_mode: OFF }
-          - { compiler: clang, os: 'macos-11',    conan-ver: '1.52.*', cmake-ver: '3.24.*', build_type: Release, developer_mode: OFF }
-          - { compiler: clang, os: 'macos-12',    conan-ver: '1.52.*', cmake-ver: '3.24.*', build_type: Release, developer_mode: OFF }
-          - { compiler: clang, os: 'macos-12',    conan-ver: '1.52.*', cmake-ver: '3.24.*', build_type: Debug,   developer_mode: OFF }
+          - { compiler-name: apple-clang, compiler-version: '12.0', os: 'macos-10.15', conan-ver: '1.52.*', cmake-ver: '3.24.*', build_type: Release, developer_mode: OFF }
+          - { compiler-name: apple-clang, compiler-version: '13.0', os: 'macos-11',    conan-ver: '1.52.*', cmake-ver: '3.24.*', build_type: Release, developer_mode: OFF }
+          - { compiler-name: apple-clang, compiler-version: '13.1', os: 'macos-12',    conan-ver: '1.52.*', cmake-ver: '3.24.*', build_type: Release, developer_mode: OFF }
+          - { compiler-name: apple-clang, compiler-version: '13.1', os: 'macos-12',    conan-ver: '1.52.*', cmake-ver: '3.24.*', build_type: Debug,   developer_mode: OFF }
 
     steps:
       - uses: actions/checkout@v3
-
-      - name: Detect number available CPUs
-        run: |
-          ncpus=$(python -c 'import multiprocessing as mp; print(mp.cpu_count())')
-
-          echo "CMAKE_BUILD_PARALLEL_LEVEL=$ncpus" >> $GITHUB_ENV
-          echo "CTEST_PARALLEL_LEVEL=$ncpus" >> $GITHUB_ENV
 
       - name: Generate requirements.txt for pip
         run: |
@@ -67,18 +61,21 @@ jobs:
 
       - uses: actions/setup-python@v4
         with:
-          python-version: '3.9'
+          python-version: '3.10'
           cache: 'pip'
 
-      - name: Install deps with PIP
+      - name: Detect number available CPUs
         run: |
-          pip install -r requirements.txt
+          ncpus=$(python -c 'import multiprocessing as mp; print(mp.cpu_count())')
+
+          echo "CMAKE_BUILD_PARALLEL_LEVEL=$ncpus" >> $GITHUB_ENV
+          echo "CTEST_PARALLEL_LEVEL=$ncpus" >> $GITHUB_ENV
 
       - name: Generate cache key
         id: cache-key
         run: |
           os="${{ matrix.os }}"
-          compiler="${{ matrix.compiler }}"
+          compiler="${{ matrix.compiler-name }}"
           build_type="${{ matrix.build_type }}"
           hash="${{ hashFiles('conanfile.py', '.github/workflows/unit-tests-macos.yml') }}"
 
@@ -99,13 +96,43 @@ jobs:
       - name: Configure Conan
         if: steps.cache-conan.outputs.cache-hit != 'true'
         run: |
-          conan profile new "$HOME/.conan/profiles/default" --detect --force
+          conan profile new "$CONAN_USER_HOME/profiles/default" --detect --force
           conan config init
+
+          conan profile update settings.compiler=${{ matrix.compiler-name }} default
+          conan profile update settings.compiler.version=${{ matrix.compiler-version }} default
           conan profile update settings.compiler.cppstd=17 default
 
+      - name: Clean Conan cache (pre-build)
+        if: steps.cache-conan.outputs.cache-hit != 'true'
+        run: |
           conan remove -f "*" --builds
           conan remove -f "*" --src
           conan remove -f "*" --system-reqs
+
+      - name: Build conanfile.py
+        if: steps.cache-conan.outputs.cache-hit != 'true'
+        run: |
+          conan install conanfile.py                  \
+               --build=outdated                       \
+               --update                               \
+               -s build_type=${{ matrix.build_type }} \
+               -s compiler.libcxx=libstdc++11         \
+               -s compiler.cppstd=17
+
+      - name: Clean Conan cache (post-build)
+        if: steps.cache-conan.outputs.cache-hit != 'true'
+        run: |
+          conan remove -f "*" --builds
+          conan remove -f "*" --src
+          conan remove -f "*" --system-reqs
+          conan remove -f "*" --outdated
+
+      - name: Cache test datasets
+        uses: actions/cache@v3
+        with:
+          key: test-dataset-${{ hashFiles('cmake/FetchTestDataset.cmake') }}
+          path: ${{ github.workspace }}/test/data/modle_test_data.tar.gz
 
       - name: Configure project
         run: |
@@ -132,7 +159,7 @@ jobs:
       - name: Setup R
         uses: r-lib/actions/setup-r@v2
         with:
-          r-version: '4.2.0'
+          r-version: '4.2.1'
 
       - name: Install R packages
         uses: r-lib/actions/setup-r-dependencies@v2
