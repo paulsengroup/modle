@@ -1,7 +1,7 @@
 # Copyright (C) 2022 Roberto Rossini (roberros@uio.no)
 # SPDX-License-Identifier: MIT
 
-name: Unit tests Ubuntu
+name: Ubuntu CI
 
 on:
   push:
@@ -177,7 +177,7 @@ jobs:
           key: conan-${{ steps.cache-key.outputs.key }}
           path: ${{ env.CONAN_USER_HOME }}
 
-      - name: Clean conan cache (pre-build)
+      - name: Clean Conan cache (pre-build)
         if: steps.cache-conan.outputs.cache-hit != 'true'
         run: |
           conan remove -f "*" --builds
@@ -194,7 +194,7 @@ jobs:
                -s compiler.libcxx=libstdc++11         \
                -s compiler.cppstd=17
 
-      - name: Clean conan cache (post-build)
+      - name: Clean Conan cache (post-build)
         if: steps.cache-conan.outputs.cache-hit != 'true'
         run: |
           conan remove -f "*" --builds
@@ -260,7 +260,6 @@ jobs:
       - name: Run modle_tools transform integration test(s)
         working-directory: ${{ github.workspace }}/test/scripts
         run: |
-          ./modle_tools_transform_integration_test.sh ${{ github.workspace }}/build/src/modle_tools/modle_tools
           ./modle_tools_transform_integration_test.sh ${{ github.workspace }}/build/src/modle_tools/modle_tools
 
       - name: Run modle_tools evaluate integration test(s)
