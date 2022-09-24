@@ -59,10 +59,14 @@ jobs:
           echo 'cmake==${{ matrix.cmake-ver }}' >> requirements.txt
           echo 'scipy' >> requirements.txt
 
-      - uses: actions/setup-python@v4
+      - name: Setup Python
+        uses: actions/setup-python@v4
         with:
           python-version: '3.10'
           cache: 'pip'
+
+      - name: Install Python deps
+        run: pip install -r requirements.txt
 
       - name: Detect number available CPUs
         run: |
