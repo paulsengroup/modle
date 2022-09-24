@@ -59,6 +59,8 @@ jobs:
             var includes = []
             var ci_short = ${{ ! contains(github.event.head_commit.message, '[ci full]') }}
 
+            console.log(ci_short)
+
             // Debug builds (short CI)
             includes.push({ compiler: 'gcc-8',     os: 'ubuntu-20.04',  generator: 'Ninja', cmake: '3.24.*', conan: '1.52.*', build_type: 'Debug',   developer_mode: 'OFF' })
             includes.push({ compiler: 'gcc-12',    os: 'ubuntu-22.04',  generator: 'Ninja', cmake: '3.24.*', conan: '1.52.*', build_type: 'Debug',   developer_mode: 'ON'  })
@@ -69,7 +71,7 @@ jobs:
             includes.push({ compiler: 'gcc-12',    os: 'ubuntu-22.04',  generator: 'Ninja', cmake: '3.24.*', conan: '1.52.*', build_type: 'Release', developer_mode: 'ON'  })
             includes.push({ compiler: 'clang-14',  os: 'ubuntu-22.04',  generator: 'Ninja', cmake: '3.24.*', conan: '1.52.*', build_type: 'Release', developer_mode: 'ON'  })
 
-            if (! ${{ contains(github.event.head_commit.message, '[ci full]') }}) {
+            if (ci_short) {
               return { include: includes }
             }
 
@@ -119,6 +121,7 @@ jobs:
       options: "-v ${{ github.workspace }}:${{ github.workspace }}"
 
     steps:
+      - run: exit 1
       - uses: actions/checkout@v3
 
       - name: Update build deps
