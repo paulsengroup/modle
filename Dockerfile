@@ -58,8 +58,7 @@ COPY conanfile.py "$src_dir"
 RUN cd "$build_dir"                             \
 && conan install "$src_dir/conanfile.py"        \
                  --build=outdated               \
-                 --env "CC=$CC"                 \
-                 --env "CXX=$CXX"               \
+                 --update                       \
                  -s build_type=Release          \
                  -s compiler.libcxx=libstdc++11 \
                  -s compiler.cppstd=17
