@@ -52,20 +52,20 @@ jobs:
         id: set-result
         with:
           script: |
-            # Documentation
-            # https://docs.github.com/en/actions/learn-github-actions/contexts#fromjson
-            # https://github.com/actions/runner/issues/982#issuecomment-809360765
+            // Documentation
+            // https://docs.github.com/en/actions/learn-github-actions/contexts#fromjson
+            // https://github.com/actions/runner/issues/982#issuecomment-809360765
 
             var includes = []
             var ci_full = ${{ contains(github.event.head_commit.message, '[ci full]') }}
 
-            # Debug builds (short CI)
+            // Debug builds (short CI)
             include.push({ compiler: 'gcc-8',     os: 'ubuntu-20.04',  generator: 'Ninja', cmake: '3.24.*', conan: '1.52.*', build_type: 'Debug',   developer_mode: 'OFF' })
             include.push({ compiler: 'gcc-12',    os: 'ubuntu-22.04',  generator: 'Ninja', cmake: '3.24.*', conan: '1.52.*', build_type: 'Debug',   developer_mode: 'ON'  })
             include.push({ compiler: 'clang-8',   os: 'ubuntu-20.04',  generator: 'Ninja', cmake: '3.24.*', conan: '1.52.*', build_type: 'Debug',   developer_mode: 'OFF' })
             include.push({ compiler: 'clang-14',  os: 'ubuntu-22.04',  generator: 'Ninja', cmake: '3.24.*', conan: '1.52.*', build_type: 'Debug',   developer_mode: 'ON'  })
 
-            # Release builds (short CI)
+            // Release builds (short CI)
             include.push({ compiler: 'gcc-12',    os: 'ubuntu-22.04',  generator: 'Ninja', cmake: '3.24.*', conan: '1.52.*', build_type: 'Release', developer_mode: 'ON'  })
             include.push({ compiler: 'clang-14',  os: 'ubuntu-22.04',  generator: 'Ninja', cmake: '3.24.*', conan: '1.52.*', build_type: 'Release', developer_mode: 'ON'  })
 
@@ -73,7 +73,7 @@ jobs:
               return { include: includes }
             }
 
-            # Debug builds (long CI)
+            // Debug builds (long CI)
             include.push({ compiler: 'gcc-9',     os: 'ubuntu-22.04',  generator: 'Ninja', cmake: '3.24.*', conan: '1.52.*', build_type: 'Debug',   developer_mode: 'OFF' })
             include.push({ compiler: 'gcc-10',    os: 'ubuntu-22.04',  generator: 'Ninja', cmake: '3.24.*', conan: '1.52.*', build_type: 'Debug',   developer_mode: 'OFF' })
             include.push({ compiler: 'gcc-11',    os: 'ubuntu-22.04',  generator: 'Ninja', cmake: '3.24.*', conan: '1.52.*', build_type: 'Debug',   developer_mode: 'ON'  })
@@ -85,7 +85,7 @@ jobs:
             include.push({ compiler: 'clang-13',  os: 'ubuntu-22.04',  generator: 'Ninja', cmake: '3.24.*', conan: '1.52.*', build_type: 'Debug',   developer_mode: 'ON'  })
             include.push({ compiler: 'clang-14',  os: 'ubuntu-22.04',  generator: 'Ninja', cmake: '3.24.*', conan: '1.52.*', build_type: 'Debug',   developer_mode: 'ON'  })
 
-            # Release builds (long CI)
+            // Release builds (long CI)
             include.push({ compiler: 'gcc-8',     os: 'ubuntu-20.04',  generator: 'Ninja', cmake: '3.24.*', conan: '1.52.*', build_type: 'Release', developer_mode: 'OFF' })
             include.push({ compiler: 'gcc-9',     os: 'ubuntu-22.04',  generator: 'Ninja', cmake: '3.24.*', conan: '1.52.*', build_type: 'Release', developer_mode: 'OFF' })
             include.push({ compiler: 'gcc-10',    os: 'ubuntu-22.04',  generator: 'Ninja', cmake: '3.24.*', conan: '1.52.*', build_type: 'Release', developer_mode: 'ON'  })
@@ -97,13 +97,13 @@ jobs:
             include.push({ compiler: 'clang-12',  os: 'ubuntu-22.04',  generator: 'Ninja', cmake: '3.24.*', conan: '1.52.*', build_type: 'Release', developer_mode: 'ON'  })
             include.push({ compiler: 'clang-13',  os: 'ubuntu-22.04',  generator: 'Ninja', cmake: '3.24.*', conan: '1.52.*', build_type: 'Release', developer_mode: 'ON'  })
 
-            # Make sure project builds with CMake 3.18
+            // Make sure project builds with CMake 3.18
             include.push({ compiler: 'clang-14',  os: 'ubuntu-22.04',  generator: 'Ninja', cmake: '3.18.4', conan: '1.52.*', build_type: 'Release', developer_mode: 'OFF' })
-            # Make sure project builds with Conan 1.51
+            // Make sure project builds with Conan 1.51
             include.push({ compiler: 'clang-14',  os: 'ubuntu-22.04',  generator: 'Ninja', cmake: '3.24.*', conan: '1.51.*', build_type: 'Release', developer_mode: 'OFF' })
-            # Make sure project builds with make
+            // Make sure project builds with make
             include.push({ compiler: 'clang-14',  os: 'ubuntu-22.04',  generator: 'Unix Makefiles', cmake: '3.24.*', conan: '1.52.*', build_type: 'Release', developer_mode: 'OFF' })
-            
+
             return { include: includes }
 
 
