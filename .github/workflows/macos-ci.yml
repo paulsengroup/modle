@@ -121,7 +121,6 @@ jobs:
                --build=outdated                       \
                --update                               \
                -s build_type=${{ matrix.build_type }} \
-               -s compiler.libcxx=libstdc++11         \
                -s compiler.cppstd=17
 
       - name: Clean Conan cache (post-build)
