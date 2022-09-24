@@ -60,7 +60,7 @@ jobs:
             var ci_short = ! ${{contains(github.event.head_commit.message, '[ci full]') }}
 
             console.log(ci_short)
-            console.log("${{github.event.head_commit.message}}")
+            console.log(${{github.event.head_commit.message}})
 
             // Debug builds (short CI)
             includes.push({ compiler: 'gcc-8',     os: 'ubuntu-20.04',  generator: 'Ninja', cmake: '3.24.*', conan: '1.52.*', build_type: 'Debug',   developer_mode: 'OFF' })
