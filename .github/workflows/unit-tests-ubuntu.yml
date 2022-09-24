@@ -223,7 +223,7 @@ jobs:
         working-directory: ${{ github.workspace }}/build
         run: |
           TMPDIR=/tmp
-          export "$TMPDIR"
+          export TMPDIR
           mkdir -p "$TMPDIR"
 
           ctest --test-dir .             \
