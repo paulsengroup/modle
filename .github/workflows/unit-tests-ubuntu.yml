@@ -69,7 +69,7 @@ jobs:
             includes.push({ compiler: 'gcc-12',    os: 'ubuntu-22.04',  generator: 'Ninja', cmake: '3.24.*', conan: '1.52.*', build_type: 'Release', developer_mode: 'ON'  })
             includes.push({ compiler: 'clang-14',  os: 'ubuntu-22.04',  generator: 'Ninja', cmake: '3.24.*', conan: '1.52.*', build_type: 'Release', developer_mode: 'ON'  })
 
-            if (ci_short) {
+            if (! ${{ contains(github.event.head_commit.message, '[ci full]') }}) {
               return { include: includes }
             }
 
