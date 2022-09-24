@@ -40,7 +40,6 @@ env:
   CCACHE_DIR: "${{ github.workspace }}/ccache-cache"
   CCACHE_COMPRESSLEVEL: "13"
   CCACHE_MAXSIZE: "200M"
-  JF_ARTIFACTORY_NAME: "modle-ci-conan"
 
 jobs:
   matrix-factory:
@@ -75,7 +74,7 @@ jobs:
             }
 
             var ci_short = !commit_msg.includes('[ci full]')
-            console.log("Commit message: '%s'", commit_msg)
+            console.log("Commit message: %s", commit_msg)
             console.log("CI short: '%s'", ci_short.toString())
 
             var includes = []
