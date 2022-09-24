@@ -140,7 +140,6 @@ jobs:
       options: "-v ${{ github.workspace }}:${{ github.workspace }}"
 
     steps:
-      - run: exit 1
       - uses: actions/checkout@v3
 
       - name: Update build deps
