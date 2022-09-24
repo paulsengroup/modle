@@ -167,7 +167,9 @@ jobs:
         run: |
           conan profile new "$HOME/profiles/default" --detect --force
           conan config init
-
+          
+          conan profile update settings.compiler=${{ matrix.compiler-name }} default
+          conan profile update settings.compiler.version=${{ matrix.compiler-version }} default
           conan profile update settings.compiler.cppstd=17 default
 
           conan remove -f "*" --builds
