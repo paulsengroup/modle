@@ -48,7 +48,20 @@ jobs:
     outputs:
       matrix: ${{ steps.set-result.outputs.result }}
     steps:
-      - uses: actions/github-script@v6
+
+      - name: Checkout repo
+        uses: actions/checkout@v3
+        if: github.event_name == 'pull_request'
+        with:
+          ref: ${{ github.head_ref }}
+
+      - name: Extract PR commit message
+        if: github.event_name == 'pull_request'
+        id: pr-commit-message
+        run: echo "::set-output name=message::'$(git log -1 --pretty=%B)'"
+
+      - name: Generate matrix
+        uses: actions/github-script@v6
         id: set-result
         with:
           script: |
@@ -56,12 +69,16 @@ jobs:
             // https://docs.github.com/en/actions/learn-github-actions/contexts#fromjson
             // https://github.com/actions/runner/issues/982#issuecomment-809360765
 
-            var includes = []
-            var ci_short = ! ${{contains(github.event.head_commit.message, '[ci full]') }}
+            var commit_msg = "${{ github.event.head_commit.message }}"
+            if (${{ github.event_name == 'pull_request' }}) {
+              commit_msg = "${{ steps.pr-commit-message.outputs.message }}"
+            }
 
-            console.log(ci_short)
-            console.log(${{github.event.head_commit.message}})
-            console.log(${{github.event.commits[0].message}})
+            var ci_short = !commit_msg.includes('[ci full]')
+            console.log("Commit message: '%s'", commit_msg)
+            console.log("CI short: '%s'", ci_short.toString())
+
+            var includes = []
 
             // Debug builds (short CI)
             includes.push({ compiler: 'gcc-8',     os: 'ubuntu-20.04',  generator: 'Ninja', cmake: '3.24.*', conan: '1.52.*', build_type: 'Debug',   developer_mode: 'OFF' })
