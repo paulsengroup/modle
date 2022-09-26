@@ -70,8 +70,10 @@ jobs:
           sha256sum -c checksum.sha256
 
           tar -xf ccache-4.6.3-linux-x86_64.tar.xz
-
           make -C ccache-4.6.3-linux-x86_64 install
+
+          whereis ccache
+          ccache --version
 
       - uses: actions/checkout@v3
 
@@ -175,9 +177,14 @@ jobs:
 
           cmake --build build -j $(nproc)
 
+      - name: Print Ccache statistics
+        run: ccache -s
+
       - name: Install project
         working-directory: ${{ github.workspace }}
-        run: cmake --install build/
+        run: |
+          cmake --install build/
+          cp build/test/test_main build/bin
 
       - name: Inspect MoDLE version
         working-directory: /tmp/modle
@@ -300,7 +307,7 @@ jobs:
       matrix:
         image:
           - 'centos:7'
-          - 'centos:latest'
+          - 'rockylinux:9'
           - 'fedora:34'
           - 'fedora:latest'
           - 'opensuse/leap:latest'
@@ -314,13 +321,13 @@ jobs:
 
     steps:
       - name: Install dependencies (Ubuntu)
-        if: contains(${{ matrix.image }}, 'ubuntu')
+        if: ${{ contains(${{ matrix.image }}, 'ubuntu') }}
         run: |
           apt-get update
           apt-get install -y libstdc++6
 
       - name: Install dependencies (openSUSE)
-        if: contains(${{ matrix.image }}, 'opensuse')
+        if: ${{ contains(${{ matrix.image }}, 'opensuse') }}
         run: zypper install -y libstdc++6
 
       - name: Download binaries
