@@ -184,7 +184,7 @@ jobs:
         working-directory: ${{ github.workspace }}
         run: |
           cmake --install build/
-          cp build/test/test_main build/bin
+          cp build/test/test_main modle/bin
 
       - name: Inspect MoDLE version
         working-directory: /tmp/modle
@@ -224,7 +224,6 @@ jobs:
       - name: Extract binaries
         run: |
           tar -xf modle.tar.gz
-          ls -lah .
 
       - name: Cache test datasets
         uses: actions/cache@v3
