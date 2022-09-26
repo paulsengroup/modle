@@ -184,7 +184,7 @@ jobs:
         working-directory: ${{ github.workspace }}
         run: |
           cmake --install build/
-          cp build/test/test_main modle/bin
+          cp build/test/test_main /tmp/modle/bin
 
       - name: Inspect MoDLE version
         working-directory: /tmp/modle
@@ -374,12 +374,21 @@ jobs:
         with:
           name: portable-bins
 
+      - name: Generate archive name
+        id: archive-name
+        run: |
+          version="${GITHUB_REF#refs/tags/v}"
+
+          echo "::set-output name=version::$version"
+          echo "::set-output name=name::modle-$version.tar.xz"
+
       - name: Extract binaries
         run: |
           tar -xf modle.tar.gz
           rm modle/bin/test_main
 
-          tar -cJf modle.tar.xz modle
+          mv modle "modle-${{ steps.archive-name.outputs.version }}"
+          tar -cJf "${{ steps.archive-name.outputs.name }}" "modle-${{ steps.archive-name.outputs.version }}"
 
       - name: Upload Binaries
         uses: skx/github-action-publish-binaries@release-2.0
