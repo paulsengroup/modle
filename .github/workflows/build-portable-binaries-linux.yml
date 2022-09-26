@@ -209,6 +209,9 @@ jobs:
   run-unit-tests:
     runs-on: ubuntu-latest
     needs: build-portable-binaries
+    container:
+      image: centos:6
+      options: "-v ${{ github.workspace }}:${{ github.workspace }}"
 
     steps:
       - uses: actions/checkout@v3
