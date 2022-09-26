@@ -328,7 +328,7 @@ jobs:
 
       - name: Install dependencies (openSUSE)
         if: contains(matrix.image, 'opensuse')
-        run: zypper install -y libstdc++6
+        run: zypper install -y libstdc++6 tar
 
       - name: Download binaries
         uses: actions/download-artifact@v3
