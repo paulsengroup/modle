@@ -70,7 +70,7 @@ jobs:
           compiler="gcc-11"
           hash="${{ hashFiles('conanfile.py', '.github/workflows/build-portable-binary-ubuntu.yml') }}"
 
-          echo "::set-output name=key::$os-$compiler-$hash
+          echo "::set-output name=key::$os-$compiler-$hash"
 
       - name: Cache Conan packages
         id: cache-conan
