@@ -40,6 +40,9 @@ env:
   CONAN_USER_HOME: "${{ github.workspace }}/conan-cache"
   CONAN_USER_HOME_SHORT: "${{ github.workspace }}/conan-cache/short"
   CONAN_V2_MODE: "1"
+  CCACHE_DIR: "${{ github.workspace }}/ccache-cache"
+  CCACHE_COMPRESSLEVEL: "13"
+  CCACHE_MAXSIZE: "200M"
 
 jobs:
   build-portable-binaries:
@@ -61,6 +64,15 @@ jobs:
           pip3 install --upgrade pip
           pip3 install 'cmake>=3.18' 'conan>=1.51.3'
 
+          # Download and install ccache
+          curl -LO 'https://github.com/ccache/ccache/releases/download/v4.6.3/ccache-4.6.3-linux-x86_64.tar.xz'
+          echo 'abfa3a89de66f98972da43acbc52894a3f328fa784d0a33d45288c9bd450339d  ccache-4.6.3-linux-x86_64.tar.xz' > checksum.sha256
+          sha256sum -c checksum.sha256
+
+          tar -xf ccache-4.6.3-linux-x86_64.tar.xz
+
+          make -C ccache-4.6.3-linux-x86_64 install
+
       - uses: actions/checkout@v3
 
       - name: Generate cache key
@@ -70,7 +82,11 @@ jobs:
           compiler="gcc-11"
           hash="${{ hashFiles('conanfile.py', '.github/workflows/build-portable-binary-ubuntu.yml') }}"
 
+          # This can be used by to always update a cache entry (useful e.g. for ccache)
+          current_date="$(date '+%s')"
+
           echo "::set-output name=key::$os-$compiler-$hash"
+          echo "::set-output name=date::$current_date"
 
       - name: Cache Conan packages
         id: cache-conan
@@ -123,6 +139,13 @@ jobs:
           conan remove -f "*" --system-reqs
           conan remove -f "*" --outdated
 
+      - name: Cache Ccache folder
+        uses: actions/cache@v3
+        with:
+          key: ccache-${{ steps.cache-key.outputs.key }}-${{ steps.cache-key.outputs.date }}
+          restore-keys: ccache-${{ steps.cache-key.outputs.key }}
+          path: ${{ env.CCACHE_DIR }}
+
       - name: Cache test datasets
         uses: actions/cache@v3
         with:
@@ -140,7 +163,7 @@ jobs:
           cmake -DCMAKE_BUILD_TYPE=Release            \
                 -DENABLE_TESTING=ON                   \
                 -DENABLE_DEVELOPER_MODE=OFF           \
-                -DCMAKE_INSTALL_PREFIX="/tmp/modle/" \
+                -DCMAKE_INSTALL_PREFIX="/tmp/modle/"  \
                 -S "${{ github.workspace }}"          \
                 -B "${{ github.workspace }}/build"
 
@@ -174,7 +197,7 @@ jobs:
           retention-days: 1
           path: /tmp/modle.tar.gz
 
-  run-automated-tests:
+  run-unit-tests:
     runs-on: ubuntu-latest
     needs: build-portable-binaries
     container:
@@ -204,9 +227,63 @@ jobs:
       - name: Run unit tests
         run: modle/bin/test_main --durations=yes
 
+  run-modle-integration-tests:
+    runs-on: ubuntu-latest
+    needs: build-portable-binaries
+    container:
+      image: ghcr.io/${{ github.repository_owner }}/ci-docker-images/modle/ubuntu-22.04-cxx-clang-14:latest
+      options: "-v ${{ github.workspace }}:${{ github.workspace }}"
+
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Download binaries
+        uses: actions/download-artifact@v3
+        with:
+          name: portable-bins
+
+      - name: Extract binaries
+        run: tar -xf modle.tar.gz
+
+      - name: Cache test datasets
+        uses: actions/cache@v3
+        with:
+          key: test-dataset-${{ hashFiles('cmake/FetchTestDataset.cmake') }}
+          path: ${{ github.workspace }}/test/data/modle_test_data.tar.gz
+
+      - name: Extract test datasets
+        run: tar -xf ${{ github.workspace }}/test/data/modle_test_data.tar.gz
+
       - name: Run modle integration test(s)
         working-directory: ${{ github.workspace }}/test/scripts
         run: ./modle_integration_test.sh ${{ github.workspace }}/modle/bin/modle
+
+  run-modle-tools-integration-tests:
+    runs-on: ubuntu-latest
+    needs: build-portable-binaries
+    container:
+      image: ghcr.io/${{ github.repository_owner }}/ci-docker-images/modle/ubuntu-22.04-cxx-clang-14:latest
+      options: "-v ${{ github.workspace }}:${{ github.workspace }}"
+
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Download binaries
+        uses: actions/download-artifact@v3
+        with:
+          name: portable-bins
+
+      - name: Extract binaries
+        run: tar -xf modle.tar.gz
+
+      - name: Cache test datasets
+        uses: actions/cache@v3
+        with:
+          key: test-dataset-${{ hashFiles('cmake/FetchTestDataset.cmake') }}
+          path: ${{ github.workspace }}/test/data/modle_test_data.tar.gz
+
+      - name: Extract test datasets
+        run: tar -xf ${{ github.workspace }}/test/data/modle_test_data.tar.gz
 
       - name: Run modle_tools transform integration test(s)
         working-directory: ${{ github.workspace }}/test/scripts
@@ -273,7 +350,12 @@ jobs:
 
   publish-binaries:
     if: github.event_name == 'release'
-    needs: [ run-automated-tests, run-portability-test ]
+    needs:
+      - run-unit-tests
+      - run-modle-integration-tests
+      - run-modle-tools-integration-tests
+      - run-portability-test
+
     runs-on: ubuntu-latest
     steps:
       - name: Download binaries
