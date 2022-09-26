@@ -95,7 +95,7 @@ jobs:
           conan profile update settings.compiler=gcc default
           conan profile update settings.compiler.version=11 default
           conan profile update settings.compiler.cppstd=17 default
-          conan profile update settings.compiler.libcxx=libstdc++ default
+          conan profile update settings.compiler.libcxx=libstdc++11 default
 
       - name: Build conanfile.py
         if: steps.cache-conan.outputs.cache-hit != 'true'
@@ -229,6 +229,16 @@ jobs:
       options: "-v ${{ github.workspace }}:${{ github.workspace }}"
 
     steps:
+      - name: Install dependencies (Ubuntu)
+        if: "contains(${{ matrix.image }}, 'ubuntu')"
+        run: |
+          apt-get update
+          apt-get install -y libstdc++6
+
+      - name: Install dependencies (openSUSE)
+        if: "contains(${{ matrix.image }}, 'opensuse')"
+        run: zypper install -y libstdc++6
+
       - name: Download binaries
         uses: actions/download-artifact@v3
         with:
