@@ -469,7 +469,7 @@ void Cli::make_transform_subcommand() {
       "-r,--resolution",
       c.bin_size,
       "Resolution in base pairs.\n"
-      "Only used when the contact matrix passed to --reference-matrix is in\n"
+      "Only used when the contact matrix passed to --input-matrix is in\n"
       "multires-cooler format.")
       ->check(CLI::PositiveNumber)
       ->transform(utils::cli::TrimTrailingZerosFromDecimalDigit | utils::cli::AsGenomicDistance);
