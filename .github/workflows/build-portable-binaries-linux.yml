@@ -209,9 +209,6 @@ jobs:
   run-unit-tests:
     runs-on: ubuntu-latest
     needs: build-portable-binaries
-    container:
-      image: ghcr.io/${{ github.repository_owner }}/ci-docker-images/modle/ubuntu-22.04-cxx-clang-14:latest
-      options: "-v ${{ github.workspace }}:${{ github.workspace }}"
 
     steps:
       - uses: actions/checkout@v3
@@ -222,8 +219,7 @@ jobs:
           name: portable-bins
 
       - name: Extract binaries
-        run: |
-          tar -xf modle.tar.gz
+        run: tar -xf modle.tar.gz
 
       - name: Cache test datasets
         uses: actions/cache@v3
@@ -235,7 +231,7 @@ jobs:
         run: tar -xf ${{ github.workspace }}/test/data/modle_test_data.tar.gz
 
       - name: Run unit tests
-        run: modle/bin/test_main --durations=yes
+        run: modle/bin/test_main --durations=yes 'exclude:*SciPy*' 'exclude:*wCorr*'
 
   run-modle-integration-tests:
     runs-on: ubuntu-latest
@@ -360,7 +356,6 @@ jobs:
           ./modle_tools transform --help
 
   publish-binaries:
-    if: github.event_name == 'release'
     needs:
       - run-unit-tests
       - run-modle-integration-tests
@@ -382,7 +377,7 @@ jobs:
           echo "::set-output name=version::$version"
           echo "::set-output name=name::modle-$version.tar.xz"
 
-      - name: Extract binaries
+      - name: Archive binaries
         run: |
           tar -xf modle.tar.gz
           rm modle/bin/test_main
@@ -391,8 +386,9 @@ jobs:
           tar -cJf "${{ steps.archive-name.outputs.name }}" "modle-${{ steps.archive-name.outputs.version }}"
 
       - name: Upload Binaries
+        if: github.event_name == 'release'
         uses: skx/github-action-publish-binaries@release-2.0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          args: modle.tar.xz
+          args: ${{ steps.archive-name.outputs.name }}
