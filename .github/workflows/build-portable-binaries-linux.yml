@@ -95,7 +95,7 @@ jobs:
           conan profile update settings.compiler=gcc default
           conan profile update settings.compiler.version=11 default
           conan profile update settings.compiler.cppstd=17 default
-          conan profile update settings.compiler.libcxx=libstdc++11 default
+          conan profile update settings.compiler.libcxx=libstdc++ default
 
       - name: Build conanfile.py
         if: steps.cache-conan.outputs.cache-hit != 'true'
@@ -111,7 +111,7 @@ jobs:
                --build=outdated               \
                --update                       \
                -s build_type=Release          \
-               -s compiler.libcxx=libstdc++11 \
+               -s compiler.libcxx=libstdc++   \
                -s compiler.cppstd=17
 
       - name: Clean Conan cache (post-build)
