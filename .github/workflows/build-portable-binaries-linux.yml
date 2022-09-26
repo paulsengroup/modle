@@ -86,6 +86,17 @@ jobs:
           conan remove -f "*" --src
           conan remove -f "*" --system-reqs
 
+      - name: Configure Conan
+        if: steps.cache-conan.outputs.cache-hit != 'true'
+        run: |
+          conan profile new "$CONAN_USER_HOME/profiles/default" --detect --force
+          conan config init
+
+          conan profile update settings.compiler=gcc default
+          conan profile update settings.compiler.version=11 default
+          conan profile update settings.compiler.cppstd=17 default
+          conan profile update settings.compiler.libcxx=libstdc++ default
+
       - name: Build conanfile.py
         if: steps.cache-conan.outputs.cache-hit != 'true'
         run: |
