@@ -17,7 +17,7 @@
 #include <type_traits>  // for is_arithmetic, is_signed
 #include <vector>       // for vector
 
-#include "bigWig.h"                                     // for bwAddIntervalSpanSteps
+#include "libbigwig/bigWig.h"                           // for bwAddIntervalSpanSteps
 #include "modle/common/common.hpp"                      // for u32, u64, i32
 #include "modle/common/suppress_compiler_warnings.hpp"  // for DISABLE_WARNING_POP, DISABLE_WARN...
 

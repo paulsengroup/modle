@@ -4,23 +4,7 @@
 
 ##### IMPORTANT #####
 # This Dockerfile requires several build arguments to be defined through --build-arg
-# Example (assuming command is run from the repository's root):
-#       docker build \
-#         --build-arg "BUILD_BASE_IMAGE=ghcr.io/paulsengroup/ci-docker-images/ubuntu-20.04-cxx-clang-13:latest" \
-#         --build-arg "TEST_BASE_IMAGE=ghcr.io/paulsengroup/ci-docker-images/modle/ubuntu-20.04-cxx-clang-13:latest" \
-#         --build-arg "FINAL_BASE_IMAGE=docker.io/library/ubuntu" \
-#         --build-arg "FINAL_BASE_IMAGE_TAG=20.04" \
-#         --build-arg "FINAL_BASE_IMAGE_DIGEST=$(sudo docker inspect --format='{{index .RepoDigests 0}}' docker.io/library/ubuntu:20.04 | grep -o '[[:alnum:]:]\+$')" \
-#         --build-arg "C_COMPILER=clang-13" \
-#         --build-arg "CXX_COMPILER=clang++-13" \
-#         --build-arg "GIT_HASH=$(git rev-parse HEAD)" \
-#         --build-arg "GIT_SHORT_HASH=$(git rev-parse --short HEAD)" \
-#         --build-arg "CREATION_DATE=$(date --iso-8601)" \
-#         --build-arg "VERSION=x.y.z"                      \
-#         -t modle:latest \
-#         -t modle:x.y.z  \
-#         -t modle:$(date --iso-8601 | tr -d '\-' ) \
-#         .
+# See utils/devel/build_dockerfile.sh for an example of how to build this Dockerfile
 #####################
 
 ARG BUILD_BASE_IMAGE
@@ -59,10 +43,6 @@ ARG build_dir='/root/modle/build'
 ARG staging_dir='/root/modle/staging'
 ARG install_dir='/usr/local'
 
-ARG BITFLAGS_VER=1.5.0
-ARG LIBBIGWIG_VER=0.4.6
-ARG XOSHIRO_CPP_VER=1.1
-
 ENV CONAN_V2=1
 ENV CONAN_REVISIONS_ENABLED=1
 ENV CONAN_NON_INTERACTIVE=1
@@ -78,8 +58,7 @@ COPY conanfile.py "$src_dir"
 RUN cd "$build_dir"                             \
 && conan install "$src_dir/conanfile.py"        \
                  --build=outdated               \
-                 --env "CC=$CC"                 \
-                 --env "CXX=$CXX"               \
+                 --update                       \
                  -s build_type=Release          \
                  -s compiler.libcxx=libstdc++11 \
                  -s compiler.cppstd=17

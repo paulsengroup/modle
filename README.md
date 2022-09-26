@@ -6,8 +6,8 @@ SPDX-License-Identifier: MIT
 
 # MoDLE
 
-[![Unit tests Ubuntu](https://github.com/paulsengroup/modle/actions/workflows/unit-tests-ubuntu.yml/badge.svg?branch=main)](https://github.com/paulsengroup/modle/actions/workflows/unit-tests-ubuntu.yml)
-[![Unit tests macOS](https://github.com/paulsengroup/modle/actions/workflows/unit-tests-macos.yml/badge.svg)](https://github.com/paulsengroup/modle/actions/workflows/unit-tests-macos.yml)
+[![Ubuntu CI](https://github.com/paulsengroup/modle/actions/workflows/ubuntu-ci.yml/badge.svg)](https://github.com/paulsengroup/modle/actions/workflows/ubuntu-ci.yml)
+[![MacOS CI](https://github.com/paulsengroup/modle/actions/workflows/macos-ci.yml/badge.svg)](https://github.com/paulsengroup/modle/actions/workflows/macos-ci.yml)
 [![Build Docker image](https://github.com/paulsengroup/modle/actions/workflows/build-docker-image.yml/badge.svg)](https://github.com/paulsengroup/modle/actions/workflows/build-docker-image.yml)
 
 ## Using MoDLE
@@ -44,13 +44,13 @@ and [dockerhub](https://hub.docker.com/repository/docker/paulsengroup/modle).
 In addition to a C++17 compiler, building MoDLE requires the following tools:
 
 - CMake >= 3.18
-- Conan >= 1.50
+- Conan >= 1.51.3
 
 #### Installing Conan
 
 Conan is a package manager for C and C++ applications, and can be installed using pip or Homebrew:
 
-- `pip3 install "conan>=1.50"`
+- `pip3 install "conan>=1.51.3"`
 - `brew install conan`
 
 ### Getting MoDLE source code

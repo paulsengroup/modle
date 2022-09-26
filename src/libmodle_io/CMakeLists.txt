@@ -7,6 +7,7 @@ find_package(Boost CONFIG REQUIRED)
 find_package(fmt CONFIG REQUIRED)
 find_package(HDF5 CONFIG REQUIRED)
 find_package(LibArchive CONFIG REQUIRED)
+find_package(BigWig CONFIG REQUIRED)
 find_package(readerwriterqueue CONFIG REQUIRED)
 find_package(spdlog CONFIG REQUIRED)
 find_package(ZLIB CONFIG REQUIRED)
@@ -59,7 +60,7 @@ target_link_system_libraries(
   libmodle_io_bigwig
   PUBLIC
   absl::span
-  libBigWig::libbigwig)
+  BigWig::BigWig)
 
 target_compile_definitions(libmodle_io_bigwig PRIVATE -DNOCURL)
 
