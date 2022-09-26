@@ -359,7 +359,6 @@ jobs:
           ./modle_tools transform --help
 
   publish-binaries:
-    if: github.event_name == 'release'
     needs:
       - run-unit-tests
       - run-modle-integration-tests
@@ -376,24 +375,25 @@ jobs:
       - name: Generate archive name
         id: archive-name
         run: |
-          version="${GITHUB_REF#refs/tags/v}"
+          version="$(basename "$GITHUB_REF")"
+          version="${version#v}"
 
-          echo "::set-output name=version::$version"
-          echo "::set-output name=name::modle-$version.tar.xz"
+          echo "::set-output name=name::modle-$version"
 
       - name: Archive binaries
         run: |
           tar -xf modle.tar.gz
           rm modle/bin/test_main
 
-          mv modle "modle-${{ steps.archive-name.outputs.version }}"
-          tar -cJf "${{ steps.archive-name.outputs.name }}" "modle-${{ steps.archive-name.outputs.version }}"
+          mv modle "${{ steps.archive-name.outputs.name }}"
+          tar -cJf "${{ steps.archive-name.outputs.name }}.tar.xz" "${{ steps.archive-name.outputs.name }}"
 
-          tar -tf "${{ steps.archive-name.outputs.name }}"
+          tar -tf "${{ steps.archive-name.outputs.name }}.tar.xz"
 
       - name: Upload Binaries
+        if: github.event_name == 'release'
         uses: skx/github-action-publish-binaries@release-2.0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          args: ${{ steps.archive-name.outputs.name }}
+          args: "${{ steps.archive-name.outputs.name }}.tar.xz"
