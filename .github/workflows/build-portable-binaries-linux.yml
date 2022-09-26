@@ -210,7 +210,7 @@ jobs:
     runs-on: ubuntu-latest
     needs: build-portable-binaries
     container:
-      image: centos:6
+      image: centos:7
       options: "-v ${{ github.workspace }}:${{ github.workspace }}"
 
     steps:
