@@ -89,7 +89,8 @@ jobs:
       - name: Build conanfile.py
         if: steps.cache-conan.outputs.cache-hit != 'true'
         run: |
-          scl enable devtoolset-11 rh-git227 bash
+          source /opt/rh/devtoolset-11
+          source /opt/rh/rh-git227
 
           conan install conanfile.py          \
                --build=outdated               \
@@ -114,7 +115,8 @@ jobs:
 
       - name: Configure project
         run: |
-          scl enable devtoolset-11 rh-git227 bash
+          source /opt/rh/devtoolset-11
+          source /opt/rh/rh-git227
 
           git config --global --add safe.directory ${{ github.workspace }}
           mkdir ${{ github.workspace }}/build
@@ -126,7 +128,8 @@ jobs:
 
       - name: Build project
         run: |
-          scl enable devtoolset-11 rh-git227 bash
+          source /opt/rh/devtoolset-11
+          source /opt/rh/rh-git227
 
           cmake --build ${{ github.workspace }}/build -j $(nproc)
 
@@ -192,7 +195,7 @@ jobs:
         run: |
           ./modle_tools_eval_integration_test.sh ${{ github.workspace }}/build/bin/modle_tools
 
-  test-portability:
+  portability-test:
     runs-on: ubuntu-latest
     needs: build-portable-binaries
     strategy:
