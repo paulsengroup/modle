@@ -194,7 +194,9 @@ jobs:
 
       - name: Archive binaries
         working-directory: /tmp
-        run: tar -czf modle.tar.gz modle
+        run: |
+          tar -czf modle.tar.gz modle
+          tar -tf modle.tar.gz
 
       - name: Upload binaries
         uses: actions/upload-artifact@v3
@@ -220,7 +222,9 @@ jobs:
           name: portable-bins
 
       - name: Extract binaries
-        run: tar -xf modle.tar.gz
+        run: |
+          tar -xf modle.tar.gz
+          ls -lah .
 
       - name: Cache test datasets
         uses: actions/cache@v3
@@ -314,6 +318,7 @@ jobs:
           - 'opensuse/tumbleweed:latest'
           - 'ubuntu:16.04'
           - 'ubuntu:latest'
+      fail-fast: false
 
     container:
       image: ${{ matrix.image }}
@@ -328,7 +333,7 @@ jobs:
 
       - name: Install dependencies (openSUSE)
         if: contains(matrix.image, 'opensuse')
-        run: zypper install -y libstdc++6 tar
+        run: zypper install -y gzip libstdc++6 tar
 
       - name: Download binaries
         uses: actions/download-artifact@v3
