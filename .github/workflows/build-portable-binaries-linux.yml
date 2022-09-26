@@ -359,6 +359,7 @@ jobs:
           ./modle_tools transform --help
 
   publish-binaries:
+    if: github.event_name == 'release'
     needs:
       - run-unit-tests
       - run-modle-integration-tests
@@ -388,8 +389,9 @@ jobs:
           mv modle "modle-${{ steps.archive-name.outputs.version }}"
           tar -cJf "${{ steps.archive-name.outputs.name }}" "modle-${{ steps.archive-name.outputs.version }}"
 
+          tar -tf "${{ steps.archive-name.outputs.name }}"
+
       - name: Upload Binaries
-        if: github.event_name == 'release'
         uses: skx/github-action-publish-binaries@release-2.0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
