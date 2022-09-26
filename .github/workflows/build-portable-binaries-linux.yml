@@ -308,6 +308,7 @@ jobs:
     strategy:
       matrix:
         image:
+          - 'archlinux:base'
           - 'centos:7'
           - 'rockylinux:9'
           - 'fedora:34'
