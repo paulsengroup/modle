@@ -89,8 +89,12 @@ jobs:
       - name: Build conanfile.py
         if: steps.cache-conan.outputs.cache-hit != 'true'
         run: |
-          source /opt/rh/devtoolset-11
-          source /opt/rh/rh-git227
+          source /opt/rh/devtoolset-11/enable
+          source /opt/rh/rh-git227/enable
+
+          # Workaround GLIBCXX version mismatch
+          printf '[requires]\nb2/4.9.2\n' > /tmp/conanfile.txt
+          conan install conanfile.txt --build=b2
 
           conan install conanfile.py          \
                --build=outdated               \
@@ -115,8 +119,8 @@ jobs:
 
       - name: Configure project
         run: |
-          source /opt/rh/devtoolset-11
-          source /opt/rh/rh-git227
+          source /opt/rh/devtoolset-11/enable
+          source /opt/rh/rh-git227/enable
 
           git config --global --add safe.directory ${{ github.workspace }}
           mkdir ${{ github.workspace }}/build
@@ -128,8 +132,8 @@ jobs:
 
       - name: Build project
         run: |
-          source /opt/rh/devtoolset-11
-          source /opt/rh/rh-git227
+          source /opt/rh/devtoolset-11/enable
+          source /opt/rh/rh-git227/enable
 
           cmake --build ${{ github.workspace }}/build -j $(nproc)
 
