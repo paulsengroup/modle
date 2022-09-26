@@ -321,13 +321,13 @@ jobs:
 
     steps:
       - name: Install dependencies (Ubuntu)
-        if: ${{ contains(${{ matrix.image }}, 'ubuntu') }}
+        if: contains(matrix.image, 'ubuntu')
         run: |
           apt-get update
           apt-get install -y libstdc++6
 
       - name: Install dependencies (openSUSE)
-        if: ${{ contains(${{ matrix.image }}, 'opensuse') }}
+        if: contains(matrix.image, 'opensuse')
         run: zypper install -y libstdc++6
 
       - name: Download binaries
