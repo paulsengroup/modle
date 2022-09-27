@@ -4,13 +4,12 @@
 
 #include "./cli.hpp"
 
-#include <absl/strings/str_cat.h>      // for StrAppend
-#include <absl/strings/str_split.h>    // for SplitIterator, Splitter, StrSplit, operator!=
-#include <absl/strings/string_view.h>  // for string_view, basic_string_view, operator""sv
-#include <absl/types/span.h>           // for MakeSpan
-#include <fmt/format.h>                // for format, FMT_STRING, join, print, make_format_...
-#include <fmt/os.h>                    // for output_file, ostream
-#include <toml++/toml.h>               // for array::operator[], operator<<, parse, print_to...
+#include <absl/strings/str_cat.h>    // for StrAppend
+#include <absl/strings/str_split.h>  // for SplitIterator, Splitter, StrSplit, operator!=
+#include <absl/types/span.h>         // for MakeSpan
+#include <fmt/format.h>              // for format, FMT_STRING, join, print, make_format_...
+#include <fmt/os.h>                  // for output_file, ostream
+#include <toml++/toml.h>             // for array::operator[], operator<<, parse, print_to...
 
 #include <CLI/CLI.hpp>  // for Option_group, App
 #include <algorithm>    // for max
@@ -36,18 +35,6 @@
 #include "modle/cooler/cooler.hpp"             // for Cooler
 
 namespace modle {
-
-static std::string is_odd_number(std::string_view s) noexcept {
-  try {
-    const auto n = utils::parse_numeric_or_throw<i64>(s);
-    if (n % 2 == 0) {
-      return fmt::format(FMT_STRING("{} is not an odd number"), n);
-    }
-  } catch (const std::exception& e) {
-    return fmt::format(FMT_STRING("Failed parsing number: ({}): {}"), s, e.what());
-  }
-  return "";
-}
 
 // These stream operators are needed to properly serialize enums when writing the config file to
 // TOML or JSON
@@ -597,170 +584,6 @@ void Cli::make_simulation_subcommand() {
            ->configurable();
   s.alias("sim");
   auto option_group_ptrs = add_common_options(s, this->_config);
-  for (auto* og : option_group_ptrs) {
-    auto option_ptrs = og->get_options();
-    std::move(option_ptrs.begin(), option_ptrs.end(),
-              std::inserter(this->_options, this->_options.begin()));
-  }
-}
-
-void Cli::make_perturbate_subcommand() {
-  // TODO add description
-  // clang-format off
-  auto& s = *this->_cli.add_subcommand("perturbate", "TODO.")
-                 ->configurable()
-                 ->fallthrough()
-                 ->group("");
-  // clang-format on
-
-  s.alias("pert");
-  add_common_options(s, this->_config);
-
-  auto& c = this->_config;
-  auto& io = *s.get_option_group("IO");
-  auto& misc = *s.get_option_group("Miscellaneous");
-
-  auto& io_adv = *s.get_option_group("Advanced")->get_option_group("IO");
-
-  // Remove unused flags/options
-  io_adv.remove_option(io_adv.get_option("--simulate-chromosomes-wo-barriers"));
-  misc.remove_option(misc.get_option("--ncells"));
-
-  // Update flag/option descriptions
-  // clang-format off
-  io.get_option("--output-prefix")
-      ->description(
-      "Output prefix.\n"
-      "Can be a full or relative path including the file name but without extension.\n"
-      "Example: -o /tmp/mymatrix will produce the following files:\n"
-      "         - /tmp/mymatrix.bedpe.gz\n"
-      "         - /tmp/mymatrix.log\n");
-
-  // Add new flags/options
-  io.add_option(
-      "--reference-contacts",
-      c.path_to_reference_contacts,
-      "Path to a cooler file with the contact matrix to use as reference")
-      ->check(CLI::ExistingFile)
-      ->required();
-
-  io_adv.add_flag("--write-header,!--no-write-header",
-      c.write_header,
-      "Write header with column names to output file.")
-      ->capture_default_str();
-
-  io.add_option(
-      "--feature-beds",
-      c.path_to_feature_bed_files,
-      "Path to one or more BED files containing features used to compute the total number of contacts between pairs of features.\n"
-      "Pairs of features with a non-zero number of contacts will be written to a BEDPE file.\n"
-      "When a single BED file is specified, the output will only contain within-feature contacts (Not yet implemented).")
-      ->check(CLI::ExistingFile);
-
-  io_adv.add_flag(
-      "--generate-reference-matrix",
-      c.compute_reference_matrix,
-      "Compute and write to disk the reference contact matrix."
-      "This is equivalent to running modle simulate followed by modle perturbate without changing parameters.")
-      ->capture_default_str();
-
-  misc.add_option(
-      "--block-size",
-      c.block_size,
-      "Size of the block of pixels to use when generating contacts for a pair of features. Must be an odd number.")
-      ->check(CLI::Range(1UL, std::numeric_limits<decltype(c.block_size)>::max()) |
-              CLI::Validator(is_odd_number, "ODD-NUMBER", ""))
-      ->transform(utils::cli::TrimTrailingZerosFromDecimalDigit)
-      ->capture_default_str();
-
-  misc.add_option(
-      "--deletion-size",
-      c.deletion_size,
-      "Size of deletion in bp. Used to enable/disable extrusion barriers and compute the total number of contacts between pairs of feats1.\n"
-      "Specify 0 to compute all possible combinations. Ignored when --mode=\"cluster\".")
-      ->check(CLI::NonNegativeNumber)
-      ->transform(utils::cli::TrimTrailingZerosFromDecimalDigit)
-      ->capture_default_str();
-
-  misc.add_option(
-      "--deletion-list",
-      c.path_to_deletion_bed,
-      "Path to a BED file containing the list deletions to perform when perturbating extrusion barriers.")
-      ->check(CLI::ExistingFile);
-  // clang-format on
-
-  misc.get_option("--deletion-size")->excludes("--deletion-list");
-
-  auto option_group_ptrs = add_common_options(s, this->_config);
-  for (auto* og : option_group_ptrs) {
-    auto option_ptrs = og->get_options();
-    std::move(option_ptrs.begin(), option_ptrs.end(),
-              std::inserter(this->_options, this->_options.begin()));
-  }
-}
-
-void Cli::make_replay_subcommand() {
-  // TODO add description
-  // clang-format off
-  auto& s = *this->_cli.add_subcommand("replay", "TODO")
-                 ->fallthrough()
-                 ->group("");
-  // clang-format on
-  s.alias("rpl");
-
-  auto& c = this->_config;
-  auto& io = *s.add_option_group("IO", "Options controlling MoDLE input, output and logs.");
-  auto& various = *s.add_option_group("Various");
-
-  // clang-format off
-  io.add_option(
-      "--config",
-      c.path_to_config_file,
-      "Path to the config file of a previous run of modle perturbate.")
-      ->check(CLI::ExistingFile)
-      ->required();
-
-  io.add_option(
-      "--task-file",
-      c.path_to_task_file,
-      "Path to the task file produced by modle perturbate.")
-      ->check(CLI::ExistingFile)
-      ->required();
-
-  io.add_option(
-      "--task-filter-file",
-      c.path_to_task_filter_file,
-      "TSV containing the list of task IDs to be processed.")
-      ->check(CLI::ExistingFile);
-
-  io.add_option(
-      "-o,--output-prefix",
-      c.path_to_output_prefix,
-      "Output prefix.\n"
-      "Can be a full or relative path including the file name but without extension.")
-      ->required();
-
-  io.add_flag(
-      "-f,--force",
-      c.force,
-      "Force overwrite of output files if they exists.")
-      ->capture_default_str();
-
-  various.add_option(
-      "-t,--threads",
-      c.nthreads,
-      "Number of simulate_worker threads used to run the simulation.\n"
-      "By default MoDLE will try to use all available threads.")
-      ->check(CLI::PositiveNumber)
-      ->transform(CLI::Bound(1U, std::thread::hardware_concurrency()))
-      ->capture_default_str();
-  // clang-format on
-
-  for (auto* og : {&io, &various}) {
-    auto option_ptrs = og->get_options();
-    std::move(option_ptrs.begin(), option_ptrs.end(),
-              std::inserter(this->_options, this->_options.begin()));
-  }
 }
 
 void Cli::make_cli() {
@@ -772,21 +595,7 @@ void Cli::make_cli() {
   this->_cli.formatter(std::make_shared<utils::cli::Formatter>());
   this->_cli.get_formatter()->column_width(30);
 
-  auto option_ptrs = this->_cli.get_options();
-  std::move(option_ptrs.begin(), option_ptrs.end(),
-            std::inserter(this->_options, this->_options.begin()));
-
   this->make_simulation_subcommand();
-  this->make_perturbate_subcommand();
-  this->make_replay_subcommand();
-
-  if (auto it = this->_options.find(static_cast<CLI::Option*>(nullptr));
-      it != this->_options.end()) {
-    this->_options.erase(it);
-  }
-
-  // break_long_help_lines(this->_options.begin(), this->_options.end(),
-  //                       140 - this->_cli.get_formatter()->get_column_width());
 }
 
 Cli::Cli(int argc, char** argv) : _argc(argc), _argv(argv), _exec_name(*argv) { this->make_cli(); }
@@ -801,32 +610,13 @@ const Config& Cli::parse_arguments() {
 
   if (this->_cli.get_subcommand("simulate")->parsed()) {
     this->_subcommand = simulate;
-  } else if (this->_cli.get_subcommand("perturbate")->parsed()) {
-    this->_subcommand = perturbate;
-  } else {
-    assert(this->_cli.get_subcommand("replay")->parsed());
-    this->_subcommand = replay;
-    // The code in this branch basically tricks CLI11 into parsing a config file by creating a
-    // fake argv like: {"modle", "pert", "--config", "myconfig.toml"}
-    const auto config_backup = this->_config;
-    constexpr std::string_view subcmd_arg = "pert\0";
-    constexpr std::string_view config_arg = "--config\0";
-    const std::array<const char*, 4> args{this->_exec_name.c_str(), subcmd_arg.data(),
-                                          config_arg.data(),
-                                          this->_config.path_to_config_file.c_str()};
-    this->_cli.parse(args.size(), args.data());
-    this->_config.path_to_config_file = config_backup.path_to_config_file;
-    this->_config.path_to_task_file = config_backup.path_to_task_file;
-    this->_config.path_to_task_filter_file = config_backup.path_to_task_filter_file;
-    this->_config.path_to_output_prefix = config_backup.path_to_output_prefix;
-    this->_config.nthreads = config_backup.nthreads;
   }
 
   this->validate_args();
   this->transform_args();
   this->_config.args = absl::MakeSpan(_argv, static_cast<usize>(_argc));
 
-  this->_config.argv_json = this->to_json();
+  this->_config.args_json = this->to_json();
   return this->_config;
 }
 
@@ -878,26 +668,6 @@ std::string Cli::detect_path_collisions(modle::Config& c) const {
       std::filesystem::exists(c.path_to_model_state_log_file)) {
     absl::StrAppend(&collisions, check_for_path_collisions(c.path_to_model_state_log_file));
   }
-  if (this->get_subcommand() != subcommand::replay &&
-      std::filesystem::exists(c.path_to_config_file)) {
-    absl::StrAppend(&collisions, check_for_path_collisions(c.path_to_config_file));
-  }
-  if ((this->get_subcommand() == subcommand::simulate ||
-       (this->get_subcommand() == subcommand::perturbate &&
-        this->_config.compute_reference_matrix)) &&
-      std::filesystem::exists(c.path_to_output_file_cool)) {
-    absl::StrAppend(&collisions, check_for_path_collisions(c.path_to_output_file_cool));
-  }
-  if ((this->get_subcommand() == subcommand::perturbate ||
-       this->get_subcommand() == subcommand::replay) &&
-      !c.path_to_output_file_bedpe.empty() &&
-      std::filesystem::exists(c.path_to_output_file_bedpe)) {
-    absl::StrAppend(&collisions, check_for_path_collisions(c.path_to_output_file_bedpe));
-  }
-  if (this->get_subcommand() == subcommand::perturbate &&
-      std::filesystem::exists(this->_config.path_to_task_file)) {
-    absl::StrAppend(&collisions, check_for_path_collisions(c.path_to_task_file));
-  }
 
   return collisions;
 }
@@ -923,14 +693,6 @@ void Cli::validate_args() const {
         c.burnin_history_length));
   }
 
-  if (!c.path_to_reference_contacts.empty()) {
-    try {
-      modle::cooler::Cooler<>(c.path_to_reference_contacts, cooler::Cooler<>::IO_MODE::READ_ONLY,
-                              c.bin_size);
-    } catch (const std::runtime_error& e) {
-      errors.emplace_back(e.what());
-    }
-  }
   const auto& cgen_adv =
       subcmd->get_option_group("Advanced")->get_option_group("Contact generation");
 
@@ -1057,14 +819,8 @@ constexpr double compute_occupancy_from_stp(double stp_active, double stp_inacti
 /// Generate output file paths from output prefix
 static void cli_update_paths(Cli::subcommand subcommand, Config& c) {
   c.path_to_output_file_cool = c.path_to_output_prefix;
-  c.path_to_output_file_bedpe =
-      !c.path_to_feature_bed_files.empty() ? c.path_to_output_prefix : std::filesystem::path{};
   c.path_to_log_file = c.path_to_output_prefix;
   c.path_to_config_file = c.path_to_output_prefix;
-  if (subcommand == Cli::subcommand::perturbate) {
-    c.path_to_task_file = c.path_to_output_prefix;
-    c.path_to_task_file += "_tasks.tsv.gz";
-  }
   if (subcommand == Cli::subcommand::simulate) {
     c.path_to_model_state_log_file = c.path_to_output_prefix;
     c.path_to_model_state_log_file += "_internal_state.log.gz";
@@ -1076,7 +832,6 @@ static void cli_update_paths(Cli::subcommand subcommand, Config& c) {
   }
 
   c.path_to_output_file_cool += ".cool";
-  c.path_to_output_file_bedpe += !c.path_to_output_file_bedpe.empty() ? ".bedpe.gz" : "";
   c.path_to_log_file += ".log";
   c.path_to_config_file += "_config.toml";
 }
