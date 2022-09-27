@@ -57,11 +57,11 @@ namespace modle {
 
 Simulation::Simulation(const Config& c, bool import_chroms)
     : Config(c),
-      _genome(import_chroms ? Genome(path_to_chrom_sizes, path_to_extr_barriers,
-                                     path_to_chrom_subranges, path_to_feature_bed_files,
-                                     barrier_occupied_stp, barrier_not_occupied_stp,
-                                     interpret_bed_name_field_as_barrier_not_occupied_stp)
-                            : Genome{}) {
+      _genome(import_chroms
+                  ? Genome(path_to_chrom_sizes, path_to_extr_barriers, path_to_chrom_subranges,
+                           barrier_occupied_stp, barrier_not_occupied_stp,
+                           interpret_bed_name_field_as_barrier_not_occupied_stp)
+                  : Genome{}) {
   _tpool.reset(utils::conditional_static_cast<BS::concurrency_t>(c.nthreads + 1));
 
   // Override barrier occupancies read from BED file
@@ -129,8 +129,8 @@ void Simulation::write_contacts_to_disk(std::deque<std::pair<Chromosome*, usize>
                                    max_str_length);
 
   try {
-    if (c && !this->argv_json.empty()) {
-      c->write_metadata_attribute(this->argv_json);
+    if (c && !this->args_json.empty()) {
+      c->write_metadata_attribute(this->args_json);
     }
     auto sleep_us = 100;
     while (this->ok()) {  // Structuring the loop in this way allows us to sleep without
@@ -637,67 +637,6 @@ Simulation::Task Simulation::Task::from_string(std::string_view serialized_task,
   return t;
 }
 
-Simulation::TaskPW Simulation::TaskPW::from_string(std::string_view serialized_task,
-                                                   Genome& genome) {
-  [[maybe_unused]] const usize ntoks = 15;
-  const auto sep = '\t';
-  const std::vector<std::string_view> toks = absl::StrSplit(serialized_task, sep);
-  assert(toks.size() == ntoks);
-
-  TaskPW t;
-  try {
-    usize i = 0;
-    utils::parse_numeric_or_throw(toks[i++], t.id);
-    const auto& chrom_name = toks[i++];
-    utils::parse_numeric_or_throw(toks[i++], t.cell_id);
-    utils::parse_numeric_or_throw(toks[i++], t.num_target_epochs);
-    utils::parse_numeric_or_throw(toks[i++], t.num_target_contacts);
-    utils::parse_numeric_or_throw(toks[i++], t.num_lefs);
-    const auto num_barriers_expected = utils::parse_numeric_or_throw<usize>(toks[i++]);
-    utils::parse_numeric_or_throw(toks[i++], t.deletion_begin);
-    utils::parse_numeric_or_throw(toks[i++], t.deletion_size);
-    utils::parse_numeric_or_throw(toks[i++], t.window_start);
-    utils::parse_numeric_or_throw(toks[i++], t.window_end);
-    utils::parse_numeric_or_throw(toks[i++], t.active_window_start);
-    utils::parse_numeric_or_throw(toks[i++], t.active_window_end);
-    const auto num_feats1_expected = utils::parse_numeric_or_throw<usize>(toks[i++]);
-    const auto num_feats2_expected = utils::parse_numeric_or_throw<usize>(toks[i++]);
-
-    auto chrom_it = genome.find(chrom_name);
-    if (chrom_it == genome.end()) {
-      throw std::runtime_error(
-          fmt::format(FMT_STRING("Unable to find a chromosome named \"{}\""), chrom_name));
-    }
-    t.chrom = &(*chrom_it);
-
-    if (t.chrom->num_barriers() < num_barriers_expected) {
-      throw std::runtime_error(
-          fmt::format(FMT_STRING("Expected {} extrusion barriers for chromosome \"{}\". Found {}"),
-                      num_barriers_expected, t.chrom->name(), t.chrom->num_barriers()));
-    }
-    t.barriers = absl::MakeConstSpan(t.chrom->barriers().data());
-
-    assert(t.chrom->get_features().size() == 2);
-    Simulation::map_barriers_to_window(t, *t.chrom);
-    Simulation::map_features_to_window(t, *t.chrom);
-
-    if (t.feats1.size() != num_feats1_expected || t.feats2.size() != num_feats2_expected) {
-      throw std::runtime_error(fmt::format(
-          FMT_STRING("Expected {} and {} features for chromosome \"{}\". Found {} and {}"),
-          num_feats1_expected, num_feats2_expected, t.chrom->name(), t.feats1.size(),
-          t.feats2.size()));
-    }
-
-  } catch (const std::runtime_error& e) {
-    throw std::runtime_error(
-        fmt::format(FMT_STRING("An error occourred while parsing task definition #{}.\n"
-                               "Task definition: \"{}\"\n"
-                               "Reason: {}"),
-                    toks.front(), serialized_task, e.what()));
-  }
-  return t;
-}
-
 void Simulation::State::resize_buffers(usize new_size) {
   if (new_size == (std::numeric_limits<usize>::max)()) {
     new_size = this->num_lefs;
@@ -838,12 +777,6 @@ const std::deque<double>& Simulation::State::get_avg_loop_sizes() const noexcept
   return this->avg_loop_size_buff;
 }
 
-bool Simulation::State::is_modle_pert_state() const noexcept { return !this->is_modle_sim_state(); }
-
-bool Simulation::State::is_modle_sim_state() const noexcept {
-  return feats1.empty() && feats2.empty();
-}
-
 Simulation::State& Simulation::State::operator=(const Task& task) {
   this->epoch = 0;
   this->num_burnin_epochs = 0;
@@ -859,67 +792,33 @@ Simulation::State& Simulation::State::operator=(const Task& task) {
   this->num_lefs = task.num_lefs;
   this->barriers = ExtrusionBarriers{task.barriers.begin(), task.barriers.end()};
 
-  this->deletion_begin = 0;
-  this->deletion_size = 0;
-  this->window_start = 0;
-  this->window_end = 0;
-  this->active_window_start = 0;
-  this->active_window_end = 0;
-
-  this->feats1 = absl::Span<const bed::BED>{};
-  this->feats2 = absl::Span<const bed::BED>{};
-
   if (this->chrom->contacts_ptr()) {
     this->contacts = this->chrom->contacts_ptr();
   }
-  this->reference_contacts = nullptr;
-  return *this;
-}
-
-Simulation::State& Simulation::State::operator=(const TaskPW& task) {
-  this->epoch = 0;
-  this->num_burnin_epochs = 0;
-  this->burnin_completed = false;
-  this->num_active_lefs = 0;
-  this->num_contacts = 0;
-
-  this->id = task.id;
-  this->chrom = task.chrom;
-  this->cell_id = task.cell_id;
-  this->num_target_epochs = task.num_target_epochs;
-  this->num_target_contacts = task.num_target_contacts;
-  this->num_lefs = task.num_lefs;
-  this->barriers = ExtrusionBarriers{task.barriers.begin(), task.barriers.end()};
-
-  this->deletion_begin = task.deletion_begin;
-  this->deletion_size = task.deletion_size;
-  this->window_start = task.window_start;
-  this->window_end = task.window_end;
-  this->active_window_start = task.active_window_start;
-  this->active_window_end = task.active_window_end;
-
-  this->feats1 = task.feats1;
-  this->feats2 = task.feats2;
-
-  assert(task.reference_contacts);
-  this->reference_contacts = task.reference_contacts;
   return *this;
 }
 
 std::string Simulation::State::to_string() const noexcept {
-  return fmt::format(FMT_STRING("StatePW:\n - TaskID {}\n"
+  // clang-format off
+  return fmt::format(FMT_STRING("State:\n - TaskID {}\n"
                                 " - Chrom: {}[{}-{}]\n"
-                                " - Range start: {}\n"
-                                " - Range end: {}\n"
                                 " - CellID: {}\n"
                                 " - Target epochs: {}\n"
                                 " - Target contacts: {}\n"
                                 " - # of LEFs: {}\n"
                                 " - # Extrusion barriers: {}\n"
                                 " - seed: {}\n"),
-                     id, chrom->name(), chrom->start_pos(), chrom->end_pos(), window_start,
-                     window_end, cell_id, num_target_epochs, num_target_contacts, num_lefs,
-                     barriers.size(), seed);
+                     id,
+                     chrom->name(),
+                     chrom->start_pos(),
+                     chrom->end_pos(),
+                     cell_id,
+                     num_target_epochs,
+                     num_target_contacts,
+                     num_lefs,
+                     barriers.size(),
+                     seed);
+  // clang-format on
 }
 
 std::pair<usize, usize> Simulation::process_collisions(
@@ -1154,13 +1053,8 @@ void Simulation::simulate_one_cell(State& s) const {
 void Simulation::select_and_bind_lefs(State& s) noexcept(utils::ndebug_defined()) {
   const auto lef_mask = s.get_idx_buff();
   Simulation::select_lefs_to_bind(s.get_lefs(), lef_mask);
-  if (s.is_modle_sim_state()) {
-    Simulation::bind_lefs(*s.chrom, s.get_lefs(), s.get_rev_ranks(), s.get_fwd_ranks(), lef_mask,
-                          s.rand_eng, s.epoch);
-    return;
-  }
-  Simulation::bind_lefs(s.window_start, s.window_end, s.get_lefs(), s.get_rev_ranks(),
-                        s.get_fwd_ranks(), lef_mask, s.rand_eng, s.epoch);
+  Simulation::bind_lefs(*s.chrom, s.get_lefs(), s.get_rev_ranks(), s.get_fwd_ranks(), lef_mask,
+                        s.rand_eng, s.epoch);
 }
 
 void Simulation::dump_stats(const usize task_id, const usize epoch, const usize cell_id,

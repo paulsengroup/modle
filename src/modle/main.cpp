@@ -193,15 +193,6 @@ int main(int argc, char** argv) noexcept {
       case subcommand::simulate:
         sim.run_simulate();
         break;
-      case subcommand::perturbate:
-        if (config.compute_reference_matrix) {
-          sim.run_simulate();
-        }
-        sim.run_perturbate();
-        break;
-      case subcommand::replay:
-        sim.run_replay();
-        break;
       default:
         MODLE_UNREACHABLE_CODE;
     }

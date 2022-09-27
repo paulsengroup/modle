@@ -95,8 +95,7 @@ Chromosome::Chromosome(const Chromosome& other)
       _size(other._size),
       _id(other._id),
       _barriers(other._barriers),
-      _contacts(other._contacts),
-      _features(other._features) {
+      _contacts(other._contacts) {
   _barriers.make_BST();
 }
 
@@ -107,8 +106,7 @@ Chromosome::Chromosome(Chromosome&& other) noexcept
       _size(other._size),
       _id(other._id),
       _barriers(std::move(other._barriers)),
-      _contacts(std::move(other._contacts)),
-      _features(std::move(other._features)) {
+      _contacts(std::move(other._contacts)) {
   _barriers.make_BST();
 }
 
@@ -124,7 +122,6 @@ Chromosome& Chromosome::operator=(const Chromosome& other) {
   _end = other._end;
   _barriers = other._barriers;
   _contacts = other._contacts;
-  _features = other._features;
 
   _barriers.make_BST();
 
@@ -143,7 +140,6 @@ Chromosome& Chromosome::operator=(Chromosome&& other) noexcept {
   _end = other._end;
   _barriers = std::move(other._barriers);
   _contacts = std::move(other._contacts);
-  _features = std::move(other._features);
 
   _barriers.make_BST();
 
@@ -220,9 +216,6 @@ usize Chromosome::num_barriers() const { return this->_barriers.size(); }
 
 const IITree<bp_t, ExtrusionBarrier>& Chromosome::barriers() const { return this->_barriers; }
 IITree<bp_t, ExtrusionBarrier>& Chromosome::barriers() { return this->_barriers; }
-absl::Span<const Chromosome::bed_tree_value_t> Chromosome::get_features() const {
-  return this->_features;
-}
 
 bool Chromosome::allocate_contact_matrix(bp_t bin_size, bp_t diagonal_width) {
   if (std::scoped_lock lck(this->_buff_mtx); !this->_contacts) {
@@ -343,13 +336,11 @@ u64 Chromosome::hash(u64 seed, usize cell_id) const {
 Genome::Genome(const std::filesystem::path& path_to_chrom_sizes,
                const std::filesystem::path& path_to_extr_barriers,
                const std::filesystem::path& path_to_chrom_subranges,
-               const absl::Span<const std::filesystem::path> paths_to_extra_features,
                const double default_barrier_pbb, const double default_barrier_puu,
                bool interpret_name_field_as_puu)
     : _chromosomes(instantiate_genome(path_to_chrom_sizes, path_to_extr_barriers,
-                                      path_to_chrom_subranges, paths_to_extra_features,
-                                      default_barrier_pbb, default_barrier_puu,
-                                      interpret_name_field_as_puu)) {}
+                                      path_to_chrom_subranges, default_barrier_pbb,
+                                      default_barrier_puu, interpret_name_field_as_puu)) {}
 
 absl::btree_set<Chromosome> Genome::import_chromosomes(
     const std::filesystem::path& path_to_chrom_sizes,
@@ -479,37 +470,11 @@ usize Genome::import_barriers(absl::btree_set<Chromosome>& chromosomes,
   return tot_num_barriers;
 }
 
-usize Genome::import_extra_features(absl::btree_set<Chromosome>& chromosomes,
-                                    const std::filesystem::path& path_to_extra_features) {
-  assert(!chromosomes.empty());
-  assert(!path_to_extra_features.empty());
-
-  const auto t0 = absl::Now();
-  spdlog::info(FMT_STRING("Importing features from the following file: {}..."),
-               path_to_extra_features);
-  usize num_features = 0;
-
-  // Parse all the records from the BED file. The parser will throw in case of duplicates.
-  const auto features = bed::Parser(path_to_extra_features, bed::BED::Dialect::autodetect)
-                            .parse_all_in_interval_tree();
-
-  for (auto& chrom : chromosomes) {
-    if (const auto chrom_name = std::string{chrom.name()}; features.contains(chrom_name)) {
-      const auto element = chrom._features.emplace_back(features.at(chrom_name));
-      num_features += element.size();
-    }
-  }
-  spdlog::info(FMT_STRING("Imported {} features in {}."), num_features,
-               absl::FormatDuration(absl::Now() - t0));
-  return num_features;
-}
-
 absl::btree_set<Chromosome> Genome::instantiate_genome(
     const std::filesystem::path& path_to_chrom_sizes,
     const std::filesystem::path& path_to_extr_barriers,
-    const std::filesystem::path& path_to_chrom_subranges,
-    const absl::Span<const std::filesystem::path> paths_to_extra_features,
-    double default_barrier_pbb, double default_barrier_puu, bool interpret_name_field_as_puu) {
+    const std::filesystem::path& path_to_chrom_subranges, double default_barrier_pbb,
+    double default_barrier_puu, bool interpret_name_field_as_puu) {
   auto chroms = import_chromosomes(path_to_chrom_sizes, path_to_chrom_subranges);
 
   if (chroms.empty()) {
@@ -534,10 +499,6 @@ absl::btree_set<Chromosome> Genome::instantiate_genome(
         FMT_STRING(
             "Unable to import any barrier from file {}. Please make sure this was not a mistake."),
         path_to_extr_barriers);
-  }
-
-  for (const auto& path_to_feature_bed : paths_to_extra_features) {
-    import_extra_features(chroms, path_to_feature_bed);
   }
 
   return chroms;

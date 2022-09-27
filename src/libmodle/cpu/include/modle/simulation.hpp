@@ -58,9 +58,9 @@ class Simulation : Config {
 
   static constexpr auto Mbp = 1.0e6;
 
- private:
+ public:
   using CollisionT = Collision<u32f>;
-  struct BaseTask {  // NOLINT(altera-struct-pack-align)
+  struct Task {  // NOLINT(altera-struct-pack-align)
     usize id{};
     Chromosome* chrom{};
     usize cell_id{};
@@ -68,31 +68,11 @@ class Simulation : Config {
     usize num_target_contacts{};
     usize num_lefs{};
     absl::Span<const ExtrusionBarrier> barriers{};
-  };
 
- public:
-  struct Task : BaseTask {  // NOLINT(altera-struct-pack-align)
     static Task from_string(std::string_view serialized_task, Genome& genome);
   };
 
-  struct TaskPW : BaseTask {  // NOLINT(altera-struct-pack-align)
-    TaskPW() = default;
-    static TaskPW from_string(std::string_view serialized_task, Genome& genome);
-
-    bp_t deletion_begin{};
-    bp_t deletion_size{};
-    bp_t window_start{};
-    bp_t window_end{};
-    bp_t active_window_start{};
-    bp_t active_window_end{};
-
-    std::shared_ptr<const ContactMatrixDense<contacts_t>> reference_contacts{};
-
-    absl::Span<const bed::BED> feats1{};
-    absl::Span<const bed::BED> feats2{};
-  };
-
-  struct State : BaseTask {  // NOLINT(altera-struct-pack-align)
+  struct State : Task {  // NOLINT(altera-struct-pack-align)
     State() = default;
     usize epoch{};                 // NOLINT
     bool burnin_completed{false};  // NOLINT
@@ -148,26 +128,10 @@ class Simulation : Config {
     [[nodiscard]] const std::deque<double>& get_cfx_of_variation() const noexcept;
     [[nodiscard]] const std::deque<double>& get_avg_loop_sizes() const noexcept;
 
-    [[nodiscard]] bool is_modle_pert_state() const noexcept;
-    [[nodiscard]] bool is_modle_sim_state() const noexcept;
-
-    // These fields are specific to modle pert
-    bp_t deletion_begin{};       // NOLINT
-    bp_t deletion_size{};        // NOLINT
-    bp_t window_start{};         // NOLINT
-    bp_t window_end{};           // NOLINT
-    bp_t active_window_start{};  // NOLINT
-    bp_t active_window_end{};    // NOLINT
-
-    absl::Span<const bed::BED> feats1{};  // NOLINT
-    absl::Span<const bed::BED> feats2{};  // NOLINT
-
-    std::shared_ptr<std::mutex> contacts_mtx{nullptr};                                  // NOLINT
-    std::shared_ptr<const ContactMatrixDense<contacts_t>> reference_contacts{nullptr};  // NOLINT
-    std::shared_ptr<ContactMatrixDense<contacts_t>> contacts{nullptr};                  // NOLINT
+    std::shared_ptr<std::mutex> contacts_mtx{nullptr};                  // NOLINT
+    std::shared_ptr<ContactMatrixDense<contacts_t>> contacts{nullptr};  // NOLINT
 
     State& operator=(const Task& task);
-    State& operator=(const TaskPW& task);
     [[nodiscard]] std::string to_string() const noexcept;
 
     void resize_buffers(usize size = (std::numeric_limits<usize>::max)());
@@ -175,8 +139,6 @@ class Simulation : Config {
   };
 
   void run_simulate();
-  void run_perturbate();
-  void run_replay();
 
  private:
   Genome _genome{};
@@ -208,18 +170,6 @@ class Simulation : Config {
   void simulate_window(State& state, compressed_io::Writer& out_stream, std::mutex& cooler_mtx,
                        bool write_contacts_to_cooler = false) const;
 
-  /// Advance the simulation window by one diagonal width.
-
-  //! Return false if the new window extends past the end of \p chrom
-  bool advance_window(TaskPW& base_task, const Chromosome& chrom) const;
-
-  /// Map barrier or features to the window specified by \p base_task.
-
-  //! Return false if the window doesn't have any barrier or is missing one or more type of
-  //! features
-  static bool map_barriers_to_window(TaskPW& base_task, const Chromosome& chrom);
-  static bool map_features_to_window(TaskPW& base_task, const Chromosome& chrom);
-
   /// Monitor the progress queue and write contacts to a .cool file when all the cells belonging to
   /// a given chromosome have been simulated.
 
@@ -242,14 +192,6 @@ class Simulation : Config {
                        std::deque<std::pair<Chromosome*, usize>>& progress_queue,
                        std::mutex& progress_queue_mtx, std::mutex& model_state_logger_mtx,
                        usize task_batch_size = 32);
-
-  void perturbate_worker(u64 tid,
-                         moodycamel::BlockingConcurrentQueue<Simulation::TaskPW>& task_queue,
-                         const std::filesystem::path& tmp_output_path, std::mutex& cooler_mtx,
-                         usize task_batch_size = 1);
-
-  void replay_worker(u64 tid, moodycamel::BlockingConcurrentQueue<Simulation::TaskPW>& task_queue,
-                     std::mutex& cooler_mtx, usize task_batch_size = 32);
 
   /// Bind inactive LEFs, then sort them by their genomic coordinates.
 
@@ -455,11 +397,6 @@ class Simulation : Config {
   [[nodiscard]] static std::pair<bp_t /*rev*/, bp_t /*fwd*/> compute_lef_lef_collision_pos(
       const ExtrusionUnit& rev_unit, const ExtrusionUnit& fwd_unit, bp_t rev_move, bp_t fwd_move);
 
-  [[nodiscard]] bed::BED_tree<> import_deletions() const;
-  [[nodiscard]] bed::BED_tree<> generate_deletions() const;
-  [[nodiscard]] static absl::flat_hash_set<usize> import_task_filter(
-      const std::filesystem::path& path_to_task_filter);
-
   [[noreturn]] void rethrow_exceptions() const;
   [[noreturn]] void handle_exceptions();
 
@@ -659,16 +596,6 @@ struct fmt::formatter<modle::Simulation::Task> {
   // stored in this formatter.
   template <typename FormatContext>
   inline auto format(const modle::Simulation::Task& t, FormatContext& ctx) const
-      -> decltype(ctx.out());
-};
-
-template <>
-struct fmt::formatter<modle::Simulation::TaskPW> {
-  inline constexpr auto parse(format_parse_context& ctx) -> decltype(ctx.begin());
-  // Formats the point p using the parsed format specification (presentation)
-  // stored in this formatter.
-  template <typename FormatContext>
-  inline auto format(const modle::Simulation::TaskPW& t, FormatContext& ctx) const
       -> decltype(ctx.out());
 };
 

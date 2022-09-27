@@ -81,7 +81,6 @@ class Chromosome {
   [[nodiscard]] usize num_barriers() const;
   [[nodiscard]] const IITree<bp_t, ExtrusionBarrier>& barriers() const;
   [[nodiscard]] IITree<bp_t, ExtrusionBarrier>& barriers();
-  [[nodiscard]] absl::Span<const bed_tree_value_t> get_features() const;
   bool allocate_contact_matrix(bp_t bin_size, bp_t diagonal_width);
   bool allocate_lef_occupancy_buffer(bp_t bin_size);
   bool deallocate_contact_matrix();
@@ -112,8 +111,6 @@ class Chromosome {
   std::shared_mutex _buff_mtx{};
   std::shared_ptr<contact_matrix_t> _contacts{};
   std::shared_ptr<std::vector<std::atomic<u64>>> _lef_1d_occupancy{};
-
-  std::vector<bed_tree_value_t> _features{};
 };
 
 class Genome {
@@ -121,9 +118,8 @@ class Genome {
   Genome() = default;
   Genome(const std::filesystem::path& path_to_chrom_sizes,
          const std::filesystem::path& path_to_extr_barriers,
-         const std::filesystem::path& path_to_chrom_subranges,
-         absl::Span<const std::filesystem::path> paths_to_extra_features,
-         double default_barrier_pbb, double default_barrier_puu, bool interpret_name_field_as_puu);
+         const std::filesystem::path& path_to_chrom_subranges, double default_barrier_pbb,
+         double default_barrier_puu, bool interpret_name_field_as_puu);
 
   using iterator = absl::btree_set<Chromosome>::iterator;
   using const_iterator = absl::btree_set<Chromosome>::const_iterator;
@@ -165,8 +161,7 @@ class Genome {
   [[nodiscard]] static absl::btree_set<Chromosome> instantiate_genome(
       const std::filesystem::path& path_to_chrom_sizes,
       const std::filesystem::path& path_to_extr_barriers,
-      const std::filesystem::path& path_to_chrom_subranges,
-      absl::Span<const std::filesystem::path> paths_to_extra_features, double default_barrier_pbb,
+      const std::filesystem::path& path_to_chrom_subranges, double default_barrier_pbb,
       double default_barrier_puu, bool interpret_name_field_as_puu);
 
  private:
@@ -187,11 +182,6 @@ class Genome {
                                const std::filesystem::path& path_to_extr_barriers,
                                double default_barrier_pbb, double default_barrier_puu,
                                bool interpret_name_field_as_puu);
-
-  /// Parse a BED file containing the genomic coordinates of extra features (e.g. promoters,
-  /// enhancer) them to the Genome
-  static usize import_extra_features(absl::btree_set<Chromosome>& chromosomes,
-                                     const std::filesystem::path& path_to_extra_features);
 };
 
 }  // namespace modle

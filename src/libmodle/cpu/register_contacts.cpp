@@ -104,22 +104,17 @@ void Simulation::sample_and_register_contacts(State& s, usize num_sampling_event
     return;
   }
 
-  const auto start_pos = s.is_modle_sim_state() ? s.chrom->start_pos() : s.window_start;
-  const auto end_pos = s.is_modle_sim_state() ? s.chrom->end_pos() : s.window_end;
-
   const auto num_loop_contacts =
       compute_num_contacts_loop(num_sampling_events, this->tad_to_loop_contact_ratio, s.rand_eng);
   const auto num_tad_contacts = num_sampling_events - num_loop_contacts;
 
+  assert(s.chrom);
   assert(s.contacts);
-  this->register_contacts_loop(start_pos + 1, end_pos - 1, *s.contacts, s.get_lefs(),
-                               num_loop_contacts, s.rand_eng);
-  this->register_contacts_tad(start_pos + 1, end_pos - 1, *s.contacts, s.get_lefs(),
-                              num_tad_contacts, s.rand_eng);
+  this->register_contacts_loop(*s.chrom, s.get_lefs(), num_loop_contacts, s.rand_eng);
+  this->register_contacts_tad(*s.chrom, s.get_lefs(), num_tad_contacts, s.rand_eng);
 
   if (this->track_1d_lef_position) {
-    this->register_1d_lef_occupancy(start_pos + 1, end_pos - 1, s.chrom->lef_1d_occupancy(),
-                                    s.get_lefs(), num_sampling_events, s.rand_eng);
+    this->register_1d_lef_occupancy(*s.chrom, s.get_lefs(), num_sampling_events, s.rand_eng);
   }
 
   s.num_contacts += num_sampling_events;

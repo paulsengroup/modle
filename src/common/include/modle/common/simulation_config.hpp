@@ -47,12 +47,6 @@ struct Config {
   std::filesystem::path path_to_extr_barriers;
   bool force{false};
   bool quiet{false};
-  std::filesystem::path path_to_reference_contacts{};
-  std::vector<std::filesystem::path> path_to_feature_bed_files{};
-  std::filesystem::path path_to_output_file_bedpe{};
-  std::filesystem::path path_to_deletion_bed{};
-  std::filesystem::path path_to_task_file;
-  std::filesystem::path path_to_task_filter_file{};
   bool write_header{true};
   bool skip_output{false};
   bool log_model_internal_state{false};
@@ -107,11 +101,6 @@ struct Config {
   bp_t probability_normalization_factor{rev_extrusion_speed + fwd_extrusion_speed};
   bool normalize_probabilities{true};
 
-  // MoDLE perturbate
-  bp_t deletion_size{10'000};
-  bool compute_reference_matrix{false};
-  usize block_size{9};
-
   // Burn-in
   bool skip_burnin{false};
   usize burnin_history_length{100};
@@ -131,7 +120,7 @@ struct Config {
       "num_secondary_lef_lef_collisions\tavg_loop_size\n";
 
   absl::Span<char*> args;
-  std::string argv_json{};
+  std::string args_json{};
 };
 
 }  // namespace modle
