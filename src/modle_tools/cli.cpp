@@ -182,183 +182,6 @@ void Cli::make_eval_subcommand() {
   this->_config = absl::monostate{};
 }
 
-void Cli::make_find_barrier_clusters_subcommand() {
-  auto& sc = *this->_cli
-                  .add_subcommand("find-barrier-clusters",
-                                  "Detect clusters of extrusion barriers given a BED file.")
-                  ->fallthrough()
-                  ->preparse_callback([this]([[maybe_unused]] usize i) {
-                    assert(this->_config.index() == 0);
-                    this->_config = find_barrier_clusters_config{};
-                  })
-                  ->group("");
-
-  sc.alias("fbcl");
-
-  this->_config = find_barrier_clusters_config{};
-  auto& c = absl::get<find_barrier_clusters_config>(this->_config);
-
-  auto& io = *sc.add_option_group("Input/Output", "");
-  auto& cluster = *sc.add_option_group("Cluster properties", "");
-
-  // clang-format off
-  io.add_option(
-      "-i,--input",
-      c.path_to_input_barriers,
-      "Path to a BED file with the collection of extrusion barriers to be processed.")
-      ->check(CLI::ExistingFile)
-      ->required();
-
-  io.add_option(
-      "-o,--output-name",
-      c.path_to_output,
-      "Path to output file. When not provided, barrier clusters will be written to stdout.");
-
-  io.add_option(
-      "-b,--breaking-points",
-      c.path_to_breaking_points,
-      "Path to a BED file listing a the coordinates of cluster breaking points. "
-      "These could for instance be a list of genes or enhancers.")
-      ->check(CLI::ExistingFile);
-
-  io.add_flag(
-      "-f,--force",
-      c.force,
-      "Overwrite existing file(s).")
-      ->capture_default_str();
-
-  io.add_flag(
-      "-q,--quiet",
-      c.quiet,
-      "Don't print warnings to stderr.")
-      ->capture_default_str();
-
-  cluster.add_option(
-      "-w,--extension-window",
-      c.extension_window,
-      "Size of the extension window in bp.\n"
-      "Clusters of extrusion barriers are identified by finding the first barrier not belonging to any cluster, "
-      "then extending the cluster by --extension-window bp, until extending the cluster does not increase the "
-      "number of barriers in the cluster.")
-      ->check(CLI::PositiveNumber);
-
-  cluster.add_option(
-      "--min-cluster-span",
-      c.min_cluster_span,
-      "The minimum span in bp of a cluster of barriers.\n"
-      "--min-cluster-span=0 can be used to allow clusters of any size less than --max-cluster-span.")
-      ->check(CLI::NonNegativeNumber)
-      ->capture_default_str();
-
-  cluster.add_option(
-      "--max-cluster-span",
-      c.max_cluster_span,
-      "The maximum span in bp of a cluster of barriers.\n"
-      "--max-cluster-span=0 can be used to allow clusters to grow indefinitely.")
-      ->check(CLI::NonNegativeNumber)
-      ->capture_default_str();
-
-  cluster.add_option(
-      "--min-cluster-size",
-      c.min_cluster_size,
-      "The minimum number of barriers that can belong to a given cluster.\n")
-      ->check(CLI::NonNegativeNumber)
-      ->capture_default_str();
-
-  cluster.add_option(
-      "--max-cluster-size",
-      c.max_cluster_size,
-      "The maximum number of barriers that can belong to a given cluster.\n"
-      "--max-cluster-size=0 can be used to allow clusters with an unlimited number of barriers.")
-      ->check(CLI::NonNegativeNumber)
-      ->capture_default_str();
-  // clang-format on
-  this->_config = absl::monostate{};
-}
-
-void Cli::make_noisify_subcommand() {
-  auto& sc =
-      *this->_cli
-           .add_subcommand("noisify", "Add noise to MoDLE's contact matrix in Cooler format.")
-           ->fallthrough()
-           ->preparse_callback([this]([[maybe_unused]] usize i) {
-             assert(this->_config.index() == 0);
-             this->_config = noisify_config{};
-           })
-           ->group("");
-
-  this->_config = noisify_config{};
-  auto& c = absl::get<noisify_config>(this->_config);
-
-  auto& io = *sc.add_option_group("Input/Output", "");
-  auto& gen = *sc.add_option_group("Generic", "");
-  auto& noise = *sc.add_option_group("Noise properties", "");
-
-  // clang-format off
-  io.add_option(
-     "-i,--input",
-     c.path_to_input_matrix,
-     "Path to a contact matrix in Cooler format.")
-     ->check(CLI::ExistingFile)
-     ->required();
-
-  io.add_option(
-     "-o,--output-name",
-     c.path_to_output_matrix,
-     "Output file name (possibly including directories) to use for output.")
-     ->required();
-
-  io.add_flag(
-     "-f,--force",
-     c.force,
-     "Overwrite existing file(s).")
-     ->capture_default_str();
-
-  gen.add_option(
-     "-w,--diagonal-width",
-     c.diagonal_width,
-     "Diagonal width of the input contact matrix.")
-     ->check(CLI::PositiveNumber)
-     ->transform(utils::cli::TrimTrailingZerosFromDecimalDigit)
-     ->required();
-
-  gen.add_option(
-      "--bin-size",
-      c.bin_size,
-      "Bin size of the matrix to noisify. Required and only used when the input matrix is in .mcool format.")
-      ->check(CLI::PositiveNumber);
-
-  noise.add_option(
-     "--mu,--location",
-     c.genextreme_mu,
-     "Location parameter (mu) of the generalized extreme value used to.add noise to the contact matrix.")
-     ->check(CLI::NonNegativeNumber)
-     ->capture_default_str();
-
-  noise.add_option(
-     "--sigma,--scale",
-     c.genextreme_sigma,
-     "Scale parameter (sigma) of the generalized extreme value used to.add noise to the contact matrix.")
-     ->check(CLI::NonNegativeNumber)
-     ->capture_default_str();
-
-  noise.add_option(
-     "--xi,--shape",
-     c.genextreme_xi,
-     "Shape parameter (xi) of the generalized extreme value used to.add noise to the contact matrix.")
-     ->check(CLI::NonNegativeNumber)
-     ->capture_default_str();
-
-  noise.add_option(
-     "--seed",
-     c.seed,
-     "Seed used to initialize the PRNG.")
-     ->check(CLI::NonNegativeNumber)
-     ->capture_default_str();
-  // clang-format on
-  this->_config = absl::monostate{};
-}
-
 void Cli::make_transform_subcommand() {
   auto& sc = *this->_cli
                   .add_subcommand("transform",
@@ -510,8 +333,6 @@ void Cli::make_cli() {
   this->_cli.formatter(std::make_shared<utils::cli::Formatter>());
 
   this->make_eval_subcommand();
-  this->make_find_barrier_clusters_subcommand();
-  this->make_noisify_subcommand();
   this->make_transform_subcommand();
 }
 
@@ -597,89 +418,6 @@ void Cli::validate_eval_subcommand() const {
   }
 }
 
-void Cli::validate_find_barrier_clusters_subcommand() const {
-  assert(this->_cli.get_subcommand("find-barrier-clusters")->parsed());
-  std::vector<std::string> errors;
-  const auto& c = absl::get<find_barrier_clusters_config>(this->_config);
-
-  assert(std::filesystem::exists(c.path_to_input_barriers));
-
-  if (auto collision = utils::detect_path_collision(c.path_to_output, c.force,
-                                                    std::filesystem::file_type::regular);
-      !collision.empty()) {
-    errors.push_back(collision);
-  }
-
-  if (c.min_cluster_span >= c.max_cluster_span && c.max_cluster_span != 0) {
-    errors.emplace_back(fmt::format(
-        FMT_STRING("--min-cluster-span should be strictly less than --max-cluster-span.\n"
-                   "Found:\n"
-                   "  --min-cluster-span={}\n"
-                   "  --max-cluster-span={}"),
-        c.min_cluster_span, c.max_cluster_span));
-  }
-
-  if (c.min_cluster_size >= c.max_cluster_size && c.max_cluster_size != 0) {
-    errors.emplace_back(fmt::format(
-        FMT_STRING("--min-cluster-size should be strictly less than --max-cluster-size.\n"
-                   "Found:\n"
-                   "  --min-cluster-size={}\n"
-                   "  --max-cluster-size={}"),
-        c.min_cluster_size, c.max_cluster_size));
-  }
-
-  if (!errors.empty()) {
-    throw std::runtime_error(
-        fmt::format(FMT_STRING("The following error(s) where encountered while validating CLI "
-                               "arguments and input file(s):\n - {}"),
-                    fmt::join(errors, "\n - ")));
-  }
-}
-
-void Cli::validate_noisify_subcommand() const {
-  std::string errors;
-  assert(this->_cli.get_subcommand("noisify")->parsed());
-  const auto& c = absl::get<noisify_config>(this->_config);
-
-  assert(std::filesystem::exists(c.path_to_input_matrix));
-  try {
-    cooler::Cooler f(c.path_to_input_matrix, cooler::Cooler<>::IO_MODE::READ_ONLY, c.bin_size);
-  } catch (const std::runtime_error& e) {
-    if (absl::EndsWith(e.what(),
-                       "A bin size other than 0 is required when calling "
-                       "Cooler::validate_multires_cool_flavor()")) {
-      absl::StrAppendFormat(
-          &errors,
-          "File \"%s\" appears to be a multi-resolution Cooler. --bin-size is a "
-          "mandatory argument and must be different than 0 when processing .mcool files.\n",
-          c.path_to_input_matrix.string());
-    } else {
-      absl::StrAppendFormat(&errors,
-                            "Validation of file \"%s\" failed with the following error: %s.\n",
-                            c.path_to_input_matrix.string(), e.what());
-    }
-  }
-
-  if (!c.force && std::filesystem::exists(c.path_to_output_matrix)) {
-    const auto path_type = std::filesystem::status(c.path_to_output_matrix).type();
-    if (path_type == std::filesystem::file_type::directory) {
-      absl::StrAppendFormat(&errors,
-                            "File \"%s\" already exists and is actually a directory. Please remove "
-                            "the directory and try again.",
-                            c.path_to_output_matrix.string());
-    } else {
-      absl::StrAppendFormat(&errors, "File \"%s\" already exists. Pass --force to overwrite",
-                            c.path_to_output_matrix.string());
-    }
-  }
-  if (!errors.empty()) {
-    throw std::runtime_error(
-        fmt::format(FMT_STRING("The following error(s) where encountered while validating CLI "
-                               "arguments and input file(s):\n{}"),
-                    errors));
-  }
-}
-
 void Cli::validate_transform_subcommand() const {
   assert(this->_cli.get_subcommand("transform")->parsed());
   std::vector<std::string> errors;
@@ -737,10 +475,6 @@ void Cli::validate_transform_subcommand() const {
 void Cli::validate() const {
   if (this->_cli.get_subcommand("eval")->parsed()) {
     this->validate_eval_subcommand();
-  } else if (this->_cli.get_subcommand("find-barrier-clusters")->parsed()) {
-    this->validate_find_barrier_clusters_subcommand();
-  } else if (this->_cli.get_subcommand("noisify")->parsed()) {
-    this->validate_noisify_subcommand();
   } else if (this->_cli.get_subcommand("transform")->parsed()) {
     this->validate_transform_subcommand();
   } else {
@@ -748,9 +482,6 @@ void Cli::validate() const {
   }
 }
 
-bool Cli::is_ok() const noexcept {
-  return (this->_exit_code != 0) && this->_subcommand != subcommand::help;
-}
 Cli::subcommand Cli::get_subcommand() const noexcept { return this->_subcommand; }
 std::string_view Cli::get_printable_subcommand() const noexcept {
   return Cli::subcommand_to_str(this->get_subcommand());
@@ -762,10 +493,6 @@ modle::tools::modle_tools_config Cli::parse_arguments() {
   try {
     if (this->_cli.get_subcommand("evaluate")->parsed()) {
       this->_subcommand = subcommand::eval;
-    } else if (this->_cli.get_subcommand("find-barrier-clusters")->parsed()) {
-      this->_subcommand = subcommand::fbcl;
-    } else if (this->_cli.get_subcommand("noisify")->parsed()) {
-      this->_subcommand = subcommand::noisify;
     } else if (this->_cli.get_subcommand("transform")->parsed()) {
       this->_subcommand = subcommand::transform;
     } else {
@@ -842,10 +569,6 @@ std::string_view Cli::subcommand_to_str(subcommand s) noexcept {
   switch (s) {
     case eval:
       return "evaluate";
-    case fbcl:
-      return "find-barrier-clusters";
-    case noisify:
-      return "noisify";
     case transform:
       return "transform";
     default:
