@@ -49,10 +49,10 @@ fi
 outdir="$(mktemp -d -t modle-tools-XXXXXXXXXX)"
 trap 'rm -rf -- "$outdir"' EXIT
 
-"$modle_tools_bin" eval -i "$matrix1" \
-                        -r "$matrix2" \
-                        -m custom     \
-                        -w 3mbp       \
+"$modle_tools_bin" eval -i "$matrix1"                 \
+                        --reference-matrix "$matrix2" \
+                        -m custom                     \
+                        -w 3mbp                       \
                         -o "$outdir/out_custom_score"
 
 # cp "$outdir/"*horizontal.bw" /tmp/test/data/integration_tests/4DNFI9GMP2J8_vs_4DNFIFJH2524_mt_eval_custom_score_custom_metric_horizontal.bw
