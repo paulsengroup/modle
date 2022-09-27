@@ -29,6 +29,7 @@
 #include <absl/time/clock.h>  // for Now
 #include <absl/time/time.h>   // for FormatTime, UTCTimeZone
 #include <fmt/format.h>       // for format
+#include <fmt/std.h>
 
 #include <string>       // for string
 #include <string_view>  // for string_view
@@ -45,7 +46,7 @@ void Cooler<N>::write_metadata() {
     throw std::runtime_error(
         fmt::format(FMT_STRING("Caught attempt to write metadata to an HDF5 file that is open in "
                                "read-only mode. File name: {}"),
-                    this->_path_to_file.string()));
+                    this->_path_to_file));
   }
   assert(this->_bin_size != 0);
   i64 int_buff{};
@@ -100,7 +101,7 @@ void Cooler<N>::write_metadata_attribute(std::string_view metadata_str) {
     throw std::runtime_error(
         fmt::format(FMT_STRING("Caught attempt to write metadata to an HDF5 file that is open in "
                                "read-only mode. File name: {}"),
-                    this->_path_to_file.string()));
+                    this->_path_to_file));
   }
 
   assert(this->_bin_size != 0);

@@ -9,7 +9,8 @@
 #include <absl/types/span.h>         // for MakeSpan
 #include <fmt/format.h>              // for format, FMT_STRING, join, print, make_format_...
 #include <fmt/os.h>                  // for output_file, ostream
-#include <toml++/toml.h>             // for array::operator[], operator<<, parse, print_to...
+#include <fmt/std.h>
+#include <toml++/toml.h>  // for array::operator[], operator<<, parse, print_to...
 
 #include <CLI/CLI.hpp>  // for Option_group, App
 #include <algorithm>    // for max

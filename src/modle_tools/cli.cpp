@@ -11,7 +11,8 @@
 #include <absl/strings/strip.h>       // for StripPrefix, StripSuffix
 #include <absl/types/variant.h>       // for get, monostate
 #include <fmt/format.h>               // for format, join, FMT_STRING, make_format_args
-#include <toml++/toml.h>              // for array::operator[], operator<<, parse, print_to...
+#include <fmt/std.h>
+#include <toml++/toml.h>  // for array::operator[], operator<<, parse, print_to...
 
 #include <CLI/CLI.hpp>
 #include <algorithm>    // for max

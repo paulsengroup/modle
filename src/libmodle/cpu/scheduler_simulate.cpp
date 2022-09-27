@@ -6,11 +6,12 @@
 #include "modle/simulation.hpp"
 // clang-format on
 
-#include <absl/container/btree_map.h>            // for btree_iterator
-#include <absl/container/fixed_array.h>          // for FixedArray
-#include <absl/strings/str_format.h>             // StrAppendFormat
-#include <absl/types/span.h>                     // for MakeConstSpan, Span
-#include <fmt/format.h>                          // for make_format_args, vformat_to, FMT_STRING
+#include <absl/container/btree_map.h>    // for btree_iterator
+#include <absl/container/fixed_array.h>  // for FixedArray
+#include <absl/strings/str_format.h>     // StrAppendFormat
+#include <absl/types/span.h>             // for MakeConstSpan, Span
+#include <fmt/format.h>                  // for make_format_args, vformat_to, FMT_STRING
+#include <fmt/std.h>
 #include <moodycamel/blockingconcurrentqueue.h>  // for BlockingConcurrentQueue
 #include <moodycamel/concurrentqueue.h>          // for ConsumerToken, ProducerToken
 #include <spdlog/spdlog.h>                       // for info

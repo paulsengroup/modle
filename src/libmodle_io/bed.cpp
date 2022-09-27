@@ -12,6 +12,7 @@
 #include <absl/strings/str_join.h>         // for StrJoin
 #include <absl/strings/str_split.h>        // for StrSplit, Splitter, SplitIterator
 #include <fmt/format.h>                    // for format, FMT_STRING, join, to_string
+#include <fmt/std.h>
 
 #include <algorithm>    // for max, find_if, count, for_each
 #include <cassert>      // for assert

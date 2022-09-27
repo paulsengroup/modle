@@ -9,7 +9,8 @@
 #include <absl/time/clock.h>           // for Now
 #include <absl/time/time.h>            // for FormatDuration, operator-, Time
 #include <fmt/format.h>                // for format, make_format_args, vformat_to
-#include <spdlog/spdlog.h>             // for info
+#include <fmt/std.h>
+#include <spdlog/spdlog.h>  // for info
 
 #include <algorithm>  // for max, max_element, find_if
 #include <cassert>    // for assert
