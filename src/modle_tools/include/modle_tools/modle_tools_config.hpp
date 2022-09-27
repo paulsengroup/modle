@@ -56,60 +56,6 @@ struct eval_config {
   std::string args_json{};
 };
 
-struct find_barrier_clusters_config {
-  // IO
-  std::filesystem::path path_to_input_barriers;
-  std::filesystem::path path_to_output;
-  std::filesystem::path path_to_breaking_points;
-  bool force{false};
-  bool quiet{false};
-
-  // Cluster properties
-  bp_t extension_window{5000};
-  bp_t min_cluster_span{0};
-  bp_t max_cluster_span{0};
-  bp_t min_cluster_size{0};
-  bp_t max_cluster_size{0};
-  absl::Span<char*> args;
-  std::string args_json{};
-};
-
-struct noisify_config {
-  // IO
-  std::filesystem::path path_to_input_matrix;
-  std::filesystem::path path_to_output_matrix;
-  bool force{false};
-
-  // Generic
-  usize diagonal_width;
-  usize bin_size{0};
-
-  // Noise properties
-  double genextreme_mu{0};
-  double genextreme_sigma{7'500};
-  double genextreme_xi{0.001};
-  u64 seed{0};
-  absl::Span<char*> args;
-  std::string args_json{};
-};
-
-struct stats_config {
-  // IO
-  std::filesystem::path path_to_input_matrix;
-  std::filesystem::path path_to_chrom_subranges;
-  std::string output_path_for_histograms{};
-  bool dump_depleted_matrices{false};
-  bool force{false};
-
-  // Contact matrix
-  usize bin_size{0};
-  usize diagonal_width;
-  std::vector<std::string> chromosomes_excluded_vect{};
-  double depletion_multiplier{1.0};
-  absl::Span<char*> args;
-  std::string args_json{};
-};
-
 struct transform_config {
   // IO
   std::filesystem::path path_to_input_matrix;
@@ -154,9 +100,6 @@ struct transform_config {
 // clang-format off
 using modle_tools_config = absl::variant<absl::monostate,
                                          eval_config,
-                                         find_barrier_clusters_config,
-                                         noisify_config,
-                                         stats_config,
                                          transform_config>;
 // clang-format on
 
