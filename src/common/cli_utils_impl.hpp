@@ -8,6 +8,7 @@
 #include <cpp-sort/comparators/natural_less.h>
 #include <cpp-sort/sorters/insertion_sorter.h>
 #include <fmt/format.h>  // for compile_string_to_view, FMT_STRING, formatbu...
+#include <fmt/std.h>
 
 #include <algorithm>   // for transform
 #include <cctype>      // for isalpha

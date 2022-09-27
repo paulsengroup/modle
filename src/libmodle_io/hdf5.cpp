@@ -24,6 +24,7 @@
 #include <absl/strings/strip.h>    // for ConsumePrefix, StripPrefix, StripSuffix
 #include <fcntl.h>                 // for SEEK_END, SEEK_SET
 #include <fmt/format.h>            // for format, FMT_STRING
+#include <fmt/std.h>
 
 #include <algorithm>    // for max
 #include <cassert>      // for assert

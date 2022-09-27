@@ -7,6 +7,7 @@
 #include <absl/strings/ascii.h>  // for AsciiStrToLower
 #include <archive.h>             // for archive_errno, archiv...
 #include <fmt/format.h>          // for format, FMT_STRING
+#include <fmt/std.h>
 
 #include <algorithm>                         // for find_if
 #include <boost/iostreams/close.hpp>         // for close
