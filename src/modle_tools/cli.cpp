@@ -790,6 +790,16 @@ modle::tools::modle_tools_config Cli::parse_arguments() {
         "file an issue on GitHub");
   }
   this->validate();
+
+  absl::visit(
+      [&, this](auto& config) {
+        if constexpr (!std::is_same_v<absl::remove_cvref_t<decltype(config)>, absl::monostate>) {
+          config.args = absl::MakeSpan(_argv, static_cast<usize>(_argc));
+          config.args_json = this->to_json();
+        }
+      },
+      this->_config);
+
   this->_exit_code = 0;
   return this->_config;
 }
@@ -797,27 +807,24 @@ modle::tools::modle_tools_config Cli::parse_arguments() {
 int Cli::exit(const CLI::ParseError& e) const { return this->_cli.exit(e); }
 
 std::string Cli::to_json() const {
+  const auto prefix = std::string{this->get_printable_subcommand()} + ".";
   std::string buff;
   for (const auto& line : absl::StrSplit(this->_cli.config_to_str(true, false), '\n')) {
-    if (line.empty()) {
+    if (line.empty() || line.front() == '[') {
       continue;
     }
-    if (line.front() == '[') {  // Begin of the section for the active subcommand
-      absl::StrAppend(&buff, line, "\n");
-      continue;
+
+    if (buff.empty()) {
+      buff = fmt::format(FMT_STRING("[{}]\n"), this->get_printable_subcommand());
     }
-    // Given two subcommands named comm1 and comm2, assuming comm1 was parsed while comm2 was not,
-    // the TOML produced by CLI11 will have values for comm2 formatted as comm2.myarg1=1,
-    // comm2.myarg2="a" etc.
-    // All we are doing here is to look for an argument name containing '.'.
-    // In this way we can filter out entry corresponding to arguments for inactive subcommands
-    const auto arg = line.substr(0, line.find('='));
-    assert(!arg.empty());
-    if (arg.find('.') == decltype(arg)::npos) {
-      absl::StrAppend(&buff, line, "\n");
+
+    if (line.find(prefix) != std::string::npos) {
+      assert(line.find('=') != std::string::npos);
+      absl::StrAppend(&buff, line.substr(prefix.size()), "\n");
     }
   }
 
+  assert(!buff.empty());
   try {
     auto tt = toml::parse(buff);
     std::stringstream ss;

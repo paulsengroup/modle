@@ -52,6 +52,8 @@ struct eval_config {
   bool exclude_zero_pxls{false};
   std::string weight_column_name{"balanced.sum"};
   bool reciprocal_weights{false};
+  absl::Span<char*> args;
+  std::string args_json{};
 };
 
 struct find_barrier_clusters_config {
@@ -68,6 +70,8 @@ struct find_barrier_clusters_config {
   bp_t max_cluster_span{0};
   bp_t min_cluster_size{0};
   bp_t max_cluster_size{0};
+  absl::Span<char*> args;
+  std::string args_json{};
 };
 
 struct noisify_config {
@@ -85,6 +89,8 @@ struct noisify_config {
   double genextreme_sigma{7'500};
   double genextreme_xi{0.001};
   u64 seed{0};
+  absl::Span<char*> args;
+  std::string args_json{};
 };
 
 struct stats_config {
@@ -100,6 +106,8 @@ struct stats_config {
   usize diagonal_width;
   std::vector<std::string> chromosomes_excluded_vect{};
   double depletion_multiplier{1.0};
+  absl::Span<char*> args;
+  std::string args_json{};
 };
 
 struct transform_config {
@@ -139,6 +147,8 @@ struct transform_config {
 
   // Other
   usize nthreads{std::thread::hardware_concurrency()};
+  absl::Span<char*> args;
+  std::string args_json{};
 };
 
 // clang-format off

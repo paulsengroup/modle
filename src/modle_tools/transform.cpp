@@ -204,10 +204,12 @@ void transform_subcmd(const modle::tools::transform_config& c) {
     using CoolerT = cooler::Cooler<double>;
     cooler_dbl = std::make_unique<CoolerT>(c.path_to_output_matrix, CoolerT::IO_MODE::WRITE_ONLY,
                                            bin_size, max_chrom_name_size);
+    cooler_dbl->write_metadata_attribute(c.args_json);
   } else {
     using CoolerT = cooler::Cooler<i32>;
     cooler_int = std::make_unique<CoolerT>(c.path_to_output_matrix, CoolerT::IO_MODE::WRITE_ONLY,
                                            bin_size, max_chrom_name_size);
+    cooler_int->write_metadata_attribute(c.args_json);
   }
 
   BS::thread_pool tpool(static_cast<u32>(c.nthreads));
