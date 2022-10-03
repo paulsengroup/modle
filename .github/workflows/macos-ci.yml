@@ -51,8 +51,8 @@ jobs:
         include:
           - { compiler-name: apple-clang, compiler-version: '12.0', os: 'macos-10.15', conan-ver: '1.52.*', cmake-ver: '3.24.*', build_type: Release, developer_mode: OFF }
           - { compiler-name: apple-clang, compiler-version: '13.0', os: 'macos-11',    conan-ver: '1.52.*', cmake-ver: '3.24.*', build_type: Release, developer_mode: OFF }
-          - { compiler-name: apple-clang, compiler-version: '13.1', os: 'macos-12',    conan-ver: '1.52.*', cmake-ver: '3.24.*', build_type: Release, developer_mode: OFF }
-          - { compiler-name: apple-clang, compiler-version: '13.1', os: 'macos-12',    conan-ver: '1.52.*', cmake-ver: '3.24.*', build_type: Debug,   developer_mode: OFF }
+          - { compiler-name: apple-clang, compiler-version: '14.0', os: 'macos-12',    conan-ver: '1.52.*', cmake-ver: '3.24.*', build_type: Release, developer_mode: OFF }
+          - { compiler-name: apple-clang, compiler-version: '14.0', os: 'macos-12',    conan-ver: '1.52.*', cmake-ver: '3.24.*', build_type: Debug,   developer_mode: OFF }
 
     steps:
       - uses: actions/checkout@v3
@@ -85,7 +85,7 @@ jobs:
           os="${{ matrix.os }}"
           compiler="${{ matrix.compiler-name }}"
           build_type="${{ matrix.build_type }}"
-          hash="${{ hashFiles('conanfile.py', '.github/workflows/unit-tests-macos.yml') }}"
+          hash="${{ hashFiles('conanfile.py', '.github/workflows/macos-ci.yml') }}"
 
           # This can be used by to always update a cache entry (useful e.g. for ccache)
           current_date="$(date '+%s')"
@@ -110,6 +110,10 @@ jobs:
           conan profile update settings.compiler=${{ matrix.compiler-name }} default
           conan profile update settings.compiler.version=${{ matrix.compiler-version }} default
           conan profile update settings.compiler.cppstd=17 default
+
+          # Add apple-clang 14.0 to settings.yml
+          sed -i.bak 's/"10.0", "11.0", "12.0", "13", "13.0", "13.1"\]/"10.0", "11.0", "12.0", "13", "13.0", "13.1", "14.0"\]/' \
+            "$CONAN_USER_HOME/.conan/settings.yml"
 
       - name: Clean Conan cache (pre-build)
         if: steps.cache-conan.outputs.cache-hit != 'true'
