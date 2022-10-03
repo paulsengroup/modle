@@ -17,16 +17,6 @@ on:
     tags:
       - 'v*.*.*'
 
-  pull_request:
-    paths:
-      - ".github/workflows/build-portable-binaries-linux.yml"
-      - "cmake/**"
-      - "external/**"
-      - "src/**"
-      - "test/**"
-      - "CMakeLists.txt"
-      - "conanfile.py"
-
   release:
     types: [ created ]
 
