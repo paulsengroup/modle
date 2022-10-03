@@ -107,6 +107,10 @@ jobs:
           conan profile update settings.compiler.version=${{ matrix.compiler-version }} default
           conan profile update settings.compiler.cppstd=17 default
 
+          # Add apple-clang 14.0 to settings.yml
+          sed -i.bak 's/"10.0", "11.0", "12.0", "13", "13.0", "13.1"\]/"10.0", "11.0", "12.0", "13", "13.0", "13.1", "14.0"\]/' \
+            "$CONAN_USER_HOME/.conan/settings.yml"
+
       - name: Clean Conan cache (pre-build)
         if: steps.cache-conan.outputs.cache-hit != 'true'
         run: |
