@@ -38,6 +38,10 @@ env:
   CONAN_USER_HOME_SHORT: "${{ github.workspace }}/conan-cache/short"
   CONAN_V2_MODE: "1"
 
+  # Workaround memory leak in HighFive
+  # See: https://github.com/BlueBrain/HighFive/pull/583
+  LSAN_OPTIONS: "suppressions=${{ github.workspace }}/lsan.supp"
+
 jobs:
   build-project:
     runs-on: ${{ matrix.os }}

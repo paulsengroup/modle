@@ -20,18 +20,19 @@
 #include <BS_thread_pool.hpp>  // for BS::thread_pool
 #include <algorithm>           // for transform, max
 #include <cassert>             // for assert
-#include <cstdio>              // for stderr
-#include <exception>           // for exception
-#include <filesystem>          // for operator<<, path
-#include <future>              // for future
-#include <iosfwd>              // for streamsize
-#include <iterator>            // for insert_iterator, inserter
-#include <memory>              // for unique_ptr, shared_ptr, __shared_ptr_access
-#include <stdexcept>           // for runtime_error, overflow_error
-#include <string>              // for string, basic_string
-#include <string_view>         // for string_view
-#include <utility>             // for tuple_element<>::type, pair, make_pair
-#include <vector>              // for vector
+#include <coolerpp/coolerpp.hpp>
+#include <cstdio>       // for stderr
+#include <exception>    // for exception
+#include <filesystem>   // for operator<<, path
+#include <future>       // for future
+#include <iosfwd>       // for streamsize
+#include <iterator>     // for insert_iterator, inserter
+#include <memory>       // for unique_ptr, shared_ptr, __shared_ptr_access
+#include <stdexcept>    // for runtime_error, overflow_error
+#include <string>       // for string, basic_string
+#include <string_view>  // for string_view
+#include <utility>      // for tuple_element<>::type, pair, make_pair
+#include <vector>       // for vector
 
 #include "modle/bed/bed.hpp"        // for BED_tree, BED_tree<>::value_type, Parser
 #include "modle/bigwig/bigwig.hpp"  // for Writer
@@ -40,11 +41,11 @@
 #include "modle/common/utils.hpp"                 // for identity::operator()
 #include "modle/compressed_io/compressed_io.hpp"  // for Reader
 #include "modle/contact_matrix_dense.hpp"         // for ContactMatrixDense
-#include "modle/cooler/cooler.hpp"                // for Cooler, Cooler::READ_ONLY
 #include "modle/interval_tree.hpp"                // for IITree, IITree::IITree<I, T>, IITree::empty
-#include "modle/stats/correlation.hpp"            // for Pearson, Spearman
-#include "modle_tools/modle_tools_config.hpp"     // for eval_config
-#include "modle_tools/tools.hpp"                  // for eval_subcmd
+#include "modle/io/contact_matrix_dense.hpp"
+#include "modle/stats/correlation.hpp"         // for Pearson, Spearman
+#include "modle_tools/modle_tools_config.hpp"  // for eval_config
+#include "modle_tools/tools.hpp"               // for eval_subcmd
 
 namespace modle::tools {
 
@@ -104,12 +105,8 @@ template <class N>
   if (!std::isinf(lower_bound_sat) || !std::isinf(upper_bound_sat)) {
     m.clamp_inplace(static_cast<N>(lower_bound_sat), static_cast<N>(upper_bound_sat));
   }
-  if constexpr (std::is_same_v<N, double>) {
-    m.normalize_inplace(lower_bound_norm, upper_bound_norm);
-    return m;
-  } else {
-    return m.normalize(lower_bound_norm, upper_bound_norm);
-  }
+  m.normalize_inplace(lower_bound_norm, upper_bound_norm);
+  return m;
 }
 
 template <class N>
@@ -137,15 +134,15 @@ template <class N>
   return m.gaussian_diff(sigma1, sigma2, lower_bound_sat, upper_bound_sat, &tpool);
 }
 
-template <class N>
 [[nodiscard]] static ContactMatrixDense<double> process_chromosome(
-    BS::thread_pool& tpool, const std::string_view chrom_name, const bp_t bin_size,
-    cooler::Cooler<N>& cooler, const modle::tools::transform_config& c,
+    BS::thread_pool& tpool, const std::string_view chrom_name, const coolerpp::File& cooler,
+    const modle::tools::transform_config& c,
     const modle::IITree<double, double>& discretization_ranges) {
   auto t1 = absl::Now();
   spdlog::info(FMT_STRING("Processing contacts for {}..."), chrom_name);
   auto matrix = [&, chrom_name = chrom_name]() {
-    auto m = cooler.cooler_to_cmatrix(chrom_name, c.diagonal_width, bin_size);
+    auto m = io::read_contact_matrix_from_cooler<double>(cooler, chrom_name,
+                                                         static_cast<bp_t>(c.diagonal_width));
     using t = transform_config::Transformation;
     switch (c.method) {
       case t::normalize:
@@ -182,59 +179,49 @@ void transform_subcmd(const modle::tools::transform_config& c) {
     return import_discretization_ranges(c.path_to_discretization_ranges_tsv);
   }();
 
-  // The underlying HDF5 API is not yet thread safe, so we need to use this global mutex
-  auto input_cooler = cooler::Cooler<double>(
-      c.path_to_input_matrix, cooler::Cooler<double>::IO_MODE::READ_ONLY, c.bin_size);
-  const auto chroms = input_cooler.get_chroms();
-  const auto bin_size = input_cooler.get_bin_size();
-  const auto max_chrom_name_size = [&]() {
-    const auto it = std::max_element(
-        chroms.begin(), chroms.end(),
-        [](const auto& c1, const auto& c2) { return c1.first.size() < c2.first.size(); });
-    return it->first.size();
-  }();
-
-  if (const auto& output_dir = c.path_to_output_matrix.parent_path(); !output_dir.empty()) {
+  const auto input_cooler = coolerpp::File::open_read_only(c.input_cooler_uri.string());
+  if (const auto& output_dir = c.output_cooler_uri.parent_path(); !output_dir.empty()) {
     std::filesystem::create_directories(output_dir.string());
   }
 
-  std::unique_ptr<cooler::Cooler<double>> cooler_dbl{nullptr};
-  std::unique_ptr<cooler::Cooler<i32>> cooler_int{nullptr};
+  coolerpp::File output_cooler{};
+
+  auto attrs = c.floating_point
+                   ? coolerpp::StandardAttributes::init<double>(input_cooler.bin_size())
+                   : coolerpp::StandardAttributes::init<i32>(input_cooler.bin_size());
+  attrs.metadata = c.args_json;
   if (c.floating_point) {
-    using CoolerT = cooler::Cooler<double>;
-    cooler_dbl = std::make_unique<CoolerT>(c.path_to_output_matrix, CoolerT::IO_MODE::WRITE_ONLY,
-                                           bin_size, max_chrom_name_size);
-    cooler_dbl->write_metadata_attribute(c.args_json);
+    output_cooler = coolerpp::File::create_new_cooler<double>(
+        c.output_cooler_uri.string(), input_cooler.chromosomes(), input_cooler.bin_size(), c.force,
+        attrs);
   } else {
-    using CoolerT = cooler::Cooler<i32>;
-    cooler_int = std::make_unique<CoolerT>(c.path_to_output_matrix, CoolerT::IO_MODE::WRITE_ONLY,
-                                           bin_size, max_chrom_name_size);
-    cooler_int->write_metadata_attribute(c.args_json);
+    output_cooler = coolerpp::File::create_new_cooler<i32>(c.output_cooler_uri.string(),
+                                                           input_cooler.chromosomes(),
+                                                           input_cooler.bin_size(), c.force, attrs);
   }
 
   BS::thread_pool tpool(static_cast<u32>(c.nthreads));
-
   const auto t0 = absl::Now();
-  spdlog::info(FMT_STRING("Transforming contacts from file {}..."), input_cooler.get_path());
-  for (const auto& [chrom_name, chrom_size] : chroms) {
-    const auto matrix_dbl =
-        process_chromosome(tpool, chrom_name, bin_size, input_cooler, c, discretization_ranges);
+  spdlog::info(FMT_STRING("Transforming contacts from Cooler at URI \"{}\"..."),
+               input_cooler.uri());
+  for (const auto& [chrom_name, chrom_size] : input_cooler.chromosomes()) {
+    if (io::query_returns_no_pixels(input_cooler, chrom_name, bp_t(0), chrom_size)) {
+      spdlog::warn(FMT_STRING("Read 0 contacts for {}. SKIPPING!"), chrom_name);
+      continue;
+    }
+    const auto transformed_matrix =
+        process_chromosome(tpool, chrom_name, input_cooler, c, discretization_ranges);
     if (c.floating_point) {
-      assert(cooler_dbl);
-      cooler_dbl->write_or_append_cmatrix_to_file(matrix_dbl, chrom_name, usize(0), chrom_size,
-                                                  chrom_size);
+      io::append_contact_matrix_to_cooler(output_cooler, chrom_name, transformed_matrix);
     } else {
-      assert(cooler_int);
-      cooler_int->write_or_append_cmatrix_to_file(matrix_dbl.as<i32>(), chrom_name, usize(0),
-                                                  chrom_size, chrom_size);
+      io::append_contact_matrix_to_cooler(output_cooler, chrom_name, transformed_matrix.as<i32>());
     }
   }
 
   tpool.wait_for_tasks();
-  spdlog::info(FMT_STRING("DONE! Processed {} chromosomes in {}!"), chroms.size(),
-               absl::FormatDuration(absl::Now() - t0));
-  spdlog::info(FMT_STRING("Transformed contacts have been saved to file {}"),
-               c.path_to_output_matrix);
+  spdlog::info(FMT_STRING("DONE! Processed {} chromosomes in {}!"),
+               input_cooler.chromosomes().size(), absl::FormatDuration(absl::Now() - t0));
+  spdlog::info(FMT_STRING("Transformed contacts have been saved to file {}"), c.output_cooler_uri);
 }
 
 }  // namespace modle::tools

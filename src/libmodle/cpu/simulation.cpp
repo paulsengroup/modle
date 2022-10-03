@@ -22,20 +22,21 @@
 #include <cassert>             // for assert
 #include <chrono>              // for microseconds
 #include <cmath>               // for log, round, exp, floor, sqrt
-#include <cstdlib>             // for abs
-#include <deque>               // for _Deque_iterator<>::_Self
-#include <filesystem>          // for operator<<, path
-#include <iosfwd>              // for streamsize
-#include <limits>              // for numeric_limits
-#include <memory>              // for shared_ptr, unique_ptr, make...
-#include <mutex>               // for mutex
-#include <numeric>             // for iota
-#include <stdexcept>           // for runtime_error
-#include <string>              // for string
-#include <string_view>         // for string_view
-#include <thread>              // IWYU pragma: keep for sleep_for
-#include <utility>             // for make_pair, pair
-#include <vector>              // for vector, vector<>::iterator
+#include <coolerpp/coolerpp.hpp>
+#include <cstdlib>      // for abs
+#include <deque>        // for _Deque_iterator<>::_Self
+#include <filesystem>   // for operator<<, path
+#include <iosfwd>       // for streamsize
+#include <limits>       // for numeric_limits
+#include <memory>       // for shared_ptr, unique_ptr, make...
+#include <mutex>        // for mutex
+#include <numeric>      // for iota
+#include <stdexcept>    // for runtime_error
+#include <string>       // for string
+#include <string_view>  // for string_view
+#include <thread>       // IWYU pragma: keep for sleep_for
+#include <utility>      // for make_pair, pair
+#include <vector>       // for vector, vector<>::iterator
 
 #include "modle/bigwig/bigwig.hpp"
 #include "modle/common/common.hpp"  // for bp_t, contacts_t
@@ -46,11 +47,11 @@
 #include "modle/common/random_sampling.hpp"    // for random_sample
 #include "modle/common/simulation_config.hpp"  // for Config
 #include "modle/common/utils.hpp"              // for parse_numeric_or_throw, ndeb...
-#include "modle/cooler/cooler.hpp"             // for Cooler, Cooler::WRITE_ONLY
 #include "modle/extrusion_barriers.hpp"        // for ExtrusionBarrier, update_states
 #include "modle/extrusion_factors.hpp"         // for Lef, ExtrusionUnit
 #include "modle/genome.hpp"                    // for Genome::iterator, Chromosome
 #include "modle/interval_tree.hpp"             // for IITree, IITree::data
+#include "modle/io/contact_matrix_dense.hpp"
 #include "modle/stats/descriptive.hpp"
 
 namespace modle {
@@ -110,29 +111,41 @@ usize Simulation::size() const { return this->_genome.size(); }
 
 usize Simulation::simulated_size() const { return this->_genome.simulated_size(); }
 
+[[nodiscard]] static coolerpp::File init_cooler(const Genome& genome,
+                                                const std::filesystem::path& path, usize bin_size,
+                                                std::string_view metadata_str) {
+  std::vector<std::string> chrom_names(genome.number_of_chromosomes());
+  std::vector<u32> chrom_sizes(genome.number_of_chromosomes());
+
+  std::transform(genome.begin(), genome.end(), chrom_names.begin(),
+                 [](const Chromosome& chrom) { return std::string{chrom.name()}; });
+  std::transform(genome.begin(), genome.end(), chrom_sizes.begin(), [](const Chromosome& chrom) {
+    return utils::conditional_static_cast<u32>(chrom.size());
+  });
+
+  auto attrs = coolerpp::StandardAttributes::init(utils::conditional_static_cast<u32>(bin_size));
+  if (!metadata_str.empty()) {
+    attrs.metadata = std::string{metadata_str};
+  }
+
+  return coolerpp::File::create_new_cooler(
+      path.string(),
+      coolerpp::ChromosomeSet{chrom_names.begin(), chrom_names.end(), chrom_sizes.begin()},
+      utils::conditional_static_cast<u32>(bin_size), false, attrs);
+}
+
 // NOLINTNEXTLINE(readability-function-cognitive-complexity)
 void Simulation::write_contacts_to_disk(std::deque<std::pair<Chromosome*, usize>>& progress_queue,
                                         std::mutex& progress_queue_mtx) {
   // This thread is in charge of writing contacts to disk
   Chromosome* chrom_to_be_written = nullptr;
-  const auto max_str_length =
-      std::max_element(  // Find chrom with the longest name
-          this->_genome.begin(), this->_genome.end(),
-          [](const auto& c1, const auto& c2) { return c1.name().size() < c2.name().size(); })
-          ->name()
-          .size();
 
-  auto c = this->skip_output ? nullptr
-                             : std::make_unique<cooler::Cooler<contacts_t>>(
-                                   this->path_to_output_file_cool,
-                                   cooler::Cooler<contacts_t>::IO_MODE::WRITE_ONLY, this->bin_size,
-                                   max_str_length);
+  coolerpp::File c{this->skip_output ? coolerpp::File{}
+                                     : init_cooler(this->_genome, this->path_to_output_file_cool,
+                                                   this->bin_size, this->args_json)};
 
   try {
-    if (c && !this->args_json.empty()) {
-      c->write_metadata_attribute(this->args_json);
-    }
-    auto sleep_us = 100;
+    auto sleep_us = 100;  // TODO use a conditional_variable
     while (this->ok()) {  // Structuring the loop in this way allows us to sleep without
                           // holding the mutex
       sleep_us = std::min(500000, sleep_us * 2);
@@ -158,30 +171,28 @@ void Simulation::write_contacts_to_disk(std::deque<std::pair<Chromosome*, usize>
         }
       }
       sleep_us = 100;
-      if (c) {  // c == nullptr only when --skip-output is used
+      if (c) {
         // NOTE here we have to use pointers instead of references because
         // chrom_to_be_written.contacts() == nullptr is used to signal an empty matrix.
-        // In this case, c->write_or_append_cmatrix_to_file() will create an entry in the chroms and
-        // bins datasets, as well as update the appropriate index
+        // In this case, c->write_or_append_cmatrix_to_file() will create an entry in the chroms
+        // and bins datasets, as well as update the appropriate index
         if (chrom_to_be_written->contacts_ptr()) {
-          spdlog::info(FMT_STRING("Writing contacts for \"{}\" to file {}..."),
-                       chrom_to_be_written->name(), c->get_path());
+          spdlog::info(FMT_STRING("Writing contacts for \"{}\" to file \"{}\"..."),
+                       chrom_to_be_written->name(), c.uri());
         } else {
-          spdlog::info(FMT_STRING("Writing bin table for \"{}\" to file {}..."),
-                       chrom_to_be_written->name(), c->get_path());
+          spdlog::info(FMT_STRING("Writing bin table for \"{}\" to file \"{}\"..."),
+                       chrom_to_be_written->name(), c.uri());
         }
 
-        c->write_or_append_cmatrix_to_file(
-            chrom_to_be_written->contacts_ptr().get(), chrom_to_be_written->name(),
-            chrom_to_be_written->start_pos(), chrom_to_be_written->end_pos(),
-            chrom_to_be_written->size());
+        io::append_contact_matrix_to_cooler(c, chrom_to_be_written->name(),
+                                            chrom_to_be_written->contacts());
 
         if (chrom_to_be_written->contacts_ptr()) {
           spdlog::info(
-              FMT_STRING(
-                  "Written {} contacts for \"{}\" to file {} ({:.2f}M nnz out of {:.2f}M pixels)."),
+              FMT_STRING("Written {} contacts for \"{}\" to file \"{}\" ({:.2f}M nnz out of "
+                         "{:.2f}M pixels)."),
               chrom_to_be_written->contacts().get_tot_contacts(), chrom_to_be_written->name(),
-              c->get_path(), static_cast<double>(chrom_to_be_written->contacts().get_nnz()) / 1.0e6,
+              c.uri(), static_cast<double>(chrom_to_be_written->contacts().get_nnz()) / 1.0e6,
               static_cast<double>(chrom_to_be_written->contacts().npixels()) / 1.0e6);
         }
       }
@@ -193,12 +204,12 @@ void Simulation::write_contacts_to_disk(std::deque<std::pair<Chromosome*, usize>
     if (chrom_to_be_written) {
       this->_exceptions.emplace_back(std::make_exception_ptr(std::runtime_error(fmt::format(
           FMT_STRING(
-              "The following error occurred while writing contacts for \"{}\" to file {}: {}"),
-          chrom_to_be_written->name(), c->get_path(), err.what()))));
+              "The following error occurred while writing contacts for \"{}\" to file \"{}\": {}"),
+          chrom_to_be_written->name(), c.uri(), err.what()))));
     } else {
       this->_exceptions.emplace_back(std::make_exception_ptr(std::runtime_error(fmt::format(
-          FMT_STRING("The following error occurred while writing contacts to file {}: {}"),
-          c->get_path(), err.what()))));
+          FMT_STRING("The following error occurred while writing contacts to file \"{}\": {}"),
+          c.uri(), err.what()))));
     }
     this->_exception_thrown = true;
   } catch (...) {
@@ -219,23 +230,12 @@ void Simulation::write_1d_lef_occupancy_to_disk() const {
   try {
     io::bigwig::Writer bw(this->path_to_lef_1d_occupancy_bw_file.string());
 
-#if 0
-    std::vector<std::string> chrom_names(this->_genome.number_of_chromosomes());
-    std::vector<u32> chrom_sizes(this->_genome.number_of_chromosomes());
-    std::transform(this->_genome.begin(), this->_genome.end(), chrom_names.begin(),
-                   [](const Chromosome& chrom) { return chrom.name(); });
-    std::transform(this->_genome.begin(), this->_genome.end(), chrom_sizes.begin(),
-                   [](const Chromosome& chrom) { return static_cast<u32>(chrom.size()); });
-    bw.write_chromosomes(chrom_names, chrom_sizes);
-#else
-    // TODO removeme
     std::vector<std::pair<std::string, u32>> chroms(this->_genome.number_of_chromosomes());
     std::transform(this->_genome.begin(), this->_genome.end(), chroms.begin(),
                    [](const Chromosome& chrom) {
                      return std::make_pair(chrom.name(), static_cast<u32>(chrom.size()));
                    });
     bw.write_chromosomes(chroms);
-#endif
 
     for (const Chromosome& chrom : this->_genome) {
       if (!chrom.lef_1d_occupancy_ptr()) {
@@ -381,7 +381,8 @@ void Simulation::adjust_moves_of_consecutive_extr_units(
     const auto i1 = fwd_lef_ranks[i - 1];
     const auto i2 = fwd_lef_ranks[i];
 
-    // See above for detailed comments. The code logic is the same used on rev units (but mirrored!)
+    // See above for detailed comments. The code logic is the same used on rev units (but
+    // mirrored!)
     if (lefs[i1].is_bound() && lefs[i2].is_bound()) {
       if (lefs[i1].fwd_unit.pos() + fwd_moves[i1] > chrom.end_pos() - 1 ||
           lefs[i2].fwd_unit.pos() + fwd_moves[i2] > chrom.end_pos() - 1) {

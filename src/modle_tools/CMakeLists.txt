@@ -32,8 +32,9 @@ target_link_libraries(
           Modle::interval_tree
           Modle::io_bed
           Modle::io_bigwig
+          Modle::io_chrom_sizes
           Modle::io_compressed
-          Modle::io_cooler
+          Modle::io_contact_matrix
           Modle::stats)
 
 target_link_system_libraries(
@@ -53,6 +54,7 @@ target_link_system_libraries(
   Boost::headers
   bshoshany-thread-pool::bshoshany-thread-pool
   CLI11::CLI11
+  coolerpp
   cpp-sort::cpp-sort
   readerwriterqueue::readerwriterqueue
   tomlplusplus::tomlplusplus

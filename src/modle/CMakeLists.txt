@@ -19,7 +19,6 @@ target_link_libraries(
           project_options
           Modle::common
           Modle::config
-          Modle::io_cooler
           Modle::libmodle)
 
 target_link_system_libraries(
@@ -34,7 +33,8 @@ target_link_system_libraries(
   Boost::headers
   CLI11::CLI11
   spdlog::spdlog
-  tomlplusplus::tomlplusplus)
+  tomlplusplus::tomlplusplus
+  coolerpp)
 
 include(GNUInstallDirs)
 install(
