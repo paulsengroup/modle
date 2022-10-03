@@ -81,7 +81,7 @@ jobs:
           os="${{ matrix.os }}"
           compiler="${{ matrix.compiler-name }}"
           build_type="${{ matrix.build_type }}"
-          hash="${{ hashFiles('conanfile.py', '.github/workflows/unit-tests-macos.yml') }}"
+          hash="${{ hashFiles('conanfile.py', '.github/workflows/macos-ci.yml') }}"
 
           # This can be used by to always update a cache entry (useful e.g. for ccache)
           current_date="$(date '+%s')"
