@@ -4,6 +4,7 @@
 
 #include "modle/contact_matrix_serde.hpp"
 
+#include <absl/time/clock.h>
 #include <fmt/format.h>
 #include <spdlog/spdlog.h>
 
@@ -19,7 +20,6 @@
 #include "modle/common/common.hpp"  // for u32
 #include "modle/contact_matrix_dense.hpp"
 #include "modle/contact_matrix_sparse.hpp"
-#include "modle/cooler/cooler.hpp"
 #include "modle/test/self_deleting_folder.hpp"
 
 namespace modle::test {

@@ -1,0 +1,11 @@
+# Copyright (C) 2022 Roberto Rossini <roberros@uio.no>
+#
+# SPDX-License-Identifier: MIT
+
+# See: https://github.com/BlueBrain/HighFive/pull/583
+leak:HighFive::HDF5ErrMapper
+leak:H5Exception_misc.hpp
+leak:H5E__walk
+leak:H5Eget_major
+leak:H5Eget_minor
+leak:H5MM_malloc

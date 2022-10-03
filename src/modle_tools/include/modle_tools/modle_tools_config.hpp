@@ -4,6 +4,7 @@
 
 #pragma once
 
+#include <coolerpp/uri.hpp>
 #include <absl/types/variant.h>  // for monostate, variant
 
 #include <filesystem>  // for path
@@ -20,10 +21,11 @@ namespace modle::tools {
 
 struct eval_config {
   // IO
-  std::filesystem::path path_to_input_matrix;
+  std::filesystem::path input_cooler_uri;
   std::filesystem::path output_prefix;
-  std::filesystem::path path_to_reference_matrix;
-  std::filesystem::path path_to_chrom_subranges;
+  std::filesystem::path reference_cooler_uri;
+  std::filesystem::path path_to_chrom_sizes;
+  std::filesystem::path path_to_regions_of_interest_bed;
   std::filesystem::path path_to_weights;
   bool force{false};
   bool normalize{false};
@@ -43,8 +45,7 @@ struct eval_config {
       // clang-format on
   };
 
-  // Reference contacts
-  usize bin_size{0};
+  // Matrix options
   usize diagonal_width;
 
   // Other
@@ -58,8 +59,8 @@ struct eval_config {
 
 struct transform_config {
   // IO
-  std::filesystem::path path_to_input_matrix;
-  std::filesystem::path path_to_output_matrix;
+  std::filesystem::path input_cooler_uri;
+  std::filesystem::path output_cooler_uri;
   bool force{false};
 
   // Transformation methods
@@ -88,7 +89,6 @@ struct transform_config {
   bool floating_point{true};
 
   // Matrix options
-  usize bin_size{0};
   usize diagonal_width;
 
   // Other
