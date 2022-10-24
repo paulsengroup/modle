@@ -15,7 +15,9 @@ defaults:
     shell: bash
 
 jobs:
-  steps:
+  cache-test-datasets:
+    runs-on: ubuntu-latest
+    steps:
     - name: Cache test datasets
       id: cache-dataset
       uses: actions/cache@v3
