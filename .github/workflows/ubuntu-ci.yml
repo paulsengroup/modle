@@ -300,10 +300,17 @@ jobs:
         run: zstd -dcf unit-tests.tar.zst | tar -xf -
 
       - name: Cache test datasets
+        id: cache-dset
         uses: actions/cache@v3
         with:
           key: test-dataset-${{ hashFiles('cmake/FetchTestDataset.cmake') }}
           path: ${{ github.workspace }}/test/data/modle_test_data.tar.gz
+
+      - name: Check test datasets availability
+        if: ${{ !steps.cache-dset.outputs.cache-hit }}
+        run: |
+          2>&1 echo 'Failed to restore test dataset from GHA cache'
+          exit 1
 
       - name: Run unit tests
         working-directory: ${{ github.workspace }}/build
@@ -348,6 +355,12 @@ jobs:
           key: test-dataset-${{ hashFiles('cmake/FetchTestDataset.cmake') }}
           path: ${{ github.workspace }}/test/data/modle_test_data.tar.gz
 
+      - name: Check test datasets availability
+        if: ${{ !steps.cache-dset.outputs.cache-hit }}
+        run: |
+          2>&1 echo 'Failed to restore test dataset from GHA cache'
+          exit 1
+
       - name: Inspect modle version
         run: bin/modle --version
 
@@ -383,6 +396,12 @@ jobs:
         with:
           key: test-dataset-${{ hashFiles('cmake/FetchTestDataset.cmake') }}
           path: ${{ github.workspace }}/test/data/modle_test_data.tar.gz
+
+      - name: Check test datasets availability
+        if: ${{ !steps.cache-dset.outputs.cache-hit }}
+        run: |
+          2>&1 echo 'Failed to restore test dataset from GHA cache'
+          exit 1
 
       - name: Inspect modle_tools version
         run: bin/modle_tools --version
