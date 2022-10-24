@@ -14,6 +14,10 @@ defaults:
   run:
     shell: bash
 
+env:
+  FETCH_TEST_DATASET_CMAKE: cmake/FetchTestDataset.cmake
+  TEST_DATASET_PATH: test/data/modle_test_data.tar.gz
+
 jobs:
   cache-test-datasets:
     runs-on: ubuntu-latest
