@@ -26,7 +26,7 @@ jobs:
       id: cache-dataset
       uses: actions/cache@v3
       with:
-        key: test-dataset-${{ 'hashFiles( cmake/FetchTestDataset.cmake' ) }}
+        key: test-dataset-${{ hashFiles( 'cmake/FetchTestDataset.cmake' ) }}
         path: ${{ env.TEST_DATASET_PATH }}
 
     - name: Checkout repo
