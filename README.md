@@ -43,7 +43,7 @@ and [dockerhub](https://hub.docker.com/repository/docker/paulsengroup/modle).
 
 In addition to a C++17 compiler, building MoDLE requires the following tools:
 
-- CMake >= 3.18
+- CMake >= 3.20
 - Conan >= 1.51.3
 
 #### Installing Conan
@@ -100,7 +100,7 @@ This will cause CMake to exit with an error during project configuration.
 When this is the case, the error message should look similar to the following:
 
 ```
-ERROR: libBigWig/0.4.6: 'settings.compiler' value not defined
+ERROR: libBigWig/0.4.7: 'settings.compiler' value not defined
 CMake Error at build/conan.cmake:631 (message):
   Conan install failed='1'
 ```
