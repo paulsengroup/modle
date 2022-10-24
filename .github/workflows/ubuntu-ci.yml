@@ -41,6 +41,10 @@ env:
   CCACHE_COMPRESSLEVEL: "13"
   CCACHE_MAXSIZE: "200M"
 
+defaults:
+  run:
+    shell: bash
+
 jobs:
   matrix-factory:
     runs-on: ubuntu-latest
@@ -144,7 +148,6 @@ jobs:
       - uses: actions/checkout@v3
 
       - name: Update build deps
-        shell: bash
         run: |
           pattern='[[:digit:]]\+\.[[:digit:]]\+\.[[:digit:]]\+$'
 

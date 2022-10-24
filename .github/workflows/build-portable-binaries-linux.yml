@@ -25,6 +25,10 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: true
 
+defaults:
+  run:
+    shell: bash
+
 env:
   CONAN_REVISIONS_ENABLED: "1"
   CONAN_USER_HOME: "${{ github.workspace }}/conan-cache"
