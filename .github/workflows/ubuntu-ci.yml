@@ -82,49 +82,49 @@ jobs:
             var includes = []
 
             // Debug builds (short CI)
-            includes.push({ compiler: 'gcc-8',     os: 'ubuntu-20.04',  generator: 'Ninja', cmake: '3.24.*', conan: '1.52.*', build_type: 'Debug',   developer_mode: 'OFF' })
-            includes.push({ compiler: 'gcc-12',    os: 'ubuntu-22.04',  generator: 'Ninja', cmake: '3.24.*', conan: '1.52.*', build_type: 'Debug',   developer_mode: 'ON'  })
-            includes.push({ compiler: 'clang-8',   os: 'ubuntu-20.04',  generator: 'Ninja', cmake: '3.24.*', conan: '1.52.*', build_type: 'Debug',   developer_mode: 'OFF' })
-            includes.push({ compiler: 'clang-14',  os: 'ubuntu-22.04',  generator: 'Ninja', cmake: '3.24.*', conan: '1.52.*', build_type: 'Debug',   developer_mode: 'ON'  })
+            includes.push({ compiler: 'gcc-8',     os: 'ubuntu-20.04',  generator: 'Ninja', cmake: '3.24.*', conan: '1.53.*', build_type: 'Debug',   developer_mode: 'OFF' })
+            includes.push({ compiler: 'gcc-12',    os: 'ubuntu-22.04',  generator: 'Ninja', cmake: '3.24.*', conan: '1.53.*', build_type: 'Debug',   developer_mode: 'ON'  })
+            includes.push({ compiler: 'clang-8',   os: 'ubuntu-20.04',  generator: 'Ninja', cmake: '3.24.*', conan: '1.53.*', build_type: 'Debug',   developer_mode: 'OFF' })
+            includes.push({ compiler: 'clang-14',  os: 'ubuntu-22.04',  generator: 'Ninja', cmake: '3.24.*', conan: '1.53.*', build_type: 'Debug',   developer_mode: 'ON'  })
 
             // Release builds (short CI)
-            includes.push({ compiler: 'gcc-12',    os: 'ubuntu-22.04',  generator: 'Ninja', cmake: '3.24.*', conan: '1.52.*', build_type: 'Release', developer_mode: 'ON'  })
-            includes.push({ compiler: 'clang-14',  os: 'ubuntu-22.04',  generator: 'Ninja', cmake: '3.24.*', conan: '1.52.*', build_type: 'Release', developer_mode: 'ON'  })
+            includes.push({ compiler: 'gcc-12',    os: 'ubuntu-22.04',  generator: 'Ninja', cmake: '3.24.*', conan: '1.53.*', build_type: 'Release', developer_mode: 'ON'  })
+            includes.push({ compiler: 'clang-14',  os: 'ubuntu-22.04',  generator: 'Ninja', cmake: '3.24.*', conan: '1.53.*', build_type: 'Release', developer_mode: 'ON'  })
 
             if (ci_short) {
               return { include: includes }
             }
 
             // Debug builds (long CI)
-            includes.push({ compiler: 'gcc-9',     os: 'ubuntu-22.04',  generator: 'Ninja', cmake: '3.24.*', conan: '1.52.*', build_type: 'Debug',   developer_mode: 'OFF' })
-            includes.push({ compiler: 'gcc-10',    os: 'ubuntu-22.04',  generator: 'Ninja', cmake: '3.24.*', conan: '1.52.*', build_type: 'Debug',   developer_mode: 'OFF' })
-            includes.push({ compiler: 'gcc-11',    os: 'ubuntu-22.04',  generator: 'Ninja', cmake: '3.24.*', conan: '1.52.*', build_type: 'Debug',   developer_mode: 'ON'  })
-            includes.push({ compiler: 'gcc-12',    os: 'ubuntu-22.04',  generator: 'Ninja', cmake: '3.24.*', conan: '1.52.*', build_type: 'Debug',   developer_mode: 'ON'  })
-            includes.push({ compiler: 'clang-9',   os: 'ubuntu-20.04',  generator: 'Ninja', cmake: '3.24.*', conan: '1.52.*', build_type: 'Debug',   developer_mode: 'OFF' })
-            includes.push({ compiler: 'clang-10',  os: 'ubuntu-20.04',  generator: 'Ninja', cmake: '3.24.*', conan: '1.52.*', build_type: 'Debug',   developer_mode: 'OFF' })
-            includes.push({ compiler: 'clang-11',  os: 'ubuntu-22.04',  generator: 'Ninja', cmake: '3.24.*', conan: '1.52.*', build_type: 'Debug',   developer_mode: 'OFF' })
-            includes.push({ compiler: 'clang-12',  os: 'ubuntu-22.04',  generator: 'Ninja', cmake: '3.24.*', conan: '1.52.*', build_type: 'Debug',   developer_mode: 'OFF' })
-            includes.push({ compiler: 'clang-13',  os: 'ubuntu-22.04',  generator: 'Ninja', cmake: '3.24.*', conan: '1.52.*', build_type: 'Debug',   developer_mode: 'ON'  })
-            includes.push({ compiler: 'clang-14',  os: 'ubuntu-22.04',  generator: 'Ninja', cmake: '3.24.*', conan: '1.52.*', build_type: 'Debug',   developer_mode: 'ON'  })
+            includes.push({ compiler: 'gcc-9',     os: 'ubuntu-22.04',  generator: 'Ninja', cmake: '3.24.*', conan: '1.53.*', build_type: 'Debug',   developer_mode: 'OFF' })
+            includes.push({ compiler: 'gcc-10',    os: 'ubuntu-22.04',  generator: 'Ninja', cmake: '3.24.*', conan: '1.53.*', build_type: 'Debug',   developer_mode: 'OFF' })
+            includes.push({ compiler: 'gcc-11',    os: 'ubuntu-22.04',  generator: 'Ninja', cmake: '3.24.*', conan: '1.53.*', build_type: 'Debug',   developer_mode: 'ON'  })
+            includes.push({ compiler: 'gcc-12',    os: 'ubuntu-22.04',  generator: 'Ninja', cmake: '3.24.*', conan: '1.53.*', build_type: 'Debug',   developer_mode: 'ON'  })
+            includes.push({ compiler: 'clang-9',   os: 'ubuntu-20.04',  generator: 'Ninja', cmake: '3.24.*', conan: '1.53.*', build_type: 'Debug',   developer_mode: 'OFF' })
+            includes.push({ compiler: 'clang-10',  os: 'ubuntu-20.04',  generator: 'Ninja', cmake: '3.24.*', conan: '1.53.*', build_type: 'Debug',   developer_mode: 'OFF' })
+            includes.push({ compiler: 'clang-11',  os: 'ubuntu-22.04',  generator: 'Ninja', cmake: '3.24.*', conan: '1.53.*', build_type: 'Debug',   developer_mode: 'OFF' })
+            includes.push({ compiler: 'clang-12',  os: 'ubuntu-22.04',  generator: 'Ninja', cmake: '3.24.*', conan: '1.53.*', build_type: 'Debug',   developer_mode: 'OFF' })
+            includes.push({ compiler: 'clang-13',  os: 'ubuntu-22.04',  generator: 'Ninja', cmake: '3.24.*', conan: '1.53.*', build_type: 'Debug',   developer_mode: 'ON'  })
+            includes.push({ compiler: 'clang-14',  os: 'ubuntu-22.04',  generator: 'Ninja', cmake: '3.24.*', conan: '1.53.*', build_type: 'Debug',   developer_mode: 'ON'  })
 
             // Release builds (long CI)
-            includes.push({ compiler: 'gcc-8',     os: 'ubuntu-20.04',  generator: 'Ninja', cmake: '3.24.*', conan: '1.52.*', build_type: 'Release', developer_mode: 'OFF' })
-            includes.push({ compiler: 'gcc-9',     os: 'ubuntu-22.04',  generator: 'Ninja', cmake: '3.24.*', conan: '1.52.*', build_type: 'Release', developer_mode: 'OFF' })
-            includes.push({ compiler: 'gcc-10',    os: 'ubuntu-22.04',  generator: 'Ninja', cmake: '3.24.*', conan: '1.52.*', build_type: 'Release', developer_mode: 'ON'  })
-            includes.push({ compiler: 'gcc-11',    os: 'ubuntu-22.04',  generator: 'Ninja', cmake: '3.24.*', conan: '1.52.*', build_type: 'Release', developer_mode: 'ON'  })
-            includes.push({ compiler: 'clang-8',   os: 'ubuntu-20.04',  generator: 'Ninja', cmake: '3.24.*', conan: '1.52.*', build_type: 'Release', developer_mode: 'OFF' })
-            includes.push({ compiler: 'clang-9',   os: 'ubuntu-20.04',  generator: 'Ninja', cmake: '3.24.*', conan: '1.52.*', build_type: 'Release', developer_mode: 'OFF' })
-            includes.push({ compiler: 'clang-10',  os: 'ubuntu-20.04',  generator: 'Ninja', cmake: '3.24.*', conan: '1.52.*', build_type: 'Release', developer_mode: 'OFF' })
-            includes.push({ compiler: 'clang-11',  os: 'ubuntu-22.04',  generator: 'Ninja', cmake: '3.24.*', conan: '1.52.*', build_type: 'Release', developer_mode: 'OFF' })
-            includes.push({ compiler: 'clang-12',  os: 'ubuntu-22.04',  generator: 'Ninja', cmake: '3.24.*', conan: '1.52.*', build_type: 'Release', developer_mode: 'ON'  })
-            includes.push({ compiler: 'clang-13',  os: 'ubuntu-22.04',  generator: 'Ninja', cmake: '3.24.*', conan: '1.52.*', build_type: 'Release', developer_mode: 'ON'  })
+            includes.push({ compiler: 'gcc-8',     os: 'ubuntu-20.04',  generator: 'Ninja', cmake: '3.24.*', conan: '1.53.*', build_type: 'Release', developer_mode: 'OFF' })
+            includes.push({ compiler: 'gcc-9',     os: 'ubuntu-22.04',  generator: 'Ninja', cmake: '3.24.*', conan: '1.53.*', build_type: 'Release', developer_mode: 'OFF' })
+            includes.push({ compiler: 'gcc-10',    os: 'ubuntu-22.04',  generator: 'Ninja', cmake: '3.24.*', conan: '1.53.*', build_type: 'Release', developer_mode: 'ON'  })
+            includes.push({ compiler: 'gcc-11',    os: 'ubuntu-22.04',  generator: 'Ninja', cmake: '3.24.*', conan: '1.53.*', build_type: 'Release', developer_mode: 'ON'  })
+            includes.push({ compiler: 'clang-8',   os: 'ubuntu-20.04',  generator: 'Ninja', cmake: '3.24.*', conan: '1.53.*', build_type: 'Release', developer_mode: 'OFF' })
+            includes.push({ compiler: 'clang-9',   os: 'ubuntu-20.04',  generator: 'Ninja', cmake: '3.24.*', conan: '1.53.*', build_type: 'Release', developer_mode: 'OFF' })
+            includes.push({ compiler: 'clang-10',  os: 'ubuntu-20.04',  generator: 'Ninja', cmake: '3.24.*', conan: '1.53.*', build_type: 'Release', developer_mode: 'OFF' })
+            includes.push({ compiler: 'clang-11',  os: 'ubuntu-22.04',  generator: 'Ninja', cmake: '3.24.*', conan: '1.53.*', build_type: 'Release', developer_mode: 'OFF' })
+            includes.push({ compiler: 'clang-12',  os: 'ubuntu-22.04',  generator: 'Ninja', cmake: '3.24.*', conan: '1.53.*', build_type: 'Release', developer_mode: 'ON'  })
+            includes.push({ compiler: 'clang-13',  os: 'ubuntu-22.04',  generator: 'Ninja', cmake: '3.24.*', conan: '1.53.*', build_type: 'Release', developer_mode: 'ON'  })
 
             // Make sure project builds with CMake 3.20
             includes.push({ compiler: 'clang-14',  os: 'ubuntu-22.04',  generator: 'Ninja', cmake: '3.20.5', conan: '1.52.*', build_type: 'Release', developer_mode: 'OFF' })
             // Make sure project builds with Conan 1.51
             includes.push({ compiler: 'clang-14',  os: 'ubuntu-22.04',  generator: 'Ninja', cmake: '3.24.*', conan: '1.51.*', build_type: 'Release', developer_mode: 'OFF' })
             // Make sure project builds with make
-            includes.push({ compiler: 'clang-14',  os: 'ubuntu-22.04',  generator: 'Unix Makefiles', cmake: '3.24.*', conan: '1.52.*', build_type: 'Release', developer_mode: 'OFF' })
+            includes.push({ compiler: 'clang-14',  os: 'ubuntu-22.04',  generator: 'Unix Makefiles', cmake: '3.24.*', conan: '1.53.*', build_type: 'Release', developer_mode: 'OFF' })
 
             return { include: includes }
 
