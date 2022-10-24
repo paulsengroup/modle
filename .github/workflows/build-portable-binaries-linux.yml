@@ -157,7 +157,7 @@ jobs:
           git config --global --add safe.directory ${{ github.workspace }}
           mkdir ${{ github.workspace }}/build
           cmake -DCMAKE_BUILD_TYPE=Release            \
-                -DENABLE_TESTING=ON                   \
+                -DMODLE_ENABLE_TESTING=ON             \
                 -DENABLE_DEVELOPER_MODE=OFF           \
                 -DCMAKE_INSTALL_PREFIX="/tmp/modle/"  \
                 -S "${{ github.workspace }}"          \
