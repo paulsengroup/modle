@@ -35,7 +35,7 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  docker:
+  build-image:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
