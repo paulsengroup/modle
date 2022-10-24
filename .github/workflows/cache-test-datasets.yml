@@ -1,0 +1,47 @@
+# Copyright (C) 2022 Roberto Rossini (roberros@uio.no)
+# SPDX-License-Identifier: MIT
+
+name: Cache test datasets
+
+on:
+  schedule:
+    # Run workflow every Sunday at 04:17
+    - cron: '17 4 * * 0'
+
+  workflow_dispatch:
+
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  cache-test-datasets:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Cache test datasets
+      id: cache-dataset
+      uses: actions/cache@v3
+      with:
+        key: test-dataset-${{ hashFiles("${{ env.FETCH_TEST_DATASET_CMAKE }}") }}
+        path: ${{ env.TEST_DATASET_PATH }}
+
+    - name: Checkout repo
+      if: ${{ !steps.cache-dataset.outputs.cache-hit }}
+      uses: actions/checkout@v3
+
+    - name: Extract test dataset URL
+      id: test-dataset-url
+      if: ${{ !steps.cache-dataset.outputs.cache-hit }}
+      run: |
+        url="$(grep -F 'DOWNLOAD' "$FETCH_TEST_DATASET_CMAKE" | awk '{print $2}')"
+
+        echo "url=$url" >> $GITHUB_OUTPUT
+
+    - name: Download test dataset
+      if: ${{ !steps.cache-dataset.outputs.cache-hit }}
+      run: |
+        source="${{ steps.test-dataset-url.outputs.url }}"
+        dest="$TEST_DATASET_PATH"
+
+        mkdir -p "$(dirname "$dest")"
+        curl -L "$src" -o "$dest"
