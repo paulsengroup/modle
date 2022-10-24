@@ -44,7 +44,7 @@ jobs:
     - name: Download test dataset
       if: ${{ !steps.cache-dataset.outputs.cache-hit }}
       run: |
-        source="${{ steps.test-dataset-url.outputs.url }}"
+        src="${{ steps.test-dataset-url.outputs.url }}"
         dest="$TEST_DATASET_PATH"
 
         mkdir -p "$(dirname "$dest")"
