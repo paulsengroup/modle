@@ -6,29 +6,15 @@
 **
 
 # Allowed directories
-!.git/**
-!.github/**
 !cmake/**
-!config/**
 !external/**
 !src/**
-!test/data/integration_tests/**
-!test/data/unit_tests/**
 !test/scripts/**
 !test/units/**
-!utils/**
 
 # Allowed files
-!.clang*
-!.cmake-format.yaml
-!.dockerignore
-!.editorconfig
-!.git*
-!CITATION.cff
 !CMakeLists.txt
-!Dockerfile
 !LICENSE
-!README.md
 !conanfile.*
 !test/CMakeLists.txt
-!test/test_main.cpp
+!test/data/modle_test_data.tar.gz
