@@ -49,6 +49,15 @@ jobs:
 
         echo "key=$key" >> $GITHUB_OUTPUT
 
+    - name: Extract test dataset URL and checksum
+      id: test-dataset
+      run: |
+        url="$(grep -F 'DOWNLOAD' "$FETCH_TEST_DATASET_CMAKE" | sed 's/.*DOWNLOAD[[:space:]]\+//')"
+        checksum="$(grep -F 'EXPECTED_HASH' "$FETCH_TEST_DATASET_CMAKE" | sed 's/.*SHA512=//')"
+
+        echo "url=$url" >> $GITHUB_OUTPUT
+        echo "checksum=$checksum" >> $GITHUB_OUTPUT
+
     - name: Cache test datasets
       id: cache-dataset
       uses: actions/cache@v3
@@ -56,22 +65,19 @@ jobs:
         key: ${{ steps.generate-cache-key.outputs.key }}
         path: ${{ env.TEST_DATASET_PATH }}
 
-    - name: Extract test dataset URL
-      id: test-dataset-url
-      if: steps.cache-dataset.outputs.cache-hit != 'true'
-      run: |
-        url="$(grep -F 'DOWNLOAD' "$FETCH_TEST_DATASET_CMAKE" | awk '{print $2}')"
-
-        echo "url=$url" >> $GITHUB_OUTPUT
-
     - name: Download test dataset
       if: steps.cache-dataset.outputs.cache-hit != 'true'
       run: |
-        src="${{ steps.test-dataset-url.outputs.url }}"
+        src="${{ steps.test-dataset.outputs.url }}"
         dest="$TEST_DATASET_PATH"
 
         mkdir -p "$(dirname "$dest")"
         curl -L "$src" -o "$dest"
+
+    - name: Checksum test dataset
+      run: |
+        echo "${{ steps.test-dataset.outputs.checksum }}  $TEST_DATASET_PATH" > checksum.sha512
+        shasum -c checksum.sha512
 
     - name: Upload test dataset
       uses: actions/upload-artifact@v3
