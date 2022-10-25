@@ -75,7 +75,7 @@ target_link_system_libraries(
   HDF5::HDF5
   spdlog::spdlog)
 
-file(MAKE_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/Testing/)
+file(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/Testing/)
 
 # automatically discover tests that are defined in catch based test files you can modify the unittests. TEST_PREFIX to
 # whatever you want, or use different for different binaries
@@ -88,7 +88,7 @@ catch_discover_tests(
   WORKING_DIRECTORY
   ${CMAKE_CURRENT_SOURCE_DIR}/../
   OUTPUT_DIR
-  ${CMAKE_CURRENT_SOURCE_DIR}/Testing/
+  ${CMAKE_CURRENT_BINARY_DIR}/Testing/
   EXTRA_ARGS
   --success)
 
@@ -101,7 +101,7 @@ catch_discover_tests(
   WORKING_DIRECTORY
   ${CMAKE_CURRENT_SOURCE_DIR}/../
   OUTPUT_DIR
-  ${CMAKE_CURRENT_SOURCE_DIR}/Testing/
+  ${CMAKE_CURRENT_BINARY_DIR}/Testing/
   EXTRA_ARGS
   --success)
 
@@ -114,6 +114,6 @@ catch_discover_tests(
   WORKING_DIRECTORY
   ${CMAKE_CURRENT_SOURCE_DIR}/../
   OUTPUT_DIR
-  ${CMAKE_CURRENT_SOURCE_DIR}/Testing/
+  ${CMAKE_CURRENT_BINARY_DIR}/Testing/
   EXTRA_ARGS
   --success)
