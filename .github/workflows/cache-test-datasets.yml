@@ -4,16 +4,23 @@
 name: Cache test datasets
 
 on:
-  schedule:
-    # Run workflow every Sunday at 04:17
-    - cron: '17 4 * * 0'
-
   workflow_dispatch:
 
   workflow_call:
     outputs:
-      cache-key:
+      artifact-name:
+        description: "Test dataset artifact name"
         value: ${{ jobs.cache-test-datasets.outputs.cache-key }}
+      cache-key:
+        description: "Test dataset cache key"
+        value: ${{ jobs.cache-test-datasets.outputs.cache-key }}
+
+  push:
+    branches: [ main ]
+    paths: [ "cmake/FetchExternalDataset.cmake" ]
+
+  pull_request:
+    paths: [ "cmake/FetchExternalDataset.cmake" ]
 
 defaults:
   run:
@@ -40,7 +47,7 @@ jobs:
       run: |
         key="test-dataset-${{ hashFiles( 'cmake/FetchTestDataset.cmake' ) }}"
 
-        echo "key=$key" >> $GITHUB_OUTPUTS
+        echo "key=$key" >> $GITHUB_OUTPUT
 
     - name: Cache test datasets
       id: cache-dataset
@@ -65,3 +72,11 @@ jobs:
 
         mkdir -p "$(dirname "$dest")"
         curl -L "$src" -o "$dest"
+
+    - name: Upload test dataset
+      uses: actions/upload-artifact@v3
+      with:
+        name: ${{ steps.generate-cache-key.outputs.key }}
+        path: ${{ env.TEST_DATASET_PATH }}
+        if-no-files-found: error
+        retention-days: 1

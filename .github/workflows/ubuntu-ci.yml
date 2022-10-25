@@ -132,7 +132,7 @@ jobs:
             return { include: includes }
 
   cache-test-datasets:
-    uses: paulsengroup/modle/.github/workflows/cache-test-datasets.yml@v1
+    uses: paulsengroup/modle/.github/workflows/cache-test-datasets.yml@update-ci # TODO: change to main
 
   build-project:
     needs: matrix-factory
@@ -259,7 +259,7 @@ jobs:
 
       - name: Package unit tests
         run: |
-          tar -cf - ${{ github.workspace }}/build | zstd -T0 -13 -o unit-tests.tar.zst
+          tar -cf - build/ | zstd -T0 -13 -o unit-tests.tar.zst
 
       - name: Build modle and modle_tools
         run: cmake --build ${{ github.workspace }}/build -j $(nproc)
@@ -268,7 +268,7 @@ jobs:
         run: |
           cmake --install ${{ github.workspace }}/build
 
-          tar -cf - -C ${{ github.workspace }}/dest bin |
+          tar -cf - -C dest/ bin |
           zstd -T0 -13 -o binaries.tar.zst
 
       - name: Upload unit tests
@@ -310,21 +310,11 @@ jobs:
         with:
           name: unit-tests-${{ matrix.os }}-${{ matrix.compiler }}-${{ matrix.generator }}-${{ matrix.build_type }}
 
-      - name: Extract unit test artifact
-        run: zstd -dcf unit-tests.tar.zst | tar -xf -
-
-      - name: Cache test datasets
-        id: cache-dset
-        uses: actions/cache@v3
+      - name: Download test datasets
+        id: test-dataset
+        uses: actions/download-artifact@v3
         with:
-          key: ${{ needs.cache-test-datasets.outputs.cache-key }}
-          path: modle_test_data.tar.gz
-
-      - name: Check test datasets availability
-        if: steps.cache-dset.outputs.cache-hit != 'true'
-        run: |
-          2>&1 echo 'Failed to restore test dataset from GHA cache'
-          exit 1
+          name: ${{ needs.cache-test-datasets.outputs.artifact-name }}
 
       - name: Extract binaries and test dataset
         run: |
@@ -364,18 +354,11 @@ jobs:
         with:
           name: binaries-${{ matrix.os }}-${{ matrix.compiler }}-${{ matrix.generator }}-${{ matrix.build_type }}
 
-      - name: Cache test datasets
-        id: cache-dset
-        uses: actions/cache@v3
+      - name: Download test datasets
+        id: test-dataset
+        uses: actions/download-artifact@v3
         with:
-          key: ${{ needs.cache-test-datasets.outputs.cache-key }}
-          path: modle_test_data.tar.gz
-
-      - name: Check test datasets availability
-        if: steps.cache-dset.outputs.cache-hit != 'true'
-        run: |
-          2>&1 echo 'Failed to restore test dataset from GHA cache'
-          exit 1
+          name: ${{ needs.cache-test-datasets.outputs.artifact-name }}
 
       - name: Extract binaries and test dataset
         run: |
@@ -409,18 +392,11 @@ jobs:
         with:
           name: binaries-${{ matrix.os }}-${{ matrix.compiler }}-${{ matrix.generator }}-${{ matrix.build_type }}
 
-      - name: Cache test datasets
-        id: cache-dset
-        uses: actions/cache@v3
+      - name: Download test datasets
+        id: test-dataset
+        uses: actions/download-artifact@v3
         with:
-          key: ${{ needs.cache-test-datasets.outputs.cache-key }}
-          path: modle_test_data.tar.gz
-
-      - name: Check test datasets availability
-        if: steps.cache-dset.outputs.cache-hit != 'true'
-        run: |
-          2>&1 echo 'Failed to restore test dataset from GHA cache'
-          exit 1
+          name: ${{ needs.cache-test-datasets.outputs.artifact-name }}
 
       - name: Extract binaries and test dataset
         run: |
