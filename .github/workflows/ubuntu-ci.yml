@@ -172,35 +172,46 @@ jobs:
       - name: Generate cache keys
         id: cache-key
         run: |
+          set -u
+
           os="${{ matrix.os }}"
           compiler="${{ matrix.compiler }}"
           generator="${{ matrix.generator }}"
           build_type="${{ matrix.build_type }}"
-          hash="${{ hashFiles('conanfile.py', '.github/workflows/ubuntu-ci.yml') }}"
+
+          conanfile_hash="${{ hashFiles('conanfile.py') }}"
+          workflow_hash="${{ hashFiles('.github/workflows/ubuntu-ci.yml') }}"
+          combined_hash="${{ hashFiles('conanfile.py', '.github/workflows/ubuntu-ci.yml') }}"
 
           # This can be used by to always update a cache entry (useful e.g. for ccache)
           current_date="$(date '+%s')"
 
-          echo "key=$os-$compiler-$hash-$build_type-$generator" >> $GITHUB_OUTPUT
-          echo "restore-key=$os-$compiler-$hash-$build_type" >> $GITHUB_OUTPUT
-          echo "date=$current_date" >> $GITHUB_OUTPUT
+          conan_key_prefix="conan-$os-$compiler-$conanfile_hash-$build_type-$generator"
+          ccache_key_prefix="ccache-$os-$compiler-$conanfile_hash-$build_type-$generator"
+
+          echo "conan-key=$conan_key_prefix" >> $GITHUB_OUTPUT
+          echo "conan-restore-key=$conan_key_prefix" >> $GITHUB_OUTPUT
+
+          echo "ccache-key=${ccache_key_prefix}-${current_date}" >> $GITHUB_OUTPUT
+          echo "ccache-restore-key=$ccache_key_prefix" >> $GITHUB_OUTPUT
 
       - name: Cache Conan packages
         id: cache-conan
         uses: actions/cache@v3
         with:
-          key: conan-${{ steps.cache-key.outputs.key }}
+          key: ${{ steps.cache-key.outputs.conan-key }}
+          restore-keys: ${{ steps.cache-key.outputs.conan-restore-key }}
           path: ${{ env.CONAN_USER_HOME }}
 
       - name: Clean Conan cache (pre-build)
-        if: ${{ !steps.cache-conan.outputs.cache-hit }}
+        if: steps.cache-dset.outputs.cache-hit != 'true'
         run: |
           conan remove -f "*" --builds
           conan remove -f "*" --src
           conan remove -f "*" --system-reqs
 
       - name: Build conanfile.py
-        if: ${{ !steps.cache-conan.outputs.cache-hit }}
+        if: steps.cache-dset.outputs.cache-hit != 'true'
         run: |
           conan install conanfile.py                  \
                --build=outdated                       \
@@ -210,7 +221,7 @@ jobs:
                -s compiler.cppstd=17
 
       - name: Clean Conan cache (post-build)
-        if: ${{ !steps.cache-conan.outputs.cache-hit }}
+        if: steps.cache-dset.outputs.cache-hit != 'true'
         run: |
           conan remove -f "*" --builds
           conan remove -f "*" --src
@@ -220,8 +231,8 @@ jobs:
       - name: Cache Ccache folder
         uses: actions/cache@v3
         with:
-          key: ccache-${{ steps.cache-key.outputs.key }}-${{ steps.cache-key.outputs.date }}
-          restore-keys: ccache-${{ steps.cache-key.outputs.restore-key }}
+          key: ${{ steps.cache-key.outputs.ccache-key }}
+          restore-keys: ${{ steps.cache-key.outputs.ccache-restore-key }}
           path: ${{ env.CCACHE_DIR }}
 
       - name: Configure project
@@ -304,22 +315,26 @@ jobs:
         uses: actions/cache@v3
         with:
           key: test-dataset-${{ hashFiles('cmake/FetchTestDataset.cmake') }}
-          path: ${{ github.workspace }}/test/data/modle_test_data.tar.gz
+          path: modle_test_data.tar.gz
 
       - name: Check test datasets availability
-        if: ${{ !steps.cache-dset.outputs.cache-hit }}
+        if: steps.cache-dset.outputs.cache-hit != 'true'
         run: |
           2>&1 echo 'Failed to restore test dataset from GHA cache'
           exit 1
 
+      - name: Extract binaries and test dataset
+        run: |
+          zstd -dcf unit-tests.tar.zst | tar -xf -
+          tar -xf modle_test_data.tar.gz
+
       - name: Run unit tests
-        working-directory: ${{ github.workspace }}/build
         run: |
           TMPDIR=/tmp
           export TMPDIR
           mkdir -p "$TMPDIR"
 
-          ctest --test-dir .             \
+          ctest --test-dir build/        \
                 --schedule-random        \
                 --output-on-failure      \
                 --no-tests=error         \
@@ -346,17 +361,20 @@ jobs:
         with:
           name: binaries-${{ matrix.os }}-${{ matrix.compiler }}-${{ matrix.generator }}-${{ matrix.build_type }}
 
-      - name: Extract binaries artifact
-        run: zstd -dcf binaries.tar.zst | tar -xf -
-
       - name: Cache test datasets
+        id: cache-dset
         uses: actions/cache@v3
         with:
           key: test-dataset-${{ hashFiles('cmake/FetchTestDataset.cmake') }}
-          path: ${{ github.workspace }}/test/data/modle_test_data.tar.gz
+          path: modle_test_data.tar.gz
+
+      - name: Extract binaries and test dataset
+        run: |
+          zstd -dcf binaries.tar.zst | tar -xf -
+          tar -xf modle_test_data.tar.gz
 
       - name: Check test datasets availability
-        if: ${{ !steps.cache-dset.outputs.cache-hit }}
+        if: steps.cache-dset.outputs.cache-hit != 'true'
         run: |
           2>&1 echo 'Failed to restore test dataset from GHA cache'
           exit 1
@@ -388,20 +406,23 @@ jobs:
         with:
           name: binaries-${{ matrix.os }}-${{ matrix.compiler }}-${{ matrix.generator }}-${{ matrix.build_type }}
 
-      - name: Extract binaries artifact
-        run: zstd -dcf binaries.tar.zst | tar -xf -
-
       - name: Cache test datasets
+        id: cache-dset
         uses: actions/cache@v3
         with:
           key: test-dataset-${{ hashFiles('cmake/FetchTestDataset.cmake') }}
-          path: ${{ github.workspace }}/test/data/modle_test_data.tar.gz
+          path: modle_test_data.tar.gz
 
       - name: Check test datasets availability
-        if: ${{ !steps.cache-dset.outputs.cache-hit }}
+        if: steps.cache-dset.outputs.cache-hit != 'true'
         run: |
           2>&1 echo 'Failed to restore test dataset from GHA cache'
           exit 1
+
+      - name: Extract binaries and test dataset
+        run: |
+          zstd -dcf binaries.tar.zst | tar -xf -
+          tar -xf modle_test_data.tar.gz
 
       - name: Inspect modle_tools version
         run: bin/modle_tools --version
