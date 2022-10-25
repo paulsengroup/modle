@@ -207,14 +207,14 @@ jobs:
           path: ${{ env.CONAN_USER_HOME }}
 
       - name: Clean Conan cache (pre-build)
-        if: steps.cache-dset.outputs.cache-hit != 'true'
+        if: steps.cache-conan.outputs.cache-hit != 'true'
         run: |
           conan remove -f "*" --builds
           conan remove -f "*" --src
           conan remove -f "*" --system-reqs
 
       - name: Build conanfile.py
-        if: steps.cache-dset.outputs.cache-hit != 'true'
+        if: steps.cache-conan.outputs.cache-hit != 'true'
         run: |
           conan install conanfile.py                  \
                --build=outdated                       \
@@ -224,7 +224,7 @@ jobs:
                -s compiler.cppstd=17
 
       - name: Clean Conan cache (post-build)
-        if: steps.cache-dset.outputs.cache-hit != 'true'
+        if: steps.cache-conan.outputs.cache-hit != 'true'
         run: |
           conan remove -f "*" --builds
           conan remove -f "*" --src
