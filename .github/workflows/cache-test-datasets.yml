@@ -22,16 +22,15 @@ jobs:
   cache-test-datasets:
     runs-on: ubuntu-latest
     steps:
+    - name: Checkout repo
+      uses: actions/checkout@v3
+
     - name: Cache test datasets
       id: cache-dataset
       uses: actions/cache@v3
       with:
         key: test-dataset-${{ hashFiles( 'cmake/FetchTestDataset.cmake' ) }}
         path: ${{ env.TEST_DATASET_PATH }}
-
-    - name: Checkout repo
-      if: ${{ !steps.cache-dataset.outputs.cache-hit }}
-      uses: actions/checkout@v3
 
     - name: Extract test dataset URL
       id: test-dataset-url
