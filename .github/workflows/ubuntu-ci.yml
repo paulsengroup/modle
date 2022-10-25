@@ -131,6 +131,9 @@ jobs:
 
             return { include: includes }
 
+  cache-test-datasets:
+    uses: paulsengroup/modle/.github/workflows/cache-test-datasets.yml@v1
+
   build-project:
     needs: matrix-factory
     runs-on: ubuntu-latest
@@ -288,7 +291,7 @@ jobs:
         run: ccache -s
 
   unit-tests:
-    needs: [matrix-factory, build-project]
+    needs: [matrix-factory, cache-test-datasets, build-project]
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
@@ -314,7 +317,7 @@ jobs:
         id: cache-dset
         uses: actions/cache@v3
         with:
-          key: test-dataset-${{ hashFiles('cmake/FetchTestDataset.cmake') }}
+          key: ${{ needs.cache-test-datasets.outputs.cache-key }}
           path: modle_test_data.tar.gz
 
       - name: Check test datasets availability
@@ -342,7 +345,7 @@ jobs:
                 -j $(nproc)
 
   modle-integration-test:
-    needs: [matrix-factory, build-project]
+    needs: [matrix-factory, cache-test-datasets, build-project]
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
@@ -365,19 +368,19 @@ jobs:
         id: cache-dset
         uses: actions/cache@v3
         with:
-          key: test-dataset-${{ hashFiles('cmake/FetchTestDataset.cmake') }}
+          key: ${{ needs.cache-test-datasets.outputs.cache-key }}
           path: modle_test_data.tar.gz
-
-      - name: Extract binaries and test dataset
-        run: |
-          zstd -dcf binaries.tar.zst | tar -xf -
-          tar -xf modle_test_data.tar.gz
 
       - name: Check test datasets availability
         if: steps.cache-dset.outputs.cache-hit != 'true'
         run: |
           2>&1 echo 'Failed to restore test dataset from GHA cache'
           exit 1
+
+      - name: Extract binaries and test dataset
+        run: |
+          zstd -dcf binaries.tar.zst | tar -xf -
+          tar -xf modle_test_data.tar.gz
 
       - name: Inspect modle version
         run: bin/modle --version
@@ -387,7 +390,7 @@ jobs:
         run: ./modle_integration_test.sh ${{ github.workspace }}/bin/modle
 
   modle-tools-integration-test:
-    needs: [matrix-factory, build-project]
+    needs: [matrix-factory, cache-test-datasets, build-project]
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
@@ -410,7 +413,7 @@ jobs:
         id: cache-dset
         uses: actions/cache@v3
         with:
-          key: test-dataset-${{ hashFiles('cmake/FetchTestDataset.cmake') }}
+          key: ${{ needs.cache-test-datasets.outputs.cache-key }}
           path: modle_test_data.tar.gz
 
       - name: Check test datasets availability
