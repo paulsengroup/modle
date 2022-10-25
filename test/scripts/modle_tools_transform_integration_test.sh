@@ -59,16 +59,27 @@ trap 'rm -rf -- "$outdir"' EXIT
                              -i "$matrix"               \
                              -o "$outdir/out_dog.cool"
 
+# mkdir -p /tmp/test/data/integration_tests/
 # cp "$outdir/out_blurred.cool" /tmp/test/data/integration_tests/4DNFI9GMP2J8_chr20_25kbp_blurred.cool
 # cp "$outdir/out_dog.cool" /tmp/test/data/integration_tests/4DNFI9GMP2J8_chr20_25kbp_dog.cool
 
 function compare_coolers {
   set -o pipefail
+  set -e
+
   2>&1 echo "Comparing $1 with $2..."
-  diff --report-identical-files   \
-       --brief                    \
-       <(cooler dump --join "$1") \
-       <(cooler dump --join "$2")
+  if diff <(cooler dump -t chroms "$1") \
+          <(cooler dump -t chroms "$2") \
+     && \
+     diff <(cooler dump --join "$1") \
+          <(cooler dump --join "$2");
+  then
+    2>&1 echo "Files are identical"
+    return 0
+  else
+    2>&1 echo "Files differ"
+    return 1
+  fi
 }
 
 status=0

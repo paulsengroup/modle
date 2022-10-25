@@ -54,6 +54,7 @@ trap 'rm -rf -- "$outdir"' EXIT
                         -w 3mbp                       \
                         -o "$outdir/out_custom_score"
 
+# mkdir -p /tmp/test/data/integration_tests/
 # cp "$outdir/"*horizontal.bw" /tmp/test/data/integration_tests/4DNFI9GMP2J8_vs_4DNFIFJH2524_mt_eval_custom_score_custom_metric_horizontal.bw
 # cp "$outdir/"*vertical.bw" /tmp/test/data/integration_tests/4DNFI9GMP2J8_vs_4DNFIFJH2524_mt_eval_custom_score_custom_metric_vertical.bw
 # cp "$outdir/"*horizontal.tsv.gz" /tmp/test/data/integration_tests/4DNFI9GMP2J8_vs_4DNFIFJH2524_mt_eval_custom_score_custom_metric_horizontal.tsv.gz
@@ -67,5 +68,6 @@ if [ "$status" -eq 0 ]; then
   printf '\n### PASS ###\n'
 else
   printf '\n### FAIL ###\n'
-  exit "$status"
 fi
+
+exit "$status"
