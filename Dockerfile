@@ -24,6 +24,8 @@ ARG CXX_COMPILER
 
 ARG GIT_HASH
 ARG GIT_SHORT_HASH
+ARG GIT_TAG
+ARG GIT_IS_DIRTY
 ARG CREATION_DATE
 
 # Make sure all build arguments have been defined
@@ -36,7 +38,9 @@ RUN if [ -z "$BUILD_BASE_IMAGE" ]; then echo "Missing BUILD_BASE_IMAGE --build-a
 &&  if [ -z "$CXX_COMPILER" ]; then echo "Missing CXX_COMPILER --build-arg" && exit 1; fi \
 &&  if [ -z "$GIT_HASH" ]; then echo "Missing GIT_HASH --build-arg" && exit 1; fi \
 &&  if [ -z "$GIT_SHORT_HASH" ]; then echo "Missing GIT_SHORT_HASH --build-arg" && exit 1; fi \
-&&  if [ -z "$CREATION_DATE" ]; then echo "Missing CREATION_DATE --build-arg" && exit 1; fi
+&&  if [ -z "$CREATION_DATE" ]; then echo "Missing CREATION_DATE --build-arg" && exit 1; fi \
+&&  if [ -z "$GIT_IS_DIRTY" ]; then echo "Missing GIT_IS_DIRTY --build-arg" && exit 1; fi \
+&&  if [ -z "$GIT_TAG" ]; then echo "Missing GIT_TAG --build-arg" && exit 1; fi
 
 ARG src_dir='/root/modle'
 ARG build_dir='/root/modle/build'
@@ -64,14 +68,26 @@ RUN cd "$build_dir"                             \
                  -s compiler.cppstd=17
 
 # Copy source files
-COPY . "$src_dir"
+COPY LICENSE "$src_dir/"
+COPY external "$src_dir/external/"
+COPY cmake "$src_dir/cmake/"
+COPY test/CMakeLists.txt "$src_dir/test/"
+COPY CMakeLists.txt "$src_dir/"
+COPY src "$src_dir/src/"
+COPY test/units "$src_dir/test/units/"
 
 # Configure project
 RUN cd "$build_dir"                            \
 && cmake -DCMAKE_BUILD_TYPE=Release            \
          -DWARNINGS_AS_ERRORS=ON               \
          -DENABLE_DEVELOPER_MODE=OFF           \
-         -DENABLE_TESTING=ON                   \
+         -DMODLE_ENABLE_TESTING=ON             \
+         -DMODLE_DOWNLOAD_TEST_DATASET=OFF     \
+         -DGIT_RETRIEVED_STATE=true            \
+         -DGIT_TAG="$GIT_TAG"                  \
+         -DGIT_IS_DIRTY="$GIT_IS_DIRTY"        \
+         -DGIT_HEAD_SHA1="$GIT_HASH"           \
+         -DGIT_DESCRIBE="$GIT_SHORT_HASH"      \
          -DCMAKE_INSTALL_PREFIX="$staging_dir" \
          -G Ninja                              \
          "$src_dir"
@@ -86,15 +102,17 @@ FROM "$TEST_BASE_IMAGE" AS unit-testing
 
 ARG src_dir="/root/modle"
 
-# Run test suite
 COPY --from=builder "$src_dir" "$src_dir"
-RUN cd "$src_dir/build"           \
-&& ctest -j "$(nproc)"            \
-         --test-dir .             \
-         --schedule-random        \
-         --output-on-failure      \
-         --no-tests=error         \
-         --timeout 180            \
+COPY test/data/modle_test_data.tar.gz "$src_dir/test/data/"
+
+RUN tar -xf "$src_dir/test/data/modle_test_data.tar.gz" -C "$src_dir/"
+
+RUN ctest -j "$(nproc)"               \
+          --test-dir "$src_dir/build" \
+          --schedule-random           \
+          --output-on-failure         \
+          --no-tests=error            \
+          --timeout 180               \
 && rm -rf "$src_dir/test/Testing"
 
 ARG FINAL_BASE_IMAGE
@@ -105,14 +123,22 @@ ARG src_dir="/root/modle"
 ARG staging_dir='/root/modle/staging'
 ARG install_dir='/usr/local'
 
+RUN apt-get update \
+&& apt-get install -q -y --no-install-recommends \
+                   gcc                           \
+                   libdigest-sha-perl            \
+                   python3-dev                   \
+                   python3-pip                   \
+                   xz-utils
+
+RUN pip3 install cython numpy    \
+&& pip3 install 'cooler>=0.8.11'
+
 COPY --from=unit-testing "$staging_dir" "$staging_dir"
-COPY --from=unit-testing "$src_dir/test/data/integration_tests/" "$src_dir/test/data/integration_tests/"
-COPY --from=unit-testing /usr/local/bin/h5diff /usr/local/bin/h5diff
+COPY test/data/modle_test_data.tar.gz "$src_dir/test/data/"
 COPY test/scripts/modle*integration_test.sh "$src_dir/test/scripts/"
 
-RUN apt-get update \
-&& apt-get install -y libdigest-sha-perl \
-                      xz-utils
+RUN tar -xf "$src_dir/test/data/modle_test_data.tar.gz" -C "$src_dir/"
 
 RUN "$src_dir/test/scripts/modle_integration_test.sh" "$staging_dir/bin/modle"
 RUN "$src_dir/test/scripts/modle_tools_transform_integration_test.sh" "$staging_dir/bin/modle_tools"

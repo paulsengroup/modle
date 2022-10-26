@@ -8,30 +8,30 @@ set -e
 set -o pipefail
 set -u
 
-ok=true
+status=0
 
 if [ $# -ne 1 ]; then
   2>&1 echo "Usage: $0 path_to_modle_bin"
-  ok=false
+  status=1
 fi
 
-if ! command -v h5diff &> /dev/null; then
-  2>&1 echo "Unable to find h5diff in your PATH"
-  ok=false
+if ! command -v cooler &> /dev/null; then
+  2>&1 echo "Unable to find cooler in your PATH"
+  status=1
 fi
 
 if ! command -v shasum &> /dev/null; then
   2>&1 echo "Unable to find shasum in your PATH"
-  ok=false
+  status=1
 fi
 
 if ! command -v xz &> /dev/null; then
   2>&1 echo "Unable to find xz in your PATH"
-  ok=false
+  status=1
 fi
 
-if ! $ok; then
-  exit 1
+if [ $status -ne 0 ]; then
+  exit $status
 fi
 
 modle_bin="$1"
@@ -59,49 +59,53 @@ fi
 outdir="$(mktemp -d -t modle-XXXXXXXXXX)"
 trap 'rm -rf -- "$outdir"' EXIT
 
-# Only include chr2, chr20, chr21 and chr22
-"$modle_bin" sim -c <(grep '^chr2' "$chrom_sizes") \
-                 -b <(xz -dc "$extr_barriers" | grep '^chr2') \
+# Only include chr17 and chr19
+chroms='^chr1[79]'
+"$modle_bin" sim -c <(grep "$chroms" "$chrom_sizes") \
+                 -b <(xz -dc "$extr_barriers" | grep "$chroms") \
                  -o "$outdir/out" \
                  -r 20kb \
                  --target-contact-density 20 \
-                 --ncells 4 \
+                 --ncells 2 \
                  --track-1d-lef-position \
                  --max-burnin-epochs 5000
 
+# mkdir -p /tmp/test/data/integration_tests/
 # cp "$outdir/out_lef_1d_occupancy.bw" /tmp/test/data/integration_tests/reference_001.bw
 # cp "$outdir/out.cool" /tmp/test/data/integration_tests/reference_001.cool
-echo "Comparing $outdir/out.cool with $data_dir/reference_001.cool..."
 
-function compare_group () {
-  # This is a workaround to make the test fail if two groups/datasets are not comparable
-  msg="$(h5diff -c "$outdir/out.cool"             \
-                   "$data_dir/reference_001.cool" \
-                   "$1" 2>&1)"
+function compare_coolers {
+  set -o pipefail
+  set -e
 
-  if [ -n "$msg" ]; then
-    >&2 echo "$msg"
+  2>&1 echo "Comparing $1 with $2..."
+  if diff <(cooler dump -t chroms "$1") \
+          <(cooler dump -t chroms "$2") \
+     && \
+     diff <(cooler dump --join "$1") \
+          <(cooler dump --join "$2");
+  then
+    2>&1 echo "Files are identical"
+    return 0
+  else
+    2>&1 echo "Files differ"
     return 1
   fi
-
-  return 0
 }
 
-status=0
+if ! compare_coolers "$outdir/out.cool" "$data_dir/reference_001.cool"; then
+  status=1
+fi
 
-# We test each group individually because older versions of h5diff do not have
-# the --exclude-attribute flag
-if ! compare_group chroms; then status=1; fi
-if ! compare_group bins; then status=1; fi
-if ! compare_group pixels; then status=1; fi
-if ! compare_group indexes; then status=1; fi
+bw_checksum="9f14b547e256cfc80492bd48b1b0b1a5fb56cd669b963e77ef19f93e44364a92"
+if ! shasum -c <(echo "$bw_checksum  $outdir/out_lef_1d_occupancy.bw"); then
+  status=1
+fi
 
 if [ "$status" -eq 0 ]; then
   printf '\n### PASS ###\n'
 else
   printf '\n### FAIL ###\n'
-  exit "$status"
 fi
 
-bw_checksum="54eb48e520176d0b80a9ee6df66a9d239f5d08e0237499320f4d6b8d1d70b972"
-shasum -c <(echo "$bw_checksum  $outdir/out_lef_1d_occupancy.bw")
+exit "$status"

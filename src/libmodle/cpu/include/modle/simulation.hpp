@@ -496,7 +496,7 @@ class Simulation : Config {
   [[nodiscard]] constexpr bool run_lef_bar_collision_trial(double pblock,
                                                            random::PRNG_t& rand_eng) const noexcept;
 
-#ifdef ENABLE_TESTING
+#ifdef MODLE_ENABLE_TESTING
  public:
   template <class LefsT, class UsizeT, class MaskT>
   inline void test_bind_lefs(const Chromosome& chrom, LefsT& lefs, UsizeT& rev_lef_ranks,
