@@ -23,13 +23,15 @@ fi
 
 FINAL_BASE_IMAGE_DIGEST="$(sudo docker inspect --format='{{index .RepoDigests 0}}' docker.io/library/ubuntu:22.04 | grep -o '[[:alnum:]:]\+$')"
 
-IMAGE_TAG="$GIT_SHORT_HASH"
+IMAGE_TAG="sha-$GIT_SHORT_HASH"
 if [ $GIT_IS_DIRTY -ne 0 ]; then
   IMAGE_TAG+='-dirty'
 fi
 
 if [ -z "$GIT_TAG" ]; then
-  GIT_TAG='unknown'
+  GIT_TAG="sha-$GIT_SHORT_HASH"
+else
+  GIT_TAG="$GIT_TAG"
 fi
 
 2>&1 echo "Building \"$IMAGE_NAME:$IMAGE_TAG\"..."
