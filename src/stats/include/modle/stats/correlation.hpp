@@ -50,7 +50,7 @@ class Pearson {
   template <class I, class = std::enable_if<std::is_integral_v<I>>>
   [[nodiscard]] static inline FP compute_significance(FP pcc, I n);
 
-#ifdef ENABLE_TESTING
+#ifdef MODLE_ENABLE_TESTING
  public:
   template <class It1, class It2>
   [[maybe_unused]] [[nodiscard]] static inline FP test_compute_pcc(It1 first1, It1 last1,
@@ -101,7 +101,7 @@ class Spearman {
   template <class I, class = std::enable_if<std::is_integral_v<I>>>
   [[nodiscard]] static inline FP compute_significance(FP rho, I n);
 
-#ifdef ENABLE_TESTING
+#ifdef MODLE_ENABLE_TESTING
  public:
   template <class It1, class It2>
   [[maybe_unused]] [[nodiscard]] inline FP test_compute_rho(It1 first1, It1 last1, It2 first2) {

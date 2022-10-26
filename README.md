@@ -166,14 +166,17 @@ If the above troubleshooting steps did not help, feel free to get in touch by st
 
 To ensure that the compiled code works as intended we highly recommend running MoDLE's automated test.
 
-The integration test depends on `h5diff`, `shasum` and `xz`, which can be installed as follows:
+The integration test depends on `cooler`, `shasum` and `xz`, which can be installed as follows:
 
 ```bash
 # Instructions for Ubuntu
-apt-get install -y hdf5-tools libdigest-sha-perl xz-utils
+apt-get install -y libdigest-sha-perl python3-pip xz-utils
 
 # Instructions for macOS
-brew install hdf5 xz
+brew install xz
+
+# Instructions to install Cooler are platform-independent
+python3 -m pip install cooler
 ```
 
 Once the test dependencies are satisfied, the test suite can be started by running the following commands from the repository root:
