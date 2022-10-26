@@ -136,8 +136,8 @@ jobs:
         with:
           context: ${{ github.workspace }}
           push: ${{ github.event_name != 'pull_request' }}
-          cache-from: type=gha
-          cache-to: type=gha,mode=min
+          cache-from: type=gha,scope=build-modle-docker-image
+          cache-to: type=gha,mode=min,scope=build-modle-docker-image
           tags: ${{ steps.meta.outputs.tags }}
           build-args: |
             C_COMPILER=${{ steps.build-args.outputs.C_COMPILER }}
