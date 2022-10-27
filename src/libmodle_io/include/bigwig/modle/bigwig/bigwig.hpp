@@ -7,6 +7,7 @@
 // IWYU pragma: no_include "modle/src/libio/bigwig_impl.hpp"
 
 #include <absl/types/span.h>  // for Span
+#include <fmt/std.h>
 
 #include <filesystem>   // for path
 #include <mutex>        // for mutex

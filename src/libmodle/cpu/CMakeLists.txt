@@ -23,10 +23,7 @@ target_sources(
           ${CMAKE_CURRENT_SOURCE_DIR}/simulation_correct_moves.cpp
           ${CMAKE_CURRENT_SOURCE_DIR}/simulation_detect_collisions.cpp
           ${CMAKE_CURRENT_SOURCE_DIR}/simulation_impl.hpp
-          ${CMAKE_CURRENT_SOURCE_DIR}/scheduler_common.cpp
-          ${CMAKE_CURRENT_SOURCE_DIR}/scheduler_simulate.cpp
-          ${CMAKE_CURRENT_SOURCE_DIR}/scheduler_perturbate.cpp
-          ${CMAKE_CURRENT_SOURCE_DIR}/scheduler_replay.cpp)
+          ${CMAKE_CURRENT_SOURCE_DIR}/scheduler_simulate.cpp)
 
 target_include_directories(libmodle_cpu PUBLIC include/)
 

@@ -15,12 +15,9 @@ class Cli {
   enum subcommand : u8f {
     help,
     eval,
-    fbcl,
-    noisify,
     transform,
   };
   Cli(int argc, char** argv);
-  [[nodiscard]] bool is_ok() const noexcept;
   [[nodiscard]] subcommand get_subcommand() const noexcept;
   [[nodiscard]] std::string_view get_printable_subcommand() const noexcept;
   [[nodiscard]] modle_tools_config parse_arguments();
@@ -38,14 +35,10 @@ class Cli {
   subcommand _subcommand{subcommand::help};
 
   void make_eval_subcommand();
-  void make_find_barrier_clusters_subcommand();
-  void make_noisify_subcommand();
   void make_transform_subcommand();
   void make_cli();
 
   void validate_eval_subcommand() const;
-  void validate_find_barrier_clusters_subcommand() const;
-  void validate_noisify_subcommand() const;
   void validate_transform_subcommand() const;
   void validate() const;
 };

@@ -19,8 +19,6 @@ target_sources(
           ${CMAKE_CURRENT_SOURCE_DIR}/include/modle_tools/modle_tools_config.hpp
           ${CMAKE_CURRENT_SOURCE_DIR}/cli.cpp
           ${CMAKE_CURRENT_SOURCE_DIR}/eval.cpp
-          ${CMAKE_CURRENT_SOURCE_DIR}/find_barrier_clusters.cpp
-          ${CMAKE_CURRENT_SOURCE_DIR}/noisify.cpp
           ${CMAKE_CURRENT_SOURCE_DIR}/transform.cpp)
 
 target_link_libraries(

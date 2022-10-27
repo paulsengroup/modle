@@ -6,7 +6,8 @@
 
 #include <absl/strings/str_cat.h>  // for StrCat, StrAppend
 #include <absl/types/variant.h>    // for visit
-#include <spdlog/spdlog.h>         // for error, warn
+#include <fmt/std.h>
+#include <spdlog/spdlog.h>  // for error, warn
 
 #include <cassert>     // for assert
 #include <exception>   // for exception
@@ -127,7 +128,7 @@ Cooler<N>::~Cooler() {
                 "file handle. This should never happen, as whenever Cooler objects are created "
                 "in write-mode the file handle is supposed to be closed upon object "
                 "destruction!"),
-            this->_path_to_file.string());
+            this->_path_to_file);
       }
     }
   } catch (const H5::Exception &e) {
@@ -599,9 +600,8 @@ void Cooler<N>::init_default_datasets() {
 
   } catch ([[maybe_unused]] const H5::FileIException &e) {
     throw std::runtime_error(fmt::format(
-        FMT_STRING(
-            "An error occurred while initializing default Cooler dataset on file \"{}\": {}"),
-        this->_path_to_file.string(), hdf5::construct_error_stack()));
+        FMT_STRING("An error occurred while initializing default Cooler dataset on file {}: {}"),
+        this->_path_to_file, hdf5::construct_error_stack()));
   }
 }
 

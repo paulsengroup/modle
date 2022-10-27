@@ -8,12 +8,13 @@
 #include <absl/time/clock.h>                        // for Now
 #include <absl/time/time.h>                         // for FormatDuration, operator-, Time
 #include <fmt/format.h>                             // for make_format_args, vformat_to, FMT_STRING
-#include <spdlog/common.h>                          // for sink_ptr, spdlog_ex, err
-#include <spdlog/logger.h>                          // for logger
-#include <spdlog/sinks/basic_file_sink.h>           // for basic_file_sink_mt
-#include <spdlog/sinks/sink.h>                      // for sink
-#include <spdlog/sinks/stdout_color_sinks.h>        // for stderr_color_sink_mt
-#include <spdlog/spdlog.h>                          // for error, info
+#include <fmt/std.h>
+#include <spdlog/common.h>                    // for sink_ptr, spdlog_ex, err
+#include <spdlog/logger.h>                    // for logger
+#include <spdlog/sinks/basic_file_sink.h>     // for basic_file_sink_mt
+#include <spdlog/sinks/sink.h>                // for sink
+#include <spdlog/sinks/stdout_color_sinks.h>  // for stderr_color_sink_mt
+#include <spdlog/spdlog.h>                    // for error, info
 
 #include <CLI/CLI.hpp>  // for ParseError
 #include <algorithm>    // for max
@@ -192,15 +193,6 @@ int main(int argc, char** argv) noexcept {
       using subcommand = modle::Cli::subcommand;
       case subcommand::simulate:
         sim.run_simulate();
-        break;
-      case subcommand::perturbate:
-        if (config.compute_reference_matrix) {
-          sim.run_simulate();
-        }
-        sim.run_perturbate();
-        break;
-      case subcommand::replay:
-        sim.run_replay();
         break;
       default:
         MODLE_UNREACHABLE_CODE;

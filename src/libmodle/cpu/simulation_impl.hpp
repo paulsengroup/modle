@@ -150,25 +150,6 @@ auto fmt::formatter<modle::Simulation::Task>::format(const modle::Simulation::Ta
                         t.barriers.size());
 }
 
-constexpr auto fmt::formatter<modle::Simulation::TaskPW>::parse(format_parse_context& ctx)
-    -> decltype(ctx.begin()) {
-  if (ctx.begin() != ctx.end() && *ctx.begin() != '}') {
-    throw fmt::format_error("invalid format");
-  }
-  return ctx.end();
-}
-
-template <typename FormatContext>
-auto fmt::formatter<modle::Simulation::TaskPW>::format(const modle::Simulation::TaskPW& t,
-                                                       FormatContext& ctx) const
-    -> decltype(ctx.out()) {
-  return fmt::format_to(
-      ctx.out(), FMT_STRING("{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}"), t.id,
-      t.chrom ? t.chrom->name() : "null", t.cell_id, t.num_target_epochs, t.num_target_contacts,
-      t.num_lefs, t.barriers.size(), t.deletion_begin, t.deletion_size, t.window_start,
-      t.window_end, t.active_window_start, t.active_window_end, t.feats1.size(), t.feats2.size());
-}
-
 constexpr auto fmt::formatter<modle::Simulation::State>::parse(format_parse_context& ctx)
     -> decltype(ctx.begin()) {
   if (ctx.begin() != ctx.end() && *ctx.begin() != '}') {
@@ -181,31 +162,37 @@ template <typename FormatContext>
 auto fmt::formatter<modle::Simulation::State>::format(const modle::Simulation::State& s,
                                                       FormatContext& ctx) const
     -> decltype(ctx.out()) {
-  return fmt::format_to(ctx.out(),
-                        FMT_STRING("State:\n"
-                                   " - TaskID: {:d}\n"
-                                   " - CellID: {:d}\n"
-                                   " - Chrom: {}:{:d}-{:d}\n"
-                                   " - Deletion: {:d}-{:d}\n"
-                                   " - Window: {:d}-{:d}\n"
-                                   " - Active window: {:d}-{:d}\n"
-                                   " - Current epoch: {:d}\n"
-                                   " - Burn-in completed: {}\n"
-                                   " - Target epochs: {:d}\n"
-                                   " - Target contacts: {:d}\n"
-                                   " - # of LEFs: {:d}\n"
-                                   " - # of active LEFs: {:d}\n"
-                                   " - # Extrusion barriers: {:d}\n"
-                                   " - # Type I features: {:d}\n"
-                                   " - # Type II features: {:d}\n"
-                                   " - # of contacts registered: {:d}\n"
-                                   " - seed: {:d}"),
-                        s.id, s.cell_id, s.chrom ? s.chrom->name() : "null",
-                        s.chrom ? static_cast<modle::i64>(s.chrom->start_pos()) : -1,
-                        s.chrom ? static_cast<modle::i64>(s.chrom->end_pos()) : -1,
-                        s.deletion_begin, s.deletion_begin + s.deletion_size, s.window_start,
-                        s.window_end, s.active_window_start, s.active_window_end, s.epoch,
-                        s.burnin_completed ? "True" : "False", s.num_target_epochs,
-                        s.num_target_contacts, s.num_lefs, s.num_active_lefs, s.barriers.size(),
-                        s.feats1.size(), s.feats2.size(), s.num_contacts, s.seed);
+  assert(s.chrom);
+  // clang-format off
+  return fmt::format_to(
+      ctx.out(),
+      FMT_STRING("State:\n"
+                 " - TaskID: {:d}\n"
+                 " - CellID: {:d}\n"
+                 " - Chrom: {}:{:d}-{:d}\n"
+                 " - Current epoch: {:d}\n"
+                 " - Burn-in completed: {}\n"
+                 " - Target epochs: {:d}\n"
+                 " - Target contacts: {:d}\n"
+                 " - # of LEFs: {:d}\n"
+                 " - # of active LEFs: {:d}\n"
+                 " - # Extrusion barriers: {:d}\n"
+                 " - # of contacts registered: {:d}\n"
+                 " - seed: {:d}"),
+
+      s.id,
+      s.cell_id,
+      s.chrom->name(),
+      s.chrom->start_pos(),
+      s.chrom->end_pos(),
+      s.epoch,
+      s.burnin_completed ? "True" : "False",
+      s.num_target_epochs,
+      s.num_target_contacts,
+      s.num_lefs,
+      s.num_active_lefs,
+      s.barriers.size(),
+      s.num_contacts,
+      s.seed);
+  // clang-format on
 }

@@ -6,10 +6,12 @@
 #include "modle/simulation.hpp"
 // clang-format on
 
-#include <absl/container/btree_map.h>            // for btree_iterator
-#include <absl/container/fixed_array.h>          // for FixedArray
-#include <absl/types/span.h>                     // for MakeConstSpan, Span
-#include <fmt/format.h>                          // for make_format_args, vformat_to, FMT_STRING
+#include <absl/container/btree_map.h>    // for btree_iterator
+#include <absl/container/fixed_array.h>  // for FixedArray
+#include <absl/strings/str_format.h>     // StrAppendFormat
+#include <absl/types/span.h>             // for MakeConstSpan, Span
+#include <fmt/format.h>                  // for make_format_args, vformat_to, FMT_STRING
+#include <fmt/std.h>
 #include <moodycamel/blockingconcurrentqueue.h>  // for BlockingConcurrentQueue
 #include <moodycamel/concurrentqueue.h>          // for ConsumerToken, ProducerToken
 #include <spdlog/spdlog.h>                       // for info
@@ -38,6 +40,32 @@
 #include "modle/interval_tree.hpp"                      // for IITree, IITree::data
 
 namespace modle {
+
+void Simulation::rethrow_exceptions() const {
+  assert(!this->ok());
+  assert(!this->_exceptions.empty());
+
+  std::string error_msg = "The following error(s) occurred while simulating loop extrusion:";
+  for (const auto& exc_ptr : this->_exceptions) {
+    try {
+      std::rethrow_exception(exc_ptr);
+    } catch (const std::exception& e) {
+      absl::StrAppendFormat(&error_msg, "\n  %s", e.what());
+    } catch (...) {
+      absl::StrAppend(&error_msg,
+                      "\n  An unhandled exception was caught! This should never happen! If you see "
+                      "this message, please file an issue on GitHub.");
+    }
+  }
+  throw std::runtime_error(error_msg);
+}
+
+void Simulation::handle_exceptions() {
+  assert(!this->ok());
+  spdlog::error(FMT_STRING("MoDLE encountered an exception. Shutting down worker threads..."));
+  this->_tpool.wait_for_tasks();  // Wait on simulate_worker threads
+  this->rethrow_exceptions();
+}
 
 // NOLINTNEXTLINE(readability-function-cognitive-complexity)
 void Simulation::run_simulate() {
@@ -148,8 +176,13 @@ void Simulation::run_simulate() {
               target_contacts_per_cell, tot_target_contacts - tot_target_contacts_rolling_count);
           tot_target_contacts_rolling_count += effective_target_contacts;
 
-          return Task{{taskid++, &chrom, cellid++, target_epochs, effective_target_contacts, nlefs,
-                       chrom.barriers().data()}};
+          return Task{taskid++,
+                      &chrom,
+                      cellid++,
+                      target_epochs,
+                      effective_target_contacts,
+                      nlefs,
+                      chrom.barriers().data()};
         });
         const auto ntasks =
             cellid > this->num_cells ? tasks.size() - (cellid - this->num_cells) : tasks.size();
