@@ -75,7 +75,7 @@ jobs:
             var commit_msg = "${{ steps.get-commit-msg.outputs.message }}"
 
             var ci_short = !commit_msg.includes('[ci full]')
-            console.log("Commit message: %s", commit_msg)
+            console.log("Commit message: '%s'", commit_msg)
             console.log("CI short: '%s'", ci_short.toString())
 
             var includes = []
