@@ -2,8 +2,8 @@
 #
 # SPDX-License-Identifier: MIT
 
-cmake_minimum_required(VERSION 3.18)
-cmake_policy(VERSION 3.18...3.24)
+cmake_minimum_required(VERSION 3.20)
+cmake_policy(VERSION 3.20...3.25)
 
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake/modules/")
 
@@ -23,8 +23,8 @@ include(FetchContent)
 # cmake-format: off
 FetchContent_Declare(
         _project_options
-        URL ${CMAKE_CURRENT_SOURCE_DIR}/external/project_options-v0.25.2.tar.xz
-        URL_HASH SHA512=ff7bdd70e19f5b77913fa18e5e059cbd783015dfab3a32ef073ace9ce9db69248adb07436c69ab893941950fd01e9c48b5f6ec48d198a2188188d1984ddd9d6d
+        URL ${CMAKE_CURRENT_SOURCE_DIR}/external/project_options-v0.26.0.tar.xz
+        URL_HASH SHA512=3be93396e39eaec9b3a3e363838a1067c3412eb9a3892896972ae75cd265f21123c130cb835819d81bd9e0949b5fdb7db65f41b75fbe5f86818fe20f45966473
 )
 # cmake-format: on
 
