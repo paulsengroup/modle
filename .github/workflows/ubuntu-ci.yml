@@ -61,7 +61,7 @@ jobs:
         id: get-commit-msg
         run: |
           msg="$(git log --format=%B -n 1 ${{ github.event.after }})"
-          echo "message=${msg}" >> $GITHUB_OUTPUT
+          echo "message='${msg}'" >> $GITHUB_OUTPUT
 
       - name: Generate matrix
         uses: actions/github-script@v6

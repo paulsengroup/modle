@@ -13,8 +13,6 @@ on:
         description: "Test dataset cache key"
         value: ${{ jobs.cache-test-datasets.outputs.cache-key }}
 
-  workflow_dispatch:
-
 defaults:
   run:
     shell: bash
