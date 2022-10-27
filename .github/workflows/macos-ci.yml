@@ -50,6 +50,10 @@ defaults:
   # See: https://github.com/BlueBrain/HighFive/pull/583
   LSAN_OPTIONS: "suppressions=${{ github.workspace }}/lsan.supp"
 
+  # Workaround memory leak in HighFive
+  # See: https://github.com/BlueBrain/HighFive/pull/583
+  LSAN_OPTIONS: "suppressions=${{ github.workspace }}/lsan.supp"
+
 jobs:
   cache-test-datasets:
     uses: paulsengroup/modle/.github/workflows/cache-test-datasets.yml@main
