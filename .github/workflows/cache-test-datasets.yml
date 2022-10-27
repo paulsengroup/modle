@@ -4,8 +4,6 @@
 name: Cache test datasets
 
 on:
-  workflow_dispatch:
-
   workflow_call:
     outputs:
       artifact-name:
@@ -14,6 +12,8 @@ on:
       cache-key:
         description: "Test dataset cache key"
         value: ${{ jobs.cache-test-datasets.outputs.cache-key }}
+
+  workflow_dispatch:
 
 defaults:
   run:
