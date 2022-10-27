@@ -96,6 +96,8 @@ jobs:
         run: |
           # Workaround GLIBCXX version mismatch
           printf '[requires]\nb2/4.9.2\n' > /tmp/conanfile.txt
+          
+          PATH="/opt/rh/devtoolset-11/root/usr/bin/:$PATH" \
           conan install /tmp/conanfile.txt --build=b2
 
           conan install conanfile.py          \
