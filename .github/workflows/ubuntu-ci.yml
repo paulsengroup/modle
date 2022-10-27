@@ -56,7 +56,7 @@ jobs:
         uses: GsActions/commit-message-checker@v2.0.0
         continue-on-error: true
         with:
-          pattern: '\[ci full\]'
+          pattern: '\[ci full\]$'
           error: 'ci_short'
           checkAllCommitMessages: true
           excludeTitle: true
@@ -129,7 +129,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix: ${{ fromJSON(needs.matrix-factory.outputs.matrix) }}
-    
+
     steps:
       - name: Test
         run: echo "${{ matrix.compiler }}"
