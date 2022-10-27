@@ -53,19 +53,15 @@ jobs:
     steps:
       - name: Checkout repo
         uses: actions/checkout@v3
-        if: github.event_name == 'pull_request'
         with:
-          ref: ${{ github.head_ref }}
+          fetch-depth: 0
+          ref: ${{ github.event.after }}
 
-      - name: Extract commit message
-        id: extract-commit-message
+      - name: Get commit message
+        id: get-commit-msg
         run: |
-          # This is a workaround for empty github.event.head_commit.message when workflow was triggered by a PR
-          if ${{ github.event_name == 'pull_request' }}; then
-            echo "message='$(git log -1 --pretty=%B)'"
-          else
-            echo "message='${{ github.event.head_commit.message }}'"
-          fi
+          msg="$(git log --format=%B -n 1 ${{ github.event.after }})"
+          echo "message=${msg}" >> $GITHUB_OUTPUT
 
       - name: Generate matrix
         uses: actions/github-script@v6
@@ -76,7 +72,7 @@ jobs:
             // https://docs.github.com/en/actions/learn-github-actions/contexts#fromjson
             // https://github.com/actions/runner/issues/982#issuecomment-809360765
 
-            var commit_msg = "${{ steps.extract-commit-message.outputs.message }}"
+            var commit_msg = "${{ steps.get-commit-msg.outputs.message }}"
 
             var ci_short = !commit_msg.includes('[ci full]')
             console.log("Commit message: %s", commit_msg)
@@ -165,12 +161,12 @@ jobs:
       - name: Update build deps
         if: ${{ steps.buld-deps-outdated.outputs.outdated }}
         run: |
-            apt-get update
-            apt-get install -y --no-install-recommends python3-pip
+          apt-get update
+          apt-get install -y --no-install-recommends python3-pip
 
-            python3 -m pip install         \
-              "cmake==${{ matrix.cmake }}" \
-              "conan==${{ matrix.conan }}"
+          python3 -m pip install         \
+            "cmake==${{ matrix.cmake }}" \
+            "conan==${{ matrix.conan }}"
 
       - name: Generate cache keys
         id: cache-key
