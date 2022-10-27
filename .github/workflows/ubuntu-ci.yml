@@ -51,7 +51,7 @@ jobs:
     outputs:
       matrix: ${{ steps.set-result.outputs.result }}
     steps:
-      - name: Checkout
+      - name: Checkout repo
         uses: actions/checkout@v3
         with:
           fetch-depth: 0
@@ -75,7 +75,7 @@ jobs:
             var commit_msg = "${{ steps.get-commit-msg.outputs.message }}"
 
             var ci_short = !commit_msg.includes('[ci full]')
-            console.log("Commit message: '%s'", commit_msg)
+            console.log("Commit message: %s", commit_msg)
             console.log("CI short: '%s'", ci_short.toString())
 
             var includes = []
@@ -127,13 +127,287 @@ jobs:
 
             return { include: includes }
 
-  test-matrix:
+  cache-test-datasets:
+    uses: paulsengroup/modle/.github/workflows/cache-test-datasets.yml@main
+
+  build-project:
     needs: matrix-factory
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
       matrix: ${{ fromJSON(needs.matrix-factory.outputs.matrix) }}
 
+    container:
+      image: ghcr.io/paulsengroup/ci-docker-images/${{ matrix.os }}-cxx-${{ matrix.compiler }}:latest
+      options: "-v ${{ github.workspace }}:${{ github.workspace }}"
+
     steps:
-      - name: Test
-        run: echo "${{ matrix.compiler }}"
+      - name: Checkout repo
+        uses: actions/checkout@v3
+
+      - name: Check build deps are up-to-date
+        id: build-deps-outdated
+        run: |
+          pattern='[[:digit:]]\+\.[[:digit:]]\+\.[[:digit:]]\+$'
+          flag=false
+
+          if [[ $(cmake --version | grep -o "$pattern") != ${{ matrix.cmake }} ||
+                $(conan --version | grep -o "$pattern") != ${{ matrix.conan }} ]]; then
+            flag=true
+          fi
+
+          echo "outdated=$flag" >> $GITHUB_OUTPUT
+
+      - name: Update build deps
+        if: ${{ steps.buld-deps-outdated.outputs.outdated }}
+        run: |
+          apt-get update
+          apt-get install -y --no-install-recommends python3-pip
+
+          python3 -m pip install         \
+            "cmake==${{ matrix.cmake }}" \
+            "conan==${{ matrix.conan }}"
+
+      - name: Generate cache keys
+        id: cache-key
+        run: |
+          set -u
+
+          os="${{ matrix.os }}"
+          compiler="${{ matrix.compiler }}"
+          generator="${{ matrix.generator }}"
+          build_type="${{ matrix.build_type }}"
+
+          conanfile_hash="${{ hashFiles('conanfile.py') }}"
+          workflow_hash="${{ hashFiles('.github/workflows/ubuntu-ci.yml') }}"
+          combined_hash="${{ hashFiles('conanfile.py', '.github/workflows/ubuntu-ci.yml') }}"
+
+          # This can be used by to always update a cache entry (useful e.g. for ccache)
+          current_date="$(date '+%s')"
+
+          conan_key_prefix="conan-$os-$compiler-$conanfile_hash-$build_type-$generator"
+          ccache_key_prefix="ccache-$os-$compiler-$conanfile_hash-$build_type-$generator"
+
+          echo "conan-key=$conan_key_prefix" >> $GITHUB_OUTPUT
+          echo "conan-restore-key=$conan_key_prefix" >> $GITHUB_OUTPUT
+
+          echo "ccache-key=${ccache_key_prefix}-${current_date}" >> $GITHUB_OUTPUT
+          echo "ccache-restore-key=$ccache_key_prefix" >> $GITHUB_OUTPUT
+
+      - name: Cache Conan packages
+        id: cache-conan
+        uses: actions/cache@v3
+        with:
+          key: ${{ steps.cache-key.outputs.conan-key }}
+          restore-keys: ${{ steps.cache-key.outputs.conan-restore-key }}
+          path: ${{ env.CONAN_USER_HOME }}
+
+      - name: Clean Conan cache (pre-build)
+        if: steps.cache-conan.outputs.cache-hit != 'true'
+        run: |
+          conan remove -f "*" --builds
+          conan remove -f "*" --src
+          conan remove -f "*" --system-reqs
+
+      - name: Build conanfile.py
+        if: steps.cache-conan.outputs.cache-hit != 'true'
+        run: |
+          conan install conanfile.py                  \
+               --build=outdated                       \
+               --update                               \
+               -s build_type=${{ matrix.build_type }} \
+               -s compiler.libcxx=libstdc++11         \
+               -s compiler.cppstd=17
+
+      - name: Clean Conan cache (post-build)
+        if: steps.cache-conan.outputs.cache-hit != 'true'
+        run: |
+          conan remove -f "*" --builds
+          conan remove -f "*" --src
+          conan remove -f "*" --system-reqs
+          conan remove -f "*" --outdated
+
+      - name: Cache Ccache folder
+        uses: actions/cache@v3
+        with:
+          key: ${{ steps.cache-key.outputs.ccache-key }}
+          restore-keys: ${{ steps.cache-key.outputs.ccache-restore-key }}
+          path: ${{ env.CCACHE_DIR }}
+
+      - name: Configure project
+        run: |
+          git config --global --add safe.directory ${{ github.workspace }}
+          mkdir ${{ github.workspace }}/build
+
+          cmake -DCMAKE_BUILD_TYPE=${{ matrix.build_type }}          \
+                -DMODLE_ENABLE_TESTING=ON                            \
+                -DMODLE_DOWNLOAD_TEST_DATASET=OFF                    \
+                -DENABLE_DEVELOPER_MODE=${{ matrix.developer_mode }} \
+                -DOPT_ENABLE_CLANG_TIDY=OFF                          \
+                -DOPT_ENABLE_CPPCHECK=OFF                            \
+                -DCMAKE_INSTALL_PREFIX=dest                          \
+                -G "${{ matrix.generator }}"                         \
+                -S "${{ github.workspace }}"                         \
+                -B "${{ github.workspace }}/build"
+
+      - name: Build test units
+        run: cmake --build ${{ github.workspace }}/build -t test_main -j $(nproc)
+
+      - name: Package unit tests
+        run: |
+          tar -cf - build/ | zstd -T0 -13 -o unit-tests.tar.zst
+
+      - name: Build modle and modle_tools
+        run: cmake --build ${{ github.workspace }}/build -j $(nproc)
+
+      - name: Package binaries
+        run: |
+          cmake --install ${{ github.workspace }}/build
+
+          tar -cf - -C dest/ bin |
+          zstd -T0 -13 -o binaries.tar.zst
+
+      - name: Upload unit tests
+        uses: actions/upload-artifact@v3
+        with:
+          name: unit-tests-${{ matrix.os }}-${{ matrix.compiler }}-${{ matrix.generator }}-${{ matrix.build_type }}
+          path: unit-tests.tar.zst
+          if-no-files-found: error
+          retention-days: 1
+
+      - name: Upload binaries
+        uses: actions/upload-artifact@v3
+        with:
+          name: binaries-${{ matrix.os }}-${{ matrix.compiler }}-${{ matrix.generator }}-${{ matrix.build_type }}
+          path: binaries.tar.zst
+          if-no-files-found: error
+          retention-days: 1
+
+      - name: Print Ccache statistics
+        run: ccache -s
+
+  unit-tests:
+    needs: [matrix-factory, cache-test-datasets, build-project]
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJSON(needs.matrix-factory.outputs.matrix) }}
+
+    container:
+      image: ghcr.io/paulsengroup/ci-docker-images/modle/${{ matrix.os }}-cxx-${{ matrix.compiler }}:latest
+      options: "-v ${{ github.workspace }}:${{ github.workspace }}"
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v3
+
+      - name: Download unit tests artifact
+        uses: actions/download-artifact@v3
+        with:
+          name: unit-tests-${{ matrix.os }}-${{ matrix.compiler }}-${{ matrix.generator }}-${{ matrix.build_type }}
+
+      - name: Download test datasets
+        id: test-dataset
+        uses: actions/download-artifact@v3
+        with:
+          name: ${{ needs.cache-test-datasets.outputs.artifact-name }}
+
+      - name: Extract binaries and test dataset
+        run: |
+          zstd -dcf unit-tests.tar.zst | tar -xf -
+          tar -xf modle_test_data.tar.gz
+
+      - name: Run unit tests
+        run: |
+          TMPDIR=/tmp
+          export TMPDIR
+          mkdir -p "$TMPDIR"
+
+          ctest --test-dir build/        \
+                --schedule-random        \
+                --output-on-failure      \
+                --no-tests=error         \
+                --timeout 180            \
+                -j $(nproc)
+
+  modle-integration-test:
+    needs: [matrix-factory, cache-test-datasets, build-project]
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJSON(needs.matrix-factory.outputs.matrix) }}
+
+    container:
+      image: ghcr.io/paulsengroup/ci-docker-images/modle/${{ matrix.os }}-cxx-${{ matrix.compiler }}:latest
+      options: "-v ${{ github.workspace }}:${{ github.workspace }}"
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v3
+
+      - name: Download binary artifact
+        uses: actions/download-artifact@v3
+        with:
+          name: binaries-${{ matrix.os }}-${{ matrix.compiler }}-${{ matrix.generator }}-${{ matrix.build_type }}
+
+      - name: Download test datasets
+        id: test-dataset
+        uses: actions/download-artifact@v3
+        with:
+          name: ${{ needs.cache-test-datasets.outputs.artifact-name }}
+
+      - name: Extract binaries and test dataset
+        run: |
+          zstd -dcf binaries.tar.zst | tar -xf -
+          tar -xf modle_test_data.tar.gz
+
+      - name: Inspect modle version
+        run: bin/modle --version
+
+      - name: Run modle integration test(s)
+        working-directory: ${{ github.workspace }}/test/scripts
+        run: ./modle_integration_test.sh ${{ github.workspace }}/bin/modle
+
+  modle-tools-integration-test:
+    needs: [matrix-factory, cache-test-datasets, build-project]
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJSON(needs.matrix-factory.outputs.matrix) }}
+
+    container:
+      image: ghcr.io/paulsengroup/ci-docker-images/modle/${{ matrix.os }}-cxx-${{ matrix.compiler }}:latest
+      options: "-v ${{ github.workspace }}:${{ github.workspace }}"
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v3
+
+      - name: Download binary artifact
+        uses: actions/download-artifact@v3
+        with:
+          name: binaries-${{ matrix.os }}-${{ matrix.compiler }}-${{ matrix.generator }}-${{ matrix.build_type }}
+
+      - name: Download test datasets
+        id: test-dataset
+        uses: actions/download-artifact@v3
+        with:
+          name: ${{ needs.cache-test-datasets.outputs.artifact-name }}
+
+      - name: Extract binaries and test dataset
+        run: |
+          zstd -dcf binaries.tar.zst | tar -xf -
+          tar -xf modle_test_data.tar.gz
+
+      - name: Inspect modle_tools version
+        run: bin/modle_tools --version
+
+      - name: Run modle_tools transform integration test(s)
+        working-directory: ${{ github.workspace }}/test/scripts
+        run: |
+          ./modle_tools_transform_integration_test.sh ${{ github.workspace }}/bin/modle_tools
+
+      - name: Run modle_tools evaluate integration test(s)
+        working-directory: ${{ github.workspace }}/test/scripts
+        run: |
+          ./modle_tools_eval_integration_test.sh ${{ github.workspace }}/bin/modle_tools
