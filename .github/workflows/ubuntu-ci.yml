@@ -51,22 +51,14 @@ jobs:
     outputs:
       matrix: ${{ steps.set-result.outputs.result }}
     steps:
-      - name: Get PR Commits
-        id: get-pr-commits
-        uses: tim-actions/get-pr-commits@v1.2.0
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Full CI requested
+      - name: Check if full CI requested
         id: full-ci-requested
-        uses: tim-actions/commit-message-checker-with-regex@v2.0.0
+        uses: GsActions/commit-message-checker@v2.0.0
         continue-on-error: true
         with:
-          commits: ${{ steps.get-pr-commits.outputs.commits }}
           pattern: '\[ci full\]'
           error: 'ci_short'
-          checkAllCommitMessages: true
-          accessToken: ${{ secrets.GITHUB_TOKEN }}
+          excludeTitle: 'true'
 
       - name: Generate matrix
         uses: actions/github-script@v6
