@@ -58,7 +58,10 @@ jobs:
         with:
           pattern: '\[ci full\]'
           error: 'ci_short'
-          excludeTitle: 'true'
+          checkAllCommitMessages: true
+          excludeTitle: true
+          excludeDescription: true
+          accessToken: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Generate matrix
         uses: actions/github-script@v6
