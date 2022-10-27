@@ -69,7 +69,7 @@ jobs:
             // https://docs.github.com/en/actions/learn-github-actions/contexts#fromjson
             // https://github.com/actions/runner/issues/982#issuecomment-809360765
 
-            var ci_full = ${{ steps.full-ci-requested.outcome == 'success' }}
+            var ci_full = steps.full-ci-requested.outcome == 'success'
 
             var includes = []
 
@@ -126,7 +126,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix: ${{ fromJSON(needs.matrix-factory.outputs.matrix) }}
-
+    
     steps:
       - name: Test
         run: echo "${{ matrix.compiler }}"
