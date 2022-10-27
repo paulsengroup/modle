@@ -25,7 +25,7 @@ class MoDLE(ConanFile):
               "catch2/3.1.0@#13edd92657a2a23d108e6180d7f1026a",
               "cli11/2.2.0@#33cd38722fa134b15ae308dfb4e6c942",
               "concurrentqueue/1.0.3@#c1cb7d960d8b64073643b45fa63f0bd1",
-              "cpp-sort/1.13.0@#7afd00eb54796504a30d4bd665a89c2d",
+              "cpp-sort/1.13.1@#32bc4841eedc6f06551d2317f889f920",
               "fast_float/3.5.1@#63ccdfa6e4dbc05de4bc598258b6a12f",
               "fmt/9.1.0@#78313935d914fe65715ad39687445de6",
               "hdf5/1.12.2@#b01e96ebe1e351ee1d65ae49a347c29c",  # Coolerpp
@@ -44,7 +44,7 @@ class MoDLE(ConanFile):
               "xoshiro-cpp/1.1@#be8a2825995d67cf2fb26f01accb4f4d",
               "xxhash/0.8.1@#bbf2867eb2cfe186d9bc857da8e00752",
               "xz_utils/5.2.5@#dd8565c00d13a3a6fb2f01214f73a076",
-              "zlib/1.2.12@#a30750797caa71bd61bd0a18189caa28",
+              "zlib/1.2.13@#647c91ed13c0a6c9ea9add6ca968ea93",
               "zstd/1.5.2@#0183cee53cfff406eac0a68be4c4f418"]
 
   generators = "cmake", "cmake_find_package", "cmake_find_package_multi"

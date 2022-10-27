@@ -22,8 +22,6 @@ on:
 
   workflow_dispatch:
 
-  workflow_dispatch:
-
 # https://stackoverflow.com/a/72408109
 concurrency:
   group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}

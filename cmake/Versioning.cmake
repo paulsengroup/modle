@@ -12,8 +12,8 @@ function(ConfigureVersioning input_config_folder output_config_folder)
     # cmake-format: off
     FetchContent_Declare(
             _modle_cmake-git-version-tracking
-            URL ${CMAKE_CURRENT_SOURCE_DIR}/external/cmake-git-version-tracking.tar.xz
-            URL_HASH SHA512=84d990063503c75eaedab5645cc21ca86738d84011ef0d7b630853a1bcab37693dc941333fc1e31ad421f625bb4d8b5f908bb2fa2618eff9bf1370e2ba76a1ba
+            URL ${CMAKE_CURRENT_SOURCE_DIR}/external/cmake-git-version-tracking.20221027.tar.xz
+            URL_HASH SHA512=aa339b9fb5f147c5d88341ed4abf85e88b78173714c3a994860aa81f3b558b674829c17a1567d04642ae9df3ce6ed0e88001ba143bb152e91ed7e75bc607a86b
     )
     # cmake-format: on
     FetchContent_MakeAvailable(_modle_cmake-git-version-tracking)
