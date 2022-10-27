@@ -57,11 +57,14 @@ jobs:
           fetch-depth: 0
           ref: ${{ github.event.after }}
 
-      - name: Get commit message
-        id: get-commit-msg
+      - name: Detect CI type
+        id: ci-type
         run: |
-          msg="$(git log --format=%B -n 1 ${{ github.event.after }} | tr '\n' ' ')"
-          echo "message='${msg}'" >> $GITHUB_OUTPUT
+          if git log --format=%B -n 1 ${{ github.event.after }} | grep -qF '[ci full]'; then
+            echo "type=full" >> $GITHUB_OUTPUT
+          else
+            echo "type=short" >> $GITHUB_OUTPUT
+          fi
 
       - name: Generate matrix
         uses: actions/github-script@v6
@@ -72,11 +75,7 @@ jobs:
             // https://docs.github.com/en/actions/learn-github-actions/contexts#fromjson
             // https://github.com/actions/runner/issues/982#issuecomment-809360765
 
-            var commit_msg = "${{ steps.get-commit-msg.outputs.message }}"
-
-            var ci_short = !commit_msg.includes('[ci full]')
-            console.log("Commit message: %s", commit_msg)
-            console.log("CI short: '%s'", ci_short.toString())
+            var ci_short = "${{ steps.ci-type.outputs.type }}" === "short"
 
             var includes = []
 
