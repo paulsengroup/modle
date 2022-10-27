@@ -51,17 +51,17 @@ jobs:
     outputs:
       matrix: ${{ steps.set-result.outputs.result }}
     steps:
-      - name: Check if full CI requested
-        id: full-ci-requested
-        uses: GsActions/commit-message-checker@v2.0.0
-        continue-on-error: true
+      - name: Checkout
+        uses: actions/checkout@v3
         with:
-          pattern: '\[ci full\]$'
-          error: 'ci_short'
-          checkAllCommitMessages: true
-          excludeTitle: true
-          excludeDescription: true
-          accessToken: ${{ secrets.GITHUB_TOKEN }}
+          fetch-depth: 0
+          ref: ${{ github.event.after }}
+
+      - name: Get commit message
+        id: get-commit-msg
+        run: |
+          msg="$(git log --format=%B -n 1 ${{ github.event.after }})"
+          echo "message=${msg}" >> $GITHUB_OUTPUT
 
       - name: Generate matrix
         uses: actions/github-script@v6
@@ -72,7 +72,11 @@ jobs:
             // https://docs.github.com/en/actions/learn-github-actions/contexts#fromjson
             // https://github.com/actions/runner/issues/982#issuecomment-809360765
 
-            var ci_full = ${{ steps.full-ci-requested.outcome == 'success' }}
+            var commit_msg = "${{ steps.get-commit-msg.outputs.message }}"
+
+            var ci_short = !commit_msg.includes('[ci full]')
+            console.log("Commit message: %s", commit_msg)
+            console.log("CI short: '%s'", ci_short.toString())
 
             var includes = []
 
@@ -86,7 +90,7 @@ jobs:
             includes.push({ compiler: 'gcc-12',    os: 'ubuntu-22.04',  generator: 'Ninja', cmake: '3.24.*', conan: '1.53.*', build_type: 'Release', developer_mode: 'ON'  })
             includes.push({ compiler: 'clang-14',  os: 'ubuntu-22.04',  generator: 'Ninja', cmake: '3.24.*', conan: '1.53.*', build_type: 'Release', developer_mode: 'ON'  })
 
-            if (!ci_full) {
+            if (ci_short) {
               return { include: includes }
             }
 
