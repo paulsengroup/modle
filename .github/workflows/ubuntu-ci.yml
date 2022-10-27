@@ -51,21 +51,22 @@ jobs:
     outputs:
       matrix: ${{ steps.set-result.outputs.result }}
     steps:
-      - name: Checkout repo
-        uses: actions/checkout@v3
-        if: github.event_name == 'pull_request'
+      - name: Get PR Commits
+        id: get-pr-commits
+        uses: tim-actions/get-pr-commits@master
         with:
-          ref: ${{ github.head_ref }}
+          token: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Extract commit message
-        id: extract-commit-message
-        run: |
-          # This is a workaround for empty github.event.head_commit.message when workflow was triggered by a PR
-          if ${{ github.event_name == 'pull_request' }}; then
-            echo "message='$(git log -1 --pretty=%B)'"
-          else
-            echo "message='${{ github.event.head_commit.message }}'"
-          fi
+      - name: Full CI requested
+        id: full-ci-requested
+        uses: tim-actions/commit-message-checker-with-regex@v0.3.1
+        continue-on-error: true
+        with:
+          commits: ${{ steps.get-pr-commits.outputs.commits }}
+          pattern: '\[ci full\]'
+          error: 'ci_short'
+          checkAllCommitMessages: true
+          accessToken: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Generate matrix
         uses: actions/github-script@v6
@@ -76,11 +77,7 @@ jobs:
             // https://docs.github.com/en/actions/learn-github-actions/contexts#fromjson
             // https://github.com/actions/runner/issues/982#issuecomment-809360765
 
-            var commit_msg = "${{ steps.extract-commit-message.outputs.message }}"
-
-            var ci_short = !commit_msg.includes('[ci full]')
-            console.log("Commit message: %s", commit_msg)
-            console.log("CI short: '%s'", ci_short.toString())
+            var ci_full = ${{ steps.full-ci-requested.outcome == 'success' }}
 
             var includes = []
 
@@ -94,7 +91,7 @@ jobs:
             includes.push({ compiler: 'gcc-12',    os: 'ubuntu-22.04',  generator: 'Ninja', cmake: '3.24.*', conan: '1.53.*', build_type: 'Release', developer_mode: 'ON'  })
             includes.push({ compiler: 'clang-14',  os: 'ubuntu-22.04',  generator: 'Ninja', cmake: '3.24.*', conan: '1.53.*', build_type: 'Release', developer_mode: 'ON'  })
 
-            if (ci_short) {
+            if (!ci_full) {
               return { include: includes }
             }
 

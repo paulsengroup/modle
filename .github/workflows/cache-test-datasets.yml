@@ -15,13 +15,6 @@ on:
         description: "Test dataset cache key"
         value: ${{ jobs.cache-test-datasets.outputs.cache-key }}
 
-  push:
-    branches: [ main ]
-    paths: [ "cmake/FetchExternalDataset.cmake" ]
-
-  pull_request:
-    paths: [ "cmake/FetchExternalDataset.cmake" ]
-
 defaults:
   run:
     shell: bash
