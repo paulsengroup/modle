@@ -8,20 +8,20 @@ set -e
 set -o pipefail
 set -u
 
-ok=true
+status=0
 
 if [ $# -ne 1 ]; then
   2>&1 echo "Usage: $0 path_to_modle_tools_bin"
-  ok=false
+  status=1
 fi
 
-if ! command -v h5diff &> /dev/null; then
-  2>&1 echo "Unable to find h5diff in your PATH"
-  ok=false
+if ! command -v cooler &> /dev/null; then
+  2>&1 echo "Unable to find cooler in your PATH"
+  status=1
 fi
 
-if ! $ok; then
-  exit 1
+if [ $status -ne 0 ]; then
+  exit $status
 fi
 
 modle_tools_bin="$1"
@@ -32,7 +32,6 @@ matrix="$data_dir/4DNFI9GMP2J8_chr20_25kbp.cool"
 matrix_blurred="$data_dir/4DNFI9GMP2J8_chr20_25kbp_blurred.cool"
 matrix_dog="$data_dir/4DNFI9GMP2J8_chr20_25kbp_dog.cool"
 
-status=0
 if [ ! -f "$matrix_blurred" ]; then
   2>&1 echo "Unable to find test file \"$matrix_blurred\""
   status=1
@@ -60,44 +59,43 @@ trap 'rm -rf -- "$outdir"' EXIT
                              -i "$matrix"               \
                              -o "$outdir/out_dog.cool"
 
+# mkdir -p /tmp/test/data/integration_tests/
 # cp "$outdir/out_blurred.cool" /tmp/test/data/integration_tests/4DNFI9GMP2J8_chr20_25kbp_blurred.cool
 # cp "$outdir/out_dog.cool" /tmp/test/data/integration_tests/4DNFI9GMP2J8_chr20_25kbp_dog.cool
 
-function compare_group () {
-  ref="$1"
-  tgt="$2"
-  grp="$3"
-  # This is a workaround to make the test fail if two groups/datasets are not comparable
-  msg="$(h5diff -c "$ref" "$tgt" "$grp" 2>&1)"
+function compare_coolers {
+  set -o pipefail
+  set -e
 
-  if [ -n "$msg" ]; then
-    >&2 echo "$msg"
+  2>&1 echo "Comparing $1 with $2..."
+  if diff <(cooler dump -t chroms "$1") \
+          <(cooler dump -t chroms "$2") \
+     && \
+     diff <(cooler dump --join "$1") \
+          <(cooler dump --join "$2");
+  then
+    2>&1 echo "Files are identical"
+    return 0
+  else
+    2>&1 echo "Files differ"
     return 1
   fi
-
-  return 0
 }
 
 status=0
 
-echo "Comparing $outdir/out_blurred.cool with $data_dir/4DNFI9GMP2J8_chr20_25kbp_blurred.cool..."
-# We test each group individually because older versions of h5diff do not have
-# the --exclude-attribute flag
-if ! compare_group "$outdir/out_blurred.cool" "$data_dir/4DNFI9GMP2J8_chr20_25kbp_blurred.cool" chroms; then status=1; fi
-if ! compare_group "$outdir/out_blurred.cool" "$data_dir/4DNFI9GMP2J8_chr20_25kbp_blurred.cool" bins; then status=1; fi
-if ! compare_group "$outdir/out_blurred.cool" "$data_dir/4DNFI9GMP2J8_chr20_25kbp_blurred.cool" pixels; then status=1; fi
-if ! compare_group "$outdir/out_blurred.cool" "$data_dir/4DNFI9GMP2J8_chr20_25kbp_blurred.cool" indexes; then status=1; fi
+if ! compare_coolers "$outdir/out_blurred.cool" "$data_dir/4DNFI9GMP2J8_chr20_25kbp_blurred.cool"; then
+  status=1
+fi
 
-
-echo "Comparing $outdir/out_dog.cool with $data_dir/4DNFI9GMP2J8_chr20_25kbp_dog.cool..."
-if ! compare_group "$outdir/out_dog.cool" "$data_dir/4DNFI9GMP2J8_chr20_25kbp_dog.cool" chroms; then status=1; fi
-if ! compare_group "$outdir/out_dog.cool" "$data_dir/4DNFI9GMP2J8_chr20_25kbp_dog.cool" bins; then status=1; fi
-if ! compare_group "$outdir/out_dog.cool" "$data_dir/4DNFI9GMP2J8_chr20_25kbp_dog.cool" pixels; then status=1; fi
-if ! compare_group "$outdir/out_dog.cool" "$data_dir/4DNFI9GMP2J8_chr20_25kbp_dog.cool" indexes; then status=1; fi
+if ! compare_coolers "$outdir/out_dog.cool" "$data_dir/4DNFI9GMP2J8_chr20_25kbp_dog.cool"; then
+  status=1
+fi
 
 if [ "$status" -eq 0 ]; then
   printf '\n### PASS ###\n'
 else
   printf '\n### FAIL ###\n'
-  exit "$status"
 fi
+
+exit "$status"
