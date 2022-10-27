@@ -98,13 +98,11 @@ jobs:
             includes.push({ compiler: 'gcc-9',     os: 'ubuntu-22.04',  generator: 'Ninja', cmake: '3.24.*', conan: '1.53.*', build_type: 'Debug',   developer_mode: 'OFF' })
             includes.push({ compiler: 'gcc-10',    os: 'ubuntu-22.04',  generator: 'Ninja', cmake: '3.24.*', conan: '1.53.*', build_type: 'Debug',   developer_mode: 'OFF' })
             includes.push({ compiler: 'gcc-11',    os: 'ubuntu-22.04',  generator: 'Ninja', cmake: '3.24.*', conan: '1.53.*', build_type: 'Debug',   developer_mode: 'ON'  })
-            includes.push({ compiler: 'gcc-12',    os: 'ubuntu-22.04',  generator: 'Ninja', cmake: '3.24.*', conan: '1.53.*', build_type: 'Debug',   developer_mode: 'ON'  })
             includes.push({ compiler: 'clang-9',   os: 'ubuntu-20.04',  generator: 'Ninja', cmake: '3.24.*', conan: '1.53.*', build_type: 'Debug',   developer_mode: 'OFF' })
             includes.push({ compiler: 'clang-10',  os: 'ubuntu-20.04',  generator: 'Ninja', cmake: '3.24.*', conan: '1.53.*', build_type: 'Debug',   developer_mode: 'OFF' })
             includes.push({ compiler: 'clang-11',  os: 'ubuntu-22.04',  generator: 'Ninja', cmake: '3.24.*', conan: '1.53.*', build_type: 'Debug',   developer_mode: 'OFF' })
             includes.push({ compiler: 'clang-12',  os: 'ubuntu-22.04',  generator: 'Ninja', cmake: '3.24.*', conan: '1.53.*', build_type: 'Debug',   developer_mode: 'OFF' })
             includes.push({ compiler: 'clang-13',  os: 'ubuntu-22.04',  generator: 'Ninja', cmake: '3.24.*', conan: '1.53.*', build_type: 'Debug',   developer_mode: 'ON'  })
-            includes.push({ compiler: 'clang-14',  os: 'ubuntu-22.04',  generator: 'Ninja', cmake: '3.24.*', conan: '1.53.*', build_type: 'Debug',   developer_mode: 'ON'  })
 
             // Release builds (long CI)
             includes.push({ compiler: 'gcc-8',     os: 'ubuntu-20.04',  generator: 'Ninja', cmake: '3.24.*', conan: '1.53.*', build_type: 'Release', developer_mode: 'OFF' })
@@ -128,7 +126,7 @@ jobs:
             return { include: includes }
 
   cache-test-datasets:
-    uses: paulsengroup/modle/.github/workflows/reusable/cache-test-datasets.yml@main
+    uses: paulsengroup/modle/.github/workflows/cache-test-datasets.yml@main
 
   build-project:
     needs: matrix-factory

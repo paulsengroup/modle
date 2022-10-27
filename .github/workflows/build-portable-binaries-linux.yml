@@ -44,7 +44,7 @@ env:
 
 jobs:
   cache-test-datasets:
-    uses: paulsengroup/modle/.github/workflows/reusable/cache-test-datasets.yml@main
+    uses: paulsengroup/modle/.github/workflows/cache-test-datasets.yml@main
 
   build-portable-binaries:
     runs-on: ubuntu-latest
