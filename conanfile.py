@@ -26,7 +26,7 @@ class MoDLE(ConanFile):
               "cli11/2.3.1@#8b591d97a2ed21d1e8d50afb67f3f97b",
               "concurrentqueue/1.0.3@#c1cb7d960d8b64073643b45fa63f0bd1",
               "cpp-sort/1.13.2@#65e40aeb549c77007a268dbff94f434b",
-              "fast_float/3.7.0@#b4730246c0db65def4d16ba64718a9a1",
+              "fast_float/3.8.1@#ef5291bee6d3ad59f986096df16f43e6",
               "fmt/9.1.0@#811e918ca4b4e0b9ddd6d5a2883efa82",
               "hdf5/1.12.2@#dc802e78ddfbfd6dac7a31cc004c8db0",
               "libarchive/3.6.1@#c5b67eecd08716161f71915a0539bf45",
