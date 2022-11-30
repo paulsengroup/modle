@@ -3,40 +3,55 @@
 # SPDX-License-Identifier: MIT
 
 cff-version: 1.2.0
-title: MoDLE
-abstract: High-performance stochastic modeling of DNA loop extrusion interactions.
-url: "https://github.com/paulsengroup/modle"
-message: If you use this software, please cite it using the metadata from this file.
-doi: 10.1186/s13059-022-02815-7
-type: software
-license: MIT
-repository-code: "https://github.com/paulsengroup/modle"
-identifiers:
-  - description: This is the collection of archived snapshots of all versions of MoDLE
-    type: doi
-    value: "10.5281/zenodo.6424697"
+message: 'If you use this software, please cite it using the metadata from this file.'
 authors:
   - given-names: Roberto
     family-names: Rossini
     orcid: 'https://orcid.org/0000-0003-3096-1470'
     email: roberros@uio.no
-    affiliation: Department of Biosciences, University of Oslo
+    affiliation: 'Department of Biosciences, University of Oslo'
+title: MoDLE
+abstract: 'High-performance stochastic modeling of DNA loop extrusion interactions.'
+doi: '10.5281/zenodo.6424697'
+url: 'https://github.com/paulsengroup/modle'
+repository-code: 'https://github.com/paulsengroup/modle'
+type: software
+license: MIT
+preferred-citation:
+  type: article
+  authors:
+  - given-names: Roberto
+    family-names: Rossini
+    orcid: 'https://orcid.org/0000-0003-3096-1470'
+    email: roberros@uio.no
+    affiliation: 'Department of Biosciences, University of Oslo'
   - given-names: Vipin
     family-names: Kumar
     email: vipin.kumar@ncmm.uio.no
-    affiliation: Centre for Molecular Medicine Norway (NCMM), Nordic EMBL Partnership, University of Oslo
+    affiliation: 'Centre for Molecular Medicine Norway (NCMM), Nordic EMBL Partnership, University of Oslo'
   - given-names: Anthony
     family-names: Mathelier
     orcid: 'https://orcid.org/0000-0001-5127-5459'
     email: anthony.mathelier@ncmm.uio.no
-    affiliation: Centre for Molecular Medicine Norway (NCMM), Nordic EMBL Partnership, University of Oslo
+    affiliation: 'Centre for Molecular Medicine Norway (NCMM), Nordic EMBL Partnership, University of Oslo'
   - given-names: Torbjørn
     family-names: Rognes
     orcid: 'https://orcid.org/0000-0002-9329-9974'
     email: torognes@ifi.uio.no
-    affiliation: Centre for Bioinformatics, Department of Informatics, University of Oslo
+    affiliation: 'Centre for Bioinformatics, Department of Informatics, University of Oslo'
   - given-names: Jonas
     family-names: Paulsen
     orcid: 'https://orcid.org/0000-0002-7918-5495'
     email: jonas.paulsen@ibv.uio.no
-    affiliation: Department of Biosciences, University of Oslo
+    affiliation: 'Department of Biosciences, University of Oslo'
+  doi: '10.1186/s13059-022-02815-7'
+  url: 'https://doi.org/10.1186/s13059-022-02815-7'
+  journal: 'Genome Biology'
+  year: 2022
+  month: 11
+  volume: 23
+  number: 1
+  pages: 247
+  issn: '1474-760X'
+  title: 'MoDLE: high-performance stochastic modeling of DNA loop extrusion interactions'
+  abstract: 'DNA loop extrusion emerges as a key process establishing genome structure and function. We introduce MoDLE, a computational tool for fast, stochastic modeling of molecular contacts from DNA loop extrusion capable of simulating realistic contact patterns genome wide in a few minutes. MoDLE accurately simulates contact maps in concordance with existing molecular dynamics approaches and with Micro-C data and does so orders of magnitude faster than existing approaches. MoDLE runs efficiently on machines ranging from laptops to high performance computing clusters and opens up for exploratory and predictive modeling of 3D genome structure in a wide range of settings.'
