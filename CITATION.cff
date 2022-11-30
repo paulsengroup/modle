@@ -7,7 +7,7 @@ title: MoDLE
 abstract: High-performance stochastic modeling of DNA loop extrusion interactions.
 url: "https://github.com/paulsengroup/modle"
 message: If you use this software, please cite it using the metadata from this file.
-doi: 10.1101/2022.04.13.488157
+doi: 10.1186/s13059-022-02815-7
 type: software
 license: MIT
 repository-code: "https://github.com/paulsengroup/modle"
