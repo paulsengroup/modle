@@ -19,7 +19,7 @@ class MoDLE(ConanFile):
   settings = "os", "compiler", "build_type", "arch"
   requires = ["abseil/20220623.0@#732381dc99db29b4cfd293684891da56",
               "bitflags/1.5.0@#f49a584785e75c40bf6970615c452b4e",
-              "boost/1.80.0@#57d50d5c3d4becbffa5eb2fcb718894e",
+              "boost/1.80.0@#adb2c8a7259ae06c342bea0c5c73e76c",
               "bshoshany-thread-pool/3.3.0@#22e99aee6babc19e679754d95dad2de4",
               "bzip2/1.0.8@#464be69744fa6d48ed01928cfe470008",
               "catch2/3.2.0@#19b0c83a1b34a1cb0bcd6dec76fe8b37",
@@ -42,7 +42,7 @@ class MoDLE(ConanFile):
               "xxhash/0.8.1@#5b6ded9ec554b9abb8aae075d2fd5846",
               "xz_utils/5.2.5@#7315e0f635fed3f9a91b8bfd5456b72c",
               "zlib/1.2.13@#13c96f538b52e1600c40b88994de240f",
-              "zstd/1.5.2@#32ecc755aa20cb076cd7e851e3ad3f52"]
+              "zstd/1.5.2@#485dd9c1f9245f0f362730e8b8031a17"]
 
   generators = "cmake", "cmake_find_package", "cmake_find_package_multi"
 
