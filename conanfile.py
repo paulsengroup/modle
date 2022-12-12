@@ -17,12 +17,12 @@ class MoDLE(ConanFile):
   license = "MIT"
   author = "Roberto Rossini (roberros@uio.no)"
   settings = "os", "compiler", "build_type", "arch"
-  requires = ["abseil/20220623.0@#732381dc99db29b4cfd293684891da56",
+  requires = ["abseil/20220623.1@#266f2e66c0dcd428efb9b24c2a5c8f05",
               "bitflags/1.5.0@#f49a584785e75c40bf6970615c452b4e",
               "boost/1.80.0@#adb2c8a7259ae06c342bea0c5c73e76c",
               "bshoshany-thread-pool/3.3.0@#22e99aee6babc19e679754d95dad2de4",
               "bzip2/1.0.8@#464be69744fa6d48ed01928cfe470008",
-              "catch2/3.2.0@#19b0c83a1b34a1cb0bcd6dec76fe8b37",
+              "catch2/3.2.1@#a075a8af2ed91a5ddaa4641f7209237d",
               "cli11/2.3.1@#8b591d97a2ed21d1e8d50afb67f3f97b",
               "concurrentqueue/1.0.3@#c1cb7d960d8b64073643b45fa63f0bd1",
               "cpp-sort/1.13.2@#65e40aeb549c77007a268dbff94f434b",
