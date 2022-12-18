@@ -219,7 +219,7 @@ jobs:
                 --schedule-random   \
                 --output-on-failure \
                 --no-tests=error    \
-                --timeout 240
+                --timeout 360
 
       - name: Inspect MoDLE version
         run: |
