@@ -137,6 +137,7 @@ target_link_libraries(
             project_options
             Modle::cmatrix
             Modle::common
+            Coolerpp::Coolerpp
             fmt::fmt)
 
 target_link_system_libraries(

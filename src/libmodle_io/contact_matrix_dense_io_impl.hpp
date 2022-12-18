@@ -11,43 +11,66 @@
 
 namespace modle::io {
 
-template <class N>
+namespace internal {
+
+template <class PixelT, class N>
+inline bool emplace_pixel(const coolerpp::File& f, std::vector<PixelT>& buff, usize chrom_id,
+                          usize bin1_id, usize bin2_id, N n) {
+  using T = decltype(std::declval<PixelT>().count);
+
+  const auto bin1_start = utils::conditional_static_cast<u32>(bin1_id) * f.bin_size();
+  const auto bin2_start = utils::conditional_static_cast<u32>(bin2_id) * f.bin_size();
+  buff.emplace_back(PixelT{{f.bins(), static_cast<u32>(chrom_id), bin1_start, bin2_start},
+                           utils::conditional_static_cast<T>(n)});
+
+  return buff.size() == buff.capacity();
+};
+
+template <class PixelT>
+inline void write_pixels(coolerpp::File& f, std::vector<PixelT>& buff) {
+  f.append_pixels(buff.begin(), buff.end(), utils::ndebug_not_defined(), buff.size());
+  buff.clear();
+}
+
+template <class N, class PixelT, usize chunk_size>
 inline void append_contact_matrix_to_cooler(coolerpp::File& f, usize chrom_id,
-                                            const ContactMatrixDense<N>& matrix) {
-  constexpr usize chunk_size{64U << 10U};
-
-  using PixelT = coolerpp::Pixel<N>;
-  std::vector<PixelT> pixels;
-  pixels.reserve(std::min(chunk_size, matrix.npixels()));
-
-  const auto bin_table = f.bins();
+                                            const ContactMatrixDense<N>& matrix,
+                                            std::vector<PixelT>& buff) {
+  assert(f.has_pixel_of_type<i32>() || f.has_pixel_of_type<double>());
+  buff.reserve(std::min(chunk_size, matrix.npixels()));
 
   for (usize i = 0; i < matrix.ncols(); ++i) {
     for (usize j = i; j < matrix.ncols() && j - i < matrix.nrows(); ++j) {
       if (const auto n = matrix.unsafe_get(i, j); n != 0) {
-        const auto bin1_start = utils::conditional_static_cast<u32>(i) * f.bin_size();
-        const auto bin2_start = utils::conditional_static_cast<u32>(j) * f.bin_size();
-        pixels.emplace_back(PixelT{
-            {bin_table, utils::conditional_static_cast<u32>(chrom_id), bin1_start, bin2_start}, n});
-
-        if (pixels.size() == pixels.capacity()) {
-          f.append_pixels(pixels.begin(), pixels.end(), utils::ndebug_not_defined(), chunk_size);
-          pixels.clear();
+        const auto buffer_is_full = emplace_pixel(f, buff, chrom_id, i, j, n);
+        if (buffer_is_full) {
+          write_pixels(f, buff);
         }
       }
     }
   }
 
-  if (!pixels.empty()) {
-    f.append_pixels(pixels.begin(), pixels.end(), utils::ndebug_not_defined(), pixels.size());
+  if (!buff.empty()) {
+    write_pixels(f, buff);
   }
 }
+}  // namespace internal
 
-template <class N>
+template <class N, usize chunk_size>
 inline void append_contact_matrix_to_cooler(coolerpp::File& f, std::string_view chrom_name,
                                             const ContactMatrixDense<N>& matrix) {
-  append_contact_matrix_to_cooler(f, static_cast<usize>(f.chromosomes().get_id(chrom_name)),
-                                  matrix);
+  append_contact_matrix_to_cooler<N, chunk_size>(
+      f, static_cast<usize>(f.chromosomes().get_id(chrom_name)), matrix);
+}
+
+template <class N, usize chunk_size>
+inline void append_contact_matrix_to_cooler(coolerpp::File& f, usize chrom_id,
+                                            const ContactMatrixDense<N>& matrix) {
+  using T = std::conditional_t<std::is_floating_point_v<N>, double, i32>;
+  using PixelT = coolerpp::Pixel<T>;
+  std::vector<PixelT> buff{};
+
+  internal::append_contact_matrix_to_cooler<N, PixelT, chunk_size>(f, chrom_id, matrix, buff);
 }
 
 template <class N>
