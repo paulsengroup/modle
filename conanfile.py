@@ -29,7 +29,7 @@ class MoDLE(ConanFile):
               "fast_float/3.5.1@#63ccdfa6e4dbc05de4bc598258b6a12f",
               "fmt/9.1.0@#78313935d914fe65715ad39687445de6",
               "hdf5/1.12.2@#b01e96ebe1e351ee1d65ae49a347c29c",  # Coolerpp
-              "highfive/2.4.1@#0be5e237f353ec719b2abcc4ada9d9dd",  # Coolerpp
+              "highfive/2.6.2@#829275c7502abf62045167adb79ee581",  # Coolerpp
               "libarchive/3.6.1@#9e38393eaf7725e0396a8052dd7e29eb",
               "libbigwig/0.4.7@#c51cf59700963a74fe0089a81293c91c",
               "libcuckoo/0.3.1@#2fadf7043e85444c19c1ededf9e43653",
