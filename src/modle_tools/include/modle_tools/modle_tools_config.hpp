@@ -4,9 +4,9 @@
 
 #pragma once
 
-#include <coolerpp/uri.hpp>
 #include <absl/types/variant.h>  // for monostate, variant
 
+#include <coolerpp/uri.hpp>
 #include <filesystem>  // for path
 #include <string>      // for string, allocator, basic_string
 #include <thread>      // for thread
