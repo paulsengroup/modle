@@ -86,7 +86,8 @@ catch_discover_tests(
   ${CMAKE_CURRENT_BINARY_DIR}/Testing/
   EXTRA_ARGS
   --success
-  PROPERTIES ENVIRONMENT
+  PROPERTIES
+  ENVIRONMENT
   "LSAN_OPTIONS=suppressions=${PROJECT_SOURCE_DIR}/lsan.supp")
 
 catch_discover_tests(
@@ -101,7 +102,8 @@ catch_discover_tests(
   ${CMAKE_CURRENT_BINARY_DIR}/Testing/
   EXTRA_ARGS
   --success
-  PROPERTIES ENVIRONMENT
+  PROPERTIES
+  ENVIRONMENT
   "LSAN_OPTIONS=suppressions=${PROJECT_SOURCE_DIR}/lsan.supp")
 
 catch_discover_tests(
@@ -116,5 +118,6 @@ catch_discover_tests(
   ${CMAKE_CURRENT_BINARY_DIR}/Testing/
   EXTRA_ARGS
   --success
-  PROPERTIES ENVIRONMENT
+  PROPERTIES
+  ENVIRONMENT
   "LSAN_OPTIONS=suppressions=${PROJECT_SOURCE_DIR}/lsan.supp")

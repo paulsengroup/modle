@@ -2,10 +2,6 @@
 #
 # SPDX-License-Identifier: MIT
 
-# See: https://github.com/BlueBrain/HighFive/pull/583
-leak:HighFive::HDF5ErrMapper
-leak:H5Exception_misc.hpp
-leak:H5E__walk
-leak:H5Eget_major
-leak:H5Eget_minor
-leak:H5MM_malloc
+# See: https://github.com/BlueBrain/HighFive/issues/658
+leak:H5Aread
+leak:H5T__vlen_mem_str_write
