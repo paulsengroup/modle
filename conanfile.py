@@ -19,7 +19,7 @@ class MoDLE(ConanFile):
   settings = "os", "compiler", "build_type", "arch"
   requires = ["abseil/20220623.1@#266f2e66c0dcd428efb9b24c2a5c8f05",
               "bitflags/1.5.0@#f49a584785e75c40bf6970615c452b4e",
-              "boost/1.80.0@#29948a724acd01593cb2fca6fc6ae551",
+              "boost/1.80.0@#adb2c8a7259ae06c342bea0c5c73e76c",
               "bshoshany-thread-pool/3.3.0@#22e99aee6babc19e679754d95dad2de4",
               "bzip2/1.0.8@#464be69744fa6d48ed01928cfe470008",
               "catch2/3.2.1@#f4c25988de20c21a24a1a24dab87e9b5",
