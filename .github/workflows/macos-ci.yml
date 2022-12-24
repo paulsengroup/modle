@@ -218,7 +218,7 @@ jobs:
                 --schedule-random   \
                 --output-on-failure \
                 --no-tests=error    \
-                --timeout 800
+                --timeout 1000
 
       - name: Inspect MoDLE version
         run: |
