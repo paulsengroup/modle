@@ -36,7 +36,7 @@ class MoDLE(ConanFile):
               "lzo/2.10@#491362961bbb7678fdd623555a823b60",
               "range-v3/0.12.0@#abb9932b80d96eaf8fc992debe3870ed",
               "readerwriterqueue/1.0.6@#a95c8da3d68822dec4d4c13fff4b5c96",
-              "spdlog/1.11.0@#51a8dbbfe4ea24e30e57920ce5283690",
+              "spdlog/1.11.0@#1e0f4eb6338d05e4bd6fcc6bf4734172",
               "tomlplusplus/3.2.0@#86c72c809aa5489e6cf0ce4dc5db0002",
               "xoshiro-cpp/1.1@#be8a2825995d67cf2fb26f01accb4f4d",
               "xxhash/0.8.1@#5b6ded9ec554b9abb8aae075d2fd5846",
