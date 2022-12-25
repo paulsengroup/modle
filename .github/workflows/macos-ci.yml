@@ -57,9 +57,9 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - { compiler-name: apple-clang, compiler-version: '13.0', os: 'macos-11',    conan-ver: '1.53.*', cmake-ver: '3.24.*', build_type: Release, developer_mode: OFF }
-          - { compiler-name: apple-clang, compiler-version: '14.0', os: 'macos-12',    conan-ver: '1.53.*', cmake-ver: '3.24.*', build_type: Release, developer_mode: OFF }
-          - { compiler-name: apple-clang, compiler-version: '14.0', os: 'macos-12',    conan-ver: '1.53.*', cmake-ver: '3.24.*', build_type: Debug,   developer_mode: OFF }
+          - { compiler-name: apple-clang, compiler-version: '13.0', os: 'macos-11',    conan-ver: '1.56.*', cmake-ver: '3.25.*', build_type: Release, developer_mode: OFF }
+          - { compiler-name: apple-clang, compiler-version: '14.0', os: 'macos-12',    conan-ver: '1.56.*', cmake-ver: '3.25.*', build_type: Release, developer_mode: OFF }
+          - { compiler-name: apple-clang, compiler-version: '14.0', os: 'macos-12',    conan-ver: '1.56.*', cmake-ver: '3.25.*', build_type: Debug,   developer_mode: OFF }
 
     steps:
       - uses: actions/checkout@v3
@@ -218,7 +218,7 @@ jobs:
                 --schedule-random   \
                 --output-on-failure \
                 --no-tests=error    \
-                --timeout 240
+                --timeout 1000
 
       - name: Inspect MoDLE version
         run: |

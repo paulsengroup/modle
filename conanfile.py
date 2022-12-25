@@ -7,7 +7,7 @@ from conan.tools.build import check_min_cppstd
 from conan.tools.scm import Version
 from conan.errors import ConanInvalidConfiguration
 
-required_conan_version = ">=1.51.3"
+required_conan_version = ">=1.53.0"
 
 
 class MoDLE(ConanFile):
@@ -17,32 +17,32 @@ class MoDLE(ConanFile):
   license = "MIT"
   author = "Roberto Rossini (roberros@uio.no)"
   settings = "os", "compiler", "build_type", "arch"
-  requires = ["abseil/20220623.0@#732381dc99db29b4cfd293684891da56",
+  requires = ["abseil/20220623.1@#266f2e66c0dcd428efb9b24c2a5c8f05",
               "bitflags/1.5.0@#f49a584785e75c40bf6970615c452b4e",
-              "boost/1.80.0@#3264cfe783d4202f76c96b7d5399ff17",
+              "boost/1.80.0@#adb2c8a7259ae06c342bea0c5c73e76c",
               "bshoshany-thread-pool/3.3.0@#22e99aee6babc19e679754d95dad2de4",
-              "bzip2/1.0.8@#7cbb1b682399e077c6b9b2d1bc52da81",
-              "catch2/3.1.0@#13edd92657a2a23d108e6180d7f1026a",
-              "cli11/2.2.0@#33cd38722fa134b15ae308dfb4e6c942",
+              "bzip2/1.0.8@#464be69744fa6d48ed01928cfe470008",
+              "catch2/3.2.1@#f4c25988de20c21a24a1a24dab87e9b5",
+              "cli11/2.3.1@#8b591d97a2ed21d1e8d50afb67f3f97b",
               "concurrentqueue/1.0.3@#c1cb7d960d8b64073643b45fa63f0bd1",
-              "cpp-sort/1.13.1@#32bc4841eedc6f06551d2317f889f920",
-              "fast_float/3.5.1@#63ccdfa6e4dbc05de4bc598258b6a12f",
-              "fmt/9.1.0@#78313935d914fe65715ad39687445de6",
-              "hdf5/1.12.2@#b01e96ebe1e351ee1d65ae49a347c29c",
-              "libarchive/3.6.1@#9e38393eaf7725e0396a8052dd7e29eb",
+              "cpp-sort/1.13.2@#65e40aeb549c77007a268dbff94f434b",
+              "fast_float/3.8.1@#ef5291bee6d3ad59f986096df16f43e6",
+              "fmt/9.1.0@#811e918ca4b4e0b9ddd6d5a2883efa82",
+              "hdf5/1.12.2@#dc802e78ddfbfd6dac7a31cc004c8db0",
+              "libarchive/3.6.1@#e41365ba674aa9e8fe9b5eb7b2f32fc2",
               "libbigwig/0.4.7@#c51cf59700963a74fe0089a81293c91c",
               "libcuckoo/0.3.1@#2fadf7043e85444c19c1ededf9e43653",
               "lz4/1.9.4@#8699136f62681eeba3dc033f85cc63e2",
               "lzo/2.10@#491362961bbb7678fdd623555a823b60",
-              "range-v3/0.12.0@#ef25fe38953fd3847f5bf0dabe1df122",
+              "range-v3/0.12.0@#abb9932b80d96eaf8fc992debe3870ed",
               "readerwriterqueue/1.0.6@#a95c8da3d68822dec4d4c13fff4b5c96",
-              "spdlog/1.9.2@#269bc16aef6a95887eb7c0f2e6aa4529",
+              "spdlog/1.11.0@#1e0f4eb6338d05e4bd6fcc6bf4734172",
               "tomlplusplus/3.2.0@#86c72c809aa5489e6cf0ce4dc5db0002",
               "xoshiro-cpp/1.1@#be8a2825995d67cf2fb26f01accb4f4d",
-              "xxhash/0.8.1@#bbf2867eb2cfe186d9bc857da8e00752",
-              "xz_utils/5.2.5@#dd8565c00d13a3a6fb2f01214f73a076",
-              "zlib/1.2.13@#647c91ed13c0a6c9ea9add6ca968ea93",
-              "zstd/1.5.2@#0183cee53cfff406eac0a68be4c4f418"]
+              "xxhash/0.8.1@#5b6ded9ec554b9abb8aae075d2fd5846",
+              "xz_utils/5.2.5@#7315e0f635fed3f9a91b8bfd5456b72c",
+              "zlib/1.2.13@#13c96f538b52e1600c40b88994de240f",
+              "zstd/1.5.2@#485dd9c1f9245f0f362730e8b8031a17"]
 
   generators = "cmake", "cmake_find_package", "cmake_find_package_multi"
 
