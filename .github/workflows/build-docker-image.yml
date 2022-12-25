@@ -45,6 +45,8 @@ jobs:
   build-image:
     needs: cache-test-datasets
     runs-on: ubuntu-latest
+    permissions:
+      packages: 'write'
     steps:
       - name: Checkout
         uses: actions/checkout@v3
