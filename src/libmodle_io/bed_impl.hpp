@@ -243,7 +243,7 @@ constexpr auto fmt::formatter<modle::bed::RGB>::parse(format_parse_context& ctx)
 }
 
 template <typename FormatContext>
-auto fmt::formatter<modle::bed::RGB>::format(const modle::bed::RGB& rgb, FormatContext& ctx)
+auto fmt::formatter<modle::bed::RGB>::format(const modle::bed::RGB& rgb, FormatContext& ctx) const
     -> decltype(ctx.out()) {
   return fmt::format_to(ctx.out(), FMT_STRING("{},{},{}"), rgb.r, rgb.g, rgb.b);
 }
@@ -275,7 +275,7 @@ constexpr auto fmt::formatter<modle::bed::BED>::parse(format_parse_context& ctx)
 // Formats the point p using the parsed format specification (presentation)
 // stored in this formatter.
 template <typename FormatContext>
-auto fmt::formatter<modle::bed::BED>::format(const modle::bed::BED& b, FormatContext& ctx)
+auto fmt::formatter<modle::bed::BED>::format(const modle::bed::BED& b, FormatContext& ctx) const
     -> decltype(ctx.out()) {
   assert(!b.chrom.empty());
   const auto n = std::min(b.num_fields(), static_cast<modle::usize>(this->presentation));

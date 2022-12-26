@@ -3,11 +3,13 @@
 # SPDX-License-Identifier: MIT
 
 find_package(absl CONFIG REQUIRED)
+find_package(bitflags CONFIG REQUIRED)
 find_package(Boost CONFIG REQUIRED)
 find_package(CLI11 CONFIG REQUIRED)
 find_package(FastFloat CONFIG REQUIRED)
 find_package(fmt CONFIG REQUIRED)
 find_package(range-v3 CONFIG REQUIRED)
+find_package(xoshiro-cpp CONFIG REQUIRED)
 find_package(xxHash CONFIG REQUIRED)
 
 add_library(modle_common INTERFACE)
@@ -20,7 +22,7 @@ target_sources(
             ${CMAKE_CURRENT_SOURCE_DIR}/include/modle/common/common.hpp
             ${CMAKE_CURRENT_SOURCE_DIR}/include/modle/common/const_map.hpp
             ${CMAKE_CURRENT_SOURCE_DIR}/include/modle/common/dna.hpp
-            ${CMAKE_CURRENT_SOURCE_DIR}/include/modle/common/fmt_std_helper.hpp
+            ${CMAKE_CURRENT_SOURCE_DIR}/include/modle/common/fmt_helpers.hpp
             ${CMAKE_CURRENT_SOURCE_DIR}/include/modle/common/genextreme_value_distribution.hpp
             ${CMAKE_CURRENT_SOURCE_DIR}/include/modle/common/numeric_utils.hpp
             ${CMAKE_CURRENT_SOURCE_DIR}/include/modle/common/random.hpp
@@ -33,7 +35,7 @@ target_sources(
             ${CMAKE_CURRENT_SOURCE_DIR}/numeric_utils_impl.hpp
             ${CMAKE_CURRENT_SOURCE_DIR}/utils_impl.hpp)
 
-target_link_libraries(modle_common INTERFACE project_options project_warnings)
+target_link_libraries(modle_common INTERFACE project_options project_warnings fmt::fmt)
 
 target_link_system_libraries(
   modle_common
@@ -45,9 +47,8 @@ target_link_system_libraries(
   Boost::random
   CLI11::CLI11
   FastFloat::fast_float
-  fmt::fmt
   range-v3::range-v3
-  XoshiroCpp::XoshiroCpp
+  xoshiro-cpp::xoshiro-cpp
   xxHash::xxhash)
 
 target_include_directories(modle_common INTERFACE include/)

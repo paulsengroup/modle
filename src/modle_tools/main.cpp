@@ -7,11 +7,12 @@
 #include <absl/strings/strip.h>                     // for StripSuffix
 #include <absl/types/variant.h>                     // for get
 #include <fmt/format.h>                             // for make_format_args, vformat_to, FMT_STRING
-#include <spdlog/common.h>                          // for sink_ptr, spdlog_ex
-#include <spdlog/logger.h>                          // for logger
-#include <spdlog/sinks/sink.h>                      // for sink
-#include <spdlog/sinks/stdout_color_sinks.h>        // for stderr_color_sink_mt
-#include <spdlog/spdlog.h>                          // for error
+#include <fmt/std.h>
+#include <spdlog/common.h>                    // for sink_ptr, spdlog_ex
+#include <spdlog/logger.h>                    // for logger
+#include <spdlog/sinks/sink.h>                // for sink
+#include <spdlog/sinks/stdout_color_sinks.h>  // for stderr_color_sink_mt
+#include <spdlog/spdlog.h>                    // for error
 
 #include <CLI/CLI.hpp>  // for ParseError
 #include <algorithm>    // for max
@@ -66,12 +67,6 @@ int main(int argc, char** argv) {
       switch (cli->get_subcommand()) {
         case subcmd::eval:
           eval_subcmd(absl::get<eval_config>(config));
-          return 0;
-        case subcmd::fbcl:
-          find_barrier_clusters_subcmd(absl::get<find_barrier_clusters_config>(config));
-          return 0;
-        case subcmd::noisify:
-          noisify_subcmd(absl::get<noisify_config>(config));
           return 0;
         case subcmd::transform:
           transform_subcmd(absl::get<transform_config>(config));

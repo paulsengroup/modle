@@ -7,6 +7,7 @@ find_package(Boost CONFIG REQUIRED)
 find_package(fmt CONFIG REQUIRED)
 find_package(HDF5 CONFIG REQUIRED)
 find_package(LibArchive CONFIG REQUIRED)
+find_package(BigWig CONFIG REQUIRED)
 find_package(readerwriterqueue CONFIG REQUIRED)
 find_package(spdlog CONFIG REQUIRED)
 find_package(ZLIB CONFIG REQUIRED)
@@ -33,7 +34,6 @@ target_link_system_libraries(
   absl::flat_hash_map
   absl::hash
   absl::span
-  fmt::fmt
   xxHash::xxHash)
 
 set_target_properties(libmodle_io_bed PROPERTIES OUTPUT_NAME modle_io_bed)
@@ -54,16 +54,14 @@ target_include_directories(libmodle_io_bigwig PUBLIC include/bigwig)
 target_link_libraries(
   libmodle_io_bigwig
   PRIVATE project_warnings project_options
-  PUBLIC Modle::common)
+  PUBLIC Modle::common fmt::fmt)
 
 target_link_system_libraries(
   libmodle_io_bigwig
   PUBLIC
   absl::span
-  fmt::fmt
-  libBigWig::libbigwig)
+  BigWig::BigWig)
 
-add_dependencies(libmodle_io_bigwig libBigWig)
 target_compile_definitions(libmodle_io_bigwig PRIVATE -DNOCURL)
 
 set_target_properties(libmodle_io_bigwig PROPERTIES OUTPUT_NAME modle_io_bigwig)
@@ -83,15 +81,13 @@ target_include_directories(libmodle_io_chrom_sizes PUBLIC include/chrom_sizes)
 target_link_libraries(
   libmodle_io_chrom_sizes
   PRIVATE project_warnings project_options Modle::io_bed
-  PUBLIC Modle::common Modle::io_compressed)
+  PUBLIC Modle::common Modle::io_compressed fmt::fmt)
 
 target_link_system_libraries(
   libmodle_io_chrom_sizes
   PRIVATE
   absl::flat_hash_set
-  absl::strings
-  PUBLIC
-  fmt::fmt)
+  absl::strings)
 
 set_target_properties(libmodle_io_chrom_sizes PROPERTIES OUTPUT_NAME modle_io_chrom_sizes)
 install(
@@ -110,7 +106,7 @@ target_include_directories(libmodle_io_compressed PUBLIC include/compressed_io)
 target_link_libraries(
   libmodle_io_compressed
   PRIVATE project_warnings project_options
-  PUBLIC Modle::common)
+  PUBLIC Modle::common fmt::fmt)
 
 target_link_system_libraries(
   libmodle_io_compressed
@@ -120,7 +116,6 @@ target_link_system_libraries(
   absl::strings
   PUBLIC
   Boost::iostreams
-  fmt::fmt
   LibArchive::LibArchive)
 
 set_target_properties(libmodle_io_compressed PROPERTIES OUTPUT_NAME modle_io_compressed)
@@ -155,7 +150,6 @@ target_link_system_libraries(
   absl::strings
   absl::time
   absl::variant
-  fmt::fmt
   readerwriterqueue::readerwriterqueue
   spdlog::spdlog)
 
@@ -183,7 +177,6 @@ target_link_system_libraries(
   absl::strings
   PUBLIC
   absl::variant
-  fmt::fmt
   HDF5::HDF5)
 
 set_target_properties(libmodle_io_hdf5 PROPERTIES OUTPUT_NAME modle_io_hdf5)

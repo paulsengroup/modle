@@ -24,6 +24,7 @@
 #include <absl/strings/strip.h>    // for ConsumePrefix, StripPrefix, StripSuffix
 #include <fcntl.h>                 // for SEEK_END, SEEK_SET
 #include <fmt/format.h>            // for format, FMT_STRING
+#include <fmt/std.h>
 
 #include <algorithm>    // for max
 #include <cassert>      // for assert
@@ -37,7 +38,7 @@
 #include <vector>       // for vector
 
 #include "modle/common/common.hpp"  // for i64
-#include "modle/common/fmt_std_helper.hpp"
+#include "modle/common/fmt_helpers.hpp"
 
 namespace modle::hdf5 {
 

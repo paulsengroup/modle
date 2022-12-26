@@ -4,6 +4,7 @@
 
 find_package(absl CONFIG REQUIRED)
 find_package(Boost CONFIG REQUIRED)
+find_package(bshoshany-thread-pool CONFIG REQUIRED)
 find_package(concurrentqueue CONFIG REQUIRED)
 find_package(cpp-sort CONFIG REQUIRED)
 find_package(spdlog CONFIG REQUIRED)
@@ -22,10 +23,7 @@ target_sources(
           ${CMAKE_CURRENT_SOURCE_DIR}/simulation_correct_moves.cpp
           ${CMAKE_CURRENT_SOURCE_DIR}/simulation_detect_collisions.cpp
           ${CMAKE_CURRENT_SOURCE_DIR}/simulation_impl.hpp
-          ${CMAKE_CURRENT_SOURCE_DIR}/scheduler_common.cpp
-          ${CMAKE_CURRENT_SOURCE_DIR}/scheduler_simulate.cpp
-          ${CMAKE_CURRENT_SOURCE_DIR}/scheduler_perturbate.cpp
-          ${CMAKE_CURRENT_SOURCE_DIR}/scheduler_replay.cpp)
+          ${CMAKE_CURRENT_SOURCE_DIR}/scheduler_simulate.cpp)
 
 target_include_directories(libmodle_cpu PUBLIC include/)
 
@@ -40,7 +38,10 @@ target_link_libraries(
   PUBLIC Modle::cmatrix
          Modle::common
          Modle::libmodle_internal
-         Modle::io_bed)
+         Modle::io_bed
+         Modle::io_bigwig
+         concurrentqueue::concurrentqueue
+         fmt::fmt)
 
 target_link_system_libraries(
   libmodle_cpu
@@ -56,12 +57,10 @@ target_link_system_libraries(
   absl::flat_hash_set
   absl::span
   Boost::headers
-  concurrentqueue::concurrentqueue
-  fmt::fmt
+  bshoshany-thread-pool::bshoshany-thread-pool
   range-v3::range-v3
   spdlog::spdlog
-  xxHash::xxHash
-  thread-pool)
+  xxHash::xxHash)
 
 install(
   TARGETS libmodle_cpu

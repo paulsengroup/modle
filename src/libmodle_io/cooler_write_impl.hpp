@@ -29,6 +29,7 @@
 #include <absl/time/clock.h>  // for Now
 #include <absl/time/time.h>   // for FormatTime, UTCTimeZone
 #include <fmt/format.h>       // for format
+#include <fmt/std.h>
 
 #include <string>       // for string
 #include <string_view>  // for string_view
@@ -45,7 +46,7 @@ void Cooler<N>::write_metadata() {
     throw std::runtime_error(
         fmt::format(FMT_STRING("Caught attempt to write metadata to an HDF5 file that is open in "
                                "read-only mode. File name: {}"),
-                    this->_path_to_file.string()));
+                    this->_path_to_file));
   }
   assert(this->_bin_size != 0);
   i64 int_buff{};
@@ -100,7 +101,7 @@ void Cooler<N>::write_metadata_attribute(std::string_view metadata_str) {
     throw std::runtime_error(
         fmt::format(FMT_STRING("Caught attempt to write metadata to an HDF5 file that is open in "
                                "read-only mode. File name: {}"),
-                    this->_path_to_file.string()));
+                    this->_path_to_file));
   }
 
   assert(this->_bin_size != 0);
@@ -122,14 +123,14 @@ template <class N>
 template <class I>
 void Cooler<N>::write_or_append_empty_cmatrix_to_file(std::string_view chrom_name, I chrom_start,
                                                       I chrom_end, I chrom_length) {
-  ContactMatrix<N> *null_matrix{nullptr};
+  ContactMatrixDense<N> *null_matrix{nullptr};
   Cooler::write_or_append_cmatrix_to_file(null_matrix, chrom_name, chrom_start, chrom_end,
                                           chrom_length);
 }
 
 template <class N>
 template <class M, class I, class>
-void Cooler<N>::write_or_append_cmatrix_to_file(const ContactMatrix<M> &cmatrix,
+void Cooler<N>::write_or_append_cmatrix_to_file(const ContactMatrixDense<M> &cmatrix,
                                                 std::string_view chrom_name, I chrom_start,
                                                 I chrom_end, I chrom_length) {
   Cooler::write_or_append_cmatrix_to_file(&cmatrix, chrom_name, chrom_start, chrom_end,
@@ -138,11 +139,11 @@ void Cooler<N>::write_or_append_cmatrix_to_file(const ContactMatrix<M> &cmatrix,
 
 template <class N>
 template <class M, class I, class>
-void Cooler<N>::write_or_append_cmatrix_to_file(const ContactMatrix<M> *cmatrix,
+void Cooler<N>::write_or_append_cmatrix_to_file(const ContactMatrixDense<M> *cmatrix,
                                                 std::string_view chrom_name, I chrom_start_,
                                                 I chrom_end_, I chrom_length_) {
   static_assert(std::is_floating_point_v<N> == std::is_floating_point_v<M>,
-                "Cooler<N> and ContactMatrix<M> template arguments should both be integral or "
+                "Cooler<N> and ContactMatrixDense<M> template arguments should both be integral or "
                 "floating point types.");
   assert(chrom_start_ >= 0);
   assert(chrom_end_ >= 0);
@@ -178,12 +179,12 @@ void Cooler<N>::write_or_append_cmatrix_to_file(const ContactMatrix<M> *cmatrix,
 
     // Total number of contacts
     if constexpr (IS_FP) {
-      this->_sum = utils::conditional_static_cast<sum_t>(
+      this->_sum = utils::conditional_static_cast<SumT>(
           hdf5::has_attribute(*this->_fp, "sum", this->_root_path)
               ? hdf5::read_attribute<double>(*this->_fp, "sum", this->_root_path)
               : 0.0);
     } else {
-      this->_sum = utils::conditional_static_cast<sum_t>(
+      this->_sum = utils::conditional_static_cast<SumT>(
           hdf5::has_attribute(*this->_fp, "sum", this->_root_path)
               ? hdf5::read_attribute_int(*this->_fp, "sum", this->_root_path)
               : 0);
@@ -356,7 +357,7 @@ void Cooler<N>::write_or_append_cmatrix_to_file(const ContactMatrix<M> *cmatrix,
         hdf5::write_numbers(b.idx_bin1_offset_buff, d[IDX_BIN1], idx_bin1_offset_h5_foffset);
 
     if (cmatrix) {  // Guard against nullptr deref
-      this->_sum += utils::conditional_static_cast<sum_t>(cmatrix->get_tot_contacts());
+      this->_sum += utils::conditional_static_cast<SumT>(cmatrix->get_tot_contacts());
     }
 
     auto &f = *this->_fp;

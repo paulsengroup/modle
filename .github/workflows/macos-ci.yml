@@ -1,0 +1,226 @@
+# Copyright (C) 2022 Roberto Rossini (roberros@uio.no)
+# SPDX-License-Identifier: MIT
+
+name: MacOS CI
+
+on:
+  push:
+    branches: [ main ]
+    paths:
+      - ".github/workflows/macos-ci.yml"
+      - "cmake/**"
+      - "external/**"
+      - "src/**"
+      - "test/**"
+      - "CMakeLists.txt"
+      - "conanfile.py"
+    tags:
+      - 'v*.*.*'
+
+  pull_request:
+    paths:
+      - ".github/workflows/macos-ci.yml"
+      - "cmake/**"
+      - "external/**"
+      - "src/**"
+      - "test/**"
+      - "CMakeLists.txt"
+      - "conanfile.py"
+
+# https://stackoverflow.com/a/72408109
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+env:
+  HOMEBREW_NO_AUTO_UPDATE: "1"
+  CONAN_REVISIONS_ENABLED: "1"
+  CONAN_USER_HOME: "${{ github.workspace }}/conan-cache"
+  CONAN_USER_HOME_SHORT: "${{ github.workspace }}/conan-cache/short"
+  CONAN_V2_MODE: "1"
+  CCACHE_DIR: "${{ github.workspace }}/ccache-cache"
+  CCACHE_COMPRESSLEVEL: "13"
+  CCACHE_MAXSIZE: "200M"
+
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  cache-test-datasets:
+    uses: paulsengroup/modle/.github/workflows/cache-test-datasets.yml@main
+
+  build-project:
+    needs: cache-test-datasets
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { compiler-name: apple-clang, compiler-version: '13.0', os: 'macos-11',    conan-ver: '1.56.*', cmake-ver: '3.25.*', build_type: Release, developer_mode: OFF }
+          - { compiler-name: apple-clang, compiler-version: '14.0', os: 'macos-12',    conan-ver: '1.56.*', cmake-ver: '3.25.*', build_type: Release, developer_mode: OFF }
+          - { compiler-name: apple-clang, compiler-version: '14.0', os: 'macos-12',    conan-ver: '1.56.*', cmake-ver: '3.25.*', build_type: Debug,   developer_mode: OFF }
+
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Generate requirements.txt for pip
+        run: |
+          echo 'conan==${{ matrix.conan-ver }}' > requirements.txt
+          echo 'cmake==${{ matrix.cmake-ver }}' >> requirements.txt
+          echo 'scipy' >> requirements.txt
+
+      - name: Setup Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.10'
+          cache: 'pip'
+
+      - name: Install build deps
+        run: |
+          pip install -r requirements.txt
+          brew install ccache
+
+      - name: Detect number available CPUs
+        run: |
+          ncpus=$(python -c 'import multiprocessing as mp; print(mp.cpu_count())')
+
+          echo "CMAKE_BUILD_PARALLEL_LEVEL=$ncpus" >> $GITHUB_ENV
+          echo "CTEST_PARALLEL_LEVEL=$ncpus" >> $GITHUB_ENV
+
+      - name: Generate cache key
+        id: cache-key
+        run: |
+          set -u
+
+          os="${{ matrix.os }}"
+          compiler="${{ matrix.compiler-name }}"
+          build_type="${{ matrix.build_type }}"
+
+          conanfile_hash="${{ hashFiles('conanfile.py') }}"
+          workflow_hash="${{ hashFiles('.github/workflows/ubuntu-ci.yml') }}"
+          combined_hash="${{ hashFiles('conanfile.py', '.github/workflows/ubuntu-ci.yml') }}"
+
+          # This can be used by to always update a cache entry (useful e.g. for ccache)
+          current_date="$(date '+%s')"
+
+          conan_key_prefix="conan-$os-$compiler-$conanfile_hash-$build_type"
+          ccache_key_prefix="ccache-$os-$compiler-$conanfile_hash-$build_type"
+
+          echo "conan-key=$conan_key_prefix" >> $GITHUB_OUTPUT
+          echo "conan-restore-key=$conan_key_prefix" >> $GITHUB_OUTPUT
+
+          echo "ccache-key=${ccache_key_prefix}-${current_date}" >> $GITHUB_OUTPUT
+          echo "ccache-restore-key=$ccache_key_prefix" >> $GITHUB_OUTPUT
+
+      - name: Cache Conan packages
+        id: cache-conan
+        uses: actions/cache@v3
+        with:
+          key: ${{ steps.cache-key.outputs.conan-key }}
+          restore-keys: ${{ steps.cache-key.outputs.conan-restore-key }}
+          path: ${{ env.CONAN_USER_HOME }}
+
+      - name: Configure Conan
+        if: steps.cache-conan.outputs.cache-hit != 'true'
+        run: |
+          conan profile new "$CONAN_USER_HOME/profiles/default" --detect --force
+          conan config init
+
+          conan profile update settings.compiler=${{ matrix.compiler-name }} default
+          conan profile update settings.compiler.version=${{ matrix.compiler-version }} default
+          conan profile update settings.compiler.cppstd=17 default
+
+          # Add apple-clang 14.0 to settings.yml
+          sed -i.bak 's/"10.0", "11.0", "12.0", "13", "13.0", "13.1"\]/"10.0", "11.0", "12.0", "13", "13.0", "13.1", "14.0"\]/' \
+            "$CONAN_USER_HOME/.conan/settings.yml"
+
+      - name: Clean Conan cache (pre-build)
+        if: steps.cache-conan.outputs.cache-hit != 'true'
+        run: |
+          conan remove -f "*" --builds
+          conan remove -f "*" --src
+          conan remove -f "*" --system-reqs
+
+      - name: Build conanfile.py
+        if: steps.cache-conan.outputs.cache-hit != 'true'
+        run: |
+          conan install conanfile.py                  \
+               --build=outdated                       \
+               --update                               \
+               -s build_type=${{ matrix.build_type }} \
+               -s compiler.cppstd=17
+
+      - name: Clean Conan cache (post-build)
+        if: steps.cache-conan.outputs.cache-hit != 'true'
+        run: |
+          conan remove -f "*" --builds
+          conan remove -f "*" --src
+          conan remove -f "*" --system-reqs
+          conan remove -f "*" --outdated
+
+      - name: Configure project
+        run: |
+          mkdir ${{ github.workspace }}/build
+          cmake -DCMAKE_BUILD_TYPE=${{ matrix.build_type }}          \
+                -DMODLE_ENABLE_TESTING=ON                            \
+                -DMODLE_DOWNLOAD_TEST_DATASET=OFF                    \
+                -DENABLE_DEVELOPER_MODE=${{ matrix.developer_mode }} \
+                -DOPT_ENABLE_CLANG_TIDY=OFF                          \
+                -DOPT_ENABLE_CPPCHECK=OFF                            \
+                -S "${{ github.workspace }}"                         \
+                -B "${{ github.workspace }}/build"
+
+      - name: Cache Ccache folder
+        uses: actions/cache@v3
+        with:
+          key: ${{ steps.cache-key.outputs.ccache-key }}
+          restore-keys: ${{ steps.cache-key.outputs.ccache-restore-key }}
+          path: ${{ env.CCACHE_DIR }}
+
+      - name: Build project
+        run: cmake --build ${{ github.workspace }}/build
+
+      - name: Print Ccache statistics
+        run: ccache -s
+
+      - name: Generate R package requirement list
+        run: |
+          printf 'Package: foo\nVersion: 0.0.1\nLicense: MIT\nDescription: foo\n"' >> DESCRIPTION
+          printf 'Title: foo\nAuthor: me\nMaintainer: me\nImports: wCorr' >> DESCRIPTION
+
+      - name: Install setup-r action dependencies
+        run: brew install imagemagick@6 libgit2
+
+      - name: Setup R
+        uses: r-lib/actions/setup-r@v2
+        with:
+          r-version: '4.2.1'
+
+      - name: Install R packages
+        uses: r-lib/actions/setup-r-dependencies@v2
+        with:
+          cache: true
+
+      - name: Download test datasets
+        id: test-dataset
+        uses: actions/download-artifact@v3
+        with:
+          name: ${{ needs.cache-test-datasets.outputs.artifact-name }}
+
+      - name: Extract test dataset
+        run: tar -xf modle_test_data.tar.gz
+
+      - name: Run unit tests
+        working-directory: ${{ github.workspace }}/build
+        run: |
+          ctest --test-dir .        \
+                --schedule-random   \
+                --output-on-failure \
+                --no-tests=error    \
+                --timeout 1000
+
+      - name: Inspect MoDLE version
+        run: |
+          ${{ github.workspace }}/build/src/modle/modle --version
+          ${{ github.workspace }}/build/src/modle_tools/modle_tools --version

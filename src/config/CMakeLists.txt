@@ -21,11 +21,12 @@ target_sources(
          ${CMAKE_CURRENT_SOURCE_DIR}/include/modle/config/version.hpp
   PRIVATE ${CMAKE_CURRENT_BINARY_DIR}/git.cpp ${CMAKE_CURRENT_BINARY_DIR}/version.cpp)
 
-target_link_libraries(modle_config PRIVATE project_options project_warnings Modle::common)
-target_link_system_libraries(
+target_link_libraries(
   modle_config
-  PUBLIC
-  absl::strings
-  fmt::fmt)
+  PRIVATE project_options
+          project_warnings
+          Modle::common
+          fmt::fmt)
+target_link_system_libraries(modle_config PUBLIC absl::strings)
 
 target_include_directories(modle_config PUBLIC include/)

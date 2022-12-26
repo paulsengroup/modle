@@ -7,6 +7,7 @@
 // IWYU pragma: no_include "modle/src/libio/bigwig_impl.hpp"
 
 #include <absl/types/span.h>  // for Span
+#include <fmt/std.h>
 
 #include <filesystem>   // for path
 #include <mutex>        // for mutex
@@ -21,7 +22,7 @@
 // clang-format on
 DISABLE_WARNING_PUSH
 DISABLE_WARNING_PADDED
-#include "libBigWig/bigWig.h"  // for bigWigFile_t
+#include "libbigwig/bigWig.h"  // for bigWigFile_t
 DISABLE_WARNING_POP
 
 namespace modle::io::bigwig {
@@ -39,7 +40,6 @@ class Writer {
   uint_fast8_t _zoom_levels{DEFAULT_ZOOM_LEVELS};
   usize _buff_size{DEFAULT_BUFFER_SIZE};
   bool _initialized{false};
-  u32 _offset{0};
 
  public:
   Writer() = default;
@@ -53,13 +53,14 @@ class Writer {
   Writer& operator=(Writer&& other) noexcept;
 
   template <class Chromosomes>
-  inline void write_chromosomes(const Chromosomes& chroms);
-  template <class Str>
-  inline void write_chromosomes(absl::Span<Str> chrom_names, absl::Span<const u32> chrom_sizes);
+  inline void write_chromosomes(Chromosomes& chroms);
+  void write_chromosomes(const std::vector<std::string>& chrom_names,
+                         const std::vector<u32>& chrom_sizes);
   void write_chromosomes(const char* const* chrom_names, const u32* chrom_sizes, usize num_chroms);
 
   template <class N, class = std::enable_if<std::is_arithmetic_v<N>>>
-  inline void write_range(std::string_view chrom_name, absl::Span<N> values, u64 span, u64 step);
+  inline void write_range(std::string_view chrom_name, absl::Span<N> values, u64 span, u64 step,
+                          u64 offset = 0);
 
   [[nodiscard]] const std::filesystem::path& path() const noexcept;
 };

@@ -4,7 +4,7 @@
 
 #pragma once
 
-#include <Xoshiro-cpp/XoshiroCpp.hpp>  // for SplitMix64, Xoshiro256PlusPlus
+#include <xoshiro-cpp/XoshiroCpp.hpp>  // for SplitMix64, Xoshiro256PlusPlus
 
 #include "modle/common/common.hpp"  // for u64
 

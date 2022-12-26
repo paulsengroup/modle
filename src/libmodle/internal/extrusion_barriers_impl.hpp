@@ -165,7 +165,7 @@ constexpr auto fmt::formatter<modle::ExtrusionBarrier>::parse(format_parse_conte
 // stored in this formatter.
 template <typename FormatContext>
 inline auto fmt::formatter<modle::ExtrusionBarrier>::format(const modle::ExtrusionBarrier& b,
-                                                            FormatContext& ctx)
+                                                            FormatContext& ctx) const
     -> decltype(ctx.out()) {
   const auto strand = [&b]() {
     if (b.blocking_direction == modle::dna::FWD) {

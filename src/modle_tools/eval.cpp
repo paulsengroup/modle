@@ -16,28 +16,28 @@
 #include <fmt/format.h>                         // for format, make_format_args, vformat_to, FMT...
 #include <spdlog/spdlog.h>                      // for info
 
-#include <algorithm>                    // for all_of, find_if, transform, minmax, max
-#include <cassert>                      // for assert
-#include <cstdio>                       // for stderr
-#include <exception>                    // for exception
-#include <filesystem>                   // for operator<<, path
-#include <future>                       // for future
-#include <iosfwd>                       // for streamsize
-#include <iterator>                     // for insert_iterator, inserter
-#include <memory>                       // for unique_ptr, shared_ptr, __shared_ptr_access
-#include <stdexcept>                    // for runtime_error, overflow_error
-#include <string>                       // for string, basic_string
-#include <string_view>                  // for string_view
-#include <thread_pool/thread_pool.hpp>  // for thread_pool
-#include <utility>                      // for tuple_element<>::type, pair, make_pair
-#include <vector>                       // for vector
+#include <BS_thread_pool.hpp>  // for BS::thread_pool
+#include <algorithm>           // for all_of, find_if, transform, minmax, max
+#include <cassert>             // for assert
+#include <cstdio>              // for stderr
+#include <exception>           // for exception
+#include <filesystem>          // for operator<<, path
+#include <future>              // for future
+#include <iosfwd>              // for streamsize
+#include <iterator>            // for insert_iterator, inserter
+#include <memory>              // for unique_ptr, shared_ptr, __shared_ptr_access
+#include <stdexcept>           // for runtime_error, overflow_error
+#include <string>              // for string, basic_string
+#include <string_view>         // for string_view
+#include <utility>             // for tuple_element<>::type, pair, make_pair
+#include <vector>              // for vector
 
 #include "modle/bed/bed.hpp"        // for BED_tree, BED_tree<>::value_type, Parser
 #include "modle/bigwig/bigwig.hpp"  // for Writer
 #include "modle/common/common.hpp"  // for u32, usize, bp_t, u8, i64
-#include "modle/common/fmt_std_helper.hpp"
+#include "modle/common/fmt_helpers.hpp"
 #include "modle/common/utils.hpp"              // for identity::operator()
-#include "modle/contacts.hpp"                  // for ContactMatrix
+#include "modle/contact_matrix_dense.hpp"      // for ContactMatrixDense
 #include "modle/cooler/cooler.hpp"             // for Cooler, Cooler::READ_ONLY
 #include "modle/interval_tree.hpp"             // for IITree, IITree::IITree<I, T>, IITree::empty
 #include "modle/stats/correlation.hpp"         // for Pearson, Spearman
@@ -257,11 +257,11 @@ template <class Range>
 }
 
 [[nodiscard]] static io::bigwig::Writer create_bwig_file(
-    std::vector<std::pair<std::string, usize>> &chrom_list, std::string_view base_name,
-    std::string_view suffix) {
+    const std::vector<std::string> &chrom_names, const std::vector<u32> &chrom_sizes,
+    std::string_view base_name, std::string_view suffix) {
   auto bw = io::bigwig::Writer(
       fmt::format(FMT_STRING("{}_{}"), base_name, absl::StripPrefix(suffix, "_")));
-  bw.write_chromosomes(chrom_list);
+  bw.write_chromosomes(chrom_names, chrom_sizes);
   return bw;
 }
 
@@ -329,8 +329,8 @@ struct MetricsBuff {
 
 template <StripeDirection stripe_direction, class N, class WeightIt = utils::RepeatIterator<double>>
 [[nodiscard]] static auto compute_metric(
-    const enum eval_config::Metric metric, std::shared_ptr<ContactMatrix<N>> ref_contacts,
-    std::shared_ptr<ContactMatrix<N>> tgt_contacts, const bool mask_zero_pixels_,
+    const enum eval_config::Metric metric, std::shared_ptr<ContactMatrixDense<N>> ref_contacts,
+    std::shared_ptr<ContactMatrixDense<N>> tgt_contacts, const bool mask_zero_pixels_,
     [[maybe_unused]] WeightIt weight_first = utils::RepeatIterator<double>(1)) {
   assert(ref_contacts->nrows() == tgt_contacts->nrows());
   const auto nrows = ref_contacts->nrows();
@@ -425,8 +425,8 @@ template <StripeDirection stripe_direction, class N, class WeightIt = utils::Rep
 
 template <StripeDirection stripe_direction, class N>
 [[nodiscard]] static auto compute_metric(const enum eval_config::Metric metric,
-                                         std::shared_ptr<ContactMatrix<N>> ref_contacts,
-                                         std::shared_ptr<ContactMatrix<N>> tgt_contacts,
+                                         std::shared_ptr<ContactMatrixDense<N>> ref_contacts,
+                                         std::shared_ptr<ContactMatrixDense<N>> tgt_contacts,
                                          const bool mask_zero_pixels_,
                                          const std::vector<double> &weights) {
   assert(ref_contacts->nrows() == tgt_contacts->nrows());
@@ -471,10 +471,14 @@ template <StripeDirection stripe_direction, class N>
 
 [[nodiscard]] static auto init_writers(const modle::tools::eval_config &c, const ChromSet &chroms,
                                        const bool weighted) {
-  std::vector<std::pair<std::string, usize>> chrom_vect(static_cast<usize>(chroms.size()));
-  std::transform(chroms.begin(), chroms.end(), chrom_vect.begin(), [](const auto &chrom) {
-    return std::make_pair(chrom.first, chrom.second.second);
-  });
+  std::vector<std::string> chrom_names(utils::conditional_static_cast<usize>(chroms.size()));
+  std::vector<u32> chrom_sizes(utils::conditional_static_cast<usize>(chroms.size()));
+
+  std::transform(chroms.begin(), chroms.end(), chrom_names.begin(),
+                 [](const auto &chrom) { return chrom.first; });
+
+  std::transform(chroms.begin(), chroms.end(), chrom_sizes.begin(),
+                 [](const auto &chrom) { return static_cast<u32>(chrom.second.second); });
 
   const auto name = corr_method_to_str(c.metric);
   const auto bname1 = fmt::format(FMT_STRING("{}{}_vertical"), name, weighted ? "_weighted" : "");
@@ -492,13 +496,13 @@ template <StripeDirection stripe_direction, class N>
   Writer writers;
   writers.vertical = Writer::InternalWriterPair{
       // clang-format off
-          std::make_unique<io::bigwig::Writer>(create_bwig_file(chrom_vect, c.output_prefix.string(), fmt::format(FMT_STRING("{}.bw"), bname1))),
+          std::make_unique<io::bigwig::Writer>(create_bwig_file(chrom_names, chrom_sizes, c.output_prefix.string(), fmt::format(FMT_STRING("{}.bw"), bname1))),
           std::make_unique<compressed_io::Writer>(fmt::format(FMT_STRING("{}_{}.tsv.gz"), c.output_prefix.string(), bname1))
       // clang-format on
   };
   writers.horizontal = Writer::InternalWriterPair{
       // clang-format off
-          std::make_unique<io::bigwig::Writer>(create_bwig_file(chrom_vect, c.output_prefix.string(), fmt::format(FMT_STRING("{}.bw"), bname2))),
+          std::make_unique<io::bigwig::Writer>(create_bwig_file(chrom_names, chrom_sizes, c.output_prefix.string(), fmt::format(FMT_STRING("{}.bw"), bname2))),
           std::make_unique<compressed_io::Writer>(fmt::format(FMT_STRING("{}_{}.tsv.gz"), c.output_prefix.string(), bname2))
       // clang-format on
   };
@@ -536,8 +540,8 @@ template <StripeDirection stripe_direction, class N>
 template <StripeDirection stripe_direction, class Writers, class N>
 static void run_task(const enum eval_config::Metric metric, const std::string &chrom_name,
                      const std::pair<usize, usize> chrom_range, Writers &writers,
-                     std::shared_ptr<ContactMatrix<N>> &ref_contacts,
-                     std::shared_ptr<ContactMatrix<N>> &tgt_contacts,
+                     std::shared_ptr<ContactMatrixDense<N>> &ref_contacts,
+                     std::shared_ptr<ContactMatrixDense<N>> &tgt_contacts,
                      const bool exclude_zero_pixels, const usize bin_size,
                      const absl::flat_hash_map<std::string, std::vector<double>> &weights) {
   try {
@@ -554,10 +558,12 @@ static void run_task(const enum eval_config::Metric metric, const std::string &c
                  absl::AsciiStrToLower(direction_to_str(stripe_direction)), chrom_name,
                  absl::FormatDuration(absl::Now() - t0));
     t0 = absl::Now();
+    const auto [chrom_start, chrom_end] = chrom_range;
     auto &writer =
         stripe_direction == StripeDirection::horizontal ? writers.horizontal : writers.vertical;
-    writer.bwig->write_range(chrom_name, absl::MakeSpan(metrics.metric1), bin_size, bin_size);
-    const auto [chrom_start, chrom_end] = chrom_range;
+    writer.bwig->write_range(chrom_name, absl::MakeSpan(metrics.metric1), bin_size, bin_size,
+                             chrom_start);
+
     std::string buff;
     auto format_tsv_record = [&](const std::string_view chrom_name_, const auto start_pos_,
                                  const auto end_pos_, const auto score1, const auto score2) {
@@ -647,7 +653,7 @@ void eval_subcmd(const modle::tools::eval_config &c) {
     spdlog::info(FMT_STRING("Computing metric(s) for chromosome: \"{}\""),
                  chromosomes.begin()->first);
   } else {
-    std::vector<std::string> chrom_names(static_cast<usize>(chromosomes.size()));
+    std::vector<std::string> chrom_names(utils::conditional_static_cast<usize>(chromosomes.size()));
     std::transform(chromosomes.begin(), chromosomes.end(), chrom_names.begin(),
                    [](const auto &chrom) { return chrom.first; });
     spdlog::info(FMT_STRING("Computing metric(s) for the following {} chromosomes: \"{}\""),
@@ -664,9 +670,9 @@ void eval_subcmd(const modle::tools::eval_config &c) {
   assert(nrows != 0);
 
   const auto t0 = absl::Now();
-  thread_pool tpool(static_cast<u32>(c.nthreads));
+  BS::thread_pool tpool(static_cast<u32>(c.nthreads));
 
-  std::array<std::future<bool>, 2> return_codes;
+  std::array<std::future<void>, 2> return_codes;
 
   for (const auto &[chrom_name_sv, chrom_range] : chromosomes) {
     const std::string chrom_name{chrom_name_sv};
@@ -674,9 +680,9 @@ void eval_subcmd(const modle::tools::eval_config &c) {
     const auto t1 = absl::Now();
     spdlog::info(FMT_STRING("Reading contacts for {}..."), chrom_name_sv);
 
-    auto ref_contacts = std::make_shared<ContactMatrix<double>>(
+    auto ref_contacts = std::make_shared<ContactMatrixDense<double>>(
         ref_cooler.cooler_to_cmatrix(chrom_name, nrows, chrom_range));
-    auto tgt_contacts = std::make_shared<ContactMatrix<double>>(
+    auto tgt_contacts = std::make_shared<ContactMatrixDense<double>>(
         tgt_cooler.cooler_to_cmatrix(chrom_name, nrows, chrom_range));
     spdlog::info(FMT_STRING("Read {} contacts for {} in {}"),
                  ref_contacts->get_tot_contacts() + tgt_contacts->get_tot_contacts(), chrom_name_sv,

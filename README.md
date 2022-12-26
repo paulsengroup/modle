@@ -6,7 +6,8 @@ SPDX-License-Identifier: MIT
 
 # MoDLE
 
-[![Unit tests Ubuntu](https://github.com/paulsengroup/modle/actions/workflows/unit-tests-ubuntu.yml/badge.svg?branch=main)](https://github.com/paulsengroup/modle/actions/workflows/unit-tests-ubuntu.yml)
+[![Ubuntu CI](https://github.com/paulsengroup/modle/actions/workflows/ubuntu-ci.yml/badge.svg)](https://github.com/paulsengroup/modle/actions/workflows/ubuntu-ci.yml)
+[![MacOS CI](https://github.com/paulsengroup/modle/actions/workflows/macos-ci.yml/badge.svg)](https://github.com/paulsengroup/modle/actions/workflows/macos-ci.yml)
 [![Build Docker image](https://github.com/paulsengroup/modle/actions/workflows/build-docker-image.yml/badge.svg)](https://github.com/paulsengroup/modle/actions/workflows/build-docker-image.yml)
 
 ## Using MoDLE
@@ -17,10 +18,10 @@ and [dockerhub](https://hub.docker.com/repository/docker/paulsengroup/modle).
 
 ```bash
 # Using Docker
-sudo docker run ghcr.io/paulsengroup/modle:1.0.0-rc.6 --help
+sudo docker run ghcr.io/paulsengroup/modle:1.0.0-rc.7 --help
 
 # Using Singularity/Apptainer
-singularity run docker://ghcr.io/paulsengroup/modle:1.0.0-rc.6 --help
+singularity run docker://ghcr.io/paulsengroup/modle:1.0.0-rc.7 --help
 ```
 
 ## Building MoDLE
@@ -42,14 +43,14 @@ and [dockerhub](https://hub.docker.com/repository/docker/paulsengroup/modle).
 
 In addition to a C++17 compiler, building MoDLE requires the following tools:
 
-- CMake >= 3.18
-- Conan >= 1.45
+- CMake >= 3.20
+- Conan >= 1.53.0
 
 #### Installing Conan
 
 Conan is a package manager for C and C++ applications, and can be installed using pip or Homebrew:
 
-- `pip3 install "conan>=1.45"`
+- `pip3 install "conan>=1.53.0"`
 - `brew install conan`
 
 ### Getting MoDLE source code
@@ -89,121 +90,17 @@ Pass `-DCMAKE_INSTALL_PREFIX="$HOME/.local/"` to the first CMake command (before
 The path passed to CMake through `-DCMAKE_INSTALL_PREFIX` can be in principle any path where your user has write permissions.
 </details>
 
-### Running automated tests
-
-To ensure that the compiled code works as intended, run the following command from the repository root:
-
-```bash
-cd build/
-
-# Run unit tests
-ctest -j 8                 \
-      --test-dir .         \
-      --schedule-random    \
-      --output-on-failure  \
-      --no-tests=error     \
-      -E '(SciPy)|(wCorr)'
-
-# Run integration test
-../test/scripts/modle_integration_test_simple.sh src/modle/modle
-```
-
 <details>
-<summary>Example output</summary>
-
-The first command should produce an output similar to the following:
-```
-101/110 Test #110: Generate LEF moves 001 - LONG ....................................................................   Passed    6.13 sec
-        Start  69: Detect LEF-BAR collisions 001 - wo soft collisions fwd CTCFs - SHORT
-102/110 Test  #69: Detect LEF-BAR collisions 001 - wo soft collisions fwd CTCFs - SHORT .............................   Passed    0.02 sec
-        Start  96: Variance - SHORT
-103/110 Test  #96: Variance - SHORT .................................................................................   Passed    0.01 sec
-104/110 Test  #31: Writer lzma - SHORT ..............................................................................   Passed    9.40 sec
-105/110 Test  #24: Reader lzma - SHORT ..............................................................................   Passed    7.46 sec
-106/110 Test  #19: Reader plain - SHORT .............................................................................   Passed   14.62 sec
-107/110 Test  #23: Reader lz4 - SHORT ...............................................................................   Passed    7.17 sec
-108/110 Test  #30: Writer bzip2 - SHORT .............................................................................   Passed    7.67 sec
-109/110 Test  #28: Writer plain - SHORT .............................................................................   Passed    6.86 sec
-110/110 Test  #20: Reader plain sv - SHORT ..........................................................................   Passed   14.04 sec
-
-100% tests passed, 0 tests failed out of 110
-
-Total Test time (real) =  18.45 sec
-```
-
-While the output of the second command should look something like this.
-```
-[2022-06-15 13:28:02.649] [info]: Simulation of "chr2" successfully completed.
-[2022-06-15 13:28:02.869] [info]: Writing contacts for "chr2" to file "/tmp/ci-OdNlvn6LME/out.cool"...
-[2022-06-15 13:28:02.909] [info]: Written 1816500 contacts for "chr2" across 0.21M out of 1.82M pixels to file "/tmp/ci-OdNlvn6LME/out.cool".
-[2022-06-15 13:28:02.909] [info]: Writing contacts for "chr20" to file "/tmp/ci-OdNlvn6LME/out.cool"...
-[2022-06-15 13:28:02.909] [info]: Written 483450 contacts for "chr20" across 0.05M out of 0.48M pixels to file "/tmp/ci-OdNlvn6LME/out.cool".
-[2022-06-15 13:28:02.909] [info]: Writing contacts for "chr21" to file "/tmp/ci-OdNlvn6LME/out.cool"...
-[2022-06-15 13:28:02.909] [info]: Written 350400 contacts for "chr21" across 0.04M out of 0.35M pixels to file "/tmp/ci-OdNlvn6LME/out.cool".
-[2022-06-15 13:28:02.909] [info]: Writing contacts for "chr22" to file "/tmp/ci-OdNlvn6LME/out.cool"...
-[2022-06-15 13:28:02.909] [info]: Written 381150 contacts for "chr22" across 0.04M out of 0.38M pixels to file "/tmp/ci-OdNlvn6LME/out.cool".
-[2022-06-15 13:28:03.279] [info]: Simulation terminated without errors in 4.259878566s!
-
-Bye.
-Comparing /tmp/ci-OdNlvn6LME/out.cool with /tmp/modle/test/data/integration_tests/reference_001.cool...
-```
-
-If the second test reports one or more differences between `out.cool` and `reference_001.cool`, then the test failed.
-
-Test failure example:
-```
-Comparing /tmp/ci-3Lx4kbWT26/out.cool with /tmp/test/data/integration_tests/reference_001.cool...
-dataset: </indexes/bin1_offset> and </indexes/bin1_offset>
-20154 differences found
-Not comparable: </pixels/bin1_id> has rank 1, dimensions [355352], max dimensions [18446744073709551615]
-and </pixels/bin1_id> has rank 1, dimensions [356001], max dimensions [18446744073709551615]
-Not comparable: </pixels/bin2_id> has rank 1, dimensions [355352], max dimensions [18446744073709551615]
-and </pixels/bin2_id> has rank 1, dimensions [356001], max dimensions [18446744073709551615]
-Not comparable: </pixels/count> has rank 1, dimensions [355352], max dimensions [18446744073709551615]
-and </pixels/count> has rank 1, dimensions [356001], max dimensions [18446744073709551615]
-```
-
-</details>
-
-<details>
-<summary>For developers</summary>
-To run the full test suite, remove `-E '(SciPy)|(wCorr)` from the above snipped.
-
-Some of MoDLE's unit tests depend the following libraries:
-
-- [SciPy](https://scipy.org/)
-- [wCorr](https://cran.r-project.org/web/packages/wCorr/index.html)
-
-These libraries can be installed as follows:
-
-```bash
-python3 -m pip install scipy
-Rscript --no-save -e 'install.packages("wCorr", dependencies=c("Depends", "Imports", "LinkingTo"), repos="https://cloud.r-project.org")'
-```
-
-</details>
-
-### Installing MoDLE
-
-The following command will install MoDLE files under the prefix specified through `-DCMAKE_INSTALL_PREFIX` (`/usr/local`
-by default).
-
-```bash
-# Run from the repository root
-cmake --install build/
-```
-
-<details>
-<summary>Troubleshooting common build errors</summary>
+<summary>Troubleshooting common errors</summary>
 
 #### Incorrect or incomplete Conan profile
 
-In this case the build process will fail during project configuration (i.e. when running the first CMake command
-in [this](https://github.com/paulsengroup/modle#compiling-modle) section) with an error message similar to the
-following:
+This will cause CMake to exit with an error during project configuration.
+
+When this is the case, the error message should look similar to the following:
 
 ```
-ERROR: libBigWig/0.4.6: 'settings.compiler' value not defined
+ERROR: libBigWig/0.4.7: 'settings.compiler' value not defined
 CMake Error at build/conan.cmake:631 (message):
   Conan install failed='1'
 ```
@@ -258,7 +155,140 @@ build_type=Release
 [env]
 ```
 
+Now remove the content of the build folder with e.g. `rm -r build/*` and re-run the steps listed in the [Compiling MoDLE](https://github.com/paulsengroup/modle#compiling-modle) section.
+
+#### Need more help?
+If the above troubleshooting steps did not help, feel free to get in touch by starting a new [discussion](https://github.com/paulsengroup/modle/discussions/new).
 </details>
+
+
+### Running automated tests
+
+To ensure that the compiled code works as intended we highly recommend running MoDLE's automated test.
+
+The integration test depends on `cooler`, `shasum` and `xz`, which can be installed as follows:
+
+```bash
+# Instructions for Ubuntu
+apt-get install -y libdigest-sha-perl python3-pip xz-utils
+
+# Instructions for macOS
+brew install xz
+
+# Instructions to install Cooler are platform-independent
+python3 -m pip install cooler
+```
+
+Once the test dependencies are satisfied, the test suite can be started by running the following commands from the repository root:
+
+```bash
+cd build/
+
+# Run unit tests
+ctest -j 8                 \
+      --test-dir .         \
+      --schedule-random    \
+      --output-on-failure  \
+      --no-tests=error     \
+      -E '(SciPy)|(wCorr)'
+
+# Run integration test
+../test/scripts/modle_integration_test.sh src/modle/modle
+
+../test/scripts/modle_tools_transform_integration_test.sh src/modle_tools/modle_tools
+../test/scripts/modle_tools_eval_integration_test.sh src/modle_tools/modle_tools
+```
+
+<details>
+<summary>Example output</summary>
+
+The first command should produce an output similar to the following:
+```
+101/110 Test #110: Generate LEF moves 001 - LONG ....................................................................   Passed    6.13 sec
+        Start  69: Detect LEF-BAR collisions 001 - wo soft collisions fwd CTCFs - SHORT
+102/110 Test  #69: Detect LEF-BAR collisions 001 - wo soft collisions fwd CTCFs - SHORT .............................   Passed    0.02 sec
+        Start  96: Variance - SHORT
+103/110 Test  #96: Variance - SHORT .................................................................................   Passed    0.01 sec
+104/110 Test  #31: Writer lzma - SHORT ..............................................................................   Passed    9.40 sec
+105/110 Test  #24: Reader lzma - SHORT ..............................................................................   Passed    7.46 sec
+106/110 Test  #19: Reader plain - SHORT .............................................................................   Passed   14.62 sec
+107/110 Test  #23: Reader lz4 - SHORT ...............................................................................   Passed    7.17 sec
+108/110 Test  #30: Writer bzip2 - SHORT .............................................................................   Passed    7.67 sec
+109/110 Test  #28: Writer plain - SHORT .............................................................................   Passed    6.86 sec
+110/110 Test  #20: Reader plain sv - SHORT ..........................................................................   Passed   14.04 sec
+
+100% tests passed, 0 tests failed out of 110
+
+Total Test time (real) =  18.45 sec
+```
+
+While the output of the second command should look something like this.
+```
+[2022-06-15 13:28:02.649] [info]: Simulation of "chr2" successfully completed.
+[2022-06-15 13:28:02.869] [info]: Writing contacts for "chr2" to file "/tmp/ci-OdNlvn6LME/out.cool"...
+[2022-06-15 13:28:02.909] [info]: Written 1816500 contacts for "chr2" across 0.21M out of 1.82M pixels to file "/tmp/ci-OdNlvn6LME/out.cool".
+[2022-06-15 13:28:02.909] [info]: Writing contacts for "chr20" to file "/tmp/ci-OdNlvn6LME/out.cool"...
+[2022-06-15 13:28:02.909] [info]: Written 483450 contacts for "chr20" across 0.05M out of 0.48M pixels to file "/tmp/ci-OdNlvn6LME/out.cool".
+[2022-06-15 13:28:02.909] [info]: Writing contacts for "chr21" to file "/tmp/ci-OdNlvn6LME/out.cool"...
+[2022-06-15 13:28:02.909] [info]: Written 350400 contacts for "chr21" across 0.04M out of 0.35M pixels to file "/tmp/ci-OdNlvn6LME/out.cool".
+[2022-06-15 13:28:02.909] [info]: Writing contacts for "chr22" to file "/tmp/ci-OdNlvn6LME/out.cool"...
+[2022-06-15 13:28:02.909] [info]: Written 381150 contacts for "chr22" across 0.04M out of 0.38M pixels to file "/tmp/ci-OdNlvn6LME/out.cool".
+[2022-06-15 13:28:03.279] [info]: Simulation terminated without errors in 4.259878566s!
+
+Bye.
+Comparing /tmp/modle-6n3WSvOXxQ/out.cool with /tmp/modle/test/data/integration_tests/reference_001.cool...
+
+### PASS ###
+/tmp/modle-6n3WSvOXxQ/out_lef_1d_occupancy.bw: OK
+```
+
+If the second test reports one or more differences between `out.cool` and `reference_001.cool`, then the test failed.
+
+Test failure example:
+```
+Comparing /tmp/modle-6n3WSvOXxQ/out.cool with /home/roby/github/modle/test/data/integration_tests/reference_001.cool...
+
+dataset: </indexes/bin1_offset> and </indexes/bin1_offset>
+20154 differences found
+Not comparable: </pixels/bin1_id> has rank 1, dimensions [355352], max dimensions [18446744073709551615]
+and </pixels/bin1_id> has rank 1, dimensions [356001], max dimensions [18446744073709551615]
+Not comparable: </pixels/bin2_id> has rank 1, dimensions [355352], max dimensions [18446744073709551615]
+and </pixels/bin2_id> has rank 1, dimensions [356001], max dimensions [18446744073709551615]
+Not comparable: </pixels/count> has rank 1, dimensions [355352], max dimensions [18446744073709551615]
+and </pixels/count> has rank 1, dimensions [356001], max dimensions [18446744073709551615]
+
+### FAIL ###
+```
+
+</details>
+
+<details>
+<summary>For developers</summary>
+To run the full test suite, remove `-E '(SciPy)|(wCorr)` from the above snippet.
+
+Some of MoDLE's unit tests depend on the following libraries:
+
+- [SciPy](https://scipy.org/)
+- [wCorr](https://cran.r-project.org/web/packages/wCorr/index.html)
+
+These libraries can be installed as follows:
+
+```bash
+python3 -m pip install scipy
+Rscript --no-save -e 'install.packages("wCorr", dependencies=c("Depends", "Imports", "LinkingTo"), repos="https://cloud.r-project.org")'
+```
+
+</details>
+
+### Installing MoDLE
+
+The following command will install MoDLE files under the prefix specified through `-DCMAKE_INSTALL_PREFIX` (`/usr/local`
+by default).
+
+```bash
+# Run from the repository root
+cmake --install build/
+```
 
 ### Running MoDLE
 
@@ -276,7 +306,7 @@ Datasets are automatically downloaded by CMake when running steps from inside fo
 
 <details>
 <summary>If you are not using containers...</summary>
-If you are buiding MoDLE and have followed the <a href="https://github.com/paulsengroup/modle#compiling-modle">instructions</a> for compiling MoDLE, then test datasets have already been downloaded and extracted by CMake, so you can skip the above step.
+If you are building MoDLE and have followed the <a href="https://github.com/paulsengroup/modle#compiling-modle">instructions</a> for compiling MoDLE, then test datasets have already been downloaded and extracted by CMake, so you can skip the above step.
 </details>
 
 #### Required input files
@@ -295,7 +325,7 @@ When ___score___ is non-zero, its value will be used to set the occupancy for th
 current line.
 
 The ___strand___ field is required and is used to define the extrusion barrier direction.
-As of `v1.0.0-rc.6`, this field should be populated with the direction of the corresponding CTCF binding site.
+As of `v1.0.0-rc.7`, this field should be populated with the direction of the corresponding CTCF binding site.
 Barriers without strand information (i.e. with strand '.') will be ignored.
 
 Sample chrom.sizes and BED file(s) are available inside folder `test/data/integration_tests`.
@@ -303,17 +333,17 @@ Sample chrom.sizes and BED file(s) are available inside folder `test/data/integr
 #### Running a simulation with default settings
 
 ```bash
-singularity run docker://ghcr.io/paulsengroup/modle:1.0.0-rc.6   \
+singularity run docker://ghcr.io/paulsengroup/modle:1.0.0-rc.7   \
     simulate \
     --chrom-sizes test/data/integration_tests/grch38.chrom.sizes \
     --extrusion-barrier-file test/data/integration_tests/grch38_h1_extrusion_barriers.bed.xz \
-    --output-prefix path/to/ouput/prefix
+    --output-prefix path/to/output/prefix
 ```
 
-This will create folder `path/to/output` (if it doesn't already exists), and write the following files inside it:
+This will create folder `path/to/output` (if it doesn't already exist), and write the following files inside it:
 
 ```
-path/to/ouput
+path/to/output
 ├── prefix_config.toml
 ├── prefix.cool
 └── prefix.log
@@ -324,7 +354,7 @@ Contacts are stored in `path/to/output/prefix.cool`.
 In case any of the output files already exist, MoDLE will refuse to run and print an error message listing the file name
 collisions.
 
-Passing the `--force` flag overrides this behavior and will cause MoDLE to override existing files.
+Passing the `--force` flag overrides this behavior and will cause MoDLE to overwrite existing files.
 
 #### Running a simulation using config files
 
@@ -333,7 +363,7 @@ same parameters.
 
 ```bash
 # Run a simulation with the same parameter as the previous example
-singularity run docker://ghcr.io/paulsengroup/modle:1.0.0-rc.6 \
+singularity run docker://ghcr.io/paulsengroup/modle:1.0.0-rc.7 \
     --config path/to/output/prefix_config.toml
 ```
 
@@ -346,11 +376,11 @@ handful of parameters need to change across simulation runs.
 ```bash
 # The following command will run a simulation using parameters from the previous example as starting point,
 # but using a custom lef density and overriding the output prefix specified by the config file.
-singularity run docker://ghcr.io/paulsengroup/modle:1.0.0-rc.6 \
+singularity run docker://ghcr.io/paulsengroup/modle:1.0.0-rc.7 \
     simulate \
     --config path/to/output/prefix_config.toml \
     --lef-density 15 \
-    --output-prefix path/to/ouput/prefix2
+    --output-prefix path/to/output/prefix2
 ```
 
 The config file is a text file in TOML format.
@@ -360,7 +390,7 @@ Adding a line like `my-option=my_value` to the config file is equivalent to pass
 For an up-to-date list of supported CLI options, please refer to MoDLE's help message:
 
 ```bash
-singularity run docker://ghcr.io/paulsengroup/modle:1.0.0-rc.6 simulate --help
+singularity run docker://ghcr.io/paulsengroup/modle:1.0.0-rc.7 simulate --help
 ```
 
 <details>
@@ -378,7 +408,7 @@ As of `v1.0.0-rc.6`, the following compression algorithms are supported:
 - XZ/LZMA
 - ZSTD
 
-<b>Visualizing simulation result</b>
+<b>Visualizing simulated heatmaps</b>
 
 To quickly visualize .cool files we recommend using [cooler](https://github.com/open2c/cooler) show.
 
@@ -395,4 +425,16 @@ cooler show -o my_matrix.png my_cooler.cool chr1:10000000-15000000
 cooler show -o my_matrix.png --dpi 600 my_cooler.cool chr1:10000000-15000000
 ```
 
-For a better visuation experience we recommend using [HiGlass](https://github.com/higlass/higlass), in particular the containerized version of HiGlass which is installed and managed through [higlass-manage](https://github.com/higlass/higlass-manage).
+For a better visualization experience we recommend using [HiGlass](https://github.com/higlass/higlass), more specifically the containerized version of HiGlass which is installed and managed through [higlass-manage](https://github.com/higlass/higlass-manage).
+
+Note that MoDLE produces a single-resolution Cooler file (`.cool`), while HiGlass expects a multi-resolution Cooler file (`.mcool`).
+The latter can be easily generated by running [cooler zoomify](https://cooler.readthedocs.io/en/latest/cli.html#cooler-zoomify) on the Cooler file produced by MoDLE.
+
+</details>
+
+
+## Citing
+
+If you use MoDLE in your research, please cite the following paper:
+
+Rossini, R., Kumar, V., Mathelier, A. _et al._ MoDLE: high-performance stochastic modeling of DNA loop extrusion interactions. _Genome Biol_ __23__, 247 (2022). [https://doi.org/10.1186/s13059-022-02815-7](https://doi.org/10.1186/s13059-022-02815-7)

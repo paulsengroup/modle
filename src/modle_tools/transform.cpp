@@ -17,29 +17,29 @@
 #include <readerwriterqueue/readerwriterqueue.h>
 #include <spdlog/spdlog.h>  // for info
 
-#include <algorithm>                    // for transform, max
-#include <cassert>                      // for assert
-#include <cstdio>                       // for stderr
-#include <exception>                    // for exception
-#include <filesystem>                   // for operator<<, path
-#include <future>                       // for future
-#include <iosfwd>                       // for streamsize
-#include <iterator>                     // for insert_iterator, inserter
-#include <memory>                       // for unique_ptr, shared_ptr, __shared_ptr_access
-#include <stdexcept>                    // for runtime_error, overflow_error
-#include <string>                       // for string, basic_string
-#include <string_view>                  // for string_view
-#include <thread_pool/thread_pool.hpp>  // for thread_pool
-#include <utility>                      // for tuple_element<>::type, pair, make_pair
-#include <vector>                       // for vector
+#include <BS_thread_pool.hpp>  // for BS::thread_pool
+#include <algorithm>           // for transform, max
+#include <cassert>             // for assert
+#include <cstdio>              // for stderr
+#include <exception>           // for exception
+#include <filesystem>          // for operator<<, path
+#include <future>              // for future
+#include <iosfwd>              // for streamsize
+#include <iterator>            // for insert_iterator, inserter
+#include <memory>              // for unique_ptr, shared_ptr, __shared_ptr_access
+#include <stdexcept>           // for runtime_error, overflow_error
+#include <string>              // for string, basic_string
+#include <string_view>         // for string_view
+#include <utility>             // for tuple_element<>::type, pair, make_pair
+#include <vector>              // for vector
 
 #include "modle/bed/bed.hpp"        // for BED_tree, BED_tree<>::value_type, Parser
 #include "modle/bigwig/bigwig.hpp"  // for Writer
 #include "modle/common/common.hpp"  // for u32, usize, bp_t, u8, i64
-#include "modle/common/fmt_std_helper.hpp"
+#include "modle/common/fmt_helpers.hpp"
 #include "modle/common/utils.hpp"                 // for identity::operator()
 #include "modle/compressed_io/compressed_io.hpp"  // for Reader
-#include "modle/contacts.hpp"                     // for ContactMatrix
+#include "modle/contact_matrix_dense.hpp"         // for ContactMatrixDense
 #include "modle/cooler/cooler.hpp"                // for Cooler, Cooler::READ_ONLY
 #include "modle/interval_tree.hpp"                // for IITree, IITree::IITree<I, T>, IITree::empty
 #include "modle/stats/correlation.hpp"            // for Pearson, Spearman
@@ -91,8 +91,8 @@ static modle::IITree<double, double> import_discretization_ranges(const std::fil
 }
 
 template <class N>
-[[nodiscard]] static ContactMatrix<N> run_normalization(
-    std::string_view chrom_name, ContactMatrix<N>& m,
+[[nodiscard]] static ContactMatrixDense<N> run_normalization(
+    std::string_view chrom_name, ContactMatrixDense<N>& m,
     const std::pair<double, double> normalization_range,
     const std::pair<double, double> saturation_range) {
   const auto [lower_bound_norm, upper_bound_norm] = normalization_range;
@@ -113,9 +113,9 @@ template <class N>
 }
 
 template <class N>
-[[nodiscard]] static ContactMatrix<double> run_gaussian_blur(
-    thread_pool& tpool, std::string_view chrom_name, ContactMatrix<N>& m, const double sigma,
-    const std::pair<double, double> saturation_range) {
+[[nodiscard]] static ContactMatrixDense<double> run_gaussian_blur(
+    BS::thread_pool& tpool, std::string_view chrom_name, ContactMatrixDense<N>& m,
+    const double sigma, const std::pair<double, double> saturation_range) {
   const auto [lower_bound_sat, upper_bound_sat] = saturation_range;
   spdlog::info(FMT_STRING("Applying Gaussian blur with sigma={:.4g} to contacts for {}..."), sigma,
                chrom_name);
@@ -127,9 +127,9 @@ template <class N>
 }
 
 template <class N>
-[[nodiscard]] static ContactMatrix<double> run_difference_of_gaussians(
-    thread_pool& tpool, std::string_view chrom_name, ContactMatrix<N>& m, const double sigma1,
-    const double sigma2, const std::pair<double, double> saturation_range) {
+[[nodiscard]] static ContactMatrixDense<double> run_difference_of_gaussians(
+    BS::thread_pool& tpool, std::string_view chrom_name, ContactMatrixDense<N>& m,
+    const double sigma1, const double sigma2, const std::pair<double, double> saturation_range) {
   const auto [lower_bound_sat, upper_bound_sat] = saturation_range;
   spdlog::info(FMT_STRING("Computing the difference of Gaussians for {} (sigma1={:.4g}; "
                           "sigma2={:.4g})..."),
@@ -138,8 +138,8 @@ template <class N>
 }
 
 template <class N>
-[[nodiscard]] static ContactMatrix<double> process_chromosome(
-    thread_pool& tpool, const std::string_view chrom_name, const bp_t bin_size,
+[[nodiscard]] static ContactMatrixDense<double> process_chromosome(
+    BS::thread_pool& tpool, const std::string_view chrom_name, const bp_t bin_size,
     cooler::Cooler<N>& cooler, const modle::tools::transform_config& c,
     const modle::IITree<double, double>& discretization_ranges) {
   auto t1 = absl::Now();
@@ -204,13 +204,15 @@ void transform_subcmd(const modle::tools::transform_config& c) {
     using CoolerT = cooler::Cooler<double>;
     cooler_dbl = std::make_unique<CoolerT>(c.path_to_output_matrix, CoolerT::IO_MODE::WRITE_ONLY,
                                            bin_size, max_chrom_name_size);
+    cooler_dbl->write_metadata_attribute(c.args_json);
   } else {
     using CoolerT = cooler::Cooler<i32>;
     cooler_int = std::make_unique<CoolerT>(c.path_to_output_matrix, CoolerT::IO_MODE::WRITE_ONLY,
                                            bin_size, max_chrom_name_size);
+    cooler_int->write_metadata_attribute(c.args_json);
   }
 
-  thread_pool tpool(static_cast<u32>(c.nthreads));
+  BS::thread_pool tpool(static_cast<u32>(c.nthreads));
 
   const auto t0 = absl::Now();
   spdlog::info(FMT_STRING("Transforming contacts from file {}..."), input_cooler.get_path());

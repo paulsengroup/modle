@@ -4,6 +4,7 @@
 
 find_package(absl CONFIG REQUIRED)
 find_package(Boost CONFIG REQUIRED)
+find_package(bshoshany-thread-pool CONFIG REQUIRED)
 find_package(Catch2 CONFIG REQUIRED)
 find_package(fmt CONFIG REQUIRED)
 find_package(HDF5 CONFIG REQUIRED)
@@ -19,7 +20,10 @@ target_sources(
   PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/units/common/cli_utils_test.cpp
           ${CMAKE_CURRENT_SOURCE_DIR}/units/common/const_map_test.cpp
           ${CMAKE_CURRENT_SOURCE_DIR}/units/common/dna_test.cpp
-          ${CMAKE_CURRENT_SOURCE_DIR}/units/contact_matrix/contact_matrix_test.cpp
+          ${CMAKE_CURRENT_SOURCE_DIR}/units/contact_matrix/contact_matrix_dense_test.cpp
+          ${CMAKE_CURRENT_SOURCE_DIR}/units/contact_matrix/contact_matrix_internal_test.cpp
+          ${CMAKE_CURRENT_SOURCE_DIR}/units/contact_matrix/contact_matrix_serde_test.cpp
+          ${CMAKE_CURRENT_SOURCE_DIR}/units/contact_matrix/contact_matrix_sparse_test.cpp
           ${CMAKE_CURRENT_SOURCE_DIR}/units/interval_tree/interval_tree_test.cpp
           ${CMAKE_CURRENT_SOURCE_DIR}/units/libmodle_io/bed_parser_test.cpp
           ${CMAKE_CURRENT_SOURCE_DIR}/units/libmodle_io/bed_tree_test.cpp
@@ -34,8 +38,7 @@ target_sources(
           ${CMAKE_CURRENT_SOURCE_DIR}/units/stats/correlation_test.cpp
           ${CMAKE_CURRENT_SOURCE_DIR}/units/stats/correlation_utils_test.cpp
           ${CMAKE_CURRENT_SOURCE_DIR}/units/stats/descriptive_test.cpp
-          ${CMAKE_CURRENT_SOURCE_DIR}/units/stats/misc_test.cpp
-          ${CMAKE_CURRENT_SOURCE_DIR}/units/stats/tests_test.cpp)
+          ${CMAKE_CURRENT_SOURCE_DIR}/units/stats/misc_test.cpp)
 
 target_include_directories(test_main PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/units/include)
 
@@ -43,6 +46,7 @@ target_link_libraries(
   test_main
   PRIVATE project_warnings
           project_options
+          fmt::fmt
           Modle::cmatrix
           Modle::common
           Modle::interval_tree
@@ -65,13 +69,12 @@ target_link_system_libraries(
   absl::strings
   Boost::filesystem
   Boost::headers
+  bshoshany-thread-pool::bshoshany-thread-pool
   Catch2::Catch2WithMain
-  fmt::fmt
   HDF5::HDF5
-  spdlog::spdlog
-  thread-pool)
+  spdlog::spdlog)
 
-file(MAKE_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/Testing/)
+file(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/Testing/)
 
 # automatically discover tests that are defined in catch based test files you can modify the unittests. TEST_PREFIX to
 # whatever you want, or use different for different binaries
@@ -84,7 +87,7 @@ catch_discover_tests(
   WORKING_DIRECTORY
   ${CMAKE_CURRENT_SOURCE_DIR}/../
   OUTPUT_DIR
-  ${CMAKE_CURRENT_SOURCE_DIR}/Testing/
+  ${CMAKE_CURRENT_BINARY_DIR}/Testing/
   EXTRA_ARGS
   --success)
 
@@ -97,7 +100,7 @@ catch_discover_tests(
   WORKING_DIRECTORY
   ${CMAKE_CURRENT_SOURCE_DIR}/../
   OUTPUT_DIR
-  ${CMAKE_CURRENT_SOURCE_DIR}/Testing/
+  ${CMAKE_CURRENT_BINARY_DIR}/Testing/
   EXTRA_ARGS
   --success)
 
@@ -110,6 +113,6 @@ catch_discover_tests(
   WORKING_DIRECTORY
   ${CMAKE_CURRENT_SOURCE_DIR}/../
   OUTPUT_DIR
-  ${CMAKE_CURRENT_SOURCE_DIR}/Testing/
+  ${CMAKE_CURRENT_BINARY_DIR}/Testing/
   EXTRA_ARGS
   --success)

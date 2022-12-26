@@ -7,6 +7,7 @@
 #include <absl/strings/ascii.h>  // for AsciiStrToLower
 #include <archive.h>             // for archive_errno, archiv...
 #include <fmt/format.h>          // for format, FMT_STRING
+#include <fmt/std.h>
 
 #include <algorithm>                         // for find_if
 #include <boost/iostreams/close.hpp>         // for close
@@ -25,7 +26,7 @@
 #include <tuple>                             // for ignore
 
 #include "modle/common/common.hpp"  // for usize
-#include "modle/common/fmt_std_helper.hpp"
+#include "modle/common/fmt_helpers.hpp"
 #include "modle/common/utils.hpp"  // for ndebug_not_defined
 
 namespace modle::compressed_io {

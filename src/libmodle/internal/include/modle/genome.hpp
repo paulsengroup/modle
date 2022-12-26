@@ -18,19 +18,19 @@
 #include <type_traits>   // for enable_if_t, remove_cv_t
 #include <vector>        // for vector
 
-#include "modle/bed/bed.hpp"             // for BED (ptr only), BED_tree, BED_tree<>::value_type
-#include "modle/common/common.hpp"       // for bp_t, contacts_t, u64, u32, u8
-#include "modle/common/utils.hpp"        // for ndebug_defined
-#include "modle/contacts.hpp"            // for ContactMatrix
-#include "modle/extrusion_barriers.hpp"  // for ExtrusionBarrier
-#include "modle/interval_tree.hpp"       // for IITree, IITree::IITree<I, T>
+#include "modle/bed/bed.hpp"               // for BED (ptr only), BED_tree, BED_tree<>::value_type
+#include "modle/common/common.hpp"         // for bp_t, contacts_t, u64, u32, u8
+#include "modle/common/utils.hpp"          // for ndebug_defined
+#include "modle/contact_matrix_dense.hpp"  // for ContactMatrixDense
+#include "modle/extrusion_barriers.hpp"    // for ExtrusionBarrier
+#include "modle/interval_tree.hpp"         // for IITree, IITree::IITree<I, T>
 
 namespace modle {
 
 struct ExtrusionBarrier;
 
 class Chromosome {
-  using contact_matrix_t = ContactMatrix<contacts_t>;
+  using contact_matrix_t = ContactMatrixDense<contacts_t>;
   using bed_tree_value_t = bed::BED_tree<>::value_type;
   friend class Genome;
 
@@ -81,13 +81,19 @@ class Chromosome {
   [[nodiscard]] usize num_barriers() const;
   [[nodiscard]] const IITree<bp_t, ExtrusionBarrier>& barriers() const;
   [[nodiscard]] IITree<bp_t, ExtrusionBarrier>& barriers();
-  [[nodiscard]] absl::Span<const bed_tree_value_t> get_features() const;
-  bool allocate_contacts(bp_t bin_size, bp_t diagonal_width);
-  bool deallocate_contacts();
-  [[nodiscard]] const contact_matrix_t& contacts() const;
-  [[nodiscard]] contact_matrix_t& contacts();
-  [[nodiscard]] std::shared_ptr<const contact_matrix_t> contacts_ptr() const;
-  [[nodiscard]] std::shared_ptr<contact_matrix_t> contacts_ptr();
+  bool allocate_contact_matrix(bp_t bin_size, bp_t diagonal_width);
+  bool allocate_lef_occupancy_buffer(bp_t bin_size);
+  bool deallocate_contact_matrix();
+  bool deallocate_lef_occupancy_buffer();
+  [[nodiscard]] const contact_matrix_t& contacts() const noexcept;
+  [[nodiscard]] contact_matrix_t& contacts() noexcept;
+  [[nodiscard]] const std::vector<std::atomic<u64>>& lef_1d_occupancy() const noexcept;
+  [[nodiscard]] std::vector<std::atomic<u64>>& lef_1d_occupancy() noexcept;
+  [[nodiscard]] std::shared_ptr<const contact_matrix_t> contacts_ptr() const noexcept;
+  [[nodiscard]] std::shared_ptr<contact_matrix_t> contacts_ptr() noexcept;
+  [[nodiscard]] std::shared_ptr<const std::vector<std::atomic<u64>>> lef_1d_occupancy_ptr()
+      const noexcept;
+  [[nodiscard]] std::shared_ptr<std::vector<std::atomic<u64>>> lef_1d_occupancy_ptr() noexcept;
   [[nodiscard]] u64 hash(XXH3_state_t* xxh_state, u64 seed, usize cell_id) const;
   [[nodiscard]] u64 hash(u64 seed, usize cell_id) const;
 
@@ -101,11 +107,10 @@ class Chromosome {
   bp_t _size{(std::numeric_limits<bp_t>::max)()};
   usize _id{(std::numeric_limits<usize>::max)()};
   IITree<bp_t, ExtrusionBarrier> _barriers{};
-  // Protect _contacts from concurrent writes and allocations/deallocations
-  std::shared_mutex _contacts_mtx{};
+  // Protect _contacts and _lef_1d_occupancy from concurrent writes and allocations/deallocations
+  std::shared_mutex _buff_mtx{};
   std::shared_ptr<contact_matrix_t> _contacts{};
-
-  std::vector<bed_tree_value_t> _features{};
+  std::shared_ptr<std::vector<std::atomic<u64>>> _lef_1d_occupancy{};
 };
 
 class Genome {
@@ -113,9 +118,8 @@ class Genome {
   Genome() = default;
   Genome(const std::filesystem::path& path_to_chrom_sizes,
          const std::filesystem::path& path_to_extr_barriers,
-         const std::filesystem::path& path_to_chrom_subranges,
-         absl::Span<const std::filesystem::path> paths_to_extra_features,
-         double ctcf_prob_occ_to_occ, double ctcf_prob_nocc_to_nocc);
+         const std::filesystem::path& path_to_chrom_subranges, double default_barrier_pbb,
+         double default_barrier_puu, bool interpret_name_field_as_puu);
 
   using iterator = absl::btree_set<Chromosome>::iterator;
   using const_iterator = absl::btree_set<Chromosome>::const_iterator;
@@ -157,9 +161,8 @@ class Genome {
   [[nodiscard]] static absl::btree_set<Chromosome> instantiate_genome(
       const std::filesystem::path& path_to_chrom_sizes,
       const std::filesystem::path& path_to_extr_barriers,
-      const std::filesystem::path& path_to_chrom_subranges,
-      absl::Span<const std::filesystem::path> paths_to_extra_features, double ctcf_prob_occ_to_occ,
-      double ctcf_prob_nocc_to_nocc);
+      const std::filesystem::path& path_to_chrom_subranges, double default_barrier_pbb,
+      double default_barrier_puu, bool interpret_name_field_as_puu);
 
  private:
   absl::btree_set<Chromosome> _chromosomes{};
@@ -177,12 +180,8 @@ class Genome {
   /// Genome
   static usize import_barriers(absl::btree_set<Chromosome>& chromosomes,
                                const std::filesystem::path& path_to_extr_barriers,
-                               double ctcf_prob_occ_to_occ, double ctcf_prob_nocc_to_nocc);
-
-  /// Parse a BED file containing the genomic coordinates of extra features (e.g. promoters,
-  /// enhancer) them to the Genome
-  static usize import_extra_features(absl::btree_set<Chromosome>& chromosomes,
-                                     const std::filesystem::path& path_to_extra_features);
+                               double default_barrier_pbb, double default_barrier_puu,
+                               bool interpret_name_field_as_puu);
 };
 
 }  // namespace modle

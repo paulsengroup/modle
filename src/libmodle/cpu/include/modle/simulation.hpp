@@ -10,18 +10,18 @@
 #include <moodycamel/blockingconcurrentqueue.h>  // for BlockingConcurrentQueue
 #include <xxhash.h>                              // for XXH_INLINE_XXH3_createState, XXH3...
 
-#include <atomic>                       // for atomic
-#include <deque>                        // for deque
-#include <exception>                    // for exception_ptr
-#include <filesystem>                   // for path
-#include <limits>                       // for numeric_limits
-#include <memory>                       // for shared_ptr, allocator, unique_ptr
-#include <mutex>                        // for mutex
-#include <string>                       // for string
-#include <string_view>                  // for string_view
-#include <thread_pool/thread_pool.hpp>  // for thread_pool
-#include <utility>                      // for pair
-#include <vector>                       // for vector
+#include <BS_thread_pool.hpp>  // for BS::thread_pool
+#include <atomic>              // for atomic
+#include <deque>               // for deque
+#include <exception>           // for exception_ptr
+#include <filesystem>          // for path
+#include <limits>              // for numeric_limits
+#include <memory>              // for shared_ptr, allocator, unique_ptr
+#include <mutex>               // for mutex
+#include <string>              // for string
+#include <string_view>         // for string_view
+#include <utility>             // for pair
+#include <vector>              // for vector
 
 #include "modle/bed/bed.hpp"                            // for BED (ptr only), BED_tree
 #include "modle/collision_encoding.hpp"                 // for Collision<>
@@ -30,7 +30,7 @@
 #include "modle/common/simulation_config.hpp"           // for Config
 #include "modle/common/suppress_compiler_warnings.hpp"  // for DISABLE_WARNING_POP, DISABLE_WARN...
 #include "modle/common/utils.hpp"                       // for ndebug_defined, XXH3_Deleter, XXH...
-#include "modle/contacts.hpp"                           // for ContactMatrix
+#include "modle/contact_matrix_dense.hpp"               // for ContactMatrixDense
 #include "modle/extrusion_barriers.hpp"                 // for ExtrusionBarrier
 #include "modle/extrusion_factors.hpp"                  // for Lef, ExtrusionUnit (ptr only)
 #include "modle/genome.hpp"                             // for Chromosome (ptr only), Genome
@@ -58,9 +58,9 @@ class Simulation : Config {
 
   static constexpr auto Mbp = 1.0e6;
 
- private:
+ public:
   using CollisionT = Collision<u32f>;
-  struct BaseTask {  // NOLINT(altera-struct-pack-align)
+  struct Task {  // NOLINT(altera-struct-pack-align)
     usize id{};
     Chromosome* chrom{};
     usize cell_id{};
@@ -68,31 +68,11 @@ class Simulation : Config {
     usize num_target_contacts{};
     usize num_lefs{};
     absl::Span<const ExtrusionBarrier> barriers{};
-  };
 
- public:
-  struct Task : BaseTask {  // NOLINT(altera-struct-pack-align)
     static Task from_string(std::string_view serialized_task, Genome& genome);
   };
 
-  struct TaskPW : BaseTask {  // NOLINT(altera-struct-pack-align)
-    TaskPW() = default;
-    static TaskPW from_string(std::string_view serialized_task, Genome& genome);
-
-    bp_t deletion_begin{};
-    bp_t deletion_size{};
-    bp_t window_start{};
-    bp_t window_end{};
-    bp_t active_window_start{};
-    bp_t active_window_end{};
-
-    std::shared_ptr<const ContactMatrix<contacts_t>> reference_contacts{};
-
-    absl::Span<const bed::BED> feats1{};
-    absl::Span<const bed::BED> feats2{};
-  };
-
-  struct State : BaseTask {  // NOLINT(altera-struct-pack-align)
+  struct State : Task {  // NOLINT(altera-struct-pack-align)
     State() = default;
     usize epoch{};                 // NOLINT
     bool burnin_completed{false};  // NOLINT
@@ -148,26 +128,10 @@ class Simulation : Config {
     [[nodiscard]] const std::deque<double>& get_cfx_of_variation() const noexcept;
     [[nodiscard]] const std::deque<double>& get_avg_loop_sizes() const noexcept;
 
-    [[nodiscard]] bool is_modle_pert_state() const noexcept;
-    [[nodiscard]] bool is_modle_sim_state() const noexcept;
-
-    // These fields are specific to modle pert
-    bp_t deletion_begin{};       // NOLINT
-    bp_t deletion_size{};        // NOLINT
-    bp_t window_start{};         // NOLINT
-    bp_t window_end{};           // NOLINT
-    bp_t active_window_start{};  // NOLINT
-    bp_t active_window_end{};    // NOLINT
-
-    absl::Span<const bed::BED> feats1{};  // NOLINT
-    absl::Span<const bed::BED> feats2{};  // NOLINT
-
-    std::shared_ptr<std::mutex> contacts_mtx{nullptr};                             // NOLINT
-    std::shared_ptr<const ContactMatrix<contacts_t>> reference_contacts{nullptr};  // NOLINT
-    std::shared_ptr<ContactMatrix<contacts_t>> contacts{nullptr};                  // NOLINT
+    std::shared_ptr<std::mutex> contacts_mtx{nullptr};                  // NOLINT
+    std::shared_ptr<ContactMatrixDense<contacts_t>> contacts{nullptr};  // NOLINT
 
     State& operator=(const Task& task);
-    State& operator=(const TaskPW& task);
     [[nodiscard]] std::string to_string() const noexcept;
 
     void resize_buffers(usize size = (std::numeric_limits<usize>::max)());
@@ -175,8 +139,6 @@ class Simulation : Config {
   };
 
   void run_simulate();
-  void run_perturbate();
-  void run_replay();
 
  private:
   Genome _genome{};
@@ -184,15 +146,16 @@ class Simulation : Config {
   std::atomic<bool> _exception_thrown{false};
   std::vector<std::exception_ptr> _exceptions{};  // NOLINT(bugprone-throw-keyword-missing)
   std::mutex _exceptions_mutex{};
-  thread_pool _tpool;
+  BS::thread_pool _tpool;
 
   static constexpr auto& model_internal_state_log_header = Config::model_internal_state_log_header;
 
   [[nodiscard]] bool ok() const noexcept;
 
-  [[nodiscard]] [[maybe_unused]] thread_pool instantiate_thread_pool() const;
+  [[nodiscard]] [[maybe_unused]] BS::thread_pool instantiate_thread_pool() const;
   template <typename I>
-  [[nodiscard]] inline static thread_pool instantiate_thread_pool(I nthreads, bool clamp_nthreads);
+  [[nodiscard]] inline static BS::thread_pool instantiate_thread_pool(I nthreads,
+                                                                      bool clamp_nthreads);
 
   /// Simulate loop extrusion using the parameters and buffers passed through \p state
   void simulate_one_cell(State& s) const;
@@ -207,24 +170,15 @@ class Simulation : Config {
   void simulate_window(State& state, compressed_io::Writer& out_stream, std::mutex& cooler_mtx,
                        bool write_contacts_to_cooler = false) const;
 
-  /// Advance the simulation window by one diagonal width.
-
-  //! Return false if the new window extends past the end of \p chrom
-  bool advance_window(TaskPW& base_task, const Chromosome& chrom) const;
-
-  /// Map barrier or features to the window specified by \p base_task.
-
-  //! Return false if the window doesn't have any barrier or is missing one or more type of
-  //! features
-  static bool map_barriers_to_window(TaskPW& base_task, const Chromosome& chrom);
-  static bool map_features_to_window(TaskPW& base_task, const Chromosome& chrom);
-
   /// Monitor the progress queue and write contacts to a .cool file when all the cells belonging to
   /// a given chromosome have been simulated.
 
   //! IMPORTANT: this function is meant to be run in a dedicated thread.
   void write_contacts_to_disk(std::deque<std::pair<Chromosome*, usize>>& progress_queue,
                               std::mutex& progress_queue_mtx);
+
+  /// Write LEF occupancy in 1D space to disk as a BigWig file
+  void write_1d_lef_occupancy_to_disk() const;
 
   /// Worker function used to run an instance of the simulation
 
@@ -238,14 +192,6 @@ class Simulation : Config {
                        std::deque<std::pair<Chromosome*, usize>>& progress_queue,
                        std::mutex& progress_queue_mtx, std::mutex& model_state_logger_mtx,
                        usize task_batch_size = 32);
-
-  void perturbate_worker(u64 tid,
-                         moodycamel::BlockingConcurrentQueue<Simulation::TaskPW>& task_queue,
-                         const std::filesystem::path& tmp_output_path, std::mutex& cooler_mtx,
-                         usize task_batch_size = 1);
-
-  void replay_worker(u64 tid, moodycamel::BlockingConcurrentQueue<Simulation::TaskPW>& task_queue,
-                     std::mutex& cooler_mtx, usize task_batch_size = 32);
 
   /// Bind inactive LEFs, then sort them by their genomic coordinates.
 
@@ -422,14 +368,22 @@ class Simulation : Config {
   /// in \p lefs whose index is present in \p selected_lef_idx.
   void register_contacts_loop(Chromosome& chrom, absl::Span<const Lef> lefs,
                               usize num_contacts_to_register, random::PRNG_t& rand_eng) const;
-  void register_contacts_loop(bp_t start_pos, bp_t end_pos, ContactMatrix<contacts_t>& contacts,
-                              absl::Span<const Lef> lefs, usize num_contacts_to_register,
-                              random::PRNG_t& rand_eng) const;
+  void register_contacts_loop(bp_t start_pos, bp_t end_pos,
+                              ContactMatrixDense<contacts_t>& contacts, absl::Span<const Lef> lefs,
+                              usize num_contacts_to_register, random::PRNG_t& rand_eng) const;
   void register_contacts_tad(Chromosome& chrom, absl::Span<const Lef> lefs,
                              usize num_contacts_to_register, random::PRNG_t& rand_eng) const;
-  void register_contacts_tad(bp_t start_pos, bp_t end_pos, ContactMatrix<contacts_t>& contacts,
+  void register_contacts_tad(bp_t start_pos, bp_t end_pos, ContactMatrixDense<contacts_t>& contacts,
                              absl::Span<const Lef> lefs, usize num_contacts_to_register,
                              random::PRNG_t& rand_eng) const;
+
+  void register_1d_lef_occupancy(Chromosome& chrom, absl::Span<const Lef> lefs,
+                                 usize num_sampling_events, random::PRNG_t& rand_eng) const;
+
+  void register_1d_lef_occupancy(bp_t start_pos, bp_t end_pos,
+                                 std::vector<std::atomic<u64>>& occupancy_buff,
+                                 absl::Span<const Lef> lefs, usize num_sampling_events,
+                                 random::PRNG_t& rand_eng) const;
 
   template <typename MaskT>
   inline static void select_lefs_to_bind(absl::Span<const Lef> lefs,
@@ -442,11 +396,6 @@ class Simulation : Config {
 
   [[nodiscard]] static std::pair<bp_t /*rev*/, bp_t /*fwd*/> compute_lef_lef_collision_pos(
       const ExtrusionUnit& rev_unit, const ExtrusionUnit& fwd_unit, bp_t rev_move, bp_t fwd_move);
-
-  [[nodiscard]] bed::BED_tree<> import_deletions() const;
-  [[nodiscard]] bed::BED_tree<> generate_deletions() const;
-  [[nodiscard]] static absl::flat_hash_set<usize> import_task_filter(
-      const std::filesystem::path& path_to_task_filter);
 
   [[noreturn]] void rethrow_exceptions() const;
   [[noreturn]] void handle_exceptions();
@@ -462,7 +411,7 @@ class Simulation : Config {
 
   void run_burnin(State& s, double lef_binding_rate_burnin) const;
 
-  void sample_and_register_contacts(State& s, usize num_contacts_to_sample) const;
+  void sample_and_register_contacts(State& s, usize num_sampling_events) const;
   void dump_stats(usize task_id, usize epoch, usize cell_id, bool burnin, const Chromosome& chrom,
                   absl::Span<const Lef> lefs, const ExtrusionBarriers& barriers,
                   absl::Span<const CollisionT> rev_lef_collisions,
@@ -484,7 +433,7 @@ class Simulation : Config {
   [[nodiscard]] constexpr bool run_lef_bar_collision_trial(double pblock,
                                                            random::PRNG_t& rand_eng) const noexcept;
 
-#ifdef ENABLE_TESTING
+#ifdef MODLE_ENABLE_TESTING
  public:
   template <class LefsT, class UsizeT, class MaskT>
   inline void test_bind_lefs(const Chromosome& chrom, LefsT& lefs, UsizeT& rev_lef_ranks,
@@ -646,16 +595,8 @@ struct fmt::formatter<modle::Simulation::Task> {
   // Formats the point p using the parsed format specification (presentation)
   // stored in this formatter.
   template <typename FormatContext>
-  inline auto format(const modle::Simulation::Task& t, FormatContext& ctx) -> decltype(ctx.out());
-};
-
-template <>
-struct fmt::formatter<modle::Simulation::TaskPW> {
-  inline constexpr auto parse(format_parse_context& ctx) -> decltype(ctx.begin());
-  // Formats the point p using the parsed format specification (presentation)
-  // stored in this formatter.
-  template <typename FormatContext>
-  inline auto format(const modle::Simulation::TaskPW& t, FormatContext& ctx) -> decltype(ctx.out());
+  inline auto format(const modle::Simulation::Task& t, FormatContext& ctx) const
+      -> decltype(ctx.out());
 };
 
 template <>
@@ -664,7 +605,8 @@ struct fmt::formatter<modle::Simulation::State> {
   // Formats the point p using the parsed format specification (presentation)
   // stored in this formatter.
   template <typename FormatContext>
-  inline auto format(const modle::Simulation::State& s, FormatContext& ctx) -> decltype(ctx.out());
+  inline auto format(const modle::Simulation::State& s, FormatContext& ctx) const
+      -> decltype(ctx.out());
 };
 
 #include "../../simulation_impl.hpp"  // IWYU pragma: export

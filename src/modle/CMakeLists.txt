@@ -33,7 +33,6 @@ target_link_system_libraries(
   absl::time
   Boost::headers
   CLI11::CLI11
-  fmt::fmt
   spdlog::spdlog
   tomlplusplus::tomlplusplus)
 

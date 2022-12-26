@@ -137,7 +137,8 @@ struct fmt::formatter<modle::ExtrusionBarrier> {
   char presentation = 's';  // s == short, f == full
   constexpr auto parse(format_parse_context& ctx) -> decltype(ctx.begin());
   template <typename FormatContext>
-  inline auto format(const modle::ExtrusionBarrier& b, FormatContext& ctx) -> decltype(ctx.out());
+  inline auto format(const modle::ExtrusionBarrier& b, FormatContext& ctx) const
+      -> decltype(ctx.out());
 };
 
 #include "../../extrusion_barriers_impl.hpp"

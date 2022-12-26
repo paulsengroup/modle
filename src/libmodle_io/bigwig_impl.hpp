@@ -17,30 +17,30 @@
 #include <type_traits>  // for is_arithmetic, is_signed
 #include <vector>       // for vector
 
-#include "libBigWig/bigWig.h"                           // for bwAddIntervalSpanSteps
+#include "libbigwig/bigWig.h"                           // for bwAddIntervalSpanSteps
 #include "modle/common/common.hpp"                      // for u32, u64, i32
 #include "modle/common/suppress_compiler_warnings.hpp"  // for DISABLE_WARNING_POP, DISABLE_WARN...
 
 namespace modle::io::bigwig {
 
 template <class Chromosomes>
-void Writer::write_chromosomes(const Chromosomes& chroms) {
+void Writer::write_chromosomes(Chromosomes& chroms) {
   const auto num_chroms = utils::conditional_static_cast<usize>(chroms.size());
 
   DISABLE_WARNING_PUSH
   DISABLE_WARNING_SHADOW
-  const auto chrom_names = [&]() {
-    std::vector<const char*> chrom_names(num_chroms);
+  auto chrom_names = [&]() {
+    std::vector<char*> chrom_names(num_chroms);
     std::transform(chroms.begin(), chroms.end(), chrom_names.begin(),
-                   [](const auto& chrom) { return chrom.first.c_str(); });
+                   [](auto& chrom) { return chrom.first.data(); });
     return chrom_names;
   }();
 
-  const auto chrom_sizes = [&]() {
+  auto chrom_sizes = [&]() {
     std::vector<u32> chrom_sizes(num_chroms);
 
     using chrom_size_t = decltype(chroms.begin()->second);
-    std::transform(chroms.begin(), chroms.end(), chrom_sizes.begin(), [](const auto& chrom) {
+    std::transform(chroms.begin(), chroms.end(), chrom_sizes.begin(), [](auto& chrom) {
       if constexpr (const auto max_val = (std::numeric_limits<u32>::max)();
                     (std::numeric_limits<chrom_size_t>::max)() > max_val) {
         if (chrom.second > max_val) {
@@ -65,33 +65,12 @@ void Writer::write_chromosomes(const Chromosomes& chroms) {
   }();
   DISABLE_WARNING_POP
 
-  this->write_chromosomes(chrom_names.data(), chrom_sizes.data(), chroms.size());
-}
-
-template <class Str>
-void Writer::write_chromosomes(const absl::Span<Str> chrom_names,
-                               const absl::Span<const u32> chrom_sizes) {
-  assert(chrom_names.size() == chrom_sizes.size());
-  if constexpr (std::is_same_v<std::remove_cv_t<Str>, char**>) {
-    write_chromosomes(chrom_names.data(), chrom_sizes.data(), chrom_names.size());
-  }
-
-  DISABLE_WARNING_PUSH
-  DISABLE_WARNING_SHADOW
-  const auto chrom_names_c = [&chrom_names]() {
-    std::vector<const char*> chrom_names_c(chrom_names.size());
-    std::transform(chrom_names.begin(), chrom_names.end(), chrom_names_c.begin(),
-                   [](const auto& name) { return name.c_str(); });
-    return chrom_names;
-  }();
-  DISABLE_WARNING_POP
-
-  this->write_chromosomes(chrom_names_c.data(), chrom_sizes.data(), chrom_names_c.size());
+  this->write_chromosomes(chrom_names.data(), chrom_sizes.data(), num_chroms);
 }
 
 template <class N, class>
 void Writer::write_range(std::string_view chrom_name, const absl::Span<N> values, u64 span,
-                         u64 step) {
+                         u64 step, u64 offset) {
   assert(this->_initialized);
   assert(this->_fp);
   std::vector<float> fvalues;
@@ -109,7 +88,7 @@ void Writer::write_range(std::string_view chrom_name, const absl::Span<N> values
 
   auto chrom_name_tmp = std::string{chrom_name};
   // NOLINTNEXTLINE(readability-implicit-bool-conversion)
-  if (bwAddIntervalSpanSteps(this->_fp, chrom_name_tmp.data(), this->_offset,
+  if (bwAddIntervalSpanSteps(this->_fp, chrom_name_tmp.data(), static_cast<u32>(offset),
                              static_cast<u32>(span), static_cast<u32>(step), fvalues_span.data(),
                              static_cast<u32>(fvalues_span.size()))) {
     throw std::runtime_error(

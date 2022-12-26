@@ -9,7 +9,8 @@
 #include <absl/time/clock.h>           // for Now
 #include <absl/time/time.h>            // for FormatDuration, operator-, Time
 #include <fmt/format.h>                // for format, make_format_args, vformat_to
-#include <spdlog/spdlog.h>             // for info
+#include <fmt/std.h>
+#include <spdlog/spdlog.h>  // for info
 
 #include <algorithm>  // for max, max_element, find_if
 #include <cassert>    // for assert
@@ -27,10 +28,10 @@
 #include "modle/bed/bed.hpp"                  // for BED, Parser, BED_tree, BED_tree::at
 #include "modle/chrom_sizes/chrom_sizes.hpp"  // for Parser
 #include "modle/common/common.hpp"            // for bp_t, u32, u64, u8
-#include "modle/common/fmt_std_helper.hpp"
+#include "modle/common/fmt_helpers.hpp"
 #include "modle/common/suppress_compiler_warnings.hpp"  // for DISABLE_WARNING_PUSH, DISABLE_WAR...
 #include "modle/common/utils.hpp"                       // for XXH3_Deleter, ndebug_defined, XXH...
-#include "modle/contacts.hpp"                           // for ContactMatrix
+#include "modle/contact_matrix_dense.hpp"               // for ContactMatrixDense
 #include "modle/extrusion_barriers.hpp"                 // for ExtrusionBarrier
 
 namespace modle {
@@ -95,8 +96,7 @@ Chromosome::Chromosome(const Chromosome& other)
       _size(other._size),
       _id(other._id),
       _barriers(other._barriers),
-      _contacts(other._contacts),
-      _features(other._features) {
+      _contacts(other._contacts) {
   _barriers.make_BST();
 }
 
@@ -107,8 +107,7 @@ Chromosome::Chromosome(Chromosome&& other) noexcept
       _size(other._size),
       _id(other._id),
       _barriers(std::move(other._barriers)),
-      _contacts(std::move(other._contacts)),
-      _features(std::move(other._features)) {
+      _contacts(std::move(other._contacts)) {
   _barriers.make_BST();
 }
 
@@ -124,7 +123,6 @@ Chromosome& Chromosome::operator=(const Chromosome& other) {
   _end = other._end;
   _barriers = other._barriers;
   _contacts = other._contacts;
-  _features = other._features;
 
   _barriers.make_BST();
 
@@ -143,7 +141,6 @@ Chromosome& Chromosome::operator=(Chromosome&& other) noexcept {
   _end = other._end;
   _barriers = std::move(other._barriers);
   _contacts = std::move(other._contacts);
-  _features = std::move(other._features);
 
   _barriers.make_BST();
 
@@ -220,12 +217,9 @@ usize Chromosome::num_barriers() const { return this->_barriers.size(); }
 
 const IITree<bp_t, ExtrusionBarrier>& Chromosome::barriers() const { return this->_barriers; }
 IITree<bp_t, ExtrusionBarrier>& Chromosome::barriers() { return this->_barriers; }
-absl::Span<const Chromosome::bed_tree_value_t> Chromosome::get_features() const {
-  return this->_features;
-}
 
-bool Chromosome::allocate_contacts(bp_t bin_size, bp_t diagonal_width) {
-  if (std::scoped_lock lck(this->_contacts_mtx); !this->_contacts) {
+bool Chromosome::allocate_contact_matrix(bp_t bin_size, bp_t diagonal_width) {
+  if (std::scoped_lock lck(this->_buff_mtx); !this->_contacts) {
     this->_contacts =
         std::make_shared<contact_matrix_t>(this->simulated_size(), diagonal_width, bin_size);
     return true;
@@ -233,9 +227,28 @@ bool Chromosome::allocate_contacts(bp_t bin_size, bp_t diagonal_width) {
   return false;
 }
 
-bool Chromosome::deallocate_contacts() {
-  if (std::scoped_lock lck(this->_contacts_mtx); this->_contacts) {
+bool Chromosome::allocate_lef_occupancy_buffer(modle::bp_t bin_size) {
+  if (std::scoped_lock lck(this->_buff_mtx); !this->_lef_1d_occupancy) {
+    using BuffT = std::vector<std::atomic<u64>>;
+    const auto buff_size = (this->size() + bin_size - 1) / bin_size;
+    this->_lef_1d_occupancy = std::make_shared<BuffT>(buff_size);
+    std::fill(this->_lef_1d_occupancy->begin(), this->_lef_1d_occupancy->end(), 0);
+    return true;
+  }
+  return false;
+}
+
+bool Chromosome::deallocate_contact_matrix() {
+  if (std::scoped_lock lck(this->_buff_mtx); this->_contacts) {
     this->_contacts = nullptr;
+    return true;
+  }
+  return false;
+}
+
+bool Chromosome::deallocate_lef_occupancy_buffer() {
+  if (std::scoped_lock lck(this->_buff_mtx); this->_lef_1d_occupancy) {
+    this->_lef_1d_occupancy = nullptr;
     return true;
   }
   return false;
@@ -246,26 +259,51 @@ usize Chromosome::npixels() const {
   return this->contacts().npixels();
 }
 
-const Chromosome::contact_matrix_t& Chromosome::contacts() const {
+const Chromosome::contact_matrix_t& Chromosome::contacts() const noexcept {
   assert(this->_contacts);
   return *this->_contacts;
 }
 
-Chromosome::contact_matrix_t& Chromosome::contacts() {
+Chromosome::contact_matrix_t& Chromosome::contacts() noexcept {
   assert(this->_contacts);
   return *this->_contacts;
 }
 
-std::shared_ptr<const Chromosome::contact_matrix_t> Chromosome::contacts_ptr() const {
+const std::vector<std::atomic<u64>>& Chromosome::lef_1d_occupancy() const noexcept {
+  assert(this->_lef_1d_occupancy);
+  return *this->_lef_1d_occupancy;
+}
+
+std::vector<std::atomic<u64>>& Chromosome::lef_1d_occupancy() noexcept {
+  assert(this->_lef_1d_occupancy);
+  return *this->_lef_1d_occupancy;
+}
+
+std::shared_ptr<const Chromosome::contact_matrix_t> Chromosome::contacts_ptr() const noexcept {
   if (this->_contacts) {
     return this->_contacts;
   }
   return nullptr;
 }
 
-std::shared_ptr<Chromosome::contact_matrix_t> Chromosome::contacts_ptr() {
+std::shared_ptr<Chromosome::contact_matrix_t> Chromosome::contacts_ptr() noexcept {
   if (this->_contacts) {
     return this->_contacts;
+  }
+  return nullptr;
+}
+
+std::shared_ptr<const std::vector<std::atomic<u64>>> Chromosome::lef_1d_occupancy_ptr()
+    const noexcept {
+  if (this->_lef_1d_occupancy) {
+    return this->_lef_1d_occupancy;
+  }
+  return nullptr;
+}
+
+std::shared_ptr<std::vector<std::atomic<u64>>> Chromosome::lef_1d_occupancy_ptr() noexcept {
+  if (this->_lef_1d_occupancy) {
+    return this->_lef_1d_occupancy;
   }
   return nullptr;
 }
@@ -299,11 +337,11 @@ u64 Chromosome::hash(u64 seed, usize cell_id) const {
 Genome::Genome(const std::filesystem::path& path_to_chrom_sizes,
                const std::filesystem::path& path_to_extr_barriers,
                const std::filesystem::path& path_to_chrom_subranges,
-               const absl::Span<const std::filesystem::path> paths_to_extra_features,
-               const double ctcf_prob_occ_to_occ, const double ctcf_prob_nocc_to_nocc)
+               const double default_barrier_pbb, const double default_barrier_puu,
+               bool interpret_name_field_as_puu)
     : _chromosomes(instantiate_genome(path_to_chrom_sizes, path_to_extr_barriers,
-                                      path_to_chrom_subranges, paths_to_extra_features,
-                                      ctcf_prob_occ_to_occ, ctcf_prob_nocc_to_nocc)) {}
+                                      path_to_chrom_subranges, default_barrier_pbb,
+                                      default_barrier_puu, interpret_name_field_as_puu)) {}
 
 absl::btree_set<Chromosome> Genome::import_chromosomes(
     const std::filesystem::path& path_to_chrom_sizes,
@@ -386,8 +424,8 @@ absl::btree_set<Chromosome> Genome::import_chromosomes(
 
 usize Genome::import_barriers(absl::btree_set<Chromosome>& chromosomes,
                               const std::filesystem::path& path_to_extr_barriers,
-                              const double ctcf_prob_occ_to_occ,
-                              const double ctcf_prob_nocc_to_nocc) {
+                              double default_barrier_pbb, double default_barrier_puu,
+                              bool interpret_name_field_as_puu) {
   assert(!chromosomes.empty());
   assert(!path_to_extr_barriers.empty());
 
@@ -409,7 +447,20 @@ usize Genome::import_barriers(absl::btree_set<Chromosome>& chromosomes,
                          "between 0 and 1, got {:.4g}."),
               record.chrom, record.chrom_start, record.chrom_end, record.score));
         }
-        chrom.add_extrusion_barrier(record, ctcf_prob_occ_to_occ, ctcf_prob_nocc_to_nocc);
+
+        if (interpret_name_field_as_puu) {
+          const auto puu = utils::parse_numeric_or_throw<double>(record.name);
+          if (puu < 0 || puu > 1) {
+            throw std::runtime_error(fmt::format(
+                FMT_STRING(
+                    "Invalid score field detected for record {}[{}-{}]: expected name field to be "
+                    "between 0 and 1, got {:.4g}."),
+                record.chrom, record.chrom_start, record.chrom_end, puu));
+          }
+          chrom.add_extrusion_barrier(record, default_barrier_pbb, puu);
+        } else {
+          chrom.add_extrusion_barrier(record, default_barrier_pbb, default_barrier_puu);
+        }
         ++tot_num_barriers;
       }
     }
@@ -420,37 +471,11 @@ usize Genome::import_barriers(absl::btree_set<Chromosome>& chromosomes,
   return tot_num_barriers;
 }
 
-usize Genome::import_extra_features(absl::btree_set<Chromosome>& chromosomes,
-                                    const std::filesystem::path& path_to_extra_features) {
-  assert(!chromosomes.empty());
-  assert(!path_to_extra_features.empty());
-
-  const auto t0 = absl::Now();
-  spdlog::info(FMT_STRING("Importing features from the following file: {}..."),
-               path_to_extra_features);
-  usize num_features = 0;
-
-  // Parse all the records from the BED file. The parser will throw in case of duplicates.
-  const auto features = bed::Parser(path_to_extra_features, bed::BED::Dialect::autodetect)
-                            .parse_all_in_interval_tree();
-
-  for (auto& chrom : chromosomes) {
-    if (const auto chrom_name = std::string{chrom.name()}; features.contains(chrom_name)) {
-      const auto element = chrom._features.emplace_back(features.at(chrom_name));
-      num_features += element.size();
-    }
-  }
-  spdlog::info(FMT_STRING("Imported {} features in {}."), num_features,
-               absl::FormatDuration(absl::Now() - t0));
-  return num_features;
-}
-
 absl::btree_set<Chromosome> Genome::instantiate_genome(
     const std::filesystem::path& path_to_chrom_sizes,
     const std::filesystem::path& path_to_extr_barriers,
-    const std::filesystem::path& path_to_chrom_subranges,
-    const absl::Span<const std::filesystem::path> paths_to_extra_features,
-    const double ctcf_prob_occ_to_occ, const double ctcf_prob_nocc_to_nocc) {
+    const std::filesystem::path& path_to_chrom_subranges, double default_barrier_pbb,
+    double default_barrier_puu, bool interpret_name_field_as_puu) {
   auto chroms = import_chromosomes(path_to_chrom_sizes, path_to_chrom_subranges);
 
   if (chroms.empty()) {
@@ -468,16 +493,13 @@ absl::btree_set<Chromosome> Genome::instantiate_genome(
   }
 
   const auto tot_barriers_imported =
-      import_barriers(chroms, path_to_extr_barriers, ctcf_prob_occ_to_occ, ctcf_prob_nocc_to_nocc);
+      import_barriers(chroms, path_to_extr_barriers, default_barrier_pbb, default_barrier_puu,
+                      interpret_name_field_as_puu);
   if (tot_barriers_imported == 0) {
     spdlog::warn(
         FMT_STRING(
             "Unable to import any barrier from file {}. Please make sure this was not a mistake."),
         path_to_extr_barriers);
-  }
-
-  for (const auto& path_to_feature_bed : paths_to_extra_features) {
-    import_extra_features(chroms, path_to_feature_bed);
   }
 
   return chroms;
@@ -525,7 +547,7 @@ usize Genome::size() const {
 }
 
 usize Genome::number_of_chromosomes() const {
-  return static_cast<usize>(this->_chromosomes.size());
+  return utils::conditional_static_cast<usize>(this->_chromosomes.size());
 }
 
 usize Genome::simulated_size() const {

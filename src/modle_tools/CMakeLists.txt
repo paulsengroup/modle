@@ -4,6 +4,7 @@
 
 find_package(absl CONFIG REQUIRED)
 find_package(Boost CONFIG REQUIRED)
+find_package(bshoshany-thread-pool CONFIG REQUIRED)
 find_package(CLI11 CONFIG REQUIRED)
 find_package(cpp-sort CONFIG REQUIRED)
 find_package(readerwriterqueue CONFIG REQUIRED)
@@ -18,14 +19,13 @@ target_sources(
           ${CMAKE_CURRENT_SOURCE_DIR}/include/modle_tools/modle_tools_config.hpp
           ${CMAKE_CURRENT_SOURCE_DIR}/cli.cpp
           ${CMAKE_CURRENT_SOURCE_DIR}/eval.cpp
-          ${CMAKE_CURRENT_SOURCE_DIR}/find_barrier_clusters.cpp
-          ${CMAKE_CURRENT_SOURCE_DIR}/noisify.cpp
           ${CMAKE_CURRENT_SOURCE_DIR}/transform.cpp)
 
 target_link_libraries(
   modle_tools
   PRIVATE project_warnings
           project_options
+          fmt::fmt
           Modle::cmatrix
           Modle::common
           Modle::config
@@ -51,13 +51,12 @@ target_link_system_libraries(
   absl::time
   absl::variant
   Boost::headers
+  bshoshany-thread-pool::bshoshany-thread-pool
   CLI11::CLI11
   cpp-sort::cpp-sort
-  fmt::fmt
   readerwriterqueue::readerwriterqueue
   tomlplusplus::tomlplusplus
-  spdlog::spdlog
-  thread-pool)
+  spdlog::spdlog)
 
 target_include_directories(modle_tools PRIVATE include)
 

@@ -43,15 +43,10 @@ struct Config {
   std::filesystem::path path_to_config_file{};
   std::filesystem::path path_to_log_file;
   std::filesystem::path path_to_model_state_log_file;
+  std::filesystem::path path_to_lef_1d_occupancy_bw_file;
   std::filesystem::path path_to_extr_barriers;
   bool force{false};
   bool quiet{false};
-  std::filesystem::path path_to_reference_contacts{};
-  std::vector<std::filesystem::path> path_to_feature_bed_files{};
-  std::filesystem::path path_to_output_file_bedpe{};
-  std::filesystem::path path_to_deletion_bed{};
-  std::filesystem::path path_to_task_file;
-  std::filesystem::path path_to_task_filter_file{};
   bool write_header{true};
   bool skip_output{false};
   bool log_model_internal_state{false};
@@ -82,12 +77,14 @@ struct Config {
   double prob_of_lef_release_burnin{};
   bp_t avg_lef_processivity{300'000};
   bp_t contact_sampling_interval{50'000};
+  bool track_1d_lef_position{false};
 
   // Extrusion barrier params
   double extrusion_barrier_occupancy{0.825};
   bool override_extrusion_barrier_occupancy{false};
   double barrier_occupied_stp{0.0};
   double barrier_not_occupied_stp{0.70};
+  bool interpret_bed_name_field_as_barrier_not_occupied_stp{false};
 
   // Collision/stall params
   double hard_stall_lef_stability_multiplier{5.0};
@@ -103,11 +100,6 @@ struct Config {
   u64 seed{0};
   bp_t probability_normalization_factor{rev_extrusion_speed + fwd_extrusion_speed};
   bool normalize_probabilities{true};
-
-  // MoDLE perturbate
-  bp_t deletion_size{10'000};
-  bool compute_reference_matrix{false};
-  usize block_size{9};
 
   // Burn-in
   bool skip_burnin{false};
@@ -128,7 +120,7 @@ struct Config {
       "num_secondary_lef_lef_collisions\tavg_loop_size\n";
 
   absl::Span<char*> args;
-  std::string argv_json{};
+  std::string args_json{};
 };
 
 }  // namespace modle

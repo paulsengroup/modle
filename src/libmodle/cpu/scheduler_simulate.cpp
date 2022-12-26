@@ -6,38 +6,66 @@
 #include "modle/simulation.hpp"
 // clang-format on
 
-#include <absl/container/btree_map.h>            // for btree_iterator
-#include <absl/container/fixed_array.h>          // for FixedArray
-#include <absl/types/span.h>                     // for MakeConstSpan, Span
-#include <fmt/format.h>                          // for make_format_args, vformat_to, FMT_STRING
+#include <absl/container/btree_map.h>    // for btree_iterator
+#include <absl/container/fixed_array.h>  // for FixedArray
+#include <absl/strings/str_format.h>     // StrAppendFormat
+#include <absl/types/span.h>             // for MakeConstSpan, Span
+#include <fmt/format.h>                  // for make_format_args, vformat_to, FMT_STRING
+#include <fmt/std.h>
 #include <moodycamel/blockingconcurrentqueue.h>  // for BlockingConcurrentQueue
 #include <moodycamel/concurrentqueue.h>          // for ConsumerToken, ProducerToken
 #include <spdlog/spdlog.h>                       // for info
 
-#include <algorithm>                    // for max, copy, min, find_if, generate
-#include <atomic>                       // for atomic
-#include <cassert>                      // for assert
-#include <chrono>                       // for microseconds, milliseconds
-#include <cmath>                        // for round
-#include <deque>                        // for deque, operator-, operator!=, _Deque_ite...
-#include <exception>                    // for exception_ptr, exception, current_exception
-#include <filesystem>                   // for path
-#include <iterator>                     // for move_iterator, make_move_iterator
-#include <limits>                       // for numeric_limits
-#include <mutex>                        // for mutex, scoped_lock
-#include <stdexcept>                    // for runtime_error
-#include <thread>                       // IWYU pragma: keep for sleep_for
-#include <thread_pool/thread_pool.hpp>  // for thread_pool
-#include <utility>                      // for pair
-#include <vector>                       // for vector
+#include <BS_thread_pool.hpp>  // for BS::thread_pool
+#include <algorithm>           // for max, copy, min, find_if, generate
+#include <atomic>              // for atomic
+#include <cassert>             // for assert
+#include <chrono>              // for microseconds, milliseconds
+#include <cmath>               // for round
+#include <deque>               // for deque, operator-, operator!=, _Deque_ite...
+#include <exception>           // for exception_ptr, exception, current_exception
+#include <filesystem>          // for path
+#include <iterator>            // for move_iterator, make_move_iterator
+#include <limits>              // for numeric_limits
+#include <mutex>               // for mutex, scoped_lock
+#include <stdexcept>           // for runtime_error
+#include <thread>              // IWYU pragma: keep for sleep_for
+#include <utility>             // for pair
+#include <vector>              // for vector
 
 #include "modle/common/common.hpp"  // for u64
-#include "modle/common/fmt_std_helper.hpp"
+#include "modle/common/fmt_helpers.hpp"
 #include "modle/common/suppress_compiler_warnings.hpp"  // for DISABLE_WARNING_POP, DISABLE_WARN...
 #include "modle/genome.hpp"                             // for Chromosome, Genome
 #include "modle/interval_tree.hpp"                      // for IITree, IITree::data
 
 namespace modle {
+
+void Simulation::rethrow_exceptions() const {
+  assert(!this->ok());
+  assert(!this->_exceptions.empty());
+
+  std::string error_msg = "The following error(s) occurred while simulating loop extrusion:";
+  for (const auto& exc_ptr : this->_exceptions) {
+    try {
+      std::rethrow_exception(exc_ptr);
+    } catch (const std::exception& e) {
+      absl::StrAppendFormat(&error_msg, "\n  %s", e.what());
+    } catch (...) {
+      absl::StrAppend(&error_msg,
+                      "\n  An unhandled exception was caught! This should never happen! If you see "
+                      "this message, please file an issue on GitHub.");
+    }
+  }
+  throw std::runtime_error(error_msg);
+}
+
+void Simulation::handle_exceptions() {
+  assert(!this->ok());
+  spdlog::error(FMT_STRING("MoDLE encountered an exception. Shutting down worker threads..."));
+  this->_tpool.wait_for_tasks();  // Wait on simulate_worker threads
+  this->rethrow_exceptions();
+}
 
 // NOLINTNEXTLINE(readability-function-cognitive-complexity)
 void Simulation::run_simulate() {
@@ -47,10 +75,7 @@ void Simulation::run_simulate() {
       std::filesystem::remove(this->path_to_output_file_cool);
     }
   }
-  DISABLE_WARNING_PUSH
-  DISABLE_WARNING_SHORTEN_64_TO_32
-  this->_tpool.reset(this->nthreads + 1);
-  DISABLE_WARNING_POP
+  this->_tpool.reset(utils::conditional_static_cast<BS::concurrency_t>(this->nthreads + 1));
 
   // These are the threads spawned by run_simulate:
   // - 1 thread to write contacts to disk. This thread pops Chromosome* from a std::deque once the
@@ -151,8 +176,13 @@ void Simulation::run_simulate() {
               target_contacts_per_cell, tot_target_contacts - tot_target_contacts_rolling_count);
           tot_target_contacts_rolling_count += effective_target_contacts;
 
-          return Task{{taskid++, &chrom, cellid++, target_epochs, effective_target_contacts, nlefs,
-                       chrom.barriers().data()}};
+          return Task{taskid++,
+                      &chrom,
+                      cellid++,
+                      target_epochs,
+                      effective_target_contacts,
+                      nlefs,
+                      chrom.barriers().data()};
         });
         const auto ntasks =
             cellid > this->num_cells ? tasks.size() - (cellid - this->num_cells) : tasks.size();
@@ -173,11 +203,14 @@ void Simulation::run_simulate() {
       progress_queue.emplace_back(nullptr, usize(0));
     }
     this->_tpool.wait_for_tasks();
+    if (this->track_1d_lef_position) {
+      this->write_1d_lef_occupancy_to_disk();
+    }
     assert(this->_end_of_simulation);
     assert(!this->_exception_thrown);
   } catch (...) {
     this->_exception_thrown = true;
-    this->_tpool.paused = true;
+    this->_tpool.pause();
     this->_tpool.wait_for_tasks();
     throw;
   }
@@ -232,7 +265,10 @@ void Simulation::simulate_worker(const u64 tid,
           return;
         }
         // Resize and reset buffers
-        task.chrom->allocate_contacts(this->bin_size, this->diagonal_width);
+        task.chrom->allocate_contact_matrix(this->bin_size, this->diagonal_width);
+        if (this->track_1d_lef_position) {
+          task.chrom->allocate_lef_occupancy_buffer(this->bin_size);
+        }
         local_state = task;            // Set simulation state based on task data
         local_state.resize_buffers();  // This resizes buffers based on the nlefs to be simulated
         local_state.reset_buffers();   // Clear all buffers

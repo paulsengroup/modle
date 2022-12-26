@@ -8,6 +8,7 @@
 #include <cpp-sort/comparators/natural_less.h>
 #include <cpp-sort/sorters/insertion_sorter.h>
 #include <fmt/format.h>  // for compile_string_to_view, FMT_STRING, formatbu...
+#include <fmt/std.h>
 
 #include <algorithm>   // for transform
 #include <cctype>      // for isalpha
@@ -20,7 +21,7 @@
 #include <string>       // for string, basic_string
 #include <string_view>  // for string_view
 
-#include "modle/common/fmt_std_helper.hpp"
+#include "modle/common/fmt_helpers.hpp"
 #include "modle/common/numeric_utils.hpp"  // for parse_numeric_or_throw
 #include "modle/common/suppress_compiler_warnings.hpp"
 

@@ -4,25 +4,26 @@
 
 #pragma once
 
-#include <atomic>                       // for atomic_fetch_add_explicit
-#include <cassert>                      // for assert
-#include <cmath>                        // for sqrt
-#include <fstream>                      // IWYU pragma: keep for ifstream
-#include <thread_pool/thread_pool.hpp>  // for thread_pool, parallelize_loop
-#include <vector>                       // for vector
+#include <BS_thread_pool.hpp>  // for BS::thread_pool, parallelize_loop
+#include <atomic>              // for atomic_fetch_add_explicit
+#include <cassert>             // for assert
+#include <cmath>               // for sqrt
+#include <fstream>             // IWYU pragma: keep for ifstream
+#include <vector>              // for vector
 
 #include "modle/common/common.hpp"  // for usize, i64, u64, bp_t, isize
 #include "modle/common/random.hpp"  // for PRNG, uniform_int_distribution, unifo...
 #include "modle/common/suppress_compiler_warnings.hpp"
 #include "modle/common/utils.hpp"                 // for convolve ndebug_defined, ndebug_not_defined
 #include "modle/compressed_io/compressed_io.hpp"  // for CompressedReader
-#include "modle/stats/misc.hpp"                   // for compute_gauss_kernel
+#include "modle/internal/contact_matrix_internal.hpp"  // for transpose_coords
+#include "modle/stats/misc.hpp"                        // for compute_gauss_kernel
 
 namespace modle {
 
 template <class N>
-N ContactMatrix<N>::get(const usize row, const usize col) const {
-  const auto [i, j] = transpose_coords(row, col);
+N ContactMatrixDense<N>::get(const usize row, const usize col) const {
+  const auto [i, j] = internal::transpose_coords(row, col);
   this->bound_check_coords(i, j);
 
   if (i >= this->nrows()) {
@@ -34,12 +35,12 @@ N ContactMatrix<N>::get(const usize row, const usize col) const {
 }
 
 template <class N>
-void ContactMatrix<N>::set(const usize row, const usize col, const N n) {
-  const auto [i, j] = this->transpose_coords(row, col);
+void ContactMatrixDense<N>::set(const usize row, const usize col, const N n) {
+  const auto [i, j] = internal::transpose_coords(row, col);
   this->bound_check_coords(i, j);
 
-  if (i > this->nrows()) {
-    std::atomic_fetch_add_explicit(&this->_updates_missed, i64(1), std::memory_order_relaxed);
+  if (i >= this->nrows()) {
+    std::atomic_fetch_add_explicit(&this->_updates_missed, usize(1), std::memory_order_relaxed);
     return;
   }
 
@@ -49,13 +50,13 @@ void ContactMatrix<N>::set(const usize row, const usize col, const N n) {
 }
 
 template <class N>
-void ContactMatrix<N>::add(const usize row, const usize col, const N n) {
+void ContactMatrixDense<N>::add(const usize row, const usize col, const N n) {
   assert(n > 0);
-  const auto [i, j] = transpose_coords(row, col);
+  const auto [i, j] = internal::transpose_coords(row, col);
   this->bound_check_coords(i, j);
 
-  if (i > this->nrows()) {
-    std::atomic_fetch_add_explicit(&this->_updates_missed, i64(1), std::memory_order_relaxed);
+  if (i >= this->nrows()) {
+    std::atomic_fetch_add_explicit(&this->_updates_missed, usize(1), std::memory_order_relaxed);
     return;
   }
 
@@ -65,13 +66,13 @@ void ContactMatrix<N>::add(const usize row, const usize col, const N n) {
 }
 
 template <class N>
-void ContactMatrix<N>::subtract(const usize row, const usize col, const N n) {
+void ContactMatrixDense<N>::subtract(const usize row, const usize col, const N n) {
   assert(n >= 0);
-  const auto [i, j] = transpose_coords(row, col);
+  const auto [i, j] = internal::transpose_coords(row, col);
   this->bound_check_coords(i, j);
 
-  if (i > this->nrows()) {
-    std::atomic_fetch_add_explicit(&this->_updates_missed, i64(1), std::memory_order_relaxed);
+  if (i >= this->nrows()) {
+    std::atomic_fetch_add_explicit(&this->_updates_missed, usize(1), std::memory_order_relaxed);
     return;
   }
 
@@ -81,17 +82,17 @@ void ContactMatrix<N>::subtract(const usize row, const usize col, const N n) {
 }
 
 template <class N>
-void ContactMatrix<N>::increment(usize row, usize col) {
+void ContactMatrixDense<N>::increment(usize row, usize col) {
   this->add(row, col, N(1));
 }
 
 template <class N>
-void ContactMatrix<N>::decrement(usize row, usize col) {
+void ContactMatrixDense<N>::decrement(usize row, usize col) {
   this->subtract(row, col, N(1));
 }
 
 template <class N>
-double ContactMatrix<N>::get_fraction_of_missed_updates() const {
+double ContactMatrixDense<N>::get_fraction_of_missed_updates() const {
   if (this->empty() || this->get_n_of_missed_updates() == N(0)) {
     return 0.0;
   }
@@ -101,12 +102,12 @@ double ContactMatrix<N>::get_fraction_of_missed_updates() const {
 }
 
 template <class N>
-double ContactMatrix<N>::get_avg_contact_density() const {
+double ContactMatrixDense<N>::get_avg_contact_density() const {
   return static_cast<double>(this->get_tot_contacts()) / static_cast<double>(this->npixels());
 }
 
 template <class N>
-auto ContactMatrix<N>::get_tot_contacts() const -> sum_t {
+auto ContactMatrixDense<N>::get_tot_contacts() const -> SumT {
   if (this->_global_stats_outdated) {
     const auto lck = this->lock();
     return this->unsafe_get_tot_contacts();
@@ -115,7 +116,7 @@ auto ContactMatrix<N>::get_tot_contacts() const -> sum_t {
 }
 
 template <class N>
-usize ContactMatrix<N>::get_nnz() const {
+usize ContactMatrixDense<N>::get_nnz() const {
   if (this->_global_stats_outdated) {
     const auto lck = this->lock();
     return this->unsafe_get_nnz();
@@ -124,7 +125,7 @@ usize ContactMatrix<N>::get_nnz() const {
 }
 
 template <class N>
-N ContactMatrix<N>::get_min_count() const noexcept {
+N ContactMatrixDense<N>::get_min_count() const noexcept {
   if (this->get_tot_contacts() == 0) {
     return 0;
   }
@@ -133,7 +134,7 @@ N ContactMatrix<N>::get_min_count() const noexcept {
 }
 
 template <class N>
-N ContactMatrix<N>::get_max_count() const noexcept {
+N ContactMatrixDense<N>::get_max_count() const noexcept {
   if (this->get_tot_contacts() == 0) {
     return 0;
   }
@@ -142,15 +143,15 @@ N ContactMatrix<N>::get_max_count() const noexcept {
 }
 
 template <class N>
-void ContactMatrix<N>::reset() {
+void ContactMatrixDense<N>::reset() {
   const auto lck = this->exclusive_lock();
   this->unsafe_reset();
 }
 
 template <class N>
-ContactMatrix<double> ContactMatrix<N>::blur(const double sigma, const double cutoff,
-                                             thread_pool* tpool) const {
-  ContactMatrix<double> bmatrix(this->nrows(), this->ncols());
+ContactMatrixDense<double> ContactMatrixDense<N>::blur(const double sigma, const double cutoff,
+                                                       BS::thread_pool* tpool) const {
+  ContactMatrixDense<double> bmatrix(this->nrows(), this->ncols());
   if (this->empty()) {
     return bmatrix;
   }
@@ -172,7 +173,8 @@ ContactMatrix<double> ContactMatrix<N>::blur(const double sigma, const double cu
 
   const auto lck = this->lock();
   if (tpool) {
-    tpool->template parallelize_loop(usize(0), this->ncols(), apply_kernel);
+    auto fut = tpool->template parallelize_loop(usize(0), this->ncols(), apply_kernel);
+    fut.wait();
   } else {
     apply_kernel(0, this->ncols());
   }
@@ -180,12 +182,13 @@ ContactMatrix<double> ContactMatrix<N>::blur(const double sigma, const double cu
 }
 
 template <class N>
-ContactMatrix<double> ContactMatrix<N>::gaussian_diff(const double sigma1, const double sigma2,
-                                                      const double min_value,
-                                                      const double max_value,
-                                                      thread_pool* tpool) const {
+ContactMatrixDense<double> ContactMatrixDense<N>::gaussian_diff(const double sigma1,
+                                                                const double sigma2,
+                                                                const double min_value,
+                                                                const double max_value,
+                                                                BS::thread_pool* tpool) const {
   assert(sigma1 <= sigma2);
-  ContactMatrix<double> bmatrix(this->nrows(), this->ncols());
+  ContactMatrixDense<double> bmatrix(this->nrows(), this->ncols());
   if (this->empty()) {
     return bmatrix;
   }
@@ -217,7 +220,8 @@ ContactMatrix<double> ContactMatrix<N>::gaussian_diff(const double sigma1, const
 
   const auto lck = this->lock();
   if (tpool) {
-    tpool->template parallelize_loop(usize(0), this->ncols(), compute_gauss_diff);
+    auto fut = tpool->template parallelize_loop(usize(0), this->ncols(), compute_gauss_diff);
+    fut.wait();
   } else {
     compute_gauss_diff(0, this->ncols());
   }
@@ -226,60 +230,60 @@ ContactMatrix<double> ContactMatrix<N>::gaussian_diff(const double sigma1, const
 
 template <class N>
 template <class FP, class>
-ContactMatrix<FP> ContactMatrix<N>::normalize(const double lb, const double ub) const {
+ContactMatrixDense<FP> ContactMatrixDense<N>::normalize(const double lb, const double ub) const {
   const auto lck = this->lock();
   return this->unsafe_normalize(lb, ub);
 }
 
 template <class N>
-inline void ContactMatrix<N>::normalize_inplace(const N lb, const N ub) noexcept {
+inline void ContactMatrixDense<N>::normalize_inplace(const N lb, const N ub) noexcept {
   const auto lck = this->lock();
   this->unsafe_normalize_inplace(lb, ub);
 }
 
 template <class N>
-ContactMatrix<N> ContactMatrix<N>::clamp(const N lb, const N ub) const {
+ContactMatrixDense<N> ContactMatrixDense<N>::clamp(const N lb, const N ub) const {
   const auto lck = this->lock();
-  ContactMatrix<N> m(this->nrows(), this->ncols());
-  ContactMatrix<N>::unsafe_clamp(*this, m, lb, ub);
+  ContactMatrixDense<N> m(this->nrows(), this->ncols());
+  ContactMatrixDense<N>::unsafe_clamp(*this, m, lb, ub);
   return m;
 }
 
 template <class N>
-inline void ContactMatrix<N>::clamp_inplace(const N lb, const N ub) noexcept {
+inline void ContactMatrixDense<N>::clamp_inplace(const N lb, const N ub) noexcept {
   const auto lck = this->lock();
-  ContactMatrix<N>::unsafe_clamp(*this, *this, lb, ub);
+  ContactMatrixDense<N>::unsafe_clamp(*this, *this, lb, ub);
 }
 
 template <class N>
 template <class N1, class N2>
-ContactMatrix<N1> ContactMatrix<N>::discretize(const IITree<N2, N1>& mappings) const {
+ContactMatrixDense<N1> ContactMatrixDense<N>::discretize(const IITree<N2, N1>& mappings) const {
   const auto lck = this->lock();
   return this->unsafe_discretize<N1>(mappings);
 }
 
 template <class N>
 template <class M>
-void ContactMatrix<N>::discretize_inplace(const IITree<M, N>& mappings) noexcept {
+void ContactMatrixDense<N>::discretize_inplace(const IITree<M, N>& mappings) noexcept {
   const auto lck = this->lock();
   this->unsafe_discretize_inplace(mappings);
 }
 
 template <class N>
 template <class M, class>
-ContactMatrix<M> ContactMatrix<N>::as() const {
+ContactMatrixDense<M> ContactMatrixDense<N>::as() const {
   const auto lck = this->lock();
   return this->unsafe_as<M>();
 }
 
 template <class N>
-bool ContactMatrix<N>::empty() const {
+bool ContactMatrixDense<N>::empty() const {
   return this->get_tot_contacts() == 0;
 }
 
 }  // namespace modle
 
-// IWYU pragma: private, include "modle/contacts.hpp"
+// IWYU pragma: private, include "modle/contact_matrix_dense.hpp"
 // IWYU pragma: no_include <boost/core/checked_delete.hpp>
 // IWYU pragma: no_include <boost/exception/detail/error_info_impl.hpp>
 // IWYU pragma: no_include <boost/exception/exception.hpp>
