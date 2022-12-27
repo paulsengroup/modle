@@ -138,10 +138,11 @@ template <class N>
     BS::thread_pool& tpool, const std::string_view chrom_name, const coolerpp::File& cooler,
     const modle::tools::transform_config& c,
     const modle::IITree<double, double>& discretization_ranges) {
-  auto t1 = absl::Now();
+  auto t0 = absl::Now();
   spdlog::info(FMT_STRING("Processing contacts for {}..."), chrom_name);
-  auto matrix = [&, chrom_name = chrom_name]() {
-    auto m = io::read_contact_matrix_from_cooler<double>(cooler, chrom_name,
+  auto matrix = [&]() {
+    auto m = io::read_contact_matrix_from_cooler<double>(cooler, chrom_name, bp_t(0),
+                                                         std::numeric_limits<bp_t>::max(),
                                                          static_cast<bp_t>(c.diagonal_width));
     using t = transform_config::Transformation;
     switch (c.method) {
@@ -163,7 +164,7 @@ template <class N>
   }
 
   spdlog::info(FMT_STRING("{} processing took {}"), chrom_name,
-               absl::FormatDuration(absl::Now() - t1));
+               absl::FormatDuration(absl::Now() - t0));
   return matrix;
 }
 
@@ -184,21 +185,21 @@ void transform_subcmd(const modle::tools::transform_config& c) {
     std::filesystem::create_directories(output_dir.string());
   }
 
-  coolerpp::File output_cooler{};
+  auto output_cooler = [&]() {
+    auto attrs = c.floating_point
+                     ? coolerpp::StandardAttributes::init<double>(input_cooler.bin_size())
+                     : coolerpp::StandardAttributes::init<i32>(input_cooler.bin_size());
+    attrs.metadata = c.args_json;
+    if (c.floating_point) {
+      return coolerpp::File::create_new_cooler<double>(c.output_cooler_uri.string(),
+                                                       input_cooler.chromosomes(),
+                                                       input_cooler.bin_size(), c.force, attrs);
+    }
 
-  auto attrs = c.floating_point
-                   ? coolerpp::StandardAttributes::init<double>(input_cooler.bin_size())
-                   : coolerpp::StandardAttributes::init<i32>(input_cooler.bin_size());
-  attrs.metadata = c.args_json;
-  if (c.floating_point) {
-    output_cooler = coolerpp::File::create_new_cooler<double>(
-        c.output_cooler_uri.string(), input_cooler.chromosomes(), input_cooler.bin_size(), c.force,
-        attrs);
-  } else {
-    output_cooler = coolerpp::File::create_new_cooler<i32>(c.output_cooler_uri.string(),
-                                                           input_cooler.chromosomes(),
-                                                           input_cooler.bin_size(), c.force, attrs);
-  }
+    return coolerpp::File::create_new_cooler<i32>(c.output_cooler_uri.string(),
+                                                  input_cooler.chromosomes(),
+                                                  input_cooler.bin_size(), c.force, attrs);
+  }();
 
   BS::thread_pool tpool(static_cast<u32>(c.nthreads));
   const auto t0 = absl::Now();
