@@ -48,10 +48,10 @@ fi
 outdir="$(mktemp -d -t modle-tools-XXXXXXXXXX)"
 trap 'rm -rf -- "$outdir"' EXIT
 
-"$modle_tools_bin" eval -i "$matrix1"                 \
-                        --reference-matrix "$matrix2" \
-                        -m custom                     \
-                        -w 3mbp                       \
+"$modle_tools_bin" eval -i "$matrix1" \
+                        -r "$matrix2" \
+                        -m custom     \
+                        -w 3mbp       \
                         -o "$outdir/out_custom_score"
 
 # mkdir -p /tmp/test/data/integration_tests/

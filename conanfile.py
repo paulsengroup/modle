@@ -28,7 +28,8 @@ class MoDLE(ConanFile):
               "cpp-sort/1.13.2@#65e40aeb549c77007a268dbff94f434b",
               "fast_float/3.8.1@#ef5291bee6d3ad59f986096df16f43e6",
               "fmt/9.1.0@#811e918ca4b4e0b9ddd6d5a2883efa82",
-              "hdf5/1.12.2@#dc802e78ddfbfd6dac7a31cc004c8db0",
+              "hdf5/1.12.2@#dc802e78ddfbfd6dac7a31cc004c8db0",  # Coolerpp
+              "highfive/2.6.2@#829275c7502abf62045167adb79ee581",  # Coolerpp
               "libarchive/3.6.1@#e41365ba674aa9e8fe9b5eb7b2f32fc2",
               "libbigwig/0.4.7@#c51cf59700963a74fe0089a81293c91c",
               "libcuckoo/0.3.1@#2fadf7043e85444c19c1ededf9e43653",
@@ -38,6 +39,8 @@ class MoDLE(ConanFile):
               "readerwriterqueue/1.0.6@#a95c8da3d68822dec4d4c13fff4b5c96",
               "spdlog/1.11.0@#1e0f4eb6338d05e4bd6fcc6bf4734172",
               "tomlplusplus/3.2.0@#86c72c809aa5489e6cf0ce4dc5db0002",
+              "tsl-hopscotch-map/2.3.0@#497d3f41172cefe2df9ac17692c52734",  # Coolerpp
+              "tsl-ordered-map/1.0.0@#dceec5bd0243a5c659939d0295dfee50",  # Coolerpp
               "xoshiro-cpp/1.1@#be8a2825995d67cf2fb26f01accb4f4d",
               "xxhash/0.8.1@#5b6ded9ec554b9abb8aae075d2fd5846",
               "xz_utils/5.2.5@#7315e0f635fed3f9a91b8bfd5456b72c",
@@ -89,6 +92,12 @@ class MoDLE(ConanFile):
     self.options["boost"].without_wave = True
 
     self.options["bizp2"].enable_executable = False
+
+    # Coolerpp stuff
+    self.options["highfive"].with_boost = False
+    self.options["highfive"].with_eigen = False
+    self.options["highfive"].with_opencv = False
+    self.options["highfive"].with_xtensor = False
 
     self.options["libarchive"].with_zlib = True
     self.options["libarchive"].with_bzip2 = True

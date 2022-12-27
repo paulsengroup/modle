@@ -41,6 +41,10 @@ env:
   CCACHE_COMPRESSLEVEL: "13"
   CCACHE_MAXSIZE: "200M"
 
+  # Workaround memory leak in HighFive
+  # See: https://github.com/BlueBrain/HighFive/pull/583
+  LSAN_OPTIONS: "suppressions=${{ github.workspace }}/lsan.supp"
+
 defaults:
   run:
     shell: bash
@@ -365,7 +369,7 @@ jobs:
 
       - name: Run modle integration test(s)
         working-directory: ${{ github.workspace }}/test/scripts
-        run: ./modle_integration_test.sh ${{ github.workspace }}/bin/modle
+        run: ./modle_integration_test.sh ${{ github.workspace }}/bin/modle | head -n 1000
 
   modle-tools-integration-test:
     needs: [matrix-factory, cache-test-datasets, build-project]
@@ -404,9 +408,9 @@ jobs:
       - name: Run modle_tools transform integration test(s)
         working-directory: ${{ github.workspace }}/test/scripts
         run: |
-          ./modle_tools_transform_integration_test.sh ${{ github.workspace }}/bin/modle_tools
+          ./modle_tools_transform_integration_test.sh ${{ github.workspace }}/bin/modle_tools | head -n 1000
 
       - name: Run modle_tools evaluate integration test(s)
         working-directory: ${{ github.workspace }}/test/scripts
         run: |
-          ./modle_tools_eval_integration_test.sh ${{ github.workspace }}/bin/modle_tools
+          ./modle_tools_eval_integration_test.sh ${{ github.workspace }}/bin/modle_tools | head -n 1000

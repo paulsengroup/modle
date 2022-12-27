@@ -15,7 +15,7 @@
 #include <string>      // for string
 #include <utility>     // for move
 
-#include "libbigwig/bigWig.h"       // for bwCleanup, bwClose, bwAddIntervalSpanSteps, bwCreateChromList
+#include "libbigwig/bigWig.h"  // for bwCleanup, bwClose, bwAddIntervalSpanSteps, bwCreateChromList
 #include "modle/common/common.hpp"  // for u32, u64, i32, i64
 #include "modle/common/fmt_helpers.hpp"
 

@@ -7,7 +7,6 @@ find_package(Boost CONFIG REQUIRED)
 find_package(bshoshany-thread-pool CONFIG REQUIRED)
 find_package(Catch2 CONFIG REQUIRED)
 find_package(fmt CONFIG REQUIRED)
-find_package(HDF5 CONFIG REQUIRED)
 find_package(spdlog CONFIG REQUIRED)
 
 include(CTest)
@@ -28,8 +27,7 @@ target_sources(
           ${CMAKE_CURRENT_SOURCE_DIR}/units/libmodle_io/bed_parser_test.cpp
           ${CMAKE_CURRENT_SOURCE_DIR}/units/libmodle_io/bed_tree_test.cpp
           ${CMAKE_CURRENT_SOURCE_DIR}/units/libmodle_io/compressed_io_test.cpp
-          ${CMAKE_CURRENT_SOURCE_DIR}/units/libmodle_io/cooler_test.cpp
-          ${CMAKE_CURRENT_SOURCE_DIR}/units/libmodle_io/hdf5_test.cpp
+          ${CMAKE_CURRENT_SOURCE_DIR}/units/libmodle_io/contact_matrix_io_test.cpp
           ${CMAKE_CURRENT_SOURCE_DIR}/units/simulation_cpu/collision_encoding_test.cpp
           ${CMAKE_CURRENT_SOURCE_DIR}/units/simulation_cpu/common.hpp
           ${CMAKE_CURRENT_SOURCE_DIR}/units/simulation_cpu/simulation_complex_unit_test.cpp
@@ -54,8 +52,7 @@ target_link_libraries(
           Modle::io_bigwig
           Modle::io_chrom_sizes
           Modle::io_compressed
-          Modle::io_cooler
-          Modle::io_hdf5
+          Modle::io_contact_matrix
           Modle::libmodle_cpu
           Modle::libmodle_internal
           Modle::stats)
@@ -71,7 +68,6 @@ target_link_system_libraries(
   Boost::headers
   bshoshany-thread-pool::bshoshany-thread-pool
   Catch2::Catch2WithMain
-  HDF5::HDF5
   spdlog::spdlog)
 
 file(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/Testing/)
@@ -89,7 +85,10 @@ catch_discover_tests(
   OUTPUT_DIR
   ${CMAKE_CURRENT_BINARY_DIR}/Testing/
   EXTRA_ARGS
-  --success)
+  --success
+  PROPERTIES
+  ENVIRONMENT
+  "LSAN_OPTIONS=suppressions=${PROJECT_SOURCE_DIR}/lsan.supp")
 
 catch_discover_tests(
   test_main
@@ -102,7 +101,10 @@ catch_discover_tests(
   OUTPUT_DIR
   ${CMAKE_CURRENT_BINARY_DIR}/Testing/
   EXTRA_ARGS
-  --success)
+  --success
+  PROPERTIES
+  ENVIRONMENT
+  "LSAN_OPTIONS=suppressions=${PROJECT_SOURCE_DIR}/lsan.supp")
 
 catch_discover_tests(
   test_main
@@ -115,4 +117,7 @@ catch_discover_tests(
   OUTPUT_DIR
   ${CMAKE_CURRENT_BINARY_DIR}/Testing/
   EXTRA_ARGS
-  --success)
+  --success
+  PROPERTIES
+  ENVIRONMENT
+  "LSAN_OPTIONS=suppressions=${PROJECT_SOURCE_DIR}/lsan.supp")
