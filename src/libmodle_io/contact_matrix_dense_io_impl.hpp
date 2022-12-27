@@ -28,7 +28,7 @@ inline bool emplace_pixel(const coolerpp::File& f, std::vector<PixelT>& buff, us
                            utils::conditional_static_cast<T>(n)});
 
   return buff.size() == buff.capacity();
-};
+}
 
 template <class PixelT>
 inline void write_pixels(coolerpp::File& f, std::vector<PixelT>& buff) {
