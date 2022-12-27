@@ -122,8 +122,8 @@ void Cli::make_eval_subcommand() {
      "-c,--chrom-sizes",
      c.path_to_chrom_sizes,
      "Path to a .chrom.sizes file.\n"
-     "This option is required when the input and reference Coolers passed through\n"
-     "--input-cooler and --reference-cooler do not have the same number of chromosomes.")
+     "This option is required when the Coolers passed with options --input-cooler and --reference-cooler"
+     "do not have the same number of chromosomes.")
      ->check(CLI::ExistingFile);
 
   io.add_option(
