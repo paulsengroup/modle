@@ -1,3 +1,7 @@
+// Copyright (C) 2022 Roberto Rossini <roberros@uio.no>
+//
+// SPDX-License-Identifier: MIT
+
 #pragma once
 #include <coolerpp/coolerpp.hpp>
 #include <string_view>
