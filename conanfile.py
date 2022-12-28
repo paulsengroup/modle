@@ -19,18 +19,18 @@ class MoDLE(ConanFile):
   settings = "os", "compiler", "build_type", "arch"
   requires = ["abseil/20220623.1@#266f2e66c0dcd428efb9b24c2a5c8f05",
               "bitflags/1.5.0@#f49a584785e75c40bf6970615c452b4e",
-              "boost/1.80.0@#adb2c8a7259ae06c342bea0c5c73e76c",
+              "boost/1.81.0@#ceb5cbef5143b43eab0a8e824238eba3",
               "bshoshany-thread-pool/3.3.0@#22e99aee6babc19e679754d95dad2de4",
               "bzip2/1.0.8@#464be69744fa6d48ed01928cfe470008",
               "catch2/3.2.1@#f4c25988de20c21a24a1a24dab87e9b5",
               "cli11/2.3.1@#8b591d97a2ed21d1e8d50afb67f3f97b",
               "concurrentqueue/1.0.3@#c1cb7d960d8b64073643b45fa63f0bd1",
-              "cpp-sort/1.13.2@#65e40aeb549c77007a268dbff94f434b",
+              "cpp-sort/1.14.0@#3453aaaf83c1dae4214ca3b5c4c3a5c8",
               "fast_float/3.8.1@#ef5291bee6d3ad59f986096df16f43e6",
               "fmt/9.1.0@#811e918ca4b4e0b9ddd6d5a2883efa82",
               "hdf5/1.12.2@#dc802e78ddfbfd6dac7a31cc004c8db0",  # Coolerpp
               "highfive/2.6.2@#829275c7502abf62045167adb79ee581",  # Coolerpp
-              "libarchive/3.6.1@#e41365ba674aa9e8fe9b5eb7b2f32fc2",
+              "libarchive/3.6.2@#a91b4b509a41442070757bcf295b2794",
               "libbigwig/0.4.7@#c51cf59700963a74fe0089a81293c91c",
               "libcuckoo/0.3.1@#2fadf7043e85444c19c1ededf9e43653",
               "lz4/1.9.4@#8699136f62681eeba3dc033f85cc63e2",
