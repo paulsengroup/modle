@@ -187,14 +187,18 @@ void Simulation::run_simulate() {
         const auto ntasks =
             cellid > this->num_cells ? tasks.size() - (cellid - this->num_cells) : tasks.size();
         auto sleep_us = 100;
-        while (  // Enqueue tasks
-            !task_queue.try_enqueue_bulk(ptok, std::make_move_iterator(tasks.begin()), ntasks)) {
+
+        DISABLE_WARNING_PUSH
+        DISABLE_WARNING_NULL_DEREF
+        // Enqueue tasks
+        while (!task_queue.try_enqueue_bulk(ptok, std::make_move_iterator(tasks.begin()), ntasks)) {
           if (!this->ok()) {
             this->handle_exceptions();
           }
           sleep_us = std::min(100000, sleep_us * 2);
           std::this_thread::sleep_for(std::chrono::microseconds(sleep_us));
         }
+        DISABLE_WARNING_POP
       }
     }
 
