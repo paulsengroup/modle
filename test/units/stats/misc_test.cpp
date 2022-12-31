@@ -7,58 +7,51 @@
 #include <absl/strings/str_split.h>
 #include <fmt/format.h>
 
-#include <boost/process.hpp>
 #include <catch2/catch_approx.hpp>
 #include <catch2/catch_test_macros.hpp>
+#include <filesystem>
+#include <fstream>
 #include <vector>
 
 #include "modle/common/numeric_utils.hpp"
 
-namespace modle::test::stats {
-using namespace modle::stats;
-using namespace std::string_view_literals;
+namespace modle::stats::test {
 
-// clang-format off
-// https://stackoverflow.com/a/43346070
-constexpr auto GENERATE_REFERENCE_KERNEL_CMD{
-    "import numpy as np\n"
-    "l = {:d}\n"
-    "sig = {:.16e}\n"
-    "ax = np.linspace(-(l - 1) / 2., (l - 1) / 2., l)\n"
-    "gauss = np.exp(-0.5 * np.square(ax) / np.square(sig))\n"
-    "kernel = np.outer(gauss, gauss)\n"
-    "kernel /= np.sum(kernel)\n"
-    "print(\",\".join([str(n) for n in kernel.flatten()]))\n"sv};
-// clang-format on
+[[maybe_unused]] static const std::filesystem::path& data_dir() {
+  static const std::filesystem::path data_dir{"test/data/unit_tests"};
+  return data_dir;
+}
 
-[[nodiscard]] static std::vector<double> generate_reference_kernel(const usize size,
-                                                                   const double sigma) {
-  boost::process::ipstream stdout_stream;
-  auto c = boost::process::child(
-      boost::process::search_path("python3").string(), "-c",
-      fmt::format(FMT_STRING(GENERATE_REFERENCE_KERNEL_CMD), size, sigma),
-      boost::process::std_in.close(), boost::process::std_out > stdout_stream);
-  assert(c.running());
+[[nodiscard]] static std::vector<double> import_reference_kernel(const usize size,
+                                                                 const double sigma) {
+  const auto sbuff = [&]() {
+    const auto path = data_dir() / std::filesystem::path{"reference_gaussian_kernels"} /
+                      fmt::format(FMT_STRING("gaussian_kernel_{}_{}.csv"), size, sigma);
 
-  std::string sbuff;
-  std::getline(stdout_stream, sbuff);
+    REQUIRE(std::filesystem::exists(path));
+    std::ifstream f(path);
+
+    std::stringstream buffer;
+    buffer << f.rdbuf();
+    return buffer.str();
+  }();
 
   std::vector<double> buff;
   for (const auto& tok : absl::StrSplit(sbuff, ',')) {
     buff.push_back(utils::parse_numeric_or_throw<double>(tok));
   }
 
-  assert(buff.size() == size * size);
-  assert(!std::getline(stdout_stream, sbuff));
+  REQUIRE(buff.size() == size * size);
   return buff;
 }
 
 // NOLINTNEXTLINE(readability-function-cognitive-complexity)
-TEST_CASE("Gaussian kernel (SciPy)", "[stats][short]") {
+TEST_CASE("Gaussian kernel", "[stats][short]") {
   for (usize size = 3; size < 25; size += 2) {
     for (const auto sigma : {0.5, 1.0, 1.5, 2.5, 6.3, 10.0}) {
-      const auto ref_kernel = generate_reference_kernel(size, sigma);
+      const auto ref_kernel = import_reference_kernel(size, sigma);
       const auto kernel = compute_gauss_kernel(size, sigma);
+
       REQUIRE(ref_kernel.size() == kernel.size());
       for (usize i = 0; i < kernel.size(); ++i) {
         CHECK(Catch::Approx(ref_kernel[i]) == kernel[i]);
@@ -67,4 +60,4 @@ TEST_CASE("Gaussian kernel (SciPy)", "[stats][short]") {
   }
 }
 
-}  // namespace modle::test::stats
+}  // namespace modle::stats::test
