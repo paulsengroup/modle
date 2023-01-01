@@ -22,11 +22,11 @@ namespace modle::stats::test {
   return data_dir;
 }
 
-[[nodiscard]] static std::vector<double> import_reference_kernel(const usize size,
+[[nodiscard]] static std::vector<double> import_reference_kernel(const usize radius,
                                                                  const double sigma) {
   const auto sbuff = [&]() {
     const auto path = data_dir() / std::filesystem::path{"reference_gaussian_kernels"} /
-                      fmt::format(FMT_STRING("gaussian_kernel_{}_{}.csv"), size, sigma);
+                      fmt::format(FMT_STRING("gaussian_kernel_{}_{:.1f}.csv"), radius, sigma);
 
     REQUIRE(std::filesystem::exists(path));
     std::ifstream f(path);
@@ -37,20 +37,23 @@ namespace modle::stats::test {
   }();
 
   std::vector<double> buff;
-  for (const auto& tok : absl::StrSplit(sbuff, ',')) {
-    buff.push_back(utils::parse_numeric_or_throw<double>(tok));
+  for (const auto& tok : absl::StrSplit(sbuff, absl::ByAnyChar("\t,\n"))) {
+    if (!tok.empty()) {
+      buff.push_back(utils::parse_numeric_or_throw<double>(tok));
+    }
   }
 
-  REQUIRE(buff.size() == size * size);
+  const auto kernel_size1d = radius * 2 + 1;
+  REQUIRE(buff.size() == kernel_size1d * kernel_size1d);
   return buff;
 }
 
 // NOLINTNEXTLINE(readability-function-cognitive-complexity)
 TEST_CASE("Gaussian kernel", "[stats][short]") {
-  for (usize size = 3; size < 25; size += 2) {
+  for (usize radius = 1; radius < 15; ++radius) {
     for (const auto sigma : {0.5, 1.0, 1.5, 2.5, 6.3, 10.0}) {
-      const auto ref_kernel = import_reference_kernel(size, sigma);
-      const auto kernel = compute_gauss_kernel(size, sigma);
+      const auto ref_kernel = import_reference_kernel(radius, sigma);
+      const auto kernel = compute_gauss_kernel2d(radius, sigma);
 
       REQUIRE(ref_kernel.size() == kernel.size());
       for (usize i = 0; i < kernel.size(); ++i) {

@@ -13,16 +13,16 @@ namespace modle::stats {
 
 // https://patrickfuller.github.io/gaussian-blur-image-processing-for-scientists-and-engineers-part-4/
 template <class FP = double, class = std::enable_if_t<std::is_floating_point_v<FP>>>
-[[nodiscard]] inline std::vector<FP> compute_gauss_kernel(FP sigma = 1, FP cutoff = 0.005);
+[[nodiscard]] inline std::vector<FP> compute_gauss_kernel2d(FP sigma, FP truncate = 4.0);
 
 template <class FP = double, class = std::enable_if_t<std::is_floating_point_v<FP>>>
-inline void compute_gauss_kernel(std::vector<FP>& buff, FP sigma = 1, FP cutoff = 0.005);
+inline void compute_gauss_kernel2d(std::vector<FP>& buff, FP sigma, FP truncate = 4.0);
 
 template <class FP = double, class = std::enable_if_t<std::is_floating_point_v<FP>>>
-[[nodiscard]] inline std::vector<FP> compute_gauss_kernel(usize size, FP sigma = 1);
+[[nodiscard]] inline std::vector<FP> compute_gauss_kernel2d(usize size, FP sigma);
 
 template <class FP = double, class = std::enable_if_t<std::is_floating_point_v<FP>>>
-inline void compute_gauss_kernel(usize size, std::vector<FP>& buff, FP sigma = 1);
+inline void compute_gauss_kernel2d(usize radius, std::vector<FP>& buff, FP sigma);
 }  // namespace modle::stats
 
 #include "../../../misc_impl.hpp"

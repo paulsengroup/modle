@@ -156,7 +156,7 @@ ContactMatrixDense<double> ContactMatrixDense<N>::blur(const double sigma, const
     return bmatrix;
   }
 
-  const auto gauss_kernel = stats::compute_gauss_kernel(sigma, cutoff);
+  const auto gauss_kernel = stats::compute_gauss_kernel2d(sigma, cutoff);
 
   const auto block_size = static_cast<usize>(std::sqrt(static_cast<double>(gauss_kernel.size())));
   assert(block_size * block_size == gauss_kernel.size());
@@ -193,8 +193,8 @@ ContactMatrixDense<double> ContactMatrixDense<N>::gaussian_diff(const double sig
     return bmatrix;
   }
 
-  const auto gauss_kernel1 = stats::compute_gauss_kernel(sigma1);
-  const auto gauss_kernel2 = stats::compute_gauss_kernel(sigma2);
+  const auto gauss_kernel1 = stats::compute_gauss_kernel2d(sigma1);
+  const auto gauss_kernel2 = stats::compute_gauss_kernel2d(sigma2);
 
   [[maybe_unused]] const auto block_size1 =
       static_cast<usize>(std::sqrt(static_cast<double>(gauss_kernel1.size())));
