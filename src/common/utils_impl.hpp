@@ -125,23 +125,6 @@ constexpr bool RepeatIterator<T>::operator!=([[maybe_unused]] const RepeatIterat
   return !(*this == other);
 }
 
-template <class InputIt1, class InputIt2, class N, class>
-constexpr N convolve(InputIt1 kernel_first, InputIt1 kernel_last, InputIt2 buff_first) {
-  N tot = 0;
-  for (; kernel_first != kernel_last; ++kernel_first, ++buff_first) {
-    tot += utils::conditional_static_cast<N>(*kernel_first) *
-           utils::conditional_static_cast<N>(*buff_first);
-  }
-
-  return tot;
-}
-
-template <class Rng1, class Rng2, class N, class>
-constexpr N convolve(const Rng1 &kernel, const Rng2 &buff) {
-  assert(kernel.size() == buff.size());
-  return convolve(kernel.begin(), kernel.end(), buff.begin());
-}
-
 template <class I, class>
 constexpr I next_pow2(const I n) noexcept {
   using ull = unsigned long long;

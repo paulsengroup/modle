@@ -14,6 +14,7 @@
 #include <boost/process/search_path.hpp>
 #include <catch2/catch_approx.hpp>
 #include <catch2/catch_test_macros.hpp>
+#include <catch2/matchers/catch_matchers_floating_point.hpp>
 #include <catch2/matchers/catch_matchers_string.hpp>
 #include <filesystem>  // for path
 #include <stdexcept>   // for runtime_error
@@ -33,19 +34,6 @@ namespace modle::test::cmatrix {
 }
 
 // clang-format off
-constexpr auto SCIPY_GAUSSIAN_BLUR_CMD{
-    "#!/usr/bin/env python3\n"
-    "from scipy.ndimage import gaussian_filter\n"
-    "import numpy as np\n"
-    "from sys import stdin\n"
-    "if __name__ == \"__main__\":\n"
-    "    shape = [{:d}, {:d}]\n"
-    "    sigma = {:.16e}\n"
-    "    buff = stdin.read().replace(\"\\n\", \",\")[:-1]\n"
-    "    m = np.fromstring(buff, sep=\",\", dtype=float)\n"
-    "    m = gaussian_filter(m.reshape(shape), sigma, truncate={})\n"
-    "    print(\",\".join([str(n) for n in m.flatten()]))\n"};
-
 constexpr auto SCIPY_GAUSSIAN_DIFFERENCE_CMD{
     "#!/usr/bin/env python3\n"
     "from scipy.ndimage import gaussian_filter\n"
@@ -170,17 +158,8 @@ TEST_CASE("CMatrix get w/ block small", "[cmatrix][short]") {
 
   const usize block_size = 9;
 
-  const auto reference_matrix = [&]() {
-    ContactMatrixDense<> m;
-    m.unsafe_import_from_txt(reference_file);
-    return m;
-  }();
-
-  const auto input_matrix = [&]() {
-    ContactMatrixDense<> m;
-    m.unsafe_import_from_txt(input_file);
-    return m;
-  }();
+  const auto reference_matrix = ContactMatrixDense<>::from_txt(reference_file);
+  const auto input_matrix = ContactMatrixDense<>::from_txt(input_file);
 
   REQUIRE(input_matrix.nrows() == reference_matrix.nrows());
   REQUIRE(input_matrix.ncols() == reference_matrix.ncols());
@@ -285,83 +264,53 @@ TEST_CASE("CMatrix get row", "[cmatrix][short]") {
   CHECK(buff.front() == 1);
 }
 
-// NOLINTNEXTLINE(readability-function-cognitive-complexity)
-TEST_CASE("CMatrix blur (SciPy)", "[cmatrix][long]") {
-  const auto reference_file = data_dir() / "cmatrix_001.tsv.gz";
-  const auto input_matrix = [&]() {
-    ContactMatrixDense<> m;
-    m.unsafe_import_from_txt(reference_file);
-    return m;
-  }();
+static void contact_matrix_dense_blur_helper(double sigma, BS::thread_pool* tpool = nullptr,
+                                             double truncate = 3.5) {
+  const auto path_to_input_matrix =
+      data_dir() / "contact_matrices" / "contact_matrix_dense_int_001.tsv.xz";
 
-  auto compute_reference_matrix = [&input_matrix](auto shape, auto sigma, auto trunc) {
-    boost::process::ipstream stdout_stream;
-    boost::process::opstream stdin_stream;
-    auto py = boost::process::child(
-        boost::process::search_path("python3").string(), "-c",
-        fmt::format(FMT_STRING(SCIPY_GAUSSIAN_BLUR_CMD), shape, shape, sigma, trunc),
-        boost::process::std_in<stdin_stream, boost::process::std_out> stdout_stream);
-    assert(py.running());
+  const auto path_to_reference_matrix =
+      data_dir() / "contact_matrices" / "blurred" /
+      fmt::format(FMT_STRING("contact_matrix_dense_int_001_blurred_{:.2f}.tsv.xz"), sigma);
 
-    write_cmatrix_to_stream(input_matrix, stdin_stream);
-    return read_cmatrix_from_stream<ContactMatrixDense<double>>(
-        input_matrix.nrows(), input_matrix.ncols(), stdout_stream);
-  };
+  const auto input_matrix = ContactMatrixDense<double>::from_txt(path_to_input_matrix);
+  const auto reference_matrix = ContactMatrixDense<double>::from_txt(path_to_reference_matrix);
+  const auto blurred_matrix = input_matrix.blur(sigma, truncate, tpool);
 
-  constexpr std::array<double, 3> sigmas{0.5, 1.0, 1.5};
-  constexpr std::array<double, 3> cutoffs{3.0, 3.0, 3.0};
+  REQUIRE(reference_matrix.nrows() == blurred_matrix.nrows());
+  REQUIRE(reference_matrix.ncols() == blurred_matrix.ncols());
 
-  for (usize i = 0; i < sigmas.size(); ++i) {
-    const auto reference_matrix =
-        compute_reference_matrix(input_matrix.ncols(), sigmas[i], cutoffs[i]);
-    const auto blurred_matrix = input_matrix.blur(sigmas[i]);
-
-    for (usize j = 4; j < input_matrix.nrows(); ++j) {
-      for (auto k = j; k < input_matrix.ncols() - 4; ++k) {
-        CHECK(Catch::Approx(reference_matrix.get(j, k)) == blurred_matrix.get(j, k));
-      }
+  for (usize i = 0; i < input_matrix.nrows(); ++i) {
+    for (auto j = i; j < input_matrix.ncols(); ++j) {
+      CHECK_THAT(reference_matrix.get(i, j), Catch::Matchers::WithinRel(blurred_matrix.get(i, j)));
     }
   }
 }
 
 // NOLINTNEXTLINE(readability-function-cognitive-complexity)
-TEST_CASE("CMatrix blur parallel (SciPy)", "[cmatrix][long]") {
-  const auto reference_file = data_dir() / "cmatrix_001.tsv.gz";
-  const auto input_matrix = [&]() {
-    ContactMatrixDense<> m;
-    m.unsafe_import_from_txt(reference_file);
-    return m;
-  }();
+TEST_CASE("CMatrix blur (sigma=0.01)", "[cmatrix][long]") {
+  modle::test::cmatrix::contact_matrix_dense_blur_helper(0.01);
+}
 
-  auto compute_reference_matrix = [&input_matrix](auto shape, auto sigma, auto trunc) {
-    boost::process::ipstream stdout_stream;
-    boost::process::opstream stdin_stream;
-    auto py = boost::process::child(
-        boost::process::search_path("python3").string(), "-c",
-        fmt::format(FMT_STRING(SCIPY_GAUSSIAN_BLUR_CMD), shape, shape, sigma, trunc),
-        boost::process::std_in<stdin_stream, boost::process::std_out> stdout_stream);
-    assert(py.running());
+// NOLINTNEXTLINE(readability-function-cognitive-complexity)
+TEST_CASE("CMatrix blur (sigma=0.5)", "[cmatrix][long]") {
+  modle::test::cmatrix::contact_matrix_dense_blur_helper(0.5);
+}
 
-    write_cmatrix_to_stream(input_matrix, stdin_stream);
-    return read_cmatrix_from_stream<ContactMatrixDense<double>>(
-        input_matrix.nrows(), input_matrix.ncols(), stdout_stream);
-  };
+// NOLINTNEXTLINE(readability-function-cognitive-complexity)
+TEST_CASE("CMatrix blur (sigma=1.0)", "[cmatrix][long]") {
+  modle::test::cmatrix::contact_matrix_dense_blur_helper(1.0);
+}
 
-  constexpr std::array<double, 3> sigmas{0.5, 1.0, 1.5};
-  constexpr std::array<double, 3> cutoffs{3.0, 3.0, 3.0};
+// NOLINTNEXTLINE(readability-function-cognitive-complexity)
+TEST_CASE("CMatrix blur (sigma=1.5)", "[cmatrix][long]") {
+  modle::test::cmatrix::contact_matrix_dense_blur_helper(1.5);
+}
 
-  BS::thread_pool tpool;
-  for (usize i = 0; i < sigmas.size(); ++i) {
-    const auto reference_matrix =
-        compute_reference_matrix(input_matrix.ncols(), sigmas[i], cutoffs[i]);
-    const auto blurred_matrix = input_matrix.blur(sigmas[i], 0.005, &tpool);
-
-    for (usize j = 4; j < input_matrix.nrows(); ++j) {
-      for (auto k = j; k < input_matrix.ncols() - 4; ++k) {
-        CHECK(Catch::Approx(reference_matrix.get(j, k)) == blurred_matrix.get(j, k));
-      }
-    }
-  }
+// NOLINTNEXTLINE(readability-function-cognitive-complexity)
+TEST_CASE("CMatrix blur parallel (sigma=5.0)", "[cmatrix][long][exclusive]") {
+  BS::thread_pool tpool{};
+  modle::test::cmatrix::contact_matrix_dense_blur_helper(5.0, &tpool);
 }
 
 // NOLINTNEXTLINE(readability-function-cognitive-complexity)

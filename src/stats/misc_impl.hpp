@@ -78,4 +78,21 @@ void compute_gauss_kernel2d(const usize radius, std::vector<FP>& buff, const FP 
   std::transform(buff.begin(), buff.end(), buff.begin(), [&](const FP n) { return n / sum; });
 }
 
+template <class InputIt1, class InputIt2, class N, class>
+constexpr N cross_correlation(InputIt1 kernel_first, InputIt1 kernel_last, InputIt2 buff_first) {
+  N tot = 0;
+  for (; kernel_first != kernel_last; ++kernel_first, ++buff_first) {
+    tot += utils::conditional_static_cast<N>(*kernel_first) *
+           utils::conditional_static_cast<N>(*buff_first);
+  }
+
+  return tot;
+}
+
+template <class Rng1, class Rng2, class N, class>
+constexpr N cross_correlation(const Rng1& kernel, const Rng2& buff) {
+  assert(kernel.size() == buff.size());
+  return cross_correlation(kernel.begin(), kernel.end(), buff.begin());
+}
+
 }  // namespace modle::stats

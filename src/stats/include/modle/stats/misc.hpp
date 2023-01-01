@@ -4,14 +4,13 @@
 
 #pragma once
 
-#include <type_traits>  // for enable_if, is_floating_point
+#include <type_traits>  // for enable_if, enable_if_t, is_arithmetic_v, is_floating_point
 #include <vector>       // for vector
 
 #include "modle/common/common.hpp"  // for usize
 
 namespace modle::stats {
 
-// https://patrickfuller.github.io/gaussian-blur-image-processing-for-scientists-and-engineers-part-4/
 template <class FP = double, class = std::enable_if_t<std::is_floating_point_v<FP>>>
 [[nodiscard]] inline std::vector<FP> compute_gauss_kernel2d(FP sigma, FP truncate = 4.0);
 
@@ -23,6 +22,16 @@ template <class FP = double, class = std::enable_if_t<std::is_floating_point_v<F
 
 template <class FP = double, class = std::enable_if_t<std::is_floating_point_v<FP>>>
 inline void compute_gauss_kernel2d(usize radius, std::vector<FP>& buff, FP sigma);
+
+template <class InputIt1, class InputIt2, class N = double,
+          class = std::enable_if_t<std::is_arithmetic_v<N>>>
+[[nodiscard]] constexpr N cross_correlation(InputIt1 kernel_first, InputIt1 kernel_last,
+                                            InputIt2 buff_first);
+
+template <class Rng1, class Rng2, class N = double,
+          class = std::enable_if_t<std::is_arithmetic_v<N>>>
+[[nodiscard]] constexpr N cross_correlation(const Rng1& kernel, const Rng2& buff);
+
 }  // namespace modle::stats
 
 #include "../../../misc_impl.hpp"
