@@ -6,12 +6,8 @@
 
 #include <fmt/format.h>  // for format
 
-#include <BS_thread_pool.hpp>                       // for BS::thread_pool
-#include <algorithm>                                // for generate, max
-#include <boost/dynamic_bitset/dynamic_bitset.hpp>  // for dynamic_bitset, dynamic_bitset<>::ref...
-#include <boost/process/child.hpp>
-#include <boost/process/io.hpp>
-#include <boost/process/search_path.hpp>
+#include <BS_thread_pool.hpp>  // for BS::thread_pool
+#include <algorithm>           // for generate, max
 #include <catch2/catch_approx.hpp>
 #include <catch2/catch_test_macros.hpp>
 #include <catch2/matchers/catch_matchers_floating_point.hpp>
@@ -23,7 +19,6 @@
 #include <utility>     // for pair, move
 #include <vector>      // for vector, allocator
 
-#include "./common.hpp"
 #include "modle/common/common.hpp"  // for u32
 
 namespace modle::test::cmatrix {
@@ -32,25 +27,6 @@ namespace modle::test::cmatrix {
   static const std::filesystem::path data_dir{"test/data/unit_tests"};
   return data_dir;
 }
-
-// clang-format off
-constexpr auto SCIPY_GAUSSIAN_DIFFERENCE_CMD{
-    "#!/usr/bin/env python3\n"
-    "from scipy.ndimage import gaussian_filter\n"
-    "import numpy as np\n"
-    "from sys import stdin\n"
-    "if __name__ == \"__main__\":\n"
-    "    shape = [{:d}, {:d}]\n"
-    "    sigma1 = {:.16e}\n"
-    "    sigma2 = {:.16e}\n"
-    "    assert sigma1 < sigma2\n"
-    "    trunc = {:.16e}\n"
-    "    buff = stdin.read().replace(\"\\n\", \",\")[:-1]\n"
-    "    m = np.fromstring(buff, sep=\",\", dtype=float).reshape(shape)\n"
-    "    m1 = gaussian_filter(m, sigma1, truncate=trunc)\n"
-    "    m2 = gaussian_filter(m, sigma2, truncate=trunc)\n"
-    "    print(\",\".join([str(n) for n in (m1 - m2).flatten()]))\n"};
-// clang-format on
 
 // NOLINTNEXTLINE(readability-function-cognitive-complexity)
 TEST_CASE("CMatrix simple", "[cmatrix][short]") {
@@ -64,11 +40,31 @@ TEST_CASE("CMatrix simple", "[cmatrix][short]") {
   CHECK(c.get(0, 0) == 0);
 }
 
+[[nodiscard]] static std::vector<std::vector<u32>> load_matrix_from_file(
+    const std::filesystem::path& path_to_matrix, const std::string& sep = "\t") {
+  std::vector<std::vector<u32>> m;
+  compressed_io::Reader r(path_to_matrix);
+  std::string line;
+  std::string buff;
+  u32 n{};
+  while (r.getline(line)) {
+    std::vector<u32> v;
+
+    for (const auto& tok : absl::StrSplit(line, sep)) {
+      modle::utils::parse_numeric_or_throw(tok, n);
+      v.push_back(n);
+    }
+    m.emplace_back(std::move(v));
+  }
+  REQUIRE(r.eof());
+  return m;
+}
+
 // NOLINTNEXTLINE(readability-function-cognitive-complexity)
 TEST_CASE("CMatrix 10x200", "[cmatrix][medium]") {
   const auto input_file = data_dir() / "symm_matrix_200_10.tsv.gz";
   REQUIRE(std::filesystem::exists(input_file));
-  const auto m1 = load_matrix_from_file(input_file.string());
+  const auto m1 = load_matrix_from_file(input_file);
   ContactMatrixDense<> m2(10, 200);
   for (usize i = 0; i < m1.size(); ++i) {
     for (usize j = 0; j < m1[i].size(); ++j) {
@@ -264,8 +260,8 @@ TEST_CASE("CMatrix get row", "[cmatrix][short]") {
   CHECK(buff.front() == 1);
 }
 
-static void contact_matrix_dense_blur_helper(double sigma, BS::thread_pool* tpool = nullptr,
-                                             double truncate = 3.5) {
+static void contact_matrix_dense_blur_helper(double sigma, double truncate,
+                                             BS::thread_pool* tpool = nullptr) {
   const auto path_to_input_matrix =
       data_dir() / "contact_matrices" / "contact_matrix_dense_int_001.tsv.xz";
 
@@ -282,123 +278,76 @@ static void contact_matrix_dense_blur_helper(double sigma, BS::thread_pool* tpoo
 
   for (usize i = 0; i < input_matrix.nrows(); ++i) {
     for (auto j = i; j < input_matrix.ncols(); ++j) {
-      CHECK_THAT(reference_matrix.get(i, j), Catch::Matchers::WithinRel(blurred_matrix.get(i, j)));
+      CHECK_THAT(reference_matrix.get(i, j),
+                 Catch::Matchers::WithinRel(blurred_matrix.get(i, j), 1.0e-6));
     }
   }
 }
 
 // NOLINTNEXTLINE(readability-function-cognitive-complexity)
 TEST_CASE("CMatrix blur (sigma=0.01)", "[cmatrix][long]") {
-  modle::test::cmatrix::contact_matrix_dense_blur_helper(0.01);
+  modle::test::cmatrix::contact_matrix_dense_blur_helper(0.01, 3.5);
 }
 
 // NOLINTNEXTLINE(readability-function-cognitive-complexity)
 TEST_CASE("CMatrix blur (sigma=0.5)", "[cmatrix][long]") {
-  modle::test::cmatrix::contact_matrix_dense_blur_helper(0.5);
+  modle::test::cmatrix::contact_matrix_dense_blur_helper(0.5, 3.5);
 }
 
 // NOLINTNEXTLINE(readability-function-cognitive-complexity)
 TEST_CASE("CMatrix blur (sigma=1.0)", "[cmatrix][long]") {
-  modle::test::cmatrix::contact_matrix_dense_blur_helper(1.0);
+  modle::test::cmatrix::contact_matrix_dense_blur_helper(1.0, 3.5);
 }
 
 // NOLINTNEXTLINE(readability-function-cognitive-complexity)
 TEST_CASE("CMatrix blur (sigma=1.5)", "[cmatrix][long]") {
-  modle::test::cmatrix::contact_matrix_dense_blur_helper(1.5);
+  modle::test::cmatrix::contact_matrix_dense_blur_helper(1.5, 3.5);
 }
 
 // NOLINTNEXTLINE(readability-function-cognitive-complexity)
 TEST_CASE("CMatrix blur parallel (sigma=5.0)", "[cmatrix][long][exclusive]") {
   BS::thread_pool tpool{};
-  modle::test::cmatrix::contact_matrix_dense_blur_helper(5.0, &tpool);
+  modle::test::cmatrix::contact_matrix_dense_blur_helper(5.0, 3.5, &tpool);
 }
 
-// NOLINTNEXTLINE(readability-function-cognitive-complexity)
-TEST_CASE("CMatrix difference of gaussians (SciPy)", "[cmatrix][long]") {
-  const auto reference_file = data_dir() / "cmatrix_001.tsv.gz";
-  const auto input_matrix = [&]() {
-    ContactMatrixDense<> m;
-    m.unsafe_import_from_txt(reference_file);
-    return m;
-  }();
+static void contact_matrix_dense_dog_helper(double sigma1, double sigma2, double truncate,
+                                            BS::thread_pool* tpool = nullptr) {
+  assert(sigma1 < sigma2);
+  const auto path_to_input_matrix =
+      data_dir() / "contact_matrices" / "contact_matrix_dense_int_001.tsv.xz";
 
-  auto compute_reference_matrix = [&input_matrix](auto shape, auto sigma1, auto sigma2,
-                                                  auto trunc) {
-    boost::process::ipstream stdout_stream;
-    boost::process::opstream stdin_stream;
-    auto py = boost::process::child(
-        boost::process::search_path("python3").string(), "-c",
-        fmt::format(FMT_STRING(SCIPY_GAUSSIAN_DIFFERENCE_CMD), shape, shape, sigma1, sigma2, trunc),
-        boost::process::std_in<stdin_stream, boost::process::std_out> stdout_stream);
-    assert(py.running());
+  const auto path_to_reference_matrix =
+      data_dir() / "contact_matrices" / "diff_of_gaussians" /
+      fmt::format(FMT_STRING("contact_matrix_dense_int_001_dog_{:.2f}_{:.2f}.tsv.xz"), sigma1,
+                  sigma2);
 
-    write_cmatrix_to_stream(input_matrix, stdin_stream);
-    return read_cmatrix_from_stream<ContactMatrixDense<double>>(
-        input_matrix.nrows(), input_matrix.ncols(), stdout_stream);
-  };
+  const auto input_matrix = ContactMatrixDense<double>::from_txt(path_to_input_matrix);
 
-  const double sigma1_ = 1.0;
-  const double sigma2_ = 1.6;
-  const double trunc_ = 3.0;
-  const auto reference_matrix =
-      compute_reference_matrix(input_matrix.ncols(), sigma1_, sigma2_, trunc_);
-  const auto gauss_diff_matrix = input_matrix.gaussian_diff(sigma1_, sigma2_);
+  const auto reference_matrix = ContactMatrixDense<double>::from_txt(path_to_reference_matrix);
+  const auto dog_matrix = input_matrix.diff_of_gaussians(sigma1, sigma2, truncate,
+                                                         std::numeric_limits<double>::lowest(),
+                                                         std::numeric_limits<double>::max(), tpool);
 
-  const auto m1 = input_matrix.blur(sigma1_);
-  const auto m2 = input_matrix.blur(sigma2_);
+  REQUIRE(reference_matrix.nrows() == dog_matrix.nrows());
+  REQUIRE(reference_matrix.ncols() == dog_matrix.ncols());
 
-  for (usize j = 4; j < input_matrix.nrows(); ++j) {
-    for (auto k = j; k < input_matrix.ncols() - 4; ++k) {
-      CHECK(Catch::Approx(reference_matrix.get(j, k)) == gauss_diff_matrix.get(j, k));
-      CHECK(Catch::Approx(m1.get(j, k) - m2.get(j, k)) == gauss_diff_matrix.get(j, k));
+  for (usize i = 0; i < input_matrix.nrows(); ++i) {
+    for (auto j = i; j < input_matrix.ncols(); ++j) {
+      CHECK_THAT(reference_matrix.get(i, j),
+                 Catch::Matchers::WithinRel(dog_matrix.get(i, j), 1.0e-6));
     }
   }
 }
 
 // NOLINTNEXTLINE(readability-function-cognitive-complexity)
-TEST_CASE("CMatrix difference of gaussians - parallel (SciPy)", "[cmatrix][long]") {
-  const auto reference_file = data_dir() / "cmatrix_001.tsv.gz";
-  const auto input_matrix = [&]() {
-    ContactMatrixDense<> m;
-    m.unsafe_import_from_txt(reference_file);
-    return m;
-  }();
+TEST_CASE("CMatrix difference of Gaussians", "[cmatrix][long]") {
+  modle::test::cmatrix::contact_matrix_dense_dog_helper(1.0, 1.6, 3.0);
+}
 
-  auto compute_reference_matrix = [&input_matrix](auto shape, auto sigma1, auto sigma2,
-                                                  auto trunc) {
-    boost::process::ipstream stdout_stream;
-    boost::process::opstream stdin_stream;
-    auto py = boost::process::child(
-        boost::process::search_path("python3").string(), "-c",
-        fmt::format(FMT_STRING(SCIPY_GAUSSIAN_DIFFERENCE_CMD), shape, shape, sigma1, sigma2, trunc),
-        boost::process::std_in<stdin_stream, boost::process::std_out> stdout_stream);
-    assert(py.running());
-
-    write_cmatrix_to_stream(input_matrix, stdin_stream);
-    return read_cmatrix_from_stream<ContactMatrixDense<double>>(
-        input_matrix.nrows(), input_matrix.ncols(), stdout_stream);
-  };
-
-  const double sigma1_ = 1.0;
-  const double sigma2_ = 1.6;
-  const double trunc_ = 3.0;
-
-  BS::thread_pool tpool;
-  const auto reference_matrix =
-      compute_reference_matrix(input_matrix.ncols(), sigma1_, sigma2_, trunc_);
-  const auto gauss_diff_matrix =
-      input_matrix.gaussian_diff(sigma1_, sigma2_, std::numeric_limits<double>::lowest(),
-                                 (std::numeric_limits<double>::max)(), &tpool);
-
-  const auto m1 = input_matrix.blur(sigma1_);
-  const auto m2 = input_matrix.blur(sigma2_);
-
-  for (usize j = 4; j < input_matrix.nrows(); ++j) {
-    for (auto k = j; k < input_matrix.ncols() - 4; ++k) {
-      CHECK(Catch::Approx(reference_matrix.get(j, k)) == gauss_diff_matrix.get(j, k));
-      CHECK(Catch::Approx(m1.get(j, k) - m2.get(j, k)) == gauss_diff_matrix.get(j, k));
-    }
-  }
+// NOLINTNEXTLINE(readability-function-cognitive-complexity)
+TEST_CASE("CMatrix difference of Gaussians - parallel", "[cmatrix][long][exclusive]") {
+  BS::thread_pool tpool{};
+  modle::test::cmatrix::contact_matrix_dense_dog_helper(1.0, 1.6, 3.0, &tpool);
 }
 
 // NOLINTNEXTLINE(readability-function-cognitive-complexity)

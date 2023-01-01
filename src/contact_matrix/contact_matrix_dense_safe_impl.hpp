@@ -184,19 +184,17 @@ ContactMatrixDense<double> ContactMatrixDense<N>::blur(const double sigma, const
 }
 
 template <class N>
-ContactMatrixDense<double> ContactMatrixDense<N>::gaussian_diff(const double sigma1,
-                                                                const double sigma2,
-                                                                const double min_value,
-                                                                const double max_value,
-                                                                BS::thread_pool* tpool) const {
+ContactMatrixDense<double> ContactMatrixDense<N>::diff_of_gaussians(
+    const double sigma1, const double sigma2, const double truncate, const double min_value,
+    const double max_value, BS::thread_pool* tpool) const {
   assert(sigma1 <= sigma2);
   ContactMatrixDense<double> bmatrix(this->nrows(), this->ncols());
   if (this->empty()) {
     return bmatrix;
   }
 
-  const auto gauss_kernel1 = stats::compute_gauss_kernel2d(sigma1);
-  const auto gauss_kernel2 = stats::compute_gauss_kernel2d(sigma2);
+  const auto gauss_kernel1 = stats::compute_gauss_kernel2d(sigma1, truncate);
+  const auto gauss_kernel2 = stats::compute_gauss_kernel2d(sigma2, truncate);
 
   [[maybe_unused]] const auto block_size1 =
       static_cast<usize>(std::sqrt(static_cast<double>(gauss_kernel1.size())));

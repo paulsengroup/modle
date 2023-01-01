@@ -50,4 +50,13 @@ for sigma in 0.01 0.50 1.00 1.50 5.00; do
     xz -dc "$src" | gaussian_blur_scipy.py "$sigma" | xz -9 --extreme -T0 > "$dest" &
 done
 
+# Generate DOG matrices
+src="$dest_dir/contact_matrix_dense_int_001.tsv.xz"
+dest="$dest_dir/diff_of_gaussians/contact_matrix_dense_int_001_dog_1.00_1.60.tsv.xz"
+
+mkdir -p "$(dirname "$dest")"
+
+2>&1 echo "Generating DOG matrix..." && \
+xz -dc "$src" | diff_of_gaussians_skimage.py 1.00 1.60 | xz -9 --extreme -T0 > "$dest" &
+
 wait
