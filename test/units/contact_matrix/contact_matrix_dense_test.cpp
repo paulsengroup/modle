@@ -34,7 +34,7 @@ constexpr double DEFAULT_FP_TOLERANCE =
     static_cast<double>(std::numeric_limits<float>::epsilon() * 100);
 
 // NOLINTNEXTLINE(readability-function-cognitive-complexity)
-TEST_CASE("CMatrix simple", "[cmatrix][short]") {
+TEST_CASE("ContactMatrixDense simple", "[cmatrix][short]") {
   ContactMatrixDense<> c(10, 100);
   CHECK(c.get(0, 0) == 0);
   c.increment(0, 0);
@@ -66,7 +66,7 @@ TEST_CASE("CMatrix simple", "[cmatrix][short]") {
 }
 
 // NOLINTNEXTLINE(readability-function-cognitive-complexity)
-TEST_CASE("CMatrix 10x200", "[cmatrix][medium]") {
+TEST_CASE("ContactMatrixDense 10x200", "[cmatrix][medium]") {
   const auto input_file = data_dir() / "contact_matrices" / "symmetric_matrix_200_10.tsv.xz";
   REQUIRE(std::filesystem::exists(input_file));
   const auto m1 = load_matrix_from_file(input_file);
@@ -88,7 +88,7 @@ TEST_CASE("CMatrix 10x200", "[cmatrix][medium]") {
 }
 
 // NOLINTNEXTLINE(readability-function-cognitive-complexity)
-TEST_CASE("CMatrix in/decrement", "[cmatrix][short]") {
+TEST_CASE("ContactMatrixDense in/decrement", "[cmatrix][short]") {
   ContactMatrixDense<> m(10, 20);
   m.increment(0, 0);
   m.increment(15, 15);
@@ -122,7 +122,7 @@ TEST_CASE("CMatrix in/decrement", "[cmatrix][short]") {
 }
 
 // NOLINTNEXTLINE(readability-function-cognitive-complexity)
-TEST_CASE("CMatrix get w/ block", "[cmatrix][short]") {
+TEST_CASE("ContactMatrixDense get w/ block", "[cmatrix][short]") {
   ContactMatrixDense<u32> m1(100, 100);
   // Fill the upper left corner
   for (u32 i = 0; i < 3; ++i) {
@@ -153,7 +153,7 @@ TEST_CASE("CMatrix get w/ block", "[cmatrix][short]") {
 }
 
 // NOLINTNEXTLINE(readability-function-cognitive-complexity)
-TEST_CASE("CMatrix get w/ block small", "[cmatrix][short]") {
+TEST_CASE("ContactMatrixDense get w/ block small", "[cmatrix][short]") {
   const auto parent = data_dir() / "contact_matrices";
   const auto reference_file = parent / "contact_matrix_chr1_bs9_small.tsv.xz";
   const auto input_file = parent / "contact_matrix_chr1_raw_small.tsv.xz";
@@ -174,7 +174,7 @@ TEST_CASE("CMatrix get w/ block small", "[cmatrix][short]") {
 }
 
 // NOLINTNEXTLINE(readability-function-cognitive-complexity)
-TEST_CASE("CMatrix get column", "[cmatrix][short]") {
+TEST_CASE("ContactMatrixDense get column", "[cmatrix][short]") {
   ContactMatrixDense<> c(10, 100);
 
   const usize col = 25;  // Set a column of pixels to 1
@@ -219,7 +219,7 @@ TEST_CASE("CMatrix get column", "[cmatrix][short]") {
 }
 
 // NOLINTNEXTLINE(readability-function-cognitive-complexity)
-TEST_CASE("CMatrix get row", "[cmatrix][short]") {
+TEST_CASE("ContactMatrixDense get row", "[cmatrix][short]") {
   ContactMatrixDense<> c(10, 100);
 
   const usize row = 25;  // Set a row of pixels to 1
@@ -292,27 +292,27 @@ static void contact_matrix_dense_blur_helper(double sigma, double truncate,
 }
 
 // NOLINTNEXTLINE(readability-function-cognitive-complexity)
-TEST_CASE("CMatrix blur (sigma=0.01)", "[cmatrix][long]") {
+TEST_CASE("ContactMatrixDense blur (sigma=0.01)", "[cmatrix][long]") {
   contact_matrix_dense_blur_helper(0.01, 3.5);
 }
 
 // NOLINTNEXTLINE(readability-function-cognitive-complexity)
-TEST_CASE("CMatrix blur (sigma=0.5)", "[cmatrix][long]") {
+TEST_CASE("ContactMatrixDense blur (sigma=0.5)", "[cmatrix][long]") {
   contact_matrix_dense_blur_helper(0.5, 3.5);
 }
 
 // NOLINTNEXTLINE(readability-function-cognitive-complexity)
-TEST_CASE("CMatrix blur (sigma=1.0)", "[cmatrix][long]") {
+TEST_CASE("ContactMatrixDense blur (sigma=1.0)", "[cmatrix][long]") {
   contact_matrix_dense_blur_helper(1.0, 3.5);
 }
 
 // NOLINTNEXTLINE(readability-function-cognitive-complexity)
-TEST_CASE("CMatrix blur (sigma=1.5)", "[cmatrix][long]") {
+TEST_CASE("ContactMatrixDense blur (sigma=1.5)", "[cmatrix][long]") {
   contact_matrix_dense_blur_helper(1.5, 3.5);
 }
 
 // NOLINTNEXTLINE(readability-function-cognitive-complexity)
-TEST_CASE("CMatrix blur parallel (sigma=5.0)", "[cmatrix][long][exclusive]") {
+TEST_CASE("ContactMatrixDense blur parallel (sigma=5.0)", "[cmatrix][long][exclusive]") {
   BS::thread_pool tpool{};
   contact_matrix_dense_blur_helper(5.0, 3.5, &tpool);
 }
@@ -347,18 +347,18 @@ static void contact_matrix_dense_dog_helper(double sigma1, double sigma2, double
 }
 
 // NOLINTNEXTLINE(readability-function-cognitive-complexity)
-TEST_CASE("CMatrix difference of Gaussians", "[cmatrix][long]") {
+TEST_CASE("ContactMatrixDense difference of Gaussians", "[cmatrix][long]") {
   contact_matrix_dense_dog_helper(1.0, 1.6, 3.0);
 }
 
 // NOLINTNEXTLINE(readability-function-cognitive-complexity)
-TEST_CASE("CMatrix difference of Gaussians - parallel", "[cmatrix][long][exclusive]") {
+TEST_CASE("ContactMatrixDense difference of Gaussians - parallel", "[cmatrix][long][exclusive]") {
   BS::thread_pool tpool{};
   contact_matrix_dense_dog_helper(1.0, 1.6, 3.0, &tpool);
 }
 
 // NOLINTNEXTLINE(readability-function-cognitive-complexity)
-TEST_CASE("CMatrix test get_nnz", "[cmatrix][short]") {
+TEST_CASE("ContactMatrixDense test get_nnz", "[cmatrix][short]") {
   ContactMatrixDense<> m(10, 10);
   m.set(1, 1, 100);
   CHECK(m.get_nnz() == 1);
@@ -374,7 +374,7 @@ TEST_CASE("CMatrix test get_nnz", "[cmatrix][short]") {
 }
 
 // NOLINTNEXTLINE(readability-function-cognitive-complexity)
-TEST_CASE("CMatrix test get_tot_contacts", "[cmatrix][short]") {
+TEST_CASE("ContactMatrixDense test get_tot_contacts", "[cmatrix][short]") {
   ContactMatrixDense<> m(10, 10);
   m.set(1, 1, 100);
   CHECK(m.get_tot_contacts() == 100);
@@ -391,7 +391,7 @@ TEST_CASE("CMatrix test get_tot_contacts", "[cmatrix][short]") {
 
 #ifdef MODLE_ENABLE_SANITIZER_THREAD
 // NOLINTNEXTLINE(readability-function-cognitive-complexity)
-TEST_CASE("CMatrix pixel locking TSAN", "[cmatrix][long]") {
+TEST_CASE("ContactMatrixDense pixel locking TSAN", "[cmatrix][long]") {
   ContactMatrixDense<i64> m(100, 10);
   std::atomic<bool> stop_sig = false;
 
@@ -444,7 +444,7 @@ TEST_CASE("CMatrix pixel locking TSAN", "[cmatrix][long]") {
 }
 
 // NOLINTNEXTLINE(readability-function-cognitive-complexity)
-TEST_CASE("CMatrix global locking TSAN", "[cmatrix][long]") {
+TEST_CASE("ContactMatrixDense global locking TSAN", "[cmatrix][long]") {
   ContactMatrixDense<i64> m(100, 10);
   std::atomic<bool> stop_sig = false;
 
