@@ -82,8 +82,8 @@ catch_discover_tests(
   " - SHORT"
   WORKING_DIRECTORY
   ${CMAKE_CURRENT_SOURCE_DIR}/../
-  OUTPUT_DIR
-  ${CMAKE_CURRENT_BINARY_DIR}/Testing/
+  # OUTPUT_DIR
+  # ${CMAKE_CURRENT_BINARY_DIR}/Testing/
   EXTRA_ARGS
   --success
   PROPERTIES
@@ -98,8 +98,8 @@ catch_discover_tests(
   " - MEDIUM"
   WORKING_DIRECTORY
   ${CMAKE_CURRENT_SOURCE_DIR}/../
-  OUTPUT_DIR
-  ${CMAKE_CURRENT_BINARY_DIR}/Testing/
+  # OUTPUT_DIR
+  # ${CMAKE_CURRENT_BINARY_DIR}/Testing/
   EXTRA_ARGS
   --success
   PROPERTIES
@@ -114,8 +114,8 @@ catch_discover_tests(
   " - LONG"
   WORKING_DIRECTORY
   ${CMAKE_CURRENT_SOURCE_DIR}/../
-  OUTPUT_DIR
-  ${CMAKE_CURRENT_BINARY_DIR}/Testing/
+  # OUTPUT_DIR
+  # ${CMAKE_CURRENT_BINARY_DIR}/Testing/
   EXTRA_ARGS
   --success
   PROPERTIES

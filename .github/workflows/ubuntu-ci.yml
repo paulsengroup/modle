@@ -318,7 +318,7 @@ jobs:
       - name: Extract binaries and test dataset
         run: |
           zstd -dcf unit-tests.tar.zst | tar -xf -
-          tar -xf modle_test_data.tar.gz
+          tar -xf modle_test_data.tar.xz
 
       - name: Run unit tests
         run: |
@@ -362,7 +362,7 @@ jobs:
       - name: Extract binaries and test dataset
         run: |
           zstd -dcf binaries.tar.zst | tar -xf -
-          tar -xf modle_test_data.tar.gz
+          tar -xf modle_test_data.tar.xz
 
       - name: Inspect modle version
         run: bin/modle --version
@@ -400,7 +400,7 @@ jobs:
       - name: Extract binaries and test dataset
         run: |
           zstd -dcf binaries.tar.zst | tar -xf -
-          tar -xf modle_test_data.tar.gz
+          tar -xf modle_test_data.tar.xz
 
       - name: Inspect modle_tools version
         run: bin/modle_tools --version

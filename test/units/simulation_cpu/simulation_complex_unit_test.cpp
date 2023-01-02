@@ -20,7 +20,7 @@
 #include "modle/genome.hpp"                    // for Chromosome
 #include "modle/simulation.hpp"                // for Simulation
 
-namespace modle::test::libmodle {
+namespace modle::libmodle::test {
 
 // NOLINTNEXTLINE(readability-function-cognitive-complexity)
 TEST_CASE("Simulation 001", "[simulation][short]") {
@@ -782,4 +782,4 @@ TEST_CASE("Simulation 012 - fix_secondary_lef_lef_collisions", "[simulation][sho
                           fwd_collisions_expected);
 }
 
-}  // namespace modle::test::libmodle
+}  // namespace modle::libmodle::test

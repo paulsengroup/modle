@@ -189,8 +189,7 @@ ctest -j 8                 \
       --test-dir .         \
       --schedule-random    \
       --output-on-failure  \
-      --no-tests=error     \
-      -E '(SciPy)|(wCorr)'
+      --no-tests=error
 
 # Run integration test
 ../test/scripts/modle_integration_test.sh src/modle/modle
@@ -299,7 +298,7 @@ downloaded as follows:
 
 ```bash
 # IMPORTANT! You should be in the repository root when running the following command (otherwise test files will be extracted in the wrong place)
-curl -L 'https://zenodo.org/record/6638906/files/modle_test_data.tar.gz?download=1' | tar -xzf -
+curl -L 'https://zenodo.org/record/7499993/files/modle_test_data.tar.xz?download=1' | tar -xzf -
 ```
 
 Datasets are automatically downloaded by CMake when running steps from inside folder `test/data/integration_tests`.

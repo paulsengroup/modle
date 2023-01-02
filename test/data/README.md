@@ -17,5 +17,5 @@ If you need to run MoDLE unit tests on a machine without internet access you sho
 You can get the download link by running the following command from the repository root:
 
 ```bash
-grep 'zenodo' cmake/FetchTestDataset.cmake
+awk '(index($0, "https://zenodo.org/record/")) {print $2}' cmake/FetchTestDataset.cmake
 ```

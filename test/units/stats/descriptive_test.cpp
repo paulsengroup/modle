@@ -5,17 +5,19 @@
 #include "modle/stats/descriptive.hpp"
 
 #include <algorithm>  // for transform
-#include <catch2/catch_approx.hpp>
 #include <catch2/catch_test_macros.hpp>
+#include <catch2/matchers/catch_matchers_floating_point.hpp>
 #include <string_view>  // for string_view_literals
 #include <vector>       // for vector
 
 #include "modle/common/common.hpp"  // for u8, usize
 #include "modle/common/utils.hpp"   // for identity::operator(), identity
 
-namespace modle::test::stats {
-using namespace modle::stats;
-using namespace std::string_view_literals;
+namespace modle::stats::test {
+
+// See https://github.com/catchorg/Catch2/blob/v3.2.1/src/catch2/catch_approx.cpp#L27-L32
+constexpr double DEFAULT_FP_TOLERANCE =
+    static_cast<double>(std::numeric_limits<float>::epsilon() * 100);
 
 struct FP {
   float n;
@@ -28,10 +30,10 @@ TEST_CASE("Mean", "[stats][short]") {
   std::transform(v1.begin(), v1.end(), v2.begin(),
                  [](const auto n) { return FP{static_cast<float>(n)}; });
 
-  const auto result = Catch::Approx(5.0);
-
-  CHECK(stats::mean(v1.begin(), v1.end()) == result);
-  CHECK(stats::mean(v2.begin(), v2.end(), [](const auto& fp) { return fp.n; }) == result);
+  CHECK_THAT(stats::mean(v1.begin(), v1.end()),
+             Catch::Matchers::WithinRel(5.0, DEFAULT_FP_TOLERANCE));
+  CHECK_THAT(stats::mean(v2.begin(), v2.end(), [](const auto& fp) { return fp.n; }),
+             Catch::Matchers::WithinRel(5.0, DEFAULT_FP_TOLERANCE));
 }
 
 // NOLINTNEXTLINE(readability-function-cognitive-complexity)
@@ -49,7 +51,7 @@ TEST_CASE("Moving average", "[stats][short]") {
           v1.size() - window_size);
 
   for (usize i = 0; i < results.size(); ++i) {
-    CHECK(results[i] == Catch::Approx(output[i]));
+    CHECK_THAT(results[i], Catch::Matchers::WithinRel(output[i], DEFAULT_FP_TOLERANCE));
   }
 
   output.clear();
@@ -58,13 +60,14 @@ TEST_CASE("Moving average", "[stats][short]") {
                                 [](const auto& fp) { return fp.n; }) == v1.size() - window_size);
 
   for (usize i = 0; i < results.size(); ++i) {
-    CHECK(results[i] == Catch::Approx(output[i]));
+    CHECK_THAT(results[i], Catch::Matchers::WithinRel(output[i], DEFAULT_FP_TOLERANCE));
   }
 
   output.clear();
   output.resize(1);
   REQUIRE(stats::moving_average(v1.begin(), v1.end(), output.begin(), v1.size() + 1) == 1);
-  CHECK(stats::mean(v1.begin(), v1.end()) == Catch::Approx(output.front()));
+  CHECK_THAT(stats::mean(v1.begin(), v1.end()),
+             Catch::Matchers::WithinRel(output.front(), DEFAULT_FP_TOLERANCE));
 }
 
 // NOLINTNEXTLINE(readability-function-cognitive-complexity)
@@ -74,11 +77,11 @@ TEST_CASE("Sum of squared deviations", "[stats][short]") {
   std::transform(v1.begin(), v1.end(), v2.begin(),
                  [](const auto n) { return FP{static_cast<float>(n)}; });
 
-  const auto result = Catch::Approx(110.0);
-
-  CHECK(stats::sum_of_squared_deviations(v1.begin(), v1.end()) == result);
-  CHECK(stats::sum_of_squared_deviations(v2.begin(), v2.end(),
-                                         [](const auto& fp) { return fp.n; }) == result);
+  CHECK_THAT(stats::sum_of_squared_deviations(v1.begin(), v1.end()),
+             Catch::Matchers::WithinRel(110.0, DEFAULT_FP_TOLERANCE));
+  CHECK_THAT(
+      stats::sum_of_squared_deviations(v2.begin(), v2.end(), [](const auto& fp) { return fp.n; }),
+      Catch::Matchers::WithinRel(110.0, DEFAULT_FP_TOLERANCE));
 }
 
 // NOLINTNEXTLINE(readability-function-cognitive-complexity)
@@ -88,10 +91,10 @@ TEST_CASE("Variance", "[stats][short]") {
   std::transform(v1.begin(), v1.end(), v2.begin(),
                  [](const auto n) { return FP{static_cast<float>(n)}; });
 
-  const auto result = Catch::Approx(10.0);
-
-  CHECK(stats::variance(v1.begin(), v1.end()) == result);
-  CHECK(stats::variance(v2.begin(), v2.end(), [](const auto& fp) { return fp.n; }) == result);
+  CHECK_THAT(stats::variance(v1.begin(), v1.end()),
+             Catch::Matchers::WithinRel(10.0, DEFAULT_FP_TOLERANCE));
+  CHECK_THAT(stats::variance(v2.begin(), v2.end(), [](const auto& fp) { return fp.n; }),
+             Catch::Matchers::WithinRel(10.0, DEFAULT_FP_TOLERANCE));
 }
 
 // NOLINTNEXTLINE(readability-function-cognitive-complexity)
@@ -101,10 +104,12 @@ TEST_CASE("Standard Deviation", "[stats][short]") {
   std::transform(v1.begin(), v1.end(), v2.begin(),
                  [](const auto n) { return FP{static_cast<float>(n)}; });
 
-  const auto result = Catch::Approx(3.1622776601683795);
+  const auto result = 3.1622776601683795;
 
-  CHECK(stats::standard_dev(v1.begin(), v1.end()) == result);
-  CHECK(stats::standard_dev(v2.begin(), v2.end(), [](const auto& fp) { return fp.n; }) == result);
+  CHECK_THAT(stats::standard_dev(v1.begin(), v1.end()),
+             Catch::Matchers::WithinRel(result, DEFAULT_FP_TOLERANCE));
+  CHECK_THAT(stats::standard_dev(v2.begin(), v2.end(), [](const auto& fp) { return fp.n; }),
+             Catch::Matchers::WithinRel(result, DEFAULT_FP_TOLERANCE));
 }
 
 // NOLINTNEXTLINE(readability-function-cognitive-complexity)
@@ -117,11 +122,13 @@ TEST_CASE("SED", "[stats][short]") {
   const std::vector<double> weights{0.97302005, 0.05226173, 0.15995629, 0.31495018, 0.95241483,
                                     0.87420081, 0.21360278, 0.0822476,  0.26402032, 0.49666325};
   // computed with scipy.spatial.distance.euclidean
-  const auto result = Catch::Approx(154.65977964758991);
-  const auto result_weighted = Catch::Approx(99.94033647108283);
+  const auto result = 154.65977964758991;
+  const auto result_weighted = 99.94033647108283;
 
-  CHECK(stats::sed(v1.begin(), v1.end(), v2.begin()) == result);
-  CHECK(stats::weighted_sed(v1.begin(), v1.end(), v2.begin(), weights.begin()) == result_weighted);
+  CHECK_THAT(stats::sed(v1.begin(), v1.end(), v2.begin()),
+             Catch::Matchers::WithinRel(result, DEFAULT_FP_TOLERANCE));
+  CHECK_THAT(stats::weighted_sed(v1.begin(), v1.end(), v2.begin(), weights.begin()),
+             Catch::Matchers::WithinRel(result_weighted, DEFAULT_FP_TOLERANCE));
 }
 
 // NOLINTNEXTLINE(readability-function-cognitive-complexity)
@@ -135,10 +142,12 @@ TEST_CASE("RMSE", "[stats][short]") {
                                     0.87420081, 0.21360278, 0.0822476,  0.26402032, 0.49666325};
 
   // computed with mean_squared_error from sklearn.metrics
-  const auto result = Catch::Approx(48.90771661061378);
-  const auto result_weighted = Catch::Approx(47.73515476405454);
+  const auto result = 48.90771661061378;
+  const auto result_weighted = 47.73515476405454;
 
-  CHECK(stats::rmse(v1.begin(), v1.end(), v2.begin()) == result);
-  CHECK(stats::weighted_rmse(v1.begin(), v1.end(), v2.begin(), weights.begin()) == result_weighted);
+  CHECK_THAT(stats::rmse(v1.begin(), v1.end(), v2.begin()),
+             Catch::Matchers::WithinRel(result, DEFAULT_FP_TOLERANCE));
+  CHECK_THAT(stats::weighted_rmse(v1.begin(), v1.end(), v2.begin(), weights.begin()),
+             Catch::Matchers::WithinRel(result_weighted, DEFAULT_FP_TOLERANCE));
 }
-}  // namespace modle::test::stats
+}  // namespace modle::stats::test

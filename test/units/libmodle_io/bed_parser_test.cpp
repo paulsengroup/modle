@@ -17,10 +17,14 @@
 #include "modle/common/common.hpp"                // for usize
 #include "modle/compressed_io/compressed_io.hpp"  // for Reader
 
-namespace modle::test::bed {
-using namespace modle::bed;
+namespace modle::bed::test {
 
-inline void compare_bed_records_with_file(std::vector<BED> records, const std::string &bed_file) {
+[[maybe_unused]] static const std::filesystem::path &data_dir() {
+  static const std::filesystem::path data_dir{"test/data/unit_tests"};
+  return data_dir;
+}
+
+static void compare_bed_records_with_file(std::vector<BED> records, const std::string &bed_file) {
   compressed_io::Reader r(bed_file);
   std::vector<std::string> lines;
   lines.reserve(records.size());
@@ -60,7 +64,7 @@ inline void compare_bed_records_with_file(std::vector<BED> records, const std::s
 
 // NOLINTNEXTLINE(readability-function-cognitive-complexity)
 TEST_CASE("BED Parser simple", "[parsers][BED][io][short]") {
-  const std::string bed_file = "test/data/unit_tests/sample.bed6.gz";
+  const auto bed_file = data_dir() / "genomic_intervals" / "intervals.bed6.xz";
   auto p = bed::Parser(bed_file);
   auto records = p.parse_all();
   CHECK(records.size() == 9);
@@ -74,7 +78,7 @@ TEST_CASE("BED Parser simple", "[parsers][BED][io][short]") {
 
 // NOLINTNEXTLINE(readability-function-cognitive-complexity)
 TEST_CASE("BED Parser simple: BED6 -> BED3", "[parsers][BED][io][short]") {
-  const std::string bed_file = "test/data/unit_tests/sample.bed6.gz";
+  const auto bed_file = data_dir() / "genomic_intervals" / "intervals.bed6.xz";
   auto p = bed::Parser(bed_file, BED::BED3);
   auto records = p.parse_all();
   std::sort(records.begin(), records.end());
@@ -87,7 +91,7 @@ TEST_CASE("BED Parser simple: BED6 -> BED3", "[parsers][BED][io][short]") {
 
 // NOLINTNEXTLINE(readability-function-cognitive-complexity)
 TEST_CASE("BED Parser: BED6", "[parsers][BED][io][medium]") {
-  const std::string bed_file = "test/data/unit_tests/sample.bed6.gz";
+  const auto bed_file = data_dir() / "genomic_intervals" / "intervals.bed6.xz";
   auto p = bed::Parser(bed_file);
   auto records = p.parse_all();
   REQUIRE(records.size() == 9);
@@ -95,12 +99,12 @@ TEST_CASE("BED Parser: BED6", "[parsers][BED][io][medium]") {
 }
 
 // NOLINTNEXTLINE(readability-function-cognitive-complexity)
-TEST_CASE("BED Parser: BED9", "[parsers][BED][io][medium]") {
-  std::string bed_file = "test/data/unit_tests/sample.bed9.gz";
+TEST_CASE("BED Parser: BED9", "[parsers][BED][io][long]") {
+  const auto bed_file = data_dir() / "genomic_intervals" / "intervals.bed9";
   auto p = bed::Parser(bed_file);
   auto records = p.parse_all();
   REQUIRE(records.size() == 62580);
   compare_bed_records_with_file(records, bed_file);
 }
 
-}  // namespace modle::test::bed
+}  // namespace modle::bed::test

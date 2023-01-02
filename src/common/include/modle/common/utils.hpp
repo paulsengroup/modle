@@ -86,15 +86,6 @@ class RepeatIterator {
   constexpr bool operator!=(const RepeatIterator& other) const;
 };
 
-template <class InputIt1, class InputIt2, class N = double,
-          class = std::enable_if_t<std::is_arithmetic_v<N>>>
-[[nodiscard]] constexpr N convolve(InputIt1 kernel_first, InputIt1 kernel_last,
-                                   InputIt2 buff_first);
-
-template <class Rng1, class Rng2, class N = double,
-          class = std::enable_if_t<std::is_arithmetic_v<N>>>
-[[nodiscard]] constexpr N convolve(const Rng1& kernel, const Rng2& buff);
-
 template <class I, class = std::enable_if_t<std::is_integral_v<I>>>
 [[nodiscard]] constexpr I next_pow2(I n) noexcept;
 

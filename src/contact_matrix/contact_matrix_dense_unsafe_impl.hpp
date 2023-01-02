@@ -4,8 +4,8 @@
 
 #pragma once
 
-#include <absl/strings/str_split.h>  // for StrSplit, Splitter
-#include <fmt/format.h>              // for FMT_STRING, join
+#include <fmt/format.h>  // for FMT_STRING, join
+#include <fmt/ostream.h>
 
 #include <algorithm>                                // for clamp, fill, max, min
 #include <atomic>                                   // for atomic_fetch_add_explicit
@@ -23,8 +23,6 @@
 #include <vector>                                   // for vector
 
 #include "modle/common/common.hpp"                // for usize, i64, u64, bp_t, isize
-#include "modle/common/numeric_utils.hpp"         // for parse_numeric_or_throw
-#include "modle/common/utils.hpp"                 // for convolve
 #include "modle/compressed_io/compressed_io.hpp"  // for Reader
 #include "modle/interval_tree.hpp"                // for IITree
 
@@ -258,7 +256,7 @@ void ContactMatrixDense<N>::unsafe_print(std::ostream &out_stream, bool full) co
         if (i >= this->_nrows) {
           row[x] = 0;
         } else {
-          row[x] = this->at(i, j);
+          row[x] = this->unsafe_at(i, j);
         }
       }
       fmt::print(out_stream, FMT_STRING("{}\n"), fmt::join(row, "\t"));
@@ -267,7 +265,7 @@ void ContactMatrixDense<N>::unsafe_print(std::ostream &out_stream, bool full) co
     std::vector<N> row(this->ncols());
     for (usize i = 0; i < this->nrows(); ++i) {
       for (auto j = i; j < this->ncols(); ++j) {
-        row[j] = this->at(i, j);
+        row[j] = this->unsafe_at(i, j);
       }
       fmt::print(out_stream, FMT_STRING("{}\n"), fmt::join(row, "\t"));
     }
@@ -301,29 +299,6 @@ std::vector<std::vector<N>> ContactMatrixDense<N>::unsafe_generate_symmetric_mat
     m.emplace_back(std::move(row));
   }
   return m;
-}
-
-template <class N>
-void ContactMatrixDense<N>::unsafe_import_from_txt(const std::filesystem::path &path,
-                                                   const char sep) {
-  assert(std::filesystem::exists(path));
-  compressed_io::Reader r(path);
-
-  std::string buff;
-  std::vector<std::string_view> toks;
-  usize i = 0;
-  while (r.getline(buff)) {
-    toks = absl::StrSplit(buff, sep);
-    if (i == 0) {
-      this->unsafe_resize(toks.size(), toks.size());
-      this->unsafe_reset();
-    }
-    for (usize j = i; j < this->ncols(); ++j) {
-      this->set(i, j, utils::parse_numeric_or_throw<N>(toks[j]));
-    }
-    ++i;
-  }
-  assert(i != 0);
 }
 
 template <class N>
