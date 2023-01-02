@@ -12,6 +12,6 @@ FetchContent_Declare(
 )
 # cmake-format: on
 
-SET(COOLERPP_ENABLE_TESTING OFF)
-SET(COOLERPP_BUILD_EXAMPLES OFF)
+set(COOLERPP_ENABLE_TESTING OFF)
+set(COOLERPP_BUILD_EXAMPLES OFF)
 FetchContent_MakeAvailable(coolerpp)
