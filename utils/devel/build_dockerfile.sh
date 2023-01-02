@@ -21,8 +21,6 @@ else
   GIT_IS_DIRTY=0
 fi
 
-FINAL_BASE_IMAGE_DIGEST="$(sudo docker inspect --format='{{index .RepoDigests 0}}' docker.io/library/ubuntu:22.04 | grep -o '[[:alnum:]:]\+$')"
-
 IMAGE_TAG="sha-$GIT_SHORT_HASH"
 if [ $GIT_IS_DIRTY -ne 0 ]; then
   IMAGE_TAG+='-dirty'
@@ -37,6 +35,8 @@ fi
 2>&1 echo "Building \"$IMAGE_NAME:$IMAGE_TAG\"..."
 
 sudo docker pull docker.io/library/ubuntu:22.04
+FINAL_BASE_IMAGE_DIGEST="$(sudo docker inspect --format='{{index .RepoDigests 0}}' docker.io/library/ubuntu:22.04 | grep -o '[[:alnum:]:]\+$')"
+
 BUILD_BASE_IMAGE='ghcr.io/paulsengroup/ci-docker-images/ubuntu-22.04-cxx-clang-14:latest'
 TEST_BASE_IMAGE='ghcr.io/paulsengroup/ci-docker-images/modle/ubuntu-22.04-cxx-clang-14:latest'
 

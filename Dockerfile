@@ -13,34 +13,6 @@ ARG FINAL_BASE_IMAGE
 ARG FINAL_BASE_IMAGE_DIGEST
 
 FROM "$BUILD_BASE_IMAGE" AS builder
-ARG BUILD_BASE_IMAGE
-ARG TEST_BASE_IMAGE
-ARG FINAL_BASE_IMAGE
-ARG FINAL_BASE_IMAGE_TAG
-ARG FINAL_BASE_IMAGE_DIGEST
-
-ARG C_COMPILER
-ARG CXX_COMPILER
-
-ARG GIT_HASH
-ARG GIT_SHORT_HASH
-ARG GIT_TAG
-ARG GIT_IS_DIRTY
-ARG CREATION_DATE
-
-# Make sure all build arguments have been defined
-RUN if [ -z "$BUILD_BASE_IMAGE" ]; then echo "Missing BUILD_BASE_IMAGE --build-arg" && exit 1; fi \
-&&  if [ -z "$TEST_BASE_IMAGE" ]; then echo "Missing TEST_BASE_IMAGE --build-arg" && exit 1; fi \
-&&  if [ -z "$FINAL_BASE_IMAGE" ]; then echo "Missing FINAL_BASE_IMAGE --build-arg" && exit 1; fi \
-&&  if [ -z "$FINAL_BASE_IMAGE_TAG" ]; then echo "Missing FINAL_BASE_IMAGE_TAG --build-arg" && exit 1; fi \
-&&  if [ -z "$FINAL_BASE_IMAGE_DIGEST" ]; then echo "Missing FINAL_BASE_IMAGE_DIGEST --build-arg" && exit 1; fi \
-&&  if [ -z "$C_COMPILER" ]; then echo "Missing C_COMPILER --build-arg" && exit 1; fi \
-&&  if [ -z "$CXX_COMPILER" ]; then echo "Missing CXX_COMPILER --build-arg" && exit 1; fi \
-&&  if [ -z "$GIT_HASH" ]; then echo "Missing GIT_HASH --build-arg" && exit 1; fi \
-&&  if [ -z "$GIT_SHORT_HASH" ]; then echo "Missing GIT_SHORT_HASH --build-arg" && exit 1; fi \
-&&  if [ -z "$CREATION_DATE" ]; then echo "Missing CREATION_DATE --build-arg" && exit 1; fi \
-&&  if [ -z "$GIT_IS_DIRTY" ]; then echo "Missing GIT_IS_DIRTY --build-arg" && exit 1; fi \
-&&  if [ -z "$GIT_TAG" ]; then echo "Missing GIT_TAG --build-arg" && exit 1; fi
 
 ARG src_dir='/root/modle'
 ARG build_dir='/root/modle/build'
@@ -51,6 +23,13 @@ ENV CONAN_V2=1
 ENV CONAN_REVISIONS_ENABLED=1
 ENV CONAN_NON_INTERACTIVE=1
 ENV CONAN_CMAKE_GENERATOR=Ninja
+
+
+ARG C_COMPILER
+ARG CXX_COMPILER
+
+RUN if [ -z "$C_COMPILER" ]; then echo "Missing C_COMPILER --build-arg" && exit 1; fi \
+&&  if [ -z "$CXX_COMPILER" ]; then echo "Missing CXX_COMPILER --build-arg" && exit 1; fi
 
 ENV CC="$C_COMPILER"
 ENV CXX="$CXX_COMPILER"
@@ -76,6 +55,16 @@ COPY CMakeLists.txt "$src_dir/"
 COPY src "$src_dir/src/"
 COPY test/units "$src_dir/test/units/"
 
+ARG GIT_HASH
+ARG GIT_SHORT_HASH
+ARG GIT_TAG
+ARG GIT_IS_DIRTY
+
+RUN if [ -z "$GIT_HASH" ]; then echo "Missing GIT_HASH --build-arg" && exit 1; fi \
+&&  if [ -z "$GIT_SHORT_HASH" ]; then echo "Missing GIT_SHORT_HASH --build-arg" && exit 1; fi \
+&&  if [ -z "$GIT_IS_DIRTY" ]; then echo "Missing GIT_IS_DIRTY --build-arg" && exit 1; fi \
+&&  if [ -z "$GIT_TAG" ]; then echo "Missing GIT_TAG --build-arg" && exit 1; fi
+
 # Configure project
 RUN cd "$build_dir"                            \
 && cmake -DCMAKE_BUILD_TYPE=Release            \
@@ -95,7 +84,8 @@ RUN cd "$build_dir"                            \
 # Build and install project
 RUN cd "$build_dir"               \
 && cmake --build . -j "$(nproc)"  \
-&& cmake --install .
+&& cmake --install .              \
+&& rm -r "$staging_dir/lib/"
 
 ARG TEST_BASE_IMAGE
 FROM "$TEST_BASE_IMAGE" AS unit-testing
@@ -131,7 +121,7 @@ RUN apt-get update \
                    python3-pip                   \
                    xz-utils
 
-RUN pip3 install cython numpy    \
+RUN pip3 install cython 'numpy<1.24' \
 && pip3 install 'cooler>=0.8.11'
 
 COPY --from=unit-testing "$staging_dir" "$staging_dir"
@@ -159,6 +149,13 @@ ARG GIT_HASH
 ARG GIT_SHORT_HASH
 ARG VERSION
 ARG CREATION_DATE
+
+RUN if [ -z "$BUILD_BASE_IMAGE" ]; then echo "Missing BUILD_BASE_IMAGE --build-arg" && exit 1; fi \
+&&  if [ -z "$FINAL_BASE_IMAGE" ]; then echo "Missing FINAL_BASE_IMAGE --build-arg" && exit 1; fi \
+&&  if [ -z "$FINAL_BASE_IMAGE_DIGEST" ]; then echo "Missing FINAL_BASE_IMAGE_DIGEST --build-arg" && exit 1; fi \
+&&  if [ -z "$GIT_HASH" ]; then echo "Missing GIT_HASH --build-arg" && exit 1; fi \
+&&  if [ -z "$GIT_SHORT_HASH" ]; then echo "Missing GIT_SHORT_HASH --build-arg" && exit 1; fi \
+&&  if [ -z "$CREATION_DATE" ]; then echo "Missing CREATION_DATE --build-arg" && exit 1; fi
 
 # Export project binaries to the final build stage
 COPY --from=integration-testing "$staging_dir" "$install_dir"
