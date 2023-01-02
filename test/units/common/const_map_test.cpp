@@ -7,11 +7,11 @@
 #include <catch2/catch_test_macros.hpp>
 #include <string_view>
 
-namespace modle::test::utils {
+namespace modle::utils::test {
 
 // NOLINTNEXTLINE(readability-function-cognitive-complexity)
 TEST_CASE("ConstMap Ctor", "[utils][short]") {
-  using CMap = modle::utils::ConstMap<std::string_view, int, 5>;
+  using CMap = ConstMap<std::string_view, int, 5>;
   constexpr std::array<CMap::key_type, 5> keys{"1", "2", "3", "4", "5"};
   constexpr std::array<CMap::mapped_type, 5> vals{1, 2, 3, 4, 5};
 
@@ -23,7 +23,7 @@ TEST_CASE("ConstMap Ctor", "[utils][short]") {
   CHECK_THROWS(CMap(keys.begin(), keys.end() - 1, vals.begin()));
   CHECK_THROWS(CMap(keys.begin(), keys.end() + 1, vals.begin()));
 
-  if constexpr (modle::utils::ndebug_not_defined()) {
+  if constexpr (ndebug_not_defined()) {
     CHECK_THROWS(CMap{{"1", 1}, {"1", 2}, {"3", 3}, {"4", 4}, {"5", 5}});
   } else {
     CHECK_NOTHROW(CMap{{"1", 1}, {"1", 2}, {"3", 3}, {"4", 4}, {"5", 5}});
@@ -32,7 +32,7 @@ TEST_CASE("ConstMap Ctor", "[utils][short]") {
 
 // NOLINTNEXTLINE(readability-function-cognitive-complexity)
 TEST_CASE("ConstMap Accessors", "[utils][short]") {
-  using CMap = modle::utils::ConstMap<std::string_view, usize, 5>;
+  using CMap = ConstMap<std::string_view, usize, 5>;
   constexpr CMap map{{"1", 1}, {"2", 2}, {"3", 3}, {"4", 4}, {"5", 5}};
   for (usize i = 1; i <= map.size(); ++i) {
     CHECK(map.contains(std::to_string(i)));
@@ -52,4 +52,4 @@ TEST_CASE("ConstMap Accessors", "[utils][short]") {
   }
 }
 
-}  // namespace modle::test::utils
+}  // namespace modle::utils::test

@@ -9,7 +9,7 @@
 #include "modle/common/common.hpp"  // for usize
 #include "modle/common/random.hpp"
 
-namespace modle::test::cmatrix {
+namespace modle::cmatrix::test {
 
 // NOLINTNEXTLINE(readability-function-cognitive-complexity)
 TEST_CASE("CMatrix internal: transpose_coords", "[cmatrix][short]") {
@@ -66,4 +66,4 @@ TEST_CASE("CMatrix internal: encode/decode roundtrip", "[cmatrix][short]") {
   }
 }
 
-}  // namespace modle::test::cmatrix
+}  // namespace modle::cmatrix::test

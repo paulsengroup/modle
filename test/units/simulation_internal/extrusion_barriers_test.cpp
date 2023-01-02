@@ -9,7 +9,7 @@
 
 #include "modle/common/common.hpp"  // for dna::Direction
 
-namespace modle::test::libmodle {
+namespace modle::libmodle::test {
 
 // NOLINTNEXTLINE(readability-function-cognitive-complexity)
 TEST_CASE("Extrusion barriers - comparisons", "[barriers][simulation][short]") {
@@ -92,4 +92,4 @@ TEST_CASE("Extrusion barriers - compute_occupancy", "[barriers][simulation][shor
   CHECK(ExtrusionBarrier::compute_occupancy_from_stp(stp_active, stp_inactive) == 0.0);
 }
 
-}  // namespace modle::test::libmodle
+}  // namespace modle::libmodle::test

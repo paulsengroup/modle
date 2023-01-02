@@ -16,7 +16,7 @@
 #include "modle/extrusion_factors.hpp"
 #include "modle/simulation.hpp"
 
-namespace modle::test::libmodle {
+namespace modle::libmodle::test {
 
 inline constexpr auto DEFAULT_PRNG{random::PRNG(10556020843759504871ULL)};
 
@@ -167,4 +167,4 @@ template <ExtrusionBarriers::State state = ExtrusionBarriers::State::ACTIVE, cla
   return barriers_;
 }
 
-}  // namespace modle::test::libmodle
+}  // namespace modle::libmodle::test

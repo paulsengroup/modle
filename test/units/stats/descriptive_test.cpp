@@ -13,9 +13,7 @@
 #include "modle/common/common.hpp"  // for u8, usize
 #include "modle/common/utils.hpp"   // for identity::operator(), identity
 
-namespace modle::test::stats {
-using namespace modle::stats;
-using namespace std::string_view_literals;
+namespace modle::stats::test {
 
 struct FP {
   float n;
@@ -141,4 +139,4 @@ TEST_CASE("RMSE", "[stats][short]") {
   CHECK(stats::rmse(v1.begin(), v1.end(), v2.begin()) == result);
   CHECK(stats::weighted_rmse(v1.begin(), v1.end(), v2.begin(), weights.begin()) == result_weighted);
 }
-}  // namespace modle::test::stats
+}  // namespace modle::stats::test

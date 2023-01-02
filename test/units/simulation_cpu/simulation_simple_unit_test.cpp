@@ -22,7 +22,7 @@
 #include "modle/genome.hpp"                    // for Chromosome
 #include "modle/simulation.hpp"                // for Simulation
 
-namespace modle::test::libmodle {
+namespace modle::libmodle::test {
 
 // NOLINTNEXTLINE(readability-function-cognitive-complexity)
 TEST_CASE("Bind LEFs 001", "[bind-lefs][simulation][short]") {
@@ -865,4 +865,4 @@ TEST_CASE("LEFs ranking 002 - Fwd extr. unit tied", "[simulation][short]") {
   }
 }
 
-}  // namespace modle::test::libmodle
+}  // namespace modle::libmodle::test

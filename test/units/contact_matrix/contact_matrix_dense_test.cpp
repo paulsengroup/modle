@@ -22,7 +22,7 @@
 #include "modle/common/common.hpp"  // for u32
 #include "modle/compressed_io/compressed_io.hpp"
 
-namespace modle::test::cmatrix {
+namespace modle::cmatrix::test {
 
 [[maybe_unused]] static const std::filesystem::path& data_dir() {
   static const std::filesystem::path data_dir{"test/data/unit_tests"};
@@ -293,28 +293,28 @@ static void contact_matrix_dense_blur_helper(double sigma, double truncate,
 
 // NOLINTNEXTLINE(readability-function-cognitive-complexity)
 TEST_CASE("CMatrix blur (sigma=0.01)", "[cmatrix][long]") {
-  modle::test::cmatrix::contact_matrix_dense_blur_helper(0.01, 3.5);
+  contact_matrix_dense_blur_helper(0.01, 3.5);
 }
 
 // NOLINTNEXTLINE(readability-function-cognitive-complexity)
 TEST_CASE("CMatrix blur (sigma=0.5)", "[cmatrix][long]") {
-  modle::test::cmatrix::contact_matrix_dense_blur_helper(0.5, 3.5);
+  contact_matrix_dense_blur_helper(0.5, 3.5);
 }
 
 // NOLINTNEXTLINE(readability-function-cognitive-complexity)
 TEST_CASE("CMatrix blur (sigma=1.0)", "[cmatrix][long]") {
-  modle::test::cmatrix::contact_matrix_dense_blur_helper(1.0, 3.5);
+  contact_matrix_dense_blur_helper(1.0, 3.5);
 }
 
 // NOLINTNEXTLINE(readability-function-cognitive-complexity)
 TEST_CASE("CMatrix blur (sigma=1.5)", "[cmatrix][long]") {
-  modle::test::cmatrix::contact_matrix_dense_blur_helper(1.5, 3.5);
+  contact_matrix_dense_blur_helper(1.5, 3.5);
 }
 
 // NOLINTNEXTLINE(readability-function-cognitive-complexity)
 TEST_CASE("CMatrix blur parallel (sigma=5.0)", "[cmatrix][long][exclusive]") {
   BS::thread_pool tpool{};
-  modle::test::cmatrix::contact_matrix_dense_blur_helper(5.0, 3.5, &tpool);
+  contact_matrix_dense_blur_helper(5.0, 3.5, &tpool);
 }
 
 static void contact_matrix_dense_dog_helper(double sigma1, double sigma2, double truncate,
@@ -348,13 +348,13 @@ static void contact_matrix_dense_dog_helper(double sigma1, double sigma2, double
 
 // NOLINTNEXTLINE(readability-function-cognitive-complexity)
 TEST_CASE("CMatrix difference of Gaussians", "[cmatrix][long]") {
-  modle::test::cmatrix::contact_matrix_dense_dog_helper(1.0, 1.6, 3.0);
+  contact_matrix_dense_dog_helper(1.0, 1.6, 3.0);
 }
 
 // NOLINTNEXTLINE(readability-function-cognitive-complexity)
 TEST_CASE("CMatrix difference of Gaussians - parallel", "[cmatrix][long][exclusive]") {
   BS::thread_pool tpool{};
-  modle::test::cmatrix::contact_matrix_dense_dog_helper(1.0, 1.6, 3.0, &tpool);
+  contact_matrix_dense_dog_helper(1.0, 1.6, 3.0, &tpool);
 }
 
 // NOLINTNEXTLINE(readability-function-cognitive-complexity)
@@ -500,4 +500,4 @@ TEST_CASE("CMatrix global locking TSAN", "[cmatrix][long]") {
 }
 #endif
 
-}  // namespace modle::test::cmatrix
+}  // namespace modle::cmatrix::test

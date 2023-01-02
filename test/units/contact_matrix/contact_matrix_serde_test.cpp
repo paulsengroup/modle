@@ -29,7 +29,9 @@ namespace modle::test {
 inline const SelfDeletingFolder testdir{true};  // NOLINT(cert-err58-cpp)
 }  // namespace modle::test
 
-namespace modle::test::cmatrix {
+namespace modle::cmatrix::test {
+
+constexpr auto& testdir = modle::test::testdir;
 
 [[maybe_unused]] static const std::filesystem::path& data_dir() {
   static const std::filesystem::path data_dir{"test/data/unit_tests"};
@@ -458,4 +460,4 @@ TEST_CASE("CMatrix Sparse serialization (FP)", "[cmatrix][serialization][medium]
   }
 }
 
-}  // namespace modle::test::cmatrix
+}  // namespace modle::cmatrix::test

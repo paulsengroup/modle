@@ -9,7 +9,7 @@
 #include <catch2/catch_test_macros.hpp>
 #include <catch2/matchers/catch_matchers_string.hpp>
 
-namespace modle::test::libmodle {
+namespace modle::libmodle::test {
 
 [[maybe_unused]] static std::string event_to_str(const CollisionEvent<> event) {
   return fmt::format(FMT_STRING("{:08b}"), event());
@@ -169,4 +169,4 @@ TEST_CASE("Collision encoding - LEF-LEF secondary", "[simulation][short]") {
   CHECK(Collision<>{idx, event}.collision_avoided(Collision<>::LEF_LEF_SECONDARY));
 }
 
-}  // namespace modle::test::libmodle
+}  // namespace modle::libmodle::test
