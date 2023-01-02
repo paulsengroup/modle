@@ -7,7 +7,6 @@
 #include <absl/strings/match.h>  // for StartsWith
 
 #include <cassert>  // for assert
-#include <catch2/catch_approx.hpp>
 #include <catch2/catch_test_macros.hpp>
 #include <catch2/matchers/catch_matchers_floating_point.hpp>
 #include <random>       // for random_device
@@ -127,8 +126,8 @@ TEST_CASE("Pearson correlation wo/ ties", "[correlation][pearson][short]") {
   const std::vector<u32> v1{17, 86, 60, 77, 47, 3, 70, 87, 88, 92};
   const std::vector<u32> v2{70, 29, 85, 61, 80, 34, 60, 31, 73, 66};
   const auto [pcc, pv] = Pearson<>{}(v1, v2);
-  CHECK(Catch::Approx(pcc) == -0.033621194725622014);
-  CHECK(Catch::Approx(pv) == 0.926536715854247);
+  CHECK_THAT(pcc, Catch::Matchers::WithinRel(-0.033621194725622014, DEFAULT_FP_TOLERANCE));
+  CHECK_THAT(pv, Catch::Matchers::WithinRel(0.926536715854247, DEFAULT_FP_TOLERANCE));
 }
 
 // NOLINTNEXTLINE(readability-function-cognitive-complexity)
@@ -137,7 +136,7 @@ TEST_CASE("Weighted Pearson correlation wo/ ties", "[correlation][pearson][short
   const std::vector<u32> v2{70, 29, 85, 61, 80, 34, 60, 31, 73, 66};
   const std::vector<double> w{0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0};
   const auto [pcc, pv] = Pearson<>{}(v1, v2, w);
-  CHECK(Catch::Approx(pcc) == 0.1892337717235999250409);
+  CHECK_THAT(pcc, Catch::Matchers::WithinRel(0.1892337717235999250409, DEFAULT_FP_TOLERANCE));
   CHECK(std::isnan(pv));
 }
 
@@ -146,8 +145,8 @@ TEST_CASE("Pearson correlation w/ ties", "[correlation][pearson][short]") {
   std::vector<u32> v1{17, 86, 60, 77, 47, 3, 70, 47, 88, 92};
   std::vector<u32> v2{70, 29, 85, 61, 80, 34, 60, 31, 73, 66};
   const auto [pcc, pv] = Pearson<>{}(v1, v2);
-  CHECK(Catch::Approx(pcc) == 0.16426413174421572);
-  CHECK(Catch::Approx(pv) == 0.6502118872600098);
+  CHECK_THAT(pcc, Catch::Matchers::WithinRel(0.16426413174421572, DEFAULT_FP_TOLERANCE));
+  CHECK_THAT(pv, Catch::Matchers::WithinRel(0.6502118872600098, DEFAULT_FP_TOLERANCE));
 }
 
 // NOLINTNEXTLINE(readability-function-cognitive-complexity)
@@ -156,7 +155,7 @@ TEST_CASE("Weighted Pearson correlation w/ ties", "[correlation][pearson][short]
   const std::vector<u32> v2{70, 29, 85, 61, 80, 34, 60, 31, 73, 66};
   const std::vector<double> w{0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0};
   const auto [pcc, pv] = Pearson<>{}(v1, v2, w);
-  CHECK(Catch::Approx(pcc) == 0.5009581087644285890548);
+  CHECK_THAT(pcc, Catch::Matchers::WithinRel(0.5009581087644285890548, DEFAULT_FP_TOLERANCE));
   CHECK(std::isnan(pv));
 }
 
@@ -209,8 +208,8 @@ TEST_CASE("Spearman correlation wo/ ties", "[correlation][spearman][short]") {
   const std::vector<u32> v1{17, 86, 60, 77, 47, 3, 70, 87, 88, 92};
   const std::vector<u32> v2{70, 29, 85, 61, 80, 34, 60, 31, 73, 66};
   const auto [rho, pv] = Spearman<>{}(v1, v2);
-  CHECK(Catch::Approx(rho) == -0.16363636363636364);
-  CHECK(Catch::Approx(pv) == 0.6514773427962428);
+  CHECK_THAT(rho, Catch::Matchers::WithinRel(-0.16363636363636364, DEFAULT_FP_TOLERANCE));
+  CHECK_THAT(pv, Catch::Matchers::WithinRel(0.6514773427962428, DEFAULT_FP_TOLERANCE));
 }
 
 // NOLINTNEXTLINE(readability-function-cognitive-complexity)
@@ -218,8 +217,8 @@ TEST_CASE("Spearman correlation w/ ties", "[correlation][spearman][short]") {
   const std::vector<u32> v1{17, 86, 60, 77, 47, 3, 70, 47, 88, 92};
   const std::vector<u32> v2{70, 29, 85, 61, 80, 34, 60, 31, 73, 66};
   const auto [rho, pv] = Spearman<>{}(v1, v2);
-  CHECK(Catch::Approx(rho) == 0.024316221747202587);
-  CHECK(Catch::Approx(pv) == 0.9468397049085097);
+  CHECK_THAT(rho, Catch::Matchers::WithinRel(0.024316221747202587, DEFAULT_FP_TOLERANCE));
+  CHECK_THAT(pv, Catch::Matchers::WithinRel(0.9468397049085097, DEFAULT_FP_TOLERANCE));
 }
 
 // NOLINTNEXTLINE(readability-function-cognitive-complexity)

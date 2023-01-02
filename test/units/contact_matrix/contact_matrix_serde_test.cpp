@@ -10,8 +10,8 @@
 
 #include <algorithm>
 #include <cassert>
-#include <catch2/catch_approx.hpp>
 #include <catch2/catch_test_macros.hpp>
+#include <catch2/matchers/catch_matchers_floating_point.hpp>
 #include <catch2/matchers/catch_matchers_string.hpp>
 #include <limits>
 #include <stdexcept>  // for runtime_error
@@ -37,6 +37,10 @@ constexpr auto& testdir = modle::test::testdir;
   static const std::filesystem::path data_dir{"test/data/unit_tests"};
   return data_dir;
 }
+
+// See https://github.com/catchorg/Catch2/blob/v3.2.1/src/catch2/catch_approx.cpp#L27-L32
+constexpr double DEFAULT_FP_TOLERANCE =
+    static_cast<double>(std::numeric_limits<float>::epsilon() * 100);
 
 template <class ContactMatrixT>
 static void create_random_matrix(ContactMatrixT& m, usize nnz, u64 seed = 8336046165695760686ULL) {
@@ -401,7 +405,8 @@ TEST_CASE("ContactMatrixDense serialization (FP)", "[cmatrix][serialization][med
   REQUIRE(m1.ncols() == m2.ncols());
 
   CHECK(m1.get_nnz() == m2.get_nnz());
-  CHECK(Catch::Approx(m1.get_tot_contacts()) == m2.get_tot_contacts());
+  CHECK_THAT(m1.get_tot_contacts(),
+             Catch::Matchers::WithinRel(m2.get_tot_contacts(), DEFAULT_FP_TOLERANCE));
   CHECK(m1.get_n_of_missed_updates() == m2.get_n_of_missed_updates());
 
   const auto& buff1 = m1.get_raw_count_vector();
@@ -450,7 +455,8 @@ TEST_CASE("ContactMatrixSparse serialization (FP)", "[cmatrix][serialization][lo
   REQUIRE(m1.ncols() == m2.ncols());
 
   CHECK(m1.get_nnz() == m2.get_nnz());
-  CHECK(Catch::Approx(m1.get_tot_contacts()) == m2.get_tot_contacts());
+  CHECK_THAT(m1.get_tot_contacts(),
+             Catch::Matchers::WithinRel(m2.get_tot_contacts(), DEFAULT_FP_TOLERANCE));
   CHECK(m1.get_n_of_missed_updates() == m2.get_n_of_missed_updates());
 
   for (usize i = 0; i < nrows; ++i) {

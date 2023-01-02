@@ -8,7 +8,6 @@
 
 #include <BS_thread_pool.hpp>  // for BS::thread_pool
 #include <algorithm>           // for generate, max
-#include <catch2/catch_approx.hpp>
 #include <catch2/catch_test_macros.hpp>
 #include <catch2/matchers/catch_matchers_floating_point.hpp>
 #include <catch2/matchers/catch_matchers_string.hpp>

@@ -7,8 +7,8 @@
 #include <absl/strings/str_split.h>
 #include <fmt/format.h>
 
-#include <catch2/catch_approx.hpp>
 #include <catch2/catch_test_macros.hpp>
+#include <catch2/matchers/catch_matchers_floating_point.hpp>
 #include <filesystem>
 #include <vector>
 
@@ -21,6 +21,10 @@ namespace modle::stats::test {
   static const std::filesystem::path data_dir{"test/data/unit_tests"};
   return data_dir;
 }
+
+// See https://github.com/catchorg/Catch2/blob/v3.2.1/src/catch2/catch_approx.cpp#L27-L32
+constexpr double DEFAULT_FP_TOLERANCE =
+    static_cast<double>(std::numeric_limits<float>::epsilon() * 100);
 
 [[nodiscard]] static std::vector<double> import_reference_kernel(const usize radius,
                                                                  const double sigma) {
@@ -54,7 +58,7 @@ TEST_CASE("Gaussian kernel", "[stats][short]") {
 
       REQUIRE(ref_kernel.size() == kernel.size());
       for (usize i = 0; i < kernel.size(); ++i) {
-        CHECK(Catch::Approx(ref_kernel[i]) == kernel[i]);
+        CHECK_THAT(ref_kernel[i], Catch::Matchers::WithinRel(kernel[i], DEFAULT_FP_TOLERANCE));
       }
     }
   }

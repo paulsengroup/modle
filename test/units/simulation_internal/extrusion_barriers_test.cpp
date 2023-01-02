@@ -4,12 +4,16 @@
 
 #include "modle/extrusion_barriers.hpp"  // for ExtrusionBarrier
 
-#include <catch2/catch_approx.hpp>
 #include <catch2/catch_test_macros.hpp>
+#include <catch2/matchers/catch_matchers_floating_point.hpp>
 
 #include "modle/common/common.hpp"  // for dna::Direction
 
 namespace modle::libmodle::test {
+
+// See https://github.com/catchorg/Catch2/blob/v3.2.1/src/catch2/catch_approx.cpp#L27-L32
+constexpr double DEFAULT_FP_TOLERANCE =
+    static_cast<double>(std::numeric_limits<float>::epsilon() * 100);
 
 // NOLINTNEXTLINE(readability-function-cognitive-complexity)
 TEST_CASE("Extrusion barriers - comparisons", "[barriers][simulation][short]") {
@@ -47,8 +51,8 @@ TEST_CASE("Extrusion barriers - occupancy", "[barriers][simulation][short]") {
                                           {stp_inactive1, stp_inactive2},
                                           {State::ACTIVE, State::ACTIVE}};
 
-  CHECK(barriers.occupancy(0) == Catch::Approx(occupancy1));
-  CHECK(barriers.occupancy(1) == Catch::Approx(occupancy2));
+  CHECK_THAT(barriers.occupancy(0), Catch::Matchers::WithinRel(occupancy1, DEFAULT_FP_TOLERANCE));
+  CHECK_THAT(barriers.occupancy(1), Catch::Matchers::WithinRel(occupancy2, DEFAULT_FP_TOLERANCE));
 }
 
 // NOLINTNEXTLINE(readability-function-cognitive-complexity)
@@ -80,8 +84,8 @@ TEST_CASE("Extrusion barriers - compute_occupancy", "[barriers][simulation][shor
 
   stp_active = 0.7;
   stp_inactive = 0.5;
-  CHECK(ExtrusionBarrier::compute_occupancy_from_stp(stp_active, stp_inactive) ==
-        Catch::Approx(0.625));
+  CHECK_THAT(ExtrusionBarrier::compute_occupancy_from_stp(stp_active, stp_inactive),
+             Catch::Matchers::WithinRel(0.625, DEFAULT_FP_TOLERANCE));
 
   stp_active = 1.0;
   stp_inactive = 0.5;
