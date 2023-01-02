@@ -13,7 +13,7 @@ set -u
 git_root="$(git rev-parse --show-toplevel)"
 
 git_root="$(git rev-parse --show-toplevel)"
-PATH="$git_root/test/scripts:$PATH"
+PATH="$git_root/test/scripts/devel:$PATH"
 
 dest_dir="$git_root/test/data/unit_tests/correlation/"
 mkdir -p "$dest_dir"

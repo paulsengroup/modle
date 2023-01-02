@@ -103,7 +103,7 @@ def main():
     np.random.seed(args["seed"])
 
     # Every iteration a line with the following syntax is printed to stdout:
-    #|v1|v2|weights|pcc|pcc_pval|rho|rho_pval|pccw|pccw_pval|rhow|rhow_pval|
+    # |v1|v2|weights|pcc|pcc_pval|rho|rho_pval|pccw|pccw_pval|rhow|rhow_pval|
     # v1, v2 and weights are comma-separated list of numbers (ints or floats)
     for _ in range(args["iterations"]):
         v1, v2, weights = generate_random_vectors(

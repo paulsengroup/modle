@@ -10,7 +10,7 @@ set -o pipefail
 set -u
 
 git_root="$(git rev-parse --show-toplevel)"
-PATH="$git_root/test/scripts:$PATH"
+PATH="$git_root/test/scripts/devel:$PATH"
 dest_dir="$git_root/test/data/unit_tests/reference_gaussian_kernels/"
 
 mkdir -p "$dest_dir"
