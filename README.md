@@ -298,7 +298,7 @@ downloaded as follows:
 
 ```bash
 # IMPORTANT! You should be in the repository root when running the following command (otherwise test files will be extracted in the wrong place)
-curl -L 'https://zenodo.org/record/7499258/files/modle_test_data.tar.xz?download=1' | tar -xzf -
+curl -L 'https://www.dropbox.com/s/avqohi7xzj0voi2/modle_test_data.tar.xz?dl=1' | tar -xzf -
 ```
 
 Datasets are automatically downloaded by CMake when running steps from inside folder `test/data/integration_tests`.
