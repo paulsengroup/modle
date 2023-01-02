@@ -39,11 +39,11 @@ defaults:
     shell: bash
 
 jobs:
-  # cache-test-datasets:
-  #  uses: paulsengroup/modle/.github/workflows/cache-test-datasets.yml@main
+  cache-test-datasets:
+    uses: paulsengroup/modle/.github/workflows/cache-test-datasets.yml@main
 
   build-image:
-    # needs: cache-test-datasets
+    needs: cache-test-datasets
     runs-on: ubuntu-latest
     permissions:
       packages: 'write'
@@ -52,12 +52,10 @@ jobs:
         uses: actions/checkout@v3
 
       - name: Download test datasets
-        id: test-dataset
-        # uses: actions/download-artifact@v3
-        # with:
-        #  name: ${{ needs.cache-test-datasets.outputs.artifact-name }}
-        run: |
-          curl -L 'https://zenodo.org/record/7499258/files/modle_test_data.tar.xz?download=1' | tar -xJf -
+        uses: actions/download-artifact@v3
+        with:
+          name: ${{ needs.cache-test-datasets.outputs.artifact-name }}
+          path: test/data/
 
       - name: Generate build args
         id: build-args
