@@ -20,6 +20,7 @@
 #include <vector>      // for vector, allocator
 
 #include "modle/common/common.hpp"  // for u32
+#include "modle/compressed_io/compressed_io.hpp"
 
 namespace modle::test::cmatrix {
 
@@ -27,6 +28,10 @@ namespace modle::test::cmatrix {
   static const std::filesystem::path data_dir{"test/data/unit_tests"};
   return data_dir;
 }
+
+// See https://github.com/catchorg/Catch2/blob/v3.2.1/src/catch2/catch_approx.cpp#L27-L32
+constexpr double DEFAULT_FP_TOLERANCE =
+    static_cast<double>(std::numeric_limits<float>::epsilon() * 100);
 
 // NOLINTNEXTLINE(readability-function-cognitive-complexity)
 TEST_CASE("CMatrix simple", "[cmatrix][short]") {
@@ -261,7 +266,8 @@ TEST_CASE("CMatrix get row", "[cmatrix][short]") {
 }
 
 static void contact_matrix_dense_blur_helper(double sigma, double truncate,
-                                             BS::thread_pool* tpool = nullptr) {
+                                             BS::thread_pool* tpool = nullptr,
+                                             double tolerance = DEFAULT_FP_TOLERANCE) {
   const auto path_to_input_matrix =
       data_dir() / "contact_matrices" / "contact_matrix_dense_int_001.tsv.xz";
 
@@ -279,7 +285,7 @@ static void contact_matrix_dense_blur_helper(double sigma, double truncate,
   for (usize i = 0; i < input_matrix.nrows(); ++i) {
     for (auto j = i; j < input_matrix.ncols(); ++j) {
       CHECK_THAT(reference_matrix.get(i, j),
-                 Catch::Matchers::WithinRel(blurred_matrix.get(i, j), 1.0e-6));
+                 Catch::Matchers::WithinRel(blurred_matrix.get(i, j), tolerance));
     }
   }
 }
