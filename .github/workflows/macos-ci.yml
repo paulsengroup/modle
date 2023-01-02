@@ -51,11 +51,11 @@ defaults:
     shell: bash
 
 jobs:
-  # cache-test-datasets:
-  #  uses: paulsengroup/modle/.github/workflows/cache-test-datasets.yml@main
+  cache-test-datasets:
+    uses: paulsengroup/modle/.github/workflows/cache-test-datasets.yml@main
 
   build-project:
-    # needs: cache-test-datasets
+    needs: cache-test-datasets
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
@@ -189,14 +189,12 @@ jobs:
 
       - name: Download test datasets
         id: test-dataset
-        # uses: actions/download-artifact@v3
-        # with:
-        #  name: ${{ needs.cache-test-datasets.outputs.artifact-name }}
-        run: |
-          curl -L 'https://www.dropbox.com/s/avqohi7xzj0voi2/modle_test_data.tar.xz?dl=1' | tar -xJf -
+        uses: actions/download-artifact@v3
+        with:
+          name: ${{ needs.cache-test-datasets.outputs.artifact-name }}
 
-      # - name: Extract test dataset
-      #   run: tar -xf modle_test_data.tar.xz
+      - name: Extract test dataset
+        run: tar -xf modle_test_data.tar.xz
 
       - name: Run unit tests
         working-directory: ${{ github.workspace }}/build
