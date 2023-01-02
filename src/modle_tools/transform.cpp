@@ -116,7 +116,8 @@ template <class N>
   const auto [lower_bound_sat, upper_bound_sat] = saturation_range;
   spdlog::info(FMT_STRING("Applying Gaussian blur with sigma={:.4g} to contacts for {}..."), sigma,
                chrom_name);
-  auto m2 = m.blur(sigma, 0.005, &tpool);
+  // TODO: make truncate tunable
+  auto m2 = m.blur(sigma, 3.5, &tpool);
   if (!std::isinf(lower_bound_sat) || !std::isinf(upper_bound_sat)) {
     m2.clamp_inplace(lower_bound_sat, upper_bound_sat);
   }
