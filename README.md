@@ -189,8 +189,7 @@ ctest -j 8                 \
       --test-dir .         \
       --schedule-random    \
       --output-on-failure  \
-      --no-tests=error     \
-      -E '(SciPy)|(wCorr)'
+      --no-tests=error
 
 # Run integration test
 ../test/scripts/modle_integration_test.sh src/modle/modle
