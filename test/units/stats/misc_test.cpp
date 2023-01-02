@@ -10,10 +10,10 @@
 #include <catch2/catch_approx.hpp>
 #include <catch2/catch_test_macros.hpp>
 #include <filesystem>
-#include <fstream>
 #include <vector>
 
 #include "modle/common/numeric_utils.hpp"
+#include "modle/compressed_io/compressed_io.hpp"
 
 namespace modle::stats::test {
 
@@ -26,14 +26,11 @@ namespace modle::stats::test {
                                                                  const double sigma) {
   const auto sbuff = [&]() {
     const auto path = data_dir() / std::filesystem::path{"reference_gaussian_kernels"} /
-                      fmt::format(FMT_STRING("gaussian_kernel_{}_{:.1f}.csv"), radius, sigma);
+                      fmt::format(FMT_STRING("gaussian_kernel_{}_{:.1f}.tsv.xz"), radius, sigma);
 
     REQUIRE(std::filesystem::exists(path));
-    std::ifstream f(path);
-
-    std::stringstream buffer;
-    buffer << f.rdbuf();
-    return buffer.str();
+    compressed_io::Reader r(path);
+    return r.readall();
   }();
 
   std::vector<double> buff;
