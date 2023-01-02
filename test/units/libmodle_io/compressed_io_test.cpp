@@ -31,7 +31,7 @@ constexpr auto& testdir = modle::test::testdir;
 }
 
 // NOLINTNEXTLINE(readability-function-cognitive-complexity)
-TEST_CASE("Reader plain", "[io][reader][short]") {
+TEST_CASE("Reader plain", "[io][reader][medium]") {
   const auto ptext_file = data_dir() / "genomic_intervals" / "intervals.bed9";
 
   Reader r(ptext_file);
@@ -48,7 +48,7 @@ TEST_CASE("Reader plain", "[io][reader][short]") {
 }
 
 // NOLINTNEXTLINE(readability-function-cognitive-complexity)
-TEST_CASE("Reader plain sv", "[io][reader][short]") {
+TEST_CASE("Reader plain sv", "[io][reader][medium]") {
   const auto ptext_file = data_dir() / "genomic_intervals" / "intervals.bed9";
 
   Reader r(ptext_file);
@@ -65,7 +65,7 @@ TEST_CASE("Reader plain sv", "[io][reader][short]") {
 }
 
 // NOLINTNEXTLINE(readability-function-cognitive-complexity)
-TEST_CASE("Reader gzip", "[io][reader][short]") {
+TEST_CASE("Reader gzip", "[io][reader][medium]") {
   const auto compressed_file = data_dir() / "genomic_intervals" / "intervals.bed9.gz";
   const auto ptext_file = data_dir() / "genomic_intervals" / "intervals.bed9";
 
@@ -83,7 +83,7 @@ TEST_CASE("Reader gzip", "[io][reader][short]") {
 }
 
 // NOLINTNEXTLINE(readability-function-cognitive-complexity)
-TEST_CASE("Reader bzip2", "[io][reader][short]") {
+TEST_CASE("Reader bzip2", "[io][reader][medium]") {
   const auto compressed_file = data_dir() / "genomic_intervals" / "intervals.bed9.bz2";
   const auto ptext_file = data_dir() / "genomic_intervals" / "intervals.bed9";
 
@@ -100,7 +100,7 @@ TEST_CASE("Reader bzip2", "[io][reader][short]") {
 }
 
 // NOLINTNEXTLINE(readability-function-cognitive-complexity)
-TEST_CASE("Reader lz4", "[io][reader][short]") {
+TEST_CASE("Reader lz4", "[io][reader][medium]") {
   const auto compressed_file = data_dir() / "genomic_intervals" / "intervals.bed9.lz4";
   const auto ptext_file = data_dir() / "genomic_intervals" / "intervals.bed9";
 
@@ -117,7 +117,7 @@ TEST_CASE("Reader lz4", "[io][reader][short]") {
 }
 
 // NOLINTNEXTLINE(readability-function-cognitive-complexity)
-TEST_CASE("Reader zstd", "[io][reader][short]") {
+TEST_CASE("Reader zstd", "[io][reader][medium]") {
   const auto compressed_file = data_dir() / "genomic_intervals" / "intervals.bed9.zst";
   const auto ptext_file = data_dir() / "genomic_intervals" / "intervals.bed9";
 
@@ -134,7 +134,7 @@ TEST_CASE("Reader zstd", "[io][reader][short]") {
 }
 
 // NOLINTNEXTLINE(readability-function-cognitive-complexity)
-TEST_CASE("Reader lzma", "[io][reader][short]") {
+TEST_CASE("Reader lzma", "[io][reader][medium]") {
   const auto compressed_file = data_dir() / "genomic_intervals" / "intervals.bed9.xz";
   const auto ptext_file = data_dir() / "genomic_intervals" / "intervals.bed9";
 
@@ -239,7 +239,7 @@ TEST_CASE("Reader plain - truncated file", "[io][reader][short]") {
 }
 
 // NOLINTNEXTLINE(readability-function-cognitive-complexity)
-TEST_CASE("Writer plain", "[io][writer][short]") {
+TEST_CASE("Writer plain", "[io][writer][medium]") {
   const auto ptext_file = data_dir() / "genomic_intervals" / "intervals.bed9";
   const auto tmpout = testdir() / ptext_file.filename();
 
@@ -250,7 +250,7 @@ TEST_CASE("Writer plain", "[io][writer][short]") {
 }
 
 // NOLINTNEXTLINE(readability-function-cognitive-complexity)
-TEST_CASE("Writer gzip", "[io][writer][short]") {
+TEST_CASE("Writer gzip", "[io][writer][medium]") {
   const auto ptext_file = data_dir() / "genomic_intervals" / "intervals.bed9";
   const auto tmpout = testdir() / ptext_file.filename();
 
@@ -261,7 +261,7 @@ TEST_CASE("Writer gzip", "[io][writer][short]") {
 }
 
 // NOLINTNEXTLINE(readability-function-cognitive-complexity)
-TEST_CASE("Writer bzip2", "[io][writer][short]") {
+TEST_CASE("Writer bzip2", "[io][writer][medium]") {
   const auto ptext_file = data_dir() / "genomic_intervals" / "intervals.bed9";
   const auto tmpout = testdir() / ptext_file.filename();
 
@@ -272,7 +272,7 @@ TEST_CASE("Writer bzip2", "[io][writer][short]") {
 }
 
 // NOLINTNEXTLINE(readability-function-cognitive-complexity)
-TEST_CASE("Writer lzma", "[io][writer][short]") {
+TEST_CASE("Writer lzma", "[io][writer][medium]") {
   const auto ptext_file = data_dir() / "genomic_intervals" / "intervals.bed9";
   const auto tmpout = testdir() / ptext_file.filename();
 
@@ -283,7 +283,7 @@ TEST_CASE("Writer lzma", "[io][writer][short]") {
 }
 
 // NOLINTNEXTLINE(readability-function-cognitive-complexity)
-TEST_CASE("Writer zstd", "[io][writer][short]") {
+TEST_CASE("Writer zstd", "[io][writer][medium]") {
   const auto ptext_file = data_dir() / "genomic_intervals" / "intervals.bed9";
   const auto tmpout = testdir() / ptext_file.filename();
 

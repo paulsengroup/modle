@@ -75,7 +75,7 @@ static void create_random_matrix(ContactMatrixT& m, usize nnz, u64 seed = 833604
 }
 
 // NOLINTNEXTLINE(readability-function-cognitive-complexity)
-TEST_CASE("ContactMatrixDense serialization", "[cmatrix][serialization][short]") {
+TEST_CASE("ContactMatrixDense serialization", "[cmatrix][serialization][medium]") {
   const auto serialized_matrix_path = testdir() / "cmatrix_dense.serialized.zst";
 
   constexpr bp_t chrom_size = 250'000'000;
@@ -124,7 +124,7 @@ TEST_CASE("ContactMatrixDense serialization", "[cmatrix][serialization][short]")
 }
 
 // NOLINTNEXTLINE(readability-function-cognitive-complexity)
-TEST_CASE("ContactMatrixSparse serialization", "[cmatrix][serialization][medium]") {
+TEST_CASE("ContactMatrixSparse serialization", "[cmatrix][serialization][long]") {
   const auto serialized_matrix_path = testdir() / "cmatrix_sparse.serialized.zst";
 
   constexpr bp_t chrom_size = 250'000'000;
@@ -171,7 +171,7 @@ TEST_CASE("ContactMatrixSparse serialization", "[cmatrix][serialization][medium]
 }
 
 // NOLINTNEXTLINE(readability-function-cognitive-complexity)
-TEST_CASE("ContactMatrixDense serialization (destructive)", "[cmatrix][serialization][short]") {
+TEST_CASE("ContactMatrixDense serialization (destructive)", "[cmatrix][serialization][medium]") {
   const auto serialized_matrix_path = testdir() / "cmatrix_dense_destructive.serialized.zst";
 
   constexpr bp_t chrom_size = 250'000'000;
@@ -221,7 +221,7 @@ TEST_CASE("ContactMatrixDense serialization (destructive)", "[cmatrix][serializa
 }
 
 // NOLINTNEXTLINE(readability-function-cognitive-complexity)
-TEST_CASE("ContactMatrixSparse serialization (destructive)", "[cmatrix][serialization][medium]") {
+TEST_CASE("ContactMatrixSparse serialization (destructive)", "[cmatrix][serialization][long]") {
   const auto serialized_matrix_path = testdir() / "cmatrix_sparse_destructive.serialized.zst";
 
   constexpr bp_t chrom_size = 250'000'000;
@@ -271,7 +271,7 @@ TEST_CASE("ContactMatrixSparse serialization (destructive)", "[cmatrix][serializ
 }
 
 // NOLINTNEXTLINE(readability-function-cognitive-complexity)
-TEST_CASE("ContactMatrixSparse to ContactMatrixDense", "[cmatrix][serialization][short]") {
+TEST_CASE("ContactMatrixSparse to ContactMatrixDense", "[cmatrix][serialization][medium]") {
   const auto serialized_matrix_path = testdir() / "cmatrix_sparse_to_dense.serialized.zst";
 
   constexpr bp_t chrom_size = 250'000'000;
@@ -318,7 +318,7 @@ TEST_CASE("ContactMatrixSparse to ContactMatrixDense", "[cmatrix][serialization]
 }
 
 // NOLINTNEXTLINE(readability-function-cognitive-complexity)
-TEST_CASE("ContactMatrixDense to ContactMatrixSparse", "[cmatrix][serialization][short]") {
+TEST_CASE("ContactMatrixDense to ContactMatrixSparse", "[cmatrix][serialization][medium]") {
   const auto serialized_matrix_path = testdir() / "cmatrix_dense_to_sparse.serialized.zst";
 
   constexpr bp_t chrom_size = 250'000'000;
@@ -365,7 +365,7 @@ TEST_CASE("ContactMatrixDense to ContactMatrixSparse", "[cmatrix][serialization]
 }
 
 // NOLINTNEXTLINE(readability-function-cognitive-complexity)
-TEST_CASE("ContactMatrixDense serialization (FP)", "[cmatrix][serialization][short]") {
+TEST_CASE("ContactMatrixDense serialization (FP)", "[cmatrix][serialization][medium]") {
   const auto serialized_matrix_path = testdir() / "cmatrix_dense_fp.serialized.zst";
 
   constexpr bp_t chrom_size = 250'000'000;
@@ -414,7 +414,7 @@ TEST_CASE("ContactMatrixDense serialization (FP)", "[cmatrix][serialization][sho
 }
 
 // NOLINTNEXTLINE(readability-function-cognitive-complexity)
-TEST_CASE("ContactMatrixSparse serialization (FP)", "[cmatrix][serialization][medium]") {
+TEST_CASE("ContactMatrixSparse serialization (FP)", "[cmatrix][serialization][long]") {
   const auto serialized_matrix_path = testdir() / "cmatrix_sparse_fp.serialized.zst";
 
   constexpr bp_t chrom_size = 250'000'000;

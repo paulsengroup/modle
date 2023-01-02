@@ -66,7 +66,7 @@ TEST_CASE("ContactMatrixDense to Cooler Roundtrip (square)", "[io][matrix][short
 }
 
 // NOLINTNEXTLINE(readability-function-cognitive-complexity)
-TEST_CASE("ContactMatrixDense to Cooler Roundtrip", "[io][matrix][short]") {
+TEST_CASE("ContactMatrixDense to Cooler Roundtrip", "[io][matrix][long]") {
   const auto test_file = testdir() / "contact_matrix_dense_to_cooler_roundtrip.cool";
 
   constexpr usize nrows = 100;

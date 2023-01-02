@@ -66,7 +66,7 @@ TEST_CASE("ContactMatrixDense simple", "[cmatrix][short]") {
 }
 
 // NOLINTNEXTLINE(readability-function-cognitive-complexity)
-TEST_CASE("ContactMatrixDense 10x200", "[cmatrix][medium]") {
+TEST_CASE("ContactMatrixDense 10x200", "[cmatrix][short]") {
   const auto input_file = data_dir() / "contact_matrices" / "symmetric_matrix_200_10.tsv.xz";
   REQUIRE(std::filesystem::exists(input_file));
   const auto m1 = load_matrix_from_file(input_file);

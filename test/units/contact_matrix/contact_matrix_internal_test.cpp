@@ -48,7 +48,7 @@ TEST_CASE("ContactMatrix internal: decode_idx", "[cmatrix][short]") {
 }
 
 // NOLINTNEXTLINE(readability-function-cognitive-complexity)
-TEST_CASE("ContactMatrix internal: encode/decode roundtrip", "[cmatrix][short]") {
+TEST_CASE("ContactMatrix internal: encode/decode roundtrip", "[cmatrix][long]") {
   constexpr usize nrows = 100;
   constexpr usize ncols = 5000;
 

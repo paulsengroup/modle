@@ -99,7 +99,7 @@ TEST_CASE("BED Parser: BED6", "[parsers][BED][io][medium]") {
 }
 
 // NOLINTNEXTLINE(readability-function-cognitive-complexity)
-TEST_CASE("BED Parser: BED9", "[parsers][BED][io][medium]") {
+TEST_CASE("BED Parser: BED9", "[parsers][BED][io][long]") {
   const auto bed_file = data_dir() / "genomic_intervals" / "intervals.bed9";
   auto p = bed::Parser(bed_file);
   auto records = p.parse_all();
