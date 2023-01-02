@@ -67,7 +67,7 @@ TEST_CASE("CMatrix simple", "[cmatrix][short]") {
 
 // NOLINTNEXTLINE(readability-function-cognitive-complexity)
 TEST_CASE("CMatrix 10x200", "[cmatrix][medium]") {
-  const auto input_file = data_dir() / "symm_matrix_200_10.tsv.gz";
+  const auto input_file = data_dir() / "contact_matrices" / "symmetric_matrix_200_10.tsv.xz";
   REQUIRE(std::filesystem::exists(input_file));
   const auto m1 = load_matrix_from_file(input_file);
   ContactMatrixDense<> m2(10, 200);
@@ -154,8 +154,9 @@ TEST_CASE("CMatrix get w/ block", "[cmatrix][short]") {
 
 // NOLINTNEXTLINE(readability-function-cognitive-complexity)
 TEST_CASE("CMatrix get w/ block small", "[cmatrix][short]") {
-  const auto reference_file = data_dir() / "contacts_chr1_bs9_small.tsv";
-  const auto input_file = data_dir() / "contacts_chr1_raw_small.tsv";
+  const auto parent = data_dir() / "contact_matrices";
+  const auto reference_file = parent / "contact_matrix_chr1_bs9_small.tsv.xz";
+  const auto input_file = parent / "contact_matrix_chr1_raw_small.tsv.xz";
 
   const usize block_size = 9;
 
