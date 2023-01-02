@@ -123,7 +123,7 @@ struct CorrelationBuffer {
 };
 
 // NOLINTNEXTLINE(readability-function-cognitive-complexity)
-TEST_CASE("Corr. test: Pearson wo/ ties", "[correlation][pearson][short]") {
+TEST_CASE("Pearson correlation wo/ ties", "[correlation][pearson][short]") {
   const std::vector<u32> v1{17, 86, 60, 77, 47, 3, 70, 87, 88, 92};
   const std::vector<u32> v2{70, 29, 85, 61, 80, 34, 60, 31, 73, 66};
   const auto [pcc, pv] = Pearson<>{}(v1, v2);
@@ -132,7 +132,7 @@ TEST_CASE("Corr. test: Pearson wo/ ties", "[correlation][pearson][short]") {
 }
 
 // NOLINTNEXTLINE(readability-function-cognitive-complexity)
-TEST_CASE("Corr. test: Weighted Pearson wo/ ties", "[correlation][pearson][short]") {
+TEST_CASE("Weighted Pearson correlation wo/ ties", "[correlation][pearson][short]") {
   const std::vector<u32> v1{17, 86, 60, 77, 47, 3, 70, 87, 88, 92};
   const std::vector<u32> v2{70, 29, 85, 61, 80, 34, 60, 31, 73, 66};
   const std::vector<double> w{0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0};
@@ -142,7 +142,7 @@ TEST_CASE("Corr. test: Weighted Pearson wo/ ties", "[correlation][pearson][short
 }
 
 // NOLINTNEXTLINE(readability-function-cognitive-complexity)
-TEST_CASE("Corr. test: Pearson w/ ties", "[correlation][pearson][short]") {
+TEST_CASE("Pearson correlation w/ ties", "[correlation][pearson][short]") {
   std::vector<u32> v1{17, 86, 60, 77, 47, 3, 70, 47, 88, 92};
   std::vector<u32> v2{70, 29, 85, 61, 80, 34, 60, 31, 73, 66};
   const auto [pcc, pv] = Pearson<>{}(v1, v2);
@@ -151,7 +151,7 @@ TEST_CASE("Corr. test: Pearson w/ ties", "[correlation][pearson][short]") {
 }
 
 // NOLINTNEXTLINE(readability-function-cognitive-complexity)
-TEST_CASE("Corr. test: Weighted Pearson w/ ties", "[correlation][pearson][short]") {
+TEST_CASE("Weighted Pearson correlation w/ ties", "[correlation][pearson][short]") {
   const std::vector<u32> v1{17, 86, 60, 77, 47, 3, 70, 47, 88, 92};
   const std::vector<u32> v2{70, 29, 85, 61, 80, 34, 60, 31, 73, 66};
   const std::vector<double> w{0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0};
@@ -173,7 +173,7 @@ static void correlation_helper(const std::filesystem::path& path_to_reference_da
 }
 
 // NOLINTNEXTLINE(readability-function-cognitive-complexity)
-TEST_CASE("Corr. test: Pearson", "[correlation][pearson][medium]") {
+TEST_CASE("Pearson correlation", "[correlation][pearson][medium]") {
   const auto parent = data_dir() / "correlation";
   correlation_helper<u32>(parent / "correlation_uint.txt.xz", "pearson");
   correlation_helper<i32>(parent / "correlation_int.txt.xz", "pearson");
@@ -181,7 +181,7 @@ TEST_CASE("Corr. test: Pearson", "[correlation][pearson][medium]") {
 }
 
 // NOLINTNEXTLINE(readability-function-cognitive-complexity)
-TEST_CASE("Corr. test: Pearson long vector", "[correlation][pearson][medium]") {
+TEST_CASE("Pearson correlation (long vector)", "[correlation][pearson][medium]") {
   const auto parent = data_dir() / "correlation";
   correlation_helper<u32>(parent / "correlation_uint_long_vect.txt.xz", "pearson");
   correlation_helper<i32>(parent / "correlation_int_long_vect.txt.xz", "pearson");
@@ -189,7 +189,7 @@ TEST_CASE("Corr. test: Pearson long vector", "[correlation][pearson][medium]") {
 }
 
 // NOLINTNEXTLINE(readability-function-cognitive-complexity)
-TEST_CASE("Corr. test: Weighted Pearson", "[correlation][pearson][medium]") {
+TEST_CASE("Weighted Pearson correlation", "[correlation][pearson][medium]") {
   const auto parent = data_dir() / "correlation";
   correlation_helper<u32>(parent / "correlation_uint.txt.xz", "weighted_pearson");
   correlation_helper<i32>(parent / "correlation_int.txt.xz", "weighted_pearson");
@@ -197,7 +197,7 @@ TEST_CASE("Corr. test: Weighted Pearson", "[correlation][pearson][medium]") {
 }
 
 // NOLINTNEXTLINE(readability-function-cognitive-complexity)
-TEST_CASE("Corr. test: Weighted Pearson long vector", "[correlation][pearson][long]") {
+TEST_CASE("Weighted Pearson correlation (long vector)", "[correlation][pearson][long]") {
   const auto parent = data_dir() / "correlation";
   correlation_helper<u32>(parent / "correlation_uint_long_vect.txt.xz", "weighted_pearson");
   correlation_helper<i32>(parent / "correlation_int_long_vect.txt.xz", "weighted_pearson");
@@ -205,7 +205,7 @@ TEST_CASE("Corr. test: Weighted Pearson long vector", "[correlation][pearson][lo
 }
 
 // NOLINTNEXTLINE(readability-function-cognitive-complexity)
-TEST_CASE("Corr. test: Spearman wo/ ties", "[correlation][spearman][short]") {
+TEST_CASE("Spearman correlation wo/ ties", "[correlation][spearman][short]") {
   const std::vector<u32> v1{17, 86, 60, 77, 47, 3, 70, 87, 88, 92};
   const std::vector<u32> v2{70, 29, 85, 61, 80, 34, 60, 31, 73, 66};
   const auto [rho, pv] = Spearman<>{}(v1, v2);
@@ -214,7 +214,7 @@ TEST_CASE("Corr. test: Spearman wo/ ties", "[correlation][spearman][short]") {
 }
 
 // NOLINTNEXTLINE(readability-function-cognitive-complexity)
-TEST_CASE("Corr. test: Spearman w/ ties", "[correlation][spearman][short]") {
+TEST_CASE("Spearman correlation w/ ties", "[correlation][spearman][short]") {
   const std::vector<u32> v1{17, 86, 60, 77, 47, 3, 70, 47, 88, 92};
   const std::vector<u32> v2{70, 29, 85, 61, 80, 34, 60, 31, 73, 66};
   const auto [rho, pv] = Spearman<>{}(v1, v2);
@@ -223,7 +223,7 @@ TEST_CASE("Corr. test: Spearman w/ ties", "[correlation][spearman][short]") {
 }
 
 // NOLINTNEXTLINE(readability-function-cognitive-complexity)
-TEST_CASE("Corr. test: Spearman", "[correlation][spearman][long]") {
+TEST_CASE("Spearman correlation", "[correlation][spearman][long]") {
   const auto parent = data_dir() / "correlation";
   correlation_helper<u32>(parent / "correlation_uint.txt.xz", "spearman");
   correlation_helper<i32>(parent / "correlation_int.txt.xz", "spearman");
@@ -231,7 +231,7 @@ TEST_CASE("Corr. test: Spearman", "[correlation][spearman][long]") {
 }
 
 // NOLINTNEXTLINE(readability-function-cognitive-complexity)
-TEST_CASE("Corr. test: Spearman long vector", "[correlation][spearman][long]") {
+TEST_CASE("Spearman correlation (long vector)", "[correlation][spearman][long]") {
   const auto parent = data_dir() / "correlation";
   correlation_helper<u32>(parent / "correlation_uint_long_vect.txt.xz", "spearman");
   correlation_helper<i32>(parent / "correlation_int_long_vect.txt.xz", "spearman");
@@ -239,7 +239,7 @@ TEST_CASE("Corr. test: Spearman long vector", "[correlation][spearman][long]") {
 }
 
 // NOLINTNEXTLINE(readability-function-cognitive-complexity)
-TEST_CASE("Corr. test: Weighted Spearman long", "[correlation][spearman][medium]") {
+TEST_CASE("Weighted Spearman correlation", "[correlation][spearman][medium]") {
   const auto parent = data_dir() / "correlation";
   correlation_helper<u32>(parent / "correlation_uint.txt.xz", "weighted_spearman");
   correlation_helper<i32>(parent / "correlation_int.txt.xz", "weighted_spearman");
@@ -247,7 +247,7 @@ TEST_CASE("Corr. test: Weighted Spearman long", "[correlation][spearman][medium]
 }
 
 // NOLINTNEXTLINE(readability-function-cognitive-complexity)
-TEST_CASE("Corr. test: Weighted Spearman long vector", "[correlation][spearman][long]") {
+TEST_CASE("Weighted Spearman correlation (long vector)", "[correlation][spearman][long]") {
   const auto parent = data_dir() / "correlation";
   correlation_helper<u32>(parent / "correlation_uint_long_vect.txt.xz", "weighted_spearman");
   correlation_helper<i32>(parent / "correlation_int_long_vect.txt.xz", "weighted_spearman");
