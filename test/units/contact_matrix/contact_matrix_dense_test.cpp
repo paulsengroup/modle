@@ -313,7 +313,7 @@ TEST_CASE("ContactMatrixDense blur (sigma=1.5)", "[cmatrix][long]") {
 
 // NOLINTNEXTLINE(readability-function-cognitive-complexity)
 TEST_CASE("ContactMatrixDense blur parallel (sigma=5.0)", "[cmatrix][long][exclusive]") {
-  BS::thread_pool tpool{};
+  BS::thread_pool tpool{2};
   contact_matrix_dense_blur_helper(5.0, 3.5, &tpool);
 }
 
@@ -353,7 +353,7 @@ TEST_CASE("ContactMatrixDense difference of Gaussians", "[cmatrix][long]") {
 
 // NOLINTNEXTLINE(readability-function-cognitive-complexity)
 TEST_CASE("ContactMatrixDense difference of Gaussians - parallel", "[cmatrix][long][exclusive]") {
-  BS::thread_pool tpool{};
+  BS::thread_pool tpool{2};
   contact_matrix_dense_dog_helper(1.0, 1.6, 3.0, &tpool);
 }
 
