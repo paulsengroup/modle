@@ -213,7 +213,7 @@ jobs:
           name: ${{ needs.cache-test-datasets.outputs.artifact-name }}
 
       - name: Extract test dataset
-        run: tar -xf modle_test_data.tar.gz
+        run: tar -xf modle_test_data.tar.xz
 
       - name: Run unit tests
         working-directory: ${{ github.workspace }}/build

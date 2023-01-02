@@ -17,4 +17,4 @@
 !LICENSE
 !conanfile.*
 !test/CMakeLists.txt
-!test/data/modle_test_data.tar.gz
+!test/data/modle_test_data.tar.xz

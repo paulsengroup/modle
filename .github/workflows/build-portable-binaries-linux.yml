@@ -96,7 +96,7 @@ jobs:
         run: |
           # Workaround GLIBCXX version mismatch
           printf '[requires]\nb2/4.9.2\n' > /tmp/conanfile.txt
-          
+
           PATH="/opt/rh/devtoolset-11/root/usr/bin/:$PATH" \
           conan install /tmp/conanfile.txt --build=b2
 
@@ -189,7 +189,7 @@ jobs:
       - name: Extract binaries and test dataset
         run: |
           tar -xf modle.tar.gz
-          tar -xf modle_test_data.tar.gz
+          tar -xf modle_test_data.tar.xz
 
       - name: Run unit tests
         run: modle/bin/test_main --durations=yes 'exclude:*SciPy*' 'exclude:*wCorr*'
@@ -218,7 +218,7 @@ jobs:
       - name: Extract binaries and test dataset
         run: |
           tar -xf modle.tar.gz
-          tar -xf modle_test_data.tar.gz
+          tar -xf modle_test_data.tar.xz
 
       - name: Run modle integration test(s)
         working-directory: ${{ github.workspace }}/test/scripts
@@ -248,7 +248,7 @@ jobs:
       - name: Extract binaries and test dataset
         run: |
           tar -xf modle.tar.gz
-          tar -xf modle_test_data.tar.gz
+          tar -xf modle_test_data.tar.xz
 
       - name: Run modle_tools transform integration test(s)
         working-directory: ${{ github.workspace }}/test/scripts
