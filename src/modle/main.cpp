@@ -189,14 +189,9 @@ int main(int argc, char** argv) noexcept {
     write_param_summary_to_log(config);
     const auto t0 = absl::Now();
     modle::Simulation sim(config);
-    switch (subcmd) {
-      using subcommand = modle::Cli::subcommand;
-      case subcommand::simulate:
-        sim.run_simulate();
-        break;
-      default:
-        MODLE_UNREACHABLE_CODE;
-    }
+
+    assert(subcmd == modle::Cli::subcommand::simulate);
+    sim.run_simulate();
 
     spdlog::info(FMT_STRING("Simulation terminated without errors in {}!\n\nBye."),
                  absl::FormatDuration(absl::Now() - t0));
