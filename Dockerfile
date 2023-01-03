@@ -84,8 +84,7 @@ RUN cd "$build_dir"                            \
 # Build and install project
 RUN cd "$build_dir"               \
 && cmake --build . -j "$(nproc)"  \
-&& cmake --install .              \
-&& rm -r "$staging_dir/lib/"
+&& cmake --install .
 
 ARG TEST_BASE_IMAGE
 FROM "$TEST_BASE_IMAGE" AS unit-testing

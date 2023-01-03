@@ -19,6 +19,13 @@ set(ENABLE_DEVELOPER_MODE
     OFF
     CACHE BOOL "Enable 'developer mode'")
 
+if(BUILD_SHARED_LIBS)
+  message(
+    FATAL_ERROR
+      "Building project with dynamic linking is currently not supported! Please remove option -DBUILD_SHARED_LIBS=ON and re-run cmake."
+  )
+endif()
+
 include(FetchContent)
 # cmake-format: off
 FetchContent_Declare(
