@@ -361,7 +361,7 @@ jobs:
 
           tar -tf "${{ steps.archive-name.outputs.name }}"
 
-      - name: Upload release archive
+      - name: Upload archive
         uses: actions/upload-artifact@v3
         if: github.event_name != 'release'
         with:
