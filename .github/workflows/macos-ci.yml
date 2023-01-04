@@ -14,8 +14,6 @@ on:
       - "test/**"
       - "CMakeLists.txt"
       - "conanfile.py"
-    paths-ignore:
-      - "test/scripts/devel/**"
     tags:
       - 'v*.*.*'
 
@@ -28,8 +26,6 @@ on:
       - "test/**"
       - "CMakeLists.txt"
       - "conanfile.py"
-    paths-ignore:
-      - "test/scripts/devel/**"
 
 # https://stackoverflow.com/a/72408109
 concurrency:
@@ -58,9 +54,7 @@ jobs:
   cache-test-datasets:
     uses: paulsengroup/modle/.github/workflows/cache-test-datasets.yml@main
 
-
-  ci:
-    name: MacOS CI
+  build-project:
     needs: cache-test-datasets
     runs-on: ${{ matrix.os }}
     strategy:
@@ -215,13 +209,3 @@ jobs:
         run: |
           ${{ github.workspace }}/build/src/modle/modle --version
           ${{ github.workspace }}/build/src/modle_tools/modle_tools --version
-
-
-  macos-ci-status-check:
-    name: Status Check
-    if: ${{ always() }}
-    runs-on: ubuntu-latest
-    needs: [ ci ]
-    steps:
-      - if: needs.ci.result != 'success'
-      - run: exit 1

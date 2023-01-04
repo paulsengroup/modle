@@ -14,8 +14,6 @@ on:
       - "test/**"
       - "CMakeLists.txt"
       - "conanfile.py"
-    paths-ignore:
-      - "test/scripts/devel/**"
     tags:
       - 'v*.*.*'
 
@@ -46,9 +44,7 @@ jobs:
   cache-test-datasets:
     uses: paulsengroup/modle/.github/workflows/cache-test-datasets.yml@main
 
-
   build-portable-binaries:
-    name: Build project
     runs-on: ubuntu-latest
     container:
       image: ghcr.io/paulsengroup/ci-docker-images/centos7-gcc-11:latest
@@ -170,9 +166,7 @@ jobs:
           retention-days: 1
           path: /tmp/modle.tar.gz
 
-
   run-unit-tests:
-    name: Run unit tests
     runs-on: ubuntu-latest
     needs: [build-portable-binaries, cache-test-datasets]
     container:
@@ -200,9 +194,7 @@ jobs:
       - name: Run unit tests
         run: modle/bin/test_main --durations=yes 'exclude:*SciPy*' 'exclude:*wCorr*'
 
-
   run-modle-integration-tests:
-    name: Run modle integration tests
     runs-on: ubuntu-latest
     needs: [build-portable-binaries, cache-test-datasets]
     container:
@@ -232,9 +224,7 @@ jobs:
         working-directory: ${{ github.workspace }}/test/scripts
         run: ./modle_integration_test.sh ${{ github.workspace }}/modle/bin/modle
 
-
   run-modle-tools-integration-tests:
-    name: Run modle_tools integration tests
     runs-on: ubuntu-latest
     needs: [build-portable-binaries, cache-test-datasets]
     container:
@@ -268,9 +258,7 @@ jobs:
         working-directory: ${{ github.workspace }}/test/scripts
         run: ./modle_tools_eval_integration_test.sh ${{ github.workspace }}/modle/bin/modle_tools
 
-
   run-portability-test:
-    name: Test portability
     runs-on: ubuntu-latest
     needs: build-portable-binaries
     strategy:
@@ -327,9 +315,7 @@ jobs:
           ./modle_tools eval --help
           ./modle_tools transform --help
 
-
-  prepare-release-artifacts:
-    name: Prepare release artifacts
+  publish-binaries:
     needs:
       - run-unit-tests
       - run-modle-integration-tests
@@ -349,48 +335,22 @@ jobs:
           version="$(basename "$GITHUB_REF")"
           version="${version#v}"
 
-          echo "prefix=modle-${version}-x86_64-linux" >> $GITHUB_OUTPUT
-          echo "name=modle-${version}-x86_64-linux.tar.xz" >> $GITHUB_OUTPUT
+          echo "name=modle-$version" >> $GITHUB_OUTPUT
 
       - name: Archive binaries
         run: |
           tar -xf modle.tar.gz
           rm modle/bin/test_main
 
-          mv modle "${{ steps.archive-name.outputs.prefix }}"
-          tar -cJf "${{ steps.archive-name.outputs.name }}" "${{ steps.archive-name.outputs.prefix }}"
+          mv modle "${{ steps.archive-name.outputs.name }}"
+          tar -cJf "${{ steps.archive-name.outputs.name }}.tar.xz" "${{ steps.archive-name.outputs.name }}"
 
-          tar -tf "${{ steps.archive-name.outputs.name }}"
+          tar -tf "${{ steps.archive-name.outputs.name }}.tar.xz"
 
-      - name: Upload release archive
-        uses: actions/upload-artifact@v3
+      - name: Upload Binaries
+        if: github.event_name == 'release'
+        uses: skx/github-action-publish-binaries@release-2.0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          name: steps.archive-name.outputs.prefix
-          if-no-files-found: error
-          retention-days: 90
-          path: steps.archive-name.outputs.name
-
-
-  build-portable-binaries-status-check:
-    name: Status Check
-    if: ${{ always() }}
-    runs-on: ubuntu-latest
-    needs:
-      - cache-test-datasets
-      - build-portable-binaries
-      - run-unit-tests
-      - run-modle-integration-tests
-      - run-modle-tools-integration-tests
-      - run-portability-test
-      - prepare-release-artifacts
-
-    steps:
-      - if: |
-          needs.cache-test-datasets.result != 'success'         ||
-          needs.build-portable-binaries.result != 'success'     ||
-          needs.run-unit-tests.result != 'success'              ||
-          needs.run-modle-integration-tests.result != 'success' ||
-          needs.run-modle-tools-integration-tests != 'success'  ||
-          needs.run-portability-test.result != 'success'        ||
-          needs.prepare-release-artifacts.result != 'success'
-      - run: exit 1
+          args: "${{ steps.archive-name.outputs.name }}.tar.xz"
