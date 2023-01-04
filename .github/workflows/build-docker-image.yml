@@ -173,6 +173,9 @@ jobs:
     container:
       image: ghcr.io/${{ github.repository }}/modle:latest
       options: '--entrypoint /bin/bash'
+      credentials:
+        username: ${{ github.actor }}
+        password: ${{ secrets.github_token }}
 
     steps:
       - name: Test modle
