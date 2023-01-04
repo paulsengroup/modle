@@ -349,7 +349,7 @@ jobs:
           version="$(basename "$GITHUB_REF")"
           version="${version#v}"
 
-          echo "name=modle-$version" >> $GITHUB_OUTPUT
+          echo "name=modle-${version}-x86_64-linux" >> $GITHUB_OUTPUT
 
       - name: Archive binaries
         run: |
@@ -360,11 +360,3 @@ jobs:
           tar -cJf "${{ steps.archive-name.outputs.name }}.tar.xz" "${{ steps.archive-name.outputs.name }}"
 
           tar -tf "${{ steps.archive-name.outputs.name }}.tar.xz"
-
-      - name: Upload Binaries
-        if: github.event_name == 'release'
-        uses: skx/github-action-publish-binaries@release-2.0
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          args: "${{ steps.archive-name.outputs.name }}.tar.xz"
