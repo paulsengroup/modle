@@ -349,17 +349,26 @@ jobs:
           version="$(basename "$GITHUB_REF")"
           version="${version#v}"
 
-          echo "name=modle-${version}-x86_64-linux" >> $GITHUB_OUTPUT
+          echo "prefix=modle-${version}-x86_64-linux" >> $GITHUB_OUTPUT
+          echo "name=modle-${version}-x86_64-linux.tar.xz" >> $GITHUB_OUTPUT
 
       - name: Archive binaries
         run: |
           tar -xf modle.tar.gz
           rm modle/bin/test_main
 
-          mv modle "${{ steps.archive-name.outputs.name }}"
-          tar -cJf "${{ steps.archive-name.outputs.name }}.tar.xz" "${{ steps.archive-name.outputs.name }}"
+          mv modle "${{ steps.archive-name.outputs.prefix }}"
+          tar -cJf "${{ steps.archive-name.outputs.name }}" "${{ steps.archive-name.outputs.prefix }}"
 
-          tar -tf "${{ steps.archive-name.outputs.name }}.tar.xz"
+          tar -tf "${{ steps.archive-name.outputs.name }}"
+
+      - name: Upload release archive
+        uses: actions/upload-artifact@v3
+        with:
+          name: steps.archive-name.outputs.prefix
+          if-no-files-found: error
+          retention-days: 90
+          path: steps.archive-name.outputs.name
 
 
   build-portable-binaries-status-check:
