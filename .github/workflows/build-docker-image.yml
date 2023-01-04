@@ -161,3 +161,35 @@ jobs:
             GIT_TAG=${{ steps.build-args.outputs.GIT_TAG }}
             GIT_IS_DIRTY=false
             VERSION=${{ steps.build-args.outputs.VERSION }}
+
+
+  test-docker-image:
+    name: Test Docker image
+    needs: build-docker-image
+    runs-on: ubuntu-latest
+
+    container:
+      image: ghcr.io/${{ github.repository }}/modle:latest
+      options: '--entrypoint /bin/bash'
+
+      steps:
+        - name: Test modle
+          run: |
+            set -o pipefail
+
+            whereis -b modle
+            ls -lah "$(whereis -b modle | cut -d$' ' -f 2)
+
+            modle --help
+            modle --version
+
+        - name: Test modle_tools
+          run: |
+            set -o pipefail
+
+            whereis -b modle_tools
+            ls -lah "$(whereis -b modle_tools | cut -d$' ' -f 2)
+
+            modle_tools --help
+            modle_tools --version
+
