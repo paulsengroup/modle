@@ -165,6 +165,10 @@ jobs:
     name: Test Docker image
     needs: build-docker-image
     runs-on: ubuntu-latest
+    permissions:
+      packages: 'read'
+
+    if: github.event_name != 'pull_request'
 
     container:
       image: ghcr.io/${{ github.repository }}/modle:latest
@@ -205,5 +209,6 @@ jobs:
       - if: |
           needs.cache-test-datasets.result != 'success' ||
           needs.build-docker-image.result != 'success'  ||
-          needs.test-docker-image.result != 'success'
+          (needs.test-docker-image.result != 'success'  &&
+           needs.test-docker-image.result != 'skipped')
         run: exit 1
