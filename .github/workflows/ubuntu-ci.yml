@@ -12,10 +12,9 @@ on:
       - "external/**"
       - "src/**"
       - "test/**"
+      - "!test/scripts/devel/**"
       - "CMakeLists.txt"
       - "conanfile.py"
-    paths-ignore:
-      - "test/scripts/devel/**"
     tags:
       - 'v*.*.*'
 
@@ -26,10 +25,9 @@ on:
       - "external/**"
       - "src/**"
       - "test/**"
+      - "!test/scripts/devel/**"
       - "CMakeLists.txt"
       - "conanfile.py"
-    paths-ignore:
-      - "test/scripts/devel/**"
 
 # https://stackoverflow.com/a/72408109
 concurrency:
@@ -439,8 +437,8 @@ jobs:
       - cache-test-datasets
       - build-project
       - run-unit-tests
-      - run-modle-integration-tests
-      - run-modle-tools-integration-tests
+      - run-modle-integration-test
+      - run-modle-tools-integration-test
 
     steps:
       - if: |
@@ -448,6 +446,6 @@ jobs:
           needs.cache-test-datasets.result != 'success'         ||
           needs.build-project.result != 'success'               ||
           needs.run-unit-tests.result != 'success'              ||
-          needs.run-modle-integration-tests.result != 'success' ||
-          needs.run-modle-tools-integration-tests != 'success'
-      - run: exit 1
+          needs.run-modle-integration-test.result != 'success'  ||
+          needs.run-modle-tools-integration-test != 'success'
+        run: exit 1

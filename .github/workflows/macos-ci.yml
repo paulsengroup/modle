@@ -12,10 +12,9 @@ on:
       - "external/**"
       - "src/**"
       - "test/**"
+      - "!test/scripts/devel/**"
       - "CMakeLists.txt"
       - "conanfile.py"
-    paths-ignore:
-      - "test/scripts/devel/**"
     tags:
       - 'v*.*.*'
 
@@ -26,10 +25,9 @@ on:
       - "external/**"
       - "src/**"
       - "test/**"
+      - "!test/scripts/devel/**"
       - "CMakeLists.txt"
       - "conanfile.py"
-    paths-ignore:
-      - "test/scripts/devel/**"
 
 # https://stackoverflow.com/a/72408109
 concurrency:
@@ -224,4 +222,4 @@ jobs:
     needs: [ ci ]
     steps:
       - if: needs.ci.result != 'success'
-      - run: exit 1
+        run: exit 1

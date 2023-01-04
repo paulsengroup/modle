@@ -12,11 +12,10 @@ on:
       - "external/**"
       - "src/**"
       - "test/**"
+      - "!test/scripts/devel/**"
       - "CMakeLists.txt"
       - "Dockerfile"
       - "conanfile.py"
-    paths-ignore:
-      - "test/scripts/devel/**"
     tags:
       - 'v*.*.*'
 
@@ -27,11 +26,10 @@ on:
       - "external/**"
       - "src/**"
       - "test/**"
+      - "!test/scripts/devel/**"
       - "CMakeLists.txt"
       - "Dockerfile"
       - "conanfile.py"
-    paths-ignore:
-      - "test/scripts/devel/**"
 
 # https://stackoverflow.com/a/72408109
 concurrency:
@@ -172,26 +170,26 @@ jobs:
       image: ghcr.io/${{ github.repository }}/modle:latest
       options: '--entrypoint /bin/bash'
 
-      steps:
-        - name: Test modle
-          run: |
-            set -o pipefail
+    steps:
+      - name: Test modle
+        run: |
+          set -o pipefail
 
-            whereis -b modle
-            ls -lah "$(whereis -b modle | cut -d$' ' -f 2)
+          whereis -b modle
+          ls -lah "$(whereis -b modle | cut -d$' ' -f 2)"
 
-            modle --help
-            modle --version
+          modle --help
+          modle --version
 
-        - name: Test modle_tools
-          run: |
-            set -o pipefail
+      - name: Test modle_tools
+        run: |
+          set -o pipefail
 
-            whereis -b modle_tools
-            ls -lah "$(whereis -b modle_tools | cut -d$' ' -f 2)
+          whereis -b modle_tools
+          ls -lah "$(whereis -b modle_tools | cut -d$' ' -f 2)"
 
-            modle_tools --help
-            modle_tools --version
+          modle_tools --help
+          modle_tools --version
 
 
   build-docker-image-status-check:
@@ -208,4 +206,4 @@ jobs:
           needs.cache-test-datasets.result != 'success' ||
           needs.build-docker-image.result != 'success'  ||
           needs.test-docker-image.result != 'success'
-      - run: exit 1
+        run: exit 1
