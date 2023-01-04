@@ -363,6 +363,16 @@ jobs:
 
       - name: Upload release archive
         uses: actions/upload-artifact@v3
+        if: github.event_name != 'release'
+        with:
+          name: ${{ steps.archive-name.outputs.prefix }}
+          if-no-files-found: error
+          retention-days: 7
+          path: ${{ steps.archive-name.outputs.name }}
+
+      - name: Upload release archive
+        uses: actions/upload-artifact@v3
+        if: github.event_name == 'release'
         with:
           name: ${{ steps.archive-name.outputs.prefix }}
           if-no-files-found: error
