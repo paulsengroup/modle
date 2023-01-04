@@ -14,7 +14,9 @@ namespace modle::test {
 inline const SelfDeletingFolder testdir{true};  // NOLINT(cert-err58-cpp)
 }  // namespace modle::test
 
-namespace modle::test::io {
+namespace modle::io::test {
+
+constexpr auto& testdir = modle::test::testdir;
 
 template <class N>
 [[nodiscard]] static ContactMatrixDense<N> init_dense_matrix(random::PRNG_t& rand_eng, usize nrows,
@@ -64,7 +66,7 @@ TEST_CASE("ContactMatrixDense to Cooler Roundtrip (square)", "[io][matrix][short
 }
 
 // NOLINTNEXTLINE(readability-function-cognitive-complexity)
-TEST_CASE("ContactMatrixDense to Cooler Roundtrip", "[io][matrix][short]") {
+TEST_CASE("ContactMatrixDense to Cooler Roundtrip", "[io][matrix][long]") {
   const auto test_file = testdir() / "contact_matrix_dense_to_cooler_roundtrip.cool";
 
   constexpr usize nrows = 100;
@@ -93,4 +95,4 @@ TEST_CASE("ContactMatrixDense to Cooler Roundtrip", "[io][matrix][short]") {
   }
 }
 
-}  // namespace modle::test::io
+}  // namespace modle::io::test

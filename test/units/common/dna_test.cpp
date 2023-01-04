@@ -8,26 +8,24 @@
 
 #include "modle/common/common.hpp"
 
-namespace modle::test::dna {
+namespace modle::dna::test {
 
 // NOLINTNEXTLINE(readability-function-cognitive-complexity)
 TEST_CASE("DNA Ctor", "[common][short]") {
-  namespace dna = modle::dna;
-  CHECK(dna::Direction(u8f(0)) == dna::NONE);
-  CHECK(dna::Direction(u8f(1)) == dna::REV);
-  CHECK(dna::Direction(u8f(2)) == dna::FWD);
+  CHECK(Direction(u8f(0)) == NONE);
+  CHECK(Direction(u8f(1)) == REV);
+  CHECK(Direction(u8f(2)) == FWD);
 
-  CHECK(dna::Direction::from_char('.') == dna::NONE);
-  CHECK(dna::Direction::from_char('-') == dna::REV);
-  CHECK(dna::Direction::from_char('+') == dna::FWD);
+  CHECK(Direction::from_char('.') == NONE);
+  CHECK(Direction::from_char('-') == REV);
+  CHECK(Direction::from_char('+') == FWD);
 }
 
 // NOLINTNEXTLINE(readability-function-cognitive-complexity)
 TEST_CASE("DNA complement", "[common][short]") {
-  namespace dna = modle::dna;
-  CHECK(dna::NONE.complement() == dna::NONE);
-  CHECK(dna::REV.complement() == dna::FWD);
-  CHECK(dna::FWD.complement() == dna::REV);
+  CHECK(NONE.complement() == NONE);
+  CHECK(REV.complement() == FWD);
+  CHECK(FWD.complement() == REV);
 }
 
-}  // namespace modle::test::dna
+}  // namespace modle::dna::test

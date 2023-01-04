@@ -60,9 +60,26 @@ trap 'rm -rf -- "$outdir"' EXIT
 # cp "$outdir/"*horizontal.tsv.gz" /tmp/test/data/integration_tests/4DNFI9GMP2J8_vs_4DNFIFJH2524_mt_eval_custom_score_custom_metric_horizontal.tsv.gz
 # cp "$outdir/"*vertical.tsv.gz" /tmp/test/data/integration_tests/4DNFI9GMP2J8_vs_4DNFIFJH2524_mt_eval_custom_score_custom_metric_vertical.tsv.gz
 
-(cd "$data_dir" && shasum -c checksums.sha256)
 
-status="$?"
+ref=("$data_dir/4DNFI9GMP2J8_vs_4DNFIFJH2524_mt_eval_custom_score_custom_metric_"*.{bw,tsv.gz})
+tgt=("$outdir/out_custom_score_custom_metric_"*.{bw,tsv.gz})
+
+if [ ${#ref[@]} -ne ${#tgt[@]} ]; then
+  2>&1 echo "Expected ${#ref[@]} files, found ${#tgt[@]}!"
+  2>&1 echo "Please file a bug at https://github.com/paulsengroup/modle"
+  exit 1
+fi
+
+for i in "${!ref[@]}"; do
+  f1="${ref[$i]}"
+  f2="${tgt[$i]}"
+  if cmp "$f1" "$f2"; then
+    2>&1 echo "$f2: OK"
+  else
+    status=1
+  fi
+done
+
 
 if [ "$status" -eq 0 ]; then
   printf '\n### PASS ###\n'

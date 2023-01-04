@@ -13,7 +13,7 @@ DISABLE_WARNING_POP
 
 #include "modle/common/cli_utils.hpp"
 
-namespace modle::test::utils {
+namespace modle::utils::test {
 
 BEGIN_BITFLAGS(TestEnum)
 FLAG(a)
@@ -71,4 +71,4 @@ TEST_CASE("AsGenomicDistance CLI transform operator", "[utils][short]") {
   CHECK_THROWS_AS(fx("kb"), CLI::ValidationError);
 }
 
-}  // namespace modle::test::utils
+}  // namespace modle::utils::test

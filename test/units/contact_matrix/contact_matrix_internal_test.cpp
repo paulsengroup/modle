@@ -9,10 +9,10 @@
 #include "modle/common/common.hpp"  // for usize
 #include "modle/common/random.hpp"
 
-namespace modle::test::cmatrix {
+namespace modle::cmatrix::test {
 
 // NOLINTNEXTLINE(readability-function-cognitive-complexity)
-TEST_CASE("CMatrix internal: transpose_coords", "[cmatrix][short]") {
+TEST_CASE("ContactMatrix internal: transpose_coords", "[cmatrix][short]") {
   const auto c1t = internal::transpose_coords(1, 2);
   CHECK(c1t == PixelCoordinates{1, 2});
 
@@ -24,7 +24,7 @@ TEST_CASE("CMatrix internal: transpose_coords", "[cmatrix][short]") {
 }
 
 // NOLINTNEXTLINE(readability-function-cognitive-complexity)
-TEST_CASE("CMatrix internal: encode_idx", "[cmatrix][short]") {
+TEST_CASE("ContactMatrix internal: encode_idx", "[cmatrix][short]") {
   constexpr usize nrows = 4;
   [[maybe_unused]] constexpr usize ncols = 4;
 
@@ -36,7 +36,7 @@ TEST_CASE("CMatrix internal: encode_idx", "[cmatrix][short]") {
 }
 
 // NOLINTNEXTLINE(readability-function-cognitive-complexity)
-TEST_CASE("CMatrix internal: decode_idx", "[cmatrix][short]") {
+TEST_CASE("ContactMatrix internal: decode_idx", "[cmatrix][short]") {
   constexpr usize nrows = 4;
   [[maybe_unused]] constexpr usize ncols = 4;
 
@@ -48,7 +48,7 @@ TEST_CASE("CMatrix internal: decode_idx", "[cmatrix][short]") {
 }
 
 // NOLINTNEXTLINE(readability-function-cognitive-complexity)
-TEST_CASE("CMatrix internal: encode/decode roundtrip", "[cmatrix][short]") {
+TEST_CASE("ContactMatrix internal: encode/decode roundtrip", "[cmatrix][long]") {
   constexpr usize nrows = 100;
   constexpr usize ncols = 5000;
 
@@ -66,4 +66,4 @@ TEST_CASE("CMatrix internal: encode/decode roundtrip", "[cmatrix][short]") {
   }
 }
 
-}  // namespace modle::test::cmatrix
+}  // namespace modle::cmatrix::test

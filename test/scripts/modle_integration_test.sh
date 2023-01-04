@@ -20,6 +20,10 @@ if ! command -v cooler &> /dev/null; then
   status=1
 fi
 
+# Try to detect the error outlined below as early as possible:
+# https://github.com/open2c/cooler/pull/298
+cooler --help > /dev/null
+
 if ! command -v shasum &> /dev/null; then
   2>&1 echo "Unable to find shasum in your PATH"
   status=1

@@ -125,7 +125,8 @@ class ContactMatrixDense {
   inline void unsafe_print(std::ostream& out_stream = std::cout, bool full = false) const;
   inline void unsafe_print(bool full) const;
   [[nodiscard]] inline std::vector<std::vector<N>> unsafe_generate_symmetric_matrix() const;
-  inline void unsafe_import_from_txt(const std::filesystem::path& path, char sep = '\t');
+  [[nodiscard]] static inline ContactMatrixDense<N> from_txt(const std::filesystem::path& path,
+                                                             char sep = '\t');
 
   // Misc
   inline void clear_missed_updates_counter();
@@ -139,12 +140,14 @@ class ContactMatrixDense {
   [[nodiscard]] inline absl::Span<const N> get_raw_count_vector() const;
   [[nodiscard]] inline absl::Span<N> get_raw_count_vector();
 
-  [[nodiscard]] inline ContactMatrixDense<double> blur(double sigma, double cutoff = 0.005,
+  [[nodiscard]] inline ContactMatrixDense<double> blur(double sigma, double truncate = 3.5,
                                                        BS::thread_pool* tpool = nullptr) const;
-  [[nodiscard]] inline ContactMatrixDense<double> gaussian_diff(
-      double sigma1, double sigma2, double min_value = std::numeric_limits<double>::lowest(),
-      double max_value = (std::numeric_limits<double>::max)(),
+  [[nodiscard]] inline ContactMatrixDense<double> diff_of_gaussians(
+      const double sigma1, const double sigma2, const double truncate = 3.5,
+      const double min_value = std::numeric_limits<double>::lowest(),
+      const double max_value = (std::numeric_limits<double>::max)(),
       BS::thread_pool* tpool = nullptr) const;
+
   template <class FP = double, class = std::enable_if_t<std::is_floating_point_v<FP>>>
   [[nodiscard]] inline ContactMatrixDense<FP> unsafe_normalize(double lb = 0.0,
                                                                double ub = 1.0) const;

@@ -26,7 +26,7 @@ class Pearson {
 
   struct Result {
     FP pcc{0};
-    FP pvalue{1};
+    FP pvalue{std::numeric_limits<FP>::quiet_NaN()};
   };
 
   template <class It1, class It2, class It3>
@@ -49,20 +49,6 @@ class Pearson {
 
   template <class I, class = std::enable_if<std::is_integral_v<I>>>
   [[nodiscard]] static inline FP compute_significance(FP pcc, I n);
-
-#ifdef MODLE_ENABLE_TESTING
- public:
-  template <class It1, class It2>
-  [[maybe_unused]] [[nodiscard]] static inline FP test_compute_pcc(It1 first1, It1 last1,
-                                                                   It2 first2) {
-    return compute_pcc(first1, last1, first2);
-  }
-
-  template <class I, class = std::enable_if<std::is_integral_v<I>>>
-  [[maybe_unused]] [[nodiscard]] static inline FP test_compute_significance(FP pcc, I n) {
-    return compute_significance(pcc, n);
-  }
-#endif
 };
 
 template <class FP = double>
@@ -100,19 +86,6 @@ class Spearman {
 
   template <class I, class = std::enable_if<std::is_integral_v<I>>>
   [[nodiscard]] static inline FP compute_significance(FP rho, I n);
-
-#ifdef MODLE_ENABLE_TESTING
- public:
-  template <class It1, class It2>
-  [[maybe_unused]] [[nodiscard]] inline FP test_compute_rho(It1 first1, It1 last1, It2 first2) {
-    return compute_rho(first1, last1, first2);
-  }
-
-  template <class I, class = std::enable_if<std::is_integral_v<I>>>
-  [[maybe_unused]] [[nodiscard]] static inline FP test_compute_significance(FP rho, I n) {
-    return compute_significance(rho, n);
-  }
-#endif
 };
 
 namespace internal {

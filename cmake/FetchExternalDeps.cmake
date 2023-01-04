@@ -8,10 +8,20 @@ include(FetchContent)
 FetchContent_Declare(
         coolerpp
         GIT_REPOSITORY https://github.com/robomics/coolerpp.git
-        GIT_TAG 54ee8f5063eab4a4f1a54f113cb01d6b2c01a499
+        GIT_TAG 7349bf97d92e16bb173b1591c1e399fdca1f3ab2
 )
 # cmake-format: on
 
-SET(COOLERPP_ENABLE_TESTING OFF)
-SET(COOLERPP_BUILD_EXAMPLES OFF)
-FetchContent_MakeAvailable(coolerpp)
+set(COOLERPP_ENABLE_TESTING OFF)
+set(COOLERPP_BUILD_EXAMPLES OFF)
+
+if(BUILD_SHARED_LIBS)
+  FetchContent_MakeAvailable(coolerpp)
+else()
+  # Do not install coolerpp when using static linking
+  FetchContent_GetProperties(coolerpp)
+  if(NOT coolerpp_POPULATED)
+    FetchContent_Populate(coolerpp)
+    add_subdirectory(${coolerpp_SOURCE_DIR} ${coolerpp_BINARY_DIR} EXCLUDE_FROM_ALL)
+  endif()
+endif()

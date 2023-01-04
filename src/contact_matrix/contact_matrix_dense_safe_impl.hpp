@@ -3,6 +3,7 @@
 // SPDX-License-Identifier: MIT
 
 #pragma once
+#include <absl/strings/str_split.h>  // for StrSplit, Splitter
 
 #include <BS_thread_pool.hpp>  // for BS::thread_pool, parallelize_loop
 #include <atomic>              // for atomic_fetch_add_explicit
@@ -11,11 +12,12 @@
 #include <fstream>             // IWYU pragma: keep for ifstream
 #include <vector>              // for vector
 
-#include "modle/common/common.hpp"  // for usize, i64, u64, bp_t, isize
-#include "modle/common/random.hpp"  // for PRNG, uniform_int_distribution, unifo...
+#include "modle/common/common.hpp"         // for usize, i64, u64, bp_t, isize
+#include "modle/common/numeric_utils.hpp"  // for parse_numeric_or_throw
+#include "modle/common/random.hpp"         // for PRNG, uniform_int_distribution, unifo...
 #include "modle/common/suppress_compiler_warnings.hpp"
-#include "modle/common/utils.hpp"                 // for convolve ndebug_defined, ndebug_not_defined
-#include "modle/compressed_io/compressed_io.hpp"  // for CompressedReader
+#include "modle/common/utils.hpp"                      // for ndebug_defined, ndebug_not_defined
+#include "modle/compressed_io/compressed_io.hpp"       // for CompressedReader
 #include "modle/internal/contact_matrix_internal.hpp"  // for transpose_coords
 #include "modle/stats/misc.hpp"                        // for compute_gauss_kernel
 
@@ -149,14 +151,14 @@ void ContactMatrixDense<N>::reset() {
 }
 
 template <class N>
-ContactMatrixDense<double> ContactMatrixDense<N>::blur(const double sigma, const double cutoff,
+ContactMatrixDense<double> ContactMatrixDense<N>::blur(const double sigma, const double truncate,
                                                        BS::thread_pool* tpool) const {
   ContactMatrixDense<double> bmatrix(this->nrows(), this->ncols());
   if (this->empty()) {
     return bmatrix;
   }
 
-  const auto gauss_kernel = stats::compute_gauss_kernel(sigma, cutoff);
+  const auto gauss_kernel = stats::compute_gauss_kernel2d(sigma, truncate);
 
   const auto block_size = static_cast<usize>(std::sqrt(static_cast<double>(gauss_kernel.size())));
   assert(block_size * block_size == gauss_kernel.size());
@@ -166,7 +168,7 @@ ContactMatrixDense<double> ContactMatrixDense<N>::blur(const double sigma, const
     for (usize i = i0; i < i1; ++i) {
       for (usize j = i; j < std::min(i + this->nrows(), this->ncols()); ++j) {
         this->unsafe_get_block(i, j, block_size, pixels);
-        bmatrix.unsafe_set(i, j, utils::convolve(gauss_kernel, pixels));
+        bmatrix.unsafe_set(i, j, stats::cross_correlation(gauss_kernel, pixels));
       }
     }
   };
@@ -182,19 +184,17 @@ ContactMatrixDense<double> ContactMatrixDense<N>::blur(const double sigma, const
 }
 
 template <class N>
-ContactMatrixDense<double> ContactMatrixDense<N>::gaussian_diff(const double sigma1,
-                                                                const double sigma2,
-                                                                const double min_value,
-                                                                const double max_value,
-                                                                BS::thread_pool* tpool) const {
+ContactMatrixDense<double> ContactMatrixDense<N>::diff_of_gaussians(
+    const double sigma1, const double sigma2, const double truncate, const double min_value,
+    const double max_value, BS::thread_pool* tpool) const {
   assert(sigma1 <= sigma2);
   ContactMatrixDense<double> bmatrix(this->nrows(), this->ncols());
   if (this->empty()) {
     return bmatrix;
   }
 
-  const auto gauss_kernel1 = stats::compute_gauss_kernel(sigma1);
-  const auto gauss_kernel2 = stats::compute_gauss_kernel(sigma2);
+  const auto gauss_kernel1 = stats::compute_gauss_kernel2d(sigma1, truncate);
+  const auto gauss_kernel2 = stats::compute_gauss_kernel2d(sigma2, truncate);
 
   [[maybe_unused]] const auto block_size1 =
       static_cast<usize>(std::sqrt(static_cast<double>(gauss_kernel1.size())));
@@ -209,9 +209,9 @@ ContactMatrixDense<double> ContactMatrixDense<N>::gaussian_diff(const double sig
     for (usize i = i0; i < i1; ++i) {
       for (usize j = i; j < std::min(i + this->nrows(), this->ncols()); ++j) {
         this->unsafe_get_block(i, j, block_size1, pixels);
-        const auto n1 = utils::convolve(gauss_kernel1, pixels);
+        const auto n1 = stats::cross_correlation(gauss_kernel1, pixels);
         this->unsafe_get_block(i, j, block_size2, pixels);
-        const auto n2 = utils::convolve(gauss_kernel2, pixels);
+        const auto n2 = stats::cross_correlation(gauss_kernel2, pixels);
 
         bmatrix.set(i, j, std::clamp(n1 - n2, min_value, max_value));
       }
@@ -279,6 +279,30 @@ ContactMatrixDense<M> ContactMatrixDense<N>::as() const {
 template <class N>
 bool ContactMatrixDense<N>::empty() const {
   return this->get_tot_contacts() == 0;
+}
+
+template <class N>
+ContactMatrixDense<N> ContactMatrixDense<N>::from_txt(const std::filesystem::path& path, char sep) {
+  assert(std::filesystem::exists(path));
+  compressed_io::Reader r(path);
+
+  ContactMatrixDense<N> m{};
+
+  std::string buff;
+  std::vector<std::string_view> toks;
+  usize i = 0;
+  for (; r.getline(buff); ++i) {
+    toks = absl::StrSplit(buff, sep);
+    if (i == 0) {
+      m.unsafe_resize(toks.size(), toks.size());
+    }
+    for (usize j = i; j < m.ncols(); ++j) {
+      m.unsafe_set(i, j, utils::parse_numeric_or_throw<N>(toks[j]));
+    }
+  }
+  assert(i != 0);
+
+  return m;
 }
 
 }  // namespace modle

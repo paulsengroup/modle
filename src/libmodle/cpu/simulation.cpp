@@ -611,7 +611,7 @@ Simulation::Task Simulation::Task::from_string(std::string_view serialized_task,
     utils::parse_numeric_or_throw(toks[i++], t.num_target_epochs);
     utils::parse_numeric_or_throw(toks[i++], t.num_target_contacts);
     utils::parse_numeric_or_throw(toks[i++], t.num_lefs);
-    usize num_barriers_expected;
+    usize num_barriers_expected{};
     utils::parse_numeric_or_throw(toks[i++], num_barriers_expected);
 
     auto chrom_it = genome.find(chrom_name);

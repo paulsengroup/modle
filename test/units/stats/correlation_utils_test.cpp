@@ -7,8 +7,7 @@
 #include "modle/common/common.hpp"  // for u32
 #include "modle/stats/correlation.hpp"
 
-namespace modle::test::stats {
-using namespace modle::stats;
+namespace modle::stats::stats {
 
 // NOLINTNEXTLINE(readability-function-cognitive-complexity)
 TEST_CASE("Corr. test utils: sort vect. by idx", "[correlation][utils][short]") {
@@ -48,4 +47,4 @@ TEST_CASE("Corr. test utils: compute ranks w ties", "[correlation][utils][short]
   }
 }
 
-}  // namespace modle::test::stats
+}  // namespace modle::stats::stats

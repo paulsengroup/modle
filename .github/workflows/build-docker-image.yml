@@ -12,6 +12,7 @@ on:
       - "external/**"
       - "src/**"
       - "test/**"
+      - "!test/scripts/devel/**"
       - "CMakeLists.txt"
       - "Dockerfile"
       - "conanfile.py"
@@ -25,6 +26,7 @@ on:
       - "external/**"
       - "src/**"
       - "test/**"
+      - "!test/scripts/devel/**"
       - "CMakeLists.txt"
       - "Dockerfile"
       - "conanfile.py"
@@ -42,7 +44,9 @@ jobs:
   cache-test-datasets:
     uses: paulsengroup/modle/.github/workflows/cache-test-datasets.yml@main
 
-  build-image:
+
+  build-docker-image:
+    name: Build Docker image
     needs: cache-test-datasets
     runs-on: ubuntu-latest
     permissions:
@@ -155,3 +159,57 @@ jobs:
             GIT_TAG=${{ steps.build-args.outputs.GIT_TAG }}
             GIT_IS_DIRTY=false
             VERSION=${{ steps.build-args.outputs.VERSION }}
+
+
+  test-docker-image:
+    name: Test Docker image
+    needs: build-docker-image
+    runs-on: ubuntu-latest
+    permissions:
+      packages: 'read'
+
+    if: github.event_name != 'pull_request'
+
+    container:
+      image: ghcr.io/${{ github.repository }}/modle:latest
+      options: '--entrypoint /bin/bash'
+
+    steps:
+      - name: Test modle
+        run: |
+          set -o pipefail
+
+          whereis -b modle
+          ls -lah "$(whereis -b modle | cut -d$' ' -f 2)"
+
+          modle --help
+          modle --version
+
+      - name: Test modle_tools
+        run: |
+          set -o pipefail
+
+          whereis -b modle_tools
+          ls -lah "$(whereis -b modle_tools | cut -d$' ' -f 2)"
+
+          modle_tools --help
+          modle_tools --version
+
+
+  build-docker-image-status-check:
+    name: Status Check (Build Docker image)
+    if: ${{ always() }}
+    runs-on: ubuntu-latest
+    needs:
+      - cache-test-datasets
+      - build-docker-image
+      - test-docker-image
+
+    steps:
+      - name: Collect job results
+        if: |
+          needs.cache-test-datasets.result != 'success' ||
+          needs.build-docker-image.result != 'success'  ||
+          (needs.test-docker-image.result != 'success'  &&
+           needs.test-docker-image.result != 'skipped')
+        run: exit 1

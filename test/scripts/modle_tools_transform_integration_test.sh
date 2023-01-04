@@ -20,6 +20,10 @@ if ! command -v cooler &> /dev/null; then
   status=1
 fi
 
+# Try to detect the error outlined below as early as possible:
+# https://github.com/open2c/cooler/pull/298
+cooler --help > /dev/null
+
 if [ $status -ne 0 ]; then
   exit $status
 fi

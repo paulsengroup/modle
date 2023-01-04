@@ -9,32 +9,6 @@
 
 // clang-format off
 
-// Defines for MSVC
-#ifdef _MSC_VER
-    #define DISABLE_WARNING_PUSH                    __pragma(warning(push))
-    #define DISABLE_WARNING_POP                     __pragma(warning(pop))
-    #define DISABLE_WARNING(warningNumber)          __pragma(warning(disable : warningNumber))
-
-    #define DISABLE_WARNING_BOOL_COMPARE
-    #define DISABLE_WARNING_CONVERSION              DISABLE_WARNING(C4244)
-    #define DISABLE_WARNING_IMPL_INT_TO_FLOAT
-    #define DISABLE_WARNING_SIGN_COMPARE            DISABLE_WARNING(C4018, C4287, C4388, C4389)
-    #define DISABLE_WARNING_SIGN_CONVERSION         DISABLE_WARNING(C4308, C4245, C4365)
-    #define DISABLE_WARNING_DOUBLE_PROMOTION
-    #define DISABLE_WARNING_SHORTEN_64_TO_32
-    #define DISABLE_WARNING_PADDED
-    #define DISABLE_WARNING_USED_BUT_MARKED_UNUSED
-    #define DISABLE_WARNING_FLOAT_EQUAL
-    #define DISABLE_WARNING_SWITCH_ENUM
-    #define DISABLE_WARNING_SHADOW
-    #define DISABLE_WARNING_MAYBE_UNINITIALIZED
-    #define DISABLE_WARNING_ATTRIBUTES
-    #define DISABLE_WARNING_DUPLICATED_BRANCHES
-    #define DISABLE_WARNING_UNUSED_VARIABLE
-    #define DISABLE_WARNING_UNUSED_PARAMETER
-    #define DISABLE_WARNING_RANGE_LOOP_ANALYSIS
-#endif
-
 // Defines for GCC and Clang
 #if defined(__GNUC__) || defined(__clang__)
     #define DO_PRAGMA(X)                     _Pragma(#X)                                    // NOLINT(cppcoreguidelines-macro-usage)
@@ -52,6 +26,7 @@
     #define DISABLE_WARNING_SHADOW           DISABLE_WARNING("-Wshadow")
     #define DISABLE_WARNING_ATTRIBUTES       DISABLE_WARNING("-Wattributes")
     #define DISABLE_WARNING_UNUSED_VARIABLE  DISABLE_WARNING("-Wunused-variable")
+    #define DISABLE_WARNING_NULL_DEREF       DISABLE_WARNING("-Wnull-dereference")
 #endif
 
 // Defines specific to Clang
@@ -112,6 +87,7 @@
     #define DISABLE_WARNING_UNUSED_VARIABLE
     #define DISABLE_WARNING_UNUSED_PARAMETER
     #define DISABLE_WARNING_RANGE_LOOP_ANALYSIS
+    #define DISABLE_WARNING_NULL_DEREF
 #endif
 
 // clang-format on
