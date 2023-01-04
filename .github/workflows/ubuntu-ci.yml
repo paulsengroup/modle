@@ -428,3 +428,26 @@ jobs:
         working-directory: ${{ github.workspace }}/test/scripts
         run: |
           ./modle_tools_eval_integration_test.sh ${{ github.workspace }}/bin/modle_tools | head -n 1000
+
+
+  ubuntu-ci-status-check:
+    name: Status Check
+    if: ${{ always() }}
+    runs-on: ubuntu-latest
+    needs:
+      - matrix-factory
+      - cache-test-datasets
+      - build-project
+      - run-unit-tests
+      - run-modle-integration-tests
+      - run-modle-tools-integration-tests
+
+    steps:
+      - if: |
+          needs.matrix-factory.result != 'success'              ||
+          needs.cache-test-datasets.result != 'success'         ||
+          needs.build-project.result != 'success'               ||
+          needs.run-unit-tests.result != 'success'              ||
+          needs.run-modle-integration-tests.result != 'success' ||
+          needs.run-modle-tools-integration-tests != 'success'
+      - run: exit 1

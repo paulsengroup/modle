@@ -193,3 +193,19 @@ jobs:
             modle_tools --help
             modle_tools --version
 
+
+  build-docker-image-status-check:
+    name: Status Check
+    if: ${{ always() }}
+    runs-on: ubuntu-latest
+    needs:
+      - cache-test-datasets
+      - build-docker-image
+      - test-docker-image
+
+    steps:
+      - if: |
+          needs.cache-test-datasets.result != 'success' ||
+          needs.build-docker-image.result != 'success'  ||
+          needs.test-docker-image.result != 'success'
+      - run: exit 1

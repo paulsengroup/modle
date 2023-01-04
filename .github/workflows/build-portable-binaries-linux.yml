@@ -360,3 +360,28 @@ jobs:
           tar -cJf "${{ steps.archive-name.outputs.name }}.tar.xz" "${{ steps.archive-name.outputs.name }}"
 
           tar -tf "${{ steps.archive-name.outputs.name }}.tar.xz"
+
+
+  build-portable-binaries-status-check:
+    name: Status Check
+    if: ${{ always() }}
+    runs-on: ubuntu-latest
+    needs:
+      - cache-test-datasets
+      - build-portable-binaries
+      - run-unit-tests
+      - run-modle-integration-tests
+      - run-modle-tools-integration-tests
+      - run-portability-test
+      - prepare-release-artifacts
+
+    steps:
+      - if: |
+          needs.cache-test-datasets.result != 'success'         ||
+          needs.build-portable-binaries.result != 'success'     ||
+          needs.run-unit-tests.result != 'success'              ||
+          needs.run-modle-integration-tests.result != 'success' ||
+          needs.run-modle-tools-integration-tests != 'success'  ||
+          needs.run-portability-test.result != 'success'        ||
+          needs.prepare-release-artifacts.result != 'success'
+      - run: exit 1
