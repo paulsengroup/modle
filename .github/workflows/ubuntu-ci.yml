@@ -14,6 +14,8 @@ on:
       - "test/**"
       - "CMakeLists.txt"
       - "conanfile.py"
+    paths-ignore:
+      - "test/scripts/devel/**"
     tags:
       - 'v*.*.*'
 
@@ -26,6 +28,8 @@ on:
       - "test/**"
       - "CMakeLists.txt"
       - "conanfile.py"
+    paths-ignore:
+      - "test/scripts/devel/**"
 
 # https://stackoverflow.com/a/72408109
 concurrency:

@@ -14,6 +14,8 @@ on:
       - "test/**"
       - "CMakeLists.txt"
       - "conanfile.py"
+    paths-ignore:
+      - "test/scripts/devel/**"
     tags:
       - 'v*.*.*'
 
