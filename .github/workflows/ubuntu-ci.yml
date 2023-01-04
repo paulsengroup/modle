@@ -441,11 +441,12 @@ jobs:
       - run-modle-tools-integration-test
 
     steps:
-      - if: |
-          needs.matrix-factory.result != 'success'              ||
-          needs.cache-test-datasets.result != 'success'         ||
-          needs.build-project.result != 'success'               ||
-          needs.run-unit-tests.result != 'success'              ||
-          needs.run-modle-integration-test.result != 'success'  ||
-          needs.run-modle-tools-integration-test != 'success'
+      - name: Collect job results
+        if: |
+          needs.matrix-factory.result != 'success'                   ||
+          needs.cache-test-datasets.result != 'success'              ||
+          needs.build-project.result != 'success'                    ||
+          needs.run-unit-tests.result != 'success'                   ||
+          needs.run-modle-integration-test.result != 'success'       ||
+          needs.run-modle-tools-integration-test.result != 'success'
         run: exit 1

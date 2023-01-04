@@ -206,7 +206,8 @@ jobs:
       - test-docker-image
 
     steps:
-      - if: |
+      - name: Collect job results
+        if: |
           needs.cache-test-datasets.result != 'success' ||
           needs.build-docker-image.result != 'success'  ||
           (needs.test-docker-image.result != 'success'  &&

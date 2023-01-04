@@ -384,12 +384,13 @@ jobs:
       - prepare-release-artifacts
 
     steps:
-      - if: |
-          needs.cache-test-datasets.result != 'success'         ||
-          needs.build-portable-binaries.result != 'success'     ||
-          needs.run-unit-tests.result != 'success'              ||
-          needs.run-modle-integration-test.result != 'success'  ||
-          needs.run-modle-tools-integration-test != 'success'   ||
-          needs.run-portability-test.result != 'success'        ||
+      - name: Collect job results
+        if: |
+          needs.cache-test-datasets.result != 'success'                ||
+          needs.build-portable-binaries.result != 'success'            ||
+          needs.run-unit-tests.result != 'success'                     ||
+          needs.run-modle-integration-test.result != 'success'         ||
+          needs.run-modle-tools-integration-test.result != 'success'   ||
+          needs.run-portability-test.result != 'success'               ||
           needs.prepare-release-artifacts.result != 'success'
         run: exit 1
