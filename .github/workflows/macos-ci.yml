@@ -54,7 +54,9 @@ jobs:
   cache-test-datasets:
     uses: paulsengroup/modle/.github/workflows/cache-test-datasets.yml@main
 
-  build-project:
+
+  ci:
+    name: MacOS CI
     needs: cache-test-datasets
     runs-on: ${{ matrix.os }}
     strategy:
