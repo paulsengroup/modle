@@ -371,7 +371,7 @@ jobs:
 
 
   build-portable-binaries-status-check:
-    name: Status Check
+    name: Status Check (Build portable Linux binaries)
     if: ${{ always() }}
     runs-on: ubuntu-latest
     needs:

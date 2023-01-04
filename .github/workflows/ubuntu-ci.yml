@@ -429,7 +429,7 @@ jobs:
 
 
   ubuntu-ci-status-check:
-    name: Status Check
+    name: Status Check (Ubuntu CI)
     if: ${{ always() }}
     runs-on: ubuntu-latest
     needs:

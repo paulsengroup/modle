@@ -197,7 +197,7 @@ jobs:
 
 
   build-docker-image-status-check:
-    name: Status Check
+    name: Status Check (Build Docker image)
     if: ${{ always() }}
     runs-on: ubuntu-latest
     needs:
