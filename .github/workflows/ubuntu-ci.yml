@@ -12,6 +12,7 @@ on:
       - "external/**"
       - "src/**"
       - "test/**"
+      - "!test/scripts/devel/**"
       - "CMakeLists.txt"
       - "conanfile.py"
     tags:
@@ -24,6 +25,7 @@ on:
       - "external/**"
       - "src/**"
       - "test/**"
+      - "!test/scripts/devel/**"
       - "CMakeLists.txt"
       - "conanfile.py"
 
@@ -51,6 +53,7 @@ defaults:
 
 jobs:
   matrix-factory:
+    name: Generate job matrix
     runs-on: ubuntu-latest
     outputs:
       matrix: ${{ steps.set-result.outputs.result }}
@@ -130,10 +133,13 @@ jobs:
 
             return { include: includes }
 
+
   cache-test-datasets:
     uses: paulsengroup/modle/.github/workflows/cache-test-datasets.yml@main
 
+
   build-project:
+    name: Build project
     needs: matrix-factory
     runs-on: ubuntu-latest
     strategy:
@@ -289,7 +295,9 @@ jobs:
       - name: Print Ccache statistics
         run: ccache -s
 
-  unit-tests:
+
+  run-unit-tests:
+    name: Run unit tests
     needs: [matrix-factory, cache-test-datasets, build-project]
     runs-on: ubuntu-latest
     strategy:
@@ -333,7 +341,9 @@ jobs:
                 --timeout 300            \
                 -j $(nproc)
 
-  modle-integration-test:
+
+  run-modle-integration-test:
+    name: Run modle integration tests
     needs: [matrix-factory, cache-test-datasets, build-project]
     runs-on: ubuntu-latest
     strategy:
@@ -371,7 +381,9 @@ jobs:
         working-directory: ${{ github.workspace }}/test/scripts
         run: ./modle_integration_test.sh ${{ github.workspace }}/bin/modle | head -n 1000
 
-  modle-tools-integration-test:
+
+  run-modle-tools-integration-test:
+    name: Run modle_tools integration tests
     needs: [matrix-factory, cache-test-datasets, build-project]
     runs-on: ubuntu-latest
     strategy:
@@ -414,3 +426,27 @@ jobs:
         working-directory: ${{ github.workspace }}/test/scripts
         run: |
           ./modle_tools_eval_integration_test.sh ${{ github.workspace }}/bin/modle_tools | head -n 1000
+
+
+  ubuntu-ci-status-check:
+    name: Status Check (Ubuntu CI)
+    if: ${{ always() }}
+    runs-on: ubuntu-latest
+    needs:
+      - matrix-factory
+      - cache-test-datasets
+      - build-project
+      - run-unit-tests
+      - run-modle-integration-test
+      - run-modle-tools-integration-test
+
+    steps:
+      - name: Collect job results
+        if: |
+          needs.matrix-factory.result != 'success'                   ||
+          needs.cache-test-datasets.result != 'success'              ||
+          needs.build-project.result != 'success'                    ||
+          needs.run-unit-tests.result != 'success'                   ||
+          needs.run-modle-integration-test.result != 'success'       ||
+          needs.run-modle-tools-integration-test.result != 'success'
+        run: exit 1
