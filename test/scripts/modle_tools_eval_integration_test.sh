@@ -11,7 +11,7 @@ set -u
 # readlink -f is not available on macos...
 function readlink_py {
   set -eu
-  python -c 'import os, sys; print(os.path.realpath(sys.argv[1]))' "$1"
+  python3 -c 'import os, sys; print(os.path.realpath(sys.argv[1]))' "$1"
 }
 
 function check_files_exist {
