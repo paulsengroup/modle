@@ -8,6 +8,60 @@ set -e
 set -o pipefail
 set -u
 
+# readlink -f is not available on macos...
+function readlink_py {
+  set -eu
+  python -c 'import os, sys; print(os.path.realpath(sys.argv[1]))' "$1"
+}
+
+function check_files_exist {
+  set -eu
+  status=0
+  for f in "$@"; do
+    if [ ! -f "$f" ]; then
+      2>&1 echo "Unable to find test file \"$f\""
+      status=1
+    fi
+  done
+
+  return "$status"
+}
+
+function compare_coolers {
+  set -o pipefail
+  set -e
+
+  2>&1 echo "Comparing $1 with $2..."
+  if diff <(cooler dump -t chroms "$1") \
+          <(cooler dump -t chroms "$2") \
+     && \
+     diff <(cooler dump --join "$1") \
+          <(cooler dump --join "$2");
+  then
+    2>&1 echo "Files are identical"
+    return 0
+  else
+    2>&1 echo "Files differ"
+    return 1
+  fi
+}
+
+function compare_bwigs {
+  set -o pipefail
+  set -e
+
+  2>&1 echo "Comparing $1 with $2..."
+  if cmp "$1" "$2"; then
+    2>&1 echo "Files are identical"
+    return 0
+  else
+    2>&1 echo "Files differ"
+    return 1
+  fi
+}
+
+export function readlink_py
+
 status=0
 
 if [ $# -ne 1 ]; then
@@ -24,11 +78,6 @@ fi
 # https://github.com/open2c/cooler/pull/298
 cooler --help > /dev/null
 
-if ! command -v shasum &> /dev/null; then
-  2>&1 echo "Unable to find shasum in your PATH"
-  status=1
-fi
-
 if ! command -v xz &> /dev/null; then
   2>&1 echo "Unable to find xz in your PATH"
   status=1
@@ -40,12 +89,17 @@ fi
 
 modle_bin="$1"
 
-data_dir="$(readlink -f "$(dirname "$0")/../data/integration_tests")"
+data_dir="$(readlink_py "$(dirname "$0")/../data/integration_tests")"
 
 chrom_sizes="$data_dir/grch38.chrom.sizes"
 extr_barriers="$data_dir/grch38_h1_extrusion_barriers.bed.xz"
+ref_cooler="$data_dir/reference_001.cool"
+ref_bw="$data_dir/reference_001.bw"
 
-status=0
+if ! check_files_exist "$chrom_sizes" "$extr_barriers" "$ref_cooler" "$ref_bw"; then
+  exit 1
+fi
+
 if [ ! -f "$chrom_sizes" ]; then
   2>&1 echo "Unable to find test file \"$chrom_sizes\""
   status=1
@@ -78,31 +132,11 @@ chroms='^chr1[79]'
 # cp "$outdir/out_lef_1d_occupancy.bw" /tmp/test/data/integration_tests/reference_001.bw
 # cp "$outdir/out.cool" /tmp/test/data/integration_tests/reference_001.cool
 
-function compare_coolers {
-  set -o pipefail
-  set -e
-
-  2>&1 echo "Comparing $1 with $2..."
-  if diff <(cooler dump -t chroms "$1") \
-          <(cooler dump -t chroms "$2") \
-     && \
-     diff <(cooler dump --join "$1") \
-          <(cooler dump --join "$2");
-  then
-    2>&1 echo "Files are identical"
-    return 0
-  else
-    2>&1 echo "Files differ"
-    return 1
-  fi
-}
-
-if ! compare_coolers "$outdir/out.cool" "$data_dir/reference_001.cool"; then
+if ! compare_coolers "$outdir/out.cool" "$ref_cooler"; then
   status=1
 fi
 
-bw_checksum="9f14b547e256cfc80492bd48b1b0b1a5fb56cd669b963e77ef19f93e44364a92"
-if ! shasum -c <(echo "$bw_checksum  $outdir/out_lef_1d_occupancy.bw"); then
+if ! compare_bwigs "$outdir/out_lef_1d_occupancy.bw" "$ref_bw"; then
   status=1
 fi
 
