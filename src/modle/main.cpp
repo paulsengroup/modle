@@ -118,10 +118,8 @@ std::tuple<int, modle::Cli::subcommand, modle::Config> parse_cli_and_setup_logge
     setup_logger_console(config.quiet);
 
     if (const auto collisions = cli->detect_path_collisions(config); !collisions.empty()) {
-      throw std::filesystem::filesystem_error(
-          fmt::format(FMT_STRING("Detected the following path collision(s):\n{}"),
-                      collisions.size(), collisions),
-          std::make_error_code(std::errc::file_exists));
+      throw std::filesystem::filesystem_error(collisions,
+                                              std::make_error_code(std::errc::file_exists));
     }
 
     if (!config.skip_output) {
@@ -150,7 +148,7 @@ std::tuple<int, modle::Cli::subcommand, modle::Config> parse_cli_and_setup_logge
     return std::make_tuple(cli->exit(e), modle::Cli::subcommand::help, modle::Config());
 
   } catch (const std::filesystem::filesystem_error& e) {
-    spdlog::error(FMT_STRING("FAILURE! One or more filesystem error(s) occurred: {}."), e.what());
+    spdlog::error(FMT_STRING("FAILURE! {}"), absl::StripSuffix(e.what(), ": File exists"));
     return std::make_tuple(1, modle::Cli::subcommand::help, modle::Config());
   } catch (const spdlog::spdlog_ex& e) {
     fmt::print(
