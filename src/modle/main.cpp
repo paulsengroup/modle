@@ -119,8 +119,7 @@ std::tuple<int, modle::Cli::subcommand, modle::Config> parse_cli_and_setup_logge
 
     if (const auto collisions = cli->detect_path_collisions(config); !collisions.empty()) {
       throw std::filesystem::filesystem_error(
-          fmt::format(FMT_STRING("Detected the following path collision(s):\n{}"),
-                      collisions.size(), collisions),
+          fmt::format(FMT_STRING("Detected the following path collision(s):\n{}"), collisions),
           std::make_error_code(std::errc::file_exists));
     }
 
