@@ -122,7 +122,7 @@ void Simulation::write_contacts_to_disk(std::deque<std::pair<Chromosome*, usize>
                        ? coolerpp::File{}
                        : io::init_cooler_file<i32>(this->path_to_output_file_cool, this->force,
                                                    this->_genome.begin(), this->_genome.end(),
-                                                   this->bin_size, "unknown",
+                                                   this->bin_size, this->assembly_name,
                                                    config::version::str_long(), this->args_json)};
 
   try {

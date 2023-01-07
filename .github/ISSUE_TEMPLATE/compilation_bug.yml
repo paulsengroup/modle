@@ -1,0 +1,36 @@
+name: Bug Report (Building from source)
+description: Report a bug encountered while building MoDLE from source
+title: "[bug] SHORT DESCRIPTION"
+labels: [ "bug", "build-from-source" ]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time to fill out this bug report!
+        __Please remember to update the issue title__
+  - type: textarea
+    attributes:
+      label: Environment details
+      description: Include as much information as possible
+      value: |
+        - Operating System:
+        - MoDLE version:
+        - Compiler name and version:
+        - CMake version:
+        - Conan version:
+  - type: textarea
+    attributes:
+      label: Steps to reproduce
+      description: Fill applicable fields
+      placeholder: |
+        - How were the build tools installed:
+        - CMake command(s):
+        - CTest command:
+        - Integration test command(s):
+  - type: textarea
+    attributes:
+      label: Logs
+      description: Paste relevant logs/config files (if applicable)
+      render: shell
+    validations:
+      required: false
