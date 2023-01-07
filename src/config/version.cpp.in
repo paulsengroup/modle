@@ -3,7 +3,9 @@
 // SPDX-License-Identifier: MIT
 
 // This file was generated automatically by CMake.
+// clang-format off
 #include "modle/config/version.hpp"
+// clang-format on
 
 #include <absl/strings/strip.h>
 #include <fmt/format.h>
@@ -49,15 +51,11 @@ static void generate_suffix(std::string* buff) {
 
 }  // namespace internal
 
-u8f major() noexcept {
-  return @MODLE_PROJECT_VERSION_MAJOR@;
-}
-u8f minor() noexcept {
-  return @MODLE_PROJECT_VERSION_MINOR@;
-}
-u8f patch() noexcept {
-  return @MODLE_PROJECT_VERSION_PATCH@;
-}
+// clang-format off
+u8f major() noexcept { return @MODLE_PROJECT_VERSION_MAJOR@; }
+u8f minor() noexcept { return @MODLE_PROJECT_VERSION_MINOR@; }
+u8f patch() noexcept { return @MODLE_PROJECT_VERSION_PATCH@; }
+// clang-format on
 
 std::string_view suffix() noexcept {
   static std::string buff{};
