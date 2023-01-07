@@ -636,8 +636,8 @@ std::string Cli::detect_path_collisions(modle::Config& c) const {
     if (std::filesystem::exists(path)) {
       if (std::filesystem::is_directory(path)) {
         return fmt::format(
-            FMT_STRING("Refusing to run the simulation because output file {} already "
-                       "exist (and is actually a {}directory). {}.\n"),
+            FMT_STRING("Refusing to continue because output file {} already "
+                       "exist (and is actually a {}directory).\n{}.\n"),
             path, std::filesystem::is_empty(path) ? "" : "non-empty ",
             std::filesystem::is_empty(path)
                 ? " Pass --force to overwrite"
@@ -645,14 +645,14 @@ std::string Cli::detect_path_collisions(modle::Config& c) const {
                   "existing directory");
       }
       return fmt::format(
-          FMT_STRING("Refusing to run the simulation because output file {} already exist. Pass "
-                     "--force to overwrite.\n"),
+          FMT_STRING("Refusing to continue because output file {} already exist.\n"
+                     "Pass --force to overwrite.\n"),
           path);
     }
     if (std::filesystem::is_directory(path) && !std::filesystem::is_empty(path)) {
       return fmt::format(
-          FMT_STRING("Refusing to run the simulation because output file {} is a "
-                     "non-empty directory. You should specify a different output path, or "
+          FMT_STRING("Refusing to continue because output file {} is a non-empty directory.\n"
+                     "You should specify a different output path, or "
                      "manually remove the existing directory.\n"),
           path);
     }
