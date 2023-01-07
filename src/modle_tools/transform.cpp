@@ -40,8 +40,9 @@
 #include "modle/common/fmt_helpers.hpp"
 #include "modle/common/utils.hpp"                 // for identity::operator()
 #include "modle/compressed_io/compressed_io.hpp"  // for Reader
-#include "modle/contact_matrix_dense.hpp"         // for ContactMatrixDense
-#include "modle/interval_tree.hpp"                // for IITree, IITree::IITree<I, T>, IITree::empty
+#include "modle/config/version.hpp"
+#include "modle/contact_matrix_dense.hpp"  // for ContactMatrixDense
+#include "modle/interval_tree.hpp"         // for IITree, IITree::IITree<I, T>, IITree::empty
 #include "modle/io/contact_matrix_dense.hpp"
 #include "modle/stats/correlation.hpp"         // for Pearson, Spearman
 #include "modle_tools/modle_tools_config.hpp"  // for eval_config
@@ -170,6 +171,25 @@ template <class N>
   return matrix;
 }
 
+[[nodiscard]] static coolerpp::File init_output_cooler(
+    const std::filesystem::path& output_cooler_uri, const coolerpp::File& input_cooler,
+    bool floating_point, std::string_view args_json, bool force) {
+  auto attrs = floating_point ? coolerpp::StandardAttributes::init<double>(input_cooler.bin_size())
+                              : coolerpp::StandardAttributes::init<i32>(input_cooler.bin_size());
+  attrs.metadata = args_json;
+  attrs.generated_by = config::version::str_long("MoDLE-tools");
+  if (const auto& assembly = input_cooler.attributes().assembly; assembly) {
+    attrs.assembly = *assembly;
+  }
+
+  if (floating_point) {
+    return io::init_cooler_file<double>(output_cooler_uri.string(), force,
+                                        input_cooler.chromosomes(), std::move(attrs));
+  }
+  return io::init_cooler_file<i32>(output_cooler_uri.string(), force, input_cooler.chromosomes(),
+                                   std::move(attrs));
+}
+
 void transform_subcmd(const modle::tools::transform_config& c) {
   const auto discretization_ranges = [&]() {
     if (!std::isnan(c.discretization_val)) {
@@ -187,21 +207,8 @@ void transform_subcmd(const modle::tools::transform_config& c) {
     std::filesystem::create_directories(output_dir.string());
   }
 
-  auto output_cooler = [&]() {
-    auto attrs = c.floating_point
-                     ? coolerpp::StandardAttributes::init<double>(input_cooler.bin_size())
-                     : coolerpp::StandardAttributes::init<i32>(input_cooler.bin_size());
-    attrs.metadata = c.args_json;
-    if (c.floating_point) {
-      return coolerpp::File::create_new_cooler<double>(c.output_cooler_uri.string(),
-                                                       input_cooler.chromosomes(),
-                                                       input_cooler.bin_size(), c.force, attrs);
-    }
-
-    return coolerpp::File::create_new_cooler<i32>(c.output_cooler_uri.string(),
-                                                  input_cooler.chromosomes(),
-                                                  input_cooler.bin_size(), c.force, attrs);
-  }();
+  auto output_cooler =
+      init_output_cooler(c.output_cooler_uri, input_cooler, c.floating_point, c.args_json, c.force);
 
   BS::thread_pool tpool(static_cast<u32>(c.nthreads));
   const auto t0 = absl::Now();

@@ -47,10 +47,11 @@
 #include "modle/common/random_sampling.hpp"    // for random_sample
 #include "modle/common/simulation_config.hpp"  // for Config
 #include "modle/common/utils.hpp"              // for parse_numeric_or_throw, ndeb...
-#include "modle/extrusion_barriers.hpp"        // for ExtrusionBarrier, update_states
-#include "modle/extrusion_factors.hpp"         // for Lef, ExtrusionUnit
-#include "modle/genome.hpp"                    // for Genome::iterator, Chromosome
-#include "modle/interval_tree.hpp"             // for IITree, IITree::data
+#include "modle/config/version.hpp"
+#include "modle/extrusion_barriers.hpp"  // for ExtrusionBarrier, update_states
+#include "modle/extrusion_factors.hpp"   // for Lef, ExtrusionUnit
+#include "modle/genome.hpp"              // for Genome::iterator, Chromosome
+#include "modle/interval_tree.hpp"       // for IITree, IITree::data
 #include "modle/io/contact_matrix_dense.hpp"
 #include "modle/stats/descriptive.hpp"
 
@@ -111,38 +112,18 @@ usize Simulation::size() const { return this->_genome.size(); }
 
 usize Simulation::simulated_size() const { return this->_genome.simulated_size(); }
 
-[[nodiscard]] static coolerpp::File init_cooler(const Genome& genome,
-                                                const std::filesystem::path& path, usize bin_size,
-                                                std::string_view metadata_str) {
-  std::vector<std::string> chrom_names(genome.number_of_chromosomes());
-  std::vector<u32> chrom_sizes(genome.number_of_chromosomes());
-
-  std::transform(genome.begin(), genome.end(), chrom_names.begin(),
-                 [](const Chromosome& chrom) { return std::string{chrom.name()}; });
-  std::transform(genome.begin(), genome.end(), chrom_sizes.begin(), [](const Chromosome& chrom) {
-    return utils::conditional_static_cast<u32>(chrom.size());
-  });
-
-  auto attrs = coolerpp::StandardAttributes::init(utils::conditional_static_cast<u32>(bin_size));
-  if (!metadata_str.empty()) {
-    attrs.metadata = std::string{metadata_str};
-  }
-
-  return coolerpp::File::create_new_cooler(
-      path.string(),
-      coolerpp::ChromosomeSet{chrom_names.begin(), chrom_names.end(), chrom_sizes.begin()},
-      utils::conditional_static_cast<u32>(bin_size), false, attrs);
-}
-
 // NOLINTNEXTLINE(readability-function-cognitive-complexity)
 void Simulation::write_contacts_to_disk(std::deque<std::pair<Chromosome*, usize>>& progress_queue,
                                         std::mutex& progress_queue_mtx) {
   // This thread is in charge of writing contacts to disk
   Chromosome* chrom_to_be_written = nullptr;
 
-  coolerpp::File c{this->skip_output ? coolerpp::File{}
-                                     : init_cooler(this->_genome, this->path_to_output_file_cool,
-                                                   this->bin_size, this->args_json)};
+  coolerpp::File c{this->skip_output
+                       ? coolerpp::File{}
+                       : io::init_cooler_file<i32>(this->path_to_output_file_cool, this->force,
+                                                   this->_genome.begin(), this->_genome.end(),
+                                                   this->bin_size, "unknown",
+                                                   config::version::str_long(), this->args_json)};
 
   try {
     auto sleep_us = 100;  // TODO use a conditional_variable
