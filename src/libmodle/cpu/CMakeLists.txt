@@ -36,6 +36,7 @@ target_link_libraries(
           Modle::stats
   PUBLIC Modle::cmatrix
          Modle::common
+         Modle::config
          Modle::libmodle_internal
          Modle::io_bed
          Modle::io_bigwig

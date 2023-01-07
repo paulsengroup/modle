@@ -171,8 +171,11 @@ jobs:
     if: github.event_name != 'pull_request'
 
     container:
-      image: ghcr.io/${{ github.repository }}/modle:latest
+      image: ghcr.io/${{ github.repository }}:latest
       options: '--entrypoint /bin/bash'
+      credentials:
+        username: ${{ github.actor }}
+        password: ${{ secrets.github_token }}
 
     steps:
       - name: Test modle
