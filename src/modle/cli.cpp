@@ -127,8 +127,8 @@ static std::vector<CLI::App*> add_common_options(CLI::App& subcommand, modle::Co
       "--assembly-name",
       c.assembly_name,
       "Name of the genome assembly to be simulated.\n"
-      "This is only used to populate the \"assembly\" attribute in the output .cool file")
-      ->transform(CLI::Transformer({{"", "unknown"}}), "", "")
+      "This is only used to populate the \"assembly\" attribute in the output .cool file.")
+      ->transform([](std::string str) { return str.empty() ? "unknown" : str; }, "", "")
       ->capture_default_str();
 
   io.add_flag(
