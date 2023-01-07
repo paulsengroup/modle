@@ -18,6 +18,6 @@ namespace modle::config::version {
 [[nodiscard]] std::string_view suffix() noexcept;
 
 [[nodiscard]] std::string_view str() noexcept;
-[[nodiscard]] std::string_view str_long() noexcept;
+[[nodiscard]] std::string_view str_long(std::string_view prefix = "MoDLE") noexcept;
 
 }  // namespace modle::config::version

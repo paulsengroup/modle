@@ -10,6 +10,7 @@
 #include <absl/strings/strip.h>
 #include <fmt/format.h>
 
+#include <cassert>
 #include <cstdint>
 #include <mutex>
 #include <string_view>
@@ -36,7 +37,8 @@ static void generate_suffix(std::string* buff) {
   const auto short_hash_suffix = std::string{"-"} + std::string{git::describe()};
   const auto short_version = fmt::format(FMT_STRING("{}.{}.{}"), major(), minor(), patch());
 
-  const auto expected_release_tag = "v" + short_version + (raw_suffix.empty() ? "" : "-" + std::string{raw_suffix});
+  const auto expected_release_tag =
+      "v" + short_version + (raw_suffix.empty() ? "" : "-" + std::string{raw_suffix});
   if (git::tag() == expected_release_tag) {
     *buff = std::string{raw_suffix};
   } else {
@@ -76,11 +78,12 @@ std::string_view str() noexcept {
   return buff;
 }
 
-std::string_view str_long() noexcept {
+std::string_view str_long(std::string_view prefix) noexcept {
+  assert(!prefix.empty());
   static std::string buff{};
-  auto make_str = [](std::string* _buff) {
-
-  *_buff = fmt::format(FMT_STRING("MoDLE-v{}"), str()); };
+  auto make_str = [&](std::string* _buff) {
+    *_buff = fmt::format(FMT_STRING("{}-v{}"), prefix, str());
+  };
 
   std::call_once(internal::str_long_available, make_str, &buff);
   return buff;
