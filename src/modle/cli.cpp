@@ -94,12 +94,6 @@ static std::vector<CLI::App*> add_common_options(CLI::App& subcommand, modle::Co
       "Path to file with chromosome sizes in chrom.sizes format.")
       ->check(CLI::ExistingFile)->required();
 
-  io_adv.add_option(
-      "--chrom-subranges",
-      c.path_to_chrom_subranges,
-      "Path to BED file with subranges of the chromosomes to simulate.")
-      ->check(CLI::ExistingFile);
-
   io.add_option(
       "-b,--extrusion-barrier-file",
       c.path_to_extr_barriers,
@@ -129,6 +123,14 @@ static std::vector<CLI::App*> add_common_options(CLI::App& subcommand, modle::Co
       "         - /tmp/my_simulation_config.toml")
       ->required();
 
+  io.add_option(
+      "--assembly-name",
+      c.assembly_name,
+      "Name of the genome assembly to be simulated.\n"
+      "This is only used to populate the \"assembly\" attribute in the output .cool file")
+      ->transform(CLI::Transformer({{"", "unknown"}}), "", "")
+      ->capture_default_str();
+
   io.add_flag(
       "-q,--quiet",
       c.quiet,
@@ -136,6 +138,12 @@ static std::vector<CLI::App*> add_common_options(CLI::App& subcommand, modle::Co
       "Only fatal errors will be logged to the console.\n"
       "Does not affect entries written to the log file.")
       ->capture_default_str();
+
+  io_adv.add_option(
+     "--chrom-subranges",
+     c.path_to_chrom_subranges,
+     "Path to BED file with subranges of the chromosomes to simulate.")
+     ->check(CLI::ExistingFile);
 
   io_adv.add_flag(
       "--log-model-internal-state",
