@@ -98,4 +98,35 @@ TEST_CASE("ContactMatrixDense to Cooler Roundtrip", "[io][matrix][long]") {
   }
 }
 
+// NOLINTNEXTLINE(readability-function-cognitive-complexity)
+TEST_CASE("ContactMatrixDense to Cooler Roundtrip (FP)", "[io][matrix][long]") {
+  const auto test_file = testdir() / "contact_matrix_dense_fp_to_cooler_roundtrip.cool";
+
+  constexpr usize nrows = 100;
+  constexpr usize ncols = 1000;
+  constexpr bp_t bin_size = 10;
+  constexpr bp_t chrom_size = bin_size * static_cast<bp_t>(ncols);
+
+  std::random_device rd{};
+  auto rand_eng = random::PRNG(rd());
+
+  const auto m1 = init_dense_matrix<double>(rand_eng, nrows, ncols);
+  const coolerpp::ChromosomeSet chroms{{"chr1", chrom_size}};
+  {
+    auto f = init_cooler_file<double>(test_file, false, chroms,
+                                      coolerpp::StandardAttributes::init<double>(bin_size));
+    append_contact_matrix_to_cooler(f, "chr1", m1);
+    REQUIRE(m1.get_nnz() == f.attributes().nnz);
+  }
+
+  const auto m2 = read_contact_matrix_from_cooler<double>(test_file, "chr1");
+  CHECK(m1.get_nnz() == m2.get_nnz());
+
+  for (usize i = 0; i < ncols; ++i) {
+    for (usize j = i; j < ncols; ++j) {
+      CHECK_THAT(m1.get(i, j), Catch::Matchers::WithinRel(m2.get(i, j)));
+    }
+  }
+}
+
 }  // namespace modle::io::test
