@@ -4,10 +4,18 @@
 
 #pragma once
 
+#include <fmt/format.h>
+
+#include <algorithm>
 #include <cassert>
 #include <coolerpp/coolerpp.hpp>
 #include <filesystem>
+#include <limits>
+#include <stdexcept>
+#include <string>
 #include <string_view>
+#include <type_traits>
+#include <utility>
 #include <vector>
 
 #include "modle/common/common.hpp"
@@ -59,6 +67,80 @@ inline void append_contact_matrix_to_cooler(coolerpp::File& f, usize chrom_id,
   }
 }
 }  // namespace internal
+
+template <class N, class ChromIt>
+inline coolerpp::File init_cooler_file(const std::filesystem::path& path, bool force_overwrite,
+                                       ChromIt first_chrom, ChromIt last_chrom, usize bin_size,
+                                       std::string_view assembly, std::string_view generated_by,
+                                       std::string_view metadata_str) {
+  const auto num_chroms = static_cast<usize>(std::distance(first_chrom, last_chrom));
+  std::vector<std::string> chrom_names(num_chroms);
+  std::vector<u32> chrom_sizes(num_chroms);
+
+  std::transform(first_chrom, last_chrom, chrom_names.begin(),
+                 [](const auto& chrom) { return std::string{chrom.name()}; });
+  std::transform(first_chrom, last_chrom, chrom_sizes.begin(), [](const auto& chrom) {
+    return utils::conditional_static_cast<u32>(chrom.size());
+  });
+
+  return init_cooler_file<N>(path, force_overwrite, chrom_names.begin(), chrom_names.end(),
+                             chrom_sizes.begin(), bin_size, assembly, generated_by, metadata_str);
+}
+
+template <class N, class ChromIt>
+[[nodiscard]] inline coolerpp::File init_cooler_file(const std::filesystem::path& path,
+                                                     bool force_overwrite, ChromIt first_chrom,
+                                                     ChromIt last_chrom,
+                                                     coolerpp::StandardAttributes attrs) {
+  const auto num_chroms = static_cast<usize>(std::distance(first_chrom, last_chrom));
+  std::vector<std::string> chrom_names(num_chroms);
+  std::vector<u32> chrom_sizes(num_chroms);
+
+  std::transform(first_chrom, last_chrom, chrom_names.begin(),
+                 [](const auto& chrom) { return std::string{chrom.name()}; });
+  std::transform(first_chrom, last_chrom, chrom_sizes.begin(), [](const auto& chrom) {
+    return utils::conditional_static_cast<u32>(chrom.size());
+  });
+
+  return init_cooler_file<N>(path, force_overwrite, chrom_names.begin(), chrom_names.end(),
+                             chrom_sizes.begin(), std::move(attrs));
+}
+
+template <class N, class ChromNameIt, class ChromSizeIt>
+inline coolerpp::File init_cooler_file(const std::filesystem::path& path, bool force_overwrite,
+                                       ChromNameIt first_name, ChromNameIt last_name,
+                                       ChromSizeIt first_size, usize bin_size,
+                                       std::string_view assembly, std::string_view generated_by,
+                                       std::string_view metadata_str) {
+  assert(!assembly.empty());
+  assert(!generated_by.empty());
+  auto attrs = coolerpp::StandardAttributes::init(utils::conditional_static_cast<u32>(bin_size));
+  attrs.assembly = assembly;
+  attrs.generated_by = generated_by;
+  if (!metadata_str.empty()) {
+    attrs.metadata = std::string{metadata_str};
+  }
+
+  return init_cooler_file<N>(path, force_overwrite, first_name, last_name, first_size,
+                             std::move(attrs));
+}
+
+template <class N, class ChromNameIt, class ChromSizeIt>
+inline coolerpp::File init_cooler_file(const std::filesystem::path& path, bool force_overwrite,
+                                       ChromNameIt first_name, ChromNameIt last_name,
+                                       ChromSizeIt first_size, coolerpp::StandardAttributes attrs) {
+  return coolerpp::File::create_new_cooler<N>(
+      path.string(), coolerpp::ChromosomeSet{first_name, last_name, first_size}, attrs.bin_size,
+      force_overwrite, std::move(attrs));
+}
+
+template <class N>
+inline coolerpp::File init_cooler_file(const std::filesystem::path& path, bool force_overwrite,
+                                       coolerpp::ChromosomeSet chroms,
+                                       coolerpp::StandardAttributes attrs) {
+  return coolerpp::File::create_new_cooler<N>(path.string(), std::move(chroms), attrs.bin_size,
+                                              force_overwrite, std::move(attrs));
+}
 
 template <class N, usize chunk_size>
 inline void append_contact_matrix_to_cooler(coolerpp::File& f, std::string_view chrom_name,
