@@ -4,6 +4,7 @@
 
 #pragma once
 #include <coolerpp/coolerpp.hpp>
+#include <filesystem>
 #include <string_view>
 #include <vector>
 
@@ -25,6 +26,38 @@ void append_contact_matrix_to_cooler(coolerpp::File& f, usize chrom_id,
                                      const ContactMatrixDense<N>& matrix,
                                      std::vector<PixelT>& buff);
 }  // namespace internal
+
+template <class N, class ChromIt>
+[[nodiscard]] coolerpp::File init_cooler_file(const std::filesystem::path& path,
+                                              bool force_overwrite, ChromIt first_chrom,
+                                              ChromIt last_chrom, usize bin_size,
+                                              std::string_view assembly,
+                                              std::string_view generated_by,
+                                              std::string_view metadata_str);
+template <class N, class ChromIt>
+[[nodiscard]] coolerpp::File init_cooler_file(const std::filesystem::path& path,
+                                              bool force_overwrite, ChromIt first_chrom,
+                                              ChromIt last_chrom,
+                                              coolerpp::StandardAttributes attrs);
+
+template <class N, class ChromNameIt, class ChromSizeIt>
+[[nodiscard]] coolerpp::File init_cooler_file(const std::filesystem::path& path,
+                                              bool force_overwrite, ChromNameIt first_name,
+                                              ChromNameIt last_name, ChromSizeIt first_size,
+                                              usize bin_size, std::string_view assembly,
+                                              std::string_view generated_by,
+                                              std::string_view metadata_str);
+
+template <class N, class ChromNameIt, class ChromSizeIt>
+[[nodiscard]] coolerpp::File init_cooler_file(const std::filesystem::path& path,
+                                              bool force_overwrite, ChromNameIt first_name,
+                                              ChromNameIt last_name, ChromSizeIt first_size,
+                                              coolerpp::StandardAttributes attrs);
+
+template <class N>
+[[nodiscard]] coolerpp::File init_cooler_file(const std::filesystem::path& path,
+                                              bool force_overwrite, coolerpp::ChromosomeSet chroms,
+                                              coolerpp::StandardAttributes attrs);
 
 template <class N>
 [[nodiscard]] ContactMatrixDense<N> read_contact_matrix_from_cooler(
