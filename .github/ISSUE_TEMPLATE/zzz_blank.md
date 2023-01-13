@@ -1,3 +1,9 @@
+<!--
+Copyright (C) 2023 Roberto Rossini <roberros@uio.no>
+
+SPDX-License-Identifier: MIT
+-->
+
 ---
 name: Other
 about: Report other issues or requests

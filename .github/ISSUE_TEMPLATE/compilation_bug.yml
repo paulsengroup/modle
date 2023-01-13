@@ -1,3 +1,6 @@
+# Copyright (C) 2023 Roberto Rossini (roberros@uio.no)
+# SPDX-License-Identifier: MIT
+
 name: Bug Report (Building from source)
 description: Report a bug encountered while building MoDLE from source
 title: "[bug] SHORT DESCRIPTION"
