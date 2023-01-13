@@ -1,3 +1,6 @@
+# Copyright (C) 2023 Roberto Rossini (roberros@uio.no)
+# SPDX-License-Identifier: MIT
+
 name: Bug Report
 description: Report a bug, something does not work as it's supposed to
 title: "[bug] SHORT DESCRIPTION"
