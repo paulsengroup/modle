@@ -848,7 +848,7 @@ To visualize `.cool` files we recommend using [cooler show](https://open2c.githu
 cooler show examples/out/hg38_default.cool chr1:5000000-8000000
 ```
 
-<!-- TODO: ![chr1 5-8Mbp heatmap](examples/images/hg38_default_001.avif) -->
+![chr1 5-8Mbp heatmap](examples/images/hg38_default_001.avif)
 
 ##### Visualizing interactions with HiGlass
 
@@ -928,7 +928,7 @@ Started
 
 Now if you visit [localhost:8989/app](http://localhost:8989/app) with your browser you should see an empty HiGlass page like the following:
 
-<!-- TODO: ![higlass empty page](examples/images/higlass_001.avif) -->
+![higlass empty page](examples/images/higlass_001.avif)
 
 Next, we need to ingest our `.mcool` into HiGlass:
 
@@ -958,7 +958,7 @@ command: python higlass-server/manage.py ingest_tileset --filename modle/hg38_de
 
 Finally, after refreshing page [localhost:8989/app](http://localhost:8989/app) you should be able to add tileset `hg38_default.mcool` to the center panel:
 
-<!-- TODO: ![higlass default settings](examples/images/higlass_002.avif) -->
+![higlass default settings](examples/images/higlass_002.avif)
 
 In case you are struggling to visualize MoDLE's output feel free to reach out by starting a new [discussion](https://github.com/paulsengroup/modle/discussions).
 
@@ -1071,16 +1071,17 @@ meaning that CLI options can be used to override parameters read from the config
 This can be useful when running a batch of simulations using a large number of optional parameters, and where only a
 handful of parameters need to change across simulation runs.
 
-The following command will run a simulation using parameters from the [previous example](#Running-a-simulation-with-default-settings) as starting point, but using a very high LEF density and writing output files under a new prefix.
+The following command will run a simulation using parameters from the [previous example](#Running-a-simulation-with-default-settings) as starting point, but using a different number of cells and target contact density.
 
 ```bash
 modle simulate \
     --config examples/out/hg38_default_config.toml \
-    --lef-density 100 \
-    --output-prefix examples/out/hg38_high_lef_density
+    --ncells 16 \
+    --target-contact-density 10 \
+    --output-prefix examples/out/hg38_deep
 ```
 
-<!-- TODO: ![Simulation w/ high LEF density](examples/images/hg38_high_lef_density.avif) -->
+![Simulation w/ high contact density](examples/images/higlass_003.avif)
 
 MoDLE's config files are in [TOML format](https://toml.io/en/).
 
