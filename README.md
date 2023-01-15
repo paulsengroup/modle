@@ -482,7 +482,7 @@ If after trying the above steps the tests are still failing, feel free to start 
 </details>
 
 
-##### Integration tests
+##### Integration tests (Linux only)
 
 The integration test scripts depend on the following tools:
 
