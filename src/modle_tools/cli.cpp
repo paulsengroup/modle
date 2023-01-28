@@ -15,9 +15,10 @@
 #include <toml++/toml.h>  // for array::operator[], operator<<, parse, print_to...
 
 #include <CLI/CLI.hpp>
-#include <algorithm>    // for max
-#include <array>        // for array
-#include <cassert>      // for assert
+#include <algorithm>  // for max
+#include <array>      // for array
+#include <cassert>    // for assert
+#include <coolerpp/coolerpp.hpp>
 #include <exception>    // for exception
 #include <filesystem>   // for path, operator<<, path::iterator, operator==
 #include <ostream>      // for streamsize, stringstream, basic_ostream
@@ -35,10 +36,26 @@
 #include "modle/common/fmt_helpers.hpp"
 #include "modle/common/utils.hpp"  // for str_float_to_str_int, ConstMap::begin, Con...
 #include "modle/config/version.hpp"
-#include "modle/cooler/cooler.hpp"             // for Cooler, Cooler::READ_ONLY
 #include "modle_tools/modle_tools_config.hpp"  // for eval_config, find_barrier_clusters_config
 
 namespace modle::tools {
+
+class CoolerFileValidator : public CLI::Validator {
+ public:
+  CoolerFileValidator() : Validator("Cooler") {
+    func_ = [](std::string& uri) -> std::string {
+      if (!coolerpp::utils::is_cooler(uri)) {
+        if (coolerpp::utils::is_multires_file(uri)) {
+          return "URI points to a .mcool file: " + uri;
+        }
+        return "Not a valid Cooler: " + uri;
+      }
+      return "";
+    };
+  }
+};
+
+inline const auto IsValidCoolerFile = CoolerFileValidator();
 
 namespace config = modle::config;
 
@@ -75,10 +92,10 @@ void Cli::make_eval_subcommand() {
 
   // clang-format off
   io.add_option(
-     "-i,--input-matrix",
-     c.path_to_input_matrix,
-     "Path to a contact matrix in cooler format.")
-     ->check(CLI::ExistingFile)
+     "-i,--input-cooler",
+     c.input_cooler_uri,
+     "Path or URI to a Cooler file to use as input.")
+     ->check(IsValidCoolerFile)
      ->required();
 
   io.add_option(
@@ -89,22 +106,31 @@ void Cli::make_eval_subcommand() {
      ->required();
 
   io.add_option(
-     "--reference-matrix",
-     c.path_to_reference_matrix,
-     "Path to a contact matrix in cooler format to use as reference.")
+     "-r,--reference-cooler",
+     c.reference_cooler_uri,
+     "Path or URI to a Cooler file to use as reference.")
+     ->check(IsValidCoolerFile)
      ->required();
 
   io.add_option(
-     "--chrom-subranges",
-     c.path_to_chrom_subranges,
-     "Path to a BED file with chromosome subranges to be processed.")
+     "--regions-of-interest",
+     c.path_to_regions_of_interest_bed,
+     "Path to a BED file with the list of regions of interest to be processed.")
+     ->check(CLI::ExistingFile);
+
+  io.add_option(
+     "-c,--chrom-sizes",
+     c.path_to_chrom_sizes,
+     "Path to a .chrom.sizes file.\n"
+     "This option is required when the Coolers passed with options --input-cooler and --reference-cooler"
+     "do not have the same number of chromosomes.")
      ->check(CLI::ExistingFile);
 
   io.add_option(
      "--weight-file",
      c.path_to_weights,
      "Path to a TSV file containing the weights to apply to pixels before computing the\n"
-     "correlation. The TSV should have an header with at least the following columns:\n"
+     "correlation. The TSV should have a header with at least the following columns:\n"
      " - chrom\n"
      " - diag\n"
      "Storing chromosome name and distance from the diagonal in bins to which the weight applies\n"
@@ -140,14 +166,6 @@ void Cli::make_eval_subcommand() {
                   fmt::join(eval_config::metric_map.keys_view(), "\n - ")))
       ->transform(CLI::CheckedTransformer(eval_config::metric_map, CLI::ignore_case))
       ->capture_default_str();
-
-  gen.add_option("-r,--resolution",
-     c.bin_size,
-     "Resolution in base pairs.\n"
-     "Only used when the contact matrix passed to --reference-matrix is in\n"
-     "multires-cooler format.")
-     ->check(CLI::PositiveNumber)
-     ->transform(utils::cli::TrimTrailingZerosFromDecimalDigit | utils::cli::AsGenomicDistance);
 
   gen.add_option(
      "-w,--diagonal-width",
@@ -204,16 +222,16 @@ void Cli::make_transform_subcommand() {
 
   // clang-format off
   io.add_option(
-      "-i,--input-matrix",
-      c.path_to_input_matrix,
-      "Path to a contact matrix in cooler format.")
-      ->check(CLI::ExistingFile)
+      "-i,--input-cooler",
+      c.input_cooler_uri,
+      "Path or URI to a Cooler file to use as input.")
+      ->check(IsValidCoolerFile)
       ->required();
 
   io.add_option(
-      "-o,--output-matrix",
-      c.path_to_output_matrix,
-      "Path to output matrix in cooler format.")
+      "-o,--output-cooler",
+      c.output_cooler_uri,
+      "Path or URI to to the output Cooler.")
       ->required();
 
   io.add_flag(
@@ -290,15 +308,6 @@ void Cli::make_transform_subcommand() {
       ->capture_default_str();
 
   mat.add_option(
-      "-r,--resolution",
-      c.bin_size,
-      "Resolution in base pairs.\n"
-      "Only used when the contact matrix passed to --input-matrix is in\n"
-      "multires-cooler format.")
-      ->check(CLI::PositiveNumber)
-      ->transform(utils::cli::TrimTrailingZerosFromDecimalDigit | utils::cli::AsGenomicDistance);
-
-  mat.add_option(
       "-w,--diagonal-width",
       c.diagonal_width,
       "Width of the subdiagonal window to transform.\n"
@@ -343,19 +352,26 @@ void Cli::validate_eval_subcommand() const {
   const auto& c = absl::get<eval_config>(this->_config);
 
   try {
-    std::ignore =
-        cooler::Cooler(c.path_to_input_matrix, cooler::Cooler<>::IO_MODE::READ_ONLY, c.bin_size);
-    std::ignore = cooler::Cooler(c.path_to_reference_matrix, cooler::Cooler<>::IO_MODE::READ_ONLY,
-                                 c.bin_size);
-  } catch (const std::exception& e) {
-    if (absl::StartsWith(e.what(), "Cooler::open_file(): bin_size cannot be 0")) {
-      errors.emplace_back(
-          fmt::format(FMT_STRING("File {} appears to be in .mcool format. --bin-size is required"
-                                 "when one or both contact matrices are in .mcool format"),
-                      c.path_to_reference_matrix));
-    } else {
-      errors.emplace_back(fmt::format(FMT_STRING("{}"), e.what()));
+    const auto f1 = coolerpp::File::open_read_only(c.input_cooler_uri.string());
+    const auto f2 = coolerpp::File::open_read_only(c.reference_cooler_uri.string());
+    if (f1.bin_size() != f2.bin_size()) {
+      errors.emplace_back(fmt::format(
+          FMT_STRING(
+              "Coolers at URIs {} and {} have different resolutions ({} and {} respectively)"),
+          c.input_cooler_uri, c.reference_cooler_uri, f1.bin_size(), f2.bin_size()));
     }
+
+    const auto& io_group = *this->_cli.get_subcommand("eval")->get_option_group("IO");
+    if (constexpr auto* name = "--chrom-sizes";
+        f1.chromosomes() != f2.chromosomes() && !io_group.get_option(name)->empty()) {
+      errors.emplace_back(fmt::format(
+          FMT_STRING(
+              "{} is required when input and reference Coolers do not have the same chromosomes"),
+          name));
+    }
+
+  } catch (const std::exception& e) {
+    errors.emplace_back(e.what());
   }
 
   if (c.metric == eval_config::Metric::custom) {
@@ -365,7 +381,7 @@ void Cli::validate_eval_subcommand() const {
     constexpr std::array<std::string_view, 4> gen_option_names{
         "--weight-column-name", "--reciprocal-weights", "--exclude-zero-pixels", "--normalize"};
 
-    if (const auto* name = "--weight-file"; !io_group.get_option(name)->empty()) {
+    if (constexpr auto* name = "--weight-file"; !io_group.get_option(name)->empty()) {
       errors.emplace_back(fmt::format(FMT_STRING("{} is not allowed when --metric=custom."), name));
     }
 
@@ -424,24 +440,10 @@ void Cli::validate_transform_subcommand() const {
   std::vector<std::string> errors;
   const auto& c = absl::get<transform_config>(this->_config);
 
-  if (auto collision = utils::detect_path_collision(c.path_to_output_matrix, c.force,
+  if (auto collision = utils::detect_path_collision(c.output_cooler_uri, c.force,
                                                     std::filesystem::file_type::regular);
       !collision.empty()) {
     errors.push_back(collision);
-  }
-
-  try {
-    std::ignore =
-        cooler::Cooler(c.path_to_input_matrix, cooler::Cooler<>::IO_MODE::READ_ONLY, c.bin_size);
-  } catch (const std::exception& e) {
-    if (absl::StartsWith(e.what(), "Cooler::open_file(): bin_size cannot be 0")) {
-      errors.emplace_back(
-          fmt::format(FMT_STRING("File {} appears to be in .mcool format. --bin-size is required"
-                                 "when --input-matrix is in .mcool format"),
-                      c.path_to_input_matrix));
-    } else {
-      errors.emplace_back(fmt::format(FMT_STRING("{}"), e.what()));
-    }
   }
 
   using t = transform_config::Transformation;

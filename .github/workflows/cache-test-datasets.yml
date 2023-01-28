@@ -19,7 +19,7 @@ defaults:
 
 env:
   FETCH_TEST_DATASET_CMAKE: cmake/FetchTestDataset.cmake
-  TEST_DATASET_PATH: test/data/modle_test_data.tar.gz
+  TEST_DATASET_PATH: test/data/modle_test_data.tar.xz
 
 jobs:
   cache-test-datasets:

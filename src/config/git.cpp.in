@@ -8,6 +8,7 @@
 
 namespace modle::config::git {
 
+// clang-format off
 bool state_available() noexcept { return @GIT_RETRIEVED_STATE@; }
 std::string_view head_sha1() noexcept { return "@GIT_HEAD_SHA1@"; }
 bool is_dirty() noexcept { return @GIT_IS_DIRTY@; }
@@ -19,5 +20,6 @@ std::string_view commit_body() noexcept { return "@GIT_COMMIT_BODY@"; }
 std::string_view describe() noexcept { return "@GIT_DESCRIBE@"; }
 std::string_view branch() noexcept { return "@GIT_BRANCH@"; }
 std::string_view tag() noexcept { return "@GIT_TAG@"; }
+// clang-format on
 
 }  // namespace modle::config::git

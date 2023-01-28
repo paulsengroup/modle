@@ -19,6 +19,13 @@ set(ENABLE_DEVELOPER_MODE
     OFF
     CACHE BOOL "Enable 'developer mode'")
 
+if(BUILD_SHARED_LIBS)
+  message(
+    FATAL_ERROR
+      "Building project with dynamic linking is currently not supported! Please remove option -DBUILD_SHARED_LIBS=ON and re-run cmake."
+  )
+endif()
+
 include(FetchContent)
 # cmake-format: off
 FetchContent_Declare(
@@ -77,7 +84,7 @@ set(ENABLE_CONAN_DEFAULT ON)
 set(ENABLE_CPPCHECK_DEFAULT OFF)
 set(ENABLE_DOXYGEN_USER OFF)
 set(ENABLE_DOXYGEN_DEVELOPER ON)
-set(ENABLE_INTERPROCEDURAL_OPTIMIZATION_DEFAULT OFF)
+set(ENABLE_INTERPROCEDURAL_OPTIMIZATION_DEFAULT ON)
 set(ENABLE_NATIVE_OPTIMIZATION_DEFAULT OFF)
 set(ENABLE_PCH_DEFAULT OFF)
 
@@ -211,5 +218,7 @@ if(MODLE_ENABLE_TESTING)
 endif()
 
 add_subdirectory(src)
+
+include(cmake/FetchExternalDeps.cmake)
 
 # include(cmake/Packaging.cmake)

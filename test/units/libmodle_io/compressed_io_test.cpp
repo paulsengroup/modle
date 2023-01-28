@@ -16,18 +16,25 @@ namespace modle::test {
 inline const SelfDeletingFolder testdir{true};  // NOLINT(cert-err58-cpp)
 }  // namespace modle::test
 
-namespace modle::test::compressed_io {
+namespace modle::compressed_io::test {
 
-[[maybe_unused]] inline void print_buffers(const std::string& buff1, const std::string& buff2) {
+constexpr auto& testdir = modle::test::testdir;
+
+[[maybe_unused]] static const std::filesystem::path& data_dir() {
+  static const std::filesystem::path data_dir{"test/data/unit_tests"};
+  return data_dir;
+}
+
+[[maybe_unused]] static void print_buffers(const std::string& buff1, const std::string& buff2) {
   std::cerr << "buff1='" << buff1 << "'\n"
             << "buff2='" << buff2 << "'\n";
 }
 
 // NOLINTNEXTLINE(readability-function-cognitive-complexity)
-TEST_CASE("Reader plain", "[io][reader][short]") {
-  const std::filesystem::path ptext_file = "test/data/unit_tests/sample.bed9";
+TEST_CASE("Reader plain", "[io][reader][medium]") {
+  const auto ptext_file = data_dir() / "genomic_intervals" / "intervals.bed9";
 
-  modle::compressed_io::Reader r(ptext_file);
+  Reader r(ptext_file);
   std::ifstream fp(ptext_file.string());
 
   std::string buff1;
@@ -41,10 +48,10 @@ TEST_CASE("Reader plain", "[io][reader][short]") {
 }
 
 // NOLINTNEXTLINE(readability-function-cognitive-complexity)
-TEST_CASE("Reader plain sv", "[io][reader][short]") {
-  const std::filesystem::path ptext_file = "test/data/unit_tests/sample.bed9";
+TEST_CASE("Reader plain sv", "[io][reader][medium]") {
+  const auto ptext_file = data_dir() / "genomic_intervals" / "intervals.bed9";
 
-  modle::compressed_io::Reader r(ptext_file);
+  Reader r(ptext_file);
   std::ifstream fp(ptext_file.string());
 
   std::string_view buff1;
@@ -58,12 +65,12 @@ TEST_CASE("Reader plain sv", "[io][reader][short]") {
 }
 
 // NOLINTNEXTLINE(readability-function-cognitive-complexity)
-TEST_CASE("Reader gzip", "[io][reader][short]") {
-  const std::filesystem::path compressed_file = "test/data/unit_tests/sample.bed9.gz";
-  const std::filesystem::path ptext_file = "test/data/unit_tests/sample.bed9";
+TEST_CASE("Reader gzip", "[io][reader][medium]") {
+  const auto compressed_file = data_dir() / "genomic_intervals" / "intervals.bed9.gz";
+  const auto ptext_file = data_dir() / "genomic_intervals" / "intervals.bed9";
 
-  modle::compressed_io::Reader r1(compressed_file);
-  modle::compressed_io::Reader r2(ptext_file);
+  Reader r1(compressed_file);
+  Reader r2(ptext_file);
 
   std::string buff1;
   std::string buff2;
@@ -76,29 +83,12 @@ TEST_CASE("Reader gzip", "[io][reader][short]") {
 }
 
 // NOLINTNEXTLINE(readability-function-cognitive-complexity)
-TEST_CASE("Reader bzip2", "[io][reader][short]") {
-  const std::filesystem::path compressed_file = "test/data/unit_tests/sample.bed9.bz2";
-  const std::filesystem::path ptext_file = "test/data/unit_tests/sample.bed9";
+TEST_CASE("Reader bzip2", "[io][reader][medium]") {
+  const auto compressed_file = data_dir() / "genomic_intervals" / "intervals.bed9.bz2";
+  const auto ptext_file = data_dir() / "genomic_intervals" / "intervals.bed9";
 
-  modle::compressed_io::Reader r1(compressed_file);
-  modle::compressed_io::Reader r2(ptext_file);
-
-  std::string buff1;
-  std::string buff2;
-  while (r1.getline(buff1) && r2.getline(buff2)) {
-    CHECK(buff1 == buff2);
-  }
-  CHECK(!r1.getline(buff1));
-  CHECK(!r2.getline(buff1));
-}
-
-// NOLINTNEXTLINE(readability-function-cognitive-complexity)
-TEST_CASE("Reader lz4", "[io][reader][short]") {
-  const std::filesystem::path compressed_file = "test/data/unit_tests/sample.bed9.lz4";
-  const std::filesystem::path ptext_file = "test/data/unit_tests/sample.bed9";
-
-  modle::compressed_io::Reader r1(compressed_file);
-  modle::compressed_io::Reader r2(ptext_file);
+  Reader r1(compressed_file);
+  Reader r2(ptext_file);
 
   std::string buff1;
   std::string buff2;
@@ -110,12 +100,12 @@ TEST_CASE("Reader lz4", "[io][reader][short]") {
 }
 
 // NOLINTNEXTLINE(readability-function-cognitive-complexity)
-TEST_CASE("Reader zstd", "[io][reader][short]") {
-  const std::filesystem::path compressed_file = "test/data/unit_tests/sample.bed9.zst";
-  const std::filesystem::path ptext_file = "test/data/unit_tests/sample.bed9";
+TEST_CASE("Reader lz4", "[io][reader][medium]") {
+  const auto compressed_file = data_dir() / "genomic_intervals" / "intervals.bed9.lz4";
+  const auto ptext_file = data_dir() / "genomic_intervals" / "intervals.bed9";
 
-  modle::compressed_io::Reader r1(compressed_file);
-  modle::compressed_io::Reader r2(ptext_file);
+  Reader r1(compressed_file);
+  Reader r2(ptext_file);
 
   std::string buff1;
   std::string buff2;
@@ -127,12 +117,12 @@ TEST_CASE("Reader zstd", "[io][reader][short]") {
 }
 
 // NOLINTNEXTLINE(readability-function-cognitive-complexity)
-TEST_CASE("Reader lzma", "[io][reader][short]") {
-  const std::filesystem::path compressed_file = "test/data/unit_tests/sample.bed9.xz";
-  const std::filesystem::path ptext_file = "test/data/unit_tests/sample.bed9";
+TEST_CASE("Reader zstd", "[io][reader][medium]") {
+  const auto compressed_file = data_dir() / "genomic_intervals" / "intervals.bed9.zst";
+  const auto ptext_file = data_dir() / "genomic_intervals" / "intervals.bed9";
 
-  modle::compressed_io::Reader r1(compressed_file);
-  modle::compressed_io::Reader r2(ptext_file);
+  Reader r1(compressed_file);
+  Reader r2(ptext_file);
 
   std::string buff1;
   std::string buff2;
@@ -143,7 +133,24 @@ TEST_CASE("Reader lzma", "[io][reader][short]") {
   CHECK(!r2.getline(buff1));
 }
 
-inline void test_writer(modle::compressed_io::Reader& r1, modle::compressed_io::Writer& w) {
+// NOLINTNEXTLINE(readability-function-cognitive-complexity)
+TEST_CASE("Reader lzma", "[io][reader][medium]") {
+  const auto compressed_file = data_dir() / "genomic_intervals" / "intervals.bed9.xz";
+  const auto ptext_file = data_dir() / "genomic_intervals" / "intervals.bed9";
+
+  Reader r1(compressed_file);
+  Reader r2(ptext_file);
+
+  std::string buff1;
+  std::string buff2;
+  while (r1.getline(buff1) && r2.getline(buff2)) {
+    CHECK(buff1 == buff2);
+  }
+  CHECK(!r1.getline(buff1));
+  CHECK(!r2.getline(buff1));
+}
+
+static void compare_compressed_writer_with_reader(Reader& r1, Writer& w) {
   std::string buff1;
   std::string buff2;
   while (r1.getline(buff1)) {
@@ -154,7 +161,7 @@ inline void test_writer(modle::compressed_io::Reader& r1, modle::compressed_io::
   r1.reset();
   w.close();
 
-  modle::compressed_io::Reader r2(w.path());
+  Reader r2(w.path());
   while (r1.getline(buff1) && r2.getline(buff2)) {
     CHECK(buff1 == buff2);
   }
@@ -164,9 +171,9 @@ inline void test_writer(modle::compressed_io::Reader& r1, modle::compressed_io::
 
 // NOLINTNEXTLINE(readability-function-cognitive-complexity)
 TEST_CASE("Reader plain - readall", "[io][reader][long]") {
-  const std::filesystem::path ptext_file = "test/data/unit_tests/sample.bed9";
+  const auto ptext_file = data_dir() / "genomic_intervals" / "intervals.bed9";
 
-  const auto buff1 = modle::compressed_io::Reader(ptext_file).readall();
+  const auto buff1 = Reader(ptext_file).readall();
 
   const auto buff2 = [&]() {
     std::ifstream fp(ptext_file.string(), std::ios::ate);
@@ -185,7 +192,7 @@ TEST_CASE("Reader plain - empty file", "[io][reader][short]") {
   const auto test_file = testdir() / "empty_file.txt";
   { std::ofstream fp(test_file.string()); }
 
-  modle::compressed_io::Reader r(test_file);
+  Reader r(test_file);
   CHECK(r.eof());
   std::string buff;
   CHECK(!r.getline(buff));
@@ -202,7 +209,7 @@ TEST_CASE("Reader plain - one newline", "[io][reader][short]") {
   }
 
   std::string buff;
-  modle::compressed_io::Reader r(test_file);
+  Reader r(test_file);
 
   CHECK(!r.eof());
   CHECK(r.getline(buff));
@@ -223,7 +230,7 @@ TEST_CASE("Reader plain - truncated file", "[io][reader][short]") {
   }
 
   std::string buff2;
-  modle::compressed_io::Reader r(test_file);
+  Reader r(test_file);
   CHECK(r.getline(buff2));
   CHECK(buff1 == buff2);
   CHECK(r.eof());
@@ -232,57 +239,57 @@ TEST_CASE("Reader plain - truncated file", "[io][reader][short]") {
 }
 
 // NOLINTNEXTLINE(readability-function-cognitive-complexity)
-TEST_CASE("Writer plain", "[io][writer][short]") {
-  const std::filesystem::path ptext_file = "test/data/unit_tests/sample.bed9";
+TEST_CASE("Writer plain", "[io][writer][medium]") {
+  const auto ptext_file = data_dir() / "genomic_intervals" / "intervals.bed9";
   const auto tmpout = testdir() / ptext_file.filename();
 
-  modle::compressed_io::Reader r1(ptext_file);
-  modle::compressed_io::Writer w(tmpout);
+  Reader r1(ptext_file);
+  Writer w(tmpout);
 
-  test_writer(r1, w);
+  compare_compressed_writer_with_reader(r1, w);
 }
 
 // NOLINTNEXTLINE(readability-function-cognitive-complexity)
-TEST_CASE("Writer gzip", "[io][writer][short]") {
-  const std::filesystem::path ptext_file = "test/data/unit_tests/sample.bed9";
+TEST_CASE("Writer gzip", "[io][writer][medium]") {
+  const auto ptext_file = data_dir() / "genomic_intervals" / "intervals.bed9";
   const auto tmpout = testdir() / ptext_file.filename();
 
-  modle::compressed_io::Reader r1(ptext_file);
-  modle::compressed_io::Writer w(tmpout, modle::compressed_io::Writer::GZIP);
+  Reader r1(ptext_file);
+  Writer w(tmpout, Writer::GZIP);
 
-  test_writer(r1, w);
+  compare_compressed_writer_with_reader(r1, w);
 }
 
 // NOLINTNEXTLINE(readability-function-cognitive-complexity)
-TEST_CASE("Writer bzip2", "[io][writer][short]") {
-  const std::filesystem::path ptext_file = "test/data/unit_tests/sample.bed9";
+TEST_CASE("Writer bzip2", "[io][writer][medium]") {
+  const auto ptext_file = data_dir() / "genomic_intervals" / "intervals.bed9";
   const auto tmpout = testdir() / ptext_file.filename();
 
-  modle::compressed_io::Reader r1(ptext_file);
-  modle::compressed_io::Writer w(tmpout, modle::compressed_io::Writer::BZIP2);
+  Reader r1(ptext_file);
+  Writer w(tmpout, Writer::BZIP2);
 
-  test_writer(r1, w);
+  compare_compressed_writer_with_reader(r1, w);
 }
 
 // NOLINTNEXTLINE(readability-function-cognitive-complexity)
-TEST_CASE("Writer lzma", "[io][writer][short]") {
-  const std::filesystem::path ptext_file = "test/data/unit_tests/sample.bed9";
+TEST_CASE("Writer lzma", "[io][writer][medium]") {
+  const auto ptext_file = data_dir() / "genomic_intervals" / "intervals.bed9";
   const auto tmpout = testdir() / ptext_file.filename();
 
-  modle::compressed_io::Reader r1(ptext_file);
-  modle::compressed_io::Writer w(tmpout, modle::compressed_io::Writer::LZMA);
+  Reader r1(ptext_file);
+  Writer w(tmpout, Writer::LZMA);
 
-  test_writer(r1, w);
+  compare_compressed_writer_with_reader(r1, w);
 }
 
 // NOLINTNEXTLINE(readability-function-cognitive-complexity)
-TEST_CASE("Writer zstd", "[io][writer][short]") {
-  const std::filesystem::path ptext_file = "test/data/unit_tests/sample.bed9";
+TEST_CASE("Writer zstd", "[io][writer][medium]") {
+  const auto ptext_file = data_dir() / "genomic_intervals" / "intervals.bed9";
   const auto tmpout = testdir() / ptext_file.filename();
 
-  modle::compressed_io::Reader r1(ptext_file);
-  modle::compressed_io::Writer w(tmpout, modle::compressed_io::Writer::ZSTD);
+  Reader r1(ptext_file);
+  Writer w(tmpout, Writer::ZSTD);
 
-  test_writer(r1, w);
+  compare_compressed_writer_with_reader(r1, w);
 }
-}  // namespace modle::test::compressed_io
+}  // namespace modle::compressed_io::test

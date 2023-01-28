@@ -5,9 +5,9 @@
 #include "modle/chrom_sizes/chrom_sizes.hpp"  // for Parser
 
 #include <absl/container/flat_hash_set.h>  // for flat_hash_set
-#include <absl/strings/str_join.h>         // for StrJoin
 #include <absl/strings/str_split.h>        // for StrSplit, Splitter
-#include <fmt/format.h>                    // for format, FMT_COMPILE_STRING, FMT_STRING...
+#include <fmt/compile.h>
+#include <fmt/format.h>  // for format, FMT_COMPILE_STRING, FMT_STRING...
 
 #include <cassert>      // for assert
 #include <filesystem>   // for filesystem::path
@@ -24,7 +24,6 @@ Parser::Parser(const std::filesystem::path& path_to_chrom_sizes) : _reader(path_
 
 std::vector<bed::BED> Parser::parse_all(char sep) {
   std::string buff;
-  std::vector<std::string_view> tokens;
   absl::flat_hash_set<std::string> chrom_names{};
   std::vector<bed::BED> chrom_sizes;
 
@@ -33,19 +32,23 @@ std::vector<bed::BED> Parser::parse_all(char sep) {
       continue;
     }
 
-    tokens = absl::StrSplit(buff, sep);
-    assert(!tokens.empty());
+    const auto splitter = absl::StrSplit(buff, sep);
+    const auto num_toks = std::distance(splitter.begin(), splitter.end());
     try {
-      if (tokens.size() < 2) {
-        throw std::runtime_error(fmt::format(
-            FMT_STRING("Expected 2 or more tokens, got {}: \"{}\""), tokens.size(), buff));
+      if (num_toks < 2) {
+        throw std::runtime_error(
+            fmt::format(FMT_STRING("Expected 2 or more tokens, got {}: \"{}\""), num_toks, buff));
       }
-      tokens.insert(tokens.begin() + 1, "0");
-      if (const auto& chrom_name = tokens.front(); chrom_names.contains(chrom_name)) {
+      DISABLE_WARNING_PUSH
+      DISABLE_WARNING_NULL_DEREF
+      if (const auto chrom_name = *splitter.begin(); chrom_names.contains(chrom_name)) {
         throw std::runtime_error(
             fmt::format(FMT_STRING("Found multiple records for chrom \"{}\""), chrom_name));
       }
-      chrom_sizes.emplace_back(absl::StrJoin(tokens, "\t"), id++, bed::BED::BED3);
+      DISABLE_WARNING_POP
+      chrom_sizes.emplace_back(
+          fmt::format(FMT_COMPILE("{}\t0\t{}"), *splitter.begin(), *std::next(splitter.begin())),
+          id++, bed::BED::BED3);
     } catch (const std::runtime_error& e) {
       throw std::runtime_error(
           fmt::format(FMT_STRING("Encountered a malformed record at line {} of file \"{}\": {}.\n "

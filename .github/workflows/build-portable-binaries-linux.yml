@@ -12,6 +12,7 @@ on:
       - "external/**"
       - "src/**"
       - "test/**"
+      - "!test/scripts/devel/**"
       - "CMakeLists.txt"
       - "conanfile.py"
     tags:
@@ -44,7 +45,9 @@ jobs:
   cache-test-datasets:
     uses: paulsengroup/modle/.github/workflows/cache-test-datasets.yml@main
 
+
   build-portable-binaries:
+    name: Build project
     runs-on: ubuntu-latest
     container:
       image: ghcr.io/paulsengroup/ci-docker-images/centos7-gcc-11:latest
@@ -96,7 +99,7 @@ jobs:
         run: |
           # Workaround GLIBCXX version mismatch
           printf '[requires]\nb2/4.9.2\n' > /tmp/conanfile.txt
-          
+
           PATH="/opt/rh/devtoolset-11/root/usr/bin/:$PATH" \
           conan install /tmp/conanfile.txt --build=b2
 
@@ -166,7 +169,9 @@ jobs:
           retention-days: 1
           path: /tmp/modle.tar.gz
 
+
   run-unit-tests:
+    name: Run unit tests
     runs-on: ubuntu-latest
     needs: [build-portable-binaries, cache-test-datasets]
     container:
@@ -189,12 +194,14 @@ jobs:
       - name: Extract binaries and test dataset
         run: |
           tar -xf modle.tar.gz
-          tar -xf modle_test_data.tar.gz
+          tar -xf modle_test_data.tar.xz
 
       - name: Run unit tests
         run: modle/bin/test_main --durations=yes 'exclude:*SciPy*' 'exclude:*wCorr*'
 
-  run-modle-integration-tests:
+
+  run-modle-integration-test:
+    name: Run modle integration tests
     runs-on: ubuntu-latest
     needs: [build-portable-binaries, cache-test-datasets]
     container:
@@ -218,13 +225,15 @@ jobs:
       - name: Extract binaries and test dataset
         run: |
           tar -xf modle.tar.gz
-          tar -xf modle_test_data.tar.gz
+          tar -xf modle_test_data.tar.xz
 
       - name: Run modle integration test(s)
         working-directory: ${{ github.workspace }}/test/scripts
         run: ./modle_integration_test.sh ${{ github.workspace }}/modle/bin/modle
 
-  run-modle-tools-integration-tests:
+
+  run-modle-tools-integration-test:
+    name: Run modle_tools integration tests
     runs-on: ubuntu-latest
     needs: [build-portable-binaries, cache-test-datasets]
     container:
@@ -248,7 +257,7 @@ jobs:
       - name: Extract binaries and test dataset
         run: |
           tar -xf modle.tar.gz
-          tar -xf modle_test_data.tar.gz
+          tar -xf modle_test_data.tar.xz
 
       - name: Run modle_tools transform integration test(s)
         working-directory: ${{ github.workspace }}/test/scripts
@@ -258,7 +267,9 @@ jobs:
         working-directory: ${{ github.workspace }}/test/scripts
         run: ./modle_tools_eval_integration_test.sh ${{ github.workspace }}/modle/bin/modle_tools
 
+
   run-portability-test:
+    name: Test portability
     runs-on: ubuntu-latest
     needs: build-portable-binaries
     strategy:
@@ -315,11 +326,13 @@ jobs:
           ./modle_tools eval --help
           ./modle_tools transform --help
 
-  publish-binaries:
+
+  prepare-release-artifacts:
+    name: Prepare release artifacts
     needs:
       - run-unit-tests
-      - run-modle-integration-tests
-      - run-modle-tools-integration-tests
+      - run-modle-integration-test
+      - run-modle-tools-integration-test
       - run-portability-test
 
     runs-on: ubuntu-latest
@@ -335,22 +348,59 @@ jobs:
           version="$(basename "$GITHUB_REF")"
           version="${version#v}"
 
-          echo "name=modle-$version" >> $GITHUB_OUTPUT
+          echo "prefix=modle-${version}-x86_64-linux" >> $GITHUB_OUTPUT
+          echo "name=modle-${version}-x86_64-linux.tar.xz" >> $GITHUB_OUTPUT
 
       - name: Archive binaries
         run: |
           tar -xf modle.tar.gz
           rm modle/bin/test_main
 
-          mv modle "${{ steps.archive-name.outputs.name }}"
-          tar -cJf "${{ steps.archive-name.outputs.name }}.tar.xz" "${{ steps.archive-name.outputs.name }}"
+          mv modle "${{ steps.archive-name.outputs.prefix }}"
+          tar -cJf "${{ steps.archive-name.outputs.name }}" "${{ steps.archive-name.outputs.prefix }}"
 
-          tar -tf "${{ steps.archive-name.outputs.name }}.tar.xz"
+          tar -tf "${{ steps.archive-name.outputs.name }}"
 
-      - name: Upload Binaries
-        if: github.event_name == 'release'
-        uses: skx/github-action-publish-binaries@release-2.0
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Upload archive
+        uses: actions/upload-artifact@v3
+        if: github.event_name != 'release'
         with:
-          args: "${{ steps.archive-name.outputs.name }}.tar.xz"
+          name: ${{ steps.archive-name.outputs.prefix }}
+          if-no-files-found: error
+          retention-days: 7
+          path: ${{ steps.archive-name.outputs.name }}
+
+      - name: Upload release archive
+        uses: actions/upload-artifact@v3
+        if: github.event_name == 'release'
+        with:
+          name: ${{ steps.archive-name.outputs.prefix }}
+          if-no-files-found: error
+          retention-days: 90
+          path: ${{ steps.archive-name.outputs.name }}
+
+
+  build-portable-binaries-status-check:
+    name: Status Check (Build portable Linux binaries)
+    if: ${{ always() }}
+    runs-on: ubuntu-latest
+    needs:
+      - cache-test-datasets
+      - build-portable-binaries
+      - run-unit-tests
+      - run-modle-integration-test
+      - run-modle-tools-integration-test
+      - run-portability-test
+      - prepare-release-artifacts
+
+    steps:
+      - name: Collect job results
+        if: |
+          needs.cache-test-datasets.result != 'success'                ||
+          needs.build-portable-binaries.result != 'success'            ||
+          needs.run-unit-tests.result != 'success'                     ||
+          needs.run-modle-integration-test.result != 'success'         ||
+          needs.run-modle-tools-integration-test.result != 'success'   ||
+          needs.run-portability-test.result != 'success'               ||
+          needs.prepare-release-artifacts.result != 'success'
+        run: exit 1

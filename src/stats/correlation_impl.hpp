@@ -36,7 +36,7 @@ typename Pearson<FP>::Result Pearson<FP>::operator()(It1 first1, It1 last1, It2 
   if constexpr (std::is_same_v<utils::RepeatIterator<weight_t>, It3>) {
     result.pvalue = Pearson<FP>::compute_significance(result.pcc, std::distance(first1, last1));
   } else {
-    result.pvalue = -1;
+    result.pvalue = std::numeric_limits<FP>::quiet_NaN();
   }
 
   return result;
@@ -176,7 +176,7 @@ typename Spearman<FP>::Result Spearman<FP>::operator()(It1 first1, It1 last1, It
     result.pvalue = Spearman<FP>::compute_significance(result.rho, std::distance(first1, last1));
   } else {
     result.rho = this->compute_weighted_rho(first1, last1, first2, weight_first);
-    result.pvalue = -1;
+    result.pvalue = std::numeric_limits<FP>::quiet_NaN();
   }
   return result;
 }

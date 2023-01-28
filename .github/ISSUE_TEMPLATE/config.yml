@@ -1,0 +1,7 @@
+# Copyright (C) 2023 Roberto Rossini (roberros@uio.no)
+# SPDX-License-Identifier: MIT
+
+contact_links:
+  - name: Ask for help
+    url: https://github.com/paulsengroup/modle/discussions
+    about: Please ask and answer questions here.

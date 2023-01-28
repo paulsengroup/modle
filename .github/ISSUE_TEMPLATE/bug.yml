@@ -1,0 +1,65 @@
+# Copyright (C) 2023 Roberto Rossini (roberros@uio.no)
+# SPDX-License-Identifier: MIT
+
+name: Bug Report
+description: Report a bug, something does not work as it's supposed to
+title: "[bug] SHORT DESCRIPTION"
+labels: [ "bug" ]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time to fill out this bug report!
+        __Please remember to update the issue title__
+  - type: textarea
+    attributes:
+      label: Environment details
+      description: Include as much information as possible
+      value: |
+        - Operating System:
+        - MoDLE version:
+        - How was MoDLE obtained (e.g. bioconda, ghcr.io):
+  - type: textarea
+    attributes:
+      label: Describe the bug
+      description: Fill if applicable
+      placeholder: |
+        modle terminates with error XYZ
+  - type: textarea
+    attributes:
+      label: Steps to reproduce
+      description: Fill if applicable
+      placeholder: |
+        Example:
+        - modle simulate ...
+        - modle_tools transform ...
+        - docker run ghcr.io/paulsengroup/modle:1.0.0 ...
+    validations:
+      required: false
+  - type: textarea
+    attributes:
+      label: Input files
+      description: Please link input files (if applicable)
+      placeholder: |
+        Example:
+        - chrom.sizes: [hg38.chrom.sizes](https://hgdownload.soe.ucsc.edu/goldenPath/hg38/bigZips/hg38.chrom.sizes)
+        - extrusion_barriers: ...
+    validations:
+      required: false
+  - type: textarea
+    attributes:
+      label: Output files
+      description: Please link output file(s) (if applicable)
+      placeholder: |
+        Example:
+        - cooler: [simulation.cool](https://link/to/simulation.cool)
+        - config: [simulation_config.toml](https://link/to/simulation_config.toml)
+    validations:
+      required: false
+  - type: textarea
+    attributes:
+      label: Logs
+      description: Paste relevant logs/config files (if applicable)
+      render: shell
+    validations:
+      required: false

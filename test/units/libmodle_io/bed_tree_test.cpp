@@ -3,10 +3,7 @@
 // SPDX-License-Identifier: MIT
 
 #include <absl/strings/str_split.h>  // for StrSplit, Splitter
-#include <absl/types/span.h>         // for Span
-#include <fmt/format.h>              // for format
 
-#include <algorithm>  // for max, min
 #include <catch2/catch_test_macros.hpp>
 #include <filesystem>   // for path
 #include <string>       // for basic_string, operator==, string
@@ -18,12 +15,17 @@
 #include "modle/common/numeric_utils.hpp"         // for parse_numeric_or_throw
 #include "modle/compressed_io/compressed_io.hpp"  // for Reader
 
-namespace modle::test::bed {
-using namespace modle::bed;
+namespace modle::bed::test {
+
+[[maybe_unused]] static const std::filesystem::path& data_dir() {
+  static const std::filesystem::path data_dir{"test/data/unit_tests"};
+  return data_dir;
+}
 
 // NOLINTNEXTLINE(readability-function-cognitive-complexity)
 TEST_CASE("BED Tree simple", "[BED][io][long]") {
-  const std::filesystem::path all_intervals = "test/data/unit_tests/H1_hg38_CTCFs_filtered.bed.gz";
+  const auto all_intervals =
+      data_dir() / "genomic_intervals" / "H1_ctcf_binding_sites_filtered.bed.xz";
 
   Parser p(all_intervals, bed::BED::BED3);
 
@@ -44,9 +46,9 @@ TEST_CASE("BED Tree simple", "[BED][io][long]") {
 
 // NOLINTNEXTLINE(readability-function-cognitive-complexity)
 TEST_CASE("BED Tree multiple overlaps", "[BED][io][long]") {
-  const std::filesystem::path all_intervals = "test/data/unit_tests/H1_ctcf_all_chroms.bed.gz";
-  const std::filesystem::path counts_per_interval =
-      "test/data/unit_tests/H1_ctcf_all_chroms_per_interval.tsv.gz";
+  const auto parent = data_dir() / "genomic_intervals";
+  const auto all_intervals = parent / "H1_ctcf_binding_sites.bed.xz";
+  const auto counts_per_interval = parent / "H1_ctcf_binding_sites_counts_per_interval.bed.xz";
 
   const BED_tree<> intervals{all_intervals, bed::BED::BED3};
 
@@ -56,7 +58,9 @@ TEST_CASE("BED Tree multiple overlaps", "[BED][io][long]") {
   std::vector<std::string_view> toks;
   while (r.getline(buff)) {
     toks = absl::StrSplit(buff, '\t');
-    usize num_expected_overlaps, start, end;
+    usize num_expected_overlaps{};
+    usize start{};
+    usize end{};
     const auto chrom = std::string{toks.front()};
     utils::parse_numeric_or_throw(toks[1], start);
     utils::parse_numeric_or_throw(toks[2], end);
@@ -72,4 +76,4 @@ TEST_CASE("BED Tree multiple overlaps", "[BED][io][long]") {
   }
 }
 
-}  // namespace modle::test::bed
+}  // namespace modle::bed::test

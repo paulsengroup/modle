@@ -5,7 +5,6 @@
 find_package(absl CONFIG REQUIRED)
 find_package(Boost CONFIG REQUIRED)
 find_package(fmt CONFIG REQUIRED)
-find_package(HDF5 CONFIG REQUIRED)
 find_package(LibArchive CONFIG REQUIRED)
 find_package(BigWig CONFIG REQUIRED)
 find_package(readerwriterqueue CONFIG REQUIRED)
@@ -125,63 +124,32 @@ install(
   INCLUDES
   LIBRARY)
 
-# Cooler
-add_library(libmodle_io_cooler INTERFACE)
-add_library(Modle::io_cooler ALIAS libmodle_io_cooler)
-target_sources(
-  libmodle_io_cooler
-  INTERFACE ${CMAKE_CURRENT_SOURCE_DIR}/cooler_impl.hpp ${CMAKE_CURRENT_SOURCE_DIR}/cooler_read_impl.hpp
-            ${CMAKE_CURRENT_SOURCE_DIR}/cooler_write_impl.hpp)
+# Contact matrix IO
+add_library(libmodle_io_contact_matrix INTERFACE)
+add_library(Modle::io_contact_matrix ALIAS libmodle_io_contact_matrix)
+target_sources(libmodle_io_contact_matrix INTERFACE ${CMAKE_CURRENT_SOURCE_DIR}/contact_matrix_dense_io_impl.hpp)
 
-target_include_directories(libmodle_io_cooler INTERFACE include/cooler)
+target_include_directories(libmodle_io_contact_matrix INTERFACE include/contact_matrix_io)
 
 target_link_libraries(
-  libmodle_io_cooler
+  libmodle_io_contact_matrix
   INTERFACE project_warnings
             project_options
+            Modle::cmatrix
             Modle::common
-            Modle::config
-            Modle::io_hdf5)
+            Coolerpp::Coolerpp
+            fmt::fmt)
 
 target_link_system_libraries(
-  libmodle_io_cooler
+  libmodle_io_contact_matrix
   INTERFACE
-  absl::span
-  absl::strings
-  absl::time
-  absl::variant
-  readerwriterqueue::readerwriterqueue
-  spdlog::spdlog)
+  project_warnings
+  project_options
+  coolerpp)
 
+set_target_properties(libmodle_io_contact_matrix PROPERTIES OUTPUT_NAME modle_io_contact_matrix)
 install(
-  TARGETS libmodle_io_cooler
-  ARCHIVE
-  INCLUDES
-  LIBRARY)
-
-# HDF5
-add_library(libmodle_io_hdf5)
-add_library(Modle::io_hdf5 ALIAS libmodle_io_hdf5)
-target_sources(libmodle_io_hdf5 PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/hdf5_impl.hpp ${CMAKE_CURRENT_SOURCE_DIR}/hdf5.cpp)
-
-target_include_directories(libmodle_io_hdf5 PUBLIC include/hdf5)
-
-target_link_libraries(
-  libmodle_io_hdf5
-  PRIVATE project_warnings project_options absl::strings
-  PUBLIC Modle::common)
-
-target_link_system_libraries(
-  libmodle_io_hdf5
-  PRIVATE
-  absl::strings
-  PUBLIC
-  absl::variant
-  HDF5::HDF5)
-
-set_target_properties(libmodle_io_hdf5 PROPERTIES OUTPUT_NAME modle_io_hdf5)
-install(
-  TARGETS libmodle_io_hdf5
+  TARGETS libmodle_io_contact_matrix
   ARCHIVE
   INCLUDES
   LIBRARY)

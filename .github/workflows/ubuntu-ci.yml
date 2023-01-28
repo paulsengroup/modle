@@ -12,6 +12,7 @@ on:
       - "external/**"
       - "src/**"
       - "test/**"
+      - "!test/scripts/devel/**"
       - "CMakeLists.txt"
       - "conanfile.py"
     tags:
@@ -24,6 +25,7 @@ on:
       - "external/**"
       - "src/**"
       - "test/**"
+      - "!test/scripts/devel/**"
       - "CMakeLists.txt"
       - "conanfile.py"
 
@@ -41,12 +43,17 @@ env:
   CCACHE_COMPRESSLEVEL: "13"
   CCACHE_MAXSIZE: "200M"
 
+  # Workaround memory leak in HighFive
+  # See: https://github.com/BlueBrain/HighFive/pull/583
+  LSAN_OPTIONS: "suppressions=${{ github.workspace }}/lsan.supp"
+
 defaults:
   run:
     shell: bash
 
 jobs:
   matrix-factory:
+    name: Generate job matrix
     runs-on: ubuntu-latest
     outputs:
       matrix: ${{ steps.set-result.outputs.result }}
@@ -80,56 +87,59 @@ jobs:
             var includes = []
 
             // Debug builds (short CI)
-            includes.push({ compiler: 'gcc-8',     os: 'ubuntu-20.04',  generator: 'Ninja', cmake: '3.25.*', conan: '1.56.*', build_type: 'Debug',   developer_mode: 'OFF' })
-            includes.push({ compiler: 'gcc-12',    os: 'ubuntu-22.04',  generator: 'Ninja', cmake: '3.25.*', conan: '1.56.*', build_type: 'Debug',   developer_mode: 'ON'  })
-            includes.push({ compiler: 'clang-8',   os: 'ubuntu-20.04',  generator: 'Ninja', cmake: '3.25.*', conan: '1.56.*', build_type: 'Debug',   developer_mode: 'OFF' })
-            includes.push({ compiler: 'clang-15',  os: 'ubuntu-23.04',  generator: 'Ninja', cmake: '3.25.*', conan: '1.56.*', build_type: 'Debug',   developer_mode: 'ON'  })
+            includes.push({ compiler: 'gcc-8',     os: 'ubuntu-20.04',  generator: 'Ninja', cmake: '3.25.*', conan: '1.57.*', build_type: 'Debug',   developer_mode: 'OFF' })
+            includes.push({ compiler: 'gcc-12',    os: 'ubuntu-22.04',  generator: 'Ninja', cmake: '3.25.*', conan: '1.57.*', build_type: 'Debug',   developer_mode: 'ON'  })
+            includes.push({ compiler: 'clang-8',   os: 'ubuntu-20.04',  generator: 'Ninja', cmake: '3.25.*', conan: '1.57.*', build_type: 'Debug',   developer_mode: 'OFF' })
+            includes.push({ compiler: 'clang-15',  os: 'ubuntu-23.04',  generator: 'Ninja', cmake: '3.25.*', conan: '1.57.*', build_type: 'Debug',   developer_mode: 'ON'  })
 
             // Release builds (short CI)
-            includes.push({ compiler: 'gcc-12',    os: 'ubuntu-22.04',  generator: 'Ninja', cmake: '3.25.*', conan: '1.56.*', build_type: 'Release', developer_mode: 'ON'  })
-            includes.push({ compiler: 'clang-15',  os: 'ubuntu-23.04',  generator: 'Ninja', cmake: '3.25.*', conan: '1.56.*', build_type: 'Release', developer_mode: 'ON'  })
+            includes.push({ compiler: 'gcc-12',    os: 'ubuntu-22.04',  generator: 'Ninja', cmake: '3.25.*', conan: '1.57.*', build_type: 'Release', developer_mode: 'ON'  })
+            includes.push({ compiler: 'clang-15',  os: 'ubuntu-23.04',  generator: 'Ninja', cmake: '3.25.*', conan: '1.57.*', build_type: 'Release', developer_mode: 'ON'  })
 
             if (ci_short) {
               return { include: includes }
             }
 
             // Debug builds (long CI)
-            includes.push({ compiler: 'gcc-9',     os: 'ubuntu-22.04',  generator: 'Ninja', cmake: '3.25.*', conan: '1.56.*', build_type: 'Debug',   developer_mode: 'OFF' })
-            includes.push({ compiler: 'gcc-10',    os: 'ubuntu-22.04',  generator: 'Ninja', cmake: '3.25.*', conan: '1.56.*', build_type: 'Debug',   developer_mode: 'OFF' })
-            includes.push({ compiler: 'gcc-11',    os: 'ubuntu-22.04',  generator: 'Ninja', cmake: '3.25.*', conan: '1.56.*', build_type: 'Debug',   developer_mode: 'ON'  })
-            includes.push({ compiler: 'clang-9',   os: 'ubuntu-20.04',  generator: 'Ninja', cmake: '3.25.*', conan: '1.56.*', build_type: 'Debug',   developer_mode: 'OFF' })
-            includes.push({ compiler: 'clang-10',  os: 'ubuntu-20.04',  generator: 'Ninja', cmake: '3.25.*', conan: '1.56.*', build_type: 'Debug',   developer_mode: 'OFF' })
-            includes.push({ compiler: 'clang-11',  os: 'ubuntu-22.04',  generator: 'Ninja', cmake: '3.25.*', conan: '1.56.*', build_type: 'Debug',   developer_mode: 'OFF' })
-            includes.push({ compiler: 'clang-12',  os: 'ubuntu-22.04',  generator: 'Ninja', cmake: '3.25.*', conan: '1.56.*', build_type: 'Debug',   developer_mode: 'OFF' })
-            includes.push({ compiler: 'clang-13',  os: 'ubuntu-22.04',  generator: 'Ninja', cmake: '3.25.*', conan: '1.56.*', build_type: 'Debug',   developer_mode: 'ON'  })
-            includes.push({ compiler: 'clang-14',  os: 'ubuntu-22.04',  generator: 'Ninja', cmake: '3.25.*', conan: '1.56.*', build_type: 'Debug',   developer_mode: 'ON'  })
+            includes.push({ compiler: 'gcc-9',     os: 'ubuntu-22.04',  generator: 'Ninja', cmake: '3.25.*', conan: '1.57.*', build_type: 'Debug',   developer_mode: 'OFF' })
+            includes.push({ compiler: 'gcc-10',    os: 'ubuntu-22.04',  generator: 'Ninja', cmake: '3.25.*', conan: '1.57.*', build_type: 'Debug',   developer_mode: 'OFF' })
+            includes.push({ compiler: 'gcc-11',    os: 'ubuntu-22.04',  generator: 'Ninja', cmake: '3.25.*', conan: '1.57.*', build_type: 'Debug',   developer_mode: 'ON'  })
+            includes.push({ compiler: 'clang-9',   os: 'ubuntu-20.04',  generator: 'Ninja', cmake: '3.25.*', conan: '1.57.*', build_type: 'Debug',   developer_mode: 'OFF' })
+            includes.push({ compiler: 'clang-10',  os: 'ubuntu-20.04',  generator: 'Ninja', cmake: '3.25.*', conan: '1.57.*', build_type: 'Debug',   developer_mode: 'OFF' })
+            includes.push({ compiler: 'clang-11',  os: 'ubuntu-22.04',  generator: 'Ninja', cmake: '3.25.*', conan: '1.57.*', build_type: 'Debug',   developer_mode: 'OFF' })
+            includes.push({ compiler: 'clang-12',  os: 'ubuntu-22.04',  generator: 'Ninja', cmake: '3.25.*', conan: '1.57.*', build_type: 'Debug',   developer_mode: 'OFF' })
+            includes.push({ compiler: 'clang-13',  os: 'ubuntu-22.04',  generator: 'Ninja', cmake: '3.25.*', conan: '1.57.*', build_type: 'Debug',   developer_mode: 'ON'  })
+            includes.push({ compiler: 'clang-14',  os: 'ubuntu-22.04',  generator: 'Ninja', cmake: '3.25.*', conan: '1.57.*', build_type: 'Debug',   developer_mode: 'ON'  })
 
             // Release builds (long CI)
-            includes.push({ compiler: 'gcc-8',     os: 'ubuntu-20.04',  generator: 'Ninja', cmake: '3.25.*', conan: '1.56.*', build_type: 'Release', developer_mode: 'OFF' })
-            includes.push({ compiler: 'gcc-9',     os: 'ubuntu-22.04',  generator: 'Ninja', cmake: '3.25.*', conan: '1.56.*', build_type: 'Release', developer_mode: 'OFF' })
-            includes.push({ compiler: 'gcc-10',    os: 'ubuntu-22.04',  generator: 'Ninja', cmake: '3.25.*', conan: '1.56.*', build_type: 'Release', developer_mode: 'ON'  })
-            includes.push({ compiler: 'gcc-11',    os: 'ubuntu-22.04',  generator: 'Ninja', cmake: '3.25.*', conan: '1.56.*', build_type: 'Release', developer_mode: 'ON'  })
-            includes.push({ compiler: 'clang-8',   os: 'ubuntu-20.04',  generator: 'Ninja', cmake: '3.25.*', conan: '1.56.*', build_type: 'Release', developer_mode: 'OFF' })
-            includes.push({ compiler: 'clang-9',   os: 'ubuntu-20.04',  generator: 'Ninja', cmake: '3.25.*', conan: '1.56.*', build_type: 'Release', developer_mode: 'OFF' })
-            includes.push({ compiler: 'clang-10',  os: 'ubuntu-20.04',  generator: 'Ninja', cmake: '3.25.*', conan: '1.56.*', build_type: 'Release', developer_mode: 'OFF' })
-            includes.push({ compiler: 'clang-11',  os: 'ubuntu-22.04',  generator: 'Ninja', cmake: '3.25.*', conan: '1.56.*', build_type: 'Release', developer_mode: 'OFF' })
-            includes.push({ compiler: 'clang-12',  os: 'ubuntu-22.04',  generator: 'Ninja', cmake: '3.25.*', conan: '1.56.*', build_type: 'Release', developer_mode: 'ON'  })
-            includes.push({ compiler: 'clang-13',  os: 'ubuntu-22.04',  generator: 'Ninja', cmake: '3.25.*', conan: '1.56.*', build_type: 'Release', developer_mode: 'ON'  })
-            includes.push({ compiler: 'clang-14',  os: 'ubuntu-22.04',  generator: 'Ninja', cmake: '3.25.*', conan: '1.56.*', build_type: 'Release', developer_mode: 'ON'  })
+            includes.push({ compiler: 'gcc-8',     os: 'ubuntu-20.04',  generator: 'Ninja', cmake: '3.25.*', conan: '1.57.*', build_type: 'Release', developer_mode: 'OFF' })
+            includes.push({ compiler: 'gcc-9',     os: 'ubuntu-22.04',  generator: 'Ninja', cmake: '3.25.*', conan: '1.57.*', build_type: 'Release', developer_mode: 'OFF' })
+            includes.push({ compiler: 'gcc-10',    os: 'ubuntu-22.04',  generator: 'Ninja', cmake: '3.25.*', conan: '1.57.*', build_type: 'Release', developer_mode: 'ON'  })
+            includes.push({ compiler: 'gcc-11',    os: 'ubuntu-22.04',  generator: 'Ninja', cmake: '3.25.*', conan: '1.57.*', build_type: 'Release', developer_mode: 'ON'  })
+            includes.push({ compiler: 'clang-8',   os: 'ubuntu-20.04',  generator: 'Ninja', cmake: '3.25.*', conan: '1.57.*', build_type: 'Release', developer_mode: 'OFF' })
+            includes.push({ compiler: 'clang-9',   os: 'ubuntu-20.04',  generator: 'Ninja', cmake: '3.25.*', conan: '1.57.*', build_type: 'Release', developer_mode: 'OFF' })
+            includes.push({ compiler: 'clang-10',  os: 'ubuntu-20.04',  generator: 'Ninja', cmake: '3.25.*', conan: '1.57.*', build_type: 'Release', developer_mode: 'OFF' })
+            includes.push({ compiler: 'clang-11',  os: 'ubuntu-22.04',  generator: 'Ninja', cmake: '3.25.*', conan: '1.57.*', build_type: 'Release', developer_mode: 'OFF' })
+            includes.push({ compiler: 'clang-12',  os: 'ubuntu-22.04',  generator: 'Ninja', cmake: '3.25.*', conan: '1.57.*', build_type: 'Release', developer_mode: 'ON'  })
+            includes.push({ compiler: 'clang-13',  os: 'ubuntu-22.04',  generator: 'Ninja', cmake: '3.25.*', conan: '1.57.*', build_type: 'Release', developer_mode: 'ON'  })
+            includes.push({ compiler: 'clang-14',  os: 'ubuntu-22.04',  generator: 'Ninja', cmake: '3.25.*', conan: '1.57.*', build_type: 'Release', developer_mode: 'ON'  })
 
             // Make sure project builds with CMake 3.20
-            includes.push({ compiler: 'clang-14',  os: 'ubuntu-22.04',  generator: 'Ninja', cmake: '3.20.5', conan: '1.56.*', build_type: 'Release', developer_mode: 'OFF' })
+            includes.push({ compiler: 'clang-14',  os: 'ubuntu-22.04',  generator: 'Ninja', cmake: '3.20.5', conan: '1.57.*', build_type: 'Release', developer_mode: 'OFF' })
             // Make sure project builds with Conan 1.51
             includes.push({ compiler: 'clang-14',  os: 'ubuntu-22.04',  generator: 'Ninja', cmake: '3.25.*', conan: '1.53.*', build_type: 'Release', developer_mode: 'OFF' })
             // Make sure project builds with make
-            includes.push({ compiler: 'clang-14',  os: 'ubuntu-22.04',  generator: 'Unix Makefiles', cmake: '3.25.*', conan: '1.56.*', build_type: 'Release', developer_mode: 'OFF' })
+            includes.push({ compiler: 'clang-14',  os: 'ubuntu-22.04',  generator: 'Unix Makefiles', cmake: '3.25.*', conan: '1.57.*', build_type: 'Release', developer_mode: 'OFF' })
 
             return { include: includes }
+
 
   cache-test-datasets:
     uses: paulsengroup/modle/.github/workflows/cache-test-datasets.yml@main
 
+
   build-project:
+    name: Build project
     needs: matrix-factory
     runs-on: ubuntu-latest
     strategy:
@@ -285,7 +295,9 @@ jobs:
       - name: Print Ccache statistics
         run: ccache -s
 
-  unit-tests:
+
+  run-unit-tests:
+    name: Run unit tests
     needs: [matrix-factory, cache-test-datasets, build-project]
     runs-on: ubuntu-latest
     strategy:
@@ -314,7 +326,7 @@ jobs:
       - name: Extract binaries and test dataset
         run: |
           zstd -dcf unit-tests.tar.zst | tar -xf -
-          tar -xf modle_test_data.tar.gz
+          tar -xf modle_test_data.tar.xz
 
       - name: Run unit tests
         run: |
@@ -326,10 +338,12 @@ jobs:
                 --schedule-random        \
                 --output-on-failure      \
                 --no-tests=error         \
-                --timeout 180            \
+                --timeout 300            \
                 -j $(nproc)
 
-  modle-integration-test:
+
+  run-modle-integration-test:
+    name: Run modle integration tests
     needs: [matrix-factory, cache-test-datasets, build-project]
     runs-on: ubuntu-latest
     strategy:
@@ -358,16 +372,18 @@ jobs:
       - name: Extract binaries and test dataset
         run: |
           zstd -dcf binaries.tar.zst | tar -xf -
-          tar -xf modle_test_data.tar.gz
+          tar -xf modle_test_data.tar.xz
 
       - name: Inspect modle version
         run: bin/modle --version
 
       - name: Run modle integration test(s)
         working-directory: ${{ github.workspace }}/test/scripts
-        run: ./modle_integration_test.sh ${{ github.workspace }}/bin/modle
+        run: ./modle_integration_test.sh ${{ github.workspace }}/bin/modle | head -n 1000
 
-  modle-tools-integration-test:
+
+  run-modle-tools-integration-test:
+    name: Run modle_tools integration tests
     needs: [matrix-factory, cache-test-datasets, build-project]
     runs-on: ubuntu-latest
     strategy:
@@ -396,7 +412,7 @@ jobs:
       - name: Extract binaries and test dataset
         run: |
           zstd -dcf binaries.tar.zst | tar -xf -
-          tar -xf modle_test_data.tar.gz
+          tar -xf modle_test_data.tar.xz
 
       - name: Inspect modle_tools version
         run: bin/modle_tools --version
@@ -404,9 +420,33 @@ jobs:
       - name: Run modle_tools transform integration test(s)
         working-directory: ${{ github.workspace }}/test/scripts
         run: |
-          ./modle_tools_transform_integration_test.sh ${{ github.workspace }}/bin/modle_tools
+          ./modle_tools_transform_integration_test.sh ${{ github.workspace }}/bin/modle_tools | head -n 1000
 
       - name: Run modle_tools evaluate integration test(s)
         working-directory: ${{ github.workspace }}/test/scripts
         run: |
-          ./modle_tools_eval_integration_test.sh ${{ github.workspace }}/bin/modle_tools
+          ./modle_tools_eval_integration_test.sh ${{ github.workspace }}/bin/modle_tools | head -n 1000
+
+
+  ubuntu-ci-status-check:
+    name: Status Check (Ubuntu CI)
+    if: ${{ always() }}
+    runs-on: ubuntu-latest
+    needs:
+      - matrix-factory
+      - cache-test-datasets
+      - build-project
+      - run-unit-tests
+      - run-modle-integration-test
+      - run-modle-tools-integration-test
+
+    steps:
+      - name: Collect job results
+        if: |
+          needs.matrix-factory.result != 'success'                   ||
+          needs.cache-test-datasets.result != 'success'              ||
+          needs.build-project.result != 'success'                    ||
+          needs.run-unit-tests.result != 'success'                   ||
+          needs.run-modle-integration-test.result != 'success'       ||
+          needs.run-modle-tools-integration-test.result != 'success'
+        run: exit 1

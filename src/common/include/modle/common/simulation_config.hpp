@@ -94,6 +94,7 @@ struct Config {
   double lef_bar_minor_collision_pblock{0.0};
 
   // Miscellaneous
+  std::string assembly_name{"unknown"};
   bool simulate_chromosomes_wo_barriers{false};
   usize num_cells{512};
   usize nthreads{std::thread::hardware_concurrency()};

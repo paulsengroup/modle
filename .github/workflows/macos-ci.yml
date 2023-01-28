@@ -12,6 +12,7 @@ on:
       - "external/**"
       - "src/**"
       - "test/**"
+      - "!test/scripts/devel/**"
       - "CMakeLists.txt"
       - "conanfile.py"
     tags:
@@ -24,6 +25,7 @@ on:
       - "external/**"
       - "src/**"
       - "test/**"
+      - "!test/scripts/devel/**"
       - "CMakeLists.txt"
       - "conanfile.py"
 
@@ -42,6 +44,10 @@ env:
   CCACHE_COMPRESSLEVEL: "13"
   CCACHE_MAXSIZE: "200M"
 
+  # Workaround memory leak in HighFive
+  # See: https://github.com/BlueBrain/HighFive/pull/583
+  LSAN_OPTIONS: "suppressions=${{ github.workspace }}/lsan.supp"
+
 defaults:
   run:
     shell: bash
@@ -50,16 +56,18 @@ jobs:
   cache-test-datasets:
     uses: paulsengroup/modle/.github/workflows/cache-test-datasets.yml@main
 
-  build-project:
+
+  ci:
+    name: MacOS CI
     needs: cache-test-datasets
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
       matrix:
         include:
-          - { compiler-name: apple-clang, compiler-version: '13.0', os: 'macos-11',    conan-ver: '1.56.*', cmake-ver: '3.25.*', build_type: Release, developer_mode: OFF }
-          - { compiler-name: apple-clang, compiler-version: '14.0', os: 'macos-12',    conan-ver: '1.56.*', cmake-ver: '3.25.*', build_type: Release, developer_mode: OFF }
-          - { compiler-name: apple-clang, compiler-version: '14.0', os: 'macos-12',    conan-ver: '1.56.*', cmake-ver: '3.25.*', build_type: Debug,   developer_mode: OFF }
+          - { compiler-name: apple-clang, compiler-version: '13.0', os: 'macos-11',    conan-ver: '1.57.*', cmake-ver: '3.25.*', build_type: Release, developer_mode: OFF }
+          - { compiler-name: apple-clang, compiler-version: '14.0', os: 'macos-12',    conan-ver: '1.57.*', cmake-ver: '3.25.*', build_type: Release, developer_mode: OFF }
+          - { compiler-name: apple-clang, compiler-version: '14.0', os: 'macos-12',    conan-ver: '1.57.*', cmake-ver: '3.25.*', build_type: Debug,   developer_mode: OFF }
 
     steps:
       - uses: actions/checkout@v3
@@ -68,7 +76,6 @@ jobs:
         run: |
           echo 'conan==${{ matrix.conan-ver }}' > requirements.txt
           echo 'cmake==${{ matrix.cmake-ver }}' >> requirements.txt
-          echo 'scipy' >> requirements.txt
 
       - name: Setup Python
         uses: actions/setup-python@v4
@@ -98,8 +105,8 @@ jobs:
           build_type="${{ matrix.build_type }}"
 
           conanfile_hash="${{ hashFiles('conanfile.py') }}"
-          workflow_hash="${{ hashFiles('.github/workflows/ubuntu-ci.yml') }}"
-          combined_hash="${{ hashFiles('conanfile.py', '.github/workflows/ubuntu-ci.yml') }}"
+          workflow_hash="${{ hashFiles('.github/workflows/macos-ci.yml') }}"
+          combined_hash="${{ hashFiles('conanfile.py', '.github/workflows/macos-ci.yml') }}"
 
           # This can be used by to always update a cache entry (useful e.g. for ccache)
           current_date="$(date '+%s')"
@@ -184,24 +191,6 @@ jobs:
       - name: Print Ccache statistics
         run: ccache -s
 
-      - name: Generate R package requirement list
-        run: |
-          printf 'Package: foo\nVersion: 0.0.1\nLicense: MIT\nDescription: foo\n"' >> DESCRIPTION
-          printf 'Title: foo\nAuthor: me\nMaintainer: me\nImports: wCorr' >> DESCRIPTION
-
-      - name: Install setup-r action dependencies
-        run: brew install imagemagick@6 libgit2
-
-      - name: Setup R
-        uses: r-lib/actions/setup-r@v2
-        with:
-          r-version: '4.2.1'
-
-      - name: Install R packages
-        uses: r-lib/actions/setup-r-dependencies@v2
-        with:
-          cache: true
-
       - name: Download test datasets
         id: test-dataset
         uses: actions/download-artifact@v3
@@ -209,7 +198,7 @@ jobs:
           name: ${{ needs.cache-test-datasets.outputs.artifact-name }}
 
       - name: Extract test dataset
-        run: tar -xf modle_test_data.tar.gz
+        run: tar -xf modle_test_data.tar.xz
 
       - name: Run unit tests
         working-directory: ${{ github.workspace }}/build
@@ -218,9 +207,20 @@ jobs:
                 --schedule-random   \
                 --output-on-failure \
                 --no-tests=error    \
-                --timeout 1000
+                --timeout 300
 
       - name: Inspect MoDLE version
         run: |
           ${{ github.workspace }}/build/src/modle/modle --version
           ${{ github.workspace }}/build/src/modle_tools/modle_tools --version
+
+
+  macos-ci-status-check:
+    name: Status Check (MacOS CI)
+    if: ${{ always() }}
+    runs-on: ubuntu-latest
+    needs: [ ci ]
+    steps:
+      - name: Collect job results
+        if: needs.ci.result != 'success'
+        run: exit 1

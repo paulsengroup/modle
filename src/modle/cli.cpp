@@ -6,10 +6,12 @@
 
 #include <absl/strings/str_cat.h>    // for StrAppend
 #include <absl/strings/str_split.h>  // for SplitIterator, Splitter, StrSplit, operator!=
-#include <absl/types/span.h>         // for MakeSpan
-#include <fmt/format.h>              // for format, FMT_STRING, join, print, make_format_...
-#include <fmt/os.h>                  // for output_file, ostream
+#include <absl/time/clock.h>
+#include <absl/types/span.h>  // for MakeSpan
+#include <fmt/format.h>       // for format, FMT_STRING, join, print, make_format_...
+#include <fmt/os.h>           // for output_file, ostream
 #include <fmt/std.h>
+#include <spdlog/spdlog.h>
 #include <toml++/toml.h>  // for array::operator[], operator<<, parse, print_to...
 
 #include <CLI/CLI.hpp>  // for Option_group, App
@@ -17,15 +19,16 @@
 #include <array>        // for array
 #include <cassert>      // for assert
 #include <cmath>        // for round, pow, log
-#include <cstdio>       // for stderr
-#include <exception>    // for exception
-#include <filesystem>   // for path, operator<<
-#include <limits>       // for numeric_limits
-#include <sstream>      // for streamsize, stringstream, basic_ostream
-#include <stdexcept>    // for invalid_argument, out_of_range, runtime_error
-#include <string>       // for allocator, string, basic_string
-#include <thread>       // for hardware_concurrency
-#include <vector>       // for vector
+#include <coolerpp/coolerpp.hpp>
+#include <cstdio>      // for stderr
+#include <exception>   // for exception
+#include <filesystem>  // for path, operator<<
+#include <limits>      // for numeric_limits
+#include <sstream>     // for streamsize, stringstream, basic_ostream
+#include <stdexcept>   // for invalid_argument, out_of_range, runtime_error
+#include <string>      // for allocator, string, basic_string
+#include <thread>      // for hardware_concurrency
+#include <vector>      // for vector
 
 #include "modle/common/cli_utils.hpp"
 #include "modle/common/common.hpp"  // for bp_t, i64
@@ -33,7 +36,6 @@
 #include "modle/common/simulation_config.hpp"  // for Config
 #include "modle/common/utils.hpp"              // for parse_numeric_or_throw
 #include "modle/config/version.hpp"            // modle_version_long
-#include "modle/cooler/cooler.hpp"             // for Cooler
 
 namespace modle {
 
@@ -92,12 +94,6 @@ static std::vector<CLI::App*> add_common_options(CLI::App& subcommand, modle::Co
       "Path to file with chromosome sizes in chrom.sizes format.")
       ->check(CLI::ExistingFile)->required();
 
-  io_adv.add_option(
-      "--chrom-subranges",
-      c.path_to_chrom_subranges,
-      "Path to BED file with subranges of the chromosomes to simulate.")
-      ->check(CLI::ExistingFile);
-
   io.add_option(
       "-b,--extrusion-barrier-file",
       c.path_to_extr_barriers,
@@ -132,6 +128,14 @@ static std::vector<CLI::App*> add_common_options(CLI::App& subcommand, modle::Co
       "         - /tmp/my_simulation_config.toml")
       ->required();
 
+  io.add_option(
+      "--assembly-name",
+      c.assembly_name,
+      "Name of the genome assembly to be simulated.\n"
+      "This is only used to populate the \"assembly\" attribute in the output .cool file.")
+      ->transform([](std::string str) { return str.empty() ? "unknown" : str; }, "", "")
+      ->capture_default_str();
+
   io.add_flag(
       "-q,--quiet",
       c.quiet,
@@ -139,6 +143,12 @@ static std::vector<CLI::App*> add_common_options(CLI::App& subcommand, modle::Co
       "Only fatal errors will be logged to the console.\n"
       "Does not affect entries written to the log file.")
       ->capture_default_str();
+
+  io_adv.add_option(
+     "--chrom-subranges",
+     c.path_to_chrom_subranges,
+     "Path to BED file with subranges of the chromosomes to simulate.")
+     ->check(CLI::ExistingFile);
 
   io_adv.add_flag(
       "--log-model-internal-state",
@@ -639,8 +649,8 @@ std::string Cli::detect_path_collisions(modle::Config& c) const {
     if (std::filesystem::exists(path)) {
       if (std::filesystem::is_directory(path)) {
         return fmt::format(
-            FMT_STRING("Refusing to run the simulation because output file {} already "
-                       "exist (and is actually a {}directory). {}.\n"),
+            FMT_STRING("Refusing to continue because output file {} already "
+                       "exist (and is actually a {}directory).\n{}.\n"),
             path, std::filesystem::is_empty(path) ? "" : "non-empty ",
             std::filesystem::is_empty(path)
                 ? " Pass --force to overwrite"
@@ -648,14 +658,14 @@ std::string Cli::detect_path_collisions(modle::Config& c) const {
                   "existing directory");
       }
       return fmt::format(
-          FMT_STRING("Refusing to run the simulation because output file {} already exist. Pass "
-                     "--force to overwrite.\n"),
+          FMT_STRING("Refusing to continue because output file {} already exist.\n"
+                     "Pass --force to overwrite.\n"),
           path);
     }
     if (std::filesystem::is_directory(path) && !std::filesystem::is_empty(path)) {
       return fmt::format(
-          FMT_STRING("Refusing to run the simulation because output file {} is a "
-                     "non-empty directory. You should specify a different output path, or "
+          FMT_STRING("Refusing to continue because output file {} is a non-empty directory.\n"
+                     "You should specify a different output path, or "
                      "manually remove the existing directory.\n"),
           path);
     }

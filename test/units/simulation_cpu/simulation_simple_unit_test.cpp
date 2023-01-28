@@ -22,7 +22,7 @@
 #include "modle/genome.hpp"                    // for Chromosome
 #include "modle/simulation.hpp"                // for Simulation
 
-namespace modle::test::libmodle {
+namespace modle::libmodle::test {
 
 // NOLINTNEXTLINE(readability-function-cognitive-complexity)
 TEST_CASE("Bind LEFs 001", "[bind-lefs][simulation][short]") {
@@ -198,7 +198,7 @@ TEST_CASE("Adjust LEF moves 002", "[adjust-lef-moves][simulation][short]") {
 }
 
 // NOLINTNEXTLINE(readability-function-cognitive-complexity)
-TEST_CASE("Generate LEF moves 001", "[generate-lef-moves][simulation][long]") {
+TEST_CASE("Generate LEF moves 001", "[generate-lef-moves][simulation][medium]") {
   const Chromosome chrom{0, "chr1", 1000, 2000, 2000};
   const usize nlefs = 100;
   const usize iters = 1000;
@@ -215,6 +215,8 @@ TEST_CASE("Generate LEF moves 001", "[generate-lef-moves][simulation][long]") {
   c.rev_extrusion_speed_std = static_cast<double>(c.rev_extrusion_speed) * 0.2;
   c.fwd_extrusion_speed_std = static_cast<double>(c.fwd_extrusion_speed) * 0.2;
 
+  Simulation simulation{c, false};
+
   for (usize i = 0; i < iters; ++i) {
     std::generate(lefs.begin(), lefs.end(), [&]() {
       const auto pos =
@@ -224,10 +226,9 @@ TEST_CASE("Generate LEF moves 001", "[generate-lef-moves][simulation][long]") {
     Simulation::test_rank_lefs(lefs, absl::MakeSpan(rev_ranks), absl::MakeSpan(fwd_ranks), false,
                                true);
 
-    Simulation{c, false}.test_generate_moves(
-        chrom, absl::MakeConstSpan(lefs), absl::MakeConstSpan(rev_ranks),
-        absl::MakeConstSpan(fwd_ranks), absl::MakeSpan(rev_moves), absl::MakeSpan(fwd_moves),
-        rand_eng);
+    simulation.test_generate_moves(chrom, absl::MakeConstSpan(lefs), absl::MakeConstSpan(rev_ranks),
+                                   absl::MakeConstSpan(fwd_ranks), absl::MakeSpan(rev_moves),
+                                   absl::MakeSpan(fwd_moves), rand_eng);
 
     std::for_each(rev_moves.begin(), rev_moves.end(), [&, j = 0UL](const auto n) mutable {
       CHECK(lefs[j].rev_unit.pos() >= chrom.start_pos() + n);
@@ -921,4 +922,4 @@ TEST_CASE("LEFs ranking 002 - Fwd extr. unit tied", "[simulation][short]") {
   }
 }
 
-}  // namespace modle::test::libmodle
+}  // namespace modle::libmodle::test

@@ -4,37 +4,82 @@
 
 #include "modle/contact_matrix_serde.hpp"
 
+#include <absl/time/clock.h>
 #include <fmt/format.h>
 #include <spdlog/spdlog.h>
 
-#include <catch2/catch_approx.hpp>
+#include <algorithm>
+#include <cassert>
 #include <catch2/catch_test_macros.hpp>
+#include <catch2/matchers/catch_matchers_floating_point.hpp>
 #include <catch2/matchers/catch_matchers_string.hpp>
+#include <limits>
 #include <stdexcept>  // for runtime_error
 #include <string>     // for string
-#include <utility>    // for pair, move
-#include <vector>     // for vector, allocator
+#include <type_traits>
+#include <utility>  // for pair, move
+#include <vector>   // for vector, allocator
 
-#include "./common.hpp"
 #include "modle/common/common.hpp"  // for u32
 #include "modle/contact_matrix_dense.hpp"
 #include "modle/contact_matrix_sparse.hpp"
-#include "modle/cooler/cooler.hpp"
 #include "modle/test/self_deleting_folder.hpp"
 
 namespace modle::test {
 inline const SelfDeletingFolder testdir{true};  // NOLINT(cert-err58-cpp)
 }  // namespace modle::test
 
-namespace modle::test::cmatrix {
+namespace modle::cmatrix::test {
+
+constexpr auto& testdir = modle::test::testdir;
 
 [[maybe_unused]] static const std::filesystem::path& data_dir() {
   static const std::filesystem::path data_dir{"test/data/unit_tests"};
   return data_dir;
 }
 
+// See https://github.com/catchorg/Catch2/blob/v3.2.1/src/catch2/catch_approx.cpp#L27-L32
+constexpr double DEFAULT_FP_TOLERANCE =
+    static_cast<double>(std::numeric_limits<float>::epsilon() * 100);
+
+template <class ContactMatrixT>
+static void create_random_matrix(ContactMatrixT& m, usize nnz, u64 seed = 8336046165695760686ULL) {
+  using N = typename ContactMatrixT::value_type;
+  assert(nnz <= m.npixels());
+
+  auto rand_eng = random::PRNG(seed);
+
+  auto contact_gen = [&rand_eng]() {
+    if constexpr (std::is_floating_point_v<N>) {
+      return random::uniform_real_distribution<N>{1, 65553}(rand_eng);
+    } else {
+      u64 max_ = std::min(u64(65553), static_cast<u64>((std::numeric_limits<N>::max)()));
+      return random::uniform_int_distribution<N>{1, static_cast<N>(max_)}(rand_eng);
+    }
+  };
+
+  auto row_gen = [&]() {
+    return random::uniform_int_distribution<usize>{0, m.ncols() - 1}(rand_eng);
+  };
+
+  auto col_gen = [&]() {
+    return random::uniform_int_distribution<usize>{0, m.nrows() - 1}(rand_eng);
+  };
+
+  do {
+    for (usize i = m.unsafe_get_nnz(); i < nnz; ++i) {
+      const auto row = row_gen();
+      const auto col = std::min(row + col_gen(), m.ncols() - 1);
+      if (row < m.ncols()) {
+        m.set(row, col, contact_gen());
+        assert(m.get_n_of_missed_updates() == 0);
+      }
+    }
+  } while (m.unsafe_get_nnz() < nnz);
+}
+
 // NOLINTNEXTLINE(readability-function-cognitive-complexity)
-TEST_CASE("CMatrix Dense serialization", "[cmatrix][serialization][short]") {
+TEST_CASE("ContactMatrixDense serialization", "[cmatrix][serialization][medium]") {
   const auto serialized_matrix_path = testdir() / "cmatrix_dense.serialized.zst";
 
   constexpr bp_t chrom_size = 250'000'000;
@@ -83,7 +128,7 @@ TEST_CASE("CMatrix Dense serialization", "[cmatrix][serialization][short]") {
 }
 
 // NOLINTNEXTLINE(readability-function-cognitive-complexity)
-TEST_CASE("CMatrix Sparse serialization", "[cmatrix][serialization][medium]") {
+TEST_CASE("ContactMatrixSparse serialization", "[cmatrix][serialization][long]") {
   const auto serialized_matrix_path = testdir() / "cmatrix_sparse.serialized.zst";
 
   constexpr bp_t chrom_size = 250'000'000;
@@ -130,7 +175,7 @@ TEST_CASE("CMatrix Sparse serialization", "[cmatrix][serialization][medium]") {
 }
 
 // NOLINTNEXTLINE(readability-function-cognitive-complexity)
-TEST_CASE("CMatrix Dense serialization (destructive)", "[cmatrix][serialization][short]") {
+TEST_CASE("ContactMatrixDense serialization (destructive)", "[cmatrix][serialization][medium]") {
   const auto serialized_matrix_path = testdir() / "cmatrix_dense_destructive.serialized.zst";
 
   constexpr bp_t chrom_size = 250'000'000;
@@ -180,7 +225,7 @@ TEST_CASE("CMatrix Dense serialization (destructive)", "[cmatrix][serialization]
 }
 
 // NOLINTNEXTLINE(readability-function-cognitive-complexity)
-TEST_CASE("CMatrix Sparse serialization (destructive)", "[cmatrix][serialization][medium]") {
+TEST_CASE("ContactMatrixSparse serialization (destructive)", "[cmatrix][serialization][long]") {
   const auto serialized_matrix_path = testdir() / "cmatrix_sparse_destructive.serialized.zst";
 
   constexpr bp_t chrom_size = 250'000'000;
@@ -230,7 +275,7 @@ TEST_CASE("CMatrix Sparse serialization (destructive)", "[cmatrix][serialization
 }
 
 // NOLINTNEXTLINE(readability-function-cognitive-complexity)
-TEST_CASE("CMatrix Sparse to CMatrix Dense", "[cmatrix][serialization][short]") {
+TEST_CASE("ContactMatrixSparse to ContactMatrixDense", "[cmatrix][serialization][medium]") {
   const auto serialized_matrix_path = testdir() / "cmatrix_sparse_to_dense.serialized.zst";
 
   constexpr bp_t chrom_size = 250'000'000;
@@ -277,7 +322,7 @@ TEST_CASE("CMatrix Sparse to CMatrix Dense", "[cmatrix][serialization][short]") 
 }
 
 // NOLINTNEXTLINE(readability-function-cognitive-complexity)
-TEST_CASE("CMatrix Dense to CMatrix Sparse", "[cmatrix][serialization][short]") {
+TEST_CASE("ContactMatrixDense to ContactMatrixSparse", "[cmatrix][serialization][medium]") {
   const auto serialized_matrix_path = testdir() / "cmatrix_dense_to_sparse.serialized.zst";
 
   constexpr bp_t chrom_size = 250'000'000;
@@ -324,7 +369,7 @@ TEST_CASE("CMatrix Dense to CMatrix Sparse", "[cmatrix][serialization][short]") 
 }
 
 // NOLINTNEXTLINE(readability-function-cognitive-complexity)
-TEST_CASE("CMatrix Dense serialization (FP)", "[cmatrix][serialization][short]") {
+TEST_CASE("ContactMatrixDense serialization (FP)", "[cmatrix][serialization][medium]") {
   const auto serialized_matrix_path = testdir() / "cmatrix_dense_fp.serialized.zst";
 
   constexpr bp_t chrom_size = 250'000'000;
@@ -360,7 +405,8 @@ TEST_CASE("CMatrix Dense serialization (FP)", "[cmatrix][serialization][short]")
   REQUIRE(m1.ncols() == m2.ncols());
 
   CHECK(m1.get_nnz() == m2.get_nnz());
-  CHECK(Catch::Approx(m1.get_tot_contacts()) == m2.get_tot_contacts());
+  CHECK_THAT(m1.get_tot_contacts(),
+             Catch::Matchers::WithinRel(m2.get_tot_contacts(), DEFAULT_FP_TOLERANCE));
   CHECK(m1.get_n_of_missed_updates() == m2.get_n_of_missed_updates());
 
   const auto& buff1 = m1.get_raw_count_vector();
@@ -373,7 +419,7 @@ TEST_CASE("CMatrix Dense serialization (FP)", "[cmatrix][serialization][short]")
 }
 
 // NOLINTNEXTLINE(readability-function-cognitive-complexity)
-TEST_CASE("CMatrix Sparse serialization (FP)", "[cmatrix][serialization][medium]") {
+TEST_CASE("ContactMatrixSparse serialization (FP)", "[cmatrix][serialization][long]") {
   const auto serialized_matrix_path = testdir() / "cmatrix_sparse_fp.serialized.zst";
 
   constexpr bp_t chrom_size = 250'000'000;
@@ -409,7 +455,8 @@ TEST_CASE("CMatrix Sparse serialization (FP)", "[cmatrix][serialization][medium]
   REQUIRE(m1.ncols() == m2.ncols());
 
   CHECK(m1.get_nnz() == m2.get_nnz());
-  CHECK(Catch::Approx(m1.get_tot_contacts()) == m2.get_tot_contacts());
+  CHECK_THAT(m1.get_tot_contacts(),
+             Catch::Matchers::WithinRel(m2.get_tot_contacts(), DEFAULT_FP_TOLERANCE));
   CHECK(m1.get_n_of_missed_updates() == m2.get_n_of_missed_updates());
 
   for (usize i = 0; i < nrows; ++i) {
@@ -419,4 +466,4 @@ TEST_CASE("CMatrix Sparse serialization (FP)", "[cmatrix][serialization][medium]
   }
 }
 
-}  // namespace modle::test::cmatrix
+}  // namespace modle::cmatrix::test

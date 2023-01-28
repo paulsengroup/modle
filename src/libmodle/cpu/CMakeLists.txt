@@ -33,13 +33,14 @@ target_link_libraries(
           project_options
           Modle::interval_tree
           Modle::io_compressed
-          Modle::io_cooler
           Modle::stats
   PUBLIC Modle::cmatrix
          Modle::common
+         Modle::config
          Modle::libmodle_internal
          Modle::io_bed
          Modle::io_bigwig
+         Modle::io_contact_matrix
          concurrentqueue::concurrentqueue
          fmt::fmt)
 
