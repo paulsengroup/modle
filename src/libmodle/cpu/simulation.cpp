@@ -532,10 +532,10 @@ usize Simulation::release_lefs(const absl::Span<Lef> lefs, const ExtrusionBarrie
     assert(lefs[j].is_bound());
 
     auto is_lef_bar_hard_collision = [&](const auto c, dna::Direction d) {
-      assert(d == dna::REV || d == dna::FWD);
+      assert(d == dna::REV || d == dna::FWD || d == dna::BOTH);
       if (c.collision_occurred(CollisionT::LEF_BAR)) {
         assert(c.decode_index() <= barriers.size());
-        return barriers.direction(c.decode_index()) == d;
+        return barriers.block_direction(c.decode_index()) == d;
       }
       return false;
     };

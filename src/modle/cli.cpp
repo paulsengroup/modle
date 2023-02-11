@@ -102,7 +102,12 @@ static std::vector<CLI::App*> add_common_options(CLI::App& subcommand, modle::Co
       "interpreted as the extrusion barrier occupancy for the extrusion barrier described\n"
       "by the record.\n"
       "Barriers mapping on chromosomes not listed in the chrom.sizes file passed through\n"
-      "the --chrom-sizes option are ignored.")
+      "the --chrom-sizes option are ignored.\n"
+      "Currently, barriers are assumed to be either CTCF or generic bidirectional barriers.\n"
+      "If a barrier has + or - as its direction, that barrier is assumed to be a CTCF barrier,\n"
+      "and the provided strandness is interpreted as the motif/binding site direction.\n"
+      "Barriers with . as direction are treated as bidirectional barriers.\n"
+      "The current logic is a bit clunky. We have plans to improve this in the near future.")
       ->check(CLI::ExistingFile)
       ->required();
 
