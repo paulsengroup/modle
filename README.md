@@ -262,7 +262,7 @@ singularity shell docker://ghcr.io/paulsengroup/modle:1.0.0
 MoDLE package for Linux and MacOS is available on [bioconda](https://anaconda.org/bioconda/modle) and can be installed as follows:
 
 ```console
-user@dev:/tmp$ conda create -n modle -c bioconda modle
+user@dev:/tmp$ conda create -n modle -c conda-forge -c bioconda modle
 
 (modle) user@dev:/tmp$ conda activate modle
 
