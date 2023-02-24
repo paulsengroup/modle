@@ -18,12 +18,12 @@ class MoDLE(ConanFile):
     author = "Roberto Rossini (roberros@uio.no)"
     settings = "os", "compiler", "build_type", "arch"
     requires = [
-        "abseil/20230125.0@#001809a3b778beaa61d8c80c6ba35fb3",
+        "abseil/20230125.1@#f0b7039f0985c00eccb653200a02363c",
         "bitflags/1.5.0@#f49a584785e75c40bf6970615c452b4e",
         "boost/1.81.0@#8dcd9d9df9e0d320714b83cceddbe120",
         "bshoshany-thread-pool/3.3.0@#22e99aee6babc19e679754d95dad2de4",
         "bzip2/1.0.8@#23cc41191fd58460207c5db046033507",
-        "catch2/3.3.1@#27bef8b741bcecfa5300d7b668345947",
+        "catch2/3.3.1@#90c00568038b85c98ee0d79d3fd1d678",
         "cli11/2.3.2@#8ccdf14fb1ad53532d498c16ae580b4b",
         "concurrentqueue/1.0.3@#c1cb7d960d8b64073643b45fa63f0bd1",
         "cpp-sort/1.14.0@#3453aaaf83c1dae4214ca3b5c4c3a5c8",
