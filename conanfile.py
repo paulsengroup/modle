@@ -18,35 +18,35 @@ class MoDLE(ConanFile):
     author = "Roberto Rossini (roberros@uio.no)"
     settings = "os", "compiler", "build_type", "arch"
     requires = [
-        "abseil/20230125.1@#f0b7039f0985c00eccb653200a02363c",
-        "bitflags/1.5.0@#f49a584785e75c40bf6970615c452b4e",
+        "abseil/20230125.2@#7236e32316486788d05d28fbbecbca8b",
+        "bitflags/1.5.0@#626da9d1913161321841f30caf9b994e",
         "boost/1.81.0@#8dcd9d9df9e0d320714b83cceddbe120",
         "bshoshany-thread-pool/3.3.0@#22e99aee6babc19e679754d95dad2de4",
-        "bzip2/1.0.8@#23cc41191fd58460207c5db046033507",
-        "catch2/3.3.1@#90c00568038b85c98ee0d79d3fd1d678",
+        "bzip2/1.0.8@#411fc05e80d47a89045edc1ee6f23c1d",
+        "catch2/3.3.2@#be6a2f0225146ba4fd8573ee9013e5ae",
         "cli11/2.3.2@#8ccdf14fb1ad53532d498c16ae580b4b",
         "concurrentqueue/1.0.3@#c1cb7d960d8b64073643b45fa63f0bd1",
         "cpp-sort/1.14.0@#3453aaaf83c1dae4214ca3b5c4c3a5c8",
-        "fast_float/3.10.0@#feeb915e78c405b9a589cbd5a7b4c4e2",
+        "fast_float/4.0.0@#90cac63d3ae321f6318b9abf8af9cbb1",
         "fmt/9.1.0@#e747928f85b03f48aaf227ff897d9634",
-        "hdf5/1.14.0@#6d9a830380e5f17d4584800c0a2a7efd",  # Coolerpp
-        "highfive/2.6.2@#6af2a30a4773e7d586af6a6ec4f5fd0c",  # Coolerpp
-        "libarchive/3.6.2@#8f4adbea5bce174e817dfc0053575d6c",
+        "hdf5/1.14.0@#a0adfcdc93a3fbedbbb9dc42b452cde7",  # Coolerpp
+        "highfive/2.7.1@#a73bc6937c9add30c9d47a7a70a466eb",  # Coolerpp
+        "libarchive/3.6.2@#97a1b90f7143a0b5010b3b7f8426c07a",
         "libbigwig/0.4.7@#c51cf59700963a74fe0089a81293c91c",
         "libcuckoo/0.3.1@#2fadf7043e85444c19c1ededf9e43653",
         "lz4/1.9.4@#bce1f314775b83c195dffc8e177ff368",
         "lzo/2.10@#850936b57f92160152bd9385b1770a69",
         "range-v3/0.12.0@#abb9932b80d96eaf8fc992debe3870ed",
-        "readerwriterqueue/1.0.6@#a95c8da3d68822dec4d4c13fff4b5c96",
-        "spdlog/1.11.0@#faa6eb03bd1009bf2070b0c77e4f56a6",
+        "readerwriterqueue/1.0.6@#aaa5ff6fac60c2aee591e9e51b063b83",
+        "spdlog/1.11.0@#1f94812dde789fba690ebc10e9613e61",
         "tomlplusplus/3.3.0@#ebb2a36577011fb1959b0de8c1509a6d",
         "tsl-hopscotch-map/2.3.0@#497d3f41172cefe2df9ac17692c52734",  # Coolerpp
         "tsl-ordered-map/1.1.0@#c8a6d6831f079d7fb012c46b5bcfa767",  # Coolerpp
         "xoshiro-cpp/1.1@#be8a2825995d67cf2fb26f01accb4f4d",
         "xxhash/0.8.1@#b60fcc5f9821c988a155935d87562e1d",
-        "xz_utils/5.4.0@#394283edeac4658356894312aa0fdcbb",
+        "xz_utils/5.4.2@#b6ee8320403def553418874435445982",
         "zlib/1.2.13@#13c96f538b52e1600c40b88994de240f",
-        "zstd/1.5.4@#8000dcd4e4cbcbdb8114fb684a6801a9",
+        "zstd/1.5.5@#93372fe14bb7883bd4de82914e0a1841",
     ]
 
     generators = "cmake", "cmake_find_package", "cmake_find_package_multi"
