@@ -43,9 +43,6 @@ env:
   CCACHE_COMPRESSLEVEL: "13"
   CCACHE_MAXSIZE: "200M"
 
-  # Workaround memory leak in HighFive
-  # See: https://github.com/BlueBrain/HighFive/pull/583
-  LSAN_OPTIONS: "suppressions=${{ github.workspace }}/lsan.supp"
 
 defaults:
   run:
