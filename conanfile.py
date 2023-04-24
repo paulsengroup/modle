@@ -18,9 +18,9 @@ class MoDLE(ConanFile):
     author = "Roberto Rossini (roberros@uio.no)"
     settings = "os", "compiler", "build_type", "arch"
     requires = [
-        "abseil/20230125.2@#7236e32316486788d05d28fbbecbca8b",
+        "abseil/20230125.2@#24e0584aa2ae6d2fb9e9cd0027354ee2",
         "bitflags/1.5.0@#626da9d1913161321841f30caf9b994e",
-        "boost/1.81.0@#8dcd9d9df9e0d320714b83cceddbe120",
+        "boost/1.81.0@#05966cf97c97cdd334623324750f67a0",
         "bshoshany-thread-pool/3.3.0@#22e99aee6babc19e679754d95dad2de4",
         "bzip2/1.0.8@#411fc05e80d47a89045edc1ee6f23c1d",
         "catch2/3.3.2@#be6a2f0225146ba4fd8573ee9013e5ae",
@@ -29,7 +29,7 @@ class MoDLE(ConanFile):
         "cpp-sort/1.14.0@#3453aaaf83c1dae4214ca3b5c4c3a5c8",
         "fast_float/4.0.0@#90cac63d3ae321f6318b9abf8af9cbb1",
         "fmt/9.1.0@#e747928f85b03f48aaf227ff897d9634",
-        "hdf5/1.14.0@#a0adfcdc93a3fbedbbb9dc42b452cde7",  # Coolerpp
+        "hdf5/1.14.0@#1192b687ae347bfcd40d3a7f620b5a57",  # Coolerpp
         "highfive/2.7.1@#a73bc6937c9add30c9d47a7a70a466eb",  # Coolerpp
         "libarchive/3.6.2@#97a1b90f7143a0b5010b3b7f8426c07a",
         "libbigwig/0.4.7@#c51cf59700963a74fe0089a81293c91c",
@@ -38,7 +38,7 @@ class MoDLE(ConanFile):
         "lzo/2.10@#850936b57f92160152bd9385b1770a69",
         "range-v3/0.12.0@#abb9932b80d96eaf8fc992debe3870ed",
         "readerwriterqueue/1.0.6@#aaa5ff6fac60c2aee591e9e51b063b83",
-        "spdlog/1.11.0@#1f94812dde789fba690ebc10e9613e61",
+        "spdlog/1.11.0@#d0fdbaa523550b89156084bf42b41c90",
         "tomlplusplus/3.3.0@#ebb2a36577011fb1959b0de8c1509a6d",
         "tsl-hopscotch-map/2.3.0@#497d3f41172cefe2df9ac17692c52734",  # Coolerpp
         "tsl-ordered-map/1.1.0@#c8a6d6831f079d7fb012c46b5bcfa767",  # Coolerpp
