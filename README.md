@@ -332,7 +332,7 @@ Compiling MoDLE requires a compiler toolchain supporting C++17, such as:
 
 Furthermore, the following tools are required:
 - CMake 3.20+
-- Conan 1.53+
+- Conan 1.53+, <2
 - git 2.7+
 - make or ninja
 - Python3.6+ (including `pip`, required to install Conan)
@@ -343,7 +343,7 @@ We recommend to install CMake and Conan in a Python [virtualenv](https://virtual
 ```bash
 python3 -m venv /tmp/venv
 /tmp/venv/bin/python3 -m pip install pip setuptools --upgrade
-/tmp/venv/bin/python3 -m pip  install 'cmake>=3.20' 'conan>=1.53' ninja
+/tmp/venv/bin/python3 -m pip  install 'cmake>=3.20' 'conan>=1.53,<2' ninja
 
 # NOTE: It's important to activate the venv after installing CMake
 . /tmp/venv/bin/activate

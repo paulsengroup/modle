@@ -120,8 +120,7 @@ RUN apt-get update \
                    python3-pip                   \
                    xz-utils
 
-RUN pip3 install cython 'numpy<1.24' \
-&& pip3 install 'cooler>=0.8.11'
+RUN pip3 install 'cooler>=0.9'
 
 COPY --from=unit-testing "$staging_dir" "$staging_dir"
 COPY test/data/modle_test_data.tar.xz "$src_dir/test/data/"
