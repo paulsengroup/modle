@@ -218,6 +218,7 @@ jobs:
       - name: Build conanfile.py
         if: steps.cache-conan.outputs.cache-hit != 'true'
         run: |
+          install -Dm0644 "$CONAN_DEFAULT_PROFILE_PATH" "$CONAN_USER_HOME/.conan/profiles/default"
           conan install conanfile.py                  \
                --build=outdated                       \
                --update                               \
