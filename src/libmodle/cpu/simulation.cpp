@@ -153,22 +153,11 @@ void Simulation::write_contacts_to_disk(std::deque<std::pair<Chromosome*, usize>
       }
       sleep_us = 100;
       if (c) {
-        // NOTE here we have to use pointers instead of references because
-        // chrom_to_be_written.contacts() == nullptr is used to signal an empty matrix.
-        // In this case, c->write_or_append_cmatrix_to_file() will create an entry in the chroms
-        // and bins datasets, as well as update the appropriate index
-        if (chrom_to_be_written->contacts_ptr()) {
+        if (chrom_to_be_written->contacts().npixels() != 0) {
           spdlog::info(FMT_STRING("Writing contacts for \"{}\" to file \"{}\"..."),
                        chrom_to_be_written->name(), c.uri());
-        } else {
-          spdlog::info(FMT_STRING("Writing bin table for \"{}\" to file \"{}\"..."),
-                       chrom_to_be_written->name(), c.uri());
-        }
-
-        io::append_contact_matrix_to_cooler(c, chrom_to_be_written->name(),
-                                            chrom_to_be_written->contacts());
-
-        if (chrom_to_be_written->contacts_ptr()) {
+          io::append_contact_matrix_to_cooler(c, chrom_to_be_written->name(),
+                                              chrom_to_be_written->contacts());
           spdlog::info(
               FMT_STRING("Written {} contacts for \"{}\" to file \"{}\" ({:.2f}M nnz out of "
                          "{:.2f}M pixels)."),
@@ -219,7 +208,7 @@ void Simulation::write_1d_lef_occupancy_to_disk() const {
     bw.write_chromosomes(chroms);
 
     for (const Chromosome& chrom : this->_genome) {
-      if (!chrom.lef_1d_occupancy_ptr()) {
+      if (chrom.lef_1d_occupancy().empty()) {
         continue;
       }
 
@@ -774,9 +763,6 @@ Simulation::State& Simulation::State::operator=(const Task& task) {
   this->num_lefs = task.num_lefs;
   this->barriers = ExtrusionBarriers{task.barriers.begin(), task.barriers.end()};
 
-  if (this->chrom->contacts_ptr()) {
-    this->contacts = this->chrom->contacts_ptr();
-  }
   return *this;
 }
 
@@ -801,6 +787,16 @@ std::string Simulation::State::to_string() const noexcept {
                      barriers.size(),
                      seed);
   // clang-format on
+}
+
+ContactMatrixDense<contacts_t>& Simulation::State::contacts() noexcept {
+  assert(this->chrom);
+  return this->chrom->contacts();
+}
+
+const ContactMatrixDense<contacts_t>& Simulation::State::contacts() const noexcept {
+  assert(this->chrom);
+  return this->chrom->contacts();
 }
 
 std::pair<usize, usize> Simulation::process_collisions(

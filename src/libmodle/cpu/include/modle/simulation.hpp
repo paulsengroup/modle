@@ -128,11 +128,13 @@ class Simulation : Config {
     [[nodiscard]] const std::deque<double>& get_cfx_of_variation() const noexcept;
     [[nodiscard]] const std::deque<double>& get_avg_loop_sizes() const noexcept;
 
-    std::shared_ptr<std::mutex> contacts_mtx{nullptr};                  // NOLINT
-    std::shared_ptr<ContactMatrixDense<contacts_t>> contacts{nullptr};  // NOLINT
+    std::shared_ptr<std::mutex> contacts_mtx{nullptr};  // NOLINT
 
     State& operator=(const Task& task);
     [[nodiscard]] std::string to_string() const noexcept;
+
+    ContactMatrixDense<contacts_t>& contacts() noexcept;
+    const ContactMatrixDense<contacts_t>& contacts() const noexcept;
 
     void resize_buffers(usize size = (std::numeric_limits<usize>::max)());
     void reset_buffers();

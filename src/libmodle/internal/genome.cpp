@@ -219,93 +219,62 @@ const IITree<bp_t, ExtrusionBarrier>& Chromosome::barriers() const { return this
 IITree<bp_t, ExtrusionBarrier>& Chromosome::barriers() { return this->_barriers; }
 
 bool Chromosome::allocate_contact_matrix(bp_t bin_size, bp_t diagonal_width) {
-  if (std::scoped_lock lck(this->_buff_mtx); !this->_contacts) {
-    this->_contacts =
-        std::make_shared<contact_matrix_t>(this->simulated_size(), diagonal_width, bin_size);
+  if (std::scoped_lock lck(this->_buff_mtx); this->_contacts.npixels() == 0) {
+    this->_contacts.unsafe_resize(this->simulated_size(), diagonal_width, bin_size);
     return true;
   }
   return false;
 }
 
 bool Chromosome::allocate_lef_occupancy_buffer(modle::bp_t bin_size) {
-  if (std::scoped_lock lck(this->_buff_mtx); !this->_lef_1d_occupancy) {
-    using BuffT = std::vector<std::atomic<u64>>;
-    const auto buff_size = (this->size() + bin_size - 1) / bin_size;
-    this->_lef_1d_occupancy = std::make_shared<BuffT>(buff_size);
-    std::fill(this->_lef_1d_occupancy->begin(), this->_lef_1d_occupancy->end(), 0);
+  if (std::scoped_lock lck(this->_buff_mtx); this->_lef_1d_occupancy.empty()) {
+    // Can't resize a vector of atomics
+    using BuffT = decltype(this->_lef_1d_occupancy);
+    this->_lef_1d_occupancy = BuffT((this->size() + bin_size - 1) / bin_size);
+    std::fill(this->_lef_1d_occupancy.begin(), this->_lef_1d_occupancy.end(), 0);
     return true;
   }
   return false;
 }
 
 bool Chromosome::deallocate_contact_matrix() {
-  if (std::scoped_lock lck(this->_buff_mtx); this->_contacts) {
-    this->_contacts = nullptr;
+  if (std::scoped_lock lck(this->_buff_mtx); this->_contacts.npixels() != 0) {
+    using MatrixT = decltype(this->_contacts);
+    MatrixT tmp{};
+    std::swap(this->_contacts, tmp);
     return true;
   }
   return false;
 }
 
 bool Chromosome::deallocate_lef_occupancy_buffer() {
-  if (std::scoped_lock lck(this->_buff_mtx); this->_lef_1d_occupancy) {
-    this->_lef_1d_occupancy = nullptr;
+  if (std::scoped_lock lck(this->_buff_mtx); !this->_lef_1d_occupancy.empty()) {
+    using BuffT = decltype(this->_lef_1d_occupancy);
+    BuffT tmp{};
+    std::swap(this->_lef_1d_occupancy, tmp);
     return true;
   }
   return false;
 }
 
 usize Chromosome::npixels() const {
-  assert(this->_contacts);
   return this->contacts().npixels();
 }
 
 const Chromosome::contact_matrix_t& Chromosome::contacts() const noexcept {
-  assert(this->_contacts);
-  return *this->_contacts;
+  return this->_contacts;
 }
 
 Chromosome::contact_matrix_t& Chromosome::contacts() noexcept {
-  assert(this->_contacts);
-  return *this->_contacts;
+  return this->_contacts;
 }
 
 const std::vector<std::atomic<u64>>& Chromosome::lef_1d_occupancy() const noexcept {
-  assert(this->_lef_1d_occupancy);
-  return *this->_lef_1d_occupancy;
+  return this->_lef_1d_occupancy;
 }
 
 std::vector<std::atomic<u64>>& Chromosome::lef_1d_occupancy() noexcept {
-  assert(this->_lef_1d_occupancy);
-  return *this->_lef_1d_occupancy;
-}
-
-std::shared_ptr<const Chromosome::contact_matrix_t> Chromosome::contacts_ptr() const noexcept {
-  if (this->_contacts) {
-    return this->_contacts;
-  }
-  return nullptr;
-}
-
-std::shared_ptr<Chromosome::contact_matrix_t> Chromosome::contacts_ptr() noexcept {
-  if (this->_contacts) {
-    return this->_contacts;
-  }
-  return nullptr;
-}
-
-std::shared_ptr<const std::vector<std::atomic<u64>>> Chromosome::lef_1d_occupancy_ptr()
-    const noexcept {
-  if (this->_lef_1d_occupancy) {
-    return this->_lef_1d_occupancy;
-  }
-  return nullptr;
-}
-
-std::shared_ptr<std::vector<std::atomic<u64>>> Chromosome::lef_1d_occupancy_ptr() noexcept {
-  if (this->_lef_1d_occupancy) {
-    return this->_lef_1d_occupancy;
-  }
-  return nullptr;
+  return this->_lef_1d_occupancy;
 }
 
 u64 Chromosome::hash(XXH3_state_t* const xxh_state, u64 seed, usize cell_id) const {

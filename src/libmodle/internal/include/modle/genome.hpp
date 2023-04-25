@@ -89,11 +89,6 @@ class Chromosome {
   [[nodiscard]] contact_matrix_t& contacts() noexcept;
   [[nodiscard]] const std::vector<std::atomic<u64>>& lef_1d_occupancy() const noexcept;
   [[nodiscard]] std::vector<std::atomic<u64>>& lef_1d_occupancy() noexcept;
-  [[nodiscard]] std::shared_ptr<const contact_matrix_t> contacts_ptr() const noexcept;
-  [[nodiscard]] std::shared_ptr<contact_matrix_t> contacts_ptr() noexcept;
-  [[nodiscard]] std::shared_ptr<const std::vector<std::atomic<u64>>> lef_1d_occupancy_ptr()
-      const noexcept;
-  [[nodiscard]] std::shared_ptr<std::vector<std::atomic<u64>>> lef_1d_occupancy_ptr() noexcept;
   [[nodiscard]] u64 hash(XXH3_state_t* xxh_state, u64 seed, usize cell_id) const;
   [[nodiscard]] u64 hash(u64 seed, usize cell_id) const;
 
@@ -109,8 +104,8 @@ class Chromosome {
   IITree<bp_t, ExtrusionBarrier> _barriers{};
   // Protect _contacts and _lef_1d_occupancy from concurrent writes and allocations/deallocations
   std::shared_mutex _buff_mtx{};
-  std::shared_ptr<contact_matrix_t> _contacts{};
-  std::shared_ptr<std::vector<std::atomic<u64>>> _lef_1d_occupancy{};
+  contact_matrix_t _contacts{};
+  std::vector<std::atomic<u64>> _lef_1d_occupancy{};
 };
 
 class Genome {

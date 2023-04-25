@@ -109,7 +109,6 @@ void Simulation::sample_and_register_contacts(State& s, usize num_sampling_event
   const auto num_tad_contacts = num_sampling_events - num_loop_contacts;
 
   assert(s.chrom);
-  assert(s.contacts);
   this->register_contacts_loop(*s.chrom, s.get_lefs(), num_loop_contacts, s.rand_eng);
   this->register_contacts_tad(*s.chrom, s.get_lefs(), num_tad_contacts, s.rand_eng);
 
