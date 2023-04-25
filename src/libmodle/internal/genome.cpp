@@ -257,17 +257,13 @@ bool Chromosome::deallocate_lef_occupancy_buffer() {
   return false;
 }
 
-usize Chromosome::npixels() const {
-  return this->contacts().npixels();
-}
+usize Chromosome::npixels() const { return this->contacts().npixels(); }
 
 const Chromosome::contact_matrix_t& Chromosome::contacts() const noexcept {
   return this->_contacts;
 }
 
-Chromosome::contact_matrix_t& Chromosome::contacts() noexcept {
-  return this->_contacts;
-}
+Chromosome::contact_matrix_t& Chromosome::contacts() noexcept { return this->_contacts; }
 
 const std::vector<std::atomic<u64>>& Chromosome::lef_1d_occupancy() const noexcept {
   return this->_lef_1d_occupancy;
