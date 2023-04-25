@@ -24,3 +24,5 @@ Dockerfile*
 cmake-build*
 gmon.out
 perf.*
+
+compile_commands.json
