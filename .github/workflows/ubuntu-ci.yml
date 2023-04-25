@@ -136,10 +136,10 @@ jobs:
       options: "--user=root"
 
     env:
-      CONAN_HOME: "/opt/conan/"
       CCACHE_DIR: "/opt/ccache-cache"
       CCACHE_COMPRESSLEVEL: "13"
       CCACHE_MAXSIZE: "200M"
+      CONAN_HOME: "/opt/conan/"
 
     steps:
       - name: Checkout repo
@@ -215,8 +215,8 @@ jobs:
           conan install conanfile.txt                 \
                --build=missing                        \
                --build=cascade                        \
-               --update                               \
-               -pr default                            \
+               -pr:b="$CONAN_DEFAULT_PROFILE_PATH"    \
+               -pr:h="$CONAN_DEFAULT_PROFILE_PATH"    \
                -s build_type=${{ matrix.build_type }} \
                -s compiler.libcxx=libstdc++11         \
                -s compiler.cppstd=17                  \

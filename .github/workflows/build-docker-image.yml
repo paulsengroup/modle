@@ -14,6 +14,7 @@ on:
       - "test/**"
       - "!test/scripts/devel/**"
       - "CMakeLists.txt"
+      - ".dockerignore"
       - "Dockerfile"
       - "conanfile.txt"
     tags:
@@ -29,6 +30,7 @@ on:
       - "!test/scripts/devel/**"
       - "CMakeLists.txt"
       - "Dockerfile"
+      - ".dockerignore"
       - "conanfile.txt"
 
 # https://stackoverflow.com/a/72408109
