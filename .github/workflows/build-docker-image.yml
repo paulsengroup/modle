@@ -15,7 +15,7 @@ on:
       - "!test/scripts/devel/**"
       - "CMakeLists.txt"
       - "Dockerfile"
-      - "conanfile.py"
+      - "conanfile.txt"
     tags:
       - 'v*.*.*'
 
@@ -29,7 +29,7 @@ on:
       - "!test/scripts/devel/**"
       - "CMakeLists.txt"
       - "Dockerfile"
-      - "conanfile.py"
+      - "conanfile.txt"
 
 # https://stackoverflow.com/a/72408109
 concurrency:
