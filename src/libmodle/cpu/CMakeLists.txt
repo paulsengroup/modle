@@ -3,7 +3,7 @@
 # SPDX-License-Identifier: MIT
 
 find_package(absl CONFIG REQUIRED)
-find_package(Boost CONFIG REQUIRED)
+find_package(Boost CONFIG REQUIRED COMPONENTS headers)
 find_package(bshoshany-thread-pool CONFIG REQUIRED)
 find_package(concurrentqueue CONFIG REQUIRED)
 find_package(cpp-sort CONFIG REQUIRED)
@@ -61,7 +61,7 @@ target_link_system_libraries(
   bshoshany-thread-pool::bshoshany-thread-pool
   range-v3::range-v3
   spdlog::spdlog
-  xxHash::xxHash)
+  xxHash::xxhash)
 
 install(
   TARGETS libmodle_cpu

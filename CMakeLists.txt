@@ -80,7 +80,7 @@ include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/CompilerWarnings.cmake)
 
 set(ENABLE_CACHE_DEFAULT ON)
 set(ENABLE_CLANG_TIDY_DEFAULT OFF)
-set(ENABLE_CONAN_DEFAULT ON)
+set(ENABLE_CONAN_DEFAULT OFF)
 set(ENABLE_CPPCHECK_DEFAULT OFF)
 set(ENABLE_DOXYGEN_USER OFF)
 set(ENABLE_DOXYGEN_DEVELOPER ON)
@@ -196,7 +196,7 @@ target_compile_definitions(
 target_compile_definitions(project_options INTERFACE FMT_ENFORCE_COMPILE_STRING)
 
 # Tweak boost
-find_package(Boost CONFIG REQUIRED)
+find_package(Boost CONFIG REQUIRED COMPONENTS filesystem)
 
 if(Boost_VERSION_STRING VERSION_GREATER_EQUAL 1.77.0)
   target_compile_definitions(project_options INTERFACE BOOST_FILESYSTEM_VERSION=4)

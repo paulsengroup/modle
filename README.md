@@ -332,7 +332,7 @@ Compiling MoDLE requires a compiler toolchain supporting C++17, such as:
 
 Furthermore, the following tools are required:
 - CMake 3.20+
-- Conan 1.53+, <2
+- Conan 2+
 - git 2.7+
 - make or ninja
 - Python3.6+ (including `pip`, required to install Conan)
@@ -343,7 +343,7 @@ We recommend to install CMake and Conan in a Python [virtualenv](https://virtual
 ```bash
 python3 -m venv /tmp/venv
 /tmp/venv/bin/python3 -m pip install pip setuptools --upgrade
-/tmp/venv/bin/python3 -m pip  install 'cmake>=3.20' 'conan>=1.53,<2' ninja
+/tmp/venv/bin/python3 -m pip  install 'cmake>=3.20' 'conan>=2' ninja
 
 # NOTE: It's important to activate the venv after installing CMake
 . /tmp/venv/bin/activate
@@ -354,6 +354,9 @@ whereis ninja  # ninja: /tmp/venv/bin/ninja
 
 cmake --version
 conan --version
+
+# Detect compiler toolchain. It is usually a good idea to explicitly set CC and CXX
+CC=gcc CXX=g++ conan profile detect --force
 ```
 
 Compiling MoDLE on Windows using MSVC is currently not possible.
@@ -388,9 +391,20 @@ git checkout v1.0.0  # Skip this step if you want to build the latest commit fro
 export CONAN_CPU_COUNT=8
 export CMAKE_BUILD_PARALLEL_LEVEL=8
 
+# Install/build dependencies with Conan
+conan install --build=missing \
+              --build=cascade \
+              --update \
+              -pr default \
+              -s build_type=Release \
+              -s compiler.cppstd=17 \
+              --output-folder=./build/ \
+              .
+
 # This may take a while, as CMake will run Conan to build MoDLE dependencies.
 # Do not pass -G Ninja if you want CMake to use make instead of ninja
 cmake -DCMAKE_BUILD_TYPE=Release \
+      -DCMAKE_PREFIX_PATH="$PWD/build" \
       -DMODLE_ENABLE_TESTING=ON  \
       -G Ninja \
       -S /tmp/modle \
@@ -400,6 +414,8 @@ cmake --build /tmp/modle/build
 ```
 
 To override the default compiler used by CMake, pass the following arguments to the first CMake command: `-DCMAKE_C_COMPILER=path/to/cc -DCMAKE_CXX_COMPILER=path/to/c++`
+
+We highly recommend using the same compiler when running Conan and CMake.
 
 </details>
 
@@ -739,7 +755,7 @@ After successfully compiling MoDLE the following folders safely be removed:
 - Python virtualenv: `/tmp/venv`
 - MoDLE source tree: `/tmp/modle`
 
-If you are not using Conan in any other project feel free to also delete Conan's folder `~/.conan/`
+If you are not using Conan in any other project feel free to also delete Conan's folder `~/.conan2/`
 
 </details>
 

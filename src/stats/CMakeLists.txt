@@ -2,7 +2,7 @@
 #
 # SPDX-License-Identifier: MIT
 
-find_package(Boost CONFIG REQUIRED)
+find_package(Boost CONFIG REQUIRED COMPONENTS headers)
 find_package(cpp-sort CONFIG REQUIRED)
 
 add_library(modle_stats INTERFACE)
