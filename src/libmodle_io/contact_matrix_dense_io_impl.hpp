@@ -32,7 +32,7 @@ inline bool emplace_pixel(const coolerpp::File& f, std::vector<PixelT>& buff, us
 
   const auto bin1_start = utils::conditional_static_cast<u32>(bin1_id) * f.bin_size();
   const auto bin2_start = utils::conditional_static_cast<u32>(bin2_id) * f.bin_size();
-  buff.emplace_back(PixelT{{f.bins(), static_cast<u32>(chrom_id), bin1_start, bin2_start},
+  buff.emplace_back(PixelT{{f.bins_ptr(), static_cast<u32>(chrom_id), bin1_start, bin2_start},
                            utils::conditional_static_cast<T>(n)});
 
   return buff.size() == buff.capacity();
@@ -208,13 +208,11 @@ inline ContactMatrixDense<N> read_contact_matrix_from_cooler(const coolerpp::Fil
     }
 
     ContactMatrixDense<N> m{interval_span, diagonal_width, f.bin_size()};
-
-    auto selector = f.template fetch<N>(chrom.name, static_cast<u32>(start_pos), chrom.name,
-                                        static_cast<u32>(end_pos));
-    for (const auto pixel : selector) {
-      if (pixel.coords.bin2_start - pixel.coords.bin1_start < diagonal_width) {
-        const auto i = (pixel.coords.bin1_start - static_cast<u32>(start_pos)) / f.bin_size();
-        const auto j = (pixel.coords.bin2_start - static_cast<u32>(start_pos)) / f.bin_size();
+    for (auto&& pixel :
+         f.fetch<N>(chrom.name, static_cast<u32>(start_pos), static_cast<u32>(end_pos))) {
+      if (pixel.coords.bin2().start - pixel.coords.bin1().start < diagonal_width) {
+        const auto i = (pixel.coords.bin1().start - static_cast<u32>(start_pos)) / f.bin_size();
+        const auto j = (pixel.coords.bin2().start - static_cast<u32>(start_pos)) / f.bin_size();
         m.unsafe_set(i, j, pixel.count);
       }
     }
@@ -228,8 +226,8 @@ inline ContactMatrixDense<N> read_contact_matrix_from_cooler(const coolerpp::Fil
 
 inline bool query_returns_no_pixels(const coolerpp::File& f, std::string_view chrom_name,
                                     bp_t start_pos, bp_t end_pos) {
-  const auto match = f.template fetch<double>(chrom_name, static_cast<u32>(start_pos), chrom_name,
-                                              static_cast<u32>(end_pos));
+  const auto match =
+      f.fetch<double>(chrom_name, static_cast<u32>(start_pos), static_cast<u32>(end_pos));
 
   return match.begin() == match.end();
 }
