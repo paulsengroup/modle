@@ -8,6 +8,7 @@
 .run/
 .vscode/
 build/
+conan*/
 containers/
 docs/
 examples/
