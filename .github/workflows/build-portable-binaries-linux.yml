@@ -14,7 +14,7 @@ on:
       - "test/**"
       - "!test/scripts/devel/**"
       - "CMakeLists.txt"
-      - "conanfile.py"
+      - "conanfile.txt"
     tags:
       - 'v*.*.*'
 
@@ -33,13 +33,10 @@ defaults:
     shell: bash
 
 env:
-  CONAN_REVISIONS_ENABLED: "1"
-  CONAN_USER_HOME: "${{ github.workspace }}/conan-cache"
-  CONAN_USER_HOME_SHORT: "${{ github.workspace }}/conan-cache/short"
-  CONAN_V2_MODE: "1"
-  CCACHE_DIR: "${{ github.workspace }}/ccache-cache"
+  CCACHE_DIR: "/opt/ccache-cache"
   CCACHE_COMPRESSLEVEL: "13"
   CCACHE_MAXSIZE: "200M"
+  CONAN_HOME: "/opt/conan/"
 
 jobs:
   cache-test-datasets:
@@ -51,7 +48,7 @@ jobs:
     runs-on: ubuntu-latest
     container:
       image: ghcr.io/paulsengroup/ci-docker-images/centos7-gcc-11:latest
-      options: "-v ${{ github.workspace }}:${{ github.workspace }}"
+      options: "--user=root"
 
     steps:
       - name: Checkout repo
@@ -65,7 +62,7 @@ jobs:
 
           os="centos-7"
           compiler="gcc-11"
-          hash="${{ hashFiles('conanfile.py', '.github/workflows/build-portable-binary-ubuntu.yml') }}"
+          hash="${{ hashFiles('conanfile.txt', '.github/workflows/build-portable-binary-ubuntu.yml') }}"
 
           # This can be used by to always update a cache entry (useful e.g. for ccache)
           current_date="$(date '+%s')"
@@ -94,27 +91,27 @@ jobs:
           conan remove -f "*" --src
           conan remove -f "*" --system-reqs
 
-      - name: Build conanfile.py
-        if: steps.cache-conan.outputs.cache-hit != 'true'
+      - name: Build conanfile.txt
         run: |
-          # Workaround GLIBCXX version mismatch
-          printf '[requires]\nb2/4.9.2\n' > /tmp/conanfile.txt
-
+          # We need to rebuild b2 to workaround GLIBCXX incompatibilities
           PATH="/opt/rh/devtoolset-11/root/usr/bin/:$PATH" \
-          conan install /tmp/conanfile.txt --build=b2
-
-          conan install conanfile.py          \
-               --build=outdated               \
-               --update                       \
-               -s build_type=Release
+          conan install conanfile.txt              \
+               --build=missing                     \
+               --build=cascade                     \
+               --build="b2*"                       \
+               -pr:b="$CONAN_DEFAULT_PROFILE_PATH" \
+               -pr:h="$CONAN_DEFAULT_PROFILE_PATH" \
+               -s build_type=Release               \
+               -s compiler.libcxx=libstdc++11      \
+               -s compiler.cppstd=17               \
+               --output-folder=build/
 
       - name: Clean Conan cache (post-build)
         if: steps.cache-conan.outputs.cache-hit != 'true'
         run: |
-          conan remove -f "*" --builds
-          conan remove -f "*" --src
-          conan remove -f "*" --system-reqs
-          conan remove -f "*" --outdated
+          conan cache clean "*" --build
+          conan cache clean "*" --download
+          conan cache clean "*" --source
 
       - name: Cache Ccache folder
         uses: actions/cache@v3
@@ -124,27 +121,23 @@ jobs:
           path: ${{ env.CCACHE_DIR }}
 
       - name: Configure project
-        working-directory: ${{ github.workspace }}
         run: |
-          git config --global --add safe.directory ${{ github.workspace }}
-          mkdir ${{ github.workspace }}/build
           cmake -DCMAKE_BUILD_TYPE=Release            \
+                -DCMAKE_PREFIX_PATH="$PWD/build"      \
                 -DMODLE_ENABLE_TESTING=ON             \
                 -DMODLE_DOWNLOAD_TEST_DATASET=OFF     \
                 -DENABLE_DEVELOPER_MODE=OFF           \
                 -DCMAKE_INSTALL_PREFIX="/tmp/modle/"  \
-                -S "${{ github.workspace }}"          \
-                -B "${{ github.workspace }}/build"
+                -S .                                  \
+                -B build/
 
       - name: Build project
-        working-directory: ${{ github.workspace }}
         run: cmake --build build -j $(nproc)
 
       - name: Print Ccache statistics
         run: ccache -s
 
       - name: Install project
-        working-directory: ${{ github.workspace }}
         run: |
           cmake --install build/
           cp build/test/test_main /tmp/modle/bin
@@ -176,7 +169,7 @@ jobs:
     needs: [build-portable-binaries, cache-test-datasets]
     container:
       image: centos:7
-      options: "-v ${{ github.workspace }}:${{ github.workspace }}"
+      options: "--user=root"
 
     steps:
       - uses: actions/checkout@v3
@@ -197,7 +190,7 @@ jobs:
           tar -xf modle_test_data.tar.xz
 
       - name: Run unit tests
-        run: modle/bin/test_main --durations=yes 'exclude:*SciPy*' 'exclude:*wCorr*'
+        run: modle/bin/test_main --durations=yes
 
 
   run-modle-integration-test:
@@ -205,8 +198,8 @@ jobs:
     runs-on: ubuntu-latest
     needs: [build-portable-binaries, cache-test-datasets]
     container:
-      image: ghcr.io/${{ github.repository_owner }}/ci-docker-images/modle/ubuntu-22.04-cxx-clang-14:latest
-      options: "-v ${{ github.workspace }}:${{ github.workspace }}"
+      image: ghcr.io/${{ github.repository_owner }}/ci-docker-images/modle/ubuntu-22.04-cxx-clang-15:latest
+      options: "--user=root"
 
     steps:
       - uses: actions/checkout@v3
@@ -228,8 +221,7 @@ jobs:
           tar -xf modle_test_data.tar.xz
 
       - name: Run modle integration test(s)
-        working-directory: ${{ github.workspace }}/test/scripts
-        run: ./modle_integration_test.sh ${{ github.workspace }}/modle/bin/modle
+        run: test/scripts/modle_integration_test.sh modle/bin/modle
 
 
   run-modle-tools-integration-test:
@@ -237,8 +229,8 @@ jobs:
     runs-on: ubuntu-latest
     needs: [build-portable-binaries, cache-test-datasets]
     container:
-      image: ghcr.io/${{ github.repository_owner }}/ci-docker-images/modle/ubuntu-22.04-cxx-clang-14:latest
-      options: "-v ${{ github.workspace }}:${{ github.workspace }}"
+      image: ghcr.io/${{ github.repository_owner }}/ci-docker-images/modle/ubuntu-22.04-cxx-clang-15:latest
+      options: "--user=root"
 
     steps:
       - uses: actions/checkout@v3
@@ -260,12 +252,10 @@ jobs:
           tar -xf modle_test_data.tar.xz
 
       - name: Run modle_tools transform integration test(s)
-        working-directory: ${{ github.workspace }}/test/scripts
-        run: ./modle_tools_transform_integration_test.sh ${{ github.workspace }}/modle/bin/modle_tools
+        run: test/scripts/modle_tools_transform_integration_test.sh modle/bin/modle_tools
 
       - name: Run modle_tools evaluate integration test(s)
-        working-directory: ${{ github.workspace }}/test/scripts
-        run: ./modle_tools_eval_integration_test.sh ${{ github.workspace }}/modle/bin/modle_tools
+        run: test/scripts/modle_tools_eval_integration_test.sh modle/bin/modle_tools
 
 
   run-portability-test:
@@ -288,7 +278,7 @@ jobs:
 
     container:
       image: ${{ matrix.image }}
-      options: "-v ${{ github.workspace }}:${{ github.workspace }}"
+      options: "--user=root"
 
     steps:
       - name: Install dependencies (Ubuntu)
