@@ -368,14 +368,14 @@ class Simulation : Config {
 
   /// Register contacts for chromosome \p chrom using the position the extrusion units of the LEFs
   /// in \p lefs whose index is present in \p selected_lef_idx.
-  void register_contacts_loop(Chromosome& chrom, absl::Span<const Lef> lefs,
+  void register_contacts_loop(usize epoch, Chromosome& chrom, absl::Span<const Lef> lefs,
                               usize num_contacts_to_register, random::PRNG_t& rand_eng) const;
-  void register_contacts_loop(bp_t start_pos, bp_t end_pos,
+  void register_contacts_loop(usize epoch, bp_t start_pos, bp_t end_pos,
                               ContactMatrixDense<contacts_t>& contacts, absl::Span<const Lef> lefs,
                               usize num_contacts_to_register, random::PRNG_t& rand_eng) const;
-  void register_contacts_tad(Chromosome& chrom, absl::Span<const Lef> lefs,
+  void register_contacts_tad(usize epoch, Chromosome& chrom, absl::Span<const Lef> lefs,
                              usize num_contacts_to_register, random::PRNG_t& rand_eng) const;
-  void register_contacts_tad(bp_t start_pos, bp_t end_pos, ContactMatrixDense<contacts_t>& contacts,
+  void register_contacts_tad(usize epoch, bp_t start_pos, bp_t end_pos, ContactMatrixDense<contacts_t>& contacts,
                              absl::Span<const Lef> lefs, usize num_contacts_to_register,
                              random::PRNG_t& rand_eng) const;
 

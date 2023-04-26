@@ -6,10 +6,10 @@
 #include "modle/simulation.hpp"
 // clang-format on
 
-#include <absl/types/span.h>  // for Span
+#include <absl/types/span.h>                               // for Span
 
-#include <algorithm>  // for min, all_of
-#include <cassert>    // for assert
+#include <algorithm>                                       // for min, all_of
+#include <cassert>                                         // for assert
 
 #include "modle/common/common.hpp"                         // for usize, bp_t, contacts_t, MODLE...
 #include "modle/common/genextreme_value_distribution.hpp"  // for genextreme_value_distribution
@@ -109,8 +109,8 @@ void Simulation::sample_and_register_contacts(State& s, usize num_sampling_event
   const auto num_tad_contacts = num_sampling_events - num_loop_contacts;
 
   assert(s.chrom);
-  this->register_contacts_loop(*s.chrom, s.get_lefs(), num_loop_contacts, s.rand_eng);
-  this->register_contacts_tad(*s.chrom, s.get_lefs(), num_tad_contacts, s.rand_eng);
+  this->register_contacts_loop(s.epoch, *s.chrom, s.get_lefs(), num_loop_contacts, s.rand_eng);
+  this->register_contacts_tad(s.epoch, *s.chrom, s.get_lefs(), num_tad_contacts, s.rand_eng);
 
   if (this->track_1d_lef_position) {
     this->register_1d_lef_occupancy(*s.chrom, s.get_lefs(), num_sampling_events, s.rand_eng);
@@ -120,7 +120,7 @@ void Simulation::sample_and_register_contacts(State& s, usize num_sampling_event
   assert(s.num_contacts <= s.num_target_contacts);
 }
 
-void Simulation::register_contacts_loop(const bp_t start_pos, const bp_t end_pos,
+void Simulation::register_contacts_loop(usize epoch, const bp_t start_pos, const bp_t end_pos,
                                         ContactMatrixDense<contacts_t>& contacts,
                                         const absl::Span<const Lef> lefs,
                                         usize num_contacts_to_register,
@@ -149,12 +149,13 @@ void Simulation::register_contacts_loop(const bp_t start_pos, const bp_t end_pos
       const auto pos1 = static_cast<bp_t>(p1) - start_pos;
       const auto pos2 = static_cast<bp_t>(p2) - start_pos;
       contacts.increment(pos1 / this->bin_size, pos2 / this->bin_size);
+      fmt::print(stdout, FMT_STRING("{}\t{}\t{}\n"), epoch, pos1, pos2);
       --num_contacts_to_register;
     }
   }
 }
 
-void Simulation::register_contacts_tad(bp_t start_pos, bp_t end_pos,
+void Simulation::register_contacts_tad(usize epoch, bp_t start_pos, bp_t end_pos,
                                        ContactMatrixDense<contacts_t>& contacts,
                                        absl::Span<const Lef> lefs, usize num_contacts_to_register,
                                        random::PRNG_t& rand_eng) const {
@@ -186,6 +187,7 @@ void Simulation::register_contacts_tad(bp_t start_pos, bp_t end_pos,
       const auto pos1 = static_cast<bp_t>(p11) - start_pos;
       const auto pos2 = static_cast<bp_t>(p22) - start_pos;
       contacts.increment(pos1 / this->bin_size, pos2 / this->bin_size);
+      fmt::print(stdout, FMT_STRING("{}\t{}\t{}\n"), epoch, pos1, pos2);
       --num_contacts_to_register;
     }
   }
@@ -225,18 +227,19 @@ void Simulation::register_1d_lef_occupancy(bp_t start_pos, bp_t end_pos,
   }
 }
 
-void Simulation::register_contacts_loop(Chromosome& chrom, const absl::Span<const Lef> lefs,
+void Simulation::register_contacts_loop(usize epoch, Chromosome& chrom,
+                                        const absl::Span<const Lef> lefs,
                                         usize num_contacts_to_register,
                                         random::PRNG_t& rand_eng) const {
-  this->register_contacts_loop(chrom.start_pos() + 1, chrom.end_pos() - 1, chrom.contacts(), lefs,
-                               num_contacts_to_register, rand_eng);
+  this->register_contacts_loop(epoch, chrom.start_pos() + 1, chrom.end_pos() - 1, chrom.contacts(),
+                               lefs, num_contacts_to_register, rand_eng);
 }
 
-void Simulation::register_contacts_tad(Chromosome& chrom, absl::Span<const Lef> lefs,
+void Simulation::register_contacts_tad(usize epoch, Chromosome& chrom, absl::Span<const Lef> lefs,
                                        usize num_contacts_to_register,
                                        random::PRNG_t& rand_eng) const {
-  this->register_contacts_tad(chrom.start_pos() + 1, chrom.end_pos() - 1, chrom.contacts(), lefs,
-                              num_contacts_to_register, rand_eng);
+  this->register_contacts_tad(epoch, chrom.start_pos() + 1, chrom.end_pos() - 1, chrom.contacts(),
+                              lefs, num_contacts_to_register, rand_eng);
 }
 
 void Simulation::register_1d_lef_occupancy(modle::Chromosome& chrom, absl::Span<const Lef> lefs,
