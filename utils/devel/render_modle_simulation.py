@@ -178,6 +178,12 @@ def make_cli() -> argparse.ArgumentParser:
         help="Max number of epochs to render. When not specified, render all available epochs.",
     )
     cli.add_argument(
+        "--step",
+        type=positive_int,
+        default=1,
+        help="Render one frame every --step epoch.",
+    )
+    cli.add_argument(
         "--video-encoder",
         type=str,
         default="libx265",
@@ -247,11 +253,13 @@ def compute_boundaries(df: pd.DataFrame, resolution: int) -> Tuple[int, int]:
 
 
 def df_to_numpy(df, shape) -> npt.NDArray[int]:
+    interactions = df.groupby(["bin1", "bin2"])["n"].sum()
+    idx1 = interactions.index.get_level_values("bin1")
+    idx2 = interactions.index.get_level_values("bin2")
+
     m = np.zeros([shape, shape], dtype=int)
-    for _, (bin1, bin2, n) in df[["bin1", "bin2", "n"]].iterrows():
-        m[bin1, bin2] += n
-        m[bin2, bin1] += n
-    return m
+    m[idx1, idx2] = interactions
+    return np.triu(m, 1) + m.T
 
 
 def plot_heatmap(
@@ -350,6 +358,7 @@ def main():
     grey_cmap.set_under("k", alpha=0)
 
     resolution = args["resolution"]
+    step = args["step"]
     outname = args["output-video"]
     if not args["force"]:
         handle_path_collisions(outname)
@@ -358,6 +367,7 @@ def main():
 
     start_pos, end_pos = compute_boundaries(df, resolution)
     shape = (end_pos - start_pos) // resolution
+    first_epoch = df["epoch"].min()
 
     vmax = compute_vmax(df)
     ffmpeg_args = get_ffmpeg_args(
@@ -370,23 +380,24 @@ def main():
         with manager.Pool(args["nproc"]) as pool:
             ffmpeg = pool.apply_async(run_ffmpeg, (ffmpeg_args, outname, task_queue))
 
-            for i, (_, df1) in enumerate(df.groupby("epoch")):
+            for epoch, df1 in df.groupby("epoch"):
                 foreground_matrix = df_to_numpy(df1[["bin1", "bin2", "n"]], shape)
                 background_matrix += foreground_matrix
 
-                task_queue.put(
-                    pool.apply_async(
-                        plot_heatmap_worker,
-                        (
-                            background_matrix,
-                            foreground_matrix,
-                            i,
-                            vmax,
-                            fall_cmap,
-                            grey_cmap,
-                        ),
+                if (epoch - first_epoch) % step == 0:
+                    task_queue.put(
+                        pool.apply_async(
+                            plot_heatmap_worker,
+                            (
+                                background_matrix,
+                                foreground_matrix,
+                                epoch,
+                                vmax,
+                                fall_cmap,
+                                grey_cmap,
+                            ),
+                        )
                     )
-                )
 
             task_queue.put(None)
             ffmpeg.wait()
