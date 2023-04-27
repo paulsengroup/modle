@@ -97,7 +97,11 @@ PALETTES = {
 
 @functools.cache
 def get_ffmpeg_args(
-    ffmpeg_path: Union[None, pathlib.Path], fps: int, crf: int, nthreads: int
+    ffmpeg_path: Union[None, pathlib.Path],
+    encoder: str,
+    fps: int,
+    crf: int,
+    nthreads: int,
 ) -> List[str]:
     if ffmpeg_path is None:
         raise RuntimeError("Unable to find ffmpeg!")
@@ -112,7 +116,7 @@ def get_ffmpeg_args(
         "-i",
         "-",
         "-c:v",
-        "libsvtav1",
+        encoder,
         "-threads",
         str(nthreads),
         "-crf",
@@ -186,7 +190,7 @@ def make_cli() -> argparse.ArgumentParser:
     cli.add_argument(
         "--video-encoder",
         type=str,
-        default="libx265",
+        default="libx264",
         help="Video encoder to pass to ffmpeg.",
     )
     cli.add_argument(
@@ -371,7 +375,11 @@ def main():
 
     vmax = compute_vmax(df)
     ffmpeg_args = get_ffmpeg_args(
-        shutil.which(args["ffmpeg"]), args["fps"], args["crf"], args["encoding_threads"]
+        shutil.which(args["ffmpeg"]),
+        args["video_encoder"],
+        args["fps"],
+        args["crf"],
+        args["encoding_threads"],
     )
 
     background_matrix = np.zeros([shape, shape], dtype=int)
