@@ -117,6 +117,8 @@ def get_ffmpeg_args(
         "-",
         "-c:v",
         encoder,
+        "-vf",
+        "pad=ceil(iw/2)*2:ceil(ih/2)*2",
         "-threads",
         str(nthreads),
         "-crf",
@@ -165,6 +167,12 @@ def make_cli() -> argparse.ArgumentParser:
 
         raise ValueError("Not a positive integer")
 
+    def non_negative_int(arg):
+        if (n := int(arg)) >= 0:
+            return n
+
+        raise ValueError("Not a non-negative integer")
+
     cli.add_argument(
         "tsv",
         type=pathlib.Path,
@@ -176,6 +184,7 @@ def make_cli() -> argparse.ArgumentParser:
     cli.add_argument(
         "output-video", type=pathlib.Path, help="Path where to store the output video."
     )
+    cli.add_argument("--burnin-epochs", type=non_negative_int)
     cli.add_argument(
         "--max-epochs",
         type=positive_int,
@@ -220,6 +229,12 @@ def make_cli() -> argparse.ArgumentParser:
         help="Frames per second used for rendering.",
     )
     cli.add_argument(
+        "--dpi",
+        type=positive_int,
+        default=150,
+        help="DPI used for plotting.",
+    )
+    cli.add_argument(
         "--crf",
         type=positive_int,
         default=26,
@@ -231,6 +246,13 @@ def make_cli() -> argparse.ArgumentParser:
         default="ffmpeg",
         help="Path to ffmpeg binary (required if ffmpeg is not in PATH).",
     )
+    cli.add_argument(
+        "--strategy",
+        type=str,
+        choices={"loop-only", "tad-only", "loop-plus-tad", "loop-then-tad"},
+        default="loop-plus-tad",
+    )
+    cli.add_argument("--highlight-new-interactions", action="store_true", default=False)
 
     return cli
 
@@ -248,12 +270,10 @@ def handle_path_collisions(*paths: pathlib.Path) -> None:
 
 
 def compute_boundaries(df: pd.DataFrame, resolution: int) -> Tuple[int, int]:
-    start_pos = (min(df["pos1"].min(), df["pos2"].min()) // resolution) * resolution
-    end_pos = (
-        (max(df["pos1"].max(), df["pos2"].max()) + resolution - 1) // resolution
-    ) * resolution
+    bin1 = min(df["pos1"].min(), df["pos2"].min()) // resolution
+    bin2 = (max(df["pos1"].max(), df["pos2"].max()) + resolution - 1) // resolution
 
-    return start_pos, end_pos
+    return bin1 * resolution, bin2 * resolution
 
 
 def df_to_numpy(df, shape) -> npt.NDArray[int]:
@@ -287,8 +307,9 @@ def plot_heatmap(
         sns.heatmap(m, vmin=vmin, vmax=vmax, cmap=cmap, ax=ax, cbar=plot_colorbar)
 
 
-def plot_heatmap_worker(m1, m2, i, vmax, cmap1, cmap2) -> bytes:
+def plot_heatmap_worker(m1, m2, i, vmax, cmap1, cmap2, dpi) -> bytes:
     m2[m2 == 0] = -1
+    np.fill_diagonal(m2, 1)
 
     fig, ax = plt.subplots(1, 1)
     plot_heatmap(m1, 1, vmax, cmap1, ax=ax, log=True, plot_colorbar=True)
@@ -302,17 +323,20 @@ def plot_heatmap_worker(m1, m2, i, vmax, cmap1, cmap2) -> bytes:
         aspect="equal",
     )
     buffer = io.BytesIO()
-    fig.savefig(buffer, format="png", dpi=300)
+    fig.savefig(buffer, format="png", dpi=dpi, bbox_inches="tight")
     plt.close(fig)
     buffer.seek(0)
     return buffer.read()
 
 
 def import_data(
-    path_to_tsv: pathlib.Path, resolution: int, max_epochs: Union[None, int]
+    path_to_tsv: pathlib.Path,
+    resolution: int,
+    max_epochs: Union[None, int],
+    burnin_epochs: Union[None, int],
 ) -> pd.DataFrame:
-    df = pd.read_table(path_to_tsv, names=["epoch", "pos1", "pos2"]).sort_values(
-        ["epoch", "pos1"]
+    df = pd.read_table(
+        path_to_tsv, names=["epoch", "burnin_completed", "type", "pos1", "pos2"]
     )
 
     if max_epochs is not None:
@@ -320,14 +344,23 @@ def import_data(
 
     assert len(df) != 0
 
+    if burnin_epochs is not None:
+        assert burnin_epochs <= max_epochs
+        df["burnin_completed"] = df["epoch"] > burnin_epochs
+        df = df[(df["burnin_completed"]) | (df["type"].str.lower() == "loop")]
+
     df["bin1"] = df["pos1"] // resolution
     df["bin2"] = df["pos2"] // resolution
     df["n"] = 1
-    return df
+
+    epochs = np.arange(df["epoch"].min(), df["epoch"].max())
+    df["epoch"] = df["epoch"].astype(pd.CategoricalDtype(epochs, ordered=True))
+
+    return df.sort_values(["epoch", "pos1"])
 
 
 def compute_vmax(df: pd.DataFrame) -> int:
-    return df.groupby(["bin1", "bin2"])["n"].sum().max()
+    return df[df["burnin_completed"]].groupby(["bin1", "bin2"])["n"].sum().max()
 
 
 def run_ffmpeg(
@@ -353,13 +386,241 @@ def run_ffmpeg(
             ffmpeg.stdin.write(async_res.get())
 
 
+def group_and_plot_burnin(
+    df, background_matrix, first_epoch, step, queue, pool, vmax, bg_cmap, fg_cmap
+):
+    for epoch, df1 in df.groupby("epoch")[["bin1", "bin2", "n"]]:
+        foreground_matrix = df_to_numpy(df1, background_matrix.shape[0])
+        background_matrix += foreground_matrix
+
+        if (epoch - first_epoch) % step == 0:
+            queue.put(
+                pool.apply_async(
+                    plot_heatmap_worker,
+                    (
+                        background_matrix,
+                        foreground_matrix,
+                        epoch,
+                        vmax,
+                        bg_cmap,
+                        fg_cmap,
+                    ),
+                )
+            )
+
+    return background_matrix
+
+
+def group_and_plot(
+    df,
+    background_matrix,
+    first_epoch,
+    step,
+    queue,
+    pool,
+    dpi,
+    vmax,
+    bg_cmap,
+    fg_cmap,
+    higlight_new_interactions,
+):
+    for epoch, df1 in df.groupby("epoch")[["bin1", "bin2", "n", "burnin_completed"]]:
+        foreground_matrix = df_to_numpy(df1, background_matrix.shape[0])
+
+        if df1["burnin_completed"].all():
+            background_matrix += foreground_matrix
+        if not higlight_new_interactions:
+            foreground_matrix = np.zeros_like(foreground_matrix)
+
+        if (epoch - first_epoch) % step == 0:
+            queue.put(
+                pool.apply_async(
+                    plot_heatmap_worker,
+                    (
+                        background_matrix,
+                        foreground_matrix,
+                        epoch,
+                        vmax,
+                        bg_cmap,
+                        fg_cmap,
+                        dpi,
+                    ),
+                )
+            )
+
+    return background_matrix
+
+
+def plot_loop_only(
+    df: pd.DataFrame,
+    shape: int,
+    step: int,
+    pool: mp.Pool,
+    queue: mp.Queue,
+    bg_cmap,
+    fg_cmap,
+    higlight_new_interactions,
+    background_matrix=None,
+    first_epoch=None,
+    vmax=None,
+    dpi=300,
+):
+    df = df[df["type"].str.lower() == "loop"]
+
+    if first_epoch is None:
+        first_epoch = df["epoch"].min()
+    if vmax is None:
+        vmax = compute_vmax(df)
+    if background_matrix is None:
+        background_matrix = np.zeros([shape, shape], dtype=int)
+
+    return group_and_plot(
+        df,
+        background_matrix=background_matrix,
+        first_epoch=first_epoch,
+        step=step,
+        queue=queue,
+        pool=pool,
+        vmax=vmax,
+        bg_cmap=bg_cmap,
+        fg_cmap=fg_cmap,
+        dpi=dpi,
+        higlight_new_interactions=higlight_new_interactions,
+    )
+
+
+def plot_tad_only(
+    df: pd.DataFrame,
+    shape: int,
+    step: int,
+    pool: mp.Pool,
+    queue: mp.Queue,
+    bg_cmap,
+    fg_cmap,
+    higlight_new_interactions,
+    background_matrix=None,
+    first_epoch=None,
+    vmax=None,
+    dpi=300,
+):
+    df = df[df["type"].str.lower() == "tad"]
+
+    if first_epoch is None:
+        first_epoch = df["epoch"].min()
+    if vmax is None:
+        vmax = compute_vmax(df)
+    if background_matrix is None:
+        background_matrix = np.zeros([shape, shape], dtype=int)
+
+    return group_and_plot(
+        df,
+        background_matrix=background_matrix,
+        first_epoch=first_epoch,
+        step=step,
+        queue=queue,
+        pool=pool,
+        vmax=vmax,
+        bg_cmap=bg_cmap,
+        fg_cmap=fg_cmap,
+        dpi=dpi,
+        higlight_new_interactions=higlight_new_interactions,
+    )
+
+
+def plot_loop_then_tad(
+    df: pd.DataFrame,
+    shape: int,
+    step: int,
+    pool: mp.Pool,
+    queue: mp.Queue,
+    bg_cmap,
+    fg_cmap,
+    higlight_new_interactions,
+    background_matrix=None,
+    first_epoch=None,
+    vmax=None,
+    dpi=300,
+):
+    if first_epoch is None:
+        first_epoch = df["epoch"].min()
+    if vmax is None:
+        vmax = compute_vmax(df)
+    if background_matrix is None:
+        background_matrix = np.zeros([shape, shape], dtype=int)
+
+    background_matrix += group_and_plot(
+        df[df["type"].str.lower() == "loop"],
+        background_matrix=background_matrix.copy(),
+        first_epoch=first_epoch,
+        step=step,
+        queue=queue,
+        pool=pool,
+        vmax=vmax,
+        bg_cmap=bg_cmap,
+        fg_cmap=fg_cmap,
+        dpi=dpi,
+        higlight_new_interactions=higlight_new_interactions,
+    )
+
+    background_matrix += group_and_plot(
+        df[df["type"].str.lower() == "tad"],
+        background_matrix=background_matrix.copy(),
+        first_epoch=first_epoch,
+        step=step,
+        queue=queue,
+        pool=pool,
+        vmax=vmax,
+        bg_cmap=bg_cmap,
+        fg_cmap=fg_cmap,
+        dpi=dpi,
+        higlight_new_interactions=higlight_new_interactions,
+    )
+    return background_matrix
+
+
+def plot_tad_plus_loop(
+    df: pd.DataFrame,
+    shape: int,
+    step: int,
+    pool: mp.Pool,
+    queue: mp.Queue,
+    bg_cmap,
+    fg_cmap,
+    higlight_new_interactions,
+    background_matrix=None,
+    first_epoch=None,
+    vmax=None,
+    dpi=300,
+):
+    if first_epoch is None:
+        first_epoch = df["epoch"].min()
+    if vmax is None:
+        vmax = compute_vmax(df)
+    if background_matrix is None:
+        background_matrix = np.zeros([shape, shape], dtype=int)
+
+    return group_and_plot(
+        df,
+        background_matrix=background_matrix,
+        first_epoch=first_epoch,
+        step=step,
+        queue=queue,
+        pool=pool,
+        vmax=vmax,
+        bg_cmap=bg_cmap,
+        fg_cmap=fg_cmap,
+        dpi=dpi,
+        higlight_new_interactions=higlight_new_interactions,
+    )
+
+
 def main():
     _register_cmaps()
     args = vars(make_cli().parse_args())
 
-    fall_cmap = mpl.colormaps["fall"]
-    grey_cmap = mpl.colormaps["Greys"]
-    grey_cmap.set_under("k", alpha=0)
+    bg_cmap = mpl.colormaps["fall"]
+    fg_cmap = mpl.colormaps["Greys"]
+    fg_cmap.set_under("k", alpha=0)
 
     resolution = args["resolution"]
     step = args["step"]
@@ -367,13 +628,11 @@ def main():
     if not args["force"]:
         handle_path_collisions(outname)
 
-    df = import_data(args["tsv"], resolution, args["max_epochs"])
+    df = import_data(args["tsv"], resolution, args["max_epochs"], args["burnin_epochs"])
 
     start_pos, end_pos = compute_boundaries(df, resolution)
     shape = (end_pos - start_pos) // resolution
-    first_epoch = df["epoch"].min()
 
-    vmax = compute_vmax(df)
     ffmpeg_args = get_ffmpeg_args(
         shutil.which(args["ffmpeg"]),
         args["video_encoder"],
@@ -382,30 +641,32 @@ def main():
         args["encoding_threads"],
     )
 
-    background_matrix = np.zeros([shape, shape], dtype=int)
+    strategy = args["strategy"]
     with mp.Manager() as manager:
         task_queue = manager.Queue(maxsize=args["nproc"] * 5)
         with manager.Pool(args["nproc"]) as pool:
             ffmpeg = pool.apply_async(run_ffmpeg, (ffmpeg_args, outname, task_queue))
 
-            for epoch, df1 in df.groupby("epoch"):
-                foreground_matrix = df_to_numpy(df1[["bin1", "bin2", "n"]], shape)
-                background_matrix += foreground_matrix
+            if strategy == "loop-only":
+                plotter = plot_loop_only
+            elif strategy == "tad-only":
+                plotter = plot_tad_only
+            elif strategy == "loop-then-tad":
+                plotter = plot_loop_then_tad
+            else:
+                plotter = plot_tad_plus_loop
 
-                if (epoch - first_epoch) % step == 0:
-                    task_queue.put(
-                        pool.apply_async(
-                            plot_heatmap_worker,
-                            (
-                                background_matrix,
-                                foreground_matrix,
-                                epoch,
-                                vmax,
-                                fall_cmap,
-                                grey_cmap,
-                            ),
-                        )
-                    )
+            plotter(
+                df,
+                shape=shape,
+                step=step,
+                pool=pool,
+                queue=task_queue,
+                bg_cmap=bg_cmap,
+                fg_cmap=fg_cmap,
+                dpi=args["dpi"],
+                higlight_new_interactions=args["highlight_new_interactions"],
+            )
 
             task_queue.put(None)
             ffmpeg.wait()
