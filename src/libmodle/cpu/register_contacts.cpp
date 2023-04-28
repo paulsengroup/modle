@@ -92,7 +92,7 @@ struct PosPair {
 }
 
 void Simulation::sample_and_register_contacts(State& s, usize num_sampling_events) const {
-  assert(s.num_active_lefs == s.num_lefs);
+  // assert(s.num_active_lefs == s.num_lefs);
 
   // Ensure we do not overshoot the target contact density
   if (this->target_contact_density > 0.0) {
@@ -109,18 +109,21 @@ void Simulation::sample_and_register_contacts(State& s, usize num_sampling_event
   const auto num_tad_contacts = num_sampling_events - num_loop_contacts;
 
   assert(s.chrom);
-  this->register_contacts_loop(s.epoch, *s.chrom, s.get_lefs(), num_loop_contacts, s.rand_eng);
-  this->register_contacts_tad(s.epoch, *s.chrom, s.get_lefs(), num_tad_contacts, s.rand_eng);
+  this->register_contacts_loop(s.burnin_completed, s.epoch, *s.chrom, s.get_lefs(),
+                               num_loop_contacts, s.rand_eng);
+  this->register_contacts_tad(s.burnin_completed, s.epoch, *s.chrom, s.get_lefs(), num_tad_contacts,
+                              s.rand_eng);
 
   if (this->track_1d_lef_position) {
     this->register_1d_lef_occupancy(*s.chrom, s.get_lefs(), num_sampling_events, s.rand_eng);
   }
 
-  s.num_contacts += num_sampling_events;
+  s.num_contacts += s.burnin_completed * num_sampling_events;
   assert(s.num_contacts <= s.num_target_contacts);
 }
 
-void Simulation::register_contacts_loop(usize epoch, const bp_t start_pos, const bp_t end_pos,
+void Simulation::register_contacts_loop(bool burnin_completed, usize epoch, const bp_t start_pos,
+                                        const bp_t end_pos,
                                         ContactMatrixDense<contacts_t>& contacts,
                                         const absl::Span<const Lef> lefs,
                                         usize num_contacts_to_register,
@@ -148,15 +151,18 @@ void Simulation::register_contacts_loop(usize epoch, const bp_t start_pos, const
 
       const auto pos1 = static_cast<bp_t>(p1) - start_pos;
       const auto pos2 = static_cast<bp_t>(p2) - start_pos;
-      contacts.increment(pos1 / this->bin_size, pos2 / this->bin_size);
-      fmt::print(stdout, FMT_STRING("{}\t{}\t{}\n"), epoch, pos1, pos2);
-      --num_contacts_to_register;
+      if (burnin_completed) {
+        contacts.increment(pos1 / this->bin_size, pos2 / this->bin_size);
+      }
+      fmt::print(stdout, FMT_STRING("{}\t{}\t{}\t{}\t{}\n"), epoch, burnin_completed, "Loop", pos1,
+                 pos2);
     }
+    --num_contacts_to_register;
   }
 }
 
-void Simulation::register_contacts_tad(usize epoch, bp_t start_pos, bp_t end_pos,
-                                       ContactMatrixDense<contacts_t>& contacts,
+void Simulation::register_contacts_tad(bool burnin_completed, usize epoch, bp_t start_pos,
+                                       bp_t end_pos, ContactMatrixDense<contacts_t>& contacts,
                                        absl::Span<const Lef> lefs, usize num_contacts_to_register,
                                        random::PRNG_t& rand_eng) const {
   if (num_contacts_to_register == 0) {
@@ -171,6 +177,9 @@ void Simulation::register_contacts_tad(usize epoch, bp_t start_pos, bp_t end_pos
 
   while (num_contacts_to_register != 0) {
     const auto& lef = sample_lef_with_replacement(lefs, rand_eng);
+    if (!lef_within_bound(lef, start_pos, end_pos)) {
+      return;
+    }
     if (MODLE_LIKELY(lef.is_bound() && lef_within_bound(lef, start_pos, end_pos))) {
       const auto [p1, p2] =
           randomize_extrusion_unit_positions(lef, this->genextreme_mu, this->genextreme_sigma,
@@ -186,8 +195,11 @@ void Simulation::register_contacts_tad(usize epoch, bp_t start_pos, bp_t end_pos
 
       const auto pos1 = static_cast<bp_t>(p11) - start_pos;
       const auto pos2 = static_cast<bp_t>(p22) - start_pos;
-      contacts.increment(pos1 / this->bin_size, pos2 / this->bin_size);
-      fmt::print(stdout, FMT_STRING("{}\t{}\t{}\n"), epoch, pos1, pos2);
+      if (burnin_completed) {
+        contacts.increment(pos1 / this->bin_size, pos2 / this->bin_size);
+      }
+      fmt::print(stdout, FMT_STRING("{}\t{}\t{}\t{}\t{}\n"), epoch, burnin_completed, "TAD", pos1,
+                 pos2);
       --num_contacts_to_register;
     }
   }
@@ -227,19 +239,19 @@ void Simulation::register_1d_lef_occupancy(bp_t start_pos, bp_t end_pos,
   }
 }
 
-void Simulation::register_contacts_loop(usize epoch, Chromosome& chrom,
+void Simulation::register_contacts_loop(bool burnin_completed, usize epoch, Chromosome& chrom,
                                         const absl::Span<const Lef> lefs,
                                         usize num_contacts_to_register,
                                         random::PRNG_t& rand_eng) const {
-  this->register_contacts_loop(epoch, chrom.start_pos() + 1, chrom.end_pos() - 1, chrom.contacts(),
-                               lefs, num_contacts_to_register, rand_eng);
+  this->register_contacts_loop(burnin_completed, epoch, chrom.start_pos() + 1, chrom.end_pos() - 1,
+                               chrom.contacts(), lefs, num_contacts_to_register, rand_eng);
 }
 
-void Simulation::register_contacts_tad(usize epoch, Chromosome& chrom, absl::Span<const Lef> lefs,
-                                       usize num_contacts_to_register,
+void Simulation::register_contacts_tad(bool burnin_completed, usize epoch, Chromosome& chrom,
+                                       absl::Span<const Lef> lefs, usize num_contacts_to_register,
                                        random::PRNG_t& rand_eng) const {
-  this->register_contacts_tad(epoch, chrom.start_pos() + 1, chrom.end_pos() - 1, chrom.contacts(),
-                              lefs, num_contacts_to_register, rand_eng);
+  this->register_contacts_tad(burnin_completed, epoch, chrom.start_pos() + 1, chrom.end_pos() - 1,
+                              chrom.contacts(), lefs, num_contacts_to_register, rand_eng);
 }
 
 void Simulation::register_1d_lef_occupancy(modle::Chromosome& chrom, absl::Span<const Lef> lefs,

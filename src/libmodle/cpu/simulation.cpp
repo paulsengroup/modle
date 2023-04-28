@@ -14,33 +14,33 @@
 #include <cpp-sort/sorters/pdq_sorter.h>        // for pdq_sort, pdq_sorter
 #include <cpp-sort/sorters/split_sorter.h>      // for split_sort, split_sorter
 #include <fmt/compile.h>
-#include <spdlog/spdlog.h>  // for info, warn
+#include <spdlog/spdlog.h>                      // for info, warn
 
-#include <BS_thread_pool.hpp>  // for BS::thread_pool
-#include <algorithm>           // for max, fill, min, copy, clamp
-#include <atomic>              // for atomic
-#include <cassert>             // for assert
-#include <chrono>              // for microseconds
-#include <cmath>               // for log, round, exp, floor, sqrt
+#include <BS_thread_pool.hpp>                   // for BS::thread_pool
+#include <algorithm>                            // for max, fill, min, copy, clamp
+#include <atomic>                               // for atomic
+#include <cassert>                              // for assert
+#include <chrono>                               // for microseconds
+#include <cmath>                                // for log, round, exp, floor, sqrt
 #include <coolerpp/coolerpp.hpp>
-#include <cstdlib>      // for abs
-#include <deque>        // for _Deque_iterator<>::_Self
-#include <filesystem>   // for operator<<, path
-#include <iosfwd>       // for streamsize
-#include <limits>       // for numeric_limits
-#include <memory>       // for shared_ptr, unique_ptr, make...
-#include <mutex>        // for mutex
-#include <numeric>      // for iota
-#include <stdexcept>    // for runtime_error
-#include <string>       // for string
-#include <string_view>  // for string_view
-#include <thread>       // IWYU pragma: keep for sleep_for
-#include <utility>      // for make_pair, pair
-#include <vector>       // for vector, vector<>::iterator
+#include <cstdlib>                              // for abs
+#include <deque>                                // for _Deque_iterator<>::_Self
+#include <filesystem>                           // for operator<<, path
+#include <iosfwd>                               // for streamsize
+#include <limits>                               // for numeric_limits
+#include <memory>                               // for shared_ptr, unique_ptr, make...
+#include <mutex>                                // for mutex
+#include <numeric>                              // for iota
+#include <stdexcept>                            // for runtime_error
+#include <string>                               // for string
+#include <string_view>                          // for string_view
+#include <thread>                               // IWYU pragma: keep for sleep_for
+#include <utility>                              // for make_pair, pair
+#include <vector>                               // for vector, vector<>::iterator
 
 #include "modle/bigwig/bigwig.hpp"
-#include "modle/common/common.hpp"  // for bp_t, contacts_t
-#include "modle/common/dna.hpp"     // for dna::REV, dna::FWD
+#include "modle/common/common.hpp"                         // for bp_t, contacts_t
+#include "modle/common/dna.hpp"                            // for dna::REV, dna::FWD
 #include "modle/common/fmt_helpers.hpp"
 #include "modle/common/genextreme_value_distribution.hpp"  // for genextreme_value_distribution
 #include "modle/common/random.hpp"             // for bernoulli_trial, poisson_distribution
@@ -48,10 +48,10 @@
 #include "modle/common/simulation_config.hpp"  // for Config
 #include "modle/common/utils.hpp"              // for parse_numeric_or_throw, ndeb...
 #include "modle/config/version.hpp"
-#include "modle/extrusion_barriers.hpp"  // for ExtrusionBarrier, update_states
-#include "modle/extrusion_factors.hpp"   // for Lef, ExtrusionUnit
-#include "modle/genome.hpp"              // for Genome::iterator, Chromosome
-#include "modle/interval_tree.hpp"       // for IITree, IITree::data
+#include "modle/extrusion_barriers.hpp"        // for ExtrusionBarrier, update_states
+#include "modle/extrusion_factors.hpp"         // for Lef, ExtrusionUnit
+#include "modle/genome.hpp"                    // for Genome::iterator, Chromosome
+#include "modle/interval_tree.hpp"             // for IITree, IITree::data
 #include "modle/io/contact_matrix_dense.hpp"
 #include "modle/stats/descriptive.hpp"
 
@@ -956,13 +956,13 @@ void Simulation::simulate_one_cell(State& s) const {
     // equilibrium
     s.barriers.init_states(s.rand_eng);
 
-    if (this->skip_burnin) {
+    if (this->skip_burnin || s.num_lefs == 1) {
       s.num_active_lefs = s.num_lefs;
       s.burnin_completed = true;
     }
 
     auto stop_condition = [this, &s]() {
-      if (this->target_contact_density >= 0) {
+      if (this->target_contact_density > 0) {
         assert(s.num_target_contacts != 0);
         return s.num_contacts < s.num_target_contacts;
       }
@@ -980,9 +980,9 @@ void Simulation::simulate_one_cell(State& s) const {
 
       // Select inactive LEFs and bind them
       Simulation::select_and_bind_lefs(s);
-      if (s.burnin_completed) {  // Register contacts
+      if ((s.burnin_completed || true) && s.num_active_lefs != 0) {  // Register contacts
         this->sample_and_register_contacts(s, sampling_events_per_epoch);
-        if (s.num_target_contacts != 0 && s.num_contacts >= s.num_target_contacts) {
+        if (!stop_condition()) {
           spdlog::debug(FMT_STRING("Simulation for cell #{} of {} took {} epochs ({} for burnin "
                                    "and {} for the rest of the simulation)"),
                         s.cell_id, s.chrom->name(), s.epoch, s.num_burnin_epochs,

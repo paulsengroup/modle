@@ -4,24 +4,24 @@
 
 #pragma once
 
-#include <absl/container/flat_hash_set.h>        // for flat_hash_set
-#include <absl/types/span.h>                     // for Span
-#include <fmt/format.h>                          // for format_parse_context, formatter
-#include <moodycamel/blockingconcurrentqueue.h>  // for BlockingConcurrentQueue
-#include <xxhash.h>                              // for XXH_INLINE_XXH3_createState, XXH3...
+#include <absl/container/flat_hash_set.h>               // for flat_hash_set
+#include <absl/types/span.h>                            // for Span
+#include <fmt/format.h>                                 // for format_parse_context, formatter
+#include <moodycamel/blockingconcurrentqueue.h>         // for BlockingConcurrentQueue
+#include <xxhash.h>                                     // for XXH_INLINE_XXH3_createState, XXH3...
 
-#include <BS_thread_pool.hpp>  // for BS::thread_pool
-#include <atomic>              // for atomic
-#include <deque>               // for deque
-#include <exception>           // for exception_ptr
-#include <filesystem>          // for path
-#include <limits>              // for numeric_limits
-#include <memory>              // for shared_ptr, allocator, unique_ptr
-#include <mutex>               // for mutex
-#include <string>              // for string
-#include <string_view>         // for string_view
-#include <utility>             // for pair
-#include <vector>              // for vector
+#include <BS_thread_pool.hpp>                           // for BS::thread_pool
+#include <atomic>                                       // for atomic
+#include <deque>                                        // for deque
+#include <exception>                                    // for exception_ptr
+#include <filesystem>                                   // for path
+#include <limits>                                       // for numeric_limits
+#include <memory>                                       // for shared_ptr, allocator, unique_ptr
+#include <mutex>                                        // for mutex
+#include <string>                                       // for string
+#include <string_view>                                  // for string_view
+#include <utility>                                      // for pair
+#include <vector>                                       // for vector
 
 #include "modle/bed/bed.hpp"                            // for BED (ptr only), BED_tree
 #include "modle/collision_encoding.hpp"                 // for Collision<>
@@ -72,7 +72,7 @@ class Simulation : Config {
     static Task from_string(std::string_view serialized_task, Genome& genome);
   };
 
-  struct State : Task {  // NOLINT(altera-struct-pack-align)
+  struct State : Task {            // NOLINT(altera-struct-pack-align)
     State() = default;
     usize epoch{};                 // NOLINT
     bool burnin_completed{false};  // NOLINT
@@ -80,13 +80,13 @@ class Simulation : Config {
     usize num_burnin_epochs{0};    // NOLINT
     usize num_contacts{0};         // NOLINT
 
-    random::PRNG_t rand_eng{};  // NOLINT
-    u64 seed{};                 // NOLINT
+    random::PRNG_t rand_eng{};     // NOLINT
+    u64 seed{};                    // NOLINT
     DISABLE_WARNING_PUSH
     DISABLE_WARNING_USED_BUT_MARKED_UNUSED
     std::unique_ptr<XXH3_state_t, utils::XXH3_Deleter> xxh_state{XXH3_createState()};  // NOLINT
     DISABLE_WARNING_POP
-    std::unique_ptr<compressed_io::Writer> model_state_logger{nullptr};  // NOLINT
+    std::unique_ptr<compressed_io::Writer> model_state_logger{nullptr};                // NOLINT
 
     ExtrusionBarriers barriers{};
 
@@ -368,16 +368,18 @@ class Simulation : Config {
 
   /// Register contacts for chromosome \p chrom using the position the extrusion units of the LEFs
   /// in \p lefs whose index is present in \p selected_lef_idx.
-  void register_contacts_loop(usize epoch, Chromosome& chrom, absl::Span<const Lef> lefs,
-                              usize num_contacts_to_register, random::PRNG_t& rand_eng) const;
-  void register_contacts_loop(usize epoch, bp_t start_pos, bp_t end_pos,
+  void register_contacts_loop(bool burnin_completed, usize epoch, Chromosome& chrom,
+                              absl::Span<const Lef> lefs, usize num_contacts_to_register,
+                              random::PRNG_t& rand_eng) const;
+  void register_contacts_loop(bool burnin_completed, usize epoch, bp_t start_pos, bp_t end_pos,
                               ContactMatrixDense<contacts_t>& contacts, absl::Span<const Lef> lefs,
                               usize num_contacts_to_register, random::PRNG_t& rand_eng) const;
-  void register_contacts_tad(usize epoch, Chromosome& chrom, absl::Span<const Lef> lefs,
-                             usize num_contacts_to_register, random::PRNG_t& rand_eng) const;
-  void register_contacts_tad(usize epoch, bp_t start_pos, bp_t end_pos, ContactMatrixDense<contacts_t>& contacts,
+  void register_contacts_tad(bool burnin_completed, usize epoch, Chromosome& chrom,
                              absl::Span<const Lef> lefs, usize num_contacts_to_register,
                              random::PRNG_t& rand_eng) const;
+  void register_contacts_tad(bool burnin_completed, usize epoch, bp_t start_pos, bp_t end_pos,
+                             ContactMatrixDense<contacts_t>& contacts, absl::Span<const Lef> lefs,
+                             usize num_contacts_to_register, random::PRNG_t& rand_eng) const;
 
   void register_1d_lef_occupancy(Chromosome& chrom, absl::Span<const Lef> lefs,
                                  usize num_sampling_events, random::PRNG_t& rand_eng) const;
