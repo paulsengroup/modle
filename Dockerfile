@@ -124,6 +124,7 @@ RUN pip3 install 'cooler>=0.9.1' 'pyBigWig>=0.3.22'
 COPY --from=unit-testing "$staging_dir" "$staging_dir"
 COPY test/data/modle_test_data.tar.xz "$src_dir/test/data/"
 COPY test/scripts/modle*integration_test.sh "$src_dir/test/scripts/"
+COPY test/scripts/compare_bwigs.py "$src_dir/test/scripts/"
 
 RUN tar -xf "$src_dir/test/data/modle_test_data.tar.xz" -C "$src_dir/"
 
