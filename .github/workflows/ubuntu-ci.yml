@@ -423,7 +423,7 @@ jobs:
         run: bin/modle_tools --version
 
       - name: Run modle_tools transform integration test(s)
-        run: test/scripts/modle_tools_transform_integration_test.sh /bin/modle_tools | head -n 1000
+        run: test/scripts/modle_tools_transform_integration_test.sh bin/modle_tools | head -n 1000
 
       - name: Run modle_tools evaluate integration test(s)
         run: test/scripts/modle_tools_eval_integration_test.sh bin/modle_tools | head -n 1000
