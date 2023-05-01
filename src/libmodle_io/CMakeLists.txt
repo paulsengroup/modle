@@ -9,7 +9,6 @@ find_package(LibArchive CONFIG REQUIRED)
 find_package(BigWig CONFIG REQUIRED)
 find_package(readerwriterqueue CONFIG REQUIRED)
 find_package(spdlog CONFIG REQUIRED)
-find_package(ZLIB CONFIG REQUIRED)
 find_package(xxHash CONFIG REQUIRED)
 
 # BED

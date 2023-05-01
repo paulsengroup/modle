@@ -31,6 +31,7 @@ xoshiro-cpp/1.1#94bd663a04c5335309723bfb757ae23c
 xxhash/0.8.1#b60fcc5f9821c988a155935d87562e1d
 xz_utils/5.4.2#b6ee8320403def553418874435445982
 zlib/1.2.13#e377bee636333ae348d51ca90874e353
+zlib-ng/2.0.7#fbf3d453595da4be4245283c4ca065b8
 zstd/1.5.5#93372fe14bb7883bd4de82914e0a1841
 
 [generators]
@@ -92,4 +93,5 @@ libarchive*:with_zstd=True
 libbigwig*:with_curl=False
 libbigwig*:with_zlibng=True
 xxhash*:utility=False
+zlib-ng*:with_optim=True
 zlib-ng*:zlib_compat=True
