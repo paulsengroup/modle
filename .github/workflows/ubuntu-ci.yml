@@ -145,6 +145,10 @@ jobs:
       - name: Checkout repo
         uses: actions/checkout@v3
 
+      - name: Fix permissions
+        run: |
+          chown -R $(id -u):$(id -g) $PWD
+
       - name: Check build deps are up-to-date
         id: build-deps-outdated
         run: |
@@ -302,6 +306,10 @@ jobs:
       - name: Checkout repo
         uses: actions/checkout@v3
 
+      - name: Fix permissions
+        run: |
+          chown -R $(id -u):$(id -g) $PWD
+
       - name: Download unit tests artifact
         uses: actions/download-artifact@v3
         with:
@@ -348,6 +356,10 @@ jobs:
       - name: Checkout repo
         uses: actions/checkout@v3
 
+      - name: Fix permissions
+        run: |
+          chown -R $(id -u):$(id -g) $PWD
+
       - name: Download binary artifact
         uses: actions/download-artifact@v3
         with:
@@ -387,6 +399,10 @@ jobs:
     steps:
       - name: Checkout repo
         uses: actions/checkout@v3
+
+      - name: Fix permissions
+        run: |
+          chown -R $(id -u):$(id -g) $PWD
 
       - name: Download binary artifact
         uses: actions/download-artifact@v3
