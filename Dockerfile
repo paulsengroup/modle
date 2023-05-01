@@ -119,7 +119,7 @@ RUN apt-get update \
                    python3-pip                   \
                    xz-utils
 
-RUN pip3 install 'cooler>=0.9.1'
+RUN pip3 install 'cooler>=0.9.1' 'pyBigWig>=0.3.22'
 
 COPY --from=unit-testing "$staging_dir" "$staging_dir"
 COPY test/data/modle_test_data.tar.xz "$src_dir/test/data/"
