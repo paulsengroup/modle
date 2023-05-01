@@ -214,7 +214,6 @@ jobs:
         run: |
           conan install conanfile.txt                 \
                --build=missing                        \
-               --build=cascade                        \
                -pr:b="$CONAN_DEFAULT_PROFILE_PATH"    \
                -pr:h="$CONAN_DEFAULT_PROFILE_PATH"    \
                -s build_type=${{ matrix.build_type }} \

@@ -97,7 +97,6 @@ jobs:
           PATH="/opt/rh/devtoolset-11/root/usr/bin/:$PATH" \
           conan install conanfile.txt              \
                --build=missing                     \
-               --build=cascade                     \
                --build="b2*"                       \
                -pr:b="$CONAN_DEFAULT_PROFILE_PATH" \
                -pr:h="$CONAN_DEFAULT_PROFILE_PATH" \

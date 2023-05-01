@@ -137,7 +137,6 @@ jobs:
         run: |
           conan install conanfile.txt                 \
                --build=missing                        \
-               --build=cascade                        \
                -pr default                            \
                -s build_type=${{ matrix.build_type }} \
                -s compiler.libcxx=libc++              \

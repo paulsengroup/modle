@@ -38,8 +38,6 @@ COPY conanfile.txt "$src_dir"
 RUN cd "$build_dir"                                  \
 && conan install "$src_dir/conanfile.txt"            \
                  --build=missing                     \
-                 --build=cascade                     \
-                 --update                            \
                  -pr:b="$CONAN_DEFAULT_PROFILE_PATH" \
                  -pr:h="$CONAN_DEFAULT_PROFILE_PATH" \
                  -s build_type=Release               \
