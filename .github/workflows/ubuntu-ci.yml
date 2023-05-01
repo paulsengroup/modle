@@ -380,7 +380,6 @@ jobs:
         run: bin/modle --version
 
       - name: Run modle integration test(s)
-        working-directory: test/scripts
         run: test/scripts/modle_integration_test.sh bin/modle | head -n 1000
 
 
@@ -427,7 +426,6 @@ jobs:
         run: test/scripts/modle_tools_transform_integration_test.sh /bin/modle_tools | head -n 1000
 
       - name: Run modle_tools evaluate integration test(s)
-        working-directory: ${{ github.workspace }}/test/scripts
         run: test/scripts/modle_tools_eval_integration_test.sh bin/modle_tools | head -n 1000
 
 
