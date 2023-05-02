@@ -14,8 +14,9 @@ on:
       - "test/**"
       - "!test/scripts/devel/**"
       - "CMakeLists.txt"
+      - ".dockerignore"
       - "Dockerfile"
-      - "conanfile.py"
+      - "conanfile.txt"
     tags:
       - 'v*.*.*'
 
@@ -29,7 +30,8 @@ on:
       - "!test/scripts/devel/**"
       - "CMakeLists.txt"
       - "Dockerfile"
-      - "conanfile.py"
+      - ".dockerignore"
+      - "conanfile.txt"
 
 # https://stackoverflow.com/a/72408109
 concurrency:
@@ -70,8 +72,8 @@ jobs:
 
           OS_NAME='ubuntu'
           OS_VERSION='22.04'
-          C_COMPILER='clang-14'
-          CXX_COMPILER='clang++-14'
+          C_COMPILER='clang-15'
+          CXX_COMPILER='clang++-15'
 
           BUILD_BASE_IMAGE="ghcr.io/${{ github.repository_owner }}/ci-docker-images/$OS_NAME-$OS_VERSION-cxx-$C_COMPILER:latest"
           TEST_BASE_IMAGE="ghcr.io/${{ github.repository_owner }}/ci-docker-images/modle/$OS_NAME-$OS_VERSION-cxx-$C_COMPILER:latest"

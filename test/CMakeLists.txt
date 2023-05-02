@@ -3,7 +3,7 @@
 # SPDX-License-Identifier: MIT
 
 find_package(absl CONFIG REQUIRED)
-find_package(Boost CONFIG REQUIRED)
+find_package(Boost CONFIG REQUIRED COMPONENTS filesystem headers)
 find_package(bshoshany-thread-pool CONFIG REQUIRED)
 find_package(Catch2 CONFIG REQUIRED)
 find_package(fmt CONFIG REQUIRED)
@@ -84,10 +84,7 @@ catch_discover_tests(
   ${CMAKE_CURRENT_SOURCE_DIR}/../
   # OUTPUT_DIR ${CMAKE_CURRENT_BINARY_DIR}/Testing/
   EXTRA_ARGS
-  --success
-  PROPERTIES
-  ENVIRONMENT
-  "LSAN_OPTIONS=suppressions=${PROJECT_SOURCE_DIR}/lsan.supp")
+  --success)
 
 catch_discover_tests(
   test_main
@@ -99,10 +96,7 @@ catch_discover_tests(
   ${CMAKE_CURRENT_SOURCE_DIR}/../
   # OUTPUT_DIR ${CMAKE_CURRENT_BINARY_DIR}/Testing/
   EXTRA_ARGS
-  --success
-  PROPERTIES
-  ENVIRONMENT
-  "LSAN_OPTIONS=suppressions=${PROJECT_SOURCE_DIR}/lsan.supp")
+  --success)
 
 catch_discover_tests(
   test_main
@@ -114,7 +108,4 @@ catch_discover_tests(
   ${CMAKE_CURRENT_SOURCE_DIR}/../
   # OUTPUT_DIR ${CMAKE_CURRENT_BINARY_DIR}/Testing/
   EXTRA_ARGS
-  --success
-  PROPERTIES
-  ENVIRONMENT
-  "LSAN_OPTIONS=suppressions=${PROJECT_SOURCE_DIR}/lsan.supp")
+  --success)

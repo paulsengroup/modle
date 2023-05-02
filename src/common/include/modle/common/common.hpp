@@ -4,8 +4,7 @@
 
 #pragma once
 
-#include <absl/base/macros.h>        // for ABSL_INTERNAL_UNREACHABLE
-#include <absl/base/optimization.h>  // IWYU pragma: keep for ABSL_PREDICT_TRUE, ABSL_PREDICT_FALSE
+#include <absl/base/optimization.h>  // IWYU pragma: keep for ABSL_PREDICT_TRUE, ABSL_PREDICT_FALSE, ABSL_UNREACHABLE
 
 #include <cstddef>  // IWYU pragma: keep for size_t, ptrdiff_t
 #include <cstdint>  // for i8, i16, i32, i64, u8 ...
@@ -81,7 +80,7 @@ using contacts_t = u32;
 #endif
 #endif
 
-#define MODLE_UNREACHABLE_CODE ABSL_INTERNAL_UNREACHABLE  // NOLINT(cppcoreguidelines-macro-usage)
+#define MODLE_UNREACHABLE_CODE ABSL_UNREACHABLE()           // NOLINT(cppcoreguidelines-macro-usage)
 #define MODLE_LIKELY           ABSL_PREDICT_TRUE          // NOLINT(cppcoreguidelines-macro-usage)
 #define MODLE_UNLIKELY         ABSL_PREDICT_FALSE         // NOLINT(cppcoreguidelines-macro-usage)
 

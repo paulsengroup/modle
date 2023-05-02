@@ -14,7 +14,7 @@ on:
       - "test/**"
       - "!test/scripts/devel/**"
       - "CMakeLists.txt"
-      - "conanfile.py"
+      - "conanfile.txt"
     tags:
       - 'v*.*.*'
 
@@ -27,7 +27,7 @@ on:
       - "test/**"
       - "!test/scripts/devel/**"
       - "CMakeLists.txt"
-      - "conanfile.py"
+      - "conanfile.txt"
 
 # https://stackoverflow.com/a/72408109
 concurrency:
@@ -35,18 +35,11 @@ concurrency:
   cancel-in-progress: true
 
 env:
-  HOMEBREW_NO_AUTO_UPDATE: "1"
-  CONAN_REVISIONS_ENABLED: "1"
-  CONAN_USER_HOME: "${{ github.workspace }}/conan-cache"
-  CONAN_USER_HOME_SHORT: "${{ github.workspace }}/conan-cache/short"
-  CONAN_V2_MODE: "1"
   CCACHE_DIR: "${{ github.workspace }}/ccache-cache"
   CCACHE_COMPRESSLEVEL: "13"
   CCACHE_MAXSIZE: "200M"
-
-  # Workaround memory leak in HighFive
-  # See: https://github.com/BlueBrain/HighFive/pull/583
-  LSAN_OPTIONS: "suppressions=${{ github.workspace }}/lsan.supp"
+  CONAN_HOME: "${{ github.workspace }}/.conan2"
+  HOMEBREW_NO_AUTO_UPDATE: "1"
 
 defaults:
   run:
@@ -65,9 +58,9 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - { compiler-name: apple-clang, compiler-version: '13.0', os: 'macos-11',    conan-ver: '1.57.*', cmake-ver: '3.25.*', build_type: Release, developer_mode: OFF }
-          - { compiler-name: apple-clang, compiler-version: '14.0', os: 'macos-12',    conan-ver: '1.57.*', cmake-ver: '3.25.*', build_type: Release, developer_mode: OFF }
-          - { compiler-name: apple-clang, compiler-version: '14.0', os: 'macos-12',    conan-ver: '1.57.*', cmake-ver: '3.25.*', build_type: Debug,   developer_mode: OFF }
+          - { compiler-name: apple-clang, compiler-version: '13.0', os: 'macos-11', conan-ver: '2.0.*', cmake-ver: '3.26.*', build_type: Release, developer_mode: OFF }
+          - { compiler-name: apple-clang, compiler-version: '14.0', os: 'macos-12', conan-ver: '2.0.*', cmake-ver: '3.26.*', build_type: Release, developer_mode: OFF }
+          - { compiler-name: apple-clang, compiler-version: '14.0', os: 'macos-12', conan-ver: '2.0.*', cmake-ver: '3.26.*', build_type: Debug,   developer_mode: OFF }
 
     steps:
       - uses: actions/checkout@v3
@@ -80,7 +73,7 @@ jobs:
       - name: Setup Python
         uses: actions/setup-python@v4
         with:
-          python-version: '3.10'
+          python-version: '3.11'
           cache: 'pip'
 
       - name: Install build deps
@@ -104,9 +97,9 @@ jobs:
           compiler="${{ matrix.compiler-name }}"
           build_type="${{ matrix.build_type }}"
 
-          conanfile_hash="${{ hashFiles('conanfile.py') }}"
+          conanfile_hash="${{ hashFiles('conanfile.txt') }}"
           workflow_hash="${{ hashFiles('.github/workflows/macos-ci.yml') }}"
-          combined_hash="${{ hashFiles('conanfile.py', '.github/workflows/macos-ci.yml') }}"
+          combined_hash="${{ hashFiles('conanfile.txt', '.github/workflows/macos-ci.yml') }}"
 
           # This can be used by to always update a cache entry (useful e.g. for ccache)
           current_date="$(date '+%s')"
@@ -126,50 +119,41 @@ jobs:
         with:
           key: ${{ steps.cache-key.outputs.conan-key }}
           restore-keys: ${{ steps.cache-key.outputs.conan-restore-key }}
-          path: ${{ env.CONAN_USER_HOME }}
+          path: ${{ env.CONAN_HOME }}
 
       - name: Configure Conan
         if: steps.cache-conan.outputs.cache-hit != 'true'
-        run: |
-          conan profile new "$CONAN_USER_HOME/profiles/default" --detect --force
-          conan config init
-
-          conan profile update settings.compiler=${{ matrix.compiler-name }} default
-          conan profile update settings.compiler.version=${{ matrix.compiler-version }} default
-          conan profile update settings.compiler.cppstd=17 default
-
-          # Add apple-clang 14.0 to settings.yml
-          sed -i.bak 's/"10.0", "11.0", "12.0", "13", "13.0", "13.1"\]/"10.0", "11.0", "12.0", "13", "13.0", "13.1", "14.0"\]/' \
-            "$CONAN_USER_HOME/.conan/settings.yml"
+        run: conan profile detect --force
 
       - name: Clean Conan cache (pre-build)
         if: steps.cache-conan.outputs.cache-hit != 'true'
         run: |
-          conan remove -f "*" --builds
-          conan remove -f "*" --src
-          conan remove -f "*" --system-reqs
+          conan cache clean "*" --build
+          conan cache clean "*" --download
+          conan cache clean "*" --source
+          conan remove --confirm "*"
 
-      - name: Build conanfile.py
-        if: steps.cache-conan.outputs.cache-hit != 'true'
+      - name: Build conanfile.txt
         run: |
-          conan install conanfile.py                  \
-               --build=outdated                       \
-               --update                               \
+          conan install conanfile.txt                 \
+               --build=missing                        \
+               -pr default                            \
                -s build_type=${{ matrix.build_type }} \
-               -s compiler.cppstd=17
+               -s compiler.libcxx=libc++              \
+               -s compiler.cppstd=17                  \
+               --output-folder="${{ github.workspace }}/build"
 
       - name: Clean Conan cache (post-build)
         if: steps.cache-conan.outputs.cache-hit != 'true'
         run: |
-          conan remove -f "*" --builds
-          conan remove -f "*" --src
-          conan remove -f "*" --system-reqs
-          conan remove -f "*" --outdated
+          conan cache clean "*" --build
+          conan cache clean "*" --download
+          conan cache clean "*" --source
 
       - name: Configure project
         run: |
-          mkdir ${{ github.workspace }}/build
           cmake -DCMAKE_BUILD_TYPE=${{ matrix.build_type }}          \
+                -DCMAKE_PREFIX_PATH="${{ github.workspace }}/build"  \
                 -DMODLE_ENABLE_TESTING=ON                            \
                 -DMODLE_DOWNLOAD_TEST_DATASET=OFF                    \
                 -DENABLE_DEVELOPER_MODE=${{ matrix.developer_mode }} \

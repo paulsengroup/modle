@@ -19,9 +19,6 @@ ARG build_dir='/root/modle/build'
 ARG staging_dir='/root/modle/staging'
 ARG install_dir='/usr/local'
 
-ENV CONAN_V2=1
-ENV CONAN_REVISIONS_ENABLED=1
-ENV CONAN_NON_INTERACTIVE=1
 ENV CONAN_CMAKE_GENERATOR=Ninja
 
 
@@ -37,14 +34,16 @@ ENV CXX="$CXX_COMPILER"
 # Build MoDLE's deps using Conan
 RUN mkdir -p "$src_dir" "$build_dir"
 
-COPY conanfile.py "$src_dir"
-RUN cd "$build_dir"                             \
-&& conan install "$src_dir/conanfile.py"        \
-                 --build=outdated               \
-                 --update                       \
-                 -s build_type=Release          \
-                 -s compiler.libcxx=libstdc++11 \
-                 -s compiler.cppstd=17
+COPY conanfile.txt "$src_dir"
+RUN cd "$build_dir"                                  \
+&& conan install "$src_dir/conanfile.txt"            \
+                 --build=missing                     \
+                 -pr:b="$CONAN_DEFAULT_PROFILE_PATH" \
+                 -pr:h="$CONAN_DEFAULT_PROFILE_PATH" \
+                 -s build_type=Release               \
+                 -s compiler.libcxx=libstdc++11      \
+                 -s compiler.cppstd=17               \
+                 --output-folder="$build_dir"
 
 # Copy source files
 COPY LICENSE "$src_dir/"
@@ -66,25 +65,25 @@ RUN if [ -z "$GIT_HASH" ]; then echo "Missing GIT_HASH --build-arg" && exit 1; f
 &&  if [ -z "$GIT_TAG" ]; then echo "Missing GIT_TAG --build-arg" && exit 1; fi
 
 # Configure project
-RUN cd "$build_dir"                            \
-&& cmake -DCMAKE_BUILD_TYPE=Release            \
-         -DWARNINGS_AS_ERRORS=ON               \
-         -DENABLE_DEVELOPER_MODE=OFF           \
-         -DMODLE_ENABLE_TESTING=ON             \
-         -DMODLE_DOWNLOAD_TEST_DATASET=OFF     \
-         -DGIT_RETRIEVED_STATE=true            \
-         -DGIT_TAG="$GIT_TAG"                  \
-         -DGIT_IS_DIRTY="$GIT_IS_DIRTY"        \
-         -DGIT_HEAD_SHA1="$GIT_HASH"           \
-         -DGIT_DESCRIBE="$GIT_SHORT_HASH"      \
-         -DCMAKE_INSTALL_PREFIX="$staging_dir" \
-         -G Ninja                              \
-         "$src_dir"
+RUN cmake -DCMAKE_BUILD_TYPE=Release            \
+          -DCMAKE_PREFIX_PATH="$build_dir"      \
+          -DWARNINGS_AS_ERRORS=ON               \
+          -DENABLE_DEVELOPER_MODE=OFF           \
+          -DMODLE_ENABLE_TESTING=ON             \
+          -DMODLE_DOWNLOAD_TEST_DATASET=OFF     \
+          -DGIT_RETRIEVED_STATE=true            \
+          -DGIT_TAG="$GIT_TAG"                  \
+          -DGIT_IS_DIRTY="$GIT_IS_DIRTY"        \
+          -DGIT_HEAD_SHA1="$GIT_HASH"           \
+          -DGIT_DESCRIBE="$GIT_SHORT_HASH"      \
+          -DCMAKE_INSTALL_PREFIX="$staging_dir" \
+          -G Ninja                              \
+          -S "$src_dir"                         \
+          -B "$build_dir"
 
 # Build and install project
-RUN cd "$build_dir"               \
-&& cmake --build . -j "$(nproc)"  \
-&& cmake --install .
+RUN cmake --build "$build_dir" -j "$(nproc)"  \
+&& cmake --install "$build_dir"
 
 ARG TEST_BASE_IMAGE
 FROM "$TEST_BASE_IMAGE" AS unit-testing
@@ -120,12 +119,12 @@ RUN apt-get update \
                    python3-pip                   \
                    xz-utils
 
-RUN pip3 install cython 'numpy<1.24' \
-&& pip3 install 'cooler>=0.8.11'
+RUN pip3 install 'cooler>=0.9.1' 'pyBigWig>=0.3.22'
 
 COPY --from=unit-testing "$staging_dir" "$staging_dir"
 COPY test/data/modle_test_data.tar.xz "$src_dir/test/data/"
 COPY test/scripts/modle*integration_test.sh "$src_dir/test/scripts/"
+COPY test/scripts/compare_bwigs.py "$src_dir/test/scripts/"
 
 RUN tar -xf "$src_dir/test/data/modle_test_data.tar.xz" -C "$src_dir/"
 

@@ -8,6 +8,7 @@
 .run/
 .vscode/
 build/
+conan*/
 containers/
 docs/
 examples/
@@ -23,3 +24,5 @@ Dockerfile*
 cmake-build*
 gmon.out
 perf.*
+
+compile_commands.json

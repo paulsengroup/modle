@@ -6,12 +6,10 @@
 
 #include "modle/bed/bed.hpp"
 
-#include <absl/container/flat_hash_map.h>  // for flat_hash_map, raw_hash_set<>::it...
-#include <absl/hash/hash.h>                // for Hash
-#include <absl/strings/match.h>            // for StrContains
-#include <absl/strings/str_join.h>         // for StrJoin
-#include <absl/strings/str_split.h>        // for StrSplit, Splitter, SplitIterator
-#include <fmt/format.h>                    // for format, FMT_STRING, join, to_string
+#include <absl/strings/match.h>      // for StrContains
+#include <absl/strings/str_join.h>   // for StrJoin
+#include <absl/strings/str_split.h>  // for StrSplit, Splitter, SplitIterator
+#include <fmt/format.h>              // for format, FMT_STRING, join, to_string
 #include <fmt/std.h>
 
 #include <algorithm>    // for max, find_if, count, for_each
@@ -458,14 +456,12 @@ std::vector<BED> Parser::parse_n(usize num_records) {
   }
   assert(this->_reader.is_open());
 
-  using record_idx_t = usize;
-  using line_num_t = usize;
-  absl::flat_hash_map<BED, std::pair<record_idx_t, line_num_t>> records;
+  struct RecordMetadata {
+    usize record_idx;
+    usize line_num;
+  };
 
-  if (num_records != std::numeric_limits<decltype(num_records)>::max()) {
-    records.reserve(num_records);
-  }
-
+  absl::btree_map<BED, RecordMetadata> records;
   for (auto record = this->parse_next(); !record.empty() && this->_num_records_parsed < num_records;
        record = this->parse_next()) {
     if (this->_dialect != BED::none && record.num_fields() < this->_dialect) {
@@ -476,10 +472,11 @@ std::vector<BED> Parser::parse_n(usize num_records) {
     }
 
     if (auto [node, new_insertion] = records.try_emplace(
-            record, std::make_pair(this->_num_records_parsed - 1, this->_num_lines_read));
+            std::move(record),
+            RecordMetadata{this->_num_records_parsed - 1, this->_num_lines_read});
         !new_insertion) {
       const auto& other_record = node->first;
-      const auto& other_record_line = node->second.second;
+      const auto& other_record_line = node->second.line_num;
       throw std::runtime_error(fmt::format(
           FMT_STRING("Detected duplicate record at line {} of file {}. First occurrence was at "
                      "line {}.\n - First occurrence:  \"{}\"\n - Second occurrence: \"{}\""),
@@ -489,8 +486,8 @@ std::vector<BED> Parser::parse_n(usize num_records) {
 
   std::vector<BED> _records(records.size());
   for (const auto& [record, idx] : records) {
-    assert(idx.first < _records.size());
-    _records[idx.first] = record;
+    assert(idx.record_idx < _records.size());
+    _records[idx.record_idx] = record;
   }
 
   return _records;
@@ -503,7 +500,7 @@ BED_tree<> Parser::parse_n_in_interval_tree(usize num_records) {
   assert(this->_reader.is_open());
 
   using line_num_t = usize;
-  absl::flat_hash_map<BED, line_num_t> records;
+  absl::btree_map<BED, line_num_t> records;
   BED_tree<> intervals;
 
   for (auto record = this->parse_next(); !record.empty() && this->_num_records_parsed < num_records;

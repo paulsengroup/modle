@@ -3,7 +3,7 @@
 # SPDX-License-Identifier: MIT
 
 find_package(absl CONFIG REQUIRED)
-find_package(Boost CONFIG REQUIRED)
+find_package(Boost CONFIG REQUIRED COMPONENTS headers)
 find_package(fmt CONFIG REQUIRED)
 find_package(spdlog CONFIG REQUIRED)
 find_package(xxHash CONFIG REQUIRED)
@@ -38,6 +38,6 @@ target_link_system_libraries(
   absl::span
   Boost::headers
   spdlog::spdlog
-  xxHash::xxHash)
+  xxHash::xxhash)
 
 target_include_directories(libmodle_internal PUBLIC include/)

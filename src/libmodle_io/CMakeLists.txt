@@ -3,13 +3,12 @@
 # SPDX-License-Identifier: MIT
 
 find_package(absl CONFIG REQUIRED)
-find_package(Boost CONFIG REQUIRED)
+find_package(Boost CONFIG REQUIRED COMPONENTS iostreams)
 find_package(fmt CONFIG REQUIRED)
 find_package(LibArchive CONFIG REQUIRED)
 find_package(BigWig CONFIG REQUIRED)
 find_package(readerwriterqueue CONFIG REQUIRED)
 find_package(spdlog CONFIG REQUIRED)
-find_package(ZLIB CONFIG REQUIRED)
 find_package(xxHash CONFIG REQUIRED)
 
 # BED
@@ -33,7 +32,7 @@ target_link_system_libraries(
   absl::flat_hash_map
   absl::hash
   absl::span
-  xxHash::xxHash)
+  xxHash::xxhash)
 
 set_target_properties(libmodle_io_bed PROPERTIES OUTPUT_NAME modle_io_bed)
 install(
