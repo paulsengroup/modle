@@ -3,7 +3,7 @@
 # SPDX-License-Identifier: MIT
 
 find_package(absl CONFIG REQUIRED)
-find_package(Boost CONFIG REQUIRED)
+find_package(Boost CONFIG REQUIRED COMPONENTS headers)
 find_package(bshoshany-thread-pool CONFIG REQUIRED)
 find_package(CLI11 CONFIG REQUIRED)
 find_package(cpp-sort CONFIG REQUIRED)

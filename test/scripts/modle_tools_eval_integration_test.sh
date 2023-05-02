@@ -31,8 +31,13 @@ function compare_files {
   set -o pipefail
   set -e
 
+  if [[ "$1" == *.bw ]]; then
+    compare_bwigs.py "$1" "$2"
+    return "$?"
+  fi
+
   2>&1 echo "Comparing $1 with $2..."
-  if cmp "$1" "$2"; then
+  if cmp <(zcat "$1") <(zcat "$2"); then
     2>&1 echo "Files are identical"
     return 0
   else
@@ -52,16 +57,23 @@ fi
 
 modle_tools_bin="$1"
 
-data_dir="$(readlink -f "$(dirname "$0")/../data/integration_tests")"
+data_dir="$(readlink_py "$(dirname "$0")/../data/integration_tests")"
+script_dir="$(readlink_py "$(dirname "$0")")"
 
 matrix1="$data_dir/4DNFI9GMP2J8_chr20_25kbp_mt_eval.cool"
 matrix2="$data_dir/4DNFIFJH2524_chr20_25kbp_mt_eval.cool"
 
 ref=("$data_dir/4DNFI9GMP2J8_vs_4DNFIFJH2524_mt_eval_custom_score_custom_metric_"*.{bw,tsv.gz})
 
+export PATH="$PATH:$script_dir"
 
 if ! check_files_exist "$matrix1" "$matrix2" "${ref[@]}"; then
   exit 1
+fi
+
+if ! command -v compare_bwigs.py &> /dev/null; then
+  2>&1 echo "Unable to find compare_bwigs.py"
+  status=1
 fi
 
 outdir="$(mktemp -d -t modle-tools-XXXXXXXXXX)"
