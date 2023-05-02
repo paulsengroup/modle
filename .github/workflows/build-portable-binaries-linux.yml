@@ -82,7 +82,7 @@ jobs:
         with:
           key: ${{ steps.cache-key.outputs.conan-key }}
           restore-keys: ${{ steps.cache-key.outputs.conan-restore-key }}
-          path: ${{ env.CONAN_USER_HOME }}
+          path: ${{ env.CONAN_HOME }}
 
       - name: Clean Conan cache (pre-build)
         if: steps.cache-conan.outputs.cache-hit != 'true'
@@ -101,8 +101,6 @@ jobs:
                -pr:b="$CONAN_DEFAULT_PROFILE_PATH" \
                -pr:h="$CONAN_DEFAULT_PROFILE_PATH" \
                -s build_type=Release               \
-               -s compiler=gcc                     \
-               -s compiler.version=11              \
                -s compiler.libcxx=libstdc++        \
                -s compiler.cppstd=17               \
                --output-folder=build/
