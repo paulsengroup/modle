@@ -115,7 +115,8 @@ struct Config {
 
   static constexpr std::string_view model_internal_state_log_header =
       "task_id\tepoch\tcell_id\t"
-      "chrom\tburnin\tbarrier_occupancy\t"
+      "chrom\tstart\tend\t"
+      "burnin\tbarrier_occupancy\t"
       "num_active_lefs\tnum_stalls_rev\tnum_stalls_fwd\t"
       "num_stalls_both\tnum_lef_bar_collisions\tnum_primary_lef_lef_collisions\t"
       "num_secondary_lef_lef_collisions\tavg_loop_size\n";

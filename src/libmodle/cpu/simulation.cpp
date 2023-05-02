@@ -14,33 +14,33 @@
 #include <cpp-sort/sorters/pdq_sorter.h>        // for pdq_sort, pdq_sorter
 #include <cpp-sort/sorters/split_sorter.h>      // for split_sort, split_sorter
 #include <fmt/compile.h>
-#include <spdlog/spdlog.h>  // for info, warn
+#include <spdlog/spdlog.h>                      // for info, warn
 
-#include <BS_thread_pool.hpp>  // for BS::thread_pool
-#include <algorithm>           // for max, fill, min, copy, clamp
-#include <atomic>              // for atomic
-#include <cassert>             // for assert
-#include <chrono>              // for microseconds
-#include <cmath>               // for log, round, exp, floor, sqrt
+#include <BS_thread_pool.hpp>                   // for BS::thread_pool
+#include <algorithm>                            // for max, fill, min, copy, clamp
+#include <atomic>                               // for atomic
+#include <cassert>                              // for assert
+#include <chrono>                               // for microseconds
+#include <cmath>                                // for log, round, exp, floor, sqrt
 #include <coolerpp/coolerpp.hpp>
-#include <cstdlib>      // for abs
-#include <deque>        // for _Deque_iterator<>::_Self
-#include <filesystem>   // for operator<<, path
-#include <iosfwd>       // for streamsize
-#include <limits>       // for numeric_limits
-#include <memory>       // for shared_ptr, unique_ptr, make...
-#include <mutex>        // for mutex
-#include <numeric>      // for iota
-#include <stdexcept>    // for runtime_error
-#include <string>       // for string
-#include <string_view>  // for string_view
-#include <thread>       // IWYU pragma: keep for sleep_for
-#include <utility>      // for make_pair, pair
-#include <vector>       // for vector, vector<>::iterator
+#include <cstdlib>                              // for abs
+#include <deque>                                // for _Deque_iterator<>::_Self
+#include <filesystem>                           // for operator<<, path
+#include <iosfwd>                               // for streamsize
+#include <limits>                               // for numeric_limits
+#include <memory>                               // for shared_ptr, unique_ptr, make...
+#include <mutex>                                // for mutex
+#include <numeric>                              // for iota
+#include <stdexcept>                            // for runtime_error
+#include <string>                               // for string
+#include <string_view>                          // for string_view
+#include <thread>                               // IWYU pragma: keep for sleep_for
+#include <utility>                              // for make_pair, pair
+#include <vector>                               // for vector, vector<>::iterator
 
 #include "modle/bigwig/bigwig.hpp"
-#include "modle/common/common.hpp"  // for bp_t, contacts_t
-#include "modle/common/dna.hpp"     // for dna::REV, dna::FWD
+#include "modle/common/common.hpp"                         // for bp_t, contacts_t
+#include "modle/common/dna.hpp"                            // for dna::REV, dna::FWD
 #include "modle/common/fmt_helpers.hpp"
 #include "modle/common/genextreme_value_distribution.hpp"  // for genextreme_value_distribution
 #include "modle/common/random.hpp"             // for bernoulli_trial, poisson_distribution
@@ -48,10 +48,10 @@
 #include "modle/common/simulation_config.hpp"  // for Config
 #include "modle/common/utils.hpp"              // for parse_numeric_or_throw, ndeb...
 #include "modle/config/version.hpp"
-#include "modle/extrusion_barriers.hpp"  // for ExtrusionBarrier, update_states
-#include "modle/extrusion_factors.hpp"   // for Lef, ExtrusionUnit
-#include "modle/genome.hpp"              // for Genome::iterator, Chromosome
-#include "modle/interval_tree.hpp"       // for IITree, IITree::data
+#include "modle/extrusion_barriers.hpp"        // for ExtrusionBarrier, update_states
+#include "modle/extrusion_factors.hpp"         // for Lef, ExtrusionUnit
+#include "modle/genome.hpp"                    // for Genome::iterator, GenomicInterval
+#include "modle/interval_tree.hpp"             // for IITree, IITree::data
 #include "modle/io/contact_matrix_dense.hpp"
 #include "modle/stats/descriptive.hpp"
 
@@ -61,7 +61,7 @@ Simulation::Simulation(const Config& c, bool import_chroms)
     : Config(c),
       _genome(import_chroms
                   ? Genome(path_to_chrom_sizes, path_to_extr_barriers, path_to_chrom_subranges,
-                           barrier_occupied_stp, barrier_not_occupied_stp,
+                           bin_size, diagonal_width, barrier_occupied_stp, barrier_not_occupied_stp,
                            interpret_bed_name_field_as_barrier_not_occupied_stp)
                   : Genome{}) {
   _tpool.reset(utils::conditional_static_cast<BS::concurrency_t>(c.nthreads + 1));
@@ -70,20 +70,17 @@ Simulation::Simulation(const Config& c, bool import_chroms)
   if (c.override_extrusion_barrier_occupancy) {
     for (auto& chrom : this->_genome) {
       auto& barriers = chrom.barriers();
-      std::transform(barriers.data_begin(), barriers.data_end(), barriers.data_begin(),
-                     [&](const auto& barrier) {
-                       return ExtrusionBarrier{barrier.pos, c.barrier_occupied_stp,
-                                               c.barrier_not_occupied_stp,
-                                               barrier.blocking_direction.complement()};
-                     });
+      std::transform(barriers.begin(), barriers.end(), barriers.begin(), [&](const auto& barrier) {
+        return ExtrusionBarrier{barrier.pos, c.barrier_occupied_stp, c.barrier_not_occupied_stp,
+                                barrier.blocking_direction.complement()};
+      });
     }
   }
 
   std::vector<std::string> warnings;
-  for (const auto& chrom : this->_genome) {
-    if (chrom.simulated_size() < this->diagonal_width) {
-      warnings.emplace_back(fmt::format(FMT_STRING("{}: simulated_size={}; total_size={};"),
-                                        chrom.name(), chrom.simulated_size(), chrom.size()));
+  for (const auto& interval : this->_genome) {
+    if (interval.size() < this->diagonal_width) {
+      warnings.emplace_back(fmt::format(FMT_STRING("{}: {};"), interval, interval.size()));
     }
   }
   if (!warnings.empty()) {
@@ -93,10 +90,9 @@ Simulation::Simulation(const Config& c, bool import_chroms)
   }
   warnings.clear();
   const usize min_pixels = 250'000;
-  for (const auto& chrom : this->_genome) {
-    if (const auto npixels = chrom.npixels(this->diagonal_width, this->bin_size);
-        npixels < min_pixels) {
-      warnings.emplace_back(fmt::format(FMT_STRING("{}: {} pixels"), chrom.name(), npixels));
+  for (const auto& interval : this->_genome) {
+    if (const auto npixels = interval.npixels(); npixels < min_pixels) {
+      warnings.emplace_back(fmt::format(FMT_STRING("{}: {} pixels"), interval, npixels));
     }
   }
   if (!warnings.empty()) {
@@ -112,18 +108,29 @@ usize Simulation::size() const { return this->_genome.size(); }
 
 usize Simulation::simulated_size() const { return this->_genome.simulated_size(); }
 
-// NOLINTNEXTLINE(readability-function-cognitive-complexity)
-void Simulation::write_contacts_to_disk(std::deque<std::pair<Chromosome*, usize>>& progress_queue,
-                                        std::mutex& progress_queue_mtx) {
-  // This thread is in charge of writing contacts to disk
-  Chromosome* chrom_to_be_written = nullptr;
+[[nodiscard]] static coolerpp::File init_cooler_file(
+    const std::filesystem::path& path, bool force,
+    const std::vector<std::shared_ptr<const Chromosome>>& chroms, bp_t bin_size,
+    std::string_view assembly_name, std::string_view metadata) {
+  std::vector<Chromosome> chroms_(chroms.size());
+  std::transform(chroms.begin(), chroms.end(), chroms_.begin(),
+                 [](const auto& chrom_ptr) { return *chrom_ptr; });
 
-  coolerpp::File c{this->skip_output
-                       ? coolerpp::File{}
-                       : io::init_cooler_file<i32>(this->path_to_output_file_cool, this->force,
-                                                   this->_genome.begin(), this->_genome.end(),
-                                                   this->bin_size, this->assembly_name,
-                                                   config::version::str_long(), this->args_json)};
+  return io::init_cooler_file<i32>(path, force, chroms_.begin(), chroms_.end(), bin_size,
+                                   assembly_name, config::version::str_long(), metadata);
+}
+
+// NOLINTNEXTLINE(readability-function-cognitive-complexity)
+void Simulation::write_contacts_to_disk(
+    std::deque<std::pair<GenomicInterval*, usize>>& progress_queue,
+    std::mutex& progress_queue_mtx) {
+  // This thread is in charge of writing contacts to disk
+  GenomicInterval* interval_to_be_written = nullptr;
+
+  coolerpp::File c{this->skip_output ? coolerpp::File{}
+                                     : init_cooler_file(this->path_to_output_file_cool, this->force,
+                                                        this->_genome.chromosomes(), this->bin_size,
+                                                        this->assembly_name, this->args_json)};
 
   try {
     auto sleep_us = 100;  // TODO use a conditional_variable
@@ -139,12 +146,12 @@ void Simulation::write_contacts_to_disk(std::deque<std::pair<Chromosome*, usize>
         }
 
         // chrom == nullptr is the end-of-queue signal
-        if (auto& [chrom, count] = progress_queue.front(); chrom == nullptr) {
+        if (auto& [interval, count] = progress_queue.front(); interval == nullptr) {
           break;
         }
         // count == ncells signals that we are done simulating the current chromosome
         else if (count == num_cells) {
-          chrom_to_be_written = chrom;
+          interval_to_be_written = interval;
           progress_queue.pop_front();
         } else {
           assert(count < num_cells);
@@ -153,40 +160,39 @@ void Simulation::write_contacts_to_disk(std::deque<std::pair<Chromosome*, usize>
       }
       sleep_us = 100;
       if (c) {
-        // NOTE here we have to use pointers instead of references because
-        // chrom_to_be_written.contacts() == nullptr is used to signal an empty matrix.
-        // In this case, c->write_or_append_cmatrix_to_file() will create an entry in the chroms
-        // and bins datasets, as well as update the appropriate index
-        if (chrom_to_be_written->contacts_ptr()) {
-          spdlog::info(FMT_STRING("Writing contacts for \"{}\" to file \"{}\"..."),
-                       chrom_to_be_written->name(), c.uri());
-        } else {
-          spdlog::info(FMT_STRING("Writing bin table for \"{}\" to file \"{}\"..."),
-                       chrom_to_be_written->name(), c.uri());
-        }
+        const auto& matrix = interval_to_be_written->contacts();
 
-        io::append_contact_matrix_to_cooler(c, chrom_to_be_written->name(),
-                                            chrom_to_be_written->contacts());
+        if (matrix.npixels() != 0) {
+          spdlog::info(FMT_STRING("Writing contacts for {} to file \"{}\"..."),
+                       *interval_to_be_written, c.uri());
+          const auto missing_interactions = matrix.get_fraction_of_missed_updates();
+          if (missing_interactions >= 0.01) {
+            spdlog::warn(
+                FMT_STRING(
+                    "{:.2f}% missing interactions for {}! Please make sure this is intended."),
+                missing_interactions * 100, *interval_to_be_written);
+          }
 
-        if (chrom_to_be_written->contacts_ptr()) {
+          io::append_contact_matrix_to_cooler(c, interval_to_be_written->chrom().name(), matrix,
+                                              interval_to_be_written->start());
           spdlog::info(
               FMT_STRING("Written {} contacts for \"{}\" to file \"{}\" ({:.2f}M nnz out of "
                          "{:.2f}M pixels)."),
-              chrom_to_be_written->contacts().get_tot_contacts(), chrom_to_be_written->name(),
-              c.uri(), static_cast<double>(chrom_to_be_written->contacts().get_nnz()) / 1.0e6,
-              static_cast<double>(chrom_to_be_written->contacts().npixels()) / 1.0e6);
+              matrix.get_tot_contacts(), *interval_to_be_written, c.uri(),
+              static_cast<double>(matrix.get_nnz()) / 1.0e6,
+              static_cast<double>(matrix.npixels()) / 1.0e6);
         }
       }
       // Deallocate the contact matrix to free up unused memory
-      chrom_to_be_written->deallocate_contact_matrix();
+      interval_to_be_written->deallocate();
     }
   } catch (const std::exception& err) {
     std::scoped_lock lck(this->_exceptions_mutex);
-    if (chrom_to_be_written) {
+    if (interval_to_be_written) {
       this->_exceptions.emplace_back(std::make_exception_ptr(std::runtime_error(fmt::format(
           FMT_STRING(
-              "The following error occurred while writing contacts for \"{}\" to file \"{}\": {}"),
-          chrom_to_be_written->name(), c.uri(), err.what()))));
+              "The following error occurred while writing contacts for {} to file \"{}\": {}"),
+          *interval_to_be_written, c.uri(), err.what()))));
     } else {
       this->_exceptions.emplace_back(std::make_exception_ptr(std::runtime_error(fmt::format(
           FMT_STRING("The following error occurred while writing contacts to file \"{}\": {}"),
@@ -211,29 +217,30 @@ void Simulation::write_1d_lef_occupancy_to_disk() const {
   try {
     io::bigwig::Writer bw(this->path_to_lef_1d_occupancy_bw_file.string());
 
-    std::vector<std::pair<std::string, u32>> chroms(this->_genome.number_of_chromosomes());
-    std::transform(this->_genome.begin(), this->_genome.end(), chroms.begin(),
-                   [](const Chromosome& chrom) {
-                     return std::make_pair(chrom.name(), static_cast<u32>(chrom.size()));
+    std::vector<std::pair<std::string, u32>> chroms(this->_genome.num_chromosomes());
+    std::transform(this->_genome.chromosomes().begin(), this->_genome.chromosomes().end(),
+                   chroms.begin(), [](const auto& chrom_ptr) {
+                     return std::make_pair(chrom_ptr->name(), static_cast<u32>(chrom_ptr->size()));
                    });
     bw.write_chromosomes(chroms);
 
-    for (const Chromosome& chrom : this->_genome) {
-      if (!chrom.lef_1d_occupancy_ptr()) {
+    for (const GenomicInterval& interval : this->_genome) {
+      if (interval.npixels() == 0) {
         continue;
       }
 
-      std::vector<float> buff(chrom.lef_1d_occupancy().size());
+      std::vector<float> buff(interval.lef_1d_occupancy().size());
       const auto max_element =
-          std::max_element(chrom.lef_1d_occupancy().begin(), chrom.lef_1d_occupancy().end())
+          std::max_element(interval.lef_1d_occupancy().begin(), interval.lef_1d_occupancy().end())
               ->load();
 
-      std::transform(chrom.lef_1d_occupancy().begin(), chrom.lef_1d_occupancy().end(), buff.begin(),
-                     [&](const auto& n) {
+      std::transform(interval.lef_1d_occupancy().begin(), interval.lef_1d_occupancy().end(),
+                     buff.begin(), [&](const auto& n) {
                        return static_cast<float>(static_cast<double>(n.load()) /
                                                  static_cast<double>(max_element));
                      });
-      bw.write_range(chrom.name(), absl::MakeSpan(buff), bin_size, bin_size, chrom.start_pos());
+      bw.write_range(interval.chrom().name(), absl::MakeSpan(buff), bin_size, bin_size,
+                     interval.start());
     }
   } catch (const std::exception& e) {
     throw std::runtime_error(
@@ -270,7 +277,7 @@ static void generate_moves_helper(const absl::Span<const Lef> lefs, const absl::
   }
 }
 
-void Simulation::generate_moves(const Chromosome& chrom, const absl::Span<const Lef> lefs,
+void Simulation::generate_moves(const GenomicInterval& interval, const absl::Span<const Lef> lefs,
                                 const absl::Span<const usize> rev_lef_ranks,
                                 const absl::Span<const usize> fwd_lef_ranks,
                                 const absl::Span<bp_t> rev_moves, const absl::Span<bp_t> fwd_moves,
@@ -296,14 +303,14 @@ void Simulation::generate_moves(const Chromosome& chrom, const absl::Span<const 
   if (adjust_moves_) {  // Adjust moves of consecutive extr. units to make LEF behavior more
     // realistic See comments in adjust_moves_of_consecutive_extr_units for more
     // details on what this entails
-    Simulation::adjust_moves_of_consecutive_extr_units(chrom, lefs, rev_lef_ranks, fwd_lef_ranks,
+    Simulation::adjust_moves_of_consecutive_extr_units(interval, lefs, rev_lef_ranks, fwd_lef_ranks,
                                                        rev_moves, fwd_moves);
   }
 
-  Simulation::clamp_moves(chrom, lefs, rev_moves, fwd_moves);
+  Simulation::clamp_moves(interval, lefs, rev_moves, fwd_moves);
 }
 
-void Simulation::clamp_moves(const Chromosome& chrom, const absl::Span<const Lef> lefs,
+void Simulation::clamp_moves(const GenomicInterval& interval, const absl::Span<const Lef> lefs,
                              const absl::Span<bp_t> rev_moves,
                              const absl::Span<bp_t> fwd_moves) noexcept {
   for (usize i = 0; i < lefs.size(); ++i) {
@@ -313,16 +320,16 @@ void Simulation::clamp_moves(const Chromosome& chrom, const absl::Span<const Lef
       continue;
     }
 
-    assert(lefs[i].rev_unit.pos() >= chrom.start_pos());
-    assert(lefs[i].fwd_unit.pos() < chrom.end_pos());
-    rev_moves[i] = std::min(rev_moves[i], lefs[i].rev_unit.pos() - chrom.start_pos());
-    fwd_moves[i] = std::min(fwd_moves[i], chrom.end_pos() - lefs[i].fwd_unit.pos() - 1);
+    assert(lefs[i].rev_unit.pos() >= interval.start());
+    assert(lefs[i].fwd_unit.pos() < interval.end());
+    rev_moves[i] = std::min(rev_moves[i], lefs[i].rev_unit.pos() - interval.start());
+    fwd_moves[i] = std::min(fwd_moves[i], interval.end() - lefs[i].fwd_unit.pos() - 1);
   }
 }
 
 // NOLINTNEXTLINE(readability-function-cognitive-complexity)
 void Simulation::adjust_moves_of_consecutive_extr_units(
-    [[maybe_unused]] const Chromosome& chrom, absl::Span<const Lef> lefs,
+    [[maybe_unused]] const GenomicInterval& interval, absl::Span<const Lef> lefs,
     absl::Span<const usize> rev_lef_ranks, absl::Span<const usize> fwd_lef_ranks,
     absl::Span<bp_t> rev_moves, absl::Span<bp_t> fwd_moves) noexcept(utils::ndebug_defined()) {
   assert(!lefs.empty());
@@ -337,8 +344,8 @@ void Simulation::adjust_moves_of_consecutive_extr_units(
     if (lefs[i1].is_bound() && lefs[i2].is_bound()) {
       // Don't bother processing moves that will cause LEFs to go past chromosomal boundaries: we
       // have a post-processing pass at the end of generate_moves() to handle this case
-      if (lefs[i1].rev_unit.pos() <= chrom.start_pos() + rev_moves[i1] ||
-          lefs[i2].rev_unit.pos() <= chrom.start_pos() + rev_moves[i2]) {
+      if (lefs[i1].rev_unit.pos() <= interval.start() + rev_moves[i1] ||
+          lefs[i2].rev_unit.pos() <= interval.start() + rev_moves[i2]) {
         continue;
       }
 
@@ -365,8 +372,8 @@ void Simulation::adjust_moves_of_consecutive_extr_units(
     // See above for detailed comments. The code logic is the same used on rev units (but
     // mirrored!)
     if (lefs[i1].is_bound() && lefs[i2].is_bound()) {
-      if (lefs[i1].fwd_unit.pos() + fwd_moves[i1] > chrom.end_pos() - 1 ||
-          lefs[i2].fwd_unit.pos() + fwd_moves[i2] > chrom.end_pos() - 1) {
+      if (lefs[i1].fwd_unit.pos() + fwd_moves[i1] > interval.end() - 1 ||
+          lefs[i2].fwd_unit.pos() + fwd_moves[i2] > interval.end() - 1) {
         continue;
       }
 
@@ -468,8 +475,8 @@ void Simulation::rank_lefs(const absl::Span<const Lef> lefs,
   }
 }
 
-void Simulation::extrude([[maybe_unused]] const Chromosome& chrom, const absl::Span<Lef> lefs,
-                         const absl::Span<const bp_t> rev_moves,
+void Simulation::extrude([[maybe_unused]] const GenomicInterval& interval,
+                         const absl::Span<Lef> lefs, const absl::Span<const bp_t> rev_moves,
                          const absl::Span<const bp_t> fwd_moves) noexcept(utils::ndebug_defined()) {
   assert(lefs.size() == rev_moves.size());
   assert(lefs.size() == fwd_moves.size());
@@ -481,8 +488,8 @@ void Simulation::extrude([[maybe_unused]] const Chromosome& chrom, const absl::S
     if (MODLE_UNLIKELY(!lef.is_bound())) {  // Do not process inactive LEFs
       continue;
     }
-    assert(lef.rev_unit.pos() >= chrom.start_pos() + rev_move);
-    assert(lef.fwd_unit.pos() + fwd_move < chrom.end_pos());
+    assert(lef.rev_unit.pos() >= interval.start() + rev_move);
+    assert(lef.fwd_unit.pos() + fwd_move < interval.end());
 
     // Extrude rev unit
     lef.rev_unit._pos -= rev_move;  // Advance extr. unit in 3'-5' direction
@@ -575,48 +582,6 @@ usize Simulation::release_lefs(const absl::Span<Lef> lefs, const ExtrusionBarrie
 
 BS::thread_pool Simulation::instantiate_thread_pool() const {
   return BS::thread_pool{utils::conditional_static_cast<BS::concurrency_t>(this->nthreads)};
-}
-
-Simulation::Task Simulation::Task::from_string(std::string_view serialized_task, Genome& genome) {
-  [[maybe_unused]] const usize ntoks = 7;
-  const auto sep = '\t';
-  const std::vector<std::string_view> toks = absl::StrSplit(serialized_task, sep);
-  assert(toks.size() == ntoks);
-
-  Task t;
-  try {
-    usize i = 0;
-    utils::parse_numeric_or_throw(toks[i++], t.id);
-    const auto& chrom_name = toks[i++];
-    utils::parse_numeric_or_throw(toks[i++], t.cell_id);
-    utils::parse_numeric_or_throw(toks[i++], t.num_target_epochs);
-    utils::parse_numeric_or_throw(toks[i++], t.num_target_contacts);
-    utils::parse_numeric_or_throw(toks[i++], t.num_lefs);
-    usize num_barriers_expected{};
-    utils::parse_numeric_or_throw(toks[i++], num_barriers_expected);
-
-    auto chrom_it = genome.find(chrom_name);
-    if (chrom_it == genome.end()) {
-      throw std::runtime_error(
-          fmt::format(FMT_STRING("Unable to find a chromosome named \"{}\""), chrom_name));
-    }
-    t.chrom = &(*chrom_it);
-
-    if (t.chrom->num_barriers() != num_barriers_expected) {
-      throw std::runtime_error(
-          fmt::format(FMT_STRING("Expected {} extrusion barriers for chromosome \"{}\". Found {}"),
-                      num_barriers_expected, t.chrom->name(), t.chrom->num_barriers()));
-    }
-    t.barriers = absl::MakeConstSpan(t.chrom->barriers().data());
-
-  } catch (const std::runtime_error& e) {
-    throw std::runtime_error(
-        fmt::format(FMT_STRING("An error occourred while parsing the following task definition:\n"
-                               "Task string: \"{}\"\n"
-                               "Error reason: {}"),
-                    serialized_task, e.what()));
-  }
-  return t;
 }
 
 void Simulation::State::resize_buffers(usize new_size) {
@@ -767,52 +732,26 @@ Simulation::State& Simulation::State::operator=(const Task& task) {
   this->num_contacts = 0;
 
   this->id = task.id;
-  this->chrom = task.chrom;
+  this->interval = task.interval;
   this->cell_id = task.cell_id;
   this->num_target_epochs = task.num_target_epochs;
   this->num_target_contacts = task.num_target_contacts;
   this->num_lefs = task.num_lefs;
   this->barriers = ExtrusionBarriers{task.barriers.begin(), task.barriers.end()};
 
-  if (this->chrom->contacts_ptr()) {
-    this->contacts = this->chrom->contacts_ptr();
-  }
   return *this;
 }
 
-std::string Simulation::State::to_string() const noexcept {
-  // clang-format off
-  return fmt::format(FMT_STRING("State:\n - TaskID {}\n"
-                                " - Chrom: {}[{}-{}]\n"
-                                " - CellID: {}\n"
-                                " - Target epochs: {}\n"
-                                " - Target contacts: {}\n"
-                                " - # of LEFs: {}\n"
-                                " - # Extrusion barriers: {}\n"
-                                " - seed: {}\n"),
-                     id,
-                     chrom->name(),
-                     chrom->start_pos(),
-                     chrom->end_pos(),
-                     cell_id,
-                     num_target_epochs,
-                     num_target_contacts,
-                     num_lefs,
-                     barriers.size(),
-                     seed);
-  // clang-format on
-}
-
 std::pair<usize, usize> Simulation::process_collisions(
-    const Chromosome& chrom, const absl::Span<Lef> lefs, ExtrusionBarriers& barriers,
+    const GenomicInterval& interval, const absl::Span<Lef> lefs, ExtrusionBarriers& barriers,
     const absl::Span<usize> rev_lef_ranks, const absl::Span<usize> fwd_lef_ranks,
     const absl::Span<bp_t> rev_moves, const absl::Span<bp_t> fwd_moves,
     const absl::Span<CollisionT> rev_collisions, const absl::Span<CollisionT> fwd_collisions,
     random::PRNG_t& rand_eng) const noexcept(utils::ndebug_defined()) {
   const auto& [num_rev_units_at_5prime, num_fwd_units_at_3prime] =
-      Simulation::detect_units_at_chrom_boundaries(chrom, lefs, rev_lef_ranks, fwd_lef_ranks,
-                                                   rev_moves, fwd_moves, rev_collisions,
-                                                   fwd_collisions);
+      Simulation::detect_units_at_interval_boundaries(interval, lefs, rev_lef_ranks, fwd_lef_ranks,
+                                                      rev_moves, fwd_moves, rev_collisions,
+                                                      fwd_collisions);
 
   this->detect_lef_bar_collisions(lefs, rev_lef_ranks, fwd_lef_ranks, rev_moves, fwd_moves,
                                   barriers, rev_collisions, fwd_collisions, rand_eng,
@@ -826,11 +765,11 @@ std::pair<usize, usize> Simulation::process_collisions(
 
   Simulation::correct_moves_for_primary_lef_lef_collisions(
       lefs, rev_lef_ranks, fwd_lef_ranks, rev_moves, fwd_moves, rev_collisions, fwd_collisions);
-  this->process_secondary_lef_lef_collisions(chrom, lefs, rev_lef_ranks, fwd_lef_ranks, rev_moves,
-                                             fwd_moves, rev_collisions, fwd_collisions, rand_eng,
-                                             num_rev_units_at_5prime, num_fwd_units_at_3prime);
-  Simulation::fix_secondary_lef_lef_collisions(chrom, lefs, rev_lef_ranks, fwd_lef_ranks, rev_moves,
-                                               fwd_moves, rev_collisions, fwd_collisions,
+  this->process_secondary_lef_lef_collisions(
+      interval, lefs, rev_lef_ranks, fwd_lef_ranks, rev_moves, fwd_moves, rev_collisions,
+      fwd_collisions, rand_eng, num_rev_units_at_5prime, num_fwd_units_at_3prime);
+  Simulation::fix_secondary_lef_lef_collisions(interval, lefs, rev_lef_ranks, fwd_lef_ranks,
+                                               rev_moves, fwd_moves, rev_collisions, fwd_collisions,
                                                num_rev_units_at_5prime, num_fwd_units_at_3prime);
   return std::make_pair(num_rev_units_at_5prime, num_fwd_units_at_3prime);
 }
@@ -923,11 +862,12 @@ void Simulation::run_burnin(State& s, const double lef_binding_rate_burnin) cons
 
       if (!s.burnin_completed && s.epoch >= this->max_burnin_epochs) {
         s.burnin_completed = true;
+        s.num_active_lefs = s.num_lefs;
         spdlog::warn(
-            FMT_STRING("The burn-in phase for \"{}\" from cell #{} was terminated earlier than "
+            FMT_STRING("The burn-in phase for {} from cell #{} was terminated earlier than "
                        "it should've as its simulation instance failed to stabilize "
                        "within --max-burnin-epochs={} epochs."),
-            s.chrom->name(), s.cell_id, this->max_burnin_epochs);
+            *s.interval, s.cell_id, this->max_burnin_epochs);
       }
     }
     // Guard against the rare occasion where the poisson prng samples 0 in the first epoch
@@ -942,8 +882,8 @@ void Simulation::simulate_one_cell(State& s) const {
   assert(s.num_target_epochs != (std::numeric_limits<usize>::max)());
 
   try {
-    // Seed is computed based on chrom. name, size and cellid
-    s.seed = s.chrom->hash(s.xxh_state.get(), this->seed, s.cell_id);
+    // Seed is computed based on chrom. name, interval start/end and cellid
+    s.seed = s.interval->hash(this->seed, s.cell_id);
     s.rand_eng = random::PRNG(s.seed);
 
     const auto lef_binding_rate_burnin =
@@ -989,13 +929,13 @@ void Simulation::simulate_one_cell(State& s) const {
         if (s.num_target_contacts != 0 && s.num_contacts >= s.num_target_contacts) {
           spdlog::debug(FMT_STRING("Simulation for cell #{} of {} took {} epochs ({} for burnin "
                                    "and {} for the rest of the simulation)"),
-                        s.cell_id, s.chrom->name(), s.epoch, s.num_burnin_epochs,
+                        s.cell_id, *s.interval, s.epoch, s.num_burnin_epochs,
                         s.epoch - s.num_burnin_epochs);
           return;  // Enough contacts have been generated. Yay!
         }
       }
 
-      this->generate_moves(*s.chrom, s.get_lefs(), s.get_rev_ranks(), s.get_fwd_ranks(),
+      this->generate_moves(*s.interval, s.get_lefs(), s.get_rev_ranks(), s.get_fwd_ranks(),
                            s.get_rev_moves(), s.get_fwd_moves(), s.burnin_completed, s.rand_eng);
 
       s.barriers.next_state(s.rand_eng);
@@ -1007,16 +947,16 @@ void Simulation::simulate_one_cell(State& s) const {
                     [&](auto& c) { c.clear(); });
 
       // Detect collision and correct moves
-      Simulation::process_collisions(*s.chrom, s.get_lefs(), s.barriers, s.get_rev_ranks(),
+      Simulation::process_collisions(*s.interval, s.get_lefs(), s.barriers, s.get_rev_ranks(),
                                      s.get_fwd_ranks(), s.get_rev_moves(), s.get_fwd_moves(),
                                      s.get_rev_collisions(), s.get_fwd_collisions(), s.rand_eng);
       // Advance LEFs
-      Simulation::extrude(*s.chrom, s.get_lefs(), s.get_rev_moves(), s.get_fwd_moves());
+      Simulation::extrude(*s.interval, s.get_lefs(), s.get_rev_moves(), s.get_fwd_moves());
 
       // Log model internal state
       if (MODLE_UNLIKELY(this->log_model_internal_state)) {
         assert(s.model_state_logger);
-        Simulation::dump_stats(s.id, s.epoch, s.cell_id, !s.burnin_completed, *s.chrom,
+        Simulation::dump_stats(s.id, s.epoch, s.cell_id, !s.burnin_completed, *s.interval,
                                s.get_lefs(), s.barriers, s.get_rev_collisions(),
                                s.get_fwd_collisions(), *s.model_state_logger);
       }
@@ -1028,19 +968,19 @@ void Simulation::simulate_one_cell(State& s) const {
   } catch (const std::exception& err) {
     throw std::runtime_error(fmt::format(
         FMT_STRING("Caught an exception while simulating epoch #{} in cell #{} of {}:\n{}"),
-        s.epoch, s.cell_id, s.chrom->name(), err.what()));
+        s.epoch, s.cell_id, *s.interval, err.what()));
   }
 }
 
 void Simulation::select_and_bind_lefs(State& s) noexcept(utils::ndebug_defined()) {
   const auto lef_mask = s.get_idx_buff();
   Simulation::select_lefs_to_bind(s.get_lefs(), lef_mask);
-  Simulation::bind_lefs(*s.chrom, s.get_lefs(), s.get_rev_ranks(), s.get_fwd_ranks(), lef_mask,
+  Simulation::bind_lefs(*s.interval, s.get_lefs(), s.get_rev_ranks(), s.get_fwd_ranks(), lef_mask,
                         s.rand_eng, s.epoch);
 }
 
 void Simulation::dump_stats(const usize task_id, const usize epoch, const usize cell_id,
-                            const bool burnin, const Chromosome& chrom,
+                            const bool burnin, const GenomicInterval& interval,
                             const absl::Span<const Lef> lefs, const ExtrusionBarriers& barriers,
                             const absl::Span<const CollisionT> rev_collisions,
                             const absl::Span<const CollisionT> fwd_collisions,
@@ -1079,7 +1019,7 @@ void Simulation::dump_stats(const usize task_id, const usize epoch, const usize 
   const auto lef_lef_primary_collisions = count_collisions(CollisionT::LEF_LEF_PRIMARY);
   const auto lef_lef_secondary_collisions = count_collisions(CollisionT::LEF_LEF_SECONDARY);
 
-  // TODO log number of units at chrom boundaries
+  // TODO log number of units at interval boundaries
 
   const auto avg_loop_size =
       stats::mean(lefs.begin(), lefs.end(), [](const auto& lef) { return lef.loop_size(); });
@@ -1088,11 +1028,13 @@ void Simulation::dump_stats(const usize task_id, const usize epoch, const usize 
   log_writer.write(fmt::format(
       FMT_COMPILE("{}\t{}\t{}\t"
                   "{}\t{}\t{}\t"
+                  "{}\t{}\t"
                   "{}\t{}\t{}\t"
                   "{}\t{}\t{}\t"
                   "{}\t{}\n"),
       task_id, epoch, cell_id,
-      chrom.name(), burnin ? "True" : "False", effective_barrier_occupancy,
+      interval.chrom(), interval.start(), interval.end(),
+      burnin ? "True" : "False", effective_barrier_occupancy,
       lefs.size(), lefs_stalled_rev, lefs_stalled_fwd,
       lefs_stalled_both, lef_bar_collisions, lef_lef_primary_collisions,
       lef_lef_secondary_collisions, avg_loop_size));
@@ -1133,10 +1075,10 @@ usize Simulation::compute_num_lefs(const usize size_bp) const noexcept {
 }
 
 void Simulation::print_status_update(const Task& t) const noexcept {
-  auto tot_target_epochs = this->compute_tot_target_epochs(t.num_lefs, t.chrom->npixels());
-  spdlog::info(FMT_STRING("Begin processing \"{}\": simulating ~{} epochs across {} cells using {} "
+  auto tot_target_epochs = this->compute_tot_target_epochs(t.num_lefs, t.interval->npixels());
+  spdlog::info(FMT_STRING("Begin processing {}: simulating ~{} epochs across {} cells using {} "
                           "LEFs and {} barriers (~{} epochs per cell)..."),
-               t.chrom->name(), tot_target_epochs, this->num_cells, t.num_lefs, t.barriers.size(),
+               *t.interval, tot_target_epochs, this->num_cells, t.num_lefs, t.barriers.size(),
                tot_target_epochs / this->num_cells);
 }
 }  // namespace modle

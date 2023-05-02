@@ -17,7 +17,7 @@
 #include "modle/common/simulation_config.hpp"  // for Config
 #include "modle/extrusion_barriers.hpp"        // for ExtrusionBarrier, State, OCCUPIED
 #include "modle/extrusion_factors.hpp"         // for Lef
-#include "modle/genome.hpp"                    // for Chromosome
+#include "modle/genome.hpp"                    // for GenomicInterval
 #include "modle/simulation.hpp"                // for Simulation
 
 namespace modle::libmodle::test {
@@ -27,7 +27,7 @@ TEST_CASE("Simulation 001", "[simulation][short]") {
   const auto c = init_config(75, 75);
   const usize nlefs = 7;
   const usize nbarriers = 5;
-  const Chromosome chrom{0, "chr1", 0, 1000, 1000};
+  const auto chrom = init_interval("chr1", 1000);
   auto rand_eng = DEFAULT_PRNG;
 
   // clang-format off
@@ -97,7 +97,7 @@ TEST_CASE("Simulation 002", "[simulation][short]") {
   const auto c = init_config(75, 75);
   const usize nlefs = 7;
   const usize nbarriers = 5;
-  const Chromosome chrom{0, "chr1", 0, 1000, 1000};
+  const auto chrom = init_interval("chr1", 1000);
   auto rand_eng = DEFAULT_PRNG;
 
   // clang-format off
@@ -169,7 +169,7 @@ TEST_CASE("Simulation 003 - Soft collisions on", "[simulation][short]") {
   c.lef_bar_minor_collision_pblock = 1;
   const usize nlefs = 7;
   const usize nbarriers = 5;
-  const Chromosome chrom{0, "chr1", 0, 1000, 1000};
+  const auto chrom = init_interval("chr1", 1000);
   auto rand_eng = DEFAULT_PRNG;
 
   // clang-format off
@@ -239,7 +239,7 @@ TEST_CASE("Simulation 004 - Inactive barriers", "[simulation][short]") {
   const auto c = init_config(75, 75);
   const usize nlefs = 7;
   const usize nbarriers = 5;
-  const Chromosome chrom{0, "chr1", 0, 1000, 1000};
+  const auto chrom = init_interval("chr1", 1000);
   auto rand_eng = DEFAULT_PRNG;
 
   // clang-format off
@@ -308,7 +308,7 @@ TEST_CASE("Simulation 005 - Multiple LEFs located at the same site", "[simulatio
   const auto c = init_config(25, 25);
   constexpr usize nlefs = 6;
   constexpr usize nbarriers = 1;
-  const Chromosome chrom{0, "chr1", 0, 150, 150};
+  const auto chrom = init_interval("chr1", 150);
   auto rand_eng = DEFAULT_PRNG;
 
   // clang-format off
@@ -369,7 +369,7 @@ TEST_CASE("Simulation 006 - Few inactive LEFs", "[simulation][short]") {
   const auto c = init_config(25, 25);
   constexpr usize nlefs = 6;
   constexpr usize nbarriers = 1;
-  const Chromosome chrom{0, "chr1", 0, 150, 150};
+  const auto chrom = init_interval("chr1", 150);
   auto rand_eng = DEFAULT_PRNG;
 
   // clang-format off
@@ -434,7 +434,7 @@ TEST_CASE("Simulation 007 - LEF-LEF collision overrides LEF-BAR collision 1",
   const auto c = init_config(20, 20);
   constexpr usize nlefs = 2;
   constexpr usize nbarriers = 1;
-  const Chromosome chrom{0, "chr1", 0, 200, 200};
+  const auto chrom = init_interval("chr1", 200);
   auto rand_eng = DEFAULT_PRNG;
 
   // clang-format off
@@ -483,7 +483,7 @@ TEST_CASE("Simulation 008 - LEF-LEF collision overrides LEF-BAR collision 2",
   const auto c = init_config(20, 20);
   constexpr usize nlefs = 2;
   constexpr usize nbarriers = 1;
-  const Chromosome chrom{0, "chr1", 0, 200, 200};
+  const auto chrom = init_interval("chr1", 200);
   auto rand_eng = DEFAULT_PRNG;
 
   // clang-format off
@@ -533,7 +533,7 @@ TEST_CASE("Simulation 009 - Ensure stacked LEFs do not interfere with surroundin
   const auto c = init_config(10, 10);
   constexpr usize nlefs = 5;
   constexpr usize nbarriers = 2;
-  const Chromosome chrom{0, "chr1", 0, 200, 200};
+  const auto chrom = init_interval("chr1", 200);
   auto rand_eng = DEFAULT_PRNG;
 
   // clang-format off
@@ -594,7 +594,7 @@ TEST_CASE("Simulation 010 - Ensure stacked LEFs do not interfere with surroundin
   const auto c = init_config(10, 10);
   constexpr usize nlefs = 6;
   constexpr usize nbarriers = 2;
-  const Chromosome chrom{0, "chr1", 0, 200, 200};
+  const auto chrom = init_interval("chr1", 200);
   auto rand_eng = DEFAULT_PRNG;
 
   // clang-format off
@@ -658,7 +658,7 @@ TEST_CASE("Simulation 011 - fix_secondary_lef_lef_collisions", "[simulation][sho
   c.probability_of_extrusion_unit_bypass = 0.25;
   constexpr usize nlefs = 2;
   constexpr usize nbarriers = 1;
-  const Chromosome chrom{0, "chr1", 0, 200, 200};
+  const auto chrom = init_interval("chr1", 200);
   // DO NOT CHANGE SEED!
   // The outcome of this test depends on the seed
   auto rand_eng = random::PRNG(752741483ULL);
@@ -724,7 +724,7 @@ TEST_CASE("Simulation 012 - fix_secondary_lef_lef_collisions", "[simulation][sho
   c.probability_of_extrusion_unit_bypass = 0.25;
   constexpr usize nlefs = 2;
   constexpr usize nbarriers = 1;
-  const Chromosome chrom{0, "chr1", 0, 200, 200};
+  const auto chrom = init_interval("chr1", 200);
   // DO NOT CHANGE SEED!
   // The outcome of this test depends on the seed
   auto rand_eng = random::PRNG(752741483ULL);

@@ -36,7 +36,7 @@
 #include "modle/common/common.hpp"  // for u64
 #include "modle/common/fmt_helpers.hpp"
 #include "modle/common/suppress_compiler_warnings.hpp"  // for DISABLE_WARNING_POP, DISABLE_WARN...
-#include "modle/genome.hpp"                             // for Chromosome, Genome
+#include "modle/genome.hpp"                             // for GenomicInterval, Genome
 #include "modle/interval_tree.hpp"                      // for IITree, IITree::data
 
 namespace modle {
@@ -78,8 +78,9 @@ void Simulation::run_simulate() {
   this->_tpool.reset(utils::conditional_static_cast<BS::concurrency_t>(this->nthreads + 1));
 
   // These are the threads spawned by run_simulate:
-  // - 1 thread to write contacts to disk. This thread pops Chromosome* from a std::deque once the
-  //   simulation on the Chromosome* has been ultimated. This thread is also responsible of
+  // - 1 thread to write contacts to disk. This thread pops GenomicInterval* from a std::deque once
+  // the
+  //   simulation on the GenomicInterval* has been ultimated. This thread is also responsible of
   //   freeing memory as soon as it is not needed by any other thread.
   // - The main thread (i.e. this thread), which loops over chromosomes, instantiates data
   //   structures that are shared across simulation threads (e.g. the vector of extr. barriers),
@@ -93,7 +94,7 @@ void Simulation::run_simulate() {
   // light-weight structs
 
   std::mutex progress_queue_mutex;  // Protect rw access to progress_queue
-  std::deque<std::pair<Chromosome*, usize>> progress_queue;
+  std::deque<std::pair<GenomicInterval*, usize>> progress_queue;
 
   const auto task_batch_size_deq = [this]() -> usize {
     if (this->num_cells <= this->nthreads) {
@@ -135,29 +136,29 @@ void Simulation::run_simulate() {
     usize taskid = 0;
 
     // Loop over chromosomes
-    for (auto& chrom : this->_genome) {
+    for (auto& interval : this->_genome) {
       if (!this->ok()) {
         this->handle_exceptions();
       }
-      // Don't bother simulating chromosomes without barriers
-      if (!this->simulate_chromosomes_wo_barriers && chrom.num_barriers() == 0) {
-        spdlog::info(FMT_STRING("SKIPPING \"{}\"..."), chrom.name());
+      // Don't bother simulating interval without barriers
+      if (!this->simulate_chromosomes_wo_barriers && interval.num_barriers() == 0) {
+        spdlog::info(FMT_STRING("{} has 0 barriers... SKIPPING!"), interval);
         std::scoped_lock lck(progress_queue_mutex);
-        progress_queue.emplace_back(&chrom, num_cells);
+        progress_queue.emplace_back(&interval, num_cells);
         continue;
       }
 
       {
         std::scoped_lock lck(progress_queue_mutex);
 
-        // Signal that we have started processing the current chrom
-        progress_queue.emplace_back(&chrom, usize(0));
+        // Signal that we have started processing the current interval
+        progress_queue.emplace_back(&interval, usize(0));
       }
 
-      // Compute # of LEFs to be simulated based on chrom.sizes
-      const auto nlefs = this->compute_num_lefs(chrom.simulated_size());
+      // Compute # of LEFs to be simulated based on interval.sizes
+      const auto nlefs = this->compute_num_lefs(interval.size());
 
-      const auto npixels = chrom.npixels(this->diagonal_width, this->bin_size);
+      const auto npixels = interval.npixels();
       const auto tot_target_contacts = static_cast<usize>(
           std::round(static_cast<double>(npixels) * this->target_contact_density));
       const auto target_epochs = this->compute_tot_target_epochs(nlefs, npixels);
@@ -169,20 +170,16 @@ void Simulation::run_simulate() {
       usize cellid = 0;
       const auto nbatches = (this->num_cells + task_batch_size_enq - 1) / task_batch_size_enq;
       for (usize batchid = 0; batchid < nbatches; ++batchid) {
-        // Generate a batch of tasks for the current chrom
+        // Generate a batch of tasks for the current interval
         std::generate(tasks.begin(), tasks.end(), [&]() {
           // This is needed to not overshoot the target contact density
           const auto effective_target_contacts = std::min(
               target_contacts_per_cell, tot_target_contacts - tot_target_contacts_rolling_count);
           tot_target_contacts_rolling_count += effective_target_contacts;
 
-          return Task{taskid++,
-                      &chrom,
-                      cellid++,
-                      target_epochs,
-                      effective_target_contacts,
-                      nlefs,
-                      chrom.barriers().data()};
+          return Task{
+              taskid++, &interval,          cellid++, target_epochs, effective_target_contacts,
+              nlefs,    interval.barriers()};
         });
         const auto ntasks =
             cellid > this->num_cells ? tasks.size() - (cellid - this->num_cells) : tasks.size();
@@ -222,7 +219,7 @@ void Simulation::run_simulate() {
 
 void Simulation::simulate_worker(const u64 tid,
                                  moodycamel::BlockingConcurrentQueue<Simulation::Task>& task_queue,
-                                 std::deque<std::pair<Chromosome*, usize>>& progress_queue,
+                                 std::deque<std::pair<GenomicInterval*, usize>>& progress_queue,
                                  std::mutex& progress_queue_mtx, std::mutex& model_state_logger_mtx,
                                  const usize task_batch_size) {
   spdlog::info(FMT_STRING("Spawning simulation thread {}..."), tid);
@@ -250,7 +247,9 @@ void Simulation::simulate_worker(const u64 tid,
     while (this->ok()) {
       const auto avail_tasks = this->consume_tasks_blocking(task_queue, ctok, task_buff);
       if (avail_tasks == 0) {
-        assert(this->_end_of_simulation);
+        while (!this->_end_of_simulation) {
+          std::this_thread::sleep_for(std::chrono::milliseconds(50));
+        }
         // Reached end of simulation (i.e. all tasks have been processed)
         if (this->log_model_internal_state && !this->skip_output) {
           assert(!tmp_model_internal_state_log_path.empty());
@@ -267,11 +266,6 @@ void Simulation::simulate_worker(const u64 tid,
       for (const auto& task : absl::MakeConstSpan(task_buff.data(), avail_tasks)) {
         if (!this->ok()) {
           return;
-        }
-        // Resize and reset buffers
-        task.chrom->allocate_contact_matrix(this->bin_size, this->diagonal_width);
-        if (this->track_1d_lef_position) {
-          task.chrom->allocate_lef_occupancy_buffer(this->bin_size);
         }
         local_state = task;            // Set simulation state based on task data
         local_state.resize_buffers();  // This resizes buffers based on the nlefs to be simulated
@@ -295,13 +289,12 @@ void Simulation::simulate_worker(const u64 tid,
         // Update progress for the current chrom
         std::scoped_lock lck(progress_queue_mtx);
         auto progress = std::find_if(progress_queue.begin(), progress_queue.end(),
-                                     [&](const auto& p) { return task.chrom == p.first; });
+                                     [&](const auto& p) { return task.interval == p.first; });
         assert(progress != progress_queue.end());
 
         if (++progress->second == num_cells && !this->_exception_thrown) {
           // We are done simulating loop-extrusion on task.chrom: print a status update
-          spdlog::info(FMT_STRING("Simulation of \"{}\" successfully completed."),
-                       task.chrom->name());
+          spdlog::info(FMT_STRING("Simulation of \"{}\" successfully completed."), *task.interval);
         }
       }
     }

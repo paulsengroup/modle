@@ -123,7 +123,7 @@ if [ ! "$status" -eq 0 ]; then
 fi
 
 outdir="$(mktemp -d -t modle-XXXXXXXXXX)"
-trap 'rm -rf -- "$outdir"' EXIT
+# trap 'rm -rf -- "$outdir"' EXIT
 
 # Only include chr17 and chr19
 chroms='^chr1[79]'

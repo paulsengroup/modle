@@ -4,24 +4,23 @@
 
 #pragma once
 
-#include <absl/container/flat_hash_set.h>        // for flat_hash_set
-#include <absl/types/span.h>                     // for Span
-#include <fmt/format.h>                          // for format_parse_context, formatter
-#include <moodycamel/blockingconcurrentqueue.h>  // for BlockingConcurrentQueue
-#include <xxhash.h>                              // for XXH_INLINE_XXH3_createState, XXH3...
+#include <absl/container/flat_hash_set.h>               // for flat_hash_set
+#include <absl/types/span.h>                            // for Span
+#include <fmt/format.h>                                 // for format_parse_context, formatter
+#include <moodycamel/blockingconcurrentqueue.h>         // for BlockingConcurrentQueue
 
-#include <BS_thread_pool.hpp>  // for BS::thread_pool
-#include <atomic>              // for atomic
-#include <deque>               // for deque
-#include <exception>           // for exception_ptr
-#include <filesystem>          // for path
-#include <limits>              // for numeric_limits
-#include <memory>              // for shared_ptr, allocator, unique_ptr
-#include <mutex>               // for mutex
-#include <string>              // for string
-#include <string_view>         // for string_view
-#include <utility>             // for pair
-#include <vector>              // for vector
+#include <BS_thread_pool.hpp>                           // for BS::thread_pool
+#include <atomic>                                       // for atomic
+#include <deque>                                        // for deque
+#include <exception>                                    // for exception_ptr
+#include <filesystem>                                   // for path
+#include <limits>                                       // for numeric_limits
+#include <memory>                                       // for shared_ptr, allocator, unique_ptr
+#include <mutex>                                        // for mutex
+#include <string>                                       // for string
+#include <string_view>                                  // for string_view
+#include <utility>                                      // for pair
+#include <vector>                                       // for vector
 
 #include "modle/bed/bed.hpp"                            // for BED (ptr only), BED_tree
 #include "modle/collision_encoding.hpp"                 // for Collision<>
@@ -29,11 +28,11 @@
 #include "modle/common/random.hpp"                      // for PRNG_t, normal_distribution, unif...
 #include "modle/common/simulation_config.hpp"           // for Config
 #include "modle/common/suppress_compiler_warnings.hpp"  // for DISABLE_WARNING_POP, DISABLE_WARN...
-#include "modle/common/utils.hpp"                       // for ndebug_defined, XXH3_Deleter, XXH...
+#include "modle/common/utils.hpp"                       // for ndebug_defined
 #include "modle/contact_matrix_dense.hpp"               // for ContactMatrixDense
 #include "modle/extrusion_barriers.hpp"                 // for ExtrusionBarrier
 #include "modle/extrusion_factors.hpp"                  // for Lef, ExtrusionUnit (ptr only)
-#include "modle/genome.hpp"                             // for Chromosome (ptr only), Genome
+#include "modle/genome.hpp"                             // for GenomicInterval (ptr only), Genome
 
 namespace modle {
 
@@ -47,7 +46,6 @@ class IITree;
 class Simulation : Config {
  public:
   explicit Simulation(const Config& c, bool import_chroms = true);
-  std::string to_string() = delete;
   void print() = delete;
 
   [[nodiscard]] usize size() const;
@@ -58,21 +56,18 @@ class Simulation : Config {
 
   static constexpr auto Mbp = 1.0e6;
 
- public:
   using CollisionT = Collision<u32f>;
   struct Task {  // NOLINT(altera-struct-pack-align)
     usize id{};
-    Chromosome* chrom{};
+    GenomicInterval* interval{};
     usize cell_id{};
     usize num_target_epochs{};
     usize num_target_contacts{};
     usize num_lefs{};
     absl::Span<const ExtrusionBarrier> barriers{};
-
-    static Task from_string(std::string_view serialized_task, Genome& genome);
   };
 
-  struct State : Task {  // NOLINT(altera-struct-pack-align)
+  struct State : Task {            // NOLINT(altera-struct-pack-align)
     State() = default;
     usize epoch{};                 // NOLINT
     bool burnin_completed{false};  // NOLINT
@@ -80,12 +75,8 @@ class Simulation : Config {
     usize num_burnin_epochs{0};    // NOLINT
     usize num_contacts{0};         // NOLINT
 
-    random::PRNG_t rand_eng{};  // NOLINT
-    u64 seed{};                 // NOLINT
-    DISABLE_WARNING_PUSH
-    DISABLE_WARNING_USED_BUT_MARKED_UNUSED
-    std::unique_ptr<XXH3_state_t, utils::XXH3_Deleter> xxh_state{XXH3_createState()};  // NOLINT
-    DISABLE_WARNING_POP
+    random::PRNG_t rand_eng{};     // NOLINT
+    u64 seed{};                    // NOLINT
     std::unique_ptr<compressed_io::Writer> model_state_logger{nullptr};  // NOLINT
 
     ExtrusionBarriers barriers{};
@@ -132,7 +123,6 @@ class Simulation : Config {
     std::shared_ptr<ContactMatrixDense<contacts_t>> contacts{nullptr};  // NOLINT
 
     State& operator=(const Task& task);
-    [[nodiscard]] std::string to_string() const noexcept;
 
     void resize_buffers(usize size = (std::numeric_limits<usize>::max)());
     void reset_buffers();
@@ -160,21 +150,8 @@ class Simulation : Config {
   /// Simulate loop extrusion using the parameters and buffers passed through \p state
   void simulate_one_cell(State& s) const;
 
-  /// Simulate loop extrusion on a Chromosome window using the parameters and buffers passed through
-  /// \p state
-
-  //! This function will call simulate_one_cell multiple times to compute the number of
-  //! contacts between a pair of features given a specific barrier configuration.
-  //! The different configurations are generated by this function based on the parameters from
-  //! \p state
-  void simulate_window(State& state, compressed_io::Writer& out_stream, std::mutex& cooler_mtx,
-                       bool write_contacts_to_cooler = false) const;
-
-  /// Monitor the progress queue and write contacts to a .cool file when all the cells belonging to
-  /// a given chromosome have been simulated.
-
   //! IMPORTANT: this function is meant to be run in a dedicated thread.
-  void write_contacts_to_disk(std::deque<std::pair<Chromosome*, usize>>& progress_queue,
+  void write_contacts_to_disk(std::deque<std::pair<GenomicInterval*, usize>>& progress_queue,
                               std::mutex& progress_queue_mtx);
 
   /// Write LEF occupancy in 1D space to disk as a BigWig file
@@ -189,7 +166,7 @@ class Simulation : Config {
   //! simulation.
   //! IMPORTANT: this function is meant to be run in a dedicated thread.
   void simulate_worker(u64 tid, moodycamel::BlockingConcurrentQueue<Simulation::Task>& task_queue,
-                       std::deque<std::pair<Chromosome*, usize>>& progress_queue,
+                       std::deque<std::pair<GenomicInterval*, usize>>& progress_queue,
                        std::mutex& progress_queue_mtx, std::mutex& model_state_logger_mtx,
                        usize task_batch_size = 32);
 
@@ -200,7 +177,7 @@ class Simulation : Config {
   //! In order to properly handle ties, the sorting criterion is actually a bit more complex. See
   //! documentation and comments for Simulation::rank_lefs for more details).
   template <typename MaskT>
-  inline static void bind_lefs(const Chromosome& chrom, absl::Span<Lef> lefs,
+  inline static void bind_lefs(const GenomicInterval& interval, absl::Span<Lef> lefs,
                                absl::Span<usize> rev_lef_ranks, absl::Span<usize> fwd_lef_ranks,
                                const MaskT& mask, random::PRNG_t& rand_eng,
                                usize current_epoch) noexcept(utils::ndebug_defined());
@@ -220,7 +197,7 @@ class Simulation : Config {
   //! When adjust_moves_ is true, adjust moves to make consecutive LEFs behave in a more realistic way.
   //! See Simulation::adjust_moves_of_consecutive_extr_units for more details
   // clang-format on
-  void generate_moves(const Chromosome& chrom, absl::Span<const Lef> lefs,
+  void generate_moves(const GenomicInterval& interval, absl::Span<const Lef> lefs,
                       absl::Span<const usize> rev_lef_ranks, absl::Span<const usize> fwd_lef_ranks,
                       absl::Span<bp_t> rev_moves, absl::Span<bp_t> fwd_moves, bool burnin_completed,
                       random::PRNG_t& rand_eng, bool adjust_moves_ = true) const
@@ -245,12 +222,12 @@ class Simulation : Config {
   //! against the fwd_unit of LEF2, temporarily increasing the fwd extr. speed of LEF2.
   // clang-format on
   static void adjust_moves_of_consecutive_extr_units(
-      const Chromosome& chrom, absl::Span<const Lef> lefs, absl::Span<const usize> rev_lef_ranks,
-      absl::Span<const usize> fwd_lef_ranks, absl::Span<bp_t> rev_moves,
-      absl::Span<bp_t> fwd_moves) noexcept(utils::ndebug_defined());
+      const GenomicInterval& interval, absl::Span<const Lef> lefs,
+      absl::Span<const usize> rev_lef_ranks, absl::Span<const usize> fwd_lef_ranks,
+      absl::Span<bp_t> rev_moves, absl::Span<bp_t> fwd_moves) noexcept(utils::ndebug_defined());
 
   /// Clamp moves to prevent LEFs from falling off chromosomal boundaries
-  static void clamp_moves(const Chromosome& chrom, absl::Span<const Lef> lefs,
+  static void clamp_moves(const GenomicInterval& interval, absl::Span<const Lef> lefs,
                           absl::Span<bp_t> rev_moves, absl::Span<bp_t> fwd_moves) noexcept;
 
   /// Sort extr. units by index based on their position whilst properly dealing with ties. See
@@ -265,7 +242,7 @@ class Simulation : Config {
   //! processed by:
   //! - Simulation::adjust_moves_of_consecutive_extr_units
   //! - Simulation::process_collisions
-  static void extrude(const Chromosome& chrom, absl::Span<Lef> lefs,
+  static void extrude(const GenomicInterval& interval, absl::Span<Lef> lefs,
                       absl::Span<const bp_t> rev_moves,
                       absl::Span<const bp_t> fwd_moves) noexcept(utils::ndebug_defined());
 
@@ -274,7 +251,7 @@ class Simulation : Config {
 
   //! \return number of rev units at the 5'-end, number of fwd units at the 3'-end
   std::pair<usize, usize> process_collisions(
-      const Chromosome& chrom, absl::Span<Lef> lefs, ExtrusionBarriers& barriers,
+      const GenomicInterval& interval, absl::Span<Lef> lefs, ExtrusionBarriers& barriers,
       absl::Span<usize> rev_lef_ranks, absl::Span<usize> fwd_lef_ranks, absl::Span<bp_t> rev_moves,
       absl::Span<bp_t> fwd_moves, absl::Span<CollisionT> rev_collisions,
       absl::Span<CollisionT> fwd_collisions, random::PRNG_t& rand_eng) const
@@ -284,11 +261,11 @@ class Simulation : Config {
 
   //! \return a pair of numbers consisting in the number of rev units located at the 5'-end and
   //! number of fwd units located at the 3'-end.
-  static std::pair<usize, usize> detect_units_at_chrom_boundaries(
-      const Chromosome& chrom, absl::Span<const Lef> lefs, absl::Span<const usize> rev_lef_ranks,
-      absl::Span<const usize> fwd_lef_ranks, absl::Span<const bp_t> rev_moves,
-      absl::Span<const bp_t> fwd_moves, absl::Span<CollisionT> rev_collisions,
-      absl::Span<CollisionT> fwd_collisions);
+  static std::pair<usize, usize> detect_units_at_interval_boundaries(
+      const GenomicInterval& interval, absl::Span<const Lef> lefs,
+      absl::Span<const usize> rev_lef_ranks, absl::Span<const usize> fwd_lef_ranks,
+      absl::Span<const bp_t> rev_moves, absl::Span<const bp_t> fwd_moves,
+      absl::Span<CollisionT> rev_collisions, absl::Span<CollisionT> fwd_collisions);
 
   /// Detect collisions between LEFs and extrusion barriers.
 
@@ -338,14 +315,15 @@ class Simulation : Config {
   //! The index i is encoded as num_barriers + num_lefs + i.
   // clang-format on
   void process_secondary_lef_lef_collisions(
-      const Chromosome& chrom, absl::Span<const Lef> lefs, absl::Span<const usize> rev_lef_ranks,
-      absl::Span<const usize> fwd_lef_ranks, absl::Span<bp_t> rev_moves, absl::Span<bp_t> fwd_moves,
-      absl::Span<CollisionT> rev_collisions, absl::Span<CollisionT> fwd_collisions,
-      random::PRNG_t& rand_eng, usize num_rev_units_at_5prime = 0,
-      usize num_fwd_units_at_3prime = 0) const noexcept(utils::ndebug_defined());
+      const GenomicInterval& interval, absl::Span<const Lef> lefs,
+      absl::Span<const usize> rev_lef_ranks, absl::Span<const usize> fwd_lef_ranks,
+      absl::Span<bp_t> rev_moves, absl::Span<bp_t> fwd_moves, absl::Span<CollisionT> rev_collisions,
+      absl::Span<CollisionT> fwd_collisions, random::PRNG_t& rand_eng,
+      usize num_rev_units_at_5prime = 0, usize num_fwd_units_at_3prime = 0) const
+      noexcept(utils::ndebug_defined());
 
   static void fix_secondary_lef_lef_collisions(
-      const Chromosome& chrom, absl::Span<Lef> lefs, absl::Span<usize> rev_lef_ranks,
+      const GenomicInterval& interval, absl::Span<Lef> lefs, absl::Span<usize> rev_lef_ranks,
       absl::Span<usize> fwd_lef_ranks, absl::Span<bp_t> rev_moves, absl::Span<bp_t> fwd_moves,
       absl::Span<CollisionT> rev_collisions, absl::Span<CollisionT> fwd_collisions,
       usize num_rev_units_at_5prime,
@@ -364,26 +342,27 @@ class Simulation : Config {
       absl::Span<const CollisionT> rev_collisions,
       absl::Span<const CollisionT> fwd_collisions) noexcept(utils::ndebug_defined());
 
-  /// Register contacts for chromosome \p chrom using the position the extrusion units of the LEFs
-  /// in \p lefs whose index is present in \p selected_lef_idx.
-  void register_contacts_loop(Chromosome& chrom, absl::Span<const Lef> lefs,
-                              usize num_contacts_to_register, random::PRNG_t& rand_eng) const;
-  void register_contacts_loop(bp_t start_pos, bp_t end_pos,
+  /// Register contacts for chromosome \p interval using the position the extrusion units of the
+  /// LEFs in \p lefs whose index is present in \p selected_lef_idx.
+  /// Return the actual number of contacts registered
+  usize register_contacts_loop(GenomicInterval& interval, absl::Span<const Lef> lefs,
+                               usize num_sampling_events, random::PRNG_t& rand_eng) const;
+  usize register_contacts_loop(bp_t start_pos, bp_t end_pos,
+                               ContactMatrixDense<contacts_t>& contacts, absl::Span<const Lef> lefs,
+                               usize num_sampling_events, random::PRNG_t& rand_eng) const;
+  usize register_contacts_tad(GenomicInterval& interval, absl::Span<const Lef> lefs,
+                              usize num_sampling_events, random::PRNG_t& rand_eng) const;
+  usize register_contacts_tad(bp_t start_pos, bp_t end_pos,
                               ContactMatrixDense<contacts_t>& contacts, absl::Span<const Lef> lefs,
-                              usize num_contacts_to_register, random::PRNG_t& rand_eng) const;
-  void register_contacts_tad(Chromosome& chrom, absl::Span<const Lef> lefs,
-                             usize num_contacts_to_register, random::PRNG_t& rand_eng) const;
-  void register_contacts_tad(bp_t start_pos, bp_t end_pos, ContactMatrixDense<contacts_t>& contacts,
-                             absl::Span<const Lef> lefs, usize num_contacts_to_register,
-                             random::PRNG_t& rand_eng) const;
+                              usize num_sampling_events, random::PRNG_t& rand_eng) const;
 
-  void register_1d_lef_occupancy(Chromosome& chrom, absl::Span<const Lef> lefs,
-                                 usize num_sampling_events, random::PRNG_t& rand_eng) const;
+  usize register_1d_lef_occupancy(GenomicInterval& interval, absl::Span<const Lef> lefs,
+                                  usize num_sampling_events, random::PRNG_t& rand_eng) const;
 
-  void register_1d_lef_occupancy(bp_t start_pos, bp_t end_pos,
-                                 std::vector<std::atomic<u64>>& occupancy_buff,
-                                 absl::Span<const Lef> lefs, usize num_sampling_events,
-                                 random::PRNG_t& rand_eng) const;
+  usize register_1d_lef_occupancy(bp_t start_pos, bp_t end_pos,
+                                  std::vector<std::atomic<u64>>& occupancy_buff,
+                                  absl::Span<const Lef> lefs, usize num_sampling_events,
+                                  random::PRNG_t& rand_eng) const;
 
   template <typename MaskT>
   inline static void select_lefs_to_bind(absl::Span<const Lef> lefs,
@@ -412,8 +391,9 @@ class Simulation : Config {
   void run_burnin(State& s, double lef_binding_rate_burnin) const;
 
   void sample_and_register_contacts(State& s, usize num_sampling_events) const;
-  void dump_stats(usize task_id, usize epoch, usize cell_id, bool burnin, const Chromosome& chrom,
-                  absl::Span<const Lef> lefs, const ExtrusionBarriers& barriers,
+  void dump_stats(usize task_id, usize epoch, usize cell_id, bool burnin,
+                  const GenomicInterval& interval, absl::Span<const Lef> lefs,
+                  const ExtrusionBarriers& barriers,
                   absl::Span<const CollisionT> rev_lef_collisions,
                   absl::Span<const CollisionT> fwd_lef_collisions,
                   compressed_io::Writer& log_writer) const noexcept(utils::ndebug_defined());
@@ -436,39 +416,40 @@ class Simulation : Config {
 #ifdef MODLE_ENABLE_TESTING
  public:
   template <class LefsT, class UsizeT, class MaskT>
-  inline void test_bind_lefs(const Chromosome& chrom, LefsT& lefs, UsizeT& rev_lef_ranks,
+  inline void test_bind_lefs(const GenomicInterval& interval, LefsT& lefs, UsizeT& rev_lef_ranks,
                              UsizeT& fwd_lef_ranks, const MaskT& mask, random::PRNG_t& rand_eng,
                              usize current_epoch) {
-    modle::Simulation::bind_lefs(chrom, absl::MakeSpan(lefs), absl::MakeSpan(rev_lef_ranks),
+    modle::Simulation::bind_lefs(interval, absl::MakeSpan(lefs), absl::MakeSpan(rev_lef_ranks),
                                  absl::MakeSpan(fwd_lef_ranks), mask, rand_eng, current_epoch);
   }
 
-  static inline void test_adjust_moves(const Chromosome& chrom, const absl::Span<const Lef> lefs,
+  static inline void test_adjust_moves(const GenomicInterval& interval,
+                                       const absl::Span<const Lef> lefs,
                                        const absl::Span<const usize> rev_lef_ranks,
                                        const absl::Span<const usize> fwd_lef_ranks,
                                        const absl::Span<bp_t> rev_moves,
                                        const absl::Span<bp_t> fwd_moves) {
-    Simulation::adjust_moves_of_consecutive_extr_units(chrom, lefs, rev_lef_ranks, fwd_lef_ranks,
+    Simulation::adjust_moves_of_consecutive_extr_units(interval, lefs, rev_lef_ranks, fwd_lef_ranks,
                                                        rev_moves, fwd_moves);
   }
-  static inline void test_adjust_and_clamp_moves(const Chromosome& chrom,
+  static inline void test_adjust_and_clamp_moves(const GenomicInterval& interval,
                                                  const absl::Span<const Lef> lefs,
                                                  const absl::Span<const usize> rev_lef_ranks,
                                                  const absl::Span<const usize> fwd_lef_ranks,
                                                  const absl::Span<bp_t> rev_moves,
                                                  const absl::Span<bp_t> fwd_moves) {
-    Simulation::adjust_moves_of_consecutive_extr_units(chrom, lefs, rev_lef_ranks, fwd_lef_ranks,
+    Simulation::adjust_moves_of_consecutive_extr_units(interval, lefs, rev_lef_ranks, fwd_lef_ranks,
                                                        rev_moves, fwd_moves);
-    Simulation::clamp_moves(chrom, lefs, absl::MakeSpan(rev_moves), absl::MakeSpan(fwd_moves));
+    Simulation::clamp_moves(interval, lefs, absl::MakeSpan(rev_moves), absl::MakeSpan(fwd_moves));
   }
 
-  inline void test_generate_moves(const Chromosome& chrom, const absl::Span<const Lef> lefs,
+  inline void test_generate_moves(const GenomicInterval& interval, const absl::Span<const Lef> lefs,
                                   const absl::Span<const usize> rev_lef_ranks,
                                   const absl::Span<const usize> fwd_lef_ranks,
                                   const absl::Span<bp_t> rev_moves,
                                   const absl::Span<bp_t> fwd_moves, random::PRNG_t& rand_eng,
                                   bool adjust_moves_ = false) {
-    this->generate_moves(chrom, lefs, rev_lef_ranks, fwd_lef_ranks, rev_moves, fwd_moves, false,
+    this->generate_moves(interval, lefs, rev_lef_ranks, fwd_lef_ranks, rev_moves, fwd_moves, false,
                          rand_eng, adjust_moves_);
   }
 
@@ -481,14 +462,14 @@ class Simulation : Config {
                           init_buffers);
   }
 
-  inline static void test_detect_units_at_chrom_boundaries(
-      const Chromosome& chrom, const absl::Span<const Lef> lefs,
+  inline static void test_detect_units_at_interval_boundaries(
+      const GenomicInterval& interval, const absl::Span<const Lef> lefs,
       const absl::Span<const usize> rev_lef_ranks, const absl::Span<const usize> fwd_lef_ranks,
       const absl::Span<const bp_t> rev_moves, const absl::Span<const bp_t> fwd_moves,
       const absl::Span<CollisionT> rev_collisions, const absl::Span<CollisionT> fwd_collisions) {
-    Simulation::detect_units_at_chrom_boundaries(chrom, lefs, rev_lef_ranks, fwd_lef_ranks,
-                                                 rev_moves, fwd_moves, rev_collisions,
-                                                 fwd_collisions);
+    Simulation::detect_units_at_interval_boundaries(interval, lefs, rev_lef_ranks, fwd_lef_ranks,
+                                                    rev_moves, fwd_moves, rev_collisions,
+                                                    fwd_collisions);
   }
 
   inline void test_detect_lef_bar_collisions(
@@ -519,15 +500,15 @@ class Simulation : Config {
   }
 
   inline void test_process_collisions(
-      const Chromosome& chrom, const absl::Span<const Lef> lefs,
+      const GenomicInterval& interval, const absl::Span<const Lef> lefs,
       const absl::Span<const usize> rev_lef_ranks, const absl::Span<const usize> fwd_lef_ranks,
       const absl::Span<bp_t> rev_moves, const absl::Span<bp_t> fwd_moves,
       const ExtrusionBarriers& barriers, const absl::Span<CollisionT> rev_collisions,
       const absl::Span<CollisionT> fwd_collisions, random::PRNG_t& rand_eng) {
     const auto [num_rev_units_at_5prime, num_fwd_units_at_3prime] =
-        Simulation::detect_units_at_chrom_boundaries(chrom, lefs, rev_lef_ranks, fwd_lef_ranks,
-                                                     rev_moves, fwd_moves, rev_collisions,
-                                                     fwd_collisions);
+        Simulation::detect_units_at_interval_boundaries(interval, lefs, rev_lef_ranks,
+                                                        fwd_lef_ranks, rev_moves, fwd_moves,
+                                                        rev_collisions, fwd_collisions);
 
     this->detect_lef_bar_collisions(lefs, rev_lef_ranks, fwd_lef_ranks, rev_moves, fwd_moves,
                                     barriers, rev_collisions, fwd_collisions, rand_eng,
@@ -543,26 +524,27 @@ class Simulation : Config {
     Simulation::correct_moves_for_primary_lef_lef_collisions(
         lefs, rev_lef_ranks, fwd_lef_ranks, rev_moves, fwd_moves, rev_collisions, fwd_collisions);
 
-    this->process_secondary_lef_lef_collisions(chrom, lefs, rev_lef_ranks, fwd_lef_ranks, rev_moves,
-                                               fwd_moves, rev_collisions, fwd_collisions, rand_eng,
-                                               num_rev_units_at_5prime, num_fwd_units_at_3prime);
+    this->process_secondary_lef_lef_collisions(
+        interval, lefs, rev_lef_ranks, fwd_lef_ranks, rev_moves, fwd_moves, rev_collisions,
+        fwd_collisions, rand_eng, num_rev_units_at_5prime, num_fwd_units_at_3prime);
   }
 
   static inline void test_fix_secondary_lef_lef_collisions(
-      const Chromosome& chrom, const absl::Span<Lef> lefs, const absl::Span<usize> rev_lef_ranks,
-      const absl::Span<usize> fwd_lef_ranks, const absl::Span<bp_t> rev_moves,
-      const absl::Span<bp_t> fwd_moves, const absl::Span<CollisionT> rev_collisions,
-      const absl::Span<CollisionT> fwd_collisions) {
-    Simulation::fix_secondary_lef_lef_collisions(chrom, lefs, rev_lef_ranks, fwd_lef_ranks,
+      const GenomicInterval& interval, const absl::Span<Lef> lefs,
+      const absl::Span<usize> rev_lef_ranks, const absl::Span<usize> fwd_lef_ranks,
+      const absl::Span<bp_t> rev_moves, const absl::Span<bp_t> fwd_moves,
+      const absl::Span<CollisionT> rev_collisions, const absl::Span<CollisionT> fwd_collisions) {
+    Simulation::fix_secondary_lef_lef_collisions(interval, lefs, rev_lef_ranks, fwd_lef_ranks,
                                                  rev_moves, fwd_moves, rev_collisions,
                                                  fwd_collisions, 0, 0);
   }
 
   inline void test_process_lef_lef_collisions(
-      const Chromosome& chrom, absl::Span<const Lef> lefs, const ExtrusionBarriers& barriers,
-      absl::Span<const usize> rev_lef_ranks, absl::Span<const usize> fwd_lef_ranks,
-      absl::Span<bp_t> rev_moves, absl::Span<bp_t> fwd_moves, absl::Span<CollisionT> rev_collisions,
-      absl::Span<CollisionT> fwd_collisions, random::PRNG_t& rand_eng) {
+      const GenomicInterval& interval, absl::Span<const Lef> lefs,
+      const ExtrusionBarriers& barriers, absl::Span<const usize> rev_lef_ranks,
+      absl::Span<const usize> fwd_lef_ranks, absl::Span<bp_t> rev_moves, absl::Span<bp_t> fwd_moves,
+      absl::Span<CollisionT> rev_collisions, absl::Span<CollisionT> fwd_collisions,
+      random::PRNG_t& rand_eng) {
     Simulation::detect_primary_lef_lef_collisions(lefs, barriers, rev_lef_ranks, fwd_lef_ranks,
                                                   rev_moves, fwd_moves, rev_collisions,
                                                   fwd_collisions, rand_eng);
@@ -570,7 +552,7 @@ class Simulation : Config {
     Simulation::correct_moves_for_primary_lef_lef_collisions(
         lefs, rev_lef_ranks, fwd_lef_ranks, rev_moves, fwd_moves, rev_collisions, fwd_collisions);
 
-    Simulation::process_secondary_lef_lef_collisions(chrom, lefs, rev_lef_ranks, fwd_lef_ranks,
+    Simulation::process_secondary_lef_lef_collisions(interval, lefs, rev_lef_ranks, fwd_lef_ranks,
                                                      rev_moves, fwd_moves, rev_collisions,
                                                      fwd_collisions, rand_eng);
   }

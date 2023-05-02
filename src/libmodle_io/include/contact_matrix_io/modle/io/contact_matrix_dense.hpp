@@ -12,19 +12,20 @@
 #include "modle/contact_matrix_dense.hpp"
 
 namespace modle::io {
+
 template <class N, usize chunk_size = 64U << 10U>
 void append_contact_matrix_to_cooler(coolerpp::File& f, std::string_view chrom_name,
-                                     const ContactMatrixDense<N>& matrix);
+                                     const ContactMatrixDense<N>& matrix, bp_t offset = 0);
 
 template <class N, usize chunk_size = 64U << 10U>
 void append_contact_matrix_to_cooler(coolerpp::File& f, usize chrom_id,
-                                     const ContactMatrixDense<N>& matrix);
+                                     const ContactMatrixDense<N>& matrix, bp_t offset = 0);
 
 namespace internal {
 template <class N, class PixelT, usize chunk_size>
 void append_contact_matrix_to_cooler(coolerpp::File& f, usize chrom_id,
-                                     const ContactMatrixDense<N>& matrix,
-                                     std::vector<PixelT>& buff);
+                                     const ContactMatrixDense<N>& matrix, std::vector<PixelT>& buff,
+                                     bp_t offset = 0);
 }  // namespace internal
 
 template <class N, class ChromIt>

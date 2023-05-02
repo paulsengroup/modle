@@ -36,138 +36,207 @@
 
 namespace modle {
 
-Chromosome::Chromosome(usize id, const bed::BED& chrom,
-                       const IITree<bp_t, ExtrusionBarrier>& barriers)
-    : Chromosome(id, chrom.chrom, chrom.thick_start, chrom.thick_end, chrom.size(), barriers) {}
+namespace internal {
+ContactMatrixLazy::ContactMatrixLazy(bp_t length, bp_t diagonal_width, bp_t bin_size) noexcept
+    : _nrows((diagonal_width + bin_size - 1) / bin_size),
+      _ncols((length + bin_size - 1) / bin_size) {}
 
-Chromosome::Chromosome(usize id, const bed::BED& chrom)
-    : _name(chrom.chrom),
-      _start(chrom.chrom_start),
-      _end(chrom.chrom_end),
-      _size(chrom.size()),
-      _id(id) {}
-
-Chromosome::Chromosome(usize id, const bed::BED& chrom, IITree<bp_t, ExtrusionBarrier>&& barriers)
-    : Chromosome(id, chrom.chrom, chrom.thick_start, chrom.thick_end, chrom.size(), barriers) {}
-
-DISABLE_WARNING_PUSH
-DISABLE_WARNING_SIGN_CONVERSION
-DISABLE_WARNING_CONVERSION
-Chromosome::Chromosome(usize id, std::string_view chrom_name, bp_t chrom_start, bp_t chrom_end,
-                       bp_t chrom_size)
-    : _name(chrom_name), _start(chrom_start), _end(chrom_end), _size(chrom_size), _id(id) {
-  assert(chrom_start <= chrom_end);
-  assert(chrom_end - chrom_start <= chrom_size);
+ContactMatrixLazy::ContactMatrixLazy(ContactMatrix matrix) noexcept
+    : _matrix(std::move(matrix)), _nrows(_matrix.nrows()), _ncols(_matrix.ncols()) {
+  // Signal that _matrix has already been initialized
+  std::call_once(this->_alloc_flag, []() {});
 }
 
-Chromosome::Chromosome(usize id, std::string_view chrom_name, bp_t chrom_start, bp_t chrom_end,
-                       bp_t chrom_size, const IITree<bp_t, ExtrusionBarrier>& barriers)
-    : _name(chrom_name),
-      _start(chrom_start),
-      _end(chrom_end),
-      _size(chrom_size),
-      _id(id),
-      _barriers(barriers) {
-  assert(chrom_start <= chrom_end);
-  assert(chrom_end - chrom_start <= chrom_size);
-
-  _barriers.make_BST();
+ContactMatrixLazy::ContactMatrixLazy(ContactMatrixLazy&& other) noexcept
+    : _matrix(std::move(other._matrix)), _nrows(other._nrows), _ncols(other._ncols) {
+  if (this->_matrix.npixels() == this->npixels()) {
+    // Signal that _matrix has already been initialized
+    std::call_once(this->_alloc_flag, []() {});
+  }
+  // This does not handle the case where a matrix was allocated, deallocated and then moved.
+  // We don't really care about this case, so the current impl. should be fine
 }
 
-Chromosome::Chromosome(usize id, std::string_view chrom_name, bp_t chrom_start, bp_t chrom_end,
-                       bp_t chrom_size, IITree<bp_t, ExtrusionBarrier>&& barriers)
-    : _name(chrom_name),
-      _start(chrom_start),
-      _end(chrom_end),
-      _size(chrom_size),
-      _id(id),
-      _barriers(std::move(barriers)) {
-  assert(chrom_start <= chrom_end);
-  assert(chrom_end - chrom_start <= chrom_size);
-
-  _barriers.make_BST();
-}
-DISABLE_WARNING_POP
-
-Chromosome::Chromosome(const Chromosome& other)
-    : _name(other._name),
-      _start(other._start),
-      _end(other._end),
-      _size(other._size),
-      _id(other._id),
-      _barriers(other._barriers),
-      _contacts(other._contacts) {
-  _barriers.make_BST();
-}
-
-Chromosome::Chromosome(Chromosome&& other) noexcept
-    : _name(std::move(other._name)),
-      _start(other._start),
-      _end(other._end),
-      _size(other._size),
-      _id(other._id),
-      _barriers(std::move(other._barriers)),
-      _contacts(std::move(other._contacts)) {
-  _barriers.make_BST();
-}
-
-Chromosome& Chromosome::operator=(const Chromosome& other) {
+ContactMatrixLazy& ContactMatrixLazy::operator=(ContactMatrixLazy&& other) noexcept {
   if (this == &other) {
     return *this;
   }
+  _matrix = std::move(other._matrix);
+  if (this->_matrix.npixels() == this->npixels()) {  // See comments for move ctor
+    std::call_once(this->_alloc_flag, []() {});
+  }
 
-  _id = other._id;
-  _name = other._name;
-  _size = other._size;
-  _start = other._start;
-  _end = other._end;
-  _barriers = other._barriers;
-  _contacts = other._contacts;
-
-  _barriers.make_BST();
+  _nrows = other._nrows;
+  _ncols = other._ncols;
 
   return *this;
 }
 
-Chromosome& Chromosome::operator=(Chromosome&& other) noexcept {
+auto ContactMatrixLazy::operator()() noexcept -> ContactMatrix& {
+  std::call_once(this->_alloc_flag, [this]() {
+    using MatrixT = decltype(this->_matrix);
+    this->_matrix = MatrixT(this->_nrows, this->_ncols);
+  });
+  return this->_matrix;
+}
+
+auto ContactMatrixLazy::operator()() const noexcept -> const ContactMatrix& {
+  std::call_once(this->_alloc_flag, [this]() {
+    using MatrixT = decltype(this->_matrix);
+    this->_matrix = MatrixT(this->_nrows, this->_ncols);
+  });
+  return this->_matrix;
+}
+
+void ContactMatrixLazy::deallocate() noexcept {
+  std::call_once(this->_dealloc_flag, [this]() {
+    using MatrixT = decltype(this->_matrix);
+    MatrixT tmp{};
+    std::swap(this->_matrix, tmp);
+  });
+}
+
+Occupancy1DLazy::operator bool() const noexcept { return !this->_buff.empty(); }
+
+Occupancy1DLazy::Occupancy1DLazy(bp_t length, bp_t bin_size) noexcept
+    : _size((length + bin_size - 1) / bin_size) {}
+
+Occupancy1DLazy::Occupancy1DLazy(std::vector<std::atomic<u64>> buff) noexcept
+    : _buff(std::move(buff)), _size(_buff.size()) {
+  // Signal _buff has already been initialized
+  std::call_once(this->_alloc_flag, []() {});
+}
+
+Occupancy1DLazy::Occupancy1DLazy(Occupancy1DLazy&& other) noexcept
+    : _buff(std::move(other._buff)), _size(other._size) {
+  if (_buff.size() == this->size()) {
+    // Signal _buff has already been initialized
+    std::call_once(this->_alloc_flag, []() {});
+  }
+  // This does not handle the case where buffer was allocated, deallocated and then moved.
+  // We don't really care about this case, so the current impl. should be fine
+}
+
+Occupancy1DLazy& Occupancy1DLazy::operator=(Occupancy1DLazy&& other) noexcept {
   if (this == &other) {
     return *this;
   }
-
-  _id = other._id;
-  _name = std::move(other._name);
+  _buff = std::move(other._buff);
+  if (_buff.size() == this->size()) {  // See comments for move ctor
+    std::call_once(this->_alloc_flag, []() {});
+  }
   _size = other._size;
-  _start = other._start;
-  _end = other._end;
-  _barriers = std::move(other._barriers);
-  _contacts = std::move(other._contacts);
-
-  _barriers.make_BST();
 
   return *this;
 }
 
-bool Chromosome::operator==(const Chromosome& other) const noexcept(utils::ndebug_defined()) {
-  if (this->_id == (std::numeric_limits<usize>::max)()) {
-    return this->name() == other.name() && this->size() == other.size();
-  }
-  return this->_id == other._id;
+const std::vector<std::atomic<u64>>& Occupancy1DLazy::operator()() const noexcept {
+  std::call_once(this->_alloc_flag, [this]() {
+    using BuffT = decltype(this->_buff);
+    this->_buff = BuffT(_size);
+    std::fill(this->_buff.begin(), this->_buff.end(), 0);
+  });
+  return this->_buff;
 }
 
-bool Chromosome::operator==(std::string_view other_name) const noexcept {
-  return this->name() == other_name;
+std::vector<std::atomic<u64>>& Occupancy1DLazy::operator()() noexcept {
+  std::call_once(this->_alloc_flag, [this]() {
+    using BuffT = decltype(this->_buff);
+    this->_buff = BuffT(_size);
+    std::fill(this->_buff.begin(), this->_buff.end(), 0);
+  });
+  return this->_buff;
 }
 
-bool Chromosome::operator<(const Chromosome& other) const noexcept(utils::ndebug_defined()) {
-  if (this->_id != (std::numeric_limits<usize>::max)() &&
-      other._id != (std::numeric_limits<usize>::max)()) {
-    return this->_id < other._id;
-  }
+void Occupancy1DLazy::deallocate() noexcept {
+  std::call_once(this->_dealloc_flag, [this]() {
+    using BuffT = decltype(this->_buff);
+    BuffT tmp{};
+    std::swap(this->_buff, tmp);
+  });
+}
 
-  if (this->name() != other.name()) {
-    return this->name() < other.name();
-  }
-  return this->size() < other.size();
+}  // namespace internal
+
+Chromosome::Chromosome(usize id, std::string name, bp_t size) noexcept
+    : _name(std::move(name)), _id(id), _size(size) {}
+
+std::string_view Chromosome::name() const noexcept { return this->_name; }
+const char* Chromosome::name_cstr() const noexcept { return this->_name.c_str(); }
+
+GenomicInterval::GenomicInterval(usize id, const std::shared_ptr<const Chromosome>& chrom,
+                                 bp_t contact_matrix_resolution, bp_t diagonal_width)
+    : GenomicInterval(id, chrom, 0, chrom->size(), contact_matrix_resolution, diagonal_width) {}
+
+GenomicInterval::GenomicInterval(usize id, std::shared_ptr<const Chromosome> chrom, bp_t start,
+                                 bp_t end, bp_t contact_matrix_resolution, bp_t diagonal_width)
+    : GenomicInterval(id, std::move(chrom), start, end, contact_matrix_resolution, diagonal_width,
+                      static_cast<const ExtrusionBarrier*>(nullptr),
+                      static_cast<const ExtrusionBarrier*>(nullptr)) {}
+
+const Chromosome& GenomicInterval::chrom() const noexcept {
+  assert(!!this->_chrom);
+  return *this->_chrom;
+}
+
+usize GenomicInterval::num_barriers() const { return this->_barriers.size(); }
+
+auto GenomicInterval::barriers() const noexcept -> const std::vector<ExtrusionBarrier>& {
+  return this->_barriers;
+}
+auto GenomicInterval::barriers() noexcept -> std::vector<ExtrusionBarrier>& {
+  return this->_barriers;
+}
+
+auto GenomicInterval::contacts() const noexcept -> const ContactMatrix& {
+  return this->_contacts();
+}
+auto GenomicInterval::contacts() noexcept -> ContactMatrix& { return this->_contacts(); }
+
+auto GenomicInterval::lef_1d_occupancy() const noexcept -> const std::vector<std::atomic<u64>>& {
+  return this->_lef_1d_occupancy();
+}
+
+auto GenomicInterval::lef_1d_occupancy() noexcept -> std::vector<std::atomic<u64>>& {
+  return this->_lef_1d_occupancy();
+}
+
+void GenomicInterval::deallocate() noexcept { this->_contacts.deallocate(); }
+
+/*
+u64 GenomicInterval::hash(u64 seed, usize cell_id) const {
+  const std::array<u64, 2> buff{utils::conditional_static_cast<u64>(this->_id),
+                                utils::conditional_static_cast<u64>(cell_id)};
+  DISABLE_WARNING_PUSH
+  DISABLE_WARNING_USED_BUT_MARKED_UNUSED
+  const auto hash = XXH3_64bits_withSeed(buff.data(), buff.size() * sizeof(u64), seed);
+  DISABLE_WARNING_POP
+  return utils::conditional_static_cast<u64>(hash);
+}
+*/
+
+// TODO: replace me! (changes output)
+u64 GenomicInterval::hash(u64 seed, usize cell_id) const {
+  XXH3_state_t* xxh_state = XXH3_createState();
+  auto handle_errors = [&](const auto& status) {
+    if (MODLE_UNLIKELY(status == XXH_ERROR || !xxh_state)) {
+      throw std::runtime_error(
+          fmt::format(FMT_STRING("Failed to hash \"{}\" for cell #{} using seed {}"),
+                      this->chrom().name(), cell_id, seed));
+    }
+  };
+  auto size = this->_chrom->size();
+
+  DISABLE_WARNING_PUSH
+  DISABLE_WARNING_USED_BUT_MARKED_UNUSED
+  handle_errors(XXH3_64bits_reset_withSeed(xxh_state, seed));
+  handle_errors(XXH3_64bits_update(xxh_state, this->_chrom->name().data(),
+                                   this->_chrom->name().size() * sizeof(char)));
+  handle_errors(XXH3_64bits_update(xxh_state, &size, sizeof(decltype(this->_chrom->size()))));
+  handle_errors(XXH3_64bits_update(xxh_state, &cell_id, sizeof(decltype(cell_id))));
+
+  return utils::conditional_static_cast<u64>(XXH3_64bits_digest(xxh_state));
+  DISABLE_WARNING_POP
 }
 
 struct ComputeBarrierStpResult {
@@ -188,411 +257,327 @@ struct ComputeBarrierStpResult {
   return {default_stp_active, default_stp_inactive};
 }
 
-void Chromosome::add_extrusion_barrier(const bed::BED& record,
-                                       const double default_barrier_stp_active,
-                                       const double default_barrier_stp_inactive) {
+void GenomicInterval::add_extrusion_barrier(const bed::BED& record,
+                                            const double default_barrier_stp_active,
+                                            const double default_barrier_stp_inactive) {
   assert(record.strand == '+' || record.strand == '-' || record.strand == '.');
   const auto pos = (record.chrom_start + record.chrom_end + 1) / 2;
-  if (pos < this->start_pos() || pos >= this->end_pos()) {
-    // Barrier lies outside of the genomic regions to be simulated
+  if (pos < this->start() || pos >= this->end()) {
     return;
   }
 
   const auto [barrier_stp_active, barrier_stp_inactive] =
       compute_barrier_stp(record.score, default_barrier_stp_active, default_barrier_stp_inactive);
 
-  this->_barriers.emplace(
-      record.chrom_start, record.chrom_end,
-      ExtrusionBarrier{pos, barrier_stp_active, barrier_stp_inactive, record.strand});
+  this->_barriers.emplace_back(pos, barrier_stp_active, barrier_stp_inactive, record.strand);
 }
 
-usize Chromosome::id() const { return this->_id; }
-std::string_view Chromosome::name() const { return this->_name; }
-const char* Chromosome::name_cstr() const { return this->_name.c_str(); }
-
-usize Chromosome::num_lefs(double nlefs_per_mbp) const {
-  return static_cast<usize>((static_cast<double>(this->simulated_size()) / 1.0e6) * nlefs_per_mbp);
-}
-usize Chromosome::num_barriers() const { return this->_barriers.size(); }
-
-const IITree<bp_t, ExtrusionBarrier>& Chromosome::barriers() const { return this->_barriers; }
-IITree<bp_t, ExtrusionBarrier>& Chromosome::barriers() { return this->_barriers; }
-
-bool Chromosome::allocate_contact_matrix(bp_t bin_size, bp_t diagonal_width) {
-  if (std::scoped_lock lck(this->_buff_mtx); !this->_contacts) {
-    this->_contacts =
-        std::make_shared<contact_matrix_t>(this->simulated_size(), diagonal_width, bin_size);
-    return true;
-  }
-  return false;
-}
-
-bool Chromosome::allocate_lef_occupancy_buffer(modle::bp_t bin_size) {
-  if (std::scoped_lock lck(this->_buff_mtx); !this->_lef_1d_occupancy) {
-    using BuffT = std::vector<std::atomic<u64>>;
-    const auto buff_size = (this->size() + bin_size - 1) / bin_size;
-    this->_lef_1d_occupancy = std::make_shared<BuffT>(buff_size);
-    std::fill(this->_lef_1d_occupancy->begin(), this->_lef_1d_occupancy->end(), 0);
-    return true;
-  }
-  return false;
-}
-
-bool Chromosome::deallocate_contact_matrix() {
-  if (std::scoped_lock lck(this->_buff_mtx); this->_contacts) {
-    this->_contacts = nullptr;
-    return true;
-  }
-  return false;
-}
-
-bool Chromosome::deallocate_lef_occupancy_buffer() {
-  if (std::scoped_lock lck(this->_buff_mtx); this->_lef_1d_occupancy) {
-    this->_lef_1d_occupancy = nullptr;
-    return true;
-  }
-  return false;
-}
-
-usize Chromosome::npixels() const {
-  assert(this->_contacts);
-  return this->contacts().npixels();
-}
-
-const Chromosome::contact_matrix_t& Chromosome::contacts() const noexcept {
-  assert(this->_contacts);
-  return *this->_contacts;
-}
-
-Chromosome::contact_matrix_t& Chromosome::contacts() noexcept {
-  assert(this->_contacts);
-  return *this->_contacts;
-}
-
-const std::vector<std::atomic<u64>>& Chromosome::lef_1d_occupancy() const noexcept {
-  assert(this->_lef_1d_occupancy);
-  return *this->_lef_1d_occupancy;
-}
-
-std::vector<std::atomic<u64>>& Chromosome::lef_1d_occupancy() noexcept {
-  assert(this->_lef_1d_occupancy);
-  return *this->_lef_1d_occupancy;
-}
-
-std::shared_ptr<const Chromosome::contact_matrix_t> Chromosome::contacts_ptr() const noexcept {
-  if (this->_contacts) {
-    return this->_contacts;
-  }
-  return nullptr;
-}
-
-std::shared_ptr<Chromosome::contact_matrix_t> Chromosome::contacts_ptr() noexcept {
-  if (this->_contacts) {
-    return this->_contacts;
-  }
-  return nullptr;
-}
-
-std::shared_ptr<const std::vector<std::atomic<u64>>> Chromosome::lef_1d_occupancy_ptr()
-    const noexcept {
-  if (this->_lef_1d_occupancy) {
-    return this->_lef_1d_occupancy;
-  }
-  return nullptr;
-}
-
-std::shared_ptr<std::vector<std::atomic<u64>>> Chromosome::lef_1d_occupancy_ptr() noexcept {
-  if (this->_lef_1d_occupancy) {
-    return this->_lef_1d_occupancy;
-  }
-  return nullptr;
-}
-
-u64 Chromosome::hash(XXH3_state_t* const xxh_state, u64 seed, usize cell_id) const {
-  auto handle_errors = [&](const auto& status) {
-    if (MODLE_UNLIKELY(status == XXH_ERROR || !xxh_state)) {
-      throw std::runtime_error(
-          fmt::format(FMT_STRING("Failed to hash \"{}\" for cell #{} using seed {}"), this->name(),
-                      cell_id, seed));
+void GenomicInterval::add_extrusion_barriers(std::vector<ExtrusionBarrier> barriers) {
+  if constexpr (utils::ndebug_not_defined()) {
+    for ([[maybe_unused]] const auto& barrier : barriers) {
+      assert(barrier.pos >= this->start());
+      assert(barrier.pos < this->end());
     }
-  };
-
-  DISABLE_WARNING_PUSH
-  DISABLE_WARNING_USED_BUT_MARKED_UNUSED
-  handle_errors(XXH3_64bits_reset_withSeed(xxh_state, seed));
-  handle_errors(
-      XXH3_64bits_update(xxh_state, this->_name.data(), this->_name.size() * sizeof(char)));
-  handle_errors(XXH3_64bits_update(xxh_state, &this->_size, sizeof(decltype(this->_size))));
-  handle_errors(XXH3_64bits_update(xxh_state, &cell_id, sizeof(decltype(cell_id))));
-
-  return utils::conditional_static_cast<u64>(XXH3_64bits_digest(xxh_state));
-  DISABLE_WARNING_POP
-}
-
-u64 Chromosome::hash(u64 seed, usize cell_id) const {
-  std::unique_ptr<XXH3_state_t, utils::XXH3_Deleter> xxh_state{XXH3_createState()};
-  return this->hash(xxh_state.get(), seed, cell_id);
+  }
+  this->_barriers.insert(this->_barriers.end(), std::make_move_iterator(barriers.begin()),
+                         std::make_move_iterator(barriers.end()));
 }
 
 Genome::Genome(const std::filesystem::path& path_to_chrom_sizes,
                const std::filesystem::path& path_to_extr_barriers,
-               const std::filesystem::path& path_to_chrom_subranges,
+               const std::filesystem::path& path_to_genomic_intervals,
+               bp_t contact_matrix_resolution, bp_t contact_matrix_diagonal_witdh,
                const double default_barrier_pbb, const double default_barrier_puu,
                bool interpret_name_field_as_puu)
-    : _chromosomes(instantiate_genome(path_to_chrom_sizes, path_to_extr_barriers,
-                                      path_to_chrom_subranges, default_barrier_pbb,
-                                      default_barrier_puu, interpret_name_field_as_puu)) {}
+    : _chroms(import_chromosomes(path_to_chrom_sizes)),
+      _intervals(import_genomic_intervals(path_to_genomic_intervals, _chroms,
+                                          contact_matrix_resolution,
+                                          contact_matrix_diagonal_witdh)),
+      _size(std::accumulate(_chroms.begin(), _chroms.end(), usize(0),
+                            [&](auto accumulator, const auto& chrom_ptr) {
+                              return accumulator + chrom_ptr->size();
+                            })),
+      _simulated_size(std::accumulate(
+          _intervals.begin(), _intervals.end(), usize(0),
+          [&](auto accumulator, const GenomicInterval& gi) { return accumulator + gi.size(); })) {
+  assert(!path_to_extr_barriers.empty());
+  const auto t0 = absl::Now();
+  spdlog::info(FMT_STRING("Importing extrusion barriers from {}..."), path_to_extr_barriers);
+  // Parse all the records from the BED file. The parser will throw in case of duplicates.
+  const auto barriers_gw =
+      bed::Parser(path_to_extr_barriers, bed::BED::BED6).parse_all_in_interval_tree();
+  _num_barriers = map_barriers_to_intervals(_intervals, barriers_gw, default_barrier_pbb,
+                                            default_barrier_puu, interpret_name_field_as_puu);
+  if (_num_barriers == 0) {
+    spdlog::warn(FMT_STRING("Imported 0 barriers from {}. Is this intended?"),
+                 path_to_extr_barriers);
+  } else {
+    spdlog::info(FMT_STRING("Imported {} barriers from {} in {}."), _num_barriers,
+                 path_to_extr_barriers, absl::FormatDuration(absl::Now() - t0));
+  }
+}
 
-absl::btree_set<Chromosome> Genome::import_chromosomes(
-    const std::filesystem::path& path_to_chrom_sizes,
-    const std::filesystem::path& path_to_chrom_subranges) {
+std::vector<std::shared_ptr<const Chromosome>> Genome::import_chromosomes(
+    const std::filesystem::path& path_to_chrom_sizes) {
   assert(!path_to_chrom_sizes.empty());
 
   const auto t0 = absl::Now();
-  if (path_to_chrom_subranges.empty()) {
-    spdlog::info(FMT_STRING("Importing chromosomes from file {}..."), path_to_chrom_sizes);
-  } else {
-    spdlog::info(FMT_STRING("Importing chromosomes from files {} and {}..."), path_to_chrom_sizes,
-                 path_to_chrom_subranges);
-  }
-  auto print_status_update_on_return = [&](auto num_chromosomes) {
-    spdlog::info(FMT_STRING("Imported {} chromosomes in {}."), num_chromosomes,
-                 absl::FormatDuration(absl::Now() - t0));
-  };
+  spdlog::info(FMT_STRING("Importing chromosomes from {}..."), path_to_chrom_sizes);
 
-  // Parse chrom. sizes and build the set of chromosome to be simulated.
-  // When the BED file with the chrom. subranges is not provided, all the chromosome in the
-  // chrom.sizes file will be selected and returned. When a BED file with the chrom. subranges is
-  // available, then only chromosomes that are present in both files will be selected. Furthermore
-  // we are also checking that the subrange lies within the genomic coordinates specified in the
-  // chrom. sizes file
+  absl::btree_map<std::string, usize> chrom_names;
+
   usize id = 0;
-  absl::btree_set<Chromosome> chromosomes;
-  if (path_to_chrom_subranges.empty()) {
-    for (auto record : chrom_sizes::Parser(path_to_chrom_sizes).parse_all()) {
-      record.thick_start = record.chrom_start;
-      record.thick_end = record.chrom_end;
-      chromosomes.emplace(id++, std::move(record));
+  std::vector<std::shared_ptr<const Chromosome>> buffer{};
+  for (auto&& record : chrom_sizes::Parser(path_to_chrom_sizes).parse_all()) {
+    if (auto it = chrom_names.find(record.chrom); it != chrom_names.end()) {
+      throw std::runtime_error(fmt::format(
+          FMT_STRING(
+              "Found duplicate entry for {} at line {} of file {}! First entry was at line {}"),
+          record.chrom, id, path_to_chrom_sizes, it->second));
     }
-    print_status_update_on_return(chromosomes.size());
-    return chromosomes;
+    chrom_names.emplace(record.chrom, id);
+    buffer.emplace_back(
+        std::make_shared<const Chromosome>(id++, std::move(record.chrom), record.size()));
   }
 
-  // Parse chrom subranges from BED. We parse everything at once to deal with duplicate entries
-  const auto chrom_ranges = [&]() {
-    absl::btree_map<std::string, bed::BED> ranges;
-    for (const auto& record : bed::Parser(path_to_chrom_subranges, bed::BED::BED3).parse_all()) {
-      // passing std::string{record.chrom} is required in order to make GCC 8.4 happy
-      const auto new_insertion = ranges.try_emplace(std::string{record.chrom}, record).second;
-      if (!new_insertion) {
-        throw std::runtime_error(
-            fmt::format(FMT_STRING("Found more than one entry for chromosome \"{}\" in file {}"),
-                        record.chrom, path_to_chrom_subranges));
-      }
-    }
-    return ranges;
-  }();
-
-  for (auto record : chrom_sizes::Parser(path_to_chrom_sizes).parse_all()) {
-    const auto match = chrom_ranges.find(record.chrom);
-    if (match != chrom_ranges.end()) {
-      const auto& begin_pos = match->second.chrom_start;
-      const auto& end_pos = match->second.chrom_end;
-      if (begin_pos < record.chrom_start || end_pos > record.chrom_end) {
-        throw std::runtime_error(fmt::format(
-            FMT_STRING("According to the chrom.sizes file {}, chromosome \"{}\" should have a size "
-                       "of \"{}\", but the subrange specified in BED file {} extends past this "
-                       "region: range {}:{}-{} does not fit in range {}:{}-{}"),
-            path_to_chrom_sizes, record.chrom, record.chrom_end, path_to_chrom_subranges,
-            record.chrom, begin_pos, end_pos, record.chrom, record.chrom_start, record.chrom_end));
-      }
-
-      record.thick_start = begin_pos;
-      record.thick_end = end_pos;
-    } else {
-      record.thick_start = record.chrom_start;
-      record.thick_end = record.chrom_end;
-    }
-
-    chromosomes.emplace(id++, record.chrom, record.thick_start, record.thick_end, record.size(),
-                        match != chrom_ranges.end());
+  if (buffer.empty()) {
+    throw std::runtime_error(
+        fmt::format(FMT_STRING("Unable to import any chromosome from {}!"), path_to_chrom_sizes));
   }
 
-  print_status_update_on_return(chromosomes.size());
-  return chromosomes;
+  spdlog::info(FMT_STRING("Imported {} chromosomes in {}."), buffer.size(),
+               absl::FormatDuration(absl::Now() - t0));
+  return buffer;
 }
 
-usize Genome::import_barriers(absl::btree_set<Chromosome>& chromosomes,
-                              const std::filesystem::path& path_to_extr_barriers,
-                              double default_barrier_pbb, double default_barrier_puu,
-                              bool interpret_name_field_as_puu) {
+absl::btree_set<GenomicInterval> Genome::import_genomic_intervals(
+    const std::filesystem::path& path_to_bed,
+    const std::vector<std::shared_ptr<const Chromosome>>& chromosomes,
+    bp_t contact_matrix_resolution, bp_t diagonal_width) {
   assert(!chromosomes.empty());
-  assert(!path_to_extr_barriers.empty());
+  absl::btree_set<GenomicInterval> buffer{};
+  if (path_to_bed.empty()) {
+    spdlog::debug(
+        FMT_STRING("Path to genomic regions to simulate is empty. Assuming whole chromosomes are "
+                   "to be simulated!"));
+    std::transform(chromosomes.begin(), chromosomes.end(), std::inserter(buffer, buffer.begin()),
+                   [&](const auto& chrom_ptr) {
+                     return GenomicInterval{chrom_ptr->id(), chrom_ptr, contact_matrix_resolution,
+                                            diagonal_width};
+                   });
+    return buffer;
+  }
 
   const auto t0 = absl::Now();
-  spdlog::info(FMT_STRING("Importing extrusion barriers from file {}..."), path_to_extr_barriers);
+  spdlog::info(FMT_STRING("Importing genomic intervals from {}..."), path_to_bed);
 
-  usize tot_num_barriers = 0;
+  absl::btree_map<std::string_view, std::shared_ptr<const Chromosome>> chrom_names;
+  std::transform(
+      chromosomes.begin(), chromosomes.end(), std::inserter(chrom_names, chrom_names.begin()),
+      [](auto chrom_ptr) { return std::make_pair(chrom_ptr->name(), std::move(chrom_ptr)); });
 
+  usize id = 0;
   // Parse all the records from the BED file. The parser will throw in case of duplicates.
-  const auto barriers =
-      bed::Parser(path_to_extr_barriers, bed::BED::BED6).parse_all_in_interval_tree();
-
-  for (auto& chrom : chromosomes) {
-    if (const auto chrom_name = std::string{chrom.name()}; barriers.contains(chrom_name)) {
-      for (const auto& record : barriers.at(chrom_name).data()) {
-        if (record.score < 0 || record.score > 1) {
-          throw std::runtime_error(fmt::format(
-              FMT_STRING("Invalid score field detected for record {}[{}-{}]: expected a score "
-                         "between 0 and 1, got {:.4g}."),
-              record.chrom, record.chrom_start, record.chrom_end, record.score));
-        }
-
-        if (interpret_name_field_as_puu) {
-          const auto puu = utils::parse_numeric_or_throw<double>(record.name);
-          if (puu < 0 || puu > 1) {
-            throw std::runtime_error(fmt::format(
-                FMT_STRING(
-                    "Invalid score field detected for record {}[{}-{}]: expected name field to be "
-                    "between 0 and 1, got {:.4g}."),
-                record.chrom, record.chrom_start, record.chrom_end, puu));
-          }
-          chrom.add_extrusion_barrier(record, default_barrier_pbb, puu);
-        } else {
-          chrom.add_extrusion_barrier(record, default_barrier_pbb, default_barrier_puu);
-        }
-        ++tot_num_barriers;
-      }
+  for (auto&& [chrom_name, intervals] :
+       bed::Parser(path_to_bed, bed::BED::BED3).parse_all_in_interval_tree()) {
+    auto it = chrom_names.find(chrom_name);
+    if (it == chrom_names.end()) {
+      spdlog::warn(
+          FMT_STRING(
+              "Skipping {} intervals from {}. Reason: {} was not present in the .chrom.sizes file"),
+          intervals.size(), chrom_name, chrom_name);
+      continue;
     }
-    chrom.barriers().make_BST();
+
+    auto chrom_ptr = it->second;
+    for (const auto& interval : intervals.data()) {
+      buffer.emplace(GenomicInterval{id++, chrom_ptr, interval.chrom_start, interval.chrom_end,
+                                     contact_matrix_resolution, diagonal_width});
+    }
   }
-  spdlog::info(FMT_STRING("Imported {} barriers in {}."), tot_num_barriers,
+
+  if (buffer.empty()) {
+    throw std::runtime_error(
+        fmt::format(FMT_STRING("Unable to import any interval from {}!"), path_to_bed));
+  }
+
+  spdlog::info(FMT_STRING("Imported {} intervals in {}."), buffer.size(),
                absl::FormatDuration(absl::Now() - t0));
+
+  return buffer;
+}
+
+[[nodiscard]] static std::vector<ExtrusionBarrier> generate_barriers_from_bed_records(
+    const absl::Span<const bed::BED> records, double default_barrier_pbb,
+    double default_barrier_puu, bool interpret_name_field_as_puu) {
+  std::vector<ExtrusionBarrier> buff;
+  buff.reserve(records.size());
+
+  for (const auto& record : records) {
+    try {
+      if (record.strand == '.') {
+        continue;
+      }
+      if (record.strand != '-' && record.strand != '+') {
+        throw std::runtime_error(fmt::format(FMT_STRING("invalid strand '{}'"), record.strand));
+      }
+
+      if (record.score < 0 || record.score > 1) {
+        throw std::runtime_error(fmt::format(
+            FMT_STRING("invalid score field: expected a score between 0 and 1, found {:.4g}."),
+            record.score));
+      }
+
+      auto puu = default_barrier_puu;
+      try {
+        if (interpret_name_field_as_puu) {
+          utils::parse_numeric_or_throw(record.name, puu);
+          if (puu < 0 || puu > 1) {
+            throw std::runtime_error("");
+          }
+        }
+      } catch (const std::exception&) {
+        throw std::runtime_error(fmt::format(
+            FMT_STRING(
+                "invalid name field: expected name to be a number between 0 and 1, found {}."),
+            record.name));
+      }
+
+      const auto pos = (record.chrom_start + record.chrom_end + 1) / 2;
+      const auto [barrier_stp_active, barrier_stp_inactive] =
+          compute_barrier_stp(record.score, default_barrier_pbb, default_barrier_puu);
+
+      buff.emplace_back(pos, barrier_stp_active, barrier_stp_inactive, record.strand);
+    } catch (const std::exception& e) {
+      throw std::runtime_error(
+          fmt::format(FMT_STRING("Found invalid extrusion barrier {:bed3}: {}"), record, e.what()));
+    }
+  }
+
+  return buff;
+}
+
+usize Genome::map_barriers_to_intervals(absl::btree_set<GenomicInterval>& intervals,
+                                        const bed::BED_tree<>& barriers_bed,
+                                        double default_barrier_pbb, double default_barrier_puu,
+                                        bool interpret_name_field_as_puu) {
+  assert(!intervals.empty());
+  usize tot_num_barriers = 0;
+  for (auto& interval : intervals) {
+    auto barriers = generate_barriers_from_bed_records(
+        barriers_bed.find_overlaps(std::string{interval.chrom().name()},
+                                   utils::conditional_static_cast<u64>(interval.start()),
+                                   utils::conditional_static_cast<u64>(interval.end())),
+        default_barrier_pbb, default_barrier_puu, interpret_name_field_as_puu);
+
+    tot_num_barriers += barriers.size();
+    interval.add_extrusion_barriers(std::move(barriers));
+  }
   return tot_num_barriers;
 }
 
-absl::btree_set<Chromosome> Genome::instantiate_genome(
-    const std::filesystem::path& path_to_chrom_sizes,
-    const std::filesystem::path& path_to_extr_barriers,
-    const std::filesystem::path& path_to_chrom_subranges, double default_barrier_pbb,
-    double default_barrier_puu, bool interpret_name_field_as_puu) {
-  auto chroms = import_chromosomes(path_to_chrom_sizes, path_to_chrom_subranges);
+auto Genome::begin() -> iterator { return this->_intervals.begin(); }
+auto Genome::end() -> iterator { return this->_intervals.end(); }
 
-  if (chroms.empty()) {
-    if (path_to_chrom_subranges.empty()) {
-      throw std::runtime_error(fmt::format(
-          FMT_STRING("Unable to import any chromosome from file {}. Is the file empty?"),
-          path_to_chrom_sizes));
-    }
-    throw std::runtime_error(
-        fmt::format(FMT_STRING("Unable to import any chromosome from file {} using the ranges "
-                               "specified by file {}. Please make sure that neither of the file is "
-                               "empty and that both files refer to the same genome (i.e. they use "
-                               "the same genomic coordinates)."),
-                    path_to_chrom_sizes, path_to_chrom_subranges));
-  }
+auto Genome::begin() const -> const_iterator { return this->_intervals.cbegin(); }
+auto Genome::end() const -> const_iterator { return this->_intervals.cend(); }
 
-  const auto tot_barriers_imported =
-      import_barriers(chroms, path_to_extr_barriers, default_barrier_pbb, default_barrier_puu,
-                      interpret_name_field_as_puu);
-  if (tot_barriers_imported == 0) {
-    spdlog::warn(
-        FMT_STRING(
-            "Unable to import any barrier from file {}. Please make sure this was not a mistake."),
-        path_to_extr_barriers);
-  }
+auto Genome::cbegin() const -> const_iterator { return this->_intervals.cbegin(); }
+auto Genome::cend() const -> const_iterator { return this->_intervals.cend(); }
 
-  return chroms;
+auto Genome::find(const GenomicInterval& query) -> iterator { return this->_intervals.find(query); }
+auto Genome::find(const GenomicInterval& query) const -> const_iterator {
+  return this->_intervals.find(query);
 }
 
-Genome::iterator Genome::begin() { return this->_chromosomes.begin(); }
-Genome::iterator Genome::end() { return this->_chromosomes.end(); }
-
-Genome::const_iterator Genome::begin() const { return this->_chromosomes.cbegin(); }
-Genome::const_iterator Genome::end() const { return this->_chromosomes.cend(); }
-
-Genome::const_iterator Genome::cbegin() const { return this->_chromosomes.cbegin(); }
-Genome::const_iterator Genome::cend() const { return this->_chromosomes.cend(); }
-
-Genome::iterator Genome::find(const Chromosome& other_chrom) {
-  return this->_chromosomes.find(other_chrom);
+auto Genome::find(usize query) -> iterator {
+  return std::find_if(this->_intervals.begin(), this->_intervals.end(),
+                      [&](const auto& gi) { return gi.id() == query; });
+}
+auto Genome::find(usize query) const -> const_iterator {
+  return std::find_if(this->_intervals.begin(), this->_intervals.end(),
+                      [&](const auto& gi) { return gi.id() == query; });
 }
 
-Genome::const_iterator Genome::find(const Chromosome& other_chrom) const {
-  return this->_chromosomes.find(other_chrom);
+auto Genome::find(const Chromosome& query) -> iterator {
+  return std::find_if(this->_intervals.begin(), this->_intervals.end(),
+                      [&](const auto& gi) { return gi.chrom() == query; });
+}
+auto Genome::find(const Chromosome& query) const -> const_iterator {
+  return std::find_if(this->_intervals.begin(), this->_intervals.end(),
+                      [&](const auto& gi) { return gi.chrom() == query; });
 }
 
-Genome::iterator Genome::find(std::string_view other_chrom_name) {
-  return std::find_if(this->_chromosomes.begin(), this->_chromosomes.end(),
-                      [&](const auto& chrom) { return chrom.name() == other_chrom_name; });
+auto Genome::find(std::string_view query) -> iterator {
+  return std::find_if(this->_intervals.begin(), this->_intervals.end(),
+                      [&](const auto& gi) { return gi.chrom().name() == query; });
+}
+auto Genome::find(std::string_view query) const -> const_iterator {
+  return std::find_if(this->_intervals.begin(), this->_intervals.end(),
+                      [&](const auto& gi) { return gi.chrom().name() == query; });
 }
 
-Genome::const_iterator Genome::find(std::string_view other_chrom_name) const {
-  return std::find_if(this->_chromosomes.begin(), this->_chromosomes.end(),
-                      [&](const auto& chrom) { return chrom.name() == other_chrom_name; });
+bool Genome::contains(const GenomicInterval& query) const {
+  return this->_intervals.contains(query);
+}
+bool Genome::contains(usize query) const { return query < this->_chroms.size(); }
+bool Genome::contains(const Chromosome& query) const { return this->contains(query.id()); }
+bool Genome::contains(std::string_view query) const {
+  return std::find_if(this->_chroms.begin(), this->_chroms.end(), [&](const auto& chrom_ptr) {
+           return chrom_ptr->name() == query;
+         }) != this->_chroms.end();
 }
 
-bool Genome::contains(const Chromosome& other_chromosome) const {
-  return this->_chromosomes.contains(other_chromosome);
+usize Genome::num_chromosomes() const noexcept {
+  return utils::conditional_static_cast<usize>(this->_chroms.size());
 }
 
-bool Genome::contains(std::string_view other_chrom_name) const {
-  return this->find(other_chrom_name) != this->end();
+const Chromosome& Genome::chromosome_with_longest_name() const noexcept {
+  assert(!this->_chroms.empty());
+  return **std::max_element(this->_chroms.begin(), this->_chroms.end(),
+                            [&](const auto& chrom_ptr1, const auto& chrom_ptr2) {
+                              return chrom_ptr1->name().size() < chrom_ptr2->name().size();
+                            });
 }
 
-usize Genome::size() const {
-  return std::accumulate(
-      this->_chromosomes.begin(), this->_chromosomes.end(), 0UL,
-      [](auto accumulator, const auto& chrom) { return accumulator + chrom.size(); });
+const Chromosome& Genome::longest_chromosome() const noexcept {
+  assert(!this->_chroms.empty());
+  return **std::max_element(this->_chroms.begin(), this->_chroms.end(),
+                            [&](const auto& chrom_ptr1, const auto& chrom_ptr2) {
+                              return chrom_ptr1->size() < chrom_ptr2->size();
+                            });
 }
 
-usize Genome::number_of_chromosomes() const {
-  return utils::conditional_static_cast<usize>(this->_chromosomes.size());
-}
-
-usize Genome::simulated_size() const {
-  return std::accumulate(this->_chromosomes.begin(), this->_chromosomes.end(), usize(0),
-                         [](auto accumulator, const auto& chrom) {
-                           return accumulator + (chrom.end_pos() - chrom.start_pos());
-                         });
-}
-
-const Chromosome& Genome::chromosome_with_longest_name() const {
-  assert(!this->_chromosomes.empty());
+const GenomicInterval& Genome::longest_interval() const noexcept {
+  assert(!this->_intervals.empty());
   return *std::max_element(
-      this->_chromosomes.begin(), this->_chromosomes.end(),
-      [&](const auto& c1, const auto& c2) { return c1.name().size() < c2.name().size(); });
+      this->_intervals.begin(), this->_intervals.end(),
+      [&](const auto& gi1, const auto& gi2) { return gi1.size() < gi2.size(); });
 }
 
-const Chromosome& Genome::longest_chromosome() const {
-  assert(!this->_chromosomes.empty());
-  return *std::max_element(
-      this->_chromosomes.begin(), this->_chromosomes.end(),
-      [&](const auto& c1, const auto& c2) { return c1.simulated_size() < c2.simulated_size(); });
-}
-
-const Chromosome& Genome::chromosome_with_max_nbarriers() const {
-  assert(!this->_chromosomes.empty());
-  return *std::max_element(
-      this->_chromosomes.begin(), this->_chromosomes.end(),
-      [&](const auto& c1, const auto& c2) { return c1.num_barriers() < c2.num_barriers(); });
+const GenomicInterval& Genome::interval_with_most_barriers() const noexcept {
+  assert(!this->_intervals.empty());
+  return *std::max_element(this->_intervals.begin(), this->_intervals.end(),
+                           [&](const auto& gi1, const auto& gi2) {
+                             return gi1.barriers().size() < gi2.barriers().size();
+                           });
 }
 
 usize Genome::max_target_contacts(usize bin_size, usize diagonal_width,
                                   double target_contact_density, usize simulation_iterations,
                                   double lef_fraction_contact_sampling, double nlefs_per_mbp,
                                   usize ncells) const {
-  const auto& chrom = this->longest_chromosome();
+  const auto& interval = this->longest_interval();
   if (target_contact_density == 0.0) {
     const auto nlefs = static_cast<usize>(
-        std::round(nlefs_per_mbp * (static_cast<double>(chrom.simulated_size()) / 1.0e6)));
+        std::round(nlefs_per_mbp * (static_cast<double>(interval.size()) / 1.0e6)));
     return static_cast<usize>(
         (static_cast<double>(simulation_iterations * nlefs) * lef_fraction_contact_sampling) /
         static_cast<double>(ncells));
   }
 
-  const auto npixels = ((chrom.simulated_size() + bin_size - 1) / bin_size) *
-                       ((diagonal_width + bin_size - 1) / bin_size);
+  const auto npixels =
+      ((interval.size() + bin_size - 1) / bin_size) * ((diagonal_width + bin_size - 1) / bin_size);
 
   return static_cast<usize>(std::round((static_cast<double>(npixels) * target_contact_density) /
                                        static_cast<double>(ncells)));
