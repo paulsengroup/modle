@@ -69,6 +69,18 @@ if [ $# -ne 1 ]; then
   status=1
 fi
 
+modle_bin="$1"
+
+data_dir="$(readlink_py "$(dirname "$0")/../data/integration_tests")"
+script_dir="$(readlink_py "$(dirname "$0")")"
+
+chrom_sizes="$data_dir/grch38.chrom.sizes"
+extr_barriers="$data_dir/grch38_h1_extrusion_barriers.bed.xz"
+ref_cooler="$data_dir/reference_001.cool"
+ref_bw="$data_dir/reference_001.bw"
+
+export PATH="$PATH:$script_dir"
+
 if ! command -v cooler &> /dev/null; then
   2>&1 echo "Unable to find cooler in your PATH"
   status=1
@@ -78,6 +90,11 @@ fi
 # https://github.com/open2c/cooler/pull/298
 cooler --help > /dev/null
 
+if ! command -v compare_bwigs.py &> /dev/null; then
+  2>&1 echo "Unable to find compare_bwigs.py"
+  status=1
+fi
+
 if ! command -v xz &> /dev/null; then
   2>&1 echo "Unable to find xz in your PATH"
   status=1
@@ -86,15 +103,6 @@ fi
 if [ $status -ne 0 ]; then
   exit $status
 fi
-
-modle_bin="$1"
-
-data_dir="$(readlink_py "$(dirname "$0")/../data/integration_tests")"
-
-chrom_sizes="$data_dir/grch38.chrom.sizes"
-extr_barriers="$data_dir/grch38_h1_extrusion_barriers.bed.xz"
-ref_cooler="$data_dir/reference_001.cool"
-ref_bw="$data_dir/reference_001.bw"
 
 if ! check_files_exist "$chrom_sizes" "$extr_barriers" "$ref_cooler" "$ref_bw"; then
   exit 1
@@ -136,7 +144,7 @@ if ! compare_coolers "$outdir/out.cool" "$ref_cooler"; then
   status=1
 fi
 
-if ! compare_bwigs "$outdir/out_lef_1d_occupancy.bw" "$ref_bw"; then
+if ! compare_bwigs.py "$ref_bw" "$outdir/out_lef_1d_occupancy.bw"; then
   status=1
 fi
 

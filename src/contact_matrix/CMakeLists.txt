@@ -43,4 +43,4 @@ target_link_system_libraries(
   bshoshany-thread-pool::bshoshany-thread-pool
   cpp-sort::cpp-sort
   libcuckoo::libcuckoo
-  xxHash::xxHash)
+  xxHash::xxhash)

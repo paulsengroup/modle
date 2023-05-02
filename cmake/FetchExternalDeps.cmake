@@ -15,13 +15,4 @@ FetchContent_Declare(
 set(COOLERPP_ENABLE_TESTING OFF)
 set(COOLERPP_BUILD_EXAMPLES OFF)
 
-if(BUILD_SHARED_LIBS)
-  FetchContent_MakeAvailable(coolerpp)
-else()
-  # Do not install coolerpp when using static linking
-  FetchContent_GetProperties(coolerpp)
-  if(NOT coolerpp_POPULATED)
-    FetchContent_Populate(coolerpp)
-    add_subdirectory(${coolerpp_SOURCE_DIR} ${coolerpp_BINARY_DIR} EXCLUDE_FROM_ALL)
-  endif()
-endif()
+FetchContent_MakeAvailable(coolerpp)

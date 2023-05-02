@@ -53,7 +53,7 @@ sed -i "0,/set(MODLE_PROJECT_VERSION_PATCH.*/s//set(MODLE_PROJECT_VERSION_PATCH 
 sed -i "0,/set(MODLE_PROJECT_VERSION_SUFFIX.*/s//set(MODLE_PROJECT_VERSION_SUFFIX $suffix)/" "$repo/cmake/Versioning.cmake"
 
 # Update conanfile.py
-sed -i "0,/  version.*/s//  version = \"$version\"/" "$repo/conanfile.py"
+# sed -i "0,/  version.*/s//  version = \"$version\"/" "$repo/conanfile.py"
 
 
 
