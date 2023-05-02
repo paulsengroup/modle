@@ -10,6 +10,9 @@ set -o pipefail
 
 IMAGE_NAME='modle'
 
+# Use amd64 as default platform
+PLATFORM="${1:-linux/amd64}"
+
 GIT_HASH="$(git rev-parse HEAD)"
 GIT_SHORT_HASH="$(git rev-parse --short HEAD)"
 GIT_TAG="$(git for-each-ref 'refs/tags/v*.*.*' --count 1 --sort=-v:refname --format "%(refname:short)"  --points-at HEAD)"
@@ -34,7 +37,7 @@ fi
 
 2>&1 echo "Building \"$IMAGE_NAME:$IMAGE_TAG\"..."
 
-sudo docker pull docker.io/library/ubuntu:22.04
+sudo docker pull --platform="$PLATFORM" docker.io/library/ubuntu:22.04
 FINAL_BASE_IMAGE_DIGEST="$(sudo docker inspect --format='{{index .RepoDigests 0}}' docker.io/library/ubuntu:22.04 | grep -o '[[:alnum:]:]\+$')"
 
 BUILD_BASE_IMAGE='ghcr.io/paulsengroup/ci-docker-images/ubuntu-22.04-cxx-clang-15:latest'
@@ -44,6 +47,7 @@ sudo docker pull "$BUILD_BASE_IMAGE"
 sudo docker pull "$TEST_BASE_IMAGE"
 
 sudo docker build \
+  --platform="$PLATFORM" \
   --build-arg "BUILD_BASE_IMAGE=$BUILD_BASE_IMAGE" \
   --build-arg "TEST_BASE_IMAGE=$TEST_BASE_IMAGE" \
   --build-arg "FINAL_BASE_IMAGE=docker.io/library/ubuntu" \
