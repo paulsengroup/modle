@@ -8,7 +8,7 @@ include(FetchContent)
 FetchContent_Declare(
         coolerpp
         GIT_REPOSITORY https://github.com/robomics/coolerpp.git
-        GIT_TAG 92058b9c696a0e5e263dfda8c43785ac419ed647
+        GIT_TAG d2f742ac9e93e2212a54fae0d0f0d1e516b3470c
 )
 # cmake-format: on
 
