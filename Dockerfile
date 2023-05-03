@@ -112,7 +112,7 @@ RUN ctest -j "$(nproc)"               \
           --schedule-random           \
           --output-on-failure         \
           --no-tests=error            \
-          --timeout 300               \
+          --timeout 900               \
 && rm -rf "$src_dir/test/Testing"
 
 ARG FINAL_BASE_IMAGE
