@@ -203,42 +203,6 @@ auto GenomicInterval::lef_1d_occupancy() noexcept -> std::vector<std::atomic<u64
 
 void GenomicInterval::deallocate() noexcept { this->_contacts.deallocate(); }
 
-/*
-u64 GenomicInterval::hash(u64 seed, usize cell_id) const {
-  const std::array<u64, 2> buff{utils::conditional_static_cast<u64>(this->_id),
-                                utils::conditional_static_cast<u64>(cell_id)};
-  DISABLE_WARNING_PUSH
-  DISABLE_WARNING_USED_BUT_MARKED_UNUSED
-  const auto hash = XXH3_64bits_withSeed(buff.data(), buff.size() * sizeof(u64), seed);
-  DISABLE_WARNING_POP
-  return utils::conditional_static_cast<u64>(hash);
-}
-*/
-
-// TODO: replace me! (changes output)
-u64 GenomicInterval::hash(u64 seed, usize cell_id) const {
-  XXH3_state_t* xxh_state = XXH3_createState();
-  auto handle_errors = [&](const auto& status) {
-    if (MODLE_UNLIKELY(status == XXH_ERROR || !xxh_state)) {
-      throw std::runtime_error(
-          fmt::format(FMT_STRING("Failed to hash \"{}\" for cell #{} using seed {}"),
-                      this->chrom().name(), cell_id, seed));
-    }
-  };
-  auto size = this->_chrom->size();
-
-  DISABLE_WARNING_PUSH
-  DISABLE_WARNING_USED_BUT_MARKED_UNUSED
-  handle_errors(XXH3_64bits_reset_withSeed(xxh_state, seed));
-  handle_errors(XXH3_64bits_update(xxh_state, this->_chrom->name().data(),
-                                   this->_chrom->name().size() * sizeof(char)));
-  handle_errors(XXH3_64bits_update(xxh_state, &size, sizeof(decltype(this->_chrom->size()))));
-  handle_errors(XXH3_64bits_update(xxh_state, &cell_id, sizeof(decltype(cell_id))));
-
-  return utils::conditional_static_cast<u64>(XXH3_64bits_digest(xxh_state));
-  DISABLE_WARNING_POP
-}
-
 struct ComputeBarrierStpResult {
   double stp_active;
   double stp_inactive;

@@ -58,6 +58,7 @@ class Simulation : Config {
 
   using CollisionT = Collision<u32f>;
   struct Task {  // NOLINT(altera-struct-pack-align)
+    random::PRNG_t rand_eng{};
     usize id{};
     GenomicInterval* interval{};
     usize cell_id{};
@@ -75,7 +76,6 @@ class Simulation : Config {
     usize num_burnin_epochs{0};    // NOLINT
     usize num_contacts{0};         // NOLINT
 
-    random::PRNG_t rand_eng{};     // NOLINT
     u64 seed{};                    // NOLINT
     std::unique_ptr<compressed_io::Writer> model_state_logger{nullptr};  // NOLINT
 

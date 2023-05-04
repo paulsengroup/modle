@@ -7,17 +7,16 @@
 #include <absl/container/btree_set.h>  // for btree_set, btree_set_container<>::const_iterator
 #include <absl/types/span.h>           // for Span
 #include <fmt/format.h>
-#include <xxhash.h>  // for XXH3_state_t, XXH_INLINE_XXH3_state_t
 
-#include <filesystem>    // for path
-#include <iterator>      // for iterator_traits
-#include <limits>        // for numeric_limits
-#include <memory>        // for shared_ptr
-#include <shared_mutex>  // for shared_mutex
-#include <string>        // for string
-#include <string_view>   // for string_view
-#include <type_traits>   // for enable_if_t, remove_cv_t
-#include <vector>        // for vector
+#include <filesystem>                      // for path
+#include <iterator>                        // for iterator_traits
+#include <limits>                          // for numeric_limits
+#include <memory>                          // for shared_ptr
+#include <shared_mutex>                    // for shared_mutex
+#include <string>                          // for string
+#include <string_view>                     // for string_view
+#include <type_traits>                     // for enable_if_t, remove_cv_t
+#include <vector>                          // for vector
 
 #include "modle/bed/bed.hpp"               // for BED (ptr only), BED_tree, BED_tree<>::value_type
 #include "modle/common/common.hpp"         // for bp_t, contacts_t, u64, u32, u8
@@ -180,7 +179,6 @@ class GenomicInterval {
   [[nodiscard]] auto contacts() noexcept -> ContactMatrix&;
   [[nodiscard]] auto lef_1d_occupancy() const noexcept -> const std::vector<std::atomic<u64>>&;
   [[nodiscard]] auto lef_1d_occupancy() noexcept -> std::vector<std::atomic<u64>>&;
-  [[nodiscard]] u64 hash(u64 seed, usize cell_id) const;
   void deallocate() noexcept;
 
   template <typename H>

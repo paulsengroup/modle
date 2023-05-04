@@ -883,8 +883,6 @@ void Simulation::simulate_one_cell(State& s) const {
 
   try {
     // Seed is computed based on chrom. name, interval start/end and cellid
-    s.seed = s.interval->hash(this->seed, s.cell_id);
-    s.rand_eng = random::PRNG(s.seed);
 
     const auto lef_binding_rate_burnin =
         static_cast<double>(s.num_lefs) /

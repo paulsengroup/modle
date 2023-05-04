@@ -140,7 +140,7 @@ void Simulation::run_simulate() {
       if (!this->ok()) {
         this->handle_exceptions();
       }
-      // Don't bother simulating interval without barriers
+      // Don't bother simulating intervals without barriers
       if (!this->simulate_chromosomes_wo_barriers && interval.num_barriers() == 0) {
         spdlog::info(FMT_STRING("{} has 0 barriers... SKIPPING!"), interval);
         std::scoped_lock lck(progress_queue_mutex);
@@ -169,6 +169,7 @@ void Simulation::run_simulate() {
       usize tot_target_contacts_rolling_count = 0;
       usize cellid = 0;
       const auto nbatches = (this->num_cells + task_batch_size_enq - 1) / task_batch_size_enq;
+      auto rand_eng = random::PRNG(this->seed);
       for (usize batchid = 0; batchid < nbatches; ++batchid) {
         // Generate a batch of tasks for the current interval
         std::generate(tasks.begin(), tasks.end(), [&]() {
@@ -177,7 +178,8 @@ void Simulation::run_simulate() {
               target_contacts_per_cell, tot_target_contacts - tot_target_contacts_rolling_count);
           tot_target_contacts_rolling_count += effective_target_contacts;
 
-          return Task{
+          rand_eng.jump();
+          return Task{rand_eng,
               taskid++, &interval,          cellid++, target_epochs, effective_target_contacts,
               nlefs,    interval.barriers()};
         });
