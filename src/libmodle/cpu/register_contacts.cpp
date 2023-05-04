@@ -137,7 +137,7 @@ usize Simulation::register_contacts_loop(const bp_t start_pos, const bp_t end_po
   const bool noisify_contacts = this->contact_sampling_strategy & CS::noisify;
 
   usize num_contacts_registered = 0;
-  while (num_contacts_registered != num_sampling_events) {
+  for (; num_sampling_events != 0; --num_sampling_events) {
     const auto& lef = sample_lef_with_replacement(lefs, rand_eng);
     if (MODLE_LIKELY(lef.is_bound() && lef_within_bound(lef, start_pos, end_pos))) {
       const auto [p1, p2] =
@@ -173,7 +173,7 @@ usize Simulation::register_contacts_tad(bp_t start_pos, bp_t end_pos,
   const bool noisify_contacts = this->contact_sampling_strategy & CS::noisify;
 
   usize num_contacts_registered = 0;
-  while (num_contacts_registered != num_sampling_events) {
+  for (; num_sampling_events != 0; --num_sampling_events) {
     const auto& lef = sample_lef_with_replacement(lefs, rand_eng);
     if (MODLE_LIKELY(lef.is_bound() && lef_within_bound(lef, start_pos, end_pos))) {
       const auto [p1, p2] =
@@ -210,7 +210,7 @@ usize Simulation::register_1d_lef_occupancy(bp_t start_pos, bp_t end_pos,
   const bool noisify_positions = this->contact_sampling_strategy & CS::noisify;
 
   usize num_successful_sampling_events = 0;
-  while (num_successful_sampling_events != num_sampling_events) {
+  for (; num_sampling_events != 0; --num_sampling_events) {
     const auto& lef = sample_lef_with_replacement(lefs, rand_eng);
     if (MODLE_LIKELY(lef.is_bound() && lef_within_bound(lef, start_pos, end_pos))) {
       const auto [p1, p2] =
