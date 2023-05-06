@@ -833,7 +833,7 @@ static void cli_update_paths(Cli::subcommand subcommand, Config& c) {
   c.path_to_config_file = c.path_to_output_prefix;
   if (subcommand == Cli::subcommand::simulate) {
     c.path_to_model_state_log_file = c.path_to_output_prefix;
-    c.path_to_model_state_log_file += "_internal_state.log.gz";
+    c.path_to_model_state_log_file += "_internal_state.log.zst";
   }
 
   if (c.track_1d_lef_position) {
