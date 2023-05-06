@@ -80,8 +80,8 @@ using contacts_t = u32;
 #endif
 #endif
 
-#define MODLE_UNREACHABLE_CODE ABSL_UNREACHABLE()           // NOLINT(cppcoreguidelines-macro-usage)
-#define MODLE_LIKELY           ABSL_PREDICT_TRUE          // NOLINT(cppcoreguidelines-macro-usage)
-#define MODLE_UNLIKELY         ABSL_PREDICT_FALSE         // NOLINT(cppcoreguidelines-macro-usage)
+#define MODLE_UNREACHABLE_CODE ABSL_UNREACHABLE()  // NOLINT(cppcoreguidelines-macro-usage)
+#define MODLE_LIKELY           ABSL_PREDICT_TRUE   // NOLINT(cppcoreguidelines-macro-usage)
+#define MODLE_UNLIKELY         ABSL_PREDICT_FALSE  // NOLINT(cppcoreguidelines-macro-usage)
 
 }  // namespace modle

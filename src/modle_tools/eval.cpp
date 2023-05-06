@@ -525,8 +525,7 @@ template <StripeDirection stripe_direction, class N>
   std::abort();
 }
 
-[[nodiscard]] [[maybe_unused]] static std::string_view direction_to_str(
-    const StripeDirection m) {
+[[nodiscard]] [[maybe_unused]] static std::string_view direction_to_str(const StripeDirection m) {
   if (m == StripeDirection::vertical) {
     return "Vertical";
   }
