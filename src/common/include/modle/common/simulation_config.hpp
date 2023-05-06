@@ -77,7 +77,7 @@ struct Config {
   double prob_of_lef_release_burnin{};
   bp_t avg_lef_processivity{300'000};
   bp_t contact_sampling_interval{50'000};
-  bool track_1d_lef_position{false};
+  bool track_1d_lef_position{true};
 
   // Extrusion barrier params
   double extrusion_barrier_occupancy{0.825};
