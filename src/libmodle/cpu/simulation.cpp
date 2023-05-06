@@ -12,26 +12,26 @@
 #include <cpp-sort/sorters/pdq_sorter.h>        // for pdq_sort, pdq_sorter
 #include <cpp-sort/sorters/split_sorter.h>      // for split_sort, split_sorter
 #include <fmt/compile.h>
-#include <spdlog/spdlog.h>  // for info, warn
+#include <spdlog/spdlog.h>                      // for info, warn
 
-#include <algorithm>  // for max, fill, min, copy, clamp
-#include <atomic>     // for atomic
-#include <cassert>    // for assert
-#include <chrono>     // for microseconds
-#include <cmath>      // for log, round, exp, floor, sqrt
+#include <algorithm>                            // for max, fill, min, copy, clamp
+#include <atomic>                               // for atomic
+#include <cassert>                              // for assert
+#include <chrono>                               // for microseconds
+#include <cmath>                                // for log, round, exp, floor, sqrt
 #include <coolerpp/coolerpp.hpp>
-#include <cstdlib>      // for abs
-#include <deque>        // for _Deque_iterator<>::_Self
-#include <filesystem>   // for operator<<, path
-#include <limits>       // for numeric_limits
-#include <memory>       // for shared_ptr, unique_ptr, make...
-#include <mutex>        // for mutex
-#include <numeric>      // for iota
-#include <stdexcept>    // for runtime_error
-#include <string>       // for string
-#include <string_view>  // for string_view
-#include <utility>      // for make_pair, pair
-#include <vector>       // for vector, vector<>::iterator
+#include <cstdlib>                              // for abs
+#include <deque>                                // for _Deque_iterator<>::_Self
+#include <filesystem>                           // for operator<<, path
+#include <limits>                               // for numeric_limits
+#include <memory>                               // for shared_ptr, unique_ptr, make...
+#include <mutex>                                // for mutex
+#include <numeric>                              // for iota
+#include <stdexcept>                            // for runtime_error
+#include <string>                               // for string
+#include <string_view>                          // for string_view
+#include <utility>                              // for make_pair, pair
+#include <vector>                               // for vector, vector<>::iterator
 
 #include "modle/bigwig/bigwig.hpp"
 #include "modle/common/common.hpp"             // for bp_t, contacts_t
@@ -39,13 +39,53 @@
 #include "modle/common/random.hpp"             // for bernoulli_trial, poisson_distribution
 #include "modle/common/simulation_config.hpp"  // for Config
 #include "modle/config/version.hpp"
-#include "modle/extrusion_barriers.hpp"  // for ExtrusionBarrier, update_states
-#include "modle/extrusion_factors.hpp"   // for Lef, ExtrusionUnit
-#include "modle/genome.hpp"              // for Genome::iterator, GenomicInterval
+#include "modle/extrusion_barriers.hpp"        // for ExtrusionBarrier, update_states
+#include "modle/extrusion_factors.hpp"         // for Lef, ExtrusionUnit
+#include "modle/genome.hpp"                    // for Genome::iterator, GenomicInterval
 #include "modle/io/contact_matrix_dense.hpp"
 #include "modle/stats/descriptive.hpp"
 
 namespace modle {
+
+static void override_extrusion_barrier_occupancy(Genome& genome, const double barrier_occupied_stp,
+                                                 const double barrier_not_occupied_stp) {
+  for (auto& interval : genome) {
+    auto& barriers = interval.barriers();
+    std::transform(barriers.begin(), barriers.end(), barriers.begin(), [&](const auto& barrier) {
+      return ExtrusionBarrier{barrier.pos, barrier_occupied_stp, barrier_not_occupied_stp,
+                              barrier.blocking_direction.complement()};
+    });
+  }
+}
+
+static void issue_warnings_for_small_intervals(const Genome& genome, const bp_t diagonal_width) {
+  std::vector<std::string> warnings;
+  for (const auto& interval : genome) {
+    if (interval.size() < diagonal_width) {
+      warnings.emplace_back(fmt::format(FMT_STRING("{}: {};"), interval, interval.size()));
+    }
+  }
+  if (!warnings.empty()) {
+    spdlog::warn(FMT_STRING("The simulated size for the following {} interval(s) is smaller than "
+                            "the simulation diagonal width ({} bp). Is this intended?\n - {}"),
+                 warnings.size(), diagonal_width, fmt::join(warnings, "\n - "));
+  }
+}
+
+template <usize num_pixels_threshold = 250'000>
+static void issue_warnings_for_small_matrices(const Genome& genome) {
+  std::vector<std::string> warnings;
+  for (const auto& interval : genome) {
+    if (const auto npixels = interval.npixels(); npixels < num_pixels_threshold) {
+      warnings.emplace_back(fmt::format(FMT_STRING("{}: {} pixels"), interval, npixels));
+    }
+  }
+  if (!warnings.empty()) {
+    spdlog::warn(FMT_STRING("The contact matrix for the following {} interval(s) appears to be "
+                            "really small (less than {} pixels). Is this intended?\n - {}"),
+                 warnings.size(), num_pixels_threshold, fmt::join(warnings, "\n - "));
+  }
+}
 
 Simulation::Simulation(Config config_, bool import_intervals)
     : _config(std::move(config_)),
@@ -56,40 +96,14 @@ Simulation::Simulation(Config config_, bool import_intervals)
                            c().interpret_bed_name_field_as_barrier_not_occupied_stp)
                   : Genome{}),
       _ctx(c().nthreads + 1) {
-  // Override barrier occupancies read from BED file
   if (c().override_extrusion_barrier_occupancy) {
-    for (auto& chrom : this->_genome) {
-      auto& barriers = chrom.barriers();
-      std::transform(barriers.begin(), barriers.end(), barriers.begin(), [&](const auto& barrier) {
-        return ExtrusionBarrier{barrier.pos, c().barrier_occupied_stp, c().barrier_not_occupied_stp,
-                                barrier.blocking_direction.complement()};
-      });
-    }
+    // Override barrier occupancies read from BED file
+    override_extrusion_barrier_occupancy(this->_genome, c().barrier_occupied_stp,
+                                         c().barrier_not_occupied_stp);
   }
 
-  std::vector<std::string> warnings;
-  for (const auto& interval : this->_genome) {
-    if (interval.size() < c().diagonal_width) {
-      warnings.emplace_back(fmt::format(FMT_STRING("{}: {};"), interval, interval.size()));
-    }
-  }
-  if (!warnings.empty()) {
-    spdlog::warn(FMT_STRING("The simulated size for the following {} chromosome(s) is smaller than "
-                            "the simulation diagonal width ({} bp). Is this intended?\n - {}"),
-                 warnings.size(), c().diagonal_width, fmt::join(warnings, "\n - "));
-  }
-  warnings.clear();
-  const usize min_pixels = 250'000;
-  for (const auto& interval : this->_genome) {
-    if (const auto npixels = interval.npixels(); npixels < min_pixels) {
-      warnings.emplace_back(fmt::format(FMT_STRING("{}: {} pixels"), interval, npixels));
-    }
-  }
-  if (!warnings.empty()) {
-    spdlog::warn(FMT_STRING("The contact matrix for the following {} chromosome(s) appears to be "
-                            "really small (less than {} pixels). Is this intended?\n - {}"),
-                 warnings.size(), min_pixels, fmt::join(warnings, "\n - "));
-  }
+  issue_warnings_for_small_intervals(this->_genome, c().diagonal_width);
+  issue_warnings_for_small_matrices(this->_genome);
 }
 
 usize Simulation::size() const { return this->_genome.size(); }
@@ -132,7 +146,6 @@ static void write_contact_matrix(coolerpp::File& cf, const GenomicInterval& inte
   }
 }
 
-// NOLINTNEXTLINE(readability-function-cognitive-complexity)
 void Simulation::write_contacts_to_disk(std::chrono::milliseconds wait_time) {
   assert(!std::filesystem::exists(c().path_to_output_file_cool));
   absl::btree_map<GenomicInterval*, usize> task_map{};
