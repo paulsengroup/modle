@@ -164,8 +164,8 @@ void Simulation::run_simulate() {
     assert(!this->_ctx.exception_thrown());
   } catch (...) {
     this->_ctx.set_exception_main(std::current_exception());
-    this->_ctx.shutdown();
-    throw;
+    this->_ctx.check_exceptions();
+    throw;  // should not be necessary, but better safe than sorry
   }
 }
 
