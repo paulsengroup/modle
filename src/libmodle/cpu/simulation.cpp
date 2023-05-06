@@ -171,7 +171,7 @@ static void write_lef_occupancy_to_bwig(io::bigwig::Writer& bw, const GenomicInt
                    });
     bw.write_range(interval.chrom().name(), absl::MakeSpan(buff), resolution, resolution,
                    interval.start());
-    spdlog::info(FMT_STRING("[io]: writing 1D LEF occupancy profile for {} to file \"{}\" took {}"),
+    spdlog::info(FMT_STRING("[io]: writing 1D LEF occupancy profile for {} to file {} took {}"),
                  interval, bw.path(), absl::FormatDuration(absl::Now() - t0));
   } catch (const std::exception& e) {
     throw std::runtime_error(fmt::format(
