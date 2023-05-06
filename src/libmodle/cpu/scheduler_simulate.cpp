@@ -40,7 +40,7 @@ void Simulation::spawn_worker_threads(const usize num_workers, const usize batch
   assert(batch_size != 0);
   for (usize i = 0; i < num_workers; ++i) {
     this->_ctx.spawn_worker_thread(
-        [this, batch_size, tid = u64(i)]() { this->simulate_worker(tid, batch_size); });
+        [this, batch_size, tid = i]() { this->simulate_worker(tid, batch_size); });
   }
 }
 
