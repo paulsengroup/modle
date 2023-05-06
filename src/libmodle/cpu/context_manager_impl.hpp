@@ -5,11 +5,13 @@
 #pragma once
 
 #include <fmt/format.h>
+#include <fmt/std.h>
 #include <spdlog/spdlog.h>
 
 #include <BS_thread_pool.hpp>
 #include <cassert>
 #include <exception>
+#include <filesystem>
 #include <optional>
 #include <stdexcept>
 #include <string>
@@ -17,6 +19,7 @@
 #include <vector>
 
 #include "modle/common/common.hpp"
+#include "modle/compressed_io/compressed_io.hpp"
 
 namespace modle {
 
@@ -276,6 +279,25 @@ inline void ContextManager<Task>::shutdown() {
   this->_io_tpool.pause();
   this->_worker_tpool.wait_for_tasks();
   this->_io_tpool.wait_for_tasks();
+}
+
+template <typename Task>
+inline void ContextManager<Task>::init_model_state_logger(std::filesystem::path path,
+                                                          std::string_view header) {
+  assert(!this->_state_logger_ptr);
+  assert(!std::filesystem::exists(path));
+  spdlog::debug(FMT_STRING("[io] initializing model state logger at {}..."), path);
+  compressed_io::Writer(path).write(header);
+  this->_state_logger_ptr = std::make_unique<StateLoggerAggregator>(std::move(path));
+}
+
+template <typename Task>
+inline void ContextManager<Task>::append_to_model_state_log(const std::filesystem::path& path,
+                                                            bool remove_file_after_append) {
+  assert(!!this->_state_logger_ptr);
+  spdlog::debug(FMT_STRING("[io] appending {} to log file at {}..."), path,
+                this->_state_logger_ptr->path());
+  this->_state_logger_ptr->append(path, remove_file_after_append);
 }
 
 }  // namespace modle

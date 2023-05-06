@@ -49,6 +49,9 @@ void Simulation::run_simulate() {
       if (c().track_1d_lef_position) {
         std::filesystem::remove(c().path_to_lef_1d_occupancy_bw_file);
       }
+      if (c().log_model_internal_state) {
+        std::filesystem::remove(c().path_to_model_state_log_file);
+      }
     }
   }
 
@@ -82,7 +85,8 @@ void Simulation::run_simulate() {
   // std::mutex model_state_logger_mtx;  // Protect rw access to the log file located at
   // this->path_to_model_state_log_file
   if (c().log_model_internal_state && !c().skip_output) {
-    compressed_io::Writer(c().path_to_model_state_log_file).write(model_internal_state_log_header);
+    this->_ctx.init_model_state_logger(c().path_to_model_state_log_file,
+                                       model_internal_state_log_header);
   }
 
   try {
@@ -177,6 +181,17 @@ static std::string format_rand_eng(const random::PRNG_t& rand_eng) {
                      state[3]);
 }
 
+[[nodiscard]] static std::unique_ptr<compressed_io::Writer> init_local_model_state_logger(
+    const Config& c, const u64 task_id) {
+  if (!c.log_model_internal_state) {
+    return nullptr;
+  }
+
+  auto path = c.path_to_model_state_log_file;
+  path.replace_extension(fmt::format(FMT_STRING("{}{}"), task_id, path.extension().string()));
+  return std::make_unique<compressed_io::Writer>(path);
+}
+
 void Simulation::simulate_worker(const u64 tid, const usize task_batch_size) {
   spdlog::info(FMT_STRING("Spawning simulation thread {}..."), tid);
 
@@ -190,15 +205,6 @@ void Simulation::simulate_worker(const u64 tid, const usize task_batch_size) {
   // throughout the simulation
   Simulation::State local_state;
 
-  const auto tmp_model_internal_state_log_path = [&]() {
-    auto p = c().path_to_model_state_log_file;
-    if (c().log_model_internal_state && !c().skip_output) {
-      p.replace_extension(fmt::format(FMT_STRING("{}{}"), tid, p.extension().string()));
-      local_state.model_state_logger = std::make_unique<compressed_io::Writer>(p);
-    }
-    return p;
-  }();
-
   try {
     while (!!this->_ctx) {
       this->_ctx.wait_dequeue<Task::Status::PENDING>(ctok, task_buff);
@@ -208,15 +214,6 @@ void Simulation::simulate_worker(const u64 tid, const usize task_batch_size) {
         continue;
       }
       if (task_buff.empty() && this->_ctx.shutdown_signal_sent()) {
-        // Reached end of simulation (i.e. all tasks have been processed)
-        // if (this->log_model_internal_state && !this->skip_output) {
-        //   assert(!tmp_model_internal_state_log_path.empty());
-        //   // Ensure all log records have been written to disk
-        //   local_state.model_state_logger = nullptr;
-        //   std::scoped_lock<std::mutex> lck(model_state_logger_mtx);
-        //   utils::concatenate_files<true>(this->path_to_model_state_log_file,
-        //                                  tmp_model_internal_state_log_path);
-        // }
         spdlog::debug(FMT_STRING("[W{}]: all tasks have been processed: returning!"), tid);
         return;
       }
@@ -245,7 +242,13 @@ void Simulation::simulate_worker(const u64 tid, const usize task_batch_size) {
           local_state.status = State::Status::RUNNING;
           spdlog::debug(FMT_STRING("[W{}]: begin processing task {} ({} cell #{}, {})..."), tid,
                         task.id, *task.interval, task.cell_id, format_rand_eng(task.rand_eng));
+          local_state.model_state_logger = init_local_model_state_logger(c(), local_state.id);
           Simulation::simulate_one_cell(tid, local_state);
+          if (local_state.model_state_logger) {
+            const auto path = local_state.model_state_logger->path();
+            local_state.model_state_logger = nullptr;  // Flush data to disk
+            this->_ctx.append_to_model_state_log(path, true);
+          }
           spdlog::debug(
               FMT_STRING("[W{}]: finished processing task {} ({} cell #{}, {}): collected {} "
                          "interactions throughout {} epochs ({} burnin epochs)"),

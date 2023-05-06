@@ -10,10 +10,13 @@
 #include <atomic>
 #include <chrono>
 #include <exception>
+#include <filesystem>
 #include <optional>
+#include <string_view>
 #include <vector>
 
 #include "modle/common/common.hpp"
+#include "modle/state_logger.hpp"
 
 namespace modle {
 
@@ -21,6 +24,7 @@ template <typename Task>
 class ContextManager {
   using Status = typename Task::Status;
   using QueueT = moodycamel::BlockingConcurrentQueue<Task>;
+  std::unique_ptr<StateLoggerAggregator> _state_logger_ptr{};
   QueueT _pending{};
   QueueT _finished{};
   BS::thread_pool _worker_tpool;
@@ -76,6 +80,10 @@ class ContextManager {
   template <typename TaskLambda>
   void spawn_io_thread(TaskLambda lambda);
   void shutdown();
+
+  void init_model_state_logger(std::filesystem::path path, std::string_view header);
+  void append_to_model_state_log(const std::filesystem::path& path_,
+                                 bool remove_file_after_append = false);
 
  private:
   void close_queue() noexcept;

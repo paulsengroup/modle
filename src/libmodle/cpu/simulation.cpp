@@ -1035,7 +1035,7 @@ void Simulation::dump_stats(const usize task_id, const usize epoch, const usize 
                   "{}\t{}\t{}\t"
                   "{}\t{}\n"),
       task_id, epoch, cell_id,
-      interval.chrom(), interval.start(), interval.end(),
+      interval.chrom().name(), interval.start(), interval.end(),
       burnin ? "True" : "False", effective_barrier_occupancy,
       lefs.size(), lefs_stalled_rev, lefs_stalled_fwd,
       lefs_stalled_both, lef_bar_collisions, lef_lef_primary_collisions,
