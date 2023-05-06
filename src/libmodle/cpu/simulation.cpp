@@ -6,7 +6,8 @@
 
 #include "modle/simulation.hpp"
 
-#include <absl/container/btree_set.h>           // for btree_iterator
+#include <absl/container/btree_set.h>  // for btree_iterator
+#include <absl/container/flat_hash_map.h>
 #include <absl/strings/str_split.h>             // for StrSplit, Splitter
 #include <absl/types/span.h>                    // for Span, MakeConstSpan, MakeSpan
 #include <cpp-sort/sorter_facade.h>             // for sorter_facade
@@ -14,33 +15,33 @@
 #include <cpp-sort/sorters/pdq_sorter.h>        // for pdq_sort, pdq_sorter
 #include <cpp-sort/sorters/split_sorter.h>      // for split_sort, split_sorter
 #include <fmt/compile.h>
-#include <spdlog/spdlog.h>                      // for info, warn
+#include <spdlog/spdlog.h>  // for info, warn
 
-#include <BS_thread_pool.hpp>                   // for BS::thread_pool
-#include <algorithm>                            // for max, fill, min, copy, clamp
-#include <atomic>                               // for atomic
-#include <cassert>                              // for assert
-#include <chrono>                               // for microseconds
-#include <cmath>                                // for log, round, exp, floor, sqrt
+#include <BS_thread_pool.hpp>  // for BS::thread_pool
+#include <algorithm>           // for max, fill, min, copy, clamp
+#include <atomic>              // for atomic
+#include <cassert>             // for assert
+#include <chrono>              // for microseconds
+#include <cmath>               // for log, round, exp, floor, sqrt
 #include <coolerpp/coolerpp.hpp>
-#include <cstdlib>                              // for abs
-#include <deque>                                // for _Deque_iterator<>::_Self
-#include <filesystem>                           // for operator<<, path
-#include <iosfwd>                               // for streamsize
-#include <limits>                               // for numeric_limits
-#include <memory>                               // for shared_ptr, unique_ptr, make...
-#include <mutex>                                // for mutex
-#include <numeric>                              // for iota
-#include <stdexcept>                            // for runtime_error
-#include <string>                               // for string
-#include <string_view>                          // for string_view
-#include <thread>                               // IWYU pragma: keep for sleep_for
-#include <utility>                              // for make_pair, pair
-#include <vector>                               // for vector, vector<>::iterator
+#include <cstdlib>      // for abs
+#include <deque>        // for _Deque_iterator<>::_Self
+#include <filesystem>   // for operator<<, path
+#include <iosfwd>       // for streamsize
+#include <limits>       // for numeric_limits
+#include <memory>       // for shared_ptr, unique_ptr, make...
+#include <mutex>        // for mutex
+#include <numeric>      // for iota
+#include <stdexcept>    // for runtime_error
+#include <string>       // for string
+#include <string_view>  // for string_view
+#include <thread>       // IWYU pragma: keep for sleep_for
+#include <utility>      // for make_pair, pair
+#include <vector>       // for vector, vector<>::iterator
 
 #include "modle/bigwig/bigwig.hpp"
-#include "modle/common/common.hpp"                         // for bp_t, contacts_t
-#include "modle/common/dna.hpp"                            // for dna::REV, dna::FWD
+#include "modle/common/common.hpp"  // for bp_t, contacts_t
+#include "modle/common/dna.hpp"     // for dna::REV, dna::FWD
 #include "modle/common/fmt_helpers.hpp"
 #include "modle/common/genextreme_value_distribution.hpp"  // for genextreme_value_distribution
 #include "modle/common/random.hpp"             // for bernoulli_trial, poisson_distribution
@@ -48,10 +49,10 @@
 #include "modle/common/simulation_config.hpp"  // for Config
 #include "modle/common/utils.hpp"              // for parse_numeric_or_throw, ndeb...
 #include "modle/config/version.hpp"
-#include "modle/extrusion_barriers.hpp"        // for ExtrusionBarrier, update_states
-#include "modle/extrusion_factors.hpp"         // for Lef, ExtrusionUnit
-#include "modle/genome.hpp"                    // for Genome::iterator, GenomicInterval
-#include "modle/interval_tree.hpp"             // for IITree, IITree::data
+#include "modle/extrusion_barriers.hpp"  // for ExtrusionBarrier, update_states
+#include "modle/extrusion_factors.hpp"   // for Lef, ExtrusionUnit
+#include "modle/genome.hpp"              // for Genome::iterator, GenomicInterval
+#include "modle/interval_tree.hpp"       // for IITree, IITree::data
 #include "modle/io/contact_matrix_dense.hpp"
 #include "modle/stats/descriptive.hpp"
 
@@ -63,9 +64,8 @@ Simulation::Simulation(const Config& c, bool import_chroms)
                   ? Genome(path_to_chrom_sizes, path_to_extr_barriers, path_to_chrom_subranges,
                            bin_size, diagonal_width, barrier_occupied_stp, barrier_not_occupied_stp,
                            interpret_bed_name_field_as_barrier_not_occupied_stp)
-                  : Genome{}) {
-  _tpool.reset(utils::conditional_static_cast<BS::concurrency_t>(c.nthreads + 1));
-
+                  : Genome{}),
+      _ctx(nthreads + 1) {
   // Override barrier occupancies read from BED file
   if (c.override_extrusion_barrier_occupancy) {
     for (auto& chrom : this->_genome) {
@@ -102,8 +102,6 @@ Simulation::Simulation(const Config& c, bool import_chroms)
   }
 }
 
-bool Simulation::ok() const noexcept { return !this->_exception_thrown; }
-
 usize Simulation::size() const { return this->_genome.size(); }
 
 usize Simulation::simulated_size() const { return this->_genome.simulated_size(); }
@@ -120,93 +118,86 @@ usize Simulation::simulated_size() const { return this->_genome.simulated_size()
                                    assembly_name, config::version::str_long(), metadata);
 }
 
-// NOLINTNEXTLINE(readability-function-cognitive-complexity)
-void Simulation::write_contacts_to_disk(
-    std::deque<std::pair<GenomicInterval*, usize>>& progress_queue,
-    std::mutex& progress_queue_mtx) {
-  // This thread is in charge of writing contacts to disk
-  GenomicInterval* interval_to_be_written = nullptr;
+static void write_contact_matrix(coolerpp::File& cf, const GenomicInterval& interval) {
+  if (!cf) {
+    return;
+  }
 
-  coolerpp::File c{this->skip_output ? coolerpp::File{}
-                                     : init_cooler_file(this->path_to_output_file_cool, this->force,
-                                                        this->_genome.chromosomes(), this->bin_size,
-                                                        this->assembly_name, this->args_json)};
+  const auto& matrix = interval.contacts();
+  if (matrix.npixels() != 0) {
+    spdlog::info(FMT_STRING("Writing contacts for {} to file \"{}\"..."), interval, cf.uri());
+    const auto missing_interactions = matrix.get_fraction_of_missed_updates();
+    if (missing_interactions >= 0.01) {
+      spdlog::warn(
+          FMT_STRING("{:.2f}% missing interactions for {}! Please make sure this is intended."),
+          missing_interactions * 100, interval);
+    }
+
+    io::append_contact_matrix_to_cooler(cf, interval.chrom().name(), matrix, interval.start());
+    spdlog::info(FMT_STRING("Written {} contacts for \"{}\" to file \"{}\" ({:.2f}M nnz out of "
+                            "{:.2f}M pixels)."),
+                 matrix.get_tot_contacts(), interval, cf.uri(),
+                 static_cast<double>(matrix.get_nnz()) / 1.0e6,
+                 static_cast<double>(matrix.npixels()) / 1.0e6);
+  }
+}
+
+// NOLINTNEXTLINE(readability-function-cognitive-complexity)
+void Simulation::write_contacts_to_disk(std::chrono::milliseconds wait_time) {
+  absl::btree_map<GenomicInterval*, usize> task_map{};
+
+  coolerpp::File cf{this->skip_output
+                        ? coolerpp::File{}
+                        : init_cooler_file(this->path_to_output_file_cool, this->force,
+                                           this->_genome.chromosomes(), this->bin_size,
+                                           this->assembly_name, this->args_json)};
+
+  auto current_interval = this->_genome.begin();
+  auto last_interval = this->_genome.end();
+
+  auto ctok = this->_ctx.register_consumer<Task::Status::COMPLETED>();
+
+  Task task{};
 
   try {
-    auto sleep_us = 100;  // TODO use a conditional_variable
-    while (this->ok()) {  // Structuring the loop in this way allows us to sleep without
-                          // holding the mutex
-      sleep_us = std::min(500000, sleep_us * 2);
-      std::this_thread::sleep_for(std::chrono::microseconds(sleep_us));
-      {
-        std::scoped_lock lck(progress_queue_mtx);
-        if (progress_queue.empty()) {
-          // There are no contacts to write to disk at the moment. Go back to sleep
-          continue;
-        }
-
-        // chrom == nullptr is the end-of-queue signal
-        if (auto& [interval, count] = progress_queue.front(); interval == nullptr) {
-          break;
-        }
-        // count == ncells signals that we are done simulating the current chromosome
-        else if (count == num_cells) {
-          interval_to_be_written = interval;
-          progress_queue.pop_front();
-        } else {
-          assert(count < num_cells);
-          continue;
-        }
+    while (!!this->_ctx && current_interval != last_interval) {
+      if (auto it = task_map.find(&(*current_interval)); it != task_map.end() && it->second == 0) {
+        spdlog::debug(FMT_STRING("[IO]: appending interactions for {} to {}..."), *it->first,
+                      cf.uri());
+        // All tasks for the current interval successfully completed!
+        write_contact_matrix(cf, *it->first);
+        it->first->deallocate();
+        task_map.erase(it);
+        ++current_interval;
+        continue;
       }
-      sleep_us = 100;
-      if (c) {
-        const auto& matrix = interval_to_be_written->contacts();
 
-        if (matrix.npixels() != 0) {
-          spdlog::info(FMT_STRING("Writing contacts for {} to file \"{}\"..."),
-                       *interval_to_be_written, c.uri());
-          const auto missing_interactions = matrix.get_fraction_of_missed_updates();
-          if (missing_interactions >= 0.01) {
-            spdlog::warn(
-                FMT_STRING(
-                    "{:.2f}% missing interactions for {}! Please make sure this is intended."),
-                missing_interactions * 100, *interval_to_be_written);
-          }
-
-          io::append_contact_matrix_to_cooler(c, interval_to_be_written->chrom().name(), matrix,
-                                              interval_to_be_written->start());
-          spdlog::info(
-              FMT_STRING("Written {} contacts for \"{}\" to file \"{}\" ({:.2f}M nnz out of "
-                         "{:.2f}M pixels)."),
-              matrix.get_tot_contacts(), *interval_to_be_written, c.uri(),
-              static_cast<double>(matrix.get_nnz()) / 1.0e6,
-              static_cast<double>(matrix.npixels()) / 1.0e6);
-        }
+      const auto task_opt = this->_ctx.wait_dequeue<Task::Status::COMPLETED>(ctok, wait_time);
+      if (task_opt.has_value()) {
+        task = *task_opt;
+        // Add interval to task_map if not already present.
+        // Then decrement the number of tasks still pending.
+        auto [it, _] = task_map.try_emplace(task.interval, this->num_cells);
+        --it->second;
       }
-      // Deallocate the contact matrix to free up unused memory
-      interval_to_be_written->deallocate();
     }
-  } catch (const std::exception& err) {
-    std::scoped_lock lck(this->_exceptions_mutex);
-    if (interval_to_be_written) {
-      this->_exceptions.emplace_back(std::make_exception_ptr(std::runtime_error(fmt::format(
-          FMT_STRING(
-              "The following error occurred while writing contacts for {} to file \"{}\": {}"),
-          *interval_to_be_written, c.uri(), err.what()))));
+  } catch (const std::exception& e) {
+    std::exception_ptr except_ptr{};
+    if (task.interval) {
+      except_ptr = std::make_exception_ptr(std::runtime_error(fmt::format(
+          FMT_STRING("exception encountered while writing interactions for {} to file \"{}\": {}"),
+          *task.interval, cf.uri(), e.what())));
     } else {
-      this->_exceptions.emplace_back(std::make_exception_ptr(std::runtime_error(fmt::format(
-          FMT_STRING("The following error occurred while writing contacts to file \"{}\": {}"),
-          c.uri(), err.what()))));
+      except_ptr = std::make_exception_ptr(std::runtime_error(fmt::format(
+          FMT_STRING("exception encountered while writing interactions to file \"{}\": {}"),
+          cf.uri(), e.what())));
     }
-    this->_exception_thrown = true;
+    this->_ctx.set_exception_io(0, except_ptr);
   } catch (...) {
-    std::scoped_lock lck(this->_exceptions_mutex);
-    this->_exceptions.emplace_back(std::make_exception_ptr(
-        std::runtime_error("An unhandled exception was caught! This should never happen! "
-                           "If you see this message, please file an issue on GitHub.")));
-    this->_exception_thrown = true;
+    this->_ctx.set_exception_io(0, std::make_exception_ptr(std::runtime_error(
+                                       "unhandled exception caught! This should never "
+                                       "happen! Please file an issue on GitHub.")));
   }
-  this->_end_of_simulation = true;
 }
 
 void Simulation::write_1d_lef_occupancy_to_disk() const {
@@ -580,10 +571,6 @@ usize Simulation::release_lefs(const absl::Span<Lef> lefs, const ExtrusionBarrie
   return lefs_released;
 }
 
-BS::thread_pool Simulation::instantiate_thread_pool() const {
-  return BS::thread_pool{utils::conditional_static_cast<BS::concurrency_t>(this->nthreads)};
-}
-
 void Simulation::State::resize_buffers(usize new_size) {
   if (new_size == (std::numeric_limits<usize>::max)()) {
     new_size = this->num_lefs;
@@ -737,7 +724,11 @@ Simulation::State& Simulation::State::operator=(const Task& task) {
   this->num_target_epochs = task.num_target_epochs;
   this->num_target_contacts = task.num_target_contacts;
   this->num_lefs = task.num_lefs;
-  this->barriers = ExtrusionBarriers{task.barriers.begin(), task.barriers.end()};
+  if (task.interval) {
+    this->barriers =
+        ExtrusionBarriers{task.interval->barriers().begin(), task.interval->barriers().end()};
+  }
+  this->rand_eng = task.rand_eng;
 
   return *this;
 }
@@ -874,7 +865,7 @@ void Simulation::run_burnin(State& s, const double lef_binding_rate_burnin) cons
   } while (s.num_active_lefs == 0);
 }
 
-void Simulation::simulate_one_cell(State& s) const {
+void Simulation::simulate_one_cell([[maybe_unused]] u64 tid, State& s) const {
   assert(s.epoch == 0);
   assert(s.num_burnin_epochs == 0);
   assert(!s.burnin_completed);
@@ -925,10 +916,6 @@ void Simulation::simulate_one_cell(State& s) const {
       if (s.burnin_completed) {  // Register contacts
         this->sample_and_register_contacts(s, sampling_events_per_epoch);
         if (s.num_target_contacts != 0 && s.num_contacts >= s.num_target_contacts) {
-          spdlog::debug(FMT_STRING("Simulation for cell #{} of {} took {} epochs ({} for burnin "
-                                   "and {} for the rest of the simulation)"),
-                        s.cell_id, *s.interval, s.epoch, s.num_burnin_epochs,
-                        s.epoch - s.num_burnin_epochs);
           return;  // Enough contacts have been generated. Yay!
         }
       }
@@ -1073,10 +1060,11 @@ usize Simulation::compute_num_lefs(const usize size_bp) const noexcept {
 }
 
 void Simulation::print_status_update(const Task& t) const noexcept {
+  assert(t.interval);
   auto tot_target_epochs = this->compute_tot_target_epochs(t.num_lefs, t.interval->npixels());
   spdlog::info(FMT_STRING("Begin processing {}: simulating ~{} epochs across {} cells using {} "
                           "LEFs and {} barriers (~{} epochs per cell)..."),
-               *t.interval, tot_target_epochs, this->num_cells, t.num_lefs, t.barriers.size(),
-               tot_target_epochs / this->num_cells);
+               *t.interval, tot_target_epochs, this->num_cells, t.num_lefs,
+               t.interval->barriers().size(), tot_target_epochs / this->num_cells);
 }
 }  // namespace modle

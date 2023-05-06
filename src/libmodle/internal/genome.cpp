@@ -164,6 +164,26 @@ Chromosome::Chromosome(usize id, std::string name, bp_t size) noexcept
 std::string_view Chromosome::name() const noexcept { return this->_name; }
 const char* Chromosome::name_cstr() const noexcept { return this->_name.c_str(); }
 
+u64 Chromosome::hash(XXH3_state_t& state) const {
+  auto handle_errors = [&](const auto& status) {
+    if (MODLE_UNLIKELY(status == XXH_ERROR)) {
+      throw std::runtime_error(fmt::format(FMT_STRING("Failed to hash {}"), *this));
+    }
+  };
+
+  handle_errors(XXH3_64bits_update(&state, this->_name.data(), this->_name.size() * sizeof(char)));
+  handle_errors(XXH3_64bits_update(&state, &this->_size, sizeof(decltype(this->_size))));
+  return utils::conditional_static_cast<u64>(XXH3_64bits_digest(&state));
+}
+
+u64 Chromosome::hash(XXH3_state_t& state, u64 seed) const {
+  const auto status = XXH3_64bits_reset_withSeed(&state, seed);
+  if (MODLE_UNLIKELY(status == XXH_ERROR)) {
+    throw std::runtime_error(fmt::format(FMT_STRING("Failed to hash {}"), *this));
+  }
+  return this->hash(state);
+}
+
 GenomicInterval::GenomicInterval(usize id, const std::shared_ptr<const Chromosome>& chrom,
                                  bp_t contact_matrix_resolution, bp_t diagonal_width)
     : GenomicInterval(id, chrom, 0, chrom->size(), contact_matrix_resolution, diagonal_width) {}
@@ -173,6 +193,31 @@ GenomicInterval::GenomicInterval(usize id, std::shared_ptr<const Chromosome> chr
     : GenomicInterval(id, std::move(chrom), start, end, contact_matrix_resolution, diagonal_width,
                       static_cast<const ExtrusionBarrier*>(nullptr),
                       static_cast<const ExtrusionBarrier*>(nullptr)) {}
+
+u64 GenomicInterval::hash(XXH3_state_t& state) const {
+  auto handle_errors = [&](const auto& status) {
+    if (MODLE_UNLIKELY(status == XXH_ERROR)) {
+      throw std::runtime_error(fmt::format(FMT_STRING("Failed to hash {}"), *this));
+    }
+  };
+
+  const auto& chrom_name = this->chrom().name();
+  const auto chrom_size = this->chrom().size();
+
+  handle_errors(XXH3_64bits_update(&state, chrom_name.data(), chrom_name.size() * sizeof(char)));
+  handle_errors(XXH3_64bits_update(&state, &chrom_size, sizeof(decltype(chrom_size))));
+  handle_errors(XXH3_64bits_update(&state, &this->_start, sizeof(decltype(this->_start))));
+  handle_errors(XXH3_64bits_update(&state, &this->_end, sizeof(decltype(this->_end))));
+  return utils::conditional_static_cast<u64>(XXH3_64bits_digest(&state));
+}
+
+u64 GenomicInterval::hash(XXH3_state_t& state, u64 seed) const {
+  const auto status = XXH3_64bits_reset_withSeed(&state, seed);
+  if (MODLE_UNLIKELY(status == XXH_ERROR)) {
+    throw std::runtime_error(fmt::format(FMT_STRING("Failed to hash {}"), *this));
+  }
+  return this->hash(state);
+}
 
 const Chromosome& GenomicInterval::chrom() const noexcept {
   assert(!!this->_chrom);
@@ -439,6 +484,7 @@ usize Genome::map_barriers_to_intervals(absl::btree_set<GenomicInterval>& interv
   }
   return tot_num_barriers;
 }
+usize Genome::num_intervals() const noexcept { return this->_intervals.size(); }
 
 auto Genome::begin() -> iterator { return this->_intervals.begin(); }
 auto Genome::end() -> iterator { return this->_intervals.end(); }

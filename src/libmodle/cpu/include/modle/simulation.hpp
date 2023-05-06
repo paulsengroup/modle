@@ -4,23 +4,21 @@
 
 #pragma once
 
-#include <absl/container/flat_hash_set.h>               // for flat_hash_set
-#include <absl/types/span.h>                            // for Span
-#include <fmt/format.h>                                 // for format_parse_context, formatter
-#include <moodycamel/blockingconcurrentqueue.h>         // for BlockingConcurrentQueue
+#include <absl/container/flat_hash_set.h>  // for flat_hash_set
+#include <absl/types/span.h>               // for Span
+#include <fmt/format.h>                    // for format_parse_context, formatter
 
-#include <BS_thread_pool.hpp>                           // for BS::thread_pool
-#include <atomic>                                       // for atomic
-#include <deque>                                        // for deque
-#include <exception>                                    // for exception_ptr
-#include <filesystem>                                   // for path
-#include <limits>                                       // for numeric_limits
-#include <memory>                                       // for shared_ptr, allocator, unique_ptr
-#include <mutex>                                        // for mutex
-#include <string>                                       // for string
-#include <string_view>                                  // for string_view
-#include <utility>                                      // for pair
-#include <vector>                                       // for vector
+#include <atomic>       // for atomic
+#include <deque>        // for deque
+#include <exception>    // for exception_ptr
+#include <filesystem>   // for path
+#include <limits>       // for numeric_limits
+#include <memory>       // for shared_ptr, allocator, unique_ptr
+#include <mutex>        // for mutex
+#include <string>       // for string
+#include <string_view>  // for string_view
+#include <utility>      // for pair
+#include <vector>       // for vector
 
 #include "modle/bed/bed.hpp"                            // for BED (ptr only), BED_tree
 #include "modle/collision_encoding.hpp"                 // for Collision<>
@@ -30,9 +28,10 @@
 #include "modle/common/suppress_compiler_warnings.hpp"  // for DISABLE_WARNING_POP, DISABLE_WARN...
 #include "modle/common/utils.hpp"                       // for ndebug_defined
 #include "modle/contact_matrix_dense.hpp"               // for ContactMatrixDense
-#include "modle/extrusion_barriers.hpp"                 // for ExtrusionBarrier
-#include "modle/extrusion_factors.hpp"                  // for Lef, ExtrusionUnit (ptr only)
-#include "modle/genome.hpp"                             // for GenomicInterval (ptr only), Genome
+#include "modle/context_manager.hpp"
+#include "modle/extrusion_barriers.hpp"  // for ExtrusionBarrier
+#include "modle/extrusion_factors.hpp"   // for Lef, ExtrusionUnit (ptr only)
+#include "modle/genome.hpp"              // for GenomicInterval (ptr only), Genome
 
 namespace modle {
 
@@ -58,25 +57,27 @@ class Simulation : Config {
 
   using CollisionT = Collision<u32f>;
   struct Task {  // NOLINT(altera-struct-pack-align)
-    random::PRNG_t rand_eng{};
+    enum class Status : u8f { PENDING, RUNNING, COMPLETED, FAILED };
     usize id{};
     GenomicInterval* interval{};
     usize cell_id{};
     usize num_target_epochs{};
     usize num_target_contacts{};
     usize num_lefs{};
-    absl::Span<const ExtrusionBarrier> barriers{};
+    random::PRNG_t rand_eng{};
+    Status status{Status::PENDING};
   };
 
-  struct State : Task {            // NOLINT(altera-struct-pack-align)
+  struct State : Task {  // NOLINT(altera-struct-pack-align)
     State() = default;
     usize epoch{};                 // NOLINT
     bool burnin_completed{false};  // NOLINT
     usize num_active_lefs{0};      // NOLINT
-    usize num_burnin_epochs{0};    // NOLINT
-    usize num_contacts{0};         // NOLINT
 
-    u64 seed{};                    // NOLINT
+    usize num_burnin_epochs{0};  // NOLINT
+    usize num_contacts{0};       // NOLINT
+
+    u64 seed{};                                                          // NOLINT
     std::unique_ptr<compressed_io::Writer> model_state_logger{nullptr};  // NOLINT
 
     ExtrusionBarriers barriers{};
@@ -128,31 +129,21 @@ class Simulation : Config {
     void reset_buffers();
   };
 
+  void spawn_worker_threads(usize num_workers, usize batch_size);
+  void spawn_io_threads();
   void run_simulate();
 
  private:
   Genome _genome{};
-  std::atomic<bool> _end_of_simulation{false};
-  std::atomic<bool> _exception_thrown{false};
-  std::vector<std::exception_ptr> _exceptions{};  // NOLINT(bugprone-throw-keyword-missing)
-  std::mutex _exceptions_mutex{};
-  BS::thread_pool _tpool;
+  ContextManager<Task> _ctx{0};
 
   static constexpr auto& model_internal_state_log_header = Config::model_internal_state_log_header;
 
-  [[nodiscard]] bool ok() const noexcept;
-
-  [[nodiscard]] [[maybe_unused]] BS::thread_pool instantiate_thread_pool() const;
-  template <typename I>
-  [[nodiscard]] inline static BS::thread_pool instantiate_thread_pool(I nthreads,
-                                                                      bool clamp_nthreads);
-
   /// Simulate loop extrusion using the parameters and buffers passed through \p state
-  void simulate_one_cell(State& s) const;
+  void simulate_one_cell(u64 tid, State& s) const;
 
   //! IMPORTANT: this function is meant to be run in a dedicated thread.
-  void write_contacts_to_disk(std::deque<std::pair<GenomicInterval*, usize>>& progress_queue,
-                              std::mutex& progress_queue_mtx);
+  void write_contacts_to_disk(std::chrono::milliseconds wait_time = std::chrono::milliseconds(50));
 
   /// Write LEF occupancy in 1D space to disk as a BigWig file
   void write_1d_lef_occupancy_to_disk() const;
@@ -160,15 +151,12 @@ class Simulation : Config {
   /// Worker function used to run an instance of the simulation
 
   //! Worker function used to consume Simulation::Tasks from a task queue, setup a
-  //! Simulation::State, then run an instance of the simulation of a specific chromosome (i.e.
+  //! Simulation::State, then run an instance of the simulation of a specific genomic interval (i.e.
   //! simulate loop extrusion on a single chromosome in a cell).
   //! This function is also responsible for allocating and clearing the buffers used throughout the
   //! simulation.
   //! IMPORTANT: this function is meant to be run in a dedicated thread.
-  void simulate_worker(u64 tid, moodycamel::BlockingConcurrentQueue<Simulation::Task>& task_queue,
-                       std::deque<std::pair<GenomicInterval*, usize>>& progress_queue,
-                       std::mutex& progress_queue_mtx, std::mutex& model_state_logger_mtx,
-                       usize task_batch_size = 32);
+  void simulate_worker(u64 tid, usize task_batch_size);
 
   /// Bind inactive LEFs, then sort them by their genomic coordinates.
 
@@ -376,9 +364,6 @@ class Simulation : Config {
   [[nodiscard]] static std::pair<bp_t /*rev*/, bp_t /*fwd*/> compute_lef_lef_collision_pos(
       const ExtrusionUnit& rev_unit, const ExtrusionUnit& fwd_unit, bp_t rev_move, bp_t fwd_move);
 
-  [[noreturn]] void rethrow_exceptions() const;
-  [[noreturn]] void handle_exceptions();
-
   static void compute_loop_size_stats(absl::Span<const Lef> lefs,
                                       std::deque<double>& cfx_of_variations,
                                       std::deque<double>& avg_loop_sizes,
@@ -403,12 +388,6 @@ class Simulation : Config {
   [[nodiscard]] usize compute_num_lefs(usize size_bp) const noexcept;
 
   void print_status_update(const Task& t) const noexcept;
-
-  template <class TaskT>
-  [[nodiscard]] usize consume_tasks_blocking(moodycamel::BlockingConcurrentQueue<TaskT>& task_queue,
-                                             moodycamel::ConsumerToken& ctok,
-                                             absl::FixedArray<TaskT>& task_buff);
-
   [[nodiscard]] constexpr bool run_lef_lef_collision_trial(random::PRNG_t& rand_eng) const noexcept;
   [[nodiscard]] constexpr bool run_lef_bar_collision_trial(double pblock,
                                                            random::PRNG_t& rand_eng) const noexcept;

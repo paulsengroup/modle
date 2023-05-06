@@ -6,15 +6,15 @@
 
 // IWYU pragma: private, include "modle/simulation.hpp"
 
-#include <absl/types/span.h>                            // for Span
-#include <fmt/format.h>                                 // for format_parse_context, format_error
+#include <absl/types/span.h>  // for Span
+#include <fmt/format.h>       // for format_parse_context, format_error
 
-#include <BS_thread_pool.hpp>                           // for BS::thread_pool
-#include <algorithm>                                    // for min
-#include <cassert>                                      // for assert
-#include <limits>                                       // for numeric_limits
-#include <thread>                                       // for thread
-#include <type_traits>                                  // for declval, decay_t
+#include <BS_thread_pool.hpp>  // for BS::thread_pool
+#include <algorithm>           // for min
+#include <cassert>             // for assert
+#include <limits>              // for numeric_limits
+#include <thread>              // for thread
+#include <type_traits>         // for declval, decay_t
 
 #include "modle/common/common.hpp"                      // for usize, bp_t, i64, u32
 #include "modle/common/random.hpp"                      // for PRNG_t
@@ -88,38 +88,6 @@ void Simulation::select_lefs_to_bind(const absl::Span<const Lef> lefs,
   }
 }
 
-template <typename I>
-BS::thread_pool Simulation::instantiate_thread_pool(I nthreads_, bool clamp_nthreads) {
-  static_assert(std::is_integral_v<I>, "nthreads should have an integral type.");
-  if (clamp_nthreads) {
-    return BS::thread_pool(std::min(std::thread::hardware_concurrency(),
-                                    utils::conditional_static_cast<u32>(nthreads_)));
-  }
-  assert(nthreads_ > 0);
-  return BS::thread_pool(static_cast<u32>(nthreads_));
-}
-
-template <class TaskT>
-usize Simulation::consume_tasks_blocking(moodycamel::BlockingConcurrentQueue<TaskT>& task_queue,
-                                         moodycamel::ConsumerToken& ctok,
-                                         absl::FixedArray<TaskT>& task_buff) {
-  while (this->ok()) {
-    const auto avail_tasks = task_queue.wait_dequeue_bulk_timed(
-        ctok, task_buff.begin(), task_buff.size(), std::chrono::milliseconds(10));
-    // Check whether dequeue operation timed-out before any task became available
-    if (avail_tasks == 0) {
-      // Reached end of simulation (i.e. all tasks have been processed)
-      if (this->_end_of_simulation) {
-        return 0;
-      }
-      // Keep waiting until one or more tasks become available
-      continue;
-    }
-    return avail_tasks;
-  }
-  return 0;
-}
-
 constexpr bool Simulation::run_lef_lef_collision_trial(random::PRNG_t& rand_eng) const noexcept {
   return this->probability_of_extrusion_unit_bypass == 0.0 ||
          random::bernoulli_trial{1.0 - this->probability_of_extrusion_unit_bypass}(rand_eng);
@@ -147,7 +115,7 @@ auto fmt::formatter<modle::Simulation::Task>::format(const modle::Simulation::Ta
   assert(t.interval);
   return fmt::format_to(ctx.out(), FMT_STRING("{}\t{}\t{}\t{}\t{}\t{}\t{}"), t.id,
                         t.interval->chrom(), t.cell_id, t.num_target_epochs, t.num_target_contacts,
-                        t.num_lefs, t.barriers.size());
+                        t.num_lefs, !!t.interval ? t.interval->barriers().size() : 0);
 }
 
 constexpr auto fmt::formatter<modle::Simulation::State>::parse(format_parse_context& ctx)

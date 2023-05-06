@@ -7,16 +7,17 @@
 #include <absl/container/btree_set.h>  // for btree_set, btree_set_container<>::const_iterator
 #include <absl/types/span.h>           // for Span
 #include <fmt/format.h>
+#include <xxhash.h>
 
-#include <filesystem>                      // for path
-#include <iterator>                        // for iterator_traits
-#include <limits>                          // for numeric_limits
-#include <memory>                          // for shared_ptr
-#include <shared_mutex>                    // for shared_mutex
-#include <string>                          // for string
-#include <string_view>                     // for string_view
-#include <type_traits>                     // for enable_if_t, remove_cv_t
-#include <vector>                          // for vector
+#include <filesystem>    // for path
+#include <iterator>      // for iterator_traits
+#include <limits>        // for numeric_limits
+#include <memory>        // for shared_ptr
+#include <shared_mutex>  // for shared_mutex
+#include <string>        // for string
+#include <string_view>   // for string_view
+#include <type_traits>   // for enable_if_t, remove_cv_t
+#include <vector>        // for vector
 
 #include "modle/bed/bed.hpp"               // for BED (ptr only), BED_tree, BED_tree<>::value_type
 #include "modle/common/common.hpp"         // for bp_t, contacts_t, u64, u32, u8
@@ -108,6 +109,9 @@ class Chromosome {
   [[nodiscard]] const char* name_cstr() const noexcept;
   [[nodiscard]] constexpr bp_t size() const noexcept;
 
+  [[nodiscard]] u64 hash(XXH3_state_t& state) const;
+  [[nodiscard]] u64 hash(XXH3_state_t& state, u64 seed) const;
+
   [[nodiscard]] constexpr bool operator==(const Chromosome& other) const noexcept;
   [[nodiscard]] constexpr bool operator!=(const Chromosome& other) const noexcept;
   [[nodiscard]] constexpr bool operator<(const Chromosome& other) const noexcept;
@@ -167,6 +171,8 @@ class GenomicInterval {
   void add_extrusion_barriers(std::vector<ExtrusionBarrier> barriers);
 
   [[nodiscard]] constexpr usize id() const noexcept;
+  [[nodiscard]] u64 hash(XXH3_state_t& state) const;
+  [[nodiscard]] u64 hash(XXH3_state_t& state, u64 seed) const;
   [[nodiscard]] const Chromosome& chrom() const noexcept;
   [[nodiscard]] constexpr bp_t start() const noexcept;
   [[nodiscard]] constexpr bp_t end() const noexcept;
@@ -231,6 +237,7 @@ class Genome {
 
   constexpr const std::vector<std::shared_ptr<const Chromosome>>& chromosomes() const noexcept;
 
+  [[nodiscard]] usize num_intervals() const noexcept;
   [[nodiscard]] constexpr usize size() const noexcept;
   [[nodiscard]] constexpr usize simulated_size() const noexcept;
   [[nodiscard]] usize num_chromosomes() const noexcept;

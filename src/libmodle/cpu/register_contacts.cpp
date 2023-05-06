@@ -6,10 +6,10 @@
 #include "modle/simulation.hpp"
 // clang-format on
 
-#include <absl/types/span.h>                               // for Span
+#include <absl/types/span.h>  // for Span
 
-#include <algorithm>                                       // for min, all_of
-#include <cassert>                                         // for assert
+#include <algorithm>  // for min, all_of
+#include <cassert>    // for assert
 
 #include "modle/common/common.hpp"                         // for usize, bp_t, contacts_t, MODLE...
 #include "modle/common/genextreme_value_distribution.hpp"  // for genextreme_value_distribution
