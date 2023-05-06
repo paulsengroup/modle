@@ -5,11 +5,7 @@
 // clang-format off
 #include "modle/simulation.hpp"
 // clang-format on
-#include <absl/container/btree_map.h>  // for btree_iterator
-#include <absl/strings/str_format.h>   // StrAppendFormat
-#include <absl/types/span.h>           // for MakeConstSpan, Span
-#include <fmt/format.h>                // for make_format_args, vformat_to, FMT_STRING
-#include <fmt/std.h>
+#include <fmt/format.h>     // for make_format_args, vformat_to, FMT_STRING
 #include <spdlog/spdlog.h>  // for info
 #include <xxhash.h>
 
@@ -21,17 +17,13 @@
 #include <exception>   // for exception_ptr, exception, current_exception
 #include <filesystem>  // for path
 #include <limits>      // for numeric_limits
-#include <mutex>       // for mutex, scoped_lock
 #include <stdexcept>   // for runtime_error
 #include <thread>      // IWYU pragma: keep for sleep_for
 #include <utility>     // for pair
 #include <vector>      // for vector
 
 #include "modle/common/common.hpp"  // for u64
-#include "modle/common/fmt_helpers.hpp"
-#include "modle/context_manager.hpp"
 #include "modle/genome.hpp"         // for GenomicInterval, Genome
-#include "modle/interval_tree.hpp"  // for IITree, IITree::data
 
 namespace modle {
 

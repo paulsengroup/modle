@@ -6,28 +6,23 @@
 
 #include "modle/simulation.hpp"
 
-#include <absl/container/btree_set.h>  // for btree_iterator
-#include <absl/container/flat_hash_map.h>
-#include <absl/strings/str_split.h>             // for StrSplit, Splitter
+#include <absl/container/btree_map.h>           // for btree_iterator
 #include <absl/types/span.h>                    // for Span, MakeConstSpan, MakeSpan
-#include <cpp-sort/sorter_facade.h>             // for sorter_facade
 #include <cpp-sort/sorters/insertion_sorter.h>  // for insertion_sort, insertion_so...
 #include <cpp-sort/sorters/pdq_sorter.h>        // for pdq_sort, pdq_sorter
 #include <cpp-sort/sorters/split_sorter.h>      // for split_sort, split_sorter
 #include <fmt/compile.h>
 #include <spdlog/spdlog.h>  // for info, warn
 
-#include <BS_thread_pool.hpp>  // for BS::thread_pool
-#include <algorithm>           // for max, fill, min, copy, clamp
-#include <atomic>              // for atomic
-#include <cassert>             // for assert
-#include <chrono>              // for microseconds
-#include <cmath>               // for log, round, exp, floor, sqrt
+#include <algorithm>  // for max, fill, min, copy, clamp
+#include <atomic>     // for atomic
+#include <cassert>    // for assert
+#include <chrono>     // for microseconds
+#include <cmath>      // for log, round, exp, floor, sqrt
 #include <coolerpp/coolerpp.hpp>
 #include <cstdlib>      // for abs
 #include <deque>        // for _Deque_iterator<>::_Self
 #include <filesystem>   // for operator<<, path
-#include <iosfwd>       // for streamsize
 #include <limits>       // for numeric_limits
 #include <memory>       // for shared_ptr, unique_ptr, make...
 #include <mutex>        // for mutex
@@ -35,24 +30,18 @@
 #include <stdexcept>    // for runtime_error
 #include <string>       // for string
 #include <string_view>  // for string_view
-#include <thread>       // IWYU pragma: keep for sleep_for
 #include <utility>      // for make_pair, pair
 #include <vector>       // for vector, vector<>::iterator
 
 #include "modle/bigwig/bigwig.hpp"
-#include "modle/common/common.hpp"  // for bp_t, contacts_t
-#include "modle/common/dna.hpp"     // for dna::REV, dna::FWD
-#include "modle/common/fmt_helpers.hpp"
-#include "modle/common/genextreme_value_distribution.hpp"  // for genextreme_value_distribution
+#include "modle/common/common.hpp"             // for bp_t, contacts_t
+#include "modle/common/dna.hpp"                // for dna::REV, dna::FWD
 #include "modle/common/random.hpp"             // for bernoulli_trial, poisson_distribution
-#include "modle/common/random_sampling.hpp"    // for random_sample
 #include "modle/common/simulation_config.hpp"  // for Config
-#include "modle/common/utils.hpp"              // for parse_numeric_or_throw, ndeb...
 #include "modle/config/version.hpp"
 #include "modle/extrusion_barriers.hpp"  // for ExtrusionBarrier, update_states
 #include "modle/extrusion_factors.hpp"   // for Lef, ExtrusionUnit
 #include "modle/genome.hpp"              // for Genome::iterator, GenomicInterval
-#include "modle/interval_tree.hpp"       // for IITree, IITree::data
 #include "modle/io/contact_matrix_dense.hpp"
 #include "modle/stats/descriptive.hpp"
 

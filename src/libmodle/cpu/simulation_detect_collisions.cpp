@@ -10,19 +10,15 @@
 
 #include <algorithm>  // for is_sorted, min, all_of, find_if, max
 #include <cassert>    // for assert
-#include <iterator>   // for reverse_iterator
 #include <limits>     // for numeric_limits
 #include <utility>    // for make_pair, pair
 
 #include "modle/collision_encoding.hpp"
-#include "modle/common/common.hpp"                      // for bp_t
-#include "modle/common/dna.hpp"                         // for dna::REV, dna::FWD
-#include "modle/common/random.hpp"                      // for bernoulli_trial
-#include "modle/common/suppress_compiler_warnings.hpp"  // for DISABLE_WARNING_POP, DISABLE_WARN...
-#include "modle/common/utils.hpp"                       // for ndebug_defined
-#include "modle/extrusion_barriers.hpp"                 // for ExtrusionBarrier, NOT_OCCUPIED
-#include "modle/extrusion_factors.hpp"                  // for ExtrusionUnit, Lef
-#include "modle/genome.hpp"                             // for GenomicInterval
+#include "modle/common/common.hpp"       // for bp_t
+#include "modle/common/dna.hpp"          // for dna::REV, dna::FWD
+#include "modle/extrusion_barriers.hpp"  // for ExtrusionBarrier, NOT_OCCUPIED
+#include "modle/extrusion_factors.hpp"   // for ExtrusionUnit, Lef
+#include "modle/genome.hpp"              // for GenomicInterval
 
 namespace modle {
 

@@ -7,10 +7,16 @@
 #include <fmt/format.h>
 #include <spdlog/spdlog.h>
 
+#include <BS_thread_pool.hpp>
 #include <cassert>
 #include <exception>
+#include <optional>
 #include <stdexcept>
+#include <string>
 #include <utility>
+#include <vector>
+
+#include "modle/common/common.hpp"
 
 namespace modle {
 
