@@ -246,7 +246,10 @@ auto GenomicInterval::lef_1d_occupancy() noexcept -> std::vector<std::atomic<u64
   return this->_lef_1d_occupancy();
 }
 
-void GenomicInterval::deallocate() noexcept { this->_contacts.deallocate(); }
+void GenomicInterval::deallocate() noexcept {
+  this->_contacts.deallocate();
+  this->_lef_1d_occupancy.deallocate();
+}
 
 struct ComputeBarrierStpResult {
   double stp_active;

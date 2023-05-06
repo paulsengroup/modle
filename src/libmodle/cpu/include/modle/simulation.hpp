@@ -149,10 +149,7 @@ class Simulation {
   void simulate_one_cell(u64 tid, State& s) const;
 
   //! IMPORTANT: this function is meant to be run in a dedicated thread.
-  void write_contacts_to_disk(std::chrono::milliseconds wait_time = std::chrono::milliseconds(50));
-
-  /// Write LEF occupancy in 1D space to disk as a BigWig file
-  void write_1d_lef_occupancy_to_disk() const;
+  void simulate_io(std::chrono::milliseconds wait_time = std::chrono::milliseconds(50));
 
   /// Worker function used to run an instance of the simulation
 

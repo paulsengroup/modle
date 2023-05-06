@@ -23,6 +23,8 @@
 
 namespace modle::io::bigwig {
 
+constexpr Writer::operator bool() const noexcept { return this->_fp != nullptr; }
+
 template <class Chromosomes>
 void Writer::write_chromosomes(Chromosomes& chroms) {
   const auto num_chroms = utils::conditional_static_cast<usize>(chroms.size());

@@ -37,7 +37,7 @@ void Simulation::spawn_worker_threads(const usize num_workers, const usize batch
 }
 
 void Simulation::spawn_io_threads() {
-  this->_ctx.spawn_io_thread([this]() { this->write_contacts_to_disk(); });
+  this->_ctx.spawn_io_thread([this]() { this->simulate_io(); });
 }
 
 // NOLINTNEXTLINE(readability-function-cognitive-complexity)
@@ -46,6 +46,9 @@ void Simulation::run_simulate() {
     assert(std::filesystem::exists(c().path_to_output_prefix.parent_path()));
     if (c().force) {
       std::filesystem::remove(c().path_to_output_file_cool);
+      if (c().track_1d_lef_position) {
+        std::filesystem::remove(c().path_to_lef_1d_occupancy_bw_file);
+      }
     }
   }
 
@@ -157,9 +160,6 @@ void Simulation::run_simulate() {
     }
 
     this->_ctx.shutdown();
-    if (c().track_1d_lef_position) {
-      this->write_1d_lef_occupancy_to_disk();
-    }
     assert(this->_ctx.num_submitted() == this->_ctx.num_completed());
     assert(!this->_ctx.exception_thrown());
   } catch (...) {

@@ -12,26 +12,26 @@
 #include <cpp-sort/sorters/pdq_sorter.h>        // for pdq_sort, pdq_sorter
 #include <cpp-sort/sorters/split_sorter.h>      // for split_sort, split_sorter
 #include <fmt/compile.h>
-#include <spdlog/spdlog.h>                      // for info, warn
+#include <spdlog/spdlog.h>  // for info, warn
 
-#include <algorithm>                            // for max, fill, min, copy, clamp
-#include <atomic>                               // for atomic
-#include <cassert>                              // for assert
-#include <chrono>                               // for microseconds
-#include <cmath>                                // for log, round, exp, floor, sqrt
+#include <algorithm>  // for max, fill, min, copy, clamp
+#include <atomic>     // for atomic
+#include <cassert>    // for assert
+#include <chrono>     // for microseconds
+#include <cmath>      // for log, round, exp, floor, sqrt
 #include <coolerpp/coolerpp.hpp>
-#include <cstdlib>                              // for abs
-#include <deque>                                // for _Deque_iterator<>::_Self
-#include <filesystem>                           // for operator<<, path
-#include <limits>                               // for numeric_limits
-#include <memory>                               // for shared_ptr, unique_ptr, make...
-#include <mutex>                                // for mutex
-#include <numeric>                              // for iota
-#include <stdexcept>                            // for runtime_error
-#include <string>                               // for string
-#include <string_view>                          // for string_view
-#include <utility>                              // for make_pair, pair
-#include <vector>                               // for vector, vector<>::iterator
+#include <cstdlib>      // for abs
+#include <deque>        // for _Deque_iterator<>::_Self
+#include <filesystem>   // for operator<<, path
+#include <limits>       // for numeric_limits
+#include <memory>       // for shared_ptr, unique_ptr, make...
+#include <mutex>        // for mutex
+#include <numeric>      // for iota
+#include <stdexcept>    // for runtime_error
+#include <string>       // for string
+#include <string_view>  // for string_view
+#include <utility>      // for make_pair, pair
+#include <vector>       // for vector, vector<>::iterator
 
 #include "modle/bigwig/bigwig.hpp"
 #include "modle/common/common.hpp"             // for bp_t, contacts_t
@@ -39,9 +39,9 @@
 #include "modle/common/random.hpp"             // for bernoulli_trial, poisson_distribution
 #include "modle/common/simulation_config.hpp"  // for Config
 #include "modle/config/version.hpp"
-#include "modle/extrusion_barriers.hpp"        // for ExtrusionBarrier, update_states
-#include "modle/extrusion_factors.hpp"         // for Lef, ExtrusionUnit
-#include "modle/genome.hpp"                    // for Genome::iterator, GenomicInterval
+#include "modle/extrusion_barriers.hpp"  // for ExtrusionBarrier, update_states
+#include "modle/extrusion_factors.hpp"   // for Lef, ExtrusionUnit
+#include "modle/genome.hpp"              // for Genome::iterator, GenomicInterval
 #include "modle/io/contact_matrix_dense.hpp"
 #include "modle/stats/descriptive.hpp"
 
@@ -122,53 +122,107 @@ usize Simulation::simulated_size() const { return this->_genome.simulated_size()
                                    assembly_name, config::version::str_long(), metadata);
 }
 
-static void write_contact_matrix(coolerpp::File& cf, const GenomicInterval& interval) {
+static void write_contact_matrix_to_cooler(coolerpp::File& cf, const GenomicInterval& interval) {
   if (!cf) {
     return;
   }
 
   const auto& matrix = interval.contacts();
   if (matrix.npixels() != 0) {
-    spdlog::info(FMT_STRING("Writing contacts for {} to file \"{}\"..."), interval, cf.uri());
+    const auto t0 = absl::Now();
+    spdlog::info(FMT_STRING("[io] writing contacts for {} to file \"{}\"..."), interval, cf.uri());
     const auto missing_interactions = matrix.get_fraction_of_missed_updates();
     if (missing_interactions >= 0.01) {
       spdlog::warn(
-          FMT_STRING("{:.2f}% missing interactions for {}! Please make sure this is intended."),
+          FMT_STRING(
+              "[io] {:.2f}% missing interactions for {}! Please make sure this is intended."),
           missing_interactions * 100, interval);
     }
 
     io::append_contact_matrix_to_cooler(cf, interval.chrom().name(), matrix, interval.start());
-    spdlog::info(FMT_STRING("Written {} contacts for \"{}\" to file \"{}\" ({:.2f}M nnz out of "
-                            "{:.2f}M pixels)."),
-                 matrix.get_tot_contacts(), interval, cf.uri(),
-                 static_cast<double>(matrix.get_nnz()) / 1.0e6,
-                 static_cast<double>(matrix.npixels()) / 1.0e6);
+    spdlog::info(
+        FMT_STRING("[io]: written {} contacts for {} to file \"{}\" in {} ({:.2f}M nnz out of "
+                   "{:.2f}M pixels)."),
+        matrix.get_tot_contacts(), interval, cf.uri(), absl::FormatDuration(absl::Now() - t0),
+        static_cast<double>(matrix.get_nnz()) / 1.0e6,
+        static_cast<double>(matrix.npixels()) / 1.0e6);
   }
 }
 
-void Simulation::write_contacts_to_disk(std::chrono::milliseconds wait_time) {
+static void write_lef_occupancy_to_bwig(io::bigwig::Writer& bw, const GenomicInterval& interval,
+                                        const bp_t resolution, std::vector<float>& buff) {
+  if (!bw || interval.npixels() == 0) {
+    return;
+  }
+
+  try {
+    const auto t0 = absl::Now();
+    spdlog::info(FMT_STRING("[io]: writing 1D LEF occupancy profile for {} to file {}..."),
+                 interval, bw.path());
+    buff.resize(interval.lef_1d_occupancy().size());
+    const auto max_element =
+        std::max_element(interval.lef_1d_occupancy().begin(), interval.lef_1d_occupancy().end())
+            ->load();
+
+    std::transform(interval.lef_1d_occupancy().begin(), interval.lef_1d_occupancy().end(),
+                   buff.begin(), [&](const auto& n) {
+                     return static_cast<float>(static_cast<double>(n.load()) /
+                                               static_cast<double>(max_element));
+                   });
+    bw.write_range(interval.chrom().name(), absl::MakeSpan(buff), resolution, resolution,
+                   interval.start());
+    spdlog::info(FMT_STRING("[io]: writing 1D LEF occupancy profile for {} to file \"{}\" took {}"),
+                 interval, bw.path(), absl::FormatDuration(absl::Now() - t0));
+  } catch (const std::exception& e) {
+    throw std::runtime_error(fmt::format(
+        FMT_STRING("An error occurred while writing LEF 1D occupancy profile to file {}: {}"),
+        bw.path(), e.what()));
+  }
+}
+
+static std::pair<coolerpp::File, io::bigwig::Writer> init_output_file_writers(const Genome& genome,
+                                                                              const Config& c) {
+  if (c.skip_output) {
+    return std::make_pair(coolerpp::File{}, io::bigwig::Writer{});
+  }
+
+  auto cf_ = init_cooler_file(c.path_to_output_file_cool, false, genome.chromosomes(), c.bin_size,
+                              c.assembly_name, c.args_json);
+  if (!c.track_1d_lef_position) {
+    return std::make_pair(std::move(cf_), io::bigwig::Writer{});
+  }
+
+  io::bigwig::Writer bw_(c.path_to_lef_1d_occupancy_bw_file.string());
+  std::vector<std::pair<std::string, u32>> chroms(genome.num_chromosomes());
+  std::transform(genome.chromosomes().begin(), genome.chromosomes().end(), chroms.begin(),
+                 [](const auto& chrom_ptr) {
+                   return std::make_pair(chrom_ptr->name(), static_cast<u32>(chrom_ptr->size()));
+                 });
+  bw_.write_chromosomes(chroms);
+
+  return std::make_pair(std::move(cf_), std::move(bw_));
+}
+
+void Simulation::simulate_io(std::chrono::milliseconds wait_time) {
   assert(!std::filesystem::exists(c().path_to_output_file_cool));
-  absl::btree_map<GenomicInterval*, usize> task_map{};
+  assert(!std::filesystem::exists(c().path_to_lef_1d_occupancy_bw_file));
 
-  coolerpp::File cf{c().skip_output ? coolerpp::File{}
-                                    : init_cooler_file(c().path_to_output_file_cool, false,
-                                                       this->_genome.chromosomes(), c().bin_size,
-                                                       c().assembly_name, c().args_json)};
-
+  auto [cf, bw] = init_output_file_writers(this->_genome, c());
   auto current_interval = this->_genome.begin();
   auto last_interval = this->_genome.end();
 
   auto ctok = this->_ctx.register_consumer<Task::Status::COMPLETED>();
 
+  absl::btree_map<GenomicInterval*, usize> task_map{};
+  std::vector<float> bw_buff{};
   Task task{};
 
   try {
     while (!!this->_ctx && current_interval != last_interval) {
       if (auto it = task_map.find(&(*current_interval)); it != task_map.end() && it->second == 0) {
-        spdlog::debug(FMT_STRING("[IO]: appending interactions for {} to {}..."), *it->first,
-                      cf.uri());
         // All tasks for the current interval successfully completed!
-        write_contact_matrix(cf, *it->first);
+        write_contact_matrix_to_cooler(cf, *it->first);
+        write_lef_occupancy_to_bwig(bw, *it->first, c().bin_size, bw_buff);
         it->first->deallocate();
         task_map.erase(it);
         ++current_interval;
@@ -200,46 +254,6 @@ void Simulation::write_contacts_to_disk(std::chrono::milliseconds wait_time) {
     this->_ctx.set_exception_io(0, std::make_exception_ptr(std::runtime_error(
                                        "unhandled exception caught! This should never "
                                        "happen! Please file an issue on GitHub.")));
-  }
-}
-
-void Simulation::write_1d_lef_occupancy_to_disk() const {
-  if (!c().track_1d_lef_position) {
-    return;
-  }
-
-  try {
-    io::bigwig::Writer bw(c().path_to_lef_1d_occupancy_bw_file.string());
-
-    std::vector<std::pair<std::string, u32>> chroms(this->_genome.num_chromosomes());
-    std::transform(this->_genome.chromosomes().begin(), this->_genome.chromosomes().end(),
-                   chroms.begin(), [](const auto& chrom_ptr) {
-                     return std::make_pair(chrom_ptr->name(), static_cast<u32>(chrom_ptr->size()));
-                   });
-    bw.write_chromosomes(chroms);
-
-    for (const GenomicInterval& interval : this->_genome) {
-      if (interval.npixels() == 0) {
-        continue;
-      }
-
-      std::vector<float> buff(interval.lef_1d_occupancy().size());
-      const auto max_element =
-          std::max_element(interval.lef_1d_occupancy().begin(), interval.lef_1d_occupancy().end())
-              ->load();
-
-      std::transform(interval.lef_1d_occupancy().begin(), interval.lef_1d_occupancy().end(),
-                     buff.begin(), [&](const auto& n) {
-                       return static_cast<float>(static_cast<double>(n.load()) /
-                                                 static_cast<double>(max_element));
-                     });
-      bw.write_range(interval.chrom().name(), absl::MakeSpan(buff), c().bin_size, c().bin_size,
-                     interval.start());
-    }
-  } catch (const std::exception& e) {
-    throw std::runtime_error(
-        fmt::format(FMT_STRING("An error occurred while writing lef occupancy to file {}: {}"),
-                    c().path_to_lef_1d_occupancy_bw_file, e.what()));
   }
 }
 
