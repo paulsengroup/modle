@@ -42,9 +42,9 @@ class Writer;
 template <typename I, typename T>
 class IITree;
 
-class Simulation : Config {
+class Simulation {
  public:
-  explicit Simulation(const Config& c, bool import_chroms = true);
+  explicit Simulation(Config config_, bool import_intervals = true);
   void print() = delete;
 
   [[nodiscard]] usize size() const;
@@ -129,16 +129,22 @@ class Simulation : Config {
     void reset_buffers();
   };
 
-  void spawn_worker_threads(usize num_workers, usize batch_size);
-  void spawn_io_threads();
-  void run_simulate();
-
  private:
+  Config _config{};
   Genome _genome{};
   ContextManager<Task> _ctx{0};
 
   static constexpr auto& model_internal_state_log_header = Config::model_internal_state_log_header;
 
+ public:
+  [[nodiscard]] constexpr const Config& config() const noexcept;
+  [[nodiscard]] constexpr const Config& c() const noexcept;
+
+  void spawn_worker_threads(usize num_workers, usize batch_size);
+  void spawn_io_threads();
+  void run_simulate();
+
+ private:
   /// Simulate loop extrusion using the parameters and buffers passed through \p state
   void simulate_one_cell(u64 tid, State& s) const;
 

@@ -50,10 +50,10 @@ void Simulation::spawn_io_threads() {
 
 // NOLINTNEXTLINE(readability-function-cognitive-complexity)
 void Simulation::run_simulate() {
-  if (!this->skip_output) {  // Write simulation params to file
-    assert(std::filesystem::exists(this->path_to_output_prefix.parent_path()));
-    if (this->force) {
-      std::filesystem::remove(this->path_to_output_file_cool);
+  if (!c().skip_output) {
+    assert(std::filesystem::exists(c().path_to_output_prefix.parent_path()));
+    if (c().force) {
+      std::filesystem::remove(c().path_to_output_file_cool);
     }
   }
 
@@ -74,10 +74,10 @@ void Simulation::run_simulate() {
   // light-weight structs
 
   const auto task_batch_size = [this]() -> usize {
-    if (this->num_cells <= this->nthreads) {
+    if (c().num_cells <= c().nthreads) {
       return 1;
     }
-    return std::min(usize(16), this->num_cells / this->nthreads);
+    return std::min(usize(16), c().num_cells / c().nthreads);
   }();
 
   // Queue used to submit simulation tasks to the thread pool
@@ -86,15 +86,14 @@ void Simulation::run_simulate() {
 
   // std::mutex model_state_logger_mtx;  // Protect rw access to the log file located at
   // this->path_to_model_state_log_file
-  if (this->log_model_internal_state && !this->skip_output) {
-    compressed_io::Writer(this->path_to_model_state_log_file)
-        .write(model_internal_state_log_header);
+  if (c().log_model_internal_state && !c().skip_output) {
+    compressed_io::Writer(c().path_to_model_state_log_file).write(model_internal_state_log_header);
   }
 
   try {
     this->spawn_io_threads();
     this->spawn_worker_threads(
-        std::min(this->nthreads, this->_genome.num_intervals() * this->num_cells), task_batch_size);
+        std::min(c().nthreads, this->_genome.num_intervals() * c().num_cells), task_batch_size);
 
     // The remaining code submits simulation tasks to the queue. Then it waits until all the tasks
     // have been completed and contacts have been written to disk
@@ -110,14 +109,14 @@ void Simulation::run_simulate() {
       this->_ctx.check_exceptions();
       auto sleep_time = std::chrono::microseconds(50);
 
-      auto rand_eng = random::PRNG(interval.hash(*xxh_state, this->seed));
+      auto rand_eng = random::PRNG(interval.hash(*xxh_state, c().seed));
 
       // Don't bother simulating intervals without barriers
-      if (!this->simulate_chromosomes_wo_barriers && interval.num_barriers() == 0) {
+      if (!c().simulate_chromosomes_wo_barriers && interval.num_barriers() == 0) {
         spdlog::info(FMT_STRING("{} has 0 barriers... SKIPPING!"), interval);
         Task t{};
         t.interval = &interval;
-        for (usize cellid = 0; cellid < this->num_cells; ++cellid) {
+        for (usize cellid = 0; cellid < c().num_cells; ++cellid) {
           while (!this->_ctx.try_enqueue<Task::Status::COMPLETED>(Task{t}, ptok_finished)) {
             this->_ctx.check_exceptions();
             sleep_time = std::min(max_sleep_time, sleep_time * 2);
@@ -132,15 +131,15 @@ void Simulation::run_simulate() {
       const auto nlefs = this->compute_num_lefs(interval.size());
 
       const auto npixels = interval.npixels();
-      const auto tot_target_contacts = static_cast<usize>(
-          std::round(static_cast<double>(npixels) * this->target_contact_density));
+      const auto tot_target_contacts =
+          static_cast<usize>(std::round(static_cast<double>(npixels) * c().target_contact_density));
       const auto target_epochs = this->compute_tot_target_epochs(nlefs, npixels);
 
       const auto target_contacts_per_cell =
-          (tot_target_contacts + this->num_cells - 1) / this->num_cells;
+          (tot_target_contacts + c().num_cells - 1) / c().num_cells;
 
       usize tot_target_contacts_rolling_count = 0;
-      for (usize cellid = 0; cellid < this->num_cells; ++cellid) {
+      for (usize cellid = 0; cellid < c().num_cells; ++cellid) {
         // This is needed to not overshoot the target contact density
         const auto effective_target_contacts = std::min(
             target_contacts_per_cell, tot_target_contacts - tot_target_contacts_rolling_count);
@@ -166,7 +165,7 @@ void Simulation::run_simulate() {
     }
 
     this->_ctx.shutdown();
-    if (this->track_1d_lef_position) {
+    if (c().track_1d_lef_position) {
       this->write_1d_lef_occupancy_to_disk();
     }
     assert(this->_ctx.num_submitted() == this->_ctx.num_completed());
@@ -200,8 +199,8 @@ void Simulation::simulate_worker(const u64 tid, const usize task_batch_size) {
   Simulation::State local_state;
 
   const auto tmp_model_internal_state_log_path = [&]() {
-    auto p = this->path_to_model_state_log_file;
-    if (this->log_model_internal_state && !this->skip_output) {
+    auto p = c().path_to_model_state_log_file;
+    if (c().log_model_internal_state && !c().skip_output) {
       p.replace_extension(fmt::format(FMT_STRING("{}{}"), tid, p.extension().string()));
       local_state.model_state_logger = std::make_unique<compressed_io::Writer>(p);
     }

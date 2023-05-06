@@ -58,20 +58,21 @@
 
 namespace modle {
 
-Simulation::Simulation(const Config& c, bool import_chroms)
-    : Config(c),
-      _genome(import_chroms
-                  ? Genome(path_to_chrom_sizes, path_to_extr_barriers, path_to_chrom_subranges,
-                           bin_size, diagonal_width, barrier_occupied_stp, barrier_not_occupied_stp,
-                           interpret_bed_name_field_as_barrier_not_occupied_stp)
+Simulation::Simulation(Config config_, bool import_intervals)
+    : _config(std::move(config_)),
+      _genome(import_intervals
+                  ? Genome(c().path_to_chrom_sizes, c().path_to_extr_barriers,
+                           c().path_to_chrom_subranges, c().bin_size, c().diagonal_width,
+                           c().barrier_occupied_stp, c().barrier_not_occupied_stp,
+                           c().interpret_bed_name_field_as_barrier_not_occupied_stp)
                   : Genome{}),
-      _ctx(nthreads + 1) {
+      _ctx(c().nthreads + 1) {
   // Override barrier occupancies read from BED file
-  if (c.override_extrusion_barrier_occupancy) {
+  if (c().override_extrusion_barrier_occupancy) {
     for (auto& chrom : this->_genome) {
       auto& barriers = chrom.barriers();
       std::transform(barriers.begin(), barriers.end(), barriers.begin(), [&](const auto& barrier) {
-        return ExtrusionBarrier{barrier.pos, c.barrier_occupied_stp, c.barrier_not_occupied_stp,
+        return ExtrusionBarrier{barrier.pos, c().barrier_occupied_stp, c().barrier_not_occupied_stp,
                                 barrier.blocking_direction.complement()};
       });
     }
@@ -79,14 +80,14 @@ Simulation::Simulation(const Config& c, bool import_chroms)
 
   std::vector<std::string> warnings;
   for (const auto& interval : this->_genome) {
-    if (interval.size() < this->diagonal_width) {
+    if (interval.size() < c().diagonal_width) {
       warnings.emplace_back(fmt::format(FMT_STRING("{}: {};"), interval, interval.size()));
     }
   }
   if (!warnings.empty()) {
     spdlog::warn(FMT_STRING("The simulated size for the following {} chromosome(s) is smaller than "
                             "the simulation diagonal width ({} bp). Is this intended?\n - {}"),
-                 warnings.size(), this->diagonal_width, fmt::join(warnings, "\n - "));
+                 warnings.size(), c().diagonal_width, fmt::join(warnings, "\n - "));
   }
   warnings.clear();
   const usize min_pixels = 250'000;
@@ -144,13 +145,13 @@ static void write_contact_matrix(coolerpp::File& cf, const GenomicInterval& inte
 
 // NOLINTNEXTLINE(readability-function-cognitive-complexity)
 void Simulation::write_contacts_to_disk(std::chrono::milliseconds wait_time) {
+  assert(!std::filesystem::exists(c().path_to_output_file_cool));
   absl::btree_map<GenomicInterval*, usize> task_map{};
 
-  coolerpp::File cf{this->skip_output
-                        ? coolerpp::File{}
-                        : init_cooler_file(this->path_to_output_file_cool, this->force,
-                                           this->_genome.chromosomes(), this->bin_size,
-                                           this->assembly_name, this->args_json)};
+  coolerpp::File cf{c().skip_output ? coolerpp::File{}
+                                    : init_cooler_file(c().path_to_output_file_cool, false,
+                                                       this->_genome.chromosomes(), c().bin_size,
+                                                       c().assembly_name, c().args_json)};
 
   auto current_interval = this->_genome.begin();
   auto last_interval = this->_genome.end();
@@ -177,7 +178,7 @@ void Simulation::write_contacts_to_disk(std::chrono::milliseconds wait_time) {
         task = *task_opt;
         // Add interval to task_map if not already present.
         // Then decrement the number of tasks still pending.
-        auto [it, _] = task_map.try_emplace(task.interval, this->num_cells);
+        auto [it, _] = task_map.try_emplace(task.interval, c().num_cells);
         --it->second;
       }
     }
@@ -201,12 +202,12 @@ void Simulation::write_contacts_to_disk(std::chrono::milliseconds wait_time) {
 }
 
 void Simulation::write_1d_lef_occupancy_to_disk() const {
-  if (!this->track_1d_lef_position) {
+  if (!c().track_1d_lef_position) {
     return;
   }
 
   try {
-    io::bigwig::Writer bw(this->path_to_lef_1d_occupancy_bw_file.string());
+    io::bigwig::Writer bw(c().path_to_lef_1d_occupancy_bw_file.string());
 
     std::vector<std::pair<std::string, u32>> chroms(this->_genome.num_chromosomes());
     std::transform(this->_genome.chromosomes().begin(), this->_genome.chromosomes().end(),
@@ -230,13 +231,13 @@ void Simulation::write_1d_lef_occupancy_to_disk() const {
                        return static_cast<float>(static_cast<double>(n.load()) /
                                                  static_cast<double>(max_element));
                      });
-      bw.write_range(interval.chrom().name(), absl::MakeSpan(buff), bin_size, bin_size,
+      bw.write_range(interval.chrom().name(), absl::MakeSpan(buff), c().bin_size, c().bin_size,
                      interval.start());
     }
   } catch (const std::exception& e) {
     throw std::runtime_error(
         fmt::format(FMT_STRING("An error occurred while writing lef occupancy to file {}: {}"),
-                    this->path_to_lef_1d_occupancy_bw_file, e.what()));
+                    c().path_to_lef_1d_occupancy_bw_file, e.what()));
   }
 }
 
@@ -282,14 +283,14 @@ void Simulation::generate_moves(const GenomicInterval& interval, const absl::Spa
   }
 
   const auto rev_extr_speed = static_cast<double>(
-      burnin_completed ? this->rev_extrusion_speed : this->rev_extrusion_speed_burnin);
+      burnin_completed ? c().rev_extrusion_speed : c().rev_extrusion_speed_burnin);
   const auto fwd_extr_speed = static_cast<double>(
-      burnin_completed ? this->fwd_extrusion_speed : this->fwd_extrusion_speed_burnin);
+      burnin_completed ? c().fwd_extrusion_speed : c().fwd_extrusion_speed_burnin);
 
   generate_moves_helper<lef_move_generator_t>(lefs, rev_moves, rev_extr_speed,
-                                              rev_extrusion_speed_std, rand_eng);
+                                              c().rev_extrusion_speed_std, rand_eng);
   generate_moves_helper<lef_move_generator_t>(lefs, fwd_moves, fwd_extr_speed,
-                                              fwd_extrusion_speed_std, rand_eng);
+                                              c().fwd_extrusion_speed_std, rand_eng);
 
   if (adjust_moves_) {  // Adjust moves of consecutive extr. units to make LEF behavior more
     // realistic See comments in adjust_moves_of_consecutive_extr_units for more
@@ -546,16 +547,16 @@ usize Simulation::release_lefs(const absl::Span<Lef> lefs, const ExtrusionBarrie
       case 0:
         return 1.0;
       case 1:
-        return 1.0 / this->soft_stall_lef_stability_multiplier;
+        return 1.0 / c().soft_stall_lef_stability_multiplier;
       case 2:
-        return 1.0 / this->hard_stall_lef_stability_multiplier;
+        return 1.0 / c().hard_stall_lef_stability_multiplier;
       default:
         MODLE_UNREACHABLE_CODE;
     }
   };
 
   const auto& base_prob_lef_release =
-      burnin_completed ? this->prob_of_lef_release : this->prob_of_lef_release_burnin;
+      burnin_completed ? c().prob_of_lef_release : c().prob_of_lef_release_burnin;
 
   usize lefs_released = 0;
   for (usize i = 0; i < lefs.size(); ++i) {
@@ -844,21 +845,21 @@ void Simulation::run_burnin(State& s, const double lef_binding_rate_burnin) cons
       s.num_active_lefs = std::min(s.num_active_lefs + num_lefs_to_bind, s.num_lefs);
     } else {
       Simulation::compute_loop_size_stats(s.get_lefs(), s.get_cfx_of_variation(),
-                                          s.get_avg_loop_sizes(), this->burnin_history_length);
+                                          s.get_avg_loop_sizes(), c().burnin_history_length);
 
-      s.burnin_completed = Simulation::evaluate_burnin(
-          s.get_cfx_of_variation(), s.get_avg_loop_sizes(), this->burnin_history_length,
-          this->burnin_smoothing_window_size);
-      s.burnin_completed &= s.epoch > this->min_burnin_epochs;
+      s.burnin_completed =
+          Simulation::evaluate_burnin(s.get_cfx_of_variation(), s.get_avg_loop_sizes(),
+                                      c().burnin_history_length, c().burnin_smoothing_window_size);
+      s.burnin_completed &= s.epoch > c().min_burnin_epochs;
 
-      if (!s.burnin_completed && s.epoch >= this->max_burnin_epochs) {
+      if (!s.burnin_completed && s.epoch >= c().max_burnin_epochs) {
         s.burnin_completed = true;
         s.num_active_lefs = s.num_lefs;
         spdlog::warn(
             FMT_STRING("The burn-in phase for {} from cell #{} was terminated earlier than "
                        "it should've as its simulation instance failed to stabilize "
                        "within --max-burnin-epochs={} epochs."),
-            *s.interval, s.cell_id, this->max_burnin_epochs);
+            *s.interval, s.cell_id, c().max_burnin_epochs);
       }
     }
     // Guard against the rare occasion where the poisson prng samples 0 in the first epoch
@@ -877,7 +878,7 @@ void Simulation::simulate_one_cell([[maybe_unused]] u64 tid, State& s) const {
 
     const auto lef_binding_rate_burnin =
         static_cast<double>(s.num_lefs) /
-        static_cast<double>(this->burnin_target_epochs_for_lef_activation);
+        static_cast<double>(c().burnin_target_epochs_for_lef_activation);
 
     const auto sampling_events_per_epoch = this->compute_contacts_per_epoch(s.num_lefs);
 
@@ -889,13 +890,13 @@ void Simulation::simulate_one_cell([[maybe_unused]] u64 tid, State& s) const {
     // equilibrium
     s.barriers.init_states(s.rand_eng);
 
-    if (this->skip_burnin) {
+    if (c().skip_burnin) {
       s.num_active_lefs = s.num_lefs;
       s.burnin_completed = true;
     }
 
     auto stop_condition = [this, &s]() {
-      if (this->target_contact_density >= 0) {
+      if (c().target_contact_density >= 0) {
         assert(s.num_target_contacts != 0);
         return s.num_contacts < s.num_target_contacts;
       }
@@ -939,7 +940,7 @@ void Simulation::simulate_one_cell([[maybe_unused]] u64 tid, State& s) const {
       Simulation::extrude(*s.interval, s.get_lefs(), s.get_rev_moves(), s.get_fwd_moves());
 
       // Log model internal state
-      if (MODLE_UNLIKELY(this->log_model_internal_state)) {
+      if (MODLE_UNLIKELY(c().log_model_internal_state)) {
         assert(s.model_state_logger);
         Simulation::dump_stats(s.id, s.epoch, s.cell_id, !s.burnin_completed, *s.interval,
                                s.get_lefs(), s.barriers, s.get_rev_collisions(),
@@ -971,7 +972,7 @@ void Simulation::dump_stats(const usize task_id, const usize epoch, const usize 
                             const absl::Span<const CollisionT> fwd_collisions,
                             compressed_io::Writer& log_writer) const
     noexcept(utils::ndebug_defined()) {
-  assert(this->log_model_internal_state);
+  assert(c().log_model_internal_state);
   assert(log_writer);
 
   const auto barriers_occupied = barriers.count_active();
@@ -1027,16 +1028,16 @@ void Simulation::dump_stats(const usize task_id, const usize epoch, const usize 
 }
 
 usize Simulation::compute_tot_target_epochs(usize nlefs, usize npixels) const noexcept {
-  using SC = StoppingCriterion;
-  if (this->stopping_criterion == SC::simulation_epochs) {
-    assert(this->target_simulation_epochs != 0 &&
-           this->target_simulation_epochs != std::numeric_limits<usize>::max());
-    return this->num_cells * this->target_simulation_epochs;
+  using SC = Config::StoppingCriterion;
+  if (c().stopping_criterion == SC::simulation_epochs) {
+    assert(c().target_simulation_epochs != 0 &&
+           c().target_simulation_epochs != std::numeric_limits<usize>::max());
+    return c().num_cells * c().target_simulation_epochs;
   }
 
-  assert(this->stopping_criterion == SC::contact_density);
+  assert(c().stopping_criterion == SC::contact_density);
   const auto tot_target_contacts =
-      std::max(1.0, std::round(this->target_contact_density * static_cast<double>(npixels)));
+      std::max(1.0, std::round(c().target_contact_density * static_cast<double>(npixels)));
 
   const auto new_contacts_per_epoch = this->compute_contacts_per_epoch(nlefs);
   return static_cast<usize>(
@@ -1045,9 +1046,9 @@ usize Simulation::compute_tot_target_epochs(usize nlefs, usize npixels) const no
 
 usize Simulation::compute_contacts_per_epoch(usize nlefs) const noexcept {
   const auto extrusion_speed =
-      static_cast<double>(this->rev_extrusion_speed + this->fwd_extrusion_speed);
+      static_cast<double>(c().rev_extrusion_speed + c().fwd_extrusion_speed);
   const auto prob_of_contact_sampling =
-      extrusion_speed / static_cast<double>(this->contact_sampling_interval);
+      extrusion_speed / static_cast<double>(c().contact_sampling_interval);
 
   return static_cast<usize>(
       std::max(1.0, std::round(static_cast<double>(nlefs) * prob_of_contact_sampling)));
@@ -1055,8 +1056,7 @@ usize Simulation::compute_contacts_per_epoch(usize nlefs) const noexcept {
 
 usize Simulation::compute_num_lefs(const usize size_bp) const noexcept {
   const auto size_mbp = static_cast<double>(size_bp) / Mbp;
-  return std::max(usize(1),
-                  static_cast<usize>(std::round(this->number_of_lefs_per_mbp * size_mbp)));
+  return std::max(usize(1), static_cast<usize>(std::round(c().number_of_lefs_per_mbp * size_mbp)));
 }
 
 void Simulation::print_status_update(const Task& t) const noexcept {
@@ -1064,7 +1064,7 @@ void Simulation::print_status_update(const Task& t) const noexcept {
   auto tot_target_epochs = this->compute_tot_target_epochs(t.num_lefs, t.interval->npixels());
   spdlog::info(FMT_STRING("Begin processing {}: simulating ~{} epochs across {} cells using {} "
                           "LEFs and {} barriers (~{} epochs per cell)..."),
-               *t.interval, tot_target_epochs, this->num_cells, t.num_lefs,
-               t.interval->barriers().size(), tot_target_epochs / this->num_cells);
+               *t.interval, tot_target_epochs, c().num_cells, t.num_lefs,
+               t.interval->barriers().size(), tot_target_epochs / c().num_cells);
 }
 }  // namespace modle

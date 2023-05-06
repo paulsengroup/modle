@@ -95,7 +95,7 @@ void Simulation::sample_and_register_contacts(State& s, usize num_sampling_event
   assert(s.num_active_lefs == s.num_lefs);
 
   // Ensure we do not overshoot the target contact density
-  if (this->target_contact_density > 0.0) {
+  if (c().target_contact_density > 0.0) {
     num_sampling_events = std::min(num_sampling_events, s.num_target_contacts - s.num_contacts);
   }
 
@@ -105,7 +105,7 @@ void Simulation::sample_and_register_contacts(State& s, usize num_sampling_event
   }
 
   const auto num_loop_contacts =
-      compute_num_contacts_loop(num_sampling_events, this->tad_to_loop_contact_ratio, s.rand_eng);
+      compute_num_contacts_loop(num_sampling_events, c().tad_to_loop_contact_ratio, s.rand_eng);
   const auto num_tad_contacts = num_sampling_events - num_loop_contacts;
 
   assert(s.interval);
@@ -114,7 +114,7 @@ void Simulation::sample_and_register_contacts(State& s, usize num_sampling_event
   s.num_contacts +=
       this->register_contacts_tad(*s.interval, s.get_lefs(), num_tad_contacts, s.rand_eng);
 
-  if (this->track_1d_lef_position) {
+  if (c().track_1d_lef_position) {
     this->register_1d_lef_occupancy(*s.interval, s.get_lefs(), num_sampling_events, s.rand_eng);
   }
 
@@ -130,19 +130,19 @@ usize Simulation::register_contacts_loop(const bp_t start_pos, const bp_t end_po
     return 0;
   }
 
-  using CS = ContactSamplingStrategy;
-  assert(this->contact_sampling_strategy & CS::loop);
+  using CS = Config::ContactSamplingStrategy;
+  assert(c().contact_sampling_strategy & CS::loop);
 
   // NOLINTNEXTLINE(readability-implicit-bool-conversion)
-  const bool noisify_contacts = this->contact_sampling_strategy & CS::noisify;
+  const bool noisify_contacts = c().contact_sampling_strategy & CS::noisify;
 
   usize num_contacts_registered = 0;
   for (; num_sampling_events != 0; --num_sampling_events) {
     const auto& lef = sample_lef_with_replacement(lefs, rand_eng);
     if (MODLE_LIKELY(lef.is_bound() && lef_within_bound(lef, start_pos, end_pos))) {
       const auto [p1, p2] =
-          randomize_extrusion_unit_positions(lef, this->genextreme_mu, this->genextreme_sigma,
-                                             this->genextreme_xi, noisify_contacts, rand_eng);
+          randomize_extrusion_unit_positions(lef, c().genextreme_mu, c().genextreme_sigma,
+                                             c().genextreme_xi, noisify_contacts, rand_eng);
 
       if (!pos_within_bound(p1, p2, start_pos, end_pos)) {
         continue;
@@ -150,7 +150,7 @@ usize Simulation::register_contacts_loop(const bp_t start_pos, const bp_t end_po
 
       const auto pos1 = static_cast<bp_t>(p1) - start_pos;
       const auto pos2 = static_cast<bp_t>(p2) - start_pos;
-      contacts.increment(pos1 / this->bin_size, pos2 / this->bin_size);
+      contacts.increment(pos1 / c().bin_size, pos2 / c().bin_size);
       ++num_contacts_registered;
     }
   }
@@ -166,19 +166,19 @@ usize Simulation::register_contacts_tad(bp_t start_pos, bp_t end_pos,
     return 0;
   }
 
-  using CS = ContactSamplingStrategy;
-  assert(this->contact_sampling_strategy & CS::tad);
+  using CS = Config::ContactSamplingStrategy;
+  assert(c().contact_sampling_strategy & CS::tad);
 
   // NOLINTNEXTLINE(readability-implicit-bool-conversion)
-  const bool noisify_contacts = this->contact_sampling_strategy & CS::noisify;
+  const bool noisify_contacts = c().contact_sampling_strategy & CS::noisify;
 
   usize num_contacts_registered = 0;
   for (; num_sampling_events != 0; --num_sampling_events) {
     const auto& lef = sample_lef_with_replacement(lefs, rand_eng);
     if (MODLE_LIKELY(lef.is_bound() && lef_within_bound(lef, start_pos, end_pos))) {
       const auto [p1, p2] =
-          randomize_extrusion_unit_positions(lef, this->genextreme_mu, this->genextreme_sigma,
-                                             this->genextreme_xi, noisify_contacts, rand_eng);
+          randomize_extrusion_unit_positions(lef, c().genextreme_mu, c().genextreme_sigma,
+                                             c().genextreme_xi, noisify_contacts, rand_eng);
 
       if (!pos_within_bound(p1, p2, start_pos, end_pos)) {
         continue;
@@ -190,7 +190,7 @@ usize Simulation::register_contacts_tad(bp_t start_pos, bp_t end_pos,
 
       const auto pos1 = static_cast<bp_t>(p11) - start_pos;
       const auto pos2 = static_cast<bp_t>(p22) - start_pos;
-      contacts.increment(pos1 / this->bin_size, pos2 / this->bin_size);
+      contacts.increment(pos1 / c().bin_size, pos2 / c().bin_size);
       ++num_contacts_registered;
     }
   }
@@ -205,26 +205,26 @@ usize Simulation::register_1d_lef_occupancy(bp_t start_pos, bp_t end_pos,
     return 0;
   }
 
-  using CS = ContactSamplingStrategy;
+  using CS = Config::ContactSamplingStrategy;
   // NOLINTNEXTLINE(readability-implicit-bool-conversion)
-  const bool noisify_positions = this->contact_sampling_strategy & CS::noisify;
+  const bool noisify_positions = c().contact_sampling_strategy & CS::noisify;
 
   usize num_successful_sampling_events = 0;
   for (; num_sampling_events != 0; --num_sampling_events) {
     const auto& lef = sample_lef_with_replacement(lefs, rand_eng);
     if (MODLE_LIKELY(lef.is_bound() && lef_within_bound(lef, start_pos, end_pos))) {
       const auto [p1, p2] =
-          randomize_extrusion_unit_positions(lef, this->genextreme_mu, this->genextreme_sigma,
-                                             this->genextreme_xi, noisify_positions, rand_eng);
+          randomize_extrusion_unit_positions(lef, c().genextreme_mu, c().genextreme_sigma,
+                                             c().genextreme_xi, noisify_positions, rand_eng);
 
       if (!pos_within_bound(p1, p2, start_pos, end_pos)) {
         continue;
       }
 
-      const auto i1 = utils::conditional_static_cast<usize>((static_cast<bp_t>(p1) - start_pos) /
-                                                            this->bin_size);
-      const auto i2 = utils::conditional_static_cast<usize>((static_cast<bp_t>(p2) - start_pos) /
-                                                            this->bin_size);
+      const auto i1 =
+          utils::conditional_static_cast<usize>((static_cast<bp_t>(p1) - start_pos) / c().bin_size);
+      const auto i2 =
+          utils::conditional_static_cast<usize>((static_cast<bp_t>(p2) - start_pos) / c().bin_size);
       occupancy_buff[i1]++;
       occupancy_buff[i2]++;
       ++num_successful_sampling_events;

@@ -182,8 +182,8 @@ void Simulation::detect_lef_bar_collisions(
 
     assert(j < lefs.size());
     // Probability of block is set based on the extr. barrier blocking direction
-    const auto& pblock = barriers.direction(i) == dna::REV ? this->lef_bar_major_collision_pblock
-                                                           : this->lef_bar_minor_collision_pblock;
+    const auto& pblock = barriers.direction(i) == dna::REV ? c().lef_bar_major_collision_pblock
+                                                           : c().lef_bar_minor_collision_pblock;
 
     // Look for the first rev extr. unit that comes after the current barrier
     while (unit_pos <= barriers.pos(i)) {
@@ -229,8 +229,8 @@ process_fwd_unit:
     }
 
     // Probability of block is set based on the extr. barrier blocking direction
-    const auto& pblock = barriers.direction(i) == dna::FWD ? this->lef_bar_major_collision_pblock
-                                                           : this->lef_bar_minor_collision_pblock;
+    const auto& pblock = barriers.direction(i) == dna::FWD ? c().lef_bar_major_collision_pblock
+                                                           : c().lef_bar_minor_collision_pblock;
     // Look for the next fwd unit that comes strictly before the current extr. barrier
     while (unit_pos >= barriers.pos(i)) {
       if (MODLE_UNLIKELY(--j == sentinel_idx)) {

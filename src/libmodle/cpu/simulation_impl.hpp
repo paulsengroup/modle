@@ -24,6 +24,8 @@
 #include "modle/genome.hpp"                             // for GenomicInterval
 
 namespace modle {
+constexpr const Config& Simulation::config() const noexcept { return this->_config; }
+constexpr const Config& Simulation::c() const noexcept { return this->config(); }
 
 template <typename MaskT>
 void Simulation::bind_lefs(const bp_t start_pos, const bp_t end_pos, const absl::Span<Lef> lefs,
@@ -89,8 +91,8 @@ void Simulation::select_lefs_to_bind(const absl::Span<const Lef> lefs,
 }
 
 constexpr bool Simulation::run_lef_lef_collision_trial(random::PRNG_t& rand_eng) const noexcept {
-  return this->probability_of_extrusion_unit_bypass == 0.0 ||
-         random::bernoulli_trial{1.0 - this->probability_of_extrusion_unit_bypass}(rand_eng);
+  return c().probability_of_extrusion_unit_bypass == 0.0 ||
+         random::bernoulli_trial{1.0 - c().probability_of_extrusion_unit_bypass}(rand_eng);
 }
 
 constexpr bool Simulation::run_lef_bar_collision_trial(const double pblock,
