@@ -3,7 +3,7 @@
 # SPDX-License-Identifier: MIT
 
 cmake_minimum_required(VERSION 3.20)
-cmake_policy(VERSION 3.20...3.25)
+cmake_policy(VERSION 3.20...3.26)
 
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake/modules/")
 
@@ -30,8 +30,8 @@ include(FetchContent)
 # cmake-format: off
 FetchContent_Declare(
         _project_options
-        URL ${CMAKE_CURRENT_SOURCE_DIR}/external/project_options-v0.27.2.tar.xz
-        URL_HASH SHA512=be58956b40932a96df4232897df06012423f55d00dfda26e047ff140ef084361b591b675b2372a17dc80ee20f949797f6beb8b351355a1b9d39ec73c06c41cdd
+        URL ${CMAKE_CURRENT_SOURCE_DIR}/external/project_options-v0.28.0.tar.xz
+        URL_HASH SHA512=216d0970ace00e3176788a2b5abb7b92490c005111d26365e7807a5e86c6323e38b33e2e5b01f4ee43438a8f8e96cacf16cedc6f905a7e0ad58752905b260b38
 )
 # cmake-format: on
 
@@ -84,6 +84,7 @@ set(ENABLE_CONAN_DEFAULT OFF)
 set(ENABLE_CPPCHECK_DEFAULT OFF)
 set(ENABLE_DOXYGEN_USER OFF)
 set(ENABLE_DOXYGEN_DEVELOPER ON)
+set(ENABLE_GCC_ANALYZER_DEFAULT OFF)
 set(ENABLE_INTERPROCEDURAL_OPTIMIZATION_DEFAULT ON)
 set(ENABLE_NATIVE_OPTIMIZATION_DEFAULT OFF)
 set(ENABLE_PCH_DEFAULT OFF)
