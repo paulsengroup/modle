@@ -34,6 +34,18 @@ ENV CXX="$CXX_COMPILER"
 # Build MoDLE's deps using Conan
 RUN mkdir -p "$src_dir" "$build_dir"
 
+# On linux/arm64 Conan needs a bit of help to successfully build b2
+RUN if [ $(uname -m) != x86_64 ]; then \
+   printf '[requires]\nb2/4.9.6\n[options]\n' > /tmp/conanfile.txt \
+&& printf '[options]\nb2*:toolset=%s\n' \
+   "$(echo "$C_COMPILER" | grep  -oE '(gcc|clang)')" >> /tmp/conanfile.txt \
+&& cd /tmp \
+&& conan install . \
+    --build='*' \
+    -pr:b="$CONAN_DEFAULT_PROFILE_PATH" \
+    -pr:h="$CONAN_DEFAULT_PROFILE_PATH"; \
+fi
+
 COPY conanfile.txt "$src_dir"
 RUN cd "$build_dir"                                  \
 && conan install "$src_dir/conanfile.txt"            \
@@ -100,7 +112,7 @@ RUN ctest -j "$(nproc)"               \
           --schedule-random           \
           --output-on-failure         \
           --no-tests=error            \
-          --timeout 300               \
+          --timeout 900               \
 && rm -rf "$src_dir/test/Testing"
 
 ARG FINAL_BASE_IMAGE
@@ -119,7 +131,8 @@ RUN apt-get update \
                    python3-pip                   \
                    xz-utils
 
-RUN pip3 install 'cooler>=0.9.1' 'pyBigWig>=0.3.22'
+RUN pip3 install pip setuptools wheel --upgrade \
+&& pip3 install 'cooler>=0.9.1' 'pyBigWig>=0.3.22'
 
 COPY --from=unit-testing "$staging_dir" "$staging_dir"
 COPY test/data/modle_test_data.tar.xz "$src_dir/test/data/"

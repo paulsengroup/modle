@@ -3,9 +3,9 @@
 # SPDX-License-Identifier: MIT
 
 [requires]
-abseil/20230125.2#24e0584aa2ae6d2fb9e9cd0027354ee2
+abseil/20230125.3#5431a4c609f5fb48bb8d8567e953243f
 bitflags/1.5.0#626da9d1913161321841f30caf9b994e
-boost/1.81.0#e20fbb10402c8d7f8a212b9abbb34543
+boost/1.81.0#9bd7ae86a881631b6cc76590621e470b
 bshoshany-thread-pool/3.3.0#22e99aee6babc19e679754d95dad2de4
 bzip2/1.0.8#411fc05e80d47a89045edc1ee6f23c1d
 catch2/3.3.2#be6a2f0225146ba4fd8573ee9013e5ae
