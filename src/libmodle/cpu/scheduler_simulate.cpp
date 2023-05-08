@@ -9,18 +9,18 @@
 #include <spdlog/spdlog.h>  // for info
 #include <xxhash.h>
 
-#include <algorithm>                // for max, copy, min, find_if, generate
-#include <cassert>                  // for assert
-#include <chrono>                   // for microseconds, milliseconds
-#include <cmath>                    // for round
-#include <deque>                    // for deque, operator-, operator!=, _Deque_ite...
-#include <exception>                // for exception_ptr, exception, current_exception
-#include <filesystem>               // for path
-#include <limits>                   // for numeric_limits
-#include <stdexcept>                // for runtime_error
-#include <thread>                   // IWYU pragma: keep for sleep_for
-#include <utility>                  // for pair
-#include <vector>                   // for vector
+#include <algorithm>   // for max, copy, min, find_if, generate
+#include <cassert>     // for assert
+#include <chrono>      // for microseconds, milliseconds
+#include <cmath>       // for round
+#include <deque>       // for deque, operator-, operator!=, _Deque_ite...
+#include <exception>   // for exception_ptr, exception, current_exception
+#include <filesystem>  // for path
+#include <limits>      // for numeric_limits
+#include <stdexcept>   // for runtime_error
+#include <thread>      // IWYU pragma: keep for sleep_for
+#include <utility>     // for pair
+#include <vector>      // for vector
 
 #include "modle/common/common.hpp"  // for u64
 #include "modle/genome.hpp"         // for GenomicInterval, Genome
@@ -132,7 +132,6 @@ void Simulation::run_simulate() {
       const auto npixels = interval.npixels();
       const auto tot_target_contacts =
           static_cast<usize>(std::round(static_cast<double>(npixels) * c().target_contact_density));
-      const auto target_epochs = this->compute_tot_target_epochs(nlefs, npixels);
 
       const auto target_contacts_per_cell =
           (tot_target_contacts + c().num_cells - 1) / c().num_cells;
