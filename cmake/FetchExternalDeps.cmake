@@ -3,6 +3,9 @@
 # SPDX-License-Identifier: MIT
 
 include(FetchContent)
+if(CMAKE_VERSION VERSION_GREATER_EQUAL "3.24.0")
+  cmake_policy(SET CMP0135 NEW)
+endif()
 
 # cmake-format: off
 FetchContent_Declare(
