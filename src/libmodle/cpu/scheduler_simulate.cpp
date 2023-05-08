@@ -116,7 +116,7 @@ void Simulation::run_simulate() {
         Task t{};
         t.interval = &interval;
         for (usize cellid = 0; cellid < c().num_cells; ++cellid) {
-          while (!this->_ctx.try_enqueue<Task::Status::COMPLETED>(Task{t}, ptok_finished)) {
+          while (!this->_ctx.try_enqueue_task<Task::Status::COMPLETED>(Task{t}, ptok_finished)) {
             this->_ctx.check_exceptions();
             sleep_time = std::min(max_sleep_time, sleep_time * 2);
             std::this_thread::sleep_for(sleep_time);
@@ -140,21 +140,21 @@ void Simulation::run_simulate() {
       usize tot_target_contacts_rolling_count = 0;
       for (usize cellid = 0; cellid < c().num_cells; ++cellid) {
         // This is needed to not overshoot the target contact density
-        const auto effective_target_contacts = std::min(
+        const auto num_target_contacts = std::min(
             target_contacts_per_cell, tot_target_contacts - tot_target_contacts_rolling_count);
-        tot_target_contacts_rolling_count += effective_target_contacts;
+        tot_target_contacts_rolling_count += num_target_contacts;
 
         Task t{taskid++,
                &interval,
                cellid,
                target_epochs,
-               effective_target_contacts,
+               num_target_contacts,
                nlefs,
                rand_eng,
                Task::Status::PENDING};
         spdlog::debug(FMT_STRING("[main]: submitting task #{} ({} cell #{})..."), t.id, *t.interval,
                       t.cell_id);
-        while (!this->_ctx.try_enqueue<Task::Status::PENDING>(std::move(t), ptok_pending)) {
+        while (!this->_ctx.try_enqueue_task<Task::Status::PENDING>(std::move(t), ptok_pending)) {
           this->_ctx.check_exceptions();
           sleep_time = std::min(max_sleep_time, sleep_time * 2);
           std::this_thread::sleep_for(sleep_time);
@@ -207,7 +207,7 @@ void Simulation::simulate_worker(const u64 tid, const usize task_batch_size) {
 
   try {
     while (!!this->_ctx) {
-      this->_ctx.wait_dequeue<Task::Status::PENDING>(ctok, task_buff);
+      this->_ctx.wait_dequeue_tasks<Task::Status::PENDING>(ctok, task_buff);
       if (task_buff.empty() && !this->_ctx.shutdown_signal_sent()) {
         spdlog::debug(FMT_STRING("[W{}]: no tasks available: sleeping for a bit..."), tid);
         std::this_thread::sleep_for(std::chrono::milliseconds(50));
@@ -259,8 +259,8 @@ void Simulation::simulate_worker(const u64 tid, const usize task_batch_size) {
 
         local_state.status = State::Status::COMPLETED;
         // Update progress for the current chrom
-        while (!this->_ctx.try_enqueue<Task::Status::COMPLETED>(static_cast<Task>(local_state),
-                                                                ptok)) {
+        while (!this->_ctx.try_enqueue_task<Task::Status::COMPLETED>(static_cast<Task>(local_state),
+                                                                     ptok)) {
           if (!this->_ctx) {
             return;
           }

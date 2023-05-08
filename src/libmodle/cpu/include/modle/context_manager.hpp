@@ -46,17 +46,17 @@ class ContextManager {
   [[nodiscard]] bool shutdown_signal_sent() const noexcept;
 
   template <Status s>
-  [[nodiscard]] bool try_enqueue(Task&& t, moodycamel::ProducerToken& ptok);
+  [[nodiscard]] bool try_enqueue_task(Task&& t, moodycamel::ProducerToken& ptok);
   template <Status s>
-  [[nodiscard]] std::optional<Task> try_dequeue(moodycamel::ConsumerToken& ctok);
+  [[nodiscard]] std::optional<Task> try_dequeue_task(moodycamel::ConsumerToken& ctok);
   template <Status s, typename TimeT = std::chrono::milliseconds>
-  [[nodiscard]] std::optional<Task> wait_dequeue(moodycamel::ConsumerToken& ctok,
-                                                 TimeT timeout = std::chrono::milliseconds(100));
+  [[nodiscard]] std::optional<Task> wait_dequeue_task(
+      moodycamel::ConsumerToken& ctok, TimeT timeout = std::chrono::milliseconds(100));
   template <Status s>
-  void try_dequeue(moodycamel::ConsumerToken& ctok, std::vector<Task>& buff);
+  void try_dequeue_tasks(moodycamel::ConsumerToken& ctok, std::vector<Task>& buff);
   template <Status s, typename TimeT = std::chrono::milliseconds>
-  void wait_dequeue(moodycamel::ConsumerToken& ctok, std::vector<Task>& buff,
-                    TimeT timeout = std::chrono::milliseconds(100));
+  void wait_dequeue_tasks(moodycamel::ConsumerToken& ctok, std::vector<Task>& buff,
+                          TimeT timeout = std::chrono::milliseconds(100));
 
   void set_exception_worker(usize idx, std::exception_ptr e);
   void set_exception_io(usize idx, std::exception_ptr e);

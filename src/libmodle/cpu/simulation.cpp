@@ -229,7 +229,7 @@ void Simulation::simulate_io(std::chrono::milliseconds wait_time) {
         continue;
       }
 
-      const auto task_opt = this->_ctx.wait_dequeue<Task::Status::COMPLETED>(ctok, wait_time);
+      const auto task_opt = this->_ctx.wait_dequeue_task<Task::Status::COMPLETED>(ctok, wait_time);
       if (task_opt.has_value()) {
         task = *task_opt;
         // Add interval to task_map if not already present.

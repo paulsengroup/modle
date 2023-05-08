@@ -54,7 +54,7 @@ inline bool ContextManager<Task>::shutdown_signal_sent() const noexcept {
 
 template <typename Task>
 template <typename ContextManager<Task>::Status s>
-inline bool ContextManager<Task>::try_enqueue(Task&& t, moodycamel::ProducerToken& ptok) {
+inline bool ContextManager<Task>::try_enqueue_task(Task&& t, moodycamel::ProducerToken& ptok) {
   static_assert(s == Status::PENDING || s == Status::COMPLETED);
   bool successful{};
   if constexpr (s == Status::PENDING) {
@@ -70,7 +70,7 @@ inline bool ContextManager<Task>::try_enqueue(Task&& t, moodycamel::ProducerToke
 
 template <typename Task>
 template <typename ContextManager<Task>::Status s>
-inline std::optional<Task> ContextManager<Task>::try_dequeue(moodycamel::ConsumerToken& ctok) {
+inline std::optional<Task> ContextManager<Task>::try_dequeue_task(moodycamel::ConsumerToken& ctok) {
   static_assert(s == Status::PENDING || s == Status::COMPLETED);
   Task t;  // NOLINT
   const auto successful = [&]() {
@@ -90,8 +90,8 @@ inline std::optional<Task> ContextManager<Task>::try_dequeue(moodycamel::Consume
 
 template <typename Task>
 template <typename ContextManager<Task>::Status s, typename TimeT>
-inline std::optional<Task> ContextManager<Task>::wait_dequeue(moodycamel::ConsumerToken& ctok,
-                                                              TimeT timeout) {
+inline std::optional<Task> ContextManager<Task>::wait_dequeue_task(moodycamel::ConsumerToken& ctok,
+                                                                   TimeT timeout) {
   static_assert(s == Status::PENDING || s == Status::COMPLETED);
   Task t;  // NOLINT
   const auto successful = [&]() {
@@ -111,8 +111,8 @@ inline std::optional<Task> ContextManager<Task>::wait_dequeue(moodycamel::Consum
 
 template <typename Task>
 template <typename ContextManager<Task>::Status s>
-inline void ContextManager<Task>::try_dequeue(moodycamel::ConsumerToken& ctok,
-                                              std::vector<Task>& buff) {
+inline void ContextManager<Task>::try_dequeue_tasks(moodycamel::ConsumerToken& ctok,
+                                                    std::vector<Task>& buff) {
   static_assert(s == Status::PENDING || s == Status::COMPLETED);
   assert(buff.capacity() != 0);
   buff.clear();
@@ -132,8 +132,8 @@ inline void ContextManager<Task>::try_dequeue(moodycamel::ConsumerToken& ctok,
 
 template <typename Task>
 template <typename ContextManager<Task>::Status s, typename TimeT>
-inline void ContextManager<Task>::wait_dequeue(moodycamel::ConsumerToken& ctok,
-                                               std::vector<Task>& buff, TimeT timeout) {
+inline void ContextManager<Task>::wait_dequeue_tasks(moodycamel::ConsumerToken& ctok,
+                                                     std::vector<Task>& buff, TimeT timeout) {
   static_assert(s == Status::PENDING || s == Status::COMPLETED);
   assert(buff.capacity() != 0);
   buff.clear();
