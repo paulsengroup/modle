@@ -160,7 +160,6 @@ void Simulation::run_simulate() {
       const auto npixels = chrom.npixels(this->diagonal_width, this->bin_size);
       const auto tot_target_contacts = static_cast<usize>(
           std::round(static_cast<double>(npixels) * this->target_contact_density));
-      const auto target_epochs = this->compute_tot_target_epochs(nlefs, npixels);
 
       const auto target_contacts_per_cell =
           (tot_target_contacts + this->num_cells - 1) / this->num_cells;
@@ -179,7 +178,7 @@ void Simulation::run_simulate() {
           return Task{taskid++,
                       &chrom,
                       cellid++,
-                      target_epochs,
+                      this->target_simulation_epochs,
                       effective_target_contacts,
                       nlefs,
                       chrom.barriers().data()};
