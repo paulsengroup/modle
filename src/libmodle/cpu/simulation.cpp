@@ -122,6 +122,19 @@ usize Simulation::simulated_size() const { return this->_genome.simulated_size()
                                    assembly_name, config::version::str_long(), metadata);
 }
 
+[[nodiscard]] static io::bigwig::Writer init_bigwig_writer(const std::filesystem::path& path,
+                                                           const Genome& genome) {
+  auto bwf = io::bigwig::Writer(path.string());
+  std::vector<std::pair<std::string, u32>> chroms(genome.num_chromosomes());
+  std::transform(genome.chromosomes().begin(), genome.chromosomes().end(), chroms.begin(),
+                 [](const auto& chrom_ptr) {
+                   return std::make_pair(chrom_ptr->name(), static_cast<u32>(chrom_ptr->size()));
+                 });
+  bwf.write_chromosomes(chroms);
+
+  return bwf;
+}
+
 static void write_contact_matrix_to_cooler(coolerpp::File& cf, const GenomicInterval& interval) {
   if (!cf) {
     return;
@@ -180,27 +193,16 @@ static void write_lef_occupancy_to_bwig(io::bigwig::Writer& bw, const GenomicInt
   }
 }
 
-static std::pair<coolerpp::File, io::bigwig::Writer> init_output_file_writers(const Genome& genome,
-                                                                              const Config& c) {
+[[nodiscard]] static std::pair<coolerpp::File, io::bigwig::Writer> init_output_file_writers(
+    const Genome& genome, const Config& c) {
   if (c.skip_output) {
-    return std::make_pair(coolerpp::File{}, io::bigwig::Writer{});
+    return {};
   }
 
-  auto cf_ = init_cooler_file(c.path_to_output_file_cool, false, genome.chromosomes(), c.bin_size,
-                              c.assembly_name, c.args_json);
-  if (!c.track_1d_lef_position) {
-    return std::make_pair(std::move(cf_), io::bigwig::Writer{});
-  }
-
-  io::bigwig::Writer bw_(c.path_to_lef_1d_occupancy_bw_file.string());
-  std::vector<std::pair<std::string, u32>> chroms(genome.num_chromosomes());
-  std::transform(genome.chromosomes().begin(), genome.chromosomes().end(), chroms.begin(),
-                 [](const auto& chrom_ptr) {
-                   return std::make_pair(chrom_ptr->name(), static_cast<u32>(chrom_ptr->size()));
-                 });
-  bw_.write_chromosomes(chroms);
-
-  return std::make_pair(std::move(cf_), std::move(bw_));
+  return {init_cooler_file(c.path_to_output_file_cool, false, genome.chromosomes(), c.bin_size,
+                           c.assembly_name, c.args_json),
+          c.track_1d_lef_position ? init_bigwig_writer(c.path_to_lef_1d_occupancy_bw_file, genome)
+                                  : io::bigwig::Writer{}};
 }
 
 void Simulation::simulate_io(std::chrono::milliseconds wait_time) {
