@@ -165,6 +165,7 @@ void try_log_fatal_error(fmt::format_string<Args...> fmt, Args&&... args) {
   if (logger_ready) {
     assert(spdlog::default_logger());
     spdlog::error(fmt, std::forward<Args>(args)...);
+    spdlog::shutdown();
   } else {
     fmt::print(stderr, fmt, std::forward<Args>(args)...);
   }
@@ -205,5 +206,6 @@ int main(int argc, char** argv) noexcept {
                    "If you see this message, please file an issue on GitHub."));
     return 1;
   }
+  spdlog::shutdown();
   return 0;
 }
