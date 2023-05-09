@@ -27,12 +27,12 @@
 
 namespace modle {
 
-void Simulation::spawn_worker_threads(const usize num_workers, const usize batch_size) {
-  assert(num_workers != 0);
+void Simulation::spawn_worker_threads(const usize batch_size) {
+  assert(this->_ctx.num_worker_threads() != 0);
   assert(batch_size != 0);
-  for (usize i = 0; i < num_workers; ++i) {
+  for (usize tid = 0; tid < this->_ctx.num_worker_threads(); ++tid) {
     this->_ctx.spawn_worker_thread(
-        [this, batch_size, tid = i]() { this->simulate_worker(tid, batch_size); });
+        [this, batch_size, tid]() { this->simulate_worker(tid, batch_size); });
   }
 }
 
@@ -91,8 +91,7 @@ void Simulation::run_simulate() {
 
   try {
     this->spawn_io_threads();
-    this->spawn_worker_threads(
-        std::min(c().nthreads, this->_genome.num_intervals() * c().num_cells), task_batch_size);
+    this->spawn_worker_threads(task_batch_size);
 
     // The remaining code submits simulation tasks to the queue. Then it waits until all the tasks
     // have been completed and contacts have been written to disk
@@ -116,7 +115,7 @@ void Simulation::run_simulate() {
         Task t{};
         t.interval = &interval;
         for (usize cellid = 0; cellid < c().num_cells; ++cellid) {
-          while (!this->_ctx.try_enqueue_task<Task::Status::COMPLETED>(Task{t}, ptok_finished)) {
+          while (!this->_ctx.try_enqueue_task<Task::Status::COMPLETED>(t, ptok_finished)) {
             this->_ctx.check_exceptions();
             sleep_time = std::min(max_sleep_time, sleep_time * 2);
             std::this_thread::sleep_for(sleep_time);
@@ -153,7 +152,8 @@ void Simulation::run_simulate() {
                Task::Status::PENDING};
         spdlog::debug(FMT_STRING("[main]: submitting task #{} ({} cell #{})..."), t.id, *t.interval,
                       t.cell_id);
-        while (!this->_ctx.try_enqueue_task<Task::Status::PENDING>(std::move(t), ptok_pending)) {
+
+        while (!this->_ctx.try_enqueue_task<Task::Status::PENDING>(t, ptok_pending)) {
           this->_ctx.check_exceptions();
           sleep_time = std::min(max_sleep_time, sleep_time * 2);
           std::this_thread::sleep_for(sleep_time);
@@ -163,12 +163,12 @@ void Simulation::run_simulate() {
     }
 
     this->_ctx.shutdown();
-    assert(this->_ctx.num_submitted() == this->_ctx.num_completed());
-    assert(!this->_ctx.exception_thrown());
+    assert(this->_ctx.num_tasks_submitted() == this->_ctx.num_tasks_completed());
+    assert(!!this->_ctx);
   } catch (...) {
     this->_ctx.set_exception_main(std::current_exception());
     this->_ctx.check_exceptions();
-    throw;  // should not be necessary, but better safe than sorry
+    throw;
   }
 }
 
@@ -242,7 +242,7 @@ void Simulation::simulate_worker(const u64 tid, const usize task_batch_size) {
           spdlog::debug(FMT_STRING("[W{}]: begin processing task {} ({} cell #{}, {})..."), tid,
                         task.id, *task.interval, task.cell_id, format_rand_eng(task.rand_eng));
           local_state.model_state_logger = init_local_model_state_logger(c(), local_state.id);
-          Simulation::simulate_one_cell(tid, local_state);
+          this->simulate_one_cell(tid, local_state);
           if (local_state.model_state_logger) {
             const auto path = local_state.model_state_logger->path();
             local_state.model_state_logger = nullptr;  // Flush data to disk
@@ -256,10 +256,10 @@ void Simulation::simulate_worker(const u64 tid, const usize task_batch_size) {
               local_state.num_burnin_epochs);
         }
 
-        local_state.status = State::Status::COMPLETED;
+        local_state.status = Task::Status::COMPLETED;
         // Update progress for the current chrom
-        while (!this->_ctx.try_enqueue_task<Task::Status::COMPLETED>(static_cast<Task>(local_state),
-                                                                     ptok)) {
+        while (!this->_ctx.try_enqueue_task<Task::Status::COMPLETED>(
+            static_cast<const Task&>(local_state), ptok)) {
           if (!this->_ctx) {
             return;
           }
@@ -267,12 +267,12 @@ void Simulation::simulate_worker(const u64 tid, const usize task_batch_size) {
       }
     }
   } catch (const std::exception& e) {
-    const auto excp = std::runtime_error(
+    this->_ctx.throw_exception(std::runtime_error(
         fmt::format(FMT_STRING("Exception raised in worker thread {}:\n   {}\n   {}"), tid,
-                    local_state, e.what()));
-    this->_ctx.set_exception_worker(tid, std::make_exception_ptr(excp));
+                    local_state, e.what())));
   } catch (...) {
-    this->_ctx.set_exception_worker(tid, std::current_exception());
+    this->_ctx.throw_exception(std::runtime_error(
+        fmt::format(FMT_STRING("Unhandled exception raised in worker thread {}!"), tid)));
   }
 }
 

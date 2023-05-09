@@ -140,7 +140,7 @@ class Simulation {
   [[nodiscard]] constexpr const Config& config() const noexcept;
   [[nodiscard]] constexpr const Config& c() const noexcept;
 
-  void spawn_worker_threads(usize num_workers, usize batch_size);
+  void spawn_worker_threads(usize batch_size);
   void spawn_io_threads();
   void run_simulate();
 
@@ -394,6 +394,9 @@ class Simulation {
   [[nodiscard]] constexpr bool run_lef_lef_collision_trial(random::PRNG_t& rand_eng) const noexcept;
   [[nodiscard]] constexpr bool run_lef_bar_collision_trial(double pblock,
                                                            random::PRNG_t& rand_eng) const noexcept;
+
+  [[nodiscard]] static usize compute_num_worker_threads(usize num_threads, usize num_intervals,
+                                                        usize num_cells) noexcept;
 
 #ifdef MODLE_ENABLE_TESTING
  public:

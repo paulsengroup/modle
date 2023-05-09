@@ -11,6 +11,7 @@
 #include <chrono>
 #include <exception>
 #include <filesystem>
+#include <future>
 #include <optional>
 #include <string_view>
 #include <vector>
@@ -32,9 +33,8 @@ class ContextManager {
   std::atomic<usize> _num_in{};
   std::atomic<usize> _num_out{};
 
-  std::vector<std::exception_ptr> _exception_ptrs_io{};
-  std::vector<std::exception_ptr> _exception_ptrs_workers{};
-  std::atomic<bool> _exception_thrown{false};
+  mutable std::vector<std::future<void>> _futures{};
+  mutable std::atomic<bool> _exception_thrown{false};
   std::atomic<bool> _queue_closed{false};
   std::atomic<bool> _shutdown_requested{false};
 
@@ -46,7 +46,7 @@ class ContextManager {
   [[nodiscard]] bool shutdown_signal_sent() const noexcept;
 
   template <Status s>
-  [[nodiscard]] bool try_enqueue_task(Task&& t, moodycamel::ProducerToken& ptok);
+  [[nodiscard]] bool try_enqueue_task(Task t, moodycamel::ProducerToken& ptok);
   template <Status s>
   [[nodiscard]] std::optional<Task> try_dequeue_task(moodycamel::ConsumerToken& ctok);
   template <Status s, typename TimeT = std::chrono::milliseconds>
@@ -58,13 +58,12 @@ class ContextManager {
   void wait_dequeue_tasks(moodycamel::ConsumerToken& ctok, std::vector<Task>& buff,
                           TimeT timeout = std::chrono::milliseconds(100));
 
-  void set_exception_worker(usize idx, std::exception_ptr e);
-  void set_exception_io(usize idx, std::exception_ptr e);
+  template <typename Exception>
+  [[noreturn]] void throw_exception(Exception exception) const;
   void set_exception_main(std::exception_ptr e);
-  [[nodiscard]] bool exception_thrown() const noexcept;
 
-  [[nodiscard]] usize num_submitted() const noexcept;
-  [[nodiscard]] usize num_completed() const noexcept;
+  [[nodiscard]] usize num_tasks_submitted() const noexcept;
+  [[nodiscard]] usize num_tasks_completed() const noexcept;
 
   template <Status s>
   [[nodiscard]] moodycamel::ProducerToken register_producer();
@@ -86,6 +85,8 @@ class ContextManager {
                                  bool remove_file_after_append = false);
 
  private:
+  template <Status s>
+  auto get_queue() noexcept -> QueueT&;
   void close_queue() noexcept;
   [[nodiscard]] bool queue_is_closed() const noexcept;
   [[noreturn]] void rethrow_exceptions() const;

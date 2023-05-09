@@ -95,7 +95,8 @@ Simulation::Simulation(Config config_, bool import_intervals)
                            c().barrier_occupied_stp, c().barrier_not_occupied_stp,
                            c().interpret_bed_name_field_as_barrier_not_occupied_stp)
                   : Genome{}),
-      _ctx(c().nthreads + 1) {
+      _ctx(Simulation::compute_num_worker_threads(c().nthreads, this->_genome.num_intervals(),
+                                                  c().num_cells)) {
   if (c().override_extrusion_barrier_occupancy) {
     // Override barrier occupancies read from BED file
     override_extrusion_barrier_occupancy(this->_genome, c().barrier_occupied_stp,
@@ -212,20 +213,22 @@ struct CoolerBigwigPair {
 }
 
 void Simulation::simulate_io(std::chrono::milliseconds wait_time) {
+  spdlog::info(FMT_STRING("Spawning IO thread..."));
   assert(!std::filesystem::exists(c().path_to_output_file_cool));
-  assert(!std::filesystem::exists(c().path_to_lef_1d_occupancy_bw_file));
+  if (c().track_1d_lef_position) {
+    assert(!std::filesystem::exists(c().path_to_lef_1d_occupancy_bw_file));
+  }
 
-  auto [cf, bw] = init_output_file_writers(this->_genome, c());
-  auto current_interval = this->_genome.begin();
-  auto last_interval = this->_genome.end();
-
-  auto ctok = this->_ctx.register_consumer<Task::Status::COMPLETED>();
-
-  absl::btree_map<GenomicInterval*, usize> task_map{};
-  std::vector<float> bw_buff{};
   Task task{};
 
   try {
+    auto [cf, bw] = init_output_file_writers(this->_genome, c());
+    auto current_interval = this->_genome.begin();
+    auto last_interval = this->_genome.end();
+
+    auto ctok = this->_ctx.register_consumer<Task::Status::COMPLETED>();
+    absl::btree_map<GenomicInterval*, usize> task_map{};
+    std::vector<float> bw_buff{};
     while (!!this->_ctx && current_interval != last_interval) {
       if (auto it = task_map.find(&(*current_interval)); it != task_map.end() && it->second == 0) {
         // All tasks for the current interval successfully completed!
@@ -246,22 +249,20 @@ void Simulation::simulate_io(std::chrono::milliseconds wait_time) {
         --it->second;
       }
     }
+    assert(this->_ctx.num_tasks_submitted() == this->_ctx.num_tasks_completed());
   } catch (const std::exception& e) {
-    std::exception_ptr except_ptr{};
     if (task.interval) {
-      except_ptr = std::make_exception_ptr(std::runtime_error(fmt::format(
-          FMT_STRING("exception encountered while writing interactions for {} to file \"{}\": {}"),
-          *task.interval, cf.uri(), e.what())));
-    } else {
-      except_ptr = std::make_exception_ptr(std::runtime_error(fmt::format(
-          FMT_STRING("exception encountered while writing interactions to file \"{}\": {}"),
-          cf.uri(), e.what())));
+      this->_ctx.throw_exception(std::runtime_error(fmt::format(
+          FMT_STRING("exception encountered while writing interactions for {} to file {}: {}"),
+          *task.interval, c().path_to_output_file_cool, e.what())));
     }
-    this->_ctx.set_exception_io(0, except_ptr);
+    this->_ctx.throw_exception(std::runtime_error(
+        fmt::format(FMT_STRING("exception encountered while writing interactions to file {}: {}"),
+                    c().path_to_output_file_cool, e.what())));
   } catch (...) {
-    this->_ctx.set_exception_io(0, std::make_exception_ptr(std::runtime_error(
-                                       "unhandled exception caught! This should never "
-                                       "happen! Please file an issue on GitHub.")));
+    this->_ctx.throw_exception(
+        std::runtime_error("unhandled exception caught in IO thread! This should never "
+                           "happen! Please file an issue on GitHub."));
   }
 }
 
@@ -922,12 +923,12 @@ void Simulation::simulate_one_cell([[maybe_unused]] u64 tid, State& s) const {
     auto stop_condition = [this, &s]() {
       if (c().target_contact_density >= 0) {
         assert(s.num_target_contacts != 0);
-        return s.num_contacts < s.num_target_contacts;
+        return s.num_contacts >= s.num_target_contacts;
       }
-      return s.epoch - s.num_burnin_epochs < s.num_target_epochs;
+      return s.epoch - s.num_burnin_epochs >= s.num_target_epochs;
     };
 
-    for (; stop_condition(); ++s.epoch) {
+    for (; this->_ctx && !stop_condition(); ++s.epoch) {
       if (!s.burnin_completed) {
         this->Simulation::run_burnin(s, lef_binding_rate_burnin);
       }
@@ -1090,5 +1091,10 @@ void Simulation::print_status_update(const Task& t) const noexcept {
                           "LEFs and {} barriers (~{} epochs per cell)..."),
                *t.interval, tot_target_epochs, c().num_cells, t.num_lefs,
                t.interval->barriers().size(), tot_target_epochs / c().num_cells);
+}
+
+usize Simulation::compute_num_worker_threads(usize num_threads, usize num_intervals,
+                                             usize num_cells) noexcept {
+  return std::min(num_threads, num_intervals * num_cells);
 }
 }  // namespace modle
