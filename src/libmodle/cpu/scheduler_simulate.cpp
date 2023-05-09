@@ -193,18 +193,17 @@ static std::string format_rand_eng(const random::PRNG_t& rand_eng) {
 
 void Simulation::simulate_worker(const u64 tid, const usize task_batch_size) {
   spdlog::info(FMT_STRING("Spawning simulation thread {}..."), tid);
-
-  auto ctok = this->_ctx.register_consumer<Task::Status::PENDING>();
-  auto ptok = this->_ctx.register_producer<Task::Status::COMPLETED>();
-  std::vector<Task> task_buff(task_batch_size);  // Tasks are dequeued in batch.
-  // This is to reduce contention when accessing the queue
-
   // This state object owns all the buffers and PRNG + seed required in order to simulate loop
   // extrusion for a single cell. Buffers are allocated once and resized, cleared and reused
   // throughout the simulation
-  Simulation::State local_state;
+  Simulation::State local_state{};
 
   try {
+    auto ctok = this->_ctx.register_consumer<Task::Status::PENDING>();
+    auto ptok = this->_ctx.register_producer<Task::Status::COMPLETED>();
+    std::vector<Task> task_buff(task_batch_size);  // Tasks are dequeued in batch.
+    // This is to reduce contention when accessing the queue
+
     while (!!this->_ctx) {
       this->_ctx.wait_dequeue_tasks<Task::Status::PENDING>(ctok, task_buff);
       if (task_buff.empty() && !this->_ctx.shutdown_signal_sent()) {
