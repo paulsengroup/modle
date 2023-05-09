@@ -193,8 +193,14 @@ static void write_lef_occupancy_to_bwig(io::bigwig::Writer& bw, const GenomicInt
   }
 }
 
-[[nodiscard]] static std::pair<coolerpp::File, io::bigwig::Writer> init_output_file_writers(
-    const Genome& genome, const Config& c) {
+// GCC8 doesn't compile init_output_file_writers if we use std::pair<> as return type
+struct CoolerBigwigPair {
+  coolerpp::File clr{};
+  io::bigwig::Writer bw{};
+};
+
+[[nodiscard]] static CoolerBigwigPair init_output_file_writers(const Genome& genome,
+                                                               const Config& c) {
   if (c.skip_output) {
     return {};
   }

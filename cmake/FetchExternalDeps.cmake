@@ -11,7 +11,7 @@ endif()
 FetchContent_Declare(
         coolerpp
         GIT_REPOSITORY https://github.com/robomics/coolerpp.git
-        GIT_TAG 2e49aba0ef56184bc71879c551f71b8b1e45061b
+        GIT_TAG eef184a7d56a12b0691e8d9cb0437746e7645682
 )
 # cmake-format: on
 
