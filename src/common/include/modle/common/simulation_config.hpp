@@ -37,7 +37,7 @@ struct Config {
   END_BITFLAGS(ContactSamplingStrategy)
 
   std::filesystem::path path_to_chrom_sizes;
-  std::filesystem::path path_to_chrom_subranges;
+  std::filesystem::path path_to_genomic_intervals;
   std::filesystem::path path_to_output_prefix;
   std::filesystem::path path_to_output_file_cool{};
   std::filesystem::path path_to_config_file{};
@@ -46,7 +46,7 @@ struct Config {
   std::filesystem::path path_to_lef_1d_occupancy_bw_file;
   std::filesystem::path path_to_extr_barriers;
   bool force{false};
-  bool quiet{false};
+  u8 verbosity{2};  // SPDLOG_LEVEL_INFO
   bool write_header{true};
   bool skip_output{false};
   bool log_model_internal_state{false};
