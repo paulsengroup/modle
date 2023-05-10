@@ -652,10 +652,9 @@ std::string Cli::detect_path_collisions(modle::Config& c) const {
                 : "You should specify a different output path, or manually remove the "
                   "existing directory");
       }
-      return fmt::format(
-          FMT_STRING("Refusing to continue because output file {} already exist.\n"
-                     "Pass --force to overwrite.\n"),
-          path);
+      return fmt::format(FMT_STRING("Refusing to continue because output file {} already exist.\n"
+                                    "Pass --force to overwrite.\n"),
+                         path);
     }
     if (std::filesystem::is_directory(path) && !std::filesystem::is_empty(path)) {
       return fmt::format(
@@ -834,7 +833,7 @@ static void cli_update_paths(Cli::subcommand subcommand, Config& c) {
   c.path_to_config_file = c.path_to_output_prefix;
   if (subcommand == Cli::subcommand::simulate) {
     c.path_to_model_state_log_file = c.path_to_output_prefix;
-    c.path_to_model_state_log_file += "_internal_state.log.gz";
+    c.path_to_model_state_log_file += "_internal_state.log.zst";
   }
 
   if (c.track_1d_lef_position) {

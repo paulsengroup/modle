@@ -75,6 +75,7 @@ data_dir="$(readlink_py "$(dirname "$0")/../data/integration_tests")"
 script_dir="$(readlink_py "$(dirname "$0")")"
 
 chrom_sizes="$data_dir/grch38.chrom.sizes"
+regions_bed="$data_dir/grch38_regions_of_interest.bed"
 extr_barriers="$data_dir/grch38_h1_extrusion_barriers.bed.xz"
 ref_cooler="$data_dir/reference_001.cool"
 ref_bw="$data_dir/reference_001.bw"
@@ -104,31 +105,16 @@ if [ $status -ne 0 ]; then
   exit $status
 fi
 
-if ! check_files_exist "$chrom_sizes" "$extr_barriers" "$ref_cooler" "$ref_bw"; then
+if ! check_files_exist "$chrom_sizes" "$extr_barriers" "$ref_cooler" "$ref_bw" "$regions_bed"; then
   exit 1
 fi
 
-if [ ! -f "$chrom_sizes" ]; then
-  2>&1 echo "Unable to find test file \"$chrom_sizes\""
-  status=1
-fi
-
-if [ ! -f "$extr_barriers" ]; then
-  2>&1 echo "Unable to find test file \"$extr_barriers\""
-  status=1
-fi
-
-if [ ! "$status" -eq 0 ]; then
-  exit 1
-fi
-
-outdir="$(mktemp -d -t modle-XXXXXXXXXX)"
+outdir="$(mktemp -d -t modle-ci-XXXXXXXXXX)"
 trap 'rm -rf -- "$outdir"' EXIT
 
-# Only include chr17 and chr19
-chroms='^chr1[79]'
-"$modle_bin" sim -c <(grep "$chroms" "$chrom_sizes") \
-                 -b <(xz -dc "$extr_barriers" | grep "$chroms") \
+"$modle_bin" sim -c "$chrom_sizes" \
+                 --chrom-subranges="$regions_bed" \
+                 -b "$extr_barriers" \
                  -o "$outdir/out" \
                  -r 20kb \
                  --target-contact-density 20 \

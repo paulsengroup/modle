@@ -6,7 +6,8 @@
 
 #include <absl/container/btree_set.h>  // for btree_set, btree_set_container<>::const_iterator
 #include <absl/types/span.h>           // for Span
-#include <xxhash.h>                    // for XXH3_state_t, XXH_INLINE_XXH3_state_t
+#include <fmt/format.h>
+#include <xxhash.h>
 
 #include <filesystem>    // for path
 #include <iterator>      // for iterator_traits
@@ -29,161 +30,263 @@ namespace modle {
 
 struct ExtrusionBarrier;
 
+namespace internal {
+class ContactMatrixLazy {
+ public:
+  using ContactMatrix = ContactMatrixDense<contacts_t>;
+
+ private:
+  mutable ContactMatrix _matrix{};
+  mutable std::once_flag _alloc_flag{};
+  std::once_flag _dealloc_flag{};
+  u64 _nrows{0};
+  u64 _ncols{0};
+
+ public:
+  ContactMatrixLazy() = default;
+  ContactMatrixLazy(bp_t length, bp_t diagonal_width, bp_t bin_size) noexcept;
+  explicit ContactMatrixLazy(ContactMatrix matrix) noexcept;
+  ContactMatrixLazy(const ContactMatrixLazy& other) = delete;
+  ContactMatrixLazy(ContactMatrixLazy&& other) noexcept;
+
+  ~ContactMatrixLazy() = default;
+
+  ContactMatrixLazy& operator=(const ContactMatrixLazy& other) = delete;
+  ContactMatrixLazy& operator=(ContactMatrixLazy&& other) noexcept;
+
+  [[nodiscard]] auto operator()() const noexcept -> const ContactMatrix&;
+  [[nodiscard]] auto operator()() noexcept -> ContactMatrix&;
+  [[nodiscard]] constexpr explicit operator bool() const noexcept;
+
+  [[nodiscard]] constexpr u64 nrows() const noexcept;
+  [[nodiscard]] constexpr u64 ncols() const noexcept;
+  [[nodiscard]] constexpr u64 npixels() const noexcept;
+
+  void deallocate() noexcept;
+};
+
+class Occupancy1DLazy {
+  mutable std::vector<std::atomic<u64>> _buff{};
+  mutable std::once_flag _alloc_flag{};
+  std::once_flag _dealloc_flag{};
+  usize _size{0};
+
+ public:
+  Occupancy1DLazy() = default;
+  Occupancy1DLazy(bp_t length, bp_t bin_size) noexcept;
+
+  explicit Occupancy1DLazy(std::vector<std::atomic<u64>> buff) noexcept;
+  Occupancy1DLazy(const Occupancy1DLazy& other) = delete;
+  Occupancy1DLazy(Occupancy1DLazy&& other) noexcept;
+
+  ~Occupancy1DLazy() = default;
+
+  Occupancy1DLazy& operator=(const Occupancy1DLazy& other) = delete;
+  Occupancy1DLazy& operator=(Occupancy1DLazy&& other) noexcept;
+
+  [[nodiscard]] const std::vector<std::atomic<u64>>& operator()() const noexcept;
+  [[nodiscard]] std::vector<std::atomic<u64>>& operator()() noexcept;
+  [[nodiscard]] explicit operator bool() const noexcept;
+
+  [[nodiscard]] constexpr usize size() const noexcept;
+
+  void deallocate() noexcept;
+};
+}  // namespace internal
+
 class Chromosome {
-  using contact_matrix_t = ContactMatrixDense<contacts_t>;
-  using bed_tree_value_t = bed::BED_tree<>::value_type;
-  friend class Genome;
+  std::string _name{};
+  usize _id{(std::numeric_limits<usize>::max)()};
+  bp_t _size{};
 
  public:
   Chromosome() = default;
-  Chromosome(usize id, std::string_view chrom_name, bp_t chrom_start, bp_t chrom_end,
-             bp_t chrom_size);
+  Chromosome(usize id, std::string name, bp_t size) noexcept;
+  [[nodiscard]] constexpr explicit operator bool() const noexcept;
 
-  Chromosome(usize id, const bed::BED& chrom);
-  Chromosome(usize id, const bed::BED& chrom, const IITree<bp_t, ExtrusionBarrier>& barriers);
-  Chromosome(usize id, const bed::BED& chrom, IITree<bp_t, ExtrusionBarrier>&& barriers);
+  [[nodiscard]] constexpr usize id() const noexcept;
+  [[nodiscard]] std::string_view name() const noexcept;
+  [[nodiscard]] const char* name_cstr() const noexcept;
+  [[nodiscard]] constexpr bp_t size() const noexcept;
 
-  Chromosome(usize id, std::string_view chrom_name, bp_t chrom_start, bp_t chrom_end,
-             bp_t chrom_size, const IITree<bp_t, ExtrusionBarrier>& barriers);
-  Chromosome(usize id, std::string_view chrom_name, bp_t chrom_start, bp_t chrom_end,
-             bp_t chrom_size, IITree<bp_t, ExtrusionBarrier>&& barriers);
+  [[nodiscard]] u64 hash(XXH3_state_t& state) const;
+  [[nodiscard]] u64 hash(XXH3_state_t& state, u64 seed) const;
 
-  ~Chromosome() = default;
+  [[nodiscard]] constexpr bool operator==(const Chromosome& other) const noexcept;
+  [[nodiscard]] constexpr bool operator!=(const Chromosome& other) const noexcept;
+  [[nodiscard]] constexpr bool operator<(const Chromosome& other) const noexcept;
+  [[nodiscard]] constexpr bool operator<=(const Chromosome& other) const noexcept;
+  [[nodiscard]] constexpr bool operator>(const Chromosome& other) const noexcept;
+  [[nodiscard]] constexpr bool operator>=(const Chromosome& other) const noexcept;
+};
 
-  Chromosome(const Chromosome& other);
-  Chromosome(Chromosome&& other) noexcept;
+class GenomicInterval {
+ public:
+  using ContactMatrix = internal::ContactMatrixLazy::ContactMatrix;
+  friend class Genome;
 
-  Chromosome& operator=(const Chromosome& other);
-  Chromosome& operator=(Chromosome&& other) noexcept;
+ private:
+  usize _id{(std::numeric_limits<usize>::max)()};
+  std::shared_ptr<const Chromosome> _chrom{};
+  bp_t _start{};
+  bp_t _end{};
 
-  [[nodiscard]] bool operator==(const Chromosome& other) const noexcept(utils::ndebug_defined());
-  [[nodiscard]] bool operator==(std::string_view other_name) const noexcept;
-  [[nodiscard]] bool operator<(const Chromosome& other) const noexcept(utils::ndebug_defined());
+  std::vector<ExtrusionBarrier> _barriers{};
+
+  internal::ContactMatrixLazy _contacts{};
+  internal::Occupancy1DLazy _lef_1d_occupancy{};
+
+ public:
+  GenomicInterval() = default;
+  GenomicInterval(usize id, const std::shared_ptr<const Chromosome>& chrom,
+                  bp_t contact_matrix_resolution, bp_t diagonal_width);
+  GenomicInterval(usize id, std::shared_ptr<const Chromosome> chrom, bp_t start, bp_t end,
+                  bp_t contact_matrix_resolution, bp_t diagonal_width);
+  template <typename It>
+  GenomicInterval(usize id, const std::shared_ptr<const Chromosome>& chrom,
+                  bp_t contact_matrix_resolution, bp_t diagonal_width, It first_barrier,
+                  It last_barrier);
+  template <typename It>
+  GenomicInterval(usize id, std::shared_ptr<const Chromosome> chrom, bp_t start, bp_t end,
+                  bp_t contact_matrix_resolution, bp_t diagonal_width, It first_barrier,
+                  It last_barrier);
+
+  ~GenomicInterval() = default;
+
+  GenomicInterval(const GenomicInterval& other) = delete;
+  GenomicInterval(GenomicInterval&& other) noexcept = default;
+
+  GenomicInterval& operator=(const GenomicInterval& other) = delete;
+  GenomicInterval& operator=(GenomicInterval&& other) noexcept = default;
+
+  [[nodiscard]] constexpr bool operator==(const GenomicInterval& other) const noexcept;
+  [[nodiscard]] constexpr bool operator!=(const GenomicInterval& other) const noexcept;
+  [[nodiscard]] constexpr bool operator<(const GenomicInterval& other) const noexcept;
+  [[nodiscard]] constexpr bool operator<=(const GenomicInterval& other) const noexcept;
+  [[nodiscard]] constexpr bool operator>(const GenomicInterval& other) const noexcept;
+  [[nodiscard]] constexpr bool operator>=(const GenomicInterval& other) const noexcept;
 
   void add_extrusion_barrier(const bed::BED& record, double default_barrier_stp_active,
                              double default_barrier_stp_inactive);
+  void add_extrusion_barriers(std::vector<ExtrusionBarrier> barriers);
 
-  template <typename Iter,
-            typename = std::enable_if_t<std::is_same_v<
-                std::remove_cv_t<typename std::iterator_traits<Iter>::value_type>, bed::BED>>>
-  inline void add_extrusion_barrier(Iter barriers_begin, Iter barriers_end);
-
-  [[nodiscard]] usize id() const;
-  [[nodiscard]] std::string_view name() const;
-  [[nodiscard]] const char* name_cstr() const;
-  [[nodiscard]] constexpr bp_t start_pos() const;
-  [[nodiscard]] constexpr bp_t end_pos() const;
-  [[nodiscard]] constexpr bp_t size() const;
-  [[nodiscard]] constexpr bp_t simulated_size() const;
-  [[nodiscard]] usize npixels() const;
-  [[nodiscard]] constexpr usize npixels(bp_t diagonal_width, bp_t bin_size) const;
-  [[nodiscard]] usize num_lefs(double nlefs_per_mbp) const;
+  [[nodiscard]] constexpr usize id() const noexcept;
+  [[nodiscard]] u64 hash(XXH3_state_t& state) const;
+  [[nodiscard]] u64 hash(XXH3_state_t& state, u64 seed) const;
+  [[nodiscard]] const Chromosome& chrom() const noexcept;
+  [[nodiscard]] constexpr bp_t start() const noexcept;
+  [[nodiscard]] constexpr bp_t end() const noexcept;
+  [[nodiscard]] constexpr bp_t size() const noexcept;
+  [[nodiscard]] constexpr u64 npixels() const noexcept;
   [[nodiscard]] usize num_barriers() const;
-  [[nodiscard]] const IITree<bp_t, ExtrusionBarrier>& barriers() const;
-  [[nodiscard]] IITree<bp_t, ExtrusionBarrier>& barriers();
-  bool allocate_contact_matrix(bp_t bin_size, bp_t diagonal_width);
-  bool allocate_lef_occupancy_buffer(bp_t bin_size);
-  bool deallocate_contact_matrix();
-  bool deallocate_lef_occupancy_buffer();
-  [[nodiscard]] const contact_matrix_t& contacts() const noexcept;
-  [[nodiscard]] contact_matrix_t& contacts() noexcept;
-  [[nodiscard]] const std::vector<std::atomic<u64>>& lef_1d_occupancy() const noexcept;
-  [[nodiscard]] std::vector<std::atomic<u64>>& lef_1d_occupancy() noexcept;
-  [[nodiscard]] std::shared_ptr<const contact_matrix_t> contacts_ptr() const noexcept;
-  [[nodiscard]] std::shared_ptr<contact_matrix_t> contacts_ptr() noexcept;
-  [[nodiscard]] std::shared_ptr<const std::vector<std::atomic<u64>>> lef_1d_occupancy_ptr()
-      const noexcept;
-  [[nodiscard]] std::shared_ptr<std::vector<std::atomic<u64>>> lef_1d_occupancy_ptr() noexcept;
-  [[nodiscard]] u64 hash(XXH3_state_t* xxh_state, u64 seed, usize cell_id) const;
-  [[nodiscard]] u64 hash(u64 seed, usize cell_id) const;
+  [[nodiscard]] auto barriers() const noexcept -> const std::vector<ExtrusionBarrier>&;
+  [[nodiscard]] auto barriers() noexcept -> std::vector<ExtrusionBarrier>&;
+  [[nodiscard]] auto contacts() const noexcept -> const ContactMatrix&;
+  [[nodiscard]] auto contacts() noexcept -> ContactMatrix&;
+  [[nodiscard]] auto lef_1d_occupancy() const noexcept -> const std::vector<std::atomic<u64>>&;
+  [[nodiscard]] auto lef_1d_occupancy() noexcept -> std::vector<std::atomic<u64>>&;
+  void deallocate() noexcept;
 
   template <typename H>
-  inline friend H AbslHashValue(H h, const Chromosome& c);
-
- private:
-  std::string _name{};
-  bp_t _start{(std::numeric_limits<bp_t>::max)()};
-  bp_t _end{(std::numeric_limits<bp_t>::max)()};
-  bp_t _size{(std::numeric_limits<bp_t>::max)()};
-  usize _id{(std::numeric_limits<usize>::max)()};
-  IITree<bp_t, ExtrusionBarrier> _barriers{};
-  // Protect _contacts and _lef_1d_occupancy from concurrent writes and allocations/deallocations
-  std::shared_mutex _buff_mtx{};
-  std::shared_ptr<contact_matrix_t> _contacts{};
-  std::shared_ptr<std::vector<std::atomic<u64>>> _lef_1d_occupancy{};
+  inline friend H AbslHashValue(H h, const GenomicInterval& c);
 };
 
 class Genome {
+  std::vector<std::shared_ptr<const Chromosome>> _chroms{};
+  absl::btree_set<GenomicInterval> _intervals{};
+
+  usize _size{};
+  usize _simulated_size{};
+  usize _num_barriers{};
+
  public:
   Genome() = default;
   Genome(const std::filesystem::path& path_to_chrom_sizes,
          const std::filesystem::path& path_to_extr_barriers,
-         const std::filesystem::path& path_to_chrom_subranges, double default_barrier_pbb,
-         double default_barrier_puu, bool interpret_name_field_as_puu);
+         const std::filesystem::path& path_to_genomic_intervals, bp_t contact_matrix_resolution,
+         bp_t contact_matrix_diagonal_witdh, double default_barrier_pbb, double default_barrier_puu,
+         bool interpret_name_field_as_puu);
 
-  using iterator = absl::btree_set<Chromosome>::iterator;
-  using const_iterator = absl::btree_set<Chromosome>::const_iterator;
+  using iterator = decltype(_intervals)::iterator;
+  using const_iterator = decltype(_intervals)::const_iterator;
 
-  [[nodiscard]] iterator begin();
-  [[nodiscard]] iterator end();
+  [[nodiscard]] auto begin() -> iterator;
+  [[nodiscard]] auto end() -> iterator;
 
-  [[nodiscard]] const_iterator begin() const;
-  [[nodiscard]] const_iterator end() const;
+  [[nodiscard]] auto begin() const -> const_iterator;
+  [[nodiscard]] auto end() const -> const_iterator;
 
-  [[nodiscard]] const_iterator cbegin() const;
-  [[nodiscard]] const_iterator cend() const;
+  [[nodiscard]] auto cbegin() const -> const_iterator;
+  [[nodiscard]] auto cend() const -> const_iterator;
 
-  // NOTE: The find and contains method taking a string_view as input parameter are performing a
-  // linear search through the genome
-  [[nodiscard]] iterator find(const Chromosome& other_chrom);
-  [[nodiscard]] const_iterator find(const Chromosome& other_chrom) const;
-  [[nodiscard]] iterator find(std::string_view other_chrom_name);
-  [[nodiscard]] const_iterator find(std::string_view other_chrom_name) const;
+  // NOTE: The find and contains overloads taking Chromosome or string_view as query can be quite
+  // slow, as they are performing a linear search through the genome
+  [[nodiscard]] auto find(const GenomicInterval& query) -> iterator;
+  [[nodiscard]] auto find(const GenomicInterval& query) const -> const_iterator;
+  [[nodiscard]] auto find(usize query) -> iterator;
+  [[nodiscard]] auto find(usize query) const -> const_iterator;
+  [[nodiscard]] auto find(const Chromosome& query) -> iterator;
+  [[nodiscard]] auto find(const Chromosome& query) const -> const_iterator;
+  [[nodiscard]] auto find(std::string_view query) -> iterator;
+  [[nodiscard]] auto find(std::string_view query) const -> const_iterator;
 
-  [[nodiscard]] bool contains(const Chromosome& other_chromosome) const;
-  [[nodiscard]] bool contains(std::string_view other_chrom_name) const;
+  [[nodiscard]] bool contains(const GenomicInterval& query) const;
+  [[nodiscard]] bool contains(usize query) const;
+  [[nodiscard]] bool contains(const Chromosome& query) const;
+  [[nodiscard]] bool contains(std::string_view query) const;
 
-  [[nodiscard]] usize size() const;
-  [[nodiscard]] usize number_of_chromosomes() const;
-  [[nodiscard]] usize simulated_size() const;
+  constexpr const std::vector<std::shared_ptr<const Chromosome>>& chromosomes() const noexcept;
 
-  [[nodiscard]] const Chromosome& chromosome_with_longest_name() const;
-  [[nodiscard]] const Chromosome& longest_chromosome() const;
-  [[nodiscard]] const Chromosome& chromosome_with_max_nbarriers() const;
+  [[nodiscard]] usize num_intervals() const noexcept;
+  [[nodiscard]] constexpr usize size() const noexcept;
+  [[nodiscard]] constexpr usize simulated_size() const noexcept;
+  [[nodiscard]] usize num_chromosomes() const noexcept;
+  [[nodiscard]] constexpr usize num_barriers() const noexcept;
+
+  [[nodiscard]] const Chromosome& chromosome_with_longest_name() const noexcept;
+  [[nodiscard]] const Chromosome& longest_chromosome() const noexcept;
+  [[nodiscard]] const GenomicInterval& longest_interval() const noexcept;
+  [[nodiscard]] const GenomicInterval& interval_with_most_barriers() const noexcept;
   [[nodiscard]] usize max_target_contacts(usize bin_size, usize diagonal_width,
                                           double target_contact_density,
                                           usize simulation_iterations,
                                           double lef_fraction_contact_sampling,
                                           double nlefs_per_mbp, usize ncells) const;
 
-  /// A simple wrapper function that imports chromosomes and extrusion barriers that comprise the
-  /// genome that is being simulated.
-  [[nodiscard]] static absl::btree_set<Chromosome> instantiate_genome(
-      const std::filesystem::path& path_to_chrom_sizes,
-      const std::filesystem::path& path_to_extr_barriers,
-      const std::filesystem::path& path_to_chrom_subranges, double default_barrier_pbb,
-      double default_barrier_puu, bool interpret_name_field_as_puu);
-
  private:
-  absl::btree_set<Chromosome> _chromosomes{};
-
   /// Import chromosomes from a chrom.sizes file
+  [[nodiscard]] static std::vector<std::shared_ptr<const Chromosome>> import_chromosomes(
+      const std::filesystem::path& path_to_chrom_sizes);
 
-  //! When \p path_to_extr_barriers is non-empty, import the intersection of the chromosomes present
-  //! in the chrom.sizes and BED files. The optional BED file can be used to instruct MoDLE to
-  //! simulate loop extrusion on a sub-region of a chromosome from the chrom.sizes file.
-  [[nodiscard]] static absl::btree_set<Chromosome> import_chromosomes(
-      const std::filesystem::path& path_to_chrom_sizes,
-      const std::filesystem::path& path_to_chrom_subranges);
+  /// Import genomic intervals from a BED file. If path to BED file is empty, assume entire
+  /// chromosomes are to be simulated.
+  absl::btree_set<GenomicInterval> import_genomic_intervals(
+      const std::filesystem::path& path_to_bed,
+      const std::vector<std::shared_ptr<const Chromosome>>& chromosomes,
+      bp_t contact_matrix_resolution, bp_t diagonal_width);
 
-  /// Parse a BED file containing the genomic coordinates of extrusion barriers and add them to the
-  /// Genome
-  static usize import_barriers(absl::btree_set<Chromosome>& chromosomes,
-                               const std::filesystem::path& path_to_extr_barriers,
-                               double default_barrier_pbb, double default_barrier_puu,
-                               bool interpret_name_field_as_puu);
+  /// Parse a BED file containing the genomic coordinates of extrusion barriers and add them to
+  /// the Genome
+  static usize map_barriers_to_intervals(absl::btree_set<GenomicInterval>& intervals,
+                                         const bed::BED_tree<>& barriers_bed,
+                                         double default_barrier_pbb, double default_barrier_puu,
+                                         bool interpret_name_field_as_puu);
 };
 
 }  // namespace modle
+
+template <>
+struct fmt::formatter<modle::Chromosome> {
+  constexpr auto parse(format_parse_context& ctx) -> decltype(ctx.begin());
+  template <typename FormatContext>
+  auto format(const modle::Chromosome& chrom, FormatContext& ctx) const -> decltype(ctx.out());
+};
+
+template <>
+struct fmt::formatter<modle::GenomicInterval> {
+  constexpr auto parse(format_parse_context& ctx) -> decltype(ctx.begin());
+  template <typename FormatContext>
+  auto format(const modle::GenomicInterval& gi, FormatContext& ctx) const -> decltype(ctx.out());
+};
 
 #include "../../genome_impl.hpp"  // IWYU pragma: export

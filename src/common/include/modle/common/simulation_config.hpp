@@ -77,7 +77,7 @@ struct Config {
   double prob_of_lef_release_burnin{};
   bp_t avg_lef_processivity{300'000};
   bp_t contact_sampling_interval{50'000};
-  bool track_1d_lef_position{false};
+  bool track_1d_lef_position{true};
 
   // Extrusion barrier params
   double extrusion_barrier_occupancy{0.825};
@@ -115,7 +115,8 @@ struct Config {
 
   static constexpr std::string_view model_internal_state_log_header =
       "task_id\tepoch\tcell_id\t"
-      "chrom\tburnin\tbarrier_occupancy\t"
+      "chrom\tstart\tend\t"
+      "burnin\tbarrier_occupancy\t"
       "num_active_lefs\tnum_stalls_rev\tnum_stalls_fwd\t"
       "num_stalls_both\tnum_lef_bar_collisions\tnum_primary_lef_lef_collisions\t"
       "num_secondary_lef_lef_collisions\tavg_loop_size\n";

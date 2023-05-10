@@ -19,14 +19,14 @@
 #include "modle/common/simulation_config.hpp"  // for Config
 #include "modle/extrusion_barriers.hpp"        // for ExtrusionBarrier, OCCUPIED, State
 #include "modle/extrusion_factors.hpp"         // for Lef, ExtrusionUnit
-#include "modle/genome.hpp"                    // for Chromosome
+#include "modle/genome.hpp"                    // for GenomicInterval
 #include "modle/simulation.hpp"                // for Simulation
 
 namespace modle::libmodle::test {
 
 // NOLINTNEXTLINE(readability-function-cognitive-complexity)
 TEST_CASE("Bind LEFs 001", "[bind-lefs][simulation][short]") {
-  const auto chrom = init_chromosome("chr1", 1000);
+  const auto chrom = init_interval("chr1", 1000);
   const usize nlefs = 10;
   std::array<Lef, nlefs> lefs;
   std::array<usize, nlefs> rank1;
@@ -55,8 +55,8 @@ TEST_CASE("Bind LEFs 001", "[bind-lefs][simulation][short]") {
     if (mask[i]) {  // NOLINT(readability-implicit-bool-conversion)
       CHECK(lef.is_bound());
       CHECK(lef.rev_unit.pos() == lef.fwd_unit.pos());
-      CHECK(lef.rev_unit.pos() >= chrom.start_pos());
-      CHECK(lef.rev_unit.pos() < chrom.end_pos());
+      CHECK(lef.rev_unit.pos() >= chrom.start());
+      CHECK(lef.rev_unit.pos() < chrom.end());
     } else {
       CHECK(!lef.is_bound());
     }
@@ -65,7 +65,7 @@ TEST_CASE("Bind LEFs 001", "[bind-lefs][simulation][short]") {
 
 // NOLINTNEXTLINE(readability-function-cognitive-complexity)
 TEST_CASE("Bind LEFs 002 - No LEFs to bind", "[bind-lefs][simulation][short]") {
-  const auto chrom = init_chromosome("chr1", 1000);
+  const auto chrom = init_interval("chr1", 1000);
   std::vector<Lef> lefs;
   std::vector<usize> rank1, rank2;
   boost::dynamic_bitset<> mask1;
@@ -108,7 +108,7 @@ TEST_CASE("Bind LEFs 002 - No LEFs to bind", "[bind-lefs][simulation][short]") {
 
 // NOLINTNEXTLINE(readability-function-cognitive-complexity)
 TEST_CASE("Bind LEFs 003 - Empty mask (i.e. bind all LEFs)", "[bind-lefs][simulation][short]") {
-  const auto chrom = init_chromosome("chr1", 1000);
+  const auto chrom = init_interval("chr1", 1000);
   const usize nlefs = 10;
   std::array<Lef, nlefs> lefs{};
   std::array<usize, nlefs> rank1{};
@@ -130,7 +130,7 @@ TEST_CASE("Bind LEFs 003 - Empty mask (i.e. bind all LEFs)", "[bind-lefs][simula
 
 // NOLINTNEXTLINE(readability-function-cognitive-complexity)
 TEST_CASE("Adjust LEF moves 001", "[adjust-lef-moves][simulation][short]") {
-  const auto chrom = init_chromosome("chr1", 101);
+  const auto chrom = init_interval("chr1", 101);
   const usize nlefs = 3;
   // clang-format off
   const std::array<Lef, nlefs> lefs{construct_lef(5, 25, 1),
@@ -163,7 +163,7 @@ TEST_CASE("Adjust LEF moves 001", "[adjust-lef-moves][simulation][short]") {
 
 // NOLINTNEXTLINE(readability-function-cognitive-complexity)
 TEST_CASE("Adjust LEF moves 002", "[adjust-lef-moves][simulation][short]") {
-  const Chromosome chrom{0, "chr1", 10, 400, 400};
+  const auto chrom = init_interval("chr1", 400, 10);
   const usize nlefs = 6;
   // clang-format off
   const std::array<Lef, nlefs> lefs{construct_lef(20, 50, 0),
@@ -199,7 +199,7 @@ TEST_CASE("Adjust LEF moves 002", "[adjust-lef-moves][simulation][short]") {
 
 // NOLINTNEXTLINE(readability-function-cognitive-complexity)
 TEST_CASE("Generate LEF moves 001", "[generate-lef-moves][simulation][medium]") {
-  const Chromosome chrom{0, "chr1", 1000, 2000, 2000};
+  const auto chrom = init_interval("chr1", 2000, 1000);
   const usize nlefs = 100;
   const usize iters = 1000;
   auto rand_eng = DEFAULT_PRNG;
@@ -220,7 +220,7 @@ TEST_CASE("Generate LEF moves 001", "[generate-lef-moves][simulation][medium]") 
   for (usize i = 0; i < iters; ++i) {
     std::generate(lefs.begin(), lefs.end(), [&]() {
       const auto pos =
-          random::uniform_int_distribution<bp_t>{chrom.start_pos(), chrom.end_pos() - 1}(rand_eng);
+          random::uniform_int_distribution<bp_t>{chrom.start(), chrom.end() - 1}(rand_eng);
       return construct_lef(pos, pos, i);
     });
     Simulation::test_rank_lefs(lefs, absl::MakeSpan(rev_ranks), absl::MakeSpan(fwd_ranks), false,
@@ -231,13 +231,13 @@ TEST_CASE("Generate LEF moves 001", "[generate-lef-moves][simulation][medium]") 
                                    absl::MakeSpan(fwd_moves), rand_eng);
 
     std::for_each(rev_moves.begin(), rev_moves.end(), [&, j = 0UL](const auto n) mutable {
-      CHECK(lefs[j].rev_unit.pos() >= chrom.start_pos() + n);
-      CHECK(lefs[j++].rev_unit.pos() < chrom.end_pos());
+      CHECK(lefs[j].rev_unit.pos() >= chrom.start() + n);
+      CHECK(lefs[j++].rev_unit.pos() < chrom.end());
     });
 
     std::for_each(fwd_moves.begin(), fwd_moves.end(), [&, j = 0UL](const auto n) mutable {
-      CHECK(lefs[j].fwd_unit.pos() + n < chrom.end_pos());
-      CHECK(lefs[j++].fwd_unit.pos() >= chrom.start_pos());
+      CHECK(lefs[j].fwd_unit.pos() + n < chrom.end());
+      CHECK(lefs[j++].fwd_unit.pos() >= chrom.start());
     });
   }
 }
@@ -245,7 +245,7 @@ TEST_CASE("Generate LEF moves 001", "[generate-lef-moves][simulation][medium]") 
 // NOLINTNEXTLINE(readability-function-cognitive-complexity)
 TEST_CASE("Detect LEF-LEF collisions 001", "[lef-lef-collisions][simulation][short]") {
   const auto c = init_config(3, 2);
-  const auto chrom = init_chromosome("chr1", 30);
+  const auto chrom = init_interval("chr1", 30);
   [[maybe_unused]] const usize nlefs = 4;
   auto rand_eng = DEFAULT_PRNG;
 
@@ -284,7 +284,7 @@ TEST_CASE("Detect LEF-LEF collisions 001", "[lef-lef-collisions][simulation][sho
 
   require_that_lefs_are_sorted_by_idx(lefs, rev_ranks, fwd_ranks);
 
-  modle::Simulation::test_detect_units_at_chrom_boundaries(
+  modle::Simulation::test_detect_units_at_interval_boundaries(
       chrom, lefs, rev_ranks, fwd_ranks, rev_moves, fwd_moves, absl::MakeSpan(rev_collisions),
       absl::MakeSpan(fwd_collisions));
 
@@ -299,7 +299,7 @@ TEST_CASE("Detect LEF-LEF collisions 001", "[lef-lef-collisions][simulation][sho
 // NOLINTNEXTLINE(readability-function-cognitive-complexity)
 TEST_CASE("Process LEF-LEF collisions 001", "[lef-lef-collisions][simulation][short]") {
   const auto c = init_config(3, 2);
-  const auto chrom = init_chromosome("chr1", 30);
+  const auto chrom = init_interval("chr1", 30);
   [[maybe_unused]] const usize nlefs = 4;
   auto rand_eng = DEFAULT_PRNG;
 
@@ -341,7 +341,7 @@ TEST_CASE("Process LEF-LEF collisions 001", "[lef-lef-collisions][simulation][sh
 
   require_that_lefs_are_sorted_by_idx(lefs, rev_ranks, fwd_ranks);
 
-  modle::Simulation::test_detect_units_at_chrom_boundaries(
+  modle::Simulation::test_detect_units_at_interval_boundaries(
       chrom, lefs, rev_ranks, fwd_ranks, rev_moves, fwd_moves, absl::MakeSpan(rev_collisions),
       absl::MakeSpan(fwd_collisions));
 
@@ -358,7 +358,7 @@ TEST_CASE("Process LEF-LEF collisions 001", "[lef-lef-collisions][simulation][sh
 // NOLINTNEXTLINE(readability-function-cognitive-complexity)
 TEST_CASE("Detect LEF-LEF collisions 002", "[lef-lef-collisions][simulation][short]") {
   const auto c = init_config(3, 2);
-  const auto chrom = init_chromosome("chr1", 16);
+  const auto chrom = init_interval("chr1", 16);
   [[maybe_unused]] const usize nlefs = 4;
   auto rand_eng = DEFAULT_PRNG;
 
@@ -403,7 +403,7 @@ std::vector<Lef> lefs{
 
   require_that_lefs_are_sorted_by_idx(lefs, rev_ranks, fwd_ranks);
 
-  modle::Simulation::test_detect_units_at_chrom_boundaries(
+  modle::Simulation::test_detect_units_at_interval_boundaries(
       chrom, lefs, rev_ranks, fwd_ranks, rev_moves, fwd_moves, absl::MakeSpan(rev_collisions),
       absl::MakeSpan(fwd_collisions));
 
@@ -420,7 +420,7 @@ std::vector<Lef> lefs{
 // NOLINTNEXTLINE(readability-function-cognitive-complexity)
 TEST_CASE("Detect LEF-LEF collisions 003", "[lef-lef-collisions][simulation][short]") {
   const auto c = init_config(3, 2);
-  const auto chrom = init_chromosome("chr1", 201, 100);
+  const auto chrom = init_interval("chr1", 201, 100);
   const usize nlefs = 3;
   auto rand_eng = DEFAULT_PRNG;
 
@@ -463,7 +463,7 @@ std::vector<Lef> lefs{
 
   require_that_lefs_are_sorted_by_idx(lefs, rev_ranks, fwd_ranks);
 
-  modle::Simulation::test_detect_units_at_chrom_boundaries(
+  modle::Simulation::test_detect_units_at_interval_boundaries(
       chrom, lefs, rev_ranks, fwd_ranks, rev_moves, fwd_moves, absl::MakeSpan(rev_collisions),
       absl::MakeSpan(fwd_collisions));
 

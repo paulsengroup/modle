@@ -4,6 +4,7 @@
 
 #pragma once
 
+#include <ctgmath>
 #include <iterator>  // for distance
 #include <numeric>   // for accumulate
 #include <vector>    // for vector

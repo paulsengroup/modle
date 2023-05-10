@@ -52,6 +52,8 @@ class Writer {
   Writer& operator=(const Writer&) = delete;
   Writer& operator=(Writer&& other) noexcept;
 
+  [[nodiscard]] constexpr operator bool() const noexcept;
+
   template <class Chromosomes>
   inline void write_chromosomes(Chromosomes& chroms);
   void write_chromosomes(const std::vector<std::string>& chrom_names,

@@ -148,12 +148,13 @@ inline void require_that_lefs_are_sorted_by_idx(const LefCollection& lefs,
   return c;
 }
 
-[[nodiscard]] inline Chromosome init_chromosome(
-    std::string_view name, bp_t chrom_size, bp_t chrom_start = 0,
-    bp_t chrom_end = (std::numeric_limits<bp_t>::max)()) {
+[[nodiscard]] inline GenomicInterval init_interval(
+    std::string name, bp_t chrom_size, bp_t chrom_start = 0,
+    bp_t chrom_end = (std::numeric_limits<bp_t>::max)(), bp_t resolution = 1, bp_t diag_width = 1) {
   chrom_end = std::min(chrom_end, chrom_size);
   assert(chrom_start < chrom_end);
-  return {0, name, chrom_start, chrom_end, chrom_size};
+  auto chrom = std::make_shared<Chromosome>(0, std::move(name), chrom_size);
+  return {0, chrom, chrom_start, chrom_end, resolution, diag_width};
 }
 
 // This function is here as a compatibility layer between the old and new way to construct extrusion

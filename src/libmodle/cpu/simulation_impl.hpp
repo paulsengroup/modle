@@ -21,9 +21,11 @@
 #include "modle/common/suppress_compiler_warnings.hpp"  // for DISABLE_WARNING_POP, DISABLE_WARN...
 #include "modle/common/utils.hpp"                       // for ndebug_defined, ndebug_not_defined
 #include "modle/extrusion_factors.hpp"                  // for Lef, ExtrusionUnit
-#include "modle/genome.hpp"                             // for Chromosome
+#include "modle/genome.hpp"                             // for GenomicInterval
 
 namespace modle {
+constexpr const Config& Simulation::config() const noexcept { return this->_config; }
+constexpr const Config& Simulation::c() const noexcept { return this->config(); }
 
 template <typename MaskT>
 void Simulation::bind_lefs(const bp_t start_pos, const bp_t end_pos, const absl::Span<Lef> lefs,
@@ -67,13 +69,13 @@ void Simulation::bind_lefs(const bp_t start_pos, const bp_t end_pos, const absl:
 }
 
 template <typename MaskT>
-void Simulation::bind_lefs(const Chromosome& chrom, const absl::Span<Lef> lefs,
+void Simulation::bind_lefs(const GenomicInterval& interval, const absl::Span<Lef> lefs,
                            const absl::Span<usize> rev_lef_ranks,
                            const absl::Span<usize> fwd_lef_ranks, const MaskT& mask,
                            random::PRNG_t& rand_eng,
                            usize current_epoch) noexcept(utils::ndebug_defined()) {
-  Simulation::bind_lefs(chrom.start_pos(), chrom.end_pos(), lefs, rev_lef_ranks, fwd_lef_ranks,
-                        mask, rand_eng, current_epoch);
+  Simulation::bind_lefs(interval.start(), interval.end(), lefs, rev_lef_ranks, fwd_lef_ranks, mask,
+                        rand_eng, current_epoch);
 }
 
 template <typename MaskT>
@@ -88,41 +90,9 @@ void Simulation::select_lefs_to_bind(const absl::Span<const Lef> lefs,
   }
 }
 
-template <typename I>
-BS::thread_pool Simulation::instantiate_thread_pool(I nthreads_, bool clamp_nthreads) {
-  static_assert(std::is_integral_v<I>, "nthreads should have an integral type.");
-  if (clamp_nthreads) {
-    return BS::thread_pool(std::min(std::thread::hardware_concurrency(),
-                                    utils::conditional_static_cast<u32>(nthreads_)));
-  }
-  assert(nthreads_ > 0);
-  return BS::thread_pool(static_cast<u32>(nthreads_));
-}
-
-template <class TaskT>
-usize Simulation::consume_tasks_blocking(moodycamel::BlockingConcurrentQueue<TaskT>& task_queue,
-                                         moodycamel::ConsumerToken& ctok,
-                                         absl::FixedArray<TaskT>& task_buff) {
-  while (this->ok()) {
-    const auto avail_tasks = task_queue.wait_dequeue_bulk_timed(
-        ctok, task_buff.begin(), task_buff.size(), std::chrono::milliseconds(10));
-    // Check whether dequeue operation timed-out before any task became available
-    if (avail_tasks == 0) {
-      // Reached end of simulation (i.e. all tasks have been processed)
-      if (this->_end_of_simulation) {
-        return 0;
-      }
-      // Keep waiting until one or more tasks become available
-      continue;
-    }
-    return avail_tasks;
-  }
-  return 0;
-}
-
 constexpr bool Simulation::run_lef_lef_collision_trial(random::PRNG_t& rand_eng) const noexcept {
-  return this->probability_of_extrusion_unit_bypass == 0.0 ||
-         random::bernoulli_trial{1.0 - this->probability_of_extrusion_unit_bypass}(rand_eng);
+  return c().probability_of_extrusion_unit_bypass == 0.0 ||
+         random::bernoulli_trial{1.0 - c().probability_of_extrusion_unit_bypass}(rand_eng);
 }
 
 constexpr bool Simulation::run_lef_bar_collision_trial(const double pblock,
@@ -144,10 +114,10 @@ template <typename FormatContext>
 auto fmt::formatter<modle::Simulation::Task>::format(const modle::Simulation::Task& t,
                                                      FormatContext& ctx) const
     -> decltype(ctx.out()) {
-  assert(t.chrom);
-  return fmt::format_to(ctx.out(), FMT_STRING("{}\t{}\t{}\t{}\t{}\t{}\t{}"), t.id, t.chrom->name(),
-                        t.cell_id, t.num_target_epochs, t.num_target_contacts, t.num_lefs,
-                        t.barriers.size());
+  assert(t.interval);
+  return fmt::format_to(ctx.out(), FMT_STRING("{}\t{}\t{}\t{}\t{}\t{}\t{}"), t.id,
+                        t.interval->chrom(), t.cell_id, t.num_target_epochs, t.num_target_contacts,
+                        t.num_lefs, !!t.interval ? t.interval->barriers().size() : 0);
 }
 
 constexpr auto fmt::formatter<modle::Simulation::State>::parse(format_parse_context& ctx)
@@ -162,14 +132,14 @@ template <typename FormatContext>
 auto fmt::formatter<modle::Simulation::State>::format(const modle::Simulation::State& s,
                                                       FormatContext& ctx) const
     -> decltype(ctx.out()) {
-  assert(s.chrom);
+  assert(s.interval);
   // clang-format off
   return fmt::format_to(
       ctx.out(),
       FMT_STRING("State:\n"
                  " - TaskID: {:d}\n"
                  " - CellID: {:d}\n"
-                 " - Chrom: {}:{:d}-{:d}\n"
+                 " - Interval: {}\n"
                  " - Current epoch: {:d}\n"
                  " - Burn-in completed: {}\n"
                  " - Target epochs: {:d}\n"
@@ -179,12 +149,9 @@ auto fmt::formatter<modle::Simulation::State>::format(const modle::Simulation::S
                  " - # Extrusion barriers: {:d}\n"
                  " - # of contacts registered: {:d}\n"
                  " - seed: {:d}"),
-
       s.id,
       s.cell_id,
-      s.chrom->name(),
-      s.chrom->start_pos(),
-      s.chrom->end_pos(),
+      *s.interval,
       s.epoch,
       s.burnin_completed ? "True" : "False",
       s.num_target_epochs,
