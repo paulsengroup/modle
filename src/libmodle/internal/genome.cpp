@@ -167,7 +167,7 @@ const char* Chromosome::name_cstr() const noexcept { return this->_name.c_str();
 u64 Chromosome::hash(XXH3_state_t& state) const {
   auto handle_errors = [&](const auto& status) {
     if (MODLE_UNLIKELY(status == XXH_ERROR)) {
-      throw std::runtime_error(fmt::format(FMT_STRING("Failed to hash {}"), *this));
+      throw std::runtime_error(fmt::format(FMT_STRING("failed to hash {}"), *this));
     }
   };
 
@@ -179,7 +179,7 @@ u64 Chromosome::hash(XXH3_state_t& state) const {
 u64 Chromosome::hash(XXH3_state_t& state, u64 seed) const {
   const auto status = XXH3_64bits_reset_withSeed(&state, seed);
   if (MODLE_UNLIKELY(status == XXH_ERROR)) {
-    throw std::runtime_error(fmt::format(FMT_STRING("Failed to hash {}"), *this));
+    throw std::runtime_error(fmt::format(FMT_STRING("failed to hash {}"), *this));
   }
   return this->hash(state);
 }
@@ -197,7 +197,7 @@ GenomicInterval::GenomicInterval(usize id, std::shared_ptr<const Chromosome> chr
 u64 GenomicInterval::hash(XXH3_state_t& state) const {
   auto handle_errors = [&](const auto& status) {
     if (MODLE_UNLIKELY(status == XXH_ERROR)) {
-      throw std::runtime_error(fmt::format(FMT_STRING("Failed to hash {}"), *this));
+      throw std::runtime_error(fmt::format(FMT_STRING("failed to hash {}"), *this));
     }
   };
 
@@ -314,17 +314,17 @@ Genome::Genome(const std::filesystem::path& path_to_chrom_sizes,
           [&](auto accumulator, const GenomicInterval& gi) { return accumulator + gi.size(); })) {
   assert(!path_to_extr_barriers.empty());
   const auto t0 = absl::Now();
-  spdlog::info(FMT_STRING("Importing extrusion barriers from {}..."), path_to_extr_barriers);
+  spdlog::info(FMT_STRING("importing extrusion barriers from {}..."), path_to_extr_barriers);
   // Parse all the records from the BED file. The parser will throw in case of duplicates.
   const auto barriers_gw =
       bed::Parser(path_to_extr_barriers, bed::BED::BED6).parse_all_in_interval_tree();
   _num_barriers = map_barriers_to_intervals(_intervals, barriers_gw, default_barrier_pbb,
                                             default_barrier_puu, interpret_name_field_as_puu);
   if (_num_barriers == 0) {
-    spdlog::warn(FMT_STRING("Imported 0 barriers from {}. Is this intended?"),
+    spdlog::warn(FMT_STRING("imported 0 barriers from {}. Is this intended?"),
                  path_to_extr_barriers);
   } else {
-    spdlog::info(FMT_STRING("Imported {} barriers from {} in {}."), _num_barriers,
+    spdlog::info(FMT_STRING("imported {} barriers from {} in {}."), _num_barriers,
                  path_to_extr_barriers, absl::FormatDuration(absl::Now() - t0));
   }
 }
@@ -334,7 +334,7 @@ std::vector<std::shared_ptr<const Chromosome>> Genome::import_chromosomes(
   assert(!path_to_chrom_sizes.empty());
 
   const auto t0 = absl::Now();
-  spdlog::info(FMT_STRING("Importing chromosomes from {}..."), path_to_chrom_sizes);
+  spdlog::info(FMT_STRING("importing chromosomes from {}..."), path_to_chrom_sizes);
 
   absl::btree_map<std::string, usize> chrom_names;
 
@@ -357,7 +357,7 @@ std::vector<std::shared_ptr<const Chromosome>> Genome::import_chromosomes(
         fmt::format(FMT_STRING("Unable to import any chromosome from {}!"), path_to_chrom_sizes));
   }
 
-  spdlog::info(FMT_STRING("Imported {} chromosomes in {}."), buffer.size(),
+  spdlog::info(FMT_STRING("imported {} chromosomes in {}."), buffer.size(),
                absl::FormatDuration(absl::Now() - t0));
   return buffer;
 }
@@ -370,7 +370,7 @@ absl::btree_set<GenomicInterval> Genome::import_genomic_intervals(
   absl::btree_set<GenomicInterval> buffer{};
   if (path_to_bed.empty()) {
     spdlog::debug(
-        FMT_STRING("Path to genomic regions to simulate is empty. Assuming whole chromosomes are "
+        FMT_STRING("path to genomic regions to simulate is empty. Assuming whole chromosomes are "
                    "to be simulated!"));
     std::transform(chromosomes.begin(), chromosomes.end(), std::inserter(buffer, buffer.begin()),
                    [&](const auto& chrom_ptr) {
@@ -381,7 +381,7 @@ absl::btree_set<GenomicInterval> Genome::import_genomic_intervals(
   }
 
   const auto t0 = absl::Now();
-  spdlog::info(FMT_STRING("Importing genomic intervals from {}..."), path_to_bed);
+  spdlog::info(FMT_STRING("importing genomic intervals from {}..."), path_to_bed);
 
   absl::btree_map<std::string_view, std::shared_ptr<const Chromosome>> chrom_names;
   std::transform(
@@ -396,7 +396,7 @@ absl::btree_set<GenomicInterval> Genome::import_genomic_intervals(
     if (it == chrom_names.end()) {
       spdlog::warn(
           FMT_STRING(
-              "Skipping {} intervals from {}. Reason: {} was not present in the .chrom.sizes file"),
+              "skipping {} intervals from {}. Reason: {} was not present in the .chrom.sizes file"),
           intervals.size(), chrom_name, chrom_name);
       continue;
     }
@@ -410,10 +410,10 @@ absl::btree_set<GenomicInterval> Genome::import_genomic_intervals(
 
   if (buffer.empty()) {
     throw std::runtime_error(
-        fmt::format(FMT_STRING("Unable to import any interval from {}!"), path_to_bed));
+        fmt::format(FMT_STRING("unable to import any interval from {}!"), path_to_bed));
   }
 
-  spdlog::info(FMT_STRING("Imported {} intervals in {}."), buffer.size(),
+  spdlog::info(FMT_STRING("imported {} intervals in {}."), buffer.size(),
                absl::FormatDuration(absl::Now() - t0));
 
   return buffer;
@@ -462,7 +462,7 @@ absl::btree_set<GenomicInterval> Genome::import_genomic_intervals(
       buff.emplace_back(pos, barrier_stp_active, barrier_stp_inactive, record.strand);
     } catch (const std::exception& e) {
       throw std::runtime_error(
-          fmt::format(FMT_STRING("Found invalid extrusion barrier {:bed3}: {}"), record, e.what()));
+          fmt::format(FMT_STRING("found invalid extrusion barrier {:bed3}: {}"), record, e.what()));
     }
   }
 

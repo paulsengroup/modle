@@ -38,7 +38,7 @@ std::string RGB::to_string() const { return fmt::to_string(*this); }
 void BED::parse_strand_or_throw(const std::vector<std::string_view>& toks, u8 idx, char& field) {
   const auto match = bed_strand_encoding.find(toks[idx]);
   if (match == bed_strand_encoding.end()) {
-    throw std::runtime_error(fmt::format(FMT_STRING("Unrecognized strand \"{}\""), toks[idx]));
+    throw std::runtime_error(fmt::format(FMT_STRING("unrecognized strand \"{}\""), toks[idx]));
   }
   field = *match.second;
 }
@@ -71,7 +71,7 @@ BED::Dialect BED::detect_standard(std::string_view line) {
 BED::Dialect BED::detect_standard(const std::vector<std::string_view>& toks) {
   if (toks.size() < BED3) {
     throw std::runtime_error(fmt::format(
-        FMT_STRING("Expected at least 3 fields, got {}.\nRecord that caused the error: \"{}\""),
+        FMT_STRING("expected at least 3 fields, got {}.\nRecord that caused the error: \"{}\""),
         toks.size(), fmt::join(toks, "\t")));
   }
 

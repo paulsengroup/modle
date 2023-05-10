@@ -162,13 +162,13 @@ void ContactMatrixDense<N>::check_for_overflow_on_add(const usize row, const usi
   const auto m = this->at(row, col);
   if (hi - n < m) {
     throw std::runtime_error(
-        fmt::format(FMT_STRING("Overflow detected: incrementing m={} by n={} would result in a "
+        fmt::format(FMT_STRING("overflow detected: incrementing m={} by n={} would result in a "
                                "number outside of range {}-{}"),
                     m, n, lo, hi));
   }
   if (hi - n < this->_tot_contacts) {
     throw std::runtime_error(fmt::format(
-        FMT_STRING("Overflow detected: incrementing _tot_contacts={} by n={} would result in a "
+        FMT_STRING("overflow detected: incrementing _tot_contacts={} by n={} would result in a "
                    "number outside of range {}-{}"),
         this->_tot_contacts, n, lo, hi));
   }
@@ -183,13 +183,13 @@ void ContactMatrixDense<N>::check_for_overflow_on_subtract(usize row, usize col,
   const auto m = this->at(row, col);
   if (lo + n > m) {
     throw std::runtime_error(
-        fmt::format(FMT_STRING("Overflow detected: decrementing m={} by n={} would result in a "
+        fmt::format(FMT_STRING("overflow detected: decrementing m={} by n={} would result in a "
                                "number outside of range {}-{}"),
                     m, n, lo, hi));
   }
   if (lo + n > this->_tot_contacts) {
     throw std::runtime_error(fmt::format(
-        FMT_STRING("Overflow detected: decrementing _tot_contacts={} by n={} would result in a "
+        FMT_STRING("overflow detected: decrementing _tot_contacts={} by n={} would result in a "
                    "number outside of range {}-{}"),
         this->_tot_contacts, n, lo, hi));
   }
