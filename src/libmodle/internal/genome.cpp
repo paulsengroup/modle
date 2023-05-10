@@ -42,7 +42,7 @@ ContactMatrixLazy::ContactMatrixLazy(bp_t length, bp_t diagonal_width, bp_t bin_
       _ncols((length + bin_size - 1) / bin_size) {}
 
 ContactMatrixLazy::ContactMatrixLazy(ContactMatrix matrix) noexcept
-    : _matrix(std::make_unique<ContactMatrix>(std::move(matrix))),
+    : _matrix(std::make_optional<ContactMatrix>(std::move(matrix))),
       _nrows(_matrix->nrows()),
       _ncols(_matrix->ncols()) {
   // Signal that _matrix has already been initialized
@@ -76,25 +76,25 @@ ContactMatrixLazy& ContactMatrixLazy::operator=(ContactMatrixLazy&& other) noexc
 
 auto ContactMatrixLazy::operator()() noexcept -> ContactMatrix& {
   std::call_once(this->_alloc_flag, [this]() {
-    spdlog::debug(FMT_STRING("allocating {}x{} contact matrix..."), this->_nrows, this->_ncols);
-    this->_matrix = std::make_unique<ContactMatrix>(this->_nrows, this->_ncols);
+    spdlog::debug(FMT_STRING("allocating a {}x{} contact matrix..."), this->_nrows, this->_ncols);
+    this->_matrix = std::make_optional<ContactMatrix>(this->_nrows, this->_ncols);
   });
-  assert(!!this->_matrix);
+  assert(this->_matrix.has_value());
   return *this->_matrix;
 }
 
 auto ContactMatrixLazy::operator()() const noexcept -> const ContactMatrix& {
   std::call_once(this->_alloc_flag, [this]() {
-    spdlog::debug(FMT_STRING("allocating {}x{} contact matrix..."), this->_nrows, this->_ncols);
-    this->_matrix = std::make_unique<ContactMatrix>(this->_nrows, this->_ncols);
+    spdlog::debug(FMT_STRING("allocating a {}x{} contact matrix..."), this->_nrows, this->_ncols);
+    this->_matrix = std::make_optional<ContactMatrix>(this->_nrows, this->_ncols);
   });
-  assert(!!this->_matrix);
+  assert(this->_matrix.has_value());
   return *this->_matrix;
 }
 
 void ContactMatrixLazy::deallocate() noexcept {
   std::call_once(this->_dealloc_flag, [this]() {
-    spdlog::debug(FMT_STRING("deallocating {}x{} contact matrix..."), this->_nrows, this->_ncols);
+    spdlog::debug(FMT_STRING("deallocating a {}x{} contact matrix..."), this->_nrows, this->_ncols);
     this->_matrix.reset();
   });
 }
@@ -105,7 +105,7 @@ Occupancy1DLazy::Occupancy1DLazy(bp_t length, bp_t bin_size) noexcept
     : _size((length + bin_size - 1) / bin_size) {}
 
 Occupancy1DLazy::Occupancy1DLazy(BufferT buff) noexcept
-    : _buff(std::make_unique<BufferT>(std::move(buff))), _size(_buff->size()) {
+    : _buff(std::make_optional<BufferT>(std::move(buff))), _size(_buff->size()) {
   // Signal _buff has already been initialized
   std::call_once(this->_alloc_flag, []() {});
 }
@@ -135,24 +135,29 @@ Occupancy1DLazy& Occupancy1DLazy::operator=(Occupancy1DLazy&& other) noexcept {
 
 auto Occupancy1DLazy::operator()() const noexcept -> const BufferT& {
   std::call_once(this->_alloc_flag, [this]() {
-    this->_buff = std::make_unique<BufferT>(_size);
+    spdlog::debug(FMT_STRING("allocating a vector of size {}..."), this->_size);
+    this->_buff = std::make_optional<BufferT>(_size);
     std::fill(this->_buff->begin(), this->_buff->end(), 0);
   });
-  assert(!!this->_buff);
+  assert(this->_buff.has_value());
   return *this->_buff;
 }
 
 auto Occupancy1DLazy::operator()() noexcept -> BufferT& {
   std::call_once(this->_alloc_flag, [this]() {
-    this->_buff = std::make_unique<BufferT>(_size);
+    spdlog::debug(FMT_STRING("allocating a vector of size {}..."), this->_size);
+    this->_buff = std::make_optional<BufferT>(_size);
     std::fill(this->_buff->begin(), this->_buff->end(), 0);
   });
-  assert(!!this->_buff);
+  assert(this->_buff.has_value());
   return *this->_buff;
 }
 
 void Occupancy1DLazy::deallocate() noexcept {
-  std::call_once(this->_dealloc_flag, [this]() { this->_buff.reset(); });
+  std::call_once(this->_dealloc_flag, [this]() {
+    spdlog::debug(FMT_STRING("deallocating a vector of size {}..."), this->_size);
+    this->_buff.reset();
+  });
 }
 
 }  // namespace internal
