@@ -36,7 +36,7 @@ class ContactMatrixLazy {
   using ContactMatrix = ContactMatrixDense<contacts_t>;
 
  private:
-  mutable ContactMatrix _matrix{};
+  mutable std::unique_ptr<ContactMatrix> _matrix{};
   mutable std::once_flag _alloc_flag{};
   std::once_flag _dealloc_flag{};
   u64 _nrows{0};
@@ -66,7 +66,8 @@ class ContactMatrixLazy {
 };
 
 class Occupancy1DLazy {
-  mutable std::vector<std::atomic<u64>> _buff{};
+  using BufferT = std::vector<std::atomic<u64>>;
+  mutable std::unique_ptr<BufferT> _buff{};
   mutable std::once_flag _alloc_flag{};
   std::once_flag _dealloc_flag{};
   usize _size{0};

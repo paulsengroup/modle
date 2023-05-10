@@ -15,7 +15,9 @@
 namespace modle {
 
 namespace internal {
-constexpr ContactMatrixLazy::operator bool() const noexcept { return this->_matrix.npixels() != 0; }
+constexpr ContactMatrixLazy::operator bool() const noexcept {
+  return this->_matrix->npixels() != 0;
+}
 constexpr u64 ContactMatrixLazy::nrows() const noexcept { return this->_nrows; }
 constexpr u64 ContactMatrixLazy::ncols() const noexcept { return this->_ncols; }
 constexpr u64 ContactMatrixLazy::npixels() const noexcept { return this->_ncols * this->_nrows; }
