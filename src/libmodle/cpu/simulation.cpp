@@ -91,7 +91,7 @@ Simulation::Simulation(Config config_, bool import_intervals)
     : _config(std::move(config_)),
       _genome(import_intervals
                   ? Genome(c().path_to_chrom_sizes, c().path_to_extr_barriers,
-                           c().path_to_chrom_subranges, c().bin_size, c().diagonal_width,
+                           c().path_to_genomic_intervals, c().bin_size, c().diagonal_width,
                            c().barrier_occupied_stp, c().barrier_not_occupied_stp,
                            c().interpret_bed_name_field_as_barrier_not_occupied_stp)
                   : Genome{}),
