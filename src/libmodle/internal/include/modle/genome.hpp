@@ -9,10 +9,11 @@
 #include <fmt/format.h>
 #include <xxhash.h>
 
-#include <filesystem>    // for path
-#include <iterator>      // for iterator_traits
-#include <limits>        // for numeric_limits
-#include <memory>        // for shared_ptr
+#include <filesystem>  // for path
+#include <iterator>    // for iterator_traits
+#include <limits>      // for numeric_limits
+#include <memory>      // for shared_ptr
+#include <optional>
 #include <shared_mutex>  // for shared_mutex
 #include <string>        // for string
 #include <string_view>   // for string_view
@@ -36,7 +37,7 @@ class ContactMatrixLazy {
   using ContactMatrix = ContactMatrixDense<contacts_t>;
 
  private:
-  mutable ContactMatrix _matrix{};
+  mutable std::optional<ContactMatrix> _matrix{};
   mutable std::once_flag _alloc_flag{};
   std::once_flag _dealloc_flag{};
   u64 _nrows{0};
@@ -66,7 +67,8 @@ class ContactMatrixLazy {
 };
 
 class Occupancy1DLazy {
-  mutable std::vector<std::atomic<u64>> _buff{};
+  using BufferT = std::vector<std::atomic<u64>>;
+  mutable std::optional<BufferT> _buff{};
   mutable std::once_flag _alloc_flag{};
   std::once_flag _dealloc_flag{};
   usize _size{0};
@@ -75,7 +77,7 @@ class Occupancy1DLazy {
   Occupancy1DLazy() = default;
   Occupancy1DLazy(bp_t length, bp_t bin_size) noexcept;
 
-  explicit Occupancy1DLazy(std::vector<std::atomic<u64>> buff) noexcept;
+  explicit Occupancy1DLazy(BufferT buff) noexcept;
   Occupancy1DLazy(const Occupancy1DLazy& other) = delete;
   Occupancy1DLazy(Occupancy1DLazy&& other) noexcept;
 
