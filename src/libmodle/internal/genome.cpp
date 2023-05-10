@@ -42,14 +42,16 @@ ContactMatrixLazy::ContactMatrixLazy(bp_t length, bp_t diagonal_width, bp_t bin_
       _ncols((length + bin_size - 1) / bin_size) {}
 
 ContactMatrixLazy::ContactMatrixLazy(ContactMatrix matrix) noexcept
-    : _matrix(std::move(matrix)), _nrows(_matrix.nrows()), _ncols(_matrix.ncols()) {
+    : _matrix(std::make_optional<ContactMatrix>(std::move(matrix))),
+      _nrows(_matrix->nrows()),
+      _ncols(_matrix->ncols()) {
   // Signal that _matrix has already been initialized
   std::call_once(this->_alloc_flag, []() {});
 }
 
 ContactMatrixLazy::ContactMatrixLazy(ContactMatrixLazy&& other) noexcept
     : _matrix(std::move(other._matrix)), _nrows(other._nrows), _ncols(other._ncols) {
-  if (this->_matrix.npixels() == this->npixels()) {
+  if (this->_matrix && this->_matrix->npixels() == this->npixels()) {
     // Signal that _matrix has already been initialized
     std::call_once(this->_alloc_flag, []() {});
   }
@@ -62,7 +64,7 @@ ContactMatrixLazy& ContactMatrixLazy::operator=(ContactMatrixLazy&& other) noexc
     return *this;
   }
   _matrix = std::move(other._matrix);
-  if (this->_matrix.npixels() == this->npixels()) {  // See comments for move ctor
+  if (this->_matrix && this->_matrix->npixels() == this->npixels()) {  // See comments for move ctor
     std::call_once(this->_alloc_flag, []() {});
   }
 
@@ -74,42 +76,43 @@ ContactMatrixLazy& ContactMatrixLazy::operator=(ContactMatrixLazy&& other) noexc
 
 auto ContactMatrixLazy::operator()() noexcept -> ContactMatrix& {
   std::call_once(this->_alloc_flag, [this]() {
-    using MatrixT = decltype(this->_matrix);
-    this->_matrix = MatrixT(this->_nrows, this->_ncols);
+    spdlog::debug(FMT_STRING("allocating a {}x{} contact matrix..."), this->_nrows, this->_ncols);
+    this->_matrix = std::make_optional<ContactMatrix>(this->_nrows, this->_ncols);
   });
-  return this->_matrix;
+  assert(this->_matrix.has_value());
+  return *this->_matrix;
 }
 
 auto ContactMatrixLazy::operator()() const noexcept -> const ContactMatrix& {
   std::call_once(this->_alloc_flag, [this]() {
-    using MatrixT = decltype(this->_matrix);
-    this->_matrix = MatrixT(this->_nrows, this->_ncols);
+    spdlog::debug(FMT_STRING("allocating a {}x{} contact matrix..."), this->_nrows, this->_ncols);
+    this->_matrix = std::make_optional<ContactMatrix>(this->_nrows, this->_ncols);
   });
-  return this->_matrix;
+  assert(this->_matrix.has_value());
+  return *this->_matrix;
 }
 
 void ContactMatrixLazy::deallocate() noexcept {
   std::call_once(this->_dealloc_flag, [this]() {
-    using MatrixT = decltype(this->_matrix);
-    MatrixT tmp{};
-    std::swap(this->_matrix, tmp);
+    spdlog::debug(FMT_STRING("deallocating a {}x{} contact matrix..."), this->_nrows, this->_ncols);
+    this->_matrix.reset();
   });
 }
 
-Occupancy1DLazy::operator bool() const noexcept { return !this->_buff.empty(); }
+Occupancy1DLazy::operator bool() const noexcept { return !this->_buff->empty(); }
 
 Occupancy1DLazy::Occupancy1DLazy(bp_t length, bp_t bin_size) noexcept
     : _size((length + bin_size - 1) / bin_size) {}
 
-Occupancy1DLazy::Occupancy1DLazy(std::vector<std::atomic<u64>> buff) noexcept
-    : _buff(std::move(buff)), _size(_buff.size()) {
+Occupancy1DLazy::Occupancy1DLazy(BufferT buff) noexcept
+    : _buff(std::make_optional<BufferT>(std::move(buff))), _size(_buff->size()) {
   // Signal _buff has already been initialized
   std::call_once(this->_alloc_flag, []() {});
 }
 
 Occupancy1DLazy::Occupancy1DLazy(Occupancy1DLazy&& other) noexcept
     : _buff(std::move(other._buff)), _size(other._size) {
-  if (_buff.size() == this->size()) {
+  if (this->_buff && _buff->size() == this->size()) {
     // Signal _buff has already been initialized
     std::call_once(this->_alloc_flag, []() {});
   }
@@ -122,7 +125,7 @@ Occupancy1DLazy& Occupancy1DLazy::operator=(Occupancy1DLazy&& other) noexcept {
     return *this;
   }
   _buff = std::move(other._buff);
-  if (_buff.size() == this->size()) {  // See comments for move ctor
+  if (this->_buff && _buff->size() == this->size()) {  // See comments for move ctor
     std::call_once(this->_alloc_flag, []() {});
   }
   _size = other._size;
@@ -130,29 +133,30 @@ Occupancy1DLazy& Occupancy1DLazy::operator=(Occupancy1DLazy&& other) noexcept {
   return *this;
 }
 
-const std::vector<std::atomic<u64>>& Occupancy1DLazy::operator()() const noexcept {
+auto Occupancy1DLazy::operator()() const noexcept -> const BufferT& {
   std::call_once(this->_alloc_flag, [this]() {
-    using BuffT = decltype(this->_buff);
-    this->_buff = BuffT(_size);
-    std::fill(this->_buff.begin(), this->_buff.end(), 0);
+    spdlog::debug(FMT_STRING("allocating a vector of size {}..."), this->_size);
+    this->_buff = std::make_optional<BufferT>(_size);
+    std::fill(this->_buff->begin(), this->_buff->end(), 0);
   });
-  return this->_buff;
+  assert(this->_buff.has_value());
+  return *this->_buff;
 }
 
-std::vector<std::atomic<u64>>& Occupancy1DLazy::operator()() noexcept {
+auto Occupancy1DLazy::operator()() noexcept -> BufferT& {
   std::call_once(this->_alloc_flag, [this]() {
-    using BuffT = decltype(this->_buff);
-    this->_buff = BuffT(_size);
-    std::fill(this->_buff.begin(), this->_buff.end(), 0);
+    spdlog::debug(FMT_STRING("allocating a vector of size {}..."), this->_size);
+    this->_buff = std::make_optional<BufferT>(_size);
+    std::fill(this->_buff->begin(), this->_buff->end(), 0);
   });
-  return this->_buff;
+  assert(this->_buff.has_value());
+  return *this->_buff;
 }
 
 void Occupancy1DLazy::deallocate() noexcept {
   std::call_once(this->_dealloc_flag, [this]() {
-    using BuffT = decltype(this->_buff);
-    BuffT tmp{};
-    std::swap(this->_buff, tmp);
+    spdlog::debug(FMT_STRING("deallocating a vector of size {}..."), this->_size);
+    this->_buff.reset();
   });
 }
 
