@@ -192,7 +192,7 @@ static std::string format_rand_eng(const random::PRNG_t& rand_eng) {
 }
 
 void Simulation::simulate_worker(const u64 tid, const usize task_batch_size) {
-  spdlog::info(FMT_STRING("Spawning simulation thread {}..."), tid);
+  spdlog::info(FMT_STRING("spawning worker thread W{}..."), tid);
   // This state object owns all the buffers and PRNG + seed required in order to simulate loop
   // extrusion for a single cell. Buffers are allocated once and resized, cleared and reused
   // throughout the simulation

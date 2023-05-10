@@ -140,7 +140,7 @@ static void validate_regions_of_interest(const coolerpp::ChromosomeSet &chroms,
   if (!invalid_intervals.empty()) {
     const auto num_invalid_intervals = invalid_chrom + invalid_range;
     throw std::runtime_error(
-        fmt::format(FMT_STRING("Detected {} invalid intervals:\n"
+        fmt::format(FMT_STRING("detected {} invalid intervals:\n"
                                " - {} intervals refer to missing chromosome(s)\n"
                                " - {} intervals span outside existing chromosome(s)\n"
                                "Showing {}{} invalid record(s):\n"
@@ -172,7 +172,7 @@ static void validate_chrom_sizes(const coolerpp::ChromosomeSet &chrom_sizes_cool
 
   if (!errors.empty()) {
     throw std::runtime_error(fmt::format(
-        FMT_STRING("Cooler files and chrom.sizes file contain conflicting information:\n"
+        FMT_STRING("cooler files and chrom.sizes file contain conflicting information:\n"
                    " - {}"),
         fmt::join(errors, "\n - ")));
   }
@@ -185,7 +185,7 @@ static void validate_chrom_sizes(const coolerpp::ChromosomeSet &chrom_sizes_cool
   auto chroms = import_chroms_from_coolers(f1, f2);
   if (chroms.empty()) {
     throw std::runtime_error(fmt::format(
-        FMT_STRING("Coolers at URI \"{}\" and \"{}\" appear to have no chromosome in common. "
+        FMT_STRING("coolers at URI \"{}\" and \"{}\" appear to have no chromosome in common. "
                    "Please make sure both Coolers are using the same genome assembly.\n"
                    "Chromosomes found in Cooler #1:\n - {}\n"
                    "Chromosomes found in Cooler #2:\n - {}"),
@@ -226,7 +226,7 @@ static void validate_chrom_sizes(const coolerpp::ChromosomeSet &chrom_sizes_cool
   const auto it = std::find(toks.begin(), toks.end(), col_name);
   if (it == toks.end()) {
     throw std::runtime_error(
-        fmt::format(FMT_STRING("Unable to find column \"{}\" in the header \"{}\" of file {}"),
+        fmt::format(FMT_STRING("unable to find column \"{}\" in the header \"{}\" of file {}"),
                     col_name, header, path_to_weights));
   }
   return std::distance(toks.begin(), it);

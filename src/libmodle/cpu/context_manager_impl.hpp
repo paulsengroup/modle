@@ -169,7 +169,7 @@ inline void ContextManager<Task>::rethrow_exceptions() const {
   }
 
   throw std::runtime_error(fmt::format(
-      FMT_STRING("The following error(s) occurred while simulating loop extrusion:\n - {}"),
+      FMT_STRING("the following error(s) occurred while simulating loop extrusion:\n - {}"),
       fmt::join(messages, "\n - ")));
 }
 

@@ -66,7 +66,7 @@ static void issue_warnings_for_small_intervals(const Genome& genome, const bp_t 
     }
   }
   if (!warnings.empty()) {
-    spdlog::warn(FMT_STRING("The simulated size for the following {} interval(s) is smaller than "
+    spdlog::warn(FMT_STRING("simulated size for the following {} interval(s) is smaller than "
                             "the simulation diagonal width ({} bp). Is this intended?\n - {}"),
                  warnings.size(), diagonal_width, fmt::join(warnings, "\n - "));
   }
@@ -81,7 +81,7 @@ static void issue_warnings_for_small_matrices(const Genome& genome) {
     }
   }
   if (!warnings.empty()) {
-    spdlog::warn(FMT_STRING("The contact matrix for the following {} interval(s) appears to be "
+    spdlog::warn(FMT_STRING("contact matrix for the following {} interval(s) appears to be "
                             "really small (less than {} pixels). Is this intended?\n - {}"),
                  warnings.size(), num_pixels_threshold, fmt::join(warnings, "\n - "));
   }
@@ -213,7 +213,7 @@ struct CoolerBigwigPair {
 }
 
 void Simulation::simulate_io(std::chrono::milliseconds wait_time) {
-  spdlog::info(FMT_STRING("Spawning IO thread..."));
+  spdlog::info(FMT_STRING("spawning IO thread..."));
   assert(!std::filesystem::exists(c().path_to_output_file_cool));
   if (c().track_1d_lef_position) {
     assert(!std::filesystem::exists(c().path_to_lef_1d_occupancy_bw_file));
@@ -1087,7 +1087,7 @@ usize Simulation::compute_num_lefs(const usize size_bp) const noexcept {
 void Simulation::print_status_update(const Task& t) const noexcept {
   assert(t.interval);
   auto tot_target_epochs = this->compute_tot_target_epochs(t.num_lefs, t.interval->npixels());
-  spdlog::info(FMT_STRING("Begin processing {}: simulating ~{} epochs across {} cells using {} "
+  spdlog::info(FMT_STRING("begin processing {}: simulating ~{} epochs across {} cells using {} "
                           "LEFs and {} barriers (~{} epochs per cell)..."),
                *t.interval, tot_target_epochs, c().num_cells, t.num_lefs,
                t.interval->barriers().size(), tot_target_epochs / c().num_cells);

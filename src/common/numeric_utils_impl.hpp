@@ -58,7 +58,7 @@ void parse_vect_of_numbers_or_throw(const std::vector<std::string_view> &toks, u
   std::vector<std::string_view> ns = absl::StrSplit(toks[idx], ',');
   if (ns.size() != expected_size) {
     throw std::runtime_error(
-        fmt::format(FMT_STRING("Expected {} fields, got {}."), expected_size, ns.size()));
+        fmt::format(FMT_STRING("expected {} fields, got {}."), expected_size, ns.size()));
   }
   fields.resize(ns.size());
   for (usize i = 0; i < expected_size; ++i) {
@@ -73,9 +73,9 @@ void throw_except_from_errc(std::string_view tok, usize idx, [[maybe_unused]] co
   static_assert(std::is_arithmetic<N>());
   std::string base_error;
   if (idx != (std::numeric_limits<usize>::max)()) {
-    base_error = fmt::format(FMT_STRING("Unable to convert field {} (\"{}\") to a "), idx, tok);
+    base_error = fmt::format(FMT_STRING("unable to convert field {} (\"{}\") to a "), idx, tok);
   } else {
-    base_error = fmt::format(FMT_STRING("Unable to convert field \"{}\" to"), tok);
+    base_error = fmt::format(FMT_STRING("unable to convert field \"{}\" to"), tok);
   }
   if (std::is_integral<N>()) {
     if (std::is_unsigned<N>()) {
