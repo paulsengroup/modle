@@ -41,15 +41,14 @@
 // NOLINTNEXTLINE(cppcoreguidelines-avoid-non-const-global-variables)
 static std::atomic<bool> logger_ready{false};
 
-void setup_logger_console(const bool quiet) {
+void setup_logger_console(const std::uint8_t verbosity) {
   auto stderr_sink = std::make_shared<spdlog::sinks::stderr_color_sink_mt>();
   //                        [2021-08-12 17:49:34.581] [info]: my log msg
   stderr_sink->set_pattern("[%Y-%m-%d %T.%e] %^[%l]%$: %v");
-  if (quiet) {
-    stderr_sink->set_level(spdlog::level::err);
-  }
+  stderr_sink->set_level(spdlog::level::level_enum{verbosity});
 
   auto main_logger = std::make_shared<spdlog::logger>("main_logger", stderr_sink);
+  main_logger->set_level(spdlog::level::debug);
 
   spdlog::set_default_logger(main_logger);
   spdlog::info(FMT_STRING("Running MoDLE v{}"), modle::config::version::str());
@@ -115,7 +114,7 @@ std::tuple<int, modle::Cli::subcommand, modle::Config> parse_cli_and_setup_logge
     cli = std::make_unique<modle::Cli>(argc, argv);
     auto config = cli->parse_arguments();
     const auto subcmd = cli->get_subcommand();
-    setup_logger_console(config.quiet);
+    setup_logger_console(config.verbosity);
 
     if (const auto collisions = cli->detect_path_collisions(config); !collisions.empty()) {
       throw std::filesystem::filesystem_error(collisions,

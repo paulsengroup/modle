@@ -117,6 +117,7 @@ trap 'rm -rf -- "$outdir"' EXIT
                  -b "$extr_barriers" \
                  -o "$outdir/out" \
                  -r 20kb \
+                 --verbose \
                  --target-contact-density 20 \
                  --ncells 2 \
                  --track-1d-lef-position \

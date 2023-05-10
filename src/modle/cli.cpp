@@ -141,13 +141,18 @@ static std::vector<CLI::App*> add_common_options(CLI::App& subcommand, modle::Co
       ->transform([](std::string str) { return str.empty() ? "unknown" : str; }, "", "")
       ->capture_default_str();
 
-  io.add_flag(
+  io.add_flag_callback(
       "-q,--quiet",
-      c.quiet,
+      [&c](){ c.verbosity = SPDLOG_LEVEL_ERROR; },
       "Suppress console output to stderr.\n"
       "Only fatal errors will be logged to the console.\n"
-      "Does not affect entries written to the log file.")
-      ->capture_default_str();
+      "Does not affect entries written to the log file.");
+
+  io.add_flag_callback(
+      "-v,--verbose",
+      [&c](){ c.verbosity = SPDLOG_LEVEL_DEBUG; },
+      "Increase verbosity of log to console.\n"
+      "Does not affect entries written to the log file.");
 
   io_adv.add_flag(
       "--log-model-internal-state",
@@ -574,6 +579,7 @@ static std::vector<CLI::App*> add_common_options(CLI::App& subcommand, modle::Co
       ->capture_default_str();
 
   // Address option dependencies/incompatibilities
+  io.get_option("--quiet")->excludes(io.get_option("--verbose"));
   io_adv.get_option("--skip-output")->excludes(io_adv.get_option("--log-model-internal-state"));
   stopping.get_option("--target-contact-density")->excludes(stopping.get_option("--target-number-of-epochs"));
   lefbar.get_option("--extrusion-barrier-occupancy")->excludes(barr_adv.get_option("--extrusion-barrier-bound-stp"));
