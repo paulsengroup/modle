@@ -37,13 +37,13 @@ std::vector<bed::BED> Parser::parse_all(char sep) {
     try {
       if (num_toks < 2) {
         throw std::runtime_error(
-            fmt::format(FMT_STRING("Expected 2 or more tokens, got {}: \"{}\""), num_toks, buff));
+            fmt::format(FMT_STRING("expected 2 or more tokens, got {}: \"{}\""), num_toks, buff));
       }
       DISABLE_WARNING_PUSH
       DISABLE_WARNING_NULL_DEREF
       if (const auto chrom_name = *splitter.begin(); chrom_names.contains(chrom_name)) {
         throw std::runtime_error(
-            fmt::format(FMT_STRING("Found multiple records for chrom \"{}\""), chrom_name));
+            fmt::format(FMT_STRING("found multiple records for chrom \"{}\""), chrom_name));
       }
       DISABLE_WARNING_POP
       chrom_sizes.emplace_back(
@@ -51,7 +51,7 @@ std::vector<bed::BED> Parser::parse_all(char sep) {
           id++, bed::BED::BED3);
     } catch (const std::runtime_error& e) {
       throw std::runtime_error(
-          fmt::format(FMT_STRING("Encountered a malformed record at line {} of file \"{}\": {}.\n "
+          fmt::format(FMT_STRING("encountered a malformed record at line {} of file \"{}\": {}.\n "
                                  "Line that triggered the error:\n\"{}\""),
                       i, this->_reader.path_string(), e.what(), buff.data()));
     }
