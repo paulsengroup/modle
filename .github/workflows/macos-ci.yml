@@ -60,7 +60,8 @@ jobs:
         include:
           - { compiler-name: apple-clang, compiler-version: '13.0', os: 'macos-11', conan-ver: '2.0.*', cmake-ver: '3.26.*', build_type: Release, developer_mode: OFF }
           - { compiler-name: apple-clang, compiler-version: '14.0', os: 'macos-12', conan-ver: '2.0.*', cmake-ver: '3.26.*', build_type: Release, developer_mode: OFF }
-          - { compiler-name: apple-clang, compiler-version: '14.0', os: 'macos-12', conan-ver: '2.0.*', cmake-ver: '3.26.*', build_type: Debug,   developer_mode: OFF }
+          - { compiler-name: apple-clang, compiler-version: '14.0', os: 'macos-13', conan-ver: '2.0.*', cmake-ver: '3.26.*', build_type: Release, developer_mode: OFF }
+          - { compiler-name: apple-clang, compiler-version: '14.0', os: 'macos-13', conan-ver: '2.0.*', cmake-ver: '3.26.*', build_type: Debug,   developer_mode: OFF }
 
     steps:
       - uses: actions/checkout@v3
