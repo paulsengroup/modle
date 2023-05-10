@@ -37,7 +37,7 @@ struct Config {
   END_BITFLAGS(ContactSamplingStrategy)
 
   std::filesystem::path path_to_chrom_sizes;
-  std::filesystem::path path_to_chrom_subranges;
+  std::filesystem::path path_to_genomic_intervals;
   std::filesystem::path path_to_output_prefix;
   std::filesystem::path path_to_output_file_cool{};
   std::filesystem::path path_to_config_file{};

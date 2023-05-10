@@ -113,7 +113,7 @@ outdir="$(mktemp -d -t modle-ci-XXXXXXXXXX)"
 trap 'rm -rf -- "$outdir"' EXIT
 
 "$modle_bin" sim -c "$chrom_sizes" \
-                 --chrom-subranges="$regions_bed" \
+                 -g "$regions_bed" \
                  -b "$extr_barriers" \
                  -o "$outdir/out" \
                  -r 20kb \

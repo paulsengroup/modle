@@ -87,6 +87,8 @@ static std::vector<CLI::App*> add_common_options(CLI::App& subcommand, modle::Co
 
   auto& misc_adv = *adv.add_option_group("Miscellaneous");
 
+  auto& deprecated = *s.add_option_group("");
+
   // clang-format off
   io.add_option(
       "-c,--chrom-sizes",
@@ -105,6 +107,14 @@ static std::vector<CLI::App*> add_common_options(CLI::App& subcommand, modle::Co
       "the --chrom-sizes option are ignored.")
       ->check(CLI::ExistingFile)
       ->required();
+
+  io.add_option(
+      "-g,--genomic-intervals",
+      c.path_to_genomic_intervals,
+      "Path to BED3+ file with the genomic regions to be simulated.\n"
+      "Intervals listed in this file should be a subset of the chromosomes defined in the .chrom.sizes files.\n"
+      "Intervals referring to chromosomes not listed in the .chrom.sizes file are ignored.")
+      ->check(CLI::ExistingFile);
 
   io.add_flag(
       "-f,--force",
@@ -138,12 +148,6 @@ static std::vector<CLI::App*> add_common_options(CLI::App& subcommand, modle::Co
       "Only fatal errors will be logged to the console.\n"
       "Does not affect entries written to the log file.")
       ->capture_default_str();
-
-  io_adv.add_option(
-     "--chrom-subranges",
-     c.path_to_chrom_subranges,
-     "Path to BED file with subranges of the chromosomes to simulate.")
-     ->check(CLI::ExistingFile);
 
   io_adv.add_flag(
       "--log-model-internal-state",
@@ -576,6 +580,10 @@ static std::vector<CLI::App*> add_common_options(CLI::App& subcommand, modle::Co
   barr_adv.get_option("--interpret-extrusion-barrier-name-as-not-bound-stp")->excludes(barr_adv.get_option("--extrusion-barrier-not-bound-stp"));
   // clang-format on
 
+  // Deprecated options
+  deprecated.add_option("--chrom-subranges", c.path_to_genomic_intervals)->check(CLI::ExistingFile);
+  deprecated.get_option("--chrom-subranges")->excludes(io.get_option("--genomic-intervals"));
+
   std::array<std::reference_wrapper<CLI::App>, 10> option_groups{
       io, lefbar, cgen, stopping, misc, io_adv, lef_adv, barr_adv, cgen_adv, burnin_adv};
   std::vector<CLI::App*> option_groups_ptrs(option_groups.size());
@@ -684,11 +692,33 @@ std::string Cli::detect_path_collisions(modle::Config& c) const {
 
 int Cli::exit(const CLI::ParseError& e) const { return this->_cli.exit(e); }
 
+static void detect_deprecated_option_usage(const CLI::App& subcmd,
+                                           std::vector<std::string>& warnings_buff) {
+  const auto deprecated_opt_grp = subcmd.get_option_group("");
+  if (!deprecated_opt_grp->parsed()) {
+    return;
+  }
+
+  // Map deprecated options to their replacement
+  static constexpr utils::ConstMap<std::string_view, std::string_view, 1>
+      deprecated_option_mappings{{"--chrom-subranges", "--genomic-intervals"}};
+
+  for (const auto& opt : deprecated_opt_grp->parse_order()) {
+    const auto match = deprecated_option_mappings.find(opt->get_name());
+    if (match != deprecated_option_mappings.end()) {
+      warnings_buff.emplace_back(fmt::format(FMT_STRING("Option {} is deprecated. Use {} instead."),
+                                             *match.first, *match.second));
+    }
+  }
+}
+
 void Cli::validate_args() const {
   const auto& c = this->_config;
   std::vector<std::string> errors;
 
   const auto* subcmd = this->get_subcommand_ptr();
+
+  detect_deprecated_option_usage(*subcmd, this->_warnings);
 
   if (c.burnin_smoothing_window_size > c.burnin_history_length) {
     assert(subcmd->get_option_group("Advanced")
@@ -765,7 +795,7 @@ void Cli::validate_args() const {
                                          ->get_option("--probability-normalization-factor")
                                          ->empty()) {
     this->_warnings.emplace_back(
-        fmt::format(FMT_STRING("Option --probability-normalization-factor ha no effect. Reason: "
+        fmt::format(FMT_STRING("Option --probability-normalization-factor has no effect. Reason: "
                                "CLI option --no-normalize-probabilities was passed by the user.")));
   }
 
