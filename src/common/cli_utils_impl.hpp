@@ -85,13 +85,13 @@ bool detect_path_collision(const std::filesystem::path &p, std::string &error_ms
     switch (path_type) {
       case file_type::regular:
         error_msg +=
-            fmt::format(FMT_STRING("Path {} already exists and is actually a file. Please remove "
+            fmt::format(FMT_STRING("path {} already exists and is actually a file. Please remove "
                                    "the file and try again"),
                         p);
         return false;
       case file_type::directory:
         error_msg += fmt::format(
-            FMT_STRING("Path {} already exists and is actually a directory. Please remove "
+            FMT_STRING("path {} already exists and is actually a directory. Please remove "
                        "the directory and try again"),
             p);
         return false;
@@ -105,7 +105,7 @@ bool detect_path_collision(const std::filesystem::path &p, std::string &error_ms
   }
 
   if (path_type == file_type::regular) {
-    error_msg += fmt::format(FMT_STRING("File {} already exists. Pass --force to overwrite"), p);
+    error_msg += fmt::format(FMT_STRING("file {} already exists. Pass --force to overwrite"), p);
     return false;
   }
   return true;
@@ -166,7 +166,7 @@ template <class EnumT, class StringT>
 const StringT &CliEnumMappings<EnumT, StringT>::at(const EnumT key) const {
   auto match = this->find(key);
   if (match == this->_mappings.end()) {
-    throw std::out_of_range(fmt::format(FMT_STRING("Invalid key {}"), int(key)));
+    throw std::out_of_range(fmt::format(FMT_STRING("invalid key {}"), int(key)));
   }
   return match->first;
 }
@@ -175,7 +175,7 @@ template <class EnumT, class StringT>
 EnumT CliEnumMappings<EnumT, StringT>::at(const StringT &key) const {
   auto match = this->find(key);
   if (match == this->_mappings.end()) {
-    throw std::out_of_range(fmt::format(FMT_STRING("Invalid key {}"), key));
+    throw std::out_of_range(fmt::format(FMT_STRING("invalid key {}"), key));
   }
   return match->second;
 }
@@ -269,9 +269,9 @@ IsFiniteValidator::IsFiniteValidator(bool nan_ok) {
       if (std::isfinite(n) || (nan_ok && !std::isnan(n))) {
         return "";
       }
-      return fmt::format(FMT_STRING("Value {} is not a finite number"), n);
+      return fmt::format(FMT_STRING("value {} is not a finite number"), n);
     } catch ([[maybe_unused]] const std::exception &e) {
-      return fmt::format(FMT_STRING("Value {} could not be converted"), input);
+      return fmt::format(FMT_STRING("value {} could not be converted"), input);
     }
   };
 }
@@ -301,7 +301,7 @@ AsGenomicDistanceTransformer::AsGenomicDistanceTransformer() : CLI::CheckedTrans
 
     // input is empty or there are no digits preceding the unit
     if (unit_rbegin == s.rend()) {
-      throw CLI::ValidationError(fmt::format(FMT_STRING("Value {} could not be converted"), input));
+      throw CLI::ValidationError(fmt::format(FMT_STRING("value {} could not be converted"), input));
     }
 
     // input does not have a unit
@@ -310,7 +310,7 @@ AsGenomicDistanceTransformer::AsGenomicDistanceTransformer() : CLI::CheckedTrans
         std::ignore = utils::parse_numeric_or_throw<bp_t>(input);
       } catch ([[maybe_unused]] const std::exception &e) {
         throw CLI::ValidationError(
-            fmt::format(FMT_STRING("Unable to convert {} to a number"), input));
+            fmt::format(FMT_STRING("unable to convert {} to a number"), input));
       }
       return "";  // input validation was successful
     }
@@ -344,7 +344,7 @@ AsGenomicDistanceTransformer::AsGenomicDistanceTransformer() : CLI::CheckedTrans
       throw;
     } catch ([[maybe_unused]] const std::exception &e) {
       throw CLI::ValidationError(
-          fmt::format(FMT_STRING("Unable to convert {} to a number"), num_str));
+          fmt::format(FMT_STRING("unable to convert {} to a number"), num_str));
     }
   };
 }

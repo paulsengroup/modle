@@ -421,7 +421,7 @@ void Cli::validate_eval_subcommand() const {
     DISABLE_WARNING_PUSH
     if (!name_collisions.empty()) {
       errors.emplace_back(fmt::format(
-          FMT_STRING("Detected {} file name collision(s): refusing to proceed. Pass --force to "
+          FMT_STRING("detected {} file name collision(s): refusing to proceed. Pass --force to "
                      "overwrite existing file(s).\n   Colliding file name(s):\n    - {}"),
           name_collisions.size(), fmt::join(name_collisions, ".\n    - ")));
     }
@@ -429,7 +429,7 @@ void Cli::validate_eval_subcommand() const {
 
   if (!errors.empty()) {
     throw std::runtime_error(
-        fmt::format(FMT_STRING("The following error(s) where encountered while validating CLI "
+        fmt::format(FMT_STRING("the following error(s) where encountered while validating CLI "
                                "arguments and input file(s):\n - {}"),
                     fmt::join(errors, "\n - ")));
   }
@@ -450,7 +450,7 @@ void Cli::validate_transform_subcommand() const {
   if (c.method == t::normalize) {
     if (const auto [lb, ub] = c.normalization_range; lb >= ub) {
       errors.push_back(
-          fmt::format(FMT_STRING("The upper bound for the normalization range specified through "
+          fmt::format(FMT_STRING("the upper bound for the normalization range specified through "
                                  "--normalization range is expected to be strictly larger than the "
                                  "lower bound.\n   - Lower bound: {}\n   - Upper bound: {}\n"),
                       lb, ub));
@@ -460,7 +460,7 @@ void Cli::validate_transform_subcommand() const {
   if (const auto [lb, ub] = c.normalization_range; !std::isinf(lb) || !std::isinf(ub)) {
     if (lb >= ub) {
       errors.push_back(
-          fmt::format(FMT_STRING("The upper bound for the saturation range specified through "
+          fmt::format(FMT_STRING("the upper bound for the saturation range specified through "
                                  "--saturation range is expected to be strictly larger than the "
                                  "lower bound.\n   - Lower bound: {}\n   - Upper bound: {}\n"),
                       lb, ub));

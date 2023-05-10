@@ -27,7 +27,7 @@ Writer::Writer(std::filesystem::path name, std::uint_fast8_t zoom_levels, usize 
   if (Writer::_global_bigwig_files_opened == 0) {
     if (bwInit(this->_buff_size)) {  // NOLINT(readability-implicit-bool-conversion)
       throw std::runtime_error(fmt::format(
-          FMT_STRING("Failed to initialize libBigWig global state while opening file: {}"),
+          FMT_STRING("failed to initialize libBigWig global state while opening file: {}"),
           this->_fname));
     }
     ++Writer::_global_bigwig_files_opened;
@@ -40,7 +40,7 @@ Writer::Writer(std::filesystem::path name, std::uint_fast8_t zoom_levels, usize 
       bwCleanup();
     }
     throw fmt::system_error(
-        errno, FMT_STRING("An error occurred while opening file {} for writing"), this->_fname);
+        errno, FMT_STRING("an error occurred while opening file {} for writing"), this->_fname);
   }
 }
 
@@ -106,7 +106,7 @@ void Writer::write_chromosomes(const char* const* chrom_names, const u32* chrom_
 
   if (bwCreateHdr(this->_fp, this->_zoom_levels)) {  // NOLINT(readability-implicit-bool-conversion)
     throw std::runtime_error(
-        fmt::format(FMT_STRING("Failed to initialize the file header for file {}"), this->_fname));
+        fmt::format(FMT_STRING("failed to initialize the file header for file {}"), this->_fname));
   }
 
   // NOLINTNEXTLINE(cppcoreguidelines-pro-type-const-cast)
@@ -114,12 +114,12 @@ void Writer::write_chromosomes(const char* const* chrom_names, const u32* chrom_
                                     static_cast<i64>(num_chroms));
   if (!this->_fp->cl) {
     throw std::runtime_error(
-        fmt::format(FMT_STRING("Failed to create the chromosome list for file {}"), this->_fname));
+        fmt::format(FMT_STRING("failed to create the chromosome list for file {}"), this->_fname));
   }
 
   if (bwWriteHdr(this->_fp)) {  // NOLINT(readability-implicit-bool-conversion)
     throw std::runtime_error(
-        fmt::format(FMT_STRING("Failed to write file header to file {}"), this->_fname));
+        fmt::format(FMT_STRING("failed to write file header to file {}"), this->_fname));
   }
   this->_initialized = true;
 }

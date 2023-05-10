@@ -94,7 +94,7 @@ void Writer::write_range(std::string_view chrom_name, const absl::Span<N> values
                              static_cast<u32>(span), static_cast<u32>(step), fvalues_span.data(),
                              static_cast<u32>(fvalues_span.size()))) {
     throw std::runtime_error(
-        fmt::format(FMT_STRING("Failed to write data for chrom \"{}\""), chrom_name));
+        fmt::format(FMT_STRING("failed to write data for chrom \"{}\""), chrom_name));
   }
 }
 
