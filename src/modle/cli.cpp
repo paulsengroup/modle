@@ -130,7 +130,8 @@ static std::vector<CLI::App*> add_common_options(CLI::App& subcommand, modle::Co
       "Example: running modle sim -o /tmp/my_simulation ... yields the following files:\n"
       "         - /tmp/my_simulation.cool\n"
       "         - /tmp/my_simulation.log\n"
-      "         - /tmp/my_simulation_config.toml")
+      "         - /tmp/my_simulation_config.toml\n"
+      "         - /tmp/my_simulation_lef_1d_occupancy.bw")
       ->required();
 
   io.add_option(
@@ -588,7 +589,8 @@ static std::vector<CLI::App*> add_common_options(CLI::App& subcommand, modle::Co
 
   // Deprecated options
   deprecated.add_option("--chrom-subranges", c.path_to_genomic_intervals)->check(CLI::ExistingFile);
-  deprecated.get_option("--chrom-subranges")->excludes(io.get_option("--genomic-intervals"));
+  // We do not want this exclusion to show up in the help message
+  // deprecated.get_option("--chrom-subranges")->excludes(io.get_option("--genomic-intervals"));
 
   std::array<std::reference_wrapper<CLI::App>, 10> option_groups{
       io, lefbar, cgen, stopping, misc, io_adv, lef_adv, barr_adv, cgen_adv, burnin_adv};
