@@ -392,24 +392,25 @@ absl::btree_set<GenomicInterval> Genome::import_genomic_intervals(
       chromosomes.begin(), chromosomes.end(), std::inserter(chrom_names, chrom_names.begin()),
       [](auto chrom_ptr) { return std::make_pair(chrom_ptr->name(), std::move(chrom_ptr)); });
 
-  usize id = 0;
   // Parse all the records from the BED file. The parser will throw in case of duplicates.
-  for (auto&& [chrom_name, intervals] :
-       bed::Parser(path_to_bed, bed::BED::BED3).parse_all_in_interval_tree()) {
-    auto it = chrom_names.find(chrom_name);
-    if (it == chrom_names.end()) {
-      spdlog::warn(
-          FMT_STRING(
-              "skipping {} intervals from {}. Reason: {} was not present in the .chrom.sizes file"),
-          intervals.size(), chrom_name, chrom_name);
-      continue;
-    }
+  const auto intervals = bed::Parser(path_to_bed, bed::BED::BED3).parse_all_in_interval_tree();
 
-    auto chrom_ptr = it->second;
-    for (const auto& interval : intervals.data()) {
-      buffer.emplace(GenomicInterval{id++, chrom_ptr, interval.chrom_start, interval.chrom_end,
-                                     contact_matrix_resolution, diagonal_width});
+  usize id = 0;
+  for (const auto& chrom : chromosomes) {
+    auto overlaps = intervals.find_overlaps(std::string{chrom->name()}, u64(0),
+                                            utils::conditional_static_cast<u64>(chrom->size()));
+    if (overlaps.empty()) {
+      spdlog::warn(FMT_STRING("found no intervals overlapping chromosome {}!"), chrom->name());
     }
+    std::transform(overlaps.begin(), overlaps.end(), std::inserter(buffer, buffer.end()),
+                   [&](const auto& interval) {
+                     return GenomicInterval{id++,
+                                            chrom,
+                                            interval.chrom_start,
+                                            interval.chrom_end,
+                                            contact_matrix_resolution,
+                                            diagonal_width};
+                   });
   }
 
   if (buffer.empty()) {
