@@ -10,8 +10,8 @@ endif()
 # cmake-format: off
 FetchContent_Declare(
         coolerpp
-        GIT_REPOSITORY https://github.com/robomics/coolerpp.git
-        GIT_TAG eef184a7d56a12b0691e8d9cb0437746e7645682
+        URL ${CMAKE_CURRENT_SOURCE_DIR}/external/coolerpp-0b19a5b.tar.xz
+        URL_HASH SHA512=b8df4b89afba941851573033ddf72a5725faadc3476ff4ac9a1d9abb7070d6a503be4bdf91ace0fa0ec9b87239d801d45f0bc6170b284cc21b99f45dda55e507
 )
 # cmake-format: on
 

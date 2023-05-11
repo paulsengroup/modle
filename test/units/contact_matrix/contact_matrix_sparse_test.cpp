@@ -47,13 +47,13 @@ TEST_CASE("CMatrixSparse in/decrement", "[cmatrix][short]") {
   if constexpr (utils::ndebug_not_defined()) {
     CHECK_THROWS_WITH(m.increment(25, 25),
                       Catch::Matchers::ContainsSubstring(
-                          "Detected an out-of-bound read: attempt to access item at"));
+                          "detected an out-of-bound read: attempt to access item at"));
     CHECK(m.get_n_of_missed_updates() == 1);
     CHECK(m.get_tot_contacts() == 1);
 
     CHECK_THROWS_WITH(m.decrement(25, 25),
                       Catch::Matchers::ContainsSubstring(
-                          "Detected an out-of-bound read: attempt to access item at"));
+                          "detected an out-of-bound read: attempt to access item at"));
     CHECK(m.get_n_of_missed_updates() == 1);
     CHECK(m.get_tot_contacts() == 1);
   }

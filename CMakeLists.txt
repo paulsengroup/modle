@@ -80,6 +80,7 @@ include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/CompilerWarnings.cmake)
 
 set(ENABLE_CACHE_DEFAULT ON)
 set(ENABLE_CLANG_TIDY_DEFAULT OFF)
+set(ENABLE_COMPILE_COMMANDS_SYMLINK_DEFAULT OFF)
 set(ENABLE_CONAN_DEFAULT OFF)
 set(ENABLE_CPPCHECK_DEFAULT OFF)
 set(ENABLE_DOXYGEN_USER OFF)
@@ -120,6 +121,8 @@ option(
   "Enable assertions and various other runtime checks (this is done regardless of the type passed to CMAKE_BUILD_TYPE)"
   OFF)
 option(MODLE_DOWNLOAD_TEST_DATASET "Download datasets required by unit and integration tests" ON)
+option(MODLE_ENABLE_TESTING "Build MoDLE's unit tests" ON)
+option(MODLE_ENABLE_GIT_VERSION_TRACKING "Retrieve project version and metadata from git" ON)
 
 target_compile_features(project_options INTERFACE cxx_std_${CMAKE_CXX_STANDARD})
 

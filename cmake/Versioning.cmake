@@ -4,11 +4,11 @@
 
 set(MODLE_PROJECT_VERSION_MAJOR 1)
 set(MODLE_PROJECT_VERSION_MINOR 0)
-set(MODLE_PROJECT_VERSION_PATCH 0)
+set(MODLE_PROJECT_VERSION_PATCH 1)
 set(MODLE_PROJECT_VERSION_SUFFIX "")
 
 function(ConfigureVersioning input_config_folder output_config_folder)
-  if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/.git")
+  if(MODLE_ENABLE_GIT_VERSION_TRACKING AND EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/.git")
     # cmake-format: off
     FetchContent_Declare(
             _modle_cmake-git-version-tracking
@@ -66,4 +66,4 @@ function(ConfigureVersioning input_config_folder output_config_folder)
   configure_file("${input_config_folder}/version.cpp.in" "${output_config_folder}/version.cpp" @ONLY)
 endfunction()
 
-configureversioning("${CMAKE_CURRENT_SOURCE_DIR}/src/config" "${CMAKE_CURRENT_BINARY_DIR}/src/config")
+ConfigureVersioning("${CMAKE_CURRENT_SOURCE_DIR}/src/config" "${CMAKE_CURRENT_BINARY_DIR}/src/config")
