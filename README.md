@@ -170,6 +170,7 @@ drwxrwxrwt 20 user group  560 Jan  5 12:20 ..
 -rw-------  1 user group  365 Jan  5 12:00 grch38.chrom.sizes
 -rw-------  1 user group 241K Jan  5 12:00 grch38_h1_extrusion_barriers.bed.xz
 -rw-r--r--  1 root root  3.7K Jan  5 12:00 output_config.toml
+-rw-r--r--  1 root root  2.4M Jan  5 12:05 output_lef_1d_occupancy.bw
 -rw-r--r--  1 root root   57M Jan  5 12:05 output.cool
 -rw-r--r--  1 root root   14K Jan  5 12:05 output.log
 ```
@@ -187,6 +188,7 @@ user@dev:/tmp$ ls -lah output/
 drwx------  2 user group  140 Jan  5 12:20 .
 drwxrwxrwt 20 user group  560 Jan  5 12:20 ..
 -rw-r--r--  1 root root  3.7K Jan  5 12:00 output_config.toml
+-rw-r--r--  1 root root  2.4M Jan  5 12:05 output_lef_1d_occupancy.bw
 -rw-r--r--  1 root root   57M Jan  5 12:05 output.cool
 -rw-r--r--  1 root root   14K Jan  5 12:05 output.log
 ```
@@ -1037,7 +1039,7 @@ examples/out
 └── hg38_default.log
 ```
 
-Output files produced by the above command are available [here](TODO).
+Output files produced by the above command are available [here](https://doi.org/10.5281/zenodo.7924253).
 
 Simulated interactions are written to file `hg38_default.cool`. More information about the .cool format is available at [open2c/cooler](https://github.com/open2c/cooler).
 
@@ -1290,7 +1292,7 @@ modle simulate \
     --output-prefix examples/out/hg38_deep
 ```
 
-Output files produced by the above command are available [here](TODO).
+Output files produced by the above command are available [here](https://doi.org/10.5281/zenodo.7924253).
 
 ![Simulation w/ high contact density](examples/images/higlass_003.avif)
 
@@ -1304,7 +1306,7 @@ For an up-to-date list of supported CLI options, please refer to MoDLE's help me
 user@dev:/tmp/modle$ modle simulate --help
 
 Simulate loop extrusion and write resulting molecular contacts in a .cool file.
-Usage: /usr/local/modle simulate [OPTIONS]
+Usage: modle simulate [OPTIONS]
 
 Options:
   -h,--help                   Print this help message and exit
@@ -1319,6 +1321,9 @@ Options:
                                 by the record.
                                 Barriers mapping on chromosomes not listed in the chrom.sizes file passed through
                                 the --chrom-sizes option are ignored.
+    -g,--genomic-intervals      Path to BED3+ file with the genomic regions to be simulated.
+                                Intervals listed in this file should be a subset of the chromosomes defined in the .chrom.sizes files.
+                                Intervals referring to chromosomes not listed in the .chrom.sizes file are ignored.
     -f,--force                  Overwrite existing files (if any).
     -o,--output-prefix REQUIRED Output prefix.
                                 Can be an absolute or relative path including the file name but without the extension.
@@ -1331,8 +1336,6 @@ Options:
                                 This is only used to populate the "assembly" attribute in the output .cool file.
 ...
 ```
-
-
 
 ## Citing
 
