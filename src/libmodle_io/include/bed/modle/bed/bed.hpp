@@ -31,6 +31,8 @@ struct RGB {
   u8 g;
   u8 b;
 
+  bool operator==(const RGB& other) const noexcept;
+  bool operator!=(const RGB& other) const noexcept;
   [[nodiscard]] std::string to_string() const;
 };
 

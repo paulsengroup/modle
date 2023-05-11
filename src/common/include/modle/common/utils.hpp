@@ -128,6 +128,8 @@ class LockRangeShared {
   LockRangeShared& operator=(LockRangeShared&& other) noexcept = delete;
 };
 
+[[nodiscard]] constexpr std::string_view strip_quotes(std::string_view s) noexcept;
+
 }  // namespace modle::utils
 
 #include "../../../utils_impl.hpp"  // IWYU pragma: export

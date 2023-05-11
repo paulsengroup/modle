@@ -204,6 +204,19 @@ template <class MutexT>
 LockRangeShared<MutexT>::~LockRangeShared() noexcept {
   std::for_each(this->_mutexes.begin(), this->_mutexes.end(), [](auto &m) { m.unlock_shared(); });
 }
+
+constexpr std::string_view strip_quotes(std::string_view s) noexcept {
+  assert(!s.empty());
+  if (s.front() == '\'' || s.front() == '"') {
+    s = s.substr(1);
+  }
+  assert(!s.empty());
+  if (s.back() == '\'' || s.back() == '"') {
+    s = s.substr(0, s.size() - 1);
+  }
+  assert(!s.empty());
+  return s;
+}
 }  // namespace modle::utils
 
 // IWYU pragma: private, include "modle/utils.hpp"

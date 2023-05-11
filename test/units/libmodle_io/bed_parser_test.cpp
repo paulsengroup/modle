@@ -77,6 +77,38 @@ TEST_CASE("BED Parser simple", "[parsers][BED][io][short]") {
 }
 
 // NOLINTNEXTLINE(readability-function-cognitive-complexity)
+TEST_CASE("BED: strip quotes", "[parsers][BED][io][short]") {
+  SECTION("valid") {
+    constexpr std::string_view line{
+        "chr1\t"
+        "0\t"
+        "10\t"
+        "\"name\"\t"
+        "0.0\t"
+        "\"+\"\t"
+        "0\t"
+        "1\t"
+        "\"0,0,0\""};
+
+    const bed::BED record(line);
+    CHECK(record.chrom == "chr1");
+    CHECK(record.chrom_start == 0);
+    CHECK(record.chrom_end == 10);
+    CHECK(record.name == "name");
+    CHECK(record.score == 0.0);
+    CHECK(record.strand == '+');
+    CHECK(record.thick_start == 0);
+    CHECK(record.thick_end == 1);
+    CHECK(*record.rgb == RGB{});
+  }
+
+  SECTION("invalid") {
+    CHECK_THROWS(bed::BED("chr1\t\"0\"\t1"));
+    CHECK_THROWS(bed::BED("chr1\t0\t1\t.\t\"0.0\""));
+  }
+}
+
+// NOLINTNEXTLINE(readability-function-cognitive-complexity)
 TEST_CASE("BED Parser simple: BED6 -> BED3", "[parsers][BED][io][short]") {
   const auto bed_file = data_dir() / "genomic_intervals" / "intervals.bed6.xz";
   auto p = bed::Parser(bed_file, BED::BED3);

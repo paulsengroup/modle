@@ -17,6 +17,7 @@
 #include <vector>       // for vector
 
 #include "modle/bed/bed.hpp"  // for BED
+#include "modle/common/utils.hpp"
 
 namespace modle::chrom_sizes {
 
@@ -41,14 +42,15 @@ std::vector<bed::BED> Parser::parse_all(char sep) {
       }
       DISABLE_WARNING_PUSH
       DISABLE_WARNING_NULL_DEREF
-      if (const auto chrom_name = *splitter.begin(); chrom_names.contains(chrom_name)) {
+      const auto chrom_name = utils::strip_quotes(*splitter.begin());
+      if (chrom_names.contains(chrom_name)) {
         throw std::runtime_error(
             fmt::format(FMT_STRING("found multiple records for chrom \"{}\""), chrom_name));
       }
       DISABLE_WARNING_POP
       chrom_sizes.emplace_back(
-          fmt::format(FMT_COMPILE("{}\t0\t{}"), *splitter.begin(), *std::next(splitter.begin())),
-          id++, bed::BED::BED3);
+          fmt::format(FMT_COMPILE("{}\t0\t{}"), chrom_name, *std::next(splitter.begin())), id++,
+          bed::BED::BED3);
     } catch (const std::runtime_error& e) {
       throw std::runtime_error(
           fmt::format(FMT_STRING("encountered a malformed record at line {} of file \"{}\": {}.\n "

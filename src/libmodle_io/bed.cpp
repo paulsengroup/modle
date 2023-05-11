@@ -35,8 +35,14 @@ namespace modle::bed {
 
 std::string RGB::to_string() const { return fmt::to_string(*this); }
 
+bool RGB::operator==(const modle::bed::RGB& other) const noexcept {
+  return this->r == other.r && this->g == other.g && this->b == other.b;
+}
+
+bool RGB::operator!=(const modle::bed::RGB& other) const noexcept { return !(*this == other); }
+
 void BED::parse_strand_or_throw(const std::vector<std::string_view>& toks, u8 idx, char& field) {
-  const auto match = bed_strand_encoding.find(toks[idx]);
+  const auto match = bed_strand_encoding.find(utils::strip_quotes(toks[idx]));
   if (match == bed_strand_encoding.end()) {
     throw std::runtime_error(fmt::format(FMT_STRING("unrecognized strand \"{}\""), toks[idx]));
   }
@@ -44,14 +50,15 @@ void BED::parse_strand_or_throw(const std::vector<std::string_view>& toks, u8 id
 }
 
 void BED::parse_rgb_or_throw(const std::vector<std::string_view>& toks, u8 idx, RGB& field) {
-  if (toks[idx] == "0") {
+  const auto tok = utils::strip_quotes(toks[idx]);
+  if (tok == "0") {
     field = RGB{0, 0, 0};
     return;
   }
-  const std::vector<std::string_view> channels = absl::StrSplit(toks[idx], ',');
+  const std::vector<std::string_view> channels = absl::StrSplit(tok, ',');
   if (channels.size() != 3) {
-    throw std::runtime_error(fmt::format(FMT_STRING("RGB: expected 3 fields, got {}: \"{}\""),
-                                         channels.size(), toks[idx]));
+    throw std::runtime_error(
+        fmt::format(FMT_STRING("RGB: expected 3 fields, got {}: \"{}\""), channels.size(), tok));
   }
   utils::parse_numeric_or_throw(channels, 0, field.r);
   utils::parse_numeric_or_throw(channels, 1, field.g);
@@ -118,7 +125,7 @@ void BED::validate_record(const std::vector<std::string_view>& toks, const Diale
 }
 
 void BED::parse_chrom(const std::vector<std::string_view>& toks) {
-  this->chrom = toks[BED_CHROM_IDX];
+  this->chrom = utils::strip_quotes(toks[BED_CHROM_IDX]);
 }
 
 void BED::parse_chrom_start(const std::vector<std::string_view>& toks) {
@@ -138,7 +145,7 @@ bool BED::parse_chrom_end(const std::vector<std::string_view>& toks) {
 
 bool BED::parse_name(const std::vector<std::string_view>& toks) {
   assert(this->_standard >= BED4);
-  this->name = toks[BED_NAME_IDX];
+  this->name = utils::strip_quotes(toks[BED_NAME_IDX]);
   return this->_standard == BED4;
 }
 
