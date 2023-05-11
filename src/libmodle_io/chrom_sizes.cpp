@@ -42,7 +42,7 @@ std::vector<bed::BED> Parser::parse_all(char sep) {
       }
       DISABLE_WARNING_PUSH
       DISABLE_WARNING_NULL_DEREF
-      const auto chrom_name = utils::strip_quotes(*splitter.begin());
+      const auto chrom_name = utils::strip_quote_pairs(*splitter.begin());
       if (chrom_names.contains(chrom_name)) {
         throw std::runtime_error(
             fmt::format(FMT_STRING("found multiple records for chrom \"{}\""), chrom_name));

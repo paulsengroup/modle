@@ -128,7 +128,7 @@ class LockRangeShared {
   LockRangeShared& operator=(LockRangeShared&& other) noexcept = delete;
 };
 
-[[nodiscard]] constexpr std::string_view strip_quotes(std::string_view s) noexcept;
+[[nodiscard]] constexpr std::string_view strip_quote_pairs(std::string_view s) noexcept;
 
 }  // namespace modle::utils
 

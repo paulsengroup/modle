@@ -100,6 +100,8 @@ TEST_CASE("BED: strip quotes", "[parsers][BED][io][short]") {
     CHECK(record.thick_start == 0);
     CHECK(record.thick_end == 1);
     CHECK(*record.rgb == RGB{});
+
+    CHECK(bed::BED("\"chr1\t0\t1").chrom == "\"chr1");
   }
 
   SECTION("invalid") {
