@@ -5,9 +5,11 @@
 #include "modle/chrom_sizes/chrom_sizes.hpp"  // for Parser
 
 #include <absl/container/flat_hash_set.h>  // for flat_hash_set
-#include <absl/strings/str_split.h>        // for StrSplit, Splitter
+#include <absl/strings/ascii.h>
+#include <absl/strings/str_split.h>  // for StrSplit, Splitter
 #include <fmt/compile.h>
 #include <fmt/format.h>  // for format, FMT_COMPILE_STRING, FMT_STRING...
+#include <fmt/std.h>
 
 #include <cassert>      // for assert
 #include <filesystem>   // for filesystem::path
@@ -33,7 +35,7 @@ std::vector<bed::BED> Parser::parse_all(char sep) {
       continue;
     }
 
-    const auto splitter = absl::StrSplit(buff, sep);
+    const auto splitter = absl::StrSplit(absl::StripTrailingAsciiWhitespace(buff), sep);
     const auto num_toks = std::distance(splitter.begin(), splitter.end());
     try {
       if (num_toks < 2) {
