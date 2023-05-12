@@ -38,9 +38,9 @@ std::vector<bed::BED> Parser::parse_all(char sep) {
     const auto splitter = absl::StrSplit(absl::StripTrailingAsciiWhitespace(buff), sep);
     const auto num_toks = std::distance(splitter.begin(), splitter.end());
     try {
-      if (num_toks < 2) {
+      if (num_toks != 2) {
         throw std::runtime_error(
-            fmt::format(FMT_STRING("expected 2 or more tokens, got {}: \"{}\""), num_toks, buff));
+            fmt::format(FMT_STRING("expected exactly 2 tokens, found {}: \"{}\""), num_toks, buff));
       }
       DISABLE_WARNING_PUSH
       DISABLE_WARNING_NULL_DEREF
@@ -55,9 +55,9 @@ std::vector<bed::BED> Parser::parse_all(char sep) {
           bed::BED::BED3);
     } catch (const std::runtime_error& e) {
       throw std::runtime_error(
-          fmt::format(FMT_STRING("encountered a malformed record at line {} of file \"{}\": {}.\n "
+          fmt::format(FMT_STRING("encountered a malformed record at line {} of file {}: {}.\n "
                                  "Line that triggered the error:\n\"{}\""),
-                      i, this->_reader.path_string(), e.what(), buff.data()));
+                      i, this->_reader.path(), e.what(), buff.data()));
     }
   }
   return chrom_sizes;
