@@ -31,16 +31,17 @@ std::vector<bed::BED> Parser::parse_all(char sep) {
   std::vector<bed::BED> chrom_sizes;
 
   for (usize i = 1UL, id = 0; this->_reader.getline(buff); ++i) {
+    buff = absl::StripTrailingAsciiWhitespace(buff);
     if (buff.empty()) {
       continue;
     }
 
-    const auto splitter = absl::StrSplit(absl::StripTrailingAsciiWhitespace(buff), sep);
+    const auto splitter = absl::StrSplit(buff, sep);
     const auto num_toks = std::distance(splitter.begin(), splitter.end());
     try {
       if (num_toks != 2) {
         throw std::runtime_error(
-            fmt::format(FMT_STRING("expected exactly 2 tokens, found {}: \"{}\""), num_toks, buff));
+            fmt::format(FMT_STRING("expected exactly 2 fields, found {}: \"{}\""), num_toks, buff));
       }
       DISABLE_WARNING_PUSH
       DISABLE_WARNING_NULL_DEREF
