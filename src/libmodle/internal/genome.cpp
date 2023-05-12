@@ -346,6 +346,7 @@ std::vector<std::shared_ptr<const Chromosome>> Genome::import_chromosomes(
   std::vector<std::shared_ptr<const Chromosome>> buffer{};
   for (auto&& record : chrom_sizes::Parser(path_to_chrom_sizes).parse_all()) {
     if (auto it = chrom_names.find(record.chrom); it != chrom_names.end()) {
+      assert(record.size() != 0);
       throw std::runtime_error(fmt::format(
           FMT_STRING(
               "Found duplicate entry for {} at line {} of file {}! First entry was at line {}"),

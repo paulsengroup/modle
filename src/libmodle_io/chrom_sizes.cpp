@@ -45,11 +45,17 @@ std::vector<bed::BED> Parser::parse_all(char sep) {
       DISABLE_WARNING_PUSH
       DISABLE_WARNING_NULL_DEREF
       const auto chrom_name = utils::strip_quote_pairs(*splitter.begin());
+      const auto chrom_size = *std::next(splitter.begin());
+      DISABLE_WARNING_POP
       if (chrom_names.contains(chrom_name)) {
         throw std::runtime_error(
             fmt::format(FMT_STRING("found multiple records for chrom \"{}\""), chrom_name));
       }
-      DISABLE_WARNING_POP
+
+      if (chrom_size == "0") {
+        throw std::runtime_error(
+            fmt::format(FMT_STRING("chrom \"{}\" has a length of 0bp"), chrom_name));
+      }
       chrom_sizes.emplace_back(
           fmt::format(FMT_COMPILE("{}\t0\t{}"), chrom_name, *std::next(splitter.begin())), id++,
           bed::BED::BED3);
