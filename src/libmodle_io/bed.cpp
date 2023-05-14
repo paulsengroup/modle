@@ -68,7 +68,7 @@ void BED::parse_rgb_or_throw(const std::vector<std::string_view>& toks, u8 idx, 
 }
 
 RGB BED::parse_rgb_or_throw(const std::vector<std::string_view>& toks, u8 idx) {
-  RGB buff;
+  RGB buff{};
   BED::parse_rgb_or_throw(toks, idx, buff);
   return buff;
 }

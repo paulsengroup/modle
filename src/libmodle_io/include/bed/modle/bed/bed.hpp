@@ -108,6 +108,7 @@ struct BED {
   std::vector<u64> block_starts{};
   std::string extra_tokens{};
 
+  [[nodiscard]] constexpr explicit operator bool() const noexcept;
   [[nodiscard]] bool operator==(const BED& other) const noexcept;
   [[nodiscard]] bool operator<(const BED& other) const noexcept;
   [[nodiscard]] usize id() const noexcept;

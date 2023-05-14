@@ -24,6 +24,8 @@
 
 namespace modle::bed {
 
+constexpr BED::operator bool() const noexcept { return this->id() != this->null_id; }
+
 template <typename K, typename I>
 BED_tree<K, I>::BED_tree(const std::filesystem::path& path_to_bed, BED::Dialect dialect)
     : BED_tree(path_to_bed.empty()
