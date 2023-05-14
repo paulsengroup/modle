@@ -26,6 +26,7 @@ target_sources(
           ${CMAKE_CURRENT_SOURCE_DIR}/units/interval_tree/interval_tree_test.cpp
           ${CMAKE_CURRENT_SOURCE_DIR}/units/libmodle_io/bed_parser_test.cpp
           ${CMAKE_CURRENT_SOURCE_DIR}/units/libmodle_io/bed_tree_test.cpp
+          ${CMAKE_CURRENT_SOURCE_DIR}/units/libmodle_io/bigwig_test.cpp
           ${CMAKE_CURRENT_SOURCE_DIR}/units/libmodle_io/compressed_io_test.cpp
           ${CMAKE_CURRENT_SOURCE_DIR}/units/libmodle_io/contact_matrix_io_test.cpp
           ${CMAKE_CURRENT_SOURCE_DIR}/units/simulation_cpu/collision_encoding_test.cpp

@@ -23,10 +23,47 @@
 
 namespace modle::io::bigwig {
 
+constexpr Reader::operator bool() const noexcept { return this->_fp != nullptr; }
+
+constexpr const std::filesystem::path& Reader::path() const noexcept { return this->_fname; }
+constexpr auto Reader::chromosomes() const noexcept -> const Chromosomes& { return this->_chroms; }
+
+template <bwStatsType stat>
+inline void Reader::stats(const std::string& chrom, bp_t start, bp_t end, bp_t window_size,
+                          std::vector<double>& buff) {
+  static_assert(stat != bwStatsType::doesNotExist);
+  assert(window_size != 0);
+  assert(!!*this);
+  this->validate_query(chrom, start, end);
+
+  const auto num_bins =
+      utils::conditional_static_cast<u32>((end - start + window_size - 1) / window_size);
+
+  buff.clear();
+  const std::unique_ptr<double, decltype(&std::free)> stats{
+      bwStatsFromFull(this->_fp, chrom.c_str(), utils::conditional_static_cast<u32>(start),
+                      utils::conditional_static_cast<u32>(end), num_bins, stat),
+      &std::free};
+  if (!stats) {
+    return;
+  }
+
+  buff.resize(num_bins);
+  std::copy_n(stats.get(), buff.size(), buff.begin());
+}
+
+template <bwStatsType stat>
+inline std::vector<double> Reader::stats(const std::string& chrom, bp_t start, bp_t end,
+                                         bp_t window_size) {
+  std::vector<double> buff{};
+  this->stats<stat>(chrom, start, end, window_size, buff);
+  return buff;
+}
+
 constexpr Writer::operator bool() const noexcept { return this->_fp != nullptr; }
 
 template <class Chromosomes>
-void Writer::write_chromosomes(Chromosomes& chroms) {
+inline void Writer::write_chromosomes(Chromosomes& chroms) {
   const auto num_chroms = utils::conditional_static_cast<usize>(chroms.size());
 
   DISABLE_WARNING_PUSH
@@ -71,8 +108,8 @@ void Writer::write_chromosomes(Chromosomes& chroms) {
 }
 
 template <class N, class>
-void Writer::write_range(std::string_view chrom_name, const absl::Span<N> values, u64 span,
-                         u64 step, u64 offset) {
+inline void Writer::write_range(std::string_view chrom_name, const absl::Span<N> values, u64 span,
+                                u64 step, u64 offset) {
   assert(this->_initialized);
   assert(this->_fp);
   std::vector<float> fvalues;
@@ -97,5 +134,7 @@ void Writer::write_range(std::string_view chrom_name, const absl::Span<N> values
         fmt::format(FMT_STRING("failed to write data for chrom \"{}\""), chrom_name));
   }
 }
+
+constexpr const std::filesystem::path& Writer::path() const noexcept { return this->_fname; }
 
 }  // namespace modle::io::bigwig
