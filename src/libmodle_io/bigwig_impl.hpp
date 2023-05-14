@@ -28,7 +28,24 @@ constexpr Reader::operator bool() const noexcept { return this->_fp != nullptr; 
 constexpr const std::filesystem::path& Reader::path() const noexcept { return this->_fname; }
 constexpr auto Reader::chromosomes() const noexcept -> const Chromosomes& { return this->_chroms; }
 
-template <bwStatsType stat>
+template <Reader::StatsType stat>
+inline double Reader::stats(const std::string& chrom, bp_t start, bp_t end) {
+  static_assert(stat != bwStatsType::doesNotExist);
+  assert(!!*this);
+  this->validate_query(chrom, start, end);
+
+  const std::unique_ptr<double, decltype(&std::free)> stats{
+      bwStatsFromFull(this->_fp, chrom.c_str(), utils::conditional_static_cast<u32>(start),
+                      utils::conditional_static_cast<u32>(end), 1, stat),
+      &std::free};
+  if (!stats) {
+    return std::numeric_limits<double>::quiet_NaN();
+  }
+
+  return *stats;
+}
+
+template <Reader::StatsType stat>
 inline void Reader::stats(const std::string& chrom, bp_t start, bp_t end, bp_t window_size,
                           std::vector<double>& buff) {
   static_assert(stat != bwStatsType::doesNotExist);
@@ -52,7 +69,7 @@ inline void Reader::stats(const std::string& chrom, bp_t start, bp_t end, bp_t w
   std::copy_n(stats.get(), buff.size(), buff.begin());
 }
 
-template <bwStatsType stat>
+template <Reader::StatsType stat>
 inline std::vector<double> Reader::stats(const std::string& chrom, bp_t start, bp_t end,
                                          bp_t window_size) {
   std::vector<double> buff{};

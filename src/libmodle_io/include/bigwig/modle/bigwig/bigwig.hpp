@@ -34,6 +34,7 @@ class Reader {
   using Chromosomes = absl::btree_map<std::string, bp_t>;
   using Intervals =
       std::unique_ptr<bwOverlappingIntervals_t, decltype(&bwDestroyOverlappingIntervals)>;
+  using StatsType = bwStatsType;
 
  private:
   std::filesystem::path _fname{};
@@ -56,10 +57,12 @@ class Reader {
 
   [[nodiscard]] std::vector<float> read_values(const std::string& chrom, bp_t start, bp_t end);
   [[nodiscard]] auto get_intervals(const std::string& chrom, bp_t start, bp_t end) -> Intervals;
-  template <bwStatsType stat>
+  template <StatsType stat>
+  [[nodiscard]] double stats(const std::string& chrom, bp_t start, bp_t end);
+  template <StatsType stat>
   [[nodiscard]] std::vector<double> stats(const std::string& chrom, bp_t start, bp_t end,
                                           bp_t window_size);
-  template <bwStatsType stat>
+  template <StatsType stat>
   void stats(const std::string& chrom, bp_t start, bp_t end, bp_t window_size,
              std::vector<double>& buff);
 
