@@ -31,6 +31,7 @@
 #include <vector>       // for vector
 
 #include "modle/bed/bed.hpp"  // for Parser, bed_dialects, str_to_bed_dialect_m...
+#include "modle/bigwig/bigwig.hpp"
 #include "modle/common/cli_utils.hpp"
 #include "modle/common/common.hpp"  // for usize
 #include "modle/common/fmt_helpers.hpp"
@@ -55,7 +56,25 @@ class CoolerFileValidator : public CLI::Validator {
   }
 };
 
+class BigWigFileValidator : public CLI::Validator {
+ public:
+  BigWigFileValidator() : Validator("BigWig") {
+    func_ = [](std::string& path) -> std::string {
+      try {
+        io::bigwig::Reader bw{std::filesystem::path(path)};
+        if (bw.chromosomes().empty()) {
+          throw std::runtime_error("");
+        }
+      } catch (const std::exception& e) {
+        return "Not a valid bigWig file: " + path;
+      }
+      return "";
+    };
+  }
+};
+
 inline const auto IsValidCoolerFile = CoolerFileValidator();
+inline const auto IsValidBigWigFile = BigWigFileValidator();
 
 namespace config = modle::config;
 
@@ -72,6 +91,79 @@ std::ostream& operator<<(std::ostream& os, const transform_config::Transformatio
 }
 
 Cli::Cli(int argc, char** argv) : _argc(argc), _argv(argv), _exec_name(*argv) { this->make_cli(); }
+
+void Cli::make_annotate_barriers_subcommand() {
+  auto& sc =
+      *this->_cli
+           .add_subcommand("annotate-barriers",
+                           "Helper tool to generate an extrusion barrier annotation for MoDLE.")
+           ->fallthrough()
+           ->preparse_callback([this]([[maybe_unused]] usize i) {
+             assert(this->_config.index() == 0);
+             this->_config = annotate_barriers_config{};
+           });
+
+  this->_config = annotate_barriers_config{};
+  auto& c = absl::get<annotate_barriers_config>(this->_config);
+
+  auto& io = *sc.add_option_group("IO", "");
+  auto& gen = *sc.add_option_group("Generic", "");
+
+  // clang-format off
+  io.add_option(
+     "chip-bigwig",
+     c.path_to_bigwig,
+     "Path to a BigWig file.\n"
+     "This is usually a ChIP-seq BigWig file with the fold-change over control for CTCF/RAD21.\n"
+     "Values from this file are used to compute extrusion barrier occupancies.")
+     ->check(IsValidBigWigFile)
+     ->required();
+
+  io.add_option(
+     "binding-sites",
+     c.path_to_bed,
+     "Path to a BED6+ file with the list of candidate extrusion barriers.\n"
+     "This is usually the ChIP-seq broad/narrowPeak for CTCF/RAD21.")
+     ->check(CLI::ExistingFile)
+     ->required();
+
+  gen.add_option(
+     "--scaling-factor",
+     c.scaling_factor,
+     "Scaling factor to use in the logistic transformation.\n"
+     "This value is used to divide peak summits read from the bigWig file provided as input.\n"
+     "Refer to section \"Converting CTCF ChIP-Seq to Orientation-Specific BE Permeability\" from\n"
+     "\"https://www.cell.com/cell-reports/pdf/S2211-1247(16)30530-7.pdf\" for more details.")
+     ->check(CLI::PositiveNumber)
+     ->capture_default_str();
+
+  gen.add_option(
+     "--occupancy-lower-bound,--lb",
+     c.occupancy_lb,
+     "Lower bound for the barrier occupancy.\n"
+     "Bins with an occupancy smaller than --occupancy-lower-bound will be discarded or clamped,\n"
+     "depending on whether --clamp-occupancy was specified.")
+     ->check(CLI::Bound(0.0, 1.0))
+     ->capture_default_str();
+
+  gen.add_option(
+     "--occupancy-upper-bound,--ub",
+     c.occupancy_ub,
+     "Upper bound for the barrier occupancy.\n"
+     "Bins with an occupancy greater than --occupancy-upper-bound will be discarded or clamped,\n"
+     "depending on whether --clamp-occupancy was specified.")
+     ->check(CLI::Bound(0.0, 1.0))
+     ->capture_default_str();
+
+  gen.add_flag(
+     "--clamp-occupancy,!--no-clamp-occupancy",
+     c.clamp_occupancy,
+     "Clamp occupancy values falling outside of the interval specified through --lb and --ub.")
+     ->capture_default_str();
+  // clang-format on
+
+  this->_config = absl::monostate{};
+}
 
 void Cli::make_eval_subcommand() {
   auto& sc =
@@ -342,8 +434,30 @@ void Cli::make_cli() {
   this->_cli.require_subcommand(1);
   this->_cli.formatter(std::make_shared<utils::cli::Formatter>());
 
+  this->make_annotate_barriers_subcommand();
   this->make_eval_subcommand();
   this->make_transform_subcommand();
+}
+
+void Cli::validate_annotate_barriers_subcomand() const {
+  assert(this->_cli.get_subcommand("annotate-barriers")->parsed());
+  std::vector<std::string> errors;
+  const auto& c = absl::get<annotate_barriers_config>(this->_config);
+
+  if (c.occupancy_lb >= c.occupancy_ub) {
+    errors.emplace_back(
+        fmt::format(FMT_STRING("occupancy lower bound should be smaller than the upper bound.\n"
+                               "   - Lower bound: {}\n"
+                               "   - Upper bound: {}\n"),
+                    c.occupancy_lb, c.occupancy_ub));
+  }
+
+  if (!errors.empty()) {
+    throw std::runtime_error(
+        fmt::format(FMT_STRING("the following error(s) where encountered while validating CLI "
+                               "arguments and input file(s):\n - {}"),
+                    fmt::join(errors, "\n - ")));
+  }
 }
 
 void Cli::validate_eval_subcommand() const {
@@ -476,7 +590,9 @@ void Cli::validate_transform_subcommand() const {
 }
 
 void Cli::validate() const {
-  if (this->_cli.get_subcommand("eval")->parsed()) {
+  if (this->_cli.get_subcommand("annotate-barriers")->parsed()) {
+    this->validate_annotate_barriers_subcomand();
+  } else if (this->_cli.get_subcommand("eval")->parsed()) {
     this->validate_eval_subcommand();
   } else if (this->_cli.get_subcommand("transform")->parsed()) {
     this->validate_transform_subcommand();
@@ -494,7 +610,9 @@ modle::tools::modle_tools_config Cli::parse_arguments() {
   this->_cli.parse(this->_argc, this->_argv);
 
   try {
-    if (this->_cli.get_subcommand("evaluate")->parsed()) {
+    if (this->_cli.get_subcommand("annotate-barriers")->parsed()) {
+      this->_subcommand = subcommand::annotate_barriers;
+    } else if (this->_cli.get_subcommand("evaluate")->parsed()) {
       this->_subcommand = subcommand::eval;
     } else if (this->_cli.get_subcommand("transform")->parsed()) {
       this->_subcommand = subcommand::transform;
@@ -570,6 +688,8 @@ std::string Cli::to_json() const {
 
 std::string_view Cli::subcommand_to_str(subcommand s) noexcept {
   switch (s) {
+    case annotate_barriers:
+      return "annotate-barriers";
     case eval:
       return "evaluate";
     case transform:

@@ -26,6 +26,12 @@ namespace modle::bed {
 
 constexpr BED::operator bool() const noexcept { return this->id() != this->null_id; }
 
+constexpr BED::Dialect BED::get_standard() const noexcept { return this->_standard; }
+
+constexpr usize BED::id() const noexcept { return this->_id; }
+
+constexpr usize BED::size() const noexcept { return this->chrom_end - this->chrom_start; }
+
 template <typename K, typename I>
 BED_tree<K, I>::BED_tree(const std::filesystem::path& path_to_bed, BED::Dialect dialect)
     : BED_tree(path_to_bed.empty()

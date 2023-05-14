@@ -14,6 +14,7 @@ class Cli {
  public:
   enum subcommand : u8f {
     help,
+    annotate_barriers,
     eval,
     transform,
   };
@@ -34,10 +35,12 @@ class Cli {
   CLI::App _cli{};
   subcommand _subcommand{subcommand::help};
 
+  void make_annotate_barriers_subcommand();
   void make_eval_subcommand();
   void make_transform_subcommand();
   void make_cli();
 
+  void validate_annotate_barriers_subcomand() const;
   void validate_eval_subcommand() const;
   void validate_transform_subcommand() const;
   void validate() const;
