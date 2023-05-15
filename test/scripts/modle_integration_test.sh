@@ -77,8 +77,8 @@ script_dir="$(readlink_py "$(dirname "$0")")"
 chrom_sizes="$data_dir/grch38.chrom.sizes"
 regions_bed="$data_dir/grch38_regions_of_interest.bed"
 extr_barriers="$data_dir/grch38_h1_extrusion_barriers.bed.xz"
-ref_cooler="$data_dir/reference_001.cool"
-ref_bw="$data_dir/reference_001.bw"
+ref_cooler="$data_dir/modle_sim_reference_001.cool"
+ref_bw="$data_dir/modle_sim_reference_001.bw"
 
 export PATH="$PATH:$script_dir"
 
