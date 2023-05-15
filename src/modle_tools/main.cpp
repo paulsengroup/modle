@@ -65,6 +65,9 @@ int main(int argc, char** argv) {
     {
       using subcmd = Cli::subcommand;
       switch (cli->get_subcommand()) {
+        case subcmd::annotate_barriers:
+          annotate_barriers_subcmd(absl::get<annotate_barriers_config>(config));
+          return 0;
         case subcmd::eval:
           eval_subcmd(absl::get<eval_config>(config));
           return 0;

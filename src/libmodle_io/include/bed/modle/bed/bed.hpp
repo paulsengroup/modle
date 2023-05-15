@@ -108,12 +108,13 @@ struct BED {
   std::vector<u64> block_starts{};
   std::string extra_tokens{};
 
+  [[nodiscard]] constexpr explicit operator bool() const noexcept;
   [[nodiscard]] bool operator==(const BED& other) const noexcept;
   [[nodiscard]] bool operator<(const BED& other) const noexcept;
-  [[nodiscard]] usize id() const noexcept;
-  [[nodiscard]] usize size() const noexcept;
+  [[nodiscard]] constexpr usize id() const noexcept;
+  [[nodiscard]] constexpr usize size() const noexcept;
   [[nodiscard]] usize num_fields() const noexcept;
-  [[nodiscard]] Dialect get_standard() const noexcept;
+  [[nodiscard]] constexpr Dialect get_standard() const noexcept;
   [[nodiscard]] bool empty() const;
   template <typename H>
   inline friend H AbslHashValue(H h, const BED& c) {

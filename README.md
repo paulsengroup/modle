@@ -503,7 +503,7 @@ The integration test scripts depend on the following tools:
 
 - cooler>=0.9
 - xz
-- common UNIX shell commands such as (namely `cmp`, `diff`, `grep` and `mktemp`)
+- common UNIX shell commands (namely `cmp`, `diff`, `grep` and `mktemp`)
 
 cooler can be installed using pip:
 ```bash
@@ -522,6 +522,7 @@ test/scripts/modle_integration_test.sh build/src/modle/modle
 # Test modle_tools
 test/scripts/modle_tools_transform_integration_test.sh build/src/modle_tools/modle_tools
 test/scripts/modle_tools_eval_integration_test.sh build/src/modle_tools/modle_tools
+test/scripts/modle_tools_annotate_barriers_integration_test.sh build/src/modle_tools/modle_tools
 ```
 
 <details>
@@ -764,9 +765,9 @@ test/scripts/modle_tools_eval_integration_test.sh build/src/modle_tools/modle_to
 [2023-05-11 11:42:06.133] [info]: simulation terminated without errors in 2.817521006s!
 
 Bye.
-Comparing /tmp/modle-ci-SpASy09Lp3/out.cool with modle/test/data/integration_tests/reference_001.cool...
+Comparing /tmp/modle-ci-SpASy09Lp3/out.cool with modle/test/data/integration_tests/modle_sim_reference_001.cool...
 Files are identical
-Comparing modle/test/data/integration_tests/reference_001.bw with /tmp/modle-ci-SpASy09Lp3/out_lef_1d_occupancy.bw...
+Comparing modle/test/data/integration_tests/modle_sim_reference_001.bw with /tmp/modle-ci-SpASy09Lp3/out_lef_1d_occupancy.bw...
 Files are identical
 
 ### PASS ###
@@ -900,6 +901,12 @@ Files are identical
 Comparing /tmp/modle-tools-vew8zaAIaC/out_blurred.cool with modle/test/data/integration_tests/4DNFI9GMP2J8_chr20_25kbp_blurred.cool...
 Files are identical
 Comparing /tmp/modle-tools-vew8zaAIaC/out_dog.cool with modle/test/data/integration_tests/4DNFI9GMP2J8_chr20_25kbp_dog.cool...
+Files are identical
+
+### PASS ###
+
+
+Comparing test/data/integration_tests/mt_annotate_barriers_reference_001.bed.xz with /tmp/modle-tools-6bIboMh8To/out.bed.xz...
 Files are identical
 
 ### PASS ###

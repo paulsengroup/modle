@@ -144,6 +144,7 @@ RUN tar -xf "$src_dir/test/data/modle_test_data.tar.xz" -C "$src_dir/"
 RUN "$src_dir/test/scripts/modle_integration_test.sh" "$staging_dir/bin/modle"
 RUN "$src_dir/test/scripts/modle_tools_transform_integration_test.sh" "$staging_dir/bin/modle_tools"
 RUN "$src_dir/test/scripts/modle_tools_eval_integration_test.sh" "$staging_dir/bin/modle_tools"
+RUN "$src_dir/test/scripts/modle_tools_annotate_barriers_integration_test.sh" "$staging_dir/bin/modle_tools"
 
 ARG FINAL_BASE_IMAGE
 ARG FINAL_BASE_IMAGE_DIGEST

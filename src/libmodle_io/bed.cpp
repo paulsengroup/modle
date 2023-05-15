@@ -68,7 +68,7 @@ void BED::parse_rgb_or_throw(const std::vector<std::string_view>& toks, u8 idx, 
 }
 
 RGB BED::parse_rgb_or_throw(const std::vector<std::string_view>& toks, u8 idx) {
-  RGB buff;
+  RGB buff{};
   BED::parse_rgb_or_throw(toks, idx, buff);
   return buff;
 }
@@ -370,12 +370,6 @@ bool BED::operator<(const BED& other) const noexcept {
   }
   return this->chrom_end < other.chrom_end;
 }
-
-BED::Dialect BED::get_standard() const noexcept { return this->_standard; }
-
-usize BED::id() const noexcept { return this->_id; }
-
-usize BED::size() const noexcept { return this->chrom_end - this->chrom_start; }
 
 usize BED::num_fields() const noexcept {
   assert(this->_standard != autodetect);

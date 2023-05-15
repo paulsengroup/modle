@@ -4,8 +4,8 @@
 
 # cmake-format: off
 file(
-  DOWNLOAD https://zenodo.org/record/7916701/files/modle_test_data.tar.xz?download=1
-  EXPECTED_HASH SHA512=06a034a5a07b0ecef41c719ca56413c1175bfadc30029250539cc16600db3591af0918b88553bb28e0801e2a3e10fcf7c3d1c6e266c5f1dd4e4052bdba68846b
+  DOWNLOAD https://zenodo.org/record/7937395/files/modle_test_data.tar.xz?download=1
+  EXPECTED_HASH SHA512=7c74479d0570b2d59419f360054255efd1656e1401f442e8dcf2754d84bcb797011374ef3c18b2aa23f06aeb3c9fc64888e1c43a1bccaee6f5cf460c1b9d6e35
   ${CMAKE_CURRENT_SOURCE_DIR}/test/data/modle_test_data.tar.xz)
 # cmake-format: on
 

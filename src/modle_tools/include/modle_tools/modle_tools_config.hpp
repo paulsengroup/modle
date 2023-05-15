@@ -97,8 +97,26 @@ struct transform_config {
   std::string args_json{};
 };
 
+struct annotate_barriers_config {
+  // IO
+  std::filesystem::path path_to_bigwig{};
+  std::filesystem::path path_to_bed{};
+
+  // Annotation settings
+  double occupancy_lb{0.6};
+  double occupancy_ub{1.0};
+  bool clamp_occupancy{false};
+  // See https://www.cell.com/cell-reports/pdf/S2211-1247(16)30530-7.pdf
+  double scaling_factor{20 - 3};
+
+  // Other
+  absl::Span<char*> args;
+  std::string args_json{};
+};
+
 // clang-format off
 using modle_tools_config = absl::variant<absl::monostate,
+                                         annotate_barriers_config,
                                          eval_config,
                                          transform_config>;
 // clang-format on

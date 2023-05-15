@@ -7,10 +7,12 @@
 namespace modle::tools {
 
 // Pre-declare config structs
+struct annotate_barriers_config;
 struct eval_config;
 struct transform_config;
 
-void eval_subcmd(const modle::tools::eval_config &c);
-void transform_subcmd(const modle::tools::transform_config &c);
+void annotate_barriers_subcmd(const annotate_barriers_config &c);
+void eval_subcmd(const eval_config &c);
+void transform_subcmd(const transform_config &c);
 
 }  // namespace modle::tools
