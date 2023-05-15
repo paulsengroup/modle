@@ -259,7 +259,7 @@ jobs:
           cache: 'pip'
 
       - name: Install CMake
-        run: pip install -f requirements.txt
+        run: pip install -r requirements.txt
 
       - name: Run unit tests
         working-directory: ${{ github.workspace }}/build
