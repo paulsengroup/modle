@@ -192,7 +192,7 @@ jobs:
 
       - name: Package unit tests
         run: |
-          tar -cLf - build/ | zstd -T0 -13 -o unit-tests.tar.zst
+          tar -cf - build/ | zstd -T0 -13 -o unit-tests.tar.zst
 
       - name: Build modle and modle_tools
         run: cmake --build build -j $(nproc)
@@ -201,7 +201,7 @@ jobs:
         run: |
           cmake --install build
 
-          tar -cLf - -C dest/ bin |
+          tar -cf - -C dest/ bin |
           zstd -T0 -13 -o binaries.tar.zst
 
       - name: Upload unit tests
@@ -266,7 +266,8 @@ jobs:
         run: |
           ncpus=$(python -c 'import multiprocessing as mp; print(mp.cpu_count())')
           export CTEST_PARALLEL_LEVEL="$ncpus"
-          
+
+          ls -lah test/
           test/test_main --help
 
           ctest --test-dir .        \
