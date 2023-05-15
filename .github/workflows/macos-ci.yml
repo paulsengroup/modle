@@ -266,6 +266,8 @@ jobs:
         run: |
           ncpus=$(python -c 'import multiprocessing as mp; print(mp.cpu_count())')
           export CTEST_PARALLEL_LEVEL="$ncpus"
+          
+          test/test_main --help
 
           ctest --test-dir .        \
                 --schedule-random   \
