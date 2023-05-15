@@ -207,7 +207,7 @@ jobs:
       - name: Upload unit tests
         uses: actions/upload-artifact@v3
         with:
-          name: unit-tests-${{ matrix.os }}-${{ matrix.compiler }}-${{ matrix.build_type }}
+          name: unit-tests-${{ matrix.os }}-${{ matrix.compiler_name }}-${{ matrix.compiler_version }}-${{ matrix.build_type }}
           path: unit-tests.tar.zst
           if-no-files-found: error
           retention-days: 1
@@ -215,7 +215,7 @@ jobs:
       - name: Upload binaries
         uses: actions/upload-artifact@v3
         with:
-          name: binaries-${{ matrix.os }}-${{ matrix.compiler }}-${{ matrix.build_type }}
+          name: binaries-${{ matrix.os }}-${{ matrix.compiler_name }}-${{ matrix.compiler_version }}-${{ matrix.build_type }}
           path: binaries.tar.zst
           if-no-files-found: error
           retention-days: 1
@@ -236,7 +236,7 @@ jobs:
       - name: Download unit tests artifact
         uses: actions/download-artifact@v3
         with:
-          name: unit-tests-${{ matrix.os }}-${{ matrix.compiler }}-${{ matrix.build_type }}
+          name: unit-tests-${{ matrix.os }}-${{ matrix.compiler_name }}-${{ matrix.compiler_version }}-${{ matrix.build_type }}
 
       - name: Download test datasets
         id: test-dataset
@@ -276,7 +276,7 @@ jobs:
       - name: Download binary artifact
         uses: actions/download-artifact@v3
         with:
-          name: binaries-${{ matrix.os }}-${{ matrix.compiler }}-${{ matrix.build_type }}
+          name: binaries-${{ matrix.os }}-${{ matrix.compiler_name }}-${{ matrix.compiler_version }}-${{ matrix.build_type }}
 
       - name: Download test datasets
         id: test-dataset
@@ -310,7 +310,7 @@ jobs:
       - name: Download binary artifact
         uses: actions/download-artifact@v3
         with:
-          name: binaries-${{ matrix.os }}-${{ matrix.compiler }}-${{ matrix.generator }}-${{ matrix.build_type }}
+          name: binaries-${{ matrix.os }}-${{ matrix.compiler_name }}-${{ matrix.compiler_version }}-${{ matrix.build_type }}
 
       - name: Download test datasets
         id: test-dataset
