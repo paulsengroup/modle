@@ -62,10 +62,10 @@ jobs:
 
             var includes = []
 
-            includes.push({ compiler_name: 'apple-clang', compiler_version: '13.0', os: 'macos-11', conan-ver: '2.0.*', cmake-ver: '3.26.*', build_type: 'Release', developer_mode: 'OFF' })
-            includes.push({ compiler_name: 'apple-clang', compiler_version: '14.0', os: 'macos-12', conan-ver: '2.0.*', cmake-ver: '3.26.*', build_type: 'Release', developer_mode: 'OFF' })
-            includes.push({ compiler_name: 'apple-clang', compiler_version: '14.0', os: 'macos-13', conan-ver: '2.0.*', cmake-ver: '3.26.*', build_type: 'Release', developer_mode: 'OFF' })
-            includes.push({ compiler_name: 'apple-clang', compiler_version: '14.0', os: 'macos-13', conan-ver: '2.0.*', cmake-ver: '3.26.*', build_type: 'Debug',   developer_mode: 'OFF' })
+            includes.push({ compiler_name: 'apple-clang', compiler_version: '13.0', os: 'macos-11', conan: '2.0.*', cmake: '3.26.*', build_type: 'Release', developer_mode: 'OFF' })
+            includes.push({ compiler_name: 'apple-clang', compiler_version: '14.0', os: 'macos-12', conan: '2.0.*', cmake: '3.26.*', build_type: 'Release', developer_mode: 'OFF' })
+            includes.push({ compiler_name: 'apple-clang', compiler_version: '14.0', os: 'macos-13', conan: '2.0.*', cmake: '3.26.*', build_type: 'Release', developer_mode: 'OFF' })
+            includes.push({ compiler_name: 'apple-clang', compiler_version: '14.0', os: 'macos-13', conan: '2.0.*', cmake: '3.26.*', build_type: 'Debug',   developer_mode: 'OFF' })
 
             return { include: includes }
 
@@ -86,8 +86,8 @@ jobs:
 
       - name: Generate requirements.txt for pip
         run: |
-          echo 'conan==${{ matrix.conan-ver }}' > requirements.txt
-          echo 'cmake==${{ matrix.cmake-ver }}' >> requirements.txt
+          echo 'conan==${{ matrix.conan }}' > requirements.txt
+          echo 'cmake==${{ matrix.cmake }}' >> requirements.txt
 
       - name: Setup Python
         uses: actions/setup-python@v4
