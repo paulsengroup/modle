@@ -252,13 +252,13 @@ jobs:
           tar -xf modle_test_data.tar.xz
 
       - name: Run modle_tools transform integration test(s)
-        run: test/scripts/modle_tools_transform_integration_test.sh modle/bin/modle_tools
+        run: test/scripts/modle_tools_transform_integration_test.sh modle/bin/modle_tools | head -n 1000
 
       - name: Run modle_tools evaluate integration test(s)
-        run: test/scripts/modle_tools_eval_integration_test.sh modle/bin/modle_tools
+        run: test/scripts/modle_tools_eval_integration_test.sh modle/bin/modle_tools | head -n 1000
 
       - name: Run modle_tools annotate-barriers integration test(s)
-        run: test/scripts/modle_tools_annotate_barriers_integration_test.sh bin/modle_tools | head -n 1000
+        run: test/scripts/modle_tools_annotate_barriers_integration_test.sh modle/bin/modle_tools | head -n 1000
 
 
   run-portability-test:
