@@ -176,6 +176,7 @@ jobs:
                 -DENABLE_DEVELOPER_MODE=${{ matrix.developer_mode }} \
                 -DOPT_ENABLE_CLANG_TIDY=OFF                          \
                 -DOPT_ENABLE_CPPCHECK=OFF                            \
+                -DCMAKE_INSTALL_PREFIX=dest                          \
                 -S "${{ github.workspace }}"                         \
                 -B "${{ github.workspace }}/build"
 
