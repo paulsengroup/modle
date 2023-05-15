@@ -249,6 +249,9 @@ jobs:
           zstd -dcf unit-tests.tar.zst | tar -xf -
           tar -xf modle_test_data.tar.xz
 
+      - name: Generate requirements.txt for pip
+        run: echo 'cmake==${{ matrix.cmake }}' > requirements.txt
+
       - name: Setup Python
         uses: actions/setup-python@v4
         with:
@@ -256,7 +259,7 @@ jobs:
           cache: 'pip'
 
       - name: Install CMake
-        run: pip install 'cmake==${{ matrix.cmake }}'
+        run: pip install -f requirements.txt
 
       - name: Run unit tests
         working-directory: ${{ github.workspace }}/build
@@ -310,9 +313,7 @@ jobs:
           cache: 'pip'
 
       - name: Install test deps
-        run: |
-          pip install -r requirements.txt
-          brew install ccache
+        run: pip install -r requirements.txt
 
       - name: Inspect modle version
         run: bin/modle --version
@@ -360,9 +361,7 @@ jobs:
           cache: 'pip'
 
       - name: Install test deps
-        run: |
-          pip install -r requirements.txt
-          brew install ccache
+        run: pip install -r requirements.txt
 
       - name: Inspect modle_tools version
         run: bin/modle_tools --version
