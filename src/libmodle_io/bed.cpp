@@ -6,6 +6,7 @@
 
 #include "modle/bed/bed.hpp"
 
+#include <absl/strings/ascii.h>
 #include <absl/strings/match.h>      // for StrContains
 #include <absl/strings/str_join.h>   // for StrJoin
 #include <absl/strings/str_split.h>  // for StrSplit, Splitter, SplitIterator
@@ -247,7 +248,8 @@ BED::BED(BED::Dialect d) : _standard(d) {}
 // NOLINTNEXTLINE(readability-function-cognitive-complexity)
 BED::BED(std::string_view record, usize id_, BED::Dialect bed_standard, bool validate) : _id(id_) {
   std::vector<std::string_view> toks;
-  for (std::string_view tok : absl::StrSplit(record, absl::ByAnyChar("\t "))) {
+  for (std::string_view tok :
+       absl::StrSplit(absl::StripTrailingAsciiWhitespace(record), absl::ByAnyChar("\t "))) {
     if (!tok.empty()) {
       toks.push_back(tok);
     }

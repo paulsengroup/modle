@@ -16,8 +16,15 @@
 #include "modle/bed/bed.hpp"                      // for BED, Parser, formatter<>::format, BED::BED3
 #include "modle/common/common.hpp"                // for usize
 #include "modle/compressed_io/compressed_io.hpp"  // for Reader
+#include "modle/test/self_deleting_folder.hpp"    // for SelfDeletingFolder
+
+namespace modle::test {
+inline const SelfDeletingFolder testdir{true};  // NOLINT(cert-err58-cpp)
+}  // namespace modle::test
 
 namespace modle::bed::test {
+
+constexpr auto &testdir = modle::test::testdir;
 
 [[maybe_unused]] static const std::filesystem::path &data_dir() {
   static const std::filesystem::path data_dir{"test/data/unit_tests"};
@@ -63,20 +70,6 @@ static void compare_bed_records_with_file(std::vector<BED> records, const std::s
 }
 
 // NOLINTNEXTLINE(readability-function-cognitive-complexity)
-TEST_CASE("BED Parser simple", "[parsers][BED][io][short]") {
-  const auto bed_file = data_dir() / "genomic_intervals" / "intervals.bed6.xz";
-  auto p = bed::Parser(bed_file);
-  auto records = p.parse_all();
-  CHECK(records.size() == 9);
-  std::sort(records.begin(), records.end());
-  CHECK(records[0].chrom == "chr7");
-  CHECK(records[0].chrom_start == 127471196);
-  CHECK(records[0].chrom_end == 127472363);
-  CHECK(records[0].score == 0);
-  CHECK(records[0].strand == '+');
-}
-
-// NOLINTNEXTLINE(readability-function-cognitive-complexity)
 TEST_CASE("BED: strip quotes", "[parsers][BED][io][short]") {
   SECTION("valid") {
     constexpr std::string_view line{
@@ -108,6 +101,40 @@ TEST_CASE("BED: strip quotes", "[parsers][BED][io][short]") {
     CHECK_THROWS(bed::BED("chr1\t\"0\"\t1"));
     CHECK_THROWS(bed::BED("chr1\t0\t1\t.\t\"0.0\""));
   }
+}
+
+// NOLINTNEXTLINE(readability-function-cognitive-complexity)
+TEST_CASE("BED Parser CRLF", "[parsers][BED][io][short]") {
+  const auto bed_file = testdir() / "crlf.bed";
+
+  const usize num_records = 3;
+
+  {
+    compressed_io::Writer w(bed_file, compressed_io::Writer::NONE);
+    for (usize i = 0; i < num_records; ++i) {
+      w.write(fmt::format(FMT_STRING("chr{}\t0\t1\r\n"), i));
+    }
+  }
+
+  const auto records = bed::Parser(bed_file).parse_all();
+  REQUIRE(records.size() == num_records);
+  for (usize i = 0; i < num_records; ++i) {
+    CHECK(bed::BED(fmt::format(FMT_STRING("chr{}\t0\t1"), i)) == records[i]);
+  }
+}
+
+// NOLINTNEXTLINE(readability-function-cognitive-complexity)
+TEST_CASE("BED Parser simple", "[parsers][BED][io][short]") {
+  const auto bed_file = data_dir() / "genomic_intervals" / "intervals.bed6.xz";
+  auto p = bed::Parser(bed_file);
+  auto records = p.parse_all();
+  CHECK(records.size() == 9);
+  std::sort(records.begin(), records.end());
+  CHECK(records[0].chrom == "chr7");
+  CHECK(records[0].chrom_start == 127471196);
+  CHECK(records[0].chrom_end == 127472363);
+  CHECK(records[0].score == 0);
+  CHECK(records[0].strand == '+');
 }
 
 // NOLINTNEXTLINE(readability-function-cognitive-complexity)
