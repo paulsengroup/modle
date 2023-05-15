@@ -987,9 +987,8 @@ Some remarks:
 - ___chrom___ should contain the name of one of the chromosome defined in the `.chrom.sizes`
 - The ___start___ and ___end___ fields are used to position barriers along chromosomes. MoDLE models extrusion barriers as 1bp entities. Thus, when $end - start \gt 1$ the extrusion barrier will be placed in the middle of interval $[start, end)$.
 - The ___name___ field is required but ignored, and can be safely set to `.`
-- ___score___ is optional and should be set to 0 when not used.
-  When non-zero, the ___score___ value will be used to set the average occupancy of the extrusion barrier site defined by the
-current line. Refer to [MoDLE's paper](https://genomebiology.biomedcentral.com/articles/10.1186/s13059-022-02815-7) for more details regarding the extrusion barrier occupancy.
+- ___score___ is required and should be set to a number between 0 and 1 representing the average occupancy of the extrusion barrier site defined by the current line. Occupancies between 0.7-0.9 are usually a reasonable starting point.
+  Refer to [MoDLE's paper](https://genomebiology.biomedcentral.com/articles/10.1186/s13059-022-02815-7) for more details regarding the extrusion barrier occupancy.
 - ___strand___ is required and is used to define the extrusion barrier direction (should be one of `-`, `+` or `.`).
   As of MoDLE v1.0.1, extrusion barriers are modeled after CTCF barriers.
   Thus, the strand field should be populated with the direction of the CTCF binding site that is being defined.
