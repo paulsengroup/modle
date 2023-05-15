@@ -15,7 +15,7 @@
 
 namespace modle::tools {
 
-[[nodiscard]] static constexpr double logit(double x, double scaling_factor) noexcept {
+[[nodiscard]] static double logit(double x, double scaling_factor) noexcept {
   assert(scaling_factor != 0);
   return 1.0 / (1.0 + std::exp(-x / scaling_factor));
 }
