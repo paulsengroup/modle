@@ -88,7 +88,6 @@ jobs:
         run: |
           echo 'conan==${{ matrix.conan }}' > requirements.txt
           echo 'cmake==${{ matrix.cmake }}' >> requirements.txt
-          echo 'zstd>=1.5.5' >> requirements.txt
 
       - name: Setup Python
         uses: actions/setup-python@v4
@@ -198,8 +197,8 @@ jobs:
 
       - name: Package unit tests
         run: |
-          tar -cf - build/ | zstd -T0 -13 -o unit-tests.tar.zst
-          zstd -dcf unit-tests.tar.zst | tar -xf - build/test/test_main
+          gtar -cf - build/ | pigz -9 -o unit-tests.tar.zst
+          zstd -dcf unit-tests.tar.zst | gtar -xf - build/test/test_main
           shasum -a256 build/test/test_main
 
       - name: Build modle and modle_tools
@@ -209,7 +208,7 @@ jobs:
         run: |
           cmake --install build
 
-          tar -cf - -C dest/ bin |
+          gtar -cf - -C dest/ bin |
           zstd -T0 -13 -o binaries.tar.zst
 
       - name: Upload unit tests
@@ -254,8 +253,8 @@ jobs:
 
       - name: Extract binaries and test dataset
         run: |
-          zstd -dcf unit-tests.tar.zst | tar -xf -
-          tar -xf modle_test_data.tar.xz
+          zstd -dcf unit-tests.tar.zst | gtar -xf -
+          gtar -xf modle_test_data.tar.xz
 
       - name: Generate requirements.txt for pip
         run: echo 'cmake==${{ matrix.cmake }}' > requirements.txt
@@ -310,8 +309,8 @@ jobs:
 
       - name: Extract binaries and test dataset
         run: |
-          zstd -dcf binaries.tar.zst | tar -xf -
-          tar -xf modle_test_data.tar.xz
+          zstd -dcf binaries.tar.zst | gtar -xf -
+          gtar -xf modle_test_data.tar.xz
 
       - name: Generate requirements.txt for pip
         run: |
@@ -358,8 +357,8 @@ jobs:
 
       - name: Extract binaries and test dataset
         run: |
-          zstd -dcf binaries.tar.zst | tar -xf -
-          tar -xf modle_test_data.tar.xz
+          zstd -dcf binaries.tar.zst | gtar -xf -
+          gtar -xf modle_test_data.tar.xz
 
       - name: Generate requirements.txt for pip
         run: |
