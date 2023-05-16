@@ -198,6 +198,8 @@ jobs:
       - name: Package unit tests
         run: |
           tar -cf - build/ | zstd -T0 -13 -o unit-tests.tar.zst
+          zstd -dcf unit-tests.tar.zst | tar -xf - build/test/test_main
+          shasum -a256 build/test/test_main
 
       - name: Build modle and modle_tools
         run: cmake --build build
