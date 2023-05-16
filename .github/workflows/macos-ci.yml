@@ -197,7 +197,7 @@ jobs:
 
       - name: Package unit tests
         run: |
-          gtar -cf - build/ | pigz -9 -o unit-tests.tar.zst
+          gtar -cf - build/ | zstd -T0 -13 -o unit-tests.tar.zst
           zstd -dcf unit-tests.tar.zst | gtar -xf - build/test/test_main
           shasum -a256 build/test/test_main
 
