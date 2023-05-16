@@ -188,14 +188,14 @@ jobs:
           path: ${{ env.CCACHE_DIR }}
 
       - name: Build test units
-        run: cmake --build build -t test_main -j $(nproc)
+        run: cmake --build build -t test_main
 
       - name: Package unit tests
         run: |
           tar -cf - build/ | zstd -T0 -13 -o unit-tests.tar.zst
 
       - name: Build modle and modle_tools
-        run: cmake --build build -j $(nproc)
+        run: cmake --build build
 
       - name: Package binaries
         run: |
@@ -271,9 +271,9 @@ jobs:
           ncpus=$(python -c 'import multiprocessing as mp; print(mp.cpu_count())')
           export CTEST_PARALLEL_LEVEL="$ncpus"
 
-          file build/test/test_main
-          shasum -a256 build/test/test_main
-          build/test/test_main --help
+          file test/test_main
+          shasum -a256 test/test_main
+          test/test_main --help
 
           ctest --test-dir .        \
                 --schedule-random   \
