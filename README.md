@@ -327,7 +327,9 @@ MoDLE can be compiled on most UNIX-like systems, including many Linux distributi
 
 Here we assume MoDLE was correctly installed and is available in your PATH (i.e. running `whereis modle` prints something like `modle: /usr/local/bin/modle`).
 
-Folder `examples/data/` contains the input files mentioned in this section.
+If you are using Docker or Singularity/Apptainer, please make sure input files can be reached from within the container (see troubleshooting steps from [Using MoDLE with Docker or Singularity/Apptainer](https://github.com/paulsengroup/modle/tree/update-readme#docker-or-singularityapptainer).
+
+Folder `examples/data/` from this repository contains the input files used throughout this section.
 
 <details>
 <summary> Data provenance </summary>
@@ -343,10 +345,10 @@ Chromosmes were filtered and sorted using `grep -E 'chr[0-9XY]+[[:space:]]' hg38
 
 Running a simulation with default settings only requires two input files:
 
-- A [chrom.sizes file](https://software.broadinstitute.org/software/igv/chromSizes) with the list of chromosomes to be simulated
-- A [BED file]((https://bedtools.readthedocs.io/en/latest/content/general-usage.html#bed-format)) with the list of extrusion barriers to include as part of the simulation
+- A [chrom.sizes](https://software.broadinstitute.org/software/igv/chromSizes) file with the list of chromosomes to be simulated
+- A [BED file](https://bedtools.readthedocs.io/en/latest/content/general-usage.html#bed-format) with the list of extrusion barriers to include as part of the simulation
 
-Input files using common compression formats (e.g. Bzip2, Gzip, LZ4, xz/LZMA or zstd) are supported.
+Input files using common compression formats (namely Bzip2, Gzip, LZ4, xz/LZMA and zstd) are supported.
 
 The extrusion barrier BED file should have at least the first 6 columns defined (i.e. chrom, start, end, name,
 score and strand. See [bedtools docs](https://bedtools.readthedocs.io/en/latest/content/general-usage.html#bed-format) for more details).
@@ -355,7 +357,7 @@ Some remarks:
 - ___chrom___ should contain the name of one of the chromosome defined in the `.chrom.sizes`
 - The ___start___ and ___end___ fields are used to position barriers along chromosomes. MoDLE models extrusion barriers as 1bp entities. Thus, when $end - start \gt 1$ the extrusion barrier will be placed in the middle of interval $[start, end)$.
 - The ___name___ field is required but ignored, and can be safely set to `.`
-- ___score___ is required and should be set to a number between 0 and 1 representing the average occupancy of the extrusion barrier site defined by the current line. Occupancies between 0.7-0.9 are usually a reasonable starting point.
+- ___score___ is required and should be set to a number between 0 and 1. This number expresses the average occupancy of the extrusion barrier site defined by the current line. Occupancies between 0.7-0.9 can be used as a starting point. Refer to [this](https://github.com/paulsengroup/modle/wiki/%5BTutorial%5D---Generating-a-list-of-extrusion-barrier-from-ChIP-seq-data) tutorial for how barrier occupancy can be inferred from CTCF/RAD21 ChIP-Seq data.
   Refer to [MoDLE's paper](https://genomebiology.biomedcentral.com/articles/10.1186/s13059-022-02815-7) for more details regarding the extrusion barrier occupancy.
 - ___strand___ is required and is used to define the extrusion barrier direction (should be one of `-`, `+` or `.`).
   As of MoDLE v1.0.1, extrusion barriers are modeled after CTCF barriers.
