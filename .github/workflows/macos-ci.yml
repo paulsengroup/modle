@@ -191,15 +191,9 @@ jobs:
         run: |
           cmake --build build -t test_main
 
-          file build/test/test_main
-          shasum -a256 build/test/test_main
-          build/test/test_main --help
-
       - name: Package unit tests
         run: |
           gtar -cf - build/ | zstd -T0 -13 -o unit-tests.tar.zst
-          zstd -dcf unit-tests.tar.zst | gtar -xf - build/test/test_main
-          shasum -a256 build/test/test_main
 
       - name: Build modle and modle_tools
         run: cmake --build build
@@ -273,10 +267,6 @@ jobs:
         run: |
           ncpus=$(python -c 'import multiprocessing as mp; print(mp.cpu_count())')
           export CTEST_PARALLEL_LEVEL="$ncpus"
-
-          file test/test_main
-          shasum -a256 test/test_main
-          test/test_main --help
 
           ctest --test-dir .        \
                 --schedule-random   \
