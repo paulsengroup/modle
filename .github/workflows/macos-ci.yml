@@ -46,30 +46,48 @@ defaults:
     shell: bash
 
 jobs:
+  matrix-factory:
+    name: Generate job matrix
+    runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.set-result.outputs.result }}
+    steps:
+      - uses: actions/github-script@v6
+        id: set-result
+        with:
+          script: |
+            // Documentation
+            // https://docs.github.com/en/actions/learn-github-actions/contexts#fromjson
+            // https://github.com/actions/runner/issues/982#issuecomment-809360765
+
+            var includes = []
+
+            includes.push({ compiler_name: 'apple-clang', compiler_version: '13.0', os: 'macos-11', conan: '2.0.*', cmake: '3.26.*', build_type: 'Release', developer_mode: 'OFF' })
+            includes.push({ compiler_name: 'apple-clang', compiler_version: '14.0', os: 'macos-12', conan: '2.0.*', cmake: '3.26.*', build_type: 'Release', developer_mode: 'OFF' })
+            includes.push({ compiler_name: 'apple-clang', compiler_version: '14.0', os: 'macos-13', conan: '2.0.*', cmake: '3.26.*', build_type: 'Release', developer_mode: 'OFF' })
+            includes.push({ compiler_name: 'apple-clang', compiler_version: '14.0', os: 'macos-13', conan: '2.0.*', cmake: '3.26.*', build_type: 'Debug',   developer_mode: 'OFF' })
+
+            return { include: includes }
+
   cache-test-datasets:
     uses: paulsengroup/modle/.github/workflows/cache-test-datasets.yml@main
 
 
-  ci:
-    name: MacOS CI
-    needs: cache-test-datasets
+  build-project:
+    name: Build project
+    needs: matrix-factory
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
-      matrix:
-        include:
-          - { compiler-name: apple-clang, compiler-version: '13.0', os: 'macos-11', conan-ver: '2.0.*', cmake-ver: '3.26.*', build_type: Release, developer_mode: OFF }
-          - { compiler-name: apple-clang, compiler-version: '14.0', os: 'macos-12', conan-ver: '2.0.*', cmake-ver: '3.26.*', build_type: Release, developer_mode: OFF }
-          - { compiler-name: apple-clang, compiler-version: '14.0', os: 'macos-13', conan-ver: '2.0.*', cmake-ver: '3.26.*', build_type: Release, developer_mode: OFF }
-          - { compiler-name: apple-clang, compiler-version: '14.0', os: 'macos-13', conan-ver: '2.0.*', cmake-ver: '3.26.*', build_type: Debug,   developer_mode: OFF }
+      matrix: ${{ fromJSON(needs.matrix-factory.outputs.matrix) }}
 
     steps:
       - uses: actions/checkout@v3
 
       - name: Generate requirements.txt for pip
         run: |
-          echo 'conan==${{ matrix.conan-ver }}' > requirements.txt
-          echo 'cmake==${{ matrix.cmake-ver }}' >> requirements.txt
+          echo 'conan==${{ matrix.conan }}' > requirements.txt
+          echo 'cmake==${{ matrix.cmake }}' >> requirements.txt
 
       - name: Setup Python
         uses: actions/setup-python@v4
@@ -85,9 +103,7 @@ jobs:
       - name: Detect number available CPUs
         run: |
           ncpus=$(python -c 'import multiprocessing as mp; print(mp.cpu_count())')
-
           echo "CMAKE_BUILD_PARALLEL_LEVEL=$ncpus" >> $GITHUB_ENV
-          echo "CTEST_PARALLEL_LEVEL=$ncpus" >> $GITHUB_ENV
 
       - name: Generate cache key
         id: cache-key
@@ -95,7 +111,7 @@ jobs:
           set -u
 
           os="${{ matrix.os }}"
-          compiler="${{ matrix.compiler-name }}"
+          compiler="${{ matrix.compiler_name }}"
           build_type="${{ matrix.build_type }}"
 
           conanfile_hash="${{ hashFiles('conanfile.txt') }}"
@@ -160,6 +176,7 @@ jobs:
                 -DENABLE_DEVELOPER_MODE=${{ matrix.developer_mode }} \
                 -DOPT_ENABLE_CLANG_TIDY=OFF                          \
                 -DOPT_ENABLE_CPPCHECK=OFF                            \
+                -DCMAKE_INSTALL_PREFIX=dest                          \
                 -S "${{ github.workspace }}"                         \
                 -B "${{ github.workspace }}/build"
 
@@ -170,11 +187,57 @@ jobs:
           restore-keys: ${{ steps.cache-key.outputs.ccache-restore-key }}
           path: ${{ env.CCACHE_DIR }}
 
-      - name: Build project
-        run: cmake --build ${{ github.workspace }}/build
+      - name: Build test units
+        run: |
+          cmake --build build -t test_main
 
-      - name: Print Ccache statistics
-        run: ccache -s
+      - name: Package unit tests
+        run: |
+          gtar -cf - build/ | zstd -T0 -13 -o unit-tests.tar.zst
+
+      - name: Build modle and modle_tools
+        run: cmake --build build
+
+      - name: Package binaries
+        run: |
+          cmake --install build
+
+          gtar -cf - -C dest/ bin |
+          zstd -T0 -13 -o binaries.tar.zst
+
+      - name: Upload unit tests
+        uses: actions/upload-artifact@v3
+        with:
+          name: unit-tests-${{ matrix.os }}-${{ matrix.compiler_name }}-${{ matrix.compiler_version }}-${{ matrix.build_type }}
+          path: unit-tests.tar.zst
+          if-no-files-found: error
+          retention-days: 1
+
+      - name: Upload binaries
+        uses: actions/upload-artifact@v3
+        with:
+          name: binaries-${{ matrix.os }}-${{ matrix.compiler_name }}-${{ matrix.compiler_version }}-${{ matrix.build_type }}
+          path: binaries.tar.zst
+          if-no-files-found: error
+          retention-days: 1
+
+
+  run-unit-tests:
+    name: Run unit tests
+    needs: [matrix-factory, cache-test-datasets, build-project]
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJSON(needs.matrix-factory.outputs.matrix) }}
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v3
+
+      - name: Download unit tests artifact
+        uses: actions/download-artifact@v3
+        with:
+          name: unit-tests-${{ matrix.os }}-${{ matrix.compiler_name }}-${{ matrix.compiler_version }}-${{ matrix.build_type }}
 
       - name: Download test datasets
         id: test-dataset
@@ -182,30 +245,156 @@ jobs:
         with:
           name: ${{ needs.cache-test-datasets.outputs.artifact-name }}
 
-      - name: Extract test dataset
-        run: tar -xf modle_test_data.tar.xz
+      - name: Extract binaries and test dataset
+        run: |
+          zstd -dcf unit-tests.tar.zst | gtar -xf -
+          gtar -xf modle_test_data.tar.xz
+
+      - name: Generate requirements.txt for pip
+        run: echo 'cmake==${{ matrix.cmake }}' > requirements.txt
+
+      - name: Setup Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+
+      - name: Install CMake
+        run: pip install -r requirements.txt
 
       - name: Run unit tests
         working-directory: ${{ github.workspace }}/build
         run: |
+          ncpus=$(python -c 'import multiprocessing as mp; print(mp.cpu_count())')
+          export CTEST_PARALLEL_LEVEL="$ncpus"
+
           ctest --test-dir .        \
                 --schedule-random   \
                 --output-on-failure \
                 --no-tests=error    \
                 --timeout 300
 
-      - name: Inspect MoDLE version
-        run: |
-          ${{ github.workspace }}/build/src/modle/modle --version
-          ${{ github.workspace }}/build/src/modle_tools/modle_tools --version
+  run-modle-integration-test:
+    name: Run modle integration tests
+    needs: [matrix-factory, cache-test-datasets, build-project]
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJSON(needs.matrix-factory.outputs.matrix) }}
 
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v3
+
+      - name: Download binary artifact
+        uses: actions/download-artifact@v3
+        with:
+          name: binaries-${{ matrix.os }}-${{ matrix.compiler_name }}-${{ matrix.compiler_version }}-${{ matrix.build_type }}
+
+      - name: Download test datasets
+        id: test-dataset
+        uses: actions/download-artifact@v3
+        with:
+          name: ${{ needs.cache-test-datasets.outputs.artifact-name }}
+
+      - name: Extract binaries and test dataset
+        run: |
+          zstd -dcf binaries.tar.zst | gtar -xf -
+          gtar -xf modle_test_data.tar.xz
+
+      - name: Generate requirements.txt for pip
+        run: |
+          echo 'cooler>=0.9.1' > requirements.txt
+          echo 'pyBigWig>=0.3.22' >> requirements.txt
+
+      - name: Setup Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+
+      - name: Install test deps
+        run: pip install -r requirements.txt
+
+      - name: Inspect modle version
+        run: bin/modle --version
+
+      - name: Run modle integration test(s)
+        run: test/scripts/modle_integration_test.sh bin/modle | head -n 1000
+
+  run-modle-tools-integration-test:
+    name: Run modle_tools integration tests
+    needs: [ matrix-factory, cache-test-datasets, build-project ]
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJSON(needs.matrix-factory.outputs.matrix) }}
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v3
+
+      - name: Download binary artifact
+        uses: actions/download-artifact@v3
+        with:
+          name: binaries-${{ matrix.os }}-${{ matrix.compiler_name }}-${{ matrix.compiler_version }}-${{ matrix.build_type }}
+
+      - name: Download test datasets
+        id: test-dataset
+        uses: actions/download-artifact@v3
+        with:
+          name: ${{ needs.cache-test-datasets.outputs.artifact-name }}
+
+      - name: Extract binaries and test dataset
+        run: |
+          zstd -dcf binaries.tar.zst | gtar -xf -
+          gtar -xf modle_test_data.tar.xz
+
+      - name: Generate requirements.txt for pip
+        run: |
+          echo 'cooler>=0.9.1' > requirements.txt
+          echo 'pyBigWig>=0.3.22' >> requirements.txt
+
+      - name: Setup Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+
+      - name: Install test deps
+        run: pip install -r requirements.txt
+
+      - name: Inspect modle_tools version
+        run: bin/modle_tools --version
+
+      - name: Run modle_tools transform integration test(s)
+        run: test/scripts/modle_tools_transform_integration_test.sh bin/modle_tools | head -n 1000
+
+      - name: Run modle_tools evaluate integration test(s)
+        run: test/scripts/modle_tools_eval_integration_test.sh bin/modle_tools | head -n 1000
+
+      - name: Run modle_tools annotate-barriers integration test(s)
+        run: test/scripts/modle_tools_annotate_barriers_integration_test.sh bin/modle_tools | head -n 1000
 
   macos-ci-status-check:
     name: Status Check (MacOS CI)
     if: ${{ always() }}
     runs-on: ubuntu-latest
-    needs: [ ci ]
+    needs:
+      - matrix-factory
+      - cache-test-datasets
+      - build-project
+      - run-unit-tests
+      - run-modle-integration-test
+      - run-modle-tools-integration-test
+
     steps:
       - name: Collect job results
-        if: needs.ci.result != 'success'
+        if: |
+          needs.matrix-factory.result != 'success'                   ||
+          needs.cache-test-datasets.result != 'success'              ||
+          needs.build-project.result != 'success'                    ||
+          needs.run-unit-tests.result != 'success'                   ||
+          needs.run-modle-integration-test.result != 'success'       ||
+          needs.run-modle-tools-integration-test.result != 'success'
         run: exit 1
