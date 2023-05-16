@@ -188,7 +188,12 @@ jobs:
           path: ${{ env.CCACHE_DIR }}
 
       - name: Build test units
-        run: cmake --build build -t test_main
+        run: |
+          cmake --build build -t test_main
+
+          file build/test/test_main
+          shasum -a256 build/test/test_main
+          build/test/test_main --help
 
       - name: Package unit tests
         run: |
@@ -200,10 +205,6 @@ jobs:
       - name: Package binaries
         run: |
           cmake --install build
-
-          file build/test/test_main
-          shasum -a256 build/test/test_main
-          build/test/test_main --help
 
           tar -cf - -C dest/ bin |
           zstd -T0 -13 -o binaries.tar.zst
