@@ -88,6 +88,7 @@ jobs:
         run: |
           echo 'conan==${{ matrix.conan }}' > requirements.txt
           echo 'cmake==${{ matrix.cmake }}' >> requirements.txt
+          echo 'zstd>=1.5.5' >> requirements.txt
 
       - name: Setup Python
         uses: actions/setup-python@v4
