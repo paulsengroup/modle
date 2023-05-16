@@ -357,8 +357,9 @@ Some remarks:
 - ___chrom___ should contain the name of one of the chromosome defined in the `.chrom.sizes`
 - The ___start___ and ___end___ fields are used to position barriers along chromosomes. MoDLE models extrusion barriers as 1bp entities. Thus, when $end - start \gt 1$ the extrusion barrier will be placed in the middle of interval $[start, end)$.
 - The ___name___ field is required but ignored, and can be safely set to `.`
-- ___score___ is required and should be set to a number between 0 and 1. This number expresses the average occupancy of the extrusion barrier site defined by the current line. Occupancies between 0.7-0.9 can be used as a starting point. Refer to [this](https://github.com/paulsengroup/modle/wiki/%5BTutorial%5D---Generating-a-list-of-extrusion-barrier-from-ChIP-seq-data) tutorial for how barrier occupancy can be inferred from CTCF/RAD21 ChIP-Seq data.
-  Refer to [MoDLE's paper](https://genomebiology.biomedcentral.com/articles/10.1186/s13059-022-02815-7) for more details regarding the extrusion barrier occupancy.
+- ___score___ is required and should be set to a number between 0 and 1. This number expresses the average occupancy of the extrusion barrier site defined by the current line. Occupancies between 0.7-0.9 can be used as a starting point.
+
+  Check out [this](https://github.com/paulsengroup/modle/wiki/%5BTutorial%5D---Generating-a-list-of-extrusion-barrier-from-ChIP-seq-data) tutorial to learn how barrier occupancy can be inferred from CTCF/RAD21 ChIP-Seq data. More information regarding how extrusion barriers are modeled canm be found in [MoDLE's paper](https://genomebiology.biomedcentral.com/articles/10.1186/s13059-022-02815-7) and [suppl. text](https://static-content.springer.com/esm/art%3A10.1186%2Fs13059-022-02815-7/MediaObjects/13059_2022_2815_MOESM1_ESM.pdf).
 - ___strand___ is required and is used to define the extrusion barrier direction (should be one of `-`, `+` or `.`).
   As of MoDLE v1.0.1, extrusion barriers are modeled after CTCF barriers.
   Thus, the strand field should be populated with the direction of the CTCF binding site that is being defined.
