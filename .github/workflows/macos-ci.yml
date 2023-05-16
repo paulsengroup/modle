@@ -351,7 +351,9 @@ jobs:
           gtar -xf modle_test_data.tar.xz
 
       - name: Generate requirements.txt for pip
-        run: echo 'cooler>=0.9.1' > requirements.txt
+        run: |
+          echo 'cooler>=0.9.1' > requirements.txt
+          echo 'pyBigWig>=0.3.22' >> requirements.txt
 
       - name: Setup Python
         uses: actions/setup-python@v4
