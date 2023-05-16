@@ -201,6 +201,10 @@ jobs:
         run: |
           cmake --install build
 
+          file build/test/test_main
+          shasum -a256 build/test/test_main
+          build/test/test_main --help
+
           tar -cf - -C dest/ bin |
           zstd -T0 -13 -o binaries.tar.zst
 
@@ -266,6 +270,10 @@ jobs:
         run: |
           ncpus=$(python -c 'import multiprocessing as mp; print(mp.cpu_count())')
           export CTEST_PARALLEL_LEVEL="$ncpus"
+
+          file build/test/test_main
+          shasum -a256 build/test/test_main
+          build/test/test_main --help
 
           ctest --test-dir .        \
                 --schedule-random   \
