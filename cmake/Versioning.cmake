@@ -7,6 +7,8 @@ set(MODLE_PROJECT_VERSION_MINOR 0)
 set(MODLE_PROJECT_VERSION_PATCH 1)
 set(MODLE_PROJECT_VERSION_SUFFIX "")
 
+option(MODLE_ENABLE_GIT_VERSION_TRACKING "Retrieve project version and metadata from git" ON)
+
 function(ConfigureVersioning input_config_folder output_config_folder)
   if(MODLE_ENABLE_GIT_VERSION_TRACKING AND EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/.git")
     # cmake-format: off
