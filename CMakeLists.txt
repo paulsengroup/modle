@@ -122,7 +122,6 @@ option(
   OFF)
 option(MODLE_DOWNLOAD_TEST_DATASET "Download datasets required by unit and integration tests" ON)
 option(MODLE_ENABLE_TESTING "Build MoDLE's unit tests" ON)
-option(MODLE_ENABLE_GIT_VERSION_TRACKING "Retrieve project version and metadata from git" ON)
 
 target_compile_features(project_options INTERFACE cxx_std_${CMAKE_CXX_STANDARD})
 
