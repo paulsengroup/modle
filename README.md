@@ -76,10 +76,10 @@ Downloading and running the latest stable release can be done as follows:
 
 ```console
 # Using Docker, may require sudo
-user@dev:/tmp$ docker run ghcr.io/paulsengroup/modle:1.0.1 --help
+user@dev:/tmp$ docker run ghcr.io/paulsengroup/modle:1.1.0 --help
 
 # Using Singularity/Apptainer
-user@dev:/tmp$ singularity run ghcr.io/paulsengroup/modle:1.0.1 --help
+user@dev:/tmp$ singularity run ghcr.io/paulsengroup/modle:1.1.0 --help
 
 High-performance stochastic modeling of DNA loop extrusion interactions.
 Usage: /usr/local/bin/modle [OPTIONS] SUBCOMMAND
@@ -115,7 +115,7 @@ drwxrwxrwt 20 user group  540 Jan  5 12.00 ..
 
 Running MoDLE using Docker as shown below fails due to missing input file(s)
 ```bash
-docker run ghcr.io/paulsengroup/modle:1.0.1 simulate \
+docker run ghcr.io/paulsengroup/modle:1.1.0 simulate \
   --chrom-sizes mydata/grch38.chrom.sizes \
   --extrusion-barrier-file mydata/grch38_h1_extrusion_barriers.bed.xz \
   --output-prefix mydata/output
@@ -132,7 +132,7 @@ To make `mydata/` accessible from inside the container, use one of the following
 ```bash
 # Method 1: mydata/ folder on the host is mapped to /mydata (notice the /) inside the container
 docker run -v "$(pwd -P)/mydata/:/data/" \
-  ghcr.io/paulsengroup/modle:1.0.1 simulate \
+  ghcr.io/paulsengroup/modle:1.1.0 simulate \
   --chrom-sizes /data/grch38.chrom.sizes \
   --extrusion-barrier-file /data/grch38_h1_extrusion_barriers.bed.xz \
   --output-prefix /data/output
@@ -140,21 +140,21 @@ docker run -v "$(pwd -P)/mydata/:/data/" \
 # Mehtod 2: use two different folders for input/output. Input folder is mounted in read-only mode
 docker run -v "$(pwd -P)/mydata/:/input_data/:ro" \
            -v "$(pwd -P)/output/:/output_data/" \
-  ghcr.io/paulsengroup/modle:1.0.1 simulate \
+  ghcr.io/paulsengroup/modle:1.1.0 simulate \
   --chrom-sizes /input_data/grch38.chrom.sizes \
   --extrusion-barrier-file /input_data/grch38_h1_extrusion_barriers.bed.xz \
   --output-prefix /output_data/output
 
 # Methods for Singularity/Apptainer (note that manually mounting paths is usually not required when using Singularity/Apptainer)
 singularity run -B "$(pwd -P)/mydata/:/data/" \
-  docker://ghcr.io/paulsengroup/modle:1.0.1 simulate \
+  docker://ghcr.io/paulsengroup/modle:1.1.0 simulate \
   --chrom-sizes /data/grch38.chrom.sizes \
   --extrusion-barrier-file /data/grch38_h1_extrusion_barriers.bed.xz \
   --output-prefix /data/output
 
 singularity run -B "$(pwd -P)/mydata/:/input_data/:ro" \
                 -B "$(pwd -P)/output/:/output_data/" \
-  docker://ghcr.io/paulsengroup/modle:1.0.1 simulate \
+  docker://ghcr.io/paulsengroup/modle:1.1.0 simulate \
   --chrom-sizes /input_data/grch38.chrom.sizes \
   --extrusion-barrier-file /input_data/grch38_h1_extrusion_barriers.bed.xz \
   --output-prefix /output_data/output
@@ -201,7 +201,7 @@ Yes! For troubleshooting we recommend using an interactive shell running inside 
 docker run -v "$(pwd -P)/mydata/:/input_data/:ro" \
            -v "$(pwd -P)/output/:/output_data/" \
            -it --rm --entrypoint=/bin/bash \
-  ghcr.io/paulsengroup/modle:1.0.1
+  ghcr.io/paulsengroup/modle:1.1.0
 ```
 
 This will drop you in an interactive bash shell.
@@ -253,7 +253,7 @@ exit
 For Singularity/Apptainer this is even easier:
 
 ```bash
-singularity shell docker://ghcr.io/paulsengroup/modle:1.0.1
+singularity shell docker://ghcr.io/paulsengroup/modle:1.1.0
 ```
 
 </details>
@@ -272,12 +272,12 @@ user@dev:/tmp$ conda create -n modle -c conda-forge -c bioconda modle
 modle: /home/user/.miniconda3/envs/modle/bin/modle
 
 (modle) user@dev:/tmp$ modle --version
-MoDLE-v1.0.1-bioconda
+MoDLE-v1.1.0-bioconda
 ```
 
 ### Pre-built Linux binaries (not recommended)
 
-Download file `modle-1.0.1-x86_64-linux.tar.xz` from the [latest release](https://github.com/paulsengroup/modle/releases/latest).
+Download file `modle-1.1.0-x86_64-linux.tar.xz` from the [latest release](https://github.com/paulsengroup/modle/releases/latest).
 
 Extract the archive and copy `modle` and/or `modle_tools` to a location in your `PATH`
 
@@ -286,32 +286,32 @@ Extract the archive and copy `modle` and/or `modle_tools` to a location in your 
 
 <!-- TODO make sure the link is correct once the release goes live -->
 ```console
-user@dev:/tmp$ curl -LO 'https://github.com/paulsengroup/modle/releases/download/v1.0.1/modle-1.0.1-x86_64-linux.tar.xz'
+user@dev:/tmp$ curl -LO 'https://github.com/paulsengroup/modle/releases/download/v1.1.0/modle-1.1.0-x86_64-linux.tar.xz'
 
-user@dev:/tmp$ tar -xvf modle-1.0.1-x86_64-linux.tar.xz
-modle-1.0.1-x86_64-linux/
-modle-1.0.1-x86_64-linux/share/
-modle-1.0.1-x86_64-linux/share/licenses/
-modle-1.0.1-x86_64-linux/share/licenses/modle_tools/
-modle-1.0.1-x86_64-linux/share/licenses/modle_tools/LICENSE
-modle-1.0.1-x86_64-linux/share/licenses/modle/
-modle-1.0.1-x86_64-linux/share/licenses/modle/LICENSE
-modle-1.0.1-x86_64-linux/bin/
-modle-1.0.1-x86_64-linux/bin/modle_tools
-modle-1.0.1-x86_64-linux/bin/modle
+user@dev:/tmp$ tar -xvf modle-1.1.0-x86_64-linux.tar.xz
+modle-1.1.0-x86_64-linux/
+modle-1.1.0-x86_64-linux/share/
+modle-1.1.0-x86_64-linux/share/licenses/
+modle-1.1.0-x86_64-linux/share/licenses/modle_tools/
+modle-1.1.0-x86_64-linux/share/licenses/modle_tools/LICENSE
+modle-1.1.0-x86_64-linux/share/licenses/modle/
+modle-1.1.0-x86_64-linux/share/licenses/modle/LICENSE
+modle-1.1.0-x86_64-linux/bin/
+modle-1.1.0-x86_64-linux/bin/modle_tools
+modle-1.1.0-x86_64-linux/bin/modle
 
-user@dev:/tmp modle-1.0.1-x86_64-linux/bin/modle --version
-MoDLE-v1.0.1
+user@dev:/tmp modle-1.1.0-x86_64-linux/bin/modle --version
+MoDLE-v1.1.0
 
 # Optional: add modle and modle_tools to your PATH (please ensure $HOME/.local/bin/ is in your PATH)
-user@dev:/tmp$ install -Dm0755 modle-1.0.1-x86_64-linux/bin/modle "$HOME/.local/bin/"
-user@dev:/tmp$ install -Dm0755 modle-1.0.1-x86_64-linux/bin/modle_tools "$HOME/.local/bin/"
+user@dev:/tmp$ install -Dm0755 modle-1.1.0-x86_64-linux/bin/modle "$HOME/.local/bin/"
+user@dev:/tmp$ install -Dm0755 modle-1.1.0-x86_64-linux/bin/modle_tools "$HOME/.local/bin/"
 
 user@dev:/tmp$ whereis modle
 modle: /home/user/.local/bin/modle
 
 user@dev:/tmp$ modle --version
-MoDLE-v1.0.1
+MoDLE-v1.1.0
 ```
 
 </details>
@@ -361,7 +361,7 @@ Some remarks:
 
   Check out [this](https://github.com/paulsengroup/modle/wiki/%5BTutorial%5D---Generating-a-list-of-extrusion-barrier-from-ChIP-seq-data) tutorial to learn how barrier occupancy can be inferred from CTCF/RAD21 ChIP-Seq data. More information regarding how extrusion barriers are modeled canm be found in [MoDLE's paper](https://genomebiology.biomedcentral.com/articles/10.1186/s13059-022-02815-7) and [suppl. text](https://static-content.springer.com/esm/art%3A10.1186%2Fs13059-022-02815-7/MediaObjects/13059_2022_2815_MOESM1_ESM.pdf).
 - ___strand___ is required and is used to define the extrusion barrier direction (should be one of `-`, `+` or `.`).
-  As of MoDLE v1.0.1, extrusion barriers are modeled after CTCF barriers.
+  As of MoDLE v1.1.0, extrusion barriers are modeled after CTCF barriers.
   Thus, the strand field should be populated with the direction of the CTCF binding site that is being defined.
   Barriers without strand information (i.e. with strand `.`) are ignored.
 
@@ -373,7 +373,7 @@ user@dev:/tmp/modle$ modle simulate \
     --extrusion-barrier-file examples/data/hg38_extrusion_barriers.bed.xz \
     --output-prefix examples/out/hg38_default
 
-[2023-05-11 11:47:15.718] [info]: running MoDLE v1.0.1
+[2023-05-11 11:47:15.718] [info]: running MoDLE v1.1.0
 [2023-05-11 11:47:15.718] [info]: complete log will be written to file "examples/out/hg38_default.log"
 [2023-05-11 11:47:15.718] [info]: writing simulation parameters to config file "examples/out/hg38_default_config.toml"
 [2023-05-11 11:47:15.718] [info]: command: modle simulate --chrom-sizes examples/data/hg38.chrom.sizes --extrusion-barrier-file examples/data/hg38_extrusion_barriers.bed.xz --output-prefix examples/out/hg38_default
