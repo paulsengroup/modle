@@ -85,7 +85,7 @@ constexpr const Value &ConstMap<Key, Value, Size>::at(const Key &key) const {
     assert(itr.second);
     return *itr.second;
   }
-  throw std::range_error(fmt::format(FMT_STRING("unable to find key \"{}\""), key));
+  throw std::range_error("unable to find key");
 }
 
 template <class Key, class Value, usize Size>

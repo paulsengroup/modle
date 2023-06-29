@@ -89,7 +89,4 @@ libarchive*:with_lzo=True
 libarchive*:with_lzma=True
 libarchive*:with_zstd=True
 libbigwig*:with_curl=False
-libbigwig*:with_zlibng=True
 xxhash*:utility=False
-zlib-ng*:with_optim=True
-zlib-ng*:zlib_compat=True
