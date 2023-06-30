@@ -55,7 +55,7 @@ target_link_system_libraries(
   Boost::headers
   bshoshany-thread-pool::bshoshany-thread-pool
   CLI11::CLI11
-  coolerpp
+  hictk
   cpp-sort::cpp-sort
   readerwriterqueue::readerwriterqueue
   tomlplusplus::tomlplusplus

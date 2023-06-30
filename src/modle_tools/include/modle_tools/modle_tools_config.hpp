@@ -6,11 +6,11 @@
 
 #include <absl/types/variant.h>  // for monostate, variant
 
-#include <coolerpp/uri.hpp>
 #include <filesystem>  // for path
-#include <string>      // for string, allocator, basic_string
-#include <thread>      // for thread
-#include <vector>      // for vector
+#include <hictk/cooler/uri.hpp>
+#include <string>  // for string, allocator, basic_string
+#include <thread>  // for thread
+#include <vector>  // for vector
 
 #include "modle/bed/bed.hpp"           // for BED, BED::Dialect, BED::BED6
 #include "modle/common/cli_utils.hpp"  // for CliEnumMappings

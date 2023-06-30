@@ -20,11 +20,11 @@
 #include <BS_thread_pool.hpp>  // for BS::thread_pool
 #include <algorithm>           // for all_of, find_if, transform, minmax, max
 #include <cassert>             // for assert
-#include <coolerpp/coolerpp.hpp>
-#include <cstdio>       // for stderr
-#include <exception>    // for exception
-#include <filesystem>   // for operator<<, path
-#include <future>       // for future
+#include <cstdio>              // for stderr
+#include <exception>           // for exception
+#include <filesystem>          // for operator<<, path
+#include <future>              // for future
+#include <hictk/cooler.hpp>
 #include <iosfwd>       // for streamsize
 #include <iterator>     // for insert_iterator, inserter
 #include <memory>       // for unique_ptr, shared_ptr, __shared_ptr_access
@@ -49,28 +49,28 @@
 
 namespace modle::tools {
 
-[[nodiscard]] static coolerpp::ChromosomeSet import_chroms_from_coolers(const coolerpp::File &f1,
-                                                                        const coolerpp::File &f2) {
-  std::vector<coolerpp::Chromosome> chroms{};
+[[nodiscard]] static hictk::Reference import_chroms_from_coolers(const hictk::cooler::File &f1,
+                                                                 const hictk::cooler::File &f2) {
+  std::vector<hictk::Chromosome> chroms{};
   for (const auto &chrom : f1.chromosomes()) {
-    if (f2.chromosomes().contains(chrom.name) &&
-        f2.chromosomes().at(chrom.name).size == chrom.size) {
+    if (f2.chromosomes().contains(chrom.name()) &&
+        f2.chromosomes().at(chrom.name()).size() == chrom.size()) {
       chroms.push_back(chrom);
     }
   }
   return {chroms.begin(), chroms.end()};
 }
 
-[[nodiscard]] static std::vector<bed::BED> chromset_to_bed(const coolerpp::ChromosomeSet &chroms) {
+[[nodiscard]] static std::vector<bed::BED> chromset_to_bed(const hictk::Reference &chroms) {
   std::vector<bed::BED> intervals{chroms.size()};
   std::transform(chroms.begin(), chroms.end(), intervals.begin(),
-                 [&](const coolerpp::Chromosome &chrom) {
-                   return bed::BED{chrom.name, 0, chrom.size};
+                 [&](const hictk::Chromosome &chrom) {
+                   return bed::BED{chrom.name(), 0, chrom.size()};
                  });
   return intervals;
 }
 
-[[nodiscard]] static coolerpp::ChromosomeSet import_chroms_from_chrom_sizes_file(
+[[nodiscard]] static hictk::Reference import_chroms_from_chrom_sizes_file(
     const std::filesystem::path &path_to_chrom_sizes) {
   std::vector<std::string> chrom_names{};
   std::vector<u32> chrom_sizes{};
@@ -79,12 +79,11 @@ namespace modle::tools {
     chrom_sizes.emplace_back(bed.chrom_end - bed.chrom_start);
   }
 
-  return coolerpp::ChromosomeSet{chrom_names.begin(), chrom_names.end(), chrom_sizes.begin()};
+  return {chrom_names.begin(), chrom_names.end(), chrom_sizes.begin()};
 }
 
 [[nodiscard]] static std::vector<bed::BED> import_regions_of_interest(
-    const coolerpp::ChromosomeSet &chroms,
-    const std::filesystem::path &path_to_regions_of_interest) {
+    const hictk::Reference &chroms, const std::filesystem::path &path_to_regions_of_interest) {
   auto regions_of_interest = bed::Parser(path_to_regions_of_interest).parse_all();
   std::sort(regions_of_interest.begin(), regions_of_interest.end(),
             [&](const bed::BED &r1, const bed::BED &r2) {
@@ -98,7 +97,7 @@ namespace modle::tools {
 
               // both regions DO NOT overlap with the chrom annotation
               if (m1 == chroms.end() && m2 == chroms.end()) {
-                return m1->size < m2->size;
+                return m1->size() < m2->size();
               }
               // only r2 overlaps with the chrom annotation
               // return false so that m1 is pushed towards the end of the vector
@@ -114,7 +113,7 @@ namespace modle::tools {
   return regions_of_interest;
 }
 
-static void validate_regions_of_interest(const coolerpp::ChromosomeSet &chroms,
+static void validate_regions_of_interest(const hictk::Reference &chroms,
                                          const std::vector<bed::BED> &regions_of_interest) {
   usize invalid_chrom = 0;
   usize invalid_range = 0;
@@ -129,7 +128,7 @@ static void validate_regions_of_interest(const coolerpp::ChromosomeSet &chroms,
       ++invalid_chrom;
       continue;
     }
-    if (interval.chrom_end > match->size) {
+    if (interval.chrom_end > match->size()) {
       if (invalid_intervals.size() < invalid_intervals.capacity()) {
         invalid_intervals.push_back(interval);
       }
@@ -151,8 +150,8 @@ static void validate_regions_of_interest(const coolerpp::ChromosomeSet &chroms,
   }
 }
 
-static void validate_chrom_sizes(const coolerpp::ChromosomeSet &chrom_sizes_cooler,
-                                 const coolerpp::ChromosomeSet &chrom_sizes) {
+static void validate_chrom_sizes(const hictk::Reference &chrom_sizes_cooler,
+                                 const hictk::Reference &chrom_sizes) {
   std::vector<std::string> errors{};
   for (const auto &chrom1 : chrom_sizes_cooler) {
     auto match = chrom_sizes.find(chrom1);
@@ -162,24 +161,24 @@ static void validate_chrom_sizes(const coolerpp::ChromosomeSet &chrom_sizes_cool
       continue;
     }
 
-    if (match->size != chrom1.size) {
+    if (match->size() != chrom1.size()) {
       errors.emplace_back(fmt::format(
           FMT_STRING(
               "{} has size {} according to Cooler files and {} according to .chrom.sizes file"),
-          chrom1.name, chrom1.size, match->size));
+          chrom1.name(), chrom1.size(), match->size()));
     }
   }
 
   if (!errors.empty()) {
     throw std::runtime_error(fmt::format(
-        FMT_STRING("cooler files and chrom.sizes file contain conflicting information:\n"
+        FMT_STRING("cooler files and chrom.size()s file contain conflicting information:\n"
                    " - {}"),
         fmt::join(errors, "\n - ")));
   }
 }
 
-[[nodiscard]] static coolerpp::ChromosomeSet generate_chrom_annotation(
-    const coolerpp::File &f1, const coolerpp::File &f2,
+[[nodiscard]] static hictk::Reference generate_chrom_annotation(
+    const hictk::cooler::File &f1, const hictk::cooler::File &f2,
     const std::filesystem::path &path_to_chrom_sizes) {
   // Import chromosomes from Cooler files and select chroms present in both files
   auto chroms = import_chroms_from_coolers(f1, f2);
@@ -203,8 +202,7 @@ static void validate_chrom_sizes(const coolerpp::ChromosomeSet &chrom_sizes_cool
 }
 
 [[nodiscard]] static std::vector<bed::BED> generate_regions_of_interest_for_eval(
-    const coolerpp::ChromosomeSet &chroms,
-    const std::filesystem::path &path_to_regions_of_interest) {
+    const hictk::Reference &chroms, const std::filesystem::path &path_to_regions_of_interest) {
   if (path_to_regions_of_interest.empty()) {
     return chromset_to_bed(chroms);
   }
@@ -536,15 +534,15 @@ template <StripeDirection stripe_direction, class N>
 }
 
 [[nodiscard]] static auto init_writers(const modle::tools::eval_config &c,
-                                       const coolerpp::ChromosomeSet &chroms, const bool weighted) {
+                                       const hictk::Reference &chroms, const bool weighted) {
   std::vector<std::string> chrom_names(utils::conditional_static_cast<usize>(chroms.size()));
   std::vector<u32> chrom_sizes(utils::conditional_static_cast<usize>(chroms.size()));
 
   std::transform(chroms.begin(), chroms.end(), chrom_names.begin(),
-                 [](const auto &chrom) { return chrom.name; });
+                 [](const auto &chrom) { return chrom.name(); });
 
   std::transform(chroms.begin(), chroms.end(), chrom_sizes.begin(),
-                 [](const auto &chrom) { return static_cast<u32>(chrom.size); });
+                 [](const auto &chrom) { return static_cast<u32>(chrom.size()); });
 
   const auto name = corr_method_to_str(c.metric);
   const auto bname1 = fmt::format(FMT_STRING("{}{}_vertical"), name, weighted ? "_weighted" : "");
@@ -691,8 +689,8 @@ static void log_regions_for_evaluation(const std::vector<bed::BED> &intervals) {
 
 void eval_subcmd(const modle::tools::eval_config &c) {
   const auto t0 = absl::Now();
-  auto ref_cooler = coolerpp::File::open_read_only(c.reference_cooler_uri.string());
-  auto tgt_cooler = coolerpp::File::open_read_only(c.input_cooler_uri.string());
+  auto ref_cooler = hictk::cooler::File::open_read_only(c.reference_cooler_uri.string());
+  auto tgt_cooler = hictk::cooler::File::open_read_only(c.input_cooler_uri.string());
 
   assert(ref_cooler.bin_size() == tgt_cooler.bin_size());
 

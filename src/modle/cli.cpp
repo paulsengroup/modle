@@ -19,16 +19,16 @@
 #include <array>        // for array
 #include <cassert>      // for assert
 #include <cmath>        // for round, pow, log
-#include <coolerpp/coolerpp.hpp>
-#include <cstdio>      // for stderr
-#include <exception>   // for exception
-#include <filesystem>  // for path, operator<<
-#include <limits>      // for numeric_limits
-#include <sstream>     // for streamsize, stringstream, basic_ostream
-#include <stdexcept>   // for invalid_argument, out_of_range, runtime_error
-#include <string>      // for allocator, string, basic_string
-#include <thread>      // for hardware_concurrency
-#include <vector>      // for vector
+#include <cstdio>       // for stderr
+#include <exception>    // for exception
+#include <filesystem>   // for path, operator<<
+#include <hictk/cooler.hpp>
+#include <limits>     // for numeric_limits
+#include <sstream>    // for streamsize, stringstream, basic_ostream
+#include <stdexcept>  // for invalid_argument, out_of_range, runtime_error
+#include <string>     // for allocator, string, basic_string
+#include <thread>     // for hardware_concurrency
+#include <vector>     // for vector
 
 #include "modle/common/cli_utils.hpp"
 #include "modle/common/common.hpp"  // for bp_t, i64

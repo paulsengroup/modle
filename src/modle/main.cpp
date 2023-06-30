@@ -91,8 +91,19 @@ void setup_failure_signal_handler(const char* argv_0) {
   absl::InstallFailureSignalHandler(options);
 }
 
+static std::string concat_args(absl::Span<char*> args) {
+  assert(!args.empty());
+  std::string s{args.front()};
+  for (std::size_t i = 1; i < args.size(); ++i) {
+    s.append(" ");
+    s.append(args[i]);
+  }
+
+  return s;
+}
+
 void write_param_summary_to_log(const modle::Config& c) {
-  spdlog::info(FMT_STRING("command: {}"), fmt::join(c.args, " "));
+  spdlog::info(FMT_STRING("command: {}"), concat_args(c.args));
   spdlog::info(FMT_STRING("simulation will use up to {} out of {} available CPU cores."),
                c.nthreads, std::thread::hardware_concurrency());
   if (c.stopping_criterion == modle::Config::StoppingCriterion::contact_density) {
