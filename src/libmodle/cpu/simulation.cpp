@@ -14,15 +14,15 @@
 #include <fmt/compile.h>
 #include <spdlog/spdlog.h>  // for info, warn
 
-#include <algorithm>  // for max, fill, min, copy, clamp
-#include <atomic>     // for atomic
-#include <cassert>    // for assert
-#include <chrono>     // for microseconds
-#include <cmath>      // for log, round, exp, floor, sqrt
-#include <coolerpp/coolerpp.hpp>
-#include <cstdlib>      // for abs
-#include <deque>        // for _Deque_iterator<>::_Self
-#include <filesystem>   // for operator<<, path
+#include <algorithm>   // for max, fill, min, copy, clamp
+#include <atomic>      // for atomic
+#include <cassert>     // for assert
+#include <chrono>      // for microseconds
+#include <cmath>       // for log, round, exp, floor, sqrt
+#include <cstdlib>     // for abs
+#include <deque>       // for _Deque_iterator<>::_Self
+#include <filesystem>  // for operator<<, path
+#include <hictk/cooler.hpp>
 #include <limits>       // for numeric_limits
 #include <memory>       // for shared_ptr, unique_ptr, make...
 #include <mutex>        // for mutex
@@ -111,7 +111,7 @@ usize Simulation::size() const { return this->_genome.size(); }
 
 usize Simulation::simulated_size() const { return this->_genome.simulated_size(); }
 
-[[nodiscard]] static coolerpp::File init_cooler_file(
+[[nodiscard]] static hictk::cooler::File init_cooler_file(
     const std::filesystem::path& path, bool force,
     const std::vector<std::shared_ptr<const Chromosome>>& chroms, bp_t bin_size,
     std::string_view assembly_name, std::string_view metadata) {
@@ -136,7 +136,8 @@ usize Simulation::simulated_size() const { return this->_genome.simulated_size()
   return bwf;
 }
 
-static void write_contact_matrix_to_cooler(coolerpp::File& cf, const GenomicInterval& interval) {
+static void write_contact_matrix_to_cooler(hictk::cooler::File& cf,
+                                           const GenomicInterval& interval) {
   if (!cf) {
     return;
   }
@@ -196,7 +197,7 @@ static void write_lef_occupancy_to_bwig(io::bigwig::Writer& bw, const GenomicInt
 
 // GCC8 doesn't compile init_output_file_writers if we use std::pair<> as return type
 struct CoolerBigwigPair {
-  coolerpp::File clr{};
+  hictk::cooler::File clr{};
   io::bigwig::Writer bw{};
 };
 

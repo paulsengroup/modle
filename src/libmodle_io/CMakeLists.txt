@@ -136,7 +136,6 @@ target_link_libraries(
             project_options
             Modle::cmatrix
             Modle::common
-            Coolerpp::Coolerpp
             fmt::fmt)
 
 target_link_system_libraries(
@@ -144,7 +143,7 @@ target_link_system_libraries(
   INTERFACE
   project_warnings
   project_options
-  coolerpp)
+  hictk::cooler)
 
 set_target_properties(libmodle_io_contact_matrix PROPERTIES OUTPUT_NAME modle_io_contact_matrix)
 install(

@@ -34,7 +34,7 @@ target_link_system_libraries(
   CLI11::CLI11
   spdlog::spdlog
   tomlplusplus::tomlplusplus
-  coolerpp)
+  hictk)
 
 include(GNUInstallDirs)
 install(

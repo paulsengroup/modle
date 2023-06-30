@@ -20,11 +20,11 @@
 #include <BS_thread_pool.hpp>  // for BS::thread_pool
 #include <algorithm>           // for transform, max
 #include <cassert>             // for assert
-#include <coolerpp/coolerpp.hpp>
-#include <cstdio>       // for stderr
-#include <exception>    // for exception
-#include <filesystem>   // for operator<<, path
-#include <future>       // for future
+#include <cstdio>              // for stderr
+#include <exception>           // for exception
+#include <filesystem>          // for operator<<, path
+#include <future>              // for future
+#include <hictk/cooler.hpp>
 #include <iosfwd>       // for streamsize
 #include <iterator>     // for insert_iterator, inserter
 #include <memory>       // for unique_ptr, shared_ptr, __shared_ptr_access
@@ -138,7 +138,7 @@ template <class N>
 }
 
 [[nodiscard]] static ContactMatrixDense<double> process_chromosome(
-    BS::thread_pool& tpool, const std::string_view chrom_name, const coolerpp::File& cooler,
+    BS::thread_pool& tpool, const std::string_view chrom_name, const hictk::cooler::File& cooler,
     const modle::tools::transform_config& c,
     const modle::IITree<double, double>& discretization_ranges) {
   auto t0 = absl::Now();
@@ -171,11 +171,12 @@ template <class N>
   return matrix;
 }
 
-[[nodiscard]] static coolerpp::File init_output_cooler(
-    const std::filesystem::path& output_cooler_uri, const coolerpp::File& input_cooler,
+[[nodiscard]] static hictk::cooler::File init_output_cooler(
+    const std::filesystem::path& output_cooler_uri, const hictk::cooler::File& input_cooler,
     bool floating_point, std::string_view args_json, bool force) {
-  auto attrs = floating_point ? coolerpp::StandardAttributes::init<double>(input_cooler.bin_size())
-                              : coolerpp::StandardAttributes::init<i32>(input_cooler.bin_size());
+  auto attrs = floating_point
+                   ? hictk::cooler::StandardAttributes::init<double>(input_cooler.bin_size())
+                   : hictk::cooler::StandardAttributes::init<i32>(input_cooler.bin_size());
   attrs.metadata = args_json;
   attrs.generated_by = config::version::str_long("MoDLE-tools");
   if (const auto& assembly = input_cooler.attributes().assembly; assembly) {
@@ -202,7 +203,7 @@ void transform_subcmd(const modle::tools::transform_config& c) {
     return import_discretization_ranges(c.path_to_discretization_ranges_tsv);
   }();
 
-  const auto input_cooler = coolerpp::File::open_read_only(c.input_cooler_uri.string());
+  const auto input_cooler = hictk::cooler::File::open_read_only(c.input_cooler_uri.string());
   if (const auto& output_dir = c.output_cooler_uri.parent_path(); !output_dir.empty()) {
     std::filesystem::create_directories(output_dir.string());
   }
@@ -214,17 +215,18 @@ void transform_subcmd(const modle::tools::transform_config& c) {
   const auto t0 = absl::Now();
   spdlog::info(FMT_STRING("transforming contacts from Cooler at URI \"{}\"..."),
                input_cooler.uri());
-  for (const auto& [chrom_name, chrom_size] : input_cooler.chromosomes()) {
-    if (io::query_returns_no_pixels(input_cooler, chrom_name, bp_t(0), chrom_size)) {
-      spdlog::warn(FMT_STRING("read 0 contacts for {}. SKIPPING!"), chrom_name);
+  for (const auto& chrom : input_cooler.chromosomes()) {
+    if (io::query_returns_no_pixels(input_cooler, chrom.name(), bp_t(0), chrom.size())) {
+      spdlog::warn(FMT_STRING("read 0 contacts for {}. SKIPPING!"), chrom.name());
       continue;
     }
     const auto transformed_matrix =
-        process_chromosome(tpool, chrom_name, input_cooler, c, discretization_ranges);
+        process_chromosome(tpool, chrom.name(), input_cooler, c, discretization_ranges);
     if (c.floating_point) {
-      io::append_contact_matrix_to_cooler(output_cooler, chrom_name, transformed_matrix);
+      io::append_contact_matrix_to_cooler(output_cooler, chrom.name(), transformed_matrix);
     } else {
-      io::append_contact_matrix_to_cooler(output_cooler, chrom_name, transformed_matrix.as<i32>());
+      io::append_contact_matrix_to_cooler(output_cooler, chrom.name(),
+                                          transformed_matrix.as<i32>());
     }
   }
 
