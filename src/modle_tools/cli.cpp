@@ -15,12 +15,12 @@
 #include <toml++/toml.h>  // for array::operator[], operator<<, parse, print_to...
 
 #include <CLI/CLI.hpp>
-#include <algorithm>  // for max
-#include <array>      // for array
-#include <cassert>    // for assert
-#include <coolerpp/coolerpp.hpp>
-#include <exception>    // for exception
-#include <filesystem>   // for path, operator<<, path::iterator, operator==
+#include <algorithm>   // for max
+#include <array>       // for array
+#include <cassert>     // for assert
+#include <exception>   // for exception
+#include <filesystem>  // for path, operator<<, path::iterator, operator==
+#include <hictk/cooler.hpp>
 #include <ostream>      // for streamsize, stringstream, basic_ostream
 #include <stdexcept>    // for runtime_error, invalid_argument, out_of_range
 #include <string>       // for string, allocator, basic_string
@@ -45,8 +45,8 @@ class CoolerFileValidator : public CLI::Validator {
  public:
   CoolerFileValidator() : Validator("Cooler") {
     func_ = [](std::string& uri) -> std::string {
-      if (!coolerpp::utils::is_cooler(uri)) {
-        if (coolerpp::utils::is_multires_file(uri)) {
+      if (!hictk::cooler::utils::is_cooler(uri)) {
+        if (hictk::cooler::utils::is_multires_file(uri)) {
           return "URI points to a .mcool file: " + uri;
         }
         return "Not a valid Cooler: " + uri;
@@ -466,8 +466,8 @@ void Cli::validate_eval_subcommand() const {
   const auto& c = absl::get<eval_config>(this->_config);
 
   try {
-    const auto f1 = coolerpp::File::open_read_only(c.input_cooler_uri.string());
-    const auto f2 = coolerpp::File::open_read_only(c.reference_cooler_uri.string());
+    const auto f1 = hictk::cooler::File::open_read_only(c.input_cooler_uri.string());
+    const auto f2 = hictk::cooler::File::open_read_only(c.reference_cooler_uri.string());
     if (f1.bin_size() != f2.bin_size()) {
       errors.emplace_back(fmt::format(
           FMT_STRING(

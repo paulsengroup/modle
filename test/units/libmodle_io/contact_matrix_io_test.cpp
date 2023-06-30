@@ -4,7 +4,7 @@
 
 #include <catch2/catch_test_macros.hpp>
 #include <catch2/matchers/catch_matchers_floating_point.hpp>
-#include <coolerpp/coolerpp.hpp>
+#include <hictk/cooler.hpp>
 #include <random>
 
 #include "modle/common/random.hpp"
@@ -49,10 +49,10 @@ TEST_CASE("ContactMatrixDense to Cooler Roundtrip (square)", "[io][matrix][short
 
   const auto m1 = init_dense_matrix<u32>(rand_eng, nrows, ncols);
 
-  const coolerpp::ChromosomeSet chroms{{"chr1", chrom_size}};
+  const hictk::Reference chroms{{0, "chr1", chrom_size}};
   {
     auto f = init_cooler_file<i32>(test_file, false, chroms,
-                                   coolerpp::StandardAttributes::init(bin_size));
+                                   hictk::cooler::StandardAttributes::init(bin_size));
     append_contact_matrix_to_cooler(f, "chr1", m1);
     REQUIRE(m1.get_nnz() == f.attributes().nnz);
   }
@@ -80,10 +80,10 @@ TEST_CASE("ContactMatrixDense to Cooler Roundtrip", "[io][matrix][long]") {
   auto rand_eng = random::PRNG(rd());
 
   const auto m1 = init_dense_matrix<u32>(rand_eng, nrows, ncols);
-  const coolerpp::ChromosomeSet chroms{{"chr1", chrom_size}};
+  const hictk::Reference chroms{{0, "chr1", chrom_size}};
   {
     auto f = init_cooler_file<i32>(test_file, false, chroms,
-                                   coolerpp::StandardAttributes::init(bin_size));
+                                   hictk::cooler::StandardAttributes::init(bin_size));
     append_contact_matrix_to_cooler(f, "chr1", m1);
     REQUIRE(m1.get_nnz() == f.attributes().nnz);
   }
@@ -111,10 +111,10 @@ TEST_CASE("ContactMatrixDense to Cooler Roundtrip (FP)", "[io][matrix][long]") {
   auto rand_eng = random::PRNG(rd());
 
   const auto m1 = init_dense_matrix<double>(rand_eng, nrows, ncols);
-  const coolerpp::ChromosomeSet chroms{{"chr1", chrom_size}};
+  const hictk::Reference chroms{{0, "chr1", chrom_size}};
   {
     auto f = init_cooler_file<double>(test_file, false, chroms,
-                                      coolerpp::StandardAttributes::init<double>(bin_size));
+                                      hictk::cooler::StandardAttributes::init<double>(bin_size));
     append_contact_matrix_to_cooler(f, "chr1", m1);
     REQUIRE(m1.get_nnz() == f.attributes().nnz);
   }

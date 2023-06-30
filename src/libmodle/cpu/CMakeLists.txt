@@ -27,8 +27,6 @@ target_sources(
           ${CMAKE_CURRENT_SOURCE_DIR}/simulation_impl.hpp
           ${CMAKE_CURRENT_SOURCE_DIR}/state_logger.cpp)
 
-
-
 target_include_directories(libmodle_cpu PUBLIC include/)
 
 target_link_libraries(
