@@ -10,8 +10,8 @@ endif()
 # cmake-format: off
 FetchContent_Declare(
         hictk
-        URL ${CMAKE_CURRENT_SOURCE_DIR}/external/hictk-24f75ae.tar.xz
-        URL_HASH SHA256=452519a7b4e6d64f45d84ac6eacff9fc7ef119fa4aeb10e5d57ca6251710969c
+        URL ${CMAKE_CURRENT_SOURCE_DIR}/external/hictk-7a1a5d7.tar.xz
+        URL_HASH SHA256=ebbf369cc4ab01af64a4c320851b577d2fd6df636e87aeb36fb6c86524066e6e
 )
 # cmake-format: on
 

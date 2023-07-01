@@ -601,6 +601,18 @@ template <StripeDirection stripe_direction, class N>
   return writers;
 }
 
+[[nodiscard]] static std::string format_tsv_record(const enum eval_config::Metric metric,
+                                                   const std::string_view chrom_name_,
+                                                   const bp_t start_pos_, const bp_t end_pos_,
+                                                   const double score1, const double score2) {
+  if (metric == eval_config::Metric::eucl_dist || metric == eval_config::Metric::rmse) {
+    assert(score2 == 0.0);
+    return fmt::format(FMT_COMPILE("{}\t{}\t{}\t{}\n"), chrom_name_, start_pos_, end_pos_, score1);
+  }
+  return fmt::format(FMT_COMPILE("{}\t{}\t{}\t{}\t{}\n"), chrom_name_, start_pos_, end_pos_, score1,
+                     score2);
+}
+
 template <StripeDirection stripe_direction, class Writers, class N>
 static void run_task(const enum eval_config::Metric metric, const bed::BED &interval,
                      Writers &writers, const ContactMatrixDense<N> &ref_contacts,
@@ -627,31 +639,10 @@ static void run_task(const enum eval_config::Metric metric, const bed::BED &inte
                              interval.chrom_start);
 
     std::string buff;
-    auto format_tsv_record = [&](const std::string_view chrom_name_, const auto start_pos_,
-                                 const auto end_pos_, const auto score1, const auto score2) {
-      switch (metric) {
-        case eval_config::Metric::eucl_dist:
-          [[fallthrough]];
-        case eval_config::Metric::rmse:
-          assert(score2 == 0.0);
-          return fmt::format(FMT_COMPILE("{}\t{}\t{}\t{}\n"), chrom_name_, start_pos_, end_pos_,
-                             score1);
-        case eval_config::Metric::spearman:
-          [[fallthrough]];
-        case eval_config::Metric::pearson:
-          [[fallthrough]];
-        case eval_config::Metric::custom: {
-          return fmt::format(FMT_COMPILE("{}\t{}\t{}\t{}\t{}\n"), chrom_name_, start_pos_, end_pos_,
-                             score1, score2);
-        }
-      }
-      MODLE_UNREACHABLE_CODE;
-    };
-
     for (usize i = 0; i < metrics.metric1.size(); ++i) {
       const auto start_pos = interval.chrom_start + (bin_size * i);
       const auto end_pos = std::min(start_pos + bin_size, interval.chrom_end);
-      buff = format_tsv_record(interval.chrom, start_pos, end_pos, metrics.metric1[i],
+      buff = format_tsv_record(metric, interval.chrom, start_pos, end_pos, metrics.metric1[i],
                                metrics.metric2[i]);
       writer.tsv_gz->write(buff);
     }
