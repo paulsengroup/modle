@@ -332,7 +332,7 @@ Compiling MoDLE requires a compiler toolchain supporting C++17, such as:
 - Apple-Clang 10.0+
 
 Furthermore, the following tools are required:
-- CMake 3.20+
+- CMake 3.25+
 - Conan 2+
 - git 2.7+
 - make or ninja
