@@ -197,13 +197,13 @@ inline usize ContextManager<Task>::num_io_threads() const noexcept {
 template <typename Task>
 template <typename TaskLambda>
 inline void ContextManager<Task>::spawn_worker_thread(TaskLambda lambda) {
-  this->_futures.emplace_back(this->_worker_tpool.submit(lambda));
+  this->_futures.emplace_back(this->_worker_tpool.submit_task(lambda));
 }
 
 template <typename Task>
 template <typename TaskLambda>
 inline void ContextManager<Task>::spawn_io_thread(TaskLambda lambda) {
-  this->_futures.emplace_back(this->_io_tpool.submit(lambda));
+  this->_futures.emplace_back(this->_io_tpool.submit_task(lambda));
 }
 
 template <typename Task>
@@ -212,9 +212,9 @@ inline void ContextManager<Task>::shutdown() {
   this->close_queue();
 
   spdlog::debug(FMT_STRING("waiting for worker threads to return..."));
-  this->_worker_tpool.wait_for_tasks();
+  this->_worker_tpool.wait();
   spdlog::debug(FMT_STRING("waiting for io threads to return..."));
-  this->_io_tpool.wait_for_tasks();
+  this->_io_tpool.wait();
 
   spdlog::debug(
       FMT_STRING("all background threads returned! Checking if any exception have been raised..."));

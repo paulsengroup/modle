@@ -117,7 +117,7 @@ auto fmt::formatter<modle::Simulation::Task>::format(const modle::Simulation::Ta
   assert(t.interval);
   return fmt::format_to(ctx.out(), FMT_STRING("{}\t{}\t{}\t{}\t{}\t{}\t{}"), t.id,
                         t.interval->chrom(), t.cell_id, t.num_target_epochs, t.num_target_contacts,
-                        t.num_lefs, !!t.interval ? t.interval->barriers().size() : 0);
+                        t.num_lefs, !!t.interval_data ? t.interval_data->barriers().size() : 0);
 }
 
 constexpr auto fmt::formatter<modle::Simulation::State>::parse(format_parse_context& ctx)

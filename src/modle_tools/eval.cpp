@@ -745,9 +745,9 @@ void eval_subcmd(const modle::tools::eval_config &c) {
     if (c.normalize) {
       const auto t00 = absl::Now();
       spdlog::info(FMT_STRING("Normalizing contact matrices for {}..."), coord_str);
-      return_codes[0] = tpool.submit([&]() { ref_matrix.normalize_inplace(); });
-      return_codes[1] = tpool.submit([&]() { tgt_matrix.normalize_inplace(); });
-      tpool.wait_for_tasks();
+      return_codes[0] = tpool.submit_task([&]() { ref_matrix.normalize_inplace(); });
+      return_codes[1] = tpool.submit_task([&]() { tgt_matrix.normalize_inplace(); });
+      tpool.wait();
       try {
         // Handle exceptions thrown inside worker threads
         std::ignore = return_codes[0];
@@ -763,15 +763,15 @@ void eval_subcmd(const modle::tools::eval_config &c) {
     }
 
     using d = StripeDirection;
-    return_codes[0] = tpool.submit([&, interval = interval]() {
+    return_codes[0] = tpool.submit_task([&, interval = interval]() {
       run_task<d::horizontal>(c.metric, interval, writers, ref_matrix, tgt_matrix,
                               c.exclude_zero_pxls, bin_size, weights);
     });
-    return_codes[1] = tpool.submit([&, interval = interval]() {
+    return_codes[1] = tpool.submit_task([&, interval = interval]() {
       run_task<d::vertical>(c.metric, interval, writers, ref_matrix, tgt_matrix,
                             c.exclude_zero_pxls, bin_size, weights);
     });
-    tpool.wait_for_tasks();
+    tpool.wait();
     // Raise exceptions thrown inside worker threads (if any)
     std::ignore = return_codes[0];
     std::ignore = return_codes[1];

@@ -59,7 +59,8 @@ class Simulation {
   struct Task {  // NOLINT(altera-struct-pack-align)
     enum class Status : u8f { PENDING, RUNNING, COMPLETED, FAILED };
     usize id{};
-    GenomicInterval* interval{};
+    const GenomicInterval* interval{};
+    GenomicIntervalData* interval_data{};
     usize cell_id{};
     usize num_target_epochs{};
     usize num_target_contacts{};
@@ -336,18 +337,21 @@ class Simulation {
   /// Register contacts for chromosome \p interval using the position the extrusion units of the
   /// LEFs in \p lefs whose index is present in \p selected_lef_idx.
   /// Return the actual number of contacts registered
-  usize register_contacts_loop(GenomicInterval& interval, absl::Span<const Lef> lefs,
-                               usize num_sampling_events, random::PRNG_t& rand_eng) const;
+  usize register_contacts_loop(const GenomicInterval& interval, GenomicIntervalData& interval_data,
+                               absl::Span<const Lef> lefs, usize num_sampling_events,
+                               random::PRNG_t& rand_eng) const;
   usize register_contacts_loop(bp_t start_pos, bp_t end_pos,
                                ContactMatrixDense<contacts_t>& contacts, absl::Span<const Lef> lefs,
                                usize num_sampling_events, random::PRNG_t& rand_eng) const;
-  usize register_contacts_tad(GenomicInterval& interval, absl::Span<const Lef> lefs,
-                              usize num_sampling_events, random::PRNG_t& rand_eng) const;
+  usize register_contacts_tad(const GenomicInterval& interval, GenomicIntervalData& interval_data,
+                              absl::Span<const Lef> lefs, usize num_sampling_events,
+                              random::PRNG_t& rand_eng) const;
   usize register_contacts_tad(bp_t start_pos, bp_t end_pos,
                               ContactMatrixDense<contacts_t>& contacts, absl::Span<const Lef> lefs,
                               usize num_sampling_events, random::PRNG_t& rand_eng) const;
 
-  usize register_1d_lef_occupancy(GenomicInterval& interval, absl::Span<const Lef> lefs,
+  usize register_1d_lef_occupancy(const GenomicInterval& interval,
+                                  GenomicIntervalData& interval_data, absl::Span<const Lef> lefs,
                                   usize num_sampling_events, random::PRNG_t& rand_eng) const;
 
   usize register_1d_lef_occupancy(bp_t start_pos, bp_t end_pos,

@@ -175,7 +175,7 @@ ContactMatrixDense<double> ContactMatrixDense<N>::blur(const double sigma, const
 
   const auto lck = this->lock();
   if (tpool) {
-    auto fut = tpool->template parallelize_loop(usize(0), this->ncols(), apply_kernel);
+    auto fut = tpool->template submit_blocks(usize(0), this->ncols(), apply_kernel);
     fut.wait();
   } else {
     apply_kernel(0, this->ncols());
@@ -220,7 +220,7 @@ ContactMatrixDense<double> ContactMatrixDense<N>::diff_of_gaussians(
 
   const auto lck = this->lock();
   if (tpool) {
-    auto fut = tpool->template parallelize_loop(usize(0), this->ncols(), compute_gauss_diff);
+    auto fut = tpool->template submit_blocks(usize(0), this->ncols(), compute_gauss_diff);
     fut.wait();
   } else {
     compute_gauss_diff(0, this->ncols());

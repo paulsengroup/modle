@@ -230,7 +230,7 @@ void transform_subcmd(const modle::tools::transform_config& c) {
     }
   }
 
-  tpool.wait_for_tasks();
+  tpool.wait();
   spdlog::info(FMT_STRING("DONE! Processed {} chromosomes in {}!"),
                input_cooler.chromosomes().size(), absl::FormatDuration(absl::Now() - t0));
   spdlog::info(FMT_STRING("Transformed contacts have been saved to file {}"), c.output_cooler_uri);

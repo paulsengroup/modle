@@ -124,7 +124,6 @@ class Chromosome {
 
 class GenomicInterval {
  public:
-  using ContactMatrix = internal::ContactMatrixLazy::ContactMatrix;
   friend class Genome;
 
  private:
@@ -133,33 +132,10 @@ class GenomicInterval {
   bp_t _start{};
   bp_t _end{};
 
-  std::vector<ExtrusionBarrier> _barriers{};
-
-  internal::ContactMatrixLazy _contacts{};
-  internal::Occupancy1DLazy _lef_1d_occupancy{};
-
  public:
   GenomicInterval() = default;
-  GenomicInterval(usize id, const std::shared_ptr<const Chromosome>& chrom,
-                  bp_t contact_matrix_resolution, bp_t diagonal_width);
-  GenomicInterval(usize id, std::shared_ptr<const Chromosome> chrom, bp_t start, bp_t end,
-                  bp_t contact_matrix_resolution, bp_t diagonal_width);
-  template <typename It>
-  GenomicInterval(usize id, const std::shared_ptr<const Chromosome>& chrom,
-                  bp_t contact_matrix_resolution, bp_t diagonal_width, It first_barrier,
-                  It last_barrier);
-  template <typename It>
-  GenomicInterval(usize id, std::shared_ptr<const Chromosome> chrom, bp_t start, bp_t end,
-                  bp_t contact_matrix_resolution, bp_t diagonal_width, It first_barrier,
-                  It last_barrier);
-
-  ~GenomicInterval() = default;
-
-  GenomicInterval(const GenomicInterval& other) = delete;
-  GenomicInterval(GenomicInterval&& other) noexcept = default;
-
-  GenomicInterval& operator=(const GenomicInterval& other) = delete;
-  GenomicInterval& operator=(GenomicInterval&& other) noexcept = default;
+  GenomicInterval(usize id, const std::shared_ptr<const Chromosome>& chrom);
+  GenomicInterval(usize id, std::shared_ptr<const Chromosome> chrom, bp_t start, bp_t end);
 
   [[nodiscard]] constexpr bool operator==(const GenomicInterval& other) const noexcept;
   [[nodiscard]] constexpr bool operator!=(const GenomicInterval& other) const noexcept;
@@ -168,10 +144,6 @@ class GenomicInterval {
   [[nodiscard]] constexpr bool operator>(const GenomicInterval& other) const noexcept;
   [[nodiscard]] constexpr bool operator>=(const GenomicInterval& other) const noexcept;
 
-  void add_extrusion_barrier(const bed::BED& record, double default_barrier_stp_active,
-                             double default_barrier_stp_inactive);
-  void add_extrusion_barriers(std::vector<ExtrusionBarrier> barriers);
-
   [[nodiscard]] constexpr usize id() const noexcept;
   [[nodiscard]] u64 hash(XXH3_state_t& state) const;
   [[nodiscard]] u64 hash(XXH3_state_t& state, u64 seed) const;
@@ -179,7 +151,42 @@ class GenomicInterval {
   [[nodiscard]] constexpr bp_t start() const noexcept;
   [[nodiscard]] constexpr bp_t end() const noexcept;
   [[nodiscard]] constexpr bp_t size() const noexcept;
-  [[nodiscard]] constexpr u64 npixels() const noexcept;
+
+  template <typename H>
+  inline friend H AbslHashValue(H h, const GenomicInterval& c);
+};
+
+class GenomicIntervalData {
+ public:
+  using ContactMatrix = internal::ContactMatrixLazy::ContactMatrix;
+  friend class Genome;
+
+ private:
+  std::vector<ExtrusionBarrier> _barriers{};
+
+  internal::ContactMatrixLazy _contacts{};
+  internal::Occupancy1DLazy _lef_1d_occupancy{};
+
+ public:
+  GenomicIntervalData(bp_t start, bp_t end, bp_t contact_matrix_resolution, bp_t diagonal_width);
+  template <typename It>
+  GenomicIntervalData(bp_t start, bp_t end, bp_t contact_matrix_resolution, bp_t diagonal_width,
+                      It first_barrier, It last_barrier);
+
+  ~GenomicIntervalData() = default;
+
+  GenomicIntervalData(const GenomicIntervalData& other) = delete;
+  GenomicIntervalData(GenomicIntervalData&& other) noexcept = default;
+
+  GenomicIntervalData& operator=(const GenomicIntervalData& other) = delete;
+  GenomicIntervalData& operator=(GenomicIntervalData&& other) noexcept = default;
+
+  void add_extrusion_barrier(const GenomicInterval& interval, const bed::BED& record,
+                             double default_barrier_stp_active,
+                             double default_barrier_stp_inactive);
+  void add_extrusion_barriers(const GenomicInterval& interval,
+                              std::vector<ExtrusionBarrier> barriers);
+
   [[nodiscard]] usize num_barriers() const;
   [[nodiscard]] auto barriers() const noexcept -> const std::vector<ExtrusionBarrier>&;
   [[nodiscard]] auto barriers() noexcept -> std::vector<ExtrusionBarrier>&;
@@ -187,15 +194,13 @@ class GenomicInterval {
   [[nodiscard]] auto contacts() noexcept -> ContactMatrix&;
   [[nodiscard]] auto lef_1d_occupancy() const noexcept -> const std::vector<std::atomic<u64>>&;
   [[nodiscard]] auto lef_1d_occupancy() noexcept -> std::vector<std::atomic<u64>>&;
+  [[nodiscard]] constexpr u64 npixels() const noexcept;
   void deallocate() noexcept;
-
-  template <typename H>
-  inline friend H AbslHashValue(H h, const GenomicInterval& c);
 };
 
 class Genome {
   std::vector<std::shared_ptr<const Chromosome>> _chroms{};
-  absl::btree_set<GenomicInterval> _intervals{};
+  absl::btree_map<GenomicInterval, GenomicIntervalData> _intervals{};
 
   usize _size{};
   usize _simulated_size{};
@@ -262,17 +267,17 @@ class Genome {
 
   /// Import genomic intervals from a BED file. If path to BED file is empty, assume entire
   /// chromosomes are to be simulated.
-  absl::btree_set<GenomicInterval> import_genomic_intervals(
+  absl::btree_map<GenomicInterval, GenomicIntervalData> import_genomic_intervals(
       const std::filesystem::path& path_to_bed,
       const std::vector<std::shared_ptr<const Chromosome>>& chromosomes,
       bp_t contact_matrix_resolution, bp_t diagonal_width);
 
   /// Parse a BED file containing the genomic coordinates of extrusion barriers and add them to
   /// the Genome
-  static usize map_barriers_to_intervals(absl::btree_set<GenomicInterval>& intervals,
-                                         const bed::BED_tree<>& barriers_bed,
-                                         double default_barrier_pbb, double default_barrier_puu,
-                                         bool interpret_name_field_as_puu);
+  static usize map_barriers_to_intervals(
+      absl::btree_map<GenomicInterval, GenomicIntervalData>& intervals,
+      const bed::BED_tree<>& barriers_bed, double default_barrier_pbb, double default_barrier_puu,
+      bool interpret_name_field_as_puu);
 };
 
 }  // namespace modle

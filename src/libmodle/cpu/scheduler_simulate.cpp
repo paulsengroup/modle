@@ -103,14 +103,14 @@ void Simulation::run_simulate() {
     std::unique_ptr<XXH3_state_t, utils::XXH3_Deleter> xxh_state{XXH3_createState()};
 
     // Loop over chromosomes
-    for (auto& interval : this->_genome) {
+    for (auto& [interval, interval_data] : this->_genome) {
       this->_ctx.check_exceptions();
       auto sleep_time = std::chrono::microseconds(50);
 
       auto rand_eng = random::PRNG(interval.hash(*xxh_state, c().seed));
 
       // Don't bother simulating intervals without barriers
-      if (!c().simulate_chromosomes_wo_barriers && interval.num_barriers() == 0) {
+      if (!c().simulate_chromosomes_wo_barriers && interval_data.num_barriers() == 0) {
         spdlog::info(FMT_STRING("{} has 0 barriers... SKIPPING!"), interval);
         Task t{};
         t.interval = &interval;
@@ -128,7 +128,7 @@ void Simulation::run_simulate() {
       // Compute # of LEFs to be simulated based on interval.sizes
       const auto nlefs = this->compute_num_lefs(interval.size());
 
-      const auto npixels = interval.npixels();
+      const auto npixels = interval_data.npixels();
       const auto tot_target_contacts =
           static_cast<usize>(std::round(static_cast<double>(npixels) * c().target_contact_density));
 
@@ -144,6 +144,7 @@ void Simulation::run_simulate() {
 
         Task t{taskid++,
                &interval,
+               &interval_data,
                cellid,
                c().target_simulation_epochs,
                num_target_contacts,

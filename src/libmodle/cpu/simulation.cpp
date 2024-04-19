@@ -49,8 +49,8 @@ namespace modle {
 
 static void override_extrusion_barrier_occupancy(Genome& genome, const double barrier_occupied_stp,
                                                  const double barrier_not_occupied_stp) {
-  for (auto& interval : genome) {
-    auto& barriers = interval.barriers();
+  for (auto& [interval, interval_data] : genome) {
+    auto& barriers = interval_data.barriers();
     std::transform(barriers.begin(), barriers.end(), barriers.begin(), [&](const auto& barrier) {
       return ExtrusionBarrier{barrier.pos, barrier_occupied_stp, barrier_not_occupied_stp,
                               barrier.blocking_direction.complement()};
@@ -60,7 +60,7 @@ static void override_extrusion_barrier_occupancy(Genome& genome, const double ba
 
 static void issue_warnings_for_small_intervals(const Genome& genome, const bp_t diagonal_width) {
   std::vector<std::string> warnings;
-  for (const auto& interval : genome) {
+  for (const auto& [interval, interval_data] : genome) {
     if (interval.size() < diagonal_width) {
       warnings.emplace_back(fmt::format(FMT_STRING("{}: {};"), interval, interval.size()));
     }
@@ -75,8 +75,8 @@ static void issue_warnings_for_small_intervals(const Genome& genome, const bp_t 
 template <usize num_pixels_threshold = 250'000>
 static void issue_warnings_for_small_matrices(const Genome& genome) {
   std::vector<std::string> warnings;
-  for (const auto& interval : genome) {
-    if (const auto npixels = interval.npixels(); npixels < num_pixels_threshold) {
+  for (const auto& [interval, interval_data] : genome) {
+    if (const auto npixels = interval_data.npixels(); npixels < num_pixels_threshold) {
       warnings.emplace_back(fmt::format(FMT_STRING("{}: {} pixels"), interval, npixels));
     }
   }
@@ -136,13 +136,13 @@ usize Simulation::simulated_size() const { return this->_genome.simulated_size()
   return bwf;
 }
 
-static void write_contact_matrix_to_cooler(hictk::cooler::File& cf,
-                                           const GenomicInterval& interval) {
+static void write_contact_matrix_to_cooler(hictk::cooler::File& cf, const GenomicInterval& interval,
+                                           const GenomicIntervalData& interval_data) {
   if (!cf) {
     return;
   }
 
-  const auto& matrix = interval.contacts();
+  const auto& matrix = interval_data.contacts();
   if (matrix.npixels() != 0) {
     const auto t0 = absl::Now();
     spdlog::info(FMT_STRING("[io] writing contacts for {} to file \"{}\"..."), interval, cf.uri());
@@ -165,8 +165,9 @@ static void write_contact_matrix_to_cooler(hictk::cooler::File& cf,
 }
 
 static void write_lef_occupancy_to_bwig(io::bigwig::Writer& bw, const GenomicInterval& interval,
+                                        const GenomicIntervalData& interval_data,
                                         const bp_t resolution, std::vector<float>& buff) {
-  if (!bw || interval.npixels() == 0) {
+  if (!bw || interval_data.npixels() == 0) {
     return;
   }
 
@@ -174,12 +175,12 @@ static void write_lef_occupancy_to_bwig(io::bigwig::Writer& bw, const GenomicInt
     const auto t0 = absl::Now();
     spdlog::info(FMT_STRING("[io]: writing 1D LEF occupancy profile for {} to file {}..."),
                  interval, bw.path());
-    buff.resize(interval.lef_1d_occupancy().size());
-    const auto max_element =
-        std::max_element(interval.lef_1d_occupancy().begin(), interval.lef_1d_occupancy().end())
-            ->load();
+    buff.resize(interval_data.lef_1d_occupancy().size());
+    const auto max_element = std::max_element(interval_data.lef_1d_occupancy().begin(),
+                                              interval_data.lef_1d_occupancy().end())
+                                 ->load();
 
-    std::transform(interval.lef_1d_occupancy().begin(), interval.lef_1d_occupancy().end(),
+    std::transform(interval_data.lef_1d_occupancy().begin(), interval_data.lef_1d_occupancy().end(),
                    buff.begin(), [&](const auto& n) {
                      return static_cast<float>(static_cast<double>(n.load()) /
                                                static_cast<double>(max_element));
@@ -228,14 +229,15 @@ void Simulation::simulate_io(std::chrono::milliseconds wait_time) {
     auto last_interval = this->_genome.end();
 
     auto ctok = this->_ctx.register_consumer<Task::Status::COMPLETED>();
-    absl::btree_map<GenomicInterval*, usize> task_map{};
+    absl::btree_map<std::pair<const GenomicInterval*, GenomicIntervalData*>, usize> task_map{};
     std::vector<float> bw_buff{};
     while (!!this->_ctx && current_interval != last_interval) {
-      if (auto it = task_map.find(&(*current_interval)); it != task_map.end() && it->second == 0) {
+      const auto key = std::make_pair(&current_interval->first, &current_interval->second);
+      if (auto it = task_map.find(key); it != task_map.end() && it->second == 0) {
         // All tasks for the current interval successfully completed!
-        write_contact_matrix_to_cooler(cf, *it->first);
-        write_lef_occupancy_to_bwig(bw, *it->first, c().bin_size, bw_buff);
-        it->first->deallocate();
+        write_contact_matrix_to_cooler(cf, *it->first.first, *it->first.second);
+        write_lef_occupancy_to_bwig(bw, *it->first.first, *it->first.second, c().bin_size, bw_buff);
+        it->first.second->deallocate();
         task_map.erase(it);
         ++current_interval;
         continue;
@@ -246,7 +248,8 @@ void Simulation::simulate_io(std::chrono::milliseconds wait_time) {
         task = *task_opt;
         // Add interval to task_map if not already present.
         // Then decrement the number of tasks still pending.
-        auto [it, _] = task_map.try_emplace(task.interval, c().num_cells);
+        auto [it, _] =
+            task_map.try_emplace(std::make_pair(task.interval, task.interval_data), c().num_cells);
         --it->second;
       }
     }
@@ -432,8 +435,10 @@ void Simulation::rank_lefs(const absl::Span<const Lef> lefs,
   }
 
   if (MODLE_LIKELY(ranks_are_partially_sorted)) {
-    cppsort::split_sort(rev_lef_rank_buff.begin(), rev_lef_rank_buff.end(), rev_comparator);
-    cppsort::split_sort(fwd_lef_rank_buff.begin(), fwd_lef_rank_buff.end(), fwd_comparator);
+    cppsort::split_adapter<cppsort::pdq_sorter>{}(rev_lef_rank_buff.begin(),
+                                                  rev_lef_rank_buff.end(), rev_comparator);
+    cppsort::split_adapter<cppsort::pdq_sorter>{}(fwd_lef_rank_buff.begin(),
+                                                  fwd_lef_rank_buff.end(), fwd_comparator);
   } else {
     // Fallback to pattern-defeating quicksort we have no information regarding the level of
     // pre-sortedness of LEFs
@@ -747,13 +752,14 @@ Simulation::State& Simulation::State::operator=(const Task& task) {
 
   this->id = task.id;
   this->interval = task.interval;
+  this->interval_data = task.interval_data;
   this->cell_id = task.cell_id;
   this->num_target_epochs = task.num_target_epochs;
   this->num_target_contacts = task.num_target_contacts;
   this->num_lefs = task.num_lefs;
-  if (task.interval) {
-    this->barriers =
-        ExtrusionBarriers{task.interval->barriers().begin(), task.interval->barriers().end()};
+  if (task.interval_data) {
+    this->barriers = ExtrusionBarriers{task.interval_data->barriers().begin(),
+                                       task.interval_data->barriers().end()};
   }
   this->rand_eng = task.rand_eng;
 
@@ -1087,11 +1093,12 @@ usize Simulation::compute_num_lefs(const usize size_bp) const noexcept {
 
 void Simulation::print_status_update(const Task& t) const noexcept {
   assert(t.interval);
-  auto tot_target_epochs = this->compute_tot_target_epochs(t.num_lefs, t.interval->npixels());
+  assert(t.interval_data);
+  auto tot_target_epochs = this->compute_tot_target_epochs(t.num_lefs, t.interval_data->npixels());
   spdlog::info(FMT_STRING("begin processing {}: simulating ~{} epochs across {} cells using {} "
                           "LEFs and {} barriers (~{} epochs per cell)..."),
                *t.interval, tot_target_epochs, c().num_cells, t.num_lefs,
-               t.interval->barriers().size(), tot_target_epochs / c().num_cells);
+               t.interval_data->barriers().size(), tot_target_epochs / c().num_cells);
 }
 
 usize Simulation::compute_num_worker_threads(usize num_threads, usize num_intervals,
