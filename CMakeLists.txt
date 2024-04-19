@@ -30,8 +30,8 @@ include(FetchContent)
 # cmake-format: off
 FetchContent_Declare(
         _project_options
-        URL ${CMAKE_CURRENT_SOURCE_DIR}/external/project_options-v0.28.0.tar.xz
-        URL_HASH SHA512=216d0970ace00e3176788a2b5abb7b92490c005111d26365e7807a5e86c6323e38b33e2e5b01f4ee43438a8f8e96cacf16cedc6f905a7e0ad58752905b260b38
+        URL ${CMAKE_CURRENT_SOURCE_DIR}/external/project_options-v0.33.0.tar.xz
+        URL_HASH SHA512=d652ff0b6fe4833dfd340ff9687358e7b39dc85157924a855cfc51079446d249b2ea58713a2dc430dd1b65b459399fd26dddecddbcb1b7f896082987bee46489
 )
 # cmake-format: on
 
