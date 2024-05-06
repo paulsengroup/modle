@@ -120,7 +120,7 @@ static void validate_regions_of_interest(const hictk::Reference &chroms,
   std::vector<bed::BED> invalid_intervals{};
   invalid_intervals.reserve(10);
   for (const auto &interval : regions_of_interest) {
-    const auto match = chroms.find(interval.name);
+    const auto match = chroms.find(interval.chrom);
     if (match == chroms.end()) {
       if (invalid_intervals.size() < invalid_intervals.capacity()) {
         invalid_intervals.push_back(interval);
