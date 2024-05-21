@@ -52,7 +52,7 @@ target_include_directories(libmodle_io_bigwig PUBLIC include/bigwig)
 target_link_libraries(
   libmodle_io_bigwig
   PRIVATE project_warnings project_options
-  PUBLIC Modle::common fmt::fmt)
+  PUBLIC Modle::common fmt::fmt-header-only)
 
 target_link_system_libraries(
   libmodle_io_bigwig
@@ -79,7 +79,7 @@ target_include_directories(libmodle_io_chrom_sizes PUBLIC include/chrom_sizes)
 target_link_libraries(
   libmodle_io_chrom_sizes
   PRIVATE project_warnings project_options Modle::io_bed
-  PUBLIC Modle::common Modle::io_compressed fmt::fmt)
+  PUBLIC Modle::common Modle::io_compressed fmt::fmt-header-only)
 
 target_link_system_libraries(
   libmodle_io_chrom_sizes
@@ -104,7 +104,7 @@ target_include_directories(libmodle_io_compressed PUBLIC include/compressed_io)
 target_link_libraries(
   libmodle_io_compressed
   PRIVATE project_warnings project_options
-  PUBLIC Modle::common fmt::fmt)
+  PUBLIC Modle::common fmt::fmt-header-only)
 
 target_link_system_libraries(
   libmodle_io_compressed
@@ -136,7 +136,7 @@ target_link_libraries(
             project_options
             Modle::cmatrix
             Modle::common
-            fmt::fmt)
+            fmt::fmt-header-only)
 
 target_link_system_libraries(
   libmodle_io_contact_matrix

@@ -26,7 +26,7 @@ target_link_libraries(
   modle_tools
   PRIVATE project_warnings
           project_options
-          fmt::fmt
+          fmt::fmt-header-only
           Modle::cmatrix
           Modle::common
           Modle::config
@@ -59,7 +59,7 @@ target_link_system_libraries(
   cpp-sort::cpp-sort
   readerwriterqueue::readerwriterqueue
   tomlplusplus::tomlplusplus
-  spdlog::spdlog)
+  spdlog::spdlog_header_only)
 
 target_include_directories(modle_tools PRIVATE include)
 

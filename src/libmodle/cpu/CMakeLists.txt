@@ -44,7 +44,7 @@ target_link_libraries(
          Modle::io_bigwig
          Modle::io_contact_matrix
          concurrentqueue::concurrentqueue
-         fmt::fmt)
+         fmt::fmt-header-only)
 
 target_link_system_libraries(
   libmodle_cpu
@@ -62,7 +62,7 @@ target_link_system_libraries(
   Boost::headers
   bshoshany-thread-pool::bshoshany-thread-pool
   range-v3::range-v3
-  spdlog::spdlog
+  spdlog::spdlog_header_only
   xxHash::xxhash)
 
 install(

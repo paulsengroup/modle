@@ -32,7 +32,7 @@ target_link_system_libraries(
   absl::time
   Boost::headers
   CLI11::CLI11
-  spdlog::spdlog
+  spdlog::spdlog_header_only
   tomlplusplus::tomlplusplus
   hictk)
 
