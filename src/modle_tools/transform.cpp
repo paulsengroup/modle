@@ -174,9 +174,8 @@ template <class N>
 [[nodiscard]] static hictk::cooler::File init_output_cooler(
     const std::filesystem::path& output_cooler_uri, const hictk::cooler::File& input_cooler,
     bool floating_point, std::string_view args_json, bool force) {
-  auto attrs = floating_point
-                   ? hictk::cooler::StandardAttributes::init<double>(input_cooler.bin_size())
-                   : hictk::cooler::StandardAttributes::init<i32>(input_cooler.bin_size());
+  auto attrs = floating_point ? hictk::cooler::Attributes::init<double>(input_cooler.resolution())
+                              : hictk::cooler::Attributes::init<i32>(input_cooler.resolution());
   attrs.metadata = args_json;
   attrs.generated_by = config::version::str_long("MoDLE-tools");
   if (const auto& assembly = input_cooler.attributes().assembly; assembly) {
@@ -203,7 +202,7 @@ void transform_subcmd(const modle::tools::transform_config& c) {
     return import_discretization_ranges(c.path_to_discretization_ranges_tsv);
   }();
 
-  const auto input_cooler = hictk::cooler::File::open_read_only(c.input_cooler_uri.string());
+  const auto input_cooler = hictk::cooler::File(c.input_cooler_uri.string());
   if (const auto& output_dir = c.output_cooler_uri.parent_path(); !output_dir.empty()) {
     std::filesystem::create_directories(output_dir.string());
   }

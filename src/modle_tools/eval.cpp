@@ -680,12 +680,12 @@ static void log_regions_for_evaluation(const std::vector<bed::BED> &intervals) {
 
 void eval_subcmd(const modle::tools::eval_config &c) {
   const auto t0 = absl::Now();
-  auto ref_cooler = hictk::cooler::File::open_read_only(c.reference_cooler_uri.string());
-  auto tgt_cooler = hictk::cooler::File::open_read_only(c.input_cooler_uri.string());
+  auto ref_cooler = hictk::cooler::File(c.reference_cooler_uri.string());
+  auto tgt_cooler = hictk::cooler::File(c.input_cooler_uri.string());
 
-  assert(ref_cooler.bin_size() == tgt_cooler.bin_size());
+  assert(ref_cooler.resolution() == tgt_cooler.resolution());
 
-  const auto bin_size = ref_cooler.bin_size();
+  const auto bin_size = ref_cooler.resolution();
 
   const auto chroms = generate_chrom_annotation(ref_cooler, tgt_cooler, c.path_to_chrom_sizes);
 
