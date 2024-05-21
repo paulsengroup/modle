@@ -14,7 +14,7 @@ on:
       - "test/**"
       - "!test/scripts/devel/**"
       - "CMakeLists.txt"
-      - "conanfile.txt"
+      - "conanfile.py"
     tags:
       - 'v*.*.*'
 
@@ -62,7 +62,7 @@ jobs:
 
           os="centos-7"
           compiler="gcc-11"
-          hash="${{ hashFiles('conanfile.txt', '.github/workflows/build-portable-binary-ubuntu.yml') }}"
+          hash="${{ hashFiles('conanfile.py', '.github/workflows/build-portable-binary-ubuntu.yml') }}"
 
           # This can be used by to always update a cache entry (useful e.g. for ccache)
           current_date="$(date '+%s')"
@@ -92,11 +92,11 @@ jobs:
           conan cache clean "*" --source
           conan remove --confirm "*"
 
-      - name: Build conanfile.txt
+      - name: Build conanfile.py
         run: |
           # We need to rebuild b2 to workaround GLIBCXX incompatibilities
           PATH="/opt/rh/devtoolset-11/root/usr/bin/:$PATH" \
-          conan install conanfile.txt              \
+          conan install conanfile.py              \
                --build=missing                     \
                --build="b2*"                       \
                -pr:b="$CONAN_DEFAULT_PROFILE_PATH" \

@@ -46,9 +46,9 @@ RUN if [ $(uname -m) != x86_64 ]; then \
     -pr:h="$CONAN_DEFAULT_PROFILE_PATH"; \
 fi
 
-COPY conanfile.txt "$src_dir"
+COPY conanfile.py "$src_dir"
 RUN cd "$build_dir"                                  \
-&& conan install "$src_dir/conanfile.txt"            \
+&& conan install "$src_dir/conanfile.py"             \
                  --build=missing                     \
                  -pr:b="$CONAN_DEFAULT_PROFILE_PATH" \
                  -pr:h="$CONAN_DEFAULT_PROFILE_PATH" \
