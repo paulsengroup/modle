@@ -222,6 +222,4 @@ endif()
 
 add_subdirectory(src)
 
-include(cmake/FetchExternalDeps.cmake)
-
 # include(cmake/Packaging.cmake)

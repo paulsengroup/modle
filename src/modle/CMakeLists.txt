@@ -6,6 +6,7 @@ find_package(absl CONFIG REQUIRED)
 find_package(Boost CONFIG REQUIRED COMPONENTS headers)
 find_package(CLI11 CONFIG REQUIRED)
 find_package(fmt CONFIG REQUIRED)
+find_package(hictk CONFIG REQUIRED)
 find_package(spdlog CONFIG REQUIRED)
 find_package(tomlplusplus CONFIG REQUIRED)
 
@@ -34,7 +35,7 @@ target_link_system_libraries(
   CLI11::CLI11
   spdlog::spdlog_header_only
   tomlplusplus::tomlplusplus
-  hictk)
+  hictk::libhictk)
 
 include(GNUInstallDirs)
 install(

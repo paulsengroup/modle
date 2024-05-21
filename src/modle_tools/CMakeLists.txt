@@ -7,6 +7,7 @@ find_package(Boost CONFIG REQUIRED COMPONENTS headers)
 find_package(bshoshany-thread-pool CONFIG REQUIRED)
 find_package(CLI11 CONFIG REQUIRED)
 find_package(cpp-sort CONFIG REQUIRED)
+find_package(hictk CONFIG REQUIRED)
 find_package(readerwriterqueue CONFIG REQUIRED)
 find_package(spdlog CONFIG REQUIRED)
 find_package(tomlplusplus CONFIG REQUIRED)
@@ -55,7 +56,7 @@ target_link_system_libraries(
   Boost::headers
   bshoshany-thread-pool::bshoshany-thread-pool
   CLI11::CLI11
-  hictk
+  hictk::libhictk
   cpp-sort::cpp-sort
   readerwriterqueue::readerwriterqueue
   tomlplusplus::tomlplusplus

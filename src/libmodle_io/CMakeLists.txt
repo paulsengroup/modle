@@ -5,6 +5,7 @@
 find_package(absl CONFIG REQUIRED)
 find_package(Boost CONFIG REQUIRED COMPONENTS iostreams)
 find_package(fmt CONFIG REQUIRED)
+find_package(hictk CONFIG REQUIRED)
 find_package(LibArchive CONFIG REQUIRED)
 find_package(BigWig CONFIG REQUIRED)
 find_package(readerwriterqueue CONFIG REQUIRED)
@@ -143,7 +144,7 @@ target_link_system_libraries(
   INTERFACE
   project_warnings
   project_options
-  hictk::cooler)
+  hictk::libhictk)
 
 set_target_properties(libmodle_io_contact_matrix PROPERTIES OUTPUT_NAME modle_io_contact_matrix)
 install(
