@@ -191,7 +191,6 @@ endif()
 target_compile_definitions(
   project_options
   INTERFACE SPDLOG_CLOCK_COARSE
-            SPDLOG_DISABLE_DEFAULT_LOGGER
             SPDLOG_NO_ATOMIC_LEVELS
             SPDLOG_PREVENT_CHILD_FD)
 
