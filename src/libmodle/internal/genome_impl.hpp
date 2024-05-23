@@ -50,27 +50,6 @@ constexpr bool Chromosome::operator>=(const Chromosome& other) const noexcept {
   return this->_id >= other._id;
 }
 
-template <typename It>
-inline GenomicInterval::GenomicInterval(usize id, const std::shared_ptr<const Chromosome>& chrom,
-                                        bp_t contact_matrix_resolution, bp_t diagonal_width,
-                                        It first_barrier, It last_barrier)
-    : GenomicInterval(id, chrom, contact_matrix_resolution, diagonal_width, 0, chrom->size(),
-                      first_barrier, last_barrier) {}
-
-template <typename It>
-inline GenomicInterval::GenomicInterval(usize id, std::shared_ptr<const Chromosome> chrom,
-                                        bp_t start, bp_t end, bp_t contact_matrix_resolution,
-                                        bp_t diagonal_width, It first_barrier, It last_barrier)
-    : _id(id),
-      _chrom(std::move(chrom)),
-      _start(start),
-      _end(end),
-      _barriers(first_barrier, last_barrier),
-      _contacts(end - start, diagonal_width, contact_matrix_resolution),
-      _lef_1d_occupancy(end - start, contact_matrix_resolution) {
-  assert(start <= end);
-}
-
 constexpr bool GenomicInterval::operator==(const GenomicInterval& other) const noexcept {
   return this->_id == other._id;
 }
@@ -94,12 +73,23 @@ constexpr usize GenomicInterval::id() const noexcept { return this->_id; }
 constexpr bp_t GenomicInterval::start() const noexcept { return this->_start; }
 constexpr bp_t GenomicInterval::end() const noexcept { return this->_end; }
 constexpr bp_t GenomicInterval::size() const noexcept { return this->_end - this->_start; }
-constexpr u64 GenomicInterval::npixels() const noexcept { return this->_contacts.npixels(); }
 
 template <typename H>
 H AbslHashValue(H h, const GenomicInterval& c) {
   return H::combine(std::move(h), c._id);
 }
+
+template <typename It>
+inline GenomicIntervalData::GenomicIntervalData(bp_t start, bp_t end,
+                                                bp_t contact_matrix_resolution, bp_t diagonal_width,
+                                                It first_barrier, It last_barrier)
+    : _barriers(first_barrier, last_barrier),
+      _contacts(end - start, diagonal_width, contact_matrix_resolution),
+      _lef_1d_occupancy(end - start, contact_matrix_resolution) {
+  assert(start <= end);
+}
+
+constexpr u64 GenomicIntervalData::npixels() const noexcept { return this->_contacts.npixels(); }
 
 constexpr const std::vector<std::shared_ptr<const Chromosome>>& Genome::chromosomes()
     const noexcept {

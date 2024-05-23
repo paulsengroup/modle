@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-# Copyright (C) 2023 Roberto Rossini (roberros@uio.no)
+# Copyright (C) 2024 Roberto Rossini (roberros@uio.no)
 # SPDX-License-Identifier: MIT
 
 set -e
@@ -34,10 +34,21 @@ for compiler in gcc clang; do
 
     conan install \
       --build=missing \
+      --update \
       -pr "$profile"  \
       -s compiler.cppstd=17 \
       -s build_type="$build_type" \
       --output-folder="$outdir" \
       "$conanfile"
+
+     conan install \
+       --build=missing \
+       --update \
+       -pr "$profile"  \
+       -s compiler.cppstd=17 \
+       -s build_type="$build_type" \
+       -o shared=True \
+       --output-folder="$outdir" \
+       "$conanfile"
   done
 done

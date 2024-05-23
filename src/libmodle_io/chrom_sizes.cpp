@@ -4,7 +4,7 @@
 
 #include "modle/chrom_sizes/chrom_sizes.hpp"  // for Parser
 
-#include <absl/container/flat_hash_set.h>  // for flat_hash_set
+#include <absl/container/btree_set.h>  // for btree_set
 #include <absl/strings/ascii.h>
 #include <absl/strings/str_split.h>  // for StrSplit, Splitter
 #include <fmt/compile.h>
@@ -27,7 +27,7 @@ Parser::Parser(const std::filesystem::path& path_to_chrom_sizes) : _reader(path_
 
 std::vector<bed::BED> Parser::parse_all(char sep) {
   std::string buff;
-  absl::flat_hash_set<std::string> chrom_names{};
+  absl::btree_set<std::string> chrom_names{};
   std::vector<bed::BED> chrom_sizes;
 
   for (usize i = 1UL, id = 0; this->_reader.getline(buff); ++i) {
@@ -43,11 +43,10 @@ std::vector<bed::BED> Parser::parse_all(char sep) {
         throw std::runtime_error(
             fmt::format(FMT_STRING("expected exactly 2 fields, found {}: \"{}\""), num_toks, buff));
       }
-      DISABLE_WARNING_PUSH
-      DISABLE_WARNING_NULL_DEREF
-      const auto chrom_name = utils::strip_quote_pairs(*splitter.begin());
-      const auto chrom_size = *std::next(splitter.begin());
-      DISABLE_WARNING_POP
+
+      auto it = splitter.begin();
+      const auto chrom_name = utils::strip_quote_pairs(*it++);
+      const auto chrom_size = *it;
       if (chrom_names.contains(chrom_name)) {
         throw std::runtime_error(
             fmt::format(FMT_STRING("found multiple records for chrom \"{}\""), chrom_name));
@@ -57,9 +56,10 @@ std::vector<bed::BED> Parser::parse_all(char sep) {
         throw std::runtime_error(
             fmt::format(FMT_STRING("chrom \"{}\" has a length of 0bp"), chrom_name));
       }
-      chrom_sizes.emplace_back(
-          fmt::format(FMT_COMPILE("{}\t0\t{}"), chrom_name, *std::next(splitter.begin())), id++,
-          bed::BED::BED3);
+
+      chrom_names.emplace(chrom_name);
+      chrom_sizes.emplace_back(fmt::format(FMT_COMPILE("{}\t0\t{}"), chrom_name, chrom_size), id++,
+                               bed::BED::BED3);
     } catch (const std::runtime_error& e) {
       throw std::runtime_error(
           fmt::format(FMT_STRING("encountered a malformed record at line {} of file {}: {}.\n "

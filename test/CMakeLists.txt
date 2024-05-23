@@ -45,7 +45,7 @@ target_link_libraries(
   test_main
   PRIVATE project_warnings
           project_options
-          fmt::fmt
+          fmt::fmt-header-only
           Modle::cmatrix
           Modle::common
           Modle::interval_tree
@@ -69,7 +69,7 @@ target_link_system_libraries(
   Boost::headers
   bshoshany-thread-pool::bshoshany-thread-pool
   Catch2::Catch2WithMain
-  spdlog::spdlog)
+  spdlog::spdlog_header_only)
 
 file(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/Testing/)
 

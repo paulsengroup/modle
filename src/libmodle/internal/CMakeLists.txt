@@ -27,7 +27,7 @@ target_link_libraries(
          Modle::common
          Modle::io_bed
          Modle::interval_tree
-         fmt::fmt)
+         fmt::fmt-header-only)
 
 target_link_system_libraries(
   libmodle_internal
@@ -37,7 +37,7 @@ target_link_system_libraries(
   absl::btree
   absl::span
   Boost::headers
-  spdlog::spdlog
+  spdlog::spdlog_header_only
   xxHash::xxhash)
 
 target_include_directories(libmodle_internal PUBLIC include/)

@@ -188,15 +188,12 @@ u64 Chromosome::hash(XXH3_state_t& state, u64 seed) const {
   return this->hash(state);
 }
 
-GenomicInterval::GenomicInterval(usize id, const std::shared_ptr<const Chromosome>& chrom,
-                                 bp_t contact_matrix_resolution, bp_t diagonal_width)
-    : GenomicInterval(id, chrom, 0, chrom->size(), contact_matrix_resolution, diagonal_width) {}
+GenomicInterval::GenomicInterval(usize id, const std::shared_ptr<const Chromosome>& chrom)
+    : GenomicInterval(id, chrom, 0, chrom->size()) {}
 
 GenomicInterval::GenomicInterval(usize id, std::shared_ptr<const Chromosome> chrom, bp_t start,
-                                 bp_t end, bp_t contact_matrix_resolution, bp_t diagonal_width)
-    : GenomicInterval(id, std::move(chrom), start, end, contact_matrix_resolution, diagonal_width,
-                      static_cast<const ExtrusionBarrier*>(nullptr),
-                      static_cast<const ExtrusionBarrier*>(nullptr)) {}
+                                 bp_t end)
+    : _id(id), _chrom(std::move(chrom)), _start(start), _end(end) {}
 
 u64 GenomicInterval::hash(XXH3_state_t& state) const {
   auto handle_errors = [&](const auto& status) {
@@ -228,57 +225,65 @@ const Chromosome& GenomicInterval::chrom() const noexcept {
   return *this->_chrom;
 }
 
-usize GenomicInterval::num_barriers() const { return this->_barriers.size(); }
-
-auto GenomicInterval::barriers() const noexcept -> const std::vector<ExtrusionBarrier>& {
-  return this->_barriers;
-}
-auto GenomicInterval::barriers() noexcept -> std::vector<ExtrusionBarrier>& {
-  return this->_barriers;
+GenomicIntervalData::GenomicIntervalData(bp_t start, bp_t end, bp_t contact_matrix_resolution,
+                                         bp_t diagonal_width)
+    : _contacts(end - start, diagonal_width, contact_matrix_resolution),
+      _lef_1d_occupancy(end - start, contact_matrix_resolution) {
+  assert(start <= end);
 }
 
-auto GenomicInterval::contacts() const noexcept -> const ContactMatrix& {
+usize GenomicIntervalData::num_barriers() const { return this->_barriers.size(); }
+
+auto GenomicIntervalData::barriers() const noexcept -> const std::vector<ExtrusionBarrier>& {
+  return this->_barriers;
+}
+auto GenomicIntervalData::barriers() noexcept -> std::vector<ExtrusionBarrier>& {
+  return this->_barriers;
+}
+
+auto GenomicIntervalData::contacts() const noexcept -> const ContactMatrix& {
   return this->_contacts();
 }
-auto GenomicInterval::contacts() noexcept -> ContactMatrix& { return this->_contacts(); }
+auto GenomicIntervalData::contacts() noexcept -> ContactMatrix& { return this->_contacts(); }
 
-auto GenomicInterval::lef_1d_occupancy() const noexcept -> const std::vector<std::atomic<u64>>& {
+auto GenomicIntervalData::lef_1d_occupancy() const noexcept
+    -> const std::vector<std::atomic<u64>>& {
   return this->_lef_1d_occupancy();
 }
 
-auto GenomicInterval::lef_1d_occupancy() noexcept -> std::vector<std::atomic<u64>>& {
+auto GenomicIntervalData::lef_1d_occupancy() noexcept -> std::vector<std::atomic<u64>>& {
   return this->_lef_1d_occupancy();
 }
 
-void GenomicInterval::deallocate() noexcept {
+void GenomicIntervalData::deallocate() noexcept {
   this->_contacts.deallocate();
   this->_lef_1d_occupancy.deallocate();
 }
 
-struct ComputeBarrierStpResult {
-  double stp_active;
-  double stp_inactive;
-};
-
-[[nodiscard]] static constexpr ComputeBarrierStpResult compute_barrier_stp(
-    double score, double default_stp_active, double default_stp_inactive) {
+[[nodiscard]] static constexpr auto compute_barrier_stp(double score, double default_stp_active,
+                                                        double default_stp_inactive) {
+  struct Result {
+    double stp_active;
+    double stp_inactive;
+  };
   if (score != 0.0) {
     // When the score field is zero (i.e. when the extr. barrier does not have a custom
     // occupancy), use the default self-transition probabilities
     const auto occupancy = score;
     const auto stp_active =
         ExtrusionBarrier::compute_stp_active_from_occupancy(default_stp_inactive, occupancy);
-    return {stp_active, default_stp_inactive};
+    return Result{stp_active, default_stp_inactive};
   }
-  return {default_stp_active, default_stp_inactive};
+  return Result{default_stp_active, default_stp_inactive};
 }
 
-void GenomicInterval::add_extrusion_barrier(const bed::BED& record,
-                                            const double default_barrier_stp_active,
-                                            const double default_barrier_stp_inactive) {
+void GenomicIntervalData::add_extrusion_barrier(const GenomicInterval& interval,
+                                                const bed::BED& record,
+                                                const double default_barrier_stp_active,
+                                                const double default_barrier_stp_inactive) {
   assert(record.strand == '+' || record.strand == '-' || record.strand == '.');
   const auto pos = (record.chrom_start + record.chrom_end + 1) / 2;
-  if (pos < this->start() || pos >= this->end()) {
+  if (pos < interval.start() || pos >= interval.end()) {
     return;
   }
 
@@ -288,11 +293,12 @@ void GenomicInterval::add_extrusion_barrier(const bed::BED& record,
   this->_barriers.emplace_back(pos, barrier_stp_active, barrier_stp_inactive, record.strand);
 }
 
-void GenomicInterval::add_extrusion_barriers(std::vector<ExtrusionBarrier> barriers) {
+void GenomicIntervalData::add_extrusion_barriers([[maybe_unused]] const GenomicInterval& interval,
+                                                 std::vector<ExtrusionBarrier> barriers) {
   if constexpr (utils::ndebug_not_defined()) {
     for ([[maybe_unused]] const auto& barrier : barriers) {
-      assert(barrier.pos >= this->start());
-      assert(barrier.pos < this->end());
+      assert(barrier.pos >= interval.start());
+      assert(barrier.pos < interval.end());
     }
   }
   this->_barriers.insert(this->_barriers.end(), std::make_move_iterator(barriers.begin()),
@@ -315,7 +321,7 @@ Genome::Genome(const std::filesystem::path& path_to_chrom_sizes,
                             })),
       _simulated_size(std::accumulate(
           _intervals.begin(), _intervals.end(), usize(0),
-          [&](auto accumulator, const GenomicInterval& gi) { return accumulator + gi.size(); })) {
+          [&](auto accumulator, const auto& gi) { return accumulator + gi.first.size(); })) {
   assert(!path_to_extr_barriers.empty());
   const auto t0 = absl::Now();
   spdlog::info(FMT_STRING("importing extrusion barriers from {}..."), path_to_extr_barriers);
@@ -367,21 +373,23 @@ std::vector<std::shared_ptr<const Chromosome>> Genome::import_chromosomes(
   return buffer;
 }
 
-absl::btree_set<GenomicInterval> Genome::import_genomic_intervals(
+absl::btree_map<GenomicInterval, GenomicIntervalData> Genome::import_genomic_intervals(
     const std::filesystem::path& path_to_bed,
     const std::vector<std::shared_ptr<const Chromosome>>& chromosomes,
     bp_t contact_matrix_resolution, bp_t diagonal_width) {
   assert(!chromosomes.empty());
-  absl::btree_set<GenomicInterval> buffer{};
+  absl::btree_map<GenomicInterval, GenomicIntervalData> buffer{};
   if (path_to_bed.empty()) {
     spdlog::debug(
         FMT_STRING("path to genomic regions to simulate is empty. Assuming whole chromosomes are "
                    "to be simulated!"));
-    std::transform(chromosomes.begin(), chromosomes.end(), std::inserter(buffer, buffer.begin()),
-                   [&](const auto& chrom_ptr) {
-                     return GenomicInterval{chrom_ptr->id(), chrom_ptr, contact_matrix_resolution,
-                                            diagonal_width};
-                   });
+    std::transform(
+        chromosomes.begin(), chromosomes.end(), std::inserter(buffer, buffer.begin()),
+        [&](const auto& chrom_ptr) {
+          return std::make_pair(
+              GenomicInterval{chrom_ptr->id(), chrom_ptr},
+              GenomicIntervalData{0, chrom_ptr->size(), contact_matrix_resolution, diagonal_width});
+        });
     return buffer;
   }
 
@@ -405,12 +413,10 @@ absl::btree_set<GenomicInterval> Genome::import_genomic_intervals(
     }
     std::transform(overlaps.begin(), overlaps.end(), std::inserter(buffer, buffer.end()),
                    [&](const auto& interval) {
-                     return GenomicInterval{id++,
-                                            chrom,
-                                            interval.chrom_start,
-                                            interval.chrom_end,
-                                            contact_matrix_resolution,
-                                            diagonal_width};
+                     return std::make_pair(
+                         GenomicInterval{id++, chrom, interval.chrom_start, interval.chrom_end},
+                         GenomicIntervalData{interval.chrom_start, interval.chrom_end,
+                                             contact_matrix_resolution, diagonal_width});
                    });
   }
 
@@ -475,13 +481,13 @@ absl::btree_set<GenomicInterval> Genome::import_genomic_intervals(
   return buff;
 }
 
-usize Genome::map_barriers_to_intervals(absl::btree_set<GenomicInterval>& intervals,
-                                        const bed::BED_tree<>& barriers_bed,
-                                        double default_barrier_pbb, double default_barrier_puu,
-                                        bool interpret_name_field_as_puu) {
+usize Genome::map_barriers_to_intervals(
+    absl::btree_map<GenomicInterval, GenomicIntervalData>& intervals,
+    const bed::BED_tree<>& barriers_bed, double default_barrier_pbb, double default_barrier_puu,
+    bool interpret_name_field_as_puu) {
   assert(!intervals.empty());
   usize tot_num_barriers = 0;
-  for (auto& interval : intervals) {
+  for (auto& [interval, interval_data] : intervals) {
     auto barriers = generate_barriers_from_bed_records(
         barriers_bed.find_overlaps(std::string{interval.chrom().name()},
                                    utils::conditional_static_cast<u64>(interval.start()),
@@ -489,7 +495,7 @@ usize Genome::map_barriers_to_intervals(absl::btree_set<GenomicInterval>& interv
         default_barrier_pbb, default_barrier_puu, interpret_name_field_as_puu);
 
     tot_num_barriers += barriers.size();
-    interval.add_extrusion_barriers(std::move(barriers));
+    interval_data.add_extrusion_barriers(interval, std::move(barriers));
   }
   return tot_num_barriers;
 }
@@ -511,29 +517,29 @@ auto Genome::find(const GenomicInterval& query) const -> const_iterator {
 
 auto Genome::find(usize query) -> iterator {
   return std::find_if(this->_intervals.begin(), this->_intervals.end(),
-                      [&](const auto& gi) { return gi.id() == query; });
+                      [&](const auto& gi) { return gi.first.id() == query; });
 }
 auto Genome::find(usize query) const -> const_iterator {
   return std::find_if(this->_intervals.begin(), this->_intervals.end(),
-                      [&](const auto& gi) { return gi.id() == query; });
+                      [&](const auto& gi) { return gi.first.id() == query; });
 }
 
 auto Genome::find(const Chromosome& query) -> iterator {
   return std::find_if(this->_intervals.begin(), this->_intervals.end(),
-                      [&](const auto& gi) { return gi.chrom() == query; });
+                      [&](const auto& gi) { return gi.first.chrom() == query; });
 }
 auto Genome::find(const Chromosome& query) const -> const_iterator {
   return std::find_if(this->_intervals.begin(), this->_intervals.end(),
-                      [&](const auto& gi) { return gi.chrom() == query; });
+                      [&](const auto& gi) { return gi.first.chrom() == query; });
 }
 
 auto Genome::find(std::string_view query) -> iterator {
   return std::find_if(this->_intervals.begin(), this->_intervals.end(),
-                      [&](const auto& gi) { return gi.chrom().name() == query; });
+                      [&](const auto& gi) { return gi.first.chrom().name() == query; });
 }
 auto Genome::find(std::string_view query) const -> const_iterator {
   return std::find_if(this->_intervals.begin(), this->_intervals.end(),
-                      [&](const auto& gi) { return gi.chrom().name() == query; });
+                      [&](const auto& gi) { return gi.first.chrom().name() == query; });
 }
 
 bool Genome::contains(const GenomicInterval& query) const {
@@ -569,17 +575,19 @@ const Chromosome& Genome::longest_chromosome() const noexcept {
 
 const GenomicInterval& Genome::longest_interval() const noexcept {
   assert(!this->_intervals.empty());
-  return *std::max_element(
-      this->_intervals.begin(), this->_intervals.end(),
-      [&](const auto& gi1, const auto& gi2) { return gi1.size() < gi2.size(); });
+  return std::max_element(
+             this->_intervals.begin(), this->_intervals.end(),
+             [&](const auto& gi1, const auto& gi2) { return gi1.first.size() < gi2.first.size(); })
+      ->first;
 }
 
 const GenomicInterval& Genome::interval_with_most_barriers() const noexcept {
   assert(!this->_intervals.empty());
-  return *std::max_element(this->_intervals.begin(), this->_intervals.end(),
-                           [&](const auto& gi1, const auto& gi2) {
-                             return gi1.barriers().size() < gi2.barriers().size();
-                           });
+  return std::max_element(this->_intervals.begin(), this->_intervals.end(),
+                          [&](const auto& gi1, const auto& gi2) {
+                            return gi1.second.barriers().size() < gi2.second.barriers().size();
+                          })
+      ->first;
 }
 
 usize Genome::max_target_contacts(usize bin_size, usize diagonal_width,

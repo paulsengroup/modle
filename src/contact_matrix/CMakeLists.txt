@@ -30,7 +30,7 @@ target_link_libraries(
             Modle::common
             Modle::io_compressed
             Modle::stats
-            fmt::fmt)
+            fmt::fmt-header-only)
 
 target_link_system_libraries(
   cmatrix

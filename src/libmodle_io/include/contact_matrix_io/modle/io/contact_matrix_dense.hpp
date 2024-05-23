@@ -39,7 +39,7 @@ template <class N, class ChromIt>
 [[nodiscard]] hictk::cooler::File init_cooler_file(const std::filesystem::path& path,
                                                    bool force_overwrite, ChromIt first_chrom,
                                                    ChromIt last_chrom,
-                                                   hictk::cooler::StandardAttributes attrs);
+                                                   hictk::cooler::Attributes attrs);
 
 template <class N, class ChromNameIt, class ChromSizeIt>
 [[nodiscard]] hictk::cooler::File init_cooler_file(const std::filesystem::path& path,
@@ -53,12 +53,12 @@ template <class N, class ChromNameIt, class ChromSizeIt>
 [[nodiscard]] hictk::cooler::File init_cooler_file(const std::filesystem::path& path,
                                                    bool force_overwrite, ChromNameIt first_name,
                                                    ChromNameIt last_name, ChromSizeIt first_size,
-                                                   hictk::cooler::StandardAttributes attrs);
+                                                   hictk::cooler::Attributes attrs);
 
 template <class N>
 [[nodiscard]] hictk::cooler::File init_cooler_file(const std::filesystem::path& path,
                                                    bool force_overwrite, hictk::Reference chroms,
-                                                   hictk::cooler::StandardAttributes attrs);
+                                                   hictk::cooler::Attributes attrs);
 
 template <class N>
 [[nodiscard]] ContactMatrixDense<N> read_contact_matrix_from_cooler(
