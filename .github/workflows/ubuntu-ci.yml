@@ -311,13 +311,13 @@ jobs:
           chown -R $(id -u):$(id -g) $PWD
 
       - name: Download unit tests artifact
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4
         with:
           name: unit-tests-${{ matrix.os }}-${{ matrix.compiler }}-${{ matrix.generator }}-${{ matrix.build_type }}
 
       - name: Download test datasets
         id: test-dataset
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4
         with:
           name: ${{ needs.cache-test-datasets.outputs.artifact-name }}
 
@@ -361,13 +361,13 @@ jobs:
           chown -R $(id -u):$(id -g) $PWD
 
       - name: Download binary artifact
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4
         with:
           name: binaries-${{ matrix.os }}-${{ matrix.compiler }}-${{ matrix.generator }}-${{ matrix.build_type }}
 
       - name: Download test datasets
         id: test-dataset
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4
         with:
           name: ${{ needs.cache-test-datasets.outputs.artifact-name }}
 
@@ -404,13 +404,13 @@ jobs:
           chown -R $(id -u):$(id -g) $PWD
 
       - name: Download binary artifact
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4
         with:
           name: binaries-${{ matrix.os }}-${{ matrix.compiler }}-${{ matrix.generator }}-${{ matrix.build_type }}
 
       - name: Download test datasets
         id: test-dataset
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4
         with:
           name: ${{ needs.cache-test-datasets.outputs.artifact-name }}
 

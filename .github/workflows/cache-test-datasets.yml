@@ -71,7 +71,7 @@ jobs:
         shasum -c checksum.sha512
 
     - name: Upload test dataset
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: ${{ steps.generate-cache-key.outputs.key }}
         path: ${{ env.TEST_DATASET_PATH }}
