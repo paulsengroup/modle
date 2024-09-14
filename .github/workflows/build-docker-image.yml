@@ -58,7 +58,7 @@ jobs:
         uses: actions/checkout@v3
 
       - name: Download test datasets
-        uses: actions/download-artifact@v4.1.7
+        uses: actions/download-artifact@v4
         with:
           name: ${{ needs.cache-test-datasets.outputs.artifact-name }}
           path: test/data/
