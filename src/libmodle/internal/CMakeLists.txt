@@ -5,6 +5,7 @@
 find_package(absl CONFIG REQUIRED)
 find_package(Boost CONFIG REQUIRED COMPONENTS headers)
 find_package(fmt CONFIG REQUIRED)
+find_package(phmap CONFIG REQUIRED)
 find_package(spdlog CONFIG REQUIRED)
 find_package(xxHash CONFIG REQUIRED)
 
@@ -27,17 +28,17 @@ target_link_libraries(
          Modle::common
          Modle::io_bed
          Modle::interval_tree
-         fmt::fmt)
+         fmt::fmt-header-only)
 
 target_link_system_libraries(
   libmodle_internal
   PRIVATE
   absl::time
   PUBLIC
-  absl::btree
   absl::span
   Boost::headers
-  spdlog::spdlog
+  phmap
+  spdlog::spdlog_header_only
   xxHash::xxhash)
 
 target_include_directories(libmodle_internal PUBLIC include/)

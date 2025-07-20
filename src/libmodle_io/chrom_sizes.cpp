@@ -4,7 +4,7 @@
 
 #include "modle/chrom_sizes/chrom_sizes.hpp"  // for Parser
 
-#include <absl/container/flat_hash_set.h>  // for flat_hash_set
+#include <parallel_hashmap/phmap.h>  // for flat_hash_set
 #include <absl/strings/ascii.h>
 #include <absl/strings/str_split.h>  // for StrSplit, Splitter
 #include <fmt/compile.h>
@@ -27,7 +27,7 @@ Parser::Parser(const std::filesystem::path& path_to_chrom_sizes) : _reader(path_
 
 std::vector<bed::BED> Parser::parse_all(char sep) {
   std::string buff;
-  absl::flat_hash_set<std::string> chrom_names{};
+  phmap::flat_hash_set<std::string> chrom_names{};
   std::vector<bed::BED> chrom_sizes;
 
   for (usize i = 1UL, id = 0; this->_reader.getline(buff); ++i) {

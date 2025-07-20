@@ -3,12 +3,14 @@
 # SPDX-License-Identifier: MIT
 
 cmake_minimum_required(VERSION 3.25)
-cmake_policy(VERSION 3.25...3.27)
+cmake_policy(VERSION 3.25...4.0)
+set(CMAKE_POLICY_DEFAULT_CMP0069 NEW)
+set(CMAKE_POLICY_DEFAULT_CMP0077 NEW)
 
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake/modules/")
 
 # Not ideal to use this global variable, but necessary to make sure that tooling and projects use the same version
-set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_C_STANDARD 11)
 
 # strongly encouraged to enable this globally to avoid conflicts between -Wpedantic being enabled and -std=c++20 and
@@ -198,14 +200,7 @@ target_compile_definitions(
 # Tweak fmt
 target_compile_definitions(project_options INTERFACE FMT_ENFORCE_COMPILE_STRING)
 
-# Tweak boost
-find_package(Boost CONFIG REQUIRED COMPONENTS filesystem)
-
-if(Boost_VERSION_STRING VERSION_GREATER_EQUAL 1.77.0)
-  target_compile_definitions(project_options INTERFACE BOOST_FILESYSTEM_VERSION=4)
-elseif(Boost_VERSION_STRING VERSION_GREATER 1.44.0)
-  target_compile_definitions(project_options INTERFACE BOOST_FILESYSTEM_VERSION=3)
-endif()
+include(cmake/FetchExternalDeps.cmake)
 
 if(MODLE_ENABLE_TESTING)
   enable_testing()
@@ -221,7 +216,5 @@ if(MODLE_ENABLE_TESTING)
 endif()
 
 add_subdirectory(src)
-
-include(cmake/FetchExternalDeps.cmake)
 
 # include(cmake/Packaging.cmake)

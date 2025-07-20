@@ -3,10 +3,11 @@
 # SPDX-License-Identifier: MIT
 
 find_package(absl CONFIG REQUIRED)
-find_package(Boost CONFIG REQUIRED COMPONENTS filesystem headers)
+find_package(Boost CONFIG REQUIRED)
 find_package(bshoshany-thread-pool CONFIG REQUIRED)
 find_package(Catch2 CONFIG REQUIRED)
 find_package(fmt CONFIG REQUIRED)
+find_package(phmap CONFIG REQUIRED)
 find_package(spdlog CONFIG REQUIRED)
 
 include(CTest)
@@ -21,7 +22,6 @@ target_sources(
           ${CMAKE_CURRENT_SOURCE_DIR}/units/common/dna_test.cpp
           ${CMAKE_CURRENT_SOURCE_DIR}/units/contact_matrix/contact_matrix_dense_test.cpp
           ${CMAKE_CURRENT_SOURCE_DIR}/units/contact_matrix/contact_matrix_internal_test.cpp
-          ${CMAKE_CURRENT_SOURCE_DIR}/units/contact_matrix/contact_matrix_serde_test.cpp
           ${CMAKE_CURRENT_SOURCE_DIR}/units/contact_matrix/contact_matrix_sparse_test.cpp
           ${CMAKE_CURRENT_SOURCE_DIR}/units/interval_tree/interval_tree_test.cpp
           ${CMAKE_CURRENT_SOURCE_DIR}/units/libmodle_io/bed_parser_test.cpp
@@ -45,7 +45,7 @@ target_link_libraries(
   test_main
   PRIVATE project_warnings
           project_options
-          fmt::fmt
+          fmt::fmt-header-only
           Modle::cmatrix
           Modle::common
           Modle::interval_tree
@@ -61,15 +61,14 @@ target_link_libraries(
 target_link_system_libraries(
   test_main
   PRIVATE
-  absl::flat_hash_set
   absl::hash
   absl::span
   absl::strings
-  Boost::filesystem
   Boost::headers
   bshoshany-thread-pool::bshoshany-thread-pool
   Catch2::Catch2WithMain
-  spdlog::spdlog)
+  phmap
+  spdlog::spdlog_header_only)
 
 file(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/Testing/)
 

@@ -466,13 +466,13 @@ void Cli::validate_eval_subcommand() const {
   const auto& c = absl::get<eval_config>(this->_config);
 
   try {
-    const auto f1 = hictk::cooler::File::open_read_only(c.input_cooler_uri.string());
-    const auto f2 = hictk::cooler::File::open_read_only(c.reference_cooler_uri.string());
-    if (f1.bin_size() != f2.bin_size()) {
+    const hictk::cooler::File f1(c.input_cooler_uri.string());
+    const hictk::cooler::File f2(c.reference_cooler_uri.string());
+    if (f1.resolution() != f2.resolution()) {
       errors.emplace_back(fmt::format(
           FMT_STRING(
               "Coolers at URIs {} and {} have different resolutions ({} and {} respectively)"),
-          c.input_cooler_uri, c.reference_cooler_uri, f1.bin_size(), f2.bin_size()));
+          c.input_cooler_uri, c.reference_cooler_uri, f1.resolution(), f2.resolution()));
     }
 
     const auto& io_group = *this->_cli.get_subcommand("eval")->get_option_group("IO");

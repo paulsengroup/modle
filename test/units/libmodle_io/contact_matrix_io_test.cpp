@@ -9,10 +9,10 @@
 
 #include "modle/common/random.hpp"
 #include "modle/io/contact_matrix_dense.hpp"
-#include "modle/test/self_deleting_folder.hpp"  // for SelfDeletingFolder
+#include "modle/test/tmpdir.hpp"  // for TmpDir
 
 namespace modle::test {
-inline const SelfDeletingFolder testdir{true};  // NOLINT(cert-err58-cpp)
+inline const TmpDir testdir{true};  // NOLINT(cert-err58-cpp)
 }  // namespace modle::test
 
 namespace modle::io::test {
@@ -52,7 +52,7 @@ TEST_CASE("ContactMatrixDense to Cooler Roundtrip (square)", "[io][matrix][short
   const hictk::Reference chroms{{0, "chr1", chrom_size}};
   {
     auto f = init_cooler_file<i32>(test_file, false, chroms,
-                                   hictk::cooler::StandardAttributes::init(bin_size));
+                                   hictk::cooler::Attributes::init(bin_size));
     append_contact_matrix_to_cooler(f, "chr1", m1);
     REQUIRE(m1.get_nnz() == f.attributes().nnz);
   }
@@ -83,7 +83,7 @@ TEST_CASE("ContactMatrixDense to Cooler Roundtrip", "[io][matrix][long]") {
   const hictk::Reference chroms{{0, "chr1", chrom_size}};
   {
     auto f = init_cooler_file<i32>(test_file, false, chroms,
-                                   hictk::cooler::StandardAttributes::init(bin_size));
+                                   hictk::cooler::Attributes::init(bin_size));
     append_contact_matrix_to_cooler(f, "chr1", m1);
     REQUIRE(m1.get_nnz() == f.attributes().nnz);
   }
@@ -114,7 +114,7 @@ TEST_CASE("ContactMatrixDense to Cooler Roundtrip (FP)", "[io][matrix][long]") {
   const hictk::Reference chroms{{0, "chr1", chrom_size}};
   {
     auto f = init_cooler_file<double>(test_file, false, chroms,
-                                      hictk::cooler::StandardAttributes::init<double>(bin_size));
+                                      hictk::cooler::Attributes::init<double>(bin_size));
     append_contact_matrix_to_cooler(f, "chr1", m1);
     REQUIRE(m1.get_nnz() == f.attributes().nnz);
   }

@@ -9,15 +9,14 @@
 #include <cpp-sort/sorters/insertion_sorter.h>
 #include <fmt/format.h>  // for compile_string_to_view, FMT_STRING, formatbu...
 #include <fmt/std.h>
+#include <fmt/ranges.h>
 
 #include <algorithm>   // for transform
 #include <cctype>      // for isalpha
 #include <cmath>       // for trunc
 #include <exception>   // for exception
 #include <filesystem>  // for operator<<, path
-#include <range/v3/view/any_view.hpp>
-#include <range/v3/view/map.hpp>
-#include <range/v3/view/zip.hpp>
+#include <ranges>
 #include <string>       // for string, basic_string
 #include <string_view>  // for string_view
 
@@ -122,11 +121,28 @@ CliEnumMappings<EnumT, StringT>::CliEnumMappings(const std::initializer_list<val
   }
 }
 
+// TODO refactor
+namespace internal {
+template <class EnumT, class StringT>
+[[nodiscard]] inline std::vector<std::pair<StringT, EnumT>> zip_enum_labels(const std::initializer_list<StringT> labels,
+                                                 const std::initializer_list<EnumT> enums) {
+  assert(labels.size() == enums.size());
+  std::vector<std::pair<StringT, EnumT>> result;
+  result.reserve(labels.size());
+  for (usize i = 0; i < labels.size(); ++i) {
+    result.emplace_back(labels[i], enums[i]);
+  }
+
+  return result;
+}
+
+}
+
 template <class EnumT, class StringT>
 CliEnumMappings<EnumT, StringT>::CliEnumMappings(const std::initializer_list<StringT> labels,
                                                  const std::initializer_list<EnumT> enums,
                                                  const bool sort_by_key)
-    : CliEnumMappings(ranges::views::zip(labels, enums), sort_by_key) {
+    : CliEnumMappings(internal::zip_enum_labels(labels, enums), sort_by_key) {
   assert(labels.size() == enums.size());
 }
 
@@ -182,15 +198,15 @@ EnumT CliEnumMappings<EnumT, StringT>::at(const StringT &key) const {
 
 template <class EnumT, class StringT>
 auto CliEnumMappings<EnumT, StringT>::keys_view() const
-    -> decltype(ranges::views::keys(this->_mappings)) {
-  return this->_mappings | ranges::views::keys;
+    -> decltype(std::ranges::views::keys(this->_mappings)) {
+  return this->_mappings | std::ranges::views::keys;
 }
 
 template <class EnumT, class StringT>
 auto CliEnumMappings<EnumT, StringT>::values_view() const
-    -> decltype(ranges::views::values(this->_mappings)) {
-  auto foo = this->_mappings | ranges::views::values;
-  return this->_mappings | ranges::views::values;
+    -> decltype(std::ranges::views::values(this->_mappings)) {
+  auto foo = this->_mappings | std::ranges::views::values;
+  return this->_mappings | std::ranges::views::values;
 }
 
 namespace cli {

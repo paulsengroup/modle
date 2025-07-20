@@ -27,8 +27,8 @@ template <typename Task>
 inline ContextManager<Task>::ContextManager(usize num_worker_threads, usize num_io_threads)
     : _pending(2 * num_worker_threads, 1, 0),
       _finished(2 * num_worker_threads, num_worker_threads + 1, 0),
-      _worker_tpool(utils::conditional_static_cast<BS::concurrency_t>(num_worker_threads)),
-      _io_tpool(utils::conditional_static_cast<BS::concurrency_t>(num_io_threads)) {}
+      _worker_tpool(num_worker_threads),
+      _io_tpool(num_io_threads) {}
 
 template <typename Task>
 inline ContextManager<Task>::operator bool() const noexcept {
@@ -176,7 +176,7 @@ inline void ContextManager<Task>::rethrow_exceptions() const {
 template <typename Task>
 inline void ContextManager<Task>::check_exceptions() {
   if (MODLE_UNLIKELY(this->_exception_thrown.load())) {
-    spdlog::error(FMT_STRING("MoDLE encountered an exception. Shutting down worker threads..."));
+    spdlog::error("MoDLE encountered an exception. Shutting down worker threads...");
     this->shutdown();
   }
 }
@@ -197,13 +197,13 @@ inline usize ContextManager<Task>::num_io_threads() const noexcept {
 template <typename Task>
 template <typename TaskLambda>
 inline void ContextManager<Task>::spawn_worker_thread(TaskLambda lambda) {
-  this->_futures.emplace_back(this->_worker_tpool.submit(lambda));
+  this->_futures.emplace_back(this->_worker_tpool.submit_task(lambda));
 }
 
 template <typename Task>
 template <typename TaskLambda>
 inline void ContextManager<Task>::spawn_io_thread(TaskLambda lambda) {
-  this->_futures.emplace_back(this->_io_tpool.submit(lambda));
+  this->_futures.emplace_back(this->_io_tpool.submit_task(lambda));
 }
 
 template <typename Task>
@@ -211,13 +211,13 @@ inline void ContextManager<Task>::shutdown() {
   this->_shutdown_requested = true;
   this->close_queue();
 
-  spdlog::debug(FMT_STRING("waiting for worker threads to return..."));
-  this->_worker_tpool.wait_for_tasks();
-  spdlog::debug(FMT_STRING("waiting for io threads to return..."));
-  this->_io_tpool.wait_for_tasks();
+  spdlog::debug("waiting for worker threads to return...");
+  this->_worker_tpool.wait();
+  spdlog::debug("waiting for io threads to return...");
+  this->_io_tpool.wait();
 
   spdlog::debug(
-      FMT_STRING("all background threads returned! Checking if any exception have been raised..."));
+      "all background threads returned! Checking if any exception have been raised...");
   if (this->_exception_thrown) {
     this->rethrow_exceptions();
   } else {

@@ -6,6 +6,7 @@
 
 #include <fmt/format.h>  // for FMT_STRING, join
 #include <fmt/ostream.h>
+#include <fmt/ranges.h>
 
 #include <algorithm>                                // for clamp, fill, max, min
 #include <atomic>                                   // for atomic_fetch_add_explicit

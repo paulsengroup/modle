@@ -6,6 +6,8 @@ find_package(absl CONFIG REQUIRED)
 find_package(Boost CONFIG REQUIRED COMPONENTS headers)
 find_package(CLI11 CONFIG REQUIRED)
 find_package(fmt CONFIG REQUIRED)
+find_package(hictk CONFIG REQUIRED)
+find_package(phmap CONFIG REQUIRED)
 find_package(spdlog CONFIG REQUIRED)
 find_package(tomlplusplus CONFIG REQUIRED)
 
@@ -25,16 +27,16 @@ target_link_system_libraries(
   modle
   PRIVATE
   absl::failure_signal_handler
-  absl::flat_hash_map
   absl::span
   absl::strings
   absl::symbolize
   absl::time
   Boost::headers
   CLI11::CLI11
-  spdlog::spdlog
+  phmap
+  spdlog::spdlog_header_only
   tomlplusplus::tomlplusplus
-  hictk)
+  hictk::libhictk)
 
 include(GNUInstallDirs)
 install(

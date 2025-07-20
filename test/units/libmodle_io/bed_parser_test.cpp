@@ -16,10 +16,10 @@
 #include "modle/bed/bed.hpp"                      // for BED, Parser, formatter<>::format, BED::BED3
 #include "modle/common/common.hpp"                // for usize
 #include "modle/compressed_io/compressed_io.hpp"  // for Reader
-#include "modle/test/self_deleting_folder.hpp"    // for SelfDeletingFolder
+#include "modle/test/tmpdir.hpp"                  // for TmpDir
 
 namespace modle::test {
-inline const SelfDeletingFolder testdir{true};  // NOLINT(cert-err58-cpp)
+inline const TmpDir testdir{true};  // NOLINT(cert-err58-cpp)
 }  // namespace modle::test
 
 namespace modle::bed::test {

@@ -6,7 +6,7 @@
 
 #include <fmt/format.h>  // for format
 
-#include <BS_thread_pool.hpp>  // for BS::thread_pool
+#include <BS_thread_pool.hpp>  // for BS::light_thread_pool
 #include <algorithm>           // for generate, max
 #include <catch2/catch_test_macros.hpp>
 #include <catch2/matchers/catch_matchers_floating_point.hpp>
@@ -266,7 +266,7 @@ TEST_CASE("ContactMatrixDense get row", "[cmatrix][short]") {
 }
 
 static void contact_matrix_dense_blur_helper(double sigma, double truncate,
-                                             BS::thread_pool* tpool = nullptr,
+                                             BS::light_thread_pool* tpool = nullptr,
                                              double tolerance = DEFAULT_FP_TOLERANCE) {
   const auto path_to_input_matrix =
       data_dir() / "contact_matrices" / "contact_matrix_dense_int_001.tsv.xz";
@@ -312,12 +312,12 @@ TEST_CASE("ContactMatrixDense blur (sigma=1.5)", "[cmatrix][long]") {
 
 // NOLINTNEXTLINE(readability-function-cognitive-complexity)
 TEST_CASE("ContactMatrixDense blur parallel (sigma=5.0)", "[cmatrix][long][exclusive]") {
-  BS::thread_pool tpool{2};
+  BS::light_thread_pool tpool{2};
   contact_matrix_dense_blur_helper(5.0, 3.5, &tpool);
 }
 
 static void contact_matrix_dense_dog_helper(double sigma1, double sigma2, double truncate,
-                                            BS::thread_pool* tpool = nullptr) {
+                                            BS::light_thread_pool* tpool = nullptr) {
   assert(sigma1 < sigma2);
   const auto path_to_input_matrix =
       data_dir() / "contact_matrices" / "contact_matrix_dense_int_001.tsv.xz";
@@ -352,7 +352,7 @@ TEST_CASE("ContactMatrixDense difference of Gaussians", "[cmatrix][long]") {
 
 // NOLINTNEXTLINE(readability-function-cognitive-complexity)
 TEST_CASE("ContactMatrixDense difference of Gaussians - parallel", "[cmatrix][long][exclusive]") {
-  BS::thread_pool tpool{2};
+  BS::light_thread_pool tpool{2};
   contact_matrix_dense_dog_helper(1.0, 1.6, 3.0, &tpool);
 }
 
@@ -408,16 +408,16 @@ TEST_CASE("ContactMatrixDense pixel locking TSAN", "[cmatrix][long]") {
   };
 
   const auto nthreads = std::max(u32(2), std::thread::hardware_concurrency());
-  BS::thread_pool tpool(nthreads);
+  BS::light_thread_pool tpool(nthreads);
 
   // Submit nthreads - 1 tasks generating contacts
   std::vector<std::future<usize>> num_contacts_generated(nthreads - 1);
   std::generate(num_contacts_generated.begin(), num_contacts_generated.end(),
-                [&]() { return tpool.submit(generate_contacts, u64(random::random_device{}())); });
+                [&]() { return tpool.submit_task(generate_contacts, u64(random::random_device{}())); });
 
   // Submit 1 task reading random pixels from the matrix
   volatile i64 dummy_counter = 0;
-  auto return_code = tpool.submit([&]() {
+  auto return_code = tpool.submit_task([&]() {
     auto rand_eng = random::PRNG(u64(random::random_device{}()));
     random::uniform_int_distribution<usize> idx_gen(0, m.ncols() - 1);
 
@@ -430,7 +430,7 @@ TEST_CASE("ContactMatrixDense pixel locking TSAN", "[cmatrix][long]") {
   // std::this_thread::sleep_for(std::chrono::seconds(3600));
 
   stop_sig = true;
-  tpool.wait_for_tasks();
+  tpool.wait();
 
   u64 tot_contacts_expected = 0;
   for (auto& n : num_contacts_generated) {
@@ -461,16 +461,16 @@ TEST_CASE("ContactMatrixDense global locking TSAN", "[cmatrix][long]") {
   };
 
   const auto nthreads = std::max(u32(2), std::thread::hardware_concurrency());
-  BS::thread_pool tpool(nthreads);
+  BS::light_thread_pool tpool(nthreads);
 
   // Submit nthreads - 1 tasks generating contacts
   std::vector<std::future<usize>> num_contacts_generated(nthreads - 1);
   std::generate(num_contacts_generated.begin(), num_contacts_generated.end(),
-                [&]() { return tpool.submit(generate_contacts, u64(random::random_device{}())); });
+                [&]() { return tpool.submit_task(generate_contacts, u64(random::random_device{}())); });
 
   // Submit 1 task computing the calling get_tot_contacts() (which locks the entire matrix)
   u64 tot_contacts = 0;
-  auto return_code = tpool.submit([&]() {
+  auto return_code = tpool.submit_task([&]() {
     auto rand_eng = random::PRNG(u64(random::random_device{}()));
     random::uniform_int_distribution<i64> sleep_gen(0, 100);
     while (!stop_sig) {
@@ -486,7 +486,7 @@ TEST_CASE("ContactMatrixDense global locking TSAN", "[cmatrix][long]") {
   // std::this_thread::sleep_for(std::chrono::seconds(3600));
 
   stop_sig = true;
-  tpool.wait_for_tasks();
+  tpool.wait();
 
   u64 tot_contacts_expected = 0;
   for (auto& n : num_contacts_generated) {

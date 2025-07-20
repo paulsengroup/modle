@@ -9,7 +9,7 @@
 #include <absl/types/span.h>  // for Span
 #include <fmt/format.h>       // for format_parse_context, format_error
 
-#include <BS_thread_pool.hpp>  // for BS::thread_pool
+#include <BS_thread_pool.hpp>  // for BS::light_thread_pool
 #include <algorithm>           // for min
 #include <cassert>             // for assert
 #include <limits>              // for numeric_limits

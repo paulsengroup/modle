@@ -26,7 +26,7 @@ target_link_libraries(
   PRIVATE project_options
           project_warnings
           Modle::common
-          fmt::fmt)
+          fmt::fmt-header-only)
 target_link_system_libraries(modle_config PUBLIC absl::strings)
 
 target_include_directories(modle_config PUBLIC include/)

@@ -4,8 +4,8 @@
 
 #include "modle/genome.hpp"
 
-#include <absl/container/btree_map.h>  // for btree_map
-#include <absl/container/btree_set.h>  // for btree_set, btree_iterator
+#include <parallel_hashmap/btree.h>  // for btree_map
+#include <parallel_hashmap/btree.h>  // for btree_set, btree_iterator
 #include <absl/time/clock.h>           // for Now
 #include <absl/time/time.h>            // for FormatDuration, operator-, Time
 #include <fmt/format.h>                // for format, make_format_args, vformat_to
@@ -340,7 +340,7 @@ std::vector<std::shared_ptr<const Chromosome>> Genome::import_chromosomes(
   const auto t0 = absl::Now();
   spdlog::info(FMT_STRING("importing chromosomes from {}..."), path_to_chrom_sizes);
 
-  absl::btree_map<std::string, usize> chrom_names;
+  phmap::btree_map<std::string, usize> chrom_names;
 
   usize id = 0;
   std::vector<std::shared_ptr<const Chromosome>> buffer{};
@@ -367,16 +367,16 @@ std::vector<std::shared_ptr<const Chromosome>> Genome::import_chromosomes(
   return buffer;
 }
 
-absl::btree_set<GenomicInterval> Genome::import_genomic_intervals(
+phmap::btree_set<GenomicInterval> Genome::import_genomic_intervals(
     const std::filesystem::path& path_to_bed,
     const std::vector<std::shared_ptr<const Chromosome>>& chromosomes,
     bp_t contact_matrix_resolution, bp_t diagonal_width) {
   assert(!chromosomes.empty());
-  absl::btree_set<GenomicInterval> buffer{};
+  phmap::btree_set<GenomicInterval> buffer{};
   if (path_to_bed.empty()) {
     spdlog::debug(
-        FMT_STRING("path to genomic regions to simulate is empty. Assuming whole chromosomes are "
-                   "to be simulated!"));
+        "path to genomic regions to simulate is empty. Assuming whole chromosomes are "
+                   "to be simulated!");
     std::transform(chromosomes.begin(), chromosomes.end(), std::inserter(buffer, buffer.begin()),
                    [&](const auto& chrom_ptr) {
                      return GenomicInterval{chrom_ptr->id(), chrom_ptr, contact_matrix_resolution,
@@ -388,7 +388,7 @@ absl::btree_set<GenomicInterval> Genome::import_genomic_intervals(
   const auto t0 = absl::Now();
   spdlog::info(FMT_STRING("importing genomic intervals from {}..."), path_to_bed);
 
-  absl::btree_map<std::string_view, std::shared_ptr<const Chromosome>> chrom_names;
+  phmap::btree_map<std::string_view, std::shared_ptr<const Chromosome>> chrom_names;
   std::transform(
       chromosomes.begin(), chromosomes.end(), std::inserter(chrom_names, chrom_names.begin()),
       [](auto chrom_ptr) { return std::make_pair(chrom_ptr->name(), std::move(chrom_ptr)); });
@@ -475,7 +475,7 @@ absl::btree_set<GenomicInterval> Genome::import_genomic_intervals(
   return buff;
 }
 
-usize Genome::map_barriers_to_intervals(absl::btree_set<GenomicInterval>& intervals,
+usize Genome::map_barriers_to_intervals(phmap::btree_set<GenomicInterval>& intervals,
                                         const bed::BED_tree<>& barriers_bed,
                                         double default_barrier_pbb, double default_barrier_puu,
                                         bool interpret_name_field_as_puu) {

@@ -28,8 +28,8 @@ class ContextManager {
   std::unique_ptr<StateLoggerAggregator> _state_logger_ptr{};
   QueueT _pending{};
   QueueT _finished{};
-  BS::thread_pool _worker_tpool;
-  BS::thread_pool _io_tpool;
+  BS::light_thread_pool _worker_tpool;
+  BS::light_thread_pool _io_tpool;
   std::atomic<usize> _num_in{};
   std::atomic<usize> _num_out{};
 

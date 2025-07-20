@@ -33,7 +33,7 @@ ContactMatrixSparse<N>::ContactMatrixSparse(const ContactMatrixSparse<N>& other)
     auto& map = _contact_blocks[i];
     map.reserve(table.size());
     for (const auto& [k, v] : table) {
-      map.template insert(k, v);
+      map.insert(k, v);
     }
   }
 }
@@ -77,7 +77,7 @@ ContactMatrixSparse<N>& ContactMatrixSparse<N>::operator=(const ContactMatrixSpa
     auto& map = _contact_blocks[i];
     map.reserve(table.size());
     for (const auto& [k, v] : table) {
-      map.template insert(k, v);
+      map.insert(k, v);
     }
   }
 

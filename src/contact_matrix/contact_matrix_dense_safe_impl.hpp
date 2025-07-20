@@ -5,7 +5,7 @@
 #pragma once
 #include <absl/strings/str_split.h>  // for StrSplit, Splitter
 
-#include <BS_thread_pool.hpp>  // for BS::thread_pool, parallelize_loop
+#include <BS_thread_pool.hpp>  // for BS::light_thread_pool, parallelize_loop
 #include <atomic>              // for atomic_fetch_add_explicit
 #include <cassert>             // for assert
 #include <cmath>               // for sqrt
@@ -145,14 +145,8 @@ N ContactMatrixDense<N>::get_max_count() const noexcept {
 }
 
 template <class N>
-void ContactMatrixDense<N>::reset() {
-  const auto lck = this->exclusive_lock();
-  this->unsafe_reset();
-}
-
-template <class N>
 ContactMatrixDense<double> ContactMatrixDense<N>::blur(const double sigma, const double truncate,
-                                                       BS::thread_pool* tpool) const {
+                                                       BS::light_thread_pool* tpool) const {
   ContactMatrixDense<double> bmatrix(this->nrows(), this->ncols());
   if (this->empty()) {
     return bmatrix;
@@ -175,7 +169,7 @@ ContactMatrixDense<double> ContactMatrixDense<N>::blur(const double sigma, const
 
   const auto lck = this->lock();
   if (tpool) {
-    auto fut = tpool->template parallelize_loop(usize(0), this->ncols(), apply_kernel);
+    auto fut = tpool->submit_blocks(usize(0), this->ncols(), apply_kernel);
     fut.wait();
   } else {
     apply_kernel(0, this->ncols());
@@ -186,7 +180,7 @@ ContactMatrixDense<double> ContactMatrixDense<N>::blur(const double sigma, const
 template <class N>
 ContactMatrixDense<double> ContactMatrixDense<N>::diff_of_gaussians(
     const double sigma1, const double sigma2, const double truncate, const double min_value,
-    const double max_value, BS::thread_pool* tpool) const {
+    const double max_value, BS::light_thread_pool* tpool) const {
   assert(sigma1 <= sigma2);
   ContactMatrixDense<double> bmatrix(this->nrows(), this->ncols());
   if (this->empty()) {
@@ -220,7 +214,7 @@ ContactMatrixDense<double> ContactMatrixDense<N>::diff_of_gaussians(
 
   const auto lck = this->lock();
   if (tpool) {
-    auto fut = tpool->template parallelize_loop(usize(0), this->ncols(), compute_gauss_diff);
+    auto fut = tpool->submit_blocks(usize(0), this->ncols(), compute_gauss_diff);
     fut.wait();
   } else {
     compute_gauss_diff(0, this->ncols());

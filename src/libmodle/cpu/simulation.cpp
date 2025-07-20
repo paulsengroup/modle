@@ -6,7 +6,8 @@
 
 #include "modle/simulation.hpp"
 
-#include <absl/container/btree_map.h>           // for btree_iterator
+#include <parallel_hashmap/btree.h>           // for btree_iterator
+#include <absl/time/clock.h>
 #include <absl/types/span.h>                    // for Span, MakeConstSpan, MakeSpan
 #include <cpp-sort/sorters/insertion_sorter.h>  // for insertion_sort, insertion_so...
 #include <cpp-sort/sorters/pdq_sorter.h>        // for pdq_sort, pdq_sorter
@@ -214,7 +215,7 @@ struct CoolerBigwigPair {
 }
 
 void Simulation::simulate_io(std::chrono::milliseconds wait_time) {
-  spdlog::info(FMT_STRING("spawning IO thread..."));
+  spdlog::info("spawning IO thread...");
   assert(!std::filesystem::exists(c().path_to_output_file_cool));
   if (c().track_1d_lef_position) {
     assert(!std::filesystem::exists(c().path_to_lef_1d_occupancy_bw_file));
@@ -228,7 +229,7 @@ void Simulation::simulate_io(std::chrono::milliseconds wait_time) {
     auto last_interval = this->_genome.end();
 
     auto ctok = this->_ctx.register_consumer<Task::Status::COMPLETED>();
-    absl::btree_map<GenomicInterval*, usize> task_map{};
+    phmap::btree_map<GenomicInterval*, usize> task_map{};
     std::vector<float> bw_buff{};
     while (!!this->_ctx && current_interval != last_interval) {
       if (auto it = task_map.find(&(*current_interval)); it != task_map.end() && it->second == 0) {
@@ -432,8 +433,9 @@ void Simulation::rank_lefs(const absl::Span<const Lef> lefs,
   }
 
   if (MODLE_LIKELY(ranks_are_partially_sorted)) {
-    cppsort::split_sort(rev_lef_rank_buff.begin(), rev_lef_rank_buff.end(), rev_comparator);
-    cppsort::split_sort(fwd_lef_rank_buff.begin(), fwd_lef_rank_buff.end(), fwd_comparator);
+    cppsort::split_adapter<cppsort::pdq_sorter> sorter;
+    sorter(rev_lef_rank_buff.begin(), rev_lef_rank_buff.end(), rev_comparator);
+    sorter(fwd_lef_rank_buff.begin(), fwd_lef_rank_buff.end(), fwd_comparator);
   } else {
     // Fallback to pattern-defeating quicksort we have no information regarding the level of
     // pre-sortedness of LEFs

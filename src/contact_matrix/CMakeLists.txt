@@ -3,7 +3,7 @@
 # SPDX-License-Identifier: MIT
 
 find_package(absl CONFIG REQUIRED)
-find_package(Boost CONFIG REQUIRED COMPONENTS iostreams serialization)
+find_package(Boost CONFIG REQUIRED)
 find_package(bshoshany-thread-pool CONFIG REQUIRED)
 find_package(cpp-sort CONFIG REQUIRED)
 find_package(fmt CONFIG REQUIRED)
@@ -30,7 +30,7 @@ target_link_libraries(
             Modle::common
             Modle::io_compressed
             Modle::stats
-            fmt::fmt)
+            fmt::fmt-header-only)
 
 target_link_system_libraries(
   cmatrix
@@ -38,8 +38,6 @@ target_link_system_libraries(
   absl::span
   absl::strings
   Boost::headers
-  Boost::iostreams
-  Boost::serialization
   bshoshany-thread-pool::bshoshany-thread-pool
   cpp-sort::cpp-sort
   libcuckoo::libcuckoo

@@ -9,7 +9,6 @@
 #include <absl/time/clock.h>
 #include <absl/types/span.h>  // for MakeSpan
 #include <fmt/format.h>       // for format, FMT_STRING, join, print, make_format_...
-#include <fmt/os.h>           // for output_file, ostream
 #include <fmt/std.h>
 #include <spdlog/spdlog.h>
 #include <toml++/toml.h>  // for array::operator[], operator<<, parse, print_to...
@@ -1024,10 +1023,17 @@ void Cli::print_config(bool print_default_args) const {
 }
 
 void Cli::write_config_file(bool write_default_args) const {
-  auto fp = fmt::output_file(this->_config.path_to_config_file.string());
-  fp.print(FMT_STRING("# Config created by {} on {}\n{}\n"), modle::config::version::str_long(),
-           absl::FormatTime(absl::Now(), absl::UTCTimeZone()),
-           this->_cli.config_to_str(write_default_args, true));
+  try {
+    std::ofstream fs;
+    fs.exceptions(fs.exceptions() | std::ios::failbit | std::ios::badbit);
+    fs.open(this->_config.path_to_config_file);
+
+    fmt::print(fs, FMT_STRING("# Config created by {} on {}\n{}\n"), modle::config::version::str_long(),
+             absl::FormatTime(absl::Now(), absl::UTCTimeZone()),
+             this->_cli.config_to_str(write_default_args, true));
+  } catch (const std::exception& e) {
+    throw std::runtime_error(fmt::format(FMT_STRING("failed to write config file \"{}\": {}"), this->_config.path_to_config_file, e.what()));
+  }
 }
 
 bool Cli::config_file_parsed() const { return !this->_cli.get_config_ptr()->empty(); }

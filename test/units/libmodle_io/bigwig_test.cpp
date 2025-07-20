@@ -12,10 +12,10 @@
 #include <vector>  // for vector
 
 #include "modle/common/common.hpp"              // for usize
-#include "modle/test/self_deleting_folder.hpp"  // for SelfDeletingFolder
+#include "modle/test/tmpdir.hpp"                // for TmpDir
 
 namespace modle::test {
-inline const SelfDeletingFolder testdir{true};  // NOLINT(cert-err58-cpp)
+inline const TmpDir testdir{true};  // NOLINT(cert-err58-cpp)
 }  // namespace modle::test
 
 /*

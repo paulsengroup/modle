@@ -4,7 +4,7 @@
 
 #pragma once
 
-#include <absl/container/btree_set.h>  // for btree_set, btree_set_container<>::const_iterator
+#include <parallel_hashmap/btree.h>  // for btree_set, btree_set_container<>::const_iterator
 #include <absl/types/span.h>           // for Span
 #include <fmt/format.h>
 #include <xxhash.h>
@@ -195,7 +195,7 @@ class GenomicInterval {
 
 class Genome {
   std::vector<std::shared_ptr<const Chromosome>> _chroms{};
-  absl::btree_set<GenomicInterval> _intervals{};
+  phmap::btree_set<GenomicInterval> _intervals{};
 
   usize _size{};
   usize _simulated_size{};
@@ -262,14 +262,14 @@ class Genome {
 
   /// Import genomic intervals from a BED file. If path to BED file is empty, assume entire
   /// chromosomes are to be simulated.
-  absl::btree_set<GenomicInterval> import_genomic_intervals(
+  phmap::btree_set<GenomicInterval> import_genomic_intervals(
       const std::filesystem::path& path_to_bed,
       const std::vector<std::shared_ptr<const Chromosome>>& chromosomes,
       bp_t contact_matrix_resolution, bp_t diagonal_width);
 
   /// Parse a BED file containing the genomic coordinates of extrusion barriers and add them to
   /// the Genome
-  static usize map_barriers_to_intervals(absl::btree_set<GenomicInterval>& intervals,
+  static usize map_barriers_to_intervals(phmap::btree_set<GenomicInterval>& intervals,
                                          const bed::BED_tree<>& barriers_bed,
                                          double default_barrier_pbb, double default_barrier_puu,
                                          bool interpret_name_field_as_puu);

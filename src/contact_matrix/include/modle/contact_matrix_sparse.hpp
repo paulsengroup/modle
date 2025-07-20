@@ -13,14 +13,9 @@
 
 namespace modle {
 
-template <class N>
-class ContactMatrixSerde;
-
 template <class N = contacts_t>
 class ContactMatrixSparse {
   static_assert(std::is_arithmetic_v<N>);
-
-  friend class ContactMatrixSerde<N>;
 
  public:
   using value_type = N;

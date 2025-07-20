@@ -3,9 +3,9 @@
 // SPDX-License-Identifier: MIT
 
 #include <absl/algorithm/container.h>           // for c_set_intersection
-#include <absl/container/btree_map.h>           // for btree_map, btree_iterator, map_params<>::...
-#include <absl/container/flat_hash_map.h>       // for flat_hash_map
-#include <absl/container/flat_hash_set.h>       // for flat_hash_set
+#include <parallel_hashmap/btree.h>           // for btree_map, btree_iterator, map_params<>::...
+#include <parallel_hashmap/phmap.h>       // for flat_hash_map
+#include <parallel_hashmap/phmap.h>       // for flat_hash_set
 #include <absl/strings/ascii.h>                 // AsciiStrToLower
 #include <absl/strings/str_replace.h>           // for ReplaceAll
 #include <absl/strings/strip.h>                 // for StripPrefix
@@ -17,7 +17,7 @@
 #include <fmt/format.h>                         // for format, make_format_args, vformat_to, FMT...
 #include <spdlog/spdlog.h>                      // for info
 
-#include <BS_thread_pool.hpp>  // for BS::thread_pool
+#include <BS_thread_pool.hpp>  // for BS::light_thread_pool
 #include <algorithm>           // for all_of, find_if, transform, minmax, max
 #include <cassert>             // for assert
 #include <cstdio>              // for stderr
@@ -250,11 +250,11 @@ template <class Range>
       path_to_weights));
 }
 
-[[nodiscard]] static absl::flat_hash_map<std::string, std::vector<double>> import_weights(
+[[nodiscard]] static phmap::flat_hash_map<std::string, std::vector<double>> import_weights(
     const std::filesystem::path &path_to_weights, const std::string_view weight_column_name,
     const usize nbins, const bool reciprocal_weights) {
   assert(nbins != 0);
-  absl::flat_hash_map<std::string, std::vector<double>> weights;
+  phmap::flat_hash_map<std::string, std::vector<double>> weights;
 
   if (path_to_weights.empty()) {
     return weights;
@@ -307,7 +307,7 @@ template <class Range>
 }
 
 static void validate_weights(const std::vector<bed::BED> &regions_of_interest,
-                             const absl::flat_hash_map<std::string, std::vector<double>> &weights) {
+                             const phmap::flat_hash_map<std::string, std::vector<double>> &weights) {
   std::vector<std::string> missing_chroms;
   for (const auto &bed : regions_of_interest) {
     if (!weights.contains(bed.chrom)) {
@@ -618,7 +618,7 @@ static void run_task(const enum eval_config::Metric metric, const bed::BED &inte
                      Writers &writers, const ContactMatrixDense<N> &ref_contacts,
                      const ContactMatrixDense<N> &tgt_contacts, const bool exclude_zero_pixels,
                      const usize bin_size,
-                     const absl::flat_hash_map<std::string, std::vector<double>> &weights) {
+                     const phmap::flat_hash_map<std::string, std::vector<double>> &weights) {
   try {
     auto t0 = absl::Now();
     const auto metrics =
@@ -680,12 +680,12 @@ static void log_regions_for_evaluation(const std::vector<bed::BED> &intervals) {
 
 void eval_subcmd(const modle::tools::eval_config &c) {
   const auto t0 = absl::Now();
-  auto ref_cooler = hictk::cooler::File::open_read_only(c.reference_cooler_uri.string());
-  auto tgt_cooler = hictk::cooler::File::open_read_only(c.input_cooler_uri.string());
+  hictk::cooler::File ref_cooler(c.reference_cooler_uri.string());
+  hictk::cooler::File tgt_cooler(c.input_cooler_uri.string());
 
-  assert(ref_cooler.bin_size() == tgt_cooler.bin_size());
+  assert(ref_cooler.resolution() == tgt_cooler.resolution());
 
-  const auto bin_size = ref_cooler.bin_size();
+  const auto bin_size = ref_cooler.resolution();
 
   const auto chroms = generate_chrom_annotation(ref_cooler, tgt_cooler, c.path_to_chrom_sizes);
 
@@ -708,7 +708,7 @@ void eval_subcmd(const modle::tools::eval_config &c) {
 
   auto writers = init_writers(c, chroms, !weights.empty());
 
-  BS::thread_pool tpool(static_cast<u32>(c.nthreads));
+  BS::light_thread_pool tpool(static_cast<u32>(c.nthreads));
 
   std::array<std::future<void>, 2> return_codes;
 
@@ -745,9 +745,9 @@ void eval_subcmd(const modle::tools::eval_config &c) {
     if (c.normalize) {
       const auto t00 = absl::Now();
       spdlog::info(FMT_STRING("Normalizing contact matrices for {}..."), coord_str);
-      return_codes[0] = tpool.submit([&]() { ref_matrix.normalize_inplace(); });
-      return_codes[1] = tpool.submit([&]() { tgt_matrix.normalize_inplace(); });
-      tpool.wait_for_tasks();
+      return_codes[0] = tpool.submit_task([&]() { ref_matrix.normalize_inplace(); });
+      return_codes[1] = tpool.submit_task([&]() { tgt_matrix.normalize_inplace(); });
+      tpool.wait();
       try {
         // Handle exceptions thrown inside worker threads
         std::ignore = return_codes[0];
@@ -763,15 +763,15 @@ void eval_subcmd(const modle::tools::eval_config &c) {
     }
 
     using d = StripeDirection;
-    return_codes[0] = tpool.submit([&, interval = interval]() {
+    return_codes[0] = tpool.submit_task([&, interval = interval]() {
       run_task<d::horizontal>(c.metric, interval, writers, ref_matrix, tgt_matrix,
                               c.exclude_zero_pxls, bin_size, weights);
     });
-    return_codes[1] = tpool.submit([&, interval = interval]() {
+    return_codes[1] = tpool.submit_task([&, interval = interval]() {
       run_task<d::vertical>(c.metric, interval, writers, ref_matrix, tgt_matrix,
                             c.exclude_zero_pxls, bin_size, weights);
     });
-    tpool.wait_for_tasks();
+    tpool.wait();
     // Raise exceptions thrown inside worker threads (if any)
     std::ignore = return_codes[0];
     std::ignore = return_codes[1];

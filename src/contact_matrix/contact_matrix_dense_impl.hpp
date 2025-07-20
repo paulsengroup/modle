@@ -153,49 +153,6 @@ void ContactMatrixDense<N>::bound_check_coords([[maybe_unused]] const usize row,
 }
 
 template <class N>
-void ContactMatrixDense<N>::check_for_overflow_on_add(const usize row, const usize col,
-                                                      const N n) const {
-  assert(n >= 0);
-  const auto lo = (std::numeric_limits<N>::min)();
-  const auto hi = (std::numeric_limits<N>::max)();
-
-  const auto m = this->at(row, col);
-  if (hi - n < m) {
-    throw std::runtime_error(
-        fmt::format(FMT_STRING("overflow detected: incrementing m={} by n={} would result in a "
-                               "number outside of range {}-{}"),
-                    m, n, lo, hi));
-  }
-  if (hi - n < this->_tot_contacts) {
-    throw std::runtime_error(fmt::format(
-        FMT_STRING("overflow detected: incrementing _tot_contacts={} by n={} would result in a "
-                   "number outside of range {}-{}"),
-        this->_tot_contacts, n, lo, hi));
-  }
-}
-
-template <class N>
-void ContactMatrixDense<N>::check_for_overflow_on_subtract(usize row, usize col, const N n) const {
-  assert(n >= 0);
-  const auto lo = (std::numeric_limits<N>::min)();
-  const auto hi = (std::numeric_limits<N>::max)();
-
-  const auto m = this->at(row, col);
-  if (lo + n > m) {
-    throw std::runtime_error(
-        fmt::format(FMT_STRING("overflow detected: decrementing m={} by n={} would result in a "
-                               "number outside of range {}-{}"),
-                    m, n, lo, hi));
-  }
-  if (lo + n > this->_tot_contacts) {
-    throw std::runtime_error(fmt::format(
-        FMT_STRING("overflow detected: decrementing _tot_contacts={} by n={} would result in a "
-                   "number outside of range {}-{}"),
-        this->_tot_contacts, n, lo, hi));
-  }
-}
-
-template <class N>
 usize ContactMatrixDense<N>::hash_coordinates(const usize i, const usize j) noexcept {
   const std::array<usize, 2> buff{i, j};
   return utils::conditional_static_cast<usize>(XXH3_64bits(buff.data(), sizeof(usize) * 2));

@@ -9,7 +9,7 @@
 #include <CLI/Formatter.hpp>
 #include <filesystem>  // for path
 #include <initializer_list>
-#include <range/v3/view/map.hpp>
+#include <ranges>
 #include <string>       // for string
 #include <string_view>  // for string_view
 
@@ -77,8 +77,8 @@ class CliEnumMappings {
   [[nodiscard]] inline const StringT& at(EnumT key) const;
   [[nodiscard]] inline EnumT at(const StringT& key) const;
 
-  [[nodiscard]] inline auto keys_view() const -> decltype(ranges::views::keys(this->_mappings));
-  [[nodiscard]] inline auto values_view() const -> decltype(ranges::views::values(this->_mappings));
+  [[nodiscard]] inline auto keys_view() const -> decltype(std::ranges::views::keys(this->_mappings));
+  [[nodiscard]] inline auto values_view() const -> decltype(std::ranges::views::values(this->_mappings));
 };
 
 namespace cli {

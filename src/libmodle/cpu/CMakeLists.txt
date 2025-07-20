@@ -7,8 +7,8 @@ find_package(Boost CONFIG REQUIRED COMPONENTS headers)
 find_package(bshoshany-thread-pool CONFIG REQUIRED)
 find_package(concurrentqueue CONFIG REQUIRED)
 find_package(cpp-sort CONFIG REQUIRED)
+find_package(phmap CONFIG REQUIRED)
 find_package(spdlog CONFIG REQUIRED)
-find_package(range-v3 CONFIG REQUIRED)
 find_package(xxHash CONFIG REQUIRED)
 
 add_library(libmodle_cpu)
@@ -44,12 +44,11 @@ target_link_libraries(
          Modle::io_bigwig
          Modle::io_contact_matrix
          concurrentqueue::concurrentqueue
-         fmt::fmt)
+         fmt::fmt-header-only)
 
 target_link_system_libraries(
   libmodle_cpu
   PRIVATE
-  absl::btree
   absl::fixed_array
   absl::hash
   absl::strings
@@ -57,12 +56,11 @@ target_link_system_libraries(
   absl::time
   cpp-sort::cpp-sort
   PUBLIC
-  absl::flat_hash_set
   absl::span
   Boost::headers
   bshoshany-thread-pool::bshoshany-thread-pool
-  range-v3::range-v3
-  spdlog::spdlog
+  phmap
+  spdlog::spdlog_header_only
   xxHash::xxhash)
 
 install(

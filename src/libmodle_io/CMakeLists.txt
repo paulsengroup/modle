@@ -5,8 +5,10 @@
 find_package(absl CONFIG REQUIRED)
 find_package(Boost CONFIG REQUIRED COMPONENTS iostreams)
 find_package(fmt CONFIG REQUIRED)
+find_package(hictk CONFIG REQUIRED)
 find_package(LibArchive CONFIG REQUIRED)
 find_package(BigWig CONFIG REQUIRED)
+find_package(phmap CONFIG REQUIRED)
 find_package(readerwriterqueue CONFIG REQUIRED)
 find_package(spdlog CONFIG REQUIRED)
 find_package(xxHash CONFIG REQUIRED)
@@ -28,10 +30,9 @@ target_link_system_libraries(
   PRIVATE
   absl::strings
   PUBLIC
-  absl::btree
-  absl::flat_hash_map
   absl::hash
   absl::span
+  phmap
   xxHash::xxhash)
 
 set_target_properties(libmodle_io_bed PROPERTIES OUTPUT_NAME modle_io_bed)
@@ -52,13 +53,14 @@ target_include_directories(libmodle_io_bigwig PUBLIC include/bigwig)
 target_link_libraries(
   libmodle_io_bigwig
   PRIVATE project_warnings project_options
-  PUBLIC Modle::common fmt::fmt)
+  PUBLIC Modle::common fmt::fmt-header-only)
 
 target_link_system_libraries(
   libmodle_io_bigwig
   PUBLIC
   absl::span
-  BigWig::BigWig)
+  BigWig::BigWig
+  phmap)
 
 target_compile_definitions(libmodle_io_bigwig PRIVATE -DNOCURL)
 
@@ -79,13 +81,13 @@ target_include_directories(libmodle_io_chrom_sizes PUBLIC include/chrom_sizes)
 target_link_libraries(
   libmodle_io_chrom_sizes
   PRIVATE project_warnings project_options Modle::io_bed
-  PUBLIC Modle::common Modle::io_compressed fmt::fmt)
+  PUBLIC Modle::common Modle::io_compressed fmt::fmt-header-only)
 
 target_link_system_libraries(
   libmodle_io_chrom_sizes
   PRIVATE
-  absl::flat_hash_set
-  absl::strings)
+  absl::strings
+  phmap)
 
 set_target_properties(libmodle_io_chrom_sizes PROPERTIES OUTPUT_NAME modle_io_chrom_sizes)
 install(
@@ -104,7 +106,7 @@ target_include_directories(libmodle_io_compressed PUBLIC include/compressed_io)
 target_link_libraries(
   libmodle_io_compressed
   PRIVATE project_warnings project_options
-  PUBLIC Modle::common fmt::fmt)
+  PUBLIC Modle::common fmt::fmt-header-only)
 
 target_link_system_libraries(
   libmodle_io_compressed
@@ -136,14 +138,14 @@ target_link_libraries(
             project_options
             Modle::cmatrix
             Modle::common
-            fmt::fmt)
+            fmt::fmt-header-only)
 
 target_link_system_libraries(
   libmodle_io_contact_matrix
   INTERFACE
   project_warnings
   project_options
-  hictk::cooler)
+  hictk::libhictk)
 
 set_target_properties(libmodle_io_contact_matrix PROPERTIES OUTPUT_NAME modle_io_contact_matrix)
 install(

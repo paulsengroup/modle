@@ -8,7 +8,6 @@ find_package(Boost CONFIG REQUIRED COMPONENTS headers random)
 find_package(CLI11 CONFIG REQUIRED)
 find_package(FastFloat CONFIG REQUIRED)
 find_package(fmt CONFIG REQUIRED)
-find_package(range-v3 CONFIG REQUIRED)
 find_package(xoshiro-cpp CONFIG REQUIRED)
 find_package(xxHash CONFIG REQUIRED)
 
@@ -35,7 +34,7 @@ target_sources(
             ${CMAKE_CURRENT_SOURCE_DIR}/numeric_utils_impl.hpp
             ${CMAKE_CURRENT_SOURCE_DIR}/utils_impl.hpp)
 
-target_link_libraries(modle_common INTERFACE project_options project_warnings fmt::fmt)
+target_link_libraries(modle_common INTERFACE project_options project_warnings fmt::fmt-header-only)
 
 target_link_system_libraries(
   modle_common
@@ -47,7 +46,6 @@ target_link_system_libraries(
   Boost::random
   CLI11::CLI11
   FastFloat::fast_float
-  range-v3::range-v3
   xoshiro-cpp::xoshiro-cpp
   xxHash::xxhash)
 

@@ -4,7 +4,7 @@
 
 #pragma once
 
-#include <absl/container/btree_map.h>  // for btree_map
+#include <parallel_hashmap/btree.h>  // for btree_map
 #include <absl/types/span.h>           // for Span
 #include <fmt/format.h>                // for format_parse_context, formatter
 #include <xxhash.h>                    // for XXH3_state_t, XXH_INLINE_XXH3_state_t
@@ -153,7 +153,7 @@ struct BED {
 template <typename K = std::string, typename I = bp_t>
 class BED_tree {
   using IITree_t = IITree<I, BED>;
-  using BED_tree_t = absl::btree_map<K, IITree<I, BED>>;
+  using BED_tree_t = phmap::btree_map<K, IITree<I, BED>>;
 
   friend IITree_t;
 

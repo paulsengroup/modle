@@ -54,6 +54,7 @@ class ExtrusionUnit {
 
 struct Lef {
   constexpr Lef() = default;
+  inline Lef(usize binding_epoch_, ExtrusionUnit rev_unit_, ExtrusionUnit fwd_unit_) noexcept;
   [[nodiscard]] constexpr bool is_bound() const noexcept(utils::ndebug_defined());
   constexpr void bind_at_pos(usize current_epoch, bp_t pos) noexcept(utils::ndebug_defined());
   constexpr void release() noexcept(utils::ndebug_defined());

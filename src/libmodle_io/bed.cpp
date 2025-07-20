@@ -465,7 +465,7 @@ std::vector<BED> Parser::parse_n(usize num_records) {
     usize line_num;
   };
 
-  absl::btree_map<BED, RecordMetadata> records;
+  phmap::btree_map<BED, RecordMetadata> records;
   for (auto record = this->parse_next(); !record.empty() && this->_num_records_parsed < num_records;
        record = this->parse_next()) {
     if (this->_dialect != BED::none && record.num_fields() < this->_dialect) {
@@ -504,7 +504,7 @@ BED_tree<> Parser::parse_n_in_interval_tree(usize num_records) {
   assert(this->_reader.is_open());
 
   using line_num_t = usize;
-  absl::btree_map<BED, line_num_t> records;
+  phmap::btree_map<BED, line_num_t> records;
   BED_tree<> intervals;
 
   for (auto record = this->parse_next(); !record.empty() && this->_num_records_parsed < num_records;

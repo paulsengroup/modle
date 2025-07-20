@@ -7,6 +7,7 @@
 #include <absl/types/span.h>  // for Span, MakeConstSpan
 #include <fmt/format.h>       // for format_parse_context, FMT_STRING, join, format_error
 
+#include <fmt/ranges.h>
 #include <algorithm>    // for min
 #include <array>        // for array
 #include <cassert>      // for assert

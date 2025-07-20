@@ -6,7 +6,7 @@
 
 #include <absl/types/span.h>  // for Span
 
-#include <BS_thread_pool.hpp>                       // for BS::thread_pool
+#include <BS_thread_pool.hpp>                       // for BS::light_thread_pool
 #include <atomic>                                   // for atomic
 #include <boost/dynamic_bitset/dynamic_bitset.hpp>  // for dynamic_bitset
 #include <filesystem>                               // for path
@@ -25,9 +25,6 @@ namespace modle {
 template <class N, class T>
 class IITree;
 
-template <class N>
-class ContactMatrixSerde;
-
 template <class N = contacts_t>
 class ContactMatrixDense {
   static_assert(std::is_arithmetic_v<N>,
@@ -41,8 +38,6 @@ class ContactMatrixDense {
   // class ContactMatrixDense<double>
   template <class M>
   friend class ContactMatrixDense;
-
-  friend class ContactMatrixSerde<N>;
 
  private:
   using mutex_t = std::mutex;
@@ -130,7 +125,6 @@ class ContactMatrixDense {
 
   // Misc
   inline void clear_missed_updates_counter();
-  inline void reset();
   inline void unsafe_reset();
   // Note: upon resizing the content of a ContactMatrixDense is invalidated
   inline void unsafe_resize(usize nrows, usize ncols);
@@ -141,12 +135,12 @@ class ContactMatrixDense {
   [[nodiscard]] inline absl::Span<N> get_raw_count_vector();
 
   [[nodiscard]] inline ContactMatrixDense<double> blur(double sigma, double truncate = 3.5,
-                                                       BS::thread_pool* tpool = nullptr) const;
+                                                       BS::light_thread_pool* tpool = nullptr) const;
   [[nodiscard]] inline ContactMatrixDense<double> diff_of_gaussians(
       const double sigma1, const double sigma2, const double truncate = 3.5,
       const double min_value = std::numeric_limits<double>::lowest(),
       const double max_value = (std::numeric_limits<double>::max)(),
-      BS::thread_pool* tpool = nullptr) const;
+      BS::light_thread_pool* tpool = nullptr) const;
 
   template <class FP = double, class = std::enable_if_t<std::is_floating_point_v<FP>>>
   [[nodiscard]] inline ContactMatrixDense<FP> unsafe_normalize(double lb = 0.0,
@@ -182,8 +176,6 @@ class ContactMatrixDense {
   [[nodiscard]] inline const N& unsafe_at(usize i, usize j) const;
 
   inline void bound_check_coords(usize row, usize col) const;
-  inline void check_for_overflow_on_add(usize row, usize col, N n) const;
-  inline void check_for_overflow_on_subtract(usize row, usize col, N n) const;
 
   [[nodiscard]] inline utils::LockRangeExclusive<mutex_t> lock() const;
   [[nodiscard]] inline std::unique_lock<mutex_t> lock_pixel(usize row, usize col) const;
