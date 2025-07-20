@@ -187,7 +187,7 @@ jobs:
       - name: Extract binaries and test dataset
         run: |
           tar -xf modle.tar.gz
-          tar -xf modle_test_data.tar.xz
+          tar -xf modle_test_data.tar.zst
 
       - name: Run unit tests
         run: modle/bin/test_main --durations=yes
@@ -218,7 +218,7 @@ jobs:
       - name: Extract binaries and test dataset
         run: |
           tar -xf modle.tar.gz
-          tar -xf modle_test_data.tar.xz
+          tar -xf modle_test_data.tar.zst
 
       - name: Run modle integration test(s)
         run: test/scripts/modle_integration_test.sh modle/bin/modle
@@ -249,7 +249,7 @@ jobs:
       - name: Extract binaries and test dataset
         run: |
           tar -xf modle.tar.gz
-          tar -xf modle_test_data.tar.xz
+          tar -xf modle_test_data.tar.zst
 
       - name: Run modle_tools transform integration test(s)
         run: test/scripts/modle_tools_transform_integration_test.sh modle/bin/modle_tools | head -n 1000

@@ -248,7 +248,7 @@ jobs:
       - name: Extract binaries and test dataset
         run: |
           zstd -dcf unit-tests.tar.zst | gtar -xf -
-          gtar -xf modle_test_data.tar.xz
+          gtar -xf modle_test_data.tar.zst
 
       - name: Generate requirements.txt for pip
         run: echo 'cmake==${{ matrix.cmake }}' > requirements.txt
@@ -300,7 +300,7 @@ jobs:
       - name: Extract binaries and test dataset
         run: |
           zstd -dcf binaries.tar.zst | gtar -xf -
-          gtar -xf modle_test_data.tar.xz
+          gtar -xf modle_test_data.tar.zst
 
       - name: Generate requirements.txt for pip
         run: |
@@ -348,7 +348,7 @@ jobs:
       - name: Extract binaries and test dataset
         run: |
           zstd -dcf binaries.tar.zst | gtar -xf -
-          gtar -xf modle_test_data.tar.xz
+          gtar -xf modle_test_data.tar.zst
 
       - name: Generate requirements.txt for pip
         run: |

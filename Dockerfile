@@ -103,9 +103,9 @@ FROM "$TEST_BASE_IMAGE" AS unit-testing
 ARG src_dir="/root/modle"
 
 COPY --from=builder "$src_dir" "$src_dir"
-COPY test/data/modle_test_data.tar.xz "$src_dir/test/data/"
+COPY test/data/modle_test_data.tar.zst "$src_dir/test/data/"
 
-RUN tar -xf "$src_dir/test/data/modle_test_data.tar.xz" -C "$src_dir/"
+RUN tar -xf "$src_dir/test/data/modle_test_data.tar.zst" -C "$src_dir/"
 
 RUN ctest -j "$(nproc)"               \
           --test-dir "$src_dir/build" \
@@ -135,11 +135,11 @@ RUN pip3 install pip setuptools wheel --upgrade \
 && pip3 install 'cooler>=0.9.1' 'pyBigWig>=0.3.22'
 
 COPY --from=unit-testing "$staging_dir" "$staging_dir"
-COPY test/data/modle_test_data.tar.xz "$src_dir/test/data/"
+COPY test/data/modle_test_data.tar.zst "$src_dir/test/data/"
 COPY test/scripts/modle*integration_test.sh "$src_dir/test/scripts/"
 COPY test/scripts/compare_bwigs.py "$src_dir/test/scripts/"
 
-RUN tar -xf "$src_dir/test/data/modle_test_data.tar.xz" -C "$src_dir/"
+RUN tar -xf "$src_dir/test/data/modle_test_data.tar.zst" -C "$src_dir/"
 
 RUN "$src_dir/test/scripts/modle_integration_test.sh" "$staging_dir/bin/modle"
 RUN "$src_dir/test/scripts/modle_tools_transform_integration_test.sh" "$staging_dir/bin/modle_tools"
