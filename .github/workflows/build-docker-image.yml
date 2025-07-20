@@ -71,12 +71,11 @@ jobs:
           set -o pipefail
 
           OS_NAME='ubuntu'
-          OS_VERSION='22.04'
-          C_COMPILER='clang-15'
-          CXX_COMPILER='clang++-15'
+          OS_VERSION='24.04'
+          C_COMPILER='clang-20'
+          CXX_COMPILER='clang++-20'
 
           BUILD_BASE_IMAGE="ghcr.io/${{ github.repository_owner }}/ci-docker-images/$OS_NAME-$OS_VERSION-cxx-$C_COMPILER:latest"
-          TEST_BASE_IMAGE="ghcr.io/${{ github.repository_owner }}/ci-docker-images/modle/$OS_NAME-$OS_VERSION-cxx-$C_COMPILER:latest"
 
           FINAL_BASE_IMAGE="docker.io/library/$OS_NAME"
           FINAL_BASE_IMAGE_TAG="$OS_VERSION"
@@ -106,7 +105,6 @@ jobs:
           echo "FINAL_BASE_IMAGE=$FINAL_BASE_IMAGE" >> $GITHUB_OUTPUT
           echo "FINAL_BASE_IMAGE_TAG=$FINAL_BASE_IMAGE_TAG" >> $GITHUB_OUTPUT
           echo "BUILD_BASE_IMAGE=$BUILD_BASE_IMAGE" >> $GITHUB_OUTPUT
-          echo "TEST_BASE_IMAGE=$TEST_BASE_IMAGE" >> $GITHUB_OUTPUT
           echo "FINAL_BASE_IMAGE_DIGEST=$FINAL_BASE_IMAGE_DIGEST" >> $GITHUB_OUTPUT
           echo "GIT_HASH=$GIT_HASH" >> $GITHUB_OUTPUT
           echo "GIT_SHORT_HASH=$GIT_SHORT_HASH" >> $GITHUB_OUTPUT
@@ -166,7 +164,6 @@ jobs:
             C_COMPILER=${{ steps.build-args.outputs.C_COMPILER }}
             CXX_COMPILER=${{ steps.build-args.outputs.CXX_COMPILER }}
             BUILD_BASE_IMAGE=${{ steps.build-args.outputs.BUILD_BASE_IMAGE }}
-            TEST_BASE_IMAGE=${{ steps.build-args.outputs.TEST_BASE_IMAGE }}
             FINAL_BASE_IMAGE=${{ steps.build-args.outputs.FINAL_BASE_IMAGE }}
             FINAL_BASE_IMAGE_TAG=${{ steps.build-args.outputs.FINAL_BASE_IMAGE_TAG }}
             FINAL_BASE_IMAGE_DIGEST=${{ steps.build-args.outputs.FINAL_BASE_IMAGE_DIGEST }}

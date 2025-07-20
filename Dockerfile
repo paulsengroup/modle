@@ -8,7 +8,6 @@
 #####################
 
 ARG BUILD_BASE_IMAGE
-ARG TEST_BASE_IMAGE
 ARG FINAL_BASE_IMAGE
 ARG FINAL_BASE_IMAGE_DIGEST
 
@@ -30,25 +29,23 @@ RUN if [ -z "$C_COMPILER" ]; then echo "Missing C_COMPILER --build-arg" && exit 
 
 ENV CC="$C_COMPILER"
 ENV CXX="$CXX_COMPILER"
+ENV CMAKE_POLICY_VERSION_MINIMUM=3.5
+
+# Install b2 using Conan
+RUN printf '[requires]\nb2/5.3.3\n[options]\nb2*:toolset=%s' \
+           "$(basename "$(which "$CC")" | cut -f 1 -d -)" > /tmp/conanfile.txt
+
+RUN conan install /tmp/conanfile.txt                 \
+                 --build='*'                         \
+                 -pr:b="$CONAN_DEFAULT_PROFILE_PATH" \
+                 -pr:h="$CONAN_DEFAULT_PROFILE_PATH"
 
 # Build MoDLE's deps using Conan
 RUN mkdir -p "$src_dir" "$build_dir"
 
-# On linux/arm64 Conan needs a bit of help to successfully build b2
-RUN if [ $(uname -m) != x86_64 ]; then \
-   printf '[requires]\nb2/4.9.6\n[options]\n' > /tmp/conanfile.txt \
-&& printf '[options]\nb2*:toolset=%s\n' \
-   "$(echo "$C_COMPILER" | grep  -oE '(gcc|clang)')" >> /tmp/conanfile.txt \
-&& cd /tmp \
-&& conan install . \
-    --build='*' \
-    -pr:b="$CONAN_DEFAULT_PROFILE_PATH" \
-    -pr:h="$CONAN_DEFAULT_PROFILE_PATH"; \
-fi
+COPY conanfile.py "$src_dir/conanfile.py"
 
-COPY conanfile.txt "$src_dir"
-RUN cd "$build_dir"                                  \
-&& conan install "$src_dir/conanfile.txt"            \
+RUN conan install "$src_dir/conanfile.py"            \
                  --build=missing                     \
                  -pr:b="$CONAN_DEFAULT_PROFILE_PATH" \
                  -pr:h="$CONAN_DEFAULT_PROFILE_PATH" \
@@ -97,8 +94,8 @@ RUN cmake -DCMAKE_BUILD_TYPE=Release            \
 RUN cmake --build "$build_dir" -j "$(nproc)"  \
 && cmake --install "$build_dir"
 
-ARG TEST_BASE_IMAGE
-FROM "$TEST_BASE_IMAGE" AS unit-testing
+ARG BUILD_BASE_IMAGE
+FROM "$BUILD_BASE_IMAGE" AS unit-testing
 
 ARG src_dir="/root/modle"
 
@@ -129,10 +126,12 @@ RUN apt-get update \
                    libdigest-sha-perl            \
                    python3-dev                   \
                    python3-pip                   \
-                   xz-utils
+                   python3-venv                  \
+                   xz-utils                      \
+                   zstd
 
-RUN pip3 install pip setuptools wheel --upgrade \
-&& pip3 install 'cooler>=0.9.1' 'pyBigWig>=0.3.22'
+RUN python3 -m venv /tmp/venv --upgrade \
+&& /tmp/venv/bin/pip install 'cooler>=0.10.3' 'pyBigWig>=0.3.24'
 
 COPY --from=unit-testing "$staging_dir" "$staging_dir"
 COPY test/data/modle_test_data.tar.zst "$src_dir/test/data/"
@@ -140,6 +139,8 @@ COPY test/scripts/modle*integration_test.sh "$src_dir/test/scripts/"
 COPY test/scripts/compare_bwigs.py "$src_dir/test/scripts/"
 
 RUN tar -xf "$src_dir/test/data/modle_test_data.tar.zst" -C "$src_dir/"
+
+ARG PATH="/tmp/venv/bin:$PATH"
 
 RUN "$src_dir/test/scripts/modle_integration_test.sh" "$staging_dir/bin/modle"
 RUN "$src_dir/test/scripts/modle_tools_transform_integration_test.sh" "$staging_dir/bin/modle_tools"
