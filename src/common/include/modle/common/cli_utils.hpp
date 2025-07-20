@@ -77,8 +77,8 @@ class CliEnumMappings {
   [[nodiscard]] inline const StringT& at(EnumT key) const;
   [[nodiscard]] inline EnumT at(const StringT& key) const;
 
-  [[nodiscard]] inline auto keys_view() const -> decltype(std::ranges::views::keys(this->_mappings));
-  [[nodiscard]] inline auto values_view() const -> decltype(std::ranges::views::values(this->_mappings));
+  [[nodiscard]] inline std::vector<std::string> keys() const;
+  [[nodiscard]] inline std::vector<std::string> values() const;
 };
 
 namespace cli {

@@ -340,7 +340,7 @@ static std::vector<CLI::App*> add_common_options(CLI::App& subcommand, modle::Co
                              "Offsets are drawn from a genextreme distrubution.\n"
                              "The distribution parameters can be controlled through the options --mu, --sigma\n"
                              "and --xi."),
-                  fmt::join(Cli::contact_sampling_strategy_map.keys_view(), "\n - ")))
+                  fmt::join(Cli::contact_sampling_strategy_map.keys(), "\n - ")))
       ->transform(CLI::CheckedTransformer(Cli::contact_sampling_strategy_map))
       ->capture_default_str();
 
@@ -421,7 +421,7 @@ static std::vector<CLI::App*> add_common_options(CLI::App& subcommand, modle::Co
       "-s,--stopping-criterion",
       c.stopping_criterion,
       fmt::format(FMT_STRING("Simulation stopping criterion. Should be one of {}."),
-                  utils::format_collection_to_english_list(Cli::stopping_criterion_map.keys_view(), ", ", " or ")))
+                  utils::format_collection_to_english_list(Cli::stopping_criterion_map.keys(), ", ", " or ")))
       ->transform(CLI::CheckedTransformer(Cli::stopping_criterion_map))
       ->capture_default_str();
 

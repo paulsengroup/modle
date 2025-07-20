@@ -197,16 +197,17 @@ EnumT CliEnumMappings<EnumT, StringT>::at(const StringT &key) const {
 }
 
 template <class EnumT, class StringT>
-auto CliEnumMappings<EnumT, StringT>::keys_view() const
-    -> decltype(std::ranges::views::keys(this->_mappings)) {
-  return this->_mappings | std::ranges::views::keys;
+std::vector<std::string> CliEnumMappings<EnumT, StringT>::keys() const {
+  std::vector<std::string> buff{_mappings.size()};
+  std::ranges::transform(_mappings, buff.begin(), [](const auto& kv){return std::string{kv.first};});
+  return buff;
 }
 
 template <class EnumT, class StringT>
-auto CliEnumMappings<EnumT, StringT>::values_view() const
-    -> decltype(std::ranges::views::values(this->_mappings)) {
-  auto foo = this->_mappings | std::ranges::views::values;
-  return this->_mappings | std::ranges::views::values;
+std::vector<std::string> CliEnumMappings<EnumT, StringT>::values() const {
+  std::vector<std::string> buff{_mappings.size()};
+  std::ranges::transform(_mappings, buff.begin(), [](const auto& kv){return std::string{kv.second};});
+  return buff;
 }
 
 namespace cli {

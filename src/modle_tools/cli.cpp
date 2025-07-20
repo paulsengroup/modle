@@ -255,7 +255,7 @@ void Cli::make_eval_subcommand() {
       fmt::format(FMT_STRING("Comparison metric.\n"
                              "Supported metrics:\n"
                              " - {}"),
-                  fmt::join(eval_config::metric_map.keys_view(), "\n - ")))
+                  fmt::join(eval_config::metric_map.keys(), "\n - ")))
       ->transform(CLI::CheckedTransformer(eval_config::metric_map, CLI::ignore_case))
       ->capture_default_str();
 
@@ -338,7 +338,7 @@ void Cli::make_transform_subcommand() {
       fmt::format(FMT_STRING("Transformation method to apply to the input contact matrix.\n"
                              "Supported methods:\n"
                              " - {}"),
-      fmt::join(transform_config::transformation_map.keys_view(), "\n - ")))
+      fmt::join(transform_config::transformation_map.keys(), "\n - ")))
       ->transform(CLI::CheckedTransformer(transform_config::transformation_map, CLI::ignore_case))
       ->required();
 
