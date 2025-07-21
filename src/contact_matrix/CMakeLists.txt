@@ -25,8 +25,8 @@ target_include_directories(cmatrix INTERFACE include/)
 
 target_link_libraries(
   cmatrix
-  INTERFACE project_warnings
-            project_options
+  INTERFACE modle_project_warnings
+            modle_project_options
             Modle::common
             Modle::io_compressed
             Modle::stats

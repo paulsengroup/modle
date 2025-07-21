@@ -26,8 +26,8 @@ target_sources(
 
 target_link_libraries(
   modle_tools
-  PRIVATE project_warnings
-          project_options
+  PRIVATE modle_project_warnings
+          modle_project_options
           fmt::fmt-header-only
           Modle::cmatrix
           Modle::common

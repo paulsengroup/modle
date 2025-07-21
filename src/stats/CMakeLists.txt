@@ -13,7 +13,7 @@ target_sources(
                         ${CMAKE_CURRENT_SOURCE_DIR}/descriptive_impl.hpp ${CMAKE_CURRENT_SOURCE_DIR}/misc_impl.hpp)
 
 target_include_directories(modle_stats INTERFACE include/)
-target_link_libraries(modle_stats INTERFACE project_warnings project_options)
+target_link_libraries(modle_stats INTERFACE modle_project_warnings modle_project_options)
 
 target_link_system_libraries(
   modle_stats

@@ -23,7 +23,7 @@ target_sources(
 
 target_link_libraries(
   libmodle_internal
-  PRIVATE project_options project_warnings Modle::io_chrom_sizes
+  PRIVATE modle_project_options modle_project_warnings Modle::io_chrom_sizes
   PUBLIC Modle::cmatrix
          Modle::common
          Modle::io_bed

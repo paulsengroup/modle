@@ -74,20 +74,20 @@ RUN if [ -z "$GIT_HASH" ]; then echo "Missing GIT_HASH --build-arg" && exit 1; f
 &&  if [ -z "$GIT_TAG" ]; then echo "Missing GIT_TAG --build-arg" && exit 1; fi
 
 # Configure project
-RUN cmake -DCMAKE_BUILD_TYPE=Release            \
-          -DCMAKE_PREFIX_PATH="$build_dir"      \
-          -DWARNINGS_AS_ERRORS=ON               \
-          -DENABLE_DEVELOPER_MODE=OFF           \
-          -DMODLE_ENABLE_TESTING=ON             \
-          -DMODLE_DOWNLOAD_TEST_DATASET=OFF     \
-          -DGIT_RETRIEVED_STATE=true            \
-          -DGIT_TAG="$GIT_TAG"                  \
-          -DGIT_IS_DIRTY="$GIT_IS_DIRTY"        \
-          -DGIT_HEAD_SHA1="$GIT_HASH"           \
-          -DGIT_DESCRIBE="$GIT_SHORT_HASH"      \
-          -DCMAKE_INSTALL_PREFIX="$staging_dir" \
-          -G Ninja                              \
-          -S "$src_dir"                         \
+RUN cmake -DCMAKE_BUILD_TYPE=Release             \
+          -DCMAKE_PREFIX_PATH="$build_dir"       \
+          -DWARNINGS_AS_ERRORS=ON                \
+          -DENABLE_DEVELOPER_MODE=OFF            \
+          -DMODLE_ENABLE_TESTING=ON              \
+          -DMODLE_DOWNLOAD_TEST_DATASET=OFF      \
+          -DMODLE_GIT_RETRIEVED_STATE=true       \
+          -DMODLE_GIT_TAG="$GIT_TAG"             \
+          -DMODLE_GIT_IS_DIRTY="$GIT_IS_DIRTY"   \
+          -DMODLE_GIT_HEAD_SHA1="$GIT_HASH"      \
+          -DMODLE_GIT_DESCRIBE="$GIT_SHORT_HASH" \
+          -DCMAKE_INSTALL_PREFIX="$staging_dir"  \
+          -G Ninja                               \
+          -S "$src_dir"                          \
           -B "$build_dir"
 
 # Build and install project

@@ -17,8 +17,8 @@ target_sources(modle PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/cli.cpp ${CMAKE_CURRENT
 
 target_link_libraries(
   modle
-  PRIVATE project_warnings
-          project_options
+  PRIVATE modle_project_warnings
+          modle_project_options
           Modle::common
           Modle::config
           Modle::libmodle)

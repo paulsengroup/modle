@@ -31,8 +31,8 @@ target_include_directories(libmodle_cpu PUBLIC include/)
 
 target_link_libraries(
   libmodle_cpu
-  PRIVATE project_warnings
-          project_options
+  PRIVATE modle_project_warnings
+          modle_project_options
           Modle::interval_tree
           Modle::io_compressed
           Modle::stats

@@ -34,7 +34,7 @@ target_sources(
             ${CMAKE_CURRENT_SOURCE_DIR}/numeric_utils_impl.hpp
             ${CMAKE_CURRENT_SOURCE_DIR}/utils_impl.hpp)
 
-target_link_libraries(modle_common INTERFACE project_options project_warnings fmt::fmt-header-only)
+target_link_libraries(modle_common INTERFACE modle_project_options modle_project_warnings fmt::fmt-header-only)
 
 target_link_system_libraries(
   modle_common

@@ -2,6 +2,10 @@
 #
 # SPDX-License-Identifier: MIT
 
+if(MODLE_DOWNLOAD_TEST_DATASET)
+  include("${PROJECT_SOURCE_DIR}/cmake/FetchTestDataset.cmake")
+endif()
+
 find_package(absl CONFIG REQUIRED)
 find_package(Boost CONFIG REQUIRED)
 find_package(bshoshany-thread-pool CONFIG REQUIRED)
@@ -43,8 +47,8 @@ target_include_directories(test_main PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/units/i
 
 target_link_libraries(
   test_main
-  PRIVATE project_warnings
-          project_options
+  PRIVATE modle_project_warnings
+          modle_project_options
           fmt::fmt-header-only
           Modle::cmatrix
           Modle::common
