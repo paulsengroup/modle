@@ -176,7 +176,7 @@ inline void ContextManager<Task>::rethrow_exceptions() const {
 template <typename Task>
 inline void ContextManager<Task>::check_exceptions() {
   if (MODLE_UNLIKELY(this->_exception_thrown.load())) {
-    spdlog::error("MoDLE encountered an exception. Shutting down worker threads...");
+    SPDLOG_ERROR("MoDLE encountered an exception. Shutting down worker threads...");
     this->shutdown();
   }
 }
@@ -211,12 +211,12 @@ inline void ContextManager<Task>::shutdown() {
   this->_shutdown_requested = true;
   this->close_queue();
 
-  spdlog::debug("waiting for worker threads to return...");
+  SPDLOG_DEBUG("waiting for worker threads to return...");
   this->_worker_tpool.wait();
-  spdlog::debug("waiting for io threads to return...");
+  SPDLOG_DEBUG("waiting for io threads to return...");
   this->_io_tpool.wait();
 
-  spdlog::debug("all background threads returned! Checking if any exception have been raised...");
+  SPDLOG_DEBUG("all background threads returned! Checking if any exception have been raised...");
   if (this->_exception_thrown) {
     this->rethrow_exceptions();
   } else {
@@ -235,7 +235,7 @@ inline void ContextManager<Task>::shutdown() {
                                "Please file an issue on GitHub."),
                     num_submitted, num_completed));
   }
-  spdlog::debug("context manager shutdown was successful.");
+  SPDLOG_DEBUG("context manager shutdown was successful.");
 }
 
 template <typename Task>
@@ -243,7 +243,7 @@ inline void ContextManager<Task>::init_model_state_logger(std::filesystem::path 
                                                           std::string_view header) {
   assert(!this->_state_logger_ptr);
   assert(!std::filesystem::exists(path));
-  spdlog::debug(FMT_STRING("[io] initializing model state logger at {}..."), path);
+  SPDLOG_DEBUG(FMT_STRING("[io] initializing model state logger at {}..."), path);
   compressed_io::Writer(path).write(header);
   this->_state_logger_ptr = std::make_unique<StateLoggerAggregator>(std::move(path));
 }
@@ -252,8 +252,8 @@ template <typename Task>
 inline void ContextManager<Task>::append_to_model_state_log(const std::filesystem::path& path,
                                                             bool remove_file_after_append) {
   assert(!!this->_state_logger_ptr);
-  spdlog::debug(FMT_STRING("[io] appending {} to log file at {}..."), path,
-                this->_state_logger_ptr->path());
+  SPDLOG_DEBUG(FMT_STRING("[io] appending {} to log file at {}..."), path,
+               this->_state_logger_ptr->path());
   this->_state_logger_ptr->append(path, remove_file_after_append);
 }
 

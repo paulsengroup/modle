@@ -75,7 +75,7 @@ ContactMatrixLazy& ContactMatrixLazy::operator=(ContactMatrixLazy&& other) noexc
 
 auto ContactMatrixLazy::operator()() noexcept -> ContactMatrix& {
   std::call_once(this->_alloc_flag, [this]() {
-    spdlog::debug(FMT_STRING("allocating a {}x{} contact matrix..."), this->_nrows, this->_ncols);
+    SPDLOG_DEBUG(FMT_STRING("allocating a {}x{} contact matrix..."), this->_nrows, this->_ncols);
     this->_matrix = std::make_optional<ContactMatrix>(this->_nrows, this->_ncols);
   });
   assert(this->_matrix.has_value());
@@ -84,7 +84,7 @@ auto ContactMatrixLazy::operator()() noexcept -> ContactMatrix& {
 
 auto ContactMatrixLazy::operator()() const noexcept -> const ContactMatrix& {
   std::call_once(this->_alloc_flag, [this]() {
-    spdlog::debug(FMT_STRING("allocating a {}x{} contact matrix..."), this->_nrows, this->_ncols);
+    SPDLOG_DEBUG(FMT_STRING("allocating a {}x{} contact matrix..."), this->_nrows, this->_ncols);
     this->_matrix = std::make_optional<ContactMatrix>(this->_nrows, this->_ncols);
   });
   assert(this->_matrix.has_value());
@@ -93,7 +93,7 @@ auto ContactMatrixLazy::operator()() const noexcept -> const ContactMatrix& {
 
 void ContactMatrixLazy::deallocate() noexcept {
   std::call_once(this->_dealloc_flag, [this]() {
-    spdlog::debug(FMT_STRING("deallocating a {}x{} contact matrix..."), this->_nrows, this->_ncols);
+    SPDLOG_DEBUG(FMT_STRING("deallocating a {}x{} contact matrix..."), this->_nrows, this->_ncols);
     this->_matrix.reset();
   });
 }
@@ -134,7 +134,7 @@ Occupancy1DLazy& Occupancy1DLazy::operator=(Occupancy1DLazy&& other) noexcept {
 
 auto Occupancy1DLazy::operator()() const noexcept -> const BufferT& {
   std::call_once(this->_alloc_flag, [this]() {
-    spdlog::debug(FMT_STRING("allocating a vector of size {}..."), this->_size);
+    SPDLOG_DEBUG(FMT_STRING("allocating a vector of size {}..."), this->_size);
     this->_buff = std::make_optional<BufferT>(_size);
     std::fill(this->_buff->begin(), this->_buff->end(), 0);
   });
@@ -144,7 +144,7 @@ auto Occupancy1DLazy::operator()() const noexcept -> const BufferT& {
 
 auto Occupancy1DLazy::operator()() noexcept -> BufferT& {
   std::call_once(this->_alloc_flag, [this]() {
-    spdlog::debug(FMT_STRING("allocating a vector of size {}..."), this->_size);
+    SPDLOG_DEBUG(FMT_STRING("allocating a vector of size {}..."), this->_size);
     this->_buff = std::make_optional<BufferT>(_size);
     std::fill(this->_buff->begin(), this->_buff->end(), 0);
   });
@@ -154,7 +154,7 @@ auto Occupancy1DLazy::operator()() noexcept -> BufferT& {
 
 void Occupancy1DLazy::deallocate() noexcept {
   std::call_once(this->_dealloc_flag, [this]() {
-    spdlog::debug(FMT_STRING("deallocating a vector of size {}..."), this->_size);
+    SPDLOG_DEBUG(FMT_STRING("deallocating a vector of size {}..."), this->_size);
     this->_buff.reset();
   });
 }
@@ -317,18 +317,18 @@ Genome::Genome(const std::filesystem::path& path_to_chrom_sizes,
           [&](auto accumulator, const GenomicInterval& gi) { return accumulator + gi.size(); })) {
   assert(!path_to_extr_barriers.empty());
   const auto t0 = absl::Now();
-  spdlog::info(FMT_STRING("importing extrusion barriers from {}..."), path_to_extr_barriers);
+  SPDLOG_INFO(FMT_STRING("importing extrusion barriers from {}..."), path_to_extr_barriers);
   // Parse all the records from the BED file. The parser will throw in case of duplicates.
   const auto barriers_gw =
       bed::Parser(path_to_extr_barriers, bed::BED::BED6).parse_all_in_interval_tree();
   _num_barriers = map_barriers_to_intervals(_intervals, barriers_gw, default_barrier_pbb,
                                             default_barrier_puu, interpret_name_field_as_puu);
   if (_num_barriers == 0) {
-    spdlog::warn(FMT_STRING("imported 0 barriers from {}. Is this intended?"),
-                 path_to_extr_barriers);
+    SPDLOG_WARN(FMT_STRING("imported 0 barriers from {}. Is this intended?"),
+                path_to_extr_barriers);
   } else {
-    spdlog::info(FMT_STRING("imported {} barriers from {} in {}."), _num_barriers,
-                 path_to_extr_barriers, absl::FormatDuration(absl::Now() - t0));
+    SPDLOG_INFO(FMT_STRING("imported {} barriers from {} in {}."), _num_barriers,
+                path_to_extr_barriers, absl::FormatDuration(absl::Now() - t0));
   }
 }
 
@@ -337,7 +337,7 @@ std::vector<std::shared_ptr<const Chromosome>> Genome::import_chromosomes(
   assert(!path_to_chrom_sizes.empty());
 
   const auto t0 = absl::Now();
-  spdlog::info(FMT_STRING("importing chromosomes from {}..."), path_to_chrom_sizes);
+  SPDLOG_INFO(FMT_STRING("importing chromosomes from {}..."), path_to_chrom_sizes);
 
   phmap::btree_map<std::string, usize> chrom_names;
 
@@ -361,8 +361,8 @@ std::vector<std::shared_ptr<const Chromosome>> Genome::import_chromosomes(
         fmt::format(FMT_STRING("Unable to import any chromosome from {}!"), path_to_chrom_sizes));
   }
 
-  spdlog::info(FMT_STRING("imported {} chromosomes in {}."), buffer.size(),
-               absl::FormatDuration(absl::Now() - t0));
+  SPDLOG_INFO(FMT_STRING("imported {} chromosomes in {}."), buffer.size(),
+              absl::FormatDuration(absl::Now() - t0));
   return buffer;
 }
 
@@ -373,7 +373,7 @@ phmap::btree_set<GenomicInterval> Genome::import_genomic_intervals(
   assert(!chromosomes.empty());
   phmap::btree_set<GenomicInterval> buffer{};
   if (path_to_bed.empty()) {
-    spdlog::debug(
+    SPDLOG_DEBUG(
         "path to genomic regions to simulate is empty. Assuming whole chromosomes are "
         "to be simulated!");
     std::transform(chromosomes.begin(), chromosomes.end(), std::inserter(buffer, buffer.begin()),
@@ -385,7 +385,7 @@ phmap::btree_set<GenomicInterval> Genome::import_genomic_intervals(
   }
 
   const auto t0 = absl::Now();
-  spdlog::info(FMT_STRING("importing genomic intervals from {}..."), path_to_bed);
+  SPDLOG_INFO(FMT_STRING("importing genomic intervals from {}..."), path_to_bed);
 
   phmap::btree_map<std::string_view, std::shared_ptr<const Chromosome>> chrom_names;
   std::transform(
@@ -400,7 +400,7 @@ phmap::btree_set<GenomicInterval> Genome::import_genomic_intervals(
     auto overlaps = intervals.find_overlaps(std::string{chrom->name()}, u64(0),
                                             utils::conditional_static_cast<u64>(chrom->size()));
     if (overlaps.empty()) {
-      spdlog::warn(FMT_STRING("found no intervals overlapping chromosome {}!"), chrom->name());
+      SPDLOG_WARN(FMT_STRING("found no intervals overlapping chromosome {}!"), chrom->name());
     }
     std::transform(overlaps.begin(), overlaps.end(), std::inserter(buffer, buffer.end()),
                    [&](const auto& interval) {
@@ -418,8 +418,8 @@ phmap::btree_set<GenomicInterval> Genome::import_genomic_intervals(
         fmt::format(FMT_STRING("unable to import any interval from {}!"), path_to_bed));
   }
 
-  spdlog::info(FMT_STRING("imported {} intervals in {}."), buffer.size(),
-               absl::FormatDuration(absl::Now() - t0));
+  SPDLOG_INFO(FMT_STRING("imported {} intervals in {}."), buffer.size(),
+              absl::FormatDuration(absl::Now() - t0));
 
   return buffer;
 }

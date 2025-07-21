@@ -37,7 +37,7 @@ int main(int argc, char** argv) {
   options.writerfn = [](const char* buff) {
     if (buff) {
       const std::string_view buff_{buff, strlen(buff)};
-      spdlog::error(FMT_STRING("{}"), absl::StripSuffix(buff_, "\n"));
+      SPDLOG_ERROR(FMT_STRING("{}"), absl::StripSuffix(buff_, "\n"));
     } else {
       spdlog::shutdown();
     }
@@ -84,7 +84,7 @@ int main(int argc, char** argv) {
     assert(cli);
     return cli->exit(e);  //  This takes care of formatting and printing error messages (if any)
   } catch (const std::bad_alloc& err) {
-    spdlog::error(FMT_STRING("FAILURE! Unable to allocate enough memory: {}"), err.what());
+    SPDLOG_ERROR(FMT_STRING("FAILURE! Unable to allocate enough memory: {}"), err.what());
     return 1;
   } catch (const spdlog::spdlog_ex& e) {
     fmt::print(
@@ -95,14 +95,14 @@ int main(int argc, char** argv) {
     return 1;
   } catch (const std::exception& e) {
     assert(cli);
-    spdlog::error(FMT_STRING("FAILURE! modle_tools {} encountered the following error: {}."),
-                  cli->get_printable_subcommand(), e.what());
+    SPDLOG_ERROR(FMT_STRING("FAILURE! modle_tools {} encountered the following error: {}."),
+                 cli->get_printable_subcommand(), e.what());
     return 1;
   } catch (...) {
-    spdlog::error(FMT_STRING("FAILURE! modle_tools {} encountered the following error: Caught an "
-                             "unhandled exception! "
-                             "If you see this message, please file an issue on GitHub."),
-                  cli->get_printable_subcommand());
+    SPDLOG_ERROR(FMT_STRING("FAILURE! modle_tools {} encountered the following error: Caught an "
+                            "unhandled exception! "
+                            "If you see this message, please file an issue on GitHub."),
+                 cli->get_printable_subcommand());
     throw;
     return 1;
   }

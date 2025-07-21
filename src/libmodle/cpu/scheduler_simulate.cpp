@@ -111,7 +111,7 @@ void Simulation::run_simulate() {
 
       // Don't bother simulating intervals without barriers
       if (!c().simulate_chromosomes_wo_barriers && interval.num_barriers() == 0) {
-        spdlog::info(FMT_STRING("{} has 0 barriers... SKIPPING!"), interval);
+        SPDLOG_INFO(FMT_STRING("{} has 0 barriers... SKIPPING!"), interval);
         Task t{};
         t.interval = &interval;
         for (usize cellid = 0; cellid < c().num_cells; ++cellid) {
@@ -150,8 +150,8 @@ void Simulation::run_simulate() {
                nlefs,
                rand_eng,
                Task::Status::PENDING};
-        spdlog::debug(FMT_STRING("[main]: submitting task #{} ({} cell #{})..."), t.id, *t.interval,
-                      t.cell_id);
+        SPDLOG_DEBUG(FMT_STRING("[main]: submitting task #{} ({} cell #{})..."), t.id, *t.interval,
+                     t.cell_id);
 
         while (!this->_ctx.try_enqueue_task<Task::Status::PENDING>(t, ptok_pending)) {
           this->_ctx.check_exceptions();
@@ -192,7 +192,7 @@ static std::string format_rand_eng(const random::PRNG_t& rand_eng) {
 }
 
 void Simulation::simulate_worker(const u64 tid, const usize task_batch_size) {
-  spdlog::info(FMT_STRING("spawning worker thread W{}..."), tid);
+  SPDLOG_INFO(FMT_STRING("spawning worker thread W{}..."), tid);
   // This state object owns all the buffers and PRNG + seed required in order to simulate loop
   // extrusion for a single cell. Buffers are allocated once and resized, cleared and reused
   // throughout the simulation
@@ -207,12 +207,12 @@ void Simulation::simulate_worker(const u64 tid, const usize task_batch_size) {
     while (!!this->_ctx) {
       this->_ctx.wait_dequeue_tasks<Task::Status::PENDING>(ctok, task_buff);
       if (task_buff.empty() && !this->_ctx.shutdown_signal_sent()) {
-        spdlog::debug(FMT_STRING("[W{}]: no tasks available: sleeping for a bit..."), tid);
+        SPDLOG_DEBUG(FMT_STRING("[W{}]: no tasks available: sleeping for a bit..."), tid);
         std::this_thread::sleep_for(std::chrono::milliseconds(50));
         continue;
       }
       if (task_buff.empty() && this->_ctx.shutdown_signal_sent()) {
-        spdlog::debug(FMT_STRING("[W{}]: all tasks have been processed: returning!"), tid);
+        SPDLOG_DEBUG(FMT_STRING("[W{}]: all tasks have been processed: returning!"), tid);
         return;
       }
 
@@ -238,8 +238,8 @@ void Simulation::simulate_worker(const u64 tid, const usize task_batch_size) {
         if (MODLE_LIKELY(task.num_target_epochs != (std::numeric_limits<usize>::max)() ||
                          task.num_target_contacts != 0)) {
           local_state.status = State::Status::RUNNING;
-          spdlog::debug(FMT_STRING("[W{}]: begin processing task {} ({} cell #{}, {})..."), tid,
-                        task.id, *task.interval, task.cell_id, format_rand_eng(task.rand_eng));
+          SPDLOG_DEBUG(FMT_STRING("[W{}]: begin processing task {} ({} cell #{}, {})..."), tid,
+                       task.id, *task.interval, task.cell_id, format_rand_eng(task.rand_eng));
           local_state.model_state_logger = init_local_model_state_logger(c(), local_state.id);
           this->simulate_one_cell(tid, local_state);
           if (local_state.model_state_logger) {
@@ -247,7 +247,7 @@ void Simulation::simulate_worker(const u64 tid, const usize task_batch_size) {
             local_state.model_state_logger = nullptr;  // Flush data to disk
             this->_ctx.append_to_model_state_log(path, true);
           }
-          spdlog::debug(
+          SPDLOG_DEBUG(
               FMT_STRING("[W{}]: finished processing task {} ({} cell #{}, {}): collected {} "
                          "interactions throughout {} epochs ({} burnin epochs)"),
               tid, local_state.id, *local_state.interval, local_state.cell_id,

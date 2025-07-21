@@ -627,10 +627,10 @@ static void run_task(const enum eval_config::Metric metric, const bed::BED &inte
             : compute_metric<stripe_direction>(metric, ref_contacts, tgt_contacts,
                                                exclude_zero_pixels, weights.at(interval.chrom));
 
-    spdlog::info(FMT_STRING("{} for {} stripes from interval {}:{}-{} computed in {}."),
-                 corr_method_to_str(metric, true),
-                 absl::AsciiStrToLower(direction_to_str(stripe_direction)), interval.chrom,
-                 interval.chrom_start, interval.chrom_end, absl::FormatDuration(absl::Now() - t0));
+    SPDLOG_INFO(FMT_STRING("{} for {} stripes from interval {}:{}-{} computed in {}."),
+                corr_method_to_str(metric, true),
+                absl::AsciiStrToLower(direction_to_str(stripe_direction)), interval.chrom,
+                interval.chrom_start, interval.chrom_end, absl::FormatDuration(absl::Now() - t0));
     t0 = absl::Now();
     auto &writer =
         stripe_direction == StripeDirection::horizontal ? writers.horizontal : writers.vertical;
@@ -645,9 +645,9 @@ static void run_task(const enum eval_config::Metric metric, const bed::BED &inte
                                metrics.metric2[i]);
       writer.tsv_gz->write(buff);
     }
-    spdlog::info(FMT_STRING("{} values have been written to files \"{}.{{tsv.gz,bw}}\" in {}."),
-                 metrics.metric1.size(), writer.bwig->path().stem().string(),
-                 absl::FormatDuration(absl::Now() - t0));
+    SPDLOG_INFO(FMT_STRING("{} values have been written to files \"{}.{{tsv.gz,bw}}\" in {}."),
+                metrics.metric1.size(), writer.bwig->path().stem().string(),
+                absl::FormatDuration(absl::Now() - t0));
   } catch (const std::exception &e) {
     throw std::runtime_error(fmt::format(
         FMT_STRING(
@@ -660,8 +660,8 @@ static void run_task(const enum eval_config::Metric metric, const bed::BED &inte
 static void log_regions_for_evaluation(const std::vector<bed::BED> &intervals) {
   if (intervals.size() == 1) {
     const auto &chrom = intervals.front();
-    spdlog::info(FMT_STRING("Computing metric(s) for interval {}:{}-{}"), chrom.chrom,
-                 chrom.chrom_start, chrom.chrom_end);
+    SPDLOG_INFO(FMT_STRING("Computing metric(s) for interval {}:{}-{}"), chrom.chrom,
+                chrom.chrom_start, chrom.chrom_end);
     return;
   }
 
@@ -673,8 +673,8 @@ static void log_regions_for_evaluation(const std::vector<bed::BED> &intervals) {
                    return fmt::format(FMT_STRING("{}:{}-{}"), interval.chrom, interval.chrom_start,
                                       interval.chrom_end);
                  });
-  spdlog::info(FMT_STRING("Computing metric(s) for the following {} intervals:\n - {}"),
-               intervals.size(), fmt::join(printable_intervals, "\n - "));
+  SPDLOG_INFO(FMT_STRING("Computing metric(s) for the following {} intervals:\n - {}"),
+              intervals.size(), fmt::join(printable_intervals, "\n - "));
 }
 
 void eval_subcmd(const modle::tools::eval_config &c) {
@@ -725,25 +725,25 @@ void eval_subcmd(const modle::tools::eval_config &c) {
                                     interval.chrom_end) &&
         io::query_returns_no_pixels(tgt_cooler, interval.chrom, interval.chrom_start,
                                     interval.chrom_end)) {
-      spdlog::warn(FMT_STRING("Read 0 contacts for {}. SKIPPING!"), coord_str);
+      SPDLOG_WARN(FMT_STRING("Read 0 contacts for {}. SKIPPING!"), coord_str);
       continue;
     }
 
-    spdlog::info(FMT_STRING("Reading contacts for {}..."), coord_str);
+    SPDLOG_INFO(FMT_STRING("Reading contacts for {}..."), coord_str);
     auto ref_matrix = io::read_contact_matrix_from_cooler<double>(
         ref_cooler, interval.chrom, interval.chrom_start, interval.chrom_end,
         static_cast<bp_t>(c.diagonal_width));
     auto tgt_matrix = io::read_contact_matrix_from_cooler<double>(
         tgt_cooler, interval.chrom, interval.chrom_start, interval.chrom_end,
         static_cast<bp_t>(c.diagonal_width));
-    spdlog::info(FMT_STRING("Read {} contacts for {} in {}"),
-                 ref_matrix.get_tot_contacts() + tgt_matrix.get_tot_contacts(), coord_str,
-                 absl::FormatDuration(absl::Now() - t1));
+    SPDLOG_INFO(FMT_STRING("Read {} contacts for {} in {}"),
+                ref_matrix.get_tot_contacts() + tgt_matrix.get_tot_contacts(), coord_str,
+                absl::FormatDuration(absl::Now() - t1));
 
     // Normalize contact matrix before computing the correlation/distance metrics
     if (c.normalize) {
       const auto t00 = absl::Now();
-      spdlog::info(FMT_STRING("Normalizing contact matrices for {}..."), coord_str);
+      SPDLOG_INFO(FMT_STRING("Normalizing contact matrices for {}..."), coord_str);
       return_codes[0] = tpool.submit_task([&]() { ref_matrix.normalize_inplace(); });
       return_codes[1] = tpool.submit_task([&]() { tgt_matrix.normalize_inplace(); });
       tpool.wait();
@@ -757,8 +757,8 @@ void eval_subcmd(const modle::tools::eval_config &c) {
                 "The following error occurred while normalizing contact matrices for {}: {}"),
             coord_str, e.what()));
       }
-      spdlog::info(FMT_STRING("DONE! Normalization took {}."),
-                   absl::FormatDuration(absl::Now() - t00));
+      SPDLOG_INFO(FMT_STRING("DONE! Normalization took {}."),
+                  absl::FormatDuration(absl::Now() - t00));
     }
 
     using d = StripeDirection;
@@ -775,7 +775,7 @@ void eval_subcmd(const modle::tools::eval_config &c) {
     std::ignore = return_codes[0];
     std::ignore = return_codes[1];
   }
-  spdlog::info(FMT_STRING("DONE in {}!"), absl::FormatDuration(absl::Now() - t0));
+  SPDLOG_INFO(FMT_STRING("DONE in {}!"), absl::FormatDuration(absl::Now() - t0));
 }
 
 }  // namespace modle::tools

@@ -67,9 +67,9 @@ static void issue_warnings_for_small_intervals(const Genome& genome, const bp_t 
     }
   }
   if (!warnings.empty()) {
-    spdlog::warn(FMT_STRING("simulated size for the following {} interval(s) is smaller than "
-                            "the simulation diagonal width ({} bp). Is this intended?\n - {}"),
-                 warnings.size(), diagonal_width, fmt::join(warnings, "\n - "));
+    SPDLOG_WARN(FMT_STRING("simulated size for the following {} interval(s) is smaller than "
+                           "the simulation diagonal width ({} bp). Is this intended?\n - {}"),
+                warnings.size(), diagonal_width, fmt::join(warnings, "\n - "));
   }
 }
 
@@ -82,9 +82,9 @@ static void issue_warnings_for_small_matrices(const Genome& genome) {
     }
   }
   if (!warnings.empty()) {
-    spdlog::warn(FMT_STRING("contact matrix for the following {} interval(s) appears to be "
-                            "really small (less than {} pixels). Is this intended?\n - {}"),
-                 warnings.size(), num_pixels_threshold, fmt::join(warnings, "\n - "));
+    SPDLOG_WARN(FMT_STRING("contact matrix for the following {} interval(s) appears to be "
+                           "really small (less than {} pixels). Is this intended?\n - {}"),
+                warnings.size(), num_pixels_threshold, fmt::join(warnings, "\n - "));
   }
 }
 
@@ -146,17 +146,17 @@ static void write_contact_matrix_to_cooler(hictk::cooler::File& cf,
   const auto& matrix = interval.contacts();
   if (matrix.npixels() != 0) {
     const auto t0 = absl::Now();
-    spdlog::info(FMT_STRING("[io] writing contacts for {} to file \"{}\"..."), interval, cf.uri());
+    SPDLOG_INFO(FMT_STRING("[io] writing contacts for {} to file \"{}\"..."), interval, cf.uri());
     const auto missing_interactions = matrix.get_fraction_of_missed_updates();
     if (missing_interactions >= 0.01) {
-      spdlog::warn(
+      SPDLOG_WARN(
           FMT_STRING(
               "[io] {:.2f}% missing interactions for {}! Please make sure this is intended."),
           missing_interactions * 100, interval);
     }
 
     io::append_contact_matrix_to_cooler(cf, interval.chrom().name(), matrix, interval.start());
-    spdlog::info(
+    SPDLOG_INFO(
         FMT_STRING("[io]: written {} contacts for {} to file \"{}\" in {} ({:.2f}M nnz out of "
                    "{:.2f}M pixels)."),
         matrix.get_tot_contacts(), interval, cf.uri(), absl::FormatDuration(absl::Now() - t0),
@@ -173,8 +173,8 @@ static void write_lef_occupancy_to_bwig(io::bigwig::Writer& bw, const GenomicInt
 
   try {
     const auto t0 = absl::Now();
-    spdlog::info(FMT_STRING("[io]: writing 1D LEF occupancy profile for {} to file {}..."),
-                 interval, bw.path());
+    SPDLOG_INFO(FMT_STRING("[io]: writing 1D LEF occupancy profile for {} to file {}..."), interval,
+                bw.path());
     buff.resize(interval.lef_1d_occupancy().size());
     const auto max_element =
         std::max_element(interval.lef_1d_occupancy().begin(), interval.lef_1d_occupancy().end())
@@ -187,8 +187,8 @@ static void write_lef_occupancy_to_bwig(io::bigwig::Writer& bw, const GenomicInt
                    });
     bw.write_range(interval.chrom().name(), absl::MakeSpan(buff), resolution, resolution,
                    interval.start());
-    spdlog::info(FMT_STRING("[io]: writing 1D LEF occupancy profile for {} to file {} took {}"),
-                 interval, bw.path(), absl::FormatDuration(absl::Now() - t0));
+    SPDLOG_INFO(FMT_STRING("[io]: writing 1D LEF occupancy profile for {} to file {} took {}"),
+                interval, bw.path(), absl::FormatDuration(absl::Now() - t0));
   } catch (const std::exception& e) {
     throw std::runtime_error(fmt::format(
         FMT_STRING("An error occurred while writing LEF 1D occupancy profile to file {}: {}"),
@@ -215,7 +215,7 @@ struct CoolerBigwigPair {
 }
 
 void Simulation::simulate_io(std::chrono::milliseconds wait_time) {
-  spdlog::info("spawning IO thread...");
+  SPDLOG_INFO("spawning IO thread...");
   assert(!std::filesystem::exists(c().path_to_output_file_cool));
   if (c().track_1d_lef_position) {
     assert(!std::filesystem::exists(c().path_to_lef_1d_occupancy_bw_file));
@@ -883,11 +883,10 @@ void Simulation::run_burnin(State& s, const double lef_binding_rate_burnin) cons
       if (!s.burnin_completed && s.epoch >= c().max_burnin_epochs) {
         s.burnin_completed = true;
         s.num_active_lefs = s.num_lefs;
-        spdlog::warn(
-            FMT_STRING("The burn-in phase for {} from cell #{} was terminated earlier than "
-                       "it should've as its simulation instance failed to stabilize "
-                       "within --max-burnin-epochs={} epochs."),
-            *s.interval, s.cell_id, c().max_burnin_epochs);
+        SPDLOG_WARN(FMT_STRING("The burn-in phase for {} from cell #{} was terminated earlier than "
+                               "it should've as its simulation instance failed to stabilize "
+                               "within --max-burnin-epochs={} epochs."),
+                    *s.interval, s.cell_id, c().max_burnin_epochs);
       }
     }
     // Guard against the rare occasion where the poisson prng samples 0 in the first epoch
@@ -1090,10 +1089,10 @@ usize Simulation::compute_num_lefs(const usize size_bp) const noexcept {
 void Simulation::print_status_update(const Task& t) const noexcept {
   assert(t.interval);
   auto tot_target_epochs = this->compute_tot_target_epochs(t.num_lefs, t.interval->npixels());
-  spdlog::info(FMT_STRING("begin processing {}: simulating ~{} epochs across {} cells using {} "
-                          "LEFs and {} barriers (~{} epochs per cell)..."),
-               *t.interval, tot_target_epochs, c().num_cells, t.num_lefs,
-               t.interval->barriers().size(), tot_target_epochs / c().num_cells);
+  SPDLOG_INFO(FMT_STRING("begin processing {}: simulating ~{} epochs across {} cells using {} "
+                         "LEFs and {} barriers (~{} epochs per cell)..."),
+              *t.interval, tot_target_epochs, c().num_cells, t.num_lefs,
+              t.interval->barriers().size(), tot_target_epochs / c().num_cells);
 }
 
 usize Simulation::compute_num_worker_threads(usize num_threads, usize num_intervals,

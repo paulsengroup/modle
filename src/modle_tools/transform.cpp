@@ -88,7 +88,7 @@ static modle::IITree<double, double> import_discretization_ranges(const std::fil
     }
   }
   ranges.make_BST();
-  spdlog::info(FMT_STRING("imported {} ranges from file {}"), i - 1, p);
+  SPDLOG_INFO(FMT_STRING("imported {} ranges from file {}"), i - 1, p);
   return ranges;
 }
 
@@ -100,8 +100,8 @@ template <class N>
   const auto [lower_bound_norm, upper_bound_norm] = normalization_range;
   const auto [lower_bound_sat, upper_bound_sat] = saturation_range;
 
-  spdlog::info(FMT_STRING("normalizing contacts for {} to the {:.4g}-{:.4g} range..."), chrom_name,
-               lower_bound_norm, upper_bound_norm);
+  SPDLOG_INFO(FMT_STRING("normalizing contacts for {} to the {:.4g}-{:.4g} range..."), chrom_name,
+              lower_bound_norm, upper_bound_norm);
   // Clamp contacts before normalizing
   if (!std::isinf(lower_bound_sat) || !std::isinf(upper_bound_sat)) {
     m.clamp_inplace(static_cast<N>(lower_bound_sat), static_cast<N>(upper_bound_sat));
@@ -115,8 +115,8 @@ template <class N>
     BS::light_thread_pool& tpool, std::string_view chrom_name, ContactMatrixDense<N>& m,
     const double sigma, const std::pair<double, double> saturation_range) {
   const auto [lower_bound_sat, upper_bound_sat] = saturation_range;
-  spdlog::info(FMT_STRING("applying Gaussian blur with sigma={:.4g} to contacts for {}..."), sigma,
-               chrom_name);
+  SPDLOG_INFO(FMT_STRING("applying Gaussian blur with sigma={:.4g} to contacts for {}..."), sigma,
+              chrom_name);
   // TODO: make truncate tunable
   auto m2 = m.blur(sigma, 3.5, &tpool);
   if (!std::isinf(lower_bound_sat) || !std::isinf(upper_bound_sat)) {
@@ -130,9 +130,9 @@ template <class N>
     BS::light_thread_pool& tpool, std::string_view chrom_name, ContactMatrixDense<N>& m,
     const double sigma1, const double sigma2, const std::pair<double, double> saturation_range) {
   const auto [lower_bound_sat, upper_bound_sat] = saturation_range;
-  spdlog::info(FMT_STRING("computing the difference of Gaussians for {} (sigma1={:.4g}; "
-                          "sigma2={:.4g})..."),
-               chrom_name, sigma1, sigma2);
+  SPDLOG_INFO(FMT_STRING("computing the difference of Gaussians for {} (sigma1={:.4g}; "
+                         "sigma2={:.4g})..."),
+              chrom_name, sigma1, sigma2);
   // TODO: make truncate tunable
   return m.diff_of_gaussians(sigma1, sigma2, 3.5, lower_bound_sat, upper_bound_sat, &tpool);
 }
@@ -142,7 +142,7 @@ template <class N>
     const hictk::cooler::File& cooler, const modle::tools::transform_config& c,
     const modle::IITree<double, double>& discretization_ranges) {
   auto t0 = absl::Now();
-  spdlog::info(FMT_STRING("processing contacts for {}..."), chrom_name);
+  SPDLOG_INFO(FMT_STRING("processing contacts for {}..."), chrom_name);
   auto matrix = [&]() {
     auto m = io::read_contact_matrix_from_cooler<double>(cooler, chrom_name, bp_t(0),
                                                          std::numeric_limits<bp_t>::max(),
@@ -166,8 +166,8 @@ template <class N>
     matrix.discretize_inplace(discretization_ranges);
   }
 
-  spdlog::info(FMT_STRING("{} processing took {}"), chrom_name,
-               absl::FormatDuration(absl::Now() - t0));
+  SPDLOG_INFO(FMT_STRING("{} processing took {}"), chrom_name,
+              absl::FormatDuration(absl::Now() - t0));
   return matrix;
 }
 
@@ -212,11 +212,10 @@ void transform_subcmd(const modle::tools::transform_config& c) {
 
   BS::light_thread_pool tpool(static_cast<u32>(c.nthreads));
   const auto t0 = absl::Now();
-  spdlog::info(FMT_STRING("transforming contacts from Cooler at URI \"{}\"..."),
-               input_cooler.uri());
+  SPDLOG_INFO(FMT_STRING("transforming contacts from Cooler at URI \"{}\"..."), input_cooler.uri());
   for (const auto& chrom : input_cooler.chromosomes()) {
     if (input_cooler.fetch(chrom.name()).empty()) {
-      spdlog::warn(FMT_STRING("read 0 contacts for {}. SKIPPING!"), chrom.name());
+      SPDLOG_WARN(FMT_STRING("read 0 contacts for {}. SKIPPING!"), chrom.name());
       continue;
     }
     const auto transformed_matrix =
@@ -230,9 +229,9 @@ void transform_subcmd(const modle::tools::transform_config& c) {
   }
 
   tpool.wait();
-  spdlog::info(FMT_STRING("DONE! Processed {} chromosomes in {}!"),
-               input_cooler.chromosomes().size(), absl::FormatDuration(absl::Now() - t0));
-  spdlog::info(FMT_STRING("Transformed contacts have been saved to file {}"), c.output_cooler_uri);
+  SPDLOG_INFO(FMT_STRING("DONE! Processed {} chromosomes in {}!"),
+              input_cooler.chromosomes().size(), absl::FormatDuration(absl::Now() - t0));
+  SPDLOG_INFO(FMT_STRING("Transformed contacts have been saved to file {}"), c.output_cooler_uri);
 }
 
 }  // namespace modle::tools

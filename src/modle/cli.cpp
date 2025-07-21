@@ -1042,7 +1042,7 @@ bool Cli::config_file_parsed() const { return !this->_cli.get_config_ptr()->empt
 
 void Cli::log_warnings() const {
   for (const auto& warning : this->_warnings) {
-    spdlog::warn(FMT_STRING("{}"), warning);
+    SPDLOG_WARN(FMT_STRING("{}"), warning);
   }
 }
 
