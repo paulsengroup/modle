@@ -4,22 +4,22 @@
 
 #pragma once
 
-#include <absl/strings/match.h>  // for StartsWithIgnoreCase
-#include <absl/types/span.h>     // for MakeSpan, Span
-#include <xxhash.h>              // for XXH_INLINE_XXH3_freeState, XXH3_f...
+#include <absl/strings/match.h>
+#include <absl/types/span.h>
+#include <xxhash.h>
 
-#include <cassert>           // for assert
-#include <exception>         // for exception
-#include <functional>        // for reference_wrapper
-#include <future>            // for future, promise
-#include <initializer_list>  // for initializer_list
-#include <string_view>       // for string_view, basic_string_view
+#include <cassert>
+#include <exception>
+#include <functional>
+#include <future>
+#include <initializer_list>
+#include <string_view>
 #include <type_traits>
-#include <utility>  // for pair, make_pair, forward
-#include <vector>   // for vector
+#include <utility>
+#include <vector>
 
-#include "modle/common/common.hpp"                      // for usize, i64, u64
-#include "modle/common/suppress_compiler_warnings.hpp"  // for DISABLE_WARNING_POP, DISABLE_WARN...
+#include "modle/common/common.hpp"
+#include "modle/common/suppress_compiler_warnings.hpp"
 
 namespace modle::utils {
 

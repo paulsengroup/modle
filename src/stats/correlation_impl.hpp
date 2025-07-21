@@ -4,25 +4,25 @@
 
 #pragma once
 
-#include <cpp-sort/sorters/pdq_sorter.h>  // for pdq_sorter
+#include <cpp-sort/sorters/pdq_sorter.h>
 
-#include <algorithm>                                    // for min, all_of, max, clamp
-#include <boost/math/distributions/beta.hpp>            // for cdf, beta_distribution
-#include <boost/math/distributions/complement.hpp>      // for complement
-#include <boost/math/distributions/students_t.hpp>      // for cdf, students_t_distribution
-#include <boost/math/special_functions/fpclassify.hpp>  // for isinf, isnan
-#include <cassert>                                      // for assert
-#include <cmath>                                        // for sqrt, isnan
-#include <iterator>                                     // for begin, end, distance
-#include <limits>                                       // for numeric_limits
+#include <algorithm>
+#include <boost/math/distributions/beta.hpp>
+#include <boost/math/distributions/complement.hpp>
+#include <boost/math/distributions/students_t.hpp>
+#include <boost/math/special_functions/fpclassify.hpp>
+#include <cassert>
+#include <cmath>
+#include <iterator>
+#include <limits>
 #include <numeric>
-#include <type_traits>  // for is_arithmetic
-#include <vector>       // for vector
+#include <type_traits>
+#include <vector>
 
-#include "modle/common/common.hpp"                      // for u64
-#include "modle/common/suppress_compiler_warnings.hpp"  // for DISABLE_WARNING_CONVERSION, DISAB...
-#include "modle/common/utils.hpp"                       // for RepeatIterator
-#include "modle/stats/descriptive.hpp"                  // for mean
+#include "modle/common/common.hpp"
+#include "modle/common/suppress_compiler_warnings.hpp"
+#include "modle/common/utils.hpp"
+#include "modle/stats/descriptive.hpp"
 
 namespace modle::stats {
 

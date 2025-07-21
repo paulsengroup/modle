@@ -4,11 +4,11 @@
 
 #pragma once
 
-#include <string_view>   // for string_view
-#include <system_error>  // for errc
-#include <vector>        // for vector
+#include <string_view>
+#include <system_error>
+#include <vector>
 
-#include "modle/common/common.hpp"  // for usize, u64
+#include "modle/common/common.hpp"
 
 namespace modle::utils {
 

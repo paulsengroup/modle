@@ -6,23 +6,23 @@
 
 // IWYU pragma: no_include "modle/src/libio/bigwig_impl.hpp"
 
-#include <absl/types/span.h>  // for Span
+#include <absl/types/span.h>
 #include <fmt/std.h>
 #include <parallel_hashmap/btree.h>
 
-#include <filesystem>   // for path
-#include <string_view>  // for string_view
-#include <type_traits>  // for enable_if
+#include <filesystem>
+#include <string_view>
+#include <type_traits>
 
-#include "modle/common/common.hpp"  // for u32, usize, u64
+#include "modle/common/common.hpp"
 
 // clang-format off
-#include "modle/common/suppress_compiler_warnings.hpp"  // for DISABLE_WARNING_PADDED, DISABLE_W...
+#include "modle/common/suppress_compiler_warnings.hpp"
 
 // clang-format on
 DISABLE_WARNING_PUSH
 DISABLE_WARNING_PADDED
-#include "libbigwig/bigWig.h"  // for bigWigFile_t
+#include "libbigwig/bigWig.h"
 DISABLE_WARNING_POP
 
 namespace modle::io::bigwig {

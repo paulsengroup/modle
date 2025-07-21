@@ -4,13 +4,13 @@
 
 #pragma once
 
-#include <CLI/CLI.hpp>  // for App
-#include <string>       // for string
+#include <CLI/CLI.hpp>
+#include <string>
 
 #include "./cli.hpp"
 #include "modle/common/cli_utils.hpp"
-#include "modle/common/common.hpp"             // for u8
-#include "modle/common/simulation_config.hpp"  // for Config
+#include "modle/common/common.hpp"
+#include "modle/common/simulation_config.hpp"
 namespace CLI {
 class ParseError;
 }  // namespace CLI

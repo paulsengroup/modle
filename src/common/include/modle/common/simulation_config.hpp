@@ -4,17 +4,17 @@
 
 #pragma once
 
-#include <absl/types/span.h>  // for Span
+#include <absl/types/span.h>
 
 #include <bitflags/bitflags.hpp>
-#include <cmath>       // for round
-#include <filesystem>  // for path
-#include <limits>      // for numeric_limits
-#include <string>      // for string
-#include <thread>      // for thread
-#include <vector>      // for vector
+#include <cmath>
+#include <filesystem>
+#include <limits>
+#include <string>
+#include <thread>
+#include <vector>
 
-#include "modle/common/common.hpp"  // for bp_t, i64, u64
+#include "modle/common/common.hpp"
 
 namespace modle {
 class Cli;

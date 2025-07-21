@@ -4,28 +4,28 @@
 
 #pragma once
 
-#include <fmt/format.h>  // for FMT_STRING, join
+#include <fmt/format.h>
 #include <fmt/ostream.h>
 #include <fmt/ranges.h>
 
-#include <algorithm>                                // for clamp, fill, max, min
-#include <atomic>                                   // for atomic_fetch_add_explicit
-#include <boost/dynamic_bitset/dynamic_bitset.hpp>  // for dynamic_bitset
-#include <cassert>                                  // for assert
-#include <cmath>                                    // for sqrt, round
-#include <filesystem>                               // for path
-#include <fstream>                                  // for flush, ostream
-#include <iostream>                                 // for cout
-#include <numeric>                                  // for accumulate
-#include <shared_mutex>                             // for shared_mutex
-#include <string>                                   // for allocator, string
-#include <string_view>                              // for string_view
-#include <utility>                                  // for make_pair
-#include <vector>                                   // for vector
+#include <algorithm>
+#include <atomic>
+#include <boost/dynamic_bitset/dynamic_bitset.hpp>
+#include <cassert>
+#include <cmath>
+#include <filesystem>
+#include <fstream>
+#include <iostream>
+#include <numeric>
+#include <shared_mutex>
+#include <string>
+#include <string_view>
+#include <utility>
+#include <vector>
 
-#include "modle/common/common.hpp"                // for usize, i64, u64, bp_t, isize
-#include "modle/compressed_io/compressed_io.hpp"  // for Reader
-#include "modle/interval_tree.hpp"                // for IITree
+#include "modle/common/common.hpp"
+#include "modle/compressed_io/compressed_io.hpp"
+#include "modle/interval_tree.hpp"
 
 namespace modle {
 

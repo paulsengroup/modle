@@ -4,23 +4,23 @@
 
 #pragma once
 
-#include <absl/types/span.h>  // for Span, MakeConstSpan, MakeSpan
-#include <fmt/format.h>       // for FMT_STRING
-#include <xxhash.h>           // for XXH_INLINE_XXH3_64bits, XXH3_64bits
+#include <absl/types/span.h>
+#include <fmt/format.h>
+#include <xxhash.h>
 
-#include <algorithm>     // for min, clamp
-#include <array>         // for array
-#include <cassert>       // for assert
-#include <cmath>         // for sqrt
-#include <limits>        // for numeric_limits
-#include <mutex>         // for unique_lock
-#include <shared_mutex>  // for shared_lock, shared_mutex
-#include <stdexcept>     // for runtime_error, logic_error
-#include <utility>       // for make_pair, pair
+#include <algorithm>
+#include <array>
+#include <cassert>
+#include <cmath>
+#include <limits>
+#include <mutex>
+#include <shared_mutex>
+#include <stdexcept>
+#include <utility>
 
-#include "modle/common/common.hpp"                      // for usize, u64, bp_t, i64
-#include "modle/common/suppress_compiler_warnings.hpp"  // for DISABLE_WARNING_POP, DISABLE_WARN...
-#include "modle/common/utils.hpp"                       // for ndebug_not_defined, next_pow2
+#include "modle/common/common.hpp"
+#include "modle/common/suppress_compiler_warnings.hpp"
+#include "modle/common/utils.hpp"
 #include "modle/internal/contact_matrix_internal.hpp"
 
 namespace modle {

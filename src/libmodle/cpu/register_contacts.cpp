@@ -6,17 +6,17 @@
 #include "modle/simulation.hpp"
 // clang-format on
 
-#include <absl/types/span.h>  // for Span
+#include <absl/types/span.h>
 
-#include <algorithm>  // for min, all_of
-#include <cassert>    // for assert
+#include <algorithm>
+#include <cassert>
 
-#include "modle/common/common.hpp"                         // for usize, bp_t, contacts_t, MODLE...
-#include "modle/common/genextreme_value_distribution.hpp"  // for genextreme_value_distribution
-#include "modle/common/random.hpp"                         // for PRNG_t, uniform_int_distribution
-#include "modle/contact_matrix_dense.hpp"                  // for ContactMatrixDense
-#include "modle/extrusion_factors.hpp"                     // for Lef, ExtrusionUnit
-#include "modle/genome.hpp"                                // for GenomicInterval
+#include "modle/common/common.hpp"
+#include "modle/common/genextreme_value_distribution.hpp"
+#include "modle/common/random.hpp"
+#include "modle/contact_matrix_dense.hpp"
+#include "modle/extrusion_factors.hpp"
+#include "modle/genome.hpp"
 
 namespace modle {
 

@@ -2,41 +2,41 @@
 //
 // SPDX-License-Identifier: MIT
 
-#include <absl/debugging/failure_signal_handler.h>  // for InstallFailureSignalHandler, FailureS...
-#include <absl/debugging/symbolize.h>               // for InitializeSymbolizer
-#include <absl/strings/strip.h>                     // for StripSuffix
-#include <absl/time/clock.h>                        // for Now
-#include <absl/time/time.h>                         // for FormatDuration, operator-, Time
-#include <fmt/format.h>                             // for make_format_args, vformat_to, FMT_STRING
+#include <absl/debugging/failure_signal_handler.h>
+#include <absl/debugging/symbolize.h>
+#include <absl/strings/strip.h>
+#include <absl/time/clock.h>
+#include <absl/time/time.h>
+#include <fmt/format.h>
 #include <fmt/std.h>
-#include <spdlog/common.h>                    // for sink_ptr, spdlog_ex, err
-#include <spdlog/logger.h>                    // for logger
-#include <spdlog/sinks/basic_file_sink.h>     // for basic_file_sink_mt
-#include <spdlog/sinks/sink.h>                // for sink
-#include <spdlog/sinks/stdout_color_sinks.h>  // for stderr_color_sink_mt
-#include <spdlog/spdlog.h>                    // for error, info
+#include <spdlog/common.h>
+#include <spdlog/logger.h>
+#include <spdlog/sinks/basic_file_sink.h>
+#include <spdlog/sinks/sink.h>
+#include <spdlog/sinks/stdout_color_sinks.h>
+#include <spdlog/spdlog.h>
 
-#include <CLI/CLI.hpp>  // for ParseError
-#include <algorithm>    // for max
-#include <cassert>      // for assert
-#include <cstdio>       // for stderr
-#include <cstring>      // for strlen
-#include <exception>    // for exception
-#include <filesystem>   // for path, operator<<
-#include <iosfwd>       // for streamsize
-#include <memory>       // for make_shared, __shared_ptr_access, uni...
-#include <new>          // for bad_alloc
-#include <stdexcept>    // for runtime_error
-#include <string>       // for basic_string
-#include <string_view>  // for string_view
-#include <vector>       // for vector
+#include <CLI/CLI.hpp>
+#include <algorithm>
+#include <cassert>
+#include <cstdio>
+#include <cstring>
+#include <exception>
+#include <filesystem>
+#include <iosfwd>
+#include <memory>
+#include <new>
+#include <stdexcept>
+#include <string>
+#include <string_view>
+#include <vector>
 
-#include "./cli.hpp"                // for Cli, Cli::subcommand
-#include "modle/common/common.hpp"  // for usize
+#include "./cli.hpp"
+#include "modle/common/common.hpp"
 #include "modle/common/fmt_helpers.hpp"
-#include "modle/common/simulation_config.hpp"  // for Config
-#include "modle/config/version.hpp"            // for str_long
-#include "modle/simulation.hpp"                // for Simulation
+#include "modle/common/simulation_config.hpp"
+#include "modle/config/version.hpp"
+#include "modle/simulation.hpp"
 
 // NOLINTNEXTLINE(cppcoreguidelines-avoid-non-const-global-variables)
 static std::atomic<bool> logger_ready{false};

@@ -4,21 +4,21 @@
 
 #pragma once
 
-#include <absl/types/span.h>  // for Span
-#include <xxhash.h>           // for XXH3_state_t, XXH_INLINE_XXH3_state_t
+#include <absl/types/span.h>
+#include <xxhash.h>
 
-#include <array>             // for array
-#include <filesystem>        // for path
-#include <functional>        // for reference_wrapper
-#include <future>            // for future
-#include <initializer_list>  // for initializer_list
-#include <string>            // for string
-#include <string_view>       // for string_view
-#include <type_traits>       // for enable_if, enable_if_t
-#include <utility>           // for pair
-#include <vector>            // for vector
+#include <array>
+#include <filesystem>
+#include <functional>
+#include <future>
+#include <initializer_list>
+#include <string>
+#include <string_view>
+#include <type_traits>
+#include <utility>
+#include <vector>
 
-#include "modle/common/common.hpp"  // for i64, usize, isize
+#include "modle/common/common.hpp"
 
 namespace modle::utils {
 

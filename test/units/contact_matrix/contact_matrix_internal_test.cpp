@@ -6,7 +6,7 @@
 
 #include <catch2/catch_test_macros.hpp>
 
-#include "modle/common/common.hpp"  // for usize
+#include "modle/common/common.hpp"
 #include "modle/common/random.hpp"
 
 namespace modle::cmatrix::test {

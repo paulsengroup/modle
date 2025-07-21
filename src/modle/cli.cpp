@@ -4,37 +4,37 @@
 
 #include "./cli.hpp"
 
-#include <absl/strings/str_cat.h>    // for StrAppend
-#include <absl/strings/str_split.h>  // for SplitIterator, Splitter, StrSplit, operator!=
+#include <absl/strings/str_cat.h>
+#include <absl/strings/str_split.h>
 #include <absl/time/clock.h>
-#include <absl/types/span.h>  // for MakeSpan
-#include <fmt/format.h>       // for format, FMT_STRING, join, print, make_format_...
+#include <absl/types/span.h>
+#include <fmt/format.h>
 #include <fmt/std.h>
 #include <spdlog/spdlog.h>
-#include <toml++/toml.h>  // for array::operator[], operator<<, parse, print_to...
+#include <toml++/toml.h>
 
-#include <CLI/CLI.hpp>  // for Option_group, App
-#include <algorithm>    // for max
-#include <array>        // for array
-#include <cassert>      // for assert
-#include <cmath>        // for round, pow, log
-#include <cstdio>       // for stderr
-#include <exception>    // for exception
-#include <filesystem>   // for path, operator<<
+#include <CLI/CLI.hpp>
+#include <algorithm>
+#include <array>
+#include <cassert>
+#include <cmath>
+#include <cstdio>
+#include <exception>
+#include <filesystem>
 #include <hictk/cooler.hpp>
-#include <limits>     // for numeric_limits
-#include <sstream>    // for streamsize, stringstream, basic_ostream
-#include <stdexcept>  // for invalid_argument, out_of_range, runtime_error
-#include <string>     // for allocator, string, basic_string
-#include <thread>     // for hardware_concurrency
-#include <vector>     // for vector
+#include <limits>
+#include <sstream>
+#include <stdexcept>
+#include <string>
+#include <thread>
+#include <vector>
 
 #include "modle/common/cli_utils.hpp"
-#include "modle/common/common.hpp"  // for bp_t, i64
+#include "modle/common/common.hpp"
 #include "modle/common/fmt_helpers.hpp"
-#include "modle/common/simulation_config.hpp"  // for Config
-#include "modle/common/utils.hpp"              // for parse_numeric_or_throw
-#include "modle/config/version.hpp"            // modle_version_long
+#include "modle/common/simulation_config.hpp"
+#include "modle/common/utils.hpp"
+#include "modle/config/version.hpp"  // modle_version_long
 
 namespace modle {
 

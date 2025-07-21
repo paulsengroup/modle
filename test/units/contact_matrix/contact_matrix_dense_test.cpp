@@ -2,23 +2,23 @@
 //
 // SPDX-License-Identifier: MIT
 
-#include "modle/contact_matrix_dense.hpp"  // for ContactMatrixDense
+#include "modle/contact_matrix_dense.hpp"
 
-#include <fmt/format.h>  // for format
+#include <fmt/format.h>
 
-#include <BS_thread_pool.hpp>  // for BS::light_thread_pool
-#include <algorithm>           // for generate, max
+#include <BS_thread_pool.hpp>
+#include <algorithm>
 #include <catch2/catch_test_macros.hpp>
 #include <catch2/matchers/catch_matchers_floating_point.hpp>
 #include <catch2/matchers/catch_matchers_string.hpp>
-#include <filesystem>  // for path
-#include <stdexcept>   // for runtime_error
-#include <string>      // for string
-#include <thread>      // for sleep_for
-#include <utility>     // for pair, move
-#include <vector>      // for vector, allocator
+#include <filesystem>
+#include <stdexcept>
+#include <string>
+#include <thread>
+#include <utility>
+#include <vector>
 
-#include "modle/common/common.hpp"  // for u32
+#include "modle/common/common.hpp"
 #include "modle/compressed_io/compressed_io.hpp"
 
 namespace modle::cmatrix::test {

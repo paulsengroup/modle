@@ -4,8 +4,8 @@
 
 #pragma once
 
-#include "modle/common/common.hpp"  // for utils::ndebug_defined
-#include "modle/common/pixel.hpp"   // for PixelCoordinates
+#include "modle/common/common.hpp"
+#include "modle/common/pixel.hpp"
 
 namespace modle::internal {
 /// Map coordinates from the NxN to the NxM space of a ContactMatrixDense

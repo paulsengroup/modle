@@ -2,9 +2,9 @@
 //
 // SPDX-License-Identifier: MIT
 #include <catch2/catch_test_macros.hpp>
-#include <vector>  // for vector
+#include <vector>
 
-#include "modle/common/common.hpp"  // for u32
+#include "modle/common/common.hpp"
 #include "modle/stats/correlation.hpp"
 
 namespace modle::stats::stats {

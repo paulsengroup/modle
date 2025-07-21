@@ -4,18 +4,18 @@
 
 #pragma once
 
-#include <absl/types/variant.h>  // for monostate, variant
+#include <absl/types/variant.h>
 
-#include <filesystem>  // for path
+#include <filesystem>
 #include <hictk/cooler/uri.hpp>
-#include <string>  // for string, allocator, basic_string
-#include <thread>  // for thread
-#include <vector>  // for vector
+#include <string>
+#include <thread>
+#include <vector>
 
-#include "modle/bed/bed.hpp"           // for BED, BED::Dialect, BED::BED6
-#include "modle/common/cli_utils.hpp"  // for CliEnumMappings
-#include "modle/common/common.hpp"     // for usize, bp_t, u64
-#include "modle/common/utils.hpp"      // for ConstMap
+#include "modle/bed/bed.hpp"
+#include "modle/common/cli_utils.hpp"
+#include "modle/common/common.hpp"
+#include "modle/common/utils.hpp"
 
 namespace modle::tools {
 

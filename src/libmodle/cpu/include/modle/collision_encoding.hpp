@@ -4,13 +4,13 @@
 
 #pragma once
 
-#include <fmt/format.h>  // for formatter
+#include <fmt/format.h>
 
-#include <bitset>  // for bitset
+#include <bitset>
 #include <type_traits>
 
-#include "modle/common/common.hpp"  // for u8f, u32f
-#include "modle/common/utils.hpp"   // for ndebug_defined, ndebug_not_defined
+#include "modle/common/common.hpp"
+#include "modle/common/utils.hpp"
 
 namespace modle {
 

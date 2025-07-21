@@ -3,23 +3,23 @@
 // SPDX-License-Identifier: MIT
 
 #pragma once
-#include <absl/strings/str_split.h>  // for StrSplit, Splitter
+#include <absl/strings/str_split.h>
 
-#include <BS_thread_pool.hpp>  // for BS::light_thread_pool, parallelize_loop
-#include <atomic>              // for atomic_fetch_add_explicit
-#include <cassert>             // for assert
-#include <cmath>               // for sqrt
-#include <fstream>             // IWYU pragma: keep for ifstream
-#include <vector>              // for vector
+#include <BS_thread_pool.hpp>
+#include <atomic>
+#include <cassert>
+#include <cmath>
+#include <fstream>  // IWYU pragma: keep for ifstream
+#include <vector>
 
-#include "modle/common/common.hpp"         // for usize, i64, u64, bp_t, isize
-#include "modle/common/numeric_utils.hpp"  // for parse_numeric_or_throw
-#include "modle/common/random.hpp"         // for PRNG, uniform_int_distribution, unifo...
+#include "modle/common/common.hpp"
+#include "modle/common/numeric_utils.hpp"
+#include "modle/common/random.hpp"
 #include "modle/common/suppress_compiler_warnings.hpp"
-#include "modle/common/utils.hpp"                      // for ndebug_defined, ndebug_not_defined
-#include "modle/compressed_io/compressed_io.hpp"       // for CompressedReader
-#include "modle/internal/contact_matrix_internal.hpp"  // for transpose_coords
-#include "modle/stats/misc.hpp"                        // for compute_gauss_kernel
+#include "modle/common/utils.hpp"
+#include "modle/compressed_io/compressed_io.hpp"
+#include "modle/internal/contact_matrix_internal.hpp"
+#include "modle/stats/misc.hpp"
 
 namespace modle {
 

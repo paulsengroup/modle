@@ -6,13 +6,13 @@
 
 #include <fmt/format.h>
 
-#include <cassert>  // for assert
+#include <cassert>
 #include <initializer_list>
-#include <vector>  // for vector
+#include <vector>
 
-#include "modle/common/common.hpp"  // for bp_t
-#include "modle/common/dna.hpp"     // for Direction
-#include "modle/common/random.hpp"  // for PRNG_t
+#include "modle/common/common.hpp"
+#include "modle/common/dna.hpp"
+#include "modle/common/random.hpp"
 namespace modle {
 
 namespace internal {

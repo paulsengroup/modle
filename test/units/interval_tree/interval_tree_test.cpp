@@ -4,16 +4,16 @@
 
 #include "modle/interval_tree.hpp"
 
-#include <absl/strings/str_split.h>  // for StrSplit, Splitter, ByAnyChar
+#include <absl/strings/str_split.h>
 
 #include <catch2/catch_test_macros.hpp>
-#include <filesystem>   // for path
-#include <string>       // for string, basic_string, operator==
-#include <string_view>  // for string_view
-#include <vector>       // for vector, allocator
+#include <filesystem>
+#include <string>
+#include <string_view>
+#include <vector>
 
-#include "modle/common/numeric_utils.hpp"         // for parse_numeric_or_throw
-#include "modle/compressed_io/compressed_io.hpp"  // for Reader
+#include "modle/common/numeric_utils.hpp"
+#include "modle/compressed_io/compressed_io.hpp"
 
 namespace modle::interval_tree::test {
 

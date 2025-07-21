@@ -4,35 +4,34 @@
 
 #include "modle/genome.hpp"
 
-#include <absl/time/clock.h>  // for Now
-#include <absl/time/time.h>   // for FormatDuration, operator-, Time
-#include <fmt/format.h>       // for format, make_format_args, vformat_to
+#include <absl/time/clock.h>
+#include <absl/time/time.h>
+#include <fmt/format.h>
 #include <fmt/std.h>
-#include <parallel_hashmap/btree.h>  // for btree_map
-#include <parallel_hashmap/btree.h>  // for btree_set, btree_iterator
-#include <spdlog/spdlog.h>           // for info
+#include <parallel_hashmap/btree.h>
+#include <spdlog/spdlog.h>
 
-#include <algorithm>  // for max, max_element, find_if
-#include <cassert>    // for assert
-#include <cmath>      // for round
-#include <exception>  // for exception
+#include <algorithm>
+#include <cassert>
+#include <cmath>
+#include <exception>
 #include <filesystem>
-#include <iosfwd>       // for streamsize
-#include <memory>       // for shared_ptr, __shared_ptr_access
-#include <numeric>      // for accumulate
-#include <string>       // for string, char_traits
-#include <string_view>  // for string_view, operator==, operator!=
-#include <utility>      // for move, pair, pair<>::second_type
-#include <vector>       // for vector
+#include <iosfwd>
+#include <memory>
+#include <numeric>
+#include <string>
+#include <string_view>
+#include <utility>
+#include <vector>
 
-#include "modle/bed/bed.hpp"                  // for BED, Parser, BED_tree, BED_tree::at
-#include "modle/chrom_sizes/chrom_sizes.hpp"  // for Parser
-#include "modle/common/common.hpp"            // for bp_t, u32, u64, u8
+#include "modle/bed/bed.hpp"
+#include "modle/chrom_sizes/chrom_sizes.hpp"
+#include "modle/common/common.hpp"
 #include "modle/common/fmt_helpers.hpp"
-#include "modle/common/suppress_compiler_warnings.hpp"  // for DISABLE_WARNING_PUSH, DISABLE_WAR...
-#include "modle/common/utils.hpp"                       // for XXH3_Deleter, ndebug_defined, XXH...
-#include "modle/contact_matrix_dense.hpp"               // for ContactMatrixDense
-#include "modle/extrusion_barriers.hpp"                 // for ExtrusionBarrier
+#include "modle/common/suppress_compiler_warnings.hpp"
+#include "modle/common/utils.hpp"
+#include "modle/contact_matrix_dense.hpp"
+#include "modle/extrusion_barriers.hpp"
 
 namespace modle {
 

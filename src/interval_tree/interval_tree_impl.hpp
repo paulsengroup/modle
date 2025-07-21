@@ -4,18 +4,18 @@
 // SPDX-License-Identifier: MIT
 
 #pragma once
-#include <absl/types/span.h>              // for Span
-#include <cpp-sort/sorters/pdq_sorter.h>  // for pdq_sort
+#include <absl/types/span.h>
+#include <cpp-sort/sorters/pdq_sorter.h>
 
-#include <algorithm>  // for min
-#include <array>      // for array
-#include <cassert>    // for assert
-#include <iterator>   // for iterator_traits
-#include <numeric>    // for iota
-#include <utility>    // for pair, make_pair, swap
-#include <vector>     // for vector, vector::usizeype
+#include <algorithm>
+#include <array>
+#include <cassert>
+#include <iterator>
+#include <numeric>
+#include <utility>
+#include <vector>
 
-#include "modle/common/common.hpp"  // for usize, i64
+#include "modle/common/common.hpp"
 
 namespace modle {
 

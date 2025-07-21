@@ -4,9 +4,9 @@
 
 #pragma once
 
-#include <xoshiro-cpp/XoshiroCpp.hpp>  // for SplitMix64, Xoshiro256PlusPlus
+#include <xoshiro-cpp/XoshiroCpp.hpp>
 
-#include "modle/common/common.hpp"  // for u64
+#include "modle/common/common.hpp"
 
 #ifdef MODLE_WITH_BOOST_RANDOM
 #include <boost/random/bernoulli_distribution.hpp>

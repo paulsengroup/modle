@@ -4,19 +4,19 @@
 
 #include "modle/bigwig/bigwig.hpp"
 
-#include <fmt/format.h>  // for format, FMT_STRING
+#include <fmt/format.h>
 
-#include <cassert>     // for assert
-#include <cerrno>      // for errno
-#include <filesystem>  // for file_size
-#include <iosfwd>      // for streamsize
-#include <mutex>       // for scoped_lock
-#include <stdexcept>   // for runtime_error
-#include <string>      // for string
-#include <utility>     // for move
+#include <cassert>
+#include <cerrno>
+#include <filesystem>
+#include <iosfwd>
+#include <mutex>
+#include <stdexcept>
+#include <string>
+#include <utility>
 
-#include "libbigwig/bigWig.h"  // for bwCleanup, bwClose, bwAddIntervalSpanSteps, bwCreateChromList
-#include "modle/common/common.hpp"  // for u32, u64, i32, i64
+#include "libbigwig/bigWig.h"
+#include "modle/common/common.hpp"
 #include "modle/common/fmt_helpers.hpp"
 
 #ifndef NOCURL

@@ -4,13 +4,13 @@
 
 #pragma once
 
-#include <xxhash.h>  // for XXH_INLINE_XXH3_64bits, XXH3_64bits
+#include <xxhash.h>
 
-#include <array>        // for array
-#include <functional>   // for hash
-#include <type_traits>  // for is_arithmetic_v
+#include <array>
+#include <functional>
+#include <type_traits>
 
-#include "modle/common/common.hpp"  // for conditional_static_cast, usize
+#include "modle/common/common.hpp"
 
 namespace modle {
 

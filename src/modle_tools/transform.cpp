@@ -2,51 +2,51 @@
 //
 // SPDX-License-Identifier: MIT
 
-#include <absl/algorithm/container.h>           // for c_set_intersection
-#include <absl/strings/ascii.h>                 // AsciiStrToLower
-#include <absl/strings/str_split.h>             // for StrSplit
-#include <absl/strings/strip.h>                 // for StripPrefix
-#include <absl/time/clock.h>                    // for Now
-#include <absl/time/time.h>                     // for FormatDuration, operator-, Time
-#include <absl/types/span.h>                    // for MakeSpan
-#include <absl/types/variant.h>                 // for get, variant
-#include <cpp-sort/comparators/natural_less.h>  // for natural_less_t
-#include <fmt/format.h>                         // for format, make_format_args, vformat_to, FMT...
-#include <parallel_hashmap/btree.h>             // for btree_map, btree_iterator, map_params<>::...
-#include <parallel_hashmap/phmap.h>             // for flat_hash_map
+#include <absl/algorithm/container.h>
+#include <absl/strings/ascii.h>  // AsciiStrToLower
+#include <absl/strings/str_split.h>
+#include <absl/strings/strip.h>
+#include <absl/time/clock.h>
+#include <absl/time/time.h>
+#include <absl/types/span.h>
+#include <absl/types/variant.h>
+#include <cpp-sort/comparators/natural_less.h>
+#include <fmt/format.h>
+#include <parallel_hashmap/btree.h>
+#include <parallel_hashmap/phmap.h>
 #include <readerwriterqueue/readerwriterqueue.h>
-#include <spdlog/spdlog.h>  // for info
+#include <spdlog/spdlog.h>
 
-#include <BS_thread_pool.hpp>  // for BS::light_thread_pool
-#include <algorithm>           // for transform, max
-#include <cassert>             // for assert
-#include <cstdio>              // for stderr
-#include <exception>           // for exception
-#include <filesystem>          // for operator<<, path
-#include <future>              // for future
+#include <BS_thread_pool.hpp>
+#include <algorithm>
+#include <cassert>
+#include <cstdio>
+#include <exception>
+#include <filesystem>
+#include <future>
 #include <hictk/cooler.hpp>
-#include <iosfwd>       // for streamsize
-#include <iterator>     // for insert_iterator, inserter
-#include <memory>       // for unique_ptr, shared_ptr, __shared_ptr_access
-#include <stdexcept>    // for runtime_error, overflow_error
-#include <string>       // for string, basic_string
-#include <string_view>  // for string_view
-#include <utility>      // for tuple_element<>::type, pair, make_pair
-#include <vector>       // for vector
+#include <iosfwd>
+#include <iterator>
+#include <memory>
+#include <stdexcept>
+#include <string>
+#include <string_view>
+#include <utility>
+#include <vector>
 
-#include "modle/bed/bed.hpp"        // for BED_tree, BED_tree<>::value_type, Parser
-#include "modle/bigwig/bigwig.hpp"  // for Writer
-#include "modle/common/common.hpp"  // for u32, usize, bp_t, u8, i64
+#include "modle/bed/bed.hpp"
+#include "modle/bigwig/bigwig.hpp"
+#include "modle/common/common.hpp"
 #include "modle/common/fmt_helpers.hpp"
-#include "modle/common/utils.hpp"                 // for identity::operator()
-#include "modle/compressed_io/compressed_io.hpp"  // for Reader
+#include "modle/common/utils.hpp"
+#include "modle/compressed_io/compressed_io.hpp"
 #include "modle/config/version.hpp"
-#include "modle/contact_matrix_dense.hpp"  // for ContactMatrixDense
-#include "modle/interval_tree.hpp"         // for IITree, IITree::IITree<I, T>, IITree::empty
+#include "modle/contact_matrix_dense.hpp"
+#include "modle/interval_tree.hpp"
 #include "modle/io/contact_matrix_dense.hpp"
-#include "modle/stats/correlation.hpp"         // for Pearson, Spearman
-#include "modle_tools/modle_tools_config.hpp"  // for eval_config
-#include "modle_tools/tools.hpp"               // for eval_subcmd
+#include "modle/stats/correlation.hpp"
+#include "modle_tools/modle_tools_config.hpp"
+#include "modle_tools/tools.hpp"
 
 namespace modle::tools {
 

@@ -5,13 +5,13 @@
 #pragma once
 
 #include <cmath>
-#include <iterator>  // for distance
-#include <numeric>   // for accumulate
-#include <vector>    // for vector
+#include <iterator>
+#include <numeric>
+#include <vector>
 
-#include "modle/common/common.hpp"                      // for usize, isize
-#include "modle/common/suppress_compiler_warnings.hpp"  // for DISABLE_WARNING_POP, DISABLE_WARN...
-#include "modle/common/utils.hpp"                       // for RepeatIterator::operator*, Repeat...
+#include "modle/common/common.hpp"
+#include "modle/common/suppress_compiler_warnings.hpp"
+#include "modle/common/utils.hpp"
 
 namespace modle::stats {
 template <class T, class>

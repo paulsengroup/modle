@@ -4,10 +4,10 @@
 
 #pragma once
 
-#include <type_traits>  // for enable_if, enable_if_t, is_arithmetic_v, is_floating_point
-#include <vector>       // for vector
+#include <type_traits>
+#include <vector>
 
-#include "modle/common/common.hpp"  // for usize
+#include "modle/common/common.hpp"
 
 namespace modle::stats {
 

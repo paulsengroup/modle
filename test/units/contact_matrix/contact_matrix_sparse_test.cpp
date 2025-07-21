@@ -2,12 +2,12 @@
 //
 // SPDX-License-Identifier: MIT
 
-#include "modle/contact_matrix_sparse.hpp"  // for ContactMatrixSparse
+#include "modle/contact_matrix_sparse.hpp"
 
 #include <catch2/catch_test_macros.hpp>
 #include <catch2/matchers/catch_matchers_string.hpp>
 
-#include "modle/common/common.hpp"  // for u32
+#include "modle/common/common.hpp"
 
 namespace modle::test::cmatrix {
 

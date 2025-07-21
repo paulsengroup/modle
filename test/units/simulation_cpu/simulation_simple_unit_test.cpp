@@ -2,25 +2,25 @@
 //
 // SPDX-License-Identifier: MIT
 
-#include <absl/types/span.h>  // for MakeSpan, Span, MakeConstSpan
+#include <absl/types/span.h>
 
-#include <algorithm>  // for all_of, equal, copy, for_each, gene...
-#include <cassert>    // for assert
+#include <algorithm>
+#include <cassert>
 #include <catch2/catch_test_macros.hpp>
-#include <iterator>     // for back_insert_iterator, back_inserter
-#include <memory>       // for allocator, allocator_traits<>::valu...
-#include <numeric>      // for iota
-#include <string_view>  // for string_view
-#include <vector>       // for vector
+#include <iterator>
+#include <memory>
+#include <numeric>
+#include <string_view>
+#include <vector>
 
-#include "./common.hpp"                        // for construct_lef, NO_COLLISION, requir...
-#include "modle/common/common.hpp"             // for usize, bp_t
-#include "modle/common/random.hpp"             // for PRNG, bernoulli_trial, uniform_int_...
-#include "modle/common/simulation_config.hpp"  // for Config
-#include "modle/extrusion_barriers.hpp"        // for ExtrusionBarrier, OCCUPIED, State
-#include "modle/extrusion_factors.hpp"         // for Lef, ExtrusionUnit
-#include "modle/genome.hpp"                    // for GenomicInterval
-#include "modle/simulation.hpp"                // for Simulation
+#include "./common.hpp"
+#include "modle/common/common.hpp"
+#include "modle/common/random.hpp"
+#include "modle/common/simulation_config.hpp"
+#include "modle/extrusion_barriers.hpp"
+#include "modle/extrusion_factors.hpp"
+#include "modle/genome.hpp"
+#include "modle/simulation.hpp"
 
 namespace modle::libmodle::test {
 

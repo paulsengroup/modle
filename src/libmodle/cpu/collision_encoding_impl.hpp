@@ -3,12 +3,12 @@
 // SPDX-License-Identifier: MIT
 
 #pragma once
-#include <absl/numeric/bits.h>  // for countl_zero, popcount
-#include <fmt/format.h>         // for format, formatter
+#include <absl/numeric/bits.h>
+#include <fmt/format.h>
 
-#include <stdexcept>  // for runtime_error
+#include <stdexcept>
 
-#include "modle/common/utils.hpp"  // for ndebug_defined, ndebug_not_defined
+#include "modle/common/utils.hpp"
 
 namespace modle {
 template <class I>

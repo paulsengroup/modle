@@ -9,7 +9,7 @@
 
 #include "modle/common/random.hpp"
 #include "modle/io/contact_matrix_dense.hpp"
-#include "modle/test/tmpdir.hpp"  // for TmpDir
+#include "modle/test/tmpdir.hpp"
 
 namespace modle::test {
 inline const TmpDir testdir{true};  // NOLINT(cert-err58-cpp)

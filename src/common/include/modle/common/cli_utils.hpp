@@ -7,11 +7,11 @@
 #include <absl/container/fixed_array.h>
 
 #include <CLI/Formatter.hpp>
-#include <filesystem>  // for path
+#include <filesystem>
 #include <initializer_list>
 #include <ranges>
-#include <string>       // for string
-#include <string_view>  // for string_view
+#include <string>
+#include <string_view>
 
 #include "modle/common/common.hpp"
 #include "modle/common/const_map.hpp"

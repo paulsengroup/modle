@@ -11,8 +11,8 @@
 #include <numeric>
 #include <stdexcept>
 
-#include "modle/common/common.hpp"  // for ndebug_defined, ndebug_not_defined
-#include "modle/common/pixel.hpp"   // for PixelCoordinates
+#include "modle/common/common.hpp"
+#include "modle/common/pixel.hpp"
 
 namespace modle::internal {
 

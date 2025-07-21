@@ -4,13 +4,13 @@
 
 #pragma once
 
-#include <algorithm>                           // for transform
-#include <boost/math/constants/constants.hpp>  // for pi
-#include <cassert>                             // for assert
-#include <cmath>                               // for exp, sqrt
-#include <vector>                              // for vector
+#include <algorithm>
+#include <boost/math/constants/constants.hpp>
+#include <cassert>
+#include <cmath>
+#include <vector>
 
-#include "modle/common/common.hpp"  // for isize, usize
+#include "modle/common/common.hpp"
 
 namespace modle::stats {
 

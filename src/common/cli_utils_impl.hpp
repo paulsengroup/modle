@@ -7,21 +7,21 @@
 #include <absl/strings/str_replace.h>
 #include <cpp-sort/comparators/natural_less.h>
 #include <cpp-sort/sorters/insertion_sorter.h>
-#include <fmt/format.h>  // for compile_string_to_view, FMT_STRING, formatbu...
+#include <fmt/format.h>
 #include <fmt/ranges.h>
 #include <fmt/std.h>
 
-#include <algorithm>   // for transform
-#include <cctype>      // for isalpha
-#include <cmath>       // for trunc
-#include <exception>   // for exception
-#include <filesystem>  // for operator<<, path
+#include <algorithm>
+#include <cctype>
+#include <cmath>
+#include <exception>
+#include <filesystem>
 #include <ranges>
-#include <string>       // for string, basic_string
-#include <string_view>  // for string_view
+#include <string>
+#include <string_view>
 
 #include "modle/common/fmt_helpers.hpp"
-#include "modle/common/numeric_utils.hpp"  // for parse_numeric_or_throw
+#include "modle/common/numeric_utils.hpp"
 #include "modle/common/suppress_compiler_warnings.hpp"
 
 namespace modle::utils {

@@ -6,19 +6,19 @@
 #include "modle/simulation.hpp"
 // clang-format on
 
-#include <absl/types/span.h>  // for Span
+#include <absl/types/span.h>
 
-#include <algorithm>  // for is_sorted, min, all_of, find_if, max
-#include <cassert>    // for assert
-#include <limits>     // for numeric_limits
-#include <utility>    // for make_pair, pair
+#include <algorithm>
+#include <cassert>
+#include <limits>
+#include <utility>
 
 #include "modle/collision_encoding.hpp"
-#include "modle/common/common.hpp"       // for bp_t
-#include "modle/common/dna.hpp"          // for dna::REV, dna::FWD
-#include "modle/extrusion_barriers.hpp"  // for ExtrusionBarrier, NOT_OCCUPIED
-#include "modle/extrusion_factors.hpp"   // for ExtrusionUnit, Lef
-#include "modle/genome.hpp"              // for GenomicInterval
+#include "modle/common/common.hpp"
+#include "modle/common/dna.hpp"
+#include "modle/extrusion_barriers.hpp"
+#include "modle/extrusion_factors.hpp"
+#include "modle/genome.hpp"
 
 namespace modle {
 

@@ -7,7 +7,7 @@
 #include <absl/base/optimization.h>  // IWYU pragma: keep for ABSL_PREDICT_TRUE, ABSL_PREDICT_FALSE, ABSL_UNREACHABLE
 
 #include <cstddef>  // IWYU pragma: keep for size_t, ptrdiff_t
-#include <cstdint>  // for i8, i16, i32, i64, u8 ...
+#include <cstdint>
 #include <type_traits>
 
 namespace modle {

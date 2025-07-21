@@ -4,28 +4,28 @@
 
 #pragma once
 
-#include <absl/types/span.h>  // for Span
+#include <absl/types/span.h>
 #include <fmt/format.h>
-#include <parallel_hashmap/btree.h>  // for btree_set, btree_set_container<>::const_iterator
+#include <parallel_hashmap/btree.h>
 #include <xxhash.h>
 
-#include <filesystem>  // for path
-#include <iterator>    // for iterator_traits
-#include <limits>      // for numeric_limits
-#include <memory>      // for shared_ptr
+#include <filesystem>
+#include <iterator>
+#include <limits>
+#include <memory>
 #include <optional>
-#include <shared_mutex>  // for shared_mutex
-#include <string>        // for string
-#include <string_view>   // for string_view
-#include <type_traits>   // for enable_if_t, remove_cv_t
-#include <vector>        // for vector
+#include <shared_mutex>
+#include <string>
+#include <string_view>
+#include <type_traits>
+#include <vector>
 
-#include "modle/bed/bed.hpp"               // for BED (ptr only), BED_tree, BED_tree<>::value_type
-#include "modle/common/common.hpp"         // for bp_t, contacts_t, u64, u32, u8
-#include "modle/common/utils.hpp"          // for ndebug_defined
-#include "modle/contact_matrix_dense.hpp"  // for ContactMatrixDense
-#include "modle/extrusion_barriers.hpp"    // for ExtrusionBarrier
-#include "modle/interval_tree.hpp"         // for IITree, IITree::IITree<I, T>
+#include "modle/bed/bed.hpp"
+#include "modle/common/common.hpp"
+#include "modle/common/utils.hpp"
+#include "modle/contact_matrix_dense.hpp"
+#include "modle/extrusion_barriers.hpp"
+#include "modle/interval_tree.hpp"
 
 namespace modle {
 

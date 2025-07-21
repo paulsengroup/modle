@@ -4,10 +4,10 @@
 
 #pragma once
 
-#include <limits>  // for numeric_limits
+#include <limits>
 
-#include "modle/common/common.hpp"  // for bp_t, i64
-#include "modle/common/utils.hpp"   // for ndebug_defined
+#include "modle/common/common.hpp"
+#include "modle/common/utils.hpp"
 
 namespace modle {
 

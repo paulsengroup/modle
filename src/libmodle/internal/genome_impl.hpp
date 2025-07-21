@@ -10,7 +10,7 @@
 #include <limits>
 #include <utility>
 
-#include "modle/common/common.hpp"  // for bp_t
+#include "modle/common/common.hpp"
 
 namespace modle {
 

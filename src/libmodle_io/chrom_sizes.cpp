@@ -2,23 +2,23 @@
 //
 // SPDX-License-Identifier: MIT
 
-#include "modle/chrom_sizes/chrom_sizes.hpp"  // for Parser
+#include "modle/chrom_sizes/chrom_sizes.hpp"
 
 #include <absl/strings/ascii.h>
-#include <absl/strings/str_split.h>  // for StrSplit, Splitter
+#include <absl/strings/str_split.h>
 #include <fmt/compile.h>
-#include <fmt/format.h>  // for format, FMT_COMPILE_STRING, FMT_STRING...
+#include <fmt/format.h>
 #include <fmt/std.h>
-#include <parallel_hashmap/phmap.h>  // for flat_hash_set
+#include <parallel_hashmap/phmap.h>
 
-#include <cassert>      // for assert
-#include <filesystem>   // for filesystem::path
-#include <stdexcept>    // for runtime_error, invalid_argument, out_of_range
-#include <string>       // for string, operator==
-#include <string_view>  // for string_view
-#include <vector>       // for vector
+#include <cassert>
+#include <filesystem>
+#include <stdexcept>
+#include <string>
+#include <string_view>
+#include <vector>
 
-#include "modle/bed/bed.hpp"  // for BED
+#include "modle/bed/bed.hpp"
 #include "modle/common/utils.hpp"
 
 namespace modle::chrom_sizes {

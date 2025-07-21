@@ -5,25 +5,25 @@
 // clang-format off
 #include "modle/simulation.hpp"
 // clang-format on
-#include <fmt/format.h>     // for make_format_args, vformat_to, FMT_STRING
-#include <spdlog/spdlog.h>  // for info
+#include <fmt/format.h>
+#include <spdlog/spdlog.h>
 #include <xxhash.h>
 
-#include <algorithm>   // for max, copy, min, find_if, generate
-#include <cassert>     // for assert
-#include <chrono>      // for microseconds, milliseconds
-#include <cmath>       // for round
-#include <deque>       // for deque, operator-, operator!=, _Deque_ite...
-#include <exception>   // for exception_ptr, exception, current_exception
-#include <filesystem>  // for path
-#include <limits>      // for numeric_limits
-#include <stdexcept>   // for runtime_error
-#include <thread>      // IWYU pragma: keep for sleep_for
-#include <utility>     // for pair
-#include <vector>      // for vector
+#include <algorithm>
+#include <cassert>
+#include <chrono>
+#include <cmath>
+#include <deque>
+#include <exception>
+#include <filesystem>
+#include <limits>
+#include <stdexcept>
+#include <thread>  // IWYU pragma: keep for sleep_for
+#include <utility>
+#include <vector>
 
-#include "modle/common/common.hpp"  // for u64
-#include "modle/genome.hpp"         // for GenomicInterval, Genome
+#include "modle/common/common.hpp"
+#include "modle/genome.hpp"
 
 namespace modle {
 

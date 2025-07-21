@@ -3,19 +3,19 @@
 // SPDX-License-Identifier: MIT
 
 #pragma once
-#include <archive.h>  // for archive_read_free, la_susize
+#include <archive.h>
 
-#include <array>                                 // for array
-#include <boost/iostreams/filtering_stream.hpp>  // for filtering_ostream
-#include <filesystem>                            // for path
-#include <fstream>                               // for ofstream
-#include <memory>                                // for unique_ptr
-#include <string>                                // for string
-#include <string_view>                           // for operator""sv, basic_string_view
-#include <utility>                               // for make_pair, pair
+#include <array>
+#include <boost/iostreams/filtering_stream.hpp>
+#include <filesystem>
+#include <fstream>
+#include <memory>
+#include <string>
+#include <string_view>
+#include <utility>
 
-#include "modle/common/common.hpp"                      // for u8
-#include "modle/common/suppress_compiler_warnings.hpp"  // for DISABLE_WARNING_PADDED, DISABLE_W...
+#include "modle/common/common.hpp"
+#include "modle/common/suppress_compiler_warnings.hpp"
 
 struct archive;
 struct archive_entry;

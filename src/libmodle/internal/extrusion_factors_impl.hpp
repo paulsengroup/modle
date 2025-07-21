@@ -6,8 +6,8 @@
 
 // IWYU pragma: private, include "modle/extrusion_factors.hpp"
 
-#include "modle/common/common.hpp"  // for bp_t, i64
-#include "modle/common/utils.hpp"   // for ndebug_defined
+#include "modle/common/common.hpp"
+#include "modle/common/utils.hpp"
 
 namespace modle {
 

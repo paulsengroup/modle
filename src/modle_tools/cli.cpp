@@ -2,42 +2,42 @@
 //
 // SPDX-License-Identifier: MIT
 
-#include "./cli.hpp"  // for Cli
+#include "./cli.hpp"
 
-#include <absl/strings/match.h>       // for EndsWith, EndsWithIgnoreCase
-#include <absl/strings/str_cat.h>     // for StrAppend, StrCat
-#include <absl/strings/str_format.h>  // for StrAppendFormat
-#include <absl/strings/str_split.h>   // for SplitIterator, Splitter, StrSplit, operator!=
-#include <absl/strings/strip.h>       // for StripPrefix, StripSuffix
-#include <absl/types/variant.h>       // for get, monostate
-#include <fmt/format.h>               // for format, join, FMT_STRING, make_format_args
+#include <absl/strings/match.h>
+#include <absl/strings/str_cat.h>
+#include <absl/strings/str_format.h>
+#include <absl/strings/str_split.h>
+#include <absl/strings/strip.h>
+#include <absl/types/variant.h>
+#include <fmt/format.h>
 #include <fmt/std.h>
-#include <toml++/toml.h>  // for array::operator[], operator<<, parse, print_to...
+#include <toml++/toml.h>
 
 #include <CLI/CLI.hpp>
-#include <algorithm>   // for max
-#include <array>       // for array
-#include <cassert>     // for assert
-#include <exception>   // for exception
-#include <filesystem>  // for path, operator<<, path::iterator, operator==
+#include <algorithm>
+#include <array>
+#include <cassert>
+#include <exception>
+#include <filesystem>
 #include <hictk/cooler.hpp>
-#include <ostream>      // for streamsize, stringstream, basic_ostream
-#include <stdexcept>    // for runtime_error, invalid_argument, out_of_range
-#include <string>       // for string, allocator, basic_string
-#include <string_view>  // for basic_string_view, string_view, basic_stri...
-#include <thread>       // for hardware_concurrency
-#include <tuple>        // for ignore
-#include <utility>      // for move
-#include <vector>       // for vector
+#include <ostream>
+#include <stdexcept>
+#include <string>
+#include <string_view>
+#include <thread>
+#include <tuple>
+#include <utility>
+#include <vector>
 
-#include "modle/bed/bed.hpp"  // for Parser, bed_dialects, str_to_bed_dialect_m...
+#include "modle/bed/bed.hpp"
 #include "modle/bigwig/bigwig.hpp"
 #include "modle/common/cli_utils.hpp"
-#include "modle/common/common.hpp"  // for usize
+#include "modle/common/common.hpp"
 #include "modle/common/fmt_helpers.hpp"
-#include "modle/common/utils.hpp"  // for str_float_to_str_int, ConstMap::begin, Con...
+#include "modle/common/utils.hpp"
 #include "modle/config/version.hpp"
-#include "modle_tools/modle_tools_config.hpp"  // for eval_config, find_barrier_clusters_config
+#include "modle_tools/modle_tools_config.hpp"
 
 namespace modle::tools {
 

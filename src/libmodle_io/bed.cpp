@@ -7,30 +7,30 @@
 #include "modle/bed/bed.hpp"
 
 #include <absl/strings/ascii.h>
-#include <absl/strings/match.h>      // for StrContains
-#include <absl/strings/str_join.h>   // for StrJoin
-#include <absl/strings/str_split.h>  // for StrSplit, Splitter, SplitIterator
-#include <fmt/format.h>              // for format, FMT_STRING, join, to_string
+#include <absl/strings/match.h>
+#include <absl/strings/str_join.h>
+#include <absl/strings/str_split.h>
+#include <fmt/format.h>
 #include <fmt/std.h>
 
-#include <algorithm>    // for max, find_if, count, for_each
-#include <cassert>      // for assert
-#include <exception>    // for exception
-#include <filesystem>   // for operator<<, path
-#include <fstream>      // for streamsize
-#include <limits>       // for numeric_limits
-#include <stdexcept>    // for runtime_error
-#include <string>       // for string, basic_string<>::const_ite...
-#include <string_view>  // for string_view, operator==, basic_st...
-#include <utility>      // for pair, move, make_pair
-#include <vector>       // for vector
+#include <algorithm>
+#include <cassert>
+#include <exception>
+#include <filesystem>
+#include <fstream>
+#include <limits>
+#include <stdexcept>
+#include <string>
+#include <string_view>
+#include <utility>
+#include <vector>
 
-#include "modle/common/common.hpp"  // for u64, u8, u32
+#include "modle/common/common.hpp"
 #include "modle/common/fmt_helpers.hpp"
-#include "modle/common/numeric_utils.hpp"               // for parse_numeric_or_throw
-#include "modle/common/suppress_compiler_warnings.hpp"  // for DISABLE_WARNING_PUSH, DISABLE_WAR...
-#include "modle/common/utils.hpp"                       // for ConstMap
-#include "modle/compressed_io/compressed_io.hpp"        // for Reader
+#include "modle/common/numeric_utils.hpp"
+#include "modle/common/suppress_compiler_warnings.hpp"
+#include "modle/common/utils.hpp"
+#include "modle/compressed_io/compressed_io.hpp"
 
 namespace modle::bed {
 

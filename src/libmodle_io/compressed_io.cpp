@@ -4,30 +4,30 @@
 
 #include "modle/compressed_io/compressed_io.hpp"
 
-#include <absl/strings/ascii.h>  // for AsciiStrToLower
-#include <archive.h>             // for archive_errno, archiv...
-#include <fmt/format.h>          // for format, FMT_STRING
+#include <absl/strings/ascii.h>
+#include <archive.h>
+#include <fmt/format.h>
 #include <fmt/std.h>
 
-#include <algorithm>                         // for find_if
-#include <boost/iostreams/close.hpp>         // for close
-#include <boost/iostreams/filter/bzip2.hpp>  // for basic_bzip2_compressor
-#include <boost/iostreams/filter/gzip.hpp>   // for basic_gzip_compressor
-#include <boost/iostreams/filter/lzma.hpp>   // for basic_lzma_compressor
-#include <boost/iostreams/filter/zlib.hpp>   // for best_compression
-#include <boost/iostreams/filter/zstd.hpp>   // for best_compression
-#include <boost/iostreams/write.hpp>         // for put, write
-#include <cassert>                           // for assert
-#include <cerrno>                            // for errno
-#include <filesystem>                        // for path, operator<<
-#include <stdexcept>                         // for runtime_error, logic_...
-#include <string>                            // for string, basic_string
-#include <string_view>                       // for string_view, operator<<
-#include <tuple>                             // for ignore
+#include <algorithm>
+#include <boost/iostreams/close.hpp>
+#include <boost/iostreams/filter/bzip2.hpp>
+#include <boost/iostreams/filter/gzip.hpp>
+#include <boost/iostreams/filter/lzma.hpp>
+#include <boost/iostreams/filter/zlib.hpp>
+#include <boost/iostreams/filter/zstd.hpp>
+#include <boost/iostreams/write.hpp>
+#include <cassert>
+#include <cerrno>
+#include <filesystem>
+#include <stdexcept>
+#include <string>
+#include <string_view>
+#include <tuple>
 
-#include "modle/common/common.hpp"  // for usize
+#include "modle/common/common.hpp"
 #include "modle/common/fmt_helpers.hpp"
-#include "modle/common/utils.hpp"  // for ndebug_not_defined
+#include "modle/common/utils.hpp"
 
 namespace modle::compressed_io {
 

@@ -4,14 +4,14 @@
 
 #include "modle/stats/descriptive.hpp"
 
-#include <algorithm>  // for transform
+#include <algorithm>
 #include <catch2/catch_test_macros.hpp>
 #include <catch2/matchers/catch_matchers_floating_point.hpp>
-#include <string_view>  // for string_view_literals
-#include <vector>       // for vector
+#include <string_view>
+#include <vector>
 
-#include "modle/common/common.hpp"  // for u8, usize
-#include "modle/common/utils.hpp"   // for identity::operator(), identity
+#include "modle/common/common.hpp"
+#include "modle/common/utils.hpp"
 
 namespace modle::stats::test {
 

@@ -4,16 +4,16 @@
 
 #include "modle/extrusion_barriers.hpp"
 
-#include <cpp-sort/sorters/pdq_sorter.h>  // for pdq_sort
+#include <cpp-sort/sorters/pdq_sorter.h>
 
-#include <algorithm>  // for clamp
-#include <cassert>    // for assert
-#include <limits>     // for numeric_limits
-#include <vector>     // for vector
+#include <algorithm>
+#include <cassert>
+#include <limits>
+#include <vector>
 
-#include "modle/common/common.hpp"  // for bp_t, Direction, fwd, none
-#include "modle/common/dna.hpp"     // for dna::Direction, dna::NONE
-#include "modle/common/random.hpp"  // for PRNG_t
+#include "modle/common/common.hpp"
+#include "modle/common/dna.hpp"
+#include "modle/common/random.hpp"
 
 namespace modle {
 

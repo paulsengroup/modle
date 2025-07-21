@@ -6,13 +6,13 @@
 
 #include <catch2/catch_test_macros.hpp>
 #include <catch2/matchers/catch_matchers_floating_point.hpp>
-#include <filesystem>  // for path
+#include <filesystem>
 #include <numeric>
-#include <string>  // for string, basic_string, operator==, char_traits, stoull
-#include <vector>  // for vector
+#include <string>
+#include <vector>
 
-#include "modle/common/common.hpp"  // for usize
-#include "modle/test/tmpdir.hpp"    // for TmpDir
+#include "modle/common/common.hpp"
+#include "modle/test/tmpdir.hpp"
 
 namespace modle::test {
 inline const TmpDir testdir{true};  // NOLINT(cert-err58-cpp)

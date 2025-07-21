@@ -6,14 +6,14 @@
 #include "modle/simulation.hpp"
 // clang-format on
 
-#include <absl/types/span.h>  // for Span
+#include <absl/types/span.h>
 
-#include <cassert>  // for assert
+#include <cassert>
 
-#include "modle/common/common.hpp"       // for bp_t
-#include "modle/common/utils.hpp"        // for ndebug_defined
-#include "modle/extrusion_barriers.hpp"  // for ExtrusionBarrier
-#include "modle/extrusion_factors.hpp"   // for ExtrusionUnit, Lef
+#include "modle/common/common.hpp"
+#include "modle/common/utils.hpp"
+#include "modle/extrusion_barriers.hpp"
+#include "modle/extrusion_factors.hpp"
 
 namespace modle {
 

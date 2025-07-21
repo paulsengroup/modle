@@ -7,42 +7,42 @@
 #include "modle/simulation.hpp"
 
 #include <absl/time/clock.h>
-#include <absl/types/span.h>                    // for Span, MakeConstSpan, MakeSpan
-#include <cpp-sort/sorters/insertion_sorter.h>  // for insertion_sort, insertion_so...
-#include <cpp-sort/sorters/pdq_sorter.h>        // for pdq_sort, pdq_sorter
-#include <cpp-sort/sorters/split_sorter.h>      // for split_sort, split_sorter
+#include <absl/types/span.h>
+#include <cpp-sort/sorters/insertion_sorter.h>
+#include <cpp-sort/sorters/pdq_sorter.h>
+#include <cpp-sort/sorters/split_sorter.h>
 #include <fmt/compile.h>
-#include <parallel_hashmap/btree.h>  // for btree_iterator
-#include <spdlog/spdlog.h>           // for info, warn
+#include <parallel_hashmap/btree.h>
+#include <spdlog/spdlog.h>
 
-#include <algorithm>   // for max, fill, min, copy, clamp
-#include <atomic>      // for atomic
-#include <cassert>     // for assert
-#include <chrono>      // for microseconds
-#include <cmath>       // for log, round, exp, floor, sqrt
-#include <cstdlib>     // for abs
-#include <deque>       // for _Deque_iterator<>::_Self
-#include <filesystem>  // for operator<<, path
+#include <algorithm>
+#include <atomic>
+#include <cassert>
+#include <chrono>
+#include <cmath>
+#include <cstdlib>
+#include <deque>
+#include <filesystem>
 #include <hictk/cooler.hpp>
-#include <limits>       // for numeric_limits
-#include <memory>       // for shared_ptr, unique_ptr, make...
-#include <mutex>        // for mutex
-#include <numeric>      // for iota
-#include <stdexcept>    // for runtime_error
-#include <string>       // for string
-#include <string_view>  // for string_view
-#include <utility>      // for make_pair, pair
-#include <vector>       // for vector, vector<>::iterator
+#include <limits>
+#include <memory>
+#include <mutex>
+#include <numeric>
+#include <stdexcept>
+#include <string>
+#include <string_view>
+#include <utility>
+#include <vector>
 
 #include "modle/bigwig/bigwig.hpp"
-#include "modle/common/common.hpp"             // for bp_t, contacts_t
-#include "modle/common/dna.hpp"                // for dna::REV, dna::FWD
-#include "modle/common/random.hpp"             // for bernoulli_trial, poisson_distribution
-#include "modle/common/simulation_config.hpp"  // for Config
+#include "modle/common/common.hpp"
+#include "modle/common/dna.hpp"
+#include "modle/common/random.hpp"
+#include "modle/common/simulation_config.hpp"
 #include "modle/config/version.hpp"
-#include "modle/extrusion_barriers.hpp"  // for ExtrusionBarrier, update_states
-#include "modle/extrusion_factors.hpp"   // for Lef, ExtrusionUnit
-#include "modle/genome.hpp"              // for Genome::iterator, GenomicInterval
+#include "modle/extrusion_barriers.hpp"
+#include "modle/extrusion_factors.hpp"
+#include "modle/genome.hpp"
 #include "modle/io/contact_matrix_dense.hpp"
 #include "modle/stats/descriptive.hpp"
 

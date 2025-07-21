@@ -4,18 +4,18 @@
 
 #include "modle/stats/correlation.hpp"
 
-#include <absl/strings/match.h>  // for StartsWith
+#include <absl/strings/match.h>
 
-#include <cassert>  // for assert
+#include <cassert>
 #include <catch2/catch_test_macros.hpp>
 #include <catch2/matchers/catch_matchers_floating_point.hpp>
-#include <random>       // for random_device
-#include <string>       // for string
-#include <string_view>  // for operator==, operator""sv, basic_string_view
-#include <utility>      // for make_pair
-#include <vector>       // for vector
+#include <random>
+#include <string>
+#include <string_view>
+#include <utility>
+#include <vector>
 
-#include "modle/common/common.hpp"  // for u32, usize
+#include "modle/common/common.hpp"
 #include "modle/common/numeric_utils.hpp"
 #include "modle/compressed_io/compressed_io.hpp"
 

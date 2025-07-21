@@ -2,11 +2,11 @@
 //
 // SPDX-License-Identifier: MIT
 
-#include <CLI/CLI.hpp>  // for App
-#include <string>       // for string
-#include <string_view>  // for string_view
+#include <CLI/CLI.hpp>
+#include <string>
+#include <string_view>
 
-#include "modle_tools/modle_tools_config.hpp"  // for config
+#include "modle_tools/modle_tools_config.hpp"
 
 namespace modle::tools {
 

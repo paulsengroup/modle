@@ -4,10 +4,10 @@
 
 #pragma once
 
-#include <type_traits>  // for declval, enable_if_t
+#include <type_traits>
 
-#include "modle/common/common.hpp"  // for usize
-#include "modle/common/utils.hpp"   // for identity
+#include "modle/common/common.hpp"
+#include "modle/common/utils.hpp"
 
 namespace modle::stats {
 

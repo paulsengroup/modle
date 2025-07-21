@@ -4,11 +4,11 @@
 
 #pragma once
 
-#include <type_traits>  // for enable_if, enable_if_t
-#include <vector>       // for vector
+#include <type_traits>
+#include <vector>
 
-#include "modle/common/common.hpp"  // for u8f
-#include "modle/common/utils.hpp"   // for RepeatIterator
+#include "modle/common/common.hpp"
+#include "modle/common/utils.hpp"
 
 namespace modle::stats {
 

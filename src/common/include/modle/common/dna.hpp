@@ -4,11 +4,11 @@
 
 #pragma once
 
-#include <cassert>    // for assert
-#include <stdexcept>  // for runtime_error
-#include <string>     // for string
+#include <cassert>
+#include <stdexcept>
+#include <string>
 
-#include "modle/common/common.hpp"  // for u8f, MODLE_UNREACHABLE_CODE
+#include "modle/common/common.hpp"
 
 namespace modle::dna {
 

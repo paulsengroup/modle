@@ -4,12 +4,12 @@
 
 #pragma once
 
-#include <cassert>  // for assert
-#include <limits>   // for numeric_limits, numeric_limits<>::digits
+#include <cassert>
+#include <limits>
 
-#include "modle/common/common.hpp"  // for bp_t
-#include "modle/common/dna.hpp"     // for dna::Direction, dna::FWD, dna::REV
-#include "modle/common/random.hpp"  // for generate_canonical, PRNG_t
+#include "modle/common/common.hpp"
+#include "modle/common/dna.hpp"
+#include "modle/common/random.hpp"
 
 namespace modle {
 

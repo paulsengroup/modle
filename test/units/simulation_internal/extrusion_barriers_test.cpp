@@ -2,12 +2,12 @@
 //
 // SPDX-License-Identifier: MIT
 
-#include "modle/extrusion_barriers.hpp"  // for ExtrusionBarrier
+#include "modle/extrusion_barriers.hpp"
 
 #include <catch2/catch_test_macros.hpp>
 #include <catch2/matchers/catch_matchers_floating_point.hpp>
 
-#include "modle/common/common.hpp"  // for dna::Direction
+#include "modle/common/common.hpp"
 
 namespace modle::libmodle::test {
 

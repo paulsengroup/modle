@@ -2,15 +2,15 @@
 //
 // SPDX-License-Identifier: MIT
 
-#include "modle/compressed_io/compressed_io.hpp"  // for Reader
+#include "modle/compressed_io/compressed_io.hpp"
 
 #include <catch2/catch_test_macros.hpp>
-#include <filesystem>  // for path, operator/
-#include <fstream>     // for ifstream, basic_ios, basic_istream, operator<<
-#include <iostream>    // for cerr
-#include <string>      // for operator==, string, basic_string, getline
+#include <filesystem>
+#include <fstream>
+#include <iostream>
+#include <string>
 
-#include "modle/test/tmpdir.hpp"  // for TmpDir
+#include "modle/test/tmpdir.hpp"
 
 namespace modle::test {
 inline const TmpDir testdir{true};  // NOLINT(cert-err58-cpp)

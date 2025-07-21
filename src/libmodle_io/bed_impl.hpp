@@ -4,24 +4,24 @@
 
 #pragma once
 
-#include <absl/types/span.h>  // for Span, MakeConstSpan
-#include <fmt/format.h>       // for format_parse_context, FMT_STRING, join, format_error
+#include <absl/types/span.h>
+#include <fmt/format.h>
 #include <fmt/ranges.h>
 
-#include <algorithm>    // for min
-#include <array>        // for array
-#include <cassert>      // for assert
-#include <filesystem>   // for path
-#include <memory>       // for unique_ptr
-#include <numeric>      // for accumulate
-#include <string>       // for string
-#include <string_view>  // for string_view, basic_string_view
-#include <tuple>        // for ignore
-#include <type_traits>  // for add_const<>::type
-#include <utility>      // for move, pair, make_pair
-#include <vector>       // for vector
+#include <algorithm>
+#include <array>
+#include <cassert>
+#include <filesystem>
+#include <memory>
+#include <numeric>
+#include <string>
+#include <string_view>
+#include <tuple>
+#include <type_traits>
+#include <utility>
+#include <vector>
 
-#include "modle/common/common.hpp"  // for bp_t, u64, u32, u8, usize
+#include "modle/common/common.hpp"
 
 namespace modle::bed {
 

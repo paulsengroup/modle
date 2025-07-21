@@ -6,22 +6,22 @@
 
 // IWYU pragma: private, include "modle/simulation.hpp"
 
-#include <absl/types/span.h>  // for Span
-#include <fmt/format.h>       // for format_parse_context, format_error
+#include <absl/types/span.h>
+#include <fmt/format.h>
 
-#include <BS_thread_pool.hpp>  // for BS::light_thread_pool
-#include <algorithm>           // for min
-#include <cassert>             // for assert
-#include <limits>              // for numeric_limits
-#include <thread>              // for thread
-#include <type_traits>         // for declval, decay_t
+#include <BS_thread_pool.hpp>
+#include <algorithm>
+#include <cassert>
+#include <limits>
+#include <thread>
+#include <type_traits>
 
-#include "modle/common/common.hpp"                      // for usize, bp_t, i64, u32
-#include "modle/common/random.hpp"                      // for PRNG_t
-#include "modle/common/suppress_compiler_warnings.hpp"  // for DISABLE_WARNING_POP, DISABLE_WARN...
-#include "modle/common/utils.hpp"                       // for ndebug_defined, ndebug_not_defined
-#include "modle/extrusion_factors.hpp"                  // for Lef, ExtrusionUnit
-#include "modle/genome.hpp"                             // for GenomicInterval
+#include "modle/common/common.hpp"
+#include "modle/common/random.hpp"
+#include "modle/common/suppress_compiler_warnings.hpp"
+#include "modle/common/utils.hpp"
+#include "modle/extrusion_factors.hpp"
+#include "modle/genome.hpp"
 
 namespace modle {
 constexpr const Config& Simulation::config() const noexcept { return this->_config; }

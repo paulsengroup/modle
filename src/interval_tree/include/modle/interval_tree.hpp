@@ -6,16 +6,16 @@
 
 #pragma once
 
-#include <absl/types/span.h>  // for Span
+#include <absl/types/span.h>
 
-#include <iterator>     // for pair
-#include <limits>       // for numeric_limits
-#include <type_traits>  // for enable_if_t
-#include <utility>      // for pair
-#include <vector>       // for vector
+#include <iterator>
+#include <limits>
+#include <type_traits>
+#include <utility>
+#include <vector>
 
-#include "modle/common/common.hpp"                      // for i64, u8
-#include "modle/common/suppress_compiler_warnings.hpp"  // for DISABLE_WARNING_PADDED, DISABLE_W...
+#include "modle/common/common.hpp"
+#include "modle/common/suppress_compiler_warnings.hpp"
 
 namespace modle {
 

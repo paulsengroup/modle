@@ -4,34 +4,34 @@
 
 #pragma once
 
-#include <absl/types/span.h>         // for Span
-#include <fmt/format.h>              // for format_parse_context, formatter
-#include <parallel_hashmap/phmap.h>  // for flat_hash_set
+#include <absl/types/span.h>
+#include <fmt/format.h>
+#include <parallel_hashmap/phmap.h>
 
-#include <atomic>       // for atomic
-#include <deque>        // for deque
-#include <exception>    // for exception_ptr
-#include <filesystem>   // for path
-#include <limits>       // for numeric_limits
-#include <memory>       // for shared_ptr, allocator, unique_ptr
-#include <mutex>        // for mutex
-#include <string>       // for string
-#include <string_view>  // for string_view
-#include <utility>      // for pair
-#include <vector>       // for vector
+#include <atomic>
+#include <deque>
+#include <exception>
+#include <filesystem>
+#include <limits>
+#include <memory>
+#include <mutex>
+#include <string>
+#include <string_view>
+#include <utility>
+#include <vector>
 
-#include "modle/bed/bed.hpp"                            // for BED (ptr only), BED_tree
-#include "modle/collision_encoding.hpp"                 // for Collision<>
-#include "modle/common/common.hpp"                      // for usize, bp_t, contacts_t
-#include "modle/common/random.hpp"                      // for PRNG_t, normal_distribution, unif...
-#include "modle/common/simulation_config.hpp"           // for Config
-#include "modle/common/suppress_compiler_warnings.hpp"  // for DISABLE_WARNING_POP, DISABLE_WARN...
-#include "modle/common/utils.hpp"                       // for ndebug_defined
-#include "modle/contact_matrix_dense.hpp"               // for ContactMatrixDense
+#include "modle/bed/bed.hpp"
+#include "modle/collision_encoding.hpp"
+#include "modle/common/common.hpp"
+#include "modle/common/random.hpp"
+#include "modle/common/simulation_config.hpp"
+#include "modle/common/suppress_compiler_warnings.hpp"
+#include "modle/common/utils.hpp"
+#include "modle/contact_matrix_dense.hpp"
 #include "modle/context_manager.hpp"
-#include "modle/extrusion_barriers.hpp"  // for ExtrusionBarrier
-#include "modle/extrusion_factors.hpp"   // for Lef, ExtrusionUnit (ptr only)
-#include "modle/genome.hpp"              // for GenomicInterval (ptr only), Genome
+#include "modle/extrusion_barriers.hpp"
+#include "modle/extrusion_factors.hpp"
+#include "modle/genome.hpp"
 
 namespace modle {
 

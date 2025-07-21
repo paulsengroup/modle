@@ -4,25 +4,25 @@
 
 #pragma once
 
-#include <absl/types/span.h>         // for Span
-#include <fmt/format.h>              // for format_parse_context, formatter
-#include <parallel_hashmap/btree.h>  // for btree_map
-#include <xxhash.h>                  // for XXH3_state_t, XXH_INLINE_XXH3_state_t
+#include <absl/types/span.h>
+#include <fmt/format.h>
+#include <parallel_hashmap/btree.h>
+#include <xxhash.h>
 
-#include <array>        // for array
-#include <filesystem>   // for path
-#include <limits>       // for numeric_limits
-#include <memory>       // for unique_ptr
-#include <string>       // for string
-#include <string_view>  // for operator""sv, string_view, basic_string_view, stri...
-#include <type_traits>  // for __strip_reference_wrapper<>::__type
-#include <utility>      // for make_pair, pair
-#include <vector>       // for vector
+#include <array>
+#include <filesystem>
+#include <limits>
+#include <memory>
+#include <string>
+#include <string_view>
+#include <type_traits>
+#include <utility>
+#include <vector>
 
-#include "modle/common/common.hpp"     // for bp_t, u64, u8
-#include "modle/common/const_map.hpp"  // for ConstMap, ConstMap::ConstMap<Key, Value, Size>
-#include "modle/compressed_io/compressed_io.hpp"  // for Reader
-#include "modle/interval_tree.hpp"                // for IITree, IITree::IITree<I, T>
+#include "modle/common/common.hpp"
+#include "modle/common/const_map.hpp"
+#include "modle/compressed_io/compressed_io.hpp"
+#include "modle/interval_tree.hpp"
 
 namespace modle::bed {
 
