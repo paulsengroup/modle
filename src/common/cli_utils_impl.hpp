@@ -36,20 +36,19 @@ std::string format_collection_to_english_list(const Collection &collection,
 
   const auto size = std::distance(std::begin(collection), std::end(collection));
   if (size <= 2) {
-    return fmt::format(FMT_STRING("{}"), fmt::join(collection, last_sep));
+    return fmt::format("{}", fmt::join(collection, last_sep));
   }
 
   const auto first = std::begin(collection);
   const auto second_to_last = std::end(collection) - 1;
-  return fmt::format(FMT_STRING("{}{}{}"), fmt::join(first, second_to_last, sep), last_sep,
-                     *second_to_last);
+  return fmt::format("{}{}{}", fmt::join(first, second_to_last, sep), last_sep, *second_to_last);
 }
 
 std::string trim_trailing_zeros_from_decimal_digits(std::string &s) {
   try {
     auto n = parse_numeric_or_throw<double>(s);
     if (std::trunc(n) == n) {
-      return fmt::format(FMT_STRING("{:.0f}"), n);
+      return fmt::format("{:.0f}", n);
     }
 
   } catch ([[maybe_unused]] const std::exception &e) {
@@ -82,15 +81,14 @@ bool detect_path_collision(const std::filesystem::path &p, std::string &error_ms
   if (expected_type != path_type) {
     switch (path_type) {
       case file_type::regular:
-        error_msg +=
-            fmt::format(FMT_STRING("path {} already exists and is actually a file. Please remove "
-                                   "the file and try again"),
-                        p);
+        error_msg += fmt::format(
+            "path {} already exists and is actually a file. Please remove the file and try again",
+            p);
         return false;
       case file_type::directory:
         error_msg += fmt::format(
-            FMT_STRING("path {} already exists and is actually a directory. Please remove "
-                       "the directory and try again"),
+            "path {} already exists and is actually a directory. Please remove the directory and "
+            "try again",
             p);
         return false;
       default:  // For the time being we only handle regular files and folders
@@ -103,7 +101,7 @@ bool detect_path_collision(const std::filesystem::path &p, std::string &error_ms
   }
 
   if (path_type == file_type::regular) {
-    error_msg += fmt::format(FMT_STRING("file {} already exists. Pass --force to overwrite"), p);
+    error_msg += fmt::format("file {} already exists. Pass --force to overwrite", p);
     return false;
   }
   return true;
@@ -181,7 +179,7 @@ template <class EnumT, class StringT>
 const StringT &CliEnumMappings<EnumT, StringT>::at(const EnumT key) const {
   auto match = this->find(key);
   if (match == this->_mappings.end()) {
-    throw std::out_of_range(fmt::format(FMT_STRING("invalid key {}"), int(key)));
+    throw std::out_of_range(fmt::format("invalid key {}", int(key)));
   }
   return match->first;
 }
@@ -190,7 +188,7 @@ template <class EnumT, class StringT>
 EnumT CliEnumMappings<EnumT, StringT>::at(const StringT &key) const {
   auto match = this->find(key);
   if (match == this->_mappings.end()) {
-    throw std::out_of_range(fmt::format(FMT_STRING("invalid key {}"), key));
+    throw std::out_of_range(fmt::format("invalid key {}", key));
   }
   return match->second;
 }
@@ -230,9 +228,9 @@ std::string Formatter::make_option_opts(const CLI::Option *opt) const {
         if (s.find('.') == std::string::npos) {
           s += ".0";
         }
-        out += fmt::format(FMT_STRING("={}"), s);
+        out += fmt::format("={}", s);
       } else {
-        out += fmt::format(FMT_STRING("={}"), opt->get_default_str());
+        out += fmt::format("={}", opt->get_default_str());
       }
     }
 
@@ -252,7 +250,7 @@ std::string Formatter::make_option_opts(const CLI::Option *opt) const {
     if (opt->get_expected_max() == CLI::detail::expected_max_vector_size) {
       out += " ...";
     } else if (opt->get_expected_min() > 1) {
-      out += fmt::format(FMT_STRING(" x {}"), opt->get_expected());
+      out += fmt::format(" x {}", opt->get_expected());
     }
 
     if (opt->get_required()) {
@@ -260,18 +258,18 @@ std::string Formatter::make_option_opts(const CLI::Option *opt) const {
     }
   }
   if (!opt->get_envname().empty()) {
-    out += fmt::format(FMT_STRING(" ({}: {})"), get_label("env"), opt->get_envname());
+    out += fmt::format(" ({}: {})", get_label("env"), opt->get_envname());
   }
   if (!opt->get_needs().empty()) {
-    out += fmt::format(FMT_STRING(" {}:"), get_label("needs"));
+    out += fmt::format(" {}:", get_label("needs"));
     for (const auto *op : opt->get_needs()) {
-      out += fmt::format(FMT_STRING(" {}"), op->get_name());
+      out += fmt::format(" {}", op->get_name());
     }
   }
   if (!opt->get_excludes().empty()) {
-    out += fmt::format(FMT_STRING(" {}:"), get_label("excludes"));
+    out += fmt::format(" {}:", get_label("excludes"));
     for (const auto *op : opt->get_excludes()) {
-      out += fmt::format(FMT_STRING(" {}"), op->get_name());
+      out += fmt::format(" {}", op->get_name());
     }
   }
 
@@ -287,9 +285,9 @@ IsFiniteValidator::IsFiniteValidator(bool nan_ok) {
       if (std::isfinite(n) || (nan_ok && !std::isnan(n))) {
         return "";
       }
-      return fmt::format(FMT_STRING("value {} is not a finite number"), n);
+      return fmt::format("value {} is not a finite number", n);
     } catch ([[maybe_unused]] const std::exception &e) {
-      return fmt::format(FMT_STRING("value {} could not be converted"), input);
+      return fmt::format("value {} could not be converted", input);
     }
   };
 }
@@ -319,7 +317,7 @@ AsGenomicDistanceTransformer::AsGenomicDistanceTransformer() : CLI::CheckedTrans
 
     // input is empty or there are no digits preceding the unit
     if (unit_rbegin == s.rend()) {
-      throw CLI::ValidationError(fmt::format(FMT_STRING("value {} could not be converted"), input));
+      throw CLI::ValidationError(fmt::format("value {} could not be converted", input));
     }
 
     // input does not have a unit
@@ -327,8 +325,7 @@ AsGenomicDistanceTransformer::AsGenomicDistanceTransformer() : CLI::CheckedTrans
       try {  // Make sure input can be parsed to a positive integer
         std::ignore = utils::parse_numeric_or_throw<bp_t>(input);
       } catch ([[maybe_unused]] const std::exception &e) {
-        throw CLI::ValidationError(
-            fmt::format(FMT_STRING("unable to convert {} to a number"), input));
+        throw CLI::ValidationError(fmt::format("unable to convert {} to a number", input));
       }
       return "";  // input validation was successful
     }
@@ -340,9 +337,10 @@ AsGenomicDistanceTransformer::AsGenomicDistanceTransformer() : CLI::CheckedTrans
     // Look-up the appropriate multiplier
     auto it = mappings.find(absl::AsciiStrToLower(unit));
     if (it == mappings.end()) {
-      throw CLI::ValidationError(fmt::format(FMT_STRING("{} unit not recognized.\n"
-                                                        "Valid units:\n - {}"),
-                                             unit, fmt::join(mappings.keys(), "\n - ")));
+      throw CLI::ValidationError(
+          fmt::format("{} unit not recognized.\n"
+                      "Valid units:\n - {}",
+                      unit, fmt::join(mappings.keys(), "\n - ")));
     }
 
     const auto &multiplier = *it.second;
@@ -352,17 +350,14 @@ AsGenomicDistanceTransformer::AsGenomicDistanceTransformer() : CLI::CheckedTrans
 
       if (std::trunc(m) != m) {  // Ensure double can be represented as a whole number
         throw CLI::ValidationError(fmt::format(
-            FMT_STRING(
-                "Unable to convert {} to a number of base-pairs ({} is not an integral number)"),
-            s, m));
+            "Unable to convert {} to a number of base-pairs ({} is not an integral number)", s, m));
       }
-      input = fmt::format(FMT_STRING("{:.0f}"), m);
+      input = fmt::format("{:.0f}", m);
       return "";  // input validation and transformation were successful
     } catch (const CLI::ValidationError &e) {
       throw;
     } catch ([[maybe_unused]] const std::exception &e) {
-      throw CLI::ValidationError(
-          fmt::format(FMT_STRING("unable to convert {} to a number"), num_str));
+      throw CLI::ValidationError(fmt::format("unable to convert {} to a number", num_str));
     }
   };
 }

@@ -273,7 +273,7 @@ static void contact_matrix_dense_blur_helper(double sigma, double truncate,
 
   const auto path_to_reference_matrix =
       data_dir() / "contact_matrices" / "blurred" /
-      fmt::format(FMT_STRING("contact_matrix_dense_int_001_blurred_{:.2f}.tsv.xz"), sigma);
+      fmt::format("contact_matrix_dense_int_001_blurred_{:.2f}.tsv.xz", sigma);
 
   const auto input_matrix = ContactMatrixDense<double>::from_txt(path_to_input_matrix);
   const auto reference_matrix = ContactMatrixDense<double>::from_txt(path_to_reference_matrix);
@@ -324,8 +324,7 @@ static void contact_matrix_dense_dog_helper(double sigma1, double sigma2, double
 
   const auto path_to_reference_matrix =
       data_dir() / "contact_matrices" / "diff_of_gaussians" /
-      fmt::format(FMT_STRING("contact_matrix_dense_int_001_dog_{:.2f}_{:.2f}.tsv.xz"), sigma1,
-                  sigma2);
+      fmt::format("contact_matrix_dense_int_001_dog_{:.2f}_{:.2f}.tsv.xz", sigma1, sigma2);
 
   const auto input_matrix = ContactMatrixDense<double>::from_txt(path_to_input_matrix);
 

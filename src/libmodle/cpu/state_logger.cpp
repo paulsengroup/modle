@@ -22,7 +22,7 @@ StateLoggerAggregator::StateLoggerAggregator(std::filesystem::path path)
           std::ios_base::binary | std::ios_base::in | std::ios_base::out | std::ios_base::ate) {
   _fs.exceptions(_fs.exceptions() | std::ios_base::failbit | std::ios_base::badbit);
   if (!_path.empty() && !_fs) {
-    throw fmt::system_error(errno, FMT_STRING("failed to open file {} for writing"), _path);
+    throw fmt::system_error(errno, "failed to open file {} for writing", _path);
   }
 }
 
@@ -39,9 +39,9 @@ void StateLoggerAggregator::append(const std::filesystem::path &path,
       std::filesystem::remove(path);
     }
   } catch (const std::exception &e) {
-    throw std::runtime_error(fmt::format(
-        FMT_STRING("the following error occurred while appending file {} to file {}: {}"), path,
-        this->_path, std::string{e.what()}));
+    throw std::runtime_error(
+        fmt::format("the following error occurred while appending file {} to file {}: {}", path,
+                    this->_path, std::string{e.what()}));
   }
 }
 

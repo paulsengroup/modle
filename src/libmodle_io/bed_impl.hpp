@@ -254,7 +254,7 @@ constexpr auto fmt::formatter<modle::bed::RGB>::parse(format_parse_context& ctx)
 template <typename FormatContext>
 auto fmt::formatter<modle::bed::RGB>::format(const modle::bed::RGB& rgb, FormatContext& ctx) const
     -> decltype(ctx.out()) {
-  return fmt::format_to(ctx.out(), FMT_STRING("{},{},{}"), rgb.r, rgb.g, rgb.b);
+  return fmt::format_to(ctx.out(), "{},{},{}", rgb.r, rgb.g, rgb.b);
 }
 
 constexpr auto fmt::formatter<modle::bed::BED>::parse(format_parse_context& ctx)
@@ -290,31 +290,28 @@ auto fmt::formatter<modle::bed::BED>::format(const modle::bed::BED& b, FormatCon
   const auto n = std::min(b.num_fields(), static_cast<modle::usize>(this->presentation));
   auto it = ctx.out();
   if (n == 3U) {
-    it = fmt::format_to(it, FMT_STRING("{}\t{}\t{}"), b.chrom, b.chrom_start, b.chrom_end);
+    it = fmt::format_to(it, "{}\t{}\t{}", b.chrom, b.chrom_start, b.chrom_end);
   } else if (n == 4U) {
-    it = fmt::format_to(it, FMT_STRING("{}\t{}\t{}\t{}"), b.chrom, b.chrom_start, b.chrom_end,
-                        b.name);
+    it = fmt::format_to(it, "{}\t{}\t{}\t{}", b.chrom, b.chrom_start, b.chrom_end, b.name);
   } else if (n == 5U) {
-    it = fmt::format_to(it, FMT_STRING("{}\t{}\t{}\t{}\t{}"), b.chrom, b.chrom_start, b.chrom_end,
-                        b.name, b.score);
+    it = fmt::format_to(it, "{}\t{}\t{}\t{}\t{}", b.chrom, b.chrom_start, b.chrom_end, b.name,
+                        b.score);
   } else if (n == 6U) {
-    it = fmt::format_to(it, FMT_STRING("{}\t{}\t{}\t{}\t{}\t{}"), b.chrom, b.chrom_start,
-                        b.chrom_end, b.name, b.score, b.strand);
+    it = fmt::format_to(it, "{}\t{}\t{}\t{}\t{}\t{}", b.chrom, b.chrom_start, b.chrom_end, b.name,
+                        b.score, b.strand);
   } else if (n == 9U) {
     assert(b.rgb);
-    it =
-        fmt::format_to(it, FMT_STRING("{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}"), b.chrom, b.chrom_start,
-                       b.chrom_end, b.name, b.score, b.strand, b.thick_start, b.thick_end, *b.rgb);
+    it = fmt::format_to(it, "{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}", b.chrom, b.chrom_start,
+                        b.chrom_end, b.name, b.score, b.strand, b.thick_start, b.thick_end, *b.rgb);
   } else if (n >= 12U) {
     assert(b.rgb);
-    it = fmt::format_to(it, FMT_STRING("{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}"), b.chrom,
-                        b.chrom_start, b.chrom_end, b.name, b.score, b.strand, b.thick_start,
-                        b.thick_end, *b.rgb, fmt::join(b.block_sizes, ","),
-                        fmt::join(b.block_starts, ","));
+    it = fmt::format_to(it, "{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}", b.chrom, b.chrom_start,
+                        b.chrom_end, b.name, b.score, b.strand, b.thick_start, b.thick_end, *b.rgb,
+                        fmt::join(b.block_sizes, ","), fmt::join(b.block_starts, ","));
   }
 
   if (!b.extra_tokens.empty()) {
-    it = fmt::format_to(it, FMT_STRING("\t{}"), b.extra_tokens);
+    it = fmt::format_to(it, "\t{}", b.extra_tokens);
   }
 
   return it;

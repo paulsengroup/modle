@@ -12,7 +12,7 @@
 namespace modle::libmodle::test {
 
 [[maybe_unused]] static std::string event_to_str(const CollisionEvent<> event) {
-  return fmt::format(FMT_STRING("{:08b}"), event());
+  return fmt::format("{:08b}", event());
 }
 
 [[maybe_unused]] constexpr usize EVENT_BITS = 5;

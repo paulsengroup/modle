@@ -137,11 +137,11 @@ static void validate_regions_of_interest(const hictk::Reference &chroms,
   if (!invalid_intervals.empty()) {
     const auto num_invalid_intervals = invalid_chrom + invalid_range;
     throw std::runtime_error(
-        fmt::format(FMT_STRING("detected {} invalid intervals:\n"
-                               " - {} intervals refer to missing chromosome(s)\n"
-                               " - {} intervals span outside existing chromosome(s)\n"
-                               "Showing {}{} invalid record(s):\n"
-                               "- {}"),
+        fmt::format("detected {} invalid intervals:\n"
+                    " - {} intervals refer to missing chromosome(s)\n"
+                    " - {} intervals span outside existing chromosome(s)\n"
+                    "Showing {}{} invalid record(s):\n"
+                    "- {}",
                     num_invalid_intervals, invalid_chrom, invalid_range,
                     invalid_intervals.size() == num_invalid_intervals ? "" : "the first ",
                     invalid_intervals.size(), fmt::join(invalid_intervals, "\n - ")));
@@ -155,23 +155,22 @@ static void validate_chrom_sizes(const hictk::Reference &chrom_sizes_cooler,
     auto match = chrom_sizes.find(chrom1);
     if (match == chrom_sizes.end()) {
       errors.emplace_back(
-          fmt::format(FMT_STRING("{} is present in Cooler files but not in .chrom.sizes"), chrom1));
+          fmt::format("{} is present in Cooler files but not in .chrom.sizes", chrom1));
       continue;
     }
 
     if (match->size() != chrom1.size()) {
       errors.emplace_back(fmt::format(
-          FMT_STRING(
-              "{} has size {} according to Cooler files and {} according to .chrom.sizes file"),
+          "{} has size {} according to Cooler files and {} according to .chrom.sizes file",
           chrom1.name(), chrom1.size(), match->size()));
     }
   }
 
   if (!errors.empty()) {
-    throw std::runtime_error(fmt::format(
-        FMT_STRING("cooler files and chrom.size()s file contain conflicting information:\n"
-                   " - {}"),
-        fmt::join(errors, "\n - ")));
+    throw std::runtime_error(
+        fmt::format("cooler files and chrom.size()s file contain conflicting information:\n"
+                    " - {}",
+                    fmt::join(errors, "\n - ")));
   }
 }
 
@@ -181,13 +180,13 @@ static void validate_chrom_sizes(const hictk::Reference &chrom_sizes_cooler,
   // Import chromosomes from Cooler files and select chroms present in both files
   auto chroms = import_chroms_from_coolers(f1, f2);
   if (chroms.empty()) {
-    throw std::runtime_error(fmt::format(
-        FMT_STRING("coolers at URI \"{}\" and \"{}\" appear to have no chromosome in common. "
-                   "Please make sure both Coolers are using the same genome assembly.\n"
-                   "Chromosomes found in Cooler #1:\n - {}\n"
-                   "Chromosomes found in Cooler #2:\n - {}"),
-        f1.uri(), f2.uri(), fmt::join(f1.chromosomes(), "\n - "),
-        fmt::join(f2.chromosomes(), "\n - ")));
+    throw std::runtime_error(
+        fmt::format("coolers at URI \"{}\" and \"{}\" appear to have no chromosome in common. "
+                    "Please make sure both Coolers are using the same genome assembly.\n"
+                    "Chromosomes found in Cooler #1:\n - {}\n"
+                    "Chromosomes found in Cooler #2:\n - {}",
+                    f1.uri(), f2.uri(), fmt::join(f1.chromosomes(), "\n - "),
+                    fmt::join(f2.chromosomes(), "\n - ")));
   }
 
   if (path_to_chrom_sizes.empty()) {
@@ -222,8 +221,8 @@ static void validate_chrom_sizes(const hictk::Reference &chrom_sizes_cooler,
   const auto it = std::find(toks.begin(), toks.end(), col_name);
   if (it == toks.end()) {
     throw std::runtime_error(
-        fmt::format(FMT_STRING("unable to find column \"{}\" in the header \"{}\" of file {}"),
-                    col_name, header, path_to_weights));
+        fmt::format("unable to find column \"{}\" in the header \"{}\" of file {}", col_name,
+                    header, path_to_weights));
   }
   return std::distance(toks.begin(), it);
 }
@@ -242,8 +241,7 @@ template <class Range>
     }
   }
   throw std::runtime_error(fmt::format(
-      FMT_STRING(
-          "Unable to find any columns named like \"{}\" or \"{}\" in header \"{}\" of file {}"),
+      "Unable to find any columns named like \"{}\" or \"{}\" in header \"{}\" of file {}",
       fmt::join(col_names.begin(), col_names.end() - 1, "\", \""), col_names.back(), header,
       path_to_weights));
 }
@@ -264,9 +262,8 @@ template <class Range>
   std::string buff;
   r.getline(buff);
   if (buff.empty()) {
-    throw std::runtime_error(
-        fmt::format(FMT_STRING("Failed to read header from file {}: file appears to be empty"),
-                    path_to_weights));
+    throw std::runtime_error(fmt::format(
+        "Failed to read header from file {}: file appears to be empty", path_to_weights));
   }
   using namespace std::string_view_literals;
   const auto col_chrom_idx =
@@ -277,10 +274,9 @@ template <class Range>
   for (usize i = 1; r.getline(buff); ++i) {
     const auto toks = absl::StrSplit(buff, '\t');
     if (const auto ntoks = std::distance(toks.begin(), toks.end()); ntoks < col_weight_idx) {
-      throw std::runtime_error(
-          fmt::format(FMT_STRING("Failed to parse column \"{}\" at line #{}: expected at least "
-                                 "{} columns, found {}"),
-                      weight_column_name, i, col_weight_idx, ntoks));
+      throw std::runtime_error(fmt::format(
+          "Failed to parse column \"{}\" at line #{}: expected at least {} columns, found {}",
+          weight_column_name, i, col_weight_idx, ntoks));
     }
     const std::string_view chrom = *std::next(toks.begin(), col_chrom_idx);
     weights.try_emplace(chrom, nbins, 0);  // try_emplace a vector of doubles
@@ -314,17 +310,15 @@ static void validate_weights(
     }
   }
   if (!missing_chroms.empty()) {
-    throw std::runtime_error(
-        fmt::format(FMT_STRING("Unable to read weights for the following chromosomes: {}"),
-                    fmt::join(missing_chroms, ", ")));
+    throw std::runtime_error(fmt::format("Unable to read weights for the following chromosomes: {}",
+                                         fmt::join(missing_chroms, ", ")));
   }
 }
 
 [[nodiscard]] static io::bigwig::Writer create_bwig_file(
     const std::vector<std::string> &chrom_names, const std::vector<u32> &chrom_sizes,
     std::string_view base_name, std::string_view suffix) {
-  auto bw = io::bigwig::Writer(
-      fmt::format(FMT_STRING("{}_{}"), base_name, absl::StripPrefix(suffix, "_")));
+  auto bw = io::bigwig::Writer(fmt::format("{}_{}", base_name, absl::StripPrefix(suffix, "_")));
   bw.write_chromosomes(chrom_names, chrom_sizes);
   return bw;
 }
@@ -544,8 +538,8 @@ template <StripeDirection stripe_direction, class N>
                  [](const auto &chrom) { return static_cast<u32>(chrom.size()); });
 
   const auto name = corr_method_to_str(c.metric);
-  const auto bname1 = fmt::format(FMT_STRING("{}{}_vertical"), name, weighted ? "_weighted" : "");
-  const auto bname2 = fmt::format(FMT_STRING("{}{}_horizontal"), name, weighted ? "_weighted" : "");
+  const auto bname1 = fmt::format("{}{}_vertical", name, weighted ? "_weighted" : "");
+  const auto bname2 = fmt::format("{}{}_horizontal", name, weighted ? "_weighted" : "");
 
   struct Writer {
     struct InternalWriterPair {
@@ -559,14 +553,14 @@ template <StripeDirection stripe_direction, class N>
   Writer writers;
   writers.vertical = Writer::InternalWriterPair{
       // clang-format off
-          std::make_unique<io::bigwig::Writer>(create_bwig_file(chrom_names, chrom_sizes, c.output_prefix.string(), fmt::format(FMT_STRING("{}.bw"), bname1))),
-          std::make_unique<compressed_io::Writer>(fmt::format(FMT_STRING("{}_{}.tsv.gz"), c.output_prefix.string(), bname1))
+          std::make_unique<io::bigwig::Writer>(create_bwig_file(chrom_names, chrom_sizes, c.output_prefix.string(), fmt::format("{}.bw", bname1))),
+          std::make_unique<compressed_io::Writer>(fmt::format("{}_{}.tsv.gz", c.output_prefix.string(), bname1))
       // clang-format on
   };
   writers.horizontal = Writer::InternalWriterPair{
       // clang-format off
-          std::make_unique<io::bigwig::Writer>(create_bwig_file(chrom_names, chrom_sizes, c.output_prefix.string(), fmt::format(FMT_STRING("{}.bw"), bname2))),
-          std::make_unique<compressed_io::Writer>(fmt::format(FMT_STRING("{}_{}.tsv.gz"), c.output_prefix.string(), bname2))
+          std::make_unique<io::bigwig::Writer>(create_bwig_file(chrom_names, chrom_sizes, c.output_prefix.string(), fmt::format("{}.bw", bname2))),
+          std::make_unique<compressed_io::Writer>(fmt::format("{}_{}.tsv.gz", c.output_prefix.string(), bname2))
       // clang-format on
   };
 
@@ -627,7 +621,7 @@ static void run_task(const enum eval_config::Metric metric, const bed::BED &inte
             : compute_metric<stripe_direction>(metric, ref_contacts, tgt_contacts,
                                                exclude_zero_pixels, weights.at(interval.chrom));
 
-    SPDLOG_INFO(FMT_STRING("{} for {} stripes from interval {}:{}-{} computed in {}."),
+    SPDLOG_INFO("{} for {} stripes from interval {}:{}-{} computed in {}.",
                 corr_method_to_str(metric, true),
                 absl::AsciiStrToLower(direction_to_str(stripe_direction)), interval.chrom,
                 interval.chrom_start, interval.chrom_end, absl::FormatDuration(absl::Now() - t0));
@@ -645,13 +639,12 @@ static void run_task(const enum eval_config::Metric metric, const bed::BED &inte
                                metrics.metric2[i]);
       writer.tsv_gz->write(buff);
     }
-    SPDLOG_INFO(FMT_STRING("{} values have been written to files \"{}.{{tsv.gz,bw}}\" in {}."),
+    SPDLOG_INFO("{} values have been written to files \"{}.{{tsv.gz,bw}}\" in {}.",
                 metrics.metric1.size(), writer.bwig->path().stem().string(),
                 absl::FormatDuration(absl::Now() - t0));
   } catch (const std::exception &e) {
     throw std::runtime_error(fmt::format(
-        FMT_STRING(
-            "The following error occurred while computing {} on {} stripes for {}:{}-{}: {}"),
+        "The following error occurred while computing {} on {} stripes for {}:{}-{}: {}",
         corr_method_to_str(metric, true), absl::AsciiStrToLower(direction_to_str(stripe_direction)),
         interval.chrom, interval.chrom_start, interval.chrom_end, e.what()));
   }
@@ -660,21 +653,20 @@ static void run_task(const enum eval_config::Metric metric, const bed::BED &inte
 static void log_regions_for_evaluation(const std::vector<bed::BED> &intervals) {
   if (intervals.size() == 1) {
     const auto &chrom = intervals.front();
-    SPDLOG_INFO(FMT_STRING("Computing metric(s) for interval {}:{}-{}"), chrom.chrom,
-                chrom.chrom_start, chrom.chrom_end);
+    SPDLOG_INFO("Computing metric(s) for interval {}:{}-{}", chrom.chrom, chrom.chrom_start,
+                chrom.chrom_end);
     return;
   }
 
   std::vector<std::string> printable_intervals(
       utils::conditional_static_cast<usize>(intervals.size()));
 
-  std::transform(intervals.begin(), intervals.end(), printable_intervals.begin(),
-                 [](const auto &interval) {
-                   return fmt::format(FMT_STRING("{}:{}-{}"), interval.chrom, interval.chrom_start,
-                                      interval.chrom_end);
-                 });
-  SPDLOG_INFO(FMT_STRING("Computing metric(s) for the following {} intervals:\n - {}"),
-              intervals.size(), fmt::join(printable_intervals, "\n - "));
+  std::transform(
+      intervals.begin(), intervals.end(), printable_intervals.begin(), [](const auto &interval) {
+        return fmt::format("{}:{}-{}", interval.chrom, interval.chrom_start, interval.chrom_end);
+      });
+  SPDLOG_INFO("Computing metric(s) for the following {} intervals:\n - {}", intervals.size(),
+              fmt::join(printable_intervals, "\n - "));
 }
 
 void eval_subcmd(const modle::tools::eval_config &c) {
@@ -715,35 +707,34 @@ void eval_subcmd(const modle::tools::eval_config &c) {
     const auto t1 = absl::Now();
     const auto coord_str = [&]() {
       if (interval.chrom_start == 0) {
-        return fmt::format(FMT_STRING("{}:{}"), interval.chrom, interval.chrom_end);
+        return fmt::format("{}:{}", interval.chrom, interval.chrom_end);
       }
-      return fmt::format(FMT_STRING("{}:{}-{}"), interval.chrom, interval.chrom_start,
-                         interval.chrom_end);
+      return fmt::format("{}:{}-{}", interval.chrom, interval.chrom_start, interval.chrom_end);
     }();
 
     if (io::query_returns_no_pixels(ref_cooler, interval.chrom, interval.chrom_start,
                                     interval.chrom_end) &&
         io::query_returns_no_pixels(tgt_cooler, interval.chrom, interval.chrom_start,
                                     interval.chrom_end)) {
-      SPDLOG_WARN(FMT_STRING("Read 0 contacts for {}. SKIPPING!"), coord_str);
+      SPDLOG_WARN("Read 0 contacts for {}. SKIPPING!", coord_str);
       continue;
     }
 
-    SPDLOG_INFO(FMT_STRING("Reading contacts for {}..."), coord_str);
+    SPDLOG_INFO("Reading contacts for {}...", coord_str);
     auto ref_matrix = io::read_contact_matrix_from_cooler<double>(
         ref_cooler, interval.chrom, interval.chrom_start, interval.chrom_end,
         static_cast<bp_t>(c.diagonal_width));
     auto tgt_matrix = io::read_contact_matrix_from_cooler<double>(
         tgt_cooler, interval.chrom, interval.chrom_start, interval.chrom_end,
         static_cast<bp_t>(c.diagonal_width));
-    SPDLOG_INFO(FMT_STRING("Read {} contacts for {} in {}"),
+    SPDLOG_INFO("Read {} contacts for {} in {}",
                 ref_matrix.get_tot_contacts() + tgt_matrix.get_tot_contacts(), coord_str,
                 absl::FormatDuration(absl::Now() - t1));
 
     // Normalize contact matrix before computing the correlation/distance metrics
     if (c.normalize) {
       const auto t00 = absl::Now();
-      SPDLOG_INFO(FMT_STRING("Normalizing contact matrices for {}..."), coord_str);
+      SPDLOG_INFO("Normalizing contact matrices for {}...", coord_str);
       return_codes[0] = tpool.submit_task([&]() { ref_matrix.normalize_inplace(); });
       return_codes[1] = tpool.submit_task([&]() { tgt_matrix.normalize_inplace(); });
       tpool.wait();
@@ -753,12 +744,10 @@ void eval_subcmd(const modle::tools::eval_config &c) {
         std::ignore = return_codes[1];
       } catch (const std::exception &e) {
         throw std::runtime_error(fmt::format(
-            FMT_STRING(
-                "The following error occurred while normalizing contact matrices for {}: {}"),
-            coord_str, e.what()));
+            "The following error occurred while normalizing contact matrices for {}: {}", coord_str,
+            e.what()));
       }
-      SPDLOG_INFO(FMT_STRING("DONE! Normalization took {}."),
-                  absl::FormatDuration(absl::Now() - t00));
+      SPDLOG_INFO("DONE! Normalization took {}.", absl::FormatDuration(absl::Now() - t00));
     }
 
     using d = StripeDirection;
@@ -775,7 +764,7 @@ void eval_subcmd(const modle::tools::eval_config &c) {
     std::ignore = return_codes[0];
     std::ignore = return_codes[1];
   }
-  SPDLOG_INFO(FMT_STRING("DONE in {}!"), absl::FormatDuration(absl::Now() - t0));
+  SPDLOG_INFO("DONE in {}!", absl::FormatDuration(absl::Now() - t0));
 }
 
 }  // namespace modle::tools

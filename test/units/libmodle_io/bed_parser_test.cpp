@@ -112,14 +112,14 @@ TEST_CASE("BED Parser CRLF", "[parsers][BED][io][short]") {
   {
     compressed_io::Writer w(bed_file, compressed_io::Writer::NONE);
     for (usize i = 0; i < num_records; ++i) {
-      w.write(fmt::format(FMT_STRING("chr{}\t0\t1\r\n"), i));
+      w.write(fmt::format("chr{}\t0\t1\r\n", i));
     }
   }
 
   const auto records = bed::Parser(bed_file).parse_all();
   REQUIRE(records.size() == num_records);
   for (usize i = 0; i < num_records; ++i) {
-    CHECK(bed::BED(fmt::format(FMT_STRING("chr{}\t0\t1"), i)) == records[i]);
+    CHECK(bed::BED(fmt::format("chr{}\t0\t1", i)) == records[i]);
   }
 }
 

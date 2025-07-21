@@ -115,9 +115,9 @@ auto fmt::formatter<modle::Simulation::Task>::format(const modle::Simulation::Ta
                                                      FormatContext& ctx) const
     -> decltype(ctx.out()) {
   assert(t.interval);
-  return fmt::format_to(ctx.out(), FMT_STRING("{}\t{}\t{}\t{}\t{}\t{}\t{}"), t.id,
-                        t.interval->chrom(), t.cell_id, t.num_target_epochs, t.num_target_contacts,
-                        t.num_lefs, !!t.interval ? t.interval->barriers().size() : 0);
+  return fmt::format_to(ctx.out(), "{}\t{}\t{}\t{}\t{}\t{}\t{}", t.id, t.interval->chrom(),
+                        t.cell_id, t.num_target_epochs, t.num_target_contacts, t.num_lefs,
+                        !!t.interval ? t.interval->barriers().size() : 0);
 }
 
 constexpr auto fmt::formatter<modle::Simulation::State>::parse(format_parse_context& ctx)
@@ -136,19 +136,19 @@ auto fmt::formatter<modle::Simulation::State>::format(const modle::Simulation::S
   // clang-format off
   return fmt::format_to(
       ctx.out(),
-      FMT_STRING("State:\n"
-                 " - TaskID: {:d}\n"
-                 " - CellID: {:d}\n"
-                 " - Interval: {}\n"
-                 " - Current epoch: {:d}\n"
-                 " - Burn-in completed: {}\n"
-                 " - Target epochs: {:d}\n"
-                 " - Target contacts: {:d}\n"
-                 " - # of LEFs: {:d}\n"
-                 " - # of active LEFs: {:d}\n"
-                 " - # Extrusion barriers: {:d}\n"
-                 " - # of contacts registered: {:d}\n"
-                 " - seed: {:d}"),
+      "State:\n"
+      " - TaskID: {:d}\n"
+      " - CellID: {:d}\n"
+      " - Interval: {}\n"
+      " - Current epoch: {:d}\n"
+      " - Burn-in completed: {}\n"
+      " - Target epochs: {:d}\n"
+      " - Target contacts: {:d}\n"
+      " - # of LEFs: {:d}\n"
+      " - # of active LEFs: {:d}\n"
+      " - # Extrusion barriers: {:d}\n"
+      " - # of contacts registered: {:d}\n"
+      " - seed: {:d}",
       s.id,
       s.cell_id,
       *s.interval,

@@ -76,8 +76,8 @@ constexpr I Collision<I>::encode(const usize idx,
   if constexpr (utils::ndebug_not_defined()) {
     if (event == 0 && idx != 0) {
       throw std::runtime_error(
-          fmt::format(FMT_STRING("Collision<I>::encode(idx={}, event={:08b}): idx must be 0 when "
-                                 "no collision has occurred/been avoided"),
+          fmt::format("Collision<I>::encode(idx={}, event={:08b}): idx must be 0 when "
+                      "no collision has occurred/been avoided",
                       idx, event()));
     }
     Collision<I>::validate(idx, event);
@@ -134,8 +134,8 @@ constexpr void Collision<I>::validate(const usize idx, const CollisionEventT eve
     }();
 
     if (!error_msg.empty()) {
-      throw std::runtime_error(fmt::format(
-          FMT_STRING("Collision<I>::encode(idx={}, event={:08b}): {}"), idx, event(), error_msg));
+      throw std::runtime_error(
+          fmt::format("Collision<I>::encode(idx={}, event={:08b}): {}", idx, event(), error_msg));
     }
   }
 }
@@ -259,9 +259,8 @@ template <typename FormatContext>
 auto fmt::formatter<modle::Collision<>>::format(const modle::Collision<>& c,
                                                 FormatContext& ctx) const -> decltype(ctx.out()) {
   if (presentation == 's') {
-    return fmt::format_to(ctx.out(), FMT_STRING("{}"), c());
+    return fmt::format_to(ctx.out(), "{}", c());
   }
   assert(presentation == 'l');
-  return fmt::format_to(ctx.out(), FMT_STRING("idx={}; event={:08b};"), c.decode_index(),
-                        c.decode_event()());
+  return fmt::format_to(ctx.out(), "idx={}; event={:08b};", c.decode_index(), c.decode_event()());
 }

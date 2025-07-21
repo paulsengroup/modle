@@ -49,8 +49,8 @@ template <class ContactMatrix>
 void bound_check_coords(const ContactMatrix& m, const usize row, const usize col) {
   if (MODLE_UNLIKELY(row >= m.ncols()) || col >= m.ncols()) {
     throw std::logic_error(
-        fmt::format(FMT_STRING("detected an out-of-bound read: attempt to access "
-                               "item at {}:{} of a matrix of shape {}x{} ({}x{})"),
+        fmt::format("detected an out-of-bound read: attempt to access "
+                    "item at {}:{} of a matrix of shape {}x{} ({}x{})",
                     row, col, m.ncols(), m.ncols(), m.nrows(), m.ncols()));
   }
 }

@@ -49,8 +49,8 @@ Reader::Reader(std::filesystem::path name)
       _fp(bwOpen(_fname.c_str(), nullptr, "r")),
       _chroms(_fp ? read_chromosomes(_fp) : Chromosomes{}) {
   if (!_fp) {
-    throw fmt::system_error(
-        errno, FMT_STRING("an error occurred while opening file {} for reading"), this->_fname);
+    throw fmt::system_error(errno, "an error occurred while opening file {} for reading",
+                            this->_fname);
   }
 }
 
@@ -109,20 +109,18 @@ auto Reader::get_intervals(const std::string& chrom, bp_t start, bp_t end) -> In
 void Reader::validate_query(const std::string& chrom, bp_t start, bp_t end) {
   auto it = this->_chroms.find(chrom);
   if (it == this->_chroms.end()) {
-    throw std::runtime_error(
-        fmt::format(FMT_STRING("query {}:{}-{}: unable to find chromosome {} in file {}"), chrom,
-                    start, end, chrom, this->_fname));
+    throw std::runtime_error(fmt::format("query {}:{}-{}: unable to find chromosome {} in file {}",
+                                         chrom, start, end, chrom, this->_fname));
   }
 
   if (start >= end) {
-    throw std::logic_error(
-        fmt::format(FMT_STRING("query {}:{}-{}: start position is greater than end position"),
-                    chrom, start, end));
+    throw std::logic_error(fmt::format(
+        "query {}:{}-{}: start position is greater than end position", chrom, start, end));
   }
 
   if (end > it->second) {
-    throw std::out_of_range(fmt::format(
-        FMT_STRING("query {}:{}-{}: query spans past the end of chromosome"), chrom, start, end));
+    throw std::out_of_range(
+        fmt::format("query {}:{}-{}: query spans past the end of chromosome", chrom, start, end));
   }
 }
 
@@ -131,8 +129,8 @@ Writer::Writer(std::filesystem::path name, std::uint_fast8_t zoom_levels)
       _fp(bwOpen(_fname.c_str(), nullptr, "w")),
       _zoom_levels(zoom_levels) {
   if (!_fp) {
-    throw fmt::system_error(
-        errno, FMT_STRING("an error occurred while opening file {} for writing"), this->_fname);
+    throw fmt::system_error(errno, "an error occurred while opening file {} for writing",
+                            this->_fname);
   }
 }
 
@@ -188,15 +186,14 @@ void Writer::write_chromosomes(const char* const* chrom_names, const u32* chrom_
   if constexpr (utils::ndebug_not_defined()) {
 #endif
     if (this->_initialized) {
-      throw std::runtime_error(
-          fmt::format(FMT_STRING("bigwig::Writer::write_chromosomes() was called twice on file {}"),
-                      this->_fname));
+      throw std::runtime_error(fmt::format(
+          "bigwig::Writer::write_chromosomes() was called twice on file {}", this->_fname));
     }
   }
 
   if (bwCreateHdr(this->_fp, this->_zoom_levels)) {  // NOLINT(readability-implicit-bool-conversion)
     throw std::runtime_error(
-        fmt::format(FMT_STRING("failed to initialize the file header for file {}"), this->_fname));
+        fmt::format("failed to initialize the file header for file {}", this->_fname));
   }
 
   // NOLINTNEXTLINE(cppcoreguidelines-pro-type-const-cast)
@@ -204,12 +201,11 @@ void Writer::write_chromosomes(const char* const* chrom_names, const u32* chrom_
                                     static_cast<i64>(num_chroms));
   if (!this->_fp->cl) {
     throw std::runtime_error(
-        fmt::format(FMT_STRING("failed to create the chromosome list for file {}"), this->_fname));
+        fmt::format("failed to create the chromosome list for file {}", this->_fname));
   }
 
   if (bwWriteHdr(this->_fp)) {  // NOLINT(readability-implicit-bool-conversion)
-    throw std::runtime_error(
-        fmt::format(FMT_STRING("failed to write file header to file {}"), this->_fname));
+    throw std::runtime_error(fmt::format("failed to write file header to file {}", this->_fname));
   }
   this->_initialized = true;
 }

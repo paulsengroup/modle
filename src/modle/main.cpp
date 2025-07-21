@@ -51,21 +51,20 @@ void setup_logger_console(const std::uint8_t verbosity) {
   main_logger->set_level(spdlog::level::debug);
 
   spdlog::set_default_logger(main_logger);
-  SPDLOG_INFO(FMT_STRING("running MoDLE v{}"), modle::config::version::str());
+  SPDLOG_INFO("running MoDLE v{}", modle::config::version::str());
 
   logger_ready = true;
 }
 
 void setup_logger_file(const std::filesystem::path& path_to_log_file) {
-  SPDLOG_INFO(FMT_STRING("complete log will be written to file {}"), path_to_log_file);
+  SPDLOG_INFO("complete log will be written to file {}", path_to_log_file);
 
   auto file_sink =
       std::make_shared<spdlog::sinks::basic_file_sink_mt>(path_to_log_file.string(), true);
   //                      [2021-08-12 17:49:34.581] [139797797574208] [info]: my log msg
   file_sink->set_pattern("[%Y-%m-%d %T.%e] [%t] %^[%l]%$: %v");
 
-  spdlog::logger("tmp_logger", file_sink)
-      .info(FMT_STRING("running MoDLE v{}"), modle::config::version::str());
+  spdlog::logger("tmp_logger", file_sink).info("running MoDLE v{}", modle::config::version::str());
 
   spdlog::default_logger()->sinks().emplace_back(std::move(file_sink));
 
@@ -80,9 +79,9 @@ void setup_failure_signal_handler(const char* argv_0) {
     if (buff) {
       const std::string_view buff_sv{buff, strlen(buff)};
       if (logger_ready) {
-        SPDLOG_ERROR(FMT_STRING("{}"), absl::StripSuffix(buff_sv, "\n"));
+        SPDLOG_ERROR("{}", absl::StripSuffix(buff_sv, "\n"));
       } else {
-        fmt::print(stderr, FMT_STRING("{}"), buff_sv);
+        fmt::print(stderr, "{}", buff_sv);
       }
     }
     spdlog::shutdown();
@@ -103,19 +102,19 @@ static std::string concat_args(absl::Span<char*> args) {
 }
 
 void write_param_summary_to_log(const modle::Config& c) {
-  SPDLOG_INFO(FMT_STRING("command: {}"), concat_args(c.args));
-  SPDLOG_INFO(FMT_STRING("simulation will use up to {} out of {} available CPU cores."), c.nthreads,
+  SPDLOG_INFO("command: {}", concat_args(c.args));
+  SPDLOG_INFO("simulation will use up to {} out of {} available CPU cores.", c.nthreads,
               std::thread::hardware_concurrency());
   if (c.stopping_criterion == modle::Config::StoppingCriterion::contact_density) {
-    SPDLOG_INFO(FMT_STRING("using --target-contact-density={:.2f} as stopping criterion."),
+    SPDLOG_INFO("using --target-contact-density={:.2f} as stopping criterion.",
                 c.target_contact_density);
   } else {
-    SPDLOG_INFO(FMT_STRING("using --target-number-of-epochs={} as stropping criterion."),
+    SPDLOG_INFO("using --target-number-of-epochs={} as stropping criterion.",
                 c.target_simulation_epochs);
   }
-  SPDLOG_INFO(FMT_STRING("contact sampling strategy: {}."),
+  SPDLOG_INFO("contact sampling strategy: {}.",
               modle::Cli::contact_sampling_strategy_map.at(c.contact_sampling_strategy));
-  SPDLOG_INFO(FMT_STRING("contact matrix resolution: {}bp"), c.bin_size);
+  SPDLOG_INFO("contact matrix resolution: {}bp", c.bin_size);
 }
 
 std::tuple<int, modle::Cli::subcommand, modle::Config> parse_cli_and_setup_logger(int argc,
@@ -141,8 +140,7 @@ std::tuple<int, modle::Cli::subcommand, modle::Config> parse_cli_and_setup_logge
       setup_logger_file(config.path_to_log_file);
 
       if (!cli->config_file_parsed()) {
-        SPDLOG_INFO(FMT_STRING("writing simulation parameters to config file {}"),
-                    config.path_to_config_file);
+        SPDLOG_INFO("writing simulation parameters to config file {}", config.path_to_config_file);
         cli->write_config_file();
       }
     }
@@ -158,14 +156,12 @@ std::tuple<int, modle::Cli::subcommand, modle::Config> parse_cli_and_setup_logge
     return std::make_tuple(cli->exit(e), modle::Cli::subcommand::help, modle::Config());
 
   } catch (const std::filesystem::filesystem_error& e) {
-    SPDLOG_ERROR(FMT_STRING("FAILURE! {}"), absl::StripSuffix(e.what(), ": File exists"));
+    SPDLOG_ERROR("FAILURE! {}", absl::StripSuffix(e.what(), ": File exists"));
     return std::make_tuple(1, modle::Cli::subcommand::help, modle::Config());
   } catch (const spdlog::spdlog_ex& e) {
-    fmt::print(
-        stderr,
-        FMT_STRING(
-            "FAILURE! An error occurred while setting up the main application logger: {}.\n"),
-        e.what());
+    fmt::println(stderr,
+                 "FAILURE! An error occurred while setting up the main application logger: {}.",
+                 e.what());
     return std::make_tuple(1, modle::Cli::subcommand::help, modle::Config());
   }
 }
@@ -202,18 +198,18 @@ int main(int argc, char** argv) noexcept {
     assert(subcmd == modle::Cli::subcommand::simulate);
     sim.run_simulate();
 
-    SPDLOG_INFO(FMT_STRING("simulation terminated without errors in {}!\n\nBye."),
+    SPDLOG_INFO("simulation terminated without errors in {}!\n\nBye.",
                 absl::FormatDuration(absl::Now() - t0));
   } catch (const std::bad_alloc& e) {
-    try_log_fatal_error(FMT_STRING("FAILURE! Unable to allocate enough memory: {}."), e.what());
+    try_log_fatal_error("FAILURE! Unable to allocate enough memory: {}.", e.what());
     return 1;
   } catch (const std::exception& e) {
-    try_log_fatal_error(FMT_STRING("FAILURE! An error occurred during simulation: {}."), e.what());
+    try_log_fatal_error("FAILURE! An error occurred during simulation: {}.", e.what());
     return 1;
   } catch (...) {
     try_log_fatal_error(
-        FMT_STRING("FAILURE! An error occurred during simulation: Caught an unhandled exception! "
-                   "If you see this message, please file an issue on GitHub."));
+        "FAILURE! An error occurred during simulation: Caught an unhandled exception! "
+        "If you see this message, please file an issue on GitHub.");
     return 1;
   }
   spdlog::shutdown();

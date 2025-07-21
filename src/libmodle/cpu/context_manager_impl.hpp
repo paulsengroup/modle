@@ -168,9 +168,9 @@ inline void ContextManager<Task>::rethrow_exceptions() const {
     }
   }
 
-  throw std::runtime_error(fmt::format(
-      FMT_STRING("the following error(s) occurred while simulating loop extrusion:\n - {}"),
-      fmt::join(messages, "\n - ")));
+  throw std::runtime_error(
+      fmt::format("the following error(s) occurred while simulating loop extrusion:\n - {}",
+                  fmt::join(messages, "\n - ")));
 }
 
 template <typename Task>
@@ -229,10 +229,10 @@ inline void ContextManager<Task>::shutdown() {
   const auto num_submitted = this->num_tasks_submitted();
   if (num_completed != num_submitted) {
     throw std::runtime_error(
-        fmt::format(FMT_STRING("ContextManager: not all tasks have been processed! {} tasks have "
-                               "been submitted but only {} successfully completed.\n"
-                               "This should never happen!\n"
-                               "Please file an issue on GitHub."),
+        fmt::format("ContextManager: not all tasks have been processed! {} tasks have "
+                    "been submitted but only {} successfully completed.\n"
+                    "This should never happen!\n"
+                    "Please file an issue on GitHub.",
                     num_submitted, num_completed));
   }
   SPDLOG_DEBUG("context manager shutdown was successful.");
@@ -243,7 +243,7 @@ inline void ContextManager<Task>::init_model_state_logger(std::filesystem::path 
                                                           std::string_view header) {
   assert(!this->_state_logger_ptr);
   assert(!std::filesystem::exists(path));
-  SPDLOG_DEBUG(FMT_STRING("[io] initializing model state logger at {}..."), path);
+  SPDLOG_DEBUG("[io] initializing model state logger at {}...", path);
   compressed_io::Writer(path).write(header);
   this->_state_logger_ptr = std::make_unique<StateLoggerAggregator>(std::move(path));
 }
@@ -252,8 +252,7 @@ template <typename Task>
 inline void ContextManager<Task>::append_to_model_state_log(const std::filesystem::path& path,
                                                             bool remove_file_after_append) {
   assert(!!this->_state_logger_ptr);
-  SPDLOG_DEBUG(FMT_STRING("[io] appending {} to log file at {}..."), path,
-               this->_state_logger_ptr->path());
+  SPDLOG_DEBUG("[io] appending {} to log file at {}...", path, this->_state_logger_ptr->path());
   this->_state_logger_ptr->append(path, remove_file_after_append);
 }
 

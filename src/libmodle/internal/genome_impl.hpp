@@ -123,9 +123,9 @@ inline auto fmt::formatter<modle::Chromosome>::format(const modle::Chromosome& c
                                                       FormatContext& ctx) const
     -> decltype(ctx.out()) {
   if (MODLE_UNLIKELY(!chrom)) {
-    return fmt::format_to(ctx.out(), FMT_STRING("null"));
+    return fmt::format_to(ctx.out(), "null");
   }
-  return fmt::format_to(ctx.out(), FMT_STRING("{}:{}"), chrom.name(), chrom.size());
+  return fmt::format_to(ctx.out(), "{}:{}", chrom.name(), chrom.size());
 }
 
 constexpr auto fmt::formatter<modle::GenomicInterval>::parse(fmt::format_parse_context& ctx)
@@ -140,7 +140,7 @@ inline auto fmt::formatter<modle::GenomicInterval>::format(const modle::GenomicI
                                                            FormatContext& ctx) const
     -> decltype(ctx.out()) {
   if (MODLE_UNLIKELY(!gi.chrom())) {
-    return fmt::format_to(ctx.out(), FMT_STRING("null"));
+    return fmt::format_to(ctx.out(), "null");
   }
-  return fmt::format_to(ctx.out(), FMT_STRING("{}:{}-{}"), gi.chrom().name(), gi.start(), gi.end());
+  return fmt::format_to(ctx.out(), "{}:{}-{}", gi.chrom().name(), gi.start(), gi.end());
 }

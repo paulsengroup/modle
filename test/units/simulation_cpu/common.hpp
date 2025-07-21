@@ -43,13 +43,11 @@ template <class BPCollection, class CollisionCollection>
     const CollisionCollection& rev_collisions, const CollisionCollection& rev_collisions_expected,
     const CollisionCollection& fwd_collisions, const CollisionCollection& fwd_collisions_expected) {
   static_assert(std::is_same_v<typename BPCollection::value_type, bp_t>);
-  fmt::print(stderr, FMT_STRING("i={}; rev_move={}/{}; fwd_move={}/{};\n"), i, rev_moves[i],
+  fmt::print(stderr, "i={}; rev_move={}/{}; fwd_move={}/{};\n", i, rev_moves[i],
              rev_moves_expected[i], fwd_moves[i], fwd_moves_expected[i]);
   fmt::print(
-      stderr,
-      FMT_STRING("i={}; rev_status: expected {:l} got {:l}]; fwd_status: expected {:l} got {:l}\n"),
-      i, rev_collisions[i], rev_collisions_expected[i], fwd_collisions[i],
-      fwd_collisions_expected[i]);
+      stderr, "i={}; rev_status: expected {:l} got {:l}]; fwd_status: expected {:l} got {:l}\n", i,
+      rev_collisions[i], rev_collisions_expected[i], fwd_collisions[i], fwd_collisions_expected[i]);
 }
 
 template <class CollisionCollection>
@@ -57,7 +55,7 @@ template <class CollisionCollection>
                                               const CollisionCollection& rev_collisions_expected,
                                               const CollisionCollection& fwd_collisions,
                                               const CollisionCollection& fwd_collisions_expected) {
-  fmt::print(stderr, FMT_STRING("i={}; rev_status=[{:l}\t{:l}]; fwd_status=[{:l}\t{:l}];\n"), i,
+  fmt::print(stderr, "i={}; rev_status=[{:l}\t{:l}]; fwd_status=[{:l}\t{:l}];\n", i,
              rev_collisions[i], rev_collisions_expected[i], fwd_collisions[i],
              fwd_collisions_expected[i]);
 }

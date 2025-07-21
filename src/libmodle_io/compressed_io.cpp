@@ -40,13 +40,13 @@ void Reader::open(const std::filesystem::path& path) {
   auto handle_open_errors = [&](la_ssize_t status) {
     if (status == ARCHIVE_EOF) {
       this->_eof = true;
-      // throw std::runtime_error(fmt::format(FMT_STRING("file {} appears to be empty"),
+      // throw std::runtime_error(fmt::format("file {} appears to be empty",
       // this->_path));
     }
     if (status < ARCHIVE_OK) {
-      throw std::runtime_error(fmt::format(
-          FMT_STRING("failed to open file {} for reading (error code {}): {}"), this->_path,
-          archive_errno(this->_arc.get()), archive_error_string(this->_arc.get())));
+      throw std::runtime_error(fmt::format("failed to open file {} for reading (error code {}): {}",
+                                           this->_path, archive_errno(this->_arc.get()),
+                                           archive_error_string(this->_arc.get())));
     }
   };
 
@@ -62,7 +62,7 @@ void Reader::open(const std::filesystem::path& path) {
   this->_arc.reset(archive_read_new());
   if (!this->_arc) {
     throw std::runtime_error(
-        fmt::format(FMT_STRING("failed to allocate a buffer of to read file {}"), this->_path));
+        fmt::format("failed to allocate a buffer of to read file {}", this->_path));
   }
 
   handle_open_errors(archive_read_support_filter_all(this->_arc.get()));
@@ -114,8 +114,8 @@ void Reader::handle_libarchive_errors(la_ssize_t errcode) const {
 void Reader::handle_libarchive_errors() const {
   if (const auto status = archive_errno(this->_arc.get()); status < ARCHIVE_OK) {
     throw std::runtime_error(fmt::format(
-        FMT_STRING("the following error occurred while reading file (error code {}): {}"),
-        this->_path, archive_errno(this->_arc.get()), archive_error_string(this->_arc.get())));
+        "the following error occurred while reading file (error code {}): {}", this->_path,
+        archive_errno(this->_arc.get()), archive_error_string(this->_arc.get())));
   }
 }
 
@@ -290,7 +290,7 @@ void Writer::open(const std::filesystem::path& path) {
   this->_path = path;
   this->_fp.open(path.string(), std::ios_base::binary);
   if (!this->_fp) {
-    throw fmt::system_error(errno, FMT_STRING("failed to open file {} for writing"), this->_path);
+    throw fmt::system_error(errno, "failed to open file {} for writing", this->_path);
   }
   this->_out.push(this->_fp);
 }

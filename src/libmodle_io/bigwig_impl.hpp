@@ -101,17 +101,16 @@ inline void Writer::write_chromosomes(Chromosomes& chroms) {
                     (std::numeric_limits<chrom_size_t>::max)() > max_val) {
         if (chrom.second > max_val) {
           throw std::runtime_error(fmt::format(
-              FMT_STRING(
-                  "We currently don't support writing chromosomes longer than ~4.29 Gbp (2^32 "
-                  "bp) to bigWig files. \"{}\" has a length of {:.4f} Gbp"),
+              "We currently don't support writing chromosomes longer than ~4.29 Gbp (2^32 "
+              "bp) to bigWig files. \"{}\" has a length of {:.4f} Gbp",
               chrom.first, static_cast<double>(chrom.second) / 1e9));
         }
       }
       if constexpr (std::is_signed<chrom_size_t>()) {
         if (chrom.second < 0) {
-          throw std::runtime_error(fmt::format(
-              FMT_STRING("\"{}\" appears to have a negative length of {} bp. This is not allowed"),
-              chrom.first, chrom.second));
+          throw std::runtime_error(
+              fmt::format("\"{}\" appears to have a negative length of {} bp. This is not allowed",
+                          chrom.first, chrom.second));
         }
       }
       return static_cast<u32>(chrom.second);
@@ -147,8 +146,7 @@ inline void Writer::write_range(std::string_view chrom_name, const absl::Span<N>
   if (bwAddIntervalSpanSteps(this->_fp, chrom_name_tmp.data(), static_cast<u32>(offset),
                              static_cast<u32>(span), static_cast<u32>(step), fvalues_span.data(),
                              static_cast<u32>(fvalues_span.size()))) {
-    throw std::runtime_error(
-        fmt::format(FMT_STRING("failed to write data for chrom \"{}\""), chrom_name));
+    throw std::runtime_error(fmt::format("failed to write data for chrom \"{}\"", chrom_name));
   }
 }
 

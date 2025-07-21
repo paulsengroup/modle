@@ -202,8 +202,8 @@ inline ContactMatrixDense<N> read_contact_matrix_from_cooler(const hictk::cooler
 
     if (end_pos > chrom.size()) {
       if (end_pos != std::numeric_limits<bp_t>::max()) {
-        throw std::runtime_error(fmt::format(FMT_STRING("Interval {}:{}-{} lies outside of {}"),
-                                             chrom.name(), start_pos, end_pos, chrom));
+        throw std::runtime_error(fmt::format("Interval {}:{}-{} lies outside of {}", chrom.name(),
+                                             start_pos, end_pos, chrom));
       }
       end_pos = chrom.size();
     }
@@ -227,7 +227,7 @@ inline ContactMatrixDense<N> read_contact_matrix_from_cooler(const hictk::cooler
     return m;
   } catch (const std::exception& e) {
     throw std::runtime_error(fmt::format(
-        FMT_STRING("Failed to read contact matrix for {}:{}-{} from Cooler at URI \"{}\": {}"),
+        "Failed to read contact matrix for {}:{}-{} from Cooler at URI \"{}\": {}",
         f.chromosomes().at(static_cast<u32>(chrom_id)), start_pos, end_pos, f.uri(), e.what()));
   }
 }

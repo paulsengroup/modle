@@ -252,9 +252,9 @@ void Cli::make_eval_subcommand() {
   gen.add_option(
       "-m,--metric",
       c.metric,
-      fmt::format(FMT_STRING("Comparison metric.\n"
-                             "Supported metrics:\n"
-                             " - {}"),
+      fmt::format("Comparison metric.\n"
+                  "Supported metrics:\n"
+                  " - {}",
                   fmt::join(eval_config::metric_map.keys(), "\n - ")))
       ->transform(CLI::CheckedTransformer(eval_config::metric_map, CLI::ignore_case))
       ->capture_default_str();
@@ -335,9 +335,9 @@ void Cli::make_transform_subcommand() {
   trans.add_option(
       "-m,--method",
       c.method,
-      fmt::format(FMT_STRING("Transformation method to apply to the input contact matrix.\n"
-                             "Supported methods:\n"
-                             " - {}"),
+      fmt::format("Transformation method to apply to the input contact matrix.\n"
+                  "Supported methods:\n"
+                  " - {}",
       fmt::join(transform_config::transformation_map.keys(), "\n - ")))
       ->transform(CLI::CheckedTransformer(transform_config::transformation_map, CLI::ignore_case))
       ->required();
@@ -446,16 +446,16 @@ void Cli::validate_annotate_barriers_subcomand() const {
 
   if (c.occupancy_lb >= c.occupancy_ub) {
     errors.emplace_back(
-        fmt::format(FMT_STRING("occupancy lower bound should be smaller than the upper bound.\n"
-                               "   - Lower bound: {}\n"
-                               "   - Upper bound: {}\n"),
+        fmt::format("occupancy lower bound should be smaller than the upper bound.\n"
+                    "   - Lower bound: {}\n"
+                    "   - Upper bound: {}\n",
                     c.occupancy_lb, c.occupancy_ub));
   }
 
   if (!errors.empty()) {
     throw std::runtime_error(
-        fmt::format(FMT_STRING("the following error(s) where encountered while validating CLI "
-                               "arguments and input file(s):\n - {}"),
+        fmt::format("the following error(s) where encountered while validating CLI "
+                    "arguments and input file(s):\n - {}",
                     fmt::join(errors, "\n - ")));
   }
 }
@@ -470,8 +470,7 @@ void Cli::validate_eval_subcommand() const {
     const hictk::cooler::File f2(c.reference_cooler_uri.string());
     if (f1.resolution() != f2.resolution()) {
       errors.emplace_back(fmt::format(
-          FMT_STRING(
-              "Coolers at URIs {} and {} have different resolutions ({} and {} respectively)"),
+          "Coolers at URIs {} and {} have different resolutions ({} and {} respectively)",
           c.input_cooler_uri, c.reference_cooler_uri, f1.resolution(), f2.resolution()));
     }
 
@@ -479,8 +478,7 @@ void Cli::validate_eval_subcommand() const {
     if (constexpr auto* name = "--chrom-sizes";
         f1.chromosomes() != f2.chromosomes() && !io_group.get_option(name)->empty()) {
       errors.emplace_back(fmt::format(
-          FMT_STRING(
-              "{} is required when input and reference Coolers do not have the same chromosomes"),
+          "{} is required when input and reference Coolers do not have the same chromosomes",
           name));
     }
 
@@ -496,13 +494,12 @@ void Cli::validate_eval_subcommand() const {
         "--weight-column-name", "--reciprocal-weights", "--exclude-zero-pixels", "--normalize"};
 
     if (constexpr auto* name = "--weight-file"; !io_group.get_option(name)->empty()) {
-      errors.emplace_back(fmt::format(FMT_STRING("{} is not allowed when --metric=custom."), name));
+      errors.emplace_back(fmt::format("{} is not allowed when --metric=custom.", name));
     }
 
     for (const auto& name : gen_option_names) {
       if (!gen_group.get_option(std::string{name})->empty()) {
-        errors.emplace_back(
-            fmt::format(FMT_STRING("{} is not allowed when --metric=custom."), name));
+        errors.emplace_back(fmt::format("{} is not allowed when --metric=custom.", name));
       }
     }
   }
@@ -523,8 +520,8 @@ void Cli::validate_eval_subcommand() const {
     DISABLE_WARNING_RANGE_LOOP_ANALYSIS
     for (const auto direction : stripe_directions) {
       for (const auto extension : extensions) {
-        const std::filesystem::path fname = fmt::format(
-            FMT_STRING("{}_{}_{}.{}"), c.output_prefix.string(), metric_name, direction, extension);
+        const std::filesystem::path fname =
+            fmt::format("{}_{}_{}.{}", c.output_prefix.string(), metric_name, direction, extension);
         auto collision =
             utils::detect_path_collision(fname, c.force, std::filesystem::file_type::regular);
         if (!collision.empty()) {
@@ -534,17 +531,17 @@ void Cli::validate_eval_subcommand() const {
     }
     DISABLE_WARNING_PUSH
     if (!name_collisions.empty()) {
-      errors.emplace_back(fmt::format(
-          FMT_STRING("detected {} file name collision(s): refusing to proceed. Pass --force to "
-                     "overwrite existing file(s).\n   Colliding file name(s):\n    - {}"),
-          name_collisions.size(), fmt::join(name_collisions, ".\n    - ")));
+      errors.emplace_back(
+          fmt::format("detected {} file name collision(s): refusing to proceed. Pass --force to "
+                      "overwrite existing file(s).\n   Colliding file name(s):\n    - {}",
+                      name_collisions.size(), fmt::join(name_collisions, ".\n    - ")));
     }
   }
 
   if (!errors.empty()) {
     throw std::runtime_error(
-        fmt::format(FMT_STRING("the following error(s) where encountered while validating CLI "
-                               "arguments and input file(s):\n - {}"),
+        fmt::format("the following error(s) where encountered while validating CLI "
+                    "arguments and input file(s):\n - {}",
                     fmt::join(errors, "\n - ")));
   }
 }
@@ -564,9 +561,9 @@ void Cli::validate_transform_subcommand() const {
   if (c.method == t::normalize) {
     if (const auto [lb, ub] = c.normalization_range; lb >= ub) {
       errors.push_back(
-          fmt::format(FMT_STRING("the upper bound for the normalization range specified through "
-                                 "--normalization range is expected to be strictly larger than the "
-                                 "lower bound.\n   - Lower bound: {}\n   - Upper bound: {}\n"),
+          fmt::format("the upper bound for the normalization range specified through "
+                      "--normalization range is expected to be strictly larger than the "
+                      "lower bound.\n   - Lower bound: {}\n   - Upper bound: {}\n",
                       lb, ub));
     }
   }
@@ -574,17 +571,17 @@ void Cli::validate_transform_subcommand() const {
   if (const auto [lb, ub] = c.normalization_range; !std::isinf(lb) || !std::isinf(ub)) {
     if (lb >= ub) {
       errors.push_back(
-          fmt::format(FMT_STRING("the upper bound for the saturation range specified through "
-                                 "--saturation range is expected to be strictly larger than the "
-                                 "lower bound.\n   - Lower bound: {}\n   - Upper bound: {}\n"),
+          fmt::format("the upper bound for the saturation range specified through "
+                      "--saturation range is expected to be strictly larger than the "
+                      "lower bound.\n   - Lower bound: {}\n   - Upper bound: {}\n",
                       lb, ub));
     }
   }
 
   if (!errors.empty()) {
     throw std::runtime_error(
-        fmt::format(FMT_STRING("The following error(s) where encountered while validating CLI "
-                               "arguments and input file(s):\n - {}"),
+        fmt::format("The following error(s) where encountered while validating CLI "
+                    "arguments and input file(s):\n - {}",
                     fmt::join(errors, "\n - ")));
   }
 }
@@ -626,9 +623,8 @@ modle::tools::modle_tools_config Cli::parse_arguments() {
   } catch (const std::exception& e) {
     this->_exit_code = 1;
     throw std::runtime_error(fmt::format(
-        FMT_STRING(
-            "An unexpected error has occurred while parsing CLI arguments: {}. If you see this "
-            "message, please file an issue on GitHub"),
+        "An unexpected error has occurred while parsing CLI arguments: {}. If you see this "
+        "message, please file an issue on GitHub",
         e.what()));
 
   } catch (...) {
@@ -663,7 +659,7 @@ std::string Cli::to_json() const {
     }
 
     if (buff.empty()) {
-      buff = fmt::format(FMT_STRING("[{}]\n"), this->get_printable_subcommand());
+      buff = fmt::format("[{}]\n", this->get_printable_subcommand());
     }
 
     if (line.find(prefix) != std::string::npos) {
@@ -680,8 +676,7 @@ std::string Cli::to_json() const {
     return ss.str();
   } catch (const std::exception& e) {
     throw std::runtime_error(fmt::format(
-        FMT_STRING(
-            "The following error occurred while converting MoDLE's config from TOML to JSON: {}"),
+        "The following error occurred while converting MoDLE's config from TOML to JSON: {}",
         e.what()));
   }
 }

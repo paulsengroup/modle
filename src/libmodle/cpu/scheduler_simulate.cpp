@@ -111,7 +111,7 @@ void Simulation::run_simulate() {
 
       // Don't bother simulating intervals without barriers
       if (!c().simulate_chromosomes_wo_barriers && interval.num_barriers() == 0) {
-        SPDLOG_INFO(FMT_STRING("{} has 0 barriers... SKIPPING!"), interval);
+        SPDLOG_INFO("{} has 0 barriers... SKIPPING!", interval);
         Task t{};
         t.interval = &interval;
         for (usize cellid = 0; cellid < c().num_cells; ++cellid) {
@@ -150,8 +150,7 @@ void Simulation::run_simulate() {
                nlefs,
                rand_eng,
                Task::Status::PENDING};
-        SPDLOG_DEBUG(FMT_STRING("[main]: submitting task #{} ({} cell #{})..."), t.id, *t.interval,
-                     t.cell_id);
+        SPDLOG_DEBUG("[main]: submitting task #{} ({} cell #{})...", t.id, *t.interval, t.cell_id);
 
         while (!this->_ctx.try_enqueue_task<Task::Status::PENDING>(t, ptok_pending)) {
           this->_ctx.check_exceptions();
@@ -176,8 +175,7 @@ static std::string format_rand_eng(const random::PRNG_t& rand_eng) {
   const auto state = rand_eng.serialize();
   static_assert(state.size() == 4);
   static_assert(sizeof(state[0]) == sizeof(u64));
-  return fmt::format(FMT_STRING("0x{:016x}{:016x}{:016x}{:016x}"), state[0], state[1], state[2],
-                     state[3]);
+  return fmt::format("0x{:016x}{:016x}{:016x}{:016x}", state[0], state[1], state[2], state[3]);
 }
 
 [[nodiscard]] static std::unique_ptr<compressed_io::Writer> init_local_model_state_logger(
@@ -187,12 +185,12 @@ static std::string format_rand_eng(const random::PRNG_t& rand_eng) {
   }
 
   auto path = c.path_to_model_state_log_file;
-  path.replace_extension(fmt::format(FMT_STRING("{}{}"), task_id, path.extension().string()));
+  path.replace_extension(fmt::format("{}{}", task_id, path.extension().string()));
   return std::make_unique<compressed_io::Writer>(path);
 }
 
 void Simulation::simulate_worker(const u64 tid, const usize task_batch_size) {
-  SPDLOG_INFO(FMT_STRING("spawning worker thread W{}..."), tid);
+  SPDLOG_INFO("spawning worker thread W{}...", tid);
   // This state object owns all the buffers and PRNG + seed required in order to simulate loop
   // extrusion for a single cell. Buffers are allocated once and resized, cleared and reused
   // throughout the simulation
@@ -207,12 +205,12 @@ void Simulation::simulate_worker(const u64 tid, const usize task_batch_size) {
     while (!!this->_ctx) {
       this->_ctx.wait_dequeue_tasks<Task::Status::PENDING>(ctok, task_buff);
       if (task_buff.empty() && !this->_ctx.shutdown_signal_sent()) {
-        SPDLOG_DEBUG(FMT_STRING("[W{}]: no tasks available: sleeping for a bit..."), tid);
+        SPDLOG_DEBUG("[W{}]: no tasks available: sleeping for a bit...", tid);
         std::this_thread::sleep_for(std::chrono::milliseconds(50));
         continue;
       }
       if (task_buff.empty() && this->_ctx.shutdown_signal_sent()) {
-        SPDLOG_DEBUG(FMT_STRING("[W{}]: all tasks have been processed: returning!"), tid);
+        SPDLOG_DEBUG("[W{}]: all tasks have been processed: returning!", tid);
         return;
       }
 
@@ -238,8 +236,8 @@ void Simulation::simulate_worker(const u64 tid, const usize task_batch_size) {
         if (MODLE_LIKELY(task.num_target_epochs != (std::numeric_limits<usize>::max)() ||
                          task.num_target_contacts != 0)) {
           local_state.status = State::Status::RUNNING;
-          SPDLOG_DEBUG(FMT_STRING("[W{}]: begin processing task {} ({} cell #{}, {})..."), tid,
-                       task.id, *task.interval, task.cell_id, format_rand_eng(task.rand_eng));
+          SPDLOG_DEBUG("[W{}]: begin processing task {} ({} cell #{}, {})...", tid, task.id,
+                       *task.interval, task.cell_id, format_rand_eng(task.rand_eng));
           local_state.model_state_logger = init_local_model_state_logger(c(), local_state.id);
           this->simulate_one_cell(tid, local_state);
           if (local_state.model_state_logger) {
@@ -248,8 +246,8 @@ void Simulation::simulate_worker(const u64 tid, const usize task_batch_size) {
             this->_ctx.append_to_model_state_log(path, true);
           }
           SPDLOG_DEBUG(
-              FMT_STRING("[W{}]: finished processing task {} ({} cell #{}, {}): collected {} "
-                         "interactions throughout {} epochs ({} burnin epochs)"),
+              "[W{}]: finished processing task {} ({} cell #{}, {}): collected {} "
+              "interactions throughout {} epochs ({} burnin epochs)",
               tid, local_state.id, *local_state.interval, local_state.cell_id,
               format_rand_eng(task.rand_eng), local_state.num_contacts, local_state.epoch,
               local_state.num_burnin_epochs);
@@ -266,12 +264,11 @@ void Simulation::simulate_worker(const u64 tid, const usize task_batch_size) {
       }
     }
   } catch (const std::exception& e) {
-    this->_ctx.throw_exception(std::runtime_error(
-        fmt::format(FMT_STRING("Exception raised in worker thread {}:\n   {}\n   {}"), tid,
-                    local_state, e.what())));
+    this->_ctx.throw_exception(std::runtime_error(fmt::format(
+        "Exception raised in worker thread {}:\n   {}\n   {}", tid, local_state, e.what())));
   } catch (...) {
-    this->_ctx.throw_exception(std::runtime_error(
-        fmt::format(FMT_STRING("Unhandled exception raised in worker thread {}!"), tid)));
+    this->_ctx.throw_exception(
+        std::runtime_error(fmt::format("Unhandled exception raised in worker thread {}!", tid)));
   }
 }
 

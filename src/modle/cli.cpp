@@ -157,15 +157,14 @@ static std::vector<CLI::App*> add_common_options(CLI::App& subcommand, modle::Co
   io_adv.add_flag(
       "--log-model-internal-state",
       c.log_model_internal_state,
-      fmt::format(FMT_STRING(
-                      "Collect detailed statistics regarding the internal state of MoDLE simulation instance(s).\n"
-                      "Statistics will be written to a compressed file under the prefix specified through the\n"
-                      "--output-prefix option.\n"
-                      "Example: modle sim --output-prefix=/tmp/myprefix\n"
-                               "statistics will be written to file /tmp/myprefix_internal_state.log.gz.\n"
-                      "Depending on the input file(s) and parameters, specifying this option may hinder\n"
-                      "simulation throughput. Currently the following metrics are collected:\n"
-                      " - {}"),
+      fmt::format("Collect detailed statistics regarding the internal state of MoDLE simulation instance(s).\n"
+                  "Statistics will be written to a compressed file under the prefix specified through the\n"
+                  "--output-prefix option.\n"
+                  "Example: modle sim --output-prefix=/tmp/myprefix\n"
+                           "statistics will be written to file /tmp/myprefix_internal_state.log.gz.\n"
+                  "Depending on the input file(s) and parameters, specifying this option may hinder\n"
+                  "simulation throughput. Currently the following metrics are collected:\n"
+                  " - {}",
                   fmt::join(absl::StrSplit(Config::model_internal_state_log_header, '\t'), "\n - ")))
       ->capture_default_str();
 
@@ -332,14 +331,14 @@ static std::vector<CLI::App*> add_common_options(CLI::App& subcommand, modle::Co
   cgen.add_option(
       "--contact-sampling-strategy",
       c.contact_sampling_strategy,
-      fmt::format(FMT_STRING("Strategy to use when sampling contacts.\n"
-                             "Should be one of:\n"
-                             " - {}\n"
-                             "When one of the *-with-noise strategies is specified, contacts are randomized by\n"
-                             "applying a random offset to the location of LEF extrusion units.\n"
-                             "Offsets are drawn from a genextreme distribution.\n"
-                             "The distribution parameters can be controlled through the options --mu, --sigma\n"
-                             "and --xi."),
+      fmt::format("Strategy to use when sampling contacts.\n"
+                  "Should be one of:\n"
+                  " - {}\n"
+                  "When one of the *-with-noise strategies is specified, contacts are randomized by\n"
+                  "applying a random offset to the location of LEF extrusion units.\n"
+                  "Offsets are drawn from a genextreme distribution.\n"
+                  "The distribution parameters can be controlled through the options --mu, --sigma\n"
+                  "and --xi.",
                   fmt::join(Cli::contact_sampling_strategy_map.keys(), "\n - ")))
       ->transform(CLI::CheckedTransformer(Cli::contact_sampling_strategy_map))
       ->capture_default_str();
@@ -420,7 +419,7 @@ static std::vector<CLI::App*> add_common_options(CLI::App& subcommand, modle::Co
   stopping.add_option(
       "-s,--stopping-criterion",
       c.stopping_criterion,
-      fmt::format(FMT_STRING("Simulation stopping criterion. Should be one of {}."),
+      fmt::format("Simulation stopping criterion. Should be one of {}.",
                   utils::format_collection_to_english_list(Cli::stopping_criterion_map.keys(), ", ", " or ")))
       ->transform(CLI::CheckedTransformer(Cli::stopping_criterion_map))
       ->capture_default_str();
@@ -659,23 +658,24 @@ std::string Cli::detect_path_collisions(modle::Config& c) const {
     if (std::filesystem::exists(path)) {
       if (std::filesystem::is_directory(path)) {
         return fmt::format(
-            FMT_STRING("Refusing to continue because output file {} already "
-                       "exist (and is actually a {}directory).\n{}.\n"),
+            "Refusing to continue because output file {} already "
+            "exist (and is actually a {}directory).\n{}.\n",
             path, std::filesystem::is_empty(path) ? "" : "non-empty ",
             std::filesystem::is_empty(path)
                 ? " Pass --force to overwrite"
                 : "You should specify a different output path, or manually remove the "
                   "existing directory");
       }
-      return fmt::format(FMT_STRING("Refusing to continue because output file {} already exist.\n"
-                                    "Pass --force to overwrite.\n"),
-                         path);
+      return fmt::format(
+          "Refusing to continue because output file {} already exist.\n"
+          "Pass --force to overwrite.\n",
+          path);
     }
     if (std::filesystem::is_directory(path) && !std::filesystem::is_empty(path)) {
       return fmt::format(
-          FMT_STRING("Refusing to continue because output file {} is a non-empty directory.\n"
-                     "You should specify a different output path, or "
-                     "manually remove the existing directory.\n"),
+          "Refusing to continue because output file {} is a non-empty directory.\n"
+          "You should specify a different output path, or "
+          "manually remove the existing directory.\n",
           path);
     }
     return {};
@@ -713,8 +713,8 @@ static void detect_deprecated_option_usage(const CLI::App& subcmd,
   for (const auto& opt : deprecated_opt_grp->parse_order()) {
     const auto match = deprecated_option_mappings.find(opt->get_name());
     if (match != deprecated_option_mappings.end()) {
-      warnings_buff.emplace_back(fmt::format(FMT_STRING("Option {} is deprecated. Use {} instead."),
-                                             *match.first, *match.second));
+      warnings_buff.emplace_back(
+          fmt::format("Option {} is deprecated. Use {} instead.", *match.first, *match.second));
     }
   }
 }
@@ -734,10 +734,10 @@ void Cli::validate_args() const {
     assert(subcmd->get_option_group("Advanced")
                ->get_option_group("Burn-in")
                ->get_option("--burnin-history-length"));
-    errors.emplace_back(fmt::format(
-        FMT_STRING("The value passed to {} should be less or equal than that of {} ({} > {})"),
-        "--burnin-smoothing-window-size", "--burnin-history-length", c.burnin_smoothing_window_size,
-        c.burnin_history_length));
+    errors.emplace_back(
+        fmt::format("The value passed to {} should be less or equal than that of {} ({} > {})",
+                    "--burnin-smoothing-window-size", "--burnin-history-length",
+                    c.burnin_smoothing_window_size, c.burnin_history_length));
   }
 
   const auto& cgen_adv =
@@ -748,10 +748,10 @@ void Cli::validate_args() const {
   if (!(c.contact_sampling_strategy & CS::noisify)) {
     for (const std::string label : {"--mu", "--sigma", "--xi"}) {
       if (!cgen_adv->get_option(label)->empty()) {
-        this->_warnings.emplace_back(fmt::format(
-            FMT_STRING("Option {} has no effect. Reason: {} requires the strategy passed to "
-                       "--contact-sampling-strategy to be one of the *-with-noise strategies."),
-            label, label));
+        this->_warnings.emplace_back(
+            fmt::format("Option {} has no effect. Reason: {} requires the strategy passed to "
+                        "--contact-sampling-strategy to be one of the *-with-noise strategies.",
+                        label, label));
       }
     }
   }
@@ -763,18 +763,18 @@ void Cli::validate_args() const {
 
     if (sample_loop_contacts && !sample_tad_contacts && c.tad_to_loop_contact_ratio != 0) {
       this->_warnings.emplace_back(
-          fmt::format(FMT_STRING("Option --tad-to-loop-contact-ratio={} has no effect. Reason: "
-                                 "--tad-to-loop-contact-ratio is implicitly set to 0 when "
-                                 "--contact-sampling-strategy={}"),
+          fmt::format("Option --tad-to-loop-contact-ratio={} has no effect. Reason: "
+                      "--tad-to-loop-contact-ratio is implicitly set to 0 when "
+                      "--contact-sampling-strategy={}",
                       c.tad_to_loop_contact_ratio,
                       Cli::contact_sampling_strategy_map.at(c.contact_sampling_strategy)));
     }
     if (!sample_loop_contacts && sample_tad_contacts &&
         c.tad_to_loop_contact_ratio != std::numeric_limits<double>::infinity()) {
       this->_warnings.emplace_back(
-          fmt::format(FMT_STRING("Option --tad-to-loop-contact-ratio={} has no effect. Reason: "
-                                 "--tad-to-loop-contact-ratio is implicitly set to inf when "
-                                 "--contact-sampling-strategy={}"),
+          fmt::format("Option --tad-to-loop-contact-ratio={} has no effect. Reason: "
+                      "--tad-to-loop-contact-ratio is implicitly set to inf when "
+                      "--contact-sampling-strategy={}",
                       c.tad_to_loop_contact_ratio,
                       Cli::contact_sampling_strategy_map.at(c.contact_sampling_strategy)));
     }
@@ -802,20 +802,19 @@ void Cli::validate_args() const {
                                          ->get_option("--probability-normalization-factor")
                                          ->empty()) {
     this->_warnings.emplace_back(
-        fmt::format(FMT_STRING("Option --probability-normalization-factor has no effect. Reason: "
-                               "CLI option --no-normalize-probabilities was passed by the user.")));
+        fmt::format("Option --probability-normalization-factor has no effect. Reason: "
+                    "CLI option --no-normalize-probabilities was passed by the user."));
   }
 
   if (c.min_burnin_epochs > c.max_burnin_epochs) {
-    errors.emplace_back(fmt::format(
-        FMT_STRING("--min-burnin-epochs={} cannot be greater than --max-burnin-epochs={}."),
-        c.min_burnin_epochs, c.max_burnin_epochs));
+    errors.emplace_back(
+        fmt::format("--min-burnin-epochs={} cannot be greater than --max-burnin-epochs={}.",
+                    c.min_burnin_epochs, c.max_burnin_epochs));
   }
 
   if (!errors.empty()) {
     throw std::runtime_error(fmt::format(
-        FMT_STRING(
-            "The following error(s) where encountered while validating CLI arguments:\n - {}"),
+        "The following error(s) where encountered while validating CLI arguments:\n - {}",
         fmt::join(errors, "\n - ")));
   }
 }
@@ -1019,7 +1018,7 @@ void Cli::transform_args() {
 Cli::subcommand Cli::get_subcommand() const { return this->_subcommand; }
 
 void Cli::print_config(bool print_default_args) const {
-  fmt::print(stderr, FMT_STRING("{}\n"), this->_cli.config_to_str(print_default_args, true));
+  fmt::print(stderr, "{}\n", this->_cli.config_to_str(print_default_args, true));
 }
 
 void Cli::write_config_file(bool write_default_args) const {
@@ -1028,12 +1027,11 @@ void Cli::write_config_file(bool write_default_args) const {
     fs.exceptions(fs.exceptions() | std::ios::failbit | std::ios::badbit);
     fs.open(this->_config.path_to_config_file);
 
-    fmt::print(fs, FMT_STRING("# Config created by {} on {}\n{}\n"),
-               modle::config::version::str_long(),
+    fmt::print(fs, "# Config created by {} on {}\n{}\n", modle::config::version::str_long(),
                absl::FormatTime(absl::Now(), absl::UTCTimeZone()),
                this->_cli.config_to_str(write_default_args, true));
   } catch (const std::exception& e) {
-    throw std::runtime_error(fmt::format(FMT_STRING("failed to write config file \"{}\": {}"),
+    throw std::runtime_error(fmt::format("failed to write config file \"{}\": {}",
                                          this->_config.path_to_config_file, e.what()));
   }
 }
@@ -1042,7 +1040,7 @@ bool Cli::config_file_parsed() const { return !this->_cli.get_config_ptr()->empt
 
 void Cli::log_warnings() const {
   for (const auto& warning : this->_warnings) {
-    SPDLOG_WARN(FMT_STRING("{}"), warning);
+    SPDLOG_WARN("{}", warning);
   }
 }
 
@@ -1074,10 +1072,9 @@ std::string Cli::to_json() const {
     ss << toml::json_formatter{tt};
     return ss.str();
   } catch (const std::exception& e) {
-    throw std::runtime_error(
-        fmt::format(FMT_STRING("The following error occurred while converting MoDLE's config "
-                               "from TOML to JSON: {}"),
-                    e.what()));
+    throw std::runtime_error(fmt::format(
+        "The following error occurred while converting MoDLE's config from TOML to JSON: {}",
+        e.what()));
   }
 }
 

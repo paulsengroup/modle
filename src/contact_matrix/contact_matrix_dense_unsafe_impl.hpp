@@ -260,7 +260,7 @@ void ContactMatrixDense<N>::unsafe_print(std::ostream &out_stream, bool full) co
           row[x] = this->unsafe_at(i, j);
         }
       }
-      fmt::print(out_stream, FMT_STRING("{}\n"), fmt::join(row, "\t"));
+      fmt::print(out_stream, "{}\n", fmt::join(row, "\t"));
     }
   } else {
     std::vector<N> row(this->ncols());
@@ -268,7 +268,7 @@ void ContactMatrixDense<N>::unsafe_print(std::ostream &out_stream, bool full) co
       for (auto j = i; j < this->ncols(); ++j) {
         row[j] = this->unsafe_at(i, j);
       }
-      fmt::print(out_stream, FMT_STRING("{}\n"), fmt::join(row, "\t"));
+      fmt::print(out_stream, "{}\n", fmt::join(row, "\t"));
     }
   }
   out_stream << std::flush;

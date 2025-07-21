@@ -30,7 +30,7 @@ constexpr double DEFAULT_FP_TOLERANCE =
                                                                  const double sigma) {
   const auto sbuff = [&]() {
     const auto path = data_dir() / std::filesystem::path{"reference_gaussian_kernels"} /
-                      fmt::format(FMT_STRING("gaussian_kernel_{}_{:.1f}.tsv.xz"), radius, sigma);
+                      fmt::format("gaussian_kernel_{}_{:.1f}.tsv.xz", radius, sigma);
 
     REQUIRE(std::filesystem::exists(path));
     compressed_io::Reader r(path);
