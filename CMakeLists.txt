@@ -45,13 +45,13 @@ project(
   DESCRIPTION "MoDLE: High-performance stochastic modeling of DNA loop extrusion interactions.")
 
 include(FetchContent)
-# cmake-format: off
+# gersemi: off
 FetchContent_Declare(
         _modle_project_options
         URL "${CMAKE_CURRENT_SOURCE_DIR}/external/project_options-v0.36.6.tar.xz"
         URL_HASH SHA256=b4df2a4107847248d4711ee48477cdf93c1a1c7d51a931937759eb9ffba67af8
 )
-# cmake-format: on
+# gersemi: on
 
 FetchContent_MakeAvailable(_modle_project_options)
 include("${_modle_project_options_SOURCE_DIR}/Index.cmake")

@@ -4,7 +4,7 @@
 
 include(FetchContent)
 
-# cmake-format: off
+# gersemi: off
 FetchContent_Declare(
         hictk
         URL ${CMAKE_CURRENT_SOURCE_DIR}/external/hictk-v2.1.4.tar.xz
@@ -13,7 +13,7 @@ FetchContent_Declare(
         OVERRIDE_FIND_PACKAGE
         SYSTEM
 )
-# cmake-format: on
+# gersemi: on
 
 set(HICTK_BUILD_BENCHMARKS OFF)
 set(HICTK_BUILD_EXAMPLES OFF)
