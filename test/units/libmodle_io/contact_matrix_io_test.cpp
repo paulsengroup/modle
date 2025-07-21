@@ -51,8 +51,8 @@ TEST_CASE("ContactMatrixDense to Cooler Roundtrip (square)", "[io][matrix][short
 
   const hictk::Reference chroms{{0, "chr1", chrom_size}};
   {
-    auto f = init_cooler_file<i32>(test_file, false, chroms,
-                                   hictk::cooler::Attributes::init(bin_size));
+    auto f =
+        init_cooler_file<i32>(test_file, false, chroms, hictk::cooler::Attributes::init(bin_size));
     append_contact_matrix_to_cooler(f, "chr1", m1);
     REQUIRE(m1.get_nnz() == f.attributes().nnz);
   }
@@ -82,8 +82,8 @@ TEST_CASE("ContactMatrixDense to Cooler Roundtrip", "[io][matrix][long]") {
   const auto m1 = init_dense_matrix<u32>(rand_eng, nrows, ncols);
   const hictk::Reference chroms{{0, "chr1", chrom_size}};
   {
-    auto f = init_cooler_file<i32>(test_file, false, chroms,
-                                   hictk::cooler::Attributes::init(bin_size));
+    auto f =
+        init_cooler_file<i32>(test_file, false, chroms, hictk::cooler::Attributes::init(bin_size));
     append_contact_matrix_to_cooler(f, "chr1", m1);
     REQUIRE(m1.get_nnz() == f.attributes().nnz);
   }

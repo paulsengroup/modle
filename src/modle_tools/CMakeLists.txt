@@ -17,28 +17,32 @@ add_executable(modle_tools main.cpp)
 
 target_sources(
   modle_tools
-  PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/annotate_barriers.cpp
-          ${CMAKE_CURRENT_SOURCE_DIR}/cli.hpp
-          ${CMAKE_CURRENT_SOURCE_DIR}/include/modle_tools/modle_tools_config.hpp
-          ${CMAKE_CURRENT_SOURCE_DIR}/cli.cpp
-          ${CMAKE_CURRENT_SOURCE_DIR}/eval.cpp
-          ${CMAKE_CURRENT_SOURCE_DIR}/transform.cpp)
+  PRIVATE
+    ${CMAKE_CURRENT_SOURCE_DIR}/annotate_barriers.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/cli.hpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/include/modle_tools/modle_tools_config.hpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/cli.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/eval.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/transform.cpp
+)
 
 target_link_libraries(
   modle_tools
-  PRIVATE modle_project_warnings
-          modle_project_options
-          fmt::fmt-header-only
-          Modle::cmatrix
-          Modle::common
-          Modle::config
-          Modle::interval_tree
-          Modle::io_bed
-          Modle::io_bigwig
-          Modle::io_chrom_sizes
-          Modle::io_compressed
-          Modle::io_contact_matrix
-          Modle::stats)
+  PRIVATE
+    modle_project_warnings
+    modle_project_options
+    fmt::fmt-header-only
+    Modle::cmatrix
+    Modle::common
+    Modle::config
+    Modle::interval_tree
+    Modle::io_bed
+    Modle::io_bigwig
+    Modle::io_chrom_sizes
+    Modle::io_compressed
+    Modle::io_contact_matrix
+    Modle::stats
+)
 
 target_link_system_libraries(
   modle_tools
@@ -59,7 +63,8 @@ target_link_system_libraries(
   phmap
   readerwriterqueue::readerwriterqueue
   tomlplusplus::tomlplusplus
-  spdlog::spdlog_header_only)
+  spdlog::spdlog_header_only
+)
 
 target_include_directories(modle_tools PRIVATE include)
 
@@ -67,27 +72,34 @@ if(ENABLE_PCH)
   target_precompile_headers(
     modle_tools
     PRIVATE
-    <algorithm>
-    <cassert>
-    <cstddef>
-    <cstdint>
-    <filesystem>
-    <stdexcept>
-    <string>
-    <string_view>
-    <utility>
-    <vector>
-    <absl/container/flat_hash_set.h>
-    <absl/types/span.h>
-    <fmt/format.h>)
+      <algorithm>
+      <cassert>
+      <cstddef>
+      <cstdint>
+      <filesystem>
+      <stdexcept>
+      <string>
+      <string_view>
+      <utility>
+      <vector>
+      <absl/container/flat_hash_set.h>
+      <absl/types/span.h>
+      <fmt/format.h>
+  )
 endif()
 
 include(GNUInstallDirs)
 install(
-  TARGETS modle_tools
-  LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
-  ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
-  RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
-  PUBLIC_HEADER DESTINATION ${CMAKE_INSTALL_INCLUDEDIR})
+  TARGETS
+    modle_tools
+  LIBRARY
+    DESTINATION ${CMAKE_INSTALL_LIBDIR}
+  ARCHIVE
+    DESTINATION ${CMAKE_INSTALL_LIBDIR}
+  RUNTIME
+    DESTINATION ${CMAKE_INSTALL_BINDIR}
+  PUBLIC_HEADER
+    DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
+)
 
 install(FILES ${PROJECT_SOURCE_DIR}/LICENSE DESTINATION ${CMAKE_INSTALL_DATADIR}/licenses/modle_tools/)

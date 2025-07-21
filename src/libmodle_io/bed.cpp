@@ -561,7 +561,7 @@ void Parser::reset() {
   try {
     this->_reader.reset();
   } catch (const std::exception& e) {
-    throw std::runtime_error(fmt::format(FMT_STRING("An error occourred while seeking to the begin "
+    throw std::runtime_error(fmt::format(FMT_STRING("An error occurred while seeking to the begin "
                                                     "of file {} using BED::Parser::reset(): {}"),
                                          this->_reader.path(), e.what()));
   }

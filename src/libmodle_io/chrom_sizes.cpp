@@ -4,12 +4,12 @@
 
 #include "modle/chrom_sizes/chrom_sizes.hpp"  // for Parser
 
-#include <parallel_hashmap/phmap.h>  // for flat_hash_set
 #include <absl/strings/ascii.h>
 #include <absl/strings/str_split.h>  // for StrSplit, Splitter
 #include <fmt/compile.h>
 #include <fmt/format.h>  // for format, FMT_COMPILE_STRING, FMT_STRING...
 #include <fmt/std.h>
+#include <parallel_hashmap/phmap.h>  // for flat_hash_set
 
 #include <cassert>      // for assert
 #include <filesystem>   // for filesystem::path

@@ -190,7 +190,9 @@ TEST_CASE("Reader plain - readall", "[io][reader][long]") {
 // NOLINTNEXTLINE(readability-function-cognitive-complexity)
 TEST_CASE("Reader plain - empty file", "[io][reader][short]") {
   const auto test_file = testdir() / "empty_file.txt";
-  { std::ofstream fp(test_file.string()); }
+  {
+    std::ofstream fp(test_file.string());
+  }
 
   Reader r(test_file);
   CHECK(r.eof());

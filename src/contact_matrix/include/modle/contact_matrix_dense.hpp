@@ -134,8 +134,8 @@ class ContactMatrixDense {
   [[nodiscard]] inline absl::Span<const N> get_raw_count_vector() const;
   [[nodiscard]] inline absl::Span<N> get_raw_count_vector();
 
-  [[nodiscard]] inline ContactMatrixDense<double> blur(double sigma, double truncate = 3.5,
-                                                       BS::light_thread_pool* tpool = nullptr) const;
+  [[nodiscard]] inline ContactMatrixDense<double> blur(
+      double sigma, double truncate = 3.5, BS::light_thread_pool* tpool = nullptr) const;
   [[nodiscard]] inline ContactMatrixDense<double> diff_of_gaussians(
       const double sigma1, const double sigma2, const double truncate = 3.5,
       const double min_value = std::numeric_limits<double>::lowest(),

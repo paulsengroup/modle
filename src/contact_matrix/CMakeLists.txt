@@ -15,22 +15,26 @@ add_library(Modle::cmatrix ALIAS cmatrix)
 
 target_sources(
   cmatrix
-  INTERFACE ${CMAKE_CURRENT_SOURCE_DIR}/contact_matrix_dense_impl.hpp
-            ${CMAKE_CURRENT_SOURCE_DIR}/contact_matrix_dense_safe_impl.hpp
-            ${CMAKE_CURRENT_SOURCE_DIR}/contact_matrix_dense_unsafe_impl.hpp
-            ${CMAKE_CURRENT_SOURCE_DIR}/contact_matrix_internal_impl.hpp
-            ${CMAKE_CURRENT_SOURCE_DIR}/contact_matrix_sparse_impl.hpp)
+  INTERFACE
+    ${CMAKE_CURRENT_SOURCE_DIR}/contact_matrix_dense_impl.hpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/contact_matrix_dense_safe_impl.hpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/contact_matrix_dense_unsafe_impl.hpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/contact_matrix_internal_impl.hpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/contact_matrix_sparse_impl.hpp
+)
 
 target_include_directories(cmatrix INTERFACE include/)
 
 target_link_libraries(
   cmatrix
-  INTERFACE modle_project_warnings
-            modle_project_options
-            Modle::common
-            Modle::io_compressed
-            Modle::stats
-            fmt::fmt-header-only)
+  INTERFACE
+    modle_project_warnings
+    modle_project_options
+    Modle::common
+    Modle::io_compressed
+    Modle::stats
+    fmt::fmt-header-only
+)
 
 target_link_system_libraries(
   cmatrix
@@ -41,4 +45,5 @@ target_link_system_libraries(
   bshoshany-thread-pool::bshoshany-thread-pool
   cpp-sort::cpp-sort
   libcuckoo::libcuckoo
-  xxHash::xxhash)
+  xxHash::xxhash
+)

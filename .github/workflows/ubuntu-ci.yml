@@ -53,6 +53,7 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       matrix: ${{ steps.set-result.outputs.result }}
+      ci-type: ${{ steps.ci-type.outputs.type }}
     steps:
       - name: Checkout repo
         uses: actions/checkout@v3
@@ -185,7 +186,7 @@ jobs:
           echo "outdated=$flag" | tee -a "$GITHUB_OUTPUT"
 
       - name: Update build deps
-        if: ${{ steps.buld-deps-outdated.outputs.outdated }}
+        if: steps.build-deps-outdated.outputs.outdated == 'true'
         run: |
           apt-get update
           apt-get install -y --no-install-recommends python3-pip

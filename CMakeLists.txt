@@ -17,14 +17,12 @@ set(CMAKE_C_STANDARD 11)
 # -std=gnu++20 for example when compiling with PCH enabled
 set(CMAKE_CXX_EXTENSIONS OFF)
 
-set(ENABLE_DEVELOPER_MODE
-    OFF
-    CACHE BOOL "Enable 'developer mode'")
+set(ENABLE_DEVELOPER_MODE OFF CACHE BOOL "Enable 'developer mode'")
 
 if(BUILD_SHARED_LIBS)
   message(
     FATAL_ERROR
-      "Building project with dynamic linking is currently not supported! Please remove option -DBUILD_SHARED_LIBS=ON and re-run cmake."
+    "Building project with dynamic linking is currently not supported! Please remove option -DBUILD_SHARED_LIBS=ON and re-run cmake."
   )
 endif()
 
@@ -39,10 +37,13 @@ set(MODLE_PROJECT_VERSION_SUFFIX "")
 
 project(
   MoDLE
-  LANGUAGES C CXX
+  LANGUAGES
+    C
+    CXX
   VERSION "${MODLE_PROJECT_VERSION_MAJOR}.${MODLE_PROJECT_VERSION_MINOR}.${MODLE_PROJECT_VERSION_PATCH}"
   HOMEPAGE_URL https://github.com/paulsengroup/modle
-  DESCRIPTION "MoDLE: High-performance stochastic modeling of DNA loop extrusion interactions.")
+  DESCRIPTION "MoDLE: High-performance stochastic modeling of DNA loop extrusion interactions."
+)
 
 include(FetchContent)
 # gersemi: off

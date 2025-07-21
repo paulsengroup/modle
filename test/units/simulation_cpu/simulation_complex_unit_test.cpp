@@ -748,7 +748,7 @@ TEST_CASE("Simulation 012 - fix_secondary_lef_lef_collisions", "[simulation][sho
                                                               CollisionT{0, LEF_BAR}};
   const std::array<CollisionT, nlefs> fwd_collisions_expected{CollisionT{},
                                                               CollisionT{}};
-  // Important! The expecte collisions and moves look the opposite of one would expect
+  // Important! The expected collisions and moves look the opposite of one would expect
   // because fix_secondary_lef_lef_collisions is swapping ranks
   std::array<CollisionT, nlefs> rev_collisions;
   std::array<CollisionT, nlefs> fwd_collisions;

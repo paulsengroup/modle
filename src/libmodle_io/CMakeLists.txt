@@ -16,14 +16,25 @@ find_package(xxHash CONFIG REQUIRED)
 # BED
 add_library(libmodle_io_bed)
 add_library(Modle::io_bed ALIAS libmodle_io_bed)
-target_sources(libmodle_io_bed PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/bed.cpp ${CMAKE_CURRENT_SOURCE_DIR}/bed_impl.hpp)
+target_sources(
+  libmodle_io_bed
+  PRIVATE
+    ${CMAKE_CURRENT_SOURCE_DIR}/bed.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/bed_impl.hpp
+)
 
 target_include_directories(libmodle_io_bed PUBLIC include/bed)
 
 target_link_libraries(
   libmodle_io_bed
-  PRIVATE modle_project_warnings modle_project_options
-  PUBLIC Modle::common Modle::interval_tree Modle::io_compressed)
+  PRIVATE
+    modle_project_warnings
+    modle_project_options
+  PUBLIC
+    Modle::common
+    Modle::interval_tree
+    Modle::io_compressed
+)
 
 target_link_system_libraries(
   libmodle_io_bed
@@ -33,43 +44,56 @@ target_link_system_libraries(
   absl::hash
   absl::span
   phmap
-  xxHash::xxhash)
+  xxHash::xxhash
+)
 
-set_target_properties(libmodle_io_bed PROPERTIES OUTPUT_NAME modle_io_bed)
-install(
-  TARGETS libmodle_io_bed
-  ARCHIVE
-  INCLUDES
-  LIBRARY)
+set_target_properties(
+  libmodle_io_bed
+  PROPERTIES
+    OUTPUT_NAME
+      modle_io_bed
+)
+install(TARGETS libmodle_io_bed ARCHIVE INCLUDES LIBRARY)
 
 # BigWig
 add_library(libmodle_io_bigwig)
 add_library(Modle::io_bigwig ALIAS libmodle_io_bigwig)
-target_sources(libmodle_io_bigwig PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/bigwig.cpp
-                                          ${CMAKE_CURRENT_SOURCE_DIR}/bigwig_impl.hpp)
+target_sources(
+  libmodle_io_bigwig
+  PRIVATE
+    ${CMAKE_CURRENT_SOURCE_DIR}/bigwig.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/bigwig_impl.hpp
+)
 
 target_include_directories(libmodle_io_bigwig PUBLIC include/bigwig)
 
 target_link_libraries(
   libmodle_io_bigwig
-  PRIVATE modle_project_warnings modle_project_options
-  PUBLIC Modle::common fmt::fmt-header-only)
+  PRIVATE
+    modle_project_warnings
+    modle_project_options
+  PUBLIC
+    Modle::common
+    fmt::fmt-header-only
+)
 
 target_link_system_libraries(
   libmodle_io_bigwig
   PUBLIC
   absl::span
   BigWig::BigWig
-  phmap)
+  phmap
+)
 
 target_compile_definitions(libmodle_io_bigwig PRIVATE -DNOCURL)
 
-set_target_properties(libmodle_io_bigwig PROPERTIES OUTPUT_NAME modle_io_bigwig)
-install(
-  TARGETS libmodle_io_bigwig
-  ARCHIVE
-  INCLUDES
-  LIBRARY)
+set_target_properties(
+  libmodle_io_bigwig
+  PROPERTIES
+    OUTPUT_NAME
+      modle_io_bigwig
+)
+install(TARGETS libmodle_io_bigwig ARCHIVE INCLUDES LIBRARY)
 
 # ChromSizes
 add_library(libmodle_io_chrom_sizes)
@@ -80,21 +104,30 @@ target_include_directories(libmodle_io_chrom_sizes PUBLIC include/chrom_sizes)
 
 target_link_libraries(
   libmodle_io_chrom_sizes
-  PRIVATE modle_project_warnings modle_project_options Modle::io_bed
-  PUBLIC Modle::common Modle::io_compressed fmt::fmt-header-only)
+  PRIVATE
+    modle_project_warnings
+    modle_project_options
+    Modle::io_bed
+  PUBLIC
+    Modle::common
+    Modle::io_compressed
+    fmt::fmt-header-only
+)
 
 target_link_system_libraries(
   libmodle_io_chrom_sizes
   PRIVATE
   absl::strings
-  phmap)
+  phmap
+)
 
-set_target_properties(libmodle_io_chrom_sizes PROPERTIES OUTPUT_NAME modle_io_chrom_sizes)
-install(
-  TARGETS libmodle_io_chrom_sizes
-  ARCHIVE
-  INCLUDES
-  LIBRARY)
+set_target_properties(
+  libmodle_io_chrom_sizes
+  PROPERTIES
+    OUTPUT_NAME
+      modle_io_chrom_sizes
+)
+install(TARGETS libmodle_io_chrom_sizes ARCHIVE INCLUDES LIBRARY)
 
 # Compressed IO
 add_library(libmodle_io_compressed)
@@ -105,8 +138,13 @@ target_include_directories(libmodle_io_compressed PUBLIC include/compressed_io)
 
 target_link_libraries(
   libmodle_io_compressed
-  PRIVATE modle_project_warnings modle_project_options
-  PUBLIC Modle::common fmt::fmt-header-only)
+  PRIVATE
+    modle_project_warnings
+    modle_project_options
+  PUBLIC
+    Modle::common
+    fmt::fmt-header-only
+)
 
 target_link_system_libraries(
   libmodle_io_compressed
@@ -116,14 +154,16 @@ target_link_system_libraries(
   absl::strings
   PUBLIC
   Boost::iostreams
-  LibArchive::LibArchive)
+  LibArchive::LibArchive
+)
 
-set_target_properties(libmodle_io_compressed PROPERTIES OUTPUT_NAME modle_io_compressed)
-install(
-  TARGETS libmodle_io_compressed
-  ARCHIVE
-  INCLUDES
-  LIBRARY)
+set_target_properties(
+  libmodle_io_compressed
+  PROPERTIES
+    OUTPUT_NAME
+      modle_io_compressed
+)
+install(TARGETS libmodle_io_compressed ARCHIVE INCLUDES LIBRARY)
 
 # Contact matrix IO
 add_library(libmodle_io_contact_matrix INTERFACE)
@@ -134,22 +174,26 @@ target_include_directories(libmodle_io_contact_matrix INTERFACE include/contact_
 
 target_link_libraries(
   libmodle_io_contact_matrix
-  INTERFACE modle_project_warnings
-            modle_project_options
-            Modle::cmatrix
-            Modle::common
-            fmt::fmt-header-only)
+  INTERFACE
+    modle_project_warnings
+    modle_project_options
+    Modle::cmatrix
+    Modle::common
+    fmt::fmt-header-only
+)
 
 target_link_system_libraries(
   libmodle_io_contact_matrix
   INTERFACE
   modle_project_warnings
   modle_project_options
-  hictk::libhictk)
+  hictk::libhictk
+)
 
-set_target_properties(libmodle_io_contact_matrix PROPERTIES OUTPUT_NAME modle_io_contact_matrix)
-install(
-  TARGETS libmodle_io_contact_matrix
-  ARCHIVE
-  INCLUDES
-  LIBRARY)
+set_target_properties(
+  libmodle_io_contact_matrix
+  PROPERTIES
+    OUTPUT_NAME
+      modle_io_contact_matrix
+)
+install(TARGETS libmodle_io_contact_matrix ARCHIVE INCLUDES LIBRARY)

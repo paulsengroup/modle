@@ -35,35 +35,35 @@ class MoDLEConan(ConanFile):
         return 17
 
     def requirements(self):
-      self.requires("abseil/20250127.0#9e8e8cfc89a1324139fc0ee3bd4d8c8c")  # Drop
-      self.requires("bitflags/1.5.0#626da9d1913161321841f30caf9b994e")
-      self.requires("boost/1.88.0#7bc0bdd001de6abe470e5e41d3c44686")
-      self.requires("bshoshany-thread-pool/5.0.0#d94da300363f0c35b8f41b2c5490c94d")
-      self.requires("bzip2/1.0.8#00b4a4658791c1f06914e087f0e792f5")
-      self.requires("catch2/3.8.1#141f4cd552b86c7278436c434473ae2f")
-      self.requires("cli11/2.5.0#1b7c81ea2bff6279eb2150bbe06a200a")
-      self.requires("concurrentqueue/1.0.4#1e48e1c712bcfd892087c9c622a51502")
-      self.requires("cpp-sort/1.16.0#45e56dfc2a55a3e8c645576d4761dc73")
-      self.requires("fast_float/8.0.2#846ad0ebab16bc265c511095c3b490e9")
-      self.requires("fmt/11.2.0#579bb2cdf4a7607621beea4eb4651e0f")
-      self.requires("hdf5/1.14.6#6f1acd01d23d00735fe97300f4d5980c", force=True)
-      self.requires("highfive/2.10.0#c975a16d7fe3655c173f8a9aab16b416")
-      self.requires("libarchive/3.8.1#5cf685686322e906cb42706ab7e099a8")
-      self.requires("libbigwig/0.4.7#3d7ab50831d3bdc1bba52c01e405899d")
-      self.requires("libcuckoo/0.3.1#7e514d4c23a9aba3d8d80758824e9dc0")
-      self.requires("libdeflate/1.23#4994bea7cf7e93789da161fac8e26a53")
-      self.requires("lz4/1.10.0#59fc63cac7f10fbe8e05c7e62c2f3504", force=True)
-      self.requires("lzo/2.10#5725914235423c771cb1c6b607109b45")
-      self.requires("parallel-hashmap/2.0.0#82acae64ffe2693fff5fb3f9df8e1746")
-      self.requires("readerwriterqueue/1.0.6#aaa5ff6fac60c2aee591e9e51b063b83")
-      self.requires("span-lite/0.11.0#519fd49fff711674cfed8cd17d4ed422")
-      self.requires("spdlog/1.15.3#3ca0e9e6b83af4d0151e26541d140c86")
-      self.requires("tomlplusplus/3.4.0#85dbfed71376fb8dc23cdcc0570e4727")
-      self.requires("xoshiro-cpp/1.1#20f566efb3e2bf6e1b813d4abfc5e62c")
-      self.requires("xxhash/0.8.3#681d36a0a6111fc56e5e45ea182c19cc")
-      self.requires("xz_utils/5.4.5#b885d1d79c9d30cff3803f7f551dbe66")
-      self.requires("zlib/1.3.1#b8bc2603263cf7eccbd6e17e66b0ed76")
-      self.requires("zstd/1.5.7#fde461c0d847a22f16d3066774f61b11")
+        self.requires("abseil/20250127.0#9e8e8cfc89a1324139fc0ee3bd4d8c8c")  # Drop
+        self.requires("bitflags/1.5.0#626da9d1913161321841f30caf9b994e")
+        self.requires("boost/1.88.0#7bc0bdd001de6abe470e5e41d3c44686")
+        self.requires("bshoshany-thread-pool/5.0.0#d94da300363f0c35b8f41b2c5490c94d")
+        self.requires("bzip2/1.0.8#00b4a4658791c1f06914e087f0e792f5")
+        self.requires("catch2/3.8.1#141f4cd552b86c7278436c434473ae2f")
+        self.requires("cli11/2.5.0#1b7c81ea2bff6279eb2150bbe06a200a")
+        self.requires("concurrentqueue/1.0.4#1e48e1c712bcfd892087c9c622a51502")
+        self.requires("cpp-sort/1.16.0#45e56dfc2a55a3e8c645576d4761dc73")
+        self.requires("fast_float/8.0.2#846ad0ebab16bc265c511095c3b490e9")
+        self.requires("fmt/11.2.0#579bb2cdf4a7607621beea4eb4651e0f")
+        self.requires("hdf5/1.14.6#6f1acd01d23d00735fe97300f4d5980c", force=True)
+        self.requires("highfive/2.10.0#c975a16d7fe3655c173f8a9aab16b416")
+        self.requires("libarchive/3.8.1#5cf685686322e906cb42706ab7e099a8")
+        self.requires("libbigwig/0.4.7#3d7ab50831d3bdc1bba52c01e405899d")
+        self.requires("libcuckoo/0.3.1#7e514d4c23a9aba3d8d80758824e9dc0")
+        self.requires("libdeflate/1.23#4994bea7cf7e93789da161fac8e26a53")
+        self.requires("lz4/1.10.0#59fc63cac7f10fbe8e05c7e62c2f3504", force=True)
+        self.requires("lzo/2.10#5725914235423c771cb1c6b607109b45")
+        self.requires("parallel-hashmap/2.0.0#82acae64ffe2693fff5fb3f9df8e1746")
+        self.requires("readerwriterqueue/1.0.6#aaa5ff6fac60c2aee591e9e51b063b83")
+        self.requires("span-lite/0.11.0#519fd49fff711674cfed8cd17d4ed422")
+        self.requires("spdlog/1.15.3#3ca0e9e6b83af4d0151e26541d140c86")
+        self.requires("tomlplusplus/3.4.0#85dbfed71376fb8dc23cdcc0570e4727")
+        self.requires("xoshiro-cpp/1.1#20f566efb3e2bf6e1b813d4abfc5e62c")
+        self.requires("xxhash/0.8.3#681d36a0a6111fc56e5e45ea182c19cc")
+        self.requires("xz_utils/5.4.5#b885d1d79c9d30cff3803f7f551dbe66")
+        self.requires("zlib/1.3.1#b8bc2603263cf7eccbd6e17e66b0ed76")
+        self.requires("zstd/1.5.7#fde461c0d847a22f16d3066774f61b11")
 
     def validate(self):
         if self.settings.get_safe("compiler.cppstd"):
@@ -71,11 +71,11 @@ class MoDLEConan(ConanFile):
 
     def configure(self):
         if (
-          self.settings.compiler in ["clang", "gcc"]
-          and self.settings.os == "Linux"
-          and self.settings.compiler.get_safe("libcxx", "") != "libstdc++11"
+            self.settings.compiler in ["clang", "gcc"]
+            and self.settings.os == "Linux"
+            and self.settings.compiler.get_safe("libcxx", "") != "libstdc++11"
         ):
-          self.settings.compiler.libcxx = "libstdc++11"
+            self.settings.compiler.libcxx = "libstdc++11"
 
         self.options["boost"].system_no_deprecated = True
         self.options["boost"].asio_no_deprecated = True

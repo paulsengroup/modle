@@ -10,6 +10,7 @@
 #include <cassert>
 #include <filesystem>
 #include <hictk/cooler.hpp>
+#include <hictk/transformers/diagonal_band.hpp>
 #include <limits>
 #include <stdexcept>
 #include <string>
@@ -17,7 +18,6 @@
 #include <type_traits>
 #include <utility>
 #include <vector>
-#include <hictk/transformers/diagonal_band.hpp>
 
 #include "modle/common/common.hpp"
 #include "modle/contact_matrix_dense.hpp"
@@ -31,10 +31,11 @@ inline bool emplace_pixel(const hictk::cooler::File& f, std::vector<PixelT>& buf
                           bp_t offset, usize bin1_id, usize bin2_id, N n) {
   using T = decltype(std::declval<PixelT>().count);
 
-  const auto bin_offset = f.bins().at(static_cast<u32>(chrom_id), 0).id() + utils::conditional_static_cast<u64>(offset / f.resolution());
+  const auto bin_offset = f.bins().at(static_cast<u32>(chrom_id), 0).id() +
+                          utils::conditional_static_cast<u64>(offset / f.resolution());
 
-  buff.emplace_back(PixelT{bin_offset + bin1_id, bin_offset + bin2_id,
-                           utils::conditional_static_cast<T>(n)});
+  buff.emplace_back(
+      PixelT{bin_offset + bin1_id, bin_offset + bin2_id, utils::conditional_static_cast<T>(n)});
 
   return buff.size() == buff.capacity();
 }
@@ -117,8 +118,7 @@ inline hictk::cooler::File init_cooler_file(const std::filesystem::path& path, b
                                             std::string_view metadata_str) {
   assert(!assembly.empty());
   assert(!generated_by.empty());
-  auto attrs =
-      hictk::cooler::Attributes::init(utils::conditional_static_cast<u32>(bin_size));
+  auto attrs = hictk::cooler::Attributes::init(utils::conditional_static_cast<u32>(bin_size));
   attrs.assembly = assembly;
   attrs.generated_by = generated_by;
   if (!metadata_str.empty()) {
@@ -134,9 +134,9 @@ inline hictk::cooler::File init_cooler_file(const std::filesystem::path& path, b
                                             ChromNameIt first_name, ChromNameIt last_name,
                                             ChromSizeIt first_size,
                                             hictk::cooler::Attributes attrs) {
-  return hictk::cooler::File::create<N>(
-      path.string(), hictk::Reference{first_name, last_name, first_size}, attrs.bin_size,
-      force_overwrite, std::move(attrs));
+  return hictk::cooler::File::create<N>(path.string(),
+                                        hictk::Reference{first_name, last_name, first_size},
+                                        attrs.bin_size, force_overwrite, std::move(attrs));
 }
 
 template <class N>
@@ -144,7 +144,7 @@ inline hictk::cooler::File init_cooler_file(const std::filesystem::path& path, b
                                             hictk::Reference chroms,
                                             hictk::cooler::Attributes attrs) {
   return hictk::cooler::File::create<N>(path.string(), std::move(chroms), attrs.bin_size,
-                                                   force_overwrite, std::move(attrs));
+                                        force_overwrite, std::move(attrs));
 }
 
 template <class N, usize chunk_size>
@@ -169,18 +169,16 @@ template <class N>
 inline ContactMatrixDense<N> read_contact_matrix_from_cooler(
     const std::filesystem::path& path_to_cooler, std::string_view chrom_name, bp_t start_pos,
     bp_t end_pos, bp_t diagonal_width) {
-  return read_contact_matrix_from_cooler<N>(
-      hictk::cooler::File(path_to_cooler.string()), chrom_name, start_pos, end_pos,
-      diagonal_width);
+  return read_contact_matrix_from_cooler<N>(hictk::cooler::File(path_to_cooler.string()),
+                                            chrom_name, start_pos, end_pos, diagonal_width);
 }
 
 template <class N>
 inline ContactMatrixDense<N> read_contact_matrix_from_cooler(
     const std::filesystem::path& path_to_cooler, usize chrom_id, bp_t start_pos, bp_t end_pos,
     bp_t diagonal_width) {
-  return read_contact_matrix_from_cooler<N>(
-      hictk::cooler::File(path_to_cooler.string()), chrom_id, start_pos, end_pos,
-      diagonal_width);
+  return read_contact_matrix_from_cooler<N>(hictk::cooler::File(path_to_cooler.string()), chrom_id,
+                                            start_pos, end_pos, diagonal_width);
 }
 
 template <class N>
@@ -220,7 +218,8 @@ inline ContactMatrixDense<N> read_contact_matrix_from_cooler(const hictk::cooler
     const auto offset = f.bins().at(chrom.name(), static_cast<u32>(start_pos)).id();
     assert(diagonal_width >= f.resolution());
     assert(diagonal_width % f.resolution() == 0);
-    for (const auto& pixel: hictk::transformers::DiagonalBand{sel.begin<N>(), sel.end<N>(), diagonal_width / f.resolution()}) {
+    for (const auto& pixel : hictk::transformers::DiagonalBand{sel.begin<N>(), sel.end<N>(),
+                                                               diagonal_width / f.resolution()}) {
       assert(pixel.bin1_id >= offset);
       assert(pixel.bin2_id >= offset);
       m.unsafe_set(pixel.bin1_id - offset, pixel.bin2_id - offset, pixel.count);

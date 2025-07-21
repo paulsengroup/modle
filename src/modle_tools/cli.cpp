@@ -385,9 +385,9 @@ void Cli::make_transform_subcommand() {
   trans.add_option(
       "--discretization-ranges-tsv",
       c.path_to_discretization_ranges_tsv,
-      "Path to a TSV with the discratization ranges.\n"
+      "Path to a TSV with the discretization ranges.\n"
       "The TSV should have three columns.\n"
-      "The first two columns contain the first and last values (open-close inteval)\n"
+      "The first two columns contain the first and last values (open-close interval)\n"
       "of a discretization interval, while the third column contains the discretization value.\n"
       "Values not falling in any discretization interval are left unmodified.\n"
       "To make an interval start/end at infinity specify -inf or inf.")

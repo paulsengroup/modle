@@ -8,8 +8,8 @@
 #include <cpp-sort/comparators/natural_less.h>
 #include <cpp-sort/sorters/insertion_sorter.h>
 #include <fmt/format.h>  // for compile_string_to_view, FMT_STRING, formatbu...
-#include <fmt/std.h>
 #include <fmt/ranges.h>
+#include <fmt/std.h>
 
 #include <algorithm>   // for transform
 #include <cctype>      // for isalpha
@@ -60,8 +60,7 @@ std::string trim_trailing_zeros_from_decimal_digits(std::string &s) {
 
 template <char replacement>
 std::string replace_non_alpha_chars(std::string &s) {
-  std::replace_if(
-      s.begin(), s.end(), [](const auto c) { return !std::isalpha(c); }, replacement);
+  std::replace_if(s.begin(), s.end(), [](const auto c) { return !std::isalpha(c); }, replacement);
   return s;
 }
 
@@ -124,8 +123,8 @@ CliEnumMappings<EnumT, StringT>::CliEnumMappings(const std::initializer_list<val
 // TODO refactor
 namespace internal {
 template <class EnumT, class StringT>
-[[nodiscard]] inline std::vector<std::pair<StringT, EnumT>> zip_enum_labels(const std::initializer_list<StringT> labels,
-                                                 const std::initializer_list<EnumT> enums) {
+[[nodiscard]] inline std::vector<std::pair<StringT, EnumT>> zip_enum_labels(
+    const std::initializer_list<StringT> labels, const std::initializer_list<EnumT> enums) {
   assert(labels.size() == enums.size());
   std::vector<std::pair<StringT, EnumT>> result;
   result.reserve(labels.size());
@@ -136,7 +135,7 @@ template <class EnumT, class StringT>
   return result;
 }
 
-}
+}  // namespace internal
 
 template <class EnumT, class StringT>
 CliEnumMappings<EnumT, StringT>::CliEnumMappings(const std::initializer_list<StringT> labels,
@@ -199,14 +198,16 @@ EnumT CliEnumMappings<EnumT, StringT>::at(const StringT &key) const {
 template <class EnumT, class StringT>
 std::vector<std::string> CliEnumMappings<EnumT, StringT>::keys() const {
   std::vector<std::string> buff{_mappings.size()};
-  std::ranges::transform(_mappings, buff.begin(), [](const auto& kv){return std::string{kv.first};});
+  std::ranges::transform(_mappings, buff.begin(),
+                         [](const auto &kv) { return std::string{kv.first}; });
   return buff;
 }
 
 template <class EnumT, class StringT>
 std::vector<std::string> CliEnumMappings<EnumT, StringT>::values() const {
   std::vector<std::string> buff{_mappings.size()};
-  std::ranges::transform(_mappings, buff.begin(), [](const auto& kv){return std::string{kv.second};});
+  std::ranges::transform(_mappings, buff.begin(),
+                         [](const auto &kv) { return std::string{kv.second}; });
   return buff;
 }
 

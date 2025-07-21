@@ -538,7 +538,7 @@ void Simulation::fix_secondary_lef_lef_collisions(
   //
   // The case shown above (where EU2 is 1bp upstream of X) is a bit more complicated for the
   // following reason:
-  // MoDLE currently does not allow extrusion units to move backwards (i.e. against the diretion of
+  // MoDLE currently does not allow extrusion units to move backwards (i.e. against the direction of
   // extrusion). This means that it is not possible to modify EU1 and EU2 moves in such a way that
   // after extrusion EU1 is located downstream of EU2 but upstream of X.
   // To properly deal with this special case we swap the positions of EU1 and EU2 and we update the

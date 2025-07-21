@@ -6,14 +6,14 @@
 
 #include "modle/simulation.hpp"
 
-#include <parallel_hashmap/btree.h>           // for btree_iterator
 #include <absl/time/clock.h>
 #include <absl/types/span.h>                    // for Span, MakeConstSpan, MakeSpan
 #include <cpp-sort/sorters/insertion_sorter.h>  // for insertion_sort, insertion_so...
 #include <cpp-sort/sorters/pdq_sorter.h>        // for pdq_sort, pdq_sorter
 #include <cpp-sort/sorters/split_sorter.h>      // for split_sort, split_sorter
 #include <fmt/compile.h>
-#include <spdlog/spdlog.h>  // for info, warn
+#include <parallel_hashmap/btree.h>  // for btree_iterator
+#include <spdlog/spdlog.h>           // for info, warn
 
 #include <algorithm>   // for max, fill, min, copy, clamp
 #include <atomic>      // for atomic
@@ -275,7 +275,7 @@ static void generate_moves_helper(const absl::Span<const Lef> lefs, const absl::
                                   random::PRNG_t& rand_eng) {
   const bp_t move_int = static_cast<bp_t>(std::round(avg_extr_speed));
   auto generate_move = [&](const auto& lef) -> bp_t {
-    // Don't bother geerating move for inactive LEFs
+    // Don't bother generating move for inactive LEFs
     if (!lef.is_bound()) {
       return 0;
     }

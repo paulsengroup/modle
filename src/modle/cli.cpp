@@ -254,7 +254,7 @@ static std::vector<CLI::App*> add_common_options(CLI::App& subcommand, modle::Co
       "--fwd-extrusion-speed-std as its standard deviation. Candidate moves represent the maximum\n"
       "distance a given extrusion unit is set to travel during the current epoch.\n"
       "Moving distances can be shortened by collision events taking place during the current epoch.\n"
-      "By deafult extrusion speed is set to half the bin size specified through the --resolution\n"
+      "By default extrusion speed is set to half the bin size specified through the --resolution\n"
       "option.")
       ->transform(utils::cli::TrimTrailingZerosFromDecimalDigit |  utils::cli::AsGenomicDistance)
       ->check(CLI::NonNegativeNumber)
@@ -337,7 +337,7 @@ static std::vector<CLI::App*> add_common_options(CLI::App& subcommand, modle::Co
                              " - {}\n"
                              "When one of the *-with-noise strategies is specified, contacts are randomized by\n"
                              "applying a random offset to the location of LEF extrusion units.\n"
-                             "Offsets are drawn from a genextreme distrubution.\n"
+                             "Offsets are drawn from a genextreme distribution.\n"
                              "The distribution parameters can be controlled through the options --mu, --sigma\n"
                              "and --xi."),
                   fmt::join(Cli::contact_sampling_strategy_map.keys(), "\n - ")))
@@ -535,7 +535,7 @@ static std::vector<CLI::App*> add_common_options(CLI::App& subcommand, modle::Co
       "Setting this to numbers > 1.0 will speed-up the burn-in phase, as the average loop size will\n"
       "stabilize faster.\n"
       "IMPORTANT: Setting this parameter to values other than 1.0 comes with many gotchas.\n"
-      "           For the time being, tuning this parameter is not reccommended.")
+      "           For the time being, tuning this parameter is not recommended.")
       ->check(CLI::PositiveNumber)
       ->capture_default_str();
 
@@ -1028,11 +1028,13 @@ void Cli::write_config_file(bool write_default_args) const {
     fs.exceptions(fs.exceptions() | std::ios::failbit | std::ios::badbit);
     fs.open(this->_config.path_to_config_file);
 
-    fmt::print(fs, FMT_STRING("# Config created by {} on {}\n{}\n"), modle::config::version::str_long(),
-             absl::FormatTime(absl::Now(), absl::UTCTimeZone()),
-             this->_cli.config_to_str(write_default_args, true));
+    fmt::print(fs, FMT_STRING("# Config created by {} on {}\n{}\n"),
+               modle::config::version::str_long(),
+               absl::FormatTime(absl::Now(), absl::UTCTimeZone()),
+               this->_cli.config_to_str(write_default_args, true));
   } catch (const std::exception& e) {
-    throw std::runtime_error(fmt::format(FMT_STRING("failed to write config file \"{}\": {}"), this->_config.path_to_config_file, e.what()));
+    throw std::runtime_error(fmt::format(FMT_STRING("failed to write config file \"{}\": {}"),
+                                         this->_config.path_to_config_file, e.what()));
   }
 }
 

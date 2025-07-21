@@ -175,8 +175,7 @@ void ContactMatrixSparse<N>::add(usize row, usize col, N n) {
   const auto i = internal::encode_idx(rowt, colt, this->_nrows);
 
   auto& block = this->get_block(colt);
-  block.upsert(
-      i, [n](auto& num) { num += n; }, n);
+  block.upsert(i, [n](auto& num) { num += n; }, n);
   this->_global_stats_outdated = true;
 }
 

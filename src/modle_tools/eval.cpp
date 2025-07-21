@@ -3,9 +3,6 @@
 // SPDX-License-Identifier: MIT
 
 #include <absl/algorithm/container.h>           // for c_set_intersection
-#include <parallel_hashmap/btree.h>           // for btree_map, btree_iterator, map_params<>::...
-#include <parallel_hashmap/phmap.h>       // for flat_hash_map
-#include <parallel_hashmap/phmap.h>       // for flat_hash_set
 #include <absl/strings/ascii.h>                 // AsciiStrToLower
 #include <absl/strings/str_replace.h>           // for ReplaceAll
 #include <absl/strings/strip.h>                 // for StripPrefix
@@ -15,6 +12,9 @@
 #include <cpp-sort/comparators/natural_less.h>  // for natural_less_t
 #include <fmt/compile.h>                        // for FMT_COMPILE
 #include <fmt/format.h>                         // for format, make_format_args, vformat_to, FMT...
+#include <parallel_hashmap/btree.h>             // for btree_map, btree_iterator, map_params<>::...
+#include <parallel_hashmap/phmap.h>             // for flat_hash_map
+#include <parallel_hashmap/phmap.h>             // for flat_hash_set
 #include <spdlog/spdlog.h>                      // for info
 
 #include <BS_thread_pool.hpp>  // for BS::light_thread_pool
@@ -63,10 +63,9 @@ namespace modle::tools {
 
 [[nodiscard]] static std::vector<bed::BED> chromset_to_bed(const hictk::Reference &chroms) {
   std::vector<bed::BED> intervals{chroms.size()};
-  std::transform(chroms.begin(), chroms.end(), intervals.begin(),
-                 [&](const hictk::Chromosome &chrom) {
-                   return bed::BED{chrom.name(), 0, chrom.size()};
-                 });
+  std::transform(
+      chroms.begin(), chroms.end(), intervals.begin(),
+      [&](const hictk::Chromosome &chrom) { return bed::BED{chrom.name(), 0, chrom.size()}; });
   return intervals;
 }
 
@@ -267,7 +266,7 @@ template <class Range>
   r.getline(buff);
   if (buff.empty()) {
     throw std::runtime_error(
-        fmt::format(FMT_STRING("Falied to read header from file {}: file appears to be empty"),
+        fmt::format(FMT_STRING("Failed to read header from file {}: file appears to be empty"),
                     path_to_weights));
   }
   using namespace std::string_view_literals;
@@ -306,8 +305,9 @@ template <class Range>
   return weights;
 }
 
-static void validate_weights(const std::vector<bed::BED> &regions_of_interest,
-                             const phmap::flat_hash_map<std::string, std::vector<double>> &weights) {
+static void validate_weights(
+    const std::vector<bed::BED> &regions_of_interest,
+    const phmap::flat_hash_map<std::string, std::vector<double>> &weights) {
   std::vector<std::string> missing_chroms;
   for (const auto &bed : regions_of_interest) {
     if (!weights.contains(bed.chrom)) {

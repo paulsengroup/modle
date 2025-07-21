@@ -13,15 +13,22 @@ find_package(tomlplusplus CONFIG REQUIRED)
 
 add_executable(modle)
 
-target_sources(modle PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/cli.cpp ${CMAKE_CURRENT_SOURCE_DIR}/main.cpp)
+target_sources(
+  modle
+  PRIVATE
+    ${CMAKE_CURRENT_SOURCE_DIR}/cli.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/main.cpp
+)
 
 target_link_libraries(
   modle
-  PRIVATE modle_project_warnings
-          modle_project_options
-          Modle::common
-          Modle::config
-          Modle::libmodle)
+  PRIVATE
+    modle_project_warnings
+    modle_project_options
+    Modle::common
+    Modle::config
+    Modle::libmodle
+)
 
 target_link_system_libraries(
   modle
@@ -36,14 +43,21 @@ target_link_system_libraries(
   phmap
   spdlog::spdlog_header_only
   tomlplusplus::tomlplusplus
-  hictk::libhictk)
+  hictk::libhictk
+)
 
 include(GNUInstallDirs)
 install(
-  TARGETS modle
-  LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
-  ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
-  RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
-  PUBLIC_HEADER DESTINATION ${CMAKE_INSTALL_INCLUDEDIR})
+  TARGETS
+    modle
+  LIBRARY
+    DESTINATION ${CMAKE_INSTALL_LIBDIR}
+  ARCHIVE
+    DESTINATION ${CMAKE_INSTALL_LIBDIR}
+  RUNTIME
+    DESTINATION ${CMAKE_INSTALL_BINDIR}
+  PUBLIC_HEADER
+    DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
+)
 
 install(FILES ${PROJECT_SOURCE_DIR}/LICENSE DESTINATION ${CMAKE_INSTALL_DATADIR}/licenses/modle/)

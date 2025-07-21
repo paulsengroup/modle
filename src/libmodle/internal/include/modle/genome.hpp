@@ -4,9 +4,9 @@
 
 #pragma once
 
-#include <parallel_hashmap/btree.h>  // for btree_set, btree_set_container<>::const_iterator
-#include <absl/types/span.h>           // for Span
+#include <absl/types/span.h>  // for Span
 #include <fmt/format.h>
+#include <parallel_hashmap/btree.h>  // for btree_set, btree_set_container<>::const_iterator
 #include <xxhash.h>
 
 #include <filesystem>  // for path

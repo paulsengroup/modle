@@ -4,13 +4,13 @@
 
 #include "modle/genome.hpp"
 
+#include <absl/time/clock.h>  // for Now
+#include <absl/time/time.h>   // for FormatDuration, operator-, Time
+#include <fmt/format.h>       // for format, make_format_args, vformat_to
+#include <fmt/std.h>
 #include <parallel_hashmap/btree.h>  // for btree_map
 #include <parallel_hashmap/btree.h>  // for btree_set, btree_iterator
-#include <absl/time/clock.h>           // for Now
-#include <absl/time/time.h>            // for FormatDuration, operator-, Time
-#include <fmt/format.h>                // for format, make_format_args, vformat_to
-#include <fmt/std.h>
-#include <spdlog/spdlog.h>  // for info
+#include <spdlog/spdlog.h>           // for info
 
 #include <algorithm>  // for max, max_element, find_if
 #include <cassert>    // for assert
@@ -376,7 +376,7 @@ phmap::btree_set<GenomicInterval> Genome::import_genomic_intervals(
   if (path_to_bed.empty()) {
     spdlog::debug(
         "path to genomic regions to simulate is empty. Assuming whole chromosomes are "
-                   "to be simulated!");
+        "to be simulated!");
     std::transform(chromosomes.begin(), chromosomes.end(), std::inserter(buffer, buffer.begin()),
                    [&](const auto& chrom_ptr) {
                      return GenomicInterval{chrom_ptr->id(), chrom_ptr, contact_matrix_resolution,

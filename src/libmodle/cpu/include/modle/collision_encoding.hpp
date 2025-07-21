@@ -18,7 +18,7 @@ template <class I>
 class Collision;
 
 /// This class is basically an enum that implements the bitwise operations that we need to represent
-/// all kinds of collision events (e.g. an actuall LEF-BAR collision or the avoidance of a primary
+/// all kinds of collision events (e.g. an actual LEF-BAR collision or the avoidance of a primary
 /// LEF-LEF collision event)
 template <class I = u8f>
 class CollisionEvent {

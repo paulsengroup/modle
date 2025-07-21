@@ -4,10 +4,10 @@
 
 #pragma once
 
+#include <absl/types/span.h>         // for Span
+#include <fmt/format.h>              // for format_parse_context, formatter
 #include <parallel_hashmap/btree.h>  // for btree_map
-#include <absl/types/span.h>           // for Span
-#include <fmt/format.h>                // for format_parse_context, formatter
-#include <xxhash.h>                    // for XXH3_state_t, XXH_INLINE_XXH3_state_t
+#include <xxhash.h>                  // for XXH3_state_t, XXH_INLINE_XXH3_state_t
 
 #include <array>        // for array
 #include <filesystem>   // for path

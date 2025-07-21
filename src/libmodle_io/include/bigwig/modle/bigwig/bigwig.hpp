@@ -6,9 +6,9 @@
 
 // IWYU pragma: no_include "modle/src/libio/bigwig_impl.hpp"
 
-#include <parallel_hashmap/btree.h>
 #include <absl/types/span.h>  // for Span
 #include <fmt/std.h>
+#include <parallel_hashmap/btree.h>
 
 #include <filesystem>   // for path
 #include <string_view>  // for string_view

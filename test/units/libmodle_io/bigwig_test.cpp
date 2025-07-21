@@ -11,8 +11,8 @@
 #include <string>  // for string, basic_string, operator==, char_traits, stoull
 #include <vector>  // for vector
 
-#include "modle/common/common.hpp"              // for usize
-#include "modle/test/tmpdir.hpp"                // for TmpDir
+#include "modle/common/common.hpp"  // for usize
+#include "modle/test/tmpdir.hpp"    // for TmpDir
 
 namespace modle::test {
 inline const TmpDir testdir{true};  // NOLINT(cert-err58-cpp)

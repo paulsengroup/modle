@@ -12,10 +12,17 @@ target_sources(interval_tree INTERFACE ${CMAKE_CURRENT_SOURCE_DIR}/interval_tree
 
 target_include_directories(interval_tree INTERFACE include/)
 
-target_link_libraries(interval_tree INTERFACE modle_project_options modle_project_warnings Modle::common)
+target_link_libraries(
+  interval_tree
+  INTERFACE
+    modle_project_options
+    modle_project_warnings
+    Modle::common
+)
 
 target_link_system_libraries(
   interval_tree
   INTERFACE
   absl::span
-  cpp-sort::cpp-sort)
+  cpp-sort::cpp-sort
+)

@@ -412,8 +412,9 @@ TEST_CASE("ContactMatrixDense pixel locking TSAN", "[cmatrix][long]") {
 
   // Submit nthreads - 1 tasks generating contacts
   std::vector<std::future<usize>> num_contacts_generated(nthreads - 1);
-  std::generate(num_contacts_generated.begin(), num_contacts_generated.end(),
-                [&]() { return tpool.submit_task(generate_contacts, u64(random::random_device{}())); });
+  std::generate(num_contacts_generated.begin(), num_contacts_generated.end(), [&]() {
+    return tpool.submit_task(generate_contacts, u64(random::random_device{}()));
+  });
 
   // Submit 1 task reading random pixels from the matrix
   volatile i64 dummy_counter = 0;
@@ -465,8 +466,9 @@ TEST_CASE("ContactMatrixDense global locking TSAN", "[cmatrix][long]") {
 
   // Submit nthreads - 1 tasks generating contacts
   std::vector<std::future<usize>> num_contacts_generated(nthreads - 1);
-  std::generate(num_contacts_generated.begin(), num_contacts_generated.end(),
-                [&]() { return tpool.submit_task(generate_contacts, u64(random::random_device{}())); });
+  std::generate(num_contacts_generated.begin(), num_contacts_generated.end(), [&]() {
+    return tpool.submit_task(generate_contacts, u64(random::random_device{}()));
+  });
 
   // Submit 1 task computing the calling get_tot_contacts() (which locks the entire matrix)
   u64 tot_contacts = 0;

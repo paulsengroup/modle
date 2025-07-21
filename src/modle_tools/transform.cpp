@@ -3,8 +3,6 @@
 // SPDX-License-Identifier: MIT
 
 #include <absl/algorithm/container.h>           // for c_set_intersection
-#include <parallel_hashmap/btree.h>           // for btree_map, btree_iterator, map_params<>::...
-#include <parallel_hashmap/phmap.h>       // for flat_hash_map
 #include <absl/strings/ascii.h>                 // AsciiStrToLower
 #include <absl/strings/str_split.h>             // for StrSplit
 #include <absl/strings/strip.h>                 // for StripPrefix
@@ -14,6 +12,8 @@
 #include <absl/types/variant.h>                 // for get, variant
 #include <cpp-sort/comparators/natural_less.h>  // for natural_less_t
 #include <fmt/format.h>                         // for format, make_format_args, vformat_to, FMT...
+#include <parallel_hashmap/btree.h>             // for btree_map, btree_iterator, map_params<>::...
+#include <parallel_hashmap/phmap.h>             // for flat_hash_map
 #include <readerwriterqueue/readerwriterqueue.h>
 #include <spdlog/spdlog.h>  // for info
 
@@ -138,8 +138,8 @@ template <class N>
 }
 
 [[nodiscard]] static ContactMatrixDense<double> process_chromosome(
-    BS::light_thread_pool& tpool, const std::string_view chrom_name, const hictk::cooler::File& cooler,
-    const modle::tools::transform_config& c,
+    BS::light_thread_pool& tpool, const std::string_view chrom_name,
+    const hictk::cooler::File& cooler, const modle::tools::transform_config& c,
     const modle::IITree<double, double>& discretization_ranges) {
   auto t0 = absl::Now();
   spdlog::info(FMT_STRING("processing contacts for {}..."), chrom_name);
@@ -174,9 +174,8 @@ template <class N>
 [[nodiscard]] static hictk::cooler::File init_output_cooler(
     const std::filesystem::path& output_cooler_uri, const hictk::cooler::File& input_cooler,
     bool floating_point, std::string_view args_json, bool force) {
-  auto attrs = floating_point
-                   ? hictk::cooler::Attributes::init<double>(input_cooler.resolution())
-                   : hictk::cooler::Attributes::init<i32>(input_cooler.resolution());
+  auto attrs = floating_point ? hictk::cooler::Attributes::init<double>(input_cooler.resolution())
+                              : hictk::cooler::Attributes::init<i32>(input_cooler.resolution());
   attrs.metadata = args_json;
   attrs.generated_by = config::version::str_long("MoDLE-tools");
   if (const auto& assembly = input_cooler.attributes().assembly; assembly) {

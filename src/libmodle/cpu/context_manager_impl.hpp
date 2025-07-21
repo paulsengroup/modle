@@ -216,8 +216,7 @@ inline void ContextManager<Task>::shutdown() {
   spdlog::debug("waiting for io threads to return...");
   this->_io_tpool.wait();
 
-  spdlog::debug(
-      "all background threads returned! Checking if any exception have been raised...");
+  spdlog::debug("all background threads returned! Checking if any exception have been raised...");
   if (this->_exception_thrown) {
     this->rethrow_exceptions();
   } else {

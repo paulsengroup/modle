@@ -95,8 +95,10 @@ constexpr void ExtrusionUnit::release() noexcept(utils::ndebug_defined()) {
   this->_pos = (std::numeric_limits<bp_t>::max)();
 }
 
-inline Lef::Lef(usize binding_epoch_, ExtrusionUnit rev_unit_, ExtrusionUnit fwd_unit_) noexcept : binding_epoch(binding_epoch_), rev_unit(std::move(rev_unit_)), fwd_unit(std::move(fwd_unit_)) {}
-
+inline Lef::Lef(usize binding_epoch_, ExtrusionUnit rev_unit_, ExtrusionUnit fwd_unit_) noexcept
+    : binding_epoch(binding_epoch_),
+      rev_unit(std::move(rev_unit_)),
+      fwd_unit(std::move(fwd_unit_)) {}
 
 constexpr bool Lef::is_bound() const noexcept(utils::ndebug_defined()) {
   assert((this->rev_unit._pos == (std::numeric_limits<bp_t>::max)()) ==

@@ -4,9 +4,9 @@
 
 #pragma once
 
+#include <absl/types/span.h>         // for Span
+#include <fmt/format.h>              // for format_parse_context, formatter
 #include <parallel_hashmap/phmap.h>  // for flat_hash_set
-#include <absl/types/span.h>               // for Span
-#include <fmt/format.h>                    // for format_parse_context, formatter
 
 #include <atomic>       // for atomic
 #include <deque>        // for deque
