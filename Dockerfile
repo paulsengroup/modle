@@ -44,7 +44,6 @@ RUN conan install /tmp/conanfile.txt                 \
 RUN mkdir -p "$src_dir" "$build_dir"
 
 COPY conanfile.py "$src_dir/conanfile.py"
-
 RUN conan install "$src_dir/conanfile.py"            \
                  --build=missing                     \
                  -pr:b="$CONAN_DEFAULT_PROFILE_PATH" \
@@ -169,6 +168,12 @@ RUN if [ -z "$BUILD_BASE_IMAGE" ]; then echo "Missing BUILD_BASE_IMAGE --build-a
 &&  if [ -z "$GIT_HASH" ]; then echo "Missing GIT_HASH --build-arg" && exit 1; fi \
 &&  if [ -z "$GIT_SHORT_HASH" ]; then echo "Missing GIT_SHORT_HASH --build-arg" && exit 1; fi \
 &&  if [ -z "$CREATION_DATE" ]; then echo "Missing CREATION_DATE --build-arg" && exit 1; fi
+
+RUN if [ "$BUILDARCH" != 'amd64' ]; then \
+    apt-get update \
+&&  apt-get install -q -y --no-install-recommends libatomic1 \
+&&  rm -rf /var/lib/apt/lists/*; \
+fi
 
 # Export project binaries to the final build stage
 COPY --from=integration-testing "$staging_dir" "$install_dir"
