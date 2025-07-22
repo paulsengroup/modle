@@ -58,7 +58,7 @@ sudo -u "$BUILD_USER" docker buildx build \
   --build-arg "GIT_TAG=$GIT_TAG" \
   --build-arg "GIT_IS_DIRTY=$GIT_IS_DIRTY" \
   --build-arg "CREATION_DATE=$CREATION_DATE" \
-  --build-arg 'USE_LIBCXX=true' \
+  --build-arg 'LIBCXX=libc++' \
   -t "$IMAGE_NAME:latest" \
   -t "$IMAGE_NAME:$(echo "$CREATION_DATE" | tr -d '\-' )" \
   -t "$IMAGE_NAME:$IMAGE_TAG" \
