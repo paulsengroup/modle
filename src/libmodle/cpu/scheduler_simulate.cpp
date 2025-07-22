@@ -171,7 +171,7 @@ void Simulation::run_simulate() {
   }
 }
 
-static std::string format_rand_eng(const random::PRNG_t& rand_eng) {
+[[maybe_unused]] static std::string format_rand_eng(const random::PRNG_t& rand_eng) {
   const auto state = rand_eng.serialize();
   static_assert(state.size() == 4);
   static_assert(sizeof(state[0]) == sizeof(u64));
