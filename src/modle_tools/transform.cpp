@@ -210,7 +210,7 @@ void transform_subcmd(const modle::tools::transform_config& c) {
   auto output_cooler =
       init_output_cooler(c.output_cooler_uri, input_cooler, c.floating_point, c.args_json, c.force);
 
-  BS::light_thread_pool tpool(static_cast<u32>(c.nthreads));
+  BS::light_thread_pool tpool(c.nthreads);
   const auto t0 = absl::Now();
   SPDLOG_INFO("transforming contacts from Cooler at URI \"{}\"...", input_cooler.uri());
   for (const auto& chrom : input_cooler.chromosomes()) {

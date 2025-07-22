@@ -27,12 +27,6 @@ inline void parse_numeric_or_throw(const std::vector<std::string_view>& toks, us
 template <class N>
 inline void parse_vect_of_numbers_or_throw(const std::vector<std::string_view>& toks, usize idx,
                                            std::vector<N>& fields, u64 expected_size);
-
-namespace detail {
-template <class N>
-inline void throw_except_from_errc(std::string_view tok, usize idx, const N& field, const char* c,
-                                   std::errc e);
-}
 }  // namespace modle::utils
 
 #include "../../../numeric_utils_impl.hpp"  // IWYU pragma: export

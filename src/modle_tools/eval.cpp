@@ -699,7 +699,7 @@ void eval_subcmd(const modle::tools::eval_config &c) {
 
   auto writers = init_writers(c, chroms, !weights.empty());
 
-  BS::light_thread_pool tpool(static_cast<u32>(c.nthreads));
+  BS::light_thread_pool tpool(c.nthreads);
 
   std::array<std::future<void>, 2> return_codes;
 

@@ -16,7 +16,6 @@
 #include <cmath>
 #include <exception>
 #include <filesystem>
-#include <ranges>
 #include <string>
 #include <string_view>
 
@@ -196,16 +195,16 @@ EnumT CliEnumMappings<EnumT, StringT>::at(const StringT &key) const {
 template <class EnumT, class StringT>
 std::vector<std::string> CliEnumMappings<EnumT, StringT>::keys() const {
   std::vector<std::string> buff{_mappings.size()};
-  std::ranges::transform(_mappings, buff.begin(),
-                         [](const auto &kv) { return std::string{kv.first}; });
+  std::transform(_mappings.begin(), _mappings.end(), buff.begin(),
+                 [](const auto &kv) { return std::string{kv.first}; });
   return buff;
 }
 
 template <class EnumT, class StringT>
 std::vector<std::string> CliEnumMappings<EnumT, StringT>::values() const {
   std::vector<std::string> buff{_mappings.size()};
-  std::ranges::transform(_mappings, buff.begin(),
-                         [](const auto &kv) { return std::string{kv.second}; });
+  std::transform(_mappings.begin(), _mappings.end(), buff.begin(),
+                 [](const auto &kv) { return std::string{kv.second}; });
   return buff;
 }
 
