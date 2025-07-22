@@ -328,6 +328,7 @@ jobs:
                  --verbose
 
       - name: Save Ccache folder
+        if: needs.matrix-factory.outputs.ci-type == 'short'
         uses: actions/cache/save@v4
         with:
           key: ${{ steps.cache-key.outputs.ccache-key }}
