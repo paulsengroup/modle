@@ -44,12 +44,21 @@ RUN conan install /tmp/conanfile.txt                 \
 RUN mkdir -p "$src_dir" "$build_dir"
 
 COPY conanfile.py "$src_dir/conanfile.py"
+
+ARG USE_LIBCXX
+
+RUN sed -i '/^compiler\.libcxx.*$/d' "$CONAN_DEFAULT_PROFILE_PATH" \
+&&  if [ -z "$USE_LIBCXX" ]; then \
+    echo 'compiler.libcxx=libstdc++11' >> "$CONAN_DEFAULT_PROFILE_PATH"; \
+    else \
+    echo 'compiler.libcxx=libc++' >> "$CONAN_DEFAULT_PROFILE_PATH"; \
+fi
+
 RUN conan install "$src_dir/conanfile.py"            \
                  --build=missing                     \
                  -pr:b="$CONAN_DEFAULT_PROFILE_PATH" \
                  -pr:h="$CONAN_DEFAULT_PROFILE_PATH" \
                  -s build_type=Release               \
-                 -s compiler.libcxx=libstdc++11      \
                  -s compiler.cppstd=20               \
                  --output-folder="$build_dir"
 
@@ -73,21 +82,41 @@ RUN if [ -z "$GIT_HASH" ]; then echo "Missing GIT_HASH --build-arg" && exit 1; f
 &&  if [ -z "$GIT_TAG" ]; then echo "Missing GIT_TAG --build-arg" && exit 1; fi
 
 # Configure project
-RUN cmake -DCMAKE_BUILD_TYPE=Release             \
-          -DCMAKE_PREFIX_PATH="$build_dir"       \
-          -DWARNINGS_AS_ERRORS=ON                \
-          -DENABLE_DEVELOPER_MODE=OFF            \
-          -DMODLE_ENABLE_TESTING=ON              \
-          -DMODLE_DOWNLOAD_TEST_DATASET=OFF      \
-          -DMODLE_GIT_RETRIEVED_STATE=true       \
-          -DMODLE_GIT_TAG="$GIT_TAG"             \
-          -DMODLE_GIT_IS_DIRTY="$GIT_IS_DIRTY"   \
-          -DMODLE_GIT_HEAD_SHA1="$GIT_HASH"      \
-          -DMODLE_GIT_DESCRIBE="$GIT_SHORT_HASH" \
-          -DCMAKE_INSTALL_PREFIX="$staging_dir"  \
-          -G Ninja                               \
-          -S "$src_dir"                          \
-          -B "$build_dir"
+RUN if [ -z "$USE_LIBCXX" ]; then \
+  cmake -DCMAKE_BUILD_TYPE=Release             \
+        -DCMAKE_PREFIX_PATH="$build_dir"       \
+        -DWARNINGS_AS_ERRORS=ON                \
+        -DENABLE_DEVELOPER_MODE=OFF            \
+        -DMODLE_ENABLE_TESTING=ON              \
+        -DMODLE_DOWNLOAD_TEST_DATASET=OFF      \
+        -DMODLE_GIT_RETRIEVED_STATE=true       \
+        -DMODLE_GIT_TAG="$GIT_TAG"             \
+        -DMODLE_GIT_IS_DIRTY="$GIT_IS_DIRTY"   \
+        -DMODLE_GIT_HEAD_SHA1="$GIT_HASH"      \
+        -DMODLE_GIT_DESCRIBE="$GIT_SHORT_HASH" \
+        -DCMAKE_INSTALL_PREFIX="$staging_dir"  \
+        -G Ninja                               \
+        -S "$src_dir"                          \
+        -B "$build_dir";                       \
+else \
+  cmake -DCMAKE_BUILD_TYPE=Release                                       \
+        -DCMAKE_CXX_FLAGS='-stdlib=libc++'                               \
+        -DCMAKE_EXE_LINKER_FLAGS='-static -stdlib=libc++ -lc++ -lc++abi' \
+        -DCMAKE_PREFIX_PATH="$build_dir"                                 \
+        -DWARNINGS_AS_ERRORS=ON                                          \
+        -DENABLE_DEVELOPER_MODE=OFF                                      \
+        -DMODLE_ENABLE_TESTING=ON                                        \
+        -DMODLE_DOWNLOAD_TEST_DATASET=OFF                                \
+        -DMODLE_GIT_RETRIEVED_STATE=true                                 \
+        -DMODLE_GIT_TAG="$GIT_TAG"                                       \
+        -DMODLE_GIT_IS_DIRTY="$GIT_IS_DIRTY"                             \
+        -DMODLE_GIT_HEAD_SHA1="$GIT_HASH"                                \
+        -DMODLE_GIT_DESCRIBE="$GIT_SHORT_HASH"                           \
+        -DCMAKE_INSTALL_PREFIX="$staging_dir"                            \
+        -G Ninja                                                         \
+        -S "$src_dir"                                                    \
+        -B "$build_dir";                                                 \
+fi
 
 # Build and install project
 RUN cmake --build "$build_dir" -j "$(nproc)"  \

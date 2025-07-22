@@ -190,6 +190,7 @@ jobs:
             GIT_IS_DIRTY=false
             CREATION_DATE=${{ steps.build-args.outputs.CREATION_DATE }}
             VERSION=${{ steps.build-args.outputs.VERSION }}
+            USE_LIBCXX=true
 
       - name: Test Docker image
         run: utils/devel/test_docker_image.sh '${{ steps.build-image.outputs.imageid }}'
@@ -218,6 +219,7 @@ jobs:
             GIT_IS_DIRTY=false
             CREATION_DATE=${{ steps.build-args.outputs.CREATION_DATE }}
             VERSION=${{ steps.build-args.outputs.VERSION }}
+            USE_LIBCXX=true
 
       - name: Export digest
         if: github.event_name != 'pull_request'
