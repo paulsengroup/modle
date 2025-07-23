@@ -332,30 +332,31 @@ Writer::Writer(const std::filesystem::path& path, Compression compression)
 static void setup_compression(archive* arc, Writer::Compression compression) {
   assert(arc);
 
-  using enum Writer::Compression;
+  // using enum breaks GCC 10 when used in this context
+  using C = Writer::Compression;
   int ec{};
   switch (compression) {
-    case GZIP: {
+    case C::GZIP: {
       ec = archive_write_add_filter_gzip(arc);
       break;
     }
-    case BZIP2: {
+    case C::BZIP2: {
       ec = archive_write_add_filter_bzip2(arc);
       break;
     }
-    case LZMA: {
+    case C::LZMA: {
       ec = archive_write_add_filter_lzma(arc);
       break;
     }
-    case XZ: {
+    case C::XZ: {
       ec = archive_write_add_filter_xz(arc);
       break;
     }
-    case ZSTD: {
+    case C::ZSTD: {
       ec = archive_write_add_filter_zstd(arc);
       break;
     }
-    case NONE: {
+    case C::NONE: {
       ec = archive_write_add_filter_none(arc);
       break;
     }
