@@ -60,9 +60,9 @@ class ContactMatrixDense {
   ContactMatrixDense(ContactMatrixDense<N>&& other) noexcept = default;
 #endif
   inline ContactMatrixDense(const ContactMatrixDense<N>& other);
-  inline ContactMatrixDense(usize nrows, usize ncols);
+  inline ContactMatrixDense(usize nrows_, usize ncols_);
   inline ContactMatrixDense(bp_t length, bp_t diagonal_width, bp_t bin_size);
-  inline ContactMatrixDense(absl::Span<const N> contacts, usize nrows, usize ncols,
+  inline ContactMatrixDense(absl::Span<const N> contacts, usize nrows_, usize ncols_,
                             usize tot_contacts = 0, usize updates_missed = 0);
   ~ContactMatrixDense() = default;
 

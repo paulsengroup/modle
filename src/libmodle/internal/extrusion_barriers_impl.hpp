@@ -15,33 +15,33 @@ namespace modle {
 
 template <class BarrierIt, class StateIt>
 ExtrusionBarriers::ExtrusionBarriers(BarrierIt first_barrier, BarrierIt last_barrier,
-                                     StateIt first_state, bool sort)
+                                     StateIt first_state, bool sort_barriers)
     : ExtrusionBarriers(static_cast<usize>(std::distance(first_barrier, last_barrier))) {
-  this->clear();
+  clear();
 
   auto it1 = first_barrier;
   auto it2 = first_state;
 
   while (it1 != last_barrier) {
-    this->push_back(*it1++, *it2++);
+    push_back(*it1++, *it2++);
   }
 
-  if (sort) {
-    this->sort();
+  if (sort_barriers) {
+    sort();
   }
 }
 
 template <class BarrierIt>
 ExtrusionBarriers::ExtrusionBarriers(BarrierIt first_barrier, BarrierIt last_barrier, State state,
-                                     bool sort)
+                                     bool sort_barriers)
     : ExtrusionBarriers(static_cast<usize>(std::distance(first_barrier, last_barrier))) {
-  this->clear();
+  clear();
 
   std::for_each(first_barrier, last_barrier,
-                [&](const auto& barrier) { this->push_back(barrier, state); });
+                [&](const auto& barrier) { push_back(barrier, state); });
 
-  if (sort) {
-    this->sort();
+  if (sort_barriers) {
+    sort();
   }
 }
 
@@ -72,7 +72,7 @@ constexpr ExtrusionBarrier::ExtrusionBarrier(bp_t pos_, TP transition_prob_activ
 }
 
 constexpr bool ExtrusionBarrier::operator==(const ExtrusionBarrier& other) const noexcept {
-  return this->pos == other.pos;
+  return pos == other.pos;
 }
 
 constexpr bool ExtrusionBarrier::operator!=(const ExtrusionBarrier& other) const noexcept {
@@ -80,19 +80,19 @@ constexpr bool ExtrusionBarrier::operator!=(const ExtrusionBarrier& other) const
 }
 
 constexpr bool ExtrusionBarrier::operator<(const ExtrusionBarrier& other) const noexcept {
-  return this->pos < other.pos;
+  return pos < other.pos;
 }
 
 constexpr bool ExtrusionBarrier::operator>(const ExtrusionBarrier& other) const noexcept {
-  return this->pos > other.pos;
+  return pos > other.pos;
 }
 
 constexpr bool ExtrusionBarrier::operator<=(const ExtrusionBarrier& other) const noexcept {
-  return this->pos <= other.pos;
+  return pos <= other.pos;
 }
 
 constexpr bool ExtrusionBarrier::operator>=(const ExtrusionBarrier& other) const noexcept {
-  return this->pos >= other.pos;
+  return pos >= other.pos;
 }
 
 // NOLINTNEXTLINE(hicpp-explicit-conversions)
@@ -101,7 +101,7 @@ constexpr internal::TransitionProbability::TransitionProbability(double p) noexc
   assert(_p <= 1.0);
 }
 
-constexpr double internal::TransitionProbability::operator()() const noexcept { return this->_p; }
+constexpr double internal::TransitionProbability::operator()() const noexcept { return _p; }
 
 constexpr double ExtrusionBarrier::compute_stp_active_from_occupancy(TP stp_inactive,
                                                                      double occupancy) noexcept {

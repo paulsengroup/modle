@@ -24,8 +24,8 @@
 #include "modle/genome.hpp"
 
 namespace modle {
-constexpr const Config& Simulation::config() const noexcept { return this->_config; }
-constexpr const Config& Simulation::c() const noexcept { return this->config(); }
+constexpr const Config& Simulation::config() const noexcept { return _config; }
+constexpr const Config& Simulation::c() const noexcept { return config(); }
 
 template <typename MaskT>
 void Simulation::bind_lefs(const bp_t start_pos, const bp_t end_pos, const absl::Span<Lef> lefs,

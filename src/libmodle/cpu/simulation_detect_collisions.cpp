@@ -339,7 +339,7 @@ void Simulation::detect_primary_lef_lef_collisions(
     // trial before calling a collision
     if (const auto delta = rev_pos - fwd_pos; delta > 0 &&
                                               delta < rev_moves[rev_idx] + fwd_moves[fwd_idx] &&
-                                              this->run_lef_lef_collision_trial(rand_eng)) {
+                                              run_lef_lef_collision_trial(rand_eng)) {
       // Declare few aliases to reduce code verbosity later on
       const auto& rev_move = rev_moves[rev_idx];
       const auto& fwd_move = fwd_moves[fwd_idx];
@@ -461,7 +461,7 @@ void Simulation::process_secondary_lef_lef_collisions(
     assert(rev_pos2 - move2 >= interval.start());
 
     if (rev_pos2 - move2 <= rev_pos1 - move1) {
-      if (this->run_lef_lef_collision_trial(rand_eng)) {
+      if (run_lef_lef_collision_trial(rand_eng)) {
         rev_collisions[rev_idx2].set(rev_idx1,
                                      CollisionT::COLLISION | CollisionT::LEF_LEF_SECONDARY);
         const auto move = rev_pos2 - (rev_pos1 - move1);
@@ -500,7 +500,7 @@ void Simulation::process_secondary_lef_lef_collisions(
     assert(fwd_pos2 + move2 < interval.end());
 
     if (fwd_pos1 + move1 >= fwd_pos2 + move2) {
-      if (this->run_lef_lef_collision_trial(rand_eng)) {
+      if (run_lef_lef_collision_trial(rand_eng)) {
         fwd_collisions[fwd_idx1].set(fwd_idx2,
                                      CollisionT::COLLISION | CollisionT::LEF_LEF_SECONDARY);
         const auto move = (fwd_pos2 + move2) - fwd_pos1;

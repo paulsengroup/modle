@@ -14,39 +14,39 @@ namespace modle {
 template <class I>
 constexpr auto CollisionEvent<I>::operator|(CollisionEvent<I> other) const noexcept
     -> CollisionEvent<I> {
-  return this->_event | other._event;
+  return _event | other._event;
 }
 
 template <class I>
 constexpr auto CollisionEvent<I>::operator|=(CollisionEvent<I> other) noexcept
     -> CollisionEvent<I>& {
-  this->_event |= other._event;
+  _event |= other._event;
   return *this;
 }
 
 template <class I>
 constexpr auto CollisionEvent<I>::operator&(CollisionEvent<I> other) const noexcept
     -> CollisionEvent<I> {
-  return this->_event & other._event;
+  return _event & other._event;
 }
 
 template <class I>
 constexpr auto CollisionEvent<I>::operator&=(CollisionEvent<I> other) noexcept
     -> CollisionEvent<I>& {
-  this->_event &= other._event;
+  _event &= other._event;
   return *this;
 }
 
 template <class I>
 constexpr auto CollisionEvent<I>::operator^(CollisionEvent<I> other) const noexcept
     -> CollisionEvent<I> {
-  return this->_event ^ other._event;
+  return _event ^ other._event;
 }
 
 template <class I>
 constexpr auto CollisionEvent<I>::operator^=(CollisionEvent<I> other) noexcept
     -> CollisionEvent<I>& {
-  this->_event ^= other._event;
+  _event ^= other._event;
   return *this;
 }
 
@@ -62,7 +62,7 @@ constexpr bool CollisionEvent<I>::operator!=(CollisionEvent<I> other) const noex
 
 template <class I>
 constexpr I CollisionEvent<I>::operator()() const noexcept {
-  return this->_event;
+  return _event;
 }
 
 template <class I>
@@ -143,7 +143,7 @@ DISABLE_WARNING_POP
 
 template <class I>
 constexpr void Collision<I>::validate() const {
-  Collision<I>::validate(this->decode_index(), this->decode_event());
+  Collision<I>::validate(decode_index(), decode_event());
 }
 
 template <class I>
@@ -154,39 +154,39 @@ constexpr I Collision<I>::lshift_event(const CollisionEventT event) noexcept {
 template <class I>
 constexpr void Collision<I>::set_idx(const usize idx) noexcept {
   assert(is_valid_index(idx));
-  this->_collision |= idx & INDEX_MASK;
+  _collision |= idx & INDEX_MASK;
 }
 
 template <class I>
 constexpr void Collision<I>::add_event(const CollisionEventT event) noexcept {
   assert(is_valid_event(event));
-  this->_collision |= Collision<I>::lshift_event(event);
-  this->validate();
+  _collision |= Collision<I>::lshift_event(event);
+  validate();
 }
 
 template <class I>
 constexpr void Collision<I>::set_event(const CollisionEventT event) noexcept {
   assert(is_valid_event(event));
-  this->_collision = Collision<I>::lshift_event(event) | (this->_collision & INDEX_MASK);
-  assert(is_valid_event(this->decode_event()));
+  _collision = Collision<I>::lshift_event(event) | (_collision & INDEX_MASK);
+  assert(is_valid_event(decode_event()));
 }
 
 template <class I>
 constexpr void Collision<I>::set(const usize idx, const CollisionEventT event) noexcept {
-  this->clear();
-  this->set_idx(idx);
-  this->add_event(event);
-  this->validate();
+  clear();
+  set_idx(idx);
+  add_event(event);
+  validate();
 }
 
 template <class I>
 constexpr void Collision<I>::clear() noexcept {
-  this->_collision = 0;
+  _collision = 0;
 }
 
 template <class I>
 constexpr bool Collision<I>::operator==(const Collision other) const noexcept {
-  return this->_collision == other._collision;
+  return _collision == other._collision;
 }
 
 template <class I>
@@ -196,47 +196,47 @@ constexpr bool Collision<I>::operator!=(const Collision other) const noexcept {
 
 template <class I>
 constexpr I Collision<I>::operator()() const noexcept {
-  return this->_collision;
+  return _collision;
 }
 
 template <class I>
 constexpr I& Collision<I>::operator()() noexcept {
-  return this->_collision;
+  return _collision;
 }
 
 template <class I>
 constexpr usize Collision<I>::decode_index() const noexcept {
-  return this->_collision & INDEX_MASK;
+  return _collision & INDEX_MASK;
 }
 
 template <class I>
 constexpr auto Collision<I>::decode_event() const noexcept -> CollisionEventT {
   DISABLE_WARNING_PUSH
   DISABLE_WARNING_CONVERSION
-  return CollisionEventT(this->_collision >> INDEX_BITS);
+  return CollisionEventT(_collision >> INDEX_BITS);
   DISABLE_WARNING_POP
 }
 
 template <class I>
 constexpr bool Collision<I>::collision_occurred() const noexcept {
-  return this->_collision & Collision<I>::lshift_event(COLLISION);
+  return _collision & Collision<I>::lshift_event(COLLISION);
 }
 
 template <class I>
 constexpr bool Collision<I>::collision_avoided() const noexcept {
-  return !this->collision_occurred() && this->_collision != 0;
+  return !collision_occurred() && _collision != 0;
 }
 
 template <class I>
 constexpr bool Collision<I>::collision_occurred(const CollisionEventT c) const noexcept {
   assert((c & COLLISION) == 0);
-  return this->decode_event() == (c | COLLISION);
+  return decode_event() == (c | COLLISION);
 }
 
 template <class I>
 constexpr bool Collision<I>::collision_avoided(const CollisionEventT c) const noexcept {
   assert((c & COLLISION) == 0);
-  return !this->collision_occurred() && this->decode_event() == c;
+  return !collision_occurred() && decode_event() == c;
 }
 
 }  // namespace modle

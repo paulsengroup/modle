@@ -110,12 +110,11 @@ void Simulation::sample_and_register_contacts(State& s, usize num_sampling_event
 
   assert(s.interval);
   s.num_contacts +=
-      this->register_contacts_loop(*s.interval, s.get_lefs(), num_loop_contacts, s.rand_eng);
-  s.num_contacts +=
-      this->register_contacts_tad(*s.interval, s.get_lefs(), num_tad_contacts, s.rand_eng);
+      register_contacts_loop(*s.interval, s.get_lefs(), num_loop_contacts, s.rand_eng);
+  s.num_contacts += register_contacts_tad(*s.interval, s.get_lefs(), num_tad_contacts, s.rand_eng);
 
   if (c().track_1d_lef_position) {
-    this->register_1d_lef_occupancy(*s.interval, s.get_lefs(), num_sampling_events, s.rand_eng);
+    register_1d_lef_occupancy(*s.interval, s.get_lefs(), num_sampling_events, s.rand_eng);
   }
 
   assert(s.num_contacts <= s.num_target_contacts);
@@ -237,22 +236,22 @@ usize Simulation::register_contacts_loop(GenomicInterval& interval,
                                          const absl::Span<const Lef> lefs,
                                          usize num_sampling_events,
                                          random::PRNG_t& rand_eng) const {
-  return this->register_contacts_loop(interval.start() + 1, interval.end() - 1, interval.contacts(),
-                                      lefs, num_sampling_events, rand_eng);
+  return register_contacts_loop(interval.start() + 1, interval.end() - 1, interval.contacts(), lefs,
+                                num_sampling_events, rand_eng);
 }
 
 usize Simulation::register_contacts_tad(GenomicInterval& interval, absl::Span<const Lef> lefs,
                                         usize num_sampling_events, random::PRNG_t& rand_eng) const {
-  return this->register_contacts_tad(interval.start() + 1, interval.end() - 1, interval.contacts(),
-                                     lefs, num_sampling_events, rand_eng);
+  return register_contacts_tad(interval.start() + 1, interval.end() - 1, interval.contacts(), lefs,
+                               num_sampling_events, rand_eng);
 }
 
 usize Simulation::register_1d_lef_occupancy(GenomicInterval& interval, absl::Span<const Lef> lefs,
                                             usize num_sampling_events,
                                             random::PRNG_t& rand_eng) const {
-  return this->register_1d_lef_occupancy(interval.start() + 1, interval.end() - 1,
-                                         interval.lef_1d_occupancy(), lefs, num_sampling_events,
-                                         rand_eng);
+  return register_1d_lef_occupancy(interval.start() + 1, interval.end() - 1,
+                                   interval.lef_1d_occupancy(), lefs, num_sampling_events,
+                                   rand_eng);
 }
 
 }  // namespace modle

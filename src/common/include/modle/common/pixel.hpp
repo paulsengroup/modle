@@ -18,13 +18,13 @@ struct PixelCoordinates {
   usize row;
   usize col;
   [[nodiscard]] constexpr bool operator==(const PixelCoordinates &other) const {
-    return this->row == other.row && this->col == other.col;
+    return row == other.row && col == other.col;
   }
   [[nodiscard]] constexpr bool operator<(const PixelCoordinates &other) const {
-    if (this->row == other.row) {
-      return this->col < other.col;
+    if (row == other.row) {
+      return col < other.col;
     }
-    return this->row < other.row;
+    return row < other.row;
   }
 };
 
@@ -41,10 +41,10 @@ struct Pixel {
   constexpr Pixel(Coordinates coords_, N count_) noexcept : coords(coords_), count(count_) {}
   constexpr Pixel(usize row, usize col, N count_) noexcept : Pixel(Coordinates{row, col}, count_) {}
 
-  [[nodiscard]] constexpr usize row() const noexcept { return this->coords.row; }
-  [[nodiscard]] constexpr usize col() const noexcept { return this->coords.col; }
+  [[nodiscard]] constexpr usize row() const noexcept { return coords.row; }
+  [[nodiscard]] constexpr usize col() const noexcept { return coords.col; }
   [[nodiscard]] constexpr bool operator==(const Pixel &other) const {
-    return this->coords == other.coords && this->count == other.count;
+    return coords == other.coords && count == other.count;
   }
 };
 

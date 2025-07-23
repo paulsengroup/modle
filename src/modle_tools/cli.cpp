@@ -90,21 +90,20 @@ std::ostream& operator<<(std::ostream& os, const transform_config::Transformatio
   return os;
 }
 
-Cli::Cli(int argc, char** argv) : _argc(argc), _argv(argv), _exec_name(*argv) { this->make_cli(); }
+Cli::Cli(int argc, char** argv) : _argc(argc), _argv(argv), _exec_name(*argv) { make_cli(); }
 
 void Cli::make_annotate_barriers_subcommand() {
   auto& sc =
-      *this->_cli
-           .add_subcommand("annotate-barriers",
+      *_cli.add_subcommand("annotate-barriers",
                            "Helper tool to generate an extrusion barrier annotation for MoDLE.")
            ->fallthrough()
            ->preparse_callback([this]([[maybe_unused]] usize i) {
-             assert(this->_config.index() == 0);
-             this->_config = annotate_barriers_config{};
+             assert(_config.index() == 0);
+             _config = annotate_barriers_config{};
            });
 
-  this->_config = annotate_barriers_config{};
-  auto& c = absl::get<annotate_barriers_config>(this->_config);
+  _config = annotate_barriers_config{};
+  auto& c = absl::get<annotate_barriers_config>(_config);
 
   auto& io = *sc.add_option_group("IO", "");
   auto& gen = *sc.add_option_group("Generic", "");
@@ -162,22 +161,21 @@ void Cli::make_annotate_barriers_subcommand() {
      ->capture_default_str();
   // clang-format on
 
-  this->_config = absl::monostate{};
+  _config = absl::monostate{};
 }
 
 void Cli::make_eval_subcommand() {
   auto& sc =
-      *this->_cli
-           .add_subcommand("evaluate", "Helper tool to compare contact matrices in cooler format.")
+      *_cli.add_subcommand("evaluate", "Helper tool to compare contact matrices in cooler format.")
            ->fallthrough()
            ->preparse_callback([this]([[maybe_unused]] usize i) {
-             assert(this->_config.index() == 0);
-             this->_config = eval_config{};
+             assert(_config.index() == 0);
+             _config = eval_config{};
            });
   sc.alias("eval");
 
-  this->_config = eval_config{};
-  auto& c = absl::get<eval_config>(this->_config);
+  _config = eval_config{};
+  auto& c = absl::get<eval_config>(_config);
 
   auto& io = *sc.add_option_group("IO", "");
   auto& gen = *sc.add_option_group("Generic", "");
@@ -290,22 +288,21 @@ void Cli::make_eval_subcommand() {
   // clang-format on
   gen.get_option("--reciprocal-weights")->needs(io.get_option("--weight-file"));
   gen.get_option("--weight-column-name")->needs(io.get_option("--weight-file"));
-  this->_config = absl::monostate{};
+  _config = absl::monostate{};
 }
 
 void Cli::make_transform_subcommand() {
-  auto& sc = *this->_cli
-                  .add_subcommand("transform",
+  auto& sc = *_cli.add_subcommand("transform",
                                   "Transform contact matrices in cooler format using one of the "
                                   "supported transformation methods.")
                   ->fallthrough()
                   ->preparse_callback([this]([[maybe_unused]] usize i) {
-                    assert(this->_config.index() == 0);
-                    this->_config = transform_config{};
+                    assert(_config.index() == 0);
+                    _config = transform_config{};
                   });
 
-  this->_config = transform_config{};
-  auto& c = absl::get<transform_config>(this->_config);
+  _config = transform_config{};
+  auto& c = absl::get<transform_config>(_config);
 
   auto& io = *sc.add_option_group("Input/Output", "");
   auto& trans = *sc.add_option_group("Transformations", "");
@@ -420,29 +417,29 @@ void Cli::make_transform_subcommand() {
   trans.get_option("--binary-discretization-value")
       ->excludes(trans.get_option("--discretization-ranges-tsv"));
 
-  this->_config = absl::monostate{};
+  _config = absl::monostate{};
 }
 
 void Cli::make_cli() {
-  this->_cli.name(this->_exec_name);
-  this->_cli.description(
+  _cli.name(_exec_name);
+  _cli.description(
       "MoDLE's helper tool.\n"
       "This tool can be used to perform common pre and post-process operations\n"
       "on MoDLE's input/output files.");
-  this->_cli.set_version_flag("-V,--version",
-                              "MoDLE-tools-" + std::string{modle::tools::config::version::str()});
-  this->_cli.require_subcommand(1);
-  this->_cli.formatter(std::make_shared<utils::cli::Formatter>());
+  _cli.set_version_flag("-V,--version",
+                        "MoDLE-tools-" + std::string{modle::tools::config::version::str()});
+  _cli.require_subcommand(1);
+  _cli.formatter(std::make_shared<utils::cli::Formatter>());
 
-  this->make_annotate_barriers_subcommand();
-  this->make_eval_subcommand();
-  this->make_transform_subcommand();
+  make_annotate_barriers_subcommand();
+  make_eval_subcommand();
+  make_transform_subcommand();
 }
 
 void Cli::validate_annotate_barriers_subcomand() const {
-  assert(this->_cli.get_subcommand("annotate-barriers")->parsed());
+  assert(_cli.get_subcommand("annotate-barriers")->parsed());
   std::vector<std::string> errors;
-  const auto& c = absl::get<annotate_barriers_config>(this->_config);
+  const auto& c = absl::get<annotate_barriers_config>(_config);
 
   if (c.occupancy_lb >= c.occupancy_ub) {
     errors.emplace_back(
@@ -461,9 +458,9 @@ void Cli::validate_annotate_barriers_subcomand() const {
 }
 
 void Cli::validate_eval_subcommand() const {
-  assert(this->_cli.get_subcommand("eval")->parsed());
+  assert(_cli.get_subcommand("eval")->parsed());
   std::vector<std::string> errors;
-  const auto& c = absl::get<eval_config>(this->_config);
+  const auto& c = absl::get<eval_config>(_config);
 
   try {
     const hictk::cooler::File f1(c.input_cooler_uri.string());
@@ -474,7 +471,7 @@ void Cli::validate_eval_subcommand() const {
           c.input_cooler_uri, c.reference_cooler_uri, f1.resolution(), f2.resolution()));
     }
 
-    const auto& io_group = *this->_cli.get_subcommand("eval")->get_option_group("IO");
+    const auto& io_group = *_cli.get_subcommand("eval")->get_option_group("IO");
     if (constexpr auto* name = "--chrom-sizes";
         f1.chromosomes() != f2.chromosomes() && !io_group.get_option(name)->empty()) {
       errors.emplace_back(fmt::format(
@@ -487,8 +484,8 @@ void Cli::validate_eval_subcommand() const {
   }
 
   if (c.metric == eval_config::Metric::custom) {
-    const auto& io_group = *this->_cli.get_subcommand("eval")->get_option_group("IO");
-    const auto& gen_group = *this->_cli.get_subcommand("eval")->get_option_group("Generic");
+    const auto& io_group = *_cli.get_subcommand("eval")->get_option_group("IO");
+    const auto& gen_group = *_cli.get_subcommand("eval")->get_option_group("Generic");
 
     constexpr std::array<std::string_view, 4> gen_option_names{
         "--weight-column-name", "--reciprocal-weights", "--exclude-zero-pixels", "--normalize"};
@@ -547,9 +544,9 @@ void Cli::validate_eval_subcommand() const {
 }
 
 void Cli::validate_transform_subcommand() const {
-  assert(this->_cli.get_subcommand("transform")->parsed());
+  assert(_cli.get_subcommand("transform")->parsed());
   std::vector<std::string> errors;
-  const auto& c = absl::get<transform_config>(this->_config);
+  const auto& c = absl::get<transform_config>(_config);
 
   if (auto collision = utils::detect_path_collision(c.output_cooler_uri, c.force,
                                                     std::filesystem::file_type::regular);
@@ -587,79 +584,79 @@ void Cli::validate_transform_subcommand() const {
 }
 
 void Cli::validate() const {
-  if (this->_cli.get_subcommand("annotate-barriers")->parsed()) {
-    this->validate_annotate_barriers_subcomand();
-  } else if (this->_cli.get_subcommand("eval")->parsed()) {
-    this->validate_eval_subcommand();
-  } else if (this->_cli.get_subcommand("transform")->parsed()) {
-    this->validate_transform_subcommand();
+  if (_cli.get_subcommand("annotate-barriers")->parsed()) {
+    validate_annotate_barriers_subcomand();
+  } else if (_cli.get_subcommand("eval")->parsed()) {
+    validate_eval_subcommand();
+  } else if (_cli.get_subcommand("transform")->parsed()) {
+    validate_transform_subcommand();
   } else {
     MODLE_UNREACHABLE_CODE;
   }
 }
 
-Cli::subcommand Cli::get_subcommand() const noexcept { return this->_subcommand; }
+Cli::subcommand Cli::get_subcommand() const noexcept { return _subcommand; }
 std::string_view Cli::get_printable_subcommand() const noexcept {
-  return Cli::subcommand_to_str(this->get_subcommand());
+  return Cli::subcommand_to_str(get_subcommand());
 }
 modle::tools::modle_tools_config Cli::parse_arguments() {
-  this->_cli.name(this->_exec_name);
-  this->_cli.parse(this->_argc, this->_argv);
+  _cli.name(_exec_name);
+  _cli.parse(_argc, _argv);
 
   try {
-    if (this->_cli.get_subcommand("annotate-barriers")->parsed()) {
-      this->_subcommand = subcommand::annotate_barriers;
-    } else if (this->_cli.get_subcommand("evaluate")->parsed()) {
-      this->_subcommand = subcommand::eval;
-    } else if (this->_cli.get_subcommand("transform")->parsed()) {
-      this->_subcommand = subcommand::transform;
+    if (_cli.get_subcommand("annotate-barriers")->parsed()) {
+      _subcommand = subcommand::annotate_barriers;
+    } else if (_cli.get_subcommand("evaluate")->parsed()) {
+      _subcommand = subcommand::eval;
+    } else if (_cli.get_subcommand("transform")->parsed()) {
+      _subcommand = subcommand::transform;
     } else {
-      this->_subcommand = subcommand::help;
+      _subcommand = subcommand::help;
     }
   } catch (const CLI::ParseError& e) {
     //  This takes care of formatting and printing error messages (if any)
-    this->_exit_code = this->_cli.exit(e);
-    return this->_config;
+    _exit_code = _cli.exit(e);
+    return _config;
   } catch (const std::exception& e) {
-    this->_exit_code = 1;
+    _exit_code = 1;
     throw std::runtime_error(fmt::format(
         "An unexpected error has occurred while parsing CLI arguments: {}. If you see this "
         "message, please file an issue on GitHub",
         e.what()));
 
   } catch (...) {
-    this->_exit_code = 1;
+    _exit_code = 1;
     throw std::runtime_error(
         "An unknown error occurred while parsing CLI arguments! If you see this message, please "
         "file an issue on GitHub");
   }
-  this->validate();
+  validate();
 
   absl::visit(
       [&, this](auto& config) {
         if constexpr (!std::is_same_v<absl::remove_cvref_t<decltype(config)>, absl::monostate>) {
           config.args = absl::MakeSpan(_argv, static_cast<usize>(_argc));
-          config.args_json = this->to_json();
+          config.args_json = to_json();
         }
       },
-      this->_config);
+      _config);
 
-  this->_exit_code = 0;
-  return this->_config;
+  _exit_code = 0;
+  return _config;
 }
 
-int Cli::exit(const CLI::ParseError& e) const { return this->_cli.exit(e); }
+int Cli::exit(const CLI::ParseError& e) const { return _cli.exit(e); }
 
 std::string Cli::to_json() const {
-  const auto prefix = std::string{this->get_printable_subcommand()} + ".";
+  const auto prefix = std::string{get_printable_subcommand()} + ".";
   std::string buff;
-  for (const auto& line : absl::StrSplit(this->_cli.config_to_str(true, false), '\n')) {
+  for (const auto& line : absl::StrSplit(_cli.config_to_str(true, false), '\n')) {
     if (line.empty() || line.front() == '[') {
       continue;
     }
 
     if (buff.empty()) {
-      buff = fmt::format("[{}]\n", this->get_printable_subcommand());
+      buff = fmt::format("[{}]\n", get_printable_subcommand());
     }
 
     if (line.find(prefix) != std::string::npos) {

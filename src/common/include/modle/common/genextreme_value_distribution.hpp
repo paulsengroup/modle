@@ -55,17 +55,17 @@ class genextreme_value_distribution {
   // generating functions
   template <class URNG>
   [[nodiscard]] inline result_type operator()(URNG& g) {
-    return (*this)(g, this->_p);
+    return (*this)(g, _p);
   }
   template <class URNG>
   inline result_type operator()(URNG& g, const param_type& p);
 
   // property functions
-  [[nodiscard]] inline result_type mu() const { return this->_p.mu(); }
-  [[nodiscard]] inline result_type sigma() const { return this->_p.sigma(); }
-  [[nodiscard]] inline result_type xi() const { return this->_p.xi(); }
-  [[nodiscard]] inline param_type param() const { return this->_p; }
-  inline void param(const param_type& p) { this->_p = p; }
+  [[nodiscard]] inline result_type mu() const { return _p.mu(); }
+  [[nodiscard]] inline result_type sigma() const { return _p.sigma(); }
+  [[nodiscard]] inline result_type xi() const { return _p.xi(); }
+  [[nodiscard]] inline param_type param() const { return _p; }
+  inline void param(const param_type& p) { _p = p; }
 
   [[nodiscard]] inline constexpr result_type min() const {
     return (std::numeric_limits<RealType>::min)();

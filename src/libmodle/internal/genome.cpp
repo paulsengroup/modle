@@ -45,14 +45,14 @@ ContactMatrixLazy::ContactMatrixLazy(ContactMatrix matrix) noexcept
       _nrows(_matrix->nrows()),
       _ncols(_matrix->ncols()) {
   // Signal that _matrix has already been initialized
-  std::call_once(this->_alloc_flag, []() {});
+  std::call_once(_alloc_flag, []() {});
 }
 
 ContactMatrixLazy::ContactMatrixLazy(ContactMatrixLazy&& other) noexcept
     : _matrix(std::move(other._matrix)), _nrows(other._nrows), _ncols(other._ncols) {
-  if (this->_matrix && this->_matrix->npixels() == this->npixels()) {
+  if (_matrix && _matrix->npixels() == npixels()) {
     // Signal that _matrix has already been initialized
-    std::call_once(this->_alloc_flag, []() {});
+    std::call_once(_alloc_flag, []() {});
   }
   // This does not handle the case where a matrix was allocated, deallocated and then moved.
   // We don't really care about this case, so the current impl. should be fine
@@ -63,8 +63,8 @@ ContactMatrixLazy& ContactMatrixLazy::operator=(ContactMatrixLazy&& other) noexc
     return *this;
   }
   _matrix = std::move(other._matrix);
-  if (this->_matrix && this->_matrix->npixels() == this->npixels()) {  // See comments for move ctor
-    std::call_once(this->_alloc_flag, []() {});
+  if (_matrix && _matrix->npixels() == npixels()) {  // See comments for move ctor
+    std::call_once(_alloc_flag, []() {});
   }
 
   _nrows = other._nrows;
@@ -74,31 +74,31 @@ ContactMatrixLazy& ContactMatrixLazy::operator=(ContactMatrixLazy&& other) noexc
 }
 
 auto ContactMatrixLazy::operator()() noexcept -> ContactMatrix& {
-  std::call_once(this->_alloc_flag, [this]() {
-    SPDLOG_DEBUG("allocating a {}x{} contact matrix...", this->_nrows, this->_ncols);
-    this->_matrix = std::make_optional<ContactMatrix>(this->_nrows, this->_ncols);
+  std::call_once(_alloc_flag, [this]() {
+    SPDLOG_DEBUG("allocating a {}x{} contact matrix...", _nrows, _ncols);
+    _matrix = std::make_optional<ContactMatrix>(_nrows, _ncols);
   });
-  assert(this->_matrix.has_value());
-  return *this->_matrix;
+  assert(_matrix.has_value());
+  return *_matrix;
 }
 
 auto ContactMatrixLazy::operator()() const noexcept -> const ContactMatrix& {
-  std::call_once(this->_alloc_flag, [this]() {
-    SPDLOG_DEBUG("allocating a {}x{} contact matrix...", this->_nrows, this->_ncols);
-    this->_matrix = std::make_optional<ContactMatrix>(this->_nrows, this->_ncols);
+  std::call_once(_alloc_flag, [this]() {
+    SPDLOG_DEBUG("allocating a {}x{} contact matrix...", _nrows, _ncols);
+    _matrix = std::make_optional<ContactMatrix>(_nrows, _ncols);
   });
-  assert(this->_matrix.has_value());
-  return *this->_matrix;
+  assert(_matrix.has_value());
+  return *_matrix;
 }
 
 void ContactMatrixLazy::deallocate() noexcept {
-  std::call_once(this->_dealloc_flag, [this]() {
-    SPDLOG_DEBUG("deallocating a {}x{} contact matrix...", this->_nrows, this->_ncols);
-    this->_matrix.reset();
+  std::call_once(_dealloc_flag, [this]() {
+    SPDLOG_DEBUG("deallocating a {}x{} contact matrix...", _nrows, _ncols);
+    _matrix.reset();
   });
 }
 
-Occupancy1DLazy::operator bool() const noexcept { return !this->_buff->empty(); }
+Occupancy1DLazy::operator bool() const noexcept { return !_buff->empty(); }
 
 Occupancy1DLazy::Occupancy1DLazy(bp_t length, bp_t bin_size) noexcept
     : _size((length + bin_size - 1) / bin_size) {}
@@ -106,14 +106,14 @@ Occupancy1DLazy::Occupancy1DLazy(bp_t length, bp_t bin_size) noexcept
 Occupancy1DLazy::Occupancy1DLazy(BufferT buff) noexcept
     : _buff(std::make_optional<BufferT>(std::move(buff))), _size(_buff->size()) {
   // Signal _buff has already been initialized
-  std::call_once(this->_alloc_flag, []() {});
+  std::call_once(_alloc_flag, []() {});
 }
 
 Occupancy1DLazy::Occupancy1DLazy(Occupancy1DLazy&& other) noexcept
     : _buff(std::move(other._buff)), _size(other._size) {
-  if (this->_buff && _buff->size() == this->size()) {
+  if (_buff && _buff->size() == size()) {
     // Signal _buff has already been initialized
-    std::call_once(this->_alloc_flag, []() {});
+    std::call_once(_alloc_flag, []() {});
   }
   // This does not handle the case where buffer was allocated, deallocated and then moved.
   // We don't really care about this case, so the current impl. should be fine
@@ -124,8 +124,8 @@ Occupancy1DLazy& Occupancy1DLazy::operator=(Occupancy1DLazy&& other) noexcept {
     return *this;
   }
   _buff = std::move(other._buff);
-  if (this->_buff && _buff->size() == this->size()) {  // See comments for move ctor
-    std::call_once(this->_alloc_flag, []() {});
+  if (_buff && _buff->size() == size()) {  // See comments for move ctor
+    std::call_once(_alloc_flag, []() {});
   }
   _size = other._size;
 
@@ -133,29 +133,29 @@ Occupancy1DLazy& Occupancy1DLazy::operator=(Occupancy1DLazy&& other) noexcept {
 }
 
 auto Occupancy1DLazy::operator()() const noexcept -> const BufferT& {
-  std::call_once(this->_alloc_flag, [this]() {
-    SPDLOG_DEBUG("allocating a vector of size {}...", this->_size);
-    this->_buff = std::make_optional<BufferT>(_size);
-    std::fill(this->_buff->begin(), this->_buff->end(), 0);
+  std::call_once(_alloc_flag, [this]() {
+    SPDLOG_DEBUG("allocating a vector of size {}...", _size);
+    _buff = std::make_optional<BufferT>(_size);
+    std::fill(_buff->begin(), _buff->end(), 0);
   });
-  assert(this->_buff.has_value());
-  return *this->_buff;
+  assert(_buff.has_value());
+  return *_buff;
 }
 
 auto Occupancy1DLazy::operator()() noexcept -> BufferT& {
-  std::call_once(this->_alloc_flag, [this]() {
-    SPDLOG_DEBUG("allocating a vector of size {}...", this->_size);
-    this->_buff = std::make_optional<BufferT>(_size);
-    std::fill(this->_buff->begin(), this->_buff->end(), 0);
+  std::call_once(_alloc_flag, [this]() {
+    SPDLOG_DEBUG("allocating a vector of size {}...", _size);
+    _buff = std::make_optional<BufferT>(_size);
+    std::fill(_buff->begin(), _buff->end(), 0);
   });
-  assert(this->_buff.has_value());
-  return *this->_buff;
+  assert(_buff.has_value());
+  return *_buff;
 }
 
 void Occupancy1DLazy::deallocate() noexcept {
-  std::call_once(this->_dealloc_flag, [this]() {
-    SPDLOG_DEBUG("deallocating a vector of size {}...", this->_size);
-    this->_buff.reset();
+  std::call_once(_dealloc_flag, [this]() {
+    SPDLOG_DEBUG("deallocating a vector of size {}...", _size);
+    _buff.reset();
   });
 }
 
@@ -164,8 +164,8 @@ void Occupancy1DLazy::deallocate() noexcept {
 Chromosome::Chromosome(usize id, std::string name, bp_t size) noexcept
     : _name(std::move(name)), _id(id), _size(size) {}
 
-std::string_view Chromosome::name() const noexcept { return this->_name; }
-const char* Chromosome::name_cstr() const noexcept { return this->_name.c_str(); }
+std::string_view Chromosome::name() const noexcept { return _name; }
+const char* Chromosome::name_cstr() const noexcept { return _name.c_str(); }
 
 u64 Chromosome::hash(XXH3_state_t& state) const {
   auto handle_errors = [&](const auto& status) {
@@ -174,8 +174,8 @@ u64 Chromosome::hash(XXH3_state_t& state) const {
     }
   };
 
-  handle_errors(XXH3_64bits_update(&state, this->_name.data(), this->_name.size() * sizeof(char)));
-  handle_errors(XXH3_64bits_update(&state, &this->_size, sizeof(decltype(this->_size))));
+  handle_errors(XXH3_64bits_update(&state, _name.data(), _name.size() * sizeof(char)));
+  handle_errors(XXH3_64bits_update(&state, &_size, sizeof(decltype(_size))));
   return utils::conditional_static_cast<u64>(XXH3_64bits_digest(&state));
 }
 
@@ -184,7 +184,7 @@ u64 Chromosome::hash(XXH3_state_t& state, u64 seed) const {
   if (MODLE_UNLIKELY(status == XXH_ERROR)) {
     throw std::runtime_error(fmt::format("failed to hash {}", *this));
   }
-  return this->hash(state);
+  return hash(state);
 }
 
 GenomicInterval::GenomicInterval(usize id, const std::shared_ptr<const Chromosome>& chrom,
@@ -204,13 +204,13 @@ u64 GenomicInterval::hash(XXH3_state_t& state) const {
     }
   };
 
-  const auto& chrom_name = this->chrom().name();
-  const auto chrom_size = this->chrom().size();
+  const auto& chrom_name = chrom().name();
+  const auto chrom_size = chrom().size();
 
   handle_errors(XXH3_64bits_update(&state, chrom_name.data(), chrom_name.size() * sizeof(char)));
   handle_errors(XXH3_64bits_update(&state, &chrom_size, sizeof(decltype(chrom_size))));
-  handle_errors(XXH3_64bits_update(&state, &this->_start, sizeof(decltype(this->_start))));
-  handle_errors(XXH3_64bits_update(&state, &this->_end, sizeof(decltype(this->_end))));
+  handle_errors(XXH3_64bits_update(&state, &_start, sizeof(decltype(_start))));
+  handle_errors(XXH3_64bits_update(&state, &_end, sizeof(decltype(_end))));
   return utils::conditional_static_cast<u64>(XXH3_64bits_digest(&state));
 }
 
@@ -219,39 +219,35 @@ u64 GenomicInterval::hash(XXH3_state_t& state, u64 seed) const {
   if (MODLE_UNLIKELY(status == XXH_ERROR)) {
     throw std::runtime_error(fmt::format("Failed to hash {}", *this));
   }
-  return this->hash(state);
+  return hash(state);
 }
 
 const Chromosome& GenomicInterval::chrom() const noexcept {
-  assert(!!this->_chrom);
-  return *this->_chrom;
+  assert(!!_chrom);
+  return *_chrom;
 }
 
-usize GenomicInterval::num_barriers() const { return this->_barriers.size(); }
+usize GenomicInterval::num_barriers() const { return _barriers.size(); }
 
 auto GenomicInterval::barriers() const noexcept -> const std::vector<ExtrusionBarrier>& {
-  return this->_barriers;
+  return _barriers;
 }
-auto GenomicInterval::barriers() noexcept -> std::vector<ExtrusionBarrier>& {
-  return this->_barriers;
-}
+auto GenomicInterval::barriers() noexcept -> std::vector<ExtrusionBarrier>& { return _barriers; }
 
-auto GenomicInterval::contacts() const noexcept -> const ContactMatrix& {
-  return this->_contacts();
-}
-auto GenomicInterval::contacts() noexcept -> ContactMatrix& { return this->_contacts(); }
+auto GenomicInterval::contacts() const noexcept -> const ContactMatrix& { return _contacts(); }
+auto GenomicInterval::contacts() noexcept -> ContactMatrix& { return _contacts(); }
 
 auto GenomicInterval::lef_1d_occupancy() const noexcept -> const std::vector<std::atomic<u64>>& {
-  return this->_lef_1d_occupancy();
+  return _lef_1d_occupancy();
 }
 
 auto GenomicInterval::lef_1d_occupancy() noexcept -> std::vector<std::atomic<u64>>& {
-  return this->_lef_1d_occupancy();
+  return _lef_1d_occupancy();
 }
 
 void GenomicInterval::deallocate() noexcept {
-  this->_contacts.deallocate();
-  this->_lef_1d_occupancy.deallocate();
+  _contacts.deallocate();
+  _lef_1d_occupancy.deallocate();
 }
 
 struct ComputeBarrierStpResult {
@@ -277,25 +273,25 @@ void GenomicInterval::add_extrusion_barrier(const bed::BED& record,
                                             const double default_barrier_stp_inactive) {
   assert(record.strand == '+' || record.strand == '-' || record.strand == '.');
   const auto pos = (record.chrom_start + record.chrom_end + 1) / 2;
-  if (pos < this->start() || pos >= this->end()) {
+  if (pos < start() || pos >= end()) {
     return;
   }
 
   const auto [barrier_stp_active, barrier_stp_inactive] =
       compute_barrier_stp(record.score, default_barrier_stp_active, default_barrier_stp_inactive);
 
-  this->_barriers.emplace_back(pos, barrier_stp_active, barrier_stp_inactive, record.strand);
+  _barriers.emplace_back(pos, barrier_stp_active, barrier_stp_inactive, record.strand);
 }
 
 void GenomicInterval::add_extrusion_barriers(std::vector<ExtrusionBarrier> barriers) {
   if constexpr (utils::ndebug_not_defined()) {
     for ([[maybe_unused]] const auto& barrier : barriers) {
-      assert(barrier.pos >= this->start());
-      assert(barrier.pos < this->end());
+      assert(barrier.pos >= start());
+      assert(barrier.pos < end());
     }
   }
-  this->_barriers.insert(this->_barriers.end(), std::make_move_iterator(barriers.begin()),
-                         std::make_move_iterator(barriers.end()));
+  _barriers.insert(_barriers.end(), std::make_move_iterator(barriers.begin()),
+                   std::make_move_iterator(barriers.end()));
 }
 
 Genome::Genome(const std::filesystem::path& path_to_chrom_sizes,
@@ -487,90 +483,88 @@ usize Genome::map_barriers_to_intervals(phmap::btree_set<GenomicInterval>& inter
   }
   return tot_num_barriers;
 }
-usize Genome::num_intervals() const noexcept { return this->_intervals.size(); }
+usize Genome::num_intervals() const noexcept { return _intervals.size(); }
 
-auto Genome::begin() -> iterator { return this->_intervals.begin(); }
-auto Genome::end() -> iterator { return this->_intervals.end(); }
+auto Genome::begin() -> iterator { return _intervals.begin(); }
+auto Genome::end() -> iterator { return _intervals.end(); }
 
-auto Genome::begin() const -> const_iterator { return this->_intervals.cbegin(); }
-auto Genome::end() const -> const_iterator { return this->_intervals.cend(); }
+auto Genome::begin() const -> const_iterator { return _intervals.cbegin(); }
+auto Genome::end() const -> const_iterator { return _intervals.cend(); }
 
-auto Genome::cbegin() const -> const_iterator { return this->_intervals.cbegin(); }
-auto Genome::cend() const -> const_iterator { return this->_intervals.cend(); }
+auto Genome::cbegin() const -> const_iterator { return _intervals.cbegin(); }
+auto Genome::cend() const -> const_iterator { return _intervals.cend(); }
 
-auto Genome::find(const GenomicInterval& query) -> iterator { return this->_intervals.find(query); }
+auto Genome::find(const GenomicInterval& query) -> iterator { return _intervals.find(query); }
 auto Genome::find(const GenomicInterval& query) const -> const_iterator {
-  return this->_intervals.find(query);
+  return _intervals.find(query);
 }
 
 auto Genome::find(usize query) -> iterator {
-  return std::find_if(this->_intervals.begin(), this->_intervals.end(),
+  return std::find_if(_intervals.begin(), _intervals.end(),
                       [&](const auto& gi) { return gi.id() == query; });
 }
 auto Genome::find(usize query) const -> const_iterator {
-  return std::find_if(this->_intervals.begin(), this->_intervals.end(),
+  return std::find_if(_intervals.begin(), _intervals.end(),
                       [&](const auto& gi) { return gi.id() == query; });
 }
 
 auto Genome::find(const Chromosome& query) -> iterator {
-  return std::find_if(this->_intervals.begin(), this->_intervals.end(),
+  return std::find_if(_intervals.begin(), _intervals.end(),
                       [&](const auto& gi) { return gi.chrom() == query; });
 }
 auto Genome::find(const Chromosome& query) const -> const_iterator {
-  return std::find_if(this->_intervals.begin(), this->_intervals.end(),
+  return std::find_if(_intervals.begin(), _intervals.end(),
                       [&](const auto& gi) { return gi.chrom() == query; });
 }
 
 auto Genome::find(std::string_view query) -> iterator {
-  return std::find_if(this->_intervals.begin(), this->_intervals.end(),
+  return std::find_if(_intervals.begin(), _intervals.end(),
                       [&](const auto& gi) { return gi.chrom().name() == query; });
 }
 auto Genome::find(std::string_view query) const -> const_iterator {
-  return std::find_if(this->_intervals.begin(), this->_intervals.end(),
+  return std::find_if(_intervals.begin(), _intervals.end(),
                       [&](const auto& gi) { return gi.chrom().name() == query; });
 }
 
-bool Genome::contains(const GenomicInterval& query) const {
-  return this->_intervals.contains(query);
-}
-bool Genome::contains(usize query) const { return query < this->_chroms.size(); }
-bool Genome::contains(const Chromosome& query) const { return this->contains(query.id()); }
+bool Genome::contains(const GenomicInterval& query) const { return _intervals.contains(query); }
+bool Genome::contains(usize query) const { return query < _chroms.size(); }
+bool Genome::contains(const Chromosome& query) const { return contains(query.id()); }
 bool Genome::contains(std::string_view query) const {
-  return std::find_if(this->_chroms.begin(), this->_chroms.end(), [&](const auto& chrom_ptr) {
+  return std::find_if(_chroms.begin(), _chroms.end(), [&](const auto& chrom_ptr) {
            return chrom_ptr->name() == query;
-         }) != this->_chroms.end();
+         }) != _chroms.end();
 }
 
 usize Genome::num_chromosomes() const noexcept {
-  return utils::conditional_static_cast<usize>(this->_chroms.size());
+  return utils::conditional_static_cast<usize>(_chroms.size());
 }
 
 const Chromosome& Genome::chromosome_with_longest_name() const noexcept {
-  assert(!this->_chroms.empty());
-  return **std::max_element(this->_chroms.begin(), this->_chroms.end(),
+  assert(!_chroms.empty());
+  return **std::max_element(_chroms.begin(), _chroms.end(),
                             [&](const auto& chrom_ptr1, const auto& chrom_ptr2) {
                               return chrom_ptr1->name().size() < chrom_ptr2->name().size();
                             });
 }
 
 const Chromosome& Genome::longest_chromosome() const noexcept {
-  assert(!this->_chroms.empty());
-  return **std::max_element(this->_chroms.begin(), this->_chroms.end(),
+  assert(!_chroms.empty());
+  return **std::max_element(_chroms.begin(), _chroms.end(),
                             [&](const auto& chrom_ptr1, const auto& chrom_ptr2) {
                               return chrom_ptr1->size() < chrom_ptr2->size();
                             });
 }
 
 const GenomicInterval& Genome::longest_interval() const noexcept {
-  assert(!this->_intervals.empty());
+  assert(!_intervals.empty());
   return *std::max_element(
-      this->_intervals.begin(), this->_intervals.end(),
+      _intervals.begin(), _intervals.end(),
       [&](const auto& gi1, const auto& gi2) { return gi1.size() < gi2.size(); });
 }
 
 const GenomicInterval& Genome::interval_with_most_barriers() const noexcept {
-  assert(!this->_intervals.empty());
-  return *std::max_element(this->_intervals.begin(), this->_intervals.end(),
+  assert(!_intervals.empty());
+  return *std::max_element(_intervals.begin(), _intervals.end(),
                            [&](const auto& gi1, const auto& gi2) {
                              return gi1.barriers().size() < gi2.barriers().size();
                            });
@@ -580,7 +574,7 @@ usize Genome::max_target_contacts(usize bin_size, usize diagonal_width,
                                   double target_contact_density, usize simulation_iterations,
                                   double lef_fraction_contact_sampling, double nlefs_per_mbp,
                                   usize ncells) const {
-  const auto& interval = this->longest_interval();
+  const auto& interval = longest_interval();
   if (target_contact_density == 0.0) {
     const auto nlefs = static_cast<usize>(
         std::round(nlefs_per_mbp * (static_cast<double>(interval.size()) / 1.0e6)));

@@ -32,7 +32,7 @@ constexpr ConstMap<Key, Value, Size>::ConstMap(
     ++i;
   }
 
-  this->detect_duplicate_keys();
+  detect_duplicate_keys();
 }
 
 template <class Key, class Value, usize Size>
@@ -47,10 +47,10 @@ constexpr ConstMap<Key, Value, Size>::ConstMap(KeyInputIt first_key, KeyInputIt 
     throw std::out_of_range("Too many values to initialize ConstMap");
   }
 
-  std::move(first_key, last_key, this->_keys.begin());
-  std::move(first_value, first_value + static_cast<isize>(dist), this->_vals.begin());
+  std::move(first_key, last_key, _keys.begin());
+  std::move(first_value, first_value + static_cast<isize>(dist), _vals.begin());
 
-  this->detect_duplicate_keys();
+  detect_duplicate_keys();
 }
 
 template <class Key, class Value, usize Size>
@@ -70,18 +70,18 @@ constexpr void ConstMap<Key, Value, Size>::detect_duplicate_keys() const {
 
 template <class Key, class Value, usize Size>
 constexpr bool ConstMap<Key, Value, Size>::empty() const noexcept {
-  return this->_keys.empty();
+  return _keys.empty();
 }
 
 template <class Key, class Value, usize Size>
 constexpr usize ConstMap<Key, Value, Size>::size() const noexcept {
-  return this->_keys.size();
+  return _keys.size();
 }
 
 template <class Key, class Value, usize Size>
 constexpr const Value &ConstMap<Key, Value, Size>::at(const Key &key) const {
-  const auto itr = this->find(key);
-  if (itr != this->end()) {
+  const auto itr = find(key);
+  if (itr != end()) {
     assert(itr.second);
     return *itr.second;
   }
@@ -90,18 +90,18 @@ constexpr const Value &ConstMap<Key, Value, Size>::at(const Key &key) const {
 
 template <class Key, class Value, usize Size>
 constexpr const Value &ConstMap<Key, Value, Size>::operator[](const Key &key) const {
-  return *this->find(key)->second;
+  return *find(key)->second;
 }
 
 template <class Key, class Value, usize Size>
 constexpr auto ConstMap<Key, Value, Size>::find(const Key &key) const noexcept -> const_iterator {
-  auto it = std::find(this->_keys.begin(), this->_keys.end(), key);
-  return iterator(*this, static_cast<usize>(std::distance(this->_keys.begin(), it)));
+  auto it = std::find(_keys.begin(), _keys.end(), key);
+  return iterator(*this, static_cast<usize>(std::distance(_keys.begin(), it)));
 }
 
 template <class Key, class Value, usize Size>
 constexpr bool ConstMap<Key, Value, Size>::contains(const Key &key) const noexcept {
-  return this->find(key) != this->end();
+  return find(key) != end();
 }
 
 template <class Key, class Value, usize Size>
@@ -111,17 +111,17 @@ constexpr auto ConstMap<Key, Value, Size>::begin() const noexcept -> const_itera
 
 template <class Key, class Value, usize Size>
 constexpr auto ConstMap<Key, Value, Size>::end() const noexcept -> const_iterator {
-  return iterator(*this, this->size());
+  return iterator(*this, size());
 }
 
 template <class Key, class Value, usize Size>
 constexpr const std::array<Key, Size> &ConstMap<Key, Value, Size>::keys() const noexcept {
-  return this->_keys;
+  return _keys;
 }
 
 template <class Key, class Value, usize Size>
 constexpr const std::array<Value, Size> &ConstMap<Key, Value, Size>::values() const noexcept {
-  return this->_vals;
+  return _vals;
 }
 
 template <class Key, class Value, usize Size>
@@ -132,7 +132,7 @@ constexpr ConstMap<Key, Value, Size>::iterator::iterator(const ConstMap<Key, Val
 template <class Key, class Value, usize Size>
 constexpr bool ConstMap<Key, Value, Size>::iterator::operator==(
     const ConstMap<Key, Value, Size>::iterator &other) const noexcept {
-  return this->first == other.first;
+  return first == other.first;
 }
 
 template <class Key, class Value, usize Size>
@@ -143,17 +143,17 @@ constexpr bool ConstMap<Key, Value, Size>::iterator::operator!=(
 
 template <class Key, class Value, usize Size>
 constexpr auto ConstMap<Key, Value, Size>::iterator::operator*() const -> const value_type {
-  assert(this->first);
-  assert(this->second);
-  return std::make_pair(this->first, this->second);
+  assert(first);
+  assert(second);
+  return std::make_pair(first, second);
 }
 
 template <class Key, class Value, usize Size>
 constexpr auto ConstMap<Key, Value, Size>::iterator::operator++() noexcept -> iterator & {
-  assert(this->first);
-  assert(this->second);
-  ++this->first;
-  ++this->second;
+  assert(first);
+  assert(second);
+  ++first;
+  ++second;
   return *this;
 }
 

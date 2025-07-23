@@ -28,16 +28,15 @@
 namespace modle {
 
 void Simulation::spawn_worker_threads(const usize batch_size) {
-  assert(this->_ctx.num_worker_threads() != 0);
+  assert(_ctx.num_worker_threads() != 0);
   assert(batch_size != 0);
-  for (usize tid = 0; tid < this->_ctx.num_worker_threads(); ++tid) {
-    this->_ctx.spawn_worker_thread(
-        [this, batch_size, tid]() { this->simulate_worker(tid, batch_size); });
+  for (usize tid = 0; tid < _ctx.num_worker_threads(); ++tid) {
+    _ctx.spawn_worker_thread([this, batch_size, tid]() { simulate_worker(tid, batch_size); });
   }
 }
 
 void Simulation::spawn_io_threads() {
-  this->_ctx.spawn_io_thread([this]() { this->simulate_io(); });
+  _ctx.spawn_io_thread([this]() { simulate_io(); });
 }
 
 // NOLINTNEXTLINE(readability-function-cognitive-complexity)
@@ -79,19 +78,18 @@ void Simulation::run_simulate() {
   }();
 
   // Queue used to submit simulation tasks to the thread pool
-  auto ptok_pending = this->_ctx.register_producer<Task::Status::PENDING>();
-  auto ptok_finished = this->_ctx.register_producer<Task::Status::COMPLETED>();
+  auto ptok_pending = _ctx.register_producer<Task::Status::PENDING>();
+  auto ptok_finished = _ctx.register_producer<Task::Status::COMPLETED>();
 
   // std::mutex model_state_logger_mtx;  // Protect rw access to the log file located at
-  // this->path_to_model_state_log_file
+  // path_to_model_state_log_file
   if (c().log_model_internal_state && !c().skip_output) {
-    this->_ctx.init_model_state_logger(c().path_to_model_state_log_file,
-                                       model_internal_state_log_header);
+    _ctx.init_model_state_logger(c().path_to_model_state_log_file, model_internal_state_log_header);
   }
 
   try {
-    this->spawn_io_threads();
-    this->spawn_worker_threads(task_batch_size);
+    spawn_io_threads();
+    spawn_worker_threads(task_batch_size);
 
     // The remaining code submits simulation tasks to the queue. Then it waits until all the tasks
     // have been completed and contacts have been written to disk
@@ -103,8 +101,8 @@ void Simulation::run_simulate() {
     std::unique_ptr<XXH3_state_t, utils::XXH3_Deleter> xxh_state{XXH3_createState()};
 
     // Loop over chromosomes
-    for (auto& interval : this->_genome) {
-      this->_ctx.check_exceptions();
+    for (auto& interval : _genome) {
+      _ctx.check_exceptions();
       auto sleep_time = std::chrono::microseconds(50);
 
       auto rand_eng = random::PRNG(interval.hash(*xxh_state, c().seed));
@@ -115,8 +113,8 @@ void Simulation::run_simulate() {
         Task t{};
         t.interval = &interval;
         for (usize cellid = 0; cellid < c().num_cells; ++cellid) {
-          while (!this->_ctx.try_enqueue_task<Task::Status::COMPLETED>(t, ptok_finished)) {
-            this->_ctx.check_exceptions();
+          while (!_ctx.try_enqueue_task<Task::Status::COMPLETED>(t, ptok_finished)) {
+            _ctx.check_exceptions();
             sleep_time = std::min(max_sleep_time, sleep_time * 2);
             std::this_thread::sleep_for(sleep_time);
           }
@@ -126,7 +124,7 @@ void Simulation::run_simulate() {
       }
 
       // Compute # of LEFs to be simulated based on interval.sizes
-      const auto nlefs = this->compute_num_lefs(interval.size());
+      const auto nlefs = compute_num_lefs(interval.size());
 
       const auto npixels = interval.npixels();
       const auto tot_target_contacts =
@@ -152,8 +150,8 @@ void Simulation::run_simulate() {
                Task::Status::PENDING};
         SPDLOG_DEBUG("[main]: submitting task #{} ({} cell #{})...", t.id, *t.interval, t.cell_id);
 
-        while (!this->_ctx.try_enqueue_task<Task::Status::PENDING>(t, ptok_pending)) {
-          this->_ctx.check_exceptions();
+        while (!_ctx.try_enqueue_task<Task::Status::PENDING>(t, ptok_pending)) {
+          _ctx.check_exceptions();
           sleep_time = std::min(max_sleep_time, sleep_time * 2);
           std::this_thread::sleep_for(sleep_time);
         }
@@ -161,12 +159,12 @@ void Simulation::run_simulate() {
       }
     }
 
-    this->_ctx.shutdown();
-    assert(this->_ctx.num_tasks_submitted() == this->_ctx.num_tasks_completed());
-    assert(!!this->_ctx);
+    _ctx.shutdown();
+    assert(_ctx.num_tasks_submitted() == _ctx.num_tasks_completed());
+    assert(!!_ctx);
   } catch (...) {
-    this->_ctx.set_exception_main(std::current_exception());
-    this->_ctx.check_exceptions();
+    _ctx.set_exception_main(std::current_exception());
+    _ctx.check_exceptions();
     throw;
   }
 }
@@ -197,26 +195,26 @@ void Simulation::simulate_worker(const u64 tid, const usize task_batch_size) {
   Simulation::State local_state{};
 
   try {
-    auto ctok = this->_ctx.register_consumer<Task::Status::PENDING>();
-    auto ptok = this->_ctx.register_producer<Task::Status::COMPLETED>();
+    auto ctok = _ctx.register_consumer<Task::Status::PENDING>();
+    auto ptok = _ctx.register_producer<Task::Status::COMPLETED>();
     std::vector<Task> task_buff(task_batch_size);  // Tasks are dequeued in batch.
     // This is to reduce contention when accessing the queue
 
-    while (!!this->_ctx) {
-      this->_ctx.wait_dequeue_tasks<Task::Status::PENDING>(ctok, task_buff);
-      if (task_buff.empty() && !this->_ctx.shutdown_signal_sent()) {
+    while (!!_ctx) {
+      _ctx.wait_dequeue_tasks<Task::Status::PENDING>(ctok, task_buff);
+      if (task_buff.empty() && !_ctx.shutdown_signal_sent()) {
         SPDLOG_DEBUG("[W{}]: no tasks available: sleeping for a bit...", tid);
         std::this_thread::sleep_for(std::chrono::milliseconds(50));
         continue;
       }
-      if (task_buff.empty() && this->_ctx.shutdown_signal_sent()) {
+      if (task_buff.empty() && _ctx.shutdown_signal_sent()) {
         SPDLOG_DEBUG("[W{}]: all tasks have been processed: returning!", tid);
         return;
       }
 
       // Loop over new tasks
       for (const auto& task : task_buff) {
-        if (!this->_ctx) {
+        if (!_ctx) {
           return;
         }
         local_state = task;            // Set simulation state based on task data
@@ -224,7 +222,7 @@ void Simulation::simulate_worker(const u64 tid, const usize task_batch_size) {
         local_state.reset_buffers();   // Clear all buffers
 
         if (task.cell_id == 0) {
-          this->print_status_update(task);
+          print_status_update(task);
         }
 
         // When simulating using the target contact density as stopping criterion across a large
@@ -239,11 +237,11 @@ void Simulation::simulate_worker(const u64 tid, const usize task_batch_size) {
           SPDLOG_DEBUG("[W{}]: begin processing task {} ({} cell #{}, {})...", tid, task.id,
                        *task.interval, task.cell_id, format_rand_eng(task.rand_eng));
           local_state.model_state_logger = init_local_model_state_logger(c(), local_state.id);
-          this->simulate_one_cell(tid, local_state);
+          simulate_one_cell(tid, local_state);
           if (local_state.model_state_logger) {
             const auto path = local_state.model_state_logger->path();
             local_state.model_state_logger = nullptr;  // Flush data to disk
-            this->_ctx.append_to_model_state_log(path, true);
+            _ctx.append_to_model_state_log(path, true);
           }
           SPDLOG_DEBUG(
               "[W{}]: finished processing task {} ({} cell #{}, {}): collected {} "
@@ -255,19 +253,19 @@ void Simulation::simulate_worker(const u64 tid, const usize task_batch_size) {
 
         local_state.status = Task::Status::COMPLETED;
         // Update progress for the current chrom
-        while (!this->_ctx.try_enqueue_task<Task::Status::COMPLETED>(
+        while (!_ctx.try_enqueue_task<Task::Status::COMPLETED>(
             static_cast<const Task&>(local_state), ptok)) {
-          if (!this->_ctx) {
+          if (!_ctx) {
             return;
           }
         }
       }
     }
   } catch (const std::exception& e) {
-    this->_ctx.throw_exception(std::runtime_error(fmt::format(
+    _ctx.throw_exception(std::runtime_error(fmt::format(
         "Exception raised in worker thread {}:\n   {}\n   {}", tid, local_state, e.what())));
   } catch (...) {
-    this->_ctx.throw_exception(
+    _ctx.throw_exception(
         std::runtime_error(fmt::format("Unhandled exception raised in worker thread {}!", tid)));
   }
 }

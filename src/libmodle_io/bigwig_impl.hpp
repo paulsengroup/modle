@@ -23,19 +23,19 @@
 
 namespace modle::io::bigwig {
 
-constexpr Reader::operator bool() const noexcept { return this->_fp != nullptr; }
+constexpr Reader::operator bool() const noexcept { return _fp != nullptr; }
 
-constexpr const std::filesystem::path& Reader::path() const noexcept { return this->_fname; }
-constexpr auto Reader::chromosomes() const noexcept -> const Chromosomes& { return this->_chroms; }
+constexpr const std::filesystem::path& Reader::path() const noexcept { return _fname; }
+constexpr auto Reader::chromosomes() const noexcept -> const Chromosomes& { return _chroms; }
 
 template <Reader::StatsType stat>
 inline double Reader::stats(const std::string& chrom, bp_t start, bp_t end) {
   static_assert(stat != bwStatsType::doesNotExist);
   assert(!!*this);
-  this->validate_query(chrom, start, end);
+  validate_query(chrom, start, end);
 
   const std::unique_ptr<double, decltype(&std::free)> stats{
-      bwStatsFromFull(this->_fp, chrom.c_str(), utils::conditional_static_cast<u32>(start),
+      bwStatsFromFull(_fp, chrom.c_str(), utils::conditional_static_cast<u32>(start),
                       utils::conditional_static_cast<u32>(end), 1, stat),
       &std::free};
   if (!stats) {
@@ -51,14 +51,14 @@ inline void Reader::stats(const std::string& chrom, bp_t start, bp_t end, bp_t w
   static_assert(stat != bwStatsType::doesNotExist);
   assert(window_size != 0);
   assert(!!*this);
-  this->validate_query(chrom, start, end);
+  validate_query(chrom, start, end);
 
   const auto num_bins =
       utils::conditional_static_cast<u32>((end - start + window_size - 1) / window_size);
 
   buff.clear();
   const std::unique_ptr<double, decltype(&std::free)> stats{
-      bwStatsFromFull(this->_fp, chrom.c_str(), utils::conditional_static_cast<u32>(start),
+      bwStatsFromFull(_fp, chrom.c_str(), utils::conditional_static_cast<u32>(start),
                       utils::conditional_static_cast<u32>(end), num_bins, stat),
       &std::free};
   if (!stats) {
@@ -73,11 +73,11 @@ template <Reader::StatsType stat>
 inline std::vector<double> Reader::stats(const std::string& chrom, bp_t start, bp_t end,
                                          bp_t window_size) {
   std::vector<double> buff{};
-  this->stats<stat>(chrom, start, end, window_size, buff);
+  stats<stat>(chrom, start, end, window_size, buff);
   return buff;
 }
 
-constexpr Writer::operator bool() const noexcept { return this->_fp != nullptr; }
+constexpr Writer::operator bool() const noexcept { return _fp != nullptr; }
 
 template <class Chromosomes>
 inline void Writer::write_chromosomes(Chromosomes& chroms) {
@@ -120,14 +120,14 @@ inline void Writer::write_chromosomes(Chromosomes& chroms) {
   }();
   DISABLE_WARNING_POP
 
-  this->write_chromosomes(chrom_names.data(), chrom_sizes.data(), num_chroms);
+  write_chromosomes(chrom_names.data(), chrom_sizes.data(), num_chroms);
 }
 
 template <class N, class>
 inline void Writer::write_range(std::string_view chrom_name, const absl::Span<N> values, u64 span,
                                 u64 step, u64 offset) {
-  assert(this->_initialized);
-  assert(this->_fp);
+  assert(_initialized);
+  assert(_fp);
   std::vector<float> fvalues;
   auto fvalues_span = [&]() {
     if constexpr (std::is_same_v<N, float>) {
@@ -143,13 +143,13 @@ inline void Writer::write_range(std::string_view chrom_name, const absl::Span<N>
 
   auto chrom_name_tmp = std::string{chrom_name};
   // NOLINTNEXTLINE(readability-implicit-bool-conversion)
-  if (bwAddIntervalSpanSteps(this->_fp, chrom_name_tmp.data(), static_cast<u32>(offset),
+  if (bwAddIntervalSpanSteps(_fp, chrom_name_tmp.data(), static_cast<u32>(offset),
                              static_cast<u32>(span), static_cast<u32>(step), fvalues_span.data(),
                              static_cast<u32>(fvalues_span.size()))) {
     throw std::runtime_error(fmt::format("failed to write data for chrom \"{}\"", chrom_name));
   }
 }
 
-constexpr const std::filesystem::path& Writer::path() const noexcept { return this->_fname; }
+constexpr const std::filesystem::path& Writer::path() const noexcept { return _fname; }
 
 }  // namespace modle::io::bigwig

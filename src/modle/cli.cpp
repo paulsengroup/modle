@@ -601,48 +601,46 @@ static std::vector<CLI::App*> add_common_options(CLI::App& subcommand, modle::Co
 
 void Cli::make_simulation_subcommand() {
   auto& s =
-      *this->_cli
-           .add_subcommand(
+      *_cli.add_subcommand(
                "simulate",
                "Simulate loop extrusion and write resulting molecular contacts in a .cool file.")
            ->fallthrough()
            ->configurable();
   s.alias("sim");
-  auto option_group_ptrs = add_common_options(s, this->_config);
+  auto option_group_ptrs = add_common_options(s, _config);
 }
 
 void Cli::make_cli() {
-  this->_cli.description(
-      "High-performance stochastic modeling of DNA loop extrusion interactions.");
-  this->_cli.set_version_flag("-V,--version", std::string{modle::config::version::str_long()});
-  this->_cli.require_subcommand(1);
-  this->_cli.set_config("--config", "", "Path to MoDLE's config file (optional).", false);
-  this->_cli.formatter(std::make_shared<utils::cli::Formatter>());
-  this->_cli.get_formatter()->column_width(30);
+  _cli.description("High-performance stochastic modeling of DNA loop extrusion interactions.");
+  _cli.set_version_flag("-V,--version", std::string{modle::config::version::str_long()});
+  _cli.require_subcommand(1);
+  _cli.set_config("--config", "", "Path to MoDLE's config file (optional).", false);
+  _cli.formatter(std::make_shared<utils::cli::Formatter>());
+  _cli.get_formatter()->column_width(30);
 
-  this->make_simulation_subcommand();
+  make_simulation_subcommand();
 }
 
-Cli::Cli(int argc, char** argv) : _argc(argc), _argv(argv), _exec_name(*argv) { this->make_cli(); }
+Cli::Cli(int argc, char** argv) : _argc(argc), _argv(argv), _exec_name(*argv) { make_cli(); }
 
 const Config& Cli::parse_arguments() {
-  if (this->_cli.parsed()) {
-    return this->_config;
+  if (_cli.parsed()) {
+    return _config;
   }
 
-  this->_cli.name(this->_exec_name);
-  this->_cli.parse(this->_argc, this->_argv);
+  _cli.name(_exec_name);
+  _cli.parse(_argc, _argv);
 
-  if (this->_cli.get_subcommand("simulate")->parsed()) {
-    this->_subcommand = simulate;
+  if (_cli.get_subcommand("simulate")->parsed()) {
+    _subcommand = simulate;
   }
 
-  this->validate_args();
-  this->transform_args();
-  this->_config.args = absl::MakeSpan(_argv, static_cast<usize>(_argc));
+  validate_args();
+  transform_args();
+  _config.args = absl::MakeSpan(_argv, static_cast<usize>(_argc));
 
-  this->_config.args_json = this->to_json();
-  return this->_config;
+  _config.args_json = to_json();
+  return _config;
 }
 
 // NOLINTNEXTLINE(readability-function-cognitive-complexity) TODO: reduce complexity
@@ -689,7 +687,7 @@ std::string Cli::detect_path_collisions(modle::Config& c) const {
     absl::StrAppend(&collisions, check_for_path_collisions(c.path_to_lef_1d_occupancy_bw_file));
   }
 
-  if (this->get_subcommand() == simulate && !c.path_to_model_state_log_file.empty() &&
+  if (get_subcommand() == simulate && !c.path_to_model_state_log_file.empty() &&
       std::filesystem::exists(c.path_to_model_state_log_file)) {
     absl::StrAppend(&collisions, check_for_path_collisions(c.path_to_model_state_log_file));
   }
@@ -697,7 +695,7 @@ std::string Cli::detect_path_collisions(modle::Config& c) const {
   return collisions;
 }
 
-int Cli::exit(const CLI::ParseError& e) const { return this->_cli.exit(e); }
+int Cli::exit(const CLI::ParseError& e) const { return _cli.exit(e); }
 
 static void detect_deprecated_option_usage(const CLI::App& subcmd,
                                            std::vector<std::string>& warnings_buff) {
@@ -720,12 +718,12 @@ static void detect_deprecated_option_usage(const CLI::App& subcmd,
 }
 
 void Cli::validate_args() const {
-  const auto& c = this->_config;
+  const auto& c = _config;
   std::vector<std::string> errors;
 
-  const auto* subcmd = this->get_subcommand_ptr();
+  const auto* subcmd = get_subcommand_ptr();
 
-  detect_deprecated_option_usage(*subcmd, this->_warnings);
+  detect_deprecated_option_usage(*subcmd, _warnings);
 
   if (c.burnin_smoothing_window_size > c.burnin_history_length) {
     assert(subcmd->get_option_group("Advanced")
@@ -748,7 +746,7 @@ void Cli::validate_args() const {
   if (!(c.contact_sampling_strategy & CS::noisify)) {
     for (const std::string label : {"--mu", "--sigma", "--xi"}) {
       if (!cgen_adv->get_option(label)->empty()) {
-        this->_warnings.emplace_back(
+        _warnings.emplace_back(
             fmt::format("Option {} has no effect. Reason: {} requires the strategy passed to "
                         "--contact-sampling-strategy to be one of the *-with-noise strategies.",
                         label, label));
@@ -762,7 +760,7 @@ void Cli::validate_args() const {
     assert(sample_loop_contacts || sample_tad_contacts);
 
     if (sample_loop_contacts && !sample_tad_contacts && c.tad_to_loop_contact_ratio != 0) {
-      this->_warnings.emplace_back(
+      _warnings.emplace_back(
           fmt::format("Option --tad-to-loop-contact-ratio={} has no effect. Reason: "
                       "--tad-to-loop-contact-ratio is implicitly set to 0 when "
                       "--contact-sampling-strategy={}",
@@ -771,7 +769,7 @@ void Cli::validate_args() const {
     }
     if (!sample_loop_contacts && sample_tad_contacts &&
         c.tad_to_loop_contact_ratio != std::numeric_limits<double>::infinity()) {
-      this->_warnings.emplace_back(
+      _warnings.emplace_back(
           fmt::format("Option --tad-to-loop-contact-ratio={} has no effect. Reason: "
                       "--tad-to-loop-contact-ratio is implicitly set to inf when "
                       "--contact-sampling-strategy={}",
@@ -801,7 +799,7 @@ void Cli::validate_args() const {
                                          ->get_option_group("Miscellaneous")
                                          ->get_option("--probability-normalization-factor")
                                          ->empty()) {
-    this->_warnings.emplace_back(
+    _warnings.emplace_back(
         fmt::format("Option --probability-normalization-factor has no effect. Reason: "
                     "CLI option --no-normalize-probabilities was passed by the user."));
   }
@@ -821,7 +819,7 @@ void Cli::validate_args() const {
 
 CLI::App* Cli::get_subcommand_ptr() {
   for (const auto& subcmd : {"sim", "pert", "replay"}) {
-    if (auto* s = this->_cli.get_subcommand(subcmd); s->parsed()) {
+    if (auto* s = _cli.get_subcommand(subcmd); s->parsed()) {
       return s;
     }
   }
@@ -830,7 +828,7 @@ CLI::App* Cli::get_subcommand_ptr() {
 
 const CLI::App* Cli::get_subcommand_ptr() const {
   for (const auto& subcmd : {"sim", "pert", "replay"}) {
-    if (auto* s = this->_cli.get_subcommand(subcmd); s->parsed()) {
+    if (auto* s = _cli.get_subcommand(subcmd); s->parsed()) {
       return s;
     }
   }
@@ -991,62 +989,62 @@ void cli_update_burnin_params(Config& c) {
 }
 
 void Cli::transform_args() {
-  cli_update_paths(this->get_subcommand(), this->_config);
-  cli_update_extr_speed(this->_cli, this->_config);
-  cli_compute_prob_of_lef_release(this->_config);
-  cli_update_barrier_stp_and_occupancy(this->_cli, this->_config);
-  cli_update_tad_to_loop_contact_ratio(this->_config);
-  cli_update_burnin_params(this->_config);
+  cli_update_paths(get_subcommand(), _config);
+  cli_update_extr_speed(_cli, _config);
+  cli_compute_prob_of_lef_release(_config);
+  cli_update_barrier_stp_and_occupancy(_cli, _config);
+  cli_update_tad_to_loop_contact_ratio(_config);
+  cli_update_burnin_params(_config);
 
-  if (this->_config.normalize_probabilities) {
-    cli_normalize_probabilities(this->_config);
+  if (_config.normalize_probabilities) {
+    cli_normalize_probabilities(_config);
   }
 
-  const auto* subcmd = this->get_subcommand_ptr();
+  const auto* subcmd = get_subcommand_ptr();
 
   if (!subcmd->get_option_group("Extrusion Barriers and Factors")
            ->get_option("--extrusion-barrier-occupancy")
            ->empty()) {
-    this->_config.override_extrusion_barrier_occupancy = true;
+    _config.override_extrusion_barrier_occupancy = true;
   }
 
-  if (this->_config.stopping_criterion == Config::StoppingCriterion::simulation_epochs) {
-    this->_config.target_contact_density = -1;
+  if (_config.stopping_criterion == Config::StoppingCriterion::simulation_epochs) {
+    _config.target_contact_density = -1;
   }
 }
 
-Cli::subcommand Cli::get_subcommand() const { return this->_subcommand; }
+Cli::subcommand Cli::get_subcommand() const { return _subcommand; }
 
 void Cli::print_config(bool print_default_args) const {
-  fmt::print(stderr, "{}\n", this->_cli.config_to_str(print_default_args, true));
+  fmt::print(stderr, "{}\n", _cli.config_to_str(print_default_args, true));
 }
 
 void Cli::write_config_file(bool write_default_args) const {
   try {
     std::ofstream fs;
     fs.exceptions(fs.exceptions() | std::ios::failbit | std::ios::badbit);
-    fs.open(this->_config.path_to_config_file);
+    fs.open(_config.path_to_config_file);
 
     fmt::print(fs, "# Config created by {} on {}\n{}\n", modle::config::version::str_long(),
                absl::FormatTime(absl::Now(), absl::UTCTimeZone()),
-               this->_cli.config_to_str(write_default_args, true));
+               _cli.config_to_str(write_default_args, true));
   } catch (const std::exception& e) {
     throw std::runtime_error(fmt::format("failed to write config file \"{}\": {}",
-                                         this->_config.path_to_config_file, e.what()));
+                                         _config.path_to_config_file, e.what()));
   }
 }
 
-bool Cli::config_file_parsed() const { return !this->_cli.get_config_ptr()->empty(); }
+bool Cli::config_file_parsed() const { return !_cli.get_config_ptr()->empty(); }
 
 void Cli::log_warnings() const {
-  for (const auto& warning : this->_warnings) {
+  for (const auto& warning : _warnings) {
     SPDLOG_WARN("{}", warning);
   }
 }
 
 std::string Cli::to_json() const {
   std::string buff;
-  for (const auto& line : absl::StrSplit(this->_cli.config_to_str(true, false), '\n')) {
+  for (const auto& line : absl::StrSplit(_cli.config_to_str(true, false), '\n')) {
     if (line.empty()) {
       continue;
     }

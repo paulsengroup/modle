@@ -98,21 +98,21 @@ Simulation::Simulation(Config config_, bool import_intervals)
                            c().barrier_occupied_stp, c().barrier_not_occupied_stp,
                            c().interpret_bed_name_field_as_barrier_not_occupied_stp)
                   : Genome{}),
-      _ctx(Simulation::compute_num_worker_threads(c().nthreads, this->_genome.num_intervals(),
+      _ctx(Simulation::compute_num_worker_threads(c().nthreads, _genome.num_intervals(),
                                                   c().num_cells)) {
   if (c().override_extrusion_barrier_occupancy) {
     // Override barrier occupancies read from BED file
-    override_extrusion_barrier_occupancy(this->_genome, c().barrier_occupied_stp,
+    override_extrusion_barrier_occupancy(_genome, c().barrier_occupied_stp,
                                          c().barrier_not_occupied_stp);
   }
 
-  issue_warnings_for_small_intervals(this->_genome, c().diagonal_width);
-  issue_warnings_for_small_matrices(this->_genome);
+  issue_warnings_for_small_intervals(_genome, c().diagonal_width);
+  issue_warnings_for_small_matrices(_genome);
 }
 
-usize Simulation::size() const { return this->_genome.size(); }
+usize Simulation::size() const { return _genome.size(); }
 
-usize Simulation::simulated_size() const { return this->_genome.simulated_size(); }
+usize Simulation::simulated_size() const { return _genome.simulated_size(); }
 
 [[nodiscard]] static hictk::cooler::File init_cooler_file(
     const std::filesystem::path& path, bool force,
@@ -223,14 +223,14 @@ void Simulation::simulate_io(std::chrono::milliseconds wait_time) {
   Task task{};
 
   try {
-    auto [cf, bw] = init_output_file_writers(this->_genome, c());
-    auto current_interval = this->_genome.begin();
-    auto last_interval = this->_genome.end();
+    auto [cf, bw] = init_output_file_writers(_genome, c());
+    auto current_interval = _genome.begin();
+    auto last_interval = _genome.end();
 
-    auto ctok = this->_ctx.register_consumer<Task::Status::COMPLETED>();
+    auto ctok = _ctx.register_consumer<Task::Status::COMPLETED>();
     phmap::btree_map<GenomicInterval*, usize> task_map{};
     std::vector<float> bw_buff{};
-    while (!!this->_ctx && current_interval != last_interval) {
+    while (!!_ctx && current_interval != last_interval) {
       if (auto it = task_map.find(&(*current_interval)); it != task_map.end() && it->second == 0) {
         // All tasks for the current interval successfully completed!
         write_contact_matrix_to_cooler(cf, *it->first);
@@ -241,7 +241,7 @@ void Simulation::simulate_io(std::chrono::milliseconds wait_time) {
         continue;
       }
 
-      const auto task_opt = this->_ctx.wait_dequeue_task<Task::Status::COMPLETED>(ctok, wait_time);
+      const auto task_opt = _ctx.wait_dequeue_task<Task::Status::COMPLETED>(ctok, wait_time);
       if (task_opt.has_value()) {
         task = *task_opt;
         // Add interval to task_map if not already present.
@@ -250,18 +250,18 @@ void Simulation::simulate_io(std::chrono::milliseconds wait_time) {
         --it->second;
       }
     }
-    assert(this->_ctx.num_tasks_submitted() == this->_ctx.num_tasks_completed());
+    assert(_ctx.num_tasks_submitted() == _ctx.num_tasks_completed());
   } catch (const std::exception& e) {
     if (task.interval) {
-      this->_ctx.throw_exception(std::runtime_error(
+      _ctx.throw_exception(std::runtime_error(
           fmt::format("exception encountered while writing interactions for {} to file {}: {}",
                       *task.interval, c().path_to_output_file_cool, e.what())));
     }
-    this->_ctx.throw_exception(std::runtime_error(
+    _ctx.throw_exception(std::runtime_error(
         fmt::format("exception encountered while writing interactions to file {}: {}",
                     c().path_to_output_file_cool, e.what())));
   } catch (...) {
-    this->_ctx.throw_exception(
+    _ctx.throw_exception(
         std::runtime_error("unhandled exception caught in IO thread! This should never "
                            "happen! Please file an issue on GitHub."));
   }
@@ -601,7 +601,7 @@ usize Simulation::release_lefs(const absl::Span<Lef> lefs, const ExtrusionBarrie
 
 void Simulation::State::resize_buffers(usize new_size) {
   if (new_size == (std::numeric_limits<usize>::max)()) {
-    new_size = this->num_lefs;
+    new_size = num_lefs;
   }
   lef_buff.resize(new_size);
   rank_buff1.resize(new_size);
@@ -627,136 +627,134 @@ void Simulation::State::reset_buffers() {  // TODO figure out which resets are r
 
 absl::Span<Lef> Simulation::State::get_lefs(usize size) noexcept {
   if (size == State::npos) {
-    size = this->num_active_lefs;
+    size = num_active_lefs;
   }
-  assert(size <= this->lef_buff.size());
-  return absl::MakeSpan(this->lef_buff.data(), size);
+  assert(size <= lef_buff.size());
+  return absl::MakeSpan(lef_buff.data(), size);
 }
 absl::Span<usize> Simulation::State::get_rev_ranks(usize size) noexcept {
   if (size == State::npos) {
-    size = this->num_active_lefs;
+    size = num_active_lefs;
   }
-  return absl::MakeSpan(this->rank_buff1.data(), size);
+  return absl::MakeSpan(rank_buff1.data(), size);
 }
 absl::Span<usize> Simulation::State::get_fwd_ranks(usize size) noexcept {
   if (size == State::npos) {
-    size = this->num_active_lefs;
+    size = num_active_lefs;
   }
-  return absl::MakeSpan(this->rank_buff2.data(), size);
+  return absl::MakeSpan(rank_buff2.data(), size);
 }
 absl::Span<bp_t> Simulation::State::get_rev_moves(usize size) noexcept {
   if (size == State::npos) {
-    size = this->num_active_lefs;
+    size = num_active_lefs;
   }
-  return absl::MakeSpan(this->moves_buff1.data(), size);
+  return absl::MakeSpan(moves_buff1.data(), size);
 }
 absl::Span<bp_t> Simulation::State::get_fwd_moves(usize size) noexcept {
   if (size == State::npos) {
-    size = this->num_active_lefs;
+    size = num_active_lefs;
   }
-  return absl::MakeSpan(this->moves_buff2.data(), size);
+  return absl::MakeSpan(moves_buff2.data(), size);
 }
 absl::Span<usize> Simulation::State::get_idx_buff(usize size) noexcept {
   if (size == State::npos) {
-    size = this->num_active_lefs;
+    size = num_active_lefs;
   }
-  return absl::MakeSpan(this->idx_buff.data(), size);
+  return absl::MakeSpan(idx_buff.data(), size);
 }
 auto Simulation::State::get_rev_collisions(usize size) noexcept -> absl::Span<CollisionT> {
   if (size == State::npos) {
-    size = this->num_active_lefs;
+    size = num_active_lefs;
   }
-  return absl::MakeSpan(this->collision_buff1.data(), size);
+  return absl::MakeSpan(collision_buff1.data(), size);
 }
 auto Simulation::State::get_fwd_collisions(usize size) noexcept -> absl::Span<CollisionT> {
   if (size == State::npos) {
-    size = this->num_active_lefs;
+    size = num_active_lefs;
   }
-  return absl::MakeSpan(this->collision_buff2.data(), size);
+  return absl::MakeSpan(collision_buff2.data(), size);
 }
 std::deque<double>& Simulation::State::get_cfx_of_variation() noexcept {
-  return this->cfx_of_variation_buff;
+  return cfx_of_variation_buff;
 }
-std::deque<double>& Simulation::State::get_avg_loop_sizes() noexcept {
-  return this->avg_loop_size_buff;
-}
+std::deque<double>& Simulation::State::get_avg_loop_sizes() noexcept { return avg_loop_size_buff; }
 
 absl::Span<const Lef> Simulation::State::get_lefs(usize size) const noexcept {
   if (size == State::npos) {
-    size = this->num_active_lefs;
+    size = num_active_lefs;
   }
-  return absl::MakeConstSpan(this->lef_buff.data(), size);
+  return absl::MakeConstSpan(lef_buff.data(), size);
 }
 
 absl::Span<const usize> Simulation::State::get_rev_ranks(usize size) const noexcept {
   if (size == State::npos) {
-    size = this->num_active_lefs;
+    size = num_active_lefs;
   }
-  return absl::MakeConstSpan(this->rank_buff1.data(), size);
+  return absl::MakeConstSpan(rank_buff1.data(), size);
 }
 absl::Span<const usize> Simulation::State::get_fwd_ranks(usize size) const noexcept {
   if (size == State::npos) {
-    size = this->num_active_lefs;
+    size = num_active_lefs;
   }
-  return absl::MakeConstSpan(this->rank_buff2.data(), size);
+  return absl::MakeConstSpan(rank_buff2.data(), size);
 }
 absl::Span<const bp_t> Simulation::State::get_rev_moves(usize size) const noexcept {
   if (size == State::npos) {
-    size = this->num_active_lefs;
+    size = num_active_lefs;
   }
-  return absl::MakeConstSpan(this->moves_buff1.data(), size);
+  return absl::MakeConstSpan(moves_buff1.data(), size);
 }
 absl::Span<const bp_t> Simulation::State::get_fwd_moves(usize size) const noexcept {
   if (size == State::npos) {
-    size = this->num_active_lefs;
+    size = num_active_lefs;
   }
-  return absl::MakeConstSpan(this->moves_buff2.data(), size);
+  return absl::MakeConstSpan(moves_buff2.data(), size);
 }
 absl::Span<const usize> Simulation::State::get_idx_buff(usize size) const noexcept {
   if (size == State::npos) {
-    size = this->num_active_lefs;
+    size = num_active_lefs;
   }
-  return absl::MakeConstSpan(this->idx_buff.data(), size);
+  return absl::MakeConstSpan(idx_buff.data(), size);
 }
 auto Simulation::State::get_rev_collisions(usize size) const noexcept
     -> absl::Span<const CollisionT> {
   if (size == State::npos) {
-    size = this->num_active_lefs;
+    size = num_active_lefs;
   }
-  return absl::MakeConstSpan(this->collision_buff1.data(), size);
+  return absl::MakeConstSpan(collision_buff1.data(), size);
 }
 auto Simulation::State::get_fwd_collisions(usize size) const noexcept
     -> absl::Span<const CollisionT> {
   if (size == State::npos) {
-    size = this->num_active_lefs;
+    size = num_active_lefs;
   }
-  return absl::MakeConstSpan(this->collision_buff2.data(), size);
+  return absl::MakeConstSpan(collision_buff2.data(), size);
 }
 const std::deque<double>& Simulation::State::get_cfx_of_variation() const noexcept {
-  return this->cfx_of_variation_buff;
+  return cfx_of_variation_buff;
 }
 const std::deque<double>& Simulation::State::get_avg_loop_sizes() const noexcept {
-  return this->avg_loop_size_buff;
+  return avg_loop_size_buff;
 }
 
 Simulation::State& Simulation::State::operator=(const Task& task) {
-  this->epoch = 0;
-  this->num_burnin_epochs = 0;
-  this->burnin_completed = false;
-  this->num_active_lefs = 0;
-  this->num_contacts = 0;
+  epoch = 0;
+  num_burnin_epochs = 0;
+  burnin_completed = false;
+  num_active_lefs = 0;
+  num_contacts = 0;
 
-  this->id = task.id;
-  this->interval = task.interval;
-  this->cell_id = task.cell_id;
-  this->num_target_epochs = task.num_target_epochs;
-  this->num_target_contacts = task.num_target_contacts;
-  this->num_lefs = task.num_lefs;
+  id = task.id;
+  interval = task.interval;
+  cell_id = task.cell_id;
+  num_target_epochs = task.num_target_epochs;
+  num_target_contacts = task.num_target_contacts;
+  num_lefs = task.num_lefs;
   if (task.interval) {
-    this->barriers =
+    barriers =
         ExtrusionBarriers{task.interval->barriers().begin(), task.interval->barriers().end()};
   }
-  this->rand_eng = task.rand_eng;
+  rand_eng = task.rand_eng;
 
   return *this;
 }
@@ -772,21 +770,21 @@ std::pair<usize, usize> Simulation::process_collisions(
                                                       rev_moves, fwd_moves, rev_collisions,
                                                       fwd_collisions);
 
-  this->detect_lef_bar_collisions(lefs, rev_lef_ranks, fwd_lef_ranks, rev_moves, fwd_moves,
-                                  barriers, rev_collisions, fwd_collisions, rand_eng,
-                                  num_rev_units_at_5prime, num_fwd_units_at_3prime);
+  detect_lef_bar_collisions(lefs, rev_lef_ranks, fwd_lef_ranks, rev_moves, fwd_moves, barriers,
+                            rev_collisions, fwd_collisions, rand_eng, num_rev_units_at_5prime,
+                            num_fwd_units_at_3prime);
 
-  this->detect_primary_lef_lef_collisions(lefs, barriers, rev_lef_ranks, fwd_lef_ranks, rev_moves,
-                                          fwd_moves, rev_collisions, fwd_collisions, rand_eng,
-                                          num_rev_units_at_5prime, num_fwd_units_at_3prime);
+  detect_primary_lef_lef_collisions(lefs, barriers, rev_lef_ranks, fwd_lef_ranks, rev_moves,
+                                    fwd_moves, rev_collisions, fwd_collisions, rand_eng,
+                                    num_rev_units_at_5prime, num_fwd_units_at_3prime);
   Simulation::correct_moves_for_lef_bar_collisions(lefs, barriers, rev_moves, fwd_moves,
                                                    rev_collisions, fwd_collisions);
 
   Simulation::correct_moves_for_primary_lef_lef_collisions(
       lefs, rev_lef_ranks, fwd_lef_ranks, rev_moves, fwd_moves, rev_collisions, fwd_collisions);
-  this->process_secondary_lef_lef_collisions(
-      interval, lefs, rev_lef_ranks, fwd_lef_ranks, rev_moves, fwd_moves, rev_collisions,
-      fwd_collisions, rand_eng, num_rev_units_at_5prime, num_fwd_units_at_3prime);
+  process_secondary_lef_lef_collisions(interval, lefs, rev_lef_ranks, fwd_lef_ranks, rev_moves,
+                                       fwd_moves, rev_collisions, fwd_collisions, rand_eng,
+                                       num_rev_units_at_5prime, num_fwd_units_at_3prime);
   Simulation::fix_secondary_lef_lef_collisions(interval, lefs, rev_lef_ranks, fwd_lef_ranks,
                                                rev_moves, fwd_moves, rev_collisions, fwd_collisions,
                                                num_rev_units_at_5prime, num_fwd_units_at_3prime);
@@ -907,7 +905,7 @@ void Simulation::simulate_one_cell([[maybe_unused]] u64 tid, State& s) const {
         static_cast<double>(s.num_lefs) /
         static_cast<double>(c().burnin_target_epochs_for_lef_activation);
 
-    const auto sampling_events_per_epoch = this->compute_contacts_per_epoch(s.num_lefs);
+    const auto sampling_events_per_epoch = compute_contacts_per_epoch(s.num_lefs);
 
     // Init the local counter for the number of contacts generated by the current simulation
     // instance
@@ -930,9 +928,9 @@ void Simulation::simulate_one_cell([[maybe_unused]] u64 tid, State& s) const {
       return s.epoch - s.num_burnin_epochs >= s.num_target_epochs;
     };
 
-    for (; this->_ctx && !stop_condition(); ++s.epoch) {
+    for (; _ctx && !stop_condition(); ++s.epoch) {
       if (!s.burnin_completed) {
-        this->Simulation::run_burnin(s, lef_binding_rate_burnin);
+        Simulation::run_burnin(s, lef_binding_rate_burnin);
       }
 
       ////////////////////////
@@ -942,14 +940,14 @@ void Simulation::simulate_one_cell([[maybe_unused]] u64 tid, State& s) const {
       // Select inactive LEFs and bind them
       Simulation::select_and_bind_lefs(s);
       if (s.burnin_completed) {  // Register contacts
-        this->sample_and_register_contacts(s, sampling_events_per_epoch);
+        sample_and_register_contacts(s, sampling_events_per_epoch);
         if (s.num_target_contacts != 0 && s.num_contacts >= s.num_target_contacts) {
           return;  // Enough contacts have been generated. Yay!
         }
       }
 
-      this->generate_moves(*s.interval, s.get_lefs(), s.get_rev_ranks(), s.get_fwd_ranks(),
-                           s.get_rev_moves(), s.get_fwd_moves(), s.burnin_completed, s.rand_eng);
+      generate_moves(*s.interval, s.get_lefs(), s.get_rev_ranks(), s.get_fwd_ranks(),
+                     s.get_rev_moves(), s.get_fwd_moves(), s.burnin_completed, s.rand_eng);
 
       s.barriers.next_state(s.rand_eng);
 
@@ -975,8 +973,8 @@ void Simulation::simulate_one_cell([[maybe_unused]] u64 tid, State& s) const {
       }
 
       // Select LEFs to be released in the current epoch and release them
-      this->release_lefs(s.get_lefs(), s.barriers, s.get_rev_collisions(), s.get_fwd_collisions(),
-                         s.rand_eng, s.burnin_completed);
+      release_lefs(s.get_lefs(), s.barriers, s.get_rev_collisions(), s.get_fwd_collisions(),
+                   s.rand_eng, s.burnin_completed);
     }
   } catch (const std::exception& err) {
     throw std::runtime_error(
@@ -1066,7 +1064,7 @@ usize Simulation::compute_tot_target_epochs(usize nlefs, usize npixels) const no
   const auto tot_target_contacts =
       std::max(1.0, std::round(c().target_contact_density * static_cast<double>(npixels)));
 
-  const auto new_contacts_per_epoch = this->compute_contacts_per_epoch(nlefs);
+  const auto new_contacts_per_epoch = compute_contacts_per_epoch(nlefs);
   return static_cast<usize>(
       std::round(tot_target_contacts / static_cast<double>(new_contacts_per_epoch)));
 }
@@ -1088,7 +1086,7 @@ usize Simulation::compute_num_lefs(const usize size_bp) const noexcept {
 
 void Simulation::print_status_update(const Task& t) const noexcept {
   assert(t.interval);
-  auto tot_target_epochs = this->compute_tot_target_epochs(t.num_lefs, t.interval->npixels());
+  auto tot_target_epochs = compute_tot_target_epochs(t.num_lefs, t.interval->npixels());
   SPDLOG_INFO(
       "begin processing {}: simulating ~{} epochs across {} cells using {} "
       "LEFs and {} barriers (~{} epochs per cell)...",

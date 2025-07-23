@@ -25,13 +25,13 @@
 
 namespace modle::bed {
 
-constexpr BED::operator bool() const noexcept { return this->id() != this->null_id; }
+constexpr BED::operator bool() const noexcept { return id() != null_id; }
 
-constexpr BED::Dialect BED::get_standard() const noexcept { return this->_standard; }
+constexpr BED::Dialect BED::get_standard() const noexcept { return _standard; }
 
-constexpr usize BED::id() const noexcept { return this->_id; }
+constexpr usize BED::id() const noexcept { return _id; }
 
-constexpr usize BED::size() const noexcept { return this->chrom_end - this->chrom_start; }
+constexpr usize BED::size() const noexcept { return chrom_end - chrom_start; }
 
 template <typename K, typename I>
 BED_tree<K, I>::BED_tree(const std::filesystem::path& path_to_bed, BED::Dialect dialect)
@@ -47,20 +47,20 @@ using iterator_t = typename BED_tree<K, I>::iterator;
 
 template <typename K, typename I>
 std::pair<iterator_t<K, I>, bool> BED_tree<K, I>::insert(BED interval) {
-  [[maybe_unused]] auto [node, inserted] = this->_trees.try_emplace(interval.chrom, IITree_t{});
+  [[maybe_unused]] auto [node, inserted] = _trees.try_emplace(interval.chrom, IITree_t{});
   node->second.insert(I(interval.chrom_start), I(interval.chrom_end), std::move(interval));
   return std::make_pair(node, true);
 }
 
 template <typename K, typename I>
 std::pair<iterator_t<K, I>, bool> BED_tree<K, I>::insert(const K& chrom_name, value_type tree) {
-  return this->_trees.emplace(chrom_name, std::move(tree));
+  return _trees.emplace(chrom_name, std::move(tree));
 }
 
 template <typename K, typename I>
 std::pair<iterator_t<K, I>, bool> BED_tree<K, I>::insert(const K& chrom_name, I chrom_start,
                                                          I chrom_end) {
-  auto node = this->_trees.try_emplace(std::move(chrom_name), IITree_t{}).first;
+  auto node = _trees.try_emplace(std::move(chrom_name), IITree_t{}).first;
   node->second.insert(chrom_start, chrom_end, BED{chrom_name, bp_t(chrom_start), bp_t(chrom_end)});
   return std::make_pair(node, true);
 }
@@ -68,32 +68,31 @@ std::pair<iterator_t<K, I>, bool> BED_tree<K, I>::insert(const K& chrom_name, I 
 template <typename K, typename I>
 std::pair<iterator_t<K, I>, bool> BED_tree<K, I>::emplace(BED&& interval) {
 #if __GNUC__ > 7
-  [[maybe_unused]] auto [node, inserted] = this->_trees.try_emplace(interval.chrom, IITree_t{});
+  [[maybe_unused]] auto [node, inserted] = _trees.try_emplace(interval.chrom, IITree_t{});
   node->second.emplace(I(interval.chrom_start), I(interval.chrom_end), std::move(interval));
   return std::make_pair(node, true);
 #else
   // This inefficient, ugly piece of code is required to workaround a mysterious
   // -Wduplicated-branches warning that is raised on GCC 7.5
-  if (this->_trees.contains(interval.chrom)) {
-    this->_trees.at(interval.chrom)
-        .insert(I(interval.chrom_start), I(interval.chrom_end), interval);
-    return std::make_pair(this->_trees.find(interval.chrom), true);
+  if (_trees.contains(interval.chrom)) {
+    _trees.at(interval.chrom).insert(I(interval.chrom_start), I(interval.chrom_end), interval);
+    return std::make_pair(_trees.find(interval.chrom), true);
   }
-  this->_trees.emplace(interval.chrom, IITree_t{});
-  this->_trees.at(interval.chrom).insert(I(interval.chrom_start), I(interval.chrom_end), interval);
-  return std::make_pair(this->_trees.find(interval.chrom), true);
+  _trees.emplace(interval.chrom, IITree_t{});
+  _trees.at(interval.chrom).insert(I(interval.chrom_start), I(interval.chrom_end), interval);
+  return std::make_pair(_trees.find(interval.chrom), true);
 #endif
 }
 
 template <typename K, typename I>
 std::pair<iterator_t<K, I>, bool> BED_tree<K, I>::emplace(const K& chrom_name, value_type&& tree) {
-  return this->_trees.emplace(chrom_name, tree);
+  return _trees.emplace(chrom_name, tree);
 }
 
 template <typename K, typename I>
 void BED_tree<K, I>::insert(const absl::Span<const BED> intervals) {
   for (const auto& interval : intervals) {
-    [[maybe_unused]] auto [node, inserted] = this->_trees.try_emplace(interval.chrom, IITree_t{});
+    [[maybe_unused]] auto [node, inserted] = _trees.try_emplace(interval.chrom, IITree_t{});
     node->second.insert(I(interval.chrom_start), I(interval.chrom_end), interval);
   }
 }
@@ -101,44 +100,43 @@ void BED_tree<K, I>::insert(const absl::Span<const BED> intervals) {
 template <typename K, typename I>
 void BED_tree<K, I>::emplace(std::vector<BED>&& intervals) {
   for (auto&& interval : intervals) {
-    [[maybe_unused]] auto [node, inserted] = this->_trees.try_emplace(interval.chrom, IITree_t{});
+    [[maybe_unused]] auto [node, inserted] = _trees.try_emplace(interval.chrom, IITree_t{});
     node->second.emplace(I(interval.chrom_start), I(interval.chrom_end), std::move(interval));
   }
 }
 
 template <typename K, typename I>
 const typename BED_tree<K, I>::value_type& BED_tree<K, I>::at(const K& chrom) const {
-  return this->_trees.at(chrom);
+  return _trees.at(chrom);
 }
 
 template <typename K, typename I>
 void BED_tree<K, I>::index() {
   DISABLE_WARNING_PUSH
   DISABLE_WARNING_DUPLICATED_BRANCHES
-  std::for_each(this->_trees.begin(), this->_trees.end(),
-                [](auto& node) { node.second.make_BST(); });
+  std::for_each(_trees.begin(), _trees.end(), [](auto& node) { node.second.make_BST(); });
   DISABLE_WARNING_POP
 }
 
 template <typename K, typename I>
 void BED_tree<K, I>::index(const K& chrom_name) {
-  this->_trees.at(chrom_name).make_BST();
+  _trees.at(chrom_name).make_BST();
 }
 
 template <typename K, typename I>
 bool BED_tree<K, I>::contains(const K& chrom_name) const {
-  return this->_trees.contains(chrom_name);
+  return _trees.contains(chrom_name);
 }
 
 template <typename K, typename I>
 bool BED_tree<K, I>::contains_overlap(const BED& interval) const {
-  return this->contains_overlap(interval.chrom, I(interval.chrom_start), I(interval.chrom_end));
+  return contains_overlap(interval.chrom, I(interval.chrom_start), I(interval.chrom_end));
 }
 
 template <typename K, typename I>
 bool BED_tree<K, I>::contains_overlap(const K& chrom_name, u64 chrom_start, u64 chrom_end) const {
-  auto it = this->_trees.find(chrom_name);
-  if (it == this->_trees.end()) {
+  auto it = _trees.find(chrom_name);
+  if (it == _trees.end()) {
     return false;
   }
   assert(it->second.is_BST());
@@ -148,13 +146,13 @@ bool BED_tree<K, I>::contains_overlap(const K& chrom_name, u64 chrom_start, u64 
 
 template <typename K, typename I>
 usize BED_tree<K, I>::count_overlaps(const BED& interval) const {
-  return this->count_overlaps(interval.chrom, I(interval.chrom_start), I(interval.chrom_end));
+  return count_overlaps(interval.chrom, I(interval.chrom_start), I(interval.chrom_end));
 }
 
 template <typename K, typename I>
 usize BED_tree<K, I>::count_overlaps(const K& chrom_name, u64 chrom_start, u64 chrom_end) const {
-  auto it = this->_trees.find(chrom_name);
-  if (it == this->_trees.end()) {
+  auto it = _trees.find(chrom_name);
+  if (it == _trees.end()) {
     return 0UL;
   }
   assert(it->second.is_BST());
@@ -165,8 +163,8 @@ usize BED_tree<K, I>::count_overlaps(const K& chrom_name, u64 chrom_start, u64 c
 template <typename K, typename I>
 absl::Span<const BED> BED_tree<K, I>::find_overlaps(const K& chrom_name, u64 chrom_start,
                                                     u64 chrom_end) const {
-  auto it = this->_trees.find(chrom_name);
-  if (it == this->_trees.end()) {
+  auto it = _trees.find(chrom_name);
+  if (it == _trees.end()) {
     return absl::Span<const BED>{};
   }
   assert(it->second.is_BST());
@@ -180,17 +178,17 @@ absl::Span<const BED> BED_tree<K, I>::find_overlaps(const K& chrom_name, u64 chr
 
 template <typename K, typename I>
 absl::Span<const BED> BED_tree<K, I>::find_overlaps(const BED& interval) const {
-  return this->find_overlaps(interval.chrom, interval.chrom_start, interval.chrom_end);
+  return find_overlaps(interval.chrom, interval.chrom_start, interval.chrom_end);
 }
 
 template <typename K, typename I>
 bool BED_tree<K, I>::empty() const {
-  return this->_trees.empty();
+  return _trees.empty();
 }
 
 template <typename K, typename I>
 usize BED_tree<K, I>::size() const {
-  return std::accumulate(this->_trees.begin(), this->_trees.end(), usize(0),
+  return std::accumulate(_trees.begin(), _trees.end(), usize(0),
                          [](const auto accumulator, const auto& node) {
                            const auto& tree = node.second;
                            return accumulator + tree.size();
@@ -199,47 +197,47 @@ usize BED_tree<K, I>::size() const {
 
 template <typename K, typename I>
 usize BED_tree<K, I>::size(const K& chrom_name) const {
-  return this->at(chrom_name).size();
+  return at(chrom_name).size();
 }
 
 template <typename K, typename I>
 void BED_tree<K, I>::clear() {
-  this->_trees.clear();
+  _trees.clear();
 }
 
 template <typename K, typename I>
 void BED_tree<K, I>::clear(const K& chrom_name) {
-  this->_trees.at(chrom_name).clear();
+  _trees.at(chrom_name).clear();
 }
 
 template <typename K, typename I>
 typename BED_tree<K, I>::iterator BED_tree<K, I>::begin() {
-  return this->_trees.begin();
+  return _trees.begin();
 }
 
 template <typename K, typename I>
 typename BED_tree<K, I>::iterator BED_tree<K, I>::end() {
-  return this->_trees.end();
+  return _trees.end();
 }
 
 template <typename K, typename I>
 typename BED_tree<K, I>::const_iterator BED_tree<K, I>::begin() const {
-  return this->_trees.begin();
+  return _trees.begin();
 }
 
 template <typename K, typename I>
 typename BED_tree<K, I>::const_iterator BED_tree<K, I>::end() const {
-  return this->_trees.end();
+  return _trees.end();
 }
 
 template <typename K, typename I>
 typename BED_tree<K, I>::const_iterator BED_tree<K, I>::cbegin() const {
-  return this->_trees.cbegin();
+  return _trees.cbegin();
 }
 
 template <typename K, typename I>
 typename BED_tree<K, I>::const_iterator BED_tree<K, I>::cend() const {
-  return this->_trees.cend();
+  return _trees.cend();
 }
 }  // namespace modle::bed
 
@@ -264,9 +262,9 @@ constexpr auto fmt::formatter<modle::bed::BED>::parse(format_parse_context& ctx)
   const auto fmt_string =
       std::string_view{&(*ctx.begin()), static_cast<modle::usize>(ctx.end() - ctx.begin())};
   if (it != end) {
-    for (const auto& [k, v] : this->presentation_mappings) {
+    for (const auto& [k, v] : presentation_mappings) {
       if (const auto pos = fmt_string.find(k); pos != std::string_view::npos) {
-        this->presentation = v;
+        presentation = v;
         it += k.size();
         break;
       }
@@ -287,7 +285,7 @@ template <typename FormatContext>
 auto fmt::formatter<modle::bed::BED>::format(const modle::bed::BED& b, FormatContext& ctx) const
     -> decltype(ctx.out()) {
   assert(!b.chrom.empty());
-  const auto n = std::min(b.num_fields(), static_cast<modle::usize>(this->presentation));
+  const auto n = std::min(b.num_fields(), static_cast<modle::usize>(presentation));
   auto it = ctx.out();
   if (n == 3U) {
     it = fmt::format_to(it, "{}\t{}\t{}", b.chrom, b.chrom_start, b.chrom_end);

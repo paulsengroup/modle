@@ -32,9 +32,9 @@ struct Record {
   explicit Record(std::string_view buff) {
     const std::vector<std::string_view> toks = absl::StrSplit(buff, absl::ByAnyChar("\t "));
     REQUIRE(toks.size() == 3UL);
-    utils::parse_numeric_or_throw(toks[1], this->start);
-    utils::parse_numeric_or_throw(toks[2], this->end);
-    this->data = toks[0];
+    utils::parse_numeric_or_throw(toks[1], start);
+    utils::parse_numeric_or_throw(toks[2], end);
+    data = toks[0];
   }
 };
 

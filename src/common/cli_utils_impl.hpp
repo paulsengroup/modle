@@ -144,40 +144,40 @@ CliEnumMappings<EnumT, StringT>::CliEnumMappings(const std::initializer_list<Str
 
 template <class EnumT, class StringT>
 auto CliEnumMappings<EnumT, StringT>::begin() const -> const_iterator {
-  return this->_mappings.begin();
+  return _mappings.begin();
 }
 
 template <class EnumT, class StringT>
 auto CliEnumMappings<EnumT, StringT>::end() const -> const_iterator {
-  return this->_mappings.end();
+  return _mappings.end();
 }
 
 template <class EnumT, class StringT>
 auto CliEnumMappings<EnumT, StringT>::cbegin() const -> const_iterator {
-  return this->begin();
+  return begin();
 }
 
 template <class EnumT, class StringT>
 auto CliEnumMappings<EnumT, StringT>::cend() const -> const_iterator {
-  return this->end();
+  return end();
 }
 
 template <class EnumT, class StringT>
 auto CliEnumMappings<EnumT, StringT>::find(const EnumT key) const -> const_iterator {
-  return std::find_if(this->_mappings.begin(), this->_mappings.end(),
+  return std::find_if(_mappings.begin(), _mappings.end(),
                       [&](const auto &v) { return v.second == key; });
 }
 
 template <class EnumT, class StringT>
 auto CliEnumMappings<EnumT, StringT>::find(const StringT &key) const -> const_iterator {
-  return std::find_if(this->_mappings.begin(), this->_mappings.end(),
+  return std::find_if(_mappings.begin(), _mappings.end(),
                       [&](const auto &v) { return v.first == key; });
 }
 
 template <class EnumT, class StringT>
 const StringT &CliEnumMappings<EnumT, StringT>::at(const EnumT key) const {
-  auto match = this->find(key);
-  if (match == this->_mappings.end()) {
+  auto match = find(key);
+  if (match == _mappings.end()) {
     throw std::out_of_range(fmt::format("invalid key {}", int(key)));
   }
   return match->first;
@@ -185,8 +185,8 @@ const StringT &CliEnumMappings<EnumT, StringT>::at(const EnumT key) const {
 
 template <class EnumT, class StringT>
 EnumT CliEnumMappings<EnumT, StringT>::at(const StringT &key) const {
-  auto match = this->find(key);
-  if (match == this->_mappings.end()) {
+  auto match = find(key);
+  if (match == _mappings.end()) {
     throw std::out_of_range(fmt::format("invalid key {}", key));
   }
   return match->second;

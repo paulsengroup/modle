@@ -45,7 +45,7 @@ class Direction {
       case 0:
         [[fallthrough]];
       case 3:
-        return Direction{this->_direction};
+        return Direction{_direction};
       case 1:
         return Direction{2};
       case 2:

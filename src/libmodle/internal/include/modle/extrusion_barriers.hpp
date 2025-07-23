@@ -46,16 +46,16 @@ class ExtrusionBarriers {
   explicit ExtrusionBarriers(usize size);
   template <class BarrierIt, class StateIt>
   ExtrusionBarriers(BarrierIt first_barrier, BarrierIt last_barrier, StateIt first_state,
-                    bool sort = true);
+                    bool sort_barriers = true);
   template <class BarrierIt>
   ExtrusionBarriers(BarrierIt first_barrier, BarrierIt last_barrier, State state = State::INACTIVE,
-                    bool sort = true);
+                    bool sort_barriers = true);
   ExtrusionBarriers(std::initializer_list<bp_t> pos,
                     std::initializer_list<dna::Direction> direction,
                     std::initializer_list<TP> stp_active, std::initializer_list<TP> stp_inactive,
-                    std::initializer_list<State> state, bool sort = true);
+                    std::initializer_list<State> state, bool sort_barriers = true);
   ExtrusionBarriers(std::initializer_list<ExtrusionBarrier> barriers,
-                    std::initializer_list<State> states, bool sort = true);
+                    std::initializer_list<State> states, bool sort_barriers = true);
 
   void set(usize i, bp_t pos, dna::Direction direction, TP stp_active, TP stp_inactive,
            State state = State::INACTIVE) noexcept;

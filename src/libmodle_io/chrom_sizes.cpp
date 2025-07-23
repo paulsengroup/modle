@@ -30,7 +30,7 @@ std::vector<bed::BED> Parser::parse_all(char sep) {
   phmap::flat_hash_set<std::string> chrom_names{};
   std::vector<bed::BED> chrom_sizes;
 
-  for (usize i = 1UL, id = 0; this->_reader.getline(buff); ++i) {
+  for (usize i = 1UL, id = 0; _reader.getline(buff); ++i) {
     buff = absl::StripTrailingAsciiWhitespace(buff);
     if (buff.empty()) {
       continue;
@@ -63,7 +63,7 @@ std::vector<bed::BED> Parser::parse_all(char sep) {
       throw std::runtime_error(
           fmt::format("encountered a malformed record at line {} of file {}: {}.\n "
                       "Line that triggered the error:\n\"{}\"",
-                      i, this->_reader.path(), e.what(), buff.data()));
+                      i, _reader.path(), e.what(), buff.data()));
     }
   }
   return chrom_sizes;

@@ -93,31 +93,31 @@ struct CorrelationBuffer {
     const auto is_spearman = absl::EndsWith(method, "spearman");
 
     if (is_pearson && is_weighted) {
-      const auto res = Pearson<>{}(this->v1, this->v2, this->weights);
-      CHECK_THAT(res.pcc, Catch::Matchers::WithinRel(this->pccw, tolerance));
+      const auto res = Pearson<>{}(v1, v2, weights);
+      CHECK_THAT(res.pcc, Catch::Matchers::WithinRel(pccw, tolerance));
       CHECK(std::isnan(res.pvalue));
       return;
     }
 
     if (is_spearman && is_weighted) {
-      const auto res = Spearman<>{}(this->v1, this->v2, this->weights);
-      CHECK_THAT(res.rho, Catch::Matchers::WithinRel(this->rhow, tolerance));
+      const auto res = Spearman<>{}(v1, v2, weights);
+      CHECK_THAT(res.rho, Catch::Matchers::WithinRel(rhow, tolerance));
       CHECK(std::isnan(res.pvalue));
       return;
     }
 
     if (is_pearson) {
-      const auto res = Pearson<>{}(this->v1, this->v2);
-      CHECK_THAT(res.pcc, Catch::Matchers::WithinRel(this->pcc, tolerance));
-      CHECK_THAT(res.pvalue, Catch::Matchers::WithinRel(this->pcc_pval, tolerance));
+      const auto res = Pearson<>{}(v1, v2);
+      CHECK_THAT(res.pcc, Catch::Matchers::WithinRel(pcc, tolerance));
+      CHECK_THAT(res.pvalue, Catch::Matchers::WithinRel(pcc_pval, tolerance));
       return;
     }
 
     assert(is_spearman);
 
-    const auto res = Spearman<>{}(this->v1, this->v2);
-    CHECK_THAT(res.rho, Catch::Matchers::WithinRel(this->rho, tolerance));
-    CHECK_THAT(res.pvalue, Catch::Matchers::WithinRel(this->rho_pval, tolerance));
+    const auto res = Spearman<>{}(v1, v2);
+    CHECK_THAT(res.rho, Catch::Matchers::WithinRel(rho, tolerance));
+    CHECK_THAT(res.pvalue, Catch::Matchers::WithinRel(rho_pval, tolerance));
   }
 };
 

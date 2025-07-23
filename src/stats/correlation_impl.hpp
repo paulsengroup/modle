@@ -120,12 +120,11 @@ FP Spearman<FP>::compute_rho(It1 first1, It1 last1, It2 first2) {
     return FP(1);
   }
 
-  this->_rank_buff1.resize(size);
-  this->_rank_buff2.resize(size);
-  internal::compute_element_ranks(first1, last1, this->_rank_buff1, this->_idx_buff);
-  internal::compute_element_ranks(first2, last2, this->_rank_buff2, this->_idx_buff);
-  return Pearson<FP>::compute_pcc(this->_rank_buff1.begin(), this->_rank_buff1.end(),
-                                  this->_rank_buff2.begin());
+  _rank_buff1.resize(size);
+  _rank_buff2.resize(size);
+  internal::compute_element_ranks(first1, last1, _rank_buff1, _idx_buff);
+  internal::compute_element_ranks(first2, last2, _rank_buff2, _idx_buff);
+  return Pearson<FP>::compute_pcc(_rank_buff1.begin(), _rank_buff1.end(), _rank_buff2.begin());
 }
 
 template <class FP>
@@ -140,14 +139,12 @@ FP Spearman<FP>::compute_weighted_rho(It1 first1, It1 last1, It2 first2, It3 wei
     return FP(1);
   }
 
-  this->_rank_buff1.resize(size);
-  this->_rank_buff2.resize(size);
-  internal::compute_weighted_element_ranks(first1, last1, weight_first, this->_rank_buff1,
-                                           this->_idx_buff);
-  internal::compute_weighted_element_ranks(first2, last2, weight_first, this->_rank_buff2,
-                                           this->_idx_buff);
-  return Pearson<FP>::compute_weighted_pcc(this->_rank_buff1.begin(), this->_rank_buff1.end(),
-                                           this->_rank_buff2.begin(), weight_first);
+  _rank_buff1.resize(size);
+  _rank_buff2.resize(size);
+  internal::compute_weighted_element_ranks(first1, last1, weight_first, _rank_buff1, _idx_buff);
+  internal::compute_weighted_element_ranks(first2, last2, weight_first, _rank_buff2, _idx_buff);
+  return Pearson<FP>::compute_weighted_pcc(_rank_buff1.begin(), _rank_buff1.end(),
+                                           _rank_buff2.begin(), weight_first);
 }
 
 template <class FP>
@@ -172,10 +169,10 @@ typename Spearman<FP>::Result Spearman<FP>::operator()(It1 first1, It1 last1, It
   Result result;
   using weight_t = std::decay_t<decltype(*weight_first)>;
   if constexpr (std::is_same_v<utils::RepeatIterator<weight_t>, It3>) {
-    result.rho = this->compute_rho(first1, last1, first2);
+    result.rho = compute_rho(first1, last1, first2);
     result.pvalue = Spearman<FP>::compute_significance(result.rho, std::distance(first1, last1));
   } else {
-    result.rho = this->compute_weighted_rho(first1, last1, first2, weight_first);
+    result.rho = compute_weighted_rho(first1, last1, first2, weight_first);
     result.pvalue = std::numeric_limits<FP>::quiet_NaN();
   }
   return result;

@@ -58,7 +58,7 @@ RepeatIterator<T>::RepeatIterator(T value) : _value(std::move(value)) {}
 
 template <class T>
 constexpr const T &RepeatIterator<T>::operator*() const {
-  return this->_value;
+  return _value;
 }
 
 template <class T>
@@ -168,7 +168,7 @@ LockRangeExclusive<MutexT>::LockRangeExclusive(const absl::Span<MutexT> mutexes)
     }
     throw;
   }
-  this->_mutexes = mutexes;
+  _mutexes = mutexes;
 }
 
 template <class MutexT>
@@ -177,7 +177,7 @@ LockRangeExclusive<MutexT>::LockRangeExclusive(std::vector<MutexT> &mutexes)
 
 template <class MutexT>
 LockRangeExclusive<MutexT>::~LockRangeExclusive() noexcept {
-  std::for_each(this->_mutexes.begin(), this->_mutexes.end(), [](auto &m) { m.unlock(); });
+  std::for_each(_mutexes.begin(), _mutexes.end(), [](auto &m) { m.unlock(); });
 }
 
 template <class MutexT>
@@ -193,7 +193,7 @@ LockRangeShared<MutexT>::LockRangeShared(const absl::Span<MutexT> mutexes) {
     }
     throw;
   }
-  this->_mutexes = mutexes;
+  _mutexes = mutexes;
 }
 
 template <class MutexT>
@@ -202,7 +202,7 @@ LockRangeShared<MutexT>::LockRangeShared(std::vector<MutexT> &mutexes)
 
 template <class MutexT>
 LockRangeShared<MutexT>::~LockRangeShared() noexcept {
-  std::for_each(this->_mutexes.begin(), this->_mutexes.end(), [](auto &m) { m.unlock_shared(); });
+  std::for_each(_mutexes.begin(), _mutexes.end(), [](auto &m) { m.unlock_shared(); });
 }
 
 constexpr std::string_view strip_quote_pairs(std::string_view s) noexcept {

@@ -30,18 +30,18 @@ ContactMatrixDense<N>::ContactMatrixDense(const ContactMatrixDense<N> &other)
     : _nrows(other.nrows()),
       _ncols(other.ncols()),
       _contacts(other._contacts),
-      _mtxes(compute_number_of_mutexes(this->nrows(), this->ncols())),
+      _mtxes(compute_number_of_mutexes(nrows(), ncols())),
       _tot_contacts(other._tot_contacts.load()),
       _nnz(other._nnz.load()),
       _global_stats_outdated(other._global_stats_outdated.load()),
       _updates_missed(other._updates_missed.load()) {}
 
 template <class N>
-ContactMatrixDense<N>::ContactMatrixDense(const usize nrows, const usize ncols)
-    : _nrows(std::min(nrows, ncols)),
-      _ncols(ncols),
+ContactMatrixDense<N>::ContactMatrixDense(const usize nrows_, const usize ncols_)
+    : _nrows(std::min(nrows_, ncols_)),
+      _ncols(ncols_),
       _contacts(_nrows * _ncols + 1, N(0)),
-      _mtxes(compute_number_of_mutexes(this->nrows(), this->ncols())) {}
+      _mtxes(compute_number_of_mutexes(nrows(), ncols())) {}
 
 template <class N>
 ContactMatrixDense<N>::ContactMatrixDense(const bp_t length, const bp_t diagonal_width,
@@ -50,19 +50,19 @@ ContactMatrixDense<N>::ContactMatrixDense(const bp_t length, const bp_t diagonal
                          (length + bin_size - 1) / bin_size) {}
 
 template <class N>
-ContactMatrixDense<N>::ContactMatrixDense(const absl::Span<const N> contacts, const usize nrows,
-                                          const usize ncols, const usize tot_contacts,
+ContactMatrixDense<N>::ContactMatrixDense(const absl::Span<const N> contacts, const usize nrows_,
+                                          const usize ncols_, const usize tot_contacts,
                                           const usize updates_missed)
-    : _nrows(nrows),
-      _ncols(ncols),
+    : _nrows(nrows_),
+      _ncols(ncols_),
       _contacts(contacts.begin(), contacts.end()),
-      _mtxes(compute_number_of_mutexes(this->nrows(), this->ncols())),
+      _mtxes(compute_number_of_mutexes(nrows(), ncols())),
       _tot_contacts(static_cast<i64>(tot_contacts)),
       _global_stats_outdated(true),
       _updates_missed(updates_missed) {
   assert(_contacts.size() == _nrows * _ncols + 1);
   if (tot_contacts == 0) {
-    this->unsafe_update_global_stats();
+    unsafe_update_global_stats();
   }
 }
 
@@ -93,55 +93,54 @@ ContactMatrixDense<N> &ContactMatrixDense<N>::operator=(const ContactMatrixDense
 template <class N>
 std::unique_lock<typename ContactMatrixDense<N>::mutex_t> ContactMatrixDense<N>::lock_pixel(
     usize row, usize col) const {
-  return std::unique_lock<ContactMatrixDense<N>::mutex_t>(
-      this->_mtxes[this->get_pixel_mutex_idx(row, col)]);
+  return std::unique_lock<ContactMatrixDense<N>::mutex_t>(_mtxes[get_pixel_mutex_idx(row, col)]);
 }
 
 template <class N>
 
 utils::LockRangeExclusive<typename ContactMatrixDense<N>::mutex_t> ContactMatrixDense<N>::lock()
     const {
-  return utils::LockRangeExclusive<mutex_t>(this->_mtxes);
+  return utils::LockRangeExclusive<mutex_t>(_mtxes);
 }
 
 template <class N>
 constexpr usize ContactMatrixDense<N>::ncols() const {
-  return this->_ncols;
+  return _ncols;
 }
 
 template <class N>
 constexpr usize ContactMatrixDense<N>::nrows() const {
-  return this->_nrows;
+  return _nrows;
 }
 
 template <class N>
 constexpr usize ContactMatrixDense<N>::npixels() const {
-  return this->_nrows * this->_ncols;
+  return _nrows * _ncols;
 }
 
 template <class N>
 constexpr usize ContactMatrixDense<N>::get_n_of_missed_updates() const noexcept {
-  return this->_updates_missed.load();
+  return _updates_missed.load();
 }
 
 template <class N>
 constexpr usize ContactMatrixDense<N>::get_matrix_size_in_bytes() const {
-  return ((this->npixels() + 1) * sizeof(N)) + (this->_mtxes.size() * sizeof(mutex_t));
+  return ((npixels() + 1) * sizeof(N)) + (_mtxes.size() * sizeof(mutex_t));
 }
 
 template <class N>
 void ContactMatrixDense<N>::clear_missed_updates_counter() {
-  this->_updates_missed = 0;
+  _updates_missed = 0;
 }
 
 template <class N>
 absl::Span<const N> ContactMatrixDense<N>::get_raw_count_vector() const {
-  return absl::MakeConstSpan(this->_contacts);
+  return absl::MakeConstSpan(_contacts);
 }
 
 template <class N>
 absl::Span<N> ContactMatrixDense<N>::get_raw_count_vector() {
-  return absl::MakeSpan(this->_contacts);
+  return absl::MakeSpan(_contacts);
 }
 
 template <class N>
@@ -173,10 +172,10 @@ constexpr usize ContactMatrixDense<N>::compute_number_of_mutexes(const usize row
 
 template <class N>
 usize ContactMatrixDense<N>::get_pixel_mutex_idx(const usize row, const usize col) const noexcept {
-  assert(!this->_mtxes.empty());
-  assert(this->_mtxes.size() % 2 == 0);
-  // equivalent to hash_coordinates(row, col) % this->_mtxes.size() when _mtxes.size() % 2 == 0
-  return (hash_coordinates(row, col) & (this->_mtxes.size() - 1));
+  assert(!_mtxes.empty());
+  assert(_mtxes.size() % 2 == 0);
+  // equivalent to hash_coordinates(row, col) % _mtxes.size() when _mtxes.size() % 2 == 0
+  return (hash_coordinates(row, col) & (_mtxes.size() - 1));
 }
 
 }  // namespace modle

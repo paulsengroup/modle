@@ -132,86 +132,86 @@ static void try_init_archive_entry(ArchiveEntryPtr& entry) {
 
 Reader::Reader(const std::filesystem::path& path, usize buff_capacity) {
   assert(buff_capacity != 0);
-  this->_buff.reserve(buff_capacity);
-  this->open(path);
+  _buff.reserve(buff_capacity);
+  open(path);
 }
 
 void Reader::open(const std::filesystem::path& path) {
-  if (this->is_open()) {
-    this->close();
+  if (is_open()) {
+    close();
   }
 
   if (path.empty()) {
     throw std::runtime_error("path is empty");
   }
-  this->_path = path;
+  _path = path;
 
-  try_init_read_archive(this->_arc);
-  try_init_archive_entry(this->_arc_entry);
+  try_init_read_archive(_arc);
+  try_init_archive_entry(_arc_entry);
 
-  handle_errors(this->_arc.get(), archive_read_support_filter_all(this->_arc.get()));
-  handle_errors(this->_arc.get(), archive_read_support_format_empty(this->_arc.get()));
-  handle_errors(this->_arc.get(), archive_read_support_format_raw(this->_arc.get()));
-  handle_errors(this->_arc.get(), archive_read_open_filename(this->_arc.get(), this->_path.c_str(),
-                                                             this->_buff.capacity()));
+  handle_errors(_arc.get(), archive_read_support_filter_all(_arc.get()));
+  handle_errors(_arc.get(), archive_read_support_format_empty(_arc.get()));
+  handle_errors(_arc.get(), archive_read_support_format_raw(_arc.get()));
+  handle_errors(_arc.get(),
+                archive_read_open_filename(_arc.get(), _path.c_str(), _buff.capacity()));
 
-  const auto ec = archive_read_next_header2(this->_arc.get(), this->_arc_entry.get());
-  this->_eof = ec == ARCHIVE_EOF;
+  const auto ec = archive_read_next_header2(_arc.get(), _arc_entry.get());
+  _eof = ec == ARCHIVE_EOF;
 
-  this->_idx = 0;
-  if (this->_eof) {
+  _idx = 0;
+  if (_eof) {
     return;
   }
 
   if (ec < 0) {
-    handle_errors(this->_arc.get(), ec);
+    handle_errors(_arc.get(), ec);
   }
 }
 
-Reader::operator bool() const { return this->is_open() && !this->eof(); }
+Reader::operator bool() const { return is_open() && !eof(); }
 
-bool Reader::operator!() const { return !this->operator bool(); }
+bool Reader::operator!() const { return !operator bool(); }
 
 bool Reader::eof() const noexcept {
-  assert(this->is_open());
-  return this->_eof;
+  assert(is_open());
+  return _eof;
 }
 
-bool Reader::is_open() const noexcept { return !!this->_arc; }
+bool Reader::is_open() const noexcept { return !!_arc; }
 
 void Reader::close() {
-  if (this->is_open()) {
-    this->_path.clear();
-    this->_arc.reset();
-    this->_arc_entry.reset();
-    this->_buff.clear();
-    this->_idx = 0;
-    this->_eof = false;
+  if (is_open()) {
+    _path.clear();
+    _arc.reset();
+    _arc_entry.reset();
+    _buff.clear();
+    _idx = 0;
+    _eof = false;
   }
 }
 
 void Reader::reset() {
-  const auto path = this->_path;
-  this->close();
-  this->_buff.clear();
-  this->_tok_tmp_buff.clear();
-  this->open(path);
+  const auto path = _path;
+  close();
+  _buff.clear();
+  _tok_tmp_buff.clear();
+  open(path);
 }
 
-const std::filesystem::path& Reader::path() const noexcept { return this->_path; }
-std::string Reader::path_string() const noexcept { return this->_path.string(); }
-const char* Reader::path_c_str() const noexcept { return this->_path.c_str(); }
+const std::filesystem::path& Reader::path() const noexcept { return _path; }
+std::string Reader::path_string() const noexcept { return _path.string(); }
+const char* Reader::path_c_str() const noexcept { return _path.c_str(); }
 
 bool Reader::getline(std::string& buff, char sep) {
-  assert(this->is_open());
+  assert(is_open());
   buff.clear();
-  if (this->eof()) {
+  if (eof()) {
     return false;
   }
 
-  while (!this->read_next_token(buff, sep)) {
-    if (!this->read_next_chunk()) {
-      assert(this->eof());
+  while (!read_next_token(buff, sep)) {
+    if (!read_next_chunk()) {
+      assert(eof());
       return !buff.empty();
     }
   }
@@ -219,114 +219,112 @@ bool Reader::getline(std::string& buff, char sep) {
 }
 
 std::string_view Reader::getline(char sep) {
-  assert(this->is_open());
-  if (this->eof()) {
+  assert(is_open());
+  if (eof()) {
     return {};
   }
 
-  this->_tok_tmp_buff.clear();
+  _tok_tmp_buff.clear();
   while (true) {
-    if (const auto tok = this->read_next_token(sep); !tok.empty()) {
+    if (const auto tok = read_next_token(sep); !tok.empty()) {
       return tok;
     }
-    if (!this->read_next_chunk()) {
-      assert(this->eof());
+    if (!read_next_chunk()) {
+      assert(eof());
       return {};
     }
   }
 }
 
 bool Reader::readall(std::string& buff, char sep) {
-  assert(this->is_open());
+  assert(is_open());
   buff.clear();
-  if (this->eof()) {
+  if (eof()) {
     return false;
   }
 
-  while (!this->eof()) {
-    std::ignore = this->getline(sep);
-    buff.append(this->_buff.begin(), this->_buff.end());
-    this->_idx = 0;
-    this->_buff.clear();
+  while (!eof()) {
+    std::ignore = getline(sep);
+    buff.append(_buff.begin(), _buff.end());
+    _idx = 0;
+    _buff.clear();
   }
   return true;
 }
 
 std::string Reader::readall(char sep) {
   std::string buff;
-  this->readall(buff, sep);
+  readall(buff, sep);
   return buff;
 }
 
 bool Reader::read_next_chunk() {
-  assert(!this->eof());
-  assert(this->is_open());
-  this->_buff.resize(this->_buff.capacity());
-  const auto bytes_read =
-      archive_read_data(this->_arc.get(), this->_buff.data(), this->_buff.capacity());
+  assert(!eof());
+  assert(is_open());
+  _buff.resize(_buff.capacity());
+  const auto bytes_read = archive_read_data(_arc.get(), _buff.data(), _buff.capacity());
   if (bytes_read < 0) {
-    handle_errors(this->_arc.get(), bytes_read);
+    handle_errors(_arc.get(), bytes_read);
   } else if (bytes_read == 0) {
-    this->_eof = true;
-    this->_buff.clear();
-    this->_tok_tmp_buff.clear();
+    _eof = true;
+    _buff.clear();
+    _tok_tmp_buff.clear();
     return false;
   }
-  this->_buff.resize(static_cast<usize>(bytes_read));
-  this->_idx = 0;
+  _buff.resize(static_cast<usize>(bytes_read));
+  _idx = 0;
   return true;
 }
 
 bool Reader::read_next_token(std::string& buff, char sep) {
-  assert(!this->eof());
-  assert(this->is_open());
-  assert(this->_idx <= this->_buff.size());
-  if (this->_idx == this->_buff.size()) {
+  assert(!eof());
+  assert(is_open());
+  assert(_idx <= _buff.size());
+  if (_idx == _buff.size()) {
     return false;
   }
 
-  const auto pos = this->_buff.find(sep, this->_idx);
-  const auto i = static_cast<i64>(this->_idx);
+  const auto pos = _buff.find(sep, _idx);
+  const auto i = static_cast<i64>(_idx);
   if (pos == std::string::npos) {
-    buff.append(this->_buff.begin() + i, this->_buff.end());
+    buff.append(_buff.begin() + i, _buff.end());
     return false;
   }
 
-  assert(pos >= this->_idx);
-  buff.append(this->_buff.begin() + i, this->_buff.begin() + static_cast<i64>(pos));
-  this->_idx = pos + 1;
+  assert(pos >= _idx);
+  buff.append(_buff.begin() + i, _buff.begin() + static_cast<i64>(pos));
+  _idx = pos + 1;
   return true;
 }
 
 std::string_view Reader::read_next_token(char sep) {
-  assert(!this->eof());
-  assert(this->is_open());
-  assert(this->_idx <= this->_buff.size());
-  if (this->_idx == this->_buff.size()) {
+  assert(!eof());
+  assert(is_open());
+  assert(_idx <= _buff.size());
+  if (_idx == _buff.size()) {
     return {};
   }
 
-  const auto pos = this->_buff.find(sep, this->_idx);
-  const auto i = static_cast<i64>(this->_idx);
+  const auto pos = _buff.find(sep, _idx);
+  const auto i = static_cast<i64>(_idx);
   if (pos == std::string::npos) {
-    this->_tok_tmp_buff.append(this->_buff.begin() + i, this->_buff.end());
+    _tok_tmp_buff.append(_buff.begin() + i, _buff.end());
     return {};
   }
 
-  assert(pos >= this->_idx);
-  this->_idx = pos + 1;
-  if (this->_tok_tmp_buff.empty()) {
-    return std::string_view{this->_buff.data() + static_cast<usize>(i),
-                            pos - static_cast<usize>(i)};
+  assert(pos >= _idx);
+  _idx = pos + 1;
+  if (_tok_tmp_buff.empty()) {
+    return std::string_view{_buff.data() + static_cast<usize>(i), pos - static_cast<usize>(i)};
   }
 
-  this->_tok_tmp_buff.append(this->_buff.begin() + i, this->_buff.begin() + static_cast<i64>(pos));
-  return std::string_view{this->_tok_tmp_buff};
+  _tok_tmp_buff.append(_buff.begin() + i, _buff.begin() + static_cast<i64>(pos));
+  return std::string_view{_tok_tmp_buff};
 }
 
 Writer::Writer(const std::filesystem::path& path, Compression compression)
     : _compression(compression) {
-  this->open(path);
+  open(path);
 }
 
 static void setup_compression(archive* arc, Writer::Compression compression) {
@@ -378,47 +376,46 @@ void Writer::open(const std::filesystem::path& path) {
     if (path.empty()) {
       throw std::runtime_error("path is empty!");
     }
-    if (!this->is_open()) {
-      this->close();
+    if (!is_open()) {
+      close();
     }
 
-    try_init_write_archive(this->_arc);
-    try_init_archive_entry(this->_arc_entry);
+    try_init_write_archive(_arc);
+    try_init_archive_entry(_arc_entry);
 
-    const auto compression =
-        this->_compression == AUTO ? infer_compression_from_ext(path) : this->_compression;
-    setup_compression(this->_arc.get(), compression);
+    const auto compression = _compression == AUTO ? infer_compression_from_ext(path) : _compression;
+    setup_compression(_arc.get(), compression);
 
-    this->_path = path;
-    auto ec = archive_write_open_filename(this->_arc.get(), _path.c_str());
-    handle_errors(this->_arc.get(), ec);
+    _path = path;
+    auto ec = archive_write_open_filename(_arc.get(), _path.c_str());
+    handle_errors(_arc.get(), ec);
 
-    archive_entry_set_pathname(this->_arc_entry.get(), "x");  // placeholder
-    archive_entry_set_filetype(this->_arc_entry.get(), AE_IFREG);
+    archive_entry_set_pathname(_arc_entry.get(), "x");  // placeholder
+    archive_entry_set_filetype(_arc_entry.get(), AE_IFREG);
 
-    ec = archive_write_header(this->_arc.get(), this->_arc_entry.get());
-    handle_errors(this->_arc.get(), ec);
+    ec = archive_write_header(_arc.get(), _arc_entry.get());
+    handle_errors(_arc.get(), ec);
 
   } catch (const std::exception& e) {
     throw std::runtime_error(fmt::format("failed to open \"{}\" for writing: {}", path, e.what()));
   }
 }
 
-bool Writer::is_open() const noexcept { return !!this->_arc && !!this->_arc_entry; }
+bool Writer::is_open() const noexcept { return !!_arc && !!_arc_entry; }
 
 void Writer::close() {
-  this->_path.clear();
-  this->_arc.reset();
-  this->_arc_entry.reset();
+  _path.clear();
+  _arc.reset();
+  _arc_entry.reset();
 }
 
-Writer::operator bool() const { return this->is_open(); }
+Writer::operator bool() const { return is_open(); }
 
-bool Writer::operator!() const { return !this->operator bool(); }
+bool Writer::operator!() const { return !operator bool(); }
 
-const std::filesystem::path& Writer::path() const noexcept { return this->_path; }
-std::string Writer::path_string() const noexcept { return this->_path.string(); }
-const char* Writer::path_c_str() const noexcept { return this->_path.c_str(); }
+const std::filesystem::path& Writer::path() const noexcept { return _path; }
+std::string Writer::path_string() const noexcept { return _path.string(); }
+const char* Writer::path_c_str() const noexcept { return _path.c_str(); }
 
 Writer::Compression Writer::infer_compression_from_ext(const std::filesystem::path& p) {
   // clang-format off
@@ -451,9 +448,9 @@ void Writer::write(std::string_view buff) {
   }
 
   try {
-    assert(this->is_open());
-    const auto ec = archive_write_data(this->_arc.get(), buff.data(), buff.size());
-    handle_errors(this->_arc.get(), ec);
+    assert(is_open());
+    const auto ec = archive_write_data(_arc.get(), buff.data(), buff.size());
+    handle_errors(_arc.get(), ec);
   } catch (const std::exception& e) {
     throw std::runtime_error(fmt::format("failed to write {} bytes of data to file \"{}\": {}",
                                          buff.size(), path(), e.what()));

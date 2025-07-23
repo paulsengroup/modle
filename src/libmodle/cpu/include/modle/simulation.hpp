@@ -434,8 +434,8 @@ class Simulation {
                                   const absl::Span<bp_t> rev_moves,
                                   const absl::Span<bp_t> fwd_moves, random::PRNG_t& rand_eng,
                                   bool adjust_moves_ = false) {
-    this->generate_moves(interval, lefs, rev_lef_ranks, fwd_lef_ranks, rev_moves, fwd_moves, false,
-                         rand_eng, adjust_moves_);
+    generate_moves(interval, lefs, rev_lef_ranks, fwd_lef_ranks, rev_moves, fwd_moves, false,
+                   rand_eng, adjust_moves_);
   }
 
   inline static void test_rank_lefs(const absl::Span<const Lef> lefs,
@@ -495,13 +495,13 @@ class Simulation {
                                                         fwd_lef_ranks, rev_moves, fwd_moves,
                                                         rev_collisions, fwd_collisions);
 
-    this->detect_lef_bar_collisions(lefs, rev_lef_ranks, fwd_lef_ranks, rev_moves, fwd_moves,
-                                    barriers, rev_collisions, fwd_collisions, rand_eng,
-                                    num_rev_units_at_5prime, num_fwd_units_at_3prime);
+    detect_lef_bar_collisions(lefs, rev_lef_ranks, fwd_lef_ranks, rev_moves, fwd_moves, barriers,
+                              rev_collisions, fwd_collisions, rand_eng, num_rev_units_at_5prime,
+                              num_fwd_units_at_3prime);
 
-    this->detect_primary_lef_lef_collisions(lefs, barriers, rev_lef_ranks, fwd_lef_ranks, rev_moves,
-                                            fwd_moves, rev_collisions, fwd_collisions, rand_eng,
-                                            num_rev_units_at_5prime, num_fwd_units_at_3prime);
+    detect_primary_lef_lef_collisions(lefs, barriers, rev_lef_ranks, fwd_lef_ranks, rev_moves,
+                                      fwd_moves, rev_collisions, fwd_collisions, rand_eng,
+                                      num_rev_units_at_5prime, num_fwd_units_at_3prime);
 
     Simulation::correct_moves_for_lef_bar_collisions(lefs, barriers, rev_moves, fwd_moves,
                                                      rev_collisions, fwd_collisions);
@@ -509,9 +509,9 @@ class Simulation {
     Simulation::correct_moves_for_primary_lef_lef_collisions(
         lefs, rev_lef_ranks, fwd_lef_ranks, rev_moves, fwd_moves, rev_collisions, fwd_collisions);
 
-    this->process_secondary_lef_lef_collisions(
-        interval, lefs, rev_lef_ranks, fwd_lef_ranks, rev_moves, fwd_moves, rev_collisions,
-        fwd_collisions, rand_eng, num_rev_units_at_5prime, num_fwd_units_at_3prime);
+    process_secondary_lef_lef_collisions(interval, lefs, rev_lef_ranks, fwd_lef_ranks, rev_moves,
+                                         fwd_moves, rev_collisions, fwd_collisions, rand_eng,
+                                         num_rev_units_at_5prime, num_fwd_units_at_3prime);
   }
 
   static inline void test_fix_secondary_lef_lef_collisions(

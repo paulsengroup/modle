@@ -49,14 +49,13 @@ Reader::Reader(std::filesystem::path name)
       _fp(bwOpen(_fname.c_str(), nullptr, "r")),
       _chroms(_fp ? read_chromosomes(_fp) : Chromosomes{}) {
   if (!_fp) {
-    throw fmt::system_error(errno, "an error occurred while opening file {} for reading",
-                            this->_fname);
+    throw fmt::system_error(errno, "an error occurred while opening file {} for reading", _fname);
   }
 }
 
 Reader::~Reader() {
-  if (this->_fp) {
-    bwClose(this->_fp);
+  if (_fp) {
+    bwClose(_fp);
   }
 }
 
@@ -80,10 +79,10 @@ Reader& Reader::operator=(Reader&& other) noexcept {
 
 std::vector<float> Reader::read_values(const std::string& chrom, bp_t start, bp_t end) {
   assert(!!*this);
-  this->validate_query(chrom, start, end);
+  validate_query(chrom, start, end);
 
   const Intervals intervals{
-      bwGetValues(this->_fp, chrom.c_str(), utils::conditional_static_cast<u32>(start),
+      bwGetValues(_fp, chrom.c_str(), utils::conditional_static_cast<u32>(start),
                   utils::conditional_static_cast<u32>(end), 1),
       &bwDestroyOverlappingIntervals};
 
@@ -98,19 +97,19 @@ std::vector<float> Reader::read_values(const std::string& chrom, bp_t start, bp_
 
 auto Reader::get_intervals(const std::string& chrom, bp_t start, bp_t end) -> Intervals {
   assert(!!*this);
-  this->validate_query(chrom, start, end);
+  validate_query(chrom, start, end);
 
-  return Intervals{bwGetOverlappingIntervals(this->_fp, chrom.c_str(),
-                                             utils::conditional_static_cast<u32>(start),
-                                             utils::conditional_static_cast<u32>(end)),
-                   &bwDestroyOverlappingIntervals};
+  return Intervals{
+      bwGetOverlappingIntervals(_fp, chrom.c_str(), utils::conditional_static_cast<u32>(start),
+                                utils::conditional_static_cast<u32>(end)),
+      &bwDestroyOverlappingIntervals};
 }
 
 void Reader::validate_query(const std::string& chrom, bp_t start, bp_t end) {
-  auto it = this->_chroms.find(chrom);
-  if (it == this->_chroms.end()) {
+  auto it = _chroms.find(chrom);
+  if (it == _chroms.end()) {
     throw std::runtime_error(fmt::format("query {}:{}-{}: unable to find chromosome {} in file {}",
-                                         chrom, start, end, chrom, this->_fname));
+                                         chrom, start, end, chrom, _fname));
   }
 
   if (start >= end) {
@@ -129,8 +128,7 @@ Writer::Writer(std::filesystem::path name, std::uint_fast8_t zoom_levels)
       _fp(bwOpen(_fname.c_str(), nullptr, "w")),
       _zoom_levels(zoom_levels) {
   if (!_fp) {
-    throw fmt::system_error(errno, "an error occurred while opening file {} for writing",
-                            this->_fname);
+    throw fmt::system_error(errno, "an error occurred while opening file {} for writing", _fname);
   }
 }
 
@@ -143,8 +141,8 @@ Writer::Writer(Writer&& other) noexcept
 }
 
 Writer::~Writer() {
-  if (this->_fp) {
-    bwClose(this->_fp);
+  if (_fp) {
+    bwClose(_fp);
   }
 }
 
@@ -153,15 +151,15 @@ Writer& Writer::operator=(Writer&& other) noexcept {
     return *this;
   }
 
-  if (this->_fp) {
-    bwClose(this->_fp);
+  if (_fp) {
+    bwClose(_fp);
   }
-  this->_fp = nullptr;
+  _fp = nullptr;
 
-  this->_fname = std::move(other._fname);
-  std::swap(this->_fp, other._fp);
-  this->_zoom_levels = other._zoom_levels;
-  this->_initialized = other._initialized;
+  _fname = std::move(other._fname);
+  std::swap(_fp, other._fp);
+  _zoom_levels = other._zoom_levels;
+  _initialized = other._initialized;
 
   return *this;
 }
@@ -173,41 +171,41 @@ void Writer::write_chromosomes(const std::vector<std::string>& chrom_names,
   std::transform(chrom_names.begin(), chrom_names.end(), chrom_names_ptr.begin(),
                  [](const std::string& name) { return name.data(); });
 
-  this->write_chromosomes(chrom_names_ptr.data(), chrom_sizes.data(), chrom_names.size());
+  write_chromosomes(chrom_names_ptr.data(), chrom_sizes.data(), chrom_names.size());
 }
 
 void Writer::write_chromosomes(const char* const* chrom_names, const u32* chrom_sizes,
                                const usize num_chroms) {
-  assert(this->_fp);  // NOLINT(hicpp-no-array-decay)
+  assert(_fp);  // NOLINT(hicpp-no-array-decay)
   // GCC 8 and older fails to parse this if constexpr
 #if defined(__GNUC__) && !defined(__clang__) && __GNUC__ < 9
   if (utils::ndebug_not_defined()) {
 #else
   if constexpr (utils::ndebug_not_defined()) {
 #endif
-    if (this->_initialized) {
-      throw std::runtime_error(fmt::format(
-          "bigwig::Writer::write_chromosomes() was called twice on file {}", this->_fname));
+    if (_initialized) {
+      throw std::runtime_error(
+          fmt::format("bigwig::Writer::write_chromosomes() was called twice on file {}", _fname));
     }
   }
 
-  if (bwCreateHdr(this->_fp, this->_zoom_levels)) {  // NOLINT(readability-implicit-bool-conversion)
+  if (bwCreateHdr(_fp, _zoom_levels)) {  // NOLINT(readability-implicit-bool-conversion)
     throw std::runtime_error(
-        fmt::format("failed to initialize the file header for file {}", this->_fname));
+        fmt::format("failed to initialize the file header for file {}", _fname));
   }
 
   // NOLINTNEXTLINE(cppcoreguidelines-pro-type-const-cast)
-  this->_fp->cl = bwCreateChromList(const_cast<char**>(chrom_names), const_cast<u32*>(chrom_sizes),
-                                    static_cast<i64>(num_chroms));
-  if (!this->_fp->cl) {
+  _fp->cl = bwCreateChromList(const_cast<char**>(chrom_names), const_cast<u32*>(chrom_sizes),
+                              static_cast<i64>(num_chroms));
+  if (!_fp->cl) {
     throw std::runtime_error(
-        fmt::format("failed to create the chromosome list for file {}", this->_fname));
+        fmt::format("failed to create the chromosome list for file {}", _fname));
   }
 
-  if (bwWriteHdr(this->_fp)) {  // NOLINT(readability-implicit-bool-conversion)
-    throw std::runtime_error(fmt::format("failed to write file header to file {}", this->_fname));
+  if (bwWriteHdr(_fp)) {  // NOLINT(readability-implicit-bool-conversion)
+    throw std::runtime_error(fmt::format("failed to write file header to file {}", _fname));
   }
-  this->_initialized = true;
+  _initialized = true;
 }
 
 }  // namespace modle::io::bigwig
