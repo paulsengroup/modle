@@ -3,7 +3,7 @@
 # SPDX-License-Identifier: MIT
 
 find_package(absl CONFIG REQUIRED)
-find_package(Boost CONFIG REQUIRED COMPONENTS iostreams)
+find_package(Boost CONFIG REQUIRED)
 find_package(fmt CONFIG REQUIRED)
 find_package(hictk CONFIG REQUIRED)
 find_package(LibArchive CONFIG REQUIRED)
@@ -152,8 +152,9 @@ target_link_system_libraries(
   modle_project_warnings
   modle_project_options
   absl::strings
+  fmt::fmt-header-only
+  spdlog::spdlog_header_only
   PUBLIC
-  Boost::iostreams
   LibArchive::LibArchive
 )
 

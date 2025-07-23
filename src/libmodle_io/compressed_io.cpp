@@ -4,74 +4,168 @@
 
 #include "modle/compressed_io/compressed_io.hpp"
 
-#include <absl/strings/ascii.h>
 #include <archive.h>
+#include <archive_entry.h>
 #include <fmt/format.h>
 #include <fmt/std.h>
+#include <spdlog/spdlog.h>
 
 #include <algorithm>
-#include <boost/iostreams/close.hpp>
-#include <boost/iostreams/filter/bzip2.hpp>
-#include <boost/iostreams/filter/gzip.hpp>
-#include <boost/iostreams/filter/lzma.hpp>
-#include <boost/iostreams/filter/zlib.hpp>
-#include <boost/iostreams/filter/zstd.hpp>
-#include <boost/iostreams/write.hpp>
+#include <array>
 #include <cassert>
-#include <cerrno>
+#include <exception>
 #include <filesystem>
+#include <limits>
 #include <stdexcept>
 #include <string>
 #include <string_view>
 #include <tuple>
+#include <type_traits>
+#include <utility>
 
 #include "modle/common/common.hpp"
-#include "modle/common/fmt_helpers.hpp"
-#include "modle/common/utils.hpp"
 
 namespace modle::compressed_io {
 
+namespace detail {
+
+void ArchiveReaderDeleter::operator()(archive* arch) const noexcept {
+  if (arch && archive_read_free(arch) != ARCHIVE_OK) {
+    try {
+      SPDLOG_WARN("failed to close compressed file opened for reading!");
+    } catch (...) {  // NOLINT
+    }
+  }
+}
+
+void ArchiveWriterDeleter::operator()(archive* arch) const noexcept {
+  if (!arch) {
+    return;
+  }
+
+  const bool ok = archive_write_close(arch) == ARCHIVE_OK && archive_write_free(arch) == ARCHIVE_OK;
+
+  if (!ok) {
+    try {
+      SPDLOG_WARN("failed to close compressed file opened for writing!");
+    } catch (...) {  // NOLINT
+    }
+  }
+}
+
+void ArchiveEntryDeleter::operator()(archive_entry* entry) const noexcept {
+  if (entry) {
+    archive_entry_free(entry);
+  }
+}
+
+}  // namespace detail
+
+static void handle_errors(archive* arc, int ec) {
+  switch (ec) {
+    case ARCHIVE_OK:
+      return;
+    case ARCHIVE_WARN: {
+      SPDLOG_WARN("{}", archive_error_string(arc));
+      return;
+    }
+    case ARCHIVE_FAILED:
+      throw std::runtime_error(archive_error_string(arc));
+    case ARCHIVE_FATAL: {
+      const std::string msg{archive_error_string(arc)};
+      archive_write_free(arc);
+      throw std::runtime_error(msg);
+    }
+    default:
+      throw std::runtime_error(fmt::format("unknown error code {}", ec));
+  }
+}
+
+static void handle_errors(archive* arc, la_ssize_t ec) {
+  if (ec < 0) {
+    assert(ec >= std::numeric_limits<int>::min());
+    handle_errors(arc, utils::conditional_static_cast<int>(ec));
+  }
+}
+
+static void try_init_write_archive(Writer::archive_ptr_t& arc) {
+  if (arc) {
+    handle_errors(arc.get(), archive_write_close(arc.get()));
+    return;
+  }
+
+  arc.reset(archive_write_new());
+  if (!arc) {
+    throw std::runtime_error("unable to allocate memory for compressor");
+  }
+}
+
+static void try_init_read_archive(Reader::archive_ptr_t& arc) {
+  if (arc) {
+    handle_errors(arc.get(), archive_read_close(arc.get()));
+    return;
+  }
+
+  arc.reset(archive_read_new());
+  if (!arc) {
+    throw std::runtime_error("unable to allocate memory for decompressor");
+  }
+}
+
+template <typename ArchiveEntryPtr>
+static void try_init_archive_entry(ArchiveEntryPtr& entry) {
+  static_assert(std::is_same_v<ArchiveEntryPtr, Reader::archive_entry_ptr_t> ||
+                std::is_same_v<ArchiveEntryPtr, Writer::archive_entry_ptr_t>);
+  if (!entry) {
+    entry.reset(archive_entry_new());
+    if (entry) {
+      return;
+    }
+    if constexpr (std::is_same_v<ArchiveEntryPtr, Reader::archive_entry_ptr_t>) {
+      throw std::runtime_error("unable to allocate memory for decompressor");
+    } else {
+      throw std::runtime_error("unable to allocate memory for compressor");
+    }
+  }
+  archive_entry_clear(entry.get());
+}
+
 Reader::Reader(const std::filesystem::path& path, usize buff_capacity) {
+  assert(buff_capacity != 0);
   this->_buff.reserve(buff_capacity);
   this->open(path);
 }
 
 void Reader::open(const std::filesystem::path& path) {
-  auto handle_open_errors = [&](la_ssize_t status) {
-    if (status == ARCHIVE_EOF) {
-      this->_eof = true;
-      // throw std::runtime_error(fmt::format("file {} appears to be empty",
-      // this->_path));
-    }
-    if (status < ARCHIVE_OK) {
-      throw std::runtime_error(fmt::format("failed to open file {} for reading (error code {}): {}",
-                                           this->_path, archive_errno(this->_arc.get()),
-                                           archive_error_string(this->_arc.get())));
-    }
-  };
-
   if (this->is_open()) {
     this->close();
   }
 
+  if (path.empty()) {
+    throw std::runtime_error("path is empty");
+  }
   this->_path = path;
-  if (this->_path.empty()) {
+
+  try_init_read_archive(this->_arc);
+  try_init_archive_entry(this->_arc_entry);
+
+  handle_errors(this->_arc.get(), archive_read_support_filter_all(this->_arc.get()));
+  handle_errors(this->_arc.get(), archive_read_support_format_empty(this->_arc.get()));
+  handle_errors(this->_arc.get(), archive_read_support_format_raw(this->_arc.get()));
+  handle_errors(this->_arc.get(), archive_read_open_filename(this->_arc.get(), this->_path.c_str(),
+                                                             this->_buff.capacity()));
+
+  const auto ec = archive_read_next_header2(this->_arc.get(), this->_arc_entry.get());
+  this->_eof = ec == ARCHIVE_EOF;
+
+  this->_idx = 0;
+  if (this->_eof) {
     return;
   }
 
-  this->_arc.reset(archive_read_new());
-  if (!this->_arc) {
-    throw std::runtime_error(
-        fmt::format("failed to allocate a buffer of to read file {}", this->_path));
+  if (ec < 0) {
+    handle_errors(this->_arc.get(), ec);
   }
-
-  handle_open_errors(archive_read_support_filter_all(this->_arc.get()));
-  handle_open_errors(archive_read_support_format_empty(this->_arc.get()));
-  handle_open_errors(archive_read_support_format_raw(this->_arc.get()));
-  handle_open_errors(
-      archive_read_open_filename(this->_arc.get(), this->_path.c_str(), this->_buff.capacity()));
-  handle_open_errors(archive_read_next_header(this->_arc.get(), this->_arc_entry.get()));
-  this->_idx = 0;
 }
 
 Reader::operator bool() const { return this->is_open() && !this->eof(); }
@@ -87,37 +181,26 @@ bool Reader::is_open() const noexcept { return !!this->_arc; }
 
 void Reader::close() {
   if (this->is_open()) {
-    this->_arc = nullptr;
+    this->_path.clear();
+    this->_arc.reset();
+    this->_arc_entry.reset();
     this->_buff.clear();
+    this->_idx = 0;
     this->_eof = false;
   }
 }
 
 void Reader::reset() {
+  const auto path = this->_path;
   this->close();
-  this->open(this->_path);
-  this->_idx = 0;
   this->_buff.clear();
   this->_tok_tmp_buff.clear();
+  this->open(path);
 }
 
 const std::filesystem::path& Reader::path() const noexcept { return this->_path; }
 std::string Reader::path_string() const noexcept { return this->_path.string(); }
 const char* Reader::path_c_str() const noexcept { return this->_path.c_str(); }
-
-void Reader::handle_libarchive_errors(la_ssize_t errcode) const {
-  if (errcode < ARCHIVE_OK) {
-    this->handle_libarchive_errors();
-  }
-}
-
-void Reader::handle_libarchive_errors() const {
-  if (const auto status = archive_errno(this->_arc.get()); status < ARCHIVE_OK) {
-    throw std::runtime_error(fmt::format(
-        "the following error occurred while reading file (error code {}): {}", this->_path,
-        archive_errno(this->_arc.get()), archive_error_string(this->_arc.get())));
-  }
-}
 
 bool Reader::getline(std::string& buff, char sep) {
   assert(this->is_open());
@@ -138,7 +221,7 @@ bool Reader::getline(std::string& buff, char sep) {
 std::string_view Reader::getline(char sep) {
   assert(this->is_open());
   if (this->eof()) {
-    return std::string_view{};
+    return {};
   }
 
   this->_tok_tmp_buff.clear();
@@ -148,7 +231,7 @@ std::string_view Reader::getline(char sep) {
     }
     if (!this->read_next_chunk()) {
       assert(this->eof());
-      return std::string_view{};
+      return {};
     }
   }
 }
@@ -182,7 +265,7 @@ bool Reader::read_next_chunk() {
   const auto bytes_read =
       archive_read_data(this->_arc.get(), this->_buff.data(), this->_buff.capacity());
   if (bytes_read < 0) {
-    handle_libarchive_errors();
+    handle_errors(this->_arc.get(), bytes_read);
   } else if (bytes_read == 0) {
     this->_eof = true;
     this->_buff.clear();
@@ -220,14 +303,14 @@ std::string_view Reader::read_next_token(char sep) {
   assert(this->is_open());
   assert(this->_idx <= this->_buff.size());
   if (this->_idx == this->_buff.size()) {
-    return std::string_view{};
+    return {};
   }
 
   const auto pos = this->_buff.find(sep, this->_idx);
   const auto i = static_cast<i64>(this->_idx);
   if (pos == std::string::npos) {
     this->_tok_tmp_buff.append(this->_buff.begin() + i, this->_buff.end());
-    return std::string_view{};
+    return {};
   }
 
   assert(pos >= this->_idx);
@@ -238,15 +321,7 @@ std::string_view Reader::read_next_token(char sep) {
   }
 
   this->_tok_tmp_buff.append(this->_buff.begin() + i, this->_buff.begin() + static_cast<i64>(pos));
-#if __GNUC__ < 8
-  // The following two warnings seem to be a false positive produced by GCC 7.5
-  DISABLE_WARNING_PUSH
-  DISABLE_WARNING_CONVERSION
   return std::string_view{this->_tok_tmp_buff};
-  DISABLE_WARNING_POP
-#else
-  return std::string_view{this->_tok_tmp_buff};
-#endif
 }
 
 Writer::Writer(const std::filesystem::path& path, Compression compression)
@@ -254,55 +329,86 @@ Writer::Writer(const std::filesystem::path& path, Compression compression)
   this->open(path);
 }
 
-void Writer::open(const std::filesystem::path& path) {
-  this->_out.reset();
-  if (this->is_open()) {
-    this->close();
-  }
+static void setup_compression(archive* arc, Writer::Compression compression) {
+  assert(arc);
 
-  if (this->_compression == AUTO) {
-    this->_compression = infer_compression_from_ext(path);
-  }
-
-  switch (this->_compression) {
-    case GZIP:
-      this->_out.push(boost::iostreams::gzip_compressor(
-          boost::iostreams::gzip_params(boost::iostreams::gzip::best_compression)));
+  using enum Writer::Compression;
+  int ec{};
+  switch (compression) {
+    case GZIP: {
+      ec = archive_write_add_filter_gzip(arc);
       break;
-    case BZIP2:
-      this->_out.push(boost::iostreams::bzip2_compressor(boost::iostreams::bzip2_params(9)));
+    }
+    case BZIP2: {
+      ec = archive_write_add_filter_bzip2(arc);
       break;
-    case LZMA:
-      this->_out.push(boost::iostreams::lzma_compressor(
-          boost::iostreams::lzma_params(boost::iostreams::lzma::best_compression)));
+    }
+    case LZMA: {
+      ec = archive_write_add_filter_lzma(arc);
       break;
-    case ZSTD:
-      this->_out.push(boost::iostreams::zstd_compressor(
-          boost::iostreams::zstd_params(boost::iostreams::zstd::best_compression)));
+    }
+    case XZ: {
+      ec = archive_write_add_filter_xz(arc);
       break;
-    case NONE:
+    }
+    case ZSTD: {
+      ec = archive_write_add_filter_zstd(arc);
       break;
-    case AUTO:
+    }
+    case NONE: {
+      ec = archive_write_add_filter_none(arc);
+      break;
+    }
+    default:
       if constexpr (utils::ndebug_not_defined()) {
+        throw std::logic_error("unsupported compression algorithm");
+      } else {
         MODLE_UNREACHABLE_CODE;
       }
   }
-  this->_path = path;
-  this->_fp.open(path.string(), std::ios_base::binary);
-  if (!this->_fp) {
-    throw fmt::system_error(errno, "failed to open file {} for writing", this->_path);
-  }
-  this->_out.push(this->_fp);
+  handle_errors(arc, ec);
+
+  ec = archive_write_set_format_raw(arc);
+  handle_errors(arc, ec);
 }
 
-bool Writer::is_open() const noexcept { return this->_fp.is_open(); }
+void Writer::open(const std::filesystem::path& path) {
+  try {
+    if (path.empty()) {
+      throw std::runtime_error("path is empty!");
+    }
+    if (!this->is_open()) {
+      this->close();
+    }
+
+    try_init_write_archive(this->_arc);
+    try_init_archive_entry(this->_arc_entry);
+
+    const auto compression =
+        this->_compression == AUTO ? infer_compression_from_ext(path) : this->_compression;
+    setup_compression(this->_arc.get(), compression);
+
+    this->_path = path;
+    auto ec = archive_write_open_filename(this->_arc.get(), _path.c_str());
+    handle_errors(this->_arc.get(), ec);
+
+    archive_entry_set_pathname(this->_arc_entry.get(), "x");  // placeholder
+    archive_entry_set_filetype(this->_arc_entry.get(), AE_IFREG);
+
+    ec = archive_write_header(this->_arc.get(), this->_arc_entry.get());
+    handle_errors(this->_arc.get(), ec);
+
+  } catch (const std::exception& e) {
+    throw std::runtime_error(fmt::format("failed to open \"{}\" for writing: {}", path, e.what()));
+  }
+}
+
+bool Writer::is_open() const noexcept { return !!this->_arc && !!this->_arc_entry; }
 
 void Writer::close() {
-  if (this->is_open()) {
-    this->_out.reset();
-    boost::iostreams::close(this->_out);
-    this->_fp.close();
-  }
+  this->_path.clear();
+  this->_arc.reset();
+  this->_arc_entry.reset();
 }
 
 Writer::operator bool() const { return this->is_open(); }
@@ -314,22 +420,43 @@ std::string Writer::path_string() const noexcept { return this->_path.string(); 
 const char* Writer::path_c_str() const noexcept { return this->_path.c_str(); }
 
 Writer::Compression Writer::infer_compression_from_ext(const std::filesystem::path& p) {
-  const auto ext = absl::AsciiStrToLower(p.extension().string());
-  const auto* const match = std::find_if(ext_mappings.begin(), ext_mappings.end(),
-                                         [&](const auto& mapping) { return mapping.first == ext; });
+  // clang-format off
+  static constexpr std::array ext_mappings{
+    std::make_pair(".gz"sv, GZIP),
+    std::make_pair(".bz2"sv, BZIP2),
+    std::make_pair(".xz"sv, XZ),
+    std::make_pair(".lzma"sv, LZMA),
+    std::make_pair(".zst"sv, ZSTD),
+    std::make_pair(".zstd"sv, ZSTD)
+  };
+  // clang-format on
+
+  auto ext = p.extension().string();
+  std::ranges::transform(ext, ext.begin(), [](char c) { return std::tolower(c); });
+  const auto* const match =
+      std::ranges::find_if(ext_mappings, [&](const auto& mapping) { return mapping.first == ext; });
   if (match == ext_mappings.end()) {
+    SPDLOG_WARN(
+        "unable to infer compression algorithm for file \"{}\": no compression will be applied!",
+        p);
     return NONE;
   }
   return match->second;
 }
 
 void Writer::write(std::string_view buff) {
-  if constexpr (utils::ndebug_not_defined()) {
-    if (!this->is_open()) {
-      throw std::runtime_error("Writer::write() was called on a closed file!");
-    }
+  if (buff.empty()) {
+    return;
   }
-  this->_out << buff;
+
+  try {
+    assert(this->is_open());
+    const auto ec = archive_write_data(this->_arc.get(), buff.data(), buff.size());
+    handle_errors(this->_arc.get(), ec);
+  } catch (const std::exception& e) {
+    throw std::runtime_error(fmt::format("failed to write {} bytes of data to file \"{}\": {}",
+                                         buff.size(), path(), e.what()));
+  }
 }
 
 }  // namespace modle::compressed_io

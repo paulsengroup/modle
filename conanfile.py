@@ -70,21 +70,15 @@ class MoDLEConan(ConanFile):
             check_min_cppstd(self, self._min_cppstd)
 
     def configure(self):
-        if (
-            self.settings.compiler in ["clang", "gcc"]
-            and self.settings.os == "Linux"
-            and self.settings.compiler.get_safe("libcxx", "") != "libstdc++11"
-        ):
-            self.settings.compiler.libcxx = "libstdc++11"
-
         self.options["boost"].system_no_deprecated = True
         self.options["boost"].asio_no_deprecated = True
         self.options["boost"].filesystem_no_deprecated = True
+        self.options["boost"].filesystem_use_std_fs = True
         self.options["boost"].filesystem_version = 4
-        self.options["boost"].zlib = True
-        self.options["boost"].bzip2 = True
-        self.options["boost"].lzma = True
-        self.options["boost"].zstd = True
+        self.options["boost"].zlib = False
+        self.options["boost"].bzip2 = False
+        self.options["boost"].lzma = False
+        self.options["boost"].zstd = False
         self.options["boost"].without_atomic = True
         self.options["boost"].without_charconv = True
         self.options["boost"].without_chrono = True
@@ -100,7 +94,7 @@ class MoDLEConan(ConanFile):
         self.options["boost"].without_filesystem = True
         self.options["boost"].without_graph = True
         self.options["boost"].without_graph_parallel = True
-        self.options["boost"].without_iostreams = False
+        self.options["boost"].without_iostreams = True
         self.options["boost"].without_json = True
         self.options["boost"].without_locale = True
         self.options["boost"].without_log = True

@@ -151,6 +151,7 @@ TEST_CASE("Reader lzma", "[io][reader][medium]") {
 }
 
 static void compare_compressed_writer_with_reader(Reader& r1, Writer& w) {
+  const auto test_file_path = w.path();
   std::string buff1;
   std::string buff2;
   while (r1.getline(buff1)) {
@@ -161,7 +162,7 @@ static void compare_compressed_writer_with_reader(Reader& r1, Writer& w) {
   r1.reset();
   w.close();
 
-  Reader r2(w.path());
+  Reader r2(test_file_path);
   while (r1.getline(buff1) && r2.getline(buff2)) {
     CHECK(buff1 == buff2);
   }
