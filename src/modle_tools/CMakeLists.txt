@@ -68,23 +68,12 @@ target_link_system_libraries(
 
 target_include_directories(modle_tools PRIVATE include)
 
-if(ENABLE_PCH)
-  target_precompile_headers(
+if(CMAKE_CXX_COMPILER_ID STREQUAL "Clang" OR CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
+  set_target_properties(
     modle_tools
-    PRIVATE
-      <algorithm>
-      <cassert>
-      <cstddef>
-      <cstdint>
-      <filesystem>
-      <stdexcept>
-      <string>
-      <string_view>
-      <utility>
-      <vector>
-      <absl/container/flat_hash_set.h>
-      <absl/types/span.h>
-      <fmt/format.h>
+    PROPERTIES
+      LINK_FLAGS_RELEASE
+        -s
   )
 endif()
 
@@ -92,14 +81,17 @@ include(GNUInstallDirs)
 install(
   TARGETS
     modle_tools
+  COMPONENT Runtime
   LIBRARY
-    DESTINATION ${CMAKE_INSTALL_LIBDIR}
+    DESTINATION "${CMAKE_CURRENT_BINARY_DIR}/scratch/"
   ARCHIVE
-    DESTINATION ${CMAKE_INSTALL_LIBDIR}
+    DESTINATION "${CMAKE_CURRENT_BINARY_DIR}/scratch/"
   RUNTIME
-    DESTINATION ${CMAKE_INSTALL_BINDIR}
+    DESTINATION "${CMAKE_INSTALL_BINDIR}"
   PUBLIC_HEADER
-    DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
+    DESTINATION "${CMAKE_CURRENT_BINARY_DIR}/scratch/"
+  PRIVATE_HEADER
+    DESTINATION "${CMAKE_CURRENT_BINARY_DIR}/scratch/"
 )
 
-install(FILES ${PROJECT_SOURCE_DIR}/LICENSE DESTINATION ${CMAKE_INSTALL_DATADIR}/licenses/modle_tools/)
+install(FILES "${PROJECT_SOURCE_DIR}/LICENSE" DESTINATION "${CMAKE_INSTALL_DATADIR}/licenses/modle/" COMPONENT Runtime)
