@@ -7,29 +7,20 @@
 # See utils/devel/build_dockerfile.sh for an example of how to build this Dockerfile
 #####################
 
-ARG BUILD_BASE_IMAGE
-ARG FINAL_BASE_IMAGE
-ARG FINAL_BASE_IMAGE_DIGEST
 
-FROM "$BUILD_BASE_IMAGE" AS builder
+ARG BUILD_BASE_IMAGE=ghcr.io/paulsengroup/ci-docker-images/alpine-3.22-cxx
+ARG FINAL_BASE_IMAGE=ubuntu
+ARG FINAL_BASE_IMAGE_DIGEST=unknown
+
+FROM ${BUILD_BASE_IMAGE} AS builder
 
 ARG src_dir='/root/modle'
 ARG build_dir='/root/modle/build'
 ARG staging_dir='/root/modle/staging'
 ARG install_dir='/usr/local'
 
-ENV CONAN_CMAKE_GENERATOR=Ninja
-
-
-ARG C_COMPILER
-ARG CXX_COMPILER
-
-RUN if [ -z "$C_COMPILER" ]; then echo "Missing C_COMPILER --build-arg" && exit 1; fi \
-&&  if [ -z "$CXX_COMPILER" ]; then echo "Missing CXX_COMPILER --build-arg" && exit 1; fi
-
-ENV CC="$C_COMPILER"
-ENV CXX="$CXX_COMPILER"
-ENV CMAKE_POLICY_VERSION_MINIMUM=3.5
+ARG CONAN_CMAKE_GENERATOR=Ninja
+ARG CMAKE_POLICY_VERSION_MINIMUM=3.5
 
 # Install b2 using Conan
 RUN printf '[requires]\nb2/5.3.3\n[options]\nb2*:toolset=%s' \
@@ -45,12 +36,11 @@ RUN mkdir -p "$src_dir" "$build_dir"
 
 COPY conanfile.py "$src_dir/conanfile.py"
 
-ARG LIBCXX
-
-RUN sed -i "s/^compiler\.libcxx.*$/compiler.libcxx=${LIBCXX:-libstdc++11}/" "$CONAN_DEFAULT_PROFILE_PATH"
+# Make sure we're linking to libc++
+RUN sed -i "s/^compiler\.libcxx.*$/compiler.libcxx=libc++/" "$CONAN_DEFAULT_PROFILE_PATH"
 
 RUN conan install "$src_dir/conanfile.py"            \
-                 --build=missing                     \
+                 --build='missing'                   \
                  -pr:b="$CONAN_DEFAULT_PROFILE_PATH" \
                  -pr:h="$CONAN_DEFAULT_PROFILE_PATH" \
                  -s build_type=Release               \
@@ -66,27 +56,22 @@ COPY CMakeLists.txt "$src_dir/"
 COPY src "$src_dir/src/"
 COPY test/units "$src_dir/test/units/"
 
-ARG GIT_HASH
-ARG GIT_SHORT_HASH
-ARG GIT_TAG
-ARG GIT_IS_DIRTY
-
-RUN if [ -z "$GIT_HASH" ]; then echo "Missing GIT_HASH --build-arg" && exit 1; fi \
-&&  if [ -z "$GIT_SHORT_HASH" ]; then echo "Missing GIT_SHORT_HASH --build-arg" && exit 1; fi \
-&&  if [ -z "$GIT_IS_DIRTY" ]; then echo "Missing GIT_IS_DIRTY --build-arg" && exit 1; fi \
-&&  if [ -z "$GIT_TAG" ]; then echo "Missing GIT_TAG --build-arg" && exit 1; fi
+ARG GIT_HASH=0000000000000000000000000000000000000000
+ARG GIT_SHORT_HASH=00000000
+ARG GIT_TAG=unknown
+ARG GIT_IS_DIRTY=false
+ARG CMAKE_EXE_LINKER_FLAGS='-static -stdlib=libc++ LINKER:-lc++,-lc++abi'
 
 # Configure project
-RUN if [ "$LIBCXX" = 'libc++' ]; then \
-      CMAKE_EXE_LINKER_FLAGS='-static -stdlib=libc++ -lc++ -lc++abi'; \
-    else \
-      CMAKE_EXE_LINKER_FLAGS=''; \
-    fi \
-&& cmake -DCMAKE_BUILD_TYPE=Release                         \
-         -DCMAKE_CXX_FLAGS="-stdlib=${LIBCXX:-libstdc++11}" \
+RUN cmake -DCMAKE_BUILD_TYPE=Release                        \
+         -DCMAKE_CXX_FLAGS='-stdlib=libc++'                 \
          -DCMAKE_EXE_LINKER_FLAGS="$CMAKE_EXE_LINKER_FLAGS" \
+         -DCMAKE_LINKER_TYPE=LLD \
+         -DCMAKE_C_COMPILER_AR="$(which ar)" \
+         -DCMAKE_C_COMPILER_RANLIB="$(which ranlib)" \
+         -DCMAKE_CXX_COMPILER_AR="$(which ar)" \
+         -DCMAKE_CXX_COMPILER_RANLIB="$(which ranlib)" \
          -DCMAKE_PREFIX_PATH="$build_dir"                   \
-         -DWARNINGS_AS_ERRORS=ON                            \
          -DENABLE_DEVELOPER_MODE=OFF                        \
          -DMODLE_ENABLE_TESTING=ON                          \
          -DMODLE_DOWNLOAD_TEST_DATASET=OFF                  \
@@ -104,15 +89,15 @@ RUN if [ "$LIBCXX" = 'libc++' ]; then \
 RUN cmake --build "$build_dir" -j "$(nproc)"  \
 && cmake --install "$build_dir"
 
-ARG BUILD_BASE_IMAGE
-FROM "$BUILD_BASE_IMAGE" AS unit-testing
+ARG BUILD_BASE_IMAGE=ghcr.io/paulsengroup/ci-docker-images/alpine-3.22-cxx
+FROM ${BUILD_BASE_IMAGE} AS unit-testing
 
 ARG src_dir="/root/modle"
 
 COPY --from=builder "$src_dir" "$src_dir"
 COPY test/data/modle_test_data.tar.zst "$src_dir/test/data/"
 
-RUN tar -xf "$src_dir/test/data/modle_test_data.tar.zst" -C "$src_dir/"
+RUN zstd -dc "$src_dir/test/data/modle_test_data.tar.zst" |  tar -xf - -C "$src_dir/"
 
 RUN ctest -j "$(nproc)"               \
           --test-dir "$src_dir/build" \
@@ -122,9 +107,10 @@ RUN ctest -j "$(nproc)"               \
           --timeout 900               \
 && rm -rf "$src_dir/test/Testing"
 
-ARG FINAL_BASE_IMAGE
-ARG FINAL_BASE_IMAGE_DIGEST
-FROM "${FINAL_BASE_IMAGE}@${FINAL_BASE_IMAGE_DIGEST}" AS integration-testing
+
+ARG FINAL_BASE_IMAGE='ubuntu:24.04'
+
+FROM ${FINAL_BASE_IMAGE} AS integration-testing
 
 ARG src_dir="/root/modle"
 ARG staging_dir='/root/modle/staging'
@@ -157,34 +143,23 @@ RUN "$src_dir/test/scripts/modle_tools_transform_integration_test.sh" "$staging_
 RUN "$src_dir/test/scripts/modle_tools_eval_integration_test.sh" "$staging_dir/bin/modle_tools"
 RUN "$src_dir/test/scripts/modle_tools_annotate_barriers_integration_test.sh" "$staging_dir/bin/modle_tools"
 
-ARG FINAL_BASE_IMAGE
-ARG FINAL_BASE_IMAGE_DIGEST
-FROM "${FINAL_BASE_IMAGE}@${FINAL_BASE_IMAGE_DIGEST}" AS base
+ARG FINAL_BASE_IMAGE=ubuntu
+
+FROM ${FINAL_BASE_IMAGE} AS base
 
 ARG staging_dir='/root/modle/staging'
 ARG install_dir='/usr/local'
 
-ARG BUILD_BASE_IMAGE
-ARG FINAL_BASE_IMAGE
-ARG FINAL_BASE_IMAGE_DIGEST
+ARG BUILD_BASE_IMAGE=ghcr.io/paulsengroup/ci-docker-images/alpine-3.22-cxx
+ARG FINAL_BASE_IMAGE=ubuntu
+ARG FINAL_BASE_IMAGE_DIGEST=unknown
 
-ARG GIT_HASH
-ARG GIT_SHORT_HASH
-ARG VERSION
-ARG CREATION_DATE
-
-RUN if [ -z "$BUILD_BASE_IMAGE" ]; then echo "Missing BUILD_BASE_IMAGE --build-arg" && exit 1; fi \
-&&  if [ -z "$FINAL_BASE_IMAGE" ]; then echo "Missing FINAL_BASE_IMAGE --build-arg" && exit 1; fi \
-&&  if [ -z "$FINAL_BASE_IMAGE_DIGEST" ]; then echo "Missing FINAL_BASE_IMAGE_DIGEST --build-arg" && exit 1; fi \
-&&  if [ -z "$GIT_HASH" ]; then echo "Missing GIT_HASH --build-arg" && exit 1; fi \
-&&  if [ -z "$GIT_SHORT_HASH" ]; then echo "Missing GIT_SHORT_HASH --build-arg" && exit 1; fi \
-&&  if [ -z "$CREATION_DATE" ]; then echo "Missing CREATION_DATE --build-arg" && exit 1; fi
-
-RUN if [ "$BUILDARCH" != 'amd64' ]; then \
-    apt-get update \
-&&  apt-get install -q -y --no-install-recommends libatomic1 \
-&&  rm -rf /var/lib/apt/lists/*; \
-fi
+ARG GIT_HASH=0000000000000000000000000000000000000000
+ARG GIT_SHORT_HASH=00000000
+ARG GIT_TAG=unknown
+ARG GIT_IS_DIRTY=false
+ARG VERSION=latest
+ARG CREATION_DATE=2000-01-01
 
 # Export project binaries to the final build stage
 COPY --from=integration-testing "$staging_dir" "$install_dir"
