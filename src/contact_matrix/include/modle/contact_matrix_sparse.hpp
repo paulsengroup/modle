@@ -41,11 +41,7 @@ class ContactMatrixSparse {
 
  public:
   ContactMatrixSparse() = default;
-#if defined(__clang__) && __clang_major__ < 9
-  ContactMatrixSparse(ContactMatrixSparse<N>&& other) = default;
-#else
   ContactMatrixSparse(ContactMatrixSparse<N>&& other) noexcept = default;
-#endif
   inline ContactMatrixSparse(const ContactMatrixSparse<N>& other);
   inline ContactMatrixSparse(usize nrows, usize ncols,
                              ChunkSize max_chunk_size = default_max_chunk_size);
@@ -55,11 +51,7 @@ class ContactMatrixSparse {
 
   // Operators
   inline ContactMatrixSparse<N>& operator=(const ContactMatrixSparse<N>& other);
-#if defined(__clang__) && __clang_major__ < 9
-  ContactMatrixSparse<N>& operator=(ContactMatrixSparse<N>&& other) = default;
-#else
   ContactMatrixSparse<N>& operator=(ContactMatrixSparse<N>&& other) noexcept = default;
-#endif
 
   // Thread-safe count getters and setters
   [[nodiscard]] inline N get(usize row, usize col) const;

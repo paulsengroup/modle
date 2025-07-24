@@ -54,11 +54,7 @@ class ContactMatrixDense {
  public:
   // Constructors
   ContactMatrixDense() = default;
-#if defined(__clang__) && __clang_major__ < 9
-  ContactMatrixDense(ContactMatrixDense<N>&& other) = default;
-#else
   ContactMatrixDense(ContactMatrixDense<N>&& other) noexcept = default;
-#endif
   inline ContactMatrixDense(const ContactMatrixDense<N>& other);
   inline ContactMatrixDense(usize nrows_, usize ncols_);
   inline ContactMatrixDense(bp_t length, bp_t diagonal_width, bp_t bin_size);
@@ -68,11 +64,7 @@ class ContactMatrixDense {
 
   // Operators
   inline ContactMatrixDense<N>& operator=(const ContactMatrixDense<N>& other);
-#if defined(__clang__) && __clang_major__ < 9
-  ContactMatrixDense<N>& operator=(ContactMatrixDense<N>&& other) = default;
-#else
   ContactMatrixDense<N>& operator=(ContactMatrixDense<N>&& other) noexcept = default;
-#endif
 
   // Thread-safe count getters and setters
   [[nodiscard]] inline N get(usize row, usize col) const;
