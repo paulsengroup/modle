@@ -4,7 +4,6 @@
 
 #include "modle/chrom_sizes/chrom_sizes.hpp"
 
-#include <absl/strings/ascii.h>
 #include <absl/strings/str_split.h>
 #include <fmt/compile.h>
 #include <fmt/format.h>
@@ -19,6 +18,7 @@
 #include <vector>
 
 #include "modle/bed/bed.hpp"
+#include "modle/common/string_utils.hpp"
 #include "modle/common/utils.hpp"
 
 namespace modle::chrom_sizes {
@@ -31,7 +31,7 @@ std::vector<bed::BED> Parser::parse_all(char sep) {
   std::vector<bed::BED> chrom_sizes;
 
   for (usize i = 1UL, id = 0; _reader.getline(buff); ++i) {
-    buff = absl::StripTrailingAsciiWhitespace(buff);
+    buff = strip_trailing_whitespace(buff);
     if (buff.empty()) {
       continue;
     }

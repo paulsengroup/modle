@@ -2,7 +2,6 @@
 //
 // SPDX-License-Identifier: MIT
 
-#include <absl/strings/ascii.h>  // AsciiStrToLower
 #include <absl/strings/str_replace.h>
 #include <absl/strings/strip.h>
 #include <absl/time/clock.h>
@@ -37,6 +36,7 @@
 #include "modle/chrom_sizes/chrom_sizes.hpp"
 #include "modle/common/common.hpp"
 #include "modle/common/fmt_helpers.hpp"
+#include "modle/common/string_utils.hpp"
 #include "modle/common/utils.hpp"
 #include "modle/contact_matrix_dense.hpp"
 #include "modle/interval_tree.hpp"
@@ -621,9 +621,9 @@ static void run_task(const enum eval_config::Metric metric, const bed::BED &inte
                                                exclude_zero_pixels, weights.at(interval.chrom));
 
     SPDLOG_INFO("{} for {} stripes from interval {}:{}-{} computed in {}.",
-                corr_method_to_str(metric, true),
-                absl::AsciiStrToLower(direction_to_str(stripe_direction)), interval.chrom,
-                interval.chrom_start, interval.chrom_end, absl::FormatDuration(absl::Now() - t0));
+                corr_method_to_str(metric, true), to_lower(direction_to_str(stripe_direction)),
+                interval.chrom, interval.chrom_start, interval.chrom_end,
+                absl::FormatDuration(absl::Now() - t0));
     t0 = absl::Now();
     auto &writer =
         stripe_direction == StripeDirection::horizontal ? writers.horizontal : writers.vertical;
