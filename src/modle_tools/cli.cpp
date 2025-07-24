@@ -507,8 +507,8 @@ void Cli::validate_eval_subcommand() const {
 
     std::vector<std::string> name_collisions;
     const auto metric_name = [&]() {
-      const auto* it = std::find_if(eval_config::metric_map.begin(), eval_config::metric_map.end(),
-                                    [&](const auto p) { return p.second == c.metric; });
+      const auto it = std::find_if(eval_config::metric_map.begin(), eval_config::metric_map.end(),
+                                   [&](const auto p) { return p.second == c.metric; });
       assert(it != eval_config::metric_map.end());
       return it->first;
     }();

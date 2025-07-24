@@ -4,13 +4,12 @@
 
 #pragma once
 
-#include <absl/container/fixed_array.h>
-
 #include <CLI/Formatter.hpp>
 #include <filesystem>
 #include <initializer_list>
 #include <string>
 #include <string_view>
+#include <vector>
 
 #include "modle/common/common.hpp"
 #include "modle/common/const_map.hpp"
@@ -45,8 +44,7 @@ template <class EnumT, class StringT = std::string>
 class CliEnumMappings {
   static_assert(std::is_convertible_v<StringT, std::string>);
 
- private:
-  absl::FixedArray<std::pair<StringT, EnumT>> _mappings;
+  std::vector<std::pair<StringT, EnumT>> _mappings;
 
  public:
   using key_type = StringT;

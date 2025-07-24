@@ -59,7 +59,6 @@ target_link_libraries(
 target_link_system_libraries(
   libmodle_cpu
   PRIVATE
-  absl::fixed_array
   absl::hash
   absl::strings
   absl::str_format
