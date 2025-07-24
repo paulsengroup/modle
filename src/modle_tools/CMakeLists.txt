@@ -51,7 +51,6 @@ target_link_system_libraries(
   PRIVATE
   absl::span
   absl::strings
-  absl::str_format
   absl::time
   Boost::headers
   bshoshany-thread-pool::bshoshany-thread-pool

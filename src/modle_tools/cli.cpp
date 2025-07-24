@@ -4,7 +4,6 @@
 
 #include "./cli.hpp"
 
-#include <absl/strings/str_format.h>
 #include <absl/strings/str_split.h>
 #include <fmt/format.h>
 #include <fmt/std.h>
