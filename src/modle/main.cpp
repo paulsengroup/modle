@@ -2,8 +2,6 @@
 //
 // SPDX-License-Identifier: MIT
 
-#include <absl/debugging/failure_signal_handler.h>
-#include <absl/debugging/symbolize.h>
 #include <absl/strings/strip.h>
 #include <absl/time/clock.h>
 #include <absl/time/time.h>
@@ -69,25 +67,6 @@ void setup_logger_file(const std::filesystem::path& path_to_log_file) {
   spdlog::default_logger()->sinks().emplace_back(std::move(file_sink));
 
   logger_ready = true;
-}
-
-void setup_failure_signal_handler(const char* argv_0) {
-  absl::InitializeSymbolizer(argv_0);
-  absl::FailureSignalHandlerOptions options;
-  // TODO: figure out a way to make this callback async-signal-safe
-  options.writerfn = [](const char* buff) {
-    if (buff) {
-      const std::string_view buff_sv{buff, strlen(buff)};
-      if (logger_ready) {
-        SPDLOG_ERROR("{}", absl::StripSuffix(buff_sv, "\n"));
-      } else {
-        fmt::print(stderr, "{}", buff_sv);
-      }
-    }
-    spdlog::shutdown();
-  };
-
-  absl::InstallFailureSignalHandler(options);
 }
 
 static std::string concat_args(absl::Span<char*> args) {
@@ -178,12 +157,6 @@ void try_log_fatal_error(fmt::format_string<Args...> fmt, Args&&... args) {
 }
 
 int main(int argc, char** argv) noexcept {
-  // No need to set up the signal handler w/ symbol support when proj. is built in Debug mode
-  if constexpr (modle::utils::ndebug_defined()) {
-    // NOLINTNEXTLINE(cppcoreguidelines-pro-bounds-pointer-arithmetic)
-    setup_failure_signal_handler(argv[0]);
-  }
-
   try {
     const auto [ec, subcmd, config] = parse_cli_and_setup_logger(argc, argv);
     if (ec != 0 || subcmd == modle::Cli::subcommand::help) {

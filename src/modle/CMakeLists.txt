@@ -33,10 +33,8 @@ target_link_libraries(
 target_link_system_libraries(
   modle
   PRIVATE
-  absl::failure_signal_handler
   absl::span
   absl::strings
-  absl::symbolize
   absl::time
   Boost::headers
   CLI11::CLI11

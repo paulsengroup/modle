@@ -48,11 +48,9 @@ target_link_system_libraries(
   modle_tools
   PRIVATE
   absl::algorithm_container
-  absl::failure_signal_handler
   absl::span
   absl::strings
   absl::str_format
-  absl::symbolize
   absl::time
   Boost::headers
   bshoshany-thread-pool::bshoshany-thread-pool

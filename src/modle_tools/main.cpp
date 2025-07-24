@@ -2,8 +2,6 @@
 //
 // SPDX-License-Identifier: MIT
 
-#include <absl/debugging/failure_signal_handler.h>
-#include <absl/debugging/symbolize.h>
 #include <absl/strings/strip.h>
 #include <fmt/format.h>
 #include <fmt/std.h>
@@ -31,18 +29,6 @@
 
 int main(int argc, char** argv) {
   using namespace modle::tools;
-  absl::InitializeSymbolizer(argv[0]);
-  absl::FailureSignalHandlerOptions options;
-  // TODO: figure out a way to make this callback async-signal-safe
-  options.writerfn = [](const char* buff) {
-    if (buff) {
-      const std::string_view buff_{buff, strlen(buff)};
-      SPDLOG_ERROR("{}", absl::StripSuffix(buff_, "\n"));
-    } else {
-      spdlog::shutdown();
-    }
-  };
-  absl::InstallFailureSignalHandler(options);
   std::unique_ptr<Cli> cli{nullptr};
   spdlog::set_default_logger(std::make_shared<spdlog::logger>("main_logger"));
   {
