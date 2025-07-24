@@ -4,7 +4,6 @@
 
 #pragma once
 
-#include <absl/strings/str_replace.h>
 #include <cpp-sort/comparators/natural_less.h>
 #include <cpp-sort/sorters/insertion_sorter.h>
 #include <fmt/format.h>
@@ -16,6 +15,7 @@
 #include <cmath>
 #include <exception>
 #include <filesystem>
+#include <regex>
 #include <string>
 #include <string_view>
 
@@ -222,7 +222,7 @@ std::string Formatter::make_option_opts(const CLI::Option *opt) const {
   if (opt->get_type_size() != 0) {
     // Format default values so that the help string reads like: --my-option=17.0
     if (!opt->get_default_str().empty()) {
-      if (absl::StartsWith(opt->get_type_name(), "FLOAT")) {
+      if (opt->get_type_name().starts_with("FLOAT")) {
         auto s = opt->get_default_str();
         if (s.find('.') == std::string::npos) {
           s += ".0";
@@ -238,7 +238,7 @@ std::string Formatter::make_option_opts(const CLI::Option *opt) const {
       const auto p1 = t.find("[", t.find(" in "));
       const auto p2 = t.find("]", t.find(" in "));
       if (p1 != std::string::npos && p2 != std::string::npos && p2 > p1) {
-        out += " " + absl::StrReplaceAll(t.substr(p1, p2), {{" - ", ", "}});
+        out += " " + std::regex_replace(t.substr(p1, p2), std::regex{" - "}, ", ");
       }
     } else if (str_contains(t, "POSITIVE")) {
       out += " (0, inf)";
