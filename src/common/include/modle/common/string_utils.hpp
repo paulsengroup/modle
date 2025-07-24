@@ -26,4 +26,8 @@ inline void lower_inplace(std::string& s) {
   return s.substr(0, static_cast<size_t>(s.rend() - it));
 }
 
+[[nodiscard]] inline bool str_contains(std::string_view s, std::string_view query) noexcept {
+  return s.find(query) != std::string_view::npos;
+}
+
 }  // namespace modle

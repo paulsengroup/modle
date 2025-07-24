@@ -4,8 +4,6 @@
 
 #include "modle/stats/correlation.hpp"
 
-#include <absl/strings/match.h>
-
 #include <cassert>
 #include <catch2/catch_test_macros.hpp>
 #include <catch2/matchers/catch_matchers_floating_point.hpp>
@@ -88,9 +86,9 @@ struct CorrelationBuffer {
   // NOLINTNEXTLINE(readability-function-cognitive-complexity)
   void compute_and_compare_correlation(std::string_view method,
                                        double tolerance = DEFAULT_FP_TOLERANCE) const {
-    const auto is_weighted = absl::StartsWith(method, "weighted_");
-    const auto is_pearson = absl::EndsWith(method, "pearson");
-    const auto is_spearman = absl::EndsWith(method, "spearman");
+    const auto is_weighted = method.starts_with("weighted_");
+    const auto is_pearson = method.ends_with("pearson");
+    const auto is_spearman = method.ends_with("spearman");
 
     if (is_pearson && is_weighted) {
       const auto res = Pearson<>{}(v1, v2, weights);

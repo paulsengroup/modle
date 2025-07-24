@@ -6,7 +6,6 @@
 
 #include "modle/bed/bed.hpp"
 
-#include <absl/strings/match.h>
 #include <absl/strings/str_join.h>
 #include <absl/strings/str_split.h>
 #include <fmt/format.h>
@@ -574,8 +573,8 @@ usize Parser::skip_header() {
       ++num_header_lines;
       continue;
     }
-    if (_buff.front() == '#' || absl::StrContains(_buff, "track") ||
-        absl::StrContains(_buff, "browser")) {  // Skip header line(s)
+    if (_buff.front() == '#' || str_contains(_buff, "track") ||
+        str_contains(_buff, "browser")) {  // Skip header line(s)
       ++num_header_lines;
       continue;
     }
