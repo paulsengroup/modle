@@ -54,6 +54,7 @@ class MoDLEConan(ConanFile):
         self.requires("libdeflate/1.23#4994bea7cf7e93789da161fac8e26a53")
         self.requires("lz4/1.10.0#59fc63cac7f10fbe8e05c7e62c2f3504", force=True)
         self.requires("lzo/2.10#5725914235423c771cb1c6b607109b45")
+        self.requires("nlohmann_json/3.12.0#2d634ab0ec8d9f56353e5ccef6d6612c")
         self.requires("parallel-hashmap/2.0.0#82acae64ffe2693fff5fb3f9df8e1746")
         self.requires("readerwriterqueue/1.0.6#aaa5ff6fac60c2aee591e9e51b063b83")
         self.requires("span-lite/0.11.0#519fd49fff711674cfed8cd17d4ed422")

@@ -9,7 +9,6 @@ find_package(fmt CONFIG REQUIRED)
 find_package(hictk CONFIG REQUIRED)
 find_package(phmap CONFIG REQUIRED)
 find_package(spdlog CONFIG REQUIRED)
-find_package(tomlplusplus CONFIG REQUIRED)
 
 add_executable(modle)
 
@@ -27,6 +26,8 @@ target_link_libraries(
     modle_project_options
     Modle::common
     Modle::config
+    Modle::io_json
+    Modle::io_toml
     Modle::libmodle
 )
 
@@ -40,7 +41,6 @@ target_link_system_libraries(
   CLI11::CLI11
   phmap
   spdlog::spdlog_header_only
-  tomlplusplus::tomlplusplus
   hictk::libhictk
 )
 

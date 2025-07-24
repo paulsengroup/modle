@@ -4,14 +4,12 @@
 
 #include "./cli.hpp"
 
-#include <absl/strings/str_cat.h>
 #include <absl/strings/str_split.h>
 #include <absl/time/clock.h>
 #include <absl/types/span.h>
 #include <fmt/format.h>
 #include <fmt/std.h>
 #include <spdlog/spdlog.h>
-#include <toml++/toml.h>
 
 #include <CLI/CLI.hpp>
 #include <algorithm>
@@ -34,7 +32,9 @@
 #include "modle/common/fmt_helpers.hpp"
 #include "modle/common/simulation_config.hpp"
 #include "modle/common/utils.hpp"
-#include "modle/config/version.hpp"  // modle_version_long
+#include "modle/config/version.hpp"
+#include "modle/json/json.hpp"
+#include "modle/toml/toml.hpp"
 
 namespace modle {
 
@@ -644,11 +644,11 @@ const Config& Cli::parse_arguments() {
 }
 
 // NOLINTNEXTLINE(readability-function-cognitive-complexity) TODO: reduce complexity
-std::string Cli::detect_path_collisions(modle::Config& c) const {
-  std::string collisions;
+std::vector<std::string> Cli::detect_path_collisions(modle::Config& c) const {
+  std::vector<std::string> collisions;
 
   if (c.force || c.skip_output) {
-    return "";
+    return {};
   }
 
   auto check_for_path_collisions = [](const std::filesystem::path& path) -> std::string {
@@ -657,7 +657,7 @@ std::string Cli::detect_path_collisions(modle::Config& c) const {
       if (std::filesystem::is_directory(path)) {
         return fmt::format(
             "Refusing to continue because output file {} already "
-            "exist (and is actually a {}directory).\n{}.\n",
+            "exist (and is actually a {}directory).\n{}.",
             path, std::filesystem::is_empty(path) ? "" : "non-empty ",
             std::filesystem::is_empty(path)
                 ? " Pass --force to overwrite"
@@ -666,30 +666,30 @@ std::string Cli::detect_path_collisions(modle::Config& c) const {
       }
       return fmt::format(
           "Refusing to continue because output file {} already exist.\n"
-          "Pass --force to overwrite.\n",
+          "Pass --force to overwrite.",
           path);
     }
     if (std::filesystem::is_directory(path) && !std::filesystem::is_empty(path)) {
       return fmt::format(
           "Refusing to continue because output file {} is a non-empty directory.\n"
           "You should specify a different output path, or "
-          "manually remove the existing directory.\n",
+          "manually remove the existing directory.",
           path);
     }
     return {};
   };
 
   if (std::filesystem::exists(c.path_to_log_file)) {
-    absl::StrAppend(&collisions, check_for_path_collisions(c.path_to_log_file));
+    collisions.emplace_back(check_for_path_collisions(c.path_to_log_file));
   }
 
   if (c.track_1d_lef_position && std::filesystem::exists(c.path_to_lef_1d_occupancy_bw_file)) {
-    absl::StrAppend(&collisions, check_for_path_collisions(c.path_to_lef_1d_occupancy_bw_file));
+    collisions.emplace_back(check_for_path_collisions(c.path_to_lef_1d_occupancy_bw_file));
   }
 
   if (get_subcommand() == simulate && !c.path_to_model_state_log_file.empty() &&
       std::filesystem::exists(c.path_to_model_state_log_file)) {
-    absl::StrAppend(&collisions, check_for_path_collisions(c.path_to_model_state_log_file));
+    collisions.emplace_back(check_for_path_collisions(c.path_to_model_state_log_file));
   }
 
   return collisions;
@@ -1043,32 +1043,11 @@ void Cli::log_warnings() const {
 }
 
 std::string Cli::to_json() const {
-  std::string buff;
-  for (const auto& line : absl::StrSplit(_cli.config_to_str(true, false), '\n')) {
-    if (line.empty()) {
-      continue;
-    }
-    if (line.front() == '[') {  // Begin of the section for the active subcommand
-      absl::StrAppend(&buff, line, "\n");
-      continue;
-    }
-    // Given two subcommands named comm1 and comm2, assuming comm1 was parsed while comm2 was
-    // not, the TOML produced by CLI11 will have values for comm2 formatted as comm2.myarg1=1,
-    // comm2.myarg2="a" etc.
-    // All we are doing here is to look for an argument name containing '.'.
-    // In this way we can filter out entry corresponding to arguments for inactive subcommands
-    const auto arg = line.substr(0, line.find('='));
-    assert(!arg.empty());
-    if (!absl::StrContains(arg, '.')) {
-      absl::StrAppend(&buff, line, "\n");
-    }
-  }
-
   try {
-    auto tt = toml::parse(buff);
-    std::stringstream ss;
-    ss << toml::json_formatter{tt};
-    return ss.str();
+    const auto toml_config_str = _cli.config_to_str(true, false);
+    const auto toml_config = toml::parse(toml_config_str);
+    // NOLINTNEXTLINE(clang-analyzer-optin.core.EnumCastOutOfRange)
+    return toml_to_json(toml_config).dump(4);
   } catch (const std::exception& e) {
     throw std::runtime_error(fmt::format(
         "The following error occurred while converting MoDLE's config from TOML to JSON: {}",

@@ -23,7 +23,7 @@ class Cli {
 
   Cli(int argc, char** argv);
   [[nodiscard]] const Config& parse_arguments();
-  [[nodiscard]] std::string detect_path_collisions(modle::Config& c) const;
+  [[nodiscard]] std::vector<std::string> detect_path_collisions(modle::Config& c) const;
 
   [[nodiscard]] int exit(const CLI::ParseError& e) const;
   [[nodiscard]] subcommand get_subcommand() const;

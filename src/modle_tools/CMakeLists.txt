@@ -41,6 +41,8 @@ target_link_libraries(
     Modle::io_chrom_sizes
     Modle::io_compressed
     Modle::io_contact_matrix
+    Modle::io_json
+    Modle::io_toml
     Modle::stats
 )
 

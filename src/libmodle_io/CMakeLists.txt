@@ -4,13 +4,15 @@
 
 find_package(absl CONFIG REQUIRED)
 find_package(Boost CONFIG REQUIRED)
+find_package(BigWig CONFIG REQUIRED)
 find_package(fmt CONFIG REQUIRED)
 find_package(hictk CONFIG REQUIRED)
 find_package(LibArchive CONFIG REQUIRED)
-find_package(BigWig CONFIG REQUIRED)
+find_package(nlohmann_json REQUIRED QUIET)
 find_package(phmap CONFIG REQUIRED)
 find_package(readerwriterqueue CONFIG REQUIRED)
 find_package(spdlog CONFIG REQUIRED)
+find_package(tomlplusplus CONFIG REQUIRED)
 find_package(xxHash CONFIG REQUIRED)
 
 # BED
@@ -149,8 +151,6 @@ target_link_libraries(
 target_link_system_libraries(
   libmodle_io_compressed
   PRIVATE
-  modle_project_warnings
-  modle_project_options
   absl::strings
   fmt::fmt-header-only
   spdlog::spdlog_header_only
@@ -186,8 +186,6 @@ target_link_libraries(
 target_link_system_libraries(
   libmodle_io_contact_matrix
   INTERFACE
-  modle_project_warnings
-  modle_project_options
   hictk::libhictk
 )
 
@@ -198,3 +196,58 @@ set_target_properties(
       modle_io_contact_matrix
 )
 install(TARGETS libmodle_io_contact_matrix ARCHIVE INCLUDES LIBRARY)
+
+# JSON
+add_library(libmodle_io_json INTERFACE)
+add_library(Modle::io_json ALIAS libmodle_io_json)
+
+target_include_directories(libmodle_io_json INTERFACE include/json)
+
+target_link_libraries(
+  libmodle_io_json
+  INTERFACE
+    modle_project_warnings
+    modle_project_options
+    Modle::io_toml
+)
+
+target_link_system_libraries(
+  libmodle_io_json
+  INTERFACE
+  nlohmann_json::nlohmann_json
+)
+
+set_target_properties(
+  libmodle_io_json
+  PROPERTIES
+    OUTPUT_NAME
+      modle_io_json
+)
+install(TARGETS libmodle_io_json ARCHIVE INCLUDES LIBRARY)
+
+# TOML
+add_library(libmodle_io_toml INTERFACE)
+add_library(Modle::io_toml ALIAS libmodle_io_toml)
+
+target_include_directories(libmodle_io_toml INTERFACE include/toml)
+
+target_link_libraries(
+  libmodle_io_toml
+  INTERFACE
+    modle_project_warnings
+    modle_project_options
+)
+
+target_link_system_libraries(
+  libmodle_io_toml
+  INTERFACE
+  tomlplusplus::tomlplusplus
+)
+
+set_target_properties(
+  libmodle_io_toml
+  PROPERTIES
+    OUTPUT_NAME
+      modle_io_toml
+)
+install(TARGETS libmodle_io_toml ARCHIVE INCLUDES LIBRARY)

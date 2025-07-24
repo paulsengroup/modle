@@ -4,14 +4,10 @@
 
 #include "./cli.hpp"
 
-#include <absl/strings/match.h>
-#include <absl/strings/str_cat.h>
 #include <absl/strings/str_format.h>
 #include <absl/strings/str_split.h>
-#include <absl/strings/strip.h>
 #include <fmt/format.h>
 #include <fmt/std.h>
-#include <toml++/toml.h>
 
 #include <CLI/CLI.hpp>
 #include <algorithm>
@@ -20,7 +16,6 @@
 #include <exception>
 #include <filesystem>
 #include <hictk/cooler.hpp>
-#include <ostream>
 #include <stdexcept>
 #include <string>
 #include <string_view>
@@ -37,6 +32,8 @@
 #include "modle/common/fmt_helpers.hpp"
 #include "modle/common/utils.hpp"
 #include "modle/config/version.hpp"
+#include "modle/json/json.hpp"
+#include "modle/toml/toml.hpp"
 #include "modle_tools/modle_tools_config.hpp"
 
 namespace modle::tools {
@@ -661,16 +658,15 @@ std::string Cli::to_json() const {
 
     if (line.find(prefix) != std::string::npos) {
       assert(line.find('=') != std::string::npos);
-      absl::StrAppend(&buff, line.substr(prefix.size()), "\n");
+      buff.append(fmt::format("{}\n", line.substr(prefix.size())));
     }
   }
 
   assert(!buff.empty());
   try {
-    auto tt = toml::parse(buff);
-    std::stringstream ss;
-    ss << toml::json_formatter{tt};
-    return ss.str();
+    const auto toml_config = toml::parse(buff);
+    // NOLINTNEXTLINE(clang-analyzer-optin.core.EnumCastOutOfRange)
+    return toml_to_json(toml_config).dump(4);
   } catch (const std::exception& e) {
     throw std::runtime_error(fmt::format(
         "The following error occurred while converting MoDLE's config from TOML to JSON: {}",

@@ -6,6 +6,7 @@
 #include <absl/time/clock.h>
 #include <absl/time/time.h>
 #include <fmt/format.h>
+#include <fmt/ranges.h>
 #include <fmt/std.h>
 #include <spdlog/common.h>
 #include <spdlog/logger.h>
@@ -106,7 +107,7 @@ std::tuple<int, modle::Cli::subcommand, modle::Config> parse_cli_and_setup_logge
     setup_logger_console(config.verbosity);
 
     if (const auto collisions = cli->detect_path_collisions(config); !collisions.empty()) {
-      throw std::filesystem::filesystem_error(collisions,
+      throw std::filesystem::filesystem_error(fmt::format("{}", fmt::join(collisions, "\n")),
                                               std::make_error_code(std::errc::file_exists));
     }
 
