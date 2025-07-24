@@ -3,9 +3,10 @@
 // SPDX-License-Identifier: MIT
 
 #pragma once
-#include <absl/numeric/bits.h>
+
 #include <fmt/format.h>
 
+#include <bit>
 #include <stdexcept>
 
 #include "modle/common/utils.hpp"
@@ -87,20 +88,20 @@ constexpr I Collision<I>::encode(const usize idx,
 
 template <class I>
 constexpr bool Collision<I>::is_valid_index(const usize idx) noexcept(utils::ndebug_defined()) {
-  return usize(absl::countl_zero(idx)) >= RESERVED_EVENT_BITS;
+  return usize(std::countl_zero(idx)) >= RESERVED_EVENT_BITS;
 }
 
 template <class I>
 constexpr bool Collision<I>::is_valid_event(const CollisionEventT event) noexcept(
     utils::ndebug_defined()) {
   // Make sure reserved but unused bits are all 0
-  bool ok = usize(absl::countl_zero(event())) >= RESERVED_EVENT_BITS - EVENT_BITS;
+  bool ok = usize(std::countl_zero(event())) >= RESERVED_EVENT_BITS - EVENT_BITS;
   if ((event & COLLISION) != 0) {
     // In case of a collision we require exactly one of the bits recording the reason of collision
     // to be set to 1
-    ok &= absl::popcount(event()) == 2;
+    ok &= std::popcount(event()) == 2;
   } else {
-    ok &= absl::popcount(event()) <= 1;
+    ok &= std::popcount(event()) <= 1;
   }
   return ok;
 }
